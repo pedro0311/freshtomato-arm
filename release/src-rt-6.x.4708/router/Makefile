@@ -2309,6 +2309,7 @@ libcurl/stamp-h1: zlib openssl
 		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
 		--without-gnutls --without-krb4 --without-libidn \
 		--with-linux-headers=$(LINUXDIR)/include \
+		--with-ca-bundle=/rom/cacert.pem \
 		OPENSSL_CFLAGS="-I$(TOP)/openssl/include" \
 		OPENSSL_LIBS="-L$(TOP)/openssl -lcrypto -lssl"
 		touch libcurl/stamp-h1
