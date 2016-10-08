@@ -1,1 +1,1 @@
-../crypto/ripemd/rmdtest.c
+dummytest.c
