@@ -1,0 +1,483 @@
+dnscrypt_proxy-logger.o: logger.c ../../config.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/types.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/features.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_config.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/cdefs.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/types.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wordsize.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/typesizes.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/pthreadtypes.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sched.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/time.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/endian.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/endian.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/byteswap.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/byteswap.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/byteswap-common.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/select.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/select.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sigset.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/time.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/sysmacros.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/assert.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/errno.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/errno.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/linux/errno.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/errno.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm-generic/errno.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm-generic/errno-base.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdio.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_stdio.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/wchar.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wchar.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_mutex.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/pthread.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sched.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_clk_tck.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/xlocale.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/locale.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_locale.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/signal.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/initspin.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sigthread.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_pthread.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdarg.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/stdio_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/string.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/syslog.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/syslog.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/unistd.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix_opt.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/environments.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/confname.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/getopt.h \
+ ../libevent-modified/include/event2/util.h \
+ ../libevent-modified/include/event2/event-config.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/time.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdint.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdint.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/netdb.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/netinet/in.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/socket.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/uio.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uio.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/socket.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include-fixed/limits.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include-fixed/syslimits.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/limits.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix1_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/local_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/linux/limits.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_local_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix2_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/xopen_lim.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sockaddr.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/socket.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/sockios.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/in.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/rpc/netdb.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/siginfo.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/netdb.h \
+ dnscrypt_proxy.h ../libevent-modified/include/event2/event.h \
+ ../libevent-modified/include/event2/listener.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/core.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/export.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_aead_aes256gcm.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_aead_chacha20poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha512.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdlib.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/waitflags.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/waitstatus.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/alloca.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box_curve25519xsalsa20poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box_curve25519xsalsa20poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_hsalsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_hchacha20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa2012.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa208.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash_blake2b.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash_blake2b.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha512.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth_poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth_poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_argon2i.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_argon2i.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_scryptsalsa208sha256.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult_curve25519.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult_curve25519.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox_xsalsa20poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox_xsalsa20poly1305.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash_siphash24.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash_siphash24.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign_ed25519.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign_ed25519.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_xsalsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_aes128ctr.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_chacha20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa2012.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa208.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_xsalsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_16.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_32.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_64.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes_salsa20_random.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes_sysrandom.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/runtime.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/utils.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/version.h \
+ app.h plugin_support.h ../include/dnscrypt/plugin.h \
+ ../include/dnscrypt/private.h ../include/dnscrypt/version.h \
+ ../ext/queue.h cert.h ../libevent-modified/include/event2/dns.h \
+ dnscrypt_client.h dnscrypt.h logger.h safe_rw.h
+
+../../config.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/types.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/features.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_config.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/cdefs.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/types.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wordsize.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/typesizes.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/pthreadtypes.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sched.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/time.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/endian.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/endian.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/byteswap.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/byteswap.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/byteswap-common.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/select.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/select.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sigset.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/time.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/sysmacros.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/assert.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/errno.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/errno.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/linux/errno.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/errno.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm-generic/errno.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm-generic/errno-base.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdio.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_stdio.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/wchar.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wchar.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_mutex.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/pthread.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sched.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_clk_tck.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/xlocale.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/locale.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_locale.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/signal.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/initspin.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sigthread.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_pthread.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdarg.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/stdio_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/string.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/syslog.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/syslog.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/unistd.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix_opt.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/environments.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/confname.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/getopt.h:
+
+../libevent-modified/include/event2/util.h:
+
+../libevent-modified/include/event2/event-config.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/time.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdint.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdint.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/netdb.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/netinet/in.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/socket.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/uio.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uio.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/socket.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include-fixed/limits.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include-fixed/syslimits.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/limits.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix1_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/local_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/linux/limits.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_local_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/posix2_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/xopen_lim.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/sockaddr.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/socket.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/asm/sockios.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/in.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/rpc/netdb.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/siginfo.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/netdb.h:
+
+dnscrypt_proxy.h:
+
+../libevent-modified/include/event2/event.h:
+
+../libevent-modified/include/event2/listener.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/core.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/export.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_aead_aes256gcm.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_aead_chacha20poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha512.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdlib.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/waitflags.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/waitstatus.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/alloca.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_auth_hmacsha512256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box_curve25519xsalsa20poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_box_curve25519xsalsa20poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_hsalsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_hchacha20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa2012.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_core_salsa208.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash_blake2b.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_generichash_blake2b.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_hash_sha512.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth_poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_onetimeauth_poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_argon2i.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_argon2i.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_pwhash_scryptsalsa208sha256.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult_curve25519.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_scalarmult_curve25519.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox_xsalsa20poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_secretbox_xsalsa20poly1305.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash_siphash24.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_shorthash_siphash24.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign_ed25519.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_sign_ed25519.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_xsalsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_aes128ctr.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_chacha20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa2012.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_salsa208.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_stream_xsalsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_16.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_32.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/crypto_verify_64.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes_salsa20_random.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/randombytes_sysrandom.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/runtime.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/utils.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/router/libsodium/src/libsodium/include/sodium/version.h:
+
+app.h:
+
+plugin_support.h:
+
+../include/dnscrypt/plugin.h:
+
+../include/dnscrypt/private.h:
+
+../include/dnscrypt/version.h:
+
+../ext/queue.h:
+
+cert.h:
+
+../libevent-modified/include/event2/dns.h:
+
+dnscrypt_client.h:
+
+dnscrypt.h:
+
+logger.h:
+
+safe_rw.h:
