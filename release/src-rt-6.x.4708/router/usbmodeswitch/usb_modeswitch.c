@@ -504,7 +504,8 @@ int main(int argc, char **argv)
 
 	/* libusb initialization */
 	if ((libusbError = libusb_init(&ctx)) != LIBUSB_SUCCESS) {
-		fprintf(stderr, "Error: Failed to initialize libusb. %s (%d)\n\n");
+		fprintf(stderr, "Error: Failed to initialize libusb. %s (%d)\n\n",
+				libusb_error_name(libusbError), libusbError);
 		exit(1);
 	}
 
