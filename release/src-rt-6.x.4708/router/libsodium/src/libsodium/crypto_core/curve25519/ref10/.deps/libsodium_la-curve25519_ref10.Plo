@@ -1,0 +1,51 @@
+crypto_core/curve25519/ref10/libsodium_la-curve25519_ref10.lo: \
+ crypto_core/curve25519/ref10/curve25519_ref10.c \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdint.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdint.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/features.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_config.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/cdefs.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wchar.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wordsize.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/string.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/xlocale.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/locale.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_locale.h \
+ include/sodium/crypto_verify_32.h include/sodium/export.h \
+ include/sodium/private/curve25519_ref10.h \
+ crypto_core/curve25519/ref10/base2.h crypto_core/curve25519/ref10/base.h
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stdint.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdint.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/features.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_config.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/sys/cdefs.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wchar.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/wordsize.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/string.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/xlocale.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/locale.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/bits/uClibc_locale.h:
+
+include/sodium/crypto_verify_32.h:
+
+include/sodium/export.h:
+
+include/sodium/private/curve25519_ref10.h:
+
+crypto_core/curve25519/ref10/base2.h:
+
+crypto_core/curve25519/ref10/base.h:

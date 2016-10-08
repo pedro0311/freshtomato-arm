@@ -1,0 +1,23 @@
+crypto_scalarmult/curve25519/libsodium_la-scalarmult_curve25519.lo: \
+ crypto_scalarmult/curve25519/scalarmult_curve25519.c \
+ include/sodium/crypto_scalarmult_curve25519.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h \
+ include/sodium/export.h \
+ crypto_scalarmult/curve25519/scalarmult_curve25519.h \
+ include/sodium/runtime.h \
+ crypto_scalarmult/curve25519/ref10/x25519_ref10.h \
+ crypto_scalarmult/curve25519/ref10/../scalarmult_curve25519.h
+
+include/sodium/crypto_scalarmult_curve25519.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h:
+
+include/sodium/export.h:
+
+crypto_scalarmult/curve25519/scalarmult_curve25519.h:
+
+include/sodium/runtime.h:
+
+crypto_scalarmult/curve25519/ref10/x25519_ref10.h:
+
+crypto_scalarmult/curve25519/ref10/../scalarmult_curve25519.h:

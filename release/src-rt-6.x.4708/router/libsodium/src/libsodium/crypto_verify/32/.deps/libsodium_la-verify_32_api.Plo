@@ -1,0 +1,10 @@
+crypto_verify/32/libsodium_la-verify_32_api.lo: \
+ crypto_verify/32/verify_32_api.c include/sodium/crypto_verify_32.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h \
+ include/sodium/export.h
+
+include/sodium/crypto_verify_32.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h:
+
+include/sodium/export.h:

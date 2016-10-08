@@ -1,0 +1,11 @@
+crypto_core/salsa20/libsodium_la-core_salsa20_api.lo: \
+ crypto_core/salsa20/core_salsa20_api.c \
+ include/sodium/crypto_core_salsa20.h \
+ /home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h \
+ include/sodium/export.h
+
+include/sodium/crypto_core_salsa20.h:
+
+/home/borys/tomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3/include/stddef.h:
+
+include/sodium/export.h:
