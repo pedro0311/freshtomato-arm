@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = gnu no-dependencies
 
-SUBDIRS = m4 po src
+SUBDIRS = doc m4 po src
 
 EXTRA_DIST = ChangeLog.pre-2.1 IMPROVEMENTS README.GIT nano.spec
 

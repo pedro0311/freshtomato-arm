@@ -1,22 +1,23 @@
 /**************************************************************************
- *   cut.c                                                                *
+ *   cut.c  --  This file is part of GNU nano.                            *
  *                                                                        *
  *   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,  *
  *   2008, 2009, 2010, 2011, 2013, 2014 Free Software Foundation, Inc.    *
- *   This program is free software; you can redistribute it and/or modify *
- *   it under the terms of the GNU General Public License as published by *
- *   the Free Software Foundation; either version 3, or (at your option)  *
- *   any later version.                                                   *
+ *   Copyright (C) 2014 Mark Majeres                                      *
+ *   Copyright (C) 2016 Benno Schulenberg                                 *
  *                                                                        *
- *   This program is distributed in the hope that it will be useful, but  *
- *   WITHOUT ANY WARRANTY; without even the implied warranty of           *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU    *
- *   General Public License for more details.                             *
+ *   GNU nano is free software: you can redistribute it and/or modify     *
+ *   it under the terms of the GNU General Public License as published    *
+ *   by the Free Software Foundation, either version 3 of the License,    *
+ *   or (at your option) any later version.                               *
+ *                                                                        *
+ *   GNU nano is distributed in the hope that it will be useful,          *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty          *
+ *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.              *
+ *   See the GNU General Public License for more details.                 *
  *                                                                        *
  *   You should have received a copy of the GNU General Public License    *
- *   along with this program; if not, write to the Free Software          *
- *   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA            *
- *   02110-1301, USA.                                                     *
+ *   along with this program.  If not, see http://www.gnu.org/licenses/.  *
  *                                                                        *
  **************************************************************************/
 
@@ -114,13 +115,7 @@ void cut_to_eof(void)
  * copy_text is TRUE, copy the text back into the filestruct afterward.
  * If cut_till_eof is TRUE, move all text from the current cursor
  * position to the end of the file into the cutbuffer. */
-void do_cut_text(
-#ifndef NANO_TINY
-	bool copy_text, bool cut_till_eof
-#else
-	void
-#endif
-	)
+void do_cut_text(bool copy_text, bool cut_till_eof)
 {
 #ifndef NANO_TINY
     filestruct *cb_save = NULL;
@@ -220,10 +215,10 @@ void do_cut_text_void(void)
 {
 #ifndef NANO_TINY
     add_undo(CUT);
+#endif
     do_cut_text(FALSE, FALSE);
+#ifndef NANO_TINY
     update_undo(CUT);
-#else
-    do_cut_text();
 #endif
 }
 

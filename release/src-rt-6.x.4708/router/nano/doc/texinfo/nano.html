@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.3, http://www.gnu.org/software/texinfo/ -->
 <head>
 <title>nano</title>
 
@@ -59,7 +59,7 @@ Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Up: <a 
 </div>
 <a name="SEC_Top"></a>
 
-<p>This manual documents <code>nano</code>, a small and friendly text editor.
+<p>This manual documents GNU <code>nano</code>, a small and friendly text editor.
 </p>
 <table class="menu" border="0" cellspacing="0">
 <tr><td align="left" valign="top">&bull; <a href="#Introduction" accesskey="1">Introduction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
@@ -94,7 +94,7 @@ Next: <a href="#Invoking" accesskey="n" rel="next">Invoking</a>, Previous: <a hr
 <a name="Introduction-1"></a>
 <h2 class="chapter">1 Introduction</h2>
 
-<p><code>nano</code> is a small and friendly text editor.  Besides basic text
+<p>GNU <code>nano</code> is a small and friendly text editor.  Besides basic text
 editing, <code>nano</code> offers many extra features, such as an interactive
 search-and-replace, undo/redo, syntax coloring, smooth scrolling,
 auto-indentation, go-to-line-and-column-number, feature toggles,
@@ -283,8 +283,15 @@ keystroke instead of 25.  Note that option <samp>-c</samp>
 </dd>
 <dt><samp>-W</samp></dt>
 <dt><samp>--wordbounds</samp></dt>
-<dd><p>Detect word boundaries more accurately by treating punctuation
+<dd><p>Detect word boundaries differently by treating punctuation
 characters as parts of words.
+</p>
+</dd>
+<dt><samp>-X &quot;<var>characters</var>&quot;</samp></dt>
+<dt><samp>--wordchars=&quot;<var>characters</var>&quot;</samp></dt>
+<dd><p>Specify which other characters (besides the normal alphanumeric ones)
+should be considered as parts of words.  This overrides option
+<samp>-W</samp> (<samp>--wordbounds</samp>).
 </p>
 </dd>
 <dt><samp>-Y <var>name</var></samp></dt>
@@ -306,6 +313,12 @@ work properly.  You should only need to use this option if Backspace
 acts like Delete on your system.
 </p>
 </dd>
+<dt><samp>-g</samp></dt>
+<dt><samp>--showcursor</samp></dt>
+<dd><p>Make the cursor visible in the file browser, putting it on the
+highlighted item.  Useful for braille users.
+</p>
+</dd>
 <dt><samp>-h</samp></dt>
 <dt><samp>--help</samp></dt>
 <dd><p>Show a summary of command-line options and exit.
@@ -321,6 +334,11 @@ the previous line.
 <dt><samp>--cut</samp></dt>
 <dd><p>Make the &rsquo;Cut Text&rsquo; command (normally ^K) cut from the current cursor
 position to the end of the line, instead of cutting the entire line.
+</p>
+</dd>
+<dt><samp>-l</samp></dt>
+<dt><samp>--linenumbers</samp></dt>
+<dd><p>Display line numbers to the left of the text area.
 </p>
 </dd>
 <dt><samp>-m</samp></dt>
@@ -379,8 +397,8 @@ the <code>spell</code> program to be installed on your system.
 </dd>
 <dt><samp>-t</samp></dt>
 <dt><samp>--tempfile</samp></dt>
-<dd><p>Don&rsquo;t ask whether or not to save the current contents of the file when
-exiting, assume yes.  This is most useful when using <code>nano</code> as the
+<dd><p>Don&rsquo;t ask whether to save a modified buffer when exiting with ^X, but
+assume yes.  This option is useful when <code>nano</code> is used as the
 composer of a mailer program.
 </p>
 </dd>
@@ -434,7 +452,6 @@ separately (e.g. <code>nano -wS -$</code>).
 <dt><samp>-b</samp></dt>
 <dt><samp>-e</samp></dt>
 <dt><samp>-f</samp></dt>
-<dt><samp>-g</samp></dt>
 <dt><samp>-j</samp></dt>
 <dd><p>Ignored, for compatibility with Pico.
 </p>
@@ -745,6 +762,10 @@ nanorc.  See See <a href="#Syntax-Highlighting">Syntax Highlighting</a>, for mor
 <dd><p>toggles the <code>-$</code> (<code>--softwrap</code>) command-line option.
 </p>
 </dd>
+<dt><code>Line Numbers Toggle (Meta-#)</code></dt>
+<dd><p>toggles the <code>-l</code> (<code>--linenumbers</code>) command-line option.
+</p>
+</dd>
 </dl>
 
 
@@ -882,6 +903,10 @@ in the two help lines at the bottom of the screen.
 See <code>set titlecolor</code> for more details.
 </p>
 </dd>
+<dt><code>set linenumbers</code></dt>
+<dd><p>Display line numbers to the left of the text area.
+</p>
+</dd>
 <dt><code>set locking</code></dt>
 <dd><p>Enable vim-style lock-files for when editing files.
 </p>
@@ -920,6 +945,11 @@ cursor, set the mark (with a double click), or execute shortcuts.
 </dd>
 <dt><code>set nowrap</code></dt>
 <dd><p>Don&rsquo;t hard-wrap text at all.
+</p>
+</dd>
+<dt><code>set numbercolor <var>fgcolor</var>,<var>bgcolor</var></code></dt>
+<dd><p>Specify the color combination to use for line numbers.
+See <code>set titlecolor</code> for more details.
 </p>
 </dd>
 <dt><code>set operatingdir &quot;directory&quot;</code></dt>
@@ -981,6 +1011,11 @@ won&rsquo;t work properly with this option enabled.
 </dd>
 <dt><code>set regexp</code></dt>
 <dd><p>Do extended regular expression searches by default.
+</p>
+</dd>
+<dt><code>set showcursor</code></dt>
+<dd><p>Put the cursor on the highlighted item in the file browser, to aid
+braille users.
 </p>
 </dd>
 <dt><code>set smarthome</code></dt>
@@ -1050,8 +1085,14 @@ for a UTF-8 locale is <tt>&quot;Â»Â·&quot;</tt>, and for other locales <tt>&
 </p>
 </dd>
 <dt><code>set wordbounds</code></dt>
-<dd><p>Detect word boundaries more accurately by treating punctuation
+<dd><p>Detect word boundaries differently by treating punctuation
 characters as part of a word.
+</p>
+</dd>
+<dt><code>set wordchars &quot;<var>string</var>&quot;</code></dt>
+<dd><p>Specify which other characters (besides the normal alphanumeric ones)
+should be considered as parts of words.  This overrides the option
+<code>wordbounds</code>.
 </p>
 </dd>
 </dl>
@@ -1249,6 +1290,7 @@ a string in the current list in the file browser
 </dd>
 <dt><code>searchagain</code></dt>
 <dd><p>Repeats the last search command without prompting.
+(The form &rsquo;research&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>findprevious</code></dt>
@@ -1294,6 +1336,7 @@ current cursor position.
 </dd>
 <dt><code>curpos</code></dt>
 <dd><p>Shows the current cursor position: the line, column, and character positions.
+(The form &rsquo;cursorpos&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>wordcount</code></dt>
@@ -1372,6 +1415,15 @@ style specified in the active syntax.
 </dd>
 <dt><code>endpara</code></dt>
 <dd><p>Moves the cursor to the end of the current paragraph.
+</p>
+</dd>
+<dt><code>prevblock</code></dt>
+<dd><p>Moves the cursor to the beginning of the current or preceding block of text.
+(Blocks are separated by one or more blank lines.)
+</p>
+</dd>
+<dt><code>nextblock</code></dt>
+<dd><p>Moves the cursor to the beginning of the next block of text.
 </p>
 </dd>
 <dt><code>prevpage</code></dt>
@@ -1455,6 +1507,7 @@ from the end of the file (and end of the line).
 </dd>
 <dt><code>regexp</code></dt>
 <dd><p>Toggles whether searching/replacing is based on literal strings or regular expressions.
+(The form &rsquo;regex&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>backwards</code></dt>
@@ -1471,6 +1524,7 @@ from the end of the file (and end of the line).
 </dd>
 <dt><code>flipreplace</code></dt>
 <dd><p>Toggles between searching for something and replacing something.
+(The form &rsquo;dontreplace&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>flipexecute</code></dt>
@@ -1480,6 +1534,7 @@ from the end of the file (and end of the line).
 <dt><code>flipnewbuffer</code></dt>
 <dd><p>Toggles between inserting into the current buffer and into a new
 empty buffer.
+(The form &rsquo;newbuffer&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>dosformat</code></dt>
@@ -1614,6 +1669,7 @@ or read into a new buffer.
 </dd>
 <dt><code>replacewith</code></dt>
 <dd><p>The &rsquo;replace with&rsquo; menu, which comes up after &rsquo;search to replace&rsquo;.
+(The form &rsquo;replace2&rsquo; is deprecated.)
 </p>
 </dd>
 <dt><code>gotoline</code></dt>
@@ -1861,7 +1917,7 @@ chances are you only want this feature when you&rsquo;re working on the nano sou
 </dd>
 <dt><code>--disable-nls</code></dt>
 <dd><p>Disables Native Language support.  This will disable the use of any
-available <code>nano</code> translations.
+available GNU <code>nano</code> translations.
 </p>
 </dd>
 <dt><code>--disable-wrapping-as-root</code></dt>

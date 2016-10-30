@@ -1,24 +1,22 @@
-# Configuration for nano - a small and user-friendly text editor
+# Configuration for GNU nano - a small and user-friendly text editor
 #
 # Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
 # 2008, 2009, 2010, 2011, 2013, 2014 Free Software Foundation, Inc.
 #
-# nano is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any
-# later version.
+# GNU nano is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
 #
-# nano is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# GNU nano is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with nano; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301,
-# USA.
+# along with this program.  If not, see http://www.gnu.org/licenses/.
 
-AC_INIT([nano], [2.6.1], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [2.7.1], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE
@@ -126,6 +124,19 @@ fi
 
 AC_ARG_ENABLE(libmagic,
 AS_HELP_STRING([--disable-libmagic], [Disable detection of file types via libmagic]))
+
+AC_ARG_ENABLE(linenumbers,
+AS_HELP_STRING([--disable-linenumbers], [Disable line numbering]))
+if test "x$enable_tiny" = xyes; then
+    if test "x$enable_linenumbers" != xyes; then
+	enable_linenumbers=no
+    fi
+fi
+if test "x$disable_linenumbers" != xyes; then
+    if test "x$enable_linenumbers" != xno; then
+	AC_DEFINE(ENABLE_LINENUMBERS, 1, [Define this to enable line numbering.])
+    fi
+fi
 
 AC_ARG_ENABLE(mouse,
 AS_HELP_STRING([--disable-mouse], [Disable mouse support (and -m flag)]))
@@ -708,16 +719,16 @@ AM_CONDITIONAL(GROFF_HTML, test x$groff_html_support = xyes)
 AC_CHECK_PROG(haveit, makeinfo, yes, no)
 AM_CONDITIONAL(HAVE_MAKEINFO, test x$haveit = xyes)
 
+# Check whether this is a git repository.
 AC_MSG_CHECKING([whether building from git])
 if test -d .git ; then
     AC_MSG_RESULT([yes])
-    AC_PATH_PROG([GIT], [git])
-    REVISION=`($GIT rev-parse --is-inside-work-tree >/dev/null 2>&1) && ($GIT rev-parse --short HEAD)`
-    AC_SUBST(REVISION)
-    AC_DEFINE_UNQUOTED([REVISION],"${REVISION}","Setting REVISION in config.h.")
+    from_git=yes
 else
     AC_MSG_RESULT([no])
+    from_git=no
 fi
+AM_CONDITIONAL(BUILDING_FROM_GIT, test x$from_git = xyes)
 
 AC_CONFIG_FILES([
 Makefile

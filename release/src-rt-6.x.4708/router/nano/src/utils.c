@@ -1,22 +1,22 @@
 /**************************************************************************
- *   utils.c                                                              *
+ *   utils.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,  *
  *   2008, 2009, 2010, 2011, 2013, 2014 Free Software Foundation, Inc.    *
- *   This program is free software; you can redistribute it and/or modify *
- *   it under the terms of the GNU General Public License as published by *
- *   the Free Software Foundation; either version 3, or (at your option)  *
- *   any later version.                                                   *
+ *   Copyright (C) 2016 Benno Schulenberg                                 *
  *                                                                        *
- *   This program is distributed in the hope that it will be useful, but  *
- *   WITHOUT ANY WARRANTY; without even the implied warranty of           *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU    *
- *   General Public License for more details.                             *
+ *   GNU nano is free software: you can redistribute it and/or modify     *
+ *   it under the terms of the GNU General Public License as published    *
+ *   by the Free Software Foundation, either version 3 of the License,    *
+ *   or (at your option) any later version.                               *
+ *                                                                        *
+ *   GNU nano is distributed in the hope that it will be useful,          *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty          *
+ *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.              *
+ *   See the GNU General Public License for more details.                 *
  *                                                                        *
  *   You should have received a copy of the GNU General Public License    *
- *   along with this program; if not, write to the Free Software          *
- *   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA            *
- *   02110-1301, USA.                                                     *
+ *   along with this program.  If not, see http://www.gnu.org/licenses/.  *
  *                                                                        *
  **************************************************************************/
 
@@ -52,6 +52,39 @@ void get_homedir(void)
     }
 }
 
+#ifdef ENABLE_LINENUMBERS
+/* Return the number of digits that the given integer n takes up. */
+int digits(int n)
+{
+    if (n < 100000) {
+        if (n < 1000) {
+            if (n < 100)
+                return 2;
+            else
+                return 3;
+        } else {
+            if (n < 10000)
+                return 4;
+            else
+                return 5;
+        }
+    } else {
+        if (n < 10000000) {
+            if (n < 1000000)
+                return 6;
+            else
+                return 7;
+        }
+        else {
+            if (n < 100000000)
+                return 8;
+            else
+                return 9;
+        }
+    }
+}
+#endif
+
 /* Read a ssize_t from str, and store it in *val (if val is not NULL).
  * On error, we return FALSE and don't change *val.  Otherwise, we
  * return TRUE. */
@@ -77,35 +110,33 @@ bool parse_num(const char *str, ssize_t *val)
     return TRUE;
 }
 
-/* Read two ssize_t's, separated by a comma, from str, and store them in
- * *line and *column (if they're not both NULL).  Return FALSE on error,
- * or TRUE otherwise. */
+/* Read two numbers, separated by a comma, from str, and store them in
+ * *line and *column.  Return FALSE on error, and TRUE otherwise. */
 bool parse_line_column(const char *str, ssize_t *line, ssize_t *column)
 {
-    bool retval = TRUE;
+    bool retval;
+    char *firstpart;
     const char *comma;
 
-    assert(str != NULL);
+    while (*str == ' ')
+       str++;
 
-    comma = strchr(str, ',');
+    comma = strpbrk(str, "m,. /;");
 
-    if (comma != NULL && column != NULL) {
-	if (!parse_num(comma + 1, column))
-	    retval = FALSE;
-    }
+    if (comma == NULL)
+	return parse_num(str, line);
 
-    if (line != NULL) {
-	if (comma != NULL) {
-	    char *str_line = mallocstrncpy(NULL, str, comma - str + 1);
-	    str_line[comma - str] = '\0';
+    if (!parse_num(comma + 1, column))
+	return FALSE;
 
-	    if (str_line[0] != '\0' && !parse_num(str_line, line))
-		retval = FALSE;
+    if (comma == str)
+	return TRUE;
 
-	    free(str_line);
-	} else if (!parse_num(str, line))
-	    retval = FALSE;
-    }
+    firstpart = mallocstrcpy(NULL, str);
+    firstpart[comma - str] = '\0';
+
+    retval = parse_num(firstpart, line);
+    free(firstpart);
 
     return retval;
 }
@@ -292,12 +323,11 @@ bool is_separate_word(size_t position, size_t length, const char *buf)
     parse_mbchar(buf + move_mbleft(buf, position), before, NULL);
     parse_mbchar(buf + word_end, after, NULL);
 
-    /* If we're at the beginning of the line or the character before the
-     * word isn't a non-punctuation "word" character, and if we're at
-     * the end of the line or the character after the word isn't a
-     * non-punctuation "word" character, we have a whole word. */
-    retval = (position == 0 || !is_word_mbchar(before, FALSE)) &&
-		(word_end == strlen(buf) || !is_word_mbchar(after, FALSE));
+    /* If the word starts at the beginning of the line OR the character before
+     * the word isn't a letter, and if the word ends at the end of the line OR
+     * the character after the word isn't a letter, we have a whole word. */
+    retval = (position == 0 || !is_alpha_mbchar(before)) &&
+		(word_end == strlen(buf) || !is_alpha_mbchar(after));
 
     free(before);
     free(after);
@@ -324,10 +354,9 @@ const char *strstrwrapper(const char *haystack, const char *needle,
 
 #ifdef HAVE_REGEX_H
     if (ISSET(USE_REGEXP)) {
-#ifndef NANO_TINY
 	if (ISSET(BACKWARDS_SEARCH)) {
-	    if (regexec(&search_regexp, haystack, 1, regmatches,
-		0) == 0 && haystack + regmatches[0].rm_so <= start) {
+	    if (regexec(&search_regexp, haystack, 1, regmatches, 0) == 0 &&
+			haystack + regmatches[0].rm_so <= start) {
 		const char *retval = haystack + regmatches[0].rm_so;
 
 		/* Search forward until there are no more matches. */
@@ -341,10 +370,8 @@ const char *strstrwrapper(const char *haystack, const char *needle,
 		regexec(&search_regexp, retval, 10, regmatches, 0);
 		return retval;
 	    }
-	} else
-#endif /* !NANO_TINY */
-	if (regexec(&search_regexp, start, 10, regmatches,
-		(start > haystack) ? REG_NOTBOL : 0) == 0) {
+	} else if (regexec(&search_regexp, start, 10, regmatches,
+			(start > haystack) ? REG_NOTBOL : 0) == 0) {
 	    const char *retval = start + regmatches[0].rm_so;
 
 	    regexec(&search_regexp, retval, 10, regmatches, 0);
@@ -353,20 +380,14 @@ const char *strstrwrapper(const char *haystack, const char *needle,
 	return NULL;
     }
 #endif /* HAVE_REGEX_H */
-#if !defined(NANO_TINY) || !defined(DISABLE_SPELLER)
     if (ISSET(CASE_SENSITIVE)) {
-#ifndef NANO_TINY
 	if (ISSET(BACKWARDS_SEARCH))
 	    return revstrstr(haystack, needle, start);
 	else
-#endif
 	    return strstr(start, needle);
-    }
-#endif /* !DISABLE_SPELLER || !NANO_TINY */
-#ifndef NANO_TINY
-    else if (ISSET(BACKWARDS_SEARCH))
+    } else if (ISSET(BACKWARDS_SEARCH))
 	return mbrevstrcasestr(haystack, needle, start);
-#endif
+
     return mbstrcasestr(start, needle);
 }
 
@@ -406,8 +427,8 @@ void *nrealloc(void *ptr, size_t howmuch)
     return r;
 }
 
-/* Copy the first n characters of one malloc()ed string to another
- * pointer.  Should be used as: "dest = mallocstrncpy(dest, src, n);". */
+/* Allocate and copy the first n characters of the given src string, after
+ * freeing the destination.  Usage: "dest = mallocstrncpy(dest, src, n);". */
 char *mallocstrncpy(char *dest, const char *src, size_t n)
 {
     if (src == NULL)
@@ -422,17 +443,15 @@ char *mallocstrncpy(char *dest, const char *src, size_t n)
     return dest;
 }
 
-/* Copy one malloc()ed string to another pointer.  Should be used as:
+/* Free the dest string and return a malloc'ed copy of src.  Should be used as:
  * "dest = mallocstrcpy(dest, src);". */
 char *mallocstrcpy(char *dest, const char *src)
 {
     return mallocstrncpy(dest, src, (src == NULL) ? 1 : strlen(src) + 1);
 }
 
-/* Free the malloc()ed string at dest and return the malloc()ed string
- * at src.  Should be used as: "answer = mallocstrassn(answer,
- * real_dir_from_tilde(answer));". */
-char *mallocstrassn(char *dest, char *src)
+/* Free the string at dest and return the string at src. */
+char *free_and_assign(char *dest, char *src)
 {
     free(dest);
     return src;
@@ -444,12 +463,12 @@ char *mallocstrassn(char *dest, char *src)
  * get_page_start(column) < COLS). */
 size_t get_page_start(size_t column)
 {
-    if (column == 0 || column < COLS - 1)
+    if (column == 0 || column < editwincols - 1)
 	return 0;
-    else if (COLS > 8)
-	return column - 7 - (column - 7) % (COLS - 8);
+    else if (editwincols > 8)
+	return column - 7 - (column - 7) % (editwincols - 8);
     else
-	return column - (COLS - 2);
+	return column - (editwincols - 2);
 }
 
 /* Return the placewewant associated with current_x, i.e. the zero-based
