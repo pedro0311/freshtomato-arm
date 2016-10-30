@@ -2278,7 +2278,8 @@ openvpn_plugin_auth_nvram: nvram$(BCMEX)
 #shibby
 nano/stamp-h1: libncurses
 	cd nano && CC=$(CC) STRIP=$(STRIP) \
-		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
+		autoreconf && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
 		ac_cv_lib_ncursesw_get_wch=no \
