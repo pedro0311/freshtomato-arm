@@ -88,7 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = src/plugins/example-ldns-opendns-set-client-ip
+subdir = src/plugins/vendor-specific/example-ldns-opendns-set-client-ip
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/argz.m4 \
 	$(top_srcdir)/m4/ax_check_compile_flag.m4 \
@@ -296,7 +296,6 @@ SAFECODE_HOME = @SAFECODE_HOME@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SIXJACK = @SIXJACK@
 STRIP = @STRIP@
 SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
 SYSTEMD_DAEMON_CFLAGS = @SYSTEMD_DAEMON_CFLAGS@
@@ -359,6 +358,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+EXTRA_DIST = \
+	CONFIGURATION.txt
+
 pkglib_LTLIBRARIES = \
 	libdcplugin_example_ldns_opendns_set_client_ip.la
 
@@ -376,7 +378,7 @@ libdcplugin_example_ldns_opendns_set_client_ip_la_LDFLAGS = \
 
 libdcplugin_example_ldns_opendns_set_client_ip_la_CPPFLAGS = \
 	$(LTDLINCL) \
-	-I../../include
+	-I../../../include
 
 all: all-am
 
@@ -391,9 +393,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/plugins/example-ldns-opendns-set-client-ip/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/plugins/vendor-specific/example-ldns-opendns-set-client-ip/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu src/plugins/example-ldns-opendns-set-client-ip/Makefile
+	  $(AUTOMAKE) --gnu src/plugins/vendor-specific/example-ldns-opendns-set-client-ip/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
