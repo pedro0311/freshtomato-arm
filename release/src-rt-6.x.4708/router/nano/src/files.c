@@ -179,8 +179,8 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
     struct stat fileinfo;
     char *lockdata = charalloc(1024);
     char myhostname[32];
-    ssize_t lockdatalen = 1024;
-    ssize_t wroteamt;
+    size_t lockdatalen = 1024;
+    size_t wroteamt;
 
     mypid = getpid();
     myuid = geteuid();
@@ -320,8 +320,8 @@ int do_lockfile(const char *filename)
     fprintf(stderr, "lock file name is %s\n", lockfilename);
 #endif
     if (stat(lockfilename, &fileinfo) != -1) {
-	ssize_t readtot = 0;
-	ssize_t readamt = 0;
+	size_t readtot = 0;
+	size_t readamt = 0;
 	char *lockbuf, *question, *pidstring, *postedname, *promptstr;
 	int room, response;
 
@@ -422,12 +422,8 @@ void stat_with_alloc(const char *filename, struct stat **pstat)
  * or into a new buffer when MULTIBUFFER is set or there is no buffer yet. */
 bool open_buffer(const char *filename, bool undoable)
 {
-    bool new_buffer = (openfile == NULL
-#ifndef DISABLE_MULTIBUFFER
-			|| ISSET(MULTIBUFFER)
-#endif
-	);
-	/* Whether we load into this buffer or a new one. */
+    bool new_buffer = (openfile == NULL || ISSET(MULTIBUFFER));
+	/* Whether we load into the current buffer or a new one. */
     char *realname;
 	/* The filename after tilde expansion. */
     FILE *f;
@@ -912,7 +908,7 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable, bool checkw
     openfile->placewewant = xplustabs();
 
     if (!writable)
-	statusline(ALERT, "File '%s' is unwritable", filename);
+	statusline(ALERT, _("File '%s' is unwritable"), filename);
 #ifndef NANO_TINY
     else if (format == 3) {
 	/* TRANSLATORS: Keep the next four messages at most 78 characters. */
@@ -947,13 +943,10 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable, bool checkw
 #endif
 }
 
-/* Open the file (and decide if it exists).  If newfie is TRUE, display
- * "New File" if the file is missing.  Otherwise, say "[filename] not
- * found".
- *
+/* Open the file with the given name.  If the file does not exist, display
+ * "New File" if newfie is TRUE, and say "File not found" otherwise.
  * Return -2 if we say "New File", -1 if the file isn't opened, and the
- * fd opened otherwise.  The file might still have an error while reading
- * with a 0 return value.  *f is set to the opened file. */
+ * obtained fd otherwise.  *f is set to the opened file. */
 int open_file(const char *filename, bool newfie, bool quiet, FILE **f)
 {
     struct stat fileinfo, fileinfo2;
@@ -972,39 +965,35 @@ int open_file(const char *filename, bool newfie, bool quiet, FILE **f)
 	full_filename = mallocstrcpy(full_filename, filename);
 
     if (stat(full_filename, &fileinfo) == -1) {
-	/* All cases below return. */
-	free(full_filename);
-
-	/* Well, maybe we can open the file even if the OS says it's
-	 * not there. */
-	if ((fd = open(filename, O_RDONLY)) != -1) {
-	    if (!quiet)
-		statusbar(_("Reading File"));
-	    return fd;
-	}
-
 	if (newfie) {
 	    if (!quiet)
 		statusbar(_("New File"));
+	    free(full_filename);
 	    return -2;
 	}
-	statusline(ALERT, _("File \"%s\" not found"), filename);
-	return -1;
-    } else if (S_ISDIR(fileinfo.st_mode) || S_ISCHR(fileinfo.st_mode) ||
-		S_ISBLK(fileinfo.st_mode)) {
-	free(full_filename);
 
-	/* Don't open directories, character files, or block files. */
-	statusline(ALERT, S_ISDIR(fileinfo.st_mode) ?
-		_("\"%s\" is a directory") :
-		_("\"%s\" is a device file"), filename);
-	return -1;
-    } else if ((fd = open(full_filename, O_RDONLY)) == -1) {
+	statusline(ALERT, _("File \"%s\" not found"), filename);
 	free(full_filename);
-	statusline(ALERT, _("Error reading %s: %s"), filename, strerror(errno));
 	return -1;
-    } else {
-	/* The file is A-OK.  Open it. */
+    }
+
+    /* Don't open directories, character files, or block files. */
+    if (S_ISDIR(fileinfo.st_mode) || S_ISCHR(fileinfo.st_mode) ||
+				S_ISBLK(fileinfo.st_mode)) {
+	statusline(ALERT, S_ISDIR(fileinfo.st_mode) ?
+			_("\"%s\" is a directory") :
+			_("\"%s\" is a device file"), filename);
+	free(full_filename);
+	return -1;
+    }
+
+    /* Try opening the file. */
+    fd = open(full_filename, O_RDONLY);
+
+    if (fd == -1)
+	statusline(ALERT, _("Error reading %s: %s"), filename, strerror(errno));
+    else {
+	/* The file is A-OK.  Associate a stream with it. */
 	*f = fdopen(fd, "rb");
 
 	if (*f == NULL) {
@@ -2232,6 +2221,7 @@ int do_writeout(bool exiting)
 	 * it allows reading from or writing to files not specified on
 	 * the command line. */
 	if (openfile->mark_set && !exiting && !ISSET(RESTRICTED))
+	    /* TRANSLATORS: The next six strings are prompts. */
 	    msg = (method == PREPEND) ? _("Prepend Selection to File") :
 			(method == APPEND) ? _("Append Selection to File") :
 			_("Write Selection to File");
@@ -2245,8 +2235,7 @@ int do_writeout(bool exiting)
 
 	/* If we're using restricted mode, and the filename isn't blank,
 	 * disable tab completion. */
-	i = do_prompt(!ISSET(RESTRICTED) ||
-		openfile->filename[0] == '\0',
+	i = do_prompt(!ISSET(RESTRICTED) || openfile->filename[0] == '\0',
 #ifndef DISABLE_TABCOMP
 		TRUE,
 #endif
@@ -2371,14 +2360,15 @@ int do_writeout(bool exiting)
 		free(full_answer);
 
 		if (do_warning) {
-		    /* If we're using restricted mode, we aren't allowed
-		     * to overwrite an existing file with the current
-		     * file.  We also aren't allowed to change the name
-		     * of the current file if it has one, because that
-		     * would allow reading from or writing to files not
-		     * specified on the command line. */
-		    if (ISSET(RESTRICTED))
+		    /* When in restricted mode, we aren't allowed to overwrite
+		     * an existing file with the current buffer, nor to change
+		     * the name of the current file if it already has one. */
+		    if (ISSET(RESTRICTED)) {
+			/* TRANSLATORS: Restricted mode forbids overwriting. */
+			warn_and_shortly_pause(_("File exists -- "
+					"cannot overwrite"));
 			continue;
+		    }
 
 		    if (!maychange) {
 #ifndef NANO_TINY
@@ -3005,10 +2995,8 @@ void load_history(void)
 	    ssize_t read;
 
 	    while ((read = getline(&line, &buf_len, hist)) >= 0) {
-		if (read > 0 && line[read - 1] == '\n') {
-		    read--;
-		    line[read] = '\0';
-		}
+		if (read > 0 && line[read - 1] == '\n')
+		    line[--read] = '\0';
 		if (read > 0) {
 		    unsunder(line, read);
 		    update_history(history, line);

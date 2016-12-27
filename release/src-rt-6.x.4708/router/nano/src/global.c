@@ -59,6 +59,9 @@ int last_line_y;
 message_type lastmessage = HUSH;
 	/* Messages of type HUSH should not overwrite type MILD nor ALERT. */
 
+filestruct *pletion_line = NULL;
+	/* The line where the last completion was found, if any. */
+
 int controlleft, controlright, controlup, controldown;
 #ifndef NANO_TINY
 int shiftcontrolleft, shiftcontrolright, shiftcontrolup, shiftcontroldown;
@@ -531,9 +534,6 @@ void shortcut_init(void)
 	N_("Copy the current line and store it in the cutbuffer");
     const char *nano_indent_msg = N_("Indent the current line");
     const char *nano_unindent_msg = N_("Unindent the current line");
-#ifdef ENABLE_COMMENT
-    const char *nano_comment_msg = N_("Comment/uncomment the current line or marked lines");
-#endif
     const char *nano_undo_msg = N_("Undo the last operation");
     const char *nano_redo_msg = N_("Redo the last undone operation");
 #endif
@@ -591,6 +591,13 @@ void shortcut_init(void)
 	N_("Refresh (redraw) the current screen");
     const char *nano_suspend_msg =
 	N_("Suspend the editor (if suspension is enabled)");
+#ifdef ENABLE_WORDCOMPLETION
+    const char *nano_completion_msg = N_("Try and complete the current word");
+#endif
+#ifdef ENABLE_COMMENT
+    const char *nano_comment_msg =
+	N_("Comment/uncomment the current line or marked lines");
+#endif
 #ifndef NANO_TINY
     const char *nano_savefile_msg = N_("Save file without prompting");
     const char *nano_findprev_msg = N_("Search next occurrence backward");
@@ -925,6 +932,10 @@ void shortcut_init(void)
     add_to_funcs(do_suspend_void, MMAIN,
 	N_("Suspend"), IFSCHELP(nano_suspend_msg), BLANKAFTER, VIEW);
 
+#ifdef ENABLE_WORDCOMPLETION
+    add_to_funcs(complete_a_word, MMAIN,
+	N_("Complete"), IFSCHELP(nano_completion_msg), TOGETHER, NOVIEW);
+#endif
 #ifdef ENABLE_COMMENT
     add_to_funcs(do_comment, MMAIN,
 	N_("Comment Lines"), IFSCHELP(nano_comment_msg), BLANKAFTER, NOVIEW);
@@ -1095,6 +1106,9 @@ void shortcut_init(void)
     add_to_sclist(MMAIN, "M-{", 0, do_unindent, 0);
     add_to_sclist(MMAIN, "M-U", 0, do_undo, 0);
     add_to_sclist(MMAIN, "M-E", 0, do_redo, 0);
+#endif
+#ifdef ENABLE_WORDCOMPLETION
+    add_to_sclist(MMAIN, "^]", 0, complete_a_word, 0);
 #endif
 #ifdef ENABLE_COMMENT
     add_to_sclist(MMAIN, "M-3", 0, do_comment, 0);
@@ -1442,6 +1456,10 @@ sc *strtosc(const char *input)
 #ifdef ENABLE_COMMENT
     else if (!strcasecmp(input, "comment"))
 	s->scfunc = do_comment;
+#endif
+#ifdef ENABLE_WORDCOMPLETION
+    else if (!strcasecmp(input, "complete"))
+	s->scfunc = complete_a_word;
 #endif
 #ifndef NANO_TINY
     else if (!strcasecmp(input, "indent"))

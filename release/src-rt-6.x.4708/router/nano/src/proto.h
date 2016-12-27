@@ -47,6 +47,8 @@ extern int last_line_y;
 
 extern message_type lastmessage;
 
+extern filestruct *pletion_line;
+
 extern int controlleft;
 extern int controlright;
 extern int controlup;
@@ -456,7 +458,6 @@ void print_opt_full(const char *shortflag
 	, const char *desc);
 void usage(void);
 void version(void);
-void no_current_file_name_warning(void);
 void do_exit(void);
 void close_and_go(void);
 void signal_init(void);
@@ -481,9 +482,7 @@ int do_mouse(void);
 #endif
 void do_output(char *output, size_t output_len, bool allow_cntrls);
 
-/* All functions in prompt.c. */
-int do_statusbar_input(bool *ran_func, bool *finished,
-	void (*refresh_func)(void));
+/* Most functions in prompt.c. */
 #ifndef DISABLE_MOUSE
 int do_statusbar_mouse(void);
 #endif
@@ -522,22 +521,12 @@ int do_yesno_prompt(bool all, const char *msg);
 char *parse_next_word(char *ptr);
 #endif
 #ifndef DISABLE_NANORC
-void rcfile_error(const char *msg, ...);
-char *parse_argument(char *ptr);
 #ifndef DISABLE_COLOR
-char *parse_next_regex(char *ptr);
-void parse_syntax(char *ptr);
-void parse_includes(char *ptr);
-short color_to_short(const char *colorname, bool *bright);
 bool parse_color_names(char *combostr, short *fg, short *bg, bool *bright);
 void grab_and_store(const char *kind, char *ptr, regexlisttype **storage);
 #endif
-void parse_rcfile(FILE *rcstream
-#ifndef DISABLE_COLOR
-	, bool syntax_only
-#endif
-	);
-void do_rcfile(void);
+void parse_rcfile(FILE *rcstream, bool syntax_only);
+void do_rcfiles(void);
 #endif /* !DISABLE_NANORC */
 
 /* All functions in search.c. */
@@ -658,6 +647,7 @@ void do_formatter(void);
 void do_wordlinechar_count(void);
 #endif
 void do_verbatim_input(void);
+void complete_a_word(void);
 
 /* All functions in utils.c. */
 void get_homedir(void);
@@ -749,6 +739,7 @@ char *display_string(const char *buf, size_t start_col, size_t span,
 void titlebar(const char *path);
 extern void set_modified(void);
 void statusbar(const char *msg);
+void warn_and_shortly_pause(const char *msg);
 void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void onekey(const char *keystroke, const char *desc, int length);

@@ -103,7 +103,7 @@ void search_replace_abort(void)
 {
 #ifndef NANO_TINY
     if (openfile->mark_set)
-	edit_refresh();
+	refresh_needed = TRUE;
 #endif
 #ifdef HAVE_REGEX_H
     regexp_cleanup();
@@ -734,8 +734,8 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 
 	    if (!replaceall) {
 #ifndef DISABLE_COLOR
-		/* If color syntaxes are available and turned on, we
-		 * need to call edit_refresh(). */
+		/* When doing syntax coloring, the replacement might require
+		 * a change of colors, so refresh the whole edit window. */
 		if (openfile->colorstrings != NULL && !ISSET(NO_COLOR_SYNTAX))
 		    edit_refresh();
 		else
@@ -774,7 +774,6 @@ void do_replace(void)
 
     if (ISSET(VIEW_MODE)) {
 	print_view_warning();
-	search_replace_abort();
 	return;
     }
 
@@ -826,8 +825,7 @@ void do_replace(void)
     openfile->edittop = edittop_save;
     openfile->current = begin;
     openfile->current_x = begin_x;
-
-    edit_refresh();
+    refresh_needed = TRUE;
 
     if (numreplaced >= 0)
 	statusline(HUSH, P_("Replaced %lu occurrence",

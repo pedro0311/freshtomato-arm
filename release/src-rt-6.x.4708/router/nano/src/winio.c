@@ -391,7 +391,8 @@ int parse_kbinput(WINDOW *win)
 	    break;
 	case 2:
 	    if (double_esc) {
-		/* An "ESC ESC [ X" sequence from Option+arrow. */
+		/* An "ESC ESC [ X" sequence from Option+arrow, or
+		 * an "ESC ESC [ x" sequence from Shift+Alt+arrow. */
 		switch (keycode) {
 		    case 'A':
 			retval = KEY_HOME;
@@ -400,11 +401,25 @@ int parse_kbinput(WINDOW *win)
 			retval = KEY_END;
 			break;
 		    case 'C':
-			retval = controlright;
+			retval = CONTROL_RIGHT;
 			break;
 		    case 'D':
-			retval = controlleft;
+			retval = CONTROL_LEFT;
 			break;
+#ifndef NANO_TINY
+		    case 'a':
+			retval = shiftaltup;
+			break;
+		    case 'b':
+			retval = shiftaltdown;
+			break;
+		    case 'c':
+			retval = shiftaltright;
+			break;
+		    case 'd':
+			retval = shiftaltleft;
+			break;
+#endif
 		}
 		double_esc = FALSE;
 		escapes = 0;
@@ -464,8 +479,9 @@ int parse_kbinput(WINDOW *win)
 		    escapes = 0;
 		}
 	    } else if (keycode == '[' && key_buffer_len > 0 &&
-			'A' <= *key_buffer && *key_buffer <= 'D') {
-		/* This is an iTerm2 sequence: ^[ ^[ [ X. */
+			(('A' <= *key_buffer && *key_buffer <= 'D') ||
+			('a' <= *key_buffer && *key_buffer <= 'd'))) {
+		/* An iTerm2/Eterm/rxvt sequence: ^[ ^[ [ X. */
 		double_esc = TRUE;
 	    } else {
 		/* Two escapes followed by a non-escape, and there are more
@@ -616,12 +632,18 @@ int parse_kbinput(WINDOW *win)
 	case KEY_C1:	/* End (1) on keypad with NumLock off. */
 	    return KEY_END;
 #ifndef NANO_TINY
-	case SHIFT_PAGEUP:		/* Fake key, from Shift+Alt+Up. */
+#ifdef KEY_SPREVIOUS
+	case KEY_SPREVIOUS:
+#endif
+	case SHIFT_PAGEUP:	/* Fake key, from Shift+Alt+Up. */
 	    shift_held = TRUE;
 #endif
 	case KEY_A3:	/* PageUp (9) on keypad with NumLock off. */
 	    return KEY_PPAGE;
 #ifndef NANO_TINY
+#ifdef KEY_SNEXT
+	case KEY_SNEXT:
+#endif
 	case SHIFT_PAGEDOWN:	/* Fake key, from Shift+Alt+Down. */
 	    shift_held = TRUE;
 #endif
@@ -1001,22 +1023,40 @@ int convert_sequence(const int *seq, size_t seq_len)
 			break;
 		    case '3': /* Esc [ 3 ~ == Delete on VT220/VT320/
 			       * Linux console/xterm/Terminal. */
-			return KEY_DC;
+			if (seq_len > 2 && seq[2] == '~')
+			    return KEY_DC;
+			break;
 		    case '4': /* Esc [ 4 ~ == End on VT220/VT320/Linux
 			       * console/xterm. */
-			return KEY_END;
+			if (seq_len > 2 && seq[2] == '~')
+			    return KEY_END;
+			break;
 		    case '5': /* Esc [ 5 ~ == PageUp on VT220/VT320/
 			       * Linux console/xterm/Terminal;
 			       * Esc [ 5 ^ == PageUp on Eterm. */
-			return KEY_PPAGE;
+			if (seq_len > 2 && (seq[2] == '~' || seq[2] == '^'))
+			    return KEY_PPAGE;
+			break;
 		    case '6': /* Esc [ 6 ~ == PageDown on VT220/VT320/
 			       * Linux console/xterm/Terminal;
 			       * Esc [ 6 ^ == PageDown on Eterm. */
-			return KEY_NPAGE;
-		    case '7': /* Esc [ 7 ~ == Home on rxvt. */
-			return KEY_HOME;
-		    case '8': /* Esc [ 8 ~ == End on rxvt. */
-			return KEY_END;
+			if (seq_len > 2 && (seq[2] == '~' || seq[2] == '^'))
+			    return KEY_NPAGE;
+			break;
+		    case '7': /* Esc [ 7 ~ == Home on Eterm/rxvt,
+			       * Esc [ 7 $ == Shift-Home on Eterm/rxvt. */
+			if (seq_len > 2 && seq[2] == '~')
+			    return KEY_HOME;
+			else if (seq_len > 2 && seq[2] == '$')
+			    return SHIFT_HOME;
+			break;
+		    case '8': /* Esc [ 8 ~ == End on Eterm/rxvt.
+			       * Esc [ 8 $ == Shift-End on Eterm/rxvt. */
+			if (seq_len > 2 && seq[2] == '~')
+			    return KEY_END;
+			else if (seq_len > 2 && seq[2] == '$')
+			    return SHIFT_END;
+			break;
 		    case '9': /* Esc [ 9 == Delete on Mach console. */
 			return KEY_DC;
 		    case '@': /* Esc [ @ == Insert on Mach console. */
@@ -1432,10 +1472,10 @@ int *get_verbatim_kbinput(WINDOW *win, size_t *kbinput_len)
     return retval;
 }
 
-/* Read in one control character (or an iTerm double Escape), or convert a
- * series of six digits into a Unicode codepoint.  Return in count either 1
- * (for a control character or the first byte of a multibyte sequence), or 2
- * (for an iTerm double Escape). */
+/* Read in one control character (or an iTerm/Eterm/rxvt double Escape),
+ * or convert a series of six digits into a Unicode codepoint.  Return
+ * in count either 1 (for a control character or the first byte of a
+ * multibyte sequence), or 2 (for an iTerm/Eterm/rxvt double Escape). */
 int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 {
     int *kbinput;
@@ -1497,7 +1537,7 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 
     *count = 1;
 
-    /* If this is an iTerm double escape, take both Escapes. */
+    /* If this is an iTerm/Eterm/rxvt double escape, take both Escapes. */
     if (key_buffer_len > 3 && *key_buffer == ESC_CODE &&
 		key_buffer[1] == ESC_CODE && key_buffer[2] == '[')
 	*count = 2;
@@ -2036,6 +2076,15 @@ void titlebar(const char *path)
 void statusbar(const char *msg)
 {
     statusline(HUSH, msg);
+}
+
+/* Warn the user on the statusbar and pause for a moment, so that the
+ * message can be noticed and read. */
+void warn_and_shortly_pause(const char *msg)
+{
+    statusbar(msg);
+    beep();
+    napms(1800);
 }
 
 /* Display a message on the statusbar, and set suppress_cursorpos to
@@ -2755,31 +2804,32 @@ bool need_horizontal_scroll(const size_t old_column, const size_t new_column)
 	return (get_page_start(old_column) != get_page_start(new_column));
 }
 
-/* When edittop changes, try and figure out how many lines
- * we really have to work with (i.e. set maxrows). */
+/* When edittop changes, try and figure out how many lines we really
+ * have to work with, accounting for softwrap mode. */
 void compute_maxrows(void)
 {
-    int n;
-    filestruct *foo = openfile->edittop;
+#ifndef NANO_TINY
+    if (ISSET(SOFTWRAP)) {
+	int screenrow;
+	filestruct *line = openfile->edittop;
 
-    if (!ISSET(SOFTWRAP)) {
-	maxrows = editwinrows;
-	return;
-    }
+	maxrows = 0;
 
-    maxrows = 0;
-    for (n = 0; n < editwinrows && foo; n++) {
-	maxrows++;
-	n += strlenpt(foo->data) / editwincols;
-	foo = foo->next;
-    }
+	for (screenrow = 0; screenrow < editwinrows && line != NULL; screenrow++) {
+	    screenrow += strlenpt(line->data) / editwincols;
+	    line = line->next;
+	    maxrows++;
+	}
 
-    if (n < editwinrows)
-	maxrows += editwinrows - n;
+	if (screenrow < editwinrows)
+	    maxrows += editwinrows - screenrow;
 
 #ifdef DEBUG
-    fprintf(stderr, "compute_maxrows(): maxrows = %d\n", maxrows);
+	fprintf(stderr, "recomputed: maxrows = %d\n", maxrows);
 #endif
+    } else
+#endif /* !NANO_TINY */
+	maxrows = editwinrows;
 }
 
 /* Scroll the edit window in the given direction and the given number
@@ -2944,7 +2994,7 @@ void edit_refresh(void)
     if (openfile->current->lineno < openfile->edittop->lineno ||
 		openfile->current->lineno >= openfile->edittop->lineno + maxrows) {
 #ifdef DEBUG
-	fprintf(stderr, "edit_refresh(): line = %ld, edittop %ld + maxrows %d\n",
+	fprintf(stderr, "edit-refresh: line = %ld, edittop = %ld and maxrows = %d\n",
 		(long)openfile->current->lineno, (long)openfile->edittop->lineno, maxrows);
 #endif
 	adjust_viewport((focusing || !ISSET(SMOOTH_SCROLL)) ? CENTERING : STATIONARY);
@@ -2953,7 +3003,7 @@ void edit_refresh(void)
     foo = openfile->edittop;
 
 #ifdef DEBUG
-    fprintf(stderr, "edit_refresh(): edittop->lineno = %ld\n", (long)openfile->edittop->lineno);
+    fprintf(stderr, "edit-refresh: now edittop = %ld\n", (long)openfile->edittop->lineno);
 #endif
 
     for (nlines = 0; nlines < editwinrows && foo != NULL; nlines++) {
@@ -2966,7 +3016,6 @@ void edit_refresh(void)
 	blank_line(edit, nlines, 0, COLS);
 
     reset_cursor();
-    curs_set(1);
     wnoutrefresh(edit);
 
     refresh_needed = FALSE;
@@ -3145,7 +3194,6 @@ void spotlight(bool active, const char *word)
 	room--;
 
     reset_cursor();
-    wnoutrefresh(edit);
 
     if (active)
 	wattron(edit, hilite_attribute);
@@ -3161,6 +3209,8 @@ void spotlight(bool active, const char *word)
 
     if (active)
 	wattroff(edit, hilite_attribute);
+
+    wnoutrefresh(edit);
 }
 
 #ifndef DISABLE_EXTRA

@@ -1064,7 +1064,8 @@ greater than 0.  The default value is <tt>8</tt>.
 <dt><code>set titlecolor <var>fgcolor</var>,<var>bgcolor</var></code></dt>
 <dd><p>Specify the color combination to use for the titlebar.
 Valid color names for foreground and background are:
-white, black, red, blue, green, yellow, magenta, and cyan.
+white, black, blue, green, red, cyan, yellow, and magenta.
+The name of the foreground color may be prefixed with &rsquo;bright&rsquo;.
 And either <var>fgcolor</var> or <var>,bgcolor</var> may be left out.
 </p>
 </dd>
@@ -1367,6 +1368,11 @@ syntax highlighting defines one).
 <dt><code>comment</code></dt>
 <dd><p>Comments or uncomments the current line or marked lines, using the comment
 style specified in the active syntax.
+</p>
+</dd>
+<dt><code>complete</code></dt>
+<dd><p>Completes the fragment before the cursor to a full word found elsewhere
+in the current buffer.
 </p>
 </dd>
 <dt><code>left</code></dt>
@@ -1894,20 +1900,24 @@ command-line option, which allows specifying an alternate spell checker.
 </p>
 </dd>
 <dt><code>--disable-tabcomp</code></dt>
-<dd><p>Disable the tab completion code when reading or writing files.
+<dd><p>Disable tab completion (when nano asks for a filename or a search string).
+</p>
+</dd>
+<dt><code>--disable-wordcomp</code></dt>
+<dd><p>Disable word completion.
 </p>
 </dd>
 <dt><code>--disable-wrapping</code></dt>
-<dd><p>Disable hard-wrapping of overlong lines.  This also eliminates the <code>-w</code>
-command-line option, which enables long-line wrapping.
+<dd><p>Disable all hard-wrapping of overlong lines.  This also eliminates the
+<code>-w</code> command-line option, which switches long-line wrapping off.
 </p>
 </dd>
 <dt><code>--enable-tiny</code></dt>
-<dd><p>This option disables all the above.  It also disables some of the larger
-internals of the editor, like the marking code and the cut-to-end-of-line
-code.  It also disables the function toggles.  By using the enabling
+<dd><p>This option implies all of the above.  It also disables some other
+internals of the editor, like the marking code, the cut-to-end-of-line
+code, and the function toggles.  By using the enabling
 counterpart of the above options together with <code>--enable-tiny</code>,
-specific features can be switched back on.
+specific features can be switched back on &mdash; but a few cannot.
 </p>
 </dd>
 <dt><code>--enable-debug</code></dt>

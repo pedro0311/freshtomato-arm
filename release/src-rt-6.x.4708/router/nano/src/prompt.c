@@ -34,10 +34,8 @@ static size_t statusbar_x = HIGHEST_POSITIVE;
 /* Read in a keystroke, interpret it if it is a shortcut or toggle, and
  * return it.  Set ran_func to TRUE if we ran a function associated with
  * a shortcut key, and set finished to TRUE if we're done after running
- * or trying to run a function associated with a shortcut key.
- * refresh_func is the function we will call to refresh the edit window. */
-int do_statusbar_input(bool *ran_func, bool *finished,
-	void (*refresh_func)(void))
+ * or trying to run a function associated with a shortcut key. */
+int do_statusbar_input(bool *ran_func, bool *finished)
 {
     int input;
 	/* The character we read in. */
@@ -117,10 +115,7 @@ int do_statusbar_input(bool *ran_func, bool *finished,
     if (have_shortcut) {
 	if (s->scfunc == do_tab || s->scfunc == do_enter)
 	    ;
-	else if (s->scfunc == total_refresh) {
-	    total_redraw();
-	    refresh_func();
-	} else if (s->scfunc == do_left)
+	else if (s->scfunc == do_left)
 	    do_statusbar_left();
 	else if (s->scfunc == do_right)
 	    do_statusbar_right();
@@ -511,7 +506,7 @@ functionptrtype acquire_an_answer(int *actual, bool allow_tabs,
 	/* Ensure the cursor is shown when waiting for input. */
 	curs_set(1);
 
-	kbinput = do_statusbar_input(&ran_func, &finished, refresh_func);
+	kbinput = do_statusbar_input(&ran_func, &finished);
 
 #ifndef NANO_TINY
 	/* If the window size changed, go reformat the prompt string. */
@@ -729,23 +724,16 @@ int do_prompt(bool allow_tabs,
 int do_yesno_prompt(bool all, const char *msg)
 {
     int response = -2, width = 16;
-    const char *yesstr;		/* String of Yes characters accepted. */
-    const char *nostr;		/* Same for No. */
-    const char *allstr;		/* And All, surprise! */
-    int oldmenu = currmenu;
-
-    assert(msg != NULL);
-
-    /* yesstr, nostr, and allstr are strings of any length.  Each string
-     * consists of all single-byte characters accepted as valid
-     * characters for that value.  The first value will be the one
-     * displayed in the shortcuts. */
     /* TRANSLATORS: For the next three strings, if possible, specify
      * the single-byte shortcuts for both your language and English.
-     * For example, in French: "OoYy" for "Oui". */
-    yesstr = _("Yy");
-    nostr = _("Nn");
-    allstr = _("Aa");
+     * For example, in French: "OoYy", for both "Oui" and "Yes". */
+    const char *yesstr = _("Yy");
+    const char *nostr = _("Nn");
+    const char *allstr = _("Aa");
+
+    /* The above three variables consist of all the single-byte characters
+     * that are accepted for the corresponding answer.  Of each variable,
+     * the first character is displayed in the help lines. */
 
     do {
 	int kbinput;
@@ -783,16 +771,17 @@ int do_yesno_prompt(bool all, const char *msg)
 	    onekey("^C", _("Cancel"), width);
 	}
 
+	/* Color the statusbar over its full width and display the question. */
 	wattron(bottomwin, interface_color_pair[TITLE_BAR]);
-
 	blank_statusbar();
 	mvwaddnstr(bottomwin, 0, 0, msg, actual_x(msg, COLS - 1));
-
 	wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
 
-	/* Refresh edit window and statusbar before getting input. */
-	wnoutrefresh(edit);
 	wnoutrefresh(bottomwin);
+
+	/* When not replacing, show the cursor. */
+	if (!all)
+	    curs_set(1);
 
 	currmenu = MYESNO;
 	kbinput = get_kbinput(bottomwin);
@@ -828,10 +817,7 @@ int do_yesno_prompt(bool all, const char *msg)
 	    }
 	}
 #endif /* !DISABLE_MOUSE */
-	else if (func == total_refresh) {
-	    total_redraw();
-	    continue;
-	} else {
+	else {
 	    /* Look for the kbinput in the Yes, No (and All) strings. */
 	    if (strchr(yesstr, kbinput) != NULL)
 		response = 1;
@@ -841,9 +827,6 @@ int do_yesno_prompt(bool all, const char *msg)
 		response = 2;
 	}
     } while (response == -2);
-
-    /* Restore the previously active menu. */
-    bottombars(oldmenu);
 
     return response;
 }
