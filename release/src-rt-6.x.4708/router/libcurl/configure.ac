@@ -141,7 +141,7 @@ AC_SUBST(VERSIONNUM)
 
 dnl Solaris pkgadd support definitions
 PKGADD_PKG="HAXXcurl"
-PKGADD_NAME="curl - a client that groks URLs"
+PKGADD_NAME="cURL - a client that groks URLs"
 PKGADD_VENDOR="curl.haxx.se"
 AC_SUBST(PKGADD_PKG)
 AC_SUBST(PKGADD_NAME)
@@ -157,7 +157,7 @@ curl_tls_srp_msg="no      (--enable-tls-srp)"
     curl_res_msg="default (--enable-ares / --enable-threaded-resolver)"
    curl_ipv6_msg="no      (--enable-ipv6)"
 curl_unix_sockets_msg="no      (--enable-unix-sockets)"
-    curl_idn_msg="no      (--with-{libidn2,winidn})"
+    curl_idn_msg="no      (--with-{libidn,winidn})"
  curl_manual_msg="no      (--enable-manual)"
 curl_libcurl_msg="enabled (--disable-libcurl-option)"
 curl_verbose_msg="enabled (--disable-verbose)"
@@ -356,8 +356,6 @@ case X-"$curl_cv_native_windows" in
     ;;
 esac
 CURL_CHECK_WIN32_LARGEFILE
-
-CURL_MAC_CFLAGS
 
 dnl ************************************************************
 dnl switch off particular protocols
@@ -893,30 +891,17 @@ else
     OPT_ZLIB=""
   fi
 
-  CURL_CHECK_PKGCONFIG(zlib)
-
-  if test "$PKGCONFIG" != "no" ; then
-    LIBS="`$PKGCONFIG --libs-only-l zlib` $LIBS"
-    LDFLAGS="`$PKGCONFIG --libs-only-L zlib` $LDFLAGS"
-    CPPFLAGS="`$PKGCONFIG --cflags-only-I zlib` $CPPFLAGS"
-    OPT_ZLIB=""
-    HAVE_LIBZ="1"
-  fi
-
   if test -z "$OPT_ZLIB" ; then
+    dnl check for the lib first without setting any new path, since many
+    dnl people have it in the default path
 
-    if test -z "$HAVE_LIBZ"; then
-
-      dnl Check for the lib without setting any new path, since many
-      dnl people have it in the default path
-
-      AC_CHECK_LIB(z, inflateEnd,
+    AC_CHECK_LIB(z, inflateEnd,
                    dnl libz found, set the variable
                    [HAVE_LIBZ="1"
                     LIBS="-lz $LIBS"],
                    dnl if no lib found, try /usr/local
                    [OPT_ZLIB="/usr/local"])
-    fi
+
   fi
 
   dnl Add a nonempty path to the compiler flags
@@ -1373,18 +1358,18 @@ fi
 
 OPT_DARWINSSL=no
 AC_ARG_WITH(darwinssl,dnl
-AC_HELP_STRING([--with-darwinssl],[enable Apple OS native SSL/TLS])
-AC_HELP_STRING([--without-darwinssl], [disable Apple OS native SSL/TLS]),
+AC_HELP_STRING([--with-darwinssl],[enable iOS/Mac OS X native SSL/TLS])
+AC_HELP_STRING([--without-darwinssl], [disable iOS/Mac OS X native SSL/TLS]),
   OPT_DARWINSSL=$withval)
 
-AC_MSG_CHECKING([whether to enable Apple OS native SSL/TLS])
+AC_MSG_CHECKING([whether to enable iOS/Mac OS X native SSL/TLS])
 if test "$curl_ssl_msg" = "$init_ssl_msg"; then
   if test "x$OPT_DARWINSSL" != "xno" &&
      test -d "/System/Library/Frameworks/Security.framework"; then
     AC_MSG_RESULT(yes)
-    AC_DEFINE(USE_DARWINSSL, 1, [to enable Apple OS native SSL/TLS support])
+    AC_DEFINE(USE_DARWINSSL, 1, [to enable iOS/Mac OS X native SSL/TLS support])
     AC_SUBST(USE_DARWINSSL, [1])
-    curl_ssl_msg="enabled (Apple OS-native)"
+    curl_ssl_msg="enabled (iOS/Mac OS X-native)"
     DARWINSSL_ENABLED=1
     LDFLAGS="$LDFLAGS -framework CoreFoundation -framework Security"
   else
@@ -1637,8 +1622,11 @@ if test "$curl_ssl_msg" = "$init_ssl_msg" && test X"$OPT_SSL" != Xno; then
     dnl SSL_get_shutdown (but this check won't actually detect it there
     dnl as it's a macro that needs the header files be included)
 
-    AC_CHECK_FUNCS( RAND_egd \
+    AC_CHECK_FUNCS( RAND_status \
+                    RAND_screen \
+                    RAND_egd \
                     ENGINE_cleanup \
+                    CRYPTO_cleanup_all_ex_data \
                     SSL_get_shutdown \
                     SSLv2_client_method )
 
@@ -2581,7 +2569,7 @@ if test X"$OPT_LIBSSH2" != Xno; then
     DIR_SSH2=${PREFIX_SSH2}/lib$libsuff
   fi
 
-  LDFLAGS="$LD_SSH2 $LDFLAGS"
+  LDFLAGS="$LDFLAGS $LD_SSH2"
   CPPFLAGS="$CPPFLAGS $CPP_SSH2"
   LIBS="$LIB_SSH2 $LIBS"
 
@@ -2828,15 +2816,15 @@ dnl **********************************************************************
 dnl Check for the presence of IDN libraries and headers
 dnl **********************************************************************
 
-AC_MSG_CHECKING([whether to build with libidn2])
+AC_MSG_CHECKING([whether to build with libidn])
 OPT_IDN="default"
 AC_ARG_WITH(libidn,
-AC_HELP_STRING([--with-libidn2=PATH],[Enable libidn2 usage])
-AC_HELP_STRING([--without-libidn2],[Disable libidn2 usage]),
+AC_HELP_STRING([--with-libidn=PATH],[Enable libidn usage])
+AC_HELP_STRING([--without-libidn],[Disable libidn usage]),
   [OPT_IDN=$withval])
 case "$OPT_IDN" in
   no)
-    dnl --without-libidn2 option used
+    dnl --without-libidn option used
     want_idn="no"
     AC_MSG_RESULT([no])
     ;;
@@ -2847,13 +2835,13 @@ case "$OPT_IDN" in
     AC_MSG_RESULT([(assumed) yes])
     ;;
   yes)
-    dnl --with-libidn2 option used without path
+    dnl --with-libidn option used without path
     want_idn="yes"
     want_idn_path="default"
     AC_MSG_RESULT([yes])
     ;;
   *)
-    dnl --with-libidn2 option used with path
+    dnl --with-libidn option used with path
     want_idn="yes"
     want_idn_path="$withval"
     AC_MSG_RESULT([yes ($withval)])
@@ -2870,33 +2858,33 @@ if test "$want_idn" = "yes"; then
   if test "$want_idn_path" != "default"; then
     dnl path has been specified
     IDN_PCDIR="$want_idn_path/lib$libsuff/pkgconfig"
-    CURL_CHECK_PKGCONFIG(libidn2, [$IDN_PCDIR])
+    CURL_CHECK_PKGCONFIG(libidn, [$IDN_PCDIR])
     if test "$PKGCONFIG" != "no"; then
       IDN_LIBS=`CURL_EXPORT_PCDIR([$IDN_PCDIR]) dnl
-        $PKGCONFIG --libs-only-l libidn2 2>/dev/null`
+        $PKGCONFIG --libs-only-l libidn 2>/dev/null`
       IDN_LDFLAGS=`CURL_EXPORT_PCDIR([$IDN_PCDIR]) dnl
-        $PKGCONFIG --libs-only-L libidn2 2>/dev/null`
+        $PKGCONFIG --libs-only-L libidn 2>/dev/null`
       IDN_CPPFLAGS=`CURL_EXPORT_PCDIR([$IDN_PCDIR]) dnl
-        $PKGCONFIG --cflags-only-I libidn2 2>/dev/null`
+        $PKGCONFIG --cflags-only-I libidn 2>/dev/null`
       IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/-L//'`
     else
       dnl pkg-config not available or provides no info
-      IDN_LIBS="-lidn2"
+      IDN_LIBS="-lidn"
       IDN_LDFLAGS="-L$want_idn_path/lib$libsuff"
       IDN_CPPFLAGS="-I$want_idn_path/include"
       IDN_DIR="$want_idn_path/lib$libsuff"
     fi
   else
     dnl path not specified
-    CURL_CHECK_PKGCONFIG(libidn2)
+    CURL_CHECK_PKGCONFIG(libidn)
     if test "$PKGCONFIG" != "no"; then
-      IDN_LIBS=`$PKGCONFIG --libs-only-l libidn2 2>/dev/null`
-      IDN_LDFLAGS=`$PKGCONFIG --libs-only-L libidn2 2>/dev/null`
-      IDN_CPPFLAGS=`$PKGCONFIG --cflags-only-I libidn2 2>/dev/null`
+      IDN_LIBS=`$PKGCONFIG --libs-only-l libidn 2>/dev/null`
+      IDN_LDFLAGS=`$PKGCONFIG --libs-only-L libidn 2>/dev/null`
+      IDN_CPPFLAGS=`$PKGCONFIG --cflags-only-I libidn 2>/dev/null`
       IDN_DIR=`echo $IDN_LDFLAGS | $SED -e 's/-L//'`
     else
       dnl pkg-config not available or provides no info
-      IDN_LIBS="-lidn2"
+      IDN_LIBS="-lidn"
     fi
   fi
   #
@@ -2916,9 +2904,9 @@ if test "$want_idn" = "yes"; then
   LDFLAGS="$IDN_LDFLAGS $LDFLAGS"
   LIBS="$IDN_LIBS $LIBS"
   #
-  AC_MSG_CHECKING([if idn2_lookup_ul can be linked])
+  AC_MSG_CHECKING([if idna_to_ascii_4i can be linked])
   AC_LINK_IFELSE([
-    AC_LANG_FUNC_LINK_TRY([idn2_lookup_ul])
+    AC_LANG_FUNC_LINK_TRY([idna_to_ascii_4i])
   ],[
     AC_MSG_RESULT([yes])
     tst_links_libidn="yes"
@@ -2926,19 +2914,37 @@ if test "$want_idn" = "yes"; then
     AC_MSG_RESULT([no])
     tst_links_libidn="no"
   ])
+  if test "$tst_links_libidn" = "no"; then
+    AC_MSG_CHECKING([if idna_to_ascii_lz can be linked])
+    AC_LINK_IFELSE([
+      AC_LANG_FUNC_LINK_TRY([idna_to_ascii_lz])
+    ],[
+      AC_MSG_RESULT([yes])
+      tst_links_libidn="yes"
+    ],[
+      AC_MSG_RESULT([no])
+      tst_links_libidn="no"
+    ])
+  fi
   #
-  AC_CHECK_HEADERS( idn2.h )
-
   if test "$tst_links_libidn" = "yes"; then
-    AC_DEFINE(HAVE_LIBIDN2, 1, [Define to 1 if you have the `idn2' library (-lidn2).])
+    AC_DEFINE(HAVE_LIBIDN, 1, [Define to 1 if you have the `idn' library (-lidn).])
     dnl different versions of libidn have different setups of these:
-
-    AC_SUBST([IDN_ENABLED], [1])
-    curl_idn_msg="enabled (libidn2)"
-    if test -n "$IDN_DIR" -a "x$cross_compiling" != "xyes"; then
-      LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$IDN_DIR"
-      export LD_LIBRARY_PATH
-      AC_MSG_NOTICE([Added $IDN_DIR to LD_LIBRARY_PATH])
+    AC_CHECK_FUNCS( idn_free idna_strerror tld_strerror )
+    AC_CHECK_HEADERS( idn-free.h tld.h )
+    if test "x$ac_cv_header_tld_h" = "xyes"; then
+      AC_SUBST([IDN_ENABLED], [1])
+      curl_idn_msg="enabled"
+      if test -n "$IDN_DIR" -a "x$cross_compiling" != "xyes"; then
+        LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$IDN_DIR"
+        export LD_LIBRARY_PATH
+        AC_MSG_NOTICE([Added $IDN_DIR to LD_LIBRARY_PATH])
+      fi
+    else
+      AC_MSG_WARN([Libraries for IDN support too old: IDN disabled])
+      CPPFLAGS="$clean_CPPFLAGS"
+      LDFLAGS="$clean_LDFLAGS"
+      LIBS="$clean_LIBS"
     fi
   else
     AC_MSG_WARN([Cannot find libraries for IDN support: IDN disabled])
@@ -3691,8 +3697,8 @@ fi
 
 if test "x$CURL_DISABLE_CRYPTO_AUTH" != "x1"; then
   if test "x$OPENSSL_ENABLED" = "x1" -o "x$USE_WINDOWS_SSPI" = "x1" \
-      -o "x$GNUTLS_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
-      -o "x$NSS_ENABLED" = "x1" -o "x$DARWINSSL_ENABLED" = "x1"; then
+      -o "x$GNUTLS_ENABLED" = "x1" -o "x$NSS_ENABLED" = "x1" \
+      -o "x$DARWINSSL_ENABLED" = "x1"; then
     SUPPORT_FEATURES="$SUPPORT_FEATURES NTLM"
 
     if test "x$CURL_DISABLE_HTTP" != "x1" -a \
@@ -3708,11 +3714,6 @@ fi
 
 if test "x$USE_NGHTTP2" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES HTTP2"
-fi
-
-if test "x$OPENSSL_ENABLED" = "x1" -o "x$GNUTLS_ENABLED" = "x1" \
-    -o "x$NSS_ENABLED" = "x1"; then
-  SUPPORT_FEATURES="$SUPPORT_FEATURES HTTPS-proxy"
 fi
 
 AC_SUBST(SUPPORT_FEATURES)
@@ -3769,8 +3770,8 @@ fi
 if test "x$CURL_DISABLE_SMB" != "x1" \
     -a "x$CURL_DISABLE_CRYPTO_AUTH" != "x1" \
     -a \( "x$OPENSSL_ENABLED" = "x1" -o "x$USE_WINDOWS_SSPI" = "x1" \
-      -o "x$GNUTLS_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
-      -o "x$NSS_ENABLED" = "x1" -o "x$DARWINSSL_ENABLED" = "x1" \); then
+      -o "x$GNUTLS_ENABLED" = "x1" -o "x$NSS_ENABLED" = "x1" \
+      -o "x$DARWINSSL_ENABLED" = "x1" \); then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMB"
   if test "x$SSL_ENABLED" = "x1"; then
     SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMBS"
