@@ -505,13 +505,18 @@ file being edited.
 <ul>
 <li> For characters with a single-byte code,
 pressing the Esc key twice and then typing a three-digit decimal number
-(from 000 to 255) will enter the character with the corresponding value.
+(from 000 to 255) will make <code>nano</code> behave as if you typed the key
+with that value.
 
 </li><li> For any possible character, pressing M-V (Alt+V) and then typing a
 six-digit hexadecimal number (starting with 0 or 1) will enter the
-character with the corresponding Unicode value.
+corresponding Unicode character into the buffer.
 </li></ul>
 
+<p>For example, typing &quot;Esc Esc 2 3 4&quot; will enter the character &quot;Ãª&quot; &mdash;
+useful when going to a French party.  Typing &quot;M-V 0 0 2 5 c 6&quot; will
+enter the symbol &quot;â&quot;, a little black diamond.
+</p>
 <hr>
 <a name="Commands"></a>
 <div class="header">

@@ -78,8 +78,6 @@ filestruct *copy_node(const filestruct *src)
 {
     filestruct *dst;
 
-    assert(src != NULL);
-
     dst = (filestruct *)nmalloc(sizeof(filestruct));
 
     dst->data = mallocstrcpy(NULL, src->data);
@@ -96,8 +94,6 @@ filestruct *copy_node(const filestruct *src)
 /* Splice a new node into an existing linked list of filestructs. */
 void splice_node(filestruct *afterthis, filestruct *newnode)
 {
-    assert(afterthis != NULL && newnode != NULL);
-
     newnode->next = afterthis->next;
     newnode->prev = afterthis;
     if (afterthis->next != NULL)
@@ -112,8 +108,6 @@ void splice_node(filestruct *afterthis, filestruct *newnode)
 /* Disconnect a node from a linked list of filestructs and delete it. */
 void unlink_node(filestruct *fileptr)
 {
-    assert(fileptr != NULL);
-
     if (fileptr->prev != NULL)
 	fileptr->prev->next = fileptr->next;
     if (fileptr->next != NULL)
@@ -129,8 +123,6 @@ void unlink_node(filestruct *fileptr)
 /* Free the data structures in the given node. */
 void delete_node(filestruct *fileptr)
 {
-    assert(fileptr != NULL && fileptr->data != NULL);
-
     free(fileptr->data);
 #ifndef DISABLE_COLOR
     free(fileptr->multidata);
@@ -142,8 +134,6 @@ void delete_node(filestruct *fileptr)
 filestruct *copy_filestruct(const filestruct *src)
 {
     filestruct *head, *copy;
-
-    assert(src != NULL);
 
     copy = copy_node(src);
     copy->prev = NULL;
@@ -237,7 +227,6 @@ partition *partition_filestruct(filestruct *top, size_t top_x,
 
     /* Remove all text before top_x at the top of the partition. */
     charmove(top->data, top->data + top_x, strlen(top->data) - top_x + 1);
-    align(&top->data);
 
     /* Return the partition. */
     return p;
@@ -480,11 +469,6 @@ void copy_from_filestruct(filestruct *somebuffer)
     /* Add the number of characters in the copied text to the file size. */
     openfile->totsize += get_totsize(openfile->fileage, openfile->filebot);
 
-    /* Update the current y-coordinate to account for the number of
-     * lines the copied text has, less one since the first line will be
-     * tacked onto the current line. */
-    openfile->current_y += openfile->filebot->lineno - 1;
-
     /* If we pasted onto the first line of the edit window, the corresponding
      * struct has been freed, so... point at the start of the copied text. */
     if (edittop_inside)
@@ -513,8 +497,7 @@ openfilestruct *make_new_opennode(void)
 /* Unlink a node from the rest of the openfilestruct, and delete it. */
 void unlink_opennode(openfilestruct *fileptr)
 {
-    assert(fileptr != NULL && fileptr->prev != NULL && fileptr->next != NULL &&
-		fileptr != fileptr->prev && fileptr != fileptr->next);
+    assert(fileptr != fileptr->prev && fileptr != fileptr->next);
 
     fileptr->prev->next = fileptr->next;
     fileptr->next->prev = fileptr->prev;
@@ -525,8 +508,6 @@ void unlink_opennode(openfilestruct *fileptr)
 /* Free all the memory in the given open-file node. */
 void delete_opennode(openfilestruct *fileptr)
 {
-    assert(fileptr != NULL && fileptr->filename != NULL && fileptr->fileage != NULL);
-
     free(fileptr->filename);
     free_filestruct(fileptr->fileage);
 #ifndef NANO_TINY
@@ -1033,6 +1014,9 @@ void version(void)
 #ifdef DISABLE_TABCOMP
     printf(" --disable-tabcomp");
 #endif
+#ifndef ENABLE_WORDCOMPLETION
+    printf(" --disable-wordcomp");
+#endif
 #ifdef DISABLE_WRAPPING
     printf(" --disable-wrapping");
 #endif
@@ -1300,7 +1284,7 @@ RETSIGTYPE do_continue(int signal)
 RETSIGTYPE handle_sigwinch(int signal)
 {
     /* Let the input routine know that a SIGWINCH has occurred. */
-    sigwinch_counter++;
+    the_window_resized = TRUE;
 }
 
 /* Reinitialize and redraw the screen completely. */
@@ -1309,6 +1293,9 @@ void regenerate_screen(void)
     const char *tty = ttyname(0);
     int fd, result = 0;
     struct winsize win;
+
+    /* Reset the trigger. */
+    the_window_resized = FALSE;
 
     if (tty == NULL)
 	return;
@@ -1740,21 +1727,18 @@ int do_mouse(void)
     int mouse_x, mouse_y;
     int retval = get_mouseinput(&mouse_x, &mouse_y, TRUE);
 
+    /* If the click is wrong or already handled, we're done. */
     if (retval != 0)
-	/* The click is wrong or already handled. */
 	return retval;
 
-    /* We can click on the edit window to move the cursor. */
+    /* If the click was in the edit window, put the cursor in that spot. */
     if (wmouse_trafo(edit, &mouse_y, &mouse_x, FALSE)) {
-	bool sameline;
-	    /* Did they click on the line with the cursor?  If they
-	     * clicked on the cursor, we set the mark. */
+	bool sameline = (mouse_y == openfile->current_y);
+	    /* Whether the click was on the line where the cursor is. */
 	filestruct *current_save = openfile->current;
 #ifndef NANO_TINY
 	size_t current_x_save = openfile->current_x;
 #endif
-
-	sameline = (mouse_y == openfile->current_y);
 
 #ifdef DEBUG
 	fprintf(stderr, "mouse_y = %d, current_y = %ld\n", mouse_y, (long)openfile->current_y);
@@ -1762,41 +1746,48 @@ int do_mouse(void)
 
 #ifndef NANO_TINY
 	if (ISSET(SOFTWRAP)) {
-	    size_t i = 0;
+	    ssize_t current_row = 0;
 
 	    openfile->current = openfile->edittop;
 
-	    while (openfile->current->next != NULL && i < mouse_y) {
-		openfile->current_y = i;
-		i += strlenpt(openfile->current->data) / editwincols + 1;
+	    while (openfile->current->next != NULL && current_row < mouse_y) {
+		current_row += strlenpt(openfile->current->data) / editwincols + 1;
 		openfile->current = openfile->current->next;
 	    }
 
-	    if (i > mouse_y) {
+	    if (current_row > mouse_y) {
 		openfile->current = openfile->current->prev;
+		current_row -= strlenpt(openfile->current->data) / editwincols + 1;
 		openfile->current_x = actual_x(openfile->current->data,
-			mouse_x + (mouse_y - openfile->current_y) * editwincols);
+				((mouse_y - current_row) * editwincols) + mouse_x);
 	    } else
 		openfile->current_x = actual_x(openfile->current->data, mouse_x);
+
+	    openfile->current_y = current_row;
+	    ensure_line_is_visible();
+	    refresh_needed = TRUE;
 	} else
 #endif /* NANO_TINY */
 	{
+	    ssize_t current_row = openfile->current_y;
+
 	    /* Move to where the click occurred. */
-	    for (; openfile->current_y < mouse_y && openfile->current !=
-			openfile->filebot; openfile->current_y++)
+	    while (current_row < mouse_y && openfile->current->next != NULL) {
 		openfile->current = openfile->current->next;
-	    for (; openfile->current_y > mouse_y && openfile->current !=
-			openfile->fileage; openfile->current_y--)
+		current_row++;
+	    }
+	    while (current_row > mouse_y && openfile->current->prev != NULL) {
 		openfile->current = openfile->current->prev;
+		current_row--;
+	    }
 
 	    openfile->current_x = actual_x(openfile->current->data,
-		get_page_start(xplustabs()) + mouse_x);
+					get_page_start(xplustabs()) + mouse_x);
 	}
 
 #ifndef NANO_TINY
-	/* Clicking where the cursor is toggles the mark, as does
-	 * clicking beyond the line length with the cursor at the end of
-	 * the line. */
+	/* Clicking where the cursor is toggles the mark, as does clicking
+	 * beyond the line length with the cursor at the end of the line. */
 	if (sameline && openfile->current_x == current_x_save)
 	    do_mark();
 	else
@@ -1804,7 +1795,8 @@ int do_mouse(void)
 	    /* The cursor moved; clean the cutbuffer on the next cut. */
 	    cutbuffer_reset();
 
-	edit_redraw(current_save);
+	if (!ISSET(SOFTWRAP))
+	    edit_redraw(current_save);
     }
 
     /* No more handling is needed. */
@@ -1821,11 +1813,8 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 #ifndef NANO_TINY
     size_t orig_lenpt = 0;
 #endif
-
     char *char_buf = charalloc(mb_cur_max());
-    int char_buf_len;
-
-    assert(openfile->current != NULL && openfile->current->data != NULL);
+    int char_len;
 
     current_len = strlen(openfile->current->data);
 
@@ -1835,25 +1824,17 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 #endif
 
     while (i < output_len) {
-	/* If control codes are allowed, encode a verbatim null as a newline,
-	 * and let a verbatim ^J create a whole new line. */
-	if (allow_cntrls) {
-	    if (output[i] == '\0')
-		output[i] = '\n';
-	    else if (output[i] == '\n') {
-		do_enter();
-		i++;
-		continue;
-	    }
-	}
+	/* Encode an embedded NUL byte as 0x0A. */
+	if (output[i] == '\0')
+	    output[i] = '\n';
 
 	/* Get the next multibyte character. */
-	char_buf_len = parse_mbchar(output + i, char_buf, NULL);
+	char_len = parse_mbchar(output + i, char_buf, NULL);
 
-	i += char_buf_len;
+	i += char_len;
 
 	/* If controls are not allowed, ignore an ASCII control character. */
-	if (!allow_cntrls && is_ascii_cntrl_char(*(output + i -	char_buf_len)))
+	if (!allow_cntrls && is_ascii_cntrl_char(*(output + i -	char_len)))
 	    continue;
 
 	/* If we're adding to the magicline, create a new magicline. */
@@ -1867,13 +1848,13 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 
 	/* Make room for the new character and copy it into the line. */
 	openfile->current->data = charealloc(openfile->current->data,
-					current_len + char_buf_len + 1);
-	charmove(openfile->current->data + openfile->current_x + char_buf_len,
+					current_len + char_len + 1);
+	charmove(openfile->current->data + openfile->current_x + char_len,
 			openfile->current->data + openfile->current_x,
 			current_len - openfile->current_x + 1);
 	strncpy(openfile->current->data + openfile->current_x, char_buf,
-			char_buf_len);
-	current_len += char_buf_len;
+			char_len);
+	current_len += char_len;
 	openfile->totsize++;
 	set_modified();
 
@@ -1883,10 +1864,10 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 	/* Note that current_x has not yet been incremented. */
 	if (openfile->mark_set && openfile->current == openfile->mark_begin &&
 		openfile->current_x < openfile->mark_begin_x)
-	    openfile->mark_begin_x += char_buf_len;
+	    openfile->mark_begin_x += char_len;
 #endif
 
-	openfile->current_x += char_buf_len;
+	openfile->current_x += char_len;
 
 #ifndef NANO_TINY
 	update_undo(ADD);
@@ -2617,7 +2598,7 @@ int main(int argc, char **argv)
 		else if (ISSET(POS_HISTORY)) {
 		    ssize_t savedposline, savedposcol;
 		    /* If edited before, restore the last cursor position. */
-		    if (check_poshistory(argv[i], &savedposline, &savedposcol))
+		    if (has_old_position(argv[i], &savedposline, &savedposcol))
 			do_gotolinecolumn(savedposline, savedposcol,
 						FALSE, FALSE);
 		}
@@ -2651,7 +2632,7 @@ int main(int argc, char **argv)
     else if (ISSET(POS_HISTORY)) {
 	ssize_t savedposline, savedposcol;
 	/* If the file was edited before, restore the last cursor position. */
-	if (check_poshistory(argv[optind], &savedposline, &savedposcol))
+	if (has_old_position(argv[optind], &savedposline, &savedposcol))
 	    do_gotolinecolumn(savedposline, savedposcol, FALSE, FALSE);
     }
 #endif
@@ -2685,6 +2666,7 @@ int main(int argc, char **argv)
 	    display_main_list();
 
 	lastmessage = HUSH;
+	as_an_at = TRUE;
 
 	/* Update the displayed current cursor position only when there
 	 * are no keys waiting in the input buffer. */

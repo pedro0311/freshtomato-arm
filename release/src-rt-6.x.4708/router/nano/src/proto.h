@@ -26,7 +26,7 @@
 
 /* All external variables.  See global.c for their descriptions. */
 #ifndef NANO_TINY
-extern volatile sig_atomic_t sigwinch_counter;
+extern volatile sig_atomic_t the_window_resized;
 #endif
 
 #ifdef __linux__
@@ -38,12 +38,10 @@ extern bool shift_held;
 
 extern bool focusing;
 
+extern bool as_an_at;
+
 extern int margin;
 extern int editwincols;
-#ifdef ENABLE_LINENUMBERS
-extern int last_drawn_line;
-extern int last_line_y;
-#endif
 
 extern message_type lastmessage;
 
@@ -211,7 +209,7 @@ bool is_cntrl_mbchar(const char *c);
 bool is_punct_mbchar(const char *c);
 bool is_word_mbchar(const char *c, bool allow_punct);
 char control_rep(const signed char c);
-char control_mbrep(const char *c);
+char control_mbrep(const char *c, bool isdata);
 int length_of_char(const char *c, int *width);
 int mbwidth(const char *c);
 int mb_cur_max(void);
@@ -231,8 +229,8 @@ int mbstrncasecmp(const char *s1, const char *s2, size_t n);
 char *nstrcasestr(const char *haystack, const char *needle);
 #endif
 char *mbstrcasestr(const char *haystack, const char *needle);
-char *revstrstr(const char *haystack, const char *needle, const char
-	*rev_start);
+char *revstrstr(const char *haystack, const char *needle,
+	const char *pointer);
 char *revstrcasestr(const char *haystack, const char *needle, const char
 	*rev_start);
 char *mbrevstrcasestr(const char *haystack, const char *needle, const
@@ -278,7 +276,7 @@ void cutbuffer_reset(void);
 bool keeping_cutbuffer(void);
 void cut_line(void);
 #ifndef NANO_TINY
-void cut_marked(void);
+void cut_marked(bool *right_side_up);
 void cut_to_eol(void);
 void cut_to_eof(void);
 #endif
@@ -350,19 +348,19 @@ const char *tail(const char *path);
 #ifndef DISABLE_HISTORIES
 char *histfilename(void);
 void load_history(void);
-bool writehist(FILE *hist, filestruct *histhead);
+bool writehist(FILE *hist, const filestruct *head);
 void save_history(void);
 int check_dotnano(void);
 void load_poshistory(void);
 void save_poshistory(void);
 void update_poshistory(char *filename, ssize_t lineno, ssize_t xpos);
-int check_poshistory(const char *file, ssize_t *line, ssize_t *column);
+bool has_old_position(const char *file, ssize_t *line, ssize_t *column);
 #endif
 
 /* Some functions in global.c. */
 size_t length_of_list(int menu);
 const sc *first_sc_for(int menu, void (*func)(void));
-int sc_seq_or(void (*func)(void), int defaultval);
+int the_code_for(void (*func)(void), int defaultval);
 functionptrtype func_from_key(int *kbinput);
 void assign_keyinfo(sc *s, const char *keystring, const int keycode);
 void print_sclist(void);
@@ -487,7 +485,7 @@ void do_output(char *output, size_t output_len, bool allow_cntrls);
 int do_statusbar_mouse(void);
 #endif
 void do_statusbar_output(int *the_input, size_t input_len,
-	bool filtering, bool *got_newline);
+	bool filtering);
 void do_statusbar_home(void);
 void do_statusbar_end(void);
 void do_statusbar_left(void);
@@ -499,16 +497,13 @@ void do_statusbar_cut_text(void);
 void do_statusbar_prev_word(void);
 void do_statusbar_next_word(void);
 #endif
-void do_statusbar_verbatim_input(bool *got_newline);
+void do_statusbar_verbatim_input(void);
 size_t statusbar_xplustabs(void);
 size_t get_statusbar_page_start(size_t start_col, size_t column);
 void reinit_statusbar_x(void);
 void reset_statusbar_cursor(void);
 void update_the_statusbar(void);
-int do_prompt(bool allow_tabs,
-#ifndef DISABLE_TABCOMP
-	bool allow_files,
-#endif
+int do_prompt(bool allow_tabs, bool allow_files,
 	int menu, const char *curranswer,
 #ifndef DISABLE_HISTORIES
 	filestruct **history_list,
@@ -592,18 +587,25 @@ void do_tab(void);
 void do_indent(ssize_t cols);
 void do_indent_void(void);
 void do_unindent(void);
-void do_undo(void);
-void do_redo(void);
 #endif
 bool white_string(const char *s);
 #ifdef ENABLE_COMMENT
 void do_comment(void);
+bool comment_line(undo_type action, filestruct *f, const char *comment_seq);
 #endif
+void do_undo(void);
+void do_redo(void);
 void do_enter(void);
 #ifndef NANO_TINY
 RETSIGTYPE cancel_command(int signal);
 bool execute_command(const char *command);
+void discard_until(const undo *thisitem, openfilestruct *thefile);
+void add_undo(undo_type action);
+#ifndef DISABLE_COMMENT
+void update_comment_undo(ssize_t lineno);
 #endif
+void update_undo(undo_type action);
+#endif /* !NANO_TINY */
 #ifndef DISABLE_WRAPPING
 void wrap_reset(void);
 bool do_wrap(filestruct *line);
@@ -651,10 +653,12 @@ void complete_a_word(void);
 
 /* All functions in utils.c. */
 void get_homedir(void);
-int digits(int n);
+#ifdef ENABLE_LINENUMBERS
+int digits(ssize_t n);
+#endif
 bool parse_num(const char *str, ssize_t *val);
 bool parse_line_column(const char *str, ssize_t *line, ssize_t *column);
-void align(char **str);
+void snuggly_fit(char **str);
 void null_at(char **data, size_t index);
 void unsunder(char *str, size_t true_len);
 void sunder(char *str);
@@ -690,16 +694,11 @@ void new_magicline(void);
 void remove_magicline(void);
 void mark_order(const filestruct **top, size_t *top_x, const filestruct
 	**bot, size_t *bot_x, bool *right_side_up);
-void discard_until(const undo *thisitem, openfilestruct *thefile);
-void add_undo(undo_type action);
-void update_undo(undo_type action);
-#ifndef DISABLE_COMMENT
-void update_comment_undo(ssize_t lineno);
-bool comment_line(undo_type action, filestruct *f, const char *comment_seq);
-#endif
 #endif
 size_t get_totsize(const filestruct *begin, const filestruct *end);
+#ifndef NANO_TINY
 filestruct *fsfromline(ssize_t lineno);
+#endif
 #ifdef DEBUG
 void dump_filestruct(const filestruct *inptr);
 void dump_filestruct_reverse(void);
@@ -744,8 +743,8 @@ void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void onekey(const char *keystroke, const char *desc, int length);
 void reset_cursor(void);
-void edit_draw(filestruct *fileptr, const char *converted, int
-	line, size_t start);
+void edit_draw(filestruct *fileptr, const char *converted,
+	int line, size_t from_col);
 int update_line(filestruct *fileptr, size_t index);
 bool need_horizontal_scroll(const size_t old_column, const size_t new_column);
 void edit_scroll(scroll_dir direction, ssize_t nlines);

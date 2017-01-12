@@ -29,8 +29,8 @@
 
 /* Global variables. */
 #ifndef NANO_TINY
-volatile sig_atomic_t sigwinch_counter = 0;
-	/* Is incremented by the handler whenever a SIGWINCH occurs. */
+volatile sig_atomic_t the_window_resized = FALSE;
+	/* Set to TRUE by the handler whenever a SIGWINCH occurs. */
 #endif
 
 #ifdef __linux__
@@ -45,16 +45,13 @@ bool shift_held;
 bool focusing = TRUE;
 	/* Whether an update of the edit window should center the cursor. */
 
+bool as_an_at = TRUE;
+	/* Whether a 0x0A byte should be shown as a ^@ instead of a ^J. */
+
 int margin = 0;
 	/* The amount of space reserved at the left for line numbers. */
 int editwincols = -1;
 	/* The number of usable columns in the edit window: COLS - margin. */
-#ifdef ENABLE_LINENUMBERS
-int last_drawn_line = 0;
-        /* The line number of the last drawn line. */
-int last_line_y;
-        /* The y coordinate of the last drawn line. */
-#endif
 
 message_type lastmessage = HUSH;
 	/* Messages of type HUSH should not overwrite type MILD nor ALERT. */
@@ -391,18 +388,17 @@ const sc *first_sc_for(int menu, void (*func)(void))
     return NULL;
 }
 
-/* Return the given menu's first shortcut sequence, or the default value
- * (2nd arg).  Assumes currmenu for the menu to check. */
-int sc_seq_or(void (*func)(void), int defaultval)
+/* Return the first keycode that is bound to the given function in the
+ * current menu, if any; otherwise, return the given default value. */
+int the_code_for(void (*func)(void), int defaultval)
 {
     const sc *s = first_sc_for(currmenu, func);
 
-    if (s) {
-	meta_key = s->meta;
-	return s->keycode;
-    }
-    /* else */
-    return defaultval;
+    if (s == NULL)
+	return defaultval;
+
+    meta_key = s->meta;
+    return s->keycode;
 }
 
 /* Return a pointer to the function that is bound to the given key. */

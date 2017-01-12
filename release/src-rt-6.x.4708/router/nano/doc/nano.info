@@ -371,11 +371,15 @@ edited.
 
    * For characters with a single-byte code, pressing the Esc key twice
      and then typing a three-digit decimal number (from 000 to 255) will
-     enter the character with the corresponding value.
+     make 'nano' behave as if you typed the key with that value.
 
    * For any possible character, pressing M-V (Alt+V) and then typing a
      six-digit hexadecimal number (starting with 0 or 1) will enter the
-     character with the corresponding Unicode value.
+     corresponding Unicode character into the buffer.
+
+   For example, typing "Esc Esc 2 3 4" will enter the character "ê" --
+useful when going to a French party.  Typing "M-V 0 0 2 5 c 6" will
+enter the symbol "◆", a little black diamond.
 
 
 File: nano.info,  Node: Commands,  Next: The Cutbuffer,  Prev: Entering Text,  Up: Editor Basics
@@ -1552,22 +1556,22 @@ Node: Command-line Options2107
 Ref: Expert Mode9797
 Node: Editor Basics10754
 Node: Entering Text11037
-Node: Commands11776
-Node: The Cutbuffer12561
-Node: The Mark13239
-Node: Screen Layout13977
-Node: Search and Replace15146
-Node: Using the Mouse15844
-Node: Limitation16460
-Node: Built-in Help16863
-Node: Feature Toggles17254
-Node: Nanorc Files19462
-Node: Settings20894
-Ref: Whitespace28569
-Node: Syntax Highlighting29109
-Node: Rebinding Keys33819
-Node: The File Browser43807
-Node: Pico Compatibility44629
-Node: Building and Configure Options46600
+Node: Commands11976
+Node: The Cutbuffer12761
+Node: The Mark13439
+Node: Screen Layout14177
+Node: Search and Replace15346
+Node: Using the Mouse16044
+Node: Limitation16660
+Node: Built-in Help17063
+Node: Feature Toggles17454
+Node: Nanorc Files19662
+Node: Settings21094
+Ref: Whitespace28769
+Node: Syntax Highlighting29309
+Node: Rebinding Keys34019
+Node: The File Browser44007
+Node: Pico Compatibility44829
+Node: Building and Configure Options46800
 
 End Tag Table
