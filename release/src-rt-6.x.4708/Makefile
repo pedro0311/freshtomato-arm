@@ -1253,6 +1253,9 @@ ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e        RT-AC3200 build VPN"
 	@echo "ac3200z        RT-AC3200 build AIO"
+	@echo "r8000e         R8000 build VPN"
+	@echo "r8000z         R8000 build AIO"
+
 endif
 endif
 	@echo ""
