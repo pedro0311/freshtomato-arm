@@ -243,8 +243,25 @@ config TCONFIG_BCMWL6A
 	depends on TCONFIG_BCMARM && TCONFIG_BCMWL6
 	default n
 
+config TCONFIG_BCM7
+	bool "Bcm sdk 7"
+	depends on TCONFIG_BCMARM
+	default n
+
 config TCONFIG_BCMSMP
 	bool "BCM SMP"
+	default n
+
+config TCONFIG_AC3200
+	bool "AC3200"
+	default n
+
+config TCONFIG_DHDAP
+	bool "Bcm7 dhdap"
+	default n
+
+config TCONFIG_GMAC3
+	bool "Bcm7 gmac3"
 	default n
 
 config TCONFIG_GROCTRL
@@ -253,6 +270,26 @@ config TCONFIG_GROCTRL
 
 config TCONFIG_BCMFA
 	bool "BCM FA"
+	default n
+
+config TCONFIG_BCMBSD
+	bool "Brcm Band Steer Selection"
+	default n
+
+config TCONFIG_5301X
+	bool "Bcm 5301x"
+	default y
+
+config TCONFIG_BCMDCS
+	bool "Broadcom Dynamic Channel Selection"
+	default n
+
+config TCONFIG_TRAFFIC_MGMT_RSSI_POLICY
+	bool "Traffic Management RSSI policy"
+	default n
+
+config TCONFIG_TOAD
+	bool "Traffic Ordering Agent Daemon"
 	default n
 
 config TCONFIG_DNSSEC

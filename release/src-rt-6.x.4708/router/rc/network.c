@@ -332,12 +332,39 @@ static void check_afterburner(void)
 
 void unload_wl(void)
 {
+#ifdef TCONFIG_DHDAP
+	modprobe_r("dhd");
+#else
 	modprobe_r("wl");
+#endif
 }
 
 void load_wl(void)
 {
+#ifdef TCONFIG_DHDAP
+	int i = 0, maxwl_eth = 0, maxunit = -1;
+	int unit = -1;
+	char ifname[16] = {0};
+	char instance_base[128];
+
+	/* Search for existing wl devices and the max unit number used */
+	for (i = 1; i <= DEV_NUMIFS; i++) {
+		snprintf(ifname, sizeof(ifname), "eth%d", i);
+		if (!wl_probe(ifname)) {
+			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+				maxwl_eth = i;
+				maxunit = (unit > maxunit) ? unit : maxunit;
+			}
+		}
+	}
+	snprintf(instance_base, sizeof(instance_base), "instance_base=%d", maxunit + 1);
+#ifdef TCONFIG_BCM7
+	snprintf(instance_base, sizeof(instance_base), "%s", instance_base);
+#endif
+	eval("insmod", "dhd", instance_base);
+#else
 	modprobe("wl");
+#endif
 }
 
 static int set_wlmac(int idx, int unit, int subunit, void *param)
@@ -581,8 +608,7 @@ void restart_wl(void)
 
 	if (is_client)
 		xstart("radio", "join");
-		
-	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000)) {
+	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1"))
 			led(LED_WLAN, LED_ON);
 		if (nvram_match("wl1_radio", "1"))
@@ -591,6 +617,12 @@ void restart_wl(void)
 			led(LED_WLAN, LED_OFF);
 		if (nvram_match("wl1_radio", "0"))
 			led(LED_5G, LED_OFF);
+		if (get_model() == MODEL_R8000) {
+			if (nvram_match("wl2_radio", "1"))
+				xstart( "gpio", "disable" , "16" );
+			if (nvram_match("wl2_radio", "0"))
+				xstart( "gpio", "enable" , "16" );
+		}
 	}
 
 	if (get_model() == MODEL_WS880) {
@@ -599,6 +631,7 @@ void restart_wl(void)
 		else
 			led(LED_WLAN, LED_OFF);
 	}
+
 }
 
 #ifdef CONFIG_BCMWL5
@@ -683,7 +716,7 @@ void start_wl(void)
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "wlan", "20", "8192");
 						}
-						else{
+						else {
 							 led(LED_5G, LED_ON);
 							 if (nvram_get_int("blink_wl"))
 							 	eval("blink", ifname, "5g", "20", "8192");
@@ -707,8 +740,15 @@ void start_wl(void)
 
 	if (is_client)
 		xstart("radio", "join");
-	
-	if ((get_model() == MODEL_R6400) || get_model() == MODEL_R7000) {
+
+	if (get_model() == MODEL_WS880) {
+		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+			led(LED_WLAN, LED_ON);
+		else
+			led(LED_WLAN, LED_OFF);
+	}
+
+	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1"))
 			led(LED_WLAN, LED_ON);
 		if (nvram_match("wl1_radio", "1"))
@@ -717,13 +757,12 @@ void start_wl(void)
 			led(LED_WLAN, LED_OFF);
 		if (nvram_match("wl1_radio", "0"))
 			led(LED_5G, LED_OFF);
-	}
-
-	if (get_model() == MODEL_WS880) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
-			led(LED_WLAN, LED_ON);
-		else
-			led(LED_WLAN, LED_OFF);
+		if (get_model() == MODEL_R8000) {
+			if (nvram_match("wl2_radio", "1"))
+				xstart( "gpio", "disable" , "16" );
+			if (nvram_match("wl2_radio", "0"))
+				xstart( "gpio", "enable" , "16" );
+		}
 	}
 }
 

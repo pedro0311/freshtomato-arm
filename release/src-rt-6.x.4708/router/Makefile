@@ -51,7 +51,9 @@ obj-y += eapd$(BCMEX)/linux
 obj-y += libbcmcrypto
 obj-y += wlconf$(BCMEX)
 obj-y += nas$(BCMEX)
+ifeq ($(TCONFIG_DHDAP),)
 obj-y += prebuilt
+endif
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)
@@ -61,6 +63,7 @@ else
 obj-y += iptables
 obj-y += iproute2
 endif
+obj-$(TCONFIG_DHDAP) += dhd $(if $(TCONFIG_BCM7),pciefd)
 obj-y += rom
 obj-y += others
 obj-y += busybox
@@ -72,7 +75,7 @@ obj-y += etc
 # obj-y += vlan # use Busybox vconfig
 obj-y += pppd
 obj-y += rp-pppoe
-obj-y += utils
+obj-y += utils$(BCMEX)
 #obj-y += ntpclient #Asus version
 obj-y += ntpc
 obj-y += rstats
@@ -304,15 +307,45 @@ LINUX_VERSION=2_6_36
 LINUX_KERNEL=2.6.36
 export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
+ifeq ($(TCONFIG_BCM7),y)
+export BCMSRC=src-rt-7.x.main/src
+
+ifeq ($(TCONFIG_DHDAP),y)
+export CONFIG_DHDAP=y
+export CFLAGS += -D__CONFIG_DHDAP__
+export DHDAP_USE_SEPARATE_CHECKOUTS := 1
+export SRCBASE_DHD := $(SRCBASE)/../..
+export SRCBASE_FW  := $(SRCBASE)/../../43602/src
+PCIEFD_TARGETS_LIST	:= 43602a1-roml
+ifeq ($(WLTEST),1)
+PCIEFD_TARGET_NAME	:= pcie-ag-splitrx-fdap-mbss-mfgtest-seqcmds-phydbg-txbf-pktctx-amsdutx-ampduretry-chkd2hdma
+else
+PCIEFD_TARGET_NAME	:= pcie-ag-splitrx-fdap-mbss-mfp-wl11k-wl11u-txbf-pktctx-amsdutx-ampduretry-chkd2hdma-proptxstatus
+endif
+
+PCIEFD_EMBED_HEADER_TEMPLATE := $(SRCBASE_DHD)/shared/rtecdc_router.h.in
+PCIEFD_EMBED_HEADER	:= $(SRCBASE_DHD)/shared/rtecdc_router.h
+obj-pciefd		:= $(patsubst %,%-obj,$(PCIEFD_TARGETS_LIST))
+install-pciefd		:= $(patsubst %,%-install,$(PCIEFD_TARGETS_LIST))
+endif #dhdap
+
+ifeq ($(TCONFIG_GMAC3),y)
+export CFLAGS += -D__CONFIG_GMAC3__
+endif
+
+else #BCM7
+export BCMSRC=src-rt-6.x.4708
+endif #bcm7
+
 WLAN_ComponentsInUse := bcmwifi clm ppr olpc
-include ../../src-rt-6.x.4708/makefiles/WLAN_Common.mk
+include ../makefiles/WLAN_Common.mk
 export BASEDIR := $(WLAN_TreeBaseA)
 export EXTRALDFLAGS = -lgcc_s
 export EXTRALDFLAGS2 = -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared
 
 export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
 ifeq (2_6_36,$(LINUX_VERSION))
-export  LINUXDIR := $(BASEDIR)/src-rt-6.x.4708/linux/linux-2.6.36
+export  LINUXDIR := $(SRCBASE)/linux/linux-2.6.36
 export  KBUILD_VERBOSE := 1
 export  BUILD_MFG := 0
 endif
@@ -343,8 +376,18 @@ endif
 # Basic rules
 #
 
-all: clean-build libc $(obj-y) kernel
+all: clean-build libc $(obj-y) version kernel
 
+ifeq ($(TCONFIG_BCMARM),y)
+version:  $(SRCBASE)/include/epivers.h
+
+$(SRCBASE)/include/epivers.h:
+	$(MAKE) -C $(SRCBASE)/include
+ifeq ($(TCONFIG_DHDAP),y)
+	$(MAKE) -C $(SRCBASE_DHD)/include
+	$(MAKE) -C $(SRCBASE_FW)/include
+endif
+endif
 
 kernel: $(LINUXDIR)/.config
 	@$(SEP)
@@ -420,8 +463,8 @@ endif
 
 # nice and clean
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et.4702/* . && rm -rf et.4702 || true
-	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et/* . && rm -rf et
-	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv wl/* . && rm -rf wl
+	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et/* . && rm -rf et || true
+	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv wl/* . && rm -rf wl || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv cifs/* . && rm -rf cifs
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jffs2/* . && rm -rf jffs2 || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jffs/* . && rm -rf jffs || true
@@ -762,8 +805,24 @@ rmconf: config/mconf
 	@config/mconf $(CONFIG_IN)
 
 roldconf: config/conf
-	@config/conf -o $(CONFIG_IN)
-	@$(MAKE) shared-clean rc-clean nvram$(BCMEX)-clean httpd-clean prebuilt-clean libbcmcrypto-clean dhcpv6-clean
+	config/conf -o $(CONFIG_IN)
+	$(MAKE) shared-clean libdisk-clean rc-clean nvram$(BCMEX)-clean httpd-clean prebuilt-clean libbcmcrypto-clean
+	$(MAKE) dnsmasq-clean iproute2-clean
+ifeq ($(TCONFIG_BCMARM),y)
+	$(MAKE) compressed-clean
+endif
+ifeq ($(TCONFIG_DHDAP),y)
+ifeq ($(TCONFIG_BCM7),y)
+ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
+ifeq ($(wildcard /opt/hndtools-armeabi-2011.09),)
+	# build 43602 src and to match its path
+	sudo rm -rf /opt/hndtools-armeabi-2011.09
+	sudo ln -sf $(SRCBASE)/toolchains/hndtools-armeabi-2011.09 /opt/hndtools-armeabi-2011.09
+endif
+endif
+endif
+endif
+
 
 kconf:
 	@$(MAKE) -C $(LINUXDIR) config
@@ -800,6 +859,73 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 #
 # overrides and extra dependencies
 #
+
+ifeq ($(TCONFIG_BCM7),y)
+$(obj-pciefd) :
+# Build PCIEFD firmware only if it is not prebuilt
+ifeq ($(TCONFIG_DHDAP),y)
+ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
+	+$(MAKE) CROSS_COMPILE=arm-none-eabi -C $(SRCBASE_FW)/dongle/rte/wl $(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)
+	if [ -f $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/rtecdc_$(patsubst %-roml-obj,%,$@).h ]; then \
+		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/rtecdc_$(patsubst %-roml-obj,%,$@).h $(SRCBASE_DHD)/shared/rtecdc_$(patsubst %-roml-obj,%,$@).h && \
+		echo "#include <rtecdc_$(patsubst %-roml-obj,%,$@).h>" >> $(PCIEFD_EMBED_HEADER); \
+	fi;
+	if [ -f $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/rtecdc_$(patsubst %-ram-obj,%,$@).h ]; then \
+		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/rtecdc_$(patsubst %-ram-obj,%,$@).h $(SRCBASE_DHD)/shared/rtecdc_$(patsubst %-ram-obj,%,$@).h && \
+		echo "#include <rtecdc_$(patsubst %-ram-obj,%,$@).h>" >> $(PCIEFD_EMBED_HEADER); \
+	fi;
+	if [ -f $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data.c ]; then \
+		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data.c.GEN && \
+		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data_inc.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data_inc.c.GEN; \
+	fi;
+endif
+endif
+
+pciefd-cleangen: pciefd-clean
+# Clean PCIEFD firmware only if it is not prebuilt
+ifeq ($(TCONFIG_DHDAP),y)
+ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
+	rm -f  $(PCIEFD_EMBED_HEADER)
+	cp -f $(PCIEFD_EMBED_HEADER_TEMPLATE) $(PCIEFD_EMBED_HEADER)
+endif
+endif
+
+pciefd: pciefd-cleangen $(obj-pciefd)
+
+pciefd-clean :
+ifeq ($(TCONFIG_DHDAP),y)
+ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
+	+$(MAKE) CROSS_COMPILE=arm-none-eabi -C $(SRCBASE_FW)/dongle/rte/wl clean
+	rm -f $(SRCBASE_DHD)/shared/rtecdc*.h
+endif
+endif
+
+pciefd-install :
+	# Nothing to be done here
+	@true
+endif	# BCM7
+
+ifeq ($(TCONFIG_DHDAP),y)
+dhd:
+	@true
+ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
+	-$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe
+endif
+
+dhd-clean:
+ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
+	-$(MAKE) TARGET_PREFIX=$(CROSS_COMPILE) -C $(SRCBASE_DHD)/dhd/exe clean
+	rm -f $(INSTALLDIR)/dhd/usr/sbin/dhd
+	cd $(SRCBASE_DHD)/dhd/exe && rm -f `find ./ -name "*.cmd" && find ./ -name "*.o"`
+endif
+
+dhd-install:
+ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
+	install -d $(INSTALLDIR)/dhd/usr/sbin
+	install $(SRCBASE_DHD)/dhd/exe/dhd $(INSTALLDIR)/dhd/usr/sbin/dhd
+	$(STRIP) $(INSTALLDIR)/dhd/usr/sbin/dhd
+endif
+endif
 
 busybox: dummy
 	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" $(PARALLEL_BUILD)
