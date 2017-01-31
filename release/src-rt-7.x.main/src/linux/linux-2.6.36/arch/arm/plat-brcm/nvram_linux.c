@@ -772,9 +772,9 @@ nvram_commit(void)
 		header = (struct nvram_header *)(buf + i);
 		magic_offset = i + ((void *)&header->magic - (void *)header);
 	} else {
-		offset = nvram_mtd->size - nvram_space;
-		magic_offset = ((void *)&header->magic - (void *)header);
+		offset = nvram_mtd->size - nvram_space;		
 		header = (struct nvram_header *)buf;
+		magic_offset = ((void *)&header->magic - (void *)header);
 	}
 
 	/* clear the existing magic # to mark the NVRAM as unusable 
