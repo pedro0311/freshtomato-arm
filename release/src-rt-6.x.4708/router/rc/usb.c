@@ -156,7 +156,7 @@ void start_usb(void)
 			modprobe(SD_MOD);
 			modprobe(USBSTORAGE_MOD);
 
-			if (nvram_get_int("usb_fs_ext3") || nvram_get_int("usb_fs_ext4")) {
+			if (nvram_get_int("usb_fs_ext4")) {
 #ifdef LINUX26
 				modprobe("mbcache");	// used by ext2/3/4
 #endif
@@ -438,7 +438,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			/* not a mountable partition */
 			flags = 0;
 		}
-		else if (strcmp(type, "ext2") == 0 || strcmp(type, "ext3") == 0) {
+		else if (strcmp(type, "ext2") == 0 || strcmp(type, "ext3") == 0 || strcmp(type, "ext4") == 0) {
 			if (nvram_invmatch("usb_ext_opt", ""))
 				sprintf(options, nvram_safe_get("usb_ext_opt"));
 		}
