@@ -2282,6 +2282,7 @@ nano/stamp-h1: libncurses
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
+		NCURSES_LIBS="-lncurses" \
 		ac_cv_lib_ncursesw_get_wch=no \
 		$(CONFIGURE) --prefix=/usr --disable-nls --enable-all --without-libiconv-prefix --disable-utf8
 	touch nano/stamp-h1
@@ -2645,6 +2646,7 @@ apcupsd-install: apcupsd
 
 libsodium/stamp-h1:
 	cd $(TOP)/libsodium && CC=$(CC) STRIP=$(STRIP) \
+	autoreconf -fsi && \
 	$(CONFIGURE) --prefix=/usr --disable-ssp --enable-minimal
 	touch libsodium/stamp-h1
 
@@ -2754,7 +2756,7 @@ libmnl-clean:
 
 ipset/stamp-h1: libmnl
 	cd $(TOP)/ipset && CC=$(CC) STRIP=$(STRIP) \
-	autoreconf && \
+	autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	libmnl_CFLAGS="-I$(TOP)/libmnl/staged/usr/include" \
