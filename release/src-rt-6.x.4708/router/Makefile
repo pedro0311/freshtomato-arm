@@ -999,6 +999,8 @@ openssl/stamp-h1:
 	@touch openssl/stamp-h1
 
 openssl: openssl/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C openssl $(PARALLEL_BUILD)
 
 openssl-clean:
 	-@$(MAKE) -C openssl clean
@@ -1496,7 +1498,7 @@ rp-l2tp-install:
 	$(STRIP) $(INSTALLDIR)/rp-l2tp/usr/sbin/l2tpd
 
 xl2tpd: pppd
-	CFLAGS="-g $(EXTRACFLAGS)" $(MAKE) -C $@ PREFIX=/usr xl2tpd
+	CFLAGS="-g $(EXTRACFLAGS)" $(MAKE) -C $@ PREFIX=/usr xl2tpd $(PARALLEL_BUILD)
 
 xl2tpd-install: xl2tpd
 	install -D xl2tpd/xl2tpd $(INSTALLDIR)/xl2tpd/usr/sbin/xl2tpd
@@ -1592,6 +1594,7 @@ dropbear/config.h:
 
 sqlite/stamp-h1:
 	cd sqlite && \
+	autoreconf -fsi && \
 	CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
@@ -2410,7 +2413,7 @@ nano/stamp-h1: libncurses
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
 		NCURSES_LIBS="-lncurses" \
 		ac_cv_lib_ncursesw_get_wch=no \
-		$(CONFIGURE) --prefix=/usr --disable-nls --enable-all --without-libiconv-prefix --disable-utf8
+		$(CONFIGURE) --prefix=/usr --disable-nls --enable-tiny --without-libiconv-prefix --disable-utf8
 	touch nano/stamp-h1
 
 nano: nano/stamp-h1
@@ -2503,11 +2506,11 @@ libiconv-clean:
 
 libiconv-install: libiconv
 	install -d $(INSTALLDIR)/libiconv/usr/lib
-	install libiconv/lib/.libs/libiconv.so.2.5.1 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.5.1
-	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.5.1
+	install libiconv/lib/.libs/libiconv.so.2.6.0 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
+	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
 	cd $(INSTALLDIR)/libiconv/usr/lib/ && \
-		ln -sf libiconv.so.2.5.1 libiconv.so.2 && \
-		ln -sf libiconv.so.2.5.1 libiconv.so
+		ln -sf libiconv.so.2.6.0 libiconv.so.2 && \
+		ln -sf libiconv.so.2.6.0 libiconv.so
 
 transmission/stamp-h1: openssl libcurl libevent zlib
 	cd transmission && CC=$(CC) STRIP=$(STRIP) \
@@ -2782,11 +2785,11 @@ libsodium: libsodium/stamp-h1
 
 libsodium-install: libsodium
 	install -d $(INSTALLDIR)/libsodium/usr/lib
-	install -D libsodium/src/libsodium/.libs/libsodium.so.18.1.1 $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.1.1
-	$(STRIP) -s $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.1.1
+	install -D libsodium/src/libsodium/.libs/libsodium.so.18.2.0 $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
+	$(STRIP) -s $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
 	cd $(INSTALLDIR)/libsodium/usr/lib/ && \
-		ln -sf libsodium.so.18.1.1 libsodium.so.18 && \
-		ln -sf libsodium.so.18.1.1 libsodium.so
+		ln -sf libsodium.so.18.2.0 libsodium.so.18 && \
+		ln -sf libsodium.so.18.2.0 libsodium.so
 
 libsodium-clean:
 	-$(MAKE) -C libsodium clean
@@ -2794,6 +2797,7 @@ libsodium-clean:
 
 dnscrypt/stamp-h1: libsodium
 	cd $(TOP)/dnscrypt && CC=$(CC) STRIP=$(STRIP) \
+	autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libsodium/src/libsodium/include" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs" \
@@ -2834,16 +2838,19 @@ tor-clean:
 	@rm -rf tor/stamp-h1 tor/Makefile
 
 udpxy/stamp-h1:
-	cd udpxy \
 	$(MAKE) -C udpxy CFLAGS="-Os -Wall --host=$(HOST) --target=$(HOST) $(EXTRACFLAGS)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 	touch udpxy/stamp-h1
+
+udpxy: udpxy/stamp-h1
+	@$(SEP)
 
 udpxy-clean:
 	-@$(MAKE) -C udpxy clean
 	@rm -f udpxy/stamp-h1
 
-udpxy-install: udpxy/stamp-h1
+udpxy-install: udpxy
+	@$(SEP)
 	install -d $(INSTALLDIR)/udpxy/usr/bin
 	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/bin/udpxy
 	$(STRIP) -s $(INSTALLDIR)/udpxy/bin/udpxy
