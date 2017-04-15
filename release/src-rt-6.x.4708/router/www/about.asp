@@ -260,7 +260,7 @@ We want to express our gratitude to all people not mentioned here but contribute
 <i>Copyright (C) 2006-2010 Jonathan Zarate</i><br>
 <a href='http://www.polarcloud.com/tomato/' target='_new'>http://www.polarcloud.com/tomato/</a><br>
 <br>
-Built on <% build_time(); %> by @kille72, <a href='http://openlinksys.info' target='_new'>http://openlinksys.info</a><br><br>
+Built on <% build_time(); %> by @kille72, <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' target='_new'>https://openlinksys.info</a><br><br>
 <br><br>
 
 <!--
