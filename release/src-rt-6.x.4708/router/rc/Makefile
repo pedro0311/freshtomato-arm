@@ -39,7 +39,7 @@ OBJS += bcmutils.o
 endif
 
 #ifeq ($(CONFIG_BCMWL6),y)
-OBJS += blink_5g.o
+#OBJS += blink_5g.o
 #endif
 
 ifeq ($(TCONFIG_FANCTRL),y)
@@ -139,7 +139,9 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc service
 	@cd $(INSTALLDIR)/sbin && ln -sf rc buttons
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink
+ifeq ($(TCONFIG_BCMARM),n)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink_5g
+endif
 ifeq ($(TCONFIG_FANCTRL),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc phy_tempsense
 endif

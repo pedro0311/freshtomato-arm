@@ -4200,9 +4200,15 @@ static void sysinit(void)
 
 	eval("buttons");
 
+/*	blink_5g was made for MIPS AC devices, such as AC66U
+	in order to support 5Ghz LED. Not needed on ARM.
+	blink_5g binary doesn't work on ARM because
+	value blink_5g_interface in NVRAM does not exist
+	so blink_5g doesn't know which interface to listen in
 #ifdef CONFIG_BCMWL6
 	eval("blink_5g");
 #endif
+*/
 
 	if (!noconsole) xstart("console");
 

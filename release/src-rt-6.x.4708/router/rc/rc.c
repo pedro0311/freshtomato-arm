@@ -121,9 +121,11 @@ static const applets_t applets[] = {
 #endif
 	{ "buttons",			buttons_main			},
 	{ "blink",			blink_main			},
+/*	blink_5g is not needed on ARM devices.
 #ifdef CONFIG_BCMWL6
 	{ "blink_5g",			blink_5g_main			},
 #endif
+*/
 #ifdef TCONFIG_FANCTRL
 	{ "phy_tempsense",		phy_tempsense_main		},
 #endif
