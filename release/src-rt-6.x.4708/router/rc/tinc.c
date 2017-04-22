@@ -15,8 +15,14 @@ void start_tinc(void)
 	char *nv, *nvp, *b;
 	const char *connecto, *name, *address, *port, *compression, *subnet, *rsa, *ed25519, *custom, *tinc_tmp_value;
 	char buffer[BUF_SIZE];
+	char cru[128];
 	FILE *fp, *hp;
+	int nvi;
 
+	// Don't try to start tinc if it is already running
+	if (pidof("tincd") >= 0 ){
+		return;
+	}
 
 	// create tinc directories
 	mkdir("/etc/tinc", 0700);
@@ -259,6 +265,12 @@ void start_tinc(void)
 
 	run_tinc_firewall_script();
 	xstart( "/usr/sbin/tinc", "start" );
+
+	if ( (nvi = nvram_get_int("tinc_poll")) > 0 )
+	{
+		sprintf(cru, "*/%d * * * * service tinc start", nvi);
+		eval("cru", "a", "CheckTincDaemon", cru);
+	}
 	return;
 }
 
@@ -268,6 +280,7 @@ void stop_tinc(void)
 	system( "/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' /etc/tinc/tinc-fw.sh\n");
 	run_tinc_firewall_script();
 	system( "/bin/rm -rf /etc/tinc\n" );
+	eval("cru", "d", "CheckTincDaemon");
 	return;
 }
 

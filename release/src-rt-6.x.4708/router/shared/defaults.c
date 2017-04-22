@@ -1143,6 +1143,7 @@ struct nvram_tuple router_defaults[] = {
 	{"tinc_hosts",			""		, 0 },
 	{"tinc_manual_firewall",	""		, 0 },
 	{"tinc_manual_tinc_up",		"0"		, 0 },
+	{"tinc_poll",			"0"		, 0 },
 	// scripts
 	{"tinc_tinc_up",		""		, 0 },
 	{"tinc_tinc_down",		""		, 0 },

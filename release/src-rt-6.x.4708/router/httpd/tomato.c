@@ -1678,6 +1678,7 @@ static const nvset_t nvset_list[] = {
 	{"tinc_hosts",			V_NONE			},
 	{"tinc_manual_firewall",	V_RANGE(0, 2)		},
 	{"tinc_manual_tinc_up",		V_RANGE(0, 1)		},
+	{"tinc_poll",			V_RANGE(0, 1440)	},
 	// scripts
 	{"tinc_tinc_up",		V_NONE			},
 	{"tinc_tinc_down",		V_NONE			},
