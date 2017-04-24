@@ -63,48 +63,9 @@ typedef struct {
 DECLARE_LHASH_OF(FUNCTION);
 
 FUNCTION functions[] = {
-	{FUNC_TYPE_GENERAL,"req",req_main},
-#ifndef OPENSSL_NO_RSA
-	{FUNC_TYPE_GENERAL,"rsa",rsa_main},
-#endif
-	{FUNC_TYPE_GENERAL,"x509",x509_main},
-	{FUNC_TYPE_GENERAL,"enc",enc_main},
-#ifndef OPENSSL_NO_BF
-	{FUNC_TYPE_CIPHER,"bf-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_BF
-	{FUNC_TYPE_CIPHER,"bf-ecb",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-128-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-128-ecb",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-192-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-192-ecb",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-256-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_AES
-	{FUNC_TYPE_CIPHER,"aes-256-ecb",enc_main},
-#endif
-#ifndef OPENSSL_NO_SPEED
-	{FUNC_TYPE_GENERAL,"speed",speed_main},
-#endif
-	{FUNC_TYPE_GENERAL,"version",version_main},
-#if !defined(OPENSSL_NO_SOCK)
-	{FUNC_TYPE_GENERAL,"s_client",s_client_main},
-#endif
-
-#if 0
-
     {FUNC_TYPE_GENERAL, "verify", verify_main},
     {FUNC_TYPE_GENERAL, "asn1parse", asn1parse_main},
+    {FUNC_TYPE_GENERAL, "req", req_main},
     {FUNC_TYPE_GENERAL, "dgst", dgst_main},
 #ifndef OPENSSL_NO_DH
     {FUNC_TYPE_GENERAL, "dh", dh_main},
@@ -401,8 +362,5 @@ FUNCTION functions[] = {
 #ifndef OPENSSL_NO_RC5
     {FUNC_TYPE_CIPHER, "rc5-ofb", enc_main},
 #endif
-
-#endif // 0
-
-	{0,NULL,NULL}
-	};
+    {0, NULL, NULL}
+};
