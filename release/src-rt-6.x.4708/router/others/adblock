@@ -105,7 +105,7 @@ download() {
 cronAdd() {
     ISSET=`cru l | grep adblockJob | wc -l`
     if [ "$ISSET" == "0" ]; then
-        MINS=$(($RANDOM%59))
+        MINS=$(($RANDOM % 59))
         $LOGS add cron job
         cru a adblockJob "$MINS 2 * * * /usr/sbin/adblock"
     fi
