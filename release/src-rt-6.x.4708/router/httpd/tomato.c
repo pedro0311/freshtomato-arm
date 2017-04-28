@@ -696,12 +696,16 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_init",		V_LENGTH(0,25)			},
 	{ "wan_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan_modem_speed",		V_LENGTH(0,6)			},
+	{ "wan_modem_band",		V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan2_modem_dev",		V_LENGTH(0,8)			},
 	{ "wan2_modem_init",		V_LENGTH(0,25)			},
 	{ "wan2_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
+	{ "wan2_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan2_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
@@ -709,12 +713,16 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_init",		V_LENGTH(0,25)			},
 	{ "wan3_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
+	{ "wan3_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan3_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan4_modem_dev",		V_LENGTH(0,8)			},
 	{ "wan4_modem_init",		V_LENGTH(0,25)			},
 	{ "wan4_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
+	{ "wan4_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan4_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 #endif
 #endif
 

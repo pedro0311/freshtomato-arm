@@ -30,6 +30,8 @@ connect() {
     TYPE=`nvram get modem_type`
     IFA=`nvram get wan_4g`
     SPEED=`nvram get "$PREFIX"_modem_speed`
+    BAND=`nvram get "$PREFIX"_modem_band`
+    ROAMING=`nvram get "$PREFIX"_modem_roam`
 
     logger -t switch4g[$PID] "4G MODEM - connecting ..."
 
@@ -58,32 +60,91 @@ connect() {
 
                     #change network type if required
                     MODE="AT^SYSCFGEX?" gcom -d $i -s /etc/gcom/setverbose.gcom > /tmp/4g.mode
+
                     RESULT=`cat /tmp/4g.mode | grep SYSCFGEX | grep '"' | cut -d '"' -f2`
+                    RESROAM=`cat /tmp/4g.mode | grep SYSCFGEX | grep ',' | cut -d ',' -f3`
+                    RESBAND=`cat /tmp/4g.mode | grep SYSCFGEX | grep ',' | cut -d ',' -f5 | tr -d '\r'`
 
                     case "$RESULT" in
-                        "00") RES1="Auto" ;;
-                        "03") RES1="4G only" ;;
-                        "02") RES1="3G only" ;;
-                        "0302") RES1="4G/3G only" ;;
-                        "030201") RES1="4G/3G/2G" ;;
-                        *) RES1="unknown" ;;
+                         "00")   RES1="Auto" ;;
+                         "03")   RES1="4G only" ;;
+                         "02")   RES1="3G only" ;;
+                         "0302") RES1="4G/3G only" ;;
+                         "030201") RES1="4G/3G/2G" ;;
+                         *) RES1="unknown" ;;
                     esac
 
                     case "$SPEED" in
-                        "00") SPD1="Auto" ;;
-                        "03") SPD1="4G only" ;;
-                        "02") SPD1="3G only" ;;
-                        "0302") SPD1="4G/3G only" ;;
-                        "030201") SPD1="4G/3G/2G" ;;
-                        *) SPD1="unknown" ;;
+                         "00")   SPD1="Auto" ;;
+                         "03")   SPD1="4G only" ;;
+                         "02")   SPD1="3G only" ;;
+                         "0302") SPD1="4G/3G only" ;;
+                         "030201") SPD1="4G/3G/2G" ;;
+                         *) SPD1="unknown" ;;
                     esac
 
+                    case "$RESROAM" in
+                         "0")  RES3="Disabled"  ;;
+                         "1")  RES3="Supported" ;;
+                         "2")  RES3="No change" ;;
+                         "3")  RES3="Roam only" ;;
+                         *)    RES3="unknown"   ;;
+                    esac
 
-                    if [ "$RESULT" == "$SPEED" ]; then
-                        logger 4G MODEM - Network type is $RES1
+                    case "$ROAMING" in
+                         "0")  ROAM3="Disabled"  ;;
+                         "1")  ROAM3="Supported" ;;
+                         "2")  ROAM3="No change" ;;
+                         "3")  ROAM3="Roam only" ;;
+                         *)    ROAM3="unknown"   ;;
+                    esac
+
+                    case "$RESBAND" in
+                         "80000") RES2="B20 (800 MHz)" ;;
+                         "4")     RES2="B3 (1800 MHz)" ;;
+                         "1")     RES2="B1 (2100 MHz)" ;;
+                         "40")    RES2="B7 (2600 MHz)" ;;
+                         "7FFFFFFFFFFFFFFF") RES2="All supported" ;;
+                         *)       RES2="unknown"       ;;
+                    esac
+
+                    case "$BAND" in
+                         "80000") BAND2="B20 (800 MHz)" ;;
+                         "4")     BAND2="B3 (1800 MHz)" ;;
+                         "1")     BAND2="B1 (2100 MHz)" ;;
+                         "40")    BAND2="B7 (2600 MHz)" ;;
+                         "7FFFFFFFFFFFFFFF") BAND2="All supported" ;;
+                         *)       BAND2="unknown"       ;;
+                    esac
+
+                    # change band and roaming  /pedro
+                    if [ "$RESULT" != "$SPEED" ]; then
+                        TXTLOG="Network type changed: was $RES1, now $SPD1."
+                        MODESPEED=$SPEED
                     else
-                        logger 4G MODEM - Network type changed: was $RES1, now $SPD1
-                        MODE="AT^SYSCFGEX=\"$SPEED\",3fffffff,2,4,7fffffffffffffff,," gcom -d $i -s /etc/gcom/setverbose.gcom
+                        TXTLOG="Network type is $RES1."
+                        MODESPEED=$RESULT
+                    fi
+                    if [ "$ROAMING" != "$RESROAM" ]; then
+                        TXTLOG="$TXTLOG Roaming changed: was '$RES3', now '$ROAM3'."
+                        MODEROAM=$ROAMING
+                    else
+                        TXTLOG="$TXTLOG Roaming is '$RES3'."
+                        MODEROAM=$RESROAM
+                    fi
+                    if [ "$SPEED" == "03" -a "$BAND" != "$RESBAND" ]; then
+                        TXTLOG="$TXTLOG Band changed: was '$RES2', now '$BAND2'."
+                        MODEBAND=$BAND
+                    else
+                        TXTLOG="$TXTLOG Band is '$RES2'."
+                        MODEBAND=$RESBAND
+                    fi
+
+                    logger -t switch4g[$PID] "4G MODEM - $TXTLOG (device $i)"
+
+
+                    if [ "$RESULT" != "$SPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]); then
+                        MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d $i -s /etc/gcom/setverbose.gcom
                         sleep 5
                     fi
 
@@ -136,15 +197,38 @@ connect() {
             sleep 5
         done
 
-        # set lte mode
-        uqmi -s -d "$DEV" --set-network-modes "lte"
+        case "$SPEED" in
+             "00")   SPD1="all" ;;
+             "03")   SPD1="lte" ;;
+             "02")   SPD1="all" ;;
+             "0302") SPD1="all" ;;
+             "030201") SPD1="all" ;;
+             *) SPD1="all" ;;
+        esac
+
+        # set lte mode (all,lte,umts,cdma,td-scdma), implemented only all/lte
+        uqmi -s -d "$DEV" --set-network-modes "$SPD1"
         sleep 2
+
+        case "$ROAMING" in
+             "0")  ROAM3="off"  ;;
+             "1")  ROAM3="any"  ;;
+             "3")  ROAM3="only" ;;
+             *)    ROAM3="any"  ;;
+        esac
+ 
+        # set roaming
+        if [ "$ROAMING" == "0" -o "$ROAMING" == "1" -o "$ROAMING" == "3" ]; then
+            uqmi -s -d "$DEV" --set-network-roaming "$ROAM3"
+            logger -t switch4g[$PID] "4G MODEM - Roaming is set to '$ROAM3'"
+            sleep 2
+        fi
 
         if [ "$CLID" == "" ]; then
             # get client id for wds - only once!
             CLID=`uqmi -s -d "$DEV" --get-client-id wds`
             nvram set modem_clid=$CLID
-            logger 4G MODEM - got new Client ID: $CLID
+            logger -t switch4g[$PID] "4G MODEM - got new Client ID: $CLID"
         fi
 
         CONNECTED=0

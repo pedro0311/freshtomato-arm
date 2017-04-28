@@ -173,12 +173,16 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_modem_init",		"*99#"				, 0 },
 	{ "wan_modem_apn",		"internet"			, 0 },
 	{ "wan_modem_speed",		"00"				, 0 },
+	{ "wan_modem_band",		"7FFFFFFFFFFFFFFF"	, 0 },
+	{ "wan_modem_roam",		"2"					, 0 },
 
 	{ "wan2_modem_pin",		""				, 0 },
 	{ "wan2_modem_dev",		"ttyUSB0"			, 0 },
 	{ "wan2_modem_init",		"*99#"				, 0 },
 	{ "wan2_modem_apn",		"internet"			, 0 },
 	{ "wan2_modem_speed",		"00"				, 0 },
+	{ "wan2_modem_band",	"7FFFFFFFFFFFFFFF"	, 0 },
+	{ "wan2_modem_roam",	"2"					, 0 },
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		""				, 0 },
@@ -186,12 +190,16 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_modem_init",		"*99#"				, 0 },
 	{ "wan3_modem_apn",		"internet"			, 0 },
 	{ "wan3_modem_speed",		"00"				, 0 },
+	{ "wan3_modem_band",	"7FFFFFFFFFFFFFFF"	, 0 },
+	{ "wan3_modem_roam",	"2"					, 0 },
 
 	{ "wan4_modem_pin",		""				, 0 },
 	{ "wan4_modem_dev",		"ttyUSB0"			, 0 },
 	{ "wan4_modem_init",		"*99#"				, 0 },
 	{ "wan4_modem_apn",		"internet"			, 0 },
 	{ "wan4_modem_speed",		"00"				, 0 },
+	{ "wan4_modem_band",	"7FFFFFFFFFFFFFFF"	, 0 },
+	{ "wan4_modem_roam",	"2"					, 0 },
 #endif
 #endif
 
