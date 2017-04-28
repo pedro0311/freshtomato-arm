@@ -68,7 +68,7 @@ StatusUpdater.prototype =
 					if(this.routeTable) this.routeTable.headerSet(fields.slice(2,fields.length-1));
 					break;
 				default:
-					if(this.errors) this.errors.innerHTML += 'Unknown header: '+lines[i]+'<br>';
+					if(this.errors) this.errors.innerHTML += 'Unknown header: '+lines[i]+'<br />';
 					break;
 				}
 				break;
@@ -100,7 +100,7 @@ StatusUpdater.prototype =
 					if(this.statTable) this.statTable.tb.parentNode.style.display = '';
 					if(this.statTable) this.statTable.insertData(-1, fields);
 				}
-				else if(this.errors) this.errors.innerHTML += 'Unknown: '+lines[i]+'<br>';
+				else if(this.errors) this.errors.innerHTML += 'Unknown: '+lines[i]+'<br />';
 				break;
 			}
 			if ( done ) break;

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -60,7 +60,7 @@ function save()
 
 	if (!verifyFields(null, false)) return;
 
-	fom = E('_fom');
+	fom = E('t_fom');
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx)<0) {
@@ -93,7 +93,7 @@ function save()
 
 </head>
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -124,7 +124,7 @@ if (wl_sunit(uidx)<0) {
 	//if (wl_ifaces.length > 1)
 		W('(' + wl_display_ifname(uidx) + ') ');
 	//W('');
-	W('</div><div class=\'section\'>');
+	W('<\/div><div class=\'section\'>');
 
 	at = ((nvram['wl'+u+'_security_mode'] != "wep") && (nvram['wl'+u+'_security_mode'] != "radius") && (nvram['wl'+u+'_security_mode'] != "disabled"));
 	createFieldTable('', [
@@ -138,7 +138,7 @@ if (wl_sunit(uidx)<0) {
 		{ title: 'Basic Rate', name: 'wl'+u+'_rateset', type: 'select', options: [['default','Default *'],['12','1-2 Mbps'],['all','All']],
 			value: nvram['wl'+u+'_rateset'] },
 		{ title: 'Beacon Interval', name: 'wl'+u+'_bcn', type: 'text', maxlen: 5, size: 7,
-			suffix: ' <small>(range: 1 - 65535; default: 100)</small>', value: nvram['wl'+u+'_bcn'] },
+			suffix: ' <small>(range: 1 - 65535; default: 100)<\/small>', value: nvram['wl'+u+'_bcn'] },
 		{ title: 'CTS Protection Mode', name: 'wl'+u+'_gmode_protection', type: 'select', options: [['off','Disable *'],['auto','Auto']],
 			value: nvram['wl'+u+'_gmode_protection'] },
 		{ title: 'Regulatory Mode', name: 'wl'+u+'_reg_mode', type: 'select',
@@ -150,12 +150,12 @@ if (wl_sunit(uidx)<0) {
 			options: [['0', 'Disable *'],['1', 'Enable'],['2', 'Preemption']],
 			value: nvram['wl'+u+'_btc_mode'] },
 		{ title: 'Distance / ACK Timing', name: 'f_wl'+u+'_distance', type: 'text', maxlen: 5, size: 7,
-			suffix: ' <small>meters</small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)</small>',
+			suffix: ' <small>meters<\/small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)<\/small>',
 				value: (nvram['wl'+u+'_distance'] == '') ? '0' : nvram['wl'+u+'_distance'] },
 		{ title: 'DTIM Interval', name: 'wl'+u+'_dtim', type: 'text', maxlen: 3, size: 5,
-			suffix: ' <small>(range: 1 - 255; default: 1)</small>', value: nvram['wl'+u+'_dtim'] },
+			suffix: ' <small>(range: 1 - 255; default: 1)<\/small>', value: nvram['wl'+u+'_dtim'] },
 		{ title: 'Fragmentation Threshold', name: 'wl'+u+'_frag', type: 'text', maxlen: 4, size: 6,
-			suffix: ' <small>(range: 256 - 2346; default: 2346)</small>', value: nvram['wl'+u+'_frag'] },
+			suffix: ' <small>(range: 256 - 2346; default: 2346)<\/small>', value: nvram['wl'+u+'_frag'] },
 		{ title: 'Frame Burst', name: 'wl'+u+'_frameburst', type: 'select', options: [['off','Disable *'],['on','Enable']],
 			value: nvram['wl'+u+'_frameburst'] },
 		{ title: 'HP', hidden: !hp || (uidx > 0) },
@@ -164,7 +164,7 @@ if (wl_sunit(uidx)<0) {
 			{ title: 'Enhanced RX Sensitivity', indent: 2, name: 'wlx_hperx' + (uidx > 0 ? uidx + '' : ''), type: 'select', options: [['0','Disable *'],['1','Enable']],
 				value: nvram.wlx_hperx != '0', hidden: !hp || (uidx > 0) },
 		{ title: 'Maximum Clients', name: 'wl'+u+'_maxassoc', type: 'text', maxlen: 3, size: 5,
-			suffix: ' <small>(range: 1 - 255; default: 128)</small>', value: nvram['wl'+u+'_maxassoc'] },
+			suffix: ' <small>(range: 1 - 255; default: 128)<\/small>', value: nvram['wl'+u+'_maxassoc'] },
 		{ title: 'Multicast Rate', name: 'wl'+u+'_mrate', type: 'select',
 			options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
 			value: nvram['wl'+u+'_mrate'] },
@@ -175,15 +175,15 @@ if (wl_sunit(uidx)<0) {
 		{ title: 'Overlapping BSS Coexistence', name: 'wl'+u+'_obss_coex', type: 'select', options: [['0','Off *'],['1','On']],
 			value: nvram['wl'+u+'_obss_coex'], hidden: !nphy },
 		{ title: 'RTS Threshold', name: 'wl'+u+'_rts', type: 'text', maxlen: 4, size: 6,
-			suffix: ' <small>(range: 0 - 2347; default: 2347)</small>', value: nvram['wl'+u+'_rts'] },
+			suffix: ' <small>(range: 0 - 2347; default: 2347)<\/small>', value: nvram['wl'+u+'_rts'] },
 		{ title: 'Receive Antenna', name: 'wl'+u+'_antdiv', type: 'select', options: [['3','Auto *'],['1','A'],['0','B']],
 			value: nvram['wl'+u+'_antdiv'] },
 		{ title: 'Transmit Antenna', name: 'wl'+u+'_txant', type: 'select', options: [['3','Auto *'],['1','A'],['0','B']],
 			value: nvram['wl'+u+'_txant'] },
 		{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 3, size: 5,
 			suffix: hp ?
-				' <small>mW (before amplification)</small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)</small>' :
-				' <small>mW</small>&nbsp;&nbsp;<small>(range: 0 - 400, actual max depends on Country selected; use 0 for hardware default)</small>',
+				' <small>mW (before amplification)<\/small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)<\/small>' :
+				' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 400, actual max depends on Country selected; use 0 for hardware default)<\/small>',
 				value: nvram['wl'+u+'_txpwr'] },
 		{ title: 'Transmission Rate', name: 'wl'+u+'_rate', type: 'select',
 			options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
@@ -199,7 +199,7 @@ if (wl_sunit(uidx)<0) {
 	{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
 		value: nvram['wl'+u+'_wmf_bss_enable'] }
 	]);
-	W('</div>');
+	W('<\/div>');
 	}
 }
 </script>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato RAF Transmission GUI
 	Copyright (C) 2007-2011 Shibby
@@ -12,18 +12,18 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Nas: BitTorrent Client</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 <style type='text/css'>
 textarea {
- width: 98%;
- height: 15em;
+	width: 98%;
+	height: 15em;
 }
 </style>
 <script type='text/javascript'>
 //	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
-var btgui_link = '&nbsp;&nbsp;<a href="http://' + location.hostname +':<% nv('bt_port_gui'); %>" target="_blank"><i>[Click here to open Transmission GUI]</i></a>';
+var btgui_link = '&nbsp;&nbsp;<a href="http://' + location.hostname +':<% nv('bt_port_gui'); %>" class="new_window"><i>[Click here to open Transmission GUI]<\/i><\/a>';
 
 function verifyFields(focused, quiet)
 {
@@ -225,7 +225,7 @@ function verifyFields(focused, quiet)
 function save()
 {
   if (verifyFields(null, 0)==0) return;
-  var fom = E('_fom');
+  var fom = E('t_fom');
   fom.bt_enable.value = E('_f_bt_enable').checked ? 1 : 0;
   fom.bt_incomplete.value = E('_f_bt_incomplete').checked ? 1 : 0;
   fom.bt_check.value = E('_f_bt_check').checked ? 1 : 0;
@@ -251,11 +251,14 @@ function save()
   else {
   	fom._service.value = 'bittorrent-restart'; 
   }
-	form.submit('_fom', 1);
+	form.submit('t_fom', 1);
 }
 
 function init()
 {
+    var elements = document.getElementsByClassName("new_window");
+    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
@@ -271,7 +274,8 @@ function init()
 <div id='ident'><% ident(); %></div>
 <div class='section-title'>Basic Settings</div>
 <div class='section' id='config-section'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
+<div>
 <input type='hidden' name='_nextpage' value='nas-bittorrent.asp'>
 <input type='hidden' name='_service' value='bittorrent-restart'>
 <input type='hidden' name='bt_enable'>
@@ -295,20 +299,20 @@ function init()
 
 <script type='text/javascript'>
 createFieldTable('', [
-	{ title: 'Enable torrent client', name: 'f_bt_enable', type: 'checkbox', value: nvram.bt_enable == '1', suffix: ' <small>*</small>' },
+	{ title: 'Enable torrent client', name: 'f_bt_enable', type: 'checkbox', value: nvram.bt_enable == '1', suffix: ' <small>*<\/small>' },
 	{ title: 'Transmission binary path', multi: [
 		{ name: 'bt_binary', type: 'select', options: [
 /* BBT-BEGIN */
 			['internal','Internal (/usr/bin)'],
 /* BBT-END */
 			['optware','Optware (/opt/bin)'],
-			['custom','Custom'] ], value: nvram.bt_binary, suffix: ' <small>*</small> ' },
+			['custom','Custom'] ], value: nvram.bt_binary, suffix: ' <small>*<\/small> ' },
 		{ name: 'bt_binary_custom', type: 'text', maxlen: 40, size: 40, value: nvram.bt_binary_custom }
 	] },
-	{ title: 'Keep alive', name: 'f_bt_check', type: 'checkbox', value: nvram.bt_check == '1', suffix: ' <small>*</small>' },
-	{ title: 'Check alive every', indent: 2, name: 'bt_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.bt_check_time, suffix: ' <small>minutes (range: 1 - 55; default: 15)</small>' },
-	{ title: 'Delay at startup', name: 'bt_sleep', type: 'text', maxlen: 5, size: 7, value: nvram.bt_sleep, suffix: ' <small>seconds (range: 1 - 60; default: 10)</small>' },
-	{ title: 'Listening port', name: 'bt_port', type: 'text', maxlen: 5, size: 7, value: nvram.bt_port, suffix: ' <small>*</small>' },
+	{ title: 'Keep alive', name: 'f_bt_check', type: 'checkbox', value: nvram.bt_check == '1', suffix: ' <small>*<\/small>' },
+	{ title: 'Check alive every', indent: 2, name: 'bt_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.bt_check_time, suffix: ' <small>minutes (range: 1 - 55; default: 15)<\/small>' },
+	{ title: 'Delay at startup', name: 'bt_sleep', type: 'text', maxlen: 5, size: 7, value: nvram.bt_sleep, suffix: ' <small>seconds (range: 1 - 60; default: 10)<\/small>' },
+	{ title: 'Listening port', name: 'bt_port', type: 'text', maxlen: 5, size: 7, value: nvram.bt_port, suffix: ' <small>*<\/small>' },
 	{ title: 'Download directory', name: 'bt_dir', type: 'text', maxlen: 40, size: 40, value: nvram.bt_dir },
 	{ title: 'Use .incomplete/', indent: 2, name: 'f_bt_incomplete', type: 'checkbox', value: nvram.bt_incomplete == '1' }
 ]);
@@ -320,16 +324,16 @@ createFieldTable('', [
 		<li><b>Listening port</b> - Port used for torrent client. Make sure this port is not in use.
 	</ul>
 </div>
-<div class='section-title'>Remote Access<script>W(btgui_link);</script></div>
+<div class='section-title'>Remote Access<script type='text/javascript'>W(btgui_link);</script></div>
 <div class='section'>
 <script type='text/javascript'>
 createFieldTable('', [
 	{ title: 'Enable GUI', name: 'f_bt_rpc_enable', type: 'checkbox', value: nvram.bt_rpc_enable == '1' },
-	{ title: 'Listening GUI port', indent: 2, name: 'bt_port_gui', type: 'text', maxlen: 32, size: 5, value: nvram.bt_port_gui, suffix: ' <small>*</small>' },
-	{ title: 'Authentication required', name: 'f_bt_auth', type: 'checkbox', value: nvram.bt_auth == '1', suffix: ' <small>*</small>' },
+	{ title: 'Listening GUI port', indent: 2, name: 'bt_port_gui', type: 'text', maxlen: 32, size: 5, value: nvram.bt_port_gui, suffix: ' <small>*<\/small>' },
+	{ title: 'Authentication required', name: 'f_bt_auth', type: 'checkbox', value: nvram.bt_auth == '1', suffix: ' <small>*<\/small>' },
 	{ title: 'Username', indent: 2, name: 'bt_login', type: 'text', maxlen: 32, size: 15, value: nvram.bt_login },
 	{ title: 'Password', indent: 2, name: 'bt_password', type: 'password', maxlen: 32, size: 15, value: nvram.bt_password },
-	{ title: 'Allow remote access', name: 'f_bt_rpc_wan', type: 'checkbox', value: nvram.bt_rpc_wan == '1', suffix: ' <small>*</small>' }
+	{ title: 'Allow remote access', name: 'f_bt_rpc_wan', type: 'checkbox', value: nvram.bt_rpc_wan == '1', suffix: ' <small>*<\/small>' }
 ]);
 </script>
 	<ul>
@@ -344,19 +348,19 @@ createFieldTable('', [
 createFieldTable('', [
 	{ title: 'Download limit', multi: [
 		{ name: 'f_bt_dl_enable', type: 'checkbox', value: nvram.bt_dl_enable == '1', suffix: '  ' },
-		{ name: 'bt_dl', type: 'text', maxlen: 10, size: 7, value: nvram.bt_dl, suffix: ' <small>kB/s</small>' } ] },
+		{ name: 'bt_dl', type: 'text', maxlen: 10, size: 7, value: nvram.bt_dl, suffix: ' <small>kB/s<\/small>' } ] },
 	{ title: 'Upload limit', multi: [
 		{ name: 'f_bt_ul_enable', type: 'checkbox', value: nvram.bt_ul_enable == '1', suffix: '  ' },
-		{ name: 'bt_ul', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ul, suffix: ' <small>kB/s</small>' } ] },
+		{ name: 'bt_ul', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ul, suffix: ' <small>kB/s<\/small>' } ] },
 	{ title: 'Stop seeding at ratio', multi: [
 		{ name: 'f_bt_ratio_enable', type: 'checkbox', value: nvram.bt_ratio_enable == '1', suffix: '  ' },
 		{ name: 'bt_ratio', type: 'select', options: [['0.0000','0.0'],['0.1000','0.1'],['0.2000','0.2'],['0.5000','0.5'],['1.0000','1.0'],['1.5000','1.5'],['2.0000','2.0'],['2.5000','2.5'],['3.0000','3.0']], value: nvram.bt_ratio } ] },
 	{ title: 'Stop seeding if idle for', multi: [
 		{ name: 'f_bt_ratio_idle_enable', type: 'checkbox', value: nvram.bt_ratio_idle_enable == '1', suffix: '  ' },
-		{ name: 'bt_ratio_idle', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ratio_idle, suffix: ' <small>minutes (range: 1 - 55; default: 30)</small>' } ] },
-	{ title: 'Global peer limit', name: 'bt_peer_limit_global', type: 'text', maxlen: 10, size: 7, value: nvram.bt_peer_limit_global, suffix: ' <small>(range: 10 - 1000; default: 150)</small>' },
-	{ title: 'Peer limit per torrent', name: 'bt_peer_limit_per_torrent', type: 'text', maxlen: 10, size: 7, value: nvram.bt_peer_limit_per_torrent, suffix: ' <small>(range: 1 - 200; default: 30)</small>' },
-	{ title: 'Upload slots per torrent', name: 'bt_ul_slot_per_torrent', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ul_slot_per_torrent, suffix: ' <small>(range: 1 - 50; default: 10)</small>' }
+		{ name: 'bt_ratio_idle', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ratio_idle, suffix: ' <small>minutes (range: 1 - 55; default: 30)<\/small>' } ] },
+	{ title: 'Global peer limit', name: 'bt_peer_limit_global', type: 'text', maxlen: 10, size: 7, value: nvram.bt_peer_limit_global, suffix: ' <small>(range: 10 - 1000; default: 150)<\/small>' },
+	{ title: 'Peer limit per torrent', name: 'bt_peer_limit_per_torrent', type: 'text', maxlen: 10, size: 7, value: nvram.bt_peer_limit_per_torrent, suffix: ' <small>(range: 1 - 200; default: 30)<\/small>' },
+	{ title: 'Upload slots per torrent', name: 'bt_ul_slot_per_torrent', type: 'text', maxlen: 10, size: 7, value: nvram.bt_ul_slot_per_torrent, suffix: ' <small>(range: 1 - 50; default: 10)<\/small>' }
 ]);
 </script>
 </div>
@@ -366,11 +370,11 @@ createFieldTable('', [
 createFieldTable('', [
 	{ title: 'Downloads queuing', multi: [
 		{ name: 'f_bt_dl_queue_enable', type: 'checkbox', value: nvram.bt_dl_queue_enable == '1', suffix: '  ' },
-		{ name: 'bt_dl_queue_size', type: 'text', maxlen: 5, size: 7, value: nvram.bt_dl_queue_size, suffix: ' <small>(range: 1 - 30; default: 5) *</small>' }
+		{ name: 'bt_dl_queue_size', type: 'text', maxlen: 5, size: 7, value: nvram.bt_dl_queue_size, suffix: ' <small>(range: 1 - 30; default: 5) *<\/small>' }
 		] },
 	{ title: 'Seeds queuing', multi: [
 		{ name: 'f_bt_ul_queue_enable', type: 'checkbox', value: nvram.bt_ul_queue_enable == '1', suffix: '  ' },
-		{ name: 'bt_ul_queue_size', type: 'text', maxlen: 5, size: 7, value: nvram.bt_ul_queue_size, suffix: ' <small>(range: 1 - 30; default: 5) *</small>' }
+		{ name: 'bt_ul_queue_size', type: 'text', maxlen: 5, size: 7, value: nvram.bt_ul_queue_size, suffix: ' <small>(range: 1 - 30; default: 5) *<\/small>' }
 		] }
 ]);
 </script>
@@ -411,7 +415,7 @@ createFieldTable('', [
 		{ name: 'bt_log_path', type: 'text', maxlen: 80, size: 60, value: nvram.bt_log_path, suffix: ' /transmission.log' }
 		] },
 	null,
-	{ title: '<a href="https://trac.transmissionbt.com/wiki/EditConfigFiles" target="_new">Transmission</a><br>Custom configuration', name: 'bt_custom', type: 'textarea', value: nvram.bt_custom }
+	{ title: '<a href="https://github.com/transmission/transmission/wiki/Editing-Configuration-Files" class="new_window">Transmission<\/a><br />Custom configuration', name: 'bt_custom', type: 'textarea', value: nvram.bt_custom }
 ]);
 </script>
 </div>
@@ -419,12 +423,13 @@ createFieldTable('', [
 </div>
 </td></tr>
 <tr><td id='footer' colspan=2>
- <form>
- <span id='footer-msg'></span>
- <input type='button' value='Save' id='save-button' onclick='save()'>
- <input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
- </form>
-</div>
+	<form action=''>
+		<div>
+			<span id='footer-msg'></span>
+			<input type='button' value='Save' id='save-button' onclick='save()'>
+			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+		</div>
+	</form>
 </td></tr>
 </table>
 <script type='text/javascript'>verifyFields(null, 1);</script>

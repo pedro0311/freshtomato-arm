@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -130,7 +130,7 @@ function save()
 	if (!verifyFields(null, false)) return;
 	if (!confirm("Warning: Changing the MAC address may require that you reboot all devices, computers or modem connected to this router. Continue anyway?")) return;
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 		u = (uidx>1) ? uidx : '';
 		v = E('_f_wan'+u+'_hwaddr').value;
@@ -150,7 +150,7 @@ function save()
 </head>
 
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -206,7 +206,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 createFieldTable('', f);
 
 </script>
-<br>
+<br />
 <table border=0 cellpadding=1>
 	<tr><td>Router's LAN MAC Address:</td><td><b><script type='text/javascript'>W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
 	<tr><td>Computer's MAC Address:</td><td><b><script type='text/javascript'>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>

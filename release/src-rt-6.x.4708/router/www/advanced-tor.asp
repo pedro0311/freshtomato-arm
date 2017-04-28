@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2007-2011 Shibby
@@ -12,7 +12,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Advanced: TOR Project</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 <style type='text/css'>
 textarea {
@@ -100,7 +100,7 @@ function verifyFields(focused, quiet)
 function save()
 {
   if (verifyFields(null, 0)==0) return;
-  var fom = E('_fom');
+  var fom = E('t_fom');
   fom.tor_enable.value = E('_f_tor_enable').checked ? 1 : 0;
 
   if (fom.tor_enable.value == 0) {
@@ -109,7 +109,7 @@ function save()
   else {
   	fom._service.value = 'tor-restart,firewall-restart'; 
   }
-  form.submit('_fom', 1);
+  form.submit('t_fom', 1);
 }
 
 function init()
@@ -129,7 +129,8 @@ function init()
 <div id='ident'><% ident(); %></div>
 <div class='section-title'>TOR Settings</div>
 <div class='section' id='config-section'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
+<div>
 <input type='hidden' name='_nextpage' value='advanced-tor.asp'>
 <input type='hidden' name='_service' value='tor-restart'>
 <input type='hidden' name='tor_enable'>
@@ -170,19 +171,20 @@ createFieldTable('', [
 	<li><b>Enable Tor</b> - Be patient. Starting the Tor client can take from several seconds to several minutes.
 	<li><b>Selected IP`s</b> - ex: 1.2.3.4,1.1.0/24,1.2.3.1-1.2.3.4
 	<li><b>Selected Ports</b> - ex: one port (80), few ports (80,443,8888), range of ports (80:88), mix (80,8000:9000,9999)
-	<li><b><u>Caution!</u></b> - If your router has only 32MB of RAM, you'll have to use swap.
+	<li><b style='text-decoration:underline'>Caution!</b> - If your router has only 32MB of RAM, you'll have to use swap.
 </ul>
 </div>
 </form>
 </div>
 </td></tr>
 <tr><td id='footer' colspan=2>
- <form>
- <span id='footer-msg'></span>
- <input type='button' value='Save' id='save-button' onclick='save()'>
- <input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
- </form>
-</div>
+	<form action=''>
+		<div>
+			<span id='footer-msg'></span>
+			<input type='button' value='Save' id='save-button' onclick='save()'>
+			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+		</div>
+	</form>
 </td></tr>
 </table>
 <script type='text/javascript'>verifyFields(null, 1);</script>

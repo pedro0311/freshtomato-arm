@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Bandwidth: Weekly</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -110,12 +110,12 @@ function redraw()
 
 	function flush_block()
 	{
-		grid += '<b>' + dbeg + ' to ' + dend + '</b>' +
+		grid += '<b>' + dbeg + ' to ' + dend + '<\/b>' +
 				'<table class="bwmg" cellspacing="1">' +
 				makeRow('header', 'Date', 'Download', 'Upload', 'Total') +
 				block.join('') +
 				makeRow('footer', 'Total', rescale(dl), rescale(ul), rescale(dl + ul)) +
-				'</table><br>';
+				'<\/table><br />';
 	}
 
 	for (i = 0; i < daily_history.length; ++i) {
@@ -129,7 +129,7 @@ function redraw()
 		tick = d.getTime();
 		diff = lastSplit - tick;
 
-		ds = ymdText(yr, mo, da) + ' <small>(' + weeksShort[wk] + ')</small>';
+		ds = ymdText(yr, mo, da) + ' <small>(' + weeksShort[wk] + ')<\/small>';
 
 /*	REMOVE-BEGIN
 
@@ -163,7 +163,7 @@ function redraw()
 			if (summary) {
 				if (i > 0) {
 					grid += makeRow(((rows & 1) ? 'odd' : 'even'),
-						dend + '<br>' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
+						dend + '<br />' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
 					++rows;
 					++gn;
 				}
@@ -184,7 +184,7 @@ function redraw()
 		dl += h[1];
 		ul += h[2];
 		if (!summary) {
-			block.unshift(makeRow(((rows & 1) ? 'odd' : 'even'), weeks[wk] + ' <small>' + (mo + 1) + '-' + da + '</small>', rescale(h[1]), rescale(h[2]), rescale(h[1] + h[2])))
+			block.unshift(makeRow(((rows & 1) ? 'odd' : 'even'), weeks[wk] + ' <small>' + (mo + 1) + '-' + da + '<\/small>', rescale(h[1]), rescale(h[2]), rescale(h[1] + h[2])))
 			++rows;
 		}
 
@@ -194,9 +194,9 @@ function redraw()
 	if (summary) {
 		if (gn < 9) {
 			grid += makeRow(((rows & 1) ? 'odd' : 'even'),
-				dend + '<br>' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
+				dend + '<br />' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
 		}
-		grid += '</table>';
+		grid += '<\/table>';
 	}
 	else {
 		if ((rows) && (gn < 9)) {
@@ -231,7 +231,7 @@ function init()
 
 </head>
 <body onload='init()'>
-<form>
+<form action="">
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -246,15 +246,15 @@ function init()
 <div class='section-title'>WAN Bandwidth - Weekly</div>
 <div id='bwm-weekly-grid' style='float:left'></div>
 <div style="float:right;text-align:right">
-<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br>
-<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br>
-<b>Start</b> <select onchange='changeStart(this)' id='startwk'><option value=0 selected>Sun<option value=1>Mon<option value=2>Tue<option value=3>Wed<option value=4>Thu<option value=5>Fri<option value=6>Sat</select><br>
-<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br>
-<br>
+<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br />
+<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br />
+<b>Start</b> <select onchange='changeStart(this)' id='startwk'><option value=0 selected>Sun<option value=1>Mon<option value=2>Tue<option value=3>Wed<option value=4>Thu<option value=5>Fri<option value=6>Sat</select><br />
+<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
+<br />
 &raquo; <a href="admin-bwm.asp">Configure</a>
-<br><br><br>
+<br /><br /><br />
 </div>
-<br>
+<br />
 
 <script type='text/javascript'>checkRstats();</script>
 
@@ -262,7 +262,7 @@ function init()
 
 </td></tr>
 <tr><td id='footer' colspan=2>
-<input type='button' value='Refresh' onclick='reloadPage()'>
+	<input type='button' value='Refresh' onclick='reloadPage()'>
 </td></tr>
 </table>
 </form>

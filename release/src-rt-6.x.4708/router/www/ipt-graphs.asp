@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -138,7 +138,7 @@ function showData() {
 		n = nfmarks[i];
 		E('ccnt' + i).innerHTML = (abc[i] != '') ? n : '';
 		if (ct > 0) p = (n / ct) * 100;
-			else p = 0;
+		else p = 0;
 		E('cpct' + i).innerHTML = (abc[i] != '') ? p.toFixed(2) + '%' : '';
 	}
 	E('ccnt-total').innerHTML = ct;
@@ -148,7 +148,7 @@ function showData() {
 		E('bcnt' + i).innerHTML = (abc[i] != '') ? (n / 125).toFixed(2) : '';
 		E('bcntx' + i).innerHTML = (abc[i] != '') ? (n / 1024).toFixed(2) : '';
 		if (rt > 0) p = (n / rt) * 100;
-			else p = 0;
+		else p = 0;
 		E('bpct' + i).innerHTML = (abc[i] != '') ? p.toFixed(2) + '%' : '';
 	}
 	E('bcnt-total').innerHTML = (rt / 125).toFixed(2);
@@ -159,7 +159,7 @@ function showData() {
 		E('obcnt' + i).innerHTML = (abc[i] != '') ? (n / 125).toFixed(2) : '';
 		E('obcntx' + i).innerHTML = (abc[i] != '') ? (n / 1024).toFixed(2) : '';
 		if (ort > 0) p = (n / ort) * 100;
-			else p = 0;
+		else p = 0;
 		E('obpct' + i).innerHTML = (abc[i] != '') ? p.toFixed(2) + '%' : '';
 	}
 	E('obcnt-total').innerHTML = (ort / 125).toFixed(2);
@@ -211,6 +211,7 @@ ref.refresh = function(text) {
 		}
 
 		k = getArrayPosByElement(lastiptraffic, b[0], 0);
+
 		if (k == -1) {
 			k = lastiptraffic.length;
 			lastiptraffic[k] = b;
@@ -225,15 +226,15 @@ ref.refresh = function(text) {
 		avgiptraffic[j][10] = b[10];
 		lastiptraffic[k][9] = b[9];
 		lastiptraffic[k][10] = b[10];
-
 	}
 	-- lock;
 
 /* REMOVE-BEGIN */
 //updateLabels();
 /* REMOVE-END */
+
 	i = 0;
-	while (i < 11){
+	while (i < 11) {
 		if (iptraffic[i] != null) {
 			nfmarks[i] = avgiptraffic[i][9] + avgiptraffic[i][10]; // TCP + UDP connections
 			irates[i] = avgiptraffic[i][1]; // RX bytes
@@ -262,7 +263,7 @@ function checkSVG() {
 			e = E('svg' + i);
 			d = e.getSVGDocument();
 			if (d.defaultView) w = d.defaultView;
-				else w = e.getWindow();
+			else w = e.getWindow();
 			if (!w.ready) break;
 			if (i == 0) updateCD = w.updateSVG;
 			if (i == 1)	updateBD = w.updateSVG;
@@ -293,7 +294,7 @@ function init() {
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' action='javascript:{}'>
+<form id='t_fom' action='javascript:{}'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -312,18 +313,18 @@ function init() {
 <script type='text/javascript'>
 for (i = 0; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '</a></td>' +
-		'<td id="ccnt' + i + '" class="count" style="width:90px"></td>' +
-		'<td id="cpct' + i + '" class="pct"></td></tr>');
-}
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
+		'<td id="cpct' + i + '" class="pct"><\/td><\/tr>');
+	}
 </script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="ccnt-total" class="total count"></td><td class="total pct">100%</td></tr>
+	<tr><td>&nbsp;</td><td class="total">Total</td><td id="ccnt-total" class="total count"></td><td class="total pct">100%</td></tr>
 	</table>
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -340,19 +341,19 @@ if (nvram.web_svg != '0') {
 <script type='text/javascript'>
 for (i = 0; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '</a></td>' +
-		'<td id="bcnt' + i + '" class="count" style="width:60px"></td>' +
-		'<td id="bcntx' + i + '" class="count" style="width:50px"></td>' +
-		'<td id="bpct' + i + '" class="pct"></td></tr>');
-}
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="bcnt' + i + '" class="count" style="width:60px"><\/td>' +
+		'<td id="bcntx' + i + '" class="count" style="width:50px"><\/td>' +
+		'<td id="bpct' + i + '" class="pct"><\/td><\/tr>');
+	}
 </script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="bcnt-total" class="total count"></td><td id="bcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
+	<tr><td>&nbsp;</td><td class="total">Total</td><td id="bcnt-total" class="total count"></td><td id="bcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
 	</table>
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -369,19 +370,19 @@ if (nvram.web_svg != '0') {
 <script type='text/javascript'>
 for (i = 0; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '</a></td>' +
-		'<td id="obcnt' + i + '" class="count" style="width:60px"></td>' +
-		'<td id="obcntx' + i + '" class="count" style="width:50px"></td>' +
-		'<td id="obpct' + i + '" class="pct"></td></tr>');
-}
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="obcnt' + i + '" class="count" style="width:60px"><\/td>' +
+		'<td id="obcntx' + i + '" class="count" style="width:50px"><\/td>' +
+		'<td id="obpct' + i + '" class="pct"><\/td><\/tr>');
+	}
 </script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="obcnt-total" class="total count"></td><td id="obcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
+	<tr><td>&nbsp;</td><td class="total">Total</td><td id="obcnt-total" class="total count"></td><td id="obcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
 	</table>
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -392,7 +393,7 @@ if (nvram.web_svg != '0') {
 
 <script type='text/javascript'>
 if (nvram.cstats_enable != '1') {
-	W('<div class="note-disabled"><b>IP Traffic monitoring disabled.</b> &nbsp; <a href="admin-iptraffic.asp">Enable&nbsp;&raquo;</a></div>');
+	W('<div class="note-disabled"><b>IP Traffic monitoring disabled.<\/b> &nbsp; <a href="admin-iptraffic.asp">Enable&nbsp;&raquo;<\/a><\/div>');
 }
 </script>
 

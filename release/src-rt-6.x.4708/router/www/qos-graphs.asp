@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] QoS: View Graphs</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -289,7 +289,7 @@ function init()
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' action='javascript:{}'>
+<form id='t_fom' action='javascript:{}'>
 <table id='container' cellspacing=0>
 <tr><td colspan=3 id='header'>
 	<div class='title'>Tomato</div>
@@ -308,10 +308,10 @@ function init()
 <script type='text/javascript'>
 for (i = 0; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:60px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '</a></td>' +
-		'<td id="ccnt' + i + '" class="count" style="width:90px"></td>' +
-		'<td id="cpct' + i + '" class="pct"></td></tr>');
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:60px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
+		'<td id="cpct' + i + '" class="pct"><\/td><\/tr>');
 }
 </script>
 	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="ccnt-total" class="total count"></td><td class="total pct">100%</td></tr>
@@ -319,7 +319,7 @@ for (i = 0; i < 11; ++i) {
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="qos-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -334,11 +334,11 @@ if (nvram.web_svg != '0') {
 <script type='text/javascript'>
 for (i = 1; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '</a></td>' +
-		'<td id="bocnt' + i + '" class="count" style="width:60px"></td>' +
-		'<td id="bocntx' + i + '" class="count" style="width:50px"></td>' +
-		'<td id="bopct' + i + '" class="pct"></td></tr>');
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="bocnt' + i + '" class="count" style="width:60px"><\/td>' +
+		'<td id="bocntx' + i + '" class="count" style="width:50px"><\/td>' +
+		'<td id="bopct' + i + '" class="pct"><\/td><\/tr>');
 }
 </script>
 	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="bocnt-total" class="total count"></td><td id="bocntx-total" class="total count"></td><td id="rateout" class="total pct"></td></tr>
@@ -346,7 +346,7 @@ for (i = 1; i < 11; ++i) {
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="qos-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -361,11 +361,11 @@ if (nvram.web_svg != '0') {
 <script type='text/javascript'>
 for (i = 1; i < 11; ++i) {
 	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;</td>' +
-		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '</a></td>' +
-		'<td id="bicnt' + i + '" class="count" style="width:60px"></td>' +
-		'<td id="bicntx' + i + '" class="count" style="width:50px"></td>' +
-		'<td id="bipct' + i + '" class="pct"></td></tr>');
+		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+		'<td id="bicnt' + i + '" class="count" style="width:60px"><\/td>' +
+		'<td id="bicntx' + i + '" class="count" style="width:50px"><\/td>' +
+		'<td id="bipct' + i + '" class="pct"><\/td><\/tr>');
 }
 </script>
 	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="bicnt-total" class="total count"></td><td id="bicntx-total" class="total count"></td><td id="ratein" class="total pct"></td></tr>
@@ -373,7 +373,7 @@ for (i = 1; i < 11; ++i) {
 </td><td style="margin-right:150px">
 <script type='text/javascript'>
 if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"></embed>');
+	W('<embed src="qos-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
 }
 </script>
 </td></tr>
@@ -382,17 +382,19 @@ if (nvram.web_svg != '0') {
 
 <script type='text/javascript'>
 if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.</b> &nbsp; <a href="qos-settings.asp">Enable &raquo;</a></div>');
+	W('<div class="note-disabled"><b>QoS disabled.<\/b> &nbsp; <a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
 }
 </script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer'></td>
-	<td id='footer' width="528"><input name="mybtn" style="width:100px" value="Zoom Graphs" type="button" onclick="showGraph()" ></td>
-	<td id='footer' width="237"><script type='text/javascript'>genStdRefresh(1,2,'ref.toggle()');</script></td>
-	</tr>
+<tr>
+    <td id='footer' colspan='3'>
+		<div style="display:inline-block;width:528px"><input name="mybtn" style="width:100px" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
+		<div style="display:inline-block;width:237px"><script type='text/javascript'>genStdRefresh(1,2,'ref.toggle()');</script></div>
+    </td>
+</tr>
 </table>
 </form>
 </body>

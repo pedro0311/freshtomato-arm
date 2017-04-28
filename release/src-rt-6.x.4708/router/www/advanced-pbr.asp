@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 Tomato GUI
 Copyright (C) 2006-2008 Jonathan Zarate
@@ -17,53 +17,53 @@ No part of this file may be used without permission.
 <script type='text/javascript' src='protocols.js'></script>
 <style type='text/css'>
 #qg div {
-padding: 0 0 1px 0;
-margin: 0;
+	padding: 0 0 1px 0;
+	margin: 0;
 }
 #qg .co1 {
-width: 4%;
-text-align: center;
+	width: 4%;
+	text-align: center;
 }
 #qg .co2 {
-width: 8%;
+	width: 8%;
 }
 #qg .co3 {
-width: 20%;
+	width: 20%;
 }
 #qg .co4 {
-width: 20%;
+	width: 20%;
 }
 #qg .co5 {
-width: 15%;
+	width: 15%;
 }
 #qg .co6 {
-width: 25%;
+	width: 25%;
 }
 #qg .x1a {
-width: 100%;
-float: left;
-clear: left;
+	width: 100%;
+	float: left;
+	clear: left;
 }
 #qg .x1b {
-width: 100%;
-float: left;
+	width: 100%;
+	float: left;
 }
 #qg .x1c {
-width: 100%;
-float: left;
+	width: 100%;
+	float: left;
 }
 #qg .x2a {
-width: 100%;
-float: left;
-clear: left;
+	width: 100%;
+	float: left;
+	clear: left;
 }
 #qg .x2b {
-width: 100%;
-float: left;
+	width: 100%;
+	float: left;
 }
 #qg .x2c {
-width: 100%;
-float: left;
+	width: 100%;
+	float: left;
 }
 </style>
 <script type='text/javascript'>
@@ -120,7 +120,7 @@ float: left;
 			}
 		}	else a.push('All');
 		d.push(getOUTifdesc(data[8] * 1));
-		return [(data[0] != '0') ? 'On' : 'Off', a.join('<br>'), b.join('<br>'), c.join('<br>'), d.join('<br>'), escapeHTML(data[9])];
+		return [(data[0] != '0') ? 'On' : 'Off', a.join('<br />'), b.join('<br />'), c.join('<br />'), d.join('<br />'), escapeHTML(data[9])];
 	}
 	pbr.fieldValuesToData = function(row) {
 		var f = fields.getAll(row);
@@ -218,16 +218,16 @@ float: left;
 		// what a mess...
 		this.init('qg', 'move', 100, [
 			{ type: 'checkbox' },
-			{ type: 'select', prefix: '<div class="x2a">', suffix: '</div>', options: a },
+			{ type: 'select', prefix: '<div class="x2a">', suffix: '<\/div>', options: a },
 			{ multi: [
-				{ type: 'select', options: [['0','All'],['1','IP'],['2','MAC']], prefix: '<div class="x1a">', suffix: '</div>' },
-				{ type: 'text', prefix: '<div class="x1b">', suffix: '</div>' },
-				{ type: 'text', prefix: '<div class="x1c">Port', suffix: '</div>' }
+				{ type: 'select', options: [['0','All'],['1','IP'],['2','MAC']], prefix: '<div class="x1a">', suffix: '<\/div>' },
+				{ type: 'text', prefix: '<div class="x1b">', suffix: '<\/div>' },
+				{ type: 'text', prefix: '<div class="x1c">Port', suffix: '<\/div>' }
 			] },
 			{ multi: [
-				{ type: 'select', options: [['0','All'],['1','IP'],['3','Domain']], prefix: '<div class="x1a">', suffix: '</div>' },
-				{ type: 'text', prefix: '<div class="x1b">', suffix: '</div>' },
-				{ type: 'text', prefix: '<div class="x1c">Port', suffix: '</div>' }
+				{ type: 'select', options: [['0','All'],['1','IP'],['3','Domain']], prefix: '<div class="x1a">', suffix: '<\/div>' },
+				{ type: 'text', prefix: '<div class="x1b">', suffix: '<\/div>' },
+				{ type: 'text', prefix: '<div class="x1c">Port', suffix: '<\/div>' }
 			] },
 			{ type: 'select', options: class1, vtop: 1 },
 			{ type: 'text', maxlen: 32, vtop: 1 }
@@ -254,7 +254,7 @@ float: left;
 	function save()
 	{
 		if (pbr.isEditing()) return;
-		var fom = E('_fom');
+		var fom = E('t_fom');
 		var i, a, b, c;
 		c = pbr.getAllData();
 		a = [];
@@ -275,33 +275,35 @@ float: left;
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-<div class='title'>Tomato</div>
-<div class='version'>Version <% version(); %></div></td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<input type='hidden' name='_nextpage' value='advanced-pbr.asp'>
-<input type='hidden' name='_service' value='firewall-restart'>
-<input type='hidden' name='pbr_rules'>
-<div class='section-title'>Rules</div>
-<div class='section'>
-<table class='tomato-grid' cellspacing=1 id='qg'></table>
-</div>
-<div>
-<hr>
-Note: Policy routing traffic only work on the LAN to the Internet.<br>
-</div>
-</td></tr>
-<tr><td id='footer' colspan=2>
-<span id='footer-msg'></span>
-<input type='button' value='Save' id='save-button' onclick='save()'>
-<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
-</td></tr>
-</table>
-</form>
-<script type='text/javascript'>pbr.setup();</script>
+	<form id='t_fom' method='post' action='tomato.cgi'>
+		<table id='container' cellspacing=0>
+			<tr><td colspan=2 id='header'>
+				<div class='title'>Tomato</div>
+				<div class='version'>Version <% version(); %></div>
+					<tr id='body'>
+					<td id='navi'><script type='text/javascript'>navi()</script></td>
+					<td id='content'>
+					<div id='ident'><% ident(); %></div>
+					<input type='hidden' name='_nextpage' value='advanced-pbr.asp'>
+					<input type='hidden' name='_service' value='firewall-restart'>
+					<input type='hidden' name='pbr_rules'>
+					<div class='section-title'>Rules</div>
+					<div class='section'>
+						<div class="tomato-grid" id="qg"></div>
+					</div>
+					<div>
+						<hr>
+						Note: Policy routing traffic only work on the LAN to the Internet.<br />
+					</div>
+				</td>
+			</tr>
+			<tr><td id='footer' colspan=2>
+				<span id='footer-msg'></span>
+				<input type='button' value='Save' id='save-button' onclick='save()'>
+				<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+			</td></tr>
+		</table>
+	</form>
+	<script type='text/javascript'>pbr.setup();</script>
 </body>
 </html>

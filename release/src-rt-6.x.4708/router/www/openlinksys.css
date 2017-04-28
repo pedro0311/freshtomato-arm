@@ -7,7 +7,7 @@ body {
 	width: 980px;
 	height: 100%;
 	border: none;
-	margin:0px auto;
+	margin: 0px auto;
 }
 
 a {
@@ -18,7 +18,7 @@ a:hover {
 	text-decoration:none;
 	color: #fff;
 	background: #405080;
-	}
+}
 
 input[type='button']:hover {
 	background: #555;
@@ -43,7 +43,8 @@ input[type='button']:hover {
 #header .version {
 	font: 10px Tahoma, Arial, Sans-serif;
 	color: #919ea1;
-	margin: 0; padding: 0;
+	margin: 0;
+	padding: 0;
 }
 
 #navi {
@@ -74,7 +75,7 @@ input[type='button']:hover {
 	color: #fff;
 	text-decoration:none;
 	border-bottom: #3f4f52 solid 1px;
-	}
+}
 
 #navi .active {
 	color: #fff;
@@ -119,22 +120,22 @@ ul.tabs li a:hover {
 
 .tomato-grid {
 	background:#FFFFFF none repeat scroll 0 0;
-	border:1px solid #E0E0E0;
-	border-collapse:separate;
-	border-spacing:1px;
-	margin:0 0 3px;
-	padding:0;
-	width:100%;
+	border: 1px solid #E0E0E0;
+	border-collapse: separate;
+	border-spacing: 1px;
+	margin: 0 0 3px;
+	padding: 0;
+	width: 100%;
 }
 
 .tomato-grid .header,
 .bwmg .header {
-	background:#c6c6c6 none repeat scroll 0 0;
+	background: #c6c6c6 none repeat scroll 0 0;
 }
 
 .tomato-grid .odd,
 .bwmg .odd {
-	background:#ededed none repeat scroll 0 0;
+	background: #ededed none repeat scroll 0 0;
 }
 
 /* END table */
@@ -192,9 +193,9 @@ ul.tabs li a:hover {
 .section-title {
 	font: bold 1.5em Tahoma, Arial, Sans-serif !important;
 	color: #405080 !important;
-	border-bottom:1px solid #cccccc;
-	margin:0 0 10px 10px;
-	padding-bottom:4px;
+	border-bottom: 1px solid #cccccc;
+	margin: 0 0 10px 10px;
+	padding-bottom: 4px;
 }
 
 small {
@@ -226,6 +227,7 @@ input[type='radio'] {
 select {
 	margin: 0;
 }
+
 input[type='button'] {
 	margin: 0;
 	font: bold 1em Arial, Sans-serif;
@@ -234,6 +236,7 @@ input[type='button'] {
 	padding: 2px 3px;
 	color: #333;
 }
+
 input[type='button']:hover {
 	background: #405080;
 	color: #fff;
@@ -242,21 +245,22 @@ input[type='button']:hover {
 label {
 	margin: 5px 0;
 }
+
 input {
 	padding: 2px;
 	border: none;
 	font: normal 1em Tahoma, Arial, verdana, sans-serif;
-	color:#777;
+	color: #777;
 }
 
 textarea {
-	width:400px;
-	padding:2px;
+	width: 400px;
+	padding: 2px;
 	font: normal 1em Tahoma, Arial, verdana, sans-serif;
-	border:1px solid #655E56;
-	height:100px;
-	display:block;
-	color:#777;
+	border: 1px solid #655E56;
+	height: 100px;
+	display: block;
+	color: #777;
 }
 
 #footer {

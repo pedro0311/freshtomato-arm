@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato VLAN GUI
 	Copyright (C) 2011-2012 Augusto Bott
@@ -48,13 +48,13 @@
 #vlan-grid .co12,
 #vlan-grid .co13,
 #vlan-grid .co14 {
-  text-align: center;
+	text-align: center;
 }
 #vlan-grid .co2 {
 	width: 60px;
 }
 #vlan-grid .centered {
-  text-align: center;
+	text-align: center;
 }
 </style>
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
@@ -190,7 +190,7 @@ function verifyFields(focused, quiet){
 function save() {
   if (vlg.isEditing()) return;
 
-  var fom = E('_fom');
+  var fom = E('t_fom');
 // wipe out relevant fields just in case this is not the first time we try to submit
   for (var i = 0 ; i <= MAX_VLAN_ID ; i++) {
     fom['vlan' + i + 'ports'].value = '';
@@ -350,24 +350,24 @@ if(port_vlan_supported) { // aka if(supported_hardware) block
   var vlg = new TomatoGrid();
   vlg.setup = function() {
     this.init('vlan-grid', '', (MAX_VLAN_ID + 1), [
-    { type: 'select', options: [[0, '0'],[1, '1'],[2, '2'],[3, '3'],[4, '4'],[5, '5'],[6, '6'],[7, '7'],[8, '8'],[9, '9'],[10, '10'],[11, '11'],[12, '12'],[13, '13'],[14, '14'],[15, '15']], prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'text', maxlen: 4, prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-    { type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
+    { type: 'select', options: [[0, '0'],[1, '1'],[2, '2'],[3, '3'],[4, '4'],[5, '5'],[6, '6'],[7, '7'],[8, '8'],[9, '9'],[10, '10'],[11, '11'],[12, '12'],[13, '13'],[14, '14'],[15, '15']], prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'text', maxlen: 4, prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+    { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
     { type: 'select', options: [[1, 'none'],[2, 'WAN'],[3, 'LAN (br0)'],[4, 'LAN1 (br1)'],[5, 'LAN2 (br2)'],[6, 'LAN3 (br3)'],[7, 'WAN2'],
 /* MULTIWAN-BEGIN */
 				[8, 'WAN3'],[9, 'WAN4']
 /* MULTIWAN-END */
-			       ], prefix: '<div class="centered">', suffix: '</div>' }]);
+			       ], prefix: '<div class="centered">', suffix: '<\/div>' }]);
 
     this.headerSet(['VLAN', 'VID', 'Port 1', 'Tagged', 'Port 2', 'Tagged', 'Port 3', 'Tagged', 'Port 4', 'Tagged', 'WAN Port', 'Tagged', 'Default', 'Bridge']);
 
@@ -829,6 +829,9 @@ function init() {
 		var c;
 		if (((c = cookie.get('advanced_vlan_notes_vis')) != null) && (c == '1')) toggleVisibility("notes");
 	}
+    var elements = document.getElementsByClassName("new_window");
+    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function toggleVisibility(whichone) {
@@ -857,11 +860,11 @@ function earlyInit() {
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
-  <div class='title'>Tomato</div>
-  <div class='version'>Version <% version(); %></div>
+	<div class='title'>Tomato</div>
+	<div class='version'>Version <% version(); %></div>
 </td></tr>
 <tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
 <td id='content'>
@@ -932,19 +935,20 @@ function earlyInit() {
 <input type='hidden' name='vlan15vid'>
 
 <div style='display:none' id='unknown_router'>
-<div class='section-title'><center>!! Unknown Port Mapping Using Default!!</center></div>
-<div class='fields'><center><a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/'> <b>Please Follow this Link for Instructions to get it corrected.</b></a>
-<br><br> Include Router Brand/Model (<% nv('t_model_name'); %>),
-<br> Results from "nvram show | grep vlan1ports" &amp;
-<br> Port Numbers on BACK of Router Case (Left -> Right viewed from Front).
-<br> </center></div>
-<br>
+<div class='section-title' style='text-align:center'>!! Unknown Port Mapping Using Default!!</div>
+<div class='fields' style='text-align:center'><a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/' class="new_window"> <b>Please Follow this Link for Instructions to get it corrected.</b></a>
+<br /><br /> Include Router Brand/Model (<% nv('t_model_name'); %>),
+<br /> Results from "nvram show | grep vlan1ports" &amp;
+<br /> Port Numbers on BACK of Router Case (Left -> Right viewed from Front).
+<br />
+</div>
+<br />
 </div>
 
 <div id='sesdiv' style='display:none'>
 <div class='section-title'>VLAN</div>
 <div class='section'>
-  <table class='tomato-grid' cellspacing=1 id='vlan-grid'></table>
+  <div class="tomato-grid" id="vlan-grid"></div>
 </div>
 
 <!-- / / / -->
@@ -956,7 +960,7 @@ function earlyInit() {
 createFieldTable('', [
 	{ title: 'First 802.1Q VLAN tag', name: 'vlan0tag', type: 'text', maxlen:4, size:6,
 		value: fixInt(nvram.vlan0tag, 0, 4080, 0),
-		suffix: ' <small><i>(range: 0 - 4080; must be a multiple of 16; set to 0 to disable)</i></small>' }
+		suffix: ' <small><i>(range: 0 - 4080; must be a multiple of 16; set to 0 to disable)<\/i><\/small>' }
 ]);
 </script>
 </div>
@@ -982,49 +986,47 @@ if(port_vlan_supported) vlg.setup();
 <div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdiv_notes_showhide'>(Click here to hide)</span></a></i></small></div>
 <div class='section' id='sesdiv_notes' style='display:none'>
 <ul>
-<li>If you notice that the order of the Lan Ports are incorrectly mapped, <a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/'> <b>Please Follow these Instructions to get it corrected.</b></a></li>
-<br>
-<li><b>VLAN</b> - Unique identifier of a VLAN.</li>
-<li><b>VID</b> - Allows overriding 'traditional' VLAN/VID mapping with arbitrary VIDs for each VLAN (set to '0' to use 'regular' VLAN/VID mappings instead).</li>
-<li><b>Ports 1-4 &amp; WAN</b> - Which ethernet ports on the router should be members of this VLAN.</li>
-<li><b>Tagged</b> - Enable 802.1Q tagging of ethernet frames on a particular port/VLAN</li>
-<li><b>Default</b> - VLAN ID assigned to untagged frames received by the router.</li>
-<li><b>Bridge</b> - Determines if this VLAN ID should be treated as WAN, part of a LAN bridge or just left alone (i.e. member of a 802.1Q trunk, being managed manually via scripts, etc...).</li>
+	<li>If you notice that the order of the Lan Ports are incorrectly mapped, <a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/'> <b>Please Follow these Instructions to get it corrected.</b></a></li>
+	<li style="list-style: none"><br /></li>
+	<li><b>VLAN</b> - Unique identifier of a VLAN.</li>
+	<li><b>VID</b> - Allows overriding 'traditional' VLAN/VID mapping with arbitrary VIDs for each VLAN (set to '0' to use 'regular' VLAN/VID mappings instead).</li>
+	<li><b>Ports 1-4 &amp; WAN</b> - Which ethernet ports on the router should be members of this VLAN.</li>
+	<li><b>Tagged</b> - Enable 802.1Q tagging of ethernet frames on a particular port/VLAN</li>
+	<li><b>Default</b> - VLAN ID assigned to untagged frames received by the router.</li>
+	<li><b>Bridge</b> - Determines if this VLAN ID should be treated as WAN, part of a LAN bridge or just left alone (i.e. member of a 802.1Q trunk, being managed manually via scripts, etc...).</li>
 </ul>
 <ul>
-<li><b>Wireless</b> - Assignments of wireless interfaces to different LAN briges. You should probably be using and/or check things on <a href=advanced-wlanvifs.asp>Advanced/Virtual Wireless</a> and <a href=basic-network.asp>Basic/Network</a>.</li>
+	<li><b>Wireless</b> - Assignments of wireless interfaces to different LAN briges. You should probably be using and/or check things on <a href=advanced-wlanvifs.asp>Advanced/Virtual Wireless</a> and <a href=basic-network.asp>Basic/Network</a>.</li>
 </ul>
-
-<small>
 <ul>
-<li><b>Other relevant notes/hints:</b>
-<ul>
-<li>One VID <i>must</i> be assigned to WAN.</li>
-<li>One VID <i>must</i> be selected as the default.</li>
-<script type='text/javascript'>
-if(trunk_vlan_supported) {
-  W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag contains only user priority information).</li>');
-  W('<li>It may be also recommended to avoid using VID "1" as some vendors consider it special/reserved (for management purposes).</li>');
-}
-</script>
+	<li><small><b>Other relevant notes/hints:</b></small>
+		<ul>
+			<li><small>One VID <i>must</i> be assigned to WAN.</small></li>
+			<li><small>One VID <i>must</i> be selected as the default.</small></li>
+			<li style="list-style: none; display: inline"><small><script type='text/javascript'>
+			if(trunk_vlan_supported) {
+				W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag conta
+				W('<li>It may be also recommended to avoid using VID "1" as some vendors consider it special/reserved (for management purposes).<\/li>');
+			}
+			</script></small></li>
+		</ul>
+		<br />
+	</li>
 </ul>
-<br>
-</ul>
-</small>
 </div>
 </div>
 <script type='text/javascript'>
 if(!port_vlan_supported) 
-  W('<i>This feature is not supported on this router.</i>');
+  W('<i>This feature is not supported on this router.<\/i>');
 else {
   E('sesdiv').style.display = '';
 }
 </script>
 </td></tr>
 <tr><td id='footer' colspan=2>
- <span id='footer-msg'></span>
- <input type='button' value='Save' id='save-button' onclick='save()'>
- <input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+	<span id='footer-msg'></span>
+	<input type='button' value='Save' id='save-button' onclick='save()'>
+	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
 </td></tr>
 </table>
 </form>

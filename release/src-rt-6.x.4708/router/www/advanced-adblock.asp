@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2007-2011 Shibby
@@ -12,7 +12,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Advanced: Adblock</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -107,7 +107,7 @@ function save()
 		blacklist += data[i].join('<') + '>';
 	}
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.adblock_enable.value = E('_f_adblock_enable').checked ? 1 : 0;
 	fom.dnsmasq_debug.value = E('_f_dnsmasq_debug').checked ? 1 : 0;
 	fom.adblock_blacklist.value = blacklist;
@@ -121,7 +121,7 @@ function init()
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -151,7 +151,7 @@ function init()
 
 <div class='section-title'>Blacklist URL</div>
 <div class='section'>
-	<table class='tomato-grid' cellspacing=1 id='adblockg-grid'></table>
+	<div class="tomato-grid" id="adblockg-grid"></div>
 	<script type='text/javascript'>adblockg.setup();</script>
 </div>
 
@@ -176,7 +176,7 @@ function init()
 <div class='section-title'>Notes</div>
 <div class='section'>
     <ul>
-	<li><b>Adblock</b> - Autoupdate will be randomly launch between 2:00-2.59 AM every day
+	<li><b>Adblock</b> - Autoupdate will be launch on 1:00AM every day
 	<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog
 	<li><b>Blacklist URL</b> - Correct file format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, one domain per line
 	<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com

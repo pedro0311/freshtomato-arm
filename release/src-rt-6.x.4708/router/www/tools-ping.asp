@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Tools: Ping</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -102,10 +102,10 @@ REMOVE-END */
 			resolv[RegExp.$2] = RegExp.$1;
 		}
 		else if (buf[i].match(/^(\d+) packets.+, (\d+) packets.+, (\d+%)/)) {
-			stats = '   Packets: ' + RegExp.$1 + ' transmitted, ' + RegExp.$2 + ' received, ' + RegExp.$3 + ' lost<br>';
+			stats = '   Packets: ' + RegExp.$1 + ' transmitted, ' + RegExp.$2 + ' received, ' + RegExp.$3 + ' lost<br />';
 		}
 		else if (buf[i].match(/^round.+ (\d+\.\d+)\/(\d+\.\d+)\/(\d+\.\d+)/)) {
-			stats = 'Round-Trip: ' + RegExp.$1 + ' min, ' + RegExp.$2 + ' avg, ' + RegExp.$3 + ' max (ms)<br>' + stats;
+			stats = 'Round-Trip: ' + RegExp.$1 + ' min, ' + RegExp.$2 + ' avg, ' + RegExp.$3 + ' max (ms)<br />' + stats;
 		}
 	}
 
@@ -206,18 +206,18 @@ createFieldTable('', [
 	{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '',
 		suffix: ' <input type="button" value="Ping" onclick="ping()" id="pingb">' },
 	{ title: 'Ping Count', name: 'f_count', type: 'text', maxlen: 2, size: 7, value: '5' },
-	{ title: 'Packet Size', name: 'f_size', type: 'text', maxlen: 5, size: 7, value: '56', suffix: ' <small>(bytes)</small>' }
+	{ title: 'Packet Size', name: 'f_size', type: 'text', maxlen: 5, size: 7, value: '56', suffix: ' <small>(bytes)<\/small>' }
 ]);
 </script>
 </div>
 
-<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src='spin.gif' style="vertical-align:top"></div>
+<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src='spin.gif' alt="" style="vertical-align:top"></div>
 
-<table id='tp-grid' class='tomato-grid' cellspacing=1></table>
+<div id="tp-grid" class="tomato-grid"></div>
 <pre id='stats'></pre>
 
 <div style='height:10px;' onclick='javascript:E("debug").style.display=""'></div>
-<textarea id='debug' style='width:99%;height:300px;display:none'></textarea>
+<textarea id='debug' style='width:99%;height:300px;display:none' cols='50' rows='10'></textarea>
 
 <!-- / / / -->
 

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -41,7 +41,7 @@ function scale(bandwidth, rate, ceil)
 
 	var s = comma(MAX(Math.floor((bandwidth * rate) / 100), 1));
 	if (ceil > 0) s += ' - ' + MAX(Math.round((bandwidth * ceil) / 100), 1);
-	return s + ' <small>kbit/s</small>';
+	return s + ' <small>kbit/s<\/small>';
 }
 
 function toggleFiltersVisibility(){
@@ -104,7 +104,7 @@ function verifyFields(focused, quiet)
 		}
 	}
 
-	f = E('_fom').elements;
+	f = E('t_fom').elements;
 	b = !E('_f_qos_enable').checked;
 	for (i = 0; i < f.length; ++i) {
 		if ((f[i].name.substr(0, 1) != '_') && (f[i].type != 'button') && (f[i].name.indexOf('enable') == -1) &&
@@ -126,7 +126,7 @@ function verifyFields(focused, quiet)
 
 function save()
 {
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	var i, a, qos, c;
 
 
@@ -144,7 +144,7 @@ function save()
 		qos.push(E('_f_qos_' + (i - 1)).value);
 	}
 
-	fom = E('_fom');
+	fom = E('t_fom');
 	fom.qos_classnames.value = qos.join(' ');
 
 	a = [];
@@ -174,7 +174,7 @@ function save()
 
 </head>
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -256,7 +256,7 @@ cc = nvram.qos_orates.split(/[,-]/);
 f = [];
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 	var u = (uidx >1) ? uidx : '';
-	f.push({ title: 'WAN '+uidx+'<br>Max Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s </small>', value: nvram['wan'+u+'_qos_obw'] });
+	f.push({ title: 'WAN '+uidx+'<br />Max Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s <\/small>', value: nvram['wan'+u+'_qos_obw'] });
 }
 f.push(null);
 j = 0;
@@ -266,7 +266,7 @@ for (i = 0; i < 10; ++i) {
 	f.push({ title: classNames[i], multi: [
 			{ name: 'f_orate_' + i, type: 'select', options: pctListout, value: x, suffix: ' ' },
 			{ name:	'f_oceil_' + i, type: 'select', options: pctListout, value: y },
-			{ type: 'custom', custom: ' &nbsp; <span id="_okbps_' + i + '"></span>' } ]
+			{ type: 'custom', custom: ' &nbsp; <span id="_okbps_' + i + '"><\/span>' } ]
 	});
 }
 createFieldTable('', f);
@@ -282,7 +282,7 @@ allRates = nvram.qos_irates.split(',');
 f = [];
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 	var u = (uidx >1) ? uidx : '';
-	f.push({ title: 'WAN '+uidx+'<br>Max Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s </small>', value: nvram['wan'+u+'_qos_ibw'] });
+	f.push({ title: 'WAN '+uidx+'<br />Max Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s <\/small>', value: nvram['wan'+u+'_qos_ibw'] });
 }
 f.push(null);
 
@@ -304,7 +304,7 @@ for (i = 0; i < 10; ++i)
 		title: classNames[i], multi: [
 			{ name:	'f_irate_' + i, type: 'select', options: pctListin, value: incoming_rate, suffix: ' ' },
 			{ name:	'f_iceil_' + i, type: 'select', options: pctListin, value: incoming_ceil },
-			{ custom: ' &nbsp; <span id="_ikbps_' + i + '"></span>' } ]
+			{ custom: ' &nbsp; <span id="_ikbps_' + i + '"><\/span>' } ]
 	});
 }
 createFieldTable('', f);
@@ -321,11 +321,11 @@ if ((v = nvram.qos_classnames.match(/^(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+
 	v = ["-","Highest","High","Medium","Low","Lowest","A","B","C","D","E"];
 }
 titles = ['-','Priority Class 1', 'Priority Class 2', 'Priority Class 3', 'Priority Class 4', 'Priority Class 5', 'Priority Class 6', 'Priority Class 7', 'Priority Class 8', 'Priority Class 9', 'Priority Class 10'];
-f = [{ title: ' ', text: '<small>(Maximum 10 characters, no spaces)</small>' }];
+f = [{ title: ' ', text: '<small>(Maximum 10 characters, no spaces)<\/small>' }];
 for (i = 1; i < 11; ++i) {
 	f.push({ title: titles[i], name: ('f_qos_' + (i - 1)),
 		type: 'text', maxlen: 10, size: 15, value: v[i],
-		suffix: '<span id="count' + i + '"></span>' });
+		suffix: '<span id="count' + i + '"><\/span>' });
 }
 createFieldTable('', f);
 </script>
@@ -348,7 +348,7 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
+<tr><td id='footer' colspan='2'>
 	<span id='footer-msg'></span>
 	<input type='button' value='Save' id='save-button' onclick='save()'>
 	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>

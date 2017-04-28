@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2008 Jonathan Zarate
@@ -17,7 +17,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] IP/Range BW Limiter</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -261,7 +261,7 @@ function save()
 		qoslimitrules += '>' + data[i].join('<');
 	}
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.new_qoslimit_enable.value = E('_f_new_qoslimit_enable').checked ? 1 : 0;
 	fom.qosl_enable.value = E('_f_qosl_enable').checked ? 1 : 0;
 	fom.limit_br1_enable.value = E('_f_limit_br1_enable').checked ? 1 : 0;
@@ -278,7 +278,7 @@ function init()
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -309,12 +309,12 @@ function init()
 		<script type='text/javascript'>
 			createFieldTable('', [
 			{ title: 'Enable Limiter', name: 'f_new_qoslimit_enable', type: 'checkbox', value: nvram.new_qoslimit_enable != '0' },
-			{ title: 'Max Available Download <br><small>(same as used in QoS)</small>', indent: 2, name: 'wan_qos_ibw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.wan_qos_ibw },
-			{ title: 'Max Available Upload <br><small>(same as used in QoS)</small>', indent: 2, name: 'wan_qos_obw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.wan_qos_obw }
+			{ title: 'Max Available Download <br /><small>(same as used in QoS)<\/small>', indent: 2, name: 'wan_qos_ibw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.wan_qos_ibw },
+			{ title: 'Max Available Upload <br /><small>(same as used in QoS)<\/small>', indent: 2, name: 'wan_qos_obw', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.wan_qos_obw }
 			]);
 		</script>
-		<br>
-		<table class='tomato-grid' id='qosg-grid'></table>
+		<br />
+		<div class="tomato-grid" id="qosg-grid"></div>
 		<div>
 			<ul>
 				<li><b>IP Address / IP Range:</b>
@@ -327,17 +327,17 @@ function init()
 		</div>
 	</div>
 	
-	<br>
+	<br />
 
 	<div class='section-title'>Default Class for unlisted MAC / IP's in LAN (br0)</div>
 	<div class='section'>
 		<script type='text/javascript'>
 			createFieldTable('', [
 				{ title: 'Enable', name: 'f_qosl_enable', type: 'checkbox', value: nvram.qosl_enable == '1'},
-				{ title: 'Download rate', indent: 2, name: 'qosl_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.qosl_dlr },
-				{ title: 'Download ceil', indent: 2, name: 'qosl_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.qosl_dlc },
-				{ title: 'Upload rate', indent: 2, name: 'qosl_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.qosl_ulr },
-				{ title: 'Upload ceil', indent: 2, name: 'qosl_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.qosl_ulc },
+				{ title: 'Download rate', indent: 2, name: 'qosl_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_dlr },
+				{ title: 'Download ceil', indent: 2, name: 'qosl_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_dlc },
+				{ title: 'Upload rate', indent: 2, name: 'qosl_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_ulr },
+				{ title: 'Upload ceil', indent: 2, name: 'qosl_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_ulc },
 				{ title: 'Priority', indent: 2, name: 'limit_br0_prio', type: 'select', options:
 					[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br0_prio },
 				{ title: 'TCP Limit', indent: 2, name: 'qosl_tcp', type: 'select', options:
@@ -376,10 +376,10 @@ function init()
 		<script type='text/javascript'>
 			createFieldTable('', [
 				{ title: 'Enable', name: 'f_limit_br1_enable', type: 'checkbox', value: nvram.limit_br1_enable == '1'},
-				{ title: 'Download rate', indent: 2, name: 'limit_br1_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br1_dlr },
-				{ title: 'Download ceil', indent: 2, name: 'limit_br1_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br1_dlc },
-				{ title: 'Upload rate', indent: 2, name: 'limit_br1_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br1_ulr },
-				{ title: 'Upload ceil', indent: 2, name: 'limit_br1_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br1_ulc },
+				{ title: 'Download rate', indent: 2, name: 'limit_br1_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_dlr },
+				{ title: 'Download ceil', indent: 2, name: 'limit_br1_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_dlc },
+				{ title: 'Upload rate', indent: 2, name: 'limit_br1_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_ulr },
+				{ title: 'Upload ceil', indent: 2, name: 'limit_br1_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_ulc },
 				{ title: 'Priority', indent: 2, name: 'limit_br1_prio', type: 'select', options:
 					[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br1_prio }
 			]);
@@ -396,10 +396,10 @@ function init()
 		<script type='text/javascript'>
 			createFieldTable('', [
 				{ title: 'Enable', name: 'f_limit_br2_enable', type: 'checkbox', value: nvram.limit_br2_enable == '1'},
-				{ title: 'Download rate', indent: 2, name: 'limit_br2_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br2_dlr },
-				{ title: 'Download ceil', indent: 2, name: 'limit_br2_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br2_dlc },
-				{ title: 'Upload rate', indent: 2, name: 'limit_br2_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br2_ulr },
-				{ title: 'Upload ceil', indent: 2, name: 'limit_br2_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br2_ulc },
+				{ title: 'Download rate', indent: 2, name: 'limit_br2_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_dlr },
+				{ title: 'Download ceil', indent: 2, name: 'limit_br2_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_dlc },
+				{ title: 'Upload rate', indent: 2, name: 'limit_br2_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_ulr },
+				{ title: 'Upload ceil', indent: 2, name: 'limit_br2_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_ulc },
 				{ title: 'Priority', indent: 2, name: 'limit_br2_prio', type: 'select', options:
 					[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br2_prio }
 			]);
@@ -416,10 +416,10 @@ function init()
 		<script type='text/javascript'>
 			createFieldTable('', [
 				{ title: 'Enable', name: 'f_limit_br3_enable', type: 'checkbox', value: nvram.limit_br3_enable == '1'},
-				{ title: 'Download rate', indent: 2, name: 'limit_br3_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br3_dlr },
-				{ title: 'Download ceil', indent: 2, name: 'limit_br3_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br3_dlc },
-				{ title: 'Upload rate', indent: 2, name: 'limit_br3_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br3_ulr },
-				{ title: 'Upload ceil', indent: 2, name: 'limit_br3_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s</small>', value: nvram.limit_br3_ulc },
+				{ title: 'Download rate', indent: 2, name: 'limit_br3_dlr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_dlr },
+				{ title: 'Download ceil', indent: 2, name: 'limit_br3_dlc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_dlc },
+				{ title: 'Upload rate', indent: 2, name: 'limit_br3_ulr', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_ulr },
+				{ title: 'Upload ceil', indent: 2, name: 'limit_br3_ulc', type: 'text', maxlen: 6, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_ulc },
 				{ title: 'Priority', indent: 2, name: 'limit_br3_prio', type: 'select', options:
 					[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br3_prio }
 			]);

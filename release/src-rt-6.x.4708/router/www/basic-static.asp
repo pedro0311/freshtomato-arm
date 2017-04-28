@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -79,12 +79,12 @@ sg.inStatic = function(n) {
 sg.dataToView = function(data) {
 	var v = [];
 	var s = (data[0] == '00:00:00:00:00:00') ? '' : data[0];
-	if (!isMAC0(data[1])) s += '<br>' + data[1];
-	v.push((s == '') ? '<center><small><i>(unset)</i></small></center>' : s);
+	if (!isMAC0(data[1])) s += '<br />' + data[1];
+	v.push((s == '') ? '<center><small><i>(unset)<\/i><\/small><\/center>' : s);
 
-	v.push((data[2].toString() != '0') ? '<small><i>Enabled</i></small>' : '');
+	v.push((data[2].toString() != '0') ? '<small><i>Enabled<\/i><\/small>' : '');
 	v.push(escapeHTML('' + data[3]));
-	v.push((data[4].toString() != '0') ? '<small><i>Enabled</i></small>' : '');
+	v.push((data[4].toString() != '0') ? '<small><i>Enabled<\/i><\/small>' : '');
 	v.push(escapeHTML('' + data[5]));
 	return v;
 }
@@ -253,9 +253,9 @@ sg.resetNewEditor = function() {
 sg.setup = function() {
 	this.init('bs-grid', 'sort', 250, [
 		{ multi: [ { type: 'text', maxlen: 17 }, { type: 'text', maxlen: 17 } ] },
-		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 15 },
-		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 50 } ] );
 
 	this.headerSet(['MAC Address', 'Bound to', 'IP Address', 'IPTraffic', 'Hostname']);
@@ -281,7 +281,7 @@ sg.setup = function() {
 				(t[1].indexOf('.') == -1) ? (ipp + t[1]) : t[1], h, t[2]]);
 		}
 	}
-	this.sort(4);
+	this.sort(2);
 	this.showNewEditor();
 	this.resetNewEditor();
 }
@@ -302,9 +302,9 @@ function save() {
 		if (d[4] == '1') ipt += ((ipt.length > 0) ? ',' : '') + d[3];
 	}
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.dhcpd_static.value = sdhcp;
-	fom.dhcpd_static_only.value = E('_f_dhcpd_static_only').checked ? '1' : '0';
+	fom.dhcpd_static_only.value = E('t_f_dhcpd_static_only').checked ? '1' : '0';
 	fom.cstats_include.value = ipt;
 	form.submit(fom, 1);
 }
@@ -338,9 +338,9 @@ function verifyFields(focused, quiet) {
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
+<form id='t_fom' method='post' action='tomato.cgi'>
+<table id='container' cellspacing='0'>
+<tr><td colspan='2' id='header'>
 	<div class='title'>Tomato</div>
 	<div class='version'>Version <% version(); %></div>
 </td></tr>
@@ -359,7 +359,7 @@ function verifyFields(focused, quiet) {
 
 <div class='section-title'>Static DHCP/ARP/IPT</div>
 <div class='section'>
-	<table class='tomato-grid' id='bs-grid'></table>
+	<div class="tomato-grid" id="bs-grid"></div>
 </div>
 
 <!-- / / / -->
@@ -374,6 +374,7 @@ createFieldTable('', [
 </div>
 <div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
 <div class='section' id='sesdivnotes' style='display:none'>
+
 <ul>
 <li><b>MAC Address</b> - Unique identifier associated to a network interface on this particular device.</li>
 <li><b>Bound to</b> - Enforce static ARP binding of this particular IP/MAC address pair.</li>
@@ -381,24 +382,22 @@ createFieldTable('', [
 <li><b>IPTraffic</b> - Keep track of bandwidth usage for this IP address.</li>
 <li><b>Hostname</b> - Human-readable nickname/label assigned to this device on the network.</li>
 </ul>
-<small>
 <ul>
-<li><b>Other relevant notes/hints:</b>
+<li><small><b>Other relevant notes/hints:</b></small>
 <ul>
-<li>To specify multiple hostnames for a device, separate them with spaces.</li>
-<li>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</li>
-<li>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</li>
-<li>See also the <a href='advanced-dhcpdns.asp'>Advanced DHCP/DNS</a> settings page for more DHCP-related configuration options.</li>
+<li><small>To specify multiple hostnames for a device, separate them with spaces.</small></li>
+<li><small>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</small></li>
+<li><small>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</small></li>
+<li><small>See also the <a href='advanced-dhcpdns.asp'>Advanced DHCP/DNS</a> settings page for more DHCP-related configuration options.</small></li>
 </ul>
+</li>
 </ul>
-</small>
 </div>
-
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
+<tr><td id='footer' colspan='2'>
 	<span id='footer-msg'></span>
 	<input type='button' value='Save' id='save-button' onclick='save()'>
 	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>

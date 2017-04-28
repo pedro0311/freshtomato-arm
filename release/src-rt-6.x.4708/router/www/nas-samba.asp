@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Samba Server - !!TB
@@ -12,7 +12,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] NAS: File Sharing</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -29,8 +29,6 @@
 #ss-grid .co5 {
 	width: 9%;
 }
-</style>
-<style type='text/css'>
 textarea {
 	width: 98%;
 	height: 6em;
@@ -182,7 +180,7 @@ function save()
 	if (ssg.isEditing()) return;
 	if (!verifyFields(null, 0)) return;
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 
 	var data = ssg.getAllData();
 	var r = [];
@@ -203,6 +201,9 @@ function init()
 	if (((c = cookie.get('nas_samba_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility("notes");
 	}
+    var elements = document.getElementsByClassName("new_window");
+    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function toggleVisibility(whichone) {
@@ -220,7 +221,7 @@ function toggleVisibility(whichone) {
 
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -259,12 +260,12 @@ createFieldTable('', [
 		,['932', '932 (Japanese)'],['936', '936 (Simplified Chinese)'],['949', '949 (Korean)'],['950', '950 (Traditional Chinese / Big5)']
 /* LINUX26-END */
 		],
-		suffix: ' <small> (start cmd.exe and type chcp to see the current code page)</small>',
+		suffix: ' <small> (start cmd.exe and type chcp to see the current code page)<\/small>',
 		value: nvram.smbd_cpage },
 	{ title: 'Network Interfaces', name: 'smbd_ifnames', type: 'text', maxlen: 50, size: 32,
-		suffix: ' <small> (space-delimited)</small>',
+		suffix: ' <small> (space-delimited)<\/small>',
 		value: nvram.smbd_ifnames },
-	{ title: 'Samba<br>Custom Configuration', name: 'smbd_custom', type: 'textarea', value: nvram.smbd_custom },
+	{ title: 'Samba<br />Custom Configuration', name: 'smbd_custom', type: 'textarea', value: nvram.smbd_custom },
 	{ title: 'Auto-share all USB Partitions', name: 'smbd_autoshare', type: 'select',
 		options: [['0', 'Disabled'],['1', 'Read Only'],['2', 'Read / Write'],['3', 'Hidden Read / Write']],
 		value: nvram.smbd_autoshare },
@@ -275,13 +276,13 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<br>
+<br />
 
 <div class='section-title'>Additional Shares List</div>
 <div class='section'>
-	<table class='tomato-grid' cellspacing=1 id='ss-grid'></table>
+	<div class="tomato-grid" id="ss-grid"></div>
 	<script type='text/javascript'>ssg.setup();</script>
-<br>
+<br />
 <small>When no shares are specified and auto-sharing is disabled, <i>/mnt</i> directory is shared in Read Only mode.</small>
 </div>
 
@@ -294,7 +295,7 @@ createFieldTable('', [
 <ul>
 <li>If empty, <i>interfaces = <% nv("lan_ifname"); %></i> will be used instead.</li>
 <li>The <i>bind interfaces only = yes</i> directive is always set.</li>
-<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html">Samba documentation</a> for details.</li>
+<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
 </ul></li>
 </ul>
 </div>

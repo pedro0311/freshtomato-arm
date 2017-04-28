@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Admin: Configuration</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -93,57 +93,58 @@ function resetButton()
 
 <div class='section-title'>Backup Configuration</div>
 <div class='section'>
-	<form>
+	<form action=''>
 		<script type='text/javascript'>
 		W("<input type='text' size='40' maxlength='64' id='backup-name' onchange='backupNameChanged()' value='tomato_v" + ('<% version(); %>'.replace(/\./g, '')) + "_m" + nvram.et0macaddr.replace(/:/g, '').substring(6, 12) + "'>");
 		</script>
-		.cfg &nbsp;
-		<input type='button' name='f_backup_button' onclick='backupButton()' value='Backup'><br>
-		<a href='' id='backup-link'>Link</a>
+		<div style='display:inline'>.cfg &nbsp;</div>
+		<div style='display:inline'><input type='button' name='f_backup_button' onclick='backupButton()' value='Backup'></div>
 	</form>
+	<a href='#' id='backup-link'>Link</a>
 </div>
 
-<br><br>
+<br /><br />
 
 <div class='section-title'>Restore Configuration</div>
 <div class='section'>
 	<form id='restore-form' method='post' action='cfg/restore.cgi' encType='multipart/form-data'>
-		Select the configuration file to restore:<br>
-		<input type='file' size='40' id='restore-name' name='filename'> <input type='button' name='f_restore_button' id='restore-button' value='Restore' onclick='restoreButton()'>
-		<br>
+		<div>Select the configuration file to restore:</div>
+		<div><input type='file' size='40' id='restore-name' name='filename'> <input type='button' name='f_restore_button' id='restore-button' value='Restore' onclick='restoreButton()'></div>
 	</form>
 </div>
 
-<br><br>
+<br /><br />
 
 <div class='section-title'>Restore Default Configuration</div>
 <div class='section'>
 	<form id='aco-reset-form' method='post' action='cfg/defaults.cgi'>
-	<select name='mode' id='restore-mode'>
-		<option value=0>Select...</option>
-		<option value=1>Restore default router settings (normal)</option>
-		<option value=2>Erase all data in NVRAM memory (thorough)</option>
-	</select>
-	<input type='button' value='OK' onclick='resetButton()' id='reset-button'>
+	<div>
+		<select name='mode' id='restore-mode'>
+			<option value=0>Select...</option>
+			<option value=1>Restore default router settings (normal)</option>
+			<option value=2>Erase all data in NVRAM memory (thorough)</option>
+		</select>
+		<input type='button' value='OK' onclick='resetButton()' id='reset-button'>
+	</div>
 	</form>
 </div>
 
-<br>
+<br />
 
 <div class='section-title'></div>
 <div class='section'>
 <script type='text/javascript'>
 var a = nvstat.free / nvstat.size * 100.0;
 createFieldTable('', [
-	{ title: 'Total / Free NVRAM:', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)</small>' }
+	{ title: 'Total / Free NVRAM:', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)<\/small>' }
 ]);
 
 if (a <= 5) {
-	document.write('<br><div id="notice1">' +
+	document.write('<br /><div id="notice1">' +
 		'The NVRAM free space is very low. It is strongly recommended to ' +
 		'erase all data in NVRAM memory, and reconfigure the router manually ' +
 		'in order to clean up all unused and obsolete entries.' +
-		'</div><br style="clear:both">');
+		'<\/div><br style="clear:both">');
 }
 </script>
 </div>
@@ -153,6 +154,5 @@ if (a <= 5) {
 </td></tr>
 <tr><td id='footer' colspan=2>&nbsp;</td></tr>
 </table>
-<br><br>
 </body>
 </html>

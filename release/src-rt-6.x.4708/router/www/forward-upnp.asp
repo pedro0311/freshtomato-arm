@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -175,7 +175,7 @@ function save()
 REMOVE-END */
 	if (!verifyFields(null, 0)) return;
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.upnp_enable.value = 0;
 	if (fom.f_enable_upnp.checked) fom.upnp_enable.value = 1;
 	if (fom.f_enable_natpmp.checked) fom.upnp_enable.value |= 2;
@@ -210,7 +210,7 @@ function submit_complete()
 
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -239,7 +239,7 @@ REMOVE-END */
 
 <div class='section-title'>Forwarded Ports</div>
 <div class='section'>
-	<table id='upnp-grid' class='tomato-grid'></table>
+	<div id="upnp-grid" class="tomato-grid"></div>
 	<div style='width: 100%; text-align: right'><input type='button' value='Delete All' onclick='deleteAll()' id='upnp-delete-all'> <input type='button' value='Refresh' onclick='javascript:reloadPage();'></div>
 </div>
 
@@ -254,11 +254,11 @@ createFieldTable('', [
 REMOVE-END */
 	{ title: 'Inactive Rules Cleaning', name: 'f_upnp_clean', type: 'checkbox', value: (nvram.upnp_clean == '1') },
 	{ title: 'Cleaning Interval', indent: 2, name: 'upnp_clean_interval', type: 'text', maxlen: 5, size: 7,
-		suffix: ' <small>seconds</small>', value: nvram.upnp_clean_interval },
+		suffix: ' <small>seconds<\/small>', value: nvram.upnp_clean_interval },
 	{ title: 'Cleaning Threshold', indent: 2, name: 'upnp_clean_threshold', type: 'text', maxlen: 4, size: 7,
-		suffix: ' <small>redirections</small>', value: nvram.upnp_clean_threshold },
+		suffix: ' <small>redirections<\/small>', value: nvram.upnp_clean_threshold },
 	{ title: 'Secure Mode', name: 'f_upnp_secure', type: 'checkbox',
-		suffix: ' <small>(when enabled, UPnP clients are allowed to add mappings only to their IP)</small>',
+		suffix: ' <small>(when enabled, UPnP clients are allowed to add mappings only to their IP)<\/small>',
 		value: (nvram.upnp_secure == '1') },
 	{ title: 'Enabled on' },
 	{ title: 'LAN', indent: 2, name: 'f_upnp_lan', type: 'checkbox', value: (nvram.upnp_lan == '1') },
@@ -267,7 +267,7 @@ REMOVE-END */
 	{ title: 'LAN3', indent: 2, name: 'f_upnp_lan3', type: 'checkbox', value: (nvram.upnp_lan3 == '1') },
 	{ title: 'Show In My Network Places',  name: 'f_upnp_mnp',  type: 'checkbox',  value: (nvram.upnp_mnp == '1')},
 	null,
-	{ title: 'Miniupnpd</a><br>Custom configuration', name: 'upnp_custom', type: 'textarea', value: nvram.upnp_custom }
+	{ title: 'Miniupnpd<\/a><br />Custom configuration', name: 'upnp_custom', type: 'textarea', value: nvram.upnp_custom }
 ]);
 </script>
 </div>

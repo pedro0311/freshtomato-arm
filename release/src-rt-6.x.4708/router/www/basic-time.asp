@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Basic: Time</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -108,7 +108,7 @@ function save(clearKiss)
 
 	var fom, a, i;
 
-	fom = E('_fom');
+	fom = E('t_fom');
 	fom.tm_dst.value = fom.f_tm_dst.checked ? 1 : 0;
 	fom.tm_tz.value = fom.f_tm_tz.value;
 
@@ -140,7 +140,7 @@ function earlyInit()
 </script>
 </head>
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -202,7 +202,7 @@ http://www.timeanddate.com/library/abbreviations/timezones/au/
 REMOVE-END */
 
 createFieldTable('', [
-	{ title: 'Router Time', text: '<span id="clock"><% time(); %></span>' },
+	{ title: 'Router Time', text: '<span id="clock"><% time(); %><\/span>' },
 	null,
 	{ title: 'Time Zone', name: 'tm_sel', type: 'select', options: [
 		['custom','Custom...'],
@@ -267,14 +267,14 @@ createFieldTable('', [
 		value: nvram.ntp_updates },
 	{ title: 'Trigger Connect On Demand', indent: 2, name: 'f_ntp_tdod', type: 'checkbox', value: nvram.ntp_tdod != '0' },
 	{ title: 'NTP Time Server', name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
-	{ title: '&nbsp;', text: '<small><span id="ntp-preset">xx</span></small>', hidden: 1 },
+	{ title: '&nbsp;', text: '<small><span id="ntp-preset">xx<\/span><\/small>', hidden: 1 },
 	{ title: '', name: 'f_ntp_1', type: 'text', maxlen: 48, size: 50, value: ntp[0] || 'pool.ntp.org', hidden: 1 },
 	{ title: '', name: 'f_ntp_2', type: 'text', maxlen: 48, size: 50, value: ntp[1] || '', hidden: 1 },
 	{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 }
 ]);
 </script>
 </div>
-<br><br>
+<br /><br />
 
 <div id='ntpkiss' style='display:none'>
 The following NTP servers have been automatically blocked by request from the server:

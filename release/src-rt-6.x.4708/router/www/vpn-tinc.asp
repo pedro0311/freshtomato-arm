@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -17,29 +17,33 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Tinc Mesh VPN</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
 
 <style type='text/css'>
-
 #th-grid .co1 {
 	width: 10%;
 	text-align: center;
 }
+
 #th-grid .co2 {
 	width: 17%;
 }
+
 #th-grid .co3 {
 	width: 29%;
 }
+
 #th-grid .co4 {
 	width: 10%;
 }
+
 #th-grid .co5 {
 	width: 14%;
 }
+
 #th-grid .co6 {
 	width: 20%;
 }
@@ -56,7 +60,7 @@ textarea
 
 <script type='text/javascript'>
 
-//	<% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
+//  <% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
 
 var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
 var th = new TomatoGrid();
@@ -78,7 +82,7 @@ th.setup = function() {
 		{ type: 'textarea', proxy: "_host_rsa_key" },
 		{ type: 'textarea', proxy: "_host_ed25519_key" },
 		{ type: 'textarea', proxy: "_host_custom" }
-		]);
+	]);
 	this.headerSet(['ConnectTo', 'Name', 'Address', 'Port', 'Compression', 'Subnet']);
 	var nv = nvram.tinc_hosts.split('>');
 	for (var i = 0; i < nv.length; ++i) {
@@ -100,7 +104,6 @@ th.fieldValuesToData = function(row) {
 	return [f[0].checked ? 1 : 0, f[1].value, f[2].value, f[3].value, f[4].value, f[5].value, E('_host_rsa_key').value, E('_host_ed25519_key').value, E('_host_custom').value ];
 }
 
-
 th.resetNewEditor = function() {
 	var f = fields.getAll(this.newEditor);
 	f[0].checked = 0;
@@ -117,21 +120,18 @@ th.resetNewEditor = function() {
 }
 
 th.verifyFields = function(row, quiet) {
-
 	var f = fields.getAll(row);
 
 	if (f[1].value == "") {
 		ferror.set(f[1], "Host Name is required.", quiet); return 0 ; }
 	else {  ferror.clear(f[1]) }
-
 	if (f[0].checked && f[2].value == "") {
 		ferror.set(f[2], "Address must be supplied when ConnectTo is checked.", quiet); return 0 ; }
 	else {  ferror.clear(f[2]) }
-
 	if (!f[3].value == "" ) {
 		if (!v_port(f[3], quiet)) return 0 ;
 	}
-
+	
 	if(E('_tinc_devicetype').value == 'tun'){
 		if ((!v_subnet(f[5], 1)) && (!v_ip(f[5], 1))) {
 			ferror.set(f[5], "Invalid Subnet or IP address.", quiet); return 0 ; }
@@ -190,7 +190,7 @@ function verifyFields(focused, quiet)
 		default :
 			E('_tinc_firewall').disabled = 0 ;
 		break;
-        }
+	}
 
 	for (a in vis) {
 		b = E(a);
@@ -243,7 +243,7 @@ function escapeText(s)
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
+	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br />').replace(/ /g, '&nbsp;');
 }
 
 function spin(x,which)
@@ -313,14 +313,13 @@ function generateKeys()
 		/bin/cat /etc/keys/rsa_key.pub \n\
 		/bin/cat /etc/keys/ed25519_key.priv \n\
 		/bin/cat /etc/keys/ed25519_key.pub";
-
 	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
 
 }
 
 function displayStatus()
 {
-	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '</tt>';
+	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
 	cmdresult = '';
 	spin(0,'statusWait');
 }
@@ -340,7 +339,7 @@ function updateStatus(type)
 		displayStatus();
 	}
 
-	if(type != "info"){
+	if(type != "info") {
 		var commands = "/usr/sbin/tinc dump " + type + "\n";
 	}
 	else
@@ -355,11 +354,10 @@ function updateStatus(type)
 
 function displayNodes()
 {
-
 	var hostselect=document.getElementById("hostselect")
 	var selected = hostselect.value;
 
-	while(hostselect.firstChild){
+	while(hostselect.firstChild) {
 		hostselect.removeChild(hostselect.firstChild);
 	}
 
@@ -367,9 +365,9 @@ function displayNodes()
 
 	for (var i = 0; i < hosts.length; ++i)
 	{
-		if (hosts[i] != ''){
+		if (hosts[i] != '') {
 			hostselect.options[hostselect.options.length]=new Option(hosts[i],hosts[i]);
-			if(hosts[i] == selected){
+			if(hosts[i] == selected) {
 				hostselect.value = selected;
 			}
 		}
@@ -380,7 +378,6 @@ function displayNodes()
 
 function updateNodes()
 {
-
 	if (tincup)
 	{
 		cmd = new XmlHttp();
@@ -400,8 +397,8 @@ function updateNodes()
 
 function displayVersion()
 {
-	E('version').innerHTML = "<small>Tinc " + escapeText(cmdresult) + "</small>";
-        cmdresult = '';
+	E('version').innerHTML = "<small>Tinc " + escapeText(cmdresult) + "<\/small>";
+	cmdresult = '';
 }
 
 function getVersion()
@@ -433,10 +430,8 @@ function tabSelect(name)
 	}
 }
 
-
 function toggle(service, isup)
 {
-
 	var data = th.getAllData();
 	var s = '';
 	for (var i = 0; i < data.length; ++i) {
@@ -444,7 +439,7 @@ function toggle(service, isup)
 	}
 
 	if (nvram.tinc_hosts != s)
-		changed = 1;
+	changed = 1;
 
 	if (changed) {
 		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
@@ -471,7 +466,7 @@ function save()
 	for (var i = 0; i < data.length; ++i) {
 		s += data[i].join('<') + '>';
 	}
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.tinc_hosts.value = s;
 	fom.tinc_wanup.value = fom.f_tinc_wanup.checked ? 1 : 0;
 
@@ -502,22 +497,22 @@ function earlyInit()
 }
 
 function toggleVisibility(whichone) {
-        if (E('sesdiv_' + whichone).style.display == '') {
-                E('sesdiv_' + whichone).style.display = 'none';
-                E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to show)';
-                cookie.set('vpn_tinc_' + whichone + '_vis', 0);
-        } else {
-                E('sesdiv_' + whichone).style.display='';
-                E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to hide)';
-                cookie.set('vpn_tinc_' + whichone + '_vis', 1);
-        }
+	if (E('sesdiv_' + whichone).style.display == '') {
+		E('sesdiv_' + whichone).style.display = 'none';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to show)';
+		cookie.set('vpn_tinc_' + whichone + '_vis', 0);
+	} else {
+		E('sesdiv_' + whichone).style.display='';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to hide)';
+		cookie.set('vpn_tinc_' + whichone + '_vis', 1);
+	}
 }
 
 </script>
 </head>
 
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
@@ -541,39 +536,37 @@ function toggleVisibility(whichone) {
 
 	// -------- BEGIN CONFIG TAB -----------
 	tabCreate.apply(this, tabs);
-
 	t = "config";
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 	W('<input type=\'hidden\' name=\'tinc_wanup\'>');
 	W('<div class=\'section\'>');
-
 	createFieldTable('', [
 		{ title: 'Start With WAN ', name: 'f_tinc_wanup', type: 'checkbox', value: (nvram.tinc_wanup == 1) },
 		{ title: 'Interface Type', name: 'tinc_devicetype', type: 'select', options: [['tun','TUN'],['tap','TAP']], value: nvram.tinc_devicetype },
 		{ title: 'Mode', name: 'tinc_mode', type: 'select', options: [['switch','Switch'],['hub','Hub']], value: nvram.tinc_mode },
-		{ title: 'VPN Netmask', name: 'tinc_vpn_netmask', type: 'text', maxlen: 15, size: 25, value: nvram.tinc_vpn_netmask,  suffix: ' <small>The netmask for the entire VPN network.</small>' },
-		{ title: 'Host Name', name: 'tinc_name', type: 'text', maxlen: 30, size: 25, value: nvram.tinc_name, suffix: ' <small>Must also be defined in the \'Hosts\' area.</small>' },
-		{ title: 'Poll Interval', name: 'tinc_poll', type: 'text', maxlen: 4, size: 5, value: nvram.tinc_poll, suffix: '&nbsp;<small>(in minutes, 0 to disable)</small>' }, 
+		{ title: 'VPN Netmask', name: 'tinc_vpn_netmask', type: 'text', maxlen: 15, size: 25, value: nvram.tinc_vpn_netmask,  suffix: ' <small>The netmask for the entire VPN network.<\/small>' },
+		{ title: 'Host Name', name: 'tinc_name', type: 'text', maxlen: 30, size: 25, value: nvram.tinc_name, suffix: ' <small>Must also be defined in the \'Hosts\' area.<\/small>' },
+		{ title: 'Poll Interval', name: 'tinc_poll', type: 'text', maxlen: 4, size: 5, value: nvram.tinc_poll, suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Ed25519 Private Key', name: 'tinc_private_ed25519', type: 'textarea', value: nvram.tinc_private_ed25519 },
 		{ title: 'RSA Private Key *', name: 'tinc_private_rsa', type: 'textarea', value: nvram.tinc_private_rsa },
 		{ title: 'Custom', name: 'tinc_custom', type: 'textarea', value: nvram.tinc_custom }
 	]);
 
-	W('<small><b style=\'font-size: 1.5em\'>*</b> Only required to create legacy connections with tinc1.0 nodes.</small>');
-	W('</div>');
+	W('<small><b style=\'font-size: 1.5em\'>*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
+	W('<\/div>');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button1">');
-	W('</div>');
+	W('<\/div>');
 	// -------- END CONFIG TAB -----------
 
 
 	// -------- BEGIN HOSTS TAB -----------
 	t = "hosts";
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 	W('<div class=\'section\'>');
 	W('<input type=\'hidden\' name=\'tinc_hosts\'>');
-	W('<table class=\'tomato-grid\' cellspacing=1 id=\'th-grid\'></table>');
+	W('<div class="tomato-grid" id="th-grid"><\/div>');
 
 	th.setup();
 
@@ -583,27 +576,27 @@ function toggleVisibility(whichone) {
 		{ title: 'Custom', name: 'host_custom', type: 'textarea' }
 	]);
 
-	W('<small><b style=\'font-size: 1.5em\'>*</b> Only required to create legacy connections with tinc1.0 nodes.</small>');
-	W('</div>');
+	W('<small><b style=\'font-size: 1.5em\'>*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
+	W('<\/div>');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button2">');
 
-	W('<br>');
-	W('<br>');
+	W('<br />');
+	W('<br />');
 
-	W('<div class=\'section-title\'>Notes <small><i><a href=\'javascript:toggleVisibility(\"hosts\");\'><span id=\'sesdiv_hosts_showhide\'>(Click here to show)</span></a></i></small></div>');
+	W('<div class=\'section-title\'>Notes <small><i><a href=\'javascript:toggleVisibility(\"hosts\");\'><span id=\'sesdiv_hosts_showhide\'>(Click here to show)<\/span><\/a><\/i><\/small><\/div>');
 	W('<div class=\'section\' id=\'sesdiv_hosts\' style=\'display:none\'>');
 	W('<ul>');
-	W('<li><b>ConnectTo</b> - Tinc will try to establish a meta-connection to the host. Requires the Address field');
-	W('<li><b>Name</b> - Name of the host. There must be an entry for this host.');
-	W('<li><b>Address</b> <i>(optional)</i> - Must resolve to the external IP address where the host can be reached.');
-	W('<li><b>Port</b> <i>(optional)</i> - The port the host listens on. If empty the default value (655) is used.');
-	W('<li><b>Compression</b> - The level of compression used for UDP packets. Possible values are ');
+	W('<li><b>ConnectTo<\/b> - Tinc will try to establish a meta-connection to the host. Requires the Address field');
+	W('<li><b>Name<\/b> - Name of the host. There must be an entry for this host.');
+	W('<li><b>Address<\/b> <i>(optional)<\/i> - Must resolve to the external IP address where the host can be reached.');
+	W('<li><b>Port<\/b> <i>(optional)<\/i> - The port the host listens on. If empty the default value (655) is used.');
+	W('<li><b>Compression<\/b> - The level of compression used for UDP packets. Possible values are ');
 	W('0 (off), 1 (fast zlib) and any integer up to 9 (best zlib), 10 (fast lzo) and 11 (best lzo).');
-	W('<li><b>Subnet</b> - The subnet which the host will serve.');
-	W('</ul>');
-	W('</div>');
+	W('<li><b>Subnet<\/b> - The subnet which the host will serve.');
+	W('<\/ul>');
+	W('<\/div>');
 
-	W('</div>');
+	W('<\/div>');
 
 	// ---------- END HOSTS TAB ------------
 
@@ -611,7 +604,7 @@ function toggleVisibility(whichone) {
 	// -------- BEGIN SCRIPTS TAB -----------
 	t = "scripts";
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 	W('<div class=\'section\'>');
 
 	createFieldTable('', [
@@ -626,15 +619,16 @@ function toggleVisibility(whichone) {
 		{ title: 'subnet-down', name: 'tinc_subnet_down', type: 'textarea', value: nvram.tinc_subnet_down }
 	]);
 
-	W('</div>');
+	W('<\/div>');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button3">');
-	W('</div>');
+	W('<\/div>');
 	// -------- END SCRIPTS TAB -----------
+
 
 	// -------- BEGIN KEYS TAB -----------
 	t = "keys";
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 	W('<div class=\'section\'>');
 
 	createFieldTable('', [
@@ -642,51 +636,48 @@ function toggleVisibility(whichone) {
 		{ title: 'Ed25519 Public Key', name: 'ed25519_public_key', type: 'textarea', value: "" },
 		{ title: 'RSA Private Key', name: 'rsa_private_key', type: 'textarea', value: "" },
 		{ title: 'RSA Public Key', name: 'rsa_public_key', type: 'textarea', value: "" }
-        ]);
+	]);
 
-	W('</div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Generate Keys\' onclick=\'generateKeys()\' id=\'execb\'></div>');
-	W('<div style=\"visibility:hidden;text-align:right\" id=\"generateWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"></div>');
-	W('</div>');
+	W('<\/div>');
+	W('<div style=\'float:left\'><input type=\'button\' value=\'Generate Keys\' onclick=\'generateKeys()\' id=\'execb\'><\/div>');
+	W('<div style=\"visibility:hidden;text-align:right\" id=\"generateWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
+	W('<\/div>');
 
 	// -------- END KEY TAB -----------
+
 
 	// -------- BEGIN STATUS TAB -----------
 	t = "status";
 
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 
 	W('<div class=\'section\'>');
 	W('Tinc is currently '+(!tincup ? 'stopped.' : 'running.')+' ');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button4">');
-	W('</div>');
-
+	W('<\/div>');
 
 	W('<div class=\'section\'>');
 
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Edges\' onclick=\'updateStatus(\"edges\")\' id=\'edges\' style=\"width:85px\"></div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Subnets\' onclick=\'updateStatus(\"subnets\")\' id=\'subnets\' style=\"width:85px\"></div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Connections\' onclick=\'updateStatus(\"connections\")\' id=\'connections\' style=\"width:85px\"></div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Nodes\' onclick=\'updateStatus(\"nodes\")\' id=\'nodes\' style=\"width:85px\"></div>');
-	W('<div style=\"visibility:hidden;text-align:right\" id=\"statusWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"></div>');
+	W('<div style=\'float:left\'><input type=\'button\' value=\'Edges\' onclick=\'updateStatus(\"edges\")\' id=\'edges\' style=\"width:85px\"><\/div>');
+	W('<div style=\'float:left\'><input type=\'button\' value=\'Subnets\' onclick=\'updateStatus(\"subnets\")\' id=\'subnets\' style=\"width:85px\"><\/div>');
+	W('<div style=\'float:left\'><input type=\'button\' value=\'Connections\' onclick=\'updateStatus(\"connections\")\' id=\'connections\' style=\"width:85px\"><\/div>');
+	W('<div style=\'float:left\'><input type=\'button\' value=\'Nodes\' onclick=\'updateStatus(\"nodes\")\' id=\'nodes\' style=\"width:85px\"><\/div>');
+	W('<div style=\"visibility:hidden;text-align:right\" id=\"statusWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
 
-	W('</div>');
+	W('<\/div>');
 
 	W('<div class=\'section\'>');
 	W('<input type=\'button\' value=\'Info\' onclick=\'updateStatus(\"info\")\' id=\'info\' style=\"width:85px\">');
-	W('<select id=\'hostselect\' style=\"width:170px\"></select>');
-	W('</div>');
+	W('<select id=\'hostselect\' style=\"width:170px\"><\/select>');
+	W('<\/div>');
 
-	W('<pre id=\'result\'></pre>');
+	W('<pre id=\'result\'><\/pre>');
 
-	W('</div>');
-        // -------- END KEY TAB -----------
+	W('<\/div>');
+	// -------- END KEY TAB -----------
 
 </script>
-
-<!-- / / / -->
-
 </td></tr>
 <tr><td id='footer' colspan=2>
 	<span id='footer-msg'></span>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	USB Support - !!TB
@@ -12,7 +12,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] NAS: USB Support</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -22,9 +22,6 @@ textarea {
 	width: 98%;
 	height: 5em;
 }
-</style>
-
-<style type='text/css'>
 #dev-grid .co1 {
 	width: 10%;
 }
@@ -200,16 +197,16 @@ dg.populate = function()
 		e = list[i];
 
 		if (e.type != 'Storage')
-			s = '&nbsp<br><small>&nbsp</small>';
+			s = '&nbsp<br /><small>&nbsp<\/small>';
 		else {
 			if (xob)
-				s = ((e.is_mounted == 0) ? 'No' : 'Yes') + '<br><small>Please wait...</small>';
+				s = ((e.is_mounted == 0) ? 'No' : 'Yes') + '<br /><small>Please wait...<\/small>';
 			else if (e.is_mounted == 0)
-				s = 'No<br><small><a href="javascript:mountHost(\'L' + i + '\',\'' + e.host + '\')" title="Mount all Partitions of Storage Device" id="L' + i + '">[ Mount ]</a></small>';
+				s = 'No<br /><small><a href="javascript:mountHost(\'L' + i + '\',\'' + e.host + '\')" title="Mount all Partitions of Storage Device" id="L' + i + '">[ Mount ]<\/a><\/small>';
 			else
-				s = 'Yes<br><small><a href="javascript:umountHost(\'L' + i + '\',\'' + e.host + '\')" title="Safely Remove Storage Device" id="L' + i + '">[ Unmount ]</a></small>';
+				s = 'Yes<br /><small><a href="javascript:umountHost(\'L' + i + '\',\'' + e.host + '\')" title="Safely Remove Storage Device" id="L' + i + '">[ Unmount ]<\/a><\/small>';
 		}
-		desc = (e.vendor + ' ' + e.product).trim() + '<small>'; // + (e.serial == '' ? '' : '<br>Serial No: ' + e.serial);
+		desc = (e.vendor + ' ' + e.product).trim() + '<small>'; // + (e.serial == '' ? '' : '<br />Serial No: ' + e.serial);
 		if (e.discs) {
 			for (j = 0; j <= e.discs.length - 1; ++j) {
 				d = e.discs[j];
@@ -217,7 +214,7 @@ dg.populate = function()
 				for (k = 0; k <= parts.length - 1; ++k) {
 					p = parts[k];
 					if (p) {
-						desc = desc + '<br>Partition \'' + p[0] + '\'' + (p[3] != '' ? ' ' + p[3] : '') +
+						desc = desc + '<br />Partition \'' + p[0] + '\'' + (p[3] != '' ? ' ' + p[3] : '') +
 							((p[5] != 0) ? ' (' + doScaleSize(p[5], 0) + 
 							((p[1] == 1) ? ' / ' + doScaleSize(p[6], 0) + ' free' : '') +
 							')' : '') + ' is ' +
@@ -227,7 +224,7 @@ dg.populate = function()
 				}
 			}
 		}
-		desc = desc + '</small>';
+		desc = desc + '<\/small>';
 		this.insert(-1, e, [e.type, e.host, desc, s], false);
 	}
 
@@ -306,7 +303,7 @@ function save()
 
 	if (!verifyFields(null, 0)) return;
 
-	fom = E('_fom');
+	fom = E('t_fom');
 	fom.usb_enable.value = E('_f_usb').checked ? 1 : 0;
 	fom.usb_uhci.value = nvram.usb_uhci == -1 ? -1 : (E('_f_uhci').checked ? 1 : 0);
 	fom.usb_ohci.value = nvram.usb_ohci == -1 ? -1 : (E('_f_ohci').checked ? 1 : 0);
@@ -348,7 +345,7 @@ function submit_complete()
 
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -432,21 +429,21 @@ createFieldTable('', [
 /* MICROSD-END */
 /* LINUX26-END */
 		{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
-			suffix: ' <small>Automatically mount all partitions to sub-directories in <i>/mnt</i>.</small>', value: nvram.usb_automount == 1 },
+			suffix: ' <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
 	{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
 	{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
 	null,
 /* LINUX26-BEGIN */
 	{ title: 'HDD Spindown', name: 'f_idle_enable', type: 'checkbox',
-		suffix: ' <small>Spin down each HDD when idle. No need to use with flash drive.</small>', value: nvram.idle_enable == 1 },
+		suffix: ' <small>Spin down each HDD when idle. No need to use with flash drive.<\/small>', value: nvram.idle_enable == 1 },
 	null,
 	{ title: 'USB 3G Modem support', name: 'f_usb_3g', type: 'checkbox',
-		suffix: ' <small>Before disconnecting 3G Modem from USB port, remember to uncheck box. If modem used usbserial module, you have to reboot router before unplug modem.</small>', value: nvram.usb_3g == 1 },
+		suffix: ' <small>Before disconnecting 3G Modem from USB port, remember to uncheck box. If modem used usbserial module, you have to reboot router before unplug modem.<\/small>', value: nvram.usb_3g == 1 },
 	null,
 /* LINUX26-END */
-	{ title: 'Hotplug script<br><small>(called when any USB device is attached or removed)</small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
+	{ title: 'Hotplug script<br /><small>(called when any USB device is attached or removed)<\/small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
 	null,
-	{ text: '<small>Some of the changes will take effect only after a restart.</small>' }
+	{ text: '<small>Some of the changes will take effect only after a restart.<\/small>' }
 ]);
 </script>
 </div>
@@ -455,7 +452,7 @@ createFieldTable('', [
 
 <div class='section-title'>Attached Devices</div>
 <div class='section'>
-<table id='dev-grid' class='tomato-grid' cellspacing=0></table>
+	<div id="dev-grid" class="tomato-grid"></div>
 <div id='usb-controls'>
 	<script type='text/javascript'>genStdRefresh(1,0,'ref.toggle()');</script>
 </div>
