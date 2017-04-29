@@ -54,21 +54,36 @@ if [ "$ANON_ANSWER" == "1" ]; then
         fi
 
         if [ "$1" == "checkver" -a "$ANON_NOTIFY" == "1" ]; then
-            # Tomato Update Notification Script
-            # This works only for Shibby`s builds !!!
-            CHECK_VER=`echo $VER | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g'`
+            # Tomato ARM Update Notification Script
+            VER_MAJ=`echo $VER | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g'`
+            VER_MNR=`echo $VER | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g'`
 
-            #Change all spaces to %20
-            echo "http://anon.groov.pl/index.php?v=$CHECK_VER&mod=$MOD&anon=2" > /tmp/AnonLink
-            sed -i "s/ /%20/g" /tmp/AnonLink
-            ANONSEND=`cat /tmp/AnonLink`
-            rm /tmp/AnonLink
+            RESCHK="/tmp/anon.check"
+            wget -O $RESCHK "https://exotic.se/version.txt"
+
+            CHKVER_MAJ=`cat $RESCHK | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g'`
+            ISMNR=`cat $RESCHK | grep "\." | wc -l`
+            if [ "$ISMNR" == "0" ]; then
+                CHKVER_MNR=""
+            else
+                CHKVER_MNR=`cat $RESCHK | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g'`
+            fi
 
             RESULT="/tmp/anon.version"
-            wget -O $RESULT $ANONSEND
 
-            #do we have result? If don`t, then set no update needed
-            if [ ! -f "$RESULT" ]; then
+            if [ "$CHKVER_MAJ" -eq "$VER_MAJ" ]; then
+                if [ ! -z "$CHKVER_MNR" -a "$CHKVER_MNR" -gt "$VER_MNR" ]; then
+                    echo "have_update=$CHKVER_MAJ.$CHKVER_MNR" > $RESULT
+                else
+                    echo "have_update=no" > $RESULT
+                fi
+            elif [ "$CHKVER_MAJ" -gt "$VER_MAJ" ]; then
+                if [ ! -z "$CHKVER_MNR" ]; then
+                    echo "have_update=$CHKVER_MAJ.$CHKVER_MNR" > $RESULT
+                else
+                    echo "have_update=$CHKVER_MAJ" > $RESULT
+                fi
+            else
                 echo "have_update=no" > $RESULT
             fi
 
