@@ -482,7 +482,7 @@ for (i = 0; i < tabs.length; ++i)
 			suffix: '&nbsp;<small>(in seconds, -1 for default)<\/small>' },
 		{ title: 'Connection retry', name: 'vpn_'+t+'_retry', type: 'text', maxlen: 5, size: 7, value: eval( 'nvram.vpn_'+t+'_retry' ),
 			suffix: '&nbsp;<small>(in seconds; -1 for infinite)<\/small>' },
-		{ title: 'Verify server certificate (tls-remote)', multi: [
+		{ title: 'Verify server certificate (remote-cert-tls)', multi: [
 			{ name: 'f_vpn_'+t+'_tlsremote', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_tlsremote' ) != 0 },
 			{ name: 'vpn_'+t+'_cn', type: 'text', maxlen: 64, size: 54,
 				value: eval( 'nvram.vpn_'+t+'_cn' ), prefix: '<span id=\''+t+'_cn\'> Common Name:&nbsp', suffix: '<\/span>'} ] },
