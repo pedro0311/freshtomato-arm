@@ -1031,10 +1031,10 @@ test_policies_general(void *arg)
   {
     char *policy_strng = NULL;
     smartlist_t *chunks = smartlist_new();
-    smartlist_add(chunks, tor_strdup("accept "));
+    smartlist_add_strdup(chunks, "accept ");
     for (i=1; i<10000; ++i)
       smartlist_add_asprintf(chunks, "%d,", i);
-    smartlist_add(chunks, tor_strdup("20000"));
+    smartlist_add_strdup(chunks, "20000");
     policy_strng = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
@@ -1048,9 +1048,9 @@ test_policies_general(void *arg)
   for (i=1; i<2000; i+=2) {
     char buf[POLICY_BUF_LEN];
     tor_snprintf(buf, sizeof(buf), "reject *:%d", i);
-    smartlist_add(sm, tor_strdup(buf));
+    smartlist_add_strdup(sm, buf);
   }
-  smartlist_add(sm, tor_strdup("accept *:*"));
+  smartlist_add_strdup(sm, "accept *:*");
   policy_str = smartlist_join_strings(sm, ",", 0, NULL);
   test_policy_summary_helper( policy_str,
     "accept 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,"
@@ -1587,8 +1587,12 @@ test_policies_getinfo_helper_policies(void *arg)
   append_exit_policy_string(&mock_my_routerinfo.exit_policy, "reject *6:*");
 
   mock_options.IPv6Exit = 1;
-  tor_addr_from_ipv4h(&mock_options.OutboundBindAddressIPv4_, TEST_IPV4_ADDR);
-  tor_addr_parse(&mock_options.OutboundBindAddressIPv6_, TEST_IPV6_ADDR);
+  tor_addr_from_ipv4h(
+      &mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][0],
+      TEST_IPV4_ADDR);
+  tor_addr_parse(
+      &mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][1],
+      TEST_IPV6_ADDR);
 
   mock_options.ExitPolicyRejectPrivate = 1;
   mock_options.ExitPolicyRejectLocalInterfaces = 1;
