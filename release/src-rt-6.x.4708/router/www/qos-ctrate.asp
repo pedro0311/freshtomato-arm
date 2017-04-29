@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -202,10 +202,10 @@ grid.setName = function(ip, name) {
 		data = row.getRowData();
 		for (j = cols.length-1; j >= 0; j--) {
 			if (data[cols[j]].indexOf(ip) != -1 ) {
-				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')</small>';
+				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
 				row.setRowData(data);
 				if (E('_f_shortcuts').checked)
-					data[cols[j]] = data[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Exclude from List">[Hide]</a></small>';
+					data[cols[j]] = data[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Exclude from List">[Hide]<\/a><\/small>';
 				row.cells[cols[j]].innerHTML = data[cols[j]];
 				row.style.cursor = 'default';
 			}
@@ -312,7 +312,7 @@ ref.refresh = function(text)
 			ip = b[cols[j]];
 			if (cache[ip] != null) {
 				c[ip] = cache[ip];
-				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')</small>';
+				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
 				cursor = 'default';
 			} else {
 				if (resolveCB) {
@@ -326,9 +326,9 @@ ref.refresh = function(text)
 			}
 			if (E('_f_shortcuts').checked) {
 				if (cache[ip] == null) {
-					b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]</a></small>';
+					b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]<\/a><\/small>';
 				}
-				b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]</a></small>';
+				b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
 			}
 		}
 
@@ -349,9 +349,9 @@ ref.refresh = function(text)
 	if (resolveCB) resolve();
 
 	if (numconnshown != numconntotal)
-		E('numtotalconn').innerHTML='<small><i>(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)</i></small>';
+		E('numtotalconn').innerHTML='<small><i>(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)<\/i><\/small>';
 	else
-		E('numtotalconn').innerHTML='<small><i>(' + numconntotal + ' connections)</i></small>';
+		E('numtotalconn').innerHTML='<small><i>(' + numconntotal + ' connections)<\/i><\/small>';
 }
 
 function addExcludeList(address) {
@@ -468,7 +468,7 @@ function verifyFields(focused, quiet) {
 
 </head>
 <body onload='init()'>
-<form id='_fom' action='javascript:{}'>
+<form id='t_fom' action='javascript:{}'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -482,9 +482,9 @@ function verifyFields(focused, quiet) {
 
 <div class='section-title' id='stitle' onclick='document.location="qos-graphs.asp"' style='cursor:pointer'>Transfer Rates: <span id='numtotalconn'></span></div>
 <div class='section'>
-<table id='grid' class='tomato-grid' style="float:left" cellspacing=1></table>
+	<div id="grid" class="tomato-grid" style="float:left"></div>
 
-<div id='loading'><br><b>Loading...</b></div>
+<div id='loading'><br /><b>Loading...</b></div>
 </div>
 
 <!-- / / / -->
@@ -492,17 +492,17 @@ function verifyFields(focused, quiet) {
 <div class='section-title'>Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id='sesdivfiltersshowhide'>(Toggle Visibility)</span></a></i></small></div>
 <div class='section' id='sesdivfilters' style='display:none'>
 <script type='text/javascript'>
-var c;
-c = [];
-c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)</small>' });
-c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)</small>' });
-c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
-c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
-c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
-c.push({ title: 'Ignore inactive connections', name: 'f_excludebythreshold', type: 'checkbox' });
-c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
-c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-createFieldTable('',c);
+	var c;
+	c = [];
+	c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+	c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+	c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
+	c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
+	c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
+	c.push({ title: 'Ignore inactive connections', name: 'f_excludebythreshold', type: 'checkbox' });
+	c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
+	c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+	createFieldTable('',c);
 </script>
 </div>
 
@@ -516,4 +516,3 @@ createFieldTable('',c);
 </form>
 </body>
 </html>
-

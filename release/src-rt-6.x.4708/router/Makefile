@@ -985,19 +985,19 @@ cyassl-install:
 ifeq ($(FULL_OPENSSL),y)
 OPENSSL_CIPHERS:=enable-rc5
 else
-OPENSSL_CIPHERS:=no-dh no-idea no-rc2 no-rc5 no-engine no-aes192 no-cast
+OPENSSL_CIPHERS:=
 endif
 
 openssl/stamp-h1:
 	cd openssl && \
 	./Configure $(HOSTCONFIG) --openssldir=/etc --cross-compile-prefix=' ' \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	shared $(OPENSSL_CIPHERS) \
-	no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd \
-	no-seed no-capieng no-gms no-gmp no-rfc3779 \
-	no-err no-hw no-jpake \
-	no-zlib no-engines no-sse2 no-libunbound no-ssl-trace \
-	no-dtls1 no-store no-psk no-md2 no-mdc2 no-ts
+	shared $(OPENSSL_CIPHERS)
+#	no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd \
+#	no-seed no-capieng no-gms no-gmp no-rfc3779 \
+#	no-err no-hw no-jpake \
+#	no-zlib no-engines no-sse2 no-libunbound no-ssl-trace \
+#	no-dtls1 no-store no-psk no-md2 no-mdc2 no-ts
 
 	@$(MAKE) -C openssl clean
 	@touch openssl/stamp-h1

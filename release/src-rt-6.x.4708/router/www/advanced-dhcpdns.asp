@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -54,7 +54,7 @@ function save()
 	if (!verifyFields(null, false)) return;
 
 	var a;
-	var fom = E('_fom');
+	var fom = E('t_fom');
 
 	fom.dhcpd_dmdns.value = E('_f_dhcpd_dmdns').checked ? 1 : 0;
 	a = E('_f_dhcpd_sltsel').value;
@@ -117,12 +117,15 @@ function init() {
 	if (((c = cookie.get('adv_dhcpdns_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility("notes");
 	}
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -165,14 +168,14 @@ createFieldTable('', [
 	{ title: 'Static lease time', multi: [
 		{ name: 'f_dhcpd_sltsel', type: 'select', options: [[0,'Same as normal lease time'],[-1,'"Infinite"'],[1,'Custom']],
 			value: (nvram.dhcpd_slt < 1) ? nvram.dhcpd_slt : 1 },
-		{ name: 'f_dhcpd_slt', type: 'text', maxlen: 5, size: 8, prefix: '<span id="_dhcpd_sltman"> ', suffix: ' <i>(minutes)</i></span>',
+		{ name: 'f_dhcpd_slt', type: 'text', maxlen: 5, size: 8, prefix: '<span id="_dhcpd_sltman"> ', suffix: ' <i>(minutes)<\/i><\/span>',
 			value: (nvram.dhcpd_slt >= 1) ? nvram.dhcpd_slt : 3600 } ] },
 	{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == '1' },
 	{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == '1' },
 	{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 	{ title: 'Mute dhcpv6 logging', name: 'f_dnsmasq_q6', type: 'checkbox', value: (nvram.dnsmasq_q & 2) },
 	{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
-	{ title: '<a href="http://www.thekelleys.org.uk/" target="_new">Dnsmasq</a><br>Custom configuration', name: 'dnsmasq_custom', type: 'textarea', value: nvram.dnsmasq_custom }
+	{ title: '<a href="http://www.thekelleys.org.uk/"  class="new_window">Dnsmasq<\/a><br />Custom configuration', name: 'dnsmasq_custom', type: 'textarea', value: nvram.dnsmasq_custom }
 ]);
 </script>
 
@@ -193,7 +196,7 @@ createFieldTable('', [
 <div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
 <div class='section' id='sesdivnotes' style='display:none'>
 
-<i>DHCP / DNS Server (LAN):</i><br>
+<i>DHCP / DNS Server (LAN):</i><br />
 <ul>
 <li><b>Use internal DNS</b> - Allow dnsmasq to be your DNS server on LAN.</li>
 <li><b>Use received DNS with user-entered DNS</b> - Add DNS servers received from your WAN connection to the static DNS server list (see <a href='basic-network.asp'>Network</a> configuration).</li>
@@ -206,17 +209,18 @@ createFieldTable('', [
 <li><b>Custom configuration</b> - Extra options to be added to the Dnsmasq configuration file.</li>
 </ul>
 
-<i>DHCP Client (WAN):</i><br>
+<i>DHCP Client (WAN):</i><br />
 <ul>
 <li><b>DHCPC Options</b> - Extra options for the DHCP client.</li>
 <li><b>Reduce packet size</b> - Self-explanatory.</li>
 </ul>
 
-<i>Other relevant notes/hints:</i><br>
+<i>Other relevant notes/hints:</i><br />
 <ul>
 <li>The contents of file /etc/dnsmasq.custom are also added to the end of Dnsmasq's configuration file (if it exists).</li>
 </ul>
 
+</div>
 </div>
 
 <!-- / / / -->
@@ -232,4 +236,3 @@ createFieldTable('', [
 <script type='text/javascript'>verifyFields(null, true);</script>
 </body>
 </html>
-

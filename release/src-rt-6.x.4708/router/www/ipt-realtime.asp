@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -88,64 +88,64 @@ ref.refresh = function(text) {
 			this.timeExpect += 1000*updateInt;
 			this.refreshTime = MAX(this.timeExpect - n, 500);
 		}
-		else {
-			this.timeExpect = n + 1000*updateInt;
-		}
-
-		for (i in iptmon) {
-			c = iptmon[i];
-			if ((p = prev[i]) != null) {
-				h = speed_history[i];
-
-				h.rx.splice(0, 1);
-				h.rx.push((c.rx < p.rx) ? (c.rx + (0xFFFFFFFF - p.rx + 0x00000001)) : (c.rx - p.rx));
-
-				h.tx.splice(0, 1);
-				h.tx.push((c.tx < p.tx) ? (c.tx + (0xFFFFFFFF - p.tx + 0x00000001)) : (c.tx - p.tx));
-			}
-			else if (!speed_history[i]) {
-				speed_history[i] = {};
-				h = speed_history[i];
-				h.rx = [];
-				h.tx = [];
-				for (j = 300; j > 0; --j) {
-					h.rx.push(0);
-					h.tx.push(0);
-				}
-				h.count = 0;
-				h.hide = 0;
-			}
-			prev[i] = c;
-
-			if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i.trim() != '')) {
-				ipt_addr_shown.push(i);
-				var option=document.createElement("option");
-				option.value=i;
-				if (hostnamecache[i] != null) {
-					option.text = hostnamecache[i] + ' (' + i + ')';
-				} else {
-					option.text=i;
-				}
-				E('_f_ipt_addr_shown').add(option,null);
-			}
-
-			if (ipt_addr_hidden.find(i) != -1) {
-				speed_history[i].hide = 1;
-			} else {
-				speed_history[i].hide = 0;
-			}
-
-			verifyFields(null,1);
-
-		}
-		loadData();
+	else {
+		this.timeExpect = n + 1000*updateInt;
 	}
-	catch (ex) {
+
+	for (i in iptmon) {
+		c = iptmon[i];
+		if ((p = prev[i]) != null) {
+			h = speed_history[i];
+
+			h.rx.splice(0, 1);
+			h.rx.push((c.rx < p.rx) ? (c.rx + (0xFFFFFFFF - p.rx + 0x00000001)) : (c.rx - p.rx));
+
+			h.tx.splice(0, 1);
+			h.tx.push((c.tx < p.tx) ? (c.tx + (0xFFFFFFFF - p.tx + 0x00000001)) : (c.tx - p.tx));
+		}
+		else if (!speed_history[i]) {
+			speed_history[i] = {};
+			h = speed_history[i];
+			h.rx = [];
+			h.tx = [];
+			for (j = 300; j > 0; --j) {
+				h.rx.push(0);
+				h.tx.push(0);
+			}
+			h.count = 0;
+			h.hide = 0;
+		}
+		prev[i] = c;
+
+		if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i.trim() != '')) {
+			ipt_addr_shown.push(i);
+			var option=document.createElement("option");
+			option.value=i;
+			if (hostnamecache[i] != null) {
+				option.text = hostnamecache[i] + ' (' + i + ')';
+			} else {
+				option.text=i;
+			}
+			E('_f_ipt_addr_shown').add(option,null);
+		}
+
+		if (ipt_addr_hidden.find(i) != -1) {
+			speed_history[i].hide = 1;
+		} else {
+			speed_history[i].hide = 0;
+		}
+
+		verifyFields(null,1);
+
+	}
+	loadData();
+}
+catch (ex) {
 /* REMOVE-BEGIN
 //			alert('ex=' + ex);
 REMOVE-END */
-	}
-	--updating;
+}
+--updating;
 }
 
 function watchdog() {
@@ -199,16 +199,16 @@ function init() {
 /* REMOVE-BEGIN */
 //			document.styleSheets[2].deleteRule(theRules.length - 1);
 /* REMOVE-END */
-			break;
+		break;
 		case '2':		// show IPs only
 			theRules[theRules.length-1].style.cssText = 'width: 140px;';
-			break;
+		break;
 		case '0':		// show hostnames + IPs
 		default:
 /* REMOVE-BEGIN */
 //			theRules[theRules.length-1].style.cssText = 'width: 140px; height: 12px; font-size: 9px;';
 /* REMOVE-END */
-			break;
+		break;
 	}
 
 	ref.start();
@@ -263,7 +263,7 @@ function verifyFields(focused, quiet) {
 
 </head>
 <body onload='init()'>
-<form>
+<form action=''>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -274,88 +274,89 @@ function verifyFields(focused, quiet) {
 <div id='ident'><% ident(); %></div>
 
 <!-- / / / -->
+
 <div id='cstats'>
 	<div id='tab-area'></div>
 
 	<script type='text/javascript'>
 	if ((nvram.web_svg != '0') && (nvram.cstats_enable == '1')) {
 		// without a div, Opera 9 moves svgdoc several pixels outside of <embed> (?)
-		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'></embed></div>");
+		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'><\/embed><\/div>");
 	}
 	</script>
 
 	<div id='bwm-controls'>
-		<small>(<script type='text/javascript'>W(5*updateInt);</script> minute window, <script type='text/javascript'>W(updateInt);</script> second interval)</small><br>
-		<br>
-		Avg:&nbsp;
-			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
-			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
-			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
-			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br>
-		Max:&nbsp;
-			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
-			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br>
-		Display:&nbsp;
-			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
-			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br>
-		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br>
-		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br>
+	<small>(<script type='text/javascript'>W(5*updateInt);</script> minute window, <script type='text/javascript'>W(updateInt);</script> second interval)</small><br />
+	<br />
+	Avg:&nbsp;
+		<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
+		<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
+		<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
+		<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
+		<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
+	Max:&nbsp;
+		<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
+		<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
+	Display:&nbsp;
+		<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
+		<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
+	Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
+	<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
 
-		<br><br>
-		&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
+	<br /><br />
+	&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
 	</div>
 
-	<br><br>
+	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-			<td width='15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='rx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='rx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='rx-total'></td>
+		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+		<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
 		<td>&nbsp;</td>
 	</tr>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-			<td width='15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='tx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='tx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='tx-total'></td>
-		<td>&nbsp;</td>
+	<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+	<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+	<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+	<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
+	<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+	<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
+	<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+	<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
+	<td>&nbsp;</td>
 	</tr>
 	</table>
 
 <!-- / / / -->
 
-<br>
+<br />
 
 <div>
 <script type='text/javascript'>
 createFieldTable('', [
-	{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)</small>' },
-	{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)</small>' }
-	]);
+	{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
+	{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
+]);
 </script>
 </div>
 
 </div>
-<br>
+<br />
 
 <!-- / / / -->
 
 <script type='text/javascript'>
 if (nvram.cstats_enable != '1') {
-	W('<div class="note-disabled">IP Traffic monitoring disabled.</b><br><br><a href="admin-iptraffic.asp">Enable &raquo;</a><div>');
+	W('<div class="note-disabled">IP Traffic monitoring disabled.<\/b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;<\/a><div>');
 	E('cstats').style.display = 'none';
-}else {
-	W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.</div>');
+} else {
+	W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
 }
 </script>
 
@@ -365,8 +366,7 @@ if (nvram.cstats_enable != '1') {
 <tr><td id='footer' colspan=2>
 	<span id='warnwd' style='display:none'>Warning: 10 second timeout, restarting...&nbsp;</span>
 	<span id='dtime'></span>
-	<img src='spin.gif' id='refresh-spinner' onclick='javascript:debugTime=1'>
-
+	<img src='spin.gif' id='refresh-spinner' alt='' onclick='javascript:debugTime=1'>
 </td></tr>
 </table>
 </form>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -24,22 +24,22 @@
 
 <style type='text/css'>
 #txt {
-	width: 550px;
-	white-space: nowrap;
+width: 550px;
+white-space: nowrap;
 }
 #bwm-controls {
-	text-align: right;
-	margin-right: 5px;
-	margin-top: 5px;
-	float: right;
-	visibility: hidden;
+text-align: right;
+margin-right: 5px;
+margin-top: 5px;
+float: right;
+visibility: hidden;
 }
 ul.tabs a,
 #tabs a {
-	width: 140px;
-	height: 12px;
-	font-size: 9px;
-	font-weight:bold;
+width: 140px;
+height: 12px;
+font-size: 9px;
+font-weight:bold;
 }
 </style>
 
@@ -72,7 +72,7 @@ hostnamecache = [];
 
 function showHours() {
 	if (hours == lastHours) return;
-	showSelectedOption('hr', lastHours, hours);
+		showSelectedOption('hr', lastHours, hours);
 	lastHours = hours;
 }
 
@@ -307,7 +307,7 @@ function verifyFields(focused, quiet) {
 
 </head>
 <body onload='init()'>
-<form>
+<form action=''>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -325,13 +325,13 @@ function verifyFields(focused, quiet) {
 	<script type='text/javascript'>
 	if ((nvram.web_svg != '0') && (nvram.cstats_enable == '1')) {
 		// without a div, Opera 9 moves svgdoc several pixels outside of <embed> (?)
-		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'></embed></div>");
+		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'><\/embed><\/div>");
 	}
 	</script>
 
 	<div id='bwm-controls'>
-		<small>(2 minute interval)</small><br>
-		<br>
+		<small>(2 minute interval)</small><br />
+		<br />
 		Hours:&nbsp;
 			<a href='javascript:switchHours(1);' id='hr1'>1</a>,
 			<a href='javascript:switchHours(2);' id='hr2'>2</a>,
@@ -339,78 +339,77 @@ function verifyFields(focused, quiet) {
 			<a href='javascript:switchHours(6);' id='hr6'>6</a>,
 			<a href='javascript:switchHours(12);' id='hr12'>12</a>,
 			<a href='javascript:switchHours(18);' id='hr18'>18</a>,
-			<a href='javascript:switchHours(24);' id='hr24'>24</a><br>
+			<a href='javascript:switchHours(24);' id='hr24'>24</a><br />
 		Avg:&nbsp;
 			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
 			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
 			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
-			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br>
+		<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
+		<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
 		Max:&nbsp;
 			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
-			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br>
+			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
 		Display:&nbsp;
 			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
-			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br>
-		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br>
-		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br>
-		<br><br>
-		&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
+			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
+		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
+			<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
+			<br /><br />
+			&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
 	</div>
 
-	<br><br>
+	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-			<td width='15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='rx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='rx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='rx-total'></td>
+		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+		<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
 		<td>&nbsp;</td>
 	</tr>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-			<td width='15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='tx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='tx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='tx-total'></td>
+		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+		<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
 		<td>&nbsp;</td>
 	</tr>
-	</table>
+</table>
 
 <!-- / / / -->
 
-<br>
+<br />
 
 <div>
 <script type='text/javascript'>
-createFieldTable('', [
-	{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)</small>' },
-	{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)</small>' }
+	createFieldTable('', [
+		{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
+		{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
 	]);
 </script>
 </div>
 
 </div>
 
-</div>
-<br>
+<br />
 
 <!-- / / / -->
 
 <script type='text/javascript'>
-if (nvram.cstats_enable != '1') {
-	W('<div class="note-disabled">IP Traffic monitoring disabled.</b><br><br><a href="admin-iptraffic.asp">Enable &raquo;</a><div>');
-	E('cstats').style.display = 'none';
-}else {
-	W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.</div>');
-}
+	if (nvram.cstats_enable != '1') {
+		W('<div class="note-disabled">IP Traffic monitoring disabled.<\/b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;<\/a><div>');
+		E('cstats').style.display = 'none';
+	} else {
+		W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
+	}
 </script>
 
 <!-- / / / -->
@@ -418,7 +417,7 @@ if (nvram.cstats_enable != '1') {
 </td></tr>
 <tr><td id='footer' colspan=2>
 	<span id='dtime'></span>
-	<img src='spin.gif' id='refresh-spinner' onclick='debugTime=1'>
+	<img src='spin.gif' id='refresh-spinner' alt='' onclick='debugTime=1'>
 	<input type='button' value='Refresh' id='refresh-button' onclick='ref.toggleX()'>
 </td></tr>
 </table>

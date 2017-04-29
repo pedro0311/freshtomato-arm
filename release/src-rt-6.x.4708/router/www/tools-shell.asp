@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 
@@ -11,7 +11,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Tools: System Commands</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -51,7 +51,7 @@ function escapeText(s)
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
+	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br />').replace(/ /g, '&nbsp;');
 }
 
 function spin(x)
@@ -64,7 +64,7 @@ function spin(x)
 
 function updateResult()
 {
-	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '</tt>';
+	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
 	cmdresult = '';
 	spin(0);
 }
@@ -123,7 +123,7 @@ createFieldTable('', [
 <script type='text/javascript'>genStdRefresh(1,5,'ref.toggle()');</script>
 </div>
 
-<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src='spin.gif' style="vertical-align:top"></div>
+<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src='spin.gif' alt='' style="vertical-align:top"></div>
 <pre id='result'></pre>
 
 <!-- / / / -->

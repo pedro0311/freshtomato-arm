@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Tools: Trace</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -204,19 +204,19 @@ function init()
 createFieldTable('', [
 	{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '', suffix: ' <input type="button" value="Trace" onclick="trace()" id="traceb">' },
 	{ title: 'Maximum Hops', name: 'f_hops', type: 'text', maxlen: 2, size: 4, value: '20' },
-	{ title: 'Maximum Wait Time', name: 'f_wait', type: 'text', maxlen: 2, size: 4, value: '3', suffix: ' <small>(seconds per hop)</small>' }
+	{ title: 'Maximum Wait Time', name: 'f_wait', type: 'text', maxlen: 2, size: 4, value: '3', suffix: ' <small>(seconds per hop)<\/small>' }
 ]);
 </script>
 </div>
 
 <div style='visibility:hidden' id='trace-error'></div>
 
-<div style='visibility:hidden;text-align:right' id='wait'>Please wait... <img src='spin.gif' style='vertical-align:top'></div>
+<div style='visibility:hidden;text-align:right' id='wait'>Please wait... <img src='spin.gif' alt='' style='vertical-align:top'></div>
 
-<table id='ttr-grid' class='tomato-grid' cellspacing=1></table>
+<div id="ttr-grid" class="tomato-grid"></div>
 
 <div style='height:10px;' onclick='javascript:E("debug").style.display=""'></div>
-<textarea id='debug' style='width:99%;height:300px;display:none'></textarea>
+<textarea id='debug' style='width:99%;height:300px;display:none' cols='50' rows='10'></textarea>
 
 <!-- / / / -->
 

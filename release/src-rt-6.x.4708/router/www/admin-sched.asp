@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Scheduler</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -96,7 +96,7 @@ function makeSched(key, custom)
 		{ title: 'Time', multi: [
 			{ name: key + 'time', type: 'select', options: t, value: oe ? 'e' : v[2] },
 			{ name: key + 'every', type: 'text', maxlen: 10, size: 10, value: (v[2] < 0) ? -v[2] : 30,
-				prefix: ' ', suffix: ' <small id="_' + key + 'mins"><i>minutes</i></small>' } ] },
+				prefix: ' ', suffix: ' <small id="_' + key + 'mins"><i>minutes<\/i><\/small>' } ] },
 		{ title: 'Days', multi: [
 			{ name: key + 'sun', type: 'checkbox', suffix: ' Sun &nbsp; ', value: w & 1 },
 			{ name: key + 'mon', type: 'checkbox', suffix: ' Mon &nbsp; ', value: w & 2 },
@@ -221,7 +221,7 @@ function save()
 
 	if (!verifyFields(null, false)) return;
 
-	fom = E('_fom');
+	fom = E('t_fom');
 	for (i = 0; i < scheds.length; ++i) {
 		saveSched(fom, scheds[i]);
 	}
@@ -237,7 +237,7 @@ function init()
 </script>
 </head>
 <body onload='init()'>
-<form name='_fom' id='_fom' method='post' action='tomato.cgi'>
+<form name='t_fom' id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -317,7 +317,6 @@ makeSched('c5', 1);
 	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
 </td></tr>
 </table>
-<br><br>
 </form>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -126,117 +126,117 @@ function ethstates()
 	if (port == "disabled") { return 0; }
 
 	var state, state1, state2;
-	var code = '<div class="section-title">Ethernet Ports State</div>';
+	var code = '<div class="section-title">Ethernet Ports State<\/div>';
 	code += '<table class="fields"><tr>';
 	var v = 0;
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 		u = (uidx>1) ? uidx : '';
 		if ((nvram['wan'+u+'_sta'] == '') && (nvram['wan'+u+'_proto'] != 'lte') && (nvram['wan'+u+'_proto'] != 'ppp3g')) {
-			code += '<td class="title indent2"><center><b>WAN'+u+'</b></center></td>';
+			code += '<td class="title indent2" style="text-align:center"><b>WAN'+u+'<\/b><\/td>';
 			++v;
 		}
 	}
 	for (uidx = v ; uidx <= 4; ++uidx){
-	    code += '<td class="title indent2"><center><b>LAN'+uidx+'</b></center></td>';
+		code += '<td class="title indent2" style="text-align:center"><b>LAN'+uidx+'<\/b><\/td>';
 	}
 	code += '<tr>';
 
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br>';
+		state = '<img id="eth_off" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br>';
+		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br>';
+		state = '<img id="eth_100" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
 	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2"><center>' + state + state2 + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
 	} else {
-		code += '<td class="title indent2"><center>' + state + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port1;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br>';
+		state = '<img id="eth_off" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br>';
+		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br>';
+		state = '<img id="eth_100" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
 	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2"><center>' + state + state2 + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
 	} else {
-		code += '<td class="title indent2"><center>' + state + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port2;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br>';
+		state = '<img id="eth_off" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br>';
+		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br>';
+		state = '<img id="eth_100" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
 	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2"><center>' + state + state2 + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
 	} else {
-		code += '<td class="title indent2"><center>' + state + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port3;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br>';
+		state = '<img id="eth_off" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br>';
+		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br>';
+		state = '<img id="eth_100" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
 	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2"><center>' + state + state2 + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
 	} else {
-		code += '<td class="title indent2"><center>' + state + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port4;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br>';
+		state = '<img id="eth_off" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br>';
+		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br>';
+		state = '<img id="eth_100" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
 	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2"><center>' + state + state2 + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
 	} else {
-		code += '<td class="title indent2"><center>' + state + '</center></td>';
+		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
-	code += '<td class="content"> </td></tr>';
-	code += '<tr><td class="title indent1" colspan="7" align="right">&raquo; <a href="basic-network.asp">Configure</a></td></tr></table></div>';
+	code += '<td class="content"> <\/td><\/tr>';
+	code += '<tr><td class="title indent1" colspan="7" align="right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
 	E("ports").innerHTML = code;
 }
 
@@ -245,9 +245,10 @@ function anon_update()
 	update = anonupdate.update;
 	if (update == "no") { return 0; }
 
-	var code = '<div class="section-title"><center>!! Attention !!</center></div>';
-	code += '<div class="fields"><center>Tomato by Shibby ' + update + ' is now available. <a target="_blank" href="http://tomato.groov.pl/">Click here to read more</a>.</center></div>';
-	code += '<br></div>';
+	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
+	code += '<div class="fields" style="text-align:center">Newer version of Tomato ARM ' + update + ' is now available. <a class="new_window" href="https://mega.nz/#F!bAcVXCSY!DgPc0zfhunujKblc1qsQ0w">Click here to download<\/a>.<\/div>';
+	code += '<\/div>';
+	E("nversion").style.display = "block";
 	E("nversion").innerHTML = code;
 }
 
@@ -288,7 +289,7 @@ function show()
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx)<0) {
-			c('radio'+uidx, wlstats[uidx].radio ? 'Enabled' : '<b>Disabled</b>');
+			c('radio'+uidx, wlstats[uidx].radio ? 'Enabled' : '<b>Disabled<\/b>');
 			c('rate'+uidx, wlstats[uidx].rate);
 			if (show_radio[uidx]) {
 				E('b_wl'+uidx+'_enable').disabled = wlstats[uidx].radio;
@@ -349,6 +350,10 @@ function init()
 		if (((c = cookie.get('status_overview_wl_'+u+'_vis')) != null) && (c != '1')) toggleVisibility("wl_"+u);
 	}
 	ref.initPage(3000, 3);
+
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function toggleVisibility(whichone) {
@@ -367,7 +372,7 @@ function toggleVisibility(whichone) {
 
 </head>
 <body onload='init()'>
-<form>
+<form action=''>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -378,14 +383,13 @@ function toggleVisibility(whichone) {
 <div id='ident'><% ident(); %></div>
 
 <!-- / / / -->
-<div class='section' id='nversion'>
-</div>
+<div class='section' id='nversion' style='display:none'></div>
 
 <div style='display:none' id='att1'>
-<div class='section-title'><center>!! Attention !!</center></div>
-<div class='fields'><center>You did not configure <b>TomatoAnon project</b> setting.
-<br>Please go to <a href='admin-tomatoanon.asp'>TomatoAnon configuration page</a> and make a choice.</center></div>
-<br>
+<div class='section-title' style="text-align:center">!! Attention !!</div>
+<div class='fields' style="text-align:center">You did not configure <b>TomatoAnon project</b> setting.
+<br />Please go to <a href='admin-tomatoanon.asp'>TomatoAnon configuration page</a> and make a choice.</div>
+<br />
 </div>
 
 <div class='section-title'>System <small><i><a href='javascript:toggleVisibility("system");'><span id='sesdiv_system_showhide'>(hide)</span></a></i></small></div>
@@ -396,16 +400,16 @@ createFieldTable('', [
 	{ title: 'Name', text: nvram.router_name },
 	{ title: 'Model', text: nvram.t_model_name },
 	{ title: 'Chipset', text: stats.systemtype },
-	{ title: 'CPU Frequency', text: stats.cpumhz, suffix: ' <small>(dual-core)</small>' },
+	{ title: 'CPU Frequency', text: stats.cpumhz, suffix: ' <small>(dual-core)<\/small>' },
 	{ title: 'Flash Size', text: stats.flashsize },
 	null,
 	{ title: 'Time', rid: 'time', text: stats.time },
 	{ title: 'Uptime', rid: 'uptime', text: stats.uptime },
 	{ title: 'CPU Usage', rid: 'cpupercent', text: stats.cpupercent },
-	{ title: 'CPU Load <small>(1 / 5 / 15 mins)</small>', rid: 'cpu', text: stats.cpuload },
+	{ title: 'CPU Load <small>(1 / 5 / 15 mins)<\/small>', rid: 'cpu', text: stats.cpuload },
 	{ title: 'Total / Free Memory', rid: 'memory', text: stats.memory },
 	{ title: 'Total / Free Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
-	{ title: 'Total / Free NVRAM', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)</small>' },
+	{ title: 'Total / Free NVRAM', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)<\/small>' },
 	null,
 	{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C'},
 	{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
@@ -419,7 +423,7 @@ createFieldTable('', [
 <script type='text/javascript'>
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 	var u = (uidx>1) ? uidx : '';
-	W('<div class=\'section-title\' id=\'wan'+u+'-title\'>WAN'+u+' <small><i><a href=\'javascript:toggleVisibility("wan' + u + '");\'><span id=\'sesdiv_wan' +u + '_showhide\'>(hide)</span></a></i></small></div>');
+	W('<div class=\'section-title\' id=\'wan'+u+'-title\'>WAN'+u+' <small><i><a href=\'javascript:toggleVisibility("wan' + u + '");\'><span id=\'sesdiv_wan' +u + '_showhide\'>(hide)<\/span><\/a><\/i><\/small><\/div>');
 	W('<div class=\'section\' id=\'sesdiv_wan'+u+'\'>');
 	createFieldTable('', [
 		{ title: 'MAC Address', text: nvram['wan'+u+'_hwaddr'] },
@@ -440,10 +444,10 @@ for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 	W('<span id=\'b'+u+'_dhcpc\' style=\'display:none\'>');
 	W('<input type=\'button\' class=\'controls\' onclick=\'dhcpc("renew","wan'+u+'")\' value=\'Renew\'> &nbsp;');
 	W('<input type=\'button\' class=\'controls\' onclick=\'dhcpc("release","wan'+u+'")\' value=\'Release\'> &nbsp;');
-	W('</span>');
+	W('<\/span>');
 	W('<input type=\'button\' class=\'controls\' onclick=\'wan_connect('+uidx+')\' value=\'Connect\' id=\'b'+u+'_connect\' style=\'display:none\'>');
 	W('<input type=\'button\' class=\'controls\' onclick=\'wan_disconnect('+uidx+')\' value=\'Disconnect\' id=\'b'+u+'_disconnect\' style=\'display:none\'>');
-	W('</div>');
+	W('<\/div>');
 }
 </script>
 
@@ -487,14 +491,14 @@ for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 				nvram['dhcpd' + j + '_startip'] = x + nvram['dhcp' + j + '_start'];
 				nvram['dhcpd' + j + '_endip'] = x + ((nvram['dhcp' + j + '_start'] * 1) + (nvram['dhcp' + j + '_num'] * 1) - 1);
 			}
-			s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
-			s += '<b>br' + i + '</b> (LAN' + j + ') - ' + nvram['dhcpd' + j + '_startip'] + ' - ' + nvram['dhcpd' + j + '_endip'];
+			s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br />' : '';
+			s += '<b>br' + i + '<\/b> (LAN' + j + ') - ' + nvram['dhcpd' + j + '_startip'] + ' - ' + nvram['dhcpd' + j + '_endip'];
 		} else {
-			s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
-			s += '<b>br' + i + '</b> (LAN' + j + ') - Disabled';
+			s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br />' : '';
+			s += '<b>br' + i + '<\/b> (LAN' + j + ') - Disabled';
 		}
-		t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br>' : '';
-		t += '<b>br' + i + '</b> (LAN' + j + ') - ' + nvram['lan' + j + '_ipaddr'] + '/' + numberOfBitsOnNetMask(nvram['lan' + j + '_netmask']);
+		t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br />' : '';
+		t += '<b>br' + i + '<\/b> (LAN' + j + ') - ' + nvram['lan' + j + '_ipaddr'] + '/' + numberOfBitsOnNetMask(nvram['lan' + j + '_netmask']);
 		
 	}
 }
@@ -523,8 +527,8 @@ REMOVE-END */
 	W('<div class=\'section-title\' id=\'wl'+u+'-title\'>Wireless');
 	if (wl_ifaces.length > 0)
 		W(' (' + wl_display_ifname(uidx) + ')');
-	W(' <small><i><a href=\'javascript:toggleVisibility("wl_' + u + '");\'><span id=\'sesdiv_wl_' +u + '_showhide\'>(hide)</span></a></i></small>');
-	W('</div>');
+	W(' <small><i><a href=\'javascript:toggleVisibility("wl_' + u + '");\'><span id=\'sesdiv_wl_' +u + '_showhide\'>(hide)<\/span><\/a><\/i><\/small>');
+	W('<\/div>');
 	W('<div class=\'section\' id=\'sesdiv_wl_'+u+'\'>');
 	sec = auth[nvram['wl'+u+'_security_mode']] + '';
 	if (sec.indexOf('WPA') != -1) sec += ' + ' + enc[nvram['wl'+u+'_crypto']];
@@ -537,12 +541,12 @@ REMOVE-END */
 		{ title: 'Wireless Mode', text: wmode },
 		{ title: 'Wireless Network Mode', text: bgmo[nvram['wl'+u+'_net_mode']], ignore: (wl_sunit(uidx)>=0) },
 		{ title: 'Interface Status', rid: 'ifstatus'+uidx, text: wlstats[uidx].ifstatus },
-		{ title: 'Radio', rid: 'radio'+uidx, text: (wlstats[uidx].radio == 0) ? '<b>Disabled</b>' : 'Enabled', ignore: (wl_sunit(uidx)>=0) },
+		{ title: 'Radio', rid: 'radio'+uidx, text: (wlstats[uidx].radio == 0) ? '<b>Disabled<\/b>' : 'Enabled', ignore: (wl_sunit(uidx)>=0) },
 /* REMOVE-BEGIN */
-//	{ title: 'SSID', text: (nvram['wl'+u+'_ssid'] + ' <small><i>' + ((nvram['wl'+u+'_mode'] != 'ap') ? '' : ((nvram['wl'+u+'_closed'] == 0) ? '(Broadcast Enabled)' : '(Broadcast Disabled)')) + '</i></small>') },
+//	{ title: 'SSID', text: (nvram['wl'+u+'_ssid'] + ' <small><i>' + ((nvram['wl'+u+'_mode'] != 'ap') ? '' : ((nvram['wl'+u+'_closed'] == 0) ? '(Broadcast Enabled)' : '(Broadcast Disabled)')) + '<\/i><\/small>') },
 /* REMOVE-END */
 		{ title: 'SSID', text: nvram['wl'+u+'_ssid'] },
-		{ title: 'Broadcast', text: (nvram['wl'+u+'_closed'] == 0) ? 'Enabled' : '<b>Disabled</b>', ignore: (nvram['wl'+u+'_mode'] != 'ap') },
+		{ title: 'Broadcast', text: (nvram['wl'+u+'_closed'] == 0) ? 'Enabled' : '<b>Disabled<\/b>', ignore: (nvram['wl'+u+'_mode'] != 'ap') },
 		{ title: 'Security', text: sec },
 		{ title: 'Channel', rid: 'channel'+uidx, text: stats.channel[uidx], ignore: (wl_sunit(uidx)>=0) },
 		{ title: 'Channel Width', rid: 'nbw'+uidx, text: wlstats[uidx].nbw, ignore: ((!nphy) || (wl_sunit(uidx)>=0)) },
@@ -555,7 +559,7 @@ REMOVE-END */
 
 	W('<input type=\'button\' class=\'controls\' onclick=\'wlenable('+uidx+', 1)\' id=\'b_wl'+uidx+'_enable\' value=\'Enable\' style=\'display:none\'>');
 	W('<input type=\'button\' class=\'controls\' onclick=\'wlenable('+uidx+', 0)\' id=\'b_wl'+uidx+'_disable\' value=\'Disable\' style=\'display:none\'>');
-	W('</div>');
+	W('<\/div>');
 }
 </script>
 

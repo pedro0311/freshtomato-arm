@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Admin: Debugging</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -26,7 +26,7 @@
 
 function nvramCommit()
 {
-	fields.disableAll('_fom', 1);
+	fields.disableAll('t_fom', 1);
 	form.submitHidden('nvcommit.cgi', { '_nextpage': myName() });
 }
 
@@ -37,7 +37,7 @@ function verifyFields(focused, quiet)
 
 function save()
 {
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	fom.debug_nocommit.value = fom.f_debug_nocommit.checked ? 1 : 0;
 	fom.debug_cprintf.value = fom.f_debug_cprintf.checked ? 1 : 0;
 	fom.debug_cprintf_file.value = fom.f_debug_cprintf_file.checked ? 1 : 0;
@@ -60,7 +60,7 @@ function save()
 
 </head>
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -96,37 +96,37 @@ createFieldTable('', [
 	{ title: 'Avoid displaying LAN to router connections', name: 'f_hidelr', type: 'checkbox', value: nvram.t_hidelr == '1' },
 	{ title: 'Console log level', name: 'console_loglevel', type: 'select', options: a, value: fixInt(nvram.console_loglevel, 1, 8, 1) },
 	{ title: 'Do not restart the following process if they die', multi: [
-		{ name: 'f_nr_crond', type: 'checkbox', suffix: ' crond<br>', value: (nvram.debug_norestart.indexOf('crond') != -1) },
-		{ name: 'f_nr_dnsmasq', type: 'checkbox', suffix: ' dnsmasq<br>', value: (nvram.debug_norestart.indexOf('dnsmasq') != -1) },
+		{ name: 'f_nr_crond', type: 'checkbox', suffix: ' crond<br />', value: (nvram.debug_norestart.indexOf('crond') != -1) },
+		{ name: 'f_nr_dnsmasq', type: 'checkbox', suffix: ' dnsmasq<br />', value: (nvram.debug_norestart.indexOf('dnsmasq') != -1) },
 /* LINUX26-BEGIN */
-		{ name: 'f_nr_hotplug2', type: 'checkbox', suffix: ' hotplug2<br>', value: (nvram.debug_norestart.indexOf('hotplug2') != -1) },
+		{ name: 'f_nr_hotplug2', type: 'checkbox', suffix: ' hotplug2<br />', value: (nvram.debug_norestart.indexOf('hotplug2') != -1) },
 /* LINUX26-END */
-		{ name: 'f_nr_igmprt', type: 'checkbox', suffix: ' igmprt<br>', value: (nvram.debug_norestart.indexOf('igmprt') != -1) }
+		{ name: 'f_nr_igmprt', type: 'checkbox', suffix: ' igmprt<br />', value: (nvram.debug_norestart.indexOf('igmprt') != -1) }
 	] }
 ]);
 </script>
-<br><br>
+<br /><br />
 
-&raquo; <a href='clearcookies.asp?_http_id=<% nv(http_id); %>'>Clear Cookies</a><br>
-&raquo; <a href='javascript:nvramCommit()'>NVRAM Commit</a><br>
-&raquo; <a href='javascript:reboot()'>Reboot</a><br>
-&raquo; <a href='javascript:shutdown()'>Shutdown</a><br>
-<br><br>
+&raquo; <a href='clearcookies.asp?_http_id=<% nv(http_id); %>'>Clear Cookies</a><br />
+&raquo; <a href='javascript:nvramCommit()'>NVRAM Commit</a><br />
+&raquo; <a href='javascript:reboot()'>Reboot</a><br />
+&raquo; <a href='javascript:shutdown()'>Shutdown</a><br />
+<br /><br />
 
-&raquo; <a href='/cfe/cfe.bin?_http_id=<% nv(http_id); %>'>Download CFE</a><br>
-&raquo; <a href='/ipt/iptables.txt?_http_id=<% nv(http_id); %>'>Download Iptables Dump</a><br>
+&raquo; <a href='/cfe/cfe.bin?_http_id=<% nv(http_id); %>'>Download CFE</a><br />
+&raquo; <a href='/ipt/iptables.txt?_http_id=<% nv(http_id); %>'>Download Iptables Dump</a><br />
 <!-- IPV6-BEGIN -->
-&raquo; <a href='/ip6t/ip6tables.txt?_http_id=<% nv(http_id); %>'>Download Ip6tables Dump</a><br>
+&raquo; <a href='/ip6t/ip6tables.txt?_http_id=<% nv(http_id); %>'>Download Ip6tables Dump</a><br />
 <!-- IPV6-END -->
-&raquo; <a href='/logs/syslog.txt?_http_id=<% nv(http_id); %>'>Download Logs</a><br>
-&raquo; <a href='/nvram/nvram.txt?_http_id=<% nv(http_id); %>'>Download NVRAM Dump</a><br>
-<br>
+&raquo; <a href='/logs/syslog.txt?_http_id=<% nv(http_id); %>'>Download Logs</a><br />
+&raquo; <a href='/nvram/nvram.txt?_http_id=<% nv(http_id); %>'>Download NVRAM Dump</a><br />
+<br />
 
 <div style='width:80%'>
 <b>Warning</b>: The NVRAM Dump text file may contain information like wireless
 encryption keys and usernames/passwords for the router, ISP and DDNS. Please
 review &amp; edit this file before sharing it with
-anyone.<br>
+anyone.<br />
 </div>
 
 </div>

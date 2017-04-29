@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2007 Jonathan Zarate
@@ -109,9 +109,9 @@ wlg = new TomatoGrid();
 wlg.setup = function() {
 	this.init('wlif-grid', '', max_no_vifs, [
 		{ type: 'select', options: vifs_possible },
-		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-		{ type: 'text', maxlen: 32, size: 34, prefix: '<div class="centered">', suffix: '</div>' },
-		{ type: 'select', options: wl_modes_available , prefix: '<div class="centered">', suffix: '</div>' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+		{ type: 'text', maxlen: 32, size: 34, prefix: '<div class="centered">', suffix: '<\/div>' },
+		{ type: 'select', options: wl_modes_available , prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'select', options: [[0,'LAN (br0)'],[1,'LAN1  (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']] }
 	]);
 
@@ -240,8 +240,8 @@ wlg.dataToView = function(data) {
 
 	return ([ifname,
 			(data[1] == 1) ? 'Yes' : 'No',
-			ssid || '<small><i>(unset)</i></small>',
-			wmo[data[3]] || '<small><i>(unset)</i></small>',
+			ssid || '<small><i>(unset)<\/i><\/small>',
+			wmo[data[3]] || '<small><i>(unset)<\/i><\/small>',
 			['LAN (br0)', 'LAN1 (br1)', 'LAN2 (br2)', 'LAN3 (br3)', 'none' ][data[4]]
 			]);
 }
@@ -488,7 +488,7 @@ function earlyInit() {
 	W('	visibility: hidden;');
 	W('	vertical-align: middle;');
 	W('}');
-	W('</style>');
+	W('<\/style>');
 
 }
 
@@ -502,7 +502,7 @@ function init() {
 
 	E('sesdiv').style.display = '';
 	if (uninit < 0) {
-		E('sesdiv').innerHTML = '<i>This feature is not supported on this router.</i>';
+		E('sesdiv').innerHTML = '<i>This feature is not supported on this router.<\/i>';
 		return;
 	}
 
@@ -1024,7 +1024,7 @@ function save() {
 
 	var i, u, vidx, vif;
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 /* LINUX24-BEGIN */
 	fom.nas_alternate.value = E('_f_nas_alternate').checked ? '1' : '0';
 /* LINUX24-END */
@@ -1295,7 +1295,7 @@ function do_pre_submit_form(fom) {
 function error_pre_submit_form() {
 	var footermsg = E('footer-msg');
 
-	footermsg.innerHTML = '<tt>' + escapeText(cmdresult) + '</tt>';
+	footermsg.innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
 	footermsg.style.visibility = 'visible';
 
 	cmdresult = '';
@@ -1306,7 +1306,7 @@ function post_pre_submit_form(s) {
 
 	cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
-		form.submit(E('_fom'),1);
+		form.submit(E('t_fom'),1);
 	}
 	cmd.onError = function(x) {
 		cmdresult = 'ERROR: ' + x;
@@ -1320,14 +1320,14 @@ function escapeText(s) {
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
+	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br />').replace(/ /g, '&nbsp;');
 }
 
 </script>
 
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
   <div class='title'>Tomato</div>
@@ -1365,9 +1365,9 @@ tabCreate.apply(this, tabs);
 </script>
 
 <div id='overview-tab'>
-<br>
-<table class='tomato-grid' cellspacing=1 id='wlif-grid'></table>
-<br>
+<br />
+<div class="tomato-grid" id="wlif-grid"></div>
+<br />
 
 <!-- / / / -->
 
@@ -1378,9 +1378,9 @@ tabCreate.apply(this, tabs);
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	if (wl_sunit(uidx)<0) {
 		var c = [];
-		c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')</small>' });
+		c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')<\/small>' });
 		c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl' + wl_fface(uidx) + '_vifs',
-			text: 'wl' + wl_fface(uidx) + ' ' +  nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')</small>' });
+			text: 'wl' + wl_fface(uidx) + ' ' +  nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
 		createFieldTable('',c);
 	}
 }
@@ -1406,32 +1406,29 @@ createFieldTable('', [
 <div class='section' id='sesdivnotes' style='display:none'>
 
 <ul>
-<li><b>Interface</b> - Wireless VIF name.</li>
-<li><b>Enabled</b> - If this VIF should be active and brought online.</li>
-<li><b>SSID</b> - Wireless Service Set Identifier.</li>
-<li><b>Mode</b> - Interface mode: Access Point, WDS, Wireless Client, etc...</li>
-<li><b>Bridge</b> - Which LAN bridge this VIF should be assigned.</li>
+	<li><b>Interface</b> - Wireless VIF name.</li>
+	<li><b>Enabled</b> - If this VIF should be active and brought online.</li>
+	<li><b>SSID</b> - Wireless Service Set Identifier.</li>
+	<li><b>Mode</b> - Interface mode: Access Point, WDS, Wireless Client, etc...</li>
+	<li><b>Bridge</b> - Which LAN bridge this VIF should be assigned.</li>
 </ul>
 
-<ul>
 <!-- LINUX24-BEGIN -->
-<li><b>Use alternate NAS startup(...)</b> - <i>Only meaningful for K24 builds</i> - Enable this option if you need more than one NAS process running (i.e. to handle WPAx encryption on more than one WLVIF).</li>
+<ul>
+	<li><b>Use alternate NAS startup(...)</b> - <i>Only meaningful for K24 builds</i> - Enable this option if you need more than one NAS process running (i.e. to handle WPAx encryption on more than one WLVIF).</li>
+</ul>
 <!-- LINUX24-END -->
-</ul>
 
-<small>
 <ul>
-<li><b>Other relevant notes/hints:</b>
-<ul>
-<li>When creating/defining a new wireless VIF, it's MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</li>
-<li>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href=advanced-mac.asp>Advanced/MAC Address</a> after saving settings and rebooting your router).</li>
-<li>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</li>
-<li>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href=basic-network.asp>Basic/Network</a> page instead).</li>
+	<li><small><b>Other relevant notes/hints:</b></small>
+		<ul>
+			<li><small>When creating/defining a new wireless VIF, it's MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</small></li>
+			<li><small>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</small></li>
+			<li><small>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</small></li>
+			<li><small>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href="basic-network.asp">Basic/Network</a> page instead).</small></li>
+		</ul>
+	</li>
 </ul>
-</ul>
-</small>
-
-</div>
 
 <!-- / / / -->
 
@@ -1450,12 +1447,12 @@ for (var i = 1; i < tabs.length; ++i) {
 	var u = t;
 
 	W('<div id=\''+t+'-tab-disabled\'>');
-	W('<br>');
+	W('<br />');
 	W('VIF ' + tabs[i][1] + ' is not defined.');
-	W('</div>');
+	W('<\/div>');
 
 	W('<div id=\''+t+'-tab\'>');
-	W('<br>');
+	W('<br />');
 
 // common to all VIFs
 	W('<input type=\'hidden\' id=\'_wl'+u+'_radio\'       name=\'wl'+u+'_radio\'       >');
@@ -1490,12 +1487,12 @@ for (var i = 1; i < tabs.length; ++i) {
 	f.push (
 		{ title: 'Enable Interface', name: 'f_wl'+u+'_radio', type: 'checkbox',
 			value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
-		{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '</a>' +
-			' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="visibility:hidden"><small>(warning: WL driver reports BSSID <a href=advanced-mac.asp>' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '</a>)</small></b>' },
+		{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '<\/a>' +
+			' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="visibility:hidden"><small>(warning: WL driver reports BSSID <a href=advanced-mac.asp>' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '<\/a>)<\/small><\/b>' },
 		{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
 			options: wl_modes_available,
 			value: ((eval('nvram["wl'+u+'_mode"]') == 'ap') && (eval('nvram["wl'+u+'_wds_enable"]') == '1')) ? 'apwds' : eval('nvram["wl'+u+'_mode"]'),
-			suffix: ' &nbsp; <b id="wl'+u+'_mode_msg" style="visibility:hidden"><small>(note: you might wish to cross-check settings later on <a href=basic-network.asp>Basic/Network</a>)</small></b>' }
+			suffix: ' &nbsp; <b id="wl'+u+'_mode_msg" style="visibility:hidden"><small>(note: you might wish to cross-check settings later on <a href=basic-network.asp>Basic/Network<\/a>)<\/small><\/b>' }
 	);
 
 // only if primary VIF
@@ -1505,7 +1502,7 @@ for (var i = 1; i < tabs.length; ++i) {
 				value: eval('nvram["wl'+u+'_nband"]') || '0' == '0' ? bands[uidx][0][0] : eval('nvram["wl'+u+'_nband"]') },
 			{ title: 'Wireless Network Mode', name: 'wl'+u+'_net_mode', type: 'select',
 				value: (eval('nvram["wl'+u+'_net_mode"]') == 'disabled') ? 'mixed' : eval('nvram["wl'+u+'_net_mode"]'),
-				options: [], prefix: '<span id="__wl'+u+'_net_mode">', suffix: '</span>' }
+				options: [], prefix: '<span id="__wl'+u+'_net_mode">', suffix: '<\/span>' }
 		);
 	}
 
@@ -1520,7 +1517,7 @@ for (var i = 1; i < tabs.length; ++i) {
 // only if primary VIF
 	if (u.toString().indexOf('.') < 0) {
 		f.push (
-			{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '</span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" id="spin'+u+'">',
+			{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '<\/span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" id="spin'+u+'">',
 				value: eval('nvram["wl'+u+'_channel"]') },
 			{ title: 'Channel Width', name: 'wl'+u+'_nbw_cap', type: 'select', options: [['0','20 MHz'],['1','40 MHz']],
 				value: eval('nvram["wl'+u+'_nbw_cap"]') },
@@ -1545,7 +1542,7 @@ for (var i = 1; i < tabs.length; ++i) {
 		{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_radius_key', type: 'password', maxlen: 80, size: 32, peekaboo: 1,
 			suffix: ' <input type="button" id="_f_wl'+u+'_psk_random2" value="Random" onclick="random_psk(\'_wl'+u+'_radius_key\')">',
 			value: eval('nvram["wl'+u+'_radius_key"]') },
-		{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: ' <i>(seconds)</i>',
+		{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: ' <i>(seconds)<\/i>',
 			value: eval('nvram["wl'+u+'_wpa_gtk_rekey"]') || '3600' },
 		{ title: 'Radius Server', indent: 2, multi: [
 			{ name: 'wl'+u+'_radius_ipaddr', type: 'text', maxlen: 15, size: 17, value: eval('nvram["wl'+u+'_radius_ipaddr"]') },
@@ -1592,7 +1589,7 @@ for (var i = 1; i < tabs.length; ++i) {
 	}
 
 	createFieldTable('', f);
-	W('</div>');
+	W('<\/div>');
 
 }
 

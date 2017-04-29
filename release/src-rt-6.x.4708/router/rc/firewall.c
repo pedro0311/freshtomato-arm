@@ -738,18 +738,32 @@ static void mangle_table(void)
 					wan6face, p, ttl);
 	#endif
 #endif
+		}
 
 // Reset Incoming DSCP to 0x00
-		if (nvram_match("DSCP_fix_enable", "1")) {
+	if (nvram_match("DSCP_fix_enable", "1")) {
 #ifdef LINUX26
-			modprobe("xt_DSCP");
+		modprobe("xt_DSCP");
 #else
-			modprobe("ipt_DSCP");
+		modprobe("ipt_DSCP");
 #endif
+		if(wanup){
 			ipt_write("-I PREROUTING -i %s -j DSCP --set-dscp 0\n", wanface);
 		}
-
+		if(wan2up){
+			ipt_write("-I PREROUTING -i %s -j DSCP --set-dscp 0\n", wan2face);
 		}
+
+#ifdef TCONFIG_MULTIWAN
+		if(wan3up){
+                        ipt_write("-I PREROUTING -i %s -j DSCP --set-dscp 0\n", wan3face);
+                }
+                if(wan4up){
+                        ipt_write("-I PREROUTING -i %s -j DSCP --set-dscp 0\n", wan4face);
+                }
+#endif
+	}
+
 
 // Clamp TCP MSS to PMTU of WAN interface (IPv4 & IPv6)
 		ip46t_write("-I FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n");

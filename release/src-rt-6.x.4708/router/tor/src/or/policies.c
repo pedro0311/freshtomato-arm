@@ -6,6 +6,13 @@
 /**
  * \file policies.c
  * \brief Code to parse and use address policies and exit policies.
+ *
+ * We have two key kinds of address policy: full and compressed.  A full
+ * policy is an array of accept/reject patterns, to be applied in order.
+ * A short policy is simply a list of ports.  This module handles both
+ * kinds, including generic functions to apply them to addresses, and
+ * also including code to manage the global policies that we apply to
+ * incoming and outgoing connections.
  **/
 
 #define POLICIES_PRIVATE
@@ -13,6 +20,7 @@
 #include "or.h"
 #include "config.h"
 #include "dirserv.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
@@ -290,8 +298,8 @@ parse_reachable_addresses(void)
     } else if (fascist_firewall_use_ipv6(options)
        && (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0)
          || policy_is_reject_star(reachable_dir_addr_policy, AF_INET6, 0))) {
-          log_warn(LD_CONFIG, "You have configured tor to use IPv6 "
-                   "(ClientUseIPv6 1 or UseBridges 1), but "
+          log_warn(LD_CONFIG, "You have configured tor to use or prefer IPv6 "
+                   "(or UseBridges 1), but "
                    "ReachableAddresses, ReachableORAddresses, or "
                    "ReachableDirAddresses reject all IPv6 addresses. "
                    "Tor will not connect using IPv6.");
@@ -309,10 +317,8 @@ firewall_is_fascist_impl(void)
   const or_options_t *options = get_options();
   /* Assume every non-bridge relay has an IPv4 address.
    * Clients which use bridges may only know the IPv6 address of their
-   * bridge. */
-  return (options->ClientUseIPv4 == 0
-          || (!fascist_firewall_use_ipv6(options)
-              && options->UseBridges == 1));
+   * bridge, but they will connect regardless of the ClientUseIPv6 setting. */
+  return options->ClientUseIPv4 == 0;
 }
 
 /** Return true iff the firewall options, including ClientUseIPv4 0 and
@@ -419,6 +425,9 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
 }
 
 /** Is this client configured to use IPv6?
+ * Returns true if the client might use IPv6 for some of its connections
+ * (including dual-stack and IPv6-only clients), and false if it will never
+ * use IPv6 for any connections.
  * Use node_ipv6_or/dir_preferred() when checking a specific node and OR/Dir
  * port: it supports bridge client per-node IPv6 preferences.
  */
@@ -426,9 +435,11 @@ int
 fascist_firewall_use_ipv6(const or_options_t *options)
 {
   /* Clients use IPv6 if it's set, or they use bridges, or they don't use
-   * IPv4 */
-  return (options->ClientUseIPv6 == 1 || options->UseBridges == 1
-          || options->ClientUseIPv4 == 0);
+   * IPv4, or they prefer it.
+   * ClientPreferIPv6DirPort is deprecated, but check it anyway. */
+  return (options->ClientUseIPv6 == 1 || options->ClientUseIPv4 == 0 ||
+          options->ClientPreferIPv6ORPort == 1 ||
+          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1);
 }
 
 /** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and
@@ -881,6 +892,33 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
                                               pref_ipv6, ap);
 }
 
+/* The microdescriptor consensus has no IPv6 addresses in rs: they are in
+ * the microdescriptors. This means we can't rely on the node's IPv6 address
+ * until its microdescriptor is available (when using microdescs).
+ * But for bridges, rewrite_node_address_for_bridge() updates node->ri with
+ * the configured address, so we can trust bridge addresses.
+ * (Bridges could gain an IPv6 address if their microdescriptor arrives, but
+ * this will never be their preferred address: that is in the config.)
+ * Returns true if the node needs a microdescriptor for its IPv6 address, and
+ * false if the addresses in the node are already up-to-date.
+ */
+static int
+node_awaiting_ipv6(const or_options_t* options, const node_t *node)
+{
+  tor_assert(node);
+
+  /* There's no point waiting for an IPv6 address if we'd never use it */
+  if (!fascist_firewall_use_ipv6(options)) {
+    return 0;
+  }
+
+  /* We are waiting if we_use_microdescriptors_for_circuits() and we have no
+   * md. Bridges have a ri based on their config. They would never use the
+   * address from their md, so there's no need to wait for it. */
+  return (!node->md && we_use_microdescriptors_for_circuits(options) &&
+          !node->ri);
+}
+
 /** Like fascist_firewall_choose_address_base(), but takes <b>rs</b>.
  * Consults the corresponding node, then falls back to rs if node is NULL.
  * This should only happen when there's no valid consensus, and rs doesn't
@@ -897,15 +935,15 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
 
   tor_assert(ap);
 
+  const or_options_t *options = get_options();
   const node_t *node = node_get_by_id(rs->identity_digest);
 
-  if (node) {
+  if (node && !node_awaiting_ipv6(options, node)) {
     return fascist_firewall_choose_address_node(node, fw_connection, pref_only,
                                                 ap);
   } else {
     /* There's no node-specific IPv6 preference, so use the generic IPv6
      * preference instead. */
-    const or_options_t *options = get_options();
     int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
                      ? fascist_firewall_prefer_ipv6_orport(options)
                      : fascist_firewall_prefer_ipv6_dirport(options));
@@ -938,6 +976,18 @@ fascist_firewall_choose_address_node(const node_t *node,
   }
 
   node_assert_ok(node);
+
+  /* Calling fascist_firewall_choose_address_node() when the node is missing
+   * IPv6 information breaks IPv6-only clients.
+   * If the node is a hard-coded fallback directory or authority, call
+   * fascist_firewall_choose_address_rs() on the fake (hard-coded) routerstatus
+   * for the node.
+   * If it is not hard-coded, check that the node has a microdescriptor, full
+   * descriptor (routerinfo), or is one of our configured bridges before
+   * calling this function. */
+  if (BUG(node_awaiting_ipv6(get_options(), node))) {
+    return 0;
+  }
 
   const int pref_ipv6_node = (fw_connection == FIREWALL_OR_CONNECTION
                               ? node_ipv6_or_preferred(node)
@@ -1969,10 +2019,10 @@ policies_copy_ipv4h_to_smartlist(smartlist_t *addr_list, uint32_t ipv4h_addr)
   }
 }
 
-/** Helper function that adds copies of
- * or_options->OutboundBindAddressIPv[4|6]_ to a smartlist as tor_addr_t *, as
- * long as or_options is non-NULL, and the addresses are not
- * tor_addr_is_null(), by passing them to policies_add_addr_to_smartlist.
+/** Helper function that adds copies of or_options->OutboundBindAddresses
+ * to a smartlist as tor_addr_t *, as long as or_options is non-NULL, and
+ * the addresses are not tor_addr_is_null(), by passing them to
+ * policies_add_addr_to_smartlist.
  *
  * The caller is responsible for freeing all the tor_addr_t* in the smartlist.
  */
@@ -1981,10 +2031,14 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
                                               const or_options_t *or_options)
 {
   if (or_options) {
-    policies_copy_addr_to_smartlist(addr_list,
-                                    &or_options->OutboundBindAddressIPv4_);
-    policies_copy_addr_to_smartlist(addr_list,
-                                    &or_options->OutboundBindAddressIPv6_);
+    for (int i=0;i<OUTBOUND_ADDR_MAX;i++) {
+      for (int j=0;j<2;j++) {
+        if (!tor_addr_is_null(&or_options->OutboundBindAddresses[i][j])) {
+          policies_copy_addr_to_smartlist(addr_list,
+                          &or_options->OutboundBindAddresses[i][j]);
+        }
+      }
+    }
   }
 }
 
@@ -2001,10 +2055,10 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
  *  - if ipv6_local_address is non-NULL, and not the null tor_addr_t, add it
  *    to the list of configured addresses.
  * If <b>or_options->ExitPolicyRejectLocalInterfaces</b> is true:
- *  - if or_options->OutboundBindAddressIPv4_ is not the null tor_addr_t, add
- *    it to the list of configured addresses.
- *  - if or_options->OutboundBindAddressIPv6_ is not the null tor_addr_t, add
- *    it to the list of configured addresses.
+ *  - if or_options->OutboundBindAddresses[][0] (=IPv4) is not the null
+ *    tor_addr_t, add it to the list of configured addresses.
+ *  - if or_options->OutboundBindAddresses[][1] (=IPv6) is not the null
+ *    tor_addr_t, add it to the list of configured addresses.
  *
  * If <b>or_options->BridgeRelay</b> is false, append entries of default
  * Tor exit policy into <b>result</b> smartlist.
@@ -2526,9 +2580,9 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
         tor_snprintf(buf, sizeof(buf), "%d-%d", start_prt, AT(i)->prt_max);
 
       if (AT(i)->accepted)
-        smartlist_add(accepts, tor_strdup(buf));
+        smartlist_add_strdup(accepts, buf);
       else
-        smartlist_add(rejects, tor_strdup(buf));
+        smartlist_add_strdup(rejects, buf);
 
       if (last)
         break;
@@ -2708,7 +2762,7 @@ write_short_policy(const short_policy_t *policy)
       smartlist_add_asprintf(sl, "%d-%d", e->min_port, e->max_port);
     }
     if (i < policy->n_entries-1)
-      smartlist_add(sl, tor_strdup(","));
+      smartlist_add_strdup(sl, ",");
   }
   answer = smartlist_join_strings(sl, "", 0, NULL);
   SMARTLIST_FOREACH(sl, char *, a, tor_free(a));

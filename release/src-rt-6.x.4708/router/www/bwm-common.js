@@ -36,7 +36,7 @@ function xpsb(byt)
 	125 = 1000 / 8
 	((B * 8) / 1000)
 REMOVE-END */
-	return (byt / 125).toFixed(2) + ' <small>kbit/s</small><br>(' + (byt / 1024).toFixed(2) + ' <small>KB/s</small>)';
+	return (byt / 125).toFixed(2) + ' <small>kbit/s</small><br />(' + (byt / 1024).toFixed(2) + ' <small>KB/s</small>)';
 }
 
 function showCTab()

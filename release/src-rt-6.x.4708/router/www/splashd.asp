@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2008 Jonathan Zarate
@@ -16,7 +16,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Captive Portal</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 <style type='text/css'>
 textarea {
@@ -90,7 +90,7 @@ function verifyFields(focused, quiet)
 function save()
 {
   if (verifyFields(null, 0)==0) return;
-  var fom = E('_fom');
+  var fom = E('t_fom');
   fom.NC_enable.value = E('_f_NC_enable').checked ? 1 : 0;
   fom.NC_ForcedRedirect.value = E('_f_NC_ForcedRedirect').checked ? 1 : 0;
 
@@ -114,7 +114,7 @@ function save()
 	else {
 	fom._service.value = 'splashd-restart';
 	}
-	form.submit('_fom', 1);
+	form.submit('t_fom', 1);
 }
 
 function init()
@@ -134,81 +134,85 @@ function init()
 <div id='ident'><% ident(); %></div>
 <div class='section-title'>Captive Portal Management</div>
 <div class='section' id='config-section'>
-<form id='_fom' method='post' action='tomato.cgi'>
-<input type='hidden' name='_nextpage' value='splashd.asp'>
-<input type='hidden' name='_service' value='splashd-restart'>
-<input type='hidden' name='NC_enable'>
-<input type='hidden' name='NC_ForcedRedirect'>
-<script type='text/javascript'>
-createFieldTable('', [
-	{ title: 'Enable Function', name: 'f_NC_enable', type: 'checkbox', value: nvram.NC_enable == '1' },
-	{ title: 'Interface', multi: [
-		{ name: 'NC_BridgeLAN', type: 'select', options: [
-			['br0','LAN (br0)*'],
-			['br1','LAN1 (br1)'],
-			['br2','LAN2 (br2)'],
-			['br3','LAN3 (br3)']
-			], value: nvram.NC_BridgeLAN, suffix: ' <small>* default</small> ' } ] },
-	{ title: 'Gateway Name', name: 'NC_GatewayName', type: 'text', maxlen: 255, size: 34, value: nvram.NC_GatewayName },
-	{ title: 'Captive Site Forwarding', name: 'f_NC_ForcedRedirect', type: 'checkbox', value: (nvram.NC_ForcedRedirect == '1') },
-	{ title: 'Home Page', name: 'NC_HomePage', type: 'text', maxlen: 255, size: 34, value: nvram.NC_HomePage },
-	{ title: 'Welcome html Path', name: 'NC_DocumentRoot', type: 'text', maxlen: 255, size: 20, value: nvram.NC_DocumentRoot, suffix: '<span>&nbsp;/splash.html</span>' },
-	{ title: 'Logged Timeout', name: 'NC_LoginTimeout', type: 'text', maxlen: 8, size: 4, value: nvram.NC_LoginTimeout, suffix: ' <small>seconds</small>' },
-	{ title: 'Idle Timeout', name: 'NC_IdleTimeout', type: 'text', maxlen: 8, size: 4, value: nvram.NC_IdleTimeout, suffix: ' <small>seconds (0 - unlimited)</small>' },
-	{ title: 'Max Missed ARP', name: 'NC_MaxMissedARP', type: 'text', maxlen: 10, size: 2, value: nvram.NC_MaxMissedARP },
-	null,
-	{ title: 'Log Info Level', name: 'NC_Verbosity', type: 'text', maxlen: 10, size: 2, value: nvram.NC_Verbosity },
-	{ title: 'Gateway Port', name: 'NC_GatewayPort', type: 'text', maxlen: 10, size: 7, value: fixPort(nvram.NC_GatewayPort, 5280) },
-	{ title: 'Excluded Ports to be redirected', name: 'NC_ExcludePorts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_ExcludePorts },
-	{ title: 'Included Ports to be redirected', name: 'NC_IncludePorts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_IncludePorts },
-	{ title: 'URL Excluded off Captive Portal', name: 'NC_AllowedWebHosts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_AllowedWebHosts },
-	{ title: 'MAC Address Whitelist', name: 'NC_MACWhiteList', type: 'text', maxlen: 255, size: 34, value: nvram.NC_MACWhiteList }
-]);
-</script>
-</form>
+	<form id='t_fom' method='post' action='tomato.cgi'>
+		<div>
+			<input type='hidden' name='_nextpage' value='splashd.asp'>
+			<input type='hidden' name='_service' value='splashd-restart'>
+			<input type='hidden' name='NC_enable'>
+			<input type='hidden' name='NC_ForcedRedirect'>
+			<script type='text/javascript'>
+			createFieldTable('', [
+				{ title: 'Enable Function', name: 'f_NC_enable', type: 'checkbox', value: nvram.NC_enable == '1' },
+				{ title: 'Interface', multi: [
+					{ name: 'NC_BridgeLAN', type: 'select', options: [
+						['br0','LAN (br0)*'],
+						['br1','LAN1 (br1)'],
+						['br2','LAN2 (br2)'],
+						['br3','LAN3 (br3)']
+						], value: nvram.NC_BridgeLAN, suffix: ' <small>* default<\/small> ' } ] },
+				{ title: 'Gateway Name', name: 'NC_GatewayName', type: 'text', maxlen: 255, size: 34, value: nvram.NC_GatewayName },
+				{ title: 'Captive Site Forwarding', name: 'f_NC_ForcedRedirect', type: 'checkbox', value: (nvram.NC_ForcedRedirect == '1') },
+				{ title: 'Home Page', name: 'NC_HomePage', type: 'text', maxlen: 255, size: 34, value: nvram.NC_HomePage },
+				{ title: 'Welcome html Path', name: 'NC_DocumentRoot', type: 'text', maxlen: 255, size: 20, value: nvram.NC_DocumentRoot, suffix: '<span>&nbsp;/splash.html<\/span>' },
+				{ title: 'Logged Timeout', name: 'NC_LoginTimeout', type: 'text', maxlen: 8, size: 4, value: nvram.NC_LoginTimeout, suffix: ' <small>seconds<\/small>' },
+				{ title: 'Idle Timeout', name: 'NC_IdleTimeout', type: 'text', maxlen: 8, size: 4, value: nvram.NC_IdleTimeout, suffix: ' <small>seconds (0 - unlimited)<\/small>' },
+				{ title: 'Max Missed ARP', name: 'NC_MaxMissedARP', type: 'text', maxlen: 10, size: 2, value: nvram.NC_MaxMissedARP },
+				null,
+				{ title: 'Log Info Level', name: 'NC_Verbosity', type: 'text', maxlen: 10, size: 2, value: nvram.NC_Verbosity },
+				{ title: 'Gateway Port', name: 'NC_GatewayPort', type: 'text', maxlen: 10, size: 7, value: fixPort(nvram.NC_GatewayPort, 5280) },
+				{ title: 'Excluded Ports to be redirected', name: 'NC_ExcludePorts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_ExcludePorts },
+				{ title: 'Included Ports to be redirected', name: 'NC_IncludePorts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_IncludePorts },
+				{ title: 'URL Excluded off Captive Portal', name: 'NC_AllowedWebHosts', type: 'text', maxlen: 255, size: 34, value: nvram.NC_AllowedWebHosts },
+				{ title: 'MAC Address Whitelist', name: 'NC_MACWhiteList', type: 'text', maxlen: 255, size: 34, value: nvram.NC_MACWhiteList }
+			]);
+			</script>
+		</div>
+	</form>
 </div>
-<br>
+<br />
 <div class='section-title'>Customized Splash File Path</div>
 <div class='section' id='upload-section'>
- <form id='upload-form' method='post' action='uploadsplash.cgi?_http_id=<% nv(http_id); %>' encType='multipart/form-data'>
- <input type='file' size='40' id='upload-name' name='upload_name'>
- <input type='button' name='f_upload_button' id='upload-button' value='Upload' onclick='uploadButton()'>
- <br>
- </form>
+	<form id='upload-form' method='post' action='uploadsplash.cgi?_http_id=<% nv(http_id); %>' encType='multipart/form-data'>
+		<div>
+			<input type='file' size='40' id='upload-name' name='upload_name'>
+			<input type='button' name='f_upload_button' id='upload-button' value='Upload' onclick='uploadButton()'>
+		</div>
+	</form>
 </div>
 <hr>
 <span style='color:blue'>
-<b>Captive Portal. User Guide.</b><br>
-<br>
-<b>*- Enable function:</b> When you tick and save the router will show a Welcome Banner when a computer access the Internet.<br>
-<b>*- Interface:</b> Select one of the bridges on which Captive Portal will listen.<br>
-<b>*- Gateway name:</b> The name of the Gateway appearing in the welcome banner<br>
-<b>*- Captive Site Forwarding:</b> When active, the 'Home Page' (read next line) will appear after you Agree in Welcome Banner.<br>
-<b>*- Home page:</b> The URL that will appear after you Agree the Welcome Banner.<br>
-<b>*- Welcome html Path:</b> The location where the Welcome banner is located<br>
-<b>*- Logged Timeout:</b> During this period of time no Welcome banner will appear when you access to the device. Default=3600 sec.(1 Hour).<br>
-<b>*- Idle Timeout:</b> Expired time where you can't access the device again.Default value=0.<br>
-<b>*- Max Missed ARP:</b> Number of lost ARP before considering the client has leaved the connection. Default = 5<br>
-<b>*- Log Info Level:</b> Messages from this module stored internally for better trace. Level 0=Silent, 10=Parrot, 2=Default.<br>
-<b>*- Gateway Port:</b> Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default=5280.<br>
-<b>*- Excluded/Included ports to be redirected:</b> When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use prefereable one of the two option to avoid conflicts.<br>
-<b>*- URL excluded off the portal:</b> URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://www.google.com http://www.google.es<br>
-<b>*- MAC address whitelist:</b> MAC addresses excluded of the feature. Leave a blank space between each MAC Address, i.e; 11:22:33:44:55:66 11:22:33:44:55:67<br>
-<b>*- Customized Splash File Path:</b> Here you can upload your personal Welcome banner that will overwrite the default one.<br><br>
+<b>Captive Portal. User Guide.</b><br />
+<br />
+<b>*- Enable function:</b> When you tick and save the router will show a Welcome Banner when a computer access the Internet.<br />
+<b>*- Interface:</b> Select one of the bridges on which Captive Portal will listen.<br />
+<b>*- Gateway name:</b> The name of the Gateway appearing in the welcome banner<br />
+<b>*- Captive Site Forwarding:</b> When active, the 'Home Page' (read next line) will appear after you Agree in Welcome Banner.<br />
+<b>*- Home page:</b> The URL that will appear after you Agree the Welcome Banner.<br />
+<b>*- Welcome html Path:</b> The location where the Welcome banner is located<br />
+<b>*- Logged Timeout:</b> During this period of time no Welcome banner will appear when you access to the device. Default=3600 sec.(1 Hour).<br />
+<b>*- Idle Timeout:</b> Expired time where you can't access the device again.Default value=0.<br />
+<b>*- Max Missed ARP:</b> Number of lost ARP before considering the client has leaved the connection. Default = 5<br />
+<b>*- Log Info Level:</b> Messages from this module stored internally for better trace. Level 0=Silent, 10=Parrot, 2=Default.<br />
+<b>*- Gateway Port:</b> Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default=5280.<br />
+<b>*- Excluded/Included ports to be redirected:</b> When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use prefereable one of the two option to avoid conflicts.<br />
+<b>*- URL excluded off the portal:</b> URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://www.google.com http://www.google.es<br />
+<b>*- MAC address whitelist:</b> MAC addresses excluded of the feature. Leave a blank space between each MAC Address, i.e; 11:22:33:44:55:66 11:22:33:44:55:67<br />
+<b>*- Customized Splash File Path:</b> Here you can upload your personal Welcome banner that will overwrite the default one.<br /><br />
 </span>
-<br>
+<br />
 <span style='color:red'>
-<b> Note: If Login Time is expired you should re-enter again into the splash page to get a new lease period. Be aware, there is no notice about expired period so, you can loss Internet Access.</b><br>
+<b> Note: If Login Time is expired you should re-enter again into the splash page to get a new lease period. Be aware, there is no notice about expired period so, you can loss Internet Access.</b><br />
 </span>
-<br>
+<br />
 </td></tr>
 <tr><td id='footer' colspan=2>
- <form>
- <span id='footer-msg'></span>
- <input type='button' value='Save' id='save-button' onclick='save()'>
- <input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
- </form>
-</div>
+	<form action=''>
+		<div>
+			<span id='footer-msg'></span>
+			<input type='button' value='Save' id='save-button' onclick='save()'>
+			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+		</div>
+	</form>
 </td></tr>
 </table>
 <script type='text/javascript'>verifyFields(null, 1);</script>

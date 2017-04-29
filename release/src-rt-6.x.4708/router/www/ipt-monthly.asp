@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -73,7 +73,7 @@ function genData() {
 		t = getYMD(h[0]);
 		w.document.writeln([t[0], t[1] + 1, h[1], h[2], h[3]].join(','));
 	}
-	w.document.writeln('</pre>');
+	w.document.writeln('<\/pre>');
 	w.document.close();
 }
 
@@ -120,7 +120,7 @@ function redraw() {
 			if (filteripe.length>0) {
 				fskip = 0;
 				for (var x = 0; x < filteripe.length; ++x) {
-					if (b[1] == filteripe[x]){
+					if (b[1] == filteripe[x]) {
 						fskip=1;
 						break;
 					}
@@ -131,7 +131,7 @@ function redraw() {
 			if (filterip.length>0) {
 				fskip = 1;
 				for (var x = 0; x < filterip.length; ++x) {
-					if (b[1] == filterip[x]){
+					if (b[1] == filterip[x]) {
 						fskip=0;
 						break;
 					}
@@ -175,16 +175,16 @@ function redraw() {
 			var h = b[1];
 			if (E('_f_hostnames').checked) {
 				if(hostnamecache[b[1]] != null) {
-					h = hostnamecache[b[1]] + ((b[1].indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + b[1] + ')</small>';
+					h = hostnamecache[b[1]] + ((b[1].indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + b[1] + ')<\/small>';
 				}
 			}
 			if (E('_f_shortcuts').checked) {
-				h = h + '<br><small>';
-				h = h + '<a href="javascript:viewQosDetail(' + i + ')" title="View QoS Details">[qosdetails]</a>';
-				h = h + '<a href="javascript:viewQosCTrates(' + i + ')" title="View transfer rates per connection">[qosrates]</a>';
-				h = h + '<a href="javascript:viewIptDetail(' + i + ')" title="View real-time IP Traffic for this address">[iptraf]</a>';
-				h = h + '<a href="javascript:addExcludeList(' + i + ')" title="Filter out this address">[hide]</a>';
-				h = h + '</small>';
+				h = h + '<br /><small>';
+				h = h + '<a href="javascript:viewQosDetail(' + i + ')" title="View QoS Details">[qosdetails]<\/a>';
+				h = h + '<a href="javascript:viewQosCTrates(' + i + ')" title="View transfer rates per connection">[qosrates]<\/a>';
+				h = h + '<a href="javascript:viewIptDetail(' + i + ')" title="View real-time IP Traffic for this address">[iptraf]<\/a>';
+				h = h + '<a href="javascript:addExcludeList(' + i + ')" title="Filter out this address">[hide]<\/a>';
+				h = h + '<\/small>';
 			}
 			var ymd = getYMD(b[0]);
 			d = [ymText(ymd[0], ymd[1]), h, rescale(b[2]), rescale(b[3]), rescale(b[2]+b[3])];
@@ -197,11 +197,11 @@ function redraw() {
 			'Total', 
 			('<small><i>(' +
 			(((hostslisted.length > 0) || (subnetslisted.length > 0)) ? 
-				((hostslisted.length > 0) ? (hostslisted.length + ' hosts') : '') +
-				(((hostslisted.length > 0) && (subnetslisted.length > 0)) ? ', ' : '') +
-				((subnetslisted.length > 0) ? (subnetslisted.length + ' subnets') : '')
+			((hostslisted.length > 0) ? (hostslisted.length + ' hosts') : '') +
+			(((hostslisted.length > 0) && (subnetslisted.length > 0)) ? ', ' : '') +
+			((subnetslisted.length > 0) ? (subnetslisted.length + ' subnets') : '')
 			: 'no data') +
-			')</i></small>'),
+			')<\/i><\/small>'),
 			rescale(rx), 
 			rescale(tx), 
 			rescale(rx+tx)]);
@@ -250,17 +250,17 @@ dg.sortCompare = function(a, b) {
 	switch (col) {
 	case 0:	// Date
 		r = cmpText(da[col], db[col]);
-		break;
-      case 1: // Hostname
-                r = cmpIP(da[col], db[col]);
-                if (r == 0)
-                        r = cmpText(da[col], db[col]);
-                break;
+	break;
+	case 1: // Hostname
+		r = cmpIP(da[col], db[col]);
+		if (r == 0)
+			r = cmpText(da[col], db[col]);
+	break;
 	case 2:	// Download
 	case 3:	// Upload
 	case 4:	// Total
-                r = cmpFloat(da[col].replace(/,/g,""), db[col].replace(/,/g,""));
-		break;
+		r = cmpFloat(da[col].replace(/,/g,""), db[col].replace(/,/g,""));
+	break;
 	}
 	return this.sortAscending ? r : -r;
 }
@@ -417,7 +417,7 @@ function verifyFields(focused, quiet) {
 	scale = E('_f_scale').value * 1;
 	cookie.set('ipt_history_scale', E('_f_scale').value, 2);
 
-//	cookie.set('ipt_history_subnet', (E('_f_subnet').checked ? '1' : '0'), 1);
+	//	cookie.set('ipt_history_subnet', (E('_f_subnet').checked ? '1' : '0'), 1);
 
 	cookie.set('ipt_history_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
 
@@ -440,7 +440,7 @@ function verifyFields(focused, quiet) {
 </script>
 </head>
 <body onload='init()'>
-<form>
+<form action=''>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -455,7 +455,7 @@ function verifyFields(focused, quiet) {
 <div id='cstats'>
 <div class='section-title'>IP Traffic Monthly History</div>
 <div class='section'>
-<table id='monthly-grid' class='tomato-grid' cellspacing=0 style='height:auto'></table>
+	<div id="monthly-grid" class="tomato-grid" style="height:auto"></div>
 </div>
 
 <div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
@@ -463,12 +463,12 @@ function verifyFields(focused, quiet) {
 <script type='text/javascript'>
 var c;
 c = [];
-c.push({ title: 'List only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)</small>' });
-c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)</small>' });
+c.push({ title: 'List only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
 c.push({ title: 'Date Range', multi: [ { name: 'f_begin_date', type: 'select', options: [['0', 'Any']], suffix: ' - ' }, { name: 'f_end_date', type: 'select', options: [['0', 'Any']] } ] } );
 c.push({ title: 'Date Format', name: 'f_dafm', type: 'select', options: [['0', 'yyyy-mm'], ['1', 'mm-yyyy'], ['2', 'mmm, yyyy'], ['3', 'mm.yyyy']] });
 c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
-c.push({ title: 'Show subnet totals', name: 'f_subnet', type: 'checkbox', suffix: ' <small>(Not considered when calculating total traffic on the last line)</small>' });
+c.push({ title: 'Show subnet totals', name: 'f_subnet', type: 'checkbox', suffix: ' <small>(Not considered when calculating total traffic on the last line)<\/small>' });
 c.push({ title: 'Hide IPs without traffic', name: 'f_ignorezeroes', type: 'checkbox' });
 c.push({ title: 'Show known hostnames', name: 'f_hostnames', type: 'checkbox' });
 c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
@@ -476,12 +476,12 @@ createFieldTable('',c);
 </script>
 <div style="float:right;text-align:right">
 &raquo; <a href="javascript:genData()">Data</a>
-<br>
+<br />
 &raquo; <a href="admin-iptraffic.asp">Configure</a>
 </div>
 </div>
 </div>
-<br>
+<br />
 
 <script type='text/javascript'>checkCstats();</script>
 

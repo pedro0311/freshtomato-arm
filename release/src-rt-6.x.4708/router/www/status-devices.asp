@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -221,7 +221,7 @@ dg.populate = function()
 	for (i = dhcpd_lease.length - 1; i >= 0; --i) {
 		a = dhcpd_lease[i];
 		e = get(a[2], a[1]);
-		e.lease = '<small><a href="javascript:deleteLease(\'L' + i + '\',\'' + a[1] + '\')" title="Delete Lease" id="L' + i + '">' + a[3] + '</a></small>';
+		e.lease = '<small><a href="javascript:deleteLease(\'L' + i + '\',\'' + a[1] + '\')" title="Delete Lease" id="L' + i + '">' + a[3] + '<\/a><\/small>';
 		e.name = a[0];
 		e.ifname = '';
 	}
@@ -239,7 +239,7 @@ dg.populate = function()
 		e.rssi = a[2];
 
 		if ((a[3] >= 1000) || (a[4] >= 1000))
-		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-'); //+ '<br><small>Mbps</small>';
+		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-'); //+ '<br /><small>Mbps<\/small>';
 
 	}
 
@@ -285,15 +285,15 @@ dg.populate = function()
 
 		b = e.mac;
 		if (e.mac.match(/^(..):(..):(..)/)) {
-			b += '<br><small>' +
-				'<a href="http://api.macvendors.com/' + RegExp.$1 + '-' + RegExp.$2 + '-' + RegExp.$3 + '" target="_new" title="OUI Search">[oui]</a> ' +
-				'<a href="javascript:addStatic(' + i + ')" title="Static Lease...">[static]</a> ' +
-				'<a href="javascript:addbwlimit(' + i + ')" title="BW Limiter">[bwlimit]</a>';
+			b += '<br /><small>' +
+				'<a href="http://api.macvendors.com/' + RegExp.$1 + '-' + RegExp.$2 + '-' + RegExp.$3 + '" class="new_window" title="OUI Search">[oui]<\/a> ' +
+				'<a href="javascript:addStatic(' + i + ')" title="Static Lease...">[static]<\/a> ' +
+				'<a href="javascript:addbwlimit(' + i + ')" title="BW Limiter">[bwlimit]<\/a>';
 
 			if (e.rssi != '') {
-				b += ' <a href="javascript:addWF(' + i + ')" title="Wireless Filter...">[wfilter]</a>';
+				b += ' <a href="javascript:addWF(' + i + ')" title="Wireless Filter...">[wfilter]<\/a>';
 			}
-			b += '</small>';
+			b += '<\/small>';
 		}
 		else {
 			b = '';
@@ -309,8 +309,8 @@ dg.populate = function()
 
 		this.insert(-1, e, [
 			e.ifname, b, (e.ip == '-') ? '' : e.ip, e.name,
-			(e.rssi != 0) ? e.rssi + ' <small>dBm</small>' : '',
-			(e.qual < 0) ? '' : '<small>' + e.qual + '</small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif">',
+			(e.rssi != 0) ? e.rssi + ' <small>dBm<\/small>' : '',
+			(e.qual < 0) ? '' : '<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif">',
 			e.txrx,	e.lease], false);
 	}
 }
@@ -332,6 +332,10 @@ function init()
 {
 	dg.recolor();
 	ref.initPage(3000, 3);
+
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
@@ -349,7 +353,7 @@ function init()
 
 <div class='section-title'>Device List</div>
 <div class='section'>
-	<table id='dev-grid' class='tomato-grid' cellspacing=0></table>
+	<div id="dev-grid" class="tomato-grid"></div>
 
 <script type='text/javascript'>
 f = [];
@@ -360,10 +364,10 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 			var a = '';
 			if ((nvram['wl'+u+'_mode'] == 'ap') || (nvram['wl'+u+'_mode'] == 'wds'))
 				a = '&nbsp;&nbsp;&nbsp; <input type="button" value="Measure" onclick="javascript:window.location=\'wlmnoise.cgi?_http_id=' + nvram.http_id + '&_wl_unit=' + u +'\'">';
-			f.push( { title: '<b>Noise Floor (' + wl_ifaces[uidx][0] + ')&nbsp;:</b>',
+			f.push( { title: '<b>Noise Floor (' + wl_ifaces[uidx][0] + ')&nbsp;:<\/b>',
 				prefix: '<span id="noise'+uidx+'">',
 				custom: wlnoise[uidx],
-				suffix: '</span>&nbsp;<small>dBm</small>' + a } );
+				suffix: '<\/span>&nbsp;<small>dBm<\/small>' + a } );
 		}
 	}
 }
@@ -375,9 +379,10 @@ createFieldTable('', f);
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2><script type='text/javascript'>genStdRefresh(1,0,'ref.toggle()');</script></td></tr>
+<tr><td id='footer' colspan='2'>
+	<script type='text/javascript'>genStdRefresh(1,0,'ref.toggle()');</script>
+</td></tr>
 </table>
 <script type='text/javascript'>earlyInit();</script>
 </body>
 </html>
-

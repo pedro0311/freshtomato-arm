@@ -49,7 +49,7 @@ function cmpHist(a, b)
 function checkRstats()
 {
 	if (nvram.rstats_enable != '1') {
-		W('<div class="note-disabled">Bandwidth monitoring disabled.</b><br><br><a href="admin-bwm.asp">Enable &raquo;</a></div>');
+		W('<div class="note-disabled">Bandwidth monitoring disabled.</b><br /><br /><a href="admin-bwm.asp">Enable &raquo;</a></div>');
 		E('rstats').style.display = 'none';
 	}
 	else if (rstats_busy) {
@@ -60,7 +60,7 @@ function checkRstats()
 function checkCstats()
 {
 	if (nvram.cstats_enable != '1') {
-		W('<div class="note-disabled">IP Traffic monitoring disabled.</b><br><br><a href="admin-iptraffic.asp">Enable &raquo;</a></div>');
+		W('<div class="note-disabled">IP Traffic monitoring disabled.</b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;</a></div>');
 		E('cstats').style.display = 'none';
 	}
 	else if (cstats_busy) {

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -138,7 +138,7 @@ function init()
 
 </head>
 <body onload='init()'>
-<form>
+<form action=''>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -156,60 +156,60 @@ function init()
 	<script type='text/javascript'>
 	if (nvram.web_svg != '0') {
 		// without a div, Opera 9 moves svgdoc several pixels outside of <embed> (?)
-		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'></embed></div>");
+		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'><\/embed><\/div>");
 	}
 	</script>
 
 	<div id='bwm-controls'>
-		<small>(10 minute window, 2 second interval)</small><br>
-		<br>
+		<small>(10 minute window, 2 second interval)</small><br />
+		<br />
 		Avg:&nbsp;
 			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
 			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
 			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
 			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br>
+			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
 		Max:&nbsp;
 			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
-			<a href='javascript:switchScale(1)' id='scale1'>Per IF</a><br>
+			<a href='javascript:switchScale(1)' id='scale1'>Per IF</a><br />
 		Display:&nbsp;
 			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
-			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br>
-		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br>
-		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br>
+			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
+		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
+		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
 
-		<br><br>
+		<br /><br />
 		&nbsp; &raquo; <a href="admin-bwm.asp">Configure</a>
 	</div>
 
-	<br><br>
+	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-			<td width='15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='rx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='rx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='rx-total'></td>
+		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+		<td style='width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='width:15%' align='right' valign='top' id='rx-avg'></td>
+		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='width:15%' align='right' valign='top' id='rx-max'></td>
+		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='width:14%' align='right' valign='top' id='rx-total'></td>
 		<td>&nbsp;</td>
 	</tr>
 	<tr>
-		<td width='8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-			<td width='15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td width='8%' align='right' valign='top'><b>Avg</b></td>
-			<td width='15%' align='right' valign='top' id='tx-avg'></td>
-		<td width='8%' align='right' valign='top'><b>Peak</b></td>
-			<td width='15%' align='right' valign='top' id='tx-max'></td>
-		<td width='8%' align='right' valign='top'><b>Total</b></td>
-			<td width='14%' align='right' valign='top' id='tx-total'></td>
+		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+		<td style='width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='width:15%' align='right' valign='top' id='tx-avg'></td>
+		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='width:15%' align='right' valign='top' id='tx-max'></td>
+		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='width:14%' align='right' valign='top' id='tx-total'></td>
 		<td>&nbsp;</td>
 	</tr>
 	</table>
 </div>
-<br>
-<br>
+<br />
+<br />
 
 <!-- / / / -->
 
@@ -217,7 +217,7 @@ function init()
 <tr><td id='footer' colspan=2>
 	<span id='warnwd' style='display:none'>Warning: 10 second timeout, restarting...&nbsp;</span>
 	<span id='dtime'></span>
-	<img src='spin.gif' id='refresh-spinner' onclick='javascript:debugTime=1'>
+	<img src='spin.gif' id='refresh-spinner' alt='' onclick='javascript:debugTime=1'>
 </td></tr>
 </table>
 </form>

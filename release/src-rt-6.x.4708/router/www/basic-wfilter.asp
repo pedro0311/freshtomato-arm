@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -109,7 +109,7 @@ function save()
 
 	if (smg.isEditing()) return;
 
-	fom = E('_fom');
+	fom = E('t_fom');
 
 	macs = [];
 	names = [];
@@ -124,13 +124,13 @@ function save()
 		}
 	}
 	fom.wl_maclist.value = macs.join(' ');
-	fom.wl_macmode.value = E('_f_disable').checked ? 'disabled' : (E('_f_deny').checked ? 'deny' : 'allow');
+	fom.wl_macmode.value = E('t_f_disable').checked ? 'disabled' : (E('t_f_deny').checked ? 'deny' : 'allow');
 	fom.macnames.value = names.join('>');
 
 	for (i = 0; i < wl_ifaces.length; ++i) {
 		u = wl_fface(i);
-		E('_wl'+u+'_macmode').value = fom.wl_macmode.value;
-		E('_wl'+u+'_maclist').value = fom.wl_maclist.value;
+		E('t_wl'+u+'_macmode').value = fom.wl_macmode.value;
+		E('t_wl'+u+'_maclist').value = fom.wl_maclist.value;
 	}
 
 	form.submit(fom, 1);
@@ -139,9 +139,9 @@ function save()
 function earlyInit()
 {
 	smg.setup();
-	if (nvram.wl_macmode == 'allow') E('_f_allow').checked = 1;
-		else if (nvram.wl_macmode == 'deny') E('_f_deny').checked = 1;
-		else E('_f_disable').checked = 1;
+	if (nvram.wl_macmode == 'allow') E('t_f_allow').checked = 1;
+		else if (nvram.wl_macmode == 'deny') E('t_f_deny').checked = 1;
+		else E('t_f_disable').checked = 1;
 }
 
 function init()
@@ -151,7 +151,7 @@ function init()
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -174,18 +174,18 @@ function init()
 <script type='text/javascript'>
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	var u = wl_fface(uidx);
-	W('<input type=\'hidden\' id=\'_wl'+u+'_macmode\' name=\'wl'+u+'_macmode\'>');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_maclist\' name=\'wl'+u+'_maclist\'>');
+	W('<input type=\'hidden\' id=\'t_wl'+u+'_macmode\' name=\'wl'+u+'_macmode\'>');
+	W('<input type=\'hidden\' id=\'t_wl'+u+'_maclist\' name=\'wl'+u+'_maclist\'>');
 }
 </script>
 
 <div class='section-title'>Wireless Client Filter</div>
 <div class='section'>
-	<input type='radio' name='f_type' id='_f_disable' value='disabled'> <label for='_f_disable'>Disable filter</label><br>
-	<input type='radio' name='f_type' id='_f_allow' value='allow'> <label for='_f_allow'>Permit only the following clients</label><br>
-	<input type='radio' name='f_type' id='_f_deny' value='deny'> <label for='_f_deny'>Block the following clients</label><br>
-	<br>
-	<table id='sm-grid' class='tomato-grid'></table>
+	<input type='radio' name='f_type' id='t_f_disable' value='disabled'> <label for='t_f_disable'>Disable filter</label><br />
+	<input type='radio' name='f_type' id='t_f_allow' value='allow'> <label for='t_f_allow'>Permit only the following clients</label><br />
+	<input type='radio' name='f_type' id='t_f_deny' value='deny'> <label for='t_f_deny'>Block the following clients</label><br />
+	<br />
+	<div id="sm-grid" class="tomato-grid"></div>
 </div>
 
 

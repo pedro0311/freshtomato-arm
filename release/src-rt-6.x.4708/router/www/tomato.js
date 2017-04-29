@@ -480,7 +480,7 @@ function fixIP(ip, x)
 {
 	var a, n, i;
         a = ip;
-        i = a.indexOf("<br>");
+        i = a.indexOf("<br />");
         if (i > 0)
                 a = a.slice(0,i);
 
@@ -1271,6 +1271,15 @@ TomatoGrid.prototype = {
 		if (tb) {
 			this.tb = E(tb);
 			this.tb.gridObj = this;
+
+			var att_c = this.tb.getAttribute("class");
+			var att_s = this.tb.getAttribute("style");
+			var table = document.createElement("table");
+			table.setAttribute("class", att_c);
+			table.setAttribute("style", att_s);
+			this.tb.appendChild(table);
+			this.tb = E(table);
+			this.tb.gridObj = this;
 		}
 		else {
 			this.tb = null;
@@ -1606,7 +1615,7 @@ TomatoGrid.prototype = {
 					for (var k = 0; k < f.options.length; ++k) {
 						a = f.options[k];
 						if (which == 'edit') {
-							s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected>' : '>') + a[1] + '</option>';
+							s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
 						}
 						else {
 							s += '<option value="' + a[0] + '">' + a[1] + '</option>';
@@ -1616,7 +1625,7 @@ TomatoGrid.prototype = {
 					break;
 				case 'checkbox':
 					s += '<input type="checkbox"' + common + attrib;
-					if ((which == 'edit') && (values[vi])) s += ' checked';
+					if ((which == 'edit') && (values[vi])) s += ' checked="checked"';
 					s += '>';
 					break;
 				case 'textarea':
@@ -2198,7 +2207,7 @@ function genStdTimeList(id, zero, min)
 function genStdRefresh(spin, min, exec)
 {
 	W('<div style="text-align:right">');
-	if (spin) W('<img src="spin.gif" id="refresh-spinner"> ');
+	if (spin) W('<img src="spin.gif" id="refresh-spinner" alt=""> ');
 	genStdTimeList('refresh-time', 'Auto Refresh', min);
 	W('<input type="button" value="Refresh" onclick="' + (exec ? exec : 'refreshClick()') + '" id="refresh-button"></div>');
 }
@@ -2393,7 +2402,7 @@ function nothing()
 function show_notice1(s)
 {
 // ---- !!TB - USB Support: multi-line notices
-	if (s.length) document.write('<div id="notice1">' + s.replace(/\n/g, '<br>') + '</div><br style="clear:both">');
+	if (s.length) document.write('<div id="notice1">' + s.replace(/\n/g, '<br />') + '</div><br style="clear:both">');
 }
 
 // -----------------------------------------------------------------------------
@@ -2590,7 +2599,7 @@ REMOVE-END */
 	for (i = 0; i < menu.length; ++i) {
 		var m = menu[i];
 		if (!m) {
-			buf.push("<br>");
+			buf.push("<br />");
 			continue;
 		}
 		if (m.length == 2) {
@@ -2651,7 +2660,7 @@ function createFieldTable(flags, desc)
 		var v = desc[desci];
 
 		if (!v) {
-			buf.push('<tr><td colspan=2 class="spacer">&nbsp;</td></tr>');
+			buf.push('<tr><td colspan="2" class="spacer">&nbsp;</td></tr>');
 			continue;
 		}
 
@@ -2667,7 +2676,7 @@ function createFieldTable(flags, desc)
 				buf.push('<td class="title indent' + (v.indent || 1) + '">' + v.title + '</td><td class="content">' + v.text + '</td></tr>');
 			}
 			else {
-				buf.push('<td colspan=2>' + v.text + '</td></tr>');
+				buf.push('<td colspan="2">' + v.text + '</td></tr>');
 			}
 			continue;
 		}
@@ -2694,10 +2703,10 @@ function createFieldTable(flags, desc)
 
 			switch (f.type) {
 			case 'checkbox':
-				buf2.push('<input type="checkbox"' + name + (f.value ? ' checked' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+				buf2.push('<input type="checkbox"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
 				break;
 			case 'radio':
-				buf2.push('<input type="radio"' + name + (f.value ? ' checked' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+				buf2.push('<input type="radio"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
 				break;
 			case 'password':
 				if (f.peekaboo) {
@@ -2725,7 +2734,7 @@ function createFieldTable(flags, desc)
 				for (i = 0; i < f.options.length; ++i) {
 					a = f.options[i];
 					if (a.length == 1) a.push(a[0]);
-					buf2.push('<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected' : '') + '>' + a[1] + '</option>');
+					buf2.push('<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected="selected"' : '') + '>' + a[1] + '</option>');
 				}
 				buf2.push('</select>');
 				break;
@@ -2827,5 +2836,68 @@ function console(s)
 }
 
 
+// -----------------------------------------------------------------------------
 
+/* REMOVE-BEGIN
+//  events handler
+REMOVE-END */
 
+if (typeof document.getElementsByClassName!="function"){  // IE
+	document.getElementsByClassName = function(cl) {
+		var retnode = new Array(), patt = new RegExp("(^|\\\\s)"+cl+"(\\\\s|$)"), els = this.getElementsByTagName("*");
+		for (i = 0, j = 0; i < els.length; i++) {
+			if (patt.test(els[i].className)) {
+				retnode[j] = els[i];
+				j++;
+			}
+		}
+		return retnode;
+	};
+}
+function addEvent(obj, type, fn) {
+	if (obj.addEventListener) {
+		obj.addEventListener(type, fn, false);
+		EventCache.add(obj, type, fn);
+	}
+	else if (obj.attachEvent) {
+		obj["e"+type+fn] = fn;
+		obj[type+fn] = function() { obj["e"+type+fn]( window.event ); }
+		obj.attachEvent("on"+type, obj[type+fn]);
+		EventCache.add(obj, type, fn);
+	}
+	else {
+		obj["on"+type] = obj["e"+type+fn];
+	}
+}
+var EventCache = function() {
+	var listEvents = [];
+	return {
+		listEvents : listEvents,
+		add : function(node, sEventName, fHandler) {
+			listEvents.push(arguments);
+		},
+		flush : function(){
+			var i, item;
+			for(i = listEvents.length - 1; i >= 0; i = i - 1) {
+				item = listEvents[i];
+				if(item[0].removeEventListener){
+					item[0].removeEventListener(item[1], item[2], false);
+				};
+				if(item[1].substring(0, 2) != "on") {
+					item[1] = "on" + item[1];
+				};
+				if(item[0].detachEvent) {
+					item[0].detachEvent(item[1], item[2]);
+				};
+				item[0][item[1]] = null;
+			};
+		}
+	};
+}();
+addEvent(window, "unload", EventCache.flush);
+function cancelDefaultAction(e) {
+	var evt = e ? e : window.event;
+	if (evt.preventDefault) evt.preventDefault();
+	evt.returnValue = false;
+	return false;
+}

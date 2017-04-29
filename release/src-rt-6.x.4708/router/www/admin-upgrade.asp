@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Admin: Upgrade</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -69,6 +69,8 @@ function upgrade()
 	form.addIdAction(fom);
 	fom.submit();
 }
+
+//	<% sysinfo(); %>
 </script>
 
 </head>
@@ -89,23 +91,24 @@ function upgrade()
 	<div class='section'>
 		<form name='form_upgrade' method='post' action='upgrade.cgi' encType='multipart/form-data'>
 		<div id='box-input'>
-			Select the file to use:<br>
+			Select the file to use:<br />
 			<input type='file' name='file' size='50' style='height:20px'> <input type='button' value='Upgrade' id='afu-upgrade-button' onclick='upgrade()' style='height:20px'>
 		</div>
 		</form>
-		<br><form name='form_reset' action='javascript:{}'>
+		<br /><form name='form_reset' action='javascript:{}'>
 		<div id='reset-input'>
 			<input type='checkbox' id='f_reset'>&nbsp;&nbsp;After flashing, erase all data in NVRAM memory
 		</div>
 		</form>
 
-		<br>
+		<br />
 		<table border=0>
 		<tr><td>Current Version:</td><td>&nbsp; <% version(1); %></td></tr>
-		<script type='text/javascript'>
-		//	<% sysinfo(); %>
-		W('<tr><td>Free Memory:</td><td>&nbsp; ' + scaleSize(sysinfo.totalfreeram) + ' &nbsp; <small>(aprox. size that can be buffered completely in RAM)</small></td></tr>');
-		</script>
+		<tr><td>
+			<script type='text/javascript'>
+			W('Free Memory:<\/td><td>&nbsp; ' + scaleSize(sysinfo.totalfreeram) + ' &nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>');
+			</script>
+		</td></tr>
 		</table>
 
 	</div>
@@ -113,17 +116,17 @@ function upgrade()
 
 /* JFFS2-BEGIN */
 <div class='note-disabledw' style='display:none' id='jwarn'>
-<b>Cannot upgrade if JFFS is enabled.</b><br><br>
+<b>Cannot upgrade if JFFS is enabled.</b><br /><br />
 An upgrade may overwrite the JFFS partition currently in use. Before upgrading,
-please backup the contents of the JFFS partition, disable it, then reboot the router.<br><br><br>
+please backup the contents of the JFFS partition, disable it, then reboot the router.<br /><br /><br />
 <a href='admin-jffs2.asp'>Disable &raquo;</a>
 </div>
 /* JFFS2-END */
 
 <div id='afu-progress' style='display:none;margin:auto'>
-	<img src='spin.gif' style='vertical-align:baseline'> <span id='afu-time'>0:00</span><br>
-	Please wait while the firmware is uploaded &amp; flashed.<br>
-	<b>Warning:</b> Do not interrupt this browser or the router!<br>
+	<img src='spin.gif' alt='' style='vertical-align:baseline'> <span id='afu-time'>0:00</span><br />
+	Please wait while the firmware is uploaded &amp; flashed.<br />
+	<b>Warning:</b> Do not interrupt this browser or the router!<br />
 </div>
 
 <!-- / / / -->

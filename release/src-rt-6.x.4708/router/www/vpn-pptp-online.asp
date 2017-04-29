@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato PPTPd GUI
 	Copyright (C) 2012 Augusto Bott
@@ -20,26 +20,26 @@
 <script type='text/javascript' src='tomato.js'></script>
 <style type='text/css'>
 #dev-grid .co1 {
-width: 10%;
+	width: 10%;
 }
 #dev-grid .co2 {
-width: 18%;
+	width: 18%;
 }
 #dev-grid .co3 {
-width: 12%;
+	width: 12%;
 }
 #dev-grid .co4 {
-width: 12%;
+	width: 12%;
 }
 #dev-grid .co5 {
-width: 18%;
+	width: 18%;
 }
 #dev-grid .co6 {
-width: 10%;
-text-align: center;
+	width: 10%;
+	text-align: center;
 }
 #dev-grid .header {
-text-align: left;
+	text-align: left;
 }
 </style>
 <script type='text/javascript'>
@@ -171,7 +171,7 @@ dg.populate = function() {
 
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
-		hangup = '<div id="div_'+e.pid+'"><a href="javascript:disconnect(\'div_'+e.pid + '\',' + e.pid + ')" title="Disconnect" id="pid_' + e.pid + '">Disconnect</a></div>';
+		hangup = '<div id="div_'+e.pid+'"><a href="javascript:disconnect(\'div_'+e.pid + '\',' + e.pid + ')" title="Disconnect" id="pid_' + e.pid + '">Disconnect<\/a><\/div>';
 /* REMOVE-BEGIN */
 //		this.insert(-1, e, [
 //			e.ifname, e.username, e.uptime, e.ip, e.sourceip, hangup], false);
@@ -236,7 +236,7 @@ function init() {
 <div id='ident'><% ident(); %></div>
 <div class='section-title'>PPTP Users Online</div>
 <div class='section'>
-<table id='dev-grid' class='tomato-grid' cellspacing=0></table>
+	<div id="dev-grid" class="tomato-grid"></div>
 </div>
 <div style="float:right;text-align:right">
 &raquo; <a href="vpn-pptp-server.asp">Configure</a>

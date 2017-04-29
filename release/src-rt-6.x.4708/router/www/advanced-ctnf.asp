@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Advanced: Conntrack / Netfilter</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -45,7 +45,7 @@ function check()
 			conntrack = [];
 		}
 		for (i = 1; i < 13; ++i) {
-			E('count' + i).innerHTML = '&nbsp; <small>('+ ((conntrack[i] || 0) * 1) + ' in this state)</small>';
+			E('count' + i).innerHTML = '&nbsp; <small>('+ ((conntrack[i] || 0) * 1) + ' in this state)<\/small>';
 		}
 		E('count0').innerHTML = '(' + ((conntrack[0] || 0) * 1) + ' connections currently tracked)';
 		checker = null;
@@ -144,7 +144,7 @@ function save()
 		ct.push(E('_f_ct_' + i).value);
 	}
 
-	fom = E('_fom');
+	fom = E('t_fom');
 	fom.ct_tcp_timeout.value = tcp.join(' ');
 	fom.ct_udp_timeout.value = udp.join(' ');
 	fom.ct_timeout.value = ct.join(' ');
@@ -169,7 +169,7 @@ function save()
 
 </head>
 <body>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -202,16 +202,16 @@ function save()
 <script type='text/javascript'>
 createFieldTable('', [
 	{ title: 'Maximum Connections', name: 'ct_max', type: 'text', maxlen: 6, size: 8,
-		suffix: '&nbsp; <a href="javascript:clicked()" id="count0">[ count current... ]</a> <img src="spin.gif" style="vertical-align:bottom;padding-left:10px;visibility:hidden" id="spin" onclick="clicked()">',
+		suffix: '&nbsp; <a href="javascript:clicked()" id="count0">[ count current... ]<\/a> <img src="spin.gif" style="vertical-align:bottom;padding-left:10px;visibility:hidden" id="spin" onclick="clicked()">',
 		value: fixInt(nvram.ct_max || 4096, 128, 300000, 4096) }
 /* LINUX26-BEGIN */
 	,{ title: 'Hash Table Size', name: 'ct_hashsize', type: 'text', maxlen: 6, size: 8, value: nvram.ct_hashsize || 1023 }
 /* LINUX26-END */
 ]);
 </script>
-<br>
+<br />
 <input type='button' value='Drop Idle' onclick='expireClicked()' id='expire'>
-<br><br>
+<br /><br />
 </div>
 
 
@@ -222,12 +222,12 @@ if ((v = nvram.ct_tcp_timeout.match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\
 	v = [0,0,1200,120,60,120,120,10,60,30,0];
 }
 titles = ['-', 'None', 'Established', 'SYN Sent', 'SYN Received', 'FIN Wait', 'Time Wait', 'Close', 'Close Wait', 'Last ACK', 'Listen'];
-f = [{ title: ' ', text: '<small>(seconds)</small>' }];
+f = [{ title: ' ', text: '<small>(seconds)<\/small>' }];
 for (i = 1; i < 11; ++i) {
 	f.push({ title: titles[i], name: ('f_tcp_' + (i - 1)),
 		type: 'text', maxlen: 6, size: 8, value: v[i],
 		hidden: (i == 1 || i == 10) ? 1 : 0,
-		suffix: '<span id="count' + i + '"></span>' });
+		suffix: '<span id="count' + i + '"><\/span>' });
 }
 createFieldTable('', f);
 </script>
@@ -240,9 +240,9 @@ if ((v = nvram.ct_udp_timeout.match(/^(\d+)\s+(\d+)$/)) == null) {
 	v = [0,30,180];
 }
 createFieldTable('', [
-	{ title: ' ', text: '<small>(seconds)</small>' },
-	{ title: 'Unreplied', name: 'f_udp_0', type: 'text', maxlen: 6, size: 8, value: v[1], suffix: '<span id="count11"></span>' },
-	{ title: 'Assured', name: 'f_udp_1', type: 'text', maxlen: 6, size: 8, value: v[2], suffix: '<span id="count12"></span>' }
+	{ title: ' ', text: '<small>(seconds)<\/small>' },
+	{ title: 'Unreplied', name: 'f_udp_0', type: 'text', maxlen: 6, size: 8, value: v[1], suffix: '<span id="count11"><\/span>' },
+	{ title: 'Assured', name: 'f_udp_1', type: 'text', maxlen: 6, size: 8, value: v[2], suffix: '<span id="count12"><\/span>' }
 ]);
 </script>
 </div>
@@ -254,7 +254,7 @@ if ((v = nvram.ct_timeout.match(/^(\d+)\s+(\d+)$/)) == null) {
 	v = [0,600,30];
 }
 createFieldTable('', [
-	{ title: ' ', text: '<small>(seconds)</small>' },
+	{ title: ' ', text: '<small>(seconds)<\/small>' },
 	{ title: 'Generic', name: 'f_ct_0', type: 'text', maxlen: 6, size: 8, value: v[1] },
 	{ title: 'ICMP', name: 'f_ct_1', type: 'text', maxlen: 6, size: 8, value: v[2] }
 ]);

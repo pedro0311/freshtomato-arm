@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2007 Jonathan Zarate
@@ -17,25 +17,25 @@
 <script type='text/javascript' src='tomato.js'></script>
 <style type='text/css'>
 #la-grid .co1 {
-  text-align: center;
-  width: 30px;
+	text-align: center;
+	width: 30px;
 }
 #la-grid .co3,
 #la-grid .co5 {
-  text-align: center;
-  width: 120px;
+	text-align: center;
+	width: 120px;
 }
 #la-grid .co6 {
-  text-align: center;
-  width: 250px;
+	text-align: center;
+	width: 250px;
 }
 #la-grid .co2,
 #la-grid .co4 {
-  text-align: center;
+	text-align: center;
 }
 
 #la-grid .centered {
-  text-align: center;
+	text-align: center;
 }
 </style>
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
@@ -47,10 +47,10 @@ var MAX_BRIDGE_ID = 3;
 var la = new TomatoGrid();
 la.setup = function() {
 	this.init('la-grid', 'sort', 50, [
-	{ type: 'checkbox', prefix: '<div class="centered">', suffix: '</div>' },
-	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '</div>' },
+	{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 32 },
-	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '</div>' },
+	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 32 },
 	{ type: 'text', maxlen: 32 }]);
 	this.headerSet(['On', 'Src', 'Src Address', 'Dst', 'Dst Address', 'Description']);
@@ -187,7 +187,7 @@ function save()
 	if (la.isEditing()) return;
 	la.resetNewEditor();
 
-	var fom = E('_fom');
+	var fom = E('t_fom');
 	var ladata = la.getAllData();
 
 	var s = '';
@@ -220,11 +220,11 @@ function toggleVisibility(whichone) {
 </script>
 </head>
 <body onload='init()'>
-<form id='_fom' method='post' action='tomato.cgi'>
+<form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
-  <div class='title'>Tomato</div>
-  <div class='version'>Version <% version(); %></div>
+	<div class='title'>Tomato</div>
+	<div class='version'>Version <% version(); %></div>
 </td></tr>
 <tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
 <td id='content'>
@@ -236,25 +236,24 @@ function toggleVisibility(whichone) {
 
 <div class='section-title'>LAN Access</div>
 <div class='section'>
-  <table class='tomato-grid' cellspacing=1 id='la-grid'></table>
-</div>
+	<div class="tomato-grid" id="la-grid"></div>
 </div>
 
 <div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdiv_notes_showhide'>(Click here to show)</span></a></i></small></div>
 <div class='section' id='sesdiv_notes' style='display:none'>
 <ul>
-<li><b>Src</b> - Source LAN bridge.</li>
-<li><b>Src Address</b> <i>(optional)</i> - Source address allowed. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
-<li><b>Dst</b> - Destination LAN bridge.</li>
-<li><b>Dst Address</b> <i>(optional)</i> - Destination address inside the LAN.</li>
+	<li><b>Src</b> - Source LAN bridge.</li>
+	<li><b>Src Address</b> <i>(optional)</i> - Source address allowed. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
+	<li><b>Dst</b> - Destination LAN bridge.</li>
+	<li><b>Dst Address</b> <i>(optional)</i> - Destination address inside the LAN.</li>
 </ul>
 </div>
 
 </td></tr>
 <tr><td id='footer' colspan=2>
- <span id='footer-msg'></span>
- <input type='button' value='Save' id='save-button' onclick='save()'>
- <input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+	<span id='footer-msg'></span>
+	<input type='button' value='Save' id='save-button' onclick='save()'>
+	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
 </td></tr>
 </table>
 </form>

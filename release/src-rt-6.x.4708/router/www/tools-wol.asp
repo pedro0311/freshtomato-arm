@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -13,7 +13,7 @@
 <meta name='robots' content='noindex,nofollow'>
 <title>[<% ident(); %>] Tools: WOL</title>
 <link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='color.css'>
+<% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
 
 <!-- / / / -->
@@ -119,7 +119,7 @@ function verifyFields(focused, quiet)
 {
 	var e;
 
-	e = E('_f_mac');
+	e = E('t_f_mac');
 	e.value = e.value.replace(/[\t ]+/g, ' ');
 	return 1;
 }
@@ -136,11 +136,11 @@ function wake(mac)
 {
 	if (!mac) {
 		if (!verifyFields(null, 1)) return;
-		mac = E('_f_mac').value;
+		mac = E('t_f_mac').value;
 		cookie.set('wakemac', mac);
 	}
-	E('_mac').value = mac;
-	form.submit('_fom', 1);
+	E('t_mac').value = mac;
+	form.submit('t_fom', 1);
 }
 
 
@@ -182,7 +182,7 @@ function init()
 
 </head>
 <body onload='init()'>
-<form id='_fom' action='wakeup.cgi' method='post'>
+<form id='t_fom' action='wakeup.cgi' method='post'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
 	<div class='title'>Tomato</div>
@@ -196,12 +196,12 @@ function init()
 
 <input type='hidden' name='_redirect' value='tools-wol.asp'>
 <input type='hidden' name='_nextwait' value='1'>
-<input type='hidden' name='mac' value='' id='_mac'>
+<input type='hidden' name='mac' value='' id='t_mac'>
 
 <div class='section-title'>Wake On LAN</div>
 <div class='section'>
-	<table id='wol-grid' class='tomato-grid' cellspacing=1></table>
-	<div style='float:right'><img src='spin.gif' id='spin' style='vertical-align:middle;visibility:hidden'> &nbsp; <input type='button' value='Refresh' onclick='refreshClick()' id='refreshb'></div>
+	<div id="wol-grid" class="tomato-grid"></div>
+	<div style='float:right'><img src='spin.gif' alt='' id='spin' style='vertical-align:middle;visibility:hidden'> &nbsp; <input type='button' value='Refresh' onclick='refreshClick()' id='refreshb'></div>
 </div>
 <div id='msg' style='visibility:hidden;background:#ffffa0;margin:auto;width:50%;text-align:center;padding:2px;border:1px solid #fee'></div>
 <div class='section-title'></div>
