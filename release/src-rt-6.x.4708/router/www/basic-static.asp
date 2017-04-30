@@ -304,7 +304,7 @@ function save() {
 
 	var fom = E('t_fom');
 	fom.dhcpd_static.value = sdhcp;
-	fom.dhcpd_static_only.value = E('t_f_dhcpd_static_only').checked ? '1' : '0';
+	fom.dhcpd_static_only.value = E('_f_dhcpd_static_only').checked ? '1' : '0';
 	fom.cstats_include.value = ipt;
 	form.submit(fom, 1);
 }
