@@ -51,7 +51,7 @@ function escapeText(s)
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br />').replace(/ /g, '&nbsp;');
+	return s.replace(/[&"'<>]/g, esc).replace(/ /g, '&nbsp;'.replace(/\n/g, ' <br />'));
 }
 
 function spin(x)
