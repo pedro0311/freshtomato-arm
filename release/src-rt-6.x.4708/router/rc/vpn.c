@@ -236,9 +236,12 @@ void start_vpnclient(int clientNum)
 		if ( ifType == TAP && nvram_safe_get(&buffer[0])[0] != '\0' )
 			fprintf(fp, "route-gateway %s\n", nvram_safe_get(&buffer[0]));
 		fprintf(fp, "redirect-gateway def1\n");
-	} else if ( nvram_get_int(&buffer2[0]) > 0 )
-	{
-		fprintf(fp, "route-nopull\n");
+	} else {
+		if ( nvram_get_int(&buffer2[0]) > 0 )
+			fprintf(fp, "route-nopull\n");
+		sprintf(&buffer2[0], "vpn_client%d_noexec", clientNum);
+		if ( nvram_get_int(&buffer2[0]) > 0 )
+			fprintf(fp, "route-noexec\n");
 	}
 	fprintf(fp, "verb 3\n");
 	if ( cryptMode == TLS )
