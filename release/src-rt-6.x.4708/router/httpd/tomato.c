@@ -1519,8 +1519,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_port",     V_PORT              },
 	{ "vpn_server1_firewall", V_TEXT(0, 8)        },  // auto, external, custom
 	{ "vpn_server1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_server1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_server1_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_server1_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_server1_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_server1_digest",     V_TEXT(0, 15)     },
 	{ "vpn_server1_dhcp",     V_01                },
 	{ "vpn_server1_r1",       V_IP                },
 	{ "vpn_server1_r2",       V_IP                },
@@ -1555,8 +1558,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_port",     V_PORT              },
 	{ "vpn_server2_firewall", V_TEXT(0, 8)        },  // auto, external, custom
 	{ "vpn_server2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_server2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_server2_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_server2_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_server2_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_server2_digest",     V_TEXT(0, 15)     },
 	{ "vpn_server2_dhcp",     V_01                },
 	{ "vpn_server2_r1",       V_IP                },
 	{ "vpn_server2_r2",       V_IP                },
@@ -1596,8 +1602,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
 	{ "vpn_client1_firewall", V_TEXT(0, 6)        },  // auto, custom
 	{ "vpn_client1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_client1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_client1_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_client1_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_client1_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_client1_digest",     V_TEXT(0, 15)     },
 	{ "vpn_client1_local",    V_IP                },
 	{ "vpn_client1_remote",   V_IP                },
 	{ "vpn_client1_nm",       V_IP                },
@@ -1632,8 +1641,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
 	{ "vpn_client2_firewall", V_TEXT(0, 6)        },  // auto, custom
 	{ "vpn_client2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_client2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_client2_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_client2_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_client2_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_client2_digest",     V_TEXT(0, 15)     },
 	{ "vpn_client2_local",    V_IP                },
 	{ "vpn_client2_remote",   V_IP                },
 	{ "vpn_client2_nm",       V_IP                },
