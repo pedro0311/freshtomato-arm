@@ -164,12 +164,11 @@ switchMode() {
                     nvram set 3g_module=usbserial
                     echo "$VENDOR:$PRODUCT" > $DETECTFILE
                     return 1
-                else
-                    return 0
                 fi
             done
         fi
     fi
+    return 0
 }
 
 setPIN() {

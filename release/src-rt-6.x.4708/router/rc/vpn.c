@@ -280,7 +280,7 @@ void start_vpnclient(int clientNum)
 		if (nvram_get_int(&buffer[0]))
 		{
 			sprintf(&buffer[0], "vpn_client%d_cn", clientNum);
-			fprintf(fp, "tls-remote %s\n", nvram_safe_get(&buffer[0]));
+			fprintf(fp, "remote-cert-tls %s\n", nvram_safe_get(&buffer[0]));
 		}
 		if (userauth)
 			fprintf(fp, "auth-user-pass up\n");
