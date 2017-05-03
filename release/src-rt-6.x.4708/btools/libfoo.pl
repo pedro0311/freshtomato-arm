@@ -159,20 +159,20 @@ sub fixDyn
 #shibby
 	fixDynDep("transmission-daemon", "libevent-2.0.so.5");
 	fixDynDep("transmission-daemon", "libcurl.so.4.4.0");
-#	fixDynDep("transmission-daemon", "libiconv.so.2.4.0");
+#	fixDynDep("transmission-daemon", "libiconv.so.2.6.0");
 	fixDynDep("transmission-remote", "libevent-2.0.so.5");
 	fixDynDep("transmission-remote", "libcurl.so.4.4.0");
-#	fixDynDep("transmission-remote", "libiconv.so.2.4.0");
+#	fixDynDep("transmission-remote", "libiconv.so.2.6.0");
 #	fixDynDep("radvd", "libdaemon.so.0.5.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
-	fixDynDep("dnscrypt-proxy", "libsodium.so.18.1.1");
+	fixDynDep("dnscrypt-proxy", "libsodium.so.18.2.0");
 #	fixDynDep("wlconf", "libshared.so");
 
 
 #minidlna module, bwq518
 	fixDynDep("minidlna", "libz.so.1");
 	fixDynDep("minidlna", "libstdc.so.6");
-	fixDynDep("minidlna", "libiconv.so.2.4.0");
+	fixDynDep("minidlna", "libiconv.so.2.6.0");
 	fixDynDep("minidlna", "libssl.so.1.0.0");
 	fixDynDep("minidlna", "libjpeg.so");
 	fixDynDep("minidlna", "libogg.so.0");
@@ -521,9 +521,9 @@ genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a"
 genSO("${root}/usr/lib/libcurl.so.4.4.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libevent-2.0.so.5", "${router}/libevent/.libs/libevent.a");
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
-genSO("${root}/usr/lib/libiconv.so.2.5.1", "${router}/libiconv/lib/.libs/libiconv.a");
+genSO("${root}/usr/lib/libiconv.so.2.6.0", "${router}/libiconv/lib/.libs/libiconv.a");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
-genSO("${root}/usr/lib/libsodium.so.18.1.1", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
+genSO("${root}/usr/lib/libsodium.so.18.2.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
 genSO("${root}/usr/lib/libpng.so.3.51.0", "${router}/libpng/.libs/libpng.a");
 genSO("${root}/usr/lib/libpng12.so.0.51.0", "${router}/libpng/.libs/libpng12.a");
 genSO("${root}/usr/lib/libjpeg.so", "${router}/libjpeg/.libs/libjpeg.a");
