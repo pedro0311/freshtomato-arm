@@ -450,7 +450,7 @@ createFieldTable('', [
 /* LINUX26-END */
 /* UPS-BEGIN */
 	{ title: 'Run APCUPSD Deamon', name: 'f_usb_apcupsd', type: 'checkbox',
-		suffix: ' <small>Required by UPS Monitor (APC Uninterruptible Power Supply)</small>', value: nvram.usb_apcupsd == 1 },
+		suffix: ' <small>Required by UPS Monitor (APC Uninterruptible Power Supply)<\/small>', value: nvram.usb_apcupsd == 1 },
 /* UPS-END */
 	{ title: 'Hotplug script<br /><small>(called when any USB device is attached or removed)<\/small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
 	null,
