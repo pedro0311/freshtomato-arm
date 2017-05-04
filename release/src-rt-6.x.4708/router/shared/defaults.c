@@ -919,7 +919,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "usb_ext_opt",		""				, 0 },
 	{ "usb_fat_opt",		""				, 0 },
 	{ "usb_ntfs_opt",		""				, 0 },
-	{ "usb_fs_ext3",		"1"				, 0 },
 	{ "usb_fs_ext4",		"1"				, 0 },
 	{ "usb_fs_fat",			"1"				, 0 },
 	{ "usb_fs_exfat",		"1"				, 0 },
@@ -935,6 +934,9 @@ struct nvram_tuple router_defaults[] = {
 #endif //TCONFIG_NTFS
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			"0"				, 0 }, //!Victek
+#endif
+#ifdef TCONFIG_UPS
+	{ "usb_apcupsd",		"0"				, 0 },
 #endif
 	{ "usb_automount",		"1"				, 0 },
 #if 0
@@ -1003,6 +1005,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ms_dirs",			"/mnt<"				, 0 },
 	{ "ms_port",			"0"				, 0 },
 	{ "ms_dbdir",			""				, 0 },
+	{ "ms_ifname",			"br0"				, 0 },
 	{ "ms_tivo",			"0"				, 0 },
 	{ "ms_stdlna",			"0"				, 0 },
 	{ "ms_sas",			"0"				, 0 },
@@ -1059,6 +1062,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_crypt",    "tls"           , 0 },
 	{ "vpn_server1_comp",     "adaptive"      , 0 },
 	{ "vpn_server1_cipher",   "AES-128-CBC"   , 0 },
+	{ "vpn_server1_ncp_enable", "1"           , 0 },
+	{ "vpn_server1_ncp_ciphers","AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC" , 0 },
+	{ "vpn_server1_digest",   "default"       , 0 },
 	{ "vpn_server1_dhcp",     "1"             , 0 },
 	{ "vpn_server1_r1",       "192.168.1.50"  , 0 },
 	{ "vpn_server1_r2",       "192.168.1.55"  , 0 },
@@ -1092,6 +1098,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_crypt",    "tls"           , 0 },
 	{ "vpn_server2_comp",     "adaptive"      , 0 },
 	{ "vpn_server2_cipher",   "AES-128-CBC"   , 0 },
+	{ "vpn_server2_ncp_enable", "1"           , 0 },
+	{ "vpn_server2_ncp_ciphers","AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC" , 0 },
+	{ "vpn_server2_digest",   "default"       , 0 },
 	{ "vpn_server2_dhcp",     "1"             , 0 },
 	{ "vpn_server2_r1",       "192.168.1.50"  , 0 },
 	{ "vpn_server2_r2",       "192.168.1.55"  , 0 },
@@ -1131,6 +1140,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_crypt",    "tls"           , 0 },
 	{ "vpn_client1_comp",     "adaptive"      , 0 },
 	{ "vpn_client1_cipher",   "default"       , 0 },
+	{ "vpn_client1_ncp_enable", "1"           , 0 },
+	{ "vpn_client1_ncp_ciphers","AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC" , 0 },
+	{ "vpn_client1_digest",   "default"       , 0 },
 	{ "vpn_client1_local",    "10.8.0.2"      , 0 },
 	{ "vpn_client1_remote",   "10.8.0.1"      , 0 },
 	{ "vpn_client1_nm",       "255.255.255.0" , 0 },
@@ -1146,6 +1158,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_key",      ""              , 0 },
 	{ "vpn_client1_br",       "br0"           , 0 },
 	{ "vpn_client1_nopull",   "0"             , 0 },
+	{ "vpn_client1_noexec",   "0"             , 0 },
 	{ "vpn_client1_nobind",   "1"             , 0 },
 	{ "vpn_client1_route",    "0"             , 0 },
 	{ "vpn_client1_routing_val", ""           , 0 },
@@ -1162,6 +1175,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_crypt",    "tls"           , 0 },
 	{ "vpn_client2_comp",     "adaptive"      , 0 },
 	{ "vpn_client2_cipher",   "default"       , 0 },
+	{ "vpn_client2_ncp_enable", "1"           , 0 },
+	{ "vpn_client2_ncp_ciphers","AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC" , 0 },
+	{ "vpn_client2_digest",   "default"       , 0 },
 	{ "vpn_client2_local",    "10.8.0.2"      , 0 },
 	{ "vpn_client2_remote",   "10.8.0.1"      , 0 },
 	{ "vpn_client2_nm",       "255.255.255.0" , 0 },
@@ -1177,6 +1193,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_key",      ""              , 0 },
 	{ "vpn_client2_br",       "br0"           , 0 },
 	{ "vpn_client2_nopull",   "0"             , 0 },
+	{ "vpn_client2_noexec",   "0"             , 0 },
 	{ "vpn_client2_nobind",   "1"             , 0 },
 	{ "vpn_client2_route",    "0"             , 0 },
 	{ "vpn_client2_routing_val", ""           , 0 },

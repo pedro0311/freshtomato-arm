@@ -1244,13 +1244,15 @@ static const nvset_t nvset_list[] = {
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
 	{ "usb_printer_bidirect",	V_01				},
-	{ "usb_fs_ext3",		V_01				},
 	{ "usb_fs_ext4",		V_01				},
 	{ "usb_fs_fat",			V_01				},
 	{ "usb_fs_exfat",		V_01				},
 #ifdef TCONFIG_NTFS
 	{ "usb_fs_ntfs",		V_01				},
 	{ "usb_ntfs_driver",		V_LENGTH(0, 10)			},
+#endif
+#ifdef TCONFIG_UPS
+	{ "usb_apcupsd",		V_01				},
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
@@ -1317,6 +1319,7 @@ static const nvset_t nvset_list[] = {
 	{ "ms_dirs",			V_LENGTH(0, 1024)		},
 	{ "ms_port",			V_RANGE(0, 65535)		},
 	{ "ms_dbdir",			V_LENGTH(0, 256)		},
+	{ "ms_ifname",			V_LENGTH(0, 256)		},
 	{ "ms_tivo",			V_01				},
 	{ "ms_stdlna",			V_01				},
 	{ "ms_rescan",			V_01				},
@@ -1519,8 +1522,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_port",     V_PORT              },
 	{ "vpn_server1_firewall", V_TEXT(0, 8)        },  // auto, external, custom
 	{ "vpn_server1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_server1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_server1_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_server1_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_server1_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_server1_digest",     V_TEXT(0, 15)     },
 	{ "vpn_server1_dhcp",     V_01                },
 	{ "vpn_server1_r1",       V_IP                },
 	{ "vpn_server1_r2",       V_IP                },
@@ -1555,8 +1561,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_port",     V_PORT              },
 	{ "vpn_server2_firewall", V_TEXT(0, 8)        },  // auto, external, custom
 	{ "vpn_server2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_server2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_server2_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_server2_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_server2_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_server2_digest",     V_TEXT(0, 15)     },
 	{ "vpn_server2_dhcp",     V_01                },
 	{ "vpn_server2_r1",       V_IP                },
 	{ "vpn_server2_r2",       V_IP                },
@@ -1596,8 +1605,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
 	{ "vpn_client1_firewall", V_TEXT(0, 6)        },  // auto, custom
 	{ "vpn_client1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_client1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_client1_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_client1_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_client1_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_client1_digest",     V_TEXT(0, 15)     },
 	{ "vpn_client1_local",    V_IP                },
 	{ "vpn_client1_remote",   V_IP                },
 	{ "vpn_client1_nm",       V_IP                },
@@ -1619,6 +1631,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_cn",       V_NONE              },
 	{ "vpn_client1_br",       V_LENGTH(0, 50)     },
 	{ "vpn_client1_nopull",   V_01                },
+	{ "vpn_client1_noexec",   V_01                },
 	{ "vpn_client1_route",    V_01                },
 	{ "vpn_client1_routing_val", V_NONE           },
 	{ "vpn_client2_poll",     V_RANGE(0, 1440)    },
@@ -1631,8 +1644,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
 	{ "vpn_client2_firewall", V_TEXT(0, 6)        },  // auto, custom
 	{ "vpn_client2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive
+	{ "vpn_client2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
 	{ "vpn_client2_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_client2_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_client2_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_client2_digest",     V_TEXT(0, 15)     },
 	{ "vpn_client2_local",    V_IP                },
 	{ "vpn_client2_remote",   V_IP                },
 	{ "vpn_client2_nm",       V_IP                },
@@ -1654,6 +1670,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_cn",       V_NONE              },
 	{ "vpn_client2_br",       V_LENGTH(0, 50)     },
 	{ "vpn_client2_nopull",   V_01                },
+	{ "vpn_client2_noexec",   V_01                },
 	{ "vpn_client2_route",    V_01                },
 	{ "vpn_client2_routing_val", V_NONE           },
 #endif // vpn
