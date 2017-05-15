@@ -36,10 +36,18 @@ textarea {
 </style>
 <script type='text/javascript'>
 
-//      <% nvram(""); %>
+//      <% nvram("usb_apcupsd"); %>
 
 function init()
 {
+	var ids=['ups-status','ups-data'];
+
+	for (i = 0; i < ids.length; ++i) {
+		if (nvram.usb_apcupsd == 1) {
+			E(ids[i]).style.display = 'block';
+			E(ids[i]+'-section').style.display = 'block';
+		}
+	}
 	clientSideInclude('ups-status', '/ext/cgi-bin/tomatoups.cgi');
 	clientSideInclude('ups-data', '/ext/cgi-bin/tomatodata.cgi');
 }
@@ -96,13 +104,13 @@ function clientSideInclude(id, url) {
 <td id='content' style="height: 188px">
 	<div id='ident'><% ident(); %></div>
 	<input type='hidden' name='_nextpage' value='nas-ups.asp'>
-	<div class='section-title'>APC UPS Status</div>
+	<div class='section-title' id="ups-status-section" style="display:none">APC UPS Status</div>
 	<div class='section'>
-		<span id="ups-status"></span>
+		<span id="ups-status" style="display:none"></span>
 	</div>
-	<div class='section-title'>APC UPS Response</div>
+	<div class='section-title' id="ups-data-section" style="display:none">APC UPS Response</div>
 	<div class='section'>
-		<span id="ups-data"></span>
+		<span id="ups-data" style="display:none"></span>
 	</div>
 	<div id='bwm-controls'>
 		<br /><br />

@@ -25,6 +25,8 @@ fi
 
 
 switchMode() {
+    logger -t switch3g[$PID] "3G MODEM - detecting ..."
+
     # check if modem is already found
     MODULES="cdc_acm option sierra usbserial"
 
@@ -47,12 +49,15 @@ switchMode() {
 
         # vendor:product
 
-        if [ "$SEARCH" == "1" ]; then
+        if [ "$SEARCH" -eq 1 ]; then
             logger -t switch3g[$PID] "3G MODEM FOUND - $SWITCH - Switching ..."
 
             DV=`echo $SWITCH | cut -d ":" -f1`
             DP=`echo $SWITCH | cut -d ":" -f2`
             /usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP
+
+            # need few seconds before modem will be detected once again after switch
+            sleep 6
 
             VENDOR=`cat /etc/usb_modeswitch.d/$SWITCH | grep "TargetVendor" | cut -d "=" -f2 | cut -d "x" -f2`
             if [ "$VENDOR" == "" ]; then
@@ -63,9 +68,6 @@ switchMode() {
             if [ "$PRODUCT" != "" ]; then
                logger -t switch3g[$PID] "3G MODEM ready - $VENDOR:$PRODUCT"
                echo "$VENDOR:$PRODUCT" > $DETECTFILE
-            # why not? /pedro
-            #else
-                #PRODUCT=`echo $SWITCH | cut -d ":" -f2`
             fi
         fi
     done
@@ -112,6 +114,7 @@ switchMode() {
             if [ "$IS_PRODUCT" -gt 0 ]; then
                 logger -t switch3g[$PID] "3G MODEM - loading module usbserial"
                 modprobe -r usbserial
+                sleep 1
                 insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
                 echo "$VENDOR:$PRODUCT" > $DETECTFILE
                 sleep 2
@@ -139,6 +142,7 @@ switchMode() {
                 else
                     logger -t switch3g[$PID] "3G MODEM - loading usbserial module"
                     modprobe -r usbserial
+                    sleep 1
                     insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
                     echo "$VENDOR:$PRODUCT" > $DETECTFILE
                     nvram set 3g_module=usbserial
@@ -146,7 +150,7 @@ switchMode() {
                 fi
             fi
         else
-            #last chance. try to load usbserial for each usb devices
+            #last chance. try to load usbserial for each usb device
             DEVICES=`lsusb | awk '{print $6}'`
 
             for SWITCH in $DEVICES; do
@@ -154,6 +158,7 @@ switchMode() {
                 VENDOR=`echo $SWITCH | cut -d ":" -f1`
                 PRODUCT=`echo $SWITCH | cut -d ":" -f2`
                 modprobe -r usbserial
+                sleep 1
                 insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
                 sleep 2
 
@@ -226,6 +231,8 @@ switchMode
 if [ $? -eq 1 ]; then
     setPIN
     signal
+    #echo "1" > /tmp/state_$PREFIX
+    service $PREFIX restart
  else
     logger -t switch3g[$PID] "3G MODEM not found ..."
 fi

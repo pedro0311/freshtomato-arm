@@ -281,7 +281,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			}
 
 			// detect 3G Modem
-			xstart("switch3g", prefix);
+			eval("switch3g", prefix);
 		}
 		break;
 #endif
