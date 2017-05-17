@@ -57,6 +57,7 @@ var updateReTotal = 1;
 var prev = [];
 var debugTime = 0;
 var avgMode = 0;
+var unitMode = 0;
 var wdog = null;
 var wdogWarn = null;
 var cstats_busy = 0;
@@ -167,7 +168,7 @@ function init() {
 
 	speed_history = [];
 
-	initCommon(2, 1, 1);
+	initCommon(2, 1, 1, 1);
 
 	wdogWarn = E('warnwd');
 	watchdogReset();
@@ -297,6 +298,9 @@ function verifyFields(focused, quiet) {
 	Max:&nbsp;
 		<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
 		<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
+	Unit:&nbsp;
+		<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
+		<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
 	Display:&nbsp;
 		<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
 		<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />

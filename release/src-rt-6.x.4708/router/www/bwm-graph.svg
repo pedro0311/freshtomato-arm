@@ -68,6 +68,20 @@ var ignoreNext = 0;
 var eraseL = 0;
 var samp = 1;
 
+function findGetParameter(parameterName) {
+    var result = null,
+        tmp = [];
+    location.search
+    .substr(1)
+        .split("&")
+        .forEach(function (item) {
+        tmp = item.split("=");
+        if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+    });
+    return result;
+}
+var cprefix = findGetParameter('cprefix');
+
 function E(id)
 {
 	return document.getElementById(id);
@@ -82,8 +96,13 @@ function pad(n)
 
 function xps(n)
 {
-	n /= 1024;
-	return (n * 8).toFixed(2) + ' kbit/s (' + n.toFixed(2) + ' KB/s)';
+    if (unit == 0) {
+        n /= 1024;
+        return (n * 8).toFixed(2) + ' kbit/s (' + n.toFixed(2) + ' KB/s)';
+    } else {
+        n /= (1024 * 1024);
+        return (n * 8).toFixed(2) + ' Mbit/s (' + n.toFixed(2) + ' MB/s)';
+    }
 }
 
 function setText(e, text)
@@ -174,7 +193,7 @@ function drawData(poly, data, mode, color)
 	poly.setAttribute('points', pt);
 }
 
-function updateSVG(rxData, txData, maxValue, mode, rxColor, txColor, intv, maxLen, dataD, avgSamp, clock)
+function updateSVG(rxData, txData, maxValue, mode, rxColor, txColor, intv, maxLen, dataD, avgSamp, unitSamp, clock)
 {
 	var x, y, z, i;
 	var v, e;
@@ -185,6 +204,7 @@ function updateSVG(rxData, txData, maxValue, mode, rxColor, txColor, intv, maxLe
 	advX = vWidth / maxL;
 	dataDiv = dataD;
 	samp = avgSamp;
+	unit = unitSamp;
 
 	tockD = clock;
 //	tockD = new Date();

@@ -22,6 +22,8 @@ var drawLast = -1;
 var drawColor = 0;
 var avgMode = 0;
 var avgLast = -1;
+var unitMode = 0;
+var unitLast = -1;
 var colorX = 0;
 var colors = [
 	['Green &amp; Blue', '#118811', '#6495ed'], ['Blue &amp; Orange', '#003EBA', '#FF9000'],
@@ -36,7 +38,10 @@ function xpsb(byt)
 	125 = 1000 / 8
 	((B * 8) / 1000)
 REMOVE-END */
-	return (byt / 125).toFixed(2) + ' <small>kbit/s</small><br />(' + (byt / 1024).toFixed(2) + ' <small>KB/s</small>)';
+	if (cookie.get(cprefix + 'unit') == 0)
+		return (byt / 125).toFixed(2) + ' <small>kbit/s<\/small><br \/>(' + (byt / 1024).toFixed(2) + ' <small>KB/s<\/small>)';
+	else
+		return (byt / (125 * 1024)).toFixed(2) + ' <small>Mbit/s<\/small><br \/>(' + (byt / (1024 * 1024)).toFixed(2) + ' <small>MB/s<\/small>)';
 }
 
 function showCTab()
@@ -69,6 +74,22 @@ function switchDraw(n)
 	showDraw();
 	showCTab();
 	cookie.set(cprefix + 'draw', drawMode);
+}
+
+function showUnit()
+{
+	if (unitMode == unitLast) return;
+	showSelectedOption('unit', unitLast, unitMode);
+	unitLast = unitMode;
+}
+
+function switchUnit(n)
+{
+	if ((!svgReady) || (updating)) return;
+	unitMode = n;
+	showUnit();
+	cookie.set(cprefix + 'unit', unitMode);
+	showCTab();
 }
 
 function showColor()
@@ -156,7 +177,7 @@ function showTab(name)
 			else max += 100;
 		updateSVG(h.rx, h.tx, max, drawMode,
 			colors[drawColor][1 + colorX], colors[drawColor][1 + (colorX ^ 1)],
-			updateInt, updateMaxL, updateDiv, avgMode, clock);
+			updateInt, updateMaxL, updateDiv, avgMode, unitMode, clock);
 	}
 }
 
@@ -223,17 +244,17 @@ function loadData()
 						t = hostnamecache[i];
 					}
 					if (nvram['cstats_labels'] == '0') {	// show hostname and IP
-						t = hostnamecache[i] + ' <small>(' + i + ')</small>';
+						t = hostnamecache[i] + ' <small>(' + i + ')<\/small>';
 					}
 				}
 			}
 			/* WL label */
-			else if (wl_ifidx(i) >= 0) t = 'WL <small>(' + i + ')</small>';
+			else if (wl_ifidx(i) >= 0) t = 'WL <small>(' + i + ')<\/small>';
 			/* LAN label */
-			else if (nvram.lan_ifname == i) t = 'LAN <small>(' + i + ')</small>';
-			else if (nvram.lan1_ifname == i) t = 'LAN2 <small>(' + i + ')</small>';
-			else if (nvram.lan2_ifname == i) t = 'LAN3 <small>(' + i + ')</small>';
-			else if (nvram.lan3_ifname == i) t = 'LAN4 <small>(' + i + ')</small>';
+			else if (nvram.lan_ifname == i) t = 'LAN <small>(' + i + ')<\/small>';
+			else if (nvram.lan1_ifname == i) t = 'LAN2 <small>(' + i + ')<\/small>';
+			else if (nvram.lan2_ifname == i) t = 'LAN3 <small>(' + i + ')<\/small>';
+			else if (nvram.lan3_ifname == i) t = 'LAN4 <small>(' + i + ')<\/small>';
 /* REMOVE-BEGIN */
 			/* MAN + WAN label (for PPP) */
 //			else if ((nvram.wan_proto == 'pptp') || (nvram.wan_proto == 'l2tp')
@@ -243,15 +264,15 @@ function loadData()
 //			    || (nvram.wan4_proto == 'pptp') || (nvram.wan4_proto == 'l2tp')
 /* MULTIWAN-END */
 //			) {
-//				if (nvram.wan_ifname == i) t = 'MAN <small>(' + i + ')</small>';
-//				else if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')</small>';
-//				else if (nvram.wan2_ifname == i) t = 'MAN2 <small>(' + i + ')</small>';
-//				else if (nvram.wan2_iface == i) t = 'WAN2 <small>(' + i + ')</small>';
+//				if (nvram.wan_ifname == i) t = 'MAN <small>(' + i + ')<\/small>';
+//				else if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')<\/small>';
+//				else if (nvram.wan2_ifname == i) t = 'MAN2 <small>(' + i + ')<\/small>';
+//				else if (nvram.wan2_iface == i) t = 'WAN2 <small>(' + i + ')<\/small>';
 /* MULTIWAN-BEGIN */
-//				else if (nvram.wan3_ifname == i) t = 'MAN3 <small>(' + i + ')</small>';
-//				else if (nvram.wan3_iface == i) t = 'WAN3 <small>(' + i + ')</small>';
-//				else if (nvram.wan4_ifname == i) t = 'MAN4 <small>(' + i + ')</small>';
-//				else if (nvram.wan4_iface == i) t = 'WAN4 <small>(' + i + ')</small>';
+//				else if (nvram.wan3_ifname == i) t = 'MAN3 <small>(' + i + ')<\/small>';
+//				else if (nvram.wan3_iface == i) t = 'WAN3 <small>(' + i + ')<\/small>';
+//				else if (nvram.wan4_ifname == i) t = 'MAN4 <small>(' + i + ')<\/small>';
+//				else if (nvram.wan4_iface == i) t = 'WAN4 <small>(' + i + ')<\/small>';
 /* MULTIWAN-END */
 //			}
 /* REMOVE-END */
@@ -263,11 +284,11 @@ function loadData()
 			    || (nvram.wan4_proto == 'pppoe') || (nvram.wan4_proto == 'ppp3g') || (nvram.wan4_proto == 'pptp') || (nvram.wan4_proto == 'l2tp')
 /* MULTIWAN-END */
 			) {
-				if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')</small>';
-				else if (nvram.wan2_iface == i) t = 'WAN2 <small>(' + i + ')</small>';
+				if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')<\/small>';
+				else if (nvram.wan2_iface == i) t = 'WAN2 <small>(' + i + ')<\/small>';
 /* MULTIWAN-BEGIN */
-				else if (nvram.wan3_iface == i) t = 'WAN3 <small>(' + i + ')</small>';
-				else if (nvram.wan4_iface == i) t = 'WAN4 <small>(' + i + ')</small>';
+				else if (nvram.wan3_iface == i) t = 'WAN3 <small>(' + i + ')<\/small>';
+				else if (nvram.wan4_iface == i) t = 'WAN4 <small>(' + i + ')<\/small>';
 /* MULTIWAN-END */
 			}
 			/* WAN label (for wan_ifname) */
@@ -276,11 +297,11 @@ function loadData()
 			    || (nvram.wan3_proto != 'disabled') || (nvram.wan4_proto != 'disabled')
 /* MULTIWAN-END */
 			) {
-				if (nvram.wan_ifname == i) t = 'WAN <small>(' + i + ')</small>';
-				else if (nvram.wan2_ifname == i) t = 'WAN2 <small>(' + i + ')</small>';
+				if (nvram.wan_ifname == i) t = 'WAN <small>(' + i + ')<\/small>';
+				else if (nvram.wan2_ifname == i) t = 'WAN2 <small>(' + i + ')<\/small>';
 /* MULTIWAN-BEGIN */
-				else if (nvram.wan3_ifname == i) t = 'WAN3 <small>(' + i + ')</small>';
-				else if (nvram.wan4_ifname == i) t = 'WAN4 <small>(' + i + ')</small>';
+				else if (nvram.wan3_ifname == i) t = 'WAN3 <small>(' + i + ')<\/small>';
+				else if (nvram.wan4_ifname == i) t = 'WAN4 <small>(' + i + ')<\/small>';
 /* MULTIWAN-END */
 			}
 			tabs.push(['speed-tab-' + i, t]);
@@ -322,7 +343,7 @@ function initData()
 	}
 }
 
-function initCommon(defAvg, defDrawMode, defDrawColor)
+function initCommon(defAvg, defDrawMode, defDrawColor, defUnit)
 {
 	drawMode = fixInt(cookie.get(cprefix + 'draw'), 0, 1, defDrawMode);
 	showDraw();
@@ -351,6 +372,9 @@ function initCommon(defAvg, defDrawMode, defDrawColor)
 
 	avgMode = fixInt(cookie.get(cprefix + 'avg'), 1, 10, defAvg);
 	showAvg();
+
+	unitMode = fixInt(cookie.get(cprefix + 'unit'), 0, 1, defUnit);
+	showUnit();
 
 	// if just switched
 	if ((nvram.wan_proto == 'disabled') || (nvram.wan_proto == 'wet')) {
