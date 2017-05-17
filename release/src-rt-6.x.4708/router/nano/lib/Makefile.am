@@ -414,9 +414,9 @@ EXTRA_libgnu_a_SOURCES += frexp.c frexpl.c
 ## begin gnulib module fstat
 
 
-EXTRA_DIST += fstat.c
+EXTRA_DIST += fstat.c stat-w32.c stat-w32.h
 
-EXTRA_libgnu_a_SOURCES += fstat.c
+EXTRA_libgnu_a_SOURCES += fstat.c stat-w32.c
 
 ## end   gnulib module fstat
 
@@ -458,11 +458,11 @@ EXTRA_libgnu_a_SOURCES += getlogin_r.c
 
 ## begin gnulib module getopt-posix
 
-BUILT_SOURCES += $(GETOPT_H)
+BUILT_SOURCES += $(GETOPT_H) $(GETOPT_CDEFS_H)
 
 # We need the following in order to create <getopt.h> when the system
 # doesn't have one that works with the given compiler.
-getopt.h: getopt.in.h $(top_builddir)/config.status $(ARG_NONNULL_H)
+getopt.h: getopt.in.h $(top_builddir)/config.status
 	$(AM_V_GEN)rm -f $@-t $@ && \
 	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
 	  sed -e 's|@''GUARD_PREFIX''@|GL|g' \
@@ -475,9 +475,18 @@ getopt.h: getopt.in.h $(top_builddir)/config.status $(ARG_NONNULL_H)
 	      < $(srcdir)/getopt.in.h; \
 	} > $@-t && \
 	mv -f $@-t $@
-MOSTLYCLEANFILES += getopt.h getopt.h-t
 
-EXTRA_DIST += getopt.c getopt.in.h getopt1.c getopt_int.h
+getopt-cdefs.h: getopt-cdefs.in.h $(top_builddir)/config.status
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+          sed -e 's|@''HAVE_SYS_CDEFS_H''@|$(HAVE_SYS_CDEFS_H)|g' \
+	      < $(srcdir)/getopt-cdefs.in.h; \
+	} > $@-t && \
+	mv -f $@-t $@
+
+MOSTLYCLEANFILES += getopt.h getopt.h-t getopt-cdefs.h getopt-cdefs.h-t
+
+EXTRA_DIST += getopt-cdefs.in.h getopt-core.h getopt-ext.h getopt-pfx-core.h getopt-pfx-ext.h getopt.c getopt.in.h getopt1.c getopt_int.h
 
 EXTRA_libgnu_a_SOURCES += getopt.c getopt1.c
 
@@ -802,6 +811,14 @@ EXTRA_DIST += malloc.c
 EXTRA_libgnu_a_SOURCES += malloc.c
 
 ## end   gnulib module malloc-posix
+
+## begin gnulib module malloca
+
+libgnu_a_SOURCES += malloca.c
+
+EXTRA_DIST += malloca.h malloca.valgrind
+
+## end   gnulib module malloca
 
 ## begin gnulib module math
 
@@ -1162,6 +1179,15 @@ EXTRA_libgnu_a_SOURCES += msvc-inval.c
 
 ## end   gnulib module msvc-inval
 
+## begin gnulib module msvc-nothrow
+
+
+EXTRA_DIST += msvc-nothrow.c msvc-nothrow.h
+
+EXTRA_libgnu_a_SOURCES += msvc-nothrow.c
+
+## end   gnulib module msvc-nothrow
+
 ## begin gnulib module nl_langinfo
 
 
@@ -1368,9 +1394,9 @@ EXTRA_libgnu_a_SOURCES += snprintf.c
 ## begin gnulib module stat
 
 
-EXTRA_DIST += stat.c
+EXTRA_DIST += stat-w32.c stat-w32.h stat.c
 
-EXTRA_libgnu_a_SOURCES += stat.c
+EXTRA_libgnu_a_SOURCES += stat-w32.c stat.c
 
 ## end   gnulib module stat
 
@@ -2092,9 +2118,12 @@ time.h: time.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
 	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
 	      -e 's|@''NEXT_TIME_H''@|$(NEXT_TIME_H)|g' \
+	      -e 's/@''GNULIB_CTIME''@/$(GNULIB_CTIME)/g' \
 	      -e 's/@''GNULIB_GETTIMEOFDAY''@/$(GNULIB_GETTIMEOFDAY)/g' \
+	      -e 's/@''GNULIB_LOCALTIME''@/$(GNULIB_LOCALTIME)/g' \
 	      -e 's/@''GNULIB_MKTIME''@/$(GNULIB_MKTIME)/g' \
 	      -e 's/@''GNULIB_NANOSLEEP''@/$(GNULIB_NANOSLEEP)/g' \
+	      -e 's/@''GNULIB_STRFTIME''@/$(GNULIB_STRFTIME)/g' \
 	      -e 's/@''GNULIB_STRPTIME''@/$(GNULIB_STRPTIME)/g' \
 	      -e 's/@''GNULIB_TIMEGM''@/$(GNULIB_TIMEGM)/g' \
 	      -e 's/@''GNULIB_TIME_R''@/$(GNULIB_TIME_R)/g' \
@@ -2104,11 +2133,13 @@ time.h: time.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e 's|@''HAVE_STRPTIME''@|$(HAVE_STRPTIME)|g' \
 	      -e 's|@''HAVE_TIMEGM''@|$(HAVE_TIMEGM)|g' \
 	      -e 's|@''HAVE_TIMEZONE_T''@|$(HAVE_TIMEZONE_T)|g' \
+	      -e 's|@''REPLACE_CTIME''@|$(REPLACE_CTIME)|g' \
 	      -e 's|@''REPLACE_GMTIME''@|$(REPLACE_GMTIME)|g' \
 	      -e 's|@''REPLACE_LOCALTIME''@|$(REPLACE_LOCALTIME)|g' \
 	      -e 's|@''REPLACE_LOCALTIME_R''@|$(REPLACE_LOCALTIME_R)|g' \
 	      -e 's|@''REPLACE_MKTIME''@|$(REPLACE_MKTIME)|g' \
 	      -e 's|@''REPLACE_NANOSLEEP''@|$(REPLACE_NANOSLEEP)|g' \
+	      -e 's|@''REPLACE_STRFTIME''@|$(REPLACE_STRFTIME)|g' \
 	      -e 's|@''REPLACE_TIMEGM''@|$(REPLACE_TIMEGM)|g' \
 	      -e 's|@''PTHREAD_H_DEFINES_STRUCT_TIMESPEC''@|$(PTHREAD_H_DEFINES_STRUCT_TIMESPEC)|g' \
 	      -e 's|@''SYS_TIME_H_DEFINES_STRUCT_TIMESPEC''@|$(SYS_TIME_H_DEFINES_STRUCT_TIMESPEC)|g' \
@@ -2330,6 +2361,50 @@ EXTRA_DIST += uniwidth/cjk.h
 
 ## end   gnulib module uniwidth/width
 
+## begin gnulib module utime
+
+
+EXTRA_DIST += utime.c
+
+EXTRA_libgnu_a_SOURCES += utime.c
+
+## end   gnulib module utime
+
+## begin gnulib module utime-h
+
+BUILT_SOURCES += $(UTIME_H)
+
+# We need the following in order to create <utime.h> when the system
+# doesn't have one that works with the given compiler.
+if GL_GENERATE_UTIME_H
+utime.h: utime.in.h $(top_builddir)/config.status
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */' && \
+	  sed -e 's|@''GUARD_PREFIX''@|GL|g' \
+	      -e 's/@''HAVE_UTIME_H''@/$(HAVE_UTIME_H)/g' \
+	      -e 's|@''INCLUDE_NEXT''@|$(INCLUDE_NEXT)|g' \
+	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
+	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
+	      -e 's|@''NEXT_UTIME_H''@|$(NEXT_UTIME_H)|g' \
+	      -e 's/@''GNULIB_UTIME''@/$(GNULIB_UTIME)/g' \
+	      -e 's|@''HAVE_UTIME''@|$(HAVE_UTIME)|g' \
+	      -e 's|@''REPLACE_UTIME''@|$(REPLACE_UTIME)|g' \
+	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
+	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
+	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)' \
+	      < $(srcdir)/utime.in.h; \
+	} > $@-t && \
+	mv $@-t $@
+else
+utime.h: $(top_builddir)/config.status
+	rm -f $@
+endif
+MOSTLYCLEANFILES += utime.h utime.h-t
+
+EXTRA_DIST += utime.in.h
+
+## end   gnulib module utime-h
+
 ## begin gnulib module utimens
 
 libgnu_a_SOURCES += utimens.c
@@ -2379,6 +2454,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''HAVE_FEATURES_H''@|$(HAVE_FEATURES_H)|g' \
 	      -e 's|@''NEXT_WCHAR_H''@|$(NEXT_WCHAR_H)|g' \
 	      -e 's|@''HAVE_WCHAR_H''@|$(HAVE_WCHAR_H)|g' \
+	      -e 's/@''HAVE_CRTDEFS_H''@/$(HAVE_CRTDEFS_H)/g' \
 	      -e 's/@''GNULIB_OVERRIDES_WINT_T''@/$(GNULIB_OVERRIDES_WINT_T)/g' \
 	      -e 's/@''GNULIB_BTOWC''@/$(GNULIB_BTOWC)/g' \
 	      -e 's/@''GNULIB_WCTOB''@/$(GNULIB_WCTOB)/g' \
@@ -2419,6 +2495,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's/@''GNULIB_WCSSTR''@/$(GNULIB_WCSSTR)/g' \
 	      -e 's/@''GNULIB_WCSTOK''@/$(GNULIB_WCSTOK)/g' \
 	      -e 's/@''GNULIB_WCSWIDTH''@/$(GNULIB_WCSWIDTH)/g' \
+	      -e 's/@''GNULIB_WCSFTIME''@/$(GNULIB_WCSFTIME)/g' \
 	      < $(srcdir)/wchar.in.h | \
 	  sed -e 's|@''HAVE_WINT_T''@|$(HAVE_WINT_T)|g' \
 	      -e 's|@''HAVE_BTOWC''@|$(HAVE_BTOWC)|g' \
@@ -2458,6 +2535,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''HAVE_WCSSTR''@|$(HAVE_WCSSTR)|g' \
 	      -e 's|@''HAVE_WCSTOK''@|$(HAVE_WCSTOK)|g' \
 	      -e 's|@''HAVE_WCSWIDTH''@|$(HAVE_WCSWIDTH)|g' \
+	      -e 's|@''HAVE_WCSFTIME''@|$(HAVE_WCSFTIME)|g' \
 	      -e 's|@''HAVE_DECL_WCTOB''@|$(HAVE_DECL_WCTOB)|g' \
 	      -e 's|@''HAVE_DECL_WCWIDTH''@|$(HAVE_DECL_WCWIDTH)|g' \
 	  | \
@@ -2474,6 +2552,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''REPLACE_WCSNRTOMBS''@|$(REPLACE_WCSNRTOMBS)|g' \
 	      -e 's|@''REPLACE_WCWIDTH''@|$(REPLACE_WCWIDTH)|g' \
 	      -e 's|@''REPLACE_WCSWIDTH''@|$(REPLACE_WCSWIDTH)|g' \
+	      -e 's|@''REPLACE_WCSFTIME''@|$(REPLACE_WCSFTIME)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)'; \
@@ -2510,6 +2589,7 @@ wctype.h: wctype.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(WARN_ON_USE_H
 	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
 	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
 	      -e 's|@''NEXT_WCTYPE_H''@|$(NEXT_WCTYPE_H)|g' \
+	      -e 's/@''HAVE_CRTDEFS_H''@/$(HAVE_CRTDEFS_H)/g' \
 	      -e 's/@''GNULIB_OVERRIDES_WINT_T''@/$(GNULIB_OVERRIDES_WINT_T)/g' \
 	      -e 's/@''GNULIB_ISWBLANK''@/$(GNULIB_ISWBLANK)/g' \
 	      -e 's/@''GNULIB_WCTYPE''@/$(GNULIB_WCTYPE)/g' \
@@ -2543,6 +2623,13 @@ EXTRA_DIST += wcwidth.c
 EXTRA_libgnu_a_SOURCES += wcwidth.c
 
 ## end   gnulib module wcwidth
+
+## begin gnulib module xalloc-oversized
+
+
+EXTRA_DIST += xalloc-oversized.h
+
+## end   gnulib module xalloc-oversized
 
 ## begin gnulib module xsize
 

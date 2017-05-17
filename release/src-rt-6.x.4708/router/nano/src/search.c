@@ -143,7 +143,8 @@ int search_init(bool replacing, bool use_answer)
 
     /* This is now one simple call.  It just does a lot. */
     i = do_prompt(FALSE, FALSE,
-		replacing ? MREPLACE : MWHEREIS, backupstring,
+		inhelp ? MFINDINHELP : (replacing ? MREPLACE : MWHEREIS),
+		backupstring,
 #ifndef DISABLE_HISTORIES
 		&search_history,
 #endif
@@ -437,7 +438,6 @@ void go_looking(void)
 {
     filestruct *was_current = openfile->current;
     size_t was_current_x = openfile->current_x;
-    int didfind;
 #ifdef DEBUG
     clock_t start = clock();
 #endif

@@ -122,7 +122,7 @@ char *do_browser(char *path)
 
 	kbinput = get_kbinput(edit);
 
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 	if (kbinput == KEY_MOUSE) {
 	    int mouse_x, mouse_y;
 
@@ -151,7 +151,7 @@ char *do_browser(char *path)
 
 	    continue;
 	}
-#endif /* !DISABLE_MOUSE */
+#endif /* ENABLE_MOUSE */
 
 	func = parse_browser_input(&kbinput);
 
@@ -162,7 +162,7 @@ char *do_browser(char *path)
 	    kbinput = KEY_WINCH;
 #endif
 	} else if (func == do_help_void) {
-#ifndef DISABLE_HELP
+#ifdef ENABLE_HELP
 	    do_help_void();
 #ifndef NANO_TINY
 	    /* The window dimensions might have changed, so act as if. */
@@ -490,7 +490,11 @@ functionptrtype parse_browser_input(int *kbinput)
 		return do_enter;
 	    case 'W':
 	    case 'w':
+	    case '/':
 		return do_search;
+	    case 'N':
+	    case 'n':
+		return do_research;
 	}
     }
     return func_from_key(kbinput);

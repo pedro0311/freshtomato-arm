@@ -57,7 +57,7 @@ int do_statusbar_input(bool *ran_func, bool *finished)
 	return KEY_WINCH;
 #endif
 
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
     /* If we got a mouse click and it was on a shortcut, read in the
      * shortcut character. */
     if (input == KEY_MOUSE) {
@@ -164,7 +164,7 @@ int do_statusbar_input(bool *ran_func, bool *finished)
     return input;
 }
 
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 /* Handle a mouse click on the statusbar prompt or the shortcut list. */
 int do_statusbar_mouse(void)
 {
@@ -383,35 +383,18 @@ void reinit_statusbar_x(void)
     statusbar_x = HIGHEST_POSITIVE;
 }
 
-/* Put the cursor in the answer at statusbar_x. */
-void reset_statusbar_cursor(void)
-{
-    size_t start_col = strlenpt(prompt) + 2;
-    size_t xpt = statusbar_xplustabs();
-
-    /* Work around a cursor-misplacement bug in VTEs. */
-    wmove(bottomwin, 0, 0);
-    wnoutrefresh(bottomwin);
-    doupdate();
-
-    wmove(bottomwin, 0, start_col + xpt -
-			get_statusbar_page_start(start_col, start_col + xpt));
-
-    wnoutrefresh(bottomwin);
-}
-
-/* Repaint the statusbar. */
+/* Redraw the promptbar and place the cursor at the right spot. */
 void update_the_statusbar(void)
 {
-    size_t base, the_page, end_page;
+    size_t base = strlenpt(prompt) + 2;
+    size_t the_page, end_page, column;
     char *expanded;
 
-    base = strlenpt(prompt) + 2;
     the_page = get_statusbar_page_start(base, base + strnlenpt(answer, statusbar_x));
     end_page = get_statusbar_page_start(base, base + strlenpt(answer) - 1);
 
+    /* Color the promptbar over its full width. */
     wattron(bottomwin, interface_color_pair[TITLE_BAR]);
-
     blank_statusbar();
 
     mvwaddstr(bottomwin, 0, 0, prompt);
@@ -426,7 +409,15 @@ void update_the_statusbar(void)
 
     wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
 
-    reset_statusbar_cursor();
+    /* Work around a cursor-misplacement bug in VTEs. */
+    wmove(bottomwin, 0, 0);
+    wnoutrefresh(bottomwin);
+    doupdate();
+
+    /* Place the cursor at statusbar_x in the answer. */
+    column = base + statusbar_xplustabs();
+    wmove(bottomwin, 0, column - get_statusbar_page_start(base, column));
+    wnoutrefresh(bottomwin);
 }
 
 /* Get a string of input at the statusbar prompt. */
@@ -467,10 +458,6 @@ functionptrtype acquire_an_answer(int *actual, bool allow_tabs,
 #endif
 
     update_the_statusbar();
-
-    /* Refresh edit window and statusbar before getting input. */
-    wnoutrefresh(edit);
-    wnoutrefresh(bottomwin);
 
     while (TRUE) {
 	/* Ensure the cursor is shown when waiting for input. */
@@ -620,8 +607,9 @@ int do_prompt(bool allow_tabs, bool allow_files,
     int retval;
     functionptrtype func = NULL;
     bool listed = FALSE;
-    /* Save a possible current statusbar x position. */
+    /* Save a possible current statusbar x position and prompt. */
     size_t was_statusbar_x = statusbar_x;
+    char *saved_prompt = prompt;
 
     bottombars(menu);
 
@@ -644,7 +632,7 @@ int do_prompt(bool allow_tabs, bool allow_files,
 			refresh_func);
 
     free(prompt);
-    prompt = NULL;
+    prompt = saved_prompt;
 
 #ifndef NANO_TINY
     if (retval == KEY_WINCH)
@@ -751,7 +739,7 @@ int do_yesno_prompt(bool all, const char *msg)
 
 	if (func == do_cancel)
 	    response = -1;
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 	else if (kbinput == KEY_MOUSE) {
 	    int mouse_x, mouse_y;
 	    /* We can click on the Yes/No/All shortcuts to select an answer. */
@@ -773,7 +761,7 @@ int do_yesno_prompt(bool all, const char *msg)
 		    response = -2;
 	    }
 	}
-#endif /* !DISABLE_MOUSE */
+#endif /* ENABLE_MOUSE */
 	else {
 	    /* Look for the kbinput in the Yes, No (and All) strings. */
 	    if (strchr(yesstr, kbinput) != NULL)
