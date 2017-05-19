@@ -185,7 +185,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 		fprintf(fp,
 			"persist\n"
 			"holdoff %d\n",
-			demand ? 30 : (nvram_get_int(strcat_r(prefix, "ppp_redialperiod", tmp)) ? : 30)); //"ppp_redialperiod"
+			demand ? 30 : (nvram_get_int(strcat_r(prefix, "_ppp_redialperiod", tmp)) ? : 30)); //"ppp_redialperiod"
 	}
 
 	switch (wan_proto) {
@@ -924,7 +924,7 @@ void start_wan_if(int mode, char *prefix)
 	switch (wan_proto) {
 	case WP_PPPOE:
 	case WP_PPP3G:
-		if (wan_proto = WP_PPPOE && using_dhcpc(prefix)) { // PPPoE with DHCP MAN
+		if (wan_proto == WP_PPPOE && using_dhcpc(prefix)) { // PPPoE with DHCP MAN
 			stop_dhcpc(prefix);
 			mwanlog(LOG_DEBUG, "MultiWAN: start_wan_if: start_dhcpc(%s) for PPPoE ...", prefix);
 			start_dhcpc(prefix);
