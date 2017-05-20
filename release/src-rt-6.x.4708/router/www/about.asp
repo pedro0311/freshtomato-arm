@@ -95,12 +95,9 @@ function init()
 <b>Tomato Firmware <% version(1); %></b><br />
 <br />
 Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br />
-<i>Copyright (C) 2013-2014 Tomato-ARM Team</i><br />
 <br />
-<b>Tomato-ARM Team:</b><br />
-- Michał Rupental (Shibby)<br />
-- Ofer Chen (roadkill)<br />
-- Vicente Soriano (Victek)<br />
+<b>Tomato-ARM by @kille72</b> - Polish forum: <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' class='new_window'>https://openlinksys.info</a> English forum: <a href='https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled-by-kille72.73397/' class='new_window'>https://linksysinfo.org</a><br />
+<b>About me</b> - <a href='https://exotic.se' class='new_window'>https://exotic.se</a><br />
 <br />
 <hr>
 <!-- / / / -->
@@ -263,7 +260,7 @@ We want to express our gratitude to all people not mentioned here but contribute
 <i>Copyright (C) 2006-2010 Jonathan Zarate</i><br />
 <a href='http://www.polarcloud.com/tomato/' class='new_window'>http://www.polarcloud.com/tomato/</a><br />
 <br />
-Built on <% build_time(); %> by @kille72, <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' class='new_window'>http://openlinksys.info</a><br /><br />
+Built on <% build_time(); %> by @kille72 - <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' class='new_window'>https://openlinksys.info, </a><a href='https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled-by-kille72.73397/' class='new_window'>https://linksysinfo.org</a><br /><br />
 <br /><br />
 
 <!--
