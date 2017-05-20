@@ -24,6 +24,7 @@
 #include "nano.h"
 
 /* All external variables.  See global.c for their descriptions. */
+
 #ifndef NANO_TINY
 extern volatile sig_atomic_t the_window_resized;
 #endif
@@ -42,9 +43,18 @@ extern bool as_an_at;
 extern int margin;
 extern int editwincols;
 
+#ifndef DISABLE_COLOR
+extern bool have_palette;
+#endif
+
 extern message_type lastmessage;
 
 extern filestruct *pletion_line;
+
+extern bool inhelp;
+extern char *title;
+
+extern int didfind;
 
 extern int controlleft;
 extern int controlright;
@@ -202,9 +212,9 @@ int mbstrcasecmp(const char *s1, const char *s2);
 int mbstrncasecmp(const char *s1, const char *s2, size_t n);
 char *mbstrcasestr(const char *haystack, const char *needle);
 char *revstrstr(const char *haystack, const char *needle,
-	const char *pointer);
-char *mbrevstrcasestr(const char *haystack, const char *needle, const
-	char *rev_start);
+	const char *index);
+char *mbrevstrcasestr(const char *haystack, const char *needle,
+	const char *index);
 size_t mbstrlen(const char *s);
 size_t mbstrnlen(const char *s, size_t maxlen);
 #if !defined(NANO_TINY) || !defined(DISABLE_JUSTIFY)
@@ -212,10 +222,8 @@ char *mbstrchr(const char *s, const char *c);
 #endif
 #ifndef NANO_TINY
 char *mbstrpbrk(const char *s, const char *accept);
-char *revstrpbrk(const char *s, const char *accept, const char
-	*rev_start);
-char *mbrevstrpbrk(const char *s, const char *accept, const char
-	*rev_start);
+char *revstrpbrk(const char *head, const char *accept, const char *index);
+char *mbrevstrpbrk(const char *head, const char *accept, const char *index);
 #endif
 #if !defined(DISABLE_NANORC) && (!defined(NANO_TINY) || !defined(DISABLE_JUSTIFY))
 bool has_blank_mbchars(const char *s);
@@ -261,8 +269,8 @@ void replace_marked_buffer(const char *filename, filestruct *top, size_t top_x,
 	filestruct *bot, size_t bot_x);
 #endif
 #endif
-void display_buffer(void);
-#ifndef DISABLE_MULTIBUFFER
+void prepare_for_display(void);
+#ifdef ENABLE_MULTIBUFFER
 void switch_to_prev_buffer_void(void);
 void switch_to_next_buffer_void(void);
 bool close_buffer(void);
@@ -336,7 +344,8 @@ void thanks_for_all_the_fish(void);
 #endif
 
 /* All functions in help.c. */
-#ifndef DISABLE_HELP
+#ifdef ENABLE_HELP
+void wrap_the_help_text(bool redisplaying);
 void do_help(void);
 void help_init(void);
 functionptrtype parse_help_input(int *kbinput);
@@ -350,16 +359,16 @@ void do_last_line(void);
 void do_page_up(void);
 void do_page_down(void);
 #ifndef DISABLE_JUSTIFY
-void do_para_begin(bool allow_update);
+void do_para_begin(bool update_screen);
 void do_para_begin_void(void);
-void do_para_end(bool allow_update);
+void do_para_end(bool update_screen);
 void do_para_end_void(void);
 #endif
 void do_prev_block(void);
 void do_next_block(void);
-void do_prev_word(bool allow_punct, bool allow_update);
+void do_prev_word(bool allow_punct, bool update_screen);
 void do_prev_word_void(void);
-bool do_next_word(bool allow_punct, bool allow_update);
+bool do_next_word(bool allow_punct, bool update_screen);
 void do_next_word_void(void);
 void do_home(bool be_clever);
 void do_home_void(void);
@@ -396,7 +405,7 @@ void unlink_opennode(openfilestruct *fileptr);
 void delete_opennode(openfilestruct *fileptr);
 void print_view_warning(void);
 void show_restricted_warning(void);
-#ifdef DISABLE_HELP
+#ifndef ENABLE_HELP
 void say_there_is_no_help(void);
 #endif
 void finish(void);
@@ -421,13 +430,13 @@ void enable_flow_control(void);
 void terminal_init(void);
 void unbound_key(int code);
 int do_input(bool allow_funcs);
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 int do_mouse(void);
 #endif
 void do_output(char *output, size_t output_len, bool allow_cntrls);
 
 /* Most functions in prompt.c. */
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 int do_statusbar_mouse(void);
 #endif
 void do_statusbar_output(int *the_input, size_t input_len,
@@ -540,7 +549,7 @@ void update_undo(undo_type action);
 void wrap_reset(void);
 bool do_wrap(filestruct *line);
 #endif
-#if !defined(DISABLE_HELP) || !defined(DISABLE_WRAPJUSTIFY)
+#if defined(ENABLE_HELP) || !defined(DISABLE_WRAPJUSTIFY)
 ssize_t break_line(const char *line, ssize_t goal, bool snap_at_nl);
 #endif
 #if !defined(NANO_TINY) || !defined(DISABLE_JUSTIFY)
@@ -596,8 +605,10 @@ size_t actual_x(const char *s, size_t column);
 size_t strnlenpt(const char *s, size_t maxlen);
 size_t strlenpt(const char *s);
 void new_magicline(void);
-#ifndef NANO_TINY
+#if !defined(NANO_TINY) || defined(ENABLE_HELP)
 void remove_magicline(void);
+#endif
+#ifndef NANO_TINY
 void mark_order(const filestruct **top, size_t *top_x, const filestruct
 	**bot, size_t *bot_x, bool *right_side_up);
 #endif
@@ -622,7 +633,7 @@ int get_byte_kbinput(int kbinput);
 int get_control_kbinput(int kbinput);
 int *get_verbatim_kbinput(WINDOW *win, size_t *kbinput_len);
 int *parse_verbatim_kbinput(WINDOW *win, size_t *count);
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
 int get_mouseinput(int *mouse_x, int *mouse_y, bool allow_shortcuts);
 #endif
 const sc *get_shortcut(int *kbinput);
@@ -631,8 +642,7 @@ void blank_edit(void);
 void blank_statusbar(void);
 void blank_bottombars(void);
 void check_statusblank(void);
-char *display_string(const char *buf, size_t start_col, size_t span,
-	bool dollars);
+char *display_string(const char *buf, size_t column, size_t span, bool isdata);
 void titlebar(const char *path);
 extern void set_modified(void);
 void statusbar(const char *msg);
@@ -640,7 +650,7 @@ void warn_and_shortly_pause(const char *msg);
 void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void onekey(const char *keystroke, const char *desc, int length);
-void reset_cursor(void);
+void place_the_cursor(void);
 void edit_draw(filestruct *fileptr, const char *converted,
 	int line, size_t from_col);
 int update_line(filestruct *fileptr, size_t index);

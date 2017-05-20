@@ -116,12 +116,12 @@ void start_pptp_client(void)
         if ((p = nvram_get("pptp_client_username")) == NULL)
             ok = 0;
         else
-            fprintf(fd,"user %s\n", p);
+            fprintf(fd,"user \"%s\"\n", p);
 
         if ((p = nvram_get("pptp_client_passwd")) == NULL)
             ok = 0;
         else
-            fprintf(fd,"password %s\n", p);
+            fprintf(fd,"password \"%s\"\n", p);
 		/*
         switch (get_wan_proto())
         {

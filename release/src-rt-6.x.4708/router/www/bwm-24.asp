@@ -142,7 +142,7 @@ function init()
 	updateMaxL = (720 / 24) * hours;
 	showHours();
 
-	initCommon(1, 0, 0);
+	initCommon(1, 0, 0, 1);
 	ref.initX();
 }
 </script>
@@ -191,6 +191,9 @@ function init()
 		Max:&nbsp;
 			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
 			<a href='javascript:switchScale(1)' id='scale1'>Per IF</a><br />
+		Unit:&nbsp;
+			<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
+			<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
 		Display:&nbsp;
 			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
 			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />

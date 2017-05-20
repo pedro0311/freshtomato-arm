@@ -237,6 +237,10 @@ bool is_separate_word(size_t position, size_t length, const char *buf)
 const char *strstrwrapper(const char *haystack, const char *needle,
 	const char *start)
 {
+    /* Just in case we search for an empty needle. :/ */
+    if (*needle == '\0')
+	return (char *)start;
+
     if (ISSET(USE_REGEXP)) {
 	if (ISSET(BACKWARDS_SEARCH)) {
 	    size_t last_find, ceiling, far_end;
@@ -452,7 +456,7 @@ void new_magicline(void)
     openfile->totsize++;
 }
 
-#ifndef NANO_TINY
+#if !defined(NANO_TINY) || defined(ENABLE_HELP)
 /* Remove the magicline from filebot, if there is one and it isn't the
  * only line in the file.  Assume that edittop and current are not at
  * filebot. */
@@ -466,7 +470,9 @@ void remove_magicline(void)
 	openfile->totsize--;
     }
 }
+#endif
 
+#ifndef NANO_TINY
 /* Set top_x and bot_x to the top and bottom x-coordinates of the mark,
  * respectively, based on the locations of top and bot.  If
  * right_side_up isn't NULL, set it to TRUE if the mark begins with
@@ -535,7 +541,7 @@ size_t get_totsize(const filestruct *begin, const filestruct *end)
 }
 
 #ifdef DEBUG
-/* Dump the filestruct inptr to stderr. */
+/* Dump the given buffer to stderr. */
 void dump_filestruct(const filestruct *inptr)
 {
     if (inptr == openfile->fileage)
@@ -551,7 +557,7 @@ void dump_filestruct(const filestruct *inptr)
     }
 }
 
-/* Dump the current buffer's filestruct to stderr in reverse. */
+/* Dump the current buffer to stderr in reverse. */
 void dump_filestruct_reverse(void)
 {
     const filestruct *fileptr = openfile->filebot;

@@ -44,8 +44,8 @@ static const rcoption rcopts[] = {
 #ifndef DISABLE_JUSTIFY
     {"brackets", 0},
 #endif
-    {"const", CONST_UPDATE},  /* deprecated form, remove in 2018 */
-    {"constantshow", CONST_UPDATE},
+    {"const", CONSTANT_SHOW},  /* deprecated form, remove in 2018 */
+    {"constantshow", CONSTANT_SHOW},
 #ifndef DISABLE_WRAPJUSTIFY
     {"fill", 0},
 #endif
@@ -53,10 +53,10 @@ static const rcoption rcopts[] = {
     {"historylog", HISTORYLOG},
 #endif
     {"morespace", MORE_SPACE},
-#ifndef DISABLE_MOUSE
+#ifdef ENABLE_MOUSE
     {"mouse", USE_MOUSE},
 #endif
-#ifndef DISABLE_MULTIBUFFER
+#ifdef ENABLE_MULTIBUFFER
     {"multibuffer", MULTIBUFFER},
 #endif
     {"nohelp", NO_HELP},
@@ -77,6 +77,7 @@ static const rcoption rcopts[] = {
     {"punct", 0},
     {"quotestr", 0},
 #endif
+    {"quickblank", QUICK_BLANK},
     {"rebinddelete", REBIND_DELETE},
     {"rebindkeypad", REBIND_KEYPAD},
     {"regexp", USE_REGEXP},
@@ -99,7 +100,6 @@ static const rcoption rcopts[] = {
     {"locking", LOCKING},
     {"matchbrackets", 0},
     {"noconvert", NO_CONVERT},
-    {"quickblank", QUICK_BLANK},
     {"quiet", QUIET},
     {"showcursor", SHOW_CURSOR},
     {"smarthome", SMART_HOME},

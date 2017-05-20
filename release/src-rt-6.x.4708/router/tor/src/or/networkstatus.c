@@ -2444,14 +2444,10 @@ int
 client_would_use_router(const routerstatus_t *rs, time_t now,
                         const or_options_t *options)
 {
+  (void) options; /* unused */
   if (!rs->is_flagged_running) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * (Fetching and storing depends on by we_want_to_fetch_flavor().) */
-    return 0;
-  }
-  if (rs->published_on + options->TestingEstimatedDescriptorPropagationTime
-      > now) {
-    /* Most caches probably don't have this descriptor yet. */
     return 0;
   }
   if (rs->published_on + OLD_ROUTER_DESC_MAX_AGE < now) {
