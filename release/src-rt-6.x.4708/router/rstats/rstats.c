@@ -601,7 +601,7 @@ static void calc(void)
 	long tick;
 	int n;
 	char *exclude;
-	char prefix[] = "wanXX_";
+	char prefix[] = "wan"; // not yet mwan ready, assume wan
 
 	int wanup = 0; // 0 = FALSE, 1 = TRUE
 	long wanuptime = 0; // wanuptime in seconds
