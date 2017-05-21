@@ -547,7 +547,7 @@ static void calc(void) {
 	int n;
 	char *exclude = NULL;
 	char *include = NULL;
-	char prefix[] = "wanXX_";
+	char prefix[] = "wan"; // not yet mwan ready, assume wan
 
 	Node *ptr = NULL;
 	Node test;
