@@ -78,7 +78,7 @@ function verifyFields(focused, quiet)
 {
 	var i, e, b, f;
 
-	if (!v_range('_qos_obw', quiet, 10, 999999)) return 0;
+	if (!v_range('_qos_obw', quiet, 10, 999999999999)) return 0;
 	for (i = 0; i < 10; ++i) 
 	{
 		if (!verifyClassCeilingAndRate(
@@ -91,7 +91,7 @@ function verifyFields(focused, quiet)
 		}
 	}
 
-	if (!v_range('_qos_ibw', quiet, 10, 999999)) return 0;
+	if (!v_range('_qos_ibw', quiet, 10, 999999999999)) return 0;
 	for (i = 0; i < 10; ++i) 
 	{
 		if (!verifyClassCeilingAndRate(
