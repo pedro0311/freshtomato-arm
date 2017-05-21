@@ -1336,15 +1336,15 @@ static const nvset_t nvset_list[] = {
 	{ "qos_udp",			V_01				},
 	{ "qos_reset",			V_01				},
 	{ "qos_pfifo",			V_NUM				}, // !!TB
-	{ "wan_qos_obw",		V_RANGE(10, 999999999999)	},
-	{ "wan_qos_ibw",		V_RANGE(10, 999999999999)	},
-	{ "wan2_qos_obw",		V_RANGE(10, 999999999999)	},
-	{ "wan2_qos_ibw",		V_RANGE(10, 999999999999)	},
+	{ "wan_qos_obw",		V_RANGE(10, 99999999)	},
+	{ "wan_qos_ibw",		V_RANGE(10, 99999999)	},
+	{ "wan2_qos_obw",		V_RANGE(10, 99999999)	},
+	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)	},
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_qos_obw",		V_RANGE(10, 999999999999)	},
-	{ "wan3_qos_ibw",		V_RANGE(10, 999999999999)	},
-	{ "wan4_qos_obw",		V_RANGE(10, 999999999999)	},
-	{ "wan4_qos_ibw",		V_RANGE(10, 999999999999)	},
+	{ "wan3_qos_obw",		V_RANGE(10, 99999999)	},
+	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)	},
+	{ "wan4_qos_obw",		V_RANGE(10, 99999999)	},
+	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)	},
 #endif
 	{ "qos_orules",			V_LENGTH(0, 4096)	},
 	{ "qos_default",		V_RANGE(0, 9)		},
