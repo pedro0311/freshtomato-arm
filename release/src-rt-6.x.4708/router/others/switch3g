@@ -8,7 +8,7 @@
 PREFIX=$1
 
 PID=$$
-PIDFILE="/tmp/switch3g.pid"
+PIDFILE="/var/run/switch3g.pid"
 DETECTFILE="/tmp/3g.detect"
 MODE=`nvram get "$PREFIX"_proto`
 DEVNR=`nvram get "$PREFIX"_modem_dev`
@@ -231,7 +231,6 @@ switchMode
 if [ $? -eq 1 ]; then
     setPIN
     signal
-    #echo "1" > /tmp/state_$PREFIX
     service $PREFIX restart
  else
     logger -t switch3g[$PID] "3G MODEM not found ..."

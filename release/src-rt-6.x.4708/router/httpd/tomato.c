@@ -1673,6 +1673,45 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_noexec",   V_01                },
 	{ "vpn_client2_route",    V_01                },
 	{ "vpn_client2_routing_val", V_NONE           },
+	{ "vpn_client3_poll",     V_RANGE(0, 1440)    },
+	{ "vpn_client3_if",       V_TEXT(3, 3)        },  // tap, tun
+	{ "vpn_client3_bridge",   V_01                },
+	{ "vpn_client3_nat",      V_01                },
+	{ "vpn_client3_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
+	{ "vpn_client3_addr",     V_NONE              },
+	{ "vpn_client3_port",     V_PORT              },
+	{ "vpn_client3_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
+	{ "vpn_client3_firewall", V_TEXT(0, 6)        },  // auto, custom
+	{ "vpn_client3_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
+	{ "vpn_client3_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
+	{ "vpn_client3_cipher",   V_TEXT(0, 16)       },
+	{ "vpn_client3_ncp_enable", V_RANGE(0,3)      },
+	{ "vpn_client3_ncp_ciphers",V_TEXT(0, 47)     },
+	{ "vpn_client3_digest",     V_TEXT(0, 15)     },
+	{ "vpn_client3_local",    V_IP                },
+	{ "vpn_client3_remote",   V_IP                },
+	{ "vpn_client3_nm",       V_IP                },
+	{ "vpn_client3_reneg",    V_RANGE(-1,2147483647)},
+	{ "vpn_client3_hmac",     V_RANGE(-1, 2)      },
+	{ "vpn_client3_adns",     V_RANGE(0, 3)       },
+	{ "vpn_client3_rgw",      V_01                },
+	{ "vpn_client3_gw",       V_TEXT(0, 15)       },
+	{ "vpn_client3_custom",   V_NONE              },
+	{ "vpn_client3_static",   V_NONE              },
+	{ "vpn_client3_ca",       V_NONE              },
+	{ "vpn_client3_crt",      V_NONE              },
+	{ "vpn_client3_key",      V_NONE              },
+	{ "vpn_client3_userauth", V_01                },
+	{ "vpn_client3_username", V_TEXT(0,50)        },
+	{ "vpn_client3_password", V_TEXT(0,50)        },
+	{ "vpn_client3_useronly", V_01                },
+	{ "vpn_client3_tlsremote",V_01                },
+	{ "vpn_client3_cn",       V_NONE              },
+	{ "vpn_client3_br",       V_LENGTH(0, 50)     },
+	{ "vpn_client3_nopull",   V_01                },
+	{ "vpn_client3_noexec",   V_01                },
+	{ "vpn_client3_route",    V_01                },
+	{ "vpn_client3_routing_val", V_NONE           },
 #endif // vpn
 
 #ifdef TCONFIG_PPTPD

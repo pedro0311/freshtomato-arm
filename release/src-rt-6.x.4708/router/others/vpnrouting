@@ -15,24 +15,27 @@ if [ -z "$SERVICE" ]; then
 fi
 
 
-find_iface(){
+find_iface() {
     if [ "$SERVICE" == "client1" ]; then
         IFACE="tun11"
         ID="311"
     elif [ "$SERVICE" == "client2" ]; then
         IFACE="tun12"
         ID="312"
+    elif [ "$SERVICE" == "client3" ]; then
+        IFACE="tun13"
+        ID="313"
     else
         echo "vpnrouting: Interface not found!"
         logger -t vpnrouting[$PID] "Interface not found!"
         exit 0
     fi
 
-    PIDFILE="/tmp/vpnrouting$ID.pid"
+    PIDFILE="/var/run/vpnrouting$ID.pid"
     FIREWALL="/etc/openvpn/fw/vpnrouting$ID.sh"
 }
 
-cleanup(){
+cleanup() {
     ip route flush table $ID
     ip route flush cache
     RULE=`ip rule | grep "lookup $ID" | wc -l`
@@ -52,15 +55,15 @@ cleanup(){
 startRouting() {
     cleanup
 
-    CONNECTED="0"
+    CONNECTED=0
     VPN_GW=""
 
     #wait for gateway
-    while [ $CONNECTED == "0" ]; do
+    while [ "$CONNECTED" -eq 0 ]; do
         VPN_GW=`ifconfig $IFACE | awk '/inet addr/ {split ($2,A,":"); print A[2]}'`
         if [ -n "$VPN_GW" ]; then
             logger -t vpnrouting[$PID][$IFACE] "Got gateway for $IFACE - IP $VPN_GW - ID $ID"
-            CONNECTED="1"
+            CONNECTED=1
         else
             logger -t vpnrouting[$PID][$IFACE] "Searching gateway for $IFACE"
             sleep 3
@@ -85,7 +88,7 @@ startRouting() {
     #example of routing_val: 1<2<8.8.8.8>1<1<1.2.3.4>1<3<domain.com>
     VALUE=`nvram get vpn_"$SERVICE"_routing_val`
 
-    DNSMASQ="0"
+    DNSMASQ=0
 
     for i in $(echo $VALUE | tr ">" "\n")
     do
@@ -112,7 +115,7 @@ startRouting() {
                     #try to add ipset rule using forced query to DNS server
                     nslookup $VAL3 127.0.0.1 > /dev/null
 
-                    DNSMASQ="1"
+                    DNSMASQ=1
                     ;;
                 *) continue ;;
             esac
@@ -122,9 +125,11 @@ startRouting() {
     chmod +x $FIREWALL
     service firewall restart
 
-    if [ "$DNSMASQ" == "1" ]; then
+    if [ "$DNSMASQ" -eq 1 ]; then
         service dnsmasq restart
     fi
+
+    logger -t vpnrouting[$PID][$IFACE] "Completed routing policy configuration for $SERVICE"
 }
 
 stopRouting() {
@@ -171,7 +176,8 @@ checkPid() {
 if [ "$2" == "start" ]; then
     # check for proper interface
     find_iface
-    # check pid file /pedro
+
+    # check pid file
     checkPid
 
     startRouting
@@ -180,7 +186,7 @@ elif [ "$2" == "stop" ]; then
     # check for proper interface
     find_iface
 
-    # check pid file /pedro
+    # check pid file
     checkPid
 
     stopRouting

@@ -6,7 +6,7 @@
 
 
 PID=$$
-PIDFILE="/tmp/watchdog.pid"
+PIDFILE="/var/run/watchdog.pid"
 MWAN=`nvram get mwan_num`
 DLVL=`nvram get mwan_debug`
 DST=`nvram get mwan_ckdst`
@@ -39,7 +39,7 @@ watchdogRun() {
         PROTO=`nvram get "$PREFIX"_proto`
         RESULT=0
 
-        if [ "$PROTO" != "disabled" ]; then # don't check added but disabled wan /pedro
+        if [ "$PROTO" != "disabled" ]; then # don't check added but disabled wan
 
             if [ "$PREFIX" == "wan" ]; then
                 METRIC="101"
@@ -162,7 +162,7 @@ ckwget() {
     fi
 
     for HOST in $HOSTLIST; do
-        # proper check if wan is up (1 try and 5 secs timeout for every host)
+        # check if wan is up (1 try and 5 secs timeout for every host)
 
         # to be checked  /pedro
         #BIND_ADDR="$ADDR" LD_PRELOAD=/usr/lib/bind/bind.so wget -q $SPR -t 1 -T 5 $HOST
@@ -274,10 +274,10 @@ checkPid() {
 }
 
 checkPidSwitch() {
-    if [ -f /tmp/switch3g.pid ]; then
+    if [ -f /var/run/switch3g.pid ]; then
 
         if [ `ps | grep switch3g | grep -v "grep" | wc -l` == "0" ]; then  #pid file exist but process doesn`t.
-            rm /tmp/switch3g.pid
+            rm /var/run/switch3g.pid
         else
             logger -t watchdog[$PID] "Switch3g script in action - exiting"
             rm -f $PIDFILE > /dev/null 2>&1
@@ -285,10 +285,10 @@ checkPidSwitch() {
         fi
     fi
 
-    if [ -f /tmp/switch4g.pid ]; then
+    if [ -f /var/run/switch4g.pid ]; then
 
         if [ `ps | grep switch4g | grep -v "grep" | wc -l` == "0" ]; then  #pid file exist but process doesn`t.
-            rm /tmp/switch4g.pid
+            rm /var/run/switch4g.pid
         else
             logger -t watchdog[$PID] "Switch4g script in action - exiting"
             rm -f $PIDFILE > /dev/null 2>&1
