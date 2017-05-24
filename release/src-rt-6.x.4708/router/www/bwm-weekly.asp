@@ -211,7 +211,7 @@ function init()
 	var s;
 
 	if (nvram.rstats_enable != '1') {
-		E('refresh-button').disabled = 1;
+		E('refresh-button').setAttribute("disabled", "disabled");
 		return;
 	}
 
@@ -244,17 +244,19 @@ function init()
 <!-- / / / -->
 
 <div class='section-title'>WAN Bandwidth - Weekly</div>
-<div id='bwm-weekly-grid' style='float:left'></div>
-<div style="float:right;text-align:right">
-<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br />
-<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br />
-<b>Start</b> <select onchange='changeStart(this)' id='startwk'><option value=0 selected>Sun<option value=1>Mon<option value=2>Tue<option value=3>Wed<option value=4>Thu<option value=5>Fri<option value=6>Sat</select><br />
-<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
-<br />
-&raquo; <a href="admin-bwm.asp">Configure</a>
-<br /><br /><br />
+<div id="rstats">
+	<div id='bwm-weekly-grid' style='float:left'></div>
+	<div style="float:right;text-align:right">
+		<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br />
+		<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br />
+		<b>Start</b> <select onchange='changeStart(this)' id='startwk'><option value=0 selected>Sun<option value=1>Mon<option value=2>Tue<option value=3>Wed<option value=4>Thu<option value=5>Fri<option value=6>Sat</select><br />
+		<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
+		<br />
+		&raquo; <a href="admin-bwm.asp">Configure</a>
+		<br /><br /><br />
+	</div>
+	<br />
 </div>
-<br />
 
 <script type='text/javascript'>checkRstats();</script>
 
@@ -262,7 +264,7 @@ function init()
 
 </td></tr>
 <tr><td id='footer' colspan=2>
-	<input type='button' value='Refresh' onclick='reloadPage()'>
+	<input type='button' value='Refresh' id='refresh-button' onclick='reloadPage()'>
 </td></tr>
 </table>
 </form>

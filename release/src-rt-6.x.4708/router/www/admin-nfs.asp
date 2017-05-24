@@ -107,6 +107,12 @@ nfsg.setup = function()
 	this.resetNewEditor();
 }
 
+function verifyFields(focused, quiet)
+{
+	var ok = 1;
+	return ok;
+}
+
 function save()
 {
 	var data = nfsg.getAllData();

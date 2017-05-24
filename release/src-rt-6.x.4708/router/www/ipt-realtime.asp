@@ -32,9 +32,9 @@
 }
 ul.tabs a,
 #tabs a {
-	width: 140px;
-	height: 12px;
-	font-size: 9px;
+	width: 165px;
+	height: 15px;
+	font-size: 10px;
 }
 </style>
 
@@ -42,6 +42,7 @@ ul.tabs a,
 
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
 <script type='text/javascript' src='bwm-common.js'></script>
+<script type='text/javascript' src='bwm-hist.js'></script>
 <script type='text/javascript' src='interfaces.js'></script>
 
 <script type='text/javascript'>
@@ -247,15 +248,15 @@ function verifyFields(focused, quiet) {
 	}
 
 	if (E('_f_ipt_addr_hidden').length < 2) {
-		E('_f_ipt_addr_hidden').disabled = 1;
+		E('_f_ipt_addr_hidden').setAttribute("disabled", "disabled");
 	} else {
-		E('_f_ipt_addr_hidden').disabled = 0;
+		E('_f_ipt_addr_hidden').removeAttribute("disabled");
 	}
 
 	if (E('_f_ipt_addr_shown').length < 2) {
-		E('_f_ipt_addr_shown').disabled = 1;
+		E('_f_ipt_addr_shown').setAttribute("disabled", "disabled");
 	} else {
-		E('_f_ipt_addr_shown').disabled = 0;
+		E('_f_ipt_addr_shown').removeAttribute("disabled");
 	}
 
 	return 1;
@@ -276,6 +277,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
+<div class='section-title'>IP Traffic - Real-Time</div>
 <div id='cstats'>
 	<div id='tab-area'></div>
 
@@ -287,28 +289,28 @@ function verifyFields(focused, quiet) {
 	</script>
 
 	<div id='bwm-controls'>
-	<small>(<script type='text/javascript'>W(5*updateInt);</script> minute window, <script type='text/javascript'>W(updateInt);</script> second interval)</small><br />
-	<br />
-	Avg:&nbsp;
-		<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
-		<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
-		<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
-		<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-		<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
-	Max:&nbsp;
-		<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
-		<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
-	Unit:&nbsp;
-		<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
-		<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
-	Display:&nbsp;
-		<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
-		<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
-	Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
-	<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
+		<small>(<script type='text/javascript'>W(5*updateInt);</script> minute window, <script type='text/javascript'>W(updateInt);</script> second interval)</small><br />
+		<br />
+		Avg:&nbsp;
+			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
+			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
+			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
+			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
+			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
+		Max:&nbsp;
+			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
+			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
+		Unit:&nbsp;
+			<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
+			<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
+		Display:&nbsp;
+			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
+			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
+		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
+		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
 
-	<br /><br />
-	&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
+		<br /><br />
+		&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
 	</div>
 
 	<br /><br />
@@ -325,44 +327,37 @@ function verifyFields(focused, quiet) {
 		<td>&nbsp;</td>
 	</tr>
 	<tr>
-	<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-	<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
-	<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
-	<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
-	<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
-	<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
-	<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
-	<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
-	<td>&nbsp;</td>
+		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+		<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+		<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
+		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+		<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
+		<td>&nbsp;</td>
 	</tr>
 	</table>
 
 <!-- / / / -->
 
-<br />
+	<br />
 
-<div>
-<script type='text/javascript'>
-createFieldTable('', [
-	{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
-	{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
-]);
-</script>
-</div>
+	<div>
+		<script type='text/javascript'>
+			createFieldTable('', [
+				{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
+				{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
+			]);
+		</script>
+	</div>
 
 </div>
 <br />
 
 <!-- / / / -->
 
-<script type='text/javascript'>
-if (nvram.cstats_enable != '1') {
-	W('<div class="note-disabled">IP Traffic monitoring disabled.<\/b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;<\/a><div>');
-	E('cstats').style.display = 'none';
-} else {
-	W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
-}
-</script>
+<script type='text/javascript'>checkCstats();</script>
 
 <!-- / / / -->
 

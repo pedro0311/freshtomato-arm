@@ -183,13 +183,14 @@ function init()
 	<script type='text/javascript'>fog.setup();</script>
 </div>
 
-<div>
-Opens access to ports on machines inside the LAN, but does <b>not</b> re-map ports.
-<ul>
-<li><b>Src Address</b> <i>(optional)</i> - Forward only if from this address. Ex: "2001:4860:800b::/48", "me.example.com".
-<li><b>Dest Address</b> <i>(optional)</i> - The destination address inside the LAN.
-<li><b>Dest Ports</b> - The ports to be opened for forwarding. Ex: "2345", "200,300", "200-300,400".
-</ul>
+<div class='section-title'>Notes</div>
+<i>Opens access to ports on machines inside the LAN, but does <b>not</b> re-map ports:</i><br />
+<div class='section'>
+	<ul>
+		<li><b>Src Address</b> <i>(optional)</i> - Forward only if from this address. Ex: "2001:4860:800b::/48", "me.example.com".</li>
+		<li><b>Dest Address</b> <i>(optional)</i> - The destination address inside the LAN.</li>
+		<li><b>Dest Ports</b> - The ports to be opened for forwarding. Ex: "2345", "200,300", "200-300,400".</li>
+	</ul>
 </div>
 
 <br />

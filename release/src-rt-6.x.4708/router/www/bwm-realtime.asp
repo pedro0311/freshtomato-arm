@@ -151,6 +151,7 @@ function init()
 
 <!-- / / / -->
 
+<div class='section-title'>WAN Bandwidth - Real-Time</div>
 <div id='rstats'>
 	<div id='tab-area'></div>
 

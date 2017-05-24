@@ -1005,7 +1005,7 @@ if(port_vlan_supported) vlg.setup();
 			<li><small>One VID <i>must</i> be selected as the default.</small></li>
 			<li style="list-style: none; display: inline"><small><script type='text/javascript'>
 			if(trunk_vlan_supported) {
-				W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag conta
+				W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag contains only user priority information).</li>');
 				W('<li>It may be also recommended to avoid using VID "1" as some vendors consider it special/reserved (for management purposes).<\/li>');
 			}
 			</script></small></li>

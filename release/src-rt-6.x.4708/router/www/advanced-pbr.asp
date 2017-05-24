@@ -291,10 +291,14 @@ No part of this file may be used without permission.
 					<div class='section'>
 						<div class="tomato-grid" id="qg"></div>
 					</div>
-					<div>
-						<hr>
-						Note: Policy routing traffic only work on the LAN to the Internet.<br />
+
+					<div class='section-title'>Notes</div>
+					<div class='section'>
+						<ul>
+							<li>Policy routing traffic only work on the LAN to the Internet.</li>
+						</ul>
 					</div>
+
 				</td>
 			</tr>
 			<tr><td id='footer' colspan=2>

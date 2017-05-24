@@ -123,7 +123,10 @@ ref.initX = function()
 
 function init()
 {
-	if (nvram.rstats_enable != '1') return;
+	if (nvram.rstats_enable != '1') {
+		E('refresh-button').setAttribute("disabled", "disabled");
+		return;
+	}
 
 	try {
 	//	<% bandwidth("speed"); %>
@@ -161,6 +164,7 @@ function init()
 
 <!-- / / / -->
 
+<div class='section-title'>WAN Bandwidth - Last 24 Hours</div>
 <div id='rstats'>
 	<div id='tab-area'></div>
 
@@ -231,15 +235,7 @@ function init()
 </div>
 <br />
 
-<script type='text/javascript'>
-if (nvram.rstats_enable != '1') {
-	W('<div class="note-disabled">Bandwidth monitoring disabled.<\/b><br /><br /><a href="admin-bwm.asp">Enable &raquo;<\/a><div>');
-	E('rstats').style.display = 'none';
-}
-else {
-	W('<div class="note-warning" style="display:none" id="rbusy">The rstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
-}
-</script>
+<script type='text/javascript'>checkRstats();</script>
 
 <!-- / / / -->
 

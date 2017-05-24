@@ -446,7 +446,7 @@ function init()
 <br />
 <script type='text/javascript'>
 if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.<\/b> &nbsp; <a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
 }
 else {
 	show_notice1('<% notice("iptables"); %>');

@@ -297,22 +297,17 @@ function earlyInit()
 
 function init()
 {
+	new observer(InNewWindow).observe(E("survey-grid"), { childList: true, subtree: true });
 	sg.recolor();
 	ref.initPage();
-    if (observer) {
-        new observer(InNewWindow).observe(E("survey-grid"), { childList: true, subtree: true });
-    } else {
-        addEvent(E("survey-grid"), "DOMNodeInserted", function() { InNewWindow(); } );
-    }
 }
-var observer = getMutationObserver();
-function getMutationObserver() {
-    return window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-}
+
+var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+
 function InNewWindow () {
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>

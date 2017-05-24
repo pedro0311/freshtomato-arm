@@ -330,9 +330,14 @@ function earlyInit()
 
 function init()
 {
+	new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true, attributes: true });
 	dg.recolor();
 	ref.initPage(3000, 3);
+}
 
+var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+
+function InNewWindow () {
 	var elements = document.getElementsByClassName("new_window");
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );

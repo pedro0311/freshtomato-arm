@@ -117,17 +117,19 @@ function init()
 <!-- / / / -->
 
 <div class='section-title'>WAN Bandwidth - Monthly</div>
-<div id='bwm-monthly-grid' style='float:left'></div>
-<div style="float:right;text-align:right">
-<b>Date</b> <select onchange='changeDate(this, "ym")' id='dafm'><option value=0>yyyy-mm</option><option value=1>mm-yyyy</option><option value=2>mmm yyyy</option><option value=3>mm.yyyy</option></select><br />
-<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
-<br />
-&raquo; <a href="javascript:genData()">Data</a>
-<br />
-&raquo; <a href="admin-bwm.asp">Configure</a>
-<br /><br /><br />
+<div id="rstats">
+	<div id='bwm-monthly-grid' style='float:left'></div>
+	<div style="float:right;text-align:right">
+		<b>Date</b> <select onchange='changeDate(this, "ym")' id='dafm'><option value=0>yyyy-mm</option><option value=1>mm-yyyy</option><option value=2>mmm yyyy</option><option value=3>mm.yyyy</option></select><br />
+		<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
+		<br />
+		&raquo; <a href="javascript:genData()">Data</a>
+		<br />
+		&raquo; <a href="admin-bwm.asp">Configure</a>
+		<br /><br /><br />
+	</div>
+	<br />
 </div>
-<br />
 
 <script type='text/javascript'>checkRstats();</script>
 
@@ -135,7 +137,7 @@ function init()
 
 </td></tr>
 <tr><td id='footer' colspan=2>
-	<input type='button' value='Refresh' onclick='reloadPage()'>
+	<input type='button' value='Refresh' id='refresh-button' onclick='reloadPage()'>
 </td></tr>
 </table>
 </form>
