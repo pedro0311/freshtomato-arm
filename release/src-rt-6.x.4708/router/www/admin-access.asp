@@ -303,7 +303,8 @@ var m = [
 	{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
 		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: ' <small>Please be sure of your decision before change this settings!<\/small>' },
 	{ title: 'Color Scheme', name: 'web_css', type: 'select',
-		options: [['openlinksys','USB Blue - OpenLinksys'],['red','Tomato'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
+		options: [['openlinksys','USB Blue - OpenLinksys'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
+		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['usbred','USB Red'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
 	{ title: 'TTB ID#', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 30, value: nvram.ttb_css, suffix: ' Theme name from <a href="http://www.tomatothemebase.eu"  class="new_window"><u><i>TTB themes gallery<\/i><\/u><\/a>' },
 	null,
 	{ title: 'Open Menus' }
