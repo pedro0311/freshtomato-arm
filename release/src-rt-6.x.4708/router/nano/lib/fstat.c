@@ -27,12 +27,6 @@
 
 #if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
 # define WINDOWS_NATIVE
-# if _GL_WINDOWS_64_BIT_ST_SIZE
-#  undef stat /* avoid warning on mingw64 with _FILE_OFFSET_BITS=64 */
-#  define stat _stati64
-#  undef fstat /* avoid warning on mingw64 with _FILE_OFFSET_BITS=64 */
-#  define fstat _fstati64
-# endif
 #endif
 
 #if !defined WINDOWS_NATIVE
@@ -56,7 +50,11 @@ orig_fstat (int fd, struct stat *buf)
 #ifdef WINDOWS_NATIVE
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
-# include "msvc-nothrow.h"
+# if GNULIB_MSVC_NOTHROW
+#  include "msvc-nothrow.h"
+# else
+#  include <io.h>
+# endif
 # include "stat-w32.h"
 #endif
 

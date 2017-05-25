@@ -1235,7 +1235,7 @@ int parse_escape_sequence(WINDOW *win, int kbinput)
 	    suppress_cursorpos = FALSE;
 	    lastmessage = HUSH;
 	    if (currmenu == MMAIN) {
-		place_the_cursor();
+		place_the_cursor(TRUE);
 		curs_set(1);
 	    }
 	}
@@ -1989,7 +1989,7 @@ void titlebar(const char *path)
     /* Figure out the path, prefix and state strings. */
     if (inhelp)
 	branding = "";
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
     else if (path != NULL)
 	prefix = _("DIR:");
 #endif
@@ -2014,7 +2014,7 @@ void titlebar(const char *path)
     prefixlen = strlenpt(prefix);
     if (prefixlen > 0)
 	prefixlen++;
-    pathlen= strlenpt(path);
+    pathlen = strlenpt(path);
     statelen = strlenpt(state) + 2;
     if (statelen > 2) {
 	pathlen++;
@@ -2070,8 +2070,7 @@ void titlebar(const char *path)
 
     wattroff(topwin, interface_color_pair[TITLE_BAR]);
 
-    wnoutrefresh(topwin);
-    doupdate();
+    wrefresh(topwin);
 }
 
 /* Display a normal message on the statusbar, quietly. */
@@ -2163,8 +2162,7 @@ void statusline(message_type importance, const char *msg, ...)
     wattroff(bottomwin, interface_color_pair[STATUS_BAR]);
 
     /* Push the message to the screen straightaway. */
-    wnoutrefresh(bottomwin);
-    doupdate();
+    wrefresh(bottomwin);
 
     suppress_cursorpos = TRUE;
 
@@ -2242,8 +2240,7 @@ void bottombars(int menu)
 
     /* Defeat a VTE bug by moving the cursor and forcing a screen update. */
     wmove(bottomwin, 0, 0);
-    wnoutrefresh(bottomwin);
-    doupdate();
+    wrefresh(bottomwin);
 }
 
 /* Write a shortcut key to the help area at the bottom of the window.
@@ -2271,7 +2268,7 @@ void onekey(const char *keystroke, const char *desc, int length)
 
 /* Redetermine current_y from the position of current relative to edittop,
  * and put the cursor in the edit window at (current_y, "current_x"). */
-void place_the_cursor(void)
+void place_the_cursor(bool forreal)
 {
     ssize_t row = 0;
     size_t col, xpt = xplustabs();
@@ -2293,7 +2290,7 @@ void place_the_cursor(void)
 	col = xpt % editwincols;
 
 	/* If the cursor ought to be in column zero, nudge it there. */
-	if (openfile->placewewant % editwincols == 0 && col != 0) {
+	if (forreal && openfile->placewewant % editwincols == 0 && col != 0) {
 	    row++;
 	    col = 0;
 	}
@@ -2307,7 +2304,8 @@ void place_the_cursor(void)
     if (row < editwinrows)
 	wmove(edit, row, margin + col);
 
-    openfile->current_y = row;
+    if (forreal)
+	openfile->current_y = row;
 }
 
 /* edit_draw() takes care of the job of actually painting a line into
@@ -2686,8 +2684,10 @@ int update_line(filestruct *fileptr, size_t index)
 
     /* If the line is offscreen, don't even try to display it. */
     if (row < 0 || row >= editwinrows) {
+#ifndef NANO_TINY
 	statusline(ALERT, "Badness: tried to display a line on row %i"
 				" -- please report a bug", row);
+#endif
 	return 0;
     }
 
@@ -2902,12 +2902,16 @@ void edit_scroll(scroll_dir direction, int nrows)
 
     /* Don't bother scrolling zero rows, nor more than the window can hold. */
     if (nrows == 0) {
+#ifndef NANO_TINY
 	statusline(ALERT, "Underscrolling -- please report a bug");
+#endif
 	return;
     }
     if (nrows >= editwinrows) {
+#ifndef NANO_TINY
 	if (editwinrows > 1)
 	    statusline(ALERT, "Overscrolling -- please report a bug");
+#endif
 	refresh_needed = TRUE;
 	return;
     }
@@ -2951,16 +2955,19 @@ void edit_scroll(scroll_dir direction, int nrows)
     }
 }
 
+#ifndef NANO_TINY
 /* Ensure that firstcolumn is at the starting column of the softwrapped chunk
  * it's on.  We need to do this when the number of columns of the edit window
  * has changed, because then the width of softwrapped chunks has changed. */
 void ensure_firstcolumn_is_aligned(void)
 {
-#ifndef NANO_TINY
     if (openfile->firstcolumn % editwincols != 0)
 	openfile->firstcolumn -= (openfile->firstcolumn % editwincols);
-#endif
+
+    /* If smooth scrolling is on, make sure the viewport doesn't center. */
+    focusing = FALSE;
 }
+#endif
 
 /* Return TRUE if current[current_x] is above the top of the screen, and FALSE
  * otherwise. */
@@ -3086,7 +3093,7 @@ void edit_refresh(void)
     while (row < editwinrows)
 	blank_row(edit, row++, 0, COLS);
 
-    place_the_cursor();
+    place_the_cursor(TRUE);
     wnoutrefresh(edit);
 
     refresh_needed = FALSE;
@@ -3245,7 +3252,7 @@ void spotlight(bool active, const char *word)
 	    room--;
     }
 
-    place_the_cursor();
+    place_the_cursor(FALSE);
 
     if (active)
 	wattron(edit, hilite_attribute);

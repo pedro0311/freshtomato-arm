@@ -18,23 +18,34 @@
 
 #include <config.h>
 
+#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+
+/* Ensure that <windows.h> defines FILE_ID_INFO.  */
+#undef _WIN32_WINNT
+#define _WIN32_WINNT _WIN32_WINNT_WIN8
+
 #include <sys/types.h>
 #include <sys/stat.h>
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-# if _GL_WINDOWS_64_BIT_ST_SIZE
-#  undef stat /* avoid warning on mingw64 with _FILE_OFFSET_BITS=64 */
-#  define stat _stati64
-# endif
-# include <errno.h>
-# include <limits.h>
-# include <unistd.h>
-# include <windows.h>
+#include <errno.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+#include <windows.h>
 
 /* Specification.  */
-# include "stat-w32.h"
+#include "stat-w32.h"
 
-# include "pathmax.h"
+#include "pathmax.h"
+#include "verify.h"
 
+#if _GL_WINDOWS_STAT_INODES == 2
+/* GetFileInformationByHandleEx was introduced only in Windows Vista.  */
+typedef DWORD (WINAPI * GetFileInformationByHandleExFuncType) (HANDLE hFile,
+                                                               FILE_INFO_BY_HANDLE_CLASS fiClass,
+                                                               LPVOID lpBuffer,
+                                                               DWORD dwBufferSize);
+static GetFileInformationByHandleExFuncType GetFileInformationByHandleExFunc = NULL;
+#endif
 /* GetFinalPathNameByHandle was introduced only in Windows Vista.  */
 typedef DWORD (WINAPI * GetFinalPathNameByHandleFuncType) (HANDLE hFile,
                                                            LPTSTR lpFilePath,
@@ -49,13 +60,43 @@ initialize (void)
   HMODULE kernel32 = LoadLibrary ("kernel32.dll");
   if (kernel32 != NULL)
     {
+#if _GL_WINDOWS_STAT_INODES == 2
+      GetFileInformationByHandleExFunc =
+        (GetFileInformationByHandleExFuncType) GetProcAddress (kernel32, "GetFileInformationByHandleEx");
+#endif
       GetFinalPathNameByHandleFunc =
-	(GetFinalPathNameByHandleFuncType) GetProcAddress (kernel32, "GetFinalPathNameByHandleA");
+        (GetFinalPathNameByHandleFuncType) GetProcAddress (kernel32, "GetFinalPathNameByHandleA");
     }
   initialized = TRUE;
 }
 
 /* Converts a FILETIME to GMT time since 1970-01-01 00:00:00.  */
+#if _GL_WINDOWS_STAT_TIMESPEC
+struct timespec
+_gl_convert_FILETIME_to_timespec (const FILETIME *ft)
+{
+  struct timespec result;
+  /* FILETIME: <https://msdn.microsoft.com/en-us/library/ms724284.aspx> */
+  unsigned long long since_1601 =
+    ((unsigned long long) ft->dwHighDateTime << 32)
+    | (unsigned long long) ft->dwLowDateTime;
+  if (since_1601 == 0)
+    {
+      result.tv_sec = 0;
+      result.tv_nsec = 0;
+    }
+  else
+    {
+      /* Between 1601-01-01 and 1970-01-01 there were 280 normal years and 89
+         leap years, in total 134774 days.  */
+      unsigned long long since_1970 =
+        since_1601 - (unsigned long long) 134774 * (unsigned long long) 86400 * (unsigned long long) 10000000;
+      result.tv_sec = since_1970 / (unsigned long long) 10000000;
+      result.tv_nsec = (unsigned long) (since_1970 % (unsigned long long) 10000000) * 100;
+    }
+  return result;
+}
+#else
 time_t
 _gl_convert_FILETIME_to_POSIX (const FILETIME *ft)
 {
@@ -65,12 +106,16 @@ _gl_convert_FILETIME_to_POSIX (const FILETIME *ft)
     | (unsigned long long) ft->dwLowDateTime;
   if (since_1601 == 0)
     return 0;
-  /* Between 1601-01-01 and 1970-01-01 there were 280 normal years and 89 leap
-     years, in total 134774 days.  */
-  unsigned long long since_1970 =
-    since_1601 - (unsigned long long) 134774 * (unsigned long long) 86400 * (unsigned long long) 10000000;
-  return since_1970 / (unsigned long long) 10000000;
+  else
+    {
+      /* Between 1601-01-01 and 1970-01-01 there were 280 normal years and 89
+         leap years, in total 134774 days.  */
+      unsigned long long since_1970 =
+        since_1601 - (unsigned long long) 134774 * (unsigned long long) 86400 * (unsigned long long) 10000000;
+      return since_1970 / (unsigned long long) 10000000;
+    }
 }
+#endif
 
 /* Fill *BUF with information about the file designated by H.
    PATH is the file name, if known, otherwise NULL.
@@ -110,10 +155,71 @@ _gl_fstat_by_handle (HANDLE h, const char *path, struct stat *buf)
           return -1;
         }
 
+#if _GL_WINDOWS_STAT_INODES
+      /* st_ino can be determined through
+         GetFileInformationByHandle
+         <https://msdn.microsoft.com/en-us/library/aa364952.aspx>
+         <https://msdn.microsoft.com/en-us/library/aa363788.aspx>
+         as 64 bits, or through
+         GetFileInformationByHandleEx with argument FileIdInfo
+         <https://msdn.microsoft.com/en-us/library/aa364953.aspx>
+         <https://msdn.microsoft.com/en-us/library/hh802691.aspx>
+         as 128 bits.
+         The latter requires -D_WIN32_WINNT=_WIN32_WINNT_WIN8 or higher.  */
+      /* Experiments show that GetFileInformationByHandleEx does not provide
+         much more information than GetFileInformationByHandle:
+           * The dwVolumeSerialNumber from GetFileInformationByHandle is equal
+             to the low 32 bits of the 64-bit VolumeSerialNumber from
+             GetFileInformationByHandleEx, and is apparently sufficient for
+             identifying the device.
+           * The nFileIndex from GetFileInformationByHandle is equal to the low
+             64 bits of the 128-bit FileId from GetFileInformationByHandleEx,
+             and the high 64 bits of this 128-bit FileId are zero.
+           * On a FAT file system, GetFileInformationByHandleEx fails with error
+             ERROR_INVALID_PARAMETER, whereas GetFileInformationByHandle
+             succeeds.
+           * On a CIFS/SMB file system, GetFileInformationByHandleEx fails with
+             error ERROR_INVALID_LEVEL, whereas GetFileInformationByHandle
+             succeeds.  */
+# if _GL_WINDOWS_STAT_INODES == 2
+      if (GetFileInformationByHandleExFunc != NULL)
+        {
+          FILE_ID_INFO id;
+          if (GetFileInformationByHandleExFunc (h, FileIdInfo, &id, sizeof (id)))
+            {
+              buf->st_dev = id.VolumeSerialNumber;
+              verify (sizeof (ino_t) == sizeof (id.FileId));
+              memcpy (&buf->st_ino, &id.FileId, sizeof (ino_t));
+              goto ino_done;
+            }
+          else
+            {
+              switch (GetLastError ())
+                {
+                case ERROR_INVALID_PARAMETER: /* older Windows version, or FAT */
+                case ERROR_INVALID_LEVEL: /* CIFS/SMB file system */
+                  goto fallback;
+                default:
+                  goto failed;
+                }
+            }
+        }
+     fallback: ;
+      /* Fallback for older Windows versions.  */
+      buf->st_dev = info.dwVolumeSerialNumber;
+      buf->st_ino._gl_ino[0] = ((ULONGLONG) info.nFileIndexHigh << 32) | (ULONGLONG) info.nFileIndexLow;
+      buf->st_ino._gl_ino[1] = 0;
+     ino_done: ;
+# else /* _GL_WINDOWS_STAT_INODES == 1 */
+      buf->st_dev = info.dwVolumeSerialNumber;
+      buf->st_ino = ((ULONGLONG) info.nFileIndexHigh << 32) | (ULONGLONG) info.nFileIndexLow;
+# endif
+#else
       /* st_ino is not wide enough for identifying a file on a device.
          Without st_ino, st_dev is pointless.  */
       buf->st_dev = 0;
       buf->st_ino = 0;
+#endif
 
       /* st_mode.  */
       unsigned int mode =
@@ -221,16 +327,26 @@ _gl_fstat_by_handle (HANDLE h, const char *path, struct stat *buf)
          <https://msdn.microsoft.com/en-us/library/aa364953.aspx>
          <https://msdn.microsoft.com/en-us/library/aa364217.aspx>
          The latter requires -D_WIN32_WINNT=_WIN32_WINNT_VISTA or higher.  */
+#if _GL_WINDOWS_STAT_TIMESPEC
+      buf->st_atim = _gl_convert_FILETIME_to_timespec (&info.ftLastAccessTime);
+      buf->st_mtim = _gl_convert_FILETIME_to_timespec (&info.ftLastWriteTime);
+      buf->st_ctim = _gl_convert_FILETIME_to_timespec (&info.ftCreationTime);
+#else
       buf->st_atime = _gl_convert_FILETIME_to_POSIX (&info.ftLastAccessTime);
       buf->st_mtime = _gl_convert_FILETIME_to_POSIX (&info.ftLastWriteTime);
       buf->st_ctime = _gl_convert_FILETIME_to_POSIX (&info.ftCreationTime);
+#endif
 
       return 0;
     }
   else if (type == FILE_TYPE_CHAR || type == FILE_TYPE_PIPE)
     {
       buf->st_dev = 0;
+#if _GL_WINDOWS_STAT_INODES == 2
+      buf->st_ino._gl_ino[0] = buf->st_ino._gl_ino[1] = 0;
+#else
       buf->st_ino = 0;
+#endif
       buf->st_mode = (type == FILE_TYPE_PIPE ? _S_IFIFO : _S_IFCHR);
       buf->st_nlink = 1;
       buf->st_uid = 0;
@@ -248,9 +364,15 @@ _gl_fstat_by_handle (HANDLE h, const char *path, struct stat *buf)
         }
       else
         buf->st_size = 0;
+#if _GL_WINDOWS_STAT_TIMESPEC
+      buf->st_atim.tv_sec = 0; buf->st_atim.tv_nsec = 0;
+      buf->st_mtim.tv_sec = 0; buf->st_mtim.tv_nsec = 0;
+      buf->st_ctim.tv_sec = 0; buf->st_ctim.tv_nsec = 0;
+#else
       buf->st_atime = 0;
       buf->st_mtime = 0;
       buf->st_ctime = 0;
+#endif
       return 0;
     }
   else

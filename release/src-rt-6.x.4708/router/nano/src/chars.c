@@ -374,24 +374,39 @@ int parse_mbchar(const char *buf, char *chr, size_t *col)
  * before the one at pos. */
 size_t move_mbleft(const char *buf, size_t pos)
 {
-    size_t before, char_len = 0;
+#ifdef ENABLE_UTF8
+    if (use_utf8) {
+	size_t before, char_len = 0;
 
-    assert(pos <= strlen(buf));
+	if (pos < 4)
+	    before = 0;
+	else {
+	    const char *ptr = buf + pos;
 
-    /* There is no library function to move backward one multibyte
-     * character.  So we just start groping for one at the farthest
-     * possible point. */
-    if (pos < MAXCHARLEN)
-	before = 0;
-    else
-	before = pos - MAXCHARLEN;
+	    /* Probe for a valid starter byte in the preceding four bytes. */
+	    if ((signed char)*(--ptr) > -65)
+		before = pos - 1;
+	    else if ((signed char)*(--ptr) > -65)
+		before = pos - 2;
+	    else if ((signed char)*(--ptr) > -65)
+		before = pos - 3;
+	    else if ((signed char)*(--ptr) > -65)
+		before = pos - 4;
+	    else
+		before = pos - 1;
+	}
 
-    while (before < pos) {
-	char_len = parse_mbchar(buf + before, NULL, NULL);
-	before += char_len;
-    }
+	/* Move forward again until we reach the original character,
+	 * so we know the length of its preceding the character. */
+	while (before < pos) {
+	    char_len = parse_mbchar(buf + before, NULL, NULL);
+	    before += char_len;
+	}
 
-    return before - char_len;
+	return before - char_len;
+    } else
+#endif
+    return (pos == 0 ? 0 : pos - 1);
 }
 
 /* Return the index in buf of the beginning of the multibyte character
@@ -671,7 +686,7 @@ char *mbrevstrpbrk(const char *head, const char *accept, const char *pointer)
 }
 #endif /* !NANO_TINY */
 
-#if !defined(DISABLE_NANORC) && (!defined(NANO_TINY) || !defined(DISABLE_JUSTIFY))
+#if defined(ENABLE_NANORC) && (!defined(NANO_TINY) || !defined(DISABLE_JUSTIFY))
 /* Return TRUE if the string s contains one or more blank characters,
  * and FALSE otherwise. */
 bool has_blank_chars(const char *s)
@@ -704,7 +719,7 @@ bool has_blank_mbchars(const char *s)
 #endif
 	return has_blank_chars(s);
 }
-#endif /* !DISABLE_NANORC && (!NANO_TINY || !DISABLE_JUSTIFY) */
+#endif /* ENABLE_NANORC && (!NANO_TINY || !DISABLE_JUSTIFY) */
 
 #ifdef ENABLE_UTF8
 /* Return TRUE if wc is valid Unicode, and FALSE otherwise. */
@@ -717,7 +732,7 @@ bool is_valid_unicode(wchar_t wc)
 }
 #endif
 
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 /* Check if the string s is a valid multibyte string.  Return TRUE if it
  * is, and FALSE otherwise. */
 bool is_valid_mbstring(const char *s)
@@ -729,4 +744,4 @@ bool is_valid_mbstring(const char *s)
 #endif
 	return TRUE;
 }
-#endif /* !DISABLE_NANORC */
+#endif /* ENABLE_NANORC */

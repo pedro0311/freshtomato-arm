@@ -60,30 +60,29 @@ void get_homedir(void)
 int digits(ssize_t n)
 {
     if (n < 100000) {
-        if (n < 1000) {
-            if (n < 100)
-                return 2;
-            else
-                return 3;
-        } else {
-            if (n < 10000)
-                return 4;
-            else
-                return 5;
-        }
+	if (n < 1000) {
+	    if (n < 100)
+		return 2;
+	    else
+		return 3;
+	} else {
+	    if (n < 10000)
+		return 4;
+	    else
+		return 5;
+	}
     } else {
-        if (n < 10000000) {
-            if (n < 1000000)
-                return 6;
-            else
-                return 7;
-        }
-        else {
-            if (n < 100000000)
-                return 8;
-            else
-                return 9;
-        }
+	if (n < 10000000) {
+	    if (n < 1000000)
+		return 6;
+	    else
+		return 7;
+	} else {
+	    if (n < 100000000)
+		return 8;
+	    else
+		return 9;
+	}
     }
 }
 #endif
@@ -117,7 +116,7 @@ bool parse_line_column(const char *str, ssize_t *line, ssize_t *column)
     const char *comma;
 
     while (*str == ' ')
-       str++;
+	str++;
 
     comma = strpbrk(str, "m,. /;");
 
@@ -237,9 +236,12 @@ bool is_separate_word(size_t position, size_t length, const char *buf)
 const char *strstrwrapper(const char *haystack, const char *needle,
 	const char *start)
 {
-    /* Just in case we search for an empty needle. :/ */
-    if (*needle == '\0')
+    if (*needle == '\0') {
+#ifndef NANO_TINY
+	statusline(ALERT, "Searching for nothing -- please report a bug");
+#endif
 	return (char *)start;
+    }
 
     if (ISSET(USE_REGEXP)) {
 	if (ISSET(BACKWARDS_SEARCH)) {
@@ -279,7 +281,7 @@ const char *strstrwrapper(const char *haystack, const char *needle,
 	    regmatches[0].rm_eo = far_end;
 	    if (regexec(&search_regexp, haystack, 10, regmatches,
 					REG_STARTEND) != 0)
-		statusline(ALERT, "BAD: failed to refind the match!");
+		return NULL;
 
 	    return haystack + regmatches[0].rm_so;
 	}

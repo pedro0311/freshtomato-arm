@@ -45,7 +45,7 @@
 static int oldinterval = -1;
 	/* Used to store the user's original mouse click interval. */
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 static bool no_rcfiles = FALSE;
 	/* Should we ignore all rcfiles? */
 #endif
@@ -677,14 +677,17 @@ void die_save_file(const char *die_filename, struct stat *die_stat)
 /* Initialize the three window portions nano uses. */
 void window_init(void)
 {
-    /* First delete existing windows, in case of resizing. */
-    delwin(topwin);
-    topwin = NULL;
-    delwin(edit);
-    delwin(bottomwin);
+    /* When resizing, first delete the existing windows. */
+    if (edit != NULL) {
+	if (topwin != NULL)
+	    delwin(topwin);
+	delwin(edit);
+	delwin(bottomwin);
+    }
 
     /* If the terminal is very flat, don't set up a titlebar. */
     if (LINES < 3) {
+	topwin = NULL;
 	editwinrows = 1;
 	/* Set up two subwindows.  If the terminal is just one line,
 	 * edit window and statusbar window will cover each other. */
@@ -804,7 +807,7 @@ void usage(void)
 	print_opt("-H", "--historylog",
 		N_("Log & read search/replace string history"));
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
     if (!ISSET(RESTRICTED))
 	print_opt("-I", "--ignorercfiles", N_("Don't look at nanorc files"));
 #endif
@@ -848,7 +851,7 @@ void usage(void)
     print_opt("-c", "--constantshow", N_("Constantly show cursor position"));
     print_opt("-d", "--rebinddelete",
 	N_("Fix Backspace/Delete confusion problem"));
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
     if (!ISSET(RESTRICTED))
 	print_opt("-g", "--showcursor", N_("Show cursor in file browser"));
 #endif
@@ -869,7 +872,7 @@ void usage(void)
 	N_("Set operating directory"));
 #endif
     print_opt("-p", "--preserve", N_("Preserve XON (^Q) and XOFF (^S) keys"));
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
     if (!ISSET(RESTRICTED))
 	print_opt("-q", "--quiet",
 		N_("Silently ignore startup issues like rc file errors"));
@@ -916,7 +919,7 @@ void version(void)
 
 #ifdef NANO_TINY
     printf(" --enable-tiny");
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
     printf(" --enable-browser");
 #endif
 #ifndef DISABLE_COLOR
@@ -943,7 +946,7 @@ void version(void)
 #ifdef ENABLE_MOUSE
     printf(" --enable-mouse");
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
     printf(" --enable-nanorc");
 #endif
 #ifdef ENABLE_MULTIBUFFER
@@ -955,14 +958,14 @@ void version(void)
 #ifndef DISABLE_SPELLER
     printf(" --enable-speller");
 #endif
-#ifndef DISABLE_TABCOMP
+#ifdef ENABLE_TABCOMP
     printf(" --enable-tabcomp");
 #endif
 #ifndef DISABLE_WRAPPING
     printf(" --enable-wrapping");
 #endif
 #else /* !NANO_TINY */
-#ifdef DISABLE_BROWSER
+#ifndef ENABLE_BROWSER
     printf(" --disable-browser");
 #endif
 #ifdef DISABLE_COLOR
@@ -995,7 +998,7 @@ void version(void)
 #ifndef ENABLE_MULTIBUFFER
     printf(" --disable-multibuffer");
 #endif
-#ifdef DISABLE_NANORC
+#ifndef ENABLE_NANORC
     printf(" --disable-nanorc");
 #endif
 #ifdef DISABLE_OPERATINGDIR
@@ -1004,7 +1007,7 @@ void version(void)
 #ifdef DISABLE_SPELLER
     printf(" --disable-speller");
 #endif
-#ifdef DISABLE_TABCOMP
+#ifndef ENABLE_TABCOMP
     printf(" --disable-tabcomp");
 #endif
 #ifndef ENABLE_WORDCOMPLETION
@@ -1386,6 +1389,7 @@ void do_toggle(int flag)
 	case MORE_SPACE:
 	case NO_HELP:
 	    window_init();
+	    focusing = FALSE;
 	    total_refresh();
 	    break;
 	case SUSPEND:
@@ -1619,7 +1623,7 @@ int do_input(bool allow_funcs)
     /* If the keystroke isn't a shortcut nor a toggle, it's a normal text
      * character: add the character to the input buffer -- or display a
      * warning when we're in view mode. */
-     if (input != ERR && !have_shortcut) {
+    if (input != ERR && !have_shortcut) {
 	if (ISSET(VIEW_MODE))
 	    print_view_warning();
 	else {
@@ -1916,7 +1920,7 @@ int main(int argc, char **argv)
 #ifdef ENABLE_MULTIBUFFER
 	{"multibuffer", 0, NULL, 'F'},
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 	{"ignorercfiles", 0, NULL, 'I'},
 #endif
 	{"rebindkeypad", 0, NULL, 'K'},
@@ -1934,7 +1938,7 @@ int main(int argc, char **argv)
 #endif
 	{"constantshow", 0, NULL, 'c'},
 	{"rebinddelete", 0, NULL, 'd'},
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
 	{"showcursor", 0, NULL, 'g'},
 #endif
 	{"help", 0, NULL, 'h'},
@@ -2006,13 +2010,13 @@ int main(int argc, char **argv)
     textdomain(PACKAGE);
 #endif
 
-#ifdef ENABLE_UTF8
+#if defined(ENABLE_UTF8) && !defined(NANO_TINY)
     if (MB_CUR_MAX > MAXCHARLEN)
 	fprintf(stderr, "Unexpected large character size: %i bytes"
 			" -- please report a bug\n", (int)MB_CUR_MAX);
 #endif
 
-#if defined(DISABLE_NANORC) && defined(DISABLE_ROOTWRAPPING)
+#if !defined(ENABLE_NANORC) && defined(DISABLE_ROOTWRAPPING)
     /* If we don't have rcfile support, --disable-wrapping-as-root is
      * used, and we're root, turn wrapping off. */
     if (geteuid() == NANO_ROOT_UID)
@@ -2069,7 +2073,7 @@ int main(int argc, char **argv)
 		SET(HISTORYLOG);
 		break;
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 	    case 'I':
 		no_rcfiles = TRUE;
 		break;
@@ -2165,7 +2169,7 @@ int main(int argc, char **argv)
 	    case 'p':
 		SET(PRESERVE);
 		break;
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 	    case 'q':
 		SET(QUIET);
 		break;
@@ -2238,7 +2242,7 @@ int main(int argc, char **argv)
     if (ISSET(RESTRICTED)) {
 	UNSET(SUSPEND);
 	UNSET(BACKUP_FILE);
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 	no_rcfiles = TRUE;
 	UNSET(HISTORYLOG);
 	UNSET(POS_HISTORY);
@@ -2249,11 +2253,9 @@ int main(int argc, char **argv)
      * before reading the rcfile, to be able to rebind/unbind keys. */
     shortcut_init();
 
-/* We've read through the command line options.  Now back up the flags
- * and values that are set, and read the rcfile(s).  If the values
- * haven't changed afterward, restore the backed-up values. */
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
     if (!no_rcfiles) {
+	/* Back up the command-line options, then read the rcfile(s). */
 #ifndef DISABLE_OPERATINGDIR
 	char *operating_dir_cpy = operating_dir;
 #endif
@@ -2297,6 +2299,7 @@ int main(int argc, char **argv)
 	print_sclist();
 #endif
 
+	/* If the backed-up command-line options have a value, restore them. */
 #ifndef DISABLE_OPERATINGDIR
 	if (operating_dir_cpy != NULL) {
 	    free(operating_dir);
@@ -2332,6 +2335,7 @@ int main(int argc, char **argv)
 	if (tabsize_cpy != -1)
 	    tabsize = tabsize_cpy;
 
+	/* Simply OR the boolean flags from rcfile and command line. */
 	for (i = 0; i < sizeof(flags) / sizeof(flags[0]); i++)
 	    flags[i] |= flags_cpy[i];
     }
@@ -2341,7 +2345,7 @@ int main(int argc, char **argv)
     else if (geteuid() == NANO_ROOT_UID)
 	SET(NO_WRAP);
 #endif
-#endif /* !DISABLE_NANORC */
+#endif /* ENABLE_NANORC */
 
 #ifndef DISABLE_WRAPPING
     /* Override a "set nowrap" in an rcfile (or a --disable-wrapping-as-root)
@@ -2636,9 +2640,10 @@ int main(int argc, char **argv)
 	    margin = needed_margin;
 	    editwincols = COLS - margin;
 
+#ifndef NANO_TINY
 	    /* Ensure that firstcolumn is the starting column of its chunk. */
 	    ensure_firstcolumn_is_aligned();
-
+#endif
 	    /* The margin has changed -- schedule a full refresh. */
 	    refresh_needed = TRUE;
 	}
@@ -2657,7 +2662,7 @@ int main(int argc, char **argv)
 
 	/* Refresh just the cursor position or the entire edit window. */
 	if (!refresh_needed) {
-	    place_the_cursor();
+	    place_the_cursor(TRUE);
 	    wnoutrefresh(edit);
 	} else
 	    edit_refresh();
