@@ -245,6 +245,7 @@ function init()
 
 <div class='section-title'>WAN Bandwidth - Weekly</div>
 <div id="rstats">
+
 	<div id='bwm-weekly-grid' style='float:left'></div>
 	<div style="float:right;text-align:right">
 		<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br />
@@ -255,8 +256,12 @@ function init()
 		&raquo; <a href="admin-bwm.asp">Configure</a>
 		<br /><br /><br />
 	</div>
+
 	<br />
+
 </div>
+
+<!-- / / / -->
 
 <script type='text/javascript'>checkRstats();</script>
 

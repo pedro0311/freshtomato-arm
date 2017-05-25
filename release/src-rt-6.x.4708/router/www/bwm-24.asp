@@ -176,7 +176,8 @@ function init()
 	</script>
 
 	<div id='bwm-controls'>
-		<small>(2 minute interval)</small><br />
+		<small>(2 minute interval)</small>
+		<br />
 		<br />
 		Hours:&nbsp;
 			<a href='javascript:switchHours(1);' id='hr1'>1</a>,
@@ -209,31 +210,35 @@ function init()
 
 	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
-	<tr>
-		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-		<td style='width:15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='width:15%' align='right' valign='top' id='rx-avg'></td>
-		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='width:15%' align='right' valign='top' id='rx-max'></td>
-		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='width:14%' align='right' valign='top' id='rx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-		<td style='width:15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='width:15%' align='right' valign='top' id='tx-avg'></td>
-		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='width:15%' align='right' valign='top' id='tx-max'></td>
-		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='width:14%' align='right' valign='top' id='tx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
+		<tr>
+			<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+			<td style='width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+			<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='width:15%' align='right' valign='top' id='rx-avg'></td>
+			<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='width:15%' align='right' valign='top' id='rx-max'></td>
+			<td style='width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='width:14%' align='right' valign='top' id='rx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+			<td style='width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+			<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='width:15%' align='right' valign='top' id='tx-avg'></td>
+			<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='width:15%' align='right' valign='top' id='tx-max'></td>
+			<td style='width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='width:14%' align='right' valign='top' id='tx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
 	</table>
+
+	<br />
+
 </div>
-<br />
+
+<!-- / / / -->
 
 <script type='text/javascript'>checkRstats();</script>
 

@@ -168,8 +168,12 @@ function init()
 		<br /><br /><br />
 
 	</div>
+
 	<br />
+
 </div>
+
+<!-- / / / -->
 
 <script type='text/javascript'>checkRstats();</script>
 

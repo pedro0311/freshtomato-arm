@@ -432,6 +432,15 @@ function init()
 <td id='content'>
 <div id='ident'><% ident(); %></div>
 
+<script type='text/javascript'>
+if (nvram.qos_enable != '1') {
+	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+}
+else {
+	show_notice1('<% notice("iptables"); %>');
+}
+</script>
+
 <!-- / / / -->
 
 <input type='hidden' name='_nextpage' value='qos-classify.asp'>
@@ -442,16 +451,6 @@ function init()
 <div class='section'>
 	<div class="tomato-grid" id="qg"></div>
 </div>
-
-<br />
-<script type='text/javascript'>
-if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
-}
-else {
-	show_notice1('<% notice("iptables"); %>');
-}
-</script>
 
 <!-- / / / -->
 

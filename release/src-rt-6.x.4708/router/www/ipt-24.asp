@@ -364,46 +364,44 @@ function verifyFields(focused, quiet) {
 
 	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
-	<tr>
-		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-		<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-		<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
-</table>
+		<tr>
+			<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+			<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+			<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
+	</table>
 
 <!-- / / / -->
 
-<br />
-
-<div>
-<script type='text/javascript'>
-	createFieldTable('', [
-		{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
-		{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
-	]);
-</script>
-</div>
-
-</div>
+	<div>
+		<script type='text/javascript'>
+			createFieldTable('', [
+				{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
+				{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
+			]);
+		</script>
+	</div>
 
 <br />
+
+</div>
 
 <!-- / / / -->
 

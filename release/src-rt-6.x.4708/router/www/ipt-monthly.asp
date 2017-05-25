@@ -480,8 +480,10 @@ function verifyFields(focused, quiet) {
 			&raquo; <a href="admin-iptraffic.asp">Configure</a>
 		</div>
 	</div>
+
+	<br />
+
 </div>
-<br />
 
 <!-- / / / -->
 

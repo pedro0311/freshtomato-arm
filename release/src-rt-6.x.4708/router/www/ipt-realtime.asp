@@ -352,8 +352,9 @@ function verifyFields(focused, quiet) {
 		</script>
 	</div>
 
+	<br />
+
 </div>
-<br />
 
 <!-- / / / -->
 
