@@ -44,9 +44,9 @@
 </style>
 
 <script type='text/javascript'>
-// <% nvram("qos_classnames,web_svg,qos_enable,wan_qos_obw,wan_qos_ibw,wan2_qos_obw,wan2_qos_ibw,wan3_qos_obw,wan3_qos_ibw,wan4_qos_obw,wan4_qos_ibw"); %>
+//	<% nvram("qos_classnames,web_svg,qos_enable,wan_qos_obw,wan_qos_ibw,wan2_qos_obw,wan2_qos_ibw,wan3_qos_obw,wan3_qos_ibw,wan4_qos_obw,wan4_qos_ibw"); %>
 
-//<% qrate(); %>
+//	<% qrate(); %>
 
 qrates_out = [0,0,0,0,0,0,0,0,0,0,0];
 qrates_in = [0,0,0,0,0,0,0,0,0,0,0];
@@ -280,6 +280,13 @@ function showGraph()
 
 function init()
 {
+	if (nvram.qos_enable != '1') {
+		E('refresh-time').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute("disabled", "disabled");
+		E('zoom-button').setAttribute("disabled", "disabled");
+		return;
+	}
+
 	nbase = fixInt(cookie.get('qnbase'), 0, 1, 0);
 	showData();
 	checkSVG();
@@ -301,88 +308,103 @@ function init()
 
 <!-- / / / -->
 
-<div class="section-title">Connections Distribution</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-<script type='text/javascript'>
-for (i = 0; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:60px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
-		'<td id="cpct' + i + '" class="pct"><\/td><\/tr>');
-}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="ccnt-total" class="total count"></td><td class="total pct">100%</td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
+<div class="section-title" id="qosstatsoff" style="display:none">View Graphs</div>
+<div id="qosstats">
+	<div class="section-title">Connections Distribution</div>
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<script type='text/javascript'>
+				W('<table style="width:250px">');
+				for (i = 0; i < 11; ++i) {
+					W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+					'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+					'<td class="title" style="width:60px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+					'<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
+					'<td id="cpct' + i + '" class="pct"><\/td><\/tr>\n');
+				}
+				W('<tr><td>&nbsp;<\/td><td class="total">Total<\/a><\/td><td id="ccnt-total" class="total count"><\/td><td class="total pct">100%<\/td><\/tr>\n');
+				W('<\/table>\n');
+				</script>
+			</td><td style="margin-right:150px">
+			<script type='text/javascript'>
+			if (nvram.web_svg != '0') {
+				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="qos-graph.svg?n=0&v=<% version(); %>" id="svg0">Your browser does not support SVG<\/object>\n');
+			}
+			</script>
+			</td></tr>
+		</table>
+	</div>
+
+	<div class="section-title">Bandwidth Distribution (Outbound)</div>
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<table style="width:250px">
+					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;
+						<script type='text/javascript'>
+						W('<\/td><\/tr>\n');
+						for (i = 1; i < 11; ++i) {
+							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+							'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+							'<td id="bocnt' + i + '" class="count" style="width:60px"><\/td>' +
+							'<td id="bocntx' + i + '" class="count" style="width:50px"><\/td>' +
+							'<td id="bopct' + i + '" class="pct"><\/td><\/tr>\n');
+						}
+						W('<tr><td>\n');
+						</script>
+					&nbsp;</td><td class="total">Total</td><td id="bocnt-total" class="total count"></td><td id="bocntx-total" class="total count"></td><td id="rateout" class="total pct"></td></tr>
+				</table>
+			</td><td style="margin-right:150px">
+			<script type='text/javascript'>
+			if (nvram.web_svg != '0') {
+				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="qos-graph.svg?n=1&v=<% version(); %>" id="svg1">Your browser does not support SVG<\/object>\n');
+			}
+			</script>
+			</td></tr>
+		</table>
+	</div>
+
+	<div class="section-title">Bandwidth Distribution (Inbound)</div>
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<table style="width:250px">
+					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;
+						<script type='text/javascript'>
+						W('<\/td><\/tr>\n');
+						for (i = 1; i < 11; ++i) {
+							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+							'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+							'<td id="bicnt' + i + '" class="count" style="width:60px"><\/td>' +
+							'<td id="bicntx' + i + '" class="count" style="width:50px"><\/td>' +
+							'<td id="bipct' + i + '" class="pct"><\/td><\/tr>\n');
+						}
+						W('<tr><td>\n');
+						</script>
+					&nbsp;</td><td class="total">Total</td><td id="bicnt-total" class="total count"></td><td id="bicntx-total" class="total count"></td><td id="ratein" class="total pct"></td></tr>
+				</table>
+				</td><td style="margin-right:150px">
+				<script type='text/javascript'>
+				if (nvram.web_svg != '0') {
+					W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="qos-graph.svg?n=2&v=<% version(); %>" id="svg2">Your browser does not support SVG<\/object>\n');
+				}
+				</script>
+			</td></tr>
+		</table>
+	</div>
+
 </div>
 
-<div class="section-title">Bandwidth Distribution (Outbound)</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-	<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;</td></tr>
-<script type='text/javascript'>
-for (i = 1; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="bocnt' + i + '" class="count" style="width:60px"><\/td>' +
-		'<td id="bocntx' + i + '" class="count" style="width:50px"><\/td>' +
-		'<td id="bopct' + i + '" class="pct"><\/td><\/tr>');
-}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="bocnt-total" class="total count"></td><td id="bocntx-total" class="total count"></td><td id="rateout" class="total pct"></td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
-</div>
-
-<div class="section-title">Bandwidth Distribution (Inbound)</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-	<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;</td></tr>
-<script type='text/javascript'>
-for (i = 1; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="bicnt' + i + '" class="count" style="width:60px"><\/td>' +
-		'<td id="bicntx' + i + '" class="count" style="width:50px"><\/td>' +
-		'<td id="bipct' + i + '" class="pct"><\/td><\/tr>');
-}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</a></td><td id="bicnt-total" class="total count"></td><td id="bicntx-total" class="total count"></td><td id="ratein" class="total pct"></td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="qos-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
-</div>
+<!-- / / / -->
 
 <script type='text/javascript'>
 if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.<\/b> &nbsp; <a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>\n');
+	E('qosstats').style.display = 'none';
+	E('qosstatsoff').style.display = '';
 }
 </script>
 
@@ -391,7 +413,7 @@ if (nvram.qos_enable != '1') {
 </td></tr>
 <tr>
     <td id='footer' colspan='3'>
-		<div style="display:inline-block;width:528px"><input name="mybtn" style="width:100px" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
+		<div style="display:inline-block;width:528px"><input name="mybtn" style="width:100px" id="zoom-button" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
 		<div style="display:inline-block;width:237px"><script type='text/javascript'>genStdRefresh(1,2,'ref.toggle()');</script></div>
     </td>
 </tr>

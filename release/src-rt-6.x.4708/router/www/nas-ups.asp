@@ -36,18 +36,10 @@ textarea {
 </style>
 <script type='text/javascript'>
 
-//      <% nvram("usb_apcupsd"); %>
+//	<% nvram("usb_apcupsd"); %>
 
 function init()
 {
-	var ids=['ups-status','ups-data'];
-
-	for (i = 0; i < ids.length; ++i) {
-		if (nvram.usb_apcupsd == 1) {
-			E(ids[i]).style.display = 'block';
-			E(ids[i]+'-section').style.display = 'block';
-		}
-	}
 	clientSideInclude('ups-status', '/ext/cgi-bin/tomatoups.cgi');
 	clientSideInclude('ups-data', '/ext/cgi-bin/tomatodata.cgi');
 }
@@ -103,19 +95,38 @@ function clientSideInclude(id, url) {
 <tr id='body'><td id='navi' style="height: 188px"><script type='text/javascript'>navi()</script></td>
 <td id='content' style="height: 188px">
 	<div id='ident'><% ident(); %></div>
-	<input type='hidden' name='_nextpage' value='nas-ups.asp'>
-	<div class='section-title' id="ups-status-section" style="display:none">APC UPS Status</div>
-	<div class='section'>
-		<span id="ups-status" style="display:none"></span>
+
+
+	<div class='section-title' id="upsstatus" style="display:none">UPS Monitor</div>
+	<div id="upsmonitor">
+
+		<input type='hidden' name='_nextpage' value='nas-ups.asp'>
+		<div class='section-title' id="ups-status-section">APC UPS Status</div>
+		<div class='section'>
+			<span id="ups-status"></span>
+		</div>
+		<div class='section-title' id="ups-data-section">APC UPS Response</div>
+		<div class='section'>
+			<span id="ups-data"></span>
+		</div>
+
+	<br />
+
 	</div>
-	<div class='section-title' id="ups-data-section" style="display:none">APC UPS Response</div>
-	<div class='section'>
-		<span id="ups-data" style="display:none"></span>
-	</div>
-	<div id='bwm-controls'>
-		<br /><br />
-		&nbsp; &raquo; <a href="nas-usb.asp">Configure</a>
-	</div>
+
+<!-- / / / -->
+
+<script type='text/javascript'>
+	if (nvram.usb_apcupsd != '1') {
+		W('<div class="note-disabled"><b>UPS Monitor disabled.<\/b><br /><br /><a href="nas-usb.asp">Enable &raquo;<\/a><\/div>');
+		E('upsmonitor').style.display = 'none';
+		E('upsstatus').style.display = 'block';
+	}
+</script>
+
+<!-- / / / -->
+
+
 </td></tr>
 <tr><td id='footer' colspan=2>&nbsp;</td></tr>
 </table>

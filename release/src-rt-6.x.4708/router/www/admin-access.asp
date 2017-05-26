@@ -291,7 +291,7 @@ var m = [
 	{ title: 'HTTP Port', indent: 2, name: 'http_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.http_lanport, 80) },
 	{ title: 'HTTPS Port', indent: 2, name: 'https_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.https_lanport, 443) },
 	{ title: 'SSL Certificate', rid: 'row_sslcert' },
-	{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 64, value: nvram.https_crt_cn,
+	{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 40, value: nvram.https_crt_cn,
 		suffix: '&nbsp;<small>(optional; space separated)<\/small>' },
 	{ title: 'Regenerate', indent: 2, name: 'f_https_crt_gen', type: 'checkbox', value: 0 },
 	{ title: 'Save In NVRAM', indent: 2, name: 'f_https_crt_save', type: 'checkbox', value: nvram.https_crt_save == 1 },
@@ -303,7 +303,8 @@ var m = [
 	{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
 		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: ' <small>Please be sure of your decision before change this settings!<\/small>' },
 	{ title: 'Color Scheme', name: 'web_css', type: 'select',
-		options: [['openlinksys','USB Blue - OpenLinksys'],['red','Tomato'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
+		options: [['openlinksys','USB Blue - OpenLinksys'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
+		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['usbred','USB Red'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
 	{ title: 'TTB ID#', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 30, value: nvram.ttb_css, suffix: ' Theme name from <a href="http://www.tomatothemebase.eu"  class="new_window"><u><i>TTB themes gallery<\/i><\/u><\/a>' },
 	null,
 	{ title: 'Open Menus' }

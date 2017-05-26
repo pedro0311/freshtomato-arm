@@ -15,6 +15,7 @@
 <link rel='stylesheet' type='text/css' href='tomato.css'>
 <% css(); %>
 <script type='text/javascript' src='tomato.js'></script>
+<script type='text/javascript' src='bwm-hist.js'></script>
 
 <!-- / / / -->
 <script type='text/javascript' src='debug.js'></script>
@@ -46,7 +47,7 @@
 <script type='text/javascript'>
 //	<% nvram('cstats_enable,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,dhcpd_static,web_svg'); %>
 
-// <% iptraffic(); %>
+//	<% iptraffic(); %>
 
 /* REMOVE-BEGIN */
 //	<% devlist(); %>
@@ -83,6 +84,7 @@ var thistimestamp;
 var difftimestamp;
 var avgiptraffic = [];
 var lastiptraffic = iptraffic;
+var cstats_busy = 0;
 
 /* REMOVE-BEGIN */
 //hostnamecache = [];
@@ -104,7 +106,7 @@ updateLabels();
 //	while (i < nfmarks.length){
 /* REMOVE-END */
 	i = 0;
-	while (i < 11){
+	while (i < 11) {
 		if (iptraffic[i] != null) {
 			nfmarks[i] = iptraffic[i][9] + iptraffic[i][10]; // TCP + UDP connections
 		} else {
@@ -285,6 +287,11 @@ function checkSVG() {
 }
 
 function init() {
+	if (nvram.cstats_enable != '1') {
+		E('refresh-time').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute("disabled", "disabled");
+		return;
+	}
 	showData();
 	checkSVG();
 	ref.initPage(2000, 3);
@@ -307,95 +314,102 @@ function init() {
 <!-- / / / -->
 
 <div class="section-title">Connections Distribution (TCP/UDP)</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-<script type='text/javascript'>
-for (i = 0; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
-		'<td id="cpct' + i + '" class="pct"><\/td><\/tr>');
-	}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</td><td id="ccnt-total" class="total count"></td><td class="total pct">100%</td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
+<div id="cstats">
+
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<script type='text/javascript'>
+				W('<table style="width:250px">\n');
+				for (i = 0; i < 11; ++i) {
+					W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+					  '<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+					  '<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+					  '<td id="ccnt' + i + '" class="count" style="width:90px"><\/td>' +
+					  '<td id="cpct' + i + '" class="pct"><\/td><\/tr>\n');
+				}
+				W('<tr><td>&nbsp;<\/td><td class="total">Total<\/td><td id="ccnt-total" class="total count"><\/td><td class="total pct">100%<\/td><\/tr>\n');
+				W('<\/table>\n');
+				</script>
+			</td><td style="margin-right:150px">
+			<script type='text/javascript'>
+			if (nvram.web_svg != '0') {
+				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=0&v=<% version(); %>" id="svg0">Your browser does not support SVG<\/object>\n');
+			}
+			</script>
+			</td></tr>
+		</table>
+	</div>
+
+<!-- / / / -->
+
+	<div class="section-title">Bandwidth Distribution (Inbound)</div>
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<table style="width:250px">
+					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='pct'>&nbsp;
+						<script type='text/javascript'>
+						W('<\/td><\/tr>\n');
+						for (i = 0; i < 11; ++i) {
+							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+							'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+							'<td id="bcnt' + i + '" class="count" style="width:60px"><\/td>' +
+							'<td id="bcntx' + i + '" class="count" style="width:50px"><\/td>' +
+							'<td id="bpct' + i + '" class="pct"><\/td><\/tr>\n');
+						}
+						W('<tr><td>\n');
+						</script>
+					&nbsp;</td><td class="total">Total</td><td id="bcnt-total" class="total count"></td><td id="bcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
+				</table>
+			</td><td style="margin-right:150px">
+			<script type='text/javascript'>
+			if (nvram.web_svg != '0') {
+				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=1&v=<% version(); %>" id="svg1">Your browser does not support SVG<\/object>\n');
+			}
+			</script>
+			</td></tr>
+		</table>
+	</div>
+
+<!-- / / / -->
+
+	<div class="section-title">Bandwidth Distribution (Outbound)</div>
+	<div class="section">
+		<table border=0 width="100%">
+			<tr><td>
+				<table style="width:250px">
+					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='pct'>&nbsp;
+						<script type='text/javascript'>
+						W('<\/td><\/tr>\n');
+						for (i = 0; i < 11; ++i) {
+							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+							'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
+							'<td id="obcnt' + i + '" class="count" style="width:60px"><\/td>' +
+							'<td id="obcntx' + i + '" class="count" style="width:50px"><\/td>' +
+							'<td id="obpct' + i + '" class="pct"><\/td><\/tr>\n');
+						}
+						W('<tr><td>\n');
+						</script>
+					&nbsp;</td><td class="total">Total</td><td id="obcnt-total" class="total count"></td><td id="obcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
+				</table>
+			</td><td style="margin-right:150px">
+			<script type='text/javascript'>
+			if (nvram.web_svg != '0') {
+				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=2&v=<% version(); %>" id="svg2">Your browser does not support SVG<\/object>\n');
+			}
+			</script>
+			</td></tr>
+		</table>
+	</div>
+
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Bandwidth Distribution (Inbound)</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-	<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='pct'>&nbsp;</td></tr>
-<script type='text/javascript'>
-for (i = 0; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="bcnt' + i + '" class="count" style="width:60px"><\/td>' +
-		'<td id="bcntx' + i + '" class="count" style="width:50px"><\/td>' +
-		'<td id="bpct' + i + '" class="pct"><\/td><\/tr>');
-	}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</td><td id="bcnt-total" class="total count"></td><td id="bcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
-</div>
-
-<!-- / / / -->
-
-<div class="section-title">Bandwidth Distribution (Outbound)</div>
-<div class="section">
-<table border=0 width="100%"><tr><td>
-	<table style="width:250px">
-	<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='pct'>&nbsp;</td></tr>
-<script type='text/javascript'>
-for (i = 0; i < 11; ++i) {
-	W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-		'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-		'<td class="title" style="width:45px"><a href="ipt-details.asp?ipt_filterip=' + abc[i] + '">' + abc[i] + '<\/a><\/td>' +
-		'<td id="obcnt' + i + '" class="count" style="width:60px"><\/td>' +
-		'<td id="obcntx' + i + '" class="count" style="width:50px"><\/td>' +
-		'<td id="obpct' + i + '" class="pct"><\/td><\/tr>');
-	}
-</script>
-	<tr><td>&nbsp;</td><td class="total">Total</td><td id="obcnt-total" class="total count"></td><td id="obcntx-total" class="total count"></td><td class="total pct">100%</td></tr>
-	</table>
-</td><td style="margin-right:150px">
-<script type='text/javascript'>
-if (nvram.web_svg != '0') {
-	W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>');
-}
-</script>
-</td></tr>
-</table>
-</div>
-
-<!-- / / / -->
-
-<script type='text/javascript'>
-if (nvram.cstats_enable != '1') {
-	W('<div class="note-disabled"><b>IP Traffic monitoring disabled.<\/b> &nbsp; <a href="admin-iptraffic.asp">Enable&nbsp;&raquo;<\/a><\/div>');
-}
-</script>
+<script type='text/javascript'>checkCstats();</script>
 
 <!-- / / / -->
 

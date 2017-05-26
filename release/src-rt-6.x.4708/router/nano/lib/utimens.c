@@ -35,10 +35,20 @@
 #include "stat-time.h"
 #include "timespec.h"
 
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+/* On native Windows, use SetFileTime; but avoid this when compiling
+   GNU Emacs, which arranges for this in some other way and which
+   defines WIN32_LEAN_AND_MEAN itself.  */
+
+#if ((defined _WIN32 || defined __WIN32__) \
+     && ! defined __CYGWIN__ && ! defined EMACS_CONFIGURATION)
+# define USE_SETFILETIME
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
-# include "msvc-nothrow.h"
+# if GNULIB_MSVC_NOTHROW
+#  include "msvc-nothrow.h"
+# else
+#  include <io.h>
+# endif
 #endif
 
 /* Avoid recursion with rpl_futimens or rpl_utimensat.  */
@@ -277,7 +287,7 @@ fdutimens (int fd, char const *file, struct timespec const timespec[2])
   lutimensat_works_really = -1;
 #endif /* HAVE_UTIMENSAT || HAVE_FUTIMENS */
 
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#ifdef USE_SETFILETIME
   /* On native Windows, use SetFileTime(). See
      <https://msdn.microsoft.com/en-us/library/ms724933.aspx>
      <https://msdn.microsoft.com/en-us/library/ms724284.aspx>  */
@@ -343,11 +353,19 @@ fdutimens (int fd, char const *file, struct timespec const timespec[2])
         return 0;
       else
         {
-          #if 0
           DWORD sft_error = GetLastError ();
-          fprintf (stderr, "utime SetFileTime error 0x%x\n", (unsigned int) sft_error);
+          #if 0
+          fprintf (stderr, "fdutimens SetFileTime error 0x%x\n", (unsigned int) sft_error);
           #endif
-          errno = EINVAL;
+          switch (sft_error)
+            {
+            case ERROR_ACCESS_DENIED: /* fd was opened without O_RDWR */
+              errno = EACCES; /* not specified by POSIX */
+              break;
+            default:
+              errno = EINVAL;
+              break;
+            }
           return -1;
         }
     }
@@ -459,7 +477,9 @@ fdutimens (int fd, char const *file, struct timespec const timespec[2])
         return -1;
       }
 
-#if HAVE_WORKING_UTIMES
+#ifdef USE_SETFILETIME
+    return _gl_utimens_windows (file, ts);
+#elif HAVE_WORKING_UTIMES
     return utimes (file, t);
 #else
     {

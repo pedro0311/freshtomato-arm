@@ -24,22 +24,21 @@
 
 <style type='text/css'>
 #txt {
-width: 550px;
-white-space: nowrap;
+	width: 550px;
+	white-space: nowrap;
 }
 #bwm-controls {
-text-align: right;
-margin-right: 5px;
-margin-top: 5px;
-float: right;
-visibility: hidden;
+	text-align: right;
+	margin-right: 5px;
+	margin-top: 5px;
+	float: right;
+	visibility: hidden;
 }
 ul.tabs a,
 #tabs a {
-width: 140px;
-height: 12px;
-font-size: 9px;
-font-weight:bold;
+	width: 165px;
+	height: 15px;
+	font-size: 10px;
 }
 </style>
 
@@ -64,6 +63,7 @@ var updateReTotal = 1;
 var hours = 24;
 var lastHours = 0;
 var debugTime = 0;
+var cstats_busy = 0;
 
 var ipt_addr_shown = [];
 var ipt_addr_hidden = [];
@@ -162,7 +162,7 @@ ref.initX = function() {
 
 function init() {
 	if (nvram.cstats_enable != '1') {
-		E('refresh-button').disabled = 1;
+		E('refresh-button').setAttribute("disabled", "disabled");
 		return;
 	}
 
@@ -290,15 +290,15 @@ function verifyFields(focused, quiet) {
 	}
 
 	if (E('_f_ipt_addr_hidden').length < 2) {
-		E('_f_ipt_addr_hidden').disabled = 1;
+		E('_f_ipt_addr_hidden').setAttribute("disabled", "disabled");
 	} else {
-		E('_f_ipt_addr_hidden').disabled = 0;
+		E('_f_ipt_addr_hidden').removeAttribute("disabled");
 	}
 
 	if (E('_f_ipt_addr_shown').length < 2) {
-		E('_f_ipt_addr_shown').disabled = 1;
+		E('_f_ipt_addr_shown').setAttribute("disabled", "disabled");
 	} else {
-		E('_f_ipt_addr_shown').disabled = 0;
+		E('_f_ipt_addr_shown').removeAttribute("disabled");
 	}
 
 	return 1;
@@ -319,7 +319,8 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<div id='cstats'>
+<div class='section-title'>IP Traffic - Last 24 Hours</div>
+<div id="cstats">
 	<div id='tab-area'></div>
 
 	<script type='text/javascript'>
@@ -344,15 +345,14 @@ function verifyFields(focused, quiet) {
 			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
 			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
 			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
-		<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-		<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
+			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
+			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
 		Max:&nbsp;
 			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
 			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
 		Unit:&nbsp;
 			<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
 			<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
-		Display:&nbsp;
 		Display:&nbsp;
 			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
 			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
@@ -364,57 +364,48 @@ function verifyFields(focused, quiet) {
 
 	<br /><br />
 	<table border=0 cellspacing=2 id='txt'>
-	<tr>
-		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-		<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-		<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
-		<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
-		<td>&nbsp;</td>
-	</tr>
-</table>
+		<tr>
+			<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
+			<td style='display:width:15%' align='right' valign='top'><span id='rx-current'></span></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='rx-avg'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='rx-max'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='display:width:14%' align='right' valign='top' id='rx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td style='display:width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
+			<td style='display:width:15%' align='right' valign='top'><span id='tx-current'></span></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Avg</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='tx-avg'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Peak</b></td>
+			<td style='display:width:15%' align='right' valign='top' id='tx-max'></td>
+			<td style='display:width:8%' align='right' valign='top'><b>Total</b></td>
+			<td style='display:width:14%' align='right' valign='top' id='tx-total'></td>
+			<td>&nbsp;</td>
+		</tr>
+	</table>
 
 <!-- / / / -->
 
-<br />
-
-<div>
-<script type='text/javascript'>
-	createFieldTable('', [
-		{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
-		{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
-	]);
-</script>
-</div>
-
-</div>
+	<div>
+		<script type='text/javascript'>
+			createFieldTable('', [
+				{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
+				{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
+			]);
+		</script>
+	</div>
 
 <br />
+
+</div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>
-	if (nvram.cstats_enable != '1') {
-		W('<div class="note-disabled">IP Traffic monitoring disabled.<\/b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;<\/a><div>');
-		E('cstats').style.display = 'none';
-	} else {
-		W('<div class="note-warning" style="display:none" id="rbusy">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
-	}
-</script>
+<script type='text/javascript'>checkCstats();</script>
 
 <!-- / / / -->
 

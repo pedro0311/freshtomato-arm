@@ -580,11 +580,11 @@ The following global toggles are available:
 'Suspension Toggle (Meta-Z)'
      toggles the '-z' ('--suspend') command-line option.
 
-'Soft Wrapping Toggle (Meta-$)'
-     toggles the '-$' ('--softwrap') command-line option.
-
 'Line Numbers Toggle (Meta-#)'
      toggles the '-l' ('--linenumbers') command-line option.
+
+'Soft Wrapping Toggle (Meta-$)'
+     toggles the '-$' ('--softwrap') command-line option.
 
 
 File: nano.info,  Node: Nanorc Files,  Next: The File Browser,  Prev: Feature Toggles,  Up: Top
@@ -1404,6 +1404,16 @@ some differences between the editors:
      you close a file, and will place the cursor in that position again
      when you later reopen the file.
 
+'Current Cursor Position'
+     The output of the "Display Cursor Position" command (^C) displays
+     not only the current line and character position of the cursor, but
+     also (between the two) the current column position.
+
+'Spell Checking'
+     In the internal spell checker misspelled words are sorted
+     alphabetically and trimmed for uniqueness, such that the words
+     'apple' and 'Apple' will be prompted for correction separately.
+
 'Writing Selected Text to Files'
      When using the Write-Out key (^O), text that has been selected
      using the marking key (^^) can not just be written out to a new (or
@@ -1432,16 +1442,6 @@ some differences between the editors:
      does not have to be restarted to turn a particular feature on or
      off.  See the internal help function (^G) for a list of features
      that can be toggled.  Or see *Note Feature Toggles:: instead.
-
-'Current Cursor Position'
-     The output of the "Display Cursor Position" command (^C) displays
-     not only the current line and character position of the cursor, but
-     also (between the two) the current column position.
-
-'Spell Checking'
-     In the internal spell checker misspelled words are sorted
-     alphabetically and trimmed for uniqueness, such that the words
-     'apple' and 'Apple' will be prompted for correction separately.
 
 
 File: nano.info,  Node: Building and Configure Options,  Prev: Pico Compatibility,  Up: Top

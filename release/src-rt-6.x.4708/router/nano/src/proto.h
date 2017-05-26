@@ -176,7 +176,7 @@ extern char *homedir;
 typedef void (*functionptrtype)(void);
 
 /* Most functions in browser.c. */
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
 char *do_browse_from(const char *inpath);
 void read_the_list(const char *path, DIR *dir);
 functionptrtype parse_browser_input(int *kbinput);
@@ -225,13 +225,13 @@ char *mbstrpbrk(const char *s, const char *accept);
 char *revstrpbrk(const char *head, const char *accept, const char *index);
 char *mbrevstrpbrk(const char *head, const char *accept, const char *index);
 #endif
-#if !defined(DISABLE_NANORC) && (!defined(NANO_TINY) || !defined(DISABLE_JUSTIFY))
+#if defined(ENABLE_NANORC) && (!defined(NANO_TINY) || !defined(DISABLE_JUSTIFY))
 bool has_blank_mbchars(const char *s);
 #endif
 #ifdef ENABLE_UTF8
 bool is_valid_unicode(wchar_t wc);
 #endif
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 bool is_valid_mbstring(const char *s);
 #endif
 
@@ -304,11 +304,11 @@ void do_writeout_void(void);
 void do_savefile(void);
 #endif
 char *real_dir_from_tilde(const char *buf);
-#if !defined(DISABLE_TABCOMP) || !defined(DISABLE_BROWSER)
+#if defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
 int diralphasort(const void *va, const void *vb);
 void free_chararray(char **array, size_t len);
 #endif
-#ifndef DISABLE_TABCOMP
+#ifdef ENABLE_TABCOMP
 char *input_tab(char *buf, bool allow_files, size_t *place,
 	bool *lastwastab, void (*refresh_func)(void), bool *listed);
 #endif
@@ -466,14 +466,14 @@ int do_prompt(bool allow_tabs, bool allow_files,
 int do_yesno_prompt(bool all, const char *msg);
 
 /* Most functions in rcfile.c. */
-#ifndef DISABLE_NANORC
+#ifdef ENABLE_NANORC
 #ifndef DISABLE_COLOR
 bool parse_color_names(char *combostr, short *fg, short *bg, bool *bright);
 void grab_and_store(const char *kind, char *ptr, regexlisttype **storage);
 #endif
 void parse_rcfile(FILE *rcstream, bool syntax_only);
 void do_rcfiles(void);
-#endif /* !DISABLE_NANORC */
+#endif /* ENABLE_NANORC */
 
 /* Most functions in search.c. */
 void not_found_msg(const char *str);
@@ -496,7 +496,7 @@ void do_gotolinecolumn(ssize_t line, ssize_t column, bool use_answer,
 void do_gotolinecolumn_void(void);
 #ifndef NANO_TINY
 void do_find_bracket(void);
-#ifndef DISABLE_TABCOMP
+#ifdef ENABLE_TABCOMP
 char *get_history_completion(filestruct **h, char *s, size_t len);
 #endif
 #endif
@@ -650,7 +650,7 @@ void warn_and_shortly_pause(const char *msg);
 void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void onekey(const char *keystroke, const char *desc, int length);
-void place_the_cursor(void);
+void place_the_cursor(bool forreal);
 void edit_draw(filestruct *fileptr, const char *converted,
 	int line, size_t from_col);
 int update_line(filestruct *fileptr, size_t index);
@@ -662,7 +662,9 @@ int go_back_chunks(int nrows, filestruct **line, size_t *leftedge);
 int go_forward_chunks(int nrows, filestruct **line, size_t *leftedge);
 bool less_than_a_screenful(size_t was_lineno, size_t was_leftedge);
 void edit_scroll(scroll_dir direction, int nrows);
+#ifndef NANO_TINY
 void ensure_firstcolumn_is_aligned(void);
+#endif
 void edit_redraw(filestruct *old_current);
 void edit_refresh(void);
 void adjust_viewport(update_type location);
@@ -681,22 +683,28 @@ void disable_nodelay(void);
 void do_credits(void);
 #endif
 
-/* May as well throw these here, since they are just placeholders. */
+/* These are just name definitions. */
 void do_cancel(void);
 void case_sens_void(void);
 void regexp_void(void);
+void backwards_void(void);
+void flip_replace(void);
 void gototext_void(void);
+#ifdef ENABLE_BROWSER
 void to_files_void(void);
+void goto_dir_void(void);
+#endif
+#ifndef NANO_TINY
 void dos_format_void(void);
 void mac_format_void(void);
 void append_void(void);
 void prepend_void(void);
 void backup_file_void(void);
+void flip_execute(void);
+#endif
+#ifdef ENABLE_MULTIBUFFER
+void flip_newbuffer(void);
+#endif
 void discard_buffer(void);
-void new_buffer_void(void);
-void backwards_void(void);
-void goto_dir_void(void);
-void flip_replace_void(void);
-void flip_execute_void(void);
 
 #endif /* !PROTO_H */

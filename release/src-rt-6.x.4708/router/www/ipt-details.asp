@@ -313,8 +313,8 @@ grid.setup = function() {
 
 function init() {
 	if (nvram.cstats_enable != '1') {
-		E('refresh-time').disabled = 1;
-		E('refresh-button').disabled = 1;
+		E('refresh-time').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute("disabled", "disabled");
 		return;
 	}
 
@@ -448,42 +448,45 @@ function toggleVisibility(whichone) {
 <td id='content'>
 <div id='ident'><% ident(); %></div>
 
+<!-- / / / -->
+
+<div class='section-title'>IP Traffic - Transfer Rates</div>
 <div id='cstats'>
-<!-- / / / -->
+	<div class='section'>
+		<div id="grid" class="tomato-grid" style="float:left"></div>
 
-<div class='section-title'>IP Traffic Details</div>
-<div class='section'>
-	<div id="grid" class="tomato-grid" style="float:left"></div>
-
-<div id='loading'><br /><b>Loading...</b></div>
-</div>
+		<div id='loading'><br /><b>Loading...</b></div>
+	</div>
 
 <!-- / / / -->
 
-<div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivoptions' style='display:none'>
-<script type='text/javascript'>
-var c;
-c = [];
-c.push({ title: 'Only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
-c.push({ title: 'Ignore inactive hosts', name: 'f_onlyactive', type: 'checkbox' });
-c.push({ title: 'Show hostnames', name: 'f_hostnames', type: 'checkbox' });
-c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-createFieldTable('',c);
-</script>
-<div style="float:right;text-align:right">
-&raquo; <a href="admin-iptraffic.asp">Configure</a>
-</div>
+	<div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
+	<div class='section' id='sesdivoptions' style='display:none'>
+		<script type='text/javascript'>
+		var c;
+		c = [];
+		c.push({ title: 'Only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
+		c.push({ title: 'Ignore inactive hosts', name: 'f_onlyactive', type: 'checkbox' });
+		c.push({ title: 'Show hostnames', name: 'f_hostnames', type: 'checkbox' });
+		c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+		createFieldTable('',c);
+		</script>
+		<div style="float:right;text-align:right">
+			&raquo; <a href="admin-iptraffic.asp">Configure</a>
+		</div>
+	</div>
+
+	<br />
+
 </div>
 
 <!-- / / / -->
-
-</div>
-<br />
 
 <script type='text/javascript'>checkCstats();</script>
+
+<!-- / / / -->
 
 </td></tr>
 <tr><td id='footer' colspan=2>

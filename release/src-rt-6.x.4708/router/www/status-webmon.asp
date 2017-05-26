@@ -315,28 +315,20 @@ sg.populate = function() {
 
 function init()
 {
+	new observer(InNewWindow).observe(E("dom-grid"), { childList: true, subtree: true });
+
 	ref.initPage();
 
 	if (!ref.running) ref.once = 1;
 	ref.start();
-
-    if (observer) {
-        new observer(InNewWindow).observe(E("dom-grid"), { childList: true, subtree: true });
-    } else {
-        addEvent(E("dom-grid"), "DOMNodeInserted", function() { InNewWindow(); } );
-    }
 }
 
-var observer = getMutationObserver();
-
-function getMutationObserver() {
-    return window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-}
+var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
 function InNewWindow () {
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function earlyInit()
@@ -344,7 +336,7 @@ function earlyInit()
 	if (nvram.log_wm == '1' && (nvram.log_wmdmax != '0' || nvram.log_wmsmax != '0')) {
 		E('webmon').style.display = '';
 		E('webmon2').style.display = '';
-		E('wm-disabled').style.display = 'none';
+		E('webmonoff').style.display = 'none';
 
 		maxLimit = nvram.log_wmdmax * 1;
 		if (nvram.log_wmsmax * 1 > maxLimit) maxLimit = nvram.log_wmsmax * 1;
@@ -385,6 +377,7 @@ function earlyInit()
 
 <!-- / / / -->
 
+<div id="webmonoff" class="section-title">Web Usage</div>
 <div id='webmon' style='display:none'>
 	<div id='webmon-domains'>
 		<div class='section-title'>Recently Visited Web Sites</div>
@@ -427,12 +420,13 @@ function earlyInit()
 	</div>
 </div>
 
-<div id='wm-disabled'>
-	<b>Web Monitoring disabled.</b>
-	<br /><br />
-	<a href="admin-log.asp">Enable &raquo;</a>
-	<br /><br />
-</div>
+<!-- / / / -->
+
+<script type='text/javascript'>
+if (!(nvram.log_wm == '1' && (nvram.log_wmdmax != '0' || nvram.log_wmsmax != '0'))) {
+	W('<div class="note-disabled"><b>Web Monitoring disabled.<\/b><br /><br /><a href="admin-log.asp">Enable &raquo;<\/a><\/div>\n');
+}
+</script>
 
 <!-- / / / -->
 

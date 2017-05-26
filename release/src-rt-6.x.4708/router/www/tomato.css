@@ -183,7 +183,7 @@ ul.tabs a,
 	display: block;
 	float: left;
 	padding: 3px 0;
-	margin: 0 3px 0 0;
+	margin: 3px 3px 0 0;
 	text-align: center;
 	text-decoration: none;
 	color: #888;
@@ -205,7 +205,7 @@ ul.tabs a:hover,
 div.tabs-bottom,
 #tabs-bottom {
 	clear:both;
-	border-top: 1px solid #eee;
+	border-top: 12px solid #eee;
 	padding: 0;
 }
 
@@ -368,7 +368,7 @@ table.fields {
 .note-warning {
 	background: #f7f7f7;
 	border: 1px solid #aaa;
-	width: 10em;
+	width: 15em;
 	padding: 0.5em;
 	margin: 1em;
 	font-size: 0.9em

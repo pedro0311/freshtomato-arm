@@ -408,7 +408,7 @@ createFieldTable('', [
 <div class='section'>
 <br />
 	<ul>
-	<li><b>Request PD Only:</b> Check for ISP's that require only a Prefix Delegation(usually PPPOE(Dsl,Fiber?) connections).</li>
+	<li><b>Request PD Only:</b> Check for ISP's that require only a Prefix Delegation (usually PPPOE (Dsl, Fiber?) connections).</li>
 	</ul>
 </div>
 

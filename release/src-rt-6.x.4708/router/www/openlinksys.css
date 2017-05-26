@@ -269,7 +269,7 @@ textarea {
 }
 
 form {
-	-moz-border-radius: 25px;
+	border-radius: 25px;
 }
 
 input[type=text],

@@ -439,19 +439,18 @@ function init()
 <input type='hidden' name='qos_orules'>
 
 <div class='section-title'>Outbound Direction</div>
-<div class='section'>
-	<div class="tomato-grid" id="qg"></div>
-</div>
 
-<br />
 <script type='text/javascript'>
 if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.<\/b> &nbsp; <a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
-}
-else {
+	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+} else {
 	show_notice1('<% notice("iptables"); %>');
 }
 </script>
+
+<div class='section'>
+	<div class="tomato-grid" id="qg"></div>
+</div>
 
 <!-- / / / -->
 

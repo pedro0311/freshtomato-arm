@@ -162,10 +162,10 @@ Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br
 <b>Tomato-RAF features:</b><br />
 - Extended Sysinfo<br />
 <!-- NOCAT-BEGIN -->
-- Captive Portal. (Based in NocatSplash)<br />
+- Captive Portal (Based in NocatSplash)<br />
 <!-- NOCAT-END -->
 <!-- NGINX-BEGIN -->
-- Web Server. (NGinX)<br />
+- Web Server (NGinX)<br />
 <!-- NGINX-END -->
 <!-- HFS-BEGIN -->
 - HFS / HFS+ filesystem integration<br />

@@ -1106,14 +1106,13 @@ void do_insertfile(void)
 	} else {
 	    ssize_t was_current_lineno = openfile->current->lineno;
 	    size_t was_current_x = openfile->current_x;
-#if !defined(NANO_TINY) || !defined(DISABLE_BROWSER)
+#if !defined(NANO_TINY) || defined(ENABLE_BROWSER) || defined(ENABLE_MULTIBUFFER)
 	    functionptrtype func = func_from_key(&i);
 #endif
 	    given = mallocstrcpy(given, answer);
 
-#ifndef NANO_TINY
 #ifdef ENABLE_MULTIBUFFER
-	    if (func == new_buffer_void) {
+	    if (func == flip_newbuffer) {
 		/* Don't allow toggling when in view mode. */
 		if (!ISSET(VIEW_MODE))
 		    TOGGLE(MULTIBUFFER);
@@ -1122,13 +1121,13 @@ void do_insertfile(void)
 		continue;
 	    }
 #endif
-	    if (func == flip_execute_void) {
+#ifndef NANO_TINY
+	    if (func == flip_execute) {
 		execute = !execute;
 		continue;
 	    }
-#endif /* !NANO_TINY */
-
-#ifndef DISABLE_BROWSER
+#endif
+#ifdef ENABLE_BROWSER
 	    if (func == to_files_void) {
 		char *chosen = do_browse_from(answer);
 
@@ -1199,7 +1198,7 @@ void do_insertfile(void)
 		    set_modified();
 
 		/* Update current_y to account for inserted lines. */
-		place_the_cursor();
+		place_the_cursor(TRUE);
 
 		refresh_needed = TRUE;
 	    }
@@ -2128,11 +2127,12 @@ int do_writeout(bool exiting)
 	    msg = (method == PREPEND) ? _("Prepend Selection to File") :
 			(method == APPEND) ? _("Append Selection to File") :
 			_("Write Selection to File");
+	else if (method != OVERWRITE)
+	    msg = (method == PREPEND) ? _("File Name to Prepend to") :
+					_("File Name to Append to");
 	else
 #endif /* !NANO_TINY */
-	    msg = (method == PREPEND) ? _("File Name to Prepend to") :
-			(method == APPEND) ? _("File Name to Append to") :
-			_("File Name to Write");
+	    msg = _("File Name to Write");
 
 	present_path = mallocstrcpy(present_path, "./");
 
@@ -2157,24 +2157,15 @@ int do_writeout(bool exiting)
 	} else {
 	    functionptrtype func = func_from_key(&i);
 
-	    /* Upon request, abandon the buffer, if user is sure. */
+	    /* Upon request, abandon the buffer. */
 	    if (func == discard_buffer) {
-		if (openfile->modified)
-		    i = do_yesno_prompt(FALSE,
-				_("Save modified buffer anyway? "));
-		else
-		    i = 0;
-
-		if (i == 0) {
-		    free(given);
-		    return 2;	/* Yes, discard the buffer. */
-		} else
-		    continue;	/* Go back to the filename prompt. */
+		free(given);
+		return 2;
 	    }
 
 	    given = mallocstrcpy(given, answer);
 
-#ifndef DISABLE_BROWSER
+#ifdef ENABLE_BROWSER
 	    if (func == to_files_void) {
 		char *chosen = do_browse_from(answer);
 
@@ -2185,7 +2176,7 @@ int do_writeout(bool exiting)
 		free(answer);
 		answer = chosen;
 	    } else
-#endif /* !DISABLE_BROWSER */
+#endif
 #ifndef NANO_TINY
 	    if (func == dos_format_void) {
 		openfile->fmt = (openfile->fmt == DOS_FILE) ? NIX_FILE :
@@ -2386,7 +2377,7 @@ char *real_dir_from_tilde(const char *buf)
     return retval;
 }
 
-#if !defined(DISABLE_TABCOMP) || !defined(DISABLE_BROWSER)
+#if defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
 /* Our sort routine for file listings.  Sort alphabetically and
  * case-insensitively, and sort directories before filenames. */
 int diralphasort(const void *va, const void *vb)
@@ -2423,7 +2414,7 @@ void free_chararray(char **array, size_t len)
 }
 #endif
 
-#ifndef DISABLE_TABCOMP
+#ifdef ENABLE_TABCOMP
 /* Is the given path a directory? */
 bool is_dir(const char *buf)
 {
@@ -2747,7 +2738,7 @@ char *input_tab(char *buf, bool allow_files, size_t *place,
 
     return buf;
 }
-#endif /* !DISABLE_TABCOMP */
+#endif /* ENABLE_TABCOMP */
 
 /* Return the filename part of the given path. */
 const char *tail(const char *path)
@@ -3003,7 +2994,7 @@ void update_poshistory(char *filename, ssize_t lineno, ssize_t xpos)
     poshiststruct *posptr, *theone, *posprev = NULL;
     char *fullpath = get_full_path(filename);
 
-    if (fullpath == NULL || fullpath[strlen(fullpath) - 1] == '/') {
+    if (fullpath == NULL || fullpath[strlen(fullpath) - 1] == '/' || inhelp) {
 	free(fullpath);
 	return;
     }
@@ -3075,7 +3066,7 @@ bool has_old_position(const char *file, ssize_t *line, ssize_t *column)
     free(fullpath);
 
     if (posptr == NULL)
-        return FALSE;
+	return FALSE;
 
     *line = posptr->lineno;
     *column = posptr->xno;

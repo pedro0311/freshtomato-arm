@@ -49,22 +49,22 @@ function cmpHist(a, b)
 function checkRstats()
 {
 	if (nvram.rstats_enable != '1') {
-		W('<div class="note-disabled">Bandwidth monitoring disabled.</b><br /><br /><a href="admin-bwm.asp">Enable &raquo;</a></div>');
+		W('<div class="note-disabled"><b>Bandwidth monitoring disabled.<\/b><br /><br /><a href="admin-bwm.asp">Enable &raquo;<\/a><\/div>');
 		E('rstats').style.display = 'none';
 	}
 	else if (rstats_busy) {
-		W('<div class="note-warning">The rstats program is not responding or is busy. Try reloading after a few seconds.</div>');
+		W('<div class="note-warning">The rstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
 	}
 }
 
 function checkCstats()
 {
 	if (nvram.cstats_enable != '1') {
-		W('<div class="note-disabled">IP Traffic monitoring disabled.</b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;</a></div>');
+		W('<div class="note-disabled"><b>IP Traffic monitoring disabled.<\/b><br /><br /><a href="admin-iptraffic.asp">Enable &raquo;<\/a><\/div>');
 		E('cstats').style.display = 'none';
 	}
 	else if (cstats_busy) {
-		W('<div class="note-warning">The cstats program is not responding or is busy. Try reloading after a few seconds.</div>');
+		W('<div class="note-warning">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
 	}
 }
 

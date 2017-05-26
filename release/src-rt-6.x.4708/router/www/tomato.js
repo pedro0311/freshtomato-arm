@@ -2142,15 +2142,17 @@ TomatoRefresh.prototype = {
 
 	updateUI: function(mode) {
 		var e, b;
-
 		if (typeof(E) == 'undefined') return;	// for a bizzare bug...
 
 		b = (mode != 'stop') && (this.refreshTime > 0);
+
 		if ((e = E('refresh-button')) != null) {
 			e.value = b ? 'Stop' : 'Refresh';
-			e.disabled = ((mode == 'start') && (!b));
+			((mode == 'start') && (!b) ? e.setAttribute("disabled", "disabled") : e.removeAttribute("disabled"));
 		}
-		if ((e = E('refresh-time')) != null) e.disabled = b;
+
+		if ((e = E('refresh-time')) != null)
+			(b == 0 ? e.removeAttribute("disabled") : e.setAttribute("disabled", "disabled"))
 		if ((e = E('refresh-spinner')) != null) e.style.visibility = b ? 'visible' : 'hidden';
 	},
 

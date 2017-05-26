@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see http://www.gnu.org/licenses/.
 
-AC_INIT([GNU nano], [2.8.2], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [2.8.4], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.14])
@@ -64,8 +64,13 @@ dnl Checks for options.
 
 AC_ARG_ENABLE(browser,
 AS_HELP_STRING([--disable-browser], [Disable the built-in file browser]))
-if test "x$enable_browser" = xno; then
-    AC_DEFINE(DISABLE_BROWSER, 1, [Define this to disable the built-in file browser.])
+if test "x$enable_tiny" = xyes; then
+    if test "x$enable_browser" != xyes; then
+	enable_browser=no
+    fi
+fi
+if test "x$enable_browser" != xno; then
+    AC_DEFINE(ENABLE_BROWSER, 1, [Define this to enable the built-in file browser.])
 fi
 
 AC_ARG_ENABLE(color,
@@ -93,10 +98,8 @@ if test "x$enable_tiny" = xyes; then
 	enable_comment=no
     fi
 fi
-if test "x$disable_comment" != xyes; then
-    if test "x$enable_comment" != xno; then
-	AC_DEFINE(ENABLE_COMMENT, 1, [Define this to enable the comment/uncomment function.])
-    fi
+if test "x$enable_comment" != xno; then
+    AC_DEFINE(ENABLE_COMMENT, 1, [Define this to enable the comment/uncomment function.])
 fi
 
 AC_ARG_ENABLE(extra,
@@ -110,7 +113,7 @@ AS_HELP_STRING([--disable-help], [Disable the built-in help texts]))
 if test "x$enable_tiny" = xyes; then
     if test "x$enable_help" = xyes; then
 	if test "x$enable_multibuffer" != xyes; then
-	    AC_MSG_ERROR([--enable-help cannot work without --enable-multibuffer])
+	    AC_MSG_ERROR([--enable-help needs --enable-multibuffer to work])
 	fi
     else
 	enable_help=no
@@ -124,10 +127,8 @@ if test "x$enable_multibuffer" = xno; then
 	enable_help=no
     fi
 fi
-if test "x$disable_help" != xyes; then
-    if test "x$enable_help" != xno; then
-	AC_DEFINE(ENABLE_HELP, 1, [Define this to enable the Ctrl+G help texts.])
-    fi
+if test "x$enable_help" != xno; then
+    AC_DEFINE(ENABLE_HELP, 1, [Define this to enable the Ctrl+G help texts.])
 fi
 
 AC_ARG_ENABLE(histories,
@@ -152,10 +153,8 @@ if test "x$enable_tiny" = xyes; then
 	enable_linenumbers=no
     fi
 fi
-if test "x$disable_linenumbers" != xyes; then
-    if test "x$enable_linenumbers" != xno; then
-	AC_DEFINE(ENABLE_LINENUMBERS, 1, [Define this to enable line numbering.])
-    fi
+if test "x$enable_linenumbers" != xno; then
+    AC_DEFINE(ENABLE_LINENUMBERS, 1, [Define this to enable line numbering.])
 fi
 
 AC_ARG_ENABLE(mouse,
@@ -165,10 +164,8 @@ if test "x$enable_tiny" = xyes; then
 	enable_mouse=no
     fi
 fi
-if test "x$disable_mouse" != xyes; then
-    if test "x$enable_mouse" != xno; then
-	AC_DEFINE(ENABLE_MOUSE, 1, [Define this to enable mouse support.])
-    fi
+if test "x$enable_mouse" != xno; then
+    AC_DEFINE(ENABLE_MOUSE, 1, [Define this to enable mouse support.])
 fi
 
 AC_ARG_ENABLE(multibuffer,
@@ -178,17 +175,19 @@ if test "x$enable_tiny" = xyes; then
 	enable_multibuffer=no
     fi
 fi
-if test "x$disable_multibuffer" != xyes; then
-    if test "x$enable_multibuffer" != xno; then
-	AC_DEFINE(ENABLE_MULTIBUFFER, 1, [Define this to enable multiple file buffers.])
-    fi
+if test "x$enable_multibuffer" != xno; then
+    AC_DEFINE(ENABLE_MULTIBUFFER, 1, [Define this to enable multiple file buffers.])
 fi
 
 AC_ARG_ENABLE(nanorc,
 AS_HELP_STRING([--disable-nanorc], [Disable the use of .nanorc files]))
-if test "x$enable_nanorc" = xno; then
-    AC_DEFINE(DISABLE_NANORC, 1, [Define this to disable the use of .nanorc files.])
-else
+if test "x$enable_tiny" = xyes; then
+    if test "x$enable_nanorc" != xyes; then
+	enable_nanorc=no
+    fi
+fi
+if test "x$enable_nanorc" != xno; then
+    AC_DEFINE(ENABLE_NANORC, 1, [Define this to enable the use of .nanorc files.])
     nanorc_support=yes
 fi
 
@@ -206,8 +205,13 @@ fi
 
 AC_ARG_ENABLE(tabcomp,
 AS_HELP_STRING([--disable-tabcomp], [Disable the tab-completion functions]))
-if test "x$enable_tabcomp" = xno; then
-    AC_DEFINE(DISABLE_TABCOMP, 1, [Define this to disable the tab-completion functions for filenames and search strings.])
+if test "x$enable_tiny" = xyes; then
+    if test "x$enable_tabcomp" != xyes; then
+	enable_tabcomp=no
+    fi
+fi
+if test "x$enable_tabcomp" != xno; then
+    AC_DEFINE(ENABLE_TABCOMP, 1, [Define this to have tab completion for filenames and search strings.])
 fi
 
 AC_ARG_ENABLE(wordcomp,
@@ -219,10 +223,8 @@ if test "x$enable_tiny" = xyes; then
 	enable_wordcomp=no
     fi
 fi
-if test "x$disable_wordcomp" != xyes; then
-    if test "x$enable_wordcomp" != xno; then
-	AC_DEFINE(ENABLE_WORDCOMPLETION, 1, [Define this to enable the word-completion function.])
-    fi
+if test "x$enable_wordcomp" != xno; then
+    AC_DEFINE(ENABLE_WORDCOMPLETION, 1, [Define this to enable the word-completion function.])
 fi
 
 AC_ARG_ENABLE(wrapping,
@@ -249,15 +251,12 @@ AC_ARG_ENABLE(tiny,
 AS_HELP_STRING([--enable-tiny], [Disable features for the sake of size]))
 if test "x$enable_tiny" = xyes; then
     AC_DEFINE(NANO_TINY, 1, [Define this to make the nano executable as small as possible.])
-    if test "x$enable_browser" != xyes; then
-	AC_DEFINE(DISABLE_BROWSER, 1, [Define this to disable the built-in file browser.])
-    fi
     if test "x$enable_color" != xyes; then
 	AC_DEFINE(DISABLE_COLOR, 1, [Define this to disable syntax highlighting.])
 	color_support=no
     else
 	if test "x$enable_nanorc" != xyes; then
-	    AC_MSG_ERROR([--enable-color with --enable-tiny cannot work without --enable-nanorc])
+	    AC_MSG_ERROR([--enable-color needs --enable-nanorc to work])
 	fi
     fi
     if test "x$enable_extra" != xyes; then
@@ -272,17 +271,11 @@ if test "x$enable_tiny" = xyes; then
     if test "x$enable_libmagic" != xyes; then
 	enable_libmagic=no
     fi
-    if test "x$enable_nanorc" != xyes; then
-	AC_DEFINE(DISABLE_NANORC, 1, [Define this to disable the use of .nanorc files.])
-    fi
     if test "x$enable_operatingdir" != xyes; then
 	AC_DEFINE(DISABLE_OPERATINGDIR, 1, [Define this to disable the setting of an operating directory (a chroot of sorts).])
     fi
     if test "x$enable_speller" != xyes; then
 	AC_DEFINE(DISABLE_SPELLER, 1, [Define this to disable the spell-checker functions.])
-    fi
-    if test "x$enable_tabcomp" != xyes; then
-	AC_DEFINE(DISABLE_TABCOMP, 1, [Define this to disable the tab-completion functions for files and search strings.])
     fi
     if test "x$enable_wrapping" != xyes; then
 	AC_DEFINE(DISABLE_WRAPPING, 1, [Define this to disable all text wrapping.])

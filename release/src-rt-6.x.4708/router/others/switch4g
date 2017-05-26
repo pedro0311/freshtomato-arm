@@ -8,7 +8,7 @@
 PREFIX=$1
 
 PID=$$
-PIDFILE="/tmp/switch4g.pid"
+PIDFILE="/var/run/switch4g.pid"
 READYFILE="/tmp/4g.ready"
 DETECTFILE="/tmp/4g.detect"
 MODE=`nvram get "$PREFIX"_proto`
