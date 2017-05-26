@@ -1275,8 +1275,8 @@ TomatoGrid.prototype = {
 			var att_c = this.tb.getAttribute("class");
 			var att_s = this.tb.getAttribute("style");
 			var table = document.createElement("table");
-			table.setAttribute("class", att_c);
-			table.setAttribute("style", att_s);
+			if (att_c) table.setAttribute("class", att_c);
+			if (att_s) table.setAttribute("style", att_s);
 			this.tb.appendChild(table);
 			this.tb = E(table);
 			this.tb.gridObj = this;

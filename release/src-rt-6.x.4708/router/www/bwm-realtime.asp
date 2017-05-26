@@ -53,7 +53,7 @@ var wdog = null;
 var wdogWarn = null;
 
 
-var ref = new TomatoRefresh('update.cgi', 'exec=netdev', 2);
+var ref = new TomatoRefresh('update.cgi', 'exec=netdev', updateInt);
 
 ref.stop = function() {
 	this.timer.start(1000);
@@ -71,12 +71,12 @@ ref.refresh = function(text) {
 
 		n = (new Date()).getTime();
 		if (this.timeExpect) {
-			if (debugTime) E('dtime').innerHTML = (this.timeExpect - n) + ' ' + ((this.timeExpect + 2000) - n);
-			this.timeExpect += 2000;
+			if (debugTime) E('dtime').innerHTML = (this.timeExpect - n) + ' ' + ((this.timeExpect + 1000*updateInt) - n);
+			this.timeExpect += 1000*updateInt;
 			this.refreshTime = MAX(this.timeExpect - n, 500);
 		}
 		else {
-			this.timeExpect = n + 2000;
+			this.timeExpect = n + 1000*updateInt;
 		}
 
 		for (i in netdev) {
@@ -110,22 +110,19 @@ ref.refresh = function(text) {
 	--updating;
 }
 
-function watchdog()
-{
+function watchdog() {
 	watchdogReset();
 	ref.stop();
 	wdogWarn.style.display = '';
 }
 
-function watchdogReset()
-{
+function watchdogReset() {
 	if (wdog) clearTimeout(wdog)
-	wdog = setTimeout(watchdog, 10000);
+	wdog = setTimeout(watchdog, 5000*updateInt);
 	wdogWarn.style.display = 'none';
 }
 
-function init()
-{
+function init() {
 	speed_history = [];
 
 	initCommon(2, 1, 1, 1);

@@ -91,8 +91,8 @@ function upgrade()
 	<div class='section'>
 		<form name='form_upgrade' method='post' action='upgrade.cgi' encType='multipart/form-data'>
 		<div id='box-input'>
-			Select the file to use:<br />
-			<input type='file' name='file' size='50' style='height:20px'> <input type='button' value='Upgrade' id='afu-upgrade-button' onclick='upgrade()' style='height:20px'>
+			Select the file to use:<br /><br />
+			<input type='file' name='file' size='50' style='height:25px'> <input type='button' value='Upgrade' id='afu-upgrade-button' onclick='upgrade()' style='height:25px'>
 		</div>
 		</form>
 		<br /><form name='form_reset' action='javascript:{}'>
@@ -102,12 +102,14 @@ function upgrade()
 		</form>
 
 		<br />
+		<br />
 		<table border=0>
 		<tr><td>Current Version:</td><td>&nbsp; <% version(1); %></td></tr>
-		<tr><td>
+		<tr><td>Free Memory:</td><td>&nbsp; 
 			<script type='text/javascript'>
-			W('Free Memory:<\/td><td>&nbsp; ' + scaleSize(sysinfo.totalfreeram) + ' &nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>');
+			W(scaleSize(sysinfo.totalfreeram));
 			</script>
+		 &nbsp; <small>(aprox. size that can be buffered completely in RAM)</small>
 		</td></tr>
 		</table>
 

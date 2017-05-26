@@ -179,31 +179,35 @@ function init()
 		</div>
 	</form>
 </div>
-<hr>
-<span style='color:blue'>
-<b>Captive Portal. User Guide.</b><br />
+
 <br />
-<b>*- Enable function:</b> When you tick and save the router will show a Welcome Banner when a computer access the Internet.<br />
-<b>*- Interface:</b> Select one of the bridges on which Captive Portal will listen.<br />
-<b>*- Gateway name:</b> The name of the Gateway appearing in the welcome banner<br />
-<b>*- Captive Site Forwarding:</b> When active, the 'Home Page' (read next line) will appear after you Agree in Welcome Banner.<br />
-<b>*- Home page:</b> The URL that will appear after you Agree the Welcome Banner.<br />
-<b>*- Welcome html Path:</b> The location where the Welcome banner is located<br />
-<b>*- Logged Timeout:</b> During this period of time no Welcome banner will appear when you access to the device. Default=3600 sec.(1 Hour).<br />
-<b>*- Idle Timeout:</b> Expired time where you can't access the device again.Default value=0.<br />
-<b>*- Max Missed ARP:</b> Number of lost ARP before considering the client has leaved the connection. Default = 5<br />
-<b>*- Log Info Level:</b> Messages from this module stored internally for better trace. Level 0=Silent, 10=Parrot, 2=Default.<br />
-<b>*- Gateway Port:</b> Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default=5280.<br />
-<b>*- Excluded/Included ports to be redirected:</b> When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use prefereable one of the two option to avoid conflicts.<br />
-<b>*- URL excluded off the portal:</b> URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://www.google.com http://www.google.es<br />
-<b>*- MAC address whitelist:</b> MAC addresses excluded of the feature. Leave a blank space between each MAC Address, i.e; 11:22:33:44:55:66 11:22:33:44:55:67<br />
-<b>*- Customized Splash File Path:</b> Here you can upload your personal Welcome banner that will overwrite the default one.<br /><br />
-</span>
-<br />
+
+<div class='section-title'>Notes</div>
+<div class='section'>
+	<ul>
+		<li><b>Enable function:</b> When you tick and save the router will show a Welcome Banner when a computer access the Internet.</li>
+		<li><b>Interface:</b> Select one of the bridges on which Captive Portal will listen.</li>
+		<li><b>Gateway name:</b> The name of the Gateway appearing in the welcome banner</li>
+		<li><b>Captive Site Forwarding:</b> When active, the 'Home Page' (read next line) will appear after you Agree in Welcome Banner.</li>
+		<li><b>Home page:</b> The URL that will appear after you Agree the Welcome Banner.</li>
+		<li><b>Welcome html Path:</b> The location where the Welcome banner is located</li>
+		<li><b>Logged Timeout:</b> During this period of time no Welcome banner will appear when you access to the device. Default=3600 sec.(1 Hour).</li>
+		<li><b>Idle Timeout:</b> Expired time where you can't access the device again.Default value=0.</li>
+		<li><b>Max Missed ARP:</b> Number of lost ARP before considering the client has leaved the connection. Default = 5</li>
+		<li><b>Log Info Level:</b> Messages from this module stored internally for better trace. Level 0=Silent, 10=Parrot, 2=Default.</li>
+		<li><b>Gateway Port:</b> Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default=5280.</li>
+		<li><b>Excluded/Included ports to be redirected:</b> When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use prefereable one of the two option to avoid conflicts.</li>
+		<li><b>URL excluded off the portal:</b> URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://www.google.com http://www.google.es</li>
+		<li><b>MAC address whitelist:</b> MAC addresses excluded of the feature. Leave a blank space between each MAC Address, i.e; 11:22:33:44:55:66 11:22:33:44:55:67</li>
+		<li><b>Customized Splash File Path:</b> Here you can upload your personal Welcome banner that will overwrite the default one.</li>
+	</ul>
+</div>
+
 <span style='color:red'>
 <b> Note: If Login Time is expired you should re-enter again into the splash page to get a new lease period. Be aware, there is no notice about expired period so, you can loss Internet Access.</b><br />
 </span>
 <br />
+
 </td></tr>
 <tr><td id='footer' colspan=2>
 	<form action=''>
