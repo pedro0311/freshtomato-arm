@@ -246,7 +246,7 @@ function anon_update()
 	if (update == "no") { return 0; }
 
 	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
-	code += '<div class="fields" style="text-align:center">Newer version of Tomato ARM ' + update + ' is now available. <a class="new_window" href="https://mega.nz/#F!bAcVXCSY!DgPc0zfhunujKblc1qsQ0w">Click here to download<\/a>.<\/div>';
+	code += '<div class="fields" style="text-align:center">Newer version of Tomato ARM ' + update + ' is now available. <a class="new_window" href="https://exotic.se/tomato-arm">Click here to download<\/a>.<\/div>';
 	code += '<\/div>';
 	E("nversion").style.display = "block";
 	E("nversion").innerHTML = code;
