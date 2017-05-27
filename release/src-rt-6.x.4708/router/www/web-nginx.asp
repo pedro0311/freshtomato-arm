@@ -180,7 +180,7 @@ createFieldTable('', [
 		<li><b> Allow remote access:</b> This option will open the Web Server GUI port from the WAN side. Service will be accessed from the internet.</li>
 		<li><b> Web Server Name:</b> Name that will appear on top of your Internet Browser.</li>
 		<li><b> Document Root Path:</b> The path in your router where documents are stored.</li>
-		<li><b> Examples:</b></li>
+		<li><b> Examples:</b><br />
 			/tmp/mnt/HDD/www as you can find in USB mount path.</li>
 		<li><b> NGINX Custom Configuration:</b> You can add other values to nginx.conf to suit your needs.</li>
 		<li><b> NGINX HTTP Section Custom Configuration:</b> You can add other values to nginx.conf in declaration of http {} to suit your needs.</li>
