@@ -451,15 +451,15 @@ struct nvram_tuple router_defaults[] = {
 #endif
 #endif
 
-	{ "wan_pptp_server_ip",		""				, 0 },	// as same as WAN gateway
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
-	{ "wan_pptp_dhcp",		"0"				, 0 },
 
 	// for firewall
+	{ "wan_pptp_server_ip",		""				, 0 },	// as same as WAN gateway
+	{ "wan_pptp_dhcp",		"0"				, 0 },
 	{ "wan_mtu_enable",		"0"				, 0 },	// WAN MTU [1|0]
 	{ "wan_mtu",			"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
-
 	{ "wan_l2tp_server_ip",		""				, 0 },	// L2TP auth server (IP Address)
+
 	{ "wan2_pptp_server_ip",	""				, 0 },	// as same as WAN gateway
 	{ "wan2_pptp_dhcp",		"0"				, 0 },
 	{ "wan2_mtu_enable",		"0"				, 0 },	// WAN MTU [1|0]
@@ -1008,10 +1008,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_dhcp",     "1"             , 0 },
 	{ "vpn_server1_r1",       "192.168.1.50"  , 0 },
 	{ "vpn_server1_r2",       "192.168.1.55"  , 0 },
-	{ "vpn_server1_sn",       "10.8.0.0"      , 0 },
+	{ "vpn_server1_sn",       "10.6.0.0"      , 0 },
 	{ "vpn_server1_nm",       "255.255.255.0" , 0 },
-	{ "vpn_server1_local",    "10.8.0.1"      , 0 },
-	{ "vpn_server1_remote",   "10.8.0.2"      , 0 },
+	{ "vpn_server1_local",    "10.6.0.1"      , 0 },
+	{ "vpn_server1_remote",   "10.6.0.2"      , 0 },
 	{ "vpn_server1_reneg",    "-1"            , 0 },
 	{ "vpn_server1_hmac",     "-1"            , 0 },
 	{ "vpn_server1_plan",     "1"             , 0 },
@@ -1044,10 +1044,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_dhcp",     "1"             , 0 },
 	{ "vpn_server2_r1",       "192.168.1.50"  , 0 },
 	{ "vpn_server2_r2",       "192.168.1.55"  , 0 },
-	{ "vpn_server2_sn",       "10.8.0.0"      , 0 },
+	{ "vpn_server2_sn",       "10.7.0.0"      , 0 },
 	{ "vpn_server2_nm",       "255.255.255.0" , 0 },
-	{ "vpn_server2_local",    "10.8.0.1"      , 0 },
-	{ "vpn_server2_remote",   "10.8.0.2"      , 0 },
+	{ "vpn_server2_local",    "10.7.0.1"      , 0 },
+	{ "vpn_server2_remote",   "10.7.0.2"      , 0 },
 	{ "vpn_server2_reneg",    "-1"            , 0 },
 	{ "vpn_server2_hmac",     "-1"            , 0 },
 	{ "vpn_server2_plan",     "1"             , 0 },
@@ -1173,7 +1173,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_route",    "0"             , 0 },
 	{ "vpn_client3_routing_val", ""           , 0 },
 #endif
-    // vpn
+
 #ifdef TCONFIG_PPTPD
 	{ "pptp_client_enable",   "0"             , 0 },
 	{ "pptp_client_peerdns",  "0"             , 0 },

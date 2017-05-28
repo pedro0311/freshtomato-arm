@@ -31,7 +31,9 @@ fi
 
 watchdogRun() {
     for PREFIX in $MWANTABLE; do
-
+        # wan test by check_wanup, in case there is ppp mess and other wans active with the same
+        # interface name (ppp0 etc) all checks will be false-positive. wanuptime is real stuff!
+        ISUP=`wanuptime "$PREFIX"`
         IFACE=`nvram get "$PREFIX"_iface`
         WEIGHT=`nvram get "$PREFIX"_weight`
         ADDR=`ifconfig "$IFACE" | grep inet | cut -d ":" -f2 | cut -d " " -f1`
@@ -48,25 +50,29 @@ watchdogRun() {
                 METRIC=`expr $PREFNR + 100`
             fi
 
-            $DEBUG $PREFIX $METRIC
+            $DEBUG $PREFIX metric $METRIC iface $IFACE uptime $ISUP
 
             ADD=0
             ISGW=`ip route | grep $IFACE | grep -v "link" | wc -l`
             $DEBUG "ISGW=$ISGW, WEIGHT=$WEIGHT"
 
-            if [ "$ISGW" == "0" -a "$WEIGHT" -gt 0 ]; then
+            if [ "$ISGW" == "0" -a "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
                 #failback required default gateway to check is indeed connection back to live
                 #so we have to add temporary gateway
                 GW=`ip route | grep $IFACE | grep -v "kernel" | awk {' printf $1'}`
-                $DEBUG "add gw $GW for $IFACE"
-                if [ -n "$GW" -a ! "$GW" == "0.0.0.0" ]; then
-                    route add default gw $GW metric $METRIC
-                    ADD=1
-                    $DEBUG "add=1"
+                if [ ! $GW ]; then # no GW found
+                    $DEBUG "no gw found for $IFACE"
+                else
+                    $DEBUG "add test gw $GW for $IFACE"
+                    if [ -n "$GW" -a ! "$GW" == "0.0.0.0" ]; then
+                        route add default gw $GW metric $METRIC
+                        ADD=1
+                        $DEBUG "add=1"
+                    fi
                 fi
             fi
 
-            if [ "$WEIGHT" -gt 0 ]; then
+            if [ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
                 if [ "$MTD" == "1" ]; then
                     ckping
                     $DEBUG "run ping-test"
@@ -82,7 +88,7 @@ watchdogRun() {
             #remove temporary added gateway
             if [ "$ADD" == "1" ]; then
                 route del default gw $GW
-                $DEBUG "del gw $GW"
+                $DEBUG "del test gw $GW"
             fi
 
             if [ "$RESULT" == "0" -a "$WEIGHT" == "0" ]; then
@@ -94,7 +100,7 @@ watchdogRun() {
 
             if [ "$RESULT" == "0" ]; then #wan is down
                 $DEBUG "result=0, restart $PREFIX"
-                logger -t watchdog[$PID] "Connection $PREFIX down - Reconnecting ..."
+                logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
                 echo "0" > /tmp/state_$PREFIX
 
                 if [ "$PROTO" == "lte" ]; then
@@ -130,7 +136,7 @@ cktracert() {
     if [ "$RXBYTES2" -gt "$RXBYTES1" ]; then
         RESULT=1
     fi
-    $DEBUG tracert RX2=$RXBYTES2 RX1=$RXBYTES1
+    $DEBUG tracert for $IFACE: RX2=$RXBYTES2 RX1=$RXBYTES1
 }
 
 ckping() {
@@ -148,7 +154,7 @@ ckping() {
 
     if [ "$OK" -gt 0 ]; then
         RESULT=1
-        $DEBUG "ping OK=1"
+        $DEBUG "ping for $IFACE: OK=1"
     fi
 }
 

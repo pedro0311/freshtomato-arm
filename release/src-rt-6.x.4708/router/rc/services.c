@@ -2958,7 +2958,7 @@ TOP:
 		if (action & A_START) {
 			rename("/tmp/ppp/wan_log", "/tmp/ppp/wan_log.~");
 			start_wan(BOOT);
-			sleep(2);
+			sleep(5);
 			force_to_dial("wan");
 			force_to_dial("wan2");
 #ifdef TCONFIG_MULTIWAN
@@ -2976,7 +2976,7 @@ TOP:
 
 		if (action & A_START) {
 			start_wan_if(BOOT, "wan");
-			sleep(2);
+			sleep(5);
 			force_to_dial("wan");
 		}
 		goto CLEAR;
@@ -2989,7 +2989,7 @@ TOP:
 
 		if (action & A_START) {
 			start_wan_if(BOOT, "wan2");
-			sleep(2);
+			sleep(5);
 			force_to_dial("wan2");
 		}
 		goto CLEAR;
@@ -3003,7 +3003,7 @@ TOP:
 
 		if (action & A_START) {
 			start_wan_if(BOOT, "wan3");
-			sleep(2);
+			sleep(5);
 			force_to_dial("wan3");
 		}
 		goto CLEAR;
@@ -3016,7 +3016,7 @@ TOP:
 
 		if (action & A_START) {
 			start_wan_if(BOOT, "wan4");
-			sleep(2);
+			sleep(5);
 			force_to_dial("wan4");
 		}
 		goto CLEAR;
