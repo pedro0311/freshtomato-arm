@@ -225,6 +225,16 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 #ifdef LINUX26
 #ifdef TCONFIG_USB
 	case WP_PPP3G:
+		if (nvram_match("usb_3g", "1") && nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g")) {
+			// clear old gateway
+			if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) >0 ) {  //"wan_gateway"
+				nvram_set(strcat_r(prefix, "_gateway", tmp), "");
+			}
+
+			// detect 3G Modem
+			xstart("switch3g", prefix);
+		}
+
 		memset(ppp3g_chatfile, 0, 256);
 		sprintf(ppp3g_chatfile, "/tmp/ppp/%s_connect.chat", prefix);
 		if ((cfp = fopen(ppp3g_chatfile, "w")) == NULL) {
@@ -240,12 +250,12 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"REPORT CONNECT\n"
 			"\"\" \"AT\"\n");
 /* moved to switch3g script
-		if (strlen(nvram_get("modem_pin")) >0 ) {
+		if (strlen(nvram_get(strcat_r(prefix, "_modem_pin", tmp))) > 0 ) {
 			fprintf(cfp, 
 				"TIMEOUT 60\n"
 				"OK \"AT+CPIN=%s\"\n"
 				"TIMEOUT 10\n",
-				nvram_get("modem_pin"));
+				nvram_safe_get(strcat_r(prefix, "_modem_pin", tmp)));
 		}
 */
 		fprintf(cfp,
@@ -272,17 +282,6 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			nvram_safe_get(strcat_r(prefix, "_modem_init", tmp)) //"modem_init"
 			);
 		fclose(cfp);
-
-
-		if (nvram_match("usb_3g", "1") && nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g")) {
-			// clear old gateway
-			if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) >0 ) {  //"wan_gateway"
-				nvram_set(strcat_r(prefix, "_gateway", tmp), "");
-			}
-
-			// detect 3G Modem
-			xstart("switch3g", prefix);
-		}
 		break;
 #endif
 #endif
@@ -411,13 +410,17 @@ void start_pptp(int mode, char *prefix)
 void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 {
 	int i;
+	int proto;
 	char tmp[100];
+	struct in_addr ipaddr;
+	char saddr[INET_ADDRSTRLEN];
 
 	/* Delete all default routes */
 	route_del(ifname, 0, NULL, NULL, NULL);
 
 	/* try adding a route to gateway first */
 	route_add(ifname, 0, gw, NULL, "255.255.255.255");
+	mwanlog(LOG_DEBUG, "### preset_wan: route_add(%s,0,%s,NULL,255.255.255.255)",ifname, gw);
 
 	/* Set default route to gateway if specified */
 	i = 5;
@@ -433,7 +436,30 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 		if ((inet_addr(word) & mask) != (inet_addr(nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp))) & mask))  //"wan_ipaddr"
 			route_add(ifname, 0, word, gw, "255.255.255.255");
 	}
-	if(!strcmp(prefix,"wan")){
+
+	/* Add routes to PPTP/L2TP servers for load-balanced WAN setups will work.
+	   Without it, if there is other WAN active, xl2tpd / pptp tries to connect
+	   to l2tp/pptp server not via WAN's gateway, but setup route via existing
+	   Internet connection (other WAN gw or default) so never reached server.
+       NB! l2/pptp_server_ip can be hostname also, so route will not be added */
+
+	proto = get_wanx_proto(prefix);
+	if (proto == WP_PPTP) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &(ipaddr.s_addr))) {
+			inet_ntop(AF_INET, &(ipaddr.s_addr), saddr, INET_ADDRSTRLEN);
+			mwanlog(LOG_DEBUG, "### preset_wan: got %s_pptp_server_ip, add route to %s...", prefix, saddr);
+			route_add(ifname, 0, saddr, gw, "255.255.255.255");
+		}
+	}
+	if (proto == WP_L2TP) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &(ipaddr.s_addr))) {
+		inet_ntop(AF_INET, &(ipaddr.s_addr), saddr, INET_ADDRSTRLEN);
+			mwanlog(LOG_DEBUG, "### preset_wan: got %s_l2tp_server_ip, add route to %s...", prefix, saddr);
+			route_add(ifname, 0, saddr, gw, "255.255.255.255");
+		}
+	}
+
+	if(!strcmp(prefix,"wan")) {
 		dns_to_resolv();
 		start_dnsmasq();
 		sleep(1);
@@ -1143,6 +1169,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			if (proto == WP_PPTP || proto == WP_L2TP) {
 				// delete gateway route as it's no longer needed
 				route_del(wan_ifname, 0, gw, "0.0.0.0", "255.255.255.255");
+				mwanlog(LOG_DEBUG, "### start_wan_done: route_del(%s,0,%s,0.0.0.0,255.255.255.255)", wan_ifname, gw);
 			}
 		}
 
@@ -1162,12 +1189,16 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 		if (proto == WP_PPTP || proto == WP_L2TP) {
 			route_del(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)), NULL, "255.255.255.255"); //"wan_iface","wan_gateway_get"
+			mwanlog(LOG_DEBUG, "### start_wan_done, route_del(%s,0,%s,NULL,%s)", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)));
 			route_add(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)), NULL, "255.255.255.255"); //"wan_iface","ppp_get_ip"
+			mwanlog(LOG_DEBUG, "### start_wan_done, route_add(%s,0,%s,NULL,%s)", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
 		}
+/* moved to preset_wan()
 		if (proto == WP_L2TP) {
 			route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
 			// "wan_ifname","l2tp_server_ip","wan_getaway"
 		}
+*/
 	}
 
 	dns_to_resolv();
