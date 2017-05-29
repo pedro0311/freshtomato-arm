@@ -92,6 +92,7 @@ int ipup_main(int argc, char **argv)
 	
 	if ((p = getenv("IPREMOTE"))) {
 		nvram_set(strcat_r(prefix, "_gateway_get", tmp), p);
+		mwanlog(LOG_DEBUG,"### ipup_main: set %s_gateway_get=%s", prefix, p);
 		TRACE_PT("IPREMOTE=%s\n", p);
 	}
 
@@ -172,10 +173,17 @@ int ipdown_main(int argc, char **argv)
 		nvram_set(strcat_r(prefix, "_get_dns", tmp),"");
 		dns_to_resolv();
 
-		if (proto == WP_L2TP) {
-			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)),
-				nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
-		}
+ 		if (proto == WP_L2TP) {
+ 			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)),
+			nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
+			mwanlog(LOG_DEBUG,"### ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+ 		}
+
+ 		if (proto == WP_PPTP) {
+ 			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)),
+			nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255");
+			mwanlog(LOG_DEBUG,"### ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+ 		}
 
 		// Restore the default gateway for WAN interface
 		nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
@@ -183,6 +191,7 @@ int ipdown_main(int argc, char **argv)
 		// Set default route to gateway if specified
 		route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
 		route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
+		mwanlog(LOG_DEBUG,"### ipdown_main: route_add(%s,0,0.0.0.0,%s,0.0.0.0)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 	}
 
 	if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) {
