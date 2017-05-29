@@ -44,7 +44,7 @@
 
 #define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
 
-static void make_secrets(char *prefix) //static void make_secrets(void)
+static void make_secrets(char *prefix) // static void make_secrets(void)
 {
 	FILE *f;
 	char *user;
@@ -53,8 +53,8 @@ static void make_secrets(char *prefix) //static void make_secrets(void)
 	char secrets_file[256];
 	char tmp[100];
 
-	user = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)); //"ppp_username" -> strcat_r(prefix, "_ppp_username", tmp)
-	pass = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp));   //"ppp_passwd" -> strcat_r(prefix, "_ppp_passwd", tmp)
+	user = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)); //"ppp_username"
+	pass = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp));   //"ppp_passwd"
 	
 	memset(secrets_file, 0, 256);
 	sprintf(secrets_file, "/tmp/ppp/%s_pap-secrets", prefix);
@@ -96,7 +96,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 #endif
 	symlink("/dev/null", "/tmp/ppp/connect-errors");
 
-	demand = nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)); //"ppp_demand" -> strcat_r(prefix, "_ppp_demand", tmp)
+	demand = nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)); //"ppp_demand"
 
 	// Generate options file
 	memset(ppp_optfile, 0, 256);
@@ -111,7 +111,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 	char ppp3g_chatfile[256];
 	memset(ppp3g_chatfile, 0, 256);
 	sprintf(ppp3g_chatfile, "/tmp/ppp/%s_connect.chat", prefix);
-	if (nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g") ) { //"_proto" -> strcat_r(prefix, "_proto", tmp)
+	if (nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g") ) { //"_proto"
 		fprintf(fp,
 			"/dev/%s\n"
 			"460800\n"
@@ -121,11 +121,11 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"crtscts\n"
 			"modem\n"
 			"ipcp-accept-local\n",
-			nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)), //"modem_dev" -> strcat_r(prefix, "_modem_dev", tmp)
+			nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)), //"modem_dev"
 			ppp3g_chatfile);
 
-		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) >0 ) //if (strlen(nvram_get("ppp_username")) >0 )
-			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp)));// "ppp_username" -> strcat_r(prefix, "_ppp_username", tmp)
+		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) >0 )
+			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp))); //"ppp_username"
 		if (strlen(nvram_get(strcat_r(prefix, "_ppp_passwd", tmp))) >0 )
 			fprintf(fp, "password \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_passwd", tmp)));
 			fprintf(fp, "linkname %s\n", prefix);	// link name for WAN ID
@@ -139,8 +139,8 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"linkname %s\n"	// link name for WAN ID
 			"lcp-echo-adaptive\n",	// Suppress LCP echo-requests if traffic was received
 			num,
-			nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)), //"ppp_usrename" -> strcat_r(prefix, "_ppp_username", tmp
-			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd" -> strcat_r(prefix, "_ppp_passwd", tmp
+			nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)), //"ppp_username"
+			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd"
 			prefix);	// link name for WAN ID
 #ifdef LINUX26
 #ifdef TCONFIG_USB
@@ -160,14 +160,14 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 		"lcp-echo-interval %d\n"// Interval between LCP echo-requests
 		"lcp-echo-failure %d\n"	// Tolerance to unanswered echo-requests
 		"%s",			// Debug
-		nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10, //"pppoe_lei" -> strcat_r(prefix, "_pppoe_lei", tmp)
-		nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,  //"pppoe_lef" -> strcat_r(prefix, "_pppoe_lef", tmp)
+		nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10, //"pppoe_lei"
+		nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,  //"pppoe_lef"
 		nvram_get_int("debug_ppp") ? "debug\n" : ""); //"debug_ppp"
 
 #ifdef LINUX26
 #ifdef TCONFIG_USB
 	if (nvram_match(strcat_r(prefix, "_wan_proto", tmp), "ppp3g") && nvram_match(strcat_r(prefix, "_modem_dev", tmp), "ttyACM0") ) {  //"wan_proto", "modem_dev"
-		//don`t write nopcomp and noaccomp options
+		// don`t write nopcomp and noaccomp options
 	} else {
 #endif
 #endif
@@ -211,7 +211,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 //			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd"
 			nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), //"wan_ifname"
 			nvram_get_int(strcat_r(prefix, "_mtu", tmp)),
-			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));  //"wan_mtu
+			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));  //"wan_mtu"
 		if (((p = nvram_get(strcat_r(prefix, "_ppp_service", tmp))) != NULL) && (*p)) {  //"ppp_service"
 			fprintf(fp, "rp_pppoe_service '%s'\n", p); 
 		}
@@ -342,7 +342,7 @@ static void stop_ppp(char *prefix)
 	killall_tk("ipv6-up");
 	killall_tk("ipv6-down");
 #endif
-	killall_tk("xl2tpd");
+	//killall_tk("xl2tpd"); /* xl2tpd may be used by other WANs, moved to stop_l2tp */
 	//kill(nvram_get_int(strcat_r(prefix, "_pppd_pid", tmp)),1); 
 	killall_tk((char *)pppd_name);
 	killall_tk("listen");
@@ -669,7 +669,17 @@ static int config_l2tp(void) { // shared xl2tpd.conf for all WAN
 
 inline void stop_l2tp(char *prefix)
 {
-	stop_ppp(prefix);
+	char l2tp_file[64];
+	char dconnects[64];
+
+	memset(l2tp_file, 0, 64);
+	sprintf(l2tp_file, "/var/run/l2tp-control");
+	memset(dconnects, 0, 64);
+	sprintf(dconnects, "d %s", prefix);
+	f_write_string(l2tp_file, dconnects, 0, 0); // disconnect current session
+	stop_ppp(prefix); /* unlink ppp files in /tmp/ppp (used by mwan.c) */
+	/* stop l2tp daemon */
+	killall_tk("xl2tpd");
 }
 
 void start_l2tp(char *prefix)
@@ -692,7 +702,7 @@ void start_l2tp(char *prefix)
 	enable_ip_forward();
 
 	mwanlog(LOG_DEBUG, "start_l2tp, cmd: xl2tpd -c /etc/xl2tpd.conf");
-	eval("xl2tpd", "-c", "/etc/xl2tpd.conf");
+	eval("xl2tpd", "-c", "/etc/xl2tpd.conf"); /* not sure it even works */
 
 	if (demand) {
 		eval("listen", nvram_safe_get("lan_ifname"), prefix);
@@ -721,7 +731,7 @@ char *wan_gateway(char *prefix)
 // trigger connect on demand
 void force_to_dial(char *prefix)
 {
-	char l2tp_file[256];
+	char l2tp_file[64];
 //	char tmp[64];
 	char connects[64];
 
@@ -730,9 +740,10 @@ void force_to_dial(char *prefix)
 	sleep(1);
 	switch (get_wanx_proto(prefix)) {
 	case WP_L2TP:
-		memset(l2tp_file, 0, 256);
+		memset(l2tp_file, 0, 64);
 		sprintf(l2tp_file, "/var/run/l2tp-control");
-//		sprintf(connects, "c %s", nvram_safe_get(strcat_r(prefix, "_l2tp_server_name", tmp)));	// connect control command
+		memset(connects, 0, 64);
+//		sprintf(connects, "c %s", nvram_safe_get(strcat_r(prefix, "_l2tp_server_name", tmp))); // connect control command
 		sprintf(connects, "c %s", prefix);
 		mwanlog(LOG_DEBUG, "force_to_dial, L2TP connect string = %s", connects);
 		f_write_string(l2tp_file, connects, 0, 0);
@@ -862,7 +873,7 @@ void start_wan_if(int mode, char *prefix)
 	}
 
 	// shibby fix wireless client
-	if (nvram_invmatch(strcat_r(prefix, "_sta", tmp), "")) { //wireless client as wan
+	if (nvram_invmatch(strcat_r(prefix, "_sta", tmp), "")) { // wireless client as wan
 		w = nvram_safe_get(strcat_r(prefix, "_sta", tmp));
 		p = nvram_safe_get(strcat_r(w, "_ifname", tmp));
 	}
