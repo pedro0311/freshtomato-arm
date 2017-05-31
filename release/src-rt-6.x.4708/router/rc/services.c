@@ -2992,9 +2992,12 @@ TOP:
 			start_wan(BOOT);
 			sleep(5);
 			force_to_dial("wan");
+			sleep(5);
 			force_to_dial("wan2");
 #ifdef TCONFIG_MULTIWAN
+			sleep(5);
 			force_to_dial("wan3");
+			sleep(5);
 			force_to_dial("wan4");
 #endif
 		}
