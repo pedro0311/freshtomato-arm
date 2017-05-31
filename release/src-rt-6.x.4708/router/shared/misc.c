@@ -261,9 +261,9 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 	int model;
 
 	if (mode) {
-		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,ON)");
+		mwanlog(LOG_DEBUG, "### wan_led: led(LED_WHITE,ON)");
 	} else {
-		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,OFF)");
+		mwanlog(LOG_DEBUG, "### wan_led: led(LED_WHITE,OFF)");
 	}
 
 	model = get_model();
@@ -362,11 +362,11 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 	}
 
 	if (count > 0) {
-		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, active WANs count:%d, stay on", prefix, count);
+		mwanlog(LOG_DEBUG, "### OUT wan_led_off: %s, active WANs count:%d, stay on", prefix, count);
 		return count; // do not LED OFF
 	}
 	else {
-		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, no other active WANs, turn off led", prefix);
+		mwanlog(LOG_DEBUG, "### OUT wan_led_off: %s, no other active WANs, turn off led", prefix);
 		return wan_led(LED_OFF); // LED OFF
 	}
 }
@@ -420,11 +420,11 @@ int check_wanup(char *prefix)
 				name = psname(atoi(buf1), buf2, sizeof(buf2));
 				memset(pppd_name, 0, 256);
 				sprintf(pppd_name, "pppd%s", prefix);
-				//mwanlog(LOG_INFO, "### check_wanup: pppd name=%s, psname=%s", pppd_name, name);
+				mwanlog(LOG_DEBUG, "### check_wanup: pppd name=%s, psname=%s", pppd_name, name);
 				if (strcmp(name, pppd_name) == 0) up = 1;
 				if (proto == WP_L2TP) {
 					sprintf(pppd_name, "pppd");
-					//mwanlog(LOG_INFO, "### check_wanup: L2TP pppd name=%s, psname=%s", pppd_name, name);
+					mwanlog(LOG_DEBUG, "### check_wanup: L2TP pppd name=%s, psname=%s", pppd_name, name);
 					if (strcmp(name, pppd_name) == 0) up = 1;
 				}
 			}
@@ -441,11 +441,12 @@ int check_wanup(char *prefix)
 		}
 	}
 	else if (!nvram_match(strcat_r(prefix, "_ipaddr", tmp), "0.0.0.0")) {
+		mwanlog(LOG_DEBUG, "### check_wanup: %s have IP, assume ON", prefix);
 		up = 1;
 	}
 	else {
 		_x_dprintf("%s: default !up\n", __FUNCTION__);
-		return up;	// don't turn off LED
+		return up;	// don't turn off WAN LED
 	}
 
 	if ((up) && ((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {

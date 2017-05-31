@@ -203,6 +203,14 @@ static int bound(char *ifname, int renew, char *prefix)
 	TRACE_PT("wan_6rd=%s\n", nvram_safe_get("wan_6rd"));
 #endif
 
+	mwanlog(LOG_DEBUG, "*** bound, %s_ipaddr=%s", prefix, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
+	mwanlog(LOG_DEBUG, "*** bound, %s_netmask=%s", prefix, netmask);
+	mwanlog(LOG_DEBUG, "*** bound, %s_gateway=%s", prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+	mwanlog(LOG_DEBUG, "*** bound, %s_get_dns=%s", prefix, nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
+	mwanlog(LOG_DEBUG, "*** bound, %s_routes1=%s", prefix, nvram_safe_get(strcat_r(prefix, "_routes1", tmp)));
+	mwanlog(LOG_DEBUG, "*** bound, %s_routes2=%s", prefix, nvram_safe_get(strcat_r(prefix, "_routes2", tmp)));
+
+	mwanlog(LOG_DEBUG, "*** bound, do ifconfig ...");
 	ifconfig(ifname, IFUP, "0.0.0.0", NULL);
 	ifconfig(ifname, IFUP, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), netmask);
 
@@ -211,8 +219,9 @@ static int bound(char *ifname, int renew, char *prefix)
 
 		preset_wan(ifname, gw, netmask, prefix);
 
-		/* clear dns from the resolv.conf */
+		/* clear / set dns in the resolv.conf */
 		nvram_set(strcat_r(prefix, "_get_dns", tmp), renew ? dns : "");
+		mwanlog(LOG_DEBUG, "*** bound, clear dns from resolv.conf (if not renew)");
 
 		switch (wan_proto) {
 		case WP_PPTP:
@@ -224,6 +233,7 @@ static int bound(char *ifname, int renew, char *prefix)
 		}
 	}
 	else {
+		mwanlog(LOG_DEBUG,"OUT bound: to start_wan_done, ifname=%s prefix=%s", ifname, prefix);
 		start_wan_done(ifname,prefix);
 	}
 

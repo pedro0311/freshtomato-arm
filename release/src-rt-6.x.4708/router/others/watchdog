@@ -31,7 +31,9 @@ fi
 
 watchdogRun() {
     for PREFIX in $MWANTABLE; do
-
+        # wan test by check_wanup, in case there is ppp mess and other wans active with the same
+        # interface name (ppp0 etc) all checks will be false-positive. wanuptime is real stuff!
+        ISUP=`wanuptime "$PREFIX"`
         IFACE=`nvram get "$PREFIX"_iface`
         WEIGHT=`nvram get "$PREFIX"_weight`
         ADDR=`ifconfig "$IFACE" | grep inet | cut -d ":" -f2 | cut -d " " -f1`
@@ -48,53 +50,57 @@ watchdogRun() {
                 METRIC=`expr $PREFNR + 100`
             fi
 
-            $DEBUG $PREFIX $METRIC
+            $DEBUG ""$PREFIX" metric "$METRIC" iface "$IFACE" uptime "$ISUP""
 
             ADD=0
             ISGW=`ip route | grep $IFACE | grep -v "link" | wc -l`
-            $DEBUG "ISGW=$ISGW, WEIGHT=$WEIGHT"
+            $DEBUG "ISGW="$ISGW", WEIGHT="$WEIGHT""
 
-            if [ "$ISGW" == "0" -a "$WEIGHT" -gt 0 ]; then
+            if [ "$ISGW" -eq 0 -a "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
                 #failback required default gateway to check is indeed connection back to live
                 #so we have to add temporary gateway
                 GW=`ip route | grep $IFACE | grep -v "kernel" | awk {' printf $1'}`
-                $DEBUG "add gw $GW for $IFACE"
-                if [ -n "$GW" -a ! "$GW" == "0.0.0.0" ]; then
-                    route add default gw $GW metric $METRIC
-                    ADD=1
-                    $DEBUG "add=1"
+                if [ ! $GW ]; then # no GW found
+                    $DEBUG "no gw found for "$IFACE""
+                else
+                    $DEBUG "add test gw "$GW" for "$IFACE""
+                    if [ -n "$GW" -a ! "$GW" == "0.0.0.0" ]; then
+                        route add default gw $GW metric $METRIC
+                        ADD=1
+                        $DEBUG "add=1"
+                    fi
                 fi
             fi
 
-            if [ "$WEIGHT" -gt 0 ]; then
-                if [ "$MTD" == "1" ]; then
-                    ckping
+            if [ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
+                if [ "$MTD" -eq 1 ]; then
                     $DEBUG "run ping-test"
-                elif [ "$MTD" == "2" ]; then
-                    cktracert
+                    ckping
+                elif [ "$MTD" -eq 2 ]; then
                     $DEBUG "run tracert-test"
+                    cktracert
                 else
-                    ckwget
                     $DEBUG "run wget-test"
+                    ckwget
                 fi
             fi
 
             #remove temporary added gateway
-            if [ "$ADD" == "1" ]; then
+            if [ "$ADD" -eq 1 ]; then
                 route del default gw $GW
-                $DEBUG "del gw $GW"
+                $DEBUG "del test gw "$GW""
             fi
 
-            if [ "$RESULT" == "0" -a "$WEIGHT" == "0" ]; then
+            if [ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ]; then
                 #failover does not have default gateway in route table
                 #so we can`t check connection to outside. Check only if interface exist
                 ckfailover
                 $DEBUG "run failover-test"
             fi
 
-            if [ "$RESULT" == "0" ]; then #wan is down
-                $DEBUG "result=0, restart $PREFIX"
-                logger -t watchdog[$PID] "Connection $PREFIX down - Reconnecting ..."
+            if [ "$RESULT" -eq 0 ]; then #wan is down
+                $DEBUG "result=0, restart "$PREFIX""
+                logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
                 echo "0" > /tmp/state_$PREFIX
 
                 if [ "$PROTO" == "lte" ]; then
@@ -113,7 +119,7 @@ watchdogRun() {
 
             else
                 echo "1" > /tmp/state_$PREFIX
-                $DEBUG "result=1, $PREFIX"
+                $DEBUG "result=1, "$PREFIX""
             fi
         fi
     done
@@ -130,25 +136,25 @@ cktracert() {
     if [ "$RXBYTES2" -gt "$RXBYTES1" ]; then
         RESULT=1
     fi
-    $DEBUG tracert RX2=$RXBYTES2 RX1=$RXBYTES1
+    $DEBUG "tracert for "$IFACE": RX2="$RXBYTES2" RX1="$RXBYTES1""
 }
 
 ckping() {
     OK=0
 
     for HOST in $HOSTLIST; do
-        $DEBUG "$IFACE - $HOST"
+        $DEBUG ""$IFACE" - "$HOST""
         TEST=`ping -I $IFACE -c 4 $HOST | grep "received" | cut -d "," -f2 | cut -d " " -f2`
-        $DEBUG "$IFACE = $TEST"
+        $DEBUG ""$IFACE" = "$TEST""
         if [ "$TEST" -gt 0 ]; then  # "0" means 100% loss - not receive any package
             OK=`expr $OK + 1`
-        $DEBUG "ping ok=$OK"
+        $DEBUG "ping ok="$OK""
         fi
     done
 
     if [ "$OK" -gt 0 ]; then
         RESULT=1
-        $DEBUG "ping OK=1"
+        $DEBUG "ping for "$IFACE": OK=1"
     fi
 }
 
@@ -173,7 +179,7 @@ ckwget() {
             RESULT=1
         fi
     done
-    $DEBUG "wget OK=$RESULT"
+    $DEBUG "wget OK="$RESULT""
 }
 
 ckfailover() {
@@ -192,7 +198,7 @@ ckfailover() {
                 fi
             else
                 RESULT=1
-                $DEBUG "failover=1, tle $TYPE"
+                $DEBUG "failover=1, lte $TYPE"
             fi
         else
             RESULT=1

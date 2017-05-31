@@ -44,7 +44,7 @@
 
 #define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
 
-static void make_secrets(char *prefix) //static void make_secrets(void)
+static void make_secrets(char *prefix) // static void make_secrets(void)
 {
 	FILE *f;
 	char *user;
@@ -53,8 +53,8 @@ static void make_secrets(char *prefix) //static void make_secrets(void)
 	char secrets_file[256];
 	char tmp[100];
 
-	user = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)); //"ppp_username" -> strcat_r(prefix, "_ppp_username", tmp)
-	pass = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp));   //"ppp_passwd" -> strcat_r(prefix, "_ppp_passwd", tmp)
+	user = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)); //"ppp_username"
+	pass = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp));   //"ppp_passwd"
 	
 	memset(secrets_file, 0, 256);
 	sprintf(secrets_file, "/tmp/ppp/%s_pap-secrets", prefix);
@@ -96,7 +96,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 #endif
 	symlink("/dev/null", "/tmp/ppp/connect-errors");
 
-	demand = nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)); //"ppp_demand" -> strcat_r(prefix, "_ppp_demand", tmp)
+	demand = nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)); //"ppp_demand"
 
 	// Generate options file
 	memset(ppp_optfile, 0, 256);
@@ -111,7 +111,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 	char ppp3g_chatfile[256];
 	memset(ppp3g_chatfile, 0, 256);
 	sprintf(ppp3g_chatfile, "/tmp/ppp/%s_connect.chat", prefix);
-	if (nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g") ) { //"_proto" -> strcat_r(prefix, "_proto", tmp)
+	if (nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g") ) { //"_proto"
 		fprintf(fp,
 			"/dev/%s\n"
 			"460800\n"
@@ -121,11 +121,11 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"crtscts\n"
 			"modem\n"
 			"ipcp-accept-local\n",
-			nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)), //"modem_dev" -> strcat_r(prefix, "_modem_dev", tmp)
+			nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)), //"modem_dev"
 			ppp3g_chatfile);
 
-		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) >0 ) //if (strlen(nvram_get("ppp_username")) >0 )
-			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp)));// "ppp_username" -> strcat_r(prefix, "_ppp_username", tmp)
+		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) >0 )
+			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp))); //"ppp_username"
 		if (strlen(nvram_get(strcat_r(prefix, "_ppp_passwd", tmp))) >0 )
 			fprintf(fp, "password \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_passwd", tmp)));
 			fprintf(fp, "linkname %s\n", prefix);	// link name for WAN ID
@@ -139,8 +139,8 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"linkname %s\n"	// link name for WAN ID
 			"lcp-echo-adaptive\n",	// Suppress LCP echo-requests if traffic was received
 			num,
-			nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)), //"ppp_usrename" -> strcat_r(prefix, "_ppp_username", tmp
-			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd" -> strcat_r(prefix, "_ppp_passwd", tmp
+			nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)), //"ppp_username"
+			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd"
 			prefix);	// link name for WAN ID
 #ifdef LINUX26
 #ifdef TCONFIG_USB
@@ -160,14 +160,14 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 		"lcp-echo-interval %d\n"// Interval between LCP echo-requests
 		"lcp-echo-failure %d\n"	// Tolerance to unanswered echo-requests
 		"%s",			// Debug
-		nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10, //"pppoe_lei" -> strcat_r(prefix, "_pppoe_lei", tmp)
-		nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,  //"pppoe_lef" -> strcat_r(prefix, "_pppoe_lef", tmp)
+		nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10, //"pppoe_lei"
+		nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,  //"pppoe_lef"
 		nvram_get_int("debug_ppp") ? "debug\n" : ""); //"debug_ppp"
 
 #ifdef LINUX26
 #ifdef TCONFIG_USB
 	if (nvram_match(strcat_r(prefix, "_wan_proto", tmp), "ppp3g") && nvram_match(strcat_r(prefix, "_modem_dev", tmp), "ttyACM0") ) {  //"wan_proto", "modem_dev"
-		//don`t write nopcomp and noaccomp options
+		// don`t write nopcomp and noaccomp options
 	} else {
 #endif
 #endif
@@ -211,7 +211,7 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 //			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)), //"ppp_passwd"
 			nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), //"wan_ifname"
 			nvram_get_int(strcat_r(prefix, "_mtu", tmp)),
-			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));  //"wan_mtu
+			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));  //"wan_mtu"
 		if (((p = nvram_get(strcat_r(prefix, "_ppp_service", tmp))) != NULL) && (*p)) {  //"ppp_service"
 			fprintf(fp, "rp_pppoe_service '%s'\n", p); 
 		}
@@ -225,6 +225,16 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 #ifdef LINUX26
 #ifdef TCONFIG_USB
 	case WP_PPP3G:
+		if (nvram_match("usb_3g", "1") && nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g")) {
+			// clear old gateway
+			if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) >0 ) {  //"wan_gateway"
+				nvram_set(strcat_r(prefix, "_gateway", tmp), "");
+			}
+
+			// detect 3G Modem
+			xstart("switch3g", prefix);
+		}
+
 		memset(ppp3g_chatfile, 0, 256);
 		sprintf(ppp3g_chatfile, "/tmp/ppp/%s_connect.chat", prefix);
 		if ((cfp = fopen(ppp3g_chatfile, "w")) == NULL) {
@@ -240,12 +250,12 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			"REPORT CONNECT\n"
 			"\"\" \"AT\"\n");
 /* moved to switch3g script
-		if (strlen(nvram_get("modem_pin")) >0 ) {
+		if (strlen(nvram_get(strcat_r(prefix, "_modem_pin", tmp))) > 0 ) {
 			fprintf(cfp, 
 				"TIMEOUT 60\n"
 				"OK \"AT+CPIN=%s\"\n"
 				"TIMEOUT 10\n",
-				nvram_get("modem_pin"));
+				nvram_safe_get(strcat_r(prefix, "_modem_pin", tmp)));
 		}
 */
 		fprintf(cfp,
@@ -272,17 +282,6 @@ static int config_pppd(int wan_proto, int num, char *prefix) //static int config
 			nvram_safe_get(strcat_r(prefix, "_modem_init", tmp)) //"modem_init"
 			);
 		fclose(cfp);
-
-
-		if (nvram_match("usb_3g", "1") && nvram_match(strcat_r(prefix, "_proto", tmp), "ppp3g")) {
-			// clear old gateway
-			if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) >0 ) {  //"wan_gateway"
-				nvram_set(strcat_r(prefix, "_gateway", tmp), "");
-			}
-
-			// detect 3G Modem
-			eval("switch3g", prefix);
-		}
 		break;
 #endif
 #endif
@@ -343,7 +342,7 @@ static void stop_ppp(char *prefix)
 	killall_tk("ipv6-up");
 	killall_tk("ipv6-down");
 #endif
-	killall_tk("xl2tpd");
+	//killall_tk("xl2tpd"); /* xl2tpd may be used by other WANs, moved to stop_l2tp */
 	//kill(nvram_get_int(strcat_r(prefix, "_pppd_pid", tmp)),1); 
 	killall_tk((char *)pppd_name);
 	killall_tk("listen");
@@ -411,13 +410,17 @@ void start_pptp(int mode, char *prefix)
 void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 {
 	int i;
+	int proto;
 	char tmp[100];
+	struct in_addr ipaddr;
+	char saddr[INET_ADDRSTRLEN];
 
 	/* Delete all default routes */
 	route_del(ifname, 0, NULL, NULL, NULL);
 
 	/* try adding a route to gateway first */
 	route_add(ifname, 0, gw, NULL, "255.255.255.255");
+	mwanlog(LOG_DEBUG, "### preset_wan: route_add(%s,0,%s,NULL,255.255.255.255)",ifname, gw);
 
 	/* Set default route to gateway if specified */
 	i = 5;
@@ -433,7 +436,30 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 		if ((inet_addr(word) & mask) != (inet_addr(nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp))) & mask))  //"wan_ipaddr"
 			route_add(ifname, 0, word, gw, "255.255.255.255");
 	}
-	if(!strcmp(prefix,"wan")){
+
+	/* Add routes to PPTP/L2TP servers for load-balanced WAN setups will work.
+	   Without it, if there is other WAN active, xl2tpd / pptp tries to connect
+	   to l2tp/pptp server not via WAN's gateway, but setup route via existing
+	   Internet connection (other WAN gw or default) so never reached server.
+       NB! l2/pptp_server_ip can be hostname also, so route will not be added */
+
+	proto = get_wanx_proto(prefix);
+	if (proto == WP_PPTP) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &(ipaddr.s_addr))) {
+			inet_ntop(AF_INET, &(ipaddr.s_addr), saddr, INET_ADDRSTRLEN);
+			mwanlog(LOG_DEBUG, "### preset_wan: got %s_pptp_server_ip, add route to %s...", prefix, saddr);
+			route_add(ifname, 0, saddr, gw, "255.255.255.255");
+		}
+	}
+	if (proto == WP_L2TP) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &(ipaddr.s_addr))) {
+		inet_ntop(AF_INET, &(ipaddr.s_addr), saddr, INET_ADDRSTRLEN);
+			mwanlog(LOG_DEBUG, "### preset_wan: got %s_l2tp_server_ip, add route to %s...", prefix, saddr);
+			route_add(ifname, 0, saddr, gw, "255.255.255.255");
+		}
+	}
+
+	if(!strcmp(prefix,"wan")) {
 		dns_to_resolv();
 		start_dnsmasq();
 		sleep(1);
@@ -643,7 +669,17 @@ static int config_l2tp(void) { // shared xl2tpd.conf for all WAN
 
 inline void stop_l2tp(char *prefix)
 {
-	stop_ppp(prefix);
+	char l2tp_file[64];
+	char dconnects[64];
+
+	memset(l2tp_file, 0, 64);
+	sprintf(l2tp_file, "/var/run/l2tp-control");
+	memset(dconnects, 0, 64);
+	sprintf(dconnects, "d %s", prefix);
+	f_write_string(l2tp_file, dconnects, 0, 0); // disconnect current session
+	stop_ppp(prefix); /* unlink ppp files in /tmp/ppp (used by mwan.c) */
+	/* stop l2tp daemon */
+	killall_tk("xl2tpd");
 }
 
 void start_l2tp(char *prefix)
@@ -666,7 +702,7 @@ void start_l2tp(char *prefix)
 	enable_ip_forward();
 
 	mwanlog(LOG_DEBUG, "start_l2tp, cmd: xl2tpd -c /etc/xl2tpd.conf");
-	eval("xl2tpd", "-c", "/etc/xl2tpd.conf");
+	eval("xl2tpd", "-c", "/etc/xl2tpd.conf"); /* not sure it even works */
 
 	if (demand) {
 		eval("listen", nvram_safe_get("lan_ifname"), prefix);
@@ -695,7 +731,7 @@ char *wan_gateway(char *prefix)
 // trigger connect on demand
 void force_to_dial(char *prefix)
 {
-	char l2tp_file[256];
+	char l2tp_file[64];
 //	char tmp[64];
 	char connects[64];
 
@@ -704,9 +740,10 @@ void force_to_dial(char *prefix)
 	sleep(1);
 	switch (get_wanx_proto(prefix)) {
 	case WP_L2TP:
-		memset(l2tp_file, 0, 256);
+		memset(l2tp_file, 0, 64);
 		sprintf(l2tp_file, "/var/run/l2tp-control");
-//		sprintf(connects, "c %s", nvram_safe_get(strcat_r(prefix, "_l2tp_server_name", tmp)));	// connect control command
+		memset(connects, 0, 64);
+//		sprintf(connects, "c %s", nvram_safe_get(strcat_r(prefix, "_l2tp_server_name", tmp))); // connect control command
 		sprintf(connects, "c %s", prefix);
 		mwanlog(LOG_DEBUG, "force_to_dial, L2TP connect string = %s", connects);
 		f_write_string(l2tp_file, connects, 0, 0);
@@ -836,7 +873,7 @@ void start_wan_if(int mode, char *prefix)
 	}
 
 	// shibby fix wireless client
-	if (nvram_invmatch(strcat_r(prefix, "_sta", tmp), "")) { //wireless client as wan
+	if (nvram_invmatch(strcat_r(prefix, "_sta", tmp), "")) { // wireless client as wan
 		w = nvram_safe_get(strcat_r(prefix, "_sta", tmp));
 		p = nvram_safe_get(strcat_r(w, "_ifname", tmp));
 	}
@@ -1143,6 +1180,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			if (proto == WP_PPTP || proto == WP_L2TP) {
 				// delete gateway route as it's no longer needed
 				route_del(wan_ifname, 0, gw, "0.0.0.0", "255.255.255.255");
+				mwanlog(LOG_DEBUG, "### start_wan_done: route_del(%s,0,%s,0.0.0.0,255.255.255.255)", wan_ifname, gw);
 			}
 		}
 
@@ -1162,12 +1200,16 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 		if (proto == WP_PPTP || proto == WP_L2TP) {
 			route_del(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)), NULL, "255.255.255.255"); //"wan_iface","wan_gateway_get"
+			mwanlog(LOG_DEBUG, "### start_wan_done, route_del(%s,0,%s,NULL,%s)", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)));
 			route_add(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)), NULL, "255.255.255.255"); //"wan_iface","ppp_get_ip"
+			mwanlog(LOG_DEBUG, "### start_wan_done, route_add(%s,0,%s,NULL,%s)", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
 		}
+/* moved to preset_wan()
 		if (proto == WP_L2TP) {
 			route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
 			// "wan_ifname","l2tp_server_ip","wan_getaway"
 		}
+*/
 	}
 
 	dns_to_resolv();

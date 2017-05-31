@@ -340,22 +340,22 @@ function init()
 	<div class="section">
 		<table border=0 width="100%">
 			<tr><td>
-				<table style="width:250px">
-					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;
-						<script type='text/javascript'>
-						W('<\/td><\/tr>\n');
-						for (i = 1; i < 11; ++i) {
-							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-							'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
-							'<td id="bocnt' + i + '" class="count" style="width:60px"><\/td>' +
-							'<td id="bocntx' + i + '" class="count" style="width:50px"><\/td>' +
-							'<td id="bopct' + i + '" class="pct"><\/td><\/tr>\n');
-						}
-						W('<tr><td>\n');
-						</script>
-					&nbsp;</td><td class="total">Total</td><td id="bocnt-total" class="total count"></td><td id="bocntx-total" class="total count"></td><td id="rateout" class="total pct"></td></tr>
-				</table>
+				<script type='text/javascript'>
+					W('<table style="width:250px">\n');
+					W('<tr><td class="color" style="height:1em"><\/td><td class="title" style="width:45px">&nbsp;<\/td><td class="thead count">kbit/s<\/td><td class="thead count">KB/s<\/td><td class="thead pct">&nbsp;\n');
+					W('<\/td><\/tr>\n');
+					for (i = 1; i < 11; ++i) {
+						W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+						'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+						'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+						'<td id="bocnt' + i + '" class="count" style="width:60px"><\/td>' +
+						'<td id="bocntx' + i + '" class="count" style="width:50px"><\/td>' +
+						'<td id="bopct' + i + '" class="pct"><\/td><\/tr>\n');
+					}
+					W('<tr><td>\n');
+					W('&nbsp;<\/td><td class="total">Total<\/td><td id="bocnt-total" class="total count"><\/td><td id="bocntx-total" class="total count"><\/td><td id="rateout" class="total pct"><\/td><\/tr>\n');
+					W('<\/table>\n');
+				</script>
 			</td><td style="margin-right:150px">
 			<script type='text/javascript'>
 			if (nvram.web_svg != '0') {
@@ -370,22 +370,22 @@ function init()
 	<div class="section">
 		<table border=0 width="100%">
 			<tr><td>
-				<table style="width:250px">
-					<tr><td class='color' style="height:1em"></td><td class='title' style="width:45px">&nbsp;</td><td class='thead count'>kbit/s</td><td class='thead count'>KB/s</td><td class='thead pct'>&nbsp;
-						<script type='text/javascript'>
-						W('<\/td><\/tr>\n');
-						for (i = 1; i < 11; ++i) {
-							W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
-							'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
-							'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
-							'<td id="bicnt' + i + '" class="count" style="width:60px"><\/td>' +
-							'<td id="bicntx' + i + '" class="count" style="width:50px"><\/td>' +
-							'<td id="bipct' + i + '" class="pct"><\/td><\/tr>\n');
-						}
-						W('<tr><td>\n');
-						</script>
-					&nbsp;</td><td class="total">Total</td><td id="bicnt-total" class="total count"></td><td id="bicntx-total" class="total count"></td><td id="ratein" class="total pct"></td></tr>
-				</table>
+				<script type='text/javascript'>
+					W('<table style="width:250px">\n');
+					W('<tr><td class="color" style="height:1em"><\/td><td class="title" style="width:45px">&nbsp;<\/td><td class="thead count">kbit/s<\/td><td class="thead count">KB/s<\/td><td class="thead pct">&nbsp;\n');
+					W('<\/td><\/tr>\n');
+					for (i = 1; i < 11; ++i) {
+						W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
+						'<td class="color" style="background:#' + colors[i] + '" onclick="mClick(' + i + ')">&nbsp;<\/td>' +
+						'<td class="title" style="width:45px"><a href="qos-detailed.asp?class=' + i + '">' + abc[i] + '<\/a><\/td>' +
+						'<td id="bicnt' + i + '" class="count" style="width:60px"><\/td>' +
+						'<td id="bicntx' + i + '" class="count" style="width:50px"><\/td>' +
+						'<td id="bipct' + i + '" class="pct"><\/td><\/tr>\n');
+					}
+					W('<tr><td>\n');
+					W('&nbsp;<\/td><td class="total">Total<\/td><td id="bicnt-total" class="total count"><\/td><td id="bicntx-total" class="total count"><\/td><td id="ratein" class="total pct"><\/td><\/tr>\n');
+					W('<\/table>\n');
+				</script>
 				</td><td style="margin-right:150px">
 				<script type='text/javascript'>
 				if (nvram.web_svg != '0') {

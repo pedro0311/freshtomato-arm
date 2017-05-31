@@ -163,7 +163,7 @@ var vlt = nvram.vlan0tag | '0';
 // set to either 5 or 8 when nvram settings are read (FastE or GigE routers)
 var SWITCH_INTERNAL_PORT=0;
 
-function verifyFields(focused, quiet){
+function verifyFields(focused, quiet) {
   for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
     var u = wl_fface(uidx);
     var wlan = E('_f_bridge_wlan'+u+'_to');
@@ -996,34 +996,34 @@ if(port_vlan_supported) vlg.setup();
 	<li><b>Bridge</b> - Determines if this VLAN ID should be treated as WAN, part of a LAN bridge or just left alone (i.e. member of a 802.1Q trunk, being managed manually via scripts, etc...).</li>
 </ul>
 <ul>
-	<li><b>Wireless</b> - Assignments of wireless interfaces to different LAN briges. You should probably be using and/or check things on <a href=advanced-wlanvifs.asp>Advanced/Virtual Wireless</a> and <a href=basic-network.asp>Basic/Network</a>.</li>
+	<li><b>Wireless</b> - Assignments of wireless interfaces to different LAN briges. You should probably be using and/or check things on <a href="advanced-wlanvifs.asp">Advanced/Virtual Wireless</a> and <a href="basic-network.asp">Basic/Network</a>.</li>
 </ul>
 <ul>
 	<li><small><b>Other relevant notes/hints:</b></small>
-		<ul>
-			<li><small>One VID <i>must</i> be assigned to WAN.</small></li>
-			<li><small>One VID <i>must</i> be selected as the default.</small></li>
-			<li style="list-style: none; display: inline"><small><script type='text/javascript'>
-			if(trunk_vlan_supported) {
-				W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag contains only user priority information).</li>');
-				W('<li>It may be also recommended to avoid using VID "1" as some vendors consider it special/reserved (for management purposes).<\/li>');
-			}
-			</script></small></li>
-		</ul>
+		<script type="text/javascript">
+		W('<ul><li><small>One VID <i>must<\/i> be assigned to WAN.<\/small><\/li>\n');
+		W('<li><small>One VID <i>must<\/i> be selected as the default.<\/small><\/li>\n');
+		W('<li style="list-style:none;display:inline"><small>\n');
+		if (trunk_vlan_supported) {
+			W('<li>To prevent 802.1Q compatibility issues, avoid using VID "0" as 802.1Q specifies that frames with a tag of "0" do not belong to any VLAN (the tag contains only user priority information).<\/li>\n');
+			W('<li>It may be also recommended to avoid using VID "1" as some vendors consider it special/reserved (for management purposes).<\/li>\n');
+		}
+		W('<\/small><\/li><\/ul>\n');
+		</script>
 		<br />
 	</li>
 </ul>
 </div>
 </div>
 <script type='text/javascript'>
-if(!port_vlan_supported) 
-  W('<i>This feature is not supported on this router.<\/i>');
-else {
-  E('sesdiv').style.display = '';
+if (!port_vlan_supported) {
+	W('<i>This feature is not supported on this router.<\/i>');
+} else {
+	E('sesdiv').style.display = '';
 }
 </script>
 </td></tr>
-<tr><td id='footer' colspan=2>
+<tr><td id='footer' colspan='2'>
 	<span id='footer-msg'></span>
 	<input type='button' value='Save' id='save-button' onclick='save()'>
 	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
