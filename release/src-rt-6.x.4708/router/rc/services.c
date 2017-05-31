@@ -1488,7 +1488,7 @@ void start_igmp_proxy(void)
 			}
 			if (!count) {
 				fclose(fp);
-				unlink(fp);
+				unlink("/etc/igmp.conf");
 				return;
 			}
 //				nvram_safe_get("lan_ifname"));
