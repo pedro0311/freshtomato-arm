@@ -104,7 +104,7 @@ int ipup_main(int argc, char **argv)
 		switch (wan_proto) {	// store last ip address for Web UI
 		case WP_PPPOE:
 		case WP_PPP3G:
-			if (wan_proto = WP_PPPOE && using_dhcpc(prefix)) { // PPPoE with DHCP MAN
+			if (wan_proto == WP_PPPOE && using_dhcpc(prefix)) { // PPPoE with DHCP MAN
 				nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
 			} else {	// PPPoE / 3G
 				nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
