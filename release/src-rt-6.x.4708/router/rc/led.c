@@ -39,11 +39,14 @@ int led_main(int argc, char *argv[])
 	if ((argc < 3) || ((argc % 2) != 1)) help();
 
 	for (j = 1; j < argc; j += 2) {
-		a = argv[j];
+		a = argv[j]; // led name
 		for (i = 0; i < LED_COUNT; ++i) {
-			if (strncmp(led_names[i], a, 2) == 0) break;
+			if ((strncmp(led_names[i], a, 2) == 0) && (strcmp("usb3",a) != 0 )) // first 2 chars except usb3
+				break;
+			else if (strcmp(led_names[i], a) == 0) // full led name (usb/usb3 workaround)
+				break;
 		}
-		a = argv[j + 1];
+		a = argv[j + 1]; // action (on/off)
 		if ((i >= LED_COUNT) || ((strcmp(a, "on") != 0) && (strcmp(a, "off") != 0))) help();
 		if (!led(i, (a[1] == 'n'))) help();
 	}
