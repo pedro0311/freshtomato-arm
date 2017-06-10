@@ -528,7 +528,7 @@
 /* #undef HAVE_LINUXTHREADS */
 
 /* Define to 1 if you have the <linux/config.h> header file. */
-#define HAVE_LINUX_CONFIG_H 1
+/* #undef HAVE_LINUX_CONFIG_H */
 
 /* Define to 1 if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
@@ -696,7 +696,7 @@
 /* #undef HAVE_PTHREAD_YIELD_ONE_ARG */
 
 /* pthread_yield that doesn't take any arguments */
-/* #undef HAVE_PTHREAD_YIELD_ZERO_ARG */
+#define HAVE_PTHREAD_YIELD_ZERO_ARG 1
 
 /* Define to 1 if you have the `putenv' function. */
 #define HAVE_PUTENV 1
@@ -1125,7 +1125,7 @@
 #define LT_OBJDIR ".libs/"
 
 /* Machine type name, eg sparc */
-#define MACHINE_TYPE "mipsel"
+#define MACHINE_TYPE "arm"
 
 /* Maximum number of indexes per table */
 #define MAX_INDEXES 64
