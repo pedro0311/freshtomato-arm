@@ -7,7 +7,7 @@
 	<manvolnum>1</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">User Commands</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -58,23 +58,32 @@
 		on STDIN. An empty command line or a "q" will quit the 
 		program.</para></listitem>
 		</varlistentry>
-		
+
 		<varlistentry>
 		<term>destination</term>
 		<listitem><para>One of <parameter>nmbd</parameter>, <parameter>smbd</parameter> or a process ID.</para>
 
+		<para>The <parameter>all</parameter> destination causes the 
+		message to "broadcast" to all running daemons including nmbd and
+		winbind. This is a change for Samba 3.3, prior to this the
+		parameter smbd used to do this.</para>
+
 		<para>The <parameter>smbd</parameter> destination causes the 
-		message to "broadcast" to all smbd daemons.</para>
+		message to be sent to the smbd daemon specified in the 
+		<filename>smbd.pid</filename> file.</para>
 
 		<para>The <parameter>nmbd</parameter> destination causes the 
 		message to be sent to the nmbd daemon specified in the 
 		<filename>nmbd.pid</filename> file.</para>
 
+		<para>The <parameter>winbindd</parameter> destination causes the 
+		message to be sent to the winbind daemon specified in the 
+		<filename>winbindd.pid</filename> file.</para>
+
 		<para>If a single process ID is given, the message is sent 
 		to only that process.</para></listitem>
 		</varlistentry>
-		
-		
+
 		<varlistentry>
 		<term>message-type</term>
 		<listitem><para>Type of message to send. See 
@@ -112,7 +121,10 @@
 	<varlistentry>
 	<term>debug</term>
 	<listitem><para>Set debug level to the value specified by the 
-	parameter. This can be sent to any of the destinations.</para>
+	parameter. This can be sent to any of the destinations. If this
+	message is sent to either the smbd or winbindd daemons, the parent
+	process will rebroadcast the message to all child processes changing
+	the debug level in each one.</para>
 	</listitem>
 	</varlistentry>
 
@@ -202,7 +214,7 @@
 
 	<para>
 	Note that this message only sends notification that an
-	event has occured.  It doesn't actually cause the
+	event has occurred.  It doesn't actually cause the
 	event to happen.
 	</para>
 
@@ -260,13 +272,39 @@
 	</para></listitem>
 	</varlistentry>
 
+	<varlistentry>
+	<term>idmap</term>
+	<listitem><para>Notify about changes of id mapping. Can be sent
+	to <constant>smbd</constant> or (not implemented yet) <constant>winbindd</constant>.
+	</para></listitem>
+
+	<variablelist>
+	  <varlistentry>
+	    <term>flush [uid|gid]</term>
+	    <listitem><para>Flush caches for sid &lt;-&gt; gid and/or sid &lt;-&gt; uid mapping.
+	    </para></listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>delete &lt;ID&gt;</term>
+	    <listitem><para>Remove a mapping from cache. The mapping is given by &lt;ID&gt;
+	    which may either be a sid: S-x-..., a gid: "GID number" or a uid: "UID number".
+	    </para></listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>kill &lt;ID&gt;</term>
+	    <listitem><para>Remove a mapping from cache. Terminate <constant>smbd</constant> if
+	    the id is currently in use.</para></listitem>
+	  </varlistentry>
+	</variablelist>
+	</varlistentry>
+
 </variablelist>
 </refsect1>
 
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of 
+	<para>This man page is correct for version 3 of 
 	the Samba suite.</para>
 </refsect1>
 

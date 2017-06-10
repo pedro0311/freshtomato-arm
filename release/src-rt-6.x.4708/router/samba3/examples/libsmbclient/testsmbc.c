@@ -7,7 +7,7 @@
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
    
    This program is distributed in the hope that it will be useful,
@@ -16,17 +16,17 @@
    GNU General Public License for more details.
    
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <libsmbclient.h>
+#include "libsmbclient.h"
 #include "get_auth_data_fn.h"
 
 int global_id = 0;
@@ -34,8 +34,12 @@ int global_id = 0;
 void print_list_fn(struct print_job_info *pji)
 {
 
-  fprintf(stdout, "Print job: ID: %u, Prio: %u, Size: %u, User: %s, Name: %s\n",
-	  pji->id, pji->priority, pji->size, pji->user, pji->name);
+  fprintf(stdout, "Print job: ID: %u, Prio: %u, Size: %lu, User: %s, Name: %s\n",
+	  pji->id,
+          pji->priority,
+          (unsigned long) pji->size,
+          pji->user,
+          pji->name);
 
   global_id = pji->id;
 
@@ -138,7 +142,8 @@ int main(int argc, char *argv[])
 
   }
 
-  fprintf(stdout, "Wrote %d bytes to file: %s\n", sizeof(buff), buff);
+  fprintf(stdout, "Wrote %lu bytes to file: %s\n",
+          (unsigned long) sizeof(buff), buff);
 
   /* Now, seek the file back to offset 0 */
 

@@ -7,7 +7,7 @@
 	<manvolnum>8</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">System Administration tools</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -120,7 +120,7 @@
 		<listitem><para>If this parameter is specified it causes the
 		server to run "interactively", not as a daemon, even if the
 		server is executed on the command line of a shell. Setting this
-		parameter negates the implicit deamon mode when run from the
+		parameter negates the implicit daemon mode when run from the
 		command line. <command>smbd</command> also logs to standard
 		output, as if the <command>-S</command> parameter had been
 		given.
@@ -239,19 +239,19 @@
 	password), for account checking (is this account disabled?) and for
 	session management.  The degree too which samba supports PAM is restricted
 	by the limitations of the SMB protocol and the <smbconfoption name="obey pam restrictions"/> <citerefentry><refentrytitle>smb.conf</refentrytitle>
-	<manvolnum>5</manvolnum></citerefentry> paramater.  When this is set, the following restrictions apply:
+	<manvolnum>5</manvolnum></citerefentry> parameter.  When this is set, the following restrictions apply:
 	</para>
 
 	<itemizedlist>
 	<listitem><para><emphasis>Account Validation</emphasis>:  All accesses to a 
 	samba server are checked 
-	against PAM to see if the account is vaild, not disabled and is permitted to 
+	against PAM to see if the account is valid, not disabled and is permitted to
 	login at this time.  This also applies to encrypted logins.
 	</para></listitem>
 
 	<listitem><para><emphasis>Session Management</emphasis>:  When not using share 
-	level secuirty, users must pass PAM's session checks before access 
-	is granted.  Note however, that this is bypassed in share level secuirty.  
+	level security, users must pass PAM's session checks before access
+	is granted.  Note however, that this is bypassed in share level security.
 	Note also that some older pam configuration files may need a line 
 	added for session support. 
 	</para></listitem>
@@ -261,7 +261,7 @@
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of 
+	<para>This man page is correct for version 3 of 
 	the Samba suite.</para>
 </refsect1>
 

@@ -7,7 +7,7 @@
 	<manvolnum>1</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">User Commands</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -29,7 +29,6 @@
 		<arg choice="opt">-s &lt;smb config file&gt;</arg>
 		<arg choice="opt">-U username[%password]</arg>
 		<arg choice="opt">-W workgroup</arg>
-		<arg choice="opt">-N</arg>
 		<arg choice="opt">-I destinationIP</arg>
 		<arg choice="req">server</arg>
 	</cmdsynopsis>
@@ -63,14 +62,14 @@
 
 
 		<varlistentry>
-		<term>-c|--command='command string'</term>
-		<listitem><para>execute semicolon separated commands (listed 
-		below)) </para></listitem>
+		<term>-c|--command=&lt;command string&gt;</term>
+		<listitem><para>Execute semicolon separated commands (listed
+		below) </para></listitem>
 		</varlistentry>
 
 		
 		<varlistentry>
-		<term>-I IP-address</term>
+		<term>-I|--dest-ip IP-address</term>
 		<listitem><para><replaceable>IP address</replaceable> is the address of the server to connect to. 
 		It should be specified in standard "a.b.c.d" notation. </para>
 
@@ -85,6 +84,14 @@
 		<para>There is no default for this parameter. If not supplied, 
 		it will be determined automatically by the client as described 
 		above. </para></listitem>
+		</varlistentry>
+
+		<varlistentry>
+		<term>-p|--port port</term>
+		<listitem><para>This number is the TCP port number that will be used
+		when making connections to the server. The standard (well-known)
+		TCP port number for an SMB/CIFS server is 139, which is the
+		default. </para></listitem>
 		</varlistentry>
 
 		&stdarg.server.debug;
@@ -260,7 +267,7 @@ Comma Separated list of Files
 		</listitem></varlistentry>
 
 
-		<varlistentry><term>deldriver</term><listitem><para>Delete the 
+		<varlistentry><term>deldriver &lt;driver&gt;</term><listitem><para>Delete the
 		specified printer driver for all architectures.  This
 		does not delete the actual driver files from the server,
 		only the entry from the server's list of drivers.
@@ -465,7 +472,7 @@ Comma Separated list of Files
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of the Samba 
+	<para>This man page is correct for version 3 of the Samba 
 	suite.</para>
 </refsect1>
 

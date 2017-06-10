@@ -7,7 +7,7 @@
 	<manvolnum>8</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">System Administration tools</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -20,7 +20,7 @@
 	<title>DESCRIPTION</title>
 
 	<para>The idmap_nss plugin provides a means to map Unix users and groups
-	to Windows accounts and obseletes the &quot;winbind trusted domains only&quot;
+	to Windows accounts and obsoletes the &quot;winbind trusted domains only&quot;
 	smb.conf option.  This provides a simple means of ensuring that the SID
 	for a Unix user named jsmith is reported as the one assigned to
 	DOMAIN\jsmith which is necessary for reporting ACLs on files and printers
@@ -38,17 +38,11 @@
 
 	<programlisting>
 	[global]
-	    idmap domains = SAMBA TRUSTEDDOMAINS
+	idmap config * : backend = tdb
+	idmap config * : range = 1000000-1999999
 
-	    idmap config SAMBA:backend  = nss
-	    idmap config SAMBA:readonly = yes
-
-	    idmap config TRUSTEDDOMAINS:default = yes
-	    idmap config TRUSTEDDOMAINS:backend = tdb
-	    idmap config TRUSTEDDOMAINS:range   = 10000 - 50000
-
-	    idmap alloc backend      = tdb
-	    idmap alloc config:range = 10000 - 50000
+	idmap config SAMBA : backend  = nss
+	idmap config SAMBA : range = 1000-999999
 	</programlisting>
 </refsect1>
 

@@ -1,161 +1,22 @@
+'\" t
 .\"     Title: vfs_catia
 .\"    Author: [see the "AUTHOR" section]
-.\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 09/30/2009
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 09/18/2013
 .\"    Manual: System Administration tools
-.\"    Source: Samba 3.0
+.\"    Source: Samba 3.6
 .\"  Language: English
 .\"
-.TH "VFS_CATIA" "8" "09/30/2009" "Samba 3\&.0" "System Administration tools"
+.TH "VFS_CATIA" "8" "09/18/2013" "Samba 3\&.6" "System Administration tools"
 .\" -----------------------------------------------------------------
-.\" * (re)Define some macros
+.\" * Define some portability stuff
 .\" -----------------------------------------------------------------
 .\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" toupper - uppercase a string (locale-aware)
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
 .\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de toupper
-.tr aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ
-\\$*
-.tr aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH-xref - format a cross-reference to an SH section
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de SH-xref
-.ie n \{\
-.\}
-.toupper \\$*
-.el \{\
-\\$*
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH - level-one heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SH
-.\" put an extra blank line of space above the head in non-TTY output
-.if t \{\
-.sp 1
-.\}
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[an-margin]u
-.ti 0
-.HTML-TAG ".NH \\n[an-level]"
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-\." make the size of the head bigger
-.ps +3
-.ft B
-.ne (2v + 1u)
-.ie n \{\
-.\" if n (TTY output), use uppercase
-.toupper \\$*
-.\}
-.el \{\
-.nr an-break-flag 0
-.\" if not n (not TTY), use normal case (not uppercase)
-\\$1
-.in \\n[an-margin]u
-.ti 0
-.\" if not n (not TTY), put a border/line under subheading
-.sp -.6
-\l'\n(.lu'
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SS - level-two heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SS
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[IN]u
-.ti \\n[SN]u
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.ps \\n[PS-SS]u
-\." make the size of the head bigger
-.ps +2
-.ft B
-.ne (2v + 1u)
-.if \\n[.$] \&\\$*
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BB/BE - put background/screen (filled box) around block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BB
-.if t \{\
-.sp -.5
-.br
-.in +2n
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EB
-.if t \{\
-.if "\\$2"adjust-for-leading-newline" \{\
-.sp -1
-.\}
-.br
-.di
-.in
-.ll
-.gcolor
-.nr BW \\n(.lu-\\n(.i
-.nr BH \\n(dn+.5v
-.ne \\n(BHu+.5v
-.ie "\\$2"adjust-for-leading-newline" \{\
-\M[\\$1]\h'1n'\v'+.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.el \{\
-\M[\\$1]\h'1n'\v'-.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.in 0
-.sp -.5v
-.nf
-.BX
-.in
-.sp .5v
-.fi
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BM/EM - put colored marker in margin next to block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BM
-.if t \{\
-.br
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EM
-.if t \{\
-.br
-.di
-.ll
-.gcolor
-.nr BH \\n(dn
-.ne \\n(BHu
-\M[\\$1]\D'P -.75n 0 0 \\n(BHu -(\\n[.i]u - \\n(INu - .75n) 0 0 -\\n(BHu'\M[]
-.in 0
-.nf
-.BX
-.in
-.fi
-.\}
-..
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -166,13 +27,11 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.SH "Name"
+.SH "NAME"
 vfs_catia \- translate illegal characters in Catia filenames
-.SH "Synopsis"
-.fam C
+.SH "SYNOPSIS"
 .HP \w'\ 'u
-\FCvfs objects = catia\F[]
-.fam
+vfs objects = catia
 .SH "DESCRIPTION"
 .PP
 This VFS module is part of the
@@ -180,42 +39,99 @@ This VFS module is part of the
 suite\&.
 .PP
 The Catia CAD package commonly creates filenames that use characters that are illegal in CIFS filenames\&. The
-\FCvfs_catia\F[]
-VFS module implements a fixed character mapping so that these files can be shared with CIFS clients\&.
+vfs_catia
+VFS module implements a character mapping so that these files can be shared with CIFS clients\&.
 .PP
 This module is stackable\&.
+.PP
+Up to samba version 3\&.4\&.x a fixed character mapping was used\&. The invalid windows characters \e / : * ? " < > | and the blank character were mapped in a hardcoded way\&.
+.PP
+Starting with samba\-3\&.5\&.0 a more flexible mapping was introduced\&. The new parameter "catia:mappings" now specifies the mapping on a char by char basis using the notation: unix hex char 0x\&.\&. : windows hex char 0x\&.\&. Multiple character mappings are separated by a comma\&.
 .SH "EXAMPLES"
+.PP
+Samba versions up to 3\&.4\&.x:
 .PP
 Map Catia filenames on the [CAD] share:
 .sp
 .if n \{\
 .RS 4
 .\}
-.fam C
-.ps -1
 .nf
-.if t \{\
-.sp -1
-.\}
-.BB lightgray adjust-for-leading-newline
-.sp -1
-
         \fI[CAD]\fR
 	\m[blue]\fBpath = /data/cad\fR\m[]
 	\m[blue]\fBvfs objects = catia\fR\m[]
-.EB lightgray adjust-for-leading-newline
-.if t \{\
-.sp 1
-.\}
 .fi
-.fam
-.ps +1
 .if n \{\
 .RE
 .\}
+.PP
+Samba versions 3\&.5\&.0 and later:
+.PP
+Map Catia filenames on the [CAD] share:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+        \fI[CAD]\fR
+	\m[blue]\fBpath = /data/cad\fR\m[]
+	\m[blue]\fBvfs objects = catia\fR\m[]
+	\m[blue]\fBcatia:mappings = 0x22:0xa8\fR\m[]
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+To get the full formerly fixed mappings:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+        \fI[CAD]\fR
+	\m[blue]\fBpath = /data/cad\fR\m[]
+	\m[blue]\fBvfs objects = catia\fR\m[]
+	\m[blue]\fBcatia:mappings = 0x22:0xa8,0x2a:0xa4,0x2f:0xf8,0x3a:0xf7,0x3c:0xab,0x3e:0xbb,0x3f:0xbf,0x5c:0xff,0x7c:0xa6,0x20:0xb1\fR\m[]
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Unix filename to be translated (Note that the path delimiter "/" is not used here):
+.PP
+a\ea:a*a?a"a<a>a|a a
+.PP
+Resulting windows filename:
+.PP
+aÿa\(dia\(Csa\(r?a\(ada\(Foa\(Fca\(bba\(+-a
+.PP
+Note that the character mapping must work in BOTH directions (unix \-> windows and windows \-> unix) to get unique and existing file names!
+.PP
+A NOT working example:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+        \fI[CAD]\fR
+	\m[blue]\fBpath = /data/cad\fR\m[]
+	\m[blue]\fBvfs objects = catia\fR\m[]
+	\m[blue]\fBcatia:mappings = 0x3a:0x5f\fR\m[]
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Here the colon ":" is mapped to the underscore "_"\&.
+.PP
+Assuming a unix filename "a:should_work", which is well translated to windows as "a_should_work"\&.
+.PP
+BUT the reverse mapping from windows "a_should_work" to unix will result in "a:should:work" \- something like "file not found" will be returned\&.
 .SH "VERSION"
 .PP
-This man page is correct for version 3\&.0\&.25 of the Samba suite\&.
+This man page is correct for all versions up to 4\&.0\&.3 of the Samba suite\&.
 .SH "AUTHOR"
 .PP
 The original Samba software and related utilities were created by Andrew Tridgell\&. Samba is now developed by the Samba Team as an Open Source project similar to the way the Linux kernel is developed\&.
+.PP
+New version written by Guenter Kukkukk kukks@samba\&.org

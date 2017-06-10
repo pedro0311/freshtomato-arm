@@ -7,7 +7,7 @@
 	<manvolnum>1</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">User Commands</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -34,6 +34,7 @@
 		<arg choice="opt">-q, --quiet</arg>
 		<arg choice="opt">-v, --verbose</arg>
 		<arg choice="opt">-b, --blocksize</arg>
+		<arg choice="opt">-O, --stdout</arg>
 		<arg choice="opt">-?, --help</arg>
 		<arg choice="opt">--usage</arg>
 		<arg choice="req">smb://host/share/path/to/file</arg>
@@ -112,12 +113,17 @@
 
 	<varlistentry>
 		<term>-o, --outputfile</term>
-		<listitem><para>Write the file that is being download to the specified file. Can not be used together with -R.</para></listitem>
+		<listitem><para>Write the file that is being downloaded to the specified file. Can not be used together with -R.</para></listitem>
+	</varlistentry>
+
+	<varlistentry>
+		<term>-O, --stdout</term>
+		<listitem><para>Write the file that is being downloaded to standard output.</para></listitem>
 	</varlistentry>
 
 	<varlistentry>
 		<term>-f, --rcfile</term>
-		<listitem><para>Use specified rcfile. This will be loaded in the order it was specified - e.g. if you specify any options before this one, they might get overriden by the contents of the rcfile.</para></listitem>
+		<listitem><para>Use specified rcfile. This will be loaded in the order it was specified - e.g. if you specify any options before this one, they might get overridden by the contents of the rcfile.</para></listitem>
 	</varlistentry>
 
 	<varlistentry>
@@ -192,7 +198,7 @@ turned on).</para>
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of 
+	<para>This man page is correct for version 3 of 
 	the Samba suite.</para>
 </refsect1>
 

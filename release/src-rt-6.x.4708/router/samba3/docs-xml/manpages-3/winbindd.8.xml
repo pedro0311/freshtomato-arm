@@ -7,7 +7,7 @@
 	<manvolnum>8</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">System Administration tools</refmiscinfo>
-	<refmiscinfo class="version">3.2</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -24,7 +24,6 @@
 		<arg choice="opt">-F</arg>
 		<arg choice="opt">-S</arg>
 		<arg choice="opt">-i</arg>
-		<arg choice="opt">-Y</arg>
 		<arg choice="opt">-d &lt;debug level&gt;</arg>
 		<arg choice="opt">-s &lt;smb config file&gt;</arg>
 		<arg choice="opt">-n</arg>
@@ -46,10 +45,10 @@
 	service to <command>smbd</command>, <command>ntlm_auth</command>
 	and the <command>pam_winbind.so</command> PAM module, by managing connections to
 	domain controllers.  In this configuration the
-	<smbconfoption name="idmap uid"/> and <smbconfoption name="idmap gid"/>
-	parameters are not required. (This is known as `netlogon proxy only mode'.)</para>
+	<smbconfoption name="idmap config * : range"/>
+	parameter is not required. (This is known as `netlogon proxy only mode'.)</para>
 
-        <para>The Name Service Switch allows user
+        <para> The Name Service Switch allows user
 	and system information to be obtained from different databases
 	services such as NIS or DNS.  The exact behaviour can be configured
 	through the <filename>/etc/nsswitch.conf</filename> file.
@@ -60,12 +59,13 @@
 	<para>The service provided by <command>winbindd</command> is called `winbind' and
 	can be used to resolve user and group information from a
 	Windows NT server. The service can also provide authentication
-	services via an associated PAM module.</para>
+	services via an associated PAM module. </para>
 
 	<para>
 	The <filename>pam_winbind</filename> module supports the
         <parameter>auth</parameter>, <parameter>account</parameter>
-        and <parameter>password</parameter> module-types.  It should be noted that the
+        and <parameter>password</parameter>
+        module-types.  It should be noted that the
         <parameter>account</parameter> module simply performs a getpwnam() to verify that
         the system can obtain a uid for the user, as the domain
         controller has already performed access control.  If the
@@ -77,16 +77,6 @@
 	the winbindd service: </para>
 
 	<variablelist>
-		<varlistentry>
-		<term>-D</term>
-		<listitem><para>If specified, this parameter causes
-		the server to operate as a daemon. That is, it detaches
-		itself and runs in the background on the appropriate port. 
-		This switch is assumed if <command>winbindd</command> is 
-		executed on the command line of a shell.
-		</para></listitem>
-		</varlistentry>
-
 		<varlistentry>
 		<term>hosts</term>
 		<listitem><para>This feature is only available on IRIX.
@@ -145,6 +135,16 @@ hosts:		files wins
 
 	<variablelist>
 		<varlistentry>
+		<term>-D</term>
+		<listitem><para>If specified, this parameter causes
+		the server to operate as a daemon. That is, it detaches
+		itself and runs in the background on the appropriate port.
+		This switch is assumed if <command>winbindd</command> is
+		executed on the command line of a shell.
+		</para></listitem>
+		</varlistentry>
+
+		<varlistentry>
 		<term>-F</term>
 		<listitem><para>If specified, this parameter causes
 		the main <command>winbindd</command> process to not daemonize,
@@ -192,15 +192,6 @@ hosts:		files wins
 		</para></listitem>
 		</varlistentry>
 
-		<varlistentry>
-		<term>-Y</term>
-		<listitem><para>Single daemon mode. This means winbindd will run
-		as a single process (the mode of operation in Samba 2.2).  Winbindd's
-		default behavior is to launch a child process that is responsible for
-		updating expired cache entries.
-		</para></listitem>
-		</varlistentry>
-
 	</variablelist>
 </refsect1>
 
@@ -228,9 +219,6 @@ hosts:		files wins
 	determine which user and group ids correspond to Windows NT user
 	and group rids. </para>
 
-        <para>See the <smbconfoption name="idmap domains"/> or the old <smbconfoption name="idmap backend"/> parameters in
-        <filename>smb.conf</filename> for options for sharing this
-        database, such as via LDAP.</para>
 </refsect1>
 
 
@@ -247,11 +235,9 @@ hosts:		files wins
 		<listitem><para>
 		<smbconfoption name="winbind separator"/></para></listitem>
 		<listitem><para>
-		<smbconfoption name="idmap uid"/></para></listitem>
+		<smbconfoption name="idmap config * : range"/></para></listitem>
 		<listitem><para>
-		<smbconfoption name="idmap gid"/></para></listitem>
-		<listitem><para>
-		<smbconfoption name="idmap backend"/></para></listitem>
+		<smbconfoption name="idmap config * : backend"/></para></listitem>
 		<listitem><para>
 		<smbconfoption name="winbind cache time"/></para></listitem>
 		<listitem><para>
@@ -341,8 +327,7 @@ auth  required    /lib/security/pam_unix.so \
         winbind cache time = 10
         template shell = /bin/bash
         template homedir = /home/%D/%U
-        idmap uid = 10000-20000
-        idmap gid = 10000-20000
+        idmap config * : range = 10000-20000
         workgroup = DOMAIN
         security = domain
         password server = *
@@ -375,7 +360,7 @@ auth  required    /lib/security/pam_unix.so \
 	<para>If more than one UNIX machine is running <command>winbindd</command>,
 	then in general the user and groups ids allocated by winbindd will not
 	be the same.  The user and group ids will only be valid for the local
-	machine, unless a shared <smbconfoption name="idmap backend"/> is configured.</para>
+	machine, unless a shared <smbconfoption name="idmap config * : backend"/> is configured.</para>
 
 	<para>If the the Windows NT SID to UNIX user and group id mapping
 	file is damaged or destroyed then the mappings will be lost. </para>

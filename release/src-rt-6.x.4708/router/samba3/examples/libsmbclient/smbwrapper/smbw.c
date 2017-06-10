@@ -7,7 +7,7 @@
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
    
    This program is distributed in the hope that it will be useful,
@@ -16,8 +16,7 @@
    GNU General Public License for more details.
    
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
@@ -56,12 +55,9 @@ smbw_ref -- manipulate reference counts
 ******************************************************/
 int smbw_ref(int client_fd, Ref_Count_Type type, ...)
 {
-        va_list ap;
-
         /* client id values begin at SMBC_BASE_FC. */
         client_fd -= SMBC_BASE_FD;
 
-        va_start(ap, type);
         switch(type)
         {
         case SMBW_RCT_Increment:
@@ -74,9 +70,16 @@ int smbw_ref(int client_fd, Ref_Count_Type type, ...)
                 return smbw_ref_count[client_fd];
 
         case SMBW_RCT_Set:
-                return (smbw_ref_count[client_fd] = va_arg(ap, int));
+		{
+			va_list ap;
+			int ret;
+
+			va_start(ap, type);
+			ret = (smbw_ref_count[client_fd] = va_arg(ap, int));
+			va_end(ap);
+			return ret;
+		}
         }
-        va_end(ap);
 
         /* never gets here */
         return -1;
@@ -175,11 +178,11 @@ static void do_init(StartupType startupType)
                 exit(1);
         }
         
-        smbw_ctx->debug = debug_level;
-        smbw_ctx->callbacks.auth_fn = get_auth_data_fn;
-        smbw_ctx->options.browse_max_lmb_count = 0;
-        smbw_ctx->options.urlencode_readdir_entries = 1;
-        smbw_ctx->options.one_share_per_server = 1;
+        smbc_setDebug(smbw_ctx, debug_level);
+        smbc_setFunctionAuthData(smbw_ctx, get_auth_data_fn);
+        smbc_setOptionBrowseMaxLmbCount(smbw_ctx, 0);
+        smbc_setOptionUrlEncodeReaddirEntries(smbw_ctx, 1);
+        smbc_setOptionOneSharePerServer(smbw_ctx, 1);
         
         if (smbc_init_context(smbw_ctx) == NULL) {
                 fprintf(stderr, "Could not initialize context.\n");
