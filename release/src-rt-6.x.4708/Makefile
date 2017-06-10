@@ -1116,8 +1116,8 @@ ifeq ($(CONFIG_LINUX26),y)
 	@echo "wzr1750e      WZR-1750DHP build VPN"
 	@echo "wzr1750z      WZR-1750DHP build AIO"
 	@echo "LINKSYS ARM Builds"
-	@echo "ea6700e       EA6700/EA6500v2/EA6900 build VPN"
-	@echo "ea6700z       EA6700/EA6500v2/EA6900 build AIO"
+	@echo "ea6700e       EA6700/EA6400/EA6500v2/EA6900 build VPN"
+	@echo "ea6700z       EA6700/EA6400/EA6500v2/EA6900 build AIO"
 endif
 	@echo ""
 	@echo "..etc..      other build configs"
