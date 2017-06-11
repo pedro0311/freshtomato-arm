@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE chapter PUBLIC "-//Samba-Team//DTD DocBook V4.2-Based Variant V1.0//EN" "http://www.samba.org/samba/DTD/samba-doc">
-<chapter id="msdfs">
+<chapter id="tdb">
 
 <chapterinfo>
 	&author.jht;
@@ -24,7 +24,7 @@
 
 	<para>
 <indexterm><primary>tdb</primary></indexterm>
-<indexterm><primary>currupted</primary></indexterm>
+<indexterm><primary>corrupted</primary></indexterm>
 <indexterm><primary>backup</primary></indexterm>
 <indexterm><primary>restore</primary></indexterm>
 	Those who package Samba for commercial distribution with operating systems and appliances would do well to take

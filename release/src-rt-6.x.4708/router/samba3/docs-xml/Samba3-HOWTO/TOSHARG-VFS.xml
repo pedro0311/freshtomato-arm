@@ -276,7 +276,7 @@ quotasettings:	gid nolimit = no
 
 		<para>
 <indexterm><primary>logging</primary></indexterm>
-		This auditing tool is more felxible than most people readily will recognize. There are a number of ways
+		This auditing tool is more flexible than most people will readily recognize. There are a number of ways
 		by which useful logging information can be recorded.
 		</para>
 
@@ -916,7 +916,7 @@ max lru files entries = 100
 lru file entry lifetime = 5
 
 ; exclude files from being scanned based on the MIME-type! Semi-colon
-; seperated list (default: empty list). Use this with care!
+; separated list (default: empty list). Use this with care!
 exclude file types =
 
 ; socket name of clamd (default: /var/run/clamd). Setting will be ignored if

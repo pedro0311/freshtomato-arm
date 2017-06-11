@@ -8,7 +8,7 @@
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
    
    This program is distributed in the hope that it will be useful,
@@ -17,8 +17,7 @@
    GNU General Public License for more details.
    
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /* This program can get or set NT printer security permissions from the 
@@ -147,7 +146,7 @@ char *ace_to_str(SEC_ACE *ace)
 void str_to_ace(SEC_ACE *ace, char *ace_str)
 {
 	SEC_ACCESS sa;
-	DOM_SID sid;
+	struct dom_sid sid;
 	uint32 mask;
 	uint8 type, flags;
 
@@ -257,7 +256,7 @@ int psec_getsec(char *printer)
 
 int psec_setsec(char *printer)
 {
-	DOM_SID user_sid, group_sid;
+	struct dom_sid user_sid, group_sid;
 	SEC_ACE *ace_list = NULL;
 	SEC_ACL *dacl = NULL;
 	SEC_DESC *sd;
@@ -305,7 +304,7 @@ int psec_setsec(char *printer)
 		int ace_type, ace_flags;
 		uint32 ace_mask;
 		fstring sidstr;
-		DOM_SID sid;
+		struct dom_sid sid;
 		SEC_ACCESS sa;
 
 		if (sscanf(line, "%d %d 0x%x %s", &ace_type, &ace_flags, 
@@ -353,8 +352,11 @@ int psec_setsec(char *printer)
 		goto done;
 	}
 
-	prs_init(&ps, (uint32)sec_desc_size(sdb->sec) + 
-		 sizeof(SEC_DESC_BUF), 4, mem_ctx, MARSHALL);
+	if (!prs_init(&ps, (uint32)sec_desc_size(sdb->sec) +
+		 sizeof(SEC_DESC_BUF), 4, mem_ctx, MARSHALL)) {
+		printf("prs_init() failed\n");
+		goto done;
+	}
 
 	if (!sec_io_desc_buf("nt_printing_setsec", &sdb, &ps, 1)) {
 		printf("sec_io_desc_buf failed\n");

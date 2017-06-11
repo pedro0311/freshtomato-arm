@@ -7,7 +7,7 @@
 	<manvolnum>1</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">User Commands</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -118,7 +118,7 @@
 
 
 <refsect1>
-	<title>QUOTA_SET_COMAND</title>
+	<title>QUOTA_SET_COMMAND</title>
 
 	<para>The format of an the QUOTA_SET_COMMAND is an operation
 	name followed by a set of parameters specific to that operation.
@@ -166,7 +166,7 @@
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of the Samba suite.</para>
+	<para>This man page is correct for version 3 of the Samba suite.</para>
 </refsect1>
 
 <refsect1>

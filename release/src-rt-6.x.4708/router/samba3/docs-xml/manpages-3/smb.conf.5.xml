@@ -6,7 +6,7 @@
 	<manvolnum>5</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">File Formats and Conventions</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -63,7 +63,7 @@
 
 	<para>
 	The values following the equals sign in parameters are all either a string (no quotes needed) or a boolean,
-	which may be given as yes/no, 0/1 or true/false. Case is not significant in boolean values, but is preserved
+	which may be given as yes/no, 1/0 or true/false. Case is not significant in boolean values, but is preserved
 	in string values. Some items such as create masks are numeric.
 	</para>
 
@@ -488,7 +488,7 @@ chmod 1770 /usr/local/samba/lib/usershares
 		    The architecture of the remote
 		    machine.  It currently recognizes Samba (<constant>Samba</constant>), 
 		    the Linux CIFS file system (<constant>CIFSFS</constant>), OS/2, (<constant>OS2</constant>),
-		    Windows for Workgroups (<constant>WfWg</constant>), Windows 9x/ME 
+		    Mac OS X (<constant>OSX</constant>), Windows for Workgroups (<constant>WfWg</constant>), Windows 9x/ME 
 		    (<constant>Win95</constant>), Windows NT (<constant>WinNT</constant>),
 		    Windows 2000 (<constant>Win2K</constant>),
 		    Windows XP (<constant>WinXP</constant>),
@@ -503,12 +503,16 @@ chmod 1770 /usr/local/samba/lib/usershares
 		<varlistentry>
 		<term>%I</term>
 		<listitem><para>the IP address of the client machine.</para>
+		<para>Before 3.6.0 it could contain IPv4 mapped IPv6 addresses,
+			now it only contains IPv4 or IPv6 addresses.</para>
 		</listitem>
 		</varlistentry>
 
 		<varlistentry>
 		<term>%i</term>
 		<listitem><para>the local IP address to which a client connected.</para>
+		<para>Before 3.6.0 it could contain IPv4 mapped IPv6 addresses,
+			now it only contains IPv4 or IPv6 addresses.</para>
 		</listitem>
 		</varlistentry>
 
@@ -628,11 +632,11 @@ chmod 1770 /usr/local/samba/lib/usershares
 		<term>default case = upper/lower</term>
 		<listitem><para>
 		controls what the default case is for new filenames (ie. files that don't currently exist in the filesystem).
-		Default <emphasis>lower</emphasis>.  IMPORTANT NOTE: This option will be used to modify the case of
-		<emphasis>all</emphasis> incoming client filenames, not just new filenames if the options <smbconfoption
-		name="case sensitive">yes</smbconfoption>, <smbconfoption name="preserve case">No</smbconfoption>,
-		<smbconfoption name="short preserve case">No</smbconfoption> are set.  This change is needed as part of the
-		optimisations for directories containing large numbers of files.
+		Default <emphasis>lower</emphasis>.  IMPORTANT NOTE: As part of the optimizations for directories containing
+		large numbers of files, the following special case applies. If the options
+		<smbconfoption 	name="case sensitive">yes</smbconfoption>, <smbconfoption name="preserve case">No</smbconfoption>, and
+		<smbconfoption name="short preserve case">No</smbconfoption> are set, then the case of <emphasis>all</emphasis>
+		incoming client filenames, not just new filenames, will be modified. See additional notes below.
 		</para></listitem>
 		</varlistentry> 
 	
@@ -720,6 +724,89 @@ chmod 1770 /usr/local/samba/lib/usershares
 </refsect1>
 
 <refsect1>
+	<title>REGISTRY-BASED CONFIGURATION</title>
+
+	<para>
+		Starting with Samba version 3.2.0, the capability to
+		store Samba configuration in the registry is available.
+		The configuration is stored in the registry key
+		 <emphasis><literal>HKLM\Software\Samba\smbconf</literal></emphasis>.
+		There are two levels of registry configuration:
+	</para>
+
+	<orderedlist continuation="restarts" inheritnum="ignore" numeration="arabic">
+		<listitem><para>Share definitions stored in registry are used.
+		This is triggered by setting the global 
+		parameter <parameter>registry shares</parameter>
+		to <quote>yes</quote> in <emphasis>smb.conf</emphasis>.
+		</para>
+
+		<para>The registry shares are loaded not at startup but
+		on demand at runtime by <emphasis>smbd</emphasis>.
+		Shares defined in <emphasis>smb.conf</emphasis> take
+		priority over shares of the same name defined in
+		registry.</para></listitem>
+
+		<listitem>
+		<para>Global <emphasis>smb.conf</emphasis>
+		options stored in registry are used. This can be activated
+		in two different ways:</para>
+
+		<para>Firstly, a registry only configuration is triggered
+		by setting
+		<smbconfoption name="config backend">registry</smbconfoption>
+		in the [global] section of <emphasis>smb.conf</emphasis>.
+		This resets everything that has been read from config files
+		to this point and reads the content of the global configuration
+		section from the registry.
+		This is the recommended method of using registry based
+		configuration.</para>
+
+		<para>Secondly, a mixed configuration can be activated
+		by a special new meaning of the parameter
+		<smbconfoption name="include">registry</smbconfoption>
+		in the [global] section of <emphasis>smb.conf</emphasis>.
+		This reads the global options from registry with the same
+		priorities as for an include of a text file.
+		This may be especially useful in cases where an initial
+		configuration is needed to access the registry.</para>
+
+		<para>Activation of global registry options automatically
+		activates registry shares. So in the registry only case,
+		shares are loaded on demand only.</para>
+		</listitem>
+	</orderedlist>
+
+	<para>
+		Note: To make registry-based configurations foolproof
+		at least to a certain extent, the use
+		of <parameter>lock directory</parameter> and
+		 <parameter>config backend</parameter>
+		inside the registry configuration has been disabled:
+		Especially by changing the
+		 <parameter>lock directory</parameter> inside the registry
+		configuration, one would create a broken setup where the daemons
+		do not see the configuration they loaded once it is active.
+	</para>
+
+	<para>
+		The registry configuration can be accessed with
+		tools like <emphasis>regedit</emphasis> or <emphasis>net (rpc)
+		registry</emphasis> in the key
+		 <emphasis><literal>HKLM\Software\Samba\smbconf</literal></emphasis>.
+
+		More conveniently, the <emphasis>conf</emphasis> subcommand of the
+		 <citerefentry><refentrytitle>net</refentrytitle>
+		<manvolnum>8</manvolnum></citerefentry> utility
+		offers a dedicated interface to read and write the
+		registry based configuration locally, i.e. directly
+		accessing the database file, circumventing the
+		server.
+	</para>
+
+</refsect1>
+
+<refsect1>
 	<title>EXPLANATION OF EACH PARAMETER</title>
 	
 	<samba:parameterlist>
@@ -755,7 +842,7 @@ chmod 1770 /usr/local/samba/lib/usershares
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of the Samba suite.</para>
+	<para>This man page is correct for version 3 of the Samba suite.</para>
 </refsect1>
 
 <refsect1>

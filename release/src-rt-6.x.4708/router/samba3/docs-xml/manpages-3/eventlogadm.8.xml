@@ -7,7 +7,7 @@
 	<manvolnum>8</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">System Administration tools</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -20,6 +20,7 @@
 	<cmdsynopsis>
 
 		<command>eventlogadm</command>
+		<arg><option>-s</option></arg>
 		<arg><option>-d</option></arg>
 		<arg><option>-h</option></arg>
 		<arg choice="plain"><option>-o</option>
@@ -32,6 +33,7 @@
 	</cmdsynopsis>
 	<cmdsynopsis>
 		<command>eventlogadm</command>
+		<arg><option>-s</option></arg>
 		<arg><option>-d</option></arg>
 		<arg><option>-h</option></arg>
 		<arg choice="plain"><option>-o</option>
@@ -40,6 +42,19 @@
 		</arg>
 
 	</cmdsynopsis>
+	<cmdsynopsis>
+		<command>eventlogadm</command>
+		<arg><option>-s</option></arg>
+		<arg><option>-d</option></arg>
+		<arg><option>-h</option></arg>
+		<arg choice="plain"><option>-o</option>
+		<literal>dump</literal>
+		<replaceable>EVENTLOG</replaceable>
+		<replaceable>RECORD_NUMBER</replaceable>
+		</arg>
+
+	</cmdsynopsis>
+
 </refsynopsisdiv>
 
 <refsect1>
@@ -60,6 +75,16 @@
 	<title>OPTIONS</title>
 
 	<variablelist>
+		<varlistentry>
+		<term>
+		<option>-s</option>
+		<replaceable>FILENAME</replaceable>
+		</term>
+		<listitem><para>
+		The <command>-s</command> option causes <command>eventlogadm</command> to load the
+		configuration file given as FILENAME instead of the default one used by Samba.
+		</para></listitem>
+		</varlistentry>
 
 		<varlistentry>
 		<term><option>-d</option></term>
@@ -91,8 +116,22 @@
 		</term>
 		<listitem><para>
 		The <command>-o write</command> reads event log
-		records from standard input and writes them to theSamba
+		records from standard input and writes them to the Samba
 		event log store named by EVENTLOG.
+		</para> </listitem>
+		</varlistentry>
+
+		<varlistentry>
+		<term>
+		<option>-o</option>
+		<literal>dump</literal>
+		<replaceable>EVENTLOG</replaceable>
+		<replaceable>RECORD_NUMBER</replaceable>
+		</term>
+		<listitem><para>
+		The <command>-o dump</command> reads event log
+		records from a EVENTLOG tdb and dumps them to standard
+		output on screen.
 		</para> </listitem>
 		</varlistentry>
 
@@ -180,7 +219,7 @@
 		</para></listitem>
 
 		<listitem><para>
-		<command>SRN</command> - he name of the machine on
+		<command>SRN</command> - The name of the machine on
 		which the eventlog was generated. This is typically the
 		host name.
 		</para></listitem>

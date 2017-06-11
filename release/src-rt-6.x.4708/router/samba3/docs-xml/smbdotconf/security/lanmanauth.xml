@@ -12,10 +12,17 @@
     Windows 95/98 or the MS DOS network client) will be able to
     connect to the Samba host.</para>
 
-    <para>The LANMAN encrypted response is easily broken, due to it's
+    <para>The LANMAN encrypted response is easily broken, due to its
     case-insensitive nature, and the choice of algorithm.  Servers
     without Windows 95/98/ME or MS DOS clients are advised to disable
     this option.  </para>
+
+    <para>When this parameter is set to <value>no</value> this
+    will also result in sambaLMPassword in Samba's passdb being
+    blanked after the next password change. As a result of that
+    lanman clients won't be able to authenticate, even if lanman
+    auth is reenabled later on.
+    </para>
 		
     <para>Unlike the <command moreinfo="none">encrypt
     passwords</command> option, this parameter cannot alter client
@@ -29,5 +36,5 @@
     special configuration to use it.</para>
 </description>
 
-<value type="default">yes</value>
+<value type="default">no</value>
 </samba:parameter>

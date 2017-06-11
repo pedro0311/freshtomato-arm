@@ -1,161 +1,22 @@
+'\" t
 .\"     Title: vfs_gpfs
 .\"    Author: [see the "AUTHOR" section]
-.\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 09/30/2009
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 09/18/2013
 .\"    Manual: System Administration tools
-.\"    Source: Samba 3.0
+.\"    Source: Samba 3.6
 .\"  Language: English
 .\"
-.TH "VFS_GPFS" "8" "09/30/2009" "Samba 3\&.0" "System Administration tools"
+.TH "VFS_GPFS" "8" "09/18/2013" "Samba 3\&.6" "System Administration tools"
 .\" -----------------------------------------------------------------
-.\" * (re)Define some macros
+.\" * Define some portability stuff
 .\" -----------------------------------------------------------------
 .\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" toupper - uppercase a string (locale-aware)
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
 .\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de toupper
-.tr aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ
-\\$*
-.tr aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH-xref - format a cross-reference to an SH section
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de SH-xref
-.ie n \{\
-.\}
-.toupper \\$*
-.el \{\
-\\$*
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH - level-one heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SH
-.\" put an extra blank line of space above the head in non-TTY output
-.if t \{\
-.sp 1
-.\}
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[an-margin]u
-.ti 0
-.HTML-TAG ".NH \\n[an-level]"
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-\." make the size of the head bigger
-.ps +3
-.ft B
-.ne (2v + 1u)
-.ie n \{\
-.\" if n (TTY output), use uppercase
-.toupper \\$*
-.\}
-.el \{\
-.nr an-break-flag 0
-.\" if not n (not TTY), use normal case (not uppercase)
-\\$1
-.in \\n[an-margin]u
-.ti 0
-.\" if not n (not TTY), put a border/line under subheading
-.sp -.6
-\l'\n(.lu'
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SS - level-two heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SS
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[IN]u
-.ti \\n[SN]u
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.ps \\n[PS-SS]u
-\." make the size of the head bigger
-.ps +2
-.ft B
-.ne (2v + 1u)
-.if \\n[.$] \&\\$*
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BB/BE - put background/screen (filled box) around block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BB
-.if t \{\
-.sp -.5
-.br
-.in +2n
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EB
-.if t \{\
-.if "\\$2"adjust-for-leading-newline" \{\
-.sp -1
-.\}
-.br
-.di
-.in
-.ll
-.gcolor
-.nr BW \\n(.lu-\\n(.i
-.nr BH \\n(dn+.5v
-.ne \\n(BHu+.5v
-.ie "\\$2"adjust-for-leading-newline" \{\
-\M[\\$1]\h'1n'\v'+.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.el \{\
-\M[\\$1]\h'1n'\v'-.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.in 0
-.sp -.5v
-.nf
-.BX
-.in
-.sp .5v
-.fi
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BM/EM - put colored marker in margin next to block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BM
-.if t \{\
-.br
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EM
-.if t \{\
-.br
-.di
-.ll
-.gcolor
-.nr BH \\n(dn
-.ne \\n(BHu
-\M[\\$1]\D'P -.75n 0 0 \\n(BHu -(\\n[.i]u - \\n(INu - .75n) 0 0 -\\n(BHu'\M[]
-.in 0
-.nf
-.BX
-.in
-.fi
-.\}
-..
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -166,13 +27,11 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.SH "Name"
+.SH "NAME"
 vfs_gpfs \- gpfs specific samba extensions like acls and prealloc
-.SH "Synopsis"
-.fam C
+.SH "SYNOPSIS"
 .HP \w'\ 'u
-\FCvfs objects = gpfs\F[]
-.fam
+vfs objects = gpfs
 .SH "DESCRIPTION"
 .PP
 This VFS module is part of the
@@ -180,7 +39,7 @@ This VFS module is part of the
 suite\&.
 .PP
 The
-\FCgpfs\F[]
+gpfs
 VFS module is the home for all gpfs extensions that Samba requires for proper integration with GPFS\&. It uses the GPL library interfaces provided by GPFS\&.
 .PP
 Currently the gpfs vfs module provides extensions in following areas :
@@ -216,13 +75,259 @@ Kernel oplock support on GPFS
 .IP \(bu 2.3
 .\}
 Lease support on GPFS
+.RE
 .sp
 .RE
 .PP
-\FCNOTE:\F[]This module follows the posix\-acl behaviour and hence allows permission stealing via chown\&. Samba might allow at a later point in time, to restrict the chown via this module as such restrictions are the responsibility of the underlying filesystem than of Samba\&.
+NOTE:This module follows the posix\-acl behaviour and hence allows permission stealing via chown\&. Samba might allow at a later point in time, to restrict the chown via this module as such restrictions are the responsibility of the underlying filesystem than of Samba\&.
 .PP
 This module is stackable\&.
 .SH "OPTIONS"
+.PP
+gpfs:sharemodes = [ yes | no ]
+.RS 4
+Enable/Disable cross node sharemode handling for GPFS\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes(default)
+\- propagate sharemodes across all GPFS nodes\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no
+\- do not propagate sharemodes across all GPFS nodes\&. This should only be used if the GPFS file system is exclusively exported by Samba\&. Access by local unix application or NFS exports could lead to corrupted files\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:leases = [ yes | no ]
+.RS 4
+Enable/Disable cross node leases (oplocks) for GPFS\&. You should also set the
+oplocks
+and
+kernel oplocks
+options to the same value\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes(default)
+\- propagate leases across all GPFS nodes\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no
+\- do not propagate leases across all GPFS nodes\&. This should only be used if the GPFS file system is exclusively exported by Samba\&. Access by local unix application or NFS exports could lead to corrupted files\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:hsm = [ yes | no ]
+.RS 4
+Enable/Disable announcing if this FS has HSM enabled\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no(default)
+\- Do not announce HSM\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no
+\- Announce HSM\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:getrealfilename = [ yes | no ]
+.RS 4
+Enable/Disable usage of the
+gpfs_get_realfilename_path()
+function\&. This improves the casesensitive wildcard file name access\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes(default)
+\- use
+gpfs_get_realfilename_path()\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no
+\- do not use
+gpfs_get_realfilename_path()\&. It seems that
+gpfs_get_realfilename_path()
+doesn\*(Aqt work on AIX\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:winattr = [ yes | no ]
+.RS 4
+Enable/Disable usage of the windows attributes in GPFS\&. GPFS is able to store windows file attributes e\&.g\&. HIDDEN, READONLY, SYSTEM and others natively\&. That means Samba doesn\*(Aqt need to map them to permission bits or extended attributes\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no(default)
+\- do not use GPFS windows attributes\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes
+\- use GPFS windows attributes\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:merge_writeappend = [ yes | no ]
+.RS 4
+GPFS ACLs doesn\*(Aqt know about the \*(AqAPPEND\*(Aq right\&. This optionen lets Samba map the \*(AqAPPEND\*(Aq right to \*(AqWRITE\*(Aq\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes(default)
+\- map \*(AqAPPEND\*(Aq to \*(AqWRITE\*(Aq\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no
+\- do not map \*(AqAPPEND\*(Aq to \*(AqWRITE\*(Aq\&.
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:refuse_dacl_protected = [ yes | no ]
+.RS 4
+As GPFS does not support the ACE4_FLAG_NO_PROPAGATE NFSv4 flag (which would be the mapping for the DESC_DACL_PROTECTED flag), the status of this flag is currently silently ignored by Samba\&. That means that if you deselect the "Allow inheritable permissions\&.\&.\&." checkbox in Windows\*(Aq ACL dialog and then apply the ACL, the flag will be back immediately\&.
+.sp
+To make sure that automatic migration with e\&.g\&. robocopy does not lead to ACLs silently (and unintentionally) changed, you can set
+gpfs:refuse_dacl_protected = yes
+to enable an explicit check for this flag and if set, it will return NT_STATUS_NOT_SUPPORTED so errors are shown up on the Windows side and the Administrator is aware of the ACLs not being settable like intended
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+no(default)
+\- ignore the DESC_DACL_PROTECTED flags\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+
+yes
+\- reject ACLs with DESC_DACL_PROTECTED\&.
+.RE
+.sp
+.RE
+.RE
 .PP
 nfs4:mode = [ simple | special ]
 .RS 4
@@ -238,7 +343,7 @@ The following MODEs are understood by the module:
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCsimple(default)\F[]
+simple(default)
 \- do not use special IDs in GPFS ACEs
 .RE
 .sp
@@ -250,8 +355,9 @@ The following MODEs are understood by the module:
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCspecial\F[]
+special
 \- use special IDs in GPFS ACEs\&.
+.RE
 .sp
 .RE
 .RE
@@ -270,7 +376,7 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCdontcare (default)\F[]
+dontcare (default)
 \- copy the ACEs as they come
 .RE
 .sp
@@ -282,7 +388,7 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCreject\F[]
+reject
 \- stop operation and exit with error on ACL set op
 .RE
 .sp
@@ -294,8 +400,8 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCignore\F[]
-\- don\'t include the second matching ACE
+ignore
+\- don\*(Aqt include the second matching ACE
 .RE
 .sp
 .RS 4
@@ -306,8 +412,9 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCmerge\F[]
+merge
 \- bitwise OR the 2 ace\&.flag fields and 2 ace\&.mask fields of the 2 duplicate ACEs into 1 ACE
+.RE
 .sp
 .RE
 .RE
@@ -328,7 +435,7 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCyes\F[]
+yes
 \- Enable chown if as supported by the under filesystem
 .RE
 .sp
@@ -340,8 +447,40 @@ Following is the behaviour of Samba for different values :
 .sp -1
 .IP \(bu 2.3
 .\}
-\FCno (default)\F[]
+no (default)
 \- Disable chown
+.RE
+.sp
+.RE
+.RE
+.PP
+gpfs:syncio = [yes|no]
+.RS 4
+This parameter makes Samba open all files with O_SYNC\&. This triggers optimizations in GPFS for workloads that heavily share files\&.
+.sp
+Following is the behaviour of Samba for different values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+yesOpen files with O_SYNC
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+no (default)Open files as normal Samba would do
+.RE
 .sp
 .RE
 .RE
@@ -352,35 +491,37 @@ A GPFS mount can be exported via Samba as follows :
 .if n \{\
 .RS 4
 .\}
-.fam C
-.ps -1
 .nf
-.if t \{\
-.sp -1
-.\}
-.BB lightgray adjust-for-leading-newline
-.sp -1
-
         \fI[samba_gpfs_share]\fR
 	\m[blue]\fBvfs objects = gpfs\fR\m[]
 	\m[blue]\fBpath = /test/gpfs_mount\fR\m[]
 	\m[blue]\fBnfs4: mode = special\fR\m[]
 	\m[blue]\fBnfs4: acedup = merge\fR\m[]
-.EB lightgray adjust-for-leading-newline
-.if t \{\
-.sp 1
-.\}
 .fi
-.fam
-.ps +1
 .if n \{\
 .RE
 .\}
 .SH "CAVEATS"
 .PP
-The gpfs gpl libraries are required by
-\FCgpfs\F[]
-VFS module during both compilation and runtime\&. Also this VFS module is tested to work on SLES 9/10 and RHEL 4\&.4
+Depending on the version of gpfs, the
+libgpfs_gpl
+library or the
+libgpfs
+library is needed at runtime by the
+gpfs
+VFS module: Starting with gpfs 3\&.2\&.1 PTF8, the complete
+libgpfs
+is available as open source and
+libgpfs_gpl
+does no longer exist\&. With earlier versions of gpfs, only the
+libgpfs_gpl
+library was open source and could be used at run time\&.
+.PP
+At build time, only the header file
+gpfs_gpl\&.h
+is required , which is a symlink to
+gpfs\&.h
+in gpfs versions newer than 3\&.2\&.1 PTF8\&.
 .SH "VERSION"
 .PP
 This man page is correct for version 3\&.0\&.25 of the Samba suite\&.

@@ -7,7 +7,7 @@
 	<manvolnum>1</manvolnum>
 	<refmiscinfo class="source">Samba</refmiscinfo>
 	<refmiscinfo class="manual">User Commands</refmiscinfo>
-	<refmiscinfo class="version">3.0</refmiscinfo>
+	<refmiscinfo class="version">3.6</refmiscinfo>
 </refmeta>
 
 
@@ -23,7 +23,6 @@
 		<arg choice="opt">-s</arg>
 		<arg choice="opt">-h</arg>
 		<arg choice="opt">-v</arg>
-		<arg choice="opt">-L &lt;servername&gt;</arg>
 		<arg choice="opt">-t &lt;encoding&gt;</arg>
 		<arg choice="req">config filename</arg>
 		<arg choice="opt">hostname hostIP</arg>
@@ -74,13 +73,6 @@
 		&stdarg.version;
 		
 		<varlistentry>
-		<term>-L servername</term>
-		<listitem><para>Sets the value of the %L macro to <replaceable>servername</replaceable>.
-		This is useful for testing include files specified with the 
-		%L macro. </para></listitem>
-		</varlistentry>
-
-		<varlistentry>
 		<term>-v</term>
 		<listitem><para>If this option is specified, testparm 
 		will also output all options that were not used in <citerefentry>
@@ -101,7 +93,7 @@
 		Dumps the named parameter.  If no section-name is set the view
 		is limited by default to the global section.
 
-		It is also possible to dump a parametrical option.  Therfore
+		It is also possible to dump a parametrical option.  Therefore
 		the option has to be separated by a colon from the
 		parametername.
 		</para></listitem>
@@ -177,7 +169,7 @@
 <refsect1>
 	<title>VERSION</title>
 
-	<para>This man page is correct for version 3.0 of 
+	<para>This man page is correct for version 3 of 
 	the Samba suite.</para>
 </refsect1>
 

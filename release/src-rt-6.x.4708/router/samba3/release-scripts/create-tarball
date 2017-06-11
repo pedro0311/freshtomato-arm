@@ -3,11 +3,10 @@
 ## option defaults
 OPT_BRANCH=""
 OPT_DOCSDIR=""
-OPT_TAG=""
 OPT_KEYID=""
 
 TOPDIR="`dirname $0`/.."
-VER_H="${TOPDIR}/source/include/version.h"
+VER_H="${TOPDIR}/source3/include/version.h"
 
 function exitOnError
 {
@@ -32,13 +31,12 @@ function printUsage
     echo "    --help             Print command usage"
     echo "    --branch <name>    Specify the branch to to create the archive file from"
     echo "    --copy-docs <dir>  Copy documentation from <dir> rather than building"
-    echo "    --tag <name>       Tag name for release"
     echo "    --keyid <email>    The GnuPG key ID used to sign the release tag"
     echo ""
 }
 
 ##
-## Parse the command line options 
+## Parse the command line options
 ##
 
 function parseOptions
@@ -67,15 +65,6 @@ function parseOptions
 		OPT_DOCSDIR="$1"
 		shift
 		;;
-	    --tag)
-		shift
-		if [ -z "$1" ]; then
-		    printUsage
-		    return 1
-		fi
-		OPT_TAG="$1"
-		shift
-		;;
 	    --keyid)
 		shift
 		if [ -z "$1" ]; then
@@ -100,7 +89,7 @@ function parseOptions
 }
 
 ##
-## Build the dopcumentation (may be a no-op)
+## Build the documentation (may be a no-op)
 ##
 
 function buildDocs
@@ -115,7 +104,20 @@ function buildDocs
 
 	rsync -av "${OPT_DOCSDIR}"/ docs/
 	exitOnError $? "Failed top copy docs from ${OPT_DOCSDIR}"
-	
+
+	cd docs/
+	/bin/rm -rf test.pdf Samba4*pdf htmldocs/Samba4* htmldocs/test
+	if [ -d manpages-3 ]; then
+		mv manpages-3 manpages
+	fi
+	if [ -d htmldocs/manpages-3 ]; then
+		mv htmldocs/manpages-3 htmldocs/manpages
+	fi
+	# Sync thanks, history and registry/ into the docs dir
+	rsync -Ca --exclude=.svn ../../$OPT_BRANCH/docs-xml/registry ../docs/
+	rsync -Ca --exclude=.svn ../../$OPT_BRANCH/docs-xml/archives/ ../docs/
+	cd ../
+
 	return 0
     fi
 
@@ -132,13 +134,10 @@ function buildDocs
 ##
 function createReleaseTag
 {
-    if [ -z "${OPT_TAG}" ]; then
-	echo "Tagging disabled"
-	return 0
-    fi
+    tagname="$1"
 
-    if [ "x`git tag -l ${OPT_TAG}`" != "x" ]; then
-	echo -n "Tag exists.  Do you wish to overwrite? (y/N): "
+    if [ "x`git tag -l ${tagname}`" != "x" ]; then
+	echo -n "Tag '${tagname}' exists.  Do you wish to overwrite? (y/N): "
 	read answer
 
 	if [ "x$answer" != "xy" ]; then
@@ -155,35 +154,35 @@ function createReleaseTag
 	fi
     fi
 
-    git tag -u ${OPT_KEYID} ${OPT_TAG}
-    exitOnError $? "Failed to create tag"
+    git tag -u ${OPT_KEYID} ${tagname}
+    exitOnError $? "Failed to create tag '${tagname}'"
 
     return 0
 }
 ##
 ## Main driver
 ##
-function main 
+function main
 {
     parseOptions "$@"
     exitOnError $? "Failed to parse options"
-    
+
     cd $TOPDIR
 
     git checkout ${OPT_BRANCH}
     exitOnError $? "Invalid branch name \"${OPT_BRANCH}\""
 
-    (cd source && ./script/mkversion.sh)
+    (cd source3 && ./script/mkversion.sh)
     if [ ! -f $VER_H ]; then
 	exitOnError 1 "Failed to find ${VER_H}!"
     fi
 
-    version=`grep SAMBA_VERSION_OFFICIAL_STRING $VER_H | awk '{print $3}'`
-    vendor_version=`grep SAMBA_VERSION_VENDOR_SUFFIX $VER_H | awk '{print $3}'`
+    version=`grep "define SAMBA_VERSION_OFFICIAL_STRING" $VER_H | awk '{print $3}'`
+    vendor_version=`grep "define SAMBA_VERSION_VENDOR_SUFFIX" $VER_H | awk '{print $3}'`
     if [ -n "$vendor_version" ]; then
 	version="$version-$vendor_version"
     fi
-    vendor_patch=`grep "define SAMBA_VERSION_VENDOR_PATCH" $VER_H | awk '{print $3}'`
+    vendor_patch=`grep "define SAMBA_VERSION_VENDOR_PATCH_STRING" $VER_H | awk '{print $3}'`
     if [ -n "$vendor_patch" ]; then
 	version="$version-$vendor_patch"
     fi
@@ -197,12 +196,24 @@ function main
 
     pushd ../samba-${version}
 
+    # Remove RFCs as they are non-free content (with a strict interpretation of
+    # the DFSG)
+
+    if [ -d source4 ]; then
+	echo "Removing RFCs"
+	find source4/ -name "rfc*.txt" -exec /bin/rm -f {} \;
+	/bin/rm -f source4/ldap_server/devdocs/draft-armijo-ldap-syntax-00.txt
+	/bin/rm -f source4/ldap_server/devdocs/ldapext-ldapv3-vlv-04.txt
+    fi
+
+    /bin/rm -f Makefile configure configure.developer
+
     packaging/bin/update-pkginfo ${version} 1 ""
 
     buildDocs
     exitOnError $? "Failed to build documentation"
 
-    ( cd source && ./autogen.sh )
+    ( cd source3 && ./autogen.sh )
 
     cd ..
     tar cf samba-${version}.tar --exclude=.git* --exclude=CVS --exclude=.svn samba-${version}
@@ -216,7 +227,7 @@ function main
 
     popd
 
-    createReleaseTag
+    createReleaseTag "samba-${version}"
     exitOnError $? "Failed to create release tag"
 
     return 0
