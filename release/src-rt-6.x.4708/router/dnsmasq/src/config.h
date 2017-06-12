@@ -21,7 +21,7 @@
 #define TCP_BACKLOG 32  /* kernel backlog limit for TCP connections */
 #define EDNS_PKTSZ 4096 /* default max EDNS.0 UDP packet from RFC5625 */
 #define SAFE_PKTSZ 1280 /* "go anywhere" UDP packet size */
-#define KEYBLOCK_LEN 40 /* choose to mininise fragmentation when storing DNSSEC keys */
+#define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
 #define DNSSEC_WORK 50 /* Max number of queries to validate one question */
 #define TIMEOUT 10 /* drop UDP queries after TIMEOUT seconds */
 #define FORWARD_TEST 50 /* try all servers every 50 queries */
@@ -98,13 +98,13 @@ HAVE_DBUS
    servers via DBus.
 
 HAVE_IDN
-   define this if you want international domain name support.
-   NOTE: for backwards compatibility, IDN support is automatically 
-         included when internationalisation support is built, using the 
-	 *-i18n makefile targets, even if HAVE_IDN is not explicitly set.
+   define this if you want international domain name 2003 support.
+   
+HAVE_LIBIDN2
+   define this if you want international domain name 2008 support.
 
 HAVE_CONNTRACK
-   define this to include code which propogates conntrack marks from
+   define this to include code which propagates conntrack marks from
    incoming DNS queries to the corresponding upstream queries. This adds
    a build-dependency on libnetfilter_conntrack, but the resulting binary will
    still run happily on a kernel without conntrack support.
@@ -126,6 +126,8 @@ HAVE_LOOP
 HAVE_INOTIFY
    use the Linux inotify facility to efficiently re-read configuration files.
 
+NO_ID
+   Don't report *.bind CHAOS info to clients, forward such requests upstream instead.
 NO_IPV6
 NO_TFTP
 NO_DHCP
@@ -134,7 +136,7 @@ NO_SCRIPT
 NO_LARGEFILE
 NO_AUTH
 NO_INOTIFY
-   these are avilable to explictly disable compile time options which would 
+   these are available to explicitly disable compile time options which would 
    otherwise be enabled automatically (HAVE_IPV6, >2Gb file sizes) or 
    which are enabled  by default in the distributed source tree. Building dnsmasq
    with something like "make COPTS=-DNO_SCRIPT" will do the trick.
@@ -179,6 +181,7 @@ RESOLVFILE
 /* #define HAVE_LUASCRIPT */
 /* #define HAVE_DBUS */
 /* #define HAVE_IDN */
+/* #define HAVE_LIBIDN2 */
 /* #define HAVE_CONNTRACK */
 /* #define HAVE_DNSSEC */
 
@@ -235,7 +238,7 @@ HAVE_SOCKADDR_SA_LEN
    defined if struct sockaddr has sa_len field (*BSD) 
 */
 
-/* Must preceed __linux__ since uClinux defines __linux__ too. */
+/* Must precede __linux__ since uClinux defines __linux__ too. */
 #if defined(__uClinux__)
 #define HAVE_LINUX_NETWORK
 #define HAVE_GETOPT_LONG
@@ -273,7 +276,7 @@ HAVE_SOCKADDR_SA_LEN
       defined(__DragonFly__) || \
       defined(__FreeBSD_kernel__)
 #define HAVE_BSD_NETWORK
-/* Later verions of FreeBSD have getopt_long() */
+/* Later versions of FreeBSD have getopt_long() */
 #if defined(optional_argument) && defined(required_argument)
 #   define HAVE_GETOPT_LONG
 #endif
@@ -375,7 +378,7 @@ HAVE_SOCKADDR_SA_LEN
 #endif
 
 /* Define a string indicating which options are in use.
-   DNSMASQP_COMPILE_OPTS is only defined in dnsmasq.c */
+   DNSMASQ_COMPILE_OPTS is only defined in dnsmasq.c */
 
 #ifdef DNSMASQ_COMPILE_OPTS
 
@@ -402,10 +405,14 @@ static char *compile_opts =
 "no-"
 #endif
 "i18n "
-#if !defined(LOCALEDIR) && !defined(HAVE_IDN)
+#if defined(HAVE_LIBIDN2)
+"IDN2 "
+#else
+ #if !defined(HAVE_IDN)
 "no-"
-#endif 
-"IDN "
+ #endif 
+"IDN " 
+#endif
 #ifndef HAVE_DHCP
 "no-"
 #endif
@@ -415,14 +422,14 @@ static char *compile_opts =
      "no-"
 #  endif  
      "DHCPv6 "
-#  if !defined(HAVE_SCRIPT)
+#endif
+#if !defined(HAVE_SCRIPT)
      "no-scripts "
-#  else
-#    if !defined(HAVE_LUASCRIPT)
-       "no-"
-#    endif
-     "Lua "
+#else
+#  if !defined(HAVE_LUASCRIPT)
+     "no-"
 #  endif
+     "Lua "
 #endif
 #ifndef HAVE_TFTP
 "no-"
@@ -447,6 +454,9 @@ static char *compile_opts =
 "no-"
 #endif
 "DNSSEC "
+#ifdef NO_ID
+"no-ID "
+#endif
 #ifndef HAVE_LOOP
 "no-"
 #endif

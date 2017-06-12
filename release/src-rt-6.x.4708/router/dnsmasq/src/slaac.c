@@ -94,7 +94,7 @@ void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 	    slaac->backoff = 1;
 	    slaac->addr = addr;
 	    /* Do RA's to prod it */
-	    ra_start_unsolicted(now, context);
+	    ra_start_unsolicited(now, context);
 	  }
 	
 	if (slaac)
@@ -147,10 +147,10 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 	    struct sockaddr_in6 addr;
  
 	    reset_counter();
-	    
+
 	    if (!(ping = expand(sizeof(struct ping_packet))))
 	      continue;
-	    
+
 	    ping->type = ICMP6_ECHO_REQUEST;
 	    ping->code = 0;
 	    ping->identifier = ping_id;

@@ -77,29 +77,29 @@ int is_name_synthetic(int flags, char *name, struct all_addr *addr)
       
       *p = 0;	
       
-#ifdef HAVE_IPV6
-	if (prot == AF_INET6 && strstr(tail, "--ffff-") == tail)
-	  {
-	    /* special hack for v4-mapped. */
-	    memcpy(tail, "::ffff:", 7);
-	    for (p = tail + 7; *p; p++)
-	      if (*p == '-')
-		*p = '.';
-	  }
-	else
+ #ifdef HAVE_IPV6
+      if (prot == AF_INET6 && strstr(tail, "--ffff-") == tail)
+	{
+	  /* special hack for v4-mapped. */
+	  memcpy(tail, "::ffff:", 7);
+	  for (p = tail + 7; *p; p++)
+	    if (*p == '-')
+	      *p = '.';
+	}
+      else
 #endif
 	{
 	  /* swap . or : for - */
 	  for (p = tail; *p; p++)
 	    if (*p == '-')
-	    {
-	      if (prot == AF_INET)
-		*p = '.';
+	      {
+		if (prot == AF_INET)
+		  *p = '.';
 #ifdef HAVE_IPV6
 		else
 		  *p = ':';
 #endif
-		  }
+	      }
 	}
 
       if (hostname_isequal(c->domain, p+1) && inet_pton(prot, tail, addr))

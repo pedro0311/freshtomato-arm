@@ -219,10 +219,10 @@ int add_to_ipset(const char *setname, const struct all_addr *ipaddr, int flags, 
       af = AF_INET6;
       /* old method only supports IPv4 */
       if (old_kernel)
-       {
-         errno = EAFNOSUPPORT ;
-         ret = -1;
-       }
+	{
+	  errno = EAFNOSUPPORT ;
+	  ret = -1;
+	}
     }
 #endif
   
