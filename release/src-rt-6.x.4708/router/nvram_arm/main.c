@@ -217,7 +217,7 @@ int nvram_restore_new(char *file, char *buf)
 		{
 			*v++ = '\0';
 
-			if (issyspara(p))
+		//	if (issyspara(p))
 				nvram_set(p, v);
 
 			p = v + strlen(v) + 1;
