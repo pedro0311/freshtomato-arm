@@ -34,7 +34,7 @@ typedef enum {
 #ifdef HAVE_ICONV
 static iconv_result
 do_iconv(const char* to_ces, const char* from_ces,
-	 char *inbuf,  size_t inbytesleft,
+	 ICONV_CONST char *inbuf,  size_t inbytesleft,
 	 char *outbuf_orig, size_t outbytesleft_orig)
 {
 	size_t rc;

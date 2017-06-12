@@ -51,7 +51,7 @@ BASEOBJS = minidlna.o upnphttp.o upnpdescgen.o upnpsoap.o \
 	   upnpreplyparse.o minixml.o \
 	   getifaddr.o process.o upnpglobalvars.o \
 	   options.o minissdp.o uuid.o upnpevents.o \
-	   sql.o utils.o metadata.o scanner.o inotify.o \
+	   sql.o utils.o metadata.o scanner.o monitor.o \
 	   tivo_utils.o tivo_beacon.o tivo_commands.o \
 	   containers.o tagutils/tagutils.o \
 	   playlist.o image_utils.o albumart.o log.o clients.o
@@ -151,7 +151,7 @@ tagutils/tagutils.o: tagutils/tagutils-asf.c tagutils/tagutils-flc.c tagutils/ta
 tagutils/tagutils.o: tagutils/tagutils-aac.c tagutils/tagutils-asf.h tagutils/tagutils-flc.h tagutils/tagutils-mp3.c tagutils/tagutils-wav.c
 tagutils/tagutils.o: tagutils/tagutils-ogg.c tagutils/tagutils-aac.h tagutils/tagutils.h tagutils/tagutils-mp3.h tagutils/tagutils-ogg.h log.h
 playlist.o: playlist.h
-inotify.o: inotify.h playlist.h
+monitor.o: monitor.h playlist.h
 image_utils.o: image_utils.h
 tivo_utils.o: config.h tivo_utils.h
 tivo_beacon.o: config.h tivo_beacon.h tivo_utils.h

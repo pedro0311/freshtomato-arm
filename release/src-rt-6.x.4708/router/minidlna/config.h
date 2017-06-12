@@ -6,7 +6,7 @@
 #define __CONFIG_H__
 
 #define OS_NAME			"Tomato"
-#define OS_VERSION		"Linux/2.6.22.19"
+#define OS_VERSION		"Linux/2.6.36.4brcmarm"
 #define OS_URL			"http://tomatousb.org/"
 
 #define HAVE_CLOCK_GETTIME 1
