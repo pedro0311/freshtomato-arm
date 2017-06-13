@@ -33,7 +33,7 @@
 
 /* strings used in the root device xml description */
 #define ROOTDEV_MANUFACTURERURL		"http://tomatousb.org/"
-#define ROOTDEV_MANUFACTURER		"Tomato"
+#define ROOTDEV_MANUFACTURER		"TomatoUSB"
 #define ROOTDEV_MODELNAME		"Windows Media Connect compatible"
 #define ROOTDEV_MODELDESCRIPTION	OS_NAME
 #define ROOTDEV_MODELURL		"http://tomatousb.org/"

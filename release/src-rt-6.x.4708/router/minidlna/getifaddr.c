@@ -67,7 +67,6 @@
 #include "log.h"
 #include "ifaddrs.c"
 
-
 static int
 getifaddr(const char *ifname)
 {

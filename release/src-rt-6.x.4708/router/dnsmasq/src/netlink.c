@@ -193,7 +193,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	    /* May be multicast arriving async */
 	    nl_async(h);
 	  }
-	  else if (h->nlmsg_seq != seq)
+	else if (h->nlmsg_seq != seq)
 	  {
 	    /* May be part of incomplete response to previous request after
 	       ENOBUFS. Drop it. */

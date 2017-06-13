@@ -1,5 +1,5 @@
 AC_PREREQ([2.65])
-AC_INIT([dnscrypt-proxy],[1.9.4],[https://dnscrypt.org])
+AC_INIT([dnscrypt-proxy],[1.9.5],[https://dnscrypt.org])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([libltdl/config])
 AC_CONFIG_SRCDIR([src/proxy/app.c])
@@ -401,8 +401,11 @@ dnl Checks for library functions.
 
 AC_SEARCH_LIBS(pow, [m])
 AC_SEARCH_LIBS(dlopen, [dl])
-AC_SEARCH_LIBS(clock_gettime, [rt],
-  [AC_DEFINE(HAVE_CLOCK_GETTIME,[1],[define if you have clock_gettime()])])
+
+AS_IF([test "$host_vendor" = "apple"], [],[
+  AC_SEARCH_LIBS(clock_gettime, [rt],
+    [AC_DEFINE(HAVE_CLOCK_GETTIME,[1],[define if you have clock_gettime()])])
+])
 
 AC_SEARCH_LIBS(backtrace, [execinfo],
   [AC_DEFINE(HAVE_BACKTRACE,[1],[define if you have backtrace()])])
