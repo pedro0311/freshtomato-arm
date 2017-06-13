@@ -12775,7 +12775,12 @@ if test "$ac_res" != no; then :
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+
+if test "$host_vendor" = "apple"; then :
+
+else
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
 $as_echo_n "checking for library containing clock_gettime... " >&6; }
 if ${ac_cv_search_clock_gettime+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -12828,6 +12833,9 @@ $as_echo "$ac_cv_search_clock_gettime" >&6; }
 ac_res=$ac_cv_search_clock_gettime
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
 
 fi
 
@@ -13718,7 +13726,7 @@ $as_echo "#define TIME_WITH_SYS_TIME 1" >>confdefs.h
 fi
 
 
-for ac_func in gettimeofday vasprintf fcntl clock_gettime strtok_r strsep
+for ac_func in gettimeofday vasprintf fcntl strtok_r strsep
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
