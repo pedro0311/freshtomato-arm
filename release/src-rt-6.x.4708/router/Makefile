@@ -701,7 +701,7 @@ ifeq ($(TCONFIG_PPTPD),y)
 endif
 
 	busybox/examples/depmod.pl -k $(LINUXDIR)/vmlinux -b $(TARGETDIR)/lib/modules/*/
-	@mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
+#	@mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
 	@echo ---
 
 	@rm -f $(TARGETDIR)/lib/modules/*/build
