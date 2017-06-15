@@ -2009,6 +2009,11 @@ static void start_samba(void)
 		" interfaces = %s\n"
 		" bind interfaces only = yes\n"
 		" max protocol = SMB2\n"
+		" enable core files = no\n"
+		" deadtime = 30\n"
+		" smb encrypt = disabled\n"
+		" min receivefile size = 16384\n"
+		" use sendfile = yes\n"
 		" workgroup = %s\n"
 		" netbios name = %s\n"
 		" server string = %s\n"
@@ -2048,7 +2053,7 @@ static void start_samba(void)
 			" domain master = yes\n"
 			" local master = yes\n"
 			" preferred master = yes\n"
-			" os level = 65\n");
+			" os level = 255\n");
 	}
 
 	nv = nvram_safe_get("smbd_cpage");
@@ -2078,7 +2083,7 @@ static void start_samba(void)
 	if (strstr(nv, "socket options") == NULL) {
 		fprintf(fp, " socket options = TCP_NODELAY SO_KEEPALIVE IPTOS_LOWDELAY SO_RCVBUF=65536 SO_SNDBUF=65536\n");
 	}
-	fprintf(fp, "%s\n\n", nv);
+	fprintf(fp, "%s\n", nv);
 
 	/* configure shares */
 
