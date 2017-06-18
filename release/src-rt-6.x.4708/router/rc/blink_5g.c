@@ -78,6 +78,7 @@ int blink_5g_main(int argc, char *argv[])
 	if (fork() != 0) return 0;
 	setsid();
 	signal(SIGCHLD, chld_reap);
+
 #define INTERFACE_MAXLEN 10
 	interface = calloc(INTERFACE_MAXLEN,1);
 	char *tmp_interface = nvram_get("blink_5g_interface");
@@ -86,7 +87,7 @@ int blink_5g_main(int argc, char *argv[])
 	// check data per 10 count
 	model = get_model();
 	while(1){
-		if (model == MODEL_WS880) {
+		if (model == MODEL_WS880 || model == MODEL_RTN18U) {	// LAN check / LED control
 			sleep(5);
 			if (get_lanports_status()) {
 				led(LED_BRIDGE, LED_ON);
@@ -96,6 +97,7 @@ int blink_5g_main(int argc, char *argv[])
 			}
 			continue;
 		}
+
 		if(!tmp_interface){
 			sleep(5);
 			tmp_interface = nvram_get("blink_5g_interface");
@@ -136,4 +138,3 @@ int blink_5g_main(int argc, char *argv[])
 		usleep(50000);
 	}
 }
-

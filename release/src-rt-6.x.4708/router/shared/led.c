@@ -179,7 +179,7 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 int do_led(int which, int mode)
 {
-//				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDG  USB2 USB3   5G
+//				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDGE USB2 USB3   5G
 //				    ----- ----- ----- -----  ---  ----  -----  ---- ----   --
 	static int wrt54g[]	= { 255,  1,    2,    3,    7,    255,  255,   255, 255,  255};
 	static int wrtsl[]	= { 255,  1,    5,    7,    0,    255,  255,   255, 255,  255};
@@ -218,17 +218,17 @@ int do_led(int which, int mode)
 	static int tdn6[]       = { 255,  -6,     8,  255,  255,  255,  255,   255, 255,  255};
 #endif
 #ifdef CONFIG_BCMWL6A
-	static int ac68u[]      = { 255, 255,   255,  255,  255,   -4,  255,    -0, -14,  255};
-	static int ac56u[]      = { 255, 255,   255,  255,  255,   -3,  255,    -0, -14,  255};
-	static int n18u[]       = { 255, 255,     6,  255,  255,  255,  255,     3,  14,  255};
+	static int ac68u[]      = { 255, 255,   255,  255,  255,   -4,  255,     0, -14,  255};
+	static int ac56u[]      = { 255, 255,   255,  255,  255,   -3,  255,     0, -14,  255};
+	static int n18u[]       = { 255, 255,     6,  255,  255,  255,    9,     3,  14,  255};
 	static int r6250[]      = {  11, 255,    15,  255,  255,    1,  255,     8,   8,  255};
 	static int r6300v2[]    = {  11, 255,    10,  255,  255,    1,  255,     8,   8,  255};
 	static int r6400[]      = {   9,  -2,   255,  255,  255,  -11,  255,    12,  13,    8};
 	static int r7000[]      = {  13, 255,   255,  255,  255,  -15,  255,   -17, -18,   12};
 	static int ac15[]       = { 255,  -0,   255,  255,  255,   -6,  255,   -14, 255,   -2};
 	static int dir868[]     = { 255, 255,     3,  255,  255,   -0,  255,   255, 255,  255};
-// Assume the LED is the same as ea6700, need to be verified
-	static int ea6400[]     = { 255, 255,    8,   255,  255,  255,  255,   255, 255,  255};
+// Assume the LED is the same as ea6700, needs to be verified
+	static int ea6400[]     = { 255, 255,     8,   255, 255,  255,  255,   255, 255,  255};
 	static int ea6700[]     = { 255, 255,    -6,   -6,  255,  255,  255,   255, 255,  255};
 	static int ea6900[]     = { 255, 255,     8,  255,  255,    6,  255,   255, 255,  255};
 	static int ws880[]      = {   0, 255,   -12,  255,  255,    6,    1,    14,  14,    6};
@@ -236,7 +236,7 @@ int do_led(int which, int mode)
 	static int wzr1750[]    = { 255, 255,   255,  255,  255,   -5,  255,   255, 255,  255};
 
 #endif
-//                                 WLAN  DIAG  WHITE AMBER  DMZ   AOSS BRIDG   USB2 USB3   5G
+//                                 WLAN  DIAG  WHITE AMBER  DMZ   AOSS BRIDGE  USB2 USB3   5G
 
 
 	char s[16];
