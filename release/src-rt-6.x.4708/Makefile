@@ -162,6 +162,13 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/tomato-RT-AC56S-$(V1)$(V2)-$(current_BUILD_DESC)-NOSMP.trx
 endif
 endif
+# for Tenda
+ifeq ($(ASUS_TRX),TENDA)
+	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC15,3.0.0.4,image/tomato-TendaAC15-$(V1)$(V2)-$(current_BUILD_DESC).trx
+#	The following lines help to create .bin file that is uploadable from original firmware. Process is semi-manual so it is disabled for now
+#	crc32 image/tomato-TendaAC15-$(V1)$(V2)-$(current_BUILD_DESC).trx
+#	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
+#	cat ctools/tendahead.bin image/tomato-TendaAC15-$(V1)$(V2)-$(current_BUILD_DESC).trx > image/tomato-TendaAC15-$(V1)$(V2)-$(current_BUILD_DESC).bin
 endif
 # for dlink
 ifeq ($(ASUS_TRX),DLINK)
@@ -778,6 +785,28 @@ define KernelConfig
 		sed -i "/CONFIG_MTD_BRCMNAND/d" $(1); \
 		echo "CONFIG_MTD_BRCMNAND=y" >>$(1); \
 	fi; \
+	if [ "$(SPI)" = "y" ]; then \
+		echo "# CONFIG_MTD_DATAFLASH is not set" >>$(1); \
+		echo "CONFIG_MTD_M25P80=y" >>$(1); \
+		echo "CONFIG_M25PXX_USE_FAST_READ=y" >>$(1); \
+		echo "# CONFIG_MTD_SST25L is not set" >>$(1); \
+		echo "# CONFIG_AD525X_DPOT is not set" >>$(1); \
+		echo "# CONFIG_TI_DAC7512 is not set" >>$(1); \
+		echo "# CONFIG_EEPROM_AT25 is not set" >>$(1); \
+		echo "# CONFIG_SERIAL_MAX3100 is not set" >>$(1); \
+		echo "# CONFIG_SERIAL_MAX3107 is not set" >>$(1); \
+		echo "CONFIG_SPI=y" >>$(1); \
+		echo "CONFIG_SPI_MASTER=y" >>$(1); \
+		echo "# SPI Master Controller Drivers" >>$(1); \
+		echo "# CONFIG_SPI_BITBANG is not set" >>$(1); \
+		echo "# CONFIG_SPI_XILINX is not set" >>$(1); \
+		echo "# CONFIG_SPI_DESIGNWARE is not set" >>$(1); \
+		echo "# CONFIG_SPI_SPIDEV is not set" >>$(1); \
+		echo "# CONFIG_SPI_TLE62X0 is not set" >>$(1); \
+		echo "# CONFIG_SND_SPI is not set" >>$(1); \
+		echo "# CONFIG_SND_SOC is not set" >>$(1); \
+		echo "# CONFIG_LEDS_DAC124S085 is not set" >>$(1); \
+	fi; \
 	if [ "$(UPS)" = "y" ]; then \
 		sed -i "/CONFIG_INPUT=m/d" $(1); \
 		echo "CONFIG_INPUT=y" >>$(1); \
@@ -1106,6 +1135,9 @@ n18e:
 n18z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS"
 
+ac15:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="TENDA" TUXERA=y
+
 dir868l:
 	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="special" USB="USB" DNSSEC=y DNSCRYPT=y UPS=y NO_SSH=y NANO=y
 
@@ -1229,6 +1261,8 @@ ifeq ($(CONFIG_LINUX26),y)
 	@echo "ac68z         RT-N18U/AC56U/AC68U(R/P) build AIO"
 	@echo "n18e          RT-N18U/AC56S without SMP build VPN"
 	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
+	@echo "TENDA ARM Builds"
+	@echo "ac15          Tenda AC15"
 	@echo "DLINK ARM Builds"
 	@echo "dir868l       DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"

@@ -65,7 +65,11 @@ int nvram_save_new(char *file, char *buf)
 	}
 
 	filelen = count + (1024 - count % 1024);
-	rand = get_rand() % 30;
+	do
+	{
+		rand = get_rand() % 30;
+	}
+	while (rand > 7 && rand < 14);
 #ifdef ASUS_DEBUG
 	fprintf(stderr, "random number: %x\n", rand);
 #endif
@@ -213,7 +217,7 @@ int nvram_restore_new(char *file, char *buf)
 		{
 			*v++ = '\0';
 
-			if (issyspara(p))
+		//	if (issyspara(p))
 				nvram_set(p, v);
 
 			p = v + strlen(v) + 1;

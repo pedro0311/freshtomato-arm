@@ -744,7 +744,7 @@ ifeq ($(TCONFIG_PPTPD),y)
 endif
 
 	busybox/examples/depmod.pl -k $(LINUXDIR)/vmlinux -b $(TARGETDIR)/lib/modules/*/
-	@mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
+#	@mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
 	@echo ---
 
 	@rm -f $(TARGETDIR)/lib/modules/*/build
@@ -2430,7 +2430,7 @@ libcurl/stamp-h1: zlib openssl
 		--enable-ares --enable-cookies --enable-crypto-auth --enable-nonblocking \
 		--enable-file --enable-ftp --enable-http --enable-ipv6 --enable-tftp \
 		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher \
-		--disable-ldap --disable-manual --disable-telnet --disable-verbose \
+		--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
 		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
 		--without-gnutls --without-krb4 --without-libidn \
 		--with-linux-headers=$(LINUXDIR)/include \

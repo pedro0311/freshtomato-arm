@@ -737,3 +737,50 @@ long fappend_file(const char *path, const char *fname)
 	}
 	return r;
 }
+
+/* convert mac address format from XXXXXXXXXXXX to XX:XX:XX:XX:XX:XX */
+char *conv_mac(char *mac, char *buf)
+{
+	int i, j;
+
+	if (strlen(mac)==0)
+	{
+		buf[0] = 0;
+	}
+	else
+	{
+		j=0;
+		for (i=0; i<12; i++)
+		{
+			if (i!=0&&i%2==0) buf[j++] = ':';
+			buf[j++] = mac[i];
+		}
+		buf[j] = 0;	// oleg patch
+	}
+	//buf[j] = 0;
+
+	_dprintf("mac: %s\n", buf);
+
+	return (buf);
+}
+
+/* convert mac address format from XX:XX:XX:XX:XX:XX to XXXXXXXXXXXX */
+char *conv_mac2(char *mac, char *buf)
+{
+	int i,j;
+
+	if(strlen(mac) != 17)
+		buf[0] = 0;
+	else{
+		for(i = 0, j = 0; i < 17; ++i){
+			if(i%3 != 2){
+				buf[j] = mac[i];
+				++j;
+			}
+
+			buf[j] = 0;
+		}
+	}
+
+	return(buf);
+}

@@ -134,6 +134,13 @@ switch(nvram['t_model_name']) {
 		COL_P3N = '3';
 		COL_P4N = '4';
 	break;
+	case 'Tenda AC15': //only has 3 Lan ports
+		COL_P0N = '2';
+		COL_P1N = '3';
+		COL_P2N = '4';
+		COL_P3N = '1'; //not used
+		COL_P4N = '0';
+	break;
 	default:
 		COL_P0N = '1';
 		COL_P1N = '2';
