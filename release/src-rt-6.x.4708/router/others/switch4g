@@ -32,6 +32,7 @@ connect() {
     SPEED=`nvram get "$PREFIX"_modem_speed`
     BAND=`nvram get "$PREFIX"_modem_band`
     ROAMING=`nvram get "$PREFIX"_modem_roam`
+    CLID=$(nvram get modem_clid)
 
     logger -t switch4g[$PID] "4G MODEM - connecting ..."
 
@@ -45,6 +46,32 @@ connect() {
             rm -f $PIDFILE > /dev/null 2>&1
             exit 0
         fi
+
+        case "$SPEED" in
+             "00")   SPD1="Auto" ;;
+             "03")   SPD1="4G only" ;;
+             "02")   SPD1="3G only" ;;
+             "0302") SPD1="4G/3G only" ;;
+             "030201") SPD1="4G/3G/2G" ;;
+             *) SPD1="unknown" ;;
+        esac
+
+        case "$ROAMING" in
+             "0")  ROAM3="Disabled"  ;;
+             "1")  ROAM3="Supported" ;;
+             "2")  ROAM3="No change" ;;
+             "3")  ROAM3="Roam only" ;;
+             *)    ROAM3="unknown"   ;;
+        esac
+
+        case "$BAND" in
+             "80000") BAND2="B20 (800 MHz)" ;;
+              "4")     BAND2="B3 (1800 MHz)" ;;
+              "1")     BAND2="B1 (2100 MHz)" ;;
+              "40")    BAND2="B7 (2600 MHz)" ;;
+              "7FFFFFFFFFFFFFFF") BAND2="All supported" ;;
+              *)       BAND2="unknown"       ;;
+        esac
 
         #we try use last diag iface first. If it failed then we try use any other ttyUSB device
         TTY=`ls /dev/ttyUSB* | grep -v $DEV`
@@ -73,29 +100,12 @@ connect() {
                      *) RES1="unknown" ;;
                 esac
 
-                case "$SPEED" in
-                     "00")   SPD1="Auto" ;;
-                     "03")   SPD1="4G only" ;;
-                     "02")   SPD1="3G only" ;;
-                     "0302") SPD1="4G/3G only" ;;
-                     "030201") SPD1="4G/3G/2G" ;;
-                     *) SPD1="unknown" ;;
-                esac
-
                 case "$RESROAM" in
                      "0")  RES3="Disabled"  ;;
                      "1")  RES3="Supported" ;;
                      "2")  RES3="No change" ;;
                      "3")  RES3="Roam only" ;;
                      *)    RES3="unknown"   ;;
-                esac
-
-                case "$ROAMING" in
-                     "0")  ROAM3="Disabled"  ;;
-                     "1")  ROAM3="Supported" ;;
-                     "2")  ROAM3="No change" ;;
-                     "3")  ROAM3="Roam only" ;;
-                     *)    ROAM3="unknown"   ;;
                 esac
 
                 case "$RESBAND" in
@@ -105,15 +115,6 @@ connect() {
                      "40")    RES2="B7 (2600 MHz)" ;;
                      "7FFFFFFFFFFFFFFF") RES2="All supported" ;;
                      *)       RES2="unknown"       ;;
-                esac
-
-                case "$BAND" in
-                     "80000") BAND2="B20 (800 MHz)" ;;
-                     "4")     BAND2="B3 (1800 MHz)" ;;
-                     "1")     BAND2="B1 (2100 MHz)" ;;
-                     "40")    BAND2="B7 (2600 MHz)" ;;
-                     "7FFFFFFFFFFFFFFF") BAND2="All supported" ;;
-                     *)       BAND2="unknown"       ;;
                 esac
 
                 # change network type, band and roaming if required
@@ -187,12 +188,8 @@ connect() {
 
     # non-hilink/2nd type
     elif [ "$TYPE" == "qmi_wwan" ]; then
-        CLID=""
-
-        # wait till registered
-        while [ `uqmi -s -d "$DEV" --get-serving-system | grep searching | wc -l` != "0" ]; do
-            sleep 5
-        done
+        CONNECTED=0
+        COUNT=0
 
         case "$SPEED" in
              "00")   SPD1="all" ;;
@@ -203,63 +200,78 @@ connect() {
              *) SPD1="all" ;;
         esac
 
-        # set lte mode (all,lte,umts,cdma,td-scdma), implemented only all/lte
-        uqmi -s -d "$DEV" --set-network-modes "$SPD1"
-        sleep 2
-
         case "$ROAMING" in
-             "0")  ROAM3="off"  ;;
-             "1")  ROAM3="any"  ;;
              "3")  ROAM3="only" ;;
              *)    ROAM3="any"  ;;
         esac
+
+        sleep 3
+        uqmi -s -d /dev/"$devnr" --sync
+        sleep 1
+
+        # wait till registered
+        while [ `uqmi -s -d "$DEV" --get-serving-system | grep searching | wc -l` -ne 0 ]; do
+            sleep 5
+        done
+
+        sleep 1
+        # set lte mode (all,lte,umts,cdma,td-scdma), implemented only all/lte
+        uqmi -s -d "$DEV" --set-network-modes "$SPD1"
+        sleep 1
  
         # set roaming
-        if [ "$ROAMING" -eq 0 -o "$ROAMING" -eq 1 -o "$ROAMING" -eq 3 ]; then
-            uqmi -s -d "$DEV" --set-network-roaming "$ROAM3"
-            logger -t switch4g[$PID] "4G MODEM - Roaming is set to '$ROAM3'"
-            sleep 2
-        fi
+        uqmi -s -d "$DEV" --set-network-roaming "$ROAM3"
+        logger -t switch4g[$PID] "4G MODEM - Roaming is set to '$ROAM3'"
+        sleep 1
 
-        if [ "$CLID" == "" ]; then
-            # get client id for wds - only once!
-            CLID=`uqmi -s -d "$DEV" --get-client-id wds`
-            nvram set modem_clid=$CLID
-            logger -t switch4g[$PID] "4G MODEM - got new Client ID: $CLID"
-        fi
+        # get client id for wds
+        CLID=`uqmi -s -d "$DEV" --get-client-id wds`
 
-        CONNECTED=0
-        COUNT=0
+        [ $? -ne 0 ] && {
+            logger -t switch4g[$pid] "4G MODEM - unable to obtain client ID!"
+            rm -f $pidfile > /dev/null 2>&1
+            exit 0
+        }
+        sleep 1
+        nvram set modem_clid=$CLID
+        logger -t switch4g[$PID] "4G MODEM - got new Client ID: $CLID"
+
+		# try to clear previous autoconnect state
+        uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network 0xffffffff --autoconnect > /dev/null
+		sleep 1
+
+        uqmi -s -d "$DEV" --set-data-format 802.3
+        sleep 1
+        uqmi -s -d "$DEV" --wda-set-data-format 802.3
+        sleep 1
+
         while [ "$CONNECTED" -eq 0 ]; do
             if [ "$COUNT" -lt 5 ]; then
+                #connect...
+                PDH=$(uqmi -s -d "$DEV" --set-client-id wds,"$CLID" \
+                     --start-network \
+                     ${apn:+"$apn"})
 
-                if [ "$CLID" != "" ]; then
-                    #connect...
-                    PDH=`uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --start-network "$APN" --autoconnect`
-
-                    case $PDH in
-                    ''|*[!0-9]*)
-                        logger -t switch4g[$PID] "4G MODEM - connection failed (device $DEV) [$COUNT]"
-                        COUNT=`expr $COUNT + 1`
-                        sleep 5
-                        ;;
-                    *)
-                        logger -t switch4g[$PID] "4G MODEM - connected (device $DEV) ..."
-                        CONNECTED=1
-                        COUNT=6
-                        logger -t switch4g[$PID] "4G MODEM - Session ID: $PDH"
-                        nvram set modem_pdh=$PDH
-                        break
-                        ;;
-                    esac
-
-                else
-                    logger -t switch4g[$PID] "4G MODEM - Unable to obtain client ID!"
-                    rm -f $PIDFILE > /dev/null 2>&1
-                    exit 0
-                fi
+                case $PDH in
+                ''|*[!0-9]*)
+                    logger -t switch4g[$PID] "4G MODEM - connection failed (device $DEV) [$COUNT]"
+                    COUNT=`expr $COUNT + 1`
+                    sleep 5
+                    ;;
+                *)
+                    logger -t switch4g[$PID] "4G MODEM - connected (device $DEV) ..."
+                    CONNECTED=1
+                    COUNT=6
+                    logger -t switch4g[$PID] "4G MODEM - Session ID: $PDH"
+                    nvram set modem_pdh=$PDH
+                    break
+                    ;;
+                esac
             else
                 # checked 5 times but still not connected?
+                sleep 1
+                uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --release-client-id wds
+
                 INTERVAL=`nvram get mwan_cktime`
                 if [ "$INTERVAL" -gt 0 ]; then
                     logger -t switch4g[$PID] "4G MODEM - connection failed - watchdog enabled"
@@ -321,6 +333,7 @@ disconnect() {
     DEV=`nvram get modem_dev4g`
     TYPE=`nvram get modem_type`
     CLID=`nvram get modem_clid`
+    PDH=`nvram get modem_pdh`
 
     logger -t switch4g[$PID] "4G MODEM - disconnecting ..."
     watchdog del
@@ -330,12 +343,16 @@ disconnect() {
         MODE="AT^NDISDUP=1,0" gcom -d "$DEV" -s /etc/gcom/setmode.gcom
         sleep 1
     elif [ "$TYPE" == "qmi_wwan" ]; then
-        # disable previous autoconnect state using the global handle
-        # do not reuse previous wds client id to prevent hangs caused by stale data
-        uqmi -s -d "$DEV" --stop-network 0xffffffff --autoconnect
         if [ "$CLID" != "" ]; then
-            logger -t switch4g[$PID] "4G MODEM - release Client ID: $CLID"
+            uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network 0xffffffff --autoconnect > /dev/null
+            sleep 1
+
+            if [ "$PDH" != "" ]; then
+                uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network "$PDH"
+                sleep 1
+            }
             uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --release-client-id wds
+            logger -t switch4g[$pid] "4G MODEM - release Client ID: $CLID"
             nvram unset modem_pdh
             nvram unset modem_clid
         fi
@@ -729,6 +746,7 @@ signal() {
         RSRP=`echo $SIGNAL | cut -d "," -f4 | cut -d ":" -f2`
         SNR=`echo $SIGNAL | cut -d ":" -f6 | cut -d "}" -f1`
         logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dB, RSRQ $RSRQ dB, SNR $SNR dB"
+        sleep 1
     fi
 }
 
