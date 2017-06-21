@@ -2250,24 +2250,28 @@ static void start_media_server(void)
 	FILE *f;
 	int port, pid, https;
 	char *dbdir;
-	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-R", NULL };
+	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-r", NULL, NULL };
 	static int once = 1;
+	int index = 4;
+	int i;
 	char *msi;
+	char serial[16];
 
 	if (getpid() != 1) {
 		start_service("media");
 		return;
 	}
 
-	if (nvram_get_int("ms_sas") == 0)
+	if (nvram_get_int("ms_sas") == 0) {
 		once = 0;
-
+		argv[index - 1] = NULL;
+	}
 	if (nvram_get_int("ms_enable") != 0) {
-		if ((!once) && (nvram_get_int("ms_rescan") == 0)) {
-			// no forced rescan
-			argv[3] = NULL;
+		if (/* (once) && */(nvram_get_int("ms_rescan") == 1)) {
+			// force rebuild
+			argv[index - 1] = "-R";
+			nvram_unset("ms_rescan");
 		}
-		nvram_unset("ms_rescan");
 
 		if (f_exists("/etc/"MEDIA_SERVER_APP".alt")) {
 			argv[2] = "/etc/"MEDIA_SERVER_APP".alt";
@@ -2281,6 +2285,14 @@ static void start_media_server(void)
 				mkdir_if_none(dbdir ? : "/var/run/"MEDIA_SERVER_APP);
 
 				msi = nvram_safe_get("ms_ifname");
+				//persistent ident (router's mac as serial)
+				conv_mac2(nvram_safe_get("et0macaddr"), serial);
+ 				if (strlen(serial)) {
+ 					for (i = 0; i < strlen(serial); i++)
+ 						serial[i] = tolower(serial[i]);
+ 					}
+				else
+					strcpy(serial, "554e4b4e4f57"); //default if no hwaddr
 
 				fprintf(f,
 					"network_interface=%s\n"
@@ -2295,6 +2307,10 @@ static void start_media_server(void)
 					"album_art_names=Cover.jpg/cover.jpg/AlbumArtSmall.jpg/albumartsmall.jpg/AlbumArt.jpg/albumart.jpg/Album.jpg/album.jpg/Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg\n"
 					"log_dir=/var/log\n"
 					"log_level=general,artwork,database,inotify,scanner,metadata,http,ssdp,tivo=warn\n"
+					"serial=%s\n"
+					//add explicit uuid based on mac(serial)
+					//since some recent change has resulted in a changing uuid at boot
+					"uuid=4d696e69-444c-164e-9d41-%s\n"
 					"\n",
 					strlen(msi) ? msi : nvram_safe_get("lan_ifname"),
 					(port < 0) || (port >= 0xffff) ? 0 : port,
@@ -2302,7 +2318,8 @@ static void start_media_server(void)
 					dbdir ? : "/var/run/"MEDIA_SERVER_APP,
 					nvram_get_int("ms_tivo") ? "yes" : "no",
 					nvram_get_int("ms_stdlna") ? "yes" : "no",
-					https ? "s" : "", nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport")
+					https ? "s" : "", nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport"),
+					serial, serial
 				);
 
 				// media directories
@@ -2325,6 +2342,11 @@ static void start_media_server(void)
 				fclose(f);
 			}
 		}
+
+		if (nvram_get_int("ms_debug") == 1)
+			argv[index++] = "-v";
+
+		//syslog(LOG_DEBUG,"**** minidlna cmd: minidlna -f /etc/minidlna.conf %s %s", argv[3] ? argv[3] : "" , argv[4] ? argv[4] : "");
 
 		/* start media server if it's not already running */
 		if (pidof(MEDIA_SERVER_APP) <= 0) {
