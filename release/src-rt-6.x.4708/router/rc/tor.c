@@ -26,7 +26,13 @@ void start_tor(void) {
 			perror("/etc/tor.conf");
 			return;
 		}
-		fprintf(fp, "SocksPort %d\n", nvram_get_int("tor_socksport"));
+		/* localhost ports, NoPreferIPv6Automap doesn't matter when applied only to DNSPort, but works fine with SocksPort */
+		fprintf(fp, "SocksPort %d NoPreferIPv6Automap\n", nvram_get_int("tor_socksport"));
+		/* .exit .onion domains support for LAN clients */
+		fprintf(fp, "AutomapHostsOnResolve 1\n");
+		fprintf(fp, "VirtualAddrNetworkIPv4 172.16.0.0/12\n");
+		fprintf(fp, "VirtualAddrNetworkIPv6 [FC00::]/7\n");
+		fprintf(fp, "AvoidDiskWrites 1\n");
 		fprintf(fp, "RunAsDaemon 1\n");
 		fprintf(fp, "Log notice syslog\n");
 		fprintf(fp, "DataDirectory %s\n", nvram_safe_get("tor_datadir"));
