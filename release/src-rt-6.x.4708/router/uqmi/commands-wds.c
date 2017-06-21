@@ -30,6 +30,14 @@ static struct qmi_wds_start_network_request wds_sn_req = {
 };
 static struct qmi_wds_stop_network_request wds_stn_req;
 
+#define cmd_wds_set_apn_cb no_cb
+static enum qmi_cmd_result
+cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+{
+	qmi_set_ptr(&wds_sn_req, apn, arg);
+	return QMI_CMD_DONE;
+}
+
 #define cmd_wds_set_auth_cb no_cb
 static enum qmi_cmd_result
 cmd_wds_set_auth_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
@@ -82,6 +90,42 @@ cmd_wds_set_autoconnect_prepare(struct qmi_dev *qmi, struct qmi_request *req, st
 	return QMI_CMD_DONE;
 }
 
+#define cmd_wds_set_ip_family_pref_cb no_cb
+static enum qmi_cmd_result
+cmd_wds_set_ip_family_pref_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+{
+	static const struct {
+		const char *name;
+		const QmiWdsIpFamily mode;
+	} modes[] = {
+		{ "ipv4", QMI_WDS_IP_FAMILY_IPV4 },
+		{ "ipv6", QMI_WDS_IP_FAMILY_IPV6 },
+		{ "unspecified", QMI_WDS_IP_FAMILY_UNSPECIFIED },
+	};
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(modes); i++) {
+		if (strcasecmp(modes[i].name, arg) != 0)
+			continue;
+
+		qmi_set(&wds_sn_req, ip_family_preference, modes[i].mode);
+		return QMI_CMD_DONE;
+	}
+
+	uqmi_add_error("Invalid value (valid: ipv4, ipv6, unspecified)");
+	return QMI_CMD_EXIT;
+}
+
+#define cmd_wds_set_profile_cb no_cb
+static enum qmi_cmd_result
+cmd_wds_set_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+{
+	uint32_t idx = strtoul(arg, NULL, 10);
+
+	qmi_set(&wds_sn_req, profile_index_3gpp, idx);
+	return QMI_CMD_DONE;
+}
+
 static void
 cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
 {
@@ -95,7 +139,6 @@ cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qm
 static enum qmi_cmd_result
 cmd_wds_start_network_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
 {
-	qmi_set_ptr(&wds_sn_req, apn, arg);
 	qmi_set_wds_start_network_request(msg, &wds_sn_req);
 	return QMI_CMD_REQUEST;
 }
@@ -211,13 +254,12 @@ static void wds_to_ipv4(const char *name, const uint32_t addr)
 
 static void wds_to_ipv6(const char *name, const uint16_t *addr)
 {
-	int i;
-	struct in6_addr ip_addr;
 	char buf[INET6_ADDRSTRLEN];
+	uint16_t ip_addr[8];
+	int i;
 
-	for (i = 0; i < ARRAY_SIZE(ip_addr.s6_addr16); i++) {
-		ip_addr.s6_addr16[i] = htons(addr[i]);
-	}
+	for (i = 0; i < ARRAY_SIZE(ip_addr); i++)
+		ip_addr[i] = htons(addr[i]);
 
 	blobmsg_add_string(&status, name, inet_ntop(AF_INET6, &ip_addr, buf, sizeof(buf)));
 }
@@ -247,7 +289,7 @@ cmd_wds_get_current_settings_cb(struct qmi_dev *qmi, struct qmi_request *req, st
 
 	t = blobmsg_open_table(&status, NULL);
 
-	if (res.set.pdp_type && res.data.pdp_type < ARRAY_SIZE(pdptypes))
+	if (res.set.pdp_type && (int) res.data.pdp_type < ARRAY_SIZE(pdptypes))
 		blobmsg_add_string(&status, "pdp-type", pdptypes[res.data.pdp_type]);
 
 	if (res.set.ip_family) {

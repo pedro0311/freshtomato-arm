@@ -250,7 +250,7 @@ connect() {
                 #connect...
                 PDH=$(uqmi -s -d "$DEV" --set-client-id wds,"$CLID" \
                      --start-network \
-                     ${apn:+"$apn"})
+                     ${apn:+--apn "$apn"})
 
                 case $PDH in
                 ''|*[!0-9]*)
