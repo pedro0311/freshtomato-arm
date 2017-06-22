@@ -1300,7 +1300,7 @@ ntfs-3g-install: ntfs-3g
 
 libusb10/Makefile: libusb10/Makefile.in
 	cd libusb10 && CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
-	$(CONFIGURE) --prefix=/usr ac_cv_lib_rt_clock_gettime=no
+	$(CONFIGURE) --disable-udev --prefix=/usr ac_cv_lib_rt_clock_gettime=no
 
 libusb10: libusb10/Makefile
 	$(MAKE) -C $@
@@ -2058,11 +2058,11 @@ libxml2: libxml2/stamp-h1
 
 libxml2-install: libxml2
 	@$(SEP)
-	install -D libxml2/.libs/libxml2.so.2.9.1 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.1
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.1
+	install -D libxml2/.libs/libxml2.so.2.9.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.1 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.1 libxml2.so
+		ln -sf libxml2.so.2.9.3 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.3 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
