@@ -1,7 +1,7 @@
-AC_INIT([libusb-compat], [0.1.3])
+AC_INIT([libusb-compat], [0.1.5])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([libusb/core.c])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ([2.50])
@@ -52,11 +52,11 @@ AM_CONDITIONAL([BUILD_EXAMPLES], [test "x$build_examples" != "xno"])
 # Restore gnu89 inline semantics on gcc 4.3 and newer
 saved_cflags="$CFLAGS"
 CFLAGS="$CFLAGS -fgnu89-inline"
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]), inline_cflags="-fgnu89-inline", inline_cflags="")
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], inline_cflags="-fgnu89-inline", inline_cflags="")
 CFLAGS="$saved_cflags"
 
 AC_DEFINE([API_EXPORTED], [__attribute__((visibility("default")))], [Default visibility])
-AM_CFLAGS="-std=gnu99 $inline_cflags -Wall -Wundef -Wunused -Wstrict-prototypes -Werror-implicit-function-declaration -Wshadow"
+AM_CFLAGS="-std=gnu99 $inline_cflags -Wall -Wundef -Wunused -Wstrict-prototypes -Werror-implicit-function-declaration -Wno-pointer-sign -Wshadow"
 AC_SUBST(AM_CFLAGS)
 
 AC_CONFIG_FILES([libusb.pc] [libusb-config] [Makefile] [libusb/Makefile] [examples/Makefile])

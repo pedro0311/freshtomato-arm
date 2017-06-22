@@ -21,6 +21,7 @@
 #include <config.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -136,6 +137,13 @@ static void usbi_log(enum usbi_log_level level, const char *function,
 	fprintf(stream, "\n");
 }
 
+static void _usb_finalize(void) {
+       if (ctx) {
+          libusb_exit(ctx);
+               ctx = NULL;
+               }
+}
+
 API_EXPORTED void usb_init(void)
 {
 	int r;
@@ -151,6 +159,8 @@ API_EXPORTED void usb_init(void)
 		/* usb_set_debug can be called before usb_init */
 		if (usb_debug)
 			libusb_set_debug(ctx, 3);
+
+               atexit(_usb_finalize);
 	}
 }
 
@@ -659,6 +669,10 @@ API_EXPORTED usb_dev_handle *usb_open(struct usb_device *dev)
 
 	r = libusb_open((libusb_device *) dev->dev, &udev->handle);
 	if (r < 0) {
+		if (r == LIBUSB_ERROR_ACCESS) {
+			usbi_info("Device open failed due to a permission denied error.");
+			usbi_info("libusb requires write access to USB device nodes.");
+		}
 		usbi_err("could not open device, error %d", r);
 		free(udev);
 		errno = libusb_to_errno(r);
@@ -773,31 +787,7 @@ API_EXPORTED int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes,
 	return usb_bulk_io(dev, ep, bytes, size, timeout);
 }
 
-API_EXPORTED int usb_bulk_write_sp(usb_dev_handle *dev, int ep, char *bytes, int size,
-	int timeout, int *actual_length, int max_rw)
-{
-	if (ep & USB_ENDPOINT_IN) {
-		/* libusb-0.1 on BSD strangely fix up a write request to endpoint
-		 * 0x81 to be to endpoint 0x01. do the same thing here, but
-		 * warn about this silly behaviour. */
-		usbi_warn("endpoint %x has excessive IN direction bit, fixing");
-		ep &= ~USB_ENDPOINT_IN;
-	}
-
-	int r;
-	usbi_dbg("endpoint %x size %d timeout %d", ep, size, timeout);
-	r = libusb_bulk_transfer(dev->handle, ep & 0xff, bytes, size,
-		actual_length, timeout);
-	
-	/* if we timed out but did transfer some data, report as successful short
-	 * read. FIXME: is this how libusb-0.1 works? */
-	if (r == 0 || (r == LIBUSB_ERROR_TIMEOUT && actual_length > 0))
-		return actual_length;
-
-	return compat_err(r);
-}
-
-API_EXPORTED int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes,
+API_EXPORTED int usb_bulk_write(usb_dev_handle *dev, int ep, const char *bytes,
 	int size, int timeout)
 {
 	if (ep & USB_ENDPOINT_IN) {
@@ -808,7 +798,7 @@ API_EXPORTED int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes,
 		ep &= ~USB_ENDPOINT_IN;
 	}
 
-	return usb_bulk_io(dev, ep, bytes, size, timeout);
+	return usb_bulk_io(dev, ep, (char *)bytes, size, timeout);
 }
 
 static int usb_interrupt_io(usb_dev_handle *dev, int ep, char *bytes,
@@ -841,7 +831,7 @@ API_EXPORTED int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes,
 	return usb_interrupt_io(dev, ep, bytes, size, timeout);
 }
 
-API_EXPORTED int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes,
+API_EXPORTED int usb_interrupt_write(usb_dev_handle *dev, int ep, const char *bytes,
 	int size, int timeout)
 {
 	if (ep & USB_ENDPOINT_IN) {
@@ -852,7 +842,7 @@ API_EXPORTED int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes,
 		ep &= ~USB_ENDPOINT_IN;
 	}
 
-	return usb_interrupt_io(dev, ep, bytes, size, timeout);
+	return usb_interrupt_io(dev, ep, (char *)bytes, size, timeout);
 }
 
 API_EXPORTED int usb_control_msg(usb_dev_handle *dev, int bmRequestType,
@@ -936,6 +926,22 @@ API_EXPORTED int usb_get_driver_np(usb_dev_handle *dev, int interface,
 
 API_EXPORTED int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
-	return compat_err(libusb_detach_kernel_driver(dev->handle, interface));
+	int r = compat_err(libusb_detach_kernel_driver(dev->handle, interface));
+	switch (r) {
+	case LIBUSB_SUCCESS:
+		return 0;
+	case LIBUSB_ERROR_NOT_FOUND:
+		return -ENODATA;
+	case LIBUSB_ERROR_INVALID_PARAM:
+		return -EINVAL;
+	case LIBUSB_ERROR_NO_DEVICE:
+		return -ENODEV;
+	case LIBUSB_ERROR_OTHER:
+		return -errno;
+	/* default can be reached only in non-Linux implementations,
+	 * mostly with LIBUSB_ERROR_NOT_SUPPORTED. */
+	default:
+		return -ENOSYS;
+	}
 }
 

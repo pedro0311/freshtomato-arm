@@ -1,3 +1,176 @@
+commit cab33bcf07541d1a36e1e9d4ec75a3c080e98b2d
+Author: Nathan Hjelm <hjelmn@me.com>
+Date:   Mon May 20 17:34:02 2013 -0600
+
+    libusb-compat-0.1.5
+
+commit 86dafa1443aef6fb9df50734df7b6e2240de4d9c
+Author: Nathan Hjelm <hjelmn@me.com>
+Date:   Mon May 20 17:33:43 2013 -0600
+
+    Add bootstrap.sh and do not set debug mode by default.
+
+commit 72dc8b5987580c73e5df14cc330cea72b0f5a827
+Author: Nathan Hjelm <hjelmn@me.com>
+Date:   Mon May 20 17:32:43 2013 -0600
+
+    Replace the deprecated INCLUDES token with AM_CPPFLAGS in Makefile.am
+
+commit 70083af73554fec63fa4c13b0211b4d5ddf5a8cd
+Author: Brad Smith <brad@comstyle.com>
+Date:   Fri Aug 24 17:13:11 2012 -0400
+
+    libusb.pc.in: Add missing Requires.private: libusb-1.0 so that pkg-config adds the libusb 1.0 library and dependencies when static linking.
+
+commit 0be16b8dd25733d242ae32b57823a9513ec21353
+Author: Nathan Hjelm <hjelmn@cs.unm.edu>
+Date:   Thu Apr 4 10:53:42 2013 -0600
+
+    use atexit() to call libusb_exit()
+    
+    Fixes #130
+
+commit f52bc041ccadbc72860fcc3409e915121f6a22ac
+Author: Nathan Hjelm <hjelmn@cs.unm.edu>
+Date:   Thu Apr 4 10:53:01 2013 -0600
+
+    fix autoconf errors/warnings
+    
+    Fixes #161
+
+commit b2200bea0cf009f4ca31717b588e3c78bbda4e96
+Author: Xiaofan Chen <xiaofanc@gmail.com>
+Date:   Sun May 13 19:50:38 2012 +0800
+
+    examples: Link only with ../libusb/libusb.la and not with -lusb
+    
+    Similar to libusb.git commit 93b0e09d53ed1d177631af9182378492481a790a
+    http://git.libusb.org/?p=libusb.git;a=commitdiff;h=93b0e09d53ed1d177631af918
+    
+    Previous _LDFLAGS included both the freshly built libusb in ../libusb
+    and -lusb, where libtool would usually resolve the latter to an
+    already-installed libusb library in the system. The extra reference
+    to a second libusb library may cause failures to build examples
+    on some platforms and is wrong.
+    
+    Fixes #135.
+
+commit 96aed2f7963d4a55d575a701adce8e64c0ae89fb
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 07:27:08 2012 +0200
+
+    libusb-compat-0.1.4
+
+commit 2ec4b60bc6394356975757b754e2b52b1dc17bb8
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 07:21:54 2012 +0200
+
+    README: Add Peter Stuge and remove Daniel Drake
+
+commit 2236a36fe8acdf1bc74239e5dae4d4cad4f679be
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 07:20:58 2012 +0200
+
+    README: Update libusb homepage URL
+
+commit 1e00ab3f042a8d37558e321e3240df514b6d9d81
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 07:43:39 2012 +0200
+
+    examples/Makefile.am: -I$(top_srcdir)/libusb to reach usb.h properly
+
+commit 983fabd544ca9879d8901f05e286a674db97070e
+Author: Stanislav Brabec <sbrabec@suse.cz>
+Date:   Wed Apr 4 17:44:24 2012 +0200
+
+    Fix #42 usb_detach_kernel_driver_np() error mapping
+    
+    usb_detach_kernel_driver_np() from libusb-compat-0.1 returns different
+    error messages than the old libusb-0.1. It causes problems for drivers
+    that expect exact error code.
+    
+    Convert libusb-1.0 errors back to libusb-0.1 errors to get 1:1 mapping
+    of kernel error codes.
+    
+    Affected software:
+    lirc-0.8.7/daemons/hw_srm7500libusb.c: srm7500_initialize_usbdongle()
+    The function continues if usb_detach_kernel_driver_np() finishes with
+    no error or if it returns -ENODATA. But libusb-compat-0.1 used to
+    return -ENOENT and the driver considers this error as fatal.
+    
+    Upstream bug reference:
+    http://libusb.org/ticket/42
+    Upstream mailing list reference:
+    http://marc.info/?m=133355454809642
+    Downstream bug reference:
+    https://bugzilla.novell.com/show_bug.cgi?id=683307
+
+commit 284235b7e71978f2c2068fbd66698bc4c6770559
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 06:15:35 2012 +0200
+
+    autogen.sh: Try to use libtoolize before trying glibtoolize
+    
+    This helps on Mac OS X where an old glibtoolize is included in the
+    system and newer, manually installed, versions provide libtoolize.
+    
+    See also http://marc.info/?m=132490560131894
+    
+    libusb.git commit 3df437680f8f5406795ec5f32d96612d327b2ca4
+
+commit 1aa067b7d2ab313096bdc16b5a3aa050971b14d5
+Author: Peter Stuge <peter@stuge.se>
+Date:   Tue Apr 24 07:36:47 2012 +0200
+
+    Silence warnings: passing argument 3 of 'usb_*_io' discards qualifiers
+
+commit ab21a0312fe2df754fd7a4cf4c45050233ee443d
+Author: Ludovic Rousseau <ludovic.rousseau+github@gmail.com>
+Date:   Tue May 3 11:12:13 2011 +0200
+
+    Use const for read only buffers
+    
+    Change the usb_bulk_write() and usb_interrupt_write() API to use
+    "const char *bytes" for read only buffers (data sent to the device).
+    
+    See Debian bug #473814
+    "libusb: Please use const where appropriate in headers"
+    http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=473814
+    
+    [stuge: Also change actual function definitions]
+
+commit ccb66689c0e04db4ac8474e573ca2e5f055f5d7b
+Author: Daniel Drake <dan@reactivated.net>
+Date:   Tue Jun 22 18:19:15 2010 -0500
+
+    Add log message for open permission denied errors
+    
+    This message was previously in libusb but is being removed (ticket #44).
+    Move it here so that this caveat (also documented in README) is more
+    obvious.
+
+commit cbfeff38e3a10b9e28a575a47e39b2311f38ce9a
+Author: Ludovic Rousseau <rousseau@debian.org>
+Date:   Sun Oct 25 10:33:02 2009 +0100
+
+    testlibusb warning fixes
+    
+    testlibusb.c:14: warning: no previous prototype for 'print_endpoint'
+    testlibusb.c:24: warning: no previous prototype for 'print_altsetting'
+    testlibusb.c:40: warning: no previous prototype for 'print_interface'
+    testlibusb.c:48: warning: no previous prototype for 'print_configuration'
+    testlibusb.c:63: warning: no previous prototype for 'print_device'
+
+commit 511324a538a034f7f0766b7689ed50ed4e21ee43
+Author: Daniel Drake <dsd@gentoo.org>
+Date:   Thu Sep 17 23:49:53 2009 +0545
+
+    Document breakage from internal handle structure change
+    
+    Code exists which expects usb_dev_handle to always have the same
+    contents as it did in libusb-0.1.12. Such code will not work with the
+    compat layer since the structure has changed.
+
 commit 713a4c3c2097e6d060d41718b2005490dfd7c71c
 Author: Daniel Drake <dsd@gentoo.org>
 Date:   Thu Jul 9 22:15:32 2009 +0100
