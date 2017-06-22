@@ -9,9 +9,9 @@ CFLAGS  += -Ilibubox -static-libgcc
 LDFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections -Llibubox -lubox
 
 TARGET = uqmi
-SOURCES = main.c dev.c commands.c qmi-message.c
+SOURCES = main.c dev.c commands.c qmi-message.c mbim.c
 
-service_sources = $(foreach service,ctl dms nas pds wds wms wda,qmi-message-$(service).c)
+service_sources = $(foreach service,ctl dms nas pds wds wms wda uim,qmi-message-$(service).c)
 service_headers = $(service_sources:.c=.h)
 
 SOURCES += $(service_sources)

@@ -24,15 +24,18 @@
 #include <libexif/exif-mnote-data-priv.h>
 #include <libexif/olympus/mnote-olympus-entry.h>
 #include <libexif/exif-byte-order.h>
+#include <libexif/exif-data.h>
 #include <libexif/exif-mem.h>
 
 enum OlympusVersion {
+	unrecognized = 0,
 	nikonV1 = 1,
 	nikonV2 = 2,
 	olympusV1 = 3,
 	olympusV2 = 4,
 	sanyoV1 = 5,
-	epsonV1 = 6
+	epsonV1 = 6,
+	nikonV0 = 7
 };
 
 
@@ -46,9 +49,18 @@ struct _ExifMnoteDataOlympus {
 
 	ExifByteOrder order;
 	unsigned int offset;
-	/* 0: Olympus; 1: Nikon v1; 2: Nikon v2 */
-	int version;
+	enum OlympusVersion version;
 };
+
+/*! Detect if MakerNote is recognized as one handled by the Olympus module.
+ * 
+ * \param[in] ed image #ExifData to identify as as an Olympus type
+ * \param[in] e #ExifEntry for EXIF_TAG_MAKER_NOTE, from within ed but
+ *   duplicated here for convenience
+ * \return 0 if not recognized, nonzero if recognized. The specific nonzero 
+ *   value returned may identify a subtype unique within this module.
+ */
+int exif_mnote_data_olympus_identify (const ExifData *ed, const ExifEntry *e);
 
 ExifMnoteData *exif_mnote_data_olympus_new (ExifMem *);
 

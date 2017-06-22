@@ -39,10 +39,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#if defined(__WATCOMC__) || defined(_MSC_VER)
-#      define strncasecmp strnicmp
-#endif
-
 #undef JPEG_MARKER_SOI
 #define JPEG_MARKER_SOI  0xd8
 #undef JPEG_MARKER_APP0
@@ -235,7 +231,6 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
 			   unsigned int offset)
 {
 	unsigned int doff, s;
-	unsigned char *t;
 	unsigned int ts;
 
 	if (!data || !data->priv) 
@@ -253,6 +248,7 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
 	if (!(data->priv->options & EXIF_DATA_OPTION_DONT_CHANGE_MAKER_NOTE)) {
 		/* If this is the maker note tag, update it. */
 		if ((e->tag == EXIF_TAG_MAKER_NOTE) && data->priv->md) {
+			/* TODO: this is using the wrong ExifMem to free e->data */
 			exif_mem_free (data->priv->mem, e->data);
 			e->data = NULL;
 			e->size = 0;
@@ -271,6 +267,7 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
 	 */
 	s = exif_format_get_size (e->format) * e->components;
 	if (s > 4) {
+		unsigned char *t;
 		doff = *ds - 6;
 		ts = *ds + s;
 
@@ -722,61 +719,60 @@ typedef enum {
 	EXIF_DATA_TYPE_MAKER_NOTE_NONE		= 0,
 	EXIF_DATA_TYPE_MAKER_NOTE_CANON		= 1,
 	EXIF_DATA_TYPE_MAKER_NOTE_OLYMPUS	= 2,
-	EXIF_DATA_TYPE_MAKER_NOTE_PENTAX		= 3,
+	EXIF_DATA_TYPE_MAKER_NOTE_PENTAX	= 3,
 	EXIF_DATA_TYPE_MAKER_NOTE_NIKON		= 4,
 	EXIF_DATA_TYPE_MAKER_NOTE_CASIO		= 5,
 	EXIF_DATA_TYPE_MAKER_NOTE_FUJI 		= 6
 } ExifDataTypeMakerNote;
 
-static ExifDataTypeMakerNote
-exif_data_get_type_maker_note (ExifData *d)
+/*! If MakerNote is recognized, load it.
+ *
+ * \param[in,out] data #ExifData
+ * \param[in] d pointer to raw EXIF data
+ * \param[in] ds length of data at d
+ */
+static void
+interpret_maker_note(ExifData *data, const unsigned char *d, unsigned int ds)
 {
-	ExifEntry *e, *em;
-	char value[1024];
-
-	if (!d) 
-		return EXIF_DATA_TYPE_MAKER_NOTE_NONE;
+	int mnoteid;
+	ExifEntry* e = exif_data_get_entry (data, EXIF_TAG_MAKER_NOTE);
+	if (!e)
+		return;
 	
-	e = exif_data_get_entry (d, EXIF_TAG_MAKER_NOTE);
-	if (!e) 
-		return EXIF_DATA_TYPE_MAKER_NOTE_NONE;
+	if ((mnoteid = exif_mnote_data_olympus_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Olympus MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_olympus_new (data->priv->mem);
 
-	/* Olympus & Nikon & Sanyo */
-	if ((e->size >= 8) && ( !memcmp (e->data, "OLYMP", 6) ||
-				!memcmp (e->data, "OLYMPUS", 8) ||
-				!memcmp (e->data, "SANYO", 6) ||
-				!memcmp (e->data, "EPSON", 6) ||
-				!memcmp (e->data, "Nikon", 6)))
-		return EXIF_DATA_TYPE_MAKER_NOTE_OLYMPUS;
+	} else if ((mnoteid = exif_mnote_data_canon_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Canon MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_canon_new (data->priv->mem, data->priv->options);
 
-	em = exif_data_get_entry (d, EXIF_TAG_MAKE);
-	if (!em) 
-		return EXIF_DATA_TYPE_MAKER_NOTE_NONE;
+	} else if ((mnoteid = exif_mnote_data_fuji_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Fuji MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_fuji_new (data->priv->mem);
 
-	/* Canon */
-	if (!strcmp (exif_entry_get_value (em, value, sizeof (value)), "Canon"))
-		return EXIF_DATA_TYPE_MAKER_NOTE_CANON;
-
-	/* Pentax & some variant of Nikon */
-	if ((e->size >= 2) && (e->data[0] == 0x00) && (e->data[1] == 0x1b)) {
-		if (!strncasecmp (
-			    exif_entry_get_value (em, value, sizeof(value)),
-			    "Nikon", 5))
-			return EXIF_DATA_TYPE_MAKER_NOTE_NIKON;
-		else
-			return EXIF_DATA_TYPE_MAKER_NOTE_PENTAX;
-	}
-	if ((e->size >= 8) && !memcmp (e->data, "AOC", 4)) {
-		return EXIF_DATA_TYPE_MAKER_NOTE_PENTAX;
-	}
-	if ((e->size >= 8) && !memcmp (e->data, "QVC", 4)) {
-		return EXIF_DATA_TYPE_MAKER_NOTE_CASIO;
-	}
-	if ((e->size >= 12) && !memcmp (e->data, "FUJIFILM", 8)) {
-		return EXIF_DATA_TYPE_MAKER_NOTE_FUJI;
+	/* NOTE: Must do Pentax detection last because some of the
+	 * heuristics are pretty general. */
+	} else if ((mnoteid = exif_mnote_data_pentax_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Pentax MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_pentax_new (data->priv->mem);
 	}
 
-	return EXIF_DATA_TYPE_MAKER_NOTE_NONE;
+	/* 
+	 * If we are able to interpret the maker note, do so.
+	 */
+	if (data->priv->md) {
+		exif_mnote_data_log (data->priv->md, data->priv->log);
+		exif_mnote_data_set_byte_order (data->priv->md,
+						data->priv->order);
+		exif_mnote_data_set_offset (data->priv->md,
+					    data->priv->offset_mnote);
+		exif_mnote_data_load (data->priv->md, d, ds);
+	}
 }
 
 #define LOG_TOO_SMALL \
@@ -785,15 +781,15 @@ exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData", \
 
 void
 exif_data_load_data (ExifData *data, const unsigned char *d_orig,
-		     unsigned int ds_orig)
+		     unsigned int ds)
 {
 	unsigned int l;
 	ExifLong offset;
 	ExifShort n;
 	const unsigned char *d = d_orig;
-	unsigned int ds = ds_orig, len;
+	unsigned int len, fullds;
 
-	if (!data || !data->priv || !d || !ds) 
+	if (!data || !data->priv || !d || !ds)
 		return;
 
 	exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
@@ -811,21 +807,21 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 			  "Found EXIF header.");
 	} else {
-		while (1) {
-			while ((d[0] == 0xff) && ds) {
+		while (ds >= 3) {
+			while (ds && (d[0] == 0xff)) {
 				d++;
 				ds--;
 			}
 
 			/* JPEG_MARKER_SOI */
-			if (d[0] == JPEG_MARKER_SOI) {
+			if (ds && d[0] == JPEG_MARKER_SOI) {
 				d++;
 				ds--;
 				continue;
 			}
 
 			/* JPEG_MARKER_APP0 */
-			if (d[0] == JPEG_MARKER_APP0) {
+			if (ds >= 3 && d[0] == JPEG_MARKER_APP0) {
 				d++;
 				ds--;
 				l = (d[0] << 8) | d[1];
@@ -837,7 +833,7 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 			}
 
 			/* JPEG_MARKER_APP1 */
-			if (d[0] == JPEG_MARKER_APP1)
+			if (ds && d[0] == JPEG_MARKER_APP1)
 				break;
 
 			/* Unknown marker or data. Give up. */
@@ -845,12 +841,12 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 				  "ExifData", _("EXIF marker not found."));
 			return;
 		}
-		d++;
-		ds--;
-		if (ds < 2) {
+		if (ds < 3) {
 			LOG_TOO_SMALL;
 			return;
 		}
+		d++;
+		ds--;
 		len = (d[0] << 8) | d[1];
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 			  "We have to deal with %i byte(s) of EXIF data.",
@@ -876,9 +872,18 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 	exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 		  "Found EXIF header.");
 
-	/* Byte order (offset 6, length 2) */
+	/* Sanity check the data length */
 	if (ds < 14)
 		return;
+
+	/* The JPEG APP1 section can be no longer than 64 KiB (including a
+	   16-bit length), so cap the data length to protect against overflow
+	   in future offset calculations */
+	fullds = ds;
+	if (ds > 0xfffe)
+		ds = 0xfffe;
+
+	/* Byte order (offset 6, length 2) */
 	if (!memcmp (d + 6, "II", 2))
 		data->priv->order = EXIF_BYTE_ORDER_INTEL;
 	else if (!memcmp (d + 6, "MM", 2))
@@ -898,24 +903,25 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 	exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData", 
 		  "IFD 0 at %i.", (int) offset);
 
+	/* Sanity check the offset, being careful about overflow */
+	if (offset > ds || offset + 6 + 2 > ds)
+		return;
+
 	/* Parse the actual exif data (usually offset 14 from start) */
 	exif_data_load_data_content (data, EXIF_IFD_0, d + 6, ds - 6, offset, 0);
 
 	/* IFD 1 offset */
-	if (offset + 6 + 2 > ds) {
-		return;
-	}
 	n = exif_get_short (d + 6 + offset, data->priv->order);
-	if (offset + 6 + 2 + 12 * n + 4 > ds) {
+	if (offset + 6 + 2 + 12 * n + 4 > ds)
 		return;
-	}
+
 	offset = exif_get_long (d + 6 + offset + 2 + 12 * n, data->priv->order);
 	if (offset) {
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 			  "IFD 1 at %i.", (int) offset);
 
 		/* Sanity check. */
-		if (offset > ds - 6) {
+		if (offset > ds || offset + 6 > ds) {
 			exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA,
 				  "ExifData", "Bogus offset of IFD1.");
 		} else {
@@ -929,37 +935,9 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 	 * space between IFDs. Here is the only place where we have access
 	 * to that data.
 	 */
-	switch (exif_data_get_type_maker_note (data)) {
-	case EXIF_DATA_TYPE_MAKER_NOTE_OLYMPUS:
-	case EXIF_DATA_TYPE_MAKER_NOTE_NIKON:
-		data->priv->md = exif_mnote_data_olympus_new (data->priv->mem);
-		break;
-	case EXIF_DATA_TYPE_MAKER_NOTE_PENTAX:
-	case EXIF_DATA_TYPE_MAKER_NOTE_CASIO:
-		data->priv->md = exif_mnote_data_pentax_new (data->priv->mem);
-		break;
-	case EXIF_DATA_TYPE_MAKER_NOTE_CANON:
-		data->priv->md = exif_mnote_data_canon_new (data->priv->mem, data->priv->options);
-		break;
-	case EXIF_DATA_TYPE_MAKER_NOTE_FUJI:
-		data->priv->md = exif_mnote_data_fuji_new (data->priv->mem);
-		break;
-	default:
-		break;
-	}
+	interpret_maker_note(data, d, fullds);
 
-	/* 
-	 * If we are able to interpret the maker note, do so.
-	 */
-	if (data->priv->md) {
-		exif_mnote_data_log (data->priv->md, data->priv->log);
-		exif_mnote_data_set_byte_order (data->priv->md,
-						data->priv->order);
-		exif_mnote_data_set_offset (data->priv->md,
-					    data->priv->offset_mnote);
-		exif_mnote_data_load (data->priv->md, d, ds);
-	}
-
+	/* Fixup tags if requested */
 	if (data->priv->options & EXIF_DATA_OPTION_FOLLOW_SPECIFICATION)
 		exif_data_fix (data);
 }
@@ -1255,7 +1233,7 @@ fix_func (ExifContent *c, void *UNUSED(data))
 	case EXIF_IFD_1:
 		if (c->parent->data)
 			exif_content_fix (c);
-		else {
+		else if (c->count) {
 			exif_log (c->parent->priv->log, EXIF_LOG_CODE_DEBUG, "exif-data",
 				  "No thumbnail but entries on thumbnail. These entries have been "
 				  "removed.");

@@ -58,7 +58,7 @@ void ipt_qos(void)
 	int sizegroup;
 	int class_flag;
 	int rule_num;
-	int qosImqDeviceNumberString = 0;
+	int qosIFBDeviceNumberString = 0;
 
 	if (!nvram_get_int("qos_enable")) return;
 
@@ -429,7 +429,7 @@ void start_qos(char *prefix)
 	char burst_root[32];
 	char burst_leaf[32];
 	char qosfn[] = "/etc/wanX_qos";
-	char qosImqDeviceString[] = "imq0";
+	char qosIFBDeviceString[] = "ifb0";
 	char tmp[100];
 	int wan_unit;
 
@@ -438,23 +438,23 @@ void start_qos(char *prefix)
 
 	if(!strcmp(prefix,"wan")){
 		strcpy(qosfn, "/etc/wan_qos");
-		strcpy(qosImqDeviceString, "ifb0");
+		strcpy(qosIFBDeviceString, "ifb0");
 		wan_unit = 1;
 	}
 	else if(!strcmp(prefix,"wan2")){
 		strcpy(qosfn, "/etc/wan2_qos");
-		strcpy(qosImqDeviceString, "ifb1");
+		strcpy(qosIFBDeviceString, "ifb1");
 		wan_unit = 2;
 	}
 #ifdef TCONFIG_MULTIWAN
 	else if(!strcmp(prefix,"wan3")){
 		strcpy(qosfn, "/etc/wan3_qos");
-		strcpy(qosImqDeviceString, "ifb2");
+		strcpy(qosIFBDeviceString, "ifb2");
 		wan_unit = 3;
 	}
 	else if(!strcmp(prefix,"wan4")){
 		strcpy(qosfn, "/etc/wan4_qos");
-		strcpy(qosImqDeviceString, "ifb3");
+		strcpy(qosIFBDeviceString, "ifb3");
 		wan_unit = 4;
 	}
 #endif
@@ -520,13 +520,13 @@ void start_qos(char *prefix)
 		fprintf(f,
 			"#!/bin/sh\n"
 			"WAN_DEV=%s\n"
-			"IMQ_DEV=%s\n"
+			"IFB_DEV=%s\n"
 			"TQA=\"tc qdisc add dev $WAN_DEV\"\n"
 			"TCA=\"tc class add dev $WAN_DEV\"\n"
 			"TFA=\"tc filter add dev $WAN_DEV\"\n"
-			"TQA_IMQ=\"tc qdisc add dev $IMQ_DEV\"\n"
-			"TCA_IMQ=\"tc class add dev $IMQ_DEV\"\n"
-			"TFA_IMQ=\"tc filter add dev $IMQ_DEV\"\n"
+			"TQA_IFB=\"tc qdisc add dev $IFB_DEV\"\n"
+			"TCA_IFB=\"tc class add dev $IFB_DEV\"\n"
+			"TFA_IFB=\"tc filter add dev $IFB_DEV\"\n"
 			"Q=\"%s\"\n"
 			"\n"
 			"case \"$1\" in\n"
@@ -535,7 +535,7 @@ void start_qos(char *prefix)
 			"\t$TQA root handle 1: htb default %u r2q %u\n"
 			"\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s\n",
 				get_wanface(prefix),
-				qosImqDeviceString,
+				qosIFBDeviceString,
 				qos,
 				qosDefaultClassId, r2q,
 				bw, bw, burst_root);
@@ -543,13 +543,13 @@ void start_qos(char *prefix)
 		fprintf(f,
 			"#!/bin/sh\n"
 			"WAN_DEV=%s\n"
-			"IMQ_DEV=%s\n"
+			"IFB_DEV=%s\n"
 			"TQA=\"tc qdisc add dev $WAN_DEV\"\n"
 			"TCA=\"tc class add dev $WAN_DEV\"\n"
 			"TFA=\"tc filter add dev $WAN_DEV\"\n"
-			"TQA_IMQ=\"tc qdisc add dev $IMQ_DEV\"\n"
-			"TCA_IMQ=\"tc class add dev $IMQ_DEV\"\n"
-			"TFA_IMQ=\"tc filter add dev $IMQ_DEV\"\n"
+			"TQA_IFB=\"tc qdisc add dev $IFB_DEV\"\n"
+			"TCA_IFB=\"tc class add dev $IFB_DEV\"\n"
+			"TFA_IFB=\"tc filter add dev $IFB_DEV\"\n"
 			"Q=\"%s\"\n"
 			"\n"
 			"case \"$1\" in\n"
@@ -558,7 +558,7 @@ void start_qos(char *prefix)
 			"\t$TQA root handle 1: htb default %u r2q %u\n"
 			"\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s overhead %u linklayer atm\n",
 				get_wanface(prefix),
-				qosImqDeviceString,
+				qosIFBDeviceString,
 				qos,
 				qosDefaultClassId, r2q,
 				bw, bw, burst_root, overhead);
@@ -832,20 +832,20 @@ void start_qos(char *prefix)
 			if (overhead == 0) {
 				fprintf(f,
 				"\n"
-				"\tip link set $IMQ_DEV up\n"
-				"\ttc qdisc del dev $IMQ_DEV 2>/dev/null\n"
-				"\t$TQA_IMQ handle 1: root htb default %u r2q %u\n"
-				"\t$TCA_IMQ parent 1: classid 1:1 htb rate %ukbit ceil %ukbit\n",
+				"\tip link set $IFB_DEV up\n"
+				"\ttc qdisc del dev $IFB_DEV 2>/dev/null\n"
+				"\t$TQA_IFB handle 1: root htb default %u r2q %u\n"
+				"\t$TCA_IFB parent 1: classid 1:1 htb rate %ukbit ceil %ukbit\n",
 				qosDefaultClassId, r2q,
 				incomingBandwidthInKilobitsPerSecond,
 				incomingBandwidthInKilobitsPerSecond);
 			} else {
 				fprintf(f,
 					"\n"
-					"\tip link set $IMQ_DEV up\n"
-					"\ttc qdisc del dev $IMQ_DEV 2>/dev/null\n"
-					"\t$TQA_IMQ handle 1: root htb default %u r2q %u\n"
-					"\t$TCA_IMQ parent 1: classid 1:1 htb rate %ukbit ceil %ukbit overhead %u linklayer atm\n",
+					"\tip link set $IFB_DEV up\n"
+					"\ttc qdisc del dev $IFB_DEV 2>/dev/null\n"
+					"\t$TQA_IFB handle 1: root htb default %u r2q %u\n"
+					"\t$TCA_IFB parent 1: classid 1:1 htb rate %ukbit ceil %ukbit overhead %u linklayer atm\n",
 					qosDefaultClassId, r2q,
 					incomingBandwidthInKilobitsPerSecond,
 					incomingBandwidthInKilobitsPerSecond, overhead);
@@ -853,7 +853,11 @@ void start_qos(char *prefix)
 
 			fprintf(f,
 			"\n"
-			"\t$TFA parent ffff: prio 10 u32 match ip %s action mirred egress redirect dev $IMQ_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0");
+			"\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0");
+#ifdef TCONFIG_IPV6
+			fprintf(f,
+			"\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ipv6 %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
+#endif
 		}
 		
 		fprintf(
@@ -865,49 +869,56 @@ void start_qos(char *prefix)
 		if (overhead == 0) {
 			fprintf(
 				f,
-				"\t$TCA_IMQ parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u\n",
+				"\t$TCA_IFB parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u\n",
 				classid, rateInKilobitsPerSecond, ceilingInKilobitsPerSecond, priority, mtu);
 		} else {
 			fprintf(
 				f,
-				"\t$TCA_IMQ parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u overhead %u linklayer atm\n",
+				"\t$TCA_IFB parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u overhead %u linklayer atm\n",
 				classid, rateInKilobitsPerSecond, ceilingInKilobitsPerSecond, priority, mtu, overhead);
 			}
 
 		fprintf(
 			f,
-			"\t$TQA_IMQ parent 1:%u handle %u: $Q\n",
+			"\t$TQA_IFB parent 1:%u handle %u: $Q\n",
 			classid, classid);
 
 		fprintf(
 			f,
-			"\t$TFA_IMQ parent 1: prio %u protocol ip handle %u fw flowid 1:%u \n",
+			"\t$TFA_IFB parent 1: prio %u protocol ip handle %u fw flowid 1:%u \n",
 			classid, priority, classid);
 
 #ifdef TCONFIG_IPV6
 		fprintf(
 			f,
-			"\t$TFA_IMQ parent 1: prio %u protocol ipv6 handle %u fw flowid 1:%u \n",
+			"\t$TFA_IFB parent 1: prio %u protocol ipv6 handle %u fw flowid 1:%u \n",
 			classid + 100, priority, classid);
 #endif
 	}
 
 	free(buf);
 
-	//// write commands which adds rule to forward traffic to IMQ device
+	//// write commands which adds rule to forward traffic to IFB device
 	fputs(
 		"\n"
-		"\t# set up the IMQ device (otherwise this won't work) to limit the incoming data\n"
-		"\tip link set $IMQ_DEV up\n",
+		"\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"
+		"\tip link set $IFB_DEV up\n",
 		f);
 
 	fprintf(f,
 		"\t;;\n"
 		"stop)\n"
-		"\tip link set $IMQ_DEV down\n"
+		"\tip link set $IFB_DEV down\n"
 		"\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-		"\ttc qdisc del dev $IMQ_DEV root 2>/dev/null\n"
-		"\ttc filter del dev $WAN_DEV parent ffff: prio 10 u32 match ip %s action mirred egress redirect dev $IMQ_DEV 2>/dev/null\n"
+		"\ttc qdisc del dev $IFB_DEV root 2>/dev/null\n"
+		"\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n"
+	);
+#ifdef TCONFIG_IPV6
+	fprintf(f,
+		"\ttc filter del dev $WAN_DEV parent ffff: protocol ipv6 prio 11 u32 match ipv6 %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n"
+	);
+#endif
+	fprintf(f,
 		"\t;;\n"
 		"*)\n"
 		"\techo \"...\"\n"
@@ -918,14 +929,18 @@ void start_qos(char *prefix)
 		"\ttc -s -d class ls dev $WAN_DEV\n"
 		"\techo\n"
 		"\techo \"...\"\n"
-		"\techo \"... INCOMING QDISCS AND CLASSES FOR $WAN_DEV (routed through $IMQ_DEV)\"\n"
+		"\techo \"... INCOMING QDISCS AND CLASSES FOR $WAN_DEV (routed through $IFB_DEV)\"\n"
 		"\techo \"...\"\n"
-		"\ttc -s -d qdisc ls dev $IMQ_DEV\n"
+		"\ttc -s -d qdisc ls dev $IFB_DEV\n"
 		"\techo\n"
-		"\ttc -s -d class ls dev $IMQ_DEV\n"
+		"\ttc -s -d class ls dev $IFB_DEV\n"
 		"\techo\n"
 		"esac\n",
 		(nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0");
+#ifdef TCONFIG_IPV6
+	fprintf(f,
+		(nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
+#endif
 
 	fclose(f);
 	chmod(qosfn, 0700);
