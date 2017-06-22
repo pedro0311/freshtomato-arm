@@ -2577,8 +2577,10 @@ class xmlNode(xmlCore):
     def newNs(self, href, prefix):
         """Creation of a new Namespace. This function will refuse to
           create a namespace with a similar prefix than an existing
-          one present on this node. We use href==None in the case of
-           an element creation where the namespace was not defined. """
+          one present on this node. Note that for a default
+          namespace, @prefix should be None.  We use href==None in
+          the case of an element creation where the namespace was not
+           defined. """
         ret = libxml2mod.xmlNewNs(self._o, href, prefix)
         if ret is None:raise treeError('xmlNewNs() failed')
         __tmp = xmlNs(_obj=ret)
@@ -7216,6 +7218,7 @@ XML_BUFFER_ALLOC_EXACT = 2
 XML_BUFFER_ALLOC_IMMUTABLE = 3
 XML_BUFFER_ALLOC_IO = 4
 XML_BUFFER_ALLOC_HYBRID = 5
+XML_BUFFER_ALLOC_BOUNDED = 6
 
 # xmlParserSeverities
 XML_PARSER_SEVERITY_VALIDITY_WARNING = 1
