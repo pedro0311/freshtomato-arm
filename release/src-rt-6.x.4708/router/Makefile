@@ -1174,6 +1174,7 @@ ntfs-3g-install: ntfs-3g
 
 libusb10/Makefile: libusb10/Makefile.in
 	cd libusb10 && CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
+	autoreconf -fsi && \
 	$(CONFIGURE) --disable-udev --prefix=/usr ac_cv_lib_rt_clock_gettime=no
 
 libusb10: libusb10/Makefile
@@ -1537,6 +1538,7 @@ endif
 
 libogg/stamp-h1:
 	cd libogg && \
+	autoreconf -fsi && \
 	CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix=''
