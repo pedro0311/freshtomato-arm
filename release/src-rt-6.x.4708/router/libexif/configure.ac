@@ -1,10 +1,14 @@
 AC_PREREQ(2.59)
-AC_INIT([EXIF library], [0.6.19], [libexif-devel@lists.sourceforge.net], [libexif])
+AC_INIT([EXIF library], [0.6.21], [libexif-devel@lists.sourceforge.net], [libexif])
 AC_CONFIG_SRCDIR([libexif/exif-data.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([auto-m4])
 AM_INIT_AUTOMAKE([-Wall gnu 1.9 dist-bzip2 dist-zip check-news])
 AM_MAINTAINER_MODE
+
+# Use the silent-rules feature when possible.
+m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])
+AM_SILENT_RULES([no])
 
 if test ! -d "$srcdir/m4m"; then
 AC_MSG_ERROR([
@@ -54,9 +58,11 @@ dnl 14:2:0   added XP_ WinXP tags (for 0.6.15)
 dnl 14:2:1   0.6.17
 dnl 15:3:0   added exif_loader_get_buf (for 0.6.18)
 dnl 15:3:1   0.6.19
+dnl 15:3:2   0.6.20
+dnl 15:3:3   0.6.21
 LIBEXIF_CURRENT=15
 LIBEXIF_AGE=3
-LIBEXIF_REVISION=1
+LIBEXIF_REVISION=3
 AC_SUBST([LIBEXIF_AGE])
 AC_SUBST([LIBEXIF_REVISION])
 AC_SUBST([LIBEXIF_CURRENT])
@@ -171,7 +177,7 @@ AM_CONDITIONAL([ENABLE_INTERNAL_DOCS], [test "x${set_enable_internal_docs}" = "x
 # ---------------------------------------------------------------------------
 # i18n support
 # ---------------------------------------------------------------------------
-ALL_LINGUAS="be cs da de en_CA en_GB es fr it ja nl pl pt pt_BR ru sk sq sr sv vi zh_CN"
+ALL_LINGUAS="be bs cs da de en_AU en_CA en_GB es fr it ja nl pl pt pt_BR ru sk sq sr sv tr uk vi zh_CN"
 AM_PO_SUBDIRS
 GP_GETTEXT_HACK([${PACKAGE}-${LIBEXIF_CURRENT_MIN}],
                 [Lutz Mueller and others])
