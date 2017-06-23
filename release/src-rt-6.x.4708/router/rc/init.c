@@ -1788,6 +1788,9 @@ static int init_nvram(void)
 			wl_defaults();
 			bsd_defaults();
 			set_r8000_vars();
+
+		}
+		break;
 	case MODEL_AC15:
 		mfr = "Tenda";
 		name = "AC15";
