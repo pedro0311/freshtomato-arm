@@ -1957,16 +1957,16 @@ libpng: libpng/stamp-h1
 
 libpng-install: libpng
 	@$(SEP)
-	install -D libpng/.libs/libpng.so.3.51.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.51.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.51.0
+	install -D libpng/.libs/libpng.so.3.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng.so.3.51.0 libpng.so && \
-		ln -sf libpng.so.3.51.0 libpng.so.3
-	install -D libpng/.libs/libpng12.so.0.51.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.51.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.51.0
+		ln -sf libpng.so.3.57.0 libpng.so && \
+		ln -sf libpng.so.3.57.0 libpng.so.3
+	install -D libpng/.libs/libpng12.so.0.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng12.so.0.51.0 libpng12.so && \
-		ln -sf libpng12.so.0.51.0 libpng12.so.0
+		ln -sf libpng12.so.0.57.0 libpng12.so && \
+		ln -sf libpng12.so.0.57.0 libpng12.so.0
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean

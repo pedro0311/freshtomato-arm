@@ -524,8 +524,8 @@ genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs
 genSO("${root}/usr/lib/libiconv.so.2.6.0", "${router}/libiconv/lib/.libs/libiconv.a");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
 genSO("${root}/usr/lib/libsodium.so.18.2.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
-genSO("${root}/usr/lib/libpng.so.3.51.0", "${router}/libpng/.libs/libpng.a");
-genSO("${root}/usr/lib/libpng12.so.0.51.0", "${router}/libpng/.libs/libpng12.a");
+genSO("${root}/usr/lib/libpng.so.3.57.0", "${router}/libpng/.libs/libpng.a");
+genSO("${root}/usr/lib/libpng12.so.0.57.0", "${router}/libpng/.libs/libpng12.a");
 genSO("${root}/usr/lib/libjpeg.so", "${router}/libjpeg/.libs/libjpeg.a");
 genSO("${root}/usr/lib/libxml2.so.2.9.3", "${router}/libxml2/.libs/libxml2.a");
 genSO("${root}/usr/lib/libipset.so.3.6.0", "${router}/ipset/lib/.libs/libipset.a");
