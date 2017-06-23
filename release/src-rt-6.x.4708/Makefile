@@ -162,6 +162,7 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/tomato-RT-AC56S-$(V1)$(V2)-$(current_BUILD_DESC)-NOSMP.trx
 endif
 endif
+endif
 # for Tenda
 ifeq ($(ASUS_TRX),TENDA)
 	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC15,3.0.0.4,image/tomato-TendaAC15-$(V1)$(V2)-$(current_BUILD_DESC).trx
