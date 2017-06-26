@@ -1101,10 +1101,10 @@ void start_upnp(void)
 							"listening_ip=%s/%s\n",
 							lanip, lanmask);
 						int ports[4];
-						if ((ports[0] = nvram_get_int("upnp_min_port_int")) > 0 &&
-							(ports[1] = nvram_get_int("upnp_max_port_int")) > 0 &&
-							(ports[2] = nvram_get_int("upnp_min_port_ext")) > 0 &&
-							(ports[3] = nvram_get_int("upnp_max_port_ext")) > 0) {
+						if ((ports[0] = nvram_get_int("upnp_min_port_ext")) > 0 &&
+							(ports[1] = nvram_get_int("upnp_max_port_ext")) > 0 &&
+							(ports[2] = nvram_get_int("upnp_min_port_int")) > 0 &&
+							(ports[3] = nvram_get_int("upnp_max_port_int")) > 0) {
 							fprintf(f,
 								"allow %d-%d %s/%s %d-%d\n",
 								ports[0], ports[1],

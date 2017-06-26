@@ -350,7 +350,7 @@ disconnect() {
             if [ "$PDH" != "" ]; then
                 uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network "$PDH"
                 sleep 1
-            }
+            fi
             uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --release-client-id wds
             logger -t switch4g[$pid] "4G MODEM - release Client ID: $CLID"
             nvram unset modem_pdh
@@ -457,7 +457,7 @@ switchMode() {
                 /usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP
 
                 # need few seconds before modem will be detected once again after switch
-                sleep 6
+                sleep 10
 
                 VENDOR=`cat /etc/usb_modeswitch.d/$SWITCH | grep "TargetVendor" | cut -d "=" -f2 | cut -d "x" -f2`
                 if [ "$VENDOR" == "" ]; then

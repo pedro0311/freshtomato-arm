@@ -1,8 +1,8 @@
 
 /* pngread.c - read a PNG file
  *
- * Last changed in libpng 1.2.51 [February 6, 2014]
- * Copyright (c) 1998-2014 Glenn Randers-Pehrson
+ * Last changed in libpng 1.2.53 [February 26, 2015]
+ * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -100,16 +100,22 @@ png_create_read_struct_2(png_const_charp user_png_ver, png_voidp error_ptr,
 
    png_set_error_fn(png_ptr, error_ptr, error_fn, warn_fn);
 
-   if (user_png_ver)
+   if (user_png_ver != NULL)
    {
-      i = 0;
+      int found_dots = 0;
+      i = -1;
+
       do
       {
-         if (user_png_ver[i] != png_libpng_ver[i])
+         i++;
+         if (user_png_ver[i] != PNG_LIBPNG_VER_STRING[i])
             png_ptr->flags |= PNG_FLAG_LIBRARY_MISMATCH;
-      } while (png_libpng_ver[i++]);
-    }
-    else
+         if (user_png_ver[i] == '.')
+            found_dots++;
+      } while (found_dots < 2 && user_png_ver[i] != 0 &&
+            PNG_LIBPNG_VER_STRING[i] != 0);
+   }
+   else
          png_ptr->flags |= PNG_FLAG_LIBRARY_MISMATCH;
 
 
@@ -268,7 +274,7 @@ png_read_init_3(png_structpp ptr_ptr, png_const_charp user_png_ver,
 
    do
    {
-      if (user_png_ver[i] != png_libpng_ver[i])
+      if (user_png_ver == NULL || user_png_ver[i] != png_libpng_ver[i])
       {
 #ifdef PNG_LEGACY_SUPPORTED
         png_ptr->flags |= PNG_FLAG_LIBRARY_MISMATCH;
@@ -591,10 +597,12 @@ png_start_read_image(png_structp png_ptr)
 void PNGAPI
 png_read_row(png_structp png_ptr, png_bytep row, png_bytep dsp_row)
 {
+#ifndef PNG_USE_GLOBAL_ARRAYS
    PNG_CONST PNG_IDAT;
    PNG_CONST int png_pass_dsp_mask[7] = {0xff, 0x0f, 0xff, 0x33, 0xff, 0x55,
       0xff};
    PNG_CONST int png_pass_mask[7] = {0x80, 0x08, 0x88, 0x22, 0xaa, 0x55, 0xff};
+#endif
    int ret;
  
    if (png_ptr == NULL)
