@@ -1488,7 +1488,7 @@ void start_igmp_proxy(void)
 			}
 			if (!count) {
 				fclose(fp);
-				unlink(fp);
+				unlink("/etc/igmp.conf");
 				return;
 			}
 //				nvram_safe_get("lan_ifname"));
@@ -2996,9 +2996,12 @@ TOP:
 			start_wan(BOOT);
 			sleep(5);
 			force_to_dial("wan");
+			sleep(5);
 			force_to_dial("wan2");
 #ifdef TCONFIG_MULTIWAN
+			sleep(5);
 			force_to_dial("wan3");
+			sleep(5);
 			force_to_dial("wan4");
 #endif
 		}

@@ -911,11 +911,11 @@ void start_qos(char *prefix)
 		"\tip link set $IFB_DEV down\n"
 		"\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
 		"\ttc qdisc del dev $IFB_DEV root 2>/dev/null\n"
-		"\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n"
+		"\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0"
 	);
 #ifdef TCONFIG_IPV6
 	fprintf(f,
-		"\ttc filter del dev $WAN_DEV parent ffff: protocol ipv6 prio 11 u32 match ipv6 %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n"
+		"\ttc filter del dev $WAN_DEV parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $IFB_DEV 2>/dev/null\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0"
 	);
 #endif
 	fprintf(f,
@@ -935,12 +935,8 @@ void start_qos(char *prefix)
 		"\techo\n"
 		"\ttc -s -d class ls dev $IFB_DEV\n"
 		"\techo\n"
-		"esac\n",
-		(nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0");
-#ifdef TCONFIG_IPV6
-	fprintf(f,
-		(nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
-#endif
+		"esac\n"
+	);
 
 	fclose(f);
 	chmod(qosfn, 0700);

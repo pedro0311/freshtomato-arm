@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Aug 16 2016 - Tvlz **
+	** Last Updated - Jun 23 2017 - Tvlz **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -72,15 +72,10 @@ nvram['boardflags'] = ((nvram['boardflags'].toLowerCase().indexOf('0x') != -1) ?
 nvram['boardtype'] = ((nvram['boardtype'].toLowerCase().indexOf('0x') != -1) ? '0x' : '') + String('0000' + ((nvram['boardtype'].toLowerCase()).replace('0x',''))).slice(-4);
 
 // see http://www.dd-wrt.com/wiki/index.php/Hardware#Boardflags and router/shared/id.c
-if(nvram['boardflags'] & 0x0100) { // BFL_ENETVLAN = this board has vlan capability
+if (nvram['boardflags'] & 0x0100) { // BFL_ENETVLAN = this board has vlan capability
   port_vlan_supported = 1;
 }
 
-// TESTED ONLY ON WRT54G v2 (boardtype 0x0101),WRT54GL v1.1 (boardtype 0x0467) and WNR3500L (boardtype 0x04cf)
-// info on some of these boardtypes/routers obtained from 
-// http://wiki.openwrt.org/toh/asus/start
-// http://wiki.openwrt.org/toh/linksys/start
-// http://wiki.openwrt.org/toh/start
 switch(nvram['t_model_name']) {
 	case 'vlan-testid0':
 	case 'Asus RT-AC56U':
@@ -100,7 +95,6 @@ switch(nvram['t_model_name']) {
 	case 'Asus RT-AC68R/U':
 	case 'Asus RT-AC68P':
 	case 'Asus RT-AC68P/U B1':
-	case 'Asus RT-AC3200':
 	case 'Huawei WS880':
 	case 'Linksys EA6900':
 	case 'Netgear R6400':
@@ -121,6 +115,7 @@ switch(nvram['t_model_name']) {
 		COL_P4N = '4';
 	break;
 	case 'vlan-testid3':
+	case 'Asus RT-AC3200':
 		COL_P0N = '4';
 		COL_P1N = '3';
 		COL_P2N = '2';
@@ -175,13 +170,13 @@ function verifyFields(focused, quiet) {
   for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
     var u = wl_fface(uidx);
     var wlan = E('_f_bridge_wlan'+u+'_to');
-      if(nvram.lan_ifname.length < 1)
+      if (nvram.lan_ifname.length < 1)
         wlan.options[0].disabled=true;
-      if(nvram.lan1_ifname.length < 1)
+      if (nvram.lan1_ifname.length < 1)
         wlan.options[1].disabled=true;
-      if(nvram.lan2_ifname.length < 1)
+      if (nvram.lan2_ifname.length < 1)
         wlan.options[2].disabled=true;
-      if(nvram.lan3_ifname.length < 1)
+      if (nvram.lan3_ifname.length < 1)
         wlan.options[3].disabled=true;
   }
   var e = E('_vlan0tag');
@@ -312,7 +307,7 @@ REMOVE-END */
 
   var e = E('footer-msg');
 
-  if(vlg.countWan() != 1) {
+  if (vlg.countWan() != 1) {
     e.innerHTML = 'Cannot proceed: one VID must be assigned to WAN.';
     e.style.visibility = 'visible';
     setTimeout(
@@ -323,7 +318,7 @@ REMOVE-END */
     return;
   }
 
-  if(vlg.countLan(0) != 1) {
+  if (vlg.countLan(0) != 1) {
     e.innerHTML = 'Cannot proceed: one and only one VID must be assigned to the primary LAN (br0).';
     e.style.visibility = 'visible';
     setTimeout(
@@ -354,7 +349,7 @@ function trailingSpace(s)
   return ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? ' ' : '';
 }
 
-if(port_vlan_supported) { // aka if(supported_hardware) block
+if (port_vlan_supported) { // aka if (supported_hardware) block
   var vlg = new TomatoGrid();
   vlg.setup = function() {
     this.init('vlan-grid', '', (MAX_VLAN_ID + 1), [
@@ -402,7 +397,7 @@ REMOVE-END */
 /* REMOVE-BEGIN
 //        alert("bridge br" + i + "=vlan" + parseInt(l[k].replace('vlan','')));
 REMOVE-END */
-        if(l[k].indexOf('vlan') != -1) {
+        if (l[k].indexOf('vlan') != -1) {
 /* REMOVE-BEGIN
 //        alert('lan' + j + '_ifname=br' + nvram['lan' + j + '_ifname'].replace('br',''));
 REMOVE-END */
@@ -413,7 +408,7 @@ REMOVE-END */
         }
         // WLAN
         for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-          if(l[k].indexOf(wl_ifaces[uidx][0]) != -1) {
+          if (l[k].indexOf(wl_ifaces[uidx][0]) != -1) {
             E('_f_bridge_wlan'+wl_fface(uidx)+'_to').selectedIndex=i;
           }
         }
@@ -446,7 +441,7 @@ REMOVE-END */
         }
 
         if (port_vlan_supported) {
-          if((nvram['vlan' + i + 'ports']).indexOf('*') != -1)
+          if ((nvram['vlan' + i + 'ports']).indexOf('*') != -1)
             SWITCH_INTERNAL_PORT=(nvram['vlan' + i + 'ports']).charAt((nvram['vlan' + i + 'ports']).indexOf('*')-1);
 
           vlg.insertData(-1, [ i.toString(),
@@ -528,8 +523,8 @@ REMOVE-END */
     if ((trunk_vlan_supported) && (f[COL_P0].checked == 1)) {
       f[COL_P0T].disabled=0;
 /* REMOVE-BEGIN
-//      if((f[COL_P0T].checked==0) || (this.countElem(COL_P0,1)>0) )
-//      if(this.countElem(COL_P0,1)>0) {
+//      if ((f[COL_P0T].checked==0) || (this.countElem(COL_P0,1)>0) )
+//      if (this.countElem(COL_P0,1)>0) {
 //      }
 REMOVE-END */
     } else {
@@ -603,19 +598,19 @@ REMOVE-END */
       }
     }
 
-    if(this.countDefaultVID() > 0) {
+    if (this.countDefaultVID() > 0) {
       f[COL_VID_DEF].disabled=1;
       f[COL_VID_DEF].checked=0;
     }
 
-    if((this.countDefaultVID() > 0) && (f[COL_VID_DEF].checked ==1)) {
+    if ((this.countDefaultVID() > 0) && (f[COL_VID_DEF].checked ==1)) {
       ferror.set(f[COL_VID_DEF], 'Only one VID can be selected as the default VID', quiet);
       valid = 0;
     } else {
       ferror.clear(f[COL_VID_DEF]);
     }
 
-    if(this.countVID(f[COL_VID].selectedIndex) > 0) {
+    if (this.countVID(f[COL_VID].selectedIndex) > 0) {
       ferror.set(f[COL_VID], 'Cannot add more than one entry with VID ' + f[0].selectedIndex, quiet);
       valid = 0;
     } else {
@@ -828,10 +823,10 @@ REMOVE-END */
     f[COL_BRI].selectedIndex = 0;
     ferror.clearAll(fields.getAll(this.newEditor));
   }
-} // end of the so-called if(supported_device) block
+} // end of the so-called if (supported_device) block
 
 function init() {
-	if(port_vlan_supported) {
+	if (port_vlan_supported) {
 		vlg.recolor();
 		vlg.resetNewEditor();
 		var c;
@@ -855,7 +850,7 @@ function toggleVisibility(whichone) {
 }
 
 function earlyInit() {
-	if(!port_vlan_supported) {
+	if (!port_vlan_supported) {
 		E('save-button').disabled = 1;
 		return;
 	}
@@ -987,7 +982,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
      options: [[0,'LAN (br0)'],[1,'LAN1  (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], value: 4 } );
 }
 createFieldTable('',f);
-if(port_vlan_supported) vlg.setup();
+if (port_vlan_supported) vlg.setup();
 </script>
 </div>
 
