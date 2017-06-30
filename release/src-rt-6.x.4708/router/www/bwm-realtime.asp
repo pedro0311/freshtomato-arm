@@ -154,8 +154,7 @@ function init() {
 
 	<script type='text/javascript'>
 	if (nvram.web_svg != '0') {
-		// without a div, Opera 9 moves svgdoc several pixels outside of <embed> (?)
-		W("<div style='border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0' id='graph'><embed src='bwm-graph.svg?<% version(); %>' style='width:760px;height:300px;margin:0;padding:0' type='image/svg+xml' pluginspage='http://www.adobe.com/svg/viewer/install/'><\/embed><\/div>");
+		W('<div style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0" id="graph"><embed src="bwm-graph.svg?<% version(); %>" style="width:760px;height:300px;margin:0;padding:0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed><\/div>\n');
 	}
 	</script>
 
