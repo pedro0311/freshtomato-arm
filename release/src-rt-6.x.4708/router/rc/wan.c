@@ -1214,9 +1214,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 	dns_to_resolv();
 
-	if(nvram_match("adblock_enable", "1"))
-		xstart("/usr/sbin/adblock");
-
 	start_dnsmasq();
 
 	start_firewall();
@@ -1292,6 +1289,9 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		if (wanup)
 			start_vpn_eas();
+
+		if (wanup && nvram_match("adblock_enable", "1"))
+			xstart("/usr/sbin/adblock");
 
 #ifdef TCONFIG_TINC
 		if(wanup)
