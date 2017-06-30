@@ -50,7 +50,7 @@ watchdogRun() {
                 METRIC=`expr $PREFNR + 100`
             fi
 
-            $DEBUG ""$PREFIX" metric "$METRIC" iface "$IFACE" uptime "$ISUP""
+            $DEBUG ""$PREFIX" metric="$METRIC" iface="$IFACE" uptime="$ISUP""
 
             ADD=0
             ISGW=`ip route | grep $IFACE | grep -v "link" | wc -l`
@@ -80,8 +80,8 @@ watchdogRun() {
                     $DEBUG "run tracert-test"
                     cktracert
                 else
-                    $DEBUG "run wget-test"
-                    ckwget
+                    $DEBUG "run curl-test"
+                    ckcurl
                 fi
             fi
 
@@ -94,12 +94,11 @@ watchdogRun() {
             if [ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ]; then
                 #failover does not have default gateway in route table
                 #so we can`t check connection to outside. Check only if interface exist
-                ckfailover
                 $DEBUG "run failover-test"
+                ckfailover
             fi
 
             if [ "$RESULT" -eq 0 ]; then #wan is down
-                $DEBUG "result=0, restart "$PREFIX""
                 logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
                 echo "0" > /tmp/state_$PREFIX
 
@@ -119,7 +118,6 @@ watchdogRun() {
 
             else
                 echo "1" > /tmp/state_$PREFIX
-                $DEBUG "result=1, "$PREFIX""
             fi
         fi
     done
@@ -143,13 +141,11 @@ ckping() {
     OK=0
 
     for HOST in $HOSTLIST; do
-        $DEBUG ""$IFACE" - "$HOST""
         TEST=`ping -I $IFACE -c 4 $HOST | grep "received" | cut -d "," -f2 | cut -d " " -f2`
-        $DEBUG ""$IFACE" = "$TEST""
         if [ "$TEST" -gt 0 ]; then  # "0" means 100% loss - not receive any package
             OK=`expr $OK + 1`
-        $DEBUG "ping ok="$OK""
         fi
+        $DEBUG ""$IFACE" - "$HOST": "$TEST"; ping ok="$OK""
     done
 
     if [ "$OK" -gt 0 ]; then
@@ -158,28 +154,19 @@ ckping() {
     fi
 }
 
-ckwget() {
-    WGETVER=`wget --help 2>&1 | grep "BusyBox"`
-
-    if [ "$WGETVER" == "" ]; then
-        SPR="--spider"   # GNU wget
-    else
-        SPR="-s"         # BusyBox wget
-    fi
-
+ckcurl() {
     for HOST in $HOSTLIST; do
-        # check if wan is up (1 try and 5 secs timeout for every host)
-
-        # to be checked  /pedro
-        #BIND_ADDR="$ADDR" LD_PRELOAD=/usr/lib/bind/bind.so wget -q $SPR -t 1 -T 5 $HOST
-        wget -q $SPR -t 1 -T 5 $HOST
-
-        if [ $? -eq 0 ]; then
-            # one good result for wget is enough
-            RESULT=1
+        TEST=`curl $HOST --interface $IFACE --connect-timeout 3 -ksfI -o /dev/null && echo 1 || echo 0`
+        if [ "$TEST" -gt 0 ]; then
+            OK=`expr $OK + 1`
         fi
+        $DEBUG ""$IFACE" - "$HOST": "$TEST"; curl connect ok="$OK""
     done
-    $DEBUG "wget OK="$RESULT""
+
+    if [ "$OK" -gt 0 ]; then
+        RESULT=1
+        $DEBUG "curl connect for "$IFACE": OK=1"
+    fi
 }
 
 ckfailover() {
