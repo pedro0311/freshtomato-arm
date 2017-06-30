@@ -2103,7 +2103,7 @@ for(var uidx = 1; uidx <= maxwan_num; ++uidx) {
 		{ title: 'Single Line MLPPP', name: 'f_wan'+u+'_ppp_mlppp', type: 'checkbox', value: (nvram['wan'+u+'_ppp_mlppp'] == 1) },
 
 		{ title: 'Route Modem IP', name: 'wan'+u+'_modem_ipaddr', type: 'text', maxlen: 15, size: 17, suffix: ' <small>(must be in different subnet to router, 0.0.0.0 to disable)<\/small>', value: nvram['wan'+u+'_modem_ipaddr'] },
-		{ title: 'Watchdog Mode', name: 'wan'+u+'_ckmtd', type: 'select', options: [['1','Ping'],['2','Traceroute*'],['3','Wget']], value: nvram['wan'+u+'_ckmtd'], suffix: '<div style="display:inline-block;position:absolute;padding-left:7px"><small>(*default; Use Ping only when Traceroute is not working correctly.<br />Wget is not <i>yet<\/i> suitable for multiwan but works best with LTE connection.)<\/small><\/div>' },
+		{ title: 'Watchdog Mode', name: 'wan'+u+'_ckmtd', type: 'select', options: [['1','Ping'],['2','Traceroute*'],['3','Curl']], value: nvram['wan'+u+'_ckmtd'], suffix: '<div style="display:inline-block;position:absolute;padding-left:7px"><small>(*default; Use Ping only when Traceroute is not working correctly.<br />Curl works best with LTE connection.)<\/small><\/div>' },
 
 		{ title: 'Bridge WAN port to primary LAN (br0)', name: 'f_wan'+u+'_islan', type: 'checkbox', value: (nvram['wan'+u+'_islan'] == 1) }
 	]);
