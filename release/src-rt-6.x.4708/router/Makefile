@@ -1115,7 +1115,7 @@ libnfnetlink-install:
 		ln -sf libnfnetlink.so.0.2.0 libnfnetlink.so
 
 miniupnpd-config:
-	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg
+	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
