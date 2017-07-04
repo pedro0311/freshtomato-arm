@@ -334,7 +334,7 @@ function init() {
 			</td><td style="margin-right:150px">
 			<script type='text/javascript'>
 			if (nvram.web_svg != '0') {
-				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=0&v=<% version(); %>" id="svg0">Your browser does not support SVG<\/object>\n');
+				W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
@@ -366,7 +366,7 @@ function init() {
 			</td><td style="margin-right:150px">
 			<script type='text/javascript'>
 			if (nvram.web_svg != '0') {
-				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=1&v=<% version(); %>" id="svg1">Your browser does not support SVG<\/object>\n');
+				W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
@@ -398,7 +398,7 @@ function init() {
 			</td><td style="margin-right:150px">
 			<script type='text/javascript'>
 			if (nvram.web_svg != '0') {
-				W('<object style="width:310px;height:310px;margin:0;padding:0" type="image/svg+xml" data="ipt-graph.svg?n=2&v=<% version(); %>" id="svg2">Your browser does not support SVG<\/object>\n');
+				W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
