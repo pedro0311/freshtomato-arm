@@ -877,7 +877,7 @@ openssl-clean:
 	-@$(MAKE) -C openssl clean
 	@rm -f openssl/stamp-h1
 
-openssl-install: openssl
+openssl-install:
 	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
 	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
 	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so
@@ -1083,7 +1083,7 @@ rp-pppoe-clean:
 	@rm -f rp-pppoe/src/pppoe-relay
 	@rm -f rp-pppoe/src/stamp-h1
 
-rp-pppoe-install: rp-pppoe
+rp-pppoe-install:
 	install -D rp-pppoe/src/rp-pppoe.so $(INSTALLDIR)/rp-pppoe/usr/lib/pppd/rp-pppoe.so
 	$(STRIP) $(INSTALLDIR)/rp-pppoe/usr/lib/pppd/*.so
 #	install -D rp-pppoe/src/pppoe-relay $(INSTALLDIR)/rp-pppoe/usr/sbin/pppoe-relay
@@ -1136,14 +1136,14 @@ vsftpd: $(if $(TCONFIG_FTP_SSL),openssl,)
 	@$(SEP)
 	$(MAKE) -C vsftpd $(PARALLEL_BUILD)
 
-vsftpd-install: vsftpd
+vsftpd-install:
 	install -D vsftpd/vsftpd $(INSTALLDIR)/vsftpd/usr/sbin/vsftpd
 	$(STRIP) -s $(INSTALLDIR)/vsftpd/usr/sbin/vsftpd
 
 ufsd-asus: kernel_header kernel
 	@$(MAKE) -C ufsd-asus all
 
-ufsd-asus-install: ufsd-asus
+ufsd-asus-install:
 	@$(MAKE) -C ufsd-asus install INSTALLDIR=$(INSTALLDIR)/ufsd-asus
 
 ufsd-netgear-install:
@@ -1165,7 +1165,7 @@ ntfs-3g-clean:
 	-@$(MAKE) -C ntfs-3g clean
 	@rm -f ntfs-3g/Makefile
 
-ntfs-3g-install: ntfs-3g
+ntfs-3g-install:
 	install -D ntfs-3g/src/ntfs-3g $(INSTALLDIR)/ntfs-3g/bin/ntfs-3g
 	$(STRIP) -s $(INSTALLDIR)/ntfs-3g/bin/ntfs-3g
 	install -d $(INSTALLDIR)/ntfs-3g/sbin && cd $(INSTALLDIR)/ntfs-3g/sbin && \
@@ -1180,7 +1180,7 @@ libusb10/Makefile: libusb10/Makefile.in
 libusb10: libusb10/Makefile
 	$(MAKE) -C $@
 
-libusb10-install: libusb10
+libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
 	cd $(INSTALLDIR)/libusb10/usr/lib && \
@@ -1200,7 +1200,7 @@ libusb/Makefile: libusb/Makefile.in
 libusb: libusb10 libusb/Makefile
 	$(MAKE) -C $@
 
-libusb-install: libusb
+libusb-install:
 	install -D libusb/libusb/.libs/libusb-0.1.so $(INSTALLDIR)/libusb/usr/lib/libusb-0.1.so
 	$(STRIP) $(INSTALLDIR)/libusb/usr/lib/*.so
 
@@ -1240,7 +1240,7 @@ dhcpv6: dhcpv6/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C dhcpv6 dhcp6c
 
-dhcpv6-install: dhcpv6
+dhcpv6-install:
 	install -D dhcpv6/dhcp6c $(INSTALLDIR)/dhcpv6/usr/sbin/dhcp6c
 	$(STRIP) $(INSTALLDIR)/dhcpv6/usr/sbin/dhcp6c
 
@@ -1281,7 +1281,7 @@ accel-pptp-clean:
 	-@$(MAKE) -C accel-pptp clean
 	@rm -f accel-pptp/Makefile
 
-accel-pptp-install: accel-pptp
+accel-pptp-install:
 	install -D accel-pptp/src/.libs/pptp.so $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
 	$(STRIP) $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
 
@@ -1292,7 +1292,7 @@ pptpd/stamp-h1:
 
 pptpd: pptpd/stamp-h1
 
-pptpd-install: pptpd
+pptpd-install:
 	@echo pptpd
 	@install -D pptpd/pptpd $(INSTALLDIR)/pptpd/usr/sbin/pptpd
 	@install -D pptpd/bcrelay $(INSTALLDIR)/pptpd/usr/sbin/bcrelay
@@ -1316,7 +1316,7 @@ pppd-clean:
 	-@$(MAKE) -C pppd clean
 	@rm -f pppd/Makefile
 
-pppd-install: pppd
+pppd-install:
 	install -D pppd/pppd/pppd $(INSTALLDIR)/pppd/usr/sbin/pppd
 	$(STRIP) $(INSTALLDIR)/pppd/usr/sbin/pppd
 	install -D pppd/chat/chat $(INSTALLDIR)/pppd/usr/sbin/chat
@@ -1347,7 +1347,7 @@ zebra-clean:
 	-@$(MAKE) -C zebra clean
 	@rm -f zebra/stamp-h1
 
-zebra-install: zebra
+zebra-install:
 	install -D zebra/zebra/zebra $(INSTALLDIR)/zebra/usr/sbin/zebra
 	install -D zebra/ripd/ripd $(INSTALLDIR)/zebra/usr/sbin/ripd
 	install -D zebra/lib/libzebra.so $(INSTALLDIR)/zebra/usr/lib/libzebra.so
@@ -1368,7 +1368,7 @@ rp-l2tp-install:
 xl2tpd: pppd
 	CFLAGS="-g $(EXTRACFLAGS)" $(MAKE) -C $@ PREFIX=/usr xl2tpd $(PARALLEL_BUILD)
 
-xl2tpd-install: xl2tpd
+xl2tpd-install:
 	install -D xl2tpd/xl2tpd $(INSTALLDIR)/xl2tpd/usr/sbin/xl2tpd
 	$(STRIP) $(INSTALLDIR)/xl2tpd/usr/sbin/xl2tpd
 
@@ -1399,7 +1399,7 @@ iproute2:
 	@$(SEP)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)"
 
-iproute2-install: iproute2
+iproute2-install:
 	install -D iproute2/tc/tc $(INSTALLDIR)/iproute2/usr/sbin/tc
 	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/tc
 	install -D iproute2/ip/ip $(INSTALLDIR)/iproute2/usr/sbin/ip
@@ -1409,7 +1409,7 @@ iproute2-3.x: kernel_header iptables-1.4.x
 	@$(SEP)
 	@$(MAKE) -C $@ IPTABLES_DIR=$(TOP)/iptables-1.4.x KERNEL_INCLUDE=$(TOP)/kernel_header/include EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)"
 
-iproute2-3.x-install: iproute2-3.x
+iproute2-3.x-install:
 	install -D iproute2-3.x/tc/tc $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
 	$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
 	install -D iproute2-3.x/ip/ip $(INSTALLDIR)/iproute2-3.x/usr/sbin/ip
@@ -1476,7 +1476,7 @@ sqlite-clean:
 	-@$(MAKE) -C sqlite clean
 	@rm -f sqlite/stamp-h1
 
-sqlite-install: sqlite
+sqlite-install:
 	@$(SEP)
 ifeq ($(TCONFIG_NGINX),y)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
@@ -1525,7 +1525,7 @@ ffmpeg-clean:
 	-@$(MAKE) -C ffmpeg clean
 	@rm -f ffmpeg/stamp-h1 ffmpeg/config.h ffmpeg/config.mak
 
-ffmpeg-install: ffmpeg
+ffmpeg-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D ffmpeg/libavformat/libavformat.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
@@ -1551,7 +1551,7 @@ libogg-clean:
 	-@$(MAKE) -C libogg clean
 	@rm -f libogg/stamp-h1
 
-libogg-install: libogg
+libogg-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libogg/src/.libs/libogg.so.0 $(INSTALLDIR)/libogg/usr/lib/libogg.so.0
@@ -1575,7 +1575,7 @@ flac-clean:
 	-@$(MAKE) -C flac clean
 	@rm -f flac/stamp-h1
 
-flac-install: flac
+flac-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D flac/src/libFLAC/.libs/libFLAC.so.8 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.8
@@ -1602,7 +1602,7 @@ jpeg-clean:
 	@rm -f jpeg/stamp-h1 jpeg/Makefile
 	@rm -rf jpeg/staged
 
-jpeg-install: jpeg
+jpeg-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D jpeg/libjpeg.so $(INSTALLDIR)/jpeg/usr/lib/libjpeg.so
@@ -1627,7 +1627,7 @@ libexif-clean:
 	-@$(MAKE) -C libexif clean
 	@rm -f libexif/stamp-h1
 
-libexif-install: libexif
+libexif-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libexif/libexif/.libs/libexif.so.12 $(INSTALLDIR)/libexif/usr/lib/libexif.so.12
@@ -1649,7 +1649,7 @@ zlib-clean:
 	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
 	@rm -rf zlib/staged
 
-zlib-install: zlib
+zlib-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -d $(INSTALLDIR)/zlib/usr/lib
@@ -1687,7 +1687,7 @@ libid3tag-clean:
 	-@$(MAKE) -C libid3tag clean
 	@rm -f libid3tag/stamp-h1
 
-libid3tag-install: libid3tag
+libid3tag-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libid3tag/.libs/libid3tag.so.0 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0
@@ -1711,7 +1711,7 @@ libvorbis-clean:
 	-@$(MAKE) -C libvorbis clean
 	@rm -f libvorbis/stamp-h1
 
-libvorbis-install: libvorbis
+libvorbis-install:
 	@$(SEP)
 ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libvorbis/lib/.libs/libvorbis.so.0 $(INSTALLDIR)/libvorbis/usr/lib/libvorbis.so.0
@@ -1726,7 +1726,7 @@ minidlna-clean:
 	-@$(MAKE) -C minidlna clean
 	@rm -f minidlna/stamp-h1
 
-minidlna-install: minidlna
+minidlna-install:
 	@$(SEP)
 	install -D minidlna/minidlna $(INSTALLDIR)/minidlna/usr/sbin/minidlna
 	$(STRIP) $(INSTALLDIR)/minidlna/usr/sbin/minidlna
@@ -1740,7 +1740,7 @@ igmpproxy: igmpproxy/src/Makefile
 	@$(SEP)
 	@$(MAKE) -C igmpproxy/src $(PARALLEL_BUILD)
 
-igmpproxy-install: igmpproxy
+igmpproxy-install:
 	install -D igmpproxy/src/igmpproxy $(INSTALLDIR)/igmpproxy/usr/sbin/igmpproxy
 	$(STRIP) $(INSTALLDIR)/igmpproxy/usr/sbin/igmpproxy
 
@@ -1752,7 +1752,7 @@ udev:
 	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) EXTRACFLAGS="$(EXTRACFLAGS)" \
 	    PROGRAMS=udevtrigger
 
-udev-install: udev
+udev-install:
 	install -d $(INSTALLDIR)
 	install -d $(TARGETDIR)
 	$(MAKE) -C udev DESTDIR=$(INSTALLDIR) prefix=/udev install-udevtrigger
@@ -1760,7 +1760,7 @@ udev-install: udev
 hotplug2:
 	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) CC=$(CC) EXTRACFLAGS="$(EXTRACFLAGS)"
 
-hotplug2-install: hotplug2
+hotplug2-install:
 	$(MAKE) -C hotplug2 install PREFIX=$(INSTALLDIR)/hotplug2 SUBDIRS=""
 	$(MAKE) -C hotplug2/examples install PREFIX=$(INSTALLDIR)/hotplug2/rom KERNELVER=$(LINUX_KERNEL)
 
@@ -1806,7 +1806,7 @@ ebtables: dummy
 	LOCKFILE="/var/lock/ebtables" LOCKDIR="/var/lock" \
 	BINDIR="/usr/sbin" LIBDIR="/usr/lib/ebtables" KERNEL_DIR=$(LINUXDIR) KERNEL_INCLUDES=$(LINUXDIR)/include $(if $(TCONFIG_IPV6),DO_IPV6=1,)
 
-ebtables-install: ebtables
+ebtables-install:
 	install -D ebtables/ebtables $(INSTALLDIR)/ebtables/usr/sbin/ebtables
 
 	@mkdir -p $(TARGETDIR)/rom/etc
@@ -1841,7 +1841,7 @@ spawn-fcgi-clean:
 	-@$(MAKE) -C spawn-fcgi clean
 	rm -f spawn-fcgi/stamp-h1
 
-spawn-fcgi-install: spawn-fcgi
+spawn-fcgi-install:
 	install -d $(INSTALLDIR)/spawn-fcgi/usr/bin
 	install spawn-fcgi/src/spawn-fcgi $(INSTALLDIR)/spawn-fcgi/usr/bin/spawn-fcgi
 	$(STRIP) -s $(INSTALLDIR)/spawn-fcgi/usr/bin/spawn-fcgi
@@ -1906,7 +1906,7 @@ pcre/stamp-h1:
 
 pcre: pcre/stamp-h1
 
-pcre-install: pcre
+pcre-install:
 	@$(SEP)
 	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.7
 	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.7
@@ -1933,7 +1933,7 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C libxml2 all $(PARALLEL_BUILD)
 	@$(MAKE) -C libxml2 DESTDIR=$(TOP)/libxml2/staged install
 
-libxml2-install: libxml2
+libxml2-install:
 	@$(SEP)
 	install -D libxml2/.libs/libxml2.so.2.9.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
@@ -1956,7 +1956,7 @@ libpng: libpng/stamp-h1
 	@$(MAKE) -C libpng all $(PARALLEL_BUILD)
 	@$(MAKE) -C libpng DESTDIR=$(TOP)/libpng/staged install
 
-libpng-install: libpng
+libpng-install:
 	@$(SEP)
 	install -D libpng/.libs/libpng.so.3.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
 	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
@@ -2056,7 +2056,7 @@ php-clean:
 	-@$(MAKE) -C php clean
 	-@rm php/stamp-h1
 
-php-install: php
+php-install:
 	@$(SEP)
 	install -d $(INSTALLDIR)/php/usr/sbin
 	install -D php/sapi/cli/.libs/php $(INSTALLDIR)/php/usr/sbin/php-cli && chmod 0755 $(INSTALLDIR)/php/usr/sbin/php-cli
@@ -2096,7 +2096,7 @@ nginx-clean:
 	-@$(MAKE) -C nginx clean
 	-@rm -f nginx/stamp-h1
 
-nginx-install: nginx
+nginx-install:
 	install -d $(INSTALLDIR)/nginx/usr/sbin
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 755 $(INSTALLDIR)/nginx/usr/sbin/nginx
 	$(STRIP) $(INSTALLDIR)/nginx/usr/sbin/nginx
@@ -2119,7 +2119,7 @@ libncurses-clean:
 	@rm -f libncurses/stamp-h1 libncurses/Makefile
 	@rm -rf libncurses/staged
 
-libncurses-install: libncurses
+libncurses-install:
 	install -d $(INSTALLDIR)/libncurses/usr/lib
 	install -d $(INSTALLDIR)/libncurses/usr/share/terminfo
 	install -d $(INSTALLDIR)/libncurses/usr/share/terminfo/l
@@ -2240,7 +2240,7 @@ lzo-clean:
 	-@$(MAKE) -C lzo clean
 	@rm -f lzo/stamp-h1
 
-lzo-install: lzo
+lzo-install:
 	install -D lzo/src/.libs/liblzo2.so $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
 	$(STRIP) $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
 	cd $(INSTALLDIR)/lzo/usr/lib && \
@@ -2268,7 +2268,7 @@ openvpn-clean:
 	-@$(MAKE) -C openvpn clean
 	@rm -f openvpn/.conf
 
-openvpn-install: openvpn
+openvpn-install:
 	install -D openvpn/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 	$(STRIP) -s $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 	chmod 0500 $(INSTALLDIR)/openvpn/usr/sbin/openvpn
@@ -2294,7 +2294,7 @@ nano-clean:
 	-@$(MAKE) -C nano clean
 	@rm -f nano/stamp-h1 nano/Makefile nano/src/Makefile
 
-nano-install: nano
+nano-install:
 	install -d $(INSTALLDIR)/nano/usr/sbin
 	install -D nano/src/nano $(INSTALLDIR)/nano/usr/sbin/nano
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
@@ -2325,7 +2325,7 @@ libcurl-clean:
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
 
-libcurl-install: libcurl
+libcurl-install:
 	install -d $(INSTALLDIR)/libcurl/usr/sbin
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
@@ -2353,7 +2353,7 @@ libevent-clean:
 	@rm -f libevent/stamp-h1 libevent/Makefile
 	@rm -rf libevent/staged
 
-libevent-install: libevent
+libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
 	install libevent/.libs/libevent-2.0.so.5.1.9 $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
@@ -2375,7 +2375,7 @@ libiconv-clean:
 	@rm -rf libiconv/stamp-h1 libiconv/Makefile
 	@rm -rf libiconv/staged
 
-libiconv-install: libiconv
+libiconv-install:
 	install -d $(INSTALLDIR)/libiconv/usr/lib
 	install libiconv/lib/.libs/libiconv.so.2.6.0 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
 	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
@@ -2416,7 +2416,7 @@ transmission-clean:
 	-@$(MAKE) -C transmission clean
 	@rm -f transmission/stamp-h1 transmission/Makefile
 
-transmission-install: transmission
+transmission-install:
 	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
 	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-cli
@@ -2433,7 +2433,7 @@ endif
 btgui:
 	@$(SEP)
 
-btgui-install: btgui
+btgui-install:
 	install -d $(INSTALLDIR)/btgui/usr/bin
 	install -D transmission/btcheck $(INSTALLDIR)/btgui/usr/bin/btcheck
 
@@ -2455,7 +2455,7 @@ libnfsidmap-clean:
 	@rm -f libnfsidmap/stamp-h1
 	@rm -rf libnfsidmap/staged
 
-libnfsidmap-install: libnfsidmap
+libnfsidmap-install:
 	install -d $(TOP)/libnfsidmap/staged
 	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
 
@@ -2473,7 +2473,7 @@ portmap-clean:
 	-@$(MAKE) -C portmap clean
 	@rm -f portmap/stamp-h1
 
-portmap-install: portmap
+portmap-install:
 	install -d $(INSTALLDIR)/portmap/usr/sbin
 	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
 	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
@@ -2488,7 +2488,7 @@ e2fsprogs: e2fsprogs/stamp-h1
 	@$(SEP)
 	$(MAKE) -C e2fsprogs $(PARALLEL_BUILD)
 
-e2fsprogs-install: e2fsprogs
+e2fsprogs-install:
 	cp e2fsprogs/misc/mke2fs.conf $(INSTALLDIR)/rom/rom/etc/mke2fs.conf
 	install -d $(INSTALLDIR)/e2fsprogs/sbin
 	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/sbin/e2fsck
@@ -2530,7 +2530,7 @@ nfs-utils-clean:
 	-@$(MAKE) -C nfs-utils clean
 	@rm -f nfs-utils/stamp-h1
 
-nfs-utils-install: nfs-utils
+nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
 	install -D nfs-utils/utils/mount/mount.nfs $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
 	install -D nfs-utils/utils/nfsd/nfsd $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
@@ -2616,7 +2616,7 @@ snmp-clean:
 	-@$(MAKE) -C snmp clean
 	@rm -f snmp/stamp-h1
 
-snmp-install: snmp
+snmp-install:
 	install -D snmp/agent/snmpd $(INSTALLDIR)/snmp/usr/sbin/snmpd
 	$(STRIP) $(INSTALLDIR)/snmp/usr/sbin/snmpd
 
@@ -2638,7 +2638,7 @@ apcupsd-clean:
 	@rm -f apcupsd/stamp-h1
 	@rm -f apcupsd/config*
 
-apcupsd-install: apcupsd
+apcupsd-install:
 	$(MAKE) -C apcupsd DESTDIR=$(INSTALLDIR)/apcupsd install
 	@rm -rf $(INSTALLDIR)/apcupsd/sbin/apctest
 	@rm -rf $(INSTALLDIR)/apcupsd/www/apcupsd/ups*.cgi
@@ -2654,7 +2654,7 @@ libsodium/stamp-h1:
 libsodium: libsodium/stamp-h1
 	$(MAKE) -C libsodium $(PARALLEL_BUILD)
 
-libsodium-install: libsodium
+libsodium-install:
 	install -d $(INSTALLDIR)/libsodium/usr/lib
 	install -D libsodium/src/libsodium/.libs/libsodium.so.18.2.0 $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
 	$(STRIP) -s $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
@@ -2678,7 +2678,7 @@ dnscrypt/stamp-h1: libsodium
 dnscrypt: dnscrypt/stamp-h1
 	$(MAKE) -C dnscrypt $(PARALLEL_BUILD)
 
-dnscrypt-install: dnscrypt
+dnscrypt-install:
 	install -D dnscrypt/src/proxy/.libs/dnscrypt-proxy $(INSTALLDIR)/dnscrypt/usr/sbin/dnscrypt-proxy
 	install -D dnscrypt/src/hostip/.libs/hostip $(INSTALLDIR)/dnscrypt/usr/sbin/hostip
 	$(STRIP) -s $(INSTALLDIR)/dnscrypt/usr/sbin/dnscrypt-proxy
@@ -2700,7 +2700,7 @@ tor/stamp-h1: openssl zlib libevent
 tor: tor/stamp-h1
 	$(MAKE) -C tor $(PARALLEL_BUILD)
 
-tor-install: tor
+tor-install:
 	install -D tor/src/or/tor $(INSTALLDIR)/tor/usr/sbin/tor
 	$(STRIP) -s $(INSTALLDIR)/tor/usr/sbin/tor
 
@@ -2720,7 +2720,7 @@ udpxy-clean:
 	-@$(MAKE) -C udpxy clean
 	@rm -f udpxy/stamp-h1
 
-udpxy-install: udpxy
+udpxy-install:
 	@$(SEP)
 	install -d $(INSTALLDIR)/udpxy/usr/bin
 	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/bin/udpxy
@@ -2729,7 +2729,7 @@ udpxy-install: udpxy
 mdadm:
 	$(MAKE) -C mdadm $(PARALLEL_BUILD)
 
-mdadm-install: mdadm
+mdadm-install:
 	install -D mdadm/mdadm $(INSTALLDIR)/mdadm/usr/sbin/mdadm
 	$(STRIP) -s $(INSTALLDIR)/mdadm/usr/sbin/mdadm
 
@@ -2747,7 +2747,7 @@ libmnl: libmnl/stamp-h1
 	$(MAKE) -C libmnl
 	$(MAKE) -C libmnl DESTDIR=$(TOP)/libmnl/staged install
 
-libmnl-install: libmnl
+libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
 	install libmnl/src/.libs/libmnl.so.0.1.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
 	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
@@ -2772,7 +2772,7 @@ ipset/stamp-h1: libmnl
 ipset: ipset/stamp-h1
 	$(MAKE) -C ipset
 
-ipset-install: ipset
+ipset-install:
 	install -D ipset/src/ipset $(INSTALLDIR)/ipset/usr/sbin/ipset
 	install -d $(INSTALLDIR)/ipset/usr/lib/
 	install ipset/lib/.libs/libipset.so.3.6.0 $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.6.0
@@ -2803,7 +2803,7 @@ uqmi: libjson-c
 	$(MAKE) -C uqmi/libubox
 	$(MAKE) -C uqmi SHARED=0 CC='$(CC) -static'
 
-uqmi-install: uqmi
+uqmi-install:
 	install -D uqmi/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 	$(STRIP) $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 
@@ -2814,7 +2814,7 @@ uqmi-clean: libjson-c-clean
 comgt:
 	@$(MAKE) -C comgt CC=$(CC) CFLAGS="$(EXTRACFLAGS)" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" comgt
 
-comgt-install: comgt
+comgt-install:
 	install -D comgt/comgt $(INSTALLDIR)/comgt/usr/sbin/comgt
 	cd $(INSTALLDIR)/comgt/usr/sbin/ && \
 		ln -sf comgt gcom
