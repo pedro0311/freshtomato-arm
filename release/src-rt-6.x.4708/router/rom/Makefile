@@ -15,7 +15,7 @@ install:
 	# remove comments, compress whitespace
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/services > $(INSTALLDIR)/rom/etc/services
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
-	
+
 ifeq ($(TCONFIG_HTTPS),y)
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/openssl.cnf > $(INSTALLDIR)/rom/etc/openssl.cnf
 else
@@ -29,7 +29,20 @@ endif
 ifneq ($(TCONFIG_DNSCRYPT),y)
 	rm -f $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv
 else
-	-wget https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/dnscrypt-resolvers.csv -O $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv
+	@count=0; \
+	while [ $${count} -lt 6 ]; do \
+	    wget https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/dnscrypt-resolvers.csv -O $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
+	    if [ $${?} -ne 0 ]; then \
+		count=`expr $${count} + 1`; \
+		if [ $${count} -gt 5 ]; then \
+		    echo "Dnscrypt resolvers download error, check your internet connection!"; \
+		    exit 1; \
+		fi; \
+		sleep 2; \
+	    else \
+		count=6; \
+	    fi; \
+	done
 endif
 
 #	Used by Curl
