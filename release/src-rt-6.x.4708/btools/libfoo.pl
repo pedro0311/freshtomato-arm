@@ -529,8 +529,8 @@ genSO("${root}/usr/lib/libpng12.so.0.57.0", "${router}/libpng/.libs/libpng12.a")
 genSO("${root}/usr/lib/libjpeg.so", "${router}/libjpeg/.libs/libjpeg.a");
 genSO("${root}/usr/lib/libxml2.so.2.9.3", "${router}/libxml2/.libs/libxml2.a");
 genSO("${root}/usr/lib/libipset.so.3.6.0", "${router}/ipset/lib/.libs/libipset.a");
-genSO("${root}/usr/lib/libpcre.so.1.2.7", "${router}/pcre/.libs/libpcre.a");
-genSO("${root}/usr/lib/libpcreposix.so.0.0.4", "${router}/pcre/.libs/libpcreposix.a");
+genSO("${root}/usr/lib/libpcre.so.1.2.9", "${router}/pcre/.libs/libpcre.a");
+genSO("${root}/usr/lib/libpcreposix.so.0.0.5", "${router}/pcre/.libs/libpcreposix.a");
 
 print "\n";
 
