@@ -1264,12 +1264,6 @@ vlan-install:
 	$(MAKE) -C vlan CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install	# STRIPTOOL=$(STRIP)
 	$(STRIP) $(INSTALLDIR)/vlan/usr/sbin/vconfig
 
-
-pptp-client-install:
-	install -D pptp-client/pptp $(INSTALLDIR)/pptp-client/usr/sbin/pptp
-	$(STRIP) $(INSTALLDIR)/pptp-client/usr/sbin/pptp
-
-
 accel-pptp: pppd accel-pptp/Makefile
 	@$(MAKE) -C accel-pptp
 
