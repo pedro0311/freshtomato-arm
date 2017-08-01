@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -77,6 +77,10 @@
 #endif
 #define DEBUG_SMIME	0
 
+#if !defined(OPENSSL_NO_EC) && defined(EVP_PKEY_EC)
+#define HAVE_EVP_PKEY_EC 1
+#endif
+
 /* FIXME: Use the openssl constants instead of
  * enum. It is now impossible to match real values
  * against php constants. Also sorry to break the
@@ -87,7 +91,7 @@ enum php_openssl_key_type {
 	OPENSSL_KEYTYPE_DSA,
 	OPENSSL_KEYTYPE_DH,
 	OPENSSL_KEYTYPE_DEFAULT = OPENSSL_KEYTYPE_RSA,
-#ifdef EVP_PKEY_EC
+#ifdef HAVE_EVP_PKEY_EC
 	OPENSSL_KEYTYPE_EC = OPENSSL_KEYTYPE_DH +1
 #endif
 };
@@ -657,17 +661,22 @@ static time_t asn1_time_to_time_t(ASN1_UTCTIME * timestr TSRMLS_DC) /* {{{ */
 	char * thestr;
 	long gmadjust = 0;
 
-	if (ASN1_STRING_type(timestr) != V_ASN1_UTCTIME) {
+	if (ASN1_STRING_type(timestr) != V_ASN1_UTCTIME && ASN1_STRING_type(timestr) != V_ASN1_GENERALIZEDTIME) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "illegal ASN1 data type for timestamp");
 		return (time_t)-1;
 	}
 
-	if (ASN1_STRING_length(timestr) != strlen(ASN1_STRING_data(timestr))) {
+	if (ASN1_STRING_length(timestr) != strlen((char *)ASN1_STRING_data(timestr))) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "illegal length in timestamp");
 		return (time_t)-1;
 	}
 
 	if (ASN1_STRING_length(timestr) < 13) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "unable to parse time string %s correctly", timestr->data);
+		return (time_t)-1;
+	}
+
+	if (ASN1_STRING_type(timestr) == V_ASN1_GENERALIZEDTIME && ASN1_STRING_length(timestr) < 15) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "unable to parse time string %s correctly", timestr->data);
 		return (time_t)-1;
 	}
@@ -693,13 +702,20 @@ static time_t asn1_time_to_time_t(ASN1_UTCTIME * timestr TSRMLS_DC) /* {{{ */
 	*thestr = '\0';
 	thestr -= 2;
 	thetime.tm_mon = atoi(thestr)-1;
-	*thestr = '\0';
-	thestr -= 2;
-	thetime.tm_year = atoi(thestr);
 
-	if (thetime.tm_year < 68) {
-		thetime.tm_year += 100;
+	*thestr = '\0';
+	if( ASN1_STRING_type(timestr) == V_ASN1_UTCTIME ) {
+		thestr -= 2;
+		thetime.tm_year = atoi(thestr);
+
+		if (thetime.tm_year < 68) {
+			thetime.tm_year += 100;
+		}
+	} else if( ASN1_STRING_type(timestr) == V_ASN1_GENERALIZEDTIME ) {
+		thestr -= 4;
+		thetime.tm_year = atoi(thestr) - 1900;
 	}
+
 
 	thetime.tm_isdst = -1;
 	ret = mktime(&thetime);
@@ -778,13 +794,13 @@ static int add_oid_section(struct php_x509_request * req TSRMLS_DC) /* {{{ */
 			req->config_filename, req->var, req->req_config TSRMLS_CC) == FAILURE) return FAILURE
 
 #define SET_OPTIONAL_STRING_ARG(key, varname, defval)	\
-	if (optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), key, sizeof(key), (void**)&item) == SUCCESS) \
+	if (optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), key, sizeof(key), (void**)&item) == SUCCESS && Z_TYPE_PP(item) == IS_STRING) \
 		varname = Z_STRVAL_PP(item); \
 	else \
 		varname = defval
 
 #define SET_OPTIONAL_LONG_ARG(key, varname, defval)	\
-	if (optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), key, sizeof(key), (void**)&item) == SUCCESS) \
+	if (optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), key, sizeof(key), (void**)&item) == SUCCESS && Z_TYPE_PP(item) == IS_LONG) \
 		varname = Z_LVAL_PP(item); \
 	else \
 		varname = defval
@@ -843,7 +859,8 @@ static int php_openssl_parse_config(struct php_x509_request * req, zval * option
 		}
 	}
 
-	if (req->priv_key_encrypt && optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), "encrypt_key_cipher", sizeof("encrypt_key_cipher"), (void**)&item) == SUCCESS) {
+	if (req->priv_key_encrypt && optional_args && zend_hash_find(Z_ARRVAL_P(optional_args), "encrypt_key_cipher", sizeof("encrypt_key_cipher"), (void**)&item) == SUCCESS 
+		&& Z_TYPE_PP(item) == IS_LONG) {
 		long cipher_algo = Z_LVAL_PP(item);
 		const EVP_CIPHER* cipher = php_openssl_get_evp_cipher_from_algo(cipher_algo);
 		if (cipher == NULL) {
@@ -866,7 +883,7 @@ static int php_openssl_parse_config(struct php_x509_request * req, zval * option
 		req->digest = req->md_alg = EVP_get_digestbyname(req->digest_name);
 	}
 	if (req->md_alg == NULL) {
-		req->md_alg = req->digest = EVP_md5();
+		req->md_alg = req->digest = EVP_sha1();
 	}
 
 	PHP_SSL_CONFIG_SYNTAX_CHECK(extensions_section);
@@ -910,11 +927,13 @@ static int php_openssl_load_rand_file(const char * file, int *egdsocket, int *se
 
 	if (file == NULL) {
 		file = RAND_file_name(buffer, sizeof(buffer));
+#ifdef HAVE_RAND_EGD
 	} else if (RAND_egd(file) > 0) {
 		/* if the given filename is an EGD socket, don't
 		 * write anything back to it */
 		*egdsocket = 1;
 		return SUCCESS;
+#endif
 	}
 	if (file == NULL || !RAND_load_file(file, -1)) {
 		if (RAND_status() == 0) {
@@ -1128,7 +1147,7 @@ PHP_MINIT_FUNCTION(openssl)
 	REGISTER_LONG_CONSTANT("OPENSSL_KEYTYPE_DSA", OPENSSL_KEYTYPE_DSA, CONST_CS|CONST_PERSISTENT);
 #endif
 	REGISTER_LONG_CONSTANT("OPENSSL_KEYTYPE_DH", OPENSSL_KEYTYPE_DH, CONST_CS|CONST_PERSISTENT);
-#ifdef EVP_PKEY_EC
+#ifdef HAVE_EVP_PKEY_EC
 	REGISTER_LONG_CONSTANT("OPENSSL_KEYTYPE_EC", OPENSSL_KEYTYPE_EC, CONST_CS|CONST_PERSISTENT);
 #endif
 
@@ -1484,7 +1503,7 @@ PHP_FUNCTION(openssl_x509_parse)
 	zval ** zcert;
 	X509 * cert = NULL;
 	long certresource = -1;
-	int i;
+	int i, sig_nid;
 	zend_bool useshortnames = 1;
 	char * tmpstr;
 	zval * subitem;
@@ -1531,11 +1550,12 @@ PHP_FUNCTION(openssl_x509_parse)
 	if (tmpstr) {
 		add_assoc_string(return_value, "alias", tmpstr, 1);
 	}
-/*
-	add_assoc_long(return_value, "signaturetypeLONG", X509_get_signature_type(cert));
-	add_assoc_string(return_value, "signaturetype", OBJ_nid2sn(X509_get_signature_type(cert)), 1);
-	add_assoc_string(return_value, "signaturetypeLN", OBJ_nid2ln(X509_get_signature_type(cert)), 1);
-*/
+
+	sig_nid = OBJ_obj2nid((cert)->sig_alg->algorithm);
+	add_assoc_string(return_value, "signatureTypeSN", (char*)OBJ_nid2sn(sig_nid), 1);
+	add_assoc_string(return_value, "signatureTypeLN", (char*)OBJ_nid2ln(sig_nid), 1);
+	add_assoc_long(return_value, "signatureTypeNID", sig_nid);
+
 	MAKE_STD_ZVAL(subitem);
 	array_init(subitem);
 
@@ -1958,7 +1978,7 @@ PHP_FUNCTION(openssl_pkcs12_export_to_file)
 	}
 
 	/* parse extra config from args array, promote this to an extra function */
-	if (args && zend_hash_find(Z_ARRVAL_P(args), "friendly_name", sizeof("friendly_name"), (void**)&item) == SUCCESS)
+	if (args && zend_hash_find(Z_ARRVAL_P(args), "friendly_name", sizeof("friendly_name"), (void**)&item) == SUCCESS && Z_TYPE_PP(item) == IS_STRING)
 		friendly_name = Z_STRVAL_PP(item);
 	/* certpbe (default RC2-40)
 	   keypbe (default 3DES)
@@ -2036,7 +2056,7 @@ PHP_FUNCTION(openssl_pkcs12_export)
 	}
 
 	/* parse extra config from args array, promote this to an extra function */
-	if (args && zend_hash_find(Z_ARRVAL_P(args), "friendly_name", sizeof("friendly_name"), (void**)&item) == SUCCESS)
+	if (args && zend_hash_find(Z_ARRVAL_P(args), "friendly_name", sizeof("friendly_name"), (void**)&item) == SUCCESS && Z_TYPE_PP(item) == IS_STRING)
 		friendly_name = Z_STRVAL_PP(item);
 
 	if (args && zend_hash_find(Z_ARRVAL_P(args), "extracerts", sizeof("extracerts"), (void**)&item) == SUCCESS)
@@ -3026,7 +3046,7 @@ static int php_openssl_is_private_key(EVP_PKEY* pkey TSRMLS_DC)
 			}
 			break;
 #endif
-#if OPENSSL_VERSION_NUMBER >= 0x0090800fL && !defined(OPENSSL_NO_EC) && defined(EVP_PKEY_EC)
+#ifdef HAVE_EVP_PKEY_EC
 		case EVP_PKEY_EC:
 			assert(pkey->pkey.ec != NULL);
 
@@ -3435,7 +3455,7 @@ PHP_FUNCTION(openssl_pkey_get_details)
 			}
 
 			break;
-#ifdef EVP_PKEY_EC 
+#ifdef HAVE_EVP_PKEY_EC
 		case EVP_PKEY_EC:
 			ktype = OPENSSL_KEYTYPE_EC;
 			break;
@@ -4380,6 +4400,7 @@ PHP_FUNCTION(openssl_seal)
 
 	if (!EVP_EncryptInit(&ctx,cipher,NULL,NULL)) {
 		RETVAL_FALSE;
+		EVP_CIPHER_CTX_cleanup(&ctx);
 		goto clean_exit;
 	}
 
@@ -4390,10 +4411,12 @@ PHP_FUNCTION(openssl_seal)
 #endif
 	/* allocate one byte extra to make room for \0 */
 	buf = emalloc(data_len + EVP_CIPHER_CTX_block_size(&ctx));
+	EVP_CIPHER_CTX_cleanup(&ctx);
 
 	if (!EVP_SealInit(&ctx, cipher, eks, eksl, NULL, pkeys, nkeys) || !EVP_SealUpdate(&ctx, buf, &len1, (unsigned char *)data, data_len)) {
 		RETVAL_FALSE;
 		efree(buf);
+		EVP_CIPHER_CTX_cleanup(&ctx);
 		goto clean_exit;
 	}
 
@@ -4426,6 +4449,7 @@ PHP_FUNCTION(openssl_seal)
 		efree(buf);
 	}
 	RETVAL_LONG(len1 + len2);
+	EVP_CIPHER_CTX_cleanup(&ctx);
 
 clean_exit:
 	for (i=0; i<nkeys; i++) {
@@ -4484,25 +4508,21 @@ PHP_FUNCTION(openssl_open)
 	if (EVP_OpenInit(&ctx, cipher, (unsigned char *)ekey, ekey_len, NULL, pkey) && EVP_OpenUpdate(&ctx, buf, &len1, (unsigned char *)data, data_len)) {
 		if (!EVP_OpenFinal(&ctx, buf + len1, &len2) || (len1 + len2 == 0)) {
 			efree(buf);
-			if (keyresource == -1) { 
-				EVP_PKEY_free(pkey);
-			}
-			RETURN_FALSE;
+			RETVAL_FALSE;
+		} else {
+			zval_dtor(opendata);
+			buf[len1 + len2] = '\0';
+			ZVAL_STRINGL(opendata, erealloc(buf, len1 + len2 + 1), len1 + len2, 0);
+			RETVAL_TRUE;
 		}
 	} else {
 		efree(buf);
-		if (keyresource == -1) {
-			EVP_PKEY_free(pkey);
-		}
-		RETURN_FALSE;
+		RETVAL_FALSE;
 	}
 	if (keyresource == -1) {
 		EVP_PKEY_free(pkey);
 	}
-	zval_dtor(opendata);
-	buf[len1 + len2] = '\0';
-	ZVAL_STRINGL(opendata, erealloc(buf, len1 + len2 + 1), len1 + len2, 0);
-	RETURN_TRUE;
+	EVP_CIPHER_CTX_cleanup(&ctx);
 }
 /* }}} */
 
@@ -4602,14 +4622,14 @@ int php_openssl_apply_verification_policy(SSL *ssl, X509 *peer, php_stream *stre
 			return FAILURE;
 		}
 
-		match = strcmp(cnmatch, buf) == 0;
+		match = strcasecmp(cnmatch, buf) == 0;
 		if (!match && strlen(buf) > 3 && buf[0] == '*' && buf[1] == '.') {
 			/* Try wildcard */
 
 			if (strchr(buf+2, '.')) {
 				char *tmp = strstr(cnmatch, buf+1);
 
-				match = tmp && strcmp(tmp, buf+2) && tmp == strchr(cnmatch, '.');
+				match = tmp && strcasecmp(tmp, buf+2) && tmp == strchr(cnmatch, '.');
 			}
 		}
 
@@ -5073,7 +5093,7 @@ PHP_FUNCTION(openssl_cipher_iv_length)
 
 
 /* {{{ proto string openssl_dh_compute_key(string pub_key, resource dh_key)
-   Computes shared sicret for public value of remote DH key and local DH key */
+   Computes shared secret for public value of remote DH key and local DH key */
 PHP_FUNCTION(openssl_dh_compute_key)
 {
 	zval *key;
@@ -5116,7 +5136,6 @@ PHP_FUNCTION(openssl_random_pseudo_bytes)
 	long buffer_length;
 	unsigned char *buffer = NULL;
 	zval *zstrong_result_returned = NULL;
-	int strong_result = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|z", &buffer_length, &zstrong_result_returned) == FAILURE) {
 		return;
@@ -5134,7 +5153,6 @@ PHP_FUNCTION(openssl_random_pseudo_bytes)
 	buffer = emalloc(buffer_length + 1);
 
 #ifdef PHP_WIN32
-	strong_result = 1;
 	/* random/urandom equivalent on Windows */
 	if (php_win32_get_random_bytes(buffer, (size_t) buffer_length) == FAILURE){
 		efree(buffer);
@@ -5144,7 +5162,7 @@ PHP_FUNCTION(openssl_random_pseudo_bytes)
 		RETURN_FALSE;
 	}
 #else
-	if ((strong_result = RAND_pseudo_bytes(buffer, buffer_length)) < 0) {
+	if (RAND_bytes(buffer, buffer_length) <= 0) {
 		efree(buffer);
 		if (zstrong_result_returned) {
 			ZVAL_BOOL(zstrong_result_returned, 0);
@@ -5157,7 +5175,7 @@ PHP_FUNCTION(openssl_random_pseudo_bytes)
 	RETVAL_STRINGL((char *)buffer, buffer_length, 0);
 
 	if (zstrong_result_returned) {
-		ZVAL_BOOL(zstrong_result_returned, strong_result);
+		ZVAL_BOOL(zstrong_result_returned, 1);
 	}
 }
 /* }}} */

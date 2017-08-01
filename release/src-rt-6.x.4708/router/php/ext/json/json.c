@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2014 The PHP Group                                |
+  | Copyright (c) 1997-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -230,7 +230,7 @@ static inline void json_pretty_print_indent(smart_str *buf, int options TSRMLS_D
 
 static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC) /* {{{ */
 {
-	int i, r;
+	int i, r, need_comma = 0;
 	HashTable *myht;
 
 	if (Z_TYPE_PP(val) == IS_ARRAY) {
@@ -253,7 +253,6 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 		smart_str_appendc(buf, '{');
 	}
 
-	json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 	++JSON_G(encoder_depth);
 
 	i = myht ? zend_hash_num_elements(myht) : 0;
@@ -266,7 +265,6 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 		uint key_len;
 		HashPosition pos;
 		HashTable *tmp_ht;
-		int need_comma = 0;
 
 		zend_hash_internal_pointer_reset_ex(myht, &pos);
 		for (;; zend_hash_move_forward_ex(myht, &pos)) {
@@ -283,11 +281,11 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 				if (r == PHP_JSON_OUTPUT_ARRAY) {
 					if (need_comma) {
 						smart_str_appendc(buf, ',');
-						json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 					} else {
 						need_comma = 1;
 					}
 
+					json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 					json_pretty_print_indent(buf, options TSRMLS_CC);
 					php_json_encode(buf, *data, options TSRMLS_CC);
 				} else if (r == PHP_JSON_OUTPUT_OBJECT) {
@@ -302,11 +300,11 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 
 						if (need_comma) {
 							smart_str_appendc(buf, ',');
-							json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 						} else {
 							need_comma = 1;
 						}
 
+						json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 						json_pretty_print_indent(buf, options TSRMLS_CC);
 
 						json_escape_string(buf, key, key_len - 1, options & ~PHP_JSON_NUMERIC_CHECK TSRMLS_CC);
@@ -318,11 +316,11 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 					} else {
 						if (need_comma) {
 							smart_str_appendc(buf, ',');
-							json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 						} else {
 							need_comma = 1;
 						}
 
+						json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
 						json_pretty_print_indent(buf, options TSRMLS_CC);
 
 						smart_str_appendc(buf, '"');
@@ -347,8 +345,12 @@ static void json_encode_array(smart_str *buf, zval **val, int options TSRMLS_DC)
 		JSON_G(error_code) = PHP_JSON_ERROR_DEPTH;
 	}
 	--JSON_G(encoder_depth);
-	json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
-	json_pretty_print_indent(buf, options TSRMLS_CC);
+
+	/* Only keep closing bracket on same line for empty arrays/objects */
+	if (need_comma) {
+		json_pretty_print_char(buf, options, '\n' TSRMLS_CC);
+		json_pretty_print_indent(buf, options TSRMLS_CC);
+	}
 
 	if (r == PHP_JSON_OUTPUT_ARRAY) {
 		smart_str_appendc(buf, ']');
@@ -380,7 +382,7 @@ static int json_utf8_to_utf16(unsigned short *utf16, char utf8[], int len) /* {{
 			}
 		}
 	} else {
-		/* Only check if utf8 string is valid, and compute utf16 lenght */
+		/* Only check if utf8 string is valid, and compute utf16 length */
 		for (j=0 ; pos < len ; j++) {
 			us = php_next_utf8_char((const unsigned char *)utf8, len, &pos, &status);
 			if (status != SUCCESS) {
@@ -416,18 +418,14 @@ static void json_escape_string(smart_str *buf, char *s, int len, int options TSR
 		if ((type = is_numeric_string(s, len, &p, &d, 0)) != 0) {
 			if (type == IS_LONG) {
 				smart_str_append_long(buf, p);
-			} else if (type == IS_DOUBLE) {
-				if (!zend_isinf(d) && !zend_isnan(d)) {
-					char *tmp;
-					int l = spprintf(&tmp, 0, "%.*k", (int) EG(precision), d);
-					smart_str_appendl(buf, tmp, l);
-					efree(tmp);
-				} else {
-					JSON_G(error_code) = PHP_JSON_ERROR_INF_OR_NAN;
-					smart_str_appendc(buf, '0');
-				}
+				return;
+			} else if (type == IS_DOUBLE && !zend_isinf(d) && !zend_isnan(d)) {
+				char *tmp;
+				int l = spprintf(&tmp, 0, "%.*k", (int) EG(precision), d);
+				smart_str_appendl(buf, tmp, l);
+				efree(tmp);
+				return;
 			}
-			return;
 		}
 
 	}

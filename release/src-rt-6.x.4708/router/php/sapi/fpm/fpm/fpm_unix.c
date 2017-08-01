@@ -35,7 +35,7 @@ int fpm_unix_resolve_socket_premissions(struct fpm_worker_pool_s *wp) /* {{{ */
 	/* uninitialized */
 	wp->socket_uid = -1;
 	wp->socket_gid = -1;
-	wp->socket_mode = 0666;
+	wp->socket_mode = 0660;
 
 	if (!c) {
 		return 0;
@@ -361,7 +361,6 @@ int fpm_unix_init_main() /* {{{ */
 		}
 	}
 
-	zlog_set_level(fpm_globals.log_level);
 	return 0;
 }
 /* }}} */

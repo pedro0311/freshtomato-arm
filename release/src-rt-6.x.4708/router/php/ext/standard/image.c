@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -30,6 +30,9 @@
 #include <unistd.h>
 #endif
 #include "php_image.h"
+#ifdef PHP_WIN32
+#include "win32/php_stdint.h"
+#endif
 
 #if HAVE_ZLIB && !defined(COMPILE_DL_ZLIB)
 #include "zlib.h"
@@ -163,6 +166,7 @@ static struct gfxinfo *php_handle_bmp (php_stream * stream TSRMLS_DC)
 		result = (struct gfxinfo *) ecalloc (1, sizeof(struct gfxinfo));
 		result->width    =  (((unsigned int)dim[ 7]) << 24) + (((unsigned int)dim[ 6]) << 16) + (((unsigned int)dim[ 5]) << 8) + ((unsigned int) dim[ 4]);
 		result->height   =  (((unsigned int)dim[11]) << 24) + (((unsigned int)dim[10]) << 16) + (((unsigned int)dim[ 9]) << 8) + ((unsigned int) dim[ 8]);
+		result->height   =  abs((int32_t)result->height);
 		result->bits     =  (((unsigned int)dim[15]) <<  8) +  ((unsigned int)dim[14]);
 	} else {
 		return NULL;
@@ -361,8 +365,8 @@ static unsigned short php_read2(php_stream * stream TSRMLS_DC)
 {
 	unsigned char a[2];
 
-	/* just return 0 if we hit the end-of-file */
-	if((php_stream_read(stream, a, sizeof(a))) <= 0) return 0;
+	/* return 0 if we couldn't read enough data */
+	if((php_stream_read(stream, a, sizeof(a))) < sizeof(a)) return 0;
 
 	return (((unsigned short)a[0]) << 8) + ((unsigned short)a[1]);
 }
@@ -642,7 +646,7 @@ static struct gfxinfo *php_handle_jpc(php_stream * stream TSRMLS_DC)
 #endif
 
 	result->channels = php_read2(stream TSRMLS_CC); /* Csiz */
-	if (result->channels < 0 || result->channels > 256) {
+	if (result->channels == 0 && php_stream_eof(stream) || result->channels > 256) {
 		efree(result);
 		return NULL;
 	}

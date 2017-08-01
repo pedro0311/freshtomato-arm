@@ -39,8 +39,8 @@
 	downscaling using the fixed point implementations are usually much faster
 	than the existing gdImageCopyResampled while having a similar or better
 	quality.
-	
-	For image rotations, the optimized versions have a lazy antialiasing for 
+
+	For image rotations, the optimized versions have a lazy antialiasing for
 	the edges of the images. For a much better antialiased result, the affine
 	function is recommended.
 */
@@ -633,7 +633,7 @@ static inline int _color_blend (const int dst, const int src)
 	}
 }
 
-static inline int _setEdgePixel(const gdImagePtr src, unsigned int x, unsigned int y, gdFixed coverage, const int bgColor) 
+static inline int _setEdgePixel(const gdImagePtr src, unsigned int x, unsigned int y, gdFixed coverage, const int bgColor)
 {
 	const gdFixed f_127 = gd_itofx(127);
 	register int c = src->tpixels[y][x];
@@ -881,20 +881,41 @@ int getPixelInterpolated(gdImagePtr im, const double x, const double y, const in
 static inline LineContribType * _gdContributionsAlloc(unsigned int line_length, unsigned int windows_size)
 {
 	unsigned int u = 0;
-    LineContribType *res;
+	LineContribType *res;
+	int overflow_error = 0;
 
 	res = (LineContribType *) gdMalloc(sizeof(LineContribType));
 	if (!res) {
 		return NULL;
 	}
-    res->WindowSize = windows_size;
-    res->LineLength = line_length;
-    res->ContribRow = (ContributionType *) gdMalloc(line_length * sizeof(ContributionType));
-
-    for (u = 0 ; u < line_length ; u++) {
-        res->ContribRow[u].Weights = (double *) gdMalloc(windows_size * sizeof(double));
-    }
-    return res;
+	res->WindowSize = windows_size;
+	res->LineLength = line_length;
+	if (overflow2(line_length, sizeof(ContributionType))) {
+		gdFree(res);
+		return NULL;
+	}
+	res->ContribRow = (ContributionType *) gdMalloc(line_length * sizeof(ContributionType));
+	if (res->ContribRow == NULL) {
+		gdFree(res);
+		return NULL;
+	}
+	for (u = 0 ; u < line_length ; u++) {
+		if (overflow2(windows_size, sizeof(double))) {
+			overflow_error = 1;
+		} else {
+			res->ContribRow[u].Weights = (double *) gdMalloc(windows_size * sizeof(double));
+		}
+		if (overflow_error == 1 || res->ContribRow[u].Weights == NULL) {
+			unsigned int i;
+			u--;
+			for (i=0;i<=u;i++) {
+				gdFree(res->ContribRow[i].Weights);
+			}
+			gdFree(res);
+			return NULL;
+		}
+	}
+	return res;
 }
 
 static inline void _gdContributionsFree(LineContribType * p)
@@ -909,59 +930,62 @@ static inline void _gdContributionsFree(LineContribType * p)
 
 static inline LineContribType *_gdContributionsCalc(unsigned int line_size, unsigned int src_size, double scale_d,  const interpolation_method pFilter)
 {
-    double width_d;
-    double scale_f_d = 1.0;
-    const double filter_width_d = DEFAULT_BOX_RADIUS;
+	double width_d;
+	double scale_f_d = 1.0;
+	const double filter_width_d = DEFAULT_BOX_RADIUS;
 	int windows_size;
 	unsigned int u;
 	LineContribType *res;
+	int overflow_error = 0;
 
-    if (scale_d < 1.0) {
-        width_d = filter_width_d / scale_d;
-        scale_f_d = scale_d;
-    }  else {
-        width_d= filter_width_d;
-    }
+	if (scale_d < 1.0) {
+		width_d = filter_width_d / scale_d;
+		scale_f_d = scale_d;
+	}  else {
+		width_d= filter_width_d;
+	}
 
-    windows_size = 2 * (int)ceil(width_d) + 1;
-    res = _gdContributionsAlloc(line_size, windows_size);
-
-    for (u = 0; u < line_size; u++) {
-        const double dCenter = (double)u / scale_d;
-        /* get the significant edge points affecting the pixel */
-        register int iLeft = MAX(0, (int)floor (dCenter - width_d));
-        int iRight = MIN((int)ceil(dCenter + width_d), (int)src_size - 1);
-        double dTotalWeight = 0.0;
+	windows_size = 2 * (int)ceil(width_d) + 1;
+	res = _gdContributionsAlloc(line_size, windows_size);
+	if (res == NULL) {
+		return NULL;
+	}
+	for (u = 0; u < line_size; u++) {
+	const double dCenter = (double)u / scale_d;
+	/* get the significant edge points affecting the pixel */
+	register int iLeft = MAX(0, (int)floor (dCenter - width_d));
+	int iRight = MIN((int)ceil(dCenter + width_d), (int)src_size - 1);
+	double dTotalWeight = 0.0;
 		int iSrc;
 
-        res->ContribRow[u].Left = iLeft;
-        res->ContribRow[u].Right = iRight;
+	/* Cut edge points to fit in filter window in case of spill-off */
+	if (iRight - iLeft + 1 > windows_size)  {
+		if (iLeft < ((int)src_size - 1 / 2))  {
+			iLeft++;
+		} else {
+			iRight--;
+		}
+	}
 
-        /* Cut edge points to fit in filter window in case of spill-off */
-        if (iRight - iLeft + 1 > windows_size)  {
-            if (iLeft < ((int)src_size - 1 / 2))  {
-                iLeft++;
-            } else {
-                iRight--;
-            }
-        }
+	res->ContribRow[u].Left = iLeft;
+	res->ContribRow[u].Right = iRight;
 
-        for (iSrc = iLeft; iSrc <= iRight; iSrc++) {
-            dTotalWeight += (res->ContribRow[u].Weights[iSrc-iLeft] =  scale_f_d * (*pFilter)(scale_f_d * (dCenter - (double)iSrc)));
-        }
+	for (iSrc = iLeft; iSrc <= iRight; iSrc++) {
+		dTotalWeight += (res->ContribRow[u].Weights[iSrc-iLeft] =  scale_f_d * (*pFilter)(scale_f_d * (dCenter - (double)iSrc)));
+	}
 
 		if (dTotalWeight < 0.0) {
 			_gdContributionsFree(res);
 			return NULL;
 		}
 
-        if (dTotalWeight > 0.0) {
-            for (iSrc = iLeft; iSrc <= iRight; iSrc++) {
-                res->ContribRow[u].Weights[iSrc-iLeft] /= dTotalWeight;
-            }
-        }
-   }
-   return res;
+	if (dTotalWeight > 0.0) {
+		for (iSrc = iLeft; iSrc <= iRight; iSrc++) {
+			res->ContribRow[u].Weights[iSrc-iLeft] /= dTotalWeight;
+		}
+	}
+	}
+	return res;
 }
 
 static inline void _gdScaleRow(gdImagePtr pSrc,  unsigned int src_width, gdImagePtr dst, unsigned int dst_width, unsigned int row, LineContribType *contrib)
@@ -1049,6 +1073,9 @@ static inline void _gdScaleVert (const gdImagePtr pSrc, const unsigned int src_w
 	}
 
 	contrib = _gdContributionsCalc(dst_height, src_height, (double)(dst_height) / (double)(src_height), pSrc->interpolation);
+	if (contrib == NULL) {
+		return;
+	}
 	/* scale each column */
 	for (u = 0; u < dst_width - 1; u++) {
 		_gdScaleCol(pSrc, src_width, pDst, dst_width, dst_height, u, contrib);
@@ -1070,12 +1097,12 @@ gdImagePtr gdImageScaleTwoPass(const gdImagePtr src, const unsigned int src_widt
 
 	dst = gdImageCreateTrueColor(new_width, new_height);
 	if (dst == NULL) {
-		gdFree(tmp_im);
+		gdImageDestroy(tmp_im);
 		return NULL;
 	}
 	gdImageSetInterpolationMethod(dst, src->interpolation_id);
 	_gdScaleVert(tmp_im, new_width, src_height, dst, new_width, new_height);
-	gdFree(tmp_im);
+	gdImageDestroy(tmp_im);
 
 	return dst;
 }
@@ -1093,7 +1120,7 @@ gdImagePtr Scale(const gdImagePtr src, const unsigned int src_width, const unsig
 	_gdScaleHoriz(src, src_width, src_height, tmp_im, new_width, src_height);
 	_gdScaleVert(tmp_im, new_width, src_height, dst, new_width, new_height);
 
-	gdFree(tmp_im);
+	gdImageDestroy(tmp_im);
 	return dst;
 }
 
@@ -1222,7 +1249,13 @@ static gdImagePtr gdImageScaleBilinearPalette(gdImagePtr im, const unsigned int 
 	if (new_img == NULL) {
 		return NULL;
 	}
-	new_img->transparent = gdTrueColorAlpha(im->red[transparent], im->green[transparent], im->blue[transparent], im->alpha[transparent]);
+
+	if (transparent < 0) {
+		/* uninitialized */
+		new_img->transparent = -1;
+	} else {
+		new_img->transparent = gdTrueColorAlpha(im->red[transparent], im->green[transparent], im->blue[transparent], im->alpha[transparent]);
+	}
 
 	for (i=0; i < _height; i++) {
 		long j;
@@ -1324,8 +1357,8 @@ static gdImagePtr gdImageScaleBilinearTC(gdImagePtr im, const unsigned int new_w
 			gdFixed f_j = gd_itofx(j);
 			gdFixed f_a = gd_mulfx(f_i, f_dy);
 			gdFixed f_b = gd_mulfx(f_j, f_dx);
-			const long m = gd_fxtoi(f_a);
-			const long n = gd_fxtoi(f_b);
+			const gdFixed m = gd_fxtoi(f_a);
+			const gdFixed n = gd_fxtoi(f_b);
 			gdFixed f_f = f_a - gd_itofx(m);
 			gdFixed f_g = f_b - gd_itofx(n);
 
@@ -1365,10 +1398,10 @@ static gdImagePtr gdImageScaleBilinearTC(gdImagePtr im, const unsigned int new_w
 			f_a3 = gd_itofx(gdTrueColorGetAlpha(pixel3));
 			f_a4 = gd_itofx(gdTrueColorGetAlpha(pixel4));
 			{
-				const char red = (char) gd_fxtoi(gd_mulfx(f_w1, f_r1) + gd_mulfx(f_w2, f_r2) + gd_mulfx(f_w3, f_r3) + gd_mulfx(f_w4, f_r4));
-				const char green = (char) gd_fxtoi(gd_mulfx(f_w1, f_g1) + gd_mulfx(f_w2, f_g2) + gd_mulfx(f_w3, f_g3) + gd_mulfx(f_w4, f_g4));
-				const char blue = (char) gd_fxtoi(gd_mulfx(f_w1, f_b1) + gd_mulfx(f_w2, f_b2) + gd_mulfx(f_w3, f_b3) + gd_mulfx(f_w4, f_b4));
-				const char alpha = (char) gd_fxtoi(gd_mulfx(f_w1, f_a1) + gd_mulfx(f_w2, f_a2) + gd_mulfx(f_w3, f_a3) + gd_mulfx(f_w4, f_a4));
+				const unsigned char red   = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_r1) + gd_mulfx(f_w2, f_r2) + gd_mulfx(f_w3, f_r3) + gd_mulfx(f_w4, f_r4));
+				const unsigned char green = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_g1) + gd_mulfx(f_w2, f_g2) + gd_mulfx(f_w3, f_g3) + gd_mulfx(f_w4, f_g4));
+				const unsigned char blue  = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_b1) + gd_mulfx(f_w2, f_b2) + gd_mulfx(f_w3, f_b3) + gd_mulfx(f_w4, f_b4));
+				const unsigned char alpha = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_a1) + gd_mulfx(f_w2, f_a2) + gd_mulfx(f_w3, f_a3) + gd_mulfx(f_w4, f_a4));
 
 				new_img->tpixels[dst_offset_v][dst_offset_h] = gdTrueColorAlpha(red, green, blue, alpha);
 			}
@@ -2162,7 +2195,7 @@ gdImagePtr gdImageRotateInterpolated(const gdImagePtr src, const float angle, in
 	   images can be done at a later point.
 	*/
 	if (src->trueColor == 0) {
-		if (bgcolor >= 0) {
+		if (bgcolor < gdMaxColors) {
 			bgcolor =  gdTrueColorAlpha(src->red[bgcolor], src->green[bgcolor], src->blue[bgcolor], src->alpha[bgcolor]);
 		}
 		gdImagePaletteToTrueColor(src);
@@ -2273,7 +2306,7 @@ int gdTransformAffineGetImage(gdImagePtr *dst,
 	if (!src->trueColor) {
 		gdImagePaletteToTrueColor(src);
 	}
-	
+
 	/* Translate to dst origin (0,0) */
 	gdAffineTranslate(m, -bbox.x, -bbox.y);
 	gdAffineConcat(m, affine, m);
@@ -2332,7 +2365,7 @@ int gdTransformAffineCopy(gdImagePtr dst,
 	if (src->interpolation_id == GD_BILINEAR_FIXED || src->interpolation_id == GD_BICUBIC_FIXED || src->interpolation_id == GD_NEAREST_NEIGHBOUR) {
 		interpolation_id_bak = src->interpolation_id;
 		interpolation_bak = src->interpolation;
-		
+
 		gdImageSetInterpolationMethod(src, GD_BICUBIC);
 	}
 
@@ -2472,10 +2505,7 @@ int gdImageSetInterpolationMethod(gdImagePtr im, gdInterpolationMethod id)
 
 	switch (id) {
 		case GD_DEFAULT:
-			im->interpolation_id = GD_BILINEAR_FIXED;
-			im->interpolation = NULL;
-			break;
-
+			id = GD_BILINEAR_FIXED;
 		/* Optimized versions */
 		case GD_BILINEAR_FIXED:
 		case GD_BICUBIC_FIXED:

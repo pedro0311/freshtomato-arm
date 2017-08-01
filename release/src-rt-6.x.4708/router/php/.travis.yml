@@ -1,11 +1,28 @@
-language: php
-
-php:
-    # We only specify one version so we only get one worker
-    - 5.4
-
+language: c
+sudo: false
+addons:
+  apt:
+    packages:
+      - locales
+      - language-pack-de
+      - re2c
+      - libgmp-dev
+      - libicu-dev
+      - libmcrypt-dev
+      - libtidy-dev
 notifications:
-    email: false
+    email: 
+       on_failure: change
+    irc:
+      template:
+        - "%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} -  Change view : %{compare_url} - Build details : %{build_url}"
+      channels:
+        - "irc.efnet.org#php.pecl"
+      on_success: change
+      on_failure: always
+
+cache: 
+    - apt
 
 env:
     global:
@@ -15,8 +32,10 @@ env:
       - PDO_MYSQL_TEST_USER=travis
       - PDO_MYSQL_TEST_PASS=
       - PDO_MYSQL_TEST_HOST=127.0.0.1
-    matrix:
       - REPORT_EXIT_STATUS=1
+    matrix:
+      - ENABLE_MAINTAINER_ZTS=0 ENABLE_DEBUG=0
+      - ENABLE_MAINTAINER_ZTS=1 ENABLE_DEBUG=1
 
 before_script:
     # Compile PHP
