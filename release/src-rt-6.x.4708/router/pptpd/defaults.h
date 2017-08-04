@@ -27,7 +27,7 @@
 
 /* Default configuration values, mostly configurable */
 
-#define CONNECTIONS_DEFAULT             100
+#define CONNECTIONS_DEFAULT             6
 #define DEFAULT_LOCAL_IP_LIST           "192.168.0.1-100"
 #define DEFAULT_REMOTE_IP_LIST          "192.168.1.1-100"
 
@@ -48,10 +48,14 @@
 #define STIMEOUT_DEFAULT                10 /* seconds */
 
 /* Location of binaries */
-
+/*
 #define PPTP_CTRL_BIN                   SBINDIR "/pptpctrl"
 #define PPTPD_BIN                       SBINDIR "/pptpd"
 #define BCRELAY_BIN                     SBINDIR "/bcrelay"
+*/
+#define PPTP_CTRL_BIN                   "/usr/sbin/pptpctrl"
+#define PPTPD_BIN                       "/usr/sbin/pptpd"
+#define BCRELAY_BIN                     "/usr/sbin/bcrelay"
 
 /* Parameters permitted in the config file */
 
