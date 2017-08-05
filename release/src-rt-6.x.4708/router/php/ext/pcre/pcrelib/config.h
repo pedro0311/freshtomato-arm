@@ -234,8 +234,8 @@ them both to 0; an emulation function will be used. */
 #define LINK_SIZE 2
 #endif
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
+/* This is ignored unless you are using libtool. */
 #ifndef LT_OBJDIR
 #define LT_OBJDIR ".libs/"
 #endif
@@ -314,7 +314,7 @@ them both to 0; an emulation function will be used. */
 #define PACKAGE_NAME "PCRE"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "PCRE 8.32"
+#define PACKAGE_STRING "PCRE 8.38"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "pcre"
@@ -323,13 +323,20 @@ them both to 0; an emulation function will be used. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "8.32"
+#define PACKAGE_VERSION "8.38"
 
 /* to make a symbol visible */
 /* #undef PCRECPP_EXP_DECL */
 
 /* to make a symbol visible */
 /* #undef PCRECPP_EXP_DEFN */
+
+/* The value of PARENS_NEST_LIMIT specifies the maximum depth of nested
+   parentheses (of any kind) in a pattern. This limits the amount of system
+   stack that is used while compiling a pattern. */
+#ifndef PARENS_NEST_LIMIT
+#define PARENS_NEST_LIMIT 250
+#endif
 
 /* The value of PCREGREP_BUFSIZE determines the size of buffer used by
    pcregrep to hold parts of the file it is searching. This is also the
@@ -390,7 +397,7 @@ them both to 0; an emulation function will be used. */
 #undef SUPPORT_GCOV
 
 /* Define to any value to enable support for Just-In-Time compiling. */
-#undef SUPPORT_JIT
+#define SUPPORT_JIT
 
 /* Define to any value to allow pcregrep to be linked with libbz2, so that it
    is able to handle .bz2 files. */
@@ -432,7 +439,7 @@ them both to 0; an emulation function will be used. */
 
 /* Version number of package */
 #ifndef VERSION
-#define VERSION "8.34"
+#define VERSION "8.38"
 #endif
 
 /* Define to empty if `const' does not conform to ANSI C. */

@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -43,12 +43,10 @@ PHPAPI zend_class_entry  *spl_ce_SplStack;
 
 #define SPL_LLIST_DELREF(elem) if(!--(elem)->rc) { \
 	efree(elem); \
-	elem = NULL; \
 }
 
 #define SPL_LLIST_CHECK_DELREF(elem) if((elem) && !--(elem)->rc) { \
 	efree(elem); \
-	elem = NULL; \
 }
 
 #define SPL_LLIST_ADDREF(elem) (elem)->rc++
@@ -502,7 +500,7 @@ static int spl_dllist_object_count_elements(zval *object, long *count TSRMLS_DC)
 
 	*count = spl_ptr_llist_count(intern->llist);
 	return SUCCESS;
-} 
+}
 /* }}} */
 
 static HashTable* spl_dllist_object_get_debug_info(zval *obj, int *is_temp TSRMLS_DC) /* {{{{ */
@@ -573,7 +571,7 @@ SPL_METHOD(SplDoublyLinkedList, push)
 	spl_ptr_llist_push(intern->llist, value TSRMLS_CC);
 
 	RETURN_TRUE;
-} 
+}
 /* }}} */
 
 /* {{{ proto bool SplDoublyLinkedList::unshift(mixed $value) U
@@ -616,7 +614,7 @@ SPL_METHOD(SplDoublyLinkedList, pop)
 	}
 
 	RETURN_ZVAL(value, 1, 1);
-} 
+}
 /* }}} */
 
 /* {{{ proto mixed SplDoublyLinkedList::shift() U
@@ -639,7 +637,7 @@ SPL_METHOD(SplDoublyLinkedList, shift)
 	}
 
 	RETURN_ZVAL(value, 1, 1);
-} 
+}
 /* }}} */
 
 /* {{{ proto mixed SplDoublyLinkedList::top() U
@@ -916,6 +914,11 @@ SPL_METHOD(SplDoublyLinkedList, offsetUnset)
 			llist->dtor(element TSRMLS_CC);
 		}
 
+		if (intern->traverse_pointer == element) {
+			SPL_LLIST_DELREF(element);
+			intern->traverse_pointer = NULL;
+		}
+
 		zval_ptr_dtor((zval **)&element->data);
 		element->data = NULL;
 
@@ -1047,7 +1050,7 @@ static void spl_dllist_it_move_forward(zend_object_iterator *iter TSRMLS_DC) /* 
 SPL_METHOD(SplDoublyLinkedList, key)
 {
 	spl_dllist_object *intern = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1061,7 +1064,7 @@ SPL_METHOD(SplDoublyLinkedList, key)
 SPL_METHOD(SplDoublyLinkedList, prev)
 {
 	spl_dllist_object *intern = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1075,7 +1078,7 @@ SPL_METHOD(SplDoublyLinkedList, prev)
 SPL_METHOD(SplDoublyLinkedList, next)
 {
 	spl_dllist_object *intern = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1089,7 +1092,7 @@ SPL_METHOD(SplDoublyLinkedList, next)
 SPL_METHOD(SplDoublyLinkedList, valid)
 {
 	spl_dllist_object *intern = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1103,7 +1106,7 @@ SPL_METHOD(SplDoublyLinkedList, valid)
 SPL_METHOD(SplDoublyLinkedList, rewind)
 {
 	spl_dllist_object *intern = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1118,7 +1121,7 @@ SPL_METHOD(SplDoublyLinkedList, current)
 {
 	spl_dllist_object     *intern  = (spl_dllist_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
 	spl_ptr_llist_element *element = intern->traverse_pointer;
-	
+
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
@@ -1173,7 +1176,7 @@ SPL_METHOD(SplDoublyLinkedList, serialize)
 	} else {
 		RETURN_NULL();
 	}
-	
+
 } /* }}} */
 
 /* {{{ proto void SplDoublyLinkedList::unserialize(string serialized)
@@ -1186,7 +1189,7 @@ SPL_METHOD(SplDoublyLinkedList, unserialize)
 	int buf_len;
 	const unsigned char *p, *s;
 	php_unserialize_data_t var_hash;
-	
+
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &buf_len) == FAILURE) {
 		return;
 	}
@@ -1205,6 +1208,7 @@ SPL_METHOD(SplDoublyLinkedList, unserialize)
 		zval_ptr_dtor(&flags);
 		goto error;
 	}
+	var_push_dtor(&var_hash, &flags);
 	intern->flags = Z_LVAL_P(flags);
 	zval_ptr_dtor(&flags);
 
@@ -1216,6 +1220,7 @@ SPL_METHOD(SplDoublyLinkedList, unserialize)
 			zval_ptr_dtor(&elem);
 			goto error;
 		}
+		var_push_dtor(&var_hash, &elem);
 
 		spl_ptr_llist_push(intern->llist, elem TSRMLS_CC);
 	}

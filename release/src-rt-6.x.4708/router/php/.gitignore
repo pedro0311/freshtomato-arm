@@ -3,6 +3,7 @@
 .#*
 *.
 *.slo
+*.mk
 *.mem
 *.gcda
 *.gcno
@@ -18,6 +19,10 @@
 *.tgz
 *.tar.gz
 *.tar.bz2
+*.tar.xz
+*.tar.gz.asc
+*.tar.bz2.asc
+*.tar.xz.asc
 .FBCIndex
 .FBCLockFolder
 .deps
@@ -44,6 +49,7 @@ bsd_converted
 buildconf.stamp
 buildmk.stamp
 confdefs.h
+config.h
 config.guess
 config.cache
 config.h.in
@@ -51,11 +57,13 @@ config.log
 config.nice
 config.nice.bat
 config.status
+config.sub
 config_vars.mk
 configuration-parser.c
 configuration-parser.h
 configuration-parser.output
 configuration-scanner.c
+configure
 configure.bat
 configure.js
 conftest
@@ -64,6 +72,7 @@ debug.log
 diff
 generated_lists
 include
+install-sh
 internal_functions.c
 lcov_data
 lcov_html
@@ -102,6 +111,8 @@ Zend/zend_language_parser.output
 ext/date/lib/timelib_config.h
 ext/iconv/php_iconv_aliased_libiconv.h
 ext/phar/phar.php
+main/php_config.h
+main/php_config.h.in
 
 # Test specific Ignores
 tests/*/*.diff

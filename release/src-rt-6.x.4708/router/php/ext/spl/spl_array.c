@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -402,7 +402,7 @@ static zval *spl_array_read_dimension_ex(int check_inherited, zval *object, zval
 	/* When in a write context,
 	 * ZE has to be fooled into thinking this is in a reference set
 	 * by separating (if necessary) and returning as an is_ref=1 zval (even if refcount == 1) */
-	if ((type == BP_VAR_W || type == BP_VAR_RW || type == BP_VAR_UNSET) && !Z_ISREF_PP(ret)) {
+	if ((type == BP_VAR_W || type == BP_VAR_RW || type == BP_VAR_UNSET) && !Z_ISREF_PP(ret) && ret != &EG(uninitialized_zval_ptr)) {
 		if (Z_REFCOUNT_PP(ret) > 1) {
 			zval *newval;
 
@@ -831,6 +831,16 @@ static HashTable* spl_array_get_debug_info(zval *obj, int *is_temp TSRMLS_DC) /*
 }
 /* }}} */
 
+static HashTable *spl_array_get_gc(zval *object, zval ***gc_data, int *gc_data_count TSRMLS_DC) /* {{{ */
+{
+	spl_array_object *intern = (spl_array_object*)zend_object_store_get_object(object TSRMLS_CC);
+
+	*gc_data = &intern->array;
+	*gc_data_count = 1;
+	return zend_std_get_properties(object TSRMLS_CC);
+}
+/* }}} */
+
 static zval *spl_array_read_property(zval *object, zval *member, int type, const zend_literal *key TSRMLS_DC) /* {{{ */
 {
 	spl_array_object *intern = (spl_array_object*)zend_object_store_get_object(object TSRMLS_CC);
@@ -922,7 +932,14 @@ static int spl_array_skip_protected(spl_array_object *intern, HashTable *aht TSR
 	if (Z_TYPE_P(intern->array) == IS_OBJECT) {
 		do {
 			if (zend_hash_get_current_key_ex(aht, &string_key, &string_length, &num_key, 0, &intern->pos) == HASH_KEY_IS_STRING) {
-				if (!string_length || string_key[0]) {
+				/* zend_hash_get_current_key_ex() should never set
+				 * string_length to 0 when returning HASH_KEY_IS_STRING, but we
+				 * may as well be defensive and consider that successful.
+				 * Beyond that, we're looking for protected keys (which will
+				 * have a null byte at string_key[0]), but want to avoid
+				 * skipping completely empty keys (which will also have the
+				 * null byte, but a string_length of 1). */
+				if (!string_length || string_key[0] || string_length == 1) {
 					return SUCCESS;
 				}
 			} else {
@@ -1726,6 +1743,7 @@ SPL_METHOD(Array, unserialize)
 	const unsigned char *p, *s;
 	php_unserialize_data_t var_hash;
 	zval *pmembers, *pflags = NULL;
+	HashTable *aht;
 	long flags;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &buf_len) == FAILURE) {
@@ -1734,6 +1752,12 @@ SPL_METHOD(Array, unserialize)
 
 	if (buf_len == 0) {
 		zend_throw_exception_ex(spl_ce_UnexpectedValueException, 0 TSRMLS_CC, "Empty serialized string cannot be empty");
+		return;
+	}
+
+	aht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
+	if (aht->nApplyCount > 0) {
+		zend_error(E_WARNING, "Modification of ArrayObject during sorting is prohibited");
 		return;
 	}
 
@@ -1748,13 +1772,12 @@ SPL_METHOD(Array, unserialize)
 
 	ALLOC_INIT_ZVAL(pflags);
 	if (!php_var_unserialize(&pflags, &p, s + buf_len, &var_hash TSRMLS_CC) || Z_TYPE_P(pflags) != IS_LONG) {
-		zval_ptr_dtor(&pflags);
 		goto outexcept;
 	}
 
+	var_push_dtor(&var_hash, &pflags);
 	--p; /* for ';' */
 	flags = Z_LVAL_P(pflags);
-	zval_ptr_dtor(&pflags);
 	/* flags needs to be verified and we also need to verify whether the next
 	 * thing we get is ';'. After that we require an 'm' or somethign else
 	 * where 'm' stands for members and anything else should be an array. If
@@ -1776,6 +1799,7 @@ SPL_METHOD(Array, unserialize)
 		if (!php_var_unserialize(&intern->array, &p, s + buf_len, &var_hash TSRMLS_CC)) {
 			goto outexcept;
 		}
+		var_push_dtor(&var_hash, &intern->array);
 	}
 	if (*p != ';') {
 		goto outexcept;
@@ -1789,11 +1813,12 @@ SPL_METHOD(Array, unserialize)
 	++p;
 
 	ALLOC_INIT_ZVAL(pmembers);
-	if (!php_var_unserialize(&pmembers, &p, s + buf_len, &var_hash TSRMLS_CC)) {
+	if (!php_var_unserialize(&pmembers, &p, s + buf_len, &var_hash TSRMLS_CC) || Z_TYPE_P(pmembers) != IS_ARRAY) {
 		zval_ptr_dtor(&pmembers);
 		goto outexcept;
 	}
 
+	var_push_dtor(&var_hash, &pmembers);
 	/* copy members */
 	if (!intern->std.properties) {
 		rebuild_object_properties(&intern->std);
@@ -1804,10 +1829,16 @@ SPL_METHOD(Array, unserialize)
 	/* done reading $serialized */
 
 	PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+	if (pflags) {
+		zval_ptr_dtor(&pflags);
+	}
 	return;
 
 outexcept:
 	PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+	if (pflags) {
+		zval_ptr_dtor(&pflags);
+	}
 	zend_throw_exception_ex(spl_ce_UnexpectedValueException, 0 TSRMLS_CC, "Error at offset %ld of %d bytes", (long)((char*)p - buf), buf_len);
 	return;
 
@@ -1940,6 +1971,7 @@ PHP_MINIT_FUNCTION(spl_array)
 
 	spl_handler_ArrayObject.get_properties = spl_array_get_properties;
 	spl_handler_ArrayObject.get_debug_info = spl_array_get_debug_info;
+	spl_handler_ArrayObject.get_gc = spl_array_get_gc;
 	spl_handler_ArrayObject.read_property = spl_array_read_property;
 	spl_handler_ArrayObject.write_property = spl_array_write_property;
 	spl_handler_ArrayObject.get_property_ptr_ptr = spl_array_get_property_ptr_ptr;

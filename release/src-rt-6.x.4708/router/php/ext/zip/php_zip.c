@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2014 The PHP Group                                |
+  | Copyright (c) 1997-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -174,7 +174,7 @@ static int php_zip_extract_file(struct zip * za, char *dest, char *file, int fil
 
 	/* it is a directory only, see #40228 */
 	if (path_cleaned_len > 1 && IS_SLASH(path_cleaned[path_cleaned_len - 1])) {
-		len = spprintf(&file_dirname_fullpath, 0, "%s/%s", dest, file);
+		len = spprintf(&file_dirname_fullpath, 0, "%s/%s", dest, path_cleaned);
 		is_dir_only = 1;
 	} else {
 		memcpy(file_dirname, path_cleaned, path_cleaned_len);
@@ -417,7 +417,7 @@ static int php_zip_parse_options(zval *options, long *remove_all_path,
 		ze_zip_object *obj = (ze_zip_object*) zend_object_store_get_object(object TSRMLS_CC); \
 		intern = obj->za; \
 		if (!intern) { \
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid or unitialized Zip object"); \
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid or uninitialized Zip object"); \
 			RETURN_FALSE; \
 		} \
 	}
@@ -1012,6 +1012,14 @@ static int php_zip_has_property(zval *object, zval *member, int type, const zend
 		zval_dtor(member);
 	}
 	return retval;
+}
+/* }}} */
+
+static HashTable *php_zip_get_gc(zval *object, zval ***gc_data, int *gc_data_count TSRMLS_DC) /* {{{ */
+{
+	*gc_data = NULL;
+	*gc_data_count = 0;
+	return zend_std_get_properties(object TSRMLS_CC);
 }
 /* }}} */
 
@@ -1865,7 +1873,7 @@ static ZIPARCHIVE_METHOD(addFromString)
 	}
 fail:
 	zip_source_free(zs);
-	RETURN_FALSE;	
+	RETURN_FALSE;
 }
 /* }}} */
 
@@ -2777,6 +2785,7 @@ static PHP_MINIT_FUNCTION(zip)
 	zip_object_handlers.clone_obj		= NULL;
 	zip_object_handlers.get_property_ptr_ptr = php_zip_get_property_ptr_ptr;
 
+	zip_object_handlers.get_gc          = php_zip_get_gc;
 	zip_object_handlers.get_properties = php_zip_get_properties;
 	zip_object_handlers.read_property	= php_zip_read_property;
 	zip_object_handlers.has_property	= php_zip_has_property;

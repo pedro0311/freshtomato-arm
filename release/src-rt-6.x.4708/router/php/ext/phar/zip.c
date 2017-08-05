@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | ZIP archive support for Phar                                         |
   +----------------------------------------------------------------------+
-  | Copyright (c) 2007-2014 The PHP Group                                |
+  | Copyright (c) 2007-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -159,7 +159,7 @@ static void phar_zip_u2d_time(time_t time, char *dtime, char *ddate) /* {{{ */
  *
  * Parse a new one and add it to the cache, returning either SUCCESS or
  * FAILURE, and setting pphar to the pointer to the manifest entry
- * 
+ *
  * This is used by phar_open_from_fp to process a zip-based phar, but can be called
  * directly.
  */
@@ -199,7 +199,7 @@ int phar_parse_zipfile(php_stream *fp, char *fname, int fname_len, char *alias, 
 	}
 
 	while ((p=(char *) memchr(p + 1, 'P', (size_t) (size - (p + 1 - buf)))) != NULL) {
-		if (!memcmp(p + 1, "K\5\6", 3)) {
+		if ((p - buf) + sizeof(locator) <= size && !memcmp(p + 1, "K\5\6", 3)) {
 			memcpy((void *)&locator, (void *) p, sizeof(locator));
 			if (PHAR_GET_16(locator.centraldisk) != 0 || PHAR_GET_16(locator.disknumber) != 0) {
 				/* split archives not handled */
@@ -396,7 +396,9 @@ foundit:
 
 		if (entry.filename[entry.filename_len - 1] == '/') {
 			entry.is_dir = 1;
-			entry.filename_len--;
+			if(entry.filename_len > 1) {
+				entry.filename_len--;
+			}
 			entry.flags |= PHAR_ENT_PERM_DEF_DIR;
 		} else {
 			entry.is_dir = 0;
@@ -1159,7 +1161,7 @@ int phar_zip_flush(phar_archive_data *phar, char *user_stub, long len, int defau
 	static const char newstub[] = "<?php // zip-based phar archive stub file\n__HALT_COMPILER();";
 	char halt_stub[] = "__HALT_COMPILER();";
 	char *tmp;
-	
+
 	php_stream *stubfile, *oldfile;
 	php_serialize_data_t metadata_hash;
 	int free_user_stub, closeoldfile = 0;

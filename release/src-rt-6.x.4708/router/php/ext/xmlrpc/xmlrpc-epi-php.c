@@ -37,7 +37,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -532,7 +532,16 @@ static XMLRPC_VALUE PHP_to_XMLRPC_worker (const char* key, zval* in_val, int dep
 						xReturn = XMLRPC_CreateValueEmpty();
 						XMLRPC_SetValueID(xReturn, key, 0);
 					} else {
-						xReturn = XMLRPC_CreateValueBase64(key, Z_STRVAL_P(val), Z_STRLEN_P(val));
+						if (Z_TYPE_P(val) != IS_STRING) {
+							zval *newvalue;
+							ALLOC_INIT_ZVAL(newvalue);
+							MAKE_COPY_ZVAL(&val, newvalue);
+							convert_to_string(newvalue);
+							xReturn = XMLRPC_CreateValueBase64(key, Z_STRVAL_P(newvalue), Z_STRLEN_P(newvalue));
+							zval_ptr_dtor(&newvalue);
+						} else {
+							xReturn = XMLRPC_CreateValueBase64(key, Z_STRVAL_P(val), Z_STRLEN_P(val));
+						}
 					}
 					break;
 				case xmlrpc_datetime:
@@ -1452,7 +1461,7 @@ XMLRPC_VALUE_TYPE get_zval_xmlrpc_type(zval* value, zval** newvalue) /* {{{ */
 		if (newvalue) {
 			zval** val;
 
-			if ((type == xmlrpc_base64 && Z_TYPE_P(value) != IS_NULL) || type == xmlrpc_datetime) {
+			if ((type == xmlrpc_base64 && Z_TYPE_P(value) == IS_OBJECT) || type == xmlrpc_datetime) {
 				if (zend_hash_find(Z_OBJPROP_P(value), OBJECT_VALUE_ATTR, sizeof(OBJECT_VALUE_ATTR), (void**) &val) == SUCCESS) {
 					*newvalue = *val;
 				}

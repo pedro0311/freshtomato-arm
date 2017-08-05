@@ -1,6 +1,21 @@
 #!/bin/bash
-./buildconf
-./configure --quiet \
+if [[ "$ENABLE_MAINTAINER_ZTS" == 1 ]]; then
+	TS="--enable-maintainer-zts";
+else
+	TS="";
+fi
+if [[ "$ENABLE_DEBUG" == 1 ]]; then
+	DEBUG="--enable-debug";
+else
+	DEBUG="";
+fi
+./buildconf --force
+./configure \
+--prefix=$HOME"/php-install" \
+--quiet \
+$DEBUG \
+$TS \
+--enable-fpm \
 --with-pdo-mysql=mysqlnd \
 --with-mysql=mysqlnd \
 --with-mysqli=mysqlnd \
@@ -8,7 +23,7 @@
 --with-pdo-pgsql \
 --with-pdo-sqlite \
 --enable-intl \
---without-pear \
+--with-pear \
 --with-gd \
 --with-jpeg-dir=/usr \
 --with-png-dir=/usr \
@@ -34,5 +49,7 @@
 --enable-sockets \
 --with-bz2 \
 --with-openssl \
+--with-gmp \
 --enable-bcmath
-make --quiet
+make -j2 --quiet
+make install

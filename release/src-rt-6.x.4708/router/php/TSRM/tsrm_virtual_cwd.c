@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -251,7 +251,7 @@ CWD_API int php_sys_readlink(const char *link, char *target, size_t target_len){
 	}
 
 	dwRet = pGetFinalPathNameByHandle(hFile, target, MAXPATHLEN, VOLUME_NAME_DOS);
-	if(dwRet >= MAXPATHLEN) {
+	if(dwRet >= MAXPATHLEN || dwRet == 0) {
 		return -1;
 	}
 
@@ -621,14 +621,14 @@ CWD_API void realpath_cache_del(const char *path, int path_len TSRMLS_DC) /* {{{
 					memcmp(path, (*bucket)->path, path_len) == 0) {
 			realpath_cache_bucket *r = *bucket;
 			*bucket = (*bucket)->next;
-		   
+
 			/* if the pointers match then only subtract the length of the path */
 		   	if(r->path == r->realpath) {
 				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1;
 			} else {
 				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1 + r->realpath_len + 1;
 			}
-		   
+
 			free(r);
 			return;
 		} else {
@@ -704,7 +704,7 @@ static inline realpath_cache_bucket* realpath_cache_find(const char *path, int p
 			realpath_cache_bucket *r = *bucket;
 			*bucket = (*bucket)->next;
 
-			/* if the pointers match then only subtract the length of the path */		   
+			/* if the pointers match then only subtract the length of the path */
 		   	if(r->path == r->realpath) {
 				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1;
 			} else {
@@ -1159,7 +1159,7 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	int add_slash;
 	void *tmp;
 
-	if (path_length == 0 || path_length >= MAXPATHLEN-1) {
+	if (path_length <= 0 || path_length >= MAXPATHLEN-1) {
 #ifdef TSRM_WIN32
 # if _MSC_VER < 1300
 		errno = EINVAL;

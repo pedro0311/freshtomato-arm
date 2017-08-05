@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2014 The PHP Group                                |
+  | Copyright (c) 1997-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -36,14 +36,16 @@ int proxy_authentication(zval* this_ptr, smart_str* soap_headers TSRMLS_DC)
 {
 	zval **login, **password;
 
-	if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_login", sizeof("_proxy_login"), (void **)&login) == SUCCESS) {
+	if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_login", sizeof("_proxy_login"), (void **)&login) == SUCCESS &&
+	    Z_TYPE_PP(login) == IS_STRING) {
 		unsigned char* buf;
 		int len;
 		smart_str auth = {0};
 
 		smart_str_appendl(&auth, Z_STRVAL_PP(login), Z_STRLEN_PP(login));
 		smart_str_appendc(&auth, ':');
-		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_password", sizeof("_proxy_password"), (void **)&password) == SUCCESS) {
+		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_password", sizeof("_proxy_password"), (void **)&password) == SUCCESS &&
+		    Z_TYPE_PP(password) == IS_STRING) {
 			smart_str_appendl(&auth, Z_STRVAL_PP(password), Z_STRLEN_PP(password));
 		}
 		smart_str_0(&auth);
@@ -64,14 +66,16 @@ int basic_authentication(zval* this_ptr, smart_str* soap_headers TSRMLS_DC)
 	zval **login, **password;
 
 	if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_login", sizeof("_login"), (void **)&login) == SUCCESS &&
-			!zend_hash_exists(Z_OBJPROP_P(this_ptr), "_digest", sizeof("_digest"))) {
+	    Z_TYPE_PP(login) == IS_STRING &&
+	    !zend_hash_exists(Z_OBJPROP_P(this_ptr), "_digest", sizeof("_digest"))) {
 		unsigned char* buf;
 		int len;
 		smart_str auth = {0};
 
 		smart_str_appendl(&auth, Z_STRVAL_PP(login), Z_STRLEN_PP(login));
 		smart_str_appendc(&auth, ':');
-		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_password", sizeof("_password"), (void **)&password) == SUCCESS) {
+		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_password", sizeof("_password"), (void **)&password) == SUCCESS &&
+		    Z_TYPE_PP(password) == IS_STRING) {
 			smart_str_appendl(&auth, Z_STRVAL_PP(password), Z_STRLEN_PP(password));
 		}
 		smart_str_0(&auth);
@@ -371,7 +375,7 @@ int make_http_soap_request(zval  *this_ptr,
 		int kind  = Z_LVAL_PP(tmp) & SOAP_COMPRESSION_DEFLATE;
 
 		if (level > 9) {level = 9;}
-		
+
 	  if ((Z_LVAL_PP(tmp) & SOAP_COMPRESSION_ACCEPT) != 0) {
 			smart_str_append_const(&soap_headers_z,"Accept-Encoding: gzip, deflate\r\n");
 	  }
@@ -430,7 +434,7 @@ int make_http_soap_request(zval  *this_ptr,
 		context = php_stream_context_from_zval(*tmp, 0);
 	}
 
-	if (context && 
+	if (context &&
 		php_stream_context_get_option(context, "http", "max_redirects", &tmp) == SUCCESS) {
 		if (Z_TYPE_PP(tmp) != IS_STRING || !is_numeric_string(Z_STRVAL_PP(tmp), Z_STRLEN_PP(tmp), &redirect_max, NULL, 1)) {
 			if (Z_TYPE_PP(tmp) == IS_LONG)
@@ -528,7 +532,7 @@ try_again:
 		add_property_resource(this_ptr, "httpurl", ret);
 		/*zend_list_addref(ret);*/
 
-		if (context && 
+		if (context &&
 		    php_stream_context_get_option(context, "http", "protocol_version", &tmp) == SUCCESS &&
 		    Z_TYPE_PP(tmp) == IS_DOUBLE &&
 		    Z_DVAL_PP(tmp) == 1.0) {
@@ -571,6 +575,7 @@ try_again:
 		}
 		if (!http_1_1 ||
 			(zend_hash_find(Z_OBJPROP_P(this_ptr), "_keep_alive", sizeof("_keep_alive"), (void **)&tmp) == SUCCESS &&
+			 (Z_TYPE_PP(tmp) == IS_BOOL || Z_TYPE_PP(tmp) == IS_LONG) &&
 			 Z_LVAL_PP(tmp) == 0)) {
 			smart_str_append_const(&soap_headers, "\r\n"
 				"Connection: close\r\n");
@@ -585,7 +590,7 @@ try_again:
 				smart_str_appendl(&soap_headers, Z_STRVAL_PP(tmp), Z_STRLEN_PP(tmp));
 				smart_str_append_const(&soap_headers, "\r\n");
 			}
-		} else if (context && 
+		} else if (context &&
 		           php_stream_context_get_option(context, "http", "user_agent", &tmp) == SUCCESS &&
 		           Z_TYPE_PP(tmp) == IS_STRING) {
 			if (Z_STRLEN_PP(tmp) > 0) {
@@ -727,7 +732,7 @@ try_again:
 					PHP_MD5Update(&md5ctx, (unsigned char*)HA2, 32);
 					PHP_MD5Final(hash, &md5ctx);
 					make_digest(response, hash);
-	
+
 					smart_str_append_const(&soap_headers, "Authorization: Digest username=\"");
 					smart_str_appendl(&soap_headers, Z_STRVAL_PP(login), Z_STRLEN_PP(login));
 					if (zend_hash_find(Z_ARRVAL_PP(digest), "realm", sizeof("realm"), (void **)&tmp) == SUCCESS &&
@@ -745,7 +750,7 @@ try_again:
 						smart_str_appends(&soap_headers, phpurl->path);
 					} else {
 						smart_str_appendc(&soap_headers, '/');
-					} 
+					}
 					if (phpurl->query) {
 						smart_str_appendc(&soap_headers, '?');
 						smart_str_appends(&soap_headers, phpurl->query);
@@ -804,7 +809,8 @@ try_again:
 		}
 
 		/* Send cookies along with request */
-		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_cookies", sizeof("_cookies"), (void **)&cookies) == SUCCESS) {
+		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_cookies", sizeof("_cookies"), (void **)&cookies) == SUCCESS &&
+		    Z_TYPE_PP(cookies) == IS_ARRAY) {
 			zval **data;
 			char *key;
 			int i, n;
@@ -815,18 +821,21 @@ try_again:
 				zend_hash_internal_pointer_reset(Z_ARRVAL_PP(cookies));
 				smart_str_append_const(&soap_headers, "Cookie: ");
 				for (i = 0; i < n; i++) {
+					ulong numindx;
+					int res = zend_hash_get_current_key(Z_ARRVAL_PP(cookies), &key, &numindx, FALSE);
 					zend_hash_get_current_data(Z_ARRVAL_PP(cookies), (void **)&data);
-					zend_hash_get_current_key(Z_ARRVAL_PP(cookies), &key, NULL, FALSE);
 
-					if (Z_TYPE_PP(data) == IS_ARRAY) {
+					if (res == HASH_KEY_IS_STRING && Z_TYPE_PP(data) == IS_ARRAY) {
 					  zval** value;
 
 						if (zend_hash_index_find(Z_ARRVAL_PP(data), 0, (void**)&value) == SUCCESS &&
 						    Z_TYPE_PP(value) == IS_STRING) {
 						  zval **tmp;
 						  if ((zend_hash_index_find(Z_ARRVAL_PP(data), 1, (void**)&tmp) == FAILURE ||
+					           Z_TYPE_PP(tmp) != IS_STRING ||
 						       strncmp(phpurl->path?phpurl->path:"/",Z_STRVAL_PP(tmp),Z_STRLEN_PP(tmp)) == 0) &&
 						      (zend_hash_index_find(Z_ARRVAL_PP(data), 2, (void**)&tmp) == FAILURE ||
+						       Z_TYPE_PP(tmp) != IS_STRING ||
 						       in_domain(phpurl->host,Z_STRVAL_PP(tmp))) &&
 						      (use_ssl || zend_hash_index_find(Z_ARRVAL_PP(data), 3, (void**)&tmp) == FAILURE)) {
 								smart_str_appendl(&soap_headers, key, strlen(key));
@@ -847,7 +856,7 @@ try_again:
 		smart_str_append_const(&soap_headers, "\r\n");
 		smart_str_0(&soap_headers);
 		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "trace", sizeof("trace"), (void **) &trace) == SUCCESS &&
-		    Z_LVAL_PP(trace) > 0) {
+		    (Z_TYPE_PP(trace) == IS_BOOL || Z_TYPE_PP(trace) == IS_LONG) && Z_LVAL_PP(trace) != 0) {
 			add_property_stringl(this_ptr, "__last_request_headers", soap_headers.c, soap_headers.len, 1);
 		}
 		smart_str_appendl(&soap_headers, request, request_size);
@@ -892,7 +901,7 @@ try_again:
 		}
 
 		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "trace", sizeof("trace"), (void **) &trace) == SUCCESS &&
-		    Z_LVAL_PP(trace) > 0) {
+		    (Z_TYPE_PP(trace) == IS_BOOL || Z_TYPE_PP(trace) == IS_LONG) && Z_LVAL_PP(trace) != 0) {
 			add_property_stringl(this_ptr, "__last_response_headers", http_headers, http_header_size, 1);
 		}
 
@@ -941,7 +950,8 @@ try_again:
 		char *eqpos, *sempos;
 		zval **cookies;
 
-		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_cookies", sizeof("_cookies"), (void **)&cookies) == FAILURE) {
+		if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_cookies", sizeof("_cookies"), (void **)&cookies) == FAILURE ||
+		    Z_TYPE_PP(cookies) != IS_ARRAY) {
 			zval *tmp_cookies;
 			MAKE_STD_ZVAL(tmp_cookies);
 			array_init(tmp_cookies);
@@ -1052,7 +1062,7 @@ try_again:
 				efree(connection);
 			}
 		}
-	}	
+	}
 
 	if (!get_http_body(stream, http_close, http_headers, &http_body, &http_body_size TSRMLS_CC)) {
 		if (request != buf) {efree(request);}
@@ -1103,7 +1113,7 @@ try_again:
 								strcat(s, new_url->path);
 								efree(new_url->path);
 								new_url->path = s;
-							} 
+							}
 						} else {
 							char *s = emalloc(strlen(new_url->path) + 2);
 							s[0] = '/'; s[1] = 0;

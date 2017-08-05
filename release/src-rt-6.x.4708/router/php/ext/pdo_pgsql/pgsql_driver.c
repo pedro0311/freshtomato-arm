@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2014 The PHP Group                                |
+  | Copyright (c) 1997-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -27,6 +27,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
+#include "ext/standard/php_string.h"
 #include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
 #include "ext/standard/file.h"
@@ -58,6 +59,17 @@ static char * _pdo_pgsql_trim_message(const char *message, int persistent)
 	tmp[i] = '\0';
 	
 	return tmp;
+}
+
+static char * _pdo_pgsql_escape_credentials(char *str TSRMLS_DC)
+{
+	int len;
+
+	if (str) {
+		return php_addcslashes(str, strlen(str), &len, 0, "\\'", sizeof("\\'") TSRMLS_CC);
+	}
+
+	return NULL;
 }
 
 int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *file, int line TSRMLS_DC) /* {{{ */
@@ -379,6 +391,14 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 
 	switch (attr) {
+		case PDO_ATTR_EMULATE_PREPARES:
+			ZVAL_BOOL(return_value, H->emulate_prepares);
+			break;
+
+		case PDO_PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT:
+			ZVAL_BOOL(return_value, H->disable_native_prepares);
+			break;
+
 		case PDO_ATTR_CLIENT_VERSION:
 			ZVAL_STRING(return_value, PG_VERSION, 1);
 			break;
@@ -465,6 +485,15 @@ static int pdo_pgsql_check_liveness(pdo_dbh_t *dbh TSRMLS_DC)
 }
 /* }}} */
 
+static int pgsql_handle_in_transaction(pdo_dbh_t *dbh TSRMLS_DC)
+{
+	pdo_pgsql_db_handle *H;
+
+	H = (pdo_pgsql_db_handle *)dbh->driver_data;
+
+	return PQtransactionStatus(H->server) > PQTRANS_IDLE;
+}
+
 static int pdo_pgsql_transaction_cmd(const char *cmd, pdo_dbh_t *dbh TSRMLS_DC)
 {
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
@@ -489,21 +518,20 @@ static int pgsql_handle_begin(pdo_dbh_t *dbh TSRMLS_DC)
 
 static int pgsql_handle_commit(pdo_dbh_t *dbh TSRMLS_DC)
 {
-	return pdo_pgsql_transaction_cmd("COMMIT", dbh TSRMLS_CC);
+	int ret = pdo_pgsql_transaction_cmd("COMMIT", dbh TSRMLS_CC);
+
+	/* When deferred constraints are used the commit could
+	   fail, and a ROLLBACK implicitly ran. See bug #67462 */
+	if (!ret) {
+		dbh->in_txn = pgsql_handle_in_transaction(dbh TSRMLS_CC);
+	}
+
+	return ret;
 }
 
 static int pgsql_handle_rollback(pdo_dbh_t *dbh TSRMLS_DC)
 {
 	return pdo_pgsql_transaction_cmd("ROLLBACK", dbh TSRMLS_CC);
-}
-
-static int pgsql_handle_in_transaction(pdo_dbh_t *dbh TSRMLS_DC)
-{
-	pdo_pgsql_db_handle *H;
-
-	H = (pdo_pgsql_db_handle *)dbh->driver_data;
-
-	return PQtransactionStatus(H->server);
 }
 
 /* {{{ proto string PDO::pgsqlCopyFromArray(string $table_name , array $rows [, string $delimiter [, string $null_as ] [, string $fields])
@@ -1039,7 +1067,7 @@ static int pdo_pgsql_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_
 	pdo_pgsql_db_handle *H;
 	int ret = 0;
 	char *conn_str, *p, *e;
-	char *tmp_pass;
+	char *tmp_user, *tmp_pass;
 	long connect_timeout = 30;
 
 	H = pecalloc(1, sizeof(pdo_pgsql_db_handle), dbh->is_persistent);
@@ -1047,7 +1075,7 @@ static int pdo_pgsql_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_
 
 	H->einfo.errcode = 0;
 	H->einfo.errmsg = NULL;
-	
+
 	/* PostgreSQL wants params in the connect string to be separated by spaces,
 	 * if the PDO standard semicolons are used, we convert them to spaces
 	 */
@@ -1061,42 +1089,27 @@ static int pdo_pgsql_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_
 		connect_timeout = pdo_attr_lval(driver_options, PDO_ATTR_TIMEOUT, 30 TSRMLS_CC);
 	}
 
-	if (dbh->password) {
-		if (dbh->password[0] != '\'' && dbh->password[strlen(dbh->password) - 1] != '\'') {
-			char *pwd = dbh->password;
-			int pos = 1;
-
-			tmp_pass = safe_emalloc(2, strlen(dbh->password), 3);
-			tmp_pass[0] = '\'';
-
-			while (*pwd != '\0') {
-				if (*pwd == '\\' || *pwd == '\'') {
-					tmp_pass[pos++] = '\\';
-				}
-
-				tmp_pass[pos++] = *pwd++;
-			}
-
-			tmp_pass[pos++] = '\'';
-			tmp_pass[pos] = '\0';
-		} else {
-			tmp_pass = dbh->password;
-		}
-	}
+	/* escape username and password, if provided */
+	tmp_user = _pdo_pgsql_escape_credentials(dbh->username TSRMLS_CC);
+	tmp_pass = _pdo_pgsql_escape_credentials(dbh->password TSRMLS_CC);
 
 	/* support both full connection string & connection string + login and/or password */
-	if (dbh->username && dbh->password) {
-		spprintf(&conn_str, 0, "%s user=%s password=%s connect_timeout=%ld", dbh->data_source, dbh->username, tmp_pass, connect_timeout);
-	} else if (dbh->username) {
-		spprintf(&conn_str, 0, "%s user=%s connect_timeout=%ld", dbh->data_source, dbh->username, connect_timeout);
-	} else if (dbh->password) {
-		spprintf(&conn_str, 0, "%s password=%s connect_timeout=%ld", dbh->data_source, tmp_pass, connect_timeout);
+	if (tmp_user && tmp_pass) {
+		spprintf(&conn_str, 0, "%s user='%s' password='%s' connect_timeout=%ld", dbh->data_source, tmp_user, tmp_pass, connect_timeout);
+	} else if (tmp_user) {
+		spprintf(&conn_str, 0, "%s user='%s' connect_timeout=%ld", dbh->data_source, tmp_user, connect_timeout);
+	} else if (tmp_pass) {
+		spprintf(&conn_str, 0, "%s password='%s' connect_timeout=%ld", dbh->data_source, tmp_pass, connect_timeout);
 	} else {
 		spprintf(&conn_str, 0, "%s connect_timeout=%ld", (char *) dbh->data_source, connect_timeout);
 	}
 
 	H->server = PQconnectdb(conn_str);
-	if (dbh->password && tmp_pass != dbh->password) {
+
+	if (tmp_user) {
+		efree(tmp_user);
+	}
+	if (tmp_pass) {
 		efree(tmp_pass);
 	}
 

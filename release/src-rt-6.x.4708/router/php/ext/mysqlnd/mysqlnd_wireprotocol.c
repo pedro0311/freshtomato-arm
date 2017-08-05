@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2014 The PHP Group                                |
+  | Copyright (c) 2006-2015 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -226,7 +226,7 @@ php_mysqlnd_net_store_length_size(uint64_t length)
 	if (length < (uint64_t) L64(16777216)) {
 		return 4;
 	}
-	return 8;
+	return 9;
 }
 /* }}} */
 
@@ -1741,8 +1741,9 @@ php_mysqlnd_rowp_read_text_protocol(MYSQLND_MEMORY_POOL_CHUNK * row_buffer, zval
 					zval_dtor(*current_field);
 					ZVAL_STRINGL(*current_field, (char *) start, bit_area - start - 1, 0);
 				}
-			} else
-			ZVAL_STRINGL(*current_field, (char *)p, len, 0);
+			} else {
+				ZVAL_STRINGL(*current_field, (char *)p, len, 0);
+			}
 			p += len;
 			last_field_was_string = TRUE;
 		}

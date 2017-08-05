@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2014 The PHP Group                                |
+   | Copyright (c) 1997-2015 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -27,7 +27,12 @@
 
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
+#ifdef ZTS
+#include "ext/standard/php_string.h"
+#define LCONV_DECIMAL_POINT (*lconv.decimal_point)
+#else
 #define LCONV_DECIMAL_POINT (*lconv->decimal_point)
+#endif
 #else
 #define LCONV_DECIMAL_POINT '.'
 #endif
@@ -214,7 +219,11 @@ php_sprintf_appenddouble(char **buffer, int *pos,
 	char *s = NULL;
 	int s_len = 0, is_negative = 0;
 #ifdef HAVE_LOCALE_H
+#ifdef ZTS
+	struct lconv lconv;
+#else
 	struct lconv *lconv;
+#endif
 #endif
 
 	PRINTF_DEBUG(("sprintf: appenddouble(%x, %x, %x, %f, %d, '%c', %d, %c)\n",
@@ -246,7 +255,11 @@ php_sprintf_appenddouble(char **buffer, int *pos,
 		case 'f':
 		case 'F':
 #ifdef HAVE_LOCALE_H
+#ifdef ZTS
+			localeconv_r(&lconv);
+#else
 			lconv = localeconv();
+#endif
 #endif
 			s = php_conv_fp((fmt == 'f')?'F':fmt, number, 0, precision,
 						(fmt == 'f')?LCONV_DECIMAL_POINT:'.',
@@ -270,7 +283,11 @@ php_sprintf_appenddouble(char **buffer, int *pos,
 			 * * We use &num_buf[ 1 ], so that we have room for the sign
 			 */
 #ifdef HAVE_LOCALE_H
+#ifdef ZTS
+			localeconv_r(&lconv);
+#else
 			lconv = localeconv();
+#endif
 #endif
 			s = php_gcvt(number, precision, LCONV_DECIMAL_POINT, (fmt == 'G')?'E':'e', &num_buf[1]);
 			is_negative = 0;
@@ -376,6 +393,7 @@ php_formatted_print(int ht, int *len, int use_array, int format_offset TSRMLS_DC
 	int alignment, currarg, adjusting, argnum, width, precision;
 	char *format, *result, padding;
 	int always_sign;
+	int format_len;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "+", &args, &argc) == FAILURE) {
 		return NULL;
@@ -414,11 +432,12 @@ php_formatted_print(int ht, int *len, int use_array, int format_offset TSRMLS_DC
 	
 	convert_to_string_ex(args[format_offset]);
 	format = Z_STRVAL_PP(args[format_offset]);
+	format_len = Z_STRLEN_PP(args[format_offset]);
 	result = emalloc(size);
 
 	currarg = 1;
 
-	while (inpos<Z_STRLEN_PP(args[format_offset])) {
+	while (inpos<format_len) {
 		int expprec = 0, multiuse = 0;
 		zval *tmp;
 
@@ -473,7 +492,7 @@ php_formatted_print(int ht, int *len, int use_array, int format_offset TSRMLS_DC
 						/* space padding, the default */
 					} else if (format[inpos] == '+') {
 						always_sign = 1;
-					} else if (format[inpos] == '\'') {
+					} else if (format[inpos] == '\'' && inpos+1<format_len) {
 						padding = format[++inpos];
 					} else {
 						PRINTF_DEBUG(("sprintf: end of modifiers\n"));
