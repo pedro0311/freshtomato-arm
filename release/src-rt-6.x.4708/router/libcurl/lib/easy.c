@@ -561,7 +561,7 @@ static void events_setup(struct Curl_multi *multi, struct events *ev)
 static CURLcode wait_or_timeout(struct Curl_multi *multi, struct events *ev)
 {
   bool done = FALSE;
-  CURLMcode mcode;
+  CURLMcode mcode = CURLM_OK;
   CURLcode result = CURLE_OK;
 
   while(!done) {
@@ -572,8 +572,8 @@ static CURLcode wait_or_timeout(struct Curl_multi *multi, struct events *ev)
     int numfds=0;
     int pollrc;
     int i;
-    struct timeval before;
-    struct timeval after;
+    struct curltime before;
+    struct curltime after;
 
     /* populate the fds[] array */
     for(m = ev->list, f=&fds[0]; m; m = m->next) {
@@ -615,12 +615,18 @@ static CURLcode wait_or_timeout(struct Curl_multi *multi, struct events *ev)
         }
       }
 
-      if(!ev->msbump)
+      if(!ev->msbump) {
         /* If nothing updated the timeout, we decrease it by the spent time.
          * If it was updated, it has the new timeout time stored already.
          */
-        ev->ms += (long)curlx_tvdiff(after, before);
-
+        time_t timediff = curlx_tvdiff(after, before);
+        if(timediff > 0) {
+          if(timediff > ev->ms)
+            ev->ms = 0;
+          else
+            ev->ms -= (long)timediff;
+        }
+      }
     }
     else
       return CURLE_RECV_ERROR;
@@ -647,7 +653,9 @@ static CURLcode wait_or_timeout(struct Curl_multi *multi, struct events *ev)
  */
 static CURLcode easy_events(struct Curl_multi *multi)
 {
-  struct events evs= {2, FALSE, 0, NULL, 0};
+  /* this struct is made static to allow it to be used after this function
+     returns and curl_multi_remove_handle() is called */
+  static struct events evs= {2, FALSE, 0, NULL, 0};
 
   /* if running event-based, do some further multi inits */
   events_setup(multi, &evs);
@@ -664,7 +672,7 @@ static CURLcode easy_transfer(struct Curl_multi *multi)
   bool done = FALSE;
   CURLMcode mcode = CURLM_OK;
   CURLcode result = CURLE_OK;
-  struct timeval before;
+  struct curltime before;
   int without_fds = 0;  /* count number of consecutive returns from
                            curl_multi_wait() without any filedescriptors */
 
@@ -677,7 +685,7 @@ static CURLcode easy_transfer(struct Curl_multi *multi)
 
     if(!mcode) {
       if(!rc) {
-        struct timeval after = curlx_tvnow();
+        struct curltime after = curlx_tvnow();
 
         /* If it returns without any filedescriptor instantly, we need to
            avoid busy-looping during periods where it has nothing particular
@@ -870,7 +878,7 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
    * the likeliness of us forgetting to init a buffer here in the future.
    */
   outcurl->set.buffer_size = data->set.buffer_size;
-  outcurl->state.buffer = malloc(CURL_BUFSIZE(outcurl->set.buffer_size) + 1);
+  outcurl->state.buffer = malloc(outcurl->set.buffer_size + 1);
   if(!outcurl->state.buffer)
     goto fail;
 
@@ -1044,7 +1052,7 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
   if(!result &&
      ((newstate&(KEEP_RECV_PAUSE|KEEP_SEND_PAUSE)) !=
       (KEEP_RECV_PAUSE|KEEP_SEND_PAUSE)) )
-    Curl_expire(data, 0); /* get this handle going again */
+    Curl_expire(data, 0, EXPIRE_RUN_NOW); /* get this handle going again */
 
   return result;
 }

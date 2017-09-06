@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -181,6 +181,7 @@ const struct Curl_handler Curl_handler_tftp = {
   ZERO_NULL,                            /* perform_getsock */
   tftp_disconnect,                      /* disconnect */
   ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* connection_check */
   PORT_TFTP,                            /* defport */
   CURLPROTO_TFTP,                       /* protocol */
   PROTOPT_NONE | PROTOPT_NOURLQUERY     /* flags */
@@ -489,6 +490,11 @@ static CURLcode tftp_send_first(tftp_state_data_t *state, tftp_event_t event)
                             &filename, NULL, FALSE);
     if(result)
       return result;
+
+    if(strlen(filename) > (state->blksize - strlen(mode) - 4)) {
+      failf(data, "TFTP file name too long\n");
+      return CURLE_TFTP_ILLEGAL; /* too long file name field */
+    }
 
     snprintf((char *)state->spacket.data+2,
              state->blksize,
@@ -1119,7 +1125,8 @@ static CURLcode tftp_receive_packet(struct connectdata *conn)
   }
   else {
     /* The event is given by the TFTP packet time */
-    state->event = (tftp_event_t)getrpacketevent(&state->rpacket);
+    unsigned short event = getrpacketevent(&state->rpacket);
+    state->event = (tftp_event_t)event;
 
     switch(state->event) {
     case TFTP_EVENT_DATA:
@@ -1138,9 +1145,12 @@ static CURLcode tftp_receive_packet(struct connectdata *conn)
       }
       break;
     case TFTP_EVENT_ERROR:
-      state->error = (tftp_error_t)getrpacketblock(&state->rpacket);
+    {
+      unsigned short error = getrpacketblock(&state->rpacket);
+      state->error = (tftp_error_t)error;
       infof(data, "%s\n", (const char *)state->rpacket.data+4);
       break;
+    }
     case TFTP_EVENT_ACK:
       break;
     case TFTP_EVENT_OACK:
@@ -1340,7 +1350,7 @@ static CURLcode tftp_do(struct connectdata *conn, bool *done)
 
   state = (tftp_state_data_t *)conn->proto.tftpc;
   if(!state)
-    return CURLE_BAD_CALLING_ORDER;
+    return CURLE_TFTP_ILLEGAL;
 
   result = tftp_perform(conn, done);
 

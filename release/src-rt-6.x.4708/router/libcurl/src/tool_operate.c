@@ -71,7 +71,6 @@
 #include "tool_sleep.h"
 #include "tool_urlglob.h"
 #include "tool_util.h"
-#include "tool_writeenv.h"
 #include "tool_writeout.h"
 #include "tool_xattr.h"
 #include "tool_vms.h"
@@ -231,6 +230,17 @@ static void setfiletime(long filetime, const char *filename,
               "CreateFile failed: GetLastError %u\n",
               filetime, GetLastError());
     }
+
+#elif defined(HAVE_UTIMES)
+    struct timeval times[2];
+    times[0].tv_sec = times[1].tv_sec = filetime;
+    times[0].tv_usec = times[1].tv_usec = 0;
+    if(utimes(filename, times)) {
+      fprintf(error_stream,
+              "Failed to set filetime %ld on outfile: errno %d\n",
+              filetime, errno);
+    }
+
 #elif defined(HAVE_UTIME)
     struct utimbuf times;
     times.actime = (time_t)filetime;
@@ -245,6 +255,8 @@ static void setfiletime(long filetime, const char *filename,
 }
 #endif /* defined(HAVE_UTIME) || \
           (defined(WIN32) && (CURL_SIZEOF_CURL_OFF_T >= 8)) */
+
+#define BUFFER_SIZE (100*1024)
 
 static CURLcode operate_do(struct GlobalConfig *global,
                            struct OperationConfig *config)
@@ -850,6 +862,9 @@ static CURLcode operate_do(struct GlobalConfig *global,
           set_binmode(stdout);
         }
 
+        /* explicitly passed to stdout means okaying binary gunk */
+        config->terminal_binary_ok = (outfile && !strcmp(outfile, "-"));
+
         if(!config->tcp_nodelay)
           my_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
 
@@ -888,10 +903,12 @@ static CURLcode operate_do(struct GlobalConfig *global,
         my_setopt(curl, CURLOPT_SEEKDATA, &input);
         my_setopt(curl, CURLOPT_SEEKFUNCTION, tool_seek_cb);
 
-        if(config->recvpersecond)
-          /* tell libcurl to use a smaller sized buffer as it allows us to
-             make better sleeps! 7.9.9 stuff! */
+        if(config->recvpersecond &&
+           (config->recvpersecond < BUFFER_SIZE))
+          /* use a smaller sized buffer for better sleeps */
           my_setopt(curl, CURLOPT_BUFFERSIZE, (long)config->recvpersecond);
+        else
+          my_setopt(curl, CURLOPT_BUFFERSIZE, (long)BUFFER_SIZE);
 
         /* size of uploaded file: */
         if(uploadfilesize != -1)
@@ -955,6 +972,7 @@ static CURLcode operate_do(struct GlobalConfig *global,
 #endif /* !CURL_DISABLE_PROXY */
 
         my_setopt(curl, CURLOPT_FAILONERROR, config->failonerror?1L:0L);
+        my_setopt(curl, CURLOPT_REQUEST_TARGET, config->request_target);
         my_setopt(curl, CURLOPT_UPLOAD, uploadfile?1L:0L);
         my_setopt(curl, CURLOPT_DIRLISTONLY, config->dirlistonly?1L:0L);
         my_setopt(curl, CURLOPT_APPEND, config->ftp_append?1L:0L);
@@ -1324,6 +1342,11 @@ static CURLcode operate_do(struct GlobalConfig *global,
         if(config->socks5_gssapi_nec)
           my_setopt_str(curl, CURLOPT_SOCKS5_GSSAPI_NEC,
                         config->socks5_gssapi_nec);
+
+        /* new in curl 7.55.0 */
+        if(config->socks5_auth)
+          my_setopt_bitmask(curl, CURLOPT_SOCKS5_AUTH,
+                            (long)config->socks5_auth);
 
         /* new in curl 7.43.0 */
         if(config->proxy_service_name)
@@ -1733,9 +1756,6 @@ static CURLcode operate_do(struct GlobalConfig *global,
         if(config->writeout)
           ourWriteOut(curl, &outs, config->writeout);
 
-        if(config->writeenv)
-          ourWriteEnv(curl);
-
         /*
         ** Code within this loop may jump directly here to label 'show_error'
         ** in order to display an error message for CURLcode stored in 'res'
@@ -1753,7 +1773,10 @@ static CURLcode operate_do(struct GlobalConfig *global,
         }
         else
 #endif
-        if(result && global->showerror) {
+        if(config->synthetic_error) {
+          ;
+        }
+        else if(result && global->showerror) {
           fprintf(global->errors, "curl: (%d) %s\n", result, (errorbuffer[0]) ?
                   errorbuffer : curl_easy_strerror(result));
           if(result == CURLE_SSL_CACERT)

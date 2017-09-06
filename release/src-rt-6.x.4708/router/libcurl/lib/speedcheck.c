@@ -30,14 +30,14 @@
 
 void Curl_speedinit(struct Curl_easy *data)
 {
-  memset(&data->state.keeps_speed, 0, sizeof(struct timeval));
+  memset(&data->state.keeps_speed, 0, sizeof(struct curltime));
 }
 
 /*
  * @unittest: 1606
  */
 CURLcode Curl_speedcheck(struct Curl_easy *data,
-                         struct timeval now)
+                         struct curltime now)
 {
   if((data->progress.current_speed >= 0) && data->set.low_speed_time) {
     if(data->progress.current_speed < data->set.low_speed_limit) {
@@ -67,7 +67,7 @@ CURLcode Curl_speedcheck(struct Curl_easy *data,
   if(data->set.low_speed_limit)
     /* if low speed limit is enabled, set the expire timer to make this
        connection's speed get checked again in a second */
-    Curl_expire_latest(data, 1000);
+    Curl_expire(data, 1000, EXPIRE_SPEEDCHECK);
 
   return CURLE_OK;
 }

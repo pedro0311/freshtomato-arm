@@ -111,7 +111,6 @@
 #define HAVE_OPAQUE_EVP_PKEY 1 /* since 1.1.0 -pre3 */
 #define HAVE_OPAQUE_RSA_DSA_DH 1 /* since 1.1.0 -pre5 */
 #define CONST_EXTS const
-#define CONST_ASN1_BIT_STRING const
 #define HAVE_ERR_REMOVE_THREAD_STATE_DEPRECATED 1
 #else
 /* For OpenSSL before 1.1.0 */
@@ -119,7 +118,6 @@
 #define X509_get0_notBefore(x) X509_get_notBefore(x)
 #define X509_get0_notAfter(x) X509_get_notAfter(x)
 #define CONST_EXTS /* nope */
-#define CONST_ASN1_BIT_STRING /* nope */
 #ifdef LIBRESSL_VERSION_NUMBER
 static unsigned long OpenSSL_version_num(void)
 {
@@ -236,8 +234,7 @@ static CURLcode Curl_ossl_seed(struct Curl_easy *data)
   /* we have the "SSL is seeded" boolean static to prevent multiple
      time-consuming seedings in vain */
   static bool ssl_seeded = FALSE;
-  char *buf = data->state.buffer; /* point to the big buffer */
-  int nread=0;
+  char fname[256];
 
   if(ssl_seeded)
     return CURLE_OK;
@@ -256,12 +253,12 @@ static CURLcode Curl_ossl_seed(struct Curl_easy *data)
 #endif
   {
     /* let the option override the define */
-    nread += RAND_load_file((data->set.str[STRING_SSL_RANDOM_FILE]?
-                             data->set.str[STRING_SSL_RANDOM_FILE]:
-                             RANDOM_FILE),
-                            RAND_LOAD_LENGTH);
+    RAND_load_file((data->set.str[STRING_SSL_RANDOM_FILE]?
+                    data->set.str[STRING_SSL_RANDOM_FILE]:
+                    RANDOM_FILE),
+                   RAND_LOAD_LENGTH);
     if(rand_enough())
-      return nread;
+      return CURLE_OK;
   }
 
 #if defined(HAVE_RAND_EGD)
@@ -279,35 +276,47 @@ static CURLcode Curl_ossl_seed(struct Curl_easy *data)
     int ret = RAND_egd(data->set.str[STRING_SSL_EGDSOCKET]?
                        data->set.str[STRING_SSL_EGDSOCKET]:EGD_SOCKET);
     if(-1 != ret) {
-      nread += ret;
       if(rand_enough())
-        return nread;
+        return CURLE_OK;
     }
   }
 #endif
 
-  /* If we get here, it means we need to seed the PRNG using a "silly"
-     approach! */
+  /* fallback to a custom seeding of the PRNG using a hash based on a current
+     time */
   do {
     unsigned char randb[64];
-    int len = sizeof(randb);
-    if(!RAND_bytes(randb, len))
-      break;
-    RAND_add(randb, len, (len >> 1));
+    size_t len = sizeof(randb);
+    size_t i, i_max;
+    for(i = 0, i_max = len / sizeof(struct curltime); i < i_max; ++i) {
+      struct curltime tv = curlx_tvnow();
+      Curl_wait_ms(1);
+      tv.tv_sec *= i + 1;
+      tv.tv_usec *= (unsigned int)i + 2;
+      tv.tv_sec ^= ((curlx_tvnow().tv_sec + curlx_tvnow().tv_usec) *
+                    (i + 3)) << 8;
+      tv.tv_usec ^= (unsigned int) ((curlx_tvnow().tv_sec +
+                                     curlx_tvnow().tv_usec) *
+                                    (i + 4)) << 16;
+      memcpy(&randb[i * sizeof(struct curltime)], &tv,
+             sizeof(struct curltime));
+    }
+    RAND_add(randb, (int)len, (double)len/2);
   } while(!rand_enough());
 
   /* generates a default path for the random seed file */
-  buf[0]=0; /* blank it first */
-  RAND_file_name(buf, BUFSIZE);
-  if(buf[0]) {
+  fname[0]=0; /* blank it first */
+  RAND_file_name(fname, sizeof(fname));
+  if(fname[0]) {
     /* we got a file name to try */
-    nread += RAND_load_file(buf, RAND_LOAD_LENGTH);
+    RAND_load_file(fname, RAND_LOAD_LENGTH);
     if(rand_enough())
-      return nread;
+      return CURLE_OK;
   }
 
   infof(data, "libcurl is now using a weak random seed!\n");
-  return CURLE_SSL_CONNECT_ERROR; /* confusing error code */
+  return (rand_enough() ? CURLE_OK :
+    CURLE_SSL_CONNECT_ERROR /* confusing error code */);
 }
 
 #ifndef SSL_FILETYPE_ENGINE
@@ -1371,7 +1380,8 @@ static CURLcode verifystatus(struct connectdata *conn,
   st = SSL_CTX_get_cert_store(connssl->ctx);
 
 #if ((OPENSSL_VERSION_NUMBER <= 0x1000201fL) /* Fixed after 1.0.2a */ || \
-     defined(LIBRESSL_VERSION_NUMBER))
+     (defined(LIBRESSL_VERSION_NUMBER) &&                               \
+      LIBRESSL_VERSION_NUMBER <= 0x2040200fL))
   /* The authorized responder cert in the OCSP response MUST be signed by the
      peer cert's issuer (see RFC6960 section 4.2.2.2). If that's a root cert,
      no problem, but if it's an intermediate cert OpenSSL has a bug where it
@@ -1766,6 +1776,7 @@ set_ssl_version_min_max(long *ctx_options, struct connectdata *conn,
       failf(data, OSSL_PACKAGE " was built without TLS 1.3 support");
       return CURLE_NOT_BUILT_IN;
 #endif
+      /* FALLTHROUGH */
     case CURL_SSLVERSION_TLSv1_2:
 #if OPENSSL_VERSION_NUMBER >= 0x1000100FL
       *ctx_options |= SSL_OP_NO_TLSv1_1;
@@ -2056,7 +2067,8 @@ static CURLcode ossl_connect_step1(struct connectdata *conn, int sockindex)
     unsigned char protocols[128];
 
 #ifdef USE_NGHTTP2
-    if(data->set.httpversion >= CURL_HTTP_VERSION_2) {
+    if(data->set.httpversion >= CURL_HTTP_VERSION_2 &&
+       (!SSL_IS_PROXY() || !conn->bits.tunnel_proxy)) {
       protocols[cur++] = NGHTTP2_PROTO_VERSION_ID_LEN;
 
       memcpy(&protocols[cur], NGHTTP2_PROTO_VERSION_ID,
@@ -2547,7 +2559,7 @@ static CURLcode get_cert_chain(struct connectdata *conn,
     EVP_PKEY *pubkey=NULL;
     int j;
     char *ptr;
-    CONST_ASN1_BIT_STRING ASN1_BIT_STRING *psig = NULL;
+    const ASN1_BIT_STRING *psig = NULL;
 
     X509_NAME_print_ex(mem, X509_get_subject_name(x), 0, XN_FLAG_ONELINE);
     push_certinfo("Subject", i);
@@ -2807,7 +2819,7 @@ static CURLcode servercert(struct connectdata *conn,
   struct Curl_easy *data = conn->data;
   X509 *issuer;
   FILE *fp;
-  char *buffer = data->state.buffer;
+  char buffer[2048];
   const char *ptr;
   long * const certverifyresult = SSL_IS_PROXY() ?
     &data->set.proxy_ssl.certverifyresult : &data->set.ssl.certverifyresult;
@@ -2819,6 +2831,7 @@ static CURLcode servercert(struct connectdata *conn,
 
   connssl->server_cert = SSL_get_peer_certificate(connssl->handle);
   if(!connssl->server_cert) {
+    BIO_free(mem);
     if(!strict)
       return CURLE_OK;
 
@@ -2829,7 +2842,7 @@ static CURLcode servercert(struct connectdata *conn,
   infof(data, "%s certificate:\n", SSL_IS_PROXY() ? "Proxy" : "Server");
 
   rc = x509_name_oneline(X509_get_subject_name(connssl->server_cert),
-                         buffer, BUFSIZE);
+                         buffer, sizeof(buffer));
   infof(data, " subject: %s\n", rc?"[NONE]":buffer);
 
   ASN1_TIME_print(mem, X509_get0_notBefore(connssl->server_cert));
@@ -2854,7 +2867,7 @@ static CURLcode servercert(struct connectdata *conn,
   }
 
   rc = x509_name_oneline(X509_get_issuer_name(connssl->server_cert),
-                         buffer, BUFSIZE);
+                         buffer, sizeof(buffer));
   if(rc) {
     if(strict)
       failf(data, "SSL: couldn't get X509-issuer name!");

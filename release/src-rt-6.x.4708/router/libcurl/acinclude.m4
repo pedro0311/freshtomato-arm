@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -32,8 +32,8 @@ dnl actually be a single double-quoted string concatenating all them.
 AC_DEFUN([CURL_CHECK_DEF], [
   AC_REQUIRE([CURL_CPP_P])dnl
   OLDCPPFLAGS=$CPPFLAGS
-  # CPPPFLAGS comes from CURL_CPP_P
-  CPPFLAGS="$CPPPFLAGS"
+  # CPPPFLAG comes from CURL_CPP_P
+  CPPFLAGS="$CPPFLAGS $CPPPFLAG"
   AS_VAR_PUSHDEF([ac_HaveDef], [curl_cv_have_def_$1])dnl
   AS_VAR_PUSHDEF([ac_Def], [curl_cv_def_$1])dnl
   if test -z "$SED"; then
@@ -199,8 +199,6 @@ AC_DEFUN([CURL_CHECK_HEADER_WINDOWS], [
     yes)
       AC_DEFINE_UNQUOTED(HAVE_WINDOWS_H, 1,
         [Define to 1 if you have the windows.h header file.])
-      AC_DEFINE_UNQUOTED(WIN32_LEAN_AND_MEAN, 1,
-        [Define to avoid automatic inclusion of winsock.h])
       ;;
   esac
 ])
@@ -790,8 +788,8 @@ AC_DEFUN([CURL_CHECK_LIBS_LDAP], [
   #
   for x_nlibs in '' "$u_libs" \
     '-lldap' \
-    '-llber -lldap' \
     '-lldap -llber' \
+    '-llber -lldap' \
     '-lldapssl -lldapx -lldapsdk' \
     '-lldapsdk -lldapx -lldapssl' ; do
     if test "$curl_cv_ldap_LIBS" = "unknown"; then
@@ -1084,7 +1082,11 @@ AC_DEFUN([CURL_CHECK_FUNC_GETNAMEINFO], [
 #endif
 #define GNICALLCONV
 #endif
-                    extern int GNICALLCONV getnameinfo($gni_arg1, $gni_arg2,
+                    extern int GNICALLCONV
+#ifdef __ANDROID__
+__attribute__((overloadable))
+#endif
+				getnameinfo($gni_arg1, $gni_arg2,
                                            char *, $gni_arg46,
                                            char *, $gni_arg46,
                                            $gni_arg7);
@@ -1388,6 +1390,9 @@ AC_DEFUN([CURL_CHECK_FUNC_RECV], [
 #define RECVCALLCONV
 #endif
                       extern $recv_retv RECVCALLCONV
+#ifdef __ANDROID__
+__attribute__((overloadable))
+#endif
                       recv($recv_arg1, $recv_arg2, $recv_arg3, $recv_arg4);
                     ]],[[
                       $recv_arg1 s=0;
@@ -1522,6 +1527,9 @@ AC_DEFUN([CURL_CHECK_FUNC_SEND], [
 #define SENDCALLCONV
 #endif
                       extern $send_retv SENDCALLCONV
+#ifdef __ANDROID__
+__attribute__((overloadable))
+#endif
                       send($send_arg1, $send_arg2, $send_arg3, $send_arg4);
                     ]],[[
                       $send_arg1 s=0;
@@ -1856,7 +1864,7 @@ AC_DEFUN([CURL_CHECK_FUNC_CLOCK_GETTIME_MONOTONIC], [
   AC_CHECK_HEADERS(sys/types.h sys/time.h time.h)
   AC_MSG_CHECKING([for monotonic clock_gettime])
   #
-  if test "x$dontwant_rt" == "xno" ; then
+  if test "x$dontwant_rt" = "xno" ; then
     AC_COMPILE_IFELSE([
       AC_LANG_PROGRAM([[
 #ifdef HAVE_SYS_TYPES_H
@@ -2079,10 +2087,7 @@ _EOF
 dnl CURL_CONFIGURE_LONG
 dnl -------------------------------------------------
 dnl Find out the size of long as reported by sizeof() and define
-dnl CURL_SIZEOF_LONG as appropriate to be used in template file
-dnl include/curl/curlbuild.h.in to properly configure the library.
-dnl The size of long is a build time characteristic and as such
-dnl must be recorded in curlbuild.h
+dnl CURL_SIZEOF_LONG.
 
 AC_DEFUN([CURL_CONFIGURE_LONG], [
   if test -z "$ac_cv_sizeof_long" ||
@@ -2095,10 +2100,6 @@ AC_DEFUN([CURL_CONFIGURE_LONG], [
 
 dnl CURL_CONFIGURE_CURL_SOCKLEN_T
 dnl -------------------------------------------------
-dnl Find out suitable curl_socklen_t data type definition and size, making
-dnl appropriate definitions for template file include/curl/curlbuild.h.in
-dnl to properly configure and use the library.
-dnl
 dnl The need for the curl_socklen_t definition arises mainly to properly
 dnl interface HP-UX systems which on one hand have a typedef'ed socklen_t
 dnl data type which is 32 or 64-Bit wide depending on the data model being
@@ -2222,10 +2223,6 @@ AC_DEFUN([CURL_CONFIGURE_CURL_SOCKLEN_T], [
 
 dnl CURL_CONFIGURE_PULL_SYS_POLL
 dnl -------------------------------------------------
-dnl Find out if system header file sys/poll.h must be included by the
-dnl external interface, making appropriate definitions for template file
-dnl include/curl/curlbuild.h.in to properly configure and use the library.
-dnl
 dnl The need for the sys/poll.h inclusion arises mainly to properly
 dnl interface AIX systems which define macros 'events' and 'revents'.
 
@@ -2378,11 +2375,15 @@ AC_DEFUN([CURL_CHECK_FUNC_SELECT], [
                       long tv_usec;
                     };
 #endif
-                    extern $sel_retv SELECTCALLCONV select($sel_arg1,
-                                                           $sel_arg234,
-                                                           $sel_arg234,
-                                                           $sel_arg234,
-                                                           $sel_arg5);
+                    extern $sel_retv SELECTCALLCONV
+#ifdef __ANDROID__
+__attribute__((overloadable))
+#endif
+			select($sel_arg1,
+					$sel_arg234,
+					$sel_arg234,
+					$sel_arg234,
+					$sel_arg5);
                   ]],[[
                     $sel_arg1   nfds=0;
                     $sel_arg234 rfds=0;
@@ -2859,8 +2860,7 @@ AC_DEFUN([DO_CURL_OFF_T_SUFFIX_CHECK], [
 dnl CURL_CONFIGURE_CURL_OFF_T
 dnl -------------------------------------------------
 dnl Find out suitable curl_off_t data type definition and associated
-dnl items, and make the appropriate definitions used in template file
-dnl include/curl/curlbuild.h.in to properly configure the library.
+dnl items
 
 AC_DEFUN([CURL_CONFIGURE_CURL_OFF_T], [
   AC_REQUIRE([CURL_INCLUDES_INTTYPES])dnl
@@ -3187,12 +3187,59 @@ TEST EINVAL TEST
     if test "x$cpp_p" = "xno"; then
       AC_MSG_WARN([failed to figure out cpp -P alternative])
       # without -P
-      CPPPFLAGS=$OLDCPPFLAGS
+      CPPPFLAG=""
     else
       # with -P
-      CPPPFLAGS=$CPPFLAGS
+      CPPPFLAG="-P"
     fi
     dnl restore CPPFLAGS
     CPPFLAGS=$OLDCPPFLAGS
+  else
+    # without -P
+    CPPPFLAG=""
   fi
+])
+
+
+dnl CURL_MAC_CFLAGS
+dnl
+dnl Check if -mmacosx-version-min, -miphoneos-version-min or any
+dnl similar are set manually, otherwise do. And set
+dnl -Werror=partial-availability.
+dnl
+
+AC_DEFUN([CURL_MAC_CFLAGS], [
+
+  tst_cflags="no"
+  case $host_os in
+    darwin*)
+      tst_cflags="yes"
+      ;;
+  esac
+
+  AC_MSG_CHECKING([for good-to-use Mac CFLAGS])
+  AC_MSG_RESULT([$tst_cflags]);
+
+  if test "$tst_cflags" = "yes"; then
+    AC_MSG_CHECKING([for *version-min in CFLAGS])
+    min=""
+    if test -z "$(echo $CFLAGS | grep m.*os.*-version-min)"; then
+      min="-mmacosx-version-min=10.8"
+      CFLAGS="$CFLAGS $min"
+    fi
+    if test -z "$min"; then
+      AC_MSG_RESULT([set by user])
+    else
+      AC_MSG_RESULT([$min set])
+    fi
+
+    old_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS -Werror=partial-availability"
+    AC_MSG_CHECKING([whether $CC accepts -Werror=partial-availability])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
+      [AC_MSG_RESULT([yes])],
+      [AC_MSG_RESULT([no])
+      CFLAGS=$old_CFLAGS])
+  fi
+
 ])
