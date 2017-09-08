@@ -2662,7 +2662,7 @@ libsodium-clean:
 
 dnscrypt/stamp-h1: libsodium
 	cd $(TOP)/dnscrypt && CC=$(CC) STRIP=$(STRIP) \
-	autoreconf -fsi && \
+	autoreconf && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libsodium/src/libsodium/include" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs" \
