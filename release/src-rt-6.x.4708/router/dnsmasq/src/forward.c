@@ -790,7 +790,6 @@ void reply_query(int fd, int family, time_t now)
   /* Note: if we send extra options in the EDNS0 header, we can't recreate
      the query from the reply. */
   if (RCODE(header) == REFUSED &&
-      !option_bool(OPT_ORDER) &&
       forward->forwardall == 0 &&
       !(forward->flags & FREC_HAS_EXTRADATA))
     /* for broken servers, attempt to send to another one. */
@@ -1184,6 +1183,10 @@ void receive_query(struct listener *listen, time_t now)
   
   if ((n = recvmsg(listen->fd, &msg, 0)) == -1)
     return;
+
+  /* Clear buffer beyond request to avoid risk of
+     information disclosure. */
+  memset(daemon->packet + n, 0, daemon->edns_pktsz - n);
   
   if (n < (int)sizeof(struct dns_header) || 
       (msg.msg_flags & MSG_TRUNC) ||
@@ -1409,6 +1412,8 @@ void receive_query(struct listener *listen, time_t now)
 	 defaults to 512 */
       if (udp_size > daemon->edns_pktsz)
 	udp_size = daemon->edns_pktsz;
+      else if (udp_size < PACKETSZ)
+       udp_size = PACKETSZ; /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
     }
 
 #ifdef HAVE_AUTH
@@ -1689,6 +1694,10 @@ unsigned char *tcp_request(int confd, time_t now,
   
       if (size < (int)sizeof(struct dns_header))
 	continue;
+
+      /* Clear buffer beyond request to avoid risk of
+        information disclosure. */
+      memset(payload + size, 0, 65536 - size);
       
       query_count++;
 
