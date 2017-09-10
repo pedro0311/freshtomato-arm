@@ -861,7 +861,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "usb_ntfs_opt",		""				, 0 },
 	{ "usb_fs_ext4",		"1"				, 0 },
 	{ "usb_fs_fat",			"1"				, 0 },
-	{ "usb_fs_exfat",		"1"				, 0 },
+	{ "usb_fs_exfat",		"0"				, 0 },
 #ifdef TCONFIG_NTFS
 	{ "usb_fs_ntfs",		"1"				, 0 },
 #ifdef TCONFIG_TUXERA
