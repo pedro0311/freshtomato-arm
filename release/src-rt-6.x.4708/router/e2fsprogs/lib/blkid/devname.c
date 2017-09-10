@@ -36,6 +36,9 @@
 #if HAVE_SYS_MKDEV_H
 #include <sys/mkdev.h>
 #endif
+#ifdef HAVE_SYS_SYSMACROS_H
+#include <sys/sysmacros.h>
+#endif
 #include <time.h>
 
 #include "blkidP.h"
@@ -228,7 +231,8 @@ static void probe_one(blkid_cache cache, const char *ptname,
 		    dev->bid_devno == devno)
 			goto set_pri;
 
-		if (stat(device, &st) == 0 && S_ISBLK(st.st_mode) &&
+		if (stat(device, &st) == 0 &&
+		    blkidP_is_disk_device(st.st_mode) &&
 		    st.st_rdev == devno) {
 			devname = blkid_strdup(device);
 			goto get_dev;

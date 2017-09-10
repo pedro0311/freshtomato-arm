@@ -945,6 +945,25 @@ AC_CHECK_HEADERS(m4_flatten([
 	sys/un.h
 	sys/wait.h
 ]))
+dnl Check where to find a dd(1) that supports iflag=fullblock
+dnl and oflag=append
+AC_MSG_CHECKING([for a dd(1) program that supports iflag=fullblock])
+DD=
+for i in dd gdd ; do
+	if "$i" if=/dev/null of=/dev/null count=1 bs=10k 2>/dev/null iflag=fullblock oflag=append ; then
+		DD=$i
+		break
+	fi
+done
+if test -n "$DD" ; then
+	AC_MSG_RESULT([$DD])
+else
+	AC_MSG_RESULT([not found, using dd])
+	DD=dd
+	AC_MSG_WARN([No GNU-compatible dd(1) program found, expect some self-test failures.])
+fi
+AC_SUBST([DD])
+
 AC_CHECK_HEADERS(net/if.h,,,
 [[
 #if HAVE_SYS_TYPES_H
@@ -1235,16 +1254,20 @@ dnl Test for sem_init, and which library it might require:
 dnl
 AH_TEMPLATE([HAVE_SEM_INIT], [Define to 1 if sem_init() exists])
 SEM_INIT_LIB=''
-AC_CHECK_FUNC(sem_init, ,
-  AC_CHECK_LIB(pthread, sem_init,
+echo GL_THREADS_API: ${gl_threads_api}
+if test "${gl_threads_api}" != none
+then
+  AC_CHECK_FUNC(sem_init, ,
+    AC_CHECK_LIB(pthread, sem_init,
   	AC_DEFINE(HAVE_SEM_INIT, 1)
   	SEM_INIT_LIB=-lpthread,
-  AC_CHECK_LIB(rt, sem_init,
+    AC_CHECK_LIB(rt, sem_init,
   	AC_DEFINE(HAVE_SEM_INIT, 1)
   	SEM_INIT_LIB=-lrt,
-  AC_CHECK_LIB(posix4, sem_init,
+    AC_CHECK_LIB(posix4, sem_init,
   	AC_DEFINE(HAVE_SEM_INIT, 1)
   	SEM_INIT_LIB=-lposix4))))dnl
+fi
 AC_SUBST(SEM_INIT_LIB)
 dnl
 dnl Check for unified diff

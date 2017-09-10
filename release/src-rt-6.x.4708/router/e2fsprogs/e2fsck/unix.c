@@ -709,6 +709,18 @@ static void parse_extended_opts(e2fsck_t ctx, const char *opts)
 		} else if (strcmp(token, "nodiscard") == 0) {
 			ctx->options &= ~E2F_OPT_DISCARD;
 			continue;
+		} else if (strcmp(token, "optimize_extents") == 0) {
+			ctx->options &= ~E2F_OPT_NOOPT_EXTENTS;
+			continue;
+		} else if (strcmp(token, "no_optimize_extents") == 0) {
+			ctx->options |= E2F_OPT_NOOPT_EXTENTS;
+			continue;
+		} else if (strcmp(token, "inode_count_fullmap") == 0) {
+			ctx->options |= E2F_OPT_ICOUNT_FULLMAP;
+			continue;
+		} else if (strcmp(token, "no_inode_count_fullmap") == 0) {
+			ctx->options &= ~E2F_OPT_ICOUNT_FULLMAP;
+			continue;
 		} else if (strcmp(token, "log_filename") == 0) {
 			if (!arg)
 				extended_usage++;
@@ -730,17 +742,21 @@ static void parse_extended_opts(e2fsck_t ctx, const char *opts)
 	free(buf);
 
 	if (extended_usage) {
-		fputs(("\nExtended options are separated by commas, "
+		fputs(_("\nExtended options are separated by commas, "
 		       "and may take an argument which\n"
 		       "is set off by an equals ('=') sign.  "
-		       "Valid extended options are:\n"), stderr);
-		fputs(("\tea_ver=<ea_version (1 or 2)>\n"), stderr);
-		fputs(("\tfragcheck\n"), stderr);
-		fputs(("\tjournal_only\n"), stderr);
-		fputs(("\tdiscard\n"), stderr);
-		fputs(("\tnodiscard\n"), stderr);
-		fputs(("\treadahead_kb=<buffer size>\n"), stderr);
-		fputs(("\tbmap2extent\n"), stderr);
+		       "Valid extended options are:\n\n"), stderr);
+		fputs(_("\tea_ver=<ea_version (1 or 2)>\n"), stderr);
+		fputs("\tfragcheck\n", stderr);
+		fputs("\tjournal_only\n", stderr);
+		fputs("\tdiscard\n", stderr);
+		fputs("\tnodiscard\n", stderr);
+		fputs("\toptimize_extents\n", stderr);
+		fputs("\tno_optimize_extents\n", stderr);
+		fputs("\tinode_count_fullmap\n", stderr);
+		fputs("\tno_inode_count_fullmap\n", stderr);
+		fputs(_("\treadahead_kb=<buffer size>\n"), stderr);
+		fputs("\tbmap2extent\n", stderr);
 		fputc('\n', stderr);
 		exit(1);
 	}
@@ -1006,6 +1022,16 @@ static errcode_t PRS(int argc, char *argv[], e2fsck_t *ret_ctx)
 			    &c);
 	if (c)
 		verbose = 1;
+
+	profile_get_boolean(ctx->profile, "options", "no_optimize_extents",
+			    0, 0, &c);
+	if (c)
+		ctx->options |= E2F_OPT_NOOPT_EXTENTS;
+
+	profile_get_boolean(ctx->profile, "options", "inode_count_fullmap",
+			    0, 0, &c);
+	if (c)
+		ctx->options |= E2F_OPT_ICOUNT_FULLMAP;
 
 	if (ctx->readahead_kb == ~0ULL) {
 		profile_get_integer(ctx->profile, "options",
@@ -1890,22 +1916,36 @@ no_journal:
 		ext2fs_mark_super_dirty(fs);
 	}
 
-	e2fsck_write_bitmaps(ctx);
-	if (fs->flags & EXT2_FLAG_DIRTY) {
-		pctx.errcode = ext2fs_flush(ctx->fs);
+	if (!(ctx->options & E2F_OPT_READONLY)) {
+		e2fsck_write_bitmaps(ctx);
+		if (fs->flags & EXT2_FLAG_DIRTY) {
+			pctx.errcode = ext2fs_flush(ctx->fs);
+			if (pctx.errcode)
+				fix_problem(ctx, PR_6_FLUSH_FILESYSTEM, &pctx);
+		}
+		pctx.errcode = io_channel_flush(ctx->fs->io);
 		if (pctx.errcode)
-			fix_problem(ctx, PR_6_FLUSH_FILESYSTEM, &pctx);
+			fix_problem(ctx, PR_6_IO_FLUSH, &pctx);
 	}
-	pctx.errcode = io_channel_flush(ctx->fs->io);
-	if (pctx.errcode)
-		fix_problem(ctx, PR_6_IO_FLUSH, &pctx);
 
 	if (was_changed) {
-		exit_value |= FSCK_NONDESTRUCT;
-		if (!(ctx->options & E2F_OPT_PREEN))
-			log_out(ctx, _("\n%s: ***** FILE SYSTEM WAS "
-				       "MODIFIED *****\n"),
+		int fs_fixed = (ctx->flags & E2F_FLAG_PROBLEMS_FIXED);
+
+		if (fs_fixed)
+			exit_value |= FSCK_NONDESTRUCT;
+		if (!(ctx->options & E2F_OPT_PREEN)) {
+#if 0	/* Do this later; it breaks too many tests' golden outputs */
+			log_out(ctx, fs_fixed ?
+				_("\n%s: ***** FILE SYSTEM ERRORS "
+				  "CORRECTED *****\n") :
+				_("%s: File system was modified.\n"),
 				ctx->device_name);
+#else
+			log_out(ctx,
+				_("\n%s: ***** FILE SYSTEM WAS MODIFIED *****\n"),
+				ctx->device_name);
+#endif
+		}
 		if (ctx->mount_flags & EXT2_MF_ISROOT) {
 			log_out(ctx, _("%s: ***** REBOOT SYSTEM *****\n"),
 				ctx->device_name);
@@ -1939,6 +1979,8 @@ no_journal:
 	ext2fs_close_free(&ctx->fs);
 	free(ctx->journal_name);
 
+	if (ctx->logf)
+		fprintf(ctx->logf, "Exit status: %d\n", exit_value);
 	e2fsck_free_context(ctx);
 	remove_error_table(&et_ext2_error_table);
 	remove_error_table(&et_prof_error_table);

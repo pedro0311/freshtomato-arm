@@ -169,6 +169,8 @@ struct resource_track {
 #define E2F_OPT_DISCARD		0x2000
 #define E2F_OPT_CONVERT_BMAP	0x4000 /* convert blockmap to extent */
 #define E2F_OPT_FIXES_ONLY	0x8000 /* skip all optimizations */
+#define E2F_OPT_NOOPT_EXTENTS	0x10000 /* don't optimize extents */
+#define E2F_OPT_ICOUNT_FULLMAP	0x20000 /* use an array for inode counts */
 
 /*
  * E2fsck flags
@@ -504,6 +506,7 @@ extern void set_up_logging(e2fsck_t ctx);
 
 /* quota.c */
 extern void e2fsck_hide_quota(e2fsck_t ctx);
+extern void e2fsck_validate_quota_inodes(e2fsck_t ctx);
 
 /* pass1.c */
 extern errcode_t e2fsck_setup_icount(e2fsck_t ctx, const char *icount_name,
