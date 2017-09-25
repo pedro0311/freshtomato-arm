@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2015 The PHP Group                                |
+  | Copyright (c) 1997-2016 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -31,6 +31,7 @@
 #include "ext/standard/file.h"
 #include "ext/standard/info.h"
 #include "ext/standard/php_string.h"
+#include "main/php_network.h"
 
 /* for fileno() */
 #include <stdio.h>
@@ -196,7 +197,7 @@ php_stream_ops php_stream_bz2io_ops = {
 
 /* {{{ Bzip2 stream openers */
 PHP_BZ2_API php_stream *_php_stream_bz2open_from_BZFILE(BZFILE *bz,
-														char *mode, php_stream *innerstream STREAMS_DC TSRMLS_DC)
+														const char *mode, php_stream *innerstream STREAMS_DC TSRMLS_DC)
 {
 	struct php_bz2_stream_data_t *self;
 
@@ -209,8 +210,8 @@ PHP_BZ2_API php_stream *_php_stream_bz2open_from_BZFILE(BZFILE *bz,
 }
 
 PHP_BZ2_API php_stream *_php_stream_bz2open(php_stream_wrapper *wrapper,
-											char *path,
-											char *mode,
+											const char *path,
+											const char *mode,
 											int options,
 											char **opened_path,
 											php_stream_context *context STREAMS_DC TSRMLS_DC)
@@ -234,7 +235,7 @@ PHP_BZ2_API php_stream *_php_stream_bz2open(php_stream_wrapper *wrapper,
 
 	if (php_check_open_basedir(path_copy TSRMLS_CC)) {
 #ifdef VIRTUAL_DIR
-		free(path_copy);
+		efree(path_copy);
 #endif
 		return NULL;
 	}
@@ -246,7 +247,7 @@ PHP_BZ2_API php_stream *_php_stream_bz2open(php_stream_wrapper *wrapper,
 		*opened_path = estrdup(path_copy);
 	}
 #ifdef VIRTUAL_DIR
-	free(path_copy);
+	efree(path_copy);
 #endif
 	path_copy = NULL;
 
@@ -255,7 +256,7 @@ PHP_BZ2_API php_stream *_php_stream_bz2open(php_stream_wrapper *wrapper,
 		stream = php_stream_open_wrapper(path, mode, options | STREAM_WILL_CAST, opened_path);
 
 		if (stream) {
-			int fd;
+			php_socket_t fd;
 			if (SUCCESS == php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &fd, REPORT_ERRORS)) {
 				bz_file = BZ2_bzdopen(fd, mode);
 			}
@@ -404,7 +405,7 @@ static PHP_FUNCTION(bzopen)
 									NULL);
 	} else if (Z_TYPE_PP(file) == IS_RESOURCE) {
 		/* If it is a resource, than its a stream resource */
-		int fd;
+		php_socket_t fd;
 		int stream_mode_len;
 
 		php_stream_from_zval(stream, file);
@@ -512,7 +513,7 @@ static PHP_FUNCTION(bzcompress)
 	dest_len   = (unsigned int) (source_len + (0.01 * source_len) + 600);
 
 	/* Allocate the destination buffer */
-	dest = emalloc(dest_len + 1);
+	dest = safe_emalloc(dest_len, 1, 1);
 
 	/* Handle the optional arguments */
 	if (argc > 1) {
@@ -532,7 +533,7 @@ static PHP_FUNCTION(bzcompress)
 		   so we erealloc() the buffer to the proper size */
 		dest = erealloc(dest, dest_len + 1);
 		dest[dest_len] = 0;
-		RETURN_STRINGL(dest, dest_len, 0);
+		RETURN_STRINGL_CHECK(dest, dest_len, 0);
 	}
 }
 /* }}} */
@@ -573,15 +574,25 @@ static PHP_FUNCTION(bzdecompress)
 		/* compression is better then 2:1, need to allocate more memory */
 		bzs.avail_out = source_len;
 		size = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;
+		if (size > INT_MAX) {
+			/* no reason to continue if we're going to drop it anyway */
+			break;
+		}
 		dest = safe_erealloc(dest, 1, bzs.avail_out+1, (size_t) size );
 		bzs.next_out = dest + size;
 	}
 
 	if (error == BZ_STREAM_END || error == BZ_OK) {
 		size = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;
-		dest = safe_erealloc(dest, 1, (size_t) size, 1);
-		dest[size] = '\0';
-		RETVAL_STRINGL(dest, (int) size, 0);
+		if (size > INT_MAX) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Decompressed size too big, max is %d", INT_MAX);
+			efree(dest);
+			RETVAL_LONG(BZ_MEM_ERROR);
+		} else {
+			dest = safe_erealloc(dest, 1, (size_t) size, 1);
+			dest[size] = '\0';
+			RETVAL_STRINGL(dest, (int) size, 0);
+		}
 	} else { /* real error */
 		efree(dest);
 		RETVAL_LONG(error);

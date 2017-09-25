@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -57,7 +57,8 @@
 		newlen = (n);												\
 		(d)->a = newlen < SMART_STR_START_SIZE 						\
 				? SMART_STR_START_SIZE 								\
-				: newlen + SMART_STR_PREALLOC;						\
+				: (newlen >= (INT_MAX - SMART_STR_PREALLOC)? newlen \
+							: (newlen + SMART_STR_PREALLOC));		\
 		SMART_STR_DO_REALLOC(d, what);								\
 	} else {														\
 		newlen = (d)->len + (n);									\

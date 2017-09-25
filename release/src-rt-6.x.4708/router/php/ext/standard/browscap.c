@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -122,6 +122,10 @@ static void convert_browscap_pattern(zval *pattern, int persistent) /* {{{ */
 			case '~':
 				t[j++] = '\\';
 				t[j] = '~';
+				break;
+			case '+':
+				t[j++] = '\\';
+				t[j] = '+';
 				break;
 			default:
 				t[j] = Z_STRVAL_P(pattern)[i];

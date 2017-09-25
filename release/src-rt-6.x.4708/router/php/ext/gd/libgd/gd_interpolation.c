@@ -1,4 +1,5 @@
 /*
+ * The two pass scaling function is based on:
  * Filtered Image Rescaling
  * Based on Gems III
  *  - Schumacher general filtered image rescaling
@@ -13,6 +14,7 @@
  *
  * 	Initial sources code is avaibable in the Gems Source Code Packages:
  * 	http://www.acm.org/pubs/tog/GraphicsGems/GGemsIII.tar.gz
+ *
  */
 
 /*
@@ -816,10 +818,6 @@ int getPixelInterpolated(gdImagePtr im, const double x, const double y, const in
 		return -1;
 	}
 
-	/* Default to full alpha */
-	if (bgColor == -1) {
-	}
-
 	if (im->interpolation_id == GD_WEIGHTED4) {
 		return getPixelInterpolateWeight(im, x, y, bgColor);
 	}
@@ -911,6 +909,7 @@ static inline LineContribType * _gdContributionsAlloc(unsigned int line_length, 
 			for (i=0;i<=u;i++) {
 				gdFree(res->ContribRow[i].Weights);
 			}
+			gdFree(res->ContribRow);
 			gdFree(res);
 			return NULL;
 		}
@@ -1088,6 +1087,15 @@ gdImagePtr gdImageScaleTwoPass(const gdImagePtr src, const unsigned int src_widt
 	gdImagePtr tmp_im;
 	gdImagePtr dst;
 
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
+
+	/* Convert to truecolor if it isn't; this code requires it. */
+	if (!src->trueColor) {
+		gdImagePaletteToTrueColor(src);
+	}
+
 	tmp_im = gdImageCreateTrueColor(new_width, src_height);
 	if (tmp_im == NULL) {
 		return NULL;
@@ -1110,6 +1118,10 @@ gdImagePtr gdImageScaleTwoPass(const gdImagePtr src, const unsigned int src_widt
 gdImagePtr Scale(const gdImagePtr src, const unsigned int src_width, const unsigned int src_height, const gdImagePtr dst, const unsigned int new_width, const unsigned int new_height)
 {
 	gdImagePtr tmp_im;
+
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
 
 	tmp_im = gdImageCreateTrueColor(new_width, src_height);
 	if (tmp_im == NULL) {
@@ -1143,6 +1155,10 @@ gdImagePtr gdImageScaleNearestNeighbour(gdImagePtr im, const unsigned int width,
 	unsigned long  dst_offset_x;
 	unsigned long  dst_offset_y = 0;
 	unsigned int i;
+
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
 
 	dst_img = gdImageCreateTrueColor(new_width, new_height);
 
@@ -1245,6 +1261,10 @@ static gdImagePtr gdImageScaleBilinearPalette(gdImagePtr im, const unsigned int 
 	gdImagePtr new_img;
 	const int transparent = im->transparent;
 
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
+
 	new_img = gdImageCreateTrueColor(new_width, new_height);
 	if (new_img == NULL) {
 		return NULL;
@@ -1311,10 +1331,10 @@ static gdImagePtr gdImageScaleBilinearPalette(gdImagePtr im, const unsigned int 
 			f_a4 = gd_itofx(gdTrueColorGetAlpha(pixel4));
 
 			{
-				const char red = (char) gd_fxtoi(gd_mulfx(f_w1, f_r1) + gd_mulfx(f_w2, f_r2) + gd_mulfx(f_w3, f_r3) + gd_mulfx(f_w4, f_r4));
-				const char green = (char) gd_fxtoi(gd_mulfx(f_w1, f_g1) + gd_mulfx(f_w2, f_g2) + gd_mulfx(f_w3, f_g3) + gd_mulfx(f_w4, f_g4));
-				const char blue = (char) gd_fxtoi(gd_mulfx(f_w1, f_b1) + gd_mulfx(f_w2, f_b2) + gd_mulfx(f_w3, f_b3) + gd_mulfx(f_w4, f_b4));
-				const char alpha = (char) gd_fxtoi(gd_mulfx(f_w1, f_a1) + gd_mulfx(f_w2, f_a2) + gd_mulfx(f_w3, f_a3) + gd_mulfx(f_w4, f_a4));
+				const unsigned char red = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_r1) + gd_mulfx(f_w2, f_r2) + gd_mulfx(f_w3, f_r3) + gd_mulfx(f_w4, f_r4));
+				const unsigned char green = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_g1) + gd_mulfx(f_w2, f_g2) + gd_mulfx(f_w3, f_g3) + gd_mulfx(f_w4, f_g4));
+				const unsigned char blue = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_b1) + gd_mulfx(f_w2, f_b2) + gd_mulfx(f_w3, f_b3) + gd_mulfx(f_w4, f_b4));
+				const unsigned char alpha = (unsigned char) gd_fxtoi(gd_mulfx(f_w1, f_a1) + gd_mulfx(f_w2, f_a2) + gd_mulfx(f_w3, f_a3) + gd_mulfx(f_w4, f_a4));
 
 				new_img->tpixels[dst_offset_v][dst_offset_h] = gdTrueColorAlpha(red, green, blue, alpha);
 			}
@@ -1342,6 +1362,10 @@ static gdImagePtr gdImageScaleBilinearTC(gdImagePtr im, const unsigned int new_w
 	int dwSrcTotalOffset;
 	long i;
 	gdImagePtr new_img;
+
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
 
 	new_img = gdImageCreateTrueColor(new_width, new_height);
 	if (!new_img){
@@ -1442,6 +1466,10 @@ gdImagePtr gdImageScaleBicubicFixed(gdImagePtr src, const unsigned int width, co
 	unsigned int dst_offset_y = 0;
 	long i;
 
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
+
 	/* impact perf a bit, but not that much. Implementation for palette
 	   images can be done at a later point.
 	*/
@@ -1481,13 +1509,8 @@ gdImagePtr gdImageScaleBicubicFixed(gdImagePtr src, const unsigned int width, co
 				src_offset_y[0] = m;
 			}
 
-			if (m < 1) {
-				src_offset_x[1] = n;
-				src_offset_y[1] = m;
-			} else {
-				src_offset_x[1] = n;
-				src_offset_y[1] = m;
-			}
+			src_offset_x[1] = n;
+			src_offset_y[1] = m;
 
 			if ((m < 1) || (n >= src_w - 1)) {
 				src_offset_x[2] = n;
@@ -1539,13 +1562,8 @@ gdImagePtr gdImageScaleBicubicFixed(gdImagePtr src, const unsigned int width, co
 				src_offset_y[8] = m;
 			}
 
-			if (m >= src_h - 1) {
-				src_offset_x[8] = n;
-				src_offset_y[8] = m;
-			} else {
-				src_offset_x[9] = n;
-				src_offset_y[9] = m;
-			}
+			src_offset_x[9] = n;
+			src_offset_y[9] = m;
 
 			if ((m >= src_h-1) || (n >= src_w-1)) {
 				src_offset_x[10] = n;
@@ -1571,13 +1589,8 @@ gdImagePtr gdImageScaleBicubicFixed(gdImagePtr src, const unsigned int width, co
 				src_offset_y[12] = m;
 			}
 
-			if (m >= src_h - 2) {
-				src_offset_x[13] = n;
-				src_offset_y[13] = m;
-			} else {
-				src_offset_x[13] = n;
-				src_offset_y[13] = m;
-			}
+			src_offset_x[13] = n;
+			src_offset_y[13] = m;
 
 			if ((m >= src_h - 2) || (n >= src_w - 1)) {
 				src_offset_x[14] = n;
@@ -1664,7 +1677,11 @@ gdImagePtr gdImageScale(const gdImagePtr src, const unsigned int new_width, cons
 	gdImagePtr im_scaled = NULL;
 
 	if (src == NULL || src->interpolation_id < 0 || src->interpolation_id > GD_METHOD_COUNT) {
-		return 0;
+		return NULL;
+	}
+
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
 	}
 
 	switch (src->interpolation_id) {
@@ -1710,6 +1727,10 @@ gdImagePtr gdImageRotateNearestNeighbour(gdImagePtr src, const float degrees, co
 	unsigned int i;
 	gdImagePtr dst;
 
+	if (new_width == 0 || new_height == 0) {
+		return NULL;
+	}
+
 	dst = gdImageCreateTrueColor(new_width, new_height);
 	if (!dst) {
 		return NULL;
@@ -1744,6 +1765,7 @@ gdImagePtr gdImageRotateNearestNeighbour(gdImagePtr src, const float degrees, co
 gdImagePtr gdImageRotateGeneric(gdImagePtr src, const float degrees, const int bgColor)
 {
 	float _angle = ((float) (-degrees / 180.0f) * (float)M_PI);
+	const int angle_rounded = (int)floor(degrees * 100);
 	const int src_w  = gdImageSX(src);
 	const int src_h = gdImageSY(src);
 	const unsigned int new_width = (unsigned int)(abs((int)(src_w * cos(_angle))) + abs((int)(src_h * sin(_angle))) + 0.5f);
@@ -1765,6 +1787,10 @@ gdImagePtr gdImageRotateGeneric(gdImagePtr src, const float degrees, const int b
 							f_slop_x > f_slop_y ? gd_divfx(f_slop_y, f_slop_x) : gd_divfx(f_slop_x, f_slop_y)
 						: 0;
 
+
+	if (bgColor < 0) {
+		return NULL;
+	}
 
 	dst = gdImageCreateTrueColor(new_width, new_height);
 	if (!dst) {
@@ -1973,13 +1999,8 @@ gdImagePtr gdImageRotateBicubicFixed(gdImagePtr src, const float degrees, const 
 					src_offset_y[0] = m;
 				}
 
-				if (m < 1) {
-					src_offset_x[1] = n;
-					src_offset_y[1] = m;
-				} else {
-					src_offset_x[1] = n;
-					src_offset_y[1] = m ;
-				}
+				src_offset_x[1] = n;
+				src_offset_y[1] = m;
 
 				if ((m < 1) || (n >= src_w-1)) {
 					src_offset_x[2] = - 1;
@@ -2032,8 +2053,8 @@ gdImagePtr gdImageRotateBicubicFixed(gdImagePtr src, const float degrees, const 
 				}
 
 				if (m >= src_h-1) {
-					src_offset_x[8] = - 1;
-					src_offset_y[8] = - 1;
+					src_offset_x[9] = - 1;
+					src_offset_y[9] = - 1;
 				} else {
 					src_offset_x[9] = n;
 					src_offset_y[9] = m;
@@ -2203,10 +2224,13 @@ gdImagePtr gdImageRotateInterpolated(const gdImagePtr src, const float angle, in
 
 	/* no interpolation needed here */
 	switch (angle_rounded) {
-		case 9000:
+		case -27000:
+		case   9000:
 			return gdImageRotate90(src, 0);
-		case 18000:
+		case -18000:
+		case  18000:
 			return gdImageRotate180(src, 0);
+		case -9000:
 		case 27000:
 			return gdImageRotate270(src, 0);
 	}

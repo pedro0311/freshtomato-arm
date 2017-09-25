@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -32,7 +32,7 @@
 #ifdef TSRM_WIN32
 #include <Sddl.h>
 #include "tsrm_win32.h"
-#include "tsrm_virtual_cwd.h"
+#include "zend_virtual_cwd.h"
 
 #ifdef ZTS
 static ts_rsrc_id win32_globals_id;
@@ -616,6 +616,12 @@ TSRM_API int shmget(int key, int size, int flags)
 		}
 	} else {
 		if (flags & IPC_EXCL) {
+			if (shm_handle) {
+				CloseHandle(shm_handle);
+			}
+			if (info_handle) {
+				CloseHandle(info_handle);
+			}
 			return -1;
 		}
 	}
@@ -654,16 +660,26 @@ TSRM_API int shmget(int key, int size, int flags)
 TSRM_API void *shmat(int key, const void *shmaddr, int flags)
 {
 	shm_pair *shm = shm_get(key, NULL);
+	int err;
 
 	if (!shm->segment) {
+		return (void*)-1;
+	}
+
+	shm->addr = MapViewOfFileEx(shm->segment, FILE_MAP_ALL_ACCESS, 0, 0, 0, NULL);
+
+	err = GetLastError();
+	if (err) {
+		/* Catch more errors */
+		if (ERROR_NOT_ENOUGH_MEMORY == err) {
+			_set_errno(ENOMEM);
+		}
 		return (void*)-1;
 	}
 
 	shm->descriptor->shm_atime = time(NULL);
 	shm->descriptor->shm_lpid  = getpid();
 	shm->descriptor->shm_nattch++;
-
-	shm->addr = MapViewOfFileEx(shm->segment, FILE_MAP_ALL_ACCESS, 0, 0, 0, NULL);
 
 	return shm->addr;
 }

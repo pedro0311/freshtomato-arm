@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -35,7 +35,7 @@ static void curlfile_ctor(INTERNAL_FUNCTION_PARAMETERS)
 	int fname_len, mime_len, postname_len;
 	zval *cf = return_value;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ss", &fname, &fname_len, &mime, &mime_len, &postname, &postname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|ss", &fname, &fname_len, &mime, &mime_len, &postname, &postname_len) == FAILURE) {
 		return;
 	}
 
@@ -137,7 +137,10 @@ ZEND_METHOD(CURLFile, setPostFilename)
    Unserialization handler */
 ZEND_METHOD(CURLFile, __wakeup)
 {
-	zend_update_property_string(curl_CURLFile_class, getThis(), "name", sizeof("name")-1, "" TSRMLS_CC);
+	zval *_this = getThis();
+
+	zend_unset_property(curl_CURLFile_class, _this, "name", sizeof("name")-1 TSRMLS_CC);
+	zend_update_property_string(curl_CURLFile_class, _this, "name", sizeof("name")-1, "" TSRMLS_CC);
 	zend_throw_exception(NULL, "Unserialization of CURLFile instances is not allowed", 0 TSRMLS_CC);
 }
 /* }}} */

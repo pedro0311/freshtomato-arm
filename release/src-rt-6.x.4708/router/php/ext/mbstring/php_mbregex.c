@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -64,8 +64,8 @@ static void php_mb_regex_free_cache(php_mb_regex_t **pre)
 /* {{{ _php_mb_regex_globals_ctor */
 static int _php_mb_regex_globals_ctor(zend_mb_regex_globals *pglobals TSRMLS_DC)
 {
-	pglobals->default_mbctype = ONIG_ENCODING_EUC_JP;
-	pglobals->current_mbctype = ONIG_ENCODING_EUC_JP;
+	pglobals->default_mbctype = ONIG_ENCODING_UTF8;
+	pglobals->current_mbctype = ONIG_ENCODING_UTF8;
 	zend_hash_init(&(pglobals->ht_rc), 0, NULL, (void (*)(void *)) php_mb_regex_free_cache, 1);
 	pglobals->search_str = (zval*) NULL;
 	pglobals->search_re = (php_mb_regex_t*)NULL;
@@ -456,7 +456,7 @@ static php_mb_regex_t *php_mbregex_compile_pattern(const char *pattern, int patl
 	found = zend_hash_find(&MBREX(ht_rc), (char *)pattern, patlen+1, (void **) &rc);
 	if (found == FAILURE || (*rc)->options != options || (*rc)->enc != enc || (*rc)->syntax != syntax) {
 		if ((err_code = onig_new(&retval, (OnigUChar *)pattern, (OnigUChar *)(pattern + patlen), options, enc, syntax, &err_info)) != ONIG_NORMAL) {
-			onig_error_code_to_str(err_str, err_code, err_info);
+			onig_error_code_to_str(err_str, err_code, &err_info);
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "mbregex compile err: %s", err_str);
 			retval = NULL;
 			goto out;
@@ -811,7 +811,7 @@ static void _php_mb_regex_ereg_replace_exec(INTERNAL_FUNCTION_PARAMETERS, OnigOp
 	OnigUChar *pos;
 	OnigUChar *string_lim;
 	char *description = NULL;
-	char pat_buf[2];
+	char pat_buf[6];
 
 	const mbfl_encoding *enc;
 
@@ -862,6 +862,10 @@ static void _php_mb_regex_ereg_replace_exec(INTERNAL_FUNCTION_PARAMETERS, OnigOp
 		convert_to_long_ex(arg_pattern_zval);
 		pat_buf[0] = (char)Z_LVAL_PP(arg_pattern_zval);
 		pat_buf[1] = '\0';
+		pat_buf[2] = '\0';
+		pat_buf[3] = '\0';
+		pat_buf[4] = '\0';
+		pat_buf[5] = '\0';
 
 		arg_pattern = pat_buf;
 		arg_pattern_len = 1;
@@ -1235,9 +1239,6 @@ _php_mb_regex_ereg_search_exec(INTERNAL_FUNCTION_PARAMETERS, int mode)
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "mbregex search failure in mbregex_search(): %s", err_str);
 		RETVAL_FALSE;
 	} else {
-		if (MBREX(search_regs)->beg[0] == MBREX(search_regs)->end[0]) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Empty regular expression");
-		}
 		switch (mode) {
 		case 1:
 			array_init(return_value);
@@ -1264,7 +1265,7 @@ _php_mb_regex_ereg_search_exec(INTERNAL_FUNCTION_PARAMETERS, int mode)
 			break;
 		}
 		end = MBREX(search_regs)->end[0];
-		if (pos < end) {
+		if (pos <= end) {
 			MBREX(search_pos) = end;
 		} else {
 			MBREX(search_pos) = pos + 1;
@@ -1403,7 +1404,7 @@ PHP_FUNCTION(mb_ereg_search_setpos)
 		return;
 	}
 
-	if (position < 0 || (MBREX(search_str) != NULL && Z_TYPE_P(MBREX(search_str)) == IS_STRING && position >= Z_STRLEN_P(MBREX(search_str)))) {
+	if (position < 0 || (MBREX(search_str) != NULL && Z_TYPE_P(MBREX(search_str)) == IS_STRING && position > Z_STRLEN_P(MBREX(search_str)))) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Position is out of range");
 		MBREX(search_pos) = 0;
 		RETURN_FALSE;

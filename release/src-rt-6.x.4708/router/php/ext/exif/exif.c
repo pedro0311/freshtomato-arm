@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -39,16 +39,6 @@
 
 #include "php.h"
 #include "ext/standard/file.h"
-
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#endif
-#ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
-#endif
-#ifdef PHP_WIN32
-# include "win32/php_stdint.h"
-#endif
 
 #if HAVE_EXIF
 
@@ -1313,7 +1303,7 @@ static size_t exif_convert_any_to_int(void *value, int format, int motorola_inte
 			if (s_den == 0) {
 				return 0;
 			} else {
-				return php_ifd_get32s(value, motorola_intel) / s_den;
+				return (size_t)((double)php_ifd_get32s(value, motorola_intel) / s_den);
 			}
 
 		case TAG_FMT_SSHORT:    return php_ifd_get16u(value, motorola_intel);
@@ -1719,6 +1709,10 @@ static void exif_iif_add_value(image_info_type *image_info, int section_index, c
 				break;
 		case TAG_FMT_UNDEFINED:
 			if (value) {
+				if (tag == TAG_MAKER_NOTE) {
+					length = MIN(length, strlen(value));
+				}
+
 				/* do not recompute length here */
 				info_value->s = estrndup(value, length);
 				info_data->length = length;
@@ -2733,8 +2727,14 @@ static int exif_process_IFD_in_MAKERNOTE(image_info_type *ImageInfo, char * valu
 	char *dir_start;
 
 	for (i=0; i<=sizeof(maker_note_array)/sizeof(maker_note_type); i++) {
-		if (i==sizeof(maker_note_array)/sizeof(maker_note_type))
-			return FALSE;
+		if (i==sizeof(maker_note_array)/sizeof(maker_note_type)) {
+#ifdef EXIF_DEBUG
+			exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_NOTICE, "No maker note data found. Detected maker: %s (length = %d)", ImageInfo->make, strlen(ImageInfo->make));
+#endif
+			/* unknown manufacturer, not an error, use it as a string */
+			return TRUE;
+		}
+
 		maker_note = maker_note_array+i;
 
 		/*exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_NOTICE, "check (%s,%s)", maker_note->make?maker_note->make:"", maker_note->model?maker_note->model:"");*/
@@ -2855,7 +2855,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 	}
 
 	if (components < 0) {
-		exif_error_docref("exif_read_data#error_ifd" EXIFERR_CC, ImageInfo, E_WARNING, "Process tag(x%04X=%s): Illegal components(%ld)", tag, exif_get_tagname(tag, tagname, -12, tag_table TSRMLS_CC), components);
+		exif_error_docref("exif_read_data#error_ifd" EXIFERR_CC, ImageInfo, E_WARNING, "Process tag(x%04X=%s): Illegal components(%d)", tag, exif_get_tagname(tag, tagname, -12, tag_table TSRMLS_CC), components);
 		return FALSE;
 	}
 
@@ -2908,11 +2908,11 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 			}
 
 			fpos = php_stream_tell(ImageInfo->infile);
-			php_stream_seek(ImageInfo->infile, offset_val, SEEK_SET);
+			php_stream_seek(ImageInfo->infile, displacement+offset_val, SEEK_SET);
 			fgot = php_stream_tell(ImageInfo->infile);
-			if (fgot!=offset_val) {
+			if (fgot!=displacement+offset_val) {
 				EFREE_IF(outside);
-				exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_WARNING, "Wrong file pointer: 0x%08X != 0x%08X", fgot, offset_val);
+				exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_WARNING, "Wrong file pointer: 0x%08X != 0x%08X", fgot, displacement+offset_val);
 				return FALSE;
 			}
 			fgot = php_stream_read(ImageInfo->infile, value_ptr, byte_count);
@@ -3734,8 +3734,11 @@ static int exif_process_IFD_in_TIFF(image_info_type *ImageInfo, size_t dir_offse
 									fgot = php_stream_read(ImageInfo->infile, ImageInfo->Thumbnail.data, ImageInfo->Thumbnail.size);
 									if (fgot < ImageInfo->Thumbnail.size) {
 										EXIF_ERRLOG_THUMBEOF(ImageInfo)
+										efree(ImageInfo->Thumbnail.data);
+										ImageInfo->Thumbnail.data = NULL;
+									} else {
+										exif_thumbnail_build(ImageInfo TSRMLS_CC);
 									}
-									exif_thumbnail_build(ImageInfo TSRMLS_CC);
 								}
 							}
 						}
@@ -3768,8 +3771,11 @@ static int exif_process_IFD_in_TIFF(image_info_type *ImageInfo, size_t dir_offse
 						fgot = php_stream_read(ImageInfo->infile, ImageInfo->Thumbnail.data, ImageInfo->Thumbnail.size);
 						if (fgot < ImageInfo->Thumbnail.size) {
 							EXIF_ERRLOG_THUMBEOF(ImageInfo)
+							efree(ImageInfo->Thumbnail.data);
+							ImageInfo->Thumbnail.data = NULL;
+						} else {
+							exif_thumbnail_build(ImageInfo TSRMLS_CC);
 						}
-						exif_thumbnail_build(ImageInfo TSRMLS_CC);
 					}
 #ifdef EXIF_DEBUG
 					exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_NOTICE, "Read next IFD (THUMBNAIL) done");
@@ -4204,7 +4210,7 @@ PHP_FUNCTION(exif_imagetype)
 	php_stream * stream;
  	int itype = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &imagefile, &imagefile_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &imagefile, &imagefile_len) == FAILURE) {
 		return;
 	}
 

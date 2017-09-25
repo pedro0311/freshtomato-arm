@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -62,6 +62,16 @@ static int _php_image_stream_putbuf(struct gdIOCtx *ctx, const void* buf, int l)
 
 static void _php_image_stream_ctxfree(struct gdIOCtx *ctx)
 {
+	if(ctx->data) {
+		ctx->data = NULL;
+	}
+	if(ctx) {
+		efree(ctx);
+	}
+} /* }}} */
+
+static void _php_image_stream_ctxfreeandclose(struct gdIOCtx *ctx) /* {{{ */
+{
 	TSRMLS_FETCH();
 
 	if(ctx->data) {
@@ -87,6 +97,7 @@ static void _php_image_output_ctx(INTERNAL_FUNCTION_PARAMETERS, int image_type, 
 	gdIOCtx *ctx = NULL;
 	zval *to_zval = NULL;
 	php_stream *stream;
+	int close_stream = 1;
 
 	/* The third (quality) parameter for Wbmp stands for the threshold when called from image2wbmp().
 	 * The third (quality) parameter for Wbmp and Xbm stands for the foreground color index when called
@@ -123,6 +134,7 @@ static void _php_image_output_ctx(INTERNAL_FUNCTION_PARAMETERS, int image_type, 
 			if (stream == NULL) {
 				RETURN_FALSE;
 			}
+			close_stream = 0;
 		} else if (Z_TYPE_P(to_zval) == IS_STRING) {
 			if (CHECK_ZVAL_NULL_PATH(to_zval)) {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid 2nd parameter, filename must not contain null bytes");
@@ -135,6 +147,11 @@ static void _php_image_output_ctx(INTERNAL_FUNCTION_PARAMETERS, int image_type, 
 			}
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid 2nd parameter, it must a filename or a stream");
+			RETURN_FALSE;
+		}
+	} else if (argc > 1 && file != NULL) {
+		stream = php_stream_open_wrapper(file, "wb", REPORT_ERRORS|IGNORE_PATH|IGNORE_URL_WIN, NULL);
+		if (stream == NULL) {
 			RETURN_FALSE;
 		}
 	} else {
@@ -154,7 +171,11 @@ static void _php_image_output_ctx(INTERNAL_FUNCTION_PARAMETERS, int image_type, 
 		ctx = emalloc(sizeof(gdIOCtx));
 		ctx->putC = _php_image_stream_putc;
 		ctx->putBuf = _php_image_stream_putbuf;
-		ctx->gd_free = _php_image_stream_ctxfree;
+		if (close_stream) {
+			ctx->gd_free = _php_image_stream_ctxfreeandclose;
+		} else {
+			ctx->gd_free = _php_image_stream_ctxfree;
+		}
 		ctx->data = (void *)stream;
 	}
 
@@ -184,7 +205,7 @@ static void _php_image_output_ctx(INTERNAL_FUNCTION_PARAMETERS, int image_type, 
 				q = i;
 			}
 			if (image_type == PHP_GDIMG_TYPE_XBM) {
-				(*func_p)(im, file, q, ctx);
+				(*func_p)(im, file ? file : "", q, ctx);
 			} else {
 				(*func_p)(im, q, ctx);
 			}

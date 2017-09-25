@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2015 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) 1998-2016 Zend Technologies Ltd. (http://www.zend.com) |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -215,7 +215,7 @@ ZEND_API void zend_objects_store_del_ref_by_handle_ex(zend_object_handle handle,
 					} zend_end_try();
 				}
 			}
-			
+
 			/* re-read the object from the object store as the store might have been reallocated in the dtor */
 			obj = &EG(objects_store).object_buckets[handle].bucket.obj;
 
@@ -306,8 +306,8 @@ ZEND_API void zend_object_store_ctor_failed(zval *zobject TSRMLS_DC)
 {
 	zend_object_handle handle = Z_OBJ_HANDLE_P(zobject);
 	zend_object_store_bucket *obj_bucket = &EG(objects_store).object_buckets[handle];
-	
-	obj_bucket->bucket.obj.handlers = Z_OBJ_HT_P(zobject);;
+
+	obj_bucket->bucket.obj.handlers = Z_OBJ_HT_P(zobject);
 	obj_bucket->destructor_called = 1;
 }
 

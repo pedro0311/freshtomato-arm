@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2015 The PHP Group                                |
+  | Copyright (c) 1997-2016 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -380,8 +380,14 @@ static void php_zval_filter(zval **value, long filter, long flags, zval *options
 
 		ce = Z_OBJCE_PP(value);
 		if (!ce->__tostring) {
-			ZVAL_FALSE(*value);
-			return;
+			zval_dtor(*value);
+			/* #67167: doesn't return null on failure for objects */
+			if (flags & FILTER_NULL_ON_FAILURE) {
+				ZVAL_NULL(*value);
+			} else {
+				ZVAL_FALSE(*value);
+			}
+			goto handle_default;
 		}
 	}
 
@@ -390,6 +396,7 @@ static void php_zval_filter(zval **value, long filter, long flags, zval *options
 
 	filter_func.function(*value, flags, options, charset TSRMLS_CC);
 
+handle_default:
 	if (
 		options && (Z_TYPE_P(options) == IS_ARRAY || Z_TYPE_P(options) == IS_OBJECT) &&
 		((flags & FILTER_NULL_ON_FAILURE && Z_TYPE_PP(value) == IS_NULL) || 
@@ -791,7 +798,7 @@ PHP_FUNCTION(filter_input)
 /* }}} */
 
 /* {{{ proto mixed filter_var(mixed variable [, long filter [, mixed options]])
- * Returns the filtered version of the vriable.
+ * Returns the filtered version of the variable.
  */
 PHP_FUNCTION(filter_var)
 {
