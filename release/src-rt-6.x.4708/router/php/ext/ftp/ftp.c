@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -289,6 +289,9 @@ ftp_login(ftpbuf_t *ftp, const char *user, const char *pass TSRMLS_DC)
 		ssl_ctx_options &= ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 #endif
 		SSL_CTX_set_options(ctx, ssl_ctx_options);
+
+		/* allow SSL to re-use sessions */
+		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_BOTH);
 
 		ftp->ssl_handle = SSL_new(ctx);
 		if (ftp->ssl_handle == NULL) {
@@ -722,10 +725,11 @@ ftp_pasv(ftpbuf_t *ftp, int pasv)
 	memset(&ftp->pasvaddr, 0, n);
 	sa = (struct sockaddr *) &ftp->pasvaddr;
 
-#if HAVE_IPV6
 	if (getpeername(ftp->fd, sa, &n) < 0) {
 		return 0;
 	}
+
+#if HAVE_IPV6
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
 		char *endptr, delimiter;
@@ -778,8 +782,9 @@ ftp_pasv(ftpbuf_t *ftp, int pasv)
 		ipbox.c[n] = (unsigned char) b[n];
 	}
 	sin = (struct sockaddr_in *) sa;
-	sin->sin_family = AF_INET;
-	sin->sin_addr = ipbox.ia[0];
+	if (ftp->usepasvaddress) {
+		sin->sin_addr = ipbox.ia[0];
+	}
 	sin->sin_port = ipbox.s[2];
 
 	ftp->pasv = 2;
@@ -1493,7 +1498,8 @@ data_accept(databuf_t *data, ftpbuf_t *ftp TSRMLS_DC)
 
 #if HAVE_OPENSSL_EXT
 	SSL_CTX		*ctx;
-	long ssl_ctx_options = SSL_OP_ALL;
+	SSL_SESSION *session;
+	int result;
 #endif
 
 	if (data->fd != -1) {
@@ -1514,29 +1520,38 @@ data_accepted:
 
 	/* now enable ssl if we need to */
 	if (ftp->use_ssl && ftp->use_ssl_for_data) {
-		ctx = SSL_CTX_new(SSLv23_client_method());
+		ctx = SSL_get_SSL_CTX(ftp->ssl_handle);
 		if (ctx == NULL) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "data_accept: failed to create the SSL context");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "data_accept: failed to retreive the existing SSL context");
 			return 0;
 		}
-
-#if OPENSSL_VERSION_NUMBER >= 0x0090605fL
-		ssl_ctx_options &= ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
-#endif
-		SSL_CTX_set_options(ctx, ssl_ctx_options);
 
 		data->ssl_handle = SSL_new(ctx);
 		if (data->ssl_handle == NULL) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "data_accept: failed to create the SSL handle");
-			SSL_CTX_free(ctx);
 			return 0;
 		}
-
 
 		SSL_set_fd(data->ssl_handle, data->fd);
 
 		if (ftp->old_ssl) {
 			SSL_copy_session_id(data->ssl_handle, ftp->ssl_handle);
+		}
+
+		/* get the session from the control connection so we can re-use it */
+		session = SSL_get_session(ftp->ssl_handle);
+		if (session == NULL) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "data_accept: failed to retreive the existing SSL session");
+			SSL_free(data->ssl_handle);
+			return 0;
+		}
+
+		/* and set it on the data connection */
+		result = SSL_set_session(data->ssl_handle, session);
+		if (result == 0) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "data_accept: failed to set the existing SSL session");
+			SSL_free(data->ssl_handle);
+			return 0;
 		}
 
 		if (SSL_connect(data->ssl_handle) <= 0) {
@@ -1569,10 +1584,7 @@ data_close(ftpbuf_t *ftp, databuf_t *data)
 	if (data->listener != -1) {
 #if HAVE_OPENSSL_EXT
 		if (data->ssl_active) {
-
-			ctx = SSL_get_SSL_CTX(data->ssl_handle);
-			SSL_CTX_free(ctx);
-
+			/* don't free the data context, it's the same as the control */
 			SSL_shutdown(data->ssl_handle);
 			SSL_free(data->ssl_handle);
 			data->ssl_active = 0;
@@ -1583,9 +1595,7 @@ data_close(ftpbuf_t *ftp, databuf_t *data)
 	if (data->fd != -1) {
 #if HAVE_OPENSSL_EXT
 		if (data->ssl_active) {
-			ctx = SSL_get_SSL_CTX(data->ssl_handle);
-			SSL_CTX_free(ctx);
-
+			/* don't free the data context, it's the same as the control */
 			SSL_shutdown(data->ssl_handle);
 			SSL_free(data->ssl_handle);
 			data->ssl_active = 0;

@@ -96,7 +96,7 @@ struct process_block_struct {
 	struct problem_context *pctx;
 	ext2fs_block_bitmap fs_meta_blocks;
 	e2fsck_t	ctx;
-	region_t	region;
+	blk64_t		next_lblock;
 	struct extent_tree_info	eti;
 };
 
@@ -449,7 +449,7 @@ fix:
 }
 
 static int check_inode_extra_negative_epoch(__u32 xtime, __u32 extra) {
-	return (xtime & (1 << 31)) != 0 &&
+	return (xtime & (1U << 31)) != 0 &&
 		(extra & EXT4_EPOCH_MASK) == EXT4_EPOCH_MASK;
 }
 
@@ -711,6 +711,7 @@ extern errcode_t e2fsck_setup_icount(e2fsck_t ctx, const char *icount_name,
 	errcode_t		retval;
 	char			*tdb_dir;
 	int			enable;
+	int			full_map;
 
 	*ret = 0;
 
@@ -734,6 +735,8 @@ extern errcode_t e2fsck_setup_icount(e2fsck_t ctx, const char *icount_name,
 	}
 	e2fsck_set_bitmap_type(ctx->fs, EXT2FS_BMAP64_RBTREE, icount_name,
 			       &save_type);
+	if (ctx->options & E2F_OPT_ICOUNT_FULLMAP)
+		flags |= EXT2_ICOUNT_OPT_FULLMAP;
 	retval = ext2fs_create_icount2(ctx->fs, flags, 0, hint, ret);
 	ctx->fs->default_bitmap_type = save_type;
 	return retval;
@@ -1316,6 +1319,34 @@ void e2fsck_pass1(e2fsck_t ctx)
 		}
 		failed_csum = pctx.errcode != 0;
 
+		/*
+		 * Check for inodes who might have been part of the
+		 * orphaned list linked list.  They should have gotten
+		 * dealt with by now, unless the list had somehow been
+		 * corrupted.
+		 *
+		 * FIXME: In the future, inodes which are still in use
+		 * (and which are therefore) pending truncation should
+		 * be handled specially.  Right now we just clear the
+		 * dtime field, and the normal e2fsck handling of
+		 * inodes where i_size and the inode blocks are
+		 * inconsistent is to fix i_size, instead of releasing
+		 * the extra blocks.  This won't catch the inodes that
+		 * was at the end of the orphan list, but it's better
+		 * than nothing.  The right answer is that there
+		 * shouldn't be any bugs in the orphan list handling.  :-)
+		 */
+		if (inode->i_dtime && low_dtime_check &&
+		    inode->i_dtime < ctx->fs->super->s_inodes_count) {
+			if (fix_problem(ctx, PR_1_LOW_DTIME, &pctx)) {
+				inode->i_dtime = inode->i_links_count ?
+					0 : ctx->now;
+				e2fsck_write_inode(ctx, ino, inode,
+						   "pass1");
+				failed_csum = 0;
+			}
+		}
+
 		if (inode->i_links_count) {
 			pctx.errcode = ext2fs_icount_store(ctx->inode_link_info,
 					   ino, inode->i_links_count);
@@ -1325,6 +1356,19 @@ void e2fsck_pass1(e2fsck_t ctx)
 				ctx->flags |= E2F_FLAG_ABORT;
 				goto endit;
 			}
+		} else if ((ino >= EXT2_FIRST_INODE(fs->super)) &&
+			   !quota_inum_is_reserved(fs, ino)) {
+			if (!inode->i_dtime && inode->i_mode) {
+				if (fix_problem(ctx,
+					    PR_1_ZERO_DTIME, &pctx)) {
+					inode->i_dtime = ctx->now;
+					e2fsck_write_inode(ctx, ino, inode,
+							   "pass1");
+					failed_csum = 0;
+				}
+			}
+			FINISH_INODE_LOOP(ctx, ino, &pctx, failed_csum);
+			continue;
 		}
 
 		/* Conflicting inlinedata/extents inode flags? */
@@ -1641,48 +1685,7 @@ void e2fsck_pass1(e2fsck_t ctx)
 			continue;
 		}
 
-		/*
-		 * Check for inodes who might have been part of the
-		 * orphaned list linked list.  They should have gotten
-		 * dealt with by now, unless the list had somehow been
-		 * corrupted.
-		 *
-		 * FIXME: In the future, inodes which are still in use
-		 * (and which are therefore) pending truncation should
-		 * be handled specially.  Right now we just clear the
-		 * dtime field, and the normal e2fsck handling of
-		 * inodes where i_size and the inode blocks are
-		 * inconsistent is to fix i_size, instead of releasing
-		 * the extra blocks.  This won't catch the inodes that
-		 * was at the end of the orphan list, but it's better
-		 * than nothing.  The right answer is that there
-		 * shouldn't be any bugs in the orphan list handling.  :-)
-		 */
-		if (inode->i_dtime && low_dtime_check &&
-		    inode->i_dtime < ctx->fs->super->s_inodes_count) {
-			if (fix_problem(ctx, PR_1_LOW_DTIME, &pctx)) {
-				inode->i_dtime = inode->i_links_count ?
-					0 : ctx->now;
-				e2fsck_write_inode(ctx, ino, inode,
-						   "pass1");
-				failed_csum = 0;
-			}
-		}
-
-		/*
-		 * This code assumes that deleted inodes have
-		 * i_links_count set to 0.
-		 */
 		if (!inode->i_links_count) {
-			if (!inode->i_dtime && inode->i_mode) {
-				if (fix_problem(ctx,
-					    PR_1_ZERO_DTIME, &pctx)) {
-					inode->i_dtime = ctx->now;
-					e2fsck_write_inode(ctx, ino, inode,
-							   "pass1");
-					failed_csum = 0;
-				}
-			}
 			FINISH_INODE_LOOP(ctx, ino, &pctx, failed_csum);
 			continue;
 		}
@@ -1822,9 +1825,14 @@ void e2fsck_pass1(e2fsck_t ctx)
 		     inode->i_block[EXT2_DIND_BLOCK] ||
 		     inode->i_block[EXT2_TIND_BLOCK] ||
 		     ext2fs_file_acl_block(fs, inode))) {
+			struct ext2_inode_large *ip;
+
 			inodes_to_process[process_inode_count].ino = ino;
-			inodes_to_process[process_inode_count].inode =
-				       *(struct ext2_inode_large *)inode;
+			ip = &inodes_to_process[process_inode_count].inode;
+			if (inode_size < sizeof(struct ext2_inode_large))
+				memcpy(ip, inode, inode_size);
+			else
+				memcpy(ip, inode, sizeof(*ip));
 			process_inode_count++;
 		} else
 			check_blocks(ctx, &pctx, block_buf);
@@ -2623,9 +2631,18 @@ static void scan_extent_node(e2fsck_t ctx, struct problem_context *pctx,
 			  (1U << (21 - ctx->fs->super->s_log_block_size))))
 			problem = PR_1_TOOBIG_DIR;
 
-		if (is_leaf && problem == 0 && extent.e_len > 0 &&
-		    region_allocate(pb->region, extent.e_lblk, extent.e_len))
-			problem = PR_1_EXTENT_COLLISION;
+		if (is_leaf && problem == 0 && extent.e_len > 0) {
+#if 0
+			printf("extent_region(ino=%u, expect=%llu, "
+			       "lblk=%llu, len=%u)\n",
+			       pb->ino, pb->next_lblock,
+			       extent.e_lblk, extent.e_len);
+#endif
+			if (extent.e_lblk < pb->next_lblock)
+				problem = PR_1_EXTENT_COLLISION;
+			else if (extent.e_lblk + extent.e_len > pb->next_lblock)
+				pb->next_lblock = extent.e_lblk + extent.e_len;
+		}
 
 		/*
 		 * Uninitialized blocks in a directory?  Clear the flag and
@@ -2705,6 +2722,7 @@ report_problem:
 			 * will reallocate the block; then we can try again.
 			 */
 			if (pb->ino != EXT2_RESIZE_INO &&
+			    extent.e_pblk < ctx->fs->super->s_blocks_count &&
 			    ext2fs_test_block_bitmap2(ctx->block_metadata_map,
 						      extent.e_pblk)) {
 				next_try_repairs = 0;
@@ -2712,7 +2730,8 @@ report_problem:
 				fix_problem(ctx,
 					    PR_1_CRITICAL_METADATA_COLLISION,
 					    pctx);
-				ctx->flags |= E2F_FLAG_RESTART_LATER;
+				if ((ctx->options & E2F_OPT_NO) == 0)
+					ctx->flags |= E2F_FLAG_RESTART_LATER;
 			}
 			pctx->errcode = ext2fs_extent_get(ehandle,
 						  EXT2_EXTENT_DOWN, &extent);
@@ -2956,13 +2975,7 @@ static void check_blocks_extents(e2fsck_t ctx, struct problem_context *pctx,
 	memset(pb->eti.ext_info, 0, sizeof(pb->eti.ext_info));
 	pb->eti.ino = pb->ino;
 
-	pb->region = region_create(0, info.max_lblk);
-	if (!pb->region) {
-		ext2fs_extent_free(ehandle);
-		fix_problem(ctx, PR_1_EXTENT_ALLOC_REGION_ABORT, pctx);
-		ctx->flags |= E2F_FLAG_ABORT;
-		return;
-	}
+	pb->next_lblock = 0;
 
 	eof_lblk = ((EXT2_I_SIZE(inode) + fs->blocksize - 1) >>
 		EXT2_BLOCK_SIZE_BITS(fs->super)) - 1;
@@ -2975,8 +2988,6 @@ static void check_blocks_extents(e2fsck_t ctx, struct problem_context *pctx,
 				   "check_blocks_extents");
 		pctx->errcode = 0;
 	}
-	region_free(pb->region);
-	pb->region = NULL;
 	ext2fs_extent_free(ehandle);
 
 	/* Rebuild unless it's a dir and we're rehashing it */
@@ -3067,7 +3078,7 @@ static void check_blocks(e2fsck_t ctx, struct problem_context *pctx,
 	pb.previous_block = 0;
 	pb.is_dir = LINUX_S_ISDIR(inode->i_mode);
 	pb.is_reg = LINUX_S_ISREG(inode->i_mode);
-	pb.max_blocks = 1 << (31 - fs->super->s_log_block_size);
+	pb.max_blocks = 1U << (31 - fs->super->s_log_block_size);
 	pb.inode = inode;
 	pb.pctx = pctx;
 	pb.ctx = ctx;
@@ -3174,7 +3185,8 @@ static void check_blocks(e2fsck_t ctx, struct problem_context *pctx,
 	if (ino != quota_type2inum(PRJQUOTA, fs->super) &&
 	    (ino == EXT2_ROOT_INO || ino >= EXT2_FIRST_INODE(ctx->fs->super))) {
 		quota_data_add(ctx->qctx, (struct ext2_inode_large *) inode,
-			       ino, pb.num_blocks * fs->blocksize);
+			       ino,
+			       pb.num_blocks * EXT2_CLUSTER_SIZE(fs->super));
 		quota_data_inodes(ctx->qctx, (struct ext2_inode_large *) inode,
 				  ino, +1);
 	}
@@ -3442,10 +3454,12 @@ static int process_block(ext2_filsys fs,
 	 */
 	if (blockcnt < 0 &&
 	    p->ino != EXT2_RESIZE_INO &&
+	    blk < ctx->fs->super->s_blocks_count &&
 	    ext2fs_test_block_bitmap2(ctx->block_metadata_map, blk)) {
 		pctx->blk = blk;
 		fix_problem(ctx, PR_1_CRITICAL_METADATA_COLLISION, pctx);
-		ctx->flags |= E2F_FLAG_RESTART_LATER;
+		if ((ctx->options & E2F_OPT_NO) == 0)
+			ctx->flags |= E2F_FLAG_RESTART_LATER;
 	}
 
 	if (problem) {

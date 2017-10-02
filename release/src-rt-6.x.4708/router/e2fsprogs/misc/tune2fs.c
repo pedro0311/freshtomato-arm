@@ -116,6 +116,8 @@ struct blk_move {
 
 errcode_t ext2fs_run_ext3_journal(ext2_filsys *fs);
 
+static const char *fsck_explain = N_("\nThis operation requires a freshly checked filesystem.\n");
+
 static const char *please_fsck = N_("Please run e2fsck -f on the filesystem.\n");
 static const char *please_dir_fsck =
 		N_("Please run e2fsck -fD on the filesystem.\n");
@@ -188,6 +190,7 @@ static __u32 clear_ok_features[3] = {
 		EXT4_FEATURE_RO_COMPAT_EXTRA_ISIZE|
 		EXT4_FEATURE_RO_COMPAT_GDT_CSUM |
 		EXT4_FEATURE_RO_COMPAT_QUOTA |
+		EXT4_FEATURE_RO_COMPAT_PROJECT |
 		EXT4_FEATURE_RO_COMPAT_METADATA_CSUM |
 		EXT4_FEATURE_RO_COMPAT_READONLY
 };
@@ -418,7 +421,8 @@ static void check_fsck_needed(ext2_filsys fs, const char *prompt)
 	if (!(fs->super->s_state & EXT2_VALID_FS) ||
 	    (fs->super->s_state & EXT2_ERROR_FS) ||
 	    (fs->super->s_lastcheck < fs->super->s_mtime)) {
-		printf("\n%s\n", _(please_fsck));
+		puts(_(fsck_explain));
+		puts(_(please_fsck));
 		if (mount_flags & EXT2_MF_READONLY)
 			printf("%s", _("(and reboot afterwards!)\n"));
 		exit(1);
@@ -440,7 +444,8 @@ static void request_dir_fsck_afterwards(ext2_filsys fs)
 		return;
 	fsck_requested++;
 	fs->super->s_state &= ~EXT2_VALID_FS;
-	printf("\n%s\n", _(please_dir_fsck));
+	puts(_(fsck_explain));
+	puts(_(please_dir_fsck));
 	if (mount_flags & EXT2_MF_READONLY)
 		printf("%s", _("(and reboot afterwards!)\n"));
 }
@@ -1308,12 +1313,20 @@ mmp_error:
 	}
 
 	if (FEATURE_ON(E2P_FEATURE_RO_INCOMPAT,
-				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
-		if (!Q_flag && !ext2fs_has_feature_quota(sb))
-			fputs(_("\nWarning: enabled project without quota together\n"),
-				stderr);
+		       EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		if (fs->super->s_inode_size == EXT2_GOOD_OLD_INODE_SIZE) {
+			fprintf(stderr, _("Cannot enable project feature; "
+					  "inode size too small.\n"));
+			exit(1);
+		}
 		Q_flag = 1;
 		quota_enable[PRJQUOTA] = QOPT_ENABLE;
+	}
+
+	if (FEATURE_OFF(E2P_FEATURE_RO_INCOMPAT,
+			EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		Q_flag = 1;
+		quota_enable[PRJQUOTA] = QOPT_DISABLE;
 	}
 
 	if (FEATURE_OFF(E2P_FEATURE_RO_INCOMPAT,
@@ -1483,7 +1496,8 @@ static void handle_quota_options(ext2_filsys fs)
 	quota_ctx_t qctx;
 	ext2_ino_t qf_ino;
 	enum quota_type qtype;
-	int enable = 0;
+	unsigned int qtype_bits = 0;
+	int need_dirty = 0;
 
 	for (qtype = 0 ; qtype < MAXQUOTAS; qtype++)
 		if (quota_enable[qtype] != 0)
@@ -1492,19 +1506,26 @@ static void handle_quota_options(ext2_filsys fs)
 		/* Nothing to do. */
 		return;
 
-	retval = quota_init_context(&qctx, fs, 0);
+	if (quota_enable[PRJQUOTA] == QOPT_ENABLE &&
+	    fs->super->s_inode_size == EXT2_GOOD_OLD_INODE_SIZE) {
+		fprintf(stderr, _("Cannot enable project quota; "
+				  "inode size too small.\n"));
+		exit(1);
+	}
+
+	for (qtype = 0; qtype < MAXQUOTAS; qtype++) {
+		if (quota_enable[qtype] == QOPT_ENABLE)
+			qtype_bits |= 1 << qtype;
+	}
+
+	retval = quota_init_context(&qctx, fs, qtype_bits);
 	if (retval) {
 		com_err(program_name, retval,
 			_("while initializing quota context in support library"));
 		exit(1);
 	}
-	for (qtype = 0 ; qtype < MAXQUOTAS; qtype++) {
-		if (quota_enable[qtype] == QOPT_ENABLE) {
-			enable = 1;
-			break;
-		}
-	}
-	if (enable)
+
+	if (qtype_bits)
 		quota_compute_usage(qctx);
 
 	for (qtype = 0 ; qtype < MAXQUOTAS; qtype++) {
@@ -1527,6 +1548,16 @@ static void handle_quota_options(ext2_filsys fs)
 					qtype);
 				exit(1);
 			}
+			/* Enable Quota feature if one of quota enabled */
+			if (!ext2fs_has_feature_quota(fs->super)) {
+				ext2fs_set_feature_quota(fs->super);
+				need_dirty = 1;
+			}
+			if (qtype == PRJQUOTA &&
+			    !ext2fs_has_feature_project(fs->super)) {
+				ext2fs_set_feature_project(fs->super);
+				need_dirty = 1;
+			}
 		} else if (quota_enable[qtype] == QOPT_DISABLE) {
 			retval = quota_remove_inode(fs, qtype);
 			if (retval) {
@@ -1535,25 +1566,27 @@ static void handle_quota_options(ext2_filsys fs)
 					qtype);
 				exit(1);
 			}
+			if (qtype == PRJQUOTA) {
+				ext2fs_clear_feature_project(fs->super);
+				need_dirty = 1;
+			}
 		}
 	}
 
 	quota_release_context(&qctx);
-
-	if (enable) {
-		ext2fs_set_feature_quota(fs->super);
-		ext2fs_mark_super_dirty(fs);
-	} else {
+	/* Clear Quota feature if all quota types disabled. */
+	if (!qtype_bits) {
 		for (qtype = 0 ; qtype < MAXQUOTAS; qtype++)
-			if (*quota_sb_inump(fs->super, qtype) != 0)
+			if (*quota_sb_inump(fs->super, qtype))
 				break;
 		if (qtype == MAXQUOTAS) {
-			fs->super->s_feature_ro_compat &=
-					~EXT4_FEATURE_RO_COMPAT_QUOTA;
-			ext2fs_mark_super_dirty(fs);
+			ext2fs_clear_feature_quota(fs->super);
+			need_dirty = 1;
 		}
-	}
 
+	}
+	if (need_dirty)
+		ext2fs_mark_super_dirty(fs);
 	return;
 }
 

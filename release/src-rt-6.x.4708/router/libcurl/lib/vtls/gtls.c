@@ -60,15 +60,13 @@
 /* The last #include file should be: */
 #include "memdebug.h"
 
-/*
- Some hackish cast macros based on:
- https://developer.gnome.org/glib/unstable/glib-Type-Conversion-Macros.html
-*/
-#ifndef GNUTLS_POINTER_TO_INT_CAST
-#define GNUTLS_POINTER_TO_INT_CAST(p) ((int) (long) (p))
+#ifndef GNUTLS_POINTER_TO_SOCKET_CAST
+#define GNUTLS_POINTER_TO_SOCKET_CAST(p) \
+  ((curl_socket_t) ((char *)(p) - (char *)NULL))
 #endif
-#ifndef GNUTLS_INT_TO_POINTER_CAST
-#define GNUTLS_INT_TO_POINTER_CAST(i) ((void *) (long) (i))
+#ifndef GNUTLS_SOCKET_TO_POINTER_CAST
+#define GNUTLS_SOCKET_TO_POINTER_CAST(s) \
+  ((void *) ((char *)NULL + (s)))
 #endif
 
 /* Enable GnuTLS debugging by defining GTLSDEBUG */
@@ -153,7 +151,7 @@ static int gtls_mapped_sockerrno(void)
 
 static ssize_t Curl_gtls_push(void *s, const void *buf, size_t len)
 {
-  ssize_t ret = swrite(GNUTLS_POINTER_TO_INT_CAST(s), buf, len);
+  ssize_t ret = swrite(GNUTLS_POINTER_TO_SOCKET_CAST(s), buf, len);
 #if defined(USE_WINSOCK) && !defined(GNUTLS_MAPS_WINSOCK_ERRORS)
   if(ret < 0)
     gnutls_transport_set_global_errno(gtls_mapped_sockerrno());
@@ -163,7 +161,7 @@ static ssize_t Curl_gtls_push(void *s, const void *buf, size_t len)
 
 static ssize_t Curl_gtls_pull(void *s, void *buf, size_t len)
 {
-  ssize_t ret = sread(GNUTLS_POINTER_TO_INT_CAST(s), buf, len);
+  ssize_t ret = sread(GNUTLS_POINTER_TO_SOCKET_CAST(s), buf, len);
 #if defined(USE_WINSOCK) && !defined(GNUTLS_MAPS_WINSOCK_ERRORS)
   if(ret < 0)
     gnutls_transport_set_global_errno(gtls_mapped_sockerrno());
@@ -211,18 +209,20 @@ int Curl_gtls_cleanup(void)
   return 1;
 }
 
+#ifndef CURL_DISABLE_VERBOSE_STRINGS
 static void showtime(struct Curl_easy *data,
                      const char *text,
                      time_t stamp)
 {
   struct tm buffer;
   const struct tm *tm = &buffer;
+  char str[96];
   CURLcode result = Curl_gmtime(stamp, &buffer);
   if(result)
     return;
 
-  snprintf(data->state.buffer,
-           BUFSIZE,
+  snprintf(str,
+           sizeof(str),
            "\t %s: %s, %02d %s %4d %02d:%02d:%02d GMT",
            text,
            Curl_wkday[tm->tm_wday?tm->tm_wday-1:6],
@@ -232,8 +232,9 @@ static void showtime(struct Curl_easy *data,
            tm->tm_hour,
            tm->tm_min,
            tm->tm_sec);
-  infof(data, "%s\n", data->state.buffer);
+  infof(data, "%s\n", str);
 }
+#endif
 
 static gnutls_datum_t load_file(const char *file)
 {
@@ -760,7 +761,8 @@ gtls_connect_step1(struct connectdata *conn,
     gnutls_datum_t protocols[2];
 
 #ifdef USE_NGHTTP2
-    if(data->set.httpversion >= CURL_HTTP_VERSION_2) {
+    if(data->set.httpversion >= CURL_HTTP_VERSION_2 &&
+       (!SSL_IS_PROXY() || !conn->bits.tunnel_proxy)) {
       protocols[cur].data = (unsigned char *)NGHTTP2_PROTO_VERSION_ID;
       protocols[cur].size = NGHTTP2_PROTO_VERSION_ID_LEN;
       cur++;
@@ -846,7 +848,7 @@ gtls_connect_step1(struct connectdata *conn,
   }
   else {
     /* file descriptor for the socket */
-    transport_ptr = GNUTLS_INT_TO_POINTER_CAST(conn->sock[sockindex]);
+    transport_ptr = GNUTLS_SOCKET_TO_POINTER_CAST(conn->sock[sockindex]);
     gnutls_transport_push = Curl_gtls_push;
     gnutls_transport_pull = Curl_gtls_pull;
   }
@@ -962,8 +964,6 @@ gtls_connect_step3(struct connectdata *conn,
   gnutls_datum_t issuerp;
   char certbuf[256] = ""; /* big enough? */
   size_t size;
-  unsigned int algo;
-  unsigned int bits;
   time_t certclock;
   const char *ptr;
   struct Curl_easy *data = conn->data;
@@ -974,6 +974,8 @@ gtls_connect_step3(struct connectdata *conn,
 #endif
   CURLcode result = CURLE_OK;
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
+  unsigned int algo;
+  unsigned int bits;
   gnutls_protocol_t version = gnutls_protocol_get_version(session);
 #endif
   const char * const hostname = SSL_IS_PROXY() ? conn->http_proxy.host.name :
@@ -1344,6 +1346,7 @@ gtls_connect_step3(struct connectdata *conn,
 
   */
 
+#ifndef CURL_DISABLE_VERBOSE_STRINGS
   /* public key algorithm's parameters */
   algo = gnutls_x509_crt_get_pk_algorithm(x509_cert, &bits);
   infof(data, "\t certificate public key: %s\n",
@@ -1368,12 +1371,13 @@ gtls_connect_step3(struct connectdata *conn,
   gnutls_x509_crt_get_issuer_dn(x509_cert, certbuf, &size);
   infof(data, "\t issuer: %s\n", certbuf);
 
-  gnutls_x509_crt_deinit(x509_cert);
-
   /* compression algorithm (if any) */
   ptr = gnutls_compression_get_name(gnutls_compression_get(session));
   /* the *_get_name() says "NULL" if GNUTLS_COMP_NULL is returned */
   infof(data, "\t compression: %s\n", ptr);
+#endif
+
+  gnutls_x509_crt_deinit(x509_cert);
 
 #ifdef HAS_ALPN
   if(conn->bits.tls_enable_alpn) {

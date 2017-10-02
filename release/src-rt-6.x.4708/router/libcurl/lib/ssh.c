@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -113,6 +113,7 @@
         libssh2_sftp_symlink_ex((s), (p), curlx_uztoui(strlen(p)), \
                                 (t), (m), LIBSSH2_SFTP_REALPATH)
 
+
 /* Local functions: */
 static const char *sftp_libssh2_strerror(int err);
 static LIBSSH2_ALLOC_FUNC(my_libssh2_malloc);
@@ -176,6 +177,7 @@ const struct Curl_handler Curl_handler_scp = {
   ssh_perform_getsock,                  /* perform_getsock */
   scp_disconnect,                       /* disconnect */
   ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* connection_check */
   PORT_SSH,                             /* defport */
   CURLPROTO_SCP,                        /* protocol */
   PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION
@@ -202,6 +204,7 @@ const struct Curl_handler Curl_handler_sftp = {
   ssh_perform_getsock,                  /* perform_getsock */
   sftp_disconnect,                      /* disconnect */
   ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* connection_check */
   PORT_SSH,                             /* defport */
   CURLPROTO_SFTP,                       /* protocol */
   PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION
@@ -1837,8 +1840,9 @@ static CURLcode ssh_statemach_act(struct connectdata *conn, bool *block)
           /* seekerr == CURL_SEEKFUNC_CANTSEEK (can't seek to offset) */
           do {
             size_t readthisamountnow =
-              (data->state.resume_from - passed > CURL_OFF_T_C(BUFSIZE)) ?
-              BUFSIZE : curlx_sotouz(data->state.resume_from - passed);
+              (data->state.resume_from - passed > data->set.buffer_size) ?
+              (size_t)data->set.buffer_size :
+              curlx_sotouz(data->state.resume_from - passed);
 
             size_t actuallyread =
               data->state.fread_func(data->state.buffer, 1,
@@ -1890,7 +1894,7 @@ static CURLcode ssh_statemach_act(struct connectdata *conn, bool *block)
         /* since we don't really wait for anything at this point, we want the
            state machine to move on as soon as possible so we set a very short
            timeout here */
-        Curl_expire(data, 0);
+        Curl_expire(data, 0, EXPIRE_RUN_NOW);
 
         state(conn, SSH_STOP);
       }
@@ -2814,7 +2818,7 @@ static CURLcode ssh_multi_statemach(struct connectdata *conn, bool *done)
 }
 
 static CURLcode ssh_block_statemach(struct connectdata *conn,
-                                   bool duringconnect)
+                                    bool disconnect)
 {
   struct ssh_conn *sshc = &conn->proto.sshc;
   CURLcode result = CURLE_OK;
@@ -2822,24 +2826,26 @@ static CURLcode ssh_block_statemach(struct connectdata *conn,
 
   while((sshc->state != SSH_STOP) && !result) {
     bool block;
-    time_t left;
-    struct timeval now = Curl_tvnow();
+    time_t left = 1000;
+    struct curltime now = Curl_tvnow();
 
     result = ssh_statemach_act(conn, &block);
     if(result)
       break;
 
-    if(Curl_pgrsUpdate(conn))
-      return CURLE_ABORTED_BY_CALLBACK;
+    if(!disconnect) {
+      if(Curl_pgrsUpdate(conn))
+        return CURLE_ABORTED_BY_CALLBACK;
 
-    result = Curl_speedcheck(data, now);
-    if(result)
-      break;
+      result = Curl_speedcheck(data, now);
+      if(result)
+        break;
 
-    left = Curl_timeleft(data, NULL, duringconnect);
-    if(left < 0) {
-      failf(data, "Operation timed out");
-      return CURLE_OPERATION_TIMEDOUT;
+      left = Curl_timeleft(data, NULL, FALSE);
+      if(left < 0) {
+        failf(data, "Operation timed out");
+        return CURLE_OPERATION_TIMEDOUT;
+      }
     }
 
 #ifdef HAVE_LIBSSH2_SESSION_BLOCK_DIRECTION
@@ -3055,7 +3061,7 @@ static CURLcode scp_disconnect(struct connectdata *conn, bool dead_connection)
 
     state(conn, SSH_SESSION_DISCONNECT);
 
-    result = ssh_block_statemach(conn, FALSE);
+    result = ssh_block_statemach(conn, TRUE);
   }
 
   return result;
@@ -3209,7 +3215,7 @@ static CURLcode sftp_disconnect(struct connectdata *conn, bool dead_connection)
   if(conn->proto.sshc.ssh_session) {
     /* only if there's a session still around to use! */
     state(conn, SSH_SFTP_SHUTDOWN);
-    result = ssh_block_statemach(conn, FALSE);
+    result = ssh_block_statemach(conn, TRUE);
   }
 
   DEBUGF(infof(conn->data, "SSH DISCONNECT is done\n"));

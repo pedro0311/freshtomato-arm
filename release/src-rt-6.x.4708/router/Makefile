@@ -2096,6 +2096,9 @@ libpng-clean:
 
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	@$(SEP)
+	( if ! patch -R -f -d php --dry-run --silent < patches/php/101-fix-cross-compiling-issue.patch; then \
+		patch -b -d php < patches/php/101-fix-cross-compiling-issue.patch; \
+	fi ) && \
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/include" \
@@ -2266,6 +2269,9 @@ libncurses-install:
 
 mysql/stamp-h1: openssl zlib libncurses
 	@$(SEP)
+	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch; then \
+		patch -b -d mysql/sql < patches/mysql/101-bison-compat.patch; \
+	fi ) && \
 	cd mysql && cp -f configure.arm configure && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
@@ -2788,7 +2794,7 @@ libsodium-clean:
 
 dnscrypt/stamp-h1: libsodium
 	cd $(TOP)/dnscrypt && CC=$(CC) STRIP=$(STRIP) \
-	autoreconf -fsi && \
+	autoreconf && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libsodium/src/libsodium/include" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs" \
@@ -2895,12 +2901,12 @@ ipset: ipset/stamp-h1
 ipset-install:
 	install -D ipset/src/ipset $(INSTALLDIR)/ipset/usr/sbin/ipset
 	install -d $(INSTALLDIR)/ipset/usr/lib/
-	install ipset/lib/.libs/libipset.so.3.6.0 $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.6.0
-	$(STRIP) $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.6.0
+	install ipset/lib/.libs/libipset.so.3.7.0 $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.7.0
+	$(STRIP) $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.7.0
 	$(STRIP) $(INSTALLDIR)/ipset/usr/sbin/ipset
 	cd $(INSTALLDIR)/ipset/usr/lib/ && \
-		ln -sf libipset.so.3.6.0 libipset.so.3 && \
-		ln -sf libipset.so.3.6.0 libipset.so
+		ln -sf libipset.so.3.7.0 libipset.so.3 && \
+		ln -sf libipset.so.3.7.0 libipset.so
 
 ipset-clean:
 	-@$(MAKE) -C ipset clean

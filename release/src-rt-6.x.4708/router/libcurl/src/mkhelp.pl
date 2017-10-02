@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 #***************************************************************************
 #                                  _   _ ____  _
 #  Project                     ___| | | |  _ \| |
@@ -36,7 +36,7 @@ if($ARGV[0] eq "-c") {
 my $README = $ARGV[0];
 
 if($README eq "") {
-    print "usage: mkreadme.pl [-c] <README> < manpage\n";
+    print "usage: mkhelp.pl [-c] <README> < manpage\n";
     exit;
 }
 
@@ -129,7 +129,7 @@ if($c)
     my $content = join("", @out);
     my $gzippedContent;
     IO::Compress::Gzip::gzip(
-        \$content, \$gzippedContent, Level => 9, TextFlag => 1) or die "gzip failed:";
+        \$content, \$gzippedContent, Level => 9, TextFlag => 1, Time=>0) or die "gzip failed:";
     $gzip = length($content);
     $gzipped = length($gzippedContent);
 

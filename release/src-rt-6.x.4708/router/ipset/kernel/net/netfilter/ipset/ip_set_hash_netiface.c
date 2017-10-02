@@ -170,7 +170,7 @@ hash_netiface4_kadt(struct ip_set *set, const struct sk_buff *skb,
 	ip4addrptr(skb, opt->flags & IPSET_DIM_ONE_SRC, &e.ip);
 	e.ip &= ip_set_netmask(e.cidr);
 
-#define IFACE(dir)	(par->dir ? par->dir->name : "")
+#define IFACE(dir)	(XAP_STATE(par)->dir ? XAP_STATE(par)->dir->name : "")
 #define SRCDIR		(opt->flags & IPSET_DIM_TWO_SRC)
 
 	if (opt->cmdflags & IPSET_FLAG_PHYSDEV) {
@@ -255,7 +255,7 @@ hash_netiface4_uadt(struct ip_set *set, struct nlattr *tb[],
 
 	if (retried)
 		ip = ntohl(h->next.ip);
-	while (!after(ip, ip_to)) {
+	while (ip <= ip_to) {
 		e.ip = htonl(ip);
 		last = ip_set_range_to_cidr(ip, ip_to, &e.cidr);
 		ret = adtfn(set, &e, &ext, &ext, flags);

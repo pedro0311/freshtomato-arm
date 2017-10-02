@@ -130,7 +130,7 @@ static curl_socket_t all_sockets[MAX_SOCKETS];
 static size_t num_sockets = 0;
 
 static int ProcessRequest(struct httprequest *req);
-static void storerequest(char *reqbuf, size_t totalsize);
+static void storerequest(const char *reqbuf, size_t totalsize);
 
 #define DEFAULT_PORT 8999
 
@@ -602,6 +602,14 @@ static int ProcessRequest(struct httprequest *req)
     }
 
     if(req->testno == DOCNUMBER_NOTHING) {
+      /* check for a Testno: header with the test case number */
+      char *testno = strstr(line, "\nTestno: ");
+      if(testno) {
+        req->testno = strtol(&testno[9], NULL, 10);
+        logmsg("Found test number %d in Testno: header!", req->testno);
+      }
+    }
+    if(req->testno == DOCNUMBER_NOTHING) {
       /* Still no test case number. Try to get the the number off the last dot
          instead, IE we consider the TLD to be the test number. Test 123 can
          then be written as "example.com.123". */
@@ -843,7 +851,7 @@ static int ProcessRequest(struct httprequest *req)
 }
 
 /* store the entire request in a file */
-static void storerequest(char *reqbuf, size_t totalsize)
+static void storerequest(const char *reqbuf, size_t totalsize)
 {
   int res;
   int error = 0;
@@ -1194,12 +1202,12 @@ static int send_doc(curl_socket_t sock, struct httprequest *req)
 
   responsesize = count;
   do {
-    /* Ok, we send no more than 200 bytes at a time, just to make sure that
+    /* Ok, we send no more than N bytes at a time, just to make sure that
        larger chunks are split up so that the client will need to do multiple
        recv() calls to get it and thus we exercise that code better */
     size_t num = count;
-    if(num > 200)
-      num = 200;
+    if(num > 20)
+      num = 20;
 
     retry:
     written = swrite(sock, buffer, num);
@@ -1210,9 +1218,6 @@ static int send_doc(curl_socket_t sock, struct httprequest *req)
       }
       sendfailure = TRUE;
       break;
-    }
-    else {
-      logmsg("Sent off %zd bytes", written);
     }
 
     /* write to file as well */
@@ -1965,7 +1970,7 @@ int main(int argc, char *argv[])
   const char *unix_socket = NULL;
   bool unlink_socket = false;
 #endif
-  char *pidname= (char *)".http.pid";
+  const char *pidname = ".http.pid";
   struct httprequest req;
   int rc = 0;
   int error;
@@ -2315,7 +2320,7 @@ int main(int argc, char *argv[])
 
             if(req.connmon) {
               const char *keepopen="[DISCONNECT]\n";
-              storerequest((char *)keepopen, strlen(keepopen));
+              storerequest(keepopen, strlen(keepopen));
             }
 
             if(!req.open)

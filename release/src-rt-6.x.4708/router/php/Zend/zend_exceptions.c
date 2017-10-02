@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2015 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) 1998-2016 Zend Technologies Ltd. (http://www.zend.com) |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -36,7 +36,7 @@ ZEND_API void (*zend_throw_exception_hook)(zval *ex TSRMLS_DC);
 
 void zend_exception_set_previous(zval *exception, zval *add_previous TSRMLS_DC)
 {
-	zval *previous;
+	zval *previous, *ancestor;
 
 	if (exception == add_previous || !add_previous || !exception) {
 		return;
@@ -46,6 +46,14 @@ void zend_exception_set_previous(zval *exception, zval *add_previous TSRMLS_DC)
 		return;
 	}
 	while (exception && exception != add_previous && Z_OBJ_HANDLE_P(exception) != Z_OBJ_HANDLE_P(add_previous)) {
+		ancestor = zend_read_property(default_exception_ce, add_previous, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
+		while (Z_TYPE_P(ancestor) == IS_OBJECT) {
+			if (Z_OBJ_HANDLE_P(ancestor) == Z_OBJ_HANDLE_P(exception)) {
+				zval_ptr_dtor(&add_previous);
+				return;
+			}
+			ancestor = zend_read_property(default_exception_ce, ancestor, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
+		}
 		previous = zend_read_property(default_exception_ce, exception, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
 		if (Z_TYPE_P(previous) == IS_NULL) {
 			zend_update_property(default_exception_ce, exception, "previous", sizeof("previous")-1, add_previous TSRMLS_CC);
@@ -221,27 +229,27 @@ ZEND_METHOD(exception, __construct)
 /* {{{ proto Exception::__wakeup()
    Exception unserialize checks */
 #define CHECK_EXC_TYPE(name, type) \
-	value = zend_read_property(default_exception_ce, object, name, sizeof(name)-1, 0 TSRMLS_CC); \
-	if(value && Z_TYPE_P(value) != type) { \
-		zval *tmp; \
-		MAKE_STD_ZVAL(tmp); \
-		ZVAL_STRINGL(tmp, name, sizeof(name)-1, 1); \
-		Z_OBJ_HANDLER_P(object, unset_property)(object, tmp, 0 TSRMLS_CC); \
-		zval_ptr_dtor(&tmp); \
+	value = zend_read_property(default_exception_ce, object, name, sizeof(name)-1, 1 TSRMLS_CC); \
+	if (value && Z_TYPE_P(value) != IS_NULL && Z_TYPE_P(value) != type) { \
+		zend_unset_property(default_exception_ce, object, name, sizeof(name)-1 TSRMLS_CC); \
 	}
 
 ZEND_METHOD(exception, __wakeup)
 {
 	zval *value;
 	zval *object = getThis();
-	HashTable *intern_ht = zend_std_get_properties(getThis() TSRMLS_CC);
 	CHECK_EXC_TYPE("message", IS_STRING);
 	CHECK_EXC_TYPE("string", IS_STRING);
 	CHECK_EXC_TYPE("code", IS_LONG);
 	CHECK_EXC_TYPE("file", IS_STRING);
 	CHECK_EXC_TYPE("line", IS_LONG);
 	CHECK_EXC_TYPE("trace", IS_ARRAY);
-	CHECK_EXC_TYPE("previous", IS_OBJECT);
+	value = zend_read_property(default_exception_ce, object, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
+	if (value && Z_TYPE_P(value) != IS_NULL && (Z_TYPE_P(value) != IS_OBJECT ||
+			!instanceof_function(Z_OBJCE_P(value), default_exception_ce TSRMLS_CC) ||
+			value == object)) {
+		zend_unset_property(default_exception_ce, object, "previous", sizeof("previous")-1 TSRMLS_CC);
+	}
 }
 /* }}} */
 
@@ -645,6 +653,7 @@ ZEND_METHOD(exception, getPrevious)
 	previous = zend_read_property(default_exception_ce, getThis(), "previous", sizeof("previous")-1, 1 TSRMLS_CC);
 	RETURN_ZVAL(previous, 1, 0);
 }
+/* }}} */
 
 int zend_spprintf(char **message, int max_len, const char *format, ...) /* {{{ */
 {
@@ -719,7 +728,11 @@ ZEND_METHOD(exception, __toString)
 		zval_dtor(&file);
 		zval_dtor(&line);
 
-		exception = zend_read_property(default_exception_ce, exception, "previous", sizeof("previous")-1, 0 TSRMLS_CC);
+		Z_OBJPROP_P(exception)->nApplyCount++;
+		exception = zend_read_property(default_exception_ce, exception, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
+		if (exception && Z_TYPE_P(exception) == IS_OBJECT && Z_OBJPROP_P(exception)->nApplyCount > 0) {
+			exception = NULL;
+		}
 
 		if (trace) {
 			zval_ptr_dtor(&trace);
@@ -727,6 +740,17 @@ ZEND_METHOD(exception, __toString)
 
 	}
 	zval_dtor(&fname);
+
+	/* Reset apply counts */
+	exception = getThis();
+	while (exception && Z_TYPE_P(exception) == IS_OBJECT && instanceof_function(Z_OBJCE_P(exception), default_exception_ce TSRMLS_CC)) {
+		if(Z_OBJPROP_P(exception)->nApplyCount) {
+			Z_OBJPROP_P(exception)->nApplyCount--;
+		} else {
+			break;
+		}
+		exception = zend_read_property(default_exception_ce, exception, "previous", sizeof("previous")-1, 1 TSRMLS_CC);
+	}
 
 	/* We store the result in the private property string so we can access
 	 * the result in uncaught exception handlers without memleaks. */
@@ -885,10 +909,9 @@ static void zend_error_va(int type, const char *file, uint lineno, const char *f
 ZEND_API void zend_exception_error(zval *exception, int severity TSRMLS_DC) /* {{{ */
 {
 	zend_class_entry *ce_exception = Z_OBJCE_P(exception);
+	EG(exception) = NULL;
 	if (instanceof_function(ce_exception, default_exception_ce TSRMLS_CC)) {
 		zval *str, *file, *line;
-
-		EG(exception) = NULL;
 
 		zend_call_method_with_0_params(&exception, ce_exception, NULL, "__tostring", &str);
 		if (!EG(exception)) {
@@ -928,6 +951,7 @@ ZEND_API void zend_exception_error(zval *exception, int severity TSRMLS_DC) /* {
 	} else {
 		zend_error(severity, "Uncaught exception '%s'", ce_exception->name);
 	}
+	zval_ptr_dtor(&exception);
 }
 /* }}} */
 

@@ -1,5 +1,5 @@
 dnl Boilerplate
-AC_INIT([ipset], [6.32], [kadlec@blackhole.kfki.hu])
+AC_INIT([ipset], [6.34], [kadlec@blackhole.kfki.hu])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_HOST
 AC_CONFIG_MACRO_DIR([m4])
@@ -9,8 +9,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_ENABLE_STATIC
 LT_INIT([dlopen])
-LT_CONFIG_LTDL_DIR([libltdl])
-LTDL_INIT([nonrecursive])
 
 PKG_PROG_PKG_CONFIG
 
@@ -506,6 +504,87 @@ if test -f $ksourcedir/include/linux/netfilter/x_tables.h && \
 else
 	AC_MSG_RESULT(no)
 	AC_SUBST(HAVE_NET_IN_XT_ACTION_PARAM, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for struct nf_hook_state in struct xt_action_param])
+if test -f $ksourcedir/include/linux/netfilter/x_tables.h && \
+   $AWK '/^struct xt_action_param / {for(i=1; i<=10; i++) {getline; print}}' $ksourcedir/include/linux/netfilter/x_tables.h | \
+   $GREP -q 'struct nf_hook_state '; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_STATE_IN_XT_ACTION_PARAM, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_STATE_IN_XT_ACTION_PARAM, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for xt_family() in x_tables.h])
+if test -f $ksourcedir/include/linux/netfilter/x_tables.h && \
+   $GREP -q 'xt_family' $ksourcedir/include/linux/netfilter/x_tables.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_XT_FAMILY, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_XT_FAMILY, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for xt_net() in x_tables.h])
+if test -f $ksourcedir/include/linux/netfilter/x_tables.h && \
+   $GREP -q 'xt_net' $ksourcedir/include/linux/netfilter/x_tables.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_XT_NET, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_XT_NET, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for nfnl_msg_type() in nfnetlink.h])
+if test -f $ksourcedir/include/linux/netfilter/nfnetlink.h && \
+   $GREP -q 'nfnl_msg_type' $ksourcedir/include/linux/netfilter/nfnetlink.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_NFNL_MSG_TYPE, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_NFNL_MSG_TYPE, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for netlink extended ACK])
+if test -f $ksourcedir/include/linux/netlink.h && \
+   $AWK '/^extern void netlink_ack/ {for(i=1; i<=2; i++) {getline; print}}' $ksourcedir/include/linux/netlink.h | $GREP -q 'const struct netlink_ext_ack'; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_NETLINK_EXTENDED_ACK, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_NETLINK_EXTENDED_ACK, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for passing extended ACK struct to parsing functions])
+if test -f $ksourcedir/include/net/netlink.h && \
+   $AWK '/^static inline int nla_parse_nested/ {for(i=1; i<=4; i++) {getline; print}}' $ksourcedir/include/net/netlink.h | $GREP -q 'struct netlink_ext_ack'; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_PASSING_EXTENDED_ACK_TO_PARSERS, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_PASSING_EXTENDED_ACK_TO_PARSERS, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for passing extended ACK struct to callback functions])
+if test -f $ksourcedir/include/linux/netfilter/nfnetlink.h && \
+   $AWK '/^struct nfnl_callback / {for(i=1; i<=5; i++) {getline; print}}' $ksourcedir/include/linux/netfilter/nfnetlink.h | $GREP -q 'struct netlink_ext_ack'; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_PASSING_EXTENDED_ACK_TO_CALLBACKS, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_PASSING_EXTENDED_ACK_TO_CALLBACKS, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for no typedef sctp_sctphdr_t])
+if test -f $ksourcedir/include/linux/sctp.h && \
+   $GREP -q '^typedef struct sctphdr' $ksourcedir/include/linux/sctp.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_TYPEDEF_SCTP_SCTPHDR_T, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_TYPEDEF_SCTP_SCTPHDR_T, undef)
 fi
 
 AC_MSG_CHECKING([kernel source for struct net_generic])

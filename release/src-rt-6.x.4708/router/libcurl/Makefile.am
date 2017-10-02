@@ -27,10 +27,10 @@ ACLOCAL_AMFLAGS = -I m4
 CMAKE_DIST = CMakeLists.txt CMake/CMakeConfigurableFile.in      \
  CMake/CurlTests.c CMake/FindGSS.cmake CMake/OtherTests.cmake   \
  CMake/Platforms/WindowsCache.cmake CMake/Utilities.cmake       \
- include/curl/curlbuild.h.cmake CMake/Macros.cmake              \
+ CMake/Macros.cmake              \
  CMake/CurlSymbolHiding.cmake CMake/FindCARES.cmake             \
- CMake/FindLibSSH2.cmake CMake/FindNGHTTP2.cmake
-
+ CMake/FindLibSSH2.cmake CMake/FindNGHTTP2.cmake                \
+ CMake/FindMbedTLS.cmake CMake/cmake_uninstall.cmake.in
 
 VC6_LIBTMPL = projects/Windows/VC6/lib/libcurl.tmpl
 VC6_LIBDSP = projects/Windows/VC6/lib/libcurl.dsp.dist
@@ -133,15 +133,18 @@ VC_DIST = projects/README                           \
  projects/Windows/VC14/lib/libcurl.sln              \
  projects/Windows/VC14/lib/libcurl.vcxproj.filters  \
  projects/Windows/VC14/src/curl.sln                 \
- projects/Windows/VC14/src/curl.vcxproj.filters
+ projects/Windows/VC14/src/curl.vcxproj.filters     \
+ projects/generate.bat                              \
+ projects/wolfssl_options.h                         \
+ projects/wolfssl_override.props
 
 WINBUILD_DIST = winbuild/BUILD.WINDOWS.txt winbuild/gen_resp_file.bat	\
  winbuild/MakefileBuild.vc winbuild/Makefile.vc
 
 EXTRA_DIST = CHANGES COPYING maketgz Makefile.dist curl-config.in	\
  RELEASE-NOTES buildconf libcurl.pc.in MacOSX-Framework scripts/zsh.pl	\
- $(CMAKE_DIST) $(VC_DIST) $(WINBUILD_DIST) lib/libcurl.vers.in          \
- buildconf.bat
+ scripts/updatemanpages.pl $(CMAKE_DIST) $(VC_DIST) $(WINBUILD_DIST)	\
+ lib/libcurl.vers.in buildconf.bat scripts/coverage.sh
 
 CLEANFILES = $(VC6_LIBDSP) $(VC6_SRCDSP) $(VC7_LIBVCPROJ) $(VC7_SRCVCPROJ)	\
  $(VC71_LIBVCPROJ) $(VC71_SRCVCPROJ) $(VC8_LIBVCPROJ) $(VC8_SRCVCPROJ)	\
@@ -151,8 +154,8 @@ CLEANFILES = $(VC6_LIBDSP) $(VC6_SRCDSP) $(VC7_LIBVCPROJ) $(VC7_SRCVCPROJ)	\
 
 bin_SCRIPTS = curl-config
 
-SUBDIRS = lib src include
-DIST_SUBDIRS = $(SUBDIRS) tests packages scripts
+SUBDIRS = lib src
+DIST_SUBDIRS = $(SUBDIRS) tests packages scripts include docs
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcurl.pc
@@ -167,10 +170,16 @@ dist-hook:
 	(distit=`find $(srcdir) -name "*.dist" | grep -v ./ares/`; \
 	for file in $$distit; do \
 	  strip=`echo $$file | sed -e s/^$(srcdir)// -e s/\.dist//`; \
-	  cp $$file $(distdir)$$strip; \
+	  cp -p $$file $(distdir)$$strip; \
 	done)
 
-check: test examples
+html:
+	cd docs && $(MAKE) html
+
+pdf:
+	cd docs && $(MAKE) pdf
+
+check: test examples check-docs
 
 if CROSSCOMPILING
 test-full: test
@@ -187,13 +196,25 @@ test:
 test-full:
 	@(cd tests; $(MAKE) all full-test)
 
+test-nonflaky:
+	@(cd tests; $(MAKE) all nonflaky-test)
+
 test-torture:
 	@(cd tests; $(MAKE) all torture-test)
+
+test-event:
+	@(cd tests; $(MAKE) all event-test)
 
 test-am:
 	@(cd tests; $(MAKE) all am-test)
 
 endif
+
+examples:
+	@(cd docs/examples; $(MAKE) check)
+
+check-docs:
+	@(cd docs/libcurl; $(MAKE) check)
 
 # This is a hook to have 'make clean' also clean up the docs and the tests
 # dir. The extra check for the Makefiles being present is necessary because
@@ -201,6 +222,7 @@ endif
 # this hook.
 clean-local:
 	@(if test -f tests/Makefile; then cd tests; $(MAKE) clean; fi)
+	@(if test -f docs/Makefile; then cd docs; $(MAKE) clean; fi)
 
 #
 # Build source and binary rpms. For rpm-3.0 and above, the ~/.rpmmacros
@@ -240,7 +262,7 @@ rpm:
 # gak - libtool requires an absolute directory, hence the pwd below...
 pkgadd:
 	umask 022 ; \
-	make install DESTDIR=`/bin/pwd`/packages/Solaris/root ; \
+	$(MAKE) install DESTDIR=`/bin/pwd`/packages/Solaris/root ; \
 	cat COPYING > $(srcdir)/packages/Solaris/copyright ; \
 	cd $(srcdir)/packages/Solaris && $(MAKE) package
 
@@ -253,10 +275,14 @@ cygwinbin:
 # We extend the standard install with a custom hook:
 install-data-hook:
 	cd include && $(MAKE) install
+	cd docs && $(MAKE) install
+	cd docs/libcurl && $(MAKE) install
 
 # We extend the standard uninstall with a custom hook:
 uninstall-hook:
 	cd include && $(MAKE) uninstall
+	cd docs && $(MAKE) uninstall
+	cd docs/libcurl && $(MAKE) uninstall
 
 ca-bundle: lib/mk-ca-bundle.pl
 	@echo "generating a fresh ca-bundle.crt"
@@ -271,6 +297,7 @@ checksrc:
 	cd src && $(MAKE) checksrc
 	cd tests && $(MAKE) checksrc
 	cd include/curl && $(MAKE) checksrc
+	cd docs/examples && $(MAKE) checksrc
 
 .PHONY: vc-ide
 

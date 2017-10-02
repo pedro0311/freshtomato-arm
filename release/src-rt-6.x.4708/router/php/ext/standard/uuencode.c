@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
+   | Copyright (c) 1997-2016 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -153,7 +153,7 @@ PHPAPI int php_uudecode(char *src, int src_len, char **dest) /* {{{ */
 		while (s < ee) {
 			if(s+4 > e) {
 				goto err;
-			} 
+			}
 			*p++ = PHP_UU_DEC(*s) << 2 | PHP_UU_DEC(*(s + 1)) >> 4;
 			*p++ = PHP_UU_DEC(*(s + 1)) << 4 | PHP_UU_DEC(*(s + 2)) >> 2;
 			*p++ = PHP_UU_DEC(*(s + 2)) << 6 | PHP_UU_DEC(*(s + 3));
@@ -168,7 +168,7 @@ PHPAPI int php_uudecode(char *src, int src_len, char **dest) /* {{{ */
 		s++;
 	}
 
-	if ((len = total_len > (p - *dest))) {
+	if ((len = total_len) > (p - *dest)) {
 		*p++ = PHP_UU_DEC(*s) << 2 | PHP_UU_DEC(*(s + 1)) >> 4;
 		if (len > 1) {
 			*p++ = PHP_UU_DEC(*(s + 1)) << 4 | PHP_UU_DEC(*(s + 2)) >> 2;
@@ -188,7 +188,7 @@ err:
 }
 /* }}} */
 
-/* {{{ proto string convert_uuencode(string data) 
+/* {{{ proto string convert_uuencode(string data)
    uuencode a string */
 PHP_FUNCTION(convert_uuencode)
 {
@@ -200,6 +200,11 @@ PHP_FUNCTION(convert_uuencode)
 	}
 
 	dst_len = php_uuencode(src, src_len, &dst);
+	if (dst_len < 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "String too long, max length is %d", INT_MAX);
+		efree(dst);
+		RETURN_FALSE;
+	}
 
 	RETURN_STRINGL(dst, dst_len, 0);
 }

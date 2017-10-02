@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -66,6 +66,10 @@ static CURLcode glob_fixed(URLGlob *glob, char *fixed, size_t len)
 static int multiply(unsigned long *amount, long with)
 {
   unsigned long sum = *amount * with;
+  if(!with) {
+    *amount = 0;
+    return 0;
+  }
   if(sum/with != *amount)
     return 1; /* didn't fit, bail out */
   *amount = sum;
@@ -269,7 +273,10 @@ static CURLcode glob_range(URLGlob *glob, char **patternp,
         }
         errno = 0;
         max_n = strtoul(pattern, &endp, 10);
-        if(errno || (*endp == ':')) {
+        if(errno)
+          /* overflow */
+          endp = NULL;
+        else if(*endp == ':') {
           pattern = endp+1;
           errno = 0;
           step_n = strtoul(pattern, &endp, 10);
