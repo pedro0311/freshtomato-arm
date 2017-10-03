@@ -926,6 +926,9 @@ bridge-install:
 
 dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	@$(SEP)
+	( if ! patch -R -f -d dnsmasq/src --dry-run --silent < patches/dnsmasq/101-tomato-specific.patch; then \
+		patch -b -d dnsmasq/src < patches/dnsmasq/101-tomato-specific.patch; \
+	fi )
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) \

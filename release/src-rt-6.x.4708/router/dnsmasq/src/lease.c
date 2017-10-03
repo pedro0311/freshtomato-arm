@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2016 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2017 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -108,15 +108,12 @@ static int read_leases(time_t now, FILE *leasestream)
 
 	ei = atol(daemon->dhcp_buff3);
 
-//Some ASUS & TOMATO tweaks
-#if defined(HAVE_BROKEN_RTC) || defined(HAVE_LEASEFILE_EXPIRE)
+#ifdef HAVE_BROKEN_RTC
 	if (ei != 0)
 	  lease->expires = (time_t)ei + now;
 	else
 	  lease->expires = (time_t)0;
-#ifdef HAVE_BROKEN_RTC
 	lease->length = ei;
-#endif
 #else
 	/* strictly time_t is opaque, but this hack should work on all sane systems,
 	   even when sizeof(time_t) == 8 */
@@ -232,7 +229,7 @@ void lease_update_from_configs(void)
     else if ((name = host_from_dns(lease->addr)))
       lease_set_hostname(lease, name, 1, get_domain(lease->addr), NULL); /* updates auth flag only */
 }
- 
+
 static void ourprintf(int *errp, char *format, ...)
 {
   va_list ap;
@@ -264,19 +261,10 @@ void lease_update_file(time_t now)
 	    continue;
 #endif
 
-//ASUS and TOMATO tweaks to output remaining leasetime
-#ifdef HAVE_LEASEFILE_EXPIRE
-	ourprintf(&err, "%u ",
 #ifdef HAVE_BROKEN_RTC
-		(lease->length == 0) ? 0 :
+	  ourprintf(&err, "%u ", lease->length);
 #else
-		(lease->expires == 0) ? 0 :
-#endif
-		(unsigned int)difftime(lease->expires, now));
-#elif defined(HAVE_BROKEN_RTC)
-	ourprintf(&err, "%u ", lease->length);
-else
-	ourprintf(&err, "%lu ", (unsigned long)lease->expires);
+	  ourprintf(&err, "%lu ", (unsigned long)lease->expires);
 #endif
 
 	  if (lease->hwaddr_type != ARPHRD_ETHER || lease->hwaddr_len == 0) 
@@ -317,21 +305,12 @@ else
 	      if (!(lease->flags & (LEASE_TA | LEASE_NA)))
 		continue;
 
-//ASUS and TOMATO tweaks to output remaining leasetime
-#ifdef HAVE_LEASEFILE_EXPIRE
-		ourprintf(&err, "%u ",
 #ifdef HAVE_BROKEN_RTC
-			(lease->length == 0) ? 0 :
+	      ourprintf(&err, "%u ", lease->length);
 #else
-			(lease->expires == 0) ? 0 :
+	      ourprintf(&err, "%lu ", (unsigned long)lease->expires);
 #endif
-			(unsigned int)difftime(lease->expires, now));
-#elif defined(HAVE_BROKEN_RTC)
-		ourprintf(&err, "%u ", lease->length);
-else
-		ourprintf(&err, "%lu ", (unsigned long)lease->expires);
-#endif
-
+    
 	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
 	 
 	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
@@ -1203,67 +1182,8 @@ void lease_add_extradata(struct dhcp_lease *lease, unsigned char *data, unsigned
 }
 #endif
 
-#ifdef HAVE_TOMATO
-
-void tomato_helper(time_t now)
-{
-	FILE *f;
-	struct in_addr ia;
-	char buf[64];
-	struct dhcp_lease *lease;
-
-	// if delete exists...
-	if ((f = fopen("/var/tmp/dhcp/delete", "r")) != NULL) {
-		while (fgets(buf, sizeof(buf), f)) {
-			ia.s_addr = inet_addr(buf);
-			lease = lease_find_by_addr(ia);
-			if (lease) {
-				lease_prune(lease, 0);
-				lease_update_file(now);
-			}
-		}
-		fclose(f);
-		unlink("/var/tmp/dhcp/delete");
-	}
-
-	// dump the leases file
-	if ((f = fopen("/var/tmp/dhcp/leases.!", "w")) != NULL) {
-		for (lease = leases; lease; lease = lease->next) {
-			if (lease->hwaddr_type == ARPHRD_ETHER) {
-#ifdef HAVE_DHCP6 //only dump dhcpv6 if we have it
-                           if (lease->flags & (LEASE_TA | LEASE_NA))
-                                inet_ntop(AF_INET6, &lease->addr6, buf, ADDRSTRLEN);
-                           else
-#endif // Thanks to Shibby :-)
-                                inet_ntop(AF_INET, &lease->addr, buf, ADDRSTRLEN);
-
-				fprintf(f, "%lu %02X:%02X:%02X:%02X:%02X:%02X %s %s\n",
-					lease->expires - now,
-					lease->hwaddr[0], lease->hwaddr[1], lease->hwaddr[2], lease->hwaddr[3], lease->hwaddr[4], lease->hwaddr[5],
-					buf,
-					((lease->hostname) && (strlen(lease->hostname) > 0)) ? lease->hostname : "*");
-			}
-		}
-		fclose(f);
-		rename("/var/tmp/dhcp/leases.!", "/var/tmp/dhcp/leases");
-	}
-}
-#endif //HAVE_TOMATO
-
-#ifdef HAVE_LEASEFILE_EXPIRE
-void flush_lease_file(time_t now)
-{
-	static time_t flush_time = (time_t)0;
-
-	if(difftime(flush_time, now) < 0)
-		file_dirty = 1;
-
-	lease_prune(NULL, now);
-	lease_update_file(now);
-
-	if (file_dirty == 0)
-		flush_time = now;
-}
-#endif //HAVE_LEASEFILE_EXPIRE
-
 #endif
+	  
+
+      
+

@@ -13,7 +13,7 @@ version 2.78
 	ff325644c7afae2588583f935f4ea9b9694eb52e. Thanks to
 	John Fitzgibbon for the diagnosis and patch.
 
-	Try other servers if first returns REFUSED when
+        Try other servers if first returns REFUSED when
 	--strict-order active. Thanks to Hans Dedecker
 	for the patch
 
@@ -23,6 +23,65 @@ version 2.78
 	if different.) Thanks to Christian Kujau, Arne Woerner
 	Juan Manuel Fernandez and Kevin Darbyshire-Bryant for
 	chasing this one down.  CVE-2017-13704 applies.
+
+	Fix heap overflow in DNS code. This is a potentially serious
+	security hole. It allows an attacker who can make DNS
+	requests to dnsmasq, and who controls the contents of
+	a domain, which is thereby queried, to overflow
+	(by 2 bytes) a heap buffer and either crash, or
+	even take control of, dnsmasq.
+	CVE-2017-14491 applies.
+	Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	Kevin Hamacher and Ron Bowes of the Google Security Team for
+	finding this.
+
+	Fix heap overflow in IPv6 router advertisement code.
+	This is a potentially serious security hole, as a
+	crafted RA request can overflow a buffer and crash or
+	control dnsmasq. Attacker must be on the local network.
+	CVE-2017-14492 applies.
+        Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	and Kevin Hamacher of the Google Security Team for
+	finding this.
+
+	Fix stack overflow in DHCPv6 code. An attacker who can send
+	a DHCPv6 request to dnsmasq can overflow the stack frame and
+	crash or control dnsmasq.
+	CVE-2017-14493 applies.
+	Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	Kevin Hamacher and Ron Bowes of the Google Security Team for
+	finding this.
+
+	Fix information leak in DHCPv6. A crafted DHCPv6 packet can
+	cause dnsmasq to forward memory from outside the packet
+	buffer to a DHCPv6 server when acting as a relay.
+	CVE-2017-14494 applies.
+	Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	Kevin Hamacher and Ron Bowes of the Google Security Team for
+	finding this.
+
+	Fix DoS in DNS. Invalid boundary checks in the
+	add_pseudoheader function allows a memcpy call with negative
+	size An attacker which can send malicious DNS queries
+	to dnsmasq can trigger a DoS remotely.
+	dnsmasq is vulnerable only if one of the following option is
+	specified: --add-mac, --add-cpe-id or --add-subnet.
+	CVE-2017-14496 applies.
+	Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	Kevin Hamacher and Ron Bowes of the Google Security Team for
+	finding this.
+
+	Fix out-of-memory Dos vulnerability. An attacker which can
+	send malicious DNS queries to dnsmasq can trigger memory
+	allocations in the add_pseudoheader function
+	The allocated memory is never freed which leads to a DoS
+	through memory exhaustion. dnsmasq is vulnerable only
+	if one of the following option is specified:
+	--add-mac, --add-cpe-id or --add-subnet.
+	CVE-2017-14495 applies.
+	Credit to Felix Wilhelm, Fermin J. Serna, Gabriel Campana
+	Kevin Hamacher and Ron Bowes of the Google Security Team for
+	finding this.
 
 
 version 2.77
@@ -82,7 +141,7 @@ version 2.77
 	replies, especially when DNSSEC validation on, and 
 	the upstream server returns answer with the RRs in a 
 	particular order. The only DNS server known to tickle
-	this is Nominum's. Thanks to Dave TÃ¤ht for spotting the
+	this is Nominum's. Thanks to Dave Täht for spotting the
 	bug and assisting in the fix.
 
 	Fix the manpage which lied that only the primary address
@@ -134,7 +193,7 @@ version 2.77
 
 	Do ICMP-ping check for address-in-use for DHCPv4 when
 	the client specifies an address in DHCPDISCOVER, and when
-	an address in configured locally. Thanks to Alin NÄƒstac
+	an address in configured locally. Thanks to Alin Năstac
 	for spotting the problem.
 
 	Add new DHCP tag "known-othernet" which is set when only a
@@ -154,7 +213,7 @@ version 2.76
 	translates to hosts on  the local network, or, at 
 	least, 0.0.0.0 accesses the local host, so could
 	be targets for DNS rebinding. See RFC 5735 section 3 
-	for details. Thanks to Stephen RÃ¶ttger for the bug report.
+	for details. Thanks to Stephen Röttger for the bug report.
 
 	Enhance --add-subnet to allow arbitrary subnet addresses.
 	Thanks to Ed Barsley for the patch.
@@ -166,11 +225,11 @@ version 2.76
 
 	Fix crash when an A or AAAA record is defined locally,
 	in a hosts file, and an upstream server sends a reply
-	that the same name is empty. Thanks to Edwin TÃ¶rÃ¶k for
+	that the same name is empty. Thanks to Edwin Török for
 	the patch.
 
 	Fix failure to correctly calculate cache-size when 
-	reading a hosts-file fails. Thanks to AndrÃ© GlÃ¼pker 
+	reading a hosts-file fails. Thanks to André Glüpker 
 	for the patch.
 
 	Fix wrong answer to simple name query when --domain-needed
@@ -1011,7 +1070,7 @@ version 2.63
 	the suggestion.
 
 	Allow "w" (for week) as multiplier in lease times, as well
-	as seconds, minutes, hours and days.  Ãlvaro GÃ¡mez Machado 
+	as seconds, minutes, hours and days.  Álvaro Gámez Machado 
 	spotted the omission.
 
 	Update French translation. Thanks to Gildas Le Nadan.
@@ -1860,8 +1919,8 @@ version 2.50
 	Fix security problem which allowed any host permitted to 
 	do TFTP to possibly compromise dnsmasq by remote buffer 
 	overflow when TFTP enabled. Thanks to Core Security 
-	Technologies and IvÃ¡n Arce, Pablo HernÃ¡n Jorge, Alejandro 
-	Pablo Rodriguez, MartÃ­n Coco, Alberto SoliÃ±o Testa and
+	Technologies and Iván Arce, Pablo Hernán Jorge, Alejandro 
+	Pablo Rodriguez, Martín Coco, Alberto Soliño Testa and
 	Pablo Annetta. This problem has Bugtraq id: 36121 
 	and CVE: 2009-2957
 
