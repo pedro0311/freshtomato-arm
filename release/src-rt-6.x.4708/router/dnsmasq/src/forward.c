@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2016 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2017 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1183,15 +1183,15 @@ void receive_query(struct listener *listen, time_t now)
   
   if ((n = recvmsg(listen->fd, &msg, 0)) == -1)
     return;
-
-  /* Clear buffer beyond request to avoid risk of
-     information disclosure. */
-  memset(daemon->packet + n, 0, daemon->edns_pktsz - n);
   
   if (n < (int)sizeof(struct dns_header) || 
       (msg.msg_flags & MSG_TRUNC) ||
       (header->hb3 & HB3_QR))
     return;
+
+  /* Clear buffer beyond request to avoid risk of
+     information disclosure. */
+  memset(daemon->packet + n, 0, daemon->edns_pktsz - n);
   
   source_addr.sa.sa_family = listen->family;
   
@@ -1413,7 +1413,7 @@ void receive_query(struct listener *listen, time_t now)
       if (udp_size > daemon->edns_pktsz)
 	udp_size = daemon->edns_pktsz;
       else if (udp_size < PACKETSZ)
-       udp_size = PACKETSZ; /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
+	udp_size = PACKETSZ; /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
     }
 
 #ifdef HAVE_AUTH
@@ -1696,7 +1696,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	continue;
 
       /* Clear buffer beyond request to avoid risk of
-        information disclosure. */
+	 information disclosure. */
       memset(payload + size, 0, 65536 - size);
       
       query_count++;
