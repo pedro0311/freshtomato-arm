@@ -1,4 +1,4 @@
-# Part of usb-modeswitch-data, version 20170205
+# Part of usb-modeswitch-data, version 20170805
 #
 # Works with usb_modeswitch versions >= 2.4.0. Slash before %k parameter
 # is for compatibility only. Versions >= 2.5.0 don't need it.
@@ -12,7 +12,7 @@ KERNEL=="ttyUSB*", ATTRS{bNumConfigurations}=="*", PROGRAM="usb_modeswitch --sym
 SUBSYSTEM!="usb", ACTION!="add",, GOTO="modeswitch_rules_end"
 
 # Generic entry for most Huawei devices, excluding Android phones
-ATTRS{idVendor}=="12d1", ATTRS{manufacturer}!="Android", ATTR{bInterfaceNumber}=="00", ATTR{bInterfaceClass}=="08", RUN+="usb_modeswitch '/%k'"
+ATTRS{idVendor}=="12d1", ATTRS{manufacturer}!="Android", ATTR{bInterfaceNumber}=="00", ATTR{bInterfaceClass}=="08", RUN+="usb_modeswitch '%b/%k'"
 
 # HP LaserJet Professional P1102
 ATTR{idVendor}=="03f0", ATTR{idProduct}=="002a", RUN+="usb_modeswitch '/%k'"
@@ -149,7 +149,7 @@ ATTR{idVendor}=="0586", ATTR{idProduct}=="2030", RUN+="usb_modeswitch '/%k'"
 # Axesstel Modems (w/ initial idProduct 0x0010)
 ATTR{idVendor}=="05c6", ATTR{idProduct}=="0010", RUN+="usb_modeswitch '/%k'"
 
-# Option GlobeTrotter GX0201, Older Option devices, AnyDATA devices, Bless UC165, Celot K-300 a.o., TechFaith Venus VT-18, Celot CT-680, Quirky Option devices, Samsung SGH-Z810, Prolink P2000 CDMA, StrongRising device, Vertex Wireless 100 Series
+# Samsung SGH-Z810, Option GlobeTrotter GX0201, Celot K-300 a.o., Celot CT-680, Older Option devices, AnyDATA devices, Bless UC165, StrongRising device, Prolink P2000 CDMA, TechFaith Venus VT-18, Vertex Wireless 100 Series
 ATTR{idVendor}=="05c6", ATTR{idProduct}=="1000", RUN+="usb_modeswitch '/%k'"
 
 # Various USB modems
@@ -413,7 +413,7 @@ ATTR{idVendor}=="0d46", ATTR{idProduct}=="45a5", RUN+="usb_modeswitch '/%k'"
 # Mobile Action ("Smart Cable")
 ATTR{idVendor}=="0df7", ATTR{idProduct}=="0800", RUN+="usb_modeswitch '/%k'"
 
-# MediaTek MT6276M and others, MediaTek/Medion S4222 and probably others
+# MediaTek/Medion S4222 and probably others, MediaTek MT6276M and others
 ATTR{idVendor}=="0e8d", ATTR{idProduct}=="0002", RUN+="usb_modeswitch '/%k'"
 
 # MediaTek Wimax USB Card

@@ -1,3 +1,9 @@
+20170806:
+    Added devices: [03f0:371d] HP un2430, [03f0:4b1d] HP hs2434, [03f0:4e1d]
+    HP lt4111, [03f0:a31d] HP lt4132, [0846:0fff] Netgear AirCard 779S,
+    [12d1:15ec] Vodafone/Huawei K5150; Corrected/amended configs: [0922:1003]
+    Dymo LabelManager 420P, [0922:1007] Dymo LabelManager Wireless PnP,
+    [1199:0fff] Sierra devices; Removed configs: [1004:61aa] LG VL600
 20170205:
     Bugfix release: removed all catch-all fallback config files as they can
     affect unrelated devices - fixes
