@@ -1,7 +1,7 @@
 Configuration File Reference for USB_ModeSwitch
 -----------------------------------------------
 
-Last modified: 2016-08-03
+Last modified: 2017-08-06
 
 
 
@@ -112,6 +112,14 @@ message. Don't use with recent devices
 The standard for many newer Huawei devices. Sends a specific bulk message,
 but different target layouts may be reached with variants of that
 message; use MessageContent for these
+
+
+* HuaweiAltMode <0/1>      -X
+
+An alternative to the Huawei standard, recommended by the manufacturer for
+the Android OS. Sends a different bulk message which brings newer modems
+into NCM mode (well supported in Linux) and older ones into plain PPP mode.
+Also globally settable with HuaweiAltModeGlobal in /etc/usb_modeswitch.conf
 
 
 * OptionMode <0/1>         -U
