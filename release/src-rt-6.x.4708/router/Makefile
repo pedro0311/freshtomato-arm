@@ -2333,11 +2333,11 @@ libcurl-install:
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 	install -d $(INSTALLDIR)/libcurl/usr/lib
-	install -D libcurl/lib/.libs/libcurl.so.4.4.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.4.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.4.0
+	install -D libcurl/lib/.libs/libcurl.so.4.5.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
 	cd $(INSTALLDIR)/libcurl/usr/lib/ && \
-		ln -sf libcurl.so.4.4.0 libcurl.so.4 && \
-		ln -sf libcurl.so.4.4.0 libcurl.so
+		ln -sf libcurl.so.4.5.0 libcurl.so.4 && \
+		ln -sf libcurl.so.4.5.0 libcurl.so
 
 libevent/stamp-h1:
 	cd libevent && CC=$(CC) \
