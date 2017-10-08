@@ -99,10 +99,6 @@ sg.rateSorter = function(a, b)
 
 sg.populate = function()
 {
-	var caps = ['infra', 'adhoc', 'poll', 'pollreq', 'wep', 'shortpre', 'pbcc', 'agility', 'spectrum', null, 'shortslot', null, null, 'cck-ofdm'];
-	var ncaps = [null, null /*40MHz*/, null, null, 'gf', 'sgi20', 'sgi40', 'stbc'];
-	var ncap = '802.11n';
-	var cap_maxlen = 14;
 	var added = 0;
 	var removed = 0;
 	var i, j, k, t, e, s;
@@ -131,69 +127,12 @@ sg.populate = function()
 		e.lastSeen = new Date();
 		e.bssid = s[0];
 		e.ssid = s[1];
-		e.channel = s[2];
-		if (s[7] != 0 && s[9] != 0) {
-			e.channel = e.channel + '<br /><small>' + s[9] + ' MHz<\/small>';
-		}
-		e.rssi = s[4];
-
-		t = '';
-		k = 0;
-		for (j = 0; j < caps.length; ++j) {
-			if ((s[3] & (1 << j)) && (caps[j])) {
-				k += caps[j].length;
-				if (k > cap_maxlen) {
-					t += '<br />';
-					k = caps[j].length;
-				}
-				else t += ' ';
-				t += caps[j];
-			}
-		}
-
-		if (s[7] != 0) {
-			k += ncap.length;
-			if (k > cap_maxlen) {
-				t += '<br />';
-				k = ncap.length;
-			}
-			else t += ' ';
-			t += ncap;
-		}
-
-		for (j = 0; j < ncaps.length; ++j) {
-			if ((s[8] & (1 << j)) && (ncaps[j])) {
-				k += ncaps[j].length;
-				if (k > cap_maxlen) {
-					t += '<br />';
-					k = ncaps[j].length;
-				}
-				else t += ' ';
-				t += ncaps[j];
-			}
-		}
-
-		e.cap = t;
-
-		t = '';
-		var rb = [];
-		var rg = [];
-		for (j = 0; j < s[6].length; ++j) {
-			var x = s[6][j];
-			var r = (x & 0x7F) / 2;
-			if (x & 0x80) rb.push(r);
-				else rg.push(r);
-		}
-		rb.sort(this.rateSorter);
-		rg.sort(this.rateSorter);
-
-		t = '';
-		if (rb.length) t = '<span class="brate">' + rb.join(',') + '<\/span>';
-		if (rg.length) {
-			if (rb.length) t += '<br />';
-			t +='<span class="grate">' + rg.join(',') + '<\/span>';
-		}
-		e.rates = t;
+		e.channel = s[3];
+		e.channel = e.channel + '<br /><small>' + s[9] + ' GHz<\/small>'+ '<br /><small>' + s[4] + ' MHz<\/small>';
+		e.rssi = s[2];
+		e.cap = s[7]+ '<br />' +s[8];
+		e.rates = s[6];
+		e.qual = Math.round(s[5]);
 	}
 
 	t = E('expire-time').value;
@@ -212,16 +151,6 @@ sg.populate = function()
 		var seen, m, mac;
 
 		e = entries[i];
-
-		if (e.rssi >= -50) {
-			e.qual = 100;
-		} else if (e.rssi >= -80) { // between -50 ~ -80dbm
-			e.qual = Math.round(24 + ((e.rssi + 80) * 26)/10);
-		} else if (e.rssi >= -90) { // between -80 ~ -90dbm
-		        e.qual = Math.round(24 + ((e.rssi + 90) * 26)/10);
-		} else {
-		        e.qual = 0;
-		}
 
 		seen = e.lastSeen.toWHMS();
 		if (useAjax()) {
@@ -256,7 +185,7 @@ sg.populate = function()
 
 sg.setup = function() {
 	this.init('survey-grid', 'sort');
-	this.headerSet(['Last Seen', 'SSID', 'BSSID', 'RSSI &nbsp; &nbsp; ', 'Quality', 'Ch', 'Capabilities', 'Rates']);
+	this.headerSet(['Last Seen', 'SSID', 'BSSID', 'RSSI &nbsp; &nbsp; ', 'Quality', 'Ch', 'Security', 'Rates']);
 	this.populate();
 	this.sort(0);
 }
