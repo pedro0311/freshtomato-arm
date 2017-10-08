@@ -1,0 +1,175 @@
+--- mysql/configure	2013-11-04 19:55:16.000000000 +0100
++++ mysql/configure	2017-09-28 17:27:10.000000000 +0200
+@@ -26300,13 +26300,14 @@ if test "${ac_cv_sys_restartable_syscall
+   $as_echo_n "(cached) " >&6
+ else
+   if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
++$as_echo "Skipping...! bwq518"
++#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&5
++#$as_echo "$as_me: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&2;}
++#   { (exit 1); exit 1; }; }; }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+@@ -26393,7 +26394,7 @@ fi
+ fi
+ { $as_echo "$as_me:$LINENO: result: $ac_cv_sys_restartable_syscalls" >&5
+ $as_echo "$ac_cv_sys_restartable_syscalls" >&6; }
+-if test $ac_cv_sys_restartable_syscalls = yes; then
++if test "$ac_cv_sys_restartable_syscalls" = yes; then
+ 
+ cat >>confdefs.h <<\_ACEOF
+ #define HAVE_RESTARTABLE_SYSCALLS 1
+@@ -48118,13 +48119,14 @@ $as_echo "$as_me: error: unknown endiann
+ $as_echo_n "checking whether GCC atomic builtins are available... " >&6; }
+   # either define HAVE_IB_GCC_ATOMIC_BUILTINS or not
+   if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
++$as_echo "Skipping...! bwq518"
++#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&5
++#$as_echo "$as_me: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&2;}
++#   { (exit 1); exit 1; }; }; }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+@@ -48224,13 +48226,14 @@ fi
+ $as_echo_n "checking whether pthread_t can be used by GCC atomic builtins... " >&6; }
+   # either define HAVE_IB_ATOMIC_PTHREAD_T_GCC or not
+   if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
++$as_echo "Skipping...! bwq518"
++#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&5
++#$as_echo "$as_me: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&2;}
++#   { (exit 1); exit 1; }; }; }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+@@ -48437,13 +48440,14 @@ _ACEOF
+ $as_echo_n "checking whether pthread_t can be used by Solaris libc atomic functions... " >&6; }
+   # either define HAVE_IB_ATOMIC_PTHREAD_T_SOLARIS or not
+   if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
++$as_echo "Skipping...! bwq518"
++#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&5
++#$as_echo "$as_me: error: cannot run test program while cross compiling
++#See \`config.log' for more details." >&2;}
++#   { (exit 1); exit 1; }; }; }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+--- mysql/extra/Makefile.am	2013-11-04 19:52:27.000000000 +0100
++++ mysql/extra/Makefile.am	2017-09-28 17:27:10.000000000 +0200
+@@ -32,7 +32,7 @@ DIST_SUBDIRS =		yassl
+ $(top_builddir)/include/mysqld_error.h: comp_err.c \
+ 			$(top_srcdir)/sql/share/errmsg.txt
+ 	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
+-	$(top_builddir)/extra/comp_err$(EXEEXT) \
++	$(top_builddir)/host/comp_err$(EXEEXT) \
+ 	--charset=$(top_srcdir)/sql/share/charsets \
+ 	--out-dir=$(top_builddir)/sql/share/ \
+ 	--header_file=$(top_builddir)/include/mysqld_error.h \
+--- mysql/extra/Makefile.in	2013-11-04 19:54:57.000000000 +0100
++++ mysql/extra/Makefile.in	2017-10-03 19:58:43.000000000 +0200
+@@ -938,7 +938,7 @@ uninstall-am: uninstall-binPROGRAMS unin
+ $(top_builddir)/include/mysqld_error.h: comp_err.c \
+ 			$(top_srcdir)/sql/share/errmsg.txt
+ 	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
+-	$(top_builddir)/extra/comp_err$(EXEEXT) \
++	$(top_builddir)/host/comp_err$(EXEEXT) \
+ 	--charset=$(top_srcdir)/sql/share/charsets \
+ 	--out-dir=$(top_builddir)/sql/share/ \
+ 	--header_file=$(top_builddir)/include/mysqld_error.h \
+--- mysql/include/my_global.h	2013-11-04 19:52:27.000000000 +0100
++++ mysql/include/my_global.h	2017-09-28 17:27:10.000000000 +0200
+@@ -894,6 +894,7 @@ typedef SOCKET_SIZE_TYPE size_socket;
+ #endif /* isfinite */
+ 
+ #ifndef HAVE_ISNAN
++#undef isnan //bwq518
+ #define isnan(x) ((x) != (x))
+ #endif
+ 
+--- mysql/scripts/Makefile.am	2013-11-04 19:52:27.000000000 +0100
++++ mysql/scripts/Makefile.am	2017-09-28 17:27:12.000000000 +0200
+@@ -121,7 +121,7 @@ mysql_fix_privilege_tables.sql: mysql_sy
+ mysql_fix_privilege_tables_sql.c: comp_sql.c mysql_fix_privilege_tables.sql
+ 	$(MAKE) $(AM_MAKEFLAGS) comp_sql$(EXEEXT)
+ 	sleep 2
+-	$(top_builddir)/scripts/comp_sql$(EXEEXT) \
++	$(top_builddir)/host/comp_sql$(EXEEXT) \
+ 	  mysql_fix_privilege_tables \
+ 	    $(top_srcdir)/scripts/mysql_fix_privilege_tables.sql $@
+ 
+--- mysql/scripts/Makefile.in	2013-11-04 19:55:01.000000000 +0100
++++ mysql/scripts/Makefile.in	2017-10-03 19:58:44.000000000 +0200
+@@ -804,7 +804,7 @@ mysql_fix_privilege_tables.sql: mysql_sy
+ mysql_fix_privilege_tables_sql.c: comp_sql.c mysql_fix_privilege_tables.sql
+ 	$(MAKE) $(AM_MAKEFLAGS) comp_sql$(EXEEXT)
+ 	sleep 2
+-	$(top_builddir)/scripts/comp_sql$(EXEEXT) \
++	$(top_builddir)/host/comp_sql$(EXEEXT) \
+ 	  mysql_fix_privilege_tables \
+ 	    $(top_srcdir)/scripts/mysql_fix_privilege_tables.sql $@
+ 
+--- mysql/sql/Makefile.am	2013-11-04 19:52:27.000000000 +0100
++++ mysql/sql/Makefile.am	2017-09-28 17:27:12.000000000 +0200
+@@ -177,7 +177,7 @@ link_sources:
+ # this avoid the rebuild of the built files in a source dist
+ lex_hash.h:	gen_lex_hash.cc lex.h
+ 		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
+-		./gen_lex_hash$(EXEEXT) > $@-t
++		../host/gen_lex_hash$(EXEEXT) > $@-t
+ 		$(MV) $@-t $@
+ 
+ # For testing of udf_example.so
+--- mysql/sql/Makefile.in	2013-11-04 19:55:02.000000000 +0100
++++ mysql/sql/Makefile.in	2017-10-03 19:58:44.000000000 +0200
+@@ -1310,7 +1310,7 @@ link_sources:
+ # this avoid the rebuild of the built files in a source dist
+ lex_hash.h:	gen_lex_hash.cc lex.h
+ 		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
+-		./gen_lex_hash$(EXEEXT) > $@-t
++		../host/gen_lex_hash$(EXEEXT) > $@-t
+ 		$(MV) $@-t $@
+ 
+ # We might have some stuff not built in this build, but that we want to install
