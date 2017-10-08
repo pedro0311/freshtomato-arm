@@ -2146,10 +2146,14 @@ libncurses-install:
 
 mysql/stamp-h1: openssl zlib libncurses
 	@$(SEP)
+	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
 	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch; then \
 		patch -b -d mysql/sql < patches/mysql/101-bison-compat.patch; \
 	fi ) && \
-	cd mysql && cp -f configure.arm configure && \
+	( if ! patch -p0 -R -f --dry-run --silent < patches/mysql/201-fix-cross-compiling.patch; then \
+		patch -p0 -b < patches/mysql/201-fix-cross-compiling.patch; \
+	fi ) && \
+	cd mysql && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
 		-I$(TOP)/openssl/include -I$(TOP)/libncurses/include" \
@@ -2164,7 +2168,6 @@ mysql/stamp-h1: openssl zlib libncurses
 		--without-mysqlmanager \
 		--with-pthread \
 		--with-ssl \
-		--without-docs \
 		--with-geometry \
 		--with-low-memory \
 		--enable-assembler \
@@ -2196,7 +2199,6 @@ mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/lib/mysql/plugin
 	install -d $(INSTALLDIR)/mysql/usr/share
 	install -d $(INSTALLDIR)/mysql/usr/share/mysql
-	install -D -m 755 mysql/mycheck $(INSTALLDIR)/mysql/usr/bin
 	install -D -m 755 mysql/staged/usr/bin/my_print_defaults $(INSTALLDIR)/mysql/usr/bin
 	$(STRIP) $(INSTALLDIR)/mysql/usr/bin/my_print_defaults
 	install -D -m 755 mysql/staged/usr/bin/myisamchk $(INSTALLDIR)/mysql/usr/bin
