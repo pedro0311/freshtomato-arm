@@ -301,7 +301,15 @@ dg.populate = function()
 
 		var ifidx = wl_uidx(e.unit);
 		if ((e.rssi !== '') && (ifidx >= 0) && (wlnoise[ifidx] < 0)) {
-			e.qual = MAX(e.rssi - wlnoise[ifidx], 0);
+			if (e.rssi >= -50) {
+			    e.qual = 100;
+			} else if (e.rssi >= -80) { // between -50 ~ -80dbm
+			    e.qual = Math.round(24 + ((e.rssi + 80) * 26)/10);
+			} else if (e.rssi >= -90) { // between -80 ~ -90dbm
+			    e.qual = Math.round(24 + ((e.rssi + 90) * 26)/10);
+			} else {
+			    e.qual = 0;
+			}
 		}
 		else {
 			e.qual = -1;
