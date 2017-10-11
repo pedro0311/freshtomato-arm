@@ -926,7 +926,7 @@ bridge-install:
 
 dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	@$(SEP)
-	( if ! patch -R -f -d dnsmasq/src --dry-run --silent < patches/dnsmasq/101-tomato-specific.patch; then \
+	( if ! patch -R -f -d dnsmasq/src --dry-run --silent < patches/dnsmasq/101-tomato-specific.patch 2>/dev/null; then \
 		patch -b -d dnsmasq/src < patches/dnsmasq/101-tomato-specific.patch; \
 	fi )
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
@@ -1973,9 +1973,9 @@ libpng-clean:
 
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	@$(SEP)
-	( if ! patch -R -f -d php --dry-run --silent < patches/php/101-fix-cross-compiling-issue.patch; then \
+	( if ! patch -R -f -d php --dry-run --silent < patches/php/101-fix-cross-compiling-issue.patch 2>/dev/null; then \
 		patch -b -d php < patches/php/101-fix-cross-compiling-issue.patch; \
-	fi ) && \
+	fi )
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/include" \
@@ -2147,12 +2147,12 @@ libncurses-install:
 mysql/stamp-h1: openssl zlib libncurses
 	@$(SEP)
 	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
-	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch; then \
+	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch 2>/dev/null; then \
 		patch -b -d mysql/sql < patches/mysql/101-bison-compat.patch; \
-	fi ) && \
-	( if ! patch -p0 -R -f --dry-run --silent < patches/mysql/201-fix-cross-compiling.patch; then \
+	fi )
+	( if ! patch -p0 -R -f --dry-run --silent < patches/mysql/201-fix-cross-compiling.patch 2>/dev/null; then \
 		patch -p0 -b < patches/mysql/201-fix-cross-compiling.patch; \
-	fi ) && \
+	fi )
 	cd mysql && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
@@ -2190,6 +2190,7 @@ mysql-clean:
 	-@$(MAKE) -C mysql clean
 	-@rm -f mysql/stamp-h1
 	-@rm -rf mysql/staged mysql/host
+	-@rm -f mysql/.host.tgz
 
 mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/bin
