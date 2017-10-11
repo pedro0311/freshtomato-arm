@@ -57,7 +57,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="SEC_Top"></a>
 
-<p>This manual documents the GNU <code>nano</code> editor, version 2.8.6.
+<p>This manual documents the GNU <code>nano</code> editor, version 2.8.7.
 </p>
 <table class="menu" border="0" cellspacing="0">
 <tr><td align="left" valign="top">&bull; <a href="#Introduction" accesskey="1">Introduction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
@@ -802,9 +802,9 @@ The uniquely numbered files are stored in the specified directory.
 </dd>
 <dt><code>set boldtext</code></dt>
 <dd><p>Use bold instead of reverse video for the title bar, status bar, key combos,
-function tags, line numbers, and selected text.  This can be overridden for
-the first five by setting the options <code>titlecolor</code>, <code>statuscolor</code>,
-<code>keycolor</code>, <code>functioncolor</code>, and <code>numbercolor</code>.
+function tags, line numbers, and selected text.  This can be overridden by
+setting the options <code>titlecolor</code>, <code>statuscolor</code>, <code>keycolor</code>,
+<code>functioncolor</code>, <code>numbercolor</code>, and <code>selectedcolor</code>.
 </p>
 </dd>
 <dt><code>set brackets &quot;<var>string</var>&quot;</code></dt>
@@ -844,7 +844,7 @@ Valid names for foreground and background color are:
 <code>white</code>, <code>black</code>, <code>blue</code>, <code>green</code>,
 <code>red</code>, <code>cyan</code>, <code>yellow</code>, and <code>magenta</code>.
 The name of the foreground color may be prefixed with <code>bright</code>.
-And either <var>fgcolor</var> or <var>,bgcolor</var> may be left out.
+And either <var>fgcolor</var> or ,<var>bgcolor</var> may be left out.
 </p>
 </dd>
 <dt><code>set historylog</code></dt>
@@ -976,6 +976,11 @@ won&rsquo;t work properly with this option enabled.
 </dd>
 <dt><code>set regexp</code></dt>
 <dd><p>Do extended regular expression searches by default.
+</p>
+</dd>
+<dt><code>set selectedcolor <var>fgcolor</var>,<var>bgcolor</var></code></dt>
+<dd><p>Use this color combination for selected text.
+See <a href="#set-functioncolor"><code>set functioncolor</code></a> for valid color names.
 </p>
 </dd>
 <dt><code>set showcursor</code></dt>

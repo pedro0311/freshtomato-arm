@@ -2283,6 +2283,12 @@ openvpn_plugin_auth_nvram: nvram$(BCMEX)
 
 #shibby
 nano/stamp-h1: libncurses
+	( if ! patch -p0 -Rf --dry-run --silent < patches/nano/101-do-not-build-doc.patch 2>/dev/null; then \
+		patch -p0 -b < patches/nano/101-do-not-build-doc.patch; \
+	fi )
+	( if ! patch -p0 -Rf --dry-run --silent < patches/nano/102-fix-build-with-tiny-option.patch 2>/dev/null; then \
+		patch -p0 -b < patches/nano/102-fix-build-with-tiny-option.patch; \
+	fi )
 	cd nano && CC=$(CC) STRIP=$(STRIP) \
 		autoreconf && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \

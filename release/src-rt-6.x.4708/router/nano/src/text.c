@@ -24,13 +24,11 @@
 
 #include "proto.h"
 
-#include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <sys/wait.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #ifndef NANO_TINY
 static pid_t pid = -1;
@@ -52,7 +50,7 @@ static filestruct *jusbottom = NULL;
 static int pletion_x = 0;
 	/* The x position in pletion_line of the last found completion. */
 static completion_word *list_of_completions;
-	/* A linked list of the completions that have been attepmted. */
+	/* A linked list of the completions that have been attempted. */
 #endif
 
 #ifndef NANO_TINY
@@ -282,162 +280,160 @@ void do_tab(void)
  * depending on whether --tabstospaces is in effect. */
 void do_indent(void)
 {
-    char *line_indent = NULL;
-	/* The text added to each line in order to indent it. */
+    char *line_indent = charalloc(tabsize + 1);
+	/* The whitespace added to each line in order to indent it. */
     size_t line_indent_len = 0;
-	/* The length of the text added to each line in order to indent
-	 * it. */
+	/* The number of bytes added to each line in order to indent it. */
     filestruct *top, *bot, *f;
     size_t top_x, bot_x;
 
-    assert(openfile->current != NULL && openfile->current->data != NULL);
-
-    /* If the mark is on, use all lines covered by the mark. */
+    /* Use either all the marked lines or just the current line. */
     if (openfile->mark_set)
 	mark_order((const filestruct **)&top, &top_x,
 			(const filestruct **)&bot, &bot_x, NULL);
-    /* Otherwise, use the current line. */
     else {
 	top = openfile->current;
 	bot = top;
     }
 
-    /* Set up the text we'll be using as indentation. */
-    line_indent = charalloc(tabsize + 1);
+    /* Go through the lines to see if there's a non-empty one. */
+    for (f = top; f != bot->next; f = f->next) {
+	if (f->data[0] != '\0')
+	    break;
+    }
 
+    /* If all lines are empty, there is nothing to do. */
+    if (f == bot->next) {
+	free(line_indent);
+	return;
+    }
+
+    /* Set the indentation to either a bunch of spaces or a single tab. */
     if (ISSET(TABS_TO_SPACES)) {
-	/* Set the indentation to tabsize spaces. */
 	charset(line_indent, ' ', tabsize);
 	line_indent_len = tabsize;
     } else {
-	/* Set the indentation to a tab. */
 	line_indent[0] = '\t';
 	line_indent_len = 1;
     }
 
     line_indent[line_indent_len] = '\0';
 
-    /* Go through each line of the text. */
+    /* Go through each of the lines, but skip empty ones. */
     for (f = top; f != bot->next; f = f->next) {
 	size_t line_len = strlen(f->data);
-	size_t indent_len = indent_length(f->data);
 
-	/* Add the characters in line_indent to
-	 * the beginning of the non-whitespace text of this line. */
+	if (f->data[0] == '\0')
+	    continue;
+
+	/* Add the fabricated indentation to the beginning of the line. */
 	f->data = charealloc(f->data, line_len + line_indent_len + 1);
-	charmove(&f->data[indent_len + line_indent_len],
-		&f->data[indent_len], line_len - indent_len + 1);
-	strncpy(f->data + indent_len, line_indent, line_indent_len);
+	charmove(&f->data[line_indent_len], f->data, line_len + 1);
+	strncpy(f->data, line_indent, line_indent_len);
+
 	openfile->totsize += line_indent_len;
 
-	/* Keep track of the change in the current line. */
-	if (openfile->mark_set && f == openfile->mark_begin &&
-		openfile->mark_begin_x >= indent_len)
+	/* Compensate for the change in the current line. */
+	if (openfile->mark_set && f == openfile->mark_begin)
 	    openfile->mark_begin_x += line_indent_len;
-
-	if (f == openfile->current && openfile->current_x >= indent_len) {
+	if (f == openfile->current) {
 	    openfile->current_x += line_indent_len;
 	    openfile->placewewant = xplustabs();
 	}
-
-	/* If the NO_NEWLINES flag isn't set, and this is the
-	 * magicline, add a new magicline. */
-	if (!ISSET(NO_NEWLINES) && f == openfile->filebot)
-	    new_magicline();
     }
 
-    /* Clean up. */
     free(line_indent);
 
     /* Throw away the undo stack, to prevent making mistakes when
      * the user tries to undo something in the indented text. */
     discard_until(NULL, openfile);
 
-    /* Mark the file as modified. */
     set_modified();
-
-    /* Update the screen. */
     refresh_needed = TRUE;
+}
+
+/* If the given text starts with a tab's worth of whitespace, return the
+ * number of bytes this whitespace occupies.  Otherwise, return zero. */
+size_t length_of_white(const char *text)
+{
+    size_t bytes_of_white = 1;
+
+    while (TRUE) {
+	if (*text == '\t')
+	    return bytes_of_white;
+
+	if (*text != ' ')
+	    return 0;
+
+       if (bytes_of_white == tabsize)
+	    return tabsize;
+
+	bytes_of_white++;
+	text++;
+    }
 }
 
 /* Unindent the current line (or the marked lines) by tabsize columns.
  * The removed indent can be a mixture of spaces plus at most one tab. */
 void do_unindent(void)
 {
-    bool indent_changed = FALSE;
-	/* Whether any unindenting was done. */
     filestruct *top, *bot, *f;
     size_t top_x, bot_x;
 
-    assert(openfile->current != NULL && openfile->current->data != NULL);
-
-    /* If the mark is on, use all lines covered by the mark. */
+    /* Use either all the marked lines or just the current line. */
     if (openfile->mark_set)
 	mark_order((const filestruct **)&top, &top_x,
 			(const filestruct **)&bot, &bot_x, NULL);
-    /* Otherwise, use the current line. */
     else {
 	top = openfile->current;
 	bot = top;
     }
 
-    /* Go through each line of the text. */
+    /* If any of the lines cannot be unindented and does not consist of
+     * only whitespace, we don't change anything. */
     for (f = top; f != bot->next; f = f->next) {
-	size_t line_len = strlen(f->data);
-	size_t indent_len = indent_length(f->data);
-	size_t indent_col = strnlenpt(f->data, indent_len);
-		/* The length in columns of the indentation on this line. */
-
-	if (tabsize <= indent_col) {
-	    size_t indent_new = actual_x(f->data, indent_col - tabsize);
-		/* The length of the indentation remaining on
-		 * this line after we unindent. */
-	    size_t indent_shift = indent_len - indent_new;
-		/* The change in the indentation on this line
-		 * after we unindent. */
-
-	    /* If there's at least tabsize
-	     * columns' worth of indentation at the beginning of the
-	     * non-whitespace text of this line, remove it. */
-	    charmove(&f->data[indent_new], &f->data[indent_len],
-			line_len - indent_shift - indent_new + 1);
-	    null_at(&f->data, line_len - indent_shift + 1);
-	    openfile->totsize -= indent_shift;
-
-	    /* Keep track of the change in the current line. */
-	    if (openfile->mark_set && f == openfile->mark_begin &&
-			openfile->mark_begin_x > indent_new) {
-		if (openfile->mark_begin_x <= indent_len)
-		    openfile->mark_begin_x = indent_new;
-		else
-		    openfile->mark_begin_x -= indent_shift;
-	    }
-
-	    if (f == openfile->current &&
-			openfile->current_x > indent_new) {
-		if (openfile->current_x <= indent_len)
-		    openfile->current_x = indent_new;
-		else
-		    openfile->current_x -= indent_shift;
-		openfile->placewewant = xplustabs();
-	    }
-
-	    /* We've unindented, so the indentation changed. */
-	    indent_changed = TRUE;
+	if (length_of_white(f->data) == 0 && !white_string(f->data)) {
+	    statusline(HUSH, _("Can unindent only by a full tab size"));
+	    return;
 	}
     }
 
-    if (indent_changed) {
-	/* Throw away the undo stack, to prevent making mistakes when
-	 * the user tries to undo something in the unindented text. */
-	discard_until(NULL, openfile);
+    /* Go through each of the lines and remove their leading indent. */
+    for (f = top; f != bot->next; f = f->next) {
+	size_t line_len = strlen(f->data);
+	size_t indent_len = length_of_white(f->data);
 
-	/* Mark the file as modified. */
-	set_modified();
+	/* If this line cannot be unindeted, simply skip it. */
+	if (indent_len == 0)
+	    continue;
 
-	/* Update the screen. */
-	refresh_needed = TRUE;
+	/* Remove the first tab's worth of whitespace from this line. */
+	charmove(f->data, &f->data[indent_len], line_len - indent_len + 1);
+	null_at(&f->data, line_len - indent_len + 1);
+	openfile->totsize -= indent_len;
+
+	/* Compensate for the change in the current line. */
+	if (openfile->mark_set && f == openfile->mark_begin) {
+	    if (openfile->mark_begin_x <= indent_len)
+		openfile->mark_begin_x = 0;
+	    else
+		openfile->mark_begin_x -= indent_len;
+	}
+	if (f == openfile->current) {
+	    if (openfile->current_x <= indent_len)
+		openfile->current_x = 0;
+	    else
+		openfile->current_x -= indent_len;
+	    openfile->placewewant = xplustabs();
+	}
     }
+
+    /* Throw away the undo stack, to prevent making mistakes when
+     * the user tries to undo something in the unindented text. */
+    discard_until(NULL, openfile);
+
+    set_modified();
+    refresh_needed = TRUE;
 }
 #endif /* !NANO_TINY */
 
@@ -2443,7 +2439,7 @@ void do_justify(bool full_justify)
     do {
 #endif
 	statusbar(_("Can now UnJustify!"));
-	place_the_cursor(TRUE);
+	place_the_cursor();
 	curs_set(1);
 	kbinput = do_input(FALSE);
 #ifndef NANO_TINY
@@ -3030,14 +3026,13 @@ void do_spell(void)
  * termination, and the error string otherwise. */
 void do_linter(void)
 {
-    char *read_buff, *read_buff_ptr, *read_buff_word, *ptr;
+    char *read_buff, *read_buff_ptr, *read_buff_word, *ptr, *lintcopy;
     size_t pipe_buff_size, read_buff_size, read_buff_read, bytesread;
     size_t parsesuccess = 0;
     int lint_status, lint_fd[2];
     pid_t pid_lint;
     static int arglen = 3;
     static char **lintargs = NULL;
-    char *lintcopy, *convendptr = NULL;
     lintstruct *lints = NULL, *tmplint = NULL, *curlint = NULL;
 
     if (ISSET(RESTRICTED)) {
@@ -3128,9 +3123,6 @@ void do_linter(void)
     read_buff = read_buff_ptr = charalloc(read_buff_size);
 
     while ((bytesread = read(lint_fd[0], read_buff_ptr, pipe_buff_size)) > 0) {
-#ifdef DEBUG
-	fprintf(stderr, "text.c:do_linter:%ld bytes (%s)\n", (long)bytesread, read_buff_ptr);
-#endif
 	read_buff_read += bytesread;
 	read_buff_size += pipe_buff_size;
 	read_buff = read_buff_ptr = charealloc(read_buff, read_buff_size);
@@ -3139,10 +3131,6 @@ void do_linter(void)
 
     *read_buff_ptr = '\0';
     close(lint_fd[0]);
-
-#ifdef DEBUG
-		fprintf(stderr, "text.c:do_lint:Raw output: %s\n", read_buff);
-#endif
 
     /* Process the linter output. */
     read_buff_word = read_buff_ptr = read_buff;
@@ -3154,15 +3142,14 @@ void do_linter(void)
 		char *filename = NULL, *linestr = NULL, *maybecol = NULL;
 		char *message = mallocstrcpy(NULL, read_buff_word);
 
-		/* At the moment we're assuming the following formats:
+		/* At the moment we handle the following formats:
 		 *
 		 * filenameorcategory:line:column:message (e.g. splint)
+		 * filenameorcategory:line,column:message (e.g. pylint)
 		 * filenameorcategory:line:message        (e.g. pyflakes)
-		 * filenameorcategory:line,col:message    (e.g. pylint)
-		 *
-		 * This could be turned into some scanf() based parser,
-		 * but ugh. */
-		if ((filename = strtok(read_buff_word, ":")) != NULL) {
+		 */
+		if (strstr(message, ": ") != NULL) {
+		    filename = strtok(read_buff_word, ":");
 		    if ((linestr = strtok(NULL, ":")) != NULL) {
 			if ((maybecol = strtok(NULL, ":")) != NULL) {
 			    ssize_t tmplineno = 0, tmpcolno = 0;
@@ -3175,18 +3162,16 @@ void do_linter(void)
 				continue;
 			    }
 
-			    tmpcolno = strtol(maybecol, &convendptr, 10);
-			    if (*convendptr != '\0') {
-				/* Previous field might still be
-				 * line,col format. */
+			    tmpcolno = strtol(maybecol, NULL, 10);
+			    /* Check if the middle field is in comma format. */
+			    if (tmpcolno <= 0) {
 				strtok(linestr, ",");
 				if ((tmplinecol = strtok(NULL, ",")) != NULL)
 				    tmpcolno = strtol(tmplinecol, NULL, 10);
+				else
+				    tmpcolno = 1;
 			    }
 
-#ifdef DEBUG
-			    fprintf(stderr, "text.c:do_lint:Successful parse! %ld:%ld:%s\n", (long)tmplineno, (long)tmpcolno, message);
-#endif
 			    /* Nice.  We have a lint message we can use. */
 			    parsesuccess++;
 			    tmplint = curlint;
@@ -3313,7 +3298,7 @@ void do_linter(void)
 	}
 
 	/* Place and show the cursor to indicate the affected line. */
-	place_the_cursor(TRUE);
+	place_the_cursor();
 	wnoutrefresh(edit);
 	curs_set(1);
 
@@ -3411,7 +3396,7 @@ void do_formatter(void)
 	formatargs[0] = strtok(openfile->syntax->formatter, " ");
 	while ((ptr = strtok(NULL, " ")) != NULL) {
 	    arglen++;
-	    formatargs = (char **)nrealloc(formatargs, arglen *	sizeof(char *));
+	    formatargs = (char **)nrealloc(formatargs, arglen * sizeof(char *));
 	    formatargs[arglen - 3] = ptr;
 	}
 	formatargs[arglen - 1] = NULL;
@@ -3561,7 +3546,7 @@ void do_verbatim_input(void)
     /* TRANSLATORS: This is displayed when the next keystroke will be
      * inserted verbatim. */
     statusbar(_("Verbatim Input"));
-    place_the_cursor(TRUE);
+    place_the_cursor();
     curs_set(1);
 
     /* Read in all the verbatim characters. */
@@ -3604,7 +3589,7 @@ char *copy_completion(char *check_line, int start)
 	position = next;
     }
 
-    word = (char *)nmalloc((len_of_word + 1) * sizeof(char));
+    word = charalloc(len_of_word + 1);
 
     /* Simply copy the word. */
     while (index < len_of_word)
@@ -3669,7 +3654,7 @@ void complete_a_word(void)
 	return;
     }
 
-    shard = (char *)nmalloc((openfile->current_x - start_of_shard + 1) * sizeof(char));
+    shard = charalloc(openfile->current_x - start_of_shard + 1);
 
     /* Copy the fragment that has to be searched for. */
     while (start_of_shard < openfile->current_x)
