@@ -22,11 +22,9 @@
 #include "proto.h"
 
 #include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <errno.h>
+#ifdef DEBUG
 #include <time.h>
+#endif
 
 static bool came_full_circle = FALSE;
 	/* Have we reached the starting line again while searching? */
@@ -461,7 +459,7 @@ void go_looking(void)
     statusline(HUSH, "Took: %.2f", (double)(clock() - start) / CLOCKS_PER_SEC);
 #endif
 
-    edit_redraw(was_current);
+    edit_redraw(was_current, CENTERING);
     search_replace_abort();
 }
 
@@ -1075,8 +1073,7 @@ void do_find_bracket(void)
 	    /* If count is zero, we've found a matching bracket.  Update
 	     * the screen and get out. */
 	    if (count == 0) {
-		focusing = FALSE;
-		edit_redraw(current_save);
+		edit_redraw(current_save, FLOWING);
 		break;
 	    }
 	} else {

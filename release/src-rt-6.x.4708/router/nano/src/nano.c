@@ -22,24 +22,22 @@
 #include "proto.h"
 #include "revision.h"
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <ctype.h>
-#include <locale.h>
-#ifdef ENABLE_UTF8
-#include <langinfo.h>
-#endif
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
-#endif
+#include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #ifndef NANO_TINY
 #include <sys/ioctl.h>
 #endif
+#ifdef ENABLE_UTF8
+#include <langinfo.h>
+#endif
+#include <locale.h>
+#include <string.h>
+#ifdef HAVE_TERMIOS_H
+#include <termios.h>
+#endif
+#include <unistd.h>
 
 #ifdef ENABLE_MOUSE
 static int oldinterval = -1;
@@ -1790,7 +1788,7 @@ int do_mouse(void)
 	    /* The cursor moved; clean the cutbuffer on the next cut. */
 	    cutbuffer_reset();
 
-	edit_redraw(current_save);
+	edit_redraw(current_save, CENTERING);
     }
 
     /* No more handling is needed. */
@@ -1857,6 +1855,15 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 	if (openfile->mark_set && openfile->current == openfile->mark_begin &&
 		openfile->current_x < openfile->mark_begin_x)
 	    openfile->mark_begin_x += char_len;
+
+	/* When the cursor is on the top row and not on the first chunk
+	 * of a line, adding text there might change the preceding chunk
+	 * and thus require an adjustment of firstcolumn. */
+	if (openfile->current == openfile->edittop &&
+			openfile->firstcolumn > 0) {
+	    ensure_firstcolumn_is_aligned();
+	    refresh_needed = TRUE;
+	}
 #endif
 
 	openfile->current_x += char_len;
@@ -2377,19 +2384,18 @@ int main(int argc, char **argv)
 #endif /* !DISABLE_HISTORIES */
 
 #ifndef NANO_TINY
-    /* Set up the backup directory (unless we're using restricted mode,
-     * in which case backups are disabled, since they would allow
-     * reading from or writing to files not specified on the command
-     * line).  This entails making sure it exists and is a directory, so
-     * that backup files will be saved there. */
-    if (!ISSET(RESTRICTED))
+    /* If backups are enabled and a backup directory was specified and
+     * we're not in restricted mode, make sure the path exists and is
+     * a directory, so that backup files can be saved there. */
+    if (ISSET(BACKUP_FILE) && backup_dir != NULL && !ISSET(RESTRICTED))
 	init_backup_dir();
 #endif
 
 #ifndef DISABLE_OPERATINGDIR
     /* Set up the operating directory.  This entails chdir()ing there,
      * so that file reads and writes will be based there. */
-    init_operating_dir();
+    if (operating_dir != NULL)
+	init_operating_dir();
 #endif
 
 #ifndef DISABLE_JUSTIFY
@@ -2496,6 +2502,7 @@ int main(int argc, char **argv)
 #else
     interface_color_pair[TITLE_BAR] = hilite_attribute;
     interface_color_pair[LINE_NUMBER] = hilite_attribute;
+    interface_color_pair[SELECTED_TEXT] = hilite_attribute;
     interface_color_pair[STATUS_BAR] = hilite_attribute;
     interface_color_pair[KEY_COMBO] = hilite_attribute;
     interface_color_pair[FUNCTION_TAG] = A_NORMAL;
@@ -2518,6 +2525,11 @@ int main(int argc, char **argv)
     /* Ask for the codes for Shift+Control+Home/End. */
     shiftcontrolhome = get_keycode("kHOM6", SHIFT_CONTROL_HOME);
     shiftcontrolend = get_keycode("kEND6", SHIFT_CONTROL_END);
+    /* Ask for the codes for Alt+Left/Right/Up/Down. */
+    altleft = get_keycode("kLFT3", ALT_LEFT);
+    altright = get_keycode("kRIT3", ALT_RIGHT);
+    altup = get_keycode("kUP3", ALT_UP);
+    altdown = get_keycode("kDN3", ALT_DOWN);
     /* Ask for the codes for Shift+Alt+Left/Right/Up/Down. */
     shiftaltleft = get_keycode("kLFT4", SHIFT_ALT_LEFT);
     shiftaltright = get_keycode("kRIT4", SHIFT_ALT_RIGHT);
@@ -2626,7 +2638,7 @@ int main(int argc, char **argv)
 
 	/* Refresh just the cursor position or the entire edit window. */
 	if (!refresh_needed) {
-	    place_the_cursor(TRUE);
+	    place_the_cursor();
 	    wnoutrefresh(edit);
 	} else
 	    edit_refresh();

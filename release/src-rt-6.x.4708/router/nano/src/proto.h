@@ -71,6 +71,10 @@ extern int shiftcontrolup;
 extern int shiftcontroldown;
 extern int shiftcontrolhome;
 extern int shiftcontrolend;
+extern int altleft;
+extern int altright;
+extern int altup;
+extern int altdown;
 extern int shiftaltleft;
 extern int shiftaltright;
 extern int shiftaltup;
@@ -132,7 +136,6 @@ extern const char *locking_suffix;
 #endif
 #ifndef DISABLE_OPERATINGDIR
 extern char *operating_dir;
-extern char *full_operating_dir;
 #endif
 
 #ifndef DISABLE_SPELLER
@@ -183,7 +186,7 @@ functionptrtype parse_browser_input(int *kbinput);
 void browser_refresh(void);
 void browser_select_dirname(const char *needle);
 void do_filesearch(void);
-void do_fileresearch(void);
+void do_fileresearch(bool forwards);
 void do_first_file(void);
 void do_last_file(void);
 char *strip_last_component(const char *path);
@@ -284,7 +287,7 @@ char *get_full_path(const char *origpath);
 char *safe_tempfile(FILE **f);
 #ifndef DISABLE_OPERATINGDIR
 void init_operating_dir(void);
-bool check_operating_dir(const char *currpath, bool allow_tabcomp);
+bool outside_of_confinement(const char *currpath, bool allow_tabcomp);
 #endif
 #ifndef NANO_TINY
 void init_backup_dir(void);
@@ -328,6 +331,7 @@ size_t length_of_list(int menu);
 const sc *first_sc_for(int menu, void (*func)(void));
 int the_code_for(void (*func)(void), int defaultval);
 functionptrtype func_from_key(int *kbinput);
+int keycode_from_string(const char *keystring);
 void assign_keyinfo(sc *s, const char *keystring, const int keycode);
 void print_sclist(void);
 void shortcut_init(void);
@@ -353,30 +357,28 @@ size_t help_line_len(const char *ptr);
 #endif
 void do_help_void(void);
 
-/* All functions in move.c. */
+/* Most functions in move.c. */
 void do_first_line(void);
 void do_last_line(void);
 void do_page_up(void);
 void do_page_down(void);
 #ifndef DISABLE_JUSTIFY
 void do_para_begin(bool update_screen);
-void do_para_begin_void(void);
 void do_para_end(bool update_screen);
+void do_para_begin_void(void);
 void do_para_end_void(void);
 #endif
 void do_prev_block(void);
 void do_next_block(void);
 void do_prev_word(bool allow_punct, bool update_screen);
-void do_prev_word_void(void);
 bool do_next_word(bool allow_punct, bool update_screen);
+void do_prev_word_void(void);
 void do_next_word_void(void);
-void do_home(bool be_clever);
-void do_home_void(void);
-void do_end(bool be_clever);
-void do_end_void(void);
+void do_home(void);
+void do_end(void);
 void do_up(bool scroll_only);
-void do_up_void(void);
 void do_down(bool scroll_only);
+void do_up_void(void);
 void do_down_void(void);
 #ifndef NANO_TINY
 void do_scroll_up(void);
@@ -448,6 +450,7 @@ void do_statusbar_right(void);
 void do_statusbar_backspace(void);
 void do_statusbar_delete(void);
 void do_statusbar_cut_text(void);
+void do_statusbar_uncut_text(void);
 #ifndef NANO_TINY
 void do_statusbar_prev_word(void);
 void do_statusbar_next_word(void);
@@ -600,9 +603,9 @@ char *mallocstrcpy(char *dest, const char *src);
 char *free_and_assign(char *dest, char *src);
 size_t get_page_start(size_t column);
 size_t xplustabs(void);
-size_t actual_x(const char *s, size_t column);
-size_t strnlenpt(const char *s, size_t maxlen);
-size_t strlenpt(const char *s);
+size_t actual_x(const char *text, size_t column);
+size_t strnlenpt(const char *text, size_t maxlen);
+size_t strlenpt(const char *text);
 void new_magicline(void);
 #if !defined(NANO_TINY) || defined(ENABLE_HELP)
 void remove_magicline(void);
@@ -649,7 +652,7 @@ void warn_and_shortly_pause(const char *msg);
 void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void onekey(const char *keystroke, const char *desc, int length);
-void place_the_cursor(bool forreal);
+void place_the_cursor(void);
 void edit_draw(filestruct *fileptr, const char *converted,
 	int line, size_t from_col);
 int update_line(filestruct *fileptr, size_t index);
@@ -671,7 +674,7 @@ size_t number_of_chunks_in(filestruct *line);
 void ensure_firstcolumn_is_aligned(void);
 #endif
 size_t actual_last_column(size_t leftedge, size_t column);
-void edit_redraw(filestruct *old_current);
+void edit_redraw(filestruct *old_current, update_type manner);
 void edit_refresh(void);
 void adjust_viewport(update_type location);
 void total_redraw(void);

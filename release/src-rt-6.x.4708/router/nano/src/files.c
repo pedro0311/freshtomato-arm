@@ -21,17 +21,14 @@
 
 #include "proto.h"
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <ctype.h>
+#include <fcntl.h>
+#include <libgen.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
-#include <libgen.h>
+#include <string.h>
+#include <unistd.h>
 
 #define LOCKBUFSIZE 8192
 
@@ -261,6 +258,7 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
     if (wroteamt < lockdatalen) {
 	statusline(MILD, _("Error writing lock file %s: %s"),
 			lockfilename, ferror(filestream));
+ 	fclose(filestream);
 	goto free_the_data;
     }
 
@@ -434,9 +432,9 @@ bool open_buffer(const char *filename, bool undoable)
     as_an_at = FALSE;
 
 #ifndef DISABLE_OPERATINGDIR
-    if (check_operating_dir(filename, FALSE)) {
-	statusline(ALERT, _("Can't insert file from outside of %s"),
-				full_operating_dir);
+    if (outside_of_confinement(filename, FALSE)) {
+	statusline(ALERT, _("Can't read file from outside of %s"),
+				operating_dir);
 	return FALSE;
     }
 #endif
@@ -688,32 +686,30 @@ bool close_buffer(void)
  * warnings. */
 int is_file_writable(const char *filename)
 {
-    struct stat fileinfo, fileinfo2;
+    char *full_filename;
+    struct stat fileinfo;
     int fd;
     FILE *f;
-    char *full_filename;
     bool result = TRUE;
 
     if (ISSET(VIEW_MODE))
 	return TRUE;
 
-    /* Get the specified file's full path. */
     full_filename = get_full_path(filename);
 
-    /* Okay, if we can't stat the absolute path due to some component's
-     * permissions, just try the relative one. */
-    if (full_filename == NULL ||
-		(stat(full_filename, &fileinfo) == -1 && stat(filename, &fileinfo2) != -1))
+    /* If the absolute path is unusable, use the given relative one. */
+    if (full_filename == NULL || stat(full_filename, &fileinfo) == -1)
 	full_filename = mallocstrcpy(NULL, filename);
 
     if ((fd = open(full_filename, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR |
-		S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)) == -1 ||
-		(f = fdopen(fd, "a")) == NULL)
+		S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)) == -1)
 	result = FALSE;
-    else
+    else if ((f = fdopen(fd, "a")) == NULL) {
+	result = FALSE;
+	close(fd);
+    } else
 	fclose(f);
 
-    close(fd);
     free(full_filename);
 
     return result;
@@ -1188,9 +1184,6 @@ void do_insertfile(void)
 			openfile->current_x != was_current_x)
 		    set_modified();
 
-		/* Update current_y to account for inserted lines. */
-		place_the_cursor(TRUE);
-
 		refresh_needed = TRUE;
 	    }
 
@@ -1414,37 +1407,28 @@ char *safe_tempfile(FILE **f)
 }
 
 #ifndef DISABLE_OPERATINGDIR
-/* Initialize full_operating_dir based on operating_dir. */
+/* Change to the specified operating directory, when it's valid. */
 void init_operating_dir(void)
 {
-    if (operating_dir == NULL)
-	return;
-
-    full_operating_dir = get_full_path(operating_dir);
+    operating_dir = free_and_assign(operating_dir, get_full_path(operating_dir));
 
     /* If the operating directory is inaccessible, fail. */
-    if (full_operating_dir == NULL || chdir(full_operating_dir) == -1)
+    if (operating_dir == NULL || chdir(operating_dir) == -1)
 	die(_("Invalid operating directory\n"));
 
-    snuggly_fit(&full_operating_dir);
+    snuggly_fit(&operating_dir);
 }
 
-/* Check to see if we're inside the operating directory.  Return FALSE
- * if we are, or TRUE otherwise.  If allow_tabcomp is TRUE, allow
- * incomplete names that would be matches for the operating directory,
- * so that tab completion will work. */
-bool check_operating_dir(const char *currpath, bool allow_tabcomp)
+/* Check whether the given path is outside of the operating directory.
+ * Return TRUE if it is, and FALSE otherwise.  If allow_tabcomp is TRUE,
+ * incomplete names that can grow into matches for the operating directory
+ * are considered to be inside, so that tab completion will work. */
+bool outside_of_confinement(const char *currpath, bool allow_tabcomp)
 {
-    /* full_operating_dir is global for memory cleanup.  It should have
-     * already been initialized by init_operating_dir().  Also, a
-     * relative operating directory path will only be handled properly
-     * if this is done. */
-
     char *fullpath;
-    bool retval = FALSE;
-    const char *whereami1, *whereami2 = NULL;
+    bool is_inside, begins_to_be;
 
-    /* If no operating directory is set, don't bother doing anything. */
+    /* If no operating directory is set, there is nothing to check. */
     if (operating_dir == NULL)
 	return FALSE;
 
@@ -1455,26 +1439,17 @@ bool check_operating_dir(const char *currpath, bool allow_tabcomp)
      * is what the user typed somewhere.  We don't want to report a
      * non-existent directory as being outside the operating directory,
      * so we return FALSE.  If allow_tabcomp is TRUE, then currpath
-     * exists, but is not executable.  So we say it isn't in the
+     * exists, but is not executable.  So we say it is outside the
      * operating directory. */
     if (fullpath == NULL)
 	return allow_tabcomp;
 
-    whereami1 = strstr(fullpath, full_operating_dir);
-    if (allow_tabcomp)
-	whereami2 = strstr(full_operating_dir, fullpath);
-
-    /* If both searches failed, we're outside the operating directory.
-     * Otherwise, check the search results.  If the full operating
-     * directory path is not at the beginning of the full current path
-     * (for normal usage) and vice versa (for tab completion, if we're
-     * allowing it), we're outside the operating directory. */
-    if (whereami1 != fullpath && whereami2 != full_operating_dir)
-	retval = TRUE;
+    is_inside = (strstr(fullpath, operating_dir) == fullpath);
+    begins_to_be = (allow_tabcomp &&
+			strstr(operating_dir, fullpath) == operating_dir);
     free(fullpath);
 
-    /* Otherwise, we're still inside it. */
-    return retval;
+    return (!is_inside && !begins_to_be);
 }
 #endif
 
@@ -1496,27 +1471,18 @@ int prompt_failed_backupwrite(const char *filename)
     return response;
 }
 
+/* Transform the specified backup directory to an absolute path,
+ * and verify that it is usable. */
 void init_backup_dir(void)
 {
-    char *full_backup_dir;
+    backup_dir = free_and_assign(backup_dir, get_full_path(backup_dir));
 
-    if (backup_dir == NULL)
-	return;
+    /* If we can't get an absolute path (which means it doesn't exist or
+       isn't accessible), or it's not a directory, fail. */
+    if (backup_dir == NULL || backup_dir[strlen(backup_dir) - 1] != '/')
+	die(_("Invalid backup directory\n"));
 
-    full_backup_dir = get_full_path(backup_dir);
-
-    /* If get_full_path() failed or the backup directory is
-     * inaccessible, unset backup_dir. */
-    if (full_backup_dir == NULL ||
-		full_backup_dir[strlen(full_backup_dir) - 1] != '/') {
-	free(full_backup_dir);
-	free(backup_dir);
-	backup_dir = NULL;
-    } else {
-	free(backup_dir);
-	backup_dir = full_backup_dir;
-	snuggly_fit(&backup_dir);
-    }
+    snuggly_fit(&backup_dir);
 }
 #endif /* !NANO_TINY */
 
@@ -1606,8 +1572,8 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 #ifndef DISABLE_OPERATINGDIR
     /* If we're writing a temporary file, we're probably going outside
      * the operating directory, so skip the operating directory test. */
-    if (!tmp && check_operating_dir(realname, FALSE)) {
-	statusline(ALERT, _("Can't write outside of %s"), full_operating_dir);
+    if (!tmp && outside_of_confinement(realname, FALSE)) {
+	statusline(ALERT, _("Can't write outside of %s"), operating_dir);
 	goto cleanup_and_exit;
     }
 #endif
@@ -1635,11 +1601,10 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
     if (ISSET(BACKUP_FILE) && !tmp && realexists && openfile->current_stat &&
 		(method != OVERWRITE || openfile->mark_set ||
 		openfile->current_stat->st_mtime == st.st_mtime)) {
-	int backup_fd;
-	FILE *backup_file;
-	char *backupname;
 	static struct timespec filetime[2];
-	int backup_cflags;
+	char *backupname;
+	int backup_cflags, backup_fd;
+	FILE *backup_file = NULL;
 
 	/* Save the original file's access and modification times. */
 	filetime[0].tv_sec = openfile->current_stat->st_atime;
@@ -1653,7 +1618,7 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 		statusline(ALERT, _("Error reading %s: %s"), realname,
 			strerror(errno));
 		/* If we can't read from the original file, go on, since
-		 * only saving the original file is better than saving
+		 * only saving the current buffer is better than saving
 		 * nothing. */
 		goto skip_backup;
 	    }
@@ -1667,13 +1632,10 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 	if (backup_dir != NULL) {
 	    char *backuptemp = get_full_path(realname);
 
+	    /* If we can't get a canonical absolute path, just use the
+	     * filename portion of the given path.  Otherwise, replace
+	     * slashes with exclamation marks in the full path. */
 	    if (backuptemp == NULL)
-		/* If get_full_path() failed, we don't have a
-		 * canonicalized absolute pathname, so just use the
-		 * filename portion of the pathname.  We use tail() so
-		 * that e.g. ../backupname will be backed up in
-		 * backupdir/backupname~ instead of
-		 * backupdir/../backupname~. */
 		backuptemp = mallocstrcpy(NULL, tail(realname));
 	    else {
 		size_t i = 0;
@@ -1694,10 +1656,9 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 		free(backuptemp);
 		free(backupname);
 		/* If we can't write to the backup, DON'T go on, since
-		 * whatever caused the backup file to fail (e.g. disk
-		 * full may well cause the real file write to fail,
-		 * which means we could lose both the backup and the
-		 * original! */
+		 * whatever caused the backup-file write to fail (e.g.
+		 * disk full) may well cause the real file write to fail
+		 * too, which means we could lose the original! */
 		goto cleanup_and_exit;
 	    } else {
 		free(backupname);
@@ -1727,18 +1688,14 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 
 	backup_fd = open(backupname, backup_cflags,
 		S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-	/* Now we've got a safe file stream.  If the previous open()
-	 * call failed, this will return NULL. */
-	backup_file = fdopen(backup_fd, "wb");
 
-	if (backup_fd < 0 || backup_file == NULL) {
+	if (backup_fd >= 0)
+	    backup_file = fdopen(backup_fd, "wb");
+
+	if (backup_file == NULL) {
 	    statusline(HUSH, _("Error writing backup file %s: %s"),
 			backupname, strerror(errno));
 	    free(backupname);
-	    /* If we can't make a backup, DON'T go on, since whatever caused
-	     * the backup to fail (e.g. disk full) may well cause the real
-	     * file write to fail, in which case we could lose both the
-	     * backup and the original! */
 	    goto cleanup_and_exit;
 	}
 
@@ -1800,8 +1757,7 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
     if (f_open == NULL) {
 	original_umask = umask(0);
 
-	/* If we create a temp file, we don't let anyone else access it.
-	 * We create a temp file if tmp is TRUE. */
+	/* If we create a temp file, we don't let anyone else access it. */
 	if (tmp)
 	    umask(S_IRWXG | S_IRWXO);
 	else
@@ -1972,9 +1928,9 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 	/* If we must set the filename, and it changed, adjust things. */
 	if (!nonamechange && strcmp(openfile->filename, realname) != 0) {
 #ifndef DISABLE_COLOR
-	    char *newname;
-	    char *oldname = openfile->syntax ? openfile->syntax->name : "";
-	    filestruct *line = openfile->fileage;
+	    const char *oldname, *newname;
+
+	    oldname = openfile->syntax ? openfile->syntax->name : "";
 #endif
 	    openfile->filename = mallocstrcpy(openfile->filename, realname);
 
@@ -1987,9 +1943,12 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 
 	    /* If the syntax changed, discard and recompute the multidata. */
 	    if (strcmp(oldname, newname) != 0) {
-		for (; line != NULL; line = line->next) {
+		filestruct *line = openfile->fileage;
+
+		while (line != NULL) {
 		    free(line->multidata);
 		    line->multidata = NULL;
+		    line = line->next;
 		}
 		precalc_multicolorinfo();
 		refresh_needed = TRUE;
@@ -2460,7 +2419,7 @@ char **username_tab_completion(const char *buf, size_t *num_matches,
 #ifndef DISABLE_OPERATINGDIR
 	    /* ...unless the match exists outside the operating
 	     * directory, in which case just go to the next match. */
-	    if (check_operating_dir(userdata->pw_dir, TRUE))
+	    if (outside_of_confinement(userdata->pw_dir, TRUE))
 		continue;
 #endif
 
@@ -2546,14 +2505,12 @@ char **cwd_tab_completion(const char *buf, bool allow_files, size_t
 #ifndef DISABLE_OPERATINGDIR
 	    /* ...unless the match exists outside the operating
 	     * directory, in which case just go to the next match. */
-	    if (check_operating_dir(tmp, TRUE))
-		skip_match = TRUE;
+	    skip_match = outside_of_confinement(tmp, TRUE);
 #endif
 
 	    /* ...or unless the match isn't a directory and allow_files
 	     * isn't set, in which case just go to the next match. */
-	    if (!allow_files && !is_dir(tmp))
-		skip_match = TRUE;
+	    skip_match = skip_match || (!allow_files && !is_dir(tmp));
 
 	    free(tmp);
 
@@ -2820,59 +2777,62 @@ int check_dotnano(void)
 /* Load the search and replace histories from ~/.nano/search_history. */
 void load_history(void)
 {
-    char *nanohist = histfilename();
+    char *searchhist = histfilename();
     char *legacyhist = legacyhistfilename();
     struct stat hstat;
+    FILE *hist;
+
+    /* If no home directory was found, we can't do anything. */
+    if (searchhist == NULL || legacyhist == NULL)
+	return;
 
     /* If there is an old history file, migrate it. */
     /* (To be removed in 2018.) */
-    if (stat(legacyhist, &hstat) != -1 && stat(nanohist, &hstat) == -1) {
-	if (rename(legacyhist, nanohist) == -1)
+    if (stat(legacyhist, &hstat) != -1 && stat(searchhist, &hstat) == -1) {
+	if (rename(legacyhist, searchhist) == -1)
 	    history_error(N_("Detected a legacy nano history file (%s) which I tried to move\n"
 			     "to the preferred location (%s) but encountered an error: %s"),
-				legacyhist, nanohist, strerror(errno));
+				legacyhist, searchhist, strerror(errno));
 	else
 	    history_error(N_("Detected a legacy nano history file (%s) which I moved\n"
 			     "to the preferred location (%s)\n(see the nano FAQ about this change)"),
-				legacyhist, nanohist);
+				legacyhist, searchhist);
     }
 
-    /* Assume do_rcfile() has reported a missing home directory. */
-    if (nanohist != NULL) {
-	FILE *hist = fopen(nanohist, "rb");
+    hist = fopen(searchhist, "rb");
 
-	if (hist == NULL) {
-	    if (errno != ENOENT) {
-		/* Don't save history when we quit. */
-		UNSET(HISTORYLOG);
-		history_error(N_("Error reading %s: %s"), nanohist,
+    if (hist == NULL) {
+	if (errno != ENOENT) {
+	    /* When reading failed, don't save history when we quit. */
+	    UNSET(HISTORYLOG);
+	    history_error(N_("Error reading %s: %s"), searchhist,
 			strerror(errno));
-	    }
-	} else {
-	    /* Load a history list (first the search history, then the
-	     * replace history) from the oldest entry to the newest.
-	     * Assume the last history entry is a blank line. */
-	    filestruct **history = &search_history;
-	    char *line = NULL;
-	    size_t buf_len = 0;
-	    ssize_t read;
-
-	    while ((read = getline(&line, &buf_len, hist)) > 0) {
-		line[--read] = '\0';
-		if (read > 0) {
-		    /* Encode any embedded NUL as 0x0A. */
-		    unsunder(line, read);
-		    update_history(history, line);
-		} else
-		    history = &replace_history;
-	    }
-
-	    fclose(hist);
-	    free(line);
 	}
-	free(nanohist);
-	free(legacyhist);
+    } else {
+	/* Load the two history lists -- first the search history, then
+	 * the replace history -- from the oldest entry to the newest.
+	 * The two lists are separated by an empty line. */
+	filestruct **history = &search_history;
+	char *line = NULL;
+	size_t buf_len = 0;
+	ssize_t read;
+
+	while ((read = getline(&line, &buf_len, hist)) > 0) {
+	    line[--read] = '\0';
+	    if (read > 0) {
+		/* Encode any embedded NUL as 0x0A. */
+		unsunder(line, read);
+		update_history(history, line);
+	    } else
+		history = &replace_history;
+	}
+
+	fclose(hist);
+	free(line);
     }
+
+    free(searchhist);
+    free(legacyhist);
 }
 
 /* Write the lines of a history list, starting with the line at head, to
@@ -2901,35 +2861,36 @@ bool writehist(FILE *hist, const filestruct *head)
 /* Save the search and replace histories to ~/.nano/search_history. */
 void save_history(void)
 {
-    char *nanohist;
+    char *searchhist;
+    FILE *hist;
 
-    /* Don't save unchanged or empty histories. */
+    /* If the histories are unchanged or empty, don't bother saving them. */
     if (!history_has_changed() || (searchbot->lineno == 1 &&
-		replacebot->lineno == 1))
+				replacebot->lineno == 1))
 	return;
 
-    nanohist = histfilename();
+    searchhist = histfilename();
 
-    if (nanohist != NULL) {
-	FILE *hist = fopen(nanohist, "wb");
+    if (searchhist == NULL)
+	return;
 
-	if (hist == NULL)
-	    fprintf(stderr, _("Error writing %s: %s\n"), nanohist,
+    hist = fopen(searchhist, "wb");
+
+    if (hist == NULL)
+	fprintf(stderr, _("Error writing %s: %s\n"), searchhist,
 			strerror(errno));
-	else {
-	    /* Make sure no one else can read from or write to the
-	     * history file. */
-	    chmod(nanohist, S_IRUSR | S_IWUSR);
+    else {
+	/* Don't allow others to read or write the history file. */
+	chmod(searchhist, S_IRUSR | S_IWUSR);
 
-	    if (!writehist(hist, searchage) || !writehist(hist, replaceage))
-		fprintf(stderr, _("Error writing %s: %s\n"), nanohist,
+	if (!writehist(hist, searchage) || !writehist(hist, replaceage))
+	    fprintf(stderr, _("Error writing %s: %s\n"), searchhist,
 			strerror(errno));
 
-	    fclose(hist);
-	}
-
-	free(nanohist);
+	fclose(hist);
     }
+
+    free(searchhist);
 }
 
 /* Save the recorded last file positions to ~/.nano/filepos_history. */

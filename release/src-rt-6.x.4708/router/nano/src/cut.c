@@ -23,7 +23,6 @@
 #include "proto.h"
 
 #include <string.h>
-#include <stdio.h>
 
 static bool keep_cutbuffer = FALSE;
 	/* Should we keep the contents of the cutbuffer? */
@@ -290,9 +289,6 @@ void do_uncut_text(void)
 
     /* Mark the file as modified. */
     set_modified();
-
-    /* Update current_y to account for the inserted lines. */
-    place_the_cursor(TRUE);
 
     refresh_needed = TRUE;
 

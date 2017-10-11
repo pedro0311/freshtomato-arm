@@ -22,7 +22,6 @@
 #include "proto.h"
 
 #include <string.h>
-#include <ctype.h>
 
 /* Move to the first line of the file. */
 void do_first_line(void)
@@ -53,14 +52,61 @@ void get_edge_and_target(size_t *leftedge, size_t *target_column)
 {
 #ifndef NANO_TINY
     if (ISSET(SOFTWRAP)) {
+	size_t shim = editwincols * (1 + (tabsize / editwincols));
+
 	*leftedge = leftedge_for(xplustabs(), openfile->current);
-	*target_column = openfile->placewewant - *leftedge;
+	*target_column = (openfile->placewewant + shim - *leftedge) % editwincols;
     } else
 #endif
     {
 	*leftedge = 0;
 	*target_column = openfile->placewewant;
     }
+}
+
+/* Return the index in line->data that corresponds to the given column on the
+ * chunk that starts at the given leftedge.  If the index lands on a tab, and
+ * this tab starts on an earlier chunk, and the tab ends on this row OR we're
+ * going forward, then increment the index and recalculate leftedge. */
+size_t proper_x(filestruct *line, size_t *leftedge, bool forward,
+		size_t column, bool *shifted)
+{
+    size_t index = actual_x(line->data, column);
+
+#ifndef NANO_TINY
+    if (ISSET(SOFTWRAP) && line->data[index] == '\t' && (forward ||
+		*leftedge / tabsize < (*leftedge + editwincols) / tabsize) &&
+		*leftedge % tabsize != 0 && column < *leftedge + tabsize) {
+	index++;
+
+	*leftedge = leftedge_for(strnlenpt(line->data, index), line);
+
+	if (shifted != NULL)
+	    *shifted = TRUE;
+    }
+#endif
+
+    return index;
+}
+
+/* Adjust the values for current_x and placewewant in case we have landed in
+ * the middle of a tab that crosses a row boundary. */
+void set_proper_index_and_pww(size_t *leftedge, size_t target, bool forward)
+{
+    bool shifted = FALSE;
+
+    openfile->current_x = proper_x(openfile->current, leftedge, forward,
+			actual_last_column(*leftedge, target), &shifted);
+
+    /* If the index was incremented, try going to the target column. */
+    if (shifted) {
+	size_t newer_x = actual_x(openfile->current->data, *leftedge + target);
+
+	if (newer_x > openfile->current_x)
+	    openfile->current_x = newer_x;
+    }
+
+    openfile->placewewant = *leftedge + target;
 }
 
 /* Move up nearly one screenful. */
@@ -73,13 +119,12 @@ void do_page_up(void)
      * beginning of the top line of the edit window, as Pico does. */
     if (!ISSET(SMOOTH_SCROLL)) {
 	openfile->current = openfile->edittop;
-	openfile->placewewant = openfile->firstcolumn;
-	openfile->current_x = actual_x(openfile->current->data,
-					openfile->firstcolumn);
 	openfile->current_y = 0;
-    }
 
-    get_edge_and_target(&leftedge, &target_column);
+	leftedge = leftedge_for(openfile->firstcolumn, openfile->edittop);
+	target_column = 0;
+    } else
+	get_edge_and_target(&leftedge, &target_column);
 
     /* Move up the required number of lines or chunks.  If we can't, we're
      * at the top of the file, so put the cursor there and get out. */
@@ -88,9 +133,7 @@ void do_page_up(void)
 	return;
     }
 
-    openfile->placewewant = leftedge + target_column;
-    openfile->current_x = actual_x(openfile->current->data,
-				actual_last_column(leftedge, target_column));
+    set_proper_index_and_pww(&leftedge, target_column, FALSE);
 
     /* Move the viewport so that the cursor stays immobile, if possible. */
     adjust_viewport(STATIONARY);
@@ -107,13 +150,12 @@ void do_page_down(void)
      * beginning of the top line of the edit window, as Pico does. */
     if (!ISSET(SMOOTH_SCROLL)) {
 	openfile->current = openfile->edittop;
-	openfile->placewewant = openfile->firstcolumn;
-	openfile->current_x = actual_x(openfile->current->data,
-					openfile->firstcolumn);
 	openfile->current_y = 0;
-    }
 
-    get_edge_and_target(&leftedge, &target_column);
+	leftedge = leftedge_for(openfile->firstcolumn, openfile->edittop);
+	target_column = 0;
+    } else
+	get_edge_and_target(&leftedge, &target_column);
 
     /* Move down the required number of lines or chunks.  If we can't, we're
      * at the bottom of the file, so put the cursor there and get out. */
@@ -122,9 +164,7 @@ void do_page_down(void)
 	return;
     }
 
-    openfile->placewewant = leftedge + target_column;
-    openfile->current_x = actual_x(openfile->current->data,
-				actual_last_column(leftedge, target_column));
+    set_proper_index_and_pww(&leftedge, target_column, TRUE);
 
     /* Move the viewport so that the cursor stays immobile, if possible. */
     adjust_viewport(STATIONARY);
@@ -147,13 +187,7 @@ void do_para_begin(bool update_screen)
     openfile->current_x = 0;
 
     if (update_screen)
-	edit_redraw(was_current);
-}
-
-/* Move up to first start of a paragraph before the current line. */
-void do_para_begin_void(void)
-{
-    do_para_begin(TRUE);
+	edit_redraw(was_current, CENTERING);
 }
 
 /* Move down to the beginning of the last line of the current paragraph.
@@ -183,7 +217,13 @@ void do_para_end(bool update_screen)
 	openfile->current_x = strlen(openfile->current->data);
 
     if (update_screen)
-	edit_redraw(was_current);
+	edit_redraw(was_current, CENTERING);
+}
+
+/* Move up to first start of a paragraph before the current line. */
+void do_para_begin_void(void)
+{
+    do_para_begin(TRUE);
 }
 
 /* Move down to just after the first end of a paragraph. */
@@ -212,7 +252,7 @@ void do_prev_block(void)
 	openfile->current = openfile->current->next;
 
     openfile->current_x = 0;
-    edit_redraw(was_current);
+    edit_redraw(was_current, CENTERING);
 }
 
 /* Move to the next block of text in the file. */
@@ -230,7 +270,7 @@ void do_next_block(void)
     }
 
     openfile->current_x = 0;
-    edit_redraw(was_current);
+    edit_redraw(was_current, CENTERING);
 }
 
 /* Move to the previous word in the file.  If allow_punct is TRUE, treat
@@ -273,17 +313,8 @@ void do_prev_word(bool allow_punct, bool update_screen)
 	openfile->current_x = move_mbright(openfile->current->data,
 						openfile->current_x);
 
-    if (update_screen) {
-	focusing = FALSE;
-	edit_redraw(was_current);
-    }
-}
-
-/* Move to the previous word in the file, treating punctuation as part of a
- * word if the WORD_BOUNDS flag is set, and update the screen afterwards. */
-void do_prev_word_void(void)
-{
-    do_prev_word(ISSET(WORD_BOUNDS), TRUE);
+    if (update_screen)
+	edit_redraw(was_current, FLOWING);
 }
 
 /* Move to the next word in the file.  If allow_punct is TRUE, treat
@@ -322,13 +353,18 @@ bool do_next_word(bool allow_punct, bool update_screen)
 	    break;
     }
 
-    if (update_screen) {
-	focusing = FALSE;
-	edit_redraw(was_current);
-    }
+    if (update_screen)
+	edit_redraw(was_current, FLOWING);
 
     /* Return whether we started on a word. */
     return started_on_word;
+}
+
+/* Move to the previous word in the file, treating punctuation as part of a
+ * word if the WORD_BOUNDS flag is set, and update the screen afterwards. */
+void do_prev_word_void(void)
+{
+    do_prev_word(ISSET(WORD_BOUNDS), TRUE);
 }
 
 /* Move to the next word in the file, treating punctuation as part of a word
@@ -339,10 +375,9 @@ void do_next_word_void(void)
 }
 
 /* Move to the beginning of the current line (or softwrapped chunk).
- * If be_clever is TRUE, do a smart home when wanted and possible,
- * and do a dynamic home when in softwrap mode and it's possible.
- * If be_clever is FALSE, just do a simple home. */
-void do_home(bool be_clever)
+ * When enabled, do a smart home.  When softwrapping, go the beginning
+ * of the full line when already at the start of a chunk. */
+void do_home(void)
 {
     filestruct *was_current = openfile->current;
     size_t was_column = xplustabs();
@@ -353,10 +388,11 @@ void do_home(bool be_clever)
 
     if (ISSET(SOFTWRAP)) {
 	leftedge = leftedge_for(was_column, openfile->current);
-	leftedge_x = actual_x(openfile->current->data, leftedge);
+	leftedge_x = proper_x(openfile->current, &leftedge, FALSE, leftedge,
+				NULL);
     }
 
-    if (ISSET(SMART_HOME) && be_clever) {
+    if (ISSET(SMART_HOME)) {
 	size_t indent_x = indent_length(openfile->current->data);
 
 	if (openfile->current->data[indent_x] != '\0') {
@@ -376,7 +412,7 @@ void do_home(bool be_clever)
     if (!moved && ISSET(SOFTWRAP)) {
 	/* If already at the left edge of the screen, move fully home.
 	 * Otherwise, move to the left edge. */
-	if (openfile->current_x == leftedge_x && be_clever)
+	if (openfile->current_x == leftedge_x)
 	    openfile->current_x = 0;
 	else {
 	    openfile->current_x = leftedge_x;
@@ -392,23 +428,16 @@ void do_home(bool be_clever)
 
     /* If we changed chunk, we might be offscreen.  Otherwise,
      * update current if the mark is on or we changed "page". */
-    if (ISSET(SOFTWRAP) && moved_off_chunk) {
-	focusing = FALSE;
-	edit_redraw(was_current);
-    } else if (line_needs_update(was_column, openfile->placewewant))
+    if (ISSET(SOFTWRAP) && moved_off_chunk)
+	edit_redraw(was_current, FLOWING);
+    else if (line_needs_update(was_column, openfile->placewewant))
 	update_line(openfile->current, openfile->current_x);
 }
 
-/* Do a (smart or dynamic) home. */
-void do_home_void(void)
-{
-    do_home(TRUE);
-}
-
 /* Move to the end of the current line (or softwrapped chunk).
- * If be_clever is TRUE, do a dynamic end when in softwrap mode and
- * it's possible.  If be_clever is FALSE, just do a simple end. */
-void do_end(bool be_clever)
+ * When softwrapping and alredy at the end of a chunk, go to the
+ * end of the full line. */
+void do_end(void)
 {
     filestruct *was_current = openfile->current;
     size_t was_column = xplustabs();
@@ -434,7 +463,7 @@ void do_end(bool be_clever)
 
 	/* If already at the right edge of the screen, move fully to
 	 * the end of the line.  Otherwise, move to the right edge. */
-	if (openfile->current_x == rightedge_x && be_clever)
+	if (openfile->current_x == rightedge_x)
 	    openfile->current_x = line_len;
 	else {
 	    openfile->current_x = rightedge_x;
@@ -450,17 +479,10 @@ void do_end(bool be_clever)
 
     /* If we changed chunk, we might be offscreen.  Otherwise,
      * update current if the mark is on or we changed "page". */
-    if (ISSET(SOFTWRAP) && moved_off_chunk) {
-	focusing = FALSE;
-	edit_redraw(was_current);
-    } else if (line_needs_update(was_column, openfile->placewewant))
+    if (ISSET(SOFTWRAP) && moved_off_chunk)
+	edit_redraw(was_current, FLOWING);
+    else if (line_needs_update(was_column, openfile->placewewant))
 	update_line(openfile->current, openfile->current_x);
-}
-
-/* Do a (dynamic) end. */
-void do_end_void(void)
-{
-    do_end(TRUE);
 }
 
 /* Move the cursor to the preceding line or chunk.  If scroll_only is TRUE,
@@ -468,7 +490,6 @@ void do_end_void(void)
 void do_up(bool scroll_only)
 {
     filestruct *was_current = openfile->current;
-    size_t was_column = xplustabs();
     size_t leftedge, target_column;
 
     /* When just scrolling and the top of the file is onscreen, get out. */
@@ -482,34 +503,15 @@ void do_up(bool scroll_only)
     if (go_back_chunks(1, &openfile->current, &leftedge) > 0)
 	return;
 
+    set_proper_index_and_pww(&leftedge, target_column, FALSE);
+
+    if (scroll_only)
+	edit_scroll(UPWARD, 1);
+
+    edit_redraw(was_current, FLOWING);
+
+    /* <Up> should not change placewewant, so restore it. */
     openfile->placewewant = leftedge + target_column;
-    openfile->current_x = actual_x(openfile->current->data,
-				actual_last_column(leftedge, target_column));
-
-    /* When the cursor was on the first line of the edit window (or when just
-     * scrolling without moving the cursor), scroll the edit window up -- one
-     * line if we're in smooth scrolling mode, and half a page otherwise. */
-    if (openfile->current_y == 0 || scroll_only)
-	edit_scroll(UPWARD, (ISSET(SMOOTH_SCROLL) || scroll_only) ?
-				1 : editwinrows / 2 + 1);
-
-    if (openfile->current_y > 0) {
-	/* Redraw the prior line if it's not offscreen, and it's not the same
-	 * line as the current one, and the line was horizontally scrolled. */
-	if ((!scroll_only || openfile->current_y < editwinrows - 1) &&
-			openfile->current != was_current &&
-			line_needs_update(was_column, 0))
-	    update_line(openfile->current->next, 0);
-	/* Redraw the current line if it needs to be horizontally scrolled. */
-	if (line_needs_update(0, xplustabs()))
-	    update_line(openfile->current, openfile->current_x);
-    }
-}
-
-/* Move up one line or chunk. */
-void do_up_void(void)
-{
-    do_up(FALSE);
 }
 
 /* Move the cursor to next line or chunk.  If scroll_only is TRUE, also
@@ -517,7 +519,6 @@ void do_up_void(void)
 void do_down(bool scroll_only)
 {
     filestruct *was_current = openfile->current;
-    size_t was_column = xplustabs();
     size_t leftedge, target_column;
 
     get_edge_and_target(&leftedge, &target_column);
@@ -526,28 +527,21 @@ void do_down(bool scroll_only)
     if (go_forward_chunks(1, &openfile->current, &leftedge) > 0)
 	return;
 
+    set_proper_index_and_pww(&leftedge, target_column, TRUE);
+
+    if (scroll_only)
+	edit_scroll(DOWNWARD, 1);
+
+    edit_redraw(was_current, FLOWING);
+
+    /* <Down> should not change placewewant, so restore it. */
     openfile->placewewant = leftedge + target_column;
-    openfile->current_x = actual_x(openfile->current->data,
-				actual_last_column(leftedge, target_column));
+}
 
-    /* When the cursor was on the last line of the edit window (or when just
-     * scrolling without moving the cursor), scroll the edit window down -- one
-     * line if we're in smooth scrolling mode, and half a page otherwise. */
-    if (openfile->current_y == editwinrows - 1 || scroll_only)
-	edit_scroll(DOWNWARD, (ISSET(SMOOTH_SCROLL) || scroll_only) ?
-				1 : editwinrows / 2 + 1);
-
-    if (openfile->current_y < editwinrows - 1) {
-	/* Redraw the prior line if it's not offscreen, and it's not the same
-	 * line as the current one, and the line was horizontally scrolled. */
-	if ((!scroll_only || openfile->current_y > 0) &&
-			openfile->current != was_current &&
-			line_needs_update(was_column, 0))
-	    update_line(openfile->current->prev, 0);
-	/* Redraw the current line if it needs to be horizontally scrolled. */
-	if (line_needs_update(0, xplustabs()))
-	    update_line(openfile->current, openfile->current_x);
-    }
+/* Move up one line or chunk. */
+void do_up_void(void)
+{
+    do_up(FALSE);
 }
 
 /* Move down one line or chunk. */
@@ -573,73 +567,31 @@ void do_scroll_down(void)
 /* Move left one character. */
 void do_left(void)
 {
-    size_t was_column = xplustabs();
-#ifndef NANO_TINY
     filestruct *was_current = openfile->current;
-    size_t was_chunk = chunk_for(was_column, was_current);
-#endif
 
     if (openfile->current_x > 0)
 	openfile->current_x = move_mbleft(openfile->current->data,
 						openfile->current_x);
     else if (openfile->current != openfile->fileage) {
-	do_up_void();
-	do_end(FALSE);
-	return;
+	openfile->current = openfile->current->prev;
+	openfile->current_x = strlen(openfile->current->data);
     }
 
-    openfile->placewewant = xplustabs();
-
-#ifndef NANO_TINY
-    /* If we were on the first line of the edit window, and we changed chunk,
-     * we're now above the first line of the edit window, so scroll up. */
-    if (ISSET(SOFTWRAP) && openfile->current_y == 0 &&
-		openfile->current == was_current &&
-		chunk_for(openfile->placewewant,
-				openfile->current) != was_chunk) {
-	edit_scroll(UPWARD, ISSET(SMOOTH_SCROLL) ? 1 : editwinrows / 2 + 1);
-	return;
-    }
-#endif
-
-    /* Update current if the mark is on or it has changed "page". */
-    if (line_needs_update(was_column, openfile->placewewant))
-	update_line(openfile->current, openfile->current_x);
+    edit_redraw(was_current, FLOWING);
 }
 
 /* Move right one character. */
 void do_right(void)
 {
-    size_t was_column = xplustabs();
-#ifndef NANO_TINY
     filestruct *was_current = openfile->current;
-    size_t was_chunk = chunk_for(was_column, was_current);
-#endif
 
     if (openfile->current->data[openfile->current_x] != '\0')
 	openfile->current_x = move_mbright(openfile->current->data,
 						openfile->current_x);
     else if (openfile->current != openfile->filebot) {
-	do_home(FALSE);
-	do_down_void();
-	return;
+	openfile->current = openfile->current->next;
+	openfile->current_x = 0;
     }
 
-    openfile->placewewant = xplustabs();
-
-#ifndef NANO_TINY
-    /* If we were on the last line of the edit window, and we changed chunk,
-     * we're now below the first line of the edit window, so scroll down. */
-    if (ISSET(SOFTWRAP) && openfile->current_y == editwinrows - 1 &&
-		openfile->current == was_current &&
-		chunk_for(openfile->placewewant,
-				openfile->current) != was_chunk) {
-	edit_scroll(DOWNWARD, ISSET(SMOOTH_SCROLL) ? 1 : editwinrows / 2 + 1);
-	return;
-    }
-#endif
-
-    /* Update current if the mark is on or it has changed "page". */
-    if (line_needs_update(was_column, openfile->placewewant))
-	update_line(openfile->current, openfile->current_x);
+    edit_redraw(was_current, FLOWING);
 }

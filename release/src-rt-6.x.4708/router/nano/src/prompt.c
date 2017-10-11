@@ -21,8 +21,6 @@
 
 #include "proto.h"
 
-#include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 
 static char *prompt = NULL;
@@ -124,9 +122,9 @@ int do_statusbar_input(bool *ran_func, bool *finished)
 	else if (s->scfunc == do_next_word_void)
 	    do_statusbar_next_word();
 #endif
-	else if (s->scfunc == do_home_void)
+	else if (s->scfunc == do_home)
 	    do_statusbar_home();
-	else if (s->scfunc == do_end_void)
+	else if (s->scfunc == do_end)
 	    do_statusbar_end();
 	/* When in restricted mode at the "Write File" prompt and the
 	 * filename isn't blank, disallow any input and deletion. */
@@ -145,7 +143,10 @@ int do_statusbar_input(bool *ran_func, bool *finished)
 	    do_statusbar_delete();
 	else if (s->scfunc == do_backspace)
 	    do_statusbar_backspace();
-	else {
+	else if (s->scfunc == do_uncut_text) {
+	    if (cutbuffer != NULL)
+		do_statusbar_uncut_text();
+	} else {
 	    /* Handle any other shortcut in the current menu, setting
 	     * ran_func to TRUE if we try to run their associated functions,
 	     * and setting finished to TRUE to indicatethat we're done after
@@ -361,6 +362,23 @@ void do_statusbar_verbatim_input(void)
 size_t statusbar_xplustabs(void)
 {
     return strnlenpt(answer, statusbar_x);
+}
+
+/* Paste the first line of the cutbuffer into the current answer. */
+void do_statusbar_uncut_text(void)
+{
+    size_t pastelen = strlen(cutbuffer->data);
+    char *fusion = charalloc(strlen(answer) + pastelen + 1);
+
+    /* Concatenate: the current answer before the cursor, the first line
+     * of the cutbuffer, plus the rest of the current answer. */
+    strncpy(fusion, answer, statusbar_x);
+    strncpy(fusion + statusbar_x, cutbuffer->data, pastelen);
+    strcpy(fusion + statusbar_x + pastelen, answer + statusbar_x);
+
+    free(answer);
+    answer = fusion;
+    statusbar_x += pastelen;
 }
 
 /* Return the column number of the first character of the answer that is
@@ -691,7 +709,7 @@ int do_yesno_prompt(bool all, const char *msg)
 	functionptrtype func;
 
 	if (!ISSET(NO_HELP)) {
-	    char shortstr[3];
+	    char shortstr[MAXCHARLEN + 2];
 		/* Temporary string for (translated) " Y", " N" and " A". */
 
 	    if (COLS < 32)

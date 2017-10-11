@@ -22,10 +22,8 @@
 
 #include "proto.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
 #include <errno.h>
+#include <string.h>
 
 #ifdef ENABLE_HELP
 
@@ -210,8 +208,11 @@ void do_help(void)
 	    bottombars(MHELP);
 	} else if (func == do_research) {
 	    do_research();
-	    currmenu = MHELP;
 #ifndef NANO_TINY
+	} else if (func == do_findprevious) {
+	    do_findprevious();
+	} else if (func == do_findnext) {
+	    do_findnext();
 	} else if (kbinput == KEY_WINCH) {
 	    ; /* Nothing to do. */
 #endif
@@ -228,11 +229,9 @@ void do_help(void)
 	    unbound_key(kbinput);
 
 	/* If we searched and found something, let the cursor show it. */
-	if (didfind == 1)
-	    curs_set(1);
-	else
-	    curs_set(0);
+	curs_set(didfind == 1 ? 1 : 0);
 
+	currmenu = MHELP;
 	edit_refresh();
 
 	location = 0;
@@ -260,8 +259,6 @@ void do_help(void)
     switch_to_prev_buffer_void();
 
     if (ISSET(NO_HELP)) {
-	blank_bottombars();
-	wnoutrefresh(bottomwin);
 	currmenu = oldmenu;
 	window_init();
     } else
@@ -514,7 +511,7 @@ void help_init(void)
 		if (scsfound == 1) {
 		    sprintf(ptr, "%s               ", s->keystr);
 		    /* Unicode arrows take three bytes instead of one. */
-		    if (s->keystr[0] == '\xE2' || s->keystr[1] == '\xE2')
+		    if (strstr(s->keystr, "\xE2") != NULL)
 			ptr += 8;
 		    else
 			ptr += 6;
@@ -580,6 +577,9 @@ functionptrtype parse_help_input(int *kbinput)
 	    case '/':
 		return do_search;
 	    case 'N':
+#ifndef NANO_TINY
+		return do_findprevious;
+#endif
 	    case 'n':
 		return do_research;
 	    case 'E':
