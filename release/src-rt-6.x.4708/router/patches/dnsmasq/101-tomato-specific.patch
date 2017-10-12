@@ -1,5 +1,5 @@
---- config.h	2017-05-22 23:58:46.000000000 +0200
-+++ config.h	2017-10-03 20:05:34.000000000 +0200
+--- dnsmasq/src/config.h	2017-05-22 23:58:46.000000000 +0200
++++ dnsmasq/src/config.h	2017-10-03 20:05:34.000000000 +0200
 @@ -73,6 +73,10 @@ HAVE_BROKEN_RTC
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
@@ -40,8 +40,8 @@
  #endif
  
  
---- dnsmasq.c	2017-05-22 23:58:46.000000000 +0200
-+++ dnsmasq.c	2017-10-03 20:05:34.000000000 +0200
+--- dnsmasq/src/dnsmasq.c	2017-05-22 23:58:46.000000000 +0200
++++ dnsmasq/src/dnsmasq.c	2017-10-03 20:05:34.000000000 +0200
 @@ -13,6 +13,44 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -123,8 +123,8 @@
  	
  	if (daemon->lease_stream)
  	  fclose(daemon->lease_stream);
---- dnsmasq.h	2017-05-22 23:58:46.000000000 +0200
-+++ dnsmasq.h	2017-10-03 20:05:34.000000000 +0200
+--- dnsmasq/src/dnsmasq.h	2017-05-22 23:58:46.000000000 +0200
++++ dnsmasq/src/dnsmasq.h	2017-10-03 20:05:34.000000000 +0200
 @@ -1356,6 +1356,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
@@ -138,8 +138,8 @@
  void queue_event(int event);
  void send_alarm(time_t event, time_t now);
  void send_event(int fd, int event, int data, char *msg);
---- lease.c	2017-05-22 23:58:46.000000000 +0200
-+++ lease.c	2017-10-03 20:05:34.000000000 +0200
+--- dnsmasq/src/lease.c	2017-05-22 23:58:46.000000000 +0200
++++ dnsmasq/src/lease.c	2017-10-03 20:05:34.000000000 +0200
 @@ -108,12 +108,15 @@ static int read_leases(time_t now, FILE
  
  	ei = atol(daemon->dhcp_buff3);
