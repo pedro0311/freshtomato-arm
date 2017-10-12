@@ -1,5 +1,5 @@
---- a/sql/sql_lex.cc
-+++ b/sql/sql_lex.cc
+--- mysql/sql/sql_lex.cc
++++ mysql/sql/sql_lex.cc
 @@ -775,14 +775,13 @@ bool consume_comment(Lex_input_stream *l
 				(which can't be followed by a signed number)
  */
@@ -16,8 +16,8 @@
    Lex_input_stream *lip= & thd->m_parser_state->m_lip;
    LEX *lex= thd->lex;
    YYSTYPE *yylval=(YYSTYPE*) arg;
---- a/sql/sql_lex.h
-+++ b/sql/sql_lex.h
+--- mysql/sql/sql_lex.h
++++ mysql/sql/sql_lex.h
 @@ -2072,7 +2072,7 @@ extern void lex_init(void);
  extern void lex_free(void);
  extern void lex_start(THD *thd);
@@ -27,8 +27,8 @@
  
  extern void trim_whitespace(CHARSET_INFO *cs, LEX_STRING *str);
  
---- a/sql/sql_parse.cc
-+++ b/sql/sql_parse.cc
+--- mysql/sql/sql_parse.cc
++++ mysql/sql/sql_parse.cc
 @@ -8012,7 +8012,7 @@ bool check_host_name(LEX_STRING *str)
  }
  
@@ -38,8 +38,8 @@
  
  
  /**
---- a/sql/sql_yacc.yy
-+++ b/sql/sql_yacc.yy
+--- mysql/sql/sql_yacc.yy
++++ mysql/sql/sql_yacc.yy
 @@ -25,17 +25,15 @@
  %{
  /* thd is passed as an argument to yyparse(), and subsequently to yylex().

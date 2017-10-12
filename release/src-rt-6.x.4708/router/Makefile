@@ -18,6 +18,23 @@ include common.mak
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
 
+define patch_files =
+ find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
+  ( if ! patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
+   patch -p0 < $$FILE; \
+  fi ) \
+ done
+endef
+
+define unpatch_files =
+ find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
+  ( if patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
+   patch -p0 -Rf < $$FILE; \
+  fi ) \
+ done
+endef
+
+
 #
 #
 #
@@ -926,9 +943,7 @@ bridge-install:
 
 dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	@$(SEP)
-	( if ! patch -R -f -d dnsmasq/src --dry-run --silent < patches/dnsmasq/101-tomato-specific.patch 2>/dev/null; then \
-		patch -b -d dnsmasq/src < patches/dnsmasq/101-tomato-specific.patch; \
-	fi )
+	$(call patch_files,dnsmasq)
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) \
@@ -940,6 +955,9 @@ dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 dnsmasq-install:
 	install -D dnsmasq/src/dnsmasq $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
 	$(STRIP) $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
+
+dnsmasq-clean:
+	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
 	@cd nettle && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
@@ -1973,9 +1991,7 @@ libpng-clean:
 
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	@$(SEP)
-	( if ! patch -R -f -d php --dry-run --silent < patches/php/101-fix-cross-compiling-issue.patch 2>/dev/null; then \
-		patch -b -d php < patches/php/101-fix-cross-compiling-issue.patch; \
-	fi )
+	$(call patch_files,php)
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/include" \
@@ -2055,6 +2071,7 @@ php: php/stamp-h1
 php-clean:
 	-@$(MAKE) -C php clean
 	-@rm php/stamp-h1
+	$(call unpatch_files,php)
 
 php-install:
 	@$(SEP)
@@ -2147,12 +2164,7 @@ libncurses-install:
 mysql/stamp-h1: openssl zlib libncurses
 	@$(SEP)
 	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
-	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch 2>/dev/null; then \
-		patch -b -d mysql/sql < patches/mysql/101-bison-compat.patch; \
-	fi )
-	( if ! patch -p0 -R -f --dry-run --silent < patches/mysql/201-fix-cross-compiling.patch 2>/dev/null; then \
-		patch -p0 -b < patches/mysql/201-fix-cross-compiling.patch; \
-	fi )
+	$(call patch_files,mysql)
 	cd mysql && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
@@ -2191,6 +2203,7 @@ mysql-clean:
 	-@rm -f mysql/stamp-h1
 	-@rm -rf mysql/staged mysql/host
 	-@rm -f mysql/.host.tgz
+	$(call unpatch_files,mysql)
 
 mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/bin
@@ -2283,12 +2296,7 @@ openvpn_plugin_auth_nvram: nvram$(BCMEX)
 
 #shibby
 nano/stamp-h1: libncurses
-	( if ! patch -p0 -Rf --dry-run --silent < patches/nano/101-do-not-build-doc.patch 2>/dev/null; then \
-		patch -p0 -b < patches/nano/101-do-not-build-doc.patch; \
-	fi )
-	( if ! patch -p0 -Rf --dry-run --silent < patches/nano/102-fix-build-with-tiny-option.patch 2>/dev/null; then \
-		patch -p0 -b < patches/nano/102-fix-build-with-tiny-option.patch; \
-	fi )
+	$(call patch_files,nano)
 	cd nano && CC=$(CC) STRIP=$(STRIP) \
 		autoreconf && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
@@ -2305,6 +2313,7 @@ nano: nano/stamp-h1
 nano-clean:
 	-@$(MAKE) -C nano clean
 	@rm -f nano/stamp-h1 nano/Makefile nano/src/Makefile
+	$(call unpatch_files,nano)
 
 nano-install:
 	install -d $(INSTALLDIR)/nano/usr/sbin
