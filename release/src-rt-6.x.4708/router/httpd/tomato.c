@@ -1370,6 +1370,7 @@ static const nvset_t nvset_list[] = {
 	{ "qosl_dlc",                    V_RANGE(0, 99999999)   },
 	{ "qosl_tcp",                    V_RANGE(0, 1000)       },
 	{ "qosl_udp",                    V_RANGE(0, 100)        },
+	{ "limit_br0_prio",              V_RANGE(0, 5)          },
 	{ "limit_br1_enable",            V_01                   },
 	{ "limit_br1_ulr",               V_RANGE(0, 99999999)   },
 	{ "limit_br1_ulc",               V_RANGE(0, 99999999)   },
@@ -2158,5 +2159,3 @@ static void wo_nvcommit(char *url)
 	web_close();
 	nvram_commit();
 }
-
-
