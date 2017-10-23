@@ -1140,11 +1140,13 @@ miniupnpd-config:
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
+	$(call patch_files,miniupnpd)
 	$(MAKE) -C miniupnpd -f Makefile.linux
 
 miniupnpd-clean:
 	-@$(MAKE) -C miniupnpd -f Makefile.linux clean
 	@rm -f miniupnpd/config.h
+	$(call unpatch_files,miniupnpd)
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
