@@ -124,7 +124,6 @@ AC_SUBST(libext)
 dnl figure out the libcurl version
 CURLVERSION=`$SED -ne 's/^#define LIBCURL_VERSION "\(.*\)".*/\1/p' ${srcdir}/include/curl/curlver.h`
 XC_CHECK_PROG_CC
-AC_PROG_CXX
 XC_AUTOMAKE
 AC_MSG_CHECKING([curl version])
 AC_MSG_RESULT($CURLVERSION)
@@ -1647,10 +1646,7 @@ if test -z "$ssl_backends" -o "x$OPT_SSL" != xno &&
       fi
     fi
 
-    if test X"$OPENSSL_ENABLED" = X"1"; then
-       dnl is there a pkcs12.h header present?
-       AC_CHECK_HEADERS(openssl/pkcs12.h)
-    else
+    if test X"$OPENSSL_ENABLED" != X"1"; then
        LIBS="$CLEANLIBS"
     fi
 
@@ -3974,7 +3970,6 @@ AC_CONFIG_FILES([Makefile \
            tests/server/Makefile \
            tests/libtest/Makefile \
            tests/unit/Makefile \
-           tests/fuzz/Makefile \
            packages/Makefile \
            packages/Win32/Makefile \
            packages/Win32/cygwin/Makefile \

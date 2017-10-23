@@ -25,9 +25,12 @@ the form-field to which portrait.jpg will be the input:
  curl -F profile=@portrait.jpg https://example.com/upload.cgi
 
 To read content from stdin instead of a file, use - as the filename. This goes
-for both @ and < constructs. Unfortunately it does not support reading the
-file from a named pipe or similar, as it needs the full size before the
-transfer starts.
+for both @ and < constructs. If stdin is not attached to a regular file, it is
+buffered first to determine its size and allow a possible resend. Defining a
+part's data from a named non-regular file (such as a named pipe or similar) is
+unfortunately not subject to buffering and will be effectively read at
+transmission time; since the full size is unknown before the transfer starts,
+data is sent as chunks by HTTP and rejected by IMAP.
 
 You can also tell curl what Content-Type to use by using 'type=', in a manner
 similar to:
