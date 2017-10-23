@@ -1,6 +1,6 @@
 /*
     tincctl.c -- Controlling a running tincd
-    Copyright (C) 2007-2016 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -74,6 +74,9 @@ bool netnamegiven = false;
 char *scriptinterpreter = NULL;
 char *scriptextension = "";
 static char *prompt;
+char *device = NULL;
+char *iface = NULL;
+int debug_level = -1;
 
 static struct option const long_options[] = {
 	{"batch", no_argument, NULL, 'b'},
@@ -89,7 +92,7 @@ static struct option const long_options[] = {
 static void version(void) {
 	printf("%s version %s (built %s %s, protocol %d.%d)\n", PACKAGE,
 		   BUILD_VERSION, BUILD_DATE, BUILD_TIME, PROT_MAJOR, PROT_MINOR);
-	printf("Copyright (C) 1998-2016 Ivo Timmermans, Guus Sliepen and others.\n"
+	printf("Copyright (C) 1998-2017 Ivo Timmermans, Guus Sliepen and others.\n"
 			"See the AUTHORS file for a complete list.\n\n"
 			"tinc comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
 			"and you are welcome to redistribute it under certain conditions;\n"
@@ -446,11 +449,13 @@ static bool rsa_keygen(int bits, bool ask) {
 	// Make sure the key size is a multiple of 8 bits.
 	bits &= ~0x7;
 
-	// Force them to be between 1024 and 8192 bits long.
-	if(bits < 1024)
-		bits = 1024;
-	if(bits > 8192)
-		bits = 8192;
+	// Make sure that a valid key size is used.
+	if(bits < 1024 || bits > 8192) {
+		fprintf(stderr, "Invalid key size %d specified! It should be between 1024 and 8192 bits.\n", bits);
+		return false;
+	} else if(bits < 2048) {
+		fprintf(stderr, "WARNING: generating a weak %d bits RSA key! 2048 or more bits are recommended.\n", bits);
+	}
 
 	fprintf(stderr, "Generating %d bits keys:\n", bits);
 
@@ -508,7 +513,7 @@ bool recvline(int fd, char *line, size_t len) {
 	char *newline = NULL;
 
 	if(!fd)
-		abort();
+		return false;
 
 	while(!(newline = memchr(buffer, '\n', blen))) {
 		int result = recv(fd, buffer + blen, sizeof buffer - blen, 0);
@@ -560,6 +565,7 @@ bool sendline(int fd, char *format, ...) {
 
 	va_start(ap, format);
 	blen = vsnprintf(buffer, sizeof buffer, format, ap);
+	buffer[sizeof buffer - 1] = 0;
 	va_end(ap);
 
 	if(blen < 1 || blen >= sizeof buffer)
@@ -720,6 +726,14 @@ bool connect_tincd(bool verbose) {
 	fclose(f);
 
 #ifndef HAVE_MINGW
+	if ((pid == 0) || (kill(pid, 0) && (errno == ESRCH))) {
+		fprintf(stderr, "Could not find tincd running at pid %d\n", pid);
+		/* clean up the stale socket and pid file */
+		unlink(pidfilename);
+		unlink(unixsocketname);
+		return false;
+	}
+
 	struct sockaddr_un sa;
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, unixsocketname, sizeof sa.sun_path);
@@ -789,7 +803,7 @@ bool connect_tincd(bool verbose) {
 	char data[4096];
 	int version;
 
-	if(!recvline(fd, line, sizeof line) || sscanf(line, "%d %s %d", &code, data, &version) != 3 || code != 0) {
+	if(!recvline(fd, line, sizeof line) || sscanf(line, "%d %4095s %d", &code, data, &version) != 3 || code != 0) {
 		if(verbose)
 			fprintf(stderr, "Cannot read greeting from control socket: %s\n", sockstrerror(sockerrno));
 		close(fd);
@@ -878,7 +892,7 @@ static int cmd_start(int argc, char *argv[]) {
 
 	if(!pid) {
 		close(pfd[0]);
-		char buf[100] = "";
+		char buf[100];
 		snprintf(buf, sizeof buf, "%d", pfd[1]);
 		setenv("TINC_UMBILICAL", buf, true);
 		exit(execvp(c, nargv));
@@ -937,11 +951,11 @@ static int cmd_stop(int argc, char *argv[]) {
 	if(!connect_tincd(true)) {
 		if(pid) {
 			if(kill(pid, SIGTERM)) {
-				fprintf(stderr, "Could not send TERM signal to process with PID %u: %s\n", pid, strerror(errno));
+				fprintf(stderr, "Could not send TERM signal to process with PID %d: %s\n", pid, strerror(errno));
 				return 1;
 			}
 
-			fprintf(stderr, "Sent TERM signal to process with PID %u.\n", pid);
+			fprintf(stderr, "Sent TERM signal to process with PID %d.\n", pid);
 			waitpid(pid, NULL, 0);
 			return 0;
 		}
@@ -1016,7 +1030,6 @@ static int dump_invitations(void) {
 		FILE *f = fopen(fname, "r");
 		if(!f) {
 			fprintf(stderr, "Cannot open %s: %s\n", fname, strerror(errno));
-			fclose(f);
 			continue;
 		}
 
@@ -1105,7 +1118,7 @@ static int cmd_dump(int argc, char *argv[]) {
 
 	while(recvline(fd, line, sizeof line)) {
 		char node1[4096], node2[4096];
-		int n = sscanf(line, "%d %d %s %s", &code, &req, node1, node2);
+		int n = sscanf(line, "%d %d %4095s %4095s", &code, &req, node1, node2);
 		if(n == 2) {
 			if(do_graph && req == REQ_DUMP_NODES)
 				continue;
@@ -1137,7 +1150,7 @@ static int cmd_dump(int argc, char *argv[]) {
 
 		switch(req) {
 			case REQ_DUMP_NODES: {
-				int n = sscanf(line, "%*d %*d %s %s %s port %s %d %d %d %d %x %x %s %s %d %hd %hd %hd %ld", node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_int, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change);
+				int n = sscanf(line, "%*d %*d %4095s %4095s %4095s port %4095s %d %d %d %d %x %x %4095s %4095s %d %hd %hd %hd %ld", node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_int, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change);
 				if(n != 17) {
 					fprintf(stderr, "Unable to parse node dump from tincd: %s\n", line);
 					return 1;
@@ -1161,13 +1174,13 @@ static int cmd_dump(int argc, char *argv[]) {
 				} else {
 					if(only_reachable && !status.reachable)
 						continue;
-					printf("%s id %s at %s port %s cipher %d digest %d maclength %d compression %d options %x status %04x nexthop %s via %s distance %d pmtu %hd (min %hd max %hd)\n",
+					printf("%s id %s at %s port %s cipher %d digest %d maclength %d compression %d options %x status %04x nexthop %s via %s distance %d pmtu %d (min %d max %d)\n",
 							node, id, host, port, cipher, digest, maclength, compression, options, status_int, nexthop, via, distance, pmtu, minmtu, maxmtu);
 				}
 			} break;
 
 			case REQ_DUMP_EDGES: {
-				int n = sscanf(line, "%*d %*d %s %s %s port %s %s port %s %x %d", from, to, host, port, local_host, local_port, &options, &weight);
+				int n = sscanf(line, "%*d %*d %4095s %4095s %4095s port %4095s %4095s port %4095s %x %d", from, to, host, port, local_host, local_port, &options, &weight);
 				if(n != 8) {
 					fprintf(stderr, "Unable to parse edge dump from tincd.\n");
 					return 1;
@@ -1185,7 +1198,7 @@ static int cmd_dump(int argc, char *argv[]) {
 			} break;
 
 			case REQ_DUMP_SUBNETS: {
-				int n = sscanf(line, "%*d %*d %s %s", subnet, node);
+				int n = sscanf(line, "%*d %*d %4095s %4095s", subnet, node);
 				if(n != 2) {
 					fprintf(stderr, "Unable to parse subnet dump from tincd.\n");
 					return 1;
@@ -1194,7 +1207,7 @@ static int cmd_dump(int argc, char *argv[]) {
 			} break;
 
 			case REQ_DUMP_CONNECTIONS: {
-				int n = sscanf(line, "%*d %*d %s %s port %s %x %d %x", node, host, port, &options, &socket, &status_int);
+				int n = sscanf(line, "%*d %*d %4095s %4095s port %4095s %x %d %x", node, host, port, &options, &socket, &status_int);
 				if(n != 6) {
 					fprintf(stderr, "Unable to parse connection dump from tincd.\n");
 					return 1;
@@ -1384,7 +1397,7 @@ static int cmd_pid(int argc, char *argv[]) {
 		return 1;
 	}
 
-	if(!connect_tincd(true) && !pid)
+	if(!connect_tincd(true) || !pid)
 		return 1;
 
 	printf("%d\n", pid);
@@ -1477,9 +1490,11 @@ const var_t variables[] = {
 	{"Hostnames", VAR_SERVER},
 	{"IffOneQueue", VAR_SERVER},
 	{"Interface", VAR_SERVER},
+	{"InvitationExpire", VAR_SERVER},
 	{"KeyExpire", VAR_SERVER},
 	{"ListenAddress", VAR_SERVER | VAR_MULTIPLE},
 	{"LocalDiscovery", VAR_SERVER},
+	{"LogLevel", VAR_SERVER},
 	{"MACExpire", VAR_SERVER},
 	{"MaxConnectionBurst", VAR_SERVER},
 	{"MaxOutputBufferSize", VAR_SERVER},
@@ -2219,7 +2234,7 @@ static int cmd_import(int argc, char *argv[]) {
 	bool firstline = true;
 
 	while(fgets(buf, sizeof buf, in)) {
-		if(sscanf(buf, "Name = %s", name) == 1) {
+		if(sscanf(buf, "Name = %4095s", name) == 1) {
 			firstline = false;
 
 			if(!check_id(name)) {
@@ -2513,6 +2528,7 @@ static int cmd_verify(int argc, char *argv[]) {
 	char *newline = memchr(data, '\n', len);
 	if(!newline || (newline - data > MAX_STRING_SIZE - 1)) {
 		fprintf(stderr, "Invalid input\n");
+		free(data);
 		return 1;
 	}
 
@@ -2525,11 +2541,13 @@ static int cmd_verify(int argc, char *argv[]) {
 
 	if(sscanf(data, "Signature = %s %ld %s", signer, &t, sig) != 3 || strlen(sig) != 86 || !t || !check_id(signer)) {
 		fprintf(stderr, "Invalid input\n");
+		free(data);
 		return 1;
 	}
 
 	if(node && strcmp(node, signer)) {
 		fprintf(stderr, "Signature is not made by %s\n", node);
+		free(data);
 		return 1;
 	}
 
@@ -2708,7 +2726,7 @@ static char *complete_info(const char *text, int state) {
 
 	while(recvline(fd, line, sizeof line)) {
 		char item[4096];
-		int n = sscanf(line, "%d %d %s", &code, &req, item);
+		int n = sscanf(line, "%d %d %4095s", &code, &req, item);
 		if(n == 2) {
 			i++;
 			if(i >= 2)
@@ -2809,8 +2827,6 @@ static int cmd_shell(int argc, char *argv[]) {
 
 		while(p && *p) {
 			if(nargc >= maxargs) {
-				fprintf(stderr, "next %p '%s', p %p '%s'\n", next, next, p, p);
-				abort();
 				maxargs *= 2;
 				nargv = xrealloc(nargv, maxargs * sizeof *nargv);
 			}
@@ -2823,8 +2839,10 @@ static int cmd_shell(int argc, char *argv[]) {
 		if(nargc == argc)
 			continue;
 
-		if(!strcasecmp(nargv[argc], "exit") || !strcasecmp(nargv[argc], "quit"))
+		if(!strcasecmp(nargv[argc], "exit") || !strcasecmp(nargv[argc], "quit")) {
+			free(nargv);
 			return result;
+		}
 
 		bool found = false;
 

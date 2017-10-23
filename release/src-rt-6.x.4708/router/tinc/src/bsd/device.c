@@ -1,7 +1,7 @@
 /*
     device.c -- Interaction BSD tun/tap device
     Copyright (C) 2001-2005 Ivo Timmermans,
-                  2001-2016 Guus Sliepen <guus@tinc-vpn.org>
+                  2001-2017 Guus Sliepen <guus@tinc-vpn.org>
                   2009      Grzegorz Dymarek <gregd72002@googlemail.com>
 
     This program is free software; you can redistribute it and/or modify
@@ -198,17 +198,18 @@ static bool setup_device(void) {
 
 	// Guess what the corresponding interface is called
 
-	char *realname;
+	char *realname = NULL;
 
 #if defined(HAVE_FDEVNAME)
-	realname = fdevname(device_fd) ? : device;
+	realname = fdevname(device_fd);
 #elif defined(HAVE_DEVNAME)
 	struct stat buf;
 	if(!fstat(device_fd, &buf))
-		realname = devname(buf.st_rdev, S_IFCHR) ? : device;
-#else
-	realname = device;
+		realname = devname(buf.st_rdev, S_IFCHR);
 #endif
+
+	if(!realname)
+		realname = device;
 
 	if(!get_config_string(lookup_config(config_tree, "Interface"), &iface))
 		iface = xstrdup(strrchr(realname, '/') ? strrchr(realname, '/') + 1 : realname);

@@ -25,6 +25,15 @@
 #define ETH_ALEN 6
 #endif
 
+#ifndef ETH_HLEN
+#define ETH_HLEN 14
+#endif
+
+#ifndef ETHER_TYPE_LEN
+#define ETHER_TYPE_LEN 2
+#endif
+
+
 #ifndef ARPHRD_ETHER
 #define ARPHRD_ETHER 1
 #endif
@@ -43,6 +52,10 @@
 
 #ifndef ETH_P_8021Q
 #define ETH_P_8021Q 0x8100
+#endif
+
+#ifndef ETH_P_MAX
+#define ETH_P_MAX 0xFFFF
 #endif
 
 #ifndef HAVE_STRUCT_ETHER_HEADER

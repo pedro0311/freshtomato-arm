@@ -90,7 +90,7 @@ static bool update(int fd) {
 		ns->known = false;
 
 	while(recvline(fd, line, sizeof line)) {
-		int n = sscanf(line, "%d %d %s %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64, &code, &req, name, &in_packets, &in_bytes, &out_packets, &out_bytes);
+		int n = sscanf(line, "%d %d %4095s %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64, &code, &req, name, &in_packets, &in_bytes, &out_packets, &out_bytes);
 
 		if(n == 2)
 			return true;
@@ -158,40 +158,54 @@ static int cmpu64(uint64_t a, uint64_t b) {
 static int sortfunc(const void *a, const void *b) {
 	const nodestats_t *na = *(const nodestats_t **)a;
 	const nodestats_t *nb = *(const nodestats_t **)b;
+	int result;
+
 	switch(sortmode) {
 		case 1:
 			if(cumulative)
-				return -cmpu64(na->in_packets, nb->in_packets) ?: na->i - nb->i;
+				result = -cmpu64(na->in_packets, nb->in_packets);
 			else
-				return -cmpfloat(na->in_packets_rate, nb->in_packets_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->in_packets_rate, nb->in_packets_rate);
+			break;
 		case 2:
 			if(cumulative)
-				return -cmpu64(na->in_bytes, nb->in_bytes) ?: na->i - nb->i;
+				result = -cmpu64(na->in_bytes, nb->in_bytes);
 			else
-				return -cmpfloat(na->in_bytes_rate, nb->in_bytes_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->in_bytes_rate, nb->in_bytes_rate);
+			break;
 		case 3:
 			if(cumulative)
-				return -cmpu64(na->out_packets, nb->out_packets) ?: na->i - nb->i;
+				result = -cmpu64(na->out_packets, nb->out_packets);
 			else
-				return -cmpfloat(na->out_packets_rate, nb->out_packets_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->out_packets_rate, nb->out_packets_rate);
+			break;
 		case 4:
 			if(cumulative)
-				return -cmpu64(na->out_bytes, nb->out_bytes) ?: na->i - nb->i;
+				result = -cmpu64(na->out_bytes, nb->out_bytes);
 			else
-				return -cmpfloat(na->out_bytes_rate, nb->out_bytes_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->out_bytes_rate, nb->out_bytes_rate);
+			break;
 		case 5:
 			if(cumulative)
-				return -cmpu64(na->in_packets + na->out_packets, nb->in_packets + nb->out_packets) ?: na->i - nb->i;
+				result = -cmpu64(na->in_packets + na->out_packets, nb->in_packets + nb->out_packets);
 			else
-				return -cmpfloat(na->in_packets_rate + na->out_packets_rate, nb->in_packets_rate + nb->out_packets_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->in_packets_rate + na->out_packets_rate, nb->in_packets_rate + nb->out_packets_rate);
+			break;
 		case 6:
 			if(cumulative)
-				return -cmpu64(na->in_bytes + na->out_bytes, nb->in_bytes + nb->out_bytes) ?: na->i - nb->i;
+				result = -cmpu64(na->in_bytes + na->out_bytes, nb->in_bytes + nb->out_bytes);
 			else
-				return -cmpfloat(na->in_bytes_rate + na->out_bytes_rate, nb->in_bytes_rate + nb->out_bytes_rate) ?: na->i - nb->i;
+				result = -cmpfloat(na->in_bytes_rate + na->out_bytes_rate, nb->in_bytes_rate + nb->out_bytes_rate);
+			break;
 		default:
-			return strcmp(na->name, nb->name) ?: na->i - nb->i;
+			result = strcmp(na->name, nb->name);
+			break;
 	}
+
+	if(result)
+		return result;
+	else
+		return na->i - nb->i;
 }
 
 static void redraw(void) {

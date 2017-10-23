@@ -1,6 +1,6 @@
 /*
     pong.c -- ICMP echo reply generator
-    Copyright (C) 2013 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 */
 
 #include "../src/system.h"
+
+#include "../src/ethernet.h"
 
 uint8_t mymac[6] = {6, 5, 5, 6, 5, 5};
 
@@ -152,7 +154,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 		default:
-			fprintf(stderr, "Multicast for address family %hx unsupported\n", ai->ai_family);
+			fprintf(stderr, "Multicast for address family %x unsupported\n", ai->ai_family);
 			return 1;
 	}
 

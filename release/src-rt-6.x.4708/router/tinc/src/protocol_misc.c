@@ -135,7 +135,7 @@ bool send_tcppacket(connection_t *c, const vpn_packet_t *packet) {
 	if(2.0 * c->outbuf.len / (float)maxoutbufsize - 1 > (float)rand()/(float)RAND_MAX)
 		return true;
 
-	if(!send_request(c, "%d %hd", PACKET, packet->len))
+	if(!send_request(c, "%d %d", PACKET, packet->len))
 		return false;
 
 	return send_meta(c, (char *)DATA(packet), packet->len);
@@ -193,6 +193,11 @@ bool send_udp_info(node_t *from, node_t *to) {
 	/* If there's a static relay in the path, there's no point in sending the message
 	   farther than the static relay. */
 	to = (to->via == myself) ? to->nexthop : to->via;
+
+	if (to == NULL) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Something went wrong when selecting relay - possible fake UDP_INFO");
+		return false;
+	}
 
 	/* Skip cases where sending UDP info messages doesn't make sense.
 	   This is done here in order to avoid repeating the same logic in multiple callsites. */
