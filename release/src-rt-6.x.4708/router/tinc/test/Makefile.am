@@ -4,9 +4,11 @@ TESTS = \
 	executables.test \
 	import-export.test \
 	invite-join.test \
+	invite-offline.test \
 	invite-tinc-up.test \
 	ns-ping.test \
 	ping.test \
+	scripts.test \
 	sptps-basic.test \
 	variables.test
 

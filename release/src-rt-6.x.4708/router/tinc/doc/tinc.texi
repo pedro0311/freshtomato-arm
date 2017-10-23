@@ -15,7 +15,7 @@
 
 This is the info manual for @value{PACKAGE} version @value{VERSION}, a Virtual Private Network daemon.
 
-Copyright @copyright{} 1998-2016 Ivo Timmermans,
+Copyright @copyright{} 1998-2017 Ivo Timmermans,
 Guus Sliepen <guus@@tinc-vpn.org> and
 Wessel Dankers <wsl@@tinc-vpn.org>.
 
@@ -43,7 +43,7 @@ permission notice identical to this one.
 @vskip 0pt plus 1filll
 This is the info manual for @value{PACKAGE} version @value{VERSION}, a Virtual Private Network daemon.
 
-Copyright @copyright{} 1998-2016 Ivo Timmermans,
+Copyright @copyright{} 1998-2017 Ivo Timmermans,
 Guus Sliepen <guus@@tinc-vpn.org> and
 Wessel Dankers <wsl@@tinc-vpn.org>.
 
@@ -958,6 +958,12 @@ This can be used to connect to UML, QEMU or KVM instances listening on the same 
 Do NOT connect multiple tinc daemons to the same multicast address, this will very likely cause routing loops.
 Also note that this can cause decrypted VPN packets to be sent out on a real network if misconfigured.
 
+@cindex fd
+@item fd
+Use a file descriptor.
+All packets are read from this interface.
+Packets received for the local node are written to it.
+
 @cindex UML
 @item uml (not compiled in by default)
 Create a UNIX socket with the filename specified by
@@ -1086,9 +1092,10 @@ which normally would prevent the peers from learning each other's LAN address.
 Currently, local discovery is implemented by sending some packets to the local address of the node during UDP discovery.
 This will not work with old nodes that don't transmit their local address.
 
-@cindex LocalDiscoveryAddress
-@item LocalDiscoveryAddress <@var{address}>
-If this variable is specified, local discovery packets are sent to the given @var{address}.
+@cindex LogLevel
+@item LogLevel = <@var{level}> (0)
+This option controls the verbosity of the logging.
+See @ref{Debug levels}.
 
 @cindex Mode
 @item Mode = <router|switch|hub> (router)
@@ -1118,6 +1125,10 @@ This mode is almost the same as the switch mode, but instead
 every packet will be broadcast to the other daemons
 while no routing table is managed.
 @end table
+
+@cindex InvitationExpire
+@item InvitationExpire = <@var{seconds}> (604800)
+This option controls the time invitations are valid.
 
 @cindex KeyExpire
 @item KeyExpire = <@var{seconds}> (3600)

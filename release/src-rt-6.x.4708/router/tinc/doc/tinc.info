@@ -1,14 +1,14 @@
-This is tinc.info, produced by makeinfo version 6.1 from tinc.texi.
+This is tinc.info, produced by makeinfo version 6.4.90 from tinc.texi.
 
 INFO-DIR-SECTION Networking tools
 START-INFO-DIR-ENTRY
 * tinc: (tinc).              The tinc Manual.
 END-INFO-DIR-ENTRY
 
-This is the info manual for tinc version 1.1pre11-263-g51a0dc5, a
+This is the info manual for tinc version 1.1pre14-62-g958a751e, a
 Virtual Private Network daemon.
 
-   Copyright (C) 1998-2016 Ivo Timmermans, Guus Sliepen
+   Copyright (C) 1998-2017 Ivo Timmermans, Guus Sliepen
 <guus@tinc-vpn.org> and Wessel Dankers <wsl@tinc-vpn.org>.
 
    Permission is granted to make and distribute verbatim copies of this
@@ -888,6 +888,11 @@ DeviceType = <TYPE> (platform dependent)
           that this can cause decrypted VPN packets to be sent out on a
           real network if misconfigured.
 
+     fd
+          Use a file descriptor.  All packets are read from this
+          interface.  Packets received for the local node are written to
+          it.
+
      uml (not compiled in by default)
           Create a UNIX socket with the filename specified by DEVICE, or
           '/var/run/NETNAME.umlsocket' if not specified.  Tinc will wait
@@ -1008,9 +1013,9 @@ LocalDiscovery = <yes | no> (no)
      to the local address of the node during UDP discovery.  This will
      not work with old nodes that don't transmit their local address.
 
-LocalDiscoveryAddress <ADDRESS>
-     If this variable is specified, local discovery packets are sent to
-     the given ADDRESS.
+LogLevel = <LEVEL> (0)
+     This option controls the verbosity of the logging.  See *note Debug
+     levels::.
 
 Mode = <router|switch|hub> (router)
      This option selects the way packets are routed to other daemons.
@@ -1038,6 +1043,9 @@ Mode = <router|switch|hub> (router)
           This mode is almost the same as the switch mode, but instead
           every packet will be broadcast to the other daemons while no
           routing table is managed.
+
+InvitationExpire = <SECONDS> (604800)
+     This option controls the time invitations are valid.
 
 KeyExpire = <SECONDS> (3600)
      This option controls the time the encryption keys used to encrypt
@@ -1098,7 +1106,7 @@ ProcessPriority = <low|normal|high>
      adjusted.  Increasing the priority may help to reduce latency and
      packet loss on the VPN.
 
-Proxy = socks4 | socks5 | http | exec ... [experimental]
+Proxy = socks4 | socks5 | http | exec ... [experimental]
      Use a proxy when making outgoing connections.  The following proxy
      types are currently supported:
 
@@ -3397,13 +3405,13 @@ Concept Index
 * Digest:                                Host configuration variables.
                                                               (line  33)
 * DirectOnly:                            Main configuration variables.
-                                                              (line 169)
+                                                              (line 174)
 * disconnect:                            tinc commands.       (line 142)
 * dummy:                                 Main configuration variables.
                                                               (line 106)
 * dump:                                  tinc commands.       (line  95)
 * Ed25519PrivateKeyFile:                 Main configuration variables.
-                                                              (line 176)
+                                                              (line 181)
 * edit:                                  tinc commands.       (line  32)
 * encapsulating:                         The UDP tunnel.      (line  30)
 * encryption:                            Encryption of network packets.
@@ -3414,13 +3422,15 @@ Concept Index
 * exchange:                              tinc commands.       (line  48)
 * exchange-all:                          tinc commands.       (line  51)
 * exec:                                  Main configuration variables.
-                                                              (line 357)
+                                                              (line 365)
 * ExperimentalProtocol:                  Main configuration variables.
-                                                              (line 180)
+                                                              (line 185)
 * export:                                tinc commands.       (line  36)
 * export-all:                            tinc commands.       (line  40)
+* fd:                                    Main configuration variables.
+                                                              (line 129)
 * Forwarding:                            Main configuration variables.
-                                                              (line 187)
+                                                              (line 192)
 * frame type:                            The UDP tunnel.      (line   6)
 * fsck:                                  tinc commands.       (line 160)
 * generate-ed25519-keys:                 tinc commands.       (line  86)
@@ -3429,11 +3439,11 @@ Concept Index
 * get:                                   tinc commands.       (line  11)
 * graph:                                 tinc commands.       (line 108)
 * Hostnames:                             Main configuration variables.
-                                                              (line 207)
+                                                              (line 212)
 * http:                                  Main configuration variables.
-                                                              (line 354)
+                                                              (line 362)
 * hub:                                   Main configuration variables.
-                                                              (line 275)
+                                                              (line 280)
 * ID:                                    Legacy authentication protocol.
                                                               (line   6)
 * Ifconfig:                              Invitation file format.
@@ -3444,15 +3454,17 @@ Concept Index
 * info:                                  tinc commands.       (line 120)
 * init:                                  tinc commands.       (line   6)
 * Interface:                             Main configuration variables.
-                                                              (line 218)
+                                                              (line 223)
 * INTERFACE:                             Scripts.             (line  75)
+* InvitationExpire:                      Main configuration variables.
+                                                              (line 285)
 * INVITATION_FILE:                       Scripts.             (line  98)
 * INVITATION_URL:                        Scripts.             (line 102)
 * invite:                                tinc commands.       (line  54)
 * IRC:                                   Contact information. (line   9)
 * join:                                  tinc commands.       (line  59)
 * KeyExpire:                             Main configuration variables.
-                                                              (line 280)
+                                                              (line 288)
 * KEY_CHANGED:                           The meta-protocol.   (line  63)
 * legacy authentication protocol:        Legacy authentication protocol.
                                                               (line   6)
@@ -3462,31 +3474,31 @@ Concept Index
 * LibreSSL:                              LibreSSL/OpenSSL.    (line   6)
 * license:                               LibreSSL/OpenSSL.    (line  38)
 * ListenAddress:                         Main configuration variables.
-                                                              (line 226)
+                                                              (line 231)
 * LocalDiscovery:                        Main configuration variables.
-                                                              (line 238)
-* LocalDiscoveryAddress:                 Main configuration variables.
-                                                              (line 249)
+                                                              (line 243)
 * log:                                   tinc commands.       (line 130)
+* LogLevel:                              Main configuration variables.
+                                                              (line 254)
 * lzo:                                   lzo.                 (line   6)
 * MACExpire:                             Main configuration variables.
-                                                              (line 286)
+                                                              (line 294)
 * MACLength:                             Host configuration variables.
                                                               (line  45)
 * MaxConnectionBurst:                    Main configuration variables.
-                                                              (line 291)
+                                                              (line 299)
 * meta-protocol:                         The meta-connection. (line  18)
 * META_KEY:                              Legacy authentication protocol.
                                                               (line   6)
 * Mode:                                  Main configuration variables.
-                                                              (line 253)
+                                                              (line 258)
 * MTUInfoInterval:                       Host configuration variables.
                                                               (line  60)
 * multicast:                             Main configuration variables.
                                                               (line 118)
 * multiple networks:                     Multiple networks.   (line   6)
 * Name:                                  Main configuration variables.
-                                                              (line 297)
+                                                              (line 305)
 * NAME:                                  Scripts.             (line  69)
 * netmask:                               Network interfaces.  (line  39)
 * netname:                               Multiple networks.   (line   6)
@@ -3505,9 +3517,9 @@ Concept Index
 * pid:                                   tinc commands.       (line  78)
 * PING:                                  The meta-protocol.   (line  88)
 * PingInterval:                          Main configuration variables.
-                                                              (line 308)
+                                                              (line 316)
 * PingTimeout:                           Main configuration variables.
-                                                              (line 312)
+                                                              (line 320)
 * platforms:                             Supported platforms. (line   6)
 * PMTU:                                  Host configuration variables.
                                                               (line  52)
@@ -3518,17 +3530,17 @@ Concept Index
                                                               (line  65)
 * port numbers:                          Other files.         (line  17)
 * PriorityInheritance:                   Main configuration variables.
-                                                              (line 318)
+                                                              (line 326)
 * private:                               Virtual Private Networks.
                                                               (line  10)
 * PrivateKey:                            Main configuration variables.
-                                                              (line 323)
+                                                              (line 331)
 * PrivateKeyFile:                        Main configuration variables.
-                                                              (line 329)
+                                                              (line 337)
 * ProcessPriority:                       Main configuration variables.
-                                                              (line 334)
+                                                              (line 342)
 * Proxy:                                 Main configuration variables.
-                                                              (line 339)
+                                                              (line 347)
 * PublicKey:                             Host configuration variables.
                                                               (line  69)
 * PublicKeyFile:                         Host configuration variables.
@@ -3541,7 +3553,7 @@ Concept Index
 * REMOTEADDRESS:                         Scripts.             (line  84)
 * REMOTEPORT:                            Scripts.             (line  87)
 * ReplayWindow:                          Main configuration variables.
-                                                              (line 362)
+                                                              (line 370)
 * requirements:                          Libraries.           (line   6)
 * REQ_KEY:                               The meta-protocol.   (line  63)
 * restart:                               tinc commands.       (line  70)
@@ -3549,7 +3561,7 @@ Concept Index
 * Route:                                 Invitation file format.
                                                               (line  51)
 * router:                                Main configuration variables.
-                                                              (line 256)
+                                                              (line 261)
 * runtime options:                       Runtime options.     (line   9)
 * scalability:                           tinc.                (line  19)
 * scripts:                               Scripts.             (line   6)
@@ -3560,21 +3572,21 @@ Concept Index
 * sign:                                  tinc commands.       (line 172)
 * signals:                               Signals.             (line   6)
 * socks4:                                Main configuration variables.
-                                                              (line 343)
+                                                              (line 351)
 * socks5:                                Main configuration variables.
-                                                              (line 348)
+                                                              (line 356)
 * SPTPS:                                 Simple Peer-to-Peer Security.
                                                               (line   6)
 * start:                                 tinc commands.       (line  64)
 * stop:                                  tinc commands.       (line  67)
 * StrictSubnets:                         Main configuration variables.
-                                                              (line 373)
+                                                              (line 381)
 * Subnet:                                Host configuration variables.
                                                               (line  84)
 * SUBNET:                                Scripts.             (line  91)
 * SVPN:                                  Security.            (line  11)
 * switch:                                Main configuration variables.
-                                                              (line 264)
+                                                              (line 269)
 * TCP:                                   The meta-connection. (line  10)
 * TCPonly:                               Host configuration variables.
                                                               (line 113)
@@ -3588,42 +3600,42 @@ Concept Index
 * top <1>:                               tinc top.            (line   6)
 * traditional VPNs:                      tinc.                (line  19)
 * tunifhead:                             Main configuration variables.
-                                                              (line 153)
+                                                              (line 158)
 * TunnelServer:                          Main configuration variables.
-                                                              (line 380)
+                                                              (line 388)
 * tunnohead:                             Main configuration variables.
-                                                              (line 147)
+                                                              (line 152)
 * UDP:                                   The UDP tunnel.      (line  30)
 * UDP <1>:                               Encryption of network packets.
                                                               (line  11)
 * UDPDiscoveryInterval:                  Main configuration variables.
-                                                              (line 400)
+                                                              (line 408)
 * UDPDiscoveryKeepaliveInterval:         Main configuration variables.
-                                                              (line 394)
+                                                              (line 402)
 * UDPDiscoveryTimeout:                   Main configuration variables.
-                                                              (line 404)
+                                                              (line 412)
 * UDPDiscovey:                           Main configuration variables.
-                                                              (line 387)
+                                                              (line 395)
 * UDPInfoInterval:                       Main configuration variables.
-                                                              (line 409)
+                                                              (line 417)
 * UDPRcvBuf:                             Main configuration variables.
-                                                              (line 413)
+                                                              (line 421)
 * UDPSndBuf:                             Main configuration variables.
-                                                              (line 419)
+                                                              (line 427)
 * UML:                                   Main configuration variables.
-                                                              (line 129)
+                                                              (line 134)
 * Universal tun/tap:                     Configuration of Linux kernels.
                                                               (line   6)
 * UPnP:                                  Main configuration variables.
-                                                              (line 425)
+                                                              (line 433)
 * UPnPDiscoverWait:                      Main configuration variables.
-                                                              (line 436)
+                                                              (line 444)
 * UPnPRefreshPeriod:                     Main configuration variables.
-                                                              (line 440)
+                                                              (line 448)
 * utun:                                  Main configuration variables.
-                                                              (line 160)
+                                                              (line 165)
 * VDE:                                   Main configuration variables.
-                                                              (line 134)
+                                                              (line 139)
 * verify:                                tinc commands.       (line 177)
 * virtual:                               Virtual Private Networks.
                                                               (line  18)
@@ -3640,78 +3652,78 @@ Concept Index
 
 
 Tag Table:
-Node: Top821
-Node: Introduction1157
-Node: Virtual Private Networks1961
-Node: tinc3673
-Node: Supported platforms5185
-Node: Preparations5882
-Node: Configuring the kernel6138
-Node: Configuration of Linux kernels6547
-Node: Configuration of FreeBSD kernels7396
-Node: Configuration of OpenBSD kernels7861
-Node: Configuration of NetBSD kernels8218
-Node: Configuration of Solaris kernels8620
-Node: Configuration of Darwin (MacOS/X) kernels9282
-Node: Configuration of Windows10095
-Node: Libraries10634
-Node: LibreSSL/OpenSSL11091
-Node: zlib13617
-Node: lzo14639
-Node: libcurses15630
-Node: libreadline16540
-Node: Installation17477
-Node: Building and installing tinc18381
-Node: Darwin (MacOS/X) build environment19037
-Node: Cygwin (Windows) build environment19596
-Node: MinGW (Windows) build environment20181
-Node: System files20769
-Node: Device files21034
-Node: Other files21447
-Node: Configuration22060
-Node: Configuration introduction22347
-Node: Multiple networks23868
-Node: How connections work25235
-Node: Configuration files27796
-Node: Main configuration variables29428
-Node: Host configuration variables50169
-Node: Scripts56239
-Node: How to configure60139
-Node: Network interfaces64623
-Node: Example configuration67002
-Node: Running tinc72101
-Node: Runtime options72688
-Node: Signals75548
-Node: Debug levels76397
-Node: Solving problems77333
-Node: Error messages78759
-Node: Sending bug reports83076
-Node: Controlling tinc84023
-Node: tinc runtime options84759
-Node: tinc environment variables85508
-Node: tinc commands85837
-Node: tinc examples92695
-Node: tinc top93257
-Node: Invitations94842
-Node: How invitations work95505
-Node: Invitation file format97798
-Node: Writing an invitation-created script100723
-Node: Technical information101785
-Node: The connection102015
-Node: The UDP tunnel102327
-Node: The meta-connection105372
-Node: The meta-protocol106830
-Node: Security111813
-Node: Legacy authentication protocol113150
-Node: Simple Peer-to-Peer Security117767
-Node: Encryption of network packets123412
-Node: Security issues126050
-Node: Platform specific information127797
-Node: Interface configuration128025
-Node: Routes130466
-Node: About us132377
-Node: Contact information132554
-Node: Authors132957
-Node: Concept Index133361
+Node: Top824
+Node: Introduction1160
+Node: Virtual Private Networks1964
+Node: tinc3676
+Node: Supported platforms5188
+Node: Preparations5885
+Node: Configuring the kernel6141
+Node: Configuration of Linux kernels6550
+Node: Configuration of FreeBSD kernels7399
+Node: Configuration of OpenBSD kernels7864
+Node: Configuration of NetBSD kernels8221
+Node: Configuration of Solaris kernels8623
+Node: Configuration of Darwin (MacOS/X) kernels9285
+Node: Configuration of Windows10098
+Node: Libraries10637
+Node: LibreSSL/OpenSSL11094
+Node: zlib13620
+Node: lzo14642
+Node: libcurses15633
+Node: libreadline16543
+Node: Installation17480
+Node: Building and installing tinc18384
+Node: Darwin (MacOS/X) build environment19040
+Node: Cygwin (Windows) build environment19599
+Node: MinGW (Windows) build environment20184
+Node: System files20772
+Node: Device files21037
+Node: Other files21450
+Node: Configuration22063
+Node: Configuration introduction22350
+Node: Multiple networks23871
+Node: How connections work25238
+Node: Configuration files27799
+Node: Main configuration variables29431
+Node: Host configuration variables50412
+Node: Scripts56482
+Node: How to configure60382
+Node: Network interfaces64866
+Node: Example configuration67245
+Node: Running tinc72344
+Node: Runtime options72931
+Node: Signals75791
+Node: Debug levels76640
+Node: Solving problems77576
+Node: Error messages79002
+Node: Sending bug reports83319
+Node: Controlling tinc84266
+Node: tinc runtime options85002
+Node: tinc environment variables85751
+Node: tinc commands86080
+Node: tinc examples92938
+Node: tinc top93500
+Node: Invitations95085
+Node: How invitations work95748
+Node: Invitation file format98041
+Node: Writing an invitation-created script100966
+Node: Technical information102028
+Node: The connection102258
+Node: The UDP tunnel102570
+Node: The meta-connection105615
+Node: The meta-protocol107073
+Node: Security112056
+Node: Legacy authentication protocol113393
+Node: Simple Peer-to-Peer Security118010
+Node: Encryption of network packets123655
+Node: Security issues126293
+Node: Platform specific information128040
+Node: Interface configuration128268
+Node: Routes130709
+Node: About us132620
+Node: Contact information132797
+Node: Authors133200
+Node: Concept Index133604
 
 End Tag Table

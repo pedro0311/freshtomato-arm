@@ -1,7 +1,7 @@
 /*
     protocol_auth.c -- handle the meta-protocol, authentication
     Copyright (C) 1999-2005 Ivo Timmermans,
-                  2000-2014 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 
 #include "ed25519/sha512.h"
 
+int invitation_lifetime;
 ecdsa_t *invitation_key = NULL;
 
 static bool send_proxyrequest(connection_t *c) {
@@ -180,21 +181,18 @@ static bool finalize_invitation(connection_t *c, const char *data, uint16_t len)
 	logger(DEBUG_CONNECTIONS, LOG_INFO, "Key succesfully received from %s (%s)", c->name, c->hostname);
 
 	// Call invitation-accepted script
-	char *envp[7] = {NULL};
+	environment_t env;
 	char *address, *port;
 
-	xasprintf(&envp[0], "NETNAME=%s", netname ? : "");
-        xasprintf(&envp[1], "DEVICE=%s", device ? : "");
-        xasprintf(&envp[2], "INTERFACE=%s", iface ? : "");
-        xasprintf(&envp[3], "NODE=%s", c->name);
+	environment_init(&env);
+        environment_add(&env, "NODE=%s", c->name);
 	sockaddr2str(&c->address, &address, &port);
-	xasprintf(&envp[4], "REMOTEADDRESS=%s", address);
-	xasprintf(&envp[5], "NAME=%s", myself->name);
+	environment_add(&env, "REMOTEADDRESS=%s", address);
+	environment_add(&env, "NAME=%s", myself->name);
 
-	execute_script("invitation-accepted", envp);
+	execute_script("invitation-accepted", &env);
 
-	for(int i = 0; envp[i] && i < 7; i++)
-		free(envp[i]);
+	environment_exit(&env);
 
 	sptps_send_record(&c->sptps, 2, data, 0);
 	return true;
@@ -232,6 +230,18 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 			logger(DEBUG_ALWAYS, LOG_ERR, "Peer %s tried to use non-existing invitation %s\n", c->hostname, cookie);
 		else
 			logger(DEBUG_ALWAYS, LOG_ERR, "Error trying to rename invitation %s\n", cookie);
+		return false;
+	}
+
+	// Check the timestamp of the invitation
+	struct stat st;
+	if(stat(usedname, &st)) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Could not stat %s", usedname);
+		return false;
+	}
+
+	if(st.st_mtime + invitation_lifetime < now.tv_sec) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Peer %s tried to use expired invitation %s", c->hostname, cookie);
 		return false;
 	}
 
@@ -284,7 +294,7 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 bool id_h(connection_t *c, const char *request) {
 	char name[MAX_STRING_SIZE];
 
-	if(sscanf(request, "%*d " MAX_STRING " %d.%d", name, &c->protocol_major, &c->protocol_minor) < 2) {
+	if(sscanf(request, "%*d " MAX_STRING " %2d.%3d", name, &c->protocol_major, &c->protocol_minor) < 2) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "ID", c->name,
 			   c->hostname);
 		return false;
@@ -421,10 +431,24 @@ bool send_metakey(connection_t *c) {
 	if(!read_rsa_public_key(c))
 		return false;
 
-	if(!(c->outcipher = cipher_open_blowfish_ofb()))
+	/* We need to use a stream mode for the meta protocol. Use AES for this,
+	   but try to match the key size with the one from the cipher selected
+	   by Cipher.
+	*/
+
+	int keylen = cipher_keylength(myself->incipher);
+	if(keylen <= 16)
+		c->outcipher = cipher_open_by_name("aes-128-cfb");
+	else if(keylen <= 24)
+		c->outcipher = cipher_open_by_name("aes-192-cfb");
+	else
+		c->outcipher = cipher_open_by_name("aes-256-cfb");
+	if(!c)
 		return false;
 
-	if(!(c->outdigest = digest_open_sha1(-1)))
+	c->outbudget = cipher_budget(c->outcipher);
+
+	if(!(c->outdigest = digest_open_by_name("sha256", -1)))
 		return false;
 
 	const size_t len = rsa_size(c->rsa);
@@ -535,6 +559,8 @@ bool metakey_h(connection_t *c, const char *request) {
 	} else {
 		c->incipher = NULL;
 	}
+
+	c->inbudget = cipher_budget(c->incipher);
 
 	if(digest) {
 		if(!(c->indigest = digest_open_by_nid(digest, -1))) {
@@ -790,7 +816,6 @@ bool ack_h(connection_t *c, const char *request) {
 		return upgrade_h(c, request);
 
 	char hisport[MAX_STRING_SIZE];
-	char *hisaddress;
 	int weight, mtu;
 	uint32_t options;
 	node_t *n;
@@ -867,18 +892,15 @@ bool ack_h(connection_t *c, const char *request) {
 	c->edge = new_edge();
 	c->edge->from = myself;
 	c->edge->to = n;
-	sockaddr2str(&c->address, &hisaddress, NULL);
-	c->edge->address = str2sockaddr(hisaddress, hisport);
-	free(hisaddress);
+	sockaddrcpy(&c->edge->address, &c->address);
+	sockaddr_setport(&c->edge->address, hisport);
 	sockaddr_t local_sa;
 	socklen_t local_salen = sizeof local_sa;
 	if (getsockname(c->socket, &local_sa.sa, &local_salen) < 0)
 		logger(DEBUG_ALWAYS, LOG_WARNING, "Could not get local socket address for connection with %s", c->name);
 	else {
-		char *local_address;
-		sockaddr2str(&local_sa, &local_address, NULL);
-		c->edge->local_address = str2sockaddr(local_address, myport);
-		free(local_address);
+		sockaddr_setport(&local_sa, myport);
+		c->edge->local_address = local_sa;
 	}
 	c->edge->weight = (weight + c->estimated_weight) / 2;
 	c->edge->connection = c;

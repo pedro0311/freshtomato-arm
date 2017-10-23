@@ -1,6 +1,6 @@
 /*
-    rsa.h -- RSA key handling
-    Copyright (C) 2007 Guus Sliepen <guus@tinc-vpn.org>
+    autoconnect.h -- header for autoconnect.c
+    Copyright (C) 2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,23 +17,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef __TINC_RSA_H__
-#define __TINC_RSA_H__
+#ifndef __TINC_AUTOCONNECT_H__
+#define __TINC_AUTOCONNECT_H__
 
-#include <gcrypt.h>
-
-typedef struct rsa {
-	gcry_mpi_t n;
-	gcry_mpi_t e;
-	gcry_mpi_t d;
-} rsa_t;
-
-extern bool rsa_set_hex_public_key(rsa_t *rsa, char *n, char *e);
-extern bool rsa_set_hex_private_key(rsa_t *rsa, char *n, char *e, char *d);
-extern bool rsa_read_pem_public_key(rsa_t *rsa, FILE *fp);
-extern bool rsa_read_pem_private_key(rsa_t *rsa, FILE *fp);
-extern size_t rsa_size(rsa_t *rsa);
-extern bool rsa_public_encrypt(rsa_t *rsa, void *in, size_t len, void *out);
-extern bool rsa_private_decrypt(rsa_t *rsa, void *in, size_t len, void *out);
+extern void do_autoconnect(void);
 
 #endif

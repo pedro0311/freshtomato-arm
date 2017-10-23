@@ -1,3 +1,108 @@
+Version 1.1pre15                                       September 02 2017
+------------------------------------------------------------------------
+
+Guus Sliepen (56):
+      Preserve IPv6 scope_id in edges.
+      Fix the previous commit.
+      Ensure compatibility with OpenSSL 1.1.0.
+      Add -Wall to CFLAGS.
+      Check return value of RSA_generate_key_ex().
+      Use EVP_MD_CTX_destroy() instead of _free().
+      Force nul-termination of strings after vsnprintf().
+      Fix warnings from the Clang static analyzer.
+      Fix potential memory leaks found by the Clang static analyzer.
+      Add missing m4 files.
+      Fix compiling with OpenSSL < 1.1.0.
+      Log warnings about dropped packets only with debug level 5 or higher.
+      Use AES256 and SHA256 by default for the legacy protocol.
+      Enforce maximum amount of bytes sent/received on meta-connections.
+      Fix potential segfault in the replacement vasprintf() function.
+      Don't build sptps_* binaries by default.
+      Remove the description of the LocalDiscoveryAddress option from the manual.
+      Use free_known_addresses() to free memory allocated by get_known_addresses().
+      Add missing #defines used by fd_device.c.
+      Don't try to use kill() on Windows.
+      Merge remote-tracking branch 'dechamps/sleep' into 1.1
+      Put script environment creation/deletion in functions.
+      Add DEBUG environment variable for scripts.
+      Use unique ports for all tests.
+      Remove superfluous sleep command in invite-join test.
+      Add the invite-offline test.
+      Update .gitignore.
+      Add the scripts test.
+      Ensure proper logging in the invite-offline test.
+      Use 127.0.0.1 instead of localhost to ensure tests are reproducible.
+      Ensure sptps_keypair and sptps_test get build for make check.
+      Use /dev/udp instead of /dev/ip on Solaris.
+      Use getmsg()/putmsg() instead of read()/write() on Solaris.
+      Ensure tests compile on *BSD.
+      Make sure realname is always initialized.
+      Fix compiler warnings on *BSD.
+      Fix segfault when adding environment variables.
+      Fix tests on *BSD.
+      Add missing tinc stop command to the scripts test.
+      Remove dead stores.
+      Add field widths to sscanf() calls.
+      Fix some minor issues found by cppcheck.
+      Remove unused add_scalar function.
+      Move logging of "would block" messages to debug level 4.
+      Set KillMode=mixed in the systemd service file.
+      Add configurable experation time for invitations.
+      Store the invitation data after a succesful join.
+      Forward-port tinc 1.0's handling of device errors.
+      Make autoconnect try to heal network splits.
+      Add missing break statements.
+      Force IPv4 for sptps-basic.test.
+      Fix a compiler warning.
+      Fix a file descriptor leak when using an invitation.
+      Ensure packet priority is cleared when sending PMTU probe replies.
+      Drop h and hh length modifiers from printf format strings.
+      Releasing 1.1pre15.
+
+Etienne Dechamps (7):
+      Fix error handling when setting up the UDP socket.
+      Fix crash on Windows when a socket is available for both write and read.
+      On Windows, don't cancel I/O when disabling the device.
+      Fix edge local addresses not being set when connections are established.
+      Fix edge updates containing local address changes.
+      Clarify the flow of add_edge_h().
+      Fix address memory leaks in add_edge_h().
+
+thorkill (4):
+      Send PKT_PROBE only when handshake has been done already.
+      Prevent tincd from sending packets to unexpecting nodes
+      Sanitize input in id_h - prevent integer overflows
+      Fix NULL pointer dereference in send_udp_info
+
+Sean McVeigh (2):
+      check for daemon pid existence before trying to connect to the control socket, and clean up stale files otherwise.
+      fix check in cmd_pid() for failure to connect to tincd
+
+Vittorio G (VittGam) (2):
+      fsck: Fix ed25519 public key reading, and fclose usage.
+      tincctl: Avoid falling back to 1024 bits RSA key generation when an invalid key size is specified.
+
+Dennis Lan (1):
+      Fix typo in src/upnp.c.
+
+Pacien TRAN-GIRARD (1):
+      Add fd_device
+
+Roman Savelyev (1):
+      Fix lost pointer trails in get_known_addresses().
+
+Vittorio Gambaletta (VittGam) (1):
+      route: Support ToS/DiffServ priority inheritance when routing IPv6 packets.
+
+lemoer (1):
+      Added comments and unfold deep "if"-construct in timeout_handler
+
+pacien (1):
+      Add LogLevel config option
+
+volth (1):
+      Avoid infinite loop on EBADFD
+
 Version 1.1pre14                                             May 01 2016
 ------------------------------------------------------------------------
 
