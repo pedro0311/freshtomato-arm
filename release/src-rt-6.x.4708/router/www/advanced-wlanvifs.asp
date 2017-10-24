@@ -25,7 +25,8 @@
 <style type='text/css'>
 #wlif-grid .co2,
 #wlif-grid .co3,
-#wlif-grid .co4 {
+#wlif-grid .co4,
+#wlif-grid .co6 {
 	text-align: center;
 }
 #wlif-grid .centered {
@@ -50,7 +51,9 @@ ul.tabs a,
 
 <script type='text/javascript'>
 
-// <% nvram("nas_alternate,wl_auth,wl_auth_mode,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features");%>
+var nvram;
+
+// <% nvram("nas_alternate,wl_auth,wl_auth_mode,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features,wl_macmode,wl_maclist");%>
 
 var vifs_possible = [];
 var vifs_defined = [];
@@ -59,9 +62,10 @@ var max_no_vifs = 0;
 
 var wl_modes_available = [];
 
-wmo = {'ap':'Access Point','apwds':'Access Point + WDS','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'};
+var wmo = {'ap':'Access Point','apwds':'Access Point + WDS','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'};
+var macmode = {'disabled':'Disabled','deny':'Block','allow':'Permit'};
 
-tabs = [['overview', 'Overview']];
+var tabs = [['overview', 'Overview']];
 
 var xob = null;
 var refresher = [];
@@ -104,7 +108,7 @@ function spin(x, unit) {
 <script type='text/javascript'>
 earlyInit();
 
-wlg = new TomatoGrid();
+var wlg = new TomatoGrid();
 
 wlg.setup = function() {
 	this.init('wlif-grid', '', max_no_vifs, [
@@ -112,10 +116,11 @@ wlg.setup = function() {
 		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 32, size: 34, prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'select', options: wl_modes_available , prefix: '<div class="centered">', suffix: '<\/div>' },
-		{ type: 'select', options: [[0,'LAN (br0)'],[1,'LAN1  (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']] }
+		{ type: 'select', options: [[0,'LAN (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']] },
+		{ type: 'select', options: [['disabled','Disabled'],['deny','Block'],['allow','Permit']] }
 	]);
 
-	this.headerSet(['Interface', 'Enabled', 'SSID', 'Mode', 'Bridge']);
+	this.headerSet(['Interface', 'Enabled', 'SSID', 'Mode', 'Bridge', 'WFilter']);
 
 	wlg.populate();
 
@@ -138,7 +143,8 @@ wlg.populate = function() {
 				vifs_defined[uidx][4],
 				vifs_defined[uidx][8],
 				wmode,
-				vifs_defined[uidx][11].toString()
+				vifs_defined[uidx][11].toString(),
+				vifs_defined[uidx][12].toString()
 			]);
 		}
 	}
@@ -183,6 +189,7 @@ wlg.resetNewEditor = function() {
 		f[4].options[3].disabled=1;
 
 	f[4].selectedIndex = 4;
+	f[5].selectedIndex = 0;
 	ferror.clearAll(fields.getAll(this.newEditor));
 }
 
@@ -236,33 +243,34 @@ wlg.dataToView = function(data) {
 	} else {
 		ifname = wl_ifaces[uidx][0] + ((wl_sunit(uidx) < 0) ? ' (wl' + wl_fface(uidx) + ')' : '');
 	}
-	ssid = data[2];
-
 	return ([ifname,
-			(data[1] == 1) ? 'Yes' : 'No',
-			ssid || '<small><i>(unset)<\/i><\/small>',
-			wmo[data[3]] || '<small><i>(unset)<\/i><\/small>',
-			['LAN (br0)', 'LAN1 (br1)', 'LAN2 (br2)', 'LAN3 (br3)', 'none' ][data[4]]
-			]);
+		(data[1] == 1) ? 'Yes' : 'No',
+		data[2] || '<small><i>(unset)<\/i><\/small>',
+		wmo[data[3]] || '<small><i>(unset)<\/i><\/small>',
+		['LAN (br0)', 'LAN1 (br1)', 'LAN2 (br2)', 'LAN3 (br3)', 'none' ][data[4]],
+		macmode[data[5]] || macmode[nvram['wl' + data[0].toString() + '_macmode']]
+	]);
 }
 
 wlg.dataToFieldValues = function (data) {
 	return ([data[0],
-			(data[1] == '1') ? 'checked' : '',
-			data[2],
-			data[3],
-			data[4]
-			]);
+		(data[1] == '1') ? 'checked' : '',
+		data[2],
+		data[3],
+		data[4],
+		data[5]
+	]);
 }
 
 wlg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 	return ([f[0].value,
-			f[1].checked ? '1' : '0',
-			f[2].value,
-			f[3].value,
-			f[4].value
-			]);
+		f[1].checked ? '1' : '0',
+		f[2].value,
+		f[3].value,
+		f[4].value,
+		f[5].value
+	]);
 }
 
 wlg.onDelete = function() {
@@ -302,20 +310,22 @@ wlg.onAdd = function() {
 	E('_f_wl'+u+'_radio').checked = (data[1] == '1');
 	E('_wl'+u+'_ssid').value = data[2];
 	E('_f_wl'+u+'_mode').value = data[3];
+	E('_f_wl'+u+'_macmode').value = data[5];
 
 	vifs_defined.push([
-		u.toString(),						// fface == wl_ifaces[uidx][1]
-		(nvram['wl' + u + '_ifname']) || ('wl'+u),	// ifname =~ wl_ifaces[uidx][0]
-		u.substr(0, u.indexOf('.')),		// unit
-		u.substr(u.indexOf('.')+1) || '-1',	// subunit
-		data[1] || '1',						// radio
+		u.toString(),							// fface == wl_ifaces[uidx][1]
+		(nvram['wl' + u + '_ifname']) || ('wl'+u),			// ifname =~ wl_ifaces[uidx][0]
+		u.substr(0, u.indexOf('.')),					// unit
+		u.substr(u.indexOf('.')+1) || '-1',				// subunit
+		data[1] || '1',							// radio
 		'0',								// iface up?
-		data[1] || '1',						// bss_enabled
+		data[1] || '1',							// bss_enabled
 		data[3],							// WL net mode
 		data[2], 							// nvram['wl' + u + '_ssid'],
-		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',		// MAC addr
+		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',	// MAC addr
 		'0',								// VIFs supported
-		data[4]
+		data[4],
+		data[5]								// Wireless Filter
 	]);
 
 	this.resort();
@@ -361,21 +371,20 @@ wlg.onOK = function() {
 	E('_f_wl'+u+'_radio').checked = (data[1] == '1');
 	E('_wl'+u+'_ssid').value = data[2];
 	E('_f_wl'+u+'_mode').value = data[3];
+	E('_f_wl'+u+'_macmode').value = data[5];
 
 	var vif = definedVIFidx(u);
+
+	vifs_defined[vif][4] = data[1]; // radio
 /* REMOVE-BEGIN */
-//	vifs_defined[vif][4] = data[1]; // radio
 //	vifs_defined[vif][6] = data[2]; // bss_enabled
 //	vifs_defined[vif][8] = data[3]; // SSID
 //	vifs_defined[vif][7] = data[4]; // WL mode
 /* REMOVE-END */
-	vifs_defined[vif][4] = data[1]; // radio
-/* REMOVE-BEGIN */
-//	vifs_defined[vif][6] = data[2]; // bss_enabled
-/* REMOVE-END */
 	vifs_defined[vif][8] = data[2]; // SSID
 	vifs_defined[vif][7] = data[3]; // WL mode
 	vifs_defined[vif][11] = data[4]; // LAN bridge
+	vifs_defined[vif][12] = data[5]; // Wireless Filter
 /* REMOVE-BEGIN */
 //alert(data.join('\n'));
 /* REMOVE-END */
@@ -421,7 +430,7 @@ function earlyInit() {
 
 //wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0], 
 //				['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
-//wl_bands = [ [ '2'],[ '2'],[ '2'] ];
+//wl_bands = [ ['2'],['2'],['2'] ];
 /* REMOVE-END */
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
@@ -442,23 +451,23 @@ function earlyInit() {
 
 			var wlvifs = ((wl_ifaces[uidx][7] > 4) ? '4' : wl_ifaces[uidx][7].toString());
 			vifs_defined.push([
-				u.toString(),						// fface == wl_ifaces[uidx][1]
+				u.toString(),					// fface == wl_ifaces[uidx][1]
 				wl_ifaces[uidx][0],
-	//			(nvram['wl' + u + '_ifname']) || ('wl'u),	// ifname =~ wl_ifaces[uidx][0]
+				// (nvram['wl' + u + '_ifname']) || ('wl'u),	// ifname =~ wl_ifaces[uidx][0]
 				wl_ifaces[uidx][2] || '0',			// unit
 				wl_ifaces[uidx][3] || '0',			// subunit
-				nvram['wl' + u + '_radio'] || '0',	// radio
+				nvram['wl' + u + '_radio'] || '0',		// radio
 				wl_ifaces[uidx][6] || '0',			// iface up/operational status
 				nvram['wl' + u + '_bss_enabled'] || '1',	// bss_enabled
 				wmode || 'disabled',				// WL net mode
 				wl_ifaces[uidx][4] || '',			// nvram['wl' + u + '_ssid'],
-	//			wl_ifaces[uidx][4], 				// nvram['wl' + u + '_ssid'],
-				nvram['wl' + u + '_hwaddr'],		// MAC addr
-//				(wl_ifaces[uidx][7] * 1).toString(), // VIFs supported
-				wlvifs,								// VIFs supported
-				bridged
+				nvram['wl' + u + '_hwaddr'],			// MAC addr
+				// (wl_ifaces[uidx][7] * 1).toString(), 	// VIFs supported
+				wlvifs,						// VIFs supported
+				bridged,
+				nvram['wl' + u + '_macmode'] || 'disabled'	// Wireless Filter
 			]);
-//			max_no_vifs = max_no_vifs + ((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]);
+			// max_no_vifs = max_no_vifs + ((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]);
 			max_no_vifs = max_no_vifs + parseInt(wlvifs);
 		}
 	}
@@ -489,7 +498,6 @@ function earlyInit() {
 	W('	vertical-align: middle;');
 	W('}');
 	W('<\/style>');
-
 }
 
 function init() {
@@ -517,13 +525,12 @@ function init() {
 	if (((c = cookie.get('adv_wlvifs_details_vis')) != null) && (c == '1')) {
 		toggleVisibility("details");
 	}
-/* LINUX24-BEGIN */
-	if (((c = cookie.get('adv_wlvifs_options_vis')) != null) && (c == '1')) {
-		toggleVisibility("options");
-	}
-/* LINUX24-END */
 
 	wlg.setup();
+
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function toggleVisibility(whichone) {
@@ -644,7 +651,8 @@ function verifyFields(focused, quiet) {
 			_wl_key4: 1,
 
 			_f_wl_lazywds: 1,
-			_f_wl_wds_0: 1
+			_f_wl_wds_0: 1,
+			_f_wl_macmode: 1
 			};
 		} else {
 			a = {
@@ -685,7 +693,8 @@ function verifyFields(focused, quiet) {
 			_wl_key4: 1,
 
 			_f_wl_lazywds: 1,
-			_f_wl_wds_0: 1
+			_f_wl_wds_0: 1,
+			_f_wl_macmode: 1
 			};
 		}
 		wl_vis[vidx] = a;
@@ -936,6 +945,7 @@ REMOVE-END */
 	}
 
 	for (var vidx = 0; vidx < vifs_possible.length; ++vidx) {
+		var v;
 		var u = vifs_possible[vidx][0];
 		if (definedVIFidx(u) < 0) continue;
 
@@ -977,12 +987,19 @@ REMOVE-END */
 			for (i = 0; i < 10; ++i) {
 				a = E('_f_wl'+u+'_wds_' + i);
 				if (!v_macz(a, quiet || !ok)) ok = 0;
-					else if (!isMAC0(a.value)) b = 1;
+				else if (!isMAC0(a.value)) b = 1;
 			}
 			if (!b) {
 				ferror.set('_f_wl'+u+'_wds_0', 'WDS MAC address required.', quiet || !ok);
 				ok = 0;
 			}
+		}
+
+		ferror.clear('_f_wl'+u+'_macmode');
+		a = E('_f_wl'+u+'_macmode').value;
+		if (a != 'disabled' && a != 'deny' && a != 'allow') {
+			ferror.set('_f_wl'+u+'_macmode', 'Wrong Wireless Filter settings.', quiet || !ok);
+			ok = 0;
 		}
 
 		if ((ok) && (focused)) {
@@ -996,6 +1013,9 @@ REMOVE-END */
 			if (focused.id == '_f_wl'+u+'_radio') {
 				vifs_defined[w][4] = (focused.checked) ? '1' : '0';
 				vifs_defined[w][6] = (focused.checked) ? '1' : '0';
+			}
+			if (focused.id == '_f_wl'+u+'_macmode') {
+				vifs_defined[w][12] = focused.value;
 			}
 		}
 
@@ -1025,9 +1045,6 @@ function save() {
 	var i, u, vidx, vif;
 
 	var fom = E('t_fom');
-/* LINUX24-BEGIN */
-	fom.nas_alternate.value = E('_f_nas_alternate').checked ? '1' : '0';
-/* LINUX24-END */
 
 	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		var j = (i == 0) ? '' : i.toString();
@@ -1042,9 +1059,18 @@ function save() {
 	}
 
 	for (vidx = 0; vidx < vifs_possible.length; ++vidx) {
-		u = vifs_possible[vidx][0].toString();  // WL unit (primary) or unit.subunit (virtual)
+		u = vifs_possible[vidx][0].toString();					// WL unit (primary) or unit.subunit (virtual)
 		vif = definedVIFidx(u);
 
+		if (u == 0) {
+			fom.wl_macmode.value = E('_f_wl'+u+'_macmode').value;		// rewrite for backward compatibility
+		}
+		if (vif < 0) {
+			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_';		// use fake input name to delete
+		} else {
+			E('_wl'+u+'_macmode').value = E('_f_wl'+u+'_macmode').value;
+			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString();	// copy base maclist to 'u' interface
+		}
 /* REMOVE-BEGIN */
 // AB TODO: try to play this safer - save some vital info on primary BSS (just in case?)
 // AB TODO: with the UNSET part later on - is this really needed?
@@ -1277,6 +1303,8 @@ function do_pre_submit_form(fom) {
 		}
 		s += 'nvram unset wl' + u + '_wme\n';
 		s += 'nvram unset wl' + u + '_bss_maxassoc\n';
+		s += 'nvram unset wl' + u + '_macmode\n';
+		s += 'nvram unset wl' + u + '_maclist\n';
 	}
 	if (vifs_deleted.length > 0)
 	{
@@ -1343,14 +1371,11 @@ function escapeText(s) {
 <input type='hidden' name='_nextwait' value='10'>
 <input type='hidden' name='_service' value='wireless-restart'>
 <input type='hidden' name='_force_commit' value='1'>
-
-<!-- LINUX24-BEGIN -->
-<input type='hidden' name='nas_alternate' value=''>
-<!-- LINUX24-END -->
 <input type='hidden' name='lan_ifnames' value=''>
 <input type='hidden' name='lan1_ifnames' value=''>
 <input type='hidden' name='lan2_ifnames' value=''>
 <input type='hidden' name='lan3_ifnames' value=''>
+<input type='hidden' name='wl_macmode' value=''>
 
 <!-- / / / -->
 
@@ -1380,25 +1405,12 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var c = [];
 		c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')<\/small>' });
 		c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl' + wl_fface(uidx) + '_vifs',
-			text: 'wl' + wl_fface(uidx) + ' ' +  nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
+			text: 'wl' + wl_fface(uidx) + ' ' + nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
 		createFieldTable('',c);
 	}
 }
 </script>
 </div>
-
-<!-- / / / -->
-
-<!-- LINUX24-BEGIN -->
-<div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivoptions' style='display:none'>
-<script type='text/javascript'>
-createFieldTable('', [
-{ title: 'Use alternate NAS startup sequence', name: 'f_nas_alternate', type: 'checkbox', value: nvram.nas_alternate == '1' }
-]);
-</script>
-</div>
-<!-- LINUX24-END -->
 
 <!-- / / / -->
 
@@ -1411,18 +1423,18 @@ createFieldTable('', [
 	<li><b>SSID</b> - Wireless Service Set Identifier.</li>
 	<li><b>Mode</b> - Interface mode: Access Point, WDS, Wireless Client, etc...</li>
 	<li><b>Bridge</b> - Which LAN bridge this VIF should be assigned.</li>
+	<li><b>WFilter</b> - <a href="basic-wfilter.asp" class="new_window">Wireless Filter</a>:
+		<ul>
+			<li><i>Disabled</i> - Disable filter on that interface.</li>
+			<li><i>Block</i> - Block clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
+			<li><i>Permit</i> - Permit only clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
+		</ul>
+	</li>
 </ul>
-
-<!-- LINUX24-BEGIN -->
-<ul>
-	<li><b>Use alternate NAS startup(...)</b> - <i>Only meaningful for K24 builds</i> - Enable this option if you need more than one NAS process running (i.e. to handle WPAx encryption on more than one WLVIF).</li>
-</ul>
-<!-- LINUX24-END -->
-
 <ul>
 	<li><small><b>Other relevant notes/hints:</b></small>
 		<ul>
-			<li><small>When creating/defining a new wireless VIF, it's MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</small></li>
+			<li><small>When creating/defining a new wireless VIF, its MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</small></li>
 			<li><small>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</small></li>
 			<li><small>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</small></li>
 			<li><small>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href="basic-network.asp">Basic/Network</a> page instead).</small></li>
@@ -1465,6 +1477,8 @@ for (var i = 1; i < tabs.length; ++i) {
 	W('<input type=\'hidden\' id=\'_wl'+u+'_auth\'        name=\'wl'+u+'_auth\'        >');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_bss_enabled\' name=\'wl'+u+'_bss_enabled\' >');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_ifname\'      name=\'wl'+u+'_ifname\'      >');
+	W('<input type=\'hidden\' id=\'_wl'+u+'_macmode\'     name=\'wl'+u+'_macmode\'     >');
+	W('<input type=\'hidden\' id=\'_wl'+u+'_maclist\'     name=\'wl'+u+'_maclist\'     >');
 
 // only if primary VIF
 	if (u.toString().indexOf('.') < 0) {
@@ -1531,6 +1545,10 @@ for (var i = 1; i < tabs.length; ++i) {
 
 	f.push (
 		null,
+		{ title: '<a href="basic-wfilter.asp" class="new_window">Wireless Filter<\/a>', name: 'f_wl'+u+'_macmode', type: 'select',
+			options: [['disabled','Disable filter on that interface'],['deny','Block clients from the list on that interface'],['allow','Permit only clients from the list on that interface']],
+			value: nvram['wl'+u+'_macmode'] },
+		null,
 		{ title: 'Security', name: 'wl'+u+'_security_mode', type: 'select',
 			options: [['disabled','Disabled'],['wep','WEP'],['wpa_personal','WPA Personal'],['wpa_enterprise','WPA Enterprise'],['wpa2_personal','WPA2 Personal'],['wpa2_enterprise','WPA2 Enterprise'],['wpaX_personal','WPA / WPA2 Personal'],['wpaX_enterprise','WPA / WPA2 Enterprise'],['radius','Radius']],
 			value: eval('nvram["wl'+u+'_security_mode"]') },
@@ -1567,13 +1585,13 @@ for (var i = 1; i < tabs.length; ++i) {
 				value: nvram['wl'+u+'_key' + j] });
 	}
 
-	f.push(null,
+	f.push(	null,
 		{ title: 'WDS', name: 'f_wl'+u+'_lazywds', type: 'select',
 			options: [['0','Link With...'],['1','Automatic']], value: nvram['wl'+u+'_lazywds'] } );
 /* REMOVE-BEGIN */
 //	alert('nvram["wl'+u+'_wds"]=' + eval('nvram["wl'+u+'_wds"]'));
 /* REMOVE-END */
-	wds = eval('nvram["wl'+u+'_wds"]');
+	var wds = eval('nvram["wl'+u+'_wds"]');
 	if (typeof(wds) == 'undefined') {
 		nvram['wl'+u+'_wds'] = '';
 	}
