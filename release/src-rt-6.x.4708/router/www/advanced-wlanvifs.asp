@@ -70,6 +70,7 @@ var tabs = [['overview', 'Overview']];
 var xob = null;
 var refresher = [];
 var nphy = features('11n');
+var acphy = features('11ac');
 
 var ghz = [];
 var bands = [];
@@ -99,8 +100,12 @@ function spin(x, unit) {
 		E('_f_wl'+wl_unit(u)+'_scan').disabled = x;
 	}
 	var e = E('_f_wl'+unit+'_scan');
-	if (x) e.value = 'Scan ' + (wscan.tries + 1);
-		else e.value = 'Scan';
+
+	if (x)
+		e.value = 'Scan ' + (wscan.tries + 1);
+	else
+		e.value = 'Scan';
+
 	E('spin'+unit).style.visibility = x ? 'visible' : 'hidden';
 }
 </script>
@@ -428,9 +433,9 @@ function earlyInit() {
 //		wl_enc_modes_available.push([mode, enc[mode]]);
 //	}
 
-//wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0], 
-//				['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
-//wl_bands = [ ['2'],['2'],['2'] ];
+// wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0], 
+//		['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
+// wl_bands = [ ['2'],['2'],['2'] ];
 /* REMOVE-END */
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
@@ -600,6 +605,7 @@ function verifyFields(focused, quiet) {
 			if (focused == E('_f_wl'+u+'_nband')) {
 				refreshNetModes(uidx);
 				refreshChannels(uidx);
+				refreshBandWidth(uidx);
 			}
 			else if (focused == E('_f_wl'+u+'_nctrlsb') || focused == E('_wl'+u+'_nbw_cap')) {
 				refreshChannels(uidx);
@@ -626,9 +632,9 @@ function verifyFields(focused, quiet) {
 // AB disabled for VIFs?!
 			_wl_channel: 1,
 // AB disabled for VIFs?!
-			_wl_nbw_cap: nphy ? 1 : 0,
+			_wl_nbw_cap: nphy || acphy ? 1 : 0,
 // AB disabled for VIFs?!
-			_f_wl_nctrlsb: nphy ? 1 : 0,
+			_f_wl_nctrlsb: nphy || acphy ? 1 : 0,
 // AB disabled for VIFs?!
 			_f_wl_scan: 1,
 
@@ -713,7 +719,7 @@ function verifyFields(focused, quiet) {
 			wl_vis[vidx]._f_wl_radio = 1;
 			if (u.toString().indexOf('.') < 0) {
 				var uidx = wl_ifidxx(u);
-				wl_vis[vidx]._wl_nbw_cap = nphy ? 2 : 0;
+				wl_vis[vidx]._wl_nbw_cap = nphy || acphy ? 2 : 0;
 				wl_vis[vidx]._f_wl_nband = (bands[uidx].length > 1) ? 2 : 0;
 			}
 		}
@@ -763,8 +769,7 @@ function verifyFields(focused, quiet) {
 			if (sm2.indexOf('personal') != -1) {
 				wl_vis[vidx]._wl_radius_key = 0;
 				wl_vis[vidx]._wl_radius_ipaddr = 0;
-			}
-			else {
+			} else {
 				wl_vis[vidx]._wl_wpa_psk = 0;
 			}
 			break;
@@ -800,7 +805,8 @@ function verifyFields(focused, quiet) {
 					}
 				}
 			}
-		wl_vis[vidx]._f_wl_nctrlsb = (E('_wl'+u+'_nbw_cap').value == 0) ? 0 : wl_vis[vidx]._wl_nbw_cap;
+
+			wl_vis[vidx]._f_wl_nctrlsb = (E('_wl'+u+'_nbw_cap').value == 0) ? 0 : wl_vis[vidx]._wl_nbw_cap;
 
 /* REMOVE-BEGIN
 	This is ugly...
@@ -889,10 +895,11 @@ REMOVE-END */
 			case 'mixed':
 			case 'n-only':
 				if (nphy && (a.value == 'tkip') && (sm2.indexOf('wpa') != -1)) {
-					ferror.set(a, 'TKIP encryption is not supported with WPA / WPA2 in N mode.', quiet || !ok);
+					ferror.set(a, 'TKIP encryption is not supported with WPA / WPA2 in N and AC mode.', quiet || !ok);
 					ok = 0;
+				} else {
+					ferror.clear(a);
 				}
-				else ferror.clear(a);
 				break;
 			}
 
@@ -908,8 +915,7 @@ REMOVE-END */
 			if (wlclnt > 1) {
 				ferror.set(b, 'Only one wireless interface can be configured in client mode.', quiet || !ok);
 				ok = 0;
-			}
-			else if (a.value == 'n-only') {
+			} else if (a.value == 'n-only') {
 				ferror.set(a, 'N-only is not supported in wireless client modes, use Auto.', quiet || !ok);
 				ok = 0;
 			}
@@ -929,8 +935,9 @@ REMOVE-END */
 			if (((wmode == 'wds') || (wmode == 'apwds')) && (wl_vis[vidx]._wl_channel == 1) && (E('_wl'+u+'_channel').value == '0')) {
 				ferror.set('_wl'+u+'_channel', 'Fixed wireless channel required in WDS mode.', quiet || !ok);
 				ok = 0;
+			} else {
+				ferror.clear('_wl'+u+'_channel');
 			}
-			else ferror.clear('_wl'+u+'_channel');
 		}
 /* REMOVE-BEGIN */
 /*
@@ -976,8 +983,9 @@ REMOVE-END */
 				b.maxLength = a;
 				if ((b.value.length > 0) || (E('_f_wl'+u+'_wepidx_' + i).checked)) {
 					if (!v_wep(b, quiet || !ok)) ok = 0;
+				} else {
+					ferror.clear(b);
 				}
-				else ferror.clear(b);
 			}
 		}
 
@@ -986,8 +994,10 @@ REMOVE-END */
 			b = 0;
 			for (i = 0; i < 10; ++i) {
 				a = E('_f_wl'+u+'_wds_' + i);
-				if (!v_macz(a, quiet || !ok)) ok = 0;
-				else if (!isMAC0(a.value)) b = 1;
+				if (!v_macz(a, quiet || !ok))
+					ok = 0;
+				else if (!isMAC0(a.value))
+					b = 1;
 			}
 			if (!b) {
 				ferror.set('_f_wl'+u+'_wds_0', 'WDS MAC address required.', quiet || !ok);
@@ -1112,8 +1122,10 @@ function save() {
 		sm2 = E('_wl'+u+'_security_mode').value;
 		wradio = E('_f_wl'+u+'_radio').checked;
 
-		if (wmode == 'apwds') E('_wl'+u+'_mode').value = 'ap';
-		else E('_wl'+u+'_mode').value = wmode;
+		if (wmode == 'apwds')
+			E('_wl'+u+'_mode').value = 'ap';
+		else
+			E('_wl'+u+'_mode').value = wmode;
 
 /* REMOVE-BEGIN */
 // primary VIF
@@ -1129,8 +1141,7 @@ function save() {
 				E('_wl'+u+'_wds_enable').value = 1;
 				E('_wl'+u+'_lazywds').value = E('_f_wl'+u+'_lazywds').value;
 				if (E('_wl'+u+'_lazywds').value == 1) E('_wl'+u+'_wds').value = '';
-			}
-			else {
+			} else {
 				E('_wl'+u+'_wds_enable').value = 0;
 				E('_wl'+u+'_wds').value = '';
 				E('_wl'+u+'_lazywds').value = 0;
@@ -1155,8 +1166,7 @@ function save() {
 			if (sm2.indexOf('personal') != -1) {
 				if (sm2.indexOf('wpa2_') == -1) c.push('psk');
 				if (sm2.indexOf('wpa_') == -1) c.push('psk2');
-			}
-			else {
+			} else {
 				if (sm2.indexOf('wpa2_') == -1) c.push('wpa');
 				if (sm2.indexOf('wpa_') == -1) c.push('wpa2');
 			}
@@ -1210,7 +1220,7 @@ function save() {
 			E('_wl'+u+'_nctrlsb').value = eval('nvram.wl'+u+'_nctrlsb');
 			if (E('_wl'+u+'_nmode').value != 0) {
 				E('_wl'+u+'_nctrlsb').value = E('_f_wl'+u+'_nctrlsb').value;
-				E('_wl'+u+'_nbw').value = (E('_wl'+u+'_nbw_cap').value == 0) ? 20 : 40;
+				E('_wl'+u+'_nbw').value = (E('_wl'+u+'_nbw_cap').value == 0) ? 20 : ((E('_wl'+u+'_nbw_cap').value== 3) ? 80:40);
 			}
 		}
 
@@ -1533,8 +1543,8 @@ for (var i = 1; i < tabs.length; ++i) {
 		f.push (
 			{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '<\/span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" id="spin'+u+'">',
 				value: eval('nvram["wl'+u+'_channel"]') },
-			{ title: 'Channel Width', name: 'wl'+u+'_nbw_cap', type: 'select', options: [['0','20 MHz'],['1','40 MHz']],
-				value: eval('nvram["wl'+u+'_nbw_cap"]') },
+			{ title: 'Channel Width', name: 'wl'+u+'_nbw_cap', type: 'select', options: [],
+				value: eval('nvram["wl'+u+'_nbw_cap"]'), prefix: '<span id="__wl'+u+'_nbw_cap">', suffix: '<\/span>' },
 			{ title: 'Control Sideband', name: 'f_wl'+u+'_nctrlsb', type: 'select', options: [['lower','Lower'],['upper','Upper']],
 				value: eval('nvram["wl'+u+'_nctrlsb"]') == 'none' ? 'lower' : eval('nvram["wl'+u+'_nctrlsb"]') }
 		);
@@ -1560,7 +1570,7 @@ for (var i = 1; i < tabs.length; ++i) {
 		{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_radius_key', type: 'password', maxlen: 80, size: 32, peekaboo: 1,
 			suffix: ' <input type="button" id="_f_wl'+u+'_psk_random2" value="Random" onclick="random_psk(\'_wl'+u+'_radius_key\')">',
 			value: eval('nvram["wl'+u+'_radius_key"]') },
-		{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: ' <i>(seconds)<\/i>',
+		{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>seconds<\/small>',
 			value: eval('nvram["wl'+u+'_wpa_gtk_rekey"]') || '3600' },
 		{ title: 'Radius Server', indent: 2, multi: [
 			{ name: 'wl'+u+'_radius_ipaddr', type: 'text', maxlen: 15, size: 17, value: eval('nvram["wl'+u+'_radius_ipaddr"]') },
@@ -1635,6 +1645,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	if (wl_sunit(uidx) < 0) {
 		refreshNetModes(uidx);
 		refreshChannels(uidx);
+		refreshBandWidth(uidx);
 	}
 }
 verifyFields(null, 1);
