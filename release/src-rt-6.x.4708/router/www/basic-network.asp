@@ -1194,11 +1194,11 @@ REMOVE-END */
 			if (!quiet) ferror.show('_wan'+u+'_pptp_server_ip');
 		}
 		// WANx IP address
-		if ((vis['_wan'+u+'_wan_ipaddr']) && (!v_ip('_wan'+u+'_wan_ipaddr', quiet))) ok = 0;
-		if ((vis['_wan'+u+'_wan_gateway']) && (!v_ip('_wan'+u+'_wan_gateway', quiet))) ok = 0;
+		if ((vis['_wan'+u+'_ipaddr']) && (!v_ip('_wan'+u+'_ipaddr', quiet))) ok = 0;
+		if ((vis['_wan'+u+'_gateway']) && (!v_ip('_wan'+u+'_gateway', quiet))) ok = 0;
 		if ((vis['_wan'+u+'_modem_ipaddr']) && (!v_ip('_wan'+u+'_modem_ipaddr', quiet))) ok = 0;
 		// WANx netmask
-		if ((vis['_wan'+u+'_wan_netmask']) && (!v_netmask('_wan'+u+'_wan_netmask', quiet))) ok = 0;
+		if ((vis['_wan'+u+'_netmask']) && (!v_netmask('_wan'+u+'_netmask', quiet))) ok = 0;
 		// range
 		if ((vis['_wan'+u+'_ppp_idletime']) && (!v_range('_wan'+u+'_ppp_idletime', quiet, 3, 1440))) ok = 0;
 		if ((vis['_wan'+u+'_ppp_redialperiod']) && (!v_range('_wan'+u+'_ppp_redialperiod', quiet, 1, 86400))) ok = 0;
