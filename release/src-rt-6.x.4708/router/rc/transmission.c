@@ -18,6 +18,7 @@ void start_bittorrent(void)
     char *pc;
     char *pd;
     char *pe;
+    char *pf;
     char *ph;
     char *pi;
     char *pj;
@@ -43,6 +44,7 @@ void start_bittorrent(void)
     if (nvram_match( "bt_dl_enable", "1") ) { pc = "true"; } else { pc = "false"; }
     if (nvram_match( "bt_ul_enable", "1") ) { pd = "true"; } else { pd = "false"; }
     if (nvram_match( "bt_incomplete", "1") ) { pe = "true"; } else { pe = "false"; }
+    if (nvram_match( "bt_autoadd", "1") ) { pf = "true"; } else { pf = "false"; }
     if (nvram_match( "bt_ratio_enable", "1") ) { ph = "true"; } else { ph = "false"; }
     if (nvram_match( "bt_dht", "1") ) { pi = "true"; } else { pi = "false"; }
     if (nvram_match( "bt_pex", "1") ) { pj = "true"; } else { pj = "false"; }
@@ -83,6 +85,8 @@ void start_bittorrent(void)
     fprintf( fp, "\"download-dir\": \"%s\", \n", nvram_safe_get( "bt_dir" ) );
     fprintf( fp, "\"incomplete-dir-enabled\": \"%s\", \n", pe );
     fprintf( fp, "\"incomplete-dir\": \"%s/.incomplete\", \n", nvram_safe_get( "bt_dir" ) );
+    fprintf( fp, "\"watch-dir\": \"%s\", \n", nvram_safe_get( "bt_dir" ) );
+    fprintf( fp, "\"watch-dir-enabled\": %s, \n", pf );
     fprintf( fp, "\"peer-limit-global\": %s, \n", nvram_safe_get( "bt_peer_limit_global" ) );
     fprintf( fp, "\"peer-limit-per-torrent\": %s, \n", nvram_safe_get( "bt_peer_limit_per_torrent" ) );
     fprintf( fp, "\"upload-slots-per-torrent\": %s, \n", nvram_safe_get( "bt_ul_slot_per_torrent" ) );
@@ -101,12 +105,13 @@ void start_bittorrent(void)
     fprintf( fp, "\"seed-queue-enabled\": %s, \n", pu );
     fprintf( fp, "\"seed-queue-size\": %s, \n", nvram_safe_get( "bt_ul_queue_size" ) );
     fprintf( fp, "\"message-level\": %s, \n", nvram_safe_get( "bt_message" ) );
-    fprintf( fp, "%s\n", nvram_safe_get("bt_custom"));
+    fprintf( fp, "%s%s", nvram_safe_get("bt_custom"), strcmp(nvram_safe_get("bt_custom"),"") ? ", \n" : "" );
     fprintf( fp, "\"rpc-authentication-required\": %s \n", pl );
     fprintf( fp, "}\n");
 
     fclose( fp );
     chmod( "/tmp/settings.json", 0644 );
+    //eval("sed","-i","'s/,,\\s/, /g'","/tmp/settings.json");
 
 //start file
     if( !( fp = fopen( "/tmp/start_transmission.sh", "w" ) ) )
@@ -128,6 +133,9 @@ void start_bittorrent(void)
     fprintf( fp, "if [ ! -d \"%s/.settings\" ]; then\n", pk );
     fprintf( fp, "mkdir %s/.settings\n", pk );
     fprintf( fp, "fi\n");
+    // backward options compatibility (worked only with trailing comma before)
+    // TBD: need better regex, trim triple commas, be safe for passwords etc
+    fprintf( fp, "sed -i 's/,,\\s/, /g' /tmp/settings.json\n", pk);
     fprintf( fp, "mv /tmp/settings.json %s/.settings\n", pk );
 
     fprintf( fp, "rm %s/.settings/blocklists/*\n", pk );
@@ -141,13 +149,17 @@ void start_bittorrent(void)
 //crash fix?
     fprintf( fp, "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n" );
 //
+//tune buffers
+    fprintf( fp, "sysctl -w net.core.rmem_max=8388608\n" );
+    fprintf( fp, "sysctl -w net.core.wmem_max=2097152\n" );
+
     if ( nvram_match( "bt_log", "1") )
     {
     fprintf( fp, "%s/transmission-daemon -g %s/.settings -e %s/transmission.log\n", pn, pk, nvram_safe_get( "bt_log_path" ) );
     } else {
     fprintf( fp, "%s/transmission-daemon -g %s/.settings\n", pn, pk );
     }
-    fprintf( fp, "logger \"Transmission daemon successfully started\" \n");
+    fprintf( fp, "logger \"Transmission daemon started\" \n");
     fprintf( fp, "sleep 2\n" );
 
 
@@ -188,9 +200,9 @@ void stop_bittorrent(void)
     fprintf( fp, "fi\n");
     fprintf( fp, "done\n");
     fprintf( fp, "if [ $COUNT -lt $TIMEOUT ]; then\n");
-    fprintf( fp, "logger \"Transmission daemon successfully stopped.\" \n");
+    fprintf( fp, "logger \"Transmission daemon successfully stopped\" \n");
     fprintf( fp, "else\n");
-    fprintf( fp, "logger \"Transmission daemon forcefully stopped.\" \n");
+    fprintf( fp, "logger \"Transmission daemon forcefully stopped\" \n");
     fprintf( fp, "fi\n");
     fprintf( fp, "/usr/bin/btcheck addcru\n");
     fprintf( fp, "exit 0\n");

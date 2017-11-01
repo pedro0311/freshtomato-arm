@@ -14,7 +14,11 @@ mkdir -p -m 0755 opt
 # !!TB
 mkdir -p -m 0755 mmc
 mkdir -p -m 0755 usr/local
+case "$1" in
+ln_usr_share)
 ln -sf /tmp/share usr/share
+;;
+esac
 ln -sf /tmp/share usr/local/share
 
 ln -sf tmp/mnt mnt
@@ -35,9 +39,9 @@ mkdir -p -m 0755 nas
 mkdir -p -m 0755 bkp
 mkdir -p -m 0777 tftpboot
 
-case "$1" in
-ln_Tor)
 # Tor GeoIP DB in /tmp
+case "$1" in
+ln_tor_geoip)
 ln -sf /tmp/tor usr/share/tor
 ;;
 esac

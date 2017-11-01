@@ -1402,6 +1402,7 @@ static const nvset_t nvset_list[] = {
 	{ "bt_settings",                V_LENGTH(0, 50)                 },
 	{ "bt_settings_custom",         V_LENGTH(0, 50)                 },
 	{ "bt_incomplete",              V_01                            },
+	{ "bt_autoadd",                 V_01                            },
 	{ "bt_rpc_enable",              V_01                            },
 	{ "bt_rpc_wan",                 V_01                            },
 	{ "bt_auth",                    V_01                            },
