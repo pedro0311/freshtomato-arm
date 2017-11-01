@@ -21,7 +21,7 @@ textarea {
 }
 </style>
 <script type='text/javascript'>
-//	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
+//	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
 var btgui_link = '&nbsp;&nbsp;<a href="http://' + location.hostname +':<% nv('bt_port_gui'); %>" class="new_window"><i>[Click here to open Transmission GUI]<\/i><\/a>';
 
@@ -48,6 +48,7 @@ function verifyFields(focused, quiet)
 	E('_bt_port').disabled = !a;
 	E('_bt_sleep').disabled = !a;
 	E('_f_bt_incomplete').disabled = !a;
+	E('_f_bt_autoadd').disabled = !a;
 	E('_f_bt_check').disabled = !a;
 	E('_bt_check_time').disabled = !a || !m;
 	E('_bt_settings').disabled = !a;
@@ -140,9 +141,17 @@ function verifyFields(focused, quiet)
 		ok = 0; }
 
 	if (s.value.search(/"incomplete-dir":/) == 0)  {
-		ferror.set(s, 'Cannot set "incomplete-dir" option here. If incomplete dir is enabled, all incomplete files will be downloaded to "/download_dir/.incomplete" directory.', quiet);
+		ferror.set(s, 'Cannot set "incomplete-dir" option here. If incomplete dir is enabled, all incomplete files will be downloaded to .incomplete directory.', quiet);
 		ok = 0; }
 
+	if (s.value.search(/"watch-dir-enabled":/) == 0)  {
+		ferror.set(s, 'Cannot set "watch-dir-enabled" option here. You can set it in Tomato GUI."', quiet);
+		ok = 0; }
+/*
+	if (s.value.search(/"watch-dir":/) == 0)  {
+		ferror.set(s, 'Cannot set "watch-dir" option here. If Autoadd .torrents is enabled, Transmission will watch them in download directory.', quiet);
+		ok = 0; }
+*/
 	if (s.value.search(/"peer-limit-global":/) == 0)  {
 		ferror.set(s, 'Cannot set "peer-limit-global" option here. You can set it in Tomato GUI', quiet);
 		ok = 0; }
@@ -228,6 +237,7 @@ function save()
   var fom = E('t_fom');
   fom.bt_enable.value = E('_f_bt_enable').checked ? 1 : 0;
   fom.bt_incomplete.value = E('_f_bt_incomplete').checked ? 1 : 0;
+  fom.bt_autoadd.value = E('_f_bt_autoadd').checked ? 1 : 0;
   fom.bt_check.value = E('_f_bt_check').checked ? 1 : 0;
   fom.bt_rpc_enable.value = E('_f_bt_rpc_enable').checked ? 1 : 0;
   fom.bt_auth.value = E('_f_bt_auth').checked ? 1 : 0;
@@ -280,6 +290,7 @@ function init()
 <input type='hidden' name='_service' value='bittorrent-restart'>
 <input type='hidden' name='bt_enable'>
 <input type='hidden' name='bt_incomplete'>
+<input type='hidden' name='bt_autoadd'>
 <input type='hidden' name='bt_check'>
 <input type='hidden' name='bt_rpc_enable'>
 <input type='hidden' name='bt_auth'>
@@ -314,7 +325,8 @@ createFieldTable('', [
 	{ title: 'Delay at startup', name: 'bt_sleep', type: 'text', maxlen: 5, size: 7, value: nvram.bt_sleep, suffix: ' <small>seconds (range: 1 - 60; default: 10)<\/small>' },
 	{ title: 'Listening port', name: 'bt_port', type: 'text', maxlen: 5, size: 7, value: nvram.bt_port, suffix: ' <small>*<\/small>' },
 	{ title: 'Download directory', name: 'bt_dir', type: 'text', maxlen: 40, size: 40, value: nvram.bt_dir },
-	{ title: 'Use .incomplete/', indent: 2, name: 'f_bt_incomplete', type: 'checkbox', value: nvram.bt_incomplete == '1' }
+	{ title: 'Use .incomplete/', indent: 2, name: 'f_bt_incomplete', type: 'checkbox', value: nvram.bt_incomplete == '1' },
+	{ title: 'Autoadd .torrents', indent: 2, name: 'f_bt_autoadd', type: 'checkbox', value: nvram.bt_autoadd == '1', suffix: ' <small>(search .torrent files in Download directory by default)<\/small>' }
 ]);
 </script>
 	<ul>
@@ -322,6 +334,7 @@ createFieldTable('', [
 		<li><b>Transmission binary path</b> Path to the directory containing transmission-daemon etc.
 		<li><b>Keep alive</b> - If enabled, transmission-daemon will be checked at the specified interval and will re-launch after a crash.
 		<li><b>Listening port</b> - Port used for torrent client. Make sure this port is not in use.
+		<li><b>Autoadd .torrents</b> - Search and add .torrent files from Download directory. Other watch directory can be setup with 'watch-dir' parameter in "Custom configuration".
 	</ul>
 </div>
 <div class='section-title'>Remote Access<script type='text/javascript'>W(btgui_link);</script></div>

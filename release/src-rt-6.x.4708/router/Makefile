@@ -535,8 +535,12 @@ endif
 
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh
 
+ifneq ($(TCONFIG_BBT),y)
+	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_usr_share
+else
 ifeq ($(TCONFIG_TOR),y)
-		@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_Tor
+	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_tor_geoip
+endif
 endif
 
 	@echo ---

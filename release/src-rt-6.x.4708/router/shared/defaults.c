@@ -1231,6 +1231,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "bt_port",			"51515"				, 0 },
 	{ "bt_dir",			"/mnt"				, 0 },
 	{ "bt_incomplete",		"1"				, 0 },
+	{ "bt_autoadd",			"1"				, 0 },
 	{ "bt_settings",		"down_dir"			, 0 },
 	{ "bt_settings_custom",		"/tmp/btclient"			, 0 },
 	{ "bt_rpc_enable",		"1"				, 0 },
