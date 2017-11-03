@@ -274,7 +274,7 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 	if (nvram_match("boardtype", "0x052b") &&  nvram_match("boardrev", "0x1204")) { //rt-n15u wan led on
 		led(LED_WHITE,mode);
 	}
-	if (nvram_match("model", "RT-N18U")) {
+	if (model == MODEL_RTN18U || model == MODEL_RTAC68U) {
 		led(LED_WHITE,mode);
 	}
 	if (model == MODEL_DIR868L) {
