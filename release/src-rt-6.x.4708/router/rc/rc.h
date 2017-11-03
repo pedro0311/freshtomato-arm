@@ -145,9 +145,9 @@ extern int stop_redial(char *prefix);
 extern int redial_main(int argc, char **argv);
 
 // wan.c
-extern void start_pptp(int mode,char *prefix);
+extern void start_pptp(char *prefix);
 extern void stop_pptp(char *prefix);
-extern void start_pppoe(int ,char *prefix);
+extern void start_pppoe(int, char *prefix);
 extern void stop_pppoe(char *prefix);
 extern void start_l2tp(char *prefix);
 extern void stop_l2tp(char *prefix);
@@ -402,7 +402,7 @@ extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);
 extern void set_mac(const char *ifname, const char *nvname, int plus);
 extern const char *default_wanif(void);
-//	extern const char *default_wlif(void);
+// extern const char *default_wlif(void);
 #define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
@@ -465,6 +465,7 @@ extern void stop_sched(void);
 #ifdef TCONFIG_PPTPD
 // pptp_client.c
 #define PPTP_CLIENT_TABLE_ID 5
+#define PPTP_CLIENT_TABLE_NAME "PPTP"
 extern void start_pptp_client(void);
 extern void stop_pptp_client(void);
 extern int write_pptpvpn_resolv(FILE*);
@@ -475,7 +476,7 @@ extern int pptpc_ipdown_main(int argc, char **argv);
 #define write_pptpvpn_resolv(f) (0)
 #endif
 
-//nvram
+// nvram
 extern int nvram_file2nvram(const char *name, const char *filename);
 extern int nvram_nvram2file(const char *name, const char *filename);
 
@@ -517,7 +518,7 @@ extern void start_snmp();
 extern void stop_snmp();
 #endif
 
-//tor.c
+// tor.c
 #ifdef TCONFIG_TOR
 extern void start_tor();
 extern void stop_tor();

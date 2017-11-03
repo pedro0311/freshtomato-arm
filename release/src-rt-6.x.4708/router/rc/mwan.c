@@ -52,10 +52,11 @@ int get_wan_unit(char *sPrefix)
 void get_wan_info(char *sPrefix)
 {
 	char tmp[100];
+	int proto = get_wanx_proto(sPrefix);
 
 	strncpy(wan_info.wan_iface, nvram_safe_get(strcat_r(sPrefix, "_iface",tmp)), sizeof(wan_info.wan_iface));
 	strncpy(wan_info.wan_ifname, nvram_safe_get(strcat_r(sPrefix, "_ifname",tmp)), sizeof(wan_info.wan_ifname));
-	switch (get_wanx_proto(sPrefix)) {
+	switch (proto) {
 		case WP_L2TP:
 		case WP_PPTP:
 			strncpy(wan_info.wan_ipaddr, nvram_safe_get(strcat_r(sPrefix, "_ppp_get_ip",tmp)), sizeof(wan_info.wan_ipaddr));
@@ -70,7 +71,10 @@ void get_wan_info(char *sPrefix)
 			strncpy(wan_info.wan_ipaddr, nvram_safe_get(strcat_r(sPrefix, "_ipaddr",tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 	}
-	strncpy(wan_info.wan_netmask, nvram_safe_get(strcat_r(sPrefix, "_netmask",tmp)), sizeof(wan_info.wan_netmask));
+	if ( proto == WP_L2TP || proto == WP_PPTP || proto == WP_PPPOE || proto == WP_PPP3G )
+		strncpy(wan_info.wan_netmask, "255.255.255.255", sizeof(wan_info.wan_netmask));
+	else
+		strncpy(wan_info.wan_netmask, nvram_safe_get(strcat_r(sPrefix, "_netmask",tmp)), sizeof(wan_info.wan_netmask));
 	strncpy(wan_info.wan_gateway, wan_gateway(sPrefix), sizeof(wan_info.wan_gateway));
 	wan_info.dns = get_dns(sPrefix);	// static buffer
 	wan_info.wan_weight = atoi(nvram_safe_get(strcat_r(sPrefix, "_weight",tmp)));
@@ -100,10 +104,12 @@ int checkConnect(char *sPrefix)
 	FILE *f;
 	int result;
 
+	get_wan_info(sPrefix); // here for mwan_load_balance IP / dev info in case wan is down
+
 	if(check_wanup(sPrefix)){
-		get_wan_info(sPrefix);
-		mwanlog(LOG_DEBUG, "IN checkConnect, wan_prefix=%s, wan_iface=%s", sPrefix, wan_info.wan_iface);
+		mwanlog(LOG_DEBUG, "checkConnect[i]: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 		if(nvram_get_int("mwan_cktime") == 0){
+			mwanlog(LOG_DEBUG, "checkConnect[r]: [1], %s is connected [result from check_wanup(%s)] [mwan_cktime = 0]", sPrefix, sPrefix);
 			return 1;
 		}
 
@@ -113,15 +119,16 @@ int checkConnect(char *sPrefix)
 		fclose(f);
 
 		if (result == 1) {
-			mwanlog(LOG_DEBUG, "OUT checkConnect, %s is connected", sPrefix);
+			mwanlog(LOG_DEBUG, "checkConnect[r]: [1], %s is connected [result from /tmp/state_%s]", sPrefix, sPrefix);
 			return 1;
 		} else {
-			mwanlog(LOG_DEBUG, "OUT checkConnect, %s is disconnected", sPrefix);
+			mwanlog(LOG_DEBUG, "checkConnect[r]: [%d], %s is disconnected  [result from /tmp/state_%s]", result, sPrefix, sPrefix);
 			return 0;
 		}
 
 	} else {
-		mwanlog(LOG_EMERG, "OUT checkConnect, %s is disconnected", sPrefix);
+		mwanlog(LOG_DEBUG, "checkConnect[i]: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
+		mwanlog(LOG_DEBUG, "checkConnect[r]: [0], %s is disconnected [result from check_wanup(%s)]", sPrefix, sPrefix);
 		return 0;
 	}
 }
@@ -183,19 +190,19 @@ void mwan_table_add(char *sPrefix)
 
 	wan_unit = table = get_wan_unit(sPrefix);
 	mwan_num = nvram_get_int("mwan_num");
-	if((mwan_num == 1 || mwan_num > MWAN_MAX)) return;
+	if ((mwan_num == 1 || mwan_num > MWAN_MAX)) return;
 
 	get_wan_info(sPrefix);
 	proto = get_wanx_proto(sPrefix);
 	
-	if(check_wanup(sPrefix)){
+	if (check_wanup(sPrefix)) {
 		// ip rule add from WAN_IP table route_id pref 10X
 		memset(cmd, 0, 256);
 		sprintf(cmd, "ip rule add from %s table %d pref 10%d", wan_info.wan_ipaddr, table, wan_unit);
 		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
 		system(cmd);
 		
-		// set the routing rules of DNS.
+		// set the routing rules of DNS
 		for (i = 0 ; i < wan_info.dns->count; ++i) {
 			memset(cmd, 0, 256);
 			sprintf(cmd, "ip rule add to %s table %d pref 11%d", inet_ntoa(wan_info.dns->dns[i].addr), table, wan_unit);
@@ -212,11 +219,11 @@ void mwan_table_add(char *sPrefix)
 		for(wanid = 1 ; wanid <= mwan_num; ++wanid){
 			// ip route add 10.0.10.1 dev ppp3 proto kernel scope link table route_id
 			memset(cmd, 0, 256);
-			if(proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC){
+			if (proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC) {
 				get_cidr(wan_info.wan_ipaddr, wan_info.wan_netmask, ip_cidr);
 				sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
 			}
-			else{
+			else {
 				sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", wan_info.wan_gateway, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
 			}
 			mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
@@ -230,7 +237,7 @@ void mwan_table_add(char *sPrefix)
 		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
 		system(cmd);
 
-		// ip route add 127.0.0.0/8 dev lo  scope link table 1
+		// ip route add 127.0.0.0/8 dev lo scope link table 1
 		memset(cmd, 0, 256);
 		sprintf(cmd, "ip route append 127.0.0.0/8 dev lo scope link table %d", table);
 		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
@@ -258,14 +265,14 @@ void mwan_state_files(void)
 	FILE *f;
 
 	mwan_num = nvram_get_int("mwan_num");
-	if(mwan_num == 1 || mwan_num > MWAN_MAX) return;
-	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
+	if (mwan_num == 1 || mwan_num > MWAN_MAX) return;
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
 		get_wan_info(prefix);
 
 		sprintf(tmp, "/tmp/state_%s", prefix);
 		if ( !(f = fopen(tmp, "r"))) {
-			// if file does not exist then we create him will value "1"
+			// if file does not exist then we create him with value "1"
 			f = fopen(tmp, "w+");
 			fprintf(f, "1\n");
 			fclose(f);
@@ -279,17 +286,16 @@ void mwan_status_update(void)
 	int mwan_num;
 	int wan_unit;
 	char prefix[] = "wanXX";
-	char tmp[100];
+	//char tmp[100];
 	FILE *f;
 
 	mwan_num = nvram_get_int("mwan_num");
-	if(mwan_num == 1 || mwan_num > MWAN_MAX) return;
-	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
+	if (mwan_num == 1 || mwan_num > MWAN_MAX) return;
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
 		get_wan_info(prefix);
-
-		if(checkConnect(prefix)){
-			if(wan_info.wan_weight > 0){
+		if (checkConnect(prefix)) {
+			if (wan_info.wan_weight > 0) {
 				mwan_curr[wan_unit-1] = '2'; // connected, load balancing
 			} else {
 				mwan_curr[wan_unit-1] = '1'; // connected, failover
@@ -354,7 +360,7 @@ void mwan_load_balance(void)
 	mwan_status_update();
 
 	memset(lb_cmd, 0, 256);
-	strncpy(lb_cmd, "ip route replace default scope global ", sizeof(lb_cmd));
+	strncpy(lb_cmd, "ip route replace default scope global", sizeof(lb_cmd));
 	
 	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
 		get_wan_prefix(wan_unit, prefix);
@@ -374,16 +380,25 @@ void mwan_load_balance(void)
 			}
 		}
 		// ip route del default via 10.0.10.1 dev ppp3 (from main route table)
-		memset(cmd, 0, 256);
-		sprintf(cmd, "ip route del default via %s dev %s",
-			(proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC) ? wan_info.wan_gateway : wan_info.wan_ipaddr,
-			wan_info.wan_iface);
-		mwanlog(LOG_DEBUG, "%s, cmd=%s", prefix, cmd);
-		system(cmd);
+		if (strcmp(wan_info.wan_iface,"none")) { // skip disabled / disconnected ppp wans
+			memset(cmd, 0, 256);
+			sprintf(cmd, "ip route del default via %s dev %s",
+				(proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC) ? wan_info.wan_gateway : wan_info.wan_ipaddr,
+				wan_info.wan_iface);
+			mwanlog(LOG_DEBUG, "%s, cmd=%s", prefix, cmd);
+			system(cmd);
+		}
 	}
-	mwanlog(LOG_DEBUG, "load_balance, cmd=%s", lb_cmd);
-	system(lb_cmd);
-	mwanlog(LOG_EMERG, "OUT fun mwan_load_balance, mwan_curr=%s", mwan_curr);
+	// don't execute incomplete lb_cmd if all wans down
+#ifdef TCONFIG_MULTIWAN
+	if (strcmp(mwan_curr,"0000")) {
+#else
+	if (strcmp(mwan_curr,"00")) {
+#endif
+		mwanlog(LOG_DEBUG, "load_balance, cmd=%s", lb_cmd);
+		system(lb_cmd);
+	}
+	mwanlog(LOG_DEBUG, "OUT fun mwan_load_balance, mwan_curr=%s", mwan_curr);
 }
 
 int mwan_route_main(int argc, char **argv)
@@ -393,7 +408,7 @@ int mwan_route_main(int argc, char **argv)
 
 	FILE *fp;
 
-	mwanlog(LOG_DEBUG, "MultiWAN: mwanroute launched");
+	mwanlog(LOG_DEBUG, "MWAN: mwanroute launched");
 
 	mkdir("/etc/iproute2", 0744);
 	if((fp = fopen("/etc/iproute2/rt_tables", "w")) != NULL) {
@@ -403,6 +418,9 @@ int mwan_route_main(int argc, char **argv)
 #ifdef TCONFIG_MULTIWAN
 			"3 WAN3\n"
 			"4 WAN4\n"
+#endif
+#ifdef TCONFIG_PPTPD
+			"%d %s\n", PPTP_CLIENT_TABLE_ID, PPTP_CLIENT_TABLE_NAME
 #endif
 			);
 		fclose(fp);

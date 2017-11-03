@@ -43,6 +43,9 @@ char lan3face[IFNAMSIZ + 1];
 #ifdef TCONFIG_IPV6
 char wan6face[IFNAMSIZ + 1];
 #endif
+#ifdef TCONFIG_PPTPD
+char *pptpcface;
+#endif
 char lan_cclass[sizeof("xxx.xxx.xxx.") + 1];
 #ifdef LINUX26
 static int can_enable_fastnat;
@@ -643,7 +646,7 @@ static void ipt_webmon()
 static void mangle_table(void)
 {
 	int ttl;
-	
+
 	char *p, *wanface, *wan2face;
 #ifdef TCONFIG_MULTIWAN
 	char *wan3face, *wan4face;
@@ -766,7 +769,7 @@ static void mangle_table(void)
 
 
 // Clamp TCP MSS to PMTU of WAN interface (IPv4 & IPv6)
-		ip46t_write("-I FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n");
+	ip46t_write("-I FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n");
 
 //shibby-arm
 	char lanaddr[32];
@@ -927,10 +930,10 @@ static void nat_table(void)
 		":OUTPUT ACCEPT [0:0]\n"
 		":%s - [0:0]\n",
 		chain_wan_prerouting);
-	
+
 	//2 for nat
 	ipt_qoslimit(2);
-	
+
 	if (gateway_mode) {
 		strlcpy(lanaddr, nvram_safe_get("lan_ipaddr"), sizeof(lanaddr));
 		strlcpy(lanmask, nvram_safe_get("lan_netmask"), sizeof(lanmask));
@@ -949,7 +952,6 @@ static void nat_table(void)
 					ipt_write("-A PREROUTING -d %s -j %s\n",
 						wanfaces.iface[i].ip, chain_wan_prerouting);
 				}
-//shibby-arm
 			}
 		}
 
@@ -1160,8 +1162,8 @@ static void nat_table(void)
 		{
 			ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("snmp_port"), lanaddr);
 		}
-#endif	
-		
+#endif
+
 #ifdef TCONFIG_FTP	// !!TB - FTP Server
 		if (nvram_match("ftp_enable", "1")) 
 		{	// FTP WAN access enabled
@@ -1185,7 +1187,7 @@ static void nat_table(void)
 		}
 #endif
 
-		
+
 #ifdef TCONFIG_SAMBASRV
 		//Samba WAN Access
 		if (nvram_get_int("smbd_enable") && nvram_match("smbd_wanaccess", "1")) {
@@ -1210,7 +1212,7 @@ static void nat_table(void)
 				} while (*p);
 			}
 		}
-		
+
 		p = "";
 #ifdef TCONFIG_IPV6
 		switch (get_ipv6_service()) {
@@ -1257,6 +1259,17 @@ static void nat_table(void)
 		}
 #endif
 
+#ifdef TCONFIG_PPTPD
+		// PPTP Client NAT
+		if (nvram_match("pptp_client_enable", "1") && nvram_match("pptp_client_nat", "1") && (pidof("pptpclient") >= 0)) {
+			if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0)) {
+				if (nvram_get_int("ne_snat") != 1)
+					ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, pptpcface);
+				else
+					ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, pptpcface, nvram_safe_get("pptp_client_ipaddr"));
+			}
+		}
+#endif
 		char *wan_modem_ipaddr;
 		if ( (nvram_match("wan_proto", "pppoe") || nvram_match("wan_proto", "dhcp") || nvram_match("wan_proto", "static") )
 		    && (wan_modem_ipaddr = nvram_safe_get("wan_modem_ipaddr")) && *wan_modem_ipaddr && !nvram_match("wan_modem_ipaddr","0.0.0.0")
@@ -1312,7 +1325,7 @@ static void nat_table(void)
 					lan3addr, lan3mask,
 					lan3addr);
 			break;
-		}		
+		}
 	}
 	ipt_write("COMMIT\n");
 }
@@ -1376,7 +1389,7 @@ static void filter_input(void)
 			}
 		}
 	}
-	
+
 	if ((nvram_get_int("nf_loopback") != 0) && (wan4up)) {	// 0 = all
 		for (n = 0; n < wan4faces.count; ++n) {
 			if (*(wan4faces.iface[n].name)) {
@@ -1585,7 +1598,7 @@ static void filter_input(void)
 			ipt_write( "-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "bt_port_gui" ) );
 		}
 	}
-#endif	
+#endif
 
 #ifdef TCONFIG_ARUI
 	//ARIA2 RPC from WAN interface
@@ -1599,7 +1612,7 @@ static void filter_input(void)
 			ipt_write( "-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "ar_rpc_port" ) );
 		}
 	}
-#endif	
+#endif
 
 
 #ifdef TCONFIG_SAMBASRV
@@ -1614,6 +1627,12 @@ static void filter_input(void)
 	if (nvram_match("pptpd_enable", "1")) {
 		ipt_write("-A INPUT -p tcp --dport 1723 -j ACCEPT\n");
 		ipt_write("-A INPUT -p 47 -j ACCEPT\n");
+	}
+	//Add for pptp client: pptp_client_srvsub pptp_client_srvsubmsk
+	// ex: iptables --insert INPUT --source $REMOTESUB/$REMOTENET --destination 0.0.0.0/0.0.0.0 --jump ACCEPT --in-interface ppp+
+	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
+		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0))
+			ipt_write("-A INPUT -s %s/%s -i %s -j ACCEPT\n", nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
 	}
 #endif
 
@@ -1828,6 +1847,21 @@ static void filter_forward(void)
 	}
 #endif
 
+#ifdef TCONFIG_PPTPD
+	//Add for pptp client: pptp_client_srvsub/pptp_client_srvsubmsk
+	//iptables --insert FORWARD --source 0.0.0.0/0.0.0.0 --destination $REMOTESUB/$REMOTENET --jump ACCEPT --out-interface ppp+
+	//iptables --insert FORWARD --source $REMOTESUB/$REMOTENET --destination 0.0.0.0/0.0.0.0 --jump ACCEPT --in-interface ppp+
+	//iptables --insert FORWARD --protocol tcp --tcp-flags SYN,RST SYN --jump TCPMSS --clamp-mss-to-pmtu 
+	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
+		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0)) {
+			ipt_write("-A FORWARD -d %s/%s -o %s -j ACCEPT\n",
+				nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
+			ipt_write("-A FORWARD -s %s/%s -i %s -j ACCEPT\n",
+				nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
+		}
+	}
+#endif
+
 	for(br=0 ; br<=3 ; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
@@ -1952,7 +1986,7 @@ static void filter6_input(void)
 	char *en;
 	char *sec;
 	char *hit;
-	int n;	
+	int n;
 	char *p, *c;
 
 	// RFC-4890, sec. 4.4.1
@@ -2100,6 +2134,15 @@ static void filter_table(void)
 	ip6t_write("-A OUTPUT -m rt --rt-type 0 -j %s\n", chain_in_drop);
 #endif
 
+#ifdef TCONFIG_PPTPD
+	//Add for pptp client: pptp_client_srvsub pptp_client_srvsubmsk pptp_client_iface
+	//iptables --insert OUTPUT --source 0.0.0.0/0.0.0.0 --destination $REMOTESUB/$REMOTENET --jump ACCEPT --out-interface ppp+
+	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
+		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0))
+			ipt_write("-A OUTPUT -d %s/%s -o %s -j ACCEPT\n", nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
+	}
+#endif
+
 	if ((gateway_mode) || (nvram_match("wk_mode_x", "1"))) {
 		ip46t_write(":FORWARD DROP [0:0]\n");
 		filter_forward();
@@ -2117,7 +2160,7 @@ int start_firewall(void)
 	DIR *dir;
 	struct dirent *dirent;
 	char s[256];
-	
+
 	char *c, *wanface, *wan2face;
 #ifdef TCONFIG_MULTIWAN
 	char *wan3face, *wan4face;
@@ -2274,7 +2317,7 @@ int start_firewall(void)
 		simple_unlock("firewall");
 		return 0;
 	}
-	
+
 #ifdef TCONFIG_IPV6
 	if ((ip6t_file = fopen(ip6t_fname, "w")) == NULL) {
 		notice_set("ip6tables", "Unable to create ip6tables restore file");
@@ -2299,14 +2342,13 @@ int start_firewall(void)
 //#endif
 //	}
 
-
 	mangle_table();
 	nat_table();
 	filter_table();
 
 	fclose(ipt_file);
 	ipt_file = NULL;
-	
+
 #ifdef TCONFIG_IPV6
 	fclose(ip6t_file);
 	ip6t_file = NULL;
@@ -2354,7 +2396,7 @@ int start_firewall(void)
 
 		*/
 	}
-	
+
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
 		notice_set("ip6tables", "");

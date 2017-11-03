@@ -277,13 +277,16 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 
 		LOG("oooooh!!! got some!\n");
 
+		/* setup wan gateway ip / mask to check (wan ip or pptp/l2tp server ip)
+		   NB! pptp_server_ip / l2tp_server_ip can be defined as hostname also
+		   so ping to it will fail listen check in case it's defined that way */
 		switch (wan_proto) {
 		case WP_PPTP:
 			inet_aton(nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &ipaddr);
 			break;
 		case WP_L2TP:
 #ifdef TCONFIG_L2TP
-			inet_aton(nvram_safe_get("lan_ipaddr"), &ipaddr);	// checkme: why?	zzz
+			inet_aton(nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &ipaddr);
 #endif
 			break;
 		default:
@@ -291,19 +294,32 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 			break;
 		}
 		inet_aton(nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), &netmask);
+
 		LOG(strcat_r(prefix, "_gateway=%08x", tmp), ipaddr.s_addr);
-		LOG(strcat_r(prefix, "netmask=%08x", tmp), netmask.s_addr);
+		LOG(strcat_r(prefix, "_netmask=%08x", tmp), netmask.s_addr);
+
+		// saddr: inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN)
+		// daddr: inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN)
+		// caddr: inet_ntop(AF_INET, &ipaddr.s_addr, tmp, INET_ADDRSTRLEN)
+		// nmask: inet_ntop(AF_INET, &netmask.s_addr, tmp, INET_ADDRSTRLEN)
 
 		if ((ipaddr.s_addr & netmask.s_addr) != (*(u_int32_t *)&(packet.daddr) & netmask.s_addr)) {
-			if (wan_proto == WP_L2TP) {
-				ret = L_SUCCESS;
-				goto EXIT;
-			}
-			else {
-				ret = L_FAIL;
-				goto EXIT;
-			}
+			ret = L_FAIL;
+			goto EXIT;
+		} else { /* dest IP is PPTP/L2TP server IP or WAN IP */
+			syslog(LOG_DEBUG, "*** got packet: saddr=%s", inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN));
+			syslog(LOG_DEBUG, "*** got packet: daddr=%s", inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN));
+			syslog(LOG_DEBUG, "*** match saddr: %s", inet_ntop(AF_INET, &ipaddr.s_addr, tmp, INET_ADDRSTRLEN));
+ 			syslog(LOG_DEBUG, "*** match nmask: %s", inet_ntop(AF_INET, &netmask.s_addr, tmp, INET_ADDRSTRLEN));
+ 			syslog(LOG_DEBUG, "*** match SUCCESS");
+			ret = L_SUCCESS;
+			goto EXIT;
 		}
+		/* all other packets to outside world, can potentially trigger WAN on any Internet activity in LAN, with real On Demand mode */
+		syslog(LOG_DEBUG, "*** listen: got saddr=%s", inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN));
+		syslog(LOG_DEBUG, "*** listen: got daddr=%s", inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN));
+		//ret = L_SUCCESS;
+		//goto EXIT;
 	}
 
 EXIT:
@@ -314,41 +330,79 @@ EXIT:
 int listen_main(int argc, char *argv[])
 {
 	char *interface;
-	char prefix[] = "wanXXXXXXXXXX_";
+	char pid_file[256];
+	char prefix[] = "wanXXX";
+	FILE *fp;
+	pid_t  pid;
+	pid_t rpid;
 
 	if (argc < 2) {
 		usage_exit(argv[0], "<interface> <wanN>");
 	}
 
 	interface = argv[1];
-	strcpy(prefix,argv[2]);
+	strcpy(prefix, argv[2]);
 
-	printf("Starting listen on %s\n", interface);
+	printf("Starting listen on %s ...\n", interface);
 
-	if (fork() != 0) return 0;
+	pid = fork();
+
+	if (pid != 0) // foreground process
+		return 0;
+
+	if (pid == 0) { // forked process
+		memset(pid_file, 0, 256);
+		sprintf(pid_file, "/var/run/listen-%s.pid", prefix);
+		/* read / write pid */
+		if (access(pid_file, F_OK) != -1) { // pid file exists
+			fp = fopen(pid_file, "r");
+			fscanf(fp, "%d", &rpid);
+			fclose(fp);
+			if (kill(rpid, 0) == 0) { // process running
+				//syslog(LOG_DEBUG, "*** Another listen running for %s ... Quit", prefix);
+				return EXIT_FAILURE;
+			} else { // no process
+				if ((fp = fopen(pid_file, "w")) != NULL) {
+					fprintf(fp, "%d", getpid()); // write new one
+					fclose(fp);
+				}
+			}
+		} else if ((fp = fopen(pid_file, "w")) != NULL) {  // file doesn't exist
+			fprintf(fp, "%d", getpid());
+			fclose(fp);
+		} else {
+			return EXIT_FAILURE;
+		}
+	}
 
 	while (1) {
 		switch (listen_interface(interface, get_wanx_proto(prefix), prefix)) {
 		case L_SUCCESS:
-			LOG("\n*** LAN to %s packet received\n\n", prefix);
+			LOG("\nLAN to %s packet received\n\n", prefix);
+			syslog(LOG_DEBUG, "*** lan to %s packet received, dialing %s ...", prefix, prefix);
 			force_to_dial(prefix);
-
 			if (check_wanup(prefix)) return 0;
-
 			// Connect fail, we want to re-connect session
 			sleep(3);
 			break;
 		case L_UPGRADE:
-			LOG("listen: nothing to do...\n");
+			LOG("Upgrade: nothing to do ...\n");
+			syslog(LOG_DEBUG, "*** nothing to do, quit");
+			unlink(pid_file);
 			return 0;
 		case L_ESTABLISHED:
 			LOG("The link had been established\n");
+			syslog(LOG_DEBUG, "*** the link had been established, quit");
+			unlink(pid_file);
 			return 0;
 		case L_ERROR:
 			LOG("ERROR\n");
+			syslog(LOG_DEBUG, "*** got ERROR, quit");
+			unlink(pid_file);
 			return 0;
-/*		case L_FAIL:
-			break;	*/
+//		case L_FAIL:
+//			LOG("FAIL\n");
+//			break;
 		}
 	}
 }

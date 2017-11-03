@@ -45,6 +45,8 @@
 #include <mntent.h>
 #include <dirent.h>
 
+#define dnslog(level,x...) if(nvram_get_int("dns_debug")>=level) syslog(level, x)
+
 // Pop an alarm to recheck pids in 500 msec.
 static const struct itimerval pop_tv = { {0,0}, {0, 500 * 1000} };
 
@@ -78,6 +80,7 @@ void start_dnsmasq()
 	char *p;
 	int ipn;
 	char ipbuf[32];
+	char tmp[128];
 	FILE *hf, *df;
 	int dhcp_start;
 	int dhcp_count;
@@ -87,13 +90,14 @@ void start_dnsmasq()
 	int do_dhcpd_hosts;
 
 #ifdef TCONFIG_IPV6
-	char *prefix, *ipv6, *mtu;
-	int do_6to4, do_6rd;
-	int service;
+//	char *prefix, *ipv6, *mtu;
+//	int do_6to4, do_6rd;
+//	int service;
 #endif
 
 	char wan_prefix[] = "wanXX";
-	int wan_unit,mwan_num;
+	int wan_unit, mwan_num;
+	const dns_list_t *dns;
 
 	TRACE_PT("begin\n");
 
@@ -112,19 +116,24 @@ void start_dnsmasq()
 
 	fprintf(f,
 		"pid-file=/var/run/dnsmasq.pid\n");
-	
+
 	if (((nv = nvram_get("wan_domain")) != NULL) || ((nv = nvram_get("wan_get_domain")) != NULL)) {
 		if (*nv) fprintf(f, "domain=%s\n", nv);
 	}
 
 	mwan_num = nvram_get_int("mwan_num");
-	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
+	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+		mwan_num = 1;
+	}
+
+/*	don't break here, use all available dns (also, checkConnect might have false-negative response vs check_wanup)
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
-		if(checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
+		if (checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
 	}
 	// dns
 	const dns_list_t *dns = get_dns(wan_prefix);	// this always points to a static buffer
-
+*/
 	if (((nv = nvram_get("dns_minport")) != NULL) && (*nv)) n = atoi(nv);
 		else n = 4096;
 	fprintf(f,
@@ -134,6 +143,7 @@ void start_dnsmasq()
 		"expand-hosts\n"		// expand hostnames in hosts file
 		"min-port=%u\n", 		// min port used for random src port
 		dmresolv, dmhosts, dmdhcp, n);
+
 	do_dns = nvram_match("dhcpd_dmdns", "1");
 
 	// DNS rebinding protection, will discard upstream RFC1918 responses
@@ -141,19 +151,6 @@ void start_dnsmasq()
 		fprintf(f,
 			"stop-dns-rebind\n"
 			"rebind-localhost-ok\n");
-		// allow RFC1918 responses for server domain
-		switch (get_wan_proto()) {
-		case WP_PPTP:
-			nv = nvram_get("pptp_server_ip");
-			break;
-		case WP_L2TP:
-			nv = nvram_get("l2tp_server_ip");
-			break;
-		default:
-			nv = NULL;
-			break;
-		}
-		if (nv && *nv) fprintf(f, "rebind-domain-ok=%s\n", nv);
 	}
 
 #ifdef TCONFIG_DNSCRYPT
@@ -161,12 +158,35 @@ void start_dnsmasq()
 		fprintf(f, "server=127.0.0.1#%s\n", nvram_safe_get("dnscrypt_port") );
 	}
 #endif
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 
-	for (n = 0 ; n < dns->count; ++n) {
-		if (dns->dns[n].port != 53) {
-			fprintf(f, "server=%s#%u\n", inet_ntoa(dns->dns[n].addr), dns->dns[n].port);
+		get_wan_prefix(wan_unit, wan_prefix);
+
+		// allow RFC1918 responses for server domain (fix connect PPTP/L2TP WANs)
+		switch (get_wanx_proto(wan_prefix)) {
+		case WP_PPTP:
+			nv = nvram_safe_get(strcat_r(wan_prefix, "_pptp_server_ip", tmp));
+			break;
+		case WP_L2TP:
+			nv = nvram_safe_get(strcat_r(wan_prefix, "_l2tp_server_ip", tmp));
+			break;
+		default:
+			nv = NULL;
+			break;
 		}
-	}
+		if (nv && *nv) fprintf(f, "rebind-domain-ok=%s\n", nv);
+
+		dns = get_dns(wan_prefix);	// this always points to a static buffer
+
+		/* check dns entries only for active connections (checkConnect might have false-negative response) */
+		if ((check_wanup(wan_prefix) == 0) && (dns->count == 0))
+			continue;
+		//dns list with non-standart ports
+		for (n = 0 ; n < dns->count; ++n) {
+			if (dns->dns[n].port != 53)
+				fprintf(f, "server=%s#%u\n", inet_ntoa(dns->dns[n].addr), dns->dns[n].port);
+		}
+	} // end for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit)
 
 	if (nvram_get_int("dhcpd_static_only")) {
 		fprintf(f, "dhcp-ignore=tag:!known\n");
@@ -221,8 +241,17 @@ void start_dnsmasq()
 			if (n < 0) strcpy(sdhcp_lease, "infinite");
 				else sprintf(sdhcp_lease, "%dm", (n > 0) ? n : dhcp_lease);
 
-			if (!do_dns) {
-				// if not using dnsmasq for dns
+			if (!do_dns) { // if not using dnsmasq for dns
+
+				for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+
+				get_wan_prefix(wan_unit, wan_prefix);
+				/* skip inactive WAN connections (checkConnect might have false-negative response)
+				   TBD: need to check if there is no WANs active do we need skip here also?!? */
+				if (check_wanup(wan_prefix) == 0)
+					continue;
+
+				dns = get_dns(wan_prefix);	// static buffer
 
 				if ((dns->count == 0) && (nvram_get_int("dhcpd_llndns"))) {
 					// no DNS might be temporary. use a low lease time to force clients to update.
@@ -240,6 +269,8 @@ void start_dnsmasq()
 					}
 					fprintf(f, "dhcp-option=tag:%s,6%s\n", nvram_safe_get(lanN_ifname), buf);
 				}
+
+				} // end for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit)
 			}
 
 			sprintf(dhcpdN_startip, "dhcpd%s_startip", bridge);
@@ -284,7 +315,9 @@ void start_dnsmasq()
 		} else {
 			if (strcmp(nvram_safe_get(lanN_ifname),"")!=0) {
 				fprintf(f, "interface=%s\n", nvram_safe_get(lanN_ifname));
-				fprintf(f, "no-dhcp-interface=%s\n", nvram_safe_get(lanN_ifname));
+// if no dhcp range is set then no dhcp service will be offered so following
+// line is superflous.
+//				fprintf(f, "no-dhcp-interface=%s\n", nvram_safe_get(lanN_ifname));
 			}
 		}
 	}
@@ -579,6 +612,7 @@ void stop_dnsmasq(void)
 
 void clear_resolv(void)
 {
+	dnslog(LOG_DEBUG, "*** clear_resolv, clear all DNS entries\n");
 	f_write(dmresolv, NULL, 0, 0, 0);	// blank
 }
 
@@ -636,43 +670,72 @@ void dns_to_resolv(void)
 	int i;
 	mode_t m;
 	char wan_prefix[] = "wanXX";
-	int wan_unit,mwan_num;
+	int wan_unit, mwan_num;
+	int append = 0;
+	int exclusive = 0;
+	char tmp[64];
 
 	mwan_num = nvram_get_int("mwan_num");
-	if(mwan_num < 1 || mwan_num > MWAN_MAX){
+	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
 		mwan_num = 1;
 	}
-	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
-		get_wan_prefix(wan_unit, wan_prefix);
-		if(checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
-	}
 
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+
+	get_wan_prefix(wan_unit, wan_prefix);
+
+	/* don't break here, use all available DNS
+	if (checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
+	*/
+
+	/* skip inactive WAN connections (checkConnect might have false-negative response)
+	   TBD: need to check if there is no WANs active do we need skip here also?!?
+	if ((check_wanup(wan_prefix) == 0) &&
+		!(get_wanx_proto(wan_prefix) == WP_PPTP || get_wanx_proto(wan_prefix) == WP_L2TP || nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))) */
+	if (
+		(check_wanup(wan_prefix) == 0) &&
+		get_wanx_proto(wan_prefix) != WP_PPTP &&
+		get_wanx_proto(wan_prefix) != WP_L2TP &&
+		!nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp))
+	) {
+		dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
+		continue;
+	} else {
+		dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is OK to ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
+		append++;
+	}
 	m = umask(022);	// 077 from pppoecd
-	if ((f = fopen(dmresolv, "w")) != NULL) {
-		// Check for VPN DNS entries
-		if (!write_pptpvpn_resolv(f) && !write_vpn_resolv(f)) {
+	if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append	
+		if (append == 1)
+			exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); // Check for VPN DNS entries
+		dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
+		if (!exclusive) { // exclusive check
 #ifdef TCONFIG_IPV6
 			if (write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0 || nvram_get_int("dns_addget"))
-				write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_get_dns"), "\n", 0);
+				if (append == 1) // only once
+					write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_get_dns"), "\n", 0);
 #endif
 			dns = get_dns(wan_prefix);	// static buffer
 			if (dns->count == 0) {
 				// Put a pseudo DNS IP to trigger Connect On Demand
-				if (nvram_match("ppp_demand", "1")) {
-					switch (get_wan_proto()) {
+				if (nvram_match(strcat_r(wan_prefix, "_ppp_demand", tmp), "1")) {
+					switch (get_wanx_proto(wan_prefix)) {
 					case WP_PPPOE:
 					case WP_PPP3G:
 					case WP_PPTP:
 					case WP_L2TP:
+						dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS IP 1.1.1.1 to trigger Connect On Demand", wan_prefix);
 						fprintf(f, "nameserver 1.1.1.1\n");
 						break;
 					}
 				}
 			}
 			else {
+				fprintf(f, "# dns for %s:\n", wan_prefix);
 				for (i = 0; i < dns->count; i++) {
 					if (dns->dns[i].port == 53) {	// resolv.conf doesn't allow for an alternate port
 						fprintf(f, "nameserver %s\n", inet_ntoa(dns->dns[i].addr));
+						dnslog(LOG_DEBUG, "*** dns_to_resolv, %s DNS %s to %s [%s]", (append == 1) ? "write" : "append", inet_ntoa(dns->dns[i].addr), dmresolv, wan_prefix);
 					}
 				}
 			}
@@ -680,6 +743,8 @@ void dns_to_resolv(void)
 		fclose(f);
 	}
 	umask(m);
+
+	} // end for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit)
 }
 
 // -----------------------------------------------------------------------------
@@ -691,7 +756,7 @@ void start_httpd(void)
 		return;
 	}
 
-	if( nvram_match( "web_css", "online" ) )
+	if ( nvram_match( "web_css", "online" ) )
 		xstart( "/usr/sbin/ttb" );
 
 	stop_httpd();
@@ -699,7 +764,7 @@ void start_httpd(void)
 // set www dir
 	if ( nvram_match( "web_dir", "jffs" ) ) { chdir("/jffs/www"); }
 	else if ( nvram_match( "web_dir", "opt" ) ) { chdir("/opt/www"); }
-	else if ( nvram_match( "web_dir", "tmp" ) ) { chdir("/tmp/www");}
+	else if ( nvram_match( "web_dir", "tmp" ) ) { chdir("/tmp/www"); }
 	else { chdir("/www"); }
 
 	eval("httpd");
@@ -738,16 +803,16 @@ void start_ipv6_tunnel(void)
 	struct in6_addr addr;
 	const char *wanip, *mtu, *tun_dev;
 	int service;
-	char wan_prefix[] = "wanXX";	
-	int wan_unit,mwan_num;
-	
+	char wan_prefix[] = "wanXX";
+	int wan_unit, mwan_num;
+
 	mwan_num = nvram_get_int("mwan_num");
-	if(mwan_num < 1 || mwan_num > MWAN_MAX){
+	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
 		mwan_num = 1;
 	}
-	for(wan_unit = 1; wan_unit <= mwan_num; ++wan_unit){
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
-		if(check_wanup(wan_prefix)) break;
+		if (check_wanup(wan_prefix)) break;
 	}
 
 	service = get_ipv6_service();
@@ -815,7 +880,7 @@ void start_6rd_tunnel(void)
 	FILE *f;
 	char wan_prefix[] = "wanXX";
 	int wan_unit,mwan_num;
-	
+
 	mwan_num = nvram_get_int("mwan_num");
 	if(mwan_num < 1 || mwan_num > MWAN_MAX){
 		mwan_num = 1;
@@ -986,7 +1051,7 @@ void start_upnp(void)
 	int enable;
 	FILE *f;
 	int upnp_port;
-	
+
 	if (((enable = nvram_get_int("upnp_enable")) & 3) != 0) {
 		mkdir("/etc/upnp", 0777);
 		if (f_exists("/etc/upnp/config.alt")) {
@@ -1118,7 +1183,7 @@ void start_upnp(void)
 				}
 				fprintf(f, "\ndeny 0-65535 0.0.0.0/0 0-65535\n");
 				fclose(f);
-				
+
 				xstart("miniupnpd", "-f", "/etc/upnp/config");
 			}
 		}
@@ -1475,6 +1540,7 @@ void start_igmp_proxy(void)
 			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 				get_wan_prefix(wan_unit, wan_prefix);
 				if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
+				//if (check_wanup(wan_prefix)) {
 					count++;
 					fprintf(fp,
 						"phyint %s upstream\n"
@@ -1787,7 +1853,7 @@ static void start_ftpd(void)
 			"anon_allow_writable_root=yes\n"
 			"anon_world_readable_only=no\n"
 			"anon_umask=022\n");
-		
+
 		/* rights */
 		sprintf(tmp, "%s/ftp", vsftpd_users);
 		if ((f = fopen(tmp, "w")))
@@ -1811,7 +1877,7 @@ static void start_ftpd(void)
 	} else {
 		fprintf(fp, "anonymous_enable=no\n");
 	}
-	
+
 	fprintf(fp,
 		"dirmessage_enable=yes\n"
 		"download_enable=no\n"
@@ -1916,7 +1982,7 @@ static void start_ftpd(void)
 					strcat(tmp, "download_enable=yes\n");
 				if (strstr(rights, "Write") || !strncmp(rights, "Private", 7))
 					strcat(tmp, "write_enable=yes\n");
-					
+
 				fputs(tmp, f);
 				fclose(f);
 			}
@@ -2192,7 +2258,6 @@ static void start_samba(void)
 #endif
 		ret2 = xstart("smbd", "-D");
 	}
-
 	if (ret1 || ret2) kill_samba(SIGTERM);
 }
 
@@ -2259,7 +2324,6 @@ static void start_media_server(void)
 		start_service("media");
 		return;
 	}
-
 	if (nvram_get_int("ms_sas") == 0) {
 		once = 0;
 		argv[index - 1] = NULL;
@@ -2477,7 +2541,6 @@ void start_services(void)
 		if (nvram_get_int("telnetd_eas")) start_telnetd();
 		if (nvram_get_int("sshd_eas")) start_sshd();
 	}
-
 //	start_syslog();
 	start_nas();
 	start_zebra();
@@ -2655,7 +2718,7 @@ TOP:
 		if (action & A_START) start_dhcpc("wan3");
 		goto CLEAR;
 	}
-	
+
 	if (strcmp(service, "dhcpc-wan4") == 0) {
 		if (action & A_STOP) stop_dhcpc("wan4");
 		if (action & A_START) start_dhcpc("wan4");
@@ -2790,7 +2853,7 @@ TOP:
 		if (action & A_START) start_httpd();
 		goto CLEAR;
 	}
-	
+
 #ifdef TCONFIG_IPV6
 	if (strcmp(service, "ipv6") == 0) {
 		if (action & A_STOP) {
@@ -2803,7 +2866,7 @@ TOP:
 		}
 		goto CLEAR;
 	}
-	
+
 	if (strncmp(service, "dhcp6", 5) == 0) {
 		if (action & A_STOP) {
 			stop_dhcp6c();
@@ -2814,7 +2877,7 @@ TOP:
 		goto CLEAR;
 	}
 #endif
-	
+
 	if (strcmp(service, "admin") == 0) {
 		if (action & A_STOP) {
 			stop_sshd();
@@ -3041,7 +3104,7 @@ TOP:
 		}
 		goto CLEAR;
 	}
-	
+
 	if (strcmp(service, "wan4") == 0) {
 		if (action & A_STOP) {
 			stop_wan_if("wan4");
@@ -3055,7 +3118,7 @@ TOP:
 		goto CLEAR;
 	}
 #endif
-	
+
 	if (strcmp(service, "net") == 0) {
 		if (action & A_STOP) {
 #ifdef TCONFIG_USB
@@ -3227,7 +3290,7 @@ TOP:
 		goto CLEAR;
 	}
 #endif
-	
+
 #ifdef TCONFIG_FTP
 	// !!TB - FTP Server
 	if (strcmp(service, "ftpd") == 0) {
