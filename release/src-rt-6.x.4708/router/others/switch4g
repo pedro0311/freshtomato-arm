@@ -163,7 +163,7 @@ connect() {
                 else
                     logger -t switch4g[$PID] "4G MODEM - connection failed (device $i) [$COUNT]"
                     COUNT=`expr $COUNT + 1`
-                    sleep 5
+                    sleep 3
                 fi
             done
 
@@ -296,23 +296,19 @@ connect() {
             dhcpc-release $PREFIX
             sleep 1
             dhcpc-renew $PREFIX
+	    sleep 1
 
             CHECKIFA=`ifconfig | grep "$IFA" | wc -l`
             if [ "$CHECKIFA" -eq 1 ]; then
-                # wan-up fix
-                dhcpc-release $PREFIX
-                sleep 1
-                dhcpc-renew $PREFIX
-                # end  ---
+                echo "1" > /tmp/state_$PREFIX
                 DONE=1
                 logger -t switch4g[$PID] "4G MODEM - WAN IFACE configured ($IFA) ..."
-                echo "1" > /tmp/state_$PREFIX
                 watchdog add
                 signal
             else
                 logger -t switch4g[$PID] "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT]"
                 COUNT=`expr $COUNT + 1`
-                sleep 4
+                sleep 2
             fi
         else
             INTERVAL=`nvram get mwan_cktime`

@@ -53,8 +53,8 @@ void ppp_prefix(char *wan_device, char *prefix)
 	else if(!strcmp(wan_device, nvram_safe_get("wan3_ifnameX"))) strcpy(prefix, "wan3");
 	else if(!strcmp(wan_device, nvram_safe_get("wan4_ifnameX"))) strcpy(prefix, "wan4");
 #endif
-	else strcpy(prefix, "wan");	// all others: DEVICE="/dev/ttyUSB0" (3G) etc
-	mwanlog(LOG_DEBUG,"### ppp_prefix: DEVICE = %s, prefix = %s", wan_device, prefix);
+	else strcpy(prefix, "wan");	// default is wan
+	mwanlog(LOG_DEBUG,"### OUT ppp_prefix: wan_device = %s, prefix = %s", wan_device, prefix);
 }
 */
 
@@ -65,21 +65,28 @@ int ipup_main(int argc, char **argv)
 	char *value;
 	char buf[256];
 	const char *p;
-	
+
 	char prefix[] = "wanXX";
 	char tmp[100];
 	char ppplink_file[256];
 
 	TRACE_PT("begin\n");
 
-	killall("listen", SIGKILL);
-	
+	/* don't kill all, only this wan listener!
+	   normally listen quits as link established
+	   and only one instance will run for a wan */
+	// killall("listen", SIGKILL);
+
 	if (!wait_action_idle(10)) return -1;
+
+	mwanlog(LOG_DEBUG,"IN ipup_main IFNAME=%s DEVICE=%s LINKNAME=%s IPREMOTE=%s IPLOCAL=%s DNS1=%s DNS2=%s", getenv("IFNAME"), getenv("DEVICE"), getenv("LINKNAME"), getenv("IPREMOTE"), getenv("IPLOCAL"), getenv("DNS1"), getenv("DNS2"));
 
 	wan_ifname = safe_getenv("IFNAME");
 	//ppp_prefix(safe_getenv("DEVICE"), prefix);
 	strcpy(prefix, safe_getenv("LINKNAME"));
+	mwanlog(LOG_DEBUG,"ipup_main, wan_ifname = %s, prefix = %s.", wan_ifname, prefix);
 	if ((!wan_ifname) || (!*wan_ifname)) return -1;
+
 	nvram_set(strcat_r(prefix, "_iface", tmp), wan_ifname);	// ppp#
 	nvram_set(strcat_r(prefix, "_pppd_pid", tmp), safe_getenv("PPPD_PID"));	
 
@@ -89,15 +96,15 @@ int ipup_main(int argc, char **argv)
 	memset(ppplink_file, 0, 256);
 	sprintf(ppplink_file, "/tmp/ppp/%s_link", prefix);
 	f_write_string(ppplink_file, argv[1], 0, 0);
-	
+
 	if ((p = getenv("IPREMOTE"))) {
 		nvram_set(strcat_r(prefix, "_gateway_get", tmp), p);
-		mwanlog(LOG_DEBUG,"### ipup_main: set %s_gateway_get=%s", prefix, p);
+		mwanlog(LOG_DEBUG,"!!! ipup_main: set %s_gateway_get=%s", prefix, p);
 		TRACE_PT("IPREMOTE=%s\n", p);
 	}
 
 	if ((value = getenv("IPLOCAL"))) {
-		_dprintf("IPLOCAL=%s\n", value);
+		TRACE_PT("IPLOCAL=%s\n", value);
 
 		wan_proto = get_wanx_proto(prefix);
 
@@ -109,7 +116,6 @@ int ipup_main(int argc, char **argv)
 			} else {	// PPPoE / 3G
 				nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
 				nvram_set(strcat_r(prefix, "_ipaddr", tmp), value);
-				nvram_set(strcat_r(prefix, "_netmask", tmp), "255.255.255.255");
 			}
 			break;
 		case WP_PPTP:
@@ -117,6 +123,9 @@ int ipup_main(int argc, char **argv)
 			nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
 			break;
 		}
+		// set netmask in nvram only if not already set (MAN)
+		if (nvram_match(strcat_r(prefix, "_netmask", tmp), "0.0.0.0"))
+			nvram_set(strcat_r(prefix, "_netmask", tmp), "255.255.255.255");
 
 		if (!nvram_match(strcat_r(prefix, "_ppp_get_ip", tmp), value)) {
 			ifconfig(wan_ifname, IFUP, "0.0.0.0", NULL);
@@ -139,7 +148,8 @@ int ipup_main(int argc, char **argv)
 	if ((value = getenv("SRV_NAME"))) nvram_set(strcat_r(prefix, "_ppp_get_srv", tmp), value);
 	if ((value = getenv("MTU"))) nvram_set(strcat_r(prefix, "_run_mtu", tmp), value);
 
-	start_wan_done(wan_ifname,prefix);
+	mwanlog(LOG_DEBUG,"OUT ipup_main: to start_wan_done, ifname=%s prefix=%s ...", wan_ifname, prefix);
+	start_wan_done(wan_ifname, prefix);
 
 	TRACE_PT("end\n");
 	return 0;
@@ -148,10 +158,11 @@ int ipup_main(int argc, char **argv)
 int ipdown_main(int argc, char **argv)
 {
 	int proto;
-	char prefix[] = "wanXX";
+	char prefix[] = "wanXXX";
 	char tmp[100];
 	char ppplink_file[256];
-	
+	struct in_addr ipaddr;
+
 	TRACE_PT("begin\n");
 
 	//ppp_prefix(safe_getenv("DEVICE"), prefix);
@@ -169,40 +180,55 @@ int ipdown_main(int argc, char **argv)
 	mwan_table_del(prefix);
 
 	if (proto == WP_L2TP || proto == WP_PPTP) {
+
 		/* clear dns from the resolv.conf */
 		nvram_set(strcat_r(prefix, "_get_dns", tmp),"");
 		dns_to_resolv();
 
- 		if (proto == WP_L2TP) {
- 			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)),
-			nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
-			mwanlog(LOG_DEBUG,"### ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
- 		}
+		if (proto == WP_L2TP) {
+			if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &(ipaddr.s_addr))) {
+				route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255"); // fixed routing problem in Israel by kanki
+				mwanlog(LOG_DEBUG,"!!! ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			}
+		}
 
- 		if (proto == WP_PPTP) {
- 			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)),
-			nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255");
-			mwanlog(LOG_DEBUG,"### ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
- 		}
+		if (proto == WP_PPTP) {
+			if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &(ipaddr.s_addr))) {
+				route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "255.255.255.255");
+				mwanlog(LOG_DEBUG,"!!! ipdown_main: route_del(%s,0,%s,%s,255.255.255.255)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			}
+		}
 
-		// Restore the default gateway for WAN interface
-		nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+		if (!nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) { // don't setup temp gateway for demand connections
+			// Restore the default gateway for WAN interface
+			nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			mwanlog(LOG_DEBUG,"*** ipdown_main: restore default gateway: nvram_set(%s_gateway_get,%s)", prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 
-		// Set default route to gateway if specified
-		route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
-		route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
-		mwanlog(LOG_DEBUG,"### ipdown_main: route_add(%s,0,0.0.0.0,%s,0.0.0.0)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			// Set default route to gateway if specified
+			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
+			route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
+			mwanlog(LOG_DEBUG,"!!! ipdown_main: route_add(%s,0,0.0.0.0,%s,0.0.0.0)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+		}
+
+		// Unset received DNS entries (BAD for PPTP/L2TP here, it need DNS on reconnect!)
+		// nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 	}
 
+	/* don't kill all, only this wan listener!
+	   normally listen quits as link established
+	   and only one instance will run for a wan */
 	if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) {
-		killall("listen", SIGKILL);
-		eval("listen", nvram_safe_get("lan_ifname"),prefix);
+		//killall("listen", SIGKILL);
+		eval("listen", nvram_safe_get("lan_ifname"), prefix);
 	}
 
 	mwan_load_balance();
 
-	/* clear active interface from nvram on disconnect. iface mandatory for mwan load balance */
-	mwanlog(LOG_DEBUG,"### ipdown_main, remove %s_iface, %s_pppd_pid", prefix, prefix);
+	// Unset netmask in nvram only if equal to 255.255.255.255 (no MAN)
+	if (nvram_match(strcat_r(prefix, "_netmask", tmp), "255.255.255.255"))
+		nvram_set(strcat_r(prefix, "_netmask", tmp), "0.0.0.0");
+
+	/* don't clear active interface from nvram on disconnect. iface mandatory for mwan load balance */
 	//nvram_set(strcat_r(prefix, "_iface", tmp),"");	// ppp#
 	nvram_set(strcat_r(prefix, "_pppd_pid", tmp),"");
 
@@ -250,7 +276,7 @@ int pppevent_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
 	char ppplog_file[256];
-	
+
 	TRACE_PT("begin\n");
 
 	//ppp_prefix(safe_getenv("DEVICE"), prefix);
@@ -266,7 +292,7 @@ int pppevent_main(int argc, char **argv)
 				f_write_string(ppplog_file, argv[i], 0, 0);
 				notice_set(prefix, "Authentication failed");	// !!!
 				return 0;
-			}			
+			}
 		}
 	}
 
@@ -289,11 +315,11 @@ int set_pppoepid_main(int argc, char **argv)
 	nvram_set(strcat_r(prefix, "_pppoe_pid0", tmp), getenv("PPPD_PID"));
 	nvram_set(strcat_r(prefix, "_pppoe_ifname0", tmp), getenv("IFNAME"));
 	nvram_set(strcat_r(prefix, "_iface", tmp), getenv("IFNAME"));
-	
+
 	TRACE_PT("IFNAME=%s DEVICE=%s\n", getenv("IFNAME"), getenv("DEVICE"));
 	return 0;
 }
-	
+
 int pppoe_down_main(int argc, char **argv)
 {
 	if (argc < 2) return 0;
@@ -308,7 +334,7 @@ int pppoe_down_main(int argc, char **argv)
 	if ((nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) && (nvram_match("action_service", "")))	{
 		stop_singe_pppoe(0,prefix);
 		start_pppoe(0,prefix);
-		
+
 		stop_dnsmasq();
 		dns_to_resolv();
 		start_dnsmasq();

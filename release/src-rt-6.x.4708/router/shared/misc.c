@@ -252,18 +252,19 @@ void notice_set(const char *path, const char *format, ...)
 	if (buf[0]) syslog(LOG_INFO, "notice[%s]: %s", path, buf);
 }
 
-#define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
-#define _x_dprintf(args...)	mwanlog(LOG_DEBUG, args);
-//#define _x_dprintf(args...)	do { } while (0);
+//#define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
+//#define _x_dprintf(args...)	mwanlog(LOG_DEBUG, args);
+#define _x_dprintf(args...)	do { } while (0);
+#define mwanlog(level,x...)	do { } while (0);
 
 int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 {
 	int model;
 
 	if (mode) {
-		mwanlog(LOG_DEBUG, "### wan_led: led(LED_WHITE,ON)");
+		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,ON)");
 	} else {
-		mwanlog(LOG_DEBUG, "### wan_led: led(LED_WHITE,OFF)");
+		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,OFF)");
 	}
 
 	model = get_model();
@@ -315,7 +316,8 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 	int f;
 	struct ifreq ifr;
 	int up;
-	int count;
+	int count = 0;	// initialize with zero
+	int proto;
 	int mwan_num = atoi(nvram_safe_get("mwan_num"));
 	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
 		mwan_num = 1;
@@ -325,26 +327,43 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 		up = 0; // default is 0 (LED_OFF)
 		if (!strcmp(prefix, names[i])) continue; // only check others
 		mwanlog(LOG_DEBUG, "### wan_led_off: check %s aliveness...", names[i]);
-		switch (get_wanx_proto(names[i])) {
+		switch (proto = get_wanx_proto(names[i])) {
 		case WP_DISABLED:
 			break;	// WAN is disabled - skip
 		case WP_STATIC:
 		case WP_DHCP:
 		case WP_LTE:
 			if (!nvram_match(strcat_r(names[i], "_ipaddr", tmp), "0.0.0.0")) { // have IP, assume ON
-				_x_dprintf("### %s: %s_ipaddr found, ++count\n", __FUNCTION__, names[i]);
 				up = 1;
 				if (((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {	// check interface
 					strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(names[i], "_iface", tmp)), sizeof(ifr.ifr_name));
-					if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0) {
+					if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0)
 						up = 0;
-						_x_dprintf("### %s: %s SIOCGIFFLAGS, reset count\n", __FUNCTION__, names[i]);
-					}
 					close(f);
-					if ((ifr.ifr_flags & IFF_UP) == 0) {
+					if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0)
 						up = 0;
-						_x_dprintf("### %s: %s !IFF_UP, reset count\n", __FUNCTION__, names[i]);
-					}
+					if (proto == WP_STATIC) {       // check port state for static
+
+						int *a;         /* port number: 0/1/2/3/4 */
+						char b[16];     /* port state: DOWN/SPEED */
+						int *c;         /* port vlan: 1/2/3/4/etc */
+						char d[4];
+						FILE *f;
+
+						strcpy(d,&ifr.ifr_name[4]);     // trim vlan
+						int vlannum = atoi(d);
+						if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
+							while (fgets(tmp, sizeof(tmp), f)) {
+								if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
+									if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
+										_x_dprintf("%s: state = DOWN for vlan%d\n", __FUNCTION__,vlannum);
+										up = 0;
+									}
+								}
+							}
+							fclose(f);
+						}
+                                        }
 				}
 			}
 			if (up) ++count;
@@ -355,10 +374,8 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 		case WP_PPP3G:
 			memset(ppplink_file , 0, 32);
 			sprintf(ppplink_file, "/tmp/ppp/%s_link", names[i]);
-			if (fopen(ppplink_file, "r") != NULL) {	// have PPP link, assume ON
-				_x_dprintf("### %s: /tmp/ppp/%s_link found, ++count\n", __FUNCTION__, names[i]);
+			if (fopen(ppplink_file, "r") != NULL)	// have PPP link, assume ON
 				up = 1;
-			}
 			if (up) ++count;
 			break;
 		default:
@@ -367,11 +384,11 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 	}
 
 	if (count > 0) {
-		mwanlog(LOG_DEBUG, "### OUT wan_led_off: %s, active WANs count:%d, stay on", prefix, count);
+		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, active WANs count:%d, stay on", prefix, count);
 		return count; // do not LED OFF
 	}
 	else {
-		mwanlog(LOG_DEBUG, "### OUT wan_led_off: %s, no other active WANs, turn off led", prefix);
+		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, no other active WANs, turn off led", prefix);
 		return wan_led(LED_OFF); // LED OFF
 	}
 }
@@ -402,7 +419,7 @@ int check_wanup(char *prefix)
 	char buf1[64];
 	char buf2[64];
 	const char *name;
-	int f;
+	int s;
 	struct ifreq ifr;
 	char tmp[100];
 	char ppplink_file[256];
@@ -425,11 +442,11 @@ int check_wanup(char *prefix)
 				name = psname(atoi(buf1), buf2, sizeof(buf2));
 				memset(pppd_name, 0, 256);
 				sprintf(pppd_name, "pppd%s", prefix);
-				mwanlog(LOG_DEBUG, "### check_wanup: pppd name=%s, psname=%s", pppd_name, name);
+				//mwanlog(LOG_INFO, "### check_wanup: pppd name=%s, psname=%s", pppd_name, name);
 				if (strcmp(name, pppd_name) == 0) up = 1;
 				if (proto == WP_L2TP) {
 					sprintf(pppd_name, "pppd");
-					mwanlog(LOG_DEBUG, "### check_wanup: L2TP pppd name=%s, psname=%s", pppd_name, name);
+					//mwanlog(LOG_INFO, "### check_wanup: L2TP pppd name=%s, psname=%s", pppd_name, name);
 					if (strcmp(name, pppd_name) == 0) up = 1;
 				}
 			}
@@ -446,7 +463,7 @@ int check_wanup(char *prefix)
 		}
 	}
 	else if (!nvram_match(strcat_r(prefix, "_ipaddr", tmp), "0.0.0.0")) {
-		mwanlog(LOG_DEBUG, "### check_wanup: %s have IP, assume ON", prefix);
+		mwanlog(LOG_DEBUG, "check_wanup: %s have IP, assume ON", prefix);
 		up = 1;
 	}
 	else {
@@ -454,19 +471,58 @@ int check_wanup(char *prefix)
 		return up;	// don't turn off WAN LED
 	}
 
-	if ((up) && ((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {
+	if ((up) && ((s = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {
 		strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(prefix, "_iface", tmp)), sizeof(ifr.ifr_name));
-		if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0) {
+		if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
 			up = 0;
 			_x_dprintf("%s: SIOCGIFFLAGS\n", __FUNCTION__);
 		}
-		close(f);
-		if ((ifr.ifr_flags & IFF_UP) == 0) {
+		close(s);
+		if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0) {
 			up = 0;
-			_x_dprintf("%s: !IFF_UP\n", __FUNCTION__);
+			_x_dprintf("%s: !IFF_UP || !IFF_RUNNING\n", __FUNCTION__);
+		}
+		if (proto == WP_STATIC) {
+			/* Ethernet WAN port state checker (static IF is always UP and RUNNING)
+			ifr.ifr_name = vlan2, vlan3 etc
+			nvram get vlan2ports
+			4 5
+			nvram get vlan3ports
+			1 5
+			robocfg showports
+			Switch: enabled
+			Port 0: 1000FD enabled stp: none vlan: 1 jumbo: off mac: 00:00:80:00:00:00
+			Port 1:   DOWN enabled stp: none vlan: 3 jumbo: off mac: 00:00:00:00:00:00
+			Port 2:   DOWN enabled stp: none vlan: 1 jumbo: off mac: 00:00:00:00:00:00
+			Port 3:   DOWN enabled stp: none vlan: 1 jumbo: off mac: 00:00:00:00:00:00
+			Port 4:  100FD enabled stp: none vlan: 2 jumbo: off mac: 00:00:00:00:00:00
+			Port 8:   DOWN enabled stp: none vlan: 1 jumbo: off mac: 00:00:00:00:00:00
+			*/
+
+			int *a;		/* port number: 0/1/2/3/4 */
+			char b[16];	/* port state: DOWN/SPEED */
+			int *c;		/* port vlan: 1/2/3/4/etc */
+			char d[4];
+			FILE *f;
+
+			strcpy(d,&ifr.ifr_name[4]);	// trim vlan
+			int vlannum = atoi(d);
+			_x_dprintf("%s: %s vlan num: %d\n", __FUNCTION__, prefix, vlannum);
+
+			if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
+				while (fgets(tmp, sizeof(tmp), f)) {
+					if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
+						if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
+							_x_dprintf("%s: port state = DOWN for vlan%d\n", __FUNCTION__,vlannum);
+							up = 0;
+						}
+					}
+				}
+				fclose(f);
+			}
 		}
 	}
-	// LED control
+	// WAN LED control
 	if (up)
 		wan_led(up); // LED ON!
 	else
@@ -585,9 +641,36 @@ const wanface_list_t *get_wanfaces(char *prefix)
 				++wanfaces.count;
 			}
 			break;
+		case WP_PPPOE:
+			if (using_dhcpc(prefix)) {	// PPPoE with MAN
+				while (wanfaces.count < 2) {
+					if (wanfaces.count == 0) {
+						ip = nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp));
+						iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
+						if (!(*iface)) iface = "ppp+";
+					}
+					else /* if (wanfaces.count == 1) */ {
+						ip = nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
+						if ((!(*ip) || strcmp(ip, "0.0.0.0") == 0) && (wanfaces.count > 0))
+							iface = "";
+						else
+							iface = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+					}
+					strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
+					strlcpy(wanfaces.iface[wanfaces.count].name, iface, IFNAMSIZ);
+					++wanfaces.count;
+				}
+			} else {	// PPPoE
+				ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
+				iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
+				if (!(*iface)) iface = "ppp+";
+				strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
+				strlcpy(wanfaces.iface[wanfaces.count++].name, iface, IFNAMSIZ);
+			}
+			break;
 		default:
 			ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
-			if ((proto == WP_PPPOE) || (proto == WP_PPP3G)) {
+			if (proto == WP_PPP3G) {
 				iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
 				if (!(*iface)) iface = "ppp+";
 			}

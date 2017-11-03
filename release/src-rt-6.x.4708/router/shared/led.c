@@ -33,7 +33,7 @@ const char *led_names[] = { "wlan", "diag", "white", "amber", "dmz", "aoss", "br
 static int _gpio_ioctl(int f, int gpioreg, unsigned int mask, unsigned int val)
 {
 	struct gpio_ioctl gpio;
-                                                                                                                     
+
 	gpio.val = val;
 	gpio.mask = mask;
 
