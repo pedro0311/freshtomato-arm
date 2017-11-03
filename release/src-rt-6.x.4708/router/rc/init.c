@@ -2431,9 +2431,9 @@ static int init_nvram(void)
 #endif
 
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "10");	// failsafe for default R1D CFE
-			nvram_set("uart_en", "1");	// failsafe for default R1D CFE
+			nvram_set("boot_wait", "on");	// failsafe for CFE flash
+			nvram_set("wait_time", "30");	// failsafe for CFE flash
+			nvram_set("uart_en", "1");	// failsafe for CFE flash
 			nvram_set("router_name", "X-R1D");
 
 			nvram_set("vlan1hwname", "et0");
@@ -2459,10 +2459,10 @@ static int init_nvram(void)
 			nvram_set("wl0_hwaddr", s);
 
 			// force 5G settings
-			nvram_set("wl0_channel", "149");
+			nvram_set("wl0_channel", "36");
 			nvram_set("wl0_bw", "3");
 			nvram_set("wl0_bw_cap", "7");
-			nvram_set("wl0_chanspec", "149/80");
+			nvram_set("wl0_chanspec", "36/80");
 			nvram_set("wl0_nctrlsb", "lower");
 			nvram_set("wl0_nband", "1");
 			nvram_set("wl0_nbw", "80");
@@ -2490,7 +2490,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ssid", "MiWiFi");
 
 			// usb settings
-			nvram_set("usb_usb3", "0");
+			nvram_set("usb_usb3", "-1");
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
