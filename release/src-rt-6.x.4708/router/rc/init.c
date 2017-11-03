@@ -2195,7 +2195,7 @@ static int init_nvram(void)
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
 			nvram_set("0:macaddr", s);
-			inc_mac(s, +4);
+			inc_mac(s, +1);
 			nvram_set("1:macaddr", s);
 
 			// usb3.0 settings
@@ -2207,7 +2207,7 @@ static int init_nvram(void)
 			// misc settings
 			nvram_set("boot_wait", "off");
 			nvram_set("wait_time", "1");
-	
+
 			// 2.4GHz module defaults
 			nvram_set("devpath0", "pci/1/1");
 			nvram_set("0:aa2g", "7");
@@ -2451,7 +2451,7 @@ static int init_nvram(void)
 
 			// fix WL mac`s
 			strcpy(s, nvram_safe_get("et0macaddr"));
-			inc_mac(s, +1);
+			inc_mac(s, +2);
 			nvram_set("pci/2/1/macaddr", s);
 			nvram_set("wl1_hwaddr", s);
 			inc_mac(s, +1);
