@@ -306,13 +306,22 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 #endif
 		NULL
 	};
+#ifdef TCONFIG_MULTIWAN
+#define MWAN_MAX	4
+#else
+#define MWAN_MAX	2
+#endif
 	int i;
 	int f;
 	struct ifreq ifr;
 	int up;
 	int count;
+	int mwan_num = atoi(nvram_safe_get("mwan_num"));
+	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+		mwan_num = 1;
+	}
 
-	for (i = 0; names[i] != NULL; ++i) {
+	for (i = 0; (names[i] != NULL) && (i <= mwan_num-1); ++i) {
 		up = 0; // default is 0 (LED_OFF)
 		if (!strcmp(prefix, names[i])) continue; // only check others
 		mwanlog(LOG_DEBUG, "### wan_led_off: check %s aliveness...", names[i]);
