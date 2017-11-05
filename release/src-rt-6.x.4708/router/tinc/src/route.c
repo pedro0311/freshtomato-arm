@@ -510,7 +510,7 @@ static void route_broadcast(node_t *source, vpn_packet_t *packet) {
 static void fragment_ipv4_packet(node_t *dest, vpn_packet_t *packet, length_t ether_size) {
 	struct ip ip;
 	vpn_packet_t fragment;
-	int len, maxlen, todo;
+	int maxlen, todo;
 	uint8_t *offset;
 	uint16_t ip_off, origf;
 
@@ -537,7 +537,7 @@ static void fragment_ipv4_packet(node_t *dest, vpn_packet_t *packet, length_t et
 	ip_off &= IP_OFFMASK;
 
 	while(todo) {
-		len = todo > maxlen ? maxlen : todo;
+		int len = todo > maxlen ? maxlen : todo;
 		memcpy(DATA(&fragment) + ether_size + ip_size, offset, len);
 		todo -= len;
 		offset += len;
@@ -682,6 +682,9 @@ static void route_ipv6(node_t *source, vpn_packet_t *packet) {
 	if(decrement_ttl && source != myself && subnet->owner != myself)
 		if(!do_decrement_ttl(source, packet))
 			return;
+
+	if(priorityinheritance)
+		packet->priority = ((DATA(packet)[14] & 0x0f) << 4) | (DATA(packet)[15] >> 4);
 
 	via = (subnet->owner->via == myself) ? subnet->owner->nexthop : subnet->owner->via;
 
@@ -954,8 +957,12 @@ static void route_mac(node_t *source, vpn_packet_t *packet) {
 
 	uint16_t type = DATA(packet)[12] << 8 | DATA(packet)[13];
 
-	if(priorityinheritance && type == ETH_P_IP && packet->len >= ether_size + ip_size)
-		packet->priority = DATA(packet)[15];
+	if(priorityinheritance) {
+		if(type == ETH_P_IP && packet->len >= ether_size + ip_size)
+			packet->priority = DATA(packet)[15];
+		else if(type == ETH_P_IPV6 && packet->len >= ether_size + ip6_size)
+			packet->priority = ((DATA(packet)[14] & 0x0f) << 4) | (DATA(packet)[15] >> 4);
+	}
 
 	// Handle packets larger than PMTU
 

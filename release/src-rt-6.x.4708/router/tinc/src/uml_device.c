@@ -1,7 +1,7 @@
 /*
     device.c -- UML network socket
     Copyright (C) 2002-2005 Ivo Timmermans,
-                  2002-2013 Guus Sliepen <guus@tinc-vpn.org>
+                  2002-2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -228,7 +228,7 @@ static bool read_packet(vpn_packet_t *packet) {
 				return false;
 			}
 
-			if(connect(write_fd, &request.sock, sizeof request.sock) < 0) {
+			if(connect(write_fd, (struct sockkadr *)&request.sock, sizeof request.sock) < 0) {
 				logger(DEBUG_ALWAYS, LOG_ERR, "Could not bind write %s: %s", device_info, strerror(errno));
 				event_exit();
 				return false;

@@ -1,6 +1,6 @@
 /*
     invitation.c -- Create and accept invitations
-    Copyright (C) 2013-2015 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2017 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -239,7 +239,7 @@ int cmd_invite(int argc, char *argv[]) {
 		return 1;
 	}
 
-	char *myname = get_my_name(true);
+	myname = get_my_name(true);
 	if(!myname)
 		return 1;
 
@@ -252,14 +252,14 @@ int cmd_invite(int argc, char *argv[]) {
 	}
 
 	// If a daemon is running, ensure no other nodes know about this name
-	bool found = false;
 	if(connect_tincd(false)) {
+		bool found = false;
 		sendline(fd, "%d %d", CONTROL, REQ_DUMP_NODES);
 
 		while(recvline(fd, line, sizeof line)) {
 			char node[4096];
 			int code, req;
-			if(sscanf(line, "%d %d %s", &code, &req, node) != 3)
+			if(sscanf(line, "%d %d %4095s", &code, &req, node) != 3)
 				break;
 			if(!strcmp(node, argv[1]))
 				found = true;
@@ -425,15 +425,13 @@ int cmd_invite(int argc, char *argv[]) {
 	xasprintf(&url, "%s/%s%s", address, hash, cookie);
 
 	// Call the inviation-created script
-	char *envp[6] = {};
-	xasprintf(&envp[0], "NAME=%s", myname);
-	xasprintf(&envp[1], "NETNAME=%s", netname);
-	xasprintf(&envp[2], "NODE=%s", argv[1]);
-	xasprintf(&envp[3], "INVITATION_FILE=%s", filename);
-	xasprintf(&envp[4], "INVITATION_URL=%s", url);
-	execute_script("invitation-created", envp);
-	for(int i = 0; i < 6 && envp[i]; i++)
-		free(envp[i]);
+	environment_t env;
+	environment_init(&env);
+	environment_add(&env, "NODE=%s", argv[1]);
+	environment_add(&env, "INVITATION_FILE=%s", filename);
+	environment_add(&env, "INVITATION_URL=%s", url);
+	execute_script("invitation-created", &env);
+	environment_exit(&env);
 
 	puts(url);
 	free(url);
@@ -609,6 +607,17 @@ make_names:
 		return false;
 	}
 
+	snprintf(filename, sizeof filename, "%s" SLASH "invitation-data", confbase);
+	FILE *finv = fopen(filename, "w");
+	if(!finv || fwrite(data, datalen, 1, finv) != 1) {
+		fprintf(stderr, "Could not create file %s: %s\n", filename, strerror(errno));
+		fclose(fh);
+		fclose(f);
+		fclose(finv);
+		return false;
+	}
+	fclose(finv);
+
 	snprintf(filename, sizeof filename, "%s" SLASH "tinc-up.invitation", confbase);
 	FILE *fup = fopen(filename, "w");
 	if(!fup) {
@@ -688,7 +697,7 @@ make_names:
 		}
 
 		// Copy the safe variable to the right config file
-		fprintf(variables[i].type & VAR_HOST ? fh : f, "%s = %s\n", l, value);
+		fprintf((variables[i].type & VAR_HOST) ? fh : f, "%s = %s\n", l, value);
 	}
 
 	fclose(f);
@@ -1046,7 +1055,7 @@ next:
 	char hisname[4096] = "";
 	int code, hismajor, hisminor = 0;
 
-	if(!recvline(sock, line, sizeof line) || sscanf(line, "%d %s %d.%d", &code, hisname, &hismajor, &hisminor) < 3 || code != 0 || hismajor != PROT_MAJOR || !check_id(hisname) || !recvline(sock, line, sizeof line) || !rstrip(line) || sscanf(line, "%d ", &code) != 1 || code != ACK || strlen(line) < 3) {
+	if(!recvline(sock, line, sizeof line) || sscanf(line, "%d %4095s %d.%d", &code, hisname, &hismajor, &hisminor) < 3 || code != 0 || hismajor != PROT_MAJOR || !check_id(hisname) || !recvline(sock, line, sizeof line) || !rstrip(line) || sscanf(line, "%d ", &code) != 1 || code != ACK || strlen(line) < 3) {
 		fprintf(stderr, "Cannot read greeting from peer\n");
 		closesocket(sock);
 		goto next;

@@ -18,6 +18,23 @@ include common.mak
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
 
+define patch_files =
+ find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
+  ( if ! patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
+   patch -p0 < $$FILE; \
+  fi ) \
+ done
+endef
+
+define unpatch_files =
+ find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
+  ( if patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
+   patch -p0 -Rf < $$FILE; \
+  fi ) \
+ done
+endef
+
+
 #
 #
 #
@@ -561,8 +578,12 @@ endif
 
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh
 
+ifneq ($(TCONFIG_BBT),y)
+	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_usr_share
+else
 ifeq ($(TCONFIG_TOR),y)
-		@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_Tor
+	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_tor_geoip
+endif
 endif
 
 	@echo ---
@@ -1052,9 +1073,7 @@ bridge-install:
 
 dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	@$(SEP)
-	( if ! patch -R -f -d dnsmasq/src --dry-run --silent < patches/dnsmasq/101-tomato-specific.patch; then \
-		patch -b -d dnsmasq/src < patches/dnsmasq/101-tomato-specific.patch; \
-	fi )
+	$(call patch_files,dnsmasq)
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) \
@@ -1066,6 +1085,9 @@ dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 dnsmasq-install:
 	install -D dnsmasq/src/dnsmasq $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
 	$(STRIP) $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
+
+dnsmasq-clean:
+	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
 	@cd nettle && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
@@ -1248,11 +1270,13 @@ miniupnpd-config:
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
+	$(call patch_files,miniupnpd)
 	$(MAKE) -C miniupnpd -f Makefile.linux
 
 miniupnpd-clean:
 	-@$(MAKE) -C miniupnpd -f Makefile.linux clean
 	@rm -f miniupnpd/config.h
+	$(call unpatch_files,miniupnpd)
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
@@ -2099,9 +2123,7 @@ libpng-clean:
 
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	@$(SEP)
-	( if ! patch -R -f -d php --dry-run --silent < patches/php/101-fix-cross-compiling-issue.patch; then \
-		patch -b -d php < patches/php/101-fix-cross-compiling-issue.patch; \
-	fi ) && \
+	$(call patch_files,php)
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/include" \
@@ -2181,6 +2203,7 @@ php: php/stamp-h1
 php-clean:
 	-@$(MAKE) -C php clean
 	-@rm php/stamp-h1
+	$(call unpatch_files,php)
 
 php-install:
 	@$(SEP)
@@ -2272,10 +2295,9 @@ libncurses-install:
 
 mysql/stamp-h1: openssl zlib libncurses
 	@$(SEP)
-	( if ! patch -R -f -d mysql/sql --dry-run --silent < patches/mysql/101-bison-compat.patch; then \
-		patch -b -d mysql/sql < patches/mysql/101-bison-compat.patch; \
-	fi ) && \
-	cd mysql && cp -f configure.arm configure && \
+	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
+	$(call patch_files,mysql)
+	cd mysql && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
 		-I$(TOP)/openssl/include -I$(TOP)/libncurses/include" \
@@ -2290,7 +2312,6 @@ mysql/stamp-h1: openssl zlib libncurses
 		--without-mysqlmanager \
 		--with-pthread \
 		--with-ssl \
-		--without-docs \
 		--with-geometry \
 		--with-low-memory \
 		--enable-assembler \
@@ -2313,6 +2334,8 @@ mysql-clean:
 	-@$(MAKE) -C mysql clean
 	-@rm -f mysql/stamp-h1
 	-@rm -rf mysql/staged mysql/host
+	-@rm -f mysql/.host.tgz
+	$(call unpatch_files,mysql)
 
 mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/bin
@@ -2322,7 +2345,6 @@ mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/lib/mysql/plugin
 	install -d $(INSTALLDIR)/mysql/usr/share
 	install -d $(INSTALLDIR)/mysql/usr/share/mysql
-	install -D -m 755 mysql/mycheck $(INSTALLDIR)/mysql/usr/bin
 	install -D -m 755 mysql/staged/usr/bin/my_print_defaults $(INSTALLDIR)/mysql/usr/bin
 	$(STRIP) $(INSTALLDIR)/mysql/usr/bin/my_print_defaults
 	install -D -m 755 mysql/staged/usr/bin/myisamchk $(INSTALLDIR)/mysql/usr/bin
@@ -2406,6 +2428,7 @@ openvpn_plugin_auth_nvram: nvram$(BCMEX)
 
 #shibby
 nano/stamp-h1: libncurses
+	$(call patch_files,nano)
 	cd nano && CC=$(CC) STRIP=$(STRIP) \
 		autoreconf && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections" \
@@ -2422,6 +2445,7 @@ nano: nano/stamp-h1
 nano-clean:
 	-@$(MAKE) -C nano clean
 	@rm -f nano/stamp-h1 nano/Makefile nano/src/Makefile
+	$(call unpatch_files,nano)
 
 nano-install:
 	install -d $(INSTALLDIR)/nano/usr/sbin
@@ -2459,11 +2483,11 @@ libcurl-install:
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 	install -d $(INSTALLDIR)/libcurl/usr/lib
-	install -D libcurl/lib/.libs/libcurl.so.4.4.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.4.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.4.0
+	install -D libcurl/lib/.libs/libcurl.so.4.5.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
 	cd $(INSTALLDIR)/libcurl/usr/lib/ && \
-		ln -sf libcurl.so.4.4.0 libcurl.so.4 && \
-		ln -sf libcurl.so.4.4.0 libcurl.so
+		ln -sf libcurl.so.4.5.0 libcurl.so.4 && \
+		ln -sf libcurl.so.4.5.0 libcurl.so
 
 libevent/stamp-h1:
 	cd libevent && CC=$(CC) \
@@ -2785,11 +2809,11 @@ libsodium: libsodium/stamp-h1
 
 libsodium-install:
 	install -d $(INSTALLDIR)/libsodium/usr/lib
-	install -D libsodium/src/libsodium/.libs/libsodium.so.18.2.0 $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
-	$(STRIP) -s $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.18.2.0
+	install -D libsodium/src/libsodium/.libs/libsodium.so.23.0.0 $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.23.0.0
+	$(STRIP) -s $(INSTALLDIR)/libsodium/usr/lib/libsodium.so.23.0.0
 	cd $(INSTALLDIR)/libsodium/usr/lib/ && \
-		ln -sf libsodium.so.18.2.0 libsodium.so.18 && \
-		ln -sf libsodium.so.18.2.0 libsodium.so
+		ln -sf libsodium.so.23.0.0 libsodium.so.23 && \
+		ln -sf libsodium.so.23.0.0 libsodium.so
 
 libsodium-clean:
 	-$(MAKE) -C libsodium clean

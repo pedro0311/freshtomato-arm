@@ -1134,6 +1134,9 @@
 /* Define to 1 if readlinkat is declared even after undefining macros. */
 #undef HAVE_RAW_DECL_READLINKAT
 
+/* Define to 1 if reallocarray is declared even after undefining macros. */
+#undef HAVE_RAW_DECL_REALLOCARRAY
+
 /* Define to 1 if realpath is declared even after undefining macros. */
 #undef HAVE_RAW_DECL_REALPATH
 
@@ -1951,6 +1954,14 @@
 /* Enable GNU extensions on systems that have them.  */
 #ifndef _GNU_SOURCE
 # undef _GNU_SOURCE
+#endif
+/* Enable NetBSD extensions on NetBSD.  */
+#ifndef _NETBSD_SOURCE
+# undef _NETBSD_SOURCE
+#endif
+/* Enable OpenBSD extensions on NetBSD.  */
+#ifndef _OPENBSD_SOURCE
+# undef _OPENBSD_SOURCE
 #endif
 /* Enable threading extensions on Solaris.  */
 #ifndef _POSIX_PTHREAD_SEMANTICS

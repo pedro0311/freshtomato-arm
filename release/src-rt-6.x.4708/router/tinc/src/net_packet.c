@@ -1,7 +1,7 @@
 /*
     net_packet.c -- Handles in- and outgoing VPN packets
     Copyright (C) 1998-2005 Ivo Timmermans,
-                  2000-2016 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
                   2010      Timothy Redaelli <timothy@redaelli.eu>
                   2010      Brandon Black <blblack@gmail.com>
 
@@ -355,16 +355,16 @@ static bool receive_udppacket(node_t *n, vpn_packet_t *inpkt) {
 		if(seqno != n->received_seqno + 1) {
 			if(seqno >= n->received_seqno + replaywin * 8) {
 				if(n->farfuture++ < replaywin >> 2) {
-					logger(DEBUG_ALWAYS, LOG_WARNING, "Packet from %s (%s) is %d seqs in the future, dropped (%u)",
+					logger(DEBUG_TRAFFIC, LOG_WARNING, "Packet from %s (%s) is %d seqs in the future, dropped (%u)",
 						n->name, n->hostname, seqno - n->received_seqno - 1, n->farfuture);
 					return false;
 				}
-				logger(DEBUG_ALWAYS, LOG_WARNING, "Lost %d packets from %s (%s)",
+				logger(DEBUG_TRAFFIC, LOG_WARNING, "Lost %d packets from %s (%s)",
 						seqno - n->received_seqno - 1, n->name, n->hostname);
 				memset(n->late, 0, replaywin);
 			} else if (seqno <= n->received_seqno) {
 				if((n->received_seqno >= replaywin * 8 && seqno <= n->received_seqno - replaywin * 8) || !(n->late[(seqno / 8) % replaywin] & (1 << seqno % 8))) {
-					logger(DEBUG_ALWAYS, LOG_WARNING, "Got late or replayed packet from %s (%s), seqno %d, last received %d",
+					logger(DEBUG_TRAFFIC, LOG_WARNING, "Got late or replayed packet from %s (%s), seqno %d, last received %d",
 						n->name, n->hostname, seqno, n->received_seqno);
 					return false;
 				}
@@ -436,7 +436,7 @@ void receive_tcppacket(connection_t *c, const char *buffer, int len) {
 
 bool receive_tcppacket_sptps(connection_t *c, const char *data, int len) {
 	if (len < sizeof(node_id_t) + sizeof(node_id_t)) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Got too short TCP SPTPS packet from %s (%s)", c->name, c->hostname);
+		logger(DEBUG_PROTOCOL, LOG_ERR, "Got too short TCP SPTPS packet from %s (%s)", c->name, c->hostname);
 		return false;
 	}
 
@@ -499,7 +499,7 @@ static void send_sptps_packet(node_t *n, vpn_packet_t *origpkt) {
 	uint8_t type = 0;
 	int offset = 0;
 
-	if(!(DATA(origpkt)[12] | DATA(origpkt)[13])) {
+	if((!(DATA(origpkt)[12] | DATA(origpkt)[13])) && (n->sptps.outstate))  {
 		sptps_send_record(&n->sptps, PKT_PROBE, (char *)DATA(origpkt), origpkt->len);
 		return;
 	}
@@ -767,7 +767,7 @@ bool send_sptps_data(node_t *to, node_t *from, int type, const void *data, size_
 			char buf[len + sizeof to->id + sizeof from->id]; char* buf_ptr = buf;
 			memcpy(buf_ptr, &to->id, sizeof to->id); buf_ptr += sizeof to->id;
 			memcpy(buf_ptr, &from->id, sizeof from->id); buf_ptr += sizeof from->id;
-			memcpy(buf_ptr, data, len); buf_ptr += len;
+			memcpy(buf_ptr, data, len);
 			logger(DEBUG_TRAFFIC, LOG_INFO, "Sending packet from %s (%s) to %s (%s) via %s (%s) (TCP)", from->name, from->hostname, to->name, to->hostname, to->nexthop->name, to->nexthop->hostname);
 			return send_sptps_tcppacket(to->nexthop->connection, buf, sizeof buf);
 		}
@@ -846,6 +846,7 @@ bool receive_sptps_record(void *handle, uint8_t type, const void *data, uint16_t
 
 	vpn_packet_t inpkt;
 	inpkt.offset = DEFAULT_PACKET_OFFSET;
+	inpkt.priority = 0;
 
 	if(type == PKT_PROBE) {
 		if(!from->status.udppacket) {
@@ -1573,10 +1574,19 @@ void handle_device_data(void *data, int flags) {
 	vpn_packet_t packet;
 	packet.offset = DEFAULT_PACKET_OFFSET;
 	packet.priority = 0;
+	static int errors = 0;
 
 	if(devops.read(&packet)) {
+		errors = 0;
 		myself->in_packets++;
 		myself->in_bytes += packet.len;
 		route(myself, &packet);
+	} else {
+		usleep(errors * 50000);
+		errors++;
+		if(errors > 10) {
+			logger(DEBUG_ALWAYS, LOG_ERR, "Too many errors from %s, exiting!", device);
+			event_exit();
+		}
 	}
 }

@@ -38,8 +38,9 @@
 
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
 <script type='text/javascript'>
+var nvram;
 
-//	<% nvram("wl_macmode,wl_maclist,macnames"); %>
+//	<% nvram("wl_maclist,macnames"); %>
 
 var smg = new TomatoGrid();
 
@@ -86,7 +87,7 @@ smg.setup = function() {
 		if ((m) && (!isMAC0(m))) {
 			s = m.replace(/:/g, '');
 			t = '';
-			for (j = 0; j < names.length; ++j) {
+			for (var j = 0; j < names.length; ++j) {
 				n = names[j].split('<');
 				if ((n.length == 2) && (n[0] == s)) {
 					t = n[1];
@@ -124,12 +125,10 @@ function save()
 		}
 	}
 	fom.wl_maclist.value = macs.join(' ');
-	fom.wl_macmode.value = E('t_f_disable').checked ? 'disabled' : (E('t_f_deny').checked ? 'deny' : 'allow');
 	fom.macnames.value = names.join('>');
 
 	for (i = 0; i < wl_ifaces.length; ++i) {
 		u = wl_fface(i);
-		E('t_wl'+u+'_macmode').value = fom.wl_macmode.value;
 		E('t_wl'+u+'_maclist').value = fom.wl_maclist.value;
 	}
 
@@ -139,14 +138,15 @@ function save()
 function earlyInit()
 {
 	smg.setup();
-	if (nvram.wl_macmode == 'allow') E('t_f_allow').checked = 1;
-		else if (nvram.wl_macmode == 'deny') E('t_f_deny').checked = 1;
-		else E('t_f_disable').checked = 1;
 }
 
 function init()
 {
 	smg.recolor();
+
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
@@ -165,29 +165,33 @@ function init()
 
 <input type='hidden' name='_nextpage' value='basic-wfilter.asp'>
 <input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='*'>
-
-<input type='hidden' name='wl_macmode'>
+<input type='hidden' name='_service' value='wireless-restart'>
+<input type='hidden' name='_force_commit' value='1'>
 <input type='hidden' name='wl_maclist'>
 <input type='hidden' name='macnames'>
 
 <script type='text/javascript'>
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	var u = wl_fface(uidx);
-	W('<input type=\'hidden\' id=\'t_wl'+u+'_macmode\' name=\'wl'+u+'_macmode\'>');
 	W('<input type=\'hidden\' id=\'t_wl'+u+'_maclist\' name=\'wl'+u+'_maclist\'>');
 }
 </script>
 
 <div class='section-title'>Wireless Client Filter</div>
 <div class='section'>
-	<input type='radio' name='f_type' id='t_f_disable' value='disabled'> <label for='t_f_disable'>Disable filter</label><br />
-	<input type='radio' name='f_type' id='t_f_allow' value='allow'> <label for='t_f_allow'>Permit only the following clients</label><br />
-	<input type='radio' name='f_type' id='t_f_deny' value='deny'> <label for='t_f_deny'>Block the following clients</label><br />
 	<br />
 	<div id="sm-grid" class="tomato-grid"></div>
 </div>
 
+
+<!-- / / / -->
+
+<div class='section-title'>Notes</div>
+<div class='section'>
+	<ul>
+	<li>To specify how and on which interface this list should work, use the <a href="advanced-wlanvifs.asp" class="new_window">Virtual Wireless Interfaces</a> page.</li>
+	</ul>
+</div>
 
 <!-- / / / -->
 

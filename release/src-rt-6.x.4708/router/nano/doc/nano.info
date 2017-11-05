@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 2.8.6.
+This manual documents the GNU ‘nano’ editor, version 2.8.7.
 
 * Menu:
 
@@ -666,9 +666,9 @@ The supported settings in a nanorc file are:
 ‘set boldtext’
      Use bold instead of reverse video for the title bar, status bar,
      key combos, function tags, line numbers, and selected text.  This
-     can be overridden for the first five by setting the options
-     ‘titlecolor’, ‘statuscolor’, ‘keycolor’, ‘functioncolor’, and
-     ‘numbercolor’.
+     can be overridden by setting the options ‘titlecolor’,
+     ‘statuscolor’, ‘keycolor’, ‘functioncolor’, ‘numbercolor’, and
+     ‘selectedcolor’.
 
 ‘set brackets "STRING"’
      Set the characters treated as closing brackets when justifying
@@ -812,6 +812,10 @@ The supported settings in a nanorc file are:
 
 ‘set regexp’
      Do extended regular expression searches by default.
+
+‘set selectedcolor FGCOLOR,BGCOLOR’
+     Use this color combination for selected text.  *Note set
+     functioncolor:: for valid color names.
 
 ‘set showcursor’
      Put the cursor on the highlighted item in the file browser, to aid
@@ -1626,13 +1630,13 @@ Node: Built-in Help18234
 Node: Feature Toggles18658
 Node: Nanorc Files21115
 Node: Settings22613
-Ref: set functioncolor25140
-Ref: Whitespace31406
-Node: Syntax Highlighting31962
-Node: Rebinding Keys36953
-Node: The File Browser47555
-Node: Pico Compatibility48415
-Node: Building and Configure Options51714
+Ref: set functioncolor25142
+Ref: Whitespace31555
+Node: Syntax Highlighting32111
+Node: Rebinding Keys37102
+Node: The File Browser47704
+Node: Pico Compatibility48564
+Node: Building and Configure Options51863
 
 End Tag Table
 

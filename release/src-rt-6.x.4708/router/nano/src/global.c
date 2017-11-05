@@ -24,7 +24,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>
-#include "assert.h"
 
 /* Global variables. */
 #ifndef NANO_TINY
@@ -78,6 +77,7 @@ int controlleft, controlright, controlup, controldown, controlhome, controlend;
 #ifndef NANO_TINY
 int shiftcontrolleft, shiftcontrolright, shiftcontrolup, shiftcontroldown;
 int shiftcontrolhome, shiftcontrolend;
+int altleft, altright, altup, altdown;
 int shiftaltleft, shiftaltright, shiftaltup, shiftaltdown;
 #endif
 
@@ -166,10 +166,7 @@ const char *locking_suffix = ".swp";
 #endif
 #ifndef DISABLE_OPERATINGDIR
 char *operating_dir = NULL;
-	/* The relative path to the operating directory, which we can't
-	 * move outside of. */
-char *full_operating_dir = NULL;
-	/* The full path to it. */
+	/* The path to our confining "operating" directory, when given. */
 #endif
 
 #ifndef DISABLE_SPELLER
@@ -313,7 +310,7 @@ void discard_buffer(void)
 void add_to_funcs(void (*func)(void), int menus, const char *desc, const char *help,
     bool blank_after, bool viewok)
 {
-    subnfunc *f = (subnfunc *)nmalloc(sizeof(subnfunc));
+    subnfunc *f = nmalloc(sizeof(subnfunc));
 
     if (allfuncs == NULL)
 	allfuncs = f;
@@ -344,7 +341,7 @@ void add_to_sclist(int menus, const char *scstring, const int keycode,
 #ifndef NANO_TINY
     static int counter = 0;
 #endif
-    sc *s = (sc *)nmalloc(sizeof(sc));
+    sc *s = nmalloc(sizeof(sc));
 
     /* Start the list, or tack on the next item. */
     if (sclist == NULL)
@@ -424,28 +421,45 @@ functionptrtype func_from_key(int *kbinput)
 void assign_keyinfo(sc *s, const char *keystring, const int keycode)
 {
     s->keystr = keystring;
-    s->meta = (keystring[0] == 'M');
+    s->meta = (keystring[0] == 'M' && keystring[2] != '\xE2');
 
     assert(strlen(keystring) > 1 && (!s->meta || strlen(keystring) > 2));
 
     if (keycode)
 	s->keycode = keycode;
-    else if (keystring[0] == '^') {
+    else
+	s->keycode = keycode_from_string(keystring);
+}
+
+/* Parse the given keystring and return the corresponding keycode,
+ * or return -1 when the string is invalid. */
+int keycode_from_string(const char *keystring)
+{
+    if (keystring[0] == '^') {
 	if (strcasecmp(keystring, "^Space") == 0)
-	    s->keycode = 0;
+	    return 0;
+	if (strlen(keystring) == 2)
+	    return keystring[1] - 64;
 	else
-	    s->keycode = keystring[1] - 64;
-    } else if (s->meta) {
+	    return -1;
+    } else if (keystring[0] == 'M') {
 	if (strcasecmp(keystring, "M-Space") == 0)
-	    s->keycode = (int)' ';
+	    return (int)' ';
+	if (keystring[1] == '-')
+	    return tolower((unsigned char)keystring[2]);
 	else
-	    s->keycode = tolower((unsigned char)keystring[2]);
-    } else if (keystring[0] == 'F')
-	s->keycode = KEY_F0 + atoi(&keystring[1]);
-    else if (!strcasecmp(keystring, "Ins"))
-	s->keycode = KEY_IC;
+	    return -1;
+    } else if (keystring[0] == 'F') {
+	int fn = atoi(&keystring[1]);
+	if (fn < 0 || fn > 63)
+	    return -1;
+	return KEY_F0 + fn;
+    } else if (!strcasecmp(keystring, "Ins"))
+	return KEY_IC;
     else if (!strcasecmp(keystring, "Del"))
-	s->keycode = KEY_DC;
+	return KEY_DC;
+    else
+	return -1;
 }
 
 #ifdef DEBUG
@@ -713,8 +727,14 @@ void shortcut_init(void)
     add_to_funcs(do_search, MBROWSER,
 	whereis_tag, IFSCHELP(nano_browser_whereis_msg), TOGETHER, VIEW);
 
+    add_to_funcs(do_research, MBROWSER,
+	whereis_next_tag, IFSCHELP(nano_whereis_next_msg), BLANKAFTER, VIEW);
+
     add_to_funcs(goto_dir_void, MBROWSER,
-	N_("Go To Dir"), IFSCHELP(nano_gotodir_msg), BLANKAFTER, VIEW);
+	N_("Go To Dir"), IFSCHELP(nano_gotodir_msg), TOGETHER, VIEW);
+
+    add_to_funcs(total_refresh, MBROWSER,
+	refresh_tag, IFSCHELP(nano_browser_refresh_msg), BLANKAFTER, VIEW);
 #endif
 
 #ifdef ENABLE_HELP
@@ -828,9 +848,9 @@ void shortcut_init(void)
     add_to_funcs(do_next_word_void, MMAIN,
 	N_("Next Word"), IFSCHELP(nano_nextword_msg), TOGETHER, VIEW);
 
-    add_to_funcs(do_home_void, MMAIN,
+    add_to_funcs(do_home, MMAIN,
 	N_("Home"), IFSCHELP(nano_home_msg), TOGETHER, VIEW);
-    add_to_funcs(do_end_void, MMAIN,
+    add_to_funcs(do_end, MMAIN,
 	N_("End"), IFSCHELP(nano_end_msg), BLANKAFTER, VIEW);
 
     add_to_funcs(do_up_void, MMAIN|MHELP|MBROWSER,
@@ -1015,16 +1035,6 @@ void shortcut_init(void)
 	N_("First File"), IFSCHELP(nano_firstfile_msg), TOGETHER, VIEW);
     add_to_funcs(do_last_file, (MBROWSER|MWHEREISFILE),
 	N_("Last File"), IFSCHELP(nano_lastfile_msg), BLANKAFTER, VIEW);
-#endif
-
-    add_to_funcs(discard_buffer, MWRITEFILE,
-	N_("Discard buffer"), IFSCHELP(nano_discard_buffer_msg), BLANKAFTER, NOVIEW);
-
-#ifdef ENABLE_BROWSER
-    add_to_funcs(do_research, MBROWSER,
-	whereis_next_tag, IFSCHELP(nano_whereis_next_msg), TOGETHER, VIEW);
-    add_to_funcs(total_refresh, MBROWSER,
-	refresh_tag, IFSCHELP(nano_browser_refresh_msg), BLANKAFTER, VIEW);
 #ifndef NANO_TINY
     add_to_funcs(do_prev_word_void, MBROWSER,
 	N_("Left Column"), IFSCHELP(nano_browser_lefthand_msg), TOGETHER, VIEW);
@@ -1035,7 +1045,10 @@ void shortcut_init(void)
     add_to_funcs(do_next_block, MBROWSER,
 	N_("Bottom Row"), IFSCHELP(nano_browser_bottomrow_msg), BLANKAFTER, VIEW);
 #endif
-#endif
+#endif /* ENABLE_BROWSER */
+
+    add_to_funcs(discard_buffer, MWRITEFILE,
+	N_("Discard buffer"), IFSCHELP(nano_discard_buffer_msg), BLANKAFTER, NOVIEW);
 
 #ifndef DISABLE_COLOR
     add_to_funcs(do_page_up, MLINTER,
@@ -1063,8 +1076,8 @@ void shortcut_init(void)
     add_to_sclist(MMAIN, "F14", 0, do_replace, 0);
     add_to_sclist(MMOST, "^K", 0, do_cut_text_void, 0);
     add_to_sclist(MMOST, "F9", 0, do_cut_text_void, 0);
-    add_to_sclist(MMAIN, "^U", 0, do_uncut_text, 0);
-    add_to_sclist(MMAIN, "F10", 0, do_uncut_text, 0);
+    add_to_sclist(MMOST, "^U", 0, do_uncut_text, 0);
+    add_to_sclist(MMOST, "F10", 0, do_uncut_text, 0);
 #ifndef DISABLE_JUSTIFY
     add_to_sclist(MMAIN, "^J", 0, do_justify_void, 0);
     add_to_sclist(MMAIN, "F4", 0, do_justify_void, 0);
@@ -1125,6 +1138,14 @@ void shortcut_init(void)
 	add_to_sclist(MMOST, "\xE2\x86\x92", KEY_RIGHT, do_right, 0);
 	add_to_sclist(MSOME, "^\xE2\x86\x90", CONTROL_LEFT, do_prev_word_void, 0);
 	add_to_sclist(MSOME, "^\xE2\x86\x92", CONTROL_RIGHT, do_next_word_void, 0);
+#ifdef ENABLE_MULTIBUFFER
+	add_to_sclist(MMAIN, "M-\xE2\x86\x90", ALT_LEFT, switch_to_prev_buffer_void, 0);
+	add_to_sclist(MMAIN, "M-\xE2\x86\x92", ALT_RIGHT, switch_to_next_buffer_void, 0);
+#endif
+#ifndef NANO_TINY
+	add_to_sclist(MMAIN|MHELP|MBROWSER, "M-\xE2\x86\x91", ALT_UP, do_findprevious, 0);
+	add_to_sclist(MMAIN|MHELP|MBROWSER, "M-\xE2\x86\x93", ALT_DOWN, do_findnext, 0);
+#endif
     } else
 #endif
     {
@@ -1135,10 +1156,10 @@ void shortcut_init(void)
     }
     add_to_sclist(MMOST, "M-Space", 0, do_prev_word_void, 0);
     add_to_sclist(MMOST, "^Space", 0, do_next_word_void, 0);
-    add_to_sclist((MMOST & ~MBROWSER), "^A", 0, do_home_void, 0);
-    add_to_sclist((MMOST & ~MBROWSER), "Home", KEY_HOME, do_home_void, 0);
-    add_to_sclist((MMOST & ~MBROWSER), "^E", 0, do_end_void, 0);
-    add_to_sclist((MMOST & ~MBROWSER), "End", KEY_END, do_end_void, 0);
+    add_to_sclist((MMOST & ~MBROWSER), "^A", 0, do_home, 0);
+    add_to_sclist((MMOST & ~MBROWSER), "Home", KEY_HOME, do_home, 0);
+    add_to_sclist((MMOST & ~MBROWSER), "^E", 0, do_end, 0);
+    add_to_sclist((MMOST & ~MBROWSER), "End", KEY_END, do_end, 0);
     add_to_sclist(MMAIN|MHELP|MBROWSER, "^P", 0, do_up_void, 0);
     add_to_sclist(MMAIN|MHELP|MBROWSER, "^N", 0, do_down_void, 0);
 #ifdef ENABLE_UTF8
@@ -1526,9 +1547,9 @@ sc *strtosc(const char *input)
     else if (!strcasecmp(input, "nextword"))
 	s->scfunc = do_next_word_void;
     else if (!strcasecmp(input, "home"))
-	s->scfunc = do_home_void;
+	s->scfunc = do_home;
     else if (!strcasecmp(input, "end"))
-	s->scfunc = do_end_void;
+	s->scfunc = do_end;
     else if (!strcasecmp(input, "prevblock"))
 	s->scfunc = do_prev_block;
     else if (!strcasecmp(input, "nextblock"))
@@ -1736,7 +1757,6 @@ void thanks_for_all_the_fish(void)
 #endif
 #ifndef DISABLE_OPERATINGDIR
     free(operating_dir);
-    free(full_operating_dir);
 #endif
     free(answer);
     free(last_search);

@@ -1,5 +1,5 @@
---- configure	2017-07-06 01:57:38.000000000 +0200
-+++ configure	2017-09-25 19:24:11.000000000 +0200
+--- php/configure	2017-07-06 01:57:38.000000000 +0200
++++ php/configure	2017-09-25 19:24:11.000000000 +0200
 @@ -36577,6 +36577,9 @@
      libmagic/is_tar.c libmagic/magic.c libmagic/print.c \
      libmagic/readcdf.c libmagic/softmagic.c"

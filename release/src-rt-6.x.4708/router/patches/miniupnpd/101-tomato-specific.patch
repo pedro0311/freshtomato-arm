@@ -1,0 +1,18 @@
+--- miniupnpd/portinuse.c	2016-08-16 11:26:08.000000000 +0200
++++ miniupnpd/portinuse.c	2017-10-22 01:57:20.000000000 +0200
+@@ -1,4 +1,4 @@
+-/* $Id: portinuse.c,v 1.6 2016/08/16 09:25:35 nanard Exp $ */
++/* $Id: portinuse.c,v 1.5 2016/01/13 16:02:08 nanard Exp $ */
+ /* MiniUPnP project
+  * (c) 2007-2014 Thomas Bernard
+  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+@@ -55,7 +55,8 @@
+ 
+ #if defined(USE_NETFILTER)
+ /* Hardcoded for now.  Ideally would come from .conf file */
+-char *chains_to_check[] = { "PREROUTING" , 0 };
++//char *chains_to_check[] = { "PREROUTING" , 0 };
++char *chains_to_check[] = { "WANPREROUTING" , 0 }; //Tomato
+ #endif
+ 
+ int

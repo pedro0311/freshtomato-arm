@@ -9,7 +9,7 @@
 # the mode switching program with the matching parameter
 # file from /usr/share/usb_modeswitch
 #
-# Part of usb-modeswitch-2.5.0 package
+# Part of usb-modeswitch-2.5.1 package
 # (C) Josua Dietze 2009-2017
 
 set arg0 [lindex $argv 0]
@@ -27,9 +27,12 @@ if [regexp {\.tcl$} $arg0] {
 set flags(logging) 1
 set flags(noswitching) 0
 set flags(stordelay) 0
+set flags(nombim) 0
+
 set flags(logwrite) 0
 # also settable in device config files
 set flags(nombim) 0
+set flags(althuawei) 0
 
 # Execution starts at file bottom
 
@@ -245,6 +248,10 @@ if [string length $usb(busnum)] {
 }
 if [regexp -nocase $flags(os) $flags(config)] {
 	Log "Note: Using generic manufacturer configuration for \"$flags(os)\""
+}
+if $flags(althuawei) {
+	regsub {HuaweiNewMode} $flags(config) {HuaweiAltMode} flags(config)
+	Log "Alternative Huawei mode set globally, modify config"
 }
 if $flags(nombim) {
 	set config(NoMBIMCheck) 1
@@ -509,8 +516,6 @@ while {![eof $rc]} {
 	if [regexp {DisableMBIMGlobal\s*=\s*([^\s]+)} $line d val] {
 		if [regexp -nocase {1|yes|true} $val] {
 			set flags(nombim) 1
-		} else {
-			set flags(nombim) 0
 		}
 	}
 	if [regexp {DisableSwitching\s*=\s*([^\s]+)} $line d val] {
@@ -519,15 +524,18 @@ while {![eof $rc]} {
 		}
 	}
 	if [regexp {EnableLogging\s*=\s*([^\s]+)} $line d val] {
-		if [regexp -nocase {1|yes|true} $val] {
-			set flags(logging) 1
-		} else {
+		if [regexp -nocase {0|no|false} $val] {
 			set flags(logging) 0
 		}
 	}
 	if [regexp {SetStorageDelay\s*=\s*([^\s]+)} $line d val] {
 		if [regexp {\d+} $val] {
 			set flags(stordelay) $val
+		}
+	}
+	if [regexp {HuaweiAltModeGlobal\s*=\s*([^\s]+)} $line d val] {
+		if [regexp -nocase {1|yes|true} $val] {
+			set flags(althuawei) 1
 		}
 	}
 
@@ -796,7 +804,7 @@ Log "Check success of mode switch for max. $config(CheckSuccess) seconds ..."
 
 set expected 1
 for {set i 1} {$i <= $config(CheckSuccess)} {incr i} {
-	after 1000
+	after 1000 
 	if {![file isdirectory $devdir]} {
 		Log " Wait for device file system ($i sec.) ..."
 		continue
@@ -814,19 +822,19 @@ for {set i 1} {$i <= $config(CheckSuccess)} {incr i} {
 		if {$usb(bConfigurationValue) != $config(Configuration)} {continue}
 	}
 	if [string length $config(TargetClass)] {
-		if {![regexp $usb($ifdir/bInterfaceClass) $config(TargetClass)]} {
+		if {![regexp -nocase $usb($ifdir/bInterfaceClass) $config(TargetClass)]} {
 			if {$config(class) != $usb($ifdir/bInterfaceClass} {
 				set expected 0
 			} else {continue}
 		}
 	}
-	if {![regexp $usb(idVendor) $config(TargetVendor)]} {
-		if {![regexp $usb(idVendor) $config(vendor)]} {
+	if {![regexp -nocase $usb(idVendor) $config(TargetVendor)]} {
+		if {![regexp -nocase $usb(idVendor) $config(vendor)]} {
 			set expected 0
 		} else {continue}
 	}
-	if {![regexp $usb(idProduct) $config(TargetProduct)]} {
-		if {![regexp $usb(idProduct) $config(product)]} {
+	if {![regexp -nocase $usb(idProduct) $config(TargetProduct)]} {
+		if {![regexp -nocase $usb(idProduct) $config(product)]} {
 			set expected 0
 		} else {continue}
 	}
@@ -837,8 +845,12 @@ for {set i 1} {$i <= $config(CheckSuccess)} {incr i} {
 		if [regexp -nocase {/[0-9a-f]+:#} $flags(config)] {
 			Log " idProduct has changed after generic mode-switch, assume success"
 		} else {
-			Log " Attributes are different but target values are unexpected:"
-			LogAttributes
+			if [regexp {HuaweiAltMode} $flags(config)] {
+				Log " Alternative target attributes found, assume success"
+			} else {
+				Log " Attributes are different but target values are unexpected:"
+				LogAttributes
+			}
 		}
 	}
 	break

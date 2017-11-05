@@ -20,6 +20,11 @@ ifeq ($(CONFIG_LINUX26),y)
 endif
 endif
 
+ifeq ($(TCONFIG_NGINX),y)
+#MySQL
+	install -D -m 755 mycheck $(INSTALLDIR)/usr/bin
+endif
+
 #MultiWAN watchdog script
 	install -m 0700 watchdog $(INSTALLDIR)/usr/sbin
 

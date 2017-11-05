@@ -894,7 +894,6 @@ typedef SOCKET_SIZE_TYPE size_socket;
 #endif /* isfinite */
 
 #ifndef HAVE_ISNAN
-#undef isnan //bwq518
 #define isnan(x) ((x) != (x))
 #endif
 

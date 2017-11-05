@@ -1,6 +1,6 @@
-function selectedBand(uidx) {
+function selectedBand(uidx)
+{
 	if (bands[uidx].length > 1) {
-		var u = wl_fface(uidx);
 		var e = E('_f_wl'+u+'_nband');
 		return (e.value + '' == '' ? eval('nvram["wl'+u+'_nband"]') : e.value);
 	} else if (bands[uidx].length > 0) {
@@ -10,7 +10,8 @@ function selectedBand(uidx) {
 	}
 }
 
-function refreshNetModes(uidx) {
+function refreshNetModes(uidx)
+{
 	var e, i, buf, val;
 
 	if (uidx >= wl_ifaces.length) return;
@@ -22,8 +23,7 @@ function refreshNetModes(uidx) {
 		if (nphy) {
 			m.push(['n-only','N Only']);
 		}
-	}
-	else {
+	} else {
 		m.push(['b-only','B Only']);
 		m.push(['g-only','G Only']);
 		if (nphy) {
@@ -37,16 +37,46 @@ function refreshNetModes(uidx) {
 	val = (!nm_loaded[uidx] || (e.value + '' == '')) ? eval('nvram["wl'+u+'_net_mode"]') : e.value;
 	if (val == 'disabled') val = 'mixed';
 	for (i = 0; i < m.length; ++i)
-		buf += '<option value="' + m[i][0] + '"' + ((m[i][0] == val) ? ' selected' : '') + '>' + m[i][1] + '</option>';
+		buf += '<option value="' + m[i][0] + '"' + ((m[i][0] == val) ? ' selected="selected"' : '') + '>' + m[i][1] + '<\/option>';
 
 	e = E('__wl'+u+'_net_mode');
-	buf = '<select name="wl'+u+'_net_mode" onchange="verifyFields(this, 1)" id = "_wl'+u+'_net_mode">' + buf + '</select>';
+	buf = '<select name="wl'+u+'_net_mode" onchange="verifyFields(this, 1)" id = "_wl'+u+'_net_mode">' + buf + '<\/select>';
 	elem.setInnerHTML(e, buf);
 
 	nm_loaded[uidx] = 1;
 }
 
-function refreshChannels(uidx) {
+function refreshBandWidth(uidx)
+{
+    var e, i, buf, val;
+
+    if (uidx >= wl_ifaces.length) return;
+    var u = wl_unit(uidx);
+    var m = [['0','20 MHz']];
+
+    if(nphy || acphy) {
+	m.push(['1','40 MHz']);
+    }
+
+    if(acphy && selectedBand(uidx) == '1') {
+	m.push(['3','80 MHz']);
+    }
+
+    e = E('_wl'+u+'_nbw_cap');
+    buf = '';
+    val = (!nm_loaded[uidx] || (e.value + '' == '')) ? eval('nvram.wl'+u+'_nbw_cap') : e.value;
+
+    for (i = 0; i < m.length; ++i)
+	buf += '<option value="' + m[i][0] + '"' + ((m[i][0] == val) ? ' selected="selected"' : '') + '>' + m[i][1] + '<\/option>';
+
+    e = E('__wl'+u+'_nbw_cap');
+    buf = '<select name="wl'+u+'_nbw_cap" onchange="verifyFields(this, 1)" id = "_wl'+u+'_nbw_cap">' + buf + '<\/select>';
+    elem.setInnerHTML(e, buf);
+    nm_loaded[uidx] = 1;
+}
+
+function refreshChannels(uidx)
+{
 	if (refresher[uidx] != null) return;
 	if (u >= wl_ifaces.length) return;
 	var u = wl_unit(uidx);
@@ -71,10 +101,10 @@ function refreshChannels(uidx) {
 			buf = '';
 			val = (!ch_loaded[uidx] || (e.value + '' == '')) ? eval('nvram["wl'+u+'_channel"]') : e.value;
 			for (i = 0; i < ghz[uidx].length; ++i)
-				buf += '<option value="' + ghz[uidx][i][0] + '"' + ((ghz[uidx][i][0] == val) ? ' selected' : '') + '>' + ghz[uidx][i][1] + '</option>';
+				buf += '<option value="' + ghz[uidx][i][0] + '"' + ((ghz[uidx][i][0] == val) ? ' selected="selected"' : '') + '>' + ghz[uidx][i][1] + '<\/option>';
 
 			e = E('__wl'+u+'_channel');
-			buf = '<select name="wl'+u+'_channel" onchange="verifyFields(this, 1)" id = "_wl'+u+'_channel">' + buf + '</select>';
+			buf = '<select name="wl'+u+'_channel" onchange="verifyFields(this, 1)" id = "_wl'+u+'_channel">' + buf + '<\/select>';
 			elem.setInnerHTML(e, buf);
 			ch_loaded[uidx] = 1;
 
@@ -89,26 +119,30 @@ function refreshChannels(uidx) {
 	var bw, sb, e;
 
 	e = E('_f_wl'+u+'_nctrlsb');
-	if (e != null)
-	{
-		sb = (e.value + '' == '' ? eval('nvram["wl'+u+'_nctrlsb"]') : e.value);
-/* REMOVE-BEGIN */
-// AB
-//		sb = ((e.value + '' == '') ? (nvram['wl'+u+'_nctrlsb']) : e.value);
-/* REMOVE-END */
-		e = E('_wl'+u+'_nbw_cap');
-		bw = (e.value + '' == '' ? eval('nvram["wl'+u+'_nbw_cap"]') : e.value) == '0' ? '20' : '40';
-/* REMOVE-BEGIN */
-// AB
-//		bw = ((e.value + '' == '') ? (nvram['wl'+u+'_nbw_cap']) : e.value) == '0' ? '20' : '40';
-/* REMOVE-END */
-		refresher[uidx].onError = function(ex) { alert(ex); refresher[uidx] = null; reloadPage(); }
-		refresher[uidx].post('update.cgi', 'exec=wlchannels&arg0=' + u + '&arg1=' + (nphy ? '1' : '0') +
-			'&arg2=' + bw + '&arg3=' + selectedBand(uidx) + '&arg4=' + sb);
+	sb = (e.value + '' == '' ? eval('nvram.wl'+u+'_nctrlsb') : e.value);
+
+	e = E('_wl'+u+'_nbw_cap');
+	switch(e.value + '' == '' ? eval('nvram.wl'+u+'_nbw_cap') : e.value) {
+		case '0':
+			bw = '20';
+			break;
+		case '1':
+			bw = '40';
+			break;
+		case '3':
+			bw = '80';
+			break;
+		default:
+			alert("Wrong nbw_cap.");
 	}
+
+	refresher[uidx].onError = function(ex) { alert(ex); refresher[uidx] = null; reloadPage(); }
+	refresher[uidx].post('update.cgi', 'exec=wlchannels&arg0=' + u + '&arg1=' + (nphy || acphy ? '1' : '0') +
+		'&arg2=' + bw + '&arg3=' + selectedBand(uidx) + '&arg4=' + sb);
 }
 
-function scan() {
+function scan()
+{
 	if (xob) return;
 
 	var unit = wscan.unit;
@@ -176,7 +210,8 @@ function scan() {
 	xob.post('update.cgi', 'exec=wlscan&arg0='+unit);
 }
 
-function scanButton(u) {
+function scanButton(u)
+{
 	if (xob) return;
 
 	wscan = {
@@ -189,7 +224,8 @@ function scanButton(u) {
 	scan();
 }
 
-function joinAddr(a) {
+function joinAddr(a)
+{
 	var r, i, s;
 
 	r = [];
@@ -200,31 +236,34 @@ function joinAddr(a) {
 	return r.join(' ');
 }
 
-function random_x(max) {
+function random_x(max)
+{
 	var c = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 	var s = '';
 	while (max-- > 0) s += c.substr(Math.floor(c.length * Math.random()), 1);
 	return s;
 }
 
-function random_psk(id) {
+function random_psk(id)
+{
 	var e = E(id);
 	e.value = random_x(63);
 	verifyFields(null, 1);
 }
 
-function random_wep(u) {
+function random_wep(u)
+{
 	E('_wl'+u+'_passphrase').value = random_x(16);
 	generate_wep(u);
 }
 
-function v_wep(e, quiet) {
+function v_wep(e, quiet)
+{
 	var s = e.value;
 
 	if (((s.length == 5) || (s.length == 13)) && (s.length == (e.maxLength >> 1))) {
 		// no checking
-	}
-	else {
+	} else {
 		s = s.toUpperCase().replace(/[^0-9A-F]/g, '');
 		if (s.length != e.maxLength) {
 			ferror.set(e, 'Invalid WEP key. Expecting ' + e.maxLength + ' hex or ' + (e.maxLength >> 1) + ' ASCII characters.', quiet);
@@ -238,7 +277,8 @@ function v_wep(e, quiet) {
 }
 
 // compatible w/ Linksys' and Netgear's (key 1) method for 128-bits
-function generate_wep(u) {
+function generate_wep(u)
+{
 	function _wepgen(pass, i)
 	{
 		while (pass.length < 64) pass += pass;

@@ -274,7 +274,7 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 	if (nvram_match("boardtype", "0x052b") &&  nvram_match("boardrev", "0x1204")) { //rt-n15u wan led on
 		led(LED_WHITE,mode);
 	}
-	if (nvram_match("model", "RT-N18U")) {
+	if (model == MODEL_RTN18U || model == MODEL_RTAC68U) {
 		led(LED_WHITE,mode);
 	}
 	if (model == MODEL_DIR868L) {
@@ -310,13 +310,22 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 #endif
 		NULL
 	};
+#ifdef TCONFIG_MULTIWAN
+#define MWAN_MAX	4
+#else
+#define MWAN_MAX	2
+#endif
 	int i;
 	int f;
 	struct ifreq ifr;
 	int up;
 	int count;
+	int mwan_num = atoi(nvram_safe_get("mwan_num"));
+	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+		mwan_num = 1;
+	}
 
-	for (i = 0; names[i] != NULL; ++i) {
+	for (i = 0; (names[i] != NULL) && (i <= mwan_num-1); ++i) {
 		up = 0; // default is 0 (LED_OFF)
 		if (!strcmp(prefix, names[i])) continue; // only check others
 		mwanlog(LOG_DEBUG, "### wan_led_off: check %s aliveness...", names[i]);

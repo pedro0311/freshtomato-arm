@@ -1,4 +1,4 @@
-.Dd 2016-04-11
+.Dd 2017-09-02
 .Dt TINC.CONF 5
 .\" Manual page created by:
 .\" Ivo Timmermans
@@ -234,6 +234,10 @@ Do NOT connect multiple
 .Nm tinc 
 daemons to the same multicast address, this will very likely cause routing loops.
 Also note that this can cause decrypted VPN packets to be sent out on a real network if misconfigured.
+.It fd
+Use a file descriptor.
+All packets are read from this interface.
+Packets received for the local node are written to it.
 .It uml Pq not compiled in by default
 Create a UNIX socket with the filename specified by
 .Va Device ,
@@ -323,6 +327,8 @@ Under Windows, this variable is used to select which network interface will be u
 If you specified a
 .Va Device ,
 this variable is almost always already correctly set.
+.It Va InvitationExpire Li = Ar seconds Pq 604800
+This option controls the period invitations are valid.
 .It Va KeyExpire Li = Ar seconds Pq 3600
 This option controls the period the encryption keys used to encrypt the data are valid.
 It is common practice to change keys at regular intervals to make it even harder for crackers,
@@ -363,6 +369,8 @@ and they only ConnectTo a third node outside the NAT,
 which normally would prevent the peers from learning each other's LAN address.
 .Pp
 Currently, local discovery is implemented by sending some packets to the local address of the node during UDP discovery. This will not work with old nodes that don't transmit their local address.
+.It Va LogLevel Li = level Pq 0
+This option controls the verbosity of the logging. The higher the debug level, the more messages it will log.
 .It Va MACExpire Li = Ar seconds Pq 600
 This option controls the amount of time MAC addresses are kept before they are removed.
 This only has effect when
@@ -775,6 +783,10 @@ It can be used to set up the corresponding network interface.
 If an executable file with this name exists,
 it will be executed right before the tinc daemon is going to close
 its connection to the virtual network device.
+.It Pa @sysconfdir@/tinc/ Ns Ar NETNAME Ns Pa /invitations/
+This directory contains outstanding invitations.
+.It Pa @sysconfdir@/tinc/ Ns Ar NETNAME Ns Pa /invitation-data
+After a succesful join, this file contains a copy of the invitation data received.
 .El
 .Sh SEE ALSO
 .Xr tincd 8 ,
