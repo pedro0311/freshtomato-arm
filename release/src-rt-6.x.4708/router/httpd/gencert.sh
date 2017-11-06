@@ -40,7 +40,7 @@ I=$(($I + 1))
 # create the key
 openssl genrsa -out key.pem 2048 -config /etc/openssl.config
 # create certificate request and sign it
-openssl req -startdate 170101000000Z -enddate 261231235959Z -new -x509 -key key.pem -sha256 -out cert.pem -set_serial $1 -config /etc/openssl.config
+openssl req -new -x509 -key key.pem -sha256 -out cert.pem -set_serial $1 -days 3653 -config /etc/openssl.config
 
 # server.pem for WebDav SSL
 cat key.pem cert.pem > server.pem
