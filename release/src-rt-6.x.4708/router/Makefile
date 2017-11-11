@@ -877,6 +877,7 @@ OPENSSL_CIPHERS:=
 endif
 
 openssl/stamp-h1:
+	$(call patch_files,openssl)
 	cd openssl && \
 	./Configure $(HOSTCONFIG) --openssldir=/etc --cross-compile-prefix=' ' \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
@@ -897,6 +898,7 @@ openssl: openssl/stamp-h1
 openssl-clean:
 	-@$(MAKE) -C openssl clean
 	@rm -f openssl/stamp-h1
+	$(call unpatch_files,openssl)
 
 openssl-install:
 	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
