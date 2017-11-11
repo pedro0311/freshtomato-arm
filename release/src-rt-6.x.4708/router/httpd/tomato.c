@@ -151,8 +151,7 @@ static void _execute_command(char *url, char *command, char *query, wofilter_t w
 			command ? "" : "./", command ? command : url,
 			query ? "<" : "", query ? webQueryFile : "");
 		fclose(f);
-	}
-	else {
+	} else {
 		close(fe);
 		unlink(webExecFile);
 		if (query) {
@@ -167,8 +166,7 @@ static void _execute_command(char *url, char *command, char *query, wofilter_t w
 		if ((f = fdopen(fq, "wb")) != NULL) {
 			fprintf(f, "%s\n", query);
 			fclose(f);
-		}
-		else {
+		} else {
 			unlink(webExecFile);
 			close(fq);
 			unlink(webQueryFile);
@@ -234,7 +232,7 @@ static void wo_spin(char *url)
 	strlcpy(s, nvram_safe_get("web_css"), sizeof(s));
 	strlcat(s, "_spin.gif", sizeof(s));
 	if (f_exists(s)) do_file(s);
-		else do_file("_spin.gif");
+	else do_file("_spin.gif");
 }
 */
 
@@ -243,8 +241,7 @@ void common_redirect(void)
 	if (atoi(webcgi_safeget("_ajax", ""))) {
 		send_header(200, NULL, mime_html, 0);
 		web_puts("OK");
-	}
-	else {
+	} else {
 		redirect(webcgi_safeget("_redirect", "/"));
 	}
 }
@@ -252,158 +249,158 @@ void common_redirect(void)
 // ----------------------------------------------------------------------------
 
 const struct mime_handler mime_handlers[] = {
-	{ "update.cgi",		mime_javascript,			0,	wi_generic,			wo_update,		1 },
-	{ "tomato.cgi",		NULL,						0,	wi_generic,		    wo_tomato,		1 },
+	{ "update.cgi",			mime_javascript,			0,	wi_generic,		wo_update,		1 },
+	{ "tomato.cgi",			NULL,					0,	wi_generic,		wo_tomato,		1 },
 
-	{ "debug.js",		mime_javascript,			12,	wi_generic_noid,	wo_blank,		1 },	// while debugging
-	{ "cfe/*.bin",		mime_binary,				0,	wi_generic,			wo_cfe,			1 },
-	{ "nvram/*.txt",	mime_binary,				0,	wi_generic,			wo_nvram,		1 },
-	{ "ipt/*.txt",		mime_binary,				0,	wi_generic,			wo_iptables,	1 },
+	{ "debug.js",			mime_javascript,			12,	wi_generic_noid,	wo_blank,		1 },	// while debugging
+	{ "cfe/*.bin",			mime_binary,				0,	wi_generic,		wo_cfe,			1 },
+	{ "nvram/*.txt",		mime_binary,				0,	wi_generic,		wo_nvram,		1 },
+	{ "ipt/*.txt",			mime_binary,				0,	wi_generic,		wo_iptables,		1 },
 #ifdef TCONFIG_IPV6
-	{ "ip6t/*.txt",		mime_binary,				0,	wi_generic,			wo_ip6tables,	1 },
+	{ "ip6t/*.txt",			mime_binary,				0,	wi_generic,		wo_ip6tables,		1 },
 #endif
-	{ "cfg/*.cfg",			NULL,					0,	wi_generic,			wo_backup,		1 },
-	{ "cfg/restore.cgi",	mime_html,				0,	wi_restore,			wo_restore,		1 },
-	{ "cfg/defaults.cgi",	NULL,					0,	wi_generic,	 		wo_defaults,	1 },
+	{ "cfg/*.cfg",			NULL,					0,	wi_generic,		wo_backup,		1 },
+	{ "cfg/restore.cgi",		mime_html,				0,	wi_restore,		wo_restore,		1 },
+	{ "cfg/defaults.cgi",		NULL,					0,	wi_generic,		wo_defaults,		1 },
 
-	{ "bwm/*.gz",			NULL,					0,	wi_generic,			wo_bwmbackup,	1 },
-	{ "bwm/restore.cgi",	NULL,					0,	wi_bwmrestore,		wo_bwmrestore,	1 },
+	{ "bwm/*.gz",			NULL,					0,	wi_generic,		wo_bwmbackup,		1 },
+	{ "bwm/restore.cgi",		NULL,					0,	wi_bwmrestore,		wo_bwmrestore,		1 },
 
-	{ "ipt/*.gz",			NULL,					0,	wi_generic,			wo_iptbackup,	1 },
-	{ "ipt/restore.cgi",	NULL,					0,	wi_iptrestore,		wo_iptrestore,	1 },
+	{ "ipt/*.gz",			NULL,					0,	wi_generic,		wo_iptbackup,		1 },
+	{ "ipt/restore.cgi",		NULL,					0,	wi_iptrestore,		wo_iptrestore,		1 },
 
-	{ "logs/view.cgi",	NULL,						0,	wi_generic,			wo_viewlog,		1 },
-	{ "logs/*.txt",		NULL,						0,	wi_generic,			wo_syslog,		1 },
-	{ "webmon_**",		NULL,						0,	wi_generic,			wo_syslog,		1 },
+	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
+	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
+	{ "webmon_**",			NULL,					0,	wi_generic,		wo_syslog,		1 },
 
-	{ "logout.asp",			NULL,					0,	wi_generic,			wo_asp,			1 },
-	{ "clearcookies.asp",	NULL,					0,	wi_generic,			wo_asp,			1 },
+	{ "logout.asp",			NULL,					0,	wi_generic,		wo_asp,			1 },
+	{ "clearcookies.asp",		NULL,					0,	wi_generic,		wo_asp,			1 },
 
-//	{ "spin.gif",		NULL,						0,	wi_generic_noid,	wo_spin,		1 },
+//	{ "spin.gif",			NULL,					0,	wi_generic_noid,	wo_spin,		1 },
 
-	{ "**.asp",			NULL,						0,	wi_generic_noid,	wo_asp,			1 },
-	{ "**.css",			"text/css",					12,	wi_generic_noid,	do_file,		1 },
-	{ "**.htm|**.html",	mime_html,		  		  	2,	wi_generic_noid,	do_file,		1 },
+	{ "**.asp",			NULL,					0,	wi_generic_noid,	wo_asp,			1 },
+	{ "**.css",			"text/css",				12,	wi_generic_noid,	do_file,		1 },
+	{ "**.htm|**.html",		mime_html,				2,	wi_generic_noid,	do_file,		1 },
 	{ "**.gif",			"image/gif",				12,	wi_generic_noid,	do_file,		1 },
 	{ "**.jpg",			"image/jpeg",				12,	wi_generic_noid,	do_file,		1 },
 	{ "**.png",			"image/png",				12,	wi_generic_noid,	do_file,		1 },
 	{ "**.js",			mime_javascript,			12,	wi_generic_noid,	do_file,		1 },
-	{ "**.jsx",			mime_javascript,			0,	wi_generic,			wo_asp,			1 },
+	{ "**.jsx",			mime_javascript,			0,	wi_generic,		wo_asp,			1 },
 	{ "**.svg",			"image/svg+xml",			12,	wi_generic_noid,	do_file,		1 },
-	{ "**.txt",			mime_plain,					2,	wi_generic_noid,	do_file,		1 },
+	{ "**.txt",			mime_plain,				2,	wi_generic_noid,	do_file,		1 },
 	{ "**.bin",			mime_binary,				0,	wi_generic_noid,	do_file,		1 },
-	{ "**.bino",		mime_octetstream,			0,	wi_generic_noid,	do_file,		1 },
-	{ "favicon.ico",	"image/x-icon",				24,	wi_generic_noid,	do_file,		1 },
+	{ "**.bino",			mime_octetstream,			0,	wi_generic_noid,	do_file,		1 },
+	{ "favicon.ico",		"image/x-icon",				24,	wi_generic_noid,	do_file,		1 },
 // !!TB - CGI Support, enable downloading archives
-	{ "**/cgi-bin/**|**.sh",	NULL,					0,	wi_cgi_bin,		wo_cgi_bin,			1 },
+	{ "**/cgi-bin/**|**.sh",	NULL,					0,	wi_cgi_bin,		wo_cgi_bin,		1 },
 	{ "**.tar|**.gz",		mime_binary,				0,	wi_generic_noid,	do_file,		1 },
 	{ "shell.cgi",			mime_javascript,			0,	wi_generic,		wo_shell,		1 },
 	{ "wpad.dat|proxy.pac",		"application/x-ns-proxy-autoconfig",	0,	wi_generic_noid,	do_file,		0 },
 
-	{ "webmon.cgi",		mime_javascript,				0,	wi_generic,		wo_webmon,		1 },
-	{ "dhcpc.cgi",		NULL,						0,	wi_generic,			wo_dhcpc,		1 },
-	{ "dhcpd.cgi",		mime_javascript,			0,	wi_generic,			wo_dhcpd,		1 },
-	{ "nvcommit.cgi",	NULL,						0,	wi_generic,			wo_nvcommit,	1 },
-	{ "ping.cgi",		mime_javascript,			0,	wi_generic,			wo_ping,		1 },
-	{ "trace.cgi",		mime_javascript,			0,	wi_generic,			wo_trace,		1 },
-	{ "upgrade.cgi",	mime_html,					0,	wi_upgrade,			wo_flash,		1 },
-	{ "upnp.cgi",		NULL,						0,	wi_generic,			wo_upnp,		1 },
-	{ "wakeup.cgi",		NULL,						0,	wi_generic,			wo_wakeup,		1 },
-	{ "wlmnoise.cgi",	mime_html,					0,	wi_generic,			wo_wlmnoise,	1 },
-	{ "wlradio.cgi",	NULL,						0,	wi_generic,			wo_wlradio,		1 },
-	{ "resolve.cgi",	mime_javascript,			0,	wi_generic,			wo_resolve,		1 },
-	{ "expct.cgi",		mime_html,					0,	wi_generic,			wo_expct,		1 },
-	{ "service.cgi",	NULL,						0,	wi_generic,			wo_service,		1 },
-//	{ "logout.cgi",		NULL,	   		 			0,	wi_generic,			wo_logout,		0 },
+	{ "webmon.cgi",			mime_javascript,			0,	wi_generic,		wo_webmon,		1 },
+	{ "dhcpc.cgi",			NULL,					0,	wi_generic,		wo_dhcpc,		1 },
+	{ "dhcpd.cgi",			mime_javascript,			0,	wi_generic,		wo_dhcpd,		1 },
+	{ "nvcommit.cgi",		NULL,					0,	wi_generic,		wo_nvcommit,		1 },
+	{ "ping.cgi",			mime_javascript,			0,	wi_generic,		wo_ping,		1 },
+	{ "trace.cgi",			mime_javascript,			0,	wi_generic,		wo_trace,		1 },
+	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
+	{ "upnp.cgi",			NULL,					0,	wi_generic,		wo_upnp,		1 },
+	{ "wakeup.cgi",			NULL,					0,	wi_generic,		wo_wakeup,		1 },
+	{ "wlmnoise.cgi",		mime_html,				0,	wi_generic,		wo_wlmnoise,		1 },
+	{ "wlradio.cgi",		NULL,					0,	wi_generic,		wo_wlradio,		1 },
+	{ "resolve.cgi",		mime_javascript,			0,	wi_generic,		wo_resolve,		1 },
+	{ "expct.cgi",			mime_html,				0,	wi_generic,		wo_expct,		1 },
+	{ "service.cgi",		NULL,					0,	wi_generic,		wo_service,		1 },
+//	{ "logout.cgi",			NULL,			 		0,	wi_generic,		wo_logout,		0 },
 // see httpd.c
-	{ "shutdown.cgi",	mime_html,					0,	wi_generic,			wo_shutdown,	1 },
+	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
 #ifdef TCONFIG_OPENVPN
-	{ "vpnstatus.cgi",	mime_javascript,			0,	wi_generic,			wo_vpn_status,		1 },
+	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_status,		1 },
 #endif
 #ifdef TCONFIG_PPTPD
-	{ "pptpd.cgi",		mime_javascript,			0,	wi_generic,			wo_pptpdcmd,		1 },	//!!AB - PPTPD
+	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD
 #endif
 #ifdef TCONFIG_USB
 	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },	//!!TB - USB
 #endif
 #ifdef BLACKHOLE
-	{ "blackhole.cgi",	NULL,						0,	wi_blackhole,		NULL,			1 },
+	{ "blackhole.cgi",		NULL,					0,	wi_blackhole,		NULL,			1 },
 #endif
 #ifdef TCONFIG_NOCAT
 	{ "uploadsplash.cgi",		NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
 	{ "ext/uploadsplash.cgi",	NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
 #endif
-	{ NULL,				NULL,					0,	NULL,		NULL,			1 }
+	{ NULL,				NULL,					0,	NULL,			NULL,			1 }
 };
 
 const aspapi_t aspapi[] = {
-	{ "activeroutes",		asp_activeroutes	},
+	{ "activeroutes",		asp_activeroutes		},
 	{ "arplist",			asp_arplist			},
-	{ "bandwidth",			asp_bandwidth		},
-	{ "build_time",			asp_build_time		},
+	{ "bandwidth",			asp_bandwidth			},
+	{ "build_time",			asp_build_time			},
 	{ "cgi_get",			asp_cgi_get			},
 	{ "compmac",			asp_compmac			},
 	{ "ctcount",			asp_ctcount			},
-	{ "ctdump",				asp_ctdump			},
-	{ "ctrate",				asp_ctrate			},
-	{ "ddnsx",				asp_ddnsx			},
+	{ "ctdump",			asp_ctdump			},
+	{ "ctrate",			asp_ctrate			},
+	{ "ddnsx",			asp_ddnsx			},
 	{ "devlist",			asp_devlist			},
-	{ "webmon",				asp_webmon			},
-	{ "dhcpc_time",			asp_dhcpc_time		},
-	{ "dns",				asp_dns				},
-	{ "ident",				asp_ident			},
-	{ "lanip",				asp_lanip			},
-	{ "layer7",				asp_layer7			},
-	{ "link_uptime",		asp_link_uptime		},
-	{ "lipp",				asp_lipp			},
-	{ "netdev",				asp_netdev			},
+	{ "webmon",			asp_webmon			},
+	{ "dhcpc_time",			asp_dhcpc_time			},
+	{ "dns",			asp_dns				},
+	{ "ident",			asp_ident			},
+	{ "lanip",			asp_lanip			},
+	{ "layer7",			asp_layer7			},
+	{ "link_uptime",		asp_link_uptime			},
+	{ "lipp",			asp_lipp			},
+	{ "netdev",			asp_netdev			},
 
-	{ "iptraffic",			asp_iptraffic		},
-	{ "iptmon",				asp_iptmon			},
-	{ "ipt_bandwidth",		asp_ipt_bandwidth	},
+	{ "iptraffic",			asp_iptraffic			},
+	{ "iptmon",			asp_iptmon			},
+	{ "ipt_bandwidth",		asp_ipt_bandwidth		},
 
-	{ "notice",				asp_notice			},
-	{ "nv",					asp_nv				},
-	{ "nvram",				asp_nvram 			},
-	{ "nvramseq",			asp_nvramseq		},
-	{ "nvstat",				asp_nvstat 			},
-	{ "psup",				asp_psup			},
-	{ "qrate",				asp_qrate			},
-	{ "resmsg",				asp_resmsg			},
-	{ "rrule",				asp_rrule			},
-	{ "statfs",				asp_statfs			},
+	{ "notice",			asp_notice			},
+	{ "nv",				asp_nv				},
+	{ "nvram",			asp_nvram 			},
+	{ "nvramseq",			asp_nvramseq			},
+	{ "nvstat",			asp_nvstat 			},
+	{ "psup",			asp_psup			},
+	{ "qrate",			asp_qrate			},
+	{ "resmsg",			asp_resmsg			},
+	{ "rrule",			asp_rrule			},
+	{ "statfs",			asp_statfs			},
 	{ "sysinfo",			asp_sysinfo			},
 	{ "jiffies",			asp_jiffies			},
-	{ "time",				asp_time			},
-	{ "upnpinfo",			asp_upnpinfo		},
+	{ "time",			asp_time			},
+	{ "upnpinfo",			asp_upnpinfo			},
 	{ "version",			asp_version			},
-	{ "wanstatus",			asp_wanstatus		},
-	{ "wanup",				asp_wanup			},
+	{ "wanstatus",			asp_wanstatus			},
+	{ "wanup",			asp_wanup			},
 #ifdef TCONFIG_PPTPD
-	{ "pptpd_userol",		asp_pptpd_userol	},
+	{ "pptpd_userol",		asp_pptpd_userol		},
 #endif
-	{ "wlstats",			asp_wlstats		},
-	{ "wlclient",			asp_wlclient		},
+	{ "wlstats",			asp_wlstats			},
+	{ "wlclient",			asp_wlclient			},
 	{ "wlnoise",			asp_wlnoise			},
-	{ "wlscan",				asp_wlscan			},
-	{ "wlchannels",			asp_wlchannels	},	//!!TB
-	{ "wlcountries",		asp_wlcountries	},
-	{ "wlifaces",			asp_wlifaces		},
-	{ "wlbands",			asp_wlbands		},
+	{ "wlscan",			asp_wlscan			},
+	{ "wlchannels",			asp_wlchannels			},	//!!TB
+	{ "wlcountries",		asp_wlcountries			},
+	{ "wlifaces",			asp_wlifaces			},
+	{ "wlbands",			asp_wlbands			},
 #ifdef TCONFIG_USB
-	{ "usbdevices",			asp_usbdevices	},	//!!TB - USB Support
+	{ "usbdevices",			asp_usbdevices			},	//!!TB - USB Support
 #endif
 #ifdef TCONFIG_SDHC
-	{ "mmcid",			asp_mmcid	},	//MMC Support
+	{ "mmcid",			asp_mmcid			},	//MMC Support
 #endif
-	{ "etherstates",		asp_etherstates	},	//Ethernet States
-	{ "anonupdate",			asp_anonupdate	},	//Tomato update notification system
+	{ "etherstates",		asp_etherstates			},	//Ethernet States
+	{ "anonupdate",			asp_anonupdate			},	//Tomato update notification system
 #ifdef TCONFIG_IPV6
-	{ "calc6rdlocalprefix",		asp_calc6rdlocalprefix	},
+	{ "calc6rdlocalprefix",		asp_calc6rdlocalprefix		},
 #endif
 
-	{ "css",				asp_css				},
-	{ NULL,					NULL				}
+	{ "css",			asp_css				},
+	{ NULL,				NULL				}
 };
 
 // -----------------------------------------------------------------------------
@@ -493,9 +490,9 @@ typedef struct {
 #define V_PORT				VT_RANGE,	{ .l = 2 },		{ .l = 65535 }
 #define V_ONOFF				VT_LENGTH,	{ .i = 2 },		{ .i = 3 }
 #define V_WORD				VT_LENGTH,	{ .i = 1 },		{ .i = 16 }
-#define V_LENGTH(min, max)	VT_LENGTH,	{ .i = min },	{ .i = max }
-#define V_TEXT(min, max)	VT_TEXT,	{ .i = min },	{ .i = max }
-#define V_RANGE(min, max)	VT_RANGE,	{ .l = min },	{ .l = max }
+#define V_LENGTH(min, max)		VT_LENGTH,	{ .i = min },		{ .i = max }
+#define V_TEXT(min, max)		VT_TEXT,	{ .i = min },		{ .i = max }
+#define V_RANGE(min, max)		VT_RANGE,	{ .l = min },		{ .l = max }
 #define V_IP				VT_IP,		{ },			{ }
 #define	V_OCTET				VT_RANGE,	{ .l = 0 },		{ .l = 255 }
 #define V_NUM				VT_RANGE,	{ .l = 0 },		{ .l = 0x7FFFFFFF }
@@ -507,74 +504,74 @@ typedef struct {
 static const nvset_t nvset_list[] = {
 
 // basic-ident
-	{ "router_name",		V_LENGTH(0, 32)		},
-	{ "wan_hostname",		V_LENGTH(0, 32)		},
-	{ "wan_domain",			V_LENGTH(0, 32)		},
+	{ "router_name",		V_LENGTH(0, 32)			},
+	{ "wan_hostname",		V_LENGTH(0, 32)			},
+	{ "wan_domain",			V_LENGTH(0, 32)			},
 
 // basic-time
-	{ "tm_tz",				V_LENGTH(1, 64)		},	// PST8PDT
-	{ "tm_sel",				V_LENGTH(1, 64)		},	// PST8PDT
-	{ "tm_dst",				V_01				},
-	{ "ntp_updates",		V_RANGE(-1, 24)		},
+	{ "tm_tz",			V_LENGTH(1, 64)			},	// PST8PDT
+	{ "tm_sel",			V_LENGTH(1, 64)			},	// PST8PDT
+	{ "tm_dst",			V_01				},
+	{ "ntp_updates",		V_RANGE(-1, 24)			},
 	{ "ntp_tdod",			V_01				},
-	{ "ntp_server",			V_LENGTH(1, 150)	},	// x y z
-	{ "ntp_kiss",			V_LENGTH(0, 255)	},
+	{ "ntp_server",			V_LENGTH(1, 150)		},	// x y z
+	{ "ntp_kiss",			V_LENGTH(0, 255)		},
 
 // basic-static
-	{ "dhcpd_static",		V_LENGTH(0, 108*251)	},	// 108 (max chars per entry) x 250 entries
-	{ "dhcpd_static_only",		V_01			},
+	{ "dhcpd_static",		V_LENGTH(0, 108*251)		},	// 108 (max chars per entry) x 250 entries
+	{ "dhcpd_static_only",		V_01				},
 
 // basic-ddns
-	{ "ddnsx0",				V_LENGTH(0, 2048)	},
-	{ "ddnsx1",				V_LENGTH(0, 2048)	},
-	{ "ddnsx0_cache",		V_LENGTH(0, 1)		},	// only to clear
-	{ "ddnsx1_cache",		V_LENGTH(0, 1)		},
-	{ "ddnsx_ip",			V_LENGTH(0, 32)		},
+	{ "ddnsx0",			V_LENGTH(0, 2048)		},
+	{ "ddnsx1",			V_LENGTH(0, 2048)		},
+	{ "ddnsx0_cache",		V_LENGTH(0, 1)			},	// only to clear
+	{ "ddnsx1_cache",		V_LENGTH(0, 1)			},
+	{ "ddnsx_ip",			V_LENGTH(0, 32)			},
 	{ "ddnsx_save",			V_01				},
-	{ "ddnsx_refresh",		V_RANGE(0, 365)		},
+	{ "ddnsx_refresh",		V_RANGE(0, 365)			},
 
 // basic-network
 	// WAN
-	{ "wan_proto",			V_LENGTH(1, 16)		},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
 	{ "wan_ipaddr",			V_IP				},
 	{ "wan_netmask",		V_IP				},
 	{ "wan_gateway",		V_IP				},
-	{ "hb_server_ip",		V_LENGTH(0, 32)		},
+	{ "hb_server_ip",		V_LENGTH(0, 32)			},
 	{ "wan_l2tp_server_ip",		V_LENGTH(0, 128)		},
 	{ "wan_pptp_server_ip",		V_LENGTH(0, 128)		},
 	{ "wan_pptp_dhcp",		V_01				},
-	{ "wan_ppp_username",		V_LENGTH(0, 60)		},
-	{ "wan_ppp_passwd",		V_LENGTH(0, 60)		},
-	{ "wan_ppp_service",		V_LENGTH(0, 50)		},
+	{ "wan_ppp_username",		V_LENGTH(0, 60)			},
+	{ "wan_ppp_passwd",		V_LENGTH(0, 60)			},
+	{ "wan_ppp_service",		V_LENGTH(0, 50)			},
 	{ "wan_ppp_demand",		V_01				},
 	{ "wan_ppp_custom",		V_LENGTH(0, 256)		},
-	{ "wan_ppp_idletime",		V_RANGE(0, 1440)	},
-	{ "wan_ppp_redialperiod",	V_RANGE(1, 86400)	},
+	{ "wan_ppp_idletime",		V_RANGE(0, 1440)		},
+	{ "wan_ppp_redialperiod",	V_RANGE(1, 86400)		},
 	{ "wan_ppp_mlppp",		V_01				},
 	{ "wan_mtu_enable",		V_01				},
-	{ "wan_mtu",			V_RANGE(576, 1500)	},
+	{ "wan_mtu",			V_RANGE(576, 1500)		},
 	{ "wan_islan",			V_01				},
 	{ "wan_modem_ipaddr",		V_IP				},
 	{ "wan_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan_pppoe_lef",		V_RANGE(1, 10)			},
-	{ "wan_sta",			V_LENGTH(0, 10)		},
-	{ "wan_dns",			V_LENGTH(0, 50)		},	// ip ip ip
-	{ "wan_ckmtd",			V_LENGTH(1, 2)		}, // check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan_sta",			V_LENGTH(0, 10)			},
+	{ "wan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "wan_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
-	{ "mwan_num",			V_RANGE(1, 4)		},
+	{ "mwan_num",			V_RANGE(1, 4)			},
 #else
-	{ "mwan_num",			V_RANGE(1, 2)		},
+	{ "mwan_num",			V_RANGE(1, 2)			},
 #endif
-	{ "mwan_init",			V_01			},
-	{ "mwan_cktime",		V_RANGE(0, 3600)	},
-	{ "mwan_ckdst",			V_LENGTH(0, 64)		},
-	{ "pbr_rules",			V_LENGTH(0, 2048)	},
+	{ "mwan_init",			V_01				},
+	{ "mwan_cktime",		V_RANGE(0, 3600)		},
+	{ "mwan_ckdst",			V_LENGTH(0, 64)			},
+	{ "pbr_rules",			V_LENGTH(0, 2048)		},
 
 	{ "wan_weight",			V_RANGE(0, 256)			},
 	{ "wan_dns_auto",		V_01				},
 
-	{ "wan2_proto",			V_LENGTH(1, 16)		},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan2_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
 	{ "wan2_weight",		V_RANGE(0, 256)			},
 	{ "wan2_ipaddr",		V_IP				},
 	{ "wan2_netmask",		V_IP				},
@@ -582,27 +579,27 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan2_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan2_pptp_dhcp",		V_01				},
-	{ "wan2_ppp_username",		V_LENGTH(0, 60)		},
-	{ "wan2_ppp_passwd",		V_LENGTH(0, 60)		},
-	{ "wan2_ppp_service",		V_LENGTH(0, 50)		},
+	{ "wan2_ppp_username",		V_LENGTH(0, 60)			},
+	{ "wan2_ppp_passwd",		V_LENGTH(0, 60)			},
+	{ "wan2_ppp_service",		V_LENGTH(0, 50)			},
 	{ "wan2_ppp_demand",		V_01				},
 	{ "wan2_ppp_custom",		V_LENGTH(0, 256)		},
-	{ "wan2_ppp_idletime",		V_RANGE(0, 1440)	},
-	{ "wan2_ppp_redialperiod",	V_RANGE(1, 86400)	},
+	{ "wan2_ppp_idletime",		V_RANGE(0, 1440)		},
+	{ "wan2_ppp_redialperiod",	V_RANGE(1, 86400)		},
 	{ "wan2_ppp_mlppp",		V_01				},
 	{ "wan2_mtu_enable",		V_01				},
-	{ "wan2_mtu",			V_RANGE(576, 1500)	},
+	{ "wan2_mtu",			V_RANGE(576, 1500)		},
 	{ "wan2_islan",			V_01				},
 	{ "wan2_modem_ipaddr",		V_IP				},
 	{ "wan2_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan2_pppoe_lef",		V_RANGE(1, 10)			},
-	{ "wan2_sta",			V_LENGTH(0, 10)		},
-	{ "wan2_dns",			V_LENGTH(0, 50)		},	// ip ip ip
+	{ "wan2_sta",			V_LENGTH(0, 10)			},
+	{ "wan2_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan2_dns_auto",		V_01				},
-	{ "wan2_ckmtd",			V_LENGTH(1, 2)		}, // check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan2_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_proto",			V_LENGTH(1, 16)		},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan3_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
 	{ "wan3_weight",		V_RANGE(0, 256)			},
 	{ "wan3_ipaddr",		V_IP				},
 	{ "wan3_netmask",		V_IP				},
@@ -610,26 +607,26 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan3_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan3_pptp_dhcp",		V_01				},
-	{ "wan3_ppp_username",		V_LENGTH(0, 60)		},
-	{ "wan3_ppp_passwd",		V_LENGTH(0, 60)		},
-	{ "wan3_ppp_service",		V_LENGTH(0, 50)		},
+	{ "wan3_ppp_username",		V_LENGTH(0, 60)			},
+	{ "wan3_ppp_passwd",		V_LENGTH(0, 60)			},
+	{ "wan3_ppp_service",		V_LENGTH(0, 50)			},
 	{ "wan3_ppp_demand",		V_01				},
 	{ "wan3_ppp_custom",		V_LENGTH(0, 256)		},
-	{ "wan3_ppp_idletime",		V_RANGE(0, 1440)	},
-	{ "wan3_ppp_redialperiod",	V_RANGE(1, 86400)	},
+	{ "wan3_ppp_idletime",		V_RANGE(0, 1440)		},
+	{ "wan3_ppp_redialperiod",	V_RANGE(1, 86400)		},
 	{ "wan3_ppp_mlppp",		V_01				},
 	{ "wan3_mtu_enable",		V_01				},
-	{ "wan3_mtu",			V_RANGE(576, 1500)	},
+	{ "wan3_mtu",			V_RANGE(576, 1500)		},
 	{ "wan3_islan",			V_01				},
 	{ "wan3_modem_ipaddr",		V_IP				},
 	{ "wan3_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan3_pppoe_lef",		V_RANGE(1, 10)			},
-	{ "wan3_sta",			V_LENGTH(0, 10)		},
-	{ "wan3_dns",			V_LENGTH(0, 50)		},	// ip ip ip
+	{ "wan3_sta",			V_LENGTH(0, 10)			},
+	{ "wan3_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan3_dns_auto",		V_01				},
-	{ "wan3_ckmtd",			V_LENGTH(1, 2)		}, // check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan3_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
-	{ "wan4_proto",			V_LENGTH(1, 16)		},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan4_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
 	{ "wan4_weight",		V_RANGE(0, 256)			},
 	{ "wan4_ipaddr",		V_IP				},
 	{ "wan4_netmask",		V_IP				},
@@ -637,39 +634,39 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan4_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan4_pptp_dhcp",		V_01				},
-	{ "wan4_ppp_username",		V_LENGTH(0, 60)		},
-	{ "wan4_ppp_passwd",		V_LENGTH(0, 60)		},
-	{ "wan4_ppp_service",		V_LENGTH(0, 50)		},
+	{ "wan4_ppp_username",		V_LENGTH(0, 60)			},
+	{ "wan4_ppp_passwd",		V_LENGTH(0, 60)			},
+	{ "wan4_ppp_service",		V_LENGTH(0, 50)			},
 	{ "wan4_ppp_demand",		V_01				},
 	{ "wan4_ppp_custom",		V_LENGTH(0, 256)		},
-	{ "wan4_ppp_idletime",		V_RANGE(0, 1440)	},
-	{ "wan4_ppp_redialperiod",	V_RANGE(1, 86400)	},
+	{ "wan4_ppp_idletime",		V_RANGE(0, 1440)		},
+	{ "wan4_ppp_redialperiod",	V_RANGE(1, 86400)		},
 	{ "wan4_ppp_mlppp",		V_01				},
 	{ "wan4_mtu_enable",		V_01				},
-	{ "wan4_mtu",			V_RANGE(576, 1500)	},
+	{ "wan4_mtu",			V_RANGE(576, 1500)		},
 	{ "wan4_islan",			V_01				},
 	{ "wan4_modem_ipaddr",		V_IP				},
 	{ "wan4_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan4_pppoe_lef",		V_RANGE(1, 10)			},
-	{ "wan4_sta",			V_LENGTH(0, 10)		},
-	{ "wan4_dns",			V_LENGTH(0, 50)		},	// ip ip ip
+	{ "wan4_sta",			V_LENGTH(0, 10)			},
+	{ "wan4_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan4_dns_auto",		V_01				},
-	{ "wan4_ckmtd",			V_LENGTH(1, 2)		}, // check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 #endif
 
 	// LAN
 	{ "lan_ipaddr",			V_IP				},
 	{ "lan_netmask",		V_IP				},
 	{ "lan_gateway",		V_IP				},
-	{ "lan_dns",			V_LENGTH(0, 50)		},	// ip ip ip
+	{ "lan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 
 #ifdef TCONFIG_DNSSEC
-	{ "dnssec_enable",		V_01			},
+	{ "dnssec_enable",		V_01				},
 #endif
 
 #ifdef TCONFIG_DNSCRYPT
 	{ "dnscrypt_proxy",		V_01				},
-	{ "dnscrypt_priority",		V_RANGE(0, 2)			}, // 0=none, 1=preferred, 2=exclusive
+	{ "dnscrypt_priority",		V_RANGE(0, 2)			},	// 0=none, 1=preferred, 2=exclusive
 	{ "dnscrypt_port",		V_PORT				},
 	{ "dnscrypt_resolver",		V_LENGTH(0, 40)			},
 	{ "dnscrypt_log",		V_RANGE(0, 99)			},
@@ -682,47 +679,47 @@ static const nvset_t nvset_list[] = {
 	{ "lan_desc",			V_01				},
 	{ "lan_invert",			V_01				},
 	{ "lan_proto",			V_WORD				},	// static, dhcp
-	{ "dhcp_start",			V_LENGTH(0, 15)		},	// remove !
-	{ "dhcp_num",			V_LENGTH(0, 4)		},	// remove !
-	{ "dhcpd_startip",		V_LENGTH(0, 15)		},
-	{ "dhcpd_endip",		V_LENGTH(0, 15)		},
-	{ "dhcp_lease",			V_LENGTH(0, 5)		},
+	{ "dhcp_start",			V_LENGTH(0, 15)			},	// remove !
+	{ "dhcp_num",			V_LENGTH(0, 4)			},	// remove !
+	{ "dhcpd_startip",		V_LENGTH(0, 15)			},
+	{ "dhcpd_endip",		V_LENGTH(0, 15)			},
+	{ "dhcp_lease",			V_LENGTH(0, 5)			},
 	{ "wan_wins",			V_IP				},
 
 #ifdef TCONFIG_USB
-	// 3G MODEM
+	// 3G/4G MODEM
 	{ "wan_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan_modem_dev",		V_LENGTH(0,8)			},
+	{ "wan_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
 	{ "wan_modem_init",		V_LENGTH(0,25)			},
 	{ "wan_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan_modem_band",		V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan2_modem_dev",		V_LENGTH(0,8)			},
+	{ "wan2_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
 	{ "wan2_modem_init",		V_LENGTH(0,25)			},
 	{ "wan2_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan2_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan2_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan2_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan3_modem_dev",		V_LENGTH(0,8)			},
+	{ "wan3_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
 	{ "wan3_modem_init",		V_LENGTH(0,25)			},
 	{ "wan3_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan3_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan3_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan3_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan4_modem_dev",		V_LENGTH(0,8)			},
+	{ "wan4_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
 	{ "wan4_modem_init",		V_LENGTH(0,25)			},
 	{ "wan4_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan4_modem_band",	V_LENGTH(0, 16)			},  // all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan4_modem_roam",	V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan4_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
+	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 #endif
 #endif
 
@@ -767,40 +764,40 @@ static const nvset_t nvset_list[] = {
 
 	// wireless
 	{ "wl_radio",			V_01				},
-	{ "wl_mode",			V_LENGTH(2, 3)		},	// ap, sta, wet, wds
-	{ "wl_net_mode",		V_LENGTH(5, 8)		},  // disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
-	{ "wl_ssid",			V_LENGTH(1, 32)		},
+	{ "wl_mode",			V_LENGTH(2, 3)			},	// ap, sta, wet, wds
+	{ "wl_net_mode",		V_LENGTH(5, 8)			},	// disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
+	{ "wl_ssid",			V_LENGTH(1, 32)			},
 	{ "wl_closed",			V_01				},
-	{ "wl_channel",			V_RANGE(0, 216)		},
+	{ "wl_channel",			V_RANGE(0, 216)			},
 
-	{ "wl_vifs",			V_LENGTH(0, 64)		},	// multiple/virtual BSSIDs
+	{ "wl_vifs",			V_LENGTH(0, 64)			},	// multiple/virtual BSSIDs
 #ifndef LINUX26
-	{ "nas_alternate",			V_01			},	// only meaningful for ND/K24 builds
+	{ "nas_alternate",		V_01				},	// only meaningful for ND/K24 builds
 #endif
 
-	{ "wl_security_mode",		V_LENGTH(1, 32)		},	// disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise
-	{ "wl_radius_ipaddr",	V_IP				},
+	{ "wl_security_mode",		V_LENGTH(1, 32)			},	// disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise
+	{ "wl_radius_ipaddr",		V_IP				},
 	{ "wl_radius_port",		V_PORT				},
-	{ "wl_radius_key",		V_LENGTH(1, 64)		},
-	{ "wl_wep_bit",			V_RANGE(64, 128)	},	// 64 or 128
-	{ "wl_passphrase",		V_LENGTH(0, 20)		},
-	{ "wl_key",				V_RANGE(1, 4)		},
-	{ "wl_key1",			V_LENGTH(0, 26)		},
-	{ "wl_key2",			V_LENGTH(0, 26)		},
-	{ "wl_key3",			V_LENGTH(0, 26)		},
-	{ "wl_key4",			V_LENGTH(0, 26)		},
-	{ "wl_crypto",			V_LENGTH(3, 8)		},	// tkip, aes, tkip+aes
-	{ "wl_wpa_psk",			V_LENGTH(8, 64)		},
-	{ "wl_wpa_gtk_rekey",	V_RANGE(60, 7200)	},
+	{ "wl_radius_key",		V_LENGTH(1, 64)			},
+	{ "wl_wep_bit",			V_RANGE(64, 128)		},	// 64 or 128
+	{ "wl_passphrase",		V_LENGTH(0, 20)			},
+	{ "wl_key",			V_RANGE(1, 4)			},
+	{ "wl_key1",			V_LENGTH(0, 26)			},
+	{ "wl_key2",			V_LENGTH(0, 26)			},
+	{ "wl_key3",			V_LENGTH(0, 26)			},
+	{ "wl_key4",			V_LENGTH(0, 26)			},
+	{ "wl_crypto",			V_LENGTH(3, 8)			},	// tkip, aes, tkip+aes
+	{ "wl_wpa_psk",			V_LENGTH(8, 64)			},
+	{ "wl_wpa_gtk_rekey",		V_RANGE(60, 7200)		},
 
 	{ "wl_lazywds",			V_01				},
-	{ "wl_wds",				V_LENGTH(0, 180)	},	// mac mac mac (x 10)
+	{ "wl_wds",			V_LENGTH(0, 180)		},	// mac mac mac (x 10)
 
 	{ "wl_wds_enable",		V_01				},
-	{ "wl_gmode",			V_RANGE(-1, 6)		},
-	{ "wl_wep",				V_LENGTH(1, 32)		},	//  off, on, restricted,tkip,aes,tkip+aes
-	{ "wl_akm",				V_LENGTH(0, 32)		},	//  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, ""
-	{ "wl_auth_mode",	   	V_LENGTH(4, 6)		},	//  none, radius
+	{ "wl_gmode",			V_RANGE(-1, 6)			},
+	{ "wl_wep",			V_LENGTH(1, 32)			},	//  off, on, restricted,tkip,aes,tkip+aes
+	{ "wl_akm",			V_LENGTH(0, 32)			},	//  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, ""
+	{ "wl_auth_mode",		V_LENGTH(4, 6)			},	//  none, radius
 
 	{ "wl_nmode",			V_NONE				},
 	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
@@ -841,15 +838,15 @@ static const nvset_t nvset_list[] = {
 
 // basic-wfilter
 	{ "wl_macmode",			V_NONE				},	// allow, deny, disabled
-	{ "wl_maclist",			V_LENGTH(0, 18*201)	},	// 18 x 200		(11:22:33:44:55:66 ...)
-	{ "macnames",			V_LENGTH(0, 62*201)	},	// 62 (12+1+48+1) x 50	(112233445566<..>)		todo: re-use -- zzz
+	{ "wl_maclist",			V_LENGTH(0, 18*201)		},	// 18 x 200		(11:22:33:44:55:66 ...)
+	{ "macnames",			V_LENGTH(0, 62*201)		},	// 62 (12+1+48+1) x 50	(112233445566<..>)	todo: re-use -- zzz
 
 // advanced-ctnf
-	{ "ct_max",			V_NUM			},
-	{ "ct_tcp_timeout",		V_LENGTH(20, 70)	},
-	{ "ct_udp_timeout",		V_LENGTH(5, 15)		},
-	{ "ct_timeout",			V_LENGTH(5, 15)		},
-	{ "nf_ttl",			V_LENGTH(1, 6)		},
+	{ "ct_max",			V_NUM				},
+	{ "ct_tcp_timeout",		V_LENGTH(20, 70)		},
+	{ "ct_udp_timeout",		V_LENGTH(5, 15)			},
+	{ "ct_timeout",			V_LENGTH(5, 15)			},
+	{ "nf_ttl",			V_LENGTH(1, 6)			},
 	{ "nf_l7in",			V_01				},
 #ifdef LINUX26
 	{ "nf_sip",			V_01				},
@@ -858,10 +855,10 @@ static const nvset_t nvset_list[] = {
 	{ "nf_rtsp",			V_01				},
 	{ "nf_pptp",			V_01				},
 	{ "nf_h323",			V_01				},
-	{ "nf_ftp",				V_01				},
+	{ "nf_ftp",			V_01				},
 
 // advanced-dhcpdns
-	{ "dhcpd_slt",			V_RANGE(-1, 43200)	},	// -1=infinite, 0=follow normal lease time, >=1 custom
+	{ "dhcpd_slt",			V_RANGE(-1, 43200)		},	// -1=infinite, 0=follow normal lease time, >=1 custom
 	{ "dhcpd_dmdns",		V_01				},
 	{ "dhcpd_lmax",			V_NUM				},
 	{ "dhcpd_gwmode",		V_NUM				},
@@ -872,7 +869,7 @@ static const nvset_t nvset_list[] = {
 	{ "dns_norebind",		V_01				},
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
-	{ "dnsmasq_q",			V_RANGE(0,7)			}, //bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
+	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
 //	{ "dnsmasq_norw",		V_01				},
 
 // advanced-firewall
@@ -909,12 +906,12 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
 
 // advanced-misc
-	{ "wait_time",			V_RANGE(3, 20)		},
-	{ "wan_speed",			V_RANGE(0, 4)		},
-	{ "jumbo_frame_enable",		V_01			},	// Jumbo Frames support (for RT-N16/WNR3500L)
-	{ "jumbo_frame_size",		V_RANGE(1, 9720)	},
+	{ "wait_time",			V_RANGE(0, 30)			},
+	{ "wan_speed",			V_RANGE(0, 4)			},
+	{ "jumbo_frame_enable",		V_01				},	// Jumbo Frames support (for RT-N16/WNR3500L)
+	{ "jumbo_frame_size",		V_RANGE(1, 9720)		},
 #ifdef CONFIG_BCMWL5
-	{ "ctf_disable",		V_01			},
+	{ "ctf_disable",		V_01				},
 #endif
 // advanced-vlan
 	{ "vlan0ports",			V_TEXT(0,16)			},
@@ -956,97 +953,105 @@ static const nvset_t nvset_list[] = {
 	{ "lan_ifnames",		V_TEXT(0,64)			},
 	{ "manual_boot_nv",		V_01				},
 	{ "trunk_vlan_so",		V_01				},
-	{ "vlan0tag",		V_TEXT(0,5)			},
-	{ "vlan0vid",		V_TEXT(0,5)			},
-	{ "vlan1vid",		V_TEXT(0,5)			},
-	{ "vlan2vid",		V_TEXT(0,5)			},
-	{ "vlan3vid",		V_TEXT(0,5)			},
-	{ "vlan4vid",		V_TEXT(0,5)			},
-	{ "vlan5vid",		V_TEXT(0,5)			},
-	{ "vlan6vid",		V_TEXT(0,5)			},
-	{ "vlan7vid",		V_TEXT(0,5)			},
-	{ "vlan8vid",		V_TEXT(0,5)			},
-	{ "vlan9vid",		V_TEXT(0,5)			},
-	{ "vlan10vid",		V_TEXT(0,5)			},
-	{ "vlan11vid",		V_TEXT(0,5)			},
-	{ "vlan12vid",		V_TEXT(0,5)			},
-	{ "vlan13vid",		V_TEXT(0,5)			},
-	{ "vlan14vid",		V_TEXT(0,5)			},
-	{ "vlan15vid",		V_TEXT(0,5)			},
+	{ "vlan0tag",			V_TEXT(0,5)			},
+	{ "vlan0vid",			V_TEXT(0,5)			},
+	{ "vlan1vid",			V_TEXT(0,5)			},
+	{ "vlan2vid",			V_TEXT(0,5)			},
+	{ "vlan3vid",			V_TEXT(0,5)			},
+	{ "vlan4vid",			V_TEXT(0,5)			},
+	{ "vlan5vid",			V_TEXT(0,5)			},
+	{ "vlan6vid",			V_TEXT(0,5)			},
+	{ "vlan7vid",			V_TEXT(0,5)			},
+	{ "vlan8vid",			V_TEXT(0,5)			},
+	{ "vlan9vid",			V_TEXT(0,5)			},
+	{ "vlan10vid",			V_TEXT(0,5)			},
+	{ "vlan11vid",			V_TEXT(0,5)			},
+	{ "vlan12vid",			V_TEXT(0,5)			},
+	{ "vlan13vid",			V_TEXT(0,5)			},
+	{ "vlan14vid",			V_TEXT(0,5)			},
+	{ "vlan15vid",			V_TEXT(0,5)			},
 
 // advanced-mac
-	{ "wan_mac",			V_LENGTH(0, 17)		},
-	{ "wan2_mac",			V_LENGTH(0, 17)		},
+	{ "wan_mac",			V_LENGTH(0, 17)			},
+	{ "wan2_mac",			V_LENGTH(0, 17)			},
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_mac",			V_LENGTH(0, 17)		},
-	{ "wan4_mac",			V_LENGTH(0, 17)		},
+	{ "wan3_mac",			V_LENGTH(0, 17)			},
+	{ "wan4_mac",			V_LENGTH(0, 17)			},
 #endif
-	{ "wl_macaddr",			V_LENGTH(0, 17)		},
-	{ "wl_hwaddr",			V_LENGTH(0, 17)		},
+	{ "wl_macaddr",			V_LENGTH(0, 17)			},
+	{ "wl_hwaddr",			V_LENGTH(0, 17)			},
 
 // advanced-routing
-	{ "routes_static",		V_LENGTH(0, 2048)	},
-	{ "dhcp_routes",		V_01			},
-	{ "lan_stp",			V_RANGE(0, 1)		},
-	{ "wk_mode",			V_LENGTH(1, 32)		},	// gateway, router
+	{ "routes_static",		V_LENGTH(0, 2048)		},
+	{ "dhcp_routes",		V_01				},
+	{ "lan_stp",			V_RANGE(0, 1)			},
+	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
 #ifdef TCONFIG_ZEBRA
-	{ "dr_setting",			V_RANGE(0, 3)		},
-	{ "dr_lan_tx",			V_LENGTH(0, 32)		},
-	{ "dr_lan_rx",			V_LENGTH(0, 32)		},
-	{ "dr_lan1_tx",			V_LENGTH(0, 32)		},
-	{ "dr_lan1_rx",			V_LENGTH(0, 32)		},
-	{ "dr_lan2_tx",			V_LENGTH(0, 32)		},
-	{ "dr_lan2_rx",			V_LENGTH(0, 32)		},
-	{ "dr_lan3_tx",			V_LENGTH(0, 32)		},
-	{ "dr_lan3_rx",			V_LENGTH(0, 32)		},
-	{ "dr_wan_tx",			V_LENGTH(0, 32)		},
-	{ "dr_wan_rx",			V_LENGTH(0, 32)		},
+	{ "dr_setting",			V_RANGE(0, 3)			},
+	{ "dr_lan_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan1_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan1_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan2_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan2_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan3_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan3_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan2_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan2_rx",			V_LENGTH(0, 32)			},
+#ifdef TCONFIG_MULTIWAN
+	{ "dr_wan3_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan3_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan4_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan4_rx",			V_LENGTH(0, 32)			},
+#endif
 #endif
 
 // advanced-access
-	{ "lan_access",			V_LENGTH(0, 4096)	},
+	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
-	{ "wl_country",			V_LENGTH(0, 64)		},	// !!TB - Country code
-	{ "wl_country_code",		V_LENGTH(0, 4)		},	// !!TB - Country code
-	{ "wl_btc_mode",		V_RANGE(0, 2)		},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
-	{ "wl_afterburner",		V_LENGTH(2, 4)		},	// off, on, auto
+	{ "wl_country",			V_LENGTH(0, 64)			},	// !!TB - Country code
+	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
+	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
+	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},
-	{ "wl_rateset",			V_LENGTH(2, 7)		},	// all, default, 12
+	{ "wl_rateset",			V_LENGTH(2, 7)			},	// all, default, 12
 	{ "wl_rate",			V_RANGE(0, 54 * 1000 * 1000)	},
 	{ "wl_mrate",			V_RANGE(0, 54 * 1000 * 1000)	},
-	{ "wl_gmode_protection",V_LENGTH(3, 4)		},	// off, auto
+	{ "wl_gmode_protection",	V_LENGTH(3, 4)			},	// off, auto
 	{ "wl_frameburst",		V_ONOFF				},	// off, on
-	{ "wl_bcn",				V_RANGE(1, 65535)	},
-	{ "wl_dtim",			V_RANGE(1, 255)		},
-	{ "wl_frag",			V_RANGE(256, 2346)	},
-	{ "wl_rts",				V_RANGE(0, 2347)	},
+	{ "wl_bcn",			V_RANGE(1, 65535)		},
+	{ "wl_dtim",			V_RANGE(1, 255)			},
+	{ "wl_frag",			V_RANGE(256, 2346)		},
+	{ "wl_rts",			V_RANGE(0, 2347)		},
 	{ "wl_ap_isolate",		V_01				},
-	{ "wl_plcphdr",			V_LENGTH(4, 5)		},	// long, short
-	{ "wl_antdiv",			V_RANGE(0, 3)		},
-	{ "wl_txant",			V_RANGE(0, 3)		},
-	{ "wl_txpwr",			V_RANGE(0, 400)		},
+	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	// long, short
+	{ "wl_antdiv",			V_RANGE(0, 3)			},
+	{ "wl_txant",			V_RANGE(0, 3)			},
+	{ "wl_txpwr",			V_RANGE(0, 400)			},
 	{ "wl_wme",			V_WORD				},	// auto, off, on
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
-	{ "wl_maxassoc",		V_RANGE(0, 255)	},
-	{ "wl_distance",		V_LENGTH(0, 5)		},	// "", 1-99999
+	{ "wl_maxassoc",		V_RANGE(0, 255)			},
+	{ "wl_distance",		V_LENGTH(0, 5)			},	// "", 1-99999
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
 	{ "wl_reg_mode",		V_LENGTH(1, 3)			},	// !!TB - Regulatory: off, h, d
 	{ "wl_mitigation",		V_RANGE(0, 4)			},	// Interference Mitigation Mode (0|1|2|3|4)
 
 	{ "wl_nmode_protection",	V_WORD,				},	// off, auto
-	{ "wl_nmcsidx",			V_RANGE(-2, 32),	},	// -2 - 32
-	{ "wl_obss_coex",		V_01			},
-	{ "wl_wmf_bss_enable",		V_01			},	// Toastman
+	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
+	{ "wl_obss_coex",		V_01				},
+	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
 
 // forward-dmz
 	{ "dmz_enable",			V_01				},
-	{ "dmz_ipaddr",			V_LENGTH(0, 15)		},
-	{ "dmz_sip",			V_LENGTH(0, 512)	},
+	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
+	{ "dmz_sip",			V_LENGTH(0, 512)		},
 	{ "dmz_ifname",			V_LENGTH(0, 5)			},
-	{ "dmz_ra",			V_01			},
+	{ "dmz_ra",			V_01				},
 
 // forward-upnp
 	{ "upnp_enable",		V_NUM				},
@@ -1068,36 +1073,36 @@ static const nvset_t nvset_list[] = {
 	{ "upnp_custom",		V_TEXT(0, 2048)			},
 
 // forward-basic
-	{ "portforward",		V_LENGTH(0, 4096)	},
+	{ "portforward",		V_LENGTH(0, 4096)		},
 
 #ifdef TCONFIG_IPV6
 // forward-basic-ipv6
-	{ "ipv6_portforward",	V_LENGTH(0, 4096)	},
+	{ "ipv6_portforward",		V_LENGTH(0, 4096)		},
 #endif
 
 // forward-triggered
-	{ "trigforward",		V_LENGTH(0, 4096)	},
+	{ "trigforward",		V_LENGTH(0, 4096)		},
 
 
 // access restriction
-	{ "rruleN",				V_RANGE(0, 99)		},
-//	{ "rrule##",			V_LENGTH(0, 2048)	},	// in save_variables()
+	{ "rruleN",			V_RANGE(0, 99)			},
+//	{ "rrule##",			V_LENGTH(0, 2048)		},	// in save_variables()
 
 // admin-access
 	{ "http_enable",		V_01				},
 	{ "https_enable",		V_01				},
 	{ "https_crt_save",		V_01				},
-	{ "https_crt_cn",		V_LENGTH(0, 64)		},
+	{ "https_crt_cn",		V_LENGTH(0, 64)			},
 	{ "https_crt_gen",		V_TEMP				},
-	{ "remote_management",	V_01				},
-	{ "remote_mgt_https",	V_01				},
+	{ "remote_management",		V_01				},
+	{ "remote_mgt_https",		V_01				},
 	{ "http_lanport",		V_PORT				},
 	{ "https_lanport",		V_PORT				},
 	{ "web_wl_filter",		V_01				},
-	{ "web_css",			V_LENGTH(1, 32)		},
-	{ "web_dir",			V_LENGTH(1, 32)		},
+	{ "web_css",			V_LENGTH(1, 32)			},
+	{ "web_dir",			V_LENGTH(1, 32)			},
 	{ "ttb_css",			V_LENGTH(0, 128)		},
-	{ "web_mx",				V_LENGTH(0, 128)	},
+	{ "web_mx",			V_LENGTH(0, 128)		},
 	{ "http_wanport",		V_PORT				},
 	{ "telnetd_eas",		V_01				},
 	{ "telnetd_port",		V_PORT				},
@@ -1108,18 +1113,18 @@ static const nvset_t nvset_list[] = {
 	{ "sshd_motd",			V_01				},
 	{ "sshd_forwarding",		V_01				},
 	{ "sshd_rport", 		V_PORT				},
-	{ "sshd_authkeys",		V_TEXT(0, 4096)		},
-	{ "rmgt_sip",			V_LENGTH(0, 512)	},
-	{ "ne_shlimit",			V_TEXT(1, 50)		},
-	{ "http_username",		V_LENGTH(0, 32)		},
+	{ "sshd_authkeys",		V_TEXT(0, 4096)			},
+	{ "rmgt_sip",			V_LENGTH(0, 512)		},
+	{ "ne_shlimit",			V_TEXT(1, 50)			},
+	{ "http_username",		V_LENGTH(0, 32)			},
 	{ "http_root",			V_01				},
 
 // admin-bwm
 	{ "rstats_enable",		V_01				},
-	{ "rstats_path",		V_LENGTH(0, 48)		},
-	{ "rstats_stime",		V_RANGE(1, 168)		},
-	{ "rstats_offset",		V_RANGE(1, 31)		},
-	{ "rstats_exclude",		V_LENGTH(0, 64)		},
+	{ "rstats_path",		V_LENGTH(0, 48)			},
+	{ "rstats_stime",		V_RANGE(1, 168)			},
+	{ "rstats_offset",		V_RANGE(1, 31)			},
+	{ "rstats_exclude",		V_LENGTH(0, 64)			},
 	{ "rstats_sshut",		V_01				},
 	{ "rstats_bak",			V_01				},
 
@@ -1136,47 +1141,47 @@ static const nvset_t nvset_list[] = {
 	{ "cstats_bak",			V_01				},
 
 // admin-buttons
-	{ "sesx_led",			V_RANGE(0, 255)		},	// amber, white, aoss
-	{ "btn_led_mode",		V_01			},	// Asus RT-AC68 Turbo Mode
-	{ "stealth_mode",		V_01			},
-	{ "stealth_iled",		V_01			},
-	{ "sesx_b0",			V_RANGE(0, 5)		},	// 0-5: toggle wireless, reboot, shutdown, script, usb unmount
-	{ "sesx_b1",			V_RANGE(0, 5)		},	// "
-	{ "sesx_b2",			V_RANGE(0, 5)		},	// "
-	{ "sesx_b3",			V_RANGE(0, 5)		},	// "
-	{ "sesx_script",		V_TEXT(0, 1024)		},	//
-	{ "script_brau",		V_TEXT(0, 1024)		},	//
+	{ "sesx_led",			V_RANGE(0, 255)			},	// amber, white, aoss
+	{ "btn_led_mode",		V_01				},	// Asus RT-AC68 Turbo Mode
+	{ "stealth_mode",		V_01				},
+	{ "stealth_iled",		V_01				},
+	{ "sesx_b0",			V_RANGE(0, 5)			},	// 0-5: toggle wireless, reboot, shutdown, script, usb unmount
+	{ "sesx_b1",			V_RANGE(0, 5)			},	// "
+	{ "sesx_b2",			V_RANGE(0, 5)			},	// "
+	{ "sesx_b3",			V_RANGE(0, 5)			},	// "
+	{ "sesx_script",		V_TEXT(0, 1024)			},	//
+	{ "script_brau",		V_TEXT(0, 1024)			},	//
 
 // admin-debug
 	{ "debug_nocommit",		V_01				},
 	{ "debug_cprintf",		V_01				},
-	{ "debug_cprintf_file",	V_01				},
-//	{ "debug_keepfiles",	V_01				},
+	{ "debug_cprintf_file",		V_01				},
+//	{ "debug_keepfiles",		V_01				},
 	{ "debug_ddns",			V_01				},
-	{ "debug_norestart",	V_TEXT(0, 128)		},
-	{ "console_loglevel",	V_RANGE(1, 8)		},
+	{ "debug_norestart",		V_TEXT(0, 128)			},
+	{ "console_loglevel",		V_RANGE(1, 8)			},
 	{ "t_cafree",			V_01				},
 	{ "t_hidelr",			V_01				},
 
 // admin-sched
-	{ "sch_rboot", 			V_TEXT(0, 64)		},
-	{ "sch_rcon", 			V_TEXT(0, 64)		},
-	{ "sch_c1",			V_TEXT(0, 64)		},
-	{ "sch_c1_cmd",			V_TEXT(0, 2048)		},
-	{ "sch_c2",			V_TEXT(0, 64)		},
-	{ "sch_c2_cmd",			V_TEXT(0, 2048)		},
-	{ "sch_c3",			V_TEXT(0, 64)		},
-	{ "sch_c3_cmd",			V_TEXT(0, 2048)		},
-	{ "sch_c4",			V_TEXT(0, 64)		},
-	{ "sch_c4_cmd",			V_TEXT(0, 2048)		},
-	{ "sch_c5",			V_TEXT(0, 64)		},
-	{ "sch_c5_cmd",			V_TEXT(0, 2048)		},
+	{ "sch_rboot", 			V_TEXT(0, 64)			},
+	{ "sch_rcon", 			V_TEXT(0, 64)			},
+	{ "sch_c1",			V_TEXT(0, 64)			},
+	{ "sch_c1_cmd",			V_TEXT(0, 2048)			},
+	{ "sch_c2",			V_TEXT(0, 64)			},
+	{ "sch_c2_cmd",			V_TEXT(0, 2048)			},
+	{ "sch_c3",			V_TEXT(0, 64)			},
+	{ "sch_c3_cmd",			V_TEXT(0, 2048)			},
+	{ "sch_c4",			V_TEXT(0, 64)			},
+	{ "sch_c4_cmd",			V_TEXT(0, 2048)			},
+	{ "sch_c5",			V_TEXT(0, 64)			},
+	{ "sch_c5_cmd",			V_TEXT(0, 2048)			},
 
 // admin-scripts
-	{ "script_init", 		V_TEXT(0, 4096)		},
-	{ "script_shut", 		V_TEXT(0, 4096)		},
-	{ "script_fire", 		V_TEXT(0, 8192)		},
-	{ "script_wanup", 		V_TEXT(0, 4096)		},
+	{ "script_init", 		V_TEXT(0, 4096)			},
+	{ "script_shut", 		V_TEXT(0, 4096)			},
+	{ "script_fire", 		V_TEXT(0, 8192)			},
+	{ "script_wanup", 		V_TEXT(0, 4096)			},
 
 // admin-log
 	{ "log_remote",			V_01				},
@@ -1185,13 +1190,13 @@ static const nvset_t nvset_list[] = {
 	{ "log_file",			V_01				},
 	{ "log_file_custom",		V_01				},
 	{ "log_file_path",		V_TEXT(0, 4096)			},
-	{ "log_file_size",		V_RANGE(0, 99999)	},
-	{ "log_file_keep",		V_RANGE(0, 99)		},
-	{ "log_limit",			V_RANGE(0, 2400)	},
-	{ "log_in",				V_RANGE(0, 3)		},
-	{ "log_out",			V_RANGE(0, 3)		},
-	{ "log_mark",			V_RANGE(0, 99999)	},
-	{ "log_events",			V_TEXT(0, 32)		},	// "acre,crond,ntp"
+	{ "log_file_size",		V_RANGE(0, 99999)		},
+	{ "log_file_keep",		V_RANGE(0, 99)			},
+	{ "log_limit",			V_RANGE(0, 2400)		},
+	{ "log_in",			V_RANGE(0, 3)			},
+	{ "log_out",			V_RANGE(0, 3)			},
+	{ "log_mark",			V_RANGE(0, 99999)		},
+	{ "log_events",			V_TEXT(0, 32)			},	// "acre,crond,ntp"
 
 // admin-log-webmonitor
 	{ "log_wm",			V_01				},
@@ -1205,12 +1210,12 @@ static const nvset_t nvset_list[] = {
 
 
 // admin-cifs
-	{ "cifs1",				V_LENGTH(1, 1024)	},
-	{ "cifs2",				V_LENGTH(1, 1024)	},
+	{ "cifs1",			V_LENGTH(1, 1024)		},
+	{ "cifs2",			V_LENGTH(1, 1024)		},
 
 // admin-jffs2
 	{ "jffs2_on",			V_01				},
-	{ "jffs2_exec",			V_LENGTH(0, 64)		},
+	{ "jffs2_exec",			V_LENGTH(0, 64)			},
 	{ "jffs2_format",		V_01				},
 
 #ifdef TCONFIG_SDHC
@@ -1338,104 +1343,104 @@ static const nvset_t nvset_list[] = {
 	{ "qos_icmp",			V_01				},
 	{ "qos_udp",			V_01				},
 	{ "qos_reset",			V_01				},
-	{ "qos_pfifo",			V_NUM				}, // !!TB
-	{ "wan_qos_obw",		V_RANGE(10, 99999999)	},
-	{ "wan_qos_ibw",		V_RANGE(10, 99999999)	},
-	{ "wan2_qos_obw",		V_RANGE(10, 99999999)	},
-	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)	},
+	{ "qos_pfifo",			V_NUM				},	// !!TB
+	{ "wan_qos_obw",		V_RANGE(10, 99999999)		},
+	{ "wan_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan2_qos_obw",		V_RANGE(10, 99999999)		},
+	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)		},
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_qos_obw",		V_RANGE(10, 99999999)	},
-	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)	},
-	{ "wan4_qos_obw",		V_RANGE(10, 99999999)	},
-	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)	},
+	{ "wan3_qos_obw",		V_RANGE(10, 99999999)		},
+	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan4_qos_obw",		V_RANGE(10, 99999999)		},
+	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)		},
 #endif
-	{ "qos_orules",			V_LENGTH(0, 4096)	},
-	{ "qos_default",		V_RANGE(0, 9)		},
-	{ "qos_irates",			V_LENGTH(0, 128)	},
-	{ "qos_orates",			V_LENGTH(0, 128)	},
-	{ "qos_classnames",		V_LENGTH(10, 128)		}, // !!TOASTMAN
-	{ "atm_overhead",		V_RANGE(-127, 128)	},
+	{ "qos_orules",			V_LENGTH(0, 4096)		},
+	{ "qos_default",		V_RANGE(0, 9)			},
+	{ "qos_irates",			V_LENGTH(0, 128)		},
+	{ "qos_orates",			V_LENGTH(0, 128)		},
+	{ "qos_classnames",		V_LENGTH(10, 128)		},	// !!TOASTMAN
+	{ "atm_overhead",		V_RANGE(-127, 128)		},
 	{ "ne_vegas",			V_01				},
 	{ "ne_valpha",			V_NUM				},
 	{ "ne_vbeta",			V_NUM				},
 	{ "ne_vgamma",			V_NUM				},
 
 // new_qoslimit
-	{ "new_qoslimit_enable",         V_01                   },
-	{ "new_qoslimit_rules",          V_LENGTH(0, 4096)      },
-	{ "qosl_enable",                 V_01                   },
-	{ "qosl_ulr",                    V_RANGE(0, 99999999)   },
-	{ "qosl_ulc",                    V_RANGE(0, 99999999)   },
-	{ "qosl_dlr",                    V_RANGE(0, 99999999)   },
-	{ "qosl_dlc",                    V_RANGE(0, 99999999)   },
-	{ "qosl_tcp",                    V_RANGE(0, 1000)       },
-	{ "qosl_udp",                    V_RANGE(0, 100)        },
-	{ "limit_br0_prio",              V_RANGE(0, 5)          },
-	{ "limit_br1_enable",            V_01                   },
-	{ "limit_br1_ulr",               V_RANGE(0, 99999999)   },
-	{ "limit_br1_ulc",               V_RANGE(0, 99999999)   },
-	{ "limit_br1_dlr",               V_RANGE(0, 99999999)   },
-	{ "limit_br1_dlc",               V_RANGE(0, 99999999)   },
-	{ "limit_br1_prio",              V_RANGE(0, 5)          },
-	{ "limit_br2_enable",            V_01                   },
-	{ "limit_br2_ulr",               V_RANGE(0, 99999999)   },
-	{ "limit_br2_ulc",               V_RANGE(0, 99999999)   },
-	{ "limit_br2_dlr",               V_RANGE(0, 99999999)   },
-	{ "limit_br2_dlc",               V_RANGE(0, 99999999)   },
-	{ "limit_br2_prio",              V_RANGE(0, 5)          },
-	{ "limit_br3_enable",            V_01                   },
-	{ "limit_br3_ulr",               V_RANGE(0, 99999999)   },
-	{ "limit_br3_ulc",               V_RANGE(0, 99999999)   },
-	{ "limit_br3_dlr",               V_RANGE(0, 99999999)   },
-	{ "limit_br3_dlc",               V_RANGE(0, 99999999)   },
-	{ "limit_br3_prio",              V_RANGE(0, 5)          },
+	{ "new_qoslimit_enable",	V_01				},
+	{ "new_qoslimit_rules",		V_LENGTH(0, 4096)		},
+	{ "qosl_enable",		V_01				},
+	{ "qosl_ulr",			V_RANGE(0, 99999999)		},
+	{ "qosl_ulc",			V_RANGE(0, 99999999)		},
+	{ "qosl_dlr",			V_RANGE(0, 99999999)		},
+	{ "qosl_dlc",			V_RANGE(0, 99999999)		},
+	{ "qosl_tcp",			V_RANGE(0, 1000)		},
+	{ "qosl_udp",			V_RANGE(0, 100)			},
+	{ "limit_br0_prio",		V_RANGE(0, 5)			},
+	{ "limit_br1_enable",		V_01				},
+	{ "limit_br1_ulr",		V_RANGE(0, 99999999)		},
+	{ "limit_br1_ulc",		V_RANGE(0, 99999999)		},
+	{ "limit_br1_dlr",		V_RANGE(0, 99999999)		},
+	{ "limit_br1_dlc",		V_RANGE(0, 99999999)		},
+	{ "limit_br1_prio",		V_RANGE(0, 5)			},
+	{ "limit_br2_enable",		V_01				},
+	{ "limit_br2_ulr",		V_RANGE(0, 99999999)		},
+	{ "limit_br2_ulc",		V_RANGE(0, 99999999)		},
+	{ "limit_br2_dlr",		V_RANGE(0, 99999999)		},
+	{ "limit_br2_dlc",		V_RANGE(0, 99999999)		},
+	{ "limit_br2_prio",		V_RANGE(0, 5)			},
+	{ "limit_br3_enable",		V_01				},
+	{ "limit_br3_ulr",		V_RANGE(0, 99999999)		},
+	{ "limit_br3_ulc",		V_RANGE(0, 99999999)		},
+	{ "limit_br3_dlr",		V_RANGE(0, 99999999)		},
+	{ "limit_br3_dlc",		V_RANGE(0, 99999999)		},
+	{ "limit_br3_prio",		V_RANGE(0, 5)			},
 
 
 #ifdef TCONFIG_BT
 // nas-transmission
-	{ "bt_enable",                  V_01                            },
-	{ "bt_binary",                  V_LENGTH(0, 50)                 },
-	{ "bt_binary_custom",           V_LENGTH(0, 50)                 },
-	{ "bt_custom",                  V_TEXT(0, 2048)                 },
-	{ "bt_port",                    V_PORT                          },
-	{ "bt_dir",                     V_LENGTH(0, 50)                 },
-	{ "bt_settings",                V_LENGTH(0, 50)                 },
-	{ "bt_settings_custom",         V_LENGTH(0, 50)                 },
-	{ "bt_incomplete",              V_01                            },
-	{ "bt_autoadd",                 V_01                            },
-	{ "bt_rpc_enable",              V_01                            },
-	{ "bt_rpc_wan",                 V_01                            },
-	{ "bt_auth",                    V_01                            },
-	{ "bt_login",                   V_LENGTH(0, 50)                 },
-	{ "bt_password",                V_LENGTH(0, 50)                 },
-	{ "bt_port_gui",                V_PORT                          },
-	{ "bt_dl_enable",               V_01                            },
-	{ "bt_ul_enable",               V_01                            },
-	{ "bt_dl",                      V_RANGE(0, 999999)              },
-	{ "bt_ul",                      V_RANGE(0, 999999)              },
-	{ "bt_peer_limit_global",       V_RANGE(10, 1000)               },
-	{ "bt_peer_limit_per_torrent",  V_RANGE(1, 200)                 },
-	{ "bt_ul_slot_per_torrent",     V_RANGE(1, 50)                  },
-	{ "bt_ratio_enable",            V_01                            },
-	{ "bt_ratio",                   V_LENGTH(0, 999999)             },
-	{ "bt_ratio_idle_enable",       V_01                            },
-	{ "bt_ratio_idle",              V_RANGE(1, 55)                  },
-	{ "bt_dht",                     V_01                            },
-	{ "bt_pex",                     V_01                            },
-	{ "bt_lpd",                     V_01                            },
-	{ "bt_utp",                     V_01                            },
-	{ "bt_blocklist",               V_01                            },
-	{ "bt_blocklist_url",           V_LENGTH(0, 80)                 },
-	{ "bt_sleep",                   V_RANGE(1, 60)                  },
-	{ "bt_check",                   V_01                            },
-	{ "bt_check_time",              V_RANGE(1, 55)                  },
-	{ "bt_dl_queue_enable",         V_01                            },
-	{ "bt_dl_queue_size",           V_RANGE(1, 30)                  },
-	{ "bt_ul_queue_enable",         V_01                            },
-	{ "bt_ul_queue_size",           V_RANGE(1, 30)                  },
-	{ "bt_message",                 V_RANGE(0, 3)                   },
-	{ "bt_log",                     V_01                            },
-	{ "bt_log_path",                V_LENGTH(0, 50)                 },
+	{ "bt_enable",			V_01				},
+	{ "bt_binary",			V_LENGTH(0, 50)			},
+	{ "bt_binary_custom",		V_LENGTH(0, 50)			},
+	{ "bt_custom",			V_TEXT(0, 2048)			},
+	{ "bt_port",			V_PORT				},
+	{ "bt_dir",			V_LENGTH(0, 50)			},
+	{ "bt_settings",		V_LENGTH(0, 50)			},
+	{ "bt_settings_custom",		V_LENGTH(0, 50)			},
+	{ "bt_incomplete",		V_01				},
+	{ "bt_autoadd",			V_01				},
+	{ "bt_rpc_enable",		V_01				},
+	{ "bt_rpc_wan",			V_01				},
+	{ "bt_auth",			V_01				},
+	{ "bt_login",			V_LENGTH(0, 50)			},
+	{ "bt_password",		V_LENGTH(0, 50)			},
+	{ "bt_port_gui",		V_PORT				},
+	{ "bt_dl_enable",		V_01				},
+	{ "bt_ul_enable",		V_01				},
+	{ "bt_dl",			V_RANGE(0, 999999)		},
+	{ "bt_ul",			V_RANGE(0, 999999)		},
+	{ "bt_peer_limit_global",	V_RANGE(10, 1000)		},
+	{ "bt_peer_limit_per_torrent",	V_RANGE(1, 200)			},
+	{ "bt_ul_slot_per_torrent",	V_RANGE(1, 50)			},
+	{ "bt_ratio_enable",		V_01				},
+	{ "bt_ratio",			V_LENGTH(0, 999999)		},
+	{ "bt_ratio_idle_enable",	V_01				},
+	{ "bt_ratio_idle",		V_RANGE(1, 55)			},
+	{ "bt_dht",			V_01				},
+	{ "bt_pex",			V_01				},
+	{ "bt_lpd",			V_01				},
+	{ "bt_utp",			V_01				},
+	{ "bt_blocklist",		V_01				},
+	{ "bt_blocklist_url",		V_LENGTH(0, 80)			},
+	{ "bt_sleep",			V_RANGE(1, 60)			},
+	{ "bt_check",			V_01				},
+	{ "bt_check_time",		V_RANGE(1, 55)			},
+	{ "bt_dl_queue_enable",		V_01				},
+	{ "bt_dl_queue_size",		V_RANGE(1, 30)			},
+	{ "bt_ul_queue_enable",		V_01				},
+	{ "bt_ul_queue_size",		V_RANGE(1, 30)			},
+	{ "bt_message",			V_RANGE(0, 3)			},
+	{ "bt_log",			V_01				},
+	{ "bt_log_path",		V_LENGTH(0, 50)			},
 
 #endif
 
@@ -1468,316 +1473,316 @@ static const nvset_t nvset_list[] = {
 
 // NGinX Roadkill-Victek
 #ifdef TCONFIG_NGINX
-	{"nginx_enable",		V_01			}, // NGinX enabled
-	{"nginx_php",			V_01			}, // PHP enabled
-	{"nginx_keepconf",		V_01			}, // NGinX configuration files overwrite flag
-	{"nginx_docroot",		V_LENGTH(0, 255)	}, // root files path
-	{"nginx_port",			V_PORT			}, // listening port
-	{"nginx_fqdn",			V_LENGTH(0, 255)	}, // server name
-	{"nginx_upload",		V_LENGTH(1, 1000)	}, // upload file size limit
-	{"nginx_remote",		V_01			},
-	{"nginx_priority",		V_LENGTH(0, 255)	}, // server priority
-	{"nginx_custom",		V_TEXT(0, 4096)		}, // user window to add parameters to nginx.conf
-	{"nginx_httpcustom",		V_TEXT(0, 4096)		}, // user window to add parameters to nginx.conf
-	{"nginx_servercustom",		V_TEXT(0, 4096)		}, // user window to add parameters to nginx.conf
-	{"nginx_phpconf",		V_TEXT(0, 4096)		}, // user window to add parameters to php.ini
-	{"nginx_user",			V_LENGTH(0, 255)	}, // user used to start nginx and spawn-fcgi
-	{"nginx_override",		V_01			},
-	{"nginx_overridefile",		V_TEXT(0, 4096)		},
+	{"nginx_enable",		V_01				},	// NGinX enabled
+	{"nginx_php",			V_01				},	// PHP enabled
+	{"nginx_keepconf",		V_01				},	// NGinX configuration files overwrite flag
+	{"nginx_docroot",		V_LENGTH(0, 255)		},	// root files path
+	{"nginx_port",			V_PORT				},	// listening port
+	{"nginx_fqdn",			V_LENGTH(0, 255)		},	// server name
+	{"nginx_upload",		V_LENGTH(1, 1000)		},	// upload file size limit
+	{"nginx_remote",		V_01				},
+	{"nginx_priority",		V_LENGTH(0, 255)		},	// server priority
+	{"nginx_custom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
+	{"nginx_httpcustom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
+	{"nginx_servercustom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
+	{"nginx_phpconf",		V_TEXT(0, 4096)			},	// user window to add parameters to php.ini
+	{"nginx_user",			V_LENGTH(0, 255)		},	// user used to start nginx and spawn-fcgi
+	{"nginx_override",		V_01				},
+	{"nginx_overridefile",		V_TEXT(0, 4096)			},
 
 // bwq518 - MySQL
-        { "mysql_enable",                               V_01                    },
-        { "mysql_sleep",                                V_RANGE(1,60)           },
-        { "mysql_check",                                V_01                    },
-        { "mysql_check_time",                           V_RANGE(1,55)           },
-        { "mysql_binary",                               V_LENGTH(0, 50)         },
-        { "mysql_binary_custom",                        V_LENGTH(0, 50)         },
-        { "mysql_usb_enable",                           V_01                    },
-        { "mysql_dlroot",                               V_LENGTH(0,50)          },
-        { "mysql_datadir",                              V_LENGTH(0,64)          },
-        { "mysql_tmpdir",                               V_LENGTH(0,64)          },
-        { "mysql_server_custom",                        V_TEXT(0,1024)          },
-        { "mysql_port",                                 V_PORT                  },
-        { "mysql_allow_anyhost",                        V_01                    },
-        { "mysql_init_rootpass",                        V_01                    },
-        { "mysql_username",                             V_TEXT(0,50)            }, // mysqladmin username
-        { "mysql_passwd",                               V_TEXT(0,50)            }, // mysqladmin password
-        { "mysql_key_buffer",                           V_RANGE(0,1024)         }, // MB
-        { "mysql_max_allowed_packet",                   V_RANGE(0,1024)         }, // MB
-        { "mysql_thread_stack",                         V_RANGE(0,1024000)      }, // KB
-        { "mysql_thread_cache_size",                    V_RANGE(0,999999)       },
-        { "mysql_init_priv",                            V_01                    },
-        { "mysql_table_open_cache",                     V_RANGE(1,999999)       },
-        { "mysql_sort_buffer_size",                     V_RANGE(0,1024000)      }, //KB
-        { "mysql_read_buffer_size",                     V_RANGE(0,1024000)      }, //KB
-        { "mysql_query_cache_size",                     V_RANGE(0,1024)         }, //MB
-        { "mysql_read_rnd_buffer_size",                 V_RANGE(0,1024000)      }, //KB
-        { "mysql_net_buffer_length",                    V_RANGE(0,1024)         }, //K
-        { "mysql_max_connections",                      V_RANGE(0,999999)       },
+	{ "mysql_enable",		V_01				},
+	{ "mysql_sleep",		V_RANGE(1,60)			},
+	{ "mysql_check",		V_01				},
+	{ "mysql_check_time",		V_RANGE(1,55)			},
+	{ "mysql_binary",		V_LENGTH(0, 50)			},
+	{ "mysql_binary_custom",	V_LENGTH(0, 50)			},
+	{ "mysql_usb_enable",		V_01				},
+	{ "mysql_dlroot",		V_LENGTH(0,50)			},
+	{ "mysql_datadir",		V_LENGTH(0,64)			},
+	{ "mysql_tmpdir",		V_LENGTH(0,64)			},
+	{ "mysql_server_custom",	V_TEXT(0,1024)			},
+	{ "mysql_port",			V_PORT				},
+	{ "mysql_allow_anyhost",	V_01				},
+	{ "mysql_init_rootpass",	V_01				},
+	{ "mysql_username",		V_TEXT(0,50)			},	// mysqladmin username
+	{ "mysql_passwd",		V_TEXT(0,50)			},	// mysqladmin password
+	{ "mysql_key_buffer",		V_RANGE(0,1024)			},	// MB
+	{ "mysql_max_allowed_packet", 	V_RANGE(0,1024)			},	// MB
+	{ "mysql_thread_stack",		V_RANGE(0,1024000)		},	// KB
+	{ "mysql_thread_cache_size",	V_RANGE(0,999999)		},
+	{ "mysql_init_priv",		V_01				},
+	{ "mysql_table_open_cache",	V_RANGE(1,999999)		},
+	{ "mysql_sort_buffer_size",	V_RANGE(0,1024000)		},	//KB
+	{ "mysql_read_buffer_size",	V_RANGE(0,1024000)		},	//KB
+	{ "mysql_query_cache_size",	V_RANGE(0,1024)			},	//MB
+	{ "mysql_read_rnd_buffer_size",	V_RANGE(0,1024000)		},	//KB
+	{ "mysql_net_buffer_length",	V_RANGE(0,1024)			},	//K
+	{ "mysql_max_connections",	V_RANGE(0,999999) 		},
 #endif
 
 #ifdef TCONFIG_OPENVPN
 // vpn
-	{ "vpn_debug",            V_01                },
-	{ "vpn_server_eas",       V_NONE              },
-	{ "vpn_server_dns",       V_NONE              },
-	{ "vpn_server1_poll",     V_RANGE(0, 1440)    },
-	{ "vpn_server1_if",       V_TEXT(3, 3)        },  // tap, tun
-	{ "vpn_server1_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
-	{ "vpn_server1_port",     V_PORT              },
-	{ "vpn_server1_firewall", V_TEXT(0, 8)        },  // auto, external, custom
-	{ "vpn_server1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
-	{ "vpn_server1_cipher",   V_TEXT(0, 16)       },
-	{ "vpn_server1_ncp_enable", V_RANGE(0,3)      },
-	{ "vpn_server1_ncp_ciphers",V_TEXT(0, 47)     },
-	{ "vpn_server1_digest",     V_TEXT(0, 15)     },
-	{ "vpn_server1_dhcp",     V_01                },
-	{ "vpn_server1_r1",       V_IP                },
-	{ "vpn_server1_r2",       V_IP                },
-	{ "vpn_server1_sn",       V_IP                },
-	{ "vpn_server1_nm",       V_IP                },
-	{ "vpn_server1_local",    V_IP                },
-	{ "vpn_server1_remote",   V_IP                },
-	{ "vpn_server1_reneg",    V_RANGE(-1,2147483647)},
-	{ "vpn_server1_hmac",     V_RANGE(-1, 2)      },
-	{ "vpn_server1_plan",     V_01                },
-	{ "vpn_server1_ccd",      V_01                },
-	{ "vpn_server1_c2c",      V_01                },
-	{ "vpn_server1_ccd_excl", V_01                },
-	{ "vpn_server1_ccd_val",  V_NONE              },
-	{ "vpn_server1_pdns",     V_01                },
-	{ "vpn_server1_rgw",      V_01                },
-	{ "vpn_server1_userpass", V_01                },
-	{ "vpn_server1_nocert",   V_01                },
-	{ "vpn_server1_users_val",V_NONE              },
-	{ "vpn_server1_custom",   V_NONE              },
-	{ "vpn_server1_static",   V_NONE              },
-	{ "vpn_server1_ca",       V_NONE              },
-	{ "vpn_server1_crt",      V_NONE              },
-	{ "vpn_server1_key",      V_NONE              },
-	{ "vpn_server1_dh",       V_NONE              },
-	{ "vpn_server1_br",       V_LENGTH(0, 50)     },
-	{ "vpn_server1_route",    V_01                },
-	{ "vpn_server1_routing_val", V_NONE           },
-	{ "vpn_server2_poll",     V_RANGE(0, 1440)    },
-	{ "vpn_server2_if",       V_TEXT(3, 3)        },  // tap, tun
-	{ "vpn_server2_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
-	{ "vpn_server2_port",     V_PORT              },
-	{ "vpn_server2_firewall", V_TEXT(0, 8)        },  // auto, external, custom
-	{ "vpn_server2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_server2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
-	{ "vpn_server2_cipher",   V_TEXT(0, 16)       },
-	{ "vpn_server2_ncp_enable", V_RANGE(0,3)      },
-	{ "vpn_server2_ncp_ciphers",V_TEXT(0, 47)     },
-	{ "vpn_server2_digest",     V_TEXT(0, 15)     },
-	{ "vpn_server2_dhcp",     V_01                },
-	{ "vpn_server2_r1",       V_IP                },
-	{ "vpn_server2_r2",       V_IP                },
-	{ "vpn_server2_sn",       V_IP                },
-	{ "vpn_server2_nm",       V_IP                },
-	{ "vpn_server2_local",    V_IP                },
-	{ "vpn_server2_remote",   V_IP                },
-	{ "vpn_server2_reneg",    V_RANGE(-1,2147483647)},
-	{ "vpn_server2_hmac",     V_RANGE(-1, 2)      },
-	{ "vpn_server2_plan",     V_01                },
-	{ "vpn_server2_pdns",     V_01                },
-	{ "vpn_server2_rgw",      V_01                },
-	{ "vpn_server2_userpass", V_01                },
-	{ "vpn_server2_nocert",   V_01                },
-	{ "vpn_server2_users_val",V_NONE              },
-	{ "vpn_server2_custom",   V_NONE              },
-	{ "vpn_server2_ccd",      V_01                },
-	{ "vpn_server2_c2c",      V_01                },
-	{ "vpn_server2_ccd_excl", V_01                },
-	{ "vpn_server2_ccd_val",  V_NONE              },
-	{ "vpn_server2_static",   V_NONE              },
-	{ "vpn_server2_ca",       V_NONE              },
-	{ "vpn_server2_crt",      V_NONE              },
-	{ "vpn_server2_key",      V_NONE              },
-	{ "vpn_server2_dh",       V_NONE              },
-	{ "vpn_server2_br",       V_LENGTH(0, 50)     },
-	{ "vpn_server2_route",    V_01                },
-	{ "vpn_server2_routing_val", V_NONE           },
-	{ "vpn_client_eas",       V_NONE              },
-	{ "vpn_client1_poll",     V_RANGE(0, 1440)    },
-	{ "vpn_client1_if",       V_TEXT(3, 3)        },  // tap, tun
-	{ "vpn_client1_bridge",   V_01                },
-	{ "vpn_client1_nat",      V_01                },
-	{ "vpn_client1_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
-	{ "vpn_client1_addr",     V_NONE              },
-	{ "vpn_client1_port",     V_PORT              },
-	{ "vpn_client1_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client1_firewall", V_TEXT(0, 6)        },  // auto, custom
-	{ "vpn_client1_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client1_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
-	{ "vpn_client1_cipher",   V_TEXT(0, 16)       },
-	{ "vpn_client1_ncp_enable", V_RANGE(0,3)      },
-	{ "vpn_client1_ncp_ciphers",V_TEXT(0, 47)     },
-	{ "vpn_client1_digest",     V_TEXT(0, 15)     },
-	{ "vpn_client1_local",    V_IP                },
-	{ "vpn_client1_remote",   V_IP                },
-	{ "vpn_client1_nm",       V_IP                },
-	{ "vpn_client1_reneg",    V_RANGE(-1,2147483647)},
-	{ "vpn_client1_hmac",     V_RANGE(-1, 2)      },
-	{ "vpn_client1_adns",     V_RANGE(0, 3)       },
-	{ "vpn_client1_rgw",      V_01                },
-	{ "vpn_client1_gw",       V_TEXT(0, 15)       },
-	{ "vpn_client1_custom",   V_NONE              },
-	{ "vpn_client1_static",   V_NONE              },
-	{ "vpn_client1_ca",       V_NONE              },
-	{ "vpn_client1_crt",      V_NONE              },
-	{ "vpn_client1_key",      V_NONE              },
-	{ "vpn_client1_userauth", V_01                },
-	{ "vpn_client1_username", V_TEXT(0,50)        },
-	{ "vpn_client1_password", V_TEXT(0,50)        },
-	{ "vpn_client1_useronly", V_01                },
-	{ "vpn_client1_tlsremote",V_01                },
-	{ "vpn_client1_cn",       V_NONE              },
-	{ "vpn_client1_br",       V_LENGTH(0, 50)     },
-	{ "vpn_client1_nopull",   V_01                },
-	{ "vpn_client1_noexec",   V_01                },
-	{ "vpn_client1_route",    V_01                },
-	{ "vpn_client1_routing_val", V_NONE           },
-	{ "vpn_client2_poll",     V_RANGE(0, 1440)    },
-	{ "vpn_client2_if",       V_TEXT(3, 3)        },  // tap, tun
-	{ "vpn_client2_bridge",   V_01                },
-	{ "vpn_client2_nat",      V_01                },
-	{ "vpn_client2_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
-	{ "vpn_client2_addr",     V_NONE              },
-	{ "vpn_client2_port",     V_PORT              },
-	{ "vpn_client2_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client2_firewall", V_TEXT(0, 6)        },  // auto, custom
-	{ "vpn_client2_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client2_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
-	{ "vpn_client2_cipher",   V_TEXT(0, 16)       },
-	{ "vpn_client2_ncp_enable", V_RANGE(0,3)      },
-	{ "vpn_client2_ncp_ciphers",V_TEXT(0, 47)     },
-	{ "vpn_client2_digest",     V_TEXT(0, 15)     },
-	{ "vpn_client2_local",    V_IP                },
-	{ "vpn_client2_remote",   V_IP                },
-	{ "vpn_client2_nm",       V_IP                },
-	{ "vpn_client2_reneg",    V_RANGE(-1,2147483647)},
-	{ "vpn_client2_hmac",     V_RANGE(-1, 2)      },
-	{ "vpn_client2_adns",     V_RANGE(0, 3)       },
-	{ "vpn_client2_rgw",      V_01                },
-	{ "vpn_client2_gw",       V_TEXT(0, 15)       },
-	{ "vpn_client2_custom",   V_NONE              },
-	{ "vpn_client2_static",   V_NONE              },
-	{ "vpn_client2_ca",       V_NONE              },
-	{ "vpn_client2_crt",      V_NONE              },
-	{ "vpn_client2_key",      V_NONE              },
-	{ "vpn_client2_userauth", V_01                },
-	{ "vpn_client2_username", V_TEXT(0,50)        },
-	{ "vpn_client2_password", V_TEXT(0,50)        },
-	{ "vpn_client2_useronly", V_01                },
-	{ "vpn_client2_tlsremote",V_01                },
-	{ "vpn_client2_cn",       V_NONE              },
-	{ "vpn_client2_br",       V_LENGTH(0, 50)     },
-	{ "vpn_client2_nopull",   V_01                },
-	{ "vpn_client2_noexec",   V_01                },
-	{ "vpn_client2_route",    V_01                },
-	{ "vpn_client2_routing_val", V_NONE           },
-	{ "vpn_client3_poll",     V_RANGE(0, 1440)    },
-	{ "vpn_client3_if",       V_TEXT(3, 3)        },  // tap, tun
-	{ "vpn_client3_bridge",   V_01                },
-	{ "vpn_client3_nat",      V_01                },
-	{ "vpn_client3_proto",    V_TEXT(3, 10)       },  // udp, tcp-server
-	{ "vpn_client3_addr",     V_NONE              },
-	{ "vpn_client3_port",     V_PORT              },
-	{ "vpn_client3_retry",    V_RANGE(-1,32767)   },  // -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client3_firewall", V_TEXT(0, 6)        },  // auto, custom
-	{ "vpn_client3_crypt",    V_TEXT(0, 6)        },  // tls, secret, custom
-	{ "vpn_client3_comp",     V_TEXT(0, 8)        },  // yes, no, adaptive, lz4
-	{ "vpn_client3_cipher",   V_TEXT(0, 16)       },
-	{ "vpn_client3_ncp_enable", V_RANGE(0,3)      },
-	{ "vpn_client3_ncp_ciphers",V_TEXT(0, 47)     },
-	{ "vpn_client3_digest",     V_TEXT(0, 15)     },
-	{ "vpn_client3_local",    V_IP                },
-	{ "vpn_client3_remote",   V_IP                },
-	{ "vpn_client3_nm",       V_IP                },
-	{ "vpn_client3_reneg",    V_RANGE(-1,2147483647)},
-	{ "vpn_client3_hmac",     V_RANGE(-1, 2)      },
-	{ "vpn_client3_adns",     V_RANGE(0, 3)       },
-	{ "vpn_client3_rgw",      V_01                },
-	{ "vpn_client3_gw",       V_TEXT(0, 15)       },
-	{ "vpn_client3_custom",   V_NONE              },
-	{ "vpn_client3_static",   V_NONE              },
-	{ "vpn_client3_ca",       V_NONE              },
-	{ "vpn_client3_crt",      V_NONE              },
-	{ "vpn_client3_key",      V_NONE              },
-	{ "vpn_client3_userauth", V_01                },
-	{ "vpn_client3_username", V_TEXT(0,50)        },
-	{ "vpn_client3_password", V_TEXT(0,50)        },
-	{ "vpn_client3_useronly", V_01                },
-	{ "vpn_client3_tlsremote",V_01                },
-	{ "vpn_client3_cn",       V_NONE              },
-	{ "vpn_client3_br",       V_LENGTH(0, 50)     },
-	{ "vpn_client3_nopull",   V_01                },
-	{ "vpn_client3_noexec",   V_01                },
-	{ "vpn_client3_route",    V_01                },
-	{ "vpn_client3_routing_val", V_NONE           },
+	{ "vpn_debug",			V_01				},
+	{ "vpn_server_eas",		V_NONE				},
+	{ "vpn_server_dns",		V_NONE				},
+	{ "vpn_server1_poll",		V_RANGE(0, 1440)		},
+	{ "vpn_server1_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_server1_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_server1_port",		V_PORT				},
+	{ "vpn_server1_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
+	{ "vpn_server1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_server1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_server1_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_server1_ncp_enable",	V_RANGE(0,3)			},
+	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server1_digest",		V_TEXT(0, 15)			},
+	{ "vpn_server1_dhcp",		V_01				},
+	{ "vpn_server1_r1",		V_IP				},
+	{ "vpn_server1_r2",		V_IP				},
+	{ "vpn_server1_sn",		V_IP				},
+	{ "vpn_server1_nm",		V_IP				},
+	{ "vpn_server1_local",		V_IP				},
+	{ "vpn_server1_remote",		V_IP				},
+	{ "vpn_server1_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_server1_hmac",		V_RANGE(-1, 2)			},
+	{ "vpn_server1_plan",		V_01				},
+	{ "vpn_server1_ccd",		V_01				},
+	{ "vpn_server1_c2c",		V_01				},
+	{ "vpn_server1_ccd_excl",	V_01				},
+	{ "vpn_server1_ccd_val",	V_NONE				},
+	{ "vpn_server1_pdns",		V_01				},
+	{ "vpn_server1_rgw",		V_01				},
+	{ "vpn_server1_userpass",	V_01				},
+	{ "vpn_server1_nocert",		V_01				},
+	{ "vpn_server1_users_val",	V_NONE				},
+	{ "vpn_server1_custom",		V_NONE				},
+	{ "vpn_server1_static",		V_NONE				},
+	{ "vpn_server1_ca",		V_NONE				},
+	{ "vpn_server1_crt",		V_NONE				},
+	{ "vpn_server1_key",		V_NONE				},
+	{ "vpn_server1_dh",		V_NONE				},
+	{ "vpn_server1_br",		V_LENGTH(0, 50)			},
+	{ "vpn_server1_route",		V_01				},
+	{ "vpn_server1_routing_val",	V_NONE				},
+	{ "vpn_server2_poll",		V_RANGE(0, 1440)		},
+	{ "vpn_server2_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_server2_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_server2_port",		V_PORT				},
+	{ "vpn_server2_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
+	{ "vpn_server2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_server2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_server2_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_server2_ncp_enable",	V_RANGE(0,3)			},
+	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server2_digest",		V_TEXT(0, 15)			},
+	{ "vpn_server2_dhcp",		V_01				},
+	{ "vpn_server2_r1",		V_IP				},
+	{ "vpn_server2_r2",		V_IP				},
+	{ "vpn_server2_sn",		V_IP				},
+	{ "vpn_server2_nm",		V_IP				},
+	{ "vpn_server2_local",		V_IP				},
+	{ "vpn_server2_remote",		V_IP				},
+	{ "vpn_server2_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_server2_hmac",		V_RANGE(-1, 2)			},
+	{ "vpn_server2_plan",		V_01				},
+	{ "vpn_server2_pdns",		V_01				},
+	{ "vpn_server2_rgw",		V_01				},
+	{ "vpn_server2_userpass",	V_01				},
+	{ "vpn_server2_nocert",		V_01				},
+	{ "vpn_server2_users_val",	V_NONE				},
+	{ "vpn_server2_custom",		V_NONE				},
+	{ "vpn_server2_ccd",		V_01				},
+	{ "vpn_server2_c2c",		V_01				},
+	{ "vpn_server2_ccd_excl",	V_01				},
+	{ "vpn_server2_ccd_val",	V_NONE				},
+	{ "vpn_server2_static",		V_NONE				},
+	{ "vpn_server2_ca",		V_NONE				},
+	{ "vpn_server2_crt",		V_NONE				},
+	{ "vpn_server2_key",		V_NONE				},
+	{ "vpn_server2_dh",		V_NONE				},
+	{ "vpn_server2_br",		V_LENGTH(0, 50)			},
+	{ "vpn_server2_route",		V_01				},
+	{ "vpn_server2_routing_val",	V_NONE				},
+	{ "vpn_client_eas",		V_NONE				},
+	{ "vpn_client1_poll",		V_RANGE(0, 1440)		},
+	{ "vpn_client1_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client1_bridge",		V_01				},
+	{ "vpn_client1_nat",		V_01				},
+	{ "vpn_client1_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client1_addr",		V_NONE				},
+	{ "vpn_client1_port",		V_PORT				},
+	{ "vpn_client1_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
+	{ "vpn_client1_firewall",	V_TEXT(0, 6)			},	// auto, custom
+	{ "vpn_client1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_client1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client1_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_client1_ncp_enable",	V_RANGE(0,3)			},
+	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client1_digest",		V_TEXT(0, 15)			},
+	{ "vpn_client1_local",		V_IP				},
+	{ "vpn_client1_remote",		V_IP				},
+	{ "vpn_client1_nm",		V_IP				},
+	{ "vpn_client1_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client1_hmac",		V_RANGE(-1, 2)			},
+	{ "vpn_client1_adns",		V_RANGE(0, 3)			},
+	{ "vpn_client1_rgw",		V_01				},
+	{ "vpn_client1_gw",		V_TEXT(0, 15)			},
+	{ "vpn_client1_custom",		V_NONE				},
+	{ "vpn_client1_static",		V_NONE				},
+	{ "vpn_client1_ca",		V_NONE				},
+	{ "vpn_client1_crt",		V_NONE				},
+	{ "vpn_client1_key",		V_NONE				},
+	{ "vpn_client1_userauth",	V_01				},
+	{ "vpn_client1_username",	V_TEXT(0,50)			},
+	{ "vpn_client1_password",	V_TEXT(0,50)			},
+	{ "vpn_client1_useronly",	V_01				},
+	{ "vpn_client1_tlsremote",	V_01				},
+	{ "vpn_client1_cn",		V_NONE				},
+	{ "vpn_client1_br",		V_LENGTH(0, 50)			},
+	{ "vpn_client1_nopull",		V_01				},
+	{ "vpn_client1_noexec",		V_01				},
+	{ "vpn_client1_route",		V_01				},
+	{ "vpn_client1_routing_val",	V_NONE				},
+	{ "vpn_client2_poll",		V_RANGE(0, 1440)		},
+	{ "vpn_client2_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client2_bridge",		V_01				},
+	{ "vpn_client2_nat",		V_01				},
+	{ "vpn_client2_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client2_addr",		V_NONE				},
+	{ "vpn_client2_port",		V_PORT				},
+	{ "vpn_client2_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
+	{ "vpn_client2_firewall",	V_TEXT(0, 6)			},	// auto, custom
+	{ "vpn_client2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_client2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client2_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_client2_ncp_enable",	V_RANGE(0,3)			},
+	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client2_digest",		V_TEXT(0, 15)			},
+	{ "vpn_client2_local",		V_IP				},
+	{ "vpn_client2_remote",		V_IP				},
+	{ "vpn_client2_nm",		V_IP				},
+	{ "vpn_client2_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client2_hmac",		V_RANGE(-1, 2)			},
+	{ "vpn_client2_adns",		V_RANGE(0, 3)			},
+	{ "vpn_client2_rgw",		V_01				},
+	{ "vpn_client2_gw",		V_TEXT(0, 15)			},
+	{ "vpn_client2_custom",		V_NONE				},
+	{ "vpn_client2_static",		V_NONE				},
+	{ "vpn_client2_ca",		V_NONE				},
+	{ "vpn_client2_crt",		V_NONE				},
+	{ "vpn_client2_key",		V_NONE				},
+	{ "vpn_client2_userauth",	V_01				},
+	{ "vpn_client2_username",	V_TEXT(0,50)			},
+	{ "vpn_client2_password",	V_TEXT(0,50)			},
+	{ "vpn_client2_useronly",	V_01				},
+	{ "vpn_client2_tlsremote",	V_01				},
+	{ "vpn_client2_cn",		V_NONE				},
+	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
+	{ "vpn_client2_nopull",		V_01				},
+	{ "vpn_client2_noexec",		V_01				},
+	{ "vpn_client2_route",		V_01				},
+	{ "vpn_client2_routing_val",	V_NONE				},
+	{ "vpn_client3_poll",		V_RANGE(0, 1440)		},
+	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client3_bridge",		V_01				},
+	{ "vpn_client3_nat",		V_01				},
+	{ "vpn_client3_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client3_addr",		V_NONE				},
+	{ "vpn_client3_port",		V_PORT				},
+	{ "vpn_client3_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
+	{ "vpn_client3_firewall",	V_TEXT(0, 6)			},	// auto, custom
+	{ "vpn_client3_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client3_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_client3_ncp_enable",	V_RANGE(0,3)			},
+	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client3_digest",		V_TEXT(0, 15)			},
+	{ "vpn_client3_local",		V_IP				},
+	{ "vpn_client3_remote",		V_IP				},
+	{ "vpn_client3_nm",		V_IP				},
+	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client3_hmac",		V_RANGE(-1, 2)			},
+	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
+	{ "vpn_client3_rgw",		V_01				},
+	{ "vpn_client3_gw",		V_TEXT(0, 15)			},
+	{ "vpn_client3_custom",		V_NONE				},
+	{ "vpn_client3_static",		V_NONE				},
+	{ "vpn_client3_ca",		V_NONE				},
+	{ "vpn_client3_crt",		V_NONE				},
+	{ "vpn_client3_key",		V_NONE				},
+	{ "vpn_client3_userauth",	V_01				},
+	{ "vpn_client3_username",	V_TEXT(0,50)			},
+	{ "vpn_client3_password",	V_TEXT(0,50)			},
+	{ "vpn_client3_useronly",	V_01				},
+	{ "vpn_client3_tlsremote",	V_01				},
+	{ "vpn_client3_cn",		V_NONE				},
+	{ "vpn_client3_br",		V_LENGTH(0, 50)			},
+	{ "vpn_client3_nopull",		V_01				},
+	{ "vpn_client3_noexec",		V_01				},
+	{ "vpn_client3_route",		V_01				},
+	{ "vpn_client3_routing_val",	V_NONE				},
 #endif
 
 #ifdef TCONFIG_PPTPD
 // pptp server
-	{ "pptpd_enable",		V_01			},
-	{ "pptpd_remoteip",		V_TEXT(0,24)		},
-	{ "pptpd_forcemppe",		V_01			},
-	{ "pptpd_users",		V_TEXT(0, 67*16)	},
-	{ "pptpd_broadcast",		V_TEXT(0,8)		},
-	{ "pptpd_dns1",			V_TEXT(0, 15)		},
-	{ "pptpd_dns2",			V_TEXT(0, 15)		},
-	{ "pptpd_wins1",		V_TEXT(0, 15)		},
-	{ "pptpd_wins2",		V_TEXT(0, 15)		},
-	{ "pptpd_mtu",			V_RANGE(576, 1500)	},
-	{ "pptpd_mru",			V_RANGE(576, 1500)	},
-	{ "pptpd_custom",		V_TEXT(0, 2048)		},
+	{ "pptpd_enable",		V_01				},
+	{ "pptpd_remoteip",		V_TEXT(0,24)			},
+	{ "pptpd_forcemppe",		V_01				},
+	{ "pptpd_users",		V_TEXT(0, 67*16)		},
+	{ "pptpd_broadcast",		V_TEXT(0,8)			},
+	{ "pptpd_dns1",			V_TEXT(0, 15)			},
+	{ "pptpd_dns2",			V_TEXT(0, 15)			},
+	{ "pptpd_wins1",		V_TEXT(0, 15)			},
+	{ "pptpd_wins2",		V_TEXT(0, 15)			},
+	{ "pptpd_mtu",			V_RANGE(576, 1500)		},
+	{ "pptpd_mru",			V_RANGE(576, 1500)		},
+	{ "pptpd_custom",		V_TEXT(0, 2048)			},
 #endif
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			V_RANGE(0, 1)		},
-	{"tinc_name",			V_LENGTH(0, 30)		},
-	{"tinc_devicetype",		V_TEXT(3, 3)		}, // tun, tap
-	{"tinc_mode",			V_TEXT(3, 6)		}, // switch, hub
-	{"tinc_vpn_netmask",		V_IP			},
-	{"tinc_private_rsa",		V_NONE			},
-	{"tinc_private_ed25519",	V_NONE			},
-	{"tinc_custom",			V_NONE			},
-	{"tinc_hosts",			V_NONE			},
-	{"tinc_manual_firewall",	V_RANGE(0, 2)		},
-	{"tinc_manual_tinc_up",		V_RANGE(0, 1)		},
-	{"tinc_poll",			V_RANGE(0, 1440)	},
+	{"tinc_wanup",			V_RANGE(0, 1)			},
+	{"tinc_name",			V_LENGTH(0, 30)			},
+	{"tinc_devicetype",		V_TEXT(3, 3)			},	// tun, tap
+	{"tinc_mode",			V_TEXT(3, 6)			},	// switch, hub
+	{"tinc_vpn_netmask",		V_IP				},
+	{"tinc_private_rsa",		V_NONE				},
+	{"tinc_private_ed25519",	V_NONE				},
+	{"tinc_custom",			V_NONE				},
+	{"tinc_hosts",			V_NONE				},
+	{"tinc_manual_firewall",	V_RANGE(0, 2)			},
+	{"tinc_manual_tinc_up",		V_RANGE(0, 1)			},
+	{"tinc_poll",			V_RANGE(0, 1440)		},
 	// scripts
-	{"tinc_tinc_up",		V_NONE			},
-	{"tinc_tinc_down",		V_NONE			},
-	{"tinc_host_up",		V_NONE			},
-	{"tinc_host_down",		V_NONE			},
-	{"tinc_subnet_up",		V_NONE			},
-	{"tinc_subnet_down",		V_NONE			},
-	{"tinc_firewall",		V_NONE			},
+	{"tinc_tinc_up",		V_NONE				},
+	{"tinc_tinc_down",		V_NONE				},
+	{"tinc_host_up",		V_NONE				},
+	{"tinc_host_down",		V_NONE				},
+	{"tinc_subnet_up",		V_NONE				},
+	{"tinc_subnet_down",		V_NONE				},
+	{"tinc_firewall",		V_NONE				},
 #endif
 
 #ifdef TCONFIG_TOR
-	{ "tor_enable",			V_01			},
-	{ "tor_socksport",		V_RANGE(1,65535)	},
-	{ "tor_transport",		V_RANGE(1,65535)	},
-	{ "tor_dnsport",		V_RANGE(1,65535)	},
-	{ "tor_datadir",		V_TEXT(0,24)		},
-	{ "tor_iface",			V_LENGTH(0, 50)		},
-	{ "tor_users",			V_LENGTH(0, 4096)	},
-	{ "tor_ports",			V_LENGTH(0, 50)		},
-	{ "tor_ports_custom",		V_LENGTH(0, 4096)	},
-	{ "tor_custom",			V_TEXT(0, 2048)		},
+	{ "tor_enable",			V_01				},
+	{ "tor_socksport",		V_RANGE(1,65535)		},
+	{ "tor_transport",		V_RANGE(1,65535)		},
+	{ "tor_dnsport",		V_RANGE(1,65535)		},
+	{ "tor_datadir",		V_TEXT(0,24)			},
+	{ "tor_iface",			V_LENGTH(0, 50)			},
+	{ "tor_users",			V_LENGTH(0, 4096)		},
+	{ "tor_ports",			V_LENGTH(0, 50)			},
+	{ "tor_ports_custom",		V_LENGTH(0, 4096)		},
+	{ "tor_custom",			V_TEXT(0, 2048)			},
 #endif
 
 /*
-ppp_static			0/1
+ppp_static		0/1
 ppp_static_ip		IP
-wl_enable			0/1
+wl_enable		0/1
 wl_wds_timeout
-wl_maxassoc			1-256
-wl_phytype			a,b,g
+wl_maxassoc		1-256
+wl_phytype		a,b,g
 wl_net_reauth
 wl_preauth
 wl_wme_ap_bk
@@ -1806,6 +1811,7 @@ wl_ap_ssid
 */
 #ifdef TCONFIG_PPTPD
 	{ "pptp_client_enable",   V_01                  },
+	{ "pptp_client_usewan",   V_TEXT(0,5)           },
 	{ "pptp_client_peerdns",  V_RANGE(0,2)          },
 	{ "pptp_client_mtuenable",V_01                  },
 	{ "pptp_client_mtu",      V_RANGE(576, 1500)	},
@@ -1998,22 +2004,21 @@ static int save_variables(int write)
 				dirty = 1;
 				nvram_set("http_passwd", p1);
 			}
-  		}
-  		else {
+		} else {
 			sprintf(s, msgf, "password");
 			resmsg_set(s);
 			return 0;
-  		}
+		}
 	}
 
 	for (n = 0; n < 50; ++n) {
 		sprintf(s, "rrule%d", n);
 		if ((p = webcgi_get(s)) != NULL) {
-	        	if (strlen(p) > 2048) {
+			if (strlen(p) > 2048) {
 				sprintf(s, msgf, s);
 				resmsg_set(s);
 				return 0;
-	        	}
+			}
 			if ((write) && (!nvram_match(s, p))) {
 				dirty = 1;
 				DEBUG_NVRAMSET(s, p);
@@ -2049,8 +2054,7 @@ static void wo_tomato(char *url)
 		if (!save_variables(0)) {
 			if (ajax) {
 				web_printf("@msg:%s", resmsg_get());
-			}
-			else {
+			} else {
 				parse_asp("error.asp");
 			}
 			return;
@@ -2063,15 +2067,12 @@ static void wo_tomato(char *url)
 	rboot = atoi(webcgi_safeget("_reboot", "0"));
 	if (rboot) {
 		parse_asp("reboot.asp");
-	}
-	else {
+	} else {
 		if (ajax) {
 			web_printf("@msg:%s", resmsg_get());
-		}
-		else if (atoi(webcgi_safeget("_moveip", "0"))) {
+		} else if (atoi(webcgi_safeget("_moveip", "0"))) {
 			parse_asp("saved-moved.asp");
-		}
-		else if (!*red) {
+		} else if (!*red) {
 			parse_asp("saved.asp");
 		}
 	}
@@ -2083,15 +2084,14 @@ static void wo_tomato(char *url)
 
 	if ((v = webcgi_get("_service")) != NULL && *v != 0) {
 		if (!*red) {
-			if (ajax) web_printf(" Some services are being restarted...");
+			if (ajax) web_printf("Some services are being restarted...");
 			web_close();
 		}
 		sleep(1);
 
 		if (*v == '*') {
 			kill(1, SIGHUP);
-		}
-		else {
+		} else {
 			exec_service(v);
 		}
 	}

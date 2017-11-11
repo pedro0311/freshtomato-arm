@@ -383,7 +383,11 @@ static void shutdn(int rb)
 	sleep(1);
 	sync();
 
-	umount("/jffs");	// may hang if not
+	// umount("/jffs");	// may hang if not
+	// routers without JFFS will never reboot
+	// with above call on presseed reset,
+	// let's try eval code here
+	eval("umount", "-f", "/jffs");
 	sleep(1);
 
 	if (rb != -1) {
@@ -710,7 +714,7 @@ static int init_vlan_ports(void)
 		dirty |= check_nv("vlan2ports", "4 5");
 		break;
 #endif
-	
+
 	}
 
 	return dirty;
@@ -987,7 +991,7 @@ static void check_bootnv(void)
 		nvram_commit();
 REBOOT:	// do a simple reboot
 		sync();
-		dbg("###### Reboot after check NV params / set VLANS...\n");
+		dbg("Reboot after check NV params / set VLANS...\n");
 		reboot(RB_AUTOBOOT);
 		exit(0);
 	}
@@ -1004,7 +1008,7 @@ static int init_nvram(void)
 	char s[256];
 	unsigned long bf;
 	unsigned long n;
-	
+
 	model = get_model();
 	sprintf(s, "%d", model);
 	nvram_set("t_model", s);
@@ -1228,11 +1232,11 @@ static int init_nvram(void)
 		mfr = "Dell";
 		name = "TrueMobile 2300";
 		break;
-	
+
 	/*
-	
+
 	  ...
-	
+
 	*/
 
 #ifndef WL_BSS_INFO_VERSION
@@ -2697,6 +2701,8 @@ static int init_nvram(void)
 			nvram_set("wait_time", "30");	// failsafe for CFE flash
 			nvram_set("uart_en", "1");	// failsafe for CFE flash
 			nvram_set("router_name", "X-R1D");
+			nvram_set("lan_hostname", "MiWiFi");
+			nvram_set("wan_hostname", "MiWiFi");
 
 			nvram_set("vlan1hwname", "et0");
 			nvram_set("vlan2hwname", "et0");
@@ -2752,11 +2758,12 @@ static int init_nvram(void)
 			nvram_set("wl1_ssid", "MiWiFi");
 
 			// usb settings
+			nvram_set("usb_ohci", "1");     // USB 1.1
 			nvram_set("usb_usb3", "-1");
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
-	
+
 			// 2.4GHz module defaults
 			nvram_set("pci/2/1/aa2g", "3");
 			nvram_set("pci/2/1/ag0", "2");
@@ -2970,14 +2977,14 @@ static int init_nvram(void)
 			//nvram_set("wl0_country_code", "Q2");
 			//nvram_set("wl1_country_code", "Q2");
 			//nvram_set("wl0_country_rev", "30");
-			//nvram_set("wl1_country_rev", "30");			
+			//nvram_set("wl1_country_rev", "30");
 			nvram_set("wl0_country_code", "#a");
 			nvram_set("wl0_country_rev", "0");
 			nvram_set("wl1_country_code", "#a");
 			nvram_set("wl1_country_rev", "0");
 			nvram_set("wl0_reg_mode", "off");
 			nvram_set("wl1_reg_mode", "off");
-			
+
 			// fix WL mac`s
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
@@ -2994,7 +3001,7 @@ static int init_nvram(void)
 			// misc settings
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "1");
-	
+
 			// 2.4GHz module defaults
 			//nvram_set("devpath0", "pci/1/1");
 			nvram_set("0:aa2g", "3");
@@ -3158,7 +3165,7 @@ static int init_nvram(void)
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 		nvram_set("acs_2g_ch_no_restrict", "1");
-		
+
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
 		nvram_set("partialboots", "0");
@@ -3202,7 +3209,7 @@ static int init_nvram(void)
 			nvram_set("wl1_country_code", "#a");
 			nvram_set("wl1_country_rev", "0");
 			nvram_set("wl1_reg_mode", "off");
-			
+
 			// fix WL mac`s
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
@@ -3219,7 +3226,7 @@ static int init_nvram(void)
 			// misc settings
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "1");
-	
+
 			// 2.4GHz module defaults
 			//nvram_set("devpath0", "pci/1/1");
 			nvram_set("0:aa2g", "7");
@@ -3383,7 +3390,7 @@ static int init_nvram(void)
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 		nvram_set("acs_2g_ch_no_restrict", "1");
-		
+
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
 		nvram_set("partialboots", "0");
@@ -3425,7 +3432,7 @@ static int init_nvram(void)
 			nvram_set("wl1_country_code", "#a");
 			nvram_set("wl1_country_rev", "0");
 			nvram_set("wl1_reg_mode", "off");
-			
+
 			// fix WL mac`s
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
@@ -3442,7 +3449,7 @@ static int init_nvram(void)
 			// misc settings
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "1");
-	
+
 			// 2.4GHz module defaults
 			nvram_set("0:aa2g", "7");
 			nvram_set("0:agbg0", "0x47");
@@ -3617,7 +3624,7 @@ static int init_nvram(void)
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 		nvram_set("acs_2g_ch_no_restrict", "1");
-		
+
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
 		nvram_set("partialboots", "0");
@@ -4485,7 +4492,7 @@ static int init_nvram(void)
 
 	/*
 		note: set wan_ifnameX if wan_ifname needs to be overriden
-	
+
 	*/
 	if (nvram_is_empty("wan_ifnameX")) {
 #if 1
@@ -4506,7 +4513,7 @@ static int init_nvram(void)
 	//nvram_set("wl_country_code", "JP");
 	nvram_set("wan_get_dns", "");
 	nvram_set("wan_get_domain", "");
-	nvram_set("wan_ppp_get_ip", "");
+	nvram_set("wan_ppp_get_ip", "0.0.0.0");
 	nvram_set("action_service", "");
 	nvram_set("jffs2_format", "0");
 	nvram_set("rrules_radio", "-1");

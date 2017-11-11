@@ -164,7 +164,7 @@ void start_pptpd(void)
                 }
 		fprintf(fp, "nomppe-stateful\n");
 //	}
-	
+
 	fprintf(fp, "ms-ignore-domain\n"
 		"chap-secrets /tmp/pptpd/chap-secrets\n"
 		"ip-up-script /tmp/pptpd/ip-up\n"
@@ -291,7 +291,7 @@ void start_pptpd(void)
 	chmod("/tmp/pptpd/ip-up", 0744);
 	chmod("/tmp/pptpd/ip-down", 0744);
 
-	// Exctract chap-secrets from nvram
+	// Extract chap-secrets from nvram
 	write_chap_secret("/tmp/pptpd/chap-secrets");
 
 	chmod("/tmp/pptpd/chap-secrets", 0600);
@@ -339,7 +339,7 @@ void stop_pptpd(void)
 }
 
 void write_pptpd_dnsmasq_config(FILE* f) {
-	int i;
+//	int i;
 	if (nvram_match("pptpd_enable", "1")) {
 	/*
 		fprintf(f, "interface=");

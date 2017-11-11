@@ -89,27 +89,31 @@ typedef struct {
 } applets_t;
 
 static const applets_t applets[] = {
-	{ "preinit",				init_main				},
-	{ "init",				init_main				},
-	{ "console",				console_main				},
-	{ "rc",					rc_main					},
-	{ "ip-up",				ipup_main				},
-	{ "ip-down",			ipdown_main				},
+	{ "preinit",			init_main			},
+	{ "init",			init_main			},
+	{ "console",			console_main			},
+	{ "rc",				rc_main				},
+	{ "ip-up",			ipup_main			},
+	{ "ip-down",			ipdown_main			},
 /*  KDB - these functions do nothing why are they here?
 #ifdef TCONFIG_IPV6
-	{ "ipv6-up",			ip6up_main				},
-	{ "ipv6-down",			ip6down_main				},
+	{ "ipv6-up",			ip6up_main			},
+	{ "ipv6-down",			ip6down_main			},
 #endif
 */
+#ifdef TCONFIG_PPTPD
+	{ "pptpc_ip-up",		pptpc_ipup_main			},
+	{ "pptpc_ip-down",		pptpc_ipdown_main		},
+#endif
 	{ "ppp_event",			pppevent_main  			},
 	{ "hotplug",			hotplug_main			},
-	{ "redial",				redial_main				},
+	{ "redial",			redial_main			},
 
-	{ "mwanroute",			mwan_route_main		},
+	{ "mwanroute",			mwan_route_main			},
 
-	{ "listen",				listen_main				},
+	{ "listen",			listen_main			},
 	{ "service",			service_main			},
-	{ "sched",				sched_main				},
+	{ "sched",			sched_main			},
 #ifdef TCONFIG_BCMARM
 	{ "mtd-write",			mtd_write_main_old		},
 	{ "mtd-erase",			mtd_unlock_erase_main_old	},
@@ -127,19 +131,19 @@ static const applets_t applets[] = {
 #ifdef TCONFIG_FANCTRL
 	{ "phy_tempsense",		phy_tempsense_main		},
 #endif
-	{ "rcheck",				rcheck_main				},
+	{ "rcheck",			rcheck_main			},
 	{ "dhcpc-event",		dhcpc_event_main		},
 	{ "dhcpc-release",		dhcpc_release_main		},
 	{ "dhcpc-renew",		dhcpc_renew_main		},
 #ifdef TCONFIG_IPV6
 	{ "dhcp6c-state",		dhcp6c_state_main		},
 #endif
-	{ "radio",				radio_main				},
-	{ "led",				led_main				},
-	{ "halt",				reboothalt_main			},
-	{ "reboot",				reboothalt_main			},
-	{ "gpio",				gpio_main				},
-	{ "wldist",				wldist_main				},
+	{ "radio",			radio_main			},
+	{ "led",			led_main			},
+	{ "halt",			reboothalt_main			},
+	{ "reboot",			reboothalt_main			},
+	{ "gpio",			gpio_main			},
+	{ "wldist",			wldist_main			},
 #ifdef TCONFIG_CIFS
 	{ "mount-cifs",			mount_cifs_main			},
 #endif
@@ -147,7 +151,7 @@ static const applets_t applets[] = {
 	{ "ddns-update",		ddns_update_main		},
 #endif
 #ifdef DEBUG_RCTEST
-	{ "rctest",				rctest_main				},
+	{ "rctest",			rctest_main			},
 #endif
 	{NULL, NULL}
 };
