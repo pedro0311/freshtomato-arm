@@ -86,7 +86,7 @@ adblockg.setup = function()
 {
 	this.init('adblockg-grid', '', 50, [
 		{ type: 'checkbox' },
-		{ type: 'text', maxlen: 90 },
+		{ type: 'text', maxlen: 130 },
 		{ type: 'text', maxlen: 40 }
 	]);
 	this.headerSet(['On', 'Blacklist URL', 'Description']);
