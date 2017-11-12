@@ -142,6 +142,10 @@ extern int capget(cap_user_header_t header, cap_user_data_t data);
 #include <priv.h>
 #endif
 
+#ifdef HAVE_DNSSEC
+#  include <nettle/nettle-meta.h>
+#endif
+
 /* daemon is function in the C library.... */
 #define daemon dnsmasq_daemon
 
@@ -452,6 +456,7 @@ struct crec {
 #define F_NO_RR     (1u<<25)
 #define F_IPSET     (1u<<26)
 #define F_NOEXTRA   (1u<<27)
+#define F_SERVFAIL  (1u<<28)
 
 /* Values of uid in crecs with F_CONFIG bit set. */
 #define SRC_INTERFACE 0
@@ -1025,6 +1030,7 @@ extern struct daemon {
 #ifdef HAVE_DNSSEC
   char *keyname; /* MAXDNAME size buffer */
   char *workspacename; /* ditto */
+  char *rr_status; /* 256 bytes as flags for individual RRs */
 #endif
   unsigned int local_answer, queries_forwarded, auth_answer;
   struct frec *frec_list;
@@ -1139,7 +1145,7 @@ size_t setup_reply(struct dns_header *header, size_t  qlen,
 		   unsigned long ttl);
 int extract_addresses(struct dns_header *header, size_t qlen, char *name,
 		      time_t now, char **ipsets, int is_sign, int check_rebind,
-		      int no_cache_dnssec, int secure, int *doctored);
+		      int no_cache_dnssec, int secure, int *doctored, char *rr_status);
 size_t answer_request(struct dns_header *header, char *limit, size_t qlen,  
 		      struct in_addr local_addr, struct in_addr local_netmask, 
 		      time_t now, int ad_reqd, int do_bit, int have_pseudoheader);
@@ -1172,11 +1178,20 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
 int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class);
 int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class);
 int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int *class,
-			  int check_unsigned, int *neganswer, int *nons);
+			  int check_unsigned, int *neganswer, int *nons, char *rr_status);
 int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen);
 size_t filter_rrsigs(struct dns_header *header, size_t plen);
 unsigned char* hash_questions(struct dns_header *header, size_t plen, char *name);
 int setup_timestamp(void);
+
+/* crypto.c */
+const struct nettle_hash *hash_find(char *name);
+int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp);
+int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+	   unsigned char *digest, size_t digest_len, int algo);
+char *ds_digest_name(int digest);
+char *algo_digest_name(int algo);
+char *nsec3_digest_name(int digest);
 
 /* util.c */
 void rand_init(void);
