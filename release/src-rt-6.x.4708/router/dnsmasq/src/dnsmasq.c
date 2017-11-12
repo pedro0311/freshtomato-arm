@@ -118,6 +118,8 @@ int main (int argc, char **argv)
       daemon->namebuff = safe_malloc(MAXDNAME * 2);
       daemon->keyname = safe_malloc(MAXDNAME * 2);
       daemon->workspacename = safe_malloc(MAXDNAME * 2);
+      /* one char flag per possible RR in answer section. */
+      daemon->rr_status = safe_malloc(256);
     }
 #endif
 
@@ -358,7 +360,8 @@ int main (int argc, char **argv)
     }
 
 #ifdef HAVE_INOTIFY
-  if (daemon->port != 0 || daemon->dhcp || daemon->doing_dhcp6)
+  if ((daemon->port != 0 || daemon->dhcp || daemon->doing_dhcp6)
+      && (!option_bool(OPT_NO_RESOLV) || daemon->dynamic_dirs))
     inotify_dnsmasq_init();
   else
     daemon->inotifyfd = -1;
