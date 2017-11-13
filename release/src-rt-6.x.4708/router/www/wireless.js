@@ -210,6 +210,18 @@ function scan()
 	xob.post('update.cgi', 'exec=wlscan&arg0='+unit);
 }
 
+function spin(x, unit)
+{
+	for (var u = 0; u < wl_ifaces.length; ++u) {
+		E('_f_wl'+wl_unit(u)+'_scan').disabled = x;
+	}
+	var e = E('_f_wl'+unit+'_scan');
+
+	if (x) e.value = 'Scan ' + (wscan.tries + 1);
+		else e.value = 'Scan';
+	E('spin'+unit).style.visibility = x ? 'visible' : 'hidden';
+}
+
 function scanButton(u)
 {
 	if (xob) return;
