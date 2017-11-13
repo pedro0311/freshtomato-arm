@@ -65,7 +65,8 @@ connect() {
         esac
 
         case "$BAND" in
-             "80000") BAND2="B20 (800 MHz)" ;;
+             "80000")  BAND2="B20 (800 MHz)" ;;
+              "80")    BAND2="B8 (900 MHz)"  ;;
               "4")     BAND2="B3 (1800 MHz)" ;;
               "1")     BAND2="B1 (2100 MHz)" ;;
               "40")    BAND2="B7 (2600 MHz)" ;;
@@ -110,6 +111,7 @@ connect() {
 
                 case "$RESBAND" in
                      "80000") RES2="B20 (800 MHz)" ;;
+                     "80")    RES2="B8 (900 MHz)"  ;;
                      "4")     RES2="B3 (1800 MHz)" ;;
                      "1")     RES2="B1 (2100 MHz)" ;;
                      "40")    RES2="B7 (2600 MHz)" ;;
