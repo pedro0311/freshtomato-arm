@@ -59,39 +59,29 @@
 #endif
 
 
-/* Define this to disable syntax highlighting. */
-#undef DISABLE_COLOR
-
-/* Define this to disable extra stuff. */
-#undef DISABLE_EXTRA
-
-/* Define this to disable search and position histories. */
-#undef DISABLE_HISTORIES
-
-/* Define this to disable the justify routines. */
-#undef DISABLE_JUSTIFY
-
-/* Define this to disable the setting of an operating directory (a chroot of
-   sorts). */
-#undef DISABLE_OPERATINGDIR
-
 /* Define this to disable text wrapping as root by default. */
 #undef DISABLE_ROOTWRAPPING
-
-/* Define this to disable the spell-checker functions. */
-#undef DISABLE_SPELLER
-
-/* Define this to disable all text wrapping. */
-#undef DISABLE_WRAPPING
 
 /* Define this to enable the built-in file browser. */
 #undef ENABLE_BROWSER
 
+/* Define this to have syntax highlighting. */
+#undef ENABLE_COLOR
+
 /* Define this to enable the comment/uncomment function. */
 #undef ENABLE_COMMENT
 
+/* Define this to have an Easter egg. */
+#undef ENABLE_EXTRA
+
 /* Define this to enable the Ctrl+G help texts. */
 #undef ENABLE_HELP
+
+/* Define this to have search and position histories. */
+#undef ENABLE_HISTORIES
+
+/* Define this to have the routines for justifying. */
+#undef ENABLE_JUSTIFY
 
 /* Define this to enable line numbering. */
 #undef ENABLE_LINENUMBERS
@@ -109,6 +99,12 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* Define this to allow setting an operating directory (a chroot of sorts). */
+#undef ENABLE_OPERATINGDIR
+
+/* Define this to have the spell-checker functions. */
+#undef ENABLE_SPELLER
+
 /* Define this to have tab completion for filenames and search strings. */
 #undef ENABLE_TABCOMP
 
@@ -117,6 +113,9 @@
 
 /* Define this to enable the word-completion function. */
 #undef ENABLE_WORDCOMPLETION
+
+/* Define this to have hard text wrapping. */
+#undef ENABLE_WRAPPING
 
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like 'struct s { int n; double

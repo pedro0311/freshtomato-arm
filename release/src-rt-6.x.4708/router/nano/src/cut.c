@@ -129,9 +129,6 @@ void do_cut_text(bool copy_text, bool cut_till_eof)
     if (!keep_cutbuffer) {
 	free_filestruct(cutbuffer);
 	cutbuffer = NULL;
-#ifdef DEBUG
-	fprintf(stderr, "Blew away cutbuffer =)\n");
-#endif
 	/* Indicate that future cuts should add to the cutbuffer. */
 	keep_cutbuffer = TRUE;
     }
@@ -191,7 +188,7 @@ void do_cut_text(bool copy_text, bool cut_till_eof)
 
     refresh_needed = TRUE;
 
-#ifndef DISABLE_COLOR
+#ifdef ENABLE_COLOR
     check_the_multis(openfile->current);
 #endif
 
@@ -292,7 +289,7 @@ void do_uncut_text(void)
 
     refresh_needed = TRUE;
 
-#ifndef DISABLE_COLOR
+#ifdef ENABLE_COLOR
     check_the_multis(openfile->current);
 #endif
 
