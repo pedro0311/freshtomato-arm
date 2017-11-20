@@ -183,9 +183,9 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_nano_OBJECTS = browser.$(OBJEXT) chars.$(OBJEXT) color.$(OBJEXT) \
 	cut.$(OBJEXT) files.$(OBJEXT) global.$(OBJEXT) help.$(OBJEXT) \
-	move.$(OBJEXT) nano.$(OBJEXT) prompt.$(OBJEXT) \
-	rcfile.$(OBJEXT) search.$(OBJEXT) text.$(OBJEXT) \
-	utils.$(OBJEXT) winio.$(OBJEXT)
+	history.$(OBJEXT) move.$(OBJEXT) nano.$(OBJEXT) \
+	prompt.$(OBJEXT) rcfile.$(OBJEXT) search.$(OBJEXT) \
+	text.$(OBJEXT) utils.$(OBJEXT) winio.$(OBJEXT)
 nano_OBJECTS = $(am_nano_OBJECTS)
 am__DEPENDENCIES_1 =
 nano_DEPENDENCIES = $(top_builddir)/lib/libgnu.a $(am__DEPENDENCIES_1) \
@@ -1437,6 +1437,7 @@ nano_SOURCES = browser.c \
 		files.c \
 		global.c \
 		help.c \
+		history.c \
 		move.c \
 		nano.c \
 		nano.h \
@@ -1544,6 +1545,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/files.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/global.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/help.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/history.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/move.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nano.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prompt.Po@am__quote@

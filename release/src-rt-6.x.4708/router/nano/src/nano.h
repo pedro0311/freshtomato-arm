@@ -2,7 +2,7 @@
  *   nano.h  --  This file is part of GNU nano.                           *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014, 2015, 2016 Benno Schulenberg                     *
+ *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -128,9 +128,19 @@
 #undef ENABLE_MOUSE
 #endif
 
-#if defined(DISABLE_WRAPPING) && defined(DISABLE_JUSTIFY)
-#define DISABLE_WRAPJUSTIFY 1
+#if defined(ENABLE_WRAPPING) || defined(ENABLE_JUSTIFY)
+#define ENABLED_WRAPORJUSTIFY 1
 #endif
+
+#define BACKWARD FALSE
+#define FORWARD TRUE
+
+#define BLIND FALSE
+#define VISIBLE TRUE
+
+#define JUSTFIND  0
+#define REPLACING 1
+#define INREGION  2
 
 /* Enumeration types. */
 typedef enum {
@@ -150,18 +160,15 @@ typedef enum {
 } mark_type;
 
 typedef enum {
-    UPWARD, DOWNWARD
-} scroll_dir;
-
-typedef enum {
     CENTERING, FLOWING, STATIONARY
 } update_type;
 
 typedef enum {
     ADD, DEL, BACK, CUT, CUT_TO_EOF, REPLACE,
-#ifndef DISABLE_WRAPPING
+#ifdef ENABLE_WRAPPING
     SPLIT_BEGIN, SPLIT_END,
 #endif
+    INDENT, UNINDENT,
 #ifdef ENABLE_COMMENT
     COMMENT, UNCOMMENT, PREFLIGHT,
 #endif
@@ -169,7 +176,7 @@ typedef enum {
 } undo_type;
 
 /* Structure types. */
-#ifndef DISABLE_COLOR
+#ifdef ENABLE_COLOR
 typedef struct colortype {
     short fg;
 	/* This syntax's foreground color. */
@@ -258,7 +265,7 @@ typedef struct lintstruct {
 	/* Regex starts and ends within this line. */
 #define CWOULDBE	(1<<6)
 	/* An unpaired start match on or before this line. */
-#endif /* !DISABLE_COLOR */
+#endif /* ENABLE_COLOR */
 
 /* More structure types. */
 typedef struct filestruct {
@@ -270,7 +277,7 @@ typedef struct filestruct {
 	/* Next node. */
     struct filestruct *prev;
 	/* Previous node. */
-#ifndef DISABLE_COLOR
+#ifdef ENABLE_COLOR
     short *multidata;
 	/* Array of which multi-line regexes apply to this line. */
 #endif
@@ -300,6 +307,8 @@ typedef struct undo_group {
 	/* First line of group. */
     ssize_t bottom_line;
 	/* Last line of group. */
+    char **indentations;
+	/* String data used to restore the affected lines; one per line. */
     struct undo_group *next;
 } undo_group;
 
@@ -334,7 +343,7 @@ typedef struct undo {
 } undo;
 #endif /* !NANO_TINY */
 
-#ifndef DISABLE_HISTORIES
+#ifdef ENABLE_HISTORIES
 typedef struct poshiststruct {
     char *filename;
 	/* The file. */
@@ -392,7 +401,7 @@ typedef struct openfilestruct {
     char *lock_filename;
 	/* The path of the lockfile, if we created one. */
 #endif
-#ifndef DISABLE_COLOR
+#ifdef ENABLE_COLOR
     syntaxtype *syntax;
 	/* The  syntax struct for this file, if any. */
     colortype *colorstrings;
