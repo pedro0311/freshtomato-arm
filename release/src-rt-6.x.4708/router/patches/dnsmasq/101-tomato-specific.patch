@@ -87,7 +87,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1334,8 +1372,22 @@ static void async_event(int pipe, time_t
+@@ -1337,8 +1375,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -110,7 +110,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1367,6 +1419,12 @@ static void async_event(int pipe, time_t
+@@ -1370,6 +1422,12 @@ static void async_event(int pipe, time_t
  	    while (retry_send(close(daemon->helperfd)));
  	  }
  #endif
@@ -125,7 +125,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h	2017-05-22 23:58:46.000000000 +0200
 +++ dnsmasq/src/dnsmasq.h	2017-10-03 20:05:34.000000000 +0200
-@@ -1364,6 +1364,12 @@ int make_icmp_sock(void);
+@@ -1379,6 +1379,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif

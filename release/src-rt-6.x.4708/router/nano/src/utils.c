@@ -2,7 +2,7 @@
  *   utils.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
- *   Copyright (C) 2016 Benno Schulenberg                                 *
+ *   Copyright (C) 2016-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -51,6 +51,29 @@ void get_homedir(void)
 	if (homenv != NULL && strcmp(homenv, "") != 0)
 	    homedir = mallocstrcpy(NULL, homenv);
     }
+}
+
+/* Return the filename part of the given path. */
+const char *tail(const char *path)
+{
+    const char *slash = strrchr(path, '/');
+
+    if (slash == NULL)
+	return path;
+    else
+	return ++slash;
+}
+
+/* Return a copy of the two given strings, welded together. */
+char *concatenate(const char *path, const char *name)
+{
+    size_t pathlen = strlen(path);
+    char *joined = charalloc(pathlen + strlen(name) + 1);
+
+    strcpy(joined, path);
+    strcpy(joined + pathlen, name);
+
+    return joined;
 }
 
 #ifdef ENABLE_LINENUMBERS
@@ -179,10 +202,6 @@ const char *fixbounds(const char *r)
     char *r2 = charalloc(strlen(r) * 5);
     char *r3;
 
-#ifdef DEBUG
-    fprintf(stderr, "fixbounds(): Start string = \"%s\"\n", r);
-#endif
-
     for (i = 0; i < strlen(r); i++) {
 	if (r[i] != '\0' && r[i] == '\\' && (r[i + 1] == '>' || r[i + 1] == '<')) {
 	    strcpy(&r2[j], "[[:");
@@ -194,19 +213,18 @@ const char *fixbounds(const char *r)
 	    r2[j] = r[i];
 	j++;
     }
+
     r2[j] = '\0';
     r3 = mallocstrcpy(NULL, r2);
     free(r2);
-#ifdef DEBUG
-    fprintf(stderr, "fixbounds(): Ending string = \"%s\"\n", r3);
-#endif
+
     return (const char *) r3;
 #endif /* !GNU_WORDBOUNDS */
 
     return r;
 }
 
-#ifndef DISABLE_SPELLER
+#ifdef ENABLE_SPELLER
 /* Is the word starting at the given position in buf and of the given length
  * a separate word?  That is: is it not part of a longer word?*/
 bool is_separate_word(size_t position, size_t length, const char *buf)
@@ -224,7 +242,7 @@ bool is_separate_word(size_t position, size_t length, const char *buf)
     return ((position == 0 || !is_alpha_mbchar(before)) &&
 		(buf[word_end] == '\0' || !is_alpha_mbchar(after)));
 }
-#endif /* !DISABLE_SPELLER */
+#endif /* ENABLE_SPELLER */
 
 /* Return the position of the needle in the haystack, or NULL if not found.
  * When searching backwards, we will find the last match that starts no later
@@ -513,8 +531,7 @@ filestruct *fsfromline(ssize_t lineno)
 	    f = f->next;
 
     if (f->lineno != lineno) {
-	statusline(ALERT, _("Internal error: can't match line %ld.  "
-			"Please save your work."), (long)lineno);
+	statusline(ALERT, "Gone undo line -- please report a bug");
 	return NULL;
     }
 
@@ -552,7 +569,7 @@ void dump_filestruct(const filestruct *inptr)
 	fprintf(stderr, "Dumping a buffer to stderr...\n");
 
     while (inptr != NULL) {
-	fprintf(stderr, "(%ld) %s\n", (long)inptr->lineno, inptr->data);
+	fprintf(stderr, "(%zd) %s\n", inptr->lineno, inptr->data);
 	inptr = inptr->next;
     }
 }
@@ -563,8 +580,7 @@ void dump_filestruct_reverse(void)
     const filestruct *fileptr = openfile->filebot;
 
     while (fileptr != NULL) {
-	fprintf(stderr, "(%ld) %s\n", (long)fileptr->lineno,
-		fileptr->data);
+	fprintf(stderr, "(%zd) %s\n", fileptr->lineno, fileptr->data);
 	fileptr = fileptr->prev;
     }
 }

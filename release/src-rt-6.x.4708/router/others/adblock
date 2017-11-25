@@ -60,6 +60,12 @@ download() {
     # scal pliki
     cat $PREFIX/_host* > $WORK1 && rm $PREFIX/_host*
 
+    # usun wszystko za '#' wlacznie
+    mv $WORK1 $WORK2 && cat $WORK2 | awk -F '#' '{print $1}' > $WORK1 && rm $WORK2
+
+    # pomin linie bez co najmniej dwoch kolumn
+    mv $WORK1 $WORK2 && cat $WORK2 | awk 'NF>=2' > $WORK1 && rm $WORK2
+
     # pozostawiam uklad IP URL
     mv $WORK1 $WORK2 && cat $WORK2 | awk '{ print $1 " " $2 }' > $WORK1 && rm $WORK2
 
