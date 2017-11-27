@@ -1448,8 +1448,11 @@ void stop_wan_if(char *prefix)
 
 	wan_proto = get_wanx_proto(prefix);
 
-	if (wan_proto == WP_LTE)
+	if (wan_proto == WP_LTE) {
+		killall_tk("switch4g");		// kill switch4g script if running
 		xstart("switch4g", prefix, "disconnect");
+		sleep(3);			// wait a litle for disconnect
+	}
 
 	/* Bring down WAN interfaces */
 	foreach(name, nvram_safe_get(strcat_r(prefix, "_ifnames", tmp)), next)  //"wan_ifnames"
