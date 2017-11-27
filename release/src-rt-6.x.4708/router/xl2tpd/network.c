@@ -272,7 +272,7 @@ void control_xmit (void *b)
             return;
         }
     }
-    if (buf->retries > DEFAULT_MAX_RETRIES)
+    if (buf->retries > gconfig.max_retries)
     {
         /*
            * Too many retries.  Either kill the tunnel, or
@@ -508,7 +508,9 @@ void network_thread ()
             {
                 if (gconfig.debug_network)
                 {
-                    l2tp_log (LOG_DEBUG, "%s: select timeout\n", __FUNCTION__);
+                    l2tp_log (LOG_DEBUG,
+                        "%s: select timeout with max retries: %d for tunnel: %d\n",
+                        __FUNCTION__, gconfig.max_retries, tunnels.head->ourtid);
                 }
             }
             else
