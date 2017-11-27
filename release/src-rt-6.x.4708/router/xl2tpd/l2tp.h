@@ -59,7 +59,7 @@ typedef unsigned long long _u64;
 #define CONTROL_PIPE_REQ_LNS_REMOVE 'w'     /* Get status of LNS */
 
 #define BINARY "xl2tpd"
-#define SERVER_VERSION "xl2tpd-1.3.10"
+#define SERVER_VERSION "xl2tpd-1.3.10.1"
 #define VENDOR_NAME "xelerance.com"
 #ifndef PPPD
 #define PPPD		"/usr/sbin/pppd"
@@ -112,7 +112,7 @@ struct payload_hdr
                                    so we can "decompress" the
                                    payloads and simplify coding */
 #if 1
-#define DEFAULT_MAX_RETRIES 5    /* Recommended value from spec */
+#define DEFAULT_MAX_RETRIES 5   /* Recommended value from spec */
 #else
 #define DEFAULT_MAX_RETRIES 95   /* give us more time to debug */
 #endif
