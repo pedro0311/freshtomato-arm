@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Rebooting...</title>
 <script type="text/javascript">
-var n = 110 + parseInt('0<% nv("wait_time"); %>');
+var n = 130 + parseInt('0<% nv("wait_time"); %>');
 function tick() {
     var e = document.getElementById("continue");
     e.value = n--;

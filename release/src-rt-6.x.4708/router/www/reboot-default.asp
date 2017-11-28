@@ -12,7 +12,7 @@ No part of this file may be used without permission.
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Restoring Defaults...</title>
 <script type="text/javascript">
-var n = 110;
+var n = 130;
 function tick() {
     var e = document.getElementById('continue');
     e.value = n--;
