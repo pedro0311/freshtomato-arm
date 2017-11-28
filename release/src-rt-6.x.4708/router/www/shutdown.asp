@@ -12,7 +12,7 @@ No part of this file may be used without permission.
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Shutting down...</title>
 <script type="text/javascript">
-var n = 16;
+var n = 31;
 function tick() {
     if (--n > 0) {
         document.getElementById("sptime").innerHTML = n;
