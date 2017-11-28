@@ -4568,7 +4568,7 @@ int init_main(int argc, char *argv[])
 			run_nvscript("script_shut", NULL, 10);
 
 			stop_services();
-			stop_wan("wan");
+			stop_wan();
 			stop_lan();
 			stop_vlan();
 			stop_syslog();
