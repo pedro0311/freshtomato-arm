@@ -32,10 +32,7 @@
 int start_redial(char *prefix)
 {
 	stop_redial(prefix);
-	char cmd[64];
-	sprintf(cmd, "redial %s", prefix);
-
-	xstart(cmd);
+	xstart("/sbin/redial", prefix);
 	return 0;
 }
 
@@ -44,7 +41,7 @@ int stop_redial(char *prefix)
 	char tmp[100];
 	int pid;
 	pid = nvram_get_int(strcat_r(prefix, "_ppp_redialpid", tmp));
-	if(pid > 1){
+	if (pid > 1) {
 		while (kill(pid, SIGKILL) == 0) {
 		sleep(1);
 		}
@@ -61,22 +58,27 @@ int redial_main(int argc, char **argv)
 	char tmp[100];
 	memset(c_pid, 0, 10);
 	sprintf(c_pid, "%d", getpid());
-	char prefix[] = "wanXXXXXXXXXX_";
-	if(argc > 1){
-		strcpy(prefix, argv[1]); } 
-	else{
-		strcpy(prefix, "wan"); }
+	char prefix[] = "wanXXX";
+
+	if (argc > 1) {
+		strcpy(prefix, argv[1]);
+	} else {
+		strcpy(prefix, "wan");
+	}
 
 	proto = get_wanx_proto(prefix);
 	if (proto == WP_PPPOE || proto == WP_PPP3G || proto == WP_PPTP || proto == WP_L2TP) {
-		if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)) != 0) return 0;
+		if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)) != 0)
+			return 0;
 	}
 
 	nvram_set(strcat_r(prefix, "_ppp_redialpid", tmp), c_pid);
+
 	tm = nvram_get_int(strcat_r(prefix, "_ppp_redialperiod", tmp)) ? : 30;
-	if (tm < 5) tm = 5;
-	
-	syslog(LOG_INFO, "Started. Time: %d", tm);
+	if (tm < 5)
+		tm = 5;
+
+	syslog(LOG_INFO, "Redial (%s) started, the check interval is %d seconds", prefix, tm);
 
 	count = 0;
 	sleep(10);
@@ -84,7 +86,10 @@ int redial_main(int argc, char **argv)
 	while (1) {
 		while (1) {
 			sleep(tm);
-			if (!check_wanup(prefix)) break;
+
+			if (!check_wanup(prefix))
+				break;
+
 			count = 0;
 		}
 
@@ -97,7 +102,7 @@ int redial_main(int argc, char **argv)
 			if (f_read(pppdisc_file, &ut, sizeof(ut)) == sizeof(ut)) {
 				ut = (get_uptime() - ut);
 				if (ut <= 15) {
-					syslog(LOG_INFO, "%s PPPoE reconnect in progress (%ld)", prefix, ut);
+					syslog(LOG_INFO, "Redial: %s PPPoE reconnect in progress (%ld)", prefix, ut);
 					++count;
 					continue;
 				}
@@ -105,7 +110,8 @@ int redial_main(int argc, char **argv)
 		}
 #endif
 
-		if ((!wait_action_idle(10)) || (check_wanup(prefix))) continue;
+		if ((!wait_action_idle(10)) || (check_wanup(prefix)))
+			continue;
 
 		if (!nvram_match("action_service", "wan1-restart")
 			|| !nvram_match("action_service", "wan2-restart")
@@ -114,14 +120,13 @@ int redial_main(int argc, char **argv)
 			|| !nvram_match("action_service", "wan4-restart")
 #endif
 			) {
-			syslog(LOG_INFO, "%s down. Reconnecting...", prefix);
-			xstart("service", (char *)prefix, "restart"); //Mabye bugs. arctic
+			syslog(LOG_INFO, "Redial: %s down. Reconnecting...", prefix);
+			xstart("service", (char *)prefix, "restart");
 			break;
-		}
-		else {
-			syslog(LOG_INFO, "%s down. Reconnect is already in progress...", prefix);
+		} else {
+			syslog(LOG_INFO, "Redial: %s down. Reconnect is already in progress...", prefix);
 		}
 	}
-	
+
 	return 0;
 }
