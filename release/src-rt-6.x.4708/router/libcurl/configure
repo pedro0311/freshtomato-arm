@@ -936,6 +936,7 @@ DEFAULT_SSL_BACKEND
 BUILD_STUB_GSS_FALSE
 BUILD_STUB_GSS_TRUE
 USE_OPENLDAP
+HAVE_BROTLI
 ZLIB_LIBS
 HAVE_LIBZ_FALSE
 HAVE_LIBZ_TRUE
@@ -1158,6 +1159,7 @@ enable_manual
 enable_libcurl_option
 enable_libgcc
 with_zlib
+with_brotli
 with_ldap_lib
 with_lber_lib
 enable_ipv6
@@ -1951,6 +1953,10 @@ Optional Packages:
                           compiler's sysroot if not specified).
   --with-zlib=PATH        search for zlib in PATH
   --without-zlib          disable use of zlib
+  --with-brotli=PATH      Where to look for brotli, PATH points to the BROTLI
+                          installation; when possible, set the PKG_CONFIG_PATH
+                          environment variable instead of using this option
+  --without-brotli        disable BROTLI
   --with-ldap-lib=libname Specify name of ldap lib file
   --with-lber-lib=libname Specify name of lber lib file
   --with-gssapi-includes=DIR
@@ -6091,6 +6097,7 @@ PKGADD_VENDOR="curl.haxx.se"
     curl_ssl_msg="no      (--with-{ssl,gnutls,nss,polarssl,mbedtls,cyassl,axtls,winssl,darwinssl} )"
     curl_ssh_msg="no      (--with-libssh2)"
    curl_zlib_msg="no      (--with-zlib)"
+ curl_brotli_msg="no      (--with-brotli)"
     curl_gss_msg="no      (--with-gssapi)"
 curl_tls_srp_msg="no      (--enable-tls-srp)"
     curl_res_msg="default (--enable-ares / --enable-threaded-resolver)"
@@ -20963,6 +20970,262 @@ fi
 
 
 
+
+OPT_BROTLI=off
+
+# Check whether --with-brotli was given.
+if test "${with_brotli+set}" = set; then :
+  withval=$with_brotli; OPT_BROTLI=$withval
+fi
+
+
+if test X"$OPT_BROTLI" != Xno; then
+    CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+  case "$OPT_BROTLI" in
+  yes)
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+$as_echo "$PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+$as_echo "$ac_pt_PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libbrotlidec options with pkg-config" >&5
+$as_echo_n "checking for libbrotlidec options with pkg-config... " >&6; }
+            itexists=`
+    if test -n ""; then
+      PKG_CONFIG_LIBDIR=""
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists libbrotlidec >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      fi
+    fi
+
+
+    if test "$PKGCONFIG" != "no" ; then
+      LIB_BROTLI=`$PKGCONFIG --libs-only-l libbrotlidec`
+      LD_BROTLI=`$PKGCONFIG --libs-only-L libbrotlidec`
+      CPP_BROTLI=`$PKGCONFIG --cflags-only-I libbrotlidec`
+      version=`$PKGCONFIG --modversion libbrotlidec`
+      DIR_BROTLI=`echo $LD_BROTLI | $SED -e 's/-L//'`
+    fi
+
+    ;;
+  off)
+        ;;
+  *)
+        PREFIX_BROTLI=$OPT_BROTLI
+    ;;
+  esac
+
+    if test -n "$PREFIX_BROTLI"; then
+    LIB_BROTLI="-lbrotlidec"
+    LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
+    CPP_BROTLI=-I${PREFIX_BROTLI}/include
+    DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
+  fi
+
+  LDFLAGS="$LDFLAGS $LD_BROTLI"
+  CPPFLAGS="$CPPFLAGS $CPP_BROTLI"
+  LIBS="$LIB_BROTLI $LIBS"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BrotliDecoderDecompress in -lbrotlidec" >&5
+$as_echo_n "checking for BrotliDecoderDecompress in -lbrotlidec... " >&6; }
+if ${ac_cv_lib_brotlidec_BrotliDecoderDecompress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lbrotlidec  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char BrotliDecoderDecompress ();
+int main (void)
+{
+return BrotliDecoderDecompress ();
+ ;
+ return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_brotlidec_BrotliDecoderDecompress=yes
+else
+  ac_cv_lib_brotlidec_BrotliDecoderDecompress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_brotlidec_BrotliDecoderDecompress" >&5
+$as_echo "$ac_cv_lib_brotlidec_BrotliDecoderDecompress" >&6; }
+if test "x$ac_cv_lib_brotlidec_BrotliDecoderDecompress" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBBROTLIDEC 1
+_ACEOF
+
+  LIBS="-lbrotlidec $LIBS"
+
+fi
+
+
+  for ac_header in brotli/decode.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "brotli/decode.h" "ac_cv_header_brotli_decode_h" "$ac_includes_default"
+if test "x$ac_cv_header_brotli_decode_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_BROTLI_DECODE_H 1
+_ACEOF
+ curl_brotli_msg="enabled (libbrotlidec)"
+    HAVE_BROTLI=1
+
+$as_echo "#define HAVE_BROTLI 1" >>confdefs.h
+
+    HAVE_BROTLI=1
+
+
+fi
+
+done
+
+
+  if test X"$OPT_BROTLI" != Xoff &&
+     test "$HAVE_BROTLI" != "1"; then
+    as_fn_error $? "BROTLI libs and/or directories were not found where specified!" "$LINENO" 5
+  fi
+
+  if test "$HAVE_BROTLI" = "1"; then
+    if test -n "$DIR_BROTLI"; then
+
+       if test "x$cross_compiling" != "xyes"; then
+         LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DIR_BROTLI"
+         export LD_LIBRARY_PATH
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_BROTLI to LD_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_BROTLI to LD_LIBRARY_PATH" >&6;}
+       fi
+    fi
+  else
+        LDFLAGS=$CLEANLDFLAGS
+    CPPFLAGS=$CLEANCPPFLAGS
+    LIBS=$CLEANLIBS
+  fi
+fi
+
+
 LDAPLIBNAME=""
 
 # Check whether --with-ldap-lib was given.
@@ -27563,6 +27826,7 @@ for ac_header in sys/types.h \
         net/if.h \
         netinet/in.h \
         sys/un.h \
+        linux/tcp.h \
         netinet/tcp.h \
         netdb.h \
         sys/sockio.h \
@@ -39407,6 +39671,7 @@ for ac_func in geteuid \
   getrlimit \
   gettimeofday \
   if_nametoindex \
+  mach_absolute_time \
   pipe \
   setlocale \
   setmode \
@@ -40693,6 +40958,9 @@ if test "x$USE_UNIX_SOCKETS" = "x1"; then
 fi
 if test "x$HAVE_LIBZ" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES libz"
+fi
+if test "x$HAVE_BROTLI" = "x1"; then
+  SUPPORT_FEATURES="$SUPPORT_FEATURES brotli"
 fi
 if test "x$USE_ARES" = "x1" -o "x$USE_THREADS_POSIX" = "x1" \
                             -o "x$USE_THREADS_WIN32" = "x1"; then
@@ -43702,6 +43970,7 @@ done
   SSL support:      ${curl_ssl_msg}
   SSH support:      ${curl_ssh_msg}
   zlib support:     ${curl_zlib_msg}
+  brotli support:   ${curl_brotli_msg}
   GSS-API support:  ${curl_gss_msg}
   TLS-SRP support:  ${curl_tls_srp_msg}
   resolver:         ${curl_res_msg}
@@ -43734,6 +44003,7 @@ $as_echo "$as_me: Configured to build curl/libcurl:
   SSL support:      ${curl_ssl_msg}
   SSH support:      ${curl_ssh_msg}
   zlib support:     ${curl_zlib_msg}
+  brotli support:   ${curl_brotli_msg}
   GSS-API support:  ${curl_gss_msg}
   TLS-SRP support:  ${curl_tls_srp_msg}
   resolver:         ${curl_res_msg}

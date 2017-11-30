@@ -314,6 +314,7 @@ FGREP = @FGREP@
 GCOV = @GCOV@
 GENHTML = @GENHTML@
 GREP = @GREP@
+HAVE_BROTLI = @HAVE_BROTLI@
 HAVE_GNUTLS_SRP = @HAVE_GNUTLS_SRP@
 HAVE_LDAP_SSL = @HAVE_LDAP_SSL@
 HAVE_LIBZ = @HAVE_LIBZ@
@@ -758,8 +759,6 @@ clean: clean-recursive
 
 clean-am: clean-generic clean-libtool mostlyclean-am
 
-distclean: distclean-recursive
-	-rm -f Makefile
 distclean-am: clean-am distclean-generic distclean-tags
 
 dvi: dvi-recursive
@@ -865,6 +864,9 @@ pdf: $(PDFPAGES)
 	ps2pdf $$foo.ps $@; \
 	rm $$foo.ps; \
 	echo "converted $< to $@")
+
+distclean:
+	rm -f $(CLEANFILES)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
