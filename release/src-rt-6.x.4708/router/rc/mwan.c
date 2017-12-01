@@ -135,7 +135,7 @@ int checkConnect(char *sPrefix)
 
 void mwan_table_del(char *sPrefix)
 {
-	mwanlog(LOG_DEBUG, "IN fun mwan_table_del");
+	mwanlog(LOG_DEBUG, "IN mwan_table_del");
 
 	int wan_unit,table;
 	int i;
@@ -168,13 +168,13 @@ void mwan_table_del(char *sPrefix)
 	mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
 	system(cmd);
 
-	mwanlog(LOG_DEBUG, "OUT fun mwan_table_del");
+	mwanlog(LOG_DEBUG, "OUT mwan_table_del");
 }
 
 // set multiwan ip route table & ip rule table
 void mwan_table_add(char *sPrefix)
 {
-	mwanlog(LOG_DEBUG, "IN fun mwan_table_add");
+	mwanlog(LOG_DEBUG, "IN mwan_table_add");
 
 	int mwan_num;
 	int proto;
@@ -253,7 +253,7 @@ void mwan_table_add(char *sPrefix)
 		system(cmd);
 	}
 
-	mwanlog(LOG_DEBUG, "OUT fun mwan_table_add");
+	mwanlog(LOG_DEBUG, "OUT mwan_table_add");
 }
 
 void mwan_state_files(void)
@@ -282,7 +282,7 @@ void mwan_state_files(void)
 
 void mwan_status_update(void)
 {
-	mwanlog(LOG_DEBUG, "IN fun mwan_status_update, mwan_curr=%s", mwan_curr);
+	mwanlog(LOG_DEBUG, "IN mwan_status_update, mwan_curr=%s", mwan_curr);
 	int mwan_num;
 	int wan_unit;
 	char prefix[] = "wanXX";
@@ -341,14 +341,14 @@ void mwan_status_update(void)
 	}
 
 	fclose(f);
-	mwanlog(LOG_DEBUG, "OUT fun mwan_status_update, mwan_curr=%s", mwan_curr);
+	mwanlog(LOG_DEBUG, "OUT mwan_status_update, mwan_curr=%s", mwan_curr);
 }
 
 void mwan_load_balance(void)
 {
 	if(nvram_get_int("mwan_num") == 1) return;
 
-	mwanlog(LOG_DEBUG, "IN fun mwan_load_balance, mwan_curr=%s", mwan_curr);
+	mwanlog(LOG_DEBUG, "IN mwan_load_balance, mwan_curr=%s", mwan_curr);
 	int mwan_num,wan_unit;
 	int proto;
 	char prefix[] = "wanXX";
@@ -398,7 +398,7 @@ void mwan_load_balance(void)
 		mwanlog(LOG_DEBUG, "load_balance, cmd=%s", lb_cmd);
 		system(lb_cmd);
 	}
-	mwanlog(LOG_DEBUG, "OUT fun mwan_load_balance, mwan_curr=%s", mwan_curr);
+	mwanlog(LOG_DEBUG, "OUT mwan_load_balance, mwan_curr=%s", mwan_curr);
 }
 
 int mwan_route_main(int argc, char **argv)
