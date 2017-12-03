@@ -227,6 +227,7 @@ cert_print_bincert_info(ProxyContext * const proxy_context,
     ts_end_t = (time_t) htonl(ts_end);
     assert(ts_end_t > (time_t) 0);
 
+    memset(&ts_end_tm, 0, sizeof ts_end_tm);
     gm_ret = (gmtime_r(&ts_begin_t, &ts_begin_tm) != NULL &&
               gmtime_r(&ts_end_t, &ts_end_tm) != NULL);
     assert(gm_ret != 0);
