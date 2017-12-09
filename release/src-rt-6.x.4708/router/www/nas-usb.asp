@@ -438,19 +438,19 @@ createFieldTable('', [
 /* MICROSD-END */
 /* LINUX26-END */
 		{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
-			suffix: ' <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
+			suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
 	{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
 	{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
 	null,
 /* LINUX26-BEGIN */
 	{ title: 'HDD Spindown', name: 'f_idle_enable', type: 'checkbox',
-		suffix: ' <small>Spin down each HDD when idle. No need to use with flash drive.<\/small>', value: nvram.idle_enable == 1 },
-	{ title: 'USB 3G Modem support', name: 'f_usb_3g', type: 'checkbox',
-		suffix: ' <small>Before disconnecting 3G Modem from USB port, remember to uncheck box. If modem used usbserial module, you have to reboot router before unplug modem.<\/small>', value: nvram.usb_3g == 1 },
+		suffix: '&nbsp; <small>Spin down each HDD when idle. No need to use with flash drive.<\/small>', value: nvram.idle_enable == 1 },
+	{ title: '3G/4G Modem Support', name: 'f_usb_3g', type: 'checkbox',
+		suffix: '&nbsp; <small>Before disconnecting Modem from USB port, remember to uncheck box. If modem used usbserial module, you have to reboot router before unplug modem.<\/small>', value: nvram.usb_3g == 1 },
 /* LINUX26-END */
 /* UPS-BEGIN */
 	{ title: 'Run APCUPSD Deamon', name: 'f_usb_apcupsd', type: 'checkbox',
-		suffix: ' <small>Required by UPS Monitor (APC Uninterruptible Power Supply)<\/small>', value: nvram.usb_apcupsd == 1 },
+		suffix: '&nbsp; <small>Required by UPS Monitor (APC Uninterruptible Power Supply)<\/small>', value: nvram.usb_apcupsd == 1 },
 /* UPS-END */
 	{ title: 'Hotplug script<br /><small>(called when any USB device is attached or removed)<\/small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
 	null,

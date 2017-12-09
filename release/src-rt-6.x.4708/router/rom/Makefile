@@ -35,8 +35,17 @@ else
 	    if [ $${?} -ne 0 ]; then \
 		count=`expr $${count} + 1`; \
 		if [ $${count} -gt 5 ]; then \
-		    echo "Dnscrypt resolvers download error, check your internet connection!"; \
-		    exit 1; \
+		    err_file="../../error_download_dnscrypt_resolvers"; \
+		    ret=$$(date)": Dnscrypt resolvers download error, check your internet connection! Using recently downloaded file!"; \
+		    echo "\n\n"$${ret}"\n\n"; \
+		    echo $${ret} >> $${err_file}; \
+		    cp rom/etc/dnscrypt-resolvers.csv $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
+		    if [ $${?} -ne 0 ]; then \
+			ret=$$(date)": No local copy of the dnscrypt-resolvers.csv file has been found, aborting!"; \
+			echo "\n\n"$${ret}"\n\n"; \
+			echo $${ret} >> $${err_file}; \
+			exit 1; \
+		    fi; \
 		fi; \
 		sleep 2; \
 	    else \

@@ -367,7 +367,7 @@ void stop_usb(void)
 	stop_ups();
 #endif
 
-	if (nvram_match("3g_usb", "0") ) {
+	if (disabled || !nvram_get_int("usb_3g")) {
 		if (nvram_match("3g_module", "sierra") ) {
 			modprobe_r("sierra");
 			modprobe_r("usbserial");

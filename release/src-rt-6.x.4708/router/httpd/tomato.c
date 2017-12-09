@@ -674,6 +674,7 @@ static const nvset_t nvset_list[] = {
 	{ "dnscrypt_provider_name",	V_LENGTH(0, 60)			},
 	{ "dnscrypt_provider_key",	V_LENGTH(0, 80)			},
 	{ "dnscrypt_resolver_address",	V_LENGTH(0, 50)			},
+	{ "dnscrypt_ephemeral_keys",	V_01				},
 #endif
 	{ "lan_state",			V_01				},
 	{ "lan_desc",			V_01				},
