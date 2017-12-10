@@ -26,10 +26,6 @@
 
 #ifdef ENABLE_HISTORIES
 
-#ifndef XDG_DATA_FALLBACK
-#define XDG_DATA_FALLBACK "/.local/share"
-#endif
-
 #ifndef SEARCH_HISTORY
 #define SEARCH_HISTORY "search_history"
 #endif
@@ -272,10 +268,18 @@ bool have_statedir(void)
     if (xdgdatadir != NULL)
 	statedir = concatenate(xdgdatadir, "/nano/");
     else
-	statedir = concatenate(homedir, XDG_DATA_FALLBACK "/nano/");
+	statedir = concatenate(homedir, "/.local/share/nano/");
 
     if (stat(statedir, &dirstat) == -1) {
-	if (mkdir(statedir, S_IRWXU | S_IRWXG | S_IRWXO) == -1) {
+	if (xdgdatadir == NULL) {
+	    char *statepath = concatenate(homedir, "/.local");
+	    mkdir(statepath, S_IRWXU | S_IRWXG | S_IRWXO);
+	    free(statepath);
+	    statepath = concatenate(homedir, "/.local/share");
+	    mkdir(statepath, S_IRWXU);
+	    free(statepath);
+	}
+	if (mkdir(statedir, S_IRWXU) == -1) {
 	    history_error(N_("Unable to create directory %s: %s\n"
 				"It is required for saving/loading "
 				"search history or cursor positions.\n"),
@@ -326,7 +330,6 @@ void load_history(void)
 		history = &replace_history;
 	   else
 		history = &execute_history;
-
 	}
 
 	fclose(hisfile);
@@ -548,6 +551,7 @@ void update_poshistory(char *filename, ssize_t lineno, ssize_t xpos)
 		posprev->next = posptr->next;
 	    free(posptr->filename);
 	    free(posptr);
+	    save_poshistory();
 	}
 	free(fullpath);
 	return;
