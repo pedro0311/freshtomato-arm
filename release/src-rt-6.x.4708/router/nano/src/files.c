@@ -93,16 +93,14 @@ void make_new_buffer(void)
 
     openfile->modified = FALSE;
 #ifndef NANO_TINY
-    openfile->mark_set = FALSE;
-    openfile->mark_begin = NULL;
-    openfile->mark_begin_x = 0;
-    openfile->kind_of_mark = SOFTMARK;
+    openfile->mark = NULL;
 
     openfile->fmt = NIX_FILE;
 
     openfile->undotop = NULL;
     openfile->current_undo = NULL;
     openfile->last_action = OTHER;
+    openfile->pristine = TRUE;
 
     openfile->current_stat = NULL;
     openfile->lock_filename = NULL;
@@ -1594,7 +1592,7 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
      * only if the file has not been modified by someone else since nano
      * opened it. */
     if (ISSET(BACKUP_FILE) && !tmp && realexists && openfile->current_stat &&
-		(method != OVERWRITE || openfile->mark_set ||
+		(method != OVERWRITE || openfile->mark ||
 		openfile->current_stat->st_mtime == st.st_mtime)) {
 	static struct timespec filetime[2];
 	char *backupname;
@@ -1952,7 +1950,7 @@ bool write_file(const char *name, FILE *f_open, bool tmp,
 	}
 
 #ifndef NANO_TINY
-	if (!openfile->mark_set)
+	if (!nonamechange)
 	    /* Get or update the stat info to reflect the current state. */
 	    stat_with_alloc(realname, &openfile->current_stat);
 #endif
@@ -2023,7 +2021,6 @@ bool write_marked_file(const char *name, FILE *f_open, bool tmp,
  * the buffer is to be discarded. */
 int do_writeout(bool exiting, bool withprompt)
 {
-    int i = 0;
     bool result = FALSE;
     kind_of_writing_type method = OVERWRITE;
     char *given;
@@ -2039,25 +2036,25 @@ int do_writeout(bool exiting, bool withprompt)
 
     given = mallocstrcpy(NULL,
 #ifndef NANO_TINY
-	(openfile->mark_set && !exiting) ? "" :
+	(openfile->mark && !exiting) ? "" :
 #endif
 	openfile->filename);
 
     while (TRUE) {
 	const char *msg;
+	int i = 0;
+	functionptrtype func;
 #ifndef NANO_TINY
 	const char *formatstr, *backupstr;
 
 	formatstr = (openfile->fmt == DOS_FILE) ? _(" [DOS Format]") :
 			(openfile->fmt == MAC_FILE) ? _(" [Mac Format]") : "";
-
 	backupstr = ISSET(BACKUP_FILE) ? _(" [Backup]") : "";
 
-	/* If we're using restricted mode, don't display the "Write
-	 * Selection to File" prompt.  This function is disabled, since
-	 * it allows reading from or writing to files not specified on
-	 * the command line. */
-	if (openfile->mark_set && !exiting && !ISSET(RESTRICTED))
+	/* When the mark is on, offer to write the selection to disk, but
+	 * not when in restricted mode, because it would allow writing to
+	 * a file not specified on the command line. */
+	if (openfile->mark && !exiting && !ISSET(RESTRICTED))
 	    /* TRANSLATORS: The next six strings are prompts. */
 	    msg = (method == PREPEND) ? _("Prepend Selection to File") :
 			(method == APPEND) ? _("Append Selection to File") :
@@ -2092,171 +2089,167 @@ int do_writeout(bool exiting, bool withprompt)
 	if (i < 0) {
 	    statusbar(_("Cancelled"));
 	    break;
-	} else {
-	    functionptrtype func = func_from_key(&i);
+	}
 
-	    /* Upon request, abandon the buffer. */
-	    if (func == discard_buffer) {
-		free(given);
-		return 2;
-	    }
+	func = func_from_key(&i);
 
-	    given = mallocstrcpy(given, answer);
+	/* Upon request, abandon the buffer. */
+	if (func == discard_buffer) {
+	    free(given);
+	    return 2;
+	}
+
+	given = mallocstrcpy(given, answer);
 
 #ifdef ENABLE_BROWSER
-	    if (func == to_files_void) {
-		char *chosen = do_browse_from(answer);
+	if (func == to_files_void) {
+	    char *chosen = do_browse_from(answer);
 
-		if (chosen == NULL)
-		    continue;
+	    if (chosen == NULL)
+		continue;
 
-		/* We have a file now.  Indicate this. */
-		free(answer);
-		answer = chosen;
-	    } else
+	    free(answer);
+	    answer = chosen;
+	} else
 #endif
 #ifndef NANO_TINY
-	    if (func == dos_format_void) {
-		openfile->fmt = (openfile->fmt == DOS_FILE) ? NIX_FILE :
-			DOS_FILE;
-		continue;
-	    } else if (func == mac_format_void) {
-		openfile->fmt = (openfile->fmt == MAC_FILE) ? NIX_FILE :
-			MAC_FILE;
-		continue;
-	    } else if (func == backup_file_void) {
-		TOGGLE(BACKUP_FILE);
-		continue;
-	    } else if (func == prepend_void) {
-		method = (method == PREPEND) ? OVERWRITE : PREPEND;
-		continue;
-	    } else if (func == append_void) {
-		method = (method == APPEND) ? OVERWRITE : APPEND;
-		continue;
-	    } else
+	if (func == dos_format_void) {
+	    openfile->fmt = (openfile->fmt == DOS_FILE) ? NIX_FILE : DOS_FILE;
+	    continue;
+	} else if (func == mac_format_void) {
+	    openfile->fmt = (openfile->fmt == MAC_FILE) ? NIX_FILE : MAC_FILE;
+	    continue;
+	} else if (func == backup_file_void) {
+	    TOGGLE(BACKUP_FILE);
+	    continue;
+	} else if (func == prepend_void) {
+	    method = (method == PREPEND) ? OVERWRITE : PREPEND;
+	    continue;
+	} else if (func == append_void) {
+	    method = (method == APPEND) ? OVERWRITE : APPEND;
+	    continue;
+	}
 #endif /* !NANO_TINY */
-	    if (func == do_help_void) {
-		continue;
-	    }
-
+	if (func == do_help_void) {
+	    continue;
+	}
 #ifdef ENABLE_EXTRA
-	    /* If the current file has been modified, we've pressed
-	     * Ctrl-X at the edit window to exit, we've pressed "y" at
-	     * the "Save modified buffer" prompt to save, we've entered
-	     * "zzy" as the filename to save under (hence "xyzzy"), and
-	     * this is the first time we've done this, show an Easter
-	     * egg.  Display the credits. */
-	    if (!did_credits && exiting && !ISSET(TEMP_FILE) &&
-			strcasecmp(answer, "zzy") == 0) {
-		do_credits();
-		did_credits = TRUE;
-		break;
-	    }
+	/* If the current file has been modified, we've pressed
+	 * Ctrl-X at the edit window to exit, we've pressed "y" at
+	 * the "Save modified buffer" prompt to save, we've entered
+	 * "zzy" as the filename to save under (hence "xyzzy"), and
+	 * this is the first time we've done this, show an Easter
+	 * egg.  Display the credits. */
+	if (!did_credits && exiting && !ISSET(TEMP_FILE) &&
+				strcasecmp(answer, "zzy") == 0) {
+	    do_credits();
+	    did_credits = TRUE;
+	    break;
+	}
 #endif
 
-	    if (method == OVERWRITE) {
-		bool name_exists, do_warning;
-		char *full_answer, *full_filename;
-		struct stat st;
+	if (method == OVERWRITE) {
+	    bool name_exists, do_warning;
+	    char *full_answer, *full_filename;
+	    struct stat st;
 
-		full_answer = get_full_path(answer);
-		full_filename = get_full_path(openfile->filename);
-		name_exists = (stat((full_answer == NULL) ?
+	    full_answer = get_full_path(answer);
+	    full_filename = get_full_path(openfile->filename);
+	    name_exists = (stat((full_answer == NULL) ?
 				answer : full_answer, &st) != -1);
-		if (openfile->filename[0] == '\0')
-		    do_warning = name_exists;
-		else
-		    do_warning = (strcmp((full_answer == NULL) ?
+	    if (openfile->filename[0] == '\0')
+		do_warning = name_exists;
+	    else
+		do_warning = (strcmp((full_answer == NULL) ?
 				answer : full_answer, (full_filename == NULL) ?
 				openfile->filename : full_filename) != 0);
 
-		free(full_filename);
-		free(full_answer);
+	    free(full_filename);
+	    free(full_answer);
 
-		if (do_warning) {
-		    /* When in restricted mode, we aren't allowed to overwrite
-		     * an existing file with the current buffer, nor to change
-		     * the name of the current file if it already has one. */
-		    if (ISSET(RESTRICTED)) {
-			/* TRANSLATORS: Restricted mode forbids overwriting. */
-			warn_and_shortly_pause(_("File exists -- "
-					"cannot overwrite"));
-			continue;
-		    }
+	    if (do_warning) {
+		/* When in restricted mode, we aren't allowed to overwrite
+		 * an existing file with the current buffer, nor to change
+		 * the name of the current file if it already has one. */
+		if (ISSET(RESTRICTED)) {
+		    /* TRANSLATORS: Restricted mode forbids overwriting. */
+		    warn_and_shortly_pause(_("File exists -- "
+						"cannot overwrite"));
+		    continue;
+		}
 
-		    if (!maychange) {
+		if (!maychange) {
 #ifndef NANO_TINY
-			if (exiting || !openfile->mark_set)
+		    if (exiting || !openfile->mark)
 #endif
-			{
-			    if (do_yesno_prompt(FALSE, _("Save file under "
-					"DIFFERENT NAME? ")) < 1)
-				continue;
-			    maychange = TRUE;
-			}
-		    }
-
-		    if (name_exists) {
-			char *question = _("File \"%s\" exists; OVERWRITE? ");
-			char *message = charalloc(strlen(question) +
-						strlen(answer) + 1);
-			sprintf(message, question, answer);
-
-			i = do_yesno_prompt(FALSE, message);
-			free(message);
-
-			if (i < 1)
+		    {
+			if (do_yesno_prompt(FALSE, _("Save file under "
+						"DIFFERENT NAME? ")) < 1)
 			    continue;
+			maychange = TRUE;
 		    }
 		}
+
+		if (name_exists) {
+		    char *question = _("File \"%s\" exists; OVERWRITE? ");
+		    char *message = charalloc(strlen(question) +
+						strlen(answer) + 1);
+		    sprintf(message, question, answer);
+
+		    i = do_yesno_prompt(FALSE, message);
+		    free(message);
+
+		    if (i < 1)
+			continue;
+		}
+	    }
 #ifndef NANO_TINY
-		/* Complain if the file exists, the name hasn't changed,
-		 * and the stat information we had before does not match
-		 * what we have now. */
-		else if (name_exists && openfile->current_stat &&
+	    /* Complain if the file exists, the name hasn't changed,
+	     * and the stat information we had before does not match
+	     * what we have now. */
+	    else if (name_exists && openfile->current_stat &&
 			(openfile->current_stat->st_mtime < st.st_mtime ||
 			openfile->current_stat->st_dev != st.st_dev ||
 			openfile->current_stat->st_ino != st.st_ino)) {
-		    int response;
+		int response;
 
-		    warn_and_shortly_pause(_("File on disk has changed"));
+		warn_and_shortly_pause(_("File on disk has changed"));
 
-		    response = do_yesno_prompt(FALSE, _("File was modified "
+		response = do_yesno_prompt(FALSE, _("File was modified "
 				"since you opened it; continue saving? "));
-		    blank_statusbar();
+		blank_statusbar();
 
-		    /* When in tool mode and not called by 'savefile',
-		     * overwrite the file right here when requested. */
-		    if (ISSET(TEMP_FILE) && withprompt) {
-			free(given);
-			if (response == 1)
-			    return write_file(openfile->filename,
-					NULL, FALSE, OVERWRITE, FALSE);
-			else if (response == 0)
-			    return 2;
-			else
-			    return 0;
-		    } else if (response != 1) {
-			free(given);
-			return 1;
-		    }
+		/* When in tool mode and not called by 'savefile',
+		 * overwrite the file right here when requested. */
+		if (ISSET(TEMP_FILE) && withprompt) {
+		    free(given);
+		    if (response == 1)
+			return write_file(openfile->filename,
+					 NULL, FALSE, OVERWRITE, FALSE);
+		    else if (response == 0)
+			return 2;
+		    else
+			return 0;
+		} else if (response != 1) {
+		    free(given);
+		    return 1;
 		}
-#endif
 	    }
-
-	    /* Here's where we allow the selected text to be written to
-	     * a separate file.  If we're using restricted mode, this
-	     * function is disabled, since it allows reading from or
-	     * writing to files not specified on the command line. */
-#ifndef NANO_TINY
-	    if (openfile->mark_set && !exiting && !ISSET(RESTRICTED))
-		result = write_marked_file(answer, NULL, FALSE, method);
-	    else
 #endif
-		result = write_file(answer, NULL, FALSE, method, FALSE);
-
-	    break;
 	}
+
+	/* Here's where we allow the selected text to be written to
+	 * a separate file.  If we're using restricted mode, this
+	 * function is disabled, since it allows reading from or
+	 * writing to files not specified on the command line. */
+#ifndef NANO_TINY
+	if (openfile->mark && !exiting && withprompt && !ISSET(RESTRICTED))
+	    result = write_marked_file(answer, NULL, FALSE, method);
+	else
+#endif
+	    result = write_file(answer, NULL, FALSE, method, FALSE);
+
+	break;
     }
 
     free(given);
@@ -2347,19 +2340,6 @@ int diralphasort(const void *va, const void *vb)
      * locale, but there's no standard strcasecoll() function, so we
      * have to use multibyte strcasecmp() instead. */
     return mbstrcasecmp(a, b);
-}
-
-/* Free the memory allocated for array, which should contain len
- * elements. */
-void free_chararray(char **array, size_t len)
-{
-    if (array == NULL)
-	return;
-
-    for (; len > 0; len--)
-	free(array[len - 1]);
-
-    free(array);
 }
 #endif
 

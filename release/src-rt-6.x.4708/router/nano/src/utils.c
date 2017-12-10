@@ -193,6 +193,20 @@ void sunder(char *str)
     }
 }
 
+#if !defined(ENABLE_TINY) || defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
+/* Free the memory of the given array, which should contain len elements. */
+void free_chararray(char **array, size_t len)
+{
+    if (array == NULL)
+	return;
+
+    while (len > 0)
+	free(array[--len]);
+
+    free(array);
+}
+#endif
+
 /* Fix the regex if we're on platforms which require an adjustment
  * from GNU-style to BSD-style word boundaries. */
 const char *fixbounds(const char *r)
@@ -499,18 +513,18 @@ void remove_magicline(void)
 void mark_order(const filestruct **top, size_t *top_x, const filestruct
 	**bot, size_t *bot_x, bool *right_side_up)
 {
-    if ((openfile->current->lineno == openfile->mark_begin->lineno &&
-		openfile->current_x > openfile->mark_begin_x) ||
-		openfile->current->lineno > openfile->mark_begin->lineno) {
-	*top = openfile->mark_begin;
-	*top_x = openfile->mark_begin_x;
+    if ((openfile->current->lineno == openfile->mark->lineno &&
+		openfile->current_x > openfile->mark_x) ||
+		openfile->current->lineno > openfile->mark->lineno) {
+	*top = openfile->mark;
+	*top_x = openfile->mark_x;
 	*bot = openfile->current;
 	*bot_x = openfile->current_x;
 	if (right_side_up != NULL)
 	    *right_side_up = TRUE;
     } else {
-	*bot = openfile->mark_begin;
-	*bot_x = openfile->mark_begin_x;
+	*bot = openfile->mark;
+	*bot_x = openfile->mark_x;
 	*top = openfile->current;
 	*top_x = openfile->current_x;
 	if (right_side_up != NULL)

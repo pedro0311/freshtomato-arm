@@ -306,16 +306,14 @@ void extract_buffer(filestruct **file_top, filestruct **file_bot,
     edittop_inside = (openfile->edittop->lineno >= openfile->fileage->lineno &&
 			openfile->edittop->lineno <= openfile->filebot->lineno);
 #ifndef NANO_TINY
-    if (openfile->mark_set) {
-	mark_inside = (openfile->mark_begin->lineno >=
-		openfile->fileage->lineno &&
-		openfile->mark_begin->lineno <=
-		openfile->filebot->lineno &&
-		(openfile->mark_begin != openfile->fileage ||
-		openfile->mark_begin_x >= top_x) &&
-		(openfile->mark_begin != openfile->filebot ||
-		openfile->mark_begin_x <= bot_x));
-	same_line = (openfile->mark_begin == openfile->fileage);
+    if (openfile->mark) {
+	mark_inside = (openfile->mark->lineno >= openfile->fileage->lineno &&
+			openfile->mark->lineno <= openfile->filebot->lineno &&
+			(openfile->mark != openfile->fileage ||
+						openfile->mark_x >= top_x) &&
+			(openfile->mark != openfile->filebot ||
+						openfile->mark_x <= bot_x));
+	same_line = (openfile->mark == openfile->fileage);
     }
 #endif
 
@@ -368,11 +366,11 @@ void extract_buffer(filestruct **file_top, filestruct **file_bot,
     openfile->current_x = top_x;
 #ifndef NANO_TINY
     if (mark_inside) {
-	openfile->mark_begin = openfile->current;
-	openfile->mark_begin_x = openfile->current_x;
+	openfile->mark = openfile->current;
+	openfile->mark_x = openfile->current_x;
     } else if (same_line)
 	/* Update the pointer to this partially cut line. */
-	openfile->mark_begin = openfile->current;
+	openfile->mark = openfile->current;
 #endif
 
     top_save = openfile->fileage;
@@ -412,7 +410,7 @@ void ingraft_buffer(filestruct *somebuffer)
 #ifndef NANO_TINY
     /* Keep track of whether the mark begins inside the partition and
      * will need adjustment. */
-    if (openfile->mark_set) {
+    if (openfile->mark) {
 	filestruct *top, *bot;
 	size_t top_x, bot_x;
 
@@ -445,10 +443,10 @@ void ingraft_buffer(filestruct *somebuffer)
      * x coordinate for the change in the current line. */
     if (openfile->fileage == openfile->filebot) {
 #ifndef NANO_TINY
-	if (openfile->mark_set && single_line) {
-	    openfile->mark_begin = openfile->current;
+	if (openfile->mark && single_line) {
+	    openfile->mark = openfile->current;
 	    if (!right_side_up)
-		openfile->mark_begin_x += openfile->current_x;
+		openfile->mark_x += openfile->current_x;
 	}
 #endif
 	/* When the pasted stuff contains no newline, adjust the cursor's
@@ -456,12 +454,12 @@ void ingraft_buffer(filestruct *somebuffer)
 	openfile->current_x += current_x_save;
     }
 #ifndef NANO_TINY
-    else if (openfile->mark_set && single_line) {
+    else if (openfile->mark && single_line) {
 	if (right_side_up)
-	    openfile->mark_begin = openfile->fileage;
+	    openfile->mark = openfile->fileage;
 	else {
-	    openfile->mark_begin = openfile->current;
-	    openfile->mark_begin_x += openfile->current_x - current_x_save;
+	    openfile->mark = openfile->current;
+	    openfile->mark_x += openfile->current_x - current_x_save;
 	}
     }
 #endif
@@ -525,7 +523,7 @@ void delete_opennode(openfilestruct *fileptr)
     free(fileptr->current_stat);
     free(fileptr->lock_filename);
     /* Free the undo stack. */
-    discard_until(NULL, fileptr);
+    discard_until(NULL, fileptr, TRUE);
 #endif
     free(fileptr);
 }
@@ -1625,8 +1623,8 @@ int do_input(bool allow_funcs)
 	    puddle[depth++] = (char)input;
 	}
 #ifndef NANO_TINY
-	if (openfile->mark_set && openfile->kind_of_mark == SOFTMARK) {
-	    openfile->mark_set = FALSE;
+	if (openfile->mark && openfile->kind_of_mark == SOFTMARK) {
+	    openfile->mark = NULL;
 	    refresh_needed = TRUE;
 	}
 #endif
@@ -1689,11 +1687,13 @@ int do_input(bool allow_funcs)
 #endif
 	{
 #ifndef NANO_TINY
+	    filestruct *was_current = openfile->current;
+	    size_t was_x = openfile->current_x;
+
 	    /* If Shifted movement occurs, set the mark. */
-	    if (shift_held && !openfile->mark_set) {
-		openfile->mark_set = TRUE;
-		openfile->mark_begin = openfile->current;
-		openfile->mark_begin_x = openfile->current_x;
+	    if (shift_held && !openfile->mark) {
+		openfile->mark = openfile->current;
+		openfile->mark_x = openfile->current_x;
 		openfile->kind_of_mark = SOFTMARK;
 	    }
 #endif
@@ -1701,10 +1701,11 @@ int do_input(bool allow_funcs)
 	    s->scfunc();
 #ifndef NANO_TINY
 	    /* If Shiftless movement occurred, discard a soft mark. */
-	    if (openfile->mark_set && !shift_held &&
-				openfile->kind_of_mark == SOFTMARK) {
-		openfile->mark_set = FALSE;
-		openfile->mark_begin = NULL;
+	    if (!shift_held && openfile->mark &&
+				openfile->kind_of_mark == SOFTMARK &&
+				(openfile->current_x != was_x ||
+				openfile->current != was_current)) {
+		openfile->mark = NULL;
 		refresh_needed = TRUE;
 	    }
 #endif
@@ -1835,9 +1836,9 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 	add_undo(ADD);
 
 	/* Note that current_x has not yet been incremented. */
-	if (openfile->mark_set && openfile->current == openfile->mark_begin &&
-		openfile->current_x < openfile->mark_begin_x)
-	    openfile->mark_begin_x += char_len;
+	if (openfile->current == openfile->mark &&
+			openfile->current_x < openfile->mark_x)
+	    openfile->mark_x += char_len;
 
 	/* When the cursor is on the top row and not on the first chunk
 	 * of a line, adding text there might change the preceding chunk
