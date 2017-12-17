@@ -8,14 +8,12 @@ EN: https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled
 
 This is my personal fork, If anyone wants to pick up my changes and merge them to your repository, feel free and go ahead. That's the reason Tomato is an open-source project.
 
-**Changelog**: https://exotic.se/tomato-arm/changelog.txt
-
-**Source code**: https://bitbucket.org/kille72/tomato-arm-kille72/commits/all
+**Source code/Changelog**: https://bitbucket.org/kille72/tomato-arm-kille72/commits/all
 
 **Downloads**: https://exotic.se/tomato-arm
 
 **About me/Donate**: https://exotic.se
 
-For the following **ARM** routers: **Asus** N18U, AC56S, AC56U, AC68U/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15.
+For the following **ARM** routers: **Asus** N18U, AC56S, AC56U, AC68U/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880.
 
 Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!

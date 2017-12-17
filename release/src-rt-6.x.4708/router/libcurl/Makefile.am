@@ -30,7 +30,8 @@ CMAKE_DIST = CMakeLists.txt CMake/CMakeConfigurableFile.in      \
  CMake/Macros.cmake              \
  CMake/CurlSymbolHiding.cmake CMake/FindCARES.cmake             \
  CMake/FindLibSSH2.cmake CMake/FindNGHTTP2.cmake                \
- CMake/FindMbedTLS.cmake CMake/cmake_uninstall.cmake.in
+ CMake/FindMbedTLS.cmake CMake/cmake_uninstall.cmake.in         \
+ CMake/curl-config.cmake
 
 VC6_LIBTMPL = projects/Windows/VC6/lib/libcurl.tmpl
 VC6_LIBDSP = projects/Windows/VC6/lib/libcurl.dsp.dist
@@ -216,15 +217,6 @@ examples:
 check-docs:
 	@(cd docs/libcurl; $(MAKE) check)
 
-# This is a hook to have 'make clean' also clean up the docs and the tests
-# dir. The extra check for the Makefiles being present is necessary because
-# 'make distcheck' will make clean first in these directories _before_ it runs
-# this hook.
-clean-local:
-	@(if test -f tests/Makefile; then cd tests; $(MAKE) clean; fi)
-	@(if test -f docs/Makefile; then cd docs; $(MAKE) clean; fi)
-
-#
 # Build source and binary rpms. For rpm-3.0 and above, the ~/.rpmmacros
 # must contain the following line:
 # %_topdir /home/loic/local/rpm

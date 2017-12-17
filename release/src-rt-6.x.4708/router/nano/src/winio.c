@@ -101,8 +101,10 @@ void run_macro(void)
 	return;
     }
 
-    if (macro_length == 0)
+    if (macro_length == 0) {
+	statusline(HUSH, _("Macro is empty"));
 	return;
+    }
 
     free(key_buffer);
     key_buffer = (int *)nmalloc(macro_length * sizeof(int));
@@ -2702,10 +2704,10 @@ void edit_draw(filestruct *fileptr, const char *converted,
 #ifndef NANO_TINY
     /* If the mark is on, and fileptr is at least partially selected, we
      * need to paint it. */
-    if (openfile->mark_set &&
-		(fileptr->lineno <= openfile->mark_begin->lineno ||
+    if (openfile->mark &&
+		(fileptr->lineno <= openfile->mark->lineno ||
 		fileptr->lineno <= openfile->current->lineno) &&
-		(fileptr->lineno >= openfile->mark_begin->lineno ||
+		(fileptr->lineno >= openfile->mark->lineno ||
 		fileptr->lineno >= openfile->current->lineno)) {
 	const filestruct *top, *bot;
 	    /* The lines where the marked region begins and ends. */
@@ -2876,7 +2878,7 @@ int update_softwrapped_line(filestruct *fileptr)
 bool line_needs_update(const size_t old_column, const size_t new_column)
 {
 #ifndef NANO_TINY
-    if (openfile->mark_set)
+    if (openfile->mark)
 	return TRUE;
     else
 #endif
@@ -3266,7 +3268,7 @@ void edit_redraw(filestruct *old_current, update_type manner)
 
 #ifndef NANO_TINY
     /* If the mark is on, update all lines between old_current and current. */
-    if (openfile->mark_set) {
+    if (openfile->mark) {
 	filestruct *line = old_current;
 
 	while (line != openfile->current) {

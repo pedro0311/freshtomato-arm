@@ -382,22 +382,23 @@ typedef struct openfilestruct {
     struct stat *current_stat;
 	/* The file's current stat information. */
 #ifndef NANO_TINY
-    bool mark_set;
-	/* Whether the mark is on in this file. */
-    filestruct *mark_begin;
-	/* The file's line where the mark is, if any. */
-    size_t mark_begin_x;
-	/* The file's mark's x-coordinate position, if any. */
+    filestruct *mark;
+	/* The line in the file where the mark is set; NULL if not set. */
+    size_t mark_x;
+	/* The mark's x position in the above line. */
     mark_type kind_of_mark;
-	/* Whether this is a soft or a hard mark. */
+	/* Whether it is a soft (with Shift) or a hard mark. */
     file_format fmt;
-	/* The file's format. */
+	/* The file's format -- Unix or DOS or Mac or mixed. */
     undo *undotop;
 	/* The top of the undo list. */
     undo *current_undo;
 	/* The current (i.e. next) level of undo. */
     undo_type last_action;
 	/* The type of the last action the user performed. */
+    bool pristine;
+	/* Whether the undo stack still contains the first edit -- it won't
+	 * when a justification or spell check discarded the undo stack. */
     char *lock_filename;
 	/* The path of the lockfile, if we created one. */
 #endif
