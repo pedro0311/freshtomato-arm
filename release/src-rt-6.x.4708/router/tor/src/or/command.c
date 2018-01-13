@@ -128,7 +128,7 @@ command_time_process_cell(cell_t *cell, channel_t *chan, int *time,
   }
   *time += time_passed;
 }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
 /** Process a <b>cell</b> that was just received on <b>chan</b>. Keep internal
  * statistics about how many of each cell we've processed so far
@@ -165,7 +165,7 @@ command_process_cell(channel_t *chan, cell_t *cell)
     /* remember which second it is, for next time */
     current_second = now;
   }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
 #ifdef KEEP_TIMING_STATS
 #define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
@@ -173,9 +173,9 @@ command_process_cell(channel_t *chan, cell_t *cell)
     command_time_process_cell(cl, cn, & tp ## time ,            \
                               command_process_ ## tp ## _cell);  \
   } STMT_END
-#else
+#else /* !(defined(KEEP_TIMING_STATS)) */
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
   switch (cell->command) {
     case CELL_CREATE:
@@ -331,7 +331,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     // Needed for chutney: Sometimes relays aren't in the consensus yet, and
     // get marked as clients. This resets their channels once they appear.
     // Probably useful for normal operation wrt relay flapping, too.
-    chan->is_client = 0;
+    channel_clear_client(chan);
   } else {
     channel_mark_client(chan);
   }
@@ -353,16 +353,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     int len;
     created_cell_t created_cell;
 
-    /* If the client used CREATE_FAST, it's probably a tor client or bridge
-     * relay, and we must not use it for EXTEND requests (in most cases, we
-     * won't have an authenticated peer ID for the extend).
-     * Public relays on 0.2.9 and later will use CREATE_FAST if they have no
-     * ntor onion key for this relay, but that should be a rare occurrence.
-     * Clients on 0.3.1 and later avoid using CREATE_FAST as much as they can,
-     * even during bootstrap, so the CREATE_FAST check is most accurate for
-     * earlier tor client versions. */
-    channel_mark_client(chan);
-
     memset(&created_cell, 0, sizeof(created_cell));
     len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
                                        create_cell->onionskin,
@@ -381,7 +371,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     created_cell.handshake_len = len;
 
     if (onionskin_answer(circ, &created_cell,
-                         (const char *)keys, rend_circ_nonce)<0) {
+                         (const char *)keys, sizeof(keys),
+                         rend_circ_nonce)<0) {
       log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;

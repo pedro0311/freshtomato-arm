@@ -701,7 +701,7 @@ channel_remove_from_digest_map(channel_t *chan)
 
     return;
   }
-#endif
+#endif /* 0 */
 
   /* Pull it out of its list, wherever that list is */
   TOR_LIST_REMOVE(chan, next_with_same_id);
@@ -1832,7 +1832,7 @@ cell_queue_entry_is_padding(cell_queue_entry_t *q)
 
   return 0;
 }
-#endif
+#endif /* 0 */
 
 /**
  * Allocate a new cell queue entry for a fixed-size cell
@@ -2088,8 +2088,8 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
  * are appropriate to the state transition in question.
  */
 
-void
-channel_change_state(channel_t *chan, channel_state_t to_state)
+static void
+channel_change_state_(channel_t *chan, channel_state_t to_state)
 {
   channel_state_t from_state;
   unsigned char was_active, is_active;
@@ -2208,22 +2208,41 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
     estimated_total_queue_size += chan->bytes_in_queue;
   }
 
-  /* Tell circuits if we opened and stuff */
-  if (to_state == CHANNEL_STATE_OPEN) {
-    channel_do_open_actions(chan);
-    chan->has_been_open = 1;
-
-    /* Check for queued cells to process */
-    if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
-      channel_process_cells(chan);
-    if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue))
-      channel_flush_cells(chan);
-  } else if (to_state == CHANNEL_STATE_CLOSED ||
-             to_state == CHANNEL_STATE_ERROR) {
+  if (to_state == CHANNEL_STATE_CLOSED ||
+      to_state == CHANNEL_STATE_ERROR) {
     /* Assert that all queues are empty */
     tor_assert(TOR_SIMPLEQ_EMPTY(&chan->incoming_queue));
     tor_assert(TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue));
   }
+}
+
+/**
+ * As channel_change_state_, but change the state to any state but open.
+ */
+void
+channel_change_state(channel_t *chan, channel_state_t to_state)
+{
+  tor_assert(to_state != CHANNEL_STATE_OPEN);
+  channel_change_state_(chan, to_state);
+}
+
+/**
+ * As channel_change_state, but change the state to open.
+ */
+void
+channel_change_state_open(channel_t *chan)
+{
+  channel_change_state_(chan, CHANNEL_STATE_OPEN);
+
+  /* Tell circuits if we opened and stuff */
+  channel_do_open_actions(chan);
+  chan->has_been_open = 1;
+
+  /* Check for queued cells to process */
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
+    channel_process_cells(chan);
+  if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue))
+    channel_flush_cells(chan);
 }
 
 /**
@@ -2584,8 +2603,8 @@ channel_flush_cells(channel_t *chan)
  * available.
  */
 
-int
-channel_more_to_flush(channel_t *chan)
+MOCK_IMPL(int,
+channel_more_to_flush, (channel_t *chan))
 {
   tor_assert(chan);
 
@@ -4071,7 +4090,7 @@ channel_mark_bad_for_new_circs(channel_t *chan)
  */
 
 int
-channel_is_client(channel_t *chan)
+channel_is_client(const channel_t *chan)
 {
   tor_assert(chan);
 
@@ -4090,6 +4109,20 @@ channel_mark_client(channel_t *chan)
   tor_assert(chan);
 
   chan->is_client = 1;
+}
+
+/**
+ * Clear the client flag
+ *
+ * Mark a channel as being _not_ from a client
+ */
+
+void
+channel_clear_client(channel_t *chan)
+{
+  tor_assert(chan);
+
+  chan->is_client = 0;
 }
 
 /**
@@ -4822,8 +4855,6 @@ channel_update_xmit_queue_size(channel_t *chan)
                 U64_FORMAT ", new size is " U64_FORMAT,
                 U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
                 U64_PRINTF_ARG(estimated_total_queue_size));
-      /* Tell the scheduler we're increasing the queue size */
-      scheduler_adjust_queue_size(chan, 1, adj);
     }
   } else if (queued < chan->bytes_queued_for_xmit) {
     adj = chan->bytes_queued_for_xmit - queued;
@@ -4846,8 +4877,6 @@ channel_update_xmit_queue_size(channel_t *chan)
                 U64_FORMAT ", new size is " U64_FORMAT,
                 U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
                 U64_PRINTF_ARG(estimated_total_queue_size));
-      /* Tell the scheduler we're decreasing the queue size */
-      scheduler_adjust_queue_size(chan, -1, adj);
     }
   }
 }
