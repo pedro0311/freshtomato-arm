@@ -1359,14 +1359,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		new_qoslimit_start(); //!! RAF
 	}
 
-	if (wanup) {
-		// bump wan state file on connect (don't wait for watchdog result)
-		sprintf(tmp, "/tmp/state_%s", prefix);
-		f = fopen(tmp, "w+");
-		fprintf(f, "1\n");
-		fclose(f);
-	}
-
 	mwan_table_add(prefix);
 	mwan_load_balance();
 
