@@ -265,7 +265,7 @@ We want to express our gratitude to all people not mentioned here but contribute
 <hr>
 <br /><b>[Kille72's Tomato-ARM] - is an alternative, customized version, forked off from Tomato-ARM by Shibby</b>																											
 <br />
-Copyright (C) 2016-2017 <a href='https://exotic.se' class='new_window'>@kille72</a>
+Copyright (C) 2016-2018 <a href='https://exotic.se' class='new_window'>@kille72</a>
 <br />
 <br />
 Built on <% build_time(); %> by <a href='https://exotic.se' class='new_window'>@kille72</a>
