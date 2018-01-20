@@ -31,7 +31,7 @@ cat << END > $NGX_AUTOTEST.c
 $NGX_INCLUDE_UNISTD_H
 $ngx_feature_incs
 
-int main() {
+int main(void) {
     $ngx_feature_test;
     return 0;
 }
@@ -39,7 +39,7 @@ int main() {
 END
 
 
-ngx_test="$CC $NGX_CC_OPT $CC_TEST_FLAGS $CC_AUX_FLAGS $ngx_feature_inc_path \
+ngx_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS $ngx_feature_inc_path \
           -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_TEST_LD_OPT $ngx_feature_libs"
 
 ngx_feature_inc_path=

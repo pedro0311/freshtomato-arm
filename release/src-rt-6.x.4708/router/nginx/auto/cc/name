@@ -7,7 +7,7 @@ if [ "$NGX_PLATFORM" != win32 ]; then
 
     ngx_feature="C compiler"
     ngx_feature_name=
-    ngx_feature_run=
+    ngx_feature_run=yes
     ngx_feature_incs=
     ngx_feature_path=
     ngx_feature_libs=
@@ -44,7 +44,11 @@ elif `$CC -v 2>&1 | grep 'gcc version' >/dev/null 2>&1`; then
     NGX_CC_NAME=gcc
     echo " + using GNU C compiler"
 
-elif `$CC -v 2>&1 | grep '\(clang\|LLVM\) version' >/dev/null 2>&1`; then
+elif `$CC -v 2>&1 | grep 'clang version' >/dev/null 2>&1`; then
+    NGX_CC_NAME=clang
+    echo " + using Clang C compiler"
+
+elif `$CC -v 2>&1 | grep 'LLVM version' >/dev/null 2>&1`; then
     NGX_CC_NAME=clang
     echo " + using Clang C compiler"
 

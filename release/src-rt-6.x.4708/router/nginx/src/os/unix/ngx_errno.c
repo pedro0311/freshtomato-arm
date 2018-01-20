@@ -8,9 +8,6 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#ifndef NGX_SYS_NERR
-#define NGX_SYS_NERR  128
-#endif
 
 /*
  * The strerror() messages are copied because:

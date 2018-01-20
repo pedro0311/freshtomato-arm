@@ -45,7 +45,6 @@
 #define NGX_CONF_ANY         0x00000400
 #define NGX_CONF_1MORE       0x00000800
 #define NGX_CONF_2MORE       0x00001000
-#define NGX_CONF_MULTI       0x00000000  /* compatibility */
 
 #define NGX_DIRECT_CONF      0x00010000
 
@@ -129,7 +128,7 @@ struct ngx_conf_s {
     ngx_uint_t            cmd_type;
 
     ngx_conf_handler_pt   handler;
-    char                 *handler_conf;
+    void                 *handler_conf;
 };
 
 

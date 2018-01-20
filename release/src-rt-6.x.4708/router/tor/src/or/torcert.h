@@ -75,11 +75,12 @@ ssize_t tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
                                        const crypto_pk_t *rsa_key,
                                        time_t expires,
                                        uint8_t **cert);
-int rsa_ed25519_crosscert_check(const uint8_t *crosscert,
-                                const size_t crosscert_len,
-                                const crypto_pk_t *rsa_id_key,
-                                const ed25519_public_key_t *master_key,
-                                const time_t reject_if_expired_before);
+MOCK_DECL(int,
+rsa_ed25519_crosscert_check, (const uint8_t *crosscert,
+                              const size_t crosscert_len,
+                              const crypto_pk_t *rsa_id_key,
+                              const ed25519_public_key_t *master_key,
+                              const time_t reject_if_expired_before));
 
 or_handshake_certs_t *or_handshake_certs_new(void);
 void or_handshake_certs_free(or_handshake_certs_t *certs);
@@ -100,5 +101,5 @@ void or_handshake_certs_check_both(int severity,
 
 int tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out);
 
-#endif
+#endif /* !defined(TORCERT_H_INCLUDED) */
 

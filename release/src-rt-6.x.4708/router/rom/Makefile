@@ -31,7 +31,7 @@ ifneq ($(TCONFIG_DNSCRYPT),y)
 else
 	@count=0; \
 	while [ $${count} -lt 6 ]; do \
-	    wget https://raw.githubusercontent.com/jedisct1/dnscrypt-resolvers/master/v1/dnscrypt-resolvers.csv -O $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
+	    wget https://raw.githubusercontent.com/dyne/dnscrypt-proxy/master/dnscrypt-resolvers.csv -O $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
 	    if [ $${?} -ne 0 ]; then \
 		count=`expr $${count} + 1`; \
 		if [ $${count} -gt 5 ]; then \

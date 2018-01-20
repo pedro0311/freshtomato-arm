@@ -1,0 +1,213 @@
+--- nginx/auto/cc/conf	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/cc/conf	2018-01-18 19:54:29.721598110 +0100
+@@ -183,7 +183,7 @@
+     else
+         ngx_feature="gcc builtin atomic operations"
+         ngx_feature_name=NGX_HAVE_GCC_ATOMIC
+-        ngx_feature_run=yes
++        ngx_feature_run=no
+         ngx_feature_incs=
+         ngx_feature_path=
+         ngx_feature_libs=
+@@ -204,7 +204,7 @@
+     else
+         ngx_feature="C99 variadic macros"
+         ngx_feature_name="NGX_HAVE_C99_VARIADIC_MACROS"
+-        ngx_feature_run=yes
++        ngx_feature_run=no
+         ngx_feature_incs="#include <stdio.h>
+ #define var(dummy, ...)  sprintf(__VA_ARGS__)"
+         ngx_feature_path=
+@@ -218,7 +218,7 @@
+ 
+     ngx_feature="gcc variadic macros"
+     ngx_feature_name="NGX_HAVE_GCC_VARIADIC_MACROS"
+-    ngx_feature_run=yes
++    ngx_feature_run=no
+     ngx_feature_incs="#include <stdio.h>
+ #define var(dummy, args...)  sprintf(args)"
+     ngx_feature_path=
+--- nginx/auto/cc/name	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/cc/name	2018-01-15 17:33:30.050044000 +0100
+@@ -7,7 +7,7 @@
+ 
+     ngx_feature="C compiler"
+     ngx_feature_name=
+-    ngx_feature_run=yes
++    ngx_feature_run=
+     ngx_feature_incs=
+     ngx_feature_path=
+     ngx_feature_libs=
+--- nginx/auto/endianness	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/endianness	2018-01-15 17:34:48.046107000 +0100
+@@ -26,7 +26,7 @@
+ 
+ END
+ 
+-ngx_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS \
++ngx_test="$CC $NGX_CC_OPT $CC_TEST_FLAGS $CC_AUX_FLAGS \
+           -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_LD_OPT $ngx_feature_libs"
+ 
+ eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
+--- nginx/auto/feature	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/feature	2018-01-15 17:35:51.150183000 +0100
+@@ -39,7 +39,7 @@
+ END
+ 
+ 
+-ngx_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS $ngx_feature_inc_path \
++ngx_test="$CC $NGX_CC_OPT $CC_TEST_FLAGS $CC_AUX_FLAGS $ngx_feature_inc_path \
+           -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_TEST_LD_OPT $ngx_feature_libs"
+ 
+ ngx_feature_inc_path=
+--- nginx/auto/include	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/include	2018-01-15 17:36:30.210240000 +0100
+@@ -27,7 +27,7 @@
+ END
+ 
+ 
+-ngx_test="$CC -o $NGX_AUTOTEST $NGX_AUTOTEST.c"
++ngx_test="$CC $NGX_CC_OPT -o $NGX_AUTOTEST $NGX_AUTOTEST.c"
+ 
+ eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
+ 
+--- nginx/auto/lib/pcre/make	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/lib/pcre/make	2018-01-15 17:41:32.690826000 +0100
+@@ -53,7 +53,7 @@
+ 	cd $PCRE \\
+ 	&& if [ -f Makefile ]; then \$(MAKE) distclean; fi \\
+ 	&& CC="\$(CC)" CFLAGS="$PCRE_OPT" \\
+-	./configure --disable-shared $PCRE_CONF_OPT
++	./configure --host=$HOST --disable-shared $PCRE_CONF_OPT
+ 
+ $PCRE/.libs/libpcre.a:	$PCRE/Makefile
+ 	cd $PCRE \\
+--- nginx/auto/os/linux	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/os/linux	2018-01-15 17:43:18.642430000 +0100
+@@ -36,7 +36,7 @@
+ 
+ ngx_feature="epoll"
+ ngx_feature_name="NGX_HAVE_EPOLL"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/epoll.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
+@@ -110,7 +110,7 @@
+ CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE"
+ ngx_feature="sendfile()"
+ ngx_feature_name="NGX_HAVE_SENDFILE"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/sendfile.h>
+                   #include <errno.h>"
+ ngx_feature_path=
+@@ -131,7 +131,7 @@
+ CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+ ngx_feature="sendfile64()"
+ ngx_feature_name="NGX_HAVE_SENDFILE64"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/sendfile.h>
+                   #include <errno.h>"
+ ngx_feature_path=
+@@ -149,7 +149,7 @@
+ 
+ ngx_feature="prctl(PR_SET_DUMPABLE)"
+ ngx_feature_name="NGX_HAVE_PR_SET_DUMPABLE"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/prctl.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
+--- nginx/auto/types/sizeof	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/types/sizeof	2018-01-15 17:45:43.737533000 +0100
+@@ -25,8 +25,13 @@
+ $NGX_INCLUDE_INTTYPES_H
+ $NGX_INCLUDE_AUTO_CONFIG_H
+ 
++char object_code_block[] = {
++	'\n', 'e', '4', 'V', 'A',
++	'0', 'x', ('0' + sizeof($ngx_type)),
++	'Y', '3', 'p', 'M', '\n'
++};
++
+ int main(void) {
+-    printf("%d", (int) sizeof($ngx_type));
+     return 0;
+ }
+ 
+@@ -40,7 +45,7 @@
+ 
+ 
+ if [ -x $NGX_AUTOTEST ]; then
+-    ngx_size=`$NGX_AUTOTEST`
++    ngx_size=`sed -ne 's/^e4VA0x\(.\)Y3pM$/\1/p' < $NGX_AUTOTEST`
+     echo " $ngx_size bytes"
+ fi
+ 
+--- nginx/auto/unix	2017-12-26 17:01:12.000000000 +0100
++++ nginx/auto/unix	2018-01-15 17:47:21.713083000 +0100
+@@ -816,7 +816,7 @@
+ 
+ ngx_feature="mmap(MAP_ANON|MAP_SHARED)"
+ ngx_feature_name="NGX_HAVE_MAP_ANON"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/mman.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
+@@ -829,7 +829,7 @@
+ 
+ ngx_feature='mmap("/dev/zero", MAP_SHARED)'
+ ngx_feature_name="NGX_HAVE_MAP_DEVZERO"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/mman.h>
+                   #include <sys/stat.h>
+                   #include <fcntl.h>"
+@@ -844,7 +844,7 @@
+ 
+ ngx_feature="System V shared memory"
+ ngx_feature_name="NGX_HAVE_SYSVSHM"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/ipc.h>
+                   #include <sys/shm.h>"
+ ngx_feature_path=
+@@ -858,7 +858,7 @@
+ 
+ ngx_feature="POSIX semaphores"
+ ngx_feature_name="NGX_HAVE_POSIX_SEM"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <semaphore.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
+--- nginx/conf/nginx.conf	2017-12-26 17:01:12.000000000 +0100
++++ nginx/conf/nginx.conf	2018-01-15 17:49:03.196723000 +0100
+@@ -1,5 +1,5 @@
+ 
+-#user  nobody;
++user nobody nogroup;
+ worker_processes  1;
+ 
+ #error_log  logs/error.log;
+@@ -16,7 +16,7 @@
+ 
+ http {
+     include       mime.types;
+-    default_type  application/octet-stream;
++    #default_type  application/octet-stream;
+ 
+     #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+     #                  '$status $body_bytes_sent "$http_referer" '
+--- nginx/src/os/unix/ngx_errno.c	2017-12-26 17:01:13.000000000 +0100
++++ nginx/src/os/unix/ngx_errno.c	2018-01-15 17:51:46.588322000 +0100
+@@ -8,6 +8,9 @@
+ #include <ngx_config.h>
+ #include <ngx_core.h>
+ 
++#ifndef NGX_SYS_NERR
++#define NGX_SYS_NERR  128
++#endif

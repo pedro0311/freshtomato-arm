@@ -45,8 +45,8 @@
  * you're doing. */
 #define tt_double_eq(a,b)     \
   STMT_BEGIN                  \
-  tt_double_op((a), >=, (b)); \
-  tt_double_op((a), <=, (b)); \
+  tt_double_op((a), OP_GE, (b)); \
+  tt_double_op((a), OP_LE, (b)); \
   STMT_END
 
 #ifdef _MSC_VER
@@ -55,7 +55,7 @@
 #else
 #define U64_PRINTF_TYPE unsigned long long
 #define I64_PRINTF_TYPE long long
-#endif
+#endif /* defined(_MSC_VER) */
 
 #define tt_size_op(a,op,b)                                              \
   tt_assert_test_fmt_type(a,b,#a" "#op" "#b,size_t,(val1_ op val2_),    \
@@ -207,8 +207,13 @@ extern struct testcase_t guardfraction_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t hs_cache[];
+extern struct testcase_t hs_cell_tests[];
+extern struct testcase_t hs_common_tests[];
+extern struct testcase_t hs_config_tests[];
 extern struct testcase_t hs_descriptor[];
+extern struct testcase_t hs_ntor_tests[];
 extern struct testcase_t hs_service_tests[];
+extern struct testcase_t hs_client_tests[];
 extern struct testcase_t hs_intropoint_tests[];
 extern struct testcase_t introduce_tests[];
 extern struct testcase_t keypin_tests[];
@@ -221,6 +226,8 @@ extern struct testcase_t oos_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
+extern struct testcase_t proto_http_tests[];
+extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];
 extern struct testcase_t pubsub_tests[];
 extern struct testcase_t pt_tests[];
@@ -264,5 +271,5 @@ extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_C_DIGEST[];
 extern const char AUTHORITY_SIGNKEY_C_DIGEST256[];
 
-#endif
+#endif /* !defined(TOR_TEST_H) */
 
