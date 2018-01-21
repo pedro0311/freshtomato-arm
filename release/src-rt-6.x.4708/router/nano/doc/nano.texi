@@ -8,8 +8,8 @@
 
 @smallbook
 @set EDITION 0.5
-@set VERSION 2.9.1
-@set UPDATED November 2017
+@set VERSION 2.9.2
+@set UPDATED January 2018
 
 @dircategory Editors
 @direntry
@@ -23,7 +23,7 @@
 @titlepage
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 2.9.1
+@subtitle version 2.9.2
 
 @author Chris Allegretta
 @page
@@ -63,7 +63,7 @@ e-mail: @email{chrisa@@asty.org}@*
 @node Top
 @top
 
-This manual documents the GNU @command{nano} editor, version 2.9.1.
+This manual documents the GNU @command{nano} editor, version 2.9.2.
 
 @menu
 * Introduction::
@@ -753,9 +753,6 @@ And either @var{fgcolor} or ,@var{bgcolor} may be left out.
 Save the last hundred search strings and replacement strings and
 executed commands, so they can be easily reused in later sessions.
 
-@item set justifytrim
-When justifying text, trailing whitespace will automatically be removed.
-
 @item set keycolor @var{fgcolor},@var{bgcolor}
 Use this color combination for the shortcut key combos
 in the two help lines at the bottom of the screen.
@@ -898,6 +895,10 @@ Save automatically on exit, don't prompt.
 @item set titlecolor @var{fgcolor},@var{bgcolor}
 Use this color combination for the title bar.
 @xref{@code{set functioncolor}} for valid color names.
+
+@item set trimblanks
+Remove trailing whitespace from wrapped lines when automatic
+hard-wrapping occurs or when text is justified.
 
 @item set unix
 Save a file by default in Unix format.  This overrides nano's
