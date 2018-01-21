@@ -1,7 +1,7 @@
-/* $Id: iptpinhole.c,v 1.16 2016/01/19 10:03:30 nanard Exp $ */
+/* $Id: iptpinhole.c,v 1.17 2017/11/02 15:41:46 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2012-2016 Thomas Bernard
+ * (c) 2012-2017 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -221,6 +221,7 @@ int add_pinhole(const char * ifname,
 	if (proto)
 		e->ipv6.flags |= IP6T_F_PROTO;
 
+	/* TODO: check if enforcing USE_IFNAME_IN_RULES is needed */
 	if(ifname)
 		strncpy(e->ipv6.iniface, ifname, IFNAMSIZ);
 	if(rem_host && (rem_host[0] != '\0')) {

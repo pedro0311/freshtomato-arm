@@ -1,8 +1,8 @@
-/* $Id: pfpinhole.c,v 1.25 2016/01/19 10:03:30 nanard Exp $ */
+/* $Id: pfpinhole.c,v 1.26 2017/05/27 08:25:16 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2012-2016 Thomas Bernard
+ * (c) 2012-2017 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
