@@ -1,4 +1,17 @@
-$Id: Changelog.txt,v 1.431 2017/04/21 11:30:23 nanard Exp $
+$Id: Changelog.txt,v 1.434 2017/12/12 11:36:42 nanard Exp $
+
+2017/12/12:
+  Fix a few buffer overrun in SSDP and SOAP parsing
+
+2017/11/02:
+  PCP : reset epoch after address change
+
+2017/05/26:
+  merge https://github.com/miniupnp/miniupnp/tree/randomize_url branch
+
+2017/05/24:
+  get SSDP packet receiving interface index and use it to check if the
+    packet is from a LAN
 
 2017/03/13:
   default to client address for AddPortMapping when <NewInternalClient>
@@ -84,6 +97,11 @@ VERSION 2.0 : released on 2016/04/19
 
 2015/09/15:
   use name server from query in SOAP responses
+
+2015/09/14:
+  Randomize URLs to avoid http://www.filet-o-firewall.com/
+    https://github.com/filetofirewall/fof
+    (specific branch, merged later, see above)
 
 2015/08/25:
   better bind socket to right interface(s),

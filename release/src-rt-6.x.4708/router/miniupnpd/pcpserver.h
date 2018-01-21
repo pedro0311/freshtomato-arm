@@ -1,4 +1,4 @@
-/* $Id: pcpserver.h,v 1.4 2014/05/19 13:38:04 nanard Exp $ */
+/* $Id: pcpserver.h,v 1.5 2017/12/12 11:43:31 nanard Exp $ */
 /* MiniUPnP project
  * Website : http://miniupnp.free.fr/
  * Author : Peter Tatrai
@@ -51,5 +51,15 @@ int ProcessIncomingPCPPacket(int s, unsigned char *msg_buff, int len,
  * returns the socket
  */
 int OpenAndConfPCPv6Socket(void);
+
+
+/*
+ * To be called when Public IP address changed (IPv4)
+ */
+#ifdef ENABLE_IPV6
+void PCPPublicAddressChanged(int * sockets, int n_sockets, int socket6);
+#else /* IPV4 Only */
+void PCPPublicAddressChanged(int * sockets, int n_sockets);
+#endif
 
 #endif /* PCPSERVER_H_INCLUDED */
