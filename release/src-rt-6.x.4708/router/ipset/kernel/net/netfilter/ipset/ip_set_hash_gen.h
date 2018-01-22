@@ -280,6 +280,9 @@ htable_bits(u32 hashsize)
 struct htype {
 	struct htable __rcu *table; /* the hash table */
 	struct timer_list gc;	/* garbage collection when timeout enabled */
+#ifdef HAVE_TIMER_SETUP
+	struct ip_set *set;	/* attached to this ip_set */
+#endif
 	u32 maxelem;		/* max elements in the hash */
 	u32 initval;		/* random jhash init value */
 #ifdef IP_SET_HASH_WITH_MARKMASK
@@ -429,11 +432,11 @@ mtype_destroy(struct ip_set *set)
 }
 
 static void
-mtype_gc_init(struct ip_set *set, void (*gc)(unsigned long ul_set))
+mtype_gc_init(struct ip_set *set, void (*gc)(GC_ARG))
 {
 	struct htype *h = set->data;
 
-	setup_timer(&h->gc, gc, (unsigned long)set);
+	TIMER_SETUP(&h->gc, gc);
 	mod_timer(&h->gc, jiffies + IPSET_GC_PERIOD(set->timeout) * HZ);
 	pr_debug("gc initialized, run in every %u\n",
 		 IPSET_GC_PERIOD(set->timeout));
@@ -527,10 +530,9 @@ mtype_expire(struct ip_set *set, struct htype *h)
 }
 
 static void
-mtype_gc(unsigned long ul_set)
+mtype_gc(GC_ARG)
 {
-	struct ip_set *set = (struct ip_set *)ul_set;
-	struct htype *h = set->data;
+	INIT_GC_VARS(htype, h);
 
 	pr_debug("called\n");
 	spin_lock_bh(&set->lock);
@@ -917,12 +919,9 @@ static inline int
 mtype_data_match(struct mtype_elem *data, const struct ip_set_ext *ext,
 		 struct ip_set_ext *mext, struct ip_set *set, u32 flags)
 {
-	if (SET_WITH_COUNTER(set))
-		ip_set_update_counter(ext_counter(data, set),
-				      ext, mext, flags);
-	if (SET_WITH_SKBINFO(set))
-		ip_set_get_skbinfo(ext_skbinfo(data, set),
-				   ext, mext, flags);
+	if (!ip_set_match_extensions(set, ext, mext, flags, data))
+		return 0;
+	/* nomatch entries return -ENOTEMPTY */
 	return mtype_do_data_match(data);
 }
 
@@ -941,9 +940,9 @@ mtype_test_cidrs(struct ip_set *set, struct mtype_elem *d,
 	struct mtype_elem *data;
 #if IPSET_NET_COUNT == 2
 	struct mtype_elem orig = *d;
-	int i, j = 0, k;
+	int ret, i, j = 0, k;
 #else
-	int i, j = 0;
+	int ret, i, j = 0;
 #endif
 	u32 key, multi = 0;
 
@@ -969,18 +968,13 @@ mtype_test_cidrs(struct ip_set *set, struct mtype_elem *d,
 			data = ahash_data(n, i, set->dsize);
 			if (!mtype_data_equal(data, d, &multi))
 				continue;
-			if (SET_WITH_TIMEOUT(set)) {
-				if (!ip_set_timeout_expired(
-						ext_timeout(data, set)))
-					return mtype_data_match(data, ext,
-								mext, set,
-								flags);
+			ret = mtype_data_match(data, ext, mext, set, flags);
+			if (ret != 0)
+				return ret;
 #ifdef IP_SET_HASH_WITH_MULTI
-				multi = 0;
+			/* No match, reset multiple match flag */
+			multi = 0;
 #endif
-			} else
-				return mtype_data_match(data, ext,
-							mext, set, flags);
 		}
 #if IPSET_NET_COUNT == 2
 		}
@@ -1027,12 +1021,11 @@ mtype_test(struct ip_set *set, void *value, const struct ip_set_ext *ext,
 		if (!test_bit(i, n->used))
 			continue;
 		data = ahash_data(n, i, set->dsize);
-		if (mtype_data_equal(data, d, &multi) &&
-		    !(SET_WITH_TIMEOUT(set) &&
-		      ip_set_timeout_expired(ext_timeout(data, set)))) {
-			ret = mtype_data_match(data, ext, mext, set, flags);
+		if (!mtype_data_equal(data, d, &multi))
+			continue;
+		ret = mtype_data_match(data, ext, mext, set, flags);
+		if (ret != 0)
 			goto out;
-		}
 	}
 out:
 	return ret;
@@ -1143,6 +1136,7 @@ mtype_list(const struct ip_set *set,
 	rcu_read_lock();
 	for (; cb->args[IPSET_CB_ARG0] < jhash_size(t->htable_bits);
 	     cb->args[IPSET_CB_ARG0]++) {
+		cond_resched_rcu();
 		incomplete = skb_tail_pointer(skb);
 		n = rcu_dereference(hbucket(t, cb->args[IPSET_CB_ARG0]));
 		pr_debug("cb->arg bucket: %lu, t %p n %p\n",
@@ -1315,6 +1309,9 @@ IPSET_TOKEN(HTYPE, _create)(struct net *net, struct ip_set *set,
 	t->htable_bits = hbits;
 	RCU_INIT_POINTER(h->table, t);
 
+#ifdef HAVE_TIMER_SETUP
+	h->set = set;
+#endif
 	set->data = h;
 #ifndef IP_SET_PROTO_UNDEF
 	if (set->family == NFPROTO_IPV4) {
