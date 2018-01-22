@@ -1,7 +1,8 @@
-/* $Id: miniupnpd.c,v 1.219 2017/04/21 11:22:38 nanard Exp $ */
-/* MiniUPnP project
+/* $Id: miniupnpd.c,v 1.222 2017/12/12 11:43:28 nanard Exp $ */
+/* vim: tabstop=4 shiftwidth=4 noexpandtab
+ * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2016 Thomas Bernard
+ * (c) 2006-2017 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -631,7 +632,7 @@ static int nfqueue_cb(
 
 					/* printf("pkt found %s\n",dd);*/
 					ProcessSSDPData (sudp, dd, size - x,
-					                 &sendername, (unsigned short) 5555);
+					                 &sendername, -1, (unsigned short) 5555);
 				}
 			}
 		}
@@ -984,7 +985,6 @@ parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 		}
 	}
 #endif
-#ifdef ENABLE_IPV6
 	if(lan_addr->ifname[0] != '\0')
 	{
 		lan_addr->index = if_nametoindex(lan_addr->ifname);
@@ -992,6 +992,7 @@ parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 			fprintf(stderr, "Cannot get index for network interface %s",
 			        lan_addr->ifname);
 	}
+#ifdef ENABLE_IPV6
 	else
 	{
 		fprintf(stderr,
@@ -1665,6 +1666,9 @@ init(int argc, char * * argv, struct runtime_vars * v)
 
 	/* initialize random number generator */
 	srandom((unsigned int)time(NULL));
+#ifdef RANDOMIZE_URLS
+	snprintf(random_url, RANDOM_URL_MAX_LEN, "%08lx", random());
+#endif /* RANDOMIZE_URLS */
 
 	/* initialize redirection engine (and pinholes) */
 	if(init_redirect() < 0)
@@ -2055,6 +2059,16 @@ main(int argc, char * * argv)
 			if(GETFLAG(ENABLEUPNPMASK))
 			{
 				upnp_event_var_change_notify(EWanIPC);
+			}
+#endif
+#ifdef ENABLE_PCP
+			if(GETFLAG(ENABLENATPMPMASK))
+			{
+#ifdef ENABLE_IPV6
+				PCPPublicAddressChanged(snatpmp, addr_count, spcp_v6);
+#else /* IPv4 only */
+				PCPPublicAddressChanged(snatpmp, addr_count);
+#endif
 			}
 #endif
 			should_send_public_address_change_notif = 0;

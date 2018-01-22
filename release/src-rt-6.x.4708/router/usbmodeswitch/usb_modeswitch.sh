@@ -1,5 +1,5 @@
 #!/bin/sh
-# part of usb_modeswitch 2.5.1
+# part of usb_modeswitch 2.5.2
 device_in()
 {
 	if [ ! -e /var/lib/usb_modeswitch/$1 ]; then
@@ -62,7 +62,7 @@ if [ "$p2" = "" -a "$p1" != "" ]; then
 fi
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
-init_path=`readlink /sbin/init`
+init_path=`readlink -f /sbin/init`
 if [ `basename $init_path` = "systemd" ]; then
 	systemctl --no-block start usb_modeswitch@$p2.service
 elif [ -e "/etc/init/usb-modeswitch-upstart.conf" ]; then

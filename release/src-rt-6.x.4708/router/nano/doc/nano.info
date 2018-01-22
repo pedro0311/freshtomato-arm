@@ -1,4 +1,4 @@
-This is nano.info, produced by makeinfo version 6.4 from nano.texi.
+This is nano.info, produced by makeinfo version 6.5 from nano.texi.
 
 INFO-DIR-SECTION Editors
 START-INFO-DIR-ENTRY
@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 2.9.1.
+This manual documents the GNU ‘nano’ editor, version 2.9.2.
 
 * Menu:
 
@@ -710,10 +710,6 @@ The supported settings in a nanorc file are:
      Save the last hundred search strings and replacement strings and
      executed commands, so they can be easily reused in later sessions.
 
-‘set justifytrim’
-     When justifying text, trailing whitespace will automatically be
-     removed.
-
 ‘set keycolor FGCOLOR,BGCOLOR’
      Use this color combination for the shortcut key combos in the two
      help lines at the bottom of the screen.  *Note set functioncolor::
@@ -858,6 +854,10 @@ The supported settings in a nanorc file are:
 ‘set titlecolor FGCOLOR,BGCOLOR’
      Use this color combination for the title bar.  *Note set
      functioncolor:: for valid color names.
+
+‘set trimblanks’
+     Remove trailing whitespace from wrapped lines when automatic
+     hard-wrapping occurs or when text is justified.
 
 ‘set unix’
      Save a file by default in Unix format.  This overrides nano’s
@@ -1640,12 +1640,12 @@ Node: Feature Toggles18747
 Node: Nanorc Files21204
 Node: Settings22801
 Ref: set functioncolor25394
-Ref: Whitespace31650
-Node: Syntax Highlighting32206
-Node: Rebinding Keys37197
-Node: The File Browser48114
-Node: Pico Compatibility48974
-Node: Building and Configure Options52271
+Ref: Whitespace31685
+Node: Syntax Highlighting32241
+Node: Rebinding Keys37232
+Node: The File Browser48149
+Node: Pico Compatibility49009
+Node: Building and Configure Options52306
 
 End Tag Table
 
