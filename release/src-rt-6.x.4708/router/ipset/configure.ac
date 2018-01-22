@@ -1,5 +1,5 @@
 dnl Boilerplate
-AC_INIT([ipset], [6.34], [kadlec@blackhole.kfki.hu])
+AC_INIT([ipset], [6.35], [kadlec@blackhole.kfki.hu])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_HOST
 AC_CONFIG_MACRO_DIR([m4])
@@ -9,6 +9,8 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_ENABLE_STATIC
 LT_INIT([dlopen])
+LT_CONFIG_LTDL_DIR([libltdl])
+LTDL_INIT([nonrecursive])
 
 PKG_PROG_PKG_CONFIG
 
@@ -585,6 +587,26 @@ if test -f $ksourcedir/include/linux/sctp.h && \
 else
 	AC_MSG_RESULT(no)
 	AC_SUBST(HAVE_TYPEDEF_SCTP_SCTPHDR_T, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for timer_setup in timer.h])
+if test -f $ksourcedir/include/linux/timer.h && \
+   $GREP -q ' timer_setup' $ksourcedir/include/linux/timer.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_TIMER_SETUP, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_TIMER_SETUP, undef)
+fi
+
+AC_MSG_CHECKING([kernel source for lockdep_nfnl_is_held() in nfnetlink.h])
+if test -f $ksourcedir/include/linux/netfilter/nfnetlink.h && \
+   $GREP -q ' lockdep_nfnl_is_held' $ksourcedir/include/linux/netfilter/nfnetlink.h; then
+	AC_MSG_RESULT(yes)
+	AC_SUBST(HAVE_LOCKDEP_NFNL_IS_HELD, define)
+else
+	AC_MSG_RESULT(no)
+	AC_SUBST(HAVE_LOCKDEP_NFNL_IS_HELD, undef)
 fi
 
 AC_MSG_CHECKING([kernel source for struct net_generic])

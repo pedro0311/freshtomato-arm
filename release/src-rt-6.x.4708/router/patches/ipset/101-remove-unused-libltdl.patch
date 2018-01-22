@@ -1,0 +1,11 @@
+--- ipset/configure.ac	2017-10-02 17:00:25.000000000 +0100
++++ ipset/configure.ac	2018-01-22 20:52:16.000000000 +0100
+@@ -9,8 +9,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_R
+ 
+ AC_ENABLE_STATIC
+ LT_INIT([dlopen])
+-LT_CONFIG_LTDL_DIR([libltdl])
+-LTDL_INIT([nonrecursive])
+ 
+ PKG_PROG_PKG_CONFIG
+ 
