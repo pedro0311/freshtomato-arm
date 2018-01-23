@@ -19,7 +19,6 @@ typedef struct CPUFeatures_ {
     int has_avx512f;
     int has_pclmul;
     int has_aesni;
-    int has_rdrand;
 } CPUFeatures;
 
 static CPUFeatures _cpu_features;
@@ -35,7 +34,6 @@ static CPUFeatures _cpu_features;
 #define CPUID_ECX_XSAVE   0x04000000
 #define CPUID_ECX_OSXSAVE 0x08000000
 #define CPUID_ECX_AVX     0x10000000
-#define CPUID_ECX_RDRAND  0x40000000
 
 #define CPUID_EDX_SSE2    0x04000000
 
@@ -198,12 +196,6 @@ _sodium_runtime_intel_cpu_features(CPUFeatures * const cpu_features)
     cpu_features->has_aesni  = 0;
 #endif
 
-#ifdef HAVE_RDRAND
-    cpu_features->has_rdrand = ((cpu_info[2] & CPUID_ECX_RDRAND) != 0x0);
-#else
-    cpu_features->has_rdrand = 0;
-#endif
-
     return 0;
 }
 
@@ -277,10 +269,4 @@ int
 sodium_runtime_has_aesni(void)
 {
     return _cpu_features.has_aesni;
-}
-
-int
-sodium_runtime_has_rdrand(void)
-{
-    return _cpu_features.has_rdrand;
 }

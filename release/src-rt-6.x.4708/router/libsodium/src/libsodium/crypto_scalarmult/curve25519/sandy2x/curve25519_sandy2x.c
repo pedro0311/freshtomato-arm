@@ -25,22 +25,22 @@ static int
 crypto_scalarmult_curve25519_sandy2x(unsigned char *q, const unsigned char *n,
                                      const unsigned char *p)
 {
-  unsigned char *t = q;
-  fe             var[3];
-  fe51           x_51;
-  fe51           z_51;
-  unsigned int   i;
+  unsigned char e[32];
+  unsigned int i;
 
-  for (i = 0; i < 32; i++) {
-      t[i] = n[i];
-  }
-  t[0] &= 248;
-  t[31] &= 127;
-  t[31] |= 64;
+  fe var[3];
+
+  fe51 x_51;
+  fe51 z_51;
+
+  for (i = 0;i < 32;++i) e[i] = n[i];
+  e[0] &= 248;
+  e[31] &= 127;
+  e[31] |= 64;
 
   fe_frombytes(x1, p);
 
-  ladder(var, t);
+  ladder(var, e);
 
   z_51.v[0] = (z2[1] << 26) + z2[0];
   z_51.v[1] = (z2[3] << 26) + z2[2];
@@ -71,20 +71,20 @@ static int
 crypto_scalarmult_curve25519_sandy2x_base(unsigned char *q,
                                           const unsigned char *n)
 {
-  unsigned char *t = q;
-  fe             var[3];
-  fe51           x_51;
-  fe51           z_51;
-  unsigned int   i;
+  unsigned char e[32];
+  unsigned int i;
 
-  for (i = 0;i < 32; i++) {
-      t[i] = n[i];
-  }
-  t[0] &= 248;
-  t[31] &= 127;
-  t[31] |= 64;
+  fe var[3];
 
-  ladder_base(var, t);
+  fe51 x_51;
+  fe51 z_51;
+
+  for (i = 0;i < 32;++i) e[i] = n[i];
+  e[0] &= 248;
+  e[31] &= 127;
+  e[31] |= 64;
+
+  ladder_base(var, e);
 
   z_51.v[0] = (z2[1] << 26) + z2[0];
   z_51.v[1] = (z2[3] << 26) + z2[2];

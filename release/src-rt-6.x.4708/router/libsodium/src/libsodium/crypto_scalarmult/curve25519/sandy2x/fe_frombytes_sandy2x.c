@@ -6,8 +6,7 @@
 
 #ifdef HAVE_AVX_ASM
 
-static uint64_t
-load_3(const unsigned char *in)
+static uint64_t load_3(const unsigned char *in)
 {
   uint64_t result;
   result = (uint64_t) in[0];
@@ -16,8 +15,7 @@ load_3(const unsigned char *in)
   return result;
 }
 
-static uint64_t
-load_4(const unsigned char *in)
+static uint64_t load_4(const unsigned char *in)
 {
   uint64_t result;
   result = (uint64_t) in[0];
@@ -27,8 +25,7 @@ load_4(const unsigned char *in)
   return result;
 }
 
-void
-fe_frombytes(fe h, const unsigned char *s)
+void fe_frombytes(fe h,const unsigned char *s)
 {
   uint64_t h0 = load_4(s);
   uint64_t h1 = load_3(s + 4) << 6;
