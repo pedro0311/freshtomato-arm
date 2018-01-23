@@ -1,5 +1,5 @@
 /* dnssec.c is Copyright (c) 2012 Giovanni Bajo <rasky@develer.com>
-           and Copyright (c) 2012-2017 Simon Kelley
+           and Copyright (c) 2012-2018 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -103,15 +103,17 @@ static void from_wire(char *name)
 static int count_labels(char *name)
 {
   int i;
-
+  char *p;
+  
   if (*name == 0)
     return 0;
 
-  for (i = 0; *name; name++)
-    if (*name == '.')
+  for (p = name, i = 0; *p; p++)
+    if (*p == '.')
       i++;
 
-  return i+1;
+  /* Don't count empty first label. */
+  return *name == '.' ? i : i+1;
 }
 
 /* Implement RFC1982 wrapped compare for 32-bit numbers */
@@ -277,10 +279,10 @@ static int get_rdata(struct dns_header *header, size_t plen, unsigned char *end,
    leaving the following bytes as deciding the order. Hence the nasty left1 and left2 variables.
 */
 
-static void sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int rrsetidx, 
-		       unsigned char **rrset, char *buff1, char *buff2)
+static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int rrsetidx, 
+		      unsigned char **rrset, char *buff1, char *buff2)
 {
-  int swap, quit, i;
+  int swap, quit, i, j;
   
   do
     {
@@ -342,11 +344,21 @@ static void sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int
 		  rrset[i] = tmp;
 		  swap = quit = 1;
 		}
+	      else if (rc == 0 && quit && len1 == len2)
+		{
+		  /* Two RRs are equal, remove one copy. RFC 4034, para 6.3 */
+		  for (j = i+1; j < rrsetidx-1; j++)
+		    rrset[j] = rrset[j+1];
+		  rrsetidx--;
+		  i--;
+		}
 	      else if (rc < 0)
 		quit = 1;
 	    }
 	}
     } while (swap);
+
+  return rrsetidx;
 }
 
 static unsigned char **rrset = NULL, **sigs = NULL;
@@ -491,7 +503,7 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
   /* Sort RRset records into canonical order. 
      Note that at this point keyname and daemon->workspacename buffs are
      unused, and used as workspace by the sort. */
-  sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon->workspacename, keyname);
+  rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon->workspacename, keyname);
          
   /* Now try all the sigs to try and find one which validates */
   for (j = 0; j <sigidx; j++)
@@ -545,6 +557,7 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
 	  u16 len, *dp;
 	  
 	  p = rrset[i];
+	 	  
 	  if (!extract_name(header, plen, &p, name, 1, 10)) 
 	    return STAT_BOGUS;
 
@@ -859,7 +872,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
   if (qtype != T_DS || qclass != class)
     rc = STAT_BOGUS;
   else
-    rc = dnssec_validate_reply(now, header, plen, name, keyname, NULL, 0, &neganswer, &nons, NULL);
+    rc = dnssec_validate_reply(now, header, plen, name, keyname, NULL, 0, &neganswer, &nons);
   
   if (rc == STAT_INSECURE)
     rc = STAT_BOGUS;
@@ -1083,8 +1096,8 @@ static int hostname_cmp(const char *a, const char *b)
     }
 }
 
-static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsigned char **nsecs, int nsec_count,
-				    char *workspace1, char *workspace2, char *name, int type, int *nons)
+static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsigned char **nsecs, unsigned char **labels, int nsec_count,
+				    char *workspace1_in, char *workspace2, char *name, int type, int *nons)
 {
   int i, rc, rdlen;
   unsigned char *p, *psave;
@@ -1097,6 +1110,9 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
   /* Find NSEC record that proves name doesn't exist */
   for (i = 0; i < nsec_count; i++)
     {
+      char *workspace1 = workspace1_in;
+      int sig_labels, name_labels;
+
       p = nsecs[i];
       if (!extract_name(header, plen, &p, workspace1, 1, 10))
 	return 0;
@@ -1105,7 +1121,27 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
       psave = p;
       if (!extract_name(header, plen, &p, workspace2, 1, 10))
 	return 0;
-      
+
+      /* If NSEC comes from wildcard expansion, use original wildcard
+	 as name for computation. */
+      sig_labels = *labels[i];
+      name_labels = count_labels(workspace1);
+
+      if (sig_labels < name_labels)
+	{
+	  int k;
+	  for (k = name_labels - sig_labels; k != 0; k--)
+	    {
+	      while (*workspace1 != '.' && *workspace1 != 0)
+		workspace1++;
+	      if (k != 1 && *workspace1 == '.')
+		workspace1++;
+	    }
+	  
+	  workspace1--;
+	  *workspace1 = '*';
+	}
+	  
       rc = hostname_cmp(workspace1, name);
       
       if (rc == 0)
@@ -1503,24 +1539,26 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
 
 static int prove_non_existence(struct dns_header *header, size_t plen, char *keyname, char *name, int qtype, int qclass, char *wildname, int *nons)
 {
-  static unsigned char **nsecset = NULL;
-  static int nsecset_sz = 0;
+  static unsigned char **nsecset = NULL, **rrsig_labels = NULL;
+  static int nsecset_sz = 0, rrsig_labels_sz = 0;
   
   int type_found = 0;
-  unsigned char *p = skip_questions(header, plen);
+  unsigned char *auth_start, *p = skip_questions(header, plen);
   int type, class, rdlen, i, nsecs_found;
   
   /* Move to NS section */
   if (!p || !(p = skip_section(p, ntohs(header->ancount), header, plen)))
     return 0;
+
+  auth_start = p;
   
   for (nsecs_found = 0, i = ntohs(header->nscount); i != 0; i--)
     {
       unsigned char *pstart = p;
       
-      if (!(p = skip_name(p, header, plen, 10)))
+      if (!extract_name(header, plen, &p, daemon->workspacename, 1, 10))
 	return 0;
-      
+	  
       GETSHORT(type, p); 
       GETSHORT(class, p);
       p += 4; /* TTL */
@@ -1537,7 +1575,69 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 	  if (!expand_workspace(&nsecset, &nsecset_sz, nsecs_found))
 	    return 0; 
 	  
-	  nsecset[nsecs_found++] = pstart;
+	  if (type == T_NSEC)
+	    {
+	      /* If we're looking for NSECs, find the corresponding SIGs, to 
+		 extract the labels value, which we need in case the NSECs
+		 are the result of wildcard expansion.
+		 Note that the NSEC may not have been validated yet
+		 so if there are multiple SIGs, make sure the label value
+		 is the same in all, to avoid be duped by a rogue one.
+		 If there are no SIGs, that's an error */
+	      unsigned char *p1 = auth_start;
+	      int res, j, rdlen1, type1, class1;
+	      
+	      if (!expand_workspace(&rrsig_labels, &rrsig_labels_sz, nsecs_found))
+		return 0;
+	      
+	      rrsig_labels[nsecs_found] = NULL;
+	      
+	      for (j = ntohs(header->nscount); j != 0; j--)
+		{
+		  if (!(res = extract_name(header, plen, &p1, daemon->workspacename, 0, 10)))
+		    return 0;
+
+		   GETSHORT(type1, p1); 
+		   GETSHORT(class1, p1);
+		   p1 += 4; /* TTL */
+		   GETSHORT(rdlen1, p1);
+
+		   if (!CHECK_LEN(header, p1, plen, rdlen1))
+		     return 0;
+		   
+		   if (res == 1 && class1 == qclass && type1 == T_RRSIG)
+		     {
+		       int type_covered;
+		       unsigned char *psav = p1;
+		       
+		       if (rdlen1 < 18)
+			 return 0; /* bad packet */
+
+		       GETSHORT(type_covered, p1);
+
+		       if (type_covered == T_NSEC)
+			 {
+			   p1++; /* algo */
+			   
+			   /* labels field must be the same in every SIG we find. */
+			   if (!rrsig_labels[nsecs_found])
+			     rrsig_labels[nsecs_found] = p1;
+			   else if (*rrsig_labels[nsecs_found] != *p1) /* algo */
+			     return 0;
+			   }
+		       p1 = psav;
+		     }
+		   
+		   if (!ADD_RDLEN(header, p1, plen, rdlen1))
+		     return 0;
+		}
+
+	      /* Must have found at least one sig. */
+	      if (!rrsig_labels[nsecs_found])
+		return 0;
+	    }
+
+	  nsecset[nsecs_found++] = pstart;   
 	}
       
       if (!ADD_RDLEN(header, p, plen, rdlen))
@@ -1545,7 +1645,7 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
     }
   
   if (type_found == T_NSEC)
-    return prove_non_existence_nsec(header, plen, nsecset, nsecs_found, daemon->workspacename, keyname, name, qtype, nons);
+    return prove_non_existence_nsec(header, plen, nsecset, rrsig_labels, nsecs_found, daemon->workspacename, keyname, name, qtype, nons);
   else if (type_found == T_NSEC3)
     return prove_non_existence_nsec3(header, plen, nsecset, nsecs_found, daemon->workspacename, keyname, name, qtype, wildname, nons);
   else
@@ -1645,11 +1745,11 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
    STAT_NEED_KEY need DNSKEY to complete validation (name is returned in keyname, class in *class)
    STAT_NEED_DS  need DS to complete validation (name is returned in keyname)
 
-   If non-NULL, rr_status points to a char array which corressponds to the RRs in the 
+   daemon->rr_status points to a char array which corressponds to the RRs in the 
    answer section (only). This is set to 1 for each RR which is validated, and 0 for any which aren't.
 */
 int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, 
-			  int *class, int check_unsigned, int *neganswer, int *nons, char *rr_status)
+			  int *class, int check_unsigned, int *neganswer, int *nons)
 {
   static unsigned char **targets = NULL;
   static int target_sz = 0;
@@ -1659,8 +1759,20 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
   int i, j, rc;
   int secure = STAT_SECURE;
 
-  if (rr_status)
-    memset(rr_status, 0, ntohs(header->ancount));
+  /* extend rr_status if necessary */
+  if (daemon->rr_status_sz < ntohs(header->ancount))
+    {
+      char *new = whine_malloc(ntohs(header->ancount) + 64);
+
+      if (!new)
+	return STAT_BOGUS;
+
+      free(daemon->rr_status);
+      daemon->rr_status = new;
+      daemon->rr_status_sz = ntohs(header->ancount) + 64;
+    }
+  
+  memset(daemon->rr_status, 0, ntohs(header->ancount));
   
   if (neganswer)
     *neganswer = 0;
@@ -1754,8 +1866,8 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
       if (j != i)
 	{
 	  /* Done already: copy the validation status */
-	  if (rr_status && (i < ntohs(header->ancount)))
-	    rr_status[i] = rr_status[j];
+	  if (i < ntohs(header->ancount))
+	    daemon->rr_status[i] = daemon->rr_status[j];
 	}
       else
 	{
@@ -1766,7 +1878,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	  if (!explore_rrset(header, plen, class1, type1, name, keyname, &sigcnt, &rrcnt))
 	    return STAT_BOGUS;
 	  
-	  /* No signatures for RRset. We can be configured to assume this is OK and return a INSECURE result. */
+	  /* No signatures for RRset. We can be configured to assume this is OK and return an INSECURE result. */
 	  if (sigcnt == 0)
 	    {
 	      if (check_unsigned)
@@ -1814,8 +1926,8 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 		  /* rc is now STAT_SECURE or STAT_SECURE_WILDCARD */
 		  
 		  /* Note that RR is validated */
-		   if (rr_status && (i < ntohs(header->ancount)))
-		     rr_status[i] = 1;
+		   if (i < ntohs(header->ancount))
+		     daemon->rr_status[i] = 1;
 		   
 		  /* Note if we've validated either the answer to the question
 		     or the target of a CNAME. Any not noted will need NSEC or
