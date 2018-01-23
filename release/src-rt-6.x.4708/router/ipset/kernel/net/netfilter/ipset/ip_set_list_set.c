@@ -44,6 +44,9 @@ struct set_adt_elem {
 struct list_set {
 	u32 size;		/* size of set list array */
 	struct timer_list gc;	/* garbage collection */
+#ifdef HAVE_TIMER_SETUP
+	struct ip_set *set;	/* attached to this ip_set */
+#endif
 	struct net *net;	/* namespace */
 	struct list_head members; /* the set members */
 };
@@ -54,8 +57,9 @@ list_set_ktest(struct ip_set *set, const struct sk_buff *skb,
 	       struct ip_set_adt_opt *opt, const struct ip_set_ext *ext)
 {
 	struct list_set *map = set->data;
+	struct ip_set_ext *mext = &opt->ext;
 	struct set_elem *e;
-	u32 cmdflags = opt->cmdflags;
+	u32 flags = opt->cmdflags;
 	int ret;
 
 	/* Don't lookup sub-counters at all */
@@ -63,21 +67,11 @@ list_set_ktest(struct ip_set *set, const struct sk_buff *skb,
 	if (opt->cmdflags & IPSET_FLAG_SKIP_SUBCOUNTER_UPDATE)
 		opt->cmdflags &= ~IPSET_FLAG_SKIP_COUNTER_UPDATE;
 	list_for_each_entry_rcu(e, &map->members, list) {
-		if (SET_WITH_TIMEOUT(set) &&
-		    ip_set_timeout_expired(ext_timeout(e, set)))
-			continue;
 		ret = ip_set_test(e->id, skb, par, opt);
-		if (ret > 0) {
-			if (SET_WITH_COUNTER(set))
-				ip_set_update_counter(ext_counter(e, set),
-						      ext, &opt->ext,
-						      cmdflags);
-			if (SET_WITH_SKBINFO(set))
-				ip_set_get_skbinfo(ext_skbinfo(e, set),
-						   ext, &opt->ext,
-						   cmdflags);
-			return ret;
-		}
+		if (ret <= 0)
+			continue;
+		if (ip_set_match_extensions(set, ext, mext, flags, e))
+			return 1;
 	}
 	return 0;
 }
@@ -568,10 +562,9 @@ static const struct ip_set_type_variant set_variant = {
 };
 
 static void
-list_set_gc(unsigned long ul_set)
+list_set_gc(GC_ARG)
 {
-	struct ip_set *set = (struct ip_set *)ul_set;
-	struct list_set *map = set->data;
+	INIT_GC_VARS(list_set, map);
 
 	spin_lock_bh(&set->lock);
 	set_cleanup_entries(set);
@@ -582,11 +575,11 @@ list_set_gc(unsigned long ul_set)
 }
 
 static void
-list_set_gc_init(struct ip_set *set, void (*gc)(unsigned long ul_set))
+list_set_gc_init(struct ip_set *set, void (*gc)(GC_ARG))
 {
 	struct list_set *map = set->data;
 
-	setup_timer(&map->gc, gc, (unsigned long)set);
+	TIMER_SETUP(&map->gc, gc);
 	mod_timer(&map->gc, jiffies + IPSET_GC_PERIOD(set->timeout) * HZ);
 }
 
@@ -603,6 +596,9 @@ init_list_set(struct net *net, struct ip_set *set, u32 size)
 
 	map->size = size;
 	map->net = net;
+#ifdef HAVE_TIMER_SETUP
+	map->set = set;
+#endif
 	INIT_LIST_HEAD(&map->members);
 	set->data = map;
 

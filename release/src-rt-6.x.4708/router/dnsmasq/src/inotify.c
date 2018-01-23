@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2017 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 #include <sys/inotify.h>
 #include <sys/param.h> /* For MAXSYMLINKS */
 
-/* the strategy is to set a inotify on the directories containing
+/* the strategy is to set an inotify on the directories containing
    resolv files, for any files in the directory which are close-write 
    or moved into the directory.
    

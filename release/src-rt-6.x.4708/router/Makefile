@@ -2917,6 +2917,7 @@ libmnl-clean:
 	-@rm -rf libmnl/staged
 
 ipset/stamp-h1: libmnl
+	$(call patch_files,ipset)
 	cd $(TOP)/ipset && CC=$(CC) STRIP=$(STRIP) \
 	autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -2932,16 +2933,17 @@ ipset: ipset/stamp-h1
 ipset-install:
 	install -D ipset/src/ipset $(INSTALLDIR)/ipset/usr/sbin/ipset
 	install -d $(INSTALLDIR)/ipset/usr/lib/
-	install ipset/lib/.libs/libipset.so.3.7.0 $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.7.0
-	$(STRIP) $(INSTALLDIR)/ipset/usr/lib/libipset.so.3.7.0
+	install ipset/lib/.libs/libipset.so.11.0.0 $(INSTALLDIR)/ipset/usr/lib/libipset.so.11.0.0
+	$(STRIP) $(INSTALLDIR)/ipset/usr/lib/libipset.so.11.0.0
 	$(STRIP) $(INSTALLDIR)/ipset/usr/sbin/ipset
 	cd $(INSTALLDIR)/ipset/usr/lib/ && \
-		ln -sf libipset.so.3.7.0 libipset.so.3 && \
-		ln -sf libipset.so.3.7.0 libipset.so
+		ln -sf libipset.so.11.0.0 libipset.so.11 && \
+		ln -sf libipset.so.11.0.0 libipset.so
 
 ipset-clean:
 	-@$(MAKE) -C ipset clean
 	-@rm -rf ipset/Makefile ipset/stamp-h1
+	$(call unpatch_files,ipset)
 
 libjson-c/stamp-h1:
 	cd $(TOP)/libjson-c && CC=$(CC) STRIP=$(CROSS_COMPILE)strip \

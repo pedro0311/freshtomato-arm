@@ -1,9 +1,11 @@
 dnsmasq (2.79-1) unstable; urgency=low
 
    * New upstream.
-   * Fix trust-anchor regex in init script.
+   * Fix trust-anchor regex in init script. (closes: #884347)
+   * Fix exit code for dhcp_release6 (closes: #833596)
+   * Add project homepage to control file. (closes: #887764)
 
- -- Simon Kelley <simon@thekelleys.org.uk>  Tue, 7 Sep 2017 22:47:01 +0000
+ -- Simon Kelley <simon@thekelleys.org.uk>  Sat, 20 Jan 2018 22:17:01 +0000
 
 dnsmasq (2.78-1) unstable; urgency=high
 
@@ -26,7 +28,7 @@ dnsmasq (2.77-1) unstable; urgency=low
      includes port=0 to disable DNS.
    * Handle gratuitous format change in /usr/share/dns/root.ds
      (closes: #858506) (closes: #860064)
-   * Add lsb-base dependancy.
+   * Add lsb-base dependency.
 
  -- Simon Kelley <simon@thekelleys.org.uk>  Tue, 11 Apr 2017 14:19:20 +0000
 
