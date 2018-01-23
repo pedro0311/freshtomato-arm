@@ -1,6 +1,6 @@
 --- dnsmasq/src/config.h	2017-05-22 23:58:46.000000000 +0200
 +++ dnsmasq/src/config.h	2017-10-03 20:05:34.000000000 +0200
-@@ -73,6 +73,10 @@ HAVE_BROKEN_RTC
+@@ -74,6 +74,10 @@ HAVE_BROKEN_RTC
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -365,6 +369,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -366,6 +370,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +22,7 @@
  #if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
  #define HAVE_INOTIFY
  #endif
-@@ -435,6 +443,9 @@ static char *compile_opts =
+@@ -436,6 +444,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -32,7 +32,7 @@
  #ifndef HAVE_AUTH
  "no-"
  #endif
-@@ -455,7 +466,6 @@ static char *compile_opts =
+@@ -456,7 +467,6 @@ static char *compile_opts =
  #endif
  "inotify";
  
@@ -87,7 +87,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1337,8 +1375,22 @@ static void async_event(int pipe, time_t
+@@ -1341,8 +1379,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -110,7 +110,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1370,6 +1422,12 @@ static void async_event(int pipe, time_t
+@@ -1385,6 +1437,12 @@ static void async_event(int pipe, time_t
  	    while (retry_send(close(daemon->helperfd)));
  	  }
  #endif
@@ -125,7 +125,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h	2017-05-22 23:58:46.000000000 +0200
 +++ dnsmasq/src/dnsmasq.h	2017-10-03 20:05:34.000000000 +0200
-@@ -1379,6 +1379,12 @@ int make_icmp_sock(void);
+@@ -1382,6 +1382,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif

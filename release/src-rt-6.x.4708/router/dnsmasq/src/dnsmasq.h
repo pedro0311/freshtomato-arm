@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2017 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define COPYRIGHT "Copyright (c) 2000-2017 Simon Kelley"
+#define COPYRIGHT "Copyright (c) 2000-2018 Simon Kelley"
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
@@ -179,6 +179,7 @@ struct event_desc {
 #define EVENT_NEWROUTE   23
 #define EVENT_TIME_ERR   24
 #define EVENT_SCRIPT_LOG 25
+#define EVENT_TIME       26
 
 /* Exit codes. */
 #define EC_GOOD        0
@@ -519,6 +520,7 @@ struct server {
   struct serverfd *sfd; 
   char *domain; /* set if this server only handles a domain. */ 
   int flags, tcpfd, edns_pktsz;
+  time_t pktsz_reduced;
   unsigned int queries, failed_queries;
 #ifdef HAVE_LOOP
   u32 uid;
@@ -1030,7 +1032,8 @@ extern struct daemon {
 #ifdef HAVE_DNSSEC
   char *keyname; /* MAXDNAME size buffer */
   char *workspacename; /* ditto */
-  char *rr_status; /* 256 bytes as flags for individual RRs */
+  char *rr_status; /* flags for individual RRs */
+  int rr_status_sz;
 #endif
   unsigned int local_answer, queries_forwarded, auth_answer;
   struct frec *frec_list;
@@ -1145,7 +1148,7 @@ size_t setup_reply(struct dns_header *header, size_t  qlen,
 		   unsigned long ttl);
 int extract_addresses(struct dns_header *header, size_t qlen, char *name,
 		      time_t now, char **ipsets, int is_sign, int check_rebind,
-		      int no_cache_dnssec, int secure, int *doctored, char *rr_status);
+		      int no_cache_dnssec, int secure, int *doctored);
 size_t answer_request(struct dns_header *header, char *limit, size_t qlen,  
 		      struct in_addr local_addr, struct in_addr local_netmask, 
 		      time_t now, int ad_reqd, int do_bit, int have_pseudoheader);
@@ -1178,7 +1181,7 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
 int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class);
 int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class);
 int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int *class,
-			  int check_unsigned, int *neganswer, int *nons, char *rr_status);
+			  int check_unsigned, int *neganswer, int *nons);
 int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen);
 size_t filter_rrsigs(struct dns_header *header, size_t plen);
 unsigned char* hash_questions(struct dns_header *header, size_t plen, char *name);

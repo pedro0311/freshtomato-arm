@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2017 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
       if ((l = *p++) == 0) 
 	/* end marker */
 	{
-	  /* check that there are the correct no of bytes after the name */
+	  /* check that there are the correct no. of bytes after the name */
 	  if (!CHECK_LEN(header, p1 ? p1 : p, plen, extrabytes))
 	    return 0;
 	  
@@ -156,7 +156,7 @@ int in_arpa_name_2_addr(char *namein, struct all_addr *addrp)
   memset(addrp, 0, sizeof(struct all_addr));
 
   /* turn name into a series of asciiz strings */
-  /* j counts no of labels */
+  /* j counts no. of labels */
   for(j = 1,cp1 = name; *namein; cp1++, namein++)
     if (*namein == '.')
       {
@@ -585,7 +585,7 @@ static int find_soa(struct dns_header *header, size_t qlen, char *name, int *doc
    Return 1 if we reject an address because it look like part of dns-rebinding attack. */
 int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t now, 
 		      char **ipsets, int is_sign, int check_rebind, int no_cache_dnssec,
-		      int secure, int *doctored, char *rr_status)
+		      int secure, int *doctored)
 {
   unsigned char *p, *p1, *endrr, *namep;
   int i, j, qtype, qclass, aqtype, aqclass, ardlen, res, searched_soa = 0;
@@ -610,10 +610,12 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 	{
 	  if (secure)
 	    return 0;
-	  if (rr_status)
+#ifdef HAVE_DNSSEC
+	  if (option_bool(OPT_DNSSEC_VALID))
 	    for (i = 0; i < ntohs(header->ancount); i++)
-	      if (rr_status[i])
+	      if (daemon->rr_status[i])
 		return 0;
+#endif
 	}
     }
   
@@ -625,7 +627,9 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
       int found = 0, cname_count = CNAME_CHAIN;
       struct crec *cpp = NULL;
       int flags = RCODE(header) == NXDOMAIN ? F_NXDOMAIN : 0;
+#ifdef HAVE_DNSSEC
       int cname_short = 0;
+#endif
       unsigned long cttl = ULONG_MAX, attl;
 
       namep = p;
@@ -681,8 +685,8 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 		    {
 		      if (!extract_name(header, qlen, &p1, name, 1, 0))
 			return 0;
-
-		      if (rr_status && rr_status[j])
+#ifdef HAVE_DNSSEC
+		      if (option_bool(OPT_DNSSEC_VALID) && daemon->rr_status[j])
 			{
 			  /* validated RR anywhere in CNAME chain, don't cache. */
 			  if (cname_short || aqtype == T_CNAME)
@@ -690,12 +694,15 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 
 			  secflag = F_DNSSECOK;
 			}
+#endif
 
 		      if (aqtype == T_CNAME)
 			{
 			  if (!cname_count--)
 			    return 0; /* looped CNAMES, we can't cache. */
+#ifdef HAVE_DNSSEC
 			  cname_short = 1;
+#endif
 			  goto cname_loop;
 			}
 		      
@@ -766,7 +773,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 	      if (aqclass == C_IN && res != 2 && (aqtype == T_CNAME || aqtype == qtype))
 		{
 #ifdef HAVE_DNSSEC
-		  if (rr_status && rr_status[j])
+		  if (option_bool(OPT_DNSSEC_VALID) && daemon->rr_status[j])
 		      secflag = F_DNSSECOK;
 #endif		  
 		  if (aqtype == T_CNAME)
