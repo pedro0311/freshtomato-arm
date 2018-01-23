@@ -2,10 +2,6 @@
 #ifndef __CMPTEST_H__
 #define __CMPTEST_H__
 
-#ifdef NDEBUG
-#/**/undef/**/ NDEBUG
-#endif
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>

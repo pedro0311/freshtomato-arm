@@ -855,16 +855,12 @@ crypto_aead_aes256gcm_encrypt(unsigned char *c,
                               const unsigned char *k)
 {
     CRYPTO_ALIGN(16) crypto_aead_aes256gcm_state ctx;
-    int ret;
 
     crypto_aead_aes256gcm_beforenm(&ctx, k);
 
-    ret = crypto_aead_aes256gcm_encrypt_afternm
+    return crypto_aead_aes256gcm_encrypt_afternm
         (c, clen_p, m, mlen, ad, adlen, nsec, npub,
             (const crypto_aead_aes256gcm_state *) &ctx);
-    sodium_memzero(ctx, sizeof ctx);
-
-    return ret;
 }
 
 int
@@ -899,16 +895,12 @@ crypto_aead_aes256gcm_decrypt(unsigned char *m,
                               const unsigned char *k)
 {
     CRYPTO_ALIGN(16) crypto_aead_aes256gcm_state ctx;
-    int ret;
 
     crypto_aead_aes256gcm_beforenm(&ctx, k);
 
-    ret = crypto_aead_aes256gcm_decrypt_afternm
+    return crypto_aead_aes256gcm_decrypt_afternm
         (m, mlen_p, nsec, c, clen, ad, adlen, npub,
          (const crypto_aead_aes256gcm_state *) &ctx);
-    sodium_memzero(ctx, sizeof ctx);
-
-    return ret;
 }
 
 int

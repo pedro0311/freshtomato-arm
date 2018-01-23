@@ -43,7 +43,7 @@ echo
 
 env - PATH="$PATH" \
     "$MAKE_TOOLCHAIN" --force --api="$NDK_API_VERSION_COMPAT" \
-    --arch="$ARCH" --install-dir="$TOOLCHAIN_DIR" || exit 1
+    --unified-headers --arch="$ARCH" --install-dir="$TOOLCHAIN_DIR" || exit 1
 
 ./configure \
     --disable-soname-versions \
@@ -59,7 +59,7 @@ if [ "$NDK_PLATFORM" != "$NDK_PLATFORM_COMPAT" ]; then
   echo
   env - PATH="$PATH" \
       "$MAKE_TOOLCHAIN" --force --api="$NDK_API_VERSION" \
-      --arch="$ARCH" --install-dir="$TOOLCHAIN_DIR" || exit 1
+      --unified-headers --arch="$ARCH" --install-dir="$TOOLCHAIN_DIR" || exit 1
 
   ./configure \
       --disable-soname-versions \
