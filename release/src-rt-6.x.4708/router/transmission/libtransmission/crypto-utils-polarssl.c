@@ -4,7 +4,7 @@
  * It may be used under the GNU GPL versions 2 or 3
  * or any future license endorsed by Mnemosyne LLC.
  *
- * $Id: crypto-utils-polarssl.c 14444 2015-01-07 14:05:58Z mikedld $
+ * $Id$
  */
 
 #include <assert.h>
