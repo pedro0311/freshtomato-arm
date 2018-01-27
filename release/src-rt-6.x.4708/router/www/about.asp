@@ -104,8 +104,8 @@ function init()
 Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br />
 <br />
 <b>[Kille72's Tomato-ARM]</b> - Polish forum: <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' class='new_window'>https://openlinksys.info</a> English forum: <a href='https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled-by-kille72.73397/' class='new_window'>https://linksysinfo.org</a><br />
-<b>Source code</b> - <a href='https://bitbucket.org/kille72/tomato-arm-kille72' class='new_window'>Bitbucket project page</a><br />
-<b>About me</b> - <a href='https://exotic.se' class='new_window'>https://exotic.se</a><br />
+<a href='https://bitbucket.org/kille72/tomato-arm-kille72' class='new_window'>Project page</a><br />
+<a href='https://exotic.se' class='new_window'>About me</a><br />
 <br />
 <hr>
 <!-- / / / -->
