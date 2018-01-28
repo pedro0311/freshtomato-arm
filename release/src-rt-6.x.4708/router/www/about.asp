@@ -281,7 +281,7 @@ Click below to send a "Thank you" gift through PayPal
 </div>
 <br />
 <br />
-<b>Based on Tomato Firmware v<% version(); %></b><br />
+<b>Based on Tomato Firmware v1.28</b><br />
 <i>Copyright (C) 2006-2010 Jonathan Zarate</i><br />
 <a href='http://www.polarcloud.com/tomato/' class='new_window'>http://www.polarcloud.com/tomato/</a><br />
 <br />
