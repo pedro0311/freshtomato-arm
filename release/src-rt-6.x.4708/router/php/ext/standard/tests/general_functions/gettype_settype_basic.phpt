@@ -38,7 +38,7 @@ class point
   var $x;
   var $y;
 
-  function point($x, $y) {
+  function __construct($x, $y) {
      $this->x = $x;
      $this->y = $y;
   }
@@ -357,7 +357,7 @@ bool(true)
 float(%d)
 string(6) "double"
 -- Iteration 14 --
-8: Object of class point could not be converted to double
+8: Object of class point could not be converted to float
 bool(true)
 float(1)
 string(6) "double"
@@ -416,7 +416,7 @@ bool(true)
 float(%d)
 string(6) "double"
 -- Iteration 14 --
-8: Object of class point could not be converted to double
+8: Object of class point could not be converted to float
 bool(true)
 float(1)
 string(6) "double"
@@ -740,11 +740,11 @@ string(5) "array"
 -- Iteration 1 --
 bool(true)
 object(stdClass)#2 (3) {
-  [0]=>
+  ["0"]=>
   int(1)
-  [1]=>
+  ["1"]=>
   int(2)
-  [2]=>
+  ["2"]=>
   int(3)
 }
 string(6) "object"
@@ -758,11 +758,11 @@ string(6) "object"
 -- Iteration 3 --
 bool(true)
 object(stdClass)#2 (3) {
-  [0]=>
+  ["0"]=>
   int(2)
-  [1]=>
+  ["1"]=>
   int(3)
-  [2]=>
+  ["2"]=>
   int(4)
 }
 string(6) "object"

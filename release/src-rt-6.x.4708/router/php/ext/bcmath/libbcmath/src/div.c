@@ -26,7 +26,7 @@
                 Computer Science Department, 9062
                 Western Washington University
                 Bellingham, WA 98226-9062
-       
+
 *************************************************************************/
 
 #include <config.h>
@@ -85,7 +85,7 @@ _one_mult (num, size, digit, result)
    by zero is tried.  The algorithm is found in Knuth Vol 2. p237. */
 
 int
-bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale TSRMLS_DC)
+bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale)
 {
   bc_num qval;
   unsigned char *num1, *num2;
@@ -98,7 +98,7 @@ bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale TSRMLS_DC)
   unsigned int  norm;
 
   /* Test for divide by zero. */
-  if (bc_is_zero (n2 TSRMLS_CC)) return -1;
+  if (bc_is_zero (n2)) return -1;
 
   /* Test for divide by 1.  If it is we must truncate. */
   if (n2->n_scale == 0)
@@ -128,13 +128,11 @@ bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale TSRMLS_DC)
   else
     extra = 0;
   num1 = (unsigned char *) safe_emalloc (1, n1->n_len+n1->n_scale, extra+2);
-  if (num1 == NULL) bc_out_of_memory();
   memset (num1, 0, n1->n_len+n1->n_scale+extra+2);
   memcpy (num1+1, n1->n_value, n1->n_len+n1->n_scale);
 
   len2 = n2->n_len + scale2;
   num2 = (unsigned char *) safe_emalloc (1, len2, 1);
-  if (num2 == NULL) bc_out_of_memory();
   memcpy (num2, n2->n_value, len2);
   *(num2+len2) = 0;
   n2ptr = num2;
@@ -165,7 +163,6 @@ bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale TSRMLS_DC)
 
   /* Allocate storage for the temporary storage mval. */
   mval = (unsigned char *) safe_emalloc (1, len2, 1);
-  if (mval == NULL) bc_out_of_memory ();
 
   /* Now for the full divide algorithm. */
   if (!zero)
@@ -259,7 +256,7 @@ bc_divide (bc_num n1, bc_num n2, bc_num *quot, int scale TSRMLS_DC)
 
   /* Clean up and return the number. */
   qval->n_sign = ( n1->n_sign == n2->n_sign ? PLUS : MINUS );
-  if (bc_is_zero (qval TSRMLS_CC)) qval->n_sign = PLUS;
+  if (bc_is_zero (qval)) qval->n_sign = PLUS;
   _bc_rm_leading_zeros (qval);
   bc_free_num (quot);
   *quot = qval;

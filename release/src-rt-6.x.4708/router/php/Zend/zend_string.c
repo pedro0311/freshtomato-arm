@@ -2,10 +2,10 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2016 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
-   | that is bundled with this package in the file LICENSE, and is        | 
+   | that is bundled with this package in the file LICENSE, and is        |
    | available through the world-wide-web at the following url:           |
    | http://www.zend.com/license/2_00.txt.                                |
    | If you did not receive a copy of the Zend license and are unable to  |
@@ -21,209 +21,200 @@
 #include "zend.h"
 #include "zend_globals.h"
 
-#ifndef ZEND_DEBUG_INTERNED_STRINGS
-# define ZEND_DEBUG_INTERNED_STRINGS 0
-#endif
+ZEND_API zend_string *(*zend_new_interned_string)(zend_string *str);
 
-#if ZEND_DEBUG_INTERNED_STRINGS
-# include <sys/mman.h>
-#endif
+static zend_string *zend_new_interned_string_permanent(zend_string *str);
+static zend_string *zend_new_interned_string_request(zend_string *str);
 
-ZEND_API const char *(*zend_new_interned_string)(const char *str, int len, int free_src TSRMLS_DC);
-ZEND_API void (*zend_interned_strings_snapshot)(TSRMLS_D);
-ZEND_API void (*zend_interned_strings_restore)(TSRMLS_D);
+/* Any strings interned in the startup phase. Common to all the threads,
+   won't be free'd until process exit. If we want an ability to 
+   add permanent strings even after startup, it would be still
+   possible on costs of locking in the thread safe builds. */
+static HashTable interned_strings_permanent;
 
-static const char *zend_new_interned_string_int(const char *str, int len, int free_src TSRMLS_DC);
-static void zend_interned_strings_snapshot_int(TSRMLS_D);
-static void zend_interned_strings_restore_int(TSRMLS_D);
+static zend_new_interned_string_func_t interned_string_request_handler = zend_new_interned_string_request;
+static zend_string_copy_storage_func_t interned_string_copy_storage = NULL;
 
-void zend_interned_strings_init(TSRMLS_D)
+ZEND_API zend_string  *zend_empty_string = NULL;
+ZEND_API zend_string  *zend_one_char_string[256];
+ZEND_API zend_string **zend_known_strings = NULL;
+
+ZEND_API zend_ulong zend_hash_func(const char *str, size_t len)
 {
-#ifndef ZTS
-	size_t size = 1024 * 1024;
-
-#if ZEND_DEBUG_INTERNED_STRINGS
-	CG(interned_strings_start) = valloc(size);
-#else
-	CG(interned_strings_start) = malloc(size);
-#endif
-
-	CG(interned_strings_top) = CG(interned_strings_start);
-	CG(interned_strings_snapshot_top) = CG(interned_strings_start);
-	CG(interned_strings_end) = CG(interned_strings_start) + size;
-
-	zend_hash_init(&CG(interned_strings), 0, NULL, NULL, 1);
-	
-	CG(interned_strings).nTableMask = CG(interned_strings).nTableSize - 1;
-	CG(interned_strings).arBuckets = (Bucket **) pecalloc(CG(interned_strings).nTableSize, sizeof(Bucket *), CG(interned_strings).persistent);
-
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_READ);
-#endif
-
-    /* interned empty string */
-	CG(interned_empty_string) = zend_new_interned_string_int("", sizeof(""), 0 TSRMLS_CC);
-#endif
-
-	zend_new_interned_string = zend_new_interned_string_int;
-	zend_interned_strings_snapshot = zend_interned_strings_snapshot_int;
-	zend_interned_strings_restore = zend_interned_strings_restore_int;
+	return zend_inline_hash_func(str, len);
 }
 
-void zend_interned_strings_dtor(TSRMLS_D)
+static void _str_dtor(zval *zv)
 {
-#ifndef ZTS
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_WRITE | PROT_READ);
-#endif
-	free(CG(interned_strings).arBuckets);
-	free(CG(interned_strings_start));
-#endif
+	zend_string *str = Z_STR_P(zv);
+	pefree(str, GC_FLAGS(str) & IS_STR_PERSISTENT);
 }
 
-static const char *zend_new_interned_string_int(const char *arKey, int nKeyLength, int free_src TSRMLS_DC)
+static const char *known_strings[] = {
+#define _ZEND_STR_DSC(id, str) str,
+ZEND_KNOWN_STRINGS(_ZEND_STR_DSC)
+#undef _ZEND_STR_DSC
+	NULL
+};
+
+static void zend_init_interned_strings_ht(HashTable *interned_strings, int permanent)
 {
-#ifndef ZTS
-	ulong h;
-	uint nIndex;
-	Bucket *p;
-
-	if (IS_INTERNED(arKey)) {
-		return arKey;
-	}
-
-	h = zend_inline_hash_func(arKey, nKeyLength);
-	nIndex = h & CG(interned_strings).nTableMask;
-	p = CG(interned_strings).arBuckets[nIndex];
-	while (p != NULL) {
-		if ((p->h == h) && (p->nKeyLength == nKeyLength)) {
-			if (!memcmp(p->arKey, arKey, nKeyLength)) {
-				if (free_src) {
-					efree((void *)arKey);
-				}
-				return p->arKey;
-			}
-		}
-		p = p->pNext;
-	}
-	
-	if (CG(interned_strings_top) + ZEND_MM_ALIGNED_SIZE(sizeof(Bucket) + nKeyLength) >=
-	    CG(interned_strings_end)) {
-	    /* no memory */
-		return arKey;
-	}
-
-	p = (Bucket *) CG(interned_strings_top);
-	CG(interned_strings_top) += ZEND_MM_ALIGNED_SIZE(sizeof(Bucket) + nKeyLength);
-
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_READ | PROT_WRITE);
-#endif
-	
-	p->arKey = (char*)(p+1);
-	memcpy((char*)p->arKey, arKey, nKeyLength);
-	if (free_src) {
-		efree((void *)arKey);
-	}
-	p->nKeyLength = nKeyLength;
-	p->h = h;
-	p->pData = &p->pDataPtr;
-	p->pDataPtr = p;
-	
-	p->pNext = CG(interned_strings).arBuckets[nIndex];
-	p->pLast = NULL;
-	if (p->pNext) {
-		p->pNext->pLast = p;
-	}
-
-	HANDLE_BLOCK_INTERRUPTIONS();
-	
-	p->pListLast = CG(interned_strings).pListTail;
-	CG(interned_strings).pListTail = p;
-	p->pListNext = NULL;
-	if (p->pListLast != NULL) {
-		p->pListLast->pListNext = p;
-	}
-	if (!CG(interned_strings).pListHead) {
-		CG(interned_strings).pListHead = p;
-	}
-
-	CG(interned_strings).arBuckets[nIndex] = p;
-
-	HANDLE_UNBLOCK_INTERRUPTIONS();
-
-	CG(interned_strings).nNumOfElements++;
-
-	if (CG(interned_strings).nNumOfElements > CG(interned_strings).nTableSize) {
-		if ((CG(interned_strings).nTableSize << 1) > 0) {	/* Let's double the table size */
-			Bucket **t = (Bucket **) perealloc_recoverable(CG(interned_strings).arBuckets, (CG(interned_strings).nTableSize << 1) * sizeof(Bucket *), CG(interned_strings).persistent);
-
-			if (t) {
-				HANDLE_BLOCK_INTERRUPTIONS();
-				CG(interned_strings).arBuckets = t;
-				CG(interned_strings).nTableSize = (CG(interned_strings).nTableSize << 1);
-				CG(interned_strings).nTableMask = CG(interned_strings).nTableSize - 1;
-				zend_hash_rehash(&CG(interned_strings));
-				HANDLE_UNBLOCK_INTERRUPTIONS();
-			}
-		}
-	}
-
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_READ);
-#endif
-
-	return p->arKey;
-#else
-	return arKey;
-#endif
+	zend_hash_init(interned_strings, 1024, NULL, _str_dtor, permanent);
+	zend_hash_real_init(interned_strings, 0);
 }
 
-static void zend_interned_strings_snapshot_int(TSRMLS_D)
+ZEND_API void zend_interned_strings_init(void)
 {
-	CG(interned_strings_snapshot_top) = CG(interned_strings_top);
-}
-
-static void zend_interned_strings_restore_int(TSRMLS_D)
-{
-#ifndef ZTS
-	Bucket *p;
+	char s[2];
 	int i;
-#endif
+	zend_string *str;
 
-	CG(interned_strings_top) = CG(interned_strings_snapshot_top);
+	zend_init_interned_strings_ht(&interned_strings_permanent, 1);
 
-#ifndef ZTS
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_WRITE | PROT_READ);
-#endif
+	zend_new_interned_string = zend_new_interned_string_permanent;
 
-	for (i = 0; i < CG(interned_strings).nTableSize; i++) {
-		p = CG(interned_strings).arBuckets[i];
-		while (p && p->arKey > CG(interned_strings_top)) {
-			CG(interned_strings).nNumOfElements--;
-			if (p->pListLast != NULL) {
-				p->pListLast->pListNext = p->pListNext;
-			} else { 
-				CG(interned_strings).pListHead = p->pListNext;
-			}
-			if (p->pListNext != NULL) {
-				p->pListNext->pListLast = p->pListLast;
-			} else {
-				CG(interned_strings).pListTail = p->pListLast;
-			}
-			p = p->pNext;
-		}
-		if (p) {
-			p->pLast = NULL;
-		}
-		CG(interned_strings).arBuckets[i] = p;
+	/* interned empty string */
+	str = zend_string_alloc(sizeof("")-1, 1);
+	ZSTR_VAL(str)[0] = '\000';
+	zend_empty_string = zend_new_interned_string_permanent(str);
+
+	s[1] = 0;
+	for (i = 0; i < 256; i++) {
+		s[0] = i;
+		zend_one_char_string[i] = zend_new_interned_string_permanent(zend_string_init(s, 1, 1));
 	}
 
-#if ZEND_DEBUG_INTERNED_STRINGS
-	mprotect(CG(interned_strings_start), CG(interned_strings_end) - CG(interned_strings_start), PROT_READ);
-#endif
-#endif
+	/* known strings */
+	zend_known_strings = pemalloc(sizeof(zend_string*) * ((sizeof(known_strings) / sizeof(known_strings[0]) - 1)), 1);
+	for (i = 0; i < (sizeof(known_strings) / sizeof(known_strings[0])) - 1; i++) {
+		str = zend_string_init(known_strings[i], strlen(known_strings[i]), 1);
+		zend_known_strings[i] = zend_new_interned_string_permanent(str);
+	}
+}
+
+ZEND_API void zend_interned_strings_dtor(void)
+{
+	zend_hash_destroy(&interned_strings_permanent);
+
+	free(zend_known_strings);
+	zend_known_strings = NULL;
+}
+
+static zend_always_inline zend_string *zend_interned_string_ht_lookup(zend_string *str, HashTable *interned_strings)
+{
+	zend_ulong h;
+	uint32_t nIndex;
+	uint32_t idx;
+	Bucket *p;
+
+	h = zend_string_hash_val(str);
+	nIndex = h | interned_strings->nTableMask;
+	idx = HT_HASH(interned_strings, nIndex);
+	while (idx != HT_INVALID_IDX) {
+		p = HT_HASH_TO_BUCKET(interned_strings, idx);
+		if ((p->h == h) && (ZSTR_LEN(p->key) == ZSTR_LEN(str))) {
+			if (!memcmp(ZSTR_VAL(p->key), ZSTR_VAL(str), ZSTR_LEN(str))) {
+				return p->key;
+			}
+		}
+		idx = Z_NEXT(p->val);
+	}
+
+	return NULL;
+}
+
+/* This function might be not thread safe at least because it would update the
+   hash val in the passed string. Be sure it is called in the appropriate context. */
+static zend_always_inline zend_string *zend_add_interned_string(zend_string *str, HashTable *interned_strings, uint32_t flags)
+{
+	zval val;
+
+	GC_REFCOUNT(str) = 1;
+	GC_FLAGS(str) |= IS_STR_INTERNED | flags;
+
+	ZVAL_INTERNED_STR(&val, str);
+
+	zend_hash_add_new(interned_strings, str, &val);
+
+	return str;
+}
+
+ZEND_API zend_string *zend_interned_string_find_permanent(zend_string *str)
+{
+	return zend_interned_string_ht_lookup(str, &interned_strings_permanent);
+}
+
+
+static zend_string *zend_new_interned_string_permanent(zend_string *str)
+{
+	zend_string *ret;
+
+	if (ZSTR_IS_INTERNED(str)) {
+		return str;
+	}
+
+	ret = zend_interned_string_ht_lookup(str, &interned_strings_permanent);
+	if (ret) {
+		zend_string_release(str);
+		return ret;
+	}
+
+	return zend_add_interned_string(str, &interned_strings_permanent, IS_STR_PERMANENT);
+}
+
+static zend_string *zend_new_interned_string_request(zend_string *str)
+{
+	zend_string *ret;
+
+	if (ZSTR_IS_INTERNED(str)) {
+		return str;
+	}
+
+	/* Check for permanent strings, the table is readonly at this point. */
+	ret = zend_interned_string_ht_lookup(str, &interned_strings_permanent);
+	if (ret) {
+		zend_string_release(str);
+		return ret;
+	}
+
+	ret = zend_interned_string_ht_lookup(str, &CG(interned_strings));
+	if (ret) {
+		zend_string_release(str);
+		return ret;
+	}
+
+	/* Create a short living interned, freed after the request. */
+	ret = zend_add_interned_string(str, &CG(interned_strings), 0);
+
+	return ret;
+}
+
+ZEND_API void zend_interned_strings_activate(void)
+{
+	zend_init_interned_strings_ht(&CG(interned_strings), 0);
+}
+
+ZEND_API void zend_interned_strings_deactivate(void)
+{
+	zend_hash_destroy(&CG(interned_strings));
+}
+
+ZEND_API void zend_interned_strings_set_request_storage_handler(zend_new_interned_string_func_t handler)
+{
+	interned_string_request_handler = handler;
+}
+
+ZEND_API void zend_interned_strings_set_permanent_storage_copy_handler(zend_string_copy_storage_func_t handler)
+{
+	interned_string_copy_storage = handler;
+}
+
+ZEND_API void zend_interned_strings_switch_storage(void)
+{
+	if (interned_string_copy_storage) {
+		interned_string_copy_storage();
+	}
+	zend_new_interned_string = interned_string_request_handler;
 }
 
 /*
@@ -232,4 +223,6 @@ static void zend_interned_strings_restore_int(TSRMLS_D)
  * c-basic-offset: 4
  * indent-tabs-mode: t
  * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
  */

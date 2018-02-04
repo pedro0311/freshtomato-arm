@@ -105,13 +105,13 @@ foreach($inputs as $key =>$value) {
 
 --int 0--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --int 1--
-string(5) "17:44"
-float(17.749%d)
-int(1218197698)
+string(5) "17:45"
+float(17.750%d)
+int(1218197701)
 
 --int 12345--
 bool(false)
@@ -125,173 +125,173 @@ int(1218197155)
 
 --empty array--
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
 --int indexed array--
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
 --associative array--
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
 --nested arrays--
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, array given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, array given in %s on line %d
 bool(false)
 
 --uppercase NULL--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --lowercase null--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --lowercase true--
-string(5) "17:44"
-float(17.749%d)
-int(1218197698)
+string(5) "17:45"
+float(17.750%d)
+int(1218197701)
 
 --lowercase false--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --uppercase TRUE--
-string(5) "17:44"
-float(17.749%d)
-int(1218197698)
+string(5) "17:45"
+float(17.750%d)
+int(1218197701)
 
 --uppercase FALSE--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --empty string DQ--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --empty string SQ--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --string DQ--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --string SQ--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --mixed case string--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --heredoc--
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, string given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, string given in %s on line %d
 bool(false)
 
 --instance of classWithToString--
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
 --instance of classWithoutToString--
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
-Warning: date_sunset() expects parameter 3 to be double, object given in %s on line %d
+Warning: date_sunset() expects parameter 3 to be float, object given in %s on line %d
 bool(false)
 
 --undefined var--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 
 --unset var--
 string(5) "17:43"
-float(17.730%d)
-int(1218197630)
+float(17.731%d)
+int(1218197632)
 ===DONE===

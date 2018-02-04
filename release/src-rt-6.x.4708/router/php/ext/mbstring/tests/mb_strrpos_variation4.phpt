@@ -20,8 +20,8 @@ function_exists('mb_strrpos') or die("skip mb_strrpos() is not available in this
 echo "*** Testing mb_strrpos() : usage variations ***\n";
 
 // Initialise function arguments not being substituted
-$haystack = b'hello, world';
-$needle = b'world';
+$haystack = 'hello, world';
+$needle = 'world';
 $offset = 0;
 
 //get an unset variable
@@ -218,5 +218,5 @@ bool(false)
 -- Iteration 24 --
 
 Warning: mb_strrpos() expects parameter 4 to be string, resource given in %s on line %d
-bool(false)
+NULL
 Done

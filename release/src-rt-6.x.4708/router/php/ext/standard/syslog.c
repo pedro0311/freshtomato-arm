@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -12,7 +12,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author: Stig Sæther Bakken <ssb@php.net>                             |
+   | Author: Stig SÃ¦ther Bakken <ssb@php.net>                             |
    +----------------------------------------------------------------------+
  */
 
@@ -135,13 +135,15 @@ PHP_MSHUTDOWN_FUNCTION(syslog)
 PHP_FUNCTION(openlog)
 {
 	char *ident;
-	long option, facility;
-	int ident_len;
+	zend_long option, facility;
+	size_t ident_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sll", &ident,
-							  &ident_len, &option, &facility) == FAILURE) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(3, 3)
+		Z_PARAM_STRING(ident, ident_len)
+		Z_PARAM_LONG(option)
+		Z_PARAM_LONG(facility)
+	ZEND_PARSE_PARAMETERS_END();
+
 	if (BG(syslog_device)) {
 		free(BG(syslog_device));
 	}
@@ -175,14 +177,14 @@ PHP_FUNCTION(closelog)
    Generate a system log message */
 PHP_FUNCTION(syslog)
 {
-	long priority;
+	zend_long priority;
 	char *message;
-	int message_len;
+	size_t message_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls", &priority,
-							  &message, &message_len) == FAILURE) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(2, 2)
+		Z_PARAM_LONG(priority)
+		Z_PARAM_STRING(message, message_len)
+	ZEND_PARSE_PARAMETERS_END();
 
 	php_syslog(priority, "%s", message);
 	RETURN_TRUE;

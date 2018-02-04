@@ -1,5 +1,5 @@
 --TEST--
-Test session_start() function : variation
+Test session_commit() function : variation
 --SKIPIF--
 <?php include('skipif.inc'); ?>
 --INI--
@@ -30,7 +30,7 @@ ob_end_flush();
 *** Testing session_commit() : variation ***
 array(0) {
 }
-NULL
+bool(true)
 array(0) {
 }
 bool(true)

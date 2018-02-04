@@ -130,27 +130,27 @@ NULL
 
 -- Iteration 5 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Iteration 6 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Iteration 7 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Iteration 8 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Iteration 9 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Iteration 10 --
@@ -185,27 +185,27 @@ NULL
 
 -- Iteration 16 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Iteration 17 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Iteration 18 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Iteration 19 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Iteration 20 --
 
-Warning: imap_fetchheader() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetchheader() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Iteration 21 --

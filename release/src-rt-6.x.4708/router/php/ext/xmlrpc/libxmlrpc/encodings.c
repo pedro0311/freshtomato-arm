@@ -5,45 +5,37 @@
   Epinions.com may be contacted at feedback@epinions-inc.com
 */
 
-/*  
-  Copyright 2000 Epinions, Inc. 
+/*
+  Copyright 2000 Epinions, Inc.
 
-  Subject to the following 3 conditions, Epinions, Inc.  permits you, free 
-  of charge, to (a) use, copy, distribute, modify, perform and display this 
-  software and associated documentation files (the "Software"), and (b) 
-  permit others to whom the Software is furnished to do so as well.  
+  Subject to the following 3 conditions, Epinions, Inc.  permits you, free
+  of charge, to (a) use, copy, distribute, modify, perform and display this
+  software and associated documentation files (the "Software"), and (b)
+  permit others to whom the Software is furnished to do so as well.
 
-  1) The above copyright notice and this permission notice shall be included 
-  without modification in all copies or substantial portions of the 
-  Software.  
+  1) The above copyright notice and this permission notice shall be included
+  without modification in all copies or substantial portions of the
+  Software.
 
-  2) THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OR CONDITION OF 
-  ANY KIND, EXPRESS, IMPLIED OR STATUTORY, INCLUDING WITHOUT LIMITATION ANY 
-  IMPLIED WARRANTIES OF ACCURACY, MERCHANTABILITY, FITNESS FOR A PARTICULAR 
-  PURPOSE OR NONINFRINGEMENT.  
+  2) THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OR CONDITION OF
+  ANY KIND, EXPRESS, IMPLIED OR STATUTORY, INCLUDING WITHOUT LIMITATION ANY
+  IMPLIED WARRANTIES OF ACCURACY, MERCHANTABILITY, FITNESS FOR A PARTICULAR
+  PURPOSE OR NONINFRINGEMENT.
 
-  3) IN NO EVENT SHALL EPINIONS, INC. BE LIABLE FOR ANY DIRECT, INDIRECT, 
-  SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES OR LOST PROFITS ARISING OUT 
-  OF OR IN CONNECTION WITH THE SOFTWARE (HOWEVER ARISING, INCLUDING 
-  NEGLIGENCE), EVEN IF EPINIONS, INC.  IS AWARE OF THE POSSIBILITY OF SUCH 
-  DAMAGES.    
+  3) IN NO EVENT SHALL EPINIONS, INC. BE LIABLE FOR ANY DIRECT, INDIRECT,
+  SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES OR LOST PROFITS ARISING OUT
+  OF OR IN CONNECTION WITH THE SOFTWARE (HOWEVER ARISING, INCLUDING
+  NEGLIGENCE), EVEN IF EPINIONS, INC.  IS AWARE OF THE POSSIBILITY OF SUCH
+  DAMAGES.
 
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#ifndef PHP_WIN32
-#include <php_config.h>
-#else
-#include <config.w32.h>
-#include <stdlib.h>
-#endif
+#include <php.h>
 
 static const char rcsid[] = "#(@) $Id$";
 
 #include <errno.h>
+#include <string.h>
 
 #ifdef HAVE_GICONV_H
 #include <giconv.h>
@@ -73,7 +65,7 @@ static char* convert(const char* src, int src_len, int *new_len, const char* fro
       ic = iconv_open(to_enc, from_enc);
       if(ic != (iconv_t)-1) {
          size_t st;
-         outbuf = (char*)malloc(outlen + 1);
+         outbuf = (char*)emalloc(outlen + 1);
 
          if(outbuf) {
             out_ptr = (char*)outbuf;
@@ -84,14 +76,14 @@ static char* convert(const char* src, int src_len, int *new_len, const char* fro
                      int diff = out_ptr - outbuf;
                      outlen += inlenleft;
                      outlenleft += inlenleft;
-                     outbuf = (char*)realloc(outbuf, outlen + 1);
+                     outbuf = (char*)erealloc(outbuf, outlen + 1);
                      if(!outbuf) {
                         break;
                      }
                      out_ptr = outbuf + diff;
                   }
                   else {
-                     free(outbuf);
+                     efree(outbuf);
                      outbuf = 0;
                      break;
                   }

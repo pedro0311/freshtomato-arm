@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -46,26 +46,27 @@ PHPAPI void make_digest_ex(char *md5str, const unsigned char *digest, int len) /
    Calculate the md5 hash of a string */
 PHP_NAMED_FUNCTION(php_if_md5)
 {
-	char *arg;
-	int arg_len;
+	zend_string *arg;
 	zend_bool raw_output = 0;
 	char md5str[33];
 	PHP_MD5_CTX context;
 	unsigned char digest[16];
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &arg, &arg_len, &raw_output) == FAILURE) {
-		return;
-	}
-	
+
+	ZEND_PARSE_PARAMETERS_START(1, 2)
+		Z_PARAM_STR(arg)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_BOOL(raw_output)
+	ZEND_PARSE_PARAMETERS_END();
+
 	md5str[0] = '\0';
 	PHP_MD5Init(&context);
-	PHP_MD5Update(&context, arg, arg_len);
+	PHP_MD5Update(&context, ZSTR_VAL(arg), ZSTR_LEN(arg));
 	PHP_MD5Final(digest, &context);
 	if (raw_output) {
-		RETURN_STRINGL(digest, 16, 1);
+		RETURN_STRINGL((char *) digest, 16);
 	} else {
 		make_digest_ex(md5str, digest, 16);
-		RETVAL_STRING(md5str, 1);
+		RETVAL_STRING(md5str);
 	}
 
 }
@@ -76,19 +77,21 @@ PHP_NAMED_FUNCTION(php_if_md5)
 PHP_NAMED_FUNCTION(php_if_md5_file)
 {
 	char          *arg;
-	int           arg_len;
+	size_t           arg_len;
 	zend_bool raw_output = 0;
 	char          md5str[33];
 	unsigned char buf[1024];
 	unsigned char digest[16];
 	PHP_MD5_CTX   context;
-	int           n;
+	size_t           n;
 	php_stream    *stream;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|b", &arg, &arg_len, &raw_output) == FAILURE) {
-		return;
-	}
-	
+	ZEND_PARSE_PARAMETERS_START(1, 2)
+		Z_PARAM_PATH(arg, arg_len)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_BOOL(raw_output)
+	ZEND_PARSE_PARAMETERS_END();
+
 	stream = php_stream_open_wrapper(arg, "rb", REPORT_ERRORS, NULL);
 	if (!stream) {
 		RETURN_FALSE;
@@ -96,23 +99,27 @@ PHP_NAMED_FUNCTION(php_if_md5_file)
 
 	PHP_MD5Init(&context);
 
-	while ((n = php_stream_read(stream, buf, sizeof(buf))) > 0) {
+	while ((n = php_stream_read(stream, (char*)buf, sizeof(buf))) > 0) {
 		PHP_MD5Update(&context, buf, n);
 	}
 
-	PHP_MD5Final(digest, &context);
+	/* XXX this probably can be improved with some number of retries */
+	if (!php_stream_eof(stream)) {
+		php_stream_close(stream);
+		PHP_MD5Final(digest, &context);
 
-	php_stream_close(stream);
-
-	if (n<0) {
 		RETURN_FALSE;
 	}
 
+	php_stream_close(stream);
+
+	PHP_MD5Final(digest, &context);
+
 	if (raw_output) {
-		RETURN_STRINGL(digest, 16, 1);
+		RETURN_STRINGL((char *) digest, 16);
 	} else {
 		make_digest_ex(md5str, digest, 16);
-		RETVAL_STRING(md5str, 1);
+		RETVAL_STRING(md5str);
 	}
 }
 /* }}} */
@@ -166,16 +173,16 @@ PHP_NAMED_FUNCTION(php_if_md5_file)
  */
 #if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
 # define SET(n) \
-	(*(php_uint32 *)&ptr[(n) * 4])
+	(*(uint32_t *)&ptr[(n) * 4])
 # define GET(n) \
 	SET(n)
 #else
 # define SET(n) \
 	(ctx->block[(n)] = \
-	(php_uint32)ptr[(n) * 4] | \
-	((php_uint32)ptr[(n) * 4 + 1] << 8) | \
-	((php_uint32)ptr[(n) * 4 + 2] << 16) | \
-	((php_uint32)ptr[(n) * 4 + 3] << 24))
+	(uint32_t)ptr[(n) * 4] | \
+	((uint32_t)ptr[(n) * 4 + 1] << 8) | \
+	((uint32_t)ptr[(n) * 4 + 2] << 16) | \
+	((uint32_t)ptr[(n) * 4 + 3] << 24))
 # define GET(n) \
 	(ctx->block[(n)])
 #endif
@@ -187,8 +194,8 @@ PHP_NAMED_FUNCTION(php_if_md5_file)
 static const void *body(PHP_MD5_CTX *ctx, const void *data, size_t size)
 {
 	const unsigned char *ptr;
-	php_uint32 a, b, c, d;
-	php_uint32 saved_a, saved_b, saved_c, saved_d;
+	uint32_t a, b, c, d;
+	uint32_t saved_a, saved_b, saved_c, saved_d;
 
 	ptr = data;
 
@@ -304,8 +311,8 @@ PHPAPI void PHP_MD5Init(PHP_MD5_CTX *ctx)
 
 PHPAPI void PHP_MD5Update(PHP_MD5_CTX *ctx, const void *data, size_t size)
 {
-	php_uint32 saved_lo;
-	php_uint32 used, free;
+	uint32_t saved_lo;
+	uint32_t used, free;
 
 	saved_lo = ctx->lo;
 	if ((ctx->lo = (saved_lo + size) & 0x1fffffff) < saved_lo) {
@@ -339,7 +346,7 @@ PHPAPI void PHP_MD5Update(PHP_MD5_CTX *ctx, const void *data, size_t size)
 
 PHPAPI void PHP_MD5Final(unsigned char *result, PHP_MD5_CTX *ctx)
 {
-	php_uint32 used, free;
+	uint32_t used, free;
 
 	used = ctx->lo & 0x3f;
 
@@ -385,5 +392,5 @@ PHPAPI void PHP_MD5Final(unsigned char *result, PHP_MD5_CTX *ctx)
 	result[14] = ctx->d >> 16;
 	result[15] = ctx->d >> 24;
 
-	memset(ctx, 0, sizeof(*ctx));
+	ZEND_SECURE_ZERO(ctx, sizeof(*ctx));
 }

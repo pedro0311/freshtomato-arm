@@ -5,7 +5,7 @@
  * LICENSE NOTICES
  *
  * This file is part of "streamable kanji code filter and converter",
- * which is distributed under the terms of GNU Lesser General Public 
+ * which is distributed under the terms of GNU Lesser General Public
  * License (version 2) as published by the Free Software Foundation.
  *
  * This software is distributed in the hope that it will be useful,
@@ -24,7 +24,7 @@
 /*
  * The source code included in this files was separated from mbfilter.c
  * by moriyoshi koizumi <moriyoshi@php.net> on 4 dec 2002.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,7 +88,8 @@ const struct mbfl_convert_vtbl vtbl_html_wchar = {
 	mbfl_filt_conv_html_dec_ctor,
 	mbfl_filt_conv_html_dec_dtor,
 	mbfl_filt_conv_html_dec,
-	mbfl_filt_conv_html_dec_flush };
+	mbfl_filt_conv_html_dec_flush,
+	mbfl_filt_conv_html_dec_copy };
 
 
 #define CK(statement)	do { if ((statement) < 0) return (-1); } while (0)
@@ -111,7 +112,7 @@ int mbfl_filt_conv_html_enc(int c, mbfl_convert_filter *filter)
 		for (i = 0; (e = &mbfl_html_entity_list[i])->name != NULL; i++) {
 			if (c == e->code) {
 				char *p;
-				
+
 				for (p = e->name; *p != '\0'; p++) {
 					CK((*filter->output_function)((int)*p, filter->data));
 				}
@@ -165,7 +166,7 @@ void mbfl_filt_conv_html_dec_ctor(mbfl_convert_filter *filter)
 	filter->status = 0;
 	filter->opaque = mbfl_malloc(html_enc_buffer_size+1);
 }
-	
+
 void mbfl_filt_conv_html_dec_dtor(mbfl_convert_filter *filter)
 {
 	filter->status = 0;
@@ -238,7 +239,7 @@ int mbfl_filt_conv_html_dec(int c, mbfl_convert_filter *filter)
 					CK((*filter->output_function)(c, filter->data));
 				}
 				filter->status = 0;
-				/*php_error_docref("ref.mbstring" TSRMLS_CC, E_NOTICE, "mbstring decoded '%s'=%d", buffer, ent);*/
+				/*php_error_docref("ref.mbstring", E_NOTICE, "mbstring decoded '%s'=%d", buffer, ent);*/
 			} else {
 				/* named entity */
 				buffer[filter->status] = 0;
@@ -254,12 +255,12 @@ int mbfl_filt_conv_html_dec(int c, mbfl_convert_filter *filter)
 					/* decoded */
 					CK((*filter->output_function)(ent, filter->data));
 					filter->status = 0;
-					/*php_error_docref("ref.mbstring" TSRMLS_CC, E_NOTICE,"mbstring decoded '%s'=%d", buffer, ent);*/
-				} else { 
+					/*php_error_docref("ref.mbstring", E_NOTICE,"mbstring decoded '%s'=%d", buffer, ent);*/
+				} else {
 					/* failure */
 					buffer[filter->status++] = ';';
 					buffer[filter->status] = 0;
-					/* php_error_docref("ref.mbstring" TSRMLS_CC, E_WARNING, "mbstring cannot decode '%s'", buffer); */
+					/* php_error_docref("ref.mbstring", E_WARNING, "mbstring cannot decode '%s'", buffer); */
 					mbfl_filt_conv_html_dec_flush(filter);
 				}
 			}
@@ -273,7 +274,7 @@ int mbfl_filt_conv_html_dec(int c, mbfl_convert_filter *filter)
 				if (c=='&')
 					filter->status--;
 				buffer[filter->status] = 0;
-				/* php_error_docref("ref.mbstring" TSRMLS_CC, E_WARNING, "mbstring cannot decode '%s'", buffer)l */
+				/* php_error_docref("ref.mbstring", E_WARNING, "mbstring cannot decode '%s'", buffer)l */
 				mbfl_filt_conv_html_dec_flush(filter);
 				if (c=='&')
 				{
@@ -309,4 +310,9 @@ int mbfl_filt_conv_html_dec_flush(mbfl_convert_filter *filter)
 	return err;
 }
 
-
+void mbfl_filt_conv_html_dec_copy(mbfl_convert_filter *src, mbfl_convert_filter *dest)
+{
+	*dest = *src;
+	dest->opaque = mbfl_malloc(html_enc_buffer_size+1);
+	memcpy(dest->opaque, src->opaque, html_enc_buffer_size+1);
+}

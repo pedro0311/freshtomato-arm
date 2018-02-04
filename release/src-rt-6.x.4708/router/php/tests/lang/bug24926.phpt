@@ -9,7 +9,7 @@ class foo {
 
     public $functions = array();
     
-    function foo()
+    function __construct()
     {
         $function = create_function('', 'return "FOO\n";');
         print($function());
@@ -23,6 +23,7 @@ class foo {
 $a = new foo ();
 
 ?>
---EXPECT--
+--EXPECTF--
+Deprecated: Function create_function() is deprecated in %s on line %d
 FOO
 FOO

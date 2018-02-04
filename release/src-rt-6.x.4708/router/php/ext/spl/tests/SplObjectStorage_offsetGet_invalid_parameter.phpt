@@ -31,13 +31,13 @@ NULL
 Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, boolean given in %s on line %d
 NULL
 
-Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, %unicode_string_optional% given in %s on line %d
+Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, string given in %s on line %d
 NULL
 
 Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, integer given in %s on line %d
 NULL
 
-Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, double given in %s on line %d
+Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, float given in %s on line %d
 NULL
 
 Warning: SplObjectStorage::offsetGet() expects parameter 1 to be object, null given in %s on line %d
