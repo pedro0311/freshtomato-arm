@@ -9,28 +9,21 @@ if (!@openssl_pkey_new()) die("skip cannot create private key");
 <?php
 echo "Creating private key\n";
 
-/* stack up some entropy; performance is not critical,
- * and being slow will most likely even help the test.
- */
-for ($z = "", $i = 0; $i < 1024; $i++) {
-	$z .= $i * $i;
-	if (function_exists("usleep"))
-		usleep($i);
-}
-
-$privkey = openssl_pkey_new();
+$conf = array('config' => dirname(__FILE__) . DIRECTORY_SEPARATOR . 'openssl.cnf');
+$privkey = openssl_pkey_new($conf);
 
 if ($privkey === false)
 	die("failed to create private key");
 
 $passphrase = "banana";
-$key_file_name = tempnam("/tmp", "ssl");
+$key_file_name = tempnam(sys_get_temp_dir(), "ssl");
 if ($key_file_name === false)
 	die("failed to get a temporary filename!");
 
 echo "Export key to file\n";
 
-openssl_pkey_export_to_file($privkey, $key_file_name, $passphrase) or die("failed to export to file $key_file_name");
+openssl_pkey_export_to_file($privkey, $key_file_name, $passphrase, $conf) or die("failed to export to file $key_file_name");
+var_dump(is_resource($privkey));
 
 echo "Load key from file - array syntax\n";
 
@@ -68,6 +61,7 @@ echo "OK!\n";
 --EXPECT--
 Creating private key
 Export key to file
+bool(true)
 Load key from file - array syntax
 Load key using direct syntax
 Load key manually and use string syntax

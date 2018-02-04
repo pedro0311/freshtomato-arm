@@ -30,16 +30,6 @@
 #include "php.h"
 #include "php_string.h"
 
-#if defined(__GNUC__)
-#  define UNUSED __attribute__((__unused__))
-#else
-#  define UNUSED
-#endif
-
-#if 0
-static char const *version UNUSED =
-    "$Id$";
-#endif
 /* {{{ compare_right
  */
 static int
@@ -92,7 +82,7 @@ compare_left(char const **a, char const *aend, char const **b, char const *bend)
 		 else if (**a > **b)
 			 return +1;
      }
-	  
+
      return 0;
 }
 /* }}} */
@@ -108,8 +98,9 @@ PHPAPI int strnatcmp_ex(char const *a, size_t a_len, char const *b, size_t b_len
 	int fractional, result;
 	short leading = 1;
 
-	if (a_len == 0 || b_len == 0)
-		return a_len - b_len;
+	if (a_len == 0 || b_len == 0) {
+		return (a_len == b_len ? 0 : (a_len > b_len ? 1 : -1));
+	}
 
 	ap = a;
 	bp = b;

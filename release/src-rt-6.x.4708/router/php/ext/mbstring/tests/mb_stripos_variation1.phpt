@@ -20,7 +20,7 @@ function_exists('mb_stripos') or die("skip mb_stripos() is not available in this
 echo "*** Testing mb_stripos() : usage variations ***\n";
 
 // Initialise function arguments not being substituted
-$needle = b'string_val';
+$needle = 'string_val';
 $offset = 0;
 $encoding = 'utf-8';
 
@@ -179,5 +179,5 @@ bool(false)
 -- Iteration 24 --
 
 Warning: mb_stripos() expects parameter 1 to be string, resource given in %s on line %d
-bool(false)
+NULL
 Done

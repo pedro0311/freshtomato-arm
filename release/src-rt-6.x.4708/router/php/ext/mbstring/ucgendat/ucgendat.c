@@ -336,7 +336,9 @@ ordered_range_insert(ac_uint4 c, char *name, int len)
         (len == 3 &&
          (memcmp(name, "NSM", 3) == 0 || memcmp(name, "PDF", 3) == 0 ||
           memcmp(name, "LRE", 3) == 0 || memcmp(name, "LRO", 3) == 0 ||
-          memcmp(name, "RLE", 3) == 0 || memcmp(name, "RLO", 3) == 0))) {
+          memcmp(name, "RLE", 3) == 0 || memcmp(name, "RLO", 3) == 0 ||
+          memcmp(name, "LRI", 3) == 0 || memcmp(name, "RLI", 3) == 0 ||
+          memcmp(name, "FSI", 3) == 0 || memcmp(name, "PDI", 3) == 0))) {
         /*
          * Mark all of these as Other Neutral to preserve compatibility with
          * older versions.
@@ -350,8 +352,10 @@ ordered_range_insert(ac_uint4 c, char *name, int len)
           break;
     }
 
-    if (i == NUMPROPS)
-      return;
+    if (i == NUMPROPS) {
+        printf("Unknown property %s\n", name);
+        return;
+    }
 
     /*
      * Have a match, so insert the code in order.
@@ -461,7 +465,7 @@ add_decomp(ac_uint4 code, short compat)
 	pdecomps_used = &decomps_used;
 	pdecomps_size = &decomps_size;
     }
-    
+
     /*
      * Add the code to the composite property.
      */
@@ -538,6 +542,10 @@ add_title(ac_uint4 code)
      * Always map the code to itself.
      */
     cases[2] = code;
+
+    /* If lower/upper case does not exist, stay the same */
+    if (!cases[0]) cases[0] = code;
+    if (!cases[1]) cases[1] = code;
 
     if (title_used == title_size) {
         if (title_size == 0)
@@ -825,7 +833,9 @@ read_cdata(FILE *in)
 
     lineno = skip = 0;
     while (fgets(line, sizeof(line), in)) {
-	if( (s=strchr(line, '\n')) ) *s = '\0';
+        int is_title = 0;
+
+        if( (s=strchr(line, '\n')) ) *s = '\0';
         lineno++;
 
         /*
@@ -965,8 +975,12 @@ read_cdata(FILE *in)
               i++;
         }
         for (e = s; *e && *e != ';'; e++) ;
-    
+
         ordered_range_insert(code, s, e - s);
+
+        if (e - s == 2 && s[0] == 'L' && s[1] == 't') {
+            is_title = 1;
+        }
 
         /*
          * Locate the combining class code.
@@ -1065,7 +1079,7 @@ read_cdata(FILE *in)
 
             if (*e == '/') {
                 /*
-                 * Move the the denominator of the fraction.
+                 * Move the denominator of the fraction.
                  */
                 if (neg)
                   number[wnum] *= -1;
@@ -1112,7 +1126,7 @@ read_cdata(FILE *in)
             if (*s == ';')
               s++;
         }
-        if (cases[0] && cases[1])
+        if (is_title)
           /*
            * Add the upper and lower mappings for a title case character.
            */
@@ -1139,7 +1153,7 @@ find_decomp(ac_uint4 code, short compat)
 {
     long l, r, m;
     _decomp_t *decs;
-    
+
     l = 0;
     r = (compat ? kdecomps_used : decomps_used) - 1;
     decs = compat ? kdecomps : decomps;
@@ -1442,7 +1456,7 @@ write_cdata(char *opath)
         " * LowerIndex = _uccase_len[0]\n"
         " * TitleIndex = LowerIndex + _uccase_len[1] */\n\n");
     fprintf(out, PREF "unsigned short _uccase_len[2] = {%ld, %ld};\n\n",
-        (long) upper_used * 3, (long) lower_used * 3);
+        (long) upper_used, (long) lower_used);
     fprintf(out, PREF "unsigned int _uccase_map[] = {");
 
     if (upper_used > 0)
@@ -1520,12 +1534,12 @@ write_cdata(char *opath)
      * Generate the composition data.
      *
      *****************************************************************/
-    
+
     /*
      * Create compositions from decomposition data
      */
     create_comps();
-    
+
 #if HARDCODE_DATA
     fprintf(out, PREF "ac_uint4 _uccomp_size = %ld;\n\n",
         comps_used * 4L);
@@ -1553,28 +1567,28 @@ write_cdata(char *opath)
     snprintf(path, sizeof path, "%s" LDAP_DIRSEP "comp.dat", opath);
     if ((out = fopen(path, "wb")) == 0)
 	return;
-    
+
     /*
      * Write the header.
      */
     hdr[1] = (ac_uint2) comps_used * 4;
     fwrite((char *) hdr, sizeof(ac_uint2), 2, out);
-    
+
     /*
      * Write out the byte count to maintain header size.
      */
     bytes = comps_used * sizeof(_comp_t);
     fwrite((char *) &bytes, sizeof(ac_uint4), 1, out);
-    
+
     /*
      * Now, if comps exist, write them out.
      */
     if (comps_used > 0)
         fwrite((char *) comps, sizeof(_comp_t), comps_used, out);
-    
+
     fclose(out);
 #endif
-    
+
     /*****************************************************************
      *
      * Generate the decomposition data.

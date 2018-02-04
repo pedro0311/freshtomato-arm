@@ -1,14 +1,12 @@
 --TEST--
 ZE2 object references
---SKIPIF--
-<?php if (version_compare(zend_version(), '2.0.0-dev', '<')) die('skip ZendEngine 2 needed'); ?>
 --FILE--
 <?php
 
 class Foo {
 	public $name;
     
-	function Foo() {
+	function __construct() {
 		$this->name = "I'm Foo!\n";
 	}
 }

@@ -25,7 +25,7 @@ string(44) "Exception: Extension unknown does not exist
 "
 string(37) "Exception: Extension  does not exist
 "
-string(%d) "Extension [ <persistent> extension #%d pcre version <no_version> ] {
+string(%d) "Extension [ <persistent> extension #%d pcre version %s ] {
 
   - INI {
     Entry [ pcre.backtrack_limit <ALL> ]
@@ -34,12 +34,16 @@ string(%d) "Extension [ <persistent> extension #%d pcre version <no_version> ] {
     Entry [ pcre.recursion_limit <ALL> ]
       Current = '%d'
     }
+    Entry [ pcre.jit <ALL> ]
+      Current = '%d'
+    }
   }
 
-  - Constants [14] {
+  - Constants [16] {
     Constant [ integer PREG_PATTERN_ORDER ] { 1 }
     Constant [ integer PREG_SET_ORDER ] { 2 }
     Constant [ integer PREG_OFFSET_CAPTURE ] { 256 }
+    Constant [ integer PREG_UNMATCHED_AS_NULL ] { 512 }
     Constant [ integer PREG_SPLIT_NO_EMPTY ] { 1 }
     Constant [ integer PREG_SPLIT_DELIM_CAPTURE ] { 2 }
     Constant [ integer PREG_SPLIT_OFFSET_CAPTURE ] { 4 }
@@ -50,6 +54,7 @@ string(%d) "Extension [ <persistent> extension #%d pcre version <no_version> ] {
     Constant [ integer PREG_RECURSION_LIMIT_ERROR ] { 3 }
     Constant [ integer PREG_BAD_UTF8_ERROR ] { 4 }
     Constant [ integer PREG_BAD_UTF8_OFFSET_ERROR ] { 5 }
+    Constant [ integer PREG_JIT_STACKLIMIT_ERROR ] { 6 }
     Constant [ string PCRE_VERSION ] { %s }
   }
 
@@ -92,6 +97,15 @@ string(%d) "Extension [ <persistent> extension #%d pcre version <no_version> ] {
         Parameter #2 [ <required> $subject ]
         Parameter #3 [ <optional> $limit ]
         Parameter #4 [ <optional> &$count ]
+      }
+    }
+    Function [ <internal:pcre> function preg_replace_callback_array ] {
+
+      - Parameters [4] {
+        Parameter #0 [ <required> $pattern ]
+        Parameter #1 [ <required> $subject ]
+        Parameter #2 [ <optional> $limit ]
+        Parameter #3 [ <optional> &$count ]
       }
     }
     Function [ <internal:pcre> function preg_filter ] {

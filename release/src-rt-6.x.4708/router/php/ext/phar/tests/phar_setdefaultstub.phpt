@@ -54,7 +54,7 @@ try {
 unlink(dirname(__FILE__) . '/' . basename(__FILE__, '.clean.php') . '.phar');
 ?>
 --EXPECT--
-string(6675) "<?php
+string(6643) "<?php
 
 $web = 'index.php';
 
@@ -164,21 +164,21 @@ const GZ = 0x1000;
 const BZ2 = 0x2000;
 const MASK = 0x3000;
 const START = 'index.php';
-const LEN = 6675;
+const LEN = 6643;
 
 static function go($return = false)
 {
 $fp = fopen(__FILE__, 'rb');
 fseek($fp, self::LEN);
-$L = unpack('V', $a = (binary)fread($fp, 4));
-$m = (binary)'';
+$L = unpack('V', $a = fread($fp, 4));
+$m = '';
 
 do {
 $read = 8192;
 if ($L[1] - strlen($m) < 8192) {
 $read = $L[1] - strlen($m);
 }
-$last = (binary)fread($fp, $read);
+$last = fread($fp, $read);
 $m .= $last;
 } while (strlen($last) && strlen($m) < $L[1]);
 
@@ -318,7 +318,7 @@ die("Invalid internal .phar file (size error " . strlen($data) . " != " .
 $stat[7] . ")");
 }
 
-if ($entry[3] != sprintf("%u", crc32((binary)$data) & 0xffffffff)) {
+if ($entry[3] != sprintf("%u", crc32($data) & 0xffffffff)) {
 die("Invalid internal .phar file (checksum error)");
 }
 
@@ -349,7 +349,7 @@ __HALT_COMPILER(); ?>
 "
 ============================================================================
 ============================================================================
-string(6686) "<?php
+string(6654) "<?php
 
 $web = 'index.php';
 
@@ -459,21 +459,21 @@ const GZ = 0x1000;
 const BZ2 = 0x2000;
 const MASK = 0x3000;
 const START = 'my/custom/thingy.php';
-const LEN = 6686;
+const LEN = 6654;
 
 static function go($return = false)
 {
 $fp = fopen(__FILE__, 'rb');
 fseek($fp, self::LEN);
-$L = unpack('V', $a = (binary)fread($fp, 4));
-$m = (binary)'';
+$L = unpack('V', $a = fread($fp, 4));
+$m = '';
 
 do {
 $read = 8192;
 if ($L[1] - strlen($m) < 8192) {
 $read = $L[1] - strlen($m);
 }
-$last = (binary)fread($fp, $read);
+$last = fread($fp, $read);
 $m .= $last;
 } while (strlen($last) && strlen($m) < $L[1]);
 
@@ -613,7 +613,7 @@ die("Invalid internal .phar file (size error " . strlen($data) . " != " .
 $stat[7] . ")");
 }
 
-if ($entry[3] != sprintf("%u", crc32((binary)$data) & 0xffffffff)) {
+if ($entry[3] != sprintf("%u", crc32($data) & 0xffffffff)) {
 die("Invalid internal .phar file (checksum error)");
 }
 
@@ -644,7 +644,7 @@ __HALT_COMPILER(); ?>
 "
 ============================================================================
 ============================================================================
-string(6688) "<?php
+string(6656) "<?php
 
 $web = 'the/web.php';
 
@@ -754,21 +754,21 @@ const GZ = 0x1000;
 const BZ2 = 0x2000;
 const MASK = 0x3000;
 const START = 'my/custom/thingy.php';
-const LEN = 6688;
+const LEN = 6656;
 
 static function go($return = false)
 {
 $fp = fopen(__FILE__, 'rb');
 fseek($fp, self::LEN);
-$L = unpack('V', $a = (binary)fread($fp, 4));
-$m = (binary)'';
+$L = unpack('V', $a = fread($fp, 4));
+$m = '';
 
 do {
 $read = 8192;
 if ($L[1] - strlen($m) < 8192) {
 $read = $L[1] - strlen($m);
 }
-$last = (binary)fread($fp, $read);
+$last = fread($fp, $read);
 $m .= $last;
 } while (strlen($last) && strlen($m) < $L[1]);
 
@@ -908,7 +908,7 @@ die("Invalid internal .phar file (size error " . strlen($data) . " != " .
 $stat[7] . ")");
 }
 
-if ($entry[3] != sprintf("%u", crc32((binary)$data) & 0xffffffff)) {
+if ($entry[3] != sprintf("%u", crc32($data) & 0xffffffff)) {
 die("Invalid internal .phar file (checksum error)");
 }
 
@@ -939,6 +939,6 @@ __HALT_COMPILER(); ?>
 "
 ============================================================================
 ============================================================================
-int(7066)
+int(7034)
 Illegal filename passed in for stub creation, was 401 characters long, and only 400 or less is allowed
 ===DONE===

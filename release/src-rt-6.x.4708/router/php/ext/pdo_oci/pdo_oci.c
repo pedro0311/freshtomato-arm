@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 5                                                        |
+  | PHP Version 7                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2016 The PHP Group                                |
+  | Copyright (c) 1997-2018 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -29,6 +29,9 @@
 #include "pdo/php_pdo_driver.h"
 #include "php_pdo_oci.h"
 #include "php_pdo_oci_int.h"
+#ifdef ZTS
+#include <TSRM/TSRM.h>
+#endif
 
 /* {{{ pdo_oci_functions[] */
 const zend_function_entry pdo_oci_functions[] = {
@@ -38,28 +41,22 @@ const zend_function_entry pdo_oci_functions[] = {
 
 /* {{{ pdo_oci_module_entry */
 
-#if ZEND_MODULE_API_NO >= 20050922
 static const zend_module_dep pdo_oci_deps[] = {
 	ZEND_MOD_REQUIRED("pdo")
 	ZEND_MOD_END
 };
-#endif
 
 zend_module_entry pdo_oci_module_entry = {
-#if ZEND_MODULE_API_NO >= 20050922
 	STANDARD_MODULE_HEADER_EX, NULL,
 	pdo_oci_deps,
-#else
-	STANDARD_MODULE_HEADER,
-#endif
 	"PDO_OCI",
 	pdo_oci_functions,
 	PHP_MINIT(pdo_oci),
 	PHP_MSHUTDOWN(pdo_oci),
-	NULL,
+	PHP_RINIT(pdo_oci),
 	NULL,
 	PHP_MINFO(pdo_oci),
-	"1.0.1",
+	PHP_PDO_OCI_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
@@ -68,7 +65,7 @@ zend_module_entry pdo_oci_module_entry = {
 ZEND_GET_MODULE(pdo_oci)
 #endif
 
-const ub4 PDO_OCI_INIT_MODE = 
+const ub4 PDO_OCI_INIT_MODE =
 #if 0 && defined(OCI_SHARED)
 			/* shared mode is known to be bad for PHP */
 			OCI_SHARED
@@ -86,18 +83,48 @@ const ub4 PDO_OCI_INIT_MODE =
 /* true global environment */
 OCIEnv *pdo_oci_Env = NULL;
 
+#ifdef ZTS
+/* lock for pdo_oci_Env initialization */
+static MUTEX_T pdo_oci_env_mutex;
+#endif
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(pdo_oci)
 {
 	php_pdo_register_driver(&pdo_oci_driver);
 
-#if HAVE_OCIENVCREATE
-	OCIEnvCreate(&pdo_oci_Env, PDO_OCI_INIT_MODE, NULL, NULL, NULL, NULL, 0, NULL);
-#else
-	OCIInitialize(PDO_OCI_INIT_MODE, NULL, NULL, NULL, NULL);
-	OCIEnvInit(&pdo_oci_Env, OCI_DEFAULT, 0, NULL);
+	// Defer OCI init to PHP_RINIT_FUNCTION because with php-fpm,
+	// NLS_LANG is not yet available here.
+
+#ifdef ZTS
+	pdo_oci_env_mutex = tsrm_mutex_alloc();
 #endif
+
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ PHP_RINIT_FUNCTION
+ */
+PHP_RINIT_FUNCTION(pdo_oci)
+{
+	if (!pdo_oci_Env) {
+#ifdef ZTS
+		tsrm_mutex_lock(pdo_oci_env_mutex);
+		if (!pdo_oci_Env) { // double-checked locking idiom
+#endif
+#if HAVE_OCIENVCREATE
+		OCIEnvCreate(&pdo_oci_Env, PDO_OCI_INIT_MODE, NULL, NULL, NULL, NULL, 0, NULL);
+#else
+		OCIInitialize(PDO_OCI_INIT_MODE, NULL, NULL, NULL, NULL);
+		OCIEnvInit(&pdo_oci_Env, OCI_DEFAULT, 0, NULL);
+#endif
+#ifdef ZTS
+		}
+		tsrm_mutex_unlock(pdo_oci_env_mutex);
+#endif
+	}
 
 	return SUCCESS;
 }
@@ -108,7 +135,15 @@ PHP_MINIT_FUNCTION(pdo_oci)
 PHP_MSHUTDOWN_FUNCTION(pdo_oci)
 {
 	php_pdo_unregister_driver(&pdo_oci_driver);
-	OCIHandleFree((dvoid*)pdo_oci_Env, OCI_HTYPE_ENV);
+
+	if (pdo_oci_Env) {
+		OCIHandleFree((dvoid*)pdo_oci_Env, OCI_HTYPE_ENV);
+	}
+
+#ifdef ZTS
+	tsrm_mutex_free(pdo_oci_env_mutex);
+#endif
+
 	return SUCCESS;
 }
 /* }}} */

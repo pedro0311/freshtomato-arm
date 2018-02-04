@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -28,13 +28,6 @@
 #ifdef PHP_WIN32
 #define O_RDONLY _O_RDONLY
 #include "win32/param.h"
-#elif defined(NETWARE)
-#ifdef USE_WINSOCK
-#include <novsock2.h>
-#else
-#include <sys/socket.h>
-#endif
-#include <sys/param.h>
 #else
 #include <sys/param.h>
 #endif
@@ -55,10 +48,9 @@
 
 #define INC_OUTPUTPOS(a,b) \
 	if ((a) < 0 || ((INT_MAX - outputpos)/((int)b)) < (a)) { \
-		efree(argv);	\
 		efree(formatcodes);	\
 		efree(formatargs);	\
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: integer overflow in format string", code); \
+		php_error_docref(NULL, E_WARNING, "Type %c: integer overflow in format string", code); \
 		RETURN_FALSE; \
 	} \
 	outputpos += (a)*(b);
@@ -82,7 +74,7 @@ static int machine_endian_long_map[4];
 static int big_endian_long_map[4];
 static int little_endian_long_map[4];
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 /* Mappings of bytes from quads (64bit) for all endian environments */
 static int machine_endian_longlong_map[8];
 static int big_endian_longlong_map[8];
@@ -91,13 +83,13 @@ static int little_endian_longlong_map[8];
 
 /* {{{ php_pack
  */
-static void php_pack(zval **val, int size, int *map, char *output)
+static void php_pack(zval *val, size_t size, int *map, char *output)
 {
-	int i;
+	size_t i;
 	char *v;
 
 	convert_to_long_ex(val);
-	v = (char *) &Z_LVAL_PP(val);
+	v = (char *) &Z_LVAL_P(val);
 
 	for (i = 0; i < size; i++) {
 		*output++ = v[map[i]];
@@ -105,40 +97,158 @@ static void php_pack(zval **val, int size, int *map, char *output)
 }
 /* }}} */
 
+/* {{{ php_pack_reverse_int32
+ */
+static inline uint32_t php_pack_reverse_int32(uint32_t arg)
+{
+    uint32_t result;
+    result = ((arg & 0xFF) << 24) | ((arg & 0xFF00) << 8) | ((arg >> 8) & 0xFF00) | ((arg >> 24) & 0xFF);
+
+	return result;
+}
+/* }}} */
+
+/* {{{ php_pack
+ */
+static inline uint64_t php_pack_reverse_int64(uint64_t arg)
+{
+	union Swap64 {
+		uint64_t i;
+		uint32_t ul[2];
+	} tmp, result;
+	tmp.i = arg;
+	result.ul[0] = php_pack_reverse_int32(tmp.ul[1]);
+	result.ul[1] = php_pack_reverse_int32(tmp.ul[0]);
+
+	return result.i;
+}
+/* }}} */
+
+/* {{{ php_pack_copy_float
+ */
+static void php_pack_copy_float(int is_little_endian, void * dst, float f)
+{
+	union Copy32 {
+		float f;
+		uint32_t i;
+	} m;
+	m.f = f;
+
+#ifdef WORDS_BIGENDIAN
+	if (is_little_endian) {
+		m.i = php_pack_reverse_int32(m.i);
+	}
+#else /* WORDS_BIGENDIAN */
+	if (!is_little_endian) {
+		m.i = php_pack_reverse_int32(m.i);
+	}
+#endif /* WORDS_BIGENDIAN */
+
+	memcpy(dst, &m.f, sizeof(float));
+}
+/* }}} */
+
+/* {{{ php_pack_copy_double
+ */
+static void php_pack_copy_double(int is_little_endian, void * dst, double d)
+{
+	union Copy64 {
+		double d;
+		uint64_t i;
+	} m;
+	m.d = d;
+
+#ifdef WORDS_BIGENDIAN
+	if (is_little_endian) {
+		m.i = php_pack_reverse_int64(m.i);
+	}
+#else /* WORDS_BIGENDIAN */
+	if (!is_little_endian) {
+		m.i = php_pack_reverse_int64(m.i);
+	}
+#endif /* WORDS_BIGENDIAN */
+
+	memcpy(dst, &m.d, sizeof(double));
+}
+/* }}} */
+
+/* {{{ php_pack_parse_float
+ */
+static float php_pack_parse_float(int is_little_endian, void * src)
+{
+	union Copy32 {
+		float f;
+		uint32_t i;
+	} m;
+	memcpy(&m.i, src, sizeof(float));
+
+#ifdef WORDS_BIGENDIAN
+	if (is_little_endian) {
+		m.i = php_pack_reverse_int32(m.i);
+	}
+#else /* WORDS_BIGENDIAN */
+	if (!is_little_endian) {
+		m.i = php_pack_reverse_int32(m.i);
+	}
+#endif /* WORDS_BIGENDIAN */
+
+	return m.f;
+}
+/* }}} */
+
+/* {{{ php_pack_parse_double
+ */
+static double php_pack_parse_double(int is_little_endian, void * src)
+{
+	union Copy64 {
+		double d;
+		uint64_t i;
+	} m;
+	memcpy(&m.i, src, sizeof(double));
+
+#ifdef WORDS_BIGENDIAN
+	if (is_little_endian) {
+		m.i = php_pack_reverse_int64(m.i);
+	}
+#else /* WORDS_BIGENDIAN */
+	if (!is_little_endian) {
+		m.i = php_pack_reverse_int64(m.i);
+	}
+#endif /* WORDS_BIGENDIAN */
+
+	return m.d;
+}
+/* }}} */
+
 /* pack() idea stolen from Perl (implemented formats behave the same as there except J and P)
  * Implemented formats are Z, A, a, h, H, c, C, s, S, i, I, l, L, n, N, q, Q, J, P, f, d, x, X, @.
+ * Added g, G for little endian float and big endian float, added e, E for little endian double and big endian double.
  */
 /* {{{ proto string pack(string format, mixed arg1 [, mixed arg2 [, mixed ...]])
    Takes one or more arguments and packs them into a binary string according to the format argument */
 PHP_FUNCTION(pack)
 {
-	zval ***argv = NULL;
-	int num_args, i;
+	zval *argv = NULL;
+	int num_args = 0;
+	size_t i;
 	int currentarg;
 	char *format;
-	int formatlen;
+	size_t formatlen;
 	char *formatcodes;
 	int *formatargs;
-	int formatcount = 0;
+	size_t formatcount = 0;
 	int outputpos = 0, outputsize = 0;
-	char *output;
+	zend_string *output;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "+", &argv, &num_args) == FAILURE) {
-		return;
-	}
-
-	if (Z_ISREF_PP(argv[0])) {
-		SEPARATE_ZVAL(argv[0]);
-	}
-	convert_to_string_ex(argv[0]);
-
-	format = Z_STRVAL_PP(argv[0]);
-	formatlen = Z_STRLEN_PP(argv[0]);
+	ZEND_PARSE_PARAMETERS_START(1, -1)
+		Z_PARAM_STRING(format, formatlen)
+		Z_PARAM_VARIADIC('*', argv, num_args)
+	ZEND_PARSE_PARAMETERS_END();
 
 	/* We have a maximum of <formatlen> format codes to deal with */
 	formatcodes = safe_emalloc(formatlen, sizeof(*formatcodes), 0);
 	formatargs = safe_emalloc(formatlen, sizeof(*formatargs), 0);
-	currentarg = 1;
+	currentarg = 0;
 
 	/* Preprocess format into formatcodes and formatargs */
 	for (i = 0; i < formatlen; formatcount++) {
@@ -169,7 +279,7 @@ PHP_FUNCTION(pack)
 			case 'X':
 			case '@':
 				if (arg < 0) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: '*' ignored", code);
+					php_error_docref(NULL, E_WARNING, "Type %c: '*' ignored", code);
 					arg = 1;
 				}
 				break;
@@ -181,19 +291,15 @@ PHP_FUNCTION(pack)
 			case 'h':
 			case 'H':
 				if (currentarg >= num_args) {
-					efree(argv);
 					efree(formatcodes);
 					efree(formatargs);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: not enough arguments", code);
+					php_error_docref(NULL, E_WARNING, "Type %c: not enough arguments", code);
 					RETURN_FALSE;
 				}
 
 				if (arg < 0) {
-					if (Z_ISREF_PP(argv[currentarg])) {
-						SEPARATE_ZVAL(argv[currentarg]);
-					}
-					convert_to_string_ex(argv[currentarg]);
-					arg = Z_STRLEN_PP(argv[currentarg]);
+					convert_to_string(&argv[currentarg]);
+					arg = Z_STRLEN(argv[currentarg]);
 					if (code == 'Z') {
 						/* add one because Z is always NUL-terminated:
 						 * pack("Z*", "aa") === "aa\0"
@@ -210,18 +316,17 @@ PHP_FUNCTION(pack)
 			case 'Q':
 			case 'J':
 			case 'P':
-#if SIZEOF_LONG < 8
-					efree(argv);
+#if SIZEOF_ZEND_LONG < 8
 					efree(formatcodes);
 					efree(formatargs);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "64-bit format codes are not available for 32-bit versions of PHP");
+					php_error_docref(NULL, E_WARNING, "64-bit format codes are not available for 32-bit versions of PHP");
 					RETURN_FALSE;
 #endif
-			case 'c': 
-			case 'C': 
-			case 's': 
-			case 'S': 
-			case 'i': 
+			case 'c':
+			case 'C':
+			case 's':
+			case 'S':
+			case 'i':
 			case 'I':
 			case 'l':
 			case 'L':
@@ -229,8 +334,12 @@ PHP_FUNCTION(pack)
 			case 'N':
 			case 'v':
 			case 'V':
-			case 'f':
-			case 'd':
+			case 'f': /* float */
+			case 'g': /* little endian float */
+			case 'G': /* big endian float */
+			case 'd': /* double */
+			case 'e': /* little endian double */
+			case 'E': /* big endian double */
 				if (arg < 0) {
 					arg = num_args - currentarg;
 				}
@@ -238,19 +347,17 @@ PHP_FUNCTION(pack)
 				currentarg += arg;
 
 				if (currentarg > num_args) {
-					efree(argv);
 					efree(formatcodes);
 					efree(formatargs);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: too few arguments", code);
+					php_error_docref(NULL, E_WARNING, "Type %c: too few arguments", code);
 					RETURN_FALSE;
 				}
 				break;
 
 			default:
-				efree(argv);
 				efree(formatcodes);
 				efree(formatargs);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: unknown format code", code);
+				php_error_docref(NULL, E_WARNING, "Type %c: unknown format code", code);
 				RETURN_FALSE;
 		}
 
@@ -259,7 +366,7 @@ PHP_FUNCTION(pack)
 	}
 
 	if (currentarg < num_args) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%d arguments unused", (num_args - currentarg));
+		php_error_docref(NULL, E_WARNING, "%d arguments unused", (num_args - currentarg));
 	}
 
 	/* Calculate output length and upper bound while processing*/
@@ -301,7 +408,7 @@ PHP_FUNCTION(pack)
 				INC_OUTPUTPOS(arg,4)		/* 32 bit per arg */
 				break;
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 			case 'q':
 			case 'Q':
 			case 'J':
@@ -310,11 +417,15 @@ PHP_FUNCTION(pack)
 				break;
 #endif
 
-			case 'f':
+			case 'f': /* float */
+			case 'g': /* little endian float */
+			case 'G': /* big endian float */
 				INC_OUTPUTPOS(arg,sizeof(float))
 				break;
 
-			case 'd':
+			case 'd': /* double */
+			case 'e': /* little endian double */
+			case 'E': /* big endian double */
 				INC_OUTPUTPOS(arg,sizeof(double))
 				break;
 
@@ -322,7 +433,7 @@ PHP_FUNCTION(pack)
 				outputpos -= arg;
 
 				if (outputpos < 0) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: outside of string", code);
+					php_error_docref(NULL, E_WARNING, "Type %c: outside of string", code);
 					outputpos = 0;
 				}
 				break;
@@ -337,30 +448,29 @@ PHP_FUNCTION(pack)
 		}
 	}
 
-	output = emalloc(outputsize + 1);
+	output = zend_string_alloc(outputsize, 0);
 	outputpos = 0;
-	currentarg = 1;
+	currentarg = 0;
 
 	/* Do actual packing */
 	for (i = 0; i < formatcount; i++) {
 	    int code = (int) formatcodes[i];
 		int arg = formatargs[i];
-		zval **val;
 
 		switch ((int) code) {
 			case 'a':
 			case 'A':
 			case 'Z': {
-				int arg_cp = (code != 'Z') ? arg : MAX(0, arg - 1);
-				memset(&output[outputpos], (code == 'a' || code == 'Z') ? '\0' : ' ', arg);
-				val = argv[currentarg++];
-				if (Z_ISREF_PP(val)) {
-					SEPARATE_ZVAL(val);
-				}
-				convert_to_string_ex(val);
-				memcpy(&output[outputpos], Z_STRVAL_PP(val),
-					   (Z_STRLEN_PP(val) < arg_cp) ? Z_STRLEN_PP(val) : arg_cp);
+				size_t arg_cp = (code != 'Z') ? arg : MAX(0, arg - 1);
+
+				zend_string *str = zval_get_string(&argv[currentarg++]);
+
+				memset(&ZSTR_VAL(output)[outputpos], (code == 'a' || code == 'Z') ? '\0' : ' ', arg);
+				memcpy(&ZSTR_VAL(output)[outputpos], ZSTR_VAL(str),
+					   (ZSTR_LEN(str) < arg_cp) ? ZSTR_LEN(str) : arg_cp);
+
 				outputpos += arg;
+				zend_string_release(str);
 				break;
 			}
 
@@ -368,18 +478,14 @@ PHP_FUNCTION(pack)
 			case 'H': {
 				int nibbleshift = (code == 'h') ? 0 : 4;
 				int first = 1;
-				char *v;
 
-				val = argv[currentarg++];
-				if (Z_ISREF_PP(val)) {
-					SEPARATE_ZVAL(val);
-				}
-				convert_to_string_ex(val);
-				v = Z_STRVAL_PP(val);
+				zend_string *str = zval_get_string(&argv[currentarg++]);
+				char *v = ZSTR_VAL(str);
+
 				outputpos--;
-				if(arg > Z_STRLEN_PP(val)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: not enough characters in string", code);
-					arg = Z_STRLEN_PP(val);
+				if ((size_t)arg > ZSTR_LEN(str)) {
+					php_error_docref(NULL, E_WARNING, "Type %c: not enough characters in string", code);
+					arg = ZSTR_LEN(str);
 				}
 
 				while (arg-- > 0) {
@@ -392,28 +498,29 @@ PHP_FUNCTION(pack)
 					} else if (n >= 'a' && n <= 'f') {
 						n -= ('a' - 10);
 					} else {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: illegal hex digit %c", code, n);
+						php_error_docref(NULL, E_WARNING, "Type %c: illegal hex digit %c", code, n);
 						n = 0;
 					}
 
 					if (first--) {
-						output[++outputpos] = 0;
+						ZSTR_VAL(output)[++outputpos] = 0;
 					} else {
 					  first = 1;
 					}
 
-					output[outputpos] |= (n << nibbleshift);
+					ZSTR_VAL(output)[outputpos] |= (n << nibbleshift);
 					nibbleshift = (nibbleshift + 4) & 7;
 				}
 
 				outputpos++;
+				zend_string_release(str);
 				break;
 			}
 
 			case 'c':
 			case 'C':
 				while (arg-- > 0) {
-					php_pack(argv[currentarg++], 1, byte_map, &output[outputpos]);
+					php_pack(&argv[currentarg++], 1, byte_map, &ZSTR_VAL(output)[outputpos]);
 					outputpos++;
 				}
 				break;
@@ -431,7 +538,7 @@ PHP_FUNCTION(pack)
 				}
 
 				while (arg-- > 0) {
-					php_pack(argv[currentarg++], 2, map, &output[outputpos]);
+					php_pack(&argv[currentarg++], 2, map, &ZSTR_VAL(output)[outputpos]);
 					outputpos += 2;
 				}
 				break;
@@ -440,7 +547,7 @@ PHP_FUNCTION(pack)
 			case 'i':
 			case 'I':
 				while (arg-- > 0) {
-					php_pack(argv[currentarg++], sizeof(int), int_map, &output[outputpos]);
+					php_pack(&argv[currentarg++], sizeof(int), int_map, &ZSTR_VAL(output)[outputpos]);
 					outputpos += sizeof(int);
 				}
 				break;
@@ -458,13 +565,13 @@ PHP_FUNCTION(pack)
 				}
 
 				while (arg-- > 0) {
-					php_pack(argv[currentarg++], 4, map, &output[outputpos]);
+					php_pack(&argv[currentarg++], 4, map, &ZSTR_VAL(output)[outputpos]);
 					outputpos += 4;
 				}
 				break;
 			}
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 			case 'q':
 			case 'Q':
 			case 'J':
@@ -478,7 +585,7 @@ PHP_FUNCTION(pack)
 				}
 
 				while (arg-- > 0) {
-					php_pack(argv[currentarg++], 8, map, &output[outputpos]);
+					php_pack(&argv[currentarg++], 8, map, &ZSTR_VAL(output)[outputpos]);
 					outputpos += 8;
 				}
 				break;
@@ -486,33 +593,65 @@ PHP_FUNCTION(pack)
 #endif
 
 			case 'f': {
-				float v;
-
 				while (arg-- > 0) {
-					val = argv[currentarg++];
-					convert_to_double_ex(val);
-					v = (float) Z_DVAL_PP(val);
-					memcpy(&output[outputpos], &v, sizeof(v));
+					float v = (float) zval_get_double(&argv[currentarg++]);
+					memcpy(&ZSTR_VAL(output)[outputpos], &v, sizeof(v));
+					outputpos += sizeof(v);
+				}
+				break;
+			}
+			
+			case 'g': {
+				/* pack little endian float */
+				while (arg-- > 0) {
+					float v = (float) zval_get_double(&argv[currentarg++]);
+					php_pack_copy_float(1, &ZSTR_VAL(output)[outputpos], v);
+					outputpos += sizeof(v);
+				}
+				
+				break;
+			}
+			case 'G': {
+				/* pack big endian float */
+				while (arg-- > 0) {
+					float v = (float) zval_get_double(&argv[currentarg++]);
+					php_pack_copy_float(0, &ZSTR_VAL(output)[outputpos], v);
 					outputpos += sizeof(v);
 				}
 				break;
 			}
 
 			case 'd': {
-				double v;
-
 				while (arg-- > 0) {
-					val = argv[currentarg++];
-					convert_to_double_ex(val);
-					v = (double) Z_DVAL_PP(val);
-					memcpy(&output[outputpos], &v, sizeof(v));
+					double v = (double) zval_get_double(&argv[currentarg++]);
+					memcpy(&ZSTR_VAL(output)[outputpos], &v, sizeof(v));
+					outputpos += sizeof(v);
+				}
+				break;
+			}
+			
+			case 'e': {
+				/* pack little endian double */
+				while (arg-- > 0) {
+					double v = (double) zval_get_double(&argv[currentarg++]);
+					php_pack_copy_double(1, &ZSTR_VAL(output)[outputpos], v);
+					outputpos += sizeof(v);
+				}
+				break;
+			}
+			
+			case 'E': {
+				/* pack big endian double */
+				while (arg-- > 0) {
+					double v = (double) zval_get_double(&argv[currentarg++]);
+					php_pack_copy_double(0, &ZSTR_VAL(output)[outputpos], v);
 					outputpos += sizeof(v);
 				}
 				break;
 			}
 
 			case 'x':
-				memset(&output[outputpos], '\0', arg);
+				memset(&ZSTR_VAL(output)[outputpos], '\0', arg);
 				outputpos += arg;
 				break;
 
@@ -526,29 +665,28 @@ PHP_FUNCTION(pack)
 
 			case '@':
 				if (arg > outputpos) {
-					memset(&output[outputpos], '\0', arg - outputpos);
+					memset(&ZSTR_VAL(output)[outputpos], '\0', arg - outputpos);
 				}
 				outputpos = arg;
 				break;
 		}
 	}
 
-	efree(argv);
 	efree(formatcodes);
 	efree(formatargs);
-	output[outputpos] = '\0';
-	RETVAL_STRINGL(output, outputpos, 1);
-	efree(output);
+	ZSTR_VAL(output)[outputpos] = '\0';
+	ZSTR_LEN(output) = outputpos;
+	RETURN_NEW_STR(output);
 }
 /* }}} */
 
 /* {{{ php_unpack
  */
-static long php_unpack(char *data, int size, int issigned, int *map)
+static zend_long php_unpack(char *data, size_t size, int issigned, int *map)
 {
-	long result;
+	zend_long result;
 	char *cresult = (char *) &result;
-	int i;
+	size_t i;
 
 	result = issigned ? -1 : 0;
 
@@ -571,25 +709,38 @@ static long php_unpack(char *data, int size, int issigned, int *map)
  * Numeric pack types will return numbers, a and A will return strings,
  * f and d will return doubles.
  * Implemented formats are Z, A, a, h, H, c, C, s, S, i, I, l, L, n, N, q, Q, J, P, f, d, x, X, @.
+ * Added g, G for little endian float and big endian float, added e, E for little endian double and big endian double.
  */
 /* {{{ proto array unpack(string format, string input)
    Unpack binary string into named array elements according to format argument */
 PHP_FUNCTION(unpack)
 {
-	char *format, *input, *formatarg, *inputarg;
-	int formatlen, formatarg_len, inputarg_len;
-	int inputpos, inputlen, i;
+	char *format, *input;
+	zend_string *formatarg, *inputarg;
+	zend_long formatlen, inputpos, inputlen;
+	int i;
+	zend_long offset = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &formatarg, &formatarg_len,
-		&inputarg, &inputarg_len) == FAILURE) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(2, 3)
+		Z_PARAM_STR(formatarg)
+		Z_PARAM_STR(inputarg)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_LONG(offset)
+	ZEND_PARSE_PARAMETERS_END();
 
-	format = formatarg;
-	formatlen = formatarg_len;
-	input = inputarg;
-	inputlen = inputarg_len;
+	format = ZSTR_VAL(formatarg);
+	formatlen = ZSTR_LEN(formatarg);
+	input = ZSTR_VAL(inputarg);
+	inputlen = ZSTR_LEN(inputarg);
 	inputpos = 0;
+
+
+	if (offset < 0 || offset > inputlen) {
+		php_error_docref(NULL, E_WARNING, "Offset " ZEND_LONG_FMT " is out of input range" , offset);
+		RETURN_FALSE;
+	}
+	input += offset;
+	inputlen -= offset;
 
 	array_init(return_value);
 
@@ -637,6 +788,10 @@ PHP_FUNCTION(unpack)
 			/* Never use any input */
 			case 'X':
 				size = -1;
+				if (arg < 0) {
+					php_error_docref(NULL, E_WARNING, "Type %c: '*' ignored", type);
+					arg = 1;
+				}
 				break;
 
 			case '@':
@@ -690,34 +845,38 @@ PHP_FUNCTION(unpack)
 			case 'Q':
 			case 'J':
 			case 'P':
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 				size = 8;
 				break;
 #else
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "64-bit format codes are not available for 32-bit versions of PHP");
+				php_error_docref(NULL, E_WARNING, "64-bit format codes are not available for 32-bit versions of PHP");
 				zval_dtor(return_value);
 				RETURN_FALSE;
 #endif
 
 			/* Use sizeof(float) bytes of input */
 			case 'f':
+			case 'g':
+			case 'G':
 				size = sizeof(float);
 				break;
 
 			/* Use sizeof(double) bytes of input */
 			case 'd':
+			case 'e':
+			case 'E':
 				size = sizeof(double);
 				break;
 
 			default:
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid format type %c", type);
+				php_error_docref(NULL, E_WARNING, "Invalid format type %c", type);
 				zval_dtor(return_value);
 				RETURN_FALSE;
 				break;
 		}
 
 		if (size != 0 && size != -1 && size < 0) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: integer overflow", type);
+			php_error_docref(NULL, E_WARNING, "Type %c: integer overflow", type);
 			zval_dtor(return_value);
 			RETURN_FALSE;
 		}
@@ -736,7 +895,7 @@ PHP_FUNCTION(unpack)
 			}
 
 			if (size != 0 && size != -1 && INT_MAX - size + 1 < inputpos) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: integer overflow", type);
+				php_error_docref(NULL, E_WARNING, "Type %c: integer overflow", type);
 				zval_dtor(return_value);
 				RETURN_FALSE;
 			}
@@ -745,7 +904,7 @@ PHP_FUNCTION(unpack)
 				switch ((int) type) {
 					case 'a': {
 						/* a will not strip any trailing whitespace or null padding */
-						int len = inputlen - inputpos;	/* Remaining string */
+						zend_long len = inputlen - inputpos;	/* Remaining string */
 
 						/* If size was given take minimum of len and size */
 						if ((size >= 0) && (len > size)) {
@@ -754,13 +913,13 @@ PHP_FUNCTION(unpack)
 
 						size = len;
 
-						add_assoc_stringl(return_value, n, &input[inputpos], len, 1);
+						add_assoc_stringl(return_value, n, &input[inputpos], len);
 						break;
 					}
 					case 'A': {
 						/* A will strip any trailing whitespace */
 						char padn = '\0'; char pads = ' '; char padt = '\t'; char padc = '\r'; char padl = '\n';
-						int len = inputlen - inputpos;	/* Remaining string */
+						zend_long len = inputlen - inputpos;	/* Remaining string */
 
 						/* If size was given take minimum of len and size */
 						if ((size >= 0) && (len > size)) {
@@ -780,14 +939,14 @@ PHP_FUNCTION(unpack)
 								break;
 						}
 
-						add_assoc_stringl(return_value, n, &input[inputpos], len + 1, 1);
+						add_assoc_stringl(return_value, n, &input[inputpos], len + 1);
 						break;
 					}
 					/* New option added for Z to remain in-line with the Perl implementation */
 					case 'Z': {
 						/* Z will strip everything after the first null character */
 						char pad = '\0';
-						int	 s,
+						zend_long s,
 							 len = inputlen - inputpos;	/* Remaining string */
 
 						/* If size was given take minimum of len and size */
@@ -804,18 +963,18 @@ PHP_FUNCTION(unpack)
 						}
 						len = s;
 
-						add_assoc_stringl(return_value, n, &input[inputpos], len, 1);
+						add_assoc_stringl(return_value, n, &input[inputpos], len);
 						break;
 					}
 
-					
-					case 'h': 
+
+					case 'h':
 					case 'H': {
-						int len = (inputlen - inputpos) * 2;	/* Remaining */
+						zend_long len = (inputlen - inputpos) * 2;	/* Remaining */
 						int nibbleshift = (type == 'h') ? 0 : 4;
 						int first = 1;
-						char *buf;
-						int ipos, opos;
+						zend_string *buf;
+						zend_long ipos, opos;
 
 						/* If size was given take minimum of len and size */
 						if (size >= 0 && len > (size * 2)) {
@@ -826,7 +985,7 @@ PHP_FUNCTION(unpack)
 							len -= argb % 2;
 						}
 
-						buf = emalloc(len + 1);
+						buf = zend_string_alloc(len, 0);
 
 						for (ipos = opos = 0; opos < len; opos++) {
 							char cc = (input[inputpos + ipos] >> nibbleshift) & 0xf;
@@ -837,7 +996,7 @@ PHP_FUNCTION(unpack)
 								cc += 'a' - 10;
 							}
 
-							buf[opos] = cc;
+							ZSTR_VAL(buf)[opos] = cc;
 							nibbleshift = (nibbleshift + 4) & 7;
 
 							if (first-- == 0) {
@@ -846,16 +1005,15 @@ PHP_FUNCTION(unpack)
 							}
 						}
 
-						buf[len] = '\0';
-						add_assoc_stringl(return_value, n, buf, len, 1);
-						efree(buf);
+						ZSTR_VAL(buf)[len] = '\0';
+						add_assoc_str(return_value, n, buf);
 						break;
 					}
 
 					case 'c':
 					case 'C': {
 						int issigned = (type == 'c') ? (input[inputpos] & 0x80) : 0;
-						long v = php_unpack(&input[inputpos], 1, issigned, byte_map);
+						zend_long v = php_unpack(&input[inputpos], 1, issigned, byte_map);
 						add_assoc_long(return_value, n, v);
 						break;
 					}
@@ -864,7 +1022,7 @@ PHP_FUNCTION(unpack)
 					case 'S':
 					case 'n':
 					case 'v': {
-						long v;
+						zend_long v;
 						int issigned = 0;
 						int *map = machine_endian_short_map;
 
@@ -883,7 +1041,7 @@ PHP_FUNCTION(unpack)
 
 					case 'i':
 					case 'I': {
-						long v;
+						zend_long v;
 						int issigned = 0;
 
 						if (type == 'i') {
@@ -901,7 +1059,7 @@ PHP_FUNCTION(unpack)
 					case 'V': {
 						int issigned = 0;
 						int *map = machine_endian_long_map;
-						long v = 0;
+						zend_long v = 0;
 
 						if (type == 'l' || type == 'L') {
 							issigned = input[inputpos + (machine_little_endian ? 3 : 0)] & 0x80;
@@ -913,12 +1071,12 @@ PHP_FUNCTION(unpack)
 							map = little_endian_long_map;
 						}
 
-						if (sizeof(long) > 4 && issigned) {
+						if (SIZEOF_ZEND_LONG > 4 && issigned) {
 							v = ~INT_MAX;
 						}
 
 						v |= php_unpack(&input[inputpos], 4, issigned, map);
-						if (sizeof(long) > 4) {
+						if (SIZEOF_ZEND_LONG > 4) {
  							if (type == 'l') {
 								v = (signed int) v;
 							} else {
@@ -929,14 +1087,14 @@ PHP_FUNCTION(unpack)
 						break;
 					}
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 					case 'q':
 					case 'Q':
 					case 'J':
 					case 'P': {
 						int issigned = 0;
 						int *map = machine_endian_longlong_map;
-						long v = 0;
+						zend_long v = 0;
 
 						if (type == 'q' || type == 'Q') {
 							issigned = input[inputpos + (machine_little_endian ? 7 : 0)] & 0x80;
@@ -951,9 +1109,9 @@ PHP_FUNCTION(unpack)
 						v = php_unpack(&input[inputpos], 8, issigned, map);
 
 						if (type == 'q') {
-							v = (signed long int) v;
+							v = (zend_long) v;
 						} else {
-							v = (unsigned long int) v;
+							v = (zend_ulong) v;
 						}
 
 						add_assoc_long(return_value, n, v);
@@ -961,18 +1119,37 @@ PHP_FUNCTION(unpack)
 					}
 #endif
 
-					case 'f': {
+					case 'f': /* float */ 
+					case 'g': /* little endian float*/
+					case 'G': /* big endian float*/
+					{
 						float v;
 
-						memcpy(&v, &input[inputpos], sizeof(float));
+						if (type == 'g') {
+							v = php_pack_parse_float(1, &input[inputpos]);
+						} else if (type == 'G') {
+							v = php_pack_parse_float(0, &input[inputpos]);
+						} else {
+							memcpy(&v, &input[inputpos], sizeof(float));
+						}
+						
 						add_assoc_double(return_value, n, (double)v);
 						break;
 					}
+					
 
-					case 'd': {
+					case 'd': /* double */
+					case 'e': /* little endian float */
+					case 'E': /* big endian float */ 
+					{
 						double v;
-
-						memcpy(&v, &input[inputpos], sizeof(double));
+						if (type == 'e') {
+							v = php_pack_parse_double(1, &input[inputpos]);
+						} else if (type == 'E') {
+							v = php_pack_parse_double(0, &input[inputpos]);
+						} else {
+							memcpy(&v, &input[inputpos], sizeof(double));
+						}
 						add_assoc_double(return_value, n, v);
 						break;
 					}
@@ -987,7 +1164,7 @@ PHP_FUNCTION(unpack)
 							i = arg - 1;		/* Break out of for loop */
 
 							if (arg >= 0) {
-								php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: outside of string", type);
+								php_error_docref(NULL, E_WARNING, "Type %c: outside of string", type);
 							}
 						}
 						break;
@@ -996,7 +1173,7 @@ PHP_FUNCTION(unpack)
 						if (arg <= inputlen) {
 							inputpos = arg;
 						} else {
-							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: outside of string", type);
+							php_error_docref(NULL, E_WARNING, "Type %c: outside of string", type);
 						}
 
 						i = arg - 1;	/* Done, break out of for loop */
@@ -1006,7 +1183,7 @@ PHP_FUNCTION(unpack)
 				inputpos += size;
 				if (inputpos < 0) {
 					if (size != -1) { /* only print warning if not working with * */
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: outside of string", type);
+						php_error_docref(NULL, E_WARNING, "Type %c: outside of string", type);
 					}
 					inputpos = 0;
 				}
@@ -1014,14 +1191,16 @@ PHP_FUNCTION(unpack)
 				/* Reached end of input for '*' repeater */
 				break;
 			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: not enough input, need %d, have %d", type, size, inputlen - inputpos);
+				php_error_docref(NULL, E_WARNING, "Type %c: not enough input, need %d, have " ZEND_LONG_FMT, type, size, inputlen - inputpos);
 				zval_dtor(return_value);
 				RETURN_FALSE;
 			}
 		}
 
-		formatlen--;	/* Skip '/' separator, does no harm if inputlen == 0 */
-		format++;
+		if (formatlen > 0) {
+			formatlen--;	/* Skip '/' separator, does no harm if inputlen == 0 */
+			format++;
+		}
 	}
 }
 /* }}} */
@@ -1063,7 +1242,7 @@ PHP_MINIT_FUNCTION(pack)
 		little_endian_long_map[2] = 2;
 		little_endian_long_map[3] = 3;
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 		machine_endian_longlong_map[0] = 0;
 		machine_endian_longlong_map[1] = 1;
 		machine_endian_longlong_map[2] = 2;
@@ -1122,7 +1301,7 @@ PHP_MINIT_FUNCTION(pack)
 		little_endian_long_map[2] = size - 3;
 		little_endian_long_map[3] = size - 4;
 
-#if SIZEOF_LONG > 4
+#if SIZEOF_ZEND_LONG > 4
 		machine_endian_longlong_map[0] = size - 8;
 		machine_endian_longlong_map[1] = size - 7;
 		machine_endian_longlong_map[2] = size - 6;

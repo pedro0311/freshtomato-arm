@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -33,10 +33,6 @@
 #include "config.w32.h"
 #endif
 
-#ifdef NETWARE
-#include <netinet/in.h>
-#endif
-
 #ifndef HAVE_FLOCK
 PHPAPI int flock(int fd, int operation)
 {
@@ -52,7 +48,7 @@ PHPAPI int php_flock(int fd, int operation)
 
 	flck.l_start = flck.l_len = 0;
 	flck.l_whence = SEEK_SET;
-	
+
 	if (operation & LOCK_SH)
 		flck.l_type = F_RDLCK;
 	else if (operation & LOCK_EX)
@@ -66,7 +62,7 @@ PHPAPI int php_flock(int fd, int operation)
 
 	ret = fcntl(fd, operation & LOCK_NB ? F_SETLK : F_SETLKW, &flck);
 
-	if (operation & LOCK_NB && ret == -1 && 
+	if (operation & LOCK_NB && ret == -1 &&
 			(errno == EACCES || errno == EAGAIN))
 		errno = EWOULDBLOCK;
 
@@ -229,7 +225,7 @@ int inet_aton(const char *cp, struct in_addr *ap)
         ap->s_addr = htonl(addr);
     }
 
-    return 1;    
+    return 1;
 }
 /* }}} */
 #endif /* !HAVE_INET_ATON */

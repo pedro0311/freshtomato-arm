@@ -18,8 +18,8 @@ echo "*** Testing mb_strstr() : error conditions ***\n";
 
 //Test mb_strstr with one more than the expected number of arguments
 echo "\n-- Testing mb_strstr() function with more than expected no. of arguments --\n";
-$haystack = b'string_val';
-$needle = b'string_val';
+$haystack = 'string_val';
+$needle = 'string_val';
 $part = true;
 $encoding = 'string_val';
 $extra_arg = 10;
@@ -27,7 +27,7 @@ var_dump( mb_strstr($haystack, $needle, $part, $encoding, $extra_arg) );
 
 // Testing mb_strstr with one less than the expected number of arguments
 echo "\n-- Testing mb_strstr() function with less than expected no. of arguments --\n";
-$haystack = b'string_val';
+$haystack = 'string_val';
 var_dump( mb_strstr($haystack) );
 
 ?>
@@ -38,10 +38,10 @@ var_dump( mb_strstr($haystack) );
 -- Testing mb_strstr() function with more than expected no. of arguments --
 
 Warning: mb_strstr() expects at most 4 parameters, 5 given in %s on line %d
-bool(false)
+NULL
 
 -- Testing mb_strstr() function with less than expected no. of arguments --
 
 Warning: mb_strstr() expects at least 2 parameters, 1 given in %s on line %d
-bool(false)
+NULL
 ===DONE===

@@ -25,8 +25,8 @@ function test_error_handler($err_no, $err_msg, $filename, $linenum, $vars) {
 set_error_handler('test_error_handler');
 
 // Initialise function arguments not being substituted (if any)
-$haystack = b'string_val';
-$needle = b'_';
+$haystack = 'string_val';
+$needle = '_';
 $part = true;
 
 //get an unset variable
@@ -159,19 +159,19 @@ bool(false)
 
 --empty array--
 Error: 2 - mb_stristr() expects parameter 4 to be string, array given, %s(%d)
-bool(false)
+NULL
 
 --int indexed array--
 Error: 2 - mb_stristr() expects parameter 4 to be string, array given, %s(%d)
-bool(false)
+NULL
 
 --associative array--
 Error: 2 - mb_stristr() expects parameter 4 to be string, array given, %s(%d)
-bool(false)
+NULL
 
 --nested arrays--
 Error: 2 - mb_stristr() expects parameter 4 to be string, array given, %s(%d)
-bool(false)
+NULL
 
 --uppercase NULL--
 Error: 2 - mb_stristr(): Unknown encoding "", %s(%d)
@@ -211,7 +211,7 @@ bool(false)
 
 --instance of classWithoutToString--
 Error: 2 - mb_stristr() expects parameter 4 to be string, object given, %s(%d)
-bool(false)
+NULL
 
 --undefined var--
 Error: 2 - mb_stristr(): Unknown encoding "", %s(%d)
@@ -223,5 +223,5 @@ bool(false)
 
 --resource--
 Error: 2 - mb_stristr() expects parameter 4 to be string, resource given, %s(%d)
-bool(false)
+NULL
 ===DONE===

@@ -119,27 +119,27 @@ NULL
 
 -- Testing with first argument value: float(10.5)
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Testing with first argument value: float(-10.5)
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Testing with first argument value: float(123456789000)
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Testing with first argument value: float(1.23456789E-9)
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Testing with first argument value: float(0.5)
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, double given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, float given in %s on line %d
 NULL
 
 -- Testing with first argument value: NULL
@@ -174,12 +174,12 @@ NULL
 
 -- Testing with first argument value: %string|unicode%(0) ""
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Testing with first argument value: %string|unicode%(0) ""
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Testing with first argument value: array(0) {
@@ -190,17 +190,17 @@ NULL
 
 -- Testing with first argument value: %string|unicode%(6) "string"
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Testing with first argument value: %string|unicode%(6) "string"
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Testing with first argument value: %string|unicode%(11) "hello world"
 
-Warning: imap_fetch_overview() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: imap_fetch_overview() expects parameter 1 to be resource, string given in %s on line %d
 NULL
 
 -- Testing with first argument value: object(classA)#1 (0) {

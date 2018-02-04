@@ -9,11 +9,7 @@ require_once('skipifconnectfailure.inc');
 require_once('connect.inc');
 if (!$IS_MYSQLND)
 	die("skip Test for mysqlnd only");
-
-if ((version_compare(PHP_VERSION, '5.9.9', '>') == 1))
-	die("skip (TODO) PHP 6.0 has a difference debug_zval_dump output format");
-?>
-<?php require_once('skipifemb.inc'); ?>
+require_once('skipifemb.inc'); ?>
 --FILE--
 <?php
 	require_once('connect.inc');
@@ -57,63 +53,63 @@ if ((version_compare(PHP_VERSION, '5.9.9', '>') == 1))
 	print "done!";
 ?>
 --EXPECTF--
-array(1) refcount(2){
+array(1) refcount(%d){
   [0]=>
-  array(4) refcount(1){
-    [%u|b%"row_ref"]=>
-    &NULL refcount(2)
-    [%u|b%"row_copy"]=>
+  array(4) refcount(%d){
+    ["row_ref"]=>
+    &NULL
+    ["row_copy"]=>
     array(2) refcount(1){
-      [%u|b%"id"]=>
-      %unicode|string%(1) "1" refcount(2)
-      [%u|b%"label"]=>
-      %unicode|string%(1) "a" refcount(2)
+      ["id"]=>
+      string(1) "1" refcount(%d)
+      ["label"]=>
+      string(1) "a" refcount(%d)
     }
-    [%u|b%"id_ref"]=>
-    %unicode|string%(1) "1" refcount(1)
-    [%u|b%"id_copy"]=>
-    %unicode|string%(1) "1" refcount(1)
+    ["id_ref"]=>
+    string(1) "1" refcount(%d)
+    ["id_copy"]=>
+    string(1) "1" refcount(%d)
   }
 }
-array(2) refcount(2){
+array(2) refcount(%d){
   [0]=>
-  array(4) refcount(1){
-    [%u|b%"row_ref"]=>
-    &NULL refcount(2)
-    [%u|b%"row_copy"]=>
-    array(2) refcount(1){
-      [%u|b%"id"]=>
-      %unicode|string%(1) "1" refcount(1)
-      [%u|b%"label"]=>
-      %unicode|string%(1) "a" refcount(1)
+  array(4) refcount(%d){
+    ["row_ref"]=>
+    &NULL
+    ["row_copy"]=>
+    array(2) refcount(%d){
+      ["id"]=>
+      string(1) "1" refcount(%d)
+      ["label"]=>
+      string(1) "a" refcount(%d)
     }
-    [%u|b%"id_ref"]=>
-    %unicode|string%(1) "1" refcount(1)
-    [%u|b%"id_copy"]=>
-    %unicode|string%(1) "1" refcount(1)
+    ["id_ref"]=>
+    string(1) "1" refcount(%d)
+    ["id_copy"]=>
+    string(1) "1" refcount(%d)
   }
   [1]=>
-  array(5) refcount(1){
-    [%u|b%"row_ref"]=>
-    &array(2) refcount(2){
-      [%u|b%"id"]=>
-      &%unicode|string%(1) "2" refcount(2)
-      [%u|b%"label"]=>
-      %unicode|string%(1) "b" refcount(2)
+  array(5) refcount(%d){
+    ["row_ref"]=>
+    &array(2) refcount(%d){
+      ["id"]=>
+      &string(1) "2" refcount(%d)
+      ["label"]=>
+      string(1) "b" refcount(%d)
     }
-    [%u|b%"row_copy"]=>
-    array(2) refcount(1){
-      [%u|b%"id"]=>
-      %unicode|string%(1) "2" refcount(1)
-      [%u|b%"label"]=>
-      %unicode|string%(1) "b" refcount(2)
+    ["row_copy"]=>
+    array(2) refcount(%d){
+      ["id"]=>
+      string(1) "2" refcount(%d)
+      ["label"]=>
+      string(1) "b" refcount(%d)
     }
-    [%u|b%"id_ref"]=>
-    &%unicode|string%(1) "2" refcount(2)
-    [%u|b%"id_copy"]=>
-    %unicode|string%(1) "2" refcount(1)
-    [%u|b%"id_copy_mod"]=>
-    long(2) refcount(1)
+    ["id_ref"]=>
+    &string(1) "2" refcount(%d)
+    ["id_copy"]=>
+    string(1) "2" refcount(%d)
+    ["id_copy_mod"]=>
+    int(2)
   }
 }
 done!

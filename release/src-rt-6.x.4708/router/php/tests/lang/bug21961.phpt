@@ -1,14 +1,12 @@
 --TEST--
 Bug #21961 (get_parent_class() segfault)
---SKIPIF--
-<?php if (version_compare(zend_version(),'2.0.0-dev','<')) die('skip prepared for ZE2'); ?>
 --FILE--
 <?php
 
 class man
 {
 	public $name, $bars;
-	function man()
+	function __construct()
 	{
 		$this->name = 'Mr. X';
 		$this->bars = array();
@@ -29,7 +27,7 @@ class bar extends man
 {
 	public $name;
 
-	function bar($w)
+	function __construct($w)
 	{
 		$this->name = $w;
 	}

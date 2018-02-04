@@ -22,8 +22,8 @@ echo "*** Testing mb_strripos() : error conditions ***\n";
 
 //Test mb_strripos with one more than the expected number of arguments
 echo "\n-- Testing mb_strripos() function with more than expected no. of arguments --\n";
-$haystack = b'string_val';
-$needle = b'string_val';
+$haystack = 'string_val';
+$needle = 'string_val';
 $offset = 10;
 $encoding = 'string_val';
 $extra_arg = 10;
@@ -31,7 +31,7 @@ var_dump( mb_strripos($haystack, $needle, $offset, $encoding, $extra_arg) );
 
 // Testing mb_strripos with one less than the expected number of arguments
 echo "\n-- Testing mb_strripos() function with less than expected no. of arguments --\n";
-$haystack = b'string_val';
+$haystack = 'string_val';
 var_dump( mb_strripos($haystack) );
 
 echo "Done";
@@ -42,10 +42,10 @@ echo "Done";
 -- Testing mb_strripos() function with more than expected no. of arguments --
 
 Warning: mb_strripos() expects at most 4 parameters, 5 given in %s on line %d
-bool(false)
+NULL
 
 -- Testing mb_strripos() function with less than expected no. of arguments --
 
 Warning: mb_strripos() expects at least 2 parameters, 1 given in %s on line %d
-bool(false)
+NULL
 Done

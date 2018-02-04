@@ -33,10 +33,10 @@ bool(false)
 Warning: ldap_unbind() expects exactly 1 parameter, 2 given in %s on line %d
 bool(false)
 
-Warning: ldap_unbind() expects parameter 1 to be resource, %unicode_string_optional% given in %s on line %d
+Warning: ldap_unbind() expects parameter 1 to be resource, string given in %s on line %d
 bool(false)
 bool(true)
 
-Warning: ldap_unbind(): %d is not a valid ldap link resource in %s on line %d
+Warning: ldap_unbind(): supplied resource is not a valid ldap link resource in %s on line %d
 bool(false)
 ===DONE===
