@@ -21,8 +21,8 @@ function_exists('mb_stripos') or die("skip mb_stripos() is not available in this
 echo "*** Testing mb_stripos() : usage variations ***\n";
 
 // Initialise function arguments not being substituted
-$haystack = b'string_val';
-$needle = b'VaL';
+$haystack = 'string_val';
+$needle = 'VaL';
 $offset = 0;
 
 //get an unset variable
@@ -219,5 +219,5 @@ bool(false)
 -- Iteration 24 --
 
 Warning: mb_stripos() expects parameter 4 to be string, resource given in %s on line %d
-bool(false)
+NULL
 Done

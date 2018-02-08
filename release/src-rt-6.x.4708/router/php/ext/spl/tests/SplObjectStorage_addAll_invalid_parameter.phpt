@@ -29,13 +29,13 @@ NULL
 Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, boolean given in %s on line %d
 NULL
 
-Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, %unicode_string_optional% given in %s on line %d
+Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, string given in %s on line %d
 NULL
 
 Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, integer given in %s on line %d
 NULL
 
-Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, double given in %s on line %d
+Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, float given in %s on line %d
 NULL
 
 Warning: SplObjectStorage::addAll() expects parameter 1 to be SplObjectStorage, null given in %s on line %d

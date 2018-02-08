@@ -2592,7 +2592,7 @@ btgui:
 
 btgui-install:
 	install -d $(INSTALLDIR)/btgui/usr/bin
-	install -D transmission/btcheck $(INSTALLDIR)/btgui/usr/bin/btcheck
+	install -D patches/transmission/btcheck $(INSTALLDIR)/btgui/usr/bin/btcheck
 
 libnfsidmap/stamp-h1:
 	cd libnfsidmap && \

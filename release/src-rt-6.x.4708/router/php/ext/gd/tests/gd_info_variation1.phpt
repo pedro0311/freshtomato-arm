@@ -28,8 +28,6 @@ array(%d) {
   string(%d) %s
   ["FreeType Support"]=>
   bool(%a
-  ["T1Lib Support"]=>
-  bool(%s)
   ["GIF Read Support"]=>
   bool(%s)
   ["GIF Create Support"]=>
@@ -46,6 +44,8 @@ array(%d) {
   bool(%s)
   ["WebP Support"]=>
   bool(%s)
+  ["BMP Support"]=>
+  bool%a
   ["JIS-mapped Japanese Font Support"]=>
   bool(%s)
 }

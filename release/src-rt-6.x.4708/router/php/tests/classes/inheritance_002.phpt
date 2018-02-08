@@ -1,7 +1,5 @@
 --TEST--
 ZE2 Constructor precedence
---SKIPIF--
-<?php if (version_compare(zend_version(), '2.0.0-dev', '<')) die('skip ZendEngine 2 needed'); ?>
 --FILE--
 <?php
 class Base_php4 {
@@ -56,7 +54,12 @@ $cm= new Child_mx1();
 echo "### Mixed style 2\n";
 $cm= new Child_mx2();
 ?>
---EXPECT--
+--EXPECTF--
+Deprecated: Methods with the same name as their class will not be constructors in a future version of PHP; Base_php4 has a deprecated constructor in %s on line %d
+
+Deprecated: Methods with the same name as their class will not be constructors in a future version of PHP; Child_php4 has a deprecated constructor in %s on line %d
+
+Deprecated: Methods with the same name as their class will not be constructors in a future version of PHP; Child_mx2 has a deprecated constructor in %s on line %d
 ### PHP 4 style
 string(17) "Child constructor"
 string(16) "Base constructor"

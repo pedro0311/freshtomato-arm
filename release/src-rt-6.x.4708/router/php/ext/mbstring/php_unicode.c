@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -16,16 +16,16 @@
    +----------------------------------------------------------------------+
 
 	Based on code from ucdata-2.5, which has the following Copyright:
-   
+
 	Copyright 2001 Computing Research Labs, New Mexico State University
- 
+
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
 	to deal in the Software without restriction, including without limitation
 	the rights to use, copy, modify, merge, publish, distribute, sublicense,
 	and/or sell copies of the Software, and to permit persons to whom the
 	Software is furnished to do so, subject to the following conditions:
- 
+
 	The above copyright notice and this permission notice shall be included in
 	all copies or substantial portions of the Software.
 */
@@ -122,6 +122,7 @@ MBSTRING_API int php_unicode_is_prop(unsigned long code, unsigned long mask1,
 static unsigned long case_lookup(unsigned long code, long l, long r, int field)
 {
 	long m;
+	const unsigned int *tmp;
 
 	/*
 	 * Do the binary search.
@@ -132,13 +133,13 @@ static unsigned long case_lookup(unsigned long code, long l, long r, int field)
 		 * the beginning of a case mapping triple.
 		 */
 		m = (l + r) >> 1;
-		m -= (m % 3);
-		if (code > _uccase_map[m])
-			l = m + 3;
-		else if (code < _uccase_map[m])
-			r = m - 3;
-		else if (code == _uccase_map[m])
-			return _uccase_map[m + field];
+		tmp = &_uccase_map[m*3];
+		if (code > *tmp)
+			l = m + 1;
+		else if (code < *tmp)
+			r = m - 1;
+		else if (code == *tmp)
+			return tmp[field];
 	}
 
 	return code;
@@ -156,11 +157,11 @@ MBSTRING_API unsigned long php_turkish_tolower(unsigned long code, long l, long 
 {
 	if (code == 0x0049L) {
 		return 0x0131L;
-	}	
+	}
 	return case_lookup(code, l, r, field);
 }
 
-MBSTRING_API unsigned long php_unicode_toupper(unsigned long code, enum mbfl_no_encoding enc TSRMLS_DC)
+MBSTRING_API unsigned long php_unicode_toupper(unsigned long code, enum mbfl_no_encoding enc)
 {
 	int field;
 	long l, r;
@@ -172,9 +173,9 @@ MBSTRING_API unsigned long php_unicode_toupper(unsigned long code, enum mbfl_no_
 		/*
 		 * The character is lower case.
 		 */
-		field = 2;
+		field = 1;
 		l = _uccase_len[0];
-		r = (l + _uccase_len[1]) - 3;
+		r = (l + _uccase_len[1]) - 1;
 
 		if (enc == mbfl_no_encoding_8859_9) {
 			return php_turkish_toupper(code, l, r, field);
@@ -186,12 +187,12 @@ MBSTRING_API unsigned long php_unicode_toupper(unsigned long code, enum mbfl_no_
 		 */
 		field = 1;
 		l = _uccase_len[0] + _uccase_len[1];
-		r = _uccase_size - 3;
+		r = _uccase_size - 1;
 	}
 	return case_lookup(code, l, r, field);
 }
 
-MBSTRING_API unsigned long php_unicode_tolower(unsigned long code, enum mbfl_no_encoding enc TSRMLS_DC)
+MBSTRING_API unsigned long php_unicode_tolower(unsigned long code, enum mbfl_no_encoding enc)
 {
 	int field;
 	long l, r;
@@ -205,7 +206,7 @@ MBSTRING_API unsigned long php_unicode_tolower(unsigned long code, enum mbfl_no_
 		 */
 		field = 1;
 		l = 0;
-		r = _uccase_len[0] - 3;
+		r = _uccase_len[0] - 1;
 
 		if (enc == mbfl_no_encoding_8859_9) {
 			return php_turkish_tolower(code, l, r, field);
@@ -217,12 +218,12 @@ MBSTRING_API unsigned long php_unicode_tolower(unsigned long code, enum mbfl_no_
 		 */
 		field = 2;
 		l = _uccase_len[0] + _uccase_len[1];
-		r = _uccase_size - 3;
+		r = _uccase_size - 1;
 	}
 	return case_lookup(code, l, r, field);
 }
 
-MBSTRING_API unsigned long php_unicode_totitle(unsigned long code, enum mbfl_no_encoding enc TSRMLS_DC)
+MBSTRING_API unsigned long php_unicode_totitle(unsigned long code, enum mbfl_no_encoding enc)
 {
 	int field;
 	long l, r;
@@ -240,13 +241,13 @@ MBSTRING_API unsigned long php_unicode_totitle(unsigned long code, enum mbfl_no_
 		 * The character is upper case.
 		 */
 		l = 0;
-		r = _uccase_len[0] - 3;
+		r = _uccase_len[0] - 1;
 	} else {
 		/*
 		 * The character is lower case.
 		 */
 		l = _uccase_len[0];
-		r = (l + _uccase_len[1]) - 3;
+		r = (l + _uccase_len[1]) - 1;
 	}
 	return case_lookup(code, l, r, field);
 
@@ -268,7 +269,7 @@ MBSTRING_API unsigned long php_unicode_totitle(unsigned long code, enum mbfl_no_
 }
 
 MBSTRING_API char *php_unicode_convert_case(int case_mode, const char *srcstr, size_t srclen, size_t *ret_len,
-		const char *src_encoding TSRMLS_DC)
+		const char *src_encoding)
 {
 	char *unicode, *newstr;
 	size_t unicode_len;
@@ -277,33 +278,33 @@ MBSTRING_API char *php_unicode_convert_case(int case_mode, const char *srcstr, s
 	enum mbfl_no_encoding _src_encoding = mbfl_name2no_encoding(src_encoding);
 
 	if (_src_encoding == mbfl_no_encoding_invalid) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown encoding \"%s\"", src_encoding);
+		php_error_docref(NULL, E_WARNING, "Unknown encoding \"%s\"", src_encoding);
 		return NULL;
-	}	
+	}
 
-	unicode = php_mb_convert_encoding(srcstr, srclen, "UCS-4BE", src_encoding, &unicode_len TSRMLS_CC);
+	unicode = php_mb_convert_encoding(srcstr, srclen, "UCS-4BE", src_encoding, &unicode_len);
 	if (unicode == NULL)
 		return NULL;
-	
+
 	unicode_ptr = (unsigned char *)unicode;
 
 	switch(case_mode) {
 		case PHP_UNICODE_CASE_UPPER:
 			for (i = 0; i < unicode_len; i+=4) {
 				UINT32_TO_BE_ARY(&unicode_ptr[i],
-					php_unicode_toupper(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding TSRMLS_CC));
+					php_unicode_toupper(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding));
 			}
 			break;
 
 		case PHP_UNICODE_CASE_LOWER:
 			for (i = 0; i < unicode_len; i+=4) {
 				UINT32_TO_BE_ARY(&unicode_ptr[i],
-					php_unicode_tolower(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding TSRMLS_CC));
+					php_unicode_tolower(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding));
 			}
 			break;
 
 		case PHP_UNICODE_CASE_TITLE: {
-			int mode = 0; 
+			int mode = 0;
 
 			for (i = 0; i < unicode_len; i+=4) {
 				int res = php_unicode_is_prop(
@@ -312,23 +313,23 @@ MBSTRING_API char *php_unicode_convert_case(int case_mode, const char *srcstr, s
 				if (mode) {
 					if (res) {
 						UINT32_TO_BE_ARY(&unicode_ptr[i],
-							php_unicode_tolower(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding TSRMLS_CC));
+							php_unicode_tolower(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding));
 					} else {
 						mode = 0;
-					}	
+					}
 				} else {
 					if (res) {
 						mode = 1;
 						UINT32_TO_BE_ARY(&unicode_ptr[i],
-							php_unicode_totitle(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding TSRMLS_CC));
+							php_unicode_totitle(BE_ARY_TO_UINT32(&unicode_ptr[i]), _src_encoding));
 					}
 				}
 			}
 		} break;
 
 	}
-	
-	newstr = php_mb_convert_encoding(unicode, unicode_len, src_encoding, "UCS-4BE", ret_len TSRMLS_CC);
+
+	newstr = php_mb_convert_encoding(unicode, unicode_len, src_encoding, "UCS-4BE", ret_len);
 	efree(unicode);
 
 	return newstr;

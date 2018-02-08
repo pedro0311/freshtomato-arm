@@ -1,12 +1,10 @@
 --TEST--
 ZE2 An interface method must be abstract
---SKIPIF--
-<?php if (version_compare(zend_version(), '2.0.0-dev', '<')) die('skip ZendEngine 2 needed'); ?>
 --FILE--
 <?php
 
 interface if_a {
-	function err() {};
+	function err() {}
 }
 
 ?>

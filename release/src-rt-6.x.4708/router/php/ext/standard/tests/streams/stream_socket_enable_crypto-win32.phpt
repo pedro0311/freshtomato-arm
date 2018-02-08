@@ -4,11 +4,13 @@ mixed stream_socket_enable_crypto(resource $stream , bool $enable [, int $crypto
 marcosptf - <marcosptf@yahoo.com.br> - #phparty7 - @phpsp - novatec/2015 - sao paulo - br
 --SKIPIF--
 <?php
-if (phpversion() < "5.3.0") { die('SKIP php version so lower.'); }
-if (!extension_loaded('openssl')) { die('skip ext/openssl required'); }
-if(substr(PHP_OS, 0, 3) != 'WIN' ) {
+if (!extension_loaded('openssl')) {
+	die('skip ext openssl required');
+}
+if (substr(PHP_OS, 0, 3) != 'WIN' ) {
 	die('skip windows only test');
 }
+if (OPENSSL_VERSION_NUMBER < 0x10100000) die("skip OpenSSLv1.1.0 required");
 ?>
 --FILE--
 <?php
@@ -42,13 +44,15 @@ bool(false)
 
 Warning: stream_socket_enable_crypto(): When enabling encryption you must specify the crypto type in %s on line %d
 bool(false)
+
+Warning: stream_socket_enable_crypto(): SSLv2 unavailable in this PHP version in %s on line %d
 bool(false)
 
-Warning: stream_socket_enable_crypto(): SSL: A request to send or receive data was disallowed because the socket is not connected and (when sending on a datagram socket using a sendto call) no address was supplied.
+Warning: stream_socket_enable_crypto(): SSLv3 unavailable %s in %s on line %d
+bool(false)
+
+Warning: stream_socket_enable_crypto(): SSL: The operation completed successfully.
  in %s on line %d
-bool(false)
-
-Warning: stream_socket_enable_crypto(): SSL/TLS already set-up for this stream in %s on line %d
 bool(false)
 
 Warning: stream_socket_enable_crypto(): SSL/TLS already set-up for this stream in %s on line %d

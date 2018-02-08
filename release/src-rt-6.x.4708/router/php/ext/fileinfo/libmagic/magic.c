@@ -28,7 +28,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: magic.c,v 1.81 2013/11/29 15:42:51 christos Exp $")
+FILE_RCSID("@(#)$File: magic.c,v 1.100 2016/07/18 11:43:05 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -40,11 +40,7 @@ FILE_RCSID("@(#)$File: magic.c,v 1.81 2013/11/29 15:42:51 christos Exp $")
 #include <unistd.h>
 #endif
 #include <string.h>
-#ifdef PHP_WIN32
-# include "config.w32.h"
-#else
-# include "php_config.h"
-#endif
+#include "config.h"
 
 #ifdef PHP_WIN32
 #include <shlwapi.h>
@@ -81,7 +77,7 @@ FILE_RCSID("@(#)$File: magic.c,v 1.81 2013/11/29 15:42:51 christos Exp $")
 #endif
 
 private void close_and_restore(const struct magic_set *, const char *, int,
-    const struct stat *);
+    const zend_stat_t *);
 private int unreadable_info(struct magic_set *, mode_t, const char *);
 #if 0
 private const char* get_default_magic(void);
@@ -90,138 +86,6 @@ private const char *file_or_stream(struct magic_set *, const char *, php_stream 
 
 #ifndef	STDIN_FILENO
 #define	STDIN_FILENO	0
-#endif
-
-/* XXX this functionality is excluded in php, enable it in apprentice.c:340 */
-#if 0
-private const char *
-get_default_magic(void)
-{
-	static const char hmagic[] = "/.magic/magic.mgc";
-	static char *default_magic;
-	char *home, *hmagicpath;
-
-#ifndef PHP_WIN32
-	struct stat st;
-
-	if (default_magic) {
-		free(default_magic);
-		default_magic = NULL;
-	}
-	if ((home = getenv("HOME")) == NULL)
-		return MAGIC;
-
-	if (asprintf(&hmagicpath, "%s/.magic.mgc", home) < 0)
-		return MAGIC;
-	if (stat(hmagicpath, &st) == -1) {
-		free(hmagicpath);
-	if (asprintf(&hmagicpath, "%s/.magic", home) < 0)
-		return MAGIC;
-	if (stat(hmagicpath, &st) == -1)
-		goto out;
-	if (S_ISDIR(st.st_mode)) {
-		free(hmagicpath);
-		if (asprintf(&hmagicpath, "%s/%s", home, hmagic) < 0)
-			return MAGIC;
-		if (access(hmagicpath, R_OK) == -1)
-			goto out;
-	}
-	}
-
-	if (asprintf(&default_magic, "%s:%s", hmagicpath, MAGIC) < 0)
-		goto out;
-	free(hmagicpath);
-	return default_magic;
-out:
-	default_magic = NULL;
-	free(hmagicpath);
-	return MAGIC;
-#else
-	char *hmagicp = hmagicpath;
-	char *tmppath = NULL;
-	LPTSTR dllpath;
-
-#define APPENDPATH() \
-	do { \
-		if (tmppath && access(tmppath, R_OK) != -1) { \
-			if (hmagicpath == NULL) \
-				hmagicpath = tmppath; \
-			else { \
-				if (asprintf(&hmagicp, "%s%c%s", hmagicpath, \
-				    PATHSEP, tmppath) >= 0) { \
-					free(hmagicpath); \
-					hmagicpath = hmagicp; \
-				} \
-				free(tmppath); \
-			} \
-			tmppath = NULL; \
-		} \
-	} while (/*CONSTCOND*/0)
-				
-	if (default_magic) {
-		free(default_magic);
-		default_magic = NULL;
-	}
-
-	/* First, try to get user-specific magic file */
-	if ((home = getenv("LOCALAPPDATA")) == NULL) {
-		if ((home = getenv("USERPROFILE")) != NULL)
-			if (asprintf(&tmppath,
-			    "%s/Local Settings/Application Data%s", home,
-			    hmagic) < 0)
-				tmppath = NULL;
-	} else {
-		if (asprintf(&tmppath, "%s%s", home, hmagic) < 0)
-			tmppath = NULL;
-	}
-
-	APPENDPATH();
-
-	/* Second, try to get a magic file from Common Files */
-	if ((home = getenv("COMMONPROGRAMFILES")) != NULL) {
-		if (asprintf(&tmppath, "%s%s", home, hmagic) >= 0)
-			APPENDPATH();
-	}
-
-	/* Third, try to get magic file relative to dll location */
-	dllpath = malloc(sizeof(*dllpath) * (MAX_PATH + 1));
-	dllpath[MAX_PATH] = 0;	/* just in case long path gets truncated and not null terminated */
-	if (GetModuleFileNameA(NULL, dllpath, MAX_PATH)){
-		PathRemoveFileSpecA(dllpath);
-		if (strlen(dllpath) > 3 &&
-		    stricmp(&dllpath[strlen(dllpath) - 3], "bin") == 0) {
-			if (asprintf(&tmppath,
-			    "%s/../share/misc/magic.mgc", dllpath) >= 0)
-				APPENDPATH();
-		} else {
-			if (asprintf(&tmppath,
-			    "%s/share/misc/magic.mgc", dllpath) >= 0)
-				APPENDPATH();
-			else if (asprintf(&tmppath,
-			    "%s/magic.mgc", dllpath) >= 0)
-				APPENDPATH();
-		}
-	}
-
-	/* Don't put MAGIC constant - it likely points to a file within MSys
-	tree */
-	default_magic = hmagicpath;
-	return default_magic;
-#endif
-}
-
-public const char *
-magic_getpath(const char *magicfile, int action)
-{
-	if (magicfile != NULL)
-		return magicfile;
-
-	magicfile = getenv("MAGIC");
-	if (magicfile != NULL)
-		return magicfile;
-
-	return action == FILE_LOAD ? get_default_magic() : MAGIC;
-}
 #endif
 
 public struct magic_set *
@@ -233,13 +97,15 @@ magic_open(int flags)
 private int
 unreadable_info(struct magic_set *ms, mode_t md, const char *file)
 {
-	/* We cannot open it, but we were able to stat it. */
-	if (access(file, W_OK) == 0)
-		if (file_printf(ms, "writable, ") == -1)
-			return -1;
-	if (access(file, X_OK) == 0)
-		if (file_printf(ms, "executable, ") == -1)
-			return -1;
+	if (file) {
+		/* We cannot open it, but we were able to stat it. */
+		if (access(file, W_OK) == 0)
+			if (file_printf(ms, "writable, ") == -1)
+				return -1;
+		if (access(file, X_OK) == 0)
+			if (file_printf(ms, "executable, ") == -1)
+				return -1;
+	}
 	if (S_ISREG(md))
 		if (file_printf(ms, "regular file, ") == -1)
 			return -1;
@@ -286,7 +152,7 @@ magic_list(struct magic_set *ms, const char *magicfile)
 
 private void
 close_and_restore(const struct magic_set *ms, const char *name, int fd,
-    const struct stat *sb)
+    const zend_stat_t *sb)
 {
 
 	if ((ms->flags & MAGIC_PRESERVE_ATIME) != 0) {
@@ -350,10 +216,12 @@ file_or_stream(struct magic_set *ms, const char *inname, php_stream *stream)
 {
 	int	rv = -1;
 	unsigned char *buf;
-	struct stat	sb;
+	zend_stat_t   sb;
 	ssize_t nbytes = 0;	/* number of bytes read from a datafile */
 	int no_in_stream = 0;
-	TSRMLS_FETCH();
+
+	if (file_reset(ms) == -1)
+		goto out;
 
 	if (!inname && !stream) {
 		return NULL;
@@ -364,10 +232,8 @@ file_or_stream(struct magic_set *ms, const char *inname, php_stream *stream)
 	 * some overlapping space for matches near EOF
 	 */
 #define SLOP (1 + sizeof(union VALUETYPE))
-	buf = emalloc(HOWMANY + SLOP);
-
-	if (file_reset(ms) == -1)
-		goto done;
+	if ((buf = CAST(unsigned char *, emalloc(ms->bytes_max + SLOP))) == NULL)
+		return NULL;
 
 	switch (file_fsmagic(ms, inname, &sb, stream)) {
 	case -1:		/* error */
@@ -398,9 +264,9 @@ file_or_stream(struct magic_set *ms, const char *inname, php_stream *stream)
 #endif
 
 	/*
-	 * try looking at the first HOWMANY bytes
+	 * try looking at the first ms->bytes_max bytes
 	 */
-	if ((nbytes = php_stream_read(stream, (char *)buf, HOWMANY)) < 0) {
+	if ((nbytes = php_stream_read(stream, (char *)buf, ms->bytes_max - nbytes)) < 0) {
 		file_error(ms, errno, "cannot read `%s'", inname);
 		goto done;
 	}
@@ -415,8 +281,7 @@ done:
 	if (no_in_stream && stream) {
 		php_stream_close(stream);
 	}
-
-	close_and_restore(ms, inname, 0, &sb);
+out:
 	return rv == 0 ? file_getbuffer(ms) : NULL;
 }
 
@@ -471,4 +336,66 @@ public int
 magic_version(void)
 {
 	return MAGIC_VERSION;
+}
+
+public int
+magic_setparam(struct magic_set *ms, int param, const void *val)
+{
+	switch (param) {
+	case MAGIC_PARAM_INDIR_MAX:
+		ms->indir_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_NAME_MAX:
+		ms->name_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_ELF_PHNUM_MAX:
+		ms->elf_phnum_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_ELF_SHNUM_MAX:
+		ms->elf_shnum_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_ELF_NOTES_MAX:
+		ms->elf_notes_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_REGEX_MAX:
+		ms->elf_notes_max = (uint16_t)*(const size_t *)val;
+		return 0;
+	case MAGIC_PARAM_BYTES_MAX:
+		ms->bytes_max = *(const size_t *)val;
+		return 0;
+	default:
+		errno = EINVAL;
+		return -1;
+	}
+}
+
+public int
+magic_getparam(struct magic_set *ms, int param, void *val)
+{
+	switch (param) {
+	case MAGIC_PARAM_INDIR_MAX:
+		*(size_t *)val = ms->indir_max;
+		return 0;
+	case MAGIC_PARAM_NAME_MAX:
+		*(size_t *)val = ms->name_max;
+		return 0;
+	case MAGIC_PARAM_ELF_PHNUM_MAX:
+		*(size_t *)val = ms->elf_phnum_max;
+		return 0;
+	case MAGIC_PARAM_ELF_SHNUM_MAX:
+		*(size_t *)val = ms->elf_shnum_max;
+		return 0;
+	case MAGIC_PARAM_ELF_NOTES_MAX:
+		*(size_t *)val = ms->elf_notes_max;
+		return 0;
+	case MAGIC_PARAM_REGEX_MAX:
+		*(size_t *)val = ms->regex_max;
+		return 0;
+	case MAGIC_PARAM_BYTES_MAX:
+		*(size_t *)val = ms->bytes_max;
+		return 0;
+	default:
+		errno = EINVAL;
+		return -1;
+	}
 }

@@ -1,8 +1,8 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 5                                                        |
+   | PHP Version 7                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2016 The PHP Group                                |
+   | Copyright (c) 1997-2018 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -12,7 +12,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author: Stig Sæther Bakken <ssb@php.net>                             |
+   | Author: Stig SÃ¦ther Bakken <ssb@php.net>                             |
    +----------------------------------------------------------------------+
  */
 
@@ -38,37 +38,38 @@
 #include "php_lcg.h"
 #include "uniqid.h"
 
+#ifdef HAVE_GETTIMEOFDAY
+ZEND_TLS struct timeval prev_tv = { 0, 0 };
+
 /* {{{ proto string uniqid([string prefix [, bool more_entropy]])
    Generates a unique ID */
-#ifdef HAVE_GETTIMEOFDAY
 PHP_FUNCTION(uniqid)
 {
 	char *prefix = "";
-#if defined(__CYGWIN__)
-	zend_bool more_entropy = 1;
-#else
 	zend_bool more_entropy = 0;
-#endif
-	char *uniqid;
-	int sec, usec, prefix_len = 0;
+	zend_string *uniqid;
+	int sec, usec;
+	size_t prefix_len = 0;
 	struct timeval tv;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sb", &prefix, &prefix_len,
-							  &more_entropy)) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(0, 2)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_STRING(prefix, prefix_len)
+		Z_PARAM_BOOL(more_entropy)
+	ZEND_PARSE_PARAMETERS_END();
 
-#if HAVE_USLEEP && !defined(PHP_WIN32)
-	if (!more_entropy) {
-#if defined(__CYGWIN__)
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "You must use 'more entropy' under CYGWIN");
-		RETURN_FALSE;
-#else
-		usleep(1);
-#endif
-	}
-#endif
-	gettimeofday((struct timeval *) &tv, (struct timezone *) NULL);
+	/* This implementation needs current microsecond to change,
+	 * hence we poll time until it does. This is much faster than
+	 * calling usleep(1) which may cause the kernel to schedule
+	 * another process, causing a pause of around 10ms.
+	 */
+	do {
+		(void)gettimeofday((struct timeval *) &tv, (struct timezone *) NULL);
+	} while (tv.tv_sec == prev_tv.tv_sec && tv.tv_usec == prev_tv.tv_usec);
+
+	prev_tv.tv_sec = tv.tv_sec;
+	prev_tv.tv_usec = tv.tv_usec;
+
 	sec = (int) tv.tv_sec;
 	usec = (int) (tv.tv_usec % 0x100000);
 
@@ -76,12 +77,12 @@ PHP_FUNCTION(uniqid)
 	 * digits for usecs.
 	 */
 	if (more_entropy) {
-		spprintf(&uniqid, 0, "%s%08x%05x%.8F", prefix, sec, usec, php_combined_lcg(TSRMLS_C) * 10);
+		uniqid = strpprintf(0, "%s%08x%05x%.8F", prefix, sec, usec, php_combined_lcg() * 10);
 	} else {
-		spprintf(&uniqid, 0, "%s%08x%05x", prefix, sec, usec);
+		uniqid = strpprintf(0, "%s%08x%05x", prefix, sec, usec);
 	}
 
-	RETURN_STRING(uniqid, 0);
+	RETURN_STR(uniqid);
 }
 #endif
 /* }}} */

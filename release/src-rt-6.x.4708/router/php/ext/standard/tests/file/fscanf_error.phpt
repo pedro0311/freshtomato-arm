@@ -70,7 +70,7 @@ NULL
 Warning: fscanf() expects at least 2 parameters, 1 given in %s on line %d
 NULL
 
-Warning: fscanf(): %d is not a valid File-Handle resource in %s on line %d
+Warning: fscanf(): supplied resource is not a valid File-Handle resource in %s on line %d
 bool(false)
 
 Warning: fscanf(): Different numbers of variable names and field specifiers in %s on line %d
@@ -78,7 +78,7 @@ int(-1)
 
 Notice: Undefined variable: undefined_var in %s on line %d
 
-Notice: Use of undefined constant undefined_constant - assumed 'undefined_constant' in %s on line %d
+Warning: Use of undefined constant undefined_constant - assumed 'undefined_constant' (this will throw an Error in a future version of PHP) in %s on line %d
 array(0) {
 }
 array(0) {

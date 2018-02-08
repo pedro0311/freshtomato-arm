@@ -4,7 +4,7 @@
  * It may be used under the GNU GPL versions 2 or 3
  * or any future license endorsed by Mnemosyne LLC.
  *
- * $Id: DetailsDialog.cc 14611 2015-12-06 21:07:37Z jordan $
+ * $Id$
  */
 
 #include <cassert>

@@ -18,5 +18,5 @@ echo strlen($p2->getStub()),"\n";
 echo "ok\n";
 __HALT_COMPILER(); ?>
 "
-6675
+6643
 ok

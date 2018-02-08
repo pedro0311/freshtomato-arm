@@ -428,6 +428,7 @@ void setup_conntrack(void)
 		char ports[32];
 
 		sprintf(ports, "ports=21,%d", i);
+		ct_modprobe_r("ftp");
 		ct_modprobe("ftp", ports);
 	}
 	else 
