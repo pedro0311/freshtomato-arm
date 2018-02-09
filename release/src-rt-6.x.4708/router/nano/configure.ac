@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see http://www.gnu.org/licenses/.
 
-AC_INIT([GNU nano], [2.9.2], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [2.9.3], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.14])
@@ -565,10 +565,10 @@ if eval "test x$CURSES_LIB_NAME = x"; then
 fi
 
 if eval "test x$CURSES_LIB_NAME = x"; then
-	AC_MSG_WARN([
-*** No curses lib available.  Consider getting the official ncurses
-*** distribution from ftp://ftp.gnu.org/pub/gnu/ncurses if you get
-*** errors compiling nano.])
+	AC_MSG_ERROR([
+*** No curses lib was found.  Please install the curses header files
+*** from libncursesw5-dev (Debian), ncurses-devel (Fedora), or similar.
+*** (Or install ncurses from https://ftp.gnu.org/gnu/ncurses/.)])
 else
 	AC_MSG_RESULT([Using $CURSES_LIB_NAME as the curses library])
 fi

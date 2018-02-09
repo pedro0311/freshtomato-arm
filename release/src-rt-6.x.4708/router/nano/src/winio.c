@@ -1,8 +1,8 @@
 /**************************************************************************
  *   winio.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2017 Benno Schulenberg                            *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2014-2018 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -35,12 +35,13 @@
 #endif
 
 static int *key_buffer = NULL;
-		/* The keystroke buffer, containing all the keystrokes we
-		 * haven't handled yet at a given point. */
+		/* A buffer for the keystrokes that haven't been handled yet. */
 static size_t key_buffer_len = 0;
 		/* The length of the keystroke buffer. */
 static bool solitary = FALSE;
 		/* Whether an Esc arrived by itself -- not as leader of a sequence. */
+static int digit_count = 0;
+		/* How many digits of a three-digit character code we've eaten. */
 static bool waiting_mode = TRUE;
 		/* Whether getting a character will wait for a key to be pressed. */
 static int statusblank = 0;
@@ -106,8 +107,7 @@ void run_macro(void)
 		return;
 	}
 
-	free(key_buffer);
-	key_buffer = (int *)nmalloc(macro_length * sizeof(int));
+	key_buffer = (int *)nrealloc(key_buffer, macro_length * sizeof(int));
 	key_buffer_len = macro_length;
 
 	for (i = 0; i < macro_length; i++)
@@ -169,14 +169,10 @@ void run_macro(void)
 
 /* Read in a sequence of keystrokes from the given window and save them
  * in the keystroke buffer. */
-void get_key_buffer(WINDOW *win)
+void read_keys_from(WINDOW *win)
 {
 	int input = ERR;
 	size_t errcount = 0;
-
-	/* If the keystroke buffer isn't empty, get out. */
-	if (key_buffer != NULL)
-		return;
 
 	/* Before reading the first keycode, display any pending screen updates. */
 	doupdate();
@@ -214,9 +210,9 @@ void get_key_buffer(WINDOW *win)
 	curs_set(0);
 
 	/* Initiate the keystroke buffer, and save the keycode in it. */
-	key_buffer_len++;
-	key_buffer = (int *)nmalloc(sizeof(int));
+	key_buffer = (int *)nrealloc(key_buffer, sizeof(int));
 	key_buffer[0] = input;
+	key_buffer_len = 1;
 
 #ifndef NANO_TINY
 	/* If we got a SIGWINCH, get out as the win argument is no longer valid. */
@@ -262,42 +258,32 @@ size_t get_key_buffer_len(void)
 	return key_buffer_len;
 }
 
-/* Add the keycodes in input to the keystroke buffer. */
-void unget_input(int *input, size_t input_len)
+/* Add the given keycode to the front of the keystroke buffer. */
+void put_back(int keycode)
 {
-	/* If input is empty, get out. */
-	if (input_len == 0)
+	/* If the keystroke buffer is at maximum capacity, don't add anything. */
+	if (key_buffer_len + 1 < key_buffer_len)
 		return;
 
-	/* If adding input would put the keystroke buffer beyond maximum capacity,
-	 * only add enough of input to put it at maximum capacity. */
-	if (key_buffer_len + input_len < key_buffer_len)
-		input_len = (size_t)-1 - key_buffer_len;
+	/* Extend the keystroke buffer to make room for the extra keycode. */
+	key_buffer = (int *)nrealloc(key_buffer, ++key_buffer_len * sizeof(int));
 
-	/* Extend the keystroke buffer to make room for the extra keycodes. */
-	key_buffer_len += input_len;
-	key_buffer = (int *)nrealloc(key_buffer, key_buffer_len * sizeof(int));
+	/* If the keystroke buffer wasn't empty before, move all the
+	 * existing content one step further away. */
+	if (key_buffer_len > 1)
+		memmove(key_buffer + 1, key_buffer, (key_buffer_len - 1) * sizeof(int));
 
-	/* If the keystroke buffer wasn't empty before, move its beginning
-	 * forward far enough so that we can add input to its beginning. */
-	if (key_buffer_len > input_len)
-		memmove(key_buffer + input_len, key_buffer,
-				(key_buffer_len - input_len) * sizeof(int));
-
-	/* Copy input to the beginning of the keystroke buffer. */
-	memcpy(key_buffer, input, input_len * sizeof(int));
+	*key_buffer = keycode;
 }
 
 /* Put the character given in kbinput back into the input stream.  If it
  * is a Meta key, also insert an Escape character in front of it. */
 void unget_kbinput(int kbinput, bool metakey)
 {
-	unget_input(&kbinput, 1);
+	put_back(kbinput);
 
-	if (metakey) {
-		kbinput = ESC_CODE;
-		unget_input(&kbinput, 1);
-	}
+	if (metakey)
+		put_back(ESC_CODE);
 }
 
 /* Try to read input_len codes from the keystroke buffer.  If the
@@ -309,7 +295,7 @@ int *get_input(WINDOW *win, size_t input_len)
 	int *input;
 
 	if (key_buffer_len == 0 && win != NULL)
-		get_key_buffer(win);
+		read_keys_from(win);
 
 	if (key_buffer_len == 0)
 		return NULL;
@@ -323,17 +309,10 @@ int *get_input(WINDOW *win, size_t input_len)
 	memcpy(input, key_buffer, input_len * sizeof(int));
 	key_buffer_len -= input_len;
 
-	/* If the keystroke buffer is now empty, mark it as such. */
-	if (key_buffer_len == 0) {
-		free(key_buffer);
-		key_buffer = NULL;
-	} else {
-		/* Trim from the buffer the codes that were copied. */
+	/* If the buffer still contains keystrokes, move them to the front. */
+	if (key_buffer_len > 0)
 		memmove(key_buffer, key_buffer + input_len, key_buffer_len *
 				sizeof(int));
-		key_buffer = (int *)nrealloc(key_buffer, key_buffer_len *
-				sizeof(int));
-	}
 
 	return input;
 }
@@ -364,7 +343,7 @@ int get_kbinput(WINDOW *win, bool showcursor)
  * the function keys (F1-F16), and the numeric keypad with NumLock off. */
 int parse_kbinput(WINDOW *win)
 {
-	static int escapes = 0, byte_digits = 0;
+	static int escapes = 0;
 	static bool double_esc = FALSE;
 	int *kbinput, keycode, retval = ERR;
 
@@ -384,8 +363,8 @@ int parse_kbinput(WINDOW *win)
 	free(kbinput);
 
 #ifdef DEBUG
-	fprintf(stderr, "before parsing:  keycode = %d, escapes = %d, byte_digits = %d\n",
-		keycode, escapes, byte_digits);
+	fprintf(stderr, "before parsing:  keycode = %d, escapes = %d, digit_count = %d\n",
+		keycode, escapes, digit_count);
 #endif
 
 	if (keycode == ERR)
@@ -409,6 +388,8 @@ int parse_kbinput(WINDOW *win)
 		case 1:
 			if (keycode >= 0x80)
 				retval = keycode;
+			else if (keycode == TAB_CODE)
+				retval = SHIFT_TAB;
 			else if ((keycode != 'O' && keycode != 'o' && keycode != '[') ||
 						key_buffer_len == 0 || *key_buffer == ESC_CODE) {
 				/* One escape followed by a single non-escape:
@@ -457,45 +438,35 @@ int parse_kbinput(WINDOW *win)
 				double_esc = FALSE;
 				escapes = 0;
 			} else if (key_buffer_len == 0) {
-				if (('0' <= keycode && keycode <= '2' &&
-						byte_digits == 0) || ('0' <= keycode &&
-						keycode <= '9' && byte_digits > 0)) {
+				if ('0' <= keycode && ((keycode <= '2' && digit_count == 0) ||
+										(keycode <= '9' && digit_count > 0))) {
 					/* Two escapes followed by one or more decimal
 					 * digits, and there aren't any other codes
-					 * waiting: byte sequence mode.  If the range
-					 * of the byte sequence is limited to 2XX (the
-					 * first digit is between '0' and '2' and the
-					 * others between '0' and '9', interpret it. */
-					int byte;
-
-					byte_digits++;
-					byte = get_byte_kbinput(keycode);
+					 * waiting: byte sequence mode.  If the range of the
+					 * byte sequence is limited to 2XX, interpret it. */
+					int byte = get_byte_kbinput(keycode);
 
 					/* If the decimal byte value is complete, convert it and
 					 * put the obtained byte(s) back into the input buffer. */
 					if (byte != ERR) {
-						char *byte_mb;
-						int byte_mb_len, *seq, i;
+						char *multibyte;
+						int count, onebyte, i;
 
 						/* Convert the decimal code to one or two bytes. */
-						byte_mb = make_mbchar((long)byte, &byte_mb_len);
-
-						seq = (int *)nmalloc(byte_mb_len * sizeof(int));
-
-						for (i = 0; i < byte_mb_len; i++)
-							seq[i] = (unsigned char)byte_mb[i];
+						multibyte = make_mbchar((long)byte, &count);
 
 						/* Insert the byte(s) into the input buffer. */
-						unget_input(seq, byte_mb_len);
+						for (i = count; i > 0 ; i--) {
+							onebyte = (unsigned char)multibyte[i - 1];
+							put_back(onebyte);
+						}
 
-						free(byte_mb);
-						free(seq);
+						free(multibyte);
 
-						byte_digits = 0;
 						escapes = 0;
 					}
 				} else {
-					if (byte_digits == 0)
+					if (digit_count == 0)
 						/* Two escapes followed by a non-decimal
 						 * digit (or a decimal digit that would
 						 * create a byte sequence greater than 2XX)
@@ -506,7 +477,7 @@ int parse_kbinput(WINDOW *win)
 						/* An invalid digit in the middle of a byte
 						 * sequence: reset the byte sequence counter
 						 * and save the code we got as the result. */
-						byte_digits = 0;
+						digit_count = 0;
 						retval = keycode;
 					}
 					escapes = 0;
@@ -654,21 +625,18 @@ int parse_kbinput(WINDOW *win)
 #endif
 
 	switch (retval) {
-#ifdef KEY_SLEFT
-		/* Slang doesn't support KEY_SLEFT. */
+#ifdef KEY_SLEFT  /* Slang doesn't support KEY_SLEFT. */
 		case KEY_SLEFT:
 			shift_held = TRUE;
 			return KEY_LEFT;
 #endif
-#ifdef KEY_SRIGHT
-		/* Slang doesn't support KEY_SRIGHT. */
+#ifdef KEY_SRIGHT  /* Slang doesn't support KEY_SRIGHT. */
 		case KEY_SRIGHT:
 			shift_held = TRUE;
 			return KEY_RIGHT;
 #endif
 #ifdef KEY_SR
-#ifdef KEY_SUP
-		/* ncurses and Slang don't support KEY_SUP. */
+#ifdef KEY_SUP  /* ncurses and Slang don't support KEY_SUP. */
 		case KEY_SUP:
 #endif
 		case KEY_SR:    /* Scroll backward, on Xfce4-terminal. */
@@ -676,30 +644,31 @@ int parse_kbinput(WINDOW *win)
 			return KEY_UP;
 #endif
 #ifdef KEY_SF
-#ifdef KEY_SDOWN
-		/* ncurses and Slang don't support KEY_SDOWN. */
+#ifdef KEY_SDOWN  /* ncurses and Slang don't support KEY_SDOWN. */
 		case KEY_SDOWN:
 #endif
 		case KEY_SF:    /* Scroll forward, on Xfce4-terminal. */
 			shift_held = TRUE;
 			return KEY_DOWN;
 #endif
-#ifdef KEY_SHOME
-		/* HP-UX 10-11 and Slang don't support KEY_SHOME. */
+#ifdef KEY_SHOME  /* HP-UX 10-11 and Slang don't support KEY_SHOME. */
 		case KEY_SHOME:
 #endif
 		case SHIFT_HOME:
 			shift_held = TRUE;
 		case KEY_A1:    /* Home (7) on keypad with NumLock off. */
 			return KEY_HOME;
-#ifdef KEY_SEND
-		/* HP-UX 10-11 and Slang don't support KEY_SEND. */
+#ifdef KEY_SEND  /* HP-UX 10-11 and Slang don't support KEY_SEND. */
 		case KEY_SEND:
 #endif
 		case SHIFT_END:
 			shift_held = TRUE;
 		case KEY_C1:    /* End (1) on keypad with NumLock off. */
 			return KEY_END;
+#ifdef KEY_EOL
+		case KEY_EOL:    /* Ctrl+End on rxvt-unicode. */
+			return CONTROL_END;
+#endif
 #ifndef NANO_TINY
 #ifdef KEY_SPREVIOUS
 		case KEY_SPREVIOUS:
@@ -718,8 +687,7 @@ int parse_kbinput(WINDOW *win)
 #endif
 		case KEY_C3:    /* PageDown (3) on keypad with NumLock off. */
 			return KEY_NPAGE;
-#ifdef KEY_SDC
-		/* Slang doesn't support KEY_SDC. */
+#ifdef KEY_SDC  /* Slang doesn't support KEY_SDC. */
 		case KEY_SDC:
 #endif
 		case DEL_CODE:
@@ -727,41 +695,33 @@ int parse_kbinput(WINDOW *win)
 				return the_code_for(do_delete, KEY_DC);
 			else
 				return KEY_BACKSPACE;
-#ifdef KEY_SIC
-		/* Slang doesn't support KEY_SIC. */
+#ifdef KEY_SIC  /* Slang doesn't support KEY_SIC. */
 		case KEY_SIC:
 			return the_code_for(do_insertfile_void, KEY_IC);
 #endif
-#ifdef KEY_SBEG
-		/* Slang doesn't support KEY_SBEG. */
+#ifdef KEY_SBEG  /* Slang doesn't support KEY_SBEG. */
 		case KEY_SBEG:
 #endif
-#ifdef KEY_BEG
-		/* Slang doesn't support KEY_BEG. */
+#ifdef KEY_BEG  /* Slang doesn't support KEY_BEG. */
 		case KEY_BEG:
 #endif
 		case KEY_B2:    /* Center (5) on keypad with NumLock off. */
 			return ERR;
-#ifdef KEY_CANCEL
-#ifdef KEY_SCANCEL
-		/* Slang doesn't support KEY_SCANCEL. */
+#ifdef KEY_CANCEL  /* Slang doesn't support KEY_CANCEL. */
+#ifdef KEY_SCANCEL  /* Slang doesn't support KEY_SCANCEL. */
 		case KEY_SCANCEL:
 #endif
-		/* Slang doesn't support KEY_CANCEL. */
 		case KEY_CANCEL:
 			return the_code_for(do_cancel, 0x03);
 #endif
-#ifdef KEY_SUSPEND
-#ifdef KEY_SSUSPEND
-		/* Slang doesn't support KEY_SSUSPEND. */
+#ifdef KEY_SUSPEND  /* Slang doesn't support KEY_SUSPEND. */
+#ifdef KEY_SSUSPEND  /* Slang doesn't support KEY_SSUSPEND. */
 		case KEY_SSUSPEND:
 #endif
-		/* Slang doesn't support KEY_SUSPEND. */
 		case KEY_SUSPEND:
 			return the_code_for(do_suspend_void, KEY_SUSPEND);
 #endif
-#ifdef KEY_BTAB
-		/* Slang doesn't support KEY_BTAB. */
+#ifdef KEY_BTAB  /* Slang doesn't support KEY_BTAB. */
 		case KEY_BTAB:
 			return SHIFT_TAB;
 #endif
@@ -774,8 +734,7 @@ int parse_kbinput(WINDOW *win)
 		case KEY_ALT_R:
 			return ERR;
 #endif
-#ifdef KEY_RESIZE
-		/* Slang and SunOS 5.7-5.9 don't support KEY_RESIZE. */
+#ifdef KEY_RESIZE  /* Slang and SunOS 5.7-5.9 don't support KEY_RESIZE. */
 		case KEY_RESIZE:
 #endif
 #if defined(USE_SLANG) && defined(ENABLE_UTF8)
@@ -792,15 +751,17 @@ int parse_kbinput(WINDOW *win)
  * keypad values, into their corresponding key values.  These sequences
  * are generated when the keypad doesn't support the needed keys.
  * Assume that Escape has already been read in. */
-int convert_sequence(const int *seq, size_t seq_len)
+int convert_sequence(const int *seq, size_t length, int *consumed)
 {
-	if (seq_len > 1) {
+	if (length > 1) {
+		*consumed = 2;
 		switch (seq[0]) {
 			case 'O':
 				switch (seq[1]) {
 					case '1':
-						if (seq_len > 4  && seq[2] == ';') {
-
+						if (length > 4  && seq[2] == ';') {
+		/* <-<-<-<-<-<-<- */
+		*consumed = 5;
 		switch (seq[3]) {
 			case '2':
 				switch (seq[4]) {
@@ -833,11 +794,12 @@ int convert_sequence(const int *seq, size_t seq_len)
 				}
 				break;
 		}
-
+		/* ->->->->->->-> */
 						}
 						break;
 					case '2':
-						if (seq_len >= 3) {
+						if (length > 2) {
+							*consumed = 3;
 							switch (seq[2]) {
 								case 'P': /* Esc O 2 P == F13 on xterm. */
 									return KEY_F(13);
@@ -851,7 +813,8 @@ int convert_sequence(const int *seq, size_t seq_len)
 						}
 						break;
 					case '5':
-						if (seq_len >= 3) {
+						if (length > 2) {
+							*consumed = 3;
 							switch (seq[2]) {
 								case 'A': /* Esc O 5 A == Ctrl-Up on Haiku. */
 									return CONTROL_UP;
@@ -863,6 +826,7 @@ int convert_sequence(const int *seq, size_t seq_len)
 									return CONTROL_LEFT;
 							}
 						}
+						break;
 					case 'A': /* Esc O A == Up on VT100/VT320/xterm. */
 					case 'B': /* Esc O B == Down on VT100/VT320/xterm. */
 					case 'C': /* Esc O C == Right on VT100/VT320/xterm. */
@@ -962,9 +926,15 @@ int convert_sequence(const int *seq, size_t seq_len)
 				}
 				break;
 			case '[':
+				if (seq[1] < '9')
+					*consumed = 3;
 				switch (seq[1]) {
 					case '1':
-						if (seq_len > 3 && seq[3] == '~') {
+						if (length > 2 && seq[2] == '~')
+							/* Esc [ 1 ~ == Home on VT320/Linux console. */
+							return KEY_HOME;
+						else if (length > 3 && seq[3] == '~') {
+							*consumed = 4;
 							switch (seq[2]) {
 								case '1': /* Esc [ 1 1 ~ == F1 on rxvt/Eterm. */
 									return KEY_F(1);
@@ -984,8 +954,9 @@ int convert_sequence(const int *seq, size_t seq_len)
 								case '9': /* Esc [ 1 9 ~ == F8 on the same. */
 									return KEY_F(8);
 							}
-						} else if (seq_len > 4 && seq[2] == ';') {
-
+						} else if (length > 4 && seq[2] == ';') {
+		/* <-<-<-<-<-<-<- */
+		*consumed = 5;
 		switch (seq[3]) {
 			case '2':
 				switch (seq[4]) {
@@ -995,6 +966,12 @@ int convert_sequence(const int *seq, size_t seq_len)
 					case 'D': /* Esc [ 1 ; 2 D == Shift-Left on xterm. */
 						shift_held = TRUE;
 						return arrow_from_abcd(seq[4]);
+#ifndef NANO_TINY
+					case 'F': /* Esc [ 1 ; 2 F == Shift-End on xterm. */
+						return SHIFT_END;
+					case 'H': /* Esc [ 1 ; 2 H == Shift-Home on xterm. */
+						return SHIFT_HOME;
+#endif
 				}
 				break;
 #ifndef NANO_TINY
@@ -1061,13 +1038,12 @@ int convert_sequence(const int *seq, size_t seq_len)
 				break;
 #endif
 		}
-
-						} else if (seq_len > 2 && seq[2] == '~')
-							/* Esc [ 1 ~ == Home on VT320/Linux console. */
-							return KEY_HOME;
+		/* ->->->->->->-> */
+						}
 						break;
 					case '2':
-						if (seq_len > 3 && seq[3] == '~') {
+						if (length > 3 && seq[3] == '~') {
+							*consumed = 4;
 							switch (seq[2]) {
 								case '0': /* Esc [ 2 0 ~ == F9 on VT220/VT320/
 										   * Linux console/xterm/rxvt/Eterm. */
@@ -1088,45 +1064,59 @@ int convert_sequence(const int *seq, size_t seq_len)
 								case '9': /* Esc [ 2 9 ~ == F16 on the same. */
 									return KEY_F(16);
 							}
-						} else if (seq_len > 2 && seq[2] == '~')
+						} else if (length > 2 && seq[2] == '~')
 							/* Esc [ 2 ~ == Insert on VT220/VT320/
 							 * Linux console/xterm/Terminal. */
 							return KEY_IC;
 						break;
 					case '3': /* Esc [ 3 ~ == Delete on VT220/VT320/
 							   * Linux console/xterm/Terminal. */
-						if (seq_len > 2 && seq[2] == '~')
+						if (length > 2 && seq[2] == '~')
 							return KEY_DC;
 						break;
 					case '4': /* Esc [ 4 ~ == End on VT220/VT320/
 							   * Linux console/xterm. */
-						if (seq_len > 2 && seq[2] == '~')
+						if (length > 2 && seq[2] == '~')
 							return KEY_END;
 						break;
 					case '5': /* Esc [ 5 ~ == PageUp on VT220/VT320/
 							   * Linux console/xterm/Terminal;
 							   * Esc [ 5 ^ == PageUp on Eterm. */
-						if (seq_len > 2 && (seq[2] == '~' || seq[2] == '^'))
+						if (length > 2 && (seq[2] == '~' || seq[2] == '^'))
 							return KEY_PPAGE;
+#ifndef NANO_TINY
+						else if (length > 4 && seq[2] == ';' &&
+									seq[3] == '2' && seq[4] == '~') {
+							*consumed = 5;
+							return shiftaltup;
+						}
+#endif
 						break;
 					case '6': /* Esc [ 6 ~ == PageDown on VT220/VT320/
 							   * Linux console/xterm/Terminal;
 							   * Esc [ 6 ^ == PageDown on Eterm. */
-						if (seq_len > 2 && (seq[2] == '~' || seq[2] == '^'))
+						if (length > 2 && (seq[2] == '~' || seq[2] == '^'))
 							return KEY_NPAGE;
+#ifndef NANO_TINY
+						else if (length > 4 && seq[2] == ';' &&
+									seq[3] == '2' && seq[4] == '~') {
+							*consumed = 5;
+							return shiftaltdown;
+						}
+#endif
 						break;
 					case '7': /* Esc [ 7 ~ == Home on Eterm/rxvt;
 							   * Esc [ 7 $ == Shift-Home on Eterm/rxvt;
 							   * Esc [ 7 ^ == Control-Home on Eterm/rxvt;
 							   * Esc [ 7 @ == Shift-Control-Home on same. */
-						if (seq_len > 2 && seq[2] == '~')
+						if (length > 2 && seq[2] == '~')
 							return KEY_HOME;
-						else if (seq_len > 2 && seq[2] == '$')
+						else if (length > 2 && seq[2] == '$')
 							return SHIFT_HOME;
-						else if (seq_len > 2 && seq[2] == '^')
+						else if (length > 2 && seq[2] == '^')
 							return CONTROL_HOME;
 #ifndef NANO_TINY
-						else if (seq_len > 2 && seq[2] == '@')
+						else if (length > 2 && seq[2] == '@')
 							return shiftcontrolhome;
 #endif
 						break;
@@ -1134,14 +1124,14 @@ int convert_sequence(const int *seq, size_t seq_len)
 							   * Esc [ 8 $ == Shift-End on Eterm/rxvt;
 							   * Esc [ 8 ^ == Control-End on Eterm/rxvt;
 							   * Esc [ 8 @ == Shift-Control-End on same. */
-						if (seq_len > 2 && seq[2] == '~')
+						if (length > 2 && seq[2] == '~')
 							return KEY_END;
-						else if (seq_len > 2 && seq[2] == '$')
+						else if (length > 2 && seq[2] == '$')
 							return SHIFT_END;
-						else if (seq_len > 2 && seq[2] == '^')
+						else if (length > 2 && seq[2] == '^')
 							return CONTROL_END;
 #ifndef NANO_TINY
-						else if (seq_len > 2 && seq[2] == '@')
+						else if (length > 2 && seq[2] == '@')
 							return shiftcontrolend;
 #endif
 						break;
@@ -1174,7 +1164,8 @@ int convert_sequence(const int *seq, size_t seq_len)
 					case 'N': /* Esc [ N == F2 on FreeBSD console. */
 						return KEY_F(2);
 					case 'O':
-						if (seq_len > 2) {
+						if (length > 2) {
+							*consumed = 3;
 							switch (seq[2]) {
 								case 'P': /* Esc [ O P == F1 on xterm. */
 									return KEY_F(1);
@@ -1219,7 +1210,8 @@ int convert_sequence(const int *seq, size_t seq_len)
 						shift_held = TRUE;
 						return arrow_from_abcd(seq[1]);
 					case '[':
-						if (seq_len > 2 ) {
+						if (length > 2) {
+							*consumed = 3;
 							switch (seq[2]) {
 								case 'A': /* Esc [ [ A == F1 on Linux console. */
 									return KEY_F(1);
@@ -1265,15 +1257,20 @@ int arrow_from_abcd(int kbinput)
  * isn't empty, and that the initial escape has already been read in. */
 int parse_escape_sequence(WINDOW *win, int kbinput)
 {
-	int retval, *sequence, length;
+	int retval, *sequence, length, consumed;
 
-	/* Put back the non-escape character, get the complete escape
-	 * sequence, translate the sequence into its corresponding key
-	 * value, and save that as the result. */
-	unget_input(&kbinput, 1);
-	length = key_buffer_len;
+	/* Put back the non-escape code, then grab at most five integers
+	 * (the longest possible escape sequence) from the keybuffer and
+	 * translate the sequence into its corresponding keycode. */
+	put_back(kbinput);
+	length = (key_buffer_len < 5 ? key_buffer_len : 5);
 	sequence = get_input(NULL, length);
-	retval = convert_sequence(sequence, length);
+	retval = convert_sequence(sequence, length, &consumed);
+
+	/* If not all grabbed integers were consumed, put the leftovers back. */
+	for (int i = length - 1; i >= consumed; i--)
+		put_back(sequence[i]);
+
 	free(sequence);
 
 	/* If we got an unrecognized escape sequence, notify the user. */
@@ -1292,73 +1289,51 @@ int parse_escape_sequence(WINDOW *win, int kbinput)
 	return retval;
 }
 
-/* Translate a byte sequence: turn a three-digit decimal number (from
- * 000 to 255) into its corresponding byte value. */
+/* Turn a three-digit decimal number (from 000 to 255) into its corresponding
+ * byte value. */
 int get_byte_kbinput(int kbinput)
 {
-	static int byte_digits = 0, byte = 0;
+	static int byte = 0;
 	int retval = ERR;
 
-	/* Increment the byte digit counter. */
-	byte_digits++;
-
-	switch (byte_digits) {
+	/* Check that the given digit is within the allowed range for its position.
+	 * If yes, store it.  If no, return the digit (or character) itself. */
+	switch (++digit_count) {
 		case 1:
-			/* First digit: This must be from zero to two.  Put it in
-			 * the 100's position of the byte sequence holder. */
+			/* The first digit (the 100's position) must be from zero to two. */
 			if ('0' <= kbinput && kbinput <= '2')
 				byte = (kbinput - '0') * 100;
 			else
-				/* This isn't the start of a byte sequence.  Return this
-				 * character as the result. */
 				retval = kbinput;
 			break;
 		case 2:
-			/* Second digit: This must be from zero to five if the first
-			 * was two, and may be any decimal value if the first was
-			 * zero or one.  Put it in the 10's position of the byte
-			 * sequence holder. */
-			if (('0' <= kbinput && kbinput <= '5') || (byte < 200 &&
-				'6' <= kbinput && kbinput <= '9'))
+			/* The second digit (the 10's position) must be from zero to five
+			 * if the first was two, and may be any decimal value otherwise. */
+			if ((byte < 200 && '0' <= kbinput && kbinput <= '9') ||
+								('0' <= kbinput && kbinput <= '5'))
 				byte += (kbinput - '0') * 10;
 			else
-				/* This isn't the second digit of a byte sequence.
-				 * Return this character as the result. */
 				retval = kbinput;
 			break;
 		case 3:
-			/* Third digit: This must be from zero to five if the first
-			 * was two and the second was five, and may be any decimal
-			 * value otherwise.  Put it in the 1's position of the byte
-			 * sequence holder. */
-			if (('0' <= kbinput && kbinput <= '5') || (byte < 250 &&
-				'6' <= kbinput && kbinput <= '9')) {
+			/* The third digit (the 1's position) must be from zero to five
+			 * if the first was two and the second was five, and may be any
+			 * decimal value otherwise. */
+			if ((byte < 250 && '0' <= kbinput && kbinput <= '9') ||
+								('0' <= kbinput && kbinput <= '5')) {
 				byte += kbinput - '0';
 				/* The byte sequence is complete. */
 				retval = byte;
 			} else
-				/* This isn't the third digit of a byte sequence.
-				 * Return this character as the result. */
 				retval = kbinput;
 			break;
-		default:
-			/* If there are more than three digits, return this
-			 * character as the result.  (Maybe we should produce an
-			 * error instead?) */
-			retval = kbinput;
-			break;
 	}
 
-	/* If we have a result, reset the byte digit counter and the byte
-	 * sequence holder. */
+	/* If we have a result, reset the counter and the byte holder. */
 	if (retval != ERR) {
-		byte_digits = 0;
+		digit_count = 0;
 		byte = 0;
 	}
-
-#ifdef DEBUG
-	fprintf(stderr, "get_byte_kbinput(): kbinput = %d, byte_digits = %d, byte = %d, retval = %d\n", kbinput, byte_digits, byte, retval);
-#endif
 
 	return retval;
 }
@@ -1553,7 +1528,7 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 
 		/* If the first code isn't the digit 0 nor 1, put it back. */
 		if (unicode != ERR)
-			unget_input(kbinput, 1);
+			put_back(*kbinput);
 		/* Otherwise, continue reading in digits until we have a complete
 		 * Unicode value, and put back the corresponding byte(s). */
 		else {
@@ -1575,7 +1550,7 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 			/* Insert the multibyte sequence into the input buffer. */
 			for (i = *count; i > 0 ; i--) {
 				onebyte = (unsigned char)multibyte[i - 1];
-				unget_input(&onebyte, 1);
+				put_back(onebyte);
 			}
 
 			free(multibyte);
@@ -1583,7 +1558,7 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 	} else
 #endif /* ENABLE_UTF8 */
 		/* Put back the first code. */
-		unget_input(kbinput, 1);
+		put_back(*kbinput);
 
 	free(kbinput);
 
@@ -1599,25 +1574,19 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 /* Handle any mouse event that may have occurred.  We currently handle
  * releases/clicks of the first mouse button.  If allow_shortcuts is
  * TRUE, releasing/clicking on a visible shortcut will put back the
- * keystroke associated with that shortcut.  If NCURSES_MOUSE_VERSION is
- * at least 2, we also currently handle presses of the fourth mouse
- * button (upward rolls of the mouse wheel) by putting back the
- * keystrokes to move up, and presses of the fifth mouse button
- * (downward rolls of the mouse wheel) by putting back the keystrokes to
- * move down.  We also store the coordinates of a mouse event that needs
- * to be handled in mouse_x and mouse_y, relative to the entire screen.
- * Return -1 on error, 0 if the mouse event needs to be handled, 1 if
- * it's been handled by putting back keystrokes that need to be handled.
- * or 2 if it's been ignored.  Assume that KEY_MOUSE has already been
- * read in. */
-int get_mouseinput(int *mouse_x, int *mouse_y, bool allow_shortcuts)
+ * keystroke associated with that shortcut.  If ncurses supports them,
+ * we also handle presses of the fourth mouse button (upward rolls of
+ * the mouse wheel) by putting back keystrokes to move up, and presses
+ * of the fifth mouse button (downward rolls of the mouse wheel) by
+ * putting back keystrokes to move down.  We also store the coordinates
+ * of a mouse event that needs further handling in mouse_x and mouse_y.
+ * Return -1 on error, 0 if the mouse event needs to be handled, 1 if it's
+ * been handled by putting back keystrokes, or 2 if it's been ignored. */
+int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 {
 	MEVENT mevent;
 	bool in_bottomwin;
 	subnfunc *f;
-
-	*mouse_x = -1;
-	*mouse_y = -1;
 
 	/* First, get the actual mouse event. */
 	if (getmouse(&mevent) == ERR)
@@ -1631,7 +1600,7 @@ int get_mouseinput(int *mouse_x, int *mouse_y, bool allow_shortcuts)
 
 	/* Handle releases/clicks of the first mouse button. */
 	if (mevent.bstate & (BUTTON1_RELEASED | BUTTON1_CLICKED)) {
-		/* If we're allowing shortcuts, the current shortcut list is
+		/* If we're allowing shortcuts, and the current shortcut list is
 		 * being displayed on the last two lines of the screen, and the
 		 * first mouse button was released on/clicked inside it, we need
 		 * to figure out which shortcut was released on/clicked and put
@@ -3332,6 +3301,7 @@ void total_refresh(void)
 #endif
 	if (currmenu != MBROWSER && currmenu != MWHEREISFILE && currmenu != MGOTODIR)
 		edit_refresh();
+	wipe_statusbar();
 	bottombars(currmenu);
 }
 
@@ -3339,7 +3309,7 @@ void total_refresh(void)
  * portion of the window. */
 void display_main_list(void)
 {
-#ifdef ENABLE_COLOR
+#if defined(ENABLE_COLOR) && defined(ENABLE_SPELLER)
 	if (openfile->syntax &&
 				(openfile->syntax->formatter || openfile->syntax->linter))
 		set_lint_or_format_shortcuts();
@@ -3572,7 +3542,7 @@ void do_credits(void)
 		"",
 		"",
 		"",
-		"(C) 2017",
+		"(C) 2018",
 		"Free Software Foundation, Inc.",
 		"",
 		"",

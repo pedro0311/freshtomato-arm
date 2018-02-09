@@ -1,7 +1,7 @@
 /**************************************************************************
  *   browser.c  --  This file is part of GNU nano.                        *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2016 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -121,7 +121,7 @@ char *do_browser(char *path)
 			int mouse_x, mouse_y;
 
 			/* We can click on the edit window to select a filename. */
-			if (get_mouseinput(&mouse_x, &mouse_y, TRUE) == 0 &&
+			if (get_mouseinput(&mouse_y, &mouse_x, TRUE) == 0 &&
 						wmouse_trafo(edit, &mouse_y, &mouse_x, FALSE)) {
 				/* longest is the width of each column.  There
 				 * are two spaces between each column. */

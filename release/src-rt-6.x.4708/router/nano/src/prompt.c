@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prompt.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2016 Benno Schulenberg                                 *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -27,6 +27,30 @@ static char *prompt = NULL;
 		/* The prompt string used for statusbar questions. */
 static size_t statusbar_x = HIGHEST_POSITIVE;
 		/* The cursor position in answer. */
+
+#ifdef ENABLE_MOUSE
+/* Handle a mouse click on the statusbar prompt or the shortcut list. */
+int do_statusbar_mouse(void)
+{
+	int click_row, click_col;
+	int retval = get_mouseinput(&click_row, &click_col, TRUE);
+
+	/* We can click on the statusbar window text to move the cursor. */
+	if (retval == 0 && wmouse_trafo(bottomwin, &click_row, &click_col, FALSE)) {
+		size_t start_col = strlenpt(prompt) + 2;
+
+		/* Move to where the click occurred. */
+		if (click_row == 0 && click_col >= start_col) {
+			statusbar_x = actual_x(answer,
+							get_statusbar_page_start(start_col, start_col +
+							statusbar_xplustabs()) + click_col - start_col);
+			update_the_statusbar();
+		}
+	}
+
+	return retval;
+}
+#endif
 
 /* Read in a keystroke, interpret it if it is a shortcut or toggle, and
  * return it.  Set ran_func to TRUE if we ran a function associated with
@@ -164,32 +188,6 @@ int do_statusbar_input(bool *ran_func, bool *finished)
 
 	return input;
 }
-
-#ifdef ENABLE_MOUSE
-/* Handle a mouse click on the statusbar prompt or the shortcut list. */
-int do_statusbar_mouse(void)
-{
-	int mouse_x, mouse_y;
-	int retval = get_mouseinput(&mouse_x, &mouse_y, TRUE);
-
-	/* We can click on the statusbar window text to move the cursor. */
-	if (retval == 0 && wmouse_trafo(bottomwin, &mouse_y, &mouse_x, FALSE)) {
-		size_t start_col;
-
-		start_col = strlenpt(prompt) + 2;
-
-		/* Move to where the click occurred. */
-		if (mouse_x >= start_col && mouse_y == 0) {
-			statusbar_x = actual_x(answer,
-						get_statusbar_page_start(start_col, start_col +
-						statusbar_xplustabs()) + mouse_x - start_col);
-			update_the_statusbar();
-		}
-	}
-
-	return retval;
-}
-#endif
 
 /* The user typed input_len multibyte characters.  Add them to the answer,
  * filtering out ASCII control characters if filtering is TRUE. */
@@ -669,7 +667,6 @@ int do_prompt(bool allow_tabs, bool allow_files,
 int do_yesno_prompt(bool all, const char *msg)
 {
 	int response = -2, width = 16;
-	char *message = display_string(msg, 0, COLS, FALSE);
 
 	/* TRANSLATORS: For the next three strings, if possible, specify
 	 * the single-byte letters for both your language and English.
@@ -717,7 +714,7 @@ int do_yesno_prompt(bool all, const char *msg)
 		/* Color the statusbar over its full width and display the question. */
 		wattron(bottomwin, interface_color_pair[TITLE_BAR]);
 		blank_statusbar();
-		mvwaddnstr(bottomwin, 0, 0, message, actual_x(message, COLS - 1));
+		mvwaddnstr(bottomwin, 0, 0, msg, actual_x(msg, COLS - 1));
 		wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
 		wnoutrefresh(bottomwin);
 
@@ -754,8 +751,6 @@ int do_yesno_prompt(bool all, const char *msg)
 		}
 #endif /* ENABLE_MOUSE */
 	}
-
-	free(message);
 
 	return response;
 }

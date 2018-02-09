@@ -1,7 +1,7 @@
 /**************************************************************************
  *   text.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2015 Mark Majeres                                 *
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
@@ -1618,12 +1618,13 @@ bool do_wrap(filestruct *line)
 
 	/* When requested, snip trailing blanks off the wrapped line. */
 	if (ISSET(TRIM_BLANKS)) {
-		size_t cur_x = move_mbleft(line->data, wrap_loc);
+		size_t tail_x = move_mbleft(line->data, wrap_loc);
+		size_t typed_x = move_mbleft(line->data, old_x);
 
-		while (is_blank_mbchar(line->data + cur_x)) {
-			openfile->current_x = cur_x;
+		while (tail_x != typed_x && is_blank_mbchar(line->data + tail_x)) {
+			openfile->current_x = tail_x;
 			do_delete();
-			cur_x = move_mbleft(line->data, cur_x);
+			tail_x = move_mbleft(line->data, tail_x);
 		}
 	}
 
@@ -2422,9 +2423,11 @@ void do_justify(bool full_justify)
 	if (first_par_line != NULL)
 		last_par_line = openfile->current;
 
+#ifndef NANO_TINY
 	/* Let a justification cancel a soft mark. */
 	if (openfile->mark && openfile->kind_of_mark == SOFTMARK)
 		openfile->mark = NULL;
+#endif
 
 	edit_refresh();
 
@@ -3035,7 +3038,9 @@ void do_linter(void)
 		return;
 	}
 
+#ifndef NANO_TINY
 	openfile->mark = NULL;
+#endif
 	edit_refresh();
 
 	if (openfile->modified) {

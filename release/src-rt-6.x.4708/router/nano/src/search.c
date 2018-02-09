@@ -1,7 +1,7 @@
 /**************************************************************************
  *   search.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -250,24 +250,19 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 				statusbar(_("Searching..."));
 		}
 
-		/* Search for the needle in the current line. */
-		if (!skipone)
-			found = strstrwrapper(line->data, needle, from);
-
-		/* Ignore the initial match at the starting position: continue
-		 * searching from the next character, or invalidate the match. */
-		if (skipone || (!whole_word_only && !came_full_circle &&
-								found == begin->data + begin_x)) {
+		/* When starting a new search, skip the first character, then
+		 * (in either case) search for the needle in the current line. */
+		if (skipone) {
 			skipone = FALSE;
 			if (ISSET(BACKWARDS_SEARCH) && from != line->data) {
 				from = line->data + move_mbleft(line->data, from - line->data);
-				continue;
+				found = strstrwrapper(line->data, needle, from);
 			} else if (!ISSET(BACKWARDS_SEARCH) && *from != '\0') {
 				from += move_mbright(from, 0);
-				continue;
+				found = strstrwrapper(line->data, needle, from);
 			}
-			found = NULL;
-		}
+		} else
+			found = strstrwrapper(line->data, needle, from);
 
 		if (found != NULL) {
 			/* When doing a regex search, compute the length of the match. */
@@ -333,7 +328,8 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 	enable_waiting();
 
 	/* Ensure that the found occurrence is not beyond the starting x. */
-	if (came_full_circle && ((!ISSET(BACKWARDS_SEARCH) && found_x > begin_x) ||
+	if (came_full_circle && ((!ISSET(BACKWARDS_SEARCH) && (found_x > begin_x ||
+						(modus == REPLACING && found_x == begin_x))) ||
 						(ISSET(BACKWARDS_SEARCH) && found_x < begin_x)))
 		return 0;
 
@@ -436,7 +432,7 @@ void go_looking(void)
 
 	came_full_circle = FALSE;
 
-	didfind = findnextstr(last_search, FALSE, JUSTFIND, NULL, FALSE,
+	didfind = findnextstr(last_search, FALSE, JUSTFIND, NULL, TRUE,
 								openfile->current, openfile->current_x);
 
 	/* If we found something, and we're back at the exact same spot
@@ -546,7 +542,7 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 	ssize_t numreplaced = -1;
 	size_t match_len;
 	bool replaceall = FALSE;
-	bool skipone = FALSE;
+	bool skipone = ISSET(BACKWARDS_SEARCH);
 	int modus = REPLACING;
 #ifndef NANO_TINY
 	filestruct *was_mark = openfile->mark;
