@@ -1,7 +1,7 @@
 /**************************************************************************
  *   global.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -233,8 +233,8 @@ regmatch_t regmatches[10];
 int hilite_attribute = A_REVERSE;
 		/* The curses attribute we use to highlight something. */
 #ifdef ENABLE_COLOR
-char* specified_color_combo[] = {NULL};
-		/* The color combinations as specified in the rcfile. */
+colortype* color_combo[] = {NULL};
+		/* The color combinations for interface elements given in the rcfile. */
 #endif
 int interface_color_pair[] = {0};
 		/* The processed color pairs for the interface elements. */
@@ -377,16 +377,6 @@ void add_to_sclist(int menus, const char *scstring, const int keycode,
 #ifdef DEBUG
 	fprintf(stderr, "Setting keycode to %d for shortcut \"%s\" in menus %x\n", s->keycode, scstring, s->menus);
 #endif
-}
-
-/* Assign one function's shortcuts to another function. */
-void replace_scs_for(void (*oldfunc)(void), void (*newfunc)(void))
-{
-	sc *s;
-
-	for (s = sclist; s != NULL; s = s->next)
-		if (s->scfunc == oldfunc)
-			s->scfunc = newfunc;
 }
 
 /* Return the first shortcut in the list of shortcuts that
@@ -633,8 +623,8 @@ void shortcut_init(void)
 	const char *comment_gist =
 		N_("Comment/uncomment the current line (or marked lines)");
 #endif
-#ifndef NANO_TINY
 	const char *savefile_gist = N_("Save file without prompting");
+#ifndef NANO_TINY
 	const char *findprev_gist = N_("Search next occurrence backward");
 	const char *findnext_gist = N_("Search next occurrence forward");
 	const char *recordmacro_gist = N_("Start/stop recording a macro");
@@ -985,14 +975,13 @@ void shortcut_init(void)
 		N_("Record"), WITHORSANS(recordmacro_gist), TOGETHER, VIEW);
 	add_to_funcs(run_macro, MMAIN,
 		N_("Run Macro"), WITHORSANS(runmacro_gist), BLANKAFTER, VIEW);
-
+#endif
 	add_to_funcs(do_search_backward, MMAIN,
 		/* TRANSLATORS: This starts a backward search. */
 		N_("Where Was"), WITHORSANS(wherewas_gist), BLANKAFTER, VIEW);
 
 	add_to_funcs(do_savefile, MMAIN,
 		N_("Save"), WITHORSANS(savefile_gist), BLANKAFTER, NOVIEW);
-#endif
 
 #ifdef ENABLE_HISTORIES
 	add_to_funcs(get_history_older_void, MWHEREIS|MREPLACE|MREPLACEWITH|MWHEREISFILE,
@@ -1364,10 +1353,17 @@ void shortcut_init(void)
 #endif
 }
 
-#ifdef ENABLE_COLOR
+#if defined(ENABLE_COLOR) && defined(ENABLE_SPELLER)
+/* Assign one function's shortcuts to another function. */
+void replace_scs_for(void (*oldfunc)(void), void (*newfunc)(void))
+{
+	for (sc *s = sclist; s != NULL; s = s->next)
+		if (s->scfunc == oldfunc)
+			s->scfunc = newfunc;
+}
+
 void set_lint_or_format_shortcuts(void)
 {
-#ifdef ENABLE_SPELLER
 	if (openfile->syntax->formatter) {
 		replace_scs_for(do_spell, do_formatter);
 		replace_scs_for(do_linter, do_formatter);
@@ -1375,17 +1371,14 @@ void set_lint_or_format_shortcuts(void)
 		replace_scs_for(do_spell, do_linter);
 		replace_scs_for(do_formatter, do_linter);
 	}
-#endif
 }
 
 void set_spell_shortcuts(void)
 {
-#ifdef ENABLE_SPELLER
 		replace_scs_for(do_formatter, do_spell);
 		replace_scs_for(do_linter, do_spell);
-#endif
 }
-#endif /* ENABLE_COLOR */
+#endif /* ENABLE_COLOR && ENABLE_SPELLER */
 
 const subnfunc *sctofunc(const sc *s)
 {
@@ -1471,10 +1464,8 @@ sc *strtosc(const char *input)
 		s->scfunc = discard_buffer;
 	else if (!strcasecmp(input, "writeout"))
 		s->scfunc = do_writeout_void;
-#ifndef NANO_TINY
 	else if (!strcasecmp(input, "savefile"))
 		s->scfunc = do_savefile;
-#endif
 	else if (!strcasecmp(input, "insert"))
 		s->scfunc = do_insertfile_void;
 	else if (!strcasecmp(input, "whereis"))

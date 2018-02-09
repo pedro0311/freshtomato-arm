@@ -802,6 +802,10 @@ SOURCE=..\..\..\..\lib\curl_ntlm_wb.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\curl_path.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\curl_rtmp.c
 # End Source File
 # Begin Source File
@@ -1086,6 +1090,10 @@ SOURCE=..\..\..\..\lib\ssh.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\ssh-libssh.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\strcase.c
 # End Source File
 # Begin Source File
@@ -1339,6 +1347,10 @@ SOURCE=..\..\..\..\lib\curl_ntlm_core.h
 # Begin Source File
 
 SOURCE=..\..\..\..\lib\curl_ntlm_wb.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\lib\curl_path.h
 # End Source File
 # Begin Source File
 

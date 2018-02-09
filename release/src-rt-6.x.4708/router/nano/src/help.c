@@ -1,7 +1,7 @@
 /**************************************************************************
  *   help.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 2000-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2000-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2017 Rishabh Dave                                      *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
@@ -220,8 +220,8 @@ void do_help(void)
 #endif
 #ifdef ENABLE_MOUSE
 		} else if (kbinput == KEY_MOUSE) {
-			int dummy_x, dummy_y;
-			get_mouseinput(&dummy_x, &dummy_y, TRUE);
+			int dummy_row, dummy_col;
+			get_mouseinput(&dummy_row, &dummy_col, TRUE);
 #endif
 		} else if (func == do_exit) {
 			/* Exit from the help viewer. */
@@ -620,7 +620,7 @@ size_t help_line_len(const char *ptr)
 	else if (wrap_location > 0)
 		return wrap_location;
 	else
-		return 0;
+		return 1;
 }
 
 #endif /* ENABLE_HELP */

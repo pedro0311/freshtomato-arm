@@ -1,7 +1,7 @@
 /**************************************************************************
  *   color.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -45,7 +45,6 @@ void set_colorpairs(void)
 {
 	const syntaxtype *sint;
 	bool using_defaults = FALSE;
-	short foreground, background;
 	size_t i;
 
 	/* Tell ncurses to enable colors. */
@@ -58,18 +57,16 @@ void set_colorpairs(void)
 
 	/* Initialize the color pairs for nano's interface elements. */
 	for (i = 0; i < NUMBER_OF_ELEMENTS; i++) {
-		bool bright = FALSE;
+		colortype *combo = color_combo[i];
 
-		if (specified_color_combo[i] != NULL &&
-						parse_color_names(specified_color_combo[i],
-								&foreground, &background, &bright)) {
-			if (foreground == -1 && !using_defaults)
-				foreground = COLOR_WHITE;
-			if (background == -1 && !using_defaults)
-				background = COLOR_BLACK;
-			init_pair(i + 1, foreground, background);
+		if (combo != NULL) {
+			if (combo->fg == -1 && !using_defaults)
+				combo->fg = COLOR_WHITE;
+			if (combo->bg == -1 && !using_defaults)
+				combo->bg = COLOR_BLACK;
+			init_pair(i + 1, combo->fg, combo->bg);
 			interface_color_pair[i] = COLOR_PAIR(i + 1) | A_BANDAID |
-										(bright ? A_BOLD : A_NORMAL);
+										(combo->bright ? A_BOLD : A_NORMAL);
 		} else {
 			if (i != FUNCTION_TAG)
 				interface_color_pair[i] = hilite_attribute;
@@ -77,8 +74,7 @@ void set_colorpairs(void)
 				interface_color_pair[i] = A_NORMAL;
 		}
 
-		free(specified_color_combo[i]);
-		specified_color_combo[i] = NULL;
+		free(color_combo[i]);
 	}
 
 	/* For each syntax, go through its list of colors and assign each
@@ -293,6 +289,7 @@ void check_the_multis(filestruct *line)
 	const colortype *ink;
 	bool astart, anend;
 	regmatch_t startmatch, endmatch;
+	char *afterstart;
 
 	/* If there is no syntax or no multiline regex, there is nothing to do. */
 	if (openfile->syntax == NULL || openfile->syntax->nmultis == 0)
@@ -306,7 +303,8 @@ void check_the_multis(filestruct *line)
 		alloc_multidata_if_needed(line);
 
 		astart = (regexec(ink->start, line->data, 1, &startmatch, 0) == 0);
-		anend = (regexec(ink->end, line->data, 1, &endmatch, 0) == 0);
+		afterstart = line->data + (astart ? startmatch.rm_eo : 0);
+		anend = (regexec(ink->end, afterstart, 1, &endmatch, 0) == 0);
 
 		/* Check whether the multidata still matches the current situation. */
 		if (line->multidata[ink->id] == CNONE ||
