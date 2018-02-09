@@ -978,6 +978,7 @@ REQUIRE_LIB_DEPS = @REQUIRE_LIB_DEPS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SSL_BACKENDS = @SSL_BACKENDS@
 SSL_ENABLED = @SSL_ENABLED@
 SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
@@ -990,6 +991,7 @@ USE_DARWINSSL = @USE_DARWINSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
 USE_LIBRTMP = @USE_LIBRTMP@
+USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
 USE_NGHTTP2 = @USE_NGHTTP2@
@@ -1080,11 +1082,12 @@ LIBDIR = $(top_builddir)/lib
 
 # These examples require external dependencies that may not be commonly
 # available on POSIX systems, so don't bother attempting to compile them here.
-COMPLICATED_EXAMPLES = curlgtk.c curlx.c htmltitle.cpp cacertinmem.c       \
-  ghiper.c hiperfifo.c htmltidy.c multithread.c          \
-  opensslthreadlock.c sampleconv.c synctime.c threaded-ssl.c evhiperfifo.c \
-  smooth-gtk-thread.c version-check.pl href_extractor.c asiohiper.cpp      \
-  multi-uv.c xmlstream.c usercertinmem.c sessioninfo.c
+COMPLICATED_EXAMPLES = curlgtk.c curlx.c htmltitle.cpp cacertinmem.c	\
+  ghiper.c hiperfifo.c htmltidy.c multithread.c opensslthreadlock.c	\
+  sampleconv.c synctime.c threaded-ssl.c evhiperfifo.c			\
+  smooth-gtk-thread.c version-check.pl href_extractor.c asiohiper.cpp	\
+  multi-uv.c xmlstream.c usercertinmem.c sessioninfo.c			\
+  threaded-shared-conn.c
 
 all: all-am
 
