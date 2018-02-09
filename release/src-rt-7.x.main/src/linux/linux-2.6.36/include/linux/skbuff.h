@@ -169,26 +169,19 @@ struct skb_shared_hwtstamps {
 	ktime_t	syststamp;
 };
 
-/**
- * struct skb_shared_tx - instructions for time stamping of outgoing packets
- * @hardware:		generate hardware time stamp
- * @software:		generate software time stamp
- * @in_progress:	device driver is going to provide
- *			hardware time stamp
- * @prevent_sk_orphan:	make sk reference available on driver level
- * @flags:		all shared_tx flags
- *
- * These flags are attached to packets as part of the
- * &skb_shared_info. Use skb_tx() to get a pointer.
- */
-union skb_shared_tx {
-	struct {
-		__u8	hardware:1,
-			software:1,
-			in_progress:1,
-			prevent_sk_orphan:1;
-	};
-	__u8 flags;
+/* Definitions for tx_flags in struct skb_shared_info */
+enum {
+	/* generate hardware time stamp */
+	SKBTX_HW_TSTAMP = 1 << 0,
+
+	/* generate software time stamp */
+	SKBTX_SW_TSTAMP = 1 << 1,
+
+	/* device driver is going to provide hardware time stamp */
+	SKBTX_IN_PROGRESS = 1 << 2,
+
+	/* ensure the originating sk reference is available on driver level */
+	SKBTX_DRV_NEEDS_SK_REF = 1 << 3,
 };
 
 /* This data is invariant across clones and lives at
@@ -201,7 +194,7 @@ struct skb_shared_info {
 	unsigned short	gso_segs;
 	unsigned short  gso_type;
 	__be32          ip6_frag_id;
-	union skb_shared_tx tx_flags;
+	__u8		tx_flags;
 	struct sk_buff	*frag_list;
 	struct skb_shared_hwtstamps hwtstamps;
 
@@ -599,6 +592,15 @@ extern unsigned int   skb_find_text(struct sk_buff *skb, unsigned int from,
 				    unsigned int to, struct ts_config *config,
 				    struct ts_state *state);
 
+extern __u32 __skb_get_rxhash(struct sk_buff *skb);
+static inline __u32 skb_get_rxhash(struct sk_buff *skb)
+{
+	if (!skb->rxhash)
+		skb->rxhash = __skb_get_rxhash(skb);
+
+	return skb->rxhash;
+}
+
 #ifdef NET_SKBUFF_DATA_USES_OFFSET
 static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 {
@@ -617,11 +619,6 @@ static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 static inline struct skb_shared_hwtstamps *skb_hwtstamps(struct sk_buff *skb)
 {
 	return &skb_shinfo(skb)->hwtstamps;
-}
-
-static inline union skb_shared_tx *skb_tx(struct sk_buff *skb)
-{
-	return &skb_shinfo(skb)->tx_flags;
 }
 
 /**
@@ -2046,8 +2043,8 @@ extern void skb_tstamp_tx(struct sk_buff *orig_skb,
 
 static inline void sw_tx_timestamp(struct sk_buff *skb)
 {
-	union skb_shared_tx *shtx = skb_tx(skb);
-	if (shtx->software && !shtx->in_progress)
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP &&
+	    !(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS))
 		skb_tstamp_tx(skb, NULL);
 }
 
