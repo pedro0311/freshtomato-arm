@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -818,6 +818,10 @@ void usage(void)
 		N_("Fix numeric keypad key confusion problem"));
 	print_opt("-L", "--nonewlines",
 		N_("Don't add newlines to the ends of files"));
+#ifdef ENABLED_WRAPORJUSTIFY
+	print_opt("-M", "--trimblanks",
+		N_("Trim tail spaces when hard-wrapping"));
+#endif
 #ifndef NANO_TINY
 	print_opt("-N", "--noconvert",
 		N_("Don't convert files from DOS/Mac format"));
@@ -913,8 +917,8 @@ void version(void)
 #else
 	printf(_(" GNU nano, version %s\n"), VERSION);
 #endif
-	printf(" (C) 1999-2011, 2013-2017 Free Software Foundation, Inc.\n");
-	printf(_(" (C) 2014-%s the contributors to nano\n"), "2017");
+	printf(" (C) 1999-2011, 2013-2018 Free Software Foundation, Inc.\n");
+	printf(_(" (C) 2014-%s the contributors to nano\n"), "2018");
 	printf(_(" Email: nano@nano-editor.org	Web: https://nano-editor.org/"));
 	printf(_("\n Compiled options:"));
 
@@ -1556,6 +1560,60 @@ void unbound_key(int code)
 		statusline(ALERT, _("Unbound key: %c"), code);
 }
 
+#ifdef ENABLE_MOUSE
+/* Handle a mouse click on the edit window or the shortcut list. */
+int do_mouse(void)
+{
+	int click_row, click_col;
+	int retval = get_mouseinput(&click_row, &click_col, TRUE);
+
+	/* If the click is wrong or already handled, we're done. */
+	if (retval != 0)
+		return retval;
+
+	/* If the click was in the edit window, put the cursor in that spot. */
+	if (wmouse_trafo(edit, &click_row, &click_col, FALSE)) {
+		filestruct *current_save = openfile->current;
+		ssize_t row_count = click_row - openfile->current_y;
+		size_t leftedge;
+#ifndef NANO_TINY
+		size_t current_x_save = openfile->current_x;
+		bool sameline = (click_row == openfile->current_y);
+			/* Whether the click was on the row where the cursor is. */
+
+		if (ISSET(SOFTWRAP))
+			leftedge = leftedge_for(xplustabs(), openfile->current);
+		else
+#endif
+			leftedge = get_page_start(xplustabs());
+
+		/* Move current up or down to the row that was clicked on. */
+		if (row_count < 0)
+			go_back_chunks(-row_count, &openfile->current, &leftedge);
+		else
+			go_forward_chunks(row_count, &openfile->current, &leftedge);
+
+		openfile->current_x = actual_x(openfile->current->data,
+								actual_last_column(leftedge, click_col));
+
+#ifndef NANO_TINY
+		/* Clicking where the cursor is toggles the mark, as does clicking
+		 * beyond the line length with the cursor at the end of the line. */
+		if (sameline && openfile->current_x == current_x_save)
+			do_mark();
+		else
+#endif
+			/* The cursor moved; clean the cutbuffer on the next cut. */
+			cutbuffer_reset();
+
+		edit_redraw(current_save, CENTERING);
+	}
+
+	/* No more handling is needed. */
+	return 2;
+}
+#endif /* ENABLE_MOUSE */
+
 /* Read in a keystroke.  Act on the keystroke if it is a shortcut or a toggle;
  * otherwise, insert it into the edit buffer.  If allow_funcs is FALSE, don't
  * do anything with the keystroke -- just return it. */
@@ -1731,60 +1789,6 @@ int do_input(bool allow_funcs)
 	return input;
 }
 
-#ifdef ENABLE_MOUSE
-/* Handle a mouse click on the edit window or the shortcut list. */
-int do_mouse(void)
-{
-	int mouse_col, mouse_row;
-	int retval = get_mouseinput(&mouse_col, &mouse_row, TRUE);
-
-	/* If the click is wrong or already handled, we're done. */
-	if (retval != 0)
-		return retval;
-
-	/* If the click was in the edit window, put the cursor in that spot. */
-	if (wmouse_trafo(edit, &mouse_row, &mouse_col, FALSE)) {
-		filestruct *current_save = openfile->current;
-		ssize_t row_count = mouse_row - openfile->current_y;
-		size_t leftedge;
-#ifndef NANO_TINY
-		size_t current_x_save = openfile->current_x;
-		bool sameline = (mouse_row == openfile->current_y);
-			/* Whether the click was on the row where the cursor is. */
-
-		if (ISSET(SOFTWRAP))
-			leftedge = leftedge_for(xplustabs(), openfile->current);
-		else
-#endif
-			leftedge = get_page_start(xplustabs());
-
-		/* Move current up or down to the row corresponding to mouse_row. */
-		if (row_count < 0)
-			go_back_chunks(-row_count, &openfile->current, &leftedge);
-		else
-			go_forward_chunks(row_count, &openfile->current, &leftedge);
-
-		openfile->current_x = actual_x(openfile->current->data,
-								actual_last_column(leftedge, mouse_col));
-
-#ifndef NANO_TINY
-		/* Clicking where the cursor is toggles the mark, as does clicking
-		 * beyond the line length with the cursor at the end of the line. */
-		if (sameline && openfile->current_x == current_x_save)
-			do_mark();
-		else
-#endif
-			/* The cursor moved; clean the cutbuffer on the next cut. */
-			cutbuffer_reset();
-
-		edit_redraw(current_save, CENTERING);
-	}
-
-	/* No more handling is needed. */
-	return 2;
-}
-#endif /* ENABLE_MOUSE */
-
 /* The user typed output_len multibyte characters.  Add them to the edit
  * buffer, filtering out all ASCII control characters if allow_cntrls is
  * TRUE. */
@@ -1916,6 +1920,9 @@ int main(int argc, char **argv)
 #endif
 		{"rebindkeypad", 0, NULL, 'K'},
 		{"nonewlines", 0, NULL, 'L'},
+#ifdef ENABLED_WRAPORJUSTIFY
+		{"trimblanks", 0, NULL, 'M'},
+#endif
 		{"morespace", 0, NULL, 'O'},
 #ifdef ENABLE_JUSTIFY
 		{"quotestr", 1, NULL, 'Q'},
@@ -1980,6 +1987,11 @@ int main(int argc, char **argv)
 		{NULL, 0, NULL, 0}
 	};
 
+#ifdef __linux__
+	/* Check whether we're running on a Linux console. */
+	console = (getenv("DISPLAY") == NULL);
+#endif
+
 	/* Back up the terminal settings so that they can be restored. */
 	tcgetattr(0, &oldterm);
 
@@ -2026,7 +2038,7 @@ int main(int argc, char **argv)
 
 	while ((optchr =
 		getopt_long(argc, argv,
-				"ABC:DEFGHIKLNOPQ:RST:UVWX:Y:abcdefghijklmno:pqr:s:tuvwxz$",
+				"ABC:DEFGHIKLMNOPQ:RST:UVWX:Y:abcdefghijklmno:pqr:s:tuvwxz$",
 				long_options, NULL)) != -1) {
 		switch (optchr) {
 			case 'b':
@@ -2080,6 +2092,11 @@ int main(int argc, char **argv)
 			case 'L':
 				SET(NO_NEWLINES);
 				break;
+#ifdef ENABLED_WRAPORJUSTIFY
+			case 'M':
+				SET(TRIM_BLANKS);
+				break;
+#endif
 #ifndef NANO_TINY
 			case 'N':
 				SET(NO_CONVERT);
@@ -2468,13 +2485,19 @@ int main(int argc, char **argv)
 	if (initscr() == NULL)
 		exit(1);
 
+#ifdef ENABLE_COLOR
+	set_colorpairs();
+#else
+	interface_color_pair[TITLE_BAR] = hilite_attribute;
+	interface_color_pair[LINE_NUMBER] = hilite_attribute;
+	interface_color_pair[SELECTED_TEXT] = hilite_attribute;
+	interface_color_pair[STATUS_BAR] = hilite_attribute;
+	interface_color_pair[KEY_COMBO] = hilite_attribute;
+	interface_color_pair[FUNCTION_TAG] = A_NORMAL;
+#endif
+
 	/* Set up the terminal state. */
 	terminal_init();
-
-#ifdef __linux__
-	/* Check whether we're running on a Linux console. */
-	console = (getenv("DISPLAY") == NULL);
-#endif
 
 #ifdef DEBUG
 	fprintf(stderr, "Main: set up windows\n");
@@ -2492,17 +2515,6 @@ int main(int argc, char **argv)
 #ifdef ENABLE_MOUSE
 	/* Initialize mouse support. */
 	mouse_init();
-#endif
-
-#ifdef ENABLE_COLOR
-	set_colorpairs();
-#else
-	interface_color_pair[TITLE_BAR] = hilite_attribute;
-	interface_color_pair[LINE_NUMBER] = hilite_attribute;
-	interface_color_pair[SELECTED_TEXT] = hilite_attribute;
-	interface_color_pair[STATUS_BAR] = hilite_attribute;
-	interface_color_pair[KEY_COMBO] = hilite_attribute;
-	interface_color_pair[FUNCTION_TAG] = A_NORMAL;
 #endif
 
 	/* Ask ncurses for the key codes for Control+Left/Right/Up/Down. */
@@ -2624,7 +2636,6 @@ int main(int argc, char **argv)
 			refresh_needed = TRUE;
 		}
 #endif
-
 		if (currmenu != MMAIN)
 			display_main_list();
 
@@ -2651,7 +2662,4 @@ int main(int argc, char **argv)
 		/* Read in and interpret keystrokes. */
 		do_input(TRUE);
 	}
-
-	/* We should never get here. */
-	assert(FALSE);
 }
