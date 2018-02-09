@@ -119,20 +119,20 @@ noinst_PROGRAMS = chkhostname$(EXEEXT) libauthretry$(EXEEXT) \
 	lib598$(EXEEXT) lib599$(EXEEXT) lib643$(EXEEXT) \
 	lib644$(EXEEXT) lib645$(EXEEXT) lib650$(EXEEXT) \
 	lib651$(EXEEXT) lib652$(EXEEXT) lib653$(EXEEXT) \
-	lib1500$(EXEEXT) lib1501$(EXEEXT) lib1502$(EXEEXT) \
-	lib1503$(EXEEXT) lib1504$(EXEEXT) lib1505$(EXEEXT) \
-	lib1506$(EXEEXT) lib1507$(EXEEXT) lib1508$(EXEEXT) \
-	lib1509$(EXEEXT) lib1510$(EXEEXT) lib1511$(EXEEXT) \
-	lib1512$(EXEEXT) lib1513$(EXEEXT) lib1514$(EXEEXT) \
-	lib1515$(EXEEXT) lib1517$(EXEEXT) lib1520$(EXEEXT) \
-	lib1521$(EXEEXT) lib1525$(EXEEXT) lib1526$(EXEEXT) \
-	lib1527$(EXEEXT) lib1528$(EXEEXT) lib1529$(EXEEXT) \
-	lib1530$(EXEEXT) lib1531$(EXEEXT) lib1532$(EXEEXT) \
-	lib1533$(EXEEXT) lib1534$(EXEEXT) lib1535$(EXEEXT) \
-	lib1536$(EXEEXT) lib1537$(EXEEXT) lib1538$(EXEEXT) \
-	lib1540$(EXEEXT) lib1550$(EXEEXT) lib1551$(EXEEXT) \
-	lib1552$(EXEEXT) lib1553$(EXEEXT) lib1554$(EXEEXT) \
-	lib1900$(EXEEXT) lib2033$(EXEEXT)
+	lib654$(EXEEXT) lib1500$(EXEEXT) lib1501$(EXEEXT) \
+	lib1502$(EXEEXT) lib1503$(EXEEXT) lib1504$(EXEEXT) \
+	lib1505$(EXEEXT) lib1506$(EXEEXT) lib1507$(EXEEXT) \
+	lib1508$(EXEEXT) lib1509$(EXEEXT) lib1510$(EXEEXT) \
+	lib1511$(EXEEXT) lib1512$(EXEEXT) lib1513$(EXEEXT) \
+	lib1514$(EXEEXT) lib1515$(EXEEXT) lib1517$(EXEEXT) \
+	lib1520$(EXEEXT) lib1521$(EXEEXT) lib1525$(EXEEXT) \
+	lib1526$(EXEEXT) lib1527$(EXEEXT) lib1528$(EXEEXT) \
+	lib1529$(EXEEXT) lib1530$(EXEEXT) lib1531$(EXEEXT) \
+	lib1532$(EXEEXT) lib1533$(EXEEXT) lib1534$(EXEEXT) \
+	lib1535$(EXEEXT) lib1536$(EXEEXT) lib1537$(EXEEXT) \
+	lib1538$(EXEEXT) lib1540$(EXEEXT) lib1550$(EXEEXT) \
+	lib1551$(EXEEXT) lib1552$(EXEEXT) lib1553$(EXEEXT) \
+	lib1554$(EXEEXT) lib1900$(EXEEXT) lib2033$(EXEEXT)
 @USE_CPPFLAG_CURL_STATICLIB_TRUE@am__append_1 = -DCURL_STATICLIB
 @CURL_LT_SHLIB_USE_NO_UNDEFINED_TRUE@am__append_2 = -no-undefined
 @CURL_LT_SHLIB_USE_MIMPURE_TEXT_TRUE@am__append_3 = -mimpure-text
@@ -958,17 +958,22 @@ am_lib653_OBJECTS = lib653-lib653.$(OBJEXT) $(am__objects_246)
 lib653_OBJECTS = $(am_lib653_OBJECTS)
 lib653_LDADD = $(LDADD)
 lib653_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am__objects_247 = libauthretry-first.$(OBJEXT)
+am__objects_247 = lib654-first.$(OBJEXT)
+am_lib654_OBJECTS = lib654-lib654.$(OBJEXT) $(am__objects_247)
+lib654_OBJECTS = $(am_lib654_OBJECTS)
+lib654_LDADD = $(LDADD)
+lib654_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am__objects_248 = libauthretry-first.$(OBJEXT)
 am_libauthretry_OBJECTS = libauthretry-libauthretry.$(OBJEXT) \
-	$(am__objects_247)
+	$(am__objects_248)
 libauthretry_OBJECTS = $(am_libauthretry_OBJECTS)
 libauthretry_LDADD = $(LDADD)
 libauthretry_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am__objects_248 = libntlmconnect-first.$(OBJEXT)
-am__objects_249 = libntlmconnect-testutil.$(OBJEXT)
-am__objects_250 = ../../lib/libntlmconnect-warnless.$(OBJEXT)
+am__objects_249 = libntlmconnect-first.$(OBJEXT)
+am__objects_250 = libntlmconnect-testutil.$(OBJEXT)
+am__objects_251 = ../../lib/libntlmconnect-warnless.$(OBJEXT)
 am_libntlmconnect_OBJECTS = libntlmconnect-libntlmconnect.$(OBJEXT) \
-	$(am__objects_248) $(am__objects_249) $(am__objects_250)
+	$(am__objects_249) $(am__objects_250) $(am__objects_251)
 libntlmconnect_OBJECTS = $(am_libntlmconnect_OBJECTS)
 libntlmconnect_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -1048,8 +1053,8 @@ SOURCES = $(libhostname_la_SOURCES) $(libstubgss_la_SOURCES) \
 	$(lib591_SOURCES) $(lib597_SOURCES) $(lib598_SOURCES) \
 	$(lib599_SOURCES) $(lib643_SOURCES) $(lib644_SOURCES) \
 	$(lib645_SOURCES) $(lib650_SOURCES) $(lib651_SOURCES) \
-	$(lib652_SOURCES) $(lib653_SOURCES) $(libauthretry_SOURCES) \
-	$(libntlmconnect_SOURCES)
+	$(lib652_SOURCES) $(lib653_SOURCES) $(lib654_SOURCES) \
+	$(libauthretry_SOURCES) $(libntlmconnect_SOURCES)
 DIST_SOURCES = $(libhostname_la_SOURCES) \
 	$(am__libstubgss_la_SOURCES_DIST) $(chkhostname_SOURCES) \
 	$(lib1500_SOURCES) $(lib1501_SOURCES) $(lib1502_SOURCES) \
@@ -1094,7 +1099,7 @@ DIST_SOURCES = $(libhostname_la_SOURCES) \
 	$(lib597_SOURCES) $(lib598_SOURCES) $(lib599_SOURCES) \
 	$(lib643_SOURCES) $(lib644_SOURCES) $(lib645_SOURCES) \
 	$(lib650_SOURCES) $(lib651_SOURCES) $(lib652_SOURCES) \
-	$(lib653_SOURCES) $(libauthretry_SOURCES) \
+	$(lib653_SOURCES) $(lib654_SOURCES) $(libauthretry_SOURCES) \
 	$(libntlmconnect_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
@@ -1247,6 +1252,7 @@ REQUIRE_LIB_DEPS = @REQUIRE_LIB_DEPS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SSL_BACKENDS = @SSL_BACKENDS@
 SSL_ENABLED = @SSL_ENABLED@
 SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
@@ -1259,6 +1265,7 @@ USE_DARWINSSL = @USE_DARWINSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
 USE_LIBRTMP = @USE_LIBRTMP@
+USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
 USE_NGHTTP2 = @USE_NGHTTP2@
@@ -1595,6 +1602,8 @@ lib652_SOURCES = lib652.c $(SUPPORTFILES)
 lib652_CPPFLAGS = $(AM_CPPFLAGS)
 lib653_SOURCES = lib653.c $(SUPPORTFILES)
 lib653_CPPFLAGS = $(AM_CPPFLAGS)
+lib654_SOURCES = lib654.c $(SUPPORTFILES)
+lib654_CPPFLAGS = $(AM_CPPFLAGS)
 lib1500_SOURCES = lib1500.c $(SUPPORTFILES) $(TESTUTIL)
 lib1500_LDADD = $(TESTUTIL_LIBS)
 lib1500_CPPFLAGS = $(AM_CPPFLAGS)
@@ -2436,6 +2445,10 @@ lib653$(EXEEXT): $(lib653_OBJECTS) $(lib653_DEPENDENCIES) $(EXTRA_lib653_DEPENDE
 	@rm -f lib653$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(lib653_OBJECTS) $(lib653_LDADD) $(LIBS)
 
+lib654$(EXEEXT): $(lib654_OBJECTS) $(lib654_DEPENDENCIES) $(EXTRA_lib654_DEPENDENCIES) 
+	@rm -f lib654$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(lib654_OBJECTS) $(lib654_LDADD) $(LIBS)
+
 libauthretry$(EXEEXT): $(libauthretry_OBJECTS) $(libauthretry_DEPENDENCIES) $(EXTRA_libauthretry_DEPENDENCIES) 
 	@rm -f libauthretry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(libauthretry_OBJECTS) $(libauthretry_LDADD) $(LIBS)
@@ -2829,6 +2842,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib652-lib652.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib653-first.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib653-lib653.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib654-first.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib654-lib654.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libauthretry-first.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libauthretry-libauthretry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhostname_la-sethostname.Plo@am__quote@
@@ -8124,6 +8139,34 @@ lib653-first.obj: first.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='first.c' object='lib653-first.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib653_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib653-first.obj `if test -f 'first.c'; then $(CYGPATH_W) 'first.c'; else $(CYGPATH_W) '$(srcdir)/first.c'; fi`
+
+lib654-lib654.o: lib654.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib654-lib654.o -MD -MP -MF $(DEPDIR)/lib654-lib654.Tpo -c -o lib654-lib654.o `test -f 'lib654.c' || echo '$(srcdir)/'`lib654.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lib654-lib654.Tpo $(DEPDIR)/lib654-lib654.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lib654.c' object='lib654-lib654.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib654-lib654.o `test -f 'lib654.c' || echo '$(srcdir)/'`lib654.c
+
+lib654-lib654.obj: lib654.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib654-lib654.obj -MD -MP -MF $(DEPDIR)/lib654-lib654.Tpo -c -o lib654-lib654.obj `if test -f 'lib654.c'; then $(CYGPATH_W) 'lib654.c'; else $(CYGPATH_W) '$(srcdir)/lib654.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lib654-lib654.Tpo $(DEPDIR)/lib654-lib654.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lib654.c' object='lib654-lib654.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib654-lib654.obj `if test -f 'lib654.c'; then $(CYGPATH_W) 'lib654.c'; else $(CYGPATH_W) '$(srcdir)/lib654.c'; fi`
+
+lib654-first.o: first.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib654-first.o -MD -MP -MF $(DEPDIR)/lib654-first.Tpo -c -o lib654-first.o `test -f 'first.c' || echo '$(srcdir)/'`first.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lib654-first.Tpo $(DEPDIR)/lib654-first.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='first.c' object='lib654-first.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib654-first.o `test -f 'first.c' || echo '$(srcdir)/'`first.c
+
+lib654-first.obj: first.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib654-first.obj -MD -MP -MF $(DEPDIR)/lib654-first.Tpo -c -o lib654-first.obj `if test -f 'first.c'; then $(CYGPATH_W) 'first.c'; else $(CYGPATH_W) '$(srcdir)/first.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lib654-first.Tpo $(DEPDIR)/lib654-first.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='first.c' object='lib654-first.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib654_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib654-first.obj `if test -f 'first.c'; then $(CYGPATH_W) 'first.c'; else $(CYGPATH_W) '$(srcdir)/first.c'; fi`
 
 libauthretry-libauthretry.o: libauthretry.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libauthretry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libauthretry-libauthretry.o -MD -MP -MF $(DEPDIR)/libauthretry-libauthretry.Tpo -c -o libauthretry-libauthretry.o `test -f 'libauthretry.c' || echo '$(srcdir)/'`libauthretry.c

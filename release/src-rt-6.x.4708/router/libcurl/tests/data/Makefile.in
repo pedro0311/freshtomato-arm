@@ -21,7 +21,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) 1998 - 2018, Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -280,6 +280,7 @@ REQUIRE_LIB_DEPS = @REQUIRE_LIB_DEPS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SSL_BACKENDS = @SSL_BACKENDS@
 SSL_ENABLED = @SSL_ENABLED@
 SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
@@ -292,6 +293,7 @@ USE_DARWINSSL = @USE_DARWINSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
 USE_LIBRTMP = @USE_LIBRTMP@
+USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
 USE_NGHTTP2 = @USE_NGHTTP2@
@@ -386,7 +388,7 @@ test190 test191 test192 test193 test194 test195 test196 test197 test198 \
 test199 test200 test201 test202 test203 test204 test205 test206 test207 \
 test208 test209 test210 test211 test212 test213 test214 test215 test216 \
 test217 test218 test219 test220 test221 test222 test223 test224 test225 \
-test226 test227 test228 test229 test230 test231         test233 test234 \
+test226 test227 test228 test229 test230 test231 test232 test233 test234 \
 test235 test236 test237 test238 test239 test240 test241 test242 test243 \
 test244 test245 test246 test247 test248 test249 test250 test251 test252 \
 test253 test254 test255 test256 test257 test258 test259 test260 test261 \
@@ -396,9 +398,10 @@ test280 test281 test282 test283 test284 test285 test286 test287 test288 \
 test289 test290 test291 test292 test293 test294 test295 test296 test297 \
 test298 test299 test300 test301 test302 test303 test304 test305 test306 \
 test307 test308 test309 test310 test311 test312 test313 test314 test315 \
-                                test320 test321 test322 test323 test324 \
+test316 test317 test318         test320 test321 test322 test323 test324 \
 test325 \
 test350 test351 test352 test353 test354 \
+test393 test394 test395 \
 \
 test400 test401 test402 test403 test404 test405 test406 test407 test408 \
 test409 \
@@ -420,7 +423,7 @@ test617 test618 test619 test620 test621 test622 test623 test624 test625 \
 test626 test627 test628 test629 test630 test631 test632 test633 test634 \
 test635 test636 test637 test638 test639 test640 test641 test642 \
 test643 test644 test645 test646 test647 test648 test649 test650 test651 \
-test652 test653 \
+test652 test653 test654 \
 \
 test700 test701 test702 test703 test704 test705 test706 test707 test708 \
 test709 test710 test711 test712 test713 test714 test715 \
@@ -436,7 +439,7 @@ test850 test851 test852 test853 test854 test855 test856 test857 test858 \
 test859 test860 test861 test862 test863 test864 test865 test866 test867 \
 test868 test869 test870 test871 test872 test873 test874 test875 test876 \
 test877 test878 test879 test880 test881 test882 test883 test884 test885 \
-test886 test887 test888 test889 test890 \
+test886 test887 test888 test889 test890 test891 \
 \
 test900 test901 test902 test903 test904 test905 test906 test907 test908 \
 test909 test910 test911 test912 test913 test914 test915 test916 test917 \
@@ -501,7 +504,7 @@ test1424 test1425 test1426 test1427 \
 test1428 test1429 test1430 test1431 test1432 test1433 test1434 test1435 \
 test1436 test1437 test1438 test1439 test1440 test1441 test1442 test1443 \
 test1444 test1445 test1446 test1447 test1448 test1449 test1450 test1451 \
-test1452 test1453 \
+test1452 test1453 test1454 \
 test1500 test1501 test1502 test1503 test1504 test1505 test1506 test1507 \
 test1508 test1509 test1510 test1511 test1512 test1513 test1514 test1515 \
 test1516 test1517 \
@@ -530,7 +533,7 @@ test2048 test2049 test2050 test2051 test2052 test2053 test2054 test2055 \
 test2056 test2057 test2058 test2059 test2060 test2061 test2062 test2063 \
 test2064 test2065 test2066 test2067 test2068 test2069 \
 \
-test2070 test2071 test2072
+test2070 test2071 test2072 test2073
 
 
 # TESTCASES are taken from Makefile.inc
