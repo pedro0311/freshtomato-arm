@@ -685,12 +685,7 @@ start_inotify(void)
 				{
 					DPRINTF(E_DEBUG, L_INOTIFY,  "The directory %s was %s.\n",
 						path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
-						// Tomato
-						begin_scan();
-						sleep(5);
-						if ( wait_for_mount(path_buf) >= 0 )
-							monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
-						end_scan();
+					monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
 				}
 				else if ( (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE)) &&
 				          (lstat(path_buf, &st) == 0) )

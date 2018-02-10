@@ -31,11 +31,7 @@
 #include <string.h>
 
 #include "config.h"
-#include "getifaddr.h"
 #include "upnpdescgen.h"
-#include "minidlnapath.h"
-#include "upnpglobalvars.h"
-#include "upnpdescstrings.h"
 
 char uuidvalue[] = "uuid:12345678-0000-0000-0000-00000000abcd";
 char friendly_name[] = "localhost: system_type";
