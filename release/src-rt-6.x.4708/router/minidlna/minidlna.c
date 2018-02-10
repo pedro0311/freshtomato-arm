@@ -287,9 +287,7 @@ open_db(sqlite3 **sq3)
 	sql_exec(db, "pragma page_size = 4096");
 	sql_exec(db, "pragma journal_mode = OFF");
 	sql_exec(db, "pragma synchronous = OFF;");
-	// this sets the sqlite database cache size
-	// original code had 8192 = 32MB - reduce it to 4MB
-	sql_exec(db, "pragma default_cache_size = 1024;");
+	sql_exec(db, "pragma default_cache_size = 8192;");
 
 	return new_db;
 }
@@ -894,7 +892,7 @@ init(int argc, char **argv)
 		}
 	}
 
-	if (runtime_vars.port < 0)
+	if (runtime_vars.port <= 0)
 	{
 		printf("Usage:\n\t"
 			"%s [-d] [-v] [-f config_file] [-p port]\n"
@@ -953,7 +951,6 @@ init(int argc, char **argv)
 		if (access(db_path, F_OK) != 0)
 			make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
 		snprintf(buf, sizeof(buf), "%s/minidlna.log", log_path);
-		unlink("/var/notice/dlna");
 		path = buf;
 		#endif
 	}
@@ -1086,21 +1083,9 @@ main(int argc, char **argv)
 			DPRINTF(E_FATAL, L_GENERAL, "Failed to connect to MiniSSDPd. EXITING");
 	}
 	/* open socket for HTTP connections. */
-	shttpl = OpenAndConfHTTPSocket((runtime_vars.port > 0) ? runtime_vars.port : 0);
+	shttpl = OpenAndConfHTTPSocket(runtime_vars.port);
 	if (shttpl < 0)
 		DPRINTF(E_FATAL, L_GENERAL, "Failed to open socket for HTTP. EXITING\n");
-
-	if(runtime_vars.port <= 0)
-	{
-		struct sockaddr_in sockinfo;
-		socklen_t len = sizeof(struct sockaddr_in);
-		if (getsockname(shttpl, (struct sockaddr *)&sockinfo, &len) < 0)
-		{
-			DPRINTF(E_FATAL, L_GENERAL, "getsockname(): %s. EXITING\n", strerror(errno));
-		}
-		runtime_vars.port = ntohs(sockinfo.sin_port);
-	}
-
 	DPRINTF(E_WARN, L_GENERAL, "HTTP listening on port %d\n", runtime_vars.port);
 
 #ifdef TIVO_SUPPORT
