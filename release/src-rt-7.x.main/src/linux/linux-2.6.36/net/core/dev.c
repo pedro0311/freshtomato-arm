@@ -2291,8 +2291,11 @@ __u32 __skb_get_rxhash(struct sk_buff *skb)
 		if (!pskb_may_pull(skb, sizeof(*ip) + nhoff))
 			goto done;
 
-		ip = (struct iphdr *) skb->data + nhoff;
-		ip_proto = ip->protocol;
+		ip = (struct iphdr *) (skb->data + nhoff);
+		if (ip->frag_off & htons(IP_MF | IP_OFFSET))
+			ip_proto = 0;
+		else
+			ip_proto = ip->protocol;
 		addr1 = (__force u32) ip->saddr;
 		addr2 = (__force u32) ip->daddr;
 		ihl = ip->ihl;
@@ -2301,7 +2304,7 @@ __u32 __skb_get_rxhash(struct sk_buff *skb)
 		if (!pskb_may_pull(skb, sizeof(*ip6) + nhoff))
 			goto done;
 
-		ip6 = (struct ipv6hdr *) skb->data + nhoff;
+		ip6 = (struct ipv6hdr *) (skb->data + nhoff);
 		ip_proto = ip6->nexthdr;
 		addr1 = (__force u32) ip6->saddr.s6_addr32[3];
 		addr2 = (__force u32) ip6->daddr.s6_addr32[3];
@@ -2380,6 +2383,7 @@ static int get_rps_cpu(struct net_device *dev, struct sk_buff *skb,
 	if (!rxqueue->rps_map && !rxqueue->rps_flow_table)
 		goto done;
 
+	skb_reset_network_header(skb);
 	if (!skb_get_rxhash(skb))
 		goto done;
 
