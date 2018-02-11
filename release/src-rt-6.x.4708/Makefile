@@ -174,7 +174,7 @@ endif
 # for R7000, R6400, R6300v2, R6250
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(CONFIG_BCM7),y)
-	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,image/tomato-R8000-ARM-$(current_TOMATO_VER)$(beta)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,image/tomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
 ifeq ($(NVRAM_128K),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400,3.0.0.4,image/tomato-R6400-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
