@@ -484,7 +484,7 @@ retry:
 	skb->dev = dev;
 	skb->priority = sk->sk_priority;
 	skb->mark = sk->sk_mark;
-	err = sock_tx_timestamp(msg, sk, skb_tx(skb));
+	err = sock_tx_timestamp(sk, &skb_shinfo(skb)->tx_flags);
 	if (err < 0)
 		goto out_unlock;
 
@@ -1205,7 +1205,7 @@ static int packet_snd(struct socket *sock,
 	err = skb_copy_datagram_from_iovec(skb, offset, msg->msg_iov, 0, len);
 	if (err)
 		goto out_free;
-	err = sock_tx_timestamp(msg, sk, skb_tx(skb));
+	err = sock_tx_timestamp(sk, &skb_shinfo(skb)->tx_flags);
 	if (err < 0)
 		goto out_free;
 
