@@ -1743,11 +1743,13 @@ endif
 
 minidlna: zlib sqlite ffmpeg libogg flac jpeg libexif libid3tag libvorbis
 	@$(SEP)
+	$(call patch_files,minidlna)
 	@$(MAKE) -C minidlna CC=$(CC) $(if $(MEDIA_SERVER_STATIC),STATIC=1,) minidlna $(PARALLEL_BUILD)
 
 minidlna-clean:
 	-@$(MAKE) -C minidlna clean
 	@rm -f minidlna/stamp-h1
+	$(call unpatch_files,minidlna)
 
 minidlna-install:
 	@$(SEP)
