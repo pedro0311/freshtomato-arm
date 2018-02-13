@@ -27,7 +27,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <sys/statfs.h>
 
 #include "config.h"
 
@@ -66,40 +65,6 @@ struct virtual_item
 	char parentID[64];
 	char name[256];
 };
-
-// Tomato
-static int
-is_external_path(const char * path)
-{
-	struct statfs sf;
-
-	if (statfs(path, &sf) == 0)
-	{
-		/* if it returns squashfs or tmpfs type, assume it's not mounted */
-		return (sf.f_type != 0x73717368 && sf.f_type != 0x1021994);
-	}
-	else
-	{
-		return -1;
-	}
-}
-
-/* This could be a directory in tmpfs.
- * Mounting a USB drive on this directory can take some time,
- * so let's wait up to 5 seconds and hope that mount will complete.
- * If not, just proceed with scanning - after all we may not mount
- * anything on this directory.
- */
-int
-wait_for_mount(const char * path)
-{
-	int r, n = 50;
-	while ( ((r = is_external_path(path)) == 0) && (n-- > 0) )
-	{
-		usleep(100 * 1000);
-	}
-	return r;
-}
 
 int64_t
 get_next_available_id(const char *table, const char *parentID)
@@ -942,8 +907,6 @@ start_scanner(void)
 	if( GETFLAG(RESCAN_MASK) )
 		return start_rescan();
 
-	begin_scan(); // Tomato
-	//_notify_start();
 	for( media_path = media_dirs; media_path != NULL; media_path = media_path->next )
 	{
 		int64_t id;
@@ -966,9 +929,6 @@ start_scanner(void)
 		ScanDirectory(media_path->path, parent, media_path->types);
 		sql_exec(db, "INSERT into SETTINGS values (%Q, %Q)", "media_dir", media_path->path);
 	}
-	//_notify_stop();
-	end_scan(); // Tomato
-
 	/* Create this index after scanning, so it doesn't slow down the scanning process.
 	 * This index is very useful for large libraries used with an XBox360 (or any
 	 * client that uses UPnPSearch on large containers). */

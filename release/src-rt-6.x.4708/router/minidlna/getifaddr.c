@@ -65,7 +65,6 @@
 #include "minissdp.h"
 #include "utils.h"
 #include "log.h"
-#include "ifaddrs.c"
 
 static int
 getifaddr(const char *ifname)

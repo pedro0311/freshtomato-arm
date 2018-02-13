@@ -347,8 +347,6 @@ mime_to_ext(const char * mime)
 				return "3gp";
 			else if( strcmp(mime, "application/ogg") == 0 )
 				return "ogg";
-			else if( strcmp(mime+6, "x-dsd") == 0 )
-				return "dsd";
 			break;
 		case 'v':
 			if( strcmp(mime+6, "avi") == 0 )
@@ -416,8 +414,7 @@ is_audio(const char * file)
 		ends_with(file, ".m4a") || ends_with(file, ".aac")  ||
 		ends_with(file, ".mp4") || ends_with(file, ".m4p")  ||
 		ends_with(file, ".wav") || ends_with(file, ".ogg")  ||
-		ends_with(file, ".pcm") || ends_with(file, ".3gp")  ||
-		ends_with(file, ".dsf") || ends_with(file, ".dff"));
+		ends_with(file, ".pcm") || ends_with(file, ".3gp"));
 }
 
 int
@@ -533,36 +530,4 @@ valid_media_types(const char *path)
 	}
 
 	return ALL_MEDIA;
-}
-
-void
-begin_scan()
-{
-	FILE * flag;
-
-#ifdef READYNAS
-	flag = fopen("/ramfs/.upnp-av_scan", "w");
-	if( flag )
-		fclose(flag);
-#else
-	mkdir("/var/notice", 0755);
-	flag = fopen("/var/notice/dlna", "w");
-	if( flag )
-	{
-		fprintf(flag, "Scan in progress");
-		fclose(flag);
-	}
-#endif
-}
-
-void
-end_scan()
-{
-#ifdef READYNAS
-	if( access("/ramfs/.rescan_done", F_OK) == 0 )
-		system("/bin/sh /ramfs/.rescan_done");
-	unlink("/ramfs/.upnp-av_scan");
-#else
-	unlink("/var/notice/dlna");
-#endif
 }

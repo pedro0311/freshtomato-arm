@@ -53,7 +53,6 @@
 
 #include "config.h"
 #include "upnpglobalvars.h"
-#include "upnpdescstrings.h"
 
 /* startup time */
 time_t startup_time = 0;
