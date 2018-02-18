@@ -1143,6 +1143,7 @@ void start_upnp(void)
 
 				char lanN_ipaddr[] = "lanXX_ipaddr";
 				char lanN_netmask[] = "lanXX_netmask";
+				char lanN_ifname[] = "lanXX_ifname";
 				char upnp_lanN[] = "upnp_lanXX";
 				char br;
 
@@ -1155,16 +1156,18 @@ void start_upnp(void)
 
 					sprintf(lanN_ipaddr, "lan%s_ipaddr", bridge);
 					sprintf(lanN_netmask, "lan%s_netmask", bridge);
+					sprintf(lanN_ifname, "lan%s_ifname", bridge);
 					sprintf(upnp_lanN, "upnp_lan%s", bridge);
 
 					char *lanip = nvram_safe_get(lanN_ipaddr);
 					char *lanmask = nvram_safe_get(lanN_netmask);
+					char *lanifname = nvram_safe_get(lanN_ifname);
 					char *lanlisten = nvram_safe_get(upnp_lanN);
 
-					if((strcmp(lanlisten,"1")==0) && (strcmp(lanip,"")!=0) && (strcmp(lanip,"0.0.0.0")!=0)) {
+					if((strcmp(lanlisten,"1")==0) && (strcmp(lanifname,"")!=0)) {
 						fprintf(f,
-							"listening_ip=%s/%s\n",
-							lanip, lanmask);
+							"listening_ip=%s\n",
+							lanifname);
 						int ports[4];
 						if ((ports[0] = nvram_get_int("upnp_min_port_ext")) > 0 &&
 							(ports[1] = nvram_get_int("upnp_max_port_ext")) > 0 &&
