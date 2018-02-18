@@ -1,4 +1,4 @@
-/* $Id: pcpserver.c,v 1.45 2017/12/12 11:43:30 nanard Exp $ */
+/* $Id: pcpserver.c,v 1.46 2018/01/16 00:50:48 nanard Exp $ */
 /* MiniUPnP project
  * Website : http://miniupnp.free.fr/
  * Author : Peter Tatrai
@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
    - IPv6 is always firewalled (this may need some work, NAT6* do exist)
 
    - we make the judgement based on (in order, picking first one available):
-     - third party adress
+     - third party address
      - internal client address
 
    TODO : handle NAT46, NAT64, NPT66. In addition, beyond FW/NAT

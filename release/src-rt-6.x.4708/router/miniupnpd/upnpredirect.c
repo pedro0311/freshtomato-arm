@@ -1,8 +1,8 @@
-/* $Id: upnpredirect.c,v 1.91 2016/02/16 12:15:02 nanard Exp $ */
+/* $Id: upnpredirect.c,v 1.92 2018/01/16 00:50:49 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2016 Thomas Bernard
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+ * (c) 2006-2018 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -277,7 +277,7 @@ int reload_from_lease_file()
 #endif
 
 /* upnp_redirect()
- * calls OS/fw dependant implementation of the redirection.
+ * calls OS/fw dependent implementation of the redirection.
  * protocol should be the string "TCP" or "UDP"
  * returns: 0 on success
  *          -1 failed to redirect
@@ -425,7 +425,7 @@ upnp_redirect_internal(const char * rhost, unsigned short eport,
 
 
 
-/* Firewall independant code which call the FW dependant code. */
+/* Firewall independent code which call the FW dependent code. */
 int
 upnp_get_redirection_infos(unsigned short eport, const char * protocol,
                            unsigned short * iport,

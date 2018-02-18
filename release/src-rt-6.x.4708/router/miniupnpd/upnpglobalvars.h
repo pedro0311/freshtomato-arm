@@ -1,8 +1,8 @@
-/* $Id: upnpglobalvars.h,v 1.44 2017/12/12 11:45:22 nanard Exp $ */
+/* $Id: upnpglobalvars.h,v 1.45 2018/01/16 00:50:49 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2017 Thomas Bernard
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+ * (c) 2006-2018 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -14,7 +14,7 @@
 #include "miniupnpdtypes.h"
 #include "config.h"
 
-/* name of the network interface used to acces internet */
+/* name of the network interface used to access internet */
 extern const char * ext_if_name;
 
 /* file to store all leases */
