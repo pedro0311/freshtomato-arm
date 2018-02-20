@@ -1473,8 +1473,10 @@ dropbear-install:
 dropbear-clean:
 	-@$(MAKE) -C dropbear clean
 	@rm -f dropbear/config.h
+	$(call unpatch_files,dropbear)
 
 dropbear/config.h:
+	$(call patch_files,dropbear)
 	cd dropbear && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
