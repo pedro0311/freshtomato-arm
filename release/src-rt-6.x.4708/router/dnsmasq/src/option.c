@@ -1163,7 +1163,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	    case 'd':
 	    case 'D':
 	      fac *= 24;
-	      /* fall though */
+	      /* fall through */
 	    case 'h':
 	    case 'H':
 	      fac *= 60;
@@ -2970,7 +2970,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		      case 'd':
 		      case 'D':
 			fac *= 24;
-			/* fall though */
+			/* fall through */
 		      case 'h':
 		      case 'H':
 			fac *= 60;
@@ -4653,6 +4653,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
   daemon->soa_retry = SOA_RETRY;
   daemon->soa_expiry = SOA_EXPIRY;
   daemon->max_port = MAX_PORT;
+  daemon->min_port = MIN_PORT;
 
 #ifndef NO_ID
   add_txt("version.bind", "dnsmasq-" VERSION, 0 );
