@@ -1,7 +1,8 @@
-/* $Id: upnpsoap.c,v 1.148 2017/04/21 11:20:27 nanard Exp $ */
-/* MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2017 Thomas Bernard
+/* $Id: upnpsoap.c,v 1.149 2018/01/16 00:50:49 nanard Exp $ */
+/* vim: tabstop=4 shiftwidth=4 noexpandtab
+ * MiniUPnP project
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+ * (c) 2006-2018 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -1370,7 +1371,7 @@ QueryStateVariable(struct upnphttp * h, const char * action, const char * ns)
 		BuildSendAndCloseSoapResp(h, body, bodylen);
 	}
 #if 0
-	/* not usefull */
+	/* not useful */
 	else if(strcmp(var_name, "ConnectionType") == 0)
 	{
 		bodylen = snprintf(body, sizeof(body), resp, "IP_Routed");
