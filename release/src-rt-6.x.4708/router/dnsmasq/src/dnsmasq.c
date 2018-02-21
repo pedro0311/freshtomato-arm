@@ -48,6 +48,7 @@ int main (int argc, char **argv)
   long i, max_fd = sysconf(_SC_OPEN_MAX);
   char *baduser = NULL;
   int log_err;
+  int chown_warn = 0;
 #if defined(HAVE_LINUX_NETWORK)
   cap_user_header_t hdr = NULL;
   cap_user_data_t data = NULL;
@@ -224,9 +225,6 @@ int main (int argc, char **argv)
     die(_("loop detection not available: set HAVE_LOOP in src/config.h"), NULL, EC_BADCONF);
 #endif
 
-  if (daemon->max_port != MAX_PORT && daemon->min_port == 0)
-    daemon->min_port = 1024u;
-
   if (daemon->max_port < daemon->min_port)
     die(_("max_port cannot be smaller than min_port"), NULL, EC_BADCONF);
 
@@ -391,10 +389,12 @@ int main (int argc, char **argv)
       daemon->scriptuser && 
       (daemon->lease_change_command || daemon->luascript))
     {
-      if ((ent_pw = getpwnam(daemon->scriptuser)))
+      struct passwd *scr_pw;
+      
+      if ((scr_pw = getpwnam(daemon->scriptuser)))
 	{
-	  script_uid = ent_pw->pw_uid;
-	  script_gid = ent_pw->pw_gid;
+	  script_uid = scr_pw->pw_uid;
+	  script_gid = scr_pw->pw_gid;
 	 }
       else
 	baduser = daemon->scriptuser;
@@ -542,9 +542,18 @@ int main (int argc, char **argv)
 	    }
 	  else
 	    {
+	      /* We're still running as root here. Change the ownership of the PID file
+		 to the user we will be running as. Note that this is not to allow
+		 us to delete the file, since that depends on the permissions 
+		 of the directory containing the file. That directory will
+		 need to by owned by the dnsmasq user, and the ownership of the
+		 file has to match, to keep systemd >273 happy. */
+	      if (getuid() == 0 && ent_pw && ent_pw->pw_uid != 0 && fchown(fd, ent_pw->pw_uid, ent_pw->pw_gid) == -1)
+		chown_warn = errno;
+
 	      if (!read_write(fd, (unsigned char *)daemon->namebuff, strlen(daemon->namebuff), 0))
 		err = 1;
-	      else 
+	      else
 		{
 		  while (retry_send(close(fd)));
 		  if (errno != 0)
@@ -731,6 +740,9 @@ int main (int argc, char **argv)
     }
   
   my_syslog(LOG_INFO, _("compile time options: %s"), compile_opts);
+
+  if (chown_warn != 0)
+    my_syslog(LOG_WARNING, "chown of PID file %s failed: %s", daemon->runfile, strerror(chown_warn));
   
 #ifdef HAVE_DBUS
   if (option_bool(OPT_DBUS))
@@ -1201,31 +1213,40 @@ static void fatal_event(struct event_desc *ev, char *msg)
 
     case EVENT_FORK_ERR:
       die(_("cannot fork into background: %s"), NULL, EC_MISC);
-  
+
+      /* fall through */
     case EVENT_PIPE_ERR:
       die(_("failed to create helper: %s"), NULL, EC_MISC);
-  
+
+      /* fall through */
     case EVENT_CAP_ERR:
       die(_("setting capabilities failed: %s"), NULL, EC_MISC);
 
+      /* fall through */
     case EVENT_USER_ERR:
       die(_("failed to change user-id to %s: %s"), msg, EC_MISC);
 
+      /* fall through */
     case EVENT_GROUP_ERR:
       die(_("failed to change group-id to %s: %s"), msg, EC_MISC);
-      
+
+      /* fall through */
     case EVENT_PIDFILE:
       die(_("failed to open pidfile %s: %s"), msg, EC_FILE);
 
+      /* fall through */
     case EVENT_LOG_ERR:
       die(_("cannot open log %s: %s"), msg, EC_FILE);
-    
+
+      /* fall through */
     case EVENT_LUA_ERR:
       die(_("failed to load Lua script: %s"), msg, EC_MISC);
 
+      /* fall through */
     case EVENT_TFTP_ERR:
       die(_("TFTP directory %s inaccessible: %s"), msg, EC_FILE);
-    
+
+      /* fall through */
     case EVENT_TIME_ERR:
       die(_("cannot create timestamp file %s: %s" ), msg, EC_BADCONF);
     }
