@@ -882,8 +882,13 @@ static int ip6_tnl_xmit2(struct sk_buff *skb,
 		max_headroom += 8;
 		mtu -= 8;
 	}
-	if (mtu < IPV6_MIN_MTU)
-		mtu = IPV6_MIN_MTU;
+	if (skb->protocol == htons(ETH_P_IPV6)) {
+		if (mtu < IPV6_MIN_MTU)
+			mtu = IPV6_MIN_MTU;
+	} else if (mtu < 576) {
+		mtu = 576;
+	}
+
 	if (skb_dst(skb))
 		skb_dst(skb)->ops->update_pmtu(skb_dst(skb), mtu);
 	if (skb->len > mtu) {
