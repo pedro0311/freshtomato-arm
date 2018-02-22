@@ -1,8 +1,8 @@
-/* $Id: miniupnpd.c,v 1.222 2017/12/12 11:43:28 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.223 2018/02/22 13:18:56 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2017 Thomas Bernard
+ * (c) 2006-2018 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -1294,6 +1294,15 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			case UPNPMINISSDPDSOCKET:
 				minissdpdsocketpath = ary_options[i].value;
 				break;
+#ifdef IGD_V2
+			case UPNPFORCEIGDDESCV1:
+				if (strcmp(ary_options[i].value, "yes") == 0)
+					SETFLAG(FORCEIGDDESCV1MASK);
+				else if (strcmp(ary_options[i].value, "no") != 0 ) {
+					fprintf(stderr, "force_igd_desc_v1 can only be yes or no\n");
+				}
+				break;
+#endif
 			default:
 				fprintf(stderr, "Unknown option in file %s\n",
 				        optionsfile);
@@ -1319,6 +1328,11 @@ init(int argc, char * * argv, struct runtime_vars * v)
 		}
 		else switch(argv[i][1])
 		{
+#ifdef IGD_V2
+		case '1':
+			SETFLAG(FORCEIGDDESCV1MASK);
+			break;
+#endif
 		case 'b':
 			if(i+1 < argc) {
 				upnp_bootid = (unsigned int)strtoul(argv[++i], NULL, 10);
@@ -1733,7 +1747,11 @@ print_usage:
 #ifdef ENABLE_NFQUEUE
                         "\t\t[-Q queue] [-n name]\n"
 #endif
-			"\t\t[-A \"permission rule\"] [-b BOOTID]\n"
+			"\t\t[-A \"permission rule\"] [-b BOOTID]"
+#ifdef IGD_V2
+			" [-1]"
+#endif
+			"\n"
 	        "\nNotes:\n\tThere can be one or several listening_ips.\n"
 	        "\tNotify interval is in seconds. Default is 30 seconds.\n"
 			"\tDefault pid file is '%s'.\n"
@@ -1764,6 +1782,9 @@ print_usage:
 			"\t  \"allow 1024-65535 192.168.1.0/24 1024-65535\"\n"
 			"\t  \"deny 0-65535 0.0.0.0/0 0-65535\"\n"
 			"\t-b sets the value of BOOTID.UPNP.ORG SSDP header\n"
+#ifdef IGD_V2
+			"\t-1 force reporting IGDv1 in rootDesc *use with care*\n"
+#endif
 			"\t-h prints this help and quits.\n"
 	        "", argv[0], pidfilename, DEFAULT_CONFIG);
 	return 1;
