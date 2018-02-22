@@ -1,4 +1,4 @@
-/* $Id: upnpglobalvars.h,v 1.45 2018/01/16 00:50:49 nanard Exp $ */
+/* $Id: upnpglobalvars.h,v 1.46 2018/02/22 13:18:58 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -64,6 +64,9 @@ extern int runtime_flags;
 #endif
 #ifdef ENABLE_PCP
 #define PCP_ALLOWTHIRDPARTYMASK	0x0400
+#endif
+#ifdef IGD_V2
+#define FORCEIGDDESCV1MASK 0x0800
 #endif
 
 #define SETFLAG(mask)	runtime_flags |= mask

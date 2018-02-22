@@ -1,4 +1,4 @@
-/* $Id: options.h,v 1.27 2016/02/09 09:37:44 nanard Exp $ */
+/* $Id: options.h,v 1.28 2018/02/22 13:18:58 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
@@ -66,6 +66,9 @@ enum upnpconfigoptions {
 	UPNPLEASEFILE,			/* lease_file */
 #endif
 	UPNPMINISSDPDSOCKET,	/* minissdpdsocket */
+#ifdef IGD_V2
+	UPNPFORCEIGDDESCV1,
+#endif
 	UPNPENABLE				/* enable_upnp */
 };
 

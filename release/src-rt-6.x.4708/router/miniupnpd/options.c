@@ -1,4 +1,4 @@
-/* $Id: options.c,v 1.33 2016/02/09 09:37:44 nanard Exp $ */
+/* $Id: options.c,v 1.34 2018/02/22 13:18:58 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
@@ -82,6 +82,9 @@ static const struct {
 #endif
 #ifdef ENABLE_LEASEFILE
 	{ UPNPLEASEFILE, "lease_file"},
+#endif
+#ifdef IGD_V2
+	{ UPNPFORCEIGDDESCV1, "force_igd_desc_v1"},
 #endif
 	{ UPNPMINISSDPDSOCKET, "minissdpdsocket"},
 	{ UPNPSECUREMODE, "secure_mode"}
