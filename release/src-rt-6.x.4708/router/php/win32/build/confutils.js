@@ -3101,6 +3101,19 @@ function toolset_setup_common_cflags()
 			// Set some debug/release specific options
 			ADD_FLAG('CFLAGS', ' /RTC1 ');
 		} else {
+			if (PHP_DEBUG == "no" && PHP_SECURITY_FLAGS == "yes") {
+				/* Mitigations for CVE-2017-5753.
+			  	   TODO backport for all supported VS versions when they release it. */
+				if (VCVERS >= 1912) {
+					var subver1912 = probe_binary(PHP_CL).substr(6);
+					if (VCVERS >= 1913 || 1912 == VCVERS && subver1912 >= 25835) {
+						ADD_FLAG('CFLAGS', "/Qspectre");
+					} else {
+						/* Undocumented. */
+						ADD_FLAG('CFLAGS', "/d2guardspecload");
+					}
+				}
+			}
 			if (VCVERS >= 1900) {
 				if (PHP_SECURITY_FLAGS == "yes") {
 					ADD_FLAG('CFLAGS', "/guard:cf");
