@@ -228,7 +228,7 @@ out1:
 
 	if (!(at & AT_EGRESS)) {
 		if (m->tcfm_ok_push)
-			skb_push(skb2, skb2->dev->hard_header_len);
+			skb_push(skb2, skb->mac_len);
 	}
 
 	/* mirror is always swallowed */
