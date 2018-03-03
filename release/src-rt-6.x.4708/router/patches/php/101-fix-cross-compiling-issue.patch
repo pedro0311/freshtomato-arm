@@ -1,8 +1,8 @@
---- php/configure	2017-07-06 01:57:38.000000000 +0200
-+++ php/configure	2017-09-25 19:24:11.000000000 +0200
-@@ -36577,6 +36577,9 @@
+--- php/configure	2018-03-02 19:14:18.745169000 +0100
++++ php/configure	2018-03-02 20:13:54.078115811 +0100
+@@ -30848,6 +30848,9 @@ if test "$PHP_FILEINFO" != "no"; then
      libmagic/is_tar.c libmagic/magic.c libmagic/print.c \
-     libmagic/readcdf.c libmagic/softmagic.c"
+     libmagic/readcdf.c libmagic/softmagic.c libmagic/der.c"
  
 +# evaluated by running test program on the target
 +libmagic_sources="$libmagic_sources libmagic/strcasestr.c"
@@ -10,15 +10,16 @@
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for strcasestr" >&5
  $as_echo_n "checking for strcasestr... " >&6; }
    if test "$cross_compiling" = yes; then :
-@@ -36631,6 +36634,7 @@
+@@ -30902,7 +30905,7 @@ fi
  rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
    conftest.$ac_objext conftest.beam conftest.$ac_ext
  fi
+-
 +fi
  
  
- 
-@@ -66548,6 +66552,10 @@
+   ext_builddir=ext/fileinfo
+@@ -57089,6 +57092,10 @@ fi
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $msg" >&5
  $as_echo "$msg" >&6; }
  
@@ -29,11 +30,12 @@
  flock_type=unknown
  { $as_echo "$as_me:${as_lineno-$LINENO}: checking \"whether flock struct is linux ordered\"" >&5
  $as_echo_n "checking \"whether flock struct is linux ordered\"... " >&6; }
-@@ -66625,6 +66633,7 @@
+@@ -57166,7 +57173,7 @@ fi
  rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
    conftest.$ac_objext conftest.beam conftest.$ac_ext
  fi
+-
 +fi
  
- 
  if test "$flock_type" = "unknown"; then
+ 	as_fn_error $? "Don't know how to define struct flock on this system, set --enable-opcache=no" "$LINENO" 5
