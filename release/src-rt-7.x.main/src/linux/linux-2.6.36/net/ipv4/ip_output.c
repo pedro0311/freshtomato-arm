@@ -85,6 +85,7 @@
 #include <bcmdefs.h>
 
 int sysctl_ip_default_ttl __read_mostly = IPDEFTTL;
+EXPORT_SYMBOL(sysctl_ip_default_ttl);
 
 /* Generate a checksum for an outgoing IP datagram. */
 __inline__ void ip_send_check(struct iphdr *iph)
@@ -138,7 +139,7 @@ static inline int ip_select_ttl(struct inet_sock *inet, struct dst_entry *dst)
 	int ttl = inet->uc_ttl;
 
 	if (ttl < 0)
-		ttl = dst_metric(dst, RTAX_HOPLIMIT);
+		ttl = ip4_dst_hoplimit(dst);
 	return ttl;
 }
 
@@ -495,7 +496,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 	 * LATER: this step can be merged to real generation of fragments,
 	 * we can switch to copy when see the first bad fragment.
 	 */
-	if (skb_has_frags(skb)) {
+	if (skb_has_frag_list(skb)) {
 		struct sk_buff *frag, *frag2;
 		int first_len = skb_pagelen(skb);
 

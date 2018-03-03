@@ -74,17 +74,20 @@ struct pcpu_lstats {
 static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 				 struct net_device *dev)
 {
-	struct pcpu_lstats __percpu *pcpu_lstats;
 	struct pcpu_lstats *lb_stats;
 	int len;
 
 	skb_orphan(skb);
 
+	/* Before queueing this packet to netif_rx(),
+	 * make sure dst is refcounted.
+	 */
+	skb_dst_force(skb);
+
 	skb->protocol = eth_type_trans(skb, dev);
 
 	/* it's OK to use per_cpu_ptr() because BHs are off */
-	pcpu_lstats = (void __percpu __force *)dev->ml_priv;
-	lb_stats = this_cpu_ptr(pcpu_lstats);
+	lb_stats = this_cpu_ptr(dev->lstats);
 
 	len = skb->len;
 	if (likely(netif_rx(skb) == NET_RX_SUCCESS)) {
@@ -101,24 +104,22 @@ static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 static struct rtnl_link_stats64 *loopback_get_stats64(struct net_device *dev,
 						      struct rtnl_link_stats64 *stats)
 {
-	const struct pcpu_lstats __percpu *pcpu_lstats;
 	u64 bytes = 0;
 	u64 packets = 0;
 	u64 drops = 0;
 	int i;
 
-	pcpu_lstats = (void __percpu __force *)dev->ml_priv;
 	for_each_possible_cpu(i) {
 		const struct pcpu_lstats *lb_stats;
 		u64 tbytes, tpackets;
 		unsigned int start;
 
-		lb_stats = per_cpu_ptr(pcpu_lstats, i);
+		lb_stats = per_cpu_ptr(dev->lstats, i);
 		do {
-			start = u64_stats_fetch_begin(&lb_stats->syncp);
+			start = u64_stats_fetch_begin_bh(&lb_stats->syncp);
 			tbytes = lb_stats->bytes;
 			tpackets = lb_stats->packets;
-		} while (u64_stats_fetch_retry(&lb_stats->syncp, start));
+		} while (u64_stats_fetch_retry_bh(&lb_stats->syncp, start));
 		drops   += lb_stats->drops;
 		bytes   += tbytes;
 		packets += tpackets;
@@ -147,22 +148,17 @@ static const struct ethtool_ops loopback_ethtool_ops = {
 
 static int loopback_dev_init(struct net_device *dev)
 {
-	struct pcpu_lstats __percpu *lstats;
-
-	lstats = alloc_percpu(struct pcpu_lstats);
-	if (!lstats)
+	dev->lstats = alloc_percpu(struct pcpu_lstats);
+	if (!dev->lstats)
 		return -ENOMEM;
 
-	dev->ml_priv = (void __force *)lstats;
 	return 0;
 }
 
 static void loopback_dev_free(struct net_device *dev)
 {
-	struct pcpu_lstats __percpu *lstats =
-		(void __percpu __force *)dev->ml_priv;
-
-	free_percpu(lstats);
+	dev_net(dev)->loopback_dev = NULL;
+	free_percpu(dev->lstats);
 	free_netdev(dev);
 }
 
@@ -178,7 +174,7 @@ static const struct net_device_ops loopback_ops = {
  */
 static void loopback_setup(struct net_device *dev)
 {
-	dev->mtu		= (16 * 1024) + 20 + 20 + 12;
+	dev->mtu		= 64 * 1024;
 	dev->hard_header_len	= ETH_HLEN;	/* 14	*/
 	dev->addr_len		= ETH_ALEN;	/* 6	*/
 	dev->tx_queue_len	= 0;
@@ -190,7 +186,8 @@ static void loopback_setup(struct net_device *dev)
 		| NETIF_F_NO_CSUM
 		| NETIF_F_HIGHDMA
 		| NETIF_F_LLTX
-		| NETIF_F_NETNS_LOCAL;
+		| NETIF_F_NETNS_LOCAL
+		| NETIF_F_VLAN_CHALLENGED;
 	dev->ethtool_ops	= &loopback_ethtool_ops;
 	dev->header_ops		= &eth_header_ops;
 	dev->netdev_ops		= &loopback_ops;

@@ -64,7 +64,7 @@ static int l2tp_eth_dev_init(struct net_device *dev)
 	struct l2tp_eth *priv = netdev_priv(dev);
 
 	priv->dev = dev;
-	random_ether_addr(dev->dev_addr);
+	eth_hw_addr_random(dev);
 	memset(&dev->broadcast[0], 0xff, 6);
 
 	return 0;
@@ -104,6 +104,7 @@ static void l2tp_eth_dev_setup(struct net_device *dev)
 {
 	ether_setup(dev);
 
+	dev->priv_flags &= ~IFF_TX_SKB_SHARING;
 	dev->netdev_ops		= &l2tp_eth_netdev_ops;
 	dev->destructor		= free_netdev;
 }

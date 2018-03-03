@@ -127,6 +127,21 @@ static inline void random_ether_addr(u8 *addr)
 }
 
 /**
+ * eth_hw_addr_random - Generate software assigned random Ethernet and
+ * set device flag
+ * @dev: pointer to net_device structure
+ *
+ * Generate a random Ethernet address (MAC) to be used by a net device
+ * and set addr_assign_type so the state can be read by sysfs and be
+ * used by userspace.
+ */
+static inline void eth_hw_addr_random(struct net_device *dev)
+{
+	dev->addr_assign_type |= NET_ADDR_RANDOM;
+	random_ether_addr(dev->dev_addr);
+}
+
+/**
  * dev_hw_addr_random - Create random MAC and set device flag
  * @dev: pointer to net_device structure
  * @hwaddr: Pointer to a six-byte array containing the Ethernet address
@@ -154,6 +169,18 @@ static inline unsigned compare_ether_addr(const u8 *addr1, const u8 *addr2)
 
 	BUILD_BUG_ON(ETH_ALEN != 6);
 	return ((a[0] ^ b[0]) | (a[1] ^ b[1]) | (a[2] ^ b[2])) != 0;
+}
+
+/**
+ * ether_addr_equal - Compare two Ethernet addresses
+ * @addr1: Pointer to a six-byte array containing the Ethernet address
+ * @addr2: Pointer other six-byte array containing the Ethernet address
+ *
+ * Compare two Ethernet addresses, returns true if equal
+ */
+static inline bool ether_addr_equal(const u8 *addr1, const u8 *addr2)
+{
+	return !compare_ether_addr(addr1, addr2);
 }
 
 static inline unsigned long zap_last_2bytes(unsigned long value)
