@@ -229,9 +229,9 @@ struct netdev_hw_addr {
 #define NETDEV_HW_ADDR_T_SLAVE		3
 #define NETDEV_HW_ADDR_T_UNICAST	4
 #define NETDEV_HW_ADDR_T_MULTICAST	5
-	int			refcount;
 	bool			synced;
 	bool			global_use;
+	int			refcount;
 	struct rcu_head		rcu_head;
 };
 
@@ -776,6 +776,15 @@ struct net_device_ops {
 #endif
 };
 
+/*
+ *	The DEVICE structure.
+ *	Actually, this whole structure is a big mistake.  It mixes I/O
+ *	data with strictly "high-level" data, and it has to know about
+ *	almost every data structure used in the INET module.
+ *
+ *	FIXME: cleanup struct net_device such that network protocol info
+ *	moves out.
+ */
 
 struct net_device {
 
@@ -793,6 +802,10 @@ struct net_device {
 	/* snmp alias */
 	char 			*ifalias;
 
+	/*
+	 *	I/O specific fields
+	 *	FIXME: Merge these and struct ifmap into one
+	 */
 	unsigned long		mem_end;	/* shared mem end	*/
 	unsigned long		mem_start;	/* shared mem start	*/
 	unsigned long		base_addr;	/* device I/O address	*/
@@ -813,7 +826,7 @@ struct net_device {
 	struct list_head	unreg_list;
 
 	/* Net device features */
-	unsigned long		features;
+	u32			features;
 #define NETIF_F_SG		1	/* Scatter/gather IO. */
 #define NETIF_F_IP_CSUM		2	/* Can checksum TCP/UDP over IPv4. */
 #define NETIF_F_NO_CSUM		4	/* Does not require checksum. F.e. loopack. */
@@ -889,7 +902,7 @@ struct net_device {
 
 	unsigned int		flags;	/* interface flags (a la BSD)	*/
 	unsigned short		gflags;
-        unsigned short          priv_flags; /* Like 'flags' but invisible to userspace. */
+	unsigned short          priv_flags; /* Like 'flags' but invisible to userspace. */
 	unsigned short		padded;	/* How much padding added by alloc_netdev() */
 
 	unsigned char		operstate; /* RFC2863 operstate */
@@ -930,7 +943,7 @@ struct net_device {
 	void			*dsa_ptr;	/* dsa specific data */
 #endif
 	void 			*atalk_ptr;	/* AppleTalk link 	*/
-	void			*ip_ptr;	/* IPv4 specific data	*/
+	struct in_device __rcu	*ip_ptr;	/* IPv4 specific data	*/
 	void                    *dn_ptr;        /* DECnet specific data */
 	void                    *ip6_ptr;       /* IPv6 specific data */
 	void			*ec_ptr;	/* Econet specific data	*/
@@ -939,9 +952,16 @@ struct net_device {
 						   assign before registering */
 
 /*
- * Cache line mostly used on receive path (including eth_type_trans())
+ * Cache lines mostly used on receive path (including eth_type_trans())
  */
-	unsigned long		last_rx;	/* Time of last Rx	*/
+	unsigned long		last_rx;	/* Time of last Rx
+						 * This should not be set in
+						 * drivers, unless really needed,
+						 * because network stack (bonding)
+						 * use it if/when necessary, to
+						 * avoid dirtying this cache line.
+						 */
+
 	/* Interface address info used in eth_type_trans() */
 	unsigned char		*dev_addr;	/* hw address, (before bcast
 						   because most packets are
@@ -978,9 +998,7 @@ struct net_device {
 
 	unsigned long		tx_queue_len;	/* Max frames per queue allowed */
 	spinlock_t		tx_global_lock;
-/*
- * One part is mostly used on xmit path (device)
- */
+
 	/* These may be needed for future network-power-down code. */
 
 	/*
@@ -1029,7 +1047,10 @@ struct net_device {
 #endif
 
 	/* mid-layer private */
-	void			*ml_priv;
+	union {
+		void				*ml_priv;
+		struct pcpu_lstats __percpu	*lstats; /* loopback stats */
+	};
 
 	/* GARP */
 	struct garp_port	*garp_port;
@@ -1043,7 +1064,7 @@ struct net_device {
 	const struct rtnl_link_ops *rtnl_link_ops;
 
 	/* VLAN feature mask */
-	unsigned long vlan_features;
+	u32			vlan_features;
 
 	/* for setting kernel sock attribute on TCP connection setup */
 #define GSO_MAX_SIZE		65536
@@ -1214,7 +1235,7 @@ struct packet_type {
 					 struct packet_type *,
 					 struct net_device *);
 	struct sk_buff		*(*gso_segment)(struct sk_buff *skb,
-						int features);
+						u32 features);
 	int			(*gso_send_check)(struct sk_buff *skb);
 	struct sk_buff		**(*gro_receive)(struct sk_buff **head,
 					       struct sk_buff *skb);
@@ -1659,7 +1680,7 @@ static inline void netif_wake_subqueue(struct net_device *dev, u16 queue_index)
  */
 static inline int netif_is_multiqueue(const struct net_device *dev)
 {
-	return (dev->num_tx_queues > 1);
+	return dev->num_tx_queues > 1;
 }
 
 extern void netif_set_real_num_tx_queues(struct net_device *dev,
@@ -1682,14 +1703,14 @@ extern int		netif_rx(struct sk_buff *skb);
 extern int		netif_rx_ni(struct sk_buff *skb);
 #define HAVE_NETIF_RECEIVE_SKB 1
 extern int		netif_receive_skb(struct sk_buff *skb);
-#ifdef CONFIG_INET_GRO
-extern void		generic_napi_gro_flush(struct napi_struct *napi);
-#endif /* CONFIG_INET_GRO */
 extern gro_result_t	dev_gro_receive(struct napi_struct *napi,
 					struct sk_buff *skb);
 extern gro_result_t	napi_skb_finish(gro_result_t ret, struct sk_buff *skb);
 extern gro_result_t	napi_gro_receive(struct napi_struct *napi,
 					 struct sk_buff *skb);
+#ifdef CONFIG_INET_GRO
+extern void		generic_napi_gro_flush(struct napi_struct *napi);
+#endif /* CONFIG_INET_GRO */
 extern void		napi_reuse_skb(struct napi_struct *napi,
 				       struct sk_buff *skb);
 extern struct sk_buff *	napi_get_frags(struct napi_struct *napi);
@@ -2145,7 +2166,7 @@ extern int		netdev_tstamp_prequeue;
 extern int		weight_p;
 extern int		netdev_set_master(struct net_device *dev, struct net_device *master);
 extern int skb_checksum_help(struct sk_buff *skb);
-extern struct sk_buff *skb_gso_segment(struct sk_buff *skb, int features);
+extern struct sk_buff *skb_gso_segment(struct sk_buff *skb, u32 features);
 #ifdef CONFIG_BUG
 extern void netdev_rx_csum_fault(struct net_device *dev);
 #else
@@ -2166,27 +2187,28 @@ extern void dev_seq_stop(struct seq_file *seq, void *v);
 extern int netdev_class_create_file(struct class_attribute *class_attr);
 extern void netdev_class_remove_file(struct class_attribute *class_attr);
 
+extern struct kobj_ns_type_operations net_ns_type_operations;
+
 extern char *netdev_drivername(const struct net_device *dev, char *buffer, int len);
 
 extern void linkwatch_run_queue(void);
 
-unsigned long netdev_increment_features(unsigned long all, unsigned long one,
-					unsigned long mask);
-unsigned long netdev_fix_features(unsigned long features, const char *name);
+u32 netdev_increment_features(u32 all, u32 one, u32 mask);
+u32 netdev_fix_features(u32 features, const char *name);
 
 void netif_stacked_transfer_operstate(const struct net_device *rootdev,
 					struct net_device *dev);
 
-static inline int net_gso_ok(int features, int gso_type)
+static inline int net_gso_ok(u32 features, int gso_type)
 {
 	int feature = gso_type << NETIF_F_GSO_SHIFT;
 	return (features & feature) == feature;
 }
 
-static inline int skb_gso_ok(struct sk_buff *skb, int features)
+static inline int skb_gso_ok(struct sk_buff *skb, u32 features)
 {
 	return net_gso_ok(features, skb_shinfo(skb)->gso_type) &&
-	       (!skb_has_frags(skb) || (features & NETIF_F_FRAGLIST));
+	       (!skb_has_frag_list(skb) || (features & NETIF_F_FRAGLIST));
 }
 
 static inline int netif_needs_gso(struct net_device *dev, struct sk_buff *skb)

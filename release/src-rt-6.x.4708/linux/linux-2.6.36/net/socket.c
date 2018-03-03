@@ -526,6 +526,9 @@ void sock_release(struct socket *sock)
 	if (sock->wq->fasync_list)
 		printk(KERN_ERR "sock_release: fasync list not empty!\n");
 
+	if (test_bit(SOCK_EXTERNALLY_ALLOCATED, &sock->flags))
+		return;
+
 	percpu_sub(sockets_in_use, 1);
 	if (!sock->file) {
 		iput(SOCK_INODE(sock));
@@ -552,7 +555,7 @@ static inline int __sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 	struct sock_iocb *si = kiocb_to_siocb(iocb);
 	int err;
 
-	sock_update_classid(sock->sk);
+	sock_update_classid(sock->sk, current);
 
 	si->sock = sock;
 	si->scm = NULL;
@@ -681,7 +684,7 @@ static inline int __sock_recvmsg_nosec(struct kiocb *iocb, struct socket *sock,
 {
 	struct sock_iocb *si = kiocb_to_siocb(iocb);
 
-	sock_update_classid(sock->sk);
+	sock_update_classid(sock->sk, current);
 
 	si->sock = sock;
 	si->scm = NULL;
@@ -778,7 +781,7 @@ static ssize_t sock_splice_read(struct file *file, loff_t *ppos,
 	if (unlikely(!sock->ops->splice_read))
 		return -EINVAL;
 
-	sock_update_classid(sock->sk);
+	sock_update_classid(sock->sk, current);
 
 	return sock->ops->splice_read(sock, ppos, pipe, len, flags);
 }
@@ -3090,7 +3093,7 @@ EXPORT_SYMBOL(kernel_setsockopt);
 int kernel_sendpage(struct socket *sock, struct page *page, int offset,
 		    size_t size, int flags)
 {
-	sock_update_classid(sock->sk);
+	sock_update_classid(sock->sk, current);
 
 	if (sock->ops->sendpage)
 		return sock->ops->sendpage(sock, page, offset, size, flags);

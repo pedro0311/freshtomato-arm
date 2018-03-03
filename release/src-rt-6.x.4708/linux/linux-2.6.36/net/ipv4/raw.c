@@ -555,7 +555,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 						.tos = tos } },
 				    .proto = inet->hdrincl ? IPPROTO_RAW :
 							     sk->sk_protocol,
-				  };
+		};
 		if (!inet->hdrincl) {
 			err = raw_probe_proto_opt(&fl, msg);
 			if (err)

@@ -249,11 +249,6 @@ static struct ip6_tnl *ip6_tnl_create(struct net *net, struct ip6_tnl_parm *p)
 
 	dev_net_set(dev, net);
 
-	if (strchr(name, '%')) {
-		if (dev_alloc_name(dev, name) < 0)
-			goto failed_free;
-	}
-
 	t = netdev_priv(dev);
 	t->parms = *p;
 	ip6_tnl_dev_init(dev);
@@ -884,10 +879,11 @@ static int ip6_tnl_xmit2(struct sk_buff *skb,
 	}
 	if (skb->protocol == htons(ETH_P_IPV6)) {
 		if (mtu < IPV6_MIN_MTU)
-				mtu = IPV6_MIN_MTU;
-		} else if (mtu < 576) {
-			mtu = 576;
+			mtu = IPV6_MIN_MTU;
+	} else if (mtu < 576) {
+		mtu = 576;
 	}
+
 	if (skb_dst(skb))
 		skb_dst(skb)->ops->update_pmtu(skb_dst(skb), mtu);
 	if (skb->len > mtu) {
