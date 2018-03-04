@@ -1,57 +1,18 @@
---- dropbear/options.h	2017-05-18 11:47:02.000000000 -0300
-+++ dropbear/options.h	2018-02-12 21:12:34.000000000 -0200
-@@ -55,7 +55,7 @@ much traffic. */
- #define DROPBEAR_SMALL_CODE
- 
- /* Enable X11 Forwarding - server only */
--#define ENABLE_X11FWD
-+/* #define ENABLE_X11FWD */
- 
- /* Enable TCP Fowarding */
- /* 'Local' is "-L" style (client listening port forwarded via server)
-@@ -134,7 +134,7 @@ If you test it please contact the Dropbe
- #define DROPBEAR_SHA1_96_HMAC
- #define DROPBEAR_SHA2_256_HMAC
- #define DROPBEAR_SHA2_512_HMAC
--#define DROPBEAR_MD5_HMAC
-+/* #define DROPBEAR_MD5_HMAC */
- 
- /* You can also disable integrity. Don't bother disabling this if you're
-  * still using a cipher, it's relatively cheap. If you disable this it's dead
-@@ -293,14 +293,14 @@ Homedir is prepended unless path begins
- /* The command to invoke for xauth when using X11 forwarding.
-  * "-q" for quiet */
- #ifndef XAUTH_COMMAND
--#define XAUTH_COMMAND "/usr/bin/xauth -q"
+--- dropbear/localoptions.h	1969-12-31 21:00:00.000000000 -0300
++++ dropbear/localoptions.h	2018-03-04 20:11:49.395872606 -0300
+@@ -0,0 +1,4 @@
++#define DROPBEAR_X11FWD 0
 +#define XAUTH_COMMAND "/opt/X11R6/X11/xauth -q"
- #endif
- 
- /* if you want to enable running an sftp server (such as the one included with
-  * OpenSSH), set the path below. If the path isn't defined, sftp will not
-  * be enabled */
- #ifndef SFTPSERVER_PATH
--#define SFTPSERVER_PATH "/usr/libexec/sftp-server"
 +#define SFTPSERVER_PATH "/opt/libexec/sftp-server"
- #endif
- 
- /* This is used by the scp binary when used as a client binary. If you're
-@@ -347,7 +347,7 @@ be overridden at runtime with -I. 0 disa
- #define DEFAULT_IDLE_TIMEOUT 0
- 
- /* The default path. This will often get replaced by the shell */
--#define DEFAULT_PATH "/usr/bin:/bin"
 +#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
- 
- /* Some other defines (that mostly should be left alone) are defined
-  * in sysoptions.h */
---- dropbear/sysoptions.h	2017-05-18 11:47:02.000000000 -0300
-+++ dropbear/sysoptions.h	2018-02-12 21:12:34.000000000 -0200
-@@ -272,7 +272,7 @@
+--- dropbear/sysoptions.h	2018-02-27 11:25:12.000000000 -0300
++++ dropbear/sysoptions.h	2018-03-04 20:12:38.820586699 -0300
+@@ -309,7 +309,7 @@ If you test it please contact the Dropbe
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
--#define DROPBEAR_SERVER_TCP_FAST_OPEN
-+/* #define DROPBEAR_SERVER_TCP_FAST_OPEN */
- /* #define DROPBEAR_CLIENT_TCP_FAST_OPEN */
- #endif
- 
+-#define DROPBEAR_SERVER_TCP_FAST_OPEN 1
++#define DROPBEAR_SERVER_TCP_FAST_OPEN 0
+ #define DROPBEAR_CLIENT_TCP_FAST_OPEN 0
+ #else
+ #define DROPBEAR_SERVER_TCP_FAST_OPEN 0
