@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2017, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.3.2.9])
+AC_INIT([tor],[0.3.2.10])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -436,6 +436,15 @@ if test "x$enable_rust" = "xyes"; then
     fi
   fi
 
+  dnl This is a workaround for #46797
+  dnl (a.k.a https://github.com/rust-lang/rust/issues/46797 ).  Once the
+  dnl upstream bug is fixed, we can remove this workaround.
+  case "$host_os" in
+      darwin*)
+        TOR_RUST_EXTRA_LIBS="-lresolv"
+	;;
+  esac
+
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
   if test "$bwin32" = "true"; then
@@ -459,6 +468,8 @@ if test "x$enable_rust" = "xyes"; then
     AC_MSG_ERROR([rustc must be at least version 1.14])
   fi
 fi
+
+AC_SUBST(TOR_RUST_EXTRA_LIBS)
 
 AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])

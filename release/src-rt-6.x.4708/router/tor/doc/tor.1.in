@@ -2,12 +2,12 @@
 .\"     Title: tor
 .\"    Author: [see the "AUTHORS" section]
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 01/09/2018
+.\"      Date: 03/01/2018
 .\"    Manual: Tor Manual
 .\"    Source: Tor
 .\"  Language: English
 .\"
-.TH "TOR" "1" "01/09/2018" "Tor" "Tor Manual"
+.TH "TOR" "1" "03/01/2018" "Tor" "Tor Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1518,6 +1518,11 @@ Note: as of Oct 2017, the BridgeDB part of this option is not yet implemented\&.
 \fBContactInfo\fR \fIemail_address\fR
 .RS 4
 Administrative contact information for this relay or bridge\&. This line can be used to contact you if your relay or bridge is misconfigured or something else goes wrong\&. Note that we archive and publish all descriptors containing these lines and that Google indexes them, so spammers might also collect them\&. You may want to obscure the fact that it\(cqs an email address and/or generate a new address for this purpose\&.
+
+
+ContactInfo
+\fBmust\fR
+be set to a working address if you run more than one relay or bridge\&. (Really, everybody running a relay or bridge should set it\&.)
 .RE
 .PP
 \fBExitRelay\fR \fB0\fR|\fB1\fR|\fBauto\fR
@@ -1614,6 +1619,11 @@ Declare that this Tor relay is controlled or administered by a group or organiza
 
 
 When listing a node, it\(cqs better to list it by fingerprint than by nickname: fingerprints are more reliable\&.
+
+
+If you run more than one relay, the MyFamily option on each relay
+\fBmust\fR
+list all other relays, as described above\&.
 .RE
 .PP
 \fBNickname\fR \fIname\fR
@@ -2156,6 +2166,105 @@ HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set to 1
 \fBHiddenServiceNonAnonymousMode\fR \fB0\fR|\fB1\fR
 .RS 4
 Makes hidden services non\-anonymous on this tor instance\&. Allows the non\-anonymous HiddenServiceSingleHopMode\&. Enables direct connections in the server\-side hidden service protocol\&. If you are using this option, you need to disable all client\-side services on your Tor instance, including setting SOCKSPort to "0"\&. Can not be changed while tor is running\&. (Default: 0)
+.RE
+.SH "DENIAL OF SERVICE MITIGATION OPTIONS"
+.sp
+The following options are useful only for a public relay\&. They control the Denial of Service mitigation subsystem\&.
+.PP
+\fBDoSCircuitCreationEnabled\fR \fB0\fR|\fB1\fR|\fBauto\fR
+.RS 4
+Enable circuit creation DoS mitigation\&. If enabled, tor will cache client IPs along with statistics in order to detect circuit DoS attacks\&. If an address is positively identified, tor will activate defenses against the address\&. See the DoSCircuitCreationDefenseType option for more details\&. This is a client to relay detection only\&. "auto" means use the consensus parameter\&. If not defined in the consensus, the value is 0\&. (Default: auto)
+.RE
+.PP
+\fBDoSCircuitCreationMinConnections\fR \fINUM\fR
+.RS 4
+Minimum threshold of concurrent connections before a client address can be flagged as executing a circuit creation DoS\&. In other words, once a client address reaches the circuit rate and has a minimum of NUM concurrent connections, a detection is positive\&. "0" means use the consensus parameter\&. If not defined in the consensus, the value is 3\&. (Default: 0)
+.RE
+.PP
+\fBDoSCircuitCreationRate\fR \fINUM\fR
+.RS 4
+The allowed circuit creation rate per second applied per client IP address\&. If this option is 0, it obeys a consensus parameter\&. If not defined in the consensus, the value is 3\&. (Default: 0)
+.RE
+.PP
+\fBDoSCircuitCreationBurst\fR \fINUM\fR
+.RS 4
+The allowed circuit creation burst per client IP address\&. If the circuit rate and the burst are reached, a client is marked as executing a circuit creation DoS\&. "0" means use the consensus parameter\&. If not defined in the consensus, the value is 90\&. (Default: 0)
+.RE
+.PP
+\fBDoSCircuitCreationDefenseType\fR \fINUM\fR
+.RS 4
+This is the type of defense applied to a detected client address\&. The possible values are:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+1: No defense\&.
+2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+"0" means use the consensus parameter\&. If not defined in the consensus,
+the value is 2\&.
+(Default: 0)
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBDoSCircuitCreationDefenseTimePeriod\fR \fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR
+.RS 4
+The base time period in seconds that the DoS defense is activated for\&. The actual value is selected randomly for each activation from N+1 to 3/2 * N\&. "0" means use the consensus parameter\&. If not defined in the consensus, the value is 3600 seconds (1 hour)\&. (Default: 0)
+.RE
+.PP
+\fBDoSConnectionEnabled\fR \fB0\fR|\fB1\fR|\fBauto\fR
+.RS 4
+Enable the connection DoS mitigation\&. For client address only, this allows tor to mitigate against large number of concurrent connections made by a single IP address\&. "auto" means use the consensus parameter\&. If not defined in the consensus, the value is 0\&. (Default: auto)
+.RE
+.PP
+\fBDoSConnectionMaxConcurrentCount\fR \fINUM\fR
+.RS 4
+The maximum threshold of concurrent connection from a client IP address\&. Above this limit, a defense selected by DoSConnectionDefenseType is applied\&. "0" means use the consensus parameter\&. If not defined in the consensus, the value is 100\&. (Default: 0)
+.RE
+.PP
+\fBDoSConnectionDefenseType\fR \fINUM\fR
+.RS 4
+This is the type of defense applied to a detected client address for the connection mitigation\&. The possible values are:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+1: No defense\&.
+2: Immediately close new connections\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+"0" means use the consensus parameter\&. If not defined in the consensus,
+the value is 2\&.
+(Default: 0)
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBDoSRefuseSingleHopClientRendezvous\fR \fB0\fR|\fB1\fR|\fBauto\fR
+.RS 4
+Refuse establishment of rendezvous points for single hop clients\&. In other words, if a client directly connects to the relay and sends an ESTABLISH_RENDEZVOUS cell, it is silently dropped\&. "auto" means use the consensus parameter\&. If not defined in the consensus, the value is 0\&. (Default: auto)
 .RE
 .SH "TESTING NETWORK OPTIONS"
 .sp

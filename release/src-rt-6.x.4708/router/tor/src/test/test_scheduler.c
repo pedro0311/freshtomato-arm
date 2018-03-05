@@ -502,6 +502,18 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
   scheduler_touch_channel(ch1);
   tt_assert(scheduler_compare_channels_mock_ctr > old_count);
 
+  /* Release the ch2 and then do it another time to make sure it doesn't blow
+   * up and we are still in a quiescent state. */
+  scheduler_release_channel(ch2);
+  tt_int_op(ch2->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(smartlist_len(channels_pending), OP_EQ, 1);
+  /* Cheat a bit so make the release more confused but also will tells us if
+   * the release did put the channel in the right state. */
+  ch2->scheduler_state = SCHED_CHAN_PENDING;
+  scheduler_release_channel(ch2);
+  tt_int_op(ch2->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(smartlist_len(channels_pending), OP_EQ, 1);
+
   /* Close */
   channel_mark_for_close(ch1);
   tt_int_op(ch1->state, OP_EQ, CHANNEL_STATE_CLOSING);
@@ -864,6 +876,7 @@ test_scheduler_loop_kist(void *arg)
   tt_assert(ch3);
   ch3->magic = TLS_CHAN_MAGIC;
   ch3->state = CHANNEL_STATE_OPEN;
+  circuitmux_free(ch3->cmux);
   ch3->cmux = circuitmux_alloc();
   channel_register(ch3);
   tt_assert(ch3->registered);
@@ -958,7 +971,7 @@ test_scheduler_can_use_kist(void *arg)
   clear_options();
   mocked_options.KISTSchedRunInterval = 1234;
   res_should = scheduler_can_use_kist();
-  res_freq = kist_scheduler_run_interval(NULL);
+  res_freq = kist_scheduler_run_interval();
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
 #else /* HAVE_KIST_SUPPORT */
@@ -970,7 +983,7 @@ test_scheduler_can_use_kist(void *arg)
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
   res_should = scheduler_can_use_kist();
-  res_freq = kist_scheduler_run_interval(NULL);
+  res_freq = kist_scheduler_run_interval();
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
 #else /* HAVE_KIST_SUPPORT */
@@ -983,7 +996,7 @@ test_scheduler_can_use_kist(void *arg)
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
   res_should = scheduler_can_use_kist();
-  res_freq = kist_scheduler_run_interval(NULL);
+  res_freq = kist_scheduler_run_interval();
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
 #else /* HAVE_KIST_SUPPORT */
@@ -997,7 +1010,7 @@ test_scheduler_can_use_kist(void *arg)
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
   res_should = scheduler_can_use_kist();
-  res_freq = kist_scheduler_run_interval(NULL);
+  res_freq = kist_scheduler_run_interval();
   tt_int_op(res_should, ==, 0);
   tt_int_op(res_freq, ==, 0);
   UNMOCK(networkstatus_get_param);
@@ -1031,7 +1044,7 @@ test_scheduler_ns_changed(void *arg)
   /* Change from vanilla to kist via consensus */
   the_scheduler = get_vanilla_scheduler();
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
-  scheduler_notify_networkstatus_changed(NULL, NULL);
+  scheduler_notify_networkstatus_changed();
   UNMOCK(networkstatus_get_param);
 #ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
@@ -1042,14 +1055,14 @@ test_scheduler_ns_changed(void *arg)
   /* Change from kist to vanilla via consensus */
   the_scheduler = get_kist_scheduler();
   MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
-  scheduler_notify_networkstatus_changed(NULL, NULL);
+  scheduler_notify_networkstatus_changed();
   UNMOCK(networkstatus_get_param);
   tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
 
   /* Doesn't change when using KIST */
   the_scheduler = get_kist_scheduler();
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
-  scheduler_notify_networkstatus_changed(NULL, NULL);
+  scheduler_notify_networkstatus_changed();
   UNMOCK(networkstatus_get_param);
 #ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
@@ -1060,7 +1073,7 @@ test_scheduler_ns_changed(void *arg)
   /* Doesn't change when using vanilla */
   the_scheduler = get_vanilla_scheduler();
   MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
-  scheduler_notify_networkstatus_changed(NULL, NULL);
+  scheduler_notify_networkstatus_changed();
   UNMOCK(networkstatus_get_param);
   tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
 

@@ -3519,7 +3519,11 @@ is non-zero):</p></div>
     descriptors containing these lines and that Google indexes them, so
     spammers might also collect them. You may want to obscure the fact
     that it&#8217;s an email address and/or generate a new address for this
-    purpose.
+    purpose.<br />
+<br />
+    ContactInfo <strong>must</strong> be set to a working address if you run more than one
+    relay or bridge.  (Really, everybody running a relay or bridge should set
+    it.)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3689,7 +3693,10 @@ accept *:*</code></pre>
     compromise its concealment.<br />
 <br />
     When listing a node, it&#8217;s better to list it by fingerprint than by
-    nickname: fingerprints are more reliable.
+    nickname: fingerprints are more reliable.<br />
+<br />
+    If you run more than one relay, the MyFamily option on each relay
+    <strong>must</strong> list all other relays, as described above.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4828,6 +4835,152 @@ on the public Tor network.</p></div>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_denial_of_service_mitigation_options">DENIAL OF SERVICE MITIGATION OPTIONS</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following options are useful only for a public relay. They control the
+Denial of Service mitigation subsystem.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationEnabled"></a> <strong>DoSCircuitCreationEnabled</strong> <strong>0</strong>|<strong>1</strong>|<strong>auto</strong>
+</dt>
+<dd>
+<p>
+    Enable circuit creation DoS mitigation. If enabled, tor will cache client
+    IPs along with statistics in order to detect circuit DoS attacks. If an
+    address is positively identified, tor will activate defenses against the
+    address. See the DoSCircuitCreationDefenseType option for more details.
+    This is a client to relay detection only. "auto" means use the consensus
+    parameter. If not defined in the consensus, the value is 0.
+    (Default: auto)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationMinConnections"></a> <strong>DoSCircuitCreationMinConnections</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    Minimum threshold of concurrent connections before a client address can be
+    flagged as executing a circuit creation DoS. In other words, once a client
+    address reaches the circuit rate and has a minimum of NUM concurrent
+    connections, a detection is positive. "0" means use the consensus
+    parameter. If not defined in the consensus, the value is 3.
+    (Default: 0)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationRate"></a> <strong>DoSCircuitCreationRate</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    The allowed circuit creation rate per second applied per client IP
+    address. If this option is 0, it obeys a consensus parameter. If not
+    defined in the consensus, the value is 3.
+    (Default: 0)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationBurst"></a> <strong>DoSCircuitCreationBurst</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    The allowed circuit creation burst per client IP address. If the circuit
+    rate and the burst are reached, a client is marked as executing a circuit
+    creation DoS. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 90.
+    (Default: 0)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationDefenseType"></a> <strong>DoSCircuitCreationDefenseType</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    This is the type of defense applied to a detected client address. The
+    possible values are:
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>1: No defense.
+2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time.</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>"0" means use the consensus parameter. If not defined in the consensus,
+the value is 2.
+(Default: 0)</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<a id="DoSCircuitCreationDefenseTimePeriod"></a> <strong>DoSCircuitCreationDefenseTimePeriod</strong> <em>N</em> <strong>seconds</strong>|<strong>minutes</strong>|<strong>hours</strong>
+</dt>
+<dd>
+<p>
+    The base time period in seconds that the DoS defense is activated for. The
+    actual value is selected randomly for each activation from N+1 to 3/2 * N.
+    "0" means use the consensus parameter. If not defined in the consensus,
+    the value is 3600 seconds (1 hour).  (Default: 0)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSConnectionEnabled"></a> <strong>DoSConnectionEnabled</strong> <strong>0</strong>|<strong>1</strong>|<strong>auto</strong>
+</dt>
+<dd>
+<p>
+    Enable the connection DoS mitigation. For client address only, this allows
+    tor to mitigate against large number of concurrent connections made by a
+    single IP address. "auto" means use the consensus parameter. If not
+    defined in the consensus, the value is 0.
+    (Default: auto)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSConnectionMaxConcurrentCount"></a> <strong>DoSConnectionMaxConcurrentCount</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    The maximum threshold of concurrent connection from a client IP address.
+    Above this limit, a defense selected by DoSConnectionDefenseType is
+    applied. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 100.
+    (Default: 0)
+</p>
+</dd>
+<dt class="hdlist1">
+<a id="DoSConnectionDefenseType"></a> <strong>DoSConnectionDefenseType</strong> <em>NUM</em>
+</dt>
+<dd>
+<p>
+    This is the type of defense applied to a detected client address for the
+    connection mitigation. The possible values are:
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>1: No defense.
+2: Immediately close new connections.</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>"0" means use the consensus parameter. If not defined in the consensus,
+the value is 2.
+(Default: 0)</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<a id="DoSRefuseSingleHopClientRendezvous"></a> <strong>DoSRefuseSingleHopClientRendezvous</strong> <strong>0</strong>|<strong>1</strong>|<strong>auto</strong>
+</dt>
+<dd>
+<p>
+    Refuse establishment of rendezvous points for single hop clients. In other
+    words, if a client directly connects to the relay and sends an
+    ESTABLISH_RENDEZVOUS cell, it is silently dropped. "auto" means use the
+    consensus parameter. If not defined in the consensus, the value is 0.
+    (Default: auto)
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_testing_network_options">TESTING NETWORK OPTIONS</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The following options are used for running a testing Tor network.</p></div>
@@ -5889,7 +6042,7 @@ A short history of bandwidth usage, as produced in the server
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-01-05 21:41:35 UTC
+Last updated 2018-02-16 14:55:59 UTC
 </div>
 </div>
 </body>
