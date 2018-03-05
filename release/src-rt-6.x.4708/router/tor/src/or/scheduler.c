@@ -435,15 +435,14 @@ scheduler_conf_changed(void)
  * Whenever we get a new consensus, this function is called.
  */
 void
-scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
-                                       const networkstatus_t *new_c)
+scheduler_notify_networkstatus_changed(void)
 {
   /* Maybe the consensus param made us change the scheduler. */
   set_scheduler();
 
   /* Then tell the (possibly new) scheduler that we have a new consensus */
   if (the_scheduler->on_new_consensus) {
-    the_scheduler->on_new_consensus(old_c, new_c);
+    the_scheduler->on_new_consensus();
   }
 }
 
@@ -538,10 +537,12 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      * channels_pending.
      */
     chan->scheduler_state = SCHED_CHAN_PENDING;
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_for_cells "
               "to pending",
@@ -627,17 +628,21 @@ scheduler_release_channel,(channel_t *chan))
     return;
   }
 
-  if (chan->scheduler_state == SCHED_CHAN_PENDING) {
-    if (SCHED_BUG(smartlist_pos(channels_pending, chan) == -1, chan)) {
-      log_warn(LD_SCHED, "Scheduler asked to release channel %" PRIu64 " "
-                         "but it wasn't in channels_pending",
-               chan->global_identifier);
-    } else {
-      smartlist_pqueue_remove(channels_pending,
-                              scheduler_compare_channels,
-                              offsetof(channel_t, sched_heap_idx),
-                              chan);
-    }
+  /* Try to remove the channel from the pending list regardless of its
+   * scheduler state. We can release a channel in many places in the tor code
+   * so we can't rely on the channel state (PENDING) to remove it from the
+   * list.
+   *
+   * For instance, the channel can change state from OPEN to CLOSING while
+   * being handled in the scheduler loop leading to the channel being in
+   * PENDING state but not in the pending list. Furthermore, we release the
+   * channel when it changes state to close and a second time when we free it.
+   * Not ideal at all but for now that is the way it is. */
+  if (chan->sched_heap_idx != -1) {
+    smartlist_pqueue_remove(channels_pending,
+                            scheduler_compare_channels,
+                            offsetof(channel_t, sched_heap_idx),
+                            chan);
   }
 
   if (the_scheduler->on_channel_free) {
@@ -665,10 +670,12 @@ scheduler_channel_wants_writes(channel_t *chan)
      */
     log_debug(LD_SCHED, "chan=%" PRIu64 " became pending",
         chan->global_identifier);
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     chan->scheduler_state = SCHED_CHAN_PENDING;
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_to_write "

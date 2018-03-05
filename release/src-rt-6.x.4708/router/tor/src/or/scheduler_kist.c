@@ -362,10 +362,10 @@ outbuf_table_remove(outbuf_table_t *table, channel_t *chan)
 
 /* Set the scheduler running interval. */
 static void
-set_scheduler_run_interval(const networkstatus_t *ns)
+set_scheduler_run_interval(void)
 {
   int old_sched_run_interval = sched_run_interval;
-  sched_run_interval = kist_scheduler_run_interval(ns);
+  sched_run_interval = kist_scheduler_run_interval();
   if (old_sched_run_interval != sched_run_interval) {
     log_info(LD_SCHED, "Scheduler KIST changing its running interval "
                        "from %" PRId32 " to %" PRId32,
@@ -481,13 +481,9 @@ kist_on_channel_free(const channel_t *chan)
 
 /* Function of the scheduler interface: on_new_consensus() */
 static void
-kist_scheduler_on_new_consensus(const networkstatus_t *old_c,
-                                const networkstatus_t *new_c)
+kist_scheduler_on_new_consensus(void)
 {
-  (void) old_c;
-  (void) new_c;
-
-  set_scheduler_run_interval(new_c);
+  set_scheduler_run_interval();
 }
 
 /* Function of the scheduler interface: on_new_options() */
@@ -497,7 +493,7 @@ kist_scheduler_on_new_options(void)
   sock_buf_size_factor = get_options()->KISTSockBufSizeFactor;
 
   /* Calls kist_scheduler_run_interval which calls get_options(). */
-  set_scheduler_run_interval(NULL);
+  set_scheduler_run_interval();
 }
 
 /* Function of the scheduler interface: init() */
@@ -693,7 +689,6 @@ kist_scheduler_run(void)
        * after the scheduling loop is over. They can hopefully be taken care of
        * in the next scheduling round.
        */
-      chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
       if (!to_readd) {
         to_readd = smartlist_new();
       }
@@ -705,8 +700,10 @@ kist_scheduler_run(void)
       /* Case 4: cells to send, and still open for writes */
 
       chan->scheduler_state = SCHED_CHAN_PENDING;
-      smartlist_pqueue_add(cp, scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx), chan);
+      if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+        smartlist_pqueue_add(cp, scheduler_compare_channels,
+                             offsetof(channel_t, sched_heap_idx), chan);
+      }
     }
   } /* End of main scheduling loop */
 
@@ -726,8 +723,13 @@ kist_scheduler_run(void)
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
       readd_chan->scheduler_state = SCHED_CHAN_PENDING;
       if (!smartlist_contains(cp, readd_chan)) {
-        smartlist_pqueue_add(cp, scheduler_compare_channels,
+        if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+          /* XXXX Note that the check above is in theory redundant with
+           * the smartlist_contains check.  But let's make sure we're
+           * not messing anything up, and leave them both for now. */
+          smartlist_pqueue_add(cp, scheduler_compare_channels,
                              offsetof(channel_t, sched_heap_idx), readd_chan);
+        }
       }
     } SMARTLIST_FOREACH_END(readd_chan);
     smartlist_free(to_readd);
@@ -770,7 +772,7 @@ get_kist_scheduler(void)
  *   - If consensus doesn't say anything, return 10 milliseconds, default.
  */
 int
-kist_scheduler_run_interval(const networkstatus_t *ns)
+kist_scheduler_run_interval(void)
 {
   int run_interval = get_options()->KISTSchedRunInterval;
 
@@ -784,7 +786,7 @@ kist_scheduler_run_interval(const networkstatus_t *ns)
 
   /* Will either be the consensus value or the default. Note that 0 can be
    * returned which means the consensus wants us to NOT use KIST. */
-  return networkstatus_get_param(ns, "KISTSchedRunInterval",
+  return networkstatus_get_param(NULL, "KISTSchedRunInterval",
                                  KIST_SCHED_RUN_INTERVAL_DEFAULT,
                                  KIST_SCHED_RUN_INTERVAL_MIN,
                                  KIST_SCHED_RUN_INTERVAL_MAX);
@@ -823,7 +825,7 @@ scheduler_can_use_kist(void)
 
   /* We do have the support, time to check if we can get the interval that the
    * consensus can be disabling. */
-  int run_interval = kist_scheduler_run_interval(NULL);
+  int run_interval = kist_scheduler_run_interval();
   log_debug(LD_SCHED, "Determined KIST sched_run_interval should be "
                       "%" PRId32 ". Can%s use KIST.",
            run_interval, (run_interval > 0 ? "" : " not"));
