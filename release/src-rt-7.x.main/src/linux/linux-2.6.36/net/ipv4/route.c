@@ -693,6 +693,8 @@ static inline int compare_keys(struct flowi *fl1, struct flowi *fl2)
 	return (((__force u32)fl1->nl_u.ip4_u.daddr ^ (__force u32)fl2->nl_u.ip4_u.daddr) |
 		((__force u32)fl1->nl_u.ip4_u.saddr ^ (__force u32)fl2->nl_u.ip4_u.saddr) |
 		(fl1->mark ^ fl2->mark) |
+		((__force u32)fl1->nl_u.ip4_u.lsrc ^ (__force u32)fl2->nl_u.ip4_u.lsrc) |
+		((__force u32)fl1->nl_u.ip4_u.gw ^ (__force u32)fl2->nl_u.ip4_u.gw) |
 		(*(u16 *)&fl1->nl_u.ip4_u.tos ^ *(u16 *)&fl2->nl_u.ip4_u.tos) |
 		(fl1->oif ^ fl2->oif) |
 		(fl1->iif ^ fl2->iif)) == 0;
@@ -1231,7 +1233,7 @@ restart:
 			}
 
 			if (net_ratelimit())
-				printk(KERN_DEBUG "ipv4: Neighbour table overflow.\n");
+				printk(KERN_WARNING "ipv4: Neighbour table overflow.\n");
 			rt_drop(rt);
 			return -ENOBUFS;
 		}
@@ -1435,6 +1437,7 @@ void ip_rt_redirect(__be32 old_gw, __be32 daddr, __be32 new_gw,
 
 				/* Gateway is different ... */
 				rt->rt_gateway		= new_gw;
+				if (rt->fl.fl4_gw) rt->fl.fl4_gw = new_gw;
 
 				/* Redirect received -> path was valid */
 				dst_confirm(&rth->dst);
@@ -1884,6 +1887,7 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	rth->fl.fl4_tos	= tos;
 	rth->fl.mark    = skb->mark;
 	rth->fl.fl4_src	= saddr;
+	rth->fl.fl4_lsrc = 0;
 	rth->rt_src	= saddr;
 #ifdef CONFIG_NET_CLS_ROUTE
 	rth->dst.tclassid = itag;
@@ -1894,6 +1898,7 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	dev_hold(rth->dst.dev);
 	rth->idev	= in_dev_get(rth->dst.dev);
 	rth->fl.oif	= 0;
+	rth->fl.fl4_gw	= 0;
 	rth->rt_gateway	= daddr;
 	rth->rt_spec_dst= spec_dst;
 	rth->rt_genid	= rt_genid(dev_net(dev));
@@ -1957,7 +1962,7 @@ static int __mkroute_input(struct sk_buff *skb,
 			   struct fib_result *res,
 			   struct in_device *in_dev,
 			   __be32 daddr, __be32 saddr, u32 tos,
-			   struct rtable **result)
+			   __be32 lsrc, struct rtable **result)
 {
 	struct rtable *rth;
 	int err;
@@ -1989,6 +1994,7 @@ static int __mkroute_input(struct sk_buff *skb,
 		flags |= RTCF_DIRECTSRC;
 
 	if (out_dev == in_dev && err &&
+	    !lsrc &&
 	    (IN_DEV_SHARED_MEDIA(out_dev) ||
 	     inet_addr_onlink(out_dev, saddr, FIB_RES_GW(*res))))
 		flags |= RTCF_DOREDIRECT;
@@ -2027,6 +2033,7 @@ static int __mkroute_input(struct sk_buff *skb,
 	rth->fl.mark    = skb->mark;
 	rth->fl.fl4_src	= saddr;
 	rth->rt_src	= saddr;
+	rth->fl.fl4_lsrc	= lsrc;
 	rth->rt_gateway	= daddr;
 	rth->rt_iif 	=
 		rth->fl.iif	= in_dev->dev->ifindex;
@@ -2034,6 +2041,7 @@ static int __mkroute_input(struct sk_buff *skb,
 	dev_hold(rth->dst.dev);
 	rth->idev	= in_dev_get(rth->dst.dev);
 	rth->fl.oif 	= 0;
+	rth->fl.fl4_gw	= 0;
 	rth->rt_spec_dst= spec_dst;
 
 	rth->dst.obsolete = -1;
@@ -2055,7 +2063,7 @@ static int ip_mkroute_input(struct sk_buff *skb,
 			    struct fib_result *res,
 			    const struct flowi *fl,
 			    struct in_device *in_dev,
-			    __be32 daddr, __be32 saddr, u32 tos)
+			    __be32 daddr, __be32 saddr, u32 tos, __be32 lsrc)
 {
 	struct rtable* rth = NULL;
 	int err;
@@ -2067,7 +2075,7 @@ static int ip_mkroute_input(struct sk_buff *skb,
 #endif
 
 	/* create a routing cache entry */
-	err = __mkroute_input(skb, res, in_dev, daddr, saddr, tos, &rth);
+	err = __mkroute_input(skb, res, in_dev, daddr, saddr, tos, lsrc, &rth);
 	if (err)
 		return err;
 
@@ -2088,18 +2096,20 @@ static int ip_mkroute_input(struct sk_buff *skb,
  */
 
 static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
-			       u8 tos, struct net_device *dev)
+			       u8 tos, struct net_device *dev, __be32 lsrc)
 {
 	struct fib_result res;
 	struct in_device *in_dev = __in_dev_get_rcu(dev);
 	struct flowi fl = { .nl_u = { .ip4_u =
 				      { .daddr = daddr,
-					.saddr = saddr,
+					.saddr = lsrc? : saddr,
 					.tos = tos,
 					.scope = RT_SCOPE_UNIVERSE,
 				      } },
 			    .mark = skb->mark,
-			    .iif = dev->ifindex };
+			    .iif = lsrc?
+					dev_net(dev)->loopback_dev->ifindex :
+					dev->ifindex };
 	unsigned	flags = 0;
 	u32		itag = 0;
 	struct rtable * rth;
@@ -2135,6 +2145,12 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	    ipv4_is_loopback(daddr))
 		goto martian_destination;
 
+	if (lsrc) {
+		if (ipv4_is_multicast(lsrc) || ipv4_is_lbcast(lsrc) ||
+		    ipv4_is_zeronet(lsrc) || ipv4_is_loopback(lsrc))
+			goto e_inval;
+	}
+
 	/*
 	 *	Now we are ready to route packet.
 	 */
@@ -2144,6 +2160,8 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 		goto no_route;
 	}
 	free_res = 1;
+	fl.iif = dev->ifindex;
+	fl.fl4_src = saddr;
 
 	RT_CACHE_STAT_INC(in_slow_tot);
 
@@ -2167,7 +2185,7 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	if (res.type != RTN_UNICAST)
 		goto martian_destination;
 
-	err = ip_mkroute_input(skb, &res, &fl, in_dev, daddr, saddr, tos);
+	err = ip_mkroute_input(skb, &res, &fl, in_dev, daddr, saddr, tos, lsrc);
 done:
 	if (free_res)
 		fib_res_put(&res);
@@ -2175,6 +2193,8 @@ out:	return err;
 
 brd_input:
 	if (skb->protocol != htons(ETH_P_IP))
+		goto e_inval;
+	if (lsrc)
 		goto e_inval;
 
 	if (ipv4_is_zeronet(saddr))
@@ -2218,6 +2238,7 @@ local_input:
 	rth->dst.dev	= net->loopback_dev;
 	dev_hold(rth->dst.dev);
 	rth->idev	= in_dev_get(rth->dst.dev);
+	rth->fl.fl4_gw	= 0;
 	rth->rt_gateway	= daddr;
 	rth->rt_spec_dst= spec_dst;
 	rth->dst.input= ip_local_deliver;
@@ -2270,8 +2291,9 @@ martian_source_keep_err:
 	goto done;
 }
 
-int ip_route_input_common(struct sk_buff *skb, __be32 daddr, __be32 saddr,
-			   u8 tos, struct net_device *dev, bool noref)
+int ip_route_input_cached(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+			   u8 tos, struct net_device *dev, bool noref,
+			   __be32 lsrc)
 {
 	struct rtable * rth;
 	unsigned	hash;
@@ -2294,6 +2316,7 @@ int ip_route_input_common(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 		if ((((__force u32)rth->fl.fl4_dst ^ (__force u32)daddr) |
 		     ((__force u32)rth->fl.fl4_src ^ (__force u32)saddr) |
 		     (rth->fl.iif ^ iif) |
+		     (rth->fl.fl4_lsrc ^ lsrc) |
 		     rth->fl.oif |
 		     (rth->fl.fl4_tos ^ tos)) == 0 &&
 		    rth->fl.mark == skb->mark &&
@@ -2347,11 +2370,24 @@ skip_cache:
 		rcu_read_unlock();
 		return -EINVAL;
 	}
-	res = ip_route_input_slow(skb, daddr, saddr, tos, dev);
+	res = ip_route_input_slow(skb, daddr, saddr, tos, dev, lsrc);
 	rcu_read_unlock();
 	return res;
 }
+
+int ip_route_input_common(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+		   u8 tos, struct net_device *dev, bool noref)
+{
+	return ip_route_input_cached(skb, daddr, saddr, tos, dev, noref, 0);
+}
 EXPORT_SYMBOL(ip_route_input_common);
+
+int ip_route_input_lookup(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+			  u8 tos, struct net_device *dev, __be32 lsrc)
+{
+	return ip_route_input_cached(skb, daddr, saddr, tos, dev, true, lsrc);
+}
+EXPORT_SYMBOL(ip_route_input_lookup);
 
 static int __mkroute_output(struct rtable **result,
 			    struct fib_result *res,
@@ -2422,6 +2458,7 @@ static int __mkroute_output(struct rtable **result,
 	rth->fl.fl4_tos	= tos;
 	rth->fl.fl4_src	= oldflp->fl4_src;
 	rth->fl.oif	= oldflp->oif;
+	rth->fl.fl4_gw	= oldflp->fl4_gw;
 	rth->fl.mark    = oldflp->mark;
 	rth->rt_dst	= fl->fl4_dst;
 	rth->rt_src	= fl->fl4_src;
@@ -2504,6 +2541,7 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 	struct flowi fl = { .nl_u = { .ip4_u =
 				      { .daddr = oldflp->fl4_dst,
 					.saddr = oldflp->fl4_src,
+					.gw = oldflp->fl4_gw,
 					.tos = tos & IPTOS_RT_MASK,
 					.scope = ((tos & RTO_ONLINK) ?
 						  RT_SCOPE_LINK :
@@ -2601,6 +2639,7 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 		dev_out = net->loopback_dev;
 		dev_hold(dev_out);
 		fl.oif = net->loopback_dev->ifindex;
+		fl.fl4_gw = 0;
 		res.type = RTN_LOCAL;
 		flags |= RTCF_LOCAL;
 		goto make_route;
@@ -2648,6 +2687,7 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 		dev_out = net->loopback_dev;
 		dev_hold(dev_out);
 		fl.oif = dev_out->ifindex;
+		fl.fl4_gw = 0;
 		if (res.fi)
 			fib_info_put(res.fi);
 		res.fi = NULL;
@@ -2702,6 +2742,7 @@ int __ip_route_output_key(struct net *net, struct rtable **rp,
 		    rth->fl.fl4_src == flp->fl4_src &&
 		    rth->fl.iif == 0 &&
 		    rth->fl.oif == flp->oif &&
+		    rth->fl.fl4_gw == flp->fl4_gw &&
 		    rth->fl.mark == flp->mark &&
 		    !((rth->fl.fl4_tos ^ flp->fl4_tos) &
 			    (IPTOS_RT_MASK | RTO_ONLINK)) &&

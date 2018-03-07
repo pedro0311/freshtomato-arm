@@ -52,7 +52,7 @@ struct ifb_private {
 	u64 tx_bytes;
 };
 
-static int numifbs = 2;
+static int numifbs = 4;
 
 static void ri_tasklet(unsigned long dev);
 static netdev_tx_t ifb_xmit(struct sk_buff *skb, struct net_device *dev);
