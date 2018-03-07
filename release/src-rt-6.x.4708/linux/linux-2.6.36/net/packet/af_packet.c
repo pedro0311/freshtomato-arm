@@ -499,30 +499,31 @@ out_free:
 	return err;
 }
 
-static inline unsigned int run_filter(struct sk_buff *skb, struct sock *sk,
+static inline unsigned int run_filter(const struct sk_buff *skb,
+				      const struct sock *sk,
 				      unsigned int res)
 {
 	struct sk_filter *filter;
 
-	rcu_read_lock_bh();
-	filter = rcu_dereference_bh(sk->sk_filter);
+	rcu_read_lock();
+	filter = rcu_dereference(sk->sk_filter);
 	if (filter != NULL)
-		res = sk_run_filter(skb, filter->insns, filter->len);
-	rcu_read_unlock_bh();
+		res = sk_run_filter(skb, filter->insns);
+	rcu_read_unlock();
 
 	return res;
 }
 
 /*
-   This function makes lazy skb cloning in hope that most of packets
-   are discarded by BPF.
-
-   Note tricky part: we DO mangle shared skb! skb->data, skb->len
-   and skb->cb are mangled. It works because (and until) packets
-   falling here are owned by current CPU. Output packets are cloned
-   by dev_queue_xmit_nit(), input packets are processed by net_bh
-   sequencially, so that if we return skb to original state on exit,
-   we will not harm anyone.
+ * This function makes lazy skb cloning in hope that most of packets
+ * are discarded by BPF.
+ *
+ * Note tricky part: we DO mangle shared skb! skb->data, skb->len
+ * and skb->cb are mangled. It works because (and until) packets
+ * falling here are owned by current CPU. Output packets are cloned
+ * by dev_queue_xmit_nit(), input packets are processed by net_bh
+ * sequencially, so that if we return skb to original state on exit,
+ * we will not harm anyone.
  */
 
 static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
@@ -548,11 +549,11 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 
 	if (dev->header_ops) {
 		/* The device has an explicit notion of ll header,
-		   exported to higher levels.
-
-		   Otherwise, the device hides datails of it frame
-		   structure, so that corresponding packet head
-		   never delivered to user.
+		 * exported to higher levels.
+		 *
+		 * Otherwise, the device hides details of its frame
+		 * structure, so that corresponding packet head is
+		 * never delivered to user.
 		 */
 		if (sk->sk_type != SOCK_DGRAM)
 			skb_push(skb, skb->data - skb_mac_header(skb));
@@ -1629,9 +1630,10 @@ static int packet_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 		if (skb->ip_summed == CHECKSUM_PARTIAL) {
 			vnet_hdr.flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
-			vnet_hdr.csum_start = skb->csum_start -
-							skb_headroom(skb);
+			vnet_hdr.csum_start = skb_checksum_start_offset(skb);
 			vnet_hdr.csum_offset = skb->csum_offset;
+		} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+			vnet_hdr.flags = VIRTIO_NET_HDR_F_DATA_VALID;
 		} /* else everything is zero */
 
 		err = memcpy_toiovec(msg->msg_iov, (void *)&vnet_hdr,

@@ -66,9 +66,8 @@ static int veth_get_settings(struct net_device *dev, struct ethtool_cmd *cmd)
 
 static void veth_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info)
 {
-	strcpy(info->driver, DRV_NAME);
-	strcpy(info->version, DRV_VERSION);
-	strcpy(info->fw_version, "N/A");
+	strlcpy(info->driver, DRV_NAME, sizeof(info->driver));
+	strlcpy(info->version, DRV_VERSION, sizeof(info->version));
 }
 
 static void veth_get_strings(struct net_device *dev, u32 stringset, u8 *buf)
@@ -377,7 +376,7 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 	}
 
 	if (tbp[IFLA_ADDRESS] == NULL)
-		random_ether_addr(peer->dev_addr);
+		eth_hw_addr_random(peer);
 
 	err = register_netdevice(peer);
 	put_net(net);
@@ -399,18 +398,7 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 	 */
 
 	if (tb[IFLA_ADDRESS] == NULL)
-		random_ether_addr(dev->dev_addr);
-
-	if (tb[IFLA_IFNAME])
-		nla_strlcpy(dev->name, tb[IFLA_IFNAME], IFNAMSIZ);
-	else
-		snprintf(dev->name, IFNAMSIZ, DRV_NAME "%%d");
-
-	if (strchr(dev->name, '%')) {
-		err = dev_alloc_name(dev, dev->name);
-		if (err < 0)
-			goto err_alloc_name;
-	}
+		eth_hw_addr_random(dev);
 
 	err = register_netdevice(dev);
 	if (err < 0)
@@ -431,7 +419,6 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 
 err_register_dev:
 	/* nothing to do */
-err_alloc_name:
 err_configure_peer:
 	unregister_netdevice(peer);
 	return err;

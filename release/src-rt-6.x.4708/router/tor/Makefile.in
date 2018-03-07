@@ -278,16 +278,17 @@ src_common_libor_event_a_OBJECTS =  \
 src_common_libor_testing_a_AR = $(AR) $(ARFLAGS)
 src_common_libor_testing_a_LIBADD =
 am__src_common_libor_testing_a_SOURCES_DIST = src/common/address.c \
-	src/common/backtrace.c src/common/buffers.c \
-	src/common/compat.c src/common/compat_threads.c \
-	src/common/compat_time.c src/common/confline.c \
-	src/common/container.c src/common/log.c src/common/memarea.c \
-	src/common/pubsub.c src/common/util.c src/common/util_bug.c \
-	src/common/util_format.c src/common/util_process.c \
-	src/common/sandbox.c src/common/storagedir.c \
-	src/common/workqueue.c src/ext/OpenBSD_malloc_Linux.c \
-	src/common/compat_pthreads.c src/common/compat_winthreads.c \
-	src/ext/readpassphrase.c src/common/compat_rust.c
+	src/common/address_set.c src/common/backtrace.c \
+	src/common/buffers.c src/common/compat.c \
+	src/common/compat_threads.c src/common/compat_time.c \
+	src/common/confline.c src/common/container.c src/common/log.c \
+	src/common/memarea.c src/common/pubsub.c src/common/util.c \
+	src/common/util_bug.c src/common/util_format.c \
+	src/common/util_process.c src/common/sandbox.c \
+	src/common/storagedir.c src/common/workqueue.c \
+	src/ext/OpenBSD_malloc_Linux.c src/common/compat_pthreads.c \
+	src/common/compat_winthreads.c src/ext/readpassphrase.c \
+	src/common/compat_rust.c
 @USE_OPENBSD_MALLOC_TRUE@am__objects_9 = src/ext/src_common_libor_testing_a-OpenBSD_malloc_Linux.$(OBJEXT)
 @THREADS_PTHREADS_FALSE@@THREADS_WIN32_TRUE@am__objects_10 = src/common/src_common_libor_testing_a-compat_winthreads.$(OBJEXT)
 @THREADS_PTHREADS_TRUE@am__objects_10 = src/common/src_common_libor_testing_a-compat_pthreads.$(OBJEXT)
@@ -295,6 +296,7 @@ am__src_common_libor_testing_a_SOURCES_DIST = src/common/address.c \
 @USE_RUST_FALSE@am__objects_12 = src/common/src_common_libor_testing_a-compat_rust.$(OBJEXT)
 am__objects_13 =  \
 	src/common/src_common_libor_testing_a-address.$(OBJEXT) \
+	src/common/src_common_libor_testing_a-address_set.$(OBJEXT) \
 	src/common/src_common_libor_testing_a-backtrace.$(OBJEXT) \
 	src/common/src_common_libor_testing_a-buffers.$(OBJEXT) \
 	src/common/src_common_libor_testing_a-compat.$(OBJEXT) \
@@ -320,16 +322,17 @@ src_common_libor_testing_a_OBJECTS =  \
 src_common_libor_a_AR = $(AR) $(ARFLAGS)
 src_common_libor_a_LIBADD =
 am__src_common_libor_a_SOURCES_DIST = src/common/address.c \
-	src/common/backtrace.c src/common/buffers.c \
-	src/common/compat.c src/common/compat_threads.c \
-	src/common/compat_time.c src/common/confline.c \
-	src/common/container.c src/common/log.c src/common/memarea.c \
-	src/common/pubsub.c src/common/util.c src/common/util_bug.c \
-	src/common/util_format.c src/common/util_process.c \
-	src/common/sandbox.c src/common/storagedir.c \
-	src/common/workqueue.c src/ext/OpenBSD_malloc_Linux.c \
-	src/common/compat_pthreads.c src/common/compat_winthreads.c \
-	src/ext/readpassphrase.c src/common/compat_rust.c
+	src/common/address_set.c src/common/backtrace.c \
+	src/common/buffers.c src/common/compat.c \
+	src/common/compat_threads.c src/common/compat_time.c \
+	src/common/confline.c src/common/container.c src/common/log.c \
+	src/common/memarea.c src/common/pubsub.c src/common/util.c \
+	src/common/util_bug.c src/common/util_format.c \
+	src/common/util_process.c src/common/sandbox.c \
+	src/common/storagedir.c src/common/workqueue.c \
+	src/ext/OpenBSD_malloc_Linux.c src/common/compat_pthreads.c \
+	src/common/compat_winthreads.c src/ext/readpassphrase.c \
+	src/common/compat_rust.c
 @USE_OPENBSD_MALLOC_TRUE@am__objects_14 = src/ext/OpenBSD_malloc_Linux.$(OBJEXT)
 @THREADS_PTHREADS_FALSE@@THREADS_WIN32_TRUE@am__objects_15 = src/common/compat_winthreads.$(OBJEXT)
 @THREADS_PTHREADS_TRUE@am__objects_15 =  \
@@ -338,6 +341,7 @@ am__src_common_libor_a_SOURCES_DIST = src/common/address.c \
 @BUILD_READPASSPHRASE_C_TRUE@	src/ext/readpassphrase.$(OBJEXT)
 @USE_RUST_FALSE@am__objects_17 = src/common/compat_rust.$(OBJEXT)
 am__objects_18 = src/common/address.$(OBJEXT) \
+	src/common/address_set.$(OBJEXT) \
 	src/common/backtrace.$(OBJEXT) src/common/buffers.$(OBJEXT) \
 	src/common/compat.$(OBJEXT) \
 	src/common/compat_threads.$(OBJEXT) \
@@ -420,18 +424,18 @@ am__src_or_libtor_testing_a_SOURCES_DIST = src/or/addressmap.c \
 	src/or/conscache.c src/or/consdiff.c src/or/consdiffmgr.c \
 	src/or/control.c src/or/cpuworker.c src/or/dircollate.c \
 	src/or/directory.c src/or/dirserv.c src/or/dirvote.c \
-	src/or/dns.c src/or/dnsserv.c src/or/fp_pair.c src/or/geoip.c \
-	src/or/entrynodes.c src/or/ext_orport.c src/or/hibernate.c \
-	src/or/hs_cache.c src/or/hs_cell.c src/or/hs_circuit.c \
-	src/or/hs_circuitmap.c src/or/hs_client.c src/or/hs_common.c \
-	src/or/hs_config.c src/or/hs_descriptor.c src/or/hs_ident.c \
-	src/or/hs_intropoint.c src/or/hs_ntor.c src/or/hs_service.c \
-	src/or/keypin.c src/or/main.c src/or/microdesc.c \
-	src/or/networkstatus.c src/or/nodelist.c src/or/onion.c \
-	src/or/onion_fast.c src/or/onion_tap.c src/or/shared_random.c \
-	src/or/shared_random_state.c src/or/transports.c \
-	src/or/parsecommon.c src/or/periodic.c src/or/protover.c \
-	src/or/proto_cell.c src/or/proto_control0.c \
+	src/or/dns.c src/or/dnsserv.c src/or/dos.c src/or/fp_pair.c \
+	src/or/geoip.c src/or/entrynodes.c src/or/ext_orport.c \
+	src/or/hibernate.c src/or/hs_cache.c src/or/hs_cell.c \
+	src/or/hs_circuit.c src/or/hs_circuitmap.c src/or/hs_client.c \
+	src/or/hs_common.c src/or/hs_config.c src/or/hs_descriptor.c \
+	src/or/hs_ident.c src/or/hs_intropoint.c src/or/hs_ntor.c \
+	src/or/hs_service.c src/or/keypin.c src/or/main.c \
+	src/or/microdesc.c src/or/networkstatus.c src/or/nodelist.c \
+	src/or/onion.c src/or/onion_fast.c src/or/onion_tap.c \
+	src/or/shared_random.c src/or/shared_random_state.c \
+	src/or/transports.c src/or/parsecommon.c src/or/periodic.c \
+	src/or/protover.c src/or/proto_cell.c src/or/proto_control0.c \
 	src/or/proto_ext_or.c src/or/proto_http.c src/or/proto_socks.c \
 	src/or/policies.c src/or/reasons.c src/or/relay.c \
 	src/or/rendcache.c src/or/rendclient.c src/or/rendcommon.c \
@@ -471,6 +475,7 @@ am__objects_20 = src/or/src_or_libtor_testing_a-addressmap.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-dirvote.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-dns.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-dnsserv.$(OBJEXT) \
+	src/or/src_or_libtor_testing_a-dos.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-fp_pair.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-geoip.$(OBJEXT) \
 	src/or/src_or_libtor_testing_a-entrynodes.$(OBJEXT) \
@@ -546,18 +551,18 @@ am__src_or_libtor_a_SOURCES_DIST = src/or/addressmap.c \
 	src/or/conscache.c src/or/consdiff.c src/or/consdiffmgr.c \
 	src/or/control.c src/or/cpuworker.c src/or/dircollate.c \
 	src/or/directory.c src/or/dirserv.c src/or/dirvote.c \
-	src/or/dns.c src/or/dnsserv.c src/or/fp_pair.c src/or/geoip.c \
-	src/or/entrynodes.c src/or/ext_orport.c src/or/hibernate.c \
-	src/or/hs_cache.c src/or/hs_cell.c src/or/hs_circuit.c \
-	src/or/hs_circuitmap.c src/or/hs_client.c src/or/hs_common.c \
-	src/or/hs_config.c src/or/hs_descriptor.c src/or/hs_ident.c \
-	src/or/hs_intropoint.c src/or/hs_ntor.c src/or/hs_service.c \
-	src/or/keypin.c src/or/main.c src/or/microdesc.c \
-	src/or/networkstatus.c src/or/nodelist.c src/or/onion.c \
-	src/or/onion_fast.c src/or/onion_tap.c src/or/shared_random.c \
-	src/or/shared_random_state.c src/or/transports.c \
-	src/or/parsecommon.c src/or/periodic.c src/or/protover.c \
-	src/or/proto_cell.c src/or/proto_control0.c \
+	src/or/dns.c src/or/dnsserv.c src/or/dos.c src/or/fp_pair.c \
+	src/or/geoip.c src/or/entrynodes.c src/or/ext_orport.c \
+	src/or/hibernate.c src/or/hs_cache.c src/or/hs_cell.c \
+	src/or/hs_circuit.c src/or/hs_circuitmap.c src/or/hs_client.c \
+	src/or/hs_common.c src/or/hs_config.c src/or/hs_descriptor.c \
+	src/or/hs_ident.c src/or/hs_intropoint.c src/or/hs_ntor.c \
+	src/or/hs_service.c src/or/keypin.c src/or/main.c \
+	src/or/microdesc.c src/or/networkstatus.c src/or/nodelist.c \
+	src/or/onion.c src/or/onion_fast.c src/or/onion_tap.c \
+	src/or/shared_random.c src/or/shared_random_state.c \
+	src/or/transports.c src/or/parsecommon.c src/or/periodic.c \
+	src/or/protover.c src/or/proto_cell.c src/or/proto_control0.c \
 	src/or/proto_ext_or.c src/or/proto_http.c src/or/proto_socks.c \
 	src/or/policies.c src/or/reasons.c src/or/relay.c \
 	src/or/rendcache.c src/or/rendclient.c src/or/rendcommon.c \
@@ -583,19 +588,20 @@ am__objects_22 = src/or/addressmap.$(OBJEXT) src/or/bridges.$(OBJEXT) \
 	src/or/dircollate.$(OBJEXT) src/or/directory.$(OBJEXT) \
 	src/or/dirserv.$(OBJEXT) src/or/dirvote.$(OBJEXT) \
 	src/or/dns.$(OBJEXT) src/or/dnsserv.$(OBJEXT) \
-	src/or/fp_pair.$(OBJEXT) src/or/geoip.$(OBJEXT) \
-	src/or/entrynodes.$(OBJEXT) src/or/ext_orport.$(OBJEXT) \
-	src/or/hibernate.$(OBJEXT) src/or/hs_cache.$(OBJEXT) \
-	src/or/hs_cell.$(OBJEXT) src/or/hs_circuit.$(OBJEXT) \
-	src/or/hs_circuitmap.$(OBJEXT) src/or/hs_client.$(OBJEXT) \
-	src/or/hs_common.$(OBJEXT) src/or/hs_config.$(OBJEXT) \
-	src/or/hs_descriptor.$(OBJEXT) src/or/hs_ident.$(OBJEXT) \
-	src/or/hs_intropoint.$(OBJEXT) src/or/hs_ntor.$(OBJEXT) \
-	src/or/hs_service.$(OBJEXT) src/or/keypin.$(OBJEXT) \
-	src/or/main.$(OBJEXT) src/or/microdesc.$(OBJEXT) \
-	src/or/networkstatus.$(OBJEXT) src/or/nodelist.$(OBJEXT) \
-	src/or/onion.$(OBJEXT) src/or/onion_fast.$(OBJEXT) \
-	src/or/onion_tap.$(OBJEXT) src/or/shared_random.$(OBJEXT) \
+	src/or/dos.$(OBJEXT) src/or/fp_pair.$(OBJEXT) \
+	src/or/geoip.$(OBJEXT) src/or/entrynodes.$(OBJEXT) \
+	src/or/ext_orport.$(OBJEXT) src/or/hibernate.$(OBJEXT) \
+	src/or/hs_cache.$(OBJEXT) src/or/hs_cell.$(OBJEXT) \
+	src/or/hs_circuit.$(OBJEXT) src/or/hs_circuitmap.$(OBJEXT) \
+	src/or/hs_client.$(OBJEXT) src/or/hs_common.$(OBJEXT) \
+	src/or/hs_config.$(OBJEXT) src/or/hs_descriptor.$(OBJEXT) \
+	src/or/hs_ident.$(OBJEXT) src/or/hs_intropoint.$(OBJEXT) \
+	src/or/hs_ntor.$(OBJEXT) src/or/hs_service.$(OBJEXT) \
+	src/or/keypin.$(OBJEXT) src/or/main.$(OBJEXT) \
+	src/or/microdesc.$(OBJEXT) src/or/networkstatus.$(OBJEXT) \
+	src/or/nodelist.$(OBJEXT) src/or/onion.$(OBJEXT) \
+	src/or/onion_fast.$(OBJEXT) src/or/onion_tap.$(OBJEXT) \
+	src/or/shared_random.$(OBJEXT) \
 	src/or/shared_random_state.$(OBJEXT) \
 	src/or/transports.$(OBJEXT) src/or/parsecommon.$(OBJEXT) \
 	src/or/periodic.$(OBJEXT) src/or/protover.$(OBJEXT) \
@@ -1110,6 +1116,7 @@ am_src_test_test_OBJECTS =  \
 	src/test/src_test_test-test_accounting.$(OBJEXT) \
 	src/test/src_test_test-test_addr.$(OBJEXT) \
 	src/test/src_test_test-test_address.$(OBJEXT) \
+	src/test/src_test_test-test_address_set.$(OBJEXT) \
 	src/test/src_test_test-test_buffers.$(OBJEXT) \
 	src/test/src_test_test-test_cell_formats.$(OBJEXT) \
 	src/test/src_test_test-test_cell_queue.$(OBJEXT) \
@@ -1132,6 +1139,7 @@ am_src_test_test_OBJECTS =  \
 	src/test/src_test_test-test_controller_events.$(OBJEXT) \
 	src/test/src_test_test-test_crypto.$(OBJEXT) \
 	src/test/src_test_test-test_crypto_openssl.$(OBJEXT) \
+	src/test/src_test_test-test_dos.$(OBJEXT) \
 	src/test/src_test_test-test_data.$(OBJEXT) \
 	src/test/src_test_test-test_dir.$(OBJEXT) \
 	src/test/src_test_test-test_dir_common.$(OBJEXT) \
@@ -1579,8 +1587,8 @@ am__noinst_HEADERS_DIST = src/ext/ht.h src/ext/byteorder.h \
 	src/trunnel/hs/cell_introduce1.h \
 	src/trunnel/hs/cell_rendezvous.h \
 	src/trunnel/channelpadding_negotiation.h src/common/address.h \
-	src/common/backtrace.h src/common/buffers.h \
-	src/common/buffers_tls.h src/common/aes.h \
+	src/common/address_set.h src/common/backtrace.h \
+	src/common/buffers.h src/common/buffers_tls.h src/common/aes.h \
 	src/common/ciphers.inc src/common/compat.h \
 	src/common/compat_libevent.h src/common/compat_openssl.h \
 	src/common/compat_rust.h src/common/compat_threads.h \
@@ -1610,32 +1618,32 @@ am__noinst_HEADERS_DIST = src/ext/ht.h src/ext/byteorder.h \
 	src/or/control.h src/or/cpuworker.h src/or/dircollate.h \
 	src/or/directory.h src/or/dirserv.h src/or/dirvote.h \
 	src/or/dns.h src/or/dns_structs.h src/or/dnsserv.h \
-	src/or/ext_orport.h src/or/fallback_dirs.inc src/or/fp_pair.h \
-	src/or/geoip.h src/or/entrynodes.h src/or/hibernate.h \
-	src/or/hs_cache.h src/or/hs_cell.h src/or/hs_config.h \
-	src/or/hs_circuit.h src/or/hs_circuitmap.h src/or/hs_client.h \
-	src/or/hs_common.h src/or/hs_descriptor.h src/or/hs_ident.h \
-	src/or/hs_intropoint.h src/or/hs_ntor.h src/or/hs_service.h \
-	src/or/keypin.h src/or/main.h src/or/microdesc.h \
-	src/or/networkstatus.h src/or/nodelist.h src/or/ntmain.h \
-	src/or/onion.h src/or/onion_fast.h src/or/onion_ntor.h \
-	src/or/onion_tap.h src/or/or.h src/or/shared_random.h \
-	src/or/shared_random_state.h src/or/transports.h \
-	src/or/parsecommon.h src/or/periodic.h src/or/policies.h \
-	src/or/protover.h src/or/proto_cell.h src/or/proto_control0.h \
-	src/or/proto_ext_or.h src/or/proto_http.h src/or/proto_socks.h \
-	src/or/reasons.h src/or/relay.h src/or/rendcache.h \
-	src/or/rendclient.h src/or/rendcommon.h src/or/rendmid.h \
-	src/or/rendservice.h src/or/rephist.h src/or/replaycache.h \
-	src/or/router.h src/or/routerkeys.h src/or/routerlist.h \
-	src/or/routerset.h src/or/routerparse.h src/or/scheduler.h \
-	src/or/statefile.h src/or/status.h src/or/torcert.h \
-	micro-revision.i src/test/fakechans.h \
-	src/test/hs_test_helpers.h src/test/log_test_helpers.h \
-	src/test/rend_test_helpers.h src/test/test.h \
-	src/test/test_helpers.h src/test/test_dir_common.h \
-	src/test/test_connection.h src/test/test_descriptors.inc \
-	src/test/example_extrainfo.inc \
+	src/or/dos.h src/or/ext_orport.h src/or/fallback_dirs.inc \
+	src/or/fp_pair.h src/or/geoip.h src/or/entrynodes.h \
+	src/or/hibernate.h src/or/hs_cache.h src/or/hs_cell.h \
+	src/or/hs_config.h src/or/hs_circuit.h src/or/hs_circuitmap.h \
+	src/or/hs_client.h src/or/hs_common.h src/or/hs_descriptor.h \
+	src/or/hs_ident.h src/or/hs_intropoint.h src/or/hs_ntor.h \
+	src/or/hs_service.h src/or/keypin.h src/or/main.h \
+	src/or/microdesc.h src/or/networkstatus.h src/or/nodelist.h \
+	src/or/ntmain.h src/or/onion.h src/or/onion_fast.h \
+	src/or/onion_ntor.h src/or/onion_tap.h src/or/or.h \
+	src/or/shared_random.h src/or/shared_random_state.h \
+	src/or/transports.h src/or/parsecommon.h src/or/periodic.h \
+	src/or/policies.h src/or/protover.h src/or/proto_cell.h \
+	src/or/proto_control0.h src/or/proto_ext_or.h \
+	src/or/proto_http.h src/or/proto_socks.h src/or/reasons.h \
+	src/or/relay.h src/or/rendcache.h src/or/rendclient.h \
+	src/or/rendcommon.h src/or/rendmid.h src/or/rendservice.h \
+	src/or/rephist.h src/or/replaycache.h src/or/router.h \
+	src/or/routerkeys.h src/or/routerlist.h src/or/routerset.h \
+	src/or/routerparse.h src/or/scheduler.h src/or/statefile.h \
+	src/or/status.h src/or/torcert.h micro-revision.i \
+	src/test/fakechans.h src/test/hs_test_helpers.h \
+	src/test/log_test_helpers.h src/test/rend_test_helpers.h \
+	src/test/test.h src/test/test_helpers.h \
+	src/test/test_dir_common.h src/test/test_connection.h \
+	src/test/test_descriptors.inc src/test/example_extrainfo.inc \
 	src/test/failing_routerdescs.inc src/test/ed25519_vectors.inc \
 	src/test/test_hs_descriptor.inc src/test/vote_descriptors.inc \
 	src/test/fuzz/fuzzing.h src/trace/trace.h src/trace/events.h \
@@ -1971,6 +1979,7 @@ TOR_LIB_WS32 = @TOR_LIB_WS32@
 TOR_LZMA_CFLAGS = @TOR_LZMA_CFLAGS@
 TOR_LZMA_LIBS = @TOR_LZMA_LIBS@
 TOR_OPENSSL_LIBS = @TOR_OPENSSL_LIBS@
+TOR_RUST_EXTRA_LIBS = @TOR_RUST_EXTRA_LIBS@
 TOR_RUST_UTIL_STATIC_NAME = @TOR_RUST_UTIL_STATIC_NAME@
 TOR_SYSTEMD_CFLAGS = @TOR_SYSTEMD_CFLAGS@
 TOR_SYSTEMD_LIBS = @TOR_SYSTEMD_LIBS@
@@ -2122,7 +2131,9 @@ AM_CFLAGS = @TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CF
 @COVERAGE_ENABLED_FALSE@TESTING_TOR_BINARY = $(top_builddir)/src/or/tor$(EXEEXT)
 @COVERAGE_ENABLED_TRUE@TESTING_TOR_BINARY = $(top_builddir)/src/or/tor-cov$(EXEEXT)
 @USE_RUST_FALSE@rust_ldadd = 
-@USE_RUST_TRUE@rust_ldadd = $(top_builddir)/src/rust/target/release/@TOR_RUST_UTIL_STATIC_NAME@
+@USE_RUST_TRUE@rust_ldadd = $(top_builddir)/src/rust/target/release/@TOR_RUST_UTIL_STATIC_NAME@ \
+@USE_RUST_TRUE@	@TOR_RUST_EXTRA_LIBS@
+
 EXTHEADERS = \
   src/ext/ht.h		\
   src/ext/byteorder.h   \
@@ -2331,16 +2342,17 @@ src_common_libor_ctime_a_SOURCES = $(LIBOR_CTIME_A_SRC)
 src_common_libor_ctime_testing_a_SOURCES = $(LIBOR_CTIME_A_SRC)
 src_common_libor_ctime_a_CFLAGS = @CFLAGS_CONSTTIME@
 src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
-LIBOR_A_SRC = src/common/address.c src/common/backtrace.c \
-	src/common/buffers.c src/common/compat.c \
-	src/common/compat_threads.c src/common/compat_time.c \
-	src/common/confline.c src/common/container.c src/common/log.c \
-	src/common/memarea.c src/common/pubsub.c src/common/util.c \
-	src/common/util_bug.c src/common/util_format.c \
-	src/common/util_process.c src/common/sandbox.c \
-	src/common/storagedir.c src/common/workqueue.c \
-	$(libor_extra_source) $(threads_impl_source) \
-	$(readpassphrase_source) $(am__append_7)
+LIBOR_A_SRC = src/common/address.c src/common/address_set.c \
+	src/common/backtrace.c src/common/buffers.c \
+	src/common/compat.c src/common/compat_threads.c \
+	src/common/compat_time.c src/common/confline.c \
+	src/common/container.c src/common/log.c src/common/memarea.c \
+	src/common/pubsub.c src/common/util.c src/common/util_bug.c \
+	src/common/util_format.c src/common/util_process.c \
+	src/common/sandbox.c src/common/storagedir.c \
+	src/common/workqueue.c $(libor_extra_source) \
+	$(threads_impl_source) $(readpassphrase_source) \
+	$(am__append_7)
 LIBOR_CRYPTO_A_SRC = \
   src/common/aes.c		\
   src/common/buffers_tls.c	\
@@ -2377,6 +2389,7 @@ src_common_libor_crypto_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 COMMONHEADERS = \
   src/common/address.h				\
+  src/common/address_set.h			\
   src/common/backtrace.h			\
   src/common/buffers.h				\
   src/common/buffers_tls.h			\
@@ -2452,6 +2465,7 @@ LIBTOR_A_SOURCES = \
 	src/or/dirvote.c				\
 	src/or/dns.c					\
 	src/or/dnsserv.c				\
+	src/or/dos.c					\
 	src/or/fp_pair.c				\
 	src/or/geoip.c					\
 	src/or/entrynodes.c				\
@@ -2575,6 +2589,7 @@ ORHEADERS = \
 	src/or/dns.h					\
 	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\
+	src/or/dos.h					\
 	src/or/ext_orport.h				\
 	src/or/fallback_dirs.inc			\
 	src/or/fp_pair.h				\
@@ -2691,6 +2706,7 @@ src_test_test_SOURCES = \
 	src/test/test_accounting.c \
 	src/test/test_addr.c \
 	src/test/test_address.c \
+	src/test/test_address_set.c \
 	src/test/test_buffers.c \
 	src/test/test_cell_formats.c \
 	src/test/test_cell_queue.c \
@@ -2713,6 +2729,7 @@ src_test_test_SOURCES = \
 	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
 	src/test/test_crypto_openssl.c \
+	src/test/test_dos.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
 	src/test/test_dir_common.c \
@@ -3576,6 +3593,9 @@ src/common/libor-event.a: $(src_common_libor_event_a_OBJECTS) $(src_common_libor
 src/common/src_common_libor_testing_a-address.$(OBJEXT):  \
 	src/common/$(am__dirstamp) \
 	src/common/$(DEPDIR)/$(am__dirstamp)
+src/common/src_common_libor_testing_a-address_set.$(OBJEXT):  \
+	src/common/$(am__dirstamp) \
+	src/common/$(DEPDIR)/$(am__dirstamp)
 src/common/src_common_libor_testing_a-backtrace.$(OBJEXT):  \
 	src/common/$(am__dirstamp) \
 	src/common/$(DEPDIR)/$(am__dirstamp)
@@ -3646,6 +3666,8 @@ src/common/libor-testing.a: $(src_common_libor_testing_a_OBJECTS) $(src_common_l
 	$(AM_V_AR)$(src_common_libor_testing_a_AR) src/common/libor-testing.a $(src_common_libor_testing_a_OBJECTS) $(src_common_libor_testing_a_LIBADD)
 	$(AM_V_at)$(RANLIB) src/common/libor-testing.a
 src/common/address.$(OBJEXT): src/common/$(am__dirstamp) \
+	src/common/$(DEPDIR)/$(am__dirstamp)
+src/common/address_set.$(OBJEXT): src/common/$(am__dirstamp) \
 	src/common/$(DEPDIR)/$(am__dirstamp)
 src/common/backtrace.$(OBJEXT): src/common/$(am__dirstamp) \
 	src/common/$(DEPDIR)/$(am__dirstamp)
@@ -3922,6 +3944,8 @@ src/or/src_or_libtor_testing_a-dns.$(OBJEXT): src/or/$(am__dirstamp) \
 	src/or/$(DEPDIR)/$(am__dirstamp)
 src/or/src_or_libtor_testing_a-dnsserv.$(OBJEXT):  \
 	src/or/$(am__dirstamp) src/or/$(DEPDIR)/$(am__dirstamp)
+src/or/src_or_libtor_testing_a-dos.$(OBJEXT): src/or/$(am__dirstamp) \
+	src/or/$(DEPDIR)/$(am__dirstamp)
 src/or/src_or_libtor_testing_a-fp_pair.$(OBJEXT):  \
 	src/or/$(am__dirstamp) src/or/$(DEPDIR)/$(am__dirstamp)
 src/or/src_or_libtor_testing_a-geoip.$(OBJEXT):  \
@@ -4102,6 +4126,8 @@ src/or/dirvote.$(OBJEXT): src/or/$(am__dirstamp) \
 src/or/dns.$(OBJEXT): src/or/$(am__dirstamp) \
 	src/or/$(DEPDIR)/$(am__dirstamp)
 src/or/dnsserv.$(OBJEXT): src/or/$(am__dirstamp) \
+	src/or/$(DEPDIR)/$(am__dirstamp)
+src/or/dos.$(OBJEXT): src/or/$(am__dirstamp) \
 	src/or/$(DEPDIR)/$(am__dirstamp)
 src/or/fp_pair.$(OBJEXT): src/or/$(am__dirstamp) \
 	src/or/$(DEPDIR)/$(am__dirstamp)
@@ -4782,6 +4808,8 @@ src/test/src_test_test-test_addr.$(OBJEXT): src/test/$(am__dirstamp) \
 	src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_address.$(OBJEXT):  \
 	src/test/$(am__dirstamp) src/test/$(DEPDIR)/$(am__dirstamp)
+src/test/src_test_test-test_address_set.$(OBJEXT):  \
+	src/test/$(am__dirstamp) src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_buffers.$(OBJEXT):  \
 	src/test/$(am__dirstamp) src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_cell_formats.$(OBJEXT):  \
@@ -4826,6 +4854,8 @@ src/test/src_test_test-test_crypto.$(OBJEXT):  \
 	src/test/$(am__dirstamp) src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_crypto_openssl.$(OBJEXT):  \
 	src/test/$(am__dirstamp) src/test/$(DEPDIR)/$(am__dirstamp)
+src/test/src_test_test-test_dos.$(OBJEXT): src/test/$(am__dirstamp) \
+	src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_data.$(OBJEXT): src/test/$(am__dirstamp) \
 	src/test/$(DEPDIR)/$(am__dirstamp)
 src/test/src_test_test-test_dir.$(OBJEXT): src/test/$(am__dirstamp) \
@@ -5101,6 +5131,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/address.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/address_set.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/aes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/backtrace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/buffers.Po@am__quote@
@@ -5150,6 +5181,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_event_testing_a-procmon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_event_testing_a-timers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_testing_a-address.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_testing_a-backtrace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_testing_a-buffers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/common/$(DEPDIR)/src_common_libor_testing_a-compat.Po@am__quote@
@@ -5266,6 +5298,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/dirvote.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/dnsserv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/dos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/entrynodes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/ext_orport.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/fp_pair.Po@am__quote@
@@ -5350,6 +5383,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-dirvote.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-dnsserv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-entrynodes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-ext_orport.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/or/$(DEPDIR)/src_or_libtor_testing_a-fp_pair.Po@am__quote@
@@ -5423,6 +5457,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_accounting.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_addr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_address.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_address_set.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_buffers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_cell_formats.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_cell_queue.Po@am__quote@
@@ -5450,6 +5485,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_dir_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_dir_handle_get.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_dns.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_dos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_entryconn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_entrynodes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/test/$(DEPDIR)/src_test_test-test_extorport.Po@am__quote@
@@ -6003,6 +6039,20 @@ src/common/src_common_libor_testing_a-address.obj: src/common/address.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/common/address.c' object='src/common/src_common_libor_testing_a-address.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -c -o src/common/src_common_libor_testing_a-address.obj `if test -f 'src/common/address.c'; then $(CYGPATH_W) 'src/common/address.c'; else $(CYGPATH_W) '$(srcdir)/src/common/address.c'; fi`
+
+src/common/src_common_libor_testing_a-address_set.o: src/common/address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -MT src/common/src_common_libor_testing_a-address_set.o -MD -MP -MF src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Tpo -c -o src/common/src_common_libor_testing_a-address_set.o `test -f 'src/common/address_set.c' || echo '$(srcdir)/'`src/common/address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Tpo src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/common/address_set.c' object='src/common/src_common_libor_testing_a-address_set.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -c -o src/common/src_common_libor_testing_a-address_set.o `test -f 'src/common/address_set.c' || echo '$(srcdir)/'`src/common/address_set.c
+
+src/common/src_common_libor_testing_a-address_set.obj: src/common/address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -MT src/common/src_common_libor_testing_a-address_set.obj -MD -MP -MF src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Tpo -c -o src/common/src_common_libor_testing_a-address_set.obj `if test -f 'src/common/address_set.c'; then $(CYGPATH_W) 'src/common/address_set.c'; else $(CYGPATH_W) '$(srcdir)/src/common/address_set.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Tpo src/common/$(DEPDIR)/src_common_libor_testing_a-address_set.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/common/address_set.c' object='src/common/src_common_libor_testing_a-address_set.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -c -o src/common/src_common_libor_testing_a-address_set.obj `if test -f 'src/common/address_set.c'; then $(CYGPATH_W) 'src/common/address_set.c'; else $(CYGPATH_W) '$(srcdir)/src/common/address_set.c'; fi`
 
 src/common/src_common_libor_testing_a-backtrace.o: src/common/backtrace.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_common_libor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_common_libor_testing_a_CFLAGS) $(CFLAGS) -MT src/common/src_common_libor_testing_a-backtrace.o -MD -MP -MF src/common/$(DEPDIR)/src_common_libor_testing_a-backtrace.Tpo -c -o src/common/src_common_libor_testing_a-backtrace.o `test -f 'src/common/backtrace.c' || echo '$(srcdir)/'`src/common/backtrace.c
@@ -7319,6 +7369,20 @@ src/or/src_or_libtor_testing_a-dnsserv.obj: src/or/dnsserv.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/or/dnsserv.c' object='src/or/src_or_libtor_testing_a-dnsserv.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -c -o src/or/src_or_libtor_testing_a-dnsserv.obj `if test -f 'src/or/dnsserv.c'; then $(CYGPATH_W) 'src/or/dnsserv.c'; else $(CYGPATH_W) '$(srcdir)/src/or/dnsserv.c'; fi`
+
+src/or/src_or_libtor_testing_a-dos.o: src/or/dos.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -MT src/or/src_or_libtor_testing_a-dos.o -MD -MP -MF src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Tpo -c -o src/or/src_or_libtor_testing_a-dos.o `test -f 'src/or/dos.c' || echo '$(srcdir)/'`src/or/dos.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Tpo src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/or/dos.c' object='src/or/src_or_libtor_testing_a-dos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -c -o src/or/src_or_libtor_testing_a-dos.o `test -f 'src/or/dos.c' || echo '$(srcdir)/'`src/or/dos.c
+
+src/or/src_or_libtor_testing_a-dos.obj: src/or/dos.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -MT src/or/src_or_libtor_testing_a-dos.obj -MD -MP -MF src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Tpo -c -o src/or/src_or_libtor_testing_a-dos.obj `if test -f 'src/or/dos.c'; then $(CYGPATH_W) 'src/or/dos.c'; else $(CYGPATH_W) '$(srcdir)/src/or/dos.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Tpo src/or/$(DEPDIR)/src_or_libtor_testing_a-dos.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/or/dos.c' object='src/or/src_or_libtor_testing_a-dos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -c -o src/or/src_or_libtor_testing_a-dos.obj `if test -f 'src/or/dos.c'; then $(CYGPATH_W) 'src/or/dos.c'; else $(CYGPATH_W) '$(srcdir)/src/or/dos.c'; fi`
 
 src/or/src_or_libtor_testing_a-fp_pair.o: src/or/fp_pair.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_or_libtor_testing_a_CPPFLAGS) $(CPPFLAGS) $(src_or_libtor_testing_a_CFLAGS) $(CFLAGS) -MT src/or/src_or_libtor_testing_a-fp_pair.o -MD -MP -MF src/or/$(DEPDIR)/src_or_libtor_testing_a-fp_pair.Tpo -c -o src/or/src_or_libtor_testing_a-fp_pair.o `test -f 'src/or/fp_pair.c' || echo '$(srcdir)/'`src/or/fp_pair.c
@@ -9518,6 +9582,20 @@ src/test/src_test_test-test_address.obj: src/test/test_address.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_address.obj `if test -f 'src/test/test_address.c'; then $(CYGPATH_W) 'src/test/test_address.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_address.c'; fi`
 
+src/test/src_test_test-test_address_set.o: src/test/test_address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_address_set.o -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_address_set.Tpo -c -o src/test/src_test_test-test_address_set.o `test -f 'src/test/test_address_set.c' || echo '$(srcdir)/'`src/test/test_address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/test/$(DEPDIR)/src_test_test-test_address_set.Tpo src/test/$(DEPDIR)/src_test_test-test_address_set.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/test/test_address_set.c' object='src/test/src_test_test-test_address_set.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_address_set.o `test -f 'src/test/test_address_set.c' || echo '$(srcdir)/'`src/test/test_address_set.c
+
+src/test/src_test_test-test_address_set.obj: src/test/test_address_set.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_address_set.obj -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_address_set.Tpo -c -o src/test/src_test_test-test_address_set.obj `if test -f 'src/test/test_address_set.c'; then $(CYGPATH_W) 'src/test/test_address_set.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_address_set.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/test/$(DEPDIR)/src_test_test-test_address_set.Tpo src/test/$(DEPDIR)/src_test_test-test_address_set.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/test/test_address_set.c' object='src/test/src_test_test-test_address_set.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_address_set.obj `if test -f 'src/test/test_address_set.c'; then $(CYGPATH_W) 'src/test/test_address_set.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_address_set.c'; fi`
+
 src/test/src_test_test-test_buffers.o: src/test/test_buffers.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_buffers.o -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_buffers.Tpo -c -o src/test/src_test_test-test_buffers.o `test -f 'src/test/test_buffers.c' || echo '$(srcdir)/'`src/test/test_buffers.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/test/$(DEPDIR)/src_test_test-test_buffers.Tpo src/test/$(DEPDIR)/src_test_test-test_buffers.Po
@@ -9825,6 +9903,20 @@ src/test/src_test_test-test_crypto_openssl.obj: src/test/test_crypto_openssl.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/test/test_crypto_openssl.c' object='src/test/src_test_test-test_crypto_openssl.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_crypto_openssl.obj `if test -f 'src/test/test_crypto_openssl.c'; then $(CYGPATH_W) 'src/test/test_crypto_openssl.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_crypto_openssl.c'; fi`
+
+src/test/src_test_test-test_dos.o: src/test/test_dos.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_dos.o -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_dos.Tpo -c -o src/test/src_test_test-test_dos.o `test -f 'src/test/test_dos.c' || echo '$(srcdir)/'`src/test/test_dos.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/test/$(DEPDIR)/src_test_test-test_dos.Tpo src/test/$(DEPDIR)/src_test_test-test_dos.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/test/test_dos.c' object='src/test/src_test_test-test_dos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_dos.o `test -f 'src/test/test_dos.c' || echo '$(srcdir)/'`src/test/test_dos.c
+
+src/test/src_test_test-test_dos.obj: src/test/test_dos.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_dos.obj -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_dos.Tpo -c -o src/test/src_test_test-test_dos.obj `if test -f 'src/test/test_dos.c'; then $(CYGPATH_W) 'src/test/test_dos.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_dos.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/test/$(DEPDIR)/src_test_test-test_dos.Tpo src/test/$(DEPDIR)/src_test_test-test_dos.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/test/test_dos.c' object='src/test/src_test_test-test_dos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -c -o src/test/src_test_test-test_dos.obj `if test -f 'src/test/test_dos.c'; then $(CYGPATH_W) 'src/test/test_dos.c'; else $(CYGPATH_W) '$(srcdir)/src/test/test_dos.c'; fi`
 
 src/test/src_test_test-test_data.o: src/test/test_data.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_test_test_CPPFLAGS) $(CPPFLAGS) $(src_test_test_CFLAGS) $(CFLAGS) -MT src/test/src_test_test-test_data.o -MD -MP -MF src/test/$(DEPDIR)/src_test_test-test_data.Tpo -c -o src/test/src_test_test-test_data.o `test -f 'src/test/test_data.c' || echo '$(srcdir)/'`src/test/test_data.c

@@ -1310,8 +1310,13 @@ store_multiple(consensus_cache_entry_handle_t **handles_out,
                             labels,
                             body_out,
                             bodylen_out);
-      if (BUG(ent == NULL))
+      if (ent == NULL) {
+        static ratelim_t cant_store_ratelim = RATELIM_INIT(5*60);
+        log_fn_ratelim(&cant_store_ratelim, LOG_WARN, LD_FS,
+                       "Unable to store object %s compressed with %s.",
+                       description, methodname);
         continue;
+      }
 
       status = CDM_DIFF_PRESENT;
       handles_out[i] = consensus_cache_entry_handle_new(ent);

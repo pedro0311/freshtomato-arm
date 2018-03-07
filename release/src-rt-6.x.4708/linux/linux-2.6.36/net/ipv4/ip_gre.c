@@ -383,11 +383,6 @@ static struct ip_tunnel * ipgre_tunnel_locate(struct net *net,
 
 	dev_net_set(dev, net);
 
-	if (strchr(name, '%')) {
-		if (dev_alloc_name(dev, name) < 0)
-			goto failed_free;
-	}
-
 	nt = netdev_priv(dev);
 	nt->parms = *parms;
 	dev->rtnl_link_ops = &ipgre_link_ops;
@@ -855,7 +850,7 @@ static netdev_tx_t ipgre_tunnel_xmit(struct sk_buff *skb, struct net_device *dev
 			iph->ttl = ((struct ipv6hdr *)old_iph)->hop_limit;
 #endif
 		else
-			iph->ttl = dst_metric(&rt->dst, RTAX_HOPLIMIT);
+			iph->ttl = ip4_dst_hoplimit(&rt->dst);
 	}
 
 	((__be16 *)(iph + 1))[0] = tunnel->parms.o_flags;
@@ -1481,7 +1476,7 @@ static int ipgre_newlink(struct net *src_net, struct net_device *dev, struct nla
 		return -EEXIST;
 
 	if (dev->type == ARPHRD_ETHER && !tb[IFLA_ADDRESS])
-		random_ether_addr(dev->dev_addr);
+		eth_hw_addr_random(dev);
 
 	mtu = ipgre_tunnel_bind_dev(dev);
 	if (!tb[IFLA_MTU])

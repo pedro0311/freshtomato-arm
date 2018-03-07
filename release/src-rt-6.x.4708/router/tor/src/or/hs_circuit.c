@@ -484,9 +484,14 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
     goto disallow;
   }
 
+  /* We check failure_count >= hs_get_service_max_rend_failures()-1 below, and
+   * the -1 is because we increment the failure count for our current failure
+   * *after* this clause. */
+  int max_rend_failures = hs_get_service_max_rend_failures() - 1;
+
   /* A failure count that has reached maximum allowed or circuit that expired,
    * we skip relaunching. */
-  if (circ->build_state->failure_count > MAX_REND_FAILURES ||
+  if (circ->build_state->failure_count > max_rend_failures ||
       circ->build_state->expiry_time <= time(NULL)) {
     log_info(LD_REND, "Attempt to build a rendezvous circuit to %s has "
                       "failed with %d attempts and expiry time %ld. "
@@ -545,7 +550,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 
   /* Transfer build state information to the new circuit state in part to
    * catch any other failures. */
-  new_circ->build_state->failure_count = bstate->failure_count++;
+  new_circ->build_state->failure_count = bstate->failure_count+1;
   new_circ->build_state->expiry_time = bstate->expiry_time;
   new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
 

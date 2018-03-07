@@ -1352,8 +1352,8 @@ static int bond_compute_features(struct bonding *bond)
 {
 	struct slave *slave;
 	struct net_device *bond_dev = bond->dev;
-	unsigned long features = bond_dev->features;
-	unsigned long vlan_features = 0;
+	u32 features = bond_dev->features;
+	u32 vlan_features = 0;
 	unsigned short max_hard_header_len = max((u16)ETH_HLEN,
 						bond_dev->hard_header_len);
 	int i;
@@ -1499,8 +1499,10 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 
 			if (slave_dev->type != ARPHRD_ETHER)
 				bond_setup_by_slave(bond_dev, slave_dev);
-			else
+			else {
 				ether_setup(bond_dev);
+				bond_dev->priv_flags &= ~IFF_TX_SKB_SHARING;
+			}
 
 			netdev_bonding_change(bond_dev,
 					      NETDEV_POST_TYPE_CHANGE);
@@ -1525,6 +1527,8 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 			goto err_undo_flags;
 		}
 	}
+
+	call_netdevice_notifiers(NETDEV_JOIN, slave_dev);
 
 	/* If this is the first slave, then we need to set the master's hardware
 	 * address to be the same as the slave's. */
@@ -1859,7 +1863,7 @@ int bond_release(struct net_device *bond_dev, struct net_device *slave_dev)
 	}
 
 	if (!bond->params.fail_over_mac) {
-		if (!compare_ether_addr(bond_dev->dev_addr, slave->perm_hwaddr) &&
+		if (ether_addr_equal(bond_dev->dev_addr, slave->perm_hwaddr) &&
 		    bond->slave_cnt > 1)
 			pr_warning("%s: Warning: the permanent HWaddr of %s - %pM - is still in use by %s. Set the HWaddr of %s to a different address to avoid conflicts.\n",
 				   bond_dev->name, slave_dev->name,
@@ -4639,7 +4643,7 @@ static void bond_setup(struct net_device *bond_dev)
 	bond_dev->tx_queue_len = 0;
 	bond_dev->flags |= IFF_MASTER|IFF_MULTICAST;
 	bond_dev->priv_flags |= IFF_BONDING;
-	bond_dev->priv_flags &= ~IFF_XMIT_DST_RELEASE;
+	bond_dev->priv_flags &= ~(IFF_XMIT_DST_RELEASE | IFF_TX_SKB_SHARING);
 
 	if (bond->params.arp_interval)
 		bond_dev->priv_flags |= IFF_MASTER_ARPMON;
@@ -5136,8 +5140,9 @@ int bond_create(struct net *net, const char *name)
 
 	rtnl_lock();
 
-	bond_dev = alloc_netdev_mq(sizeof(struct bonding), name ? name : "",
-				bond_setup, tx_queues);
+	bond_dev = alloc_netdev_mq(sizeof(struct bonding),
+				   name ? name : "bond%d",
+				   bond_setup, tx_queues);
 	if (!bond_dev) {
 		pr_err("%s: eek! can't alloc netdev!\n", name);
 		rtnl_unlock();
@@ -5147,24 +5152,8 @@ int bond_create(struct net *net, const char *name)
 	dev_net_set(bond_dev, net);
 	bond_dev->rtnl_link_ops = &bond_link_ops;
 
-	if (!name) {
-		res = dev_alloc_name(bond_dev, "bond%d");
-		if (res < 0)
-			goto out;
-	} else {
-		/*
-		 * If we're given a name to register
-		 * we need to ensure that its not already
-		 * registered
-		 */
-		res = -EEXIST;
-		if (__dev_get_by_name(net, name) != NULL)
-			goto out;
-	}
-
 	res = register_netdevice(bond_dev);
 
-out:
 	rtnl_unlock();
 	if (res < 0)
 		bond_destructor(bond_dev);
