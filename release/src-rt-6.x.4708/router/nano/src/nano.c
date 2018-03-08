@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#ifndef NANO_TINY
+#if defined(__linux__) || !defined(NANO_TINY)
 #include <sys/ioctl.h>
 #endif
 #ifdef ENABLE_UTF8
@@ -38,6 +38,9 @@
 #include <termios.h>
 #endif
 #include <unistd.h>
+#ifdef __linux__
+#include <sys/vt.h>
+#endif
 
 #ifdef ENABLE_MOUSE
 static int oldinterval = -1;
@@ -171,20 +174,24 @@ void free_filestruct(filestruct *src)
 	delete_node(src);
 }
 
-/* Renumber the lines in a buffer, starting with fileptr. */
-void renumber(filestruct *fileptr)
+/* Renumber the lines in a buffer, starting with the given line. */
+void renumber(filestruct *line)
 {
-	ssize_t line;
+	ssize_t number;
 
-	if (fileptr == NULL)
+	if (line == NULL) {
+#ifndef NANO_TINY
+		statusline(ALERT, "Trying to renumber nothing -- please report a bug");
+#endif
 		return;
+	}
 
-	line = (fileptr->prev == NULL) ? 0 : fileptr->prev->lineno;
+	number = (line->prev == NULL) ? 0 : line->prev->lineno;
 
-	assert(fileptr != fileptr->next);
-
-	for (; fileptr != NULL; fileptr = fileptr->next)
-		fileptr->lineno = ++line;
+	while (line != NULL) {
+		line->lineno = ++number;
+		line = line->next;
+	}
 }
 
 /* Partition the current buffer so that it appears to begin at (top, top_x)
@@ -1426,7 +1433,7 @@ void do_toggle_void(void)
 void disable_extended_io(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term;
+	struct termios term = {0};
 
 	tcgetattr(0, &term);
 	term.c_lflag &= ~IEXTEN;
@@ -1440,7 +1447,7 @@ void disable_extended_io(void)
 void disable_signals(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term;
+	struct termios term = {0};
 
 	tcgetattr(0, &term);
 	term.c_lflag &= ~ISIG;
@@ -1454,7 +1461,7 @@ void disable_signals(void)
 void enable_signals(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term;
+	struct termios term = {0};
 
 	tcgetattr(0, &term);
 	term.c_lflag |= ISIG;
@@ -1627,8 +1634,7 @@ int do_input(bool allow_funcs)
 		/* The length of the input buffer. */
 	bool retain_cuts = FALSE;
 		/* Whether to conserve the current contents of the cutbuffer. */
-	const sc *s;
-	bool have_shortcut;
+	const sc *shortcut;
 
 	/* Read in a keystroke, and show the cursor while waiting. */
 	input = get_kbinput(edit, VISIBLE);
@@ -1652,15 +1658,11 @@ int do_input(bool allow_funcs)
 #endif
 
 	/* Check for a shortcut in the main list. */
-	s = get_shortcut(&input);
-
-	/* If we got a shortcut from the main list, or a "universal"
-	 * edit window shortcut, set have_shortcut to TRUE. */
-	have_shortcut = (s != NULL);
+	shortcut = get_shortcut(&input);
 
 	/* If we got a non-high-bit control key, a meta key sequence, or a
 	 * function key, and it's not a shortcut or toggle, throw it out. */
-	if (!have_shortcut) {
+	if (shortcut == NULL) {
 		if (is_ascii_cntrl_char(input) || meta_key || !is_byte(input)) {
 			unbound_key(input);
 			input = ERR;
@@ -1673,7 +1675,7 @@ int do_input(bool allow_funcs)
 	/* If the keystroke isn't a shortcut nor a toggle, it's a normal text
 	 * character: add the character to the input buffer -- or display a
 	 * warning when we're in view mode. */
-	if (input != ERR && !have_shortcut) {
+	if (input != ERR && shortcut == NULL) {
 		if (ISSET(VIEW_MODE))
 			print_view_warning();
 		else {
@@ -1693,7 +1695,7 @@ int do_input(bool allow_funcs)
 	 * characters waiting after the one we read in, we need to output
 	 * all available characters in the input puddle.  Note that this
 	 * puddle will be empty if we're in view mode. */
-	if (have_shortcut || get_key_buffer_len() == 0) {
+	if (shortcut || get_key_buffer_len() == 0) {
 		if (puddle != NULL) {
 			/* Insert all bytes in the input buffer into the edit buffer
 			 * at once, filtering out any low control codes. */
@@ -1707,33 +1709,38 @@ int do_input(bool allow_funcs)
 		}
 	}
 
-	if (!have_shortcut)
+	if (shortcut == NULL)
 		pletion_line = NULL;
 	else {
-		const subnfunc *f = sctofunc(s);
-
-		if (ISSET(VIEW_MODE) && f && !f->viewok) {
+		if (ISSET(VIEW_MODE) && !sctofunc(shortcut)->viewok) {
 			print_view_warning();
 			return ERR;
 		}
 
 		/* If the function associated with this shortcut is
 		 * cutting or copying text, remember this. */
-		if (s->scfunc == do_cut_text_void
+		if (shortcut->func == do_cut_text_void
 #ifndef NANO_TINY
-				|| s->scfunc == do_copy_text || s->scfunc == do_cut_till_eof
+				|| shortcut->func == do_copy_text
+				|| shortcut->func == do_cut_till_eof
 #endif
 				)
 			retain_cuts = TRUE;
 
 #ifdef ENABLE_WORDCOMPLETION
-		if (s->scfunc != complete_a_word)
+		if (shortcut->func != complete_a_word)
 			pletion_line = NULL;
 #endif
+#ifdef ENABLE_NANORC
+		if (shortcut->func == (void *)implant) {
+			implant(shortcut->expansion);
+			return 42;
+		}
+#endif
 #ifndef NANO_TINY
-		if (s->scfunc == do_toggle_void) {
-			do_toggle(s->toggle);
-			if (s->toggle != CUT_FROM_CURSOR)
+		if (shortcut->func == do_toggle_void) {
+			do_toggle(shortcut->toggle);
+			if (shortcut->toggle != CUT_FROM_CURSOR)
 				retain_cuts = TRUE;
 		} else
 #endif
@@ -1753,14 +1760,18 @@ int do_input(bool allow_funcs)
 			}
 #endif
 			/* Execute the function of the shortcut. */
-			s->scfunc();
+			shortcut->func();
+
 #ifndef NANO_TINY
 			/* When the marked region changes without Shift being held,
 			 * discard a soft mark.  And when the marked region covers a
 			 * different set of lines, reset  the "last line too" flag. */
-			if (openfile->mark && (openfile->current != was_current ||
-										openfile->current_x != was_x)) {
-				if (!shift_held && openfile->kind_of_mark == SOFTMARK) {
+			if (openfile->mark) {
+				if (!shift_held && openfile->kind_of_mark == SOFTMARK &&
+									(openfile->current != was_current ||
+									openfile->current_x != was_x ||
+									(shortcut->func >= to_first_line &&
+									shortcut->func <= do_right))) {
 					openfile->mark = NULL;
 					refresh_needed = TRUE;
 				} else if (openfile->current != was_current)
@@ -1768,15 +1779,19 @@ int do_input(bool allow_funcs)
 			}
 #endif
 #ifdef ENABLE_WRAPPING
-			/* If the cursor moved to another line, clear the prepend flag. */
-			if (openfile->current->next != was_next)
+			/* If the cursor moved to another line and this was not caused
+			 * by adding characters to the buffer, clear the prepend flag. */
+			if (openfile->current->next != was_next &&
+							shortcut->func != do_tab &&
+							shortcut->func != do_verbatim_input)
 				wrap_reset();
 #endif
 #ifdef ENABLE_COLOR
-			if (f && !f->viewok)
+			if (!refresh_needed && !sctofunc(shortcut)->viewok)
 				check_the_multis(openfile->current);
 #endif
-			if (!refresh_needed && (s->scfunc == do_delete || s->scfunc == do_backspace))
+			if (!refresh_needed && (shortcut->func == do_delete ||
+									shortcut->func == do_backspace))
 				update_line(openfile->current, openfile->current_x);
 		}
 	}
@@ -1887,7 +1902,8 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 	openfile->placewewant = xplustabs();
 
 #ifdef ENABLE_COLOR
-	check_the_multis(openfile->current);
+	if (!refresh_needed)
+		check_the_multis(openfile->current);
 #endif
 
 	if (!refresh_needed)
@@ -1973,7 +1989,6 @@ int main(int argc, char **argv)
 		{"locking", 0, NULL, 'G'},
 		{"historylog", 0, NULL, 'H'},
 		{"noconvert", 0, NULL, 'N'},
-		{"poslog", 0, NULL, 'P'},  /* deprecated form, remove in 2018 */
 		{"positionlog", 0, NULL, 'P'},
 		{"smooth", 0, NULL, 'S'},
 		{"wordbounds", 0, NULL, 'W'},
@@ -1988,8 +2003,10 @@ int main(int argc, char **argv)
 	};
 
 #ifdef __linux__
+	struct vt_stat dummy;
+
 	/* Check whether we're running on a Linux console. */
-	console = (getenv("DISPLAY") == NULL);
+	on_a_vt = (ioctl(0, VT_GETSTATE, &dummy) == 0);
 #endif
 
 	/* Back up the terminal settings so that they can be restored. */
@@ -2492,6 +2509,7 @@ int main(int argc, char **argv)
 	interface_color_pair[LINE_NUMBER] = hilite_attribute;
 	interface_color_pair[SELECTED_TEXT] = hilite_attribute;
 	interface_color_pair[STATUS_BAR] = hilite_attribute;
+	interface_color_pair[ERROR_MESSAGE] = hilite_attribute;
 	interface_color_pair[KEY_COMBO] = hilite_attribute;
 	interface_color_pair[FUNCTION_TAG] = A_NORMAL;
 #endif

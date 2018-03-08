@@ -30,7 +30,7 @@ extern volatile sig_atomic_t the_window_resized;
 #endif
 
 #ifdef __linux__
-extern bool console;
+extern bool on_a_vt;
 #endif
 
 extern bool meta_key;
@@ -404,7 +404,7 @@ void unlink_node(filestruct *fileptr);
 void delete_node(filestruct *fileptr);
 filestruct *copy_filestruct(const filestruct *src);
 void free_filestruct(filestruct *src);
-void renumber(filestruct *fileptr);
+void renumber(filestruct *line);
 partition *partition_filestruct(filestruct *top, size_t top_x,
 		filestruct *bot, size_t bot_x);
 void unpartition_filestruct(partition **p);
@@ -495,6 +495,7 @@ void go_looking(void);
 ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 		const filestruct *real_current, size_t *real_current_x);
 void do_replace(void);
+void ask_for_replacement(void);
 void goto_line_posx(ssize_t line, size_t pos_x);
 void do_gotolinecolumn(ssize_t line, ssize_t column, bool use_answer,
 		bool interactive);
@@ -619,7 +620,11 @@ void dump_filestruct(const filestruct *inptr);
 void record_macro(void);
 void run_macro(void);
 size_t get_key_buffer_len(void);
+void put_back(int keycode);
 void unget_kbinput(int kbinput, bool metakey);
+#ifdef ENABLE_NANORC
+void implant(const char *string);
+#endif
 int get_kbinput(WINDOW *win, bool showcursor);
 int parse_kbinput(WINDOW *win);
 int arrow_from_abcd(int kbinput);
@@ -692,7 +697,7 @@ void case_sens_void(void);
 void regexp_void(void);
 void backwards_void(void);
 void flip_replace(void);
-void gototext_void(void);
+void flip_goto(void);
 #ifdef ENABLE_BROWSER
 void to_files_void(void);
 void goto_dir_void(void);
