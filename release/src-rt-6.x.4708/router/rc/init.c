@@ -1631,6 +1631,10 @@ static int init_nvram(void)
 			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
+			if (get_model() == MODEL_R7000) {	/* enable Air Time Fairness by default */
+				nvram_set("wl0_atf", "1");
+				nvram_set("wl1_atf", "1");
+			}
 
 			//disable second *fake* LAN interface
 			nvram_unset("et1macaddr");
