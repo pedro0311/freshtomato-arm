@@ -215,6 +215,10 @@ void do_help(void)
 			do_findprevious();
 		} else if (func == do_findnext) {
 			do_findnext();
+#ifdef ENABLE_NANORC
+		} else if (func == (void *)implant) {
+			implant(first_sc_for(MHELP, func)->expansion);
+#endif
 		} else if (kbinput == KEY_WINCH) {
 			; /* Nothing to do. */
 #endif
@@ -471,7 +475,7 @@ void help_init(void)
 		size_t endis_len = strlen(_("enable/disable"));
 
 		for (s = sclist; s != NULL; s = s->next)
-			if (s->scfunc == do_toggle_void)
+			if (s->func == do_toggle_void)
 				allocsize += strlen(_(flagtostr(s->toggle))) + endis_len + 8;
 	}
 #endif
@@ -504,7 +508,7 @@ void help_init(void)
 			if ((s->menus & currmenu) == 0)
 				continue;
 
-			if (s->scfunc == f->scfunc) {
+			if (s->func == f->func) {
 				scsfound++;
 				/* Make the first column narrower (6) than the second (10),
 				 * but allow it to spill into the second, for "M-Space". */
