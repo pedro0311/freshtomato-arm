@@ -286,6 +286,15 @@ void unget_kbinput(int kbinput, bool metakey)
 		put_back(ESC_CODE);
 }
 
+#ifdef ENABLE_NANORC
+/* Insert the given string into the keyboard buffer. */
+void implant(const char *string)
+{
+	for (int i = strlen(string); i > 0; i--)
+		put_back(string[i - 1]);
+}
+#endif
+
 /* Try to read input_len codes from the keystroke buffer.  If the
  * keystroke buffer is empty and win isn't NULL, try to read in more
  * codes from win and add them to the keystroke buffer before doing
@@ -573,7 +582,7 @@ int parse_kbinput(WINDOW *win)
 	 * Shift/Ctrl/Alt are being held together with them. */
 	unsigned char modifiers = 6;
 
-	if (console && ioctl(0, TIOCLINUX, &modifiers) >= 0) {
+	if (on_a_vt && ioctl(0, TIOCLINUX, &modifiers) >= 0) {
 #ifndef NANO_TINY
 		/* Is Shift being held? */
 		if (modifiers & 0x01) {
@@ -1660,7 +1669,7 @@ int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 			for (f = allfuncs; f != NULL; f = f->next) {
 				if ((f->menus & currmenu) == 0)
 					continue;
-				if (first_sc_for(currmenu, f->scfunc) == NULL)
+				if (first_sc_for(currmenu, f->func) == NULL)
 					continue;
 				/* Tick off an actually shown shortcut. */
 				j -= 1;
@@ -1670,7 +1679,7 @@ int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 
 			/* And put the corresponding key into the keyboard buffer. */
 			if (f != NULL) {
-				const sc *s = first_sc_for(currmenu, f->scfunc);
+				const sc *s = first_sc_for(currmenu, f->func);
 				unget_kbinput(s->keycode, s->meta);
 			}
 			return 1;
@@ -2131,6 +2140,7 @@ void statusline(message_type importance, const char *msg, ...)
 {
 	va_list ap;
 	static int alerts = 0;
+	int colorpair;
 	char *compound, *message;
 	size_t start_col;
 	bool bracketed;
@@ -2169,7 +2179,9 @@ void statusline(message_type importance, const char *msg, ...)
 			msg = _("Further warnings were suppressed");
 		else if (alerts < 4)
 			beep();
-	}
+		colorpair = interface_color_pair[ERROR_MESSAGE];
+	} else
+		colorpair = interface_color_pair[STATUS_BAR];
 
 	lastmessage = importance;
 
@@ -2186,14 +2198,14 @@ void statusline(message_type importance, const char *msg, ...)
 	bracketed = (start_col > 1);
 
 	wmove(bottomwin, 0, (bracketed ? start_col - 2 : start_col));
-	wattron(bottomwin, interface_color_pair[STATUS_BAR]);
+	wattron(bottomwin, colorpair);
 	if (bracketed)
 		waddstr(bottomwin, "[ ");
 	waddstr(bottomwin, message);
 	free(message);
 	if (bracketed)
 		waddstr(bottomwin, " ]");
-	wattroff(bottomwin, interface_color_pair[STATUS_BAR]);
+	wattroff(bottomwin, colorpair);
 
 	/* Defeat a VTE/Konsole bug, where the cursor can go off-limits. */
 	if (ISSET(CONSTANT_SHOW) && ISSET(NO_HELP))
@@ -2252,7 +2264,7 @@ void bottombars(int menu)
 		if ((f->menus & menu) == 0)
 			continue;
 
-		s = first_sc_for(menu, f->scfunc);
+		s = first_sc_for(menu, f->func);
 		if (s == NULL)
 			continue;
 
