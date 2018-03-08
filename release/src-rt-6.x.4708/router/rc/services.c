@@ -762,8 +762,10 @@ void start_httpd(void)
 		xstart( "/usr/sbin/ttb" );
 
 	stop_httpd();
+	/* wait to exit gracefully */
+	sleep(1);
 
-// set www dir
+	/* set www dir */
 	if ( nvram_match( "web_dir", "jffs" ) ) { chdir("/jffs/www"); }
 	else if ( nvram_match( "web_dir", "opt" ) ) { chdir("/opt/www"); }
 	else if ( nvram_match( "web_dir", "tmp" ) ) { chdir("/tmp/www"); }
@@ -2650,7 +2652,6 @@ void stop_services(void)
 	stop_cstats();
 //	stop_upnp();
 	stop_cron();
-	stop_httpd();
 #ifdef TCONFIG_NGINX
 	stop_mysql();
 	stop_enginex();
@@ -2659,6 +2660,7 @@ void stop_services(void)
 	stop_mmc();
 #endif
 	stop_cifs();
+	stop_httpd();
 	stop_dnsmasq();
 	stop_zebra();
 	stop_nas();
