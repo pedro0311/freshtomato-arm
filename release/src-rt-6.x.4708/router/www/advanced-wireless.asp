@@ -23,17 +23,23 @@
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
 <script type='text/javascript'>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_antdiv,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf"); %>
 //	<% wlcountries(); %>
 
 hp = features('hpamp');
 nphy = features('11n');
 
+var atf_display = 'none';
+switch(nvram['t_model_name']) {
+	case 'Netgear R7000':
+	case 'Netgear R8000':
+		atf_display = '';
+}
+
 function verifyFields(focused, quiet)
 {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
-		if (wl_sunit(uidx)<0) {
+		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
 
 			if (!v_range('_f_wl'+u+'_distance', quiet, 0, 99999)) return 0;
@@ -63,7 +69,7 @@ function save()
 	fom = E('t_fom');
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if (wl_sunit(uidx)<0) {
+		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
 
 			n = E('_f_wl'+u+'_distance').value * 1;
@@ -81,8 +87,7 @@ function save()
 			form.submit(fom, 0);
 			return;
 		}
-	}
-	else {
+	} else {
 		E('_wlx_hpamp').disabled = 1;
 		E('_wlx_hperx').disabled = 1;
 	}
@@ -113,7 +118,7 @@ function save()
 <script type='text/javascript'>
 
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-if (wl_sunit(uidx)<0) {
+if (wl_sunit(uidx) < 0) {
 	var u = wl_unit(uidx);
 
 	W('<input type=\'hidden\' id=\'_wl'+u+'_distance\' name=\'wl'+u+'_distance\'>');
@@ -121,9 +126,7 @@ if (wl_sunit(uidx)<0) {
 	W('<input type=\'hidden\' id=\'_wl'+u+'_nmode_protection\' name=\'wl'+u+'_nmode_protection\'>');
 
 	W('<div class=\'section-title\'>Wireless Settings ');
-	//if (wl_ifaces.length > 1)
-		W('(' + wl_display_ifname(uidx) + ') ');
-	//W('');
+	W('(' + wl_display_ifname(uidx) + ') ');
 	W('<\/div><div class=\'section\'>');
 
 	at = ((nvram['wl'+u+'_security_mode'] != "wep") && (nvram['wl'+u+'_security_mode'] != "radius") && (nvram['wl'+u+'_security_mode'] != "disabled"));
@@ -188,16 +191,18 @@ if (wl_sunit(uidx)<0) {
 		{ title: 'Transmission Rate', name: 'wl'+u+'_rate', type: 'select',
 			options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
 			value: nvram['wl'+u+'_rate'] },
-	{ title: 'Interference Mitigation', name: 'wl'+u+'_mitigation', type: 'select',
-		options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto'],['4','WLAN Auto with Noise Reduction']],
-		value: nvram['wl'+u+'_mitigation'] },
-	{ title: 'WMM', name: 'wl'+u+'_wme', type: 'select', options: [['auto','Auto *'],['off','Disable'],['on','Enable']], value: nvram['wl'+u+'_wme'] },
-	{ title: 'No ACK', name: 'wl'+u+'_wme_no_ack', indent: 2, type: 'select', options: [['off','Disable *'],['on','Enable']],
-		value: nvram['wl'+u+'_wme_no_ack'] },
-	{ title: 'APSD Mode', name: 'wl'+u+'_wme_apsd', indent: 2, type: 'select', options: [['off','Disable'],['on','Enable *']],
-		value: nvram['wl'+u+'_wme_apsd'] },
-	{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
-		value: nvram['wl'+u+'_wmf_bss_enable'] }
+		{ title: 'Interference Mitigation', name: 'wl'+u+'_mitigation', type: 'select',
+			options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto'],['4','WLAN Auto with Noise Reduction']],
+			value: nvram['wl'+u+'_mitigation'] },
+		{ title: 'WMM', name: 'wl'+u+'_wme', type: 'select', options: [['auto','Auto *'],['off','Disable'],['on','Enable']], value: nvram['wl'+u+'_wme'] },
+		{ title: 'No ACK', name: 'wl'+u+'_wme_no_ack', indent: 2, type: 'select', options: [['off','Disable *'],['on','Enable']],
+			value: nvram['wl'+u+'_wme_no_ack'] },
+		{ title: 'APSD Mode', name: 'wl'+u+'_wme_apsd', indent: 2, type: 'select', options: [['off','Disable'],['on','Enable *']],
+			value: nvram['wl'+u+'_wme_apsd'] },
+		{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
+			value: nvram['wl'+u+'_wmf_bss_enable'] },
+		{ title: 'Air Time Fairness', name: 'wl'+u+'_atf', type: 'select', options: [['0','Disable'],['1','Enable *']],
+			value: nvram['wl'+u+'_atf'], suffix: ' <small>(applies only to Netgear R7000 and R8000)<\/small>', hidden: atf_display }
 	]);
 	W('<\/div>');
 	}
