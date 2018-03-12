@@ -778,41 +778,31 @@ static void dump_inline_data(FILE *out, const char *prefix, ext2_ino_t inode_num
 		fprintf(out, "%sSize of inline data: %zu\n", prefix, size);
 }
 
-static void dump_fast_link(FILE *out, ext2_ino_t inode_num,
-			   struct ext2_inode *inode, const char *prefix)
+static void dump_inline_symlink(FILE *out, ext2_ino_t inode_num,
+				struct ext2_inode *inode, const char *prefix)
 {
-	errcode_t retval = 0;
-	char *buf;
+	errcode_t retval;
+	char *buf = NULL;
 	size_t size;
 
-	if (inode->i_flags & EXT4_INLINE_DATA_FL) {
-		retval = ext2fs_inline_data_size(current_fs, inode_num, &size);
-		if (retval)
-			goto out;
+	retval = ext2fs_inline_data_size(current_fs, inode_num, &size);
+	if (retval)
+		goto out;
 
-		retval = ext2fs_get_memzero(size + 1, &buf);
-		if (retval)
-			goto out;
+	retval = ext2fs_get_memzero(size + 1, &buf);
+	if (retval)
+		goto out;
 
-		retval = ext2fs_inline_data_get(current_fs, inode_num,
-						inode, buf, &size);
-		if (retval)
-			goto out;
-		fprintf(out, "%sFast link dest: \"%.*s\"\n", prefix,
-			(int)size, buf);
+	retval = ext2fs_inline_data_get(current_fs, inode_num,
+					inode, buf, &size);
+	if (retval)
+		goto out;
 
-		retval = ext2fs_free_mem(&buf);
-		if (retval)
-			goto out;
-	} else {
-		size_t sz = EXT2_I_SIZE(inode);
-
-		if (sz > sizeof(inode->i_block))
-			sz = sizeof(inode->i_block);
-		fprintf(out, "%sFast link dest: \"%.*s\"\n", prefix, (int) sz,
-			(char *)inode->i_block);
-	}
+	fprintf(out, "%sFast link dest: \"%.*s\"\n", prefix,
+		(int)size, buf);
 out:
+	if (buf)
+		ext2fs_free_mem(&buf);
 	if (retval)
 		com_err(__func__, retval, "while dumping link destination");
 }
@@ -840,8 +830,8 @@ void internal_dump_inode(FILE *out, const char *prefix,
 	else if (LINUX_S_ISSOCK(inode->i_mode)) i_type = "socket";
 	else i_type = "bad type";
 	fprintf(out, "%sInode: %u   Type: %s    ", prefix, inode_num, i_type);
-	fprintf(out, "%sMode:  %04o   Flags: 0x%x\n",
-		prefix, inode->i_mode & 0777, inode->i_flags);
+	fprintf(out, "%sMode:  0%03o   Flags: 0x%x\n",
+		prefix, inode->i_mode & 07777, inode->i_flags);
 	if (is_large_inode && large_inode->i_extra_isize >= 24) {
 		fprintf(out, "%sGeneration: %u    Version: 0x%08x:%08x\n",
 			prefix, inode->i_generation, large_inode->i_version_hi,
@@ -861,16 +851,15 @@ void internal_dump_inode(FILE *out, const char *prefix,
 		fprintf(out, "%d\n", inode->i_size);
 	if (os == EXT2_OS_HURD)
 		fprintf(out,
-			"%sFile ACL: %d    Directory ACL: %d Translator: %d\n",
+			"%sFile ACL: %d Translator: %d\n",
 			prefix,
-			inode->i_file_acl, LINUX_S_ISDIR(inode->i_mode) ? inode->i_dir_acl : 0,
+			inode->i_file_acl,
 			inode->osd1.hurd1.h_i_translator);
 	else
-		fprintf(out, "%sFile ACL: %llu    Directory ACL: %d\n",
+		fprintf(out, "%sFile ACL: %llu\n",
 			prefix,
 			inode->i_file_acl | ((long long)
-				(inode->osd2.linux2.l_i_file_acl_high) << 32),
-			LINUX_S_ISDIR(inode->i_mode) ? inode->i_dir_acl : 0);
+				(inode->osd2.linux2.l_i_file_acl_high) << 32));
 	if (os != EXT2_OS_HURD)
 		fprintf(out, "%sLinks: %d   Blockcount: %llu\n",
 			prefix, inode->i_links_count,
@@ -939,9 +928,12 @@ void internal_dump_inode(FILE *out, const char *prefix,
 		fprintf(out, "Inode checksum: 0x%08x\n", crc);
 	}
 
-	if (LINUX_S_ISLNK(inode->i_mode) &&
-	    ext2fs_inode_data_blocks(current_fs, inode) == 0)
-		dump_fast_link(out, inode_num, inode, prefix);
+	if (LINUX_S_ISLNK(inode->i_mode) && ext2fs_is_fast_symlink(inode))
+		fprintf(out, "%sFast link dest: \"%.*s\"\n", prefix,
+			(int)EXT2_I_SIZE(inode), (char *)inode->i_block);
+	else if (LINUX_S_ISLNK(inode->i_mode) &&
+		   (inode->i_flags & EXT4_INLINE_DATA_FL))
+		dump_inline_symlink(out, inode_num, inode, prefix);
 	else if (LINUX_S_ISBLK(inode->i_mode) || LINUX_S_ISCHR(inode->i_mode)) {
 		int major, minor;
 		const char *devnote;
@@ -1367,10 +1359,9 @@ void do_modify_inode(int argc, char *argv[])
 	modify_u32(argv[0], "Reserved1", decimal_format, &inode.i_reserved1);
 #endif
 	modify_u32(argv[0], "File acl", decimal_format, &inode.i_file_acl);
-	if (LINUX_S_ISDIR(inode.i_mode))
-		modify_u32(argv[0], "Directory acl", decimal_format, &inode.i_dir_acl);
-	else
-		modify_u32(argv[0], "High 32bits of size", decimal_format, &inode.i_size_high);
+
+	modify_u32(argv[0], "High 32bits of size", decimal_format,
+		   &inode.i_size_high);
 
 	if (os == EXT2_OS_HURD)
 		modify_u32(argv[0], "Translator Block",
