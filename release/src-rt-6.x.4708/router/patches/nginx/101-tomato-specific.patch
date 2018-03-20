@@ -146,9 +146,9 @@
      echo " $ngx_size bytes"
  fi
  
---- nginx/auto/unix	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/unix	2018-01-15 17:47:21.713083000 +0100
-@@ -816,7 +816,7 @@
+--- nginx/auto/unix	2018-03-20 16:58:31.000000000 +0100
++++ nginx/auto/unix	2018-03-20 19:37:15.834862994 +0100
+@@ -840,7 +840,7 @@
  
  ngx_feature="mmap(MAP_ANON|MAP_SHARED)"
  ngx_feature_name="NGX_HAVE_MAP_ANON"
@@ -157,7 +157,7 @@
  ngx_feature_incs="#include <sys/mman.h>"
  ngx_feature_path=
  ngx_feature_libs=
-@@ -829,7 +829,7 @@
+@@ -853,7 +853,7 @@
  
  ngx_feature='mmap("/dev/zero", MAP_SHARED)'
  ngx_feature_name="NGX_HAVE_MAP_DEVZERO"
@@ -166,7 +166,7 @@
  ngx_feature_incs="#include <sys/mman.h>
                    #include <sys/stat.h>
                    #include <fcntl.h>"
-@@ -844,7 +844,7 @@
+@@ -868,7 +868,7 @@
  
  ngx_feature="System V shared memory"
  ngx_feature_name="NGX_HAVE_SYSVSHM"
@@ -175,7 +175,7 @@
  ngx_feature_incs="#include <sys/ipc.h>
                    #include <sys/shm.h>"
  ngx_feature_path=
-@@ -858,7 +858,7 @@
+@@ -882,7 +882,7 @@
  
  ngx_feature="POSIX semaphores"
  ngx_feature_name="NGX_HAVE_POSIX_SEM"
