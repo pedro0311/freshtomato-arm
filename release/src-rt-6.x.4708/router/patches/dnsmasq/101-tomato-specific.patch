@@ -1,5 +1,5 @@
---- dnsmasq/src/config.h	2017-05-22 23:58:46.000000000 +0200
-+++ dnsmasq/src/config.h	2017-10-03 20:05:34.000000000 +0200
+--- dnsmasq/src/config.h	2018-03-17 19:39:23.000000000 +0100
++++ dnsmasq/src/config.h	2018-03-20 18:31:39.640377302 +0100
 @@ -74,6 +74,10 @@ HAVE_BROKEN_RTC
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -366,6 +370,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -363,6 +367,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,17 +22,17 @@
  #if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
  #define HAVE_INOTIFY
  #endif
-@@ -436,6 +444,9 @@ static char *compile_opts =
+@@ -433,6 +441,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
 +#ifdef HAVE_TOMATO
-+  "Tomato-helper "
++"Tomato-helper "
 +#endif
  #ifndef HAVE_AUTH
  "no-"
  #endif
-@@ -456,7 +467,6 @@ static char *compile_opts =
+@@ -453,7 +464,6 @@ static char *compile_opts =
  #endif
  "inotify";
  
