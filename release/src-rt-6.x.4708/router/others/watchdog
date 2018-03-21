@@ -158,7 +158,7 @@ ckcurl() {
     OK=0
 
     for HOST in $HOSTLIST; do
-        TEST=`curl $HOST --interface $IFACE --connect-timeout 3 -ksfI -o /dev/null && echo 1 || echo 0`
+        TEST=`curl $HOST --interface $IFACE --connect-timeout 5 -ksfI -o /dev/null && echo 1 || echo 0`
         if [ "$TEST" -gt 0 ]; then
             OK=`expr $OK + 1`
         fi
