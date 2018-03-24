@@ -47,8 +47,8 @@
 
 #define dnslog(level,x...) if(nvram_get_int("dns_debug")>=level) syslog(level, x)
 
-// Pop an alarm to recheck pids in 500 msec.
-static const struct itimerval pop_tv = { {0,0}, {0, 500 * 1000} };
+// Pop an alarm to recheck pids in 1000 msec (1 sec).
+static const struct itimerval pop_tv = { {0,0}, {0, 1000 * 1000} };
 
 // Pop an alarm to reap zombies. 
 static const struct itimerval zombie_tv = { {0,0}, {307, 0} };
@@ -2511,7 +2511,7 @@ static void _check(pid_t pid, const char *name, void (*func)(void))
 	syslog(LOG_DEBUG, "%s terminated unexpectedly, restarting.\n", name);
 	func();
 
-	// Force recheck in 500 msec
+	// Force recheck in 1000 msec
 	setitimer(ITIMER_REAL, &pop_tv, NULL);
 }
 
@@ -3427,7 +3427,7 @@ CLEAR:
 	// some functions check action_service and must be cleared at end	-- zzz
 	nvram_set("action_service", "");
 
-	// Force recheck in 500 msec
+// 	// Force recheck in 1000 msec
 	setitimer(ITIMER_REAL, &pop_tv, NULL);
 }
 
