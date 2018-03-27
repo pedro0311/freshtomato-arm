@@ -1298,11 +1298,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		start_wan6_done(get_wan6face());
 #endif
 
-#ifdef TCONFIG_DNSSEC
-		if (nvram_match("dnssec_enable", "1"))
-			killall("dnsmasq", SIGINT);
-#endif
-
 		stop_upnp();
 		start_upnp();
 
