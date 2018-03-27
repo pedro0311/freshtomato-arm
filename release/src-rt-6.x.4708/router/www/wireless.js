@@ -158,7 +158,7 @@ function scan()
 
 			for (i = 0; i < wlscandata.length; ++i) {
 				var data = wlscandata[i];
-				var ch = data[2];
+				var ch = data[3];
 				var mac = data[0];
 
 				if (!wscan.inuse[ch]) {
@@ -175,15 +175,16 @@ function scan()
 				}
 
 				if (data[4] > wscan.inuse[ch].rssi) {
-					wscan.inuse[ch].rssi = data[4];
+					wscan.inuse[ch].rssi = data[2];
 					wscan.inuse[ch].ssid = data[1];
+					wscan.inuse[ch].quality = data[5];
 				}
 			}
 			var e = E('_wl'+unit+'_channel');
 			for (i = 1; i < ghz[uidx].length; ++i) {
 				var s = ghz[uidx][i][1];
 				var u = wscan.inuse[ghz[uidx][i][0]];
-				if (u) s += ' (' + u.count + ' AP' + (u.count == 1 ? '' : 's') + ' / strongest: "' + escapeHTML(ellipsis(u.ssid, 15)) + '" ' + u.rssi + ' dBm)';
+				if (u) s += ' (' + u.count + ' AP' + (u.count == 1 ? '' : 's') + '; strongest: "' + escapeHTML(ellipsis(u.ssid, 30)) + '", RSSI: ' + u.rssi + ' dBm, Quality: ' + u.quality + ' %)';
 				e.options[i].innerHTML = s;
 			}
 			e.style.width = '400px';

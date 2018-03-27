@@ -643,7 +643,7 @@ static void parse_int_node(ext2_filsys fs,
 		printf("Entry #%d: Hash 0x%08x, block %u\n", i,
 		       hash, ext2fs_le32_to_cpu(ent[i].block));
 #endif
-		blk = ext2fs_le32_to_cpu(ent[i].block) & 0x0ffffff;
+		blk = ext2fs_le32_to_cpu(ent[i].block) & EXT4_DX_BLOCK_MASK;
 		/* Check to make sure the block is valid */
 		if (blk >= (blk_t) dx_dir->numblocks) {
 			cd->pctx.blk = blk;
@@ -664,7 +664,8 @@ static void parse_int_node(ext2_filsys fs,
 		}
 
 		dx_db->previous =
-			i ? ext2fs_le32_to_cpu(ent[i-1].block & 0x0ffffff) : 0;
+			i ? (ext2fs_le32_to_cpu(ent[i-1].block) &
+			     EXT4_DX_BLOCK_MASK) : 0;
 
 		if (hash < min_hash)
 			min_hash = hash;
@@ -1609,6 +1610,7 @@ abort_free_dict:
 struct del_block {
 	e2fsck_t	ctx;
 	e2_blkcnt_t	num;
+	blk64_t last_cluster;
 };
 
 /*
@@ -1623,14 +1625,20 @@ static int deallocate_inode_block(ext2_filsys fs,
 				  void *priv_data)
 {
 	struct del_block *p = priv_data;
+	blk64_t cluster = EXT2FS_B2C(fs, *block_nr);
 
 	if (*block_nr == 0)
 		return 0;
+
+	if (cluster == p->last_cluster)
+		return 0;
+
+	p->last_cluster = cluster;
 	if ((*block_nr < fs->super->s_first_data_block) ||
 	    (*block_nr >= ext2fs_blocks_count(fs->super)))
 		return 0;
-	if ((*block_nr % EXT2FS_CLUSTER_RATIO(fs)) == 0)
-		ext2fs_block_alloc_stats2(fs, *block_nr, -1);
+
+        ext2fs_block_alloc_stats2(fs, *block_nr, -1);
 	p->num++;
 	return 0;
 }
@@ -1691,6 +1699,7 @@ static void deallocate_inode(e2fsck_t ctx, ext2_ino_t ino, char* block_buf)
 
 	del_block.ctx = ctx;
 	del_block.num = 0;
+	del_block.last_cluster = 0;
 	pctx.errcode = ext2fs_block_iterate3(fs, ino, 0, block_buf,
 					     deallocate_inode_block,
 					     &del_block);

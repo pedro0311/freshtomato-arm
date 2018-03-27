@@ -1096,7 +1096,7 @@ nettle/stamp-h1: gmp
 	CPPFLAGS="-I$(TOP)/gmp" \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	$(CONFIGURE) prefix=$(TOP)/nettle --disable-documentation
+	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared
 	@touch nettle/stamp-h1
 
 nettle: nettle/stamp-h1
@@ -1827,6 +1827,7 @@ ifeq ($(TCONFIG_SNMP),y)
 endif
 
 libid3tag/stamp-h1: zlib
+	$(call patch_files,libid3tag)
 	cd libid3tag && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" CPPFLAGS="-I$(TOP)/zlib" \
 	LDFLAGS="-L$(TOP)/zlib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
@@ -1840,6 +1841,7 @@ libid3tag: libid3tag/stamp-h1 zlib
 libid3tag-clean:
 	-@$(MAKE) -C libid3tag clean
 	@rm -f libid3tag/stamp-h1
+	$(call unpatch_files,libid3tag)
 
 libid3tag-install:
 	@$(SEP)
