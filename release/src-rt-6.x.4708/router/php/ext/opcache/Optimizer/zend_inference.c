@@ -39,7 +39,8 @@
 #define SYM_RANGE
 
 /* Whether to handle negative range constraints */
-#define NEG_RANGE
+/* Negative range inference is buggy, so disabled for now */
+#undef NEG_RANGE
 
 /* Number of warmup passes to use prior to widening */
 #define RANGE_WARMUP_PASSES 16
@@ -156,6 +157,17 @@
 			p = zend_ssa_next_use_phi(ssa, _var, p); \
 		} \
 	} while (0)
+
+static inline zend_bool add_will_overflow(zend_long a, zend_long b) {
+	return (b > 0 && a > ZEND_LONG_MAX - b)
+		|| (b < 0 && a < ZEND_LONG_MIN - b);
+}
+#if 0
+static inline zend_bool sub_will_overflow(zend_long a, zend_long b) {
+	return (b > 0 && a < ZEND_LONG_MIN + b)
+		|| (b < 0 && a > ZEND_LONG_MAX + b);
+}
+#endif
 
 static void zend_ssa_check_scc_var(const zend_op_array *op_array, zend_ssa *ssa, int var, int *index, int *dfs, int *root, zend_worklist_stack *stack) /* {{{ */
 {
@@ -523,6 +535,15 @@ static inline zend_bool zend_abs_range(
 	return 1;
 }
 
+static inline zend_bool shift_left_overflows(zend_long n, zend_long s) {
+	/* This considers shifts that shift in the sign bit to be overflowing as well */
+	if (n >= 0) {
+		return s >= SIZEOF_ZEND_LONG * 8 - 1 || (n << s) < n;
+	} else {
+		return s >= SIZEOF_ZEND_LONG * 8 - 1 || (n << s) > n;
+	}
+}
+
 /* Get the normal op corresponding to a compound assignment op */
 static inline zend_uchar get_compound_assign_op(zend_uchar opcode) {
 	switch (opcode) {
@@ -716,12 +737,27 @@ static int zend_inference_calc_binary_op_range(
 					op2_min = OP2_MIN_RANGE();
 					op1_max = OP1_MAX_RANGE();
 					op2_max = OP2_MAX_RANGE();
-					t1 = op1_min << op2_min;
-					t2 = op1_min << op2_max;
-					t3 = op1_max << op2_min;
-					t4 = op1_max << op2_max;
-					tmp->min = MIN(MIN(t1, t2), MIN(t3, t4));
-					tmp->max = MAX(MAX(t1, t2), MAX(t3, t4));
+
+					/* Shifts by negative numbers will throw, ignore them */
+					if (op2_min < 0) {
+						op2_min = 0;
+					}
+					if (op2_max < 0) {
+						op2_max = 0;
+					}
+
+					if (shift_left_overflows(op1_min, op2_max)
+							|| shift_left_overflows(op1_max, op2_max)) {
+						tmp->min = ZEND_LONG_MIN;
+						tmp->max = ZEND_LONG_MAX;
+					} else {
+						t1 = op1_min << op2_min;
+						t2 = op1_min << op2_max;
+						t3 = op1_max << op2_min;
+						t4 = op1_max << op2_max;
+						tmp->min = MIN(MIN(t1, t2), MIN(t3, t4));
+						tmp->max = MAX(MAX(t1, t2), MAX(t3, t4));
+					}
 				}
 				return 1;
 			}
@@ -739,6 +775,23 @@ static int zend_inference_calc_binary_op_range(
 					op2_min = OP2_MIN_RANGE();
 					op1_max = OP1_MAX_RANGE();
 					op2_max = OP2_MAX_RANGE();
+
+					/* Shifts by negative numbers will throw, ignore them */
+					if (op2_min < 0) {
+						op2_min = 0;
+					}
+					if (op2_max < 0) {
+						op2_max = 0;
+					}
+
+					/* Shifts by more than the integer size will be 0 or -1 */
+					if (op2_min >= SIZEOF_ZEND_LONG * 8) {
+						op2_min = SIZEOF_ZEND_LONG * 8 - 1;
+					}
+					if (op2_max >= SIZEOF_ZEND_LONG * 8) {
+						op2_max = SIZEOF_ZEND_LONG * 8 - 1;
+					}
+
 					t1 = op1_min >> op2_min;
 					t2 = op1_min >> op2_max;
 					t3 = op1_max >> op2_min;
@@ -852,7 +905,9 @@ int zend_inference_calc_range(const zend_op_array *op_array, zend_ssa *ssa, int 
 #ifdef SYM_RANGE
 				} else if (narrowing && ssa->var_info[constraint->min_ssa_var].has_range) {
 					tmp->underflow = ssa->var_info[constraint->min_ssa_var].range.underflow && tmp->underflow;
-					tmp->min = MAX(ssa->var_info[constraint->min_ssa_var].range.min + constraint->range.min, tmp->min);
+					if (!add_will_overflow(ssa->var_info[constraint->min_ssa_var].range.min, constraint->range.min)) {
+						tmp->min = MAX(ssa->var_info[constraint->min_ssa_var].range.min + constraint->range.min, tmp->min);
+					}
 #endif
 				}
 				if (constraint->max_ssa_var < 0) {
@@ -860,7 +915,9 @@ int zend_inference_calc_range(const zend_op_array *op_array, zend_ssa *ssa, int 
 					tmp->overflow = constraint->range.overflow && tmp->overflow;
 #ifdef SYM_RANGE
 				} else if (narrowing && ssa->var_info[constraint->max_ssa_var].has_range) {
-					tmp->max = MIN(ssa->var_info[constraint->max_ssa_var].range.max + constraint->range.max, tmp->max);
+					if (!add_will_overflow(ssa->var_info[constraint->max_ssa_var].range.max, constraint->range.max)) {
+						tmp->max = MIN(ssa->var_info[constraint->max_ssa_var].range.max + constraint->range.max, tmp->max);
+					}
 					tmp->overflow = ssa->var_info[constraint->max_ssa_var].range.overflow && tmp->overflow;
 #endif
 				}
@@ -870,8 +927,13 @@ int zend_inference_calc_range(const zend_op_array *op_array, zend_ssa *ssa, int 
 					tmp->min = constraint->range.min;
 #ifdef SYM_RANGE
 				} else if (narrowing && ssa->var_info[constraint->min_ssa_var].has_range) {
-					tmp->underflow = ssa->var_info[constraint->min_ssa_var].range.underflow;
-					tmp->min = ssa->var_info[constraint->min_ssa_var].range.min + constraint->range.min;
+					if (add_will_overflow(ssa->var_info[constraint->min_ssa_var].range.min, constraint->range.min)) {
+						tmp->underflow = 1;
+						tmp->min = ZEND_LONG_MIN;
+					} else {
+						tmp->underflow = ssa->var_info[constraint->min_ssa_var].range.underflow;
+						tmp->min = ssa->var_info[constraint->min_ssa_var].range.min + constraint->range.min;
+					}
 #endif
 				} else {
 					tmp->underflow = 1;
@@ -882,8 +944,13 @@ int zend_inference_calc_range(const zend_op_array *op_array, zend_ssa *ssa, int 
 					tmp->overflow = constraint->range.overflow;
 #ifdef SYM_RANGE
 				} else if (narrowing && ssa->var_info[constraint->max_ssa_var].has_range) {
-					tmp->max = ssa->var_info[constraint->max_ssa_var].range.max + constraint->range.max;
-					tmp->overflow = ssa->var_info[constraint->max_ssa_var].range.overflow;
+					if (add_will_overflow(ssa->var_info[constraint->max_ssa_var].range.max, constraint->range.max)) {
+						tmp->overflow = 1;
+						tmp->max = ZEND_LONG_MAX;
+					} else {
+						tmp->max = ssa->var_info[constraint->max_ssa_var].range.max + constraint->range.max;
+						tmp->overflow = ssa->var_info[constraint->max_ssa_var].range.overflow;
+					}
 #endif
 				} else {
 					tmp->max = ZEND_LONG_MAX;
@@ -1392,9 +1459,13 @@ int zend_inference_calc_range(const zend_op_array *op_array, zend_ssa *ssa, int 
 				return 1;
 			}
 			break;
-		case ZEND_COUNT:
 		case ZEND_FUNC_NUM_ARGS:
 			tmp->min = 0;
+			tmp->max = ZEND_LONG_MAX;
+			return 1;
+		case ZEND_COUNT:
+			/* count() on Countable objects may return negative numbers */
+			tmp->min = ZEND_LONG_MIN;
 			tmp->max = ZEND_LONG_MAX;
 			return 1;
 		case ZEND_DO_FCALL:
@@ -2050,6 +2121,14 @@ static uint32_t binary_op_result_type(
 	uint32_t tmp = 0;
 	uint32_t t1_type = (t1 & MAY_BE_ANY) | (t1 & MAY_BE_UNDEF ? MAY_BE_NULL : 0);
 	uint32_t t2_type = (t2 & MAY_BE_ANY) | (t2 & MAY_BE_UNDEF ? MAY_BE_NULL : 0);
+
+	/* Handle potentially overloaded operators.
+	 * This could be made more precise by checking the class type, if known. */
+	if ((t1_type & MAY_BE_OBJECT) || (t2_type & MAY_BE_OBJECT)) {
+		/* This is somewhat GMP specific. */
+		tmp |= MAY_BE_OBJECT | MAY_BE_FALSE | MAY_BE_RC1;
+	}
+
 	switch (opcode) {
 		case ZEND_ADD:
 			if (t1_type == MAY_BE_LONG && t2_type == MAY_BE_LONG) {
@@ -2104,7 +2183,7 @@ static uint32_t binary_op_result_type(
 			 * handling */
 			break;
 		case ZEND_MOD:
-			tmp = MAY_BE_LONG;
+			tmp |= MAY_BE_LONG;
 			/* Division by zero results in an exception, so it doesn't need any special handling */
 			break;
 		case ZEND_BW_OR:
@@ -2119,7 +2198,7 @@ static uint32_t binary_op_result_type(
 			break;
 		case ZEND_SL:
 		case ZEND_SR:
-			tmp = MAY_BE_LONG;
+			tmp |= MAY_BE_LONG;
 			break;
 		case ZEND_CONCAT:
 		case ZEND_FAST_CONCAT:
@@ -2246,6 +2325,10 @@ static int zend_update_type_info(const zend_op_array *op_array,
 			}
 			if (t1 & (MAY_BE_ANY-MAY_BE_STRING)) {
 				tmp |= MAY_BE_LONG;
+			}
+			if (t1 & MAY_BE_OBJECT) {
+				/* Potentially overloaded operator. */
+				tmp |= MAY_BE_OBJECT | MAY_BE_RC1;
 			}
 			UPDATE_SSA_TYPE(tmp, ssa_ops[i].result_def);
 			break;
@@ -3699,6 +3782,8 @@ void zend_init_func_return_info(const zend_op_array   *op_array,
 		ret->type = zend_fetch_arg_info(script, ret_info, &ret->ce);
 		if (op_array->fn_flags & ZEND_ACC_RETURN_REFERENCE) {
 			ret->type |= MAY_BE_REF;
+		} else if (ret->type & (MAY_BE_STRING|MAY_BE_ARRAY|MAY_BE_OBJECT|MAY_BE_RESOURCE)) {
+			ret->type |= MAY_BE_RC1|MAY_BE_RCN;
 		}
 		ret->is_instanceof = (ret->ce) ? 1 : 0;
 		ret->range = tmp_range;
