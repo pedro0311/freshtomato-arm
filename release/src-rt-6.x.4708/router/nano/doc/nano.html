@@ -57,7 +57,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="SEC_Top"></a>
 
-<p>This manual documents the GNU <code>nano</code> editor, version 2.9.4.
+<p>This manual documents the GNU <code>nano</code> editor, version 2.9.5.
 </p>
 <table class="menu" border="0" cellspacing="0">
 <tr><td align="left" valign="top">&bull; <a href="#Introduction" accesskey="1">Introduction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
@@ -632,8 +632,8 @@ cannot be undone any more.  The workaround is, of course, to exit without
 saving.
 </p>
 <p>The recording and playback of keyboard macros works correctly only on a
-terminal emulator, not on a Linux console (VT), because the latter is a
-deficient terminal.
+terminal emulator, not on a Linux console (VT), because the latter does
+not by default distinguish modified from unmodified arrow keys.
 </p>
 <hr>
 <a name="Built_002din-Help"></a>
@@ -857,7 +857,8 @@ The default value is <tt>-8</tt>.  This option conflicts with
 in the two help lines at the bottom of the screen.
 Valid names for foreground and background color are:
 <code>white</code>, <code>black</code>, <code>blue</code>, <code>green</code>,
-<code>red</code>, <code>cyan</code>, <code>yellow</code>, and <code>magenta</code>.
+<code>red</code>, <code>cyan</code>, <code>yellow</code>, <code>magenta</code>, and <code>normal</code>
+&mdash; where <code>normal</code> means the default foreground or background color.
 The name of the foreground color may be prefixed with <code>bright</code>.
 And either <var>fgcolor</var> or ,<var>bgcolor</var> may be left out.
 </p>
@@ -1377,11 +1378,13 @@ in the current buffer.
 </p>
 </dd>
 <dt><code>scrollup</code></dt>
-<dd><p>Scrolls up one line of text from the current position.
+<dd><p>Scrolls the viewport up one row (meaning that the text slides down)
+while keeping the cursor in the same text position, if possible.
 </p>
 </dd>
 <dt><code>scrolldown</code></dt>
-<dd><p>Scrolls down one line of text from the current position.
+<dd><p>Scrolls the viewport down one row (meaning that the text slides up)
+while keeping the cursor in the same text position, if possible.
 </p>
 </dd>
 <dt><code>prevword</code></dt>
