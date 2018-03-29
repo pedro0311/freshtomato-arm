@@ -108,6 +108,9 @@ zend_accel_shared_globals *accel_shared_globals = NULL;
 zend_bool accel_startup_ok = 0;
 static char *zps_failure_reason = NULL;
 char *zps_api_failure_reason = NULL;
+#ifdef HAVE_OPCACHE_FILE_CACHE
+zend_bool file_cache_only = 0;  /* process uses file cache only */
+#endif
 #if ENABLE_FILE_CACHE_FALLBACK
 zend_bool fallback_process = 0; /* process uses file cache fallback */
 #endif
@@ -432,7 +435,7 @@ zend_string *accel_new_interned_string(zend_string *str)
 	Bucket *p;
 
 #ifdef HAVE_OPCACHE_FILE_CACHE
-	if (ZCG(accel_directives).file_cache_only) {
+	if (file_cache_only) {
 		return str;
 	}
 #endif
@@ -1269,8 +1272,8 @@ static zend_persistent_script *store_script_in_file_cache(zend_persistent_script
 	ZCG(mem) = zend_arena_alloc(&CG(arena), memory_used);
 #endif
 
-	/* Copy into shared memory */
-	new_persistent_script = zend_accel_script_persist(new_persistent_script, NULL, 0);
+	/* Copy into memory block */
+	new_persistent_script = zend_accel_script_persist(new_persistent_script, NULL, 0, 0);
 
 	zend_shared_alloc_destroy_xlat_table();
 
@@ -1395,7 +1398,7 @@ static zend_persistent_script *cache_script_in_shared_memory(zend_persistent_scr
 	}
 
 	/* Copy into shared memory */
-	new_persistent_script = zend_accel_script_persist(new_persistent_script, &key, key_length);
+	new_persistent_script = zend_accel_script_persist(new_persistent_script, &key, key_length, 1);
 
 	zend_shared_alloc_destroy_xlat_table();
 
@@ -1743,7 +1746,7 @@ zend_op_array *persistent_compile_file(zend_file_handle *file_handle, int type)
 		/* The Accelerator is disabled, act as if without the Accelerator */
 		return accelerator_orig_compile_file(file_handle, type);
 #ifdef HAVE_OPCACHE_FILE_CACHE
-	} else if (ZCG(accel_directives).file_cache_only) {
+	} else if (file_cache_only) {
 		return file_cache_compile_file(file_handle, type);
 #endif
 	} else if ((!ZCG(counted) && !ZCSG(accelerator_enabled)) ||
@@ -2042,6 +2045,9 @@ static int persistent_stream_open_function(const char *filename, zend_file_handl
 static zend_string* persistent_zend_resolve_path(const char *filename, int filename_len)
 {
 	if (ZCG(enabled) && accel_startup_ok &&
+#ifdef HAVE_OPCACHE_FILE_CACHE
+		!file_cache_only &&
+#endif
 	    (ZCG(counted) || ZCSG(accelerator_enabled)) &&
 	    !ZCSG(restart_in_progress)) {
 
@@ -2173,7 +2179,7 @@ static void accel_activate(void)
 	ZCG(cwd_check) = 1;
 
 #ifdef HAVE_OPCACHE_FILE_CACHE
-	if (ZCG(accel_directives).file_cache_only) {
+	if (file_cache_only) {
 		return;
 	}
 #endif
@@ -2367,6 +2373,8 @@ static inline int accel_find_sapi(void)
 
 static int zend_accel_init_shm(void)
 {
+	int i;
+
 	zend_shared_alloc_lock();
 
 	accel_shared_globals = zend_shared_alloc(sizeof(zend_accel_shared_globals));
@@ -2413,6 +2421,11 @@ static int zend_accel_init_shm(void)
 	ZCSG(start_time) = zend_accel_get_time();
 	ZCSG(last_restart_time) = 0;
 	ZCSG(restart_in_progress) = 0;
+
+
+	for (i = 0; i < -HT_MIN_MASK; i++) {
+		ZCSG(uninitialized_bucket)[i] = HT_INVALID_IDX;
+	}
 
 	zend_shared_alloc_unlock();
 
@@ -2632,7 +2645,8 @@ static int accel_startup(zend_extension *extension)
 /* End of non-SHM dependent initializations */
 /********************************************/
 #ifdef HAVE_OPCACHE_FILE_CACHE
-	if (!ZCG(accel_directives).file_cache_only) {
+	file_cache_only = ZCG(accel_directives).file_cache_only;
+	if (!file_cache_only) {
 #else
 	if (1) {
 #endif
@@ -2664,6 +2678,7 @@ static int accel_startup(zend_extension *extension)
 #if ENABLE_FILE_CACHE_FALLBACK
 			case ALLOC_FALLBACK:
 				zend_shared_alloc_lock();
+				file_cache_only = 1;
 				fallback_process = 1;
 				zend_accel_init_auto_globals();
 				zend_shared_alloc_unlock();
@@ -2762,7 +2777,7 @@ static void accel_free_ts_resources()
 void accel_shutdown(void)
 {
 	zend_ini_entry *ini_entry;
-	zend_bool file_cache_only = 0;
+	zend_bool _file_cache_only = 0;
 
 	zend_optimizer_shutdown();
 
@@ -2774,10 +2789,10 @@ void accel_shutdown(void)
 	}
 
 #ifdef HAVE_OPCACHE_FILE_CACHE
-	file_cache_only = ZCG(accel_directives).file_cache_only;
+	_file_cache_only = file_cache_only;
 #endif
 
-	if (!file_cache_only && ZCG(accel_directives).interned_strings_buffer) {
+	if (!_file_cache_only && ZCG(accel_directives).interned_strings_buffer) {
 		accel_use_permanent_interned_strings();
 	}
 
@@ -2785,7 +2800,7 @@ void accel_shutdown(void)
 
 	accel_free_ts_resources();
 
-	if (!file_cache_only) {
+	if (!_file_cache_only) {
 		zend_shared_alloc_shutdown();
 	}
 	zend_compile_file = accelerator_orig_compile_file;
