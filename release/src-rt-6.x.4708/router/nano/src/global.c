@@ -577,9 +577,9 @@ void shortcut_init(void)
 #ifndef NANO_TINY
 	const char *bracket_gist = N_("Go to the matching bracket");
 	const char *scrollup_gist =
-		N_("Scroll up one line without scrolling the cursor");
+		N_("Scroll up one line without moving the cursor textually");
 	const char *scrolldown_gist =
-		N_("Scroll down one line without scrolling the cursor");
+		N_("Scroll down one line without moving the cursor textually");
 #endif
 #ifdef ENABLE_MULTIBUFFER
 	const char *prevfile_gist = N_("Switch to the previous file buffer");
@@ -855,9 +855,9 @@ void shortcut_init(void)
 	add_to_funcs(do_end, MMAIN,
 		N_("End"), WITHORSANS(end_gist), BLANKAFTER, VIEW);
 
-	add_to_funcs(do_up_void, MMAIN|MHELP|MBROWSER,
+	add_to_funcs(do_up, MMAIN|MHELP|MBROWSER,
 		prevline_tag, WITHORSANS(prevline_gist), TOGETHER, VIEW);
-	add_to_funcs(do_down_void, MMAIN|MHELP|MBROWSER,
+	add_to_funcs(do_down, MMAIN|MHELP|MBROWSER,
 		nextline_tag, WITHORSANS(nextline_gist), TOGETHER, VIEW);
 #ifndef NANO_TINY
 	add_to_funcs(do_scroll_up, MMAIN,
@@ -1013,8 +1013,7 @@ void shortcut_init(void)
 			N_("Backup File"), WITHORSANS(backup_gist), BLANKAFTER, NOVIEW);
 	}
 
-	/* If we're using restricted mode, file insertion is disabled, and
-	 * thus command execution and the multibuffer toggle have no place. */
+	/* Command execution is only available when not in restricted mode. */
 	if (!ISSET(RESTRICTED)) {
 		add_to_funcs(flip_execute, MINSERTFILE,
 			N_("Execute Command"), WITHORSANS(execute_gist), TOGETHER, NOVIEW);
@@ -1024,12 +1023,14 @@ void shortcut_init(void)
 	}
 #endif /* !NANO_TINY */
 #ifdef ENABLE_MULTIBUFFER
+	/* Multiple buffers are only available when not in restricted mode. */
 	if (!ISSET(RESTRICTED))
 		add_to_funcs(flip_newbuffer, MINSERTFILE|MEXTCMD,
 			N_("New Buffer"), WITHORSANS(newbuffer_gist), TOGETHER, NOVIEW);
 #endif
 
 #ifdef ENABLE_BROWSER
+	/* The file browser is only available when not in restricted mode. */
 	if (!ISSET(RESTRICTED))
 		add_to_funcs(to_files_void, MWRITEFILE|MINSERTFILE,
 			N_("To Files"), WITHORSANS(tofiles_gist), TOGETHER, VIEW);
@@ -1181,19 +1182,19 @@ void shortcut_init(void)
 	add_to_sclist((MMOST & ~MBROWSER), "Home", KEY_HOME, do_home, 0);
 	add_to_sclist((MMOST & ~MBROWSER), "^E", 0, do_end, 0);
 	add_to_sclist((MMOST & ~MBROWSER), "End", KEY_END, do_end, 0);
-	add_to_sclist(MMAIN|MHELP|MBROWSER, "^P", 0, do_up_void, 0);
-	add_to_sclist(MMAIN|MHELP|MBROWSER, "^N", 0, do_down_void, 0);
+	add_to_sclist(MMAIN|MHELP|MBROWSER, "^P", 0, do_up, 0);
+	add_to_sclist(MMAIN|MHELP|MBROWSER, "^N", 0, do_down, 0);
 #ifdef ENABLE_UTF8
 	if (using_utf8()) {
-		add_to_sclist(MMAIN|MHELP|MBROWSER, "\xE2\x96\xb2", KEY_UP, do_up_void, 0);
-		add_to_sclist(MMAIN|MHELP|MBROWSER, "\xE2\x96\xbc", KEY_DOWN, do_down_void, 0);
+		add_to_sclist(MMAIN|MHELP|MBROWSER, "\xE2\x96\xb2", KEY_UP, do_up, 0);
+		add_to_sclist(MMAIN|MHELP|MBROWSER, "\xE2\x96\xbc", KEY_DOWN, do_down, 0);
 		add_to_sclist(MMAIN|MBROWSER, "^\xE2\x96\xb2", CONTROL_UP, do_prev_block, 0);
 		add_to_sclist(MMAIN|MBROWSER, "^\xE2\x96\xbc", CONTROL_DOWN, do_next_block, 0);
 	} else
 #endif
 	{
-		add_to_sclist(MMAIN|MHELP|MBROWSER, "Up", KEY_UP, do_up_void, 0);
-		add_to_sclist(MMAIN|MHELP|MBROWSER, "Down", KEY_DOWN, do_down_void, 0);
+		add_to_sclist(MMAIN|MHELP|MBROWSER, "Up", KEY_UP, do_up, 0);
+		add_to_sclist(MMAIN|MHELP|MBROWSER, "Down", KEY_DOWN, do_down, 0);
 		add_to_sclist(MMAIN|MBROWSER, "^Up", CONTROL_UP, do_prev_block, 0);
 		add_to_sclist(MMAIN|MBROWSER, "^Down", CONTROL_DOWN, do_next_block, 0);
 	}
@@ -1311,8 +1312,8 @@ void shortcut_init(void)
 #ifndef NANO_TINY
 	add_to_sclist(MWRITEFILE, "M-D", 0, dos_format_void, 0);
 	add_to_sclist(MWRITEFILE, "M-M", 0, mac_format_void, 0);
-	/* In restricted mode, don't allow Appending, Prepending, nor making
-	 * backups, nor executing a command, nor opening a new buffer. */
+	/* Only when not in restricted mode, allow Appending, Prepending,
+	 * making backups, and executing a command. */
 	if (!ISSET(RESTRICTED)) {
 		add_to_sclist(MWRITEFILE, "M-A", 0, append_void, 0);
 		add_to_sclist(MWRITEFILE, "M-P", 0, prepend_void, 0);
@@ -1321,11 +1322,12 @@ void shortcut_init(void)
 	}
 #endif
 #ifdef ENABLE_MULTIBUFFER
+	/* Only when not in restricted mode, allow multiple buffers. */
 	if (!ISSET(RESTRICTED))
 		add_to_sclist(MINSERTFILE|MEXTCMD, "M-F", 0, flip_newbuffer, 0);
 #endif
 #ifdef ENABLE_BROWSER
-	/* In restricted mode, don't allow entering the file browser. */
+	/* Only when not in restricted mode, allow entering the file browser. */
 	if (!ISSET(RESTRICTED))
 		add_to_sclist(MWRITEFILE|MINSERTFILE, "^T", 0, to_files_void, 0);
 #endif
@@ -1553,10 +1555,10 @@ sc *strtosc(const char *input)
 		s->func = do_right;
 	else if (!strcasecmp(input, "up") ||
 			 !strcasecmp(input, "prevline"))
-		s->func = do_up_void;
+		s->func = do_up;
 	else if (!strcasecmp(input, "down") ||
 			 !strcasecmp(input, "nextline"))
-		s->func = do_down_void;
+		s->func = do_down;
 	else if (!strcasecmp(input, "prevword"))
 		s->func = do_prev_word_void;
 	else if (!strcasecmp(input, "nextword"))
@@ -1777,12 +1779,14 @@ void thanks_for_all_the_fish(void)
 	free(alt_speller);
 #endif
 	free_filestruct(cutbuffer);
+#ifdef ENABLE_MULTIBUFFER
 	/* Free the memory associated with each open file buffer. */
 	while (openfile != openfile->next) {
 		openfile = openfile->next;
 		delete_opennode(openfile->prev);
 	}
 	delete_opennode(openfile);
+#endif
 #ifdef ENABLE_COLOR
 	free(syntaxstr);
 	while (syntaxes != NULL) {

@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 2.9.4.
+This manual documents the GNU ‘nano’ editor, version 2.9.5.
 
 * Menu:
 
@@ -521,8 +521,8 @@ cannot be undone any more.  The workaround is, of course, to exit
 without saving.
 
    The recording and playback of keyboard macros works correctly only on
-a terminal emulator, not on a Linux console (VT), because the latter is
-a deficient terminal.
+a terminal emulator, not on a Linux console (VT), because the latter
+does not by default distinguish modified from unmodified arrow keys.
 
 
 File: nano.info,  Node: Built-in Help,  Next: Feature Toggles,  Prev: Editor Basics,  Up: Top
@@ -711,9 +711,10 @@ The supported settings in a nanorc file are:
      Use this color combination for the concise function descriptions in
      the two help lines at the bottom of the screen.  Valid names for
      foreground and background color are: ‘white’, ‘black’, ‘blue’,
-     ‘green’, ‘red’, ‘cyan’, ‘yellow’, and ‘magenta’.  The name of the
-     foreground color may be prefixed with ‘bright’.  And either FGCOLOR
-     or ,BGCOLOR may be left out.
+     ‘green’, ‘red’, ‘cyan’, ‘yellow’, ‘magenta’, and ‘normal’ — where
+     ‘normal’ means the default foreground or background color.  The
+     name of the foreground color may be prefixed with ‘bright’.  And
+     either FGCOLOR or ,BGCOLOR may be left out.
 
 ‘set historylog’
      Save the last hundred search strings and replacement strings and
@@ -1136,10 +1137,12 @@ file:
      Goes one line down (in the editor or browser).
 
 ‘scrollup’
-     Scrolls up one line of text from the current position.
+     Scrolls the viewport up one row (meaning that the text slides down)
+     while keeping the cursor in the same text position, if possible.
 
 ‘scrolldown’
-     Scrolls down one line of text from the current position.
+     Scrolls the viewport down one row (meaning that the text slides up)
+     while keeping the cursor in the same text position, if possible.
 
 ‘prevword’
      Moves the cursor to the beginning of the previous word.
@@ -1648,17 +1651,17 @@ Node: Screen Layout15454
 Node: Search and Replace16633
 Node: Using the Mouse17368
 Node: Limitations17985
-Node: Built-in Help18497
-Node: Feature Toggles18921
-Node: Nanorc Files21378
-Node: Settings22975
-Ref: set functioncolor25679
-Ref: Whitespace31905
-Node: Syntax Highlighting32461
-Node: Rebinding Keys37452
-Node: The File Browser48483
-Node: Pico Compatibility49343
-Node: Building and Configure Options52640
+Node: Built-in Help18541
+Node: Feature Toggles18965
+Node: Nanorc Files21422
+Node: Settings23019
+Ref: set functioncolor25723
+Ref: Whitespace32040
+Node: Syntax Highlighting32596
+Node: Rebinding Keys37587
+Node: The File Browser48782
+Node: Pico Compatibility49642
+Node: Building and Configure Options52939
 
 End Tag Table
 
