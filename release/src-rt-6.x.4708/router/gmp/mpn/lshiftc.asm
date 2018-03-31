@@ -1,1 +1,0 @@
-../mpn/arm/lshiftc.asm

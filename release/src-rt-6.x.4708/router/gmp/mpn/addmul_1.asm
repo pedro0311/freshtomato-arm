@@ -1,1 +1,0 @@
-../mpn/arm/aorsmul_1.asm
