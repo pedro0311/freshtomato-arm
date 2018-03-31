@@ -1,1 +1,0 @@
-../mpn/arm/rsh1aors_n.asm

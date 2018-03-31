@@ -1,1 +1,0 @@
-../mpn/arm/sec_tabselect.asm
