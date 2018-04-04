@@ -146,8 +146,8 @@
      echo " $ngx_size bytes"
  fi
  
---- nginx/auto/unix	2018-03-20 16:58:31.000000000 +0100
-+++ nginx/auto/unix	2018-03-20 19:37:15.834862994 +0100
+--- nginx/auto/unix	2018-04-03 16:38:10.000000000 +0200
++++ nginx/auto/unix	2018-04-04 10:47:17.091799504 +0200
 @@ -840,7 +840,7 @@
  
  ngx_feature="mmap(MAP_ANON|MAP_SHARED)"
