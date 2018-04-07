@@ -46,7 +46,7 @@ char *tempfilename = NULL;
  * read that file into a new buffer. */
 void wrap_the_help_text(bool redisplaying)
 {
-	int sum = 0;
+	size_t sum = 0;
 	const char *ptr = start_of_body;
 	FILE *tempfile = fopen(tempfilename, "w+b");
 
@@ -75,7 +75,7 @@ void wrap_the_help_text(bool redisplaying)
 	if (redisplaying)
 		close_buffer();
 
-	open_buffer(tempfilename, FALSE);
+	open_buffer(tempfilename, TRUE);
 	remove_magicline();
 
 	prepare_for_display();
@@ -142,10 +142,10 @@ void do_help(void)
 
 	UNSET(WHITESPACE_DISPLAY);
 	UNSET(NOREAD_MODE);
-	SET(MULTIBUFFER);
 
 #ifdef ENABLE_LINENUMBERS
 	UNSET(LINE_NUMBERS);
+	editwincols = COLS;
 	margin = 0;
 #endif
 	tabsize = 8;
@@ -191,12 +191,12 @@ void do_help(void)
 
 		if (func == total_refresh) {
 			total_redraw();
-		} else if (func == do_up_void) {
-			do_up(TRUE);
-		} else if (func == do_down_void) {
+		} else if (func == do_up) {
+			do_scroll_up();
+		} else if (func == do_down) {
 			if (openfile->edittop->lineno + editwinrows - 1 <
 								openfile->filebot->lineno)
-				do_down(TRUE);
+				do_scroll_down();
 		} else if (func == do_page_up) {
 			do_page_up();
 		} else if (func == do_page_down) {
@@ -216,7 +216,7 @@ void do_help(void)
 		} else if (func == do_findnext) {
 			do_findnext();
 #ifdef ENABLE_NANORC
-		} else if (func == (void *)implant) {
+		} else if (func == (functionptrtype)implant) {
 			implant(first_sc_for(MHELP, func)->expansion);
 #endif
 		} else if (kbinput == KEY_WINCH) {
@@ -253,6 +253,7 @@ void do_help(void)
 
 #ifdef ENABLE_LINENUMBERS
 	margin = was_margin;
+	editwincols = COLS - margin;
 #endif
 	tabsize = was_tabsize;
 #ifdef ENABLE_COLOR

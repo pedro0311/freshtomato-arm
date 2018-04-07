@@ -727,8 +727,13 @@ void dns_to_resolv(void)
 					case WP_PPP3G:
 					case WP_PPTP:
 					case WP_L2TP:
-						dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS IP 1.1.1.1 to trigger Connect On Demand", wan_prefix);
-						fprintf(f, "nameserver 1.1.1.1\n");
+						/* The nameserver IP specified below used to be 1.1.1.1, however this became an legit IP address of a public recursive DNS server,
+						 * defeating the purpose of specifying a bogus DNS server in order to trigger Connect On Demand.
+						 * An IP address from TEST-NET-2 block was chosen here, as RFC 5737 explicitly states this address block
+						 * should be non-routable over the public internet. In effect since January 2010.
+						 * Further info: http://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102 */
+						dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS (non-routable on public internet) IP 198.51.100.1 to trigger Connect On Demand", wan_prefix);
+						fprintf(f, "nameserver 198.51.100.1\n");
 						break;
 					}
 				}

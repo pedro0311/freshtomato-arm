@@ -377,6 +377,9 @@
 /* Whether you have AI_ALL */
 #undef HAVE_AI_ALL
 
+/* Whether you have AI_IDN */
+#undef HAVE_AI_IDN
+
 /* Whether you have AI_V4MAPPED */
 #undef HAVE_AI_V4MAPPED
 

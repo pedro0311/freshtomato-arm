@@ -1149,7 +1149,7 @@ bool execute_command(const char *command)
 	if (f == NULL)
 		nperror("fdopen");
 
-	read_file(f, 0, "stdin", TRUE, FALSE);
+	read_file(f, 0, "stdin", TRUE);
 
 	if (wait(NULL) == -1)
 		nperror("wait");
@@ -1184,6 +1184,7 @@ void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep)
 			free(group);
 			group = next;
 		}
+		free(dropit);
 		dropit = thefile->undotop;
 	}
 
@@ -1505,7 +1506,7 @@ bool do_wrap(filestruct *line)
 		/* The length of the remainder. */
 
 	size_t old_x = openfile->current_x;
-	filestruct * old_line = openfile->current;
+	filestruct *old_line = openfile->current;
 
 	/* There are three steps.  First, we decide where to wrap.  Then, we
 	 * create the new wrap line.  Finally, we clean up. */
@@ -3197,75 +3198,77 @@ void do_linter(void)
 	while (TRUE) {
 		int kbinput;
 		functionptrtype func;
+		struct stat lintfileinfo;
+
+		if (stat(curlint->filename, &lintfileinfo) != -1 &&
+			openfile->current_stat->st_ino != lintfileinfo.st_ino) {
+			openfilestruct *tmpof = openfile;
+
+#ifdef ENABLE_MULTIBUFFER
+			while (tmpof != openfile->next) {
+				if (tmpof->current_stat->st_ino == lintfileinfo.st_ino)
+					break;
+				tmpof = tmpof->next;
+			}
+#endif
+			if (tmpof->current_stat->st_ino != lintfileinfo.st_ino) {
+#ifdef ENABLE_MULTIBUFFER
+				char *msg = charalloc(1024 + strlen(curlint->filename));
+				int i;
+
+				sprintf(msg, _("This message is for unopened file %s,"
+							" open it in a new buffer?"), curlint->filename);
+				i = do_yesno_prompt(FALSE, msg);
+				free(msg);
+
+				if (i == -1) {
+					statusbar(_("Cancelled"));
+					goto free_lints_and_return;
+				} else if (i == 1) {
+					open_buffer(curlint->filename, TRUE);
+				} else {
+#endif
+					char *dontwantfile = mallocstrcpy(NULL, curlint->filename);
+					lintstruct *restlint = NULL;
+
+					while (curlint != NULL) {
+						if (strcmp(curlint->filename, dontwantfile) == 0) {
+							if (curlint == lints)
+								lints = curlint->next;
+							else
+								curlint->prev->next = curlint->next;
+							if (curlint->next != NULL)
+								curlint->next->prev = curlint->prev;
+							tmplint = curlint;
+							curlint = curlint->next;
+							free(tmplint->msg);
+							free(tmplint->filename);
+							free(tmplint);
+						} else {
+							if (restlint == NULL)
+								restlint = curlint;
+							curlint = curlint->next;
+						}
+					}
+
+					if (restlint == NULL) {
+						statusbar(_("No more errors in unopened files, cancelling"));
+						napms(2400);
+						break;
+					} else {
+						curlint = restlint;
+						continue;
+					}
+
+					free(dontwantfile);
+				}
+#ifdef ENABLE_MULTIBUFFER
+			} else
+				openfile = tmpof;
+#endif
+		}
 
 		if (tmplint != curlint) {
-#ifndef NANO_TINY
-			struct stat lintfileinfo;
-
-		  new_lint_loop:
-			if (stat(curlint->filename, &lintfileinfo) != -1) {
-				if (openfile->current_stat->st_ino != lintfileinfo.st_ino) {
-					openfilestruct *tmpof = openfile;
-					while (tmpof != openfile->next) {
-						if (tmpof->current_stat->st_ino == lintfileinfo.st_ino)
-							break;
-						tmpof = tmpof->next;
-					}
-					if (tmpof->current_stat->st_ino != lintfileinfo.st_ino) {
-						char *msg = charalloc(1024 + strlen(curlint->filename));
-						int i;
-
-						sprintf(msg, _("This message is for unopened file %s,"
-										" open it in a new buffer?"),
-								curlint->filename);
-						i = do_yesno_prompt(FALSE, msg);
-						free(msg);
-						if (i == -1) {
-							statusbar(_("Cancelled"));
-							goto free_lints_and_return;
-						} else if (i == 1) {
-							SET(MULTIBUFFER);
-							open_buffer(curlint->filename, FALSE);
-						} else {
-							char *dontwantfile = mallocstrcpy(NULL, curlint->filename);
-							lintstruct *restlint = NULL;
-
-							while (curlint != NULL) {
-								if (strcmp(curlint->filename, dontwantfile) == 0) {
-									if (curlint == lints)
-										lints = curlint->next;
-									else
-										curlint->prev->next = curlint->next;
-									if (curlint->next != NULL)
-										curlint->next->prev = curlint->prev;
-									tmplint = curlint;
-									curlint = curlint->next;
-									free(tmplint->msg);
-									free(tmplint->filename);
-									free(tmplint);
-								} else {
-									if (restlint == NULL)
-										restlint = curlint;
-									curlint = curlint->next;
-								}
-							}
-
-							if (restlint == NULL) {
-								statusbar(_("No more errors in unopened files, cancelling"));
-								napms(2400);
-								break;
-							} else {
-								curlint = restlint;
-								goto new_lint_loop;
-							}
-
-							free(dontwantfile);
-						}
-					} else
-						openfile = tmpof;
-				}
-			}
-#endif /* !NANO_TINY */
 			goto_line_posx(curlint->lineno, curlint->colno - 1);
 			titlebar(NULL);
 			adjust_viewport(CENTERING);
@@ -3307,7 +3310,7 @@ void do_linter(void)
 
 	wipe_statusbar();
 
-#ifndef NANO_TINY
+#ifdef ENABLE_MULTIBUFFER
   free_lints_and_return:
 #endif
 	for (curlint = lints; curlint != NULL;) {
@@ -3577,8 +3580,8 @@ char *copy_completion(char *check_line, int start)
 void complete_a_word(void)
 {
 	char *shard, *completion = NULL;
-	int start_of_shard, shard_length = 0;
-	int i = 0, j = 0;
+	size_t start_of_shard, shard_length = 0;
+	size_t i = 0, j = 0;
 	completion_word *some_word;
 #ifdef ENABLE_WRAPPING
 	bool was_set_wrapping = !ISSET(NO_WRAP);

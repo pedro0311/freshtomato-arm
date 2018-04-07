@@ -19,9 +19,9 @@
 
 */
 
-#define DEBUG_CSTATS
-#define DEBUG_NOISY
-#define DEBUG_STIME
+//#define DEBUG_CSTATS
+//#define DEBUG_NOISY
+//#define DEBUG_STIME
 
 #define K 1024
 #define M (1024 * 1024)

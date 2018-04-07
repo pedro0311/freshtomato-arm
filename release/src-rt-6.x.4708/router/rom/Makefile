@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 include ../common.mak
 
 all:
@@ -29,26 +30,79 @@ endif
 ifneq ($(TCONFIG_DNSCRYPT),y)
 	rm -f $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv
 else
-	@count=0; \
+	@resolvers_path=$(INSTALLDIR)"/rom/etc"; \
+	resolvers_md="$${resolvers_path}/public-resolvers.md"; \
+	resolvers_file="$${resolvers_path}/dnscrypt-resolvers.csv"; \
+	resolvers_file_tmp="$${resolvers_file}.tmp"; \
+	resolvers_url="https://download.dnscrypt.info/resolvers-list/v2/public-resolvers.md"; \
+	count=0; \
 	while [ $${count} -lt 6 ]; do \
-	    wget https://raw.githubusercontent.com/dyne/dnscrypt-proxy/master/dnscrypt-resolvers.csv -O $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
+	    printf "\nRetrieving the list of public DNSCrypt resolvers...\n"; \
+	    /usr/bin/wget "$${resolvers_url}" -O "$${resolvers_md}"; \
 	    if [ $${?} -ne 0 ]; then \
 		count=`expr $${count} + 1`; \
 		if [ $${count} -gt 5 ]; then \
 		    err_file="../../error_download_dnscrypt_resolvers"; \
-		    ret=$$(date)": Dnscrypt resolvers download error, check your internet connection! Using recently downloaded file!"; \
-		    echo "\n\n"$${ret}"\n\n"; \
+		    ret=$$(date)": DNSCrypt resolvers list download error, check your internet connection! Using recently downloaded file!"; \
+		    printf "\n\n"$${ret}"\n\n"; \
 		    echo $${ret} >> $${err_file}; \
-		    cp rom/etc/dnscrypt-resolvers.csv $(INSTALLDIR)/rom/etc/dnscrypt-resolvers.csv; \
+		    cp rom/etc/dnscrypt-resolvers.csv $${resolvers_file}; \
 		    if [ $${?} -ne 0 ]; then \
 			ret=$$(date)": No local copy of the dnscrypt-resolvers.csv file has been found, aborting!"; \
-			echo "\n\n"$${ret}"\n\n"; \
+			printf "\n\n"$${ret}"\n\n"; \
 			echo $${ret} >> $${err_file}; \
 			exit 1; \
 		    fi; \
 		fi; \
 		sleep 2; \
 	    else \
+		# Parse the v2 resolvers file into v1 csv (based on John Bacho script: https://github.com/john9527/asuswrt-merlin/commit/35858017ed807d7f087cd0318d32fe2889eae23a); \
+		printf "\nParsing the list of public DNSCrypt resolvers...please wait\n"; \
+		sdns_decode="/tmp/sdns_decode.dat"; \
+		echo "Name,\"Full name\",\"Description\",\"Location\",\"Coordinates\",URL,Version,DNSSEC validation,No logs,Namecoin,Resolver address,Provider name,Provider public key,Provider public key TXT record" > $${resolvers_file_tmp}; \
+\
+		oldifs=$${IFS}; \
+		IFS=$$'\n'; \
+		for sdns in $$(cat $${resolvers_md} | grep -E '^sdns|^##'); do \
+		    echo $${sdns} | grep -q "##" >/dev/null 2>&1; \
+		    if [ $${?} -eq 0 ]; then \
+			desc=$$(echo $${sdns} | sed -r 's/.{3}//'); \
+			continue; \
+		    fi; \
+\
+		    sdns=$$(echo $${sdns} | sed -r 's/.{7}//'); \
+		    echo $${sdns}== | tr -- "-_ " "+/=" | base64 -d > $${sdns_decode}; \
+\
+		    type=$$(dd bs=1 count=1 skip=0 <$${sdns_decode} 2>/dev/null | hexdump -e '1/1 "%d"'); \
+		    if [ $${type} -ne 1 ]; then continue; fi; \
+\
+		    props=$$(dd bs=1 count=1 skip=1 <$${sdns_decode} 2>/dev/null | hexdump -e '1/1 "%d"'); \
+		    if [ $$(( $${props}&1 )) -eq 1 ]; then dnssec="yes"; else dnssec="no"; fi; \
+		    if [ $$(( $${props}&2 )) -eq 2 ]; then logs="yes"; else logs="no"; fi; \
+		    if [ $$(( $${props}&4 )) -eq 4 ]; then filter="yes"; else filter="no"; fi; \
+\
+		    addr_length=$$(dd bs=1 count=1 skip=9 <$${sdns_decode} 2>/dev/null | hexdump -e '1/1 "%d"'); \
+		    address=$$(dd bs=1 count=$${addr_length} skip=10 <$${sdns_decode} 2>/dev/null); \
+\
+		    let pk_length_offset=10+$${addr_length}; \
+		    pk_length=$$(dd bs=1 count=1 skip=$${pk_length_offset} <$${sdns_decode} 2>/dev/null | hexdump -e '1/1 "%d"'); \
+		    let pk_offset=$${pk_length_offset}+1; \
+		    pk=$$(dd bs=1 count=$${pk_length} skip=$${pk_offset} <$${sdns_decode} 2>/dev/null | hexdump -e '1/2 "%04X:"' | sed 's/\(.\)\(.\)\(.\)\(.\)\(.\)/\3\4\1\2\5/g' | sed 's/.$$//'); \
+\
+		    let name_length_offset=$${pk_offset}+$${pk_length}; \
+		    name_length=$$(dd bs=1 count=1 skip=$${name_length_offset} <$${sdns_decode} 2>/dev/null | hexdump -e '1/1 "%d"'); \
+		    let name_offset=$${name_length_offset}+1; \
+		    name=$$(dd bs=1 count=$${name_length} skip=$${name_offset} <$${sdns_decode} 2>/dev/null); \
+\
+		    echo $${name} | grep -q "cryptostorm" >/dev/null 2>&1; \
+		    if [ $${?} -eq 0 ]; then namecoin="yes"; else namecoin="no"; fi; \
+\
+		    echo "$${desc},$${desc},,,,,1,$${dnssec},$${logs},$${namecoin},$${address},$${name},$${pk}," >> $${resolvers_file_tmp}; \
+		done; \
+		IFS=$${oldifs}; \
+		mv -f "$${resolvers_file_tmp}" "$${resolvers_file}" > /dev/null 2>&1; \
+		rm -rf $${sdns_decode}; \
+		printf "\nDone\n\n"; \
 		count=6; \
 	    fi; \
 	done

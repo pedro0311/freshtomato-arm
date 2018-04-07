@@ -153,7 +153,7 @@ int do_statusbar_input(bool *finished)
 								shortcut->func == do_backspace))
 			;
 #ifdef ENABLE_NANORC
-		else if (shortcut->func == (void *)implant)
+		else if (shortcut->func == (functionptrtype)implant)
 			implant(shortcut->expansion);
 #endif
 		else if (shortcut->func == do_verbatim_input)
@@ -171,7 +171,7 @@ int do_statusbar_input(bool *finished)
 			/* Handle any other shortcut in the current menu, setting finished
 			 * to TRUE to indicate that we're done after running or trying to
 			 * run its associated function. */
-			if (!ISSET(VIEW_MODE) || sctofunc(shortcut)->viewok)
+			if (!ISSET(VIEW_MODE) || okay_for_view(shortcut))
 				shortcut->func();
 			*finished = TRUE;
 		}
@@ -187,27 +187,25 @@ void do_statusbar_output(int *the_input, size_t input_len,
 {
 	char *output = charalloc(input_len + 1);
 	char onechar[MAXCHARLEN];
-	int i, char_len;
+	size_t char_len, i, j = 0;
 
 	/* Copy the typed stuff so it can be treated. */
 	for (i = 0; i < input_len; i++)
 		output[i] = (char)the_input[i];
 	output[i] = '\0';
 
-	i = 0;
-
-	while (i < input_len) {
+	while (j < input_len) {
 		/* Encode any NUL byte as 0x0A. */
-		if (output[i] == '\0')
-			output[i] = '\n';
+		if (output[j] == '\0')
+			output[j] = '\n';
 
 		/* Interpret the next multibyte character. */
-		char_len = parse_mbchar(output + i, onechar, NULL);
+		char_len = parse_mbchar(output + j, onechar, NULL);
 
-		i += char_len;
+		j += char_len;
 
 		/* When filtering, skip any ASCII control character. */
-		if (filtering && is_ascii_cntrl_char(*(output + i - char_len)))
+		if (filtering && is_ascii_cntrl_char(*(output + j - char_len)))
 			continue;
 
 		/* Insert the typed character into the existing answer string. */

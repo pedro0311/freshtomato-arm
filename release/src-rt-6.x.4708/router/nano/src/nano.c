@@ -42,6 +42,12 @@
 #include <sys/vt.h>
 #endif
 
+#ifdef ENABLE_MULTIBUFFER
+#define read_them_all TRUE
+#else
+#define read_them_all FALSE
+#endif
+
 #ifdef ENABLE_MOUSE
 static int oldinterval = -1;
 		/* Used to store the user's original mouse click interval. */
@@ -63,8 +69,7 @@ static struct sigaction act;
 static bool input_was_aborted = FALSE;
 		/* Whether reading from standard input was aborted via ^C. */
 
-/* Create a new linestruct node.  Note that we do not set prevnode->next
- * to the new line. */
+/* Create a new linestruct node.  Note that we do not set prevnode->next. */
 filestruct *make_new_node(filestruct *prevnode)
 {
 	filestruct *newnode = nmalloc(sizeof(filestruct));
@@ -199,12 +204,7 @@ void renumber(filestruct *line)
 partition *partition_filestruct(filestruct *top, size_t top_x,
 		filestruct *bot, size_t bot_x)
 {
-	partition *p;
-
-	assert(top != NULL && bot != NULL && openfile->fileage != NULL && openfile->filebot != NULL);
-
-	/* Initialize the partition. */
-	p = (partition *)nmalloc(sizeof(partition));
+	partition *p = nmalloc(sizeof(partition));
 
 	/* If the top and bottom of the partition are different from the top
 	 * and bottom of the buffer, save the latter and then set them
@@ -247,8 +247,6 @@ partition *partition_filestruct(filestruct *top, size_t top_x,
  * to (filebot, $) again. */
 void unpartition_filestruct(partition **p)
 {
-	assert(p != NULL && openfile->fileage != NULL && openfile->filebot != NULL);
-
 	/* Reattach the line above the top of the partition, and restore the
 	 * text before top_x from top_data.  Free top_data when we're done
 	 * with it. */
@@ -298,8 +296,6 @@ void extract_buffer(filestruct **file_top, filestruct **file_bot,
 	bool mark_inside = FALSE;
 	bool same_line = FALSE;
 #endif
-
-	assert(file_top != NULL && file_bot != NULL && top != NULL && bot != NULL);
 
 	/* If (top, top_x)-(bot, bot_x) doesn't cover any text, get out. */
 	if (top == bot && top_x == bot_x)
@@ -357,8 +353,8 @@ void extract_buffer(filestruct **file_top, filestruct **file_bot,
 
 		delete_node(openfile->fileage);
 
-		/* Renumber, starting with the line after the original file_bot. */
-		renumber(file_bot_save->next);
+		/* Renumber, starting at the last line of the original buffer. */
+		renumber(file_bot_save);
 	}
 
 	/* Since the text has now been saved, remove it from the buffer. */
@@ -411,8 +407,6 @@ void ingraft_buffer(filestruct *somebuffer)
 #ifndef NANO_TINY
 	bool right_side_up = FALSE, single_line = FALSE;
 #endif
-
-	assert(somebuffer != NULL);
 
 #ifndef NANO_TINY
 	/* Keep track of whether the mark begins inside the partition and
@@ -507,17 +501,17 @@ openfilestruct *make_new_opennode(void)
 	return (openfilestruct *)nmalloc(sizeof(openfilestruct));
 }
 
+#ifdef ENABLE_MULTIBUFFER
 /* Unlink a node from the rest of the circular list, and delete it. */
 void unlink_opennode(openfilestruct *fileptr)
 {
-	assert(fileptr != fileptr->prev && fileptr != fileptr->next);
-
+#ifdef ENABLE_MULTIBUFFER
 	if (fileptr == firstfile)
 		firstfile = firstfile->next;
 
 	fileptr->prev->next = fileptr->next;
 	fileptr->next->prev = fileptr->prev;
-
+#endif
 	delete_opennode(fileptr);
 }
 
@@ -534,6 +528,7 @@ void delete_opennode(openfilestruct *fileptr)
 #endif
 	free(fileptr);
 }
+#endif
 
 /* Display a warning about a key disabled in view mode. */
 void print_view_warning(void)
@@ -591,69 +586,56 @@ void finish(void)
 void die(const char *msg, ...)
 {
 	va_list ap;
+	openfilestruct *firstone = openfile;
 
+	/* Switch on the cursor and leave curses mode. */
 	curs_set(1);
 	endwin();
 
 	/* Restore the old terminal settings. */
 	tcsetattr(0, TCSANOW, &oldterm);
 
+	/* Display the dying message. */
 	va_start(ap, msg);
 	vfprintf(stderr, msg, ap);
 	va_end(ap);
 
+	while (openfile) {
 #ifndef NANO_TINY
-	/* If the current buffer has a lockfile, remove it. */
-	if (openfile && ISSET(LOCKING) && openfile->lock_filename)
-		delete_lockfile(openfile->lock_filename);
+		/* If the current buffer has a lockfile, remove it. */
+		if (ISSET(LOCKING) && openfile->lock_filename)
+			delete_lockfile(openfile->lock_filename);
 #endif
+		/* If the current buffer was modified, ensure it is unpartitioned,
+		 * then save it.  When in restricted mode, we don't save anything,
+		 * because it would write files not mentioned on the command line. */
+		if (openfile->modified && !ISSET(RESTRICTED)) {
+			if (filepart != NULL)
+				unpartition_filestruct(&filepart);
 
-	/* If the current file buffer was modified, save it. */
-	if (openfile && openfile->modified) {
-		/* If the buffer is partitioned, unpartition it first. */
-		if (filepart != NULL)
-			unpartition_filestruct(&filepart);
-
-		die_save_file(openfile->filename, openfile->current_stat);
-	}
-
-#ifdef ENABLE_MULTIBUFFER
-	/* Save all of the other modified file buffers, if any. */
-	if (openfile != NULL) {
-		openfilestruct *firstone = openfile;
-
-		while (openfile->next != firstone) {
-			openfile = openfile->next;
-
-#ifndef NANO_TINY
-			if (ISSET(LOCKING) && openfile->lock_filename)
-				delete_lockfile(openfile->lock_filename);
-#endif
-			if (openfile->modified)
-				die_save_file(openfile->filename, openfile->current_stat);
+			emergency_save(openfile->filename, openfile->current_stat);
 		}
-	}
+
+		filepart = NULL;
+#ifdef ENABLE_MULTIBUFFER
+		openfile = openfile->next;
 #endif
+		if (openfile == firstone)
+			break;
+	}
 
 	/* Abandon the building. */
 	exit(1);
 }
 
-/* Save the current file under the name specified in die_filename, which
- * is modified to be unique if necessary. */
-void die_save_file(const char *die_filename, struct stat *die_stat)
+/* Save the current buffer under the given name.
+ * If necessary, the name is modified to be unique. */
+void emergency_save(const char *die_filename, struct stat *die_stat)
 {
 	char *targetname;
 	bool failed = TRUE;
 
-	/* If we're using restricted mode, don't write any emergency backup
-	 * files, since that would allow reading from or writing to files
-	 * not specified on the command line. */
-	if (ISSET(RESTRICTED))
-		return;
-
-	/* If we can't save, we have really bad problems, but we might as
-	 * well try. */
+	/* If the buffer has no name, simply call it "nano". */
 	if (*die_filename == '\0')
 		die_filename = "nano";
 
@@ -672,9 +654,8 @@ void die_save_file(const char *die_filename, struct stat *die_stat)
 				_("Too many backup files?"));
 
 #ifndef NANO_TINY
-	/* Try and chmod/chown the save file to the values of the original file,
-	 * but don't worry if it fails because we're supposed to be bailing as
-	 * fast as possible. */
+	/* Try to chmod/chown the saved file to the values of the original file,
+	 * but ignore any failure as we are in a hurry to get out. */
 	if (die_stat) {
 		IGNORE_CALL_RESULT(chmod(targetname, die_stat->st_mode));
 		IGNORE_CALL_RESULT(chown(targetname, die_stat->st_uid,
@@ -1164,8 +1145,8 @@ bool scoop_stdin(void)
 	}
 
 	/* Read the input into a new buffer. */
-	open_buffer("", FALSE);
-	read_file(stream, 0, "stdin", TRUE, FALSE);
+	open_buffer("", TRUE);
+	read_file(stream, 0, "stdin", TRUE);
 	openfile->edittop = openfile->fileage;
 
 	/* Reconnect the tty as the input source. */
@@ -1621,6 +1602,29 @@ int do_mouse(void)
 }
 #endif /* ENABLE_MOUSE */
 
+/* Return TRUE when the given function is a cursor-moving command. */
+bool wanted_to_move(void (*func)(void))
+{
+	return func == do_left || func == do_right ||
+			func == do_up || func == do_down ||
+			func == do_home || func == do_end ||
+			func == do_prev_word_void || func == do_next_word_void ||
+#ifdef ENABLE_JUSTIFY
+			func == do_para_begin_void || func == do_para_end_void ||
+#endif
+			func == do_prev_block || func == do_next_block ||
+			func == do_page_up || func == do_page_down ||
+			func == to_first_line || func == to_last_line;
+}
+
+/* Return TRUE when the given shortcut is valid in view mode. */
+bool okay_for_view(const sc *shortcut)
+{
+	const subnfunc *func = sctofunc(shortcut);
+
+	return (func != NULL && func->viewok);
+}
+
 /* Read in a keystroke.  Act on the keystroke if it is a shortcut or a toggle;
  * otherwise, insert it into the edit buffer.  If allow_funcs is FALSE, don't
  * do anything with the keystroke -- just return it. */
@@ -1712,7 +1716,7 @@ int do_input(bool allow_funcs)
 	if (shortcut == NULL)
 		pletion_line = NULL;
 	else {
-		if (ISSET(VIEW_MODE) && !sctofunc(shortcut)->viewok) {
+		if (ISSET(VIEW_MODE) && !okay_for_view(shortcut)) {
 			print_view_warning();
 			return ERR;
 		}
@@ -1732,7 +1736,7 @@ int do_input(bool allow_funcs)
 			pletion_line = NULL;
 #endif
 #ifdef ENABLE_NANORC
-		if (shortcut->func == (void *)implant) {
+		if (shortcut->func == (functionptrtype)implant) {
 			implant(shortcut->expansion);
 			return 42;
 		}
@@ -1770,8 +1774,7 @@ int do_input(bool allow_funcs)
 				if (!shift_held && openfile->kind_of_mark == SOFTMARK &&
 									(openfile->current != was_current ||
 									openfile->current_x != was_x ||
-									(shortcut->func >= to_first_line &&
-									shortcut->func <= do_right))) {
+									wanted_to_move(shortcut->func))) {
 					openfile->mark = NULL;
 					refresh_needed = TRUE;
 				} else if (openfile->current != was_current)
@@ -1787,7 +1790,7 @@ int do_input(bool allow_funcs)
 				wrap_reset();
 #endif
 #ifdef ENABLE_COLOR
-			if (!refresh_needed && !sctofunc(shortcut)->viewok)
+			if (!refresh_needed && !okay_for_view(shortcut))
 				check_the_multis(openfile->current);
 #endif
 			if (!refresh_needed && (shortcut->func == do_delete ||
@@ -1920,11 +1923,6 @@ int main(int argc, char **argv)
 #ifdef ENABLE_WRAPPING
 	bool forced_wrapping = FALSE;
 		/* Should long lines be automatically hard wrapped? */
-#endif
-#ifdef ENABLE_MULTIBUFFER
-	bool is_multibuffer;
-		/* The actual value of the multibuffer option, restored after
-		 * we've loaded all files given on the command line. */
 #endif
 	const struct option long_options[] = {
 		{"boldtext", 0, NULL, 'D'},
@@ -2573,13 +2571,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Main: open file\n");
 #endif
 
-#ifdef ENABLE_MULTIBUFFER
-	is_multibuffer = ISSET(MULTIBUFFER);
-	SET(MULTIBUFFER);
-#endif
-
 	/* Read the files mentioned on the command line into new buffers. */
-	while (optind < argc && (!openfile || ISSET(MULTIBUFFER))) {
+	while (optind < argc && (!openfile || read_them_all)) {
 		ssize_t givenline = 0, givencol = 0;
 
 		/* If there's a +LINE[,COLUMN] argument here, eat it up. */
@@ -2591,10 +2584,10 @@ int main(int argc, char **argv)
 		/* If the filename is a dash, read from standard input; otherwise,
 		 * open the file; skip positioning the cursor if either failed. */
 		if (strcmp(argv[optind], "-") == 0) {
+			optind++;
 			if (!scoop_stdin())
 				continue;
-			optind++;
-		} else if (!open_buffer(argv[optind++], FALSE))
+		} else if (!open_buffer(argv[optind++], TRUE))
 			continue;
 
 		/* If a position was given on the command line, go there. */
@@ -2614,15 +2607,12 @@ int main(int argc, char **argv)
 	 * directories, then open a blank buffer and allow editing.  Otherwise,
 	 * switch from the last opened file to the next, that is: the first. */
 	if (openfile == NULL) {
-		open_buffer("", FALSE);
+		open_buffer("", TRUE);
 		UNSET(VIEW_MODE);
 	}
 #ifdef ENABLE_MULTIBUFFER
 	else
 		openfile = openfile->next;
-
-	if (!is_multibuffer)
-		UNSET(MULTIBUFFER);
 #endif
 
 #ifdef DEBUG
