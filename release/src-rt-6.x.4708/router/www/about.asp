@@ -86,7 +86,7 @@ function init()
 <body onload='init()'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
+	<div class='title'>FreshTomato</div>
 	<div class='version'>Version <% version(); %></div>
 </td></tr>
 <tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
@@ -99,13 +99,12 @@ function init()
 <img src='tux.png' alt='Linux &amp; Tomato' id='tux'>
 </div>
 <div class='about'>
-<b>Tomato Firmware <% version(1); %></b><br />
+<b>FreshTomato Firmware <% version(1); %></b><br />
 <br />
 Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br />
 <br />
-<b>[Kille72's Tomato-ARM]</b> - Polish forum: <a href='https://openlinksys.info/forum/viewthread.php?thread_id=20829' class='new_window'>https://openlinksys.info</a> English forum: <a href='https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled-by-kille72.73397/' class='new_window'>https://linksysinfo.org</a><br />
-<a href='https://bitbucket.org/kille72/tomato-arm-kille72' class='new_window'>Project page</a><br />
-<a href='https://exotic.se' class='new_window'>About me</a><br />
+<b>[Pedro's Tomato-ARM]</b> - Polish forum: <a href='https://openlinksys.info/forum/' class='new_window'>https://openlinksys.info</a> English forum: <a href="https://www.linksysinfo.org/index.php" class="new_window">https://linksysinfo.org</a><br />
+<a href='https://bitbucket.org/pedro311/freshtomato-arm' class='new_window'>Project page</a><br />
 <br />
 <hr>
 <!-- / / / -->
@@ -263,21 +262,27 @@ We want to express our gratitude to all people not mentioned here but contribute
 <br />
 
 <hr>
-<br /><b>[Kille72's Tomato-ARM] - is an alternative, customized version, forked off from Tomato-ARM by Shibby</b>																											
+<br /><b>[Pedro's Tomato-ARM] - is an alternative, customized version, forked off from Tomato-ARM by Shibby</b>
 <br />
-Copyright (C) 2016-2018 <a href='https://exotic.se' class='new_window'>@kille72</a>
-<br />
-<br />
-Built on <% build_time(); %> by <a href='https://exotic.se' class='new_window'>@kille72</a>
-<br />
-PL: <a href="https://openlinksys.info/forum/viewthread.php?thread_id=20829" class="new_window">https://openlinksys.info</a>, EN: <a href="https://www.linksysinfo.org/index.php?threads/fork-tomato-by-shibby-compiled-by-kille72.73397/" class="new_window">https://linksysinfo.org</a>
+Copyright (C) 2016-2018 Pedro
 <br />
 <br />
-Click below to send a "Thank you" gift through PayPal  
+Built on <% build_time(); %> by Pedro
+<br />
+PL: <a href="https://openlinksys.info/forum/" class="new_window">https://openlinksys.info</a>, EN: <a href="https://www.linksysinfo.org/index.php" class="new_window">https://linksysinfo.org</a>
+<br />
+<br />
+Click below to send a "Thank you" gift through PayPal
 <br />
 <br />
 <div id="donate">
-	<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=ZSMTVT4WQN2W2&amp;lc=GB&amp;item_name=Thank%20you%20for%20Tomato%2e%20Keep%20it%20up&amp;item_number=Kille72&amp;currency_code=EUR&amp;bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted" class="new_window"><img style="border:none" alt="Donate" src="donate.gif"/></a><br />
+	<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+	<div>
+		<input type="hidden" name="cmd" value="_s-xclick">
+		<input type="image" src="donate.gif" style="border:0" name="submit" alt="Donate">
+		<input type="hidden" name="hosted_button_id" value="B4FDH9TH6Z8FU">
+	</div>
+	</form>
 </div>
 <br />
 <br />
