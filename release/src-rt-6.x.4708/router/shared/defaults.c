@@ -209,8 +209,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_ppp_username",		""				, 0 },	// PPP username
 	{ "wan_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
-	{ "wan_ppp_keepalive",		"0"				, 0 },	// Restore link automatically
 	{ "wan_ppp_demand",		"0"				, 0 },	// Dial on demand
+	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)*/
 	{ "wan_ppp_mru",		"1500"				, 0 },	// Negotiate MRU to this value
 	{ "wan_ppp_mtu",		"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
@@ -229,6 +229,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan2_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan2_ppp_demand",		"0"				, 0 },	// Dial on demand
+	{ "wan2_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan2_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)*/
 	{ "wan2_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan2_ppp_custom",		""				, 0 },	// PPPD additional options
@@ -241,6 +242,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan3_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan3_ppp_demand",		"0"				, 0 },	// Dial on demand
+	{ "wan3_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan3_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)*/
 	{ "wan3_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan3_ppp_custom",		""				, 0 },	// PPPD additional options
@@ -252,6 +254,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan4_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan4_ppp_demand",		"0"				, 0 },	// Dial on demand
+	{ "wan4_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan4_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)*/
 	{ "wan4_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan4_ppp_custom",		""				, 0 },	// PPPD additional options
