@@ -18,7 +18,7 @@ include common.mak
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
 
-define patch_files =
+define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
   ( if ! patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
    patch -p0 < $$FILE; \
@@ -26,7 +26,7 @@ define patch_files =
  done
 endef
 
-define unpatch_files =
+define unpatch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
   ( if patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
    patch -p0 -Rf < $$FILE; \
