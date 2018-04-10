@@ -121,7 +121,6 @@ obj-$(TCONFIG_DNSCRYPT) += dnscrypt
 obj-$(TCONFIG_SNMP) += snmp
 obj-$(TCONFIG_SDHC) += mmc
 
-#obj-y += cyassl
 obj-y += mssl
 obj-y += mdu
 obj-$(TCONFIG_RAID) += mdadm
@@ -147,7 +146,6 @@ obj-$(TCONFIG_USB) += scsi-idle
 endif
 
 obj-y += libusb10
-#obj-y += libusb
 obj-y += usbmodeswitch
 obj-$(TCONFIG_FTP) += vsftpd
 
@@ -196,18 +194,12 @@ ifeq ($(TCONFIG_TUXERA),y)
 else
     ifeq ($(TCONFIG_UFSDA),y)
         obj-$(TCONFIG_NTFS) += ufsd-asus
-    else
-        ifeq ($(TCONFIG_UFSDN),y)
-            obj-$(TCONFIG_NTFS) += ufsd-netgear
-        endif
     endif
 endif
 endif
 obj-$(TCONFIG_NTFS) += ntfs-3g
 
 obj-$(TCONFIG_EBTABLES) += ebtables
-#obj-$(TCONFIG_IPV6) += libdaemon
-#obj-$(TCONFIG_IPV6) += radvd
 obj-$(TCONFIG_IPV6) += dhcpv6
 
 obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
@@ -220,11 +212,9 @@ obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
 obj-$(TCONFIG_MEDIA_SERVER) += minidlna
 MEDIA_SERVER_STATIC=y
-#MEDIA_SERVER_STATIC :=
 
 obj-y += libnfnetlink
 obj-y += miniupnpd
-#	obj-y += upnp
 obj-$(CONFIG_LINUX26) += libmnl
 obj-$(CONFIG_LINUX26) += ipset
 
@@ -236,8 +226,6 @@ obj-$(TCONFIG_L2TP) += xl2tpd
 obj-$(TCONFIG_PPTP) += accel-pptp
 obj-$(TCONFIG_PPTPD) += pptpd
 obj-$(TCONFIG_SSH) += dropbear
-#obj-$(TCONFIG_ZEBRA) += zebra
-#	obj-$(TCONFIG_IPP2P) += ipp2p
 obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
@@ -405,7 +393,6 @@ testfind:
 
 install package: $(obj-install) $(LINUXDIR)/.config
 	@$(SEP)
-
 	install -d $(TARGETDIR)
 
 
@@ -422,7 +409,6 @@ ifneq ($(CONFIG_LINUX26),y)
 	find $(TARGETDIR)/lib/modules -name emf.*o -exec $(STRIP) --strip-unneeded -x {} \;
 	find $(TARGETDIR)/lib/modules -name igs.*o -exec $(STRIP) --strip-unneeded -x {} \;
 	find $(TARGETDIR)/lib/modules -name jffs*.*o -exec $(STRIP) --strip-unneeded -x {} \;
-
 	find $(TARGETDIR)/lib/modules -name *.*o -exec $(STRIP) --strip-debug -x -R .mdebug.abi32 {} \;
 endif
 
@@ -490,7 +476,6 @@ endif
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/media/video/gspca && mv stv06xx/* . && rm -rf stv06xx || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/media/video && mv gspca/* . && rm -rf gspca || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/media && mv video/* . && rm -rf video || true
-
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv bcm57xx/* . && rm -rf bcm57xx || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv emf/* . && rm -rf emf || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv igs/* . && rm -rf igs || true
@@ -840,35 +825,6 @@ httpd: shared nvram$(BCMEX) mssl
 www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
 
-matrixssl:
-	@$(SEP)
-	@$(MAKE) -C matrixssl/src
-
-matrixssl-install:
-	@true
-
-matrixssl-clean:
-	-@$(MAKE) -C matrixssl/src clean
-
-cyassl/stamp-h1:
-	@cd cyassl && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
-	CFLAGS="-Os -Wall -fPIC $(EXTRACFLAGS) -ffunction-sections -fdata-sections \
-	-DNO_MD4 -DNO_AES -DNO_ERROR_STRINGS -DNO_HC128 -DNO_RABBIT -DNO_PSK -DNO_DSA -DNO_DH -DNO_PWDBASED" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	PTHREAD_LIBS="-lpthread" \
-	$(CONFIGURE)
-	@touch cyassl/stamp-h1
-
-cyassl: cyassl/stamp-h1
-	@$(SEP)
-	@$(MAKE) -C cyassl
-
-cyassl-clean:
-	-@$(MAKE) -C cyassl clean
-	@rm -f cyassl/stamp-h1
-
-cyassl-install:
-	@true
 
 ifeq ($(FULL_OPENSSL),y)
 OPENSSL_CIPHERS:=enable-rc5
@@ -911,8 +867,6 @@ openssl-install:
 
 	install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
 
-#	perl -e 'while (<>) { s/.SECS/time()-(24*60*60)/e; print; }' < httpd/gencert.sh > $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
-#	chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
 
 #ifeq ($(FULL_OPENSSL),y)
 	install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
@@ -926,10 +880,8 @@ mdu:	shared mssl
 
 rc: nvram$(BCMEX) shared
 
-
 eapd$(BCMEX)-clean:
 	-@cd eapd$(BCMEX)/linux && make clean
-
 
 bridge/Makefile:
 	cd bridge && CFLAGS="-Os -g $(EXTRACFLAGS)" \
@@ -1349,45 +1301,6 @@ ifeq ($(TCONFIG_L2TP),y)
 	$(STRIP) $(INSTALLDIR)/pppd/usr/lib/pppd/*.so
 endif
 
-#	ipupdate-install:
-#		install -D ipupdate/ez-ipupdate $(INSTALLDIR)/ipupdate/usr/sbin/ez-ipupdate
-#		$(STRIP) $(INSTALLDIR)/ipupdate/usr/sbin/ez-ipupdate
-
-zebra/stamp-h1:
-	@cd zebra && rm -f config.cache && \
-	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	$(CONFIGURE) --sysconfdir=/etc \
-	--enable-netlink $(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) --disable-ripngd --disable-ospfd --disable-doc \
-	--disable-ospf6d --disable-bgpd --disable-bgpd-announce
-	@touch zebra/stamp-h1
-
-zebra: zebra/stamp-h1
-	@$(MAKE) -C zebra CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD)
-
-zebra-clean:
-	-@$(MAKE) -C zebra clean
-	@rm -f zebra/stamp-h1
-
-zebra-install:
-	install -D zebra/zebra/zebra $(INSTALLDIR)/zebra/usr/sbin/zebra
-	install -D zebra/ripd/ripd $(INSTALLDIR)/zebra/usr/sbin/ripd
-	install -D zebra/lib/libzebra.so $(INSTALLDIR)/zebra/usr/lib/libzebra.so
-	$(STRIP) $(INSTALLDIR)/zebra/usr/sbin/zebra
-	$(STRIP) $(INSTALLDIR)/zebra/usr/sbin/ripd
-	$(STRIP) $(INSTALLDIR)/zebra/usr/lib/libzebra.so
-
-
-rp-l2tp-install:
-	install -d $(INSTALLDIR)/rp-l2tp/usr/lib/l2tp
-	install rp-l2tp/handlers/*.so $(INSTALLDIR)/rp-l2tp/usr/lib/l2tp
-	$(STRIP) $(INSTALLDIR)/rp-l2tp/usr/lib/l2tp/*.so
-	install -D rp-l2tp/handlers/l2tp-control $(INSTALLDIR)/rp-l2tp/usr/sbin/l2tp-control
-	$(STRIP) $(INSTALLDIR)/rp-l2tp/usr/sbin/l2tp-control
-	install -D rp-l2tp/l2tpd $(INSTALLDIR)/rp-l2tp/usr/sbin/l2tpd
-	$(STRIP) $(INSTALLDIR)/rp-l2tp/usr/sbin/l2tpd
-
 xl2tpd: pppd
 	$(call patch_files,xl2tpd)
 	CFLAGS="-g $(EXTRACFLAGS)" $(MAKE) -C $@ PREFIX=/usr xl2tpd $(PARALLEL_BUILD)
@@ -1403,23 +1316,12 @@ bpalogin-install:
 	install -D bpalogin/bpalogin $(INSTALLDIR)/bpalogin/usr/sbin/bpalogin
 	$(STRIP) $(INSTALLDIR)/bpalogin/usr/sbin/bpalogin
 
-
-#	libnet:
-#		@$(SEP)
-#		@-mkdir -p libnet/lib
-#		@$(MAKE) -C libnet CC=$(CC) AR=$(AR) RANLIB=$(RANLIB)
-
-#	libpcap:
-#		@$(SEP)
-#		@$(MAKE) -C libpcap CC=$(CC) AR=$(AR) RANLIB=$(RANLIB)
-
 libbcm:
 	@[ ! -f libbcm/Makefile ] || $(MAKE) -C libbcm
 
 libbcm-install:
 	install -D libbcm/libbcm.so $(INSTALLDIR)/libbcm/usr/lib/libbcm.so
 	$(STRIP) $(INSTALLDIR)/libbcm/usr/lib/libbcm.so
-
 
 iproute2:
 	@$(SEP)
@@ -1449,7 +1351,6 @@ iproute2-3.x-install:
 iproute2-3.x-clean:
 	-@$(MAKE) -C iproute2-3.x clean
 	-rm -f iproute2-3.x/Config
-
 
 ntpclient: nvram$(BCMEX) shared
 

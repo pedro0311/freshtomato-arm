@@ -357,10 +357,6 @@ define RouterOptions
 			sed -i "/TCONFIG_UFSDA/d" $(1); \
 			echo "TCONFIG_UFSDA=y" >>$(1); \
 		fi; \
-		if [ "$(UFSD)" = "NETGEAR" ]; then \
-			sed -i "/TCONFIG_UFSDN/d" $(1); \
-			echo "TCONFIG_UFSDN=y" >>$(1); \
-		fi; \
 		if [ "$(TUXERA)" = "y" ]; then \
 			sed -i "/TCONFIG_TUXERA/d" $(1); \
 			echo "TCONFIG_TUXERA=y" >>$(1); \
