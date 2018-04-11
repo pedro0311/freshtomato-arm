@@ -250,7 +250,8 @@ struct event_desc {
 #define OPT_MAC_B64        54
 #define OPT_MAC_HEX        55
 #define OPT_TFTP_APREF_MAC 56
-#define OPT_LAST           57
+#define OPT_RAPID_COMMIT   57
+#define OPT_LAST           58
 
 /* extra flags for my_syslog, we use a couple of facilities since they are known 
    not to occupy the same bits as priorities, no matter how syslog.h is set up. */
@@ -505,7 +506,7 @@ struct serverfd {
   int fd;
   union mysockaddr source_addr;
   char interface[IF_NAMESIZE+1];
-  unsigned int ifindex, used;
+  unsigned int ifindex, used, preallocated;
   struct serverfd *next;
 };
 
