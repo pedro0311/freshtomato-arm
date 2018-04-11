@@ -12,11 +12,16 @@
 /* Define to 1 if you have the <asm/types.h> header file. */
 #undef HAVE_ASM_TYPES_H
 
+/* Define to 1 if you have the declaration of `TFD_CLOEXEC', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TFD_CLOEXEC
+
+/* Define to 1 if you have the declaration of `TFD_NONBLOCK', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TFD_NONBLOCK
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
-
-/* Define to 1 if you have the `gettimeofday' function. */
-#undef HAVE_GETTIMEOFDAY
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -33,11 +38,11 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the `pipe2' function. */
+#undef HAVE_PIPE2
+
 /* Define to 1 if you have the <poll.h> header file. */
 #undef HAVE_POLL_H
-
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -75,8 +80,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Darwin backend */
@@ -139,9 +143,6 @@
 /* Use udev for device enumeration/hotplug */
 #undef USE_UDEV
 
-/* Use UsbDk Windows backend */
-#undef USE_USBDK
-
 /* Version number of package */
 #undef VERSION
 
@@ -150,6 +151,9 @@
 
 /* Use GNU extensions */
 #undef _GNU_SOURCE
+
+/* Oldest Windows version supported */
+#undef _WIN32_WINNT
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */

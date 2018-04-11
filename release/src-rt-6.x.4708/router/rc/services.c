@@ -670,6 +670,7 @@ void dns_to_resolv(void)
 {
 	FILE *f;
 	const dns_list_t *dns;
+	char *trig_ip;
 	int i;
 	mode_t m;
 	char wan_prefix[] = "wanXX";
@@ -684,73 +685,74 @@ void dns_to_resolv(void)
 	}
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		get_wan_prefix(wan_unit, wan_prefix);
 
-	get_wan_prefix(wan_unit, wan_prefix);
+		/* don't break here, use all available DNS
+		if (checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
+		*/
 
-	/* don't break here, use all available DNS
-	if (checkConnect(wan_prefix) && get_dns(wan_prefix)->count) break;
-	*/
-
-	/* skip inactive WAN connections (checkConnect might have false-negative response)
-	   TBD: need to check if there is no WANs active do we need skip here also?!?
-	if ((check_wanup(wan_prefix) == 0) &&
-		!(get_wanx_proto(wan_prefix) == WP_PPTP || get_wanx_proto(wan_prefix) == WP_L2TP || nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))) */
-	if (
-		(check_wanup(wan_prefix) == 0) &&
-		get_wanx_proto(wan_prefix) != WP_PPTP &&
-		get_wanx_proto(wan_prefix) != WP_L2TP &&
-		!nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp))
-	) {
-		dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
-		continue;
-	} else {
-		dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is OK to ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
-		append++;
-	}
-	m = umask(022);	// 077 from pppoecd
-	if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append	
-		if (append == 1)
-			exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); // Check for VPN DNS entries
-		dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
-		if (!exclusive) { // exclusive check
-#ifdef TCONFIG_IPV6
-			if (write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0 || nvram_get_int("dns_addget"))
-				if (append == 1) // only once
-					write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_get_dns"), "\n", 0);
-#endif
-			dns = get_dns(wan_prefix);	// static buffer
-			if (dns->count == 0) {
-				// Put a pseudo DNS IP to trigger Connect On Demand
-				if (nvram_match(strcat_r(wan_prefix, "_ppp_demand", tmp), "1")) {
-					switch (get_wanx_proto(wan_prefix)) {
-					case WP_PPPOE:
-					case WP_PPP3G:
-					case WP_PPTP:
-					case WP_L2TP:
-						/* The nameserver IP specified below used to be 1.1.1.1, however this became an legit IP address of a public recursive DNS server,
-						 * defeating the purpose of specifying a bogus DNS server in order to trigger Connect On Demand.
-						 * An IP address from TEST-NET-2 block was chosen here, as RFC 5737 explicitly states this address block
-						 * should be non-routable over the public internet. In effect since January 2010.
-						 * Further info: http://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102 */
-						dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS (non-routable on public internet) IP 198.51.100.1 to trigger Connect On Demand", wan_prefix);
-						fprintf(f, "nameserver 198.51.100.1\n");
-						break;
-					}
-				}
-			}
-			else {
-				fprintf(f, "# dns for %s:\n", wan_prefix);
-				for (i = 0; i < dns->count; i++) {
-					if (dns->dns[i].port == 53) {	// resolv.conf doesn't allow for an alternate port
-						fprintf(f, "nameserver %s\n", inet_ntoa(dns->dns[i].addr));
-						dnslog(LOG_DEBUG, "*** dns_to_resolv, %s DNS %s to %s [%s]", (append == 1) ? "write" : "append", inet_ntoa(dns->dns[i].addr), dmresolv, wan_prefix);
-					}
-				}
-			}
+		/* skip inactive WAN connections (checkConnect might have false-negative response)
+		   TBD: need to check if there is no WANs active do we need skip here also?!?
+		if ((check_wanup(wan_prefix) == 0) &&
+			!(get_wanx_proto(wan_prefix) == WP_PPTP || get_wanx_proto(wan_prefix) == WP_L2TP || nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp))))
+		*/
+		if (	(check_wanup(wan_prefix) == 0) &&
+			get_wanx_proto(wan_prefix) != WP_PPTP &&
+			get_wanx_proto(wan_prefix) != WP_L2TP &&
+			!nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))
+		{
+			dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
+			continue;
+		} else {
+			dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is OK to ADD\n", wan_prefix, get_wanx_proto(wan_prefix));
+			append++;
 		}
-		fclose(f);
-	}
-	umask(m);
+		m = umask(022);	// 077 from pppoecd
+		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append	
+			if (append == 1)
+				exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); // Check for VPN DNS entries
+			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
+			if (!exclusive) { // exclusive check
+#ifdef TCONFIG_IPV6
+				if (write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0 || nvram_get_int("dns_addget"))
+					if (append == 1) // only once
+						write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_get_dns"), "\n", 0);
+#endif
+				dns = get_dns(wan_prefix);	// static buffer
+				if (dns->count == 0) {
+					// Put a pseudo DNS IP to trigger Connect On Demand
+					if (nvram_match(strcat_r(wan_prefix, "_ppp_demand", tmp), "1")) {
+						switch (get_wanx_proto(wan_prefix)) {
+						case WP_PPPOE:
+						case WP_PPP3G:
+						case WP_PPTP:
+						case WP_L2TP:
+							/* The nameserver IP specified below used to be 1.1.1.1, however this became an legit IP address of a public recursive DNS server,
+							 * defeating the purpose of specifying a bogus DNS server in order to trigger Connect On Demand.
+							 * An IP address from TEST-NET-2 block was chosen here, as RFC 5737 explicitly states this address block
+							 * should be non-routable over the public internet. In effect since January 2010.
+							 * Further info: http://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102
+							 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
+							 */
+							trig_ip = nvram_safe_get(strcat_r(wan_prefix, "_ppp_demand_dnsip", tmp));
+							dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", wan_prefix, trig_ip);
+							fprintf(f, "nameserver %s\n", trig_ip);
+							break;
+						}
+					}
+				} else {
+					fprintf(f, "# dns for %s:\n", wan_prefix);
+					for (i = 0; i < dns->count; i++) {
+						if (dns->dns[i].port == 53) {	// resolv.conf doesn't allow for an alternate port
+							fprintf(f, "nameserver %s\n", inet_ntoa(dns->dns[i].addr));
+							dnslog(LOG_DEBUG, "*** dns_to_resolv, %s DNS %s to %s [%s]", (append == 1) ? "write" : "append", inet_ntoa(dns->dns[i].addr), dmresolv, wan_prefix);
+						}
+					}
+				}
+			}
+			fclose(f);
+		}
+		umask(m);
 
 	} // end for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit)
 }

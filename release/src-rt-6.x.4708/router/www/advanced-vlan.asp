@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Jun 23 2017 - Tvlz **
+	** Last Updated - Apr 04 2018 - Tvlz **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -218,22 +218,27 @@ function save() {
     var p = '';
     p += (d[i][COL_P0].toString() != '0') ? COL_P0N : '';
     p += ((trunk_vlan_supported) && (d[i][COL_P0T].toString() != '0')) ? 't' : '';
+    p += ((trunk_vlan_supported) && (d[i][COL_P0].toString() != '0') && (d[i][COL_VID_DEF].toString() != '0')) ? 'u' : '';
     p += trailingSpace(p);
 
     p += (d[i][COL_P1].toString() != '0') ? COL_P1N : '';
     p += ((trunk_vlan_supported) && (d[i][COL_P1T].toString() != '0')) ? 't' : '';
+    p += ((trunk_vlan_supported) && (d[i][COL_P1].toString() != '0') && (d[i][COL_VID_DEF].toString() != '0')) ? 'u' : '';
     p += trailingSpace(p);
 
     p += (d[i][COL_P2].toString() != '0') ? COL_P2N : '';
     p += ((trunk_vlan_supported) && (d[i][COL_P2T].toString() != '0')) ? 't' : '';
+    p += ((trunk_vlan_supported) && (d[i][COL_P2].toString() != '0') && (d[i][COL_VID_DEF].toString() != '0')) ? 'u' : '';
     p += trailingSpace(p);
 
     p += (d[i][COL_P3].toString() != '0') ? COL_P3N : '';
     p += ((trunk_vlan_supported) && (d[i][COL_P3T].toString() != '0')) ? 't' : '';
+    p += ((trunk_vlan_supported) && (d[i][COL_P3].toString() != '0') && (d[i][COL_VID_DEF].toString() != '0')) ? 'u' : '';
     p += trailingSpace(p);
 
     p += (d[i][COL_P4].toString() != '0') ? COL_P4N : '';
     p += ((trunk_vlan_supported) && (d[i][COL_P4T].toString() != '0')) ? 't' : '';
+    p += ((trunk_vlan_supported) && (d[i][COL_P4].toString() != '0') && (d[i][COL_VID_DEF].toString() != '0')) ? 'u' : '';
     p += trailingSpace(p);
 
     p += (d[i][COL_VID_DEF].toString() != '0') ? (SWITCH_INTERNAL_PORT + '*') : SWITCH_INTERNAL_PORT;
