@@ -1,4 +1,4 @@
-/* $Id: getifstats.c,v 1.7 2012/03/05 20:36:20 nanard Exp $ */
+/* $Id: getifstats.c,v 1.8 2018/03/13 23:05:21 nanard Exp $ */
 /*
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -45,7 +45,7 @@ int getifstats(const char * ifname, struct ifdata * data) {
 	data->ibytes = 0;
 
 #ifdef ENABLE_GETIFSTATS_CACHING
-	current_time = time(NULL);
+	current_time = upnp_time();
 	if (current_time == ((time_t)-1)) {
 		syslog(LOG_ERR, "getifstats() : time() error : %m");
 	} else {
