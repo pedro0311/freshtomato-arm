@@ -1,4 +1,4 @@
-/* $Id: upnputils.c,v 1.12 2018/03/13 10:25:20 nanard Exp $ */
+/* $Id: upnputils.c,v 1.13 2018/04/12 08:12:34 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * (c) 2006-2018 Thomas Bernard
@@ -219,4 +219,20 @@ time_t upnp_get_uptime(void)
 	}
 #endif
 	return upnp_time() - startup_time;
+}
+
+int upnp_gettimeofday(struct timeval * tv)
+{
+#if defined(CLOCK_MONOTONIC_FAST) || defined(CLOCK_MONOTONIC)
+	struct timespec ts;
+	int ret_code = clock_gettime(UPNP_CLOCKID, &ts);
+	if (ret_code == 0)
+	{
+		tv->tv_sec = ts.tv_sec;
+		tv->tv_usec = ts.tv_nsec / 1000;
+	}
+	return ret_code;
+#else
+	return gettimeofday(tv, NULL);
+#endif
 }
