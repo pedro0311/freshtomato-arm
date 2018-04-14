@@ -704,6 +704,10 @@ acpi_ps_get_next_arg(struct acpi_walk_state *walk_state,
 				 */
 				if (arg->common.aml_opcode ==
 				    AML_INT_METHODCALL_OP) {
+
+					/* Free method call op and corresponding namestring sub-ob */
+
+					acpi_ps_free_op(arg->common.value.arg);
 					acpi_ps_free_op(arg);
 					arg = NULL;
 				}
