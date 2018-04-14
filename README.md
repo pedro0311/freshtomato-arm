@@ -10,7 +10,7 @@ This is my personal fork, If anyone wants to pick up my changes and merge them t
 
 **Source code**: https://bitbucket.org/kille72/tomato-arm-kille72/commits/all
 
-**Downloads**: https://exotic.se/tomato-arm
+**Downloads**: https://exotic.se/freshtomato-arm/
 
 **About me/Donate**: https://exotic.se
 
