@@ -1,4 +1,4 @@
-/* $Id: asyncsendto.c,v 1.8 2017/05/24 22:51:57 nanard Exp $ */
+/* $Id: asyncsendto.c,v 1.9 2018/04/12 08:12:31 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * (c) 2006-2017 Thomas Bernard
@@ -120,7 +120,7 @@ sendto_schedule2(int sockfd, const void *buf, size_t len, int flags,
 	}
 
 	/* schedule */
-	if(gettimeofday(&tv, 0) < 0) {
+	if(upnp_gettimeofday(&tv) < 0) {
 		return -1;
 	}
 	/* allocate enough space for structure + buffers */
@@ -283,7 +283,7 @@ void finalize_sendto(void)
 	struct timeval timeout;
 	int max_fd;
 
-	if(gettimeofday(&deadline, NULL) < 0) {
+	if(upnp_gettimeofday(&deadline) < 0) {
 		syslog(LOG_ERR, "gettimeofday: %m");
 		return;
 	}
@@ -317,7 +317,7 @@ void finalize_sendto(void)
 			free(elt);
 		}
 		/* check deadline */
-		if(gettimeofday(&now, NULL) < 0) {
+		if(upnp_gettimeofday(&now) < 0) {
 			syslog(LOG_ERR, "gettimeofday: %m");
 			return;
 		}

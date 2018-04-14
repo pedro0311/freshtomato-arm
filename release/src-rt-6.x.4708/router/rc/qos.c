@@ -140,7 +140,7 @@ void ipt_qos(void)
 		if ((inuse & i) == 0) {
 			inuse |= i;
 		}
-		
+
 		v4v6_ok = IPT_V4;
 #ifdef TCONFIG_IPV6
 		if (ipv6_enabled())
@@ -293,19 +293,15 @@ void ipt_qos(void)
 	qface = wanfaces.iface[0].name;
 	ipt_write(
 		"-A FORWARD -o %s -j QOSO\n"
-		"-A OUTPUT -o %s -j QOSO\n"
-		"-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-		"-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-		qface, qface, qface, qface);
+		"-A OUTPUT -o %s -j QOSO\n",
+			qface, qface);
 
 	if(check_wanup("wan2")){
 		qface = wan2faces.iface[0].name;
 		ipt_write(
 			"-A FORWARD -o %s -j QOSO\n"
-			"-A OUTPUT -o %s -j QOSO\n"
-			"-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-			"-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-			qface, qface, qface, qface);
+			"-A OUTPUT -o %s -j QOSO\n",
+				qface, qface);
 	}
 
 #ifdef TCONFIG_MULTIWAN
@@ -313,19 +309,15 @@ void ipt_qos(void)
 		qface = wan3faces.iface[0].name;
 		ipt_write(
 			"-A FORWARD -o %s -j QOSO\n"
-			"-A OUTPUT -o %s -j QOSO\n"
-			"-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-			"-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-			qface, qface, qface, qface);
+			"-A OUTPUT -o %s -j QOSO\n",
+				qface, qface);
 	}
 	if(check_wanup("wan4")){
 		qface = wan4faces.iface[0].name;
 		ipt_write(
 			"-A FORWARD -o %s -j QOSO\n"
-			"-A OUTPUT -o %s -j QOSO\n"
-			"-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-			"-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-			qface, qface, qface, qface);
+			"-A OUTPUT -o %s -j QOSO\n",
+				qface, qface);
 	}
 #endif
 
@@ -334,10 +326,8 @@ void ipt_qos(void)
 		ip6t_write(
 			"-A FORWARD -o %s -j QOSO\n"
 			"-A OUTPUT -o %s -p icmpv6 -j RETURN\n"
-			"-A OUTPUT -o %s -j QOSO\n"
-			"-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-			"-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-			wan6face, wan6face, wan6face, wan6face, wan6face);
+			"-A OUTPUT -o %s -j QOSO\n",
+				wan6face, wan6face, wan6face);
 	}
 #endif
 
@@ -351,10 +341,10 @@ void ipt_qos(void)
 	{
 		if ((!g) || ((p = strsep(&g, ",")) == NULL)) continue;
 		if ((inuse & (1 << i)) == 0) continue;
-		
+
 		unsigned int rate;
 		unsigned int ceil;
-		
+
 		// check if we've got a percentage definition in the form of "rate-ceiling"
 		// and that rate > 1
 		if ((sscanf(p, "%u-%u", &rate, &ceil) == 2) && (rate >= 1))
@@ -768,19 +758,19 @@ void start_qos(char *prefix)
 	////
 	//// INCOMING TRAFFIC SHAPING
 	////
-	
+
 	first = 1;
 	overhead = strtoul(nvram_safe_get("atm_overhead"), NULL, 10);
 
 	g = buf = strdup(nvram_safe_get("qos_irates"));
-	
+
 	for (i = 0; i < 10; ++i)
-	{	
+	{
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
 		{
 			break;
 		}
-		
+
 		if ((inuse & (1 << i)) == 0)
 		{
 			continue;
@@ -791,17 +781,17 @@ void start_qos(char *prefix)
 		{
 			continue;	// 0=off
 		}
-		
+
 		// class ID
 		unsigned int classid = ((unsigned int)i + 1) * 10;
-		
+
 		// priority
 		unsigned int priority = (unsigned int)i + 1;			//prios 1-10 - Toastman
-		
+
 		// rate in kb/s
 		unsigned int rateInKilobitsPerSecond =
 			calc(incomingBandwidthInKilobitsPerSecond, rate);
-		
+
 		// ceiling in kb/s
 		unsigned int ceilingInKilobitsPerSecond =
 			calc(incomingBandwidthInKilobitsPerSecond, ceil);
@@ -859,7 +849,7 @@ void start_qos(char *prefix)
 			"\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ipv6 %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
 #endif
 		}
-		
+
 		fprintf(
 			f,
 			"\n"
