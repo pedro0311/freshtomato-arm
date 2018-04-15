@@ -29,7 +29,7 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 	[ "$ANON_ENABLED" -eq 1 ] && {
 
 ############################
-		MOD=Kille72
+		MOD=FreshTomato
 ############################
 
 		#Detect Version and Buildtype
@@ -92,7 +92,7 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 
 		} || { #just update anon database
 			#Collect datas
-			MOD=Kille72
+			MOD=FreshTomato
 			UPTIME=$(uptime | cut -d "," -f1 | cut -d " " -f4,5)
 			WANMAC=$(nvram get wan_hwaddr)
 			LANMAC=$(nvram get lan_hwaddr)
