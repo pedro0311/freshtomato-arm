@@ -147,7 +147,7 @@ ifneq ($(ASUS_TRX),0)
 # for asus RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P
 ifeq ($(ASUS_TRX),ASUS)
 ifeq ($(CONFIG_BCM7),y)
-	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,image/tomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,image/freshtomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
 ifeq ($(BCMSMP),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56U-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -174,7 +174,7 @@ endif
 # for R7000, R6400, R6300v2, R6250
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(CONFIG_BCM7),y)
-	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,image/tomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,image/freshtomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
 ifeq ($(NVRAM_128K),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400,3.0.0.4,image/freshtomato-R6400-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
