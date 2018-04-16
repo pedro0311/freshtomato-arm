@@ -1,3 +1,9 @@
+6.38
+  - Fix API version number
+
+6.37
+  - Fix parsing service names for ports (reported by Yuri D'Elia)
+
 6.36
   - Use 'ss' in runtest.sh but fall back to deprecated 'net-tools'
     command (bugzilla id #1209)
