@@ -537,7 +537,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "nf_ttl",			"0"				, 0 },
 	{ "nf_l7in",			"1"				, 0 },
 #ifdef LINUX26
-	{ "nf_sip",			"1"				, 0 },
+	{ "nf_sip",			"0"				, 0 },
 	{ "ct_hashsize",		"2048"				, 0 },
 #endif
 #ifdef LINUX26
