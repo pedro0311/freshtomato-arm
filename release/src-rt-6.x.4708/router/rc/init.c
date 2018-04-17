@@ -1728,7 +1728,6 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("lan_invert", "1");
 			nvram_set("vlan1hwname", "et2");
 			nvram_set("vlan2hwname", "et2");
 			nvram_set("lan_ifname", "br0");
