@@ -270,6 +270,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_prefix_length",		"64"				, 0 },	// The bit length of the prefix. Used by dhcp6c. For radvd, /64 is always assumed.
 	{ "ipv6_rtr_addr",		""				, 0 },	// defaults to $ipv6_prefix::1
 	{ "ipv6_radvd",			"1"				, 0 },	// Enable Router Advertisement (radvd)
+	{ "ipv6_dhcpd",			"1"				, 0 },	// Enable DHCPv6
 	{ "ipv6_accept_ra",		"1"				, 0 },	// Accept RA on bit 0WAN and/or bit1LAN interfaces
 	{ "ipv6_ifname",		"six0"				, 0 },	// The interface facing the rest of the IPv6 world
 	{ "ipv6_tun_v4end",		"0.0.0.0"			, 0 },	// Foreign IPv4 endpoint of SIT tunnel
