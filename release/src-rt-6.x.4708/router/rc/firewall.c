@@ -2212,12 +2212,16 @@ int start_firewall(void)
 	wanproto = get_wan_proto();
 	f_write_string("/proc/sys/net/ipv4/ip_dynaddr", (wanproto == WP_DISABLED || wanproto == WP_STATIC) ? "0" : "1", 0, 0);
 
+	
 #ifdef TCONFIG_EMF
+	/* No limitations now, allow IGMPv3 for LAN at least */
 	/* Force IGMPv2 due EMF limitations */
+	/*
 	if (nvram_get_int("emf_enable")) {
 		f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "2", 0, 0);
 		f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "2", 0, 0);
 	}
+	*/
 #endif
 
 	n = nvram_get_int("log_in");
