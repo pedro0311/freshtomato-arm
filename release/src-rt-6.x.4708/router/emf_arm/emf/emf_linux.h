@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Broadcom Corporation
+ * Copyright (C) 2014, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -7,7 +7,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: emf_linux.h 344424 2012-07-12 18:33:22Z $
+ * $Id: emf_linux.h 344425 2012-07-12 18:33:25Z $
  */
 
 #ifndef _EMF_LINUX_H_
