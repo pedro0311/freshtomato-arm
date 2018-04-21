@@ -1,7 +1,7 @@
 /*
  * IGMP Snooping layer linux specific code
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2014, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: igs_linux.c 356290 2012-09-12 03:30:46Z $
+ * $Id: igs_linux.c 447222 2014-01-08 12:05:49Z $
  */
 #include <linux/module.h>
 #include <linux/netdevice.h>
@@ -402,8 +402,7 @@ igs_cfg_request_process(igs_cfg_request_t *cfg)
 
 	if (cfg == NULL)
 	{
-		cfg->status = IGSCFG_STATUS_FAILURE;
-		cfg->size = sprintf(cfg->arg, "Invalid input buffer passed\n");
+		IGS_ERROR("Configuration request doesn't exist\n");
 		return;
 	}
 
@@ -517,10 +516,12 @@ igs_netlink_sock_cb(
 #endif /* < 2.6.36 */
 	{
 		/* Check the buffer for min size */
-		if (skb->len < sizeof(igs_cfg_request_t))
+		if (skb == NULL ||skb->len < sizeof(igs_cfg_request_t))
 		{
-			IGS_ERROR("Configuration request size not > %d\n",
+			IGS_ERROR("Configuration request size not > %d or skb_clone failed\n",
 			          sizeof(igs_cfg_request_t));
+			if (skb)
+				dev_kfree_skb(skb);
 			return;
 		}
 

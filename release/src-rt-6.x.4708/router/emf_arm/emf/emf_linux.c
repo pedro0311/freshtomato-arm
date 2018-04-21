@@ -2,7 +2,7 @@
  * EMFL Linux Port: These functions handle the interface between EMFL
  * and the native OS.
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2014, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -10,7 +10,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: emf_linux.c 401759 2013-05-13 16:08:08Z $
+ * $Id: emf_linux.c 447213 2014-01-08 11:01:33Z $
  */
 #include <linux/module.h>
 #include <linux/netdevice.h>
@@ -746,8 +746,13 @@ emf_iflist_list(emf_info_t *emfi, emf_cfg_if_list_t *list, uint32 size)
 
 	for (ptr = emfi->iflist_head; ptr != NULL; ptr = ptr->next)
 	{
-		strncpy(list->if_entry[index++].if_name,
-			ptr->if_ptr->name, 16);
+		if (strlen(ptr->if_ptr->name) >= 16) {
+			EMF_ERROR("if_ptr name %s is longer than 15 chars\n", ptr->if_ptr->name);
+			return (FAILURE);
+		}
+		else
+			strncpy(list->if_entry[index++].if_name,
+				ptr->if_ptr->name,16);
 	}
 
 	/* Update the total number of entries */
@@ -1012,10 +1017,12 @@ emf_netlink_sock_cb(
 		EMF_DEBUG("Length of the command buffer %d\n", skb->len);
 
 		/* Check the buffer for min size */
-		if (skb->len < sizeof(emf_cfg_request_t))
+		if (skb == NULL || skb->len < sizeof(emf_cfg_request_t))
 		{
-			EMF_ERROR("Configuration request size not > %d\n",
+			EMF_ERROR("Configuration request size not > %d or skb_clone failed\n",
 			          sizeof(emf_cfg_request_t));
+			if (skb)
+				dev_kfree_skb(skb);
 			return;
 		}
 
