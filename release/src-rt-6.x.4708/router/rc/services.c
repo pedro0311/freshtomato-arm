@@ -1557,10 +1557,15 @@ void start_igmp_proxy(void)
 				if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
 				//if (check_wanup(wan_prefix)) {
 					count++;
+					/*
+					  Configuration for Upstream Interface
+					  Example:
+					  phyint ppp0 upstream ratelimit 0 threshold 1
+					  altnet 193.158.35.0/24
+					 */
 					fprintf(fp,
-						"phyint %s upstream\n"
+						"phyint %s upstream ratelimit 0 threshold 1\n"
 						"\taltnet %s\n",
-//						"phyint %s downstream ratelimit 0\n",
 						get_wanface(wan_prefix),
 						nvram_get("multicast_altnet") ? : "0.0.0.0/0");
 				}
@@ -1586,8 +1591,13 @@ void start_igmp_proxy(void)
 					sprintf(multicast_lanN, "multicast_lan%s", bridge);
 
 					if((strcmp(nvram_safe_get(multicast_lanN),"1")==0) && (strcmp(nvram_safe_get(lanN_ifname),"")!=0)) {
+					/*
+					  Configuration for Downstream Interface
+					  Example: 
+					  phyint br0 downstream ratelimit 0 threshold 1
+					 */
 						fprintf(fp,
-							"phyint %s downstream ratelimit 0\n",
+							"phyint %s downstream ratelimit 0 threshold 1\n",
 							nvram_safe_get(lanN_ifname));
 					}
 				}
