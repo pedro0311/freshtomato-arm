@@ -1,5 +1,5 @@
 /*
-**  igmpproxy - IGMP proxy based multicast router 
+**  igmpproxy - IGMP proxy based multicast router
 **  Copyright (C) 2005 Johnny Egeland <johnny@rlo.org>
 **
 **  This program is free software; you can redistribute it and/or modify
@@ -23,11 +23,12 @@
 **  of igmpproxy.
 **
 **  smcroute 0.92 - Copyright (C) 2001 Carsten Schill <carsten@cschill.de>
-**  - Licensed under the GNU General Public License, version 2
-**  
-**  mrouted 3.9-beta3 - COPYRIGHT 1989 by The Board of Trustees of 
+**  - Licensed under the GNU General Public License, either version 2 or
+**    any later version.
+**
+**  mrouted 3.9-beta3 - Copyright (C) 2002 by The Board of Trustees of
 **  Leland Stanford Junior University.
-**  - Original license can be found in the Stanford.txt file.
+**  - Licensed under the 3-clause BSD license, see Stanford.txt file.
 **
 */
 
@@ -72,34 +73,32 @@ void k_set_rcvbuf(int bufsize, int minsize) {
     my_log(LOG_DEBUG, 0, "Got %d byte buffer size in %d iterations", bufsize, iter);
 }
 
-
 void k_hdr_include(int hdrincl) {
     if (setsockopt(MRouterFD, IPPROTO_IP, IP_HDRINCL,
                    (char *)&hdrincl, sizeof(hdrincl)) < 0)
-        my_log(LOG_ERR, errno, "setsockopt IP_HDRINCL %u", hdrincl);
+        my_log(LOG_WARNING, errno, "setsockopt IP_HDRINCL %u", hdrincl);
 }
 
 
 void k_set_ttl(int t) {
 #ifndef RAW_OUTPUT_IS_RAW
-    u_char ttl;
+    unsigned char ttl;
 
     ttl = t;
     if (setsockopt(MRouterFD, IPPROTO_IP, IP_MULTICAST_TTL,
                    (char *)&ttl, sizeof(ttl)) < 0)
-        my_log(LOG_ERR, errno, "setsockopt IP_MULTICAST_TTL %u", ttl);
+        my_log(LOG_WARNING, errno, "setsockopt IP_MULTICAST_TTL %u", ttl);
 #endif
     curttl = t;
 }
 
-
 void k_set_loop(int l) {
-    u_char loop;
+    unsigned char loop;
 
     loop = l;
     if (setsockopt(MRouterFD, IPPROTO_IP, IP_MULTICAST_LOOP,
                    (char *)&loop, sizeof(loop)) < 0)
-        my_log(LOG_ERR, errno, "setsockopt IP_MULTICAST_LOOP %u", loop);
+        my_log(LOG_WARNING, errno, "setsockopt IP_MULTICAST_LOOP %u", loop);
 }
 
 void k_set_if(uint32_t ifa) {
@@ -108,7 +107,7 @@ void k_set_if(uint32_t ifa) {
     adr.s_addr = ifa;
     if (setsockopt(MRouterFD, IPPROTO_IP, IP_MULTICAST_IF,
                    (char *)&adr, sizeof(adr)) < 0)
-        my_log(LOG_ERR, errno, "setsockopt IP_MULTICAST_IF %s",
+        my_log(LOG_WARNING, errno, "setsockopt IP_MULTICAST_IF %s",
             inetFmt(ifa, s1));
 }
 
