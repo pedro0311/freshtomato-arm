@@ -1670,6 +1670,7 @@ minidlna-install:
 igmpproxy/src/Makefile: igmpproxy/src/Makefile.in
 	cd igmpproxy && CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	autoreconf -fsi && \
 	$(CONFIGURE) --prefix=/usr
 
 igmpproxy: igmpproxy/src/Makefile
