@@ -333,8 +333,6 @@ void new_qoslimit_start(void)
 
 	fprintf(tc,
 		"#!/bin/sh\n"
-		"tc qdisc del dev br0 root 2>/dev/null\n"
-		"tc qdisc del dev %s root 2>/dev/null\n"
 		"\n"
 		"TCA=\"tc class add dev br0\"\n"
 		"TFA=\"tc filter add dev br0\"\n"
@@ -346,11 +344,18 @@ void new_qoslimit_start(void)
 		"TFAU=\"tc filter add dev %s\"\n"
 		"TQAU=\"tc qdisc add dev %s\"\n"
 		"\n"
+		"tc qdisc del dev br0 root 2>/dev/null\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\ttc qdisc del dev %s root 2>/dev/null\n"
+		"fi\n"
+		"\n"
 		"tc qdisc add dev br0 root handle 1: htb\n"
 		"tc class add dev br0 parent 1: classid 1:1 htb rate %skbit\n"
 		"\n"
-		"tc qdisc add dev %s root handle 2: htb\n"
-		"tc class add dev %s parent 2: classid 2:1 htb rate %skbit\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\ttc qdisc add dev %s root handle 2: htb\n"
+		"\ttc class add dev %s parent 2: classid 2:1 htb rate %skbit\n"
+		"fi\n"
 		"\n"
 		,waniface
 		,waniface
@@ -369,9 +374,11 @@ void new_qoslimit_start(void)
 		"$TQA parent 1:100 handle 100: $SFQ\n"
 		"$TFA parent 1:0 prio 3 protocol all handle 100 fw flowid 1:100\n"
 		"\n"
-		"$TCAU parent 2:1 classid 2:100 htb rate %skbit ceil %skbit prio %s\n"
-		"$TQAU parent 2:100 handle 100: $SFQ\n"
-		"$TFAU parent 2:0 prio 3 protocol all handle 100 fw flowid 2:100\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\t$TCAU parent 2:1 classid 2:100 htb rate %skbit ceil %skbit prio %s\n"
+		"\t$TQAU parent 2:100 handle 100: $SFQ\n"
+		"\t$TFAU parent 2:0 prio 3 protocol all handle 100 fw flowid 2:100\n"
+		"fi\n"
 		"\n"
 		,dlr,dlc,prio_0
 		,ulr,ulc,prio_0);
@@ -422,9 +429,11 @@ void new_qoslimit_start(void)
 		if (!strcmp(ulceil,"")) strcpy(ulceil, dlrate);
 		if (strcmp(ulrate,"") && strcmp(ulceil, "")) {
 			fprintf(tc,
-				"$TCAU parent 2:1 classid 2:%s htb rate %skbit ceil %skbit prio %s\n"
-				"$TQAU parent 2:%s handle %s: $SFQ\n"
-				"$TFAU parent 2:0 prio %s protocol all handle %s fw flowid 2:%s\n"
+				"if [ $(nvram get qos_enable) = 0 ]; then\n"
+				"\t$TCAU parent 2:1 classid 2:%s htb rate %skbit ceil %skbit prio %s\n"
+				"\t$TQAU parent 2:%s handle %s: $SFQ\n"
+				"\t$TFAU parent 2:0 prio %s protocol all handle %s fw flowid 2:%s\n"
+				"fi\n"
 				"\n"
 				,seq,ulrate,ulceil,priority
 				,seq,seq
@@ -464,9 +473,11 @@ void new_qoslimit_start(void)
 
 		//upload from br1
 		fprintf(tc,
-		"$TCAU parent 2:1 classid 2:501 htb rate %skbit ceil %skbit prio %s\n"
-		"$TQAU parent 2:501 handle 501: $SFQ\n"
-		"$TFAU parent 2:0 prio %s protocol all handle 501 fw flowid 2:501\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\t$TCAU parent 2:1 classid 2:501 htb rate %skbit ceil %skbit prio %s\n"
+		"\t$TQAU parent 2:501 handle 501: $SFQ\n"
+		"\t$TFAU parent 2:0 prio %s protocol all handle 501 fw flowid 2:501\n"
+		"fi\n"
 		,ulr_1,ulc_1,prio_1
 		,prio_1);
 	}
@@ -502,9 +513,11 @@ void new_qoslimit_start(void)
 
 		//upload from br2
 		fprintf(tc,
-		"$TCAU parent 2:1 classid 2:701 htb rate %skbit ceil %skbit prio %s\n"
-		"$TQAU parent 2:701 handle 701: $SFQ\n"
-		"$TFAU parent 2:0 prio %s protocol all handle 701 fw flowid 2:701\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\t$TCAU parent 2:1 classid 2:701 htb rate %skbit ceil %skbit prio %s\n"
+		"\t$TQAU parent 2:701 handle 701: $SFQ\n"
+		"\t$TFAU parent 2:0 prio %s protocol all handle 701 fw flowid 2:701\n"
+		"fi\n"
 		,ulr_2,ulc_2,prio_2
 		,prio_2);
 	}
@@ -540,9 +553,11 @@ void new_qoslimit_start(void)
 
 		//upload from br3
 		fprintf(tc,
-		"$TCAU parent 2:1 classid 2:901 htb rate %skbit ceil %skbit prio %s\n"
-		"$TQAU parent 2:901 handle 901: $SFQ\n"
-		"$TFAU parent 2:0 prio %s protocol all handle 901 fw flowid 2:901\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\t$TCAU parent 2:1 classid 2:901 htb rate %skbit ceil %skbit prio %s\n"
+		"\t$TQAU parent 2:901 handle 901: $SFQ\n"
+		"\t$TFAU parent 2:0 prio %s protocol all handle 901 fw flowid 2:901\n"
+		"fi\n"
 		,ulr_3,ulc_3,prio_3
 		,prio_3);
 	}
@@ -566,7 +581,9 @@ void new_qoslimit_stop(void)
 
 	fprintf(f,
 		"#!/bin/sh\n"
-		"tc qdisc del dev %s root\n"
+		"if [ $(nvram get qos_enable) = 0 ]; then\n"
+		"\ttc qdisc del dev %s root\n"
+		"fi\n"
 		"tc qdisc del dev br0 root\n"
 		"\n"
 		,waniface
