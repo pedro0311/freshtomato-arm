@@ -1051,6 +1051,7 @@ ppp-%:
 	$(MAKE) -C ppp/pppoecd $* INSTALLDIR=$(INSTALLDIR)/ppp $(if $(TCONFIG_IPV6),HAVE_INET6=y,)
 
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
+	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd \
 	ac_cv_linux_kernel_pppoe=yes rpppoe_cv_pack_bitfields=rev
@@ -1063,6 +1064,7 @@ rp-pppoe-clean:
 	-@$(MAKE) -C rp-pppoe/src clean
 	@rm -f rp-pppoe/src/pppoe-relay
 	@rm -f rp-pppoe/src/stamp-h1
+	$(call unpatch_files,rp-pppoe)
 
 rp-pppoe-install:
 	install -D rp-pppoe/src/rp-pppoe.so $(INSTALLDIR)/rp-pppoe/usr/lib/pppd/rp-pppoe.so
