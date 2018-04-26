@@ -1,4 +1,4 @@
-/* $Id: iptpinhole.c,v 1.18 2018/03/13 23:05:21 nanard Exp $ */
+/* $Id: iptpinhole.c,v 1.19 2018/04/22 19:36:58 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * (c) 2012-2018 Thomas Bernard
@@ -16,6 +16,7 @@
 #include "../macros.h"
 #include "iptpinhole.h"
 #include "../upnpglobalvars.h"
+#include "../upnputils.h"
 
 #ifdef ENABLE_UPNPPINHOLE
 

@@ -1,4 +1,4 @@
-/* $Id: miniupnpd.c,v 1.227 2018/04/12 08:12:31 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.228 2018/04/22 19:36:09 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -995,6 +995,11 @@ parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 		        "Error: please specify LAN network interface by name instead of IPv4 address : %s\n",
 		        str);
 		return -1;
+	}
+#else
+	else
+	{
+		syslog(LOG_NOTICE, "it is advised to use network interface name instead of %s", str);
 	}
 #endif
 	return 0;

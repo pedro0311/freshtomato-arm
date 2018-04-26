@@ -1,4 +1,4 @@
-/* $Id: minissdp.c,v 1.92 2018/03/13 10:52:39 nanard Exp $ */
+/* $Id: minissdp.c,v 1.93 2018/04/22 19:36:58 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -237,7 +237,7 @@ OpenAndConfSSDPReceiveSocket(int ipv6)
 #if defined(SO_BINDTODEVICE) && !defined(MULTIPLE_EXTERNAL_IP)
 	/* One and only one LAN interface */
 	if(lan_addrs.lh_first != NULL && lan_addrs.lh_first->list.le_next == NULL
-	   && strlen(lan_addrs.lh_first->ifname) > 0)
+	   && lan_addrs.lh_first->ifname[0] != '\0')
 	{
 		if(setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE,
 		              lan_addrs.lh_first->ifname,
@@ -1002,7 +1002,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	{
 		if(lan_addr != NULL)
 		{
-			if(lan_addr->index != (unsigned)source_if)
+			if(lan_addr->index != (unsigned)source_if && lan_addr->index != 0)
 			{
 				syslog(LOG_WARNING, "interface index not matching %u != %d", lan_addr->index, source_if);
 			}
