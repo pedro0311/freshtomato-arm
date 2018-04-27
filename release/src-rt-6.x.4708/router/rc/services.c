@@ -1418,7 +1418,18 @@ void start_igmp_proxy(void)
 			eval("igmpproxy", "/etc/igmp.alt");
 		}
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
-
+		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
+		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces, 
+		     see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
+		     see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
+		   */
+		  if (nvram_match("multicast_lan", "0") && nvram_match("multicast_lan1", "0") && nvram_match("multicast_lan2", "0") && nvram_match("multicast_lan3", "0")) {
+			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
+			fclose(fp);
+			eval("igmpproxy", "/etc/igmp.conf");
+		  }
+		  /* create default config for upstream/downstream interface(s) */
+		  else {
 			fprintf(fp,
 				"quickleave\n");
 			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -1472,6 +1483,7 @@ void start_igmp_proxy(void)
 				}
 			fclose(fp);
 			eval("igmpproxy", "/etc/igmp.conf");
+		  }
 		}
 		else {
 			return;
