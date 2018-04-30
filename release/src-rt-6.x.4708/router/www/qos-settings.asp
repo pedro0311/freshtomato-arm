@@ -24,7 +24,7 @@
 /* REMOVE-BEGIN
 	!!TB - added qos_pfifo
 REMOVE-END */
-//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan2_qos_obw,wan2_qos_ibw,wan3_qos_obw,wan3_qos_ibw,wan4_qos_obw,wan4_qos_ibw,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,atm_overhead,mwan_num"); %>
+//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan2_qos_obw,wan2_qos_ibw,wan3_qos_obw,wan3_qos_ibw,wan4_qos_obw,wan4_qos_ibw,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,atm_overhead,mwan_num,new_qoslimit_enable"); %>
 
 var classNames = nvram.qos_classnames.split(' ');		// Toastman - configurable class names
 
@@ -201,6 +201,13 @@ function save()
 <div class='section-title'>Basic Settings</div>
 <div class='section'>
 <script type='text/javascript'>
+
+if ((nvram.qos_enable != '1') && (nvram.new_qoslimit_enable == '1')) {
+        W('<div class="fields"><div class="about"><b>QoS is disabled. If QoS was recently disabled, Bandwidth Limiter needs to be restarted by clicking on "Save" button to apply Upload Limit rules.<\/b><\/div><\/div>');
+}
+if (nvram.qos_enable == '1') {
+	W('<div class="fields"><div class="about"><b>QoS is enabled. Upload Limit rules for host IP addresses will not be applied, and Outbound QoS rules will govern upload rates.</b><\/div><\/div>');
+}
 
 classList = [];
 for (i = 0; i < 10; ++i) {
