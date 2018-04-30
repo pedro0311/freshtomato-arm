@@ -261,14 +261,6 @@ function verifyFields(focused, quiet)
 	E('_f_usb3').disabled = b || nvram.usb_usb3 == -1;
 	E('_f_print').disabled = b;
 	E('_f_storage').disabled = b;
-
-/* LINUX26-BEGIN */
-/* MICROSD-BEGIN */
-	E('_f_mmc').disabled = a || b || nvram.usb_mmc == -1;
-	elem.display(PR('_f_mmc'), nvram.usb_mmc != -1);
-/* MICROSD-END */
-/* LINUX26-END */
-
 	E('_f_ext4').disabled = b || a;
 	E('_f_fat').disabled = b || a;
 	E('_f_exfat').disabled = b || a;
@@ -315,13 +307,6 @@ function save()
 	fom.usb_storage.value = E('_f_storage').checked ? 1 : 0;
 	fom.usb_printer.value = E('_f_print').checked ? 1 : 0;
 	fom.usb_printer_bidirect.value = E('_f_bprint').checked ? 1 : 0;
-
-/* LINUX26-BEGIN */
-/* MICROSD-BEGIN */
-	fom.usb_mmc.value = nvram.usb_mmc == -1 ? -1 : (E('_f_mmc').checked ? 1 : 0);
-/* MICROSD-END */
-/* LINUX26-END */
-
 	fom.usb_fs_ext4.value = E('_f_ext4').checked ? 1 : 0;
 	fom.usb_fs_fat.value = E('_f_fat').checked ? 1 : 0;
 	fom.usb_fs_exfat.value = E('_f_exfat').checked ? 1 : 0;
@@ -432,11 +417,6 @@ createFieldTable('', [
 /* PARAGON-END */
 		], value: nvram.usb_ntfs_driver },
 /* NTFS-END */
-/* LINUX26-BEGIN */
-/* MICROSD-BEGIN */
-		{ title: 'SD/MMC Card Support', indent: 2, name: 'f_mmc', type: 'checkbox', value: nvram.usb_mmc == 1 },
-/* MICROSD-END */
-/* LINUX26-END */
 		{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
 			suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
 	{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },

@@ -1245,8 +1245,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	wanup = check_wanup(prefix);
 
 	if (is_primary) {
-		stop_zebra();
-		start_zebra();
 
 		if ((wanup) || (time(0) < Y2K)) {
 			stop_ntpc();
