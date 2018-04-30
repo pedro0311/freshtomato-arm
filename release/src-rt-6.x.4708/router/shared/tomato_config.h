@@ -28,9 +28,6 @@
 #undef TCONFIG_JFFSV1
   #define IF_TCONFIG_JFFSV1(...)
   #define IF_NOT_TCONFIG_JFFSV1(...) __VA_ARGS__
-#define TCONFIG_ZEBRA 1
-  #define IF_TCONFIG_ZEBRA(...) __VA_ARGS__
-  #define IF_NOT_TCONFIG_ZEBRA(...)
 #define TCONFIG_DDNS 1
   #define IF_TCONFIG_DDNS(...) __VA_ARGS__
   #define IF_NOT_TCONFIG_DDNS(...)
@@ -97,9 +94,6 @@
 #undef TCONFIG_SNMP
   #define IF_TCONFIG_SNMP(...)
   #define IF_NOT_TCONFIG_SNMP(...) __VA_ARGS__
-#undef TCONFIG_SDHC
-  #define IF_TCONFIG_SDHC(...)
-  #define IF_NOT_TCONFIG_SDHC(...) __VA_ARGS__
 #undef TCONFIG_HFS
   #define IF_TCONFIG_HFS(...)
   #define IF_NOT_TCONFIG_HFS(...) __VA_ARGS__
@@ -121,9 +115,6 @@
 #undef TCONFIG_RAID
   #define IF_TCONFIG_RAID(...)
   #define IF_NOT_TCONFIG_RAID(...) __VA_ARGS__
-#undef TCONFIG_MICROSD
-  #define IF_TCONFIG_MICROSD(...)
-  #define IF_NOT_TCONFIG_MICROSD(...) __VA_ARGS__
 #undef TCONFIG_USBAP
   #define IF_TCONFIG_USBAP(...)
   #define IF_NOT_TCONFIG_USBAP(...) __VA_ARGS__

@@ -43,10 +43,6 @@ config TCONFIG_JFFSV1
 	depends on TCONFIG_JFFS2
 	default y
 
-config TCONFIG_ZEBRA
-	bool "Zebra"
-	default y
-
 config TCONFIG_DDNS
 	bool "Dynamic DNS"
 	default y
@@ -150,10 +146,6 @@ config TCONFIG_SNMP
 	bool "  SNMP"
 	default n
 
-config TCONFIG_SDHC
-	bool "  SDHC/MMC mod for WRT54G/GL"
-	default n
-
 config TCONFIG_HFS
 	bool "  HFS/HFS+ filesystem support "
 	default n
@@ -191,11 +183,6 @@ config TCONFIG_RAID
 	bool "RAID Support: mdadm plus md modules"
 	default n
 
-config TCONFIG_MICROSD
-	bool "Support SD card (RT-N66u only)"
-	depends on TCONFIG_USB
-	default n
-
 config TCONFIG_USBAP
 	bool "Include wl_high module"
 	depends on TCONFIG_USB
@@ -204,10 +191,6 @@ config TCONFIG_USBAP
 config TCONFIG_REMOVE_USBAPP
 	bool "Remove USB Application (samba/ftp/usb support page)"
 	depends on TCONFIG_USBAP
-	default n
-
-config TCONFIG_AC66U
-	bool "Flag to distinguish RT-AC66U from RT-N66U"
 	default n
 
 config TCONFIG_CTF
@@ -220,10 +203,6 @@ config TCONFIG_NAND
 
 config TCONFIG_UFSDA
 	bool "Paragon NTFS driver for Asus routers"
-	default n
-
-config TCONFIG_UFSDN
-	bool "Paragon NTFS driver for Netgear routers"
 	default n
 
 config TCONFIG_TUXERA

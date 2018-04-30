@@ -3618,9 +3618,6 @@ static int init_nvram(void)
 #else
 		name = "RT-N66U";
 		features = SUP_SES | SUP_80211N | SUP_1000ET;
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
-		if (nvram_get_int("usb_mmc") == -1) nvram_set("usb_mmc", "1");
-#endif
 #endif
 
 #ifdef TCONFIG_USB
