@@ -87,6 +87,8 @@ dhcp6ctl: $(CTLOBJS)
 cfparse.c y.tab.h: cfparse.y
 	@YACC@ -d cfparse.y
 	mv y.tab.c cfparse.c
+	
+y.tab.h: cfparse.c
 
 cftoken.c: cftoken.l y.tab.h
 	@LEX@ cftoken.l
