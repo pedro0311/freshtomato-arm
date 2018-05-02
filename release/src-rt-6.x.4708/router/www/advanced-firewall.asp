@@ -114,10 +114,17 @@ function save()
 	fom.udpxy_port.value = E('_f_udpxy_port').value;
 	form.submit(fom, 1);
 }
+
+function init()
+{
+    var elements = document.getElementsByClassName("new_window");
+    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+}
 </script>
 
 </head>
-<body>
+<body onload='init()'>
 <form id='t_fom' method='post' action='tomato.cgi'>
 <table id='container' cellspacing=0>
 <tr><td colspan=2 id='header'>
