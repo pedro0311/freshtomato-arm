@@ -2838,7 +2838,6 @@ TOP:
 			restart_nas_services(1, 0);	// stop Samba, FTP and Media Server
 			stop_jffs2();
 //			stop_cifs();
-			stop_zebra();
 			stop_cron();
 			stop_ntpc();
 			stop_upnp();
