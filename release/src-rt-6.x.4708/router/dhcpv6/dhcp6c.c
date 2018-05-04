@@ -32,7 +32,6 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/queue.h>
-#include <errno.h>
 #include <limits.h>
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
@@ -65,6 +64,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <err.h>
 #include <ifaddrs.h>
 
@@ -90,7 +90,6 @@ static sig_atomic_t sig_flags = 0;
 const dhcp6_mode_t dhcp6_mode = DHCP6_MODE_CLIENT;
 
 int sock;	/* inbound/outbound udp port */
-int rtsock;	/* routing socket */
 
 #ifdef USE_DHCP6CTL
 int ctlsock = -1;		/* control TCP port */
@@ -307,6 +306,10 @@ client6_init()
 		    gai_strerror(error));
 		exit(1);
 	}
+#ifdef __linux__
+	/* Force socket to be closed on execve */
+	res->ai_socktype |= SOCK_CLOEXEC;
+#endif
 	sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (sock < 0) {
 		dprintf(LOG_ERR, FNAME, "socket");
@@ -361,13 +364,6 @@ client6_init()
 		exit(1);
 	}
 	freeaddrinfo(res);
-
-	/* open a routing socket to watch the routing table */
-	if ((rtsock = socket(PF_ROUTE, SOCK_RAW, 0)) < 0) {
-		dprintf(LOG_ERR, FNAME, "open a routing socket: %s",
-		    strerror(errno));
-		exit(1);
-	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_INET6;
@@ -554,7 +550,7 @@ client6_mainloop()
 		if (ctlsock >= 0) {
 			FD_SET(ctlsock, &r);
 			maxsock = (sock > ctlsock) ? sock : ctlsock;
-			(void)dhcp6_ctl_setreadfds(&r, &maxsock);
+			dhcp6_ctl_setreadfds(&r, &maxsock);
 		}
 #endif
 
@@ -578,10 +574,9 @@ client6_mainloop()
 #ifdef USE_DHCP6CTL
 		if (ctlsock >= 0) {
 			if (FD_ISSET(ctlsock, &r)) {
-				(void)dhcp6_ctl_acceptcommand(ctlsock,
-				    client6_do_ctlcommand);
+				dhcp6_ctl_acceptcommand(ctlsock, client6_do_ctlcommand);
 			}
-			(void)dhcp6_ctl_readcommand(&r);
+			dhcp6_ctl_readcommand(&r);
 		}
 #endif
 	}
@@ -1500,10 +1495,10 @@ client6_recv()
 
 	switch(dh6->dh6_msgtype) {
 	case DH6_ADVERTISE:
-		(void)client6_recvadvert(ifp, dh6, len, &optinfo);
+		client6_recvadvert(ifp, dh6, len, &optinfo);
 		break;
 	case DH6_REPLY:
-		(void)client6_recvreply(ifp, dh6, len, &optinfo);
+		client6_recvreply(ifp, dh6, len, &optinfo);
 		break;
 	default:
 		dprintf(LOG_INFO, FNAME, "received an unexpected message (%s) "
@@ -1527,6 +1522,7 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 	struct dhcp6_event *ev;
 	struct dhcp6_eventdata *evd;
 	struct authparam *authparam = NULL, authparam0;
+	int have_ia = -1;
 
 	/* find the corresponding event based on the received xid */
 	ev = find_event_withid(ifp, ntohl(dh6->dh6_xid) & DH6_XIDMASK);
@@ -1565,38 +1561,80 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 	 * includes a Status Code option containing the value NoPrefixAvail
 	 * [RFC3633 Section 11.1].
 	 * Likewise, the client MUST ignore any Advertise message that includes
-	 * a Status Code option containing the value NoAddrsAvail. 
+	 * a Status Code option containing the value NoAddrsAvail.
 	 * [RFC3315 Section 17.1.3].
 	 * We only apply this when we are going to request an address or
 	 * a prefix.
 	 */
-	for (evd = TAILQ_FIRST(&ev->data_list); evd;
-	    evd = TAILQ_NEXT(evd, link)) {
+	for (evd = TAILQ_FIRST(&ev->data_list); evd; evd = TAILQ_NEXT(evd, link)) {
+		struct dhcp6_listval *lv, *slv;
 		u_int16_t stcode;
 		char *stcodestr;
 
 		switch (evd->type) {
-		case DHCP6_EVDATA_IAPD:
+		    case DHCP6_EVDATA_IAPD:
 			stcode = DH6OPT_STCODE_NOPREFIXAVAIL;
 			stcodestr = "NoPrefixAvail";
 			break;
-		case DHCP6_EVDATA_IANA:
+		    case DHCP6_EVDATA_IANA:
 			stcode = DH6OPT_STCODE_NOADDRSAVAIL;
 			stcodestr = "NoAddrsAvail";
 			break;
-		default:
+		    default:
 			continue;
 		}
+
 		if (dhcp6_find_listval(&optinfo->stcode_list,
 		    DHCP6_LISTVAL_STCODE, &stcode, 0)) {
-			dprintf(LOG_INFO, FNAME,
-			    "advertise contains %s status", stcodestr);
+			dprintf(LOG_INFO, FNAME, "advertise contains %s status", stcodestr);
 			return (-1);
+		}
+
+		if (have_ia > 0 || TAILQ_EMPTY((struct dhcp6_list *)evd->data))
+		    continue;
+
+		have_ia = 0;
+		/* parse list of IA_PD */
+		if (evd->type == DHCP6_EVDATA_IAPD) {
+		    TAILQ_FOREACH(lv, (struct dhcp6_list *)evd->data, link) {
+			slv = dhcp6_find_listval(&optinfo->iapd_list, DHCP6_LISTVAL_IAPD, &lv->val_ia, 0);
+			if (slv == NULL)
+				continue;
+			TAILQ_FOREACH(slv, &slv->sublist, link) {
+			    if (slv->type == DHCP6_LISTVAL_PREFIX6) {
+				have_ia = 1;
+				break;
+			    }
+			}
+		    }
+		}
+		/* parse list of IA_NA */
+		if (evd->type == DHCP6_EVDATA_IANA) {
+		    TAILQ_FOREACH(lv, (struct dhcp6_list *)evd->data, link) {
+			slv = dhcp6_find_listval(&optinfo->iana_list, DHCP6_LISTVAL_IANA, &lv->val_ia, 0);
+			if (slv == NULL)
+				continue;
+			TAILQ_FOREACH(slv, &slv->sublist, link) {
+			    if (slv->type == DHCP6_LISTVAL_STATEFULADDR6) {
+				have_ia = 1;
+				break;
+			    }
+			}
+		    }
 		}
 	}
 
-	if (ev->state != DHCP6S_SOLICIT ||
-	    (ifp->send_flags & DHCIFF_RAPID_COMMIT) || infreq_mode) {
+	/*
+	 * Ignore message with none of requested addresses and/or
+	 * a prefixes as if NoAddrsAvail/NoPrefixAvail Status Code
+	 * was included.
+	 */
+	if (have_ia == 0) {
+		dprintf(LOG_INFO, FNAME, "advertise contains no address/prefix");
+		return (-1);
+	}
+
+	if (ev->state != DHCP6S_SOLICIT || (ifp->send_flags & DHCIFF_RAPID_COMMIT) || infreq_mode) {
 		/*
 		 * We expected a reply message, but do actually receive an
 		 * Advertise message.  The server should be configured not to
