@@ -19,7 +19,11 @@
 #ifndef _LIBBRIDGE_H
 #define _LIBBRIDGE_H
 
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+
+#include <netinet/in.h>
 #include <linux/if.h>
 #include <linux/if_bridge.h>
 
@@ -45,7 +49,7 @@ struct bridge_info
 	struct timeval bridge_max_age;
 	struct timeval bridge_hello_time;
 	struct timeval bridge_forward_delay;
-	u_int16_t root_port;
+	uint16_t root_port;
 	unsigned char stp_enabled;
 	unsigned char topology_change;
 	unsigned char topology_change_detected;
@@ -58,8 +62,8 @@ struct bridge_info
 
 struct fdb_entry
 {
-	u_int8_t mac_addr[6];
-	u_int16_t port_no;
+	uint8_t mac_addr[6];
+	uint16_t port_no;
 	unsigned char is_local;
 	struct timeval ageing_timer_value;
 };
@@ -69,9 +73,9 @@ struct port_info
 	unsigned port_no;
 	struct bridge_id designated_root;
 	struct bridge_id designated_bridge;
-	u_int16_t port_id;
-	u_int16_t designated_port;
-	u_int8_t priority;
+	uint16_t port_id;
+	uint16_t designated_port;
+	uint8_t priority;
 	unsigned char top_change_ack;
 	unsigned char config_pending;
 	unsigned char state;

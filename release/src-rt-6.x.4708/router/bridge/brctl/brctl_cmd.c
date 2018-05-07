@@ -305,30 +305,41 @@ static int br_cmd_stp(int argc, char *const* argv)
 static int br_cmd_showstp(int argc, char *const* argv)
 {
 	struct bridge_info info;
+	const char *name = argv[1];
 
-	if (br_get_bridge_info(argv[1], &info)) {
-		fprintf(stderr, "%s: can't get info %s\n", argv[1],
-			strerror(errno));
+	if (br_get_bridge_info(name, &info)) {
+		if (errno == ENODEV)
+			fprintf(stderr, "bridge %s does not exist!\n", name);
+		else
+			fprintf(stderr, "device %s is not a bridge!\n", name);
+
 		return 1;
 	}
 
-	br_dump_info(argv[1], &info);
+	br_dump_info(name, &info);
 	return 0;
 }
 
 static int show_bridge(const char *name, void *arg)
 {
 	struct bridge_info info;
-
-	printf("%s\t\t", name);
-	fflush(stdout);
+	static int show_header = 1;
 
 	if (br_get_bridge_info(name, &info)) {
-		fprintf(stderr, "can't get info %s\n",
-				strerror(errno));
+		if (errno == ENODEV)
+			fprintf(stderr, "bridge %s does not exist!\n", name);
+		else
+			fprintf(stderr, "device %s is not a bridge!\n", name);
+
 		return 1;
 	}
 
+	if (show_header) {
+		printf("bridge name\tbridge id\t\tSTP enabled\tinterfaces\n");
+		show_header = 0;
+	}
+
+	printf("%s\t\t", name);
 	br_dump_bridge_id((unsigned char *)&info.bridge_id);
 	printf("\t%s\t\t", info.stp_enabled?"yes":"no");
 
@@ -338,16 +349,15 @@ static int show_bridge(const char *name, void *arg)
 
 static int br_cmd_show(int argc, char *const* argv)
 {
-	int i;
+	int i, errs = 0;
 
-	printf("bridge name\tbridge id\t\tSTP enabled\tinterfaces\n");
 	if (argc == 1)
 		br_foreach_bridge(show_bridge, NULL);
 	else
 		for(i = 2; i <= argc; i++)
-			show_bridge(argv[i - 1], NULL);
+			errs += show_bridge(argv[i - 1], NULL);
 
-	return 0;
+	return errs > 0;
 }
 
 static int compare_fdbs(const void *_f0, const void *_f1)
@@ -473,7 +483,7 @@ static const struct command commands[] = {
 
 const struct command *command_lookup(const char *cmd)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
 		if (!strcmp(cmd, commands[i].name))
@@ -485,7 +495,7 @@ const struct command *command_lookup(const char *cmd)
 
 void command_helpall(void)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
 		printf("\t%-10s\t%s\n", commands[i].name, commands[i].help);
