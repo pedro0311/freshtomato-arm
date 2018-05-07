@@ -1,9 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(bridge-utils, 1.5)
+AC_INIT([bridge-utils],[1.6])
 AC_CONFIG_HEADERS(libbridge/config.h)
 
-AC_ARG_WITH( linux-headers, [  --with-linux-headers     Location of the linux headers to use], 
-    KERNEL_HEADERS=$withval, KERNEL_HEADERS="/usr/src/linux/include")
+AC_ARG_WITH([linux-headers],
+    [AS_HELP_STRING([--with-linux-headers], [location of the linux headers to use])],
+    [KERNEL_HEADERS=$withval],
+    [KERNEL_HEADERS="/usr/src/linux/include"]
+)
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -24,4 +27,5 @@ AC_CHECK_FUNCS(if_nametoindex if_indextoname)
 
 AC_SUBST(KERNEL_HEADERS)
 
-AC_OUTPUT(doc/Makefile libbridge/Makefile brctl/Makefile Makefile bridge-utils.spec)
+AC_CONFIG_FILES([doc/Makefile libbridge/Makefile brctl/Makefile Makefile bridge-utils.spec])
+AC_OUTPUT
