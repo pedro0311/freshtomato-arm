@@ -1,4 +1,4 @@
-/* $Id: miniupnpd.c,v 1.229 2018/05/03 08:27:42 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.230 2018/05/08 21:28:28 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -2079,6 +2079,18 @@ main(int argc, char * * argv)
 
 #ifdef TOMATO
 	tomato_helper();
+#endif
+
+#ifdef ENABLE_PCP
+	if(GETFLAG(ENABLENATPMPMASK))
+	{
+		/* Send PCP startup announcements */
+#ifdef ENABLE_IPV6
+		PCPSendUnsolicitedAnnounce(snatpmp, addr_count, spcp_v6);
+#else /* IPv4 only */
+		PCPSendUnsolicitedAnnounce(snatpmp, addr_count);
+#endif
+	}
 #endif
 
 	/* main loop */
