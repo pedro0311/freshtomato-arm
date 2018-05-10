@@ -1,4 +1,4 @@
-/* $Id: upnpevents.c,v 1.39 2018/03/12 22:41:54 nanard Exp $ */
+/* $Id: upnpevents.c,v 1.40 2018/05/03 08:26:32 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -612,6 +612,8 @@ void upnpevents_processfds(fd_set *readset, fd_set *writeset)
 				obj->sub->notify = NULL;
 			/* remove also the subscriber from the list if there was an error */
 			if(obj->state == EError && obj->sub) {
+				syslog(LOG_ERR, "%s: %p, remove subscriber %s after an ERROR cb: %s",
+				       "upnpevents_processfds", obj, obj->sub->uuid, obj->sub->callback);
 				LIST_REMOVE(obj->sub, entries);
 				free(obj->sub);
 			}

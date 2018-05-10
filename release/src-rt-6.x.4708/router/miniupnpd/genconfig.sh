@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: genconfig.sh,v 1.95 2018/01/16 00:50:46 nanard Exp $
+# $Id: genconfig.sh,v 1.96 2018/05/03 08:27:40 nanard Exp $
 # vim: tabstop=4 shiftwidth=4 noexpandtab
 #
 # miniupnp daemon
@@ -472,6 +472,8 @@ if [ -n "$LEASEFILE" ] ; then
 else
 	echo "/*#define ENABLE_LEASEFILE*/" >> ${CONFIGFILE}
 fi
+echo "/* Uncomment the following line to store remaining time in lease file */" >> ${CONFIGFILE}
+echo "/*#define LEASEFILE_USE_REMAINING_TIME*/" >> ${CONFIGFILE}
 echo "" >> ${CONFIGFILE}
 
 echo "/* Uncomment the following line to enable port in use check */" >> ${CONFIGFILE}
