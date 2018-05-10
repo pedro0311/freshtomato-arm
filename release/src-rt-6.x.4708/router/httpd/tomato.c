@@ -390,9 +390,6 @@ const aspapi_t aspapi[] = {
 #ifdef TCONFIG_USB
 	{ "usbdevices",			asp_usbdevices			},	//!!TB - USB Support
 #endif
-#ifdef TCONFIG_SDHC
-	{ "mmcid",			asp_mmcid			},	//MMC Support
-#endif
 	{ "etherstates",		asp_etherstates			},	//Ethernet States
 	{ "anonupdate",			asp_anonupdate			},	//Tomato update notification system
 #ifdef TCONFIG_IPV6
@@ -887,6 +884,7 @@ static const nvset_t nvset_list[] = {
 	{ "multicast_lan1",		V_01				},
 	{ "multicast_lan2",		V_01				},
 	{ "multicast_lan3",		V_01				},
+	{ "multicast_custom",		V_TEXT(0, 2048)			},
 	{ "block_loopback",		V_01				},
 	{ "udpxy_enable",		V_01				},
 	{ "udpxy_stats",		V_01				},
@@ -991,27 +989,6 @@ static const nvset_t nvset_list[] = {
 	{ "dhcp_routes",		V_01				},
 	{ "lan_stp",			V_RANGE(0, 1)			},
 	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
-#ifdef TCONFIG_ZEBRA
-	{ "dr_setting",			V_RANGE(0, 3)			},
-	{ "dr_lan_tx",			V_LENGTH(0, 32)			},
-	{ "dr_lan_rx",			V_LENGTH(0, 32)			},
-	{ "dr_lan1_tx",			V_LENGTH(0, 32)			},
-	{ "dr_lan1_rx",			V_LENGTH(0, 32)			},
-	{ "dr_lan2_tx",			V_LENGTH(0, 32)			},
-	{ "dr_lan2_rx",			V_LENGTH(0, 32)			},
-	{ "dr_lan3_tx",			V_LENGTH(0, 32)			},
-	{ "dr_lan3_rx",			V_LENGTH(0, 32)			},
-	{ "dr_wan_tx",			V_LENGTH(0, 32)			},
-	{ "dr_wan_rx",			V_LENGTH(0, 32)			},
-	{ "dr_wan2_tx",			V_LENGTH(0, 32)			},
-	{ "dr_wan2_rx",			V_LENGTH(0, 32)			},
-#ifdef TCONFIG_MULTIWAN
-	{ "dr_wan3_tx",			V_LENGTH(0, 32)			},
-	{ "dr_wan3_rx",			V_LENGTH(0, 32)			},
-	{ "dr_wan4_tx",			V_LENGTH(0, 32)			},
-	{ "dr_wan4_rx",			V_LENGTH(0, 32)			},
-#endif
-#endif
 
 // advanced-access
 	{ "lan_access",			V_LENGTH(0, 4096)		},
@@ -1224,19 +1201,6 @@ static const nvset_t nvset_list[] = {
 	{ "jffs2_exec",			V_LENGTH(0, 64)			},
 	{ "jffs2_format",		V_01				},
 
-#ifdef TCONFIG_SDHC
-// admin-sdhc
-	{ "mmc_on",			V_01				},
-	{ "mmc_cs",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_clk",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_din",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_dout",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_fs_partition",		V_RANGE(1, 4)			},	// partition number in partition table
-	{ "mmc_fs_type",		V_LENGTH(4, 4)			},	// ext2, ext3, vfat
-	{ "mmc_exec_mount",		V_LENGTH(0, 64)			},
-	{ "mmc_exec_umount",		V_LENGTH(0, 64)			},
-#endif
-
 // admin-tomatoanon
 	{ "tomatoanon_answer",		V_RANGE(0, 1)			},
 	{ "tomatoanon_enable",		V_RANGE(-1, 1)			},
@@ -1251,9 +1215,6 @@ static const nvset_t nvset_list[] = {
 	{ "usb_ohci",			V_RANGE(-1, 1)			},
 	{ "usb_usb2",			V_RANGE(-1, 1)			},
 	{ "usb_usb3",			V_RANGE(-1, 1)			},
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
-	{ "usb_mmc",			V_RANGE(-1, 1)			},
-#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},

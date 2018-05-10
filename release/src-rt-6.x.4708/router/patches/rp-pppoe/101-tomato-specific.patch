@@ -1,0 +1,94 @@
+--- rp-pppoe/src/discovery.c	2008-06-30 16:00:42.000000000 +0200
++++ rp-pppoe/src/discovery.c	2018-04-02 00:24:53.000000000 +0200
+@@ -45,9 +45,9 @@ static char const RCSID[] =
+ #include <signal.h>
+ 
+ #ifdef PLUGIN
+-#include "pppd/pppd.h"
+-#include "pppd/fsm.h"
+-#include "pppd/lcp.h"
++#include "../../pppd/pppd/pppd.h"
++#include "../../pppd/pppd/fsm.h"
++#include "../../pppd/pppd/lcp.h"
+ #else
+ int persist = 0;
+ #endif
+@@ -472,8 +472,8 @@ waitForPADO(PPPoEConnection *conn, int t
+ 	if (!packetIsForMe(conn, &packet)) continue;
+ 
+ 	if (packet.code == CODE_PADO) {
+-	    if (NOT_UNICAST(packet.ethHdr.h_source)) {
+-		printErr("Ignoring PADO packet from non-unicast MAC address");
++	    if (BROADCAST(packet.ethHdr.h_source)) {
++		printErr("Ignoring PADO packet from broadcast MAC address");
+ 		continue;
+ 	    }
+ #ifdef PLUGIN
+--- rp-pppoe/src/plugin.c	2008-06-30 16:00:43.000000000 +0200
++++ rp-pppoe/src/plugin.c	2018-04-02 00:24:53.000000000 +0200
+@@ -58,16 +58,19 @@ static char const RCSID[] =
+ #define _ROOT_PATH ""
+ #endif
+ 
+-#define _PATH_ETHOPT         _ROOT_PATH "/etc/ppp/options."
++#define _PATH_ETHOPT         _ROOT_PATH "/ppp/options."
+ 
+ char pppd_version[] = VERSION;
+ 
+ static int seen_devnam[2] = {0, 0};
+ static char *pppoe_reqd_mac = NULL;
+ 
+ /* From sys-linux.c in pppd -- MUST FIX THIS! */
+ extern int new_style_driver;
+ 
++/* Supplied by pppd */
++extern int debug;
++
+ char *pppd_pppoe_service = NULL;
+ static char *acName = NULL;
+ static char *existingSession = NULL;
+@@ -266,7 +269,7 @@ PPPOESendConfig(int mtu,
+     struct ifreq ifr;
+ 
+     if (mtu > MAX_PPPOE_MTU) {
+-	warn("Couldn't increase MTU to %d", mtu);
++	if (debug) warn("Couldn't increase MTU to %d", mtu);
+ 	mtu = MAX_PPPOE_MTU;
+     }
+     sock = socket(AF_INET, SOCK_DGRAM, 0);
+@@ -290,7 +293,7 @@ PPPOERecvConfig(int mru,
+ 		int pcomp,
+ 		int accomp)
+ {
+-    if (mru > MAX_PPPOE_MTU) {
++    if (mru > MAX_PPPOE_MTU && debug) {
+ 	warn("Couldn't increase MRU to %d", mru);
+     }
+ }
+--- rp-pppoe/src/pppoe-server.c	2008-06-30 16:00:43.000000000 +0200
++++ rp-pppoe/src/pppoe-server.c	2018-04-02 00:24:53.000000000 +0200
+@@ -2035,7 +2035,7 @@ startPPPDLinuxKernelMode(ClientSession *
+     argv[c++] = "default-asyncmap";
+     if (PassUnitOptionToPPPD) {
+ 	argv[c++] = "unit";
+-	sprintf(buffer, "%u", (unsigned int) (ntohs(session->sess) - 1 - SessOffset));
++	sprintf(buffer, "%u", (unsigned int) (ntohs(session->sess) - 1));
+ 	argv[c++] = buffer;
+     }
+     if (session->requested_mtu > 1492) {
+--- rp-pppoe/src/relay.c	2008-06-30 16:00:43.000000000 +0200
++++ rp-pppoe/src/relay.c	2018-04-02 00:24:53.000000000 +0200
+@@ -955,10 +955,11 @@ relayHandlePADT(PPPoEInterface const *if
+     SessionHash *sh;
+     PPPoESession *ses;
+ 
+-    /* Destination address must be interface's MAC address */
+-    if (memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
++    /* Ignore PADT packets whose destination address isn't ours */
++    if (!(packet->ethHdr.h_dest[0] & 0xfe) &&
++         memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
+	return;
+     }
+ 
+     sh = findSession(packet->ethHdr.h_source, packet->session);
+     if (!sh) {

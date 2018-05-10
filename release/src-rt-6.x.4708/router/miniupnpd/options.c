@@ -1,8 +1,8 @@
-/* $Id: options.c,v 1.34 2018/02/22 13:18:58 nanard Exp $ */
+/* $Id: options.c,v 1.35 2018/04/22 19:36:58 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
- * (c) 2006-2014 Thomas Bernard
+ * (c) 2006-2018 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -106,7 +106,7 @@ readoptionsfile(const char * fname)
 	size_t len;
 	void *tmp;
 
-	if(!fname || (strlen(fname) == 0))
+	if(!fname || (fname[0] == '\0'))
 		return -1;
 
 	memset(buffer, 0, sizeof(buffer));

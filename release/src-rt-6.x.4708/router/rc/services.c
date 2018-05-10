@@ -1262,137 +1262,6 @@ void stop_hotplug2(void)
 }
 
 #endif	/* LINUX26 */
-// -----------------------------------------------------------------------------
-
-// Written by Sparq in 2002/07/16
-void start_zebra(void)
-{
-#ifdef TCONFIG_ZEBRA
-	if (getpid() != 1) {
-		start_service("zebra");
-		return;
-	}
-
-	FILE *fp;
-
-	char *lan_tx = nvram_safe_get("dr_lan_tx");
-	char *lan_rx = nvram_safe_get("dr_lan_rx");
-	char *lan1_tx = nvram_safe_get("dr_lan1_tx");
-	char *lan1_rx = nvram_safe_get("dr_lan1_rx");
-	char *lan2_tx = nvram_safe_get("dr_lan2_tx");
-	char *lan2_rx = nvram_safe_get("dr_lan2_rx");
-	char *lan3_tx = nvram_safe_get("dr_lan3_tx");
-	char *lan3_rx = nvram_safe_get("dr_lan3_rx");
-	char *wan_tx = nvram_safe_get("dr_wan_tx");
-	char *wan_rx = nvram_safe_get("dr_wan_rx");
-
-	if ((*lan_tx == '0') && (*lan_rx == '0') && 
-		(*lan1_tx == '0') && (*lan1_rx == '0') && 
-		(*lan2_tx == '0') && (*lan2_rx == '0') && 
-		(*lan3_tx == '0') && (*lan3_rx == '0') && 
-		(*wan_tx == '0') && (*wan_rx == '0')) {
-		return;
-	}
-
-	// empty
-	if ((fp = fopen("/etc/zebra.conf", "w")) != NULL) {
-		fclose(fp);
-	}
-
-	//
-	if ((fp = fopen("/etc/ripd.conf", "w")) != NULL) {
-		char *lan_ifname = nvram_safe_get("lan_ifname");
-		char *lan1_ifname = nvram_safe_get("lan1_ifname");
-		char *lan2_ifname = nvram_safe_get("lan2_ifname");
-		char *lan3_ifname = nvram_safe_get("lan3_ifname");
-		char *wan_ifname = nvram_safe_get("wan_ifname");
-
-		fprintf(fp, "router rip\n");
-		if(strcmp(lan_ifname,"")!=0)
-			fprintf(fp, "network %s\n", lan_ifname);
-		if(strcmp(lan1_ifname,"")!=0)
-			fprintf(fp, "network %s\n", lan1_ifname);
-		if(strcmp(lan2_ifname,"")!=0)
-			fprintf(fp, "network %s\n", lan2_ifname);
-		if(strcmp(lan3_ifname,"")!=0)
-			fprintf(fp, "network %s\n", lan3_ifname);
-		fprintf(fp, "network %s\n", wan_ifname);
-		fprintf(fp, "redistribute connected\n");
-		//fprintf(fp, "redistribute static\n");
-
-		// 43011: modify by zg 2006.10.18 for cdrouter3.3 item 173(cdrouter_rip_30) bug
-		// fprintf(fp, "redistribute kernel\n"); // 1.11: removed, redistributes indirect -- zzz
-
-		if(strcmp(lan_ifname,"")!=0) {
-			fprintf(fp, "interface %s\n", lan_ifname);
-			if (*lan_tx != '0') fprintf(fp, "ip rip send version %s\n", lan_tx);
-			if (*lan_rx != '0') fprintf(fp, "ip rip receive version %s\n", lan_rx);
-		}
-		if(strcmp(lan1_ifname,"")!=0) {
-			fprintf(fp, "interface %s\n", lan1_ifname);
-			if (*lan1_tx != '0') fprintf(fp, "ip rip send version %s\n", lan1_tx);
-			if (*lan1_rx != '0') fprintf(fp, "ip rip receive version %s\n", lan1_rx);
-		}
-		if(strcmp(lan2_ifname,"")!=0) {
-			fprintf(fp, "interface %s\n", lan2_ifname);
-			if (*lan2_tx != '0') fprintf(fp, "ip rip send version %s\n", lan2_tx);
-			if (*lan2_rx != '0') fprintf(fp, "ip rip receive version %s\n", lan2_rx);
-		}
-		if(strcmp(lan3_ifname,"")!=0) {
-		fprintf(fp, "interface %s\n", lan3_ifname);
-			if (*lan3_tx != '0') fprintf(fp, "ip rip send version %s\n", lan3_tx);
-			if (*lan3_rx != '0') fprintf(fp, "ip rip receive version %s\n", lan3_rx);
-		}
-		fprintf(fp, "interface %s\n", wan_ifname);
-		if (*wan_tx != '0') fprintf(fp, "ip rip send version %s\n", wan_tx);
-		if (*wan_rx != '0') fprintf(fp, "ip rip receive version %s\n", wan_rx);
-
-		fprintf(fp, "router rip\n");
-		if(strcmp(lan_ifname,"")!=0) {
-			if (*lan_tx == '0') fprintf(fp, "distribute-list private out %s\n", lan_ifname);
-			if (*lan_rx == '0') fprintf(fp, "distribute-list private in %s\n", lan_ifname);
-		}
-		if(strcmp(lan1_ifname,"")!=0) {
-			if (*lan1_tx == '0') fprintf(fp, "distribute-list private out %s\n", lan1_ifname);
-			if (*lan1_rx == '0') fprintf(fp, "distribute-list private in %s\n", lan1_ifname);
-		}
-		if(strcmp(lan2_ifname,"")!=0) {
-			if (*lan2_tx == '0') fprintf(fp, "distribute-list private out %s\n", lan2_ifname);
-			if (*lan2_rx == '0') fprintf(fp, "distribute-list private in %s\n", lan2_ifname);
-		}
-		if(strcmp(lan3_ifname,"")!=0) {
-			if (*lan3_tx == '0') fprintf(fp, "distribute-list private out %s\n", lan3_ifname);
-			if (*lan3_rx == '0') fprintf(fp, "distribute-list private in %s\n", lan3_ifname);
-		}
-		if (*wan_tx == '0') fprintf(fp, "distribute-list private out %s\n", wan_ifname);
-		if (*wan_rx == '0') fprintf(fp, "distribute-list private in %s\n", wan_ifname);
-		fprintf(fp, "access-list private deny any\n");
-
-		//fprintf(fp, "debug rip events\n");
-		//fprintf(fp, "log file /etc/ripd.log\n");
-		fclose(fp);
-	}
-
-	xstart("zebra", "-d");
-	xstart("ripd",  "-d");
-#endif
-}
-
-void stop_zebra(void)
-{
-#ifdef TCONFIG_ZEBRA
-	if (getpid() != 1) {
-		stop_service("zebra");
-		return;
-	}
-
-	killall("zebra", SIGTERM);
-	killall("ripd", SIGTERM);
-
-	unlink("/etc/zebra.conf");
-	unlink("/etc/ripd.conf");
-#endif
-}
 
 // -----------------------------------------------------------------------------
 
@@ -1549,7 +1418,18 @@ void start_igmp_proxy(void)
 			eval("igmpproxy", "/etc/igmp.alt");
 		}
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
-
+		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
+		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces, 
+		     see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
+		     see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
+		   */
+		  if (nvram_match("multicast_lan", "0") && nvram_match("multicast_lan1", "0") && nvram_match("multicast_lan2", "0") && nvram_match("multicast_lan3", "0")) {
+			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
+			fclose(fp);
+			eval("igmpproxy", "/etc/igmp.conf");
+		  }
+		  /* create default config for upstream/downstream interface(s) */
+		  else {
 			fprintf(fp,
 				"quickleave\n");
 			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -1603,6 +1483,7 @@ void start_igmp_proxy(void)
 				}
 			fclose(fp);
 			eval("igmpproxy", "/etc/igmp.conf");
+		  }
 		}
 		else {
 			return;
@@ -2568,10 +2449,6 @@ void start_services(void)
 	}
 //	start_syslog();
 	start_nas();
-	start_zebra();
-#ifdef TCONFIG_SDHC
-	start_mmc();
-#endif
 	start_dnsmasq();
 	start_cifs();
 	start_httpd();
@@ -2678,13 +2555,9 @@ void stop_services(void)
 	stop_mysql();
 	stop_enginex();
 #endif
-#ifdef TCONFIG_SDHC
-	stop_mmc();
-#endif
 	stop_cifs();
 	stop_httpd();
 	stop_dnsmasq();
-	stop_zebra();
 	stop_nas();
 //	stop_syslog();
 }
@@ -2981,7 +2854,6 @@ TOP:
 			restart_nas_services(1, 0);	// stop Samba, FTP and Media Server
 			stop_jffs2();
 //			stop_cifs();
-			stop_zebra();
 			stop_cron();
 			stop_ntpc();
 			stop_upnp();
@@ -3021,23 +2893,8 @@ TOP:
 	}
 #endif
 
-	if (strcmp(service, "zebra") == 0) {
-		if (action & A_STOP) stop_zebra();
-		if (action & A_START) start_zebra();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_SDHC
-	if (strcmp(service, "mmc") == 0) {
-		if (action & A_STOP) stop_mmc();
-		if (action & A_START) start_mmc();
-		goto CLEAR;
-	}
-#endif
-
 	if (strcmp(service, "routing") == 0) {
 		if (action & A_STOP) {
-			stop_zebra();
 			do_static_routes(0);	// remove old '_saved'
 			eval("brctl", "stp", nvram_safe_get("lan_ifname"), "0");
 			if(strcmp(nvram_safe_get("lan1_ifname"),"")!=0)
@@ -3051,7 +2908,6 @@ TOP:
 		start_firewall();
 		if (action & A_START) {
 			do_static_routes(1);	// add new
-			start_zebra();
 			eval("brctl", "stp", nvram_safe_get("lan_ifname"), nvram_safe_get("lan_stp"));
 			if(strcmp(nvram_safe_get("lan1_ifname"),"")!=0)
 				eval("brctl", "stp", nvram_safe_get("lan1_ifname"), nvram_safe_get("lan1_stp"));

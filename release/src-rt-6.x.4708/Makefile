@@ -310,9 +310,9 @@ what:
 # KERN_SIZE_OPT
 # USB ("USB"|"")
 # JFFSv1 | NO_JFFS
-# NO_CIFS, NO_SSH, NO_ZEBRA, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
+# NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
 # SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP SDHC HFS UPS DNSCRYPT PPTPD TOR IPSEC RAID MICROSD USBAP NO_USBAPP NANO MULTIWAN
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN
 
 define RouterOptions
 	@( \
@@ -471,10 +471,6 @@ define RouterOptions
 		sed -i "/TCONFIG_SNMP/d" $(1); \
 		echo "TCONFIG_SNMP=y" >>$(1); \
 	fi; \
-	if [ "$(SDHC)" = "y" ]; then \
-		sed -i "/TCONFIG_SDHC/d" $(1); \
-		echo "TCONFIG_SDHC=y" >>$(1); \
-	fi; \
 	if [ "$(DNSSEC)" = "y" ]; then \
 		sed -i "/TCONFIG_DNSSEC/d" $(1); \
 		echo "TCONFIG_DNSSEC=y" >>$(1); \
@@ -506,10 +502,6 @@ define RouterOptions
 	if [ "$(TOR)" = "y" ]; then \
 		sed -i "/TCONFIG_TOR/d" $(1); \
 		echo "TCONFIG_TOR=y" >>$(1); \
-	fi; \
-	if [ "$(MICROSD)" = "y" ]; then \
-		sed -i "/TCONFIG_MICROSD/d" $(1); \
-		echo "TCONFIG_MICROSD=y" >>$(1); \
 	fi; \
 	if [ "$(USBAP)" = "y" ]; then \
 		sed -i "/TCONFIG_USBAP/d" $(1); \

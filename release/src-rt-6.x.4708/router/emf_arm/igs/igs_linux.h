@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Broadcom Corporation
+ * Copyright (C) 2014, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -7,7 +7,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: igs_linux.h 344201 2012-07-11 20:09:44Z $
+ * $Id: igs_linux.h 344202 2012-07-11 20:09:47Z $
  */
 
 #ifndef _IGS_LINUX_H_

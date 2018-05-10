@@ -45,9 +45,9 @@ static char const RCSID[] =
 #include <signal.h>
 
 #ifdef PLUGIN
-#include "../../pppd/pppd/pppd.h"
-#include "../../pppd/pppd/fsm.h"
-#include "../../pppd/pppd/lcp.h"
+#include "pppd/pppd.h"
+#include "pppd/fsm.h"
+#include "pppd/lcp.h"
 #else
 int persist = 0;
 #endif

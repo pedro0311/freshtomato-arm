@@ -2152,7 +2152,7 @@ TomatoRefresh.prototype = {
 		}
 
 		if ((e = E('refresh-time')) != null)
-			(b == 0 ? e.removeAttribute("disabled") : e.setAttribute("disabled", "disabled"))
+			(b == 0 ? e.removeAttribute("disabled") : e.setAttribute("disabled", "disabled"));
 		if ((e = E('refresh-spinner')) != null) e.style.visibility = b ? 'visible' : 'hidden';
 	},
 
@@ -2558,9 +2558,6 @@ REMOVE-END */
 /* CIFS-BEGIN */
 			['CIFS Client',			'cifs.asp'],
 /* CIFS-END */
-/* SDHC-BEGIN */
-			['SDHC/MMC',			'sdhc.asp'],
-/* SDHC-END */
 			['Configuration',		'config.asp'],
 			['Debugging',			'debug.asp'],
 /* JFFS2-BEGIN */

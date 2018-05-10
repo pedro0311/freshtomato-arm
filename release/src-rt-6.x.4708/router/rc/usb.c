@@ -193,15 +193,6 @@ void start_usb(void)
 				modprobe("hfsplus");
 			}
 #endif
-
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
-			if (nvram_get_int("usb_mmc") == 1) {
-				/* insert SD/MMC modules if present */
-				modprobe("mmc_core");
-				modprobe("mmc_block");
-				modprobe("sdhci");
-			}
-#endif
 		}
 
 		if (nvram_get_int("usb_usb3") == 1) {
@@ -328,14 +319,6 @@ void stop_usb(void)
 #endif
 		modprobe_r(SCSI_MOD);
 	}
-
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
-	if (disabled || !nvram_get_int("usb_storage") || nvram_get_int("usb_mmc") != 1) {
-		modprobe_r("sdhci");
-		modprobe_r("mmc_block");
-		modprobe_r("mmc_core");
-	}
-#endif
 
 	if (disabled || nvram_get_int("usb_ohci") != 1) modprobe_r(USBOHCI_MOD);
 	if (disabled || nvram_get_int("usb_uhci") != 1) modprobe_r(USBUHCI_MOD);

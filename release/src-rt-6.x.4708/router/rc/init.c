@@ -13,6 +13,7 @@
 #include "rc.h"
 #include "shared.h"
 
+#include <ctype.h>
 #include <termios.h>
 #include <dirent.h>
 #include <sys/ioctl.h>
@@ -444,9 +445,25 @@ static int check_nv(const char *name, const char *value)
 	return 0;
 }
 
-static inline int invalid_mac(const char *mac)
+static int invalid_mac(const char *mac)
 {
-	return (!mac || !(*mac) || strncasecmp(mac, "00:90:4c", 8) == 0);
+	if (!mac || !(*mac) || strncasecmp(mac, "00:90:4c", 8) == 0)
+		return 1;
+
+	int i = 0, s = 0;
+	while (*mac) {
+		if (isxdigit(*mac)) {
+			i++;
+		} else if (*mac == ':') {
+			if (i == 0 || i / 2 - 1 != s)
+				break;
+			++s;
+		} else {
+			s = -1;
+		}
+		++mac;
+	}
+	return !(i == 12 && s == 5);
 }
 
 static int find_sercom_mac_addr(void)
@@ -3882,9 +3899,6 @@ static int init_nvram(void)
 #else
 		name = "RT-N66U";
 		features = SUP_SES | SUP_80211N | SUP_1000ET;
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
-		if (nvram_get_int("usb_mmc") == -1) nvram_set("usb_mmc", "1");
-#endif
 #endif
 
 #ifdef TCONFIG_USB

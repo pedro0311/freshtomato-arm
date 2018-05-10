@@ -217,8 +217,6 @@ extern void start_cron(void);
 extern void stop_cron(void);
 extern void start_adblock(void);
 extern void stop_adblock(void);
-extern void start_zebra(void);
-extern void stop_zebra(void);
 extern void start_upnp(void);
 extern void stop_upnp(void);
 extern void start_syslog(void);
@@ -578,12 +576,6 @@ extern void new_qoslimit_stop(void);
 // arpbind.c
 extern void start_arpbind(void);
 extern void stop_arpbind(void);
-
-// mmc.c
-#ifdef TCONFIG_SDHC
-extern void start_mmc(void);
-extern void stop_mmc(void);
-#endif
 
 #ifdef TCONFIG_NOCAT
 // nocat.c 
