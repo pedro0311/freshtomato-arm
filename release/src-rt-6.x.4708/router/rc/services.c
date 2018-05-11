@@ -50,7 +50,7 @@
 // Pop an alarm to recheck pids in 500 msec.
 static const struct itimerval pop_tv = { {0,0}, {0, 500 * 1000} };
 
-// Pop an alarm to reap zombies. 
+// Pop an alarm to reap zombies.
 static const struct itimerval zombie_tv = { {0,0}, {307, 0} };
 
 // -----------------------------------------------------------------------------
@@ -708,7 +708,7 @@ void dns_to_resolv(void)
 			append++;
 		}
 		m = umask(022);	// 077 from pppoecd
-		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append	
+		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append
 			if (append == 1)
 				exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); // Check for VPN DNS entries
 			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
@@ -1419,7 +1419,7 @@ void start_igmp_proxy(void)
 		}
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
 		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
-		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces, 
+		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
 		     see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
 		     see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
 		   */
@@ -1473,7 +1473,7 @@ void start_igmp_proxy(void)
 					if((strcmp(nvram_safe_get(multicast_lanN),"1")==0) && (strcmp(nvram_safe_get(lanN_ifname),"")!=0)) {
 					/*
 					  Configuration for Downstream Interface
-					  Example: 
+					  Example:
 					  phyint br0 downstream ratelimit 0 threshold 1
 					 */
 						fprintf(fp,
@@ -1581,7 +1581,11 @@ void set_tz(void)
 
 void start_ntpc(void)
 {
-	//static char servers[32];
+	static char servers[500];
+	static char server_chosen[500];
+	int ntp_updates_hrs=0, ntp_updates_secs=0;
+	char ntp_updates_secs_str[10];
+	int i=0;
 
 	set_tz();
 
@@ -1590,14 +1594,34 @@ void start_ntpc(void)
 	if (nvram_match("dnscrypt_proxy", "1"))
 		eval("ntp2ip");
 
-	if (nvram_get_int("ntp_updates") >= 0) {
-		xstart("ntpsync", "--init");
+	ntp_updates_hrs = nvram_get_int("ntp_updates");
+	ntp_updates_secs = (ntp_updates_hrs * 60 * 60);
+	sprintf(ntp_updates_secs_str, "%d", ntp_updates_secs);
+
+	if (ntp_updates_secs >= 0) {
+		strcpy(servers, nvram_safe_get("ntp_server"));
+
+		memset(server_chosen, '\0', sizeof(server_chosen));
+		for (i=0; i<strlen(servers) && servers[i] != '\0'  && servers[i] !=  ' ' ;i++) {	/*Just grabbing the first server */
+			server_chosen[i] = servers[i];	
+		}
 	}
+
+	if (ntp_updates_secs < 0) {
+		/* Do Nothing - User disabled updates */
+	}
+	else if (ntp_updates_secs == 0) {	/* Only at startup */
+		xstart("ntpclient", server_chosen, "-s", "-t", "-c", "1");
+	}
+	else {		/* Every X seconds */
+		xstart("ntpclient", server_chosen, "-s", "-t", "-c", "0", "-i", ntp_updates_secs_str);
+	}
+
 }
 
 void stop_ntpc(void)
 {
-	killall("ntpsync", SIGTERM);
+	killall("ntpclient", SIGTERM);
 }
 
 // -----------------------------------------------------------------------------
@@ -1766,17 +1790,17 @@ static void start_ftpd(void)
 		{
 			if (nvram_match("ftp_dirlist", "0"))
 				fprintf(f, "dirlist_enable=yes\n");
-			if (nvram_match("ftp_anonymous", "1") || 
+			if (nvram_match("ftp_anonymous", "1") ||
 			    nvram_match("ftp_anonymous", "3"))
 				fprintf(f, "write_enable=yes\n");
-			if (nvram_match("ftp_anonymous", "1") || 
+			if (nvram_match("ftp_anonymous", "1") ||
 			    nvram_match("ftp_anonymous", "2"))
 				fprintf(f, "download_enable=yes\n");
 			fclose(f);
 		}
-		if (nvram_match("ftp_anonymous", "1") || 
+		if (nvram_match("ftp_anonymous", "1") ||
 		    nvram_match("ftp_anonymous", "3"))
-			fprintf(fp, 
+			fprintf(fp,
 				"anon_upload_enable=yes\n"
 				"anon_mkdir_write_enable=yes\n"
 				"anon_other_write_enable=yes\n");
