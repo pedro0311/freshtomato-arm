@@ -312,12 +312,12 @@
  					DPRINTF(E_DEBUG, L_INOTIFY,  "The directory %s was %s.\n",
  						path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
 -					monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
-+						// Tomato
-+						begin_scan();
-+						sleep(5);
-+						if ( wait_for_mount(path_buf) >= 0 )
-+							monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
-+						end_scan();
++					/* Tomato */
++					begin_scan();
++					sleep(5);
++					if ( wait_for_mount(path_buf) >= 0 )
++						monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
++					end_scan();
  				}
  				else if ( (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE)) &&
  				          (lstat(path_buf, &st) == 0) )
@@ -335,7 +335,7 @@
  	char name[256];
  };
  
-+// Tomato
++/* Tomato */
 +static int
 +is_external_path(const char * path)
 +{
@@ -372,21 +372,29 @@
  int64_t
  get_next_available_id(const char *table, const char *parentID)
  {
-@@ -907,6 +942,8 @@ start_scanner(void)
+@@ -728,6 +763,9 @@ ScanDirectory(const char *dir, const cha
+ 	static long long unsigned int fileno = 0;
+ 	enum file_types type;
+ 
++	if ( wait_for_mount(dir) < 0 )
++		return;
++
+ 	DPRINTF(parent?E_INFO:E_WARN, L_SCANNER, _("Scanning %s\n"), dir);
+ 	switch( dir_types )
+ 	{
+@@ -907,6 +945,7 @@ start_scanner(void)
  	if( GETFLAG(RESCAN_MASK) )
  		return start_rescan();
  
-+	begin_scan(); // Tomato
-+	//_notify_start();
++	begin_scan();	/* Tomato */
  	for( media_path = media_dirs; media_path != NULL; media_path = media_path->next )
  	{
  		int64_t id;
-@@ -929,6 +966,9 @@ start_scanner(void)
+@@ -929,6 +968,8 @@ start_scanner(void)
  		ScanDirectory(media_path->path, parent, media_path->types);
  		sql_exec(db, "INSERT into SETTINGS values (%Q, %Q)", "media_dir", media_path->path);
  	}
-+	//_notify_stop();
-+	end_scan(); // Tomato
++	end_scan();	/* Tomato */
 +
  	/* Create this index after scanning, so it doesn't slow down the scanning process.
  	 * This index is very useful for large libraries used with an XBox360 (or any
@@ -398,7 +406,7 @@
  start_scanner();
  
 +int
-+wait_for_mount(const char * path);     // Tomato
++wait_for_mount(const char * path)	/* Tomato */
 +
  #endif
 --- minidlna/tagutils/tagutils.c	2017-08-24 14:28:25.000000000 -0300
