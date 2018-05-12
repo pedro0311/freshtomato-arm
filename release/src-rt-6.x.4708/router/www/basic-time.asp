@@ -263,7 +263,7 @@ createFieldTable('', [
 	{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != '0' },
 	{ title: 'Custom TZ String', indent: 2, name: 'f_tm_tz', type: 'text', maxlen: 32, size: 34, value: nvram.tm_tz || '' },
 	null,
-	{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Every hour'],[2,'Every 2 hours'],[4,'Every 4 hours'],[6,'Every 6 hours'],[8,'Every 8 hours'],[12,'Every 12 hours'],[24,'Every 24 hours']],
+	{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Auto interval']],
 		value: nvram.ntp_updates },
 	{ title: 'Trigger Connect On Demand', indent: 2, name: 'f_ntp_tdod', type: 'checkbox', value: nvram.ntp_tdod != '0' },
 	{ title: 'NTP Time Server', name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
