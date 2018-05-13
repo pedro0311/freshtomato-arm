@@ -39,14 +39,13 @@
 #include <time.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <string.h>
 
 // !!TB
 #include <sys/mount.h>
 #include <mntent.h>
 #include <dirent.h>
 
-#include <stdio.h>
-#include <stdlib.h>
 
 #define dnslog(level,x...) if(nvram_get_int("dns_debug")>=level) syslog(level, x)
 
@@ -1587,11 +1586,8 @@ void set_tz(void)
 
 void start_ntpc(void)
 {
-	static char servers[200];
-	char split_servers[5][200];	/* Assume maximum 5 servers - currently there are 3 defined based on single selection in GUI*/
-	int num_servers=0;
-	int ntp_updates_int=0;
-	int i=0,j=0,k=0;
+	char *servers=NULL, *ptr=NULL;
+	int servers_len=0, ntp_updates_int=0;
 	FILE *f=NULL;
 
 	set_tz();
@@ -1602,14 +1598,7 @@ void start_ntpc(void)
 		eval("ntp2ip");
 	}
 
-
-	/* Let's initialize the string vars*/
-	memset(servers, '\0', sizeof(servers));
-
-	for (k=0;k<5;k++) {
-		memset(split_servers[k], '\0', sizeof(split_servers[k]));
-	}
-
+		/* This is the nvram var defining how the server should be run / how often to sync */
 	ntp_updates_int = nvram_get_int("ntp_updates");
 
 		/* Both a sanity check, and also to transition old nvram values to equivalent updated value */
@@ -1618,44 +1607,36 @@ void start_ntpc(void)
 		ntp_updates_int = 1;
 	}
 
+
 		/* The Tomato GUI allows the User to select an NTP Server region, and then string concats 1. 2. and 3. as prefix */
 		/* Therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to */
 		/* ntpd as separate parameters.  This code should continue to work if GUI is changed to only store 1 value in the NVRAM var */
+
 	if (ntp_updates_int >= 0) {
+		servers_len = strlen(nvram_safe_get("ntp_server"));
+
+								/* Allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
+		if ((servers = malloc(servers_len+1)) == NULL) {
+			return;				/* Just get out if we couldn't allocate memory */
+		}
+		memset(servers, 0, sizeof(servers));
+
+				/* Get the space separated list of ntp servers */
 		strcpy(servers, nvram_safe_get("ntp_server"));
 
-		/* Let's split up the input servers into different array elements so we can pass to ntpd as parameters more easily */
-		j=0;
-		k=0;
-		for (i=0; i<strlen(servers);i++) {
-			if(servers[i]==' ') {
-				if(servers[i+1] != ' ') {
-					split_servers[k][j] = '\0';
-					j=0;
-					k++;		/*Onto the next server name (word in string)*/
-				}
-				continue;
-			}
-			else {
-				split_servers[k][j++] = servers[i];	/*Add characters*/
-			}
-		}
-		split_servers[k][j]='\0';			/*Put on the ending null termination*/
-		num_servers=k+1;					/*Add 1 since k started at 0*/
-
-
-				/*Let's write the config into file*/
+				/* Put the servers into the ntp config file */
 		if ((f = fopen("/etc/ntp.conf", "w")) != NULL) {
-			for (k=0; k<num_servers; k++) {				/*Insert the server parameters for ntpd*/
-				fprintf(f,
-					"server %s\n",
-					split_servers[k]);
+			ptr = strtok(servers, " ");
+			while(ptr) {
+				fprintf(f, "server %s\n", ptr);
+				ptr = strtok(NULL, " ");
 			}
-			fclose(f);
 		}
+		ptr=NULL;
+		fclose(f);
 	}
 
-
+				/* ntpd will be run based on user setting */
 	if (ntp_updates_int < 0) {
 		/* Do Nothing - User disabled updates */
 	}
@@ -1665,11 +1646,16 @@ void start_ntpc(void)
 	else {		/* Auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 		xstart("ntpd", "-l");
 	}
+
+		/*** Clean up ***/
+	free(servers);
+	servers=NULL;
 }
 
 void stop_ntpc(void)
 {
 	killall("ntpd", SIGTERM);
+	sleep(1);
 }
 
 // -----------------------------------------------------------------------------
