@@ -380,7 +380,7 @@ void do_para_end_void(void);
 void do_prev_block(void);
 void do_next_block(void);
 void do_prev_word(bool allow_punct, bool update_screen);
-bool do_next_word(bool allow_punct, bool update_screen);
+bool do_next_word(bool after_ends, bool allow_punct, bool update_screen);
 void do_prev_word_void(void);
 void do_next_word_void(void);
 void do_home(void);
@@ -426,6 +426,9 @@ void window_init(void);
 void do_exit(void);
 void close_and_go(void);
 RETSIGTYPE handle_hupterm(int signal);
+#ifndef DEBUG
+RETSIGTYPE handle_crash(int signal);
+#endif
 RETSIGTYPE do_suspend(int signal);
 RETSIGTYPE do_continue(int signal);
 #ifndef NANO_TINY
