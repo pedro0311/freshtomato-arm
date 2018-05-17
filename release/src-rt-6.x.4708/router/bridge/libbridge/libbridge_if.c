@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/ioctl.h>
 
 #include "libbridge.h"

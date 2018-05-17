@@ -39,18 +39,20 @@
 #include <time.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <string.h>
 
 // !!TB
 #include <sys/mount.h>
 #include <mntent.h>
 #include <dirent.h>
 
+
 #define dnslog(level,x...) if(nvram_get_int("dns_debug")>=level) syslog(level, x)
 
 // Pop an alarm to recheck pids in 500 msec.
 static const struct itimerval pop_tv = { {0,0}, {0, 500 * 1000} };
 
-// Pop an alarm to reap zombies. 
+// Pop an alarm to reap zombies.
 static const struct itimerval zombie_tv = { {0,0}, {307, 0} };
 
 // -----------------------------------------------------------------------------
@@ -60,6 +62,9 @@ static const char dmdhcp[] = "/etc/dnsmasq";
 static const char dmresolv[] = "/etc/resolv.dnsmasq";
 
 static pid_t pid_dnsmasq = -1;
+
+
+
 
 static int is_wet(int idx, int unit, int subunit, void *param)
 {
@@ -708,7 +713,7 @@ void dns_to_resolv(void)
 			append++;
 		}
 		m = umask(022);	// 077 from pppoecd
-		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append	
+		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	// write / append
 			if (append == 1)
 				exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); // Check for VPN DNS entries
 			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
@@ -1419,7 +1424,7 @@ void start_igmp_proxy(void)
 		}
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
 		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
-		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces, 
+		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
 		     see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
 		     see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
 		   */
@@ -1473,7 +1478,7 @@ void start_igmp_proxy(void)
 					if((strcmp(nvram_safe_get(multicast_lanN),"1")==0) && (strcmp(nvram_safe_get(lanN_ifname),"")!=0)) {
 					/*
 					  Configuration for Downstream Interface
-					  Example: 
+					  Example:
 					  phyint br0 downstream ratelimit 0 threshold 1
 					 */
 						fprintf(fp,
@@ -1581,23 +1586,76 @@ void set_tz(void)
 
 void start_ntpc(void)
 {
-	//static char servers[32];
+	char *servers=NULL, *ptr=NULL;
+	int servers_len=0, ntp_updates_int=0;
+	FILE *f=NULL;
 
 	set_tz();
 
 	stop_ntpc();
 
-	if (nvram_match("dnscrypt_proxy", "1"))
+	if (nvram_match("dnscrypt_proxy", "1")) {
 		eval("ntp2ip");
-
-	if (nvram_get_int("ntp_updates") >= 0) {
-		xstart("ntpsync", "--init");
 	}
+
+		/* This is the nvram var defining how the server should be run / how often to sync */
+	ntp_updates_int = nvram_get_int("ntp_updates");
+
+		/* Both a sanity check, and also to transition old nvram values to equivalent updated value */
+	if (ntp_updates_int > 1) {
+		nvram_set("ntp_updates", "1");
+		ntp_updates_int = 1;
+	}
+
+
+		/* The Tomato GUI allows the User to select an NTP Server region, and then string concats 1. 2. and 3. as prefix */
+		/* Therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to */
+		/* ntpd as separate parameters.  This code should continue to work if GUI is changed to only store 1 value in the NVRAM var */
+
+	if (ntp_updates_int >= 0) {
+		servers_len = strlen(nvram_safe_get("ntp_server"));
+
+								/* Allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
+		if ((servers = malloc(servers_len+1)) == NULL) {
+			return;				/* Just get out if we couldn't allocate memory */
+		}
+		memset(servers, 0, sizeof(servers));
+
+				/* Get the space separated list of ntp servers */
+		strcpy(servers, nvram_safe_get("ntp_server"));
+
+				/* Put the servers into the ntp config file */
+		if ((f = fopen("/etc/ntp.conf", "w")) != NULL) {
+			ptr = strtok(servers, " ");
+			while(ptr) {
+				fprintf(f, "server %s\n", ptr);
+				ptr = strtok(NULL, " ");
+			}
+		}
+		ptr=NULL;
+		fclose(f);
+	}
+
+				/* ntpd will be run based on user setting */
+	if (ntp_updates_int < 0) {
+		/* Do Nothing - User disabled updates */
+	}
+	else if (ntp_updates_int == 0) {	/* Only at startup */
+		xstart("ntpd", "-q");
+	}
+	else {		/* Auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
+		xstart("ntpd", "-l");
+	}
+
+		/*** Clean up ***/
+	free(servers);
+	servers=NULL;
 }
 
 void stop_ntpc(void)
 {
-	killall("ntpsync", SIGTERM);
+	killall("ntpd", SIGTERM);
+	sleep(1);
 }
 
 // -----------------------------------------------------------------------------
@@ -1766,17 +1824,17 @@ static void start_ftpd(void)
 		{
 			if (nvram_match("ftp_dirlist", "0"))
 				fprintf(f, "dirlist_enable=yes\n");
-			if (nvram_match("ftp_anonymous", "1") || 
+			if (nvram_match("ftp_anonymous", "1") ||
 			    nvram_match("ftp_anonymous", "3"))
 				fprintf(f, "write_enable=yes\n");
-			if (nvram_match("ftp_anonymous", "1") || 
+			if (nvram_match("ftp_anonymous", "1") ||
 			    nvram_match("ftp_anonymous", "2"))
 				fprintf(f, "download_enable=yes\n");
 			fclose(f);
 		}
-		if (nvram_match("ftp_anonymous", "1") || 
+		if (nvram_match("ftp_anonymous", "1") ||
 		    nvram_match("ftp_anonymous", "3"))
-			fprintf(fp, 
+			fprintf(fp,
 				"anon_upload_enable=yes\n"
 				"anon_mkdir_write_enable=yes\n"
 				"anon_other_write_enable=yes\n");

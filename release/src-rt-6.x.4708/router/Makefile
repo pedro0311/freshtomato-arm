@@ -93,8 +93,8 @@ obj-y += etc
 obj-y += pppd
 obj-y += rp-pppoe
 obj-y += utils$(BCMEX)
-#obj-y += ntpclient #Asus version
-obj-y += ntpc
+#obj-y += ntpclient
+#obj-y += ntpc
 obj-y += rstats
 obj-y += cstats
 obj-y += udpxy
@@ -1001,7 +1001,7 @@ eapd$(BCMEX)-clean:
 	-@cd eapd$(BCMEX)/linux && make clean
 
 bridge/Makefile:
-	cd bridge && CFLAGS="-Os -g $(EXTRACFLAGS)" \
+	cd bridge && autoreconf -fsi && CFLAGS="-Os -g $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix="" --with-linux-headers=$(LINUXDIR)/include
 
 bridge: bridge/Makefile

@@ -1,4 +1,4 @@
-/* $Id: pcpserver.c,v 1.47 2018/03/13 10:21:19 nanard Exp $ */
+/* $Id: pcpserver.c,v 1.48 2018/05/08 21:28:28 nanard Exp $ */
 /* MiniUPnP project
  * Website : http://miniupnp.free.fr/
  * Author : Peter Tatrai
@@ -1637,9 +1637,9 @@ int OpenAndConfPCPv6Socket(void)
 #endif /*ENABLE_IPV6*/
 
 #ifdef ENABLE_IPV6
-static void PCPSendUnsolicitedAnnounce(int * sockets, int n_sockets, int socket6)
+void PCPSendUnsolicitedAnnounce(int * sockets, int n_sockets, int socket6)
 #else /* IPv4 only */
-static void PCPSendUnsolicitedAnnounce(int * sockets, int n_sockets)
+void PCPSendUnsolicitedAnnounce(int * sockets, int n_sockets)
 #endif
 {
 	int i;

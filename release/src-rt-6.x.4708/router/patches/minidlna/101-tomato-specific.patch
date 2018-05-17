@@ -312,12 +312,12 @@
  					DPRINTF(E_DEBUG, L_INOTIFY,  "The directory %s was %s.\n",
  						path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
 -					monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
-+						// Tomato
-+						begin_scan();
-+						sleep(5);
-+						if ( wait_for_mount(path_buf) >= 0 )
-+							monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
-+						end_scan();
++					/* Tomato */
++					begin_scan();
++					sleep(5);
++					if ( wait_for_mount(path_buf) >= 0 )
++						monitor_insert_directory(pollfds[0].fd, esc_name, path_buf);
++					end_scan();
  				}
  				else if ( (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE)) &&
  				          (lstat(path_buf, &st) == 0) )
@@ -335,7 +335,7 @@
  	char name[256];
  };
  
-+// Tomato
++/* Tomato */
 +static int
 +is_external_path(const char * path)
 +{
@@ -372,21 +372,29 @@
  int64_t
  get_next_available_id(const char *table, const char *parentID)
  {
-@@ -907,6 +942,8 @@ start_scanner(void)
+@@ -728,6 +763,9 @@ ScanDirectory(const char *dir, const cha
+ 	static long long unsigned int fileno = 0;
+ 	enum file_types type;
+ 
++	if ( wait_for_mount(dir) < 0 )
++		return;
++
+ 	DPRINTF(parent?E_INFO:E_WARN, L_SCANNER, _("Scanning %s\n"), dir);
+ 	switch( dir_types )
+ 	{
+@@ -907,6 +945,7 @@ start_scanner(void)
  	if( GETFLAG(RESCAN_MASK) )
  		return start_rescan();
  
-+	begin_scan(); // Tomato
-+	//_notify_start();
++	begin_scan();	/* Tomato */
  	for( media_path = media_dirs; media_path != NULL; media_path = media_path->next )
  	{
  		int64_t id;
-@@ -929,6 +966,9 @@ start_scanner(void)
+@@ -929,6 +968,8 @@ start_scanner(void)
  		ScanDirectory(media_path->path, parent, media_path->types);
  		sql_exec(db, "INSERT into SETTINGS values (%Q, %Q)", "media_dir", media_path->path);
  	}
-+	//_notify_stop();
-+	end_scan(); // Tomato
++	end_scan();	/* Tomato */
 +
  	/* Create this index after scanning, so it doesn't slow down the scanning process.
  	 * This index is very useful for large libraries used with an XBox360 (or any
@@ -398,7 +406,7 @@
  start_scanner();
  
 +int
-+wait_for_mount(const char * path);     // Tomato
++wait_for_mount(const char * path);	/* Tomato */
 +
  #endif
 --- minidlna/tagutils/tagutils.c	2017-08-24 14:28:25.000000000 -0300
@@ -504,14 +512,14 @@
 +	uint64_t ditickDataSize = 0;
 +	uint64_t manfckDataSize = 0;
 +
-+	//DPRINTF(E_DEBUG,L_SCANNER,"Getting DFF fileinfo =%s\n",file);    
-+	
++	//DPRINTF(E_DEBUG,L_SCANNER,"Getting DFF fileinfo =%s\n",file);
++
 +	if((fp = fopen(file, "rb")) == NULL)
 +	{
 +		DPRINTF(E_WARN, L_SCANNER, "Could not create file handle\n");
 +		return -1;
 +	}
-+		
++
 +	len = 32;
 +	//Form DSD chunk
 +	if(!(rt = fread(hdr, len, 1,fp)))
@@ -520,16 +528,16 @@
 +		fclose(fp);
 + 		return -1;
 +	}
-+	
++
 +	if(strncmp((char*)hdr, "FRM8", 4))
 +	{
 +		DPRINTF(E_WARN, L_SCANNER, "Invalid Form DSD chunk in %s\n", file);
 +		fclose(fp);
 +		return -1;
 +	}
-+        
++
 +	totalsize = GET_DFF_INT64(hdr + 4) ;
-+       
++
 +	if(strncmp((char*)hdr+12, "DSD ", 4))
 +	{
 +		DPRINTF(E_WARN, L_SCANNER, "Invalid Form DSD chunk in %s\n", file);
@@ -548,7 +556,7 @@
 +	totalsize -= 16;
 +	while(totalcount < totalsize - 4)
 +	{
-+	
++
 +		if(!(rt = fread(ckbuf, sizeof(ckbuf), 1,fp)))
 +		{
 +			//DPRINTF(E_WARN, L_SCANNER, "Could not read chunk header from %s\n", file);
@@ -556,12 +564,12 @@
 + 			//return -1;
 +			break;
 +		}
-+	
++
 +		//Property chunk
 +		if(strncmp((char*)ckbuf, "PROP", 4) == 0)
 + 		{
 +
-+			
++
 +			propckDataSize = GET_DFF_INT64(ckbuf + 4);
 +			totalcount += propckDataSize + 12;
 +
@@ -573,7 +581,7 @@
 +				fclose(fp);
 +				return -1;
 +			}
-+				
++
 +			if(strncmp((char*)propckData, "SND ", 4))
 + 			{
 + 				DPRINTF(E_WARN, L_SCANNER, "Invalid Property chunk in %s\n", file);
@@ -581,7 +589,7 @@
 + 				return -1;
 + 			}
 +
-+			count += 4;	
++			count += 4;
 +			while(count < propckDataSize)
 +			{
 +				if(strncmp((char*)propckData+count, "FS  ", 4) == 0)
@@ -591,7 +599,7 @@
 +					samplerate = GET_DFF_INT32(propckData+count);
 +					psong->samplerate = samplerate;
 +					count += 4;
-+					
++
 +					//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "Sample Rate is %d\n", psong->samplerate);
 +				}else if(strncmp((char*)propckData+count, "CHNL", 4) == 0)
 +				{
@@ -600,7 +608,7 @@
 +					channels = GET_DFF_INT16(propckData+count);
 +					psong->channels = channels;
 +					count += channels * 4 + 2;
-+					
++
 +					//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "channels is %d\n", channels);
 +				}else if(strncmp((char*)propckData+count, "CMPR", 4) == 0)
 +				{
@@ -610,21 +618,21 @@
 +					count += 8;
 +					strncpy((char*)compressionType,(char*)propckData+count,4);
 +					count += cmprckDataSize;
-+					
++
 +				}else if(strncmp((char*)propckData+count, "ABSS", 4) == 0)
 +				{
 +					//Absolute Start Time Chunk
 +					count += 4;
 +					abssckDataSize = GET_DFF_INT64(propckData+count);
 +					count += abssckDataSize + 8;
-+					
++
 +				}else if(strncmp((char*)propckData+count, "LSCO", 4) == 0)
 +				{
 +					//Loudsperaker Configuration Chunk
 +					count += 4;
 +					lscockDataSize = GET_DFF_INT64(propckData+count);
 +					count += lscockDataSize + 8;
-+					
++
 +				}else{
 +					break;
 +				}
@@ -641,7 +649,7 @@
 +				fclose(fp);
 +				return -1;
 +			}
-+	
++
 +			if(strncmp((char*)compressionType,(char*)dsdsdckData , 4))
 +			{
 +				DPRINTF(E_WARN, L_SCANNER, "Invalid DSD/DST Sound Data chunk in %s\n", file);
@@ -655,17 +663,17 @@
 +				dsdsdckDataSize = GET_DFF_INT64(dsdsdckData+4);
 +				totalcount += dsdsdckDataSize + 12;
 +				psong->song_length = (int)((double)dsdsdckDataSize / (double)samplerate / (double)channels * 8 * 1000);
-+				
++
 +				//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "songlength is %d\n", psong->song_length);
-+				
++
 +				fseeko(fp, dsdsdckDataSize,SEEK_CUR);
 +			}else if(strncmp((char*)dsdsdckData,"DST " , 4) == 0)
 +			{
 +				//DST
 +				dsdsdckDataSize = GET_DFF_INT64(dsdsdckData+4);
 +				totalcount += dsdsdckDataSize + 12;
-+	
-+				//DST Frame Information chunk	
++
++				//DST Frame Information chunk
 +				if(!(rt = fread(frteckData, 18, 1,fp)))
 +				{
 +					DPRINTF(E_WARN, L_SCANNER, "Could not read DST Frame Information chunk from %s\n", file);
@@ -680,7 +688,7 @@
 +					frameRate = GET_DFF_INT16((char*)frteckData+16);
 +
 +					psong->song_length = numFrames / frameRate * 1000;
-+	
++
 +					fseeko(fp, dsdsdckDataSize-18,SEEK_CUR); 
 +				}else
 +				{
@@ -732,7 +740,7 @@
 +			diinckDataSize = GET_DFF_INT64(ckbuf+4);
 +			unsigned char diinckData[diinckDataSize];
 +			totalcount += diinckDataSize + 12;
-+			
++
 +			if(!(rt = fread(diinckData, diinckDataSize, 1,fp)))
 +			{
 +				DPRINTF(E_WARN, L_SCANNER, "Could not read Edited Master Information chunk from %s\n", file);
@@ -746,13 +754,13 @@
 +				if(!strncmp((char*)diinckData+icount ,"EMID", 4))
 +				{
 +					//Edited Master ID chunk
-+					icount += 4;	
++					icount += 4;
 +					icount += GET_DFF_INT64(diinckData+icount) + 8;
 +
 +				}else if(!strncmp((char*)diinckData+icount ,"MARK", 4))
 +				{
 +					//Master Chunk
-+					icount += 4;	
++					icount += 4;
 +					icount += GET_DFF_INT64(diinckData+icount) + 8;
 +
 +				}else if(!strncmp((char*)diinckData+icount ,"DIAR", 4))
@@ -761,29 +769,29 @@
 +					icount += 4;
 +					diarckDataSize = GET_DFF_INT64(diinckData+icount);
 +					unsigned char arttext[diarckDataSize +1 - 4];
-+					
-+					icount += 12;	
-+					
-+					memset(arttext,0x00,sizeof(arttext));	
++
++					icount += 12;
++
++					memset(arttext,0x00,sizeof(arttext));
 +					strncpy((char*)arttext,(char*)diinckData+icount,sizeof(arttext)-1);
 +					psong->contributor[ROLE_ARTIST] = strdup((char*)&arttext[0]);
 +
 +					icount += diarckDataSize - 4;
-+					
++
 +				}else if(!strncmp((char*)diinckData+icount ,"DITI", 4))
 +				{
 +					//Title Chunk
 +					icount += 4;
 +					ditickDataSize = GET_DFF_INT64(diinckData+icount);
 +					unsigned char titletext[ditickDataSize+1 - 4];
-+					
++
 +					icount += 12;
-+					
-+					memset(titletext,0x00,sizeof(titletext));	
++
++					memset(titletext,0x00,sizeof(titletext));
 +					strncpy((char*)titletext,(char*)diinckData+icount,sizeof(titletext)-1);
 +					psong->title =  strdup((char*)&titletext[0]);
 +					icount += ditickDataSize - 4;
-+					
++
 +				}else
 +				{
 +					break;
@@ -798,7 +806,7 @@
 +
 +		}
 +	}
-+	
++
 +	fclose(fp);
 +
 +	//DPRINTF(E_DEBUG, L_SCANNER, "totalsize is 0x%016lx\n", (long unsigned int)totalsize);
@@ -813,7 +821,7 @@
 +	//DPRINTF(E_DEBUG, L_SCANNER, "diarckDataSize is 0x%016lx\n", (long unsigned int)diarckDataSize);
 +	//DPRINTF(E_DEBUG, L_SCANNER, "ditickDataSize is 0x%016lx\n", (long unsigned int)ditickDataSize);
 +	//DPRINTF(E_DEBUG, L_SCANNER, "manfckDataSize is 0x%016lx\n", (long unsigned int)manfckDataSize);
-+	
++
 +
 +	//DPRINTF(E_DEBUG, L_SCANNER, "Got dff fileinfo successfully=%s\n", file);
 +	//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "TITLE is %s\n",psong->title );
@@ -890,7 +898,7 @@
 +			  (((uint8_t)((p)[2])) << 16) |   \
 +			  (((uint8_t)((p)[1])) << 8) |	   \
 +			  (((uint8_t)((p)[0]))))
-+			
++
 +static int
 +_get_dsftags(char *file, struct song_metadata *psong)
 +{
@@ -908,7 +916,7 @@
 +	int got_numeric_genre;
 +	id3_byte_t const *image;
 +	id3_length_t image_size = 0;
-+	
++
 +	FILE *fp;
 +	struct id3header *pid3;
 +	uint32_t len;
@@ -943,7 +951,7 @@
 +
 +	total_size = GET_DSF_INT64(hdr + 12);
 +	pointer_to_metadata_chunk = GET_DSF_INT64(hdr + 20);
-+	
++
 +	//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "%llu\n", total_size);
 +	//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "%llu\n", pointer_to_metadata_chunk);
 +	//DEBUG DPRINTF(E_DEBUG, L_SCANNER, "%llu\n", metadata_chunk_size);
@@ -984,7 +992,7 @@
 +		return -1;
 +	}
 +	memset(id3tagbuf, 0,sizeof(unsigned char)*metadata_chunk_size);
-+	
++
 +	if(!(len = fread(id3tagbuf,metadata_chunk_size,1,fp)))
 +	{
 +		fclose(fp);
@@ -992,9 +1000,9 @@
 +		DPRINTF(E_WARN, L_SCANNER, "Could not read Metadata Chunk from %s\n", file);
 +		return -1;
 +	}
-+	
++
 +	pid3tag = id3_tag_parse(id3tagbuf,metadata_chunk_size);
-+	
++
 +	if(!pid3tag)
 +	{
 +		free(id3tagbuf);
@@ -1016,7 +1024,7 @@
 +		psong->tagversion = strdup(tagversion);
 +	}
 +	pid3 = NULL;
-+	
++
 +	index = 0;
 +	while((pid3frame = id3_tag_findframe(pid3tag, "", index)))
 +	{

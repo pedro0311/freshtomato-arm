@@ -1087,12 +1087,6 @@ void close_and_go(void)
 		finish();
 }
 
-/* Another placeholder for function mapping. */
-void do_cancel(void)
-{
-	;
-}
-
 /* Make a note that reading from stdin was concluded with ^C. */
 RETSIGTYPE make_a_note(int signal)
 {
@@ -1105,7 +1099,7 @@ bool scoop_stdin(void)
 	struct sigaction oldaction, newaction;
 		/* Original and temporary handlers for SIGINT. */
 	bool setup_failed = FALSE;
-		/* Whether setting up the SIGINT handler failed. */
+		/* Whether setting up the temporary SIGINT handler failed. */
 	FILE *stream;
 	int thetty;
 
@@ -1124,12 +1118,12 @@ bool scoop_stdin(void)
 	/* Set things up so that SIGINT will cancel the reading. */
 	if (sigaction(SIGINT, NULL, &newaction) == -1) {
 		setup_failed = TRUE;
-		nperror("sigaction");
+		perror("sigaction");
 	} else {
 		newaction.sa_handler = make_a_note;
 		if (sigaction(SIGINT, &newaction, &oldaction) == -1) {
 			setup_failed = TRUE;
-			nperror("sigaction");
+			perror("sigaction");
 		}
 	}
 
@@ -1162,7 +1156,7 @@ bool scoop_stdin(void)
 
 	/* If it was changed, restore the handler for SIGINT. */
 	if (!setup_failed && sigaction(SIGINT, &oldaction, NULL) == -1)
-		nperror("sigaction");
+		perror("sigaction");
 
 	terminal_init();
 	doupdate();
@@ -1401,12 +1395,6 @@ void do_toggle(int flag)
 	statusline(HUSH, "%s %s", _(flagtostr(flag)),
 						enabled ? _("enabled") : _("disabled"));
 }
-
-/* Bleh. */
-void do_toggle_void(void)
-{
-	;
-}
 #endif /* !NANO_TINY */
 
 /* Disable extended input and output processing in our terminal
@@ -1499,7 +1487,6 @@ void terminal_init(void)
 
 	if (!newterm_set) {
 #endif
-
 		raw();
 		nonl();
 		noecho();
