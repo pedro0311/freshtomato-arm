@@ -1,0 +1,46 @@
+--- miniupnpd/Makefile.linux	2018-04-06 12:53:32.000000000 +0200
++++ miniupnpd/Makefile.linux	2018-05-17 18:11:30.504486000 +0200
+@@ -25,7 +25,7 @@
+ CFLAGS ?= -Os
+ CFLAGS += -fno-strict-aliasing
+ CFLAGS += -fno-common
+-CPPFLAGS += -D_GNU_SOURCE
++CFLAGS += -D_GNU_SOURCE
+ CFLAGS += -Wall
+ CFLAGS += -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
+ #CFLAGS += -Wno-missing-field-initializers
+@@ -37,6 +37,8 @@ STRIP ?= strip
+ PKG_CONFIG ?= pkg-config
+ CP = cp
+ 
++# for Tomato ARM (router/shared)
++CFLAGS += -I$(TOP)/shared
+ 
+ INSTALLPREFIX ?= $(PREFIX)/usr
+ SBININSTALLDIR = $(INSTALLPREFIX)/sbin
+@@ -106,7 +108,13 @@ TEST := $(shell [ $(IPTVER1) -gt 1 ] ||
+ ifeq ($(TEST), 1)
+ CPPFLAGS := $(CPPFLAGS) -DIPTABLES_143
+ # the following sucks, but works
++# for Tomato ARM - check IPv6 support
++ifeq ($(TCONFIG_IPV6),y)
+ LDLIBS = $(IPTABLESPATH)/libiptc/.libs/libip4tc.o
++LDLIBS += $(IPTABLESPATH)/libiptc/.libs/libip6tc.o
++else # ($(TCONFIG_IPV6),y)
++LDLIBS = $(IPTABLESPATH)/libiptc/.libs/libip4tc.o
++endif # ($(TCONFIG_IPV6),y)
+ #LDLIBS = $(IPTABLESPATH)/libiptc/.libs/libiptc.a
+ else # ifeq ($(TEST), 1)
+ LDLIBS = $(IPTABLESPATH)/libiptc/libiptc.a
+
+--- miniupnpd/getifaddr.c	2015-07-15 18:14:01.000000000 +0200
++++ miniupnpd/getifaddr.c	2018-05-17 18:11:30.504486000 +0200
+@@ -23,6 +23,8 @@
+ #include "getifaddr.h"
+ #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
+ #include <ifaddrs.h>
++/* for Tomato ARM - Add getifaddr support to Tomato ARM builds (missing) */
++#include "ifaddrs.c"
+ #endif
+ 
+ int
