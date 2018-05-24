@@ -388,7 +388,7 @@ mtd1: 007d0000 00010000 "linux"
 	FILE *f;
 	char s[512];
 	unsigned int size;
-	char partname[16];
+	char partname[17];
 	int found = 0;
 
 	if ((f = fopen("/proc/mtd", "r")) != NULL) {
