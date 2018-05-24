@@ -910,6 +910,7 @@ poolparam:
 			if ((pool->name = strdup($1)) == NULL) {
 				yywarn("can't allocate memory");
 				free($1);
+				free(pool);
 				return (-1);
 			}
 			free($1);
@@ -935,6 +936,7 @@ poolparam:
 			if ((pool->name = strdup($1)) == NULL) {
 				yywarn("can't allocate memory");
 				free($1);
+				free(pool);
 				return (-1);
 			}
 			free($1);
