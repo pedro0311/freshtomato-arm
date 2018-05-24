@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 1998 and 1999 WIDE Project.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -14,7 +14,7 @@
  * 3. Neither the name of the project nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -745,7 +745,7 @@ getifaddr(addr, ifnam, prefix, plen, strong, ignoreflags)
 		memcpy(addr, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
 #ifdef __KAME__
 		if (IN6_IS_ADDR_LINKLOCAL(addr))
-			addr->s6_addr[2] = addr->s6_addr[3] = 0; 
+			addr->s6_addr[2] = addr->s6_addr[3] = 0;
 #endif
 		error = 0;
 		break;
@@ -800,7 +800,7 @@ in6_addrscopebyif(addr, ifnam)
 	struct in6_addr *addr;
 	char *ifnam;
 {
-	u_int ifindex; 
+	u_int ifindex;
 
 	if ((ifindex = if_nametoindex(ifnam)) == 0)
 		return (-1);
@@ -1245,7 +1245,7 @@ gethwid(buf, len, ifname, hwtypep)
 #ifdef __linux__
 	struct sockaddr_ll *sll;
 #endif
-	ssize_t l;
+	ssize_t l=0;
 
 #ifdef __sun__
 	if (ifname == NULL) {
@@ -2031,7 +2031,7 @@ copyin_option(type, p, ep, list)
 
 			if (dhcp6_find_listval(list, DHCP6_LISTVAL_PREFIX6,
 			    &iapd_prefix, 0)) {
-				dprintf(LOG_INFO, FNAME, 
+				dprintf(LOG_INFO, FNAME,
 				    "duplicated IA_PD prefix "
 				    "%s/%d pltime=%lu vltime=%lu",
 				    in6addr2str(&iapd_prefix.addr, 0),
@@ -2081,7 +2081,7 @@ copyin_option(type, p, ep, list)
 
 			if (dhcp6_find_listval(list,
 			    DHCP6_LISTVAL_STATEFULADDR6, &ia_addr, 0)) {
-				dprintf(LOG_INFO, FNAME, 
+				dprintf(LOG_INFO, FNAME,
 				    "duplicated IA_NA address"
 				    "%s pltime=%lu vltime=%lu",
 				    in6addr2str(&ia_addr.addr, 0),
@@ -2554,7 +2554,7 @@ dhcp6_set_options(type, optbp, optep, optinfo)
 				dprintf(LOG_DEBUG, FNAME,
 				    "key ID %x, offset %d",
 				    optinfo->delayedauth_keyid,
-				    optinfo->delayedauth_offset); 
+				    optinfo->delayedauth_offset);
 				break;
 #ifdef notyet
 			case DHCP6_AUTHPROTO_RECONFIG:
@@ -3232,6 +3232,7 @@ my_dprintf(int level, const char *fname, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	vsnprintf(logbuf, sizeof(logbuf), fmt, ap);
+	va_end(ap);
 
 	if (*fname == '\0')
 		printfname = 0;
@@ -3330,8 +3331,8 @@ ifaddrconf(cmd, ifname, addr, plen, pltime, vltime)
 	if (ioctl(s, SIOGIFINDEX, &ifr) < 0) {
 		dprintf(LOG_NOTICE, FNAME, "failed to get the index of %s: %s",
 		    ifname, strerror(errno));
-		close(s); 
-		return (-1); 
+		close(s);
+		return (-1);
 	}
 	memcpy(&req.ifr6_addr, &addr->sin6_addr, sizeof(struct in6_addr));
 	req.ifr6_prefixlen = plen;
