@@ -429,7 +429,10 @@ void asp_ctrate(int argc, char **argv)
 	thres = atoi(argv[1]) * delay;
 
 	if ((a = fopen(name, "r")) == NULL) return;
-	if ((b = tmpfile()) == NULL) return;
+	if ((b = tmpfile()) == NULL) {
+		fclose(a);
+		return;
+	}
 
 	size_t count;
 	char *buffer;
