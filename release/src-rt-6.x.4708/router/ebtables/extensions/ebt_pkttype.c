@@ -27,7 +27,7 @@ char *classes[] =
 	"\0"
 };
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "pkttype-type"        , required_argument, 0, '1' },
 	{ 0 }

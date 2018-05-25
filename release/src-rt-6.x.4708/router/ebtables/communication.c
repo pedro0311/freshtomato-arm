@@ -282,7 +282,7 @@ static int store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 	}
 close_file:
 	fclose(file);
-	return 0;
+	return ret;
 }
 
 /* Gets executed after ebt_deliver_table. Delivers the counters to the kernel

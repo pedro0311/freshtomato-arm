@@ -25,7 +25,7 @@
 #define VLAN_PRIO  '2'
 #define VLAN_ENCAP '3'
 
-static struct option opts[] = {
+static const struct option opts[] = {
 	{"vlan-id"   , required_argument, NULL, VLAN_ID},
 	{"vlan-prio" , required_argument, NULL, VLAN_PRIO},
 	{"vlan-encap", required_argument, NULL, VLAN_ENCAP},

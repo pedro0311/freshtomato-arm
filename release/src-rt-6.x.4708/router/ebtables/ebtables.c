@@ -528,12 +528,6 @@ void ebt_early_init_once()
 	ebt_iterate_targets(merge_target);
 }
 
-/* signal handler, installed when the option --concurrent is specified. */
-static void sighandler(int signum)
-{
-	exit(-1);
-}
-
 /* We use exec_style instead of #ifdef's because ebtables.so is a shared object. */
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_)
@@ -1047,8 +1041,6 @@ big_iface_length:
 			strcpy(replace->filename, optarg);
 			break;
 		case 13 : /* concurrent */
-			signal(SIGINT, sighandler);
-			signal(SIGTERM, sighandler);
 			use_lockfd = 1;
 			break;
 		case 1 :

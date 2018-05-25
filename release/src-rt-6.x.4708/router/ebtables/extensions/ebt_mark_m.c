@@ -15,7 +15,7 @@
 
 #define MARK '1'
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "mark", required_argument, 0, MARK },
 	{ 0 }

@@ -27,7 +27,7 @@
 #define STP_FWDD	'l'
 #define STP_NUMOPS 12
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "stp-type"         , required_argument, 0, STP_TYPE},
 	{ "stp-flags"        , required_argument, 0, STP_FLAGS},
