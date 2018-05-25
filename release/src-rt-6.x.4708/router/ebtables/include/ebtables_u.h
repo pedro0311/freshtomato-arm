@@ -24,7 +24,8 @@
 #ifndef EBTABLES_U_H
 #define EBTABLES_U_H
 #include <netinet/in.h>
-#include <linux/netfilter_bridge/ebtables.h>
+#include <netinet/ether.h>
+#include "ebtables.h"
 #include <linux/netfilter/x_tables.h>
 
 #ifndef IPPROTO_SCTP
@@ -144,6 +145,7 @@ struct ebt_u_entry
 struct ebt_u_match
 {
 	char name[EBT_FUNCTION_MAXNAMELEN];
+	uint8_t revision;
 	/* size of the real match data */
 	unsigned int size;
 	void (*help)(void);
@@ -221,6 +223,15 @@ struct ebt_u_target
 	unsigned int used;
 	struct ebt_u_target *next;
 };
+
+
+struct ebt_icmp_names {
+	const char *name;
+	uint8_t type;
+	uint8_t code_min, code_max;
+};
+
+
 
 /* libebtc.c */
 
@@ -300,10 +311,17 @@ void ebt_print_mac_and_mask(const unsigned char *mac, const unsigned char *mask)
 int ebt_get_mac_and_mask(const char *from, unsigned char *to, unsigned char *mask);
 void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 char *ebt_mask_to_dotted(uint32_t mask);
-void ebt_parse_ip6_address(char *address, struct in6_addr *addr, 
+void ebt_parse_ip6_address(char *address, struct in6_addr *addr,
 						   struct in6_addr *msk);
 char *ebt_ip6_to_numeric(const struct in6_addr *addrp);
+char *ebt_ip6_mask_to_string(const struct in6_addr *msk);
 
+int ebt_parse_icmp(const struct ebt_icmp_names *icmp_codes, size_t n_codes,
+		   const char *icmptype, uint8_t type[], uint8_t code[]);
+void ebt_print_icmp_type(const struct ebt_icmp_names *icmp_codes,
+			 size_t n_codes, uint8_t *type, uint8_t *code);
+void ebt_print_icmp_types(const struct ebt_icmp_names *icmp_codes,
+			  size_t n_codes);
 
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_);
@@ -320,6 +338,8 @@ _ch;})
 #define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
 #define ebt_print_error2(format, args...) do {__ebt_print_error(format, ##args); \
    return -1;} while (0)
+#define ebt_print_error3(format, args...) do {__ebt_print_error(format, ##args); \
+   return;} while (0)
 #define ebt_check_option2(flags,mask)	\
 ({ebt_check_option(flags,mask);		\
  if (ebt_errormsg[0] != '\0')		\

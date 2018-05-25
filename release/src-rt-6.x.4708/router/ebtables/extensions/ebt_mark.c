@@ -20,7 +20,7 @@ static int mark_supplied;
 #define MARK_ORMARK  '3'
 #define MARK_ANDMARK '4'
 #define MARK_XORMARK '5'
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "mark-target" , required_argument, 0, MARK_TARGET },
 	/* an oldtime messup, we should have always used the scheme

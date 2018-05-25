@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "December 2011"
+.TH EBTABLES 8  "$(DATE)"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -24,7 +24,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v2.0.10-4) \- Ethernet bridge frame table administration
+ebtables (v$(VERSION)) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
 .BR "ebtables " [ -t " table ] " - [ ACDI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
@@ -810,6 +810,26 @@ The hello time timer (0-65535) range.
 .TP
 .BR "--stp-forward-delay " "[!] [\fIdelay\fP][:\fIdelay\fP]"
 The forward delay timer (0-65535) range.
+.SS string
+This module matches on a given string using some pattern matching strategy.
+.TP
+.BR "--string-algo " "\fIalgorithm\fP"
+The pattern matching strategy. (bm = Boyer-Moore, kmp = Knuth-Pratt-Morris)
+.TP
+.BR "--string-from " "\fIoffset\fP"
+The lowest offset from which a match can start. (default: 0)
+.TP
+.BR "--string-to " "\fIoffset\fP"
+The highest offset from which a match can start. (default: size of frame)
+.TP
+.BR "--string " "[!] \fIpattern\fP"
+Matches the given pattern.
+.TP
+.BR "--string-hex " "[!] \fIpattern\fP"
+Matches the given pattern in hex notation, e.g. '|0D 0A|', '|0D0A|', 'www|09|netfilter|03|org|00|'
+.TP
+.BR "--string-icase"
+Ignore case when searching.
 .SS vlan
 Specify 802.1Q Tag Control Information fields.
 The protocol must be specified as
@@ -1103,7 +1123,7 @@ arp message and the hardware address length in the arp header is 6 bytes.
 .br
 .SH FILES
 .I /etc/ethertypes
-.I /var/lib/ebtables/lock
+.I $(LOCKFILE)
 .SH ENVIRONMENT VARIABLES
 .I EBTABLES_ATOMIC_FILE
 .SH MAILINGLISTS

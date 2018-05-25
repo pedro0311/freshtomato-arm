@@ -10,7 +10,6 @@
  *  Copyright (C) 1999 Paul `Rusty' Russell & Michael J. Neuling
  */
 
-/* Local copy of the kernel file, needed for Sparc64 support */
 #ifndef __LINUX_BRIDGE_EFF_H
 #define __LINUX_BRIDGE_EFF_H
 #include <linux/if.h>
@@ -32,14 +31,15 @@
  * The 4 lsb are more than enough to store the verdict. */
 #define EBT_VERDICT_BITS 0x0000000F
 
-struct ebt_counter
-{
+struct xt_match;
+struct xt_target;
+
+struct ebt_counter {
 	uint64_t pcnt;
 	uint64_t bcnt;
 };
 
-struct ebt_replace
-{
+struct ebt_replace {
 	char name[EBT_TABLE_MAXNAMELEN];
 	unsigned int valid_hooks;
 	/* nr of rules in the table */
@@ -47,21 +47,28 @@ struct ebt_replace
 	/* total size of the entries */
 	unsigned int entries_size;
 	/* start of the chains */
-#ifdef KERNEL_64_USERSPACE_32
-	uint64_t hook_entry[NF_BR_NUMHOOKS];
-#else
 	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
-#endif
 	/* nr of counters userspace expects back */
 	unsigned int num_counters;
 	/* where the kernel will put the old counters */
-#ifdef KERNEL_64_USERSPACE_32
-	uint64_t counters;
-	uint64_t entries;
-#else
 	struct ebt_counter *counters;
 	char *entries;
-#endif
+};
+
+struct ebt_replace_kernel {
+	char name[EBT_TABLE_MAXNAMELEN];
+	unsigned int valid_hooks;
+	/* nr of rules in the table */
+	unsigned int nentries;
+	/* total size of the entries */
+	unsigned int entries_size;
+	/* start of the chains */
+	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
+	/* nr of counters userspace expects back */
+	unsigned int num_counters;
+	/* where the kernel will put the old counters */
+	struct ebt_counter *counters;
+	char *entries;
 };
 
 struct ebt_entries {
@@ -85,7 +92,7 @@ struct ebt_entries {
 
 /* This is a hack to make a difference between an ebt_entry struct and an
  * ebt_entries struct when traversing the entries from start to end.
- * Using this simplifies the code alot, while still being able to use
+ * Using this simplifies the code a lot, while still being able to use
  * ebt_entries.
  * Contrary, iptables doesn't use something like ebt_entries and therefore uses
  * different techniques for naming the policy and such. So, iptables doesn't
@@ -110,56 +117,40 @@ struct ebt_entries {
 #define EBT_INV_MASK (EBT_IPROTO | EBT_IIN | EBT_IOUT | EBT_ILOGICALIN \
    | EBT_ILOGICALOUT | EBT_ISOURCE | EBT_IDEST)
 
-struct ebt_entry_match
-{
+struct ebt_entry_match {
 	union {
 		char name[EBT_FUNCTION_MAXNAMELEN];
-		struct ebt_match *match;
+		struct xt_match *match;
 	} u;
 	/* size of data */
 	unsigned int match_size;
-#ifdef KERNEL_64_USERSPACE_32
-	unsigned int pad;
-#endif
 	unsigned char data[0] __attribute__ ((aligned (__alignof__(struct ebt_replace))));
 };
 
-struct ebt_entry_watcher
-{
+struct ebt_entry_watcher {
 	union {
 		char name[EBT_FUNCTION_MAXNAMELEN];
-		struct ebt_watcher *watcher;
+		struct xt_target *watcher;
 	} u;
 	/* size of data */
 	unsigned int watcher_size;
-#ifdef KERNEL_64_USERSPACE_32
-	unsigned int pad;
-#endif
 	unsigned char data[0] __attribute__ ((aligned (__alignof__(struct ebt_replace))));
 };
 
-struct ebt_entry_target
-{
+struct ebt_entry_target {
 	union {
 		char name[EBT_FUNCTION_MAXNAMELEN];
-		struct ebt_target *target;
+		struct xt_target *target;
 	} u;
 	/* size of data */
 	unsigned int target_size;
-#ifdef KERNEL_64_USERSPACE_32
-	unsigned int pad;
-#endif
 	unsigned char data[0] __attribute__ ((aligned (__alignof__(struct ebt_replace))));
 };
 
 #define EBT_STANDARD_TARGET "standard"
-struct ebt_standard_target
-{
+struct ebt_standard_target {
 	struct ebt_entry_target target;
 	int verdict;
-#ifdef KERNEL_64_USERSPACE_32
-	unsigned int pad;
-#endif
 };
 
 /* one entry */
@@ -167,7 +158,7 @@ struct ebt_entry {
 	/* this needs to be the first field */
 	unsigned int bitmask;
 	unsigned int invflags;
-	uint16_t ethproto;
+	__be16 ethproto;
 	/* the physical in-dev */
 	char in[IFNAMSIZ];
 	/* the logical in-dev */
@@ -201,6 +192,7 @@ struct ebt_entry {
 #define EBT_SO_GET_INIT_INFO    (EBT_SO_GET_ENTRIES+1)
 #define EBT_SO_GET_INIT_ENTRIES (EBT_SO_GET_INIT_INFO+1)
 #define EBT_SO_GET_MAX          (EBT_SO_GET_INIT_ENTRIES+1)
+
 
 /* blatently stolen from ip_tables.h
  * fn returns 0 to continue iteration */

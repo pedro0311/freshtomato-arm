@@ -11,9 +11,6 @@
  *
  */
 
-#include <errno.h>
-#include <inttypes.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,13 +48,7 @@ static const struct option opts[] =
 };
 
 
-struct icmpv6_names {
-	const char *name;
-	u_int8_t type;
-	u_int8_t code_min, code_max;
-};
-
-static const struct icmpv6_names icmpv6_codes[] = {
+static const struct ebt_icmp_names icmpv6_codes[] = {
 	{ "destination-unreachable", 1, 0, 0xFF },
 	{ "no-route", 1, 0, 0 },
 	{ "communication-prohibited", 1, 1, 1 },
@@ -141,155 +132,12 @@ parse_port_range(const char *protocol, const char *portstring, uint16_t *ports)
 	free(buffer);
 }
 
-static char*
-parse_num(const char *str, long min, long max, long *num)
-{
-	char *end;
-
-	errno = 0;
-	*num = strtol(str, &end, 10);
-	if (errno && (*num == LONG_MIN || *num == LONG_MAX)) {
-		ebt_print_error("Invalid number %s: %s", str, strerror(errno));
-		return NULL;
-	}
-	if (min <= max) {
-		if (*num > max || *num < min) {
-			ebt_print_error("Value %ld out of range (%ld, %ld)", *num, min, max);
-			return NULL;
-		}
-	}
-	if (*num == 0 && str == end)
-		return NULL;
-	return end;
-}
-
-static char *
-parse_range(const char *str, long min, long max, long num[])
-{
-	char *next;
-
-	next = parse_num(str, min, max, num);
-	if (next == NULL)
-		return NULL;
-	if (next && *next == ':')
-		next = parse_num(next+1, min, max, &num[1]);
-	else
-		num[1] = num[0];
-	return next;
-}
-
-static int
-parse_icmpv6(const char *icmpv6type, uint8_t type[], uint8_t code[])
-{
-	static const unsigned int limit = ARRAY_SIZE(icmpv6_codes);
-	unsigned int match = limit;
-	unsigned int i;
-	long number[2];
-
-	for (i = 0; i < limit; i++) {
-		if (strncasecmp(icmpv6_codes[i].name, icmpv6type, strlen(icmpv6type)))
-			continue;
-		if (match != limit)
-			ebt_print_error("Ambiguous ICMPv6 type `%s':"
-					" `%s' or `%s'?",
-					icmpv6type, icmpv6_codes[match].name,
-					icmpv6_codes[i].name);
-		match = i;
-	}
-
-	if (match < limit) {
-		type[0] = type[1] = icmpv6_codes[match].type;
-		code[0] = icmpv6_codes[match].code_min;
-		code[1] = icmpv6_codes[match].code_max;
-	} else {
-		char *next = parse_range(icmpv6type, 0, 255, number);
-		if (!next) {
-			ebt_print_error("Unknown ICMPv6 type `%s'",
-							icmpv6type);
-			return -1;
-		}
-		type[0] = (uint8_t) number[0];
-		type[1] = (uint8_t) number[1];
-		switch (*next) {
-		case 0:
-			code[0] = 0;
-			code[1] = 255;
-			return 0;
-		case '/':
-			next = parse_range(next+1, 0, 255, number);
-			code[0] = (uint8_t) number[0];
-			code[1] = (uint8_t) number[1];
-			if (next == NULL)
-				return -1;
-			if (next && *next == 0)
-				return 0;
-		/* fallthrough */
-		default:
-			ebt_print_error("unknown character %c", *next);
-			return -1;
-		}
-	}
-	return 0;
-}
-
 static void print_port_range(uint16_t *ports)
 {
 	if (ports[0] == ports[1])
 		printf("%d ", ports[0]);
 	else
 		printf("%d:%d ", ports[0], ports[1]);
-}
-
-static void print_icmp_code(uint8_t *code)
-{
-	if (code[0] == code[1])
-		printf("/%"PRIu8 " ", code[0]);
-	else
-		printf("/%"PRIu8":%"PRIu8 " ", code[0], code[1]);
-}
-
-static void print_icmp_type(uint8_t *type, uint8_t *code)
-{
-	unsigned int i;
-
-	if (type[0] != type[1]) {
-		printf("%"PRIu8 ":%" PRIu8, type[0], type[1]);
-		print_icmp_code(code);
-		return;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(icmpv6_codes); i++) {
-		if (icmpv6_codes[i].type != type[0])
-			continue;
-
-		if (icmpv6_codes[i].code_min == code[0] &&
-		    icmpv6_codes[i].code_max == code[1]) {
-			printf("%s ", icmpv6_codes[i].name);
-			return;
-		}
-	}
-	printf("%"PRIu8, type[0]);
-	print_icmp_code(code);
-}
-
-static void print_icmpv6types(void)
-{
-	unsigned int i;
-        printf("Valid ICMPv6 Types:");
-
-	for (i=0; i < ARRAY_SIZE(icmpv6_codes); i++) {
-		if (i && icmpv6_codes[i].type == icmpv6_codes[i-1].type) {
-			if (icmpv6_codes[i].code_min == icmpv6_codes[i-1].code_min
-			    && (icmpv6_codes[i].code_max
-			        == icmpv6_codes[i-1].code_max))
-				printf(" (%s)", icmpv6_codes[i].name);
-			else
-				printf("\n   %s", icmpv6_codes[i].name);
-		}
-		else
-			printf("\n%s", icmpv6_codes[i].name);
-	}
-	printf("\n");
 }
 
 static void print_help()
@@ -303,7 +151,9 @@ static void print_help()
 "--ip6-sport  [!] port[:port]   : tcp/udp source port or port range\n"
 "--ip6-dport  [!] port[:port]   : tcp/udp destination port or port range\n"
 "--ip6-icmp-type [!] type[[:type]/code[:code]] : ipv6-icmp type/code or type/code range\n");
-print_icmpv6types();
+
+	printf("\nValid ICMPv6 Types:\n");
+	ebt_print_icmp_types(icmpv6_codes, ARRAY_SIZE(icmpv6_codes));
 }
 
 static void init(struct ebt_entry_match *match)
@@ -312,6 +162,10 @@ static void init(struct ebt_entry_match *match)
 
 	ipinfo->invflags = 0;
 	ipinfo->bitmask = 0;
+	memset(ipinfo->saddr.s6_addr, 0, sizeof(ipinfo->saddr.s6_addr));
+	memset(ipinfo->smsk.s6_addr, 0, sizeof(ipinfo->smsk.s6_addr));
+	memset(ipinfo->daddr.s6_addr, 0, sizeof(ipinfo->daddr.s6_addr));
+	memset(ipinfo->dmsk.s6_addr, 0, sizeof(ipinfo->dmsk.s6_addr));
 }
 
 #define OPT_SOURCE 0x01
@@ -370,7 +224,9 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		ipinfo->bitmask |= EBT_IP6_ICMP6;
 		if (ebt_check_inverse2(optarg))
 			ipinfo->invflags |= EBT_IP6_ICMP6;
-		if (parse_icmpv6(optarg, ipinfo->icmpv6_type, ipinfo->icmpv6_code))
+		if (ebt_parse_icmp(icmpv6_codes, ARRAY_SIZE(icmpv6_codes),
+				   optarg, ipinfo->icmpv6_type,
+				   ipinfo->icmpv6_code))
 			return 0;
 		break;
 
@@ -445,14 +301,14 @@ static void print(const struct ebt_u_entry *entry,
 		if (ipinfo->invflags & EBT_IP6_SOURCE)
 			printf("! ");
 		printf("%s", ebt_ip6_to_numeric(&ipinfo->saddr));
-		printf("/%s ", ebt_ip6_to_numeric(&ipinfo->smsk));
+		printf("%s ", ebt_ip6_mask_to_string(&ipinfo->smsk));
 	}
 	if (ipinfo->bitmask & EBT_IP6_DEST) {
 		printf("--ip6-dst ");
 		if (ipinfo->invflags & EBT_IP6_DEST)
 			printf("! ");
 		printf("%s", ebt_ip6_to_numeric(&ipinfo->daddr));
-		printf("/%s ", ebt_ip6_to_numeric(&ipinfo->dmsk));
+		printf("%s ", ebt_ip6_mask_to_string(&ipinfo->dmsk));
 	}
 	if (ipinfo->bitmask & EBT_IP6_TCLASS) {
 		printf("--ip6-tclass ");
@@ -489,7 +345,8 @@ static void print(const struct ebt_u_entry *entry,
 		printf("--ip6-icmp-type ");
 		if (ipinfo->invflags & EBT_IP6_ICMP6)
 			printf("! ");
-		print_icmp_type(ipinfo->icmpv6_type, ipinfo->icmpv6_code);
+		ebt_print_icmp_type(icmpv6_codes, ARRAY_SIZE(icmpv6_codes),
+				    ipinfo->icmpv6_type, ipinfo->icmpv6_code);
 	}
 }
 

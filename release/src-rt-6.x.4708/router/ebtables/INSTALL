@@ -39,6 +39,8 @@ That's all
 You can also use a base directory different from the root directory (/),
 using the DESTDIR option. See the Makefile for more details.
 
+You might need to set LDFLAGS=-Wl,-no-as-needed to build ebtables correctly
+on your system.
 
 ADDITIONAL PROGRAMS:
 ----------------------

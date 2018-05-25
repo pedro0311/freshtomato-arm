@@ -24,7 +24,7 @@
 #define ARP_MAC_S  '6'
 #define ARP_MAC_D  '7'
 #define ARP_GRAT   '8'
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "arp-opcode"    , required_argument, 0, ARP_OPCODE },
 	{ "arp-op"        , required_argument, 0, ARP_OPCODE },

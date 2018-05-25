@@ -14,7 +14,7 @@
 #include <linux/netfilter_bridge/ebt_redirect.h>
 
 #define REDIRECT_TARGET '1'
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "redirect-target", required_argument, 0, REDIRECT_TARGET },
 	{ 0 }
