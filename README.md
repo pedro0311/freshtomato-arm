@@ -10,13 +10,13 @@ EN: https://www.linksysinfo.org/
 
 This is my personal fork, If anyone wants to pick up my changes and merge them to your repository, feel free and go ahead. That's the reason Tomato is an open-source project.
 
-**Source code**: https://bitbucket.org/kille72/tomato-arm-kille72/commits/all
+**Source code**: https://bitbucket.org/kille72/freshtomato-arm/commits/all
 
 **Downloads**: https://exotic.se/freshtomato-arm/
 
 **About me/Donate**: https://exotic.se
 
-For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880.
+For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880, **Dlink** DIR868L, **Xiaomi** R1D.
 
 Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!
 
@@ -61,7 +61,7 @@ Disclaimer: I am not responsible for any bricked routers, nor do I encourage oth
     sudo apt-get install libelf1:i386 libelf-dev:i386  
 
 10. Clone/download repository:  
-    git clone https://bitbucket.org/kille72/tomato-arm-kille72.git <chosen-subdir>  
+    git clone https://bitbucket.org/kille72/freshtomato-arm.git <chosen-subdir>  
 
 11. Edit profile file:  
     PATH="$PATH:/home/<username>/<chosen-subdir>/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin"  
