@@ -2,11 +2,11 @@
  * NVRAM variable manipulation (Linux user mode half)
  *
  * Copyright (C) 2012, Broadcom Corporation. All Rights Reserved.
- * 
+ *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
@@ -212,8 +212,10 @@ nvram_commit(void)
 
         fp = fopen("/var/log/commit_ret", "w");
 
-	if ((ret = nvram_init(NULL)))
+	if ((ret = nvram_init(NULL))) {
+		fclose(fp);
 		return ret;
+	}
 
 	ret = ioctl(nvram_fd, NVRAM_MAGIC, NULL);
 

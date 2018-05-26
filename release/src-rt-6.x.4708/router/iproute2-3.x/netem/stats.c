@@ -55,6 +55,8 @@ stats(FILE *fp)
 	printf("rho =   %12.6f\n", rho);
 	/*printf("sigma2 = %10.4f\n", sqrt(sigma2/(double)(n-1)));*/
 	/*printf("correlation rho = %10.6f\n", top/((double)(n-1)*sigma*sigma));*/
+
+	free(x);
 }
 
 

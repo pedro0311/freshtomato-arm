@@ -39,9 +39,6 @@
 
 static const rcoption rcopts[] = {
 	{"boldtext", BOLD_TEXT},
-#ifdef ENABLE_LINENUMBERS
-	{"linenumbers", LINE_NUMBERS},
-#endif
 #ifdef ENABLE_JUSTIFY
 	{"brackets", 0},
 #endif
@@ -51,6 +48,9 @@ static const rcoption rcopts[] = {
 #endif
 #ifdef ENABLE_HISTORIES
 	{"historylog", HISTORYLOG},
+#endif
+#ifdef ENABLE_LINENUMBERS
+	{"linenumbers", LINE_NUMBERS},
 #endif
 	{"morespace", MORE_SPACE},
 #ifdef ENABLE_MOUSE
@@ -88,6 +88,7 @@ static const rcoption rcopts[] = {
 	{"tempfile", TEMP_FILE},
 	{"view", VIEW_MODE},
 #ifndef NANO_TINY
+	{"afterends", AFTER_ENDS},
 	{"allow_insecure_backup", INSECURE_BACKUP},
 	{"atblanks", AT_BLANKS},
 	{"autoindent", AUTOINDENT},
@@ -95,9 +96,9 @@ static const rcoption rcopts[] = {
 	{"backupdir", 0},
 	{"backwards", BACKWARDS_SEARCH},
 	{"casesensitive", CASE_SENSITIVE},
-	{"cut", CUT_FROM_CURSOR},  /* deprecated form, remove in 2020 */
+	{"cut", CUT_FROM_CURSOR},  /* deprecated form, remove end of 2018 */
 	{"cutfromcursor", CUT_FROM_CURSOR},
-	{"justifytrim", TRIM_BLANKS},  /* deprecated form, remove in 2020 */
+	{"justifytrim", TRIM_BLANKS},  /* deprecated form, remove end of 2018 */
 	{"locking", LOCKING},
 	{"matchbrackets", 0},
 	{"noconvert", NO_CONVERT},

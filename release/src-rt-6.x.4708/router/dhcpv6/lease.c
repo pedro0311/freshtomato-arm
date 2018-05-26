@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 1998 and 1999 WIDE Project.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -14,7 +14,7 @@
  * 3. Neither the name of the project nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -60,12 +60,12 @@ struct hash_entry {
 };
 
 /* marked as declined (e.g. someone has been using the same address) */
-#define	DHCP6_LEASE_DECLINED	0x01	
+#define	DHCP6_LEASE_DECLINED	0x01
 
 LIST_HEAD(hash_head, hash_entry);
 
 typedef unsigned int (*pfn_hash_t)(void *val) ;
-typedef int (*pfh_hash_match_t)(void *val1, void *val2); 
+typedef int (*pfh_hash_match_t)(void *val1, void *val2);
 
 struct hash_table {
 	struct hash_head *table;
@@ -203,7 +203,7 @@ in6_addr_match(val1, val2)
  */
 static int
 hash_table_init(table, size, hash, match)
-	struct hash_table *table; 
+	struct hash_table *table;
 	unsigned int size;
 	pfn_hash_t hash;
 	pfh_hash_match_t match;
@@ -230,7 +230,7 @@ hash_table_init(table, size, hash, match)
 
 static void
 hash_table_cleanup(table)
-	struct hash_table *table; 
+	struct hash_table *table;
 {
 	int i;
 
@@ -253,7 +253,7 @@ hash_table_cleanup(table)
 
 static int
 hash_table_add(table, val, size)
-	struct hash_table *table; 
+	struct hash_table *table;
 	void *val;
 	unsigned int size;
 {
@@ -270,6 +270,7 @@ hash_table_add(table, val, size)
 	memset(entry, 0, sizeof(*entry));
 
 	if ((entry->val = malloc(size)) == NULL) {
+		free(entry);
 		return (-1);
 	}
 	memcpy(entry->val, val, size);
@@ -282,7 +283,7 @@ hash_table_add(table, val, size)
 
 static int
 hash_table_remove(table, val)
-	struct hash_table *table; 
+	struct hash_table *table;
 	void *val;
 {
 	struct hash_entry *entry;
@@ -305,7 +306,7 @@ hash_table_remove(table, val)
 
 static struct hash_entry *
 hash_table_find(table, val)
-	struct hash_table *table; 
+	struct hash_table *table;
 	void *val;
 {
 	struct hash_entry *entry;

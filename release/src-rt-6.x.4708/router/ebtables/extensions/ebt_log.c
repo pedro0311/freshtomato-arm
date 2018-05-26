@@ -61,7 +61,7 @@ static int name_to_loglevel(char* arg)
 #define LOG_IP     '4'
 #define LOG_LOG    '5'
 #define LOG_IP6    '6'
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "log-prefix", required_argument, 0, LOG_PREFIX },
 	{ "log-level" , required_argument, 0, LOG_LEVEL  },

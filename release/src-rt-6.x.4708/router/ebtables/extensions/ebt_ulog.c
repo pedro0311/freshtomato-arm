@@ -24,7 +24,7 @@
 #define ULOG_CPRANGE    '3'
 #define ULOG_QTHRESHOLD '4'
 #define ULOG_ULOG       '5'
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "ulog-prefix"    , required_argument, 0, ULOG_PREFIX     },
 	{ "ulog-nlgroup"   , required_argument, 0, ULOG_NLGROUP    },

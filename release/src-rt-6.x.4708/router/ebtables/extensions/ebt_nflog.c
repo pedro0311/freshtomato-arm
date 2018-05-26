@@ -25,7 +25,7 @@ enum {
 	NFLOG_NFLOG = 0x16,
 };
 
-static struct option nflog_opts[] = {
+static const struct option nflog_opts[] = {
 	{"nflog-group", required_argument, NULL, NFLOG_GROUP},
 	{"nflog-prefix", required_argument, NULL, NFLOG_PREFIX},
 	{"nflog-range", required_argument, NULL, NFLOG_RANGE},

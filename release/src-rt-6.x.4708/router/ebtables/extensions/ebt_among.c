@@ -26,7 +26,7 @@
 #define AMONG_DST_F '3'
 #define AMONG_SRC_F '4'
 
-static struct option opts[] = {
+static const struct option opts[] = {
 	{"among-dst", required_argument, 0, AMONG_DST},
 	{"among-src", required_argument, 0, AMONG_SRC},
 	{"among-dst-file", required_argument, 0, AMONG_DST_F},

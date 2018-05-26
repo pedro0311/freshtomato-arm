@@ -11,7 +11,7 @@
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{0}
 };

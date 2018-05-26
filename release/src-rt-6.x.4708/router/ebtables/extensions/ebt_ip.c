@@ -16,7 +16,7 @@
 #include <getopt.h>
 #include <netdb.h>
 #include "../include/ebtables_u.h"
-#include <linux/netfilter_bridge/ebt_ip.h>
+#include "../include/linux/netfilter_bridge/ebt_ip.h"
 
 #define IP_SOURCE '1'
 #define IP_DEST   '2'
@@ -24,8 +24,10 @@
 #define IP_PROTO  '4'
 #define IP_SPORT  '5'
 #define IP_DPORT  '6'
+#define IP_ICMP   '7'
+#define IP_IGMP   '8'
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "ip-source"           , required_argument, 0, IP_SOURCE },
 	{ "ip-src"              , required_argument, 0, IP_SOURCE },
@@ -38,7 +40,71 @@ static struct option opts[] =
 	{ "ip-sport"            , required_argument, 0, IP_SPORT  },
 	{ "ip-destination-port" , required_argument, 0, IP_DPORT  },
 	{ "ip-dport"            , required_argument, 0, IP_DPORT  },
+	{ "ip-icmp-type"        , required_argument, 0, IP_ICMP   },
+	{ "ip-igmp-type"        , required_argument, 0, IP_IGMP   },
 	{ 0 }
+};
+
+static const struct ebt_icmp_names icmp_codes[] = {
+	{ "echo-reply", 0, 0, 0xFF },
+	/* Alias */ { "pong", 0, 0, 0xFF },
+
+	{ "destination-unreachable", 3, 0, 0xFF },
+	{   "network-unreachable", 3, 0, 0 },
+	{   "host-unreachable", 3, 1, 1 },
+	{   "protocol-unreachable", 3, 2, 2 },
+	{   "port-unreachable", 3, 3, 3 },
+	{   "fragmentation-needed", 3, 4, 4 },
+	{   "source-route-failed", 3, 5, 5 },
+	{   "network-unknown", 3, 6, 6 },
+	{   "host-unknown", 3, 7, 7 },
+	{   "network-prohibited", 3, 9, 9 },
+	{   "host-prohibited", 3, 10, 10 },
+	{   "TOS-network-unreachable", 3, 11, 11 },
+	{   "TOS-host-unreachable", 3, 12, 12 },
+	{   "communication-prohibited", 3, 13, 13 },
+	{   "host-precedence-violation", 3, 14, 14 },
+	{   "precedence-cutoff", 3, 15, 15 },
+
+	{ "source-quench", 4, 0, 0xFF },
+
+	{ "redirect", 5, 0, 0xFF },
+	{   "network-redirect", 5, 0, 0 },
+	{   "host-redirect", 5, 1, 1 },
+	{   "TOS-network-redirect", 5, 2, 2 },
+	{   "TOS-host-redirect", 5, 3, 3 },
+
+	{ "echo-request", 8, 0, 0xFF },
+	/* Alias */ { "ping", 8, 0, 0xFF },
+
+	{ "router-advertisement", 9, 0, 0xFF },
+
+	{ "router-solicitation", 10, 0, 0xFF },
+
+	{ "time-exceeded", 11, 0, 0xFF },
+	/* Alias */ { "ttl-exceeded", 11, 0, 0xFF },
+	{   "ttl-zero-during-transit", 11, 0, 0 },
+	{   "ttl-zero-during-reassembly", 11, 1, 1 },
+
+	{ "parameter-problem", 12, 0, 0xFF },
+	{   "ip-header-bad", 12, 0, 0 },
+	{   "required-option-missing", 12, 1, 1 },
+
+	{ "timestamp-request", 13, 0, 0xFF },
+
+	{ "timestamp-reply", 14, 0, 0xFF },
+
+	{ "address-mask-request", 17, 0, 0xFF },
+
+	{ "address-mask-reply", 18, 0, 0xFF }
+};
+
+static const struct ebt_icmp_names igmp_types[] = {
+	{ "membership-query", 0x11 },
+	{ "membership-report-v1", 0x12 },
+	{ "membership-report-v2", 0x16 },
+	{ "leave-group", 0x17 },
+	{ "membership-report-v3", 0x22 },
 };
 
 /* put the mask into 4 bytes */
@@ -105,7 +171,14 @@ static void print_help()
 "--ip-tos    [!] tos           : ip tos specification\n"
 "--ip-proto  [!] protocol      : ip protocol specification\n"
 "--ip-sport  [!] port[:port]   : tcp/udp source port or port range\n"
-"--ip-dport  [!] port[:port]   : tcp/udp destination port or port range\n");
+"--ip-dport  [!] port[:port]   : tcp/udp destination port or port range\n"
+"--ip-icmp-type [!] type[[:type]/code[:code]] : icmp type/code or type/code range\n"
+"--ip-igmp-type [!] type[:type]               : igmp type or type range\n");
+
+	printf("\nValid ICMP Types:\n");
+	ebt_print_icmp_types(icmp_codes, ARRAY_SIZE(icmp_codes));
+	printf("\nValid IGMP Types:\n");
+	ebt_print_icmp_types(igmp_types, ARRAY_SIZE(igmp_types));
 }
 
 static void init(struct ebt_entry_match *match)
@@ -122,6 +195,8 @@ static void init(struct ebt_entry_match *match)
 #define OPT_PROTO  0x08
 #define OPT_SPORT  0x10
 #define OPT_DPORT  0x20
+#define OPT_ICMP   0x40
+#define OPT_IGMP   0x80
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
@@ -168,6 +243,26 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			parse_port_range(NULL, optarg, ipinfo->sport);
 		else
 			parse_port_range(NULL, optarg, ipinfo->dport);
+		break;
+
+	case IP_ICMP:
+		ebt_check_option2(flags, OPT_ICMP);
+		ipinfo->bitmask |= EBT_IP_ICMP;
+		if (ebt_check_inverse2(optarg))
+			ipinfo->invflags |= EBT_IP_ICMP;
+		if (ebt_parse_icmp(icmp_codes, ARRAY_SIZE(icmp_codes), optarg,
+				   ipinfo->icmp_type, ipinfo->icmp_code))
+			return 0;
+		break;
+
+	case IP_IGMP:
+		ebt_check_option2(flags, OPT_IGMP);
+		ipinfo->bitmask |= EBT_IP_IGMP;
+		if (ebt_check_inverse2(optarg))
+			ipinfo->invflags |= EBT_IP_IGMP;
+		if (ebt_parse_icmp(igmp_types, ARRAY_SIZE(igmp_types), optarg,
+				   ipinfo->igmp_type, NULL))
+			return 0;
 		break;
 
 	case IP_myTOS:
@@ -219,10 +314,23 @@ static void final_check(const struct ebt_u_entry *entry,
 		(ipinfo->protocol!=IPPROTO_TCP &&
 		 ipinfo->protocol!=IPPROTO_UDP &&
 		 ipinfo->protocol!=IPPROTO_SCTP &&
-		 ipinfo->protocol!=IPPROTO_DCCP)))
+		 ipinfo->protocol!=IPPROTO_DCCP))) {
 		ebt_print_error("For port filtering the IP protocol must be "
 				"either 6 (tcp), 17 (udp), 33 (dccp) or "
 				"132 (sctp)");
+	} else if ((ipinfo->bitmask & EBT_IP_ICMP) &&
+	         (!(ipinfo->bitmask & EBT_IP_PROTO) ||
+	            ipinfo->invflags & EBT_IP_PROTO ||
+	            ipinfo->protocol != IPPROTO_ICMP)) {
+		ebt_print_error("For ICMP filtering the IP protocol must be "
+				"1 (icmp)");
+	} else if ((ipinfo->bitmask & EBT_IP_IGMP) &&
+	         (!(ipinfo->bitmask & EBT_IP_PROTO) ||
+	            ipinfo->invflags & EBT_IP_PROTO ||
+	            ipinfo->protocol != IPPROTO_IGMP)) {
+		ebt_print_error("For IGMP filtering the IP protocol must be "
+				"2 (igmp)");
+	}
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -280,6 +388,20 @@ static void print(const struct ebt_u_entry *entry,
 			printf("! ");
 		print_port_range(ipinfo->dport);
 	}
+	if (ipinfo->bitmask & EBT_IP_ICMP) {
+		printf("--ip-icmp-type ");
+		if (ipinfo->invflags & EBT_IP_ICMP)
+			printf("! ");
+		ebt_print_icmp_type(icmp_codes, ARRAY_SIZE(icmp_codes),
+				    ipinfo->icmp_type, ipinfo->icmp_code);
+	}
+	if (ipinfo->bitmask & EBT_IP_IGMP) {
+		printf("--ip-igmp-type ");
+		if (ipinfo->invflags & EBT_IP_IGMP)
+			printf("! ");
+		ebt_print_icmp_type(igmp_types, ARRAY_SIZE(igmp_types),
+				    ipinfo->igmp_type, NULL);
+	}
 }
 
 static int compare(const struct ebt_entry_match *m1,
@@ -320,6 +442,18 @@ static int compare(const struct ebt_entry_match *m1,
 	if (ipinfo1->bitmask & EBT_IP_DPORT) {
 		if (ipinfo1->dport[0] != ipinfo2->dport[0] ||
 		   ipinfo1->dport[1] != ipinfo2->dport[1])
+			return 0;
+	}
+	if (ipinfo1->bitmask & EBT_IP_ICMP) {
+		if (ipinfo1->icmp_type[0] != ipinfo2->icmp_type[0] ||
+		    ipinfo1->icmp_type[1] != ipinfo2->icmp_type[1] ||
+		    ipinfo1->icmp_code[0] != ipinfo2->icmp_code[0] ||
+		    ipinfo1->icmp_code[1] != ipinfo2->icmp_code[1])
+			return 0;
+	}
+	if (ipinfo1->bitmask & EBT_IP_IGMP) {
+		if (ipinfo1->igmp_type[0] != ipinfo2->igmp_type[0] ||
+		    ipinfo1->igmp_type[1] != ipinfo2->igmp_type[1])
 			return 0;
 	}
 	return 1;

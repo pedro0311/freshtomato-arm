@@ -43,11 +43,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <ctype.h>
 #if TIME_WITH_SYS_TIME
-# ifdef WIN32
-#  include <sys/timeb.h>
-# else
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <time.h>
 #else
 # if HAVE_SYS_TIME_H
@@ -59,9 +55,6 @@ SOFTWARE.
 #if HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
-#if HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #if HAVE_NETDB_H
 #include <netdb.h>
 #endif
@@ -72,8 +65,6 @@ SOFTWARE.
 #include <net-snmp/utilities.h>
 
 #include <net-snmp/net-snmp-includes.h>
-
-int             failures = 0;
 
 #define NETSNMP_DS_APP_DONT_FIX_PDUS 0
 
@@ -121,21 +112,27 @@ main(int argc, char *argv[])
     int             arg;
     int             count;
     int             current_name = 0;
-    char           *names[128];
+    char           *names[SNMP_MAX_CMDLINE_OIDS];
     oid             name[MAX_OID_LEN];
     size_t          name_length;
     int             status;
-    int             exitval = 0;
+    int             failures = 0;
+    int             exitval = 1;
+
+    SOCK_STARTUP;
 
     /*
      * get the common command line arguments 
      */
     switch (arg = snmp_parse_args(argc, argv, &session, "C:", optProc)) {
-    case -2:
-        exit(0);
-    case -1:
+    case NETSNMP_PARSE_ARGS_ERROR:
+        goto out;
+    case NETSNMP_PARSE_ARGS_SUCCESS_EXIT:
+        exitval = 0;
+        goto out;
+    case NETSNMP_PARSE_ARGS_ERROR_USAGE:
         usage();
-        exit(1);
+        goto out;
     default:
         break;
     }
@@ -143,7 +140,13 @@ main(int argc, char *argv[])
     if (arg >= argc) {
         fprintf(stderr, "Missing object name\n");
         usage();
-        exit(1);
+        goto out;
+    }
+    if ((argc - arg) > SNMP_MAX_CMDLINE_OIDS) {
+        fprintf(stderr, "Too many object identifiers specified. ");
+        fprintf(stderr, "Only %d allowed in one request.\n", SNMP_MAX_CMDLINE_OIDS);
+        usage();
+        goto out;
     }
 
     /*
@@ -151,9 +154,6 @@ main(int argc, char *argv[])
      */
     for (; arg < argc; arg++)
         names[current_name++] = argv[arg];
-
-    SOCK_STARTUP;
-
 
     /*
      * Open an SNMP session.
@@ -164,8 +164,7 @@ main(int argc, char *argv[])
          * diagnose snmp_open errors with the input netsnmp_session pointer 
          */
         snmp_sess_perror("snmpget", &session);
-        SOCK_CLEANUP;
-        exit(1);
+        goto out;
     }
 
 
@@ -181,11 +180,10 @@ main(int argc, char *argv[])
         } else
             snmp_add_null_var(pdu, name, name_length);
     }
-    if (failures) {
-        SOCK_CLEANUP;
-        exit(1);
-    }
+    if (failures)
+        goto close_session;
 
+    exitval = 0;
 
     /*
      * Perform the request.
@@ -246,8 +244,11 @@ main(int argc, char *argv[])
 
     if (response)
         snmp_free_pdu(response);
+
+close_session:
     snmp_close(ss);
+
+out:
     SOCK_CLEANUP;
     return exitval;
-
 }                               /* end main() */

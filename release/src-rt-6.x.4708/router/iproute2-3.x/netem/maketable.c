@@ -210,7 +210,7 @@ main(int argc, char **argv)
 		}
 	} else {
 		fp = stdin;
-	}				
+	}
 	x = readdoubles(fp, &limit);
 	if (limit <= 0) {
 		fprintf(stderr, "Nothing much read!\n");
@@ -221,12 +221,14 @@ main(int argc, char **argv)
 	fprintf(stderr, "%d values, mu %10.4f, sigma %10.4f, rho %10.4f\n",
 		limit, mu, sigma, rho);
 #endif
-	
+
 	table = makedist(x, limit, mu, sigma);
 	free((void *) x);
 	cumulativedist(table, DISTTABLESIZE, &total);
 	inverse = inverttable(table, TABLESIZE, DISTTABLESIZE, total);
 	interpolatetable(inverse, TABLESIZE);
 	printtable(inverse, TABLESIZE);
+	free(inverse);
+	free(table);
 	return 0;
 }

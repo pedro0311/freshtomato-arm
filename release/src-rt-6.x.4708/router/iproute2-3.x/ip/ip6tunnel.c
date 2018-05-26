@@ -358,6 +358,7 @@ static int do_tunnels_list(struct ip6_tnl_parm2 *p)
 	if (!fgets(buf, sizeof(buf), fp) ||
 	    !fgets(buf, sizeof(buf), fp)) {
 		fprintf(stderr, "/proc/net/dev read error\n");
+		fclose(fp);
 		return -1;
 	}
 

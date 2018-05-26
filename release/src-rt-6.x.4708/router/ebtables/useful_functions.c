@@ -24,6 +24,9 @@
  */
 #include "include/ebtables_u.h"
 #include "include/ethernetdb.h"
+#include <errno.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
 #include <netinet/ether.h>
 #include <string.h>
@@ -33,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
 
 const unsigned char mac_type_unicast[ETH_ALEN] =   {0,0,0,0,0,0};
 const unsigned char msk_type_unicast[ETH_ALEN] =   {1,0,0,0,0,0};
@@ -188,7 +192,7 @@ static int undot_ip(char *ip, unsigned char *ip2)
 			return -1;
 		*q = '\0';
 		onebyte = strtol(p, &end, 10);
-		if (*end != '\0' || onebyte > 255 || onebyte < 0)   
+		if (*end != '\0' || onebyte > 255 || onebyte < 0)
 			return -1;
 		ip2[i] = (unsigned char)onebyte;
 		p = q + 1;
@@ -275,7 +279,7 @@ char *ebt_mask_to_dotted(uint32_t mask)
 		*buf = '\0';
 	else
 		/* Mask was not a decent combination of 1's and 0's */
-		sprintf(buf, "/%d.%d.%d.%d", ((unsigned char *)&mask)[0], 
+		sprintf(buf, "/%d.%d.%d.%d", ((unsigned char *)&mask)[0],
 		   ((unsigned char *)&mask)[1], ((unsigned char *)&mask)[2],
 		   ((unsigned char *)&mask)[3]);
 
@@ -410,4 +414,169 @@ char *ebt_ip6_to_numeric(const struct in6_addr *addrp)
 	 * 0000:0000:0000:0000:0000:0000:0000:0000 */
 	static char buf[50+1];
 	return (char *)inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
+}
+
+char *ebt_ip6_mask_to_string(const struct in6_addr *msk)
+{
+   	/* /0000:0000:0000:0000:0000:000.000.000.000
+	 * /0000:0000:0000:0000:0000:0000:0000:0000 */
+	static char buf[51+1];
+	if (msk->s6_addr32[0] == 0xFFFFFFFFL && msk->s6_addr32[1] == 0xFFFFFFFFL &&
+	    msk->s6_addr32[2] == 0xFFFFFFFFL && msk->s6_addr32[3] == 0xFFFFFFFFL)
+		*buf = '\0';
+	else
+		sprintf(buf, "/%s", ebt_ip6_to_numeric(msk));
+	return buf;
+}
+
+static char*
+parse_num(const char *str, long min, long max, long *num)
+{
+	char *end;
+
+	errno = 0;
+	*num = strtol(str, &end, 10);
+	if (errno && (*num == LONG_MIN || *num == LONG_MAX)) {
+		ebt_print_error("Invalid number %s: %s", str, strerror(errno));
+		return NULL;
+	}
+	if (min <= max) {
+		if (*num > max || *num < min) {
+			ebt_print_error("Value %ld out of range (%ld, %ld)", *num, min, max);
+			return NULL;
+		}
+	}
+	if (*num == 0 && str == end)
+		return NULL;
+	return end;
+}
+
+static char *
+parse_range(const char *str, long min, long max, long num[])
+{
+	char *next;
+
+	next = parse_num(str, min, max, num);
+	if (next == NULL)
+		return NULL;
+	if (next && *next == ':')
+		next = parse_num(next+1, min, max, &num[1]);
+	else
+		num[1] = num[0];
+	return next;
+}
+
+int ebt_parse_icmp(const struct ebt_icmp_names *icmp_codes, size_t n_codes,
+		   const char *icmptype, uint8_t type[], uint8_t code[])
+{
+	unsigned int match = n_codes;
+	unsigned int i;
+	long number[2];
+
+	for (i = 0; i < n_codes; i++) {
+		if (strncasecmp(icmp_codes[i].name, icmptype, strlen(icmptype)))
+			continue;
+		if (match != n_codes)
+			ebt_print_error("Ambiguous ICMP type `%s':"
+					" `%s' or `%s'?",
+					icmptype, icmp_codes[match].name,
+					icmp_codes[i].name);
+		match = i;
+	}
+
+	if (match < n_codes) {
+		type[0] = type[1] = icmp_codes[match].type;
+		if (code) {
+			code[0] = icmp_codes[match].code_min;
+			code[1] = icmp_codes[match].code_max;
+		}
+	} else {
+		char *next = parse_range(icmptype, 0, 255, number);
+		if (!next) {
+			ebt_print_error("Unknown ICMP type `%s'",
+							icmptype);
+			return -1;
+		}
+		type[0] = (uint8_t) number[0];
+		type[1] = (uint8_t) number[1];
+		switch (*next) {
+		case 0:
+			if (code) {
+				code[0] = 0;
+				code[1] = 255;
+			}
+			return 0;
+		case '/':
+			if (code) {
+				next = parse_range(next+1, 0, 255, number);
+				code[0] = (uint8_t) number[0];
+				code[1] = (uint8_t) number[1];
+				if (next == NULL)
+					return -1;
+				if (next && *next == 0)
+					return 0;
+			}
+		/* fallthrough */
+		default:
+			ebt_print_error("unknown character %c", *next);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static void print_icmp_code(uint8_t *code)
+{
+	if (!code)
+		return;
+
+	if (code[0] == code[1])
+		printf("/%"PRIu8 " ", code[0]);
+	else
+		printf("/%"PRIu8":%"PRIu8 " ", code[0], code[1]);
+}
+
+void ebt_print_icmp_type(const struct ebt_icmp_names *icmp_codes,
+			 size_t n_codes, uint8_t *type, uint8_t *code)
+{
+	unsigned int i;
+
+	if (type[0] != type[1]) {
+		printf("%"PRIu8 ":%" PRIu8, type[0], type[1]);
+		print_icmp_code(code);
+		return;
+	}
+
+	for (i = 0; i < n_codes; i++) {
+		if (icmp_codes[i].type != type[0])
+			continue;
+
+		if (!code || (icmp_codes[i].code_min == code[0] &&
+			      icmp_codes[i].code_max == code[1])) {
+			printf("%s ", icmp_codes[i].name);
+			return;
+		}
+	}
+	printf("%"PRIu8, type[0]);
+	print_icmp_code(code);
+}
+
+void ebt_print_icmp_types(const struct ebt_icmp_names *icmp_codes,
+			  size_t n_codes)
+{
+	unsigned int i;
+
+	for (i = 0; i < n_codes; i++) {
+		if (i && icmp_codes[i].type == icmp_codes[i-1].type) {
+			if (icmp_codes[i].code_min == icmp_codes[i-1].code_min
+			    && (icmp_codes[i].code_max
+			        == icmp_codes[i-1].code_max))
+				printf(" (%s)", icmp_codes[i].name);
+			else
+				printf("\n   %s", icmp_codes[i].name);
+		}
+		else
+			printf("\n%s", icmp_codes[i].name);
+	}
+	printf("\n");
 }

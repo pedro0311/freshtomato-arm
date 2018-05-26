@@ -31,6 +31,7 @@
 #include "include/ethernetdb.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -137,58 +138,24 @@ void ebt_list_extensions()
 #define LOCKDIR "/var/lib/ebtables"
 #define LOCKFILE LOCKDIR"/lock"
 #endif
-static int lockfd = -1, locked;
 int use_lockfd;
 /* Returns 0 on success, -1 when the file is locked by another process
  * or -2 on any other error. */
 static int lock_file()
 {
-	int try = 0;
-	int ret = 0;
-	sigset_t sigset;
+	int fd, try = 0;
 
-tryagain:
-	/* the SIGINT handler will call unlock_file. To make sure the state
-	 * of the variable locked is correct, we need to temporarily mask the
-	 * SIGINT interrupt. */
-	sigemptyset(&sigset);
-	sigaddset(&sigset, SIGINT);
-	sigprocmask(SIG_BLOCK, &sigset, NULL);
-	lockfd = open(LOCKFILE, O_CREAT | O_EXCL | O_WRONLY, 00600);
-	if (lockfd < 0) {
-		if (errno == EEXIST)
-			ret = -1;
-		else if (try == 1)
-			ret = -2;
-		else {
-			if (mkdir(LOCKDIR, 00700))
-				ret = -2;
-			else {
-				try = 1;
-				goto tryagain;
-			}
-		}
-	} else {
-		close(lockfd);
-		locked = 1;
+retry:
+	fd = open(LOCKFILE, O_CREAT, 00600);
+	if (fd < 0) {
+		if (try == 1 || mkdir(LOCKDIR, 00700))
+			return -2;
+		try = 1;
+		goto retry;
 	}
-	sigprocmask(SIG_UNBLOCK, &sigset, NULL);
-	return ret;
+	return flock(fd, LOCK_EX);
 }
 
-void unlock_file()
-{
-	if (locked) {
-		remove(LOCKFILE);
-		locked = 0;
-	}
-}
-
-void __attribute__ ((destructor)) onexit()
-{
-	if (use_lockfd)
-		unlock_file();
-}
 /* Get the table from the kernel or from a binary file
  * init: 1 = ask the kernel for the initial contents of a table, i.e. the
  *           way it looks when the table is insmod'ed
@@ -305,6 +272,7 @@ void ebt_reinit_extensions()
 			if (!m->m)
 				ebt_print_memory();
 			strcpy(m->m->u.name, m->name);
+			m->m->u.revision = m->revision;
 			m->m->match_size = EBT_ALIGN(m->size);
 			m->used = 0;
 		}
@@ -583,8 +551,10 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 		while (m_l) {
 			m = (struct ebt_u_match *)(m_l->m);
 			m_l2 = u_e->m_list;
-			while (m_l2 && strcmp(m_l2->m->u.name, m->m->u.name))
+			while (m_l2 && (strcmp(m_l2->m->u.name, m->m->u.name) ||
+			       m_l2->m->u.revision != m->m->u.revision)) {
 				m_l2 = m_l2->next;
+			}
 			if (!m_l2 || !m->compare(m->m, m_l2->m))
 				goto letscontinue;
 			j++;
@@ -1102,7 +1072,7 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			/* check if we've dealt with this chain already */
 			if (entries2->hook_mask & (1<<i))
 				goto letscontinue;
-			entries2->hook_mask |= entries->hook_mask;
+			entries2->hook_mask |= entries->hook_mask & ~(1 << NF_BR_NUMHOOKS);
 			/* Jump to the chain, make sure we know how to get back */
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
@@ -1242,6 +1212,7 @@ void ebt_register_match(struct ebt_u_match *m)
 	if (!m->m)
 		ebt_print_memory();
 	strcpy(m->m->u.name, m->name);
+	m->m->u.revision = m->revision;
 	m->m->match_size = EBT_ALIGN(m->size);
 	m->init(m->m);
 

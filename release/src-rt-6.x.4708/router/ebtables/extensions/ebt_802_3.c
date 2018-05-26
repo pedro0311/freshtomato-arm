@@ -17,7 +17,7 @@
 #define _802_3_SAP '1'
 #define _802_3_TYPE '2'
 
-static struct option opts[] =
+static const struct option opts[] =
 {
 	{ "802_3-sap"   , required_argument, 0, _802_3_SAP },
 	{ "802_3-type"  , required_argument, 0, _802_3_TYPE },
