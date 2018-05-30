@@ -326,7 +326,7 @@ function earlyInit()
 	}
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx)<0)
-			elem.display('b_wl'+uidx+'_enable', 'b_wl'+uidx+'_disable', show_radio[uidx]);
+			elem.display('b_wl'+wl_fface(uidx)+'_enable', 'b_wl'+wl_fface(uidx)+'_disable', show_radio[uidx]);
 	}
 
 	ethstates();
@@ -346,7 +346,7 @@ function init()
 		}
 	if (((c = cookie.get('status_overview_lan_vis')) != null) && (c != '1')) toggleVisibility("lan");
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		u = wl_unit(uidx);
+		u = wl_fface(uidx);
 		if (((c = cookie.get('status_overview_wl_'+u+'_vis')) != null) && (c != '1')) toggleVisibility("wl_"+u);
 	}
 	ref.initPage(3000, 3);
