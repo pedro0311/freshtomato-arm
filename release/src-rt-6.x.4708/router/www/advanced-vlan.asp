@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Jun 23 2017 - Tvlz **
+	** Last Updated - Apr 16 2018 - Tvlz **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -938,7 +938,7 @@ function earlyInit() {
 <input type='hidden' name='vlan15vid'>
 
 <div style='display:none' id='unknown_router'>
-<div class='section-title' style='text-align:center'>!! Unknown Port Mapping Using Default!!</div>
+<div class='section-title' style='text-align:center'>!! Unknown Port Mapping Using Default !!</div>
 <div class='fields' style='text-align:center'><a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/' class="new_window"> <b>Please Follow this Link for Instructions to get it corrected.</b></a>
 <br /><br /> Include Router Brand/Model (<% nv('t_model_name'); %>),
 <br /> Results from "nvram show | grep vlan1ports" &amp;
@@ -987,7 +987,7 @@ if (port_vlan_supported) vlg.setup();
 </div>
 
 <div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdiv_notes_showhide'>(Click here to hide)</span></a></i></small></div>
-<div class='section' id='sesdiv_notes' style='display:none'>
+<div class='section' id='sesdiv_notes' style='display:'>
 <ul>
 	<li>If you notice that the order of the Lan Ports are incorrectly mapped, <a href='http://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634/'> <b>Please Follow these Instructions to get it corrected.</b></a></li>
 	<li style="list-style: none"><br /></li>
