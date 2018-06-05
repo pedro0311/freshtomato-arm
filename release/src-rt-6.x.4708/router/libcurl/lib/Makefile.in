@@ -241,8 +241,9 @@ am__objects_3 = vtls/libcurl_la-openssl.lo vtls/libcurl_la-gtls.lo \
 	vtls/libcurl_la-polarssl.lo \
 	vtls/libcurl_la-polarssl_threadlock.lo \
 	vtls/libcurl_la-axtls.lo vtls/libcurl_la-cyassl.lo \
-	vtls/libcurl_la-schannel.lo vtls/libcurl_la-darwinssl.lo \
-	vtls/libcurl_la-gskit.lo vtls/libcurl_la-mbedtls.lo
+	vtls/libcurl_la-schannel.lo vtls/libcurl_la-schannel_verify.lo \
+	vtls/libcurl_la-darwinssl.lo vtls/libcurl_la-gskit.lo \
+	vtls/libcurl_la-mbedtls.lo
 am__objects_4 = $(am__objects_1) $(am__objects_2) $(am__objects_3)
 am__objects_5 =
 am__objects_6 = $(am__objects_5) $(am__objects_5) $(am__objects_5)
@@ -321,8 +322,10 @@ am__objects_9 = vtls/libcurlu_la-openssl.lo vtls/libcurlu_la-gtls.lo \
 	vtls/libcurlu_la-polarssl.lo \
 	vtls/libcurlu_la-polarssl_threadlock.lo \
 	vtls/libcurlu_la-axtls.lo vtls/libcurlu_la-cyassl.lo \
-	vtls/libcurlu_la-schannel.lo vtls/libcurlu_la-darwinssl.lo \
-	vtls/libcurlu_la-gskit.lo vtls/libcurlu_la-mbedtls.lo
+	vtls/libcurlu_la-schannel.lo \
+	vtls/libcurlu_la-schannel_verify.lo \
+	vtls/libcurlu_la-darwinssl.lo vtls/libcurlu_la-gskit.lo \
+	vtls/libcurlu_la-mbedtls.lo
 am__objects_10 = $(am__objects_7) $(am__objects_8) $(am__objects_9)
 am_libcurlu_la_OBJECTS = $(am__objects_10) $(am__objects_6)
 libcurlu_la_OBJECTS = $(am_libcurlu_la_OBJECTS)
@@ -686,8 +689,8 @@ LIB_VAUTH_CFILES = vauth/vauth.c vauth/cleartext.c vauth/cram.c         \
 LIB_VAUTH_HFILES = vauth/vauth.h vauth/digest.h vauth/ntlm.h
 LIB_VTLS_CFILES = vtls/openssl.c vtls/gtls.c vtls/vtls.c vtls/nss.c     \
   vtls/polarssl.c vtls/polarssl_threadlock.c vtls/axtls.c               \
-  vtls/cyassl.c vtls/schannel.c vtls/darwinssl.c vtls/gskit.c           \
-  vtls/mbedtls.c
+  vtls/cyassl.c vtls/schannel.c vtls/schannel_verify.c                  \
+  vtls/darwinssl.c vtls/gskit.c vtls/mbedtls.c
 
 LIB_VTLS_HFILES = vtls/openssl.h vtls/vtls.h vtls/gtls.h                \
   vtls/nssg.h vtls/polarssl.h vtls/polarssl_threadlock.h vtls/axtls.h   \
@@ -892,6 +895,8 @@ vtls/libcurl_la-cyassl.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
 vtls/libcurl_la-schannel.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
+vtls/libcurl_la-schannel_verify.lo: vtls/$(am__dirstamp) \
+	vtls/$(DEPDIR)/$(am__dirstamp)
 vtls/libcurl_la-darwinssl.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
 vtls/libcurl_la-gskit.lo: vtls/$(am__dirstamp) \
@@ -942,6 +947,8 @@ vtls/libcurlu_la-axtls.lo: vtls/$(am__dirstamp) \
 vtls/libcurlu_la-cyassl.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
 vtls/libcurlu_la-schannel.lo: vtls/$(am__dirstamp) \
+	vtls/$(DEPDIR)/$(am__dirstamp)
+vtls/libcurlu_la-schannel_verify.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
 vtls/libcurlu_la-darwinssl.lo: vtls/$(am__dirstamp) \
 	vtls/$(DEPDIR)/$(am__dirstamp)
@@ -1214,6 +1221,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurl_la-polarssl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurl_la-polarssl_threadlock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurl_la-schannel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurl_la-schannel_verify.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurl_la-vtls.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-axtls.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-cyassl.Plo@am__quote@
@@ -1226,6 +1234,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-polarssl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-polarssl_threadlock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-schannel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-schannel_verify.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vtls/$(DEPDIR)/libcurlu_la-vtls.Plo@am__quote@
 
 .c.o:
@@ -2155,6 +2164,13 @@ vtls/libcurl_la-schannel.lo: vtls/schannel.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurl_la_CPPFLAGS) $(CPPFLAGS) $(libcurl_la_CFLAGS) $(CFLAGS) -c -o vtls/libcurl_la-schannel.lo `test -f 'vtls/schannel.c' || echo '$(srcdir)/'`vtls/schannel.c
 
+vtls/libcurl_la-schannel_verify.lo: vtls/schannel_verify.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurl_la_CPPFLAGS) $(CPPFLAGS) $(libcurl_la_CFLAGS) $(CFLAGS) -MT vtls/libcurl_la-schannel_verify.lo -MD -MP -MF vtls/$(DEPDIR)/libcurl_la-schannel_verify.Tpo -c -o vtls/libcurl_la-schannel_verify.lo `test -f 'vtls/schannel_verify.c' || echo '$(srcdir)/'`vtls/schannel_verify.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) vtls/$(DEPDIR)/libcurl_la-schannel_verify.Tpo vtls/$(DEPDIR)/libcurl_la-schannel_verify.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vtls/schannel_verify.c' object='vtls/libcurl_la-schannel_verify.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurl_la_CPPFLAGS) $(CPPFLAGS) $(libcurl_la_CFLAGS) $(CFLAGS) -c -o vtls/libcurl_la-schannel_verify.lo `test -f 'vtls/schannel_verify.c' || echo '$(srcdir)/'`vtls/schannel_verify.c
+
 vtls/libcurl_la-darwinssl.lo: vtls/darwinssl.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurl_la_CPPFLAGS) $(CPPFLAGS) $(libcurl_la_CFLAGS) $(CFLAGS) -MT vtls/libcurl_la-darwinssl.lo -MD -MP -MF vtls/$(DEPDIR)/libcurl_la-darwinssl.Tpo -c -o vtls/libcurl_la-darwinssl.lo `test -f 'vtls/darwinssl.c' || echo '$(srcdir)/'`vtls/darwinssl.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) vtls/$(DEPDIR)/libcurl_la-darwinssl.Tpo vtls/$(DEPDIR)/libcurl_la-darwinssl.Plo
@@ -3078,6 +3094,13 @@ vtls/libcurlu_la-schannel.lo: vtls/schannel.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vtls/schannel.c' object='vtls/libcurlu_la-schannel.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurlu_la_CPPFLAGS) $(CPPFLAGS) $(libcurlu_la_CFLAGS) $(CFLAGS) -c -o vtls/libcurlu_la-schannel.lo `test -f 'vtls/schannel.c' || echo '$(srcdir)/'`vtls/schannel.c
+
+vtls/libcurlu_la-schannel_verify.lo: vtls/schannel_verify.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurlu_la_CPPFLAGS) $(CPPFLAGS) $(libcurlu_la_CFLAGS) $(CFLAGS) -MT vtls/libcurlu_la-schannel_verify.lo -MD -MP -MF vtls/$(DEPDIR)/libcurlu_la-schannel_verify.Tpo -c -o vtls/libcurlu_la-schannel_verify.lo `test -f 'vtls/schannel_verify.c' || echo '$(srcdir)/'`vtls/schannel_verify.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) vtls/$(DEPDIR)/libcurlu_la-schannel_verify.Tpo vtls/$(DEPDIR)/libcurlu_la-schannel_verify.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vtls/schannel_verify.c' object='vtls/libcurlu_la-schannel_verify.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurlu_la_CPPFLAGS) $(CPPFLAGS) $(libcurlu_la_CFLAGS) $(CFLAGS) -c -o vtls/libcurlu_la-schannel_verify.lo `test -f 'vtls/schannel_verify.c' || echo '$(srcdir)/'`vtls/schannel_verify.c
 
 vtls/libcurlu_la-darwinssl.lo: vtls/darwinssl.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcurlu_la_CPPFLAGS) $(CPPFLAGS) $(libcurlu_la_CFLAGS) $(CFLAGS) -MT vtls/libcurlu_la-darwinssl.lo -MD -MP -MF vtls/$(DEPDIR)/libcurlu_la-darwinssl.Tpo -c -o vtls/libcurlu_la-darwinssl.lo `test -f 'vtls/darwinssl.c' || echo '$(srcdir)/'`vtls/darwinssl.c

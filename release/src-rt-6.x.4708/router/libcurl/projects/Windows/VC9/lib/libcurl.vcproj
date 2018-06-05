@@ -4549,6 +4549,10 @@
 				>
 				</File>
 				<File
+					RelativePath="..\..\..\..\lib\vtls\schannel_verify.c"
+				>
+				</File>
+				<File
 					RelativePath="..\..\..\..\lib\vtls\vtls.c"
 				>
 				</File>

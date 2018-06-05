@@ -77,6 +77,7 @@ static CURLMcode add_next_timeout(struct curltime now,
                                   struct Curl_easy *d);
 static CURLMcode multi_timeout(struct Curl_multi *multi,
                                long *timeout_ms);
+static void process_pending_handles(struct Curl_multi *multi);
 
 #ifdef DEBUGBUILD
 static const char * const statename[]={
@@ -378,6 +379,8 @@ CURLMcode curl_multi_add_handle(struct Curl_multi *multi,
    * potential multi's connection cache growing which won't be undone in this
    * function no matter what.
    */
+  if(data->set.errorbuffer)
+    data->set.errorbuffer[0] = 0;
 
   /* set the easy handle */
   multistate(data, CURLM_STATE_INIT);
@@ -538,10 +541,14 @@ static CURLcode multi_done(struct connectdata **connp,
       result = CURLE_ABORTED_BY_CALLBACK;
   }
 
+  process_pending_handles(data->multi); /* connection / multiplex */
+
   if(conn->send_pipe.size || conn->recv_pipe.size) {
     /* Stop if pipeline is not empty . */
     data->easy_conn = NULL;
-    DEBUGF(infof(data, "Connection still in use, no more multi_done now!\n"));
+    DEBUGF(infof(data, "Connection still in use %d/%d, "
+                 "no more multi_done now!\n",
+                 conn->send_pipe.size, conn->recv_pipe.size));
     return CURLE_OK;
   }
 
@@ -653,10 +660,6 @@ CURLMcode curl_multi_remove_handle(struct Curl_multi *multi,
     /* this handle is "alive" so we need to count down the total number of
        alive connections when this is removed */
     multi->num_alive--;
-
-    /* When this handle gets removed, other handles may be able to get the
-       connection */
-    Curl_multi_process_pending_handles(multi);
   }
 
   if(data->easy_conn &&
@@ -1339,7 +1342,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 
     if(multi_ischanged(multi, TRUE)) {
       DEBUGF(infof(data, "multi changed, check CONNECT_PEND queue!\n"));
-      Curl_multi_process_pending_handles(multi);
+      process_pending_handles(multi); /* pipelined/multiplexed */
     }
 
     if(data->easy_conn && data->mstate > CURLM_STATE_CONNECT &&
@@ -1785,16 +1788,17 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
     case CURLM_STATE_DO_DONE:
       /* Move ourselves from the send to recv pipeline */
       Curl_move_handle_from_send_to_recv_pipe(data, data->easy_conn);
-      /* Check if we can move pending requests to send pipe */
-      Curl_multi_process_pending_handles(multi);
+
+      if(data->easy_conn->bits.multiplex || data->easy_conn->send_pipe.size)
+        /* Check if we can move pending requests to send pipe */
+        process_pending_handles(multi); /*  pipelined/multiplexed */
 
       /* Only perform the transfer if there's a good socket to work with.
          Having both BAD is a signal to skip immediately to DONE */
       if((data->easy_conn->sockfd != CURL_SOCKET_BAD) ||
          (data->easy_conn->writesockfd != CURL_SOCKET_BAD))
         multistate(data, CURLM_STATE_WAITPERFORM);
-      else
-      {
+      else {
         if(data->state.wildcardmatch &&
            ((data->easy_conn->handler->flags & PROTOPT_WILDCARD) == 0)) {
            data->wildcard.state = CURLWC_DONE;
@@ -1823,22 +1827,26 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
       if(!result) {
         send_timeout_ms = 0;
         if(data->set.max_send_speed > 0)
-          send_timeout_ms = Curl_pgrsLimitWaitTime(data->progress.uploaded,
-                                data->progress.ul_limit_size,
-                                data->set.max_send_speed,
-                                data->progress.ul_limit_start,
-                                now);
+          send_timeout_ms =
+            Curl_pgrsLimitWaitTime(data->progress.uploaded,
+                                   data->progress.ul_limit_size,
+                                   data->set.max_send_speed,
+                                   data->progress.ul_limit_start,
+                                   now);
 
         recv_timeout_ms = 0;
         if(data->set.max_recv_speed > 0)
-          recv_timeout_ms = Curl_pgrsLimitWaitTime(data->progress.downloaded,
-                                data->progress.dl_limit_size,
-                                data->set.max_recv_speed,
-                                data->progress.dl_limit_start,
-                                now);
+          recv_timeout_ms =
+            Curl_pgrsLimitWaitTime(data->progress.downloaded,
+                                   data->progress.dl_limit_size,
+                                   data->set.max_recv_speed,
+                                   data->progress.dl_limit_start,
+                                   now);
 
-        if(send_timeout_ms <= 0 && recv_timeout_ms <= 0)
+        if(!send_timeout_ms && !recv_timeout_ms) {
           multistate(data, CURLM_STATE_PERFORM);
+          Curl_ratelimit(data, now);
+        }
         else if(send_timeout_ms >= recv_timeout_ms)
           Curl_expire(data, send_timeout_ms, EXPIRE_TOOFAST);
         else
@@ -1870,7 +1878,8 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
                                                  data->progress.dl_limit_start,
                                                  now);
 
-      if(send_timeout_ms > 0 || recv_timeout_ms > 0) {
+      if(send_timeout_ms || recv_timeout_ms) {
+        Curl_ratelimit(data, now);
         multistate(data, CURLM_STATE_TOOFAST);
         if(send_timeout_ms >= recv_timeout_ms)
           Curl_expire(data, send_timeout_ms, EXPIRE_TOOFAST);
@@ -1938,9 +1947,6 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
         if(data->easy_conn->recv_pipe.head)
           Curl_expire(data->easy_conn->recv_pipe.head->ptr, 0, EXPIRE_RUN_NOW);
 
-        /* Check if we can move pending requests to send pipe */
-        Curl_multi_process_pending_handles(multi);
-
         /* When we follow redirects or is set to retry the connection, we must
            to go back to the CONNECT state */
         if(data->req.newurl || retry) {
@@ -1997,8 +2003,10 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 
         /* Remove ourselves from the receive pipeline, if we are there. */
         Curl_removeHandleFromPipeline(data, &data->easy_conn->recv_pipe);
-        /* Check if we can move pending requests to send pipe */
-        Curl_multi_process_pending_handles(multi);
+
+        if(data->easy_conn->bits.multiplex || data->easy_conn->send_pipe.size)
+          /* Check if we can move pending requests to connection */
+          process_pending_handles(multi); /* pipelined/multiplexing */
 
         /* post-transfer command */
         res = multi_done(&data->easy_conn, result, FALSE);
@@ -2066,7 +2074,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
         data->state.pipe_broke = FALSE;
 
         /* Check if we can move pending requests to send pipe */
-        Curl_multi_process_pending_handles(multi);
+        process_pending_handles(multi); /* connection */
 
         if(data->easy_conn) {
           /* if this has a connection, unsubscribe from the pipelines */
@@ -2415,6 +2423,12 @@ static void singlesocket(struct Curl_multi *multi,
   memcpy(data->sockets, socks, num*sizeof(curl_socket_t));
   data->numsocks = num;
 }
+
+void Curl_updatesocket(struct Curl_easy *data)
+{
+  singlesocket(data->multi, data);
+}
+
 
 /*
  * Curl_multi_closed()
@@ -3068,25 +3082,21 @@ struct curl_llist *Curl_multi_pipelining_server_bl(struct Curl_multi *multi)
   return &multi->pipelining_server_bl;
 }
 
-void Curl_multi_process_pending_handles(struct Curl_multi *multi)
+static void process_pending_handles(struct Curl_multi *multi)
 {
   struct curl_llist_element *e = multi->pending.head;
-
-  while(e) {
+  if(e) {
     struct Curl_easy *data = e->ptr;
-    struct curl_llist_element *next = e->next;
 
-    if(data->mstate == CURLM_STATE_CONNECT_PEND) {
-      multistate(data, CURLM_STATE_CONNECT);
+    DEBUGASSERT(data->mstate == CURLM_STATE_CONNECT_PEND);
 
-      /* Remove this node from the list */
-      Curl_llist_remove(&multi->pending, e, NULL);
+    multistate(data, CURLM_STATE_CONNECT);
 
-      /* Make sure that the handle will be processed soonish. */
-      Curl_expire(data, 0, EXPIRE_RUN_NOW);
-    }
+    /* Remove this node from the list */
+    Curl_llist_remove(&multi->pending, e, NULL);
 
-    e = next; /* operate on next handle */
+    /* Make sure that the handle will be processed soonish. */
+    Curl_expire(data, 0, EXPIRE_RUN_NOW);
   }
 }
 

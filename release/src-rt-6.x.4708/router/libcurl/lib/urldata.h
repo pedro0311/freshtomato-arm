@@ -98,6 +98,20 @@
 #include "hash.h"
 #include "splay.h"
 
+/* return the count of bytes sent, or -1 on error */
+typedef ssize_t (Curl_send)(struct connectdata *conn, /* connection data */
+                            int sockindex,            /* socketindex */
+                            const void *buf,          /* data to write */
+                            size_t len,               /* max amount to write */
+                            CURLcode *err);           /* error to return */
+
+/* return the count of bytes read, or -1 on error */
+typedef ssize_t (Curl_recv)(struct connectdata *conn, /* connection data */
+                            int sockindex,            /* socketindex */
+                            char *buf,                /* store data here */
+                            size_t len,               /* max amount to read */
+                            CURLcode *err);           /* error to return */
+
 #include "mime.h"
 #include "imap.h"
 #include "pop3.h"
@@ -328,6 +342,7 @@ struct ntlmdata {
   BYTE *output_token;
   BYTE *input_token;
   size_t input_token_len;
+  TCHAR *spn;
 #else
   unsigned int flags;
   unsigned char nonce[8];
@@ -703,20 +718,6 @@ struct Curl_handler {
 #define CONNRESULT_NONE 0                /* No extra information. */
 #define CONNRESULT_DEAD (1<<0)           /* The connection is dead. */
 
-/* return the count of bytes sent, or -1 on error */
-typedef ssize_t (Curl_send)(struct connectdata *conn, /* connection data */
-                            int sockindex,            /* socketindex */
-                            const void *buf,          /* data to write */
-                            size_t len,               /* max amount to write */
-                            CURLcode *err);           /* error to return */
-
-/* return the count of bytes read, or -1 on error */
-typedef ssize_t (Curl_recv)(struct connectdata *conn, /* connection data */
-                            int sockindex,            /* socketindex */
-                            char *buf,                /* store data here */
-                            size_t len,               /* max amount to read */
-                            CURLcode *err);           /* error to return */
-
 #ifdef USE_RECV_BEFORE_SEND_WORKAROUND
 struct postponed_data {
   char *buffer;          /* Temporal store for received data during
@@ -895,7 +896,7 @@ struct connectdata {
                                 well be the same we read from.
                                 CURL_SOCKET_BAD disables */
 
-  /** Dynamicly allocated strings, MUST be freed before this **/
+  /** Dynamically allocated strings, MUST be freed before this **/
   /** struct is killed.                                      **/
   struct dynamically_allocated_data {
     char *proxyuserpwd;
@@ -1225,7 +1226,7 @@ struct UrlState {
   curl_off_t current_speed;  /* the ProgressShow() function sets this,
                                 bytes / second */
   bool this_is_a_follow; /* this is a followed Location: request */
-
+  bool refused_stream; /* this was refused, try again */
   char *first_host; /* host name of the first (not followed) request.
                        if set, this should be the host name that we will
                        sent authorization to, no else. Used to make Location:
@@ -1422,13 +1423,8 @@ enum dupstring {
   STRING_SSH_HOST_PUBLIC_KEY_MD5, /* md5 of host public key in ascii hex */
   STRING_SSH_KNOWNHOSTS,  /* file name of knownhosts file */
 #endif
-#if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
   STRING_PROXY_SERVICE_NAME, /* Proxy service name */
-#endif
-#if !defined(CURL_DISABLE_CRYPTO_AUTH) || defined(USE_KERBEROS5) || \
-  defined(USE_SPNEGO) || defined(HAVE_GSSAPI)
   STRING_SERVICE_NAME,    /* Service name */
-#endif
   STRING_MAIL_FROM,
   STRING_MAIL_AUTH,
 
@@ -1674,9 +1670,13 @@ struct UserDefined {
   bool suppress_connect_headers;  /* suppress proxy CONNECT response headers
                                      from user callbacks */
 
+  bool dns_shuffle_addresses; /* whether to shuffle addresses before use */
+
   struct Curl_easy *stream_depends_on;
   bool stream_depends_e; /* set or don't set the Exclusive bit */
   int stream_weight;
+
+  bool haproxyprotocol; /* whether to send HAProxy PROXY protocol header */
 
   struct Curl_http2_dep *stream_dependents;
 
