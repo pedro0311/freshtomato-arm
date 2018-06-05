@@ -1254,6 +1254,10 @@ SOURCE=..\..\..\..\lib\vtls\schannel.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\vtls\schannel_verify.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\vtls\vtls.c
 # End Source File
 # End Group

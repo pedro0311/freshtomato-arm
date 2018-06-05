@@ -2510,6 +2510,7 @@
     <ClCompile Include="..\..\..\..\lib\vtls\polarssl.c" />
     <ClCompile Include="..\..\..\..\lib\vtls\polarssl_threadlock.c" />
     <ClCompile Include="..\..\..\..\lib\vtls\schannel.c" />
+    <ClCompile Include="..\..\..\..\lib\vtls\schannel_verify.c" />
     <ClCompile Include="..\..\..\..\lib\vtls\vtls.c" />
   </ItemGroup>
   <ItemGroup>

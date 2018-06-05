@@ -112,6 +112,7 @@ man_MANS =                                      \
   CURLOPT_DNS_LOCAL_IP4.3                       \
   CURLOPT_DNS_LOCAL_IP6.3                       \
   CURLOPT_DNS_SERVERS.3                         \
+  CURLOPT_DNS_SHUFFLE_ADDRESSES.3               \
   CURLOPT_DNS_USE_GLOBAL_CACHE.3                \
   CURLOPT_EGDSOCKET.3                           \
   CURLOPT_ERRORBUFFER.3                         \
@@ -137,6 +138,7 @@ man_MANS =                                      \
   CURLOPT_FTP_USE_PRET.3                        \
   CURLOPT_GSSAPI_DELEGATION.3                   \
   CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.3           \
+  CURLOPT_HAPROXYPROTOCOL.3                     \
   CURLOPT_HEADER.3                              \
   CURLOPT_HEADERDATA.3                          \
   CURLOPT_HEADERFUNCTION.3                      \

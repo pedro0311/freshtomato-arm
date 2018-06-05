@@ -2387,6 +2387,30 @@ int test(char *URL)
   res = curl_easy_setopt(curl, CURLOPT_RESOLVER_START_DATA, NULL);
   if(UNEX(res)) {
     err("RESOLVER_START_DATA", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, 0L);
+  if(UNEX(res)) {
+    err("HAPROXYPROTOCOL", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, 22L);
+  if(UNEX(res)) {
+    err("HAPROXYPROTOCOL", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, LO);
+  if(UNEX(res)) {
+    err("HAPROXYPROTOCOL", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, HI);
+  if(UNEX(res)) {
+    err("HAPROXYPROTOCOL", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, 0L);
+  if(UNEX(res)) {
+    err("DNS_SHUFFLE_ADDRESSES", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, 22L);
+  if(UNEX(res)) {
+    err("DNS_SHUFFLE_ADDRESSES", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, LO);
+  if(UNEX(res)) {
+    err("DNS_SHUFFLE_ADDRESSES", res, __LINE__); goto test_cleanup; }
+  res = curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, HI);
+  if(UNEX(res)) {
+    err("DNS_SHUFFLE_ADDRESSES", res, __LINE__); goto test_cleanup; }
   res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &charp);
   if(UNEX(res)) {
     geterr("EFFECTIVE_URL", res, __LINE__); goto test_cleanup; }

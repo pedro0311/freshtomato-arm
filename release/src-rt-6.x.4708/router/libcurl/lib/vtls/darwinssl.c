@@ -6,7 +6,7 @@
  *                             \___|\___/|_| \_\_____|
  *
  * Copyright (C) 2012 - 2017, Nick Zitzmann, <nickzman@gmail.com>.
- * Copyright (C) 2012 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 2012 - 2018, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -1195,12 +1195,14 @@ static OSStatus CopyIdentityFromPKCS12File(const char *cPath,
           *out_cert_and_key = (SecIdentityRef) identity;
           break;
         }
+#if CURL_BUILD_MAC_10_7
         else if(itemID == SecCertificateGetTypeID()) {
           status = SecIdentityCreateWithCertificate(NULL,
                                                  (SecCertificateRef) item,
                                                  out_cert_and_key);
           break;
         }
+#endif
       }
     }
 
@@ -1389,7 +1391,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 #endif /* CURL_BUILD_MAC */
 
 #if CURL_BUILD_MAC_10_8 || CURL_BUILD_IOS
-  if(SSLCreateContext != NULL) {  /* use the newer API if avaialble */
+  if(SSLCreateContext != NULL) {  /* use the newer API if available */
     if(BACKEND->ssl_ctx)
       CFRelease(BACKEND->ssl_ctx);
     BACKEND->ssl_ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
@@ -2892,13 +2894,14 @@ static CURLcode Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
   return CURLE_OK;
 }
 
-static void Curl_darwinssl_sha256sum(const unsigned char *tmp, /* input */
+static CURLcode Curl_darwinssl_sha256sum(const unsigned char *tmp, /* input */
                                      size_t tmplen,
                                      unsigned char *sha256sum, /* output */
                                      size_t sha256len)
 {
   assert(sha256len >= CURL_SHA256_DIGEST_LENGTH);
   (void)CC_SHA256(tmp, (CC_LONG)tmplen, sha256sum);
+  return CURLE_OK;
 }
 
 static bool Curl_darwinssl_false_start(void)
@@ -3026,15 +3029,11 @@ static void *Curl_darwinssl_get_internals(struct ssl_connect_data *connssl,
 const struct Curl_ssl Curl_ssl_darwinssl = {
   { CURLSSLBACKEND_DARWINSSL, "darwinssl" }, /* info */
 
-  0, /* have_ca_path */
-  0, /* have_certinfo */
 #ifdef DARWIN_SSL_PINNEDPUBKEY
-  1, /* have_pinnedpubkey */
+  SSLSUPP_PINNEDPUBKEY,
 #else
-  0, /* have_pinnedpubkey */
+  0,
 #endif /* DARWIN_SSL_PINNEDPUBKEY */
-  0, /* have_ssl_ctx */
-  0, /* support_https_proxy */
 
   sizeof(struct ssl_backend_data),
 
