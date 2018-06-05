@@ -1223,7 +1223,7 @@ dhcpv6/stamp-h1:
 
 dhcpv6: dhcpv6/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C dhcpv6 dhcp6c
+	@$(MAKE) -C dhcpv6 dhcp6c $(PARALLEL_BUILD)
 
 dhcpv6-install:
 	install -D dhcpv6/dhcp6c $(INSTALLDIR)/dhcpv6/usr/sbin/dhcp6c
