@@ -25,7 +25,7 @@ done
 
 echo "Info: Opkg package manager deployment..."
 DLOADER="ld-linux.so.3"
-URL=http://bin.entware.net/armv7sf-k2.6/installer
+URL=https://bin.entware.net/armv7sf-k2.6/installer
 wget $URL/opkg -O /opt/bin/opkg
 chmod 755 /opt/bin/opkg
 wget $URL/opkg.conf -O /opt/etc/opkg.conf
