@@ -43,6 +43,7 @@
  1.25 Expose tried IP addresses that failed
  1.26 CURL_REFUSE_CLEARTEXT
  1.27 hardcode the "localhost" addresses
+ 1.28 FD_CLOEXEC
 
  2. libcurl - multi interface
  2.1 More non-blocking
@@ -114,6 +115,7 @@
  13.11 Support intermediate & root pinning for PINNEDPUBLICKEY
  13.12 Support HSTS
  13.13 Support HPKP
+ 13.14 Support the clienthello extension
 
  14. GnuTLS
  14.1 SSL engine stuff
@@ -121,7 +123,6 @@
 
  15. WinSSL/SChannel
  15.1 Add support for client certificate authentication
- 15.2 Add support for custom server certificate validation
  15.3 Add support for the --ciphers option
 
  16. SASL
@@ -154,6 +155,7 @@
  18.16 send only part of --data
  18.17 consider file name from the redirected URL with -O ?
  18.18 retry on network is unreachable
+ 18.19 expand ~/ in config files
 
  19. Build
  19.1 roffit
@@ -199,8 +201,7 @@
 1.2 More data sharing
 
  curl_share_* functions already exist and work, and they can be extended to
- share more. For example, enable sharing of the ares channel and the
- connection cache.
+ share more. For example, enable sharing of the ares channel.
 
 1.3 struct lifreq
 
@@ -430,6 +431,14 @@
  https://bugzilla.mozilla.org/show_bug.cgi?id=1220810
 
  https://tools.ietf.org/html/draft-ietf-dnsop-let-localhost-be-localhost-02
+
+1.28 FD_CLOEXEC
+
+ It sets the close-on-exec flag for the file descriptor, which causes the file
+ descriptor to be automatically (and atomically) closed when any of the
+ exec-family functions succeed. Should probably be set by default?
+
+ https://github.com/curl/curl/issues/2252
 
 2. libcurl - multi interface
 
@@ -710,7 +719,7 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  You can specify the private and public keys for SSH/SSL as file paths. Some
  programs want to avoid using files and instead just pass them as in-memory
  data blobs. There's probably a challenge to make this work across the
- plethory of different TLS and SSH backends that curl suppports.
+ plethory of different TLS and SSH backends that curl supports.
  https://github.com/curl/curl/issues/2310
 
 13.4 Cache/share OpenSSL contexts
@@ -799,6 +808,16 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  Doc: https://developer.mozilla.org/de/docs/Web/Security/Public_Key_Pinning
  RFC: https://tools.ietf.org/html/draft-ietf-websec-key-pinning-21
 
+13.14 Support the clienthello extension
+
+ Certain stupid networks and middle boxes have a problem with SSL handshake
+ pakets that are within a certain size range because how that sets some bits
+ that previously (in older TLS version) were not set. The clienthello
+ extension adds padding to avoid that size range.
+
+ https://tools.ietf.org/html/rfc7685
+ https://github.com/curl/curl/issues/2299
+
 14. GnuTLS
 
 14.1 SSL engine stuff
@@ -819,17 +838,6 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  or the user to supply a custom client certificate using curl or libcurl.
 
  Therefore support for the existing -E/--cert and --key options should be
- implemented by supplying a custom certificate to the SChannel APIs, see:
- - Getting a Certificate for Schannel
-   https://msdn.microsoft.com/en-us/library/windows/desktop/aa375447.aspx
-
-15.2 Add support for custom server certificate validation
-
- WinSSL/SChannel currently makes use of the OS-level system and user
- certificate trust store. This does not allow the application or user to
- customize the server certificate validation process using curl or libcurl.
-
- Therefore support for the existing --cacert or --capath options should be
  implemented by supplying a custom certificate to the SChannel APIs, see:
  - Getting a Certificate for Schannel
    https://msdn.microsoft.com/en-us/library/windows/desktop/aa375447.aspx
@@ -1062,6 +1070,13 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  want to retry for?
 
  https://github.com/curl/curl/issues/1603
+
+18.19 expand ~/ in config files
+
+ For example .curlrc could benefit from being able to do this.
+
+ See https://github.com/curl/curl/issues/2317
+
 
 19. Build
 

@@ -92,6 +92,8 @@ static int http_getsock_do(struct connectdata *conn,
                            int numsocks);
 static int http_should_fail(struct connectdata *conn);
 
+static CURLcode add_haproxy_protocol_header(struct connectdata *conn);
+
 #ifdef USE_SSL
 static CURLcode https_connecting(struct connectdata *conn, bool *done);
 static int https_getsock(struct connectdata *conn,
@@ -211,8 +213,6 @@ char *Curl_copy_header_value(const char *header)
   const char *end;
   char *value;
   size_t len;
-
-  DEBUGASSERT(header);
 
   /* Find the end of the header name */
   while(*header && (*header != ':'))
@@ -433,7 +433,7 @@ static CURLcode http_perhapsrewind(struct connectdata *conn)
            data left to send, keep on sending. */
 
         /* rewind data when completely done sending! */
-        if(!conn->bits.authneg) {
+        if(!conn->bits.authneg && (conn->writesockfd != CURL_SOCKET_BAD)) {
           conn->bits.rewindaftersend = TRUE;
           infof(data, "Rewind stream after send\n");
         }
@@ -1358,6 +1358,13 @@ CURLcode Curl_http_connect(struct connectdata *conn, bool *done)
     /* nothing else to do except wait right now - we're not done here. */
     return CURLE_OK;
 
+  if(conn->data->set.haproxyprotocol) {
+    /* add HAProxy PROXY protocol header */
+    result = add_haproxy_protocol_header(conn);
+    if(result)
+      return result;
+  }
+
   if(conn->given->protocol & CURLPROTO_HTTPS) {
     /* perform SSL initialization */
     result = https_connecting(conn, done);
@@ -1381,6 +1388,47 @@ static int http_getsock_do(struct connectdata *conn,
   (void)numsocks; /* unused, we trust it to be at least 1 */
   socks[0] = conn->sock[FIRSTSOCKET];
   return GETSOCK_WRITESOCK(0);
+}
+
+static CURLcode add_haproxy_protocol_header(struct connectdata *conn)
+{
+  char proxy_header[128];
+  Curl_send_buffer *req_buffer;
+  CURLcode result;
+  char tcp_version[5];
+
+  /* Emit the correct prefix for IPv6 */
+  if(conn->bits.ipv6) {
+    strcpy(tcp_version, "TCP6");
+  }
+  else {
+    strcpy(tcp_version, "TCP4");
+  }
+
+  snprintf(proxy_header,
+           sizeof proxy_header,
+           "PROXY %s %s %s %li %li\r\n",
+           tcp_version,
+           conn->data->info.conn_local_ip,
+           conn->data->info.conn_primary_ip,
+           conn->data->info.conn_local_port,
+           conn->data->info.conn_primary_port);
+
+  req_buffer = Curl_add_buffer_init();
+  if(!req_buffer)
+    return CURLE_OUT_OF_MEMORY;
+
+  result = Curl_add_bufferf(req_buffer, proxy_header);
+  if(result)
+    return result;
+
+  result = Curl_add_buffer_send(req_buffer,
+                                conn,
+                                &conn->data->info.request_size,
+                                0,
+                                FIRSTSOCKET);
+
+  return result;
 }
 
 #ifdef USE_SSL
@@ -2084,7 +2132,7 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
                                     host,
                                     conn->bits.ipv6_ip?"]":"");
     else
-      conn->allocptr.host = aprintf("Host: %s%s%s:%hu\r\n",
+      conn->allocptr.host = aprintf("Host: %s%s%s:%d\r\n",
                                     conn->bits.ipv6_ip?"[":"",
                                     host,
                                     conn->bits.ipv6_ip?"]":"",
@@ -2966,6 +3014,8 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
 {
   CURLcode result;
   struct SingleRequest *k = &data->req;
+  ssize_t onread = *nread;
+  char *ostr = k->str;
 
   /* header line within buffer loop */
   do {
@@ -3030,7 +3080,9 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
         else {
           /* this was all we read so it's all a bad header */
           k->badheader = HEADER_ALLBAD;
-          *nread = (ssize_t)rest_length;
+          *nread = onread;
+          k->str = ostr;
+          return CURLE_OK;
         }
         break;
       }
@@ -3684,7 +3736,7 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
       Curl_share_lock(data, CURL_LOCK_DATA_COOKIE,
                       CURL_LOCK_ACCESS_SINGLE);
       Curl_cookie_add(data,
-                      data->cookies, TRUE, k->p + 11,
+                      data->cookies, TRUE, FALSE, k->p + 11,
                       /* If there is a custom-set Host: name, use it
                          here, or else use real peer host name. */
                       conn->allocptr.cookiehost?

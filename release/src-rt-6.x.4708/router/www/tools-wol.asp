@@ -121,7 +121,7 @@ function verifyFields(focused, quiet)
 
 	e = E('t_f_mac');
 	e.value = e.value.replace(/[\t ]+/g, ' ');
-	return 1;
+	return (e.value ? 1 : 0);
 }
 
 function spin(x)
@@ -208,7 +208,7 @@ function init()
 <div class='section'>
 <script type='text/javascript'>
 createFieldTable('', [
-	{ title: 'MAC Address List', name: 'f_mac', type: 'textarea', value: cookie.get('wakemac') || '' },
+	{ title: 'MAC Address List', name: 'f_mac', id: 't_f_mac', type: 'textarea', value: cookie.get('wakemac') || '' },
 ]);
 </script>
 <div style='float:right'><input type='button' value='Wake Up' onclick='wake(null)' id='save-button'></div>

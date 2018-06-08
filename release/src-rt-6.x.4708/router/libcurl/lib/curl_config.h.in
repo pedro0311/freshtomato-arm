@@ -1,5 +1,8 @@
 /* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* to enable curl debug memory tracking */
+#undef CURLDEBUG
+
 /* Location of default ca bundle */
 #undef CURL_CA_BUNDLE
 
@@ -75,8 +78,14 @@
 /* Definition to make a library symbol externally visible. */
 #undef CURL_EXTERN_SYMBOL
 
+/* IP address type in sockaddr */
+#undef CURL_SA_FAMILY_T
+
 /* built with multiple SSL backends */
 #undef CURL_WITH_MULTI_SSL
+
+/* enable debug build options */
+#undef DEBUGBUILD
 
 /* your Entropy Gathering Daemon socket pathname */
 #undef EGD_SOCKET

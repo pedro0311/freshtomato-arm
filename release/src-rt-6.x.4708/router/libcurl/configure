@@ -1179,6 +1179,7 @@ with_gnutls
 with_polarssl
 with_mbedtls
 with_cyassl
+with_wolfssl
 with_nss
 with_axtls
 with_ca_bundle
@@ -1994,6 +1995,9 @@ Optional Packages:
   --with-cyassl=PATH      where to look for CyaSSL, PATH points to the
                           installation root (default: system lib default)
   --without-cyassl        disable CyaSSL detection
+  --with-wolfssl=PATH     where to look for WolfSSL, PATH points to the
+                          installation root (default: system lib default)
+  --without-wolfssl       disable WolfSSL detection
   --with-nss=PATH         where to look for NSS, PATH points to the
                           installation root
   --without-nss           disable NSS detection
@@ -3204,6 +3208,9 @@ fi
       ;;
     *)
             want_debug="yes"
+
+$as_echo "#define DEBUGBUILD 1" >>confdefs.h
+
       ;;
   esac
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $want_debug" >&5
@@ -3307,6 +3314,9 @@ $as_echo "no" >&6; }
                                           if test "$want_debug" = "yes"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: (assumed) yes" >&5
 $as_echo "(assumed) yes" >&6; }
+
+$as_echo "#define CURLDEBUG 1" >>confdefs.h
+
       else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -3316,6 +3326,9 @@ $as_echo "no" >&6; }
       ;;
     *)
                                                       want_curldebug="yes"
+
+$as_echo "#define CURLDEBUG 1" >>confdefs.h
+
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
       ;;
@@ -18043,6 +18056,21 @@ $as_echo "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
             tmp_CFLAGS="$tmp_CFLAGS -Wdouble-promotion"
           fi
           #
+                    if test "$compiler_num" -ge "600"; then
+            tmp_CFLAGS="$tmp_CFLAGS -Wshift-negative-value"
+            tmp_CFLAGS="$tmp_CFLAGS -Wshift-overflow=2"
+            tmp_CFLAGS="$tmp_CFLAGS -Wnull-dereference"
+            tmp_CFLAGS="$tmp_CFLAGS -Wduplicated-cond"
+          fi
+          #
+                    if test "$compiler_num" -ge "700"; then
+            tmp_CFLAGS="$tmp_CFLAGS -Wduplicated-branches"
+            tmp_CFLAGS="$tmp_CFLAGS -Wrestrict"
+            tmp_CFLAGS="$tmp_CFLAGS -Walloc-zero"
+            tmp_CFLAGS="$tmp_CFLAGS -Wformat-overflow=2"
+            tmp_CFLAGS="$tmp_CFLAGS -Wformat-truncation=2"
+          fi
+          #
         fi
         #
                 if test "$compiler_num" -ge "300"; then
@@ -18577,15 +18605,6 @@ $as_echo "$supports_curldebug" >&6; }
 $as_echo "$as_me: WARNING: cannot enable curl debug memory tracking." >&2;}
       want_curldebug="no"
     fi
-  fi
-  #
-  if test "$want_curldebug" = "yes"; then
-    CPPFLAGS="-DCURLDEBUG $CPPFLAGS"
-    squeeze CPPFLAGS
-  fi
-  if test "$want_debug" = "yes"; then
-    CPPFLAGS="-DDEBUGBUILD $CPPFLAGS"
-    squeeze CPPFLAGS
   fi
 
  if test x$want_curldebug = xyes; then
@@ -21228,10 +21247,10 @@ done
     if test -n "$DIR_BROTLI"; then
 
        if test "x$cross_compiling" != "xyes"; then
-         LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DIR_BROTLI"
-         export LD_LIBRARY_PATH
-         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_BROTLI to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $DIR_BROTLI to LD_LIBRARY_PATH" >&6;}
+         CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_BROTLI"
+         export CURL_LIBRARY_PATH
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_BROTLI to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_BROTLI to CURL_LIBRARY_PATH" >&6;}
        fi
     fi
   else
@@ -21972,34 +21991,35 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if argv can be written to" >&5
 $as_echo_n "checking if argv can be written to... " >&6; }
-if test "$cross_compiling" = yes; then :
 
+
+   old=$LD_LIBRARY_PATH
+   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH
+   if test "$cross_compiling" = yes; then :
   curl_cv_writable_argv=cross
 
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-
 int main(int argc, char ** argv) {
-    argv[0][0] = ' ';
-    return (argv[0][0] == ' ')?0:1;
+    argv00 = ' ';
+    return (argv00 == ' ')?0:1;
 }
-
 
 _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
-
   curl_cv_writable_argv=yes
 
 else
-
   curl_cv_writable_argv=no
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
+
+   LD_LIBRARY_PATH=$old # restore
 
 case $curl_cv_writable_argv in
 yes)
@@ -23059,10 +23079,10 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
   if test "$OPENSSL_ENABLED" = "1"; then
     if test -n "$LIB_OPENSSL"; then
                             if test "x$cross_compiling" != "xyes"; then
-         LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LIB_OPENSSL"
-         export LD_LIBRARY_PATH
-         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $LIB_OPENSSL to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $LIB_OPENSSL to LD_LIBRARY_PATH" >&6;}
+         CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$LIB_OPENSSL"
+         export CURL_LIBRARY_PATH
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $LIB_OPENSSL to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $LIB_OPENSSL to CURL_LIBRARY_PATH" >&6;}
        fi
     fi
 
@@ -23724,6 +23744,7 @@ $as_echo "$tst_match" >&6; }
 $as_echo "$as_me: WARNING: $tst_warns" >&2;}
   fi
 
+    check_for_ca_bundle=1
   fi
 
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
@@ -24091,13 +24112,13 @@ fi
       if test "x$USE_GNUTLS" = "xyes"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: detected GnuTLS version $version" >&5
 $as_echo "$as_me: detected GnuTLS version $version" >&6;}
-
+        check_for_ca_bundle=1
         if test -n "$gtlslib"; then
                                                   if test "x$cross_compiling" != "xyes"; then
-            LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$gtlslib"
-            export LD_LIBRARY_PATH
-            { $as_echo "$as_me:${as_lineno-$LINENO}: Added $gtlslib to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $gtlslib to LD_LIBRARY_PATH" >&6;}
+            CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$gtlslib"
+            export CURL_LIBRARY_PATH
+            { $as_echo "$as_me:${as_lineno-$LINENO}: Added $gtlslib to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $gtlslib to CURL_LIBRARY_PATH" >&6;}
           fi
         fi
         for ac_func in gnutls_certificate_set_x509_key_file2 gnutls_alpn_set_protocols gnutls_ocsp_req_init
@@ -24484,15 +24505,15 @@ fi
     if test "x$USE_POLARSSL" = "xyes"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: detected PolarSSL" >&5
 $as_echo "$as_me: detected PolarSSL" >&6;}
-
+      check_for_ca_bundle=1
       LIBS="-lpolarssl $LIBS"
 
       if test -n "$polarssllib"; then
                                         if test "x$cross_compiling" != "xyes"; then
-          LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$polarssllib"
-          export LD_LIBRARY_PATH
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $polarssllib to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $polarssllib to LD_LIBRARY_PATH" >&6;}
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$polarssllib"
+          export CURL_LIBRARY_PATH
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $polarssllib to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $polarssllib to CURL_LIBRARY_PATH" >&6;}
         fi
       fi
     fi
@@ -24645,15 +24666,16 @@ fi
     if test "x$USE_MBEDTLS" = "xyes"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: detected mbedTLS" >&5
 $as_echo "$as_me: detected mbedTLS" >&6;}
+      check_for_ca_bundle=1
 
       LIBS="-lmbedtls -lmbedx509 -lmbedcrypto $LIBS"
 
       if test -n "$mbedtlslib"; then
                                         if test "x$cross_compiling" != "xyes"; then
-          LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$mbedtlslib"
-          export LD_LIBRARY_PATH
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $mbedtlslib to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $mbedtlslib to LD_LIBRARY_PATH" >&6;}
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$mbedtlslib"
+          export CURL_LIBRARY_PATH
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $mbedtlslib to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $mbedtlslib to CURL_LIBRARY_PATH" >&6;}
         fi
       fi
     fi
@@ -24671,6 +24693,13 @@ _ldflags=$LDFLAGS
 # Check whether --with-cyassl was given.
 if test "${with_cyassl+set}" = set; then :
   withval=$with_cyassl; OPT_CYASSL=$withval
+fi
+
+
+
+# Check whether --with-wolfssl was given.
+if test "${with_wolfssl+set}" = set; then :
+  withval=$with_wolfssl; OPT_CYASSL=$withval
 fi
 
 
@@ -24878,6 +24907,7 @@ rm -f core conftest.err conftest.$ac_objext \
     if test "x$USE_CYASSL" = "xyes"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: detected $cyassllibname" >&5
 $as_echo "$as_me: detected $cyassllibname" >&6;}
+      check_for_ca_bundle=1
 
             # The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
@@ -24975,10 +25005,10 @@ done
 
       if test -n "$cyassllib"; then
                                         if test "x$cross_compiling" != "xyes"; then
-          LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$cyassllib"
-          export LD_LIBRARY_PATH
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $cyassllib to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $cyassllib to LD_LIBRARY_PATH" >&6;}
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$cyassllib"
+          export CURL_LIBRARY_PATH
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $cyassllib to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $cyassllib to CURL_LIBRARY_PATH" >&6;}
         fi
       fi
 
@@ -25414,10 +25444,10 @@ fi
 
 
                               if test "x$cross_compiling" != "xyes"; then
-        LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$nssprefix/lib$libsuff"
-        export LD_LIBRARY_PATH
-        { $as_echo "$as_me:${as_lineno-$LINENO}: Added $nssprefix/lib$libsuff to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $nssprefix/lib$libsuff to LD_LIBRARY_PATH" >&6;}
+        CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$nssprefix/lib$libsuff"
+        export CURL_LIBRARY_PATH
+        { $as_echo "$as_me:${as_lineno-$LINENO}: Added $nssprefix/lib$libsuff to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $nssprefix/lib$libsuff to CURL_LIBRARY_PATH" >&6;}
       fi
 
     fi
@@ -25501,15 +25531,16 @@ $as_echo "#define USE_AXTLS 1" >>confdefs.h
       USE_AXTLS=1
 
       AXTLS_ENABLED=1
+      check_for_ca_bundle=1
       USE_AXTLS="yes"
       ssl_msg="axTLS"
       test axtls != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
 
       if test "x$cross_compiling" != "xyes"; then
-        LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LIB_AXTLS"
-        export LD_LIBRARY_PATH
-        { $as_echo "$as_me:${as_lineno-$LINENO}: Added $LIB_AXTLS to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $LIB_AXTLS to LD_LIBRARY_PATH" >&6;}
+        CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$LIB_AXTLS"
+        export CURL_LIBRARY_PATH
+        { $as_echo "$as_me:${as_lineno-$LINENO}: Added $LIB_AXTLS to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $LIB_AXTLS to CURL_LIBRARY_PATH" >&6;}
       fi
 
 else
@@ -25574,6 +25605,7 @@ _ACEOF
 fi
 
 
+if test "$check_for_ca_bundle" -gt 0; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking default CA cert bundle/path" >&5
@@ -25733,6 +25765,7 @@ _ACEOF
 
   fi
 
+fi
 
 
 
@@ -26445,10 +26478,10 @@ done
     if test -n "$DIR_SSH2"; then
 
        if test "x$cross_compiling" != "xyes"; then
-         LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DIR_SSH2"
-         export LD_LIBRARY_PATH
-         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_SSH2 to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $DIR_SSH2 to LD_LIBRARY_PATH" >&6;}
+         CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_SSH2"
+         export CURL_LIBRARY_PATH
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_SSH2 to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_SSH2 to CURL_LIBRARY_PATH" >&6;}
        fi
     fi
   else
@@ -26689,10 +26722,10 @@ done
     if test -n "$DIR_SSH"; then
 
        if test "x$cross_compiling" != "xyes"; then
-         LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DIR_SSH"
-         export LD_LIBRARY_PATH
-         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_SSH to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $DIR_SSH to LD_LIBRARY_PATH" >&6;}
+         CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_SSH"
+         export CURL_LIBRARY_PATH
+         { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_SSH to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_SSH to CURL_LIBRARY_PATH" >&6;}
        fi
     fi
   else
@@ -27540,10 +27573,10 @@ $as_echo "#define HAVE_LIBIDN2 1" >>confdefs.h
 
     curl_idn_msg="enabled (libidn2)"
     if test -n "$IDN_DIR" -a "x$cross_compiling" != "xyes"; then
-      LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$IDN_DIR"
-      export LD_LIBRARY_PATH
-      { $as_echo "$as_me:${as_lineno-$LINENO}: Added $IDN_DIR to LD_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $IDN_DIR to LD_LIBRARY_PATH" >&6;}
+      CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$IDN_DIR"
+      export CURL_LIBRARY_PATH
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Added $IDN_DIR to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $IDN_DIR to CURL_LIBRARY_PATH" >&6;}
     fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find libraries for IDN support: IDN disabled" >&5
@@ -28892,17 +28925,53 @@ $as_echo "#define HAVE_BOOL_T 1" >>confdefs.h
 fi
 
 
+# check for sa_family_t
+ac_fn_c_check_type "$LINENO" "sa_family_t" "ac_cv_type_sa_family_t" "
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+"
+if test "x$ac_cv_type_sa_family_t" = xyes; then :
+
+$as_echo "#define CURL_SA_FAMILY_T sa_family_t" >>confdefs.h
+
+else
+
+   # The windows name?
+   ac_fn_c_check_type "$LINENO" "ADDRESS_FAMILY" "ac_cv_type_ADDRESS_FAMILY" "
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+"
+if test "x$ac_cv_type_ADDRESS_FAMILY" = xyes; then :
+
+$as_echo "#define CURL_SA_FAMILY_T ADDRESS_FAMILY" >>confdefs.h
+
+else
+
+$as_echo "#define CURL_SA_FAMILY_T unsigned short" >>confdefs.h
+
+fi
+
+
+fi
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if time_t is unsigned" >&5
 $as_echo_n "checking if time_t is unsigned... " >&6; }
-if test "$cross_compiling" = yes; then :
 
+
+   old=$LD_LIBRARY_PATH
+   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH
+   if test "$cross_compiling" = yes; then :
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
 
   #include <time.h>
   #include <limits.h>
@@ -28911,7 +28980,6 @@ else
 
 _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
@@ -28919,7 +28987,6 @@ $as_echo "#define HAVE_TIME_T_UNSIGNED 1" >>confdefs.h
 
 
 else
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
@@ -28927,6 +28994,8 @@ fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
+
+   LD_LIBRARY_PATH=$old # restore
 
 
 

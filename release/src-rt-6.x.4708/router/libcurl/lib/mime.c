@@ -241,7 +241,7 @@ static FILE * vmsfopenread(const char *file, const char *mode)
 static char *Curl_basename(char *path)
 {
   /* Ignore all the details above for now and make a quick and simple
-     implementaion here */
+     implementation here */
   char *s1;
   char *s2;
 
@@ -1193,7 +1193,10 @@ CURLcode Curl_mime_duppart(curl_mimepart *dst, const curl_mimepart *src)
   }
 
   /* Duplicate other fields. */
-  dst->encoder = src->encoder;
+  if(dst != NULL)
+    dst->encoder = src->encoder;
+  else
+    res = CURLE_WRITE_ERROR;
   if(!res)
     res = curl_mime_type(dst, src->mimetype);
   if(!res)
@@ -1202,7 +1205,7 @@ CURLcode Curl_mime_duppart(curl_mimepart *dst, const curl_mimepart *src)
     res = curl_mime_filename(dst, src->filename);
 
   /* If an error occurred, rollback. */
-  if(res)
+  if(res && dst)
     Curl_mime_cleanpart(dst);
 
   return res;
