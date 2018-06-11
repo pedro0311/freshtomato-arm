@@ -54,43 +54,43 @@ function verifyFields(focused, quiet)
 
 	var s = E('_tor_custom');
 
-	if (s.value.search(/SocksPort/) == 0)  {
+	if (s.value.indexOf('SocksPort') != -1) {
 		ferror.set(s, 'Cannot set "SocksPort" option here. You can set it in Tomato GUI', quiet);
 		ok = 0; }
 
-	if (s.value.search(/SocksBindAddress/) == 0)  {
+	if (s.value.indexOf('SocksBindAddress') != -1) {
 		ferror.set(s, 'Cannot set "SocksBindAddress" option here.', quiet);
 		ok = 0; }
 
-	if (s.value.search(/AllowUnverifiedNodes/) == 0)  {
+	if (s.value.indexOf('AllowUnverifiedNodes') != -1) {
 		ferror.set(s, 'Cannot set "AllowUnverifiedNodes" option here.', quiet);
 		ok = 0; }
 
-	if (s.value.search(/Log/) == 0)  {
+	if (s.value.indexOf('Log') != -1) {
 		ferror.set(s, 'Cannot set "Log" option here.', quiet);
 		ok = 0; }
 
-	if (s.value.search(/DataDirectory/) == 0)  {
+	if (s.value.indexOf('DataDirectory') != -1) {
 		ferror.set(s, 'Cannot set "DataDirectory" option here. You can set it in Tomato GUI', quiet);
 		ok = 0; }
 
-	if (s.value.search(/TransPort/) == 0)  {
+	if (s.value.indexOf('TransPort') != -1) {
 		ferror.set(s, 'Cannot set "TransPort" option here. You can set it in Tomato GUI', quiet);
 		ok = 0; }
 
-	if (s.value.search(/TransListenAddress/) == 0)  {
+	if (s.value.indexOf('TransListenAddress') != -1) {
 		ferror.set(s, 'Cannot set "TransListenAddress" option here.', quiet);
 		ok = 0; }
 
-	if (s.value.search(/DNSPort/) == 0)  {
+	if (s.value.indexOf('DNSPort') != -1) {
 		ferror.set(s, 'Cannot set "DNSPort" option here. You can set it in Tomato GUI', quiet);
 		ok = 0; }
 
-	if (s.value.search(/DNSListenAddress/) == 0)  {
+	if (s.value.indexOf('DNSListenAddress') != -1) {
 		ferror.set(s, 'Cannot set "DNSListenAddress" option here.', quiet);
 		ok = 0; }
 
-	if (s.value.search(/User/) == 0)  {
+	if (s.value.indexOf('User') != -1) {
 		ferror.set(s, 'Cannot set "User" option here.', quiet);
 		ok = 0; }
 
