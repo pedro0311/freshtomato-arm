@@ -54,10 +54,6 @@ function verifyFields(focused, quiet)
 
 	var s = E('_tor_custom');
 
-	if (s.value.indexOf('SocksPort') != -1) {
-		ferror.set(s, 'Cannot set "SocksPort" option here. You can set it in Tomato GUI', quiet);
-		ok = 0; }
-
 	if (s.value.indexOf('SocksBindAddress') != -1) {
 		ferror.set(s, 'Cannot set "SocksBindAddress" option here.', quiet);
 		ok = 0; }
