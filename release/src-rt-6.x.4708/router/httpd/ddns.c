@@ -66,7 +66,6 @@ void asp_ddnsx(int argc, char **argv)
 void asp_ddnsx_ip(int argc, char **argv)
 {
 	char prefix[] = "wan";
-	int unit = 1;
-	
+
 	web_puts(get_wanip(prefix));
 }

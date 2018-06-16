@@ -2000,6 +2000,30 @@ extern void add_samba_rules(void);
 #endif
 #endif
 
+#ifdef TCONFIG_GROCTRL
+void enable_gro(int interval)
+{
+	char *argv[3] = {"echo", "", NULL};
+	char lan_ifname[32], *lan_ifnames, *next;
+	char path[64] = {0};
+	char parm[32] = {0};
+
+	if(nvram_get_int("gro_disable"))
+		return;
+
+	/* enabled gso on vlan interface */
+	lan_ifnames = nvram_safe_get("lan_ifnames");
+	foreach(lan_ifname, lan_ifnames, next) {
+		if (!strncmp(lan_ifname, "vlan", 4)) {
+			sprintf(path, ">>/proc/net/vlan/%s", lan_ifname);
+			sprintf(parm, "-gro %d", interval);
+			argv[1] = parm;
+			_eval(argv, path, 0, NULL);
+		}
+	}
+}
+#endif
+
 static void start_samba(void)
 {
 	FILE *fp;
@@ -2241,33 +2265,8 @@ static void stop_samba(void)
 #ifdef TCONFIG_GROCTRL
 	enable_gro(0);
 #endif
-
 }
 #endif	// TCONFIG_SAMBASRV
-
-#ifdef TCONFIG_GROCTRL
-void enable_gro(int interval)
-{
-	char *argv[3] = {"echo", "", NULL};
-	char lan_ifname[32], *lan_ifnames, *next;
-	char path[64] = {0};
-	char parm[32] = {0};
-
-	if(nvram_get_int("gro_disable"))
-		return;
-
-	/* enabled gso on vlan interface */
-	lan_ifnames = nvram_safe_get("lan_ifnames");
-	foreach(lan_ifname, lan_ifnames, next) {
-		if (!strncmp(lan_ifname, "vlan", 4)) {
-			sprintf(path, ">>/proc/net/vlan/%s", lan_ifname);
-			sprintf(parm, "-gro %d", interval);
-			argv[1] = parm;
-			_eval(argv, path, 0, NULL);
-		}
-	}
-}
-#endif
 
 #ifdef TCONFIG_MEDIA_SERVER
 #define MEDIA_SERVER_APP	"minidlna"

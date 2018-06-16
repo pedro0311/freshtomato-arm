@@ -215,18 +215,18 @@ int build_nginx_conf(void) {
 		nginx_write("worker_cpu_affinity\t%s;\n", nginx_cpu_affinity);
 		nginx_write("master_process\t%s;\n", nginx_master_process);
 		i = nvram_get_int("nginx_priority");
-	if ((i <= -20) || (i >= 19)) i = 10; // min = Max Performance and max= Min Performance value for worker_priority	
+	if ((i <= -20) || (i >= 19)) i = 10; // min = Max Performance and max= Min Performance value for worker_priority
 		nginx_write("worker_priority\t%d;\n", i);
 		nginx_write("error_log\t%s;\n", nginxerrorlog);
 		nginx_write("pid\t%s;\n", nginxpid);
 		nginx_write("worker_rlimit_nofile\t%s;\n", nginx_worker_rlimit_profile);
-		
-//Events		
+
+//Events
 		nginx_write("events {\n");
 		nginx_write("\tworker_connections\t%s;\n", nginx_worker_connections);
 //		nginx_write("\tmulti_accept\t%s;\n", nginx_multi_accept);
 		nginx_write("\t}\n");
-		
+
 //http
 		nginx_write("http {\n");
 		nginx_write("include\t%s;\n", mimetypes);
@@ -248,7 +248,7 @@ int build_nginx_conf(void) {
 //		nginx_write("tcp_nopush\t%s;\n", nginxtcp_nopush);
 //		nginx_write("server_names_hash_bucket_size\t%s;\n", nginxserver_names_hash_bucket_size);
 //		nginx_write("limit_req_zone  $binary_remote_addr  zone=one:10m   rate=1r/s;\n");
-		
+
 //Basic Server Parameters.
 		nginx_write("server {\n"); 
 		i = nvram_get_int("nginx_port");
@@ -304,7 +304,7 @@ int build_nginx_conf(void) {
 	if( nvram_match( "nginx_php", "1" ) ) {
 		if( !(phpini_file = fopen("/tmp/etc/php.ini", "w")) ) {
 			perror( "/tmp/etc/php.ini" );
-			return;
+			return 0;
 		}
 		fprintf( phpini_file, "post_max_size = %sM\n", nvram_safe_get("nginx_upload"));
 		fprintf( phpini_file, "upload_max_filesize = %sM\n", nvram_safe_get("nginx_upload"));

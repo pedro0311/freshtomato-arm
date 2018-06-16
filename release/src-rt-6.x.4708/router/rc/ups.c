@@ -9,9 +9,9 @@
 
 void start_ups(void)
 {
-    FILE *fpm;
+/*    FILE *fpm;
     FILE *fpc;
-
+*/
 //  always copy and try start service if USB support is enable
 //  if service will not find apc ups, then will turn off automaticaly
 //    if( nvram_match( "ups_enable", "1" ) )
