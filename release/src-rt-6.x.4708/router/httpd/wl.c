@@ -449,10 +449,8 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	// format for javascript
 
 	int i;
-	int j;
 	int k;
 	int left;
-	char c;
 	char macstr[18];
 	NDIS_802_11_NETWORK_TYPE NetWorkType;
 	unsigned char *bssidp;
@@ -1186,10 +1184,10 @@ char* get_wl_tempsense(char *buf)
 	char *lan_ifnames;
 	char *p;
 	char *ifname;
-	char tmpfile[32], s[WLC_IOCTL_SMLEN],temp[128], band[WLC_IOCTL_SMLEN];
+	char s[WLC_IOCTL_SMLEN], temp[128], band[WLC_IOCTL_SMLEN];
 	int b5G, b2G;
 	unsigned *cur_temp;
-	int  ret = 0, len, i, n;
+	int  ret = 0, len, i;
 
 	strcpy(buf,"");
 	if ((lan_ifnames = strdup(nvram_safe_get("wl_ifnames"))) != NULL) {

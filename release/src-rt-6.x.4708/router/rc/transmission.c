@@ -29,7 +29,6 @@ void start_bittorrent(void)
     char *po;
     char *pp;
     char *pr;
-    char *ps;
     char *pt;
     char *pu;
 
