@@ -105,12 +105,9 @@ wl_defaults(void)
 {
 	struct nvram_tuple *t;
 	char prefix[]="wlXXXXXX_", tmp[100], tmp2[100];
-	char pprefix[]="wlXXXXXX_", *pssid;
 	char word[256], *next;
-	int unit, subunit;
+	int unit;
 	char wlx_vifnames[64], wl_vifnames[64], lan_ifnames[128];
-	int subunit_x = 0;
-	unsigned int max_mssid;
 
 	memset(wlx_vifnames, 0, sizeof(wlx_vifnames));
 	memset(wl_vifnames, 0, sizeof(wl_vifnames));
@@ -469,7 +466,7 @@ static int invalid_mac(const char *mac)
 static int find_sercom_mac_addr(void)
 {
 	FILE *fp;
-	unsigned char m[6], s[18];
+	char m[6], s[18];
 
 	sprintf(s, MTD_DEV(%dro), 0);
 	if ((fp = fopen(s, "rb"))) {
