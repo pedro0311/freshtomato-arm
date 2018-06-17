@@ -198,7 +198,7 @@ int start_vlan(void)
 	int s;
 	struct ifreq ifr;
 	int i, j, vlan0tag;
-	char ea[ETHER_ADDR_LEN];
+	unsigned char ea[ETHER_ADDR_LEN];
 
 	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0) return 0;
 	

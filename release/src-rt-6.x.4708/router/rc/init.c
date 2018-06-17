@@ -370,7 +370,7 @@ static int invalid_mac(const char *mac)
 static int find_sercom_mac_addr(void)
 {
 	FILE *fp;
-	unsigned char m[6], s[18];
+	char m[6], s[18];
 
 	sprintf(s, MTD_DEV(%dro), 0);
 	if ((fp = fopen(s, "rb"))) {

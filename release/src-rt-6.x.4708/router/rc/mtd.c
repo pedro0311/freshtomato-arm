@@ -230,10 +230,8 @@ int mtd_write_main(int argc, char *argv[])
 	int mf = -1;
 	mtd_info_t mi;
 	erase_info_t ei;
-#ifdef TCONFIG_BCMARM	
-	uint32 sig;
-	struct code_header cth;
-	uint32 crc;
+#ifdef TCONFIG_BCMARM
+	struct code_header;
 #endif
 	FILE *f;
 	unsigned char *buf = NULL, *p, *bounce_buf = NULL;
