@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -363,6 +367,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -368,6 +372,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -19,10 +19,10 @@
 +#define HAVE_LEASEFILE_EXPIRE
 +#endif
 +
- #if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
- #define HAVE_INOTIFY
+ #ifdef NO_DUMPFILE
+ #undef HAVE_DUMPFILE
  #endif
-@@ -433,6 +441,9 @@ static char *compile_opts =
+@@ -442,6 +450,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -32,14 +32,6 @@
  #ifndef HAVE_AUTH
  "no-"
  #endif
-@@ -453,7 +464,6 @@ static char *compile_opts =
- #endif
- "inotify";
- 
--
- #endif
- 
- 
 --- dnsmasq/src/dnsmasq.c	2017-05-22 23:58:46.000000000 +0200
 +++ dnsmasq/src/dnsmasq.c	2017-10-03 20:05:34.000000000 +0200
 @@ -13,6 +13,44 @@
@@ -87,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1362,8 +1400,22 @@ static void async_event(int pipe, time_t
+@@ -1378,8 +1416,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -96,7 +88,7 @@
  	  log_reopen(daemon->log_file);
 +
 +#ifdef HAVE_TOMATO
-+	tomato_helper(now); //possibly delete & write out leases for tomato
++	tomato_helper(now);	/* possibly delete & write out leases for Tomato */
 +#endif //TOMATO
 +/* following is Asus tweak.  Interestingly Asus read the dnsmasq leases db
 +   directly.  They signal dnsmasq to update via SIGUSR2 and wait 1 second
@@ -110,12 +102,12 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1406,6 +1458,12 @@ static void async_event(int pipe, time_t
+@@ -1422,6 +1474,12 @@ static void async_event(int pipe, time_t
  	    while (retry_send(close(daemon->helperfd)));
  	  }
  #endif
 +
-+//Originally TOMATO tweak
++/* Originally TOMATO tweak */
 +#if defined(HAVE_DHCP) && defined(HAVE_LEASEFILE_EXPIRE)
 +	if (daemon->dhcp || daemon->dhcp6)
 +		flush_lease_file(now);
@@ -125,14 +117,14 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h	2018-04-10 22:39:54.000000000 +0200
 +++ dnsmasq/src/dnsmasq.h	2018-04-11 18:21:30.807014530 +0200
-@@ -1383,6 +1383,12 @@ int make_icmp_sock(void);
+@@ -1407,6 +1407,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
 +#ifdef HAVE_TOMATO
 +void tomato_helper(time_t now);
 +#endif
-+#ifdef HAVE_LEASEFILE_EXPIRE //originally TOMATO option
++#ifdef HAVE_LEASEFILE_EXPIRE	/* originally TOMATO option */
 +void flush_lease_file(time_t now);
 +#endif
  void queue_event(int event);
@@ -145,7 +137,7 @@
  	ei = atol(daemon->dhcp_buff3);
  
 -#ifdef HAVE_BROKEN_RTC
-+//Some ASUS & TOMATO tweaks
++/* Some ASUS & TOMATO tweaks */
 +#if defined(HAVE_BROKEN_RTC) || defined(HAVE_LEASEFILE_EXPIRE)
  	if (ei != 0)
  	  lease->expires = (time_t)ei + now;
@@ -161,7 +153,7 @@
  	    continue;
  #endif
  
-+//ASUS and TOMATO tweaks to output remaining leasetime
++/* ASUS and TOMATO tweaks to output remaining leasetime */
 +#ifdef HAVE_LEASEFILE_EXPIRE
 +	ourprintf(&err, "%u ",
  #ifdef HAVE_BROKEN_RTC
@@ -183,7 +175,7 @@
  	      if (!(lease->flags & (LEASE_TA | LEASE_NA)))
  		continue;
  
-+//ASUS and TOMATO tweaks to output remaining leasetime
++/* ASUS and TOMATO tweaks to output remaining leasetime */
 +#ifdef HAVE_LEASEFILE_EXPIRE
 +		ourprintf(&err, "%u ",
  #ifdef HAVE_BROKEN_RTC
@@ -220,7 +212,7 @@
 +	char buf[64];
 +	struct dhcp_lease *lease;
 +
-+	// if delete exists...
++	/* if delete exists... */
 +	if ((f = fopen("/var/tmp/dhcp/delete", "r")) != NULL) {
 +		while (fgets(buf, sizeof(buf), f)) {
 +			ia.s_addr = inet_addr(buf);
@@ -234,16 +226,16 @@
 +		unlink("/var/tmp/dhcp/delete");
 +	}
 +
-+	// dump the leases file
++	/* dump the leases file */
 +	if ((f = fopen("/var/tmp/dhcp/leases.!", "w")) != NULL) {
 +		for (lease = leases; lease; lease = lease->next) {
 +			if (lease->hwaddr_type == ARPHRD_ETHER) {
-+#ifdef HAVE_DHCP6 //only dump dhcpv6 if we have it
-+                           if (lease->flags & (LEASE_TA | LEASE_NA))
-+                                inet_ntop(AF_INET6, &lease->addr6, buf, ADDRSTRLEN);
-+                           else
-+#endif // Thanks to Shibby :-)
-+                                inet_ntop(AF_INET, &lease->addr, buf, ADDRSTRLEN);
++#ifdef HAVE_DHCP6 /* only dump dhcpv6 if we have it */
++				if (lease->flags & (LEASE_TA | LEASE_NA))
++					inet_ntop(AF_INET6, &lease->addr6, buf, ADDRSTRLEN);
++				else
++#endif /* Thanks to Shibby :-) */
++					inet_ntop(AF_INET, &lease->addr, buf, ADDRSTRLEN);
 +
 +				fprintf(f, "%lu %02X:%02X:%02X:%02X:%02X:%02X %s %s\n",
 +					lease->expires - now,
@@ -256,7 +248,7 @@
 +		rename("/var/tmp/dhcp/leases.!", "/var/tmp/dhcp/leases");
 +	}
 +}
-+#endif //HAVE_TOMATO
++#endif	/* HAVE_TOMATO */
 +
 +#ifdef HAVE_LEASEFILE_EXPIRE
 +void flush_lease_file(time_t now)
@@ -272,6 +264,6 @@
 +	if (file_dirty == 0)
 +		flush_time = now;
 +}
-+#endif //HAVE_LEASEFILE_EXPIRE
++#endif	/* HAVE_LEASEFILE_EXPIRE */
 +
 +#endif
