@@ -102,6 +102,7 @@ else
 		IFS=$${oldifs}; \
 		mv -f "$${resolvers_file_tmp}" "$${resolvers_file}" > /dev/null 2>&1; \
 		rm -rf $${sdns_decode}; \
+		rm -f $${resolvers_md}; \
 		printf "\nDone\n\n"; \
 		count=6; \
 	    fi; \
