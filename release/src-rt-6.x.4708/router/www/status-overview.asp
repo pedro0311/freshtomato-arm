@@ -243,10 +243,10 @@ function ethstates()
 function anon_update()
 {
 	update = anonupdate.update;
-	if (update == "no") { return 0; }
+	if (update == "no" || update == "") { return 0; }
 
 	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
-	code += '<div class="fields" style="text-align:center">Newer version of Tomato ARM ' + update + ' is now available. <a class="new_window" href="https://exotic.se/tomato-arm">Click here to download<\/a>.<\/div>';
+	code += '<div class="fields" style="text-align:center">Newer version of FreshTomato ' + update + ' is now available. <a class="new_window" href="http://freshtomato.org/">Click here to download<\/a>.<\/div>';
 	code += '<\/div>';
 	E("nversion").style.display = "block";
 	E("nversion").innerHTML = code;
