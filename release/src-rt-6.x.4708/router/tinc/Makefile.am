@@ -2,11 +2,13 @@
 
 AUTOMAKE_OPTIONS = gnu
 
-SUBDIRS =  src doc gui test systemd
+SUBDIRS =  src doc test systemd
 
 ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST = COPYING.README README.android
+
+@CODE_COVERAGE_RULES@
 
 # If git describe works, force autoconf to run in order to make sure we have the
 # current version number from git in the resulting configure script.
@@ -33,3 +35,6 @@ release:
 	echo "Please edit the NEWS file now..."
 	/usr/bin/editor $(srcdir)/NEWS
 	$(MAKE) dist
+
+astyle:
+	astyle --options=.astylerc -nQ src/*.[ch] src/*/*.[ch] test/*.[ch]

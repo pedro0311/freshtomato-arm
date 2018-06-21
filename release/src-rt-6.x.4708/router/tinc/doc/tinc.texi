@@ -15,7 +15,7 @@
 
 This is the info manual for @value{PACKAGE} version @value{VERSION}, a Virtual Private Network daemon.
 
-Copyright @copyright{} 1998-2017 Ivo Timmermans,
+Copyright @copyright{} 1998-2018 Ivo Timmermans,
 Guus Sliepen <guus@@tinc-vpn.org> and
 Wessel Dankers <wsl@@tinc-vpn.org>.
 
@@ -43,7 +43,7 @@ permission notice identical to this one.
 @vskip 0pt plus 1filll
 This is the info manual for @value{PACKAGE} version @value{VERSION}, a Virtual Private Network daemon.
 
-Copyright @copyright{} 1998-2017 Ivo Timmermans,
+Copyright @copyright{} 1998-2018 Ivo Timmermans,
 Guus Sliepen <guus@@tinc-vpn.org> and
 Wessel Dankers <wsl@@tinc-vpn.org>.
 
@@ -721,7 +721,7 @@ It is not required if you only run one tinc daemon,
 it doesn't even have to be the same on all the nodes of your VPN,
 but it is recommended that you choose one anyway.
 
-We will asume you use a netname throughout this document.
+We will assume you use a netname throughout this document.
 This means that you call tinc with the -n argument,
 which will specify the netname.
 
@@ -778,7 +778,7 @@ It is not always possible to do this however, and firewalls might also prevent d
 In that case, VPN packets between A and C will be forwarded by B.
 
 In effect, all nodes in the VPN will be able to talk to each other, as long as
-their is a path of meta-connections between them, and whenever possible, two
+there is a path of meta-connections between them, and whenever possible, two
 nodes will communicate with each other directly.
 
 
@@ -967,7 +967,7 @@ Packets received for the local node are written to it.
 @cindex UML
 @item uml (not compiled in by default)
 Create a UNIX socket with the filename specified by
-@var{Device}, or @file{@value{localstatedir}/run/@var{netname}.umlsocket}
+@var{Device}, or @file{@value{runstatedir}/@var{netname}.umlsocket}
 if not specified.
 Tinc will wait for a User Mode Linux instance to connect to this socket.
 
@@ -975,7 +975,7 @@ Tinc will wait for a User Mode Linux instance to connect to this socket.
 @item vde (not compiled in by default)
 Uses the libvdeplug library to connect to a Virtual Distributed Ethernet switch,
 using the UNIX socket specified by
-@var{Device}, or @file{@value{localstatedir}/run/vde.ctl}
+@var{Device}, or @file{@value{runstatedir}/vde.ctl}
 if not specified.
 @end table
 
@@ -1048,16 +1048,24 @@ Incoming packets that are meant for another node are forwarded by tinc internall
 This is the default mode, and unless you really know you need another forwarding mode, don't change it.
 
 @item kernel
-Incoming packets are always sent to the TUN/TAP device, even if the packets are not for the local node.
+Incoming packets using the legacy protocol are always sent to the TUN/TAP device,
+even if the packets are not for the local node.
 This is less efficient, but allows the kernel to apply its routing and firewall rules on them,
 and can also help debugging.
+Incoming packets using the SPTPS protocol are dropped, since they are end-to-end encrypted.
 @end table
+
+@cindex FWMark
+@item FWMark = <@var{value}> (0) [experimental]
+When set to a non-zero value, all TCP and UDP sockets created by tinc will use the given value as the firewall mark.
+This can be used for mark-based routing or for packet filtering.
+This option is currently only supported on Linux.
 
 @cindex Hostnames
 @item Hostnames = <yes|no> (no)
 This option selects whether IP addresses (both real and on the VPN)
 should be resolved.  Since DNS lookups are blocking, it might affect
-tinc's efficiency, even stopping the daemon for a few seconds everytime
+tinc's efficiency, even stopping the daemon for a few seconds every time
 it does a lookup if your DNS server is not responding.
 
 This does not affect resolving hostnames to IP addresses from the
@@ -1396,7 +1404,7 @@ connection with that host.
 @cindex Subnet
 @item Subnet = <@var{address}[/@var{prefixlength}[#@var{weight}]]>
 The subnet which this tinc daemon will serve.
-Tinc tries to look up which other daemon it should send a packet to by searching the appropiate subnet.
+Tinc tries to look up which other daemon it should send a packet to by searching the appropriate subnet.
 If the packet matches a subnet,
 it will be sent to the daemon who has this subnet in his host configuration file.
 Multiple subnet lines can be specified for each daemon.
@@ -1983,7 +1991,7 @@ Specifying . for @var{netname} is the same as not specifying any @var{netname}.
 @item --pidfile=@var{filename}
 Store a cookie in @var{filename} which allows tinc to authenticate.
 If unspecified, the default is
-@file{@value{localstatedir}/run/tinc.@var{netname}.pid}.
+@file{@value{runstatedir}/tinc.@var{netname}.pid}.
 
 @item -o, --option=[@var{HOST}.]@var{KEY}=@var{VALUE}
 Without specifying a @var{HOST}, this will set server configuration variable @var{KEY} to @var{VALUE}.
@@ -2001,6 +2009,9 @@ This option is not supported on all platforms.
 Write log entries to a file instead of to the system logging facility.
 If @var{file} is omitted, the default is @file{@value{localstatedir}/log/tinc.@var{netname}.log}.
 
+@item --pidfile=@var{file}
+Write PID to @var{file} instead of @file{@value{runstatedir}/tinc.@var{netname}.pid}.
+
 @item --bypass-security
 Disables encryption and authentication.
 Only useful for debugging.
@@ -2012,10 +2023,14 @@ located (@file{@value{sysconfdir}/tinc/@var{netname}/} as determined by
 The chroot is performed after all the initialization is done, after
 writing pid files and opening network sockets.
 
-Note that this option alone does not do any good without -U/--user, below.
+This option is best used in combination with the -U/--user option described below.
 
-Note also that tinc can't run scripts anymore (such as tinc-down or host-up),
-unless it's setup to be runnable inside chroot environment.
+You will need to ensure the chroot environment contains all the files necessary
+for tinc to run correctly.
+Most importantly, for tinc to be able to resolve hostnames inside the chroot environment,
+you must copy @file{/etc/resolv.conf} into the chroot directory.
+If you want to be able to run scripts other than @file{tinc-up} in the chroot,
+you must ensure the appropriate shell is also installed in the chroot, along with all its dependencies.
 
 This option is not supported on all platforms.
 @item -U, --user=@var{user}
@@ -2295,7 +2310,11 @@ Use configuration for net @var{netname}. @xref{Multiple networks}.
 @item --pidfile=@var{filename}
 Use the cookie from @var{filename} to authenticate with a running tinc daemon.
 If unspecified, the default is
-@file{@value{localstatedir}/run/tinc.@var{netname}.pid}.
+@file{@value{runstatedir}/tinc.@var{netname}.pid}.
+
+@cindex batch
+@item -b, --batch
+Don't ask for anything (non-interactive mode).
 
 @item --force
 Force some commands to work despite warnings.
@@ -2523,7 +2542,7 @@ The @var{name} of the node must be given,
 or can be "." to check against the local node's public key,
 or "*" to allow a signature from any node whose public key is known.
 If no @var{filename} is given, the file is read from standard input.
-If the verification is succesful, a copy of the input with the signature removed is written to standard output, and the exit code will be zero.
+If the verification is successful, a copy of the input with the signature removed is written to standard output, and the exit code will be zero.
 If the verification failed, nothing will be written to standard output, and the exit code will be non-zero.
 
 @end table
@@ -2696,6 +2715,8 @@ Address = server.example.com
 The file is basically a concatenation of several host config blocks. Each host
 config block starts with @code{Name = ...}.  Lines that look like @code{#---#}
 are not important, it just makes it easier for humans to read the file.
+However, the first line of an invitation file @emph{must} always start with
+@code{Name = ...}.
 
 The first host config block is always the one representing the invitee. So the
 first Name statement determines the name that the invitee will get. From the
@@ -2744,7 +2765,7 @@ When an invitation is generated, the "invitation-created" script is called (if
 it exists) right after the invitation file is written, but before the URL has
 been written to stdout. This allows one to change the invitation file
 automatically before the invitation URL is passed to the invitee. Here is an
-example shell script that aproximately recreates the default invitation file:
+example shell script that approximately recreates the default invitation file:
 
 @example
 #!/bin/sh
@@ -3394,6 +3415,7 @@ tinc or give us feedback, you are stronly encouraged to do so.
 @menu
 * Interface configuration::
 * Routes::
+* Automatically starting tinc::
 @end menu
 
 @c ==================================================================
@@ -3520,6 +3542,67 @@ Adding routes to IPv6 subnets:
 @tab @code{netsh interface ipv6 add route} @var{network address}/@var{prefixlength} @var{interface}
 @end multitable
 
+@c ==================================================================
+@node    Automatically starting tinc
+@section Automatically starting tinc
+
+@menu
+* Linux::
+* Windows::
+* Other platforms::
+@end menu
+
+@c ==================================================================
+@node       Linux
+@subsection Linux
+
+@cindex systemd
+There are many Linux distributions, and historically, many of them had their
+own way of starting programs at boot time. Today, a number of major Linux
+distributions have chosen to use systemd as their init system. Tinc ships with
+systemd service files that allow you to start and stop tinc using systemd.
+There are two service files: @code{tinc.service} is used to globally enable or
+disable all tinc daemons managed by systemd, and
+@code{tinc@@@var{netname}.service} is used to enable or disable specific tinc
+daemons. So if one has created a tinc network with netname @code{foo}, then
+you have to run the following two commands to ensure it is started at boot
+time:
+
+@example
+systemctl enable tinc
+systemctl enable tinc@@foo
+@end example
+
+To start the tinc daemon immediately if it wasn't already running, use the
+following command:
+
+@example
+systemctl start tinc@@foo
+@end example
+
+You can also use @samp{systemctl start tinc}, this will start all tinc daemons
+that are enabled. You can stop and disable tinc networks in the same way.
+
+If your system is not using systemd, then you have to look up your
+distribution's way of starting tinc at boot time.
+
+@c ==================================================================
+@node       Windows
+@subsection Windows
+
+On Windows, if tinc is started with the @code{tinc start} command without using
+the @code{-D} or @code{--no-detach} option, it will automatically register
+itself as a service that is started at boot time. When tinc is stopped using
+the @code{tinc stop} command, it will also automatically unregister itself.
+Once tinc is registered as a service, it is also possible to stop and start
+tinc using the Windows Services Manager.
+
+@c ==================================================================
+@node       Other platforms
+@subsection Other platforms
+
+On platforms other than the ones mentioned in the earlier sections, you have to
+look up your platform's way of starting programs at boot time.
 
 @c ==================================================================
 @node    About us

@@ -1,3 +1,6 @@
+#ifndef TINC_OPENSSL_DIGEST_H
+#define TINC_OPENSSL_DIGEST_H
+
 /*
     digest.h -- header file digest.c
     Copyright (C) 2013 Guus Sliepen <guus@tinc-vpn.org>
@@ -17,16 +20,14 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef __TINC_OPENSSL_DIGEST_H__
-#define __TINC_OPENSSL_DIGEST_H__
-
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
 
 struct digest {
 	const EVP_MD *digest;
+	HMAC_CTX *hmac_ctx;
+	EVP_MD_CTX *md_ctx;
 	int maclength;
-	int keylength;
-	char *key;
 };
 
 #endif

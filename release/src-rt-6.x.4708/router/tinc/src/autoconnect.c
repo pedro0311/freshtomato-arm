@@ -27,28 +27,34 @@
 static void make_new_connection() {
 	/* Select a random node we haven't connected to yet. */
 	int count = 0;
+
 	for splay_each(node_t, n, node_tree) {
-		if(n == myself || n->connection || !(n->status.has_address || n->status.reachable))
+		if(n == myself || n->connection || !(n->status.has_address || n->status.reachable)) {
 			continue;
+		}
+
 		count++;
 	}
 
-	if(!count)
+	if(!count) {
 		return;
+	}
 
 	int r = rand() % count;
 
 	for splay_each(node_t, n, node_tree) {
-		if(n == myself || n->connection || !(n->status.has_address || n->status.reachable))
+		if(n == myself || n->connection || !(n->status.has_address || n->status.reachable)) {
 			continue;
+		}
 
-		if(r--)
+		if(r--) {
 			continue;
+		}
 
 		bool found = false;
 
 		for list_each(outgoing_t, outgoing, outgoing_list) {
-			if(!strcmp(outgoing->name, n->name)) {
+			if(outgoing->node == n) {
 				found = true;
 				break;
 			}
@@ -56,10 +62,10 @@ static void make_new_connection() {
 
 		if(!found) {
 			logger(DEBUG_CONNECTIONS, LOG_INFO, "Autoconnecting to %s", n->name);
-			outgoing_t *outgoing = xzalloc(sizeof *outgoing);
-			outgoing->name = xstrdup(n->name);
+			outgoing_t *outgoing = xzalloc(sizeof(*outgoing));
+			outgoing->node = n;
 			list_insert_tail(outgoing_list, outgoing);
-			setup_outgoing_connection(outgoing);
+			setup_outgoing_connection(outgoing, false);
 		}
 
 		break;
@@ -77,23 +83,27 @@ static void connect_to_unreachable() {
 	int r = rand() % node_tree->count;
 
 	for splay_each(node_t, n, node_tree) {
-		if(r--)
+		if(r--) {
 			continue;
+		}
 
 		/* Is it unreachable and do we know an address for it? If not, return. */
-		if(n == myself || n->connection || n->status.reachable || !n->status.has_address)
+		if(n == myself || n->connection || n->status.reachable || !n->status.has_address) {
 			return;
+		}
 
-		/* Are we already trying to make an outgoing connection to it? If not, return. */
-		for list_each(outgoing_t, outgoing, outgoing_list)
-			if(!strcmp(outgoing->name, n->name))
+		/* Are we already trying to make an outgoing connection to it? If so, return. */
+		for list_each(outgoing_t, outgoing, outgoing_list) {
+			if(outgoing->node == n) {
 				return;
+			}
+		}
 
 		logger(DEBUG_CONNECTIONS, LOG_INFO, "Autoconnecting to %s", n->name);
-		outgoing_t *outgoing = xzalloc(sizeof *outgoing);
-		outgoing->name = xstrdup(n->name);
+		outgoing_t *outgoing = xzalloc(sizeof(*outgoing));
+		outgoing->node = n;
 		list_insert_tail(outgoing_list, outgoing);
-		setup_outgoing_connection(outgoing);
+		setup_outgoing_connection(outgoing, false);
 
 		return;
 	}
@@ -102,23 +112,29 @@ static void connect_to_unreachable() {
 static void drop_superfluous_outgoing_connection() {
 	/* Choose a random outgoing connection to a node that has at least one other connection. */
 	int count = 0;
+
 	for list_each(connection_t, c, connection_list) {
-		if(!c->edge || !c->outgoing || !c->node || c->node->edge_tree->count < 2)
+		if(!c->edge || !c->outgoing || !c->node || c->node->edge_tree->count < 2) {
 			continue;
+		}
+
 		count++;
 	}
 
-	if(!count)
+	if(!count) {
 		return;
+	}
 
 	int r = rand() % count;
 
 	for list_each(connection_t, c, connection_list) {
-		if(!c->edge || !c->outgoing || !c->node || c->node->edge_tree->count < 2)
+		if(!c->edge || !c->outgoing || !c->node || c->node->edge_tree->count < 2) {
 			continue;
-		
-		if(r--)
+		}
+
+		if(r--) {
 			continue;
+		}
 
 		logger(DEBUG_CONNECTIONS, LOG_INFO, "Autodisconnecting from %s", c->name);
 		list_delete(outgoing_list, c->outgoing);
@@ -132,6 +148,7 @@ static void drop_superfluous_pending_connections() {
 	for list_each(outgoing_t, o, outgoing_list) {
 		/* Only look for connections that are waiting to be retried later. */
 		bool found = false;
+
 		for list_each(connection_t, c, connection_list) {
 			if(c->outgoing == o) {
 				found = true;
@@ -139,10 +156,11 @@ static void drop_superfluous_pending_connections() {
 			}
 		}
 
-		if(found)
+		if(found) {
 			continue;
+		}
 
-		logger(DEBUG_CONNECTIONS, LOG_INFO, "Cancelled outgoing connection to %s", o->name);
+		logger(DEBUG_CONNECTIONS, LOG_INFO, "Cancelled outgoing connection to %s", o->node->name);
 		list_delete_node(outgoing_list, node);
 	}
 }
@@ -150,9 +168,11 @@ static void drop_superfluous_pending_connections() {
 void do_autoconnect() {
 	/* Count number of active connections. */
 	int nc = 0;
+
 	for list_each(connection_t, c, connection_list) {
-		if(c->edge)
+		if(c->edge) {
 			nc++;
+		}
 	}
 
 	/* Less than 3 connections? Eagerly try to make a new one. */
@@ -160,10 +180,11 @@ void do_autoconnect() {
 		make_new_connection();
 		return;
 	}
-	
+
 	/* More than 3 connections? See if we can get rid of a superfluous one. */
-	if(nc > 3)
+	if(nc > 3) {
 		drop_superfluous_outgoing_connection();
+	}
 
 
 	/* Check if there are unreachable nodes that we should try to connect to. */
