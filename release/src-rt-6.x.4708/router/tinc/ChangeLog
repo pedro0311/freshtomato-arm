@@ -1,3 +1,92 @@
+Version 1.1pre16                                            June 12 2018
+------------------------------------------------------------------------
+
+Guus Sliepen (54):
+      Update THANKS.
+      Prepare for automatic code formatting using Artistic Style.
+      Remove unused/obsolete checks from configure.ac.
+      Update all header guards.
+      Convert sizeof foo to sizeof(foo).
+      Reformat all code using astyle.
+      Ensure "make distcheck" really runs without errors.
+      Add some information about the requirements of a chroot environment.
+      Disable PMTU discovery when TCPOnly is used.
+      Only forward SPTPS packets if Forwarding = internal.
+      If we are using libncurses, also try to link with libtinfo.
+      Don't log errors when autoconnecting fails and debuglevel is 0.
+      Remove unused functions.
+      Ensure all parameters have names in header files.
+      Support autoconf's --runstatedir option.
+      Const correctness.
+      Update THANKS.
+      Fix building documentation when using OpenBSD's make.
+      Assume all IPPROTO_* macros exist.
+      Document the --batch option.
+      Don't warn about empty lines in invitation files.
+      Document that invitation files MUST always start with Name = ...
+      Add missing newlines to some error messages.
+      Merge remote-tracking branch 'dechamps/ipip' into 1.1
+      Remove hardcoded paths from systemd unit files.
+      Set default systemd unit path to ${libdir}/systemd/system.
+      Ensure the sptps-basic test doesn't fail during make distcheck.
+      Update .gitignore.
+      Don't include generated files into the tarball.
+      Document how to enable tinc at boot time using systemd.
+      Fix all spelling errors found by codespell.
+      Add a cache of recently seen addresses.
+      Fix calling freeaddrinfo() on the wrong pointer.
+      Reformat all code using astyle.
+      Add code coverage testing support.
+      Reduce memory allocations due to zlib's uncompress().
+      Reduce memory allocations due to HMAC() and EVP_MD_*().
+      Document the control protocol.
+      Update the documentation of the control protocol.
+      Unconditionally remove timeouts from the queue before calling the callback.
+      Revert "Unconditionally remove timeouts from the queue before calling the callback."
+      Work around a GCC bug that causes inet_checksum() to give wrong results.
+      Try to process all pending events after select().
+      Fix compatibility with LibreSSL and OpenSSL < 1.1.
+      Reformat all code using astyle.
+      Ensure we call CloseServiceHandle() in case of errors.
+      Warn if we cannot reload the tincd when creating an invitation.
+      Properly implement tinc.texi's dependency on tincinclude.texi.
+      Prevent an infinite loop in get_recent_address().
+      Fix invitation tests if port 655 is available.
+      Add the ability to set a firewall mark on sockets.
+      Reformat all code using astyle.
+      Remove the wxPython GUI.
+      Releasing 1.1pre16.
+
+Todd C. Miller (9):
+      Fix parsing of -b flag
+      Replace remaining sizeof foo with sizeof(foo).
+      Add some missing freeaddrinfo() calls to avoid leaking memory.
+      WSAEVENT is a pointer, so we cannot simply return the different of two
+      In device_issue_read() there is no need to reset Offset and OffsetHigh
+      Fix a use-after-free bug in get_recent_address() and two related issues.
+      Fix heap corruption on Windows exposed by the use-after free fix.
+      In device_handle_read() we need to reset the read event on error or
+      Call WSAWaitForMultipleEvents() in a loop until we have checked all events.
+
+Etienne Dechamps (5):
+      Support MSS clamping for IP in IP (RFC 2003) packets.
+      Fix AC_CHECK_DECLS usage in openssl.m4.
+      Fix "void function should not return void expression" warning.
+      Fix "use of GNU empty initializer extension" warning.
+      Move ResetEvent() call before ReadFile().
+
+Daniel Lublin (1):
+      doc: there is, not their is
+
+Gjergji (1):
+      fix service removal.
+
+Mike Sullivan (1):
+      Fix handling partial SPTPS messages in sptps_test.
+
+Oliver Freyermuth (1):
+      Fix compiling when support for UML sockets is enabled.
+
 Version 1.1pre15                                       September 02 2017
 ------------------------------------------------------------------------
 
