@@ -1,6 +1,32 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2018.3 - 2018.06.22
+----------------------------
+
+- php: updated to 7.2.7
+- dnsmasq: update to 2.80test2
+- iptables: updated to to 1.6.2
+- libcurl: updated to 7.60.0
+- nano: updated to 2.9.8
+- sqlite: updated to 3.24.0
+- tor: Updated to 0.3.3.7
+- xl2tpd: Updated to 1.3.12
+- entware: download installer scripts over https
+- dnscrypt-proxy: remove unneeded public-resolvers.md file from build
+- dnscrypt-proxy: define own timeout and number of tries for wget to use local copy of server list much quicker than with defaults
+- www: tools-wol.asp: WOL bugfix
+- www/status-overview.asp: fix wireless show/hide state retension
+- www: advanced-vlan.asp: cosmetics
+- www: status-overview.asp: cosmetics
+- router/www: advanced-tor.asp: fix search for specified words
+- router/www: advanced-tor.asp: allow to enter "SocksPort" also in Custom Configuration
+- router/Makefile: add PARALLEL_BUILD directive to dhcpv6
+- router: httpd/rc: fix warnings in compiler
+- router: rc: fix warnings in compiler
+- kernel: tweak input class modules, removing mouse/joystick support
+
+
 2018.3.018-beta - 2018.05.27
 ----------------------------
 
