@@ -827,7 +827,7 @@ void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 }
 
 /* ----------------------------------------------------------------------------- */
-
+/*
 static int is_sta(int idx, int unit, int subunit, void *param)
 {
 	char **p = param;
@@ -838,7 +838,7 @@ static int is_sta(int idx, int unit, int subunit, void *param)
 	}
 	return 0;
 }
-
+*/
 void start_wan_if(int mode, char *prefix)
 {
 	int wan_proto;
@@ -1151,7 +1151,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	char wantime_file[256];
 	char wanconn_file[256];
 	char tmp[100];
-	FILE *f;
 
 	TRACE_PT("begin %s_ifname=%s\n", prefix, wan_ifname);
 

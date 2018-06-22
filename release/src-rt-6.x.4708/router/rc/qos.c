@@ -58,7 +58,6 @@ void ipt_qos(void)
 	int sizegroup;
 	int class_flag;
 	int rule_num;
-	int qosIFBDeviceNumberString = 0;
 
 	if (!nvram_get_int("qos_enable")) return;
 

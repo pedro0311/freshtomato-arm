@@ -366,7 +366,16 @@ int main (int argc, char **argv)
   else
     daemon->inotifyfd = -1;
 #endif
-       
+
+  if (daemon->dump_file)
+#ifdef HAVE_DUMPFILE
+    dump_init();
+  else 
+    daemon->dumpfd = -1;
+#else
+  die(_("Packet dumps not available: set HAVE_DUMP in src/config.h"), NULL, EC_BADCONF);
+#endif
+  
   if (option_bool(OPT_DBUS))
 #ifdef HAVE_DBUS
     {
@@ -731,7 +740,11 @@ int main (int argc, char **argv)
   else 
     {
       if (daemon->cachesize != 0)
-	my_syslog(LOG_INFO, _("started, version %s cachesize %d"), VERSION, daemon->cachesize);
+	{
+	  my_syslog(LOG_INFO, _("started, version %s cachesize %d"), VERSION, daemon->cachesize);
+	  if (daemon->cachesize > 10000)
+	    my_syslog(LOG_WARNING, _("cache size greater than 10000 may cause performance issues, and is unlikely to be useful."));
+	}
       else
 	my_syslog(LOG_INFO, _("started, version %s cache disabled"), VERSION);
 
@@ -1424,6 +1437,11 @@ static void async_event(int pipe, time_t now)
 
 	if (daemon->runfile)
 	  unlink(daemon->runfile);
+
+#ifdef HAVE_DUMPFILE
+	if (daemon->dumpfd != -1)
+	  close(daemon->dumpfd);
+#endif
 	
 	my_syslog(LOG_INFO, _("exiting on receipt of SIGTERM"));
 	flush_log();

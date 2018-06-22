@@ -647,6 +647,13 @@ V4 mapped IPv6 addresses, which have a representation like ::ffff:1.2.3.4 are ha
 The address range can be of the form
 <ip address>,<ip address> or <ip address>/<netmask> in both forms of the option.
 .TP
+.B --dumpfile=<path/to/file>
+Specify the location of a pcap-format file which dnsmasq uses to dump copies of network packets for debugging purposes. If the file exists when dnsmasq starts, it is not deleted; new packets are added to the end.
+.TP
+.B --dumpmask=<mask>
+Specify which types of packets should be added to the dumpfile. The argument should be the OR of the bitmasks for each type of packet to be dumped: it can be specified in hex by preceding the number with 0x in  the normal way. Each time a packet is written to the dumpfile, dnsmasq logs the packet sequence and the mask
+representing its type. The current types are: 0x0001 - DNS queries from clients 0x0002 DNS replies to clients 0x0004 - DNS queries to upstream 0x0008 - DNS replies from upstream 0x0010 - queries send upstream for DNSSEC validation 0x0020 - replies to queries for DNSSEC validation 0x0040 - replies to client queries which fail DNSSEC validation 0x0080 replies to queries for DNSSEC validation which fail validation.
+.TP
 .B --add-mac[=base64|text]
 Add the MAC address of the requestor to DNS queries which are
 forwarded upstream. This may be used to DNS filtering by the upstream
@@ -685,7 +692,7 @@ will add 1.2.3.0/24 for both IPv4 and IPv6 requestors.
 
 .TP
 .B \-c, --cache-size=<cachesize>
-Set the size of dnsmasq's cache. The default is 150 names. Setting the cache size to zero disables caching.
+Set the size of dnsmasq's cache. The default is 150 names. Setting the cache size to zero disables caching. Note: huge cache size impacts performance.
 .TP
 .B \-N, --no-negcache
 Disable negative caching. Negative caching allows dnsmasq to remember
@@ -810,7 +817,11 @@ authoritative zones as dnsmasq.
 Specify the addresses of secondary servers which are allowed to
 initiate zone transfer (AXFR) requests for zones for which dnsmasq is
 authoritative. If this option is not given, then AXFR requests will be
-accepted from any secondary. 
+accepted from any secondary. Specifying
+.B auth-peer
+without
+.B auth-sec-servers
+enables zone transfer but does not advertise the secondary in NS records returned by dnsmasq.
 .TP 
 .B --conntrack
 Read the Linux connection track mark associated with incoming DNS
