@@ -159,9 +159,11 @@ ifneq ($(TCONFIG_IPV6),y)
 endif
 
 # Only include the Transmission binary path select if Transmission binaries is configured in.
+# Also only then (when libcurl is included), let to choose curl as a connection checker.
 ifneq ($(TCONFIG_BBT),y)
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/BBT-BEGIN/,/BBT-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/BBT-BEGIN/,/BBT-END/d"
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BBT-BEGIN/,/BBT-END/d"
 endif
 
 # Only include the Transmission pages if Transmission is configured in.
