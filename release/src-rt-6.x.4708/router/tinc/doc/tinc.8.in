@@ -7,10 +7,11 @@
 .Nd tinc VPN control
 .Sh SYNOPSIS
 .Nm
-.Op Fl cn
+.Op Fl bcn
 .Op Fl -config Ns = Ns Ar DIR
 .Op Fl -net Ns = Ns Ar NETNAME
 .Op Fl -pidfile Ns = Ns Ar FILENAME
+.Op Fl -batch
 .Op Fl -force
 .Op Fl -help
 .Op Fl -version
@@ -54,7 +55,9 @@ Use the cookie from
 .Ar FILENAME
 to authenticate with a running tinc daemon.
 If unspecified, the default is
-.Pa @localstatedir@/run/tinc. Ns Ar NETNAME Ns Pa .pid.
+.Pa @runstatedir@/tinc. Ns Ar NETNAME Ns Pa .pid.
+.It Fl b, -batch
+Don't ask for anything (non-interactive mode).
 .It Fl -force
 Force some commands to work despite warnings.
 .It Fl -help
@@ -249,7 +252,7 @@ to allow a signature from any node whose public key is known.
 If no
 .Ar filename
 is given, the file is read from standard input.
-If the verification is succesful,
+If the verification is successful,
 a copy of the input with the signature removed is written to standard output,
 and the exit code will be zero.
 If the verification failed,

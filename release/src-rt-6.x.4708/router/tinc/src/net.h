@@ -1,3 +1,6 @@
+#ifndef TINC_NET_H
+#define TINC_NET_H
+
 /*
     net.h -- header for net.c
     Copyright (C) 1998-2005 Ivo Timmermans
@@ -17,9 +20,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-#ifndef __TINC_NET_H__
-#define __TINC_NET_H__
 
 #include "ipv6.h"
 #include "cipher.h"
@@ -74,9 +74,6 @@ typedef union sockaddr_t {
 	struct sockaddr_in in;
 	struct sockaddr_in6 in6;
 	struct sockaddr_unknown unknown;
-#ifdef HAVE_STRUCT_SOCKADDR_STORAGE
-	struct sockaddr_storage storage;
-#endif
 } sockaddr_t;
 
 #ifdef SA_LEN
@@ -122,13 +119,9 @@ typedef struct listen_socket_t {
 #include "list.h"
 
 typedef struct outgoing_t {
-	char *name;
+	struct node_t *node;
 	int timeout;
-	splay_tree_t *config_tree;
-	struct config_t *cfg;
-	struct addrinfo *ai;  // addresses from config files
-	struct addrinfo *aip;
-	struct addrinfo *kai; // addresses known via other online nodes (use free_known_addresses())
+	struct address_cache_t *address_cache;
 	timeout_t ev;
 } outgoing_t;
 
@@ -155,6 +148,7 @@ extern int keylifetime;
 extern int udp_rcvbuf;
 extern int udp_sndbuf;
 extern int max_connection_burst;
+extern int fwmark;
 extern bool do_prune;
 extern char *myport;
 extern bool device_standby;
@@ -185,44 +179,44 @@ extern char *scriptextension;
 #include "connection.h"
 #include "node.h"
 
-extern void retry_outgoing(outgoing_t *);
-extern void handle_incoming_vpn_data(void *, int);
-extern void finish_connecting(struct connection_t *);
-extern bool do_outgoing_connection(struct outgoing_t *);
-extern void handle_new_meta_connection(void *, int);
-extern void handle_new_unix_connection(void *, int);
-extern int setup_listen_socket(const sockaddr_t *);
-extern int setup_vpn_in_socket(const sockaddr_t *);
+extern void retry_outgoing(outgoing_t *outgoing);
+extern void handle_incoming_vpn_data(void *data, int flags);
+extern void finish_connecting(struct connection_t *c);
+extern bool do_outgoing_connection(struct outgoing_t *outgoing);
+extern void handle_new_meta_connection(void *data, int flags);
+extern void handle_new_unix_connection(void *data, int flags);
+extern int setup_listen_socket(const sockaddr_t *sa);
+extern int setup_vpn_in_socket(const sockaddr_t *sa);
 extern bool send_sptps_data(node_t *to, node_t *from, int type, const void *data, size_t len);
 extern bool receive_sptps_record(void *handle, uint8_t type, const void *data, uint16_t len);
-extern void send_packet(struct node_t *, vpn_packet_t *);
-extern void receive_tcppacket(struct connection_t *, const char *, int);
-extern bool receive_tcppacket_sptps(struct connection_t *, const char *, int);
-extern void broadcast_packet(const struct node_t *, vpn_packet_t *);
+extern void send_packet(struct node_t *n, vpn_packet_t *packet);
+extern void receive_tcppacket(struct connection_t *c, const char *buffer, int length);
+extern bool receive_tcppacket_sptps(struct connection_t *c, const char *buffer, int length);
+extern void broadcast_packet(const struct node_t *n, vpn_packet_t *packet);
 extern char *get_name(void);
 extern void device_enable(void);
 extern void device_disable(void);
 extern bool setup_myself_reloadable(void);
 extern bool setup_network(void);
-extern void setup_outgoing_connection(struct outgoing_t *);
+extern void setup_outgoing_connection(struct outgoing_t *outgoing, bool verbose);
 extern void try_outgoing_connections(void);
 extern void close_network_connections(void);
 extern int main_loop(void);
-extern void terminate_connection(struct connection_t *, bool);
-extern bool node_read_ecdsa_public_key(struct node_t *);
-extern bool read_ecdsa_public_key(struct connection_t *);
-extern bool read_rsa_public_key(struct connection_t *);
-extern void handle_device_data(void *, int);
-extern void handle_meta_connection_data(struct connection_t *);
+extern void terminate_connection(struct connection_t *c, bool report);
+extern bool node_read_ecdsa_public_key(struct node_t *n);
+extern bool read_ecdsa_public_key(struct connection_t *c);
+extern bool read_rsa_public_key(struct connection_t *c);
+extern void handle_device_data(void *data, int flags);
+extern void handle_meta_connection_data(struct connection_t *c);
 extern void regenerate_key(void);
 extern void purge(void);
 extern void retry(void);
 extern int reload_configuration(void);
 extern void load_all_nodes(void);
-extern void try_tx(struct node_t *n, bool);
+extern void try_tx(struct node_t *n, bool mtu);
 
 #ifndef HAVE_MINGW
 #define closesocket(s) close(s)
 #endif
 
-#endif /* __TINC_NET_H__ */
+#endif

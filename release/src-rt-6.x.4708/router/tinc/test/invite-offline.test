@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. ./testlib.sh
+. "${0%/*}/testlib.sh"
 
 # Initialize one node
 
@@ -9,7 +9,6 @@ init foo
 set DeviceType dummy
 set Mode switch
 set Broadcast no
-del Port
 set Address localhost
 set Port 32758
 EOF

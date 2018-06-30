@@ -1,3 +1,6 @@
+#ifndef TINC_CRYPTO_H
+#define TINC_CRYPTO_H
+
 /*
     crypto.h -- header for crypto.c
     Copyright (C) 2007-2013 Guus Sliepen <guus@tinc-vpn.org>
@@ -17,11 +20,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef __TINC_CRYPTO_H__
-#define __TINC_CRYPTO_H__
-
-extern void crypto_init();
-extern void crypto_exit();
-extern void randomize(void *, size_t);
+extern void crypto_init(void);
+extern void crypto_exit(void);
+extern void randomize(void *buf, size_t buflen);
 
 #endif

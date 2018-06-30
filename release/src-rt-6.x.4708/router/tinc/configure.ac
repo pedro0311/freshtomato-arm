@@ -1,9 +1,10 @@
 dnl Process this file with autoconf to produce a configure script.
 
+origcflags="$CFLAGS"
+
 AC_PREREQ(2.61)
 AC_INIT([tinc], m4_esyscmd_s((git describe || echo UNKNOWN) | sed 's/release-//'))
 AC_CONFIG_SRCDIR([src/tincd.c])
-AC_GNU_SOURCE
 AM_INIT_AUTOMAKE([std-options subdir-objects nostdinc silent-rules -Wall])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -19,9 +20,11 @@ dnl Checks for programs.
 AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_INSTALL
-AC_PROG_LN_S
-
 AM_PROG_CC_C_O
+
+dnl Check whether to enable code coverage testing, and if so, clear the default CFLAGS.
+AX_CODE_COVERAGE
+AS_IF([test "x$enable_code_coverage" = "xyes" -a "x$origcflags" = "x"], [CFLAGS=""])
 
 dnl Check and set OS
 
@@ -117,7 +120,7 @@ AC_ARG_WITH(systemd,
   [ systemd=false ]
 )
 
-AS_IF([test "x$with_systemd" = "xyes"], [systemd_path="/lib/systemd/system"],
+AS_IF([test "x$with_systemd" = "xyes"], [systemd_path="\${libdir}/systemd/system"],
       [AS_IF([test "x$with_systemd" = "xno"], [systemd=false])])
 
 AC_SUBST(systemd_path, $systemd_path)
@@ -186,7 +189,7 @@ AC_CHECK_TYPES([struct ether_header, struct arphdr, struct ether_arp, struct ip,
 
 dnl Checks for library functions.
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([asprintf daemon fchmod flock ftime fork gettimeofday mlockall putenv recvmmsg strsignal nanosleep unsetenv vsyslog devname fdevname],
+AC_CHECK_FUNCS([asprintf daemon fchmod flock fork gettimeofday mlockall putenv recvmmsg strsignal nanosleep unsetenv vsyslog devname fdevname],
   [], [], [#include "$srcdir/src/have.h"]
 )
 
@@ -257,6 +260,11 @@ AC_ARG_ENABLE(jumbograms,
   ]
 )
 
-AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile gui/Makefile test/Makefile systemd/Makefile])
+dnl Ensure runstatedir is set if we are using a version of autoconf that does not suppport it
+if test "x$runstatedir" = "x"; then
+  AC_SUBST([runstatedir], ['${localstatedir}/run'])
+fi
+
+AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile test/Makefile systemd/Makefile])
 
 AC_OUTPUT

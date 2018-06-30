@@ -29,7 +29,7 @@
 #include "route.h"
 #include "xalloc.h"
 
-static char *device_info;
+static const char *device_info = "multicast socket";
 
 static struct addrinfo *ai = NULL;
 static mac_t ignore_src = {{0}};
@@ -40,8 +40,6 @@ static bool setup_device(void) {
 	char *space;
 	int ttl = 1;
 
-	device_info = "multicast socket";
-
 	get_config_string(lookup_config(config_tree, "Interface"), &iface);
 
 	if(!get_config_string(lookup_config(config_tree, "Device"), &device)) {
@@ -51,6 +49,7 @@ static bool setup_device(void) {
 
 	host = xstrdup(device);
 	space = strchr(host, ' ');
+
 	if(!space) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Port number required for %s", device_info);
 		goto error;
@@ -66,10 +65,13 @@ static bool setup_device(void) {
 	}
 
 	ai = str2addrinfo(host, port, SOCK_DGRAM);
-	if(!ai)
+
+	if(!ai) {
 		goto error;
+	}
 
 	device_fd = socket(ai->ai_family, SOCK_DGRAM, IPPROTO_UDP);
+
 	if(device_fd < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Creating socket failed: %s", sockstrerror(sockerrno));
 		goto error;
@@ -80,7 +82,7 @@ static bool setup_device(void) {
 #endif
 
 	static const int one = 1;
-	setsockopt(device_fd, SOL_SOCKET, SO_REUSEADDR, (void *)&one, sizeof one);
+	setsockopt(device_fd, SOL_SOCKET, SO_REUSEADDR, (void *)&one, sizeof(one));
 
 	if(bind(device_fd, ai->ai_addr, ai->ai_addrlen)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Can't bind to %s %s: %s", host, port, sockstrerror(sockerrno));
@@ -89,48 +91,56 @@ static bool setup_device(void) {
 
 	switch(ai->ai_family) {
 #ifdef IP_ADD_MEMBERSHIP
-		case AF_INET: {
-			struct ip_mreq mreq;
-			struct sockaddr_in in;
-			memcpy(&in, ai->ai_addr, sizeof in);
-			mreq.imr_multiaddr.s_addr = in.sin_addr.s_addr;
-			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-			if(setsockopt(device_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *)&mreq, sizeof mreq)) {
-				logger(DEBUG_ALWAYS, LOG_ERR, "Cannot join multicast group %s %s: %s", host, port, sockstrerror(sockerrno));
-				goto error;
-			}
+
+	case AF_INET: {
+		struct ip_mreq mreq;
+		struct sockaddr_in in;
+		memcpy(&in, ai->ai_addr, sizeof(in));
+		mreq.imr_multiaddr.s_addr = in.sin_addr.s_addr;
+		mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+
+		if(setsockopt(device_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *)&mreq, sizeof(mreq))) {
+			logger(DEBUG_ALWAYS, LOG_ERR, "Cannot join multicast group %s %s: %s", host, port, sockstrerror(sockerrno));
+			goto error;
+		}
+
 #ifdef IP_MULTICAST_LOOP
-			setsockopt(device_fd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *)&one, sizeof one);
+		setsockopt(device_fd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *)&one, sizeof(one));
 #endif
 #ifdef IP_MULTICAST_TTL
-			setsockopt(device_fd, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&ttl, sizeof ttl);
+		setsockopt(device_fd, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&ttl, sizeof(ttl));
 #endif
-		} break;
+	}
+	break;
 #endif
 
 #ifdef IPV6_JOIN_GROUP
-		case AF_INET6: {
-			struct ipv6_mreq mreq;
-			struct sockaddr_in6 in6;
-			memcpy(&in6, ai->ai_addr, sizeof in6);
-			memcpy(&mreq.ipv6mr_multiaddr, &in6.sin6_addr, sizeof mreq.ipv6mr_multiaddr);
-			mreq.ipv6mr_interface = in6.sin6_scope_id;
-			if(setsockopt(device_fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (void *)&mreq, sizeof mreq)) {
-				logger(DEBUG_ALWAYS, LOG_ERR, "Cannot join multicast group %s %s: %s", host, port, sockstrerror(sockerrno));
-				goto error;
-			}
+
+	case AF_INET6: {
+		struct ipv6_mreq mreq;
+		struct sockaddr_in6 in6;
+		memcpy(&in6, ai->ai_addr, sizeof(in6));
+		memcpy(&mreq.ipv6mr_multiaddr, &in6.sin6_addr, sizeof(mreq.ipv6mr_multiaddr));
+		mreq.ipv6mr_interface = in6.sin6_scope_id;
+
+		if(setsockopt(device_fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (void *)&mreq, sizeof(mreq))) {
+			logger(DEBUG_ALWAYS, LOG_ERR, "Cannot join multicast group %s %s: %s", host, port, sockstrerror(sockerrno));
+			goto error;
+		}
+
 #ifdef IPV6_MULTICAST_LOOP
-			setsockopt(device_fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const void *)&one, sizeof one);
+		setsockopt(device_fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const void *)&one, sizeof(one));
 #endif
 #ifdef IPV6_MULTICAST_HOPS
-			setsockopt(device_fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (void *)&ttl, sizeof ttl);
+		setsockopt(device_fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (void *)&ttl, sizeof(ttl));
 #endif
-		} break;
+	}
+	break;
 #endif
 
-		default:
-			logger(DEBUG_ALWAYS, LOG_ERR, "Multicast for address family %x unsupported", ai->ai_family);
-			goto error;
+	default:
+		logger(DEBUG_ALWAYS, LOG_ERR, "Multicast for address family %x unsupported", ai->ai_family);
+		goto error;
 	}
 
 	logger(DEBUG_ALWAYS, LOG_INFO, "%s is a %s", device, device_info);
@@ -138,24 +148,34 @@ static bool setup_device(void) {
 	return true;
 
 error:
-	if(device_fd >= 0)
+
+	if(device_fd >= 0) {
 		closesocket(device_fd);
-	if(ai)
+	}
+
+	if(ai) {
 		freeaddrinfo(ai);
+	}
+
 	free(host);
 
 	return false;
 }
 
 static void close_device(void) {
-	close(device_fd); device_fd = -1;
+	close(device_fd);
+	device_fd = -1;
 
-	free(device); device = NULL;
-	free(iface); iface = NULL;
+	free(device);
+	device = NULL;
+	free(iface);
+	iface = NULL;
 
 	if(ai) {
-		freeaddrinfo(ai); ai = NULL;
+		freeaddrinfo(ai);
+		ai = NULL;
 	}
+
 	device_info = NULL;
 }
 
@@ -164,11 +184,11 @@ static bool read_packet(vpn_packet_t *packet) {
 
 	if((lenin = recv(device_fd, (void *)DATA(packet), MTU, 0)) <= 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading from %s %s: %s", device_info,
-			   device, sockstrerror(sockerrno));
+		       device, sockstrerror(sockerrno));
 		return false;
 	}
 
-	if(!memcmp(&ignore_src, DATA(packet) + 6, sizeof ignore_src)) {
+	if(!memcmp(&ignore_src, DATA(packet) + 6, sizeof(ignore_src))) {
 		logger(DEBUG_SCARY_THINGS, LOG_DEBUG, "Ignoring loopback packet of %d bytes from %s", lenin, device_info);
 		return false;
 	}
@@ -176,22 +196,22 @@ static bool read_packet(vpn_packet_t *packet) {
 	packet->len = lenin;
 
 	logger(DEBUG_TRAFFIC, LOG_DEBUG, "Read packet of %d bytes from %s", packet->len,
-			   device_info);
+	       device_info);
 
 	return true;
 }
 
 static bool write_packet(vpn_packet_t *packet) {
 	logger(DEBUG_TRAFFIC, LOG_DEBUG, "Writing packet of %d bytes to %s",
-			   packet->len, device_info);
+	       packet->len, device_info);
 
 	if(sendto(device_fd, (void *)DATA(packet), packet->len, 0, ai->ai_addr, ai->ai_addrlen) < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Can't write to %s %s: %s", device_info, device,
-			   sockstrerror(sockerrno));
+		       sockstrerror(sockerrno));
 		return false;
 	}
 
-	memcpy(&ignore_src, DATA(packet) + 6, sizeof ignore_src);
+	memcpy(&ignore_src, DATA(packet) + 6, sizeof(ignore_src));
 
 	return true;
 }

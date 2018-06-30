@@ -1,3 +1,6 @@
+#ifndef TINC_MINGW_COMMON_H
+#define TINC_MINGW_COMMON_H
+
 /*
  *  TAP-Win32 -- A kernel driver to provide virtual tap device functionality
  *               on Windows.  Originally derived from the CIPE-Win32
@@ -37,7 +40,7 @@
 //=============
 
 #define TAP_CONTROL_CODE(request,method) \
-  CTL_CODE (FILE_DEVICE_UNKNOWN, request, method, FILE_ANY_ACCESS)
+	CTL_CODE (FILE_DEVICE_UNKNOWN, request, method, FILE_ANY_ACCESS)
 
 #define TAP_IOCTL_GET_MAC               TAP_CONTROL_CODE (1, METHOD_BUFFERED)
 #define TAP_IOCTL_GET_VERSION           TAP_CONTROL_CODE (2, METHOD_BUFFERED)
@@ -73,3 +76,5 @@
 //=========================================================
 
 #define TAP_COMPONENT_ID "tap0801"
+
+#endif

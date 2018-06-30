@@ -33,46 +33,47 @@
 #include "xalloc.h"
 
 #if defined(PF_PACKET) && defined(ETH_P_ALL) && defined(AF_PACKET) && defined(SIOCGIFINDEX)
-static char *device_info;
+static const char *device_info = "raw_socket";
 
 static bool setup_device(void) {
 	struct ifreq ifr;
 	struct sockaddr_ll sa;
 
-	if(!get_config_string(lookup_config(config_tree, "Interface"), &iface))
+	if(!get_config_string(lookup_config(config_tree, "Interface"), &iface)) {
 		iface = xstrdup("eth0");
+	}
 
-	if(!get_config_string(lookup_config(config_tree, "Device"), &device))
+	if(!get_config_string(lookup_config(config_tree, "Device"), &device)) {
 		device = xstrdup(iface);
-
-	device_info = "raw socket";
+	}
 
 	if((device_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Could not open %s: %s", device_info,
-			   strerror(errno));
+		       strerror(errno));
 		return false;
 	}
 
-	memset(&ifr, 0, sizeof ifr);
+	memset(&ifr, 0, sizeof(ifr));
 
 #ifdef FD_CLOEXEC
 	fcntl(device_fd, F_SETFD, FD_CLOEXEC);
 #endif
 
 	strncpy(ifr.ifr_ifrn.ifrn_name, iface, IFNAMSIZ);
+
 	if(ioctl(device_fd, SIOCGIFINDEX, &ifr)) {
 		close(device_fd);
 		logger(DEBUG_ALWAYS, LOG_ERR, "Can't find interface %s: %s", iface,
-			   strerror(errno));
+		       strerror(errno));
 		return false;
 	}
 
-	memset(&sa, '0', sizeof sa);
+	memset(&sa, '0', sizeof(sa));
 	sa.sll_family = AF_PACKET;
 	sa.sll_protocol = htons(ETH_P_ALL);
 	sa.sll_ifindex = ifr.ifr_ifindex;
 
-	if(bind(device_fd, (struct sockaddr *) &sa, (socklen_t) sizeof sa)) {
+	if(bind(device_fd, (struct sockaddr *) &sa, (socklen_t) sizeof(sa))) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Could not bind %s to %s: %s", device, iface, strerror(errno));
 		return false;
 	}
@@ -83,10 +84,13 @@ static bool setup_device(void) {
 }
 
 static void close_device(void) {
-	close(device_fd); device_fd = -1;
+	close(device_fd);
+	device_fd = -1;
 
-	free(device); device = NULL;
-	free(iface); iface = NULL;
+	free(device);
+	device = NULL;
+	free(iface);
+	iface = NULL;
 	device_info = NULL;
 }
 
@@ -95,25 +99,25 @@ static bool read_packet(vpn_packet_t *packet) {
 
 	if((inlen = read(device_fd, DATA(packet), MTU)) <= 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading from %s %s: %s", device_info,
-			   device, strerror(errno));
+		       device, strerror(errno));
 		return false;
 	}
 
 	packet->len = inlen;
 
 	logger(DEBUG_TRAFFIC, LOG_DEBUG, "Read packet of %d bytes from %s", packet->len,
-			   device_info);
+	       device_info);
 
 	return true;
 }
 
 static bool write_packet(vpn_packet_t *packet) {
 	logger(DEBUG_TRAFFIC, LOG_DEBUG, "Writing packet of %d bytes to %s",
-			   packet->len, device_info);
+	       packet->len, device_info);
 
 	if(write(device_fd, DATA(packet), packet->len) < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Can't write to %s %s: %s", device_info, device,
-			   strerror(errno));
+		       strerror(errno));
 		return false;
 	}
 

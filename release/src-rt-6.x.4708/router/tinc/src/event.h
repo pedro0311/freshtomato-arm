@@ -1,3 +1,6 @@
+#ifndef TINC_EVENT_H
+#define TINC_EVENT_H
+
 /*
     event.h -- I/O, timeout and signal event handling
     Copyright (C) 2012-2013 Guus Sliepen <guus@tinc-vpn.org>
@@ -16,9 +19,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-#ifndef __TINC_EVENT_H__
-#define __TINC_EVENT_H__
 
 #include "splay_tree.h"
 
@@ -58,7 +58,7 @@ extern struct timeval now;
 
 extern void io_add(io_t *io, io_cb_t cb, void *data, int fd, int flags);
 #ifdef HAVE_MINGW
-extern void io_add_event(io_t *io, io_cb_t cb, void* data, WSAEVENT event);
+extern void io_add_event(io_t *io, io_cb_t cb, void *data, WSAEVENT event);
 #endif
 extern void io_del(io_t *io);
 extern void io_set(io_t *io, int flags);

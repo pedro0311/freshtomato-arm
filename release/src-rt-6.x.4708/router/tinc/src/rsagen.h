@@ -1,3 +1,6 @@
+#ifndef TINC_RSAGEN_H
+#define TINC_RSAGEN_H
+
 /*
     rsagen.h -- RSA key generation and export
     Copyright (C) 2008-2013 Guus Sliepen <guus@tinc-vpn.org>
@@ -17,13 +20,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef __TINC_RSAGEN_H__
-#define __TINC_RSAGEN_H__
-
 #include "rsa.h"
 
-extern rsa_t *rsa_generate(size_t bits, unsigned long exponent) __attribute__ ((__malloc__));
-extern bool rsa_write_pem_public_key(rsa_t *rsa, FILE *fp) __attribute__ ((__warn_unused_result__));
-extern bool rsa_write_pem_private_key(rsa_t *rsa, FILE *fp) __attribute__ ((__warn_unused_result__));
+extern rsa_t *rsa_generate(size_t bits, unsigned long exponent) __attribute__((__malloc__));
+extern bool rsa_write_pem_public_key(rsa_t *rsa, FILE *fp) __attribute__((__warn_unused_result__));
+extern bool rsa_write_pem_private_key(rsa_t *rsa, FILE *fp) __attribute__((__warn_unused_result__));
 
 #endif

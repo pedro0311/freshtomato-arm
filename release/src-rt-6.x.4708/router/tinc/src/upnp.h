@@ -1,3 +1,6 @@
+#ifndef TINC_UPNP_H
+#define TINC_UPNP_H
+
 /*
     upnp.h -- UPnP-IGD client
     Copyright (C) 2015 Guus Sliepen <guus@tinc-vpn.org>
@@ -17,11 +20,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef __UPNP_H__
-#define __UPNP_H__
-
 #include "system.h"
 
-extern void upnp_init(bool, bool);
+extern void upnp_init(bool tcp, bool udp);
 
 #endif

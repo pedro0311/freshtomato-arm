@@ -1,3 +1,6 @@
+#ifndef TINC_EDGE_H
+#define TINC_EDGE_H
+
 /*
     edge.h -- header for edge.c
     Copyright (C) 2001-2012 Guus Sliepen <guus@tinc-vpn.org>,
@@ -17,9 +20,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-#ifndef __TINC_EDGE_H__
-#define __TINC_EDGE_H__
 
 #include "splay_tree.h"
 #include "connection.h"
@@ -43,13 +43,13 @@ extern splay_tree_t *edge_weight_tree;          /* Tree with all known edges sor
 
 extern void init_edges(void);
 extern void exit_edges(void);
-extern edge_t *new_edge(void) __attribute__ ((__malloc__));
-extern void free_edge(edge_t *);
-extern splay_tree_t *new_edge_tree(void) __attribute__ ((__malloc__));
-extern void free_edge_tree(splay_tree_t *);
-extern void edge_add(edge_t *);
-extern void edge_del(edge_t *);
-extern edge_t *lookup_edge(struct node_t *, struct node_t *);
-extern bool dump_edges(struct connection_t *);
+extern edge_t *new_edge(void) __attribute__((__malloc__));
+extern void free_edge(edge_t *e);
+extern splay_tree_t *new_edge_tree(void) __attribute__((__malloc__));
+extern void free_edge_tree(splay_tree_t *edge_tree);
+extern void edge_add(edge_t *e);
+extern void edge_del(edge_t *e);
+extern edge_t *lookup_edge(struct node_t *from, struct node_t *to);
+extern bool dump_edges(struct connection_t *c);
 
-#endif /* __TINC_EDGE_H__ */
+#endif
