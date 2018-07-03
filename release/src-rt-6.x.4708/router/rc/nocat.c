@@ -97,7 +97,7 @@ int build_nocat_conf( void )
     fprintf( fp, "FirewallPath\t%s\n", "/usr/libexec/nocat/" );
     fprintf( fp, "ExcludePorts\t%s\n", nvram_safe_get( "NC_ExcludePorts" ) );
     fprintf( fp, "IncludePorts\t%s\n", nvram_safe_get( "NC_IncludePorts" ) );
-    fprintf( fp, "AllowedWebHosts\t%s %s\n", nvram_safe_get( "lan_ipaddr" ), nvram_safe_get( "lan1_ipaddr" ), nvram_safe_get( "lan2_ipaddr" ), nvram_safe_get( "lan3_ipaddr" ),
+    fprintf( fp, "AllowedWebHosts\t%s %s\n", nvram_safe_get( "lan_ipaddr" ),
 	     nvram_safe_get( "NC_AllowedWebHosts" ) );
     /*
      * TJaqua: Added MACWhiteList to ignore given machines or routers on the
@@ -203,7 +203,6 @@ void start_nocat(void)
 	fprintf( fp, "sleep 20\n" );
 	fprintf( fp, "$LOGGER \"splashd : Captive Portal Splash Daemon successfully started\" \n");
 	fprintf( fp, "echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse\n");
-	fprintf( fp, "touch /tmp/nocat.leases\n");
 	fprintf( fp, "/usr/sbin/splashd >> /tmp/nocat.log 2>&1 &\n" );
 	fprintf( fp, "sleep 2\n" );
 	fprintf( fp, "echo 0 > /proc/sys/net/ipv4/tcp_tw_reuse\n");
