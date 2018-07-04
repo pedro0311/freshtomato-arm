@@ -3,6 +3,8 @@ include ../common.mak
 #srcdir=source
 srcdir=source3
 
+export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
+
 SMBCFLAGS = $(EXTRACFLAGS) -O3 -ffunction-sections -fdata-sections -I$(TOP)/libiconv/include
 SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/lib/.libs
 
@@ -29,7 +31,7 @@ all: .conf apps
 
 apps: .conf
 	mkdir -p $(srcdir)/bin
-	$(MAKE) -C $(srcdir) all
+	$(MAKE) -C $(srcdir) all $(PARALLEL_BUILD)
 
 .conf:
 	cd $(srcdir) && \
