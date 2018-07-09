@@ -103,8 +103,8 @@ function init()
 <br />
 Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br />
 <br />
-<b>[Pedro's Tomato-ARM]</b> - Polish forum: <a href='https://openlinksys.info/forum/' class='new_window'>https://openlinksys.info</a> English forum: <a href="https://www.linksysinfo.org/index.php" class="new_window">https://linksysinfo.org</a><br />
-<a href='https://bitbucket.org/pedro311/freshtomato-arm' class='new_window'>Project page</a><br />
+<b>Forums about Tomato</b> - PL: <a href='https://openlinksys.info' class='new_window'>https://openlinksys.info</a> EN: <a href='https://www.linksysinfo.org' class='new_window'>https://linksysinfo.org</a><br />
+<b>FreshTomato team: </b><a href='https://bitbucket.org/kille72/freshtomato-arm' class='new_window'>@kille72</a>, <a href='https://bitbucket.org/pedro311/freshtomato-arm' class='new_window'>@pedro</a><br />
 <br />
 <hr>
 <!-- / / / -->
@@ -262,14 +262,13 @@ We want to express our gratitude to all people not mentioned here but contribute
 <br />
 
 <hr>
-<br /><b>[Pedro's Tomato-ARM] - is an alternative, customized version, forked off from Tomato-ARM by Shibby</b>
+<br /><b>FreshTomato-ARM - is an alternative, customized version, forked off from Tomato-ARM by Shibby</b>
 <br />
-Copyright (C) 2016-2018 Pedro
+Copyright (C) 2016-2018 FreshTomato team
 <br />
 <br />
 Built on <% build_time(); %> by Pedro
 <br />
-PL: <a href="https://openlinksys.info/forum/" class="new_window">https://openlinksys.info</a>, EN: <a href="https://www.linksysinfo.org/index.php" class="new_window">https://linksysinfo.org</a>
 <br />
 <br />
 Click below to send a "Thank you" gift through PayPal
