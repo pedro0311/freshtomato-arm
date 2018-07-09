@@ -1055,7 +1055,7 @@ nettle-clean:
 	@rm -rf nettle/include nettle/lib nettle/bin nettle/share
 
 gmp/stamp-h1:
-	@cd gmp && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
+	@cd gmp && autoreconf -fvi && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	$(CONFIGURE)
@@ -1063,11 +1063,13 @@ gmp/stamp-h1:
 
 gmp: gmp/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C gmp
+	$(call patch_files,gmp)
+	@$(MAKE) -C gmp $(PARALLEL_BUILD)
 
 gmp-clean:
 	@$(MAKE) -C gmp clean
 	@rm -f gmp/stamp-h1
+	$(call unpatch_files,gmp)
 
 iptables:
 ifeq ($(CONFIG_LINUX26),y)
@@ -1802,14 +1804,17 @@ minidlna-install:
 	$(STRIP) $(INSTALLDIR)/minidlna/usr/sbin/minidlna
 
 igmpproxy/src/Makefile: igmpproxy/src/Makefile.in
-	cd igmpproxy && CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	cd igmpproxy && \
 	autoreconf -fsi && \
 	$(CONFIGURE) --prefix=/usr
 
 igmpproxy: igmpproxy/src/Makefile
 	@$(SEP)
-	@$(MAKE) -C igmpproxy/src $(PARALLEL_BUILD)
+	@$(MAKE) -C igmpproxy/src \
+	CC=$(CC) \
+	CFLAGS="-O3 -g -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	$(PARALLEL_BUILD)
 
 igmpproxy-install:
 	install -D igmpproxy/src/igmpproxy $(INSTALLDIR)/igmpproxy/usr/sbin/igmpproxy
@@ -2805,7 +2810,7 @@ udpxy-install:
 	$(STRIP) -s $(INSTALLDIR)/udpxy/bin/udpxy
 
 mdadm:
-	$(MAKE) -C mdadm $(PARALLEL_BUILD)
+	$(MAKE) -C mdadm mdadm $(PARALLEL_BUILD)
 
 mdadm-install:
 	install -D mdadm/mdadm $(INSTALLDIR)/mdadm/usr/sbin/mdadm
