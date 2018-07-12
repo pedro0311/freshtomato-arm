@@ -1,10 +1,16 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Enable RDRANR Hardware RNG Hash Seed */
+/* Enable RDRAND Hardware RNG Hash Seed */
 #undef ENABLE_RDRAND
+
+/* Enable partial threading support */
+#undef ENABLE_THREADING
 
 /* Define if .gnu.warning accepts long strings. */
 #undef HAS_GNU_WARNING_LONG
+
+/* Has atomic builtins */
+#undef HAVE_ATOMIC_BUILTINS
 
 /* Define to 1 if you have the declaration of `INFINITY', and to 0 if you
    don't. */
@@ -50,18 +56,13 @@
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
-/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
-   to 0 otherwise. */
-#undef HAVE_MALLOC
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
 /* Define to 1 if you have the `open' function. */
 #undef HAVE_OPEN
 
-/* Define to 1 if your system has a GNU libc compatible `realloc' function,
-   and to 0 otherwise. */
+/* Define to 1 if you have the `realloc' function. */
 #undef HAVE_REALLOC
 
 /* Define to 1 if you have the `setlocale' function. */
@@ -115,6 +116,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the `uselocale' function. */
+#undef HAVE_USELOCALE
+
 /* Define to 1 if you have the `vasprintf' function. */
 #undef HAVE_VASPRINTF
 
@@ -126,6 +130,12 @@
 
 /* Define to 1 if you have the `vsyslog' function. */
 #undef HAVE_VSYSLOG
+
+/* Define to 1 if you have the <xlocale.h> header file. */
+#undef HAVE_XLOCALE_H
+
+/* Have __thread */
+#undef HAVE___THREAD
 
 /* Public define for json_inttypes.h */
 #undef JSON_C_HAVE_INTTYPES_H
@@ -155,6 +165,24 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* The number of bytes in type int */
+#undef SIZEOF_INT
+
+/* The number of bytes in type int64_t */
+#undef SIZEOF_INT64_T
+
+/* The number of bytes in type long */
+#undef SIZEOF_LONG
+
+/* The number of bytes in type long long */
+#undef SIZEOF_LONG_LONG
+
+/* The number of bytes in type size_t */
+#undef SIZEOF_SIZE_T
+
+/* Specifier for __thread */
+#undef SPEC___THREAD
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
@@ -163,12 +191,6 @@
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
-
-/* Define to rpl_malloc if the replacement function should be used. */
-#undef malloc
-
-/* Define to rpl_realloc if the replacement function should be used. */
-#undef realloc
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef size_t
