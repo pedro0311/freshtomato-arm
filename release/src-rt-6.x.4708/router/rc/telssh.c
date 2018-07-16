@@ -98,7 +98,7 @@ static inline int check_host_key(const char *ktype, const char *nvname, const ch
 {
 	unlink(hkfn);
 
-	if (!nvram_get_file(nvname, hkfn, 2048)) {
+	if (!nvram_get_file(nvname, hkfn, 4096)) {
 		eval("dropbearkey", "-t", (char *)ktype, "-f", (char *)hkfn);
 		if (nvram_set_file(nvname, hkfn, 2048)) {
 			return 1;
