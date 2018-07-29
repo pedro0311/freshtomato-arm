@@ -1034,8 +1034,12 @@ static noinline int early_drop(struct net *net, unsigned int hash)
 
 	if (del_timer(&ct->timeout)) {
 		death_by_timeout((unsigned long)ct);
-		dropped = 1;
-		NF_CT_STAT_INC_ATOMIC(net, early_drop);
+		/* Check if we indeed killed this entry. Reliable event
+		   delivery may have inserted it into the dying list. */
+		if (test_bit(IPS_DYING_BIT, &ct->status)) {
+			dropped = 1;
+			NF_CT_STAT_INC_ATOMIC(net, early_drop);
+		}
 	}
 	nf_ct_put(ct);
 	return dropped;
@@ -1113,6 +1117,7 @@ struct nf_conn *nf_conntrack_alloc(struct net *net, u16 zone,
 
 #ifdef CONFIG_NF_CONNTRACK_ZONES
 out_free:
+	atomic_dec(&net->ct.count);
 	kmem_cache_free(net->ct.nf_conntrack_cachep, ct);
 	return ERR_PTR(-ENOMEM);
 #endif
@@ -1323,6 +1328,9 @@ nf_conntrack_in(struct net *net, u_int8_t pf, unsigned int hooknum,
 			ret = -ret;
 			goto out;
 		}
+		/* ICMP[v6] protocol trackers may assign one conntrack. */
+		if (skb->nfct)
+			goto out;
 	}
 
 	ct = resolve_normal_ct(net, tmpl, skb, dataoff, pf, protonum,
@@ -1360,8 +1368,15 @@ nf_conntrack_in(struct net *net, u_int8_t pf, unsigned int hooknum,
 	if (set_reply && !test_and_set_bit(IPS_SEEN_REPLY_BIT, &ct->status))
 		nf_conntrack_event_cache(IPCT_REPLY, ct);
 out:
-	if (tmpl)
-		nf_ct_put(tmpl);
+	if (tmpl) {
+		/* Special case: we have to repeat this hook, assign the
+		 * template again to this packet. We assume that this packet
+		 * has no conntrack assigned. This is used by nf_ct_tcp. */
+		if (ret == NF_REPEAT)
+			skb->nfct = (struct nf_conntrack *)tmpl;
+		else
+			nf_ct_put(tmpl);
+	}
 
 	return ret;
 }
