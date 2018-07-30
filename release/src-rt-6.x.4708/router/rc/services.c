@@ -163,6 +163,11 @@ void start_dnsmasq()
 		fprintf(f, "server=127.0.0.1#%s\n", nvram_safe_get("dnscrypt_port") );
 	}
 #endif
+#ifdef TCONFIG_STUBBY
+	if (nvram_match("stubby_proxy", "1")) {
+		fprintf(f, "server=127.0.0.1#5453\n");
+	}
+#endif
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 
 		get_wan_prefix(wan_unit, wan_prefix);
@@ -460,6 +465,16 @@ void start_dnsmasq()
 	}
 #endif
 
+#ifdef TCONFIG_STUBBY
+	if (nvram_match("stubby_proxy", "1")) {
+		if (nvram_match("stubby_priority", "1"))
+			fprintf(f, "strict-order\n");
+
+		if (nvram_match("stubby_priority", "2"))
+			fprintf(f, "no-resolv\n");
+	}
+#endif
+
 	//
 
 #ifdef TCONFIG_OPENVPN
@@ -587,6 +602,12 @@ void start_dnsmasq()
 	}
 #endif
 
+#ifdef TCONFIG_STUBBY
+	if (nvram_match("stubby_proxy", "1")) {
+		eval("stubby", "-g", "-l", "-C", "/etc/stubby.yml" );
+	}
+#endif
+
 #ifdef TCONFIG_DNSSEC
 	if ((time(0) > Y2K) && nvram_match("dnssec_enable", "1")){
 		sleep(1);
@@ -613,6 +634,10 @@ void stop_dnsmasq(void)
 	killall_tk("dnsmasq");
 #ifdef TCONFIG_DNSCRYPT
 	killall_tk("dnscrypt-proxy");
+#endif
+
+#ifdef TCONFIG_STUBBY
+	killall_tk("stubby");
 #endif
 
 	TRACE_PT("end\n");

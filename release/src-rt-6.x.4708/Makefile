@@ -304,7 +304,7 @@ what:
 # JFFSv1 | NO_JFFS
 # NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
 # SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN
 
 define RouterOptions
 	@( \
@@ -483,14 +483,18 @@ define RouterOptions
 		sed -i "/TCONFIG_DNSCRYPT/d" $(1); \
 		echo "TCONFIG_DNSCRYPT=y" >>$(1); \
 	fi; \
-        if [ "$(NVRAM_64K)" = "y" ]; then \
-                sed -i "/TCONFIG_NVRAM_64K/d" $(1); \
-                echo "TCONFIG_NVRAM_64K=y" >>$(1); \
-        fi; \
-        if [ "$(NVRAM_128K)" = "y" ]; then \
-                sed -i "/TCONFIG_NVRAM_128K/d" $(1); \
-                echo "TCONFIG_NVRAM_128K=y" >>$(1); \
-        fi; \
+	if [ "$(STUBBY)" = "y" ]; then \
+		sed -i "/TCONFIG_STUBBY/d" $(1); \
+		echo "TCONFIG_STUBBY=y" >>$(1); \
+	fi; \
+	if [ "$(NVRAM_64K)" = "y" ]; then \
+		sed -i "/TCONFIG_NVRAM_64K/d" $(1); \
+		echo "TCONFIG_NVRAM_64K=y" >>$(1); \
+	fi; \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		sed -i "/TCONFIG_NVRAM_128K/d" $(1); \
+	 	echo "TCONFIG_NVRAM_128K=y" >>$(1); \
+	fi; \
 	if [ "$(TOR)" = "y" ]; then \
 		sed -i "/TCONFIG_TOR/d" $(1); \
 		echo "TCONFIG_TOR=y" >>$(1); \
@@ -982,7 +986,7 @@ o:
 	@$(MAKE) bin OPENVPN=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" BTCLIENT=y TR_EXTRAS=y DNSCRYPT=y PPTPD=y DNSSEC=y SNMP=y TINC=y TOR=y
 
 z:
-	@$(MAKE) bin OPENVPN=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" BTCLIENT=y TR_EXTRAS=y DNSCRYPT=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y
+	@$(MAKE) bin OPENVPN=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" BTCLIENT=y TR_EXTRAS=y DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y
 
 ac68e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y

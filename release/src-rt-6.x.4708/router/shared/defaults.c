@@ -124,6 +124,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "dnscrypt_resolver_address",	""				, 0 }, // Set manual resolver address
 	{ "dnscrypt_ephemeral_keys",	"0"				, 0 }, // Set manual ephemeral keys
 #endif
+#ifdef TCONFIG_STUBBY
+	{ "stubby_proxy",		"0"				, 0 },
+	{ "stubby_priority",		"1"				, 0 },	// 0=none, 1=strict-order, 2=no-resolv
+#endif
 	{ "wan_wins",			""				, 0 },	// x.x.x.x x.x.x.x ...
 	{ "wan_lease",			"86400"				, 0 },	// WAN lease time in seconds
 	{ "wan_islan",			"0"				, 0 },
