@@ -677,6 +677,10 @@ static const nvset_t nvset_list[] = {
 	{ "dnscrypt_resolver_address",	V_LENGTH(0, 50)			},
 	{ "dnscrypt_ephemeral_keys",	V_01				},
 #endif
+#ifdef TCONFIG_STUBBY
+	{ "stubby_proxy",		V_01				},
+	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
+#endif
 	{ "lan_state",			V_01				},
 	{ "lan_desc",			V_01				},
 	{ "lan_invert",			V_01				},

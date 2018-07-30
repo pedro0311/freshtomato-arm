@@ -299,6 +299,11 @@ else
 	sed -i $(INSTALLDIR)/www/about.asp -e "/DNSCRYPT-BEGIN/,/DNSCRYPT-END/d"
 endif
 
+# Only include the stubby option if is compiled in
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
@@ -329,6 +334,7 @@ endif
 		-e "/SNMP-BEGIN/d"	-e "/SNMP-END/d"\
 		-e "/HFS-BEGIN/d"	-e "/HFS-END/d"\
 		-e "/DNSCRYPT-BEGIN/d"	-e "/DNSCRYPT-END/d"\
+		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d"\
 		-e "/DNSSEC-BEGIN/d"	-e "/DNSSEC-END/d"\
 		-e "/TOR-BEGIN/d"	-e "/TOR-END/d"\
 		-e "/TINC-BEGIN/d"	-e "/TINC-END/d"\
