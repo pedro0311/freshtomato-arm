@@ -149,8 +149,8 @@ void start_bittorrent(void)
     fprintf( fp, "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n" );
 //
 //tune buffers
-    fprintf( fp, "sysctl -w net.core.rmem_max=8388608\n" );
-    fprintf( fp, "sysctl -w net.core.wmem_max=2097152\n" );
+    fprintf( fp, "echo 8388608 > /proc/sys/net/core/rmem_max\n" );
+    fprintf( fp, "echo 2097152 > /proc/sys/net/core/wmem_max\n" );
 
     if ( nvram_match( "bt_log", "1") )
     {
@@ -204,6 +204,8 @@ void stop_bittorrent(void)
     fprintf( fp, "logger \"Transmission daemon forcefully stopped\" \n");
     fprintf( fp, "fi\n");
     fprintf( fp, "/usr/bin/btcheck addcru\n");
+    fprintf( fp, "echo 120832 > /proc/sys/net/core/rmem_max\n" );
+    fprintf( fp, "echo 120832 > /proc/sys/net/core/wmem_max\n" );
     fprintf( fp, "exit 0\n");
 
     fclose( fp );
