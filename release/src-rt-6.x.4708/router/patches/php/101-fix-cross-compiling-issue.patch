@@ -1,5 +1,5 @@
---- php/configure	2018-06-19 16:40:10.000000000 +0200
-+++ php/configure	2018-06-22 11:48:01.263589610 +0200
+--- php/configure	2018-07-17 07:35:58.000000000 +0200
++++ php/configure	2018-07-29 13:29:03.759940168 +0200
 @@ -30893,6 +30893,9 @@ if test "$PHP_FILEINFO" != "no"; then
      libmagic/is_tar.c libmagic/magic.c libmagic/print.c \
      libmagic/readcdf.c libmagic/softmagic.c libmagic/der.c"
