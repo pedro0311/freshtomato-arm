@@ -187,7 +187,7 @@ void start_vpnclient(int clientNum)
 		fprintf(fp, "client\n");
 	fprintf(fp, "dev %s\n", &iface[0]);
 	sprintf(&buffer[0], "vpn_client%d_proto", clientNum);
-	fprintf(fp, "proto %s\n", nvram_safe_get(&buffer[0]));
+	fprintf(fp, "proto %s\n", nvram_safe_get(&buffer[0])); /*full dual-stack functionality starting with OpenVPN 2.4.0*/
 	sprintf(&buffer[0], "vpn_client%d_addr", clientNum);
 	fprintf(fp, "remote %s ", nvram_safe_get(&buffer[0]));
 	sprintf(&buffer[0], "vpn_client%d_port", clientNum);
@@ -452,6 +452,15 @@ void start_vpnclient(int clientNum)
 				}
 			}
 		}
+
+	/*Create firewall rules for IPv6*/
+#ifdef TCONFIG_IPV6
+	if (ipv6_enabled()) {
+		fprintf(fp, "ip6tables -I INPUT -i %s -j ACCEPT\n", &iface[0]);
+		fprintf(fp, "ip6tables -I FORWARD -i %s -j ACCEPT\n", &iface[0]);
+	}
+#endif
+
 		fclose(fp);
 		vpnlog(VPN_LOG_EXTRA,"Done creating firewall rules");
 
@@ -756,7 +765,7 @@ void start_vpnserver(int serverNum)
 		}
 	}
 	sprintf(&buffer[0], "vpn_server%d_proto", serverNum);
-	fprintf(fp, "proto %s\n", nvram_safe_get(&buffer[0]));
+	fprintf(fp, "proto %s\n", nvram_safe_get(&buffer[0])); /*full dual-stack functionality starting with OpenVPN 2.4.0*/
 	sprintf(&buffer[0], "vpn_server%d_port", serverNum);
 	fprintf(fp, "port %d\n", nvram_get_int(&buffer[0]));
 	fprintf(fp, "dev %s\n", &iface[0]);
@@ -1069,6 +1078,24 @@ void start_vpnserver(int serverNum)
 			fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n", &iface[0]);
 			fprintf(fp, "iptables -I FORWARD -i %s -j ACCEPT\n", &iface[0]);
 		}
+
+	/*Create firewall rules for IPv6*/
+#ifdef TCONFIG_IPV6
+	if (ipv6_enabled()) {
+		sprintf(&buffer[0], "vpn_server%d_proto", serverNum);
+		strncpy(&buffer[0], nvram_safe_get(&buffer[0]), BUF_SIZE);
+		fprintf(fp, "ip6tables -I INPUT -p %s ", strtok(&buffer[0], "-"));
+		sprintf(&buffer[0], "vpn_server%d_port", serverNum);
+		fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(&buffer[0]));
+		sprintf(&buffer[0], "vpn_server%d_firewall", serverNum);
+		if ( !nvram_contains_word(&buffer[0], "external") )
+		{
+			fprintf(fp, "ip6tables -I INPUT -i %s -j ACCEPT\n", &iface[0]);
+			fprintf(fp, "ip6tables -I FORWARD -i %s -j ACCEPT\n", &iface[0]);
+		}
+	}
+#endif
+
 		fclose(fp);
 		vpnlog(VPN_LOG_EXTRA,"Done creating firewall rules");
 
