@@ -208,7 +208,7 @@ static int filefrag_fiemap(int fd, int blk_shift, int *num_extents,
 	__u64 buf[2048];	/* __u64 for proper field alignment */
 	struct fiemap *fiemap = (struct fiemap *)buf;
 	struct fiemap_extent *fm_ext = &fiemap->fm_extents[0];
-	struct fiemap_extent fm_last = {0};
+	struct fiemap_extent fm_last;
 	int count = (sizeof(buf) - sizeof(*fiemap)) /
 			sizeof(struct fiemap_extent);
 	unsigned long long expected = 0;
@@ -221,6 +221,7 @@ static int filefrag_fiemap(int fd, int blk_shift, int *num_extents,
 	int rc;
 
 	memset(fiemap, 0, sizeof(struct fiemap));
+	memset(&fm_last, 0, sizeof(fm_last));
 
 	if (sync_file)
 		flags |= FIEMAP_FLAG_SYNC;
@@ -306,8 +307,8 @@ static int filefrag_fibmap(int fd, int blk_shift, int *num_extents,
 		fm_ext.fe_flags = FIEMAP_EXTENT_MERGED;
 	}
 
-	if (sync_file)
-		fsync(fd);
+	if (sync_file && fsync(fd) != 0)
+		return -errno;
 
 	for (i = 0, logical = 0, *num_extents = 0, count = last_block = 0;
 	     i < numblocks;
@@ -534,15 +535,19 @@ int main(int argc, char**argv)
 				char *end;
 				blocksize = strtoul(optarg, &end, 0);
 				if (end) {
+#if __GNUC_PREREQ (7, 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 					switch (end[0]) {
 					case 'g':
 					case 'G':
 						blocksize *= 1024;
-						/* no break */
+						/* fall through */
 					case 'm':
 					case 'M':
 						blocksize *= 1024;
-						/* no break */
+						/* fall through */
 					case 'k':
 					case 'K':
 						blocksize *= 1024;
@@ -550,6 +555,9 @@ int main(int argc, char**argv)
 					default:
 						break;
 					}
+#if __GNUC_PREREQ (7, 0)
+#pragma GCC diagnostic pop
+#endif
 				}
 			} else { /* Allow -b without argument for compat. Remove
 				  * this eventually so "-b {blocksize}" works */

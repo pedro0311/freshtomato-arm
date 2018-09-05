@@ -1,3 +1,48 @@
+e2fsprogs (1.44.4-1) unstable; urgency=medium
+
+  * New upstream release
+  * Add basic support for the ext4 verity (fsverity) feature
+  * E2fsck will fix file systems that have both the resize_inode
+    and meta_bg feature enabled
+  * Debugfs's ncheck command will now correctly inodes that have
+    multiple hard links
+  * Remove kilo/kibi rant (Closes: #757831)
+  * Update Danish, Spanish, and Swedish translations
+  * Fix symlink to directory conversions (Closes: #905195)
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Sat, 18 Aug 2018 20:46:29 -0400
+
+e2fsprogs (1.44.3-1) unstable; urgency=medium
+
+  * New upstream release
+  * Include hashmap.h in the libext2fs2 package
+  * Update debian policy compliance to 4.1.5
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Tue, 10 Jul 2018 01:23:17 -0400
+
+e2fsprogs (1.44.3~rc2-1) unstable; urgency=low
+
+  * New upstream release
+  * Debugfs's inode_dump and xattr_dump commands have new options to
+    display the low-level contents of an inode's i_blocks and extra
+    space, and to better be able to debug corrupted extended attributes.
+  * The dumpe2fs command now will show information about the Multi-Mount
+    Protection (MMP) block, if present
+  * E2fsck, dumpe2fs, and debugfs is now much more robust at handling
+    badly (or maliciously) corrupted file systems.
+  * E2fsck will now offer to enable the dir_nlink feature if it is
+    required by the file system
+  * The project id field in the inode is now properly byte-swapped on
+    big-endian systems
+  * E2fsprogs better handles recent kernels which reports old error
+    conditions via the first fsync() after the file is opened
+  * Updated/fixed various man pages
+  * Update Czech, Dutch, Spanish, French, Polish, Swedish, Ukrainian, and
+    Vietnamese translations
+  * Update debian policy compliance to 4.1.4
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Tue, 3 Jul 2018 23:31:40 -0400
+
 e2fsprogs (1.44.2-1) unstable; urgency=medium
 
   * New upstream release
