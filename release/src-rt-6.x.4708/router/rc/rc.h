@@ -257,8 +257,6 @@ extern void start_ipv6_tunnel(void);
 extern void stop_ipv6_tunnel(void);
 extern void start_6rd_tunnel(void);
 extern void stop_6rd_tunnel(void);
-extern void start_radvd(void);
-extern void stop_radvd(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif
