@@ -303,7 +303,10 @@ extern const char *chain_out_reject;
 extern char **layer7_in;
 
 extern void enable_ip_forward(void);
+#ifdef TCONFIG_IPV6
 extern void enable_ip6_forward(void);
+extern void enable_ndp_proxy(void);
+#endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
 #if defined(TCONFIG_IPV6) && defined(LINUX26)
