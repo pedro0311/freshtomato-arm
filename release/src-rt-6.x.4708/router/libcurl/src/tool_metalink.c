@@ -246,7 +246,7 @@ static int nss_hash_init(void **pctx, SECOidTag hash_alg)
   /* we have to initialize NSS if not initialized already */
   if(!NSS_IsInitialized() && !nss_context) {
     static NSSInitParameters params;
-    params.length = sizeof params;
+    params.length = sizeof(params);
     nss_context = NSS_InitContext("", "", "", "", &params, NSS_INIT_READONLY
         | NSS_INIT_NOCERTDB   | NSS_INIT_NOMODDB       | NSS_INIT_FORCEOPEN
         | NSS_INIT_NOROOTINIT | NSS_INIT_OPTIMIZESPACE | NSS_INIT_PK11RELOAD);
@@ -461,16 +461,11 @@ static void SHA256_Final(unsigned char digest[32], SHA256_CTX *ctx)
 
 #endif /* CRYPTO LIBS */
 
-/* Disable this picky gcc-8 compiler warning */
-#if defined(__GNUC__) && (__GNUC__ >= 8)
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-#endif
-
 const digest_params MD5_DIGEST_PARAMS[] = {
   {
-    (Curl_digest_init_func) MD5_Init,
-    (Curl_digest_update_func) MD5_Update,
-    (Curl_digest_final_func) MD5_Final,
+    CURLX_FUNCTION_CAST(Curl_digest_init_func, MD5_Init),
+    CURLX_FUNCTION_CAST(Curl_digest_update_func, MD5_Update),
+    CURLX_FUNCTION_CAST(Curl_digest_final_func, MD5_Final),
     sizeof(MD5_CTX),
     16
   }
@@ -478,9 +473,9 @@ const digest_params MD5_DIGEST_PARAMS[] = {
 
 const digest_params SHA1_DIGEST_PARAMS[] = {
   {
-    (Curl_digest_init_func) SHA1_Init,
-    (Curl_digest_update_func) SHA1_Update,
-    (Curl_digest_final_func) SHA1_Final,
+    CURLX_FUNCTION_CAST(Curl_digest_init_func, SHA1_Init),
+    CURLX_FUNCTION_CAST(Curl_digest_update_func, SHA1_Update),
+    CURLX_FUNCTION_CAST(Curl_digest_final_func, SHA1_Final),
     sizeof(SHA_CTX),
     20
   }
@@ -488,9 +483,9 @@ const digest_params SHA1_DIGEST_PARAMS[] = {
 
 const digest_params SHA256_DIGEST_PARAMS[] = {
   {
-    (Curl_digest_init_func) SHA256_Init,
-    (Curl_digest_update_func) SHA256_Update,
-    (Curl_digest_final_func) SHA256_Final,
+    CURLX_FUNCTION_CAST(Curl_digest_init_func, SHA256_Init),
+    CURLX_FUNCTION_CAST(Curl_digest_update_func, SHA256_Update),
+    CURLX_FUNCTION_CAST(Curl_digest_final_func, SHA256_Final),
     sizeof(SHA256_CTX),
     32
   }
@@ -529,7 +524,7 @@ digest_context *Curl_digest_init(const digest_params *dparams)
   digest_context *ctxt;
 
   /* Create digest context */
-  ctxt = malloc(sizeof *ctxt);
+  ctxt = malloc(sizeof(*ctxt));
 
   if(!ctxt)
     return ctxt;
