@@ -36,10 +36,11 @@
 
 <script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
 <script type='text/javascript' src='bwm-common.js'></script>
+<script type='text/javascript' src='bwm-hist.js'></script>
 <script type='text/javascript' src='interfaces.js'></script>
 
 <script type='text/javascript'>
-//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,rstats_colors"); %>
+//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,rstats_colors,rstats_enable"); %>
 
 var cprefix = 'bw_r';
 var updateInt = 2;
@@ -124,6 +125,7 @@ function watchdogReset() {
 }
 
 function init() {
+	if (nvram.rstats_enable != '1') return;
 	speed_history = [];
 
 	initCommon(2, 1, 1, 1);
@@ -154,7 +156,7 @@ function init() {
 	<div id='tab-area'></div>
 
 	<script type='text/javascript'>
-	if (nvram.web_svg != '0') {
+	if ((nvram.web_svg != '0') && (nvram.rstats_enable == '1')) {
 		W('<div style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0" id="graph"><embed src="bwm-graph.svg?<% version(); %>" style="width:760px;height:300px;margin:0;padding:0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed><\/div>\n');
 	}
 	</script>
@@ -210,8 +212,9 @@ function init() {
 	</tr>
 	</table>
 </div>
-<br />
-<br />
+
+
+<script type='text/javascript'>checkRstats();</script>
 
 <!-- / / / -->
 
