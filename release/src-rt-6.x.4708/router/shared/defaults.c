@@ -114,7 +114,7 @@ struct nvram_tuple router_defaults[] = {
 #endif
 #ifdef TCONFIG_DNSCRYPT
 	{ "dnscrypt_proxy",		"0"				, 0 },
-	{ "dnscrypt_priority",		"1"				, 0 }, // 0=none, 1=strict-order, 2=no-resolv
+	{ "dnscrypt_priority",		"2"				, 0 }, // 0=none, 1=strict-order, 2=no-resolv
 	{ "dnscrypt_port",		"40"				, 0 }, // local port
 	{ "dnscrypt_resolver",		"opendns"			, 0 }, // default resolver
 	{ "dnscrypt_log",		"6"				, 0 }, // log level
@@ -126,7 +126,7 @@ struct nvram_tuple router_defaults[] = {
 #endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_proxy",		"0"				, 0 },
-	{ "stubby_priority",		"1"				, 0 },	// 0=none, 1=strict-order, 2=no-resolv
+	{ "stubby_priority",		"2"				, 0 },	// 0=none, 1=strict-order, 2=no-resolv
 #endif
 	{ "wan_wins",			""				, 0 },	// x.x.x.x x.x.x.x ...
 	{ "wan_lease",			"86400"				, 0 },	// WAN lease time in seconds
