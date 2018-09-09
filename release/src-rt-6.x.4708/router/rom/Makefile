@@ -109,5 +109,9 @@ else
 	done
 endif
 
+ifneq ($(TCONFIG_STUBBY),y)
+	rm -f $(INSTALLDIR)/rom/etc/stubby.yml
+endif
+
 #	Used by Curl
 	cp -f others/cacert.pem $(INSTALLDIR)/rom/cacert.pem

@@ -121,6 +121,8 @@ endif
 obj-$(TCONFIG_TOR) += tor
 obj-$(TCONFIG_DNSCRYPT) += libsodium
 obj-$(TCONFIG_DNSCRYPT) += dnscrypt
+obj-$(TCONFIG_STUBBY) += libyaml
+obj-$(TCONFIG_STUBBY) += getdns
 obj-$(TCONFIG_SNMP) += snmp
 
 obj-y += mssl
@@ -2773,6 +2775,44 @@ dnscrypt-install:
 dnscrypt-clean:
 	-@$(MAKE) -C dnscrypt clean
 	@rm -rf dnscrypt/stamp-h1 dnscrypt/src/dnscrypt-proxy/.deps dnscrypt/Makefile
+
+libyaml/stamp-h1:
+	cd $(TOP)/libyaml && CC=$(CC) STRIP=$(STRIP) \
+	autoreconf -sfi && \
+	CFLAGS="-Os" \
+	$(CONFIGURE) --prefix=/usr
+	touch libyaml/stamp-h1
+
+libyaml: libyaml/stamp-h1
+	$(MAKE) -C libyaml $(PARALLEL_BUILD)
+
+libyaml-install:
+	install -d $(INSTALLDIR)/libyaml/usr/lib
+
+libyaml-clean:
+	-$(MAKE) -C libyaml clean
+	@rm -rf libyaml/stamp-h1 libyaml/src/.deps libyaml/src/tests/.deps
+
+getdns/stamp-h1: openssl libyaml
+	cd $(TOP)/getdns && CC=$(CC) STRIP=$(STRIP) \
+	autoreconf -fsi && \
+	CFLAGS="-Os -DYAML_DECLARE_STATIC" \
+	CPPFLAGS="-I$(TOP)/libyaml/include -I$(TOP)/openssl" \
+	LDFLAGS="-static -L$(TOP)/libyaml/src/.libs -L$(TOP)/openssl" \
+	$(CONFIGURE) --enable-static --disable-shared --prefix=/usr --sysconfdir=/etc --localstatedir=/var --without-libidn --without-libidn2 --without-libunbound --enable-stub-only --with-ssl=$(TOP)/openssl --with-libyaml=$(TOP)/libyaml --with-stubby
+	touch getdns/stamp-h1
+
+getdns: getdns/stamp-h1
+	$(MAKE) -C getdns $(PARALLEL_BUILD)
+
+getdns-install:
+	install -d $(INSTALLDIR)/getdns/usr/sbin
+	install -D getdns/src/stubby $(INSTALLDIR)/getdns/usr/sbin/stubby
+	$(STRIP) -s $(INSTALLDIR)/getdns/usr/sbin/stubby
+
+getdns-clean:
+	-@$(MAKE) -C getdns clean
+	@rm -rf getdns/stamp-h1 getdns/src/.libs getdns/src/tools/.libs
 
 tor/stamp-h1: openssl zlib libevent
 	cd $(TOP)/tor && CC=$(CC) STRIP=$(STRIP) \
