@@ -170,6 +170,19 @@ void enable_ip6_forward(void)
 }
 #endif
 
+#ifdef TCONFIG_IPV6
+void enable_ndp_proxy(void)
+{
+	if (ipv6_enabled()) {
+		f_write_string("/proc/sys/net/ipv6/conf/default/proxy_ndp", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv6/conf/all/proxy_ndp", "1", 0, 0);
+	}
+	else {
+		f_write_string("/proc/sys/net/ipv6/conf/default/proxy_ndp", "0", 0, 0);
+		f_write_string("/proc/sys/net/ipv6/conf/all/proxy_ndp", "0", 0, 0);
+	}
+}
+#endif
 
 // -----------------------------------------------------------------------------
 
@@ -2429,7 +2442,10 @@ int start_firewall(void)
 	sched_restrictions();
 	enable_ip_forward();
 #ifdef TCONFIG_IPV6
-	if (ipv6_enabled()) enable_ip6_forward();
+	if (ipv6_enabled()) {
+	  enable_ip6_forward();
+	  enable_ndp_proxy();
+	}
 #endif
 
 	led(LED_DMZ, dmz_dst(NULL));

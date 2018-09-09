@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -111,6 +111,19 @@ static bool is_fatal_error(CURLcode code)
 
   /* no error or not critical */
   return FALSE;
+}
+
+/*
+ * Check if a given string is a PKCS#11 URI
+ */
+static bool is_pkcs11_uri(const char *string)
+{
+  if(curl_strnequal(string, "pkcs11:", 7)) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
 }
 
 #ifdef __VMS
@@ -851,15 +864,8 @@ static CURLcode operate_do(struct GlobalConfig *global,
           my_setopt(curl, CURLOPT_INFILESIZE_LARGE, uploadfilesize);
         my_setopt_str(curl, CURLOPT_URL, this_url);     /* what to fetch */
         my_setopt(curl, CURLOPT_NOPROGRESS, global->noprogress?1L:0L);
-        if(config->no_body) {
+        if(config->no_body)
           my_setopt(curl, CURLOPT_NOBODY, 1L);
-          my_setopt(curl, CURLOPT_HEADER, 1L);
-        }
-        /* If --metalink is used, we ignore --include (headers in
-           output) option because mixing headers to the body will
-           confuse XML parser and/or hash check will fail. */
-        else if(!config->use_metalink)
-          my_setopt(curl, CURLOPT_HEADER, config->include_headers?1L:0L);
 
         if(config->oauth_bearer)
           my_setopt_str(curl, CURLOPT_XOAUTH2_BEARER, config->oauth_bearer);
@@ -1080,6 +1086,46 @@ static CURLcode operate_do(struct GlobalConfig *global,
           my_setopt_str(curl, CURLOPT_PINNEDPUBLICKEY, config->pinnedpubkey);
 
         if(curlinfo->features & CURL_VERSION_SSL) {
+          /* Check if config->cert is a PKCS#11 URI and set the
+           * config->cert_type if necessary */
+          if(config->cert) {
+            if(!config->cert_type) {
+              if(is_pkcs11_uri(config->cert)) {
+                config->cert_type = strdup("ENG");
+              }
+            }
+          }
+
+          /* Check if config->key is a PKCS#11 URI and set the
+           * config->key_type if necessary */
+          if(config->key) {
+            if(!config->key_type) {
+              if(is_pkcs11_uri(config->key)) {
+                config->key_type = strdup("ENG");
+              }
+            }
+          }
+
+          /* Check if config->proxy_cert is a PKCS#11 URI and set the
+           * config->proxy_type if necessary */
+          if(config->proxy_cert) {
+            if(!config->proxy_cert_type) {
+              if(is_pkcs11_uri(config->proxy_cert)) {
+                config->proxy_cert_type = strdup("ENG");
+              }
+            }
+          }
+
+          /* Check if config->proxy_key is a PKCS#11 URI and set the
+           * config->proxy_key_type if necessary */
+          if(config->proxy_key) {
+            if(!config->proxy_key_type) {
+              if(is_pkcs11_uri(config->proxy_key)) {
+                config->proxy_key_type = strdup("ENG");
+              }
+            }
+          }
+
           my_setopt_str(curl, CURLOPT_SSLCERT, config->cert);
           my_setopt_str(curl, CURLOPT_PROXY_SSLCERT, config->proxy_cert);
           my_setopt_str(curl, CURLOPT_SSLCERTTYPE, config->cert_type);
@@ -1222,6 +1268,13 @@ static CURLcode operate_do(struct GlobalConfig *global,
         if(config->proxy_cipher_list)
           my_setopt_str(curl, CURLOPT_PROXY_SSL_CIPHER_LIST,
                         config->proxy_cipher_list);
+
+        if(config->cipher13_list)
+          my_setopt_str(curl, CURLOPT_TLS13_CIPHERS, config->cipher13_list);
+
+        if(config->proxy_cipher13_list)
+          my_setopt_str(curl, CURLOPT_PROXY_TLS13_CIPHERS,
+                        config->proxy_cipher13_list);
 
         /* new in libcurl 7.9.2: */
         if(config->disable_epsv)
@@ -1373,6 +1426,8 @@ static CURLcode operate_do(struct GlobalConfig *global,
 
         hdrcbdata.outs = &outs;
         hdrcbdata.heads = &heads;
+        hdrcbdata.global = global;
+        hdrcbdata.config = config;
 
         my_setopt(curl, CURLOPT_HEADERFUNCTION, tool_header_cb);
         my_setopt(curl, CURLOPT_HEADERDATA, &hdrcbdata);
@@ -1472,6 +1527,9 @@ static CURLcode operate_do(struct GlobalConfig *global,
         if(config->haproxy_protocol)
           my_setopt(curl, CURLOPT_HAPROXYPROTOCOL, 1L);
 
+        if(config->disallow_username_in_url)
+          my_setopt(curl, CURLOPT_DISALLOW_USERNAME_IN_URL, 1L);
+
         /* initialize retry vars for loop below */
         retry_sleep_default = (config->retry_delay) ?
           config->retry_delay*1000L : RETRY_SLEEP_DEFAULT; /* ms */
@@ -1523,7 +1581,7 @@ static CURLcode operate_do(struct GlobalConfig *global,
             /* do not create (or even overwrite) the file in case we get no
                data because of unmet condition */
             curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &cond_unmet);
-            if(!cond_unmet && !tool_create_output_file(&outs))
+            if(!cond_unmet && !tool_create_output_file(&outs, FALSE))
               result = CURLE_WRITE_ERROR;
           }
 
@@ -1573,6 +1631,7 @@ static CURLcode operate_do(struct GlobalConfig *global,
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response);
 
                 switch(response) {
+                case 408: /* Request Timeout */
                 case 500: /* Internal Server Error */
                 case 502: /* Bad Gateway */
                 case 503: /* Service Unavailable */

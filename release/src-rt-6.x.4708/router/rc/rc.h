@@ -257,8 +257,6 @@ extern void start_ipv6_tunnel(void);
 extern void stop_ipv6_tunnel(void);
 extern void start_6rd_tunnel(void);
 extern void stop_6rd_tunnel(void);
-extern void start_radvd(void);
-extern void stop_radvd(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif
@@ -305,7 +303,10 @@ extern const char *chain_out_reject;
 extern char **layer7_in;
 
 extern void enable_ip_forward(void);
+#ifdef TCONFIG_IPV6
 extern void enable_ip6_forward(void);
+extern void enable_ndp_proxy(void);
+#endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
 #if defined(TCONFIG_IPV6) && defined(LINUX26)
@@ -320,6 +321,8 @@ extern void ip6t_write(const char *format, ...);
 //#define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
 #define ip46t_cond_write(do_ip6t, args...) ipt_write(args)
+#define ipt_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
+#define ipt_cond_write(do_ip6t, args...) ipt_write(args)
 #endif
 extern void ipt_log_unresolved(const char *addr, const char *addrtype, const char *categ, const char *name);
 extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int af, int strict, const char *categ, const char *name);
