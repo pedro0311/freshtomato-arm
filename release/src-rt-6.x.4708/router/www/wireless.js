@@ -1,6 +1,7 @@
 function selectedBand(uidx)
 {
 	if (bands[uidx].length > 1) {
+		var u = wl_fface(uidx);
 		var e = E('_f_wl'+u+'_nband');
 		return (e.value + '' == '' ? eval('nvram["wl'+u+'_nband"]') : e.value);
 	} else if (bands[uidx].length > 0) {

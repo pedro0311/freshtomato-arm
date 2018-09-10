@@ -2777,9 +2777,9 @@ dnscrypt-clean:
 	@rm -rf dnscrypt/stamp-h1 dnscrypt/src/dnscrypt-proxy/.deps dnscrypt/Makefile
 
 libyaml/stamp-h1:
-	cd $(TOP)/libyaml && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libyaml && CC=$(CC) AR=$(AR) LD=$(LD) STRIP=$(STRIP) \
 	autoreconf -sfi && \
-	CFLAGS="-Os" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	$(CONFIGURE) --prefix=/usr
 	touch libyaml/stamp-h1
 
@@ -2794,12 +2794,13 @@ libyaml-clean:
 	@rm -rf libyaml/stamp-h1 libyaml/src/.deps libyaml/src/tests/.deps
 
 getdns/stamp-h1: openssl libyaml
-	cd $(TOP)/getdns && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/getdns && CC=$(CC) AR=$(AR) LD=$(LD) STRIP=$(STRIP) \
 	autoreconf -fsi && \
-	CFLAGS="-Os -DYAML_DECLARE_STATIC" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libyaml/include -I$(TOP)/openssl" \
-	LDFLAGS="-static -L$(TOP)/libyaml/src/.libs -L$(TOP)/openssl" \
-	$(CONFIGURE) --enable-static --disable-shared --prefix=/usr --sysconfdir=/etc --localstatedir=/var --without-libidn --without-libidn2 --without-libunbound --enable-stub-only --with-ssl=$(TOP)/openssl --with-libyaml=$(TOP)/libyaml --with-stubby
+	LDFLAGS="-static -L$(TOP)/libyaml/src/.libs -lyaml -L$(TOP)/openssl -lcrypto -lssl" \
+	$(CONFIGURE) --enable-static --disable-shared --prefix=/usr --sysconfdir=/etc --localstatedir=/var --without-libidn --without-libidn2 \
+	--without-libunbound --enable-stub-only --with-ssl=$(TOP)/openssl --with-libyaml=$(TOP)/libyaml --with-stubby
 	touch getdns/stamp-h1
 
 getdns: getdns/stamp-h1

@@ -1,6 +1,66 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2018.4 - 2018.09-12
+----------------------------
+
+- Preliminary support for Stubby (DNS-over-TLS)
+- dnsmasq: Updated to 2.80test6
+- openssl: updated to 1.0.2p
+- php: Updated to 7.2.9
+- tor: Updated to 0.3.3.9
+- tinc: Updated to 1.1pre16
+- libcurl: Updated to 7.61.1
+- libcurl: Fix build failures
+- e2fsprogs: Updated to 1.44.4
+- libcurl: Updated CA certificate bundle as of 2018-06-20
+- adminer: Updated to 4.6.3
+- miniupnpd: Updated to 2.1.20180706
+- libjson-c: Updated to 0.13.1
+- samba: enable PARALLEL_BUILD directive for components
+- gmp: optimize gmp build (fix compilation with different autotools version, allow parallel make, don't build demos and doc)
+- mdadm: skip building mdadm man pages
+- igmpproxy: fix compiler flags, change code optimization to -O3
+- dnscrypt-proxy: Updated resolvers csv to 20180709
+- Increase the maximum size that is used when reading the ssh-host-key (to 4096 bits)
+- OpenVPN: make IPv6 connection possible if IPv6 is enabled
+- OpenVPN: extend Server GUI functionality - add option to push LAN(br0)...LAN4(br3) (only if available) - push the suitable DNS Server LAN IP
+- radvd: remove leftovers at file router/rc/rc.h (Tomato uses dnsmasq)
+- GUI: only include curl as a connection checker, if it's built
+- GUI: openvpn: add AES-*-GCM ciphers to the available legacy ciphers
+- GUI: add a needed include file for code utilizing bwm-common.js
+- GUI: bwm-common.js: fix erroneous change in commit 3e650c1
+- GUI: wireless.js: fix erroneous change in commit fe53904
+- GUI: do not display rt bw graphs if monitoring has been disabled
+- router: Makefile: compile dnsmasq with NO_ID, NO_AUTH and NO_GMP directive + some cosmetics
+- router/rc/wan.c: start miniupnpd after httpd/later to avoid disabling IPv6 at miniupnpd startup (does happen sometimes with 2018.3, solves miniupnpd warning "no HTTP IPv6 address, disabling IPv6" at reboot/restart)
+- router/rc/transmission.c: sysctl binary is not included in TomatoUSB, write values directly instead
+- router/rc/rc.h: fix ARM builds WITHOUT IPv6 support (there is no freshtomato ARM build with IPv4 support only)
+- router/rc/firewall.c and rc.h - add function "enable_ndp_proxy()" - Enable NDP Proxy for IPv6 builds - add missing conditional compilation
+- watchdog: increase waittime to 3 and max_ttl to 4 in traceroute to reduce false positives
+- nocat: Retiring Captive Portal feature
+- kernel: netfilter: fix u32 match
+- kernel: netfilter: nf_conntrack: fix count leak in error path of __nf_conntrack_alloc
+- kernel: netfilter: nf_conntrack: set conntrack templates again if we return NF_REPEAT
+- kernel: netfilter: nf_conntrack: fix early_drop with reliable event delivery
+- kernel: netfilter: nf_conntrack: fix ct refcount leak in l4proto->error() (Tomato doesn't have icmp module, but this fix is still relevant)
+- kernel: netfilter: nf_conntrack: fix event flooding in GRE protocol tracker
+- kernel: netfilter: ip6_route_output() never returns NULL. ip6_route_output() never returns NULL, so it is wrong to check if the return value is NULL
+- kernel: netfilter: ip4 ip_queue: Fix small leak in ipq_build_packet_message()
+- kernel: netfilter: ip6 ip_queue: Fix small leak in ipq_build_packet_message()
+- kernel: netfilter: ipset: dumping error triggered removing references twice
+- kernel: netfilter: ebtables: fix wrong name length while copying to user-space
+- kernel: logfs: Prevent memory corruption
+- kernel: cifs: fix possible memory corruption in CIFSFindNext
+- kernel: ARM: 6891/1: prevent heap corruption in OABI semtimedop
+- kernel: ext3: Fix error handling on inode bitmap corruption
+- kernel: ext2: Fix error handling on inode bitmap corruption
+- kernel: mac80211: fix conn_mon_timer running after disassociate
+- patches: dnsmasq: log packet resize reports at debug level instead of warning since they are too frequent
+- WL: update wireless driver for SDK7 to GPL 382.50470
+- Fixing the `uname -r` issue in readme
+
+
 2018.3 - 2018.06.22
 ----------------------------
 
