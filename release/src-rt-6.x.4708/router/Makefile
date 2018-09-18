@@ -506,7 +506,7 @@ endif
 ifeq ($(TCONFIG_BBT),y)
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
 endif
-ifeq ($(TCONFIG_NGINX),y)
+ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
 	install $(LIBDIR)/../arm-linux/lib/libstdc++.so.6 $(TARGETDIR)/lib/libstdc++.so.6
 	cd $(TARGETDIR)/lib && ln -sf libstdc++.so.6 libstdc++.so
 	$(STRIP) $(TARGETDIR)/lib/libstdc++.so.6
