@@ -553,7 +553,7 @@ void stop_dhcpc(char *prefix)
 int dhcp6c_state_main(int argc, char **argv)
 {
 	char prefix[INET6_ADDRSTRLEN];
-	char *lanif;
+	const char *lanif;
 	struct in6_addr addr;
 	int i, r;
 
@@ -561,25 +561,27 @@ int dhcp6c_state_main(int argc, char **argv)
 
 	if (!wait_action_idle(10)) return 1;
 
-    lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
-    if (!nvram_match("ipv6_rtr_addr", lanif)) {
-        nvram_set("ipv6_rtr_addr", lanif);
-        // extract prefix from configured IPv6 address
-        if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
+	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
+	if (!nvram_match("ipv6_rtr_addr", lanif)) {
+	  nvram_set("ipv6_rtr_addr", lanif);
+	  /*extract prefix from configured IPv6 address*/
+	  if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
             r = nvram_get_int("ipv6_prefix_length") ? : 64;
             for (r = 128 - r, i = 15; r > 0; r -= 8) {
-                if (r >= 8)
-                    addr.s6_addr[i--] = 0;
-                else
-                    addr.s6_addr[i--] &= (0xff << r);
+	      if (r >= 8) {
+		addr.s6_addr[i--] = 0;
+	      }
+	      else {
+		addr.s6_addr[i--] &= (0xff << r);
+	      }
             }
             inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
             nvram_set("ipv6_prefix", prefix);
-		}
-// (re)start dnsmasq and httpd
-        set_host_domain_name();
-        start_dnsmasq();
-        start_httpd(); 
+	  }
+	  /*(re)start dnsmasq and httpd*/
+	  set_host_domain_name();
+	  start_dnsmasq();
+	  start_httpd();
 	}
 
 	if (env2nv("new_domain_name_servers", "ipv6_get_dns")) {
@@ -599,11 +601,12 @@ void start_dhcp6c(void)
 	char *wan6face;
 	char *argv[] = { "dhcp6c", "-T", "LL", NULL, NULL, NULL };
 	int argc;
-	int ipv6_vlan;
+	int ipv6_vlan = 0; /*bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3,
+			     1 == TRUE, 0 == FALSE*/
 
 	TRACE_PT("begin\n");
 
-	// Check if turned on
+	/*Check if turned on*/
 	if (get_ipv6_service() != IPV6_NATIVE_DHCP) return;
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
@@ -616,7 +619,7 @@ void start_dhcp6c(void)
 	nvram_set("ipv6_rtr_addr", "");
 	nvram_set("ipv6_prefix", "");
 
-	// Create dhcp6c.conf
+	/*Create dhcp6c.conf*/
 	unlink("/var/dhcp6c_duid");
 	if ((f = fopen("/etc/dhcp6c.conf", "w"))) {
 		fprintf(f,
@@ -624,7 +627,7 @@ void start_dhcp6c(void)
 		if (nvram_get_int("ipv6_pdonly") == 0) {
 		fprintf(f,
 			" send ia-na 0;\n");
-		};
+		}
 		fprintf(f,
 			" send ia-pd 0;\n"
 			" request domain-name-servers;\n"
@@ -639,27 +642,30 @@ void start_dhcp6c(void)
 			nvram_get_int("ipv6_prefix_length"),
 			nvram_safe_get("lan_ifname"),
 			prefix_len);
-		if ((ipv6_vlan & 1) && (prefix_len >= 1)) { //2 ipv6 /64 networks
+		/*check IPv6 for LAN1*/
+		if ((ipv6_vlan & 0x01) && (prefix_len >= 1)) { /*2x IPv6 /64 networks possible --> for LAN and LAN1*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 1;\n"
 			"		sla-len %d;\n"
 			"	};\n", nvram_safe_get("lan1_ifname"), prefix_len);
-		};
-		if ((ipv6_vlan & 2) && (prefix_len >= 2)) { //4 ipv6 /64 networks
+		}
+		/*check IPv6 for LAN2*/
+		if ((ipv6_vlan & 0x02) && (prefix_len >= 2)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 2;\n"
 			"		sla-len %d;\n"
 			"	};\n", nvram_safe_get("lan2_ifname"), prefix_len);
-		};
-		if ((ipv6_vlan & 4) && (prefix_len >= 2)) {
+		}
+		/*check IPv6 for LAN3*/
+		if ((ipv6_vlan & 0x04) && (prefix_len >= 2)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 3;\n"
 			"		sla-len %d;\n"
 			"	};\n", nvram_safe_get("lan3_ifname"), prefix_len);
-		};
+		}
 		fprintf(f,
 			"};\n"
 			"id-assoc na 0 { };\n");
@@ -686,4 +692,4 @@ void stop_dhcp6c(void)
 	TRACE_PT("end\n");
 }
 
-#endif	// TCONFIG_IPV6
+#endif	//TCONFIG_IPV6
