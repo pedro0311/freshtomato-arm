@@ -74,7 +74,7 @@
 #include "../mssl/mssl.h"
 int do_ssl;
 
-#define HTTP_MAX_LISTENERS 8
+#define HTTP_MAX_LISTENERS 16
 
 typedef struct {
 	int count;
