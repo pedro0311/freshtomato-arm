@@ -1192,14 +1192,6 @@ static void nat_table(void)
 		}
 #endif
 
-#ifdef TCONFIG_ARUI
-		//ARIA2 RPC from WAN interface
-		if (nvram_get_int( "ar_enable" ) && nvram_match( "ar_rpc_wan", "1"))
-		{
-			ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("ar_rpc_port"), lanaddr);
-		}
-#endif
-
 
 #ifdef TCONFIG_SAMBASRV
 		//Samba WAN Access
@@ -1609,20 +1601,6 @@ static void filter_input(void)
 		if (nvram_match( "bt_rpc_wan", "1") )
 		{
 			ipt_write( "-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "bt_port_gui" ) );
-		}
-	}
-#endif
-
-#ifdef TCONFIG_ARUI
-	//ARIA2 RPC from WAN interface
-	if (nvram_match("ar_enable", "1")) {
-		if (nvram_match( "ar_bt_en", "1" ) )
-		{
-			ipt_write( "-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "ar_bt_port" ) );
-		}
-		if (nvram_match( "ar_rpc_wan", "1") )
-		{
-			ipt_write( "-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "ar_rpc_port" ) );
 		}
 	}
 #endif
