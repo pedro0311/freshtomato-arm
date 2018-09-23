@@ -413,7 +413,7 @@ if (nvram.qos_enable != '1') {
 </td></tr>
 <tr>
     <td id='footer' colspan='3'>
-		<div style="display:inline-block;width:528px"><input name="mybtn" style="width:100px" id="zoom-button" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
+		<div style="display:none;width:528px"><input name="mybtn" style="width:100px" id="zoom-button" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
 		<div style="display:inline-block;width:237px"><script type='text/javascript'>genStdRefresh(1,2,'ref.toggle()');</script></div>
     </td>
 </tr>
