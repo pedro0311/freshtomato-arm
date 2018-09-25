@@ -680,6 +680,7 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_STUBBY
 	{ "stubby_proxy",		V_01				},
 	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
+	{ "stubby_log",			V_RANGE(0, 7)			},
 #endif
 	{ "lan_state",			V_01				},
 	{ "lan_desc",			V_01				},
