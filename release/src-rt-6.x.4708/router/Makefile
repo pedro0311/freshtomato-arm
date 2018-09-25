@@ -549,7 +549,7 @@ endif
 ifeq ($(TCONFIG_BBT),y)
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
 endif
-ifeq ($(TCONFIG_NGINX),y)
+ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
 	install $(LIBDIR)/../arm-linux/lib/libstdc++.so.6 $(TARGETDIR)/lib/libstdc++.so.6
 	cd $(TARGETDIR)/lib && ln -sf libstdc++.so.6 libstdc++.so
 	$(STRIP) $(TARGETDIR)/lib/libstdc++.so.6
@@ -2123,6 +2123,7 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	--enable-xmlwriter \
 	--enable-zip \
 	--disable-filter \
+	--without-valgrind \
 	--with-libxml-dir="$(TOP)/libxml2/staged/usr"
 	@touch php/stamp-h1
 
