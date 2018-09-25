@@ -181,6 +181,7 @@ function init()
 	<li><b>Blacklist URL</b> - Correct file format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, one domain per line
 	<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com
 	<li><b>Whitelist</b> - Optional, space separated: domain1.com domain2.com domain3.com
+	<li><b style='text-decoration:underline'>Caution!</b> - Adblock having too many large blocklists configured may crash the router, as it exhausted all available system memory.
     </ul>
 </div>
 
