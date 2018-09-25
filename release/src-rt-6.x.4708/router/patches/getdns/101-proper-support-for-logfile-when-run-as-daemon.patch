@@ -1,0 +1,53 @@
+--- getdns/stubby/src/stubby.c	2018-06-14 12:02:48.000000000 +0200
++++ getdns/stubby/src/stubby.c	2018-09-25 16:30:33.000000000 +0200
+@@ -139,6 +139,8 @@ print_usage(FILE *out)
+ 	fprintf(out, "\t\t\t\"%s/stubby.yml\"\n", STUBBYCONFDIR);
+ 	fprintf(out, "\t\tAn default file (Using Strict mode) is installed as\n");
+ 	fprintf(out, "\t\t\t\"%s/stubby.yml\"\n", STUBBYCONFDIR);
++	fprintf(out, "\t-F\t<filename>\n");
++	fprintf(out, "\t\tWrite log output to <filename> (used with -g background mode)\n");
+ #if !defined(STUBBY_ON_WINDOWS) && !defined(GETDNS_ON_WINDOWS)
+ 	fprintf(out, "\t-g\tRun stubby in background (default is foreground)\n");
+ #endif
+@@ -704,6 +706,8 @@ main(int argc, char **argv)
+ {
+ 	char home_stubby_conf_fn_spc[1024], *home_stubby_conf_fn = NULL;
+ 	const char *custom_config_fn = NULL;
++	const char *custom_log_fn = NULL;
++	FILE *lfn;
+ 	int fn_sz;
+ 	int print_api_info = 0;
+ 	int log_connections = 0;
+@@ -715,11 +719,22 @@ main(int argc, char **argv)
+ 	getdns_list *api_info_keys = NULL;
+ 	getdns_bindata *api_info_key = NULL;
+ 
+-	while ((opt = getopt(argc, argv, "C:ighlv:V")) != -1) {
++	while ((opt = getopt(argc, argv, "C:F:ighlv:V")) != -1) {
+ 		switch (opt) {
+ 		case 'C':
+ 			custom_config_fn = optarg;
+ 			break;
++		case 'F':
++			custom_log_fn = optarg;
++			if ((lfn = fopen(custom_log_fn, "w")) != NULL) {
++				dup2(fileno(lfn), STDOUT_FILENO);
++				dup2(fileno(lfn), STDERR_FILENO);
++				fclose(lfn);
++			} else {
++				fprintf(stderr, "Could not open log file '%s'\n", custom_log_fn);
++				exit(EXIT_FAILURE);
++			}
++			break;
+ 		case 'g':
+ 			run_in_foreground = 0;
+ 			break;
+@@ -743,7 +758,7 @@ main(int argc, char **argv)
+ 				exit(EXIT_FAILURE);
+ 			}
+ 			break;
+-                case 'V':
++		case 'V':
+ 			print_version(stdout);
+ 			exit(EXIT_SUCCESS);
+ 		default:
