@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -368,6 +372,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -371,6 +375,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -442,6 +450,9 @@ static char *compile_opts =
+@@ -445,6 +453,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -79,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1378,8 +1416,22 @@ static void async_event(int pipe, time_t
+@@ -1398,8 +1436,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -102,7 +102,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1422,6 +1474,12 @@ static void async_event(int pipe, time_t
+@@ -1442,6 +1494,12 @@ static void async_event(int pipe, time_t
  	    while (retry_send(close(daemon->helperfd)));
  	  }
  #endif
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h	2018-04-10 22:39:54.000000000 +0200
 +++ dnsmasq/src/dnsmasq.h	2018-04-11 18:21:30.807014530 +0200
-@@ -1407,6 +1407,12 @@ int make_icmp_sock(void);
+@@ -1434,6 +1434,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
@@ -196,7 +196,7 @@
  	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
  	 
  	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
-@@ -1182,8 +1203,67 @@ void lease_add_extradata(struct dhcp_lea
+@@ -1189,8 +1210,67 @@ void lease_add_extradata(struct dhcp_lea
  }
  #endif
  
