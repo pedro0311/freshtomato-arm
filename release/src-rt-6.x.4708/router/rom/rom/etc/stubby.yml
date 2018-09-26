@@ -5,7 +5,7 @@ resolution_type: GETDNS_RESOLUTION_STUB
 dns_transport_list:
   - GETDNS_TRANSPORT_TLS
 
-tls_authentication: GETDNS_AUTHENTICATION_NONE
+tls_authentication: GETDNS_AUTHENTICATION_REQUIRED
 
 tls_query_padding_blocksize: 256
 
