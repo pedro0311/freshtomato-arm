@@ -25,10 +25,12 @@ LOGS="logger -p INFO -t adblock[$PID]"
 download() {
 	# example: Yes<http://url1>No<http://URL2>Yes<http://URL3>
 	COUNT=1
+	ENTRIES=0
 
 	# clean-up first
 	rm -rf $PREFIX/*
 	rm -f $FINAL
+	rm -f $CHK_FILE
 
 	for i in $(echo $BLACKLIST | tr " " "_" | tr ">" "\n")
 	do
@@ -91,7 +93,7 @@ download() {
 	# clean-up
 	rm -rf $PREFIX/*
 
-	if [ -f "$FINAL" ]; then
+	if [ -f "$FINAL" -a "$ENTRIES" -gt 0 ]; then
 		# count entries
 		COUNT=$(cat $FINAL | wc -l)
 		$LOGS "activated - $COUNT entries"
