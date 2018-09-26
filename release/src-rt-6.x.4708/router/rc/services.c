@@ -612,6 +612,8 @@ void start_dnsmasq()
 			pclose(sf);
 		}
 
+		eval("ntp2ip");
+
 		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml", "-F", "/var/log/stubby.log");
 
 		memset(stb, 0, sizeof(stb));
@@ -1631,7 +1633,7 @@ void start_ntpc(void)
 
 	stop_ntpc();
 
-	if (nvram_match("dnscrypt_proxy", "1")) {
+	if (nvram_match("dnscrypt_proxy", "1") || nvram_match("stubby_proxy", "1")) {
 		eval("ntp2ip");
 	}
 
