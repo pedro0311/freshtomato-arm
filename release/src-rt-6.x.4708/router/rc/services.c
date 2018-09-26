@@ -614,7 +614,7 @@ void start_dnsmasq()
 
 		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml", "-F", "/var/log/stubby.log");
 
-		memset(stb, 0, sizeof(ststring));
+		memset(stb, 0, sizeof(stb));
 		sprintf(stb, "Starting stubby %s, DNS-o-TLS Proxy\n", stv);
 		syslog(LOG_INFO, stb);
 	}
