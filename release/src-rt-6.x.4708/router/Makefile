@@ -1216,7 +1216,11 @@ libnfnetlink/stamp-h1:
 
 libnfnetlink: libnfnetlink/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libnfnetlink
+	$(MAKE) -C libnfnetlink $(PARALLEL_BUILD)
+
+libnfnetlink-clean:
+	-@$(MAKE) -C libnfnetlink distclean
+	@rm -f libnfnetlink/stamp-h1
 
 libnfnetlink-install:
 	install -D libnfnetlink/src/.libs/libnfnetlink.so.0.2.0 $(INSTALLDIR)/libnfnetlink/usr/lib/libnfnetlink.so.0.2.0
@@ -2795,6 +2799,7 @@ libyaml-clean:
 	@rm -rf libyaml/stamp-h1 libyaml/src/.deps libyaml/src/tests/.deps
 
 getdns/stamp-h1: openssl libyaml
+	$(call patch_files,getdns)
 	cd $(TOP)/getdns && CC=$(CC) AR=$(AR) LD=$(LD) STRIP=$(STRIP) \
 	autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -2815,6 +2820,7 @@ getdns-install:
 getdns-clean:
 	-@$(MAKE) -C getdns clean
 	@rm -rf getdns/stamp-h1 getdns/src/.libs getdns/src/tools/.libs
+	$(call unpatch_files,getdns)
 
 tor/stamp-h1: openssl zlib libevent
 	cd $(TOP)/tor && CC=$(CC) STRIP=$(STRIP) \

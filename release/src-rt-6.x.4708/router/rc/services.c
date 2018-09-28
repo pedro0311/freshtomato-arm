@@ -604,7 +604,19 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_STUBBY
 	if (nvram_match("stubby_proxy", "1")) {
-		eval("stubby", "-g", "-l", "-C", "/etc/stubby.yml" );
+		FILE *sf;
+		char stb[50], stv[10]="(-)";
+
+		if ((sf = popen("stubby -V", "r")) != NULL) {
+			fgets(stv, sizeof(stv), sf);
+			pclose(sf);
+		}
+
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml", "-F", "/var/log/stubby.log");
+
+		memset(stb, 0, sizeof(ststring));
+		sprintf(stb, "Starting stubby %s, DNS-o-TLS Proxy\n", stv);
+		syslog(LOG_INFO, stb);
 	}
 #endif
 
