@@ -411,7 +411,7 @@ createFieldTable('', [
 	{ title: 'Total / Free Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
 	{ title: 'Total / Free NVRAM', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)<\/small>' },
 	null,
-	{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C'},
+	{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1)*1.8+32) + '°F' },
 	{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
 ]);
 </script>
