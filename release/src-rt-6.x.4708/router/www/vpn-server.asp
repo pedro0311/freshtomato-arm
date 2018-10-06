@@ -11,14 +11,14 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] OpenVPN: Server</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<script type='text/javascript' src='vpn.js'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="vpn.js"></script>
+<script type="text/javascript">
 
 //	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_enable,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_crt,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_enable,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_crt,vpn_server2_key,vpn_server2_dh,vpn_server2_br,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
@@ -49,16 +49,13 @@ changed = 0;
 vpn1up = parseInt('<% psup("vpnserver1"); %>');
 vpn2up = parseInt('<% psup("vpnserver2"); %>');
 
-function updateStatus(num)
-{
+function updateStatus(num) {
 	var xob = new XmlHttp();
-	xob.onCompleted = function(text, xml)
-	{
+	xob.onCompleted = function(text, xml) {
 		statusUpdaters[num].update(text);
 		xob = null;
 	}
-	xob.onError = function(ex)
-	{
+	xob.onError = function(ex) {
 		statusUpdaters[num].errors.innerHTML += 'ERROR! '+ex+'<br />';
 		xob = null;
 	}
@@ -66,8 +63,7 @@ function updateStatus(num)
 	xob.post('/vpnstatus.cgi', 'server=' + (num+1));
 }
 
-function tabSelect(name)
-{
+function tabSelect(name) {
 	tgHideIcons();
 
 	tabHigh(name);
@@ -81,8 +77,7 @@ function tabSelect(name)
 	cookie.set('vpn_server_tab', name);
 }
 
-function sectSelect(tab, section)
-{
+function sectSelect(tab, section) {
 	tgHideIcons();
 
 	for (var i = 0; i < sections.length; ++i)
@@ -102,8 +97,7 @@ function sectSelect(tab, section)
 	cookie.set('vpn_server'+tab+'_section', section);
 }
 
-function toggle(service, isup)
-{
+function toggle(service, isup) {
 	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
 
 	E('_' + service + '_button').disabled = true;
@@ -114,8 +108,7 @@ function toggle(service, isup)
 	});
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	tgHideIcons();
 
 	var ret = 1;
@@ -265,8 +258,7 @@ function verifyFields(focused, quiet)
 	return ret;
 }
 
-CCDGrid.prototype.verifyFields = function(row, quiet)
-{
+CCDGrid.prototype.verifyFields = function(row, quiet) {
 	var ret = 1;
 
 	// When settings change, make sure we restart the right server
@@ -299,14 +291,12 @@ CCDGrid.prototype.verifyFields = function(row, quiet)
 	return ret;
 }
 
-CCDGrid.prototype.fieldValuesToData = function(row)
-{
+CCDGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 	return [f[0].checked?1:0, f[1].value, f[2].value, f[3].value, f[4].checked?1:0];
 }
 
-CCDGrid.prototype.dataToView = function(data)
-{
+CCDGrid.prototype.dataToView = function(data) {
 	var c2c = false;
 	for (i = 0; i < tabs.length; ++i)
 	{
@@ -327,13 +317,11 @@ CCDGrid.prototype.dataToView = function(data)
 	return v;
 }
 
-CCDGrid.prototype.dataToFieldValues = function(data)
-{
+CCDGrid.prototype.dataToFieldValues = function(data) {
 	return [data[0] == 1, data[1], data[2], data[3], data[4] == 1];
 }
 
-CCDGrid.prototype.reDraw = function()
-{
+CCDGrid.prototype.reDraw = function() {
 	var i, j, header, data, view;
 	data = this.getAllData();
 	header = this.header ? this.header.rowIndex + 1 : 0;
@@ -345,8 +333,7 @@ CCDGrid.prototype.reDraw = function()
 	}
 }
 
-UsersGrid.prototype.verifyFields = function(row, quiet)
-{
+UsersGrid.prototype.verifyFields = function(row, quiet) {
 	var ret = 1;
 	var fom = E('t_fom');
 	var servernum = 1;
@@ -372,16 +359,12 @@ UsersGrid.prototype.verifyFields = function(row, quiet)
 	if (f[2].value.indexOf('>') >= 0 || f[1].value.indexOf('<') >= 0) { ferror.set(f[2], "password cannot contain '<' or '>' characters.", quiet); ret = 0; }
 	return ret;
 }
-UsersGrid.prototype.fieldValuesToData = function(row)
-{
+UsersGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 	return [f[0].checked?1:0, f[1].value, f[2].value];
 }
-UsersGrid.prototype.dataToView = function(data){
-	var temp = ['<input type=\'checkbox\' style="opacity:1" disabled'+(data[0]!=0?' checked':'')+'>',
-	            data[1],
-	            'Secret'
-                ];
+UsersGrid.prototype.dataToView = function(data) {
+	var temp = ['<input type=\'checkbox\' style="opacity:1" disabled'+(data[0]!=0?' checked':'')+'>', data[1], 'Secret'];
 
 	var v = [];
 	for (var i = 0; i < temp.length; ++i){
@@ -389,12 +372,10 @@ UsersGrid.prototype.dataToView = function(data){
 	}
 	return v;
 }
-UsersGrid.prototype.dataToFieldValues = function(data)
-{
+UsersGrid.prototype.dataToFieldValues = function(data) {
 	return [data[0] == 1, data[1], data[2]];
 }
-function save()
-{
+function save() {
 	if (!verifyFields(null, false)) return;
 
 	var fom = E('t_fom');
@@ -446,8 +427,7 @@ function save()
 	changed = 0;
 }
 
-function init()
-{
+function init() {
 	tabSelect(cookie.get('vpn_server_tab') || tabs[0][0]);
 
 	for (i = 0; i < tabs.length; ++i)
@@ -456,7 +436,7 @@ function init()
 
 		t = tabs[i][0];
 
-		ccdTables[i].init('table_'+t+'_ccd', 'sort', 0, [{ type: 'checkbox' }, { type: 'text' }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'checkbox' }]);
+		ccdTables[i].init('table_'+t+'_ccd', 'sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'checkbox' }]);
 		ccdTables[i].headerSet(['Enable', 'Common Name', 'Subnet', 'Netmask', 'Push']);
 		var ccdVal = eval( 'nvram.vpn_'+t+'_ccd_val' );
 		if (ccdVal.length)
@@ -473,7 +453,7 @@ function init()
 		ccdTables[i].showNewEditor();
 		ccdTables[i].resetNewEditor();
 
-		usersTables[i].init('table_' + t + '_users','sort', 0, [{ type: 'checkbox' }, { type: 'text' }, { type: 'text', maxlen: 15 }]);
+		usersTables[i].init('table_' + t + '_users','sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }]);
 		usersTables[i].headerSet(['Enable', 'Username', 'Password']);
 		var usersVal = eval('nvram.vpn_' + t + '_users_val');
 		if(usersVal.length) {
@@ -497,7 +477,7 @@ function init()
 }
 </script>
 
-<style type='text/css'>
+<style type="text/css">
 textarea
 {
 	width: 98%;
@@ -524,25 +504,25 @@ table.status-table
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
-<input type='hidden' name='_nextpage' value='vpn-server.asp'>
-<input type='hidden' name='_nextwait' value='5'>
-<input type='hidden' name='_service' value=''>
-<input type='hidden' name='vpn_server_eas' id='vpn_server_eas' value=''>
-<input type='hidden' name='vpn_server_dns' id='vpn_server_dns' value=''>
+<input type="hidden" name="_nextpage" value="vpn-server.asp">
+<input type="hidden" name="_nextwait" value="5">
+<input type="hidden" name="_service" value="">
+<input type="hidden" name="vpn_server_eas" id="vpn_server_eas" value="">
+<input type="hidden" name="vpn_server_dns" id="vpn_server_dns" value="">
 
-<div class='section-title'>OpenVPN Server Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">OpenVPN Server Configuration</div>
+<div class="section">
+<script type="text/javascript">
 tabCreate.apply(this, tabs);
 
 for (i = 0; i < tabs.length; ++i)
@@ -567,7 +547,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<ul class="tabs">');
 	for (j = 0; j < sections.length; j++)
 	{
-		W('<li><a href="javascript:sectSelect('+i+', \''+sections[j][0]+'\')" id="'+t+'-'+sections[j][0]+'-tab">'+sections[j][1]+'<\/a><\/li>');
+		W('<li><a href="javascript:sectSelect('+i+',\''+sections[j][0]+'\')" id="'+t+'-'+sections[j][0]+'-tab">'+sections[j][1]+'<\/a><\/li>');
 	}
 	W('<\/ul><div class=\'tabs-bottom\'><\/div>');
 
@@ -582,7 +562,7 @@ for (i = 0; i < tabs.length; ++i)
 			['br3','LAN3 (br3)']
 			], value: eval ( 'nvram.vpn_'+t+'_br' ), suffix: ' <small>* default<\/small> ' },
 		{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [ ['udp','UDP'], ['tcp-server','TCP'] ], value: eval( 'nvram.vpn_'+t+'_proto' ) },
-		{ title: 'Port', name: 'vpn_'+t+'_port', type: 'text', value: eval( 'nvram.vpn_'+t+'_port' ) },
+		{ title: 'Port', name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 10, value: eval( 'nvram.vpn_'+t+'_port' ) },
 		{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [ ['auto', 'Automatic'], ['external', 'External Only'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_firewall' ) },
 		{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [ ['tls', 'TLS'], ['secret', 'Static Key'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_crypt' ),
 			suffix: '<span id=\''+t+'_custom_crypto_text\'>&nbsp;<small>(must configure manually...)<\/small><\/span>' },
@@ -655,13 +635,13 @@ for (i = 0; i < tabs.length; ++i)
 </div>
 
 </td></tr>
-	<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+	<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>init();</script>
+<script type="text/javascript">init();</script>
 </body>
 </html>

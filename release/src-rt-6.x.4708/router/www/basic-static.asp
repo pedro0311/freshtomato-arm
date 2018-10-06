@@ -13,15 +13,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: Static DHCP/ARP/IPT</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #bs-grid .co1 {
 	width: 120px;
 	text-align: center;
@@ -42,9 +42,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("lan_ipaddr,lan_netmask,dhcpd_static,dhcpd_startip,dhcpd_static_only,cstats_include"); %>
 
@@ -309,8 +309,7 @@ function save() {
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	var c;
 	if (((c = cookie.get('basic_static_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility("notes");
@@ -320,7 +319,7 @@ function init()
 }
 
 function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
+	if (E('sesdiv' + whichone).style.display=='') {
 		E('sesdiv' + whichone).style.display='none';
 		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
 		cookie.set('basic_static_' + whichone + '_vis', 0);
@@ -337,73 +336,73 @@ function verifyFields(focused, quiet) {
 
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing='0'>
-<tr><td colspan='2' id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-static.asp'>
-<input type='hidden' name='_service' value='dhcpd-restart,arpbind-restart,cstats-restart'>
+<input type="hidden" name="_nextpage" value="basic-static.asp">
+<input type="hidden" name="_service" value="dhcpd-restart,arpbind-restart,cstats-restart">
 
-<input type='hidden' name='dhcpd_static'>
-<input type='hidden' name='dhcpd_static_only'>
-<input type='hidden' name='cstats_include'>
+<input type="hidden" name="dhcpd_static">
+<input type="hidden" name="dhcpd_static_only">
+<input type="hidden" name="cstats_include">
 
-<div class='section-title'>Static DHCP/ARP/IPT</div>
-<div class='section'>
+<div class="section-title">Static DHCP/ARP/IPT</div>
+<div class="section">
 	<div class="tomato-grid" id="bs-grid"></div>
 </div>
 
 <!-- / / / -->
 
-<div class='section-title'>Options</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Options</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 { title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == '1' }
 ]);
 </script>
 </div>
-<div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivnotes' style='display:none'>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdivnotes" style="display:none">
 
 <ul>
-<li><b>MAC Address</b> - Unique identifier associated to a network interface on this particular device.</li>
-<li><b>Bound to</b> - Enforce static ARP binding of this particular IP/MAC address pair.</li>
-<li><b>IP Address</b> - Network address assigned to this device on the local network.</li>
-<li><b>IPTraffic</b> - Keep track of bandwidth usage for this IP address.</li>
-<li><b>Hostname</b> - Human-readable nickname/label assigned to this device on the network.</li>
+	<li><b>MAC Address</b> - Unique identifier associated to a network interface on this particular device.</li>
+	<li><b>Bound to</b> - Enforce static ARP binding of this particular IP/MAC address pair.</li>
+	<li><b>IP Address</b> - Network address assigned to this device on the local network.</li>
+	<li><b>IPTraffic</b> - Keep track of bandwidth usage for this IP address.</li>
+	<li><b>Hostname</b> - Human-readable nickname/label assigned to this device on the network.</li>
 </ul>
 <ul>
-<li><small><b>Other relevant notes/hints:</b></small>
-<ul>
-<li><small>To specify multiple hostnames for a device, separate them with spaces.</small></li>
-<li><small>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</small></li>
-<li><small>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</small></li>
-<li><small>See also the <a href='advanced-dhcpdns.asp'>Advanced DHCP/DNS</a> settings page for more DHCP-related configuration options.</small></li>
-</ul>
-</li>
+	<li><small><b>Other relevant notes/hints:</b></small>
+		<ul>
+			<li><small>To specify multiple hostnames for a device, separate them with spaces.</small></li>
+			<li><small>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</small></li>
+			<li><small>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</small></li>
+			<li><small>See also the <a href="advanced-dhcpdns.asp">Advanced DHCP/DNS</a> settings page for more DHCP-related configuration options.</small></li>
+		</ul>
+	</li>
 </ul>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan='2'>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>sg.setup();</script>
+<script type="text/javascript">sg.setup();</script>
 </body>
 </html>

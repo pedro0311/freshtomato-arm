@@ -9,34 +9,31 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Debugging</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("debug_nocommit,debug_cprintf,debug_cprintf_file,console_loglevel,t_cafree,t_hidelr,debug_ddns,debug_norestart"); %>
 
-function nvramCommit()
-{
+function nvramCommit() {
 	fields.disableAll('t_fom', 1);
 	form.submitHidden('nvcommit.cgi', { '_nextpage': myName() });
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var fom = E('t_fom');
 	fom.debug_nocommit.value = fom.f_debug_nocommit.checked ? 1 : 0;
 	fom.debug_cprintf.value = fom.f_debug_cprintf.checked ? 1 : 0;
@@ -60,31 +57,31 @@ function save()
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='admin-misc.asp'>
+<input type="hidden" name="_nextpage" value="admin-misc.asp">
 
-<input type='hidden' name='debug_nocommit'>
-<input type='hidden' name='debug_cprintf'>
-<input type='hidden' name='debug_cprintf_file'>
-<input type='hidden' name='debug_ddns'>
-<input type='hidden' name='debug_norestart'>
-<input type='hidden' name='t_cafree'>
-<input type='hidden' name='t_hidelr'>
+<input type="hidden" name="debug_nocommit">
+<input type="hidden" name="debug_cprintf">
+<input type="hidden" name="debug_cprintf_file">
+<input type="hidden" name="debug_ddns">
+<input type="hidden" name="debug_norestart">
+<input type="hidden" name="t_cafree">
+<input type="hidden" name="t_hidelr">
 
-<div class='section-title'>Debugging</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Debugging</div>
+<div class="section">
+<script type="text/javascript">
 a = [];
 for (i = 1; i <= 8; ++i) a.push([i, i]);
 createFieldTable('', [
@@ -105,28 +102,28 @@ createFieldTable('', [
 	] }
 ]);
 </script>
-<br /><br />
+<br/><br/>
 
-&raquo; <a href='clearcookies.asp?_http_id=<% nv(http_id); %>'>Clear Cookies</a><br />
-&raquo; <a href='javascript:nvramCommit()'>NVRAM Commit</a><br />
-&raquo; <a href='javascript:reboot()'>Reboot</a><br />
-&raquo; <a href='javascript:shutdown()'>Shutdown</a><br />
-<br /><br />
+&raquo; <a href="clearcookies.asp?_http_id=<% nv(http_id); %>">Clear Cookies</a><br/>
+&raquo; <a href="javascript:nvramCommit()">NVRAM Commit</a><br/>
+&raquo; <a href="javascript:reboot()">Reboot</a><br/>
+&raquo; <a href="javascript:shutdown()">Shutdown</a><br/>
+<br/><br/>
 
-&raquo; <a href='/cfe/cfe.bin?_http_id=<% nv(http_id); %>'>Download CFE</a><br />
-&raquo; <a href='/ipt/iptables.txt?_http_id=<% nv(http_id); %>'>Download Iptables Dump</a><br />
+&raquo; <a href="/cfe/cfe.bin?_http_id=<% nv(http_id); %>">Download CFE</a><br/>
+&raquo; <a href="/ipt/iptables.txt?_http_id=<% nv(http_id); %>">Download Iptables Dump</a><br/>
 <!-- IPV6-BEGIN -->
-&raquo; <a href='/ip6t/ip6tables.txt?_http_id=<% nv(http_id); %>'>Download Ip6tables Dump</a><br />
+&raquo; <a href="/ip6t/ip6tables.txt?_http_id=<% nv(http_id); %>">Download Ip6tables Dump</a><br/>
 <!-- IPV6-END -->
-&raquo; <a href='/logs/syslog.txt?_http_id=<% nv(http_id); %>'>Download Logs</a><br />
-&raquo; <a href='/nvram/nvram.txt?_http_id=<% nv(http_id); %>'>Download NVRAM Dump</a><br />
-<br />
+&raquo; <a href="/logs/syslog.txt?_http_id=<% nv(http_id); %>">Download Logs</a><br/>
+&raquo; <a href="/nvram/nvram.txt?_http_id=<% nv(http_id); %>">Download NVRAM Dump</a><br/>
+<br/>
 
-<div style='width:80%'>
+<div style="width:80%">
 <b>Warning</b>: The NVRAM Dump text file may contain information like wireless
 encryption keys and usernames/passwords for the router, ISP and DDNS. Please
 review &amp; edit this file before sharing it with
-anyone.<br />
+anyone.<br/>
 </div>
 
 </div>
@@ -134,10 +131,10 @@ anyone.<br />
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>

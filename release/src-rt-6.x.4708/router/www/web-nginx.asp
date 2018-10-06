@@ -14,31 +14,30 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Web Server Menu</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 .controls {
  	width: 90px;
 	margin-top: 5px;
 	margin-bottom: 10px;
 }
 </style>
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile"); %>
 
 changed = 0;
 nginxup = parseInt ('<% psup("nginx"); %>');
 
-function toggle(service, isup)
-{
+function toggle(service, isup) {
 	if (changed) {
 		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
 	}
@@ -50,8 +49,7 @@ function toggle(service, isup)
 	});
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var a = E('_f_nginx_enable').checked;
@@ -76,8 +74,7 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
+function save() {
 	if (verifyFields(null, 0)==0) return;
 	var fom = E('t_fom');
 
@@ -94,51 +91,50 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	verifyFields(null, 1);
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
-<body onLoad="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
-<div class='section-title'>Status</div>
-<div class='section' id='status-section'>
-<script type='text/javascript'>
+<div class="section-title">Status</div>
+<div class="section" id="status-section">
+<script type="text/javascript">
 	W('NGINX is currently '+(!nginxup ? 'stopped' : 'running')+' ');
 	W('<input type="button" value="' + (nginxup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'nginxfp\', nginxup)" id="_nginxfp_button">');
 </script>
-<br />
+<br/>
 </div>
 
-<div class='section-title'>Basic Settings</div>
-<div class='section' id='config-section'>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<div class="section-title">Basic Settings</div>
+<div class="section" id="config-section">
+<form id="t_fom" method="post" action="tomato.cgi">
 <div>
-<input type='hidden' name='_nextpage' value='web-nginx.asp'>
-<input type='hidden' name='_service' value='enginex-restart'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_reboot' value='0'>
+<input type="hidden" name="_nextpage" value="web-nginx.asp">
+<input type="hidden" name="_service" value="enginex-restart">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_reboot" value="0">
 
-<input type='hidden' name='nginx_enable'>
-<input type='hidden' name='nginx_php'>
-<input type='hidden' name='nginx_keepconf'>
-<input type='hidden' name='nginx_remote'>
-<input type='hidden' name='nginx_override'>
+<input type="hidden" name="nginx_enable">
+<input type="hidden" name="nginx_php">
+<input type="hidden" name="nginx_keepconf">
+<input type="hidden" name="nginx_remote">
+<input type="hidden" name="nginx_override">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable Server on Start', name: 'f_nginx_enable', type: 'checkbox', value: nvram.nginx_enable == '1'},
 	{ title: 'Enable PHP support', name: 'f_nginx_php', type: 'checkbox', value: nvram.nginx_php == '1' },
@@ -154,9 +150,9 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<div class='section-title'>Advanced Settings</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Advanced Settings</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: '<a href="http://wiki.nginx.org/Configuration" class="new_window">NGINX<\/a><br />HTTP Section<br />Custom configuration', name: 'nginx_httpcustom', type: 'textarea', value: nvram.nginx_httpcustom },
 	{ title: '<a href="http://wiki.nginx.org/Configuration" class="new_window">NGINX<\/a><br />SERVER Section<br />Custom configuration', name: 'nginx_servercustom', type: 'textarea', value: nvram.nginx_servercustom },
@@ -168,8 +164,8 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
 	<ul>
 		<li><b> Status Button:</b> Quick Start-Stop Service. Enable Web Server must be checked to modify settings.</li>
 		<li><b> Enable Server on Start:</b> To activate the Web Server tick and save this screen.</li>
@@ -180,16 +176,16 @@ createFieldTable('', [
 		<li><b> Allow remote access:</b> This option will open the Web Server GUI port from the WAN side. Service will be accessed from the internet.</li>
 		<li><b> Web Server Name:</b> Name that will appear on top of your Internet Browser.</li>
 		<li><b> Document Root Path:</b> The path in your router where documents are stored.</li>
-		<li><b> Examples:</b><br />
+		<li><b> Examples:</b><br/>
 			/tmp/mnt/HDD/www as you can find in USB mount path.</li>
 		<li><b> NGINX Custom Configuration:</b> You can add other values to nginx.conf to suit your needs.</li>
 		<li><b> NGINX HTTP Section Custom Configuration:</b> You can add other values to nginx.conf in declaration of http {} to suit your needs.</li>
 		<li><b> NGINX SERVER Section Custom Configuration:</b> You can add other values to nginx.conf in declaration of server {} to suit your needs.</li>
 		<li><b> PHP Custom Configuration:</b> You can add other values to php.ini to suit your needs.</li>
-		<li><b> Server Priority:</b> Sets the service priority over other processes running on the router.<br /><br />
-			The operating system kernel has priority -5.<br />
-			Never select a lower value than the kernel uses. Do not use the service test page to adjust the<br />
-			server performance, it's performance is lower than the definitive media where files will be <br />
+		<li><b> Server Priority:</b> Sets the service priority over other processes running on the router.<br/><br/>
+			The operating system kernel has priority -5.<br/>
+			Never select a lower value than the kernel uses. Do not use the service test page to adjust the<br/>
+			server performance, it's performance is lower than the definitive media where files will be <br/>
 			located, i.e; USB Stick, Hard Drive or SSD.</li>
 	</ul>
 </div>
@@ -199,16 +195,16 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

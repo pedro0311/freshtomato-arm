@@ -29,7 +29,7 @@ var colors = [
 	['Green &amp; Blue', '#118811', '#6495ed'], ['Blue &amp; Orange', '#003EBA', '#FF9000'],
 	['Blue &amp; Red', '#003EDD', '#CC4040'], ['Blue', '#22f', '#225'], ['Gray', '#000', '#999'],
 	['Red &amp; Black', '#d00', '#000']];
-//var hostnamecache = [];
+/* var hostnamecache = []; */
 
 function xpsb(byt)
 {
@@ -53,7 +53,7 @@ function showSelectedOption(prefix, prev, now)
 {
 	var e;
 
-	elem.removeClass(prefix + prev, 'selected');	// safe if prev doesn't exist
+	elem.removeClass(prefix + prev, 'selected');	/* safe if prev doesn't exist */
 	if ((e = E(prefix + now)) != null) {
 		elem.addClass(e, 'selected');
 		e.blur();
@@ -237,13 +237,13 @@ function loadData()
 			if (h.rx_max > xx_max) xx_max = h.rx_max;
 			if (h.tx_max > xx_max) xx_max = h.tx_max;
 
-			t = i;											// by default, show only the IP address (or IF name)
+			t = i;							/* by default, show only the IP address (or IF name) */
 			if ((typeof(hostnamecache) != 'undefined') && (hostnamecache[i] != null)) {
 				if (nvram['cstats_labels'] != null ) {
-					if (nvram['cstats_labels'] == '1') {	// if known, show only the hostname
+					if (nvram['cstats_labels'] == '1') {	/* if known, show only the hostname */
 						t = hostnamecache[i];
 					}
-					if (nvram['cstats_labels'] == '0') {	// show hostname and IP
+					if (nvram['cstats_labels'] == '0') {	/* show hostname and IP */
 						t = hostnamecache[i] + ' <small>(' + i + ')<\/small>';
 					}
 				}
@@ -376,7 +376,7 @@ function initCommon(defAvg, defDrawMode, defDrawColor, defUnit)
 	unitMode = fixInt(cookie.get(cprefix + 'unit'), 0, 1, defUnit);
 	showUnit();
 
-	// if just switched
+	/* if just switched */
 	if ((nvram.wan_proto == 'disabled') || (nvram.wan_proto == 'wet')) {
 		nvram.wan_ifname = '';
 	}

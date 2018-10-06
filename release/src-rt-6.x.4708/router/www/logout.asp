@@ -14,49 +14,49 @@
 <title>[<% ident(); %>] Logout...</title>
 <style type="text/css">
 body {
-    background:rgb(0,0,0) url(tomatousb_bg.png);
-    font:14px Tahoma,Arial,sans-serif;
-    color:rgb(255,255,255);
+	background:rgb(0,0,0) url(tomatousb_bg.png);
+	font:14px Tahoma,Arial,sans-serif;
+	color:rgb(255,255,255);
 }
 input {
-    width:80px;
-    height:24px;
+	width:80px;
+	height:24px;
 }
 .div {
-    width:600px;
-    height:180px;
-    background-color:rgb(47,61,64);
-    position:absolute;
-    top:0;
-    bottom:0;
-    left:0;
-    right:0;
-    text-align:center;
-    margin:auto;
-    padding:10px 10px;
-    border-radius:5px;
+	width:600px;
+	height:180px;
+	background-color:rgb(47,61,64);
+	position:absolute;
+	top:0;
+	bottom:0;
+	left:0;
+	right:0;
+	text-align:center;
+	margin:auto;
+	padding:10px 10px;
+	border-radius:5px;
 }
 </style>
 </head>
 <body onload='setTimeout("go.submit()", 1200)'>
-    <div class="div">
+	<div class="div">
 		<b>Logout</b>
-		<br />
+		<br/>
 		<hr style="height:1px">
-		To clear the credentials cached by the browser:<br />
-		<br />
-		<b>Firefox, Internet Explorer, Opera, Safari</b><br />
-		- Leave the password field blank.<br />
-		- Click OK/Login<br />
-		<br />
-		<b>Chrome</b><br />
-		- Select Cancel.<br /><br />
-		<br />
+		To clear the credentials cached by the browser:<br/>
+		<br/>
+		<b>Firefox, Internet Explorer, Opera, Safari</b><br/>
+		- Leave the password field blank.<br/>
+		- Click OK/Login<br/>
+		<br/>
+		<b>Chrome</b><br/>
+		- Select Cancel.<br/><br/>
+		<br/>
 		<form action="logout" name="go" method="post">
 			<div>
 				<input type="hidden" value="<% nv(http_id); %>" name="_http_id">
 			</div>
 		</form>
-    </div>
+	</div>
 </body>
 </html>

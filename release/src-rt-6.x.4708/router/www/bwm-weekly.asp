@@ -9,19 +9,19 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Bandwidth: Weekly</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,lan_ifname,rstats_enable"); %>
 try {
@@ -41,27 +41,23 @@ var weeksShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 var startwk = 0;
 var summary = 1;
 
-function save()
-{
+function save() {
 	cookie.set('weekly', scale + ',' + startwk + ',' + summary, 31);
 }
 
-function changeStart(e)
-{
+function changeStart(e) {
 	startwk = e.value * 1;
 	redraw();
 	save();
 }
 
-function changeMode(e)
-{
+function changeMode(e) {
 	summary = e.value * 1;
 	redraw();
 	save();
 }
 
-function nth(n)
-{
+function nth(n) {
 	n += '';
 	switch (n.substr(n.length - 1, 1)) {
 	case '1':
@@ -74,8 +70,7 @@ function nth(n)
 	return n + 'th';
 }
 
-function redraw()
-{
+function redraw() {
 	var h;
 	var grid;
 	var block;
@@ -103,13 +98,11 @@ function redraw()
 	if (summary) {
 		grid = '<table class="bwmg" cellspacing="1">';
 		grid += makeRow('header', 'Date', 'Download', 'Upload', 'Total');
-	}
-	else {
+	} else {
 		grid = '';
 	}
 
-	function flush_block()
-	{
+	function flush_block() {
 		grid += '<b>' + dbeg + ' to ' + dend + '<\/b>' +
 				'<table class="bwmg" cellspacing="1">' +
 				makeRow('header', 'Date', 'Download', 'Upload', 'Total') +
@@ -206,8 +199,7 @@ function redraw()
 	E('bwm-weekly-grid').innerHTML = grid;
 }
 
-function init()
-{
+function init() {
 	var s;
 
 	if (nvram.rstats_enable != '1') {
@@ -230,46 +222,46 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
+<body onload="init()">
 <form action="">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>WAN Bandwidth - Weekly</div>
+<div class="section-title">WAN Bandwidth - Weekly</div>
 <div id="rstats">
 
-	<div id='bwm-weekly-grid' style='float:left'></div>
+	<div id="bwm-weekly-grid" style="float:left"></div>
 	<div style="float:right;text-align:right">
-		<b>Show</b> <select onchange='changeMode(this)' id='shmode'><option value=1 selected>Summary<option value=0>Full</select><br />
-		<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br />
-		<b>Start</b> <select onchange='changeStart(this)' id='startwk'><option value=0 selected>Sun<option value=1>Mon<option value=2>Tue<option value=3>Wed<option value=4>Thu<option value=5>Fri<option value=6>Sat</select><br />
-		<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
-		<br />
+		<b>Show</b> <select onchange="changeMode(this)" id="shmode"><option value="1" selected="selected">Summary</option><option value="0">Full</option></select><br/>
+		<b>Date</b> <select onchange='changeDate(this, "ymd")' id="dafm"><option value="0">yyyy-mm-dd</option><option value="1">mm-dd-yyyy</option><option value="2">mmm dd, yyyy</option><option value="3">dd.mm.yyyy</option></select><br/>
+		<b>Start</b> <select onchange="changeStart(this)" id="startwk"><option value="0" selected="selected">Sun</option><option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option></select><br/>
+		<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br/>
+		<br/>
 		&raquo; <a href="admin-bwm.asp">Configure</a>
-		<br /><br /><br />
+		<br/><br/><br/>
 	</div>
 
-	<br />
+	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkRstats();</script>
+<script type="text/javascript">checkRstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<input type='button' value='Refresh' id='refresh-button' onclick='reloadPage()'>
+<tr><td id="footer" colspan="2">
+	<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
 </td></tr>
 </table>
 </form>

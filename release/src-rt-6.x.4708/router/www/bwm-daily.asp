@@ -9,19 +9,19 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Bandwidth: Daily</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,lan_ifname,rstats_enable"); %>
 try {
@@ -36,13 +36,11 @@ if (typeof(daily_history) == 'undefined') {
 	rstats_busy = 1;
 }
 
-function save()
-{
+function save() {
 	cookie.set('daily', scale, 31);
 }
 
-function genData()
-{
+function genData() {
 	var w, i, h, t;
 
 	w = window.open('', 'tomato_data_d');
@@ -56,14 +54,12 @@ function genData()
 	w.document.close();
 }
 
-function getYMD(n)
-{
+function getYMD(n) {
 	// [y,m,d]
 	return [(((n >> 16) & 0xFF) + 1900), ((n >>> 8) & 0xFF), (n & 0xFF)];
 }
 
-function redraw()
-{
+function redraw() {
 	var h;
 	var grid;
 	var rows;
@@ -108,8 +104,7 @@ function redraw()
 	E('last-total').innerHTML = rescale(lastu + lastd);
 }
 
-function init()
-{
+function init() {
 	var s;
 
 	if (nvram.rstats_enable != '1') {
@@ -130,58 +125,58 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
-<form action=''>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>WAN Bandwidth - Daily</div>
+<div class="section-title">WAN Bandwidth - Daily</div>
 <div id="rstats">
-	<div id='bwm-daily-grid' style='float:left'></div>
+	<div id="bwm-daily-grid" style="float:left"></div>
 	<div style="float:right;text-align:right">
 
-		<table class='tomato-grid' style='width:150px'>
-			<tr class='header'><td colspan=2 style='text-align:center'>Last 30 Days<br /><span style='font-weight:normal' id='last-dates'></span></td></tr>
-			<tr class='even'><td>Down</td><td id='last-dn'>-</td></tr>
-			<tr class='odd'><td>Up</td><td id='last-up'>-</td></tr>
-			<tr class='footer'><td>Total</td><td id='last-total'>-</td></tr>
+		<table class="tomato-grid" style="width:150px">
+			<tr class="header"><td colspan="2" style="text-align:center">Last 30 Days<br/><span style="font-weight:normal" id="last-dates"></span></td></tr>
+			<tr class="even"><td>Down</td><td id="last-dn">-</td></tr>
+			<tr class="odd"><td>Up</td><td id="last-up">-</td></tr>
+			<tr class="footer"><td>Total</td><td id="last-total">-</td></tr>
 		</table>
 
-		<br />
-		<hr style='height:1px'>
-		<br />
+		<br/>
+		<hr style="height:1px">
+		<br/>
 
-		<b>Date</b> <select onchange='changeDate(this, "ymd")' id='dafm'><option value=0>yyyy-mm-dd</option><option value=1>mm-dd-yyyy</option><option value=2>mmm dd, yyyy</option><option value=3>dd.mm.yyyy</option></select><br />
-		<b>Scale</b> <select onchange='changeScale(this)' id='scale'><option value=0>KB</option><option value=1>MB</option><option value=2 selected>GB</option></select><br />
-		<br />
+		<b>Date</b> <select onchange='changeDate(this, "ymd")' id="dafm"><option value="0">yyyy-mm-dd</option><option value="1">mm-dd-yyyy</option><option value="2">mmm dd, yyyy</option><option value="3">dd.mm.yyyy</option></select><br/>
+		<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br/>
+		<br/>
 		&raquo; <a href="javascript:genData()">Data</a>
-		<br />
+		<br/>
 		&raquo; <a href="admin-bwm.asp">Configure</a>
-		<br /><br /><br />
+		<br/><br/><br/>
 
 	</div>
 
-	<br />
+	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkRstats();</script>
+<script type="text/javascript">checkRstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<input type='button' value='Refresh' id='refresh-button' onclick='reloadPage()'>
+<tr><td id="footer" colspan="2">
+	<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
 </td></tr>
 </table>
 </form>

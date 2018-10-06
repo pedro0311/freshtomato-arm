@@ -8,16 +8,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] NAS: Media Server</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #ms-grid {
 	width: 81%;
 }
@@ -29,9 +29,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
@@ -55,8 +55,7 @@ msg.dataToView = function(data) {
 	return b;
 }
 
-msg.verifyFields = function(row, quiet)
-{
+msg.verifyFields = function(row, quiet) {
 	var ok = 1;
 	var f;
 	f = fields.getAll(row);
@@ -68,8 +67,7 @@ msg.verifyFields = function(row, quiet)
 	return ok;
 }
 
-msg.resetNewEditor = function()
-{
+msg.resetNewEditor = function() {
 	var f;
 
 	f = fields.getAll(this.newEditor);
@@ -78,8 +76,7 @@ msg.resetNewEditor = function()
 	f[1].selectedIndex = 0;
 }
 
-msg.setup = function()
-{
+msg.setup = function() {
 	this.init('ms-grid', 'sort', 50, [
 		{ type: 'text', maxlen: 256 },
 		{ type: 'select', options: mediatypes }
@@ -97,14 +94,12 @@ msg.setup = function()
 	this.resetNewEditor();
 }
 
-function getDbPath()
-{
+function getDbPath() {
 	var s = E('_f_loc').value;
 	return (s == '*user') ? E('_f_user').value : s;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 	var a, b, v;
 	var eLoc, eUser;
@@ -178,8 +173,7 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
+function save() {
 	if (msg.isEditing()) return;
 	if (!verifyFields(null, 0)) return;
 
@@ -201,8 +195,7 @@ function save()
 	form.submit(fom, 1);
 }
 
-function restart(isup)
-{
+function restart(isup) {
 	if (changed) {
 		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
 	}
@@ -216,22 +209,19 @@ function restart(isup)
 	});
 }
 
-function submit_complete()
-{
+function submit_complete() {
 	reloadPage();
 }
 
 var xob = null;
 
-function setNoticeText(s)
-{
+function setNoticeText(s) {
 	if (s.length)
 		s = '<div id="notice1">' + s.replace(/\n/g, '<br />') + '<\/div><br style="clear:both">';
 	elem.setInnerHTML('notice-msg', s);
 }
 
-function updateNotice()
-{
+function updateNotice() {
 	if (xob) return;
 
 	xob = new XmlHttp();
@@ -244,8 +234,7 @@ function updateNotice()
 	xob.post('update.cgi', 'exec=notice&arg0=dlna');
 }
 
-function init()
-{
+function init() {
 	changed = 0;
 	updateNotice();
 }
@@ -253,32 +242,32 @@ function init()
 
 </head>
 <body onload="init()">
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='nas-media.asp'>
-<input type='hidden' name='_service' value='media-restart'>
+<input type="hidden" name="_nextpage" value="nas-media.asp">
+<input type="hidden" name="_service" value="media-restart">
 
-<input type='hidden' name='ms_enable'>
-<input type='hidden' name='ms_dirs'>
-<input type='hidden' name='ms_dbdir'>
-<input type='hidden' name='ms_tivo'>
-<input type='hidden' name='ms_stdlna'>
-<input type='hidden' name='ms_rescan'>
-<input type='hidden' name='ms_sas'>
+<input type="hidden" name="ms_enable">
+<input type="hidden" name="ms_dirs">
+<input type="hidden" name="ms_dbdir">
+<input type="hidden" name="ms_tivo">
+<input type="hidden" name="ms_stdlna">
+<input type="hidden" name="ms_rescan">
+<input type="hidden" name="ms_sas">
 
-<div class='section-title'>Media / DLNA Server</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Media / DLNA Server</div>
+<div class="section">
+<script type="text/javascript">
 
 switch (nvram.ms_dbdir) {
 	case '':
@@ -326,25 +315,25 @@ W('<br /><input type="button" value="' + (mdup ? 'Res' : 'S') + 'tart Now" oncli
 </script>
 </div>
 <span id="notice-msg"></span>
-<br />
+<br/>
 
-<div class='section-title'>Media Directories</div>
-<div class='section'>
+<div class="section-title">Media Directories</div>
+<div class="section">
 	<div class="tomato-grid" id="ms-grid"></div>
-	<script type='text/javascript'>msg.setup();</script>
-<br />
+	<script type="text/javascript">msg.setup();</script>
+<br/>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

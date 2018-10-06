@@ -8,26 +8,25 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] MySQL Database Server</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 15em;
 }
 </style>
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("mysql_enable,mysql_sleep,mysql_check,mysql_check_time,mysql_binary,mysql_binary_custom,mysql_usb_enable,mysql_dlroot,mysql_datadir,mysql_tmpdir,mysql_server_custom,mysql_port,mysql_allow_anyhost,mysql_init_rootpass,mysql_username,mysql_passwd,mysql_key_buffer,mysql_max_allowed_packet,mysql_thread_stack,mysql_thread_cache_size,mysql_init_priv,mysql_table_open_cache,mysql_sort_buffer_size,mysql_read_buffer_size,mysql_query_cache_size,mysql_read_rnd_buffer_size,mysql_max_connections,nginx_port"); %>
 
 var ams_link = '&nbsp;&nbsp;<a href="http://' + location.hostname + ':' + nvram.nginx_port + '/adminer.php" class="new_window"><i>[Click here to manage MySQL]<\/i><\/a>';
 //	<% usbdevices(); %>
 var usb_disk_list = new Array();
-function refresh_usb_disk()
-{
+function refresh_usb_disk() {
 	var i, j, k, a, b, c, e, s, desc, d, parts, p;
 	var partcount;
 	list = [];
@@ -76,8 +75,7 @@ function refresh_usb_disk()
 }
 
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var a = E('_f_mysql_enable').checked;
@@ -135,60 +133,57 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
-  if (verifyFields(null, 0)==0) return;
-  var fom = E('t_fom');
-  
-  fom.mysql_enable.value               = E('_f_mysql_enable').checked ? 1 : 0;
-  fom.mysql_check.value                = E('_f_mysql_check').checked ? 1 : 0;
-  fom.mysql_usb_enable.value           = E('_f_mysql_usb_enable').checked ? 1 : 0;
-  fom.mysql_init_priv.value            = E('_f_mysql_init_priv').checked ? 1 : 0;
-  fom.mysql_init_rootpass.value        = E('_f_mysql_init_rootpass').checked ? 1 : 0;
-  fom.mysql_allow_anyhost.value        = E('_f_mysql_allow_anyhost').checked ? 1 : 0;
-	
-  if (fom.mysql_enable.value == 0) {
-  	fom._service.value = 'mysql-stop';
-  }
-  else {
-  	fom._service.value = 'mysql-restart'; 
-  }
-  form.submit('t_fom', 1);
+function save() {
+	if (verifyFields(null, 0)==0) return;
+	var fom = E('t_fom');
+
+	fom.mysql_enable.value		= E('_f_mysql_enable').checked ? 1 : 0;
+	fom.mysql_check.value		= E('_f_mysql_check').checked ? 1 : 0;
+	fom.mysql_usb_enable.value	= E('_f_mysql_usb_enable').checked ? 1 : 0;
+	fom.mysql_init_priv.value	= E('_f_mysql_init_priv').checked ? 1 : 0;
+	fom.mysql_init_rootpass.value	= E('_f_mysql_init_rootpass').checked ? 1 : 0;
+	fom.mysql_allow_anyhost.value	= E('_f_mysql_allow_anyhost').checked ? 1 : 0;
+
+	if (fom.mysql_enable.value == 0) {
+		fom._service.value = 'mysql-stop';
+	} else {
+		fom._service.value = 'mysql-restart'; 
+	}
+	form.submit('t_fom', 1);
 }
 
-function init()
-{
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+function init() {
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
 
-<body onLoad="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-<div class='title'>Tomato</div>
-<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+<div class="title">Tomato</div>
+<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
 <div>
-<input type='hidden' name='_nextpage' value='mysql.asp'>
-<input type='hidden' name='_service' value='mysql-restart'>
-<input type='hidden' name='mysql_enable'>
-<input type='hidden' name='mysql_check'>
-<input type='hidden' name='mysql_usb_enable'>
-<input type='hidden' name='mysql_init_priv'>
-<input type='hidden' name='mysql_init_rootpass'>
-<input type='hidden' name='mysql_allow_anyhost'>
+<input type="hidden" name="_nextpage" value="mysql.asp">
+<input type="hidden" name="_service" value="mysql-restart">
+<input type="hidden" name="mysql_enable">
+<input type="hidden" name="mysql_check">
+<input type="hidden" name="mysql_usb_enable">
+<input type="hidden" name="mysql_init_priv">
+<input type="hidden" name="mysql_init_rootpass">
+<input type="hidden" name="mysql_allow_anyhost">
 
-<div class='section-title'>Basic Settings<script type='text/javascript'>W(ams_link);</script></div>
-<div class='section' id='config-section1'>
-<script type='text/javascript'>
-	
+<div class="section-title">Basic Settings<script type="text/javascript">W(ams_link);</script></div>
+<div class="section" id="config-section1">
+<script type="text/javascript">
+
 refresh_usb_disk();
 
 createFieldTable('', [
@@ -218,16 +213,16 @@ createFieldTable('', [
 </script>
 	<ul>
 		<li><b>Enable MySQL server</b> - Caution! - If your router only has 32MB of RAM, you'll have to use swap.
-		<li><b>MySQL binary path</b> - Path to the directory containing mysqld etc. Not include program name "/mysqld"
-		<li><b>Keep alive</b> - If enabled, mysqld will be checked at the specified interval and will re-launch after a crash.
-		<li><b>Data and tmp dir.</b> - Attention! Must not use NAND for datadir and tmpdir.
-	</ul>
+		</li><li><b>MySQL binary path</b> - Path to the directory containing mysqld etc. Not include program name "/mysqld"
+		</li><li><b>Keep alive</b> - If enabled, mysqld will be checked at the specified interval and will re-launch after a crash.
+		</li><li><b>Data and tmp dir.</b> - Attention! Must not use NAND for datadir and tmpdir.
+	</li></ul>
 </div>
 </div>
 
-<div class='section-title'>Advanced Settings</div>
-<div class='section' id='config-section2'>
-<script type='text/javascript'>
+<div class="section-title">Advanced Settings</div>
+<div class="section" id="config-section2">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Key buffer', name: 'mysql_key_buffer', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_key_buffer, suffix: ' <small>MB (range: 1 - 1024; default: 8)<\/small>' },
 	{ title: 'Max allowed packet', name: 'mysql_max_allowed_packet', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_max_allowed_packet, suffix: ' <small>MB (range: 1 - 1024; default: 4)<\/small>' },
@@ -244,20 +239,20 @@ createFieldTable('', [
 </script>
 	<ul>
 		<li><b>MySQL Server custom config.</b> - input like:  param=value   e.g.  connect_timeout=10
-	</ul>
+	</li></ul>
 </div>
 </form>
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

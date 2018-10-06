@@ -8,23 +8,22 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: TOR Project</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 textarea {
  width: 98%;
  height: 15em;
 }
 </style>
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("tor_enable,tor_socksport,tor_transport,tor_dnsport,tor_datadir,tor_users,tor_ports,tor_ports_custom,tor_custom,tor_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var a = E('_f_tor_enable').checked;
@@ -93,45 +92,42 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
-  if (verifyFields(null, 0)==0) return;
-  var fom = E('t_fom');
-  fom.tor_enable.value = E('_f_tor_enable').checked ? 1 : 0;
+function save() {
+	if (verifyFields(null, 0) == 0) return;
+	var fom = E('t_fom');
+	fom.tor_enable.value = E('_f_tor_enable').checked ? 1 : 0;
 
-  if (fom.tor_enable.value == 0) {
-  	fom._service.value = 'tor-stop';
-  }
-  else {
-  	fom._service.value = 'tor-restart,firewall-restart'; 
-  }
-  form.submit('t_fom', 1);
+	if (fom.tor_enable.value == 0) {
+		fom._service.value = 'tor-stop';
+	} else {
+		fom._service.value = 'tor-restart,firewall-restart'; 
+	}
+	form.submit('t_fom', 1);
 }
 
-function init()
-{
+function init() {
 }
 </script>
 </head>
 
-<body onLoad="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-<div class='title'>Tomato</div>
-<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+<div class="title">Tomato</div>
+<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<div class='section-title'>TOR Settings</div>
-<div class='section' id='config-section'>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
+<div class="section-title">TOR Settings</div>
+<div class="section" id="config-section">
+<form id="t_fom" method="post" action="tomato.cgi">
 <div>
-<input type='hidden' name='_nextpage' value='advanced-tor.asp'>
-<input type='hidden' name='_service' value='tor-restart'>
-<input type='hidden' name='tor_enable'>
+<input type="hidden" name="_nextpage" value="advanced-tor.asp">
+<input type="hidden" name="_service" value="tor-restart">
+<input type="hidden" name="tor_enable">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable Tor', name: 'f_tor_enable', type: 'checkbox', value: nvram.tor_enable == '1' },
 	null,
@@ -161,28 +157,28 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
 <ul>
 	<li><b>Enable Tor</b> - Be patient. Starting the Tor client can take from several seconds to several minutes.
-	<li><b>Selected IP`s</b> - ex: 1.2.3.4,1.1.0/24,1.2.3.1-1.2.3.4
-	<li><b>Selected Ports</b> - ex: one port (80), few ports (80,443,8888), range of ports (80:88), mix (80,8000:9000,9999)
-	<li><b style='text-decoration:underline'>Caution!</b> - If your router has only 32MB of RAM, you'll have to use swap.
-</ul>
+	</li><li><b>Selected IP`s</b> - ex: 1.2.3.4,1.1.0/24,1.2.3.1-1.2.3.4
+	</li><li><b>Selected Ports</b> - ex: one port (80), few ports (80,443,8888), range of ports (80:88), mix (80,8000:9000,9999)
+	</li><li><b style="text-decoration:underline">Caution!</b> - If your router has only 32MB of RAM, you'll have to use swap.
+</li></ul>
 </div>
 </form>
 </div>
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

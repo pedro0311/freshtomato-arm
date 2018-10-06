@@ -9,15 +9,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Forwarding: Basic</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #fo-grid .co1 {
 	width: 25px;
 	text-align: center;
@@ -43,9 +43,9 @@
 
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("portforward"); %>
 var lipp = '<% lipp(); %>.';
@@ -165,15 +165,13 @@ fog.setup = function() {
 	fog.showNewEditor();
 }
 
-function srcSort(a, b)
-{
+function srcSort(a, b) {
 	if (a[2].length) return -1;
 	if (b[2].length) return 1;
 	return 0;
 }
 
-function save()
-{
+function save() {
 	if (fog.isEditing()) return;
 
 	var data = fog.getAllData().sort(srcSort);
@@ -187,57 +185,56 @@ function save()
 	form.submit(fom, 0, 'tomato.cgi');
 }
 
-function init()
-{
+function init() {
 	fog.recolor();
 	fog.resetNewEditor();
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='forward-basic.asp'>
-<input type='hidden' name='_service' value='firewall-restart'>
+<input type="hidden" name="_nextpage" value="forward-basic.asp">
+<input type="hidden" name="_service" value="firewall-restart">
 
-<input type='hidden' name='portforward'>
+<input type="hidden" name="portforward">
 
-<div class='section-title'>Port Forwarding</div>
-<div class='section'>
+<div class="section-title">Port Forwarding</div>
+<div class="section">
 	<div class="tomato-grid" id="fo-grid"></div>
-	<script type='text/javascript'>fog.setup();</script>
+	<script type="text/javascript">fog.setup();</script>
 </div>
 
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
 	<ul>
 		<li><b>Src Address</b> <i>(optional)</i> - Forward only if from this address. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24", "me.example.com".</li>
 		<li><b>Ext Ports</b> - The ports to be forwarded, as seen from the WAN. Ex: "2345", "200,300", "200-300,400".</li>
 		<li><b>Int Port</b> <i>(optional)</i> - The destination port inside the LAN. If blank, the destination port is the same as <i>Ext Ports</i>. Only one port per entry is supported when forwarding to a different internal port.</li>
 		<li><b>Int Address</b> - The destination address inside the LAN.
-	</ul>
+	</li></ul>
 </div>
 
-<br />
-<script type='text/javascript'>show_notice1('<% notice("iptables"); %>');</script>
+<br/>
+<script type="text/javascript">show_notice1('<% notice("iptables"); %>');</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>

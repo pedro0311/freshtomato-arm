@@ -8,15 +8,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] NAS: File Sharing</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #ss-grid {
 	width: 99%;
 }
@@ -35,16 +35,15 @@ textarea {
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins"); %>
 
 var ssg = new TomatoGrid();
 
-ssg.exist = function(f, v)
-{
+ssg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
 		if (data[i][f] == v) return true;
@@ -52,8 +51,7 @@ ssg.exist = function(f, v)
 	return false;
 }
 
-ssg.existName = function(name)
-{
+ssg.existName = function(name) {
 	return this.exist(0, name);
 }
 
@@ -74,8 +72,7 @@ ssg.fieldValuesToData = function(row) {
 	return [f[0].value, f[1].value, f[2].value, f[3].value, f[4].value];
 }
 
-ssg.verifyFields = function(row, quiet)
-{
+ssg.verifyFields = function(row, quiet) {
 	var f, s;
 
 	f = fields.getAll(row);
@@ -103,8 +100,7 @@ ssg.verifyFields = function(row, quiet)
 	return 1;
 }
 
-ssg.resetNewEditor = function()
-{
+ssg.resetNewEditor = function() {
 	var f;
 
 	f = fields.getAll(this.newEditor);
@@ -117,8 +113,7 @@ ssg.resetNewEditor = function()
 	f[4].selectedIndex = 0;
 }
 
-ssg.setup = function()
-{
+ssg.setup = function() {
 	this.init('ss-grid', 'sort', 50, [
 		{ type: 'text', maxlen: 32 },
 		{ type: 'text', maxlen: 256 },
@@ -141,8 +136,7 @@ ssg.setup = function()
 	this.resetNewEditor();
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var a, b;
 
 	a = E('_smbd_enable').value;
@@ -175,8 +169,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	if (ssg.isEditing()) return;
 	if (!verifyFields(null, 0)) return;
 
@@ -195,15 +188,14 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	var c;
 	if (((c = cookie.get('nas_samba_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility("notes");
 	}
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function toggleVisibility(whichone) {
@@ -220,29 +212,29 @@ function toggleVisibility(whichone) {
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='nas-samba.asp'>
-<input type='hidden' name='_service' value='samba-restart'>
+<input type="hidden" name="_nextpage" value="nas-samba.asp">
+<input type="hidden" name="_service" value="samba-restart">
 
-<input type='hidden' name='smbd_master'>
-<input type='hidden' name='smbd_wins'>
-<input type='hidden' name='smbd_shares'>
+<input type="hidden" name="smbd_master">
+<input type="hidden" name="smbd_wins">
+<input type="hidden" name="smbd_shares">
 
-<div class='section-title'>Samba File Sharing</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Samba File Sharing</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable File Sharing', name: 'smbd_enable', type: 'select',
 		options: [['0', 'No'],['1', 'Yes, no Authentication'],['2', 'Yes, Authentication required']],
@@ -276,20 +268,20 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<br />
+<br/>
 
-<div class='section-title'>Additional Shares List</div>
-<div class='section'>
+<div class="section-title">Additional Shares List</div>
+<div class="section">
 	<div class="tomato-grid" id="ss-grid"></div>
-	<script type='text/javascript'>ssg.setup();</script>
-<br />
+	<script type="text/javascript">ssg.setup();</script>
+<br/>
 <small>When no shares are specified and auto-sharing is disabled, <i>/mnt</i> directory is shared in Read Only mode.</small>
 </div>
 
 <!-- / / / -->
 
-<div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivnotes' style='display:none'>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdivnotes" style="display:none">
 <ul>
 <li><b>Network Interfaces</b> - Space-delimited list of router interface names Samba will bind to.
 <ul>
@@ -303,13 +295,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

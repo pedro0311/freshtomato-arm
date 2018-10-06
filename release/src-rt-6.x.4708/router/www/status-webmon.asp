@@ -7,16 +7,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Status: Web Usage</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 
 #webmon-controls {
 	text-align: right;
@@ -31,9 +31,9 @@
 
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("log_wm,log_wmdmax,log_wmsmax"); %>
 
@@ -51,8 +51,7 @@ var cache = [];
 var new_cache = [];
 var lock = 0;
 
-function clearLog(clear)
-{
+function clearLog(clear) {
 	if (xob) return;
 
 	xob = new XmlHttp();
@@ -70,8 +69,7 @@ function clearLog(clear)
 	E('clear' + clear).innerHTML = 'Please wait... <img src="spin.gif" style="vertical-align:top">';
 }
 
-function resolve()
-{
+function resolve() {
 	if ((queue.length == 0) || (xob)) return;
 
 	xob = new XmlHttp();
@@ -97,8 +95,7 @@ function resolve()
 
 var ref = new TomatoRefresh('update.cgi', '', 0, 'status_webmon');
 
-ref.refresh = function(text)
-{
+ref.refresh = function(text) {
 	++lock;
 
 	try {
@@ -118,8 +115,7 @@ ref.refresh = function(text)
 	--lock;
 }
 
-function showSelectedOption(prev, curr)
-{
+function showSelectedOption(prev, curr) {
 	var e;
 
 	elem.removeClass('mc' + prev, 'selected');	// safe if prev doesn't exist
@@ -129,16 +125,14 @@ function showSelectedOption(prev, curr)
 	}
 }
 
-function showMaxCount()
-{
+function showMaxCount() {
 	if (maxCount == lastMaxCount) return;
 	showSelectedOption(lastMaxCount, maxCount);
 	lastMaxCount = maxCount;
 	ref.postData = 'exec=webmon&arg0=' + maxCount;
 }
 
-function switchMaxCount(c)
-{
+function switchMaxCount(c) {
 	maxCount = c;
 	showMaxCount();
 	if (!ref.running) ref.once = 1;
@@ -149,8 +143,7 @@ function switchMaxCount(c)
 function WMGrid() { return this; }
 WMGrid.prototype = new TomatoGrid;
 
-WMGrid.prototype.resolveAll = function()
-{
+WMGrid.prototype.resolveAll = function() {
 	var i, ip, row, q;
 
 	q = [];
@@ -170,8 +163,7 @@ WMGrid.prototype.resolveAll = function()
 	resolve();
 }
 
-WMGrid.prototype.onClick = function(cell)
-{
+WMGrid.prototype.onClick = function(cell) {
 	if ((cell.cellIndex || 0) == 2 /* url */) return;
 
 	var row = PR(cell);
@@ -190,8 +182,7 @@ WMGrid.prototype.onClick = function(cell)
 	}
 }
 
-WMGrid.prototype.setName = function(ip, name)
-{
+WMGrid.prototype.setName = function(ip, name) {
 	var i, row, data;
 
 	for (i = this.tb.rows.length - 1; i > 0; --i) {
@@ -206,8 +197,7 @@ WMGrid.prototype.setName = function(ip, name)
 	}
 }
 
-WMGrid.prototype.populateData = function(data, url)
-{
+WMGrid.prototype.populateData = function(data, url) {
 	var a, e, i;
 	var maxl = 45;
 	var cursor;
@@ -264,8 +254,7 @@ WMGrid.prototype.populateData = function(data, url)
 	this.recolor();
 }
 
-WMGrid.prototype.sortCompare = function(a, b)
-{
+WMGrid.prototype.sortCompare = function(a, b) {
 	var col = this.sortColumn;
 	var ra = a.getRowData();
 	var rb = b.getRowData();
@@ -313,8 +302,7 @@ sg.populate = function() {
 	this.populateData(wm_searches, 0);
 }
 
-function init()
-{
+function init() {
 	new observer(InNewWindow).observe(E("dom-grid"), { childList: true, subtree: true });
 
 	ref.initPage();
@@ -331,8 +319,7 @@ function InNewWindow () {
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	if (nvram.log_wm == '1' && (nvram.log_wmdmax != '0' || nvram.log_wmsmax != '0')) {
 		E('webmon').style.display = '';
 		E('webmon2').style.display = '';
@@ -364,24 +351,24 @@ function earlyInit()
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div id="webmonoff" class="section-title">Web Usage</div>
-<div id='webmon' style='display:none'>
-	<div id='webmon-domains'>
-		<div class='section-title'>Recently Visited Web Sites</div>
-		<div class='section'>
+<div id="webmon" style="display:none">
+	<div id="webmon-domains">
+		<div class="section-title">Recently Visited Web Sites</div>
+		<div class="section">
 			<div id="dom-grid" class="tomato-grid" style="float:left"></div>
 			&raquo; <a href="webmon_recent_domains?_http_id=<% nv(http_id) %>">Download</a>
 			<div style="float:right;text-align:right;margin-right:5px" id="clear1">
@@ -390,9 +377,9 @@ function earlyInit()
 		</div>
 	</div>
 
-	<div id='webmon-searches'>
-		<div class='section-title'>Recent Web Searches</div>
-		<div class='section'>
+	<div id="webmon-searches">
+		<div class="section-title">Recent Web Searches</div>
+		<div class="section">
 			<div id="srh-grid" class="tomato-grid" style="float:left"></div>
 			&raquo; <a href="webmon_recent_searches?_http_id=<% nv(http_id) %>">Download</a>
 			<div style="float:right;text-align:right;margin-right:5px" id="clear2">
@@ -401,28 +388,28 @@ function earlyInit()
 		</div>
 	</div>
 
-	<div id='webmon-controls'>
-		<div id='webmon-mc'>
+	<div id="webmon-controls">
+		<div id="webmon-mc">
 			Show up to&nbsp;
-			<a href='javascript:switchMaxCount(10);' id='mc10'>10,</a>
-			<a href='javascript:switchMaxCount(50);' id='mc50'>50,</a>
-			<a href='javascript:switchMaxCount(100);' id='mc100'>100,</a>
-			<a href='javascript:switchMaxCount(200);' id='mc200'>200,</a>
-			<a href='javascript:switchMaxCount(500);' id='mc500'>500,</a>
-			<a href='javascript:switchMaxCount(1000);' id='mc1000'>1000,</a>
-			<a href='javascript:switchMaxCount(2000);' id='mc2000'>2000,</a>
-			<a href='javascript:switchMaxCount(5000);' id='mc5000'>5000,</a>
-			<a href='javascript:switchMaxCount(0);' id='mc0'>All</a>&nbsp;
+			<a href="javascript:switchMaxCount(10);" id="mc10">10,</a>
+			<a href="javascript:switchMaxCount(50);" id="mc50">50,</a>
+			<a href="javascript:switchMaxCount(100);" id="mc100">100,</a>
+			<a href="javascript:switchMaxCount(200);" id="mc200">200,</a>
+			<a href="javascript:switchMaxCount(500);" id="mc500">500,</a>
+			<a href="javascript:switchMaxCount(1000);" id="mc1000">1000,</a>
+			<a href="javascript:switchMaxCount(2000);" id="mc2000">2000,</a>
+			<a href="javascript:switchMaxCount(5000);" id="mc5000">5000,</a>
+			<a href="javascript:switchMaxCount(0);" id="mc0">All</a>&nbsp;
 			<small>available entries</small>
 		</div>
 		&raquo; <a href="admin-log.asp">Web Monitor Configuration</a>
-		<br /><br />
+		<br/><br/>
 	</div>
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>
+<script type="text/javascript">
 if (!(nvram.log_wm == '1' && (nvram.log_wmdmax != '0' || nvram.log_wmsmax != '0'))) {
 	W('<div class="note-disabled"><b>Web Monitoring disabled.<\/b><br /><br /><a href="admin-log.asp">Enable &raquo;<\/a><\/div>\n');
 }
@@ -431,11 +418,11 @@ if (!(nvram.log_wm == '1' && (nvram.log_wmdmax != '0' || nvram.log_wmsmax != '0'
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan='2'>
-	<div id='webmon2' style='display:none'><script type='text/javascript'>genStdRefresh(1,3,'ref.toggle()');</script></div>
+<tr><td id="footer" colspan="2">
+	<div id="webmon2" style="display:none"><script type="text/javascript">genStdRefresh(1,3,'ref.toggle()');</script></div>
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
+<script type="text/javascript">earlyInit()</script>
 </body>
 </html>

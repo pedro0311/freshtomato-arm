@@ -9,35 +9,32 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Configuration</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("et0macaddr,t_features,t_model_name"); %>
 //	<% nvstat(); %>
 
-function backupNameChanged()
-{
+function backupNameChanged() {
 	var name = fixFile(E('backup-name').value);
 	if (name.length > 1) {
 		E('backup-link').href = 'cfg/' + name + '.cfg?_http_id=' + nvram.http_id;
-	}
-	else {
+	} else {
 		E('backup-link').href = '?';
 	}
 }
 
-function backupButton()
-{
+function backupButton() {
 	var name = fixFile(E('backup-name').value);
 	if (name.length <= 1) {
 		alert('Invalid filename');
@@ -46,8 +43,7 @@ function backupButton()
 	location.href = 'cfg/' + name + '.cfg?_http_id=' + nvram.http_id;
 }
 
-function restoreButton()
-{
+function restoreButton() {
 	var name, i, f;
 
 	name = fixFile(E('restore-name').value);
@@ -64,8 +60,7 @@ function restoreButton()
 	f.submit();
 }
 
-function resetButton()
-{
+function resetButton() {
 	var i;
 
 	i = E('restore-mode').value;
@@ -79,61 +74,61 @@ function resetButton()
 }
 </script>
 </head>
-<body onload='backupNameChanged()'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="backupNameChanged()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>Backup Configuration</div>
-<div class='section'>
-	<form action=''>
-		<script type='text/javascript'>
+<div class="section-title">Backup Configuration</div>
+<div class="section">
+	<form action="">
+		<script type="text/javascript">
 		W("<input type='text' size='40' maxlength='64' id='backup-name' onchange='backupNameChanged()' value='tomato_v" + ('<% version(); %>'.replace(/\./g, '')) + "_m" + nvram.et0macaddr.replace(/:/g, '').substring(6, 12) + "'>");
 		</script>
-		<div style='display:inline'>.cfg &nbsp;</div>
-		<div style='display:inline'><input type='button' name='f_backup_button' onclick='backupButton()' value='Backup'></div>
+		<div style="display:inline">.cfg &nbsp;</div>
+		<div style="display:inline"><input type="button" name="f_backup_button" onclick="backupButton()" value="Backup"></div>
 	</form>
-	<a href='#' id='backup-link'>Link</a>
+	<a href="#" id="backup-link">Link</a>
 </div>
 
-<br /><br />
+<br/><br/>
 
-<div class='section-title'>Restore Configuration</div>
-<div class='section'>
-	<form id='restore-form' method='post' action='cfg/restore.cgi' encType='multipart/form-data'>
+<div class="section-title">Restore Configuration</div>
+<div class="section">
+	<form id="restore-form" method="post" action="cfg/restore.cgi" enctype="multipart/form-data">
 		<div>Select the configuration file to restore:</div>
-		<div><input type='file' size='40' id='restore-name' name='filename'> <input type='button' name='f_restore_button' id='restore-button' value='Restore' onclick='restoreButton()'></div>
+		<div><input type="file" size="40" id="restore-name" name="filename"> <input type="button" name="f_restore_button" id="restore-button" value="Restore" onclick="restoreButton()"></div>
 	</form>
 </div>
 
-<br /><br />
+<br/><br/>
 
-<div class='section-title'>Restore Default Configuration</div>
-<div class='section'>
-	<form id='aco-reset-form' method='post' action='cfg/defaults.cgi'>
+<div class="section-title">Restore Default Configuration</div>
+<div class="section">
+	<form id="aco-reset-form" method="post" action="cfg/defaults.cgi">
 	<div>
-		<select name='mode' id='restore-mode'>
-			<option value=0>Select...</option>
-			<option value=1>Restore default router settings (normal)</option>
-			<option value=2>Erase all data in NVRAM memory (thorough)</option>
+		<select name="mode" id="restore-mode">
+			<option value="0">Select...</option>
+			<option value="1">Restore default router settings (normal)</option>
+			<option value="2">Erase all data in NVRAM memory (thorough)</option>
 		</select>
-		<input type='button' value='OK' onclick='resetButton()' id='reset-button'>
+		<input type="button" value="OK" onclick="resetButton()" id="reset-button">
 	</div>
 	</form>
 </div>
 
-<br />
+<br/>
 
-<div class='section-title'></div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title"></div>
+<div class="section">
+<script type="text/javascript">
 var a = nvstat.free / nvstat.size * 100.0;
 createFieldTable('', [
 	{ title: 'Total / Free NVRAM:', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)<\/small>' }
@@ -152,7 +147,7 @@ if (a <= 5) {
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </body>
 </html>

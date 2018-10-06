@@ -9,24 +9,23 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: MAC Address</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript">
 
 //	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr"); %>
 
-function et0plus(plus)
-{
+function et0plus(plus) {
 	var mac = nvram.et0macaddr.split(':');
 	if (mac.length != 6) return '';
 	while (plus-- > 0) {
@@ -39,8 +38,7 @@ function et0plus(plus)
 	return mac.join(':');
 }
 
-function defmac(which)
-{
+function defmac(which) {
 	if (which == 'wan')  return et0plus(1);
 	if (which == 'wan2') return et0plus(17);
 /* MULTIWAN-BEGIN */
@@ -62,14 +60,12 @@ function defmac(which)
 	}
 }
 
-function bdefault(which)
-{
+function bdefault(which) {
 	E('_f_' + which + '_hwaddr').value = defmac(which);
 	verifyFields(null, true);
 }
 
-function brand(which)
-{
+function brand(which) {
 	var mac;
 	var i;
 
@@ -80,14 +76,12 @@ function brand(which)
 	verifyFields(null, true);
 }
 
-function bclone(which)
-{
+function bclone(which) {
 	E('_f_' + which + '_hwaddr').value = '<% compmac(); %>';
 	verifyFields(null, true);
 }
 
-function findPrevMAC(mac, maxidx)
-{
+function findPrevMAC(mac, maxidx) {
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 		var u = (uidx>1) ? uidx : '';
 		if (E('_f_wan'+u+'_hwaddr').value == mac) return 1;
@@ -100,8 +94,7 @@ function findPrevMAC(mac, maxidx)
 	return 0;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var uidx, u, a;
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
@@ -123,8 +116,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var u, uidx, v;
 
 	if (!verifyFields(null, false)) return;
@@ -150,39 +142,39 @@ function save()
 </head>
 
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='advanced-mac.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='*'>
+<input type="hidden" name="_nextpage" value="advanced-mac.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="*">
 
-<input type='hidden' name='wan_mac'>
-<input type='hidden' name='wan2_mac'>
+<input type="hidden" name="wan_mac">
+<input type="hidden" name="wan2_mac">
 /* MULTIWAN-BEGIN */
-<input type='hidden' name='wan3_mac'>
-<input type='hidden' name='wan4_mac'>
+<input type="hidden" name="wan3_mac">
+<input type="hidden" name="wan4_mac">
 /*MULTIWAN-END */
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	var u = wl_fface(uidx);
 	W('<input type=\'hidden\' id=\'_wl'+u+'_hwaddr\' name=\'wl'+u+'_hwaddr\'>');
 }
 </script>
 
-<div class='section-title'>MAC Address</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">MAC Address</div>
+<div class="section">
+<script type="text/javascript">
 
 var f = [];
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
@@ -206,10 +198,10 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 createFieldTable('', f);
 
 </script>
-<br />
-<table border=0 cellpadding=1>
-	<tr><td>Router's LAN MAC Address:</td><td><b><script type='text/javascript'>W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
-	<tr><td>Computer's MAC Address:</td><td><b><script type='text/javascript'>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
+<br/>
+<table border="0" cellpadding="1">
+	<tr><td>Router's LAN MAC Address:</td><td><b><script type="text/javascript">W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
+	<tr><td>Computer's MAC Address:</td><td><b><script type="text/javascript">W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
 </table>
 </div>
 
@@ -218,13 +210,13 @@ createFieldTable('', f);
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

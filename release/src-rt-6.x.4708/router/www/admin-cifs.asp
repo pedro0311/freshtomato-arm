@@ -9,23 +9,22 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: CIFS Client</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("cifs1,cifs2"); %>
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var i, p, b;
 	var unc, user, pass, dom, exec, servern, sec;
 
@@ -66,8 +65,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var i, p;
 
 	if (!verifyFields(null, 0)) return;
@@ -84,28 +82,28 @@ function save()
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='admin-cifs.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='cifs-restart'>
+<input type="hidden" name="_nextpage" value="admin-cifs.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="cifs-restart">
 
-<input type='hidden' name='cifs1' id='cifs1'>
-<input type='hidden' name='cifs2' id='cifs2'>
+<input type="hidden" name="cifs1" id="cifs1">
+<input type="hidden" name="cifs2" id="cifs2">
 
-<div class='section-title'>CIFS Client</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">CIFS Client</div>
+<div class="section">
+<script type="text/javascript">
 a = b = [0, '\\\\192.168.1.5\\shared_example', '', '', '', '', '', ''];
 
 if (r = nvram.cifs1.match(/^(0|1)<(\\\\.+)<(.*)<(.*)<(.*)<(.*)<(.*)<(.*)$/)) a = r.splice(1, 8);
@@ -144,19 +142,19 @@ createFieldTable('', [
 </script>
 </div>
 
-<script type='text/javascript'>show_notice1('<% notice("cifs"); %>');</script>
+<script type="text/javascript">show_notice1('<% notice("cifs"); %>');</script>
 
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>
