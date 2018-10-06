@@ -12,14 +12,14 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] OpenVPN: Client</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<script type='text/javascript' src='vpn.js'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="vpn.js"></script>
+<script type="text/javascript">
 
 //	<% nvram("vpn_client_eas,vpn_client1_poll,vpn_client1_if,vpn_client1_bridge,vpn_client1_nat,vpn_client1_proto,vpn_client1_addr,vpn_client1_port,vpn_client1_retry,vpn_client1_firewall,vpn_client1_crypt,vpn_client1_comp,vpn_client1_cipher,vpn_client1_ncp_enable,vpn_client1_ncp_ciphers,vpn_client1_local,vpn_client1_remote,vpn_client1_nm,vpn_client1_reneg,vpn_client1_hmac,vpn_client1_adns,vpn_client1_rgw,vpn_client1_gw,vpn_client1_custom,vpn_client1_static,vpn_client1_ca,vpn_client1_crt,vpn_client1_key,vpn_client1_userauth,vpn_client1_username,vpn_client1_password,vpn_client1_useronly,vpn_client1_tlsremote,vpn_client1_cn,vpn_client1_br,vpn_client1_digest,vpn_client1_nopull,vpn_client1_noexec,vpn_client1_route,vpn_client1_routing_val,vpn_client2_poll,vpn_client2_if,vpn_client2_bridge,vpn_client2_nat,vpn_client2_proto,vpn_client2_addr,vpn_client2_port,vpn_client2_retry,vpn_client2_firewall,vpn_client2_crypt,vpn_client2_comp,vpn_client2_cipher,vpn_client2_ncp_enable,vpn_client2_ncp_ciphers,vpn_client2_local,vpn_client2_remote,vpn_client2_nm,vpn_client2_reneg,vpn_client2_hmac,vpn_client2_adns,vpn_client2_rgw,vpn_client2_gw,vpn_client2_custom,vpn_client2_static,vpn_client2_ca,vpn_client2_crt,vpn_client2_key,vpn_client2_userauth,vpn_client2_username,vpn_client2_password,vpn_client2_useronly,vpn_client2_tlsremote,vpn_client2_cn,vpn_client2_br,vpn_client2_digest,vpn_client2_nopull,vpn_client2_noexec,vpn_client2_route,vpn_client2_routing_val,vpn_client3_poll,vpn_client3_if,vpn_client3_bridge,vpn_client3_nat,vpn_client3_proto,vpn_client3_addr,vpn_client3_port,vpn_client3_retry,vpn_client3_firewall,vpn_client3_crypt,vpn_client3_comp,vpn_client3_cipher,vpn_client3_ncp_enable,vpn_client3_ncp_ciphers,vpn_client3_local,vpn_client3_remote,vpn_client3_nm,vpn_client3_reneg,vpn_client3_hmac,vpn_client3_adns,vpn_client3_rgw,vpn_client3_gw,vpn_client3_custom,vpn_client3_static,vpn_client3_ca,vpn_client3_crt,vpn_client3_key,vpn_client3_userauth,vpn_client3_username,vpn_client3_password,vpn_client3_useronly,vpn_client3_tlsremote,vpn_client3_cn,vpn_client3_br,vpn_client3_digest,vpn_client3_nopull,vpn_client3_noexec,vpn_client3_route,vpn_client3_routing_val,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
@@ -45,16 +45,13 @@ vpn1up = parseInt('<% psup("vpnclient1"); %>');
 vpn2up = parseInt('<% psup("vpnclient2"); %>');
 vpn3up = parseInt('<% psup("vpnclient3"); %>');
 
-function updateStatus(num)
-{
+function updateStatus(num) {
 	var xob = new XmlHttp();
-	xob.onCompleted = function(text, xml)
-	{
+	xob.onCompleted = function(text, xml) {
 		statusUpdaters[num].update(text);
 		xob = null;
 	}
-	xob.onError = function(ex)
-	{
+	xob.onError = function(ex) {
 		statusUpdaters[num].errors.innerHTML += 'ERROR! '+ex+'<br />';
 		xob = null;
 	}
@@ -62,8 +59,7 @@ function updateStatus(num)
 	xob.post('/vpnstatus.cgi', 'client=' + (num+1));
 }
 
-function tabSelect(name)
-{
+function tabSelect(name) {
 	tgHideIcons();
 
 	tabHigh(name);
@@ -77,8 +73,7 @@ function tabSelect(name)
 	cookie.set('vpn_client_tab', name);
 }
 
-function sectSelect(tab, section)
-{
+function sectSelect(tab, section) {
 	tgHideIcons();
 
 	for (var i = 0; i < sections.length; ++i)
@@ -98,8 +93,7 @@ function sectSelect(tab, section)
 	cookie.set('vpn_client'+tab+'_section', section);
 }
 
-function toggle(service, isup)
-{
+function toggle(service, isup) {
 	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
 
 	E('_' + service + '_button').disabled = true;
@@ -110,8 +104,7 @@ function toggle(service, isup)
 	});
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	tgHideIcons();
 
 	var ret = 1;
@@ -262,8 +255,7 @@ function verifyFields(focused, quiet)
 	return ret;
 }
 
-RouteGrid.prototype.verifyFields = function(row, quiet)
-{
+RouteGrid.prototype.verifyFields = function(row, quiet) {
 	var ret = 1;
 	var fom = E('t_fom');
 	var clientnum = 1;
@@ -289,12 +281,11 @@ RouteGrid.prototype.verifyFields = function(row, quiet)
 	if (f[2].value.indexOf(' ') >= 0) { ferror.set(f[2], "Value cannot contain '-' character. IP range is not supported.", quiet); ret = 0; }
 	return ret;
 }
-RouteGrid.prototype.fieldValuesToData = function(row)
-{
+RouteGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 	return [f[0].checked?1:0, f[1].value, f[2].value];
 }
-RouteGrid.prototype.dataToView = function(data){
+RouteGrid.prototype.dataToView = function(data) {
 	var temp = ['<input type=\'checkbox\' style="opacity:1" disabled'+(data[0]!=0?' checked':'')+'>',
 	            ['From Source IP', 'To Destination IP', 'To Domain'][data[1] - 1],
 	            data[2]
@@ -305,13 +296,11 @@ RouteGrid.prototype.dataToView = function(data){
 	}
 	return v;
 }
-RouteGrid.prototype.dataToFieldValues = function(data)
-{
+RouteGrid.prototype.dataToFieldValues = function(data) {
 	return [data[0] == 1, data[1], data[2]];
 }
 
-function save()
-{
+function save() {
 	if (!verifyFields(null, false)) return;
 
 	var fom = E('t_fom');
@@ -349,8 +338,7 @@ function save()
 	changed = 0;
 }
 
-function init()
-{
+function init() {
 	tabSelect(cookie.get('vpn_client_tab') || tabs[0][0]);
 
  	for (i = 0; i < tabs.length; ++i)
@@ -362,7 +350,7 @@ function init()
 		routingTables[i].init('table_' + t + '_routing','sort', 0,[
 			{ type: 'checkbox' },
 			{ type: 'select', options: [[1, 'From Source IP'],[2, 'To Destination IP'],[3,'To Domain']] },
-			{ type: 'text' }]);
+			{ type: 'text', maxlen: 30 }]);
 		routingTables[i].headerSet(['Enable', 'Type', 'Value']);
 		var routingVal = eval('nvram.vpn_' + t + '_routing_val');
 		if(routingVal.length) {
@@ -386,7 +374,7 @@ function init()
 }
 </script>
 
-<style type='text/css'>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 10em;
@@ -412,24 +400,24 @@ table.status-table
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
-<input type='hidden' name='_nextpage' value='vpn-client.asp'>
-<input type='hidden' name='_nextwait' value='5'>
-<input type='hidden' name='_service' value=''>
-<input type='hidden' name='vpn_client_eas' id='vpn_client_eas' value=''>
+<input type="hidden" name="_nextpage" value="vpn-client.asp">
+<input type="hidden" name="_nextwait" value="5">
+<input type="hidden" name="_service" value="">
+<input type="hidden" name="vpn_client_eas" id="vpn_client_eas" value="">
 
-<div class='section-title'>OpenVPN Client Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">OpenVPN Client Configuration</div>
+<div class="section">
+<script type="text/javascript">
 tabCreate.apply(this, tabs);
 
 for (i = 0; i < tabs.length; ++i)
@@ -450,7 +438,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<ul class="tabs">');
 	for (j = 0; j < sections.length; j++)
 	{
-		W('<li><a href="javascript:sectSelect('+i+', \''+sections[j][0]+'\')" id="'+t+'-'+sections[j][0]+'-tab">'+sections[j][1]+'<\/a><\/li>');
+		W('<li><a href="javascript:sectSelect('+i+',\''+sections[j][0]+'\')" id="'+t+'-'+sections[j][0]+'-tab">'+sections[j][1]+'<\/a><\/li>');
 	}
 	W('<\/ul><div class=\'tabs-bottom\'><\/div>');
 
@@ -466,7 +454,7 @@ for (i = 0; i < tabs.length; ++i)
 			], value: eval ( 'nvram.vpn_'+t+'_br' ), suffix: ' <small>* default<\/small> ' },
 		{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [ ['udp','UDP'], ['tcp-client','TCP'] ], value: eval( 'nvram.vpn_'+t+'_proto' ) },
 		{ title: 'Server Address/Port', multi: [
-			{ name: 'vpn_'+t+'_addr', type: 'text', size: 17, value: eval( 'nvram.vpn_'+t+'_addr' ) },
+			{ name: 'vpn_'+t+'_addr', type: 'text', maxlen: 17, size: 17, value: eval( 'nvram.vpn_'+t+'_addr' ) },
 			{ name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 7, value: eval( 'nvram.vpn_'+t+'_port' ) } ] },
 		{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [ ['auto', 'Automatic'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_firewall' ) },
 		{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [ ['tls', 'TLS'], ['secret', 'Static Key'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_crypt' ),
@@ -553,13 +541,13 @@ for (i = 0; i < tabs.length; ++i)
 </div>
 
 </td></tr>
-	<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+	<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>init();</script>
+<script type="text/javascript">init();</script>
 </body>
 </html>

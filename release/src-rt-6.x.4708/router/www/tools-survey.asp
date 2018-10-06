@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: Wireless Survey</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #survey-grid .brate {
 	color: blue;
 }
@@ -48,9 +48,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 var wlscandata = [];
@@ -90,15 +90,13 @@ sg.sortCompare = function(a, b) {
 	return this.sortAscending ? r : -r;
 }
 
-sg.rateSorter = function(a, b)
-{
+sg.rateSorter = function(a, b) {
 	if (a < b) return -1;
 	if (a > b) return 1;
 	return 0;
 }
 
-sg.populate = function()
-{
+sg.populate = function() {
 	var added = 0;
 	var removed = 0;
 	var i, j, k, t, e, s;
@@ -191,16 +189,14 @@ sg.setup = function() {
 }
 
 
-function setMsg(msg)
-{
+function setMsg(msg) {
 	E('survey-msg').innerHTML = msg;
 }
 
 
 var ref = new TomatoRefresh('update.cgi', 'exec=wlscan', 0, 'tools_survey_refresh');
 
-ref.refresh = function(text)
-{
+ref.refresh = function(text) {
 	try {
 		eval(text);
 	}
@@ -212,14 +208,12 @@ ref.refresh = function(text)
 	sg.resort();
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	if (!useAjax()) E('expire-time').style.visibility = 'hidden';
 	sg.setup();
 }
 
-function init()
-{
+function init() {
 	new observer(InNewWindow).observe(E("survey-grid"), { childList: true, subtree: true });
 	sg.recolor();
 	ref.initPage();
@@ -234,25 +228,25 @@ function InNewWindow () {
 }
 </script>
 </head>
-<body onload='init()'>
-<form action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>Wireless Site Survey</div>
-<div class='section'>
+<div class="section-title">Wireless Site Survey</div>
+<div class="section">
 	<div id="survey-grid" class="tomato-grid"></div>
-	<div id='survey-msg'></div>
-	<br /><br /><br /><br />
-	<script type='text/javascript'>
+	<div id="survey-msg"></div>
+	<br/><br/><br/><br/>
+	<script type="text/javascript">
 	if ('<% wlclient(); %>' == '0') {
 		document.write('<small>Warning: Wireless connections to this router may be disrupted while using this tool.<\/small>');
 	}
@@ -262,10 +256,10 @@ function InNewWindow () {
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan='2'>
-	<div id='survey-controls'>
+<tr><td id="footer" colspan="2">
+	<div id="survey-controls">
 		<img src="spin.gif" alt="" id="refresh-spinner">
-		<script type='text/javascript'>
+		<script type="text/javascript">
 		genStdTimeList('expire-time', 'Auto Expire', 0);
 		genStdTimeList('refresh-time', 'Auto Refresh', 0);
 		</script>
@@ -274,6 +268,6 @@ function InNewWindow () {
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit();</script>
+<script type="text/javascript">earlyInit();</script>
 </body>
 </html>

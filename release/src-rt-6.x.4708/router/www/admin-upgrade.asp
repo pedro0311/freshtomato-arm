@@ -9,15 +9,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Upgrade</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #afu-progress {
 	text-align: center;
 	padding: 200px 0;
@@ -28,20 +28,18 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 // <% nvram("jffs2_on"); %>
 
-function clock()
-{
+function clock() {
 	var t = ((new Date()).getTime() - startTime) / 1000;
 	elem.setInnerHTML('afu-time', Math.floor(t / 60) + ':' + Number(Math.floor(t % 60)).pad(2));
 }
 
-function upgrade()
-{
+function upgrade() {
 	var name;
 	var i;
 	var fom = document.form_upgrade;
@@ -75,38 +73,38 @@ function upgrade()
 
 </head>
 <body>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div id='afu-input'>
-	<div class='section-title'>Upgrade Firmware</div>
-	<div class='section'>
-		<form name='form_upgrade' method='post' action='upgrade.cgi' encType='multipart/form-data'>
-		<div id='box-input'>
-			Select the file to use:<br /><br />
-			<input type='file' name='file' size='50' style='height:25px'> <input type='button' value='Upgrade' id='afu-upgrade-button' onclick='upgrade()' style='height:25px'>
+<div id="afu-input">
+	<div class="section-title">Upgrade Firmware</div>
+	<div class="section">
+		<form name="form_upgrade" method="post" action="upgrade.cgi" enctype="multipart/form-data">
+		<div id="box-input">
+			Select the file to use:<br/><br/>
+			<input type="file" name="file" size="50" style="height:25px"> <input type="button" value="Upgrade" id="afu-upgrade-button" onclick="upgrade()" style="height:25px">
 		</div>
 		</form>
-		<br /><form name='form_reset' action='javascript:{}'>
-		<div id='reset-input'>
-			<input type='checkbox' id='f_reset'>&nbsp;&nbsp;After flashing, erase all data in NVRAM memory
+		<br/><form name="form_reset" action="javascript:{}">
+		<div id="reset-input">
+			<input type="checkbox" id="f_reset">&nbsp;&nbsp;After flashing, erase all data in NVRAM memory
 		</div>
 		</form>
 
-		<br />
-		<br />
-		<table border=0>
+		<br/>
+		<br/>
+		<table border="0">
 		<tr><td>Current Version:</td><td>&nbsp; <% version(1); %></td></tr>
 		<tr><td>Free Memory:</td><td>&nbsp; 
-			<script type='text/javascript'>
+			<script type="text/javascript">
 			W(scaleSize(sysinfo.totalfreeram));
 			</script>
 		 &nbsp; <small>(aprox. size that can be buffered completely in RAM)</small>
@@ -117,27 +115,27 @@ function upgrade()
 </div>
 
 /* JFFS2-BEGIN */
-<div class='note-disabledw' style='display:none' id='jwarn'>
-<b>Cannot upgrade if JFFS is enabled.</b><br /><br />
+<div class="note-disabledw" style="display:none" id="jwarn">
+<b>Cannot upgrade if JFFS is enabled.</b><br/><br/>
 An upgrade may overwrite the JFFS partition currently in use. Before upgrading,
-please backup the contents of the JFFS partition, disable it, then reboot the router.<br /><br /><br />
-<a href='admin-jffs2.asp'>Disable &raquo;</a>
+please backup the contents of the JFFS partition, disable it, then reboot the router.<br/><br/><br/>
+<a href="admin-jffs2.asp">Disable &raquo;</a>
 </div>
 /* JFFS2-END */
 
-<div id='afu-progress' style='display:none;margin:auto'>
-	<img src='spin.gif' alt='' style='vertical-align:baseline'> <span id='afu-time'>0:00</span><br />
-	Please wait while the firmware is uploaded &amp; flashed.<br />
-	<b>Warning:</b> Do not interrupt this browser or the router!<br />
+<div id="afu-progress" style="display:none;margin:auto">
+	<img src="spin.gif" alt="" style="vertical-align:baseline"> <span id="afu-time">0:00</span><br/>
+	Please wait while the firmware is uploaded &amp; flashed.<br/>
+	<b>Warning:</b> Do not interrupt this browser or the router!<br/>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 /* JFFS2-BEGIN */
-<script type='text/javascript'>
+<script type="text/javascript">
 if (nvram.jffs2_on != '0') {
 	E('jwarn').style.display = '';
 	E('afu-input').style.display = 'none';

@@ -9,18 +9,18 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: WOL</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<style type='text/css'>
+<style type="text/css">
 #wol-grid .co1 {
 	width: 15%;
 }
@@ -42,7 +42,7 @@ textarea {
 }
 </style>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% arplist(); %>
 //	<% nvram('dhcpd_static,lan_ifname'); %>
@@ -64,8 +64,7 @@ wg.sortCompare = function(a, b) {
                 r = cmpText(da[c], db[c]);
         return this.sortAscending ? r : -r;
 }
-wg.populate = function()
-{
+wg.populate = function() {
 	var i, j, r, s;
 
 	this.removeAllData();
@@ -110,13 +109,11 @@ wg.populate = function()
 
 	this.resort(2);
 }
-wg.onClick = function(cell)
-{
+wg.onClick = function(cell) {
 	wake(PR(cell).getRowData()[0]);
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var e;
 
 	e = E('t_f_mac');
@@ -124,16 +121,14 @@ function verifyFields(focused, quiet)
 	return (e.value ? 1 : 0);
 }
 
-function spin(x)
-{
+function spin(x) {
 	E('refreshb').disabled = x;
 	E('wakeb').disabled = x;
 }
 
 var waker = null;
 
-function wake(mac)
-{
+function wake(mac) {
 	if (!mac) {
 		if (!verifyFields(null, 1)) return;
 		mac = E('t_f_mac').value;
@@ -149,8 +144,7 @@ var refresher = null;
 var timer = new TomatoTimer(refresh);
 var running = 0;
 
-function refresh()
-{
+function refresh() {
 	if (!running) return;
 
 	timer.stop();
@@ -166,60 +160,58 @@ function refresh()
 	refresher.post('update.cgi', 'exec=arplist');
 }
 
-function refreshClick()
-{
+function refreshClick() {
 	running ^= 1;
 	E('refreshb').value = running ? 'Stop' : 'Refresh';
 	E('spin').style.visibility = running ? 'visible' : 'hidden';
 	if (running) refresh();
 }
 
-function init()
-{
+function init() {
 	wg.recolor();
 }
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' action='wakeup.cgi' method='post'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" action="wakeup.cgi" method="post">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_redirect' value='tools-wol.asp'>
-<input type='hidden' name='_nextwait' value='1'>
-<input type='hidden' name='mac' value='' id='t_mac'>
+<input type="hidden" name="_redirect" value="tools-wol.asp">
+<input type="hidden" name="_nextwait" value="1">
+<input type="hidden" name="mac" value="" id="t_mac">
 
-<div class='section-title'>Wake On LAN</div>
-<div class='section'>
+<div class="section-title">Wake On LAN</div>
+<div class="section">
 	<div id="wol-grid" class="tomato-grid"></div>
-	<div style='float:right'><img src='spin.gif' alt='' id='spin' style='vertical-align:middle;visibility:hidden'> &nbsp; <input type='button' value='Refresh' onclick='refreshClick()' id='refreshb'></div>
+	<div style="float:right"><img src="spin.gif" alt="" id="spin" style="vertical-align:middle;visibility:hidden"> &nbsp; <input type="button" value="Refresh" onclick="refreshClick()" id="refreshb"></div>
 </div>
-<div id='msg' style='visibility:hidden;background:#ffffa0;margin:auto;width:50%;text-align:center;padding:2px;border:1px solid #fee'></div>
-<div class='section-title'></div>
-<div class='section'>
-<script type='text/javascript'>
+<div id="msg" style="visibility:hidden;background:#ffffa0;margin:auto;width:50%;text-align:center;padding:2px;border:1px solid #fee"></div>
+<div class="section-title"></div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'MAC Address List', name: 'f_mac', id: 't_f_mac', type: 'textarea', value: cookie.get('wakemac') || '' },
 ]);
 </script>
-<div style='float:right'><input type='button' value='Wake Up' onclick='wake(null)' id='save-button'></div>
+<div style="float:right"><input type="button" value="Wake Up" onclick="wake(null)" id="save-button"></div>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type='text/javascript'>wg.setup();wg.populate();</script>
+<script type="text/javascript">wg.setup();wg.populate();</script>
 </body>
 </html>

@@ -16,13 +16,13 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: Virtual Wireless Interfaces</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 #wlif-grid .co2,
 #wlif-grid .co3,
 #wlif-grid .co4,
@@ -42,14 +42,14 @@ ul.tabs a,
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript' src='md5.js'></script>
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript' src='interfaces.js'></script>
-<script type='text/javascript' src='wireless.js'></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript" src="interfaces.js"></script>
+<script type="text/javascript" src="wireless.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 var nvram;
 
@@ -110,7 +110,7 @@ function spin(x, unit) {
 }
 </script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 earlyInit();
 
 var wlg = new TomatoGrid();
@@ -318,19 +318,19 @@ wlg.onAdd = function() {
 	E('_f_wl'+u+'_macmode').value = data[5];
 
 	vifs_defined.push([
-		u.toString(),							// fface == wl_ifaces[uidx][1]
-		(nvram['wl' + u + '_ifname']) || ('wl'+u),			// ifname =~ wl_ifaces[uidx][0]
-		u.substr(0, u.indexOf('.')),					// unit
-		u.substr(u.indexOf('.')+1) || '-1',				// subunit
-		data[1] || '1',							// radio
-		'0',								// iface up?
-		data[1] || '1',							// bss_enabled
-		data[3],							// WL net mode
-		data[2], 							// nvram['wl' + u + '_ssid'],
-		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',	// MAC addr
-		'0',								// VIFs supported
+		u.toString(),							/* fface == wl_ifaces[uidx][1] */
+		(nvram['wl' + u + '_ifname']) || ('wl'+u),			/* ifname =~ wl_ifaces[uidx][0] */
+		u.substr(0, u.indexOf('.')),					/* unit */
+		u.substr(u.indexOf('.')+1) || '-1',				/* subunit */
+		data[1] || '1',							/* radio */
+		'0',								/* iface up? */
+		data[1] || '1',							/* bss_enabled */
+		data[3],							/* WL net mode */
+		data[2], 							/* nvram['wl' + u + '_ssid'] */
+		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',	/* MAC addr */
+		'0',								/* VIFs supported */
 		data[4],
-		data[5]								// Wireless Filter
+		data[5]								/* Wireless Filter */
 	]);
 
 	this.resort();
@@ -362,8 +362,9 @@ wlg.onAdd = function() {
 }
 
 wlg.onOK = function() {
-//TODO: update info on VIF tab
+/* TODO: update info on VIF tab
 //	var i, data, view, e, u;
+*/
 	var i, data, view, u;
 
 	if (!this.verifyFields(this.editor, false)) return;
@@ -380,16 +381,16 @@ wlg.onOK = function() {
 
 	var vif = definedVIFidx(u);
 
-	vifs_defined[vif][4] = data[1]; // radio
+	vifs_defined[vif][4] = data[1]; /* radio */
 /* REMOVE-BEGIN */
-//	vifs_defined[vif][6] = data[2]; // bss_enabled
-//	vifs_defined[vif][8] = data[3]; // SSID
-//	vifs_defined[vif][7] = data[4]; // WL mode
+//	vifs_defined[vif][6] = data[2]; /* bss_enabled */
+//	vifs_defined[vif][8] = data[3]; /* SSID */
+//	vifs_defined[vif][7] = data[4]; /* WL mode */
 /* REMOVE-END */
-	vifs_defined[vif][8] = data[2]; // SSID
-	vifs_defined[vif][7] = data[3]; // WL mode
-	vifs_defined[vif][11] = data[4]; // LAN bridge
-	vifs_defined[vif][12] = data[5]; // Wireless Filter
+	vifs_defined[vif][8] = data[2]; /* SSID */
+	vifs_defined[vif][7] = data[3]; /* WL mode */
+	vifs_defined[vif][11] = data[4]; /* LAN bridge */
+	vifs_defined[vif][12] = data[5]; /* Wireless Filter */
 /* REMOVE-BEGIN */
 //alert(data.join('\n'));
 /* REMOVE-END */
@@ -456,23 +457,23 @@ function earlyInit() {
 
 			var wlvifs = ((wl_ifaces[uidx][7] > 4) ? '4' : wl_ifaces[uidx][7].toString());
 			vifs_defined.push([
-				u.toString(),					// fface == wl_ifaces[uidx][1]
+				u.toString(),					/* fface == wl_ifaces[uidx][1] */
 				wl_ifaces[uidx][0],
-				// (nvram['wl' + u + '_ifname']) || ('wl'u),	// ifname =~ wl_ifaces[uidx][0]
-				wl_ifaces[uidx][2] || '0',			// unit
-				wl_ifaces[uidx][3] || '0',			// subunit
-				nvram['wl' + u + '_radio'] || '0',		// radio
-				wl_ifaces[uidx][6] || '0',			// iface up/operational status
-				nvram['wl' + u + '_bss_enabled'] || '1',	// bss_enabled
-				wmode || 'disabled',				// WL net mode
-				wl_ifaces[uidx][4] || '',			// nvram['wl' + u + '_ssid'],
-				nvram['wl' + u + '_hwaddr'],			// MAC addr
-				// (wl_ifaces[uidx][7] * 1).toString(), 	// VIFs supported
-				wlvifs,						// VIFs supported
+				// (nvram['wl' + u + '_ifname']) || ('wl'u),	/* ifname =~ wl_ifaces[uidx][0] */
+				wl_ifaces[uidx][2] || '0',			/* unit */
+				wl_ifaces[uidx][3] || '0',			/* subunit */
+				nvram['wl' + u + '_radio'] || '0',		/* radio */
+				wl_ifaces[uidx][6] || '0',			/* iface up/operational status */
+				nvram['wl' + u + '_bss_enabled'] || '1',	/* bss_enabled */
+				wmode || 'disabled',				/* WL net mode */
+				wl_ifaces[uidx][4] || '',			/* nvram['wl' + u + '_ssid'] */
+				nvram['wl' + u + '_hwaddr'],			/* MAC addr */
+				// (wl_ifaces[uidx][7] * 1).toString(), 	/* VIFs supported */
+				wlvifs,						/* VIFs supported */
 				bridged,
-				nvram['wl' + u + '_macmode'] || 'disabled'	// Wireless Filter
+				nvram['wl' + u + '_macmode'] || 'disabled'	/* Wireless Filter */
 			]);
-			// max_no_vifs = max_no_vifs + ((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]);
+			/* max_no_vifs = max_no_vifs + ((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]); */
 			max_no_vifs = max_no_vifs + parseInt(wlvifs);
 		}
 	}
@@ -623,19 +624,19 @@ function verifyFields(focused, quiet) {
 			a = {
 			_f_wl_radio: 1,
 			_f_wl_mode: 1,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_f_wl_nband: (bands[uidx].length > 1) ? 1 : 0,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_wl_net_mode: 1,
 			_wl_ssid: 1,
 			_f_wl_bcast: 1,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_wl_channel: 1,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_wl_nbw_cap: nphy || acphy ? 1 : 0,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_f_wl_nctrlsb: nphy || acphy ? 1 : 0,
-// AB disabled for VIFs?!
+/* AB disabled for VIFs?! */
 			_f_wl_scan: 1,
 
 			_wl_security_mode: 1,
@@ -764,7 +765,7 @@ function verifyFields(focused, quiet) {
 			wl_vis[vidx]._wl_crypto = 0;
 			wl_vis[vidx]._wl_wpa_psk = 0;
 			break;
-		default:	// wpa*
+		default:	/* wpaX */
 			wl_vis[vidx]._wl_wep_bit = 0;
 			if (sm2.indexOf('personal') != -1) {
 				wl_vis[vidx]._wl_radius_key = 0;
@@ -793,7 +794,7 @@ function verifyFields(focused, quiet) {
 					}
 					break;
 				}
-				// avoid Enterprise-TKIP with 40MHz
+				/* avoid Enterprise-TKIP with 40MHz */
 				if ((sm2 == 'wpa_enterprise') && (E('_wl'+u+'_crypto').value == 'tkip')) {
 					wl_vis[vidx]._wl_nbw_cap = 2;
 					if (E('_wl'+u+'_nbw_cap').value != '0') {
@@ -863,7 +864,7 @@ REMOVE-END */
 			wl_vis[vidx]['_f_wl_wds_' + i] = wl_vis[vidx]._f_wl_wds_0;
 		}
 
-	} // for each wl_iface
+	} /* for each wl_iface */
 
 	for (var vidx = 0; vidx < vifs_possible.length; ++vidx) {
 		var u = vifs_possible[vidx][0];
@@ -878,7 +879,7 @@ REMOVE-END */
 		}
 	}
 
-// --- verify ---
+/* --- verify --- */
 
 	var wlclnt = 0;
 	for (var vidx = 0; vidx < vifs_possible.length; ++vidx) {
@@ -888,7 +889,7 @@ REMOVE-END */
 		wmode = E('_f_wl'+u+'_mode').value;
 		sm2 = E('_wl'+u+'_security_mode').value;
 
-		// --- N standard does not support WPA+TKIP ---
+		/* --- N standard does not support WPA+TKIP --- */
 		if (u.toString().indexOf('.') < 0) {
 			a = E('_wl'+u+'_crypto');
 			switch (E('_wl'+u+'_net_mode').value) {
@@ -956,20 +957,20 @@ REMOVE-END */
 		var u = vifs_possible[vidx][0];
 		if (definedVIFidx(u) < 0) continue;
 
-		// IP address
+		/* IP address */
 		a = ['_radius_ipaddr'];
 		for (i = a.length - 1; i >= 0; --i) {
 			if ((wl_vis[vidx]['_wl'+a[i]]) && (!v_ip('_wl'+u+a[i], quiet || !ok))) ok = 0;
 		}
 
-		// range
+		/* range */
 		a = [['_wpa_gtk_rekey', 60, 7200], ['_radius_port', 1, 65535]];
 		for (i = a.length - 1; i >= 0; --i) {
 			v = a[i];
 			if ((wl_vis[vidx]['_wl'+v[0]]) && (!v_range('_wl'+u+v[0], quiet || !ok, v[1], v[2]))) ok = 0;
 		}
 
-		// length
+		/* length */
 		a = [['_ssid', 1], ['_radius_key', 1]];
 		for (i = a.length - 1; i >= 0; --i) {
 			v = a[i];
@@ -1069,17 +1070,17 @@ function save() {
 	}
 
 	for (vidx = 0; vidx < vifs_possible.length; ++vidx) {
-		u = vifs_possible[vidx][0].toString();					// WL unit (primary) or unit.subunit (virtual)
+		u = vifs_possible[vidx][0].toString();					/* WL unit (primary) or unit.subunit (virtual) */
 		vif = definedVIFidx(u);
 
 		if (u == 0) {
-			fom.wl_macmode.value = E('_f_wl'+u+'_macmode').value;		// rewrite for backward compatibility
+			fom.wl_macmode.value = E('_f_wl'+u+'_macmode').value;		/* rewrite for backward compatibility */
 		}
 		if (vif < 0) {
-			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_';		// use fake input name to delete
+			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_';		/* use fake input name to delete */
 		} else {
 			E('_wl'+u+'_macmode').value = E('_f_wl'+u+'_macmode').value;
-			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString();	// copy base maclist to 'u' interface
+			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString();	/* copy base maclist to 'u' interface */
 		}
 /* REMOVE-BEGIN */
 // AB TODO: try to play this safer - save some vital info on primary BSS (just in case?)
@@ -1187,7 +1188,7 @@ function save() {
 			E('_wl'+u+'_nreqd').value = 0;
 			E('_wl'+u+'_gmode').value = 1;
 			E('_wl'+u+'_nmode').value = 0;
-			E('_wl'+u+'_nmcsidx').value = -2; // Legacy Rate
+			E('_wl'+u+'_nmcsidx').value = -2; /* Legacy Rate */
 			E('_wl'+u+'_nbw').value = 0;
 			switch (E('_wl'+u+'_net_mode').value) {
 			case 'b-only':
@@ -1199,10 +1200,10 @@ function save() {
 			case 'bg-mixed':
 				break;
 			case 'a-only':
-				E('_wl'+u+'_nmcsidx').value = -1; // Auto
+				E('_wl'+u+'_nmcsidx').value = -1; /* Auto */
 				break;
 			case 'n-only':
-				if (selectedBand(wl_ifidxx(u)) == '1') { // 5 GHz
+				if (selectedBand(wl_ifidxx(u)) == '1') { /* 5 GHz */
 					E('_wl'+u+'_nmode').value = -1;
 					E('_wl'+u+'_nmcsidx').value = -1;
 				} else {
@@ -1211,7 +1212,7 @@ function save() {
 				}
 				E('_wl'+u+'_nreqd').value = 1;
 				break;
-			default: // Auto
+			default: /* Auto */
 				E('_wl'+u+'_nmode').value = -1;
 				E('_wl'+u+'_nmcsidx').value = -1;
 				break;
@@ -1262,8 +1263,8 @@ function do_pre_submit_form(fom) {
 	var s = '';
 
 	for (var vidx = 0; vidx < vifs_possible.length; ++vidx) {
-		var u = vifs_possible[vidx][0].toString();  // WL unit (primary) or unit.subunit (virtual)
-		if (u.indexOf('.') > 0) { // only if virtual VIF
+		var u = vifs_possible[vidx][0].toString();  /* WL unit (primary) or unit.subunit (virtual) */
+		if (u.indexOf('.') > 0) { /* only if virtual VIF */
 			var vif = definedVIFidx(u);
 			if (vif >= 0)
 			{
@@ -1364,52 +1365,52 @@ function escapeText(s) {
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-  <div class='title'>Tomato</div>
-  <div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+  <div class="title">Tomato</div>
+  <div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='advanced-wlanvifs.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='wireless-restart'>
-<input type='hidden' name='_force_commit' value='1'>
-<input type='hidden' name='lan_ifnames' value=''>
-<input type='hidden' name='lan1_ifnames' value=''>
-<input type='hidden' name='lan2_ifnames' value=''>
-<input type='hidden' name='lan3_ifnames' value=''>
-<input type='hidden' name='wl_macmode' value=''>
+<input type="hidden" name="_nextpage" value="advanced-wlanvifs.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="wireless-restart">
+<input type="hidden" name="_force_commit" value="1">
+<input type="hidden" name="lan_ifnames" value="">
+<input type="hidden" name="lan1_ifnames" value="">
+<input type="hidden" name="lan2_ifnames" value="">
+<input type="hidden" name="lan3_ifnames" value="">
+<input type="hidden" name="wl_macmode" value="">
 
 <!-- / / / -->
 
-<div id='sesdiv' style='display:none'>
+<div id="sesdiv" style="display:none">
 
 <!-- / / / -->
-<div class='section-title'>Virtual Wireless Interfaces</div>
-<div class='section'>
+<div class="section-title">Virtual Wireless Interfaces</div>
+<div class="section">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 tabCreate.apply(this, tabs);
 </script>
 
-<div id='overview-tab'>
-<br />
+<div id="overview-tab">
+<br/>
 <div class="tomato-grid" id="wlif-grid"></div>
-<br />
+<br/>
 
 <!-- / / / -->
 
-<div class='section-title'>Wireless Interfaces Details <small><i><a href='javascript:toggleVisibility("details");'><span id='sesdivdetailsshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivdetails' style='display:none'>
+<div class="section-title">Wireless Interfaces Details <small><i><a href='javascript:toggleVisibility("details");'><span id="sesdivdetailsshowhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdivdetails" style="display:none">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	if (wl_sunit(uidx)<0) {
 		var c = [];
@@ -1424,8 +1425,8 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 
 <!-- / / / -->
 
-<div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivnotes' style='display:none'>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdivnotes" style="display:none">
 
 <ul>
 	<li><b>Interface</b> - Wireless VIF name.</li>
@@ -1462,7 +1463,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 
 <!-- / / / -->
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var i = 1; i < tabs.length; ++i) {
 	var t = tabs[i][0];
 	var uidx = wl_ifidxx(t);
@@ -1476,7 +1477,7 @@ for (var i = 1; i < tabs.length; ++i) {
 	W('<div id=\''+t+'-tab\'>');
 	W('<br />');
 
-// common to all VIFs
+/* common to all VIFs */
 	W('<input type=\'hidden\' id=\'_wl'+u+'_radio\'       name=\'wl'+u+'_radio\'       >');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_mode\'        name=\'wl'+u+'_mode\'        >');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_closed\'      name=\'wl'+u+'_closed\'      >');
@@ -1490,7 +1491,7 @@ for (var i = 1; i < tabs.length; ++i) {
 	W('<input type=\'hidden\' id=\'_wl'+u+'_macmode\'     name=\'wl'+u+'_macmode\'     >');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_maclist\'     name=\'wl'+u+'_maclist\'     >');
 
-// only if primary VIF
+/* only if primary VIF */
 	if (u.toString().indexOf('.') < 0) {
 		W('<input type=\'hidden\' id=\'_wl'+u+'_nband\'      name=\'wl'+u+'_nband\'      >');
 		W('<input type=\'hidden\' id=\'_wl'+u+'_wds_enable\' name=\'wl'+u+'_wds_enable\' >');
@@ -1519,7 +1520,7 @@ for (var i = 1; i < tabs.length; ++i) {
 			suffix: ' &nbsp; <b id="wl'+u+'_mode_msg" style="visibility:hidden"><small>(note: you might wish to cross-check settings later on <a href=basic-network.asp>Basic/Network<\/a>)<\/small><\/b>' }
 	);
 
-// only if primary VIF
+/* only if primary VIF */
 	if (u.toString().indexOf('.') < 0) {
 		f.push (
 			{ title: 'Radio Band', name: 'f_wl'+u+'_nband', type: 'select', options: bands[uidx],
@@ -1538,7 +1539,7 @@ for (var i = 1; i < tabs.length; ++i) {
 		{ title: 'Broadcast', indent: 2, name: 'f_wl'+u+'_bcast', type: 'checkbox', value: (eval('nvram["wl'+u+'_closed"]') == '0') }
 	);
 
-// only if primary VIF
+/* only if primary VIF */
 	if (u.toString().indexOf('.') < 0) {
 		f.push (
 			{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '<\/span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" id="spin'+u+'">',
@@ -1633,14 +1634,14 @@ for (var i = 1; i < tabs.length; ++i) {
 </div>
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='cancel()'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="cancel()">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	if (wl_sunit(uidx) < 0) {
 		refreshNetModes(uidx);

@@ -9,18 +9,18 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: Time</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server,ntp_tdod,ntp_kiss"); %>
 
@@ -37,15 +37,13 @@ var ntpList = [
 	['us', 'US']
 ];
 
-function ntpString(name)
-{
+function ntpString(name) {
 	if (name == '') name = 'pool.ntp.org';
 		else name = name + '.pool.ntp.org';
 	return '0.' + name + ' 1.' + name + ' 2.' + name;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var s = E('_tm_sel').value;
@@ -102,8 +100,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save(clearKiss)
-{
+function save(clearKiss) {
 	if (!verifyFields(null, 0)) return;
 
 	var fom, a, i;
@@ -129,8 +126,7 @@ function save(clearKiss)
 	form.submit(fom);
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	if (nvram.ntp_kiss != '') {
 		E('ntpkiss-ip').innerHTML = nvram.ntp_kiss;
 		E('ntpkiss').style.display = '';
@@ -140,33 +136,33 @@ function earlyInit()
 </script>
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-time.asp'>
-<input type='hidden' name='_nextwait' value='5'>
-<input type='hidden' name='_service' value='ntpc-restart'>
-<input type='hidden' name='_sleep' value='3'>
+<input type="hidden" name="_nextpage" value="basic-time.asp">
+<input type="hidden" name="_nextwait" value="5">
+<input type="hidden" name="_service" value="ntpc-restart">
+<input type="hidden" name="_sleep" value="3">
 
-<input type='hidden' name='tm_dst'>
-<input type='hidden' name='tm_tz'>
-<input type='hidden' name='ntp_server'>
-<input type='hidden' name='ntp_tdod'>
-<input type='hidden' name='ntp_kiss' value='' disabled>
+<input type="hidden" name="tm_dst">
+<input type="hidden" name="tm_tz">
+<input type="hidden" name="ntp_server">
+<input type="hidden" name="ntp_tdod">
+<input type="hidden" name="ntp_kiss" value="" disabled="disabled">
 
 
-<div class='section-title'>Time</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Time</div>
+<div class="section">
+<script type="text/javascript">
 
 ntp = nvram.ntp_server.split(/\s+/);
 
@@ -274,26 +270,26 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<br /><br />
+<br/><br/>
 
-<div id='ntpkiss' style='display:none'>
+<div id="ntpkiss" style="display:none">
 The following NTP servers have been automatically blocked by request from the server:
-<b id='ntpkiss-ip'></b>
+<b id="ntpkiss-ip"></b>
 <div>
-	<input type='button' value='Clear' onclick='save(1)'>
+	<input type="button" value="Clear" onclick="save(1)">
 </div>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save(0)'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save(0)">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
+<script type="text/javascript">earlyInit()</script>
 </body>
 </html>

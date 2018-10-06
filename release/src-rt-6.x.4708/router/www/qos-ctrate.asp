@@ -13,16 +13,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] QoS: View Per-Connection Transfer Rates</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #grid .co6 {
 	text-align: right;
 }
@@ -31,11 +31,11 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript' src='protocols.js'></script>
-<script type='text/javascript' src='interfaces.js'></script>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript" src="protocols.js"></script>
+<script type="text/javascript" src="interfaces.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram('lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,t_hidelr'); %>
 var filterip = [];
 var filteripe = [];
@@ -47,8 +47,7 @@ var xob = null;
 var cache = [];
 var lock = 0;
 
-function resolve()
-{
+function resolve() {
 	if ((queue.length == 0) || (xob)) return;
 
 	xob = new XmlHttp();
@@ -77,8 +76,7 @@ var resolveCB = 0;
 var bcastCB = 0;
 var mcastCB = 0;
 
-function resolveChanged()
-{
+function resolveChanged() {
 	var b;
 
 	b = E('_f_autoresolve').checked ? 1 : 0;
@@ -91,8 +89,7 @@ function resolveChanged()
 
 var thres = 0;
 
-function thresChanged()
-{
+function thresChanged() {
 	var a, b;
 
 	b = E('_f_excludebythreshold').checked ? fixInt('<% cgi_get("thres"); %>', 100, 10000000, 100) : 0;
@@ -170,8 +167,7 @@ grid.onClick = function(cell) {
 	}
 }
 
-grid.resolveAll = function()
-{
+grid.resolveAll = function() {
 	var i, ip, row, q, cols, j;
 
 	q = [];
@@ -223,8 +219,7 @@ var ref = new TomatoRefresh('update.cgi', '', 0, 'qos_ctrate');
 var numconntotal = 0;
 var numconnshown = 0;
 
-ref.refresh = function(text)
-{
+ref.refresh = function(text) {
 	var i, b, d, cols, j;
 
 	++lock;
@@ -370,8 +365,7 @@ function addToResolveQueue(ip) {
 	resolve();
 }
 
-function init()
-{
+function init() {
 	var c;
 
 	if ((c = cookie.get('qos_filterip')) != null) {
@@ -467,31 +461,31 @@ function verifyFields(focused, quiet) {
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title' id='stitle' onclick='document.location="qos-graphs.asp"' style='cursor:pointer'>Transfer Rates: <span id='numtotalconn'></span></div>
-<div class='section'>
+<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">Transfer Rates: <span id="numtotalconn"></span></div>
+<div class="section">
 	<div id="grid" class="tomato-grid" style="float:left"></div>
 
-<div id='loading'><br /><b>Loading...</b></div>
+<div id="loading"><br/><b>Loading...</b></div>
 </div>
 
 <!-- / / / -->
 
-<div class='section-title'>Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id='sesdivfiltersshowhide'>(Toggle Visibility)</span></a></i></small></div>
-<div class='section' id='sesdivfilters' style='display:none'>
-<script type='text/javascript'>
+<div class="section-title">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
+<div class="section" id="sesdivfilters" style="display:none">
+<script type="text/javascript">
 	var c;
 	c = [];
 	c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
@@ -509,8 +503,8 @@ function verifyFields(focused, quiet) {
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<script type='text/javascript'>genStdRefresh(1,1,'ref.toggle()');</script>
+<tr><td id="footer" colspan="2">
+	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
 </td></tr>
 </table>
 </form>

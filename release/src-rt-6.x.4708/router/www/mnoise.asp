@@ -13,8 +13,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Measuring Noise...</title>
 <script type="text/javascript">
-function tick()
-{
+function tick() {
 	t.innerHTML = tock;
 	if (--tock >= 0)
 		setTimeout(tick, 1000);
@@ -22,8 +21,7 @@ function tick()
 		history.go(-1);
 }
 
-function init()
-{
+function init() {
 	t = document.getElementById('sptime');
 	tock = 15;
 	tick();
@@ -31,27 +29,27 @@ function init()
 </script>
 <style type="text/css">
 body {
-    background:rgb(0,0,0) url(tomatousb_bg.png);
-    font:14px Tahoma,Arial,sans-serif;
-    color:rgb(255,255,255);
+	background:rgb(0,0,0) url(tomatousb_bg.png);
+	font:14px Tahoma,Arial,sans-serif;
+	color:rgb(255,255,255);
 }
 input {
-    width:80px;
-    height:24px;
+	width:80px;
+	height:24px;
 }
 .div {
-    width:600px;
-    height:75px;
-    background-color:rgb(47,61,64);
-    position:absolute;
-    top:0;
-    bottom:0;
-    left:0;
-    right:0;
-    text-align:center;
-    margin:auto;
-    padding:10px 10px;
-    border-radius:5px;
+	width:600px;
+	height:75px;
+	background-color:rgb(47,61,64);
+	position:absolute;
+	top:0;
+	bottom:0;
+	left:0;
+	right:0;
+	text-align:center;
+	margin:auto;
+	padding:10px 10px;
+	border-radius:5px;
 }
 </style>
 </head>
@@ -59,7 +57,7 @@ input {
 <body onload="init()" onclick="go()">
 	<div class="div">
 		<div style="font-size:25px">Measuring radio noise floor...</div>
-		<br />
+		<br/>
 		<div>Wireless access has been temporarily disabled for <div id="sptime" style="display:inline;background:rgb(110,10,10);padding:2px 2px;border-radius:2px"></div> second(s)</div>
 	</div>
 </body>

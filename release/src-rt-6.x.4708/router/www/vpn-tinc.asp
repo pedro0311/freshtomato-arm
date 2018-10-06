@@ -13,16 +13,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tinc Mesh VPN</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #th-grid .co1 {
 	width: 10%;
 	text-align: center;
@@ -56,11 +56,11 @@ textarea
 </style>
 
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
-//  <% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
+//	<% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
 
 var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
 var th = new TomatoGrid();
@@ -150,14 +150,13 @@ th.verifyFields = function(row, quiet) {
 	return 1;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	if (focused)
 	{
 		changed = 1;
 	}
 
-	// Visibility Changes
+	/* Visibility Changes */
 	var vis = {
 		_tinc_mode: 1,
 		_tinc_vpn_netmask: 1,
@@ -238,16 +237,14 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function escapeText(s)
-{
+function escapeText(s) {
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
 	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
 }
 
-function spin(x,which)
-{
+function spin(x,which) {
 	E(which).style.visibility = x ? 'visible' : 'hidden';
 	if (!x) cmd = null;
 }
@@ -274,8 +271,7 @@ String.prototype.between = function(prefix, suffix) {
 	return s;
 }
 
-function displayKeys()
-{
+function displayKeys() {
 	E('_rsa_private_key').value = "-----BEGIN RSA PRIVATE KEY-----\n" + cmdresult. between('-----BEGIN RSA PRIVATE KEY-----\n','\n-----END RSA PRIVATE KEY-----') + "\n-----END RSA PRIVATE KEY-----";
 	E('_rsa_public_key').value = "-----BEGIN RSA PUBLIC KEY-----\n" + cmdresult. between('-----BEGIN RSA PUBLIC KEY-----\n','\n-----END RSA PUBLIC KEY-----') + "\n-----END RSA PUBLIC KEY-----";
 	E('_ed25519_private_key').value = "-----BEGIN ED25519 PRIVATE KEY-----\n" + cmdresult. between('-----BEGIN ED25519 PRIVATE KEY-----\n','\n-----END ED25519 PRIVATE KEY-----') + "\n-----END ED25519 PRIVATE KEY-----";
@@ -286,8 +282,7 @@ function displayKeys()
 	E('execb').disabled = 0;
 }
 
-function generateKeys()
-{
+function generateKeys() {
 	E('execb').disabled = 1;
 	spin(1,'generateWait');
 
@@ -317,15 +312,13 @@ function generateKeys()
 
 }
 
-function displayStatus()
-{
+function displayStatus() {
 	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
 	cmdresult = '';
 	spin(0,'statusWait');
 }
 
-function updateStatus(type)
-{
+function updateStatus(type) {
 	E('result').innerHTML = '';
 	spin(1,'statusWait');
 
@@ -352,8 +345,7 @@ function updateStatus(type)
 	updateNodes();
 }
 
-function displayNodes()
-{
+function displayNodes() {
 	var hostselect=document.getElementById("hostselect")
 	var selected = hostselect.value;
 
@@ -376,8 +368,7 @@ function displayNodes()
 	cmdresult = '';
 }
 
-function updateNodes()
-{
+function updateNodes() {
 	if (tincup)
 	{
 		cmd = new XmlHttp();
@@ -395,14 +386,12 @@ function updateNodes()
 	}
 }
 
-function displayVersion()
-{
+function displayVersion() {
 	E('version').innerHTML = "<small>Tinc " + escapeText(cmdresult) + "<\/small>";
 	cmdresult = '';
 }
 
-function getVersion()
-{
+function getVersion() {
 	cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
 		eval(text);
@@ -417,8 +406,7 @@ function getVersion()
 	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
 }
 
-function tabSelect(name)
-{
+function tabSelect(name) {
 	tgHideIcons();
 	cookie.set('vpn_tinc_tab', name);
 	tabHigh(name);
@@ -430,8 +418,7 @@ function tabSelect(name)
 	}
 }
 
-function toggle(service, isup)
-{
+function toggle(service, isup) {
 	var data = th.getAllData();
 	var s = '';
 	for (var i = 0; i < data.length; ++i) {
@@ -456,8 +443,7 @@ function toggle(service, isup)
 	});
 }
 
-function save()
-{
+function save() {
 	if (!verifyFields(null, false)) return;
 	if (th.isEditing()) return;
 
@@ -480,8 +466,7 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	verifyFields(null, true);
 	th.recolor();
 	th.resetNewEditor();
@@ -491,8 +476,7 @@ function init()
 	updateNodes();
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	tabSelect(cookie.get('vpn_tinc_tab') || 'config');
 }
 
@@ -511,28 +495,28 @@ function toggleVisibility(whichone) {
 </script>
 </head>
 
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
 
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='vpn-tinc.asp'>
-<input type='hidden' name='_service' value=''>
+<input type="hidden" name="_nextpage" value="vpn-tinc.asp">
+<input type="hidden" name="_service" value="">
 
-<div class='section-title' style='float:right' id='version'></div>
-<div class='section-title'>Tinc Configuration</div>
+<div class="section-title" style="float:right" id="version"></div>
+<div class="section-title">Tinc Configuration</div>
 
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 	// -------- BEGIN CONFIG TAB -----------
 	tabCreate.apply(this, tabs);
@@ -679,14 +663,14 @@ function toggleVisibility(whichone) {
 
 </script>
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>
+<script type="text/javascript">
 	earlyInit();
 	verifyFields(null,true);
 </script>

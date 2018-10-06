@@ -8,15 +8,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: Adblock</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #adblockg-grid {
 	width: 100%;
 }
@@ -36,15 +36,14 @@ textarea {
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript">
 
 //	<% nvram("adblock_enable,adblock_blacklist,adblock_blacklist_custom,adblock_whitelist,dnsmasq_debug"); %>
 
 var adblockg = new TomatoGrid();
 
-adblockg.exist = function(f, v)
-{
+adblockg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
 		if (data[i][f] == v) return true;
@@ -61,13 +60,11 @@ adblockg.fieldValuesToData = function(row) {
 	return [f[0].checked ? 1 : 0, f[1].value, f[2].value];
 }
 
-adblockg.verifyFields = function(row, quiet)
-{
+adblockg.verifyFields = function(row, quiet) {
 	var ok = 1;
 	return ok;
 }
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 	return ok;
 }
@@ -82,8 +79,7 @@ adblockg.resetNewEditor = function() {
 	f[2].value = '';
 }
 
-adblockg.setup = function()
-{
+adblockg.setup = function() {
 	this.init('adblockg-grid', '', 50, [
 		{ type: 'checkbox' },
 		{ type: 'text', maxlen: 130 },
@@ -99,8 +95,7 @@ adblockg.setup = function()
 	this.resetNewEditor();
 }
 
-function save()
-{
+function save() {
 	var data = adblockg.getAllData();
 	var blacklist = '';
 	for (var i = 0; i < data.length; ++i) {
@@ -114,34 +109,33 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	adblockg.recolor();
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='advanced-adblock.asp'>
-<input type='hidden' name='_service' value='adblock-restart'>
-<input type='hidden' name='adblock_enable'>
-<input type='hidden' name='dnsmasq_debug'>
-<input type='hidden' name='adblock_blacklist'>
+<input type="hidden" name="_nextpage" value="advanced-adblock.asp">
+<input type="hidden" name="_service" value="adblock-restart">
+<input type="hidden" name="adblock_enable">
+<input type="hidden" name="dnsmasq_debug">
+<input type="hidden" name="adblock_blacklist">
 
-<div class='section-title'>Adblock Settings</div>
-<div class='section'>
-	<script type='text/javascript'>
+<div class="section-title">Adblock Settings</div>
+<div class="section">
+	<script type="text/javascript">
 	createFieldTable('', [
 		{ title: 'Enable', name: 'f_adblock_enable', type: 'checkbox', value: nvram.adblock_enable != '0' },
 		{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == '1' }
@@ -149,52 +143,52 @@ function init()
 	</script>
 </div>
 
-<div class='section-title'>Blacklist URL</div>
-<div class='section'>
+<div class="section-title">Blacklist URL</div>
+<div class="section">
 	<div class="tomato-grid" id="adblockg-grid"></div>
-	<script type='text/javascript'>adblockg.setup();</script>
+	<script type="text/javascript">adblockg.setup();</script>
 </div>
 
-<div class='section-title'>Blacklist Custom</div>
-<div class='section'>
-	<script type='text/javascript'>
+<div class="section-title">Blacklist Custom</div>
+<div class="section">
+	<script type="text/javascript">
 	createFieldTable('', [
 		{ title: 'Blacklisted domains', name: 'adblock_blacklist_custom', type: 'textarea', value: nvram.adblock_blacklist_custom }
 	]);
 	</script>
 </div>
 
-<div class='section-title'>Whitelist</div>
-<div class='section'>
-	<script type='text/javascript'>
+<div class="section-title">Whitelist</div>
+<div class="section">
+	<script type="text/javascript">
 	createFieldTable('', [
 		{ title: 'Whitelisted domains', name: 'adblock_whitelist', type: 'textarea', value: nvram.adblock_whitelist }
 	]);
 	</script>
 </div>
 
-<div class='section-title'>Notes</div>
-<div class='section'>
-    <ul>
-	<li><b>Adblock</b> - Autoupdate will be randomly launch between 2:00-2.59 AM every day
-	<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog
-	<li><b>Blacklist URL</b> - Correct file format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, one domain per line
-	<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com
-	<li><b>Whitelist</b> - Optional, space separated: domain1.com domain2.com domain3.com
-	<li><b style='text-decoration:underline'>Caution!</b> - Adblock having too many large blocklists configured may crash the router, as it exhausted all available system memory.
-    </ul>
+<div class="section-title">Notes</div>
+<div class="section">
+	<ul>
+		<li><b>Adblock</b> - Autoupdate will be randomly launch between 2:00-2.59 AM every day</li>
+		<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog</li>
+		<li><b>Blacklist URL</b> - Correct file format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, one domain per line</li>
+		<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com</li>
+		<li><b>Whitelist</b> - Optional, space separated: domain1.com domain2.com domain3.com</li>
+		<li><b style="text-decoration:underline">Caution!</b> - Adblock having too many large blocklists configured may crash the router, as it exhausted all available system memory.</li>
+	</ul>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

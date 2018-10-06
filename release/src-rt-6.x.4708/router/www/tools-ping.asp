@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: Ping</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #tp-grid .co1 {
 	text-align: right;
 	width: 30px;
@@ -35,9 +35,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram(''); %>	// http_id
 
@@ -48,8 +48,7 @@ pg.setup = function() {
 	this.init('tp-grid');
 	this.headerSet(['Seq', 'Address', 'RX Bytes', 'TTL', 'RTT (ms)', '+/- (ms)']);
 }
-pg.populate = function()
-{
+pg.populate = function() {
 	var buf = pingdata.split('\n');
 	var i;
 	var r, s, t;
@@ -115,8 +114,7 @@ REMOVE-END */
 	spin(0);
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var s;
 	var e;
 
@@ -134,8 +132,7 @@ function verifyFields(focused, quiet)
 
 var pinger = null;
 
-function spin(x)
-{
+function spin(x) {
 	E('pingb').disabled = x;
 	E('_f_addr').disabled = x;
 	E('_f_count').disabled = x;
@@ -144,8 +141,7 @@ function spin(x)
 	if (!x) pinger = null;
 }
 
-function ping()
-{
+function ping() {
 	// Opera 8 sometimes sends 2 clicks
 	if (pinger) return;
 
@@ -173,8 +169,7 @@ function ping()
 	cookie.set('pingsize', size);
 }
 
-function init()
-{
+function init() {
 	var s;
 
 	if ((s = cookie.get('pingaddr')) != null) E('_f_addr').value = s;
@@ -186,22 +181,22 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
-<form action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>Ping</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Ping</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '',
 		suffix: ' <input type="button" value="Ping" onclick="ping()" id="pingb">' },
@@ -211,20 +206,20 @@ createFieldTable('', [
 </script>
 </div>
 
-<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src='spin.gif' alt="" style="vertical-align:top"></div>
+<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"></div>
 
 <div id="tp-grid" class="tomato-grid"></div>
-<pre id='stats'></pre>
+<pre id="stats"></pre>
 
-<div style='height:10px;' onclick='javascript:E("debug").style.display=""'></div>
-<textarea id='debug' style='width:99%;height:300px;display:none' cols='50' rows='10'></textarea>
+<div style="height:10px;" onclick='E("debug").style.display=""'></div>
+<textarea id="debug" style="width:99%;height:300px;display:none" cols="50" rows="10"></textarea>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type='text/javascript'>pg.setup()</script>
+<script type="text/javascript">pg.setup()</script>
 </body>
 </html>

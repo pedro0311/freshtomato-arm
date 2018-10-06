@@ -13,16 +13,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] IP Traffic: Details</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #grid .co2,
 #grid .co3,
 #grid .co4,
@@ -34,13 +34,13 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript' src='protocols.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
-<script type='text/javascript' src='bwm-common.js'></script>
-<script type='text/javascript' src='interfaces.js'></script>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript" src="protocols.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
+<script type="text/javascript" src="bwm-common.js"></script>
+<script type="text/javascript" src="interfaces.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram('cstats_enable,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,dhcpd_static'); %>
 
 //	<% devlist(); %>
@@ -48,7 +48,7 @@
 var cstats_busy = 0;
 
 try {
-// <% iptraffic(); %>
+//	<% iptraffic(); %>
 }
 catch (ex) {
 	iptraffic = [];
@@ -243,26 +243,26 @@ grid.sortCompare = function(a, b) {
 	var r = 0;
 
 	switch (col) {
-		case 0:	// host
+		case 0:	/* host */
 			r = cmpText(da[col], db[col]);
 		break;
-		case 1:	// Download
-		case 2:	// Upload
+		case 1:	/* Download */
+		case 2:	/* Upload */
 			r = cmpFloat(da[col], db[col]);
 		break;
-		case 3:	// TCP pkts
+		case 3:	/* TCP pkts */
 			r = cmpInt(da[3]+da[4], db[3]+db[4]);
 		break;
-		case 4:	// UDP pkts
+		case 4:	/* UDP pkts */
 			r = cmpInt(da[5]+da[6], db[5]+db[6]);
 		break;
-		case 5:	// ICMP pkts
+		case 5:	/* ICMP pkts */
 			r = cmpInt(da[7]+da[8], db[7]+db[8]);
 		break;
-		case 6:	// TCP connections
+		case 6:	/* TCP connections */
 			r = cmpInt(da[9], db[9]);
 		break;
-		case 7:	// UDP connections
+		case 7:	/* UDP connections */
 			r = cmpInt(da[10], db[10]);
 		break;
 	}
@@ -288,9 +288,9 @@ function addExcludeList(n) {
 	if (E('_f_filter_ipe').value.length<6) {
 		E('_f_filter_ipe').value = avgiptraffic[n][0];
 	} else {
-	if (E('_f_filter_ipe').value.indexOf(avgiptraffic[n][0]) < 0) {
-		E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + avgiptraffic[n][0];
-	}
+		if (E('_f_filter_ipe').value.indexOf(avgiptraffic[n][0]) < 0) {
+			E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + avgiptraffic[n][0];
+		}
 	}
 	dofilter();
 }
@@ -437,32 +437,32 @@ function toggleVisibility(whichone) {
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>IP Traffic - Transfer Rates</div>
-<div id='cstats'>
-	<div class='section'>
+<div class="section-title">IP Traffic - Transfer Rates</div>
+<div id="cstats">
+	<div class="section">
 		<div id="grid" class="tomato-grid" style="float:left"></div>
 
-		<div id='loading'><br /><b>Loading...</b></div>
+		<div id="loading"><br/><b>Loading...</b></div>
 	</div>
 
 <!-- / / / -->
 
-	<div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
-	<div class='section' id='sesdivoptions' style='display:none'>
-		<script type='text/javascript'>
+	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility("options");'><span id="sesdivoptionsshowhide">(Click here to show)</span></a></i></small></div>
+	<div class="section" id="sesdivoptions" style="display:none">
+		<script type="text/javascript">
 		var c;
 		c = [];
 		c.push({ title: 'Only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
@@ -478,19 +478,19 @@ function toggleVisibility(whichone) {
 		</div>
 	</div>
 
-	<br />
+	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkCstats();</script>
+<script type="text/javascript">checkCstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<script type='text/javascript'>genStdRefresh(1,1,'ref.toggle()');</script>
+<tr><td id="footer" colspan="2">
+	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
 </td></tr>
 </table>
 </form>

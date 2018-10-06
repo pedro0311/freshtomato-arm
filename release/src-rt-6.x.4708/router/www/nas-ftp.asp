@@ -8,15 +8,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] NAS: FTP Server</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #aft-grid {
 	width: 99%;
 }
@@ -38,9 +38,9 @@ textarea {
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,log_ftp"); %>
 
@@ -49,8 +49,7 @@ if (ftplimit.length != 3) ftplimit = [0,3,60];
 
 var aftg = new TomatoGrid();
 
-aftg.exist = function(f, v)
-{
+aftg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
 		if (data[i][f] == v) return true;
@@ -58,8 +57,7 @@ aftg.exist = function(f, v)
 	return false;
 }
 
-aftg.existName = function(name)
-{
+aftg.existName = function(name) {
 	return this.exist(0, name);
 }
 
@@ -70,8 +68,7 @@ aftg.sortCompare = function(a, b) {
 	return this.sortAscending ? r : -r;
 }
 
-aftg.verifyFields = function(row, quiet)
-{
+aftg.verifyFields = function(row, quiet) {
 	var f, s;
 	f = fields.getAll(row);
 
@@ -124,8 +121,7 @@ aftg.resetNewEditor = function() {
 	f[3].value = '';
 }
 
-aftg.setup = function()
-{
+aftg.setup = function() {
 	this.init('aft-grid', 'sort', 50, [
 		{ type: 'text', maxlen: 50 },
 		{ type: 'password', maxlen: 50, peekaboo: 1 },
@@ -149,8 +145,7 @@ aftg.setup = function()
 	this.resetNewEditor();
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var a, b;
 	var ok = 1;
 
@@ -203,8 +198,7 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
+function save() {
 	if (aftg.isEditing()) return;
 	if (!verifyFields(null, 0)) return;
 
@@ -225,41 +219,40 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+function init() {
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 
 </head>
 
-<body onLoad="init()">
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='nas-ftp.asp'>
-<input type='hidden' name='_service' value='ftpd-restart'>
+<input type="hidden" name="_nextpage" value="nas-ftp.asp">
+<input type="hidden" name="_service" value="ftpd-restart">
 
-<input type='hidden' name='ftp_super'>
-<input type='hidden' name='log_ftp'>
-<input type='hidden' name='ftp_users'>
-<input type='hidden' name='ftp_sip'>
-<input type='hidden' name='ftp_limit'>
+<input type="hidden" name="ftp_super">
+<input type="hidden" name="log_ftp">
+<input type="hidden" name="ftp_users">
+<input type="hidden" name="ftp_sip">
+<input type="hidden" name="ftp_limit">
 
-<div class='section-title'>FTP Server Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">FTP Server Configuration</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable FTP Server', name: 'ftp_enable', type: 'select',
 		options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']],
@@ -277,12 +270,12 @@ createFieldTable('', [
 		value: nvram.log_ftp == 1 }
 ]);
 </script>
-<small><br />*&nbsp;Avoid using this option when FTP server is enabled for WAN. IT PROVIDES FULL ACCESS TO THE ROUTER FILE SYSTEM!</small>
+<small><br/>*&nbsp;Avoid using this option when FTP server is enabled for WAN. IT PROVIDES FULL ACCESS TO THE ROUTER FILE SYSTEM!</small>
 </div>
 
-<div class='section-title'>Directories</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Directories</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Anonymous Root Directory*', name: 'ftp_anonroot', type: 'text', maxlen: 256, size: 32, 
 		suffix: ' <small>(for anonymous connections)<\/small>',
@@ -300,14 +293,14 @@ createFieldTable('', [
 ]);
 </script>
 <small>
-<br />*&nbsp;&nbsp;When no directory is specified, /mnt is used as a root directory.
-<br />**&nbsp;In private mode, the root directory is the directory under the "Private Root Directory" with the name matching the name of the user.
+<br/>*&nbsp;&nbsp;When no directory is specified, /mnt is used as a root directory.
+<br/>**&nbsp;In private mode, the root directory is the directory under the "Private Root Directory" with the name matching the name of the user.
 </small>
 </div>
 
-<div class='section-title'>Limits</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Limits</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Maximum Users Allowed to Log in', name: 'ftp_max', type: 'text', maxlen: 5, size: 7,
 		suffix: ' <small>(0 - unlimited)<\/small>',
@@ -334,19 +327,19 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Custom Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Custom Configuration</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: '<a href="http://vsftpd.beasts.org/vsftpd_conf.html" class="new_window">Vsftpd<\/a><br />Custom Configuration', name: 'ftp_custom', type: 'textarea', value: nvram.ftp_custom }
 ]);
 </script>
 </div>
 
-<div class='section-title'>User Accounts</div>
-<div class='section'>
+<div class="section-title">User Accounts</div>
+<div class="section">
 	<div class="tomato-grid" id="aft-grid"></div>
-	<script type='text/javascript'>aftg.setup();</script>
+	<script type="text/javascript">aftg.setup();</script>
 <small>
 *&nbsp;&nbsp;When no Root Directory is specified for the user, the default "Public Root Directory" is used.
 </small>
@@ -355,13 +348,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

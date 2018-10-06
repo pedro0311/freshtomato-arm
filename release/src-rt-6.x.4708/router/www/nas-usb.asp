@@ -8,16 +8,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] NAS: USB Support</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 5em;
@@ -40,9 +40,9 @@ textarea {
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("usb_enable,usb_uhci,usb_ohci,usb_usb2,usb_usb3,usb_mmc,usb_storage,usb_printer,usb_printer_bidirect,usb_automount,usb_fs_ext4,usb_fs_fat,usb_fs_exfat,usb_fs_ntfs,usb_ntfs_driver,usb_fs_hfs,script_usbmount,script_usbumount,script_usbhotplug,idle_enable,usb_3g,usb_apcupsd"); %>
 //	<% usbdevices(); %>
@@ -51,24 +51,20 @@ list = [];
 
 var xob = null;
 
-function _umountHost(host)
-{
+function _umountHost(host) {
 	form.submitHidden('usbcmd.cgi', { remove: host });
 }
 
-function _mountHost(host)
-{
+function _mountHost(host) {
 	form.submitHidden('usbcmd.cgi', { mount: host });
 }
 
-function _forceRefresh()
-{
+function _forceRefresh() {
 	if (!ref.running) ref.once = 1;
 	ref.start();
 }
 
-function umountHost(a, host)
-{
+function umountHost(a, host) {
 	if (xob) return;
 
 	if ((xob = new XmlHttp()) == null) {
@@ -97,8 +93,7 @@ function umountHost(a, host)
 	xob.post('usbcmd.cgi', 'remove=' + host);
 }
 
-function mountHost(a, host)
-{
+function mountHost(a, host) {
 	if (xob) return;
 
 	if ((xob = new XmlHttp()) == null) {
@@ -129,8 +124,7 @@ function mountHost(a, host)
 
 var ref = new TomatoRefresh('update.cgi', 'exec=usbdevices', 0, 'nas_usb_refresh');
 
-ref.refresh = function(text)
-{
+ref.refresh = function(text) {
 	try {
 		eval(text);
 	}
@@ -163,8 +157,7 @@ dg.sortCompare = function(a, b) {
 	return this.sortAscending ? r : -r;
 }
 
-dg.populate = function()
-{
+dg.populate = function() {
 	var i, j, k, a, b, c, e, s, desc, d, parts, p;
 
 	list = [];
@@ -197,7 +190,7 @@ dg.populate = function()
 		e = list[i];
 
 		if (e.type != 'Storage')
-			s = '&nbsp<br /><small>&nbsp<\/small>';
+			s = '<br />';
 		else {
 			if (xob)
 				s = ((e.is_mounted == 0) ? 'No' : 'Yes') + '<br /><small>Please wait...<\/small>';
@@ -231,27 +224,23 @@ dg.populate = function()
 	list = [];
 }
 
-dg.setup = function()
-{
+dg.setup = function() {
 	this.init('dev-grid', 'sort');
 	this.headerSet(['Type', 'Host', 'Description', 'Mounted?']);
 	this.populate();
 	this.sort(1);
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	dg.setup();
 }
 
-function init()
-{
+function init() {
 	dg.recolor();
 	ref.initPage();
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var b = !E('_f_usb').checked;
 	var a = !E('_f_storage').checked;
 
@@ -292,8 +281,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var fom;
 
 	if (!verifyFields(null, 0)) return;
@@ -328,59 +316,58 @@ function save()
 	form.submit(fom, 1);
 }
 
-function submit_complete()
-{
+function submit_complete() {
 	reloadPage();
 }
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='nas-usb.asp'>
-<input type='hidden' name='_service' value='usb-restart'>
+<input type="hidden" name="_nextpage" value="nas-usb.asp">
+<input type="hidden" name="_service" value="usb-restart">
 
-<input type='hidden' name='usb_enable'>
-<input type='hidden' name='usb_uhci'>
-<input type='hidden' name='usb_ohci'>
-<input type='hidden' name='usb_usb2'>
-<input type='hidden' name='usb_usb3'>
-<input type='hidden' name='usb_mmc'>
-<input type='hidden' name='usb_storage'>
-<input type='hidden' name='usb_printer'>
-<input type='hidden' name='usb_printer_bidirect'>
-<input type='hidden' name='usb_fs_ext4'>
-<input type='hidden' name='usb_fs_fat'>
-<input type='hidden' name='usb_fs_exfat'>
+<input type="hidden" name="usb_enable">
+<input type="hidden" name="usb_uhci">
+<input type="hidden" name="usb_ohci">
+<input type="hidden" name="usb_usb2">
+<input type="hidden" name="usb_usb3">
+<input type="hidden" name="usb_mmc">
+<input type="hidden" name="usb_storage">
+<input type="hidden" name="usb_printer">
+<input type="hidden" name="usb_printer_bidirect">
+<input type="hidden" name="usb_fs_ext4">
+<input type="hidden" name="usb_fs_fat">
+<input type="hidden" name="usb_fs_exfat">
 /* NTFS-BEGIN */
-<input type='hidden' name='usb_fs_ntfs'>
+<input type="hidden" name="usb_fs_ntfs">
 /* NTFS-END */
 /* HFS-BEGIN */
-<input type='hidden' name='usb_fs_hfs'>
+<input type="hidden" name="usb_fs_hfs">
 /* HFS-END */
-<input type='hidden' name='usb_automount'>
+<input type="hidden" name="usb_automount">
 /* LINUX26-BEGIN */
-<input type='hidden' name='idle_enable'>
-<input type='hidden' name='usb_3g'>
+<input type="hidden" name="idle_enable">
+<input type="hidden" name="usb_3g">
 /* LINUX26-END */
 /* UPS-BEGIN */
-<input type='hidden' name='usb_apcupsd'>
+<input type="hidden" name="usb_apcupsd">
 /* UPS-END */
 
-<div class='section-title'>USB Support</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">USB Support</div>
+<div class="section">
+<script type="text/javascript">
 
 createFieldTable('', [
 	{ title: 'Core USB Support', name: 'f_usb', type: 'checkbox', value: nvram.usb_enable == 1 },
@@ -441,25 +428,25 @@ createFieldTable('', [
 
 <!-- / / / -->
 
-<div class='section-title'>Attached Devices</div>
-<div class='section'>
+<div class="section-title">Attached Devices</div>
+<div class="section">
 	<div id="dev-grid" class="tomato-grid"></div>
-<div id='usb-controls'>
-	<script type='text/javascript'>genStdRefresh(1,0,'ref.toggle()');</script>
+<div id="usb-controls">
+	<script type="text/javascript">genStdRefresh(1,0,'ref.toggle()');</script>
 </div>
-<script type='text/javascript'></script>
+<script type="text/javascript"></script>
 </div>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit();verifyFields(null, 1);</script>
+<script type="text/javascript">earlyInit();verifyFields(null, 1);</script>
 </body>
 </html>

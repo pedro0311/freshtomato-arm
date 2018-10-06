@@ -13,16 +13,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: Wireless Filter</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #sm-grid {
 	width: 80%;
 }
@@ -34,10 +34,10 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript">
 var nvram;
 
 //	<% nvram("wl_maclist,macnames"); %>
@@ -102,8 +102,7 @@ smg.setup = function() {
 	this.resetNewEditor();
 }
 
-function save()
-{
+function save() {
 	var fom;
 	var d, i, macs, names, ma, na;
 	var u;
@@ -135,13 +134,11 @@ function save()
 	form.submit(fom, 1);
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	smg.setup();
 }
 
-function init()
-{
+function init() {
 	smg.recolor();
 
 	var elements = document.getElementsByClassName("new_window");
@@ -150,44 +147,44 @@ function init()
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-wfilter.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='wireless-restart'>
-<input type='hidden' name='_force_commit' value='1'>
-<input type='hidden' name='wl_maclist'>
-<input type='hidden' name='macnames'>
+<input type="hidden" name="_nextpage" value="basic-wfilter.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="wireless-restart">
+<input type="hidden" name="_force_commit" value="1">
+<input type="hidden" name="wl_maclist">
+<input type="hidden" name="macnames">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	var u = wl_fface(uidx);
-	W('<input type=\'hidden\' id=\'t_wl'+u+'_maclist\' name=\'wl'+u+'_maclist\'>');
+	W('<input type="hidden" id="t_wl'+u+'_maclist" name="wl'+u+'_maclist">');
 }
 </script>
 
-<div class='section-title'>Wireless Client Filter</div>
-<div class='section'>
-	<br />
+<div class="section-title">Wireless Client Filter</div>
+<div class="section">
+	<br/>
 	<div id="sm-grid" class="tomato-grid"></div>
 </div>
 
 
 <!-- / / / -->
 
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
 	<ul>
 	<li>To specify how and on which interface this list should work, use the <a href="advanced-wlanvifs.asp" class="new_window">Virtual Wireless Interfaces</a> page.</li>
 	</ul>
@@ -196,13 +193,13 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
+<script type="text/javascript">earlyInit()</script>
 </body>
 </html>

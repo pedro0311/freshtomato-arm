@@ -9,36 +9,34 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Bandwidth Monitoring</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 15em;
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("rstats_enable,rstats_path,rstats_stime,rstats_offset,rstats_exclude,rstats_sshut,et0macaddr,cifs1,cifs2,jffs2_on,rstats_bak"); %>
 
-function backupNameChanged()
-{
+function backupNameChanged() {
 	if (location.href.match(/^(http.+?\/.+\/)/)) {
 		E('backup-link').href = RegExp.$1 + 'bwm/' + fixFile(E('backup-name').value) + '.gz?_http_id=' + nvram.http_id;
 	}
 }
 
-function backupButton()
-{
+function backupButton() {
 	var name;
 
 	name = fixFile(E('backup-name').value);
@@ -49,8 +47,7 @@ function backupButton()
 	location.href = 'bwm/' + name + '.gz?_http_id=' + nvram.http_id;
 }
 
-function restoreButton()
-{
+function restoreButton() {
 	var fom;
 	var name;
 	var i;
@@ -71,14 +68,12 @@ function restoreButton()
 	E('restore-form').submit();
 }
 
-function getPath()
-{
+function getPath() {
 	var s = E('_f_loc').value;
 	return (s == '*user') ? E('_f_user').value : s;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var b, v;
 	var path;
 	var eLoc, eUser, eTime, eOfs;
@@ -140,8 +135,7 @@ function verifyFields(focused, quiet)
 	return v_range(eOfs, quiet, 1, 31);
 }
 
-function save()
-{
+function save() {
 	var fom, path, en, e, aj;
 
 	if (!verifyFields(null, false)) return;
@@ -185,37 +179,36 @@ function save()
 	}
 }
 
-function init()
-{
+function init() {
 	backupNameChanged();
 }
 </script>
 
 </head>
 <body onload="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>Bandwidth Monitoring</div>
-<div class='section' id='config-section'>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<div class="section-title">Bandwidth Monitoring</div>
+<div class="section" id="config-section">
+<form id="t_fom" method="post" action="tomato.cgi">
 <div>
-<input type='hidden' name='_nextpage' value='admin-bwm.asp'>
-<input type='hidden' name='_service' value='rstats-restart'>
-<input type='hidden' name='rstats_enable'>
-<input type='hidden' name='rstats_path'>
-<input type='hidden' name='rstats_sshut'>
-<input type='hidden' name='rstats_bak'>
+<input type="hidden" name="_nextpage" value="admin-bwm.asp">
+<input type="hidden" name="_service" value="rstats-restart">
+<input type="hidden" name="rstats_enable">
+<input type="hidden" name="rstats_path">
+<input type="hidden" name="rstats_sshut">
+<input type="hidden" name="rstats_bak">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 switch (nvram.rstats_path) {
 case '':
 case '*nvram':
@@ -257,28 +250,28 @@ createFieldTable('', [
 </form>
 </div>
 
-<br />
+<br/>
 
-<div class='section-title'>Backup</div>
-<div class='section' id='backup-section'>
-	<form action=''>
-	<script type='text/javascript'>
+<div class="section-title">Backup</div>
+<div class="section" id="backup-section">
+	<form action="">
+	<script type="text/javascript">
 	W("<input type='text' size='40' maxlength='64' id='backup-name' name='backup_name' onchange='backupNameChanged()' value='tomato_rstats_" + nvram.et0macaddr.replace(/:/g, '').toLowerCase() + "'>");
 	</script>
-	<div style='display:inline'>.gz &nbsp;
-		<input type='button' name='f_backup_button' id='backup-button' onclick='backupButton()' value='Backup'>
+	<div style="display:inline">.gz &nbsp;
+		<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">
 	</div>
 	</form>
-	<a href='#' id='backup-link'>Link</a>
+	<a href="#" id="backup-link">Link</a>
 </div>
-<br />
+<br/>
 
-<div class='section-title'>Restore</div>
-<div class='section' id='restore-section'>
-	<form id='restore-form' method='post' action='bwm/restore.cgi?_http_id=<% nv(http_id); %>' encType='multipart/form-data'>
+<div class="section-title">Restore</div>
+<div class="section" id="restore-section">
+	<form id="restore-form" method="post" action="bwm/restore.cgi?_http_id=<% nv(http_id); %>" enctype="multipart/form-data">
 		<div>
-			<input type='file' size='40' id='restore-name' name='restore_name'>
-			<input type='button' name='f_restore_button' id='restore-button' value='Restore' onclick='restoreButton()'>
+			<input type="file" size="40" id="restore-name" name="restore_name">
+			<input type="button" name="f_restore_button" id="restore-button" value="Restore" onclick="restoreButton()">
 		</div>
 	</form>
 </div>
@@ -286,16 +279,16 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

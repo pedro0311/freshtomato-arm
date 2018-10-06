@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: Network</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #lan-grid .co1,
 #lan-grid .co2,
 #lan-grid .co5 {
@@ -46,13 +46,13 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript' src='md5.js'></script>
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript' src='interfaces.js'></script>
-<script type='text/javascript' src='wireless.js'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript" src="interfaces.js"></script>
+<script type="text/javascript" src="wireless.js"></script>
+<script type="text/javascript">
 //	<% nvram("dhcp_lease,dhcp_num,dhcp_start,dhcpd_startip,dhcpd_endip,lan_gateway,lan_ipaddr,lan_netmask,lan_proto,lan_state,lan_desc,lan_invert,wl_security_mode,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,wan_wins,wl_wds_enable,wl_channel,wl_closed,wl_crypto,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_net_mode,wl_passphrase,wl_radio,wl_radius_ipaddr,wl_radius_port,wl_ssid,wl_wds,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_radius_key,wl_auth,wl_hwaddr,t_features,wl_nbw_cap,wl_nctrlsb,wl_nband,wl_phytype,lan_ifname,lan_stp,lan1_ifname,lan1_ipaddr,lan1_netmask,lan1_proto,lan1_stp,dhcp1_start,dhcp1_num,dhcp1_lease,dhcpd1_startip,dhcpd1_endip,lan2_ifname,lan2_ipaddr,lan2_netmask,lan2_proto,lan2_stp,dhcp2_start,dhcp2_num,dhcp2_lease,dhcpd2_startip,dhcpd2_endip,lan3_ifname,lan3_ipaddr,lan3_netmask,lan3_proto,lan3_stp,dhcp3_start,dhcp3_num,dhcp3_lease,dhcpd3_startip,dhcpd3_endip,cstats_enable,wan_proto,wan_weight,wan_modem_pin,wan_modem_dev,wan_modem_init,wan_modem_apn,wan_modem_speed,wan_modem_band,wan_modem_roam,wan_ppp_username,wan_ppp_passwd,wan_ppp_service,wan_l2tp_server_ip,wan_pptp_dhcp,wan_ipaddr,wan_netmask,wan_gateway,wan_pptp_server_ip,wan_ppp_custom,wan_ppp_demand,wan_ppp_idletime,wan_ppp_demand_dnsip,wan_ppp_redialperiod,wan_pppoe_lei,wan_pppoe_lef,wan_mtu_enable,wan_mtu,wan_ppp_mlppp,wan_modem_ipaddr,wan_islan,wan_sta,wan_dns,wan_dns_auto,wan_ifnameX,wan_ckmtd,wan2_proto,wan2_weight,wan2_modem_pin,wan2_modem_dev,wan2_modem_init,wan2_modem_apn,wan2_modem_speed,wan2_modem_band,wan2_modem_roam,wan2_ppp_username,wan2_ppp_passwd,wan2_ppp_service,wan2_l2tp_server_ip,wan2_pptp_dhcp,wan2_ipaddr,wan2_netmask,wan2_gateway,wan2_pptp_server_ip,wan2_ppp_custom,wan2_ppp_demand,wan2_ppp_idletime,wan2_ppp_demand_dnsip,wan2_ppp_redialperiod,wan2_pppoe_lei,wan2_pppoe_lef,wan2_mtu_enable,wan2_mtu,wan2_ppp_mlppp,wan2_modem_ipaddr,wan2_islan,wan2_sta,wan2_dns,wan2_dns_auto,wan2_ifnameX,wan2_ckmtd,wan3_proto,wan3_weight,wan3_modem_pin,wan3_modem_dev,wan3_modem_init,wan3_modem_apn,wan3_modem_speed,wan3_modem_band,wan3_modem_roam,wan3_ppp_username,wan3_ppp_passwd,wan3_ppp_service,wan3_l2tp_server_ip,wan3_pptp_dhcp,wan3_ipaddr,wan3_netmask,wan3_gateway,wan3_pptp_server_ip,wan3_ppp_custom,wan3_ppp_demand,wan3_ppp_idletime,wan3_ppp_demand_dnsip,wan3_ppp_redialperiod,wan3_pppoe_lei,wan3_pppoe_lef,wan3_mtu_enable,wan3_mtu,wan3_ppp_mlppp,wan3_modem_ipaddr,wan3_islan,wan3_sta,wan3_dns,wan3_dns_auto,wan3_ifnameX,wan3_ckmtd,wan4_proto,wan4_weight,wan4_modem_pin,wan4_modem_dev,wan4_modem_init,wan4_modem_apn,wan4_modem_speed,wan4_modem_band,wan4_modem_roam,wan4_ppp_username,wan4_ppp_passwd,wan4_ppp_service,wan4_l2tp_server_ip,wan4_pptp_dhcp,wan4_ipaddr,wan4_netmask,wan4_gateway,wan4_pptp_server_ip,wan4_ppp_custom,wan4_ppp_demand,wan4_ppp_idletime,wan4_ppp_demand_dnsip,wan4_ppp_redialperiod,wan4_pppoe_lei,wan4_pppoe_lef,wan4_mtu_enable,wan4_mtu,wan4_ppp_mlppp,wan4_modem_ipaddr,wan4_islan,wan4_sta,wan4_dns,wan4_dns_auto,wan4_ifnameX,wan4_ckmtd,mwan_num,mwan_cktime,mwan_ckdst,dnssec_enable,modem_type"); %>
 
 /* MULTIWAN-BEGIN */
@@ -64,8 +64,7 @@ maxwan_num = 2;
 /* DUALWAN-END */
 
 var sta_list = new Array();
-function refresh_sta_list()
-{
+function refresh_sta_list() {
 	var u;
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx)<0) {
@@ -161,11 +160,11 @@ lg.resetNewEditor = function() {
 	var f = fields.getAll(this.newEditor);
 	f[0].selectedIndex=0;
 	var t = MAX_BRIDGE_ID;
-	while((this.countBridge(f[0].selectedIndex) > 0) && (t > 0)) {
+	while ((this.countBridge(f[0].selectedIndex) > 0) && (t > 0)) {
 		f[0].selectedIndex = (f[0].selectedIndex%(MAX_BRIDGE_ID))+1;
 		t--;
 	}
-	for(var j=0; j<= MAX_BRIDGE_ID ; j++) {
+	for (var j=0; j<= MAX_BRIDGE_ID ; j++) {
 		f[0].options[j].disabled = (this.countBridge(j) > 0);
 	}
 	f[1].checked = 0;
@@ -267,40 +266,40 @@ lg.verifyFields = function(row, quiet) {
 
 	f = fields.getAll(row);
 
-	for(var j=0; j<= MAX_BRIDGE_ID ; j++) {
+	for (var j=0; j<= MAX_BRIDGE_ID ; j++) {
 		f[0].options[j].disabled = (this.countBridge(j) > 0);
 	}
 
-	if(this.countBridge(f[0].selectedIndex) > 0) {
+	if (this.countBridge(f[0].selectedIndex) > 0) {
 		ferror.set(f[0], 'Cannot add another entry for bridge br' + f[0].selectedIndex, quiet);
 		ok = 0;
 	} else {
 		ferror.clear(f[0]);
 	}
-// valid IP address? 
-	if(!v_ip(f[2], quiet || !ok)) 
+/* valid IP address? */
+	if (!v_ip(f[2], quiet || !ok)) 
 		ok = 0;
-// if we have a properly defined IP address - 0.0.0.0 is NOT a valid IP address for our intents/purposes!
+/* if we have a properly defined IP address - 0.0.0.0 is NOT a valid IP address for our intents/purposes! */
 	if ((f[2].value != '') && (f[2].value != '0.0.0.0')) {
-// allow DHCP to be enabled
+/* allow DHCP to be enabled */
 		f[4].disabled = 0;
-// validate netmask
-		if(!v_netmask(f[3], quiet || !ok)) {
+/* validate netmask */
+		if (!v_netmask(f[3], quiet || !ok)) {
 			return 0;
 		} else {
-// should be 22 bits or smaller network
+/* should be 22 bits or smaller network */
 			if ((numberOfBitsOnNetMask(f[3].value) < 22) && (nvram.cstats_enable == '1' )) {
 				if (!confirm("Netmask should have at least 22 bits (255.255.252.0). You may continue anyway but remember - you was warned")) return;
 			} else {
 				ferror.clear(f[3]);
 			}
 		}
-		if(f[2].value == getNetworkAddress(f[2].value, f[3].value)) {
+		if (f[2].value == getNetworkAddress(f[2].value, f[3].value)) {
 			var s = 'Invalid IP address or subnet mask (the address of the network cannot be used)';
 			ferror.set(f[2], s, quiet);
 			ferror.set(f[3], s, quiet);
 			return 0;
-		} else if(f[2].value == getBroadcastAddress(getNetworkAddress(f[2].value, f[3].value), f[3].value)) {
+		} else if (f[2].value == getBroadcastAddress(getNetworkAddress(f[2].value, f[3].value), f[3].value)) {
 			var s = 'Invalid IP address or subnet mask (the broadcast address cannot be used)';
 			ferror.set(f[2], s, quiet);
 			ferror.set(f[3], s, quiet);
@@ -318,12 +317,12 @@ lg.verifyFields = function(row, quiet) {
 		f[4].checked = 0;
 		f[4].disabled = 1;
 	}
-// dhcp enabled?
-	if( (f[4].checked) && (v_ip(f[2], 1)) && (v_netmask(f[3],1)) ) {
+/* dhcp enabled? */
+	if ( (f[4].checked) && (v_ip(f[2], 1)) && (v_netmask(f[3],1)) ) {
 		f[5].disabled = 0;
 		f[6].disabled = 0;
 		f[7].disabled = 0;
-// first/last IP still unset?
+/* first/last IP still unset? */
 		if (f[5].value == '') {
 			var l;
 			var m = aton(f[2].value) & aton(f[3].value);
@@ -352,7 +351,7 @@ lg.verifyFields = function(row, quiet) {
 			} while (((l = fixIP(ntoa(o), 1)) == null) || (l == f[2].value) );
 			f[6].value = l;
 		}
-// first IP valid?
+/* first IP valid? */
 		if ((getNetworkAddress(f[5].value, f[3].value) != getNetworkAddress(f[2].value, f[3].value)) ||
 			(f[5].value == getBroadcastAddress(getNetworkAddress(f[2].value, f[3].value), f[3].value)) ||
 			(f[5].value == getNetworkAddress(f[2].value, f[3].value)) ||
@@ -362,7 +361,7 @@ lg.verifyFields = function(row, quiet) {
 		} else {
 			ferror.clear(f[5]);
 		}
-// last IP valid?
+/* last IP valid? */
 		if ((getNetworkAddress(f[6].value, f[3].value) != getNetworkAddress(f[2].value, f[3].value)) ||
 			(f[6].value == getBroadcastAddress(getNetworkAddress(f[2].value, f[3].value), f[3].value)) ||
 			(f[6].value == getNetworkAddress(f[2].value, f[3].value)) ||
@@ -372,16 +371,16 @@ lg.verifyFields = function(row, quiet) {
 		} else {
 			ferror.clear(f[6]);
 		}
-// validate range, swap first/last IP if needed
+/* validate range, swap first/last IP if needed */
 		if (aton(f[6].value) < aton(f[5].value)) {
 			var t = f[5].value;
 			f[5].value = f[6].value;
 			f[6].value = t;
 		}
-// lease time
+/* lease time */
 		if (parseInt(f[7].value*1) == 0)
-			f[7].value = 1440; // from nvram/defaults.c
-		if(!v_mins(f[7], quiet || !ok, 1, 10080)) 
+			f[7].value = 1440; /* from nvram/defaults.c */
+		if (!v_mins(f[7], quiet || !ok, 1, 10080)) 
 			ok = 0;
 	} else {
 		f[5].disabled = 1;
@@ -414,7 +413,7 @@ var bands = [];
 var nm_loaded = [], ch_loaded = [], max_channel = [];
 
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//	if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*	if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 	if (wl_sunit(uidx)<0) {
 		var b;
 		b = [];
@@ -433,8 +432,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	}
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var i;
 	var ok = 1;
 	var a, b, c, d, e;
@@ -483,7 +481,7 @@ function verifyFields(focused, quiet)
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 			if (focused == E('_f_wl'+u+'_nband')) {
@@ -496,7 +494,7 @@ function verifyFields(focused, quiet)
 		}
 	}
 
-	// --- visibility ---
+	/* --- visibility --- */
 
 	var vis = {
 		_f_dns_1: 1,
@@ -509,9 +507,9 @@ function verifyFields(focused, quiet)
 	};
 
 	var wanproto = new Array();
-	for (uidx = 1; uidx <= maxwan_num; ++uidx){
+	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
 	    u = (uidx>1) ? uidx : '';
-		if (uidx <= curr_mwan_num){
+		if (uidx <= curr_mwan_num) {
 			vis['_wan'+u+'_proto'] = 1;
 			vis['_wan'+u+'_weight'] = 1;
 			vis['_wan'+u+'_ppp_username'] = 1;
@@ -658,7 +656,7 @@ function verifyFields(focused, quiet)
 
 	var wl_vis = [];
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			a = {
 			_f_wl_radio: 1,
@@ -698,7 +696,7 @@ function verifyFields(focused, quiet)
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			wmode = E('_f_wl'+wl_unit(uidx)+'_mode').value;
 
@@ -789,7 +787,7 @@ function verifyFields(focused, quiet)
 		case 'pppoe':
 			vis['_wan'+u+'_l2tp_server_ip'] = 0;
 			vis['_wan'+u+'_pptp_server_ip'] = 0;
-//			vis['_f_wan'+u+'_pptp_dhcp'] = 0;
+/*			vis['_f_wan'+u+'_pptp_dhcp'] = 0; */
 			vis['_wan'+u+'_gateway'] = 0;
 			vis['_wan'+u+'_ipaddr'] = 0;
 			vis['_wan'+u+'_netmask'] = 0;
@@ -908,7 +906,7 @@ function verifyFields(focused, quiet)
 			vis['_wan'+u+'_modem_band'] = 0;
 		}
 
-		if(wanproto[uidx-1] != 'disabled' && uidx <= curr_mwan_num) {
+		if (wanproto[uidx-1] != 'disabled' && uidx <= curr_mwan_num) {
 			vis._lan_gateway = 0;
 			vis._f_dns_1 = 0;
 			vis._f_dns_2 = 0;
@@ -959,7 +957,7 @@ function verifyFields(focused, quiet)
 	vis._stubby_log = stub;
 /* STUBBY-END */
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
@@ -980,8 +978,8 @@ function verifyFields(focused, quiet)
 			case 'wet':
 			case 'sta':
 				wl_vis[uidx]._f_wl_bcast = 0;
-				//wl_vis[uidx]._wl_channel = 0;
-				//wl_vis[uidx]._wl_nbw_cap = 0;
+				/* wl_vis[uidx]._wl_channel = 0; */
+				/* wl_vis[uidx]._wl_nbw_cap = 0; */
 				vis['_wan_modem_ipaddr'] = 0;
 			default:
 				wl_vis[uidx]._f_wl_lazywds = 0;
@@ -1010,7 +1008,7 @@ function verifyFields(focused, quiet)
 				wl_vis[uidx]._wl_crypto = 0;
 				wl_vis[uidx]._wl_wpa_psk = 0;
 				break;
-			default:	// wpa*
+			default:	/* wpaX */
 				wl_vis[uidx]._wl_wep_bit = 0;
 				if (sm2.indexOf('personal') != -1) {
 					wl_vis[uidx]._wl_radius_key = 0;
@@ -1038,7 +1036,7 @@ function verifyFields(focused, quiet)
 					}
 					break;
 				}
-				// avoid Enterprise-TKIP with 40MHz
+				/* avoid Enterprise-TKIP with 40MHz */
 				if ((sm2 == 'wpa_enterprise') && (E('_wl'+u+'_crypto').value == 'tkip')) {
 					wl_vis[uidx]._wl_nbw_cap = 2;
 					if (E('_wl'+u+'_nbw_cap').value != '0') {
@@ -1086,7 +1084,7 @@ REMOVE-END */
 				wl_vis[uidx]['_f_wl_wds_' + i] = wl_vis[uidx]._f_wl_wds_0;
 			}
 		}
-	} // for each wl_iface
+	} /* for each wl_iface */
 
 	for (a in vis) {
 		b = E(a);
@@ -1099,7 +1097,7 @@ REMOVE-END */
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+		if (wl_ifaces[uidx][0].indexOf('.') < 0) {
 			for (a in wl_vis[uidx]) {
 				i = 3;
 				if (a.substr(0, 6) == '_f_wl_') i = 5;
@@ -1111,7 +1109,7 @@ REMOVE-END */
 		}
 	}
 
-	// --- verify ---
+	/* --- verify --- */
 
 	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
 		u = (uidx>1) ? uidx : '';
@@ -1120,7 +1118,7 @@ REMOVE-END */
 
 	var wlclnt = 0;
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
@@ -1135,7 +1133,7 @@ REMOVE-END */
 			}
 REMOVE-END */
 
-			// --- N standard does not support WPA+TKIP ---
+			/* --- N standard does not support WPA+TKIP --- */
 			a = E('_wl'+u+'_crypto');
 			switch (E('_wl'+u+'_net_mode').value) {
 			case 'mixed':
@@ -1173,7 +1171,7 @@ REMOVE-END */
 				}
 			}
 
-			// wl channel
+			/* wl channel */
 			if (((wmode == 'wds') || (wmode == 'apwds')) && (wl_vis[uidx]._wl_channel == 1) && (E('_wl'+u+'_channel').value == '0')) {
 				ferror.set('_wl'+u+'_channel', 'Fixed wireless channel required in WDS mode.', quiet || !ok);
 				ok = 0;
@@ -1186,7 +1184,7 @@ REMOVE-END */
 
 	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		p = (uidx >1) ? uidx : '';
-		// domain name or IP address
+		/* domain name or IP address */
 		if ((vis['_wan'+u+'_l2tp_server_ip']) && ((!v_length('_wan'+u+'_l2tp_server_ip', 1, 1)) || ((!v_ip('_wan'+u+'_l2tp_server_ip', 1)) && (!v_domain('_wan'+u+'_l2tp_server_ip', 1))))) {
 			ok = 0;
 			if (!quiet) ferror.show('_wan'+u+'_l2tp_server_ip');
@@ -1195,14 +1193,14 @@ REMOVE-END */
 			ok = 0;
 			if (!quiet) ferror.show('_wan'+u+'_pptp_server_ip');
 		}
-		// WANx IP address
+		/* WANx IP address */
 		if ((vis['_wan'+u+'_ipaddr']) && (!v_ip('_wan'+u+'_ipaddr', quiet))) ok = 0;
 		if ((vis['_wan'+u+'_gateway']) && (!v_ip('_wan'+u+'_gateway', quiet))) ok = 0;
 		if ((vis['_wan'+u+'_modem_ipaddr']) && (!v_ip('_wan'+u+'_modem_ipaddr', quiet))) ok = 0;
 		if ((vis['_wan'+u+'_ppp_demand_dnsip']) && (!v_ip('_wan'+u+'_ppp_demand_dnsip', quiet))) ok = 0;
-		// WANx netmask
+		/* WANx netmask */
 		if ((vis['_wan'+u+'_netmask']) && (!v_netmask('_wan'+u+'_netmask', quiet))) ok = 0;
-		// range
+		/* range */
 		if ((vis['_wan'+u+'_ppp_idletime']) && (!v_range('_wan'+u+'_ppp_idletime', quiet, 3, 1440))) ok = 0;
 		if ((vis['_wan'+u+'_ppp_redialperiod']) && (!v_range('_wan'+u+'_ppp_redialperiod', quiet, 1, 86400))) ok = 0;
 		if ((vis['_f_wan'+u+'_mtu']) && (!v_range('_f_wan'+u+'_mtu', quiet, 576, 1500))) ok = 0;
@@ -1210,30 +1208,30 @@ REMOVE-END */
 		if ((vis['_wan'+u+'_pppoe_lef']) && (!v_range('_wan'+u+'_pppoe_lef', quiet, 1, 10))) ok = 0;
 	}
 
-	// IP address, blank -> 0.0.0.0
+	/* IP address, blank -> 0.0.0.0 */
 	a = ['_f_dns_1', '_f_dns_2', '_f_dns_3','_wan_wins','_lan_gateway'];
 	for (i = a.length - 1; i >= 0; --i)
 		if ((vis[a[i]]) && (!v_dns(a[i], quiet || !ok))) ok = 0;
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 
-			// IP address
+			/* IP address */
 			a = ['_radius_ipaddr'];
 			for (i = a.length - 1; i >= 0; --i) {
 				if ((wl_vis[uidx]['_wl'+a[i]]) && (!v_ip('_wl'+u+a[i], quiet || !ok))) ok = 0;
 			}
 
-			// range
+			/* range */
 			a = [['_wpa_gtk_rekey', 60, 7200], ['_radius_port', 1, 65535]];
 			for (i = a.length - 1; i >= 0; --i) {
 				v = a[i];
 				if ((wl_vis[uidx]['_wl'+v[0]]) && (!v_range('_wl'+u+v[0], quiet || !ok, v[1], v[2]))) ok = 0;
 			}
 
-			// length
+			/* length */
 			a = [['_ssid', 1], ['_radius_key', 1]];
 			for (i = a.length - 1; i >= 0; --i) {
 				v = a[i];
@@ -1286,10 +1284,10 @@ REMOVE-END */
 		}
 	}
 
-	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx){
+	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		var u = (uidx >1) ? uidx : '';
 		var sta_wl = E('_wan'+u+'_sta').value;
-		if(sta_wl != ''){
+		if (sta_wl != '') {
 			E('_f_'+sta_wl+'_mode').value = 'sta';
 			E('_f_'+sta_wl+'_mode').options[0].disabled = true;
 			E('_f_'+sta_wl+'_mode').options[1].disabled = true;
@@ -1300,8 +1298,8 @@ REMOVE-END */
 			E('_'+sta_wl+'_security_mode').options[3].disabled = true;
 			E('_'+sta_wl+'_security_mode').options[4].disabled = true;
 			E('_'+sta_wl+'_security_mode').options[5].disabled = true;
-			for (var i = uidx+1; i <= curr_mwan_num; ++i){
-				if(E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
+			for (var i = uidx+1; i <= curr_mwan_num; ++i) {
+				if (E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
 					ferror.set('_wan'+i+'_sta', 'Wireless Client mode can be set only to one WAN port', quiet || !ok);
 					ok = 0;
 				}
@@ -1330,14 +1328,14 @@ REMOVE-END */
 	}
 
 	var count = 0;
-	if((E('_wan_proto').value == 'lte') || (E('_wan_proto').value == 'ppp3g')) count++;
-	if((E('_wan2_proto').value == 'lte') || (E('_wan2_proto').value == 'ppp3g')) count++;
+	if ((E('_wan_proto').value == 'lte') || (E('_wan_proto').value == 'ppp3g')) count++;
+	if ((E('_wan2_proto').value == 'lte') || (E('_wan2_proto').value == 'ppp3g')) count++;
 /* MULTIWAN-BEGIN */
-	if((E('_wan3_proto').value == 'lte') || (E('_wan3_proto').value == 'ppp3g')) count++;
-	if((E('_wan4_proto').value == 'lte') || (E('_wan4_proto').value == 'ppp3g')) count++;
+	if ((E('_wan3_proto').value == 'lte') || (E('_wan3_proto').value == 'ppp3g')) count++;
+	if ((E('_wan4_proto').value == 'lte') || (E('_wan4_proto').value == 'ppp3g')) count++;
 /* MULTIWAN-END */
 
-	if(count > 1) {
+	if (count > 1) {
 		for (var g = 0; g <= curr_mwan_num; g++) {
 			var h = (g==0) ? '' : g.toString();
 			ferror.set('_wan'+h+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
@@ -1348,25 +1346,23 @@ REMOVE-END */
 	return ok;
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	var mwan = E('_mwan_num');
-	if(nvram.wan_ifnameX.length < 1)
+	if (nvram.wan_ifnameX.length < 1)
 		mwan.options[0].disabled=true;
-	if(nvram.wan2_ifnameX.length < 1)
+	if (nvram.wan2_ifnameX.length < 1)
 		mwan.options[1].disabled=true;
 /* MULTIWAN-BEGIN */
-	if(nvram.wan3_ifnameX.length < 1)
+	if (nvram.wan3_ifnameX.length < 1)
 		mwan.options[2].disabled=true;
-	if(nvram.wan4_ifnameX.length < 1)
+	if (nvram.wan4_ifnameX.length < 1)
 		mwan.options[3].disabled=true;
 /* MULTIWAN-END */
 
 	verifyFields(null, 1);
 }
 
-function save()
-{
+function save() {
 	if (lg.isEditing()) return;
 	lg.resetNewEditor();
 
@@ -1380,7 +1376,7 @@ function save()
 	var fom = E('t_fom');
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
@@ -1450,7 +1446,7 @@ function save()
 			E('_wl'+u+'_nreqd').value = 0;
 			E('_wl'+u+'_gmode').value = 1;
 			E('_wl'+u+'_nmode').value = 0;
-			E('_wl'+u+'_nmcsidx').value = -2; // Legacy Rate
+			E('_wl'+u+'_nmcsidx').value = -2; /* Legacy Rate */
 			E('_wl'+u+'_nbw').value = 0;
 			switch (E('_wl'+u+'_net_mode').value) {
 			case 'b-only':
@@ -1462,10 +1458,10 @@ function save()
 			case 'bg-mixed':
 				break;
 			case 'a-only':
-				E('_wl'+u+'_nmcsidx').value = -1; // Auto
+				E('_wl'+u+'_nmcsidx').value = -1; /* Auto */
 				break;
 			case 'n-only':
-				if (selectedBand(uidx) == '1') { // 5 GHz
+				if (selectedBand(uidx) == '1') { /* 5 GHz */
 					E('_wl'+u+'_nmode').value = -1;
 					E('_wl'+u+'_nmcsidx').value = -1;
 				} else {
@@ -1474,7 +1470,7 @@ function save()
 				}
 				E('_wl'+u+'_nreqd').value = 1;
 				break;
-			default: // Auto
+			default: /* Auto */
 				E('_wl'+u+'_nmode').value = -1;
 				E('_wl'+u+'_nmcsidx').value = -1;
 				break;
@@ -1511,7 +1507,7 @@ function save()
 	fom.lan_desc.value = fom.f_lan_desc.checked ? 1 : 0;
 	fom.lan_invert.value = fom.f_lan_invert.checked ? 1 : 0;
 
-// initialize/wipe out relevant fields
+/* initialize/wipe out relevant fields */
 	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		var j = (i == 0) ? '' : i.toString();
 		fom['lan' + j + '_ifname'].value = '';
@@ -1550,7 +1546,7 @@ function save()
 		fom['lan' + j + '_netmask'].value = d[i][3];
 		fom['lan' + j + '_proto'].value = (d[i][4] != '0') ? 'dhcp' : 'static';
 		fom['dhcp' + j + '_start'].value = (d[i][4] != '0') ? (d[i][5]).split('.').splice(3, 1) : '';
-		fom['dhcp' + j + '_num'].value = (d[i][4] != '0') ? d[i][6].split('.').splice(3, 1) - (d[i][5]).split('.').splice(3, 1) + 1 : ''; // presuming /24 subnet (legacy)
+		fom['dhcp' + j + '_num'].value = (d[i][4] != '0') ? d[i][6].split('.').splice(3, 1) - (d[i][5]).split('.').splice(3, 1) + 1 : ''; /* presuming /24 subnet (legacy) */
 		fom['dhcp' + j + '_lease'].value = (d[i][4] != '0') ? d[i][7] : '';
 		fom['dhcpd' + j + '_startip'].value = (d[i][4] != '0') ? d[i][5] : '';
 		fom['dhcpd' + j + '_endip'].value = (d[i][4] != '0') ? d[i][6] : '';
@@ -1584,10 +1580,10 @@ alert('lan' + j + '_ifname=' + fom['lan' + j + '_ifname'].value + '\n' +
 
 /* REMOVE-BEGIN
 //	if ((nvram.lan_ipaddr != fom.lan_ipaddr.value) || (nvram.lan1_ipaddr != fom.lan1_ipaddr.value) ||
-//		(nvram.lan2_ipaddr != fom.lan2_ipaddr.value) || (nvram.lan3_ipaddr != fom.lan3_ipaddr.value)){
+//		(nvram.lan2_ipaddr != fom.lan2_ipaddr.value) || (nvram.lan3_ipaddr != fom.lan3_ipaddr.value)) {
 REMOVE-END */
 
-        for(uidx =1; uidx <= maxwan_num; ++uidx) {
+        for (uidx =1; uidx <= maxwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		fom['wan'+u+'_mtu'].value = fom['f_wan'+u+'_mtu'].value;
 		fom['wan'+u+'_mtu'].disabled = fom['f_wan'+u+'_mtu'].disabled;
@@ -1602,14 +1598,14 @@ REMOVE-END */
 	}
 
 	fom.wan_dns.value = joinAddr([fom.f_dns_1.value, fom.f_dns_2.value]);
-	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx){
+	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		var u = (uidx >1) ? uidx : '';
-		if(fom['wan'+u+'_proto'].value != 'disabled'){
+		if (fom['wan'+u+'_proto'].value != 'disabled') {
 			fom.wan_dns.value = joinAddr([fom.f_wan_dns_1.value, fom.f_wan_dns_2.value]);
 			break;
 		}
 	}
-	if(E('_mwan_cktime').value){
+	if (E('_mwan_cktime').value) {
 		fom.mwan_ckdst.value = fom.f_mwan_ckdst_1.value + ',' + fom.f_mwan_ckdst_2.value;
 	} else {
 		fom.mwan_ckdst.value = '';
@@ -1617,7 +1613,7 @@ REMOVE-END */
 /* REMOVE-BEGIN */
 	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		var u = (uidx >1) ? uidx : '';
-		if( nvram['wan'+u+'_sta'] != fom['wan'+u+'_sta'].value ) {
+		if ( nvram['wan'+u+'_sta'] != fom['wan'+u+'_sta'].value ) {
 			fom.mwan_init.value = 1;
 			fom._reboot.value = 1;
 			form.submit(fom);
@@ -1637,10 +1633,9 @@ REMOVE-END */
 	}
 }
 
-function init()
-{
+function init() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//		if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx) < 0) {
 			refreshNetModes(uidx);
 			refreshChannels(uidx);
@@ -1656,41 +1651,41 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-network.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_reboot' value='0'>
-<input type='hidden' name='_service' value='*'>
-<input type='hidden' name='_moveip' value='0'>
+<input type="hidden" name="_nextpage" value="basic-network.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_reboot" value="0">
+<input type="hidden" name="_service" value="*">
+<input type="hidden" name="_moveip" value="0">
 
 <!-- DNSSEC-BEGIN -->
-<input type='hidden' name='dnssec_enable'>
+<input type="hidden" name="dnssec_enable">
 <!-- DNSSEC-END -->
 /* DNSCRYPT-BEGIN */
-<input type='hidden' name='dnscrypt_proxy'>
-<input type='hidden' name='dnscrypt_manual'>
-<input type='hidden' name='dnscrypt_ephemeral_keys'>
+<input type="hidden" name="dnscrypt_proxy">
+<input type="hidden" name="dnscrypt_manual">
+<input type="hidden" name="dnscrypt_ephemeral_keys">
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
-<input type='hidden' name='stubby_proxy'>
+<input type="hidden" name="stubby_proxy">
 /* STUBBY-END */
-<input type='hidden' name='lan_state'>
-<input type='hidden' name='lan_desc'>
-<input type='hidden' name='lan_invert'>
+<input type="hidden" name="lan_state">
+<input type="hidden" name="lan_desc">
+<input type="hidden" name="lan_invert">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 var j = (i == 0) ? '' : i.toString();
@@ -1708,14 +1703,13 @@ W('<input type=\'hidden\' id=\'dhcpd' + j + '_endip\' name=\'dhcpd' + j + '_endi
 </script>
 
 /* REMOVE-BEGIN */
-<input type='hidden' name='mwan_init' value='0'>
+<input type="hidden" name="mwan_init" value="0">
 /* REMOVE-END */
-<div class='section-title' id='mwan-title'>MultiWAN</div>
-<div class='section' id='mwan-section'>
-<input type='hidden' name='mwan_ckdst'>
-<script type='text/javascript'>
-function refreshWanSection()
-{
+<div class="section-title" id="mwan-title">MultiWAN</div>
+<div class="section" id="mwan-section">
+<input type="hidden" name="mwan_ckdst">
+<script type="text/javascript">
+function refreshWanSection() {
 	var curr_mwan_num = E('_mwan_num').value;
 	for (uidx = maxwan_num; uidx > 1; --uidx) {
 		var u = (uidx>1) ? uidx : '';
@@ -1737,15 +1731,15 @@ createFieldTable('', [
 	{ title: 'Target 1', indent: 2, name: 'f_mwan_ckdst_1', type: 'text', maxlen: 30, size: 30, value: ckdst[0] || ''},
 	{ title: 'Target 2', indent: 2, name: 'f_mwan_ckdst_2', type: 'text', maxlen: 30, size: 30, value: ckdst[1] || ''}
 ]);
-E('_mwan_num').onchange = function (){
+E('_mwan_num').onchange = function () {
 	refreshWanSection();
 	verifyFields(null, 1);
 }
 </script>
 </div>
-<script type='text/javascript'>
+<script type="text/javascript">
 refresh_sta_list();
-for(var uidx = 1; uidx <= maxwan_num; ++uidx) {
+for (var uidx = 1; uidx <= maxwan_num; ++uidx) {
 	var u = (uidx>1) ? uidx : '';
 	dns = nvram['wan'+u+'_dns'].split(/\s+/);
 	W('<input type=\'hidden\' name=\'wan'+u+'_mtu\'>');
@@ -1818,13 +1812,13 @@ for(var uidx = 1; uidx <= maxwan_num; ++uidx) {
 
 </script>
 
-<div class='section-title'>LAN</div>
-<div class='section'>
+<div class="section-title">LAN</div>
+<div class="section">
 	<div class="tomato-grid" id="lan-grid"></div>
 
-	<script type='text/javascript'>lg.setup();</script>
+	<script type="text/javascript">lg.setup();</script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 dns = nvram.wan_dns.split(/\s+/);
 /* REMOVE-BEGIN
 //ipp = nvram.lan_ipaddr.split('.').splice(0, 3).join('.');
@@ -1851,7 +1845,7 @@ createFieldTable('', [
 /* STUBBY-BEGIN */
 	{ title: 'Use Stubby <small>(DNS-over-TLS)<\/small>', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) },
 	{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.stubby_priority },
-	{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']], 
+	{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
 		value: nvram.stubby_log, suffix: '&nbsp; <small>*default<\/small>' },
 /* STUBBY-END */
 	{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins }
@@ -1859,9 +1853,9 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Ethernet Ports State - Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Ethernet Ports State - Configuration</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable Ports State', name: 'f_lan_state', type: 'checkbox', value: (nvram.lan_state == 1) },
 	{ title: 'Show Speed Info', indent: 2, name: 'f_lan_desc', type: 'checkbox', value: (nvram.lan_desc == 1) },
@@ -1870,10 +1864,10 @@ createFieldTable('', [
 </script>
 </div>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-//if(wl_ifaces[uidx][0].indexOf('.') < 0) {
+/* if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 if (wl_sunit(uidx)<0) {
 	var u = wl_unit(uidx);
 
@@ -1897,7 +1891,7 @@ if (wl_sunit(uidx)<0) {
 	W('<input type=\'hidden\' id=\'_wl'+u+'_nbw\' name=\'wl'+u+'_nbw\'>');
 
 	W('<div class=\'section-title\'>Wireless');
-//	if (wl_ifaces.length > 1)
+/*	if (wl_ifaces.length > 1) */
 		W(' (' + wl_display_ifname(uidx) + ')');
 	W('<\/div>');
 
@@ -1968,20 +1962,20 @@ if (wl_sunit(uidx)<0) {
 	W('<\/div>');
 	}
 }
-// for each wlif
+/* for each wlif */
 </script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
-<div style='height:100px'></div>
+<script type="text/javascript">earlyInit()</script>
+<div style="height:100px"></div>
 </body>
 </html>

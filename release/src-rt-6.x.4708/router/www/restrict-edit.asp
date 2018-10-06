@@ -9,17 +9,17 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Edit Access Restrictions</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<script type='text/javascript' src='protocols.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="protocols.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #res-comp-grid {
 	width: 60%;
 }
@@ -59,9 +59,9 @@ textarea {
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 // {enable}|{begin_mins}|{end_mins}|{dow}|{comp[<comp]}|{rules<rules[...]>}|{http[ ...]}|{http_file}|{desc}
@@ -285,8 +285,7 @@ bpg.setup = function() {
 
 //
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var b, e;
 
 	tgHideIcons();
@@ -313,13 +312,11 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function cancelRule()
-{
+function cancelRule() {
 	document.location = 'restrict.asp';
 }
 
-function removeRule()
-{
+function removeRule() {
 	if (!confirm('Delete this rule?')) return;
 
 	E('delete-button').disabled = 1;
@@ -330,8 +327,7 @@ function removeRule()
 	form.submit('t_fom');
 }
 
-function saveRule()
-{
+function saveRule() {
 	if (!verifyFields(null, false)) return;
 	if ((cg.isEditing()) || (bpg.isEditing())) return;
 
@@ -420,14 +416,12 @@ function saveRule()
 	form.submit('t_fom');
 }
 
-function init()
-{
+function init() {
 	cg.recolor();
 	bpg.recolor();
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	var count;
 
 	cg.setup();
@@ -438,26 +432,26 @@ function earlyInit()
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='restrict.asp'>
-<input type='hidden' name='_service' value='restrict-restart'>
-<input type='hidden' name='rruleNN' id='t_rrule' value=''>
+<input type="hidden" name="_nextpage" value="restrict.asp">
+<input type="hidden" name="_service" value="restrict-restart">
+<input type="hidden" name="rruleNN" id="t_rrule" value="">
 
-<div class='section-title'>Access Restriction</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Access Restriction</div>
+<div class="section">
+<script type="text/javascript">
 W('<div style="float:right"><small>'+ 'ID: ' + rruleN.pad(2) + '<\/small>&nbsp;<\/div><br />');
 tm = [];
 for (i = 0; i < 1440; i += 15) tm.push([i, timeString(i)]);
@@ -497,15 +491,15 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Delete...' id='delete-button' onclick='removeRule()'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Delete..." id="delete-button" onclick="removeRule()">
 	&nbsp;
-	<input type='button' value='Save' id='save-button' onclick='saveRule()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='cancelRule()'>
+	<input type="button" value="Save" id="save-button" onclick="saveRule()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="cancelRule()">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit();</script>
+<script type="text/javascript">earlyInit();</script>
 </body>
 </html>

@@ -121,7 +121,7 @@ var elem = {
 
 	setInnerHTML: function(e, html) {
 		 e = E(e);
-		 if (e.innerHTML != html) e.innerHTML = html;	// reduce flickering
+		 if (e.innerHTML != html) e.innerHTML = html;	/* reduce flickering */
 	}
 };
 
@@ -176,8 +176,7 @@ var fields = {
 			for (i = e.length - 1; i >= 0; --i) {
 				e[i].disabled = d;
 			}
-		}
-		else {
+		} else {
 			var a = this.getAll(E(e));
 			for (var i = a.length - 1; i >= 0; --i) {
 				a[i].disabled = d;
@@ -295,8 +294,7 @@ var form = {
 			e.name = '_http_id';
 			e.value = nvram.http_id;
 			fom.appendChild(e);
-		}
-		else {
+		} else {
 			fom._http_id.value = nvram.http_id;
 		}
 	},
@@ -422,8 +420,7 @@ function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask)
 		if (isMAC0(a)) {
 			if (bok) {
 				e.value = '';
-			}
-			else {
+			} else {
 				ferror.set(e, 'Invalid MAC or IP address');
 				return false;
 			}
@@ -522,8 +519,7 @@ function v_dns(e, quiet)
 	if ((e = E(e)) == null) return 0;	
 	if (e.value == '') {
 		e.value = '0.0.0.0';
-	}
-	else {
+	} else {
 		var s = e.value.split(':');
 		if (s.length == 1) {
 			s.push(53);
@@ -545,8 +541,7 @@ function v_dns(e, quiet)
 	
 		if (s[1] == 53) {
 			e.value = s[0];
-		}
-		else {
+		} else {
 			e.value = s.join(':');
 		}
 	}
@@ -609,8 +604,7 @@ function _v_iptip(e, ip, quiet)
 				ferror.set(e, oip + ' - invalid netmask', quiet);
 				return null;
 			}
-		}
-		else {
+		} else {
 			if ((ma < 0) || (ma > 32)) {
 				ferror.set(e, oip + ' - invalid netmask', quiet);
 				return null;
@@ -639,8 +633,7 @@ function v_iptip(e, quiet, multi)
 			ferror.set(e, 'Too many IP addresses', quiet);
 			return 0;
 		}
-	}
-	else {
+	} else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid IP address', quiet);
 			return 0;
@@ -667,8 +660,7 @@ function _v_subnet(e, ip, quiet)
 			ferror.set(e, oip + ' - invalid subnet', quiet);
 			return null;
 		}
-	}
-	else {
+	} else {
 		ferror.set(e, oip + ' - invalid subnet', quiet);
 		return null;
 	}
@@ -756,7 +748,7 @@ function CompressIPv6Address(ip)
 	ip = ExpandIPv6Address(ip);
 	if (!ip) return null;
 	
-	// if (ip.match(/(?:^00)|(?:^fe[8-9a-b])|(?:^ff)/)) return null; // not valid routable unicast address
+	// if (ip.match(/(?:^00)|(?:^fe[8-9a-b])|(?:^ff)/)) return null; /* not valid routable unicast address */
 
 	ip = ip.replace(/(^|:)0{1,3}/g, '$1');
 	ip = ip.replace(/(:0)+$/, '::');
@@ -976,8 +968,8 @@ function v_netmask(e, quiet)
 	else if (e.value.match(/^\s*\/\s*(\d+)\s*$/)) {
 		b = RegExp.$1 * 1;
 		if ((b >= 1) && (b <= 32)) {
-			if (b == 32) n = 0xFFFFFFFF;	// js quirk
-				else n = (0xFFFFFFFF >>> b) ^ 0xFFFFFFFF;
+			if (b == 32) n = 0xFFFFFFFF;	/* js quirk */
+			else n = (0xFFFFFFFF >>> b) ^ 0xFFFFFFFF;
 			e.value = (n >>> 24) + '.' + ((n >>> 16) & 0xFF) + '.' + ((n >>> 8) & 0xFF) + '.' + (n & 0xFF);
 			ferror.clear(e);
 			return 1;
@@ -997,8 +989,7 @@ function fixMAC(mac)
 	}
 	else if (mac.length == 12) {
 		mac = mac.match(/../g);
-	}
-	else {
+	} else {
 		mac = mac.split(/[:\-]/);
 		if (mac.length != 6) return null;
 	}
@@ -1074,8 +1065,7 @@ function _v_iptaddr(e, quiet, multi, ipv4, ipv6)
 			ferror.set(e, 'Too many addresses', quiet);
 			return 0;
 		}
-	}
-	else {
+	} else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid domain name or IP address', quiet);
 			return 0;
@@ -1129,8 +1119,7 @@ function _v_hostname(e, h, quiet, required, multi, delim, cidr)
 			ferror.set(e, 'Too many hostnames.', quiet);
 			return null;
 		}
-	}
-	else {
+	} else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid hostname.', quiet);
 			return null;
@@ -1280,8 +1269,7 @@ TomatoGrid.prototype = {
 			this.tb.appendChild(table);
 			this.tb = E(table);
 			this.tb.gridObj = this;
-		}
-		else {
+		} else {
 			this.tb = null;
 		}
 		if (!options) options = '';
@@ -1310,8 +1298,7 @@ TomatoGrid.prototype = {
 				td.className = 'co' + (i + 1);
 				if (escCells) td.appendChild(document.createTextNode(c));
 					else td.innerHTML = c;
-			}
-			else {
+			} else {
 				tr.appendChild(c);
 			}
 		}
@@ -1334,7 +1321,7 @@ TomatoGrid.prototype = {
 		e.className = 'header';
 
 		for (i = 0; i < e.cells.length; ++i) {
-			e.cells[i].cellN = i;	// cellIndex broken in Safari
+			e.cells[i].cellN = i;	/* cellIndex broken in Safari */
 			e.cells[i].onclick = function() { return TGO(this).headerClick(this); };
 		}
 		return e;
@@ -1551,7 +1538,7 @@ TomatoGrid.prototype = {
 		c = er.cells[cell.cellIndex || 0];
 		e = c.getElementsByTagName('input');
 		if ((e) && (e.length > 0)) {
-			try {	// IE quirk
+			try {	/* IE quirk */
 				e[0].focus();
 			}
 			catch (ex) {
@@ -1586,7 +1573,8 @@ TomatoGrid.prototype = {
 
 				if (f.prefix) s += f.prefix;
 				var attrib = ' class="fi' + (vi + 1) + '" ' + (f.attrib || '');
-				var id = (this.tb ? ('_' + this.tb + '_' + (vi + 1)) : null);
+				/* var id = (this.tb ? ('_' + this.tb + '_' + (vi + 1)) : null); */
+				var id = null;
 				if (id) attrib += ' id="' + id + '"';
 				switch (f.type) {
 				case 'password':
@@ -1616,8 +1604,7 @@ TomatoGrid.prototype = {
 						a = f.options[k];
 						if (which == 'edit') {
 							s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
-						}
-						else {
+						} else {
 							s += '<option value="' + a[0] + '">' + a[1] + '</option>';
 						}
 					}
@@ -1663,8 +1650,7 @@ TomatoGrid.prototype = {
 				'<input type=button value="Delete" onclick="TGO(this).onDelete()"> &nbsp; ' +
 				'<input type=button value="OK" onclick="TGO(this).onOK()"> ' +
 				'<input type=button value="Cancel" onclick="TGO(this).onCancel()">';
-		}
-		else {
+		} else {
 			c.innerHTML =
 				'<input type=button value="Add" onclick="TGO(this).onAdd()">';
 		}
@@ -1825,8 +1811,7 @@ TomatoGrid.prototype = {
 		}
 		if (column == this.sortColumn) {
 			this.sortAscending = !this.sortAscending;
-		}
-		else {
+		} else {
 			this.sortAscending = true;
 			this.sortColumn = column;
 		}
@@ -1975,13 +1960,12 @@ XmlHttp.prototype = {
 
 	onReadyStateChange: function() {
 		try {
-			if (typeof(E) == 'undefined') return;	// oddly late? testing for bug...
+			if (typeof(E) == 'undefined') return;	/* oddly late? testing for bug... */
 
 			if (this.xob.readyState == 4) {
 				if (this.xob.status == 200) {
 					this.onCompleted(this.xob.responseText, this.xob.responseXML);
-				}
-				else {
+				} else {
 					this.onError('' + (this.xob.status || 'unknown'));
 				}
 			}
@@ -2087,8 +2071,7 @@ TomatoRefresh.prototype = {
 			if ((p.refreshTime > 0) && (!p.once)) {
 				p.updateUI('wait');
 				p.timer.start(Math.round(p.refreshTime));
-			}
-			else {
+			} else {
 				p.stop();
 			}
 
@@ -2142,7 +2125,8 @@ TomatoRefresh.prototype = {
 
 	updateUI: function(mode) {
 		var e, b;
-		if (typeof(E) == 'undefined') return;	// for a bizzare bug...
+
+		if (typeof(E) == 'undefined') return;	/* for a bizzare bug... */
 
 		b = (mode != 'stop') && (this.refreshTime > 0);
 
@@ -2245,10 +2229,11 @@ function tabHigh(id)
 // -----------------------------------------------------------------------------
 
 var cookie = {
-	// The value 2147483647000 is ((2^31)-1)*1000, which is the number of
-	// milliseconds (minus 1 second) which correlates with the year 2038 counter
-	// rollover. This effectively makes the cookie never expire.
-
+/*
+	The value 2147483647000 is ((2^31)-1)*1000, which is the number of
+	milliseconds (minus 1 second) which correlates with the year 2038 counter
+	rollover. This effectively makes the cookie never expire.
+*/
 	set: function(key, value, days) {
 		document.cookie = 'tomato_' + encodeURIComponent(key) + '=' + encodeURIComponent(value) + '; expires=' +
 		new Date(2147483647000).toUTCString() + '; path=/';
@@ -2311,7 +2296,7 @@ function escapeHTML(s)
 
 function escapeCGI(s)
 {
-	return escape(s).replace(/\+/g, '%2B');	// escape() doesn't handle +
+	return escape(s).replace(/\+/g, '%2B');	/* escape() doesn't handle + */
 }
 
 function escapeD(s)
@@ -2414,7 +2399,7 @@ function myName()
 	var name, i;
 
 	name = document.location.pathname;
-	name = name.replace(/\\/g, '/');	// IE local testing
+	name = name.replace(/\\/g, '/');	/* IE local testing */
 	if ((i = name.lastIndexOf('/')) != -1) name = name.substring(i + 1, name.length);
 	if (name == '') name = 'status-overview.asp';
 	return name;
@@ -2603,12 +2588,10 @@ REMOVE-END */
 		}
 		if (m.length == 2) {
 			buf.push('<a href="' + m[1] + '" class="indent1' + (((base == '') && (name == m[1])) ? ' active' : '') + '">' + m[0] + '</a>');
-		}
-		else {
+		} else {
 			if (base == m[1]) {
 				b = name;
-			}
-			else {
+			} else {
 				a = cookie.get('menu_' + m[1]);
 				b = m[3][0][1];
 				for (j = 0; j < m[3].length; ++j) {
@@ -2673,8 +2656,7 @@ function createFieldTable(flags, desc)
 		if (v.text) {
 			if (v.title) {
 				buf.push('<td class="title indent' + (v.indent || 1) + '">' + v.title + '</td><td class="content">' + v.text + '</td></tr>');
-			}
-			else {
+			} else {
 				buf.push('<td colspan="2">' + v.text + '</td></tr>');
 			}
 			continue;
@@ -2749,8 +2731,10 @@ function createFieldTable(flags, desc)
 		buf2.push('</td>');
 
 		buf.push('<td class="title indent' + (v.indent ? v.indent : 1) + '">');
-		if (id1 != '') buf.push('<label for="' + id + '">' + v.title + '</label></td>');
-			else buf.push(+ v.title + '</td>');
+		if (id1 != '')
+			buf.push('<label for="' + id + '">' + (v.title ? v.title : id) + '</label></td>');
+		else
+			buf.push(+ v.title + '</td>');
 
 		buf.push(buf2.join(''));
 		buf.push('</tr>');
@@ -2781,8 +2765,7 @@ function peekaboo(id, show)
 		if (show) {
 			o.onblur = function(ev) { setTimeout('peekaboo("' + this.id + '", 0)', 0) };
 			setTimeout('try { E("' + id + '").focus() } catch (ex) { }', 0)
-		}
-		else {
+		} else {
 			o.onfocus = function(ev) { peekaboo(this.id, 1); };
 		}
 	}
@@ -2841,7 +2824,7 @@ function console(s)
 //  events handler
 REMOVE-END */
 
-if (typeof document.getElementsByClassName!="function"){  // IE
+if (typeof document.getElementsByClassName!="function") {	/* IE */
 	document.getElementsByClassName = function(cl) {
 		var retnode = new Array(), patt = new RegExp("(^|\\\\s)"+cl+"(\\\\s|$)"), els = this.getElementsByTagName("*");
 		for (i = 0, j = 0; i < els.length; i++) {
@@ -2863,8 +2846,7 @@ function addEvent(obj, type, fn) {
 		obj[type+fn] = function() { obj["e"+type+fn]( window.event ); }
 		obj.attachEvent("on"+type, obj[type+fn]);
 		EventCache.add(obj, type, fn);
-	}
-	else {
+	} else {
 		obj["on"+type] = obj["e"+type+fn];
 	}
 }
