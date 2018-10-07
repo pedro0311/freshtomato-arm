@@ -520,7 +520,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "tm_sel",			"CET-1CEST,M3.5.0/2,M10.5.0/3"	, 0 },
 	{ "tm_tz",			"CET-1CEST,M3.5.0/2,M10.5.0/3"	, 0 },
 	{ "tm_dst",			"1"				, 0 },
-	{ "ntp_updates",		"4"				, 0 },
+	{ "ntp_updates",		"1"				, 0 },
 	{ "ntp_tdod",			"0"				, 0 },
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" , 0 },
 	{ "ntp_kiss",			""				, 0 },
