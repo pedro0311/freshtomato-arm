@@ -736,15 +736,16 @@ void enable_ipv6(int enable)
 
 	if ((dir = opendir("/proc/sys/net/ipv6/conf")) != NULL) {
 		while ((dirent = readdir(dir)) != NULL) {
-			if (strcmp("vlan1", dirent->d_name) &&
-	                    strcmp("eth0", dirent->d_name) &&
-	                    strcmp("all", dirent->d_name) &&
-			    strcmp("eth1", dirent->d_name))
-			{
-
-				sprintf(s, "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
-				f_write_string(s, enable ? "0" : "1", 0, 0);
-			}
+		  /*Do not enable IPv6 on 'all', 'eth0', 'eth1', 'eth2' (ethX) - IPv6 will live on the bridged instances --> This simplifies the routing table a little bit;
+		    'default' is enabled so that new interfaces (brX, vlanX, ...)  will get IPv6*/
+		  if ( (strncmp("eth", dirent->d_name, 3) == 0) ||
+		       (strncmp("all", dirent->d_name, 3) == 0) ) {
+		    /*do nothing*/
+		  }
+		  else {
+		    sprintf(s, "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
+		    f_write_string(s, enable ? "0" : "1", 0, 0);
+		  }
 		}
 		closedir(dir);
 	}
