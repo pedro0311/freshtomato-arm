@@ -27,7 +27,7 @@ install:
 	for F in $(wildcard *.asp *.svg); do \
 		sed	-e "/REMOVE-BEGIN/,/REMOVE-END/d" \
 			-e "s,<script[^>]\+debug\.js[^>]\+></script>,," \
-			-e "s,<link[^>]\+href='color\.css'>,<% css(); %>," \
+			-e "s,<link[^>]\+href=\"color\.css\">,<% css(); %>," \
 			-e "s,color\.css,<% nv('web_css'); %>\.css," \
 			-e "s,<!-- / / / -->,," \
 			-e "s,\x0d,," \
@@ -218,21 +218,21 @@ endif
 
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp); do \
-		sed -e "s,<div class='title'>Tomato</div>,<div class='title'>FreshTomato</div>," $$F > $$F.tmp; \
+		sed -e "s,<div class=\"title\">Tomato</div>,<div class=\"title\">FreshTomato</div>," $$F > $$F.tmp; \
 		mv $$F.tmp $$F; \
 	done
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp); do \
-		sed -e "s,<div class='title'>FreshTomato</div>,<div class='title'>FreshTomato <small><i>(beta)</i></small></div>," $$F > $$F.tmp; \
+		sed -e "s,<div class=\"title\">FreshTomato</div>,<div class=\"title\">FreshTomato <small><i>(beta)</i></small></div>," $$F > $$F.tmp; \
 		mv $$F.tmp $$F; \
 	done
 endif
 
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp); do \
-		sed -e "s,<div class='version'>Version <% version(); %></div>,<div class='version'>Version <% version(); %> by FreshTomato team</div>," $$F > $$F.tmp; \
+		sed -e "s,<div class=\"version\">Version <% version(); %></div>,<div class=\"version\">Version <% version(); %> by FreshTomato team</div>," $$F > $$F.tmp; \
 		mv $$F.tmp $$F; \
 	done
 
