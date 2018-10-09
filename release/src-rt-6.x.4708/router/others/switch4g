@@ -207,7 +207,7 @@ connect() {
              *)    ROAM3="any"  ;;
         esac
 
-        sleep 3
+        sleep 6
         uqmi -s -d /dev/"$devnr" --sync
         sleep 1
 
