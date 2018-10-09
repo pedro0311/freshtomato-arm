@@ -57,7 +57,7 @@ switchMode() {
             /usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP
 
             # need few seconds before modem will be detected once again after switch
-            sleep 6
+            sleep 8
 
             VENDOR=`cat /etc/usb_modeswitch.d/$SWITCH | grep "TargetVendor" | cut -d "=" -f2 | cut -d "x" -f2`
             if [ "$VENDOR" == "" ]; then
