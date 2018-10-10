@@ -1882,7 +1882,8 @@ libxml2/stamp-h1:
 	cd libxml2 && \
 	autoreconf -fsi && \
 	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --includedir="$(TOP)/libxml2/include"
+	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
+		--includedir="$(TOP)/libxml2/include" --without-lzma
 	touch $@
 
 libxml2: libxml2/stamp-h1
