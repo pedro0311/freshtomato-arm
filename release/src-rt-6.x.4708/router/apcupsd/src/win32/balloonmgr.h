@@ -12,16 +12,16 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #ifndef BALLOONMGR_H
 #define BALLOONMGR_H
 
 #include <windows.h>
-#include <string>
-#include <vector>
+#include "astring.h"
+#include "alist.h"
 
 class BalloonMgr
 {
@@ -31,7 +31,7 @@ public:
    ~BalloonMgr();
 
    void PostBalloon(HWND hwnd, const char *title, const char *text);
-   static DWORD WINAPI BalloonMgr::Thread(LPVOID param);
+   static DWORD WINAPI Thread(LPVOID param);
 
 private:
 
@@ -43,16 +43,16 @@ private:
 
    struct Balloon {
       HWND hwnd;
-      std::string title;
-      std::string text;
+      astring title;
+      astring text;
    };
 
-   std::vector<Balloon> _pending;
+   alist<Balloon>       _pending;
    HANDLE               _mutex;
+   bool                 _exit;
    bool                 _active;
    HANDLE               _event;
    HANDLE               _timer;
-   bool                 _exit;
    struct timeval       _time;
    HANDLE               _thread;
 };

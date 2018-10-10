@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #ifndef __AMUTEX_H
@@ -31,13 +31,13 @@
 // Wrappers for debug trace
 #define LOCK(m)                                                  \
    do {                                                          \
-      Dmsg3(500, "lock 0x%p @ %s:%d\n", &m, __FILE__, __LINE__); \
+      Dmsg(500, "lock 0x%p @ %s:%d\n", &m, __FILE__, __LINE__);  \
       m.lock();                                                  \
    } while(0)
 
 #define UNLOCK(m)                                                  \
    do {                                                            \
-      Dmsg3(500, "unlock 0x%p @ %s:%d\n", &m, __FILE__, __LINE__); \
+      Dmsg(500, "unlock 0x%p @ %s:%d\n", &m, __FILE__, __LINE__);  \
       m.unlock();                                                  \
    } while(0)
 

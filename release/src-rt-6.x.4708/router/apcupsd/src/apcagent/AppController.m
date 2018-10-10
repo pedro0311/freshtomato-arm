@@ -18,13 +18,12 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #import "AppController.h"
 #import "statmgr.h"
-#import <Growl/Growl.h>
 
 //******************************************************************************
 // CLASS AppController
@@ -58,6 +57,20 @@
    // Setup events table control
    eventsDataSource = [[EventsTableDataSource alloc] init];
    [eventsGrid setDataSource:eventsDataSource];
+
+   // Configure to post notifications
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+   haveNotifCtr = NSClassFromString(@"NSUserNotificationCenter") != nil;
+   if (haveNotifCtr)
+   {
+      // Allow user to enable/disable notifications
+      [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:self];
+      [configPopups setEnabled:YES];
+      [configPopups setHidden:NO];
+   }
+#else
+   haveNotifCtr = NO;
+#endif
 }
 
 - (void)activateWithConfig:(InstanceConfig*)cfg manager:(InstanceManager*)mgr
@@ -134,7 +147,6 @@
       prevPort = [config port];
    }
    BOOL doPopup = [config popups];
-   NSString *id = [config id];
    [configMutex unlock];
 
    // Grab updated status info from apcupsd
@@ -155,7 +167,7 @@
    // Update tooltip with status and UPS name
    NSString *tooltip;
    if (upsname == "UPS_IDEN" || upsname.empty())
-      tooltip = [NSString stringWithCString:statstr];
+      tooltip = [NSString stringWithUTF8String:statstr];
    else
       tooltip = [NSString stringWithFormat:
                  @"%s: %s", upsname.str(), statstr.str()];
@@ -181,21 +193,21 @@
       [statusGrid reloadData];
 
       // Update status text
-      [statusText setStringValue:[NSString stringWithCString:statstr]];
+      [statusText setStringValue:[NSString stringWithUTF8String:statstr]];
 
       // Update runtime
-      NSString *tmp = [NSString stringWithCString:statmgr->Get("TIMELEFT")];
+      NSString *tmp = [NSString stringWithUTF8String:statmgr->Get("TIMELEFT")];
       tmp = [[tmp componentsSeparatedByString:@" "] objectAtIndex:0];
       [statusRuntime setStringValue:tmp];
 
       // Update battery
-      tmp = [NSString stringWithCString:statmgr->Get("BCHARGE")];
+      tmp = [NSString stringWithUTF8String:statmgr->Get("BCHARGE")];
       tmp = [[tmp componentsSeparatedByString:@" "] objectAtIndex:0];
       [statusBatteryText setStringValue:[tmp stringByAppendingString:@"%"]];
       [statusBatteryBar setIntValue:[tmp intValue]];
 
       // Update load
-      tmp = [NSString stringWithCString:statmgr->Get("LOADPCT")];
+      tmp = [NSString stringWithUTF8String:statmgr->Get("LOADPCT")];
       tmp = [[tmp componentsSeparatedByString:@" "] objectAtIndex:0];
       [statusLoadText setStringValue:[tmp stringByAppendingString:@"%"]];
       [statusLoadBar setIntValue:[tmp intValue]];
@@ -216,44 +228,25 @@
    }
 
    // If status has changed, display a popup window
-   NSString *newStatus = [NSString stringWithCString:statstr];
-   if (doPopup && [lastStatus length] && 
+   NSString *newStatus = [NSString stringWithUTF8String:statstr];
+   if (haveNotifCtr && doPopup && [lastStatus length] && 
        ![lastStatus isEqualToString:newStatus])
    {
-      // Determine severity based on keywords in the status string
-      NSString *severity;
-      if ([newStatus rangeOfString:@"ONBATT"].length ||
-          [newStatus rangeOfString:@"LOWBATT"].length ||
-          [newStatus rangeOfString:@"SHUTTING DOWN"].length ||
-          [newStatus rangeOfString:@"COMMLOST"].length)
-      {
-         severity = @"ApcupsdCritical";
-      }
-      else if ([newStatus rangeOfString:@"ONLINE"].length ||
-               [newStatus rangeOfString:@"OVERLOAD"].length ||
-               [newStatus rangeOfString:@"REPLACEBATT"].length)
-      {
-         severity = @"ApcupsdWarning";
-      }
-      else
-      {
-         severity = @"ApcupsdInfo";
-      }
-
-      // Register w/ Growl in case it wasn't installed when we started
-      // or user removed Apcagent from Growl preferences.
-      [GrowlApplicationBridge setGrowlDelegate:@""];
-
-      // Post the popup to Growl
-      [GrowlApplicationBridge
-         notifyWithTitle:@"Apcupsd Event"
-         description:tooltip
-         notificationName:severity
-         iconData:[[statusItem image] TIFFRepresentation]
-         priority:0
-         isSticky:NO
-         clickContext:nil
-         identifier:id];
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+      // Post notification here...
+      NSUserNotification *notification = [[NSUserNotification alloc] init];
+      notification.title = @"Apcupsd Event";
+      notification.subtitle = 
+         [NSString stringWithFormat:@"%s %@",upsname.str(),newStatus];
+      NSDate *now = [NSDate dateWithTimeIntervalSinceNow:0];
+      notification.informativeText = 
+         [NSString stringWithFormat:@"UPS '%s' status %@ at %@",
+          upsname.str(),newStatus,now];
+      notification.contentImage = [statusItem image];
+      [[NSUserNotificationCenter defaultUserNotificationCenter] 
+         deliverNotification:notification];
+      [notification release];
+#endif
    }
 
    // Save status for comparison next time
@@ -299,39 +292,7 @@
    [configHost setStringValue:[config host]];
    [configPort setIntValue:[config port]];
    [configRefresh setIntValue:[config refresh]];
-
-   if ([GrowlApplicationBridge isGrowlInstalled])
-   {
-      [configPopups setEnabled:YES];
-      [configPopups setIntValue:[config popups]];
-
-      if ([GrowlApplicationBridge isGrowlRunning])
-      {
-         [growlLabel setStringValue:
-            @"Growl is installed and running. Popups will be displayed if "
-             "enabled here and may be further configured in the Growl "
-             "preferences pane in System Preferences."];
-         [growlLabel setTextColor:[NSColor controlTextColor]];
-      }
-      else
-      {
-         [growlLabel setStringValue:
-            @"Growl does not appear to be running. Popups will not be "
-             "displayed. Growl can be started in the Growl preferences "
-             "pane in System Preferences."];
-         [growlLabel setTextColor:[NSColor redColor]];
-      }
-   }
-   else
-   {
-      [growlLabel setStringValue:
-         @"This feature requires Growl (http://www.growl.info). "
-          "Growl does not appear to be installed. Please install "
-          "Growl to enable popups."];
-      [growlLabel setTextColor:[NSColor redColor]];
-      [configPopups setEnabled:NO];
-      [configPopups setIntValue:0];
-   }
+   [configPopups setIntValue:[config popups]];
 
    // Force app to foreground and move key focus to config window
    [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
@@ -340,55 +301,30 @@
 
 -(IBAction)configComplete:(id)sender;
 {
-   bool allFieldsValid = true;
-
-   // Validate host
+   // Validate fields are not empty
    NSString *tmpstr = [configHost stringValue];
    tmpstr = [tmpstr stringByTrimmingCharactersInSet:
                [NSCharacterSet whitespaceCharacterSet]];
    if ([tmpstr length] == 0)
    {
-      [configHost setBackgroundColor:[NSColor redColor]];
-      allFieldsValid = false;
+      [configWindow makeFirstResponder:configHost];
    }
-   else
-      [configHost setBackgroundColor:[NSColor controlBackgroundColor]];
-
-   // Validate port
-   NSCharacterSet *nonDigits = 
-      [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
-
-   if ([[configPort stringValue] rangeOfCharacterFromSet:nonDigits].location != NSNotFound ||
-       [configPort intValue] < 1 || [configPort intValue] > 65535)
+   else if ([[configPort stringValue] length] == 0)
    {
-      [configPort setBackgroundColor:[NSColor redColor]];
-      allFieldsValid = false;
+      [configWindow makeFirstResponder:configPort];
    }
-   else
-      [configPort setBackgroundColor:[NSColor controlBackgroundColor]];
-
-   // Validate timeout
-   if ([[configRefresh stringValue] rangeOfCharacterFromSet:nonDigits].location != NSNotFound ||
-       [configRefresh intValue] < 1)
+   else if ([[configRefresh stringValue] length] == 0)
    {
-      [configRefresh setBackgroundColor:[NSColor redColor]];
-      allFieldsValid = false;
+      [configWindow makeFirstResponder:configRefresh];
    }
    else
-      [configRefresh setBackgroundColor:[NSColor controlBackgroundColor]];
-
-   // Apply changes
-   if (allFieldsValid)
    {
       // Grab new settings from window controls
       [configMutex lock];
       [config setHost:[configHost stringValue]];
       [config setPort:[configPort intValue]];
       [config setRefresh:[configRefresh intValue]];
-
-      // Only change popups config if Growl is installed
-      if ([GrowlApplicationBridge isGrowlInstalled])
-         [config setPopups:[configPopups intValue]];
+      [config setPopups:[configPopups intValue]];
 
       [config save];
       [configMutex unlock];
@@ -458,6 +394,14 @@
    [startAtLogin setState:([manager isStartAtLogin] ? NSOnState : NSOffState)];
 }
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center 
+   shouldPresentNotification:(NSUserNotification *)notification
+{
+    return YES;
+}
+#endif
+
 @end
 
 //******************************************************************************
@@ -492,9 +436,9 @@
 
    alist<astring>::const_iterator iter;
    for (iter = keys.begin(); iter != keys.end(); ++iter)
-      [_keys addObject:[NSString stringWithCString:*iter]];
+      [_keys addObject:[NSString stringWithUTF8String:*iter]];
    for (iter = values.begin(); iter != values.end(); ++iter)
-      [_values addObject:[NSString stringWithCString:*iter]];
+      [_values addObject:[NSString stringWithUTF8String:*iter]];
 
    [_mutex unlock];
 }
@@ -556,7 +500,7 @@
    alist<astring>::const_iterator iter;
    for (iter = stats.begin(); iter != stats.end(); ++iter)
    {
-      NSString *data = [NSString stringWithCString:*iter];
+      NSString *data = [NSString stringWithUTF8String:*iter];
       [strings addObject:data];
    }
    [mutex unlock];

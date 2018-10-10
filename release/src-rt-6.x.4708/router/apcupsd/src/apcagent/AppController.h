@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #import <Cocoa/Cocoa.h>
@@ -30,7 +30,22 @@
 
 class StatMgr;
 
-@interface StatusTableDataSource: NSObject
+// Prior to 10.6, NSTableViewDataSource was an informal protocol
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+@protocol NSTableViewDataSource <NSObject> @end
+#endif 
+
+// NSUserNotificationCenterDelegate was added in 10.8
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1080
+@protocol NSUserNotificationCenterDelegate <NSObject> @end
+#endif
+
+// NSMenuDelegate was added in 10.6
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+@protocol NSMenuDelegate <NSObject> @end
+#endif
+
+@interface StatusTableDataSource: NSObject <NSTableViewDataSource>
 {
    NSLock *_mutex;
    NSMutableArray *_keys;
@@ -45,7 +60,7 @@ class StatMgr;
    row:(int)rowIndex;
 @end
 
-@interface EventsTableDataSource: NSObject
+@interface EventsTableDataSource: NSObject <NSTableViewDataSource>
 {
    NSLock *mutex;
    NSMutableArray *strings;
@@ -59,8 +74,7 @@ class StatMgr;
    row:(int)rowIndex;
 @end
 
-
-@interface AppController: NSObject
+@interface AppController: NSObject <NSMenuDelegate, NSUserNotificationCenterDelegate>
 {
    // Status item shown in the status bar
    NSStatusItem *statusItem;
@@ -119,13 +133,17 @@ class StatMgr;
    EventsTableDataSource *eventsDataSource;
    bool updateEvents;
 
-NSString *lastStatus;
+   // Previous status, used to detect changes
+   NSString *lastStatus;
 
    // Timer for UPS polling
    NSTimer *timer;
 
    // C++ object which handles polling the UPS
    StatMgr *statmgr;
+
+   // If system support Notification Center (10.8 and above)
+   BOOL haveNotifCtr;
 
    // Runloop variables
    BOOL running;

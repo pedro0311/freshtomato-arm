@@ -2,7 +2,7 @@
 #define _HIDDEV_H
 
 /*
- * $Id: hiddev.h,v 1.1.1.1 2002/05/28 13:34:21 kerns Exp $
+ * $Id: hiddev.h,v 1.1.1.1 2002-05-28 13:34:21 kerns Exp $
  *
  *  Copyright (c) 1999-2000 Vojtech Pavlik
  *
@@ -22,7 +22,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  * 
  * Should you need to contact me, the author, you can do so either by
  * e-mail - mail your message to <vojtech@suse.cz>, or by paper mail:

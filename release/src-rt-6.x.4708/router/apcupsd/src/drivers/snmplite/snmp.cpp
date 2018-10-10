@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -33,23 +33,21 @@
 using namespace Snmp;
 
 SnmpEngine::SnmpEngine() :
-   _socket(-1),
-   _trapsock(-1),
+   _socket(INVALID_SOCKET),
+   _trapsock(INVALID_SOCKET),
    _reqid(0)
 {
 }
 
 SnmpEngine::~SnmpEngine()
 {
-   close(_socket);
-   close(_trapsock);
+   Close();
 }
 
-bool SnmpEngine::Open(const char *host, unsigned short port, const char *comm, bool trap)
+bool SnmpEngine::Open(const char *host, unsigned short port, const char *comm)
 {
    // In case we are already open
-   close(_socket);
-   close(_trapsock);
+   Close();
 
    // Remember new community name
    _community = comm;
@@ -83,8 +81,8 @@ bool SnmpEngine::Open(const char *host, unsigned short port, const char *comm, b
    }
 
    // Get a UDP socket
-   _socket = socket(PF_INET, SOCK_DGRAM, 0);
-   if (_socket == -1)
+   _socket = socket_cloexec(PF_INET, SOCK_DGRAM, 0);
+   if (_socket == INVALID_SOCKET)
    {
       perror("socket");
       return false;
@@ -100,29 +98,35 @@ bool SnmpEngine::Open(const char *host, unsigned short port, const char *comm, b
    if (rc == -1)
    {
       perror("bind");
+      close(_socket);
+      _socket = INVALID_SOCKET;
       return false;
    }
 
-   // Open socket for receiving traps, if clients wants one
-   if (trap)
-   {
-      _trapsock = socket(PF_INET, SOCK_DGRAM, 0);
-      if (_trapsock == -1)
-      {
-         perror("socket");
-         return false;
-      }
+   return true;
+}
 
-      memset(&addr, 0, sizeof(addr));
-      addr.sin_family = AF_INET;
-      addr.sin_port = htons(SNMP_TRAP_PORT);
-      addr.sin_addr.s_addr = INADDR_ANY;
-      rc = bind(_trapsock, (struct sockaddr*)&addr, sizeof(addr));
-      if (rc == -1)
-      {
-         perror("bind");
-         return false;
-      }
+bool SnmpEngine::EnableTraps()
+{
+   _trapsock = socket_cloexec(PF_INET, SOCK_DGRAM, 0);
+   if (_trapsock == INVALID_SOCKET)
+   {
+      perror("socket");
+      return false;
+   }
+
+   struct sockaddr_in addr;
+   memset(&addr, 0, sizeof(addr));
+   addr.sin_family = AF_INET;
+   addr.sin_port = htons(SNMP_TRAP_PORT);
+   addr.sin_addr.s_addr = INADDR_ANY;
+   int rc = bind(_trapsock, (struct sockaddr*)&addr, sizeof(addr));
+   if (rc == -1)
+   {
+      perror("bind");
+      close(_trapsock);
+      _trapsock = INVALID_SOCKET;
+      return false;
    }
 
    return true;
@@ -130,10 +134,17 @@ bool SnmpEngine::Open(const char *host, unsigned short port, const char *comm, b
 
 void SnmpEngine::Close()
 {
-   close(_socket);
-   _socket = -1;
-   close(_trapsock);
-   _trapsock = -1;
+   if (_socket != INVALID_SOCKET)
+   {
+      close(_socket);
+      _socket = INVALID_SOCKET;
+   }
+
+   if (_trapsock != INVALID_SOCKET)
+   {
+      close(_trapsock);
+      _trapsock = INVALID_SOCKET;
+   }
 }
 
 bool SnmpEngine::Set(const int oid[], Variable *data)
@@ -188,8 +199,14 @@ bool SnmpEngine::Get(alist<OidVar> &oids)
    // Append one varbind for each oidvar from the caller
    alist<OidVar>::iterator iter;
    for (iter = oids.begin(); iter != oids.end(); ++iter)
+   {
       if (iter->data.type != Asn::SEQUENCE)
          getreq.Append(iter->oid);
+
+      // Also use this loop as an opportunity to initialize all variables
+      // to invalid. They will be set to valid below as we fill in results.
+      iter->data.valid = false;
+   }
 
    // Perform request if we put at least one OID in it
    if (getreq.Size() > 0)
@@ -265,6 +282,7 @@ bool SnmpEngine::Get(alist<OidVar> &oids)
             Variable tmp;
             result.Extract(&tmp);
             iter->data.seq.append(tmp);
+            iter->data.valid = true;
 
             // Save returned OID for next iteration
             nextoid = result.Oid();
@@ -295,7 +313,7 @@ VbListMessage *SnmpEngine::perform(VbListMessage *req)
 
 TrapMessage *SnmpEngine::TrapWait(unsigned int msec)
 {
-   if (_trapsock == -1)
+   if (_trapsock == INVALID_SOCKET)
       return NULL;
 
    return (TrapMessage*)rspwait(msec, true);
@@ -328,7 +346,7 @@ Message *SnmpEngine::rspwait(unsigned int msec, bool trap)
    static unsigned char data[8192];
    struct sockaddr_in fromaddr;
 
-   int sock = trap ? _trapsock : _socket;
+   sock_t sock = trap ? _trapsock : _socket;
 
    // Calculate exit time
    struct timeval exittime;
@@ -483,10 +501,12 @@ bool VarBind::Extract(Variable *out)
    {
       out->i32 = _data->AsInteger()->IntValue();
       out->u32 = _data->AsInteger()->UintValue();
+      out->valid = true;
    }
    else if (_data->IsOctetString())
    {
       out->str = *_data->AsOctetString();
+      out->valid = true;
    }
    else
    {

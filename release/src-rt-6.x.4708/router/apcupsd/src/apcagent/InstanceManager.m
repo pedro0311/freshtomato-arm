@@ -18,13 +18,13 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #import "InstanceConfig.h"
 #import "AppController.h"
-#include "LoginItemsAE.h"
+#include <CoreServices/CoreServices.h>
 
 @implementation InstanceManager
 
@@ -39,40 +39,124 @@
    return [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 }
 
--(int)loginItemIndex
+// Fetches a reference to the apcagent login item or returns NULL if no login
+// item for apcagent is found
+-(LSSharedFileListItemRef)getLoginItem
 {
+   LSSharedFileListItemRef ret = NULL;
+
    // Fetch current user login items
-   NSArray *loginItems = NULL;
-   OSStatus stat = LIAECopyLoginItems((CFArrayRef*)&loginItems);
+   LSSharedFileListRef fileList = 
+      LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
+   if (!fileList)
+      return NULL;
+   UInt32 seed;
+   NSArray *loginItems = 
+      (NSArray *)LSSharedFileListCopySnapshot(fileList, &seed);
 
    // Search list for our URL
-   unsigned int i;
-   if (stat == 0)
+   if (loginItems)
    {
       NSURL *appUrl = [self appURL];
-      for (i = 0; i < [loginItems count]; i++)
+      for (unsigned i = 0; !ret && i < [loginItems count]; i++)
       {
-         NSURL *url = [[loginItems objectAtIndex:i] objectForKey:(NSString*)kLIAEURL];
-         if ([url isEqual:appUrl])
-            break;
-      }
+         LSSharedFileListItemRef item = 
+            (LSSharedFileListItemRef)[loginItems objectAtIndex:i];
+         NSURL *url = nil;
 
-      if (i == [loginItems count])
-         i = -1;
+         // LSSharedFileListItemResolve is deprecated in Mac OS X 10.10
+         // Switch to LSSharedFileListItemCopyResolvedURL if possible
+#if MAC_OS_X_VERSION_MIN_REQUIRED < 10100
+         LSSharedFileListItemResolve(item, 0, (CFURLRef*)&url, NULL);
+#else
+         url = (NSURL*)LSSharedFileListItemCopyResolvedURL(item, 0, NULL);
+#endif 
+         if (url)
+         {
+            if ([url isEqual:appUrl])
+               ret = (LSSharedFileListItemRef)CFRetain(item);
+            [url release];
+         }
+      }
 
       [loginItems release];
    }
-   else
-      i = -1;
 
-   return i;
+   CFRelease(fileList);
+   return ret;
+}
+
+// Checks to see if apcagent login item is installed
+-(BOOL)isStartAtLogin
+{
+   LSSharedFileListItemRef item = [self getLoginItem];
+   BOOL ret = item != NULL;
+   if (item)
+      CFRelease(item);
+   return ret;
+}
+
+// Add login item for apcagent (if not already present)
+- (void)addLoginItem
+{
+   if (![self isStartAtLogin])
+   {
+      LSSharedFileListRef fileList = 
+         LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
+      if (fileList)
+      {
+         LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+            fileList, kLSSharedFileListItemLast, NULL, NULL, (CFURLRef)[self appURL], NULL, NULL);
+         if (item)
+            CFRelease(item);
+         CFRelease(fileList);
+      }
+   }
+}
+
+// Remove login item for apcagent (if present)
+- (void)removeLoginItem
+{
+   LSSharedFileListRef fileList = 
+      LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
+   if (fileList)
+   {
+      LSSharedFileListItemRef item = [self getLoginItem];
+      if (item)
+      {
+         LSSharedFileListItemRemove(fileList, item);
+         CFRelease(item);
+      }
+      CFRelease(fileList);
+   }
+}
+
+// Toggle start at login in response to menu click
+-(IBAction)startAtLogin:(id)sender
+{
+   if ([self isStartAtLogin])
+   {
+      [self removeLoginItem];
+      [sender setState:NSOffState];
+   }
+   else
+   {
+      [self addLoginItem];
+      [sender setState:NSOnState];
+   }
 }
 
 - (void) instantiateMonitor:(InstanceConfig*)config
 {
    // Instantiate the NIB for this monitor
    NSArray *objs;
+   // instantiateNibWithOwner is deprecated in 10.8 where instantiateWithOwner
+   // is preferred due to better memory management characteristics
+#if MAC_OS_X_VERSION_MIN_REQUIRED < 1080
    [nib instantiateNibWithOwner:self topLevelObjects:&objs];
+#else
+   [nib instantiateWithOwner:self topLevelObjects:&objs];
+#endif
    [instmap setObject:objs forKey:[config id]];
 
    // Locate the AppController object and activate it
@@ -98,8 +182,6 @@
 
    instmap = [[NSMutableDictionary alloc] init];
    nib = [[NSNib alloc] initWithNibNamed:@"MainMenu" bundle:nil];
-
-   [self loginItemIndex];
 
    return self;
 }
@@ -127,9 +209,7 @@
       instances = [prefs arrayForKey:INSTANCES_PREF_KEY];
 
       // Add login item if not already there
-      int idx = [self loginItemIndex];
-      if (idx == -1)
-         LIAEAddURLAtEnd((CFURLRef)[self appURL], NO);
+      [self addLoginItem];
    }
 
    // Instantiate monitors
@@ -155,7 +235,7 @@
    NSLog(@"%s:%d %@", __FUNCTION__, __LINE__, [[sender menu] delegate]);
 
    // Find AppController instance which this menu refers to
-   AppController *ac = [[sender menu] delegate];
+   AppController *ac = (AppController *)[[sender menu] delegate];
 
    // Remove the config from prefs for this monitor
    [InstanceConfig removeConfigWithId:[ac id]];
@@ -166,10 +246,12 @@
    // Remove our reference to the instance and all of its NIB objects
    [instmap removeObjectForKey:[ac id]];
 
-   // Hack! There's an extra reference to AppController *somewhere* but
-   // I can't find it. So manually force a release here. This will result
-   // in a crash if the mystery reference ever gets used...
+#if MAC_OS_X_VERSION_MIN_REQUIRED < 1080
+   // When using instantiateNibWithOwner above in instantiateMonitor() we need
+   // to manually remove a ref on ac because the NIB top-level object array is
+   // retained "automatically".
    [ac release];
+#endif
 
    // If all instances have been removed, terminate the app
    if ([instmap count] == 0)
@@ -183,32 +265,10 @@
    [prefs removeObjectForKey:INSTANCES_PREF_KEY];
 
    // Remove user login item
-   int idx = [self loginItemIndex];
-   if (idx != -1)
-      LIAERemove(idx);
+   [self removeLoginItem];
 
    // Terminate the app
    [[NSApplication sharedApplication] terminate:self];
-}
-
--(BOOL)isStartAtLogin
-{
-   return [self loginItemIndex] != -1;
-}
-
--(IBAction)startAtLogin:(id)sender
-{
-   int idx = [self loginItemIndex];
-   if (idx != -1)
-   {
-      LIAERemove(idx);
-      [sender setState:NSOffState];
-   }
-   else
-   {
-      LIAEAddURLAtEnd((CFURLRef)[self appURL], NO);
-      [sender setState:NSOnState];
-   }
 }
 
 @end

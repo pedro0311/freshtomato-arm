@@ -20,8 +20,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -190,13 +190,13 @@ int parse_options(int argc, char *argv[])
    }
 
 /* Win32-specific dynamic path handling... */
-#ifdef HAVE_WIN32
+#ifdef HAVE_MINGW
    extern char sbindir[MAXSTRING];
 
    /* Obtain full path to this executable */
    DWORD len = GetModuleFileName(NULL, sbindir, sizeof(sbindir)-1);
    sbindir[len] = '\0';
-   Dmsg1(200, "Exepath: %s\n", sbindir);
+   Dmsg(200, "Exepath: %s\n", sbindir);
    if (len == 0) {
       /* Failed to get path, so make an assumption */
       asnprintf(sbindir, sizeof(sbindir), "C:\\apcupsd\\bin\\apcupsd.exe");

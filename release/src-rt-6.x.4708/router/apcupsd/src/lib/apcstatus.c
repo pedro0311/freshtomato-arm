@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -92,71 +92,74 @@ int output_status(UPSINFO *ups, int sockfd,
 
    /* Now output human readable form */
    if (ups->is_calibration())
-      astrncat(status, "CAL ", sizeof(status));
+      strlcat(status, "CAL ", sizeof(status));
 
    if (ups->is_trim())
-      astrncat(status, "TRIM ", sizeof(status));
+      strlcat(status, "TRIM ", sizeof(status));
 
    if (ups->is_boost())
-      astrncat(status, "BOOST ", sizeof(status));
+      strlcat(status, "BOOST ", sizeof(status));
 
    if (ups->is_online())
-      astrncat(status, "ONLINE ", sizeof(status));
+      strlcat(status, "ONLINE ", sizeof(status));
 
    if (ups->is_onbatt())
-      astrncat(status, "ONBATT ", sizeof(status));
+      strlcat(status, "ONBATT ", sizeof(status));
 
    if (ups->is_overload())
-      astrncat(status, "OVERLOAD ", sizeof(status));
+      strlcat(status, "OVERLOAD ", sizeof(status));
 
    if (ups->is_battlow())
-      astrncat(status, "LOWBATT ", sizeof(status));
+      strlcat(status, "LOWBATT ", sizeof(status));
 
    if (ups->is_replacebatt())
-      astrncat(status, "REPLACEBATT ", sizeof(status));
+      strlcat(status, "REPLACEBATT ", sizeof(status));
 
    if (!ups->is_battpresent())
-      astrncat(status, "NOBATT ", sizeof(status));
+      strlcat(status, "NOBATT ", sizeof(status));
 
    if (ups->is_slave())
-      astrncat(status, "SLAVE ", sizeof(status));
+      strlcat(status, "SLAVE ", sizeof(status));
 
    if (ups->is_slavedown())
-      astrncat(status, "SLAVEDOWN", sizeof(status));
+      strlcat(status, "SLAVEDOWN", sizeof(status));
 
    /* These override the above */
    if (ups->is_commlost())
-      astrncpy(status, "COMMLOST ", sizeof(status));
+      strlcpy(status, "COMMLOST ", sizeof(status));
 
    if (ups->is_shutdown())
-      astrncpy(status, "SHUTTING DOWN", sizeof(status));
+      strlcpy(status, "SHUTTING DOWN", sizeof(status));
 
    s_write(ups, "STATUS   : %s\n", status);
 
    if (ups->UPS_Cap[CI_VLINE])
-      s_write(ups, "LINEV    : %05.1f Volts\n", ups->LineVoltage);
+      s_write(ups, "LINEV    : %.1f Volts\n", ups->LineVoltage);
 
    if (ups->UPS_Cap[CI_LOAD])
-      s_write(ups, "LOADPCT  : %5.1f Percent Load Capacity\n", ups->UPSLoad);
+      s_write(ups, "LOADPCT  : %.1f Percent\n", ups->UPSLoad);
+
+   if (ups->UPS_Cap[CI_LoadApparent])
+      s_write(ups, "LOADAPNT : %.1f Percent\n", ups->LoadApparent);
 
    if (ups->UPS_Cap[CI_BATTLEV])
-      s_write(ups, "BCHARGE  : %05.1f Percent\n", ups->BattChg);
+      s_write(ups, "BCHARGE  : %.1f Percent\n", ups->BattChg);
 
    if (ups->UPS_Cap[CI_RUNTIM])
-      s_write(ups, "TIMELEFT : %5.1f Minutes\n", ups->TimeLeft);
+      s_write(ups, "TIMELEFT : %.1f Minutes\n", ups->TimeLeft);
 
    s_write(ups, "MBATTCHG : %d Percent\n", ups->percent);
    s_write(ups, "MINTIMEL : %d Minutes\n", ups->runtime);
    s_write(ups, "MAXTIME  : %d Seconds\n", ups->maxtime);
 
    if (ups->UPS_Cap[CI_VMAX])
-      s_write(ups, "MAXLINEV : %05.1f Volts\n", ups->LineMax);
+      s_write(ups, "MAXLINEV : %.1f Volts\n", ups->LineMax);
 
    if (ups->UPS_Cap[CI_VMIN])
-      s_write(ups, "MINLINEV : %05.1f Volts\n", ups->LineMin);
+      s_write(ups, "MINLINEV : %.1f Volts\n", ups->LineMin);
 
    if (ups->UPS_Cap[CI_VOUT])
-      s_write(ups, "OUTPUTV  : %05.1f Volts\n", ups->OutputVoltage);
+      s_write(ups, "OUTPUTV  : %.1f Volts\n", ups->OutputVoltage);
 
    if (ups->UPS_Cap[CI_SENS]) {
       switch ((*ups).sensitivity[0]) {
@@ -179,30 +182,30 @@ int output_status(UPSINFO *ups, int sockfd,
    }
 
    if (ups->UPS_Cap[CI_DWAKE])
-      s_write(ups, "DWAKE    : %03d Seconds\n", ups->dwake);
+      s_write(ups, "DWAKE    : %d Seconds\n", ups->dwake);
 
    if (ups->UPS_Cap[CI_DSHUTD])
-      s_write(ups, "DSHUTD   : %03d Seconds\n", ups->dshutd);
+      s_write(ups, "DSHUTD   : %d Seconds\n", ups->dshutd);
 
    if (ups->UPS_Cap[CI_DLBATT])
-      s_write(ups, "DLOWBATT : %02d Minutes\n", ups->dlowbatt);
+      s_write(ups, "DLOWBATT : %d Minutes\n", ups->dlowbatt);
 
    if (ups->UPS_Cap[CI_LTRANS])
-      s_write(ups, "LOTRANS  : %03d.0 Volts\n", ups->lotrans);
+      s_write(ups, "LOTRANS  : %d.0 Volts\n", ups->lotrans);
 
    if (ups->UPS_Cap[CI_HTRANS])
-      s_write(ups, "HITRANS  : %03d.0 Volts\n", ups->hitrans);
+      s_write(ups, "HITRANS  : %d.0 Volts\n", ups->hitrans);
 
    if (ups->UPS_Cap[CI_RETPCT])
-      s_write(ups, "RETPCT   : %03d.0 Percent\n", ups->rtnpct);
+      s_write(ups, "RETPCT   : %d.0 Percent\n", ups->rtnpct);
 
    if (ups->UPS_Cap[CI_ITEMP])
-      s_write(ups, "ITEMP    : %04.1f C Internal\n", ups->UPSTemp);
+      s_write(ups, "ITEMP    : %.1f C\n", ups->UPSTemp);
 
    if (ups->UPS_Cap[CI_DALARM]) {
       switch ((*ups).beepstate[0]) {
       case 'T':
-         s_write(ups, "ALARMDEL : 30 seconds\n");
+         s_write(ups, "ALARMDEL : 30 Seconds\n");
          break;
       case 'L':
          s_write(ups, "ALARMDEL : Low Battery\n");
@@ -211,7 +214,7 @@ int output_status(UPSINFO *ups, int sockfd,
          s_write(ups, "ALARMDEL : No alarm\n");
          break;
       case '0':
-         s_write(ups, "ALARMDEL : 5 seconds\n");
+         s_write(ups, "ALARMDEL : 5 Seconds\n");
          break;
       default:
          s_write(ups, "ALARMDEL : Always\n");
@@ -220,10 +223,13 @@ int output_status(UPSINFO *ups, int sockfd,
    }
 
    if (ups->UPS_Cap[CI_VBATT])
-      s_write(ups, "BATTV    : %04.1f Volts\n", ups->BattVoltage);
+      s_write(ups, "BATTV    : %.1f Volts\n", ups->BattVoltage);
 
    if (ups->UPS_Cap[CI_FREQ])
-      s_write(ups, "LINEFREQ : %03.1f Hz\n", ups->LineFreq);
+      s_write(ups, "LINEFREQ : %.1f Hz\n", ups->LineFreq);
+
+   if (ups->UPS_Cap[CI_OutputCurrent])
+      s_write(ups, "OUTCURNT : %.2f Amps\n", ups->OutputCurrent);
 
    /* Output cause of last transfer to batteries */
    switch (ups->lastxfer) {
@@ -270,8 +276,8 @@ int output_status(UPSINFO *ups, int sockfd,
       time_on_batt = now - ups->last_onbatt_time;
    else
       time_on_batt = 0;
-   s_write(ups, "TONBATT  : %d seconds\n", time_on_batt);
-   s_write(ups, "CUMONBATT: %d seconds\n", ups->cum_time_on_batt + time_on_batt);
+   s_write(ups, "TONBATT  : %d Seconds\n", time_on_batt);
+   s_write(ups, "CUMONBATT: %d Seconds\n", ups->cum_time_on_batt + time_on_batt);
 
    if (ups->last_offbatt_time > 0) {
       format_date(ups->last_offbatt_time, datetime, sizeof(datetime));
@@ -322,19 +328,19 @@ int output_status(UPSINFO *ups, int sockfd,
       s_write(ups, "STESTI   : %s\n", ups->selftest);
 
    /* output raw bits */
-   s_write(ups, "STATFLAG : 0x%08X Status Flag\n", ups->Status);
+   s_write(ups, "STATFLAG : 0x%08X\n", ups->Status);
 
    if (ups->UPS_Cap[CI_DIPSW])
-      s_write(ups, "DIPSW    : 0x%02X Dip Switch\n", ups->dipsw);
+      s_write(ups, "DIPSW    : 0x%02X\n", ups->dipsw);
 
    if (ups->UPS_Cap[CI_REG1])
-      s_write(ups, "REG1     : 0x%02X Register 1\n", ups->reg1);
+      s_write(ups, "REG1     : 0x%02X\n", ups->reg1);
 
    if (ups->UPS_Cap[CI_REG2])
-      s_write(ups, "REG2     : 0x%02X Register 2\n", ups->reg2);
+      s_write(ups, "REG2     : 0x%02X\n", ups->reg2);
 
    if (ups->UPS_Cap[CI_REG3])
-      s_write(ups, "REG3     : 0x%02X Register 3\n", ups->reg3);
+      s_write(ups, "REG3     : 0x%02X\n", ups->reg3);
 
    if (ups->UPS_Cap[CI_MANDAT])
       s_write(ups, "MANDATE  : %s\n", ups->birth);
@@ -346,22 +352,25 @@ int output_status(UPSINFO *ups, int sockfd,
       s_write(ups, "BATTDATE : %s\n", ups->battdat);
 
    if (ups->UPS_Cap[CI_NOMOUTV])
-      s_write(ups, "NOMOUTV  : %03d Volts\n", ups->NomOutputVoltage);
+      s_write(ups, "NOMOUTV  : %d Volts\n", ups->NomOutputVoltage);
 
    if (ups->UPS_Cap[CI_NOMINV])
-      s_write(ups, "NOMINV   : %03d Volts\n", ups->NomInputVoltage);
+      s_write(ups, "NOMINV   : %d Volts\n", ups->NomInputVoltage);
 
    if (ups->UPS_Cap[CI_NOMBATTV])
-      s_write(ups, "NOMBATTV : %5.1f Volts\n", ups->nombattv);
+      s_write(ups, "NOMBATTV : %.1f Volts\n", ups->nombattv);
 
    if (ups->UPS_Cap[CI_NOMPOWER])
       s_write(ups, "NOMPOWER : %d Watts\n", ups->NomPower);
 
+   if (ups->UPS_Cap[CI_NomApparent])
+      s_write(ups, "NOMAPNT  : %d VA\n", ups->NomApparentPower);
+
    if (ups->UPS_Cap[CI_HUMID])
-      s_write(ups, "HUMIDITY : %5.1f Percent\n", ups->humidity);
+      s_write(ups, "HUMIDITY : %.1f Percent\n", ups->humidity);
 
    if (ups->UPS_Cap[CI_ATEMP])
-      s_write(ups, "AMBTEMP  : %5.1f C\n", ups->ambtemp);
+      s_write(ups, "AMBTEMP  : %.1f C\n", ups->ambtemp);
 
    if (ups->UPS_Cap[CI_EXTBATTS])
       s_write(ups, "EXTBATTS : %d\n", ups->extbatts);
