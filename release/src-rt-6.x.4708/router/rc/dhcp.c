@@ -466,7 +466,7 @@ void start_dhcpc(char *prefix)
 	proto = get_wanx_proto(prefix);
 
 	if (proto == WP_LTE) {
-		ifname = nvram_safe_get("wan_4g");
+		ifname = nvram_safe_get(strcat_r(prefix, "_modem_if", tmp));
 	} else {
 		ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
 	}

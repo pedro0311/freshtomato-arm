@@ -702,6 +702,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan2_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
@@ -710,6 +714,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan2_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan2_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan2_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
@@ -719,6 +727,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan3_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan3_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan3_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan4_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
@@ -727,6 +739,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan4_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan4_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan4_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 #endif
 #endif
 
