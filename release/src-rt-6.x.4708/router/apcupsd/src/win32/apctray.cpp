@@ -12,8 +12,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "winapi.h"
@@ -27,6 +27,7 @@
 #include "statmgr.h"
 #include "astring.h"
 #include "instmgr.h"
+#include "compat.h"
 
 #define CMDOPT_INSTALL  "/install"
 #define CMDOPT_REMOVE   "/remove"
@@ -110,6 +111,7 @@ int Install()
 
    NotifyUser("Apctray was installed successfully and will\n"
               "automatically run when users log on.");
+   return 0;
 }
 
 int Remove()
@@ -160,7 +162,8 @@ DWORD WINAPI EventThread(LPVOID param)
    // Create global exit event and allow Adminstrator access to it so any
    // member of the Administrators group can signal it.
    exitevt = CreateEvent(NULL, TRUE, FALSE, APCTRAY_STOP_EVENT_NAME);
-   GrantAccess(exitevt, EVENT_MODIFY_STATE, TRUSTEE_IS_GROUP, "Administrators");
+   TCHAR name[] = "Administrators";
+   GrantAccess(exitevt, EVENT_MODIFY_STATE, TRUSTEE_IS_GROUP, name);
 
    // Wait for event to be signaled or for an error
    DWORD rc = WaitForSingleObject(exitevt, INFINITE);
@@ -178,11 +181,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
    // Publicize application handle
    appinst = hInstance;
-
-   // Instance parameters
-   char *host = NULL;
-   unsigned short port = 0;
-   int refresh = 0;
 
    // Check command line options
    char *arg;
@@ -213,7 +211,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
    }
 
    // On Win2K and above we spawn a thread to watch for exit requests.
-   HANDLE evtthread;
+   HANDLE evtthread = NULL;
    if (g_os_version >= WINDOWS_2000) {
       runthread = true;
       evtthread = CreateThread(NULL, 0, EventThread, NULL, 0, NULL);

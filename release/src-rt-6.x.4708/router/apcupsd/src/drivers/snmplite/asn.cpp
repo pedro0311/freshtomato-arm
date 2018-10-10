@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "asn.h"
@@ -28,21 +28,12 @@
 
 using namespace Asn;
 
-void debug(const char *foo, int indent)
-{
-   while (indent--)
-      printf(" ");
-   printf("%s\n", foo);
-}
-
 // *****************************************************************************
 // Object
 // *****************************************************************************
 
 Object *Object::Demarshal(unsigned char *&buffer, unsigned int &buflen)
 {
-   static int indent = 0;
-
    // Must have at least one byte to work with
    if (buflen < 1)
       return NULL;
@@ -60,20 +51,16 @@ Object *Object::Demarshal(unsigned char *&buffer, unsigned int &buflen)
    case COUNTER:
    case GAUGE:
    case TIMETICKS:
-      debug("INTEGER", indent);
       obj = new Integer(type);
       break;
    case OCTETSTRING:
    case IPADDRESS:
-      debug("OCTETSTRING", indent);
       obj = new OctetString();
       break;
    case OBJECTID:
-      debug("OBJECTID", indent);
       obj = new ObjectId();
       break;
    case NULLL:
-      debug("NULLL", indent);
       obj = new Null();
       break;
    case SEQUENCE:
@@ -81,13 +68,10 @@ Object *Object::Demarshal(unsigned char *&buffer, unsigned int &buflen)
    case GETNEXT_REQ_PDU:
    case GET_RSP_PDU:
    case TRAP_PDU:
-      debug("SEQUENCE", indent);
-      indent += 2;
       obj = new Sequence(type);
       break;      
    default:
       printf("UNKNOWN ASN type=0x%02x\n", type);
-      debug("UNKNOWN", indent);
       obj = NULL;
       break;      
    }
@@ -98,9 +82,6 @@ Object *Object::Demarshal(unsigned char *&buffer, unsigned int &buflen)
       delete obj;
       obj = NULL;
    }
-
-   if (type & CONSTRUCTED)
-      indent -= 2;
 
    return obj;
 }
@@ -655,6 +636,7 @@ void Sequence::clear()
    for (unsigned int i = 0; i < _size; i++)
       delete _data[i];
    delete [] _data;
+   _data = NULL;
    _size = 0;
 }
 
@@ -727,9 +709,12 @@ void Sequence::Append(Object *obj)
 {
    // realloc ... not efficient, but easy
    Object **tmp = new Object *[_size+1];
-   memcpy(tmp, _data, _size * sizeof(_data[0]));
+   if (_data)
+   {
+      memcpy(tmp, _data, _size * sizeof(_data[0]));
+      delete [] _data;
+   }
    tmp[_size++] = obj;
-   delete [] _data;
    _data = tmp;
 }
 

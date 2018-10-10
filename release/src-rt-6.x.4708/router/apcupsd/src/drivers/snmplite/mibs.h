@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #ifndef __MIBS_H_
@@ -43,8 +43,8 @@ struct MibStrategy
    const char *name;
    CiOidMap *mib;
    void (*update_ci_func)(UPSINFO*, int, Snmp::Variable &);
-   int (*killpower_func)(UPSINFO *ups);
-   int (*shutdown_func)(UPSINFO *ups);
+   int (*killpower_func)(Snmp::SnmpEngine *snmp);
+   int (*shutdown_func)(Snmp::SnmpEngine *snmp);
 };
 
 extern struct MibStrategy *MibStrategies[];

@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -28,50 +28,60 @@
 #include "snmp.h"
 #include "mibs.h"
 
-static const char *snmplite_probe_community(UPSINFO *ups)
+SnmpLiteUpsDriver::SnmpLiteUpsDriver(UPSINFO *ups) :
+   UpsDriver(ups),
+   _host(NULL),
+   _port(0),
+   _vendor(NULL),
+   _community(NULL),
+   _snmp(NULL),
+   _error_count(0),
+   _commlost_time(0),
+   _strategy(NULL),
+   _traps(false)
 {
-   struct snmplite_ups_internal_data *sid = 
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
+   memset(_device, 0, sizeof(_device));
+}
 
+const char *SnmpLiteUpsDriver::snmplite_probe_community()
+{
    const int sysDescrOid[] = {1, 3, 6, 1, 2, 1, 1, 1, -1};
    const char *communityList[] = { "private", "public", NULL };
 
-   Dmsg0(80, "Performing community autodetection\n");
+   Dmsg(80, "Performing community autodetection\n");
 
    for (unsigned int i = 0; communityList[i]; i++)
    {
-      Dmsg1(80, "Probing community: \"%s\"\n", communityList[i]);
+      Dmsg(80, "Probing community: \"%s\"\n", communityList[i]);
 
-      sid->snmp->SetCommunity(communityList[i]);
+      _snmp->SetCommunity(communityList[i]);
       Snmp::Variable result;
       result.type = Asn::OCTETSTRING;
-      if (sid->snmp->Get(sysDescrOid, &result))
+      if (_snmp->Get(sysDescrOid, &result) && result.valid)
          return communityList[i];
    }
 
    return NULL;
 }
 
-static const MibStrategy *snmplite_probe_mib(UPSINFO *ups)
+const MibStrategy *SnmpLiteUpsDriver::snmplite_probe_mib()
 {
-   struct snmplite_ups_internal_data *sid = 
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   Dmsg0(80, "Performing MIB autodetection\n");
+   Dmsg(80, "Performing MIB autodetection\n");
 
    // Every MIB strategy should have a CI_STATUS mapping in its OID map.
    // The generic probe method is simply to query for this OID and assume
    // we have found a supported MIB if the query succeeds.
    for (unsigned int i = 0; MibStrategies[i]; i++)
    {
-      Dmsg1(80, "Probing MIB: \"%s\"\n", MibStrategies[i]->name);
+      Dmsg(80, "Probing MIB: \"%s\"\n", MibStrategies[i]->name);
       for (unsigned int j = 0; MibStrategies[i]->mib[j].ci != -1; j++)
       {
          if (MibStrategies[i]->mib[j].ci == CI_STATUS)
          {
             Snmp::Variable result;
             result.type = MibStrategies[i]->mib[j].type;
-            if (sid->snmp->Get(MibStrategies[i]->mib[j].oid, &result))
+            if (_snmp->Get(MibStrategies[i]->mib[j].oid, &result) && 
+                result.valid)
                return MibStrategies[i];
          }
       }
@@ -80,32 +90,19 @@ static const MibStrategy *snmplite_probe_mib(UPSINFO *ups)
    return NULL;
 }
 
-int snmplite_ups_open(UPSINFO *ups)
+bool SnmpLiteUpsDriver::Open()
 {
-   struct snmplite_ups_internal_data *sid;
+   _port = 161;
+   _community = NULL; // autodetect
+   _vendor = NULL; // autodetect
+   _traps = true;
 
-   /* Allocate the internal data structure and link to UPSINFO. */
-   sid = (struct snmplite_ups_internal_data *)
-      malloc(sizeof(struct snmplite_ups_internal_data));
-   if (sid == NULL) {
-      log_event(ups, LOG_ERR, "Out of memory.");
+   if (*_ups->device == '\0') {
+      log_event(_ups, LOG_ERR, "snmplite Missing hostname");
       exit(1);
    }
 
-   ups->driver_internal_data = sid;
-
-   memset(sid, 0, sizeof(struct snmplite_ups_internal_data));
-   sid->port = 161;
-   sid->community = NULL; // autodetect
-   sid->vendor = NULL; // autodetect
-   sid->traps = true;
-
-   if (ups->device == NULL || *ups->device == '\0') {
-      log_event(ups, LOG_ERR, "snmplite Missing hostname");
-      exit(1);
-   }
-
-   astrncpy(sid->device, ups->device, sizeof(sid->device));
+   strlcpy(_device, _ups->device, sizeof(_device));
 
    /*
     * Split the DEVICE statement and assign pointers to the various parts.
@@ -116,18 +113,18 @@ int snmplite_ups_open(UPSINFO *ups)
     * vendor can be "APC", "RFC", "MGE" or "*_NOTRAP".
     */
 
-   char *cp = sid->device;
-   sid->host = sid->device;
+   char *cp = _device;
+   _host = _device;
    cp = strchr(cp, ':');
    if (cp)
    {
       *cp++ = '\0';
       if (*cp != ':')
       {
-         sid->port = atoi(cp);
-         if (sid->port == 0)
+         _port = atoi(cp);
+         if (_port == 0)
          {
-            log_event(ups, LOG_ERR, "snmplite Bad port number");
+            log_event(_ups, LOG_ERR, "snmplite Bad port number");
             exit(1);
          }
       }
@@ -137,14 +134,14 @@ int snmplite_ups_open(UPSINFO *ups)
       {
          *cp++ = '\0';
          if (*cp != ':')
-            sid->vendor = cp;
+            _vendor = cp;
 
          cp = strchr(cp, ':');
          if (cp)
          {
             *cp++ = '\0';
             if (*cp)
-               sid->community = cp;
+               _community = cp;
          }
       }
    }
@@ -152,95 +149,97 @@ int snmplite_ups_open(UPSINFO *ups)
    // If user supplied a vendor, check for and remove "NOTRAP" and
    // optional underscore. Underscore is optional to allow use of vendor
    // "NOTRAP" to get autodetect with trap catching disabled.
-   if (sid->vendor)
+   if (_vendor)
    {
-      char *ptr = strstr((char*)sid->vendor, "NOTRAP");
+      char *ptr = strstr((char*)_vendor, "NOTRAP");
       if (ptr)
       {
          // Trap catching is disabled
-         sid->traps = false;
+         _traps = false;
 
          // Remove "NOTRAP" from vendor string
          *ptr-- = '\0';
 
          // Remove optional underscore
-         if (ptr >= sid->vendor && *ptr == '_')
+         if (ptr >= _vendor && *ptr == '_')
             *ptr = '\0';
 
          // If nothing left, kill vendor to enable autodetect
-         if (*sid->vendor == '\0')
-            sid->vendor = NULL;
+         if (*_vendor == '\0')
+            _vendor = NULL;
       }
    }
 
-   Dmsg1(80, "Trap catching: %sabled\n", sid->traps ? "En" : "Dis");
+   Dmsg(80, "Trap catching: %sabled\n", _traps ? "En" : "Dis");
 
    // Create SNMP engine
-   sid->snmp = new Snmp::SnmpEngine();
-   if (!sid->snmp->Open(sid->host, sid->port, "dummy", sid->traps))
-      return 0;
+   _snmp = new Snmp::SnmpEngine();
+   if (!_snmp->Open(_host, _port, "dummy"))
+   {
+      log_event(_ups, LOG_ERR, "snmplite Unable to initialize SNMP");
+      exit(1);
+   }
+
+   // Enable trap catching if user requested it
+   if (_traps && !_snmp->EnableTraps())
+   {
+      // Failure to enable trap catching is not fatal. Probably just means
+      // SNMP trap port is already in use by snmptrapd or another instance
+      // of apcupsd. Warn user and continue.
+      log_event(_ups, LOG_WARNING, "snmplite Failed to enable traps");
+      _traps = false;
+   }
 
    // If user did not specify a community, probe for one
-   if (!sid->community)
+   if (!_community)
    {
-      sid->community = snmplite_probe_community(ups);
-      if (!sid->community)
+      _community = snmplite_probe_community();
+      if (!_community)
       {
-         log_event(ups, LOG_ERR, "snmplite Unable to detect community");
+         log_event(_ups, LOG_ERR, "snmplite Unable to detect community");
          exit(1);
       }
    }
 
-   sid->snmp->SetCommunity(sid->community);
-   Dmsg1(80, "Selected community: \"%s\"\n", sid->community);
+   _snmp->SetCommunity(_community);
+   Dmsg(80, "Selected community: \"%s\"\n", _community);
 
    // If user supplied a vendor, search for a matching MIB strategy,
    // otherwise attempt to autodetect
-   if (sid->vendor)
+   if (_vendor)
    {
       for (unsigned int i = 0; MibStrategies[i]; i++)
       {
-         if (strcmp(MibStrategies[i]->name, sid->vendor) == 0)
+         if (strcasecmp(MibStrategies[i]->name, _vendor) == 0)
          {
-            sid->strategy = MibStrategies[i];
+            _strategy = MibStrategies[i];
             break;
          }
       }
    }
    else
    {
-      sid->strategy = snmplite_probe_mib(ups);
+      _strategy = snmplite_probe_mib();
    }
 
-   if (!sid->strategy)
+   if (!_strategy)
    {
-      log_event(ups, LOG_ERR, "snmplite Invalid vendor or unsupported MIB");
+      log_event(_ups, LOG_ERR, "snmplite Invalid vendor or unsupported MIB");
       exit(1);
    }
 
-   Dmsg1(80, "Selected MIB: \"%s\"\n", sid->strategy->name);
+   Dmsg(80, "Selected MIB: \"%s\"\n", _strategy->name);
 
-   return 1;
+   return true;
 }
 
-int snmplite_ups_close(UPSINFO *ups)
+bool SnmpLiteUpsDriver::Close()
 {
-   write_lock(ups);
-
-   struct snmplite_ups_internal_data *sid = 
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   sid->snmp->Close();
-   delete sid->snmp;
-   free(sid);
-   ups->driver_internal_data = NULL;
-   write_unlock(ups);
-   return 1;
-}
-
-int snmplite_ups_setup(UPSINFO *ups)
-{
-   return 1;
+   write_lock(_ups);
+   _snmp->Close();
+   delete _snmp;
+   write_unlock(_ups);
+   return true;
 }
 
 bool snmplite_ups_check_ci(int ci, Snmp::Variable &data)
@@ -249,9 +248,16 @@ bool snmplite_ups_check_ci(int ci, Snmp::Variable &data)
    // to always come back as zeros.
    switch (ci)
    {
-   // SmartUPS 1000 is returning 0 for this via SNMP so screen it out
-   // in case this is a common issue.
+   // SmartUPS 1000 is returning 0 or -1 for this via SNMP so screen it out
+   // in case this is a common issue. Expected values would be 12/24/48 but
+   // allow up to 120 for a really large UPS.
    case CI_NOMBATTV:
+      return data.i32 > 0 && data.i32 <= 120;
+
+   // SmartUPS 1000 is returning -1 for this.
+   case CI_BADBATTS:
+      return data.i32 > -1;
+
    // Generex CS121 SNMP/WEB Adapter using RFC1628 MIB is returning zero for
    // these values on a Newave Conceptpower DPA UPS.
    case CI_LTRANS:
@@ -259,95 +265,75 @@ bool snmplite_ups_check_ci(int ci, Snmp::Variable &data)
    case CI_NOMOUTV:
    case CI_NOMINV:
    case CI_NOMPOWER:
-      return data.u32 != 0;
+      return data.i32 > 0;
    }
 
    return true;
 }
 
-int snmplite_ups_get_capabilities(UPSINFO *ups)
+bool SnmpLiteUpsDriver::get_capabilities()
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   write_lock(ups);
+   write_lock(_ups);
 
    // Walk the OID map, issuing an SNMP query for each item, one at a time.
    // If the query succeeds, sanity check the returned value and set the
    // capabilities flag.
-   CiOidMap *mib = sid->strategy->mib;
+   CiOidMap *mib = _strategy->mib;
    for (unsigned int i = 0; mib[i].ci != -1; i++)
    {
       Snmp::Variable data;
       data.type = mib[i].type;
-      if (sid->snmp->Get(mib[i].oid, &data))
-      {
-         ups->UPS_Cap[mib[i].ci] =
-            snmplite_ups_check_ci(mib[i].ci, data);
-      }
+
+      _ups->UPS_Cap[mib[i].ci] =
+         _snmp->Get(mib[i].oid, &data) &&
+         data.valid && snmplite_ups_check_ci(mib[i].ci, data);
    }
 
-   write_unlock(ups);
+   write_unlock(_ups);
 
    // Succeed if we found CI_STATUS
-   return ups->UPS_Cap[CI_STATUS];
+   return _ups->UPS_Cap[CI_STATUS];
 }
 
-int snmplite_ups_program_eeprom(UPSINFO *ups, int command, const char *data)
+bool SnmpLiteUpsDriver::kill_power()
 {
-   return 0;
+   if (_strategy->killpower_func)
+      return _strategy->killpower_func(_snmp);
+
+   return false;
 }
 
-int snmplite_ups_kill_power(UPSINFO *ups)
+bool SnmpLiteUpsDriver::shutdown()
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
+   if (_strategy->shutdown_func)
+      return _strategy->shutdown_func(_snmp);
 
-   if (sid->strategy->killpower_func)
-      return sid->strategy->killpower_func(ups);
-
-   return 0;
+   return false;
 }
 
-int snmplite_ups_shutdown(UPSINFO *ups)
+bool SnmpLiteUpsDriver::check_state()
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   if (sid->strategy->shutdown_func)
-      return sid->strategy->shutdown_func(ups);
-
-   return 0;
-}
-
-int snmplite_ups_check_state(UPSINFO *ups)
-{
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   if (sid->traps)
+   if (_traps)
    {
       // Simple trap handling: Any valid trap causes us to return and thus
       // new data will be fetched from the UPS.
-      Snmp::TrapMessage *trap = sid->snmp->TrapWait(ups->wait_time * 1000);
+      Snmp::TrapMessage *trap = _snmp->TrapWait(_ups->wait_time * 1000);
       if (trap)
       {
-         Dmsg2(80, "Got TRAP: generic=%d, specific=%d\n", 
+         Dmsg(80, "Got TRAP: generic=%d, specific=%d\n", 
             trap->Generic(), trap->Specific());
          delete trap;
       }
    }
    else
-      sleep(ups->wait_time);
+      sleep(_ups->wait_time);
 
-   return 1;
+   return true;
 }
 
-static int snmplite_ups_update_cis(UPSINFO *ups, bool dynamic)
+bool SnmpLiteUpsDriver::update_cis(bool dynamic)
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-   CiOidMap *mib = sid->strategy->mib;
+   CiOidMap *mib = _strategy->mib;
 
    // Walk OID map and build a query for all parameters we have that
    // match the requested 'dynamic' setting
@@ -355,7 +341,7 @@ static int snmplite_ups_update_cis(UPSINFO *ups, bool dynamic)
    alist<Snmp::SnmpEngine::OidVar> oids;
    for (unsigned int i = 0; mib[i].ci != -1; i++)
    {
-      if (ups->UPS_Cap[mib[i].ci] && mib[i].dynamic == dynamic)
+      if (_ups->UPS_Cap[mib[i].ci] && mib[i].dynamic == dynamic)
       {
          oidvar.oid = mib[i].oid;
          oidvar.data.type = mib[i].type;
@@ -364,62 +350,64 @@ static int snmplite_ups_update_cis(UPSINFO *ups, bool dynamic)
    }
 
    // Issue the query, bail if it fails
-   if (!sid->snmp->Get(oids))
-      return 0;
+   if (!_snmp->Get(oids))
+      return false;
 
    // Walk the OID map again to correlate results with CIs and invoke the 
    // update function to set the values.
    alist<Snmp::SnmpEngine::OidVar>::iterator iter = oids.begin();
    for (unsigned int i = 0; mib[i].ci != -1; i++)
    {
-      if (ups->UPS_Cap[mib[i].ci] && 
-          mib[i].dynamic == dynamic)
+      if (_ups->UPS_Cap[mib[i].ci] && 
+          mib[i].dynamic == dynamic &&
+          (*iter).data.valid &&
+          ((*iter).data.type != Asn::SEQUENCE || // Skip update if sequence
+           (*iter).data.seq.size() != 0))        // is empty
       {
-         sid->strategy->update_ci_func(ups, mib[i].ci, (*iter).data);
+         _strategy->update_ci_func(_ups, mib[i].ci, (*iter).data);
          ++iter;
       }
    }
 
-   return 1;
+   return true;
 }
 
-int snmplite_ups_read_volatile_data(UPSINFO *ups)
+bool SnmpLiteUpsDriver::read_volatile_data()
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
+   write_lock(_ups);
 
-   write_lock(ups);
-
-   int ret = snmplite_ups_update_cis(ups, true);
+   int ret = update_cis(true);
 
    time_t now = time(NULL);
    if (ret)
    {
       // Successful query
-      sid->error_count = 0;
-      ups->poll_time = now;    /* save time stamp */
+      _error_count = 0;
+      _ups->poll_time = now;    /* save time stamp */
 
       // If we were commlost, we're not any more
-      if (ups->is_commlost())
+      if (_ups->is_commlost())
       {
-         ups->clear_commlost();
-         generate_event(ups, CMDCOMMOK);
+         _ups->clear_commlost();
+         generate_event(_ups, CMDCOMMOK);
       }
    }
    else
    {
       // Query failed. Close and reopen SNMP to help recover.
-      sid->snmp->Close();
-      sid->snmp->Open(sid->host, sid->port, sid->community, sid->traps);
+      _snmp->Close();
+      _snmp->Open(_host, _port, _community);
+      if (_traps)
+         _snmp->EnableTraps();
 
-      if (ups->is_commlost())
+      if (_ups->is_commlost())
       {
          // We already know we're commlost.
          // Log an event every 10 minutes.
-         if ((now - sid->commlost_time) >= 10*60)
+         if ((now - _commlost_time) >= 10*60)
          {
-            sid->commlost_time = now;
-            log_event(ups, event_msg[CMDCOMMFAILURE].level,
+            _commlost_time = now;
+            log_event(_ups, event_msg[CMDCOMMFAILURE].level,
                event_msg[CMDCOMMFAILURE].msg);            
          }
       }
@@ -427,28 +415,52 @@ int snmplite_ups_read_volatile_data(UPSINFO *ups)
       {
          // Check to see if we've hit enough errors to declare commlost.
          // If we have, set commlost flag and log an event.
-         if (++sid->error_count >= 3)
+         if (++_error_count >= 3)
          {
-            sid->commlost_time = now;
-            ups->set_commlost();
-            generate_event(ups, CMDCOMMFAILURE);
+            _commlost_time = now;
+            _ups->set_commlost();
+            generate_event(_ups, CMDCOMMFAILURE);
          }
       }
    }
 
-   write_unlock(ups);
+   write_unlock(_ups);
    return ret;
 }
 
-int snmplite_ups_read_static_data(UPSINFO *ups)
+bool SnmpLiteUpsDriver::read_static_data()
 {
-   write_lock(ups);
-   int ret = snmplite_ups_update_cis(ups, false);
-   write_unlock(ups);
+   write_lock(_ups);
+   int ret = update_cis(false);
+   write_unlock(_ups);
    return ret;
 }
 
-int snmplite_ups_entry_point(UPSINFO *ups, int command, void *data)
+bool SnmpLiteUpsDriver::entry_point(int command, void *data)
 {
-   return 0;
+   switch (command) {
+   case DEVICE_CMD_CHECK_SELFTEST:
+      Dmsg(80, "Checking self test.\n");
+      /* Reason for last transfer to batteries */
+      if (_ups->UPS_Cap[CI_WHY_BATT] && update_cis(true))
+      {
+         Dmsg(80, "Transfer reason: %d\n", _ups->lastxfer);
+
+         /* See if this is a self test rather than power failure */
+         if (_ups->lastxfer == XFER_SELFTEST) {
+            /*
+             * set Self Test start time
+             */
+            _ups->SelfTest = time(NULL);
+            Dmsg(80, "Self Test time: %s", ctime(&_ups->SelfTest));
+         }
+      }
+      break;
+
+   case DEVICE_CMD_GET_SELFTEST_MSG:
+   default:
+      return FAILURE;
+   }
+
+   return SUCCESS;
 }

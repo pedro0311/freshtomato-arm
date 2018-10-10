@@ -23,11 +23,9 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
-
-#ifdef FREEBSD_SUPCPP_FIX
 
 #include <new>
 #include <stdlib.h>
@@ -57,5 +55,3 @@ namespace __cxxabiv1
    std::terminate_handler __terminate_handler;
    std::unexpected_handler __unexpected_handler;
 };
-
-#endif

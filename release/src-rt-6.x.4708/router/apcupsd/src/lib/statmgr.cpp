@@ -12,8 +12,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -23,7 +23,7 @@
 StatMgr::StatMgr(const char *host, unsigned short port)
    : m_host(host),
      m_port(port),
-     m_socket(-1)
+     m_socket(INVALID_SOCKET)
 {
    memset(m_stats, 0, sizeof(m_stats));
 }
@@ -41,7 +41,7 @@ bool StatMgr::Update()
    int tries;
    for (tries = 2; tries; tries--)
    {
-      if (m_socket == -1 && !open()) {
+      if (m_socket == INVALID_SOCKET && !open()) {
          // Hard failure: bail immediately
          unlock();
          return false;
@@ -55,7 +55,7 @@ bool StatMgr::Update()
 
       memset(m_stats, 0, sizeof(m_stats));
 
-      int len;
+      int len = 0;
       int i = 0;
       while (i < MAX_STATS &&
              (len = net_recv(m_socket, m_stats[i].data, sizeof(m_stats[i].data)-1)) > 0)
@@ -131,7 +131,7 @@ bool StatMgr::GetEvents(alist<astring> &events)
 {
    lock();
 
-   if (m_socket == -1 && !open()) {
+   if (m_socket == INVALID_SOCKET && !open()) {
       unlock();
       return false;
    }
@@ -195,18 +195,20 @@ void StatMgr::unlock()
 
 bool StatMgr::open()
 {
-   if (m_socket != -1)
+   if (m_socket != INVALID_SOCKET)
       close();
 
    m_socket = net_open(m_host, NULL, m_port);
-   return m_socket != -1;
+   if (m_socket < 0)
+      m_socket = INVALID_SOCKET;
+   return m_socket != INVALID_SOCKET;
 }
 
 void StatMgr::close()
 {
-   if (m_socket != -1) {
+   if (m_socket != INVALID_SOCKET) {
       net_close(m_socket);
-      m_socket = -1;
+      m_socket = INVALID_SOCKET;
    }
 }
 

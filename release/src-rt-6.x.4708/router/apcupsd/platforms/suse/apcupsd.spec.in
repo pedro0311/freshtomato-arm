@@ -11,12 +11,6 @@
 # or by manually setting it to 1 in this file,
 #  e.g. %define gapcmon 1
 #
-# If you want the (obsolete) NET-SNMP driver, use:
-#  e.g.  rpmbuild -ba --define "build_snmp 1" --define "build_suse 1" apcupsd.spec
-# or by manually setting it to 1 in this file,
-#  e.g. %define snmp 1
-# The modern SNMP driver is always enabled since it has no dependencies.
-#
 # Note, to build, you need:
 #   Release_Notes-%{version}-%{release}.tar.gz in your
 #   rpm SOURCES directory, and the tar file must contain
@@ -98,10 +92,6 @@
 %define gapcmon 0
 %{?build_gapcmon:%define gapcmon 1}
 
-# should we build net-snmp driver
-%define snmp 0
-%{?build_snmp:%define snmp 1}
-
 Summary:      APC UPS Power Control Daemon for Linux
 Name:         apcupsd
 Version:      %{_version}
@@ -127,7 +117,7 @@ BuildRequires: ORBit2, pango-devel, pkgconfig
 %endif
 %if %{suse} && %{gapcmon}
 BuildRequires: bonobo-activation, freetype2-devel, cairo-devel, fontconfig-devel
-BuildRequires: gconf2-devel, gnome-vfs2-devel, libpng-devel, glitz-devel, xorg-x11-libs
+BuildRequires: gconf2-devel, gnome-vfs2-devel, libpng-devel, xorg-x11-libs
 BuildRequires: libbonobo-devel, libbonoboui-devel
 %endif
 %if %{fedora_core} && %{gapcmon}
@@ -142,9 +132,6 @@ BuildRequires: libbonobo-devel, libbonoboui-devel, freetype-devel, GConf2-devel
 %if %{rhel5} && %{gapcmon}
 BuildRequires: libbonobo-devel, libbonoboui-devel, freetype-devel, GConf2-devel
 %endif
-%if %{snmp}
-BuildRequires: net-snmp-devel
-%endif
 
 Provides: apcupsd
 Obsoletes: apcupsd-std apcupsd-usb
@@ -154,9 +141,6 @@ Requires: perl, ncurses
 Requires: glibc >= 2.2
 %else
 Requires: glibc >= 2.3
-%endif
-%if %{snmp}
-Requires: net-snmp
 %endif
 
 %description
@@ -201,7 +185,7 @@ Requires: glibc, gtk2 >= 2.4, glib2, atk, libbonobo, libbonoboui, ORBit2, pango
 %endif
 
 %if %{suse} && %{gapcmon}
-Requires: bonobo-activation, freetype2, cairo, fontconfig, gconf2, gnome-vfs2, libpng, glitz, xorg-x11-libs
+Requires: bonobo-activation, freetype2, cairo, fontconfig, gconf2, gnome-vfs2, libpng, xorg-x11-libs
 %endif
 %if %{fedora_core} && %{gapcmon}
 Requires: freetype, GConf2
@@ -248,9 +232,6 @@ A Gnome application to monitor the status of your UPS.
         --enable-snmp \
 	%if %{gapcmon}
 	--enable-gapcmon \
-	%endif
-	%if %{snmp}
-	--enable-net-snmp \
 	%endif
         --with-serial-dev= \
         --with-upstype=usb \
@@ -417,6 +398,9 @@ if [ "$1" = 0 ] ; then
 fi
 
 %changelog
+* Fri Sep 30 2011 D. Scott Barninger <barninger at fairfieldcomputers.com>
+- remove glitz-devel build requirement for suse (obsoleted)
+- builds for older suse versions should make sure that glitz packages are installed
 * Sun Jan 10 2010 Adam Kropelin <akropel1 at rochester.rr.com>
 - changes for new snmp driver
 * Sat Aug 01 2009 D. Scott Barninger <barninger at fairfieldcomputers.com>
@@ -466,7 +450,7 @@ fi
 - release 3.12.2 update docs
 * Sun Sep 18 2005 D. Scott Barninger <barninger at fairfieldcomputers.com>
 - Change deprecated Copyright tag to License
-* Tue Jun 07 2005 Adam Kropelin <akropel1@rochester.rr.com>
+* Tue Jun 07 2005 Adam Kropelin <adam@kroptech.com>
 - Rename mainsback.in to offbattery.in so default power loss/return actions
 - are symmetrical.
 * Sat Apr 30 2005 D. Scott Barninger <barninger at fairfieldcomputers.com>

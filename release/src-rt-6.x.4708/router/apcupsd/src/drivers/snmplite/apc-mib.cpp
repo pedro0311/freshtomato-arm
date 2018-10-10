@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -83,6 +83,18 @@ static struct CiOidMap CiOidMap[] =
 #define TIMETICKS_TO_SECS 100
 #define SECS_TO_MINS      60
 
+// Seen in the field: ITEMP OID occasionally sent by UPS is bogus. Value
+// appears to come from CI_RUNTIM OID. Confirmed via Wireshark that error is on 
+// UPS Web/SNMP card side. As a workaround in apcupsd we will filter out 
+// obviously bogus ITEMPs.
+//
+// Issue was observed on:
+//    UPS: Smart-UPS RT 5000 XL
+//    SNMP module:
+//     MN:AP9619 HR:A10 MD:07/12/2007
+//     MB:v3.8.6 PF:v3.5.5 PN:apc_hw02_aos_355.bin AF1:v3.5.5 AN1:apc_hw02_sumx_355.bin
+#define MAX_SANE_ITEMP    200
+
 static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
 {
    static unsigned int alarmtimer = 0;
@@ -90,82 +102,85 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
    switch (ci)
    {
    case CI_VLINE:
-      Dmsg1(80, "Got CI_VLINE: %d\n", data.u32);
+      Dmsg(80, "Got CI_VLINE: %d\n", data.u32);
       ups->LineVoltage = data.u32;
       break;
 
    case CI_VOUT:
-      Dmsg1(80, "Got CI_VOUT: %d\n", data.u32);
+      Dmsg(80, "Got CI_VOUT: %d\n", data.u32);
       ups->OutputVoltage = data.u32;
       break;
 
    case CI_VBATT:
-      Dmsg1(80, "Got CI_VBATT: %d\n", data.u32);
+      Dmsg(80, "Got CI_VBATT: %d\n", data.u32);
       ups->BattVoltage = data.u32;
       break;
 
    case CI_FREQ:
-      Dmsg1(80, "Got CI_FREQ: %d\n", data.u32);
+      Dmsg(80, "Got CI_FREQ: %d\n", data.u32);
       ups->LineFreq = data.u32;
       break;
 
    case CI_LOAD:
-      Dmsg1(80, "Got CI_LOAD: %d\n", data.u32);
+      Dmsg(80, "Got CI_LOAD: %d\n", data.u32);
       ups->UPSLoad = data.u32;
       break;
 
    case CI_ITEMP:
-      Dmsg1(80, "Got CI_ITEMP: %d\n", data.u32);
-      ups->UPSTemp = data.u32;
+      Dmsg(80, "Got CI_ITEMP: %d\n", data.u32);
+      if (data.u32 <= MAX_SANE_ITEMP)
+         ups->UPSTemp = data.u32;
+      else
+         Dmsg(10, "Ignoring out-of-range ITEMP: %d\n", data.u32);
       break;
 
    case CI_ATEMP:
-      Dmsg1(80, "Got CI_ATEMP: %d\n", data.u32);
+      Dmsg(80, "Got CI_ATEMP: %d\n", data.u32);
       ups->ambtemp = data.u32;
       break;
 
    case CI_HUMID:
-      Dmsg1(80, "Got CI_HUMID: %d\n", data.u32);
+      Dmsg(80, "Got CI_HUMID: %d\n", data.u32);
       ups->humidity = data.u32;
       break;
 
    case CI_NOMBATTV:
-      Dmsg1(80, "Got CI_NOMBATTV: %d\n", data.u32);
+      Dmsg(80, "Got CI_NOMBATTV: %d\n", data.u32);
       ups->nombattv = data.u32;
       break;
 
    case CI_NOMOUTV:
-      Dmsg1(80, "Got CI_NOMOUTV: %d\n", data.u32);
+      Dmsg(80, "Got CI_NOMOUTV: %d\n", data.u32);
       ups->NomOutputVoltage = data.u32;
       break;
 
    case CI_NOMINV:
-      Dmsg1(80, "Got CI_NOMINV: %d\n", data.u32);
+      Dmsg(80, "Got CI_NOMINV: %d\n", data.u32);
       ups->NomInputVoltage = data.u32;
       break;
 
    case CI_NOMPOWER:
-      Dmsg1(80, "Got CI_NOMPOWER: %d\n", data.u32);
+      Dmsg(80, "Got CI_NOMPOWER: %d\n", data.u32);
       ups->NomPower = data.u32;
       break;
 
    case CI_LTRANS:
-      Dmsg1(80, "Got CI_LTRANS: %d\n", data.u32);
+      Dmsg(80, "Got CI_LTRANS: %d\n", data.u32);
       ups->lotrans = data.u32;
       break;
 
    case CI_HTRANS:
-      Dmsg1(80, "Got CI_HTRANS: %d\n", data.u32);
+      Dmsg(80, "Got CI_HTRANS: %d\n", data.u32);
       ups->hitrans = data.u32;
       break;
 
    case CI_DWAKE:
-      Dmsg1(80, "Got CI_DWAKE: %d\n", data.u32);
+      Dmsg(80, "Got CI_DWAKE: %d\n", data.u32);
       ups->dwake = data.u32;
       break;
 
    case CI_ST_STAT:
-      Dmsg1(80, "Got CI_ST_STAT: %d\n", data.u32);
+      Dmsg(80, "Got CI_ST_STAT: %d\n", data.u32);
       switch (data.u32)
       {
       case 1:  /* Passed */
@@ -185,70 +200,70 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_AlarmTimer:
-      Dmsg1(80, "Got CI_AlarmTimer: %d\n", data.u32);
+      Dmsg(80, "Got CI_AlarmTimer: %d\n", data.u32);
       // Remember alarm timer setting; we will use it for CI_DALARM
       alarmtimer = data.u32;
       break;
 
    case CI_DALARM:
-      Dmsg1(80, "Got CI_DALARM: %d\n", data.u32);
+      Dmsg(80, "Got CI_DALARM: %d\n", data.u32);
       switch (data.u32)
       {
       case 1: // Timed (uses CI_AlarmTimer)
          if (ups->UPS_Cap[CI_AlarmTimer] && alarmtimer < 30)
-            astrncpy(ups->beepstate, "0", sizeof(ups->beepstate)); // 5 secs
+            strlcpy(ups->beepstate, "0", sizeof(ups->beepstate)); // 5 secs
          else
-            astrncpy(ups->beepstate, "T", sizeof(ups->beepstate)); // 30 secs
+            strlcpy(ups->beepstate, "T", sizeof(ups->beepstate)); // 30 secs
          break;
       case 2: // LowBatt
-         astrncpy(ups->beepstate, "L", sizeof(ups->beepstate));
+         strlcpy(ups->beepstate, "L", sizeof(ups->beepstate));
          break;
       case 3: // None
-         astrncpy(ups->beepstate, "N", sizeof(ups->beepstate));
+         strlcpy(ups->beepstate, "N", sizeof(ups->beepstate));
          break;
       default:
-         astrncpy(ups->beepstate, "T", sizeof(ups->beepstate));
+         strlcpy(ups->beepstate, "T", sizeof(ups->beepstate));
          break;
       }
       break;
 
    case CI_UPSMODEL:
-      Dmsg1(80, "Got CI_UPSMODEL: %s\n", data.str.str());
-      astrncpy(ups->upsmodel, data.str, sizeof(ups->upsmodel));
+      Dmsg(80, "Got CI_UPSMODEL: %s\n", data.str.str());
+      strlcpy(ups->upsmodel, data.str, sizeof(ups->upsmodel));
       break;
 
    case CI_SERNO:
-      Dmsg1(80, "Got CI_SERNO: %s\n", data.str.str());
-      astrncpy(ups->serial, data.str, sizeof(ups->serial));
+      Dmsg(80, "Got CI_SERNO: %s\n", data.str.str());
+      strlcpy(ups->serial, data.str, sizeof(ups->serial));
       break;
 
    case CI_MANDAT:
-      Dmsg1(80, "Got CI_MANDAT: %s\n", data.str.str());
-      astrncpy(ups->birth, data.str, sizeof(ups->birth));
+      Dmsg(80, "Got CI_MANDAT: %s\n", data.str.str());
+      strlcpy(ups->birth, data.str, sizeof(ups->birth));
       break;
 
    case CI_BATTLEV:
-      Dmsg1(80, "Got CI_BATTLEV: %d\n", data.u32);
+      Dmsg(80, "Got CI_BATTLEV: %d\n", data.u32);
       ups->BattChg = data.u32;
       break;
 
    case CI_RUNTIM:
-      Dmsg1(80, "Got CI_RUNTIM: %d\n", data.u32);
+      Dmsg(80, "Got CI_RUNTIM: %d\n", data.u32);
       ups->TimeLeft = data.u32 / TIMETICKS_TO_SECS / SECS_TO_MINS;
       break;
 
    case CI_BATTDAT:
-      Dmsg1(80, "Got CI_BATTDAT: %s\n", data.str.str());
-      astrncpy(ups->battdat, data.str, sizeof(ups->battdat));
+      Dmsg(80, "Got CI_BATTDAT: %s\n", data.str.str());
+      strlcpy(ups->battdat, data.str, sizeof(ups->battdat));
       break;
 
    case CI_IDEN:
-      Dmsg1(80, "Got CI_IDEN: %s\n", data.str.str());
-      astrncpy(ups->upsname, data.str, sizeof(ups->upsname));
+      Dmsg(80, "Got CI_IDEN: %s\n", data.str.str());
+      strlcpy(ups->upsname, data.str, sizeof(ups->upsname));
       break;
 
    case CI_STATUS:
-      Dmsg1(80, "Got CI_STATUS: %d\n", data.u32);
+      Dmsg(80, "Got CI_STATUS: %d\n", data.u32);
       /* Clear the following flags: only one status will be TRUE */
       ups->clear_online();
       ups->clear_onbatt();
@@ -283,7 +298,7 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_NeedReplacement:
-      Dmsg1(80, "Got CI_NeedReplacement: %d\n", data.u32);
+      Dmsg(80, "Got CI_NeedReplacement: %d\n", data.u32);
       if (data.u32 == 2)
          ups->set_replacebatt();
       else
@@ -291,7 +306,7 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_LowBattery:
-      Dmsg1(80, "Got CI_LowBattery: %d\n", data.u32);
+      Dmsg(80, "Got CI_LowBattery: %d\n", data.u32);
       if (data.u32 == 3)
          ups->set_battlow();
       else
@@ -299,7 +314,7 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_Calibration:
-      Dmsg1(80, "Got CI_Calibration: %d\n", data.u32);
+      Dmsg(80, "Got CI_Calibration: %d\n", data.u32);
       if (data.u32 == 3)
          ups->set_calibration();
       else
@@ -307,7 +322,7 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_Overload:
-      Dmsg1(80, "Got CI_Overload: %c\n", data.str[8]);
+      Dmsg(80, "Got CI_Overload: %c\n", data.str[8]);
       if (data.str[8] == '1')
          ups->set_overload();
       else
@@ -315,16 +330,17 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_DSHUTD:
-      Dmsg1(80, "Got CI_DSHUTD: %d\n", data.u32);
+      Dmsg(80, "Got CI_DSHUTD: %d\n", data.u32);
       ups->dshutd = data.u32 / TIMETICKS_TO_SECS;
       break;
 
    case CI_RETPCT:
-      Dmsg1(80, "Got CI_RETPCT: %d\n", data.u32);
+      Dmsg(80, "Got CI_RETPCT: %d\n", data.u32);
       ups->rtnpct = data.u32;
       break;
 
    case CI_WHY_BATT:
+      Dmsg(80, "Got CI_WHY_BATT: %d\n", data.u32);
       switch (data.u32)
       {
       case 1:
@@ -356,95 +372,89 @@ static void apc_update_ci(UPSINFO *ups, int ci, Snmp::Variable &data)
       break;
 
    case CI_SENS:
-      Dmsg1(80, "Got CI_SENS: %d\n", data.u32);
+      Dmsg(80, "Got CI_SENS: %d\n", data.u32);
       switch (data.u32)
       {
       case 1:
-         astrncpy(ups->sensitivity, "Auto", sizeof(ups->sensitivity));
+         strlcpy(ups->sensitivity, "Auto", sizeof(ups->sensitivity));
          break;
       case 2:
-         astrncpy(ups->sensitivity, "Low", sizeof(ups->sensitivity));
+         strlcpy(ups->sensitivity, "Low", sizeof(ups->sensitivity));
          break;
       case 3:
-         astrncpy(ups->sensitivity, "Medium", sizeof(ups->sensitivity));
+         strlcpy(ups->sensitivity, "Medium", sizeof(ups->sensitivity));
          break;
       case 4:
-         astrncpy(ups->sensitivity, "High", sizeof(ups->sensitivity));
+         strlcpy(ups->sensitivity, "High", sizeof(ups->sensitivity));
          break;
       default:
-         astrncpy(ups->sensitivity, "Unknown", sizeof(ups->sensitivity));
+         strlcpy(ups->sensitivity, "Unknown", sizeof(ups->sensitivity));
          break;
       }
       break;
 
    case CI_REVNO:
-      Dmsg1(80, "Got CI_REVNO: %s\n", data.str.str());
-      astrncpy(ups->firmrev, data.str, sizeof(ups->firmrev));
+      Dmsg(80, "Got CI_REVNO: %s\n", data.str.str());
+      strlcpy(ups->firmrev, data.str, sizeof(ups->firmrev));
       break;
 
    case CI_EXTBATTS:
-      Dmsg1(80, "Got CI_EXTBATTS: %d\n", data.u32);
+      Dmsg(80, "Got CI_EXTBATTS: %d\n", data.u32);
       ups->extbatts = data.u32;
       break;
    
    case CI_BADBATTS:
-      Dmsg1(80, "Got CI_BADBATTS: %d\n", data.u32);
+      Dmsg(80, "Got CI_BADBATTS: %d\n", data.u32);
       ups->badbatts = data.u32;
       break;
 
    case CI_DLBATT:
-      Dmsg1(80, "Got CI_DLBATT: %d\n", data.u32);
+      Dmsg(80, "Got CI_DLBATT: %d\n", data.u32);
       ups->dlowbatt = data.u32 / TIMETICKS_TO_SECS / SECS_TO_MINS;
       break;
 
    case CI_STESTI:
-      Dmsg1(80, "Got CI_STESTI: %d\n", data.u32);
+      Dmsg(80, "Got CI_STESTI: %d\n", data.u32);
       switch (data.u32) {
       case 2:
-         astrncpy(ups->selftest, "336", sizeof(ups->selftest));
+         strlcpy(ups->selftest, "336", sizeof(ups->selftest));
          break;
       case 3:
-         astrncpy(ups->selftest, "168", sizeof(ups->selftest));
+         strlcpy(ups->selftest, "168", sizeof(ups->selftest));
          break;
       case 4:
-         astrncpy(ups->selftest, "ON", sizeof(ups->selftest));
+         strlcpy(ups->selftest, "ON", sizeof(ups->selftest));
          break;
       case 1:
       case 5:
       default:
-         astrncpy(ups->selftest, "OFF", sizeof(ups->selftest));
+         strlcpy(ups->selftest, "OFF", sizeof(ups->selftest));
          break;
       }
       break;
 
    case CI_VMIN:
-      Dmsg1(80, "Got CI_VMIN: %d\n", data.u32);
+      Dmsg(80, "Got CI_VMIN: %d\n", data.u32);
       ups->LineMin = data.u32;
       break;
 
    case CI_VMAX:
-      Dmsg1(80, "Got CI_VMAX: %d\n", data.u32);
+      Dmsg(80, "Got CI_VMAX: %d\n", data.u32);
       ups->LineMax = data.u32;
       break;
    }
 }
 
-static int apc_killpower(UPSINFO *ups)
+static int apc_killpower(Snmp::SnmpEngine *snmp)
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   Snmp::Variable var = { Asn::INTEGER, 2 };
-   return sid->snmp->Set(upsBasicControlConserveBattery, &var);
+   Snmp::Variable var(Asn::INTEGER, 2);
+   return snmp->Set(upsBasicControlConserveBattery, &var);
 }
 
-static int apc_shutdown(UPSINFO *ups)
+static int apc_shutdown(Snmp::SnmpEngine *snmp)
 {
-   struct snmplite_ups_internal_data *sid =
-      (struct snmplite_ups_internal_data *)ups->driver_internal_data;
-
-   Snmp::Variable var = { Asn::INTEGER, 2 };
-   return sid->snmp->Set(upsAdvControlUpsOff, &var);
+   Snmp::Variable var(Asn::INTEGER, 2);
+   return snmp->Set(upsAdvControlUpsOff, &var);
 }
 
 // Export strategy to snmplite.cpp

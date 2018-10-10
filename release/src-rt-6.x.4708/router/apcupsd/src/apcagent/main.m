@@ -18,18 +18,16 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #import <Cocoa/Cocoa.h>
-#import <Growl/Growl.h>
 #import "InstanceManager.h"
 
 int main(int argc, char *argv[])
 {
    NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
-   [GrowlApplicationBridge setGrowlDelegate:@""];
    [[[InstanceManager alloc] init] createMonitors];
    [p release]; // run is never coming back, so free the pool now
    [[NSApplication sharedApplication] run];
