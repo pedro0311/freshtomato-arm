@@ -2129,11 +2129,6 @@ mysql/stamp-h1: openssl zlib libncurses
 		--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 		ac_cv_c_stack_direction=-1
 	cd mysql && tar xvfz .host.tgz
-	# Update time of config.status to avoid run 'config.status --recheck'
-	touch mysql/config.status
-	# Update time of Makefile to avoid regenerate it when do make
-	sleep 5
-	-find mysql -name Makefile -print | xargs -i touch {}
 	touch mysql/stamp-h1
 
 mysql: mysql/stamp-h1
