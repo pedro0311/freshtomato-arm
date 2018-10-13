@@ -575,7 +575,7 @@ function _v_iptip(e, ip, quiet)
 
 	oip = ip;
 
-	// x.x.x.x - y.y.y.y
+	/* x.x.x.x - y.y.y.y */
 	if (ip.match(/^(.*)-(.*)$/)) {
 		a = fixIP(RegExp.$1);
 		b = fixIP(RegExp.$2);
@@ -591,8 +591,8 @@ function _v_iptip(e, ip, quiet)
 
 	ma = '';
 
-	// x.x.x.x/nn
-	// x.x.x.x/y.y.y.y
+	/* x.x.x.x/nn */
+	/* x.x.x.x/y.y.y.y */
 	if (ip.match(/^(.*)\/(.*)$/)) {
 		ip = RegExp.$1;
 		b = RegExp.$2;
@@ -651,7 +651,7 @@ function _v_subnet(e, ip, quiet)
 	var ma, oip;
 	oip = ip;
 
-	// x.x.x.x/nn
+	/* x.x.x.x/nn */
 	if (ip.match(/^(.*)\/(.*)$/)) {
 		ip = RegExp.$1;
 		ma = RegExp.$2;
@@ -795,7 +795,7 @@ function _v_ipv6_addr(e, ip, ipt, quiet)
 
 	oip = ip;
 
-	// ip range
+	/* ip range */
 	if ((ipt) && ip.match(/^(.*)-(.*)$/)) {
 		a = RegExp.$1;
 		b = RegExp.$2;
@@ -811,7 +811,7 @@ function _v_ipv6_addr(e, ip, ipt, quiet)
 		return a + '-' + b;
 	}
 
-	// mask matches
+	/* mask matches */
 	if ((ipt) && ip.match(/^([A-Fa-f0-9:]+)\/([A-Fa-f0-9:]+)$/)) {
 		a = RegExp.$1;
 		b = RegExp.$2;
@@ -1589,7 +1589,7 @@ TomatoGrid.prototype = {
 					}
 					attrib += ' autocomplete="off"';
 					if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
-					// drop
+					/* drop */
 				case 'text':
 					s += '<input type="' + f.type + '" maxlength=' + f.maxlen + common + attrib;
 					if (which == 'edit') s += ' value="' + escapeHTML('' + values[vi]) + '">';
@@ -2703,7 +2703,7 @@ function createFieldTable(flags, desc)
 					common += ' autocomplete="off"';
 					if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
 				}
-				// drop
+				/* drop */
 			case 'text':
 				buf2.push('<input type="' + f.type + '"' + name + ' value="' + escapeHTML(UT(f.value)) + '" maxlength=' + f.maxlen + (f.size ? (' size=' + f.size) : '') + common + '>');
 				break;
@@ -2732,7 +2732,7 @@ function createFieldTable(flags, desc)
 
 		buf.push('<td class="title indent' + (v.indent ? v.indent : 1) + '">');
 		if (id1 != '')
-			buf.push('<label for="' + id + '">' + (v.title ? v.title : id) + '</label></td>');
+			buf.push('<label for="' + id + '">' + (v.title ? v.title : '&nbsp;') + '</label></td>');
 		else
 			buf.push(+ v.title + '</td>');
 
@@ -2770,7 +2770,7 @@ function peekaboo(id, show)
 		}
 	}
 	catch (ex) {
-//		alert(ex);
+/*		alert(ex); */
 	}
 
 /* REMOVE-BEGIN
