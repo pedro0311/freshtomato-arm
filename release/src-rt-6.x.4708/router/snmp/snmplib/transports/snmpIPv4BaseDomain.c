@@ -242,3 +242,33 @@ netsnmp_ipv4_fmtaddr(const char *prefix, netsnmp_transport *t,
     return tmp;
 }
 
+void netsnmp_ipv4_get_taddr(struct netsnmp_transport_s *t, void **addr,
+                            size_t *addr_len)
+{
+    struct sockaddr_in *sin = t->remote;
+
+    netsnmp_assert(t->remote_length == sizeof(*sin));
+
+    *addr_len = 6;
+    if ((*addr = malloc(*addr_len))) {
+        unsigned char *p = *addr;
+
+        memcpy(p,     &sin->sin_addr, 4);
+        memcpy(p + 4, &sin->sin_port, 2);
+    }
+}
+
+int netsnmp_ipv4_ostring_to_sockaddr(struct sockaddr_in *sin, const void *o,
+                                     size_t o_len)
+{
+    const char *p = o;
+
+    if (o_len != 6)
+        return 0;
+
+    memset(sin, 0, sizeof(*sin));
+    sin->sin_family = AF_INET;
+    memcpy(&sin->sin_addr, p + 0, 4);
+    memcpy(&sin->sin_port, p + 4, 2);
+    return 1;
+}
