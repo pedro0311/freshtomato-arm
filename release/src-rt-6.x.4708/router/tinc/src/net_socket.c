@@ -41,7 +41,7 @@ int maxtimeout = 900;
 int seconds_till_retry = 5;
 int udp_rcvbuf = 1024 * 1024;
 int udp_sndbuf = 1024 * 1024;
-int max_connection_burst = 100;
+int max_connection_burst = 10;
 int fwmark;
 
 listen_socket_t listen_socket[MAXSOCKETS];
@@ -210,6 +210,7 @@ int setup_listen_socket(const sockaddr_t *sa) {
 
 		memset(&ifr, 0, sizeof(ifr));
 		strncpy(ifr.ifr_ifrn.ifrn_name, iface, IFNAMSIZ);
+		ifr.ifr_ifrn.ifrn_name[IFNAMSIZ - 1] = 0;
 
 		if(setsockopt(nfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr))) {
 			closesocket(nfd);
@@ -623,6 +624,7 @@ begin:
 }
 
 void setup_outgoing_connection(outgoing_t *outgoing, bool verbose) {
+	(void)verbose;
 	timeout_del(&outgoing->ev);
 
 	node_t *n = outgoing->node;
@@ -654,6 +656,7 @@ remove:
   new connection
 */
 void handle_new_meta_connection(void *data, int flags) {
+	(void)flags;
 	listen_socket_t *l = data;
 	connection_t *c;
 	sockaddr_t sa;
@@ -672,12 +675,6 @@ void handle_new_meta_connection(void *data, int flags) {
 	// Check if we get many connections from the same host
 
 	static sockaddr_t prev_sa;
-	static int tarpit = -1;
-
-	if(tarpit >= 0) {
-		closesocket(tarpit);
-		tarpit = -1;
-	}
 
 	if(!sockaddrcmp_noport(&sa, &prev_sa)) {
 		static int samehost_burst;
@@ -693,7 +690,7 @@ void handle_new_meta_connection(void *data, int flags) {
 		samehost_burst++;
 
 		if(samehost_burst > max_connection_burst) {
-			tarpit = fd;
+			tarpit(fd);
 			return;
 		}
 	}
@@ -716,7 +713,7 @@ void handle_new_meta_connection(void *data, int flags) {
 
 	if(connection_burst >= max_connection_burst) {
 		connection_burst = max_connection_burst;
-		tarpit = fd;
+		tarpit(fd);
 		return;
 	}
 
@@ -745,7 +742,6 @@ void handle_new_meta_connection(void *data, int flags) {
 	connection_add(c);
 
 	c->allow_request = ID;
-	send_id(c);
 }
 
 #ifndef HAVE_MINGW
@@ -753,6 +749,7 @@ void handle_new_meta_connection(void *data, int flags) {
   accept a new UNIX socket connection
 */
 void handle_new_unix_connection(void *data, int flags) {
+	(void)flags;
 	io_t *io = data;
 	connection_t *c;
 	sockaddr_t sa;
@@ -782,8 +779,6 @@ void handle_new_unix_connection(void *data, int flags) {
 	connection_add(c);
 
 	c->allow_request = ID;
-
-	send_id(c);
 }
 #endif
 

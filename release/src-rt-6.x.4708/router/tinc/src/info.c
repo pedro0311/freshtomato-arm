@@ -28,10 +28,14 @@
 #include "xalloc.h"
 
 void logger(int level, int priority, const char *format, ...) {
+	(void)level;
+	(void)priority;
 	va_list ap;
+
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
+
 	fputc('\n', stderr);
 }
 
@@ -70,15 +74,17 @@ static int info_node(int fd, const char *item) {
 	} status_union;
 	node_status_t status;
 	long int last_state_change;
+	int udp_ping_rtt;
+	uint64_t in_packets, in_bytes, out_packets, out_bytes;
 
 	while(recvline(fd, line, sizeof(line))) {
-		int n = sscanf(line, "%d %d %4095s %4095s %4095s port %4095s %d %d %d %d %x %"PRIx32" %4095s %4095s %d %hd %hd %hd %ld", &code, &req, node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_union.raw, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change);
+		int n = sscanf(line, "%d %d %4095s %4095s %4095s port %4095s %d %d %d %d %x %"PRIx32" %4095s %4095s %d %hd %hd %hd %ld %d %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64, &code, &req, node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_union.raw, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change, &udp_ping_rtt, &in_packets, &in_bytes, &out_packets, &out_bytes);
 
 		if(n == 2) {
 			break;
 		}
 
-		if(n != 19) {
+		if(n != 24) {
 			fprintf(stderr, "Unable to parse node dump from tincd.\n");
 			return 1;
 		}
@@ -179,11 +185,18 @@ static int info_node(int fd, const char *item) {
 		printf("unknown\n");
 	} else if(minmtu > 0) {
 		printf("directly with UDP\nPMTU:         %d\n", pmtu);
+
+		if(udp_ping_rtt != -1) {
+			printf("RTT:          %d.%03d\n", udp_ping_rtt / 1000, udp_ping_rtt % 1000);
+		}
 	} else if(!strcmp(nexthop, item)) {
 		printf("directly with TCP\n");
 	} else {
 		printf("none, forwarded via %s\n", nexthop);
 	}
+
+	printf("RX:           %"PRIu64" packets  %"PRIu64" bytes\n", in_packets, in_bytes);
+	printf("TX:           %"PRIu64" packets  %"PRIu64" bytes\n", out_packets, out_bytes);
 
 	// List edges
 	printf("Edges:       ");

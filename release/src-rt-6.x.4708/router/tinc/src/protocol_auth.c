@@ -176,6 +176,8 @@ bool send_id(connection_t *c) {
 }
 
 static bool finalize_invitation(connection_t *c, const char *data, uint16_t len) {
+	(void)len;
+
 	if(strchr(data, '\n')) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Received invalid key from invited node %s (%s)!\n", c->name, c->hostname);
 		return false;
@@ -300,7 +302,7 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 
 	buf[len] = 0;
 
-	if(!*buf || !*name || strcasecmp(buf, "Name") || !check_id(name)) {
+	if(!*buf || !*name || strcasecmp(buf, "Name") || !check_id(name) || !strcmp(name, myself->name)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid invitation file %s\n", cookie);
 		fclose(f);
 		return false;
@@ -346,6 +348,10 @@ bool id_h(connection_t *c, const char *request) {
 		free(c->name);
 		c->name = xstrdup("<control>");
 
+		if(!c->outgoing) {
+			send_id(c);
+		}
+
 		return send_request(c, "%d %d %d", ACK, TINC_CTL_VERSION_CURRENT, getpid());
 	}
 
@@ -369,6 +375,10 @@ bool id_h(connection_t *c, const char *request) {
 			return false;
 		}
 
+		if(!c->outgoing) {
+			send_id(c);
+		}
+
 		if(!send_request(c, "%d %s", ACK, mykey)) {
 			return false;
 		}
@@ -382,7 +392,7 @@ bool id_h(connection_t *c, const char *request) {
 
 	/* Check if identity is a valid name */
 
-	if(!check_id(name)) {
+	if(!check_id(name) || !strcmp(name, myself->name)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s): %s", "ID", c->name,
 		       c->hostname, "invalid name");
 		return false;
@@ -397,10 +407,7 @@ bool id_h(connection_t *c, const char *request) {
 			return false;
 		}
 	} else {
-		if(c->name) {
-			free(c->name);
-		}
-
+		free(c->name);
 		c->name = xstrdup(name);
 	}
 
@@ -418,6 +425,11 @@ bool id_h(connection_t *c, const char *request) {
 		}
 
 		c->allow_request = ACK;
+
+		if(!c->outgoing) {
+			send_id(c);
+		}
+
 		return send_ack(c);
 	}
 
@@ -453,6 +465,10 @@ bool id_h(connection_t *c, const char *request) {
 	}
 
 	c->allow_request = METAKEY;
+
+	if(!c->outgoing) {
+		send_id(c);
+	}
 
 	if(c->protocol_minor >= 2) {
 		c->allow_request = ACK;
@@ -589,7 +605,7 @@ bool metakey_h(connection_t *c, const char *request) {
 
 	/* Convert the challenge from hexadecimal back to binary */
 
-	int inlen = hex2bin(hexkey, enckey, sizeof(enckey));
+	size_t inlen = hex2bin(hexkey, enckey, sizeof(enckey));
 
 	/* Check if the length of the meta key is all right */
 
@@ -618,7 +634,8 @@ bool metakey_h(connection_t *c, const char *request) {
 			return false;
 		}
 	} else {
-		c->incipher = NULL;
+		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "null cipher");
+		return false;
 	}
 
 	c->inbudget = cipher_budget(c->incipher);
@@ -629,7 +646,8 @@ bool metakey_h(connection_t *c, const char *request) {
 			return false;
 		}
 	} else {
-		c->indigest = NULL;
+		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "null digest");
+		return false;
 	}
 
 	c->status.decryptin = true;
@@ -647,9 +665,7 @@ bool send_challenge(connection_t *c) {
 	const size_t len = rsa_size(c->rsa);
 	char buffer[len * 2 + 1];
 
-	if(!c->hischallenge) {
-		c->hischallenge = xrealloc(c->hischallenge, len);
-	}
+	c->hischallenge = xrealloc(c->hischallenge, len);
 
 	/* Copy random data to the buffer */
 
@@ -676,41 +692,59 @@ bool challenge_h(connection_t *c, const char *request) {
 
 	char buffer[MAX_STRING_SIZE];
 	const size_t len = rsa_size(myself->connection->rsa);
-	size_t digestlen = digest_length(c->indigest);
-	char digest[digestlen];
 
 	if(sscanf(request, "%*d " MAX_STRING, buffer) != 1) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "CHALLENGE", c->name, c->hostname);
 		return false;
 	}
 
-	/* Convert the challenge from hexadecimal back to binary */
-
-	int inlen = hex2bin(buffer, buffer, sizeof(buffer));
-
 	/* Check if the length of the challenge is all right */
 
-	if(inlen != len) {
+	if(strlen(buffer) != (size_t)len * 2) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "wrong challenge length");
 		return false;
 	}
 
-	/* Calculate the hash from the challenge we received */
+	c->mychallenge = xrealloc(c->mychallenge, len);
 
-	if(!digest_create(c->indigest, buffer, len, digest)) {
-		return false;
-	}
+	/* Convert the challenge from hexadecimal back to binary */
 
-	/* Convert the hash to a hexadecimal formatted string */
+	hex2bin(buffer, c->mychallenge, len);
 
-	bin2hex(digest, buffer, digestlen);
-
-	/* Send the reply */
+	/* The rest is done by send_chal_reply() */
 
 	c->allow_request = CHAL_REPLY;
 
-	return send_request(c, "%d %s", CHAL_REPLY, buffer);
+	if(c->outgoing) {
+		return send_chal_reply(c);
+	} else {
+		return true;
+	}
+
 #endif
+}
+
+bool send_chal_reply(connection_t *c) {
+	const size_t len = rsa_size(myself->connection->rsa);
+	size_t digestlen = digest_length(c->indigest);
+	char digest[digestlen * 2 + 1];
+
+	/* Calculate the hash from the challenge we received */
+
+	if(!digest_create(c->indigest, c->mychallenge, len, digest)) {
+		return false;
+	}
+
+	free(c->mychallenge);
+	c->mychallenge = NULL;
+
+	/* Convert the hash to a hexadecimal formatted string */
+
+	bin2hex(digest, digest, digestlen);
+
+	/* Send the reply */
+
+	return send_request(c, "%d %s", CHAL_REPLY, digest);
 }
 
 bool chal_reply_h(connection_t *c, const char *request) {
@@ -727,7 +761,7 @@ bool chal_reply_h(connection_t *c, const char *request) {
 
 	/* Convert the hash to binary format */
 
-	int inlen = hex2bin(hishash, hishash, sizeof(hishash));
+	size_t inlen = hex2bin(hishash, hishash, sizeof(hishash));
 
 	/* Check if the length of the hash is all right */
 
@@ -751,6 +785,10 @@ bool chal_reply_h(connection_t *c, const char *request) {
 	free(c->hischallenge);
 	c->hischallenge = NULL;
 	c->allow_request = ACK;
+
+	if(!c->outgoing) {
+		send_chal_reply(c);
+	}
 
 	return send_ack(c);
 #endif

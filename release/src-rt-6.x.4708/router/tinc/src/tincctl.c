@@ -355,6 +355,8 @@ static FILE *ask_and_open(const char *filename, const char *what, const char *mo
 	char buf[PATH_MAX];
 	char buf2[PATH_MAX];
 
+ask_filename:
+
 	/* Check stdin and stdout */
 	if(ask && tty) {
 		/* Ask for a file and/or directory name. */
@@ -385,7 +387,17 @@ static FILE *ask_and_open(const char *filename, const char *what, const char *mo
 #endif
 		/* The directory is a relative path or a filename. */
 		getcwd(directory, sizeof(directory));
-		snprintf(buf2, sizeof(buf2), "%s" SLASH "%s", directory, filename);
+
+		if((size_t)snprintf(buf2, sizeof(buf2), "%s" SLASH "%s", directory, filename) >= sizeof(buf2)) {
+			fprintf(stderr, "Filename too long: %s" SLASH "%s\n", directory, filename);
+
+			if(ask && tty) {
+				goto ask_filename;
+			} else {
+				return NULL;
+			}
+		}
+
 		filename = buf2;
 	}
 
@@ -565,7 +577,7 @@ bool recvline(int fd, char *line, size_t len) {
 		blen += result;
 	}
 
-	if(newline - buffer >= len) {
+	if((size_t)(newline - buffer) >= len) {
 		return false;
 	}
 
@@ -579,11 +591,7 @@ bool recvline(int fd, char *line, size_t len) {
 	return true;
 }
 
-bool recvdata(int fd, char *data, size_t len) {
-	if(len == -1) {
-		len = blen;
-	}
-
+static bool recvdata(int fd, char *data, size_t len) {
 	while(blen < len) {
 		int result = recv(fd, buffer + blen, sizeof(buffer) - blen, 0);
 
@@ -606,7 +614,7 @@ bool recvdata(int fd, char *data, size_t len) {
 bool sendline(int fd, char *format, ...) {
 	static char buffer[4096];
 	char *p = buffer;
-	int blen = 0;
+	int blen;
 	va_list ap;
 
 	va_start(ap, format);
@@ -614,7 +622,7 @@ bool sendline(int fd, char *format, ...) {
 	buffer[sizeof(buffer) - 1] = 0;
 	va_end(ap);
 
-	if(blen < 1 || blen >= sizeof(buffer)) {
+	if(blen < 1 || (size_t)blen >= sizeof(buffer)) {
 		return false;
 	}
 
@@ -637,7 +645,7 @@ bool sendline(int fd, char *format, ...) {
 	return true;
 }
 
-static void pcap(int fd, FILE *out, int snaplen) {
+static void pcap(int fd, FILE *out, uint32_t snaplen) {
 	sendline(fd, "%d %d %d", CONTROL, REQ_PCAP, snaplen);
 	char data[9018];
 
@@ -653,7 +661,7 @@ static void pcap(int fd, FILE *out, int snaplen) {
 		0xa1b2c3d4,
 		2, 4,
 		0, 0,
-		snaplen ? : sizeof(data),
+		snaplen ? snaplen : sizeof(data),
 		1,
 	};
 
@@ -676,7 +684,7 @@ static void pcap(int fd, FILE *out, int snaplen) {
 		int n = sscanf(line, "%d %d %d", &code, &req, &len);
 		gettimeofday(&tv, NULL);
 
-		if(n != 3 || code != CONTROL || req != REQ_PCAP || len < 0 || len > sizeof(data)) {
+		if(n != 3 || code != CONTROL || req != REQ_PCAP || len < 0 || (size_t)len > sizeof(data)) {
 			break;
 		}
 
@@ -703,7 +711,7 @@ static void logcontrol(int fd, FILE *out, int level) {
 		int code, req, len;
 		int n = sscanf(line, "%d %d %d", &code, &req, &len);
 
-		if(n != 3 || code != CONTROL || req != REQ_LOG || len < 0 || len > sizeof(data)) {
+		if(n != 3 || code != CONTROL || req != REQ_LOG || len < 0 || (size_t)len > sizeof(data)) {
 			break;
 		}
 
@@ -825,6 +833,8 @@ bool connect_tincd(bool verbose) {
 
 	strncpy(sa.sun_path, unixsocketname, sizeof(sa.sun_path));
 
+	sa.sun_path[sizeof(sa.sun_path) - 1] = 0;
+
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	if(fd < 0) {
@@ -902,6 +912,8 @@ bool connect_tincd(bool verbose) {
 	setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&one, sizeof(one));
 #endif
 
+	sendline(fd, "%d ^%s %d", ID, controlcookie, TINC_CTL_VERSION_CURRENT);
+
 	char data[4096];
 	int version;
 
@@ -914,8 +926,6 @@ bool connect_tincd(bool verbose) {
 		fd = -1;
 		return false;
 	}
-
-	sendline(fd, "%d ^%s %d", ID, controlcookie, TINC_CTL_VERSION_CURRENT);
 
 	if(!recvline(fd, line, sizeof(line)) || sscanf(line, "%d %d %d", &code, &version, &pid) != 3 || code != 4 || version != TINC_CTL_VERSION_CURRENT) {
 		if(verbose) {
@@ -1066,6 +1076,8 @@ static int cmd_start(int argc, char *argv[]) {
 }
 
 static int cmd_stop(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1114,6 +1126,8 @@ static int cmd_restart(int argc, char *argv[]) {
 }
 
 static int cmd_reload(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1161,7 +1175,12 @@ static int dump_invitations(void) {
 		}
 
 		char fname[PATH_MAX];
-		snprintf(fname, sizeof(fname), "%s" SLASH "%s", dname, ent->d_name);
+
+		if((size_t)snprintf(fname, sizeof(fname), "%s" SLASH "%s", dname, ent->d_name) >= sizeof(fname)) {
+			fprintf(stderr, "Filename too long: %s" SLASH "%s\n", dname, ent->d_name);
+			continue;
+		}
+
 		FILE *f = fopen(fname, "r");
 
 		if(!f) {
@@ -1298,12 +1317,14 @@ static int cmd_dump(int argc, char *argv[]) {
 		unsigned int options, status_int;
 		node_status_t status;
 		long int last_state_change;
+		int udp_ping_rtt;
+		uint64_t in_packets, in_bytes, out_packets, out_bytes;
 
 		switch(req) {
 		case REQ_DUMP_NODES: {
-			int n = sscanf(line, "%*d %*d %4095s %4095s %4095s port %4095s %d %d %d %d %x %x %4095s %4095s %d %hd %hd %hd %ld", node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_int, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change);
+			int n = sscanf(line, "%*d %*d %4095s %4095s %4095s port %4095s %d %d %d %d %x %x %4095s %4095s %d %hd %hd %hd %ld %d %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64, node, id, host, port, &cipher, &digest, &maclength, &compression, &options, &status_int, nexthop, via, &distance, &pmtu, &minmtu, &maxmtu, &last_state_change, &udp_ping_rtt, &in_packets, &in_bytes, &out_packets, &out_bytes);
 
-			if(n != 17) {
+			if(n != 22) {
 				fprintf(stderr, "Unable to parse node dump from tincd: %s\n", line);
 				return 1;
 			}
@@ -1331,8 +1352,14 @@ static int cmd_dump(int argc, char *argv[]) {
 					continue;
 				}
 
-				printf("%s id %s at %s port %s cipher %d digest %d maclength %d compression %d options %x status %04x nexthop %s via %s distance %d pmtu %d (min %d max %d)\n",
-				       node, id, host, port, cipher, digest, maclength, compression, options, status_int, nexthop, via, distance, pmtu, minmtu, maxmtu);
+				printf("%s id %s at %s port %s cipher %d digest %d maclength %d compression %d options %x status %04x nexthop %s via %s distance %d pmtu %d (min %d max %d) rx %"PRIu64" %"PRIu64" tx %"PRIu64" %"PRIu64,
+				       node, id, host, port, cipher, digest, maclength, compression, options, status_int, nexthop, via, distance, pmtu, minmtu, maxmtu, in_packets, in_bytes, out_packets, out_bytes);
+
+				if(udp_ping_rtt != -1) {
+					printf(" rtt %d.%03d", udp_ping_rtt / 1000, udp_ping_rtt % 1000);
+				}
+
+				printf("\n");
 			}
 		}
 		break;
@@ -1394,6 +1421,8 @@ static int cmd_dump(int argc, char *argv[]) {
 }
 
 static int cmd_purge(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1438,6 +1467,8 @@ static int cmd_debug(int argc, char *argv[]) {
 }
 
 static int cmd_retry(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1508,6 +1539,8 @@ static int cmd_disconnect(int argc, char *argv[]) {
 }
 
 static int cmd_top(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1543,6 +1576,8 @@ static int cmd_pcap(int argc, char *argv[]) {
 
 #ifdef SIGINT
 static void sigint_handler(int sig) {
+	(void)sig;
+
 	fprintf(stderr, "\n");
 	shutdown(fd, SHUT_RDWR);
 }
@@ -1574,6 +1609,8 @@ static int cmd_log(int argc, char *argv[]) {
 }
 
 static int cmd_pid(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -1922,7 +1959,11 @@ static int cmd_config(int argc, char *argv[]) {
 	FILE *tf = NULL;
 
 	if(action >= -1) {
-		snprintf(tmpfile, sizeof(tmpfile), "%s.config.tmp", filename);
+		if((size_t)snprintf(tmpfile, sizeof(tmpfile), "%s.config.tmp", filename) >= sizeof(tmpfile)) {
+			fprintf(stderr, "Filename too long: %s.config.tmp\n", filename);
+			return 1;
+		}
+
 		tf = fopen(tmpfile, "w");
 
 		if(!tf) {
@@ -2120,7 +2161,7 @@ static bool try_bind(int port) {
 	return success;
 }
 
-int check_port(char *name) {
+int check_port(const char *name) {
 	if(try_bind(655)) {
 		return 655;
 	}
@@ -2305,6 +2346,8 @@ static int cmd_generate_rsa_keys(int argc, char *argv[]) {
 #endif
 
 static int cmd_generate_ed25519_keys(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2318,11 +2361,16 @@ static int cmd_generate_ed25519_keys(int argc, char *argv[]) {
 }
 
 static int cmd_help(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv;
+
 	usage(false);
 	return 0;
 }
 
 static int cmd_version(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2391,7 +2439,13 @@ static int cmd_edit(int argc, char *argv[]) {
 
 	char *command;
 #ifndef HAVE_MINGW
-	xasprintf(&command, "\"%s\" \"%s\"", getenv("VISUAL") ? : getenv("EDITOR") ? : "vi", filename);
+	const char *editor = getenv("VISUAL");
+	if (!editor)
+		editor = getenv("EDITOR");
+	if (!editor)
+		editor = "vi";
+
+	xasprintf(&command, "\"%s\" \"%s\"", editor, filename);
 #else
 	xasprintf(&command, "edit \"%s\"", filename);
 #endif
@@ -2440,6 +2494,8 @@ static int export(const char *name, FILE *out) {
 }
 
 static int cmd_export(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2462,6 +2518,8 @@ static int cmd_export(int argc, char *argv[]) {
 }
 
 static int cmd_export_all(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2502,6 +2560,8 @@ static int cmd_export_all(int argc, char *argv[]) {
 }
 
 static int cmd_import(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2529,7 +2589,10 @@ static int cmd_import(int argc, char *argv[]) {
 				fclose(out);
 			}
 
-			snprintf(filename, sizeof(filename), "%s" SLASH "%s", hosts_dir, name);
+			if((size_t)snprintf(filename, sizeof(filename), "%s" SLASH "%s", hosts_dir, name) >= sizeof(filename)) {
+				fprintf(stderr, "Filename too long: %s" SLASH "%s\n", hosts_dir, name);
+				return 1;
+			}
 
 			if(!force && !access(filename, F_OK)) {
 				fprintf(stderr, "Host configuration file %s already exists, skipping.\n", filename);
@@ -2578,11 +2641,11 @@ static int cmd_import(int argc, char *argv[]) {
 }
 
 static int cmd_exchange(int argc, char *argv[]) {
-	return cmd_export(argc, argv) ? : cmd_import(argc, argv);
+	return cmd_export(argc, argv) ? 1 : cmd_import(argc, argv);
 }
 
 static int cmd_exchange_all(int argc, char *argv[]) {
-	return cmd_export_all(argc, argv) ? : cmd_import(argc, argv);
+	return cmd_export_all(argc, argv) ? 1 : cmd_import(argc, argv);
 }
 
 static int switch_network(char *name) {
@@ -2660,6 +2723,8 @@ static int cmd_network(int argc, char *argv[]) {
 }
 
 static int cmd_fsck(int argc, char *argv[]) {
+	(void)argv;
+
 	if(argc > 1) {
 		fprintf(stderr, "Too many arguments!\n");
 		return 1;
@@ -2670,11 +2735,11 @@ static int cmd_fsck(int argc, char *argv[]) {
 
 static void *readfile(FILE *in, size_t *len) {
 	size_t count = 0;
-	size_t alloced = 4096;
-	char *buf = xmalloc(alloced);
+	size_t bufsize = 4096;
+	char *buf = xmalloc(bufsize);
 
 	while(!feof(in)) {
-		size_t read = fread(buf + count, 1, alloced - count, in);
+		size_t read = fread(buf + count, 1, bufsize - count, in);
 
 		if(!read) {
 			break;
@@ -2682,9 +2747,9 @@ static void *readfile(FILE *in, size_t *len) {
 
 		count += read;
 
-		if(count >= alloced) {
-			alloced *= 2;
-			buf = xrealloc(buf, alloced);
+		if(count >= bufsize) {
+			bufsize *= 2;
+			buf = xrealloc(buf, bufsize);
 		}
 	}
 
@@ -2928,48 +2993,48 @@ static const struct {
 	int (*function)(int argc, char *argv[]);
 	bool hidden;
 } commands[] = {
-	{"start", cmd_start},
-	{"stop", cmd_stop},
-	{"restart", cmd_restart},
-	{"reload", cmd_reload},
-	{"dump", cmd_dump},
-	{"list", cmd_dump},
-	{"purge", cmd_purge},
-	{"debug", cmd_debug},
-	{"retry", cmd_retry},
-	{"connect", cmd_connect},
-	{"disconnect", cmd_disconnect},
-	{"top", cmd_top},
-	{"pcap", cmd_pcap},
-	{"log", cmd_log},
-	{"pid", cmd_pid},
+	{"start", cmd_start, false},
+	{"stop", cmd_stop, false},
+	{"restart", cmd_restart, false},
+	{"reload", cmd_reload, false},
+	{"dump", cmd_dump, false},
+	{"list", cmd_dump, false},
+	{"purge", cmd_purge, false},
+	{"debug", cmd_debug, false},
+	{"retry", cmd_retry, false},
+	{"connect", cmd_connect, false},
+	{"disconnect", cmd_disconnect, false},
+	{"top", cmd_top, false},
+	{"pcap", cmd_pcap, false},
+	{"log", cmd_log, false},
+	{"pid", cmd_pid, false},
 	{"config", cmd_config, true},
-	{"add", cmd_config},
-	{"del", cmd_config},
-	{"get", cmd_config},
-	{"set", cmd_config},
-	{"init", cmd_init},
-	{"generate-keys", cmd_generate_keys},
+	{"add", cmd_config, false},
+	{"del", cmd_config, false},
+	{"get", cmd_config, false},
+	{"set", cmd_config, false},
+	{"init", cmd_init, false},
+	{"generate-keys", cmd_generate_keys, false},
 #ifndef DISABLE_LEGACY
-	{"generate-rsa-keys", cmd_generate_rsa_keys},
+	{"generate-rsa-keys", cmd_generate_rsa_keys, false},
 #endif
-	{"generate-ed25519-keys", cmd_generate_ed25519_keys},
-	{"help", cmd_help},
-	{"version", cmd_version},
-	{"info", cmd_info},
-	{"edit", cmd_edit},
-	{"export", cmd_export},
-	{"export-all", cmd_export_all},
-	{"import", cmd_import},
-	{"exchange", cmd_exchange},
-	{"exchange-all", cmd_exchange_all},
-	{"invite", cmd_invite},
-	{"join", cmd_join},
-	{"network", cmd_network},
-	{"fsck", cmd_fsck},
-	{"sign", cmd_sign},
-	{"verify", cmd_verify},
-	{NULL, NULL},
+	{"generate-ed25519-keys", cmd_generate_ed25519_keys, false},
+	{"help", cmd_help, false},
+	{"version", cmd_version, false},
+	{"info", cmd_info, false},
+	{"edit", cmd_edit, false},
+	{"export", cmd_export, false},
+	{"export-all", cmd_export_all, false},
+	{"import", cmd_import, false},
+	{"exchange", cmd_exchange, false},
+	{"exchange-all", cmd_exchange_all, false},
+	{"invite", cmd_invite, false},
+	{"join", cmd_join, false},
+	{"network", cmd_network, false},
+	{"fsck", cmd_fsck, false},
+	{"sign", cmd_sign, false},
+	{"verify", cmd_verify, false},
+	{NULL, NULL, false},
 };
 
 #ifdef HAVE_READLINE
@@ -3087,10 +3152,13 @@ static char *complete_info(const char *text, int state) {
 }
 
 static char *complete_nothing(const char *text, int state) {
+	(void)text;
+	(void)state;
 	return NULL;
 }
 
 static char **completion(const char *text, int start, int end) {
+	(void)end;
 	char **matches = NULL;
 
 	if(!start) {
@@ -3141,10 +3209,7 @@ static int cmd_shell(int argc, char *argv[]) {
 			free(line);
 			rl_basic_word_break_characters = "\t\n ";
 			line = readline(prompt);
-
-			if(line) {
-				copy = xstrdup(line);
-			}
+			copy = line ? xstrdup(line) : NULL;
 		} else {
 			line = fgets(buf, sizeof(buf), stdin);
 		}
@@ -3190,6 +3255,9 @@ static int cmd_shell(int argc, char *argv[]) {
 		}
 
 		if(!strcasecmp(nargv[argc], "exit") || !strcasecmp(nargv[argc], "quit")) {
+#ifdef HAVE_READLINE
+			free(copy);
+#endif
 			free(nargv);
 			return result;
 		}
@@ -3218,6 +3286,9 @@ static int cmd_shell(int argc, char *argv[]) {
 		}
 	}
 
+#ifdef HAVE_READLINE
+	free(copy);
+#endif
 	free(nargv);
 
 	if(tty) {
@@ -3256,7 +3327,7 @@ int main(int argc, char *argv[]) {
 	static struct WSAData wsa_state;
 
 	if(WSAStartup(MAKEWORD(2, 2), &wsa_state)) {
-		fprintf(stderr, "System call `%s' failed: %s", "WSAStartup", winerror(GetLastError()));
+		fprintf(stderr, "System call `%s' failed: %s\n", "WSAStartup", winerror(GetLastError()));
 		return false;
 	}
 
