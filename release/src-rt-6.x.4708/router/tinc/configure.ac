@@ -181,6 +181,7 @@ AC_CHECK_HEADERS([netinet/tcp.h netinet/ip_icmp.h netinet/icmp6.h],
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 tinc_ATTRIBUTE(__malloc__)
+tinc_ATTRIBUTE(__nonnull__)
 tinc_ATTRIBUTE(__warn_unused_result__)
 
 AC_CHECK_TYPES([struct ether_header, struct arphdr, struct ether_arp, struct ip, struct icmp, struct ip6_hdr, struct icmp6_hdr, struct nd_neighbor_solicit, struct nd_opt_hdr], , ,
@@ -260,7 +261,7 @@ AC_ARG_ENABLE(jumbograms,
   ]
 )
 
-dnl Ensure runstatedir is set if we are using a version of autoconf that does not suppport it
+dnl Ensure runstatedir is set if we are using a version of autoconf that does not support it
 if test "x$runstatedir" = "x"; then
   AC_SUBST([runstatedir], ['${localstatedir}/run'])
 fi

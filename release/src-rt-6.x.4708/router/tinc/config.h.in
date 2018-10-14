@@ -42,9 +42,13 @@
 /* Darwin (MacOS/X) */
 #undef HAVE_DARWIN
 
-/* Define to 1 if you have the declaration of `OpenSSL_add_all_algorithms
-   EVP_aes_256_cfb', and to 0 if you don't. */
-#undef HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS_EVP_AES_256_CFB
+/* Define to 1 if you have the declaration of `EVP_aes_256_cfb', and to 0 if
+   you don't. */
+#undef HAVE_DECL_EVP_AES_256_CFB
+
+/* Define to 1 if you have the declaration of `OpenSSL_add_all_algorithms',
+   and to 0 if you don't. */
+#undef HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS
 
 /* Define to 1 if you have the declaration of `res_init', and to 0 if you
    don't. */
@@ -83,9 +87,6 @@
 /* FreeBSD */
 #undef HAVE_FREEBSD
 
-/* Define to 1 if you have the `ftime' function. */
-#undef HAVE_FTIME
-
 /* Define to 1 if you have the <gcrypt.h> header file. */
 #undef HAVE_GCRYPT_H
 
@@ -97,6 +98,9 @@
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
+
+/* Define to 1 if you have the `HMAC_CTX_new' function. */
+#undef HAVE_HMAC_CTX_NEW
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -423,6 +427,9 @@
 
 /* Defined if the __malloc__ attribute is not supported. */
 #undef __malloc__
+
+/* Defined if the __nonnull__ attribute is not supported. */
+#undef __nonnull__
 
 /* Defined if the __warn_unused_result__ attribute is not supported. */
 #undef __warn_unused_result__

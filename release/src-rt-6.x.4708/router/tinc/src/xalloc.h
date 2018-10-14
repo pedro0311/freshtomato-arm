@@ -2,7 +2,7 @@
 #define TINC_XALLOC_H
 
 /*
-   xalloc.h -- malloc and related fuctions with out of memory checking
+   xalloc.h -- malloc and related functions with out of memory checking
    Copyright (C) 1990, 91, 92, 93, 94, 95, 96, 97 Free Software Foundation, Inc.
    Copyright (C) 2011-2013 Guus Sliepen <guus@tinc-vpn.org>
 
@@ -53,7 +53,7 @@ static inline void *xrealloc(void *p, size_t n) {
 	return p;
 }
 
-static inline char *xstrdup(const char *s) __attribute__((__malloc__));
+static inline char *xstrdup(const char *s) __attribute__((__malloc__, __nonnull__));
 static inline char *xstrdup(const char *s) {
 	char *p = strdup(s);
 

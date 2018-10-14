@@ -76,13 +76,14 @@ bool send_request(connection_t *c, const char *format, ...) {
 	request[sizeof(request) - 1] = 0;
 	va_end(args);
 
-	if(len < 0 || len > sizeof(request) - 1) {
+	if(len < 0 || (size_t)len > sizeof(request) - 1) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Output buffer overflow while sending request to %s (%s)",
 		       c->name, c->hostname);
 		return false;
 	}
 
-	logger(DEBUG_META, LOG_DEBUG, "Sending %s to %s (%s): %s", request_name[atoi(request)], c->name, c->hostname, request);
+	int id = atoi(request);
+	logger(DEBUG_META, LOG_DEBUG, "Sending %s to %s (%s): %s", request_name[id], c->name, c->hostname, request);
 
 	request[len++] = '\n';
 
@@ -90,7 +91,12 @@ bool send_request(connection_t *c, const char *format, ...) {
 		broadcast_meta(NULL, request, len);
 		return true;
 	} else {
-		return send_meta(c, request, len);
+		if(id) {
+			return send_meta(c, request, len);
+		} else {
+			send_meta_raw(c, request, len);
+			return true;
+		}
 	}
 }
 
@@ -159,16 +165,14 @@ static int past_request_compare(const past_request_t *a, const past_request_t *b
 }
 
 static void free_past_request(past_request_t *r) {
-	if(r->request) {
-		free((char *)r->request);
-	}
-
+	free((char *)r->request);
 	free(r);
 }
 
 static timeout_t past_request_timeout;
 
 static void age_past_requests(void *data) {
+	(void)data;
 	int left = 0, deleted = 0;
 
 	for splay_each(past_request_t, p, past_request_tree) {
@@ -190,7 +194,7 @@ static void age_past_requests(void *data) {
 }
 
 bool seen_request(const char *request) {
-	past_request_t *new, p = {NULL};
+	past_request_t *new, p = {0};
 
 	p.request = request;
 
