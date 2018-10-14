@@ -25,19 +25,29 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <getopt.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include "list.h"
 
+#include "avl.h"
 #include "blob.h"
 #include "blobmsg_json.h"
 
 #define MAX_VARLEN	256
 
+static struct avl_tree env_vars;
 static struct blob_buf b = { 0 };
 
 static const char *var_prefix = "";
 static int var_prefix_len = 0;
 
 static int add_json_element(const char *key, json_object *obj);
+
+struct env_var {
+	struct avl_node avl;
+	char *val;
+};
 
 static int add_json_object(json_object *obj)
 {
@@ -98,9 +108,6 @@ static int add_json_element(const char *key, json_object *obj)
 {
 	char *type;
 
-	if (!obj)
-		return -1;
-
 	switch (json_object_get_type(obj)) {
 	case json_type_object:
 		type = "object";
@@ -119,6 +126,9 @@ static int add_json_element(const char *key, json_object *obj)
 		break;
 	case json_type_double:
 		type = "double";
+		break;
+	case json_type_null:
+		type = "null";
 		break;
 	default:
 		return -1;
@@ -147,10 +157,13 @@ static int add_json_element(const char *key, json_object *obj)
 		fprintf(stdout, "' %d;\n", json_object_get_boolean(obj));
 		break;
 	case json_type_int:
-		fprintf(stdout, "' %d;\n", json_object_get_int(obj));
+		fprintf(stdout, "' %"PRId64";\n", json_object_get_int64(obj));
 		break;
 	case json_type_double:
 		fprintf(stdout, "' %lf;\n", json_object_get_double(obj));
+		break;
+	case json_type_null:
+		fprintf(stdout, "';\n");
 		break;
 	default:
 		return -1;
@@ -175,13 +188,19 @@ static int jshn_parse(const char *str)
 	return 0;
 }
 
+static char *getenv_avl(const char *key)
+{
+	struct env_var *var = avl_find_element(&env_vars, key, var, avl);
+	return var ? var->val : NULL;
+}
+
 static char *get_keys(const char *prefix)
 {
 	char *keys;
 
 	keys = alloca(var_prefix_len + strlen(prefix) + sizeof("K_") + 1);
 	sprintf(keys, "%sK_%s", var_prefix, prefix);
-	return getenv(keys);
+	return getenv_avl(keys);
 }
 
 static void get_var(const char *prefix, const char **name, char **var, char **type)
@@ -191,13 +210,13 @@ static void get_var(const char *prefix, const char **name, char **var, char **ty
 	tmpname = alloca(var_prefix_len + strlen(prefix) + 1 + strlen(*name) + 1 + sizeof("T_"));
 
 	sprintf(tmpname, "%s%s_%s", var_prefix, prefix, *name);
-	*var = getenv(tmpname);
+	*var = getenv_avl(tmpname);
 
 	sprintf(tmpname, "%sT_%s_%s", var_prefix, prefix, *name);
-	*type = getenv(tmpname);
+	*type = getenv_avl(tmpname);
 
 	sprintf(tmpname, "%sN_%s_%s", var_prefix, prefix, *name);
-	varname = getenv(tmpname);
+	varname = getenv_avl(tmpname);
 	if (varname)
 		*name = varname;
 }
@@ -222,11 +241,13 @@ static void jshn_add_object_var(json_object *obj, bool array, const char *prefix
 	} else if (!strcmp(type, "string")) {
 		new = json_object_new_string(var);
 	} else if (!strcmp(type, "int")) {
-		new = json_object_new_int(atoi(var));
+		new = json_object_new_int64(atoll(var));
 	} else if (!strcmp(type, "double")) {
 		new = json_object_new_double(strtod(var, NULL));
 	} else if (!strcmp(type, "boolean")) {
 		new = json_object_new_boolean(!!atoi(var));
+	} else if (!strcmp(type, "null")) {
+		new = NULL;
 	} else {
 		return;
 	}
@@ -258,33 +279,94 @@ static int jshn_format(bool no_newline, bool indent)
 {
 	json_object *obj;
 	const char *output;
+	char *blobmsg_output = NULL;
+	int ret = -1;
 
-	obj = json_object_new_object();
+	if (!(obj = json_object_new_object()))
+		return -1;
+
 	jshn_add_objects(obj, "J_V", false);
-	output = json_object_to_json_string(obj);
+	if (!(output = json_object_to_json_string(obj)))
+		goto out;
+
 	if (indent) {
 		blob_buf_init(&b, 0);
-		blobmsg_add_json_from_string(&b, output);
-		output = blobmsg_format_json_indent(b.head, 1, 0);
+		if (!blobmsg_add_json_from_string(&b, output))
+			goto out;
+		if (!(blobmsg_output = blobmsg_format_json_indent(b.head, 1, 0)))
+			goto out;
+		output = blobmsg_output;
 	}
 	fprintf(stdout, "%s%s", output, no_newline ? "" : "\n");
+	free(blobmsg_output);
+	ret = 0;
+
+out:
 	json_object_put(obj);
-	return 0;
+	return ret;
 }
 
 static int usage(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-n] [-i] -r <message>|-w\n", progname);
+	fprintf(stderr, "Usage: %s [-n] [-i] -r <message>|-R <file>|-w\n", progname);
 	return 2;
+}
+
+static int avl_strcmp_var(const void *k1, const void *k2, void *ptr)
+{
+	const char *s1 = k1;
+	const char *s2 = k2;
+	char c1, c2;
+
+	while (*s1 && *s1 == *s2) {
+		s1++;
+		s2++;
+	}
+
+	c1 = *s1;
+	c2 = *s2;
+	if (c1 == '=')
+		c1 = 0;
+	if (c2 == '=')
+		c2 = 0;
+
+	return c1 - c2;
 }
 
 int main(int argc, char **argv)
 {
+	extern char **environ;
 	bool no_newline = false;
 	bool indent = false;
+	struct env_var *vars;
+	int i;
 	int ch;
+	int fd;
+	struct stat sb;
+	char *fbuf;
+	int ret;
 
-	while ((ch = getopt(argc, argv, "p:nir:w")) != -1) {
+	avl_init(&env_vars, avl_strcmp_var, false, NULL);
+	for (i = 0; environ[i]; i++);
+
+	vars = calloc(i, sizeof(*vars));
+	if (!vars) {
+		fprintf(stderr, "%m\n");
+		return -1;
+	}
+	for (i = 0; environ[i]; i++) {
+		char *c;
+
+		vars[i].avl.key = environ[i];
+		c = strchr(environ[i], '=');
+		if (!c)
+			continue;
+
+		vars[i].val = c + 1;
+		avl_insert(&env_vars, &vars[i].avl);
+	}
+
+	while ((ch = getopt(argc, argv, "p:nir:R:w")) != -1) {
 		switch(ch) {
 		case 'p':
 			var_prefix = optarg;
@@ -292,6 +374,31 @@ int main(int argc, char **argv)
 			break;
 		case 'r':
 			return jshn_parse(optarg);
+		case 'R':
+			if ((fd = open(optarg, O_RDONLY)) == -1) {
+				fprintf(stderr, "Error opening %s\n", optarg);
+				return 3;
+			}
+			if (fstat(fd, &sb) == -1) {
+				fprintf(stderr, "Error getting size of %s\n", optarg);
+				close(fd);
+				return 3;
+			}
+			if (!(fbuf = malloc(sb.st_size))) {
+				fprintf(stderr, "Error allocating memory for %s\n", optarg);
+				close(fd);
+				return 3;
+			}
+			if (read(fd, fbuf, sb.st_size) != sb.st_size) {
+				fprintf(stderr, "Error reading %s\n", optarg);
+				free(fbuf);
+				close(fd);
+				return 3;
+			}
+			ret = jshn_parse(fbuf);
+			free(fbuf);
+			close(fd);
+			return ret;
 		case 'w':
 			return jshn_format(no_newline, indent);
 		case 'n':

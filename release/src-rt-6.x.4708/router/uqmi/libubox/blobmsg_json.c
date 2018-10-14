@@ -17,8 +17,6 @@
 #include "blobmsg.h"
 #include "blobmsg_json.h"
 
-#define JSONC
-
 #ifdef JSONC
 	#include <json.h>
 #else
@@ -51,9 +49,6 @@ bool blobmsg_add_json_element(struct blob_buf *b, const char *name, json_object 
 	bool ret = true;
 	void *c;
 
-	if (!obj)
-		return false;
-
 	switch (json_object_get_type(obj)) {
 	case json_type_object:
 		c = blobmsg_open_table(b, name);
@@ -73,6 +68,12 @@ bool blobmsg_add_json_element(struct blob_buf *b, const char *name, json_object 
 		break;
 	case json_type_int:
 		blobmsg_add_u32(b, name, json_object_get_int(obj));
+		break;
+	case json_type_double:
+		blobmsg_add_double(b, name, json_object_get_double(obj));
+		break;
+	case json_type_null:
+		blobmsg_add_field(b, BLOBMSG_TYPE_UNSPEC, name, NULL, 0);
 		break;
 	default:
 		return false;
@@ -121,15 +122,22 @@ struct strbuf {
 
 static bool blobmsg_puts(struct strbuf *s, const char *c, int len)
 {
+	size_t new_len;
+	char *new_buf;
+
 	if (len <= 0)
 		return true;
 
 	if (s->pos + len >= s->len) {
-		s->len += 16 + len;
-		s->buf = realloc(s->buf, s->len);
-		if (!s->buf)
+		new_len = s->len + 16 + len;
+		new_buf = realloc(s->buf, new_len);
+		if (!new_buf)
 			return false;
+
+		s->len = new_len;
+		s->buf = new_buf;
 	}
+
 	memcpy(s->buf + s->pos, c, len);
 	s->pos += len;
 	return true;
@@ -137,21 +145,17 @@ static bool blobmsg_puts(struct strbuf *s, const char *c, int len)
 
 static void add_separator(struct strbuf *s)
 {
-	static char indent_chars[17] = "\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-	int indent;
-	char *start;
+	const char *indent_chars = "\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+	int len;
 
 	if (!s->indent)
 		return;
 
-	indent = s->indent_level;
-	if (indent > 16)
-		indent = 16;
+	len = s->indent_level + 1;
+	if (len > strlen(indent_chars))
+		len = strlen(indent_chars);
 
-	start = &indent_chars[sizeof(indent_chars) - indent - 1];
-	*start = '\n';
-	blobmsg_puts(s, start, indent + 1);
-	*start = '\t';
+	blobmsg_puts(s, indent_chars, len);
 }
 
 
@@ -213,7 +217,7 @@ static void blobmsg_format_string(struct strbuf *s, const char *str)
 
 static void blobmsg_format_json_list(struct strbuf *s, struct blob_attr *attr, int len, bool array);
 
-static void blobmsg_format_element(struct strbuf *s, struct blob_attr *attr, bool array, bool head)
+static void blobmsg_format_element(struct strbuf *s, struct blob_attr *attr, bool without_name, bool head)
 {
 	const char *data_str;
 	char buf[32];
@@ -223,7 +227,7 @@ static void blobmsg_format_element(struct strbuf *s, struct blob_attr *attr, boo
 	if (!blobmsg_check_attr(attr, false))
 		return;
 
-	if (!array && blobmsg_name(attr)[0]) {
+	if (!without_name && blobmsg_name(attr)[0]) {
 		blobmsg_format_string(s, blobmsg_name(attr));
 		blobmsg_puts(s, ": ", s->indent ? 2 : 1);
 	}
@@ -253,6 +257,9 @@ static void blobmsg_format_element(struct strbuf *s, struct blob_attr *attr, boo
 		break;
 	case BLOBMSG_TYPE_INT64:
 		sprintf(buf, "%" PRId64, (int64_t) be64_to_cpu(*(uint64_t *)data));
+		break;
+	case BLOBMSG_TYPE_DOUBLE:
+		sprintf(buf, "%lf", blobmsg_get_double(attr));
 		break;
 	case BLOBMSG_TYPE_STRING:
 		blobmsg_format_string(s, data);
@@ -292,22 +299,30 @@ static void blobmsg_format_json_list(struct strbuf *s, struct blob_attr *attr, i
 	blobmsg_puts(s, (array ? "]" : "}"), 1);
 }
 
+static void setup_strbuf(struct strbuf *s, struct blob_attr *attr, blobmsg_json_format_t cb, void *priv, int indent)
+{
+	s->len = blob_len(attr);
+	s->buf = malloc(s->len);
+	s->pos = 0;
+	s->custom_format = cb;
+	s->priv = priv;
+	s->indent = false;
+
+	if (indent >= 0) {
+		s->indent = true;
+		s->indent_level = indent;
+	}
+}
+
 char *blobmsg_format_json_with_cb(struct blob_attr *attr, bool list, blobmsg_json_format_t cb, void *priv, int indent)
 {
 	struct strbuf s;
 	bool array;
+	char *ret;
 
-	s.len = blob_len(attr);
-	s.buf = malloc(s.len);
-	s.pos = 0;
-	s.custom_format = cb;
-	s.priv = priv;
-	s.indent = false;
-
-	if (indent >= 0) {
-		s.indent = true;
-		s.indent_level = indent;
-	}
+	setup_strbuf(&s, attr, cb, priv, indent);
+	if (!s.buf)
+		return NULL;
 
 	array = blob_is_extended(attr) &&
 		blobmsg_type(attr) == BLOBMSG_TYPE_ARRAY;
@@ -322,8 +337,40 @@ char *blobmsg_format_json_with_cb(struct blob_attr *attr, bool list, blobmsg_jso
 		return NULL;
 	}
 
-	s.buf = realloc(s.buf, s.pos + 1);
-	s.buf[s.pos] = 0;
+	ret = realloc(s.buf, s.pos + 1);
+	if (!ret) {
+		free(s.buf);
+		return NULL;
+	}
 
-	return s.buf;
+	ret[s.pos] = 0;
+
+	return ret;
+}
+
+char *blobmsg_format_json_value_with_cb(struct blob_attr *attr, blobmsg_json_format_t cb, void *priv, int indent)
+{
+	struct strbuf s;
+	char *ret;
+
+	setup_strbuf(&s, attr, cb, priv, indent);
+	if (!s.buf)
+		return NULL;
+
+	blobmsg_format_element(&s, attr, true, false);
+
+	if (!s.len) {
+		free(s.buf);
+		return NULL;
+	}
+
+	ret = realloc(s.buf, s.pos + 1);
+	if (!ret) {
+		free(s.buf);
+		return NULL;
+	}
+
+	ret[s.pos] = 0;
+
+	return ret;
 }

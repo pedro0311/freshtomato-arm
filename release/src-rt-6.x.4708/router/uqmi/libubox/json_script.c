@@ -32,6 +32,7 @@ struct json_handler {
 
 static int json_process_expr(struct json_call *call, struct blob_attr *cur);
 static int json_process_cmd(struct json_call *call, struct blob_attr *cur);
+static int eval_string(struct json_call *call, struct blob_buf *buf, const char *name, const char *pattern);
 
 struct json_script_file *
 json_script_file_from_blobmsg(const char *name, void *data, int len)
@@ -44,6 +45,9 @@ json_script_file_from_blobmsg(const char *name, void *data, int len)
 		name_len = strlen(name) + 1;
 
 	f = calloc_a(sizeof(*f) + len, &new_name, name_len);
+	if (!f)
+		return NULL;
+
 	memcpy(f->data, data, len);
 	if (name)
 		f->avl.key = strcpy(new_name, name);
@@ -333,12 +337,40 @@ static int handle_expr_or(struct json_call *call, struct blob_attr *expr)
 static int handle_expr_not(struct json_call *call, struct blob_attr *expr)
 {
 	struct blob_attr *tb[3];
+	int ret;
 
 	json_get_tuple(expr, tb, BLOBMSG_TYPE_ARRAY, 0);
 	if (!tb[1])
 		return -1;
 
-	return json_process_expr(call, tb[1]);
+	ret = json_process_expr(call, tb[1]);
+	if (ret < 0)
+		return ret;
+	return !ret;
+}
+
+static int handle_expr_isdir(struct json_call *call, struct blob_attr *expr)
+{
+	static struct blob_buf b;
+	struct blob_attr *tb[3];
+	const char *pattern, *path;
+	struct stat s;
+	int ret;
+
+	json_get_tuple(expr, tb, BLOBMSG_TYPE_STRING, 0);
+	if (!tb[1] || blobmsg_type(tb[1]) != BLOBMSG_TYPE_STRING)
+		return -1;
+	pattern = blobmsg_data(tb[1]);
+
+	blob_buf_init(&b, 0);
+	ret = eval_string(call, &b, NULL, pattern);
+	if (ret < 0)
+		return ret;
+	path = blobmsg_data(blob_data(b.head));
+	ret = stat(path, &s);
+	if (ret < 0)
+		return 0;
+	return S_ISDIR(s.st_mode);
 }
 
 static const struct json_handler expr[] = {
@@ -348,6 +380,7 @@ static const struct json_handler expr[] = {
 	{ "and", handle_expr_and },
 	{ "or", handle_expr_or },
 	{ "not", handle_expr_not },
+	{ "isdir", handle_expr_isdir },
 };
 
 static int
@@ -382,8 +415,10 @@ static int json_process_expr(struct json_call *call, struct blob_attr *cur)
 	}
 
 	ret = __json_process_type(call, cur, expr, ARRAY_SIZE(expr), &found);
-	if (!found)
-		ctx->handle_error(ctx, "Unknown expression type", cur);
+	if (!found) {
+		const char *name = blobmsg_data(blobmsg_data(cur));
+		ctx->handle_expr(ctx, name, cur, call->vars);
+	}
 
 	return ret;
 }
@@ -396,12 +431,15 @@ static int eval_string(struct json_call *call, struct blob_buf *buf, const char 
 	char c = '%';
 
 	dest = blobmsg_alloc_string_buffer(buf, name, 1);
+	if (!dest)
+		return -1;
+
 	next = alloca(strlen(pattern) + 1);
 	strcpy(next, pattern);
 
 	for (str = next; str; str = next) {
 		const char *cur;
-		char *end;
+		char *end, *new_buf;
 		int cur_len = 0;
 		bool cur_var = var;
 
@@ -416,7 +454,7 @@ static int eval_string(struct json_call *call, struct blob_buf *buf, const char 
 		}
 
 		if (cur_var) {
-			if (next > str) {
+			if (end > str) {
 				cur = msg_find_var(call, str);
 				if (!cur)
 					continue;
@@ -434,7 +472,14 @@ static int eval_string(struct json_call *call, struct blob_buf *buf, const char 
 			cur_len = end - str;
 		}
 
-		dest = blobmsg_realloc_string_buffer(buf, cur_len + 1);
+		new_buf = blobmsg_realloc_string_buffer(buf, len + cur_len + 1);
+		if (!new_buf) {
+			/* Make eval_string return -1 */
+			var = true;
+			break;
+		}
+
+		dest = new_buf;
 		memcpy(dest + len, cur, cur_len);
 		len += cur_len;
 	}
@@ -480,8 +525,8 @@ static int cmd_process_strings(struct json_call *call, struct blob_attr *attr)
 			continue;
 
 		if (blobmsg_type(cur) != BLOBMSG_TYPE_STRING) {
-			ctx->handle_error(ctx, "Invalid argument in command", attr);
-			return -1;
+			blobmsg_add_blob(&ctx->buf, cur);
+			continue;
 		}
 
 		ret = cmd_add_string(call, blobmsg_data(cur));
@@ -537,6 +582,9 @@ static int json_process_cmd(struct json_call *call, struct blob_attr *block)
 	}
 
 	blobmsg_for_each_attr(cur, block, rem) {
+		if (ctx->abort)
+			break;
+
 		switch(blobmsg_type(cur)) {
 		case BLOBMSG_TYPE_STRING:
 			if (!i)
@@ -567,6 +615,8 @@ void json_script_run_file(struct json_script_ctx *ctx, struct json_script_file *
 	if (!call.seq)
 		call.seq = ++_seq;
 
+	ctx->abort = false;
+
 	__json_script_run(&call, file, NULL);
 }
 
@@ -592,8 +642,7 @@ static void __json_script_file_free(struct json_script_file *f)
 	next = f->next;
 	free(f);
 
-	if (next)
-		return __json_script_file_free(next);
+	__json_script_file_free(next);
 }
 
 void
@@ -624,6 +673,7 @@ static int
 __default_handle_expr(struct json_script_ctx *ctx, const char *name,
 		      struct blob_attr *expr, struct blob_attr *vars)
 {
+	ctx->handle_error(ctx, "Unknown expression type", expr);
 	return -1;
 }
 
