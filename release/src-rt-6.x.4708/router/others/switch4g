@@ -193,21 +193,23 @@ connect() {
         CONNECTED=0
         COUNT=0
 
-        case "$SPEED" in
-             "00")   SPD1="all" ;;
-             "03")   SPD1="lte" ;;
-             "02")   SPD1="all" ;;
-             "0302") SPD1="all" ;;
-             "030201") SPD1="all" ;;
-             *) SPD1="all" ;;
-        esac
+	case "$SPEED" in
+	     "00")   SPD1="all" ;;
+	     "03")   SPD1="lte" ;;
+	     "02")   SPD1="umts,cdma" ;;
+	     "0302") SPD1="lte,umts,cdma" ;;
+	     "030201") SPD1="lte,umts,cdma,gsm" ;;
+	     *)      SPD1="all" ;;
+	esac
 
-        case "$ROAMING" in
-             "3")  ROAM3="only" ;;
-             *)    ROAM3="any"  ;;
-        esac
+	case "$ROAMING" in
+	     "0")  ROAM3="off"  ;;
+	     "1")  ROAM3="any"  ;;
+	     "3")  ROAM3="only" ;;
+	     *)    ROAM3="any"  ;;
+	esac
 
-        sleep 3
+        sleep 6
         uqmi -s -d /dev/"$devnr" --sync
         sleep 1
 
