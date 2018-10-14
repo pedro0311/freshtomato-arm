@@ -9,18 +9,18 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] IP Traffic: View Graphs</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
 
 <!-- / / / -->
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<style type='text/css'>
+<style type="text/css">
 .color {
 	width: 12px;
 	height: 25px;
@@ -44,7 +44,7 @@
 }
 </style>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram('cstats_enable,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,dhcpd_static,web_svg'); %>
 
 //	<% iptraffic(); %>
@@ -300,16 +300,16 @@ function init() {
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
@@ -317,9 +317,9 @@ function init() {
 <div id="cstats">
 
 	<div class="section">
-		<table border=0 width="100%">
+		<table border="0" width="100%">
 			<tr><td>
-				<script type='text/javascript'>
+				<script type="text/javascript">
 				W('<table style="width:250px">\n');
 				for (i = 0; i < 11; ++i) {
 					W('<tr style="cursor:pointer" onclick="mClick(' + i + ')">' +
@@ -332,9 +332,9 @@ function init() {
 				W('<\/table>\n');
 				</script>
 			</td><td style="margin-right:150px">
-			<script type='text/javascript'>
+			<script type="text/javascript">
 			if (nvram.web_svg != '0') {
-				W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
+				W('<embed src="ipt-graph.svg?n=0&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg0" type="image/svg+xml"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
@@ -345,9 +345,9 @@ function init() {
 
 	<div class="section-title">Bandwidth Distribution (Inbound)</div>
 	<div class="section">
-		<table border=0 width="100%">
+		<table border="0" width="100%">
 			<tr><td>
-				<script type='text/javascript'>
+				<script type="text/javascript">
 					W('<table style="width:250px">\n');
 					W('<tr><td class="color" style="height:1em"><\/td><td class="title" style="width:45px">&nbsp;<\/td><td class="thead count">kbit/s<\/td><td class="thead count">KB/s<\/td><td class="pct">&nbsp;\n');
 					W('<\/td><\/tr>\n');
@@ -364,9 +364,9 @@ function init() {
 					W('<\/table>\n');
 				</script>
 			</td><td style="margin-right:150px">
-			<script type='text/javascript'>
+			<script type="text/javascript">
 			if (nvram.web_svg != '0') {
-				W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
+				W('<embed src="ipt-graph.svg?n=1&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg1" type="image/svg+xml"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
@@ -377,9 +377,9 @@ function init() {
 
 	<div class="section-title">Bandwidth Distribution (Outbound)</div>
 	<div class="section">
-		<table border=0 width="100%">
+		<table border="0" width="100%">
 			<tr><td>
-				<script type='text/javascript'>
+				<script type="text/javascript">
 					W('<table style="width:250px">\n');
 					W('<tr><td class="color" style="height:1em"><\/td><td class="title" style="width:45px">&nbsp;<\/td><td class="thead count">kbit/s<\/td><td class="thead count">KB/s<\/td><td class="pct">&nbsp;\n');
 					W('<\/td><\/tr>\n');
@@ -396,9 +396,9 @@ function init() {
 					W('<\/table>\n');
 				</script>
 			</td><td style="margin-right:150px">
-			<script type='text/javascript'>
+			<script type="text/javascript">
 			if (nvram.web_svg != '0') {
-				W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed>\n');
+				W('<embed src="ipt-graph.svg?n=2&v=<% version(); %>" style="width:310px;height:310px;margin:0;padding:0" id="svg2" type="image/svg+xml"><\/embed>\n');
 			}
 			</script>
 			</td></tr>
@@ -409,13 +409,13 @@ function init() {
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkCstats();</script>
+<script type="text/javascript">checkCstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<script type='text/javascript'>genStdRefresh(1,1,'ref.toggle()');</script>
+<tr><td id="footer" colspan="2">
+	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
 </td></tr>
 </table>
 </form>

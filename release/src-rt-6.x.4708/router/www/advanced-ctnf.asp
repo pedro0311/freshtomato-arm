@@ -9,18 +9,18 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: Conntrack / Netfilter</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("ct_tcp_timeout,ct_udp_timeout,ct_timeout,ct_max,ct_hashsize,nf_l7in,nf_ttl,nf_sip,nf_rtsp,nf_pptp,nf_h323,nf_ftp"); %>
 
@@ -28,8 +28,7 @@ var checker = null;
 var timer = new TomatoTimer(check);
 var running = 0;
 
-function check()
-{
+function check() {
 	timer.stop();
 	if ((checker) || (!running)) return;
 
@@ -59,8 +58,7 @@ function check()
 	checker.post('update.cgi', 'exec=ctcount&arg0=0');
 }
 
-function clicked()
-{
+function clicked() {
 	running ^= 1;
 	E('spin').style.visibility = running ? 'visible' : 'hidden';
 	if (running) check();
@@ -69,8 +67,7 @@ function clicked()
 
 var expireText;
 
-function expireTimer()
-{
+function expireTimer() {
 	var e = E('expire');
 
 	if (!expireText) expireText = e.value;
@@ -85,8 +82,7 @@ function expireTimer()
 	}
 }
 
-function expireClicked()
-{
+function expireClicked() {
 	expireTime = 18;
 	E('expire').disabled = true;
 	(new XmlHttp()).post('expct.cgi', '');
@@ -94,8 +90,7 @@ function expireClicked()
 }
 
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var i, v;
 
 	for (i = 1; i < 9; ++i) {
@@ -121,8 +116,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var i, tcp, udp, ct, fom;
 
 	if (!verifyFields(null, false)) return;
@@ -169,37 +163,37 @@ function save()
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='advanced-ctnf.asp'>
-<input type='hidden' name='_service' value='ctnf-restart'>
+<input type="hidden" name="_nextpage" value="advanced-ctnf.asp">
+<input type="hidden" name="_service" value="ctnf-restart">
 
-<input type='hidden' name='ct_tcp_timeout' value=''>
-<input type='hidden' name='ct_udp_timeout' value=''>
-<input type='hidden' name='ct_timeout' value=''>
-<input type='hidden' name='nf_l7in' value=''>
-<input type='hidden' name='nf_ttl'>
-<input type='hidden' name='nf_rtsp'>
-<input type='hidden' name='nf_pptp'>
-<input type='hidden' name='nf_h323'>
-<input type='hidden' name='nf_ftp'>
+<input type="hidden" name="ct_tcp_timeout" value="">
+<input type="hidden" name="ct_udp_timeout" value="">
+<input type="hidden" name="ct_timeout" value="">
+<input type="hidden" name="nf_l7in" value="">
+<input type="hidden" name="nf_ttl">
+<input type="hidden" name="nf_rtsp">
+<input type="hidden" name="nf_pptp">
+<input type="hidden" name="nf_h323">
+<input type="hidden" name="nf_ftp">
 /* LINUX26-BEGIN */
-<input type='hidden' name='nf_sip'>
+<input type="hidden" name="nf_sip">
 /* LINUX26-END */
 
-<div class='section-title'>Connections</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Connections</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Maximum Connections', name: 'ct_max', type: 'text', maxlen: 6, size: 8,
 		suffix: '&nbsp; <a href="javascript:clicked()" id="count0">[ count current... ]<\/a> <img src="spin.gif" style="vertical-align:bottom;padding-left:10px;visibility:hidden" id="spin" onclick="clicked()">',
@@ -209,15 +203,15 @@ createFieldTable('', [
 /* LINUX26-END */
 ]);
 </script>
-<br />
-<input type='button' value='Drop Idle' onclick='expireClicked()' id='expire'>
-<br /><br />
+<br/>
+<input type="button" value="Drop Idle" onclick="expireClicked()" id="expire">
+<br/><br/>
 </div>
 
 
-<div class='section-title'>TCP Timeout</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">TCP Timeout</div>
+<div class="section">
+<script type="text/javascript">
 if ((v = nvram.ct_tcp_timeout.match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)$/)) == null) {
 	v = [0,0,1200,120,60,120,120,10,60,30,0];
 }
@@ -233,9 +227,9 @@ createFieldTable('', f);
 </script>
 </div>
 
-<div class='section-title'>UDP Timeout</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">UDP Timeout</div>
+<div class="section">
+<script type="text/javascript">
 if ((v = nvram.ct_udp_timeout.match(/^(\d+)\s+(\d+)$/)) == null) {
 	v = [0,30,180];
 }
@@ -247,9 +241,9 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Other Timeouts</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Other Timeouts</div>
+<div class="section">
+<script type="text/javascript">
 if ((v = nvram.ct_timeout.match(/^(\d+)\s+(\d+)$/)) == null) {
 	v = [0,600,30];
 }
@@ -261,9 +255,9 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Tracking / NAT Helpers</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Tracking / NAT Helpers</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'FTP', name: 'f_ftp', type: 'checkbox', value: nvram.nf_ftp != '0' },
 	{ title: 'GRE / PPTP', name: 'f_pptp', type: 'checkbox', value: nvram.nf_pptp != '0' },
@@ -276,9 +270,9 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Miscellaneous</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Miscellaneous</div>
+<div class="section">
+<script type="text/javascript">
 v = [];
 for (i = -5; i <= 5; ++i) {
 	v.push([i + '', i ? ((i > 0) ? '+' : '') + i : 'None']);
@@ -298,13 +292,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

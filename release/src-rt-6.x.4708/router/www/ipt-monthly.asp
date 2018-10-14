@@ -13,16 +13,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] IP Traffic: Monthly History</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #monthly-grid .co3,
 #monthly-grid .co4,
 #monthly-grid .co5 {
@@ -32,12 +32,12 @@
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
-<script type='text/javascript' src='bwm-common.js'></script>
-<script type='text/javascript' src='interfaces.js'></script>
+<script type="text/javascript" src="debug.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
+<script type="text/javascript" src="bwm-common.js"></script>
+<script type="text/javascript" src="interfaces.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("wan_ifname,wan_proto,wan_iface,wan2_ifname,wan2_proto,wan2_iface,wan3_ifname,wan3_proto,wan3_iface,wan4_ifname,wan4_proto,wan4_iface,lan_ifname,wl_ifname,web_svg,cstats_enable,cstats_colors,dhcpd_static,lan_ipaddr,lan_netmask,lan1_ipaddr,lan1_netmask,lan2_ipaddr,lan2_netmask,lan3_ipaddr,lan3_netmask"); %>
 
 //	<% devlist(); %>
@@ -78,7 +78,7 @@ function genData() {
 }
 
 function getYMD(n) {
-	// [y,m,d]
+	/* [y,m,d] */
 	return [(((n >> 16) & 0xFF) + 1900), ((n >>> 8) & 0xFF), (n & 0xFF)];
 }
 
@@ -248,17 +248,17 @@ dg.sortCompare = function(a, b) {
 	var db = b.getRowData();
 	var r = 0;
 	switch (col) {
-	case 0:	// Date
+	case 0:	/* Date */
 		r = cmpText(da[col], db[col]);
 	break;
-	case 1: // Hostname
+	case 1: /* Hostname */
 		r = cmpIP(da[col], db[col]);
 		if (r == 0)
 			r = cmpText(da[col], db[col]);
 	break;
-	case 2:	// Download
-	case 3:	// Upload
-	case 4:	// Total
+	case 2:	/* Download */
+	case 3:	/* Upload */
+	case 4:	/* Total */
 		r = cmpFloat(da[col].replace(/,/g,""), db[col].replace(/,/g,""));
 	break;
 	}
@@ -417,7 +417,7 @@ function verifyFields(focused, quiet) {
 	scale = E('_f_scale').value * 1;
 	cookie.set('ipt_history_scale', E('_f_scale').value, 2);
 
-	//	cookie.set('ipt_history_subnet', (E('_f_subnet').checked ? '1' : '0'), 1);
+	/* cookie.set('ipt_history_subnet', (E('_f_subnet').checked ? '1' : '0'), 1); */
 
 	cookie.set('ipt_history_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
 
@@ -439,28 +439,28 @@ function verifyFields(focused, quiet) {
 }
 </script>
 </head>
-<body onload='init()'>
-<form action=''>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>IP Traffic - Monthly History</div>
-<div id='cstats'>
-	<div class='section'>
+<div class="section-title">IP Traffic - Monthly History</div>
+<div id="cstats">
+	<div class="section">
 		<div id="monthly-grid" class="tomato-grid" style="height:auto"></div>
 	</div>
 
-	<div class='section-title'>Options <small><i><a href='javascript:toggleVisibility("options");'><span id='sesdivoptionsshowhide'>(Click here to show)</span></a></i></small></div>
-	<div class='section' id='sesdivoptions' style='display:none'>
-		<script type='text/javascript'>
+	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility("options");'><span id="sesdivoptionsshowhide">(Click here to show)</span></a></i></small></div>
+	<div class="section" id="sesdivoptions" style="display:none">
+		<script type="text/javascript">
 		var c;
 		c = [];
 		c.push({ title: 'List only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
@@ -476,24 +476,24 @@ function verifyFields(focused, quiet) {
 		</script>
 		<div style="float:right;text-align:right">
 			&raquo; <a href="javascript:genData()">Data</a>
-			<br />
+			<br/>
 			&raquo; <a href="admin-iptraffic.asp">Configure</a>
 		</div>
 	</div>
 
-	<br />
+	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkCstats();</script>
+<script type="text/javascript">checkCstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-<input type='button' value='Refresh' id="refresh-button" onclick='reloadPage()'>
+<tr><td id="footer" colspan="2">
+<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
 </td></tr>
 </table>
 </form>

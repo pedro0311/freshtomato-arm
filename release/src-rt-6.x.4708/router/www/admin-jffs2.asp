@@ -9,51 +9,46 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: JFFS</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("jffs2_on,jffs2_exec,t_fix1"); %>
 
 fmtwait = (nvram.t_fix1 == 'RT-N16' ? 120 : 60);
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var b = !E('_f_jffs2_on').checked;
 	E('format').disabled = b;
 	E('_jffs2_exec').disabled = b;
 	return 1;
 }
 
-function formatClicked()
-{
+function formatClicked() {
 	if (!verifyFields(null, 0)) return;
 	if (!confirm("Format the JFFS partition?")) return;
 	save(1);
 }
 
-function formatClock()
-{
+function formatClock() {
 	if (ftime == 0) {
 		E('fclock').innerHTML = 'a few more seconds';
-	}
-	else {
+	} else {
 		E('fclock').innerHTML = ((ftime > 0) ? 'about ' : '') + ftime + ' second' + ((ftime == 1) ? '' : 's');
 	}
 	if (--ftime >= 0) setTimeout(formatClock, 1000);
 }
 
-function save(format)
-{
+function save(format) {
 	if (!verifyFields(null, 0)) return;
 
 	E('format').disabled = 1;
@@ -66,8 +61,7 @@ function save(format)
 		fom.jffs2_format.value = 1;
 		fom._commit.value = 0;
 		fom._nextwait.value = fmtwait;
-	}
-	else {
+	} else {
 		fom.jffs2_format.value = 0;
 		fom._commit.value = 1;
 		fom._nextwait.value = on ? 15 : 3;
@@ -80,37 +74,36 @@ function save(format)
 	}
 }
 
-function submit_complete()
-{
+function submit_complete() {
 	reloadPage();
 }
 </script>
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='admin-jffs2.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='jffs2-restart'>
-<input type='hidden' name='_commit' value='1'>
+<input type="hidden" name="_nextpage" value="admin-jffs2.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="jffs2-restart">
+<input type="hidden" name="_commit" value="1">
 
-<input type='hidden' name='jffs2_on'>
-<input type='hidden' name='jffs2_format' value='0'>
+<input type="hidden" name="jffs2_on">
+<input type="hidden" name="jffs2_format" value="0">
 
-<div class='section-title'>JFFS</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">JFFS</div>
+<div class="section">
+<script type="text/javascript">
 // <% statfs("/jffs", "jffs2"); %>
 
 jfon = (nvram.jffs2_on == 1);
@@ -126,18 +119,18 @@ createFieldTable('', [
 </script>
 </div>
 
-<script type='text/javascript'>show_notice1('<% notice("jffs"); %>');</script>
+<script type="text/javascript">show_notice1('<% notice("jffs"); %>');</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

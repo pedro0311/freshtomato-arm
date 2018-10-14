@@ -9,13 +9,13 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: LAN Access</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 #la-grid .co1 {
 	text-align: center;
 	width: 30px;
@@ -38,8 +38,8 @@
 	text-align: center;
 }
 </style>
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript'>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript">
 <% nvram ("lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_access");%> 
 
 var MAX_BRIDGE_ID = 3;
@@ -182,8 +182,7 @@ la.fieldValuesToData = function(row) {
 			f[5].value ];
 }
 
-function save()
-{
+function save() {
 	if (la.isEditing()) return;
 	la.resetNewEditor();
 
@@ -219,28 +218,28 @@ function toggleVisibility(whichone) {
 
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<input type='hidden' name='_nextpage' value='advanced-access.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='firewall-restart'>
-<input type='hidden' name='lan_access'>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
+<input type="hidden" name="_nextpage" value="advanced-access.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="firewall-restart">
+<input type="hidden" name="lan_access">
 
-<div class='section-title'>LAN Access</div>
-<div class='section'>
+<div class="section-title">LAN Access</div>
+<div class="section">
 	<div class="tomato-grid" id="la-grid"></div>
 </div>
 
-<div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdiv_notes_showhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdiv_notes' style='display:none'>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
 <ul>
 	<li><b>Src</b> - Source LAN bridge.</li>
 	<li><b>Src Address</b> <i>(optional)</i> - Source address allowed. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
@@ -250,10 +249,10 @@ function toggleVisibility(whichone) {
 </div>
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>

@@ -12,48 +12,45 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Captive Portal</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 textarea {
- width: 98%;
- height: 15em;
+	width: 98%;
+	height: 15em;
 }
 </style>
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("NC_enable,NC_Verbosity,NC_GatewayName,NC_GatewayPort,NC_ForcedRedirect,NC_HomePage,NC_DocumentRoot,NC_LoginTimeout,NC_IdleTimeout,NC_MaxMissedARP,NC_ExcludePorts,NC_IncludePorts,NC_AllowedWebHosts,NC_MACWhiteList,NC_BridgeLAN,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
-function fix(name)
-{
- var i;
- if (((i = name.lastIndexOf('/')) > 0) || ((i = name.lastIndexOf('\\')) > 0))
- name = name.substring(i + 1, name.length);
- return name;
+function fix(name) {
+	var i;
+	if (((i = name.lastIndexOf('/')) > 0) || ((i = name.lastIndexOf('\\')) > 0))
+	name = name.substring(i + 1, name.length);
+	return name;
 }
 
-function uploadButton()
-{
- var fom;
- var name;
- var i;
- name = fix(E('upload-name').value);
- name = name.toLowerCase();
- if ((name.length <= 5) || (name.substring(name.length - 5, name.length).toLowerCase() != '.html')) {
- alert('Wrong filename, the correct extension is ".html".');
- return;
- }
- if (!confirm('Are you sure the file' + name + 'must be uploaded to the device?')) return;
- E('upload-button').disabled = 1;
- fields.disableAll(E('config-section'), 1);
- fields.disableAll(E('footer'), 1);
- E('upload-form').submit();
+function uploadButton() {
+	var fom;
+	var name;
+	var i;
+	name = fix(E('upload-name').value);
+	name = name.toLowerCase();
+	if ((name.length <= 5) || (name.substring(name.length - 5, name.length).toLowerCase() != '.html')) {
+		alert('Wrong filename, the correct extension is ".html".');
+		return;
+	}
+	if (!confirm('Are you sure the file' + name + 'must be uploaded to the device?')) return;
+	E('upload-button').disabled = 1;
+	fields.disableAll(E('config-section'), 1);
+	fields.disableAll(E('footer'), 1);
+	E('upload-form').submit();
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var a = E('_f_NC_enable').checked;
 
 	E('_NC_Verbosity').disabled = !a;
@@ -87,60 +84,57 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
-  if (verifyFields(null, 0)==0) return;
-  var fom = E('t_fom');
-  fom.NC_enable.value = E('_f_NC_enable').checked ? 1 : 0;
-  fom.NC_ForcedRedirect.value = E('_f_NC_ForcedRedirect').checked ? 1 : 0;
+function save() {
+	if (verifyFields(null, 0)==0) return;
+	var fom = E('t_fom');
+	fom.NC_enable.value = E('_f_NC_enable').checked ? 1 : 0;
+	fom.NC_ForcedRedirect.value = E('_f_NC_ForcedRedirect').checked ? 1 : 0;
 
-  // blank spaces with commas
-  e = E('_NC_ExcludePorts');
-  e.value = e.value.replace(/\,+/g, ' ');
+	/* blank spaces with commas */
+	e = E('_NC_ExcludePorts');
+	e.value = e.value.replace(/\,+/g, ' ');
 
-  e = E('_NC_IncludePorts');
-  e.value = e.value.replace(/\,+/g, ' ');
+	e = E('_NC_IncludePorts');
+	e.value = e.value.replace(/\,+/g, ' ');
 
-  e = E('_NC_AllowedWebHosts');
-  e.value = e.value.replace(/\,+/g, ' ');
+	e = E('_NC_AllowedWebHosts');
+	e.value = e.value.replace(/\,+/g, ' ');
   
-  e = E('_NC_MACWhiteList');
-  e.value = e.value.replace(/\,+/g, ' ');
+	e = E('_NC_MACWhiteList');
+	e.value = e.value.replace(/\,+/g, ' ');
 
-  fields.disableAll(E('upload-section'), 1);
-  if (fom.NC_enable.value == 0) {
-	fom._service.value = 'splashd-stop';
-  }
-	else {
-	fom._service.value = 'splashd-restart';
+	fields.disableAll(E('upload-section'), 1);
+	if (fom.NC_enable.value == 0) {
+		fom._service.value = 'splashd-stop';
+	} else {
+		fom._service.value = 'splashd-restart';
 	}
 	form.submit('t_fom', 1);
 }
 
-function init()
-{
+function init() {
 }
 </script>
 </head>
 
-<body onLoad="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<div class='section-title'>Captive Portal Management</div>
-<div class='section' id='config-section'>
-	<form id='t_fom' method='post' action='tomato.cgi'>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
+<div class="section-title">Captive Portal Management</div>
+<div class="section" id="config-section">
+	<form id="t_fom" method="post" action="tomato.cgi">
 		<div>
-			<input type='hidden' name='_nextpage' value='splashd.asp'>
-			<input type='hidden' name='_service' value='splashd-restart'>
-			<input type='hidden' name='NC_enable'>
-			<input type='hidden' name='NC_ForcedRedirect'>
-			<script type='text/javascript'>
+			<input type="hidden" name="_nextpage" value="splashd.asp">
+			<input type="hidden" name="_service" value="splashd-restart">
+			<input type="hidden" name="NC_enable">
+			<input type="hidden" name="NC_ForcedRedirect">
+			<script type="text/javascript">
 			createFieldTable('', [
 				{ title: 'Enable Function', name: 'f_NC_enable', type: 'checkbox', value: nvram.NC_enable == '1' },
 				{ title: 'Interface', multi: [
@@ -169,21 +163,21 @@ function init()
 		</div>
 	</form>
 </div>
-<br />
-<div class='section-title'>Customized Splash File Path</div>
-<div class='section' id='upload-section'>
-	<form id='upload-form' method='post' action='uploadsplash.cgi?_http_id=<% nv(http_id); %>' encType='multipart/form-data'>
+<br/>
+<div class="section-title">Customized Splash File Path</div>
+<div class="section" id="upload-section">
+	<form id="upload-form" method="post" action="uploadsplash.cgi?_http_id=<% nv(http_id); %>" enctype="multipart/form-data">
 		<div>
-			<input type='file' size='40' id='upload-name' name='upload_name'>
-			<input type='button' name='f_upload_button' id='upload-button' value='Upload' onclick='uploadButton()'>
+			<input type="file" size="40" id="upload-name" name="upload_name">
+			<input type="button" name="f_upload_button" id="upload-button" value="Upload" onclick="uploadButton()">
 		</div>
 	</form>
 </div>
 
-<br />
+<br/>
 
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
 	<ul>
 		<li><b>Enable function:</b> When you tick and save the router will show a Welcome Banner when a computer access the Internet.</li>
 		<li><b>Interface:</b> Select one of the bridges on which Captive Portal will listen.</li>
@@ -203,22 +197,22 @@ function init()
 	</ul>
 </div>
 
-<span style='color:red'>
-<b> Note: If Login Time is expired you should re-enter again into the splash page to get a new lease period. Be aware, there is no notice about expired period so, you can loss Internet Access.</b><br />
+<span style="color:red">
+<b> Note: If Login Time is expired you should re-enter again into the splash page to get a new lease period. Be aware, there is no notice about expired period so, you can loss Internet Access.</b><br/>
 </span>
-<br />
+<br/>
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

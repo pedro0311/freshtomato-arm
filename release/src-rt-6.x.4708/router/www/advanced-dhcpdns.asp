@@ -9,32 +9,31 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: DHCP / DNS</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 15em;
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_norw,dhcpd_lmax,dhcpc_custom,dns_norebind,dhcpd_static_only,dnsmasq_debug"); %>
 
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1)) nvram.dhcpd_lmax = 255;
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var b = (E('_f_dhcpd_sltsel').value == 1);
 	elem.display('_dhcpd_sltman', b);
 	if ((b) && (!v_range('_f_dhcpd_slt', quiet, 1, 43200))) return 0;
@@ -44,13 +43,11 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function nval(a, b)
-{
+function nval(a, b) {
 	return (a == null || (a + '').trim() == '') ? b : a;
 }
 
-function save()
-{
+function save() {
 	if (!verifyFields(null, false)) return;
 
 	var a;
@@ -124,38 +121,38 @@ function init() {
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='advanced-dhcpdns.asp'>
-<input type='hidden' name='_service' value=''>
+<input type="hidden" name="_nextpage" value="advanced-dhcpdns.asp">
+<input type="hidden" name="_service" value="">
 
-<input type='hidden' name='dhcpd_dmdns'>
-<input type='hidden' name='dhcpd_slt'>
-<input type='hidden' name='dns_addget'>
-<input type='hidden' name='dns_norebind'>
-<input type='hidden' name='dhcpd_gwmode'>
-<input type='hidden' name='dns_intcpt'>
-<input type='hidden' name='dhcpc_minpkt'>
-<input type='hidden' name='dhcpd_static_only'>
-<input type='hidden' name='dnsmasq_debug'>
-<input type='hidden' name='ipv6_radvd'>
-<input type='hidden' name='ipv6_dhcpd'>
-<input type='hidden' name='dnsmasq_q'>
+<input type="hidden" name="dhcpd_dmdns">
+<input type="hidden" name="dhcpd_slt">
+<input type="hidden" name="dns_addget">
+<input type="hidden" name="dns_norebind">
+<input type="hidden" name="dhcpd_gwmode">
+<input type="hidden" name="dns_intcpt">
+<input type="hidden" name="dhcpc_minpkt">
+<input type="hidden" name="dhcpd_static_only">
+<input type="hidden" name="dnsmasq_debug">
+<input type="hidden" name="ipv6_radvd">
+<input type="hidden" name="ipv6_dhcpd">
+<input type="hidden" name="dnsmasq_q">
 
-<div class='section-title'>DHCP / DNS Server (LAN)</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">DHCP / DNS Server (LAN)</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Use internal DNS', name: 'f_dhcpd_dmdns', type: 'checkbox', value: nvram.dhcpd_dmdns == '1' },
 	{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == '1' },
@@ -175,15 +172,15 @@ createFieldTable('', [
 	{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 	{ title: 'Mute dhcpv6 logging', name: 'f_dnsmasq_q6', type: 'checkbox', value: (nvram.dnsmasq_q & 2) },
 	{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
-	{ title: '<a href="http://www.thekelleys.org.uk/"  class="new_window">Dnsmasq<\/a><br />Custom configuration', name: 'dnsmasq_custom', type: 'textarea', value: nvram.dnsmasq_custom }
+	{ title: '<a href="http://www.thekelleys.org.uk/" class="new_window">Dnsmasq<\/a><br />Custom configuration', name: 'dnsmasq_custom', type: 'textarea', value: nvram.dnsmasq_custom }
 ]);
 </script>
 
 <!-- / / / -->
 
-<div class='section-title'>DHCP Client (WAN)</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">DHCP Client (WAN)</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 80, size: 34, value: nvram.dhcpc_custom },
 	{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == '1' }
@@ -193,29 +190,29 @@ createFieldTable('', [
 
 <!-- / / / -->
 
-<div class='section-title'>Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id='sesdivnotesshowhide'>(Click here to show)</span></a></i></small></div>
-<div class='section' id='sesdivnotes' style='display:none'>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdivnotes" style="display:none">
 
-<i>DHCP / DNS Server (LAN):</i><br />
+<i>DHCP / DNS Server (LAN):</i><br/>
 <ul>
 <li><b>Use internal DNS</b> - Allow dnsmasq to be your DNS server on LAN.</li>
-<li><b>Use received DNS with user-entered DNS</b> - Add DNS servers received from your WAN connection to the static DNS server list (see <a href='basic-network.asp'>Network</a> configuration).</li>
+<li><b>Use received DNS with user-entered DNS</b> - Add DNS servers received from your WAN connection to the static DNS server list (see <a href="basic-network.asp">Network</a> configuration).</li>
 <li><b>Prevent DNS-rebind attacks</b> - Enable DNS rebinding protection on Dnsmasq.</li>
 <li><b>Intercept DNS port</b> - Any DNS requests/packets sent out to UDP/TCP port 53 are redirected to the internal DNS server. Currently only IPv4 DNS is intercepted.</li>
 <li><b>Use user-entered gateway if WAN is disabled</b> - DHCP will use the IP address of the router as the default gateway on each LAN.</li>
-<li><b>Ignore DHCP requests (...)</b> - Dnsmasq will ignore DHCP requests  to Only MAC addresses listed on the <a href='basic-static.asp'>Static DHCP/ARP</a> page won't be able to obtain an IP address through DHCP.</li>
+<li><b>Ignore DHCP requests (...)</b> - Dnsmasq will ignore DHCP requests  to Only MAC addresses listed on the <a href="basic-static.asp">Static DHCP/ARP</a> page won't be able to obtain an IP address through DHCP.</li>
 <li><b>Maximum active DHCP leases</b> - Self-explanatory.</li>
 <li><b>Static lease time</b> - Absolute maximum amount of time allowed for any DHCP lease to be valid.</li>
 <li><b>Custom configuration</b> - Extra options to be added to the Dnsmasq configuration file.</li>
 </ul>
 
-<i>DHCP Client (WAN):</i><br />
+<i>DHCP Client (WAN):</i><br/>
 <ul>
 <li><b>DHCPC Options</b> - Extra options for the DHCP client.</li>
 <li><b>Reduce packet size</b> - Self-explanatory.</li>
 </ul>
 
-<i>Other relevant notes/hints:</i><br />
+<i>Other relevant notes/hints:</i><br/>
 <ul>
 <li>The contents of file /etc/dnsmasq.custom are also added to the end of Dnsmasq's configuration file (if it exists).</li>
 </ul>
@@ -226,13 +223,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, true);</script>
+<script type="text/javascript">verifyFields(null, true);</script>
 </body>
 </html>

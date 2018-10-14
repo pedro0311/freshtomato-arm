@@ -9,23 +9,22 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Logging</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("log_remote,log_remoteip,log_remoteport,log_file,log_file_custom,log_file_path,log_limit,log_in,log_out,log_mark,log_events,log_wm,log_wmtype,log_wmip,log_wmdmax,log_wmsmax,log_file_size,log_file_keep,webmon_bkp,webmon_dir,webmon_shrink"); %>
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var a, b, c;
 
 	a = E('_f_log_file').checked;
@@ -100,8 +99,7 @@ function verifyFields(focused, quiet)
 	return 1;
 }
 
-function save()
-{
+function save() {
 	var a, fom;
 
 	if (!verifyFields(null, false)) return;
@@ -130,37 +128,37 @@ function save()
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='admin-log.asp'>
-<input type='hidden' name='_service' value='logging-restart'>
+<input type="hidden" name="_nextpage" value="admin-log.asp">
+<input type="hidden" name="_service" value="logging-restart">
 
-<input type='hidden' name='log_remote'>
-<input type='hidden' name='log_file'>
-<input type='hidden' name='log_file_custom'>
-<input type='hidden' name='log_events'>
+<input type="hidden" name="log_remote">
+<input type="hidden" name="log_file">
+<input type="hidden" name="log_file_custom">
+<input type="hidden" name="log_events">
 
-<input type='hidden' name='log_wm'>
-<input type='hidden' name='log_wmip'>
-<input type='hidden' name='webmon_bkp'>
-<input type='hidden' name='webmon_shrink'>
+<input type="hidden" name="log_wm">
+<input type="hidden" name="log_wmip">
+<input type="hidden" name="webmon_bkp">
+<input type="hidden" name="webmon_shrink">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 </script>
 
-<div class='section-title'>Syslog</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Syslog</div>
+<div class="section">
+<script type="text/javascript">
 
 /* REMOVE-BEGIN
 // adjust (>=1.22)
@@ -198,9 +196,9 @@ createFieldTable('', [
 </script>
 </div>
 
-<div class='section-title'>Web Monitor</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Web Monitor</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Monitor Web Usage', name: 'f_log_wm', type: 'checkbox', value: nvram.log_wm == 1 },
 	{ title: 'Monitor', name: 'log_wmtype', type: 'select', options: [[0,'All Computers / Devices'],[1,'The Following...'],[2,'All Except...']], value: nvram.log_wmtype },
@@ -219,13 +217,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

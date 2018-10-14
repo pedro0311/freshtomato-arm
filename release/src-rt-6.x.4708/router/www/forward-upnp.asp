@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Forwarding: UPnP / NAT-PMP</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #upnp-grid .co1, #upnp-grid .co2 {
 	width: 12%;
 }
@@ -33,9 +33,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 /* REMOVE-BEGIN
 	!!TB - additional miniupnp settings
@@ -47,16 +47,14 @@ REMOVE-END */
 nvram.upnp_enable = fixInt(nvram.upnp_enable, 0, 3, 0);
 
 
-function submitDelete(proto, eport)
-{
+function submitDelete(proto, eport) {
 	form.submitHidden('upnp.cgi', {
 		remove_proto: proto,
 		remove_eport: eport,
 		_redirect: 'forward-upnp.asp' });
 }
 
-function deleteData(data)
-{
+function deleteData(data) {
 	if (!confirm('Delete ' + data[3] + ' ' + data[0] + ' -> ' + data[2] + ':' + data[1] + ' ?')) return;
 	submitDelete(data[3], data[0]);
 }
@@ -102,14 +100,12 @@ ug.populate = function() {
 	E('upnp-delete-all').disabled = (ug.getDataCount() == 0);
 }
 
-function deleteAll()
-{
+function deleteAll() {
 	if (!confirm('Delete all entries?')) return;
 	submitDelete('*', '0');
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 /* REMOVE-BEGIN
 	!!TB - additional miniupnp settings
 REMOVE-END */
@@ -168,8 +164,7 @@ REMOVE-END */
 	return 1;
 }
 
-function save()
-{
+function save() {
 /* REMOVE-BEGIN
 	!!TB - miniupnp
 REMOVE-END */
@@ -194,58 +189,56 @@ REMOVE-END */
 	form.submit(fom, 0);
 }
 
-function init()
-{
+function init() {
 	ug.recolor();
 }
 
 /* REMOVE-BEGIN
 	!!TB - miniupnp
 REMOVE-END */
-function submit_complete()
-{
+function submit_complete() {
 	reloadPage();
 }
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='forward-upnp.asp'>
-<input type='hidden' name='_service' value='upnp-restart'>
+<input type="hidden" name="_nextpage" value="forward-upnp.asp">
+<input type="hidden" name="_service" value="upnp-restart">
 
-<input type='hidden' name='upnp_enable'>
+<input type="hidden" name="upnp_enable">
 /* REMOVE-BEGIN
 	!!TB - additional miniupnp settings
 REMOVE-END */
-<input type='hidden' name='upnp_mnp'>
-<input type='hidden' name='upnp_clean'>
-<input type='hidden' name='upnp_secure'>
-<input type='hidden' name='upnp_lan'>
-<input type='hidden' name='upnp_lan1'>
-<input type='hidden' name='upnp_lan2'>
-<input type='hidden' name='upnp_lan3'>
+<input type="hidden" name="upnp_mnp">
+<input type="hidden" name="upnp_clean">
+<input type="hidden" name="upnp_secure">
+<input type="hidden" name="upnp_lan">
+<input type="hidden" name="upnp_lan1">
+<input type="hidden" name="upnp_lan2">
+<input type="hidden" name="upnp_lan3">
 
-<div class='section-title'>Forwarded Ports</div>
-<div class='section'>
+<div class="section-title">Forwarded Ports</div>
+<div class="section">
 	<div id="upnp-grid" class="tomato-grid"></div>
-	<div style='width: 100%; text-align: right'><input type='button' value='Delete All' onclick='deleteAll()' id='upnp-delete-all'> <input type='button' value='Refresh' onclick='javascript:reloadPage();'></div>
+	<div style="width: 100%; text-align: right"><input type="button" value="Delete All" onclick="deleteAll()" id="upnp-delete-all"> <input type="button" value="Refresh" onclick="reloadPage();"></div>
 </div>
 
-<div class='section-title'>Settings</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Settings</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable UPnP', name: 'f_enable_upnp', type: 'checkbox', value: (nvram.upnp_enable & 1) },
 	{ title: 'Enable NAT-PMP', name: 'f_enable_natpmp', type: 'checkbox', value: (nvram.upnp_enable & 2) },
@@ -276,16 +269,16 @@ REMOVE-END */
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
 /* REMOVE-BEGIN
 	!!TB - added verifyFields
 REMOVE-END */
-<script type='text/javascript'>ug.setup();verifyFields(null, 1);</script>
+<script type="text/javascript">ug.setup();verifyFields(null, 1);</script>
 </body>
 </html>

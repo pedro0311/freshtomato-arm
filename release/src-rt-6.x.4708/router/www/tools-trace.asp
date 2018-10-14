@@ -9,15 +9,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: Trace</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #ttr-grid .co1, #ttr-grid .co3 {
 	text-align: right;
 }
@@ -36,9 +36,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 var tracedata = '';
@@ -114,8 +114,7 @@ tg.populate = function() {
 	spin(0);
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var s;
 	var e;
 
@@ -132,8 +131,7 @@ function verifyFields(focused, quiet)
 
 var tracer = null;
 
-function spin(x)
-{
+function spin(x) {
 	E('traceb').disabled = x;
 	E('_f_addr').disabled = x;
 	E('_f_hops').disabled = x;
@@ -142,8 +140,7 @@ function spin(x)
 	if (!x) tracer = null;
 }
 
-function trace()
-{
+function trace() {
 	// Opera 8 sometimes sends 2 clicks
 	if (tracer) return;
 
@@ -172,8 +169,7 @@ function trace()
 	cookie.set('tracewait', wait);
 }
 
-function init()
-{
+function init() {
 	var s;
 
 	if ((s = cookie.get('traceaddr')) != null) E('_f_addr').value = s;
@@ -185,22 +181,22 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
-<form action='javascript:{}'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="javascript:{}">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>Traceroute</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Traceroute</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '', suffix: ' <input type="button" value="Trace" onclick="trace()" id="traceb">' },
 	{ title: 'Maximum Hops', name: 'f_hops', type: 'text', maxlen: 2, size: 4, value: '20' },
@@ -209,21 +205,21 @@ createFieldTable('', [
 </script>
 </div>
 
-<div style='visibility:hidden' id='trace-error'></div>
+<div style="visibility:hidden" id="trace-error"></div>
 
-<div style='visibility:hidden;text-align:right' id='wait'>Please wait... <img src='spin.gif' alt='' style='vertical-align:top'></div>
+<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"></div>
 
 <div id="ttr-grid" class="tomato-grid"></div>
 
-<div style='height:10px;' onclick='javascript:E("debug").style.display=""'></div>
-<textarea id='debug' style='width:99%;height:300px;display:none' cols='50' rows='10'></textarea>
+<div style="height:10px;" onclick='E("debug").style.display=""'></div>
+<textarea id="debug" style="width:99%;height:300px;display:none" cols="50" rows="10"></textarea>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type='text/javascript'>tg.setup();</script>
+<script type="text/javascript">tg.setup();</script>
 </body>
 </html>

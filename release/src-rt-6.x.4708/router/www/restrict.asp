@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Access Restrictions</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #res-over-grid .co1 {
 	width: 40%;
 }
@@ -33,9 +33,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 //	<% nvramseq("rrules", "rrule%d", 0, 49); %>
 
@@ -100,45 +100,44 @@ og.addEntry = function() {
 	}
 }
 
-function init()
-{
+function init() {
 	og.populate();
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_redirect' value='restrict-edit.asp'>
-<input type='hidden' name='_commit' value='0'>
-<input type='hidden' name='rruleN' id='t_rruleN' value=''>
+<input type="hidden" name="_redirect" value="restrict-edit.asp">
+<input type="hidden" name="_commit" value="0">
+<input type="hidden" name="rruleN" id="t_rruleN" value="">
 
-<div class='section-title'>Access Restriction Overview</div>
-<div class='section'>
+<div class="section-title">Access Restriction Overview</div>
+<div class="section">
 	<div class="tomato-grid" id="res-over-grid"></div>
 </div>
 
-<br />
-<script type='text/javascript'>show_notice1('<% notice("iptables"); %>');</script>
-<br />
-<script type='text/javascript'>show_notice1('<% notice("ip6tables"); %>');</script>
+<br/>
+<script type="text/javascript">show_notice1('<% notice("iptables"); %>');</script>
+<br/>
+<script type="text/javascript">show_notice1('<% notice("ip6tables"); %>');</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan='2'>&nbsp;</td></tr>
+<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type='text/javascript'>og.setup();</script>
+<script type="text/javascript">og.setup();</script>
 </body>
 </html>

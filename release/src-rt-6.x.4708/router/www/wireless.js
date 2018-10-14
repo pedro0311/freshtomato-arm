@@ -49,31 +49,31 @@ function refreshNetModes(uidx)
 
 function refreshBandWidth(uidx)
 {
-    var e, i, buf, val;
+	var e, i, buf, val;
 
-    if (uidx >= wl_ifaces.length) return;
-    var u = wl_unit(uidx);
-    var m = [['0','20 MHz']];
+	if (uidx >= wl_ifaces.length) return;
+	var u = wl_unit(uidx);
+	var m = [['0','20 MHz']];
 
-    if(nphy || acphy) {
-	m.push(['1','40 MHz']);
-    }
+	if(nphy || acphy) {
+		m.push(['1','40 MHz']);
+	}
 
-    if(acphy && selectedBand(uidx) == '1') {
-	m.push(['3','80 MHz']);
-    }
+	if(acphy && selectedBand(uidx) == '1') {
+		m.push(['3','80 MHz']);
+	}
 
-    e = E('_wl'+u+'_nbw_cap');
-    buf = '';
-    val = (!nm_loaded[uidx] || (e.value + '' == '')) ? eval('nvram.wl'+u+'_nbw_cap') : e.value;
+	e = E('_wl'+u+'_nbw_cap');
+	buf = '';
+	val = (!nm_loaded[uidx] || (e.value + '' == '')) ? eval('nvram.wl'+u+'_nbw_cap') : e.value;
 
-    for (i = 0; i < m.length; ++i)
-	buf += '<option value="' + m[i][0] + '"' + ((m[i][0] == val) ? ' selected="selected"' : '') + '>' + m[i][1] + '<\/option>';
+	for (i = 0; i < m.length; ++i)
+		buf += '<option value="' + m[i][0] + '"' + ((m[i][0] == val) ? ' selected="selected"' : '') + '>' + m[i][1] + '<\/option>';
 
-    e = E('__wl'+u+'_nbw_cap');
-    buf = '<select name="wl'+u+'_nbw_cap" onchange="verifyFields(this, 1)" id = "_wl'+u+'_nbw_cap">' + buf + '<\/select>';
-    elem.setInnerHTML(e, buf);
-    nm_loaded[uidx] = 1;
+	e = E('__wl'+u+'_nbw_cap');
+	buf = '<select name="wl'+u+'_nbw_cap" onchange="verifyFields(this, 1)" id = "_wl'+u+'_nbw_cap">' + buf + '<\/select>';
+	elem.setInnerHTML(e, buf);
+	nm_loaded[uidx] = 1;
 }
 
 function refreshChannels(uidx)
@@ -276,7 +276,7 @@ function v_wep(e, quiet)
 	var s = e.value;
 
 	if (((s.length == 5) || (s.length == 13)) && (s.length == (e.maxLength >> 1))) {
-		// no checking
+		/* no checking */
 	} else {
 		s = s.toUpperCase().replace(/[^0-9A-F]/g, '');
 		if (s.length != e.maxLength) {
@@ -290,7 +290,7 @@ function v_wep(e, quiet)
 	return 1;
 }
 
-// compatible w/ Linksys' and Netgear's (key 1) method for 128-bits
+/* compatible w/ Linksys' and Netgear's (key 1) method for 128-bits */
 function generate_wep(u)
 {
 	function _wepgen(pass, i)

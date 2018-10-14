@@ -9,16 +9,16 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
-<title>[<% ident(); %>] Bandwidth: Real-Time Client Monitor</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
+<title>[<% ident(); %>] IP Traffic: Real-Time Client Monitor</title>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 #txt {
 	width: 550px;
 	white-space: nowrap;
@@ -38,14 +38,14 @@ ul.tabs a,
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript' src='bwm-common.js'></script>
-<script type='text/javascript' src='bwm-hist.js'></script>
-<script type='text/javascript' src='interfaces.js'></script>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript" src="bwm-common.js"></script>
+<script type="text/javascript" src="bwm-hist.js"></script>
+<script type="text/javascript" src="interfaces.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("wan_ifname,wan_proto,wan_iface,wan2_ifname,wan2_proto,wan2_iface,wan3_ifname,wan3_proto,wan3_iface,wan4_ifname,wan4_proto,wan4_iface,lan_ifname,wl_ifname,web_svg,cstats_enable,cstats_colors,dhcpd_static,lan_ipaddr,lan_netmask,lan1_ipaddr,lan1_netmask,lan2_ipaddr,lan2_netmask,lan3_ipaddr,lan3_netmask,cstats_labels"); %>
 
 //	<% devlist(); %>
@@ -264,86 +264,86 @@ function verifyFields(focused, quiet) {
 </script>
 
 </head>
-<body onload='init()'>
-<form action=''>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class='section-title'>IP Traffic - Real-Time</div>
-<div id='cstats'>
-	<div id='tab-area'></div>
+<div class="section-title">IP Traffic - Real-Time</div>
+<div id="cstats">
+	<div id="tab-area"></div>
 
-	<script type='text/javascript'>
+	<script type="text/javascript">
 	if ((nvram.web_svg != '0') && (nvram.cstats_enable == '1')) {
-		W('<div style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0" id="graph"><embed src="bwm-graph.svg?<% version(); %>" style="width:760px;height:300px;margin:0;padding:0" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/"><\/embed><\/div>\n');
+		W('<div style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0" id="graph"><embed src="bwm-graph.svg?<% version(); %>" style="width:760px;height:300px;margin:0;padding:0" type="image/svg+xml"><\/embed><\/div>\n');
 	}
 	</script>
 
-	<div id='bwm-controls'>
-		<small>(<script type='text/javascript'>W(5*updateInt);</script> minute window, <script type='text/javascript'>W(updateInt);</script> second interval)</small><br />
-		<br />
+	<div id="bwm-controls">
+		<small>(<script type="text/javascript">W(5*updateInt);</script> minute window, <script type="text/javascript">W(updateInt);</script> second interval)</small><br/>
+		<br/>
 		Avg:&nbsp;
-			<a href='javascript:switchAvg(1)' id='avg1'>Off</a>,
-			<a href='javascript:switchAvg(2)' id='avg2'>2x</a>,
-			<a href='javascript:switchAvg(4)' id='avg4'>4x</a>,
-			<a href='javascript:switchAvg(6)' id='avg6'>6x</a>,
-			<a href='javascript:switchAvg(8)' id='avg8'>8x</a><br />
+			<a href="javascript:switchAvg(1)" id="avg1">Off</a>,
+			<a href="javascript:switchAvg(2)" id="avg2">2x</a>,
+			<a href="javascript:switchAvg(4)" id="avg4">4x</a>,
+			<a href="javascript:switchAvg(6)" id="avg6">6x</a>,
+			<a href="javascript:switchAvg(8)" id="avg8">8x</a><br/>
 		Max:&nbsp;
-			<a href='javascript:switchScale(0)' id='scale0'>Uniform</a>,
-			<a href='javascript:switchScale(1)' id='scale1'>Per Address</a><br />
+			<a href="javascript:switchScale(0)" id="scale0">Uniform</a>,
+			<a href="javascript:switchScale(1)" id="scale1">Per Address</a><br/>
 		Unit:&nbsp;
-			<a href='javascript:switchUnit(0)' id='unit0'>kbit/KB</a>,
-			<a href='javascript:switchUnit(1)' id='unit1'>Mbit/MB</a><br />
+			<a href="javascript:switchUnit(0)" id="unit0">kbit/KB</a>,
+			<a href="javascript:switchUnit(1)" id="unit1">Mbit/MB</a><br/>
 		Display:&nbsp;
-			<a href='javascript:switchDraw(0)' id='draw0'>Solid</a>,
-			<a href='javascript:switchDraw(1)' id='draw1'>Line</a><br />
-		Color:&nbsp; <a href='javascript:switchColor()' id='drawcolor'>-</a><br />
-		<small><a href='javascript:switchColor(1)' id='drawrev'>[reverse]</a></small><br />
+			<a href="javascript:switchDraw(0)" id="draw0">Solid</a>,
+			<a href="javascript:switchDraw(1)" id="draw1">Line</a><br/>
+		Color:&nbsp; <a href="javascript:switchColor()" id="drawcolor">-</a><br/>
+		<small><a href="javascript:switchColor(1)" id="drawrev">[reverse]</a></small><br/>
 
-		<br /><br />
+		<br/><br/>
 		&nbsp; &raquo; <a href="admin-iptraffic.asp">Configure</a>
 	</div>
 
-	<br /><br />
-	<table border=0 cellspacing=2 id='txt'>
+	<br/><br/>
+	<table border="0" cellspacing="2" id="txt">
 	<tr>
-		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='rx-name'>RX</b></td>
-		<td style='width:15%' align='right' valign='top'><span id='rx-current'></span></td>
-		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='width:15%' align='right' valign='top' id='rx-avg'></td>
-		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='width:15%' align='right' valign='top' id='rx-max'></td>
-		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='width:14%' align='right' valign='top' id='rx-total'></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b style="border-bottom:blue 1px solid" id="rx-name">RX</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top"><span id="rx-current"></span></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Avg</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top" id="rx-avg"></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Peak</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top" id="rx-max"></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Total</b></td>
+		<td style="width:14%;text-align:right;vertical-align:top" id="rx-total"></td>
 		<td>&nbsp;</td>
 	</tr>
 	<tr>
-		<td style='width:8%' align='right' valign='top'><b style='border-bottom:blue 1px solid' id='tx-name'>TX</b></td>
-		<td style='width:15%' align='right' valign='top'><span id='tx-current'></span></td>
-		<td style='width:8%' align='right' valign='top'><b>Avg</b></td>
-		<td style='width:15%' align='right' valign='top' id='tx-avg'></td>
-		<td style='width:8%' align='right' valign='top'><b>Peak</b></td>
-		<td style='width:15%' align='right' valign='top' id='tx-max'></td>
-		<td style='width:8%' align='right' valign='top'><b>Total</b></td>
-		<td style='width:14%' align='right' valign='top' id='tx-total'></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b style="border-bottom:blue 1px solid" id="tx-name">TX</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top"><span id="tx-current"></span></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Avg</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top" id="tx-avg"></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Peak</b></td>
+		<td style="width:15%;text-align:right;vertical-align:top" id="tx-max"></td>
+		<td style="width:8%;text-align:right;vertical-align:top"><b>Total</b></td>
+		<td style="width:14%;text-align:right;vertical-align:top" id="tx-total"></td>
 		<td>&nbsp;</td>
 	</tr>
 	</table>
 
 <!-- / / / -->
 
-	<br />
+	<br/>
 
 	<div>
-		<script type='text/javascript'>
+		<script type="text/javascript">
 			createFieldTable('', [
 				{ title: 'IPs currently on graphic', name: 'f_ipt_addr_shown', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select a device from this list to hide it)<\/small>' },
 				{ title: 'Hidden addresses', name: 'f_ipt_addr_hidden', type: 'select', options: [[0,'Select']], suffix: ' <small>(Click/select to show it again)<\/small>' }
@@ -351,21 +351,21 @@ function verifyFields(focused, quiet) {
 		</script>
 	</div>
 
-	<br />
+	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type='text/javascript'>checkCstats();</script>
+<script type="text/javascript">checkCstats();</script>
 
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='warnwd' style='display:none'>Warning: 10 second timeout, restarting...&nbsp;</span>
-	<span id='dtime'></span>
-	<img src='spin.gif' id='refresh-spinner' alt='' onclick='javascript:debugTime=1'>
+<tr><td id="footer" colspan="2">
+	<span id="warnwd" style="display:none">Warning: 10 second timeout, restarting...&nbsp;</span>
+	<span id="dtime"></span>
+	<img src="spin.gif" id="refresh-spinner" alt="" onclick="debugTime=1">
 </td></tr>
 </table>
 </form>

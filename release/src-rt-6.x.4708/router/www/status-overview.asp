@@ -13,17 +13,17 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Status: Overview</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<script type='text/javascript' src='interfaces.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="interfaces.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 .controls {
 	width: 90px;
 	margin-top: 5px;
@@ -31,9 +31,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvstat(); %>
 //	<% etherstates(); %>
@@ -49,10 +49,10 @@ lastjiffiesidle = 0;
 lastjiffiesusage = 100;
 </script>
 
-<script type='text/javascript' src='wireless.jsx?_http_id=<% nv(http_id); %>'></script>
-<script type='text/javascript' src='status-data.jsx?_http_id=<% nv(http_id); %>'></script>
+<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script type="text/javascript" src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 show_dhcpc = [];
 show_codi = [];
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -75,35 +75,29 @@ REMOVE-END */
 
 nphy = features('11n');
 
-function dhcpc(what, wan_prefix)
-{
+function dhcpc(what, wan_prefix) {
 	form.submitHidden('dhcpc.cgi', { exec: what, prefix: wan_prefix, _redirect: 'status-overview.asp' });
 }
 
-function serv(service, sleep)
-{
+function serv(service, sleep) {
 	form.submitHidden('service.cgi', { _service: service, _redirect: 'status-overview.asp', _sleep: sleep });
 }
 
-function wan_connect(uidx)
-{
+function wan_connect(uidx) {
 	serv('wan'+uidx+'-restart', 5);
 }
 
-function wan_disconnect(uidx)
-{
+function wan_disconnect(uidx) {
 	serv('wan'+uidx+'-stop', 2);
 }
 
-function wlenable(uidx, n)
-{
+function wlenable(uidx, n) {
 	form.submitHidden('wlradio.cgi', { enable: '' + n, _nextpage: 'status-overview.asp', _nextwait: n ? 6 : 3, _wl_unit: wl_unit(uidx) });
 }
 
 var ref = new TomatoRefresh('status-data.jsx', '', 0, 'status_overview_refresh');
 
-ref.refresh = function(text)
-{
+ref.refresh = function(text) {
 	stats = {};
 	try {
 		eval(text);
@@ -115,13 +109,11 @@ ref.refresh = function(text)
 }
 
 
-function c(id, htm)
-{
+function c(id, htm) {
 	E(id).cells[1].innerHTML = htm;
 }
 
-function ethstates()
-{
+function ethstates() {
 	port = etherstates.port0;
 	if (port == "disabled") { return 0; }
 
@@ -142,14 +134,14 @@ function ethstates()
 	code += '<tr>';
 
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br />';
+		state = '<img id="eth_off_0" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
+		state = '<img id="eth_1000_0" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br />';
+		state = '<img id="eth_100_0" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
@@ -161,14 +153,14 @@ function ethstates()
 
 	port = etherstates.port1;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br />';
+		state = '<img id="eth_off_1" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
+		state = '<img id="eth_1000_1" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br />';
+		state = '<img id="eth_100_1" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
@@ -180,14 +172,14 @@ function ethstates()
 
 	port = etherstates.port2;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br />';
+		state = '<img id="eth_off_2" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
+		state = '<img id="eth_1000_2" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br />';
+		state = '<img id="eth_100_2" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
@@ -199,14 +191,14 @@ function ethstates()
 
 	port = etherstates.port3;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br />';
+		state = '<img id="eth_off_3" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
+		state = '<img id="eth_1000_3" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br />';
+		state = '<img id="eth_100_3" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
@@ -218,14 +210,14 @@ function ethstates()
 
 	port = etherstates.port4;
 	if (port == "DOWN") {
-		state = '<img id="eth_off" src="eth_off.png"><br />';
+		state = '<img id="eth_off_4" src="eth_off.png"><br />';
 		state2 = port.replace("DOWN","Unplugged");
 	} else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000" src="eth_1000.gif"><br />';
+		state = '<img id="eth_1000_4" src="eth_1000.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	} else {
-		state = '<img id="eth_100" src="eth_100.gif"><br />';
+		state = '<img id="eth_100_4" src="eth_100.gif"><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
@@ -240,8 +232,7 @@ function ethstates()
 	E("ports").innerHTML = code;
 }
 
-function anon_update()
-{
+function anon_update() {
 	update = anonupdate.update;
 	if (update == "no" || update == "") { return 0; }
 
@@ -252,8 +243,7 @@ function anon_update()
 	E("nversion").innerHTML = code;
 }
 
-function show()
-{
+function show() {
 	c('cpu', stats.cpuload);
 	c('cpupercent', stats.cpupercent);
 	c('wlsense', stats.wlsense);
@@ -312,8 +302,7 @@ function show()
 	}
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	if ((stats.anon_enable == '-1') || (stats.anon_answer == '0'))
 		E('att1').style.display = '';
 
@@ -336,8 +325,7 @@ function earlyInit()
 	show();
 }
 
-function init()
-{
+function init() {
 	var c;
 	if (((c = cookie.get('status_overview_system_vis')) != null) && (c != '1')) toggleVisibility("system");
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -371,30 +359,30 @@ function toggleVisibility(whichone) {
 </script>
 
 </head>
-<body onload='init()'>
-<form action=''>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form action="">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
-<div class='section' id='nversion' style='display:none'></div>
+<div class="section" id="nversion" style="display:none"></div>
 
-<div style='display:none' id='att1'>
-<div class='section-title' style="text-align:center">!! Attention !!</div>
-<div class='fields' style="text-align:center">You did not configure <b>TomatoAnon project</b> setting.
-<br />Please go to <a href='admin-tomatoanon.asp'>TomatoAnon configuration page</a> and make a choice.</div>
-<br />
+<div style="display:none" id="att1">
+<div class="section-title" style="text-align:center">!! Attention !!</div>
+<div class="fields" style="text-align:center">You did not configure <b>TomatoAnon project</b> setting.
+<br/>Please go to <a href="admin-tomatoanon.asp">TomatoAnon configuration page</a> and make a choice.</div>
+<br/>
 </div>
 
-<div class='section-title'>System <small><i><a href='javascript:toggleVisibility("system");'><span id='sesdiv_system_showhide'>(hide)</span></a></i></small></div>
-<div class='section' id='sesdiv_system'>
-<script type='text/javascript'>
+<div class="section-title">System <small><i><a href='javascript:toggleVisibility("system");'><span id="sesdiv_system_showhide">(hide)</span></a></i></small></div>
+<div class="section" id="sesdiv_system">
+<script type="text/javascript">
 var a = nvstat.free / nvstat.size * 100.0;
 createFieldTable('', [
 	{ title: 'Name', text: nvram.router_name },
@@ -411,16 +399,16 @@ createFieldTable('', [
 	{ title: 'Total / Free Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
 	{ title: 'Total / Free NVRAM', text: scaleSize(nvstat.size) + ' / ' + scaleSize(nvstat.free) + ' <small>(' + (a).toFixed(2) + '%)<\/small>' },
 	null,
-	{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C'},
+	{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1)*1.8+32) + '°F' },
 	{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
 ]);
 </script>
 </div>
 
-<div class='section' id='ports'>
+<div class="section" id="ports">
 </div>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 	var u = (uidx>1) ? uidx : '';
 	W('<div class=\'section-title\' id=\'wan'+u+'-title\'>WAN'+u+' <small><i><a href=\'javascript:toggleVisibility("wan' + u + '");\'><span id=\'sesdiv_wan' +u + '_showhide\'>(hide)<\/span><\/a><\/i><\/small><\/div>');
@@ -451,9 +439,9 @@ for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 }
 </script>
 
-<div class='section-title'>LAN <small><i><a href='javascript:toggleVisibility("lan");'><span id='sesdiv_lan_showhide'>(hide)</span></a></i></small></div>
-<div class='section' id='sesdiv_lan'>
-<script type='text/javascript'>
+<div class="section-title">LAN <small><i><a href='javascript:toggleVisibility("lan");'><span id="sesdiv_lan_showhide">(hide)</span></a></i></small></div>
+<div class="section" id="sesdiv_lan">
+<script type="text/javascript">
 
 function h_countbitsfromleft(num) {
 	if (num == 255 ){
@@ -518,7 +506,7 @@ createFieldTable('', [
 </script>
 </div>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 /* REMOVE-BEGIN
 //	u = wl_unit(uidx);
@@ -567,11 +555,11 @@ REMOVE-END */
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<script type='text/javascript'>genStdRefresh(1,0,'ref.toggle()');</script>
+<tr><td id="footer" colspan="2">
+	<script type="text/javascript">genStdRefresh(1,0,'ref.toggle()');</script>
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
+<script type="text/javascript">earlyInit()</script>
 </body>
 </html>

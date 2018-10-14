@@ -9,15 +9,15 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Forwarding: Triggered</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
-<style type='text/css'>
+<style type="text/css">
 #tg-grid .co1 {
 	width: 5%;
 	text-align: center;
@@ -36,9 +36,9 @@
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("trigforward"); %>
 
@@ -116,8 +116,7 @@ tg.setup = function() {
 }
 
 
-function save()
-{
+function save() {
 	if (tg.isEditing()) return;
 
 	var data = tg.getAllData();
@@ -132,39 +131,38 @@ function save()
 	form.submit(fom, 1);
 }
 
-function init()
-{
+function init() {
 	tg.recolor();
 	tg.resetNewEditor();
 }
 </script>
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='forward.asp'>
-<input type='hidden' name='_service' value='firewall-restart'>
+<input type="hidden" name="_nextpage" value="forward.asp">
+<input type="hidden" name="_service" value="firewall-restart">
 
-<input type='hidden' name='trigforward'>
+<input type="hidden" name="trigforward">
 
-<div class='section-title'>Triggered Port Forwarding</div>
-<div class='section'>
+<div class="section-title">Triggered Port Forwarding</div>
+<div class="section">
 	<div class="tomato-grid" id="tg-grid"></div>
-	<script type='text/javascript'>tg.setup();</script>
+	<script type="text/javascript">tg.setup();</script>
 </div>
 
-<div class='section-title'>Notes</div>
-<div class='section'>
+<div class="section-title">Notes</div>
+<div class="section">
     <ul>
 		<li>Use "-" to specify a range of ports (200-300).</li>
 		<li>Trigger Ports are the initial LAN to WAN "trigger".</li>
@@ -176,10 +174,10 @@ function init()
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>

@@ -9,18 +9,18 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: DDNS</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("ddnsx0,ddnsx1,ddnsx_ip,wan_dns,wan_get_dns,dns_addget,ddnsx_refresh,ddnsx_save"); %>
 //	<% ddnsx(); %>
@@ -81,8 +81,7 @@ var services = [
 var opendns = ['208.67.222.222', '208.67.220.220'];
 var opendnsInUse = 0;
 
-function msgLoc(s)
-{
+function msgLoc(s) {
 	var r;
 
 	s = s.trim().replace(/\n+/g, ' ');
@@ -100,8 +99,7 @@ function msgLoc(s)
 	return s;
 }
 
-function mop(s)
-{
+function mop(s) {
 	var op, i;
 
 	op = {};
@@ -112,8 +110,7 @@ function mop(s)
 	return op;
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var i;
 	var data, r, e;
 	var op;
@@ -203,7 +200,7 @@ function verifyFields(focused, quiet)
 		}
 	}
 
-	// shouldn't do this twice, but...
+	/* shouldn't do this twice, but... */
 	if (E('_f_opendns0') == focused) E('_f_opendns1').checked = E('_f_opendns0').checked;
 	if (E('_f_opendns1') == focused) E('_f_opendns0').checked = E('_f_opendns1').checked;
 
@@ -213,8 +210,7 @@ function verifyFields(focused, quiet)
 	return r;
 }
 
-function save()
-{
+function save() {
 	var fom;
 	var i, j, s;
 	var data, a, b;
@@ -312,7 +308,7 @@ REMOVE-END */
 			}
 		}
 		else {
-			// not set if partial, do not remove if partial
+			/* not set if partial, do not remove if partial */
 			if (opendnsInUse == opendns.length) {
 				a = nvram.wan_dns.split(/\s+/);
 				b = [];
@@ -334,8 +330,7 @@ REMOVE-END */
 	form.submit(fom);
 }
 
-function init()
-{
+function init() {
 	if ('<% psup("ddns-update"); %>' != 0) {
 		var e = E('footer-msg');
 		e.innerHTML = 'DDNS update is running. Please refresh after a few seconds.';
@@ -345,35 +340,35 @@ function init()
 </script>
 
 </head>
-<body onload='init()'>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-ddns.asp'>
-<input type='hidden' name='_service' value='ddns-restart'>
-<input type='hidden' name='_nextwait' value='10'>
+<input type="hidden" name="_nextpage" value="basic-ddns.asp">
+<input type="hidden" name="_service" value="ddns-restart">
+<input type="hidden" name="_nextwait" value="10">
 
-<input type='hidden' name='ddnsx0' value=''>
-<input type='hidden' name='ddnsx1' value=''>
-<input type='hidden' name='ddnsx0_cache' value='' disabled>
-<input type='hidden' name='ddnsx1_cache' value='' disabled>
-<input type='hidden' name='wan_dns' value='' disabled>
-<input type='hidden' name='ddnsx_ip' value=''>
-<input type='hidden' name='ddnsx_save' value=''>
+<input type="hidden" name="ddnsx0" value="">
+<input type="hidden" name="ddnsx1" value="">
+<input type="hidden" name="ddnsx0_cache" value="" disabled="disabled">
+<input type="hidden" name="ddnsx1_cache" value="" disabled="disabled">
+<input type="hidden" name="wan_dns" value="" disabled="disabled">
+<input type="hidden" name="ddnsx_ip" value="">
+<input type="hidden" name="ddnsx_save" value="">
 
 
-<div class='section-title'>Dynamic DNS</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Dynamic DNS</div>
+<div class="section">
+<script type="text/javascript">
 s = nvram.ddnsx_ip;
 a = (s != '') && (s != 'wan') && (s != 'wan2') && (s != 'wan3') && (s != 'wan4') && (s.indexOf('@') != 0) && (s != '0.0.0.0') && (s != '1.1.1.1') && (s != '10.1.1.1');
 createFieldTable('', [
@@ -400,7 +395,7 @@ createFieldTable('', [
 </div>
 
 
-<script type='text/javascript'>
+<script type="text/javascript">
 a = nvram.wan_dns.split(/\s+/);
 for (i = 0; i < a.length; ++i) {
 	for (j = 0; j < opendns.length; ++j) {
@@ -467,13 +462,13 @@ for (i = 0; i < 2; ++i) {
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </form>
 </body>
 </html>

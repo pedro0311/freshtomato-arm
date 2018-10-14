@@ -8,25 +8,24 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Nas: BitTorrent Client</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
-<style type='text/css'>
+<script type="text/javascript" src="tomato.js"></script>
+<style type="text/css">
 textarea {
 	width: 98%;
 	height: 15em;
 }
 </style>
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
 var btgui_link = '&nbsp;&nbsp;<a href="http://' + location.hostname +':<% nv('bt_port_gui'); %>" class="new_window"><i>[Click here to open Transmission GUI]<\/i><\/a>';
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var a = E('_f_bt_enable').checked;
@@ -231,8 +230,7 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
+function save() {
   if (verifyFields(null, 0)==0) return;
   var fom = E('t_fom');
   fom.bt_enable.value = E('_f_bt_enable').checked ? 1 : 0;
@@ -264,51 +262,50 @@ function save()
 	form.submit('t_fom', 1);
 }
 
-function init()
-{
-    var elements = document.getElementsByClassName("new_window");
-    for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-        addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+function init() {
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 </script>
 </head>
 
-<body onLoad="init()">
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-<div class='title'>Tomato</div>
-<div class='version'>Version <% version(); %></div>
+<body onload="init()">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+<div class="title">Tomato</div>
+<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
-<div class='section-title'>Basic Settings</div>
-<div class='section' id='config-section'>
-<form id='t_fom' method='post' action='tomato.cgi'>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
+<div class="section-title">Basic Settings</div>
+<div class="section" id="config-section">
+<form id="t_fom" method="post" action="tomato.cgi">
 <div>
-<input type='hidden' name='_nextpage' value='nas-bittorrent.asp'>
-<input type='hidden' name='_service' value='bittorrent-restart'>
-<input type='hidden' name='bt_enable'>
-<input type='hidden' name='bt_incomplete'>
-<input type='hidden' name='bt_autoadd'>
-<input type='hidden' name='bt_check'>
-<input type='hidden' name='bt_rpc_enable'>
-<input type='hidden' name='bt_auth'>
-<input type='hidden' name='bt_rpc_wan'>
-<input type='hidden' name='bt_dl_enable'>
-<input type='hidden' name='bt_ul_enable'>
-<input type='hidden' name='bt_blocklist'>
-<input type='hidden' name='bt_log'>
-<input type='hidden' name='bt_ratio_enable'>
-<input type='hidden' name='bt_ratio_idle_enable'>
-<input type='hidden' name='bt_dht'>
-<input type='hidden' name='bt_pex'>
-<input type='hidden' name='bt_lpd'>
-<input type='hidden' name='bt_utp'>
-<input type='hidden' name='bt_dl_queue_enable'>
-<input type='hidden' name='bt_ul_queue_enable'>
+<input type="hidden" name="_nextpage" value="nas-bittorrent.asp">
+<input type="hidden" name="_service" value="bittorrent-restart">
+<input type="hidden" name="bt_enable">
+<input type="hidden" name="bt_incomplete">
+<input type="hidden" name="bt_autoadd">
+<input type="hidden" name="bt_check">
+<input type="hidden" name="bt_rpc_enable">
+<input type="hidden" name="bt_auth">
+<input type="hidden" name="bt_rpc_wan">
+<input type="hidden" name="bt_dl_enable">
+<input type="hidden" name="bt_ul_enable">
+<input type="hidden" name="bt_blocklist">
+<input type="hidden" name="bt_log">
+<input type="hidden" name="bt_ratio_enable">
+<input type="hidden" name="bt_ratio_idle_enable">
+<input type="hidden" name="bt_dht">
+<input type="hidden" name="bt_pex">
+<input type="hidden" name="bt_lpd">
+<input type="hidden" name="bt_utp">
+<input type="hidden" name="bt_dl_queue_enable">
+<input type="hidden" name="bt_ul_queue_enable">
 
-<script type='text/javascript'>
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable torrent client', name: 'f_bt_enable', type: 'checkbox', value: nvram.bt_enable == '1', suffix: ' <small>*<\/small>' },
 	{ title: 'Transmission binary path', multi: [
@@ -331,15 +328,15 @@ createFieldTable('', [
 </script>
 	<ul>
 		<li><b>Enable torrent client</b> - Caution! - If your router only has 32MB of RAM, you'll have to use swap.
-		<li><b>Transmission binary path</b> Path to the directory containing transmission-daemon etc.
-		<li><b>Keep alive</b> - If enabled, transmission-daemon will be checked at the specified interval and will re-launch after a crash.
-		<li><b>Listening port</b> - Port used for torrent client. Make sure this port is not in use.
-		<li><b>Autoadd .torrents</b> - Search and add .torrent files from Download directory. Other watch directory can be setup with 'watch-dir' parameter in "Custom configuration".
-	</ul>
+		</li><li><b>Transmission binary path</b> Path to the directory containing transmission-daemon etc.
+		</li><li><b>Keep alive</b> - If enabled, transmission-daemon will be checked at the specified interval and will re-launch after a crash.
+		</li><li><b>Listening port</b> - Port used for torrent client. Make sure this port is not in use.
+		</li><li><b>Autoadd .torrents</b> - Search and add .torrent files from Download directory. Other watch directory can be setup with 'watch-dir' parameter in "Custom configuration".
+	</li></ul>
 </div>
-<div class='section-title'>Remote Access<script type='text/javascript'>W(btgui_link);</script></div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Remote Access<script type="text/javascript">W(btgui_link);</script></div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable GUI', name: 'f_bt_rpc_enable', type: 'checkbox', value: nvram.bt_rpc_enable == '1' },
 	{ title: 'Listening GUI port', indent: 2, name: 'bt_port_gui', type: 'text', maxlen: 32, size: 5, value: nvram.bt_port_gui, suffix: ' <small>*<\/small>' },
@@ -351,13 +348,13 @@ createFieldTable('', [
 </script>
 	<ul>
 		<li><b>Listening GUI port</b> - Port used for Transmission GUI. Make sure this port is not in use.
-		<li><b>Authentication required</b> - Authentication is <b><i>highly recomended</i></b>. GUI will prompt for user/pass.
-		<li><b>Allow remote access</b> - This option will open the Transmission GUI port from the WAN side and allow the GUI to be accessed from the internet.
-	</ul>
+		</li><li><b>Authentication required</b> - Authentication is <b><i>highly recomended</i></b>. GUI will prompt for user/pass.
+		</li><li><b>Allow remote access</b> - This option will open the Transmission GUI port from the WAN side and allow the GUI to be accessed from the internet.
+	</li></ul>
 </div>
-<div class='section-title'>Limits</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Limits</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Download limit', multi: [
 		{ name: 'f_bt_dl_enable', type: 'checkbox', value: nvram.bt_dl_enable == '1', suffix: '  ' },
@@ -377,9 +374,9 @@ createFieldTable('', [
 ]);
 </script>
 </div>
-<div class='section-title'>Queue torrents</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Queue torrents</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Downloads queuing', multi: [
 		{ name: 'f_bt_dl_queue_enable', type: 'checkbox', value: nvram.bt_dl_queue_enable == '1', suffix: '  ' },
@@ -393,12 +390,12 @@ createFieldTable('', [
 </script>
 	<ul>
 		<li><b>Downloads queuing</b> - If enabled, this option will limit how many torrents can be downloaded at once.
-		<li><b>Seeds queuing</b> - If enabled, this option will limit how many torrents can be uploaded/seeded at once.
-	</ul>
+		</li><li><b>Seeds queuing</b> - If enabled, this option will limit how many torrents can be uploaded/seeded at once.
+	</li></ul>
 </div>
-<div class='section-title'>Advanced Settings</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Advanced Settings</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Find more peers using', multi: [
 		{ suffix: '&nbsp; DHT &nbsp;&nbsp;&nbsp;', name: 'f_bt_dht', type: 'checkbox', value: nvram.bt_dht == '1' },
@@ -435,16 +432,16 @@ createFieldTable('', [
 </form>
 </div>
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<form action=''>
+<tr><td id="footer" colspan="2">
+	<form action="">
 		<div>
-			<span id='footer-msg'></span>
-			<input type='button' value='Save' id='save-button' onclick='save()'>
-			<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+			<span id="footer-msg"></span>
+			<input type="button" value="Save" id="save-button" onclick="save()">
+			<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 		</div>
 	</form>
 </td></tr>
 </table>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>

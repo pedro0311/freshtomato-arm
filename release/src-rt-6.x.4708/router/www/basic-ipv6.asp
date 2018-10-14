@@ -9,24 +9,23 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: IPv6</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type='text/javascript' src='tomato.js'></script>
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 //	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_accept_ra,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
 
 nvram.ipv6_accept_ra = fixInt(nvram.ipv6_accept_ra, 0, 3, 0);
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var i;
 	var ok = 1;
 	var a, b, c;
@@ -265,8 +264,7 @@ REMOVE-END */
 	return ok;
 }
 
-function earlyInit()
-{
+function earlyInit() {
 	verifyFields(null, 1);
 }
 
@@ -281,8 +279,7 @@ function joinIPv6Addr(a) {
 	return r.join(' ');
 }
 
-function save()
-{
+function save() {
 	var a, b, c;
 	var i;
 
@@ -349,36 +346,36 @@ function save()
 
 </head>
 <body>
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='basic-ipv6.asp'>
-<input type='hidden' name='_nextwait' value='10'>
-<input type='hidden' name='_service' value='*'>
+<input type="hidden" name="_nextpage" value="basic-ipv6.asp">
+<input type="hidden" name="_nextwait" value="10">
+<input type="hidden" name="_service" value="*">
 
-<input type='hidden' name='ipv6_dns'>
-<input type='hidden' name='ipv6_prefix'>
-<input type='hidden' name='ipv6_prefix_length'>
-<input type='hidden' name='ipv6_rtr_addr'>
-<input type='hidden' name='ipv6_accept_ra'>
-<input type='hidden' name='ipv6_vlan'>
-<input type='hidden' name='ipv6_pdonly'>
-<input type='hidden' name='ipv6_wan_addr'>
-<input type='hidden' name='ipv6_prefix_len_wan'>
-<input type='hidden' name='ipv6_isp_gw'>
+<input type="hidden" name="ipv6_dns">
+<input type="hidden" name="ipv6_prefix">
+<input type="hidden" name="ipv6_prefix_length">
+<input type="hidden" name="ipv6_rtr_addr">
+<input type="hidden" name="ipv6_accept_ra">
+<input type="hidden" name="ipv6_vlan">
+<input type="hidden" name="ipv6_pdonly">
+<input type="hidden" name="ipv6_wan_addr">
+<input type="hidden" name="ipv6_prefix_len_wan">
+<input type="hidden" name="ipv6_isp_gw">
 
-<div class='section-title'>IPv6 Configuration</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">IPv6 Configuration</div>
+<div class="section">
+<script type="text/javascript">
 dns = nvram.ipv6_dns.split(/\s+/);
 
 createFieldTable('', [
@@ -425,14 +422,14 @@ createFieldTable('', [
 </script>
 </div>
 
-<br />
-<script type='text/javascript'>show_notice1('<% notice("ip6tables"); %>');</script>
+<br/>
+<script type="text/javascript">show_notice1('<% notice("ip6tables"); %>');</script>
 
 <!-- / / / -->
 
-<div class='section-title'>Notes</div>
-<div class='section'>
-<br />
+<div class="section-title">Notes</div>
+<div class="section">
+<br/>
 	<ul>
 	<li><b>Request PD Only:</b> Check for ISP's that require only a Prefix Delegation (usually PPPOE (Dsl, Fiber?) connections).</li>
 	</ul>
@@ -441,14 +438,14 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>earlyInit()</script>
-<div style='height:100px'></div>
+<script type="text/javascript">earlyInit()</script>
+<div style="height:100px"></div>
 </body>
 </html>

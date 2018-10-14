@@ -9,25 +9,25 @@
 -->
 <html>
 <head>
-<meta http-equiv='content-type' content='text/html;charset=utf-8'>
-<meta name='robots' content='noindex,nofollow'>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Access</title>
-<link rel='stylesheet' type='text/css' href='tomato.css'>
-<link rel='stylesheet' type='text/css' href='<% nv('web_css'); %>.css' id='guicss'>
-<script type='text/javascript' src='tomato.js'></script>
+<link rel="stylesheet" type="text/css" href="tomato.css">
+<link rel="stylesheet" type="text/css" href="<% nv('web_css'); %>.css" id="guicss">
+<script type="text/javascript" src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type='text/css'>
+<style type="text/css">
 textarea {
 	width: 99%;
 	height: 10em;
 }
 </style>
 
-<script type='text/javascript' src='debug.js'></script>
+<script type="text/javascript" src="debug.js"></script>
 
-<script type='text/javascript'>
+<script type="text/javascript">
 
 //	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_dir,ttb_css,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username,http_root"); %>
 
@@ -48,8 +48,7 @@ var xmenus = [['Status', 'status'], ['Bandwidth', 'bwm'], ['IP Traffic', 'ipt'],
 /* VPN-END */
 	['Administration', 'admin']];
 
-function toggle(service, isup)
-{
+function toggle(service, isup) {
 	if (changed) {
 		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
 	}
@@ -61,8 +60,7 @@ function toggle(service, isup)
 	});
 }
 
-function verifyFields(focused, quiet)
-{
+function verifyFields(focused, quiet) {
 	var ok = 1;
 	var a, b, c;
 	var i;
@@ -91,8 +89,7 @@ function verifyFields(focused, quiet)
 	if ((a.value != 3) && (b != 0) && (a.value != b)) {
 		ferror.set(a, 'The local http/https must also be enabled when using remote access.', quiet || !ok);
 		ok = 0;
-	}
-	else {
+	} else {
 		ferror.clear(a);
 	}
 
@@ -124,9 +121,8 @@ function verifyFields(focused, quiet)
 	a = E('_sshd_authkeys');
 	if (!v_length(a, quiet || !ok, 0, 4096)) {
 		ok = 0;
-	}
-	else if (a.value != '') {
-        if (a.value.search(/^\s*ssh-(dss|rsa)/) == -1) {
+	} else if (a.value != '') {
+		if (a.value.search(/^\s*ssh-(dss|rsa)/) == -1) {
 			ferror.set(a, 'Invalid SSH key.', quiet || !ok);
 			ok = 0;
 		}
@@ -146,12 +142,10 @@ function verifyFields(focused, quiet)
 	if (a.value != b.value) {
 		ferror.set(b, 'Both passwords must match.', quiet || !ok);
 		ok = 0;
-	}
-	else if (a.value == '') {
+	} else if (a.value == '') {
 		ferror.set(a, 'Password must not be empty.', quiet || !ok);
 		ok = 0;
-	}
-	else {
+	} else {
 		ferror.clear(a);
 		ferror.clear(b);
 	}
@@ -160,8 +154,7 @@ function verifyFields(focused, quiet)
 	return ok;
 }
 
-function save()
-{
+function save() {
 	var a, b, fom;
 
 	if (!verifyFields(null, false)) return;
@@ -180,8 +173,7 @@ function save()
 		if (location.protocol == 'https:') {
 			b = 's';
 			if ((a & 2) == 0) b = '';
-		}
-		else {
+		} else {
 			b = '';
 			if ((a & 1) == 0) b = 's';
 		}
@@ -189,8 +181,7 @@ function save()
 		a = 'http' + b + '://' + location.hostname;
 		if (b == 's') {
 			if (fom.https_lanport.value != 443) a += ':' + fom.https_lanport.value;
-		}
-		else {
+		} else {
 			if (fom.http_lanport.value != 80) a += ':' + fom.http_lanport.value;
 		}
 		fom._nextpage.value = a + '/admin-access.asp';
@@ -203,8 +194,7 @@ function save()
 	if ((a != 0) && (location.hostname != nvram.lan_ipaddr)) {
 		if (location.protocol == 'https:') {
 			if (a != 2) fom._nextpage.value = 'http://' + location.hostname + ':' + fom.http_wanport.value + '/admin-access.asp';
-		}
-		else {
+		} else {
 			if (a == 2) fom._nextpage.value = 'https://' + location.hostname + ':' + fom.http_wanport.value + '/admin-access.asp';
 		}
 	}
@@ -224,7 +214,7 @@ function save()
 	fom.sshd_forwarding.value = E('_f_sshd_forwarding').checked ? 1 : 0;
 
 	fom.rmgt_sip.value = fom.f_rmgt_sip.value.split(/\s*,\s*/).join(',');
-	
+
 	fom.ne_shlimit.value = ((E('_f_limit_ssh').checked ? 1 : 0) | (E('_f_limit_telnet').checked ? 2 : 0)) +
 		',' + E('_f_limit_hit').value + ',' + E('_f_limit_sec').value;
 
@@ -238,8 +228,7 @@ function save()
 	form.submit(fom, 0);
 }
 
-function init()
-{
+function init() {
 	changed = 0;
 	var elements = document.getElementsByClassName("new_window");
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
@@ -248,56 +237,56 @@ function init()
 </script>
 </head>
 <body onload="init()">
-<form id='t_fom' method='post' action='tomato.cgi'>
-<table id='container' cellspacing=0>
-<tr><td colspan=2 id='header'>
-	<div class='title'>Tomato</div>
-	<div class='version'>Version <% version(); %></div>
+<form id="t_fom" method="post" action="tomato.cgi">
+<table id="container" cellspacing="0">
+<tr><td colspan="2" id="header">
+	<div class="title">Tomato</div>
+	<div class="version">Version <% version(); %></div>
 </td></tr>
-<tr id='body'><td id='navi'><script type='text/javascript'>navi()</script></td>
-<td id='content'>
-<div id='ident'><% ident(); %></div>
+<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<td id="content">
+<div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<input type='hidden' name='_nextpage' value='admin-access.asp'>
-<input type='hidden' name='_nextwait' value='20'>
-<input type='hidden' name='_service' value='admin-restart'>
+<input type="hidden" name="_nextpage" value="admin-access.asp">
+<input type="hidden" name="_nextwait" value="20">
+<input type="hidden" name="_service" value="admin-restart">
 
-<input type='hidden' name='http_enable'>
-<input type='hidden' name='https_enable'>
-<input type='hidden' name='https_crt_save'>
-<input type='hidden' name='https_crt_gen'>
-<input type='hidden' name='http_root'>
-<input type='hidden' name='remote_management'>
-<input type='hidden' name='remote_mgt_https'>
-<input type='hidden' name='web_wl_filter'>
-<input type='hidden' name='telnetd_eas'>
-<input type='hidden' name='sshd_eas'>
-<input type='hidden' name='sshd_pass'>
-<input type='hidden' name='sshd_remote'>
-<input type='hidden' name='sshd_motd'>
-<input type='hidden' name='ne_shlimit'>
-<input type='hidden' name='rmgt_sip'>
-<input type='hidden' name='sshd_forwarding'>
-<input type='hidden' name='web_mx'>
+<input type="hidden" name="http_enable">
+<input type="hidden" name="https_enable">
+<input type="hidden" name="https_crt_save">
+<input type="hidden" name="https_crt_gen">
+<input type="hidden" name="remote_mgt_https">
+<input type="hidden" name="remote_management">
+<input type="hidden" name="http_root">
+<input type="hidden" name="web_wl_filter">
+<input type="hidden" name="telnetd_eas">
+<input type="hidden" name="sshd_eas">
+<input type="hidden" name="sshd_pass">
+<input type="hidden" name="sshd_remote">
+<input type="hidden" name="sshd_motd">
+<input type="hidden" name="ne_shlimit">
+<input type="hidden" name="rmgt_sip">
+<input type="hidden" name="sshd_forwarding">
+<input type="hidden" name="web_mx">
 
-<div class='section-title'>Web Admin</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Web Admin</div>
+<div class="section">
+<script type="text/javascript">
 var m = [
 	{ title: 'Local Access', name: 'f_http_local', type: 'select', options: [[0,'Disabled'],[1,'HTTP'],[2,'HTTPS'],[3,'HTTP &amp; HTTPS']],
 		value: ((nvram.https_enable != 0) ? 2 : 0) | ((nvram.http_enable != 0) ? 1 : 0) },
-	{ title: 'HTTP Port', indent: 2, name: 'http_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.http_lanport, 80) },
-	{ title: 'HTTPS Port', indent: 2, name: 'https_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.https_lanport, 443) },
+		{ title: 'HTTP Port', indent: 2, name: 'http_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.http_lanport, 80) },
+		{ title: 'HTTPS Port', indent: 2, name: 'https_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.https_lanport, 443) },
 	{ title: 'SSL Certificate', rid: 'row_sslcert' },
-	{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 40, value: nvram.https_crt_cn,
-		suffix: '&nbsp;<small>(optional; space separated)<\/small>' },
-	{ title: 'Regenerate', indent: 2, name: 'f_https_crt_gen', type: 'checkbox', value: 0 },
-	{ title: 'Save In NVRAM', indent: 2, name: 'f_https_crt_save', type: 'checkbox', value: nvram.https_crt_save == 1 },
+		{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 40, value: nvram.https_crt_cn,
+			suffix: '&nbsp;<small>(optional; space separated)<\/small>' },
+		{ title: 'Regenerate', indent: 2, name: 'f_https_crt_gen', type: 'checkbox', value: 0 },
+		{ title: 'Save In NVRAM', indent: 2, name: 'f_https_crt_save', type: 'checkbox', value: nvram.https_crt_save == 1 },
 	{ title: 'Remote Access', name: 'f_http_remote', type: 'select', options: [[0,'Disabled'],[1,'HTTP'],[2,'HTTPS']],
 		value:  (nvram.remote_management == 1) ? ((nvram.remote_mgt_https == 1) ? 2 : 1) : 0 },
-	{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
+		{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
 	{ title: 'Allow Wireless Access', name: 'f_http_wireless', type: 'checkbox', value:  nvram.web_wl_filter == 0 },
 	null,
 	{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
@@ -305,7 +294,7 @@ var m = [
 	{ title: 'Color Scheme', name: 'web_css', type: 'select',
 		options: [['default','Default'],['openlinksys','USB Blue - OpenLinksys'],['usbred','USB Red - OpenLinksys'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
 		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
-	{ title: 'TTB ID#', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 30, value: nvram.ttb_css, suffix: ' Theme name from <a href="http://www.tomatothemebase.eu"  class="new_window"><u><i>TTB themes gallery<\/i><\/u><\/a>' },
+		{ title: 'TTB ID#', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 30, value: nvram.ttb_css, suffix: ' Theme name from <a href="http://www.tomatothemebase.eu"  class="new_window"><u><i>TTB themes gallery<\/i><\/u><\/a>' },
 	null,
 	{ title: 'Open Menus' }
 ];
@@ -320,14 +309,14 @@ createFieldTable('', m);
 </script>
 </div>
 
-<div class='section-title'>SSH Daemon</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">SSH Daemon</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable at Startup', name: 'f_sshd_eas', type: 'checkbox', value: nvram.sshd_eas == 1 },
 	{ title: 'Extended MOTD', name: 'f_sshd_motd', type: 'checkbox', value: nvram.sshd_motd == 1 },
 	{ title: 'Remote Access', name: 'f_sshd_remote', type: 'checkbox', value: nvram.sshd_remote == 1 },
-	{ title: 'Remote Port', indent: 2, name: 'sshd_rport', type: 'text', maxlen: 5, size: 7, value: nvram.sshd_rport },
+		{ title: 'Remote Port', indent: 2, name: 'sshd_rport', type: 'text', maxlen: 5, size: 7, value: nvram.sshd_rport },
 	{ title: 'Remote Forwarding', name: 'f_sshd_forwarding', type: 'checkbox', value: nvram.sshd_forwarding == 1 },
 	{ title: 'Port', name: 'sshd_port', type: 'text', maxlen: 5, size: 7, value: nvram.sshd_port },
 	{ title: 'Allow Password Login', name: 'f_sshd_pass', type: 'checkbox', value: nvram.sshd_pass == 1 },
@@ -337,9 +326,9 @@ W('<input type="button" value="' + (sdup ? 'Stop' : 'Start') + ' Now" onclick="t
 </script>
 </div>
 
-<div class='section-title'>Telnet Daemon</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Telnet Daemon</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Enable at Startup', name: 'f_telnetd_eas', type: 'checkbox', value: nvram.telnetd_eas == 1 },
 	{ title: 'Port', name: 'telnetd_port', type: 'text', maxlen: 5, size: 7, value: nvram.telnetd_port }
@@ -348,9 +337,9 @@ W('<input type="button" value="' + (tdup ? 'Stop' : 'Start') + ' Now" onclick="t
 </script>
 </div>
 
-<div class='section-title'>Admin Restrictions</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Admin Restrictions</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Allowed Remote<br />IP Address', name: 'f_rmgt_sip', type: 'text', maxlen: 512, size: 64, value: nvram.rmgt_sip,
 		suffix: '<br /><small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>' },
@@ -358,23 +347,23 @@ createFieldTable('', [
 		{ suffix: '&nbsp; SSH &nbsp; / &nbsp;', name: 'f_limit_ssh', type: 'checkbox', value: (shlimit[0] & 1) != 0 },
 		{ suffix: '&nbsp; Telnet &nbsp;', name: 'f_limit_telnet', type: 'checkbox', value: (shlimit[0] & 2) != 0 }
 	] },
-	{ title: '', indent: 2, multi: [
-		{ name: 'f_limit_hit', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; every &nbsp;', value: shlimit[1] },
-		{ name: 'f_limit_sec', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; seconds', value: shlimit[2] }
-	] }	
+		{ title: '', indent: 2, multi: [
+			{ name: 'f_limit_hit', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; every &nbsp;', value: shlimit[1] },
+			{ name: 'f_limit_sec', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; seconds', value: shlimit[2] }
+	] }
 ]);
 </script>
 </div>
 
-<div class='section-title'>Username / Password</div>
-<div class='section'>
-<script type='text/javascript'>
+<div class="section-title">Username / Password</div>
+<div class="section">
+<script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Username', name: 'http_username', type: 'text', value: nvram.http_username, suffix: '&nbsp;<small>(empty field means "admin")<\/small>' },
+	{ title: 'Username', name: 'http_username', type: 'text', maxlen: 20, value: nvram.http_username, suffix: '&nbsp;<small>(empty field means "admin")<\/small>' },
 	{ title: 'Allow web login as "root"', name: 'f_http_root', type: 'checkbox', value: nvram.http_root == 1 },
 	null,
-	{ title: 'Password', name: 'set_password_1', type: 'password', value: '**********' },
-	{ title: '<i>(re-enter to confirm)<\/i>', indent: 2, name: 'set_password_2', type: 'password', value: '**********' }
+	{ title: 'Password', name: 'set_password_1', type: 'password', maxlen: 32, value: '**********' },
+		{ title: '<i>(re-enter to confirm)<\/i>', indent: 2, name: 'set_password_2', type: 'password', maxlen: 32, value: '**********' }
 ]);
 </script>
 </div>
@@ -382,13 +371,13 @@ createFieldTable('', [
 <!-- / / / -->
 
 </td></tr>
-<tr><td id='footer' colspan=2>
-	<span id='footer-msg'></span>
-	<input type='button' value='Save' id='save-button' onclick='save()'>
-	<input type='button' value='Cancel' id='cancel-button' onclick='javascript:reloadPage();'>
+<tr><td id="footer" colspan="2">
+	<span id="footer-msg"></span>
+	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
 </form>
-<script type='text/javascript'>verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, 1);</script>
 </body>
 </html>
