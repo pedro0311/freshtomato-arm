@@ -219,6 +219,14 @@ void wo_vpn_status(char *url)
 #endif
 }
 
+void wo_vpn_genkey(char *url)
+{
+#ifdef TCONFIG_OPENVPN
+		web_pipecmd("openvpn --genkey --secret /tmp/genvpnkey \
+		 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
+#endif
+}
+
 /*
 # cat /proc/meminfo
         total:    used:    free:  shared: buffers:  cached:
