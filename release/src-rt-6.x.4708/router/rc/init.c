@@ -4654,7 +4654,7 @@ int init_main(int argc, char *argv[])
 			}
 #endif
 
-			syslog(LOG_INFO, "%s: Tomato %s", nvram_safe_get("t_model_name"), tomato_version);
+			syslog(LOG_INFO, "%s: FreshTomato %s", nvram_safe_get("t_model_name"), tomato_version);
 
 			led(LED_DIAG, 0);
 			notice_set("sysup", "");
