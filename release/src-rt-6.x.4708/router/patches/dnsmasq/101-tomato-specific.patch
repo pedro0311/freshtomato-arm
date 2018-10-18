@@ -79,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1398,8 +1436,22 @@ static void async_event(int pipe, time_t
+@@ -1405,8 +1443,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -102,7 +102,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1442,6 +1494,12 @@ static void async_event(int pipe, time_t
+@@ -1449,6 +1501,12 @@ static void async_event(int pipe, time_t
  	    while (retry_send(close(daemon->helperfd)));
  	  }
  #endif
