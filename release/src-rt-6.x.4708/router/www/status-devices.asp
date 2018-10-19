@@ -326,7 +326,7 @@ function earlyInit() {
 }
 
 function init() {
-	new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true, attributes: true });
+	new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true });
 	dg.recolor();
 	ref.initPage(3000, 3);
 }
