@@ -263,6 +263,14 @@ void stop_usb(void)
 {
 	int disabled = !nvram_get_int("usb_enable");
 
+	int mwan_num;
+	int wan_unit;
+	char *module;
+	char *mod;
+	char *tofree;
+	char tmp[100];
+	char prefix[] = "wanXX";
+
 #ifdef TCONFIG_UPS
 		stop_ups();
 		modprobe_r("usbhid");
@@ -350,25 +358,31 @@ void stop_usb(void)
 	stop_ups();
 #endif
 
+	/* Remove 3G/4G modem modules */
 	if (disabled || !nvram_get_int("usb_3g")) {
-		if (nvram_match("3g_module", "sierra") ) {
-			modprobe_r("sierra");
-			modprobe_r("usbserial");
+		mwan_num = atoi(nvram_safe_get("mwan_num"));
+		if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+			mwan_num = 1;
 		}
 
-		if (nvram_match("3g_module", "option") ) {
-			modprobe_r("option");
-			modprobe_r("usbserial");
+		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+			get_wan_prefix(wan_unit, prefix);
+			module = strdup(nvram_safe_get(strcat_r(prefix, "_modem_modules", tmp)));
+
+			if (module != NULL) {
+				tofree = module;
+				while ((mod = strsep(&module, " ")) != NULL)
+				{
+					int r = modprobe_r(mod);
+					if (r == 0) {
+						syslog(LOG_INFO, "USB: module '%s' was removed correctly (iface: %s, errno: %d)", mod, prefix, r);
+					} else {
+						syslog(LOG_INFO, "USB: module '%s' could not be removed! (iface: %s, errno: %d)", mod, prefix, r);
+					}
+				}
+				free(tofree);
+			}
 		}
-/*
-		// shibby
-		// when modem use usbserial module and we will try remove module, module will crash
-		// the only solution at the moment is reboot router
-		// FIX THIS
-		if (nvram_match("3g_module", "usbserial") ) {
-			modprobe_r("usbserial");
-		}
-*/
 	}
 
 	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - disable USB port

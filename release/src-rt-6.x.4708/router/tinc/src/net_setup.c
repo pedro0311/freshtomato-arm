@@ -215,7 +215,7 @@ static bool read_ecdsa_private_key(void) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error reading Ed25519 private key file `%s': %s", fname, strerror(errno));
 
 		if(errno == ENOENT) {
-			logger(DEBUG_ALWAYS, LOG_INFO, "Create an Ed25519 keypair with `tinc -n %s generate-ed25519-keys'.", netname ? : ".");
+			logger(DEBUG_ALWAYS, LOG_INFO, "Create an Ed25519 keypair with `tinc -n %s generate-ed25519-keys'.", netname ? netname : ".");
 		}
 
 		free(fname);
@@ -307,7 +307,7 @@ static bool read_rsa_private_key(void) {
 		       fname, strerror(errno));
 
 		if(errno == ENOENT) {
-			logger(DEBUG_ALWAYS, LOG_INFO, "Create an RSA keypair with `tinc -n %s generate-rsa-keys'.", netname ? : ".");
+			logger(DEBUG_ALWAYS, LOG_INFO, "Create an RSA keypair with `tinc -n %s generate-rsa-keys'.", netname ? netname : ".");
 		}
 
 		free(fname);
@@ -687,15 +687,8 @@ bool setup_myself_reloadable(void) {
 		keylifetime = 3600;
 	}
 
-	config_t *cfg = lookup_config(config_tree, "AutoConnect");
-
-	if(cfg) {
-		if(!get_config_bool(cfg, &autoconnect)) {
-			// Some backwards compatibility with when this option was an int
-			int val = 0;
-			get_config_int(cfg, &val);
-			autoconnect = val;
-		}
+	if(!get_config_bool(lookup_config(config_tree, "AutoConnect"), &autoconnect)) {
+		autoconnect = true;
 	}
 
 	get_config_bool(lookup_config(config_tree, "DisableBuggyPeers"), &disablebuggypeers);
@@ -982,6 +975,7 @@ static bool setup_myself(void) {
 		myself->incipher = NULL;
 	} else if(!(myself->incipher = cipher_open_by_name(cipher))) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unrecognized cipher type!");
+		free(cipher);
 		return false;
 	}
 
@@ -1009,6 +1003,7 @@ static bool setup_myself(void) {
 		myself->indigest = NULL;
 	} else if(!(myself->indigest = digest_open_by_name(digest, maclength))) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unrecognized digest type!");
+		free(digest);
 		return false;
 	}
 

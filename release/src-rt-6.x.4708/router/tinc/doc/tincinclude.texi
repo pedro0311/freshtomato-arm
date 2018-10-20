@@ -1,4 +1,4 @@
-@set VERSION 1.1pre15-70-g809ee79b
+@set VERSION 1.1pre17
 @set PACKAGE tinc
 @set sysconfdir /etc
 @set localstatedir /var

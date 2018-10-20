@@ -2008,7 +2008,8 @@ libxml2/stamp-h1:
 	cd libxml2 && \
 	autoreconf -fsi && \
 	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --includedir="$(TOP)/libxml2/include"
+	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
+		--includedir="$(TOP)/libxml2/include" --without-lzma
 	touch $@
 
 libxml2: libxml2/stamp-h1
@@ -2126,7 +2127,6 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	--enable-xmlreader \
 	--enable-xmlwriter \
 	--enable-zip \
-	--disable-filter \
 	--without-valgrind \
 	--with-libxml-dir="$(TOP)/libxml2/staged/usr"
 	@touch php/stamp-h1
@@ -2255,11 +2255,6 @@ mysql/stamp-h1: openssl zlib libncurses
 		--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 		ac_cv_c_stack_direction=-1
 	cd mysql && tar xvfz .host.tgz
-	# Update time of config.status to avoid run 'config.status --recheck'
-	touch mysql/config.status
-	# Update time of Makefile to avoid regenerate it when do make
-	sleep 5
-	-find mysql -name Makefile -print | xargs -i touch {}
 	touch mysql/stamp-h1
 
 mysql: mysql/stamp-h1

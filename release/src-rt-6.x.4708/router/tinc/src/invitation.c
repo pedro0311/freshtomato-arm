@@ -181,6 +181,7 @@ char *get_my_hostname() {
 	if(!tty) {
 		if(!hostname) {
 			fprintf(stderr, "Could not determine the external address or hostname. Please set Address manually.\n");
+			free(port);
 			return NULL;
 		}
 
@@ -199,6 +200,7 @@ again:
 	if(!fgets(line, sizeof(line), stdin)) {
 		fprintf(stderr, "Error while reading stdin: %s\n", strerror(errno));
 		free(hostname);
+		free(port);
 		return NULL;
 	}
 
@@ -353,7 +355,11 @@ int cmd_invite(int argc, char *argv[]) {
 
 		char invname[PATH_MAX];
 		struct stat st;
-		snprintf(invname, sizeof(invname), "%s" SLASH "%s", filename, ent->d_name);
+
+		if((size_t)snprintf(invname, sizeof(invname), "%s" SLASH "%s", filename, ent->d_name) >= sizeof(invname)) {
+			fprintf(stderr, "Filename too long: %s" SLASH "%s\n", filename, ent->d_name);
+			continue;
+		}
 
 		if(!stat(invname, &st)) {
 			if(deadline < st.st_mtime) {
@@ -549,7 +555,7 @@ static char *get_line(const char **data) {
 
 	static char line[1024];
 	const char *end = strchr(*data, '\n');
-	size_t len = end ? end - *data : strlen(*data);
+	size_t len = end ? (size_t)(end - *data) : strlen(*data);
 
 	if(len >= sizeof(line)) {
 		fprintf(stderr, "Maximum line length exceeded!\n");
@@ -629,7 +635,7 @@ static char *grep(const char *data, const char *var) {
 		return xstrdup(p);
 	}
 
-	if(e - p >= sizeof(value)) {
+	if((size_t)(e - p) >= sizeof(value)) {
 		fprintf(stderr, "Maximum line length exceeded!\n");
 		return NULL;
 	}
@@ -640,12 +646,17 @@ static char *grep(const char *data, const char *var) {
 }
 
 static bool finalize_join(void) {
-	char *name = xstrdup(get_value(data, "Name"));
+	const char *temp_name = get_value(data, "Name");
 
-	if(!name) {
+	if(!temp_name) {
 		fprintf(stderr, "No Name found in invitation!\n");
 		return false;
 	}
+
+	size_t len = strlen(temp_name);
+	char name[len + 1];
+	memcpy(name, temp_name, len);
+	name[len] = 0;
 
 	if(!check_id(name)) {
 		fprintf(stderr, "Invalid Name found in invitation!\n");
@@ -955,7 +966,11 @@ ask_netname:
 		line[strlen(line) - 1] = 0;
 
 		char newbase[PATH_MAX];
-		snprintf(newbase, sizeof(newbase), CONFDIR SLASH "tinc" SLASH "%s", line);
+
+		if((size_t)snprintf(newbase, sizeof(newbase), CONFDIR SLASH "tinc" SLASH "%s", line) >= sizeof(newbase)) {
+			fprintf(stderr, "Filename too long: " CONFDIR SLASH "tinc" SLASH "%s\n", line);
+			goto ask_netname;
+		}
 
 		if(rename(confbase, newbase)) {
 			fprintf(stderr, "Error trying to rename %s to %s: %s\n", confbase, newbase, strerror(errno));
@@ -997,7 +1012,13 @@ ask_netname:
 				if(response == 'e') {
 					char *command;
 #ifndef HAVE_MINGW
-					xasprintf(&command, "\"%s\" \"%s\"", getenv("VISUAL") ? : getenv("EDITOR") ? : "vi", filename);
+					const char *editor = getenv("VISUAL");
+					if (!editor)
+						editor = getenv("EDITOR");
+					if (!editor)
+						editor = "vi";
+
+					xasprintf(&command, "\"%s\" \"%s\"", editor, filename);
 #else
 					xasprintf(&command, "edit \"%s\"", filename);
 #endif
@@ -1034,7 +1055,11 @@ ask_netname:
 }
 
 
-static bool invitation_send(void *handle, uint8_t type, const void *data, size_t len) {
+static bool invitation_send(void *handle, uint8_t type, const void *vdata, size_t len) {
+	(void)handle;
+	(void)type;
+	const char *data = vdata;
+
 	while(len) {
 		int result = send(sock, data, len, 0);
 
@@ -1052,6 +1077,8 @@ static bool invitation_send(void *handle, uint8_t type, const void *data, size_t
 }
 
 static bool invitation_receive(void *handle, uint8_t type, const void *msg, uint16_t len) {
+	(void)handle;
+
 	switch(type) {
 	case SPTPS_HANDSHAKE:
 		return sptps_send_record(&sptps, 0, cookie, sizeof(cookie));
@@ -1230,7 +1257,7 @@ next:
 	// Tell him we have an invitation, and give him our throw-away key.
 	int len = snprintf(line, sizeof(line), "0 ?%s %d.%d\n", b64key, PROT_MAJOR, PROT_MINOR);
 
-	if(len <= 0 || len >= sizeof(line)) {
+	if(len <= 0 || (size_t)len >= sizeof(line)) {
 		abort();
 	}
 

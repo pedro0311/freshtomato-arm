@@ -1,3 +1,16 @@
+# Version 1.1pre17             October 8 2018
+
+* Prevent oracle attacks in the legacy protocol (CVE-2018-16737,
+  CVE-2018-16738).
+* Prevent a MITM from forcing a NULL cipher for UDP in the legacy protocol
+  (CVE-2018-16758).
+* AutoConnect is now enabled by default.
+* Per-node network traffic statistics are now shown in the output of "info" and
+  "dump nodes" commands.
+
+Thanks to volth and Rafael Sadowski for their contributions to this version of
+tinc.
+
 # Version 1.1pre16             June 12 2018
 
 * Fixed building with support for UML sockets.
@@ -11,6 +24,11 @@
 * Fixed linking with libncurses on some distributions.
 * Automatically disable PMTUDiscovery when TCPOnly is enabled.
 * Fixed removing the tinc service on Windows in some situations.
+* Fixed the TAP-Win32 device locking up after waking up from suspend.
+
+Thanks to Todd C. Miller, Etienne Dechamps, Daniel Lublin,
+Gjergji Ramku, Mike Sullivan and Oliver Freyermuth for their
+contributions to this version of tinc.
 
 # Version 1.1pre15             September 2 2017
 
@@ -566,7 +584,7 @@ Thanks to Scott Lamb for his contributions to this version of tinc.
 * Tinc will retry to connect upon startup, does not quit if it doesn't
   work the first time.
 * Hosts that are disconnected implicitly if we lose a connection get
-  deleted from the internal list, to prevent hogging eachother with
+  deleted from the internal list, to prevent hogging each other with
   add and delete requests when the connection is restored.
 
 # Version 1.0pre1              May 12 2000

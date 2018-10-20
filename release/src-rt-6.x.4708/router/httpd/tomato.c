@@ -316,6 +316,7 @@ const struct mime_handler mime_handlers[] = {
 	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
 #ifdef TCONFIG_OPENVPN
 	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_status,		1 },
+	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_genkey,		1 },
 #endif
 #ifdef TCONFIG_PPTPD
 	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD
@@ -702,6 +703,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan2_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
@@ -710,6 +715,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan2_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan2_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan2_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
@@ -719,6 +728,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan3_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan3_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan3_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan4_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
@@ -727,6 +740,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
 	{ "wan4_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
 	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
+	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
+	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan4_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
+	{ "wan4_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 #endif
 #endif
 
@@ -835,7 +852,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_6rd_prefix_length",	V_RANGE(3, 127)			},
 	{ "ipv6_6rd_borderrelay",	V_IP				},
 	{ "ipv6_6rd_ipv4masklen",	V_RANGE(0, 32)			},
-	{ "ipv6_vlan",			V_RANGE(0, 7)			},	// Enable IPv6 on 1=LAN1 2=LAN2 4=LAN3
+	{ "ipv6_vlan",			V_RANGE(0, 7)			},	// Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3
 	{ "ipv6_pdonly",		V_01				},	// Request DHCPv6 Prefix Delegation Only
 	{ "ipv6_ipsec",			V_01				},	// Enable Incoming IPv6 IPSec
 	{ "ipv6_wan_addr",		V_IPV6(0)			},	// Static IPv6 Wan Address
@@ -1522,16 +1539,16 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_plan1",		V_01				},
 	{ "vpn_server1_plan2",		V_01				},
 	{ "vpn_server1_plan3",		V_01				},
-	{ "vpn_server1_ccd",		V_01				},
-	{ "vpn_server1_c2c",		V_01				},
-	{ "vpn_server1_ccd_excl",	V_01				},
-	{ "vpn_server1_ccd_val",	V_NONE				},
 	{ "vpn_server1_pdns",		V_01				},
 	{ "vpn_server1_rgw",		V_01				},
 	{ "vpn_server1_userpass",	V_01				},
 	{ "vpn_server1_nocert",		V_01				},
 	{ "vpn_server1_users_val",	V_NONE				},
 	{ "vpn_server1_custom",		V_NONE				},
+	{ "vpn_server1_ccd",		V_01				},
+	{ "vpn_server1_c2c",		V_01				},
+	{ "vpn_server1_ccd_excl",	V_01				},
+	{ "vpn_server1_ccd_val",	V_NONE				},
 	{ "vpn_server1_static",		V_NONE				},
 	{ "vpn_server1_ca",		V_NONE				},
 	{ "vpn_server1_crt",		V_NONE				},

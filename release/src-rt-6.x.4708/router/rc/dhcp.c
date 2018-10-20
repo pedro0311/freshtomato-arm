@@ -466,7 +466,7 @@ void start_dhcpc(char *prefix)
 	proto = get_wanx_proto(prefix);
 
 	if (proto == WP_LTE) {
-		ifname = nvram_safe_get("wan_4g");
+		ifname = nvram_safe_get(strcat_r(prefix, "_modem_if", tmp));
 	} else {
 		ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
 	}
@@ -643,7 +643,7 @@ void start_dhcp6c(void)
 			nvram_safe_get("lan_ifname"),
 			prefix_len);
 		/*check IPv6 for LAN1*/
-		if ((ipv6_vlan & 0x01) && (prefix_len >= 1)) { /*2x IPv6 /64 networks possible --> for LAN and LAN1*/
+		if ((ipv6_vlan & 0x01) && (prefix_len >= 1) && (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0)) { /*2x IPv6 /64 networks possible --> for LAN and LAN1*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 1;\n"
@@ -651,7 +651,7 @@ void start_dhcp6c(void)
 			"	};\n", nvram_safe_get("lan1_ifname"), prefix_len);
 		}
 		/*check IPv6 for LAN2*/
-		if ((ipv6_vlan & 0x02) && (prefix_len >= 2)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
+		if ((ipv6_vlan & 0x02) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 2;\n"
@@ -659,7 +659,7 @@ void start_dhcp6c(void)
 			"	};\n", nvram_safe_get("lan2_ifname"), prefix_len);
 		}
 		/*check IPv6 for LAN3*/
-		if ((ipv6_vlan & 0x04) && (prefix_len >= 2)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
+		if ((ipv6_vlan & 0x04) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 3;\n"

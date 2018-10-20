@@ -174,6 +174,7 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_vpn_'+t+'_ca'), PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_dh'), PR('_vpn_'+t+'_key'),
 		             PR('_vpn_'+t+'_hmac'), PR('_f_vpn_'+t+'_rgw'), PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_static'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
+		elem.display(PR('_vpn_keygen_'+t+'_button'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
 		elem.display(E(t+'_custom_crypto_text'), auth == "custom");
 		elem.display(PR('_vpn_'+t+'_sn'), PR('_f_vpn_'+t+'_plan'), PR('_f_vpn_'+t+'_plan1'),
  		             PR('_f_vpn_'+t+'_plan2'), PR('_f_vpn_'+t+'_plan3'), auth == "tls" && iface.value == "tun");
@@ -475,6 +476,22 @@ function init() {
 
 	verifyFields(null, true);
 }
+
+var keyGenRequest = null
+
+function updateStaticKey(serverNumber)
+{
+	if (keyGenRequest) return;
+
+	keyGenRequest = new XmlHttp();
+	keyGenRequest.onCompleted = function(text, xml) {
+		E('_vpn_server'+serverNumber+'_static').value = text;
+		keyGenRequest = null;
+	}
+	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
+	keyGenRequest.post('vpngenkey.cgi', '');
+}
+
 </script>
 
 <style type="text/css">
@@ -610,6 +627,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>.<\/p>');
 	createFieldTable('', [
 		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ) },
+		{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
 		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ) },
 		{ title: 'Server Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ) },
 		{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_key' ) },
