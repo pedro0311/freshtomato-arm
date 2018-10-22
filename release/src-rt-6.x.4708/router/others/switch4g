@@ -3,751 +3,949 @@
 #
 # Copyright (C) 2015 shibby
 #
+# changes/fixes: 2018 by pedro
+#
 
 
-PREFIX=$1
+PREFIX="$1"
 
 PID=$$
-PIDFILE="/var/run/switch4g.pid"
-READYFILE="/tmp/4g.ready"
-DETECTFILE="/tmp/4g.detect"
-MODE=`nvram get "$PREFIX"_proto`
+PIDFILE="/var/run/switch4g_$PREFIX.pid"
+READYFILE="/tmp/switch4g_$PREFIX.ready"
+STATEFILE="/tmp/state_$PREFIX"
+MODE=$(nvram get "$PREFIX"_proto)
 
 
-if [ -z "$PREFIX" ]; then
-    echo "usage: switch4g INTERFACE [connect|disconnect|signal]"
-    exit 0
-fi
+[ -z "$PREFIX" ] && {
+	echo "usage: switch4g INTERFACE [connect|disconnect|signal]"
+	exit 0
+}
 
-if [ ! "$MODE" == "lte" ]; then
-    exit 0
-fi
+[ ! "$MODE" == "lte" ] && {
+	exit 0
+}
 
 
 connect() {
-    APN=`nvram get "$PREFIX"_modem_apn`
-    DEV=`nvram get modem_dev4g`
-    TYPE=`nvram get modem_type`
-    IFA=`nvram get wan_4g`
-    SPEED=`nvram get "$PREFIX"_modem_speed`
-    BAND=`nvram get "$PREFIX"_modem_band`
-    ROAMING=`nvram get "$PREFIX"_modem_roam`
-    CLID=$(nvram get modem_clid)
+	MTYPE=$(nvram get "$PREFIX"_modem_type)
+	DEVNR=$(nvram get "$PREFIX"_modem_dev)
+	APN=$(nvram get "$PREFIX"_modem_apn)
+	SPEED=$(nvram get "$PREFIX"_modem_speed)
+	BAND=$(nvram get "$PREFIX"_modem_band)
+	ROAMING=$(nvram get "$PREFIX"_modem_roam)
+	IFA=$(nvram get "$PREFIX"_modem_if)
+	local TTY DEVS SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
+	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
-    logger -t switch4g[$PID] "4G MODEM - connecting ..."
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
+		[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found - connection terminated!"
+	}
 
-    # non-hilink/1st type
-    if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-        CONNECTED=0
-        COUNT=0
+	logger -t switch4g[$PID] "4G MODEM - connecting ..."
 
-        if [ -z "$DEV" ]; then
-            logger -t switch4g[$PID] "4G MODEM - DIAG interface not found - connection terminated!"
-            rm -f $PIDFILE > /dev/null 2>&1
-            exit 0
-        fi
+	# non-hilink/1st type
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		case "$SPEED" in
+		     "00")   SPEEDTXT="Auto" ;;
+		     "03")   SPEEDTXT="4G only" ;;
+		     "02")   SPEEDTXT="3G only" ;;
+		     "0302") SPEEDTXT="4G/3G only" ;;
+		     "030201") SPEEDTXT="4G/3G/2G" ;;
+		     *)      SPEEDTXT="unknown" ;;
+		esac
 
-        case "$SPEED" in
-             "00")   SPD1="Auto" ;;
-             "03")   SPD1="4G only" ;;
-             "02")   SPD1="3G only" ;;
-             "0302") SPD1="4G/3G only" ;;
-             "030201") SPD1="4G/3G/2G" ;;
-             *) SPD1="unknown" ;;
-        esac
+		case "$ROAMING" in
+		     "0")  ROAMTXT="Disabled"  ;;
+		     "1")  ROAMTXT="Supported" ;;
+		     "2")  ROAMTXT="No change" ;;
+		     "3")  ROAMTXT="Roam only" ;;
+		     *)    ROAMTXT="unknown"   ;;
+		esac
 
-        case "$ROAMING" in
-             "0")  ROAM3="Disabled"  ;;
-             "1")  ROAM3="Supported" ;;
-             "2")  ROAM3="No change" ;;
-             "3")  ROAM3="Roam only" ;;
-             *)    ROAM3="unknown"   ;;
-        esac
+		case "$BAND" in
+		     "80000") BANDTXT="B20 (800 MHz)" ;;
+		     "80")    BANDTXT="B8 (900 MHz)"  ;;
+		     "4")     BANDTXT="B3 (1800 MHz)" ;;
+		     "1")     BANDTXT="B1 (2100 MHz)" ;;
+		     "40")    BANDTXT="B7 (2600 MHz)" ;;
+		     "7FFFFFFFFFFFFFFF") BANDTXT="All supported" ;;
+		     *)       BANDTXT="unknown"       ;;
+		esac
 
-        case "$BAND" in
-             "80000")  BAND2="B20 (800 MHz)" ;;
-              "80")    BAND2="B8 (900 MHz)"  ;;
-              "4")     BAND2="B3 (1800 MHz)" ;;
-              "1")     BAND2="B1 (2100 MHz)" ;;
-              "40")    BAND2="B7 (2600 MHz)" ;;
-              "7FFFFFFFFFFFFFFF") BAND2="All supported" ;;
-              *)       BAND2="unknown"       ;;
-        esac
+		TTY=$(ls /dev/ttyUSB* | grep -v "$DEVNR")
+		DEVS="$DEVNR $TTY $DEVNR $TTY $DEVNR $TTY"	# try 3x on every interface
 
-        #we try use last diag iface first. If it failed then we try use any other ttyUSB device
-        TTY=`ls /dev/ttyUSB* | grep -v $DEV`
-        DEVS="$DEV $TTY $DEV $TTY $DEV $TTY"  # let's triple this (try 3x on every interface)
+		while [ "$CONNECTED" -eq 0 ]; do
+			for i in $DEVS; do
 
-        while [ "$CONNECTED" -eq 0 ]; do
-            for i in $DEVS; do
+				# disconnect first
+				MODE="AT^NDISDUP=1,0" gcom -d "$i" -s /etc/gcom/setmode.gcom
+				sleep 2
 
-                #disconnect first
-                MODE="AT^NDISDUP=1,0" gcom -d "$i" -s /etc/gcom/setmode.gcom
-                sleep 3
+				# check for current type of network
+				SYSCFGEX=$(MODE="AT^SYSCFGEX?" gcom -d "$i" -s /etc/gcom/setverbose.gcom)
 
-                # check for current type of network
-                MODE="AT^SYSCFGEX?" gcom -d "$i" -s /etc/gcom/setverbose.gcom > /tmp/4g.mode
+				RESSPEED=$(echo "$SYSCFGEX" | grep SYSCFGEX | grep '"' | cut -d '"' -f2)
+				RESROAM=$(echo "$SYSCFGEX" | grep SYSCFGEX | grep ',' | cut -d ',' -f3)
+				RESBAND=$(echo "$SYSCFGEX" | grep SYSCFGEX | grep ',' | cut -d ',' -f5 | tr -d '\r')
 
-                RESULT=`cat /tmp/4g.mode | grep SYSCFGEX | grep '"' | cut -d '"' -f2`
-                RESROAM=`cat /tmp/4g.mode | grep SYSCFGEX | grep ',' | cut -d ',' -f3`
-                RESBAND=`cat /tmp/4g.mode | grep SYSCFGEX | grep ',' | cut -d ',' -f5 | tr -d '\r'`
+				case "$RESSPEED" in
+				     "00")   RSPEEDTXT="Auto" ;;
+				     "03")   RSPEEDTXT="4G only" ;;
+				     "02")   RSPEEDTXT="3G only" ;;
+				     "0302") RSPEEDTXT="4G/3G only" ;;
+				     "030201") RSPEEDTXT="4G/3G/2G" ;;
+				     *)      RSPEEDTXT="unknown" ;;
+				esac
 
-                case "$RESULT" in
-                     "00")   RES1="Auto" ;;
-                     "03")   RES1="4G only" ;;
-                     "02")   RES1="3G only" ;;
-                     "0302") RES1="4G/3G only" ;;
-                     "030201") RES1="4G/3G/2G" ;;
-                     *) RES1="unknown" ;;
-                esac
+				case "$RESROAM" in
+				     "0")  RROAMTXT="Disabled"  ;;
+				     "1")  RROAMTXT="Supported" ;;
+				     "2")  RROAMTXT="No change" ;;
+				     "3")  RROAMTXT="Roam only" ;;
+				     *)    RROAMTXT="unknown"   ;;
+				esac
 
-                case "$RESROAM" in
-                     "0")  RES3="Disabled"  ;;
-                     "1")  RES3="Supported" ;;
-                     "2")  RES3="No change" ;;
-                     "3")  RES3="Roam only" ;;
-                     *)    RES3="unknown"   ;;
-                esac
+				case "$RESBAND" in
+				     "80000") RBANDTXT="B20 (800 MHz)" ;;
+				     "80")    RBANDTXT="B8 (900 MHz)"  ;;
+				     "4")     RBANDTXT="B3 (1800 MHz)" ;;
+				     "1")     RBANDTXT="B1 (2100 MHz)" ;;
+				     "40")    RBANDTXT="B7 (2600 MHz)" ;;
+				     "7FFFFFFFFFFFFFFF") RBANDTXT="All supported" ;;
+				     *)       RBANDTXT="unknown"       ;;
+				esac
 
-                case "$RESBAND" in
-                     "80000") RES2="B20 (800 MHz)" ;;
-                     "80")    RES2="B8 (900 MHz)"  ;;
-                     "4")     RES2="B3 (1800 MHz)" ;;
-                     "1")     RES2="B1 (2100 MHz)" ;;
-                     "40")    RES2="B7 (2600 MHz)" ;;
-                     "7FFFFFFFFFFFFFFF") RES2="All supported" ;;
-                     *)       RES2="unknown"       ;;
-                esac
+				# change network type, band and roaming if required
+				[ "$SPEED" != "$RESSPEED" ] & {
+					TXTLOG="Network type changed: was $RSPEEDTXT, now $SPEEDTXT."
+					MODESPEED=$SPEED
+				} || {
+					TXTLOG="Network type is $RSPEEDTXT."
+					MODESPEED=$RESSPEED
+				}
+				[ "$ROAMING" != "$RESROAM" ] && {
+					TXTLOG="$TXTLOG Roaming changed: was '$RROAMTXT', now '$ROAMTXT'."
+					MODEROAM=$ROAMING
+				} || {
+					TXTLOG="$TXTLOG Roaming is '$RROAMTXT'."
+					MODEROAM=$RESROAM
+				}
+				[ "$SPEED" == "03" -a "$BAND" != "$RESBAND" ] && {
+					TXTLOG="$TXTLOG Band changed: was '$RBANDTXT', now '$BANDTXT'"
+					MODEBAND=$BAND
+				} || {
+					TXTLOG="$TXTLOG Band is '$RBANDTXT'"
+					MODEBAND=$RESBAND
+				}
 
-                # change network type, band and roaming if required
-                if [ "$RESULT" != "$SPEED" ]; then
-                    TXTLOG="Network type changed: was $RES1, now $SPD1."
-                    MODESPEED=$SPEED
-                else
-                    TXTLOG="Network type is $RES1."
-                    MODESPEED=$RESULT
-                fi
-                if [ "$ROAMING" != "$RESROAM" ]; then
-                    TXTLOG="$TXTLOG Roaming changed: was '$RES3', now '$ROAM3'."
-                    MODEROAM=$ROAMING
-                else
-                    TXTLOG="$TXTLOG Roaming is '$RES3'."
-                    MODEROAM=$RESROAM
-                fi
-                if [ "$SPEED" == "03" -a "$BAND" != "$RESBAND" ]; then
-                    TXTLOG="$TXTLOG Band changed: was '$RES2', now '$BAND2'"
-                    MODEBAND=$BAND
-                else
-                    TXTLOG="$TXTLOG Band is '$RES2'"
-                    MODEBAND=$RESBAND
-                fi
+				logger -t switch4g[$PID] "4G MODEM - $TXTLOG (device $i)"
 
-                logger -t switch4g[$PID] "4G MODEM - $TXTLOG (device $i)"
+				[ "$SPEED" != "$RESSPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
+					MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
+					sleep 3
+				}
 
+				# connect
+				MODE="AT^NDISDUP=1,1,\"$APN\"" gcom -d "$i" -s /etc/gcom/setverbose.gcom
+				sleep 2
 
-                if [ "$RESULT" != "$SPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]); then
-                    MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
-                    sleep 5
-                fi
+				CGPADDR=$(MODE="AT+CGPADDR=1" gcom -d "$i" -s /etc/gcom/setverbose.gcom)
 
-                #connect
-                MODE="AT^NDISDUP=1,1,\"$APN\"" gcom -d "$i" -s /etc/gcom/setverbose.gcom
-                sleep 3
+				[ "$(echo "$CGPADDR" | grep "+CGPADDR:" | wc -l)" -eq 1 ] && {
+					logger -t switch4g[$PID] "4G MODEM - connected (device $i) ..."
+					CONNECTED=1
+					nvram set "$PREFIX"_modem_dev="$i"
+					nvram commit
+					break
+				} || {
+					logger -t switch4g[$PID] "4G MODEM - connection failed (device $i) [$COUNT] ..."
+					COUNT=$((COUNT+1))
+					sleep 3
+				}
+			done
 
-                MODE="AT+CGPADDR=1" gcom -d "$i" -s /etc/gcom/setverbose.gcom > /tmp/4g.mode
+			# still not connected?
+			[ "$CONNECTED" -eq 0 ] && {
+				disconnect
+				[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+					modemReset
+					watchdog add
+					wayOut "4G MODEM - connection failed - watchdog enabled"
+				} || {
+					watchdog del
+					wayOut "4G MODEM - connection failed - process terminated!"
+				}
+			}
+		done
 
-                CHECK=`cat /tmp/4g.mode | grep "+CGPADDR:" | cut -d '"' -f2 | wc -l`
-                if [ "$CHECK" -eq 1 ]; then
-                    logger -t switch4g[$PID] "4G MODEM - connected (device $i) ..."
-                    CONNECTED=1
-                    nvram set modem_dev4g="$i"
-                    break
-                else
-                    logger -t switch4g[$PID] "4G MODEM - connection failed (device $i) [$COUNT]"
-                    COUNT=`expr $COUNT + 1`
-                    sleep 3
-                fi
-            done
+	# non-hilink/2nd type
+	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		local DATAFORMAT TIMEOUT=30 TIMECOUNT=0 CONNSTAT
+		# for feature use
+		local AUTOCONNECT="" PROFILE="" AUTH="" USERNAME="" PASSWORD=""
 
-            # checked all devices but still not connected?
-            if [ "$CONNECTED" -eq 0 ]; then
+		case "$SPEED" in
+		     "00")   SPEEDTXT="all" ;;
+		     "03")   SPEEDTXT="lte" ;;
+		     "02")   SPEEDTXT="umts,cdma" ;;
+		     "0302") SPEEDTXT="lte,umts,cdma" ;;
+		     "030201") SPEEDTXT="lte,umts,cdma,gsm" ;;
+		     *)      SPEEDTXT="all" ;;
+		esac
 
-                INTERVAL=`nvram get mwan_cktime`
-                if [ "$INTERVAL" -gt 0 ]; then
-                    logger -t switch4g[$PID] "4G MODEM - connection failed - watchdog enabled"
+		case "$ROAMING" in
+		     "0")  ROAMTXT="off"  ;;
+		     "1")  ROAMTXT="any"  ;;
+		     "3")  ROAMTXT="only" ;;
+		     *)    ROAMTXT="any"  ;;
+		esac
 
-                    # try to redetect and connect again in next cycle
-                    rm -f $READYFILE > /dev/null 2>&1
-                    watchdog add
-                else
-                    logger -t switch4g[$PID] "4G MODEM - connection failed - process terminated!"
-                    watchdog del
-                fi
-                rm -f $PIDFILE > /dev/null 2>&1
-                exit 0
-            fi
-        done
-
-    # non-hilink/2nd type
-    elif [ "$TYPE" == "qmi_wwan" ]; then
-        CONNECTED=0
-        COUNT=0
-
-	case "$SPEED" in
-	     "00")   SPD1="all" ;;
-	     "03")   SPD1="lte" ;;
-	     "02")   SPD1="umts,cdma" ;;
-	     "0302") SPD1="lte,umts,cdma" ;;
-	     "030201") SPD1="lte,umts,cdma,gsm" ;;
-	     *)      SPD1="all" ;;
-	esac
-
-	case "$ROAMING" in
-	     "0")  ROAM3="off"  ;;
-	     "1")  ROAM3="any"  ;;
-	     "3")  ROAM3="only" ;;
-	     *)    ROAM3="any"  ;;
-	esac
-
-        sleep 6
-        uqmi -s -d /dev/"$devnr" --sync
-        sleep 1
-
-        # wait till registered
-        while [ `uqmi -s -d "$DEV" --get-serving-system | grep searching | wc -l` -ne 0 ]; do
-            sleep 5
-        done
-
-        sleep 1
-        # set lte mode (all,lte,umts,cdma,td-scdma), implemented only all/lte
-        uqmi -s -d "$DEV" --set-network-modes "$SPD1"
-        sleep 1
- 
-        # set roaming
-        uqmi -s -d "$DEV" --set-network-roaming "$ROAM3"
-        logger -t switch4g[$PID] "4G MODEM - Roaming is set to '$ROAM3'"
-        sleep 1
-
-        # get client id for wds
-        CLID=`uqmi -s -d "$DEV" --get-client-id wds`
-
-        [ $? -ne 0 ] && {
-            logger -t switch4g[$pid] "4G MODEM - unable to obtain client ID!"
-            rm -f $pidfile > /dev/null 2>&1
-            exit 0
-        }
-        sleep 1
-        nvram set modem_clid=$CLID
-        logger -t switch4g[$PID] "4G MODEM - got new Client ID: $CLID"
+		# devices need timeout, otherwise they hang
+		sleep 6
 
 		# try to clear previous autoconnect state
-        uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network 0xffffffff --autoconnect > /dev/null
+		uqmiCall "--stop-network 0xffffffff --autoconnect"
+
+		uqmiCall "--set-data-format 802.3"
+		uqmiCall "--wda-set-data-format 802.3"
+		DATAFORMAT=$(uqmiCall "--wda-get-data-format")
+
+		[ "$DATAFORMAT" == '"raw-ip"' ] && {
+			[ -f /sys/class/net/$IFA/qmi/raw_ip ] || {
+				wayOut "Device only supports raw-ip mode but is missing this required driver attribute: /sys/class/net/$IFA/qmi/raw_ip"
+			}
+
+			logger -t switch4g[$PID] "4G MODEM - device does not support 802.3 mode. Informing driver of raw-ip only for $IFA ..."
+			echo "Y" > /sys/class/net/$IFA/qmi/raw_ip
+		}
+
+		uqmiCall "--sync"
+
+		logger -t switch4g[$PID] "4G MODEM - waiting for network registration ..."
+
+		while [ $(echo "$(uqmiCall "--get-serving-system")" | grep searching | wc -l) -ne 0 ]; do
+			[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found!"
+			[ "$TIMECOUNT" -lt "$TIMEOUT" ] && {
+				TIMECOUNT=$((TIMECOUNT+1))
+				sleep 1
+			} || {
+				wayOut "4G MODEM - network registration failed!"
+			}
+		done
+
+		# set network type (all,lte,umts,cdma,td-scdma)
+		uqmiCall "--set-network-modes $SPEEDTXT"
+		logger -t switch4g[$PID] "4G MODEM - network type is set to '$SPEEDTXT'"
+
+		# set roaming
+		uqmiCall "--set-network-roaming $ROAMTXT"
+		logger -t switch4g[$PID] "4G MODEM - roaming is set to '$ROAMTXT'"
+
+		# get client id for wds
+		CLID=$(uqmiCall "--get-client-id wds")
+
+		[ $? -ne 0 ] && wayOut "4G MODEM - unable to obtain client ID!"
+
+		nvram set "$PREFIX"_modem_clid="$CLID"
+		logger -t switch4g[$PID] "4G MODEM - got new client ID: $CLID"
+
+		uqmiCall "--set-client-id wds,$CLID --set-ip-family ipv4"
+
+		while [ "$CONNECTED" -eq 0 ]; do
+			[ "$COUNT" -lt 6 ] && {
+				# connect
+				PDH=$(uqmiCall "--set-client-id wds,$CLID --start-network" 1)
+
+				case $PDH in
+				     ''|*[!0-9]*)
+						logger -t switch4g[$PID] "4G MODEM - connection failed: $PDH (device $DEVNR) [$COUNT] ..."
+						COUNT=$((COUNT+1))
+						sleep 5
+					;;
+				     *)
+						logger -t switch4g[$PID] "4G MODEM - connected (device $DEVNR) - session ID: $PDH"
+						nvram set "$PREFIX"_modem_pdh="$PDH"
+						CONNECTED=1
+						break
+					;;
+				esac
+			} || {
+				# checked 5 times but still not connected?
+				uqmiCall "--set-client-id wds,$CLID --release-client-id wds"
+
+				[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+					modemReset
+					watchdog add
+					wayOut "4G MODEM - connection failed - watchdog enabled"
+				} || {
+					watchdog del
+					wayOut "4G MODEM - connection failed - process terminated!"
+				}
+			}
+		done
+
+		# check data connection state
+		CONNSTAT=$(uqmiCall "--get-data-status")
+		[ "$CONNSTAT" == '"connected"' ] || {
+			uqmiCall "--set-client-id wds,$CLID --release-client-id wds"
+
+			[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+				modemReset
+				watchdog add
+				wayOut "4G MODEM - no data link - watchdog enabled"
+			} || {
+				watchdog del
+				wayOut "4G MODEM - no data link - process terminated!"
+			}
+		}
+	fi
+	# endif (non-hilink/type)
+
+	COUNT=1
+
+	while [ "$DONE" -eq 0 -a "$COUNT" -lt 6 ]; do
+		dhcpc-release $PREFIX
+		sleep 1
+		dhcpc-renew $PREFIX
 		sleep 1
 
-        uqmi -s -d "$DEV" --set-data-format 802.3
-        sleep 1
-        uqmi -s -d "$DEV" --wda-set-data-format 802.3
-        sleep 1
+		[ "$(ifconfig | grep "$IFA" | wc -l)" -eq 0 ] && {
+			logger -t switch4g[$PID] "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT] ..."
+			COUNT=$((COUNT+1))
+			sleep 2
+		} || {
+			# TODO: IP is up only every 2nd attempt - temporary fix
+			[ "$(ifconfig | grep -A1 "$IFA" | grep 'inet addr' | wc -l)" -eq 0 ] && {
+				dhcpc-release $PREFIX
+				sleep 1
+				dhcpc-renew $PREFIX
+			}
 
-        while [ "$CONNECTED" -eq 0 ]; do
-            if [ "$COUNT" -lt 5 ]; then
-                #connect...
-                PDH=$(uqmi -s -d "$DEV" --set-client-id wds,"$CLID" \
-                     --start-network \
-                     ${apn:+--apn "$apn"})
+			logger -t switch4g[$PID] "4G MODEM - WAN IFACE configured ($IFA)"
+			DONE=1
+			break
+		}
+	done
 
-                case $PDH in
-                ''|*[!0-9]*)
-                    logger -t switch4g[$PID] "4G MODEM - connection failed (device $DEV) [$COUNT]"
-                    COUNT=`expr $COUNT + 1`
-                    sleep 5
-                    ;;
-                *)
-                    logger -t switch4g[$PID] "4G MODEM - connected (device $DEV) ..."
-                    CONNECTED=1
-                    COUNT=6
-                    logger -t switch4g[$PID] "4G MODEM - Session ID: $PDH"
-                    nvram set modem_pdh=$PDH
-                    break
-                    ;;
-                esac
-            else
-                # checked 5 times but still not connected?
-                sleep 1
-                uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --release-client-id wds
+	[ "$DONE" -eq 0 ] && {
+		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+			watchdog add
+			wayOut "4G MODEM - WAN IFACE failed - watchdog enabled"
+		} || {
+			watchdog del
+			wayOut "4G MODEM - WAN IFACE failed - connection process terminated!"
+		}
+	}
 
-                INTERVAL=`nvram get mwan_cktime`
-                if [ "$INTERVAL" -gt 0 ]; then
-                    logger -t switch4g[$PID] "4G MODEM - connection failed - watchdog enabled"
-                    watchdog add
-                else
-                    logger -t switch4g[$PID] "4G MODEM - connection failed - process terminated!"
-                    watchdog del
-                fi
-                rm -f $PIDFILE > /dev/null 2>&1
-                exit 0
-            fi
-        done
-    fi
-    # end-if (non-hilink/type)
-
-    DONE=0
-    COUNT=1
-
-    while [ "$DONE" -eq 0 ]; do
-        if [ "$COUNT" -lt 5 ]; then
-
-            dhcpc-release $PREFIX
-            sleep 1
-            dhcpc-renew $PREFIX
-	    sleep 1
-
-            CHECKIFA=`ifconfig | grep "$IFA" | wc -l`
-            if [ "$CHECKIFA" -eq 1 ]; then
-                echo "1" > /tmp/state_$PREFIX
-                DONE=1
-                logger -t switch4g[$PID] "4G MODEM - WAN IFACE configured ($IFA) ..."
-                watchdog add
-                signal
-            else
-                logger -t switch4g[$PID] "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT]"
-                COUNT=`expr $COUNT + 1`
-                sleep 2
-            fi
-        else
-            INTERVAL=`nvram get mwan_cktime`
-            if [ "$INTERVAL" -gt 0 ]; then
-                logger -t switch4g[$PID] "4G MODEM - WAN IFACE failed - watchdog enabled"
-                watchdog add
-            else
-                logger -t switch4g[$PID] "4G MODEM - WAN IFACE failed - connection process terminated!"
-                watchdog del
-            fi
-            rm -f $PIDFILE > /dev/null 2>&1
-            exit 0
-        fi
-    done
+	echo "1" > $STATEFILE
+	watchdog add
+	signal
 }
 
 disconnect() {
-    DEV=`nvram get modem_dev4g`
-    TYPE=`nvram get modem_type`
-    CLID=`nvram get modem_clid`
-    PDH=`nvram get modem_pdh`
+	MTYPE=$(nvram get "$PREFIX"_modem_type)
+	DEVNR=$(nvram get "$PREFIX"_modem_dev)
+	CLID=$(nvram get "$PREFIX"_modem_clid)
+	PDH=$(nvram get "$PREFIX"_modem_pdh)
+	local DEVALL j
 
-    logger -t switch4g[$PID] "4G MODEM - disconnecting ..."
-    watchdog del
-    dhcpc-release $PREFIX
+	logger -t switch4g[$PID] "4G MODEM - disconnecting ..."
+	watchdog del
+	dhcpc-release $PREFIX
 
-    if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-        MODE="AT^NDISDUP=1,0" gcom -d "$DEV" -s /etc/gcom/setmode.gcom
-        sleep 1
-    elif [ "$TYPE" == "qmi_wwan" ]; then
-        if [ "$CLID" != "" ]; then
-            uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network 0xffffffff --autoconnect > /dev/null
-            sleep 1
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
 
-            if [ "$PDH" != "" ]; then
-                uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --stop-network "$PDH"
-                sleep 1
-            fi
-            uqmi -s -d "$DEV" --set-client-id wds,"$CLID" --release-client-id wds
-            logger -t switch4g[$pid] "4G MODEM - release Client ID: $CLID"
-            nvram unset modem_pdh
-            nvram unset modem_clid
-        fi
-    fi
+		for j in $DEVALL; do	# on every interface
+			MODE="AT^NDISDUP=1,0" gcom -d "$j" -s /etc/gcom/setmode.gcom
+			sleep 2
+		done
+	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		[ -n "$CLID" ] || return
+		uqmiCall "--set-client-id wds,$CLID --stop-network 0xffffffff --autoconnect"
 
-    logger -t switch4g[$PID] "4G MODEM - disconnected ..."
-}
+		[ -n "$PDH" ] && uqmiCall "--set-client-id wds,$CLID --stop-network $PDH"
 
-checkPid() {
-    if [ -f $PIDFILE ]; then
+		uqmiCall "--set-client-id wds,$CLID --release-client-id wds"
+		nvram set "$PREFIX"_modem_pdh=""
+		nvram set "$PREFIX"_modem_clid=""
 
-        PIDNO=$(cat $PIDFILE)
-        cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
+		logger -t switch4g[$PID] "4G MODEM - release Client ID: $CLID"
+	fi
 
-        if [ $? -eq 0 ]; then
-            logger -t switch4g[$PID] "4G MODEM - another proces in action - exiting"
-            exit 0
-        else
-            # Process not found assume not running
-            echo $PID > $PIDFILE
-            if [ $? -ne 0 ]; then
-                logger -t switch4g[$PID] "4G MODEM - could not create PID file"
-                exit 0
-            fi
-        fi
-    else
-        echo $PID > $PIDFILE
-        if [ $? -ne 0 ]; then
-            logger -t switch4g[$PID] "4G MODEM - could not create PID file"
-            exit 0
-        fi
-    fi
-}
-
-setPIN() {
-    PIN=`nvram get "$PREFIX"_modem_pin`
-    IS_PIN=`nvram get "$PREFIX"_modem_pin | wc -w`
-
-    if [ "$IS_PIN" -eq 1 ]; then #only for non-hilink
-
-        if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-            #we try use last diag iface first. If it failed then we try use any other ttyUSB device
-            TTY=`ls /dev/ttyUSB* | grep -v $DEV`
-            DEVS="$DEV $TTY"
-            COUNT=1
-
-            if [ "$COUNT" -lt 5 ]; then
-                for i in $DEVS; do
-                    PINCODE="$PIN" gcom -d $i -s /etc/gcom/setpin.gcom > /tmp/4g.pin
-                    IS_READY=`cat /tmp/4g.pin | grep successfully | wc -l`
-                    if [ "$IS_READY" == "1" ]; then
-                        logger -t switch4g[$PID] "4G MODEM - SIM ready"
-                        nvram set modem_dev4g="$i"
-                        break
-                    else
-                        logger -t switch4g[$PID] "4G MODEM - SIM not ready ($COUNT) ..."
-                        COUNT=`expr $COUNT + 1`
-                        sleep 5
-                    fi
-                done
-            else
-                logger -t switch4g[$PID] "4G MODEM - SIM locked - connection process terminated!"
-                watchdog del
-                rm -f $PIDFILE > /dev/null 2>&1
-                exit 0
-            fi
-        elif [ "$TYPE" == "qmi_wwan" ]; then
-            # get pin status
-            PINSTATUS = `uqmi -s -d "$DEVNR" --get-pin-status | cut -d "," -f 1 | cut -d ":" -f 2 | cut -d "\"" -f2`
-            if [ "$PINSTATUS" != 'disabled' ]; then
-                uqmi -s -d "$DEVNR" --verify-pin1 "$PIN"
-            fi
-        fi
-    fi
+	logger -t switch4g[$PID] "4G MODEM - disconnected"
 }
 
 switchMode() {
-    MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm"
+	VENDOR="" PRODUCT="" MTYPE="" MODULE="" DEVICENAME=""	# global
+	MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm"
+	local COUNT=1 SWITCHED=0 DVDP=0 PATHDEV SWITCH DEVICES IFN_BEFORE DV DP DB DG
 
-    for MODULE in $MODULES; do  # remove modules
-        modprobe -r $MODULE
-    done
+	for MODULE in $MODULES; do	# remove modules
+		modprobe -r $MODULE
+	done
 
-    logger -t switch4g[$PID] "4G MODEM - detecting ..."
+	logger -t switch4g[$PID] "4G MODEM - detecting ..."
 
-    COUNT=0
-    FOUND=0
+	# detect modem
+	DEVICES=$(lsusb | awk '{print $6}')
 
-    while [ $FOUND -eq 0 ]; do
-        #modem not found, try to detect
-        DEVICES=`lsusb | awk '{print $6}'`
+	for SWITCH in $DEVICES; do
+		[ "$(ls /etc/usb_modeswitch.d/"$SWITCH" 2> /dev/null | wc -l)" -eq 1 ] && {
+			# search for devicename & other data
+			for DEVICENAME in $(ls /sys/bus/usb/devices/ | grep -v ":" | grep "-"); do
+				PATHDEV="/sys/bus/usb/devices/$DEVICENAME"
+				[ -f $PATHDEV/idVendor -a -f $PATHDEV/idProduct -a -f $PATHDEV/uevent ] || continue	# skip
 
-        for SWITCH in $DEVICES; do
-            SEARCH=`ls /etc/usb_modeswitch.d/$SWITCH | wc -l`
+				DV=$(cat "$PATHDEV"/idVendor)					# vendor
+				DP=$(cat "$PATHDEV"/idProduct)					# product
+				DB=$(grep -s ^BUSNUM "$PATHDEV"/uevent | cut -d "=" -f2)	# BUSNUM
+				DG=$(grep -s ^DEVNUM "$PATHDEV"/uevent | cut -d "=" -f2)	# DEVNUM
 
-            # vendor:product
+				[ "$DV" == "$(echo "$SWITCH" | cut -d ":" -f1)" -a "$DP" == "$(echo "$SWITCH" | cut -d ":" -f2)" ] && {		# self
+					DVDP=1
+					break
+				}
+			done
 
-            if [ "$SEARCH" -eq 1 ]; then
-                logger -t switch4g[$PID] "4G MODEM FOUND - $SWITCH - Switching ..."
-                DV=`echo $SWITCH | cut -d ":" -f1`
-                DP=`echo $SWITCH | cut -d ":" -f2`
-                /usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP
+			[ "$DVDP" -eq 1 ] && {
+				# in some cases it needs more time
+				COUNT=1
+				while [ "$COUNT" -lt 5 ]; do
+					sleep 1
+					[ -s $PATHDEV/bNumInterfaces ] && {
+						IFN_BEFORE=$(cat "$PATHDEV"/bNumInterfaces)
+						break
+					}
+					COUNT=$((COUNT+1))
+				done
 
-                # need few seconds before modem will be detected once again after switch
-                sleep 10
+				logger -t switch4g[$PID] "4G MODEM FOUND - $SWITCH - switching ..."
 
-                VENDOR=`cat /etc/usb_modeswitch.d/$SWITCH | grep "TargetVendor" | cut -d "=" -f2 | cut -d "x" -f2`
-                if [ "$VENDOR" == "" ]; then
-                    VENDOR=`echo $SWITCH | cut -d ":" -f1`
-                fi
+				/usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP -b $DB -g $DG
 
-                PRODUCT=`lsusb | awk '{print $6}' | grep $VENDOR | cut -d ":" -f2`
-                if [ "$PRODUCT" != "" ]; then
-                    logger -t switch4g[$PID] "4G MODEM ready - $VENDOR:$PRODUCT"
-                    echo "$VENDOR:$PRODUCT" > $DETECTFILE
-                fi
-            fi
-        done
+				# need few seconds before modem will be detected once again after switch
+				COUNT=1
+				while [ "$COUNT" -lt 15 ]; do
+					sleep 1
+					[ -s $PATHDEV/bNumInterfaces ] && {
+						[ "$(cat "$PATHDEV"/bNumInterfaces)" -gt "$IFN_BEFORE" ] && break
+					}
+					COUNT=$((COUNT+1))
+				done
+				sleep 1
 
-        # is modem ready?
-        for MODULE in $MODULES; do
-            modprobe $MODULE
-            sleep 1
+				VENDOR=$(cat /etc/usb_modeswitch.d/"$SWITCH" | grep TargetVendor | cut -d "=" -f2 | cut -d "x" -f2)
+				[ -n "$VENDOR" ] || VENDOR=$(cat "$PATHDEV"/idVendor)
 
-            SEARCH=`cat /proc/bus/usb/devices | grep Driver | grep $MODULE | wc -l`
+				PRODUCT=$(cat "$PATHDEV"/idProduct)
+				[ -n "$PRODUCT" ] && {
+					logger -t switch4g[$PID] "4G MODEM ready - $VENDOR:$PRODUCT"
+					SWITCHED=1
+					break
+				}
+			}
+		}
+	done
 
-            if [ "$SEARCH" -gt 0 ]; then
-                if [ "$MODULE" == "cdc_ether" ]; then
-                    TYPE="hilink"
-                elif [ "$MODULE" == "cdc_ncm" ]; then
-                    TYPE="non-hilink"
-                elif [ "$MODULE" == "huawei_ether" ]; then
-                    TYPE="hw-ether"
-                elif [ "$MODULE" == "qmi_wwan" ]; then
-                    TYPE="qmi_wwan"
-                else
-                    TYPE="unknown"
-                fi
-
-                logger -t switch4g[$PID] "4G MODEM NDIS ($TYPE) found - using $MODULE module"
-                nvram set 4g_module=$MODULE
-                FOUND=1
-                break
-            else
-                if [ "$COUNT" -eq 5 ]; then
-                    logger -t switch4g[$PID] "4G MODEM NDIS not found - process terminated!"
-                    rm -f $PIDFILE > /dev/null 2>&1
-                    exit 0
-                else
-                    logger -t switch4g[$PID] "4G MODEM NDIS ($MODULE) not found [$COUNT] ..."
-                    modprobe -r $MODULE
-                    COUNT=`expr $COUNT + 1`
-                    sleep 3
-                fi
-            fi
-        done
-    done
+	[ "$SWITCHED" -eq 0 ] && {
+		logger -t switch4g[$PID] "4G MODEM not found in USB_ModeSwitch database - already switched? Loading modules..."
+	}
 }
 
 searchWAN() {
+	# search WAN interface (usbX, ethX, wwanX)
+	WAN=""	# global
+	local PATHWAN="/sys/class/net" FOUND=0
 
-    #search WAN interface (usbX or ethX)
-    FOUND=0
-    COUNT=0
+	for MODULE in $MODULES; do
+		modprobe $MODULE
+		sleep 1
 
-    KERNEL=`uname -r | cut -d "." -f1,2,3`
+	# TODO: add a delayed loop?
+		# check if interface is up
+		for WAN in $(ls $PATHWAN/ | grep -e eth -e usb -e wwan); do
+			[ -f $PATHWAN/$WAN/uevent -a -f $PATHWAN/$WAN/device/uevent ] || continue
 
-    while [ "$FOUND" -eq 0 ]; do
-        if [ "$TYPE" == "hw-ether" ]; then
-            WAN=`dmesg | grep huawei_ether | grep Device | grep register | cut -d ":" -f1 | tail -1`
-        elif [ "$KERNEL" == "2.6.36" ]; then #ARM
-            WAN=`dmesg | grep $MODULE | grep register | grep "'" | cut -d " " -f3 | cut -d ":" -f1 | tail -1`
-        else #MIPSEL
-            WAN=`dmesg | grep $MODULE | grep register | grep "'" | cut -d ":" -f1 | tail -1`
-        fi
+			# check if interface has our $MODULE
+			[ "$(grep -s ^DRIVER $PATHWAN/$WAN/device/uevent | cut -d "=" -f2)" == "$MODULE" ] && {
+				FOUND=1
+				break 2
+			} || {
+				continue
+			}
+		done
 
-        IS_WAN=`echo $WAN | wc -w`
+		logger -t switch4g[$PID] "4G MODEM WAN ($MODULE) not found ..."
+		modprobe -r $MODULE
+		sleep 1
+	done
 
-        if [ "$IS_WAN" -gt 0 ]; then
-            logger -t switch4g[$PID] "4G MODEM WAN ($TYPE) found - using $WAN as WAN"
-            nvram set wan_4g="$WAN"
-            nvram set modem_type="$TYPE"
-            FOUND=1
-            echo "$WAN" > $READYFILE
-        else
-            if [ "$COUNT" -eq 5 ]; then
-                logger -t switch4g[$PID] "4G MODEM WAN not found - connection process terminated!"
-                rm -f $PIDFILE > /dev/null 2>&1
-                exit 0
-            else
-                logger -t switch4g[$PID] "4G MODEM WAN not found [$COUNT] ..."
-                COUNT=`expr $COUNT + 1`
-                sleep 5
-            fi
-        fi
-    done
+	[ "$FOUND" -eq 1 ] && {
+		findType	# MODULE --> MTYPE
+
+		nvram set "$PREFIX"_modem_modules="$MODULE"	# add first one
+		nvram set "$PREFIX"_modem_if="$WAN"
+		nvram set "$PREFIX"_modem_type="$MTYPE"
+		logger -t switch4g[$PID] "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
+	} || {
+		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+			watchdog add
+			wayOut "4G MODEM WAN not found - watchdog enabled"
+		} || {
+			watchdog del
+			wayOut "4G MODEM WAN not found - connection process terminated!"
+		}
+	}
 }
 
 searchDiag() {
-    FOUND=0
+	DEVNR=""
+	local IS_MLOADED=0 MODIN="" TTYS=""
+	local PATHDIAG="/sys/bus/usb/devices"
 
-    if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-        US=`cat /proc/bus/usb/devices | grep Driver | grep usbserial | wc -l`
+	[ -z "$DEVICENAME" -o -z "$VENDOR" -o -z "$PRODUCT" ] && {
+		DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
+		VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
+		PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
+	}
 
-        if [ "$US" -gt 0 ]; then
-            logger -t switch4g[$PID] "4G MODEM found - Diagnostic interface - using usbserial module"
-            break
-        else
-            IS_VENDOR=`echo $VENDOR | wc -w`
-            if [ "$IS_VENDOR" -gt 0 ]; then
-                IS_PRODUCT=`echo $PRODUCT | wc -w`
-                if [ "$IS_PRODUCT" -gt 0 ]; then
-                    logger -t switch4g[$PID] "4G MODEM - loading module usbserial ($VENDOR:$PRODUCT)"
-                    modprobe -r usbserial
-                    insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
-                    echo "$VENDOR:$PRODUCT" > $DETECTFILE
-                    sleep 1
-                fi
-            fi
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 
-            DEV=`cat /proc/bus/usb/devices | grep Driver | grep usbserial | wc -l`
-            if [ "$DEV" -gt 0 ]; then
-                logger -t switch4g[$PID] "4G MODEM ready - using usbserial module"
-                FOUND=1
-                nvram set 4g_module=usbserial
-            else
-                #last change. try load usbserial for each usb devices
-                DEVICES=`lsusb | awk '{print $6}'`
-                for SWITCH in $DEVICES; do
-                    if [ "$FOUND" -eq 0 ]; then
-                        VENDOR=`echo $SWITCH | cut -d ":" -f1`
-                        PRODUCT=`echo $SWITCH | cut -d ":" -f2`
-                        modprobe -r usbserial
-                        insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
-                        sleep 1
+		[ -z "$TTYS" ] && {
+			logger -t switch4g[$PID] "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
+			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
 
-                        DEV=`cat /proc/bus/usb/devices | grep Driver | grep usbserial | wc -l`
-                        if [ "$DEV" -gt 0 ]; then
-                            logger -t switch4g[$PID] "4G MODEM ready - using usbserial module ($VENDOR:$PRODUCT)"
-                            nvram set 4g_module=usbserial
-                            echo "$VENDOR:$PRODUCT" > $DETECTFILE
-                            FOUND=1
-                            break
-                        fi
-                    fi
-                done
-            fi
-        fi
+			[ "$IS_MLOADED" -gt 0 ] && {
+				echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
+			} || {
+				insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+			}
+			sleep 1
 
-        #search diagnostic device
-        sleep 5
-        TTY=`ls /dev/ttyUSB*`
+			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+		}
 
-        for i in $TTY; do
-            CHECKTTY=`gcom -d "$i" -s /etc/gcom/getcardinfo.gcom | grep OK | wc -l`
-            if [ "$CHECKTTY" == "1" ]; then #found working interface
-                logger -t switch4g[$PID] "4G MODEM DIAG found (device $i)"
-                nvram set modem_dev4g="$i"
-                DEVNR=$i
-            else
-                logger -t switch4g[$PID] "4G MODEM DIAG not found"
-            fi
-        done
+		[ -n "$TTYS" ] && {
+			logger -t switch4g[$PID] "4G MODEM ready - DIAG(s) found ("$TTYS")"
+			DEVNR="/dev/$(echo "$TTYS" | cut -d " " -f1)"
+			MODIN=$(nvram get "$PREFIX"_modem_modules)
+			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
+			nvram set "$PREFIX"_modem_dev="$DEVNR"
+		}
 
-    elif [ "$TYPE" == "qmi_wwan" ]; then
-        #search diagnostic device
-        TTY=`ls /dev/cdc-wdm*`
+	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/.*://g")
 
-        for i in $TTY; do
-            CHECKTTY=`uqmi -s -d "$i" --get-versions | grep service | wc -l`
-            if [ "$CHECKTTY" -eq 1 ]; then #found working interface
-                logger -t switch4g[$PID] "4G MODEM DIAG found (device $i)"
-                nvram set modem_dev4g="$i"
-                DEVNR=$i
-            else
-                logger -t switch4g[$PID] "4G MODEM DIAG not found"
-            fi
-        done
-    fi
+		[ -n "$TTYS" ] && {
+			logger -t switch4g[$PID] "4G MODEM ready - DIAG found ("$TTYS")"
+			DEVNR="/dev/$TTYS"
+			nvram set "$PREFIX"_modem_dev="$DEVNR"
+		}
+	fi
+
+	[ -z "$TTYS" ] && {
+		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+			watchdog add
+			modemReset
+			wayOut "4G MODEM - DIAG not found - watchdog enabled"
+		} || {
+			watchdog del
+			wayOut "4G MODEM - DIAG not found - connection process terminated!"
+		}
+	}
+}
+
+findType() {
+	if [ "$MODULE" == "cdc_ether" ]; then
+		MTYPE="hilink"
+	elif [ "$MODULE" == "cdc_ncm" ]; then
+		MTYPE="non-hilink"
+	elif [ "$MODULE" == "huawei_ether" ]; then
+		MTYPE="hw-ether"
+	elif [ "$MODULE" == "qmi_wwan" ]; then
+		MTYPE="qmi_wwan"
+	else
+		MTYPE="unknown"
+	fi
+}
+
+modemReset() {
+# TODO: reset should be made also when the X connection fails at a given time
+	DEVNR=$(nvram get "$PREFIX"_modem_dev)
+	local DEVALL j
+
+	logger -t switch4g[$PID] "4G MODEM - resetting the modem ..."
+
+	rm -f $READYFILE > /dev/null 2>&1
+
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+
+		for j in $DEVALL; do	# find working interface
+			MODE="AT^RESET" gcom -d "$j" -s /etc/gcom/setmode.gcom
+		done
+	# elif [ "$MTYPE" == "qmi_wwan" ]; then
+		# TODO: is it possible at all? maybe just remove qmi_wwan module...
+	fi
+
+	logger -t switch4g[$PID] "4G MODEM - reset of the modem is done"
+}
+
+setPIN() {
+	local PIN=$(nvram get "$PREFIX"_modem_pin)
+	local IS_PIN=$(nvram get "$PREFIX"_modem_pin | wc -w)
+	local IS_DONE=0 COUNT=1 TIMEOUT=30 PINVAL DEVALL i
+
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ] && {
+		[ "$IS_PIN" -eq 1 ] && {
+			DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+
+			for i in $DEVALL; do	# find working interface
+				[ -z $(MODE="ATI" gcom -d "$i" -s /etc/gcom/setverbose.gcom | grep "OK" | tr -d '\r') ] && {
+					sleep 2
+					continue
+				}
+
+				PINVAL=$(PINCODE="$PIN" gcom -d "$i" -s /etc/gcom/setpin.gcom)
+				[ "$(echo "$PINVAL" | grep successfully | wc -l)" -eq 1 ] && {
+					nvram set "$PREFIX"_modem_dev="$i"
+					IS_DONE=1
+				}
+				# try only once on working interface (do not lock the sim)
+				break
+			done
+		}
+	}
+
+	[ "$MTYPE" == "qmi_wwan" ] && {
+		logger -t switch4g[$PID] "4G MODEM - Waiting for SIM initialization"
+
+		while uqmiCall "--get-pin-status" | grep '"UIM uninitialized"'; do
+			[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found!"
+			[ "$COUNT" -lt "$TIMEOUT" ] && {
+				COUNT=$((COUNT+1))
+				sleep 1
+			} || {
+				wayOut "4G MODEM - SIM not initialized!"
+			}
+		done
+
+		# verify pin (TODO: more complex)
+		[ "$IS_PIN" -eq 1 ] && {
+			[ "$($(uqmiCall "--get-pin-status") | cut -d "," -f1 | cut -d ":" -f2 | cut -d "\"" -f2)" != "disabled" ] && {
+				uqmiCall "--verify-pin1 $PIN" && IS_DONE=1
+			}
+		}
+	}
+
+	[ "$IS_PIN" -eq 1 -a "$IS_DONE" -ne 1 ] && {
+		watchdog del
+		wayOut "4G MODEM - SIM locked - connection process terminated!"
+	} || {
+		logger -t switch4g[$PID] "4G MODEM - SIM ready"
+	}
 }
 
 signal() {
-    DEVNR=`nvram get modem_dev4g`
-    TYPE=`nvram get modem_type`
+	MTYPE=$(nvram get "$PREFIX"_modem_type)
+	DEVNR=$(nvram get "$PREFIX"_modem_dev)
+	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND BBAND="" i
 
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
 
-    if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-        HCSQ=`MODE="AT^HCSQ?" gcom -d $DEVNR -s /etc/gcom/setverbose.gcom | grep "HCSQ:" | tr -d '\r'`
-        SPEED=`echo $HCSQ | cut -d "," -f1 | cut -d '"' -f2`
-        case "$SPEED" in
-            "LTE")
-                    VALUE=`echo $HCSQ | cut -d "," -f2`
-                    RSSI=`awk "BEGIN {print -120+$VALUE}"` #dBm
-                    VALUE=`echo $HCSQ | cut -d "," -f3`
-                    RSRP=`awk "BEGIN {print -140+$VALUE}"` #dBm
-                    VALUE=`echo $HCSQ | cut -d "," -f4`
-                    SINR=`awk "BEGIN {print -20+$VALUE*0.2}"` #dB
-                    VALUE=`echo $HCSQ | cut -d "," -f5`
-                    RSRQ=`awk "BEGIN {print -19.5+$VALUE*0.5}"` #dB
+		for i in $DEVALL; do	# find working interface
+			HCSQ=$(MODE="AT^HCSQ?" gcom -d "$i" -s /etc/gcom/setverbose.gcom | grep "HCSQ:" | tr -d '\r')
+			[ -z "$HCSQ" ] && {
+				sleep 1
+			} || {
+				break
+			}
+		done
+		nvram set "$PREFIX"_modem_dev="$i"
+		DEVNR="$i"
 
-                    CERSSI=`MODE="AT^CERSSI?" gcom -d $DEVNR -s /etc/gcom/setverbose.gcom | grep "CERSSI:" | tr -d '\r'`
-                    if [ "$CERSSI" != "" ]; then
-                        CQI1=`echo $CERSSI | cut -d "," -f10`
-                        CQI2=`echo $CERSSI | cut -d "," -f11`
-                    fi
+		SPEED=$(echo "$HCSQ" | cut -d "," -f1 | cut -d '"' -f2)
 
-                    HFREQINFO=`MODE="AT^HFREQINFO?" gcom -d $DEVNR -s /etc/gcom/setverbose.gcom | grep "HFREQINFO:" | tr -d '\r'`
-                    if [ "$HFREQINFO" != "" ]; then
-                        BAND=`echo $HFREQINFO | cut -d "," -f3`
-                        VALUE=`echo $HFREQINFO | cut -d "," -f6`
-                        DOWNWIDTH=`awk "BEGIN {print $VALUE/1000}"`  # MHz
-                        VALUE=`echo $HFREQINFO | cut -d "," -f5`
-                        DOWNFREQ=`awk "BEGIN {print $VALUE/10}"`  # MHz
-                        VALUE=`echo $HFREQINFO | cut -d "," -f9`
-                        UPWIDTH=`awk "BEGIN {print $VALUE/1000}"`  # MHz
-                        VALUE=`echo $HFREQINFO | cut -d "," -f8`
-                        UPFREQ=`awk "BEGIN {print $VALUE/10}"`  # MHz
+		case "$SPEED" in
+		     "LTE")
+				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
+				RSSI=$(awk "BEGIN {print -120+$VALUE}")
+				VALUE=$(echo $HCSQ | cut -d "," -f3)
+				RSRP=$(awk "BEGIN {print -140+$VALUE}")
+				VALUE=$(echo $HCSQ | cut -d "," -f4)
+				SINR=$(awk "BEGIN {print -20+$VALUE*0.2}")
+				VALUE=$(echo $HCSQ | cut -d "," -f5)
+				RSRQ=$(awk "BEGIN {print -19.5+$VALUE*0.5}")
 
-                        case "$BAND" in
-                             "1")  BBAND="B1 (2100 MHz)" ;;
-                             "3")  BBAND="B3 (1800 MHz)" ;;
-                             "7")  BBAND="B7 (2600 MHz)" ;;
-                             "8")  BBAND="B8 (900 MHz)" ;;
-                             "13") BBAND="B13 (750 MHz)" ;;
-                             "17") BBAND="B17 (700 MHz)" ;;
-                             "20") BBAND="B20 (800 MHz)" ;;
-                             "38") BBAND="B38 (2600 MHz TDD)" ;;
-                             "40") BBAND="B40 (2300 MHz TDD)" ;;
-                             "41") BBAND="B41 (2500 MHz TDD)" ;;
-                             *)    BBAND="unknown"       ;;
-                        esac
-                    fi
+				CERSSI=$(MODE="AT^CERSSI?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "CERSSI:" | tr -d '\r')
+				[ -n "$CERSSI" ] && {
+					CQI1=$(echo "$CERSSI" | cut -d "," -f10)
+					CQI2=$(echo "$CERSSI" | cut -d "," -f11)
+				}
 
-                    LOCINFO=`MODE="AT^LOCINFO?" gcom -d $DEVNR -s /etc/gcom/setverbose.gcom | grep "LOCINFO:" | tr -d '\r'`
-                    if [ "$LOCINFO" != "" ]; then
-                        MCCMNC=`echo $LOCINFO | cut -d "," -f1 | cut -d ':' -f2`
-                        LAC=`echo $LOCINFO | cut -d "," -f2`  # hex
-                        CID=`echo $LOCINFO | cut -d "," -f3`  # hex
-                        CELL=`echo $LOCINFO | cut -d "," -f4`  # hex
-                    fi
+				HFREQINFO=$(MODE="AT^HFREQINFO?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "HFREQINFO:" | tr -d '\r')
+				[ -n "$HFREQINFO" ] && {
+					BAND=$(echo "$HFREQINFO" | cut -d "," -f3)
+					VALUE=$(echo "$HFREQINFO" | cut -d "," -f6)
+					DOWNWIDTH=$(awk "BEGIN {print $VALUE/1000}")
+					VALUE=$(echo "$HFREQINFO" | cut -d "," -f5)
+					DOWNFREQ=$(awk "BEGIN {print $VALUE/10}")
+					VALUE=$(echo "$HFREQINFO" | cut -d "," -f9)
+					UPWIDTH=$(awk "BEGIN {print $VALUE/1000}")
+					VALUE=$(echo "$HFREQINFO" | cut -d "," -f8)
+					UPFREQ=$(awk "BEGIN {print $VALUE/10}")
 
-                    logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
-                    if [ "$CERSSI" != "" ]; then
-                        logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB, CQI1 $CQI1, CQI2 $CQI2"
-                    else
-                        logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
-                    fi
-                    if [ "$HFREQINFO" != "" ]; then
-                        logger -t switch4g[$PID] "4G MODEM Carrier: $BBAND, Downlink FQ $DOWNFREQ MHz, Uplink FQ $UPFREQ MHz, Downlink BW $DOWNWIDTH MHz, Uplink BW $UPWIDTH MHz"
-                    fi
-                    if [ "$LOCINFO" != "" ]; then
-                        logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC (`printf "%d" $LAC`), CID $CID (`printf "%d" $CID`), Cell ID $CELL (`printf "%d" $CELL`)"
-                    fi
-            ;;
-            "WCDMA")
-                    VALUE=`echo $HCSQ | cut -d "," -f2`
-                    RSSI=`awk "BEGIN {print -120+$VALUE}"` #dBm
-                    VALUE=`echo $HCSQ | cut -d "," -f3`
-                    RSRP=`awk "BEGIN {print -120+$VALUE}"` #dBm
-                    VALUE=`echo $HCSQ | cut -d "," -f4`
-                    ECIO=`awk "BEGIN {print -32+$VALUE*0.5}"` #dB
+					case "$BAND" in
+					     "1")  BBAND="B1 (2100 MHz)" ;;
+					     "3")  BBAND="B3 (1800 MHz)" ;;
+					     "7")  BBAND="B7 (2600 MHz)" ;;
+					     "8")  BBAND="B8 (900 MHz)" ;;
+					     "13") BBAND="B13 (750 MHz)" ;;
+					     "17") BBAND="B17 (700 MHz)" ;;
+					     "20") BBAND="B20 (800 MHz)" ;;
+					     "38") BBAND="B38 (2600 MHz TDD)" ;;
+					     "40") BBAND="B40 (2300 MHz TDD)" ;;
+					     "41") BBAND="B41 (2500 MHz TDD)" ;;
+					     *)    BBAND="unknown"       ;;
+					esac
+				}
 
-                    LOCINFO=`MODE="AT^LOCINFO?" gcom -d $DEVNR -s /etc/gcom/setverbose.gcom | grep "LOCINFO:" | tr -d '\r'`
-                    if [ "$LOCINFO" != "" ]; then
-                        MCCMNC=`echo $LOCINFO | cut -d "," -f1 | cut -d ':' -f2`
-                        LAC=`echo $LOCINFO | cut -d "," -f2`
-                        CID=`echo $LOCINFO | cut -d "," -f3`
-                        CELL=`echo $LOCINFO | cut -d "," -f4`
-                    fi
-                    logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
-                    logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSSP $RSRP dBm, ECIO $ECIO dB"
-                    if [ "$LOCINFO" != "" ]; then
-                        logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC (`printf "%d" $LAC`), CID $CID (`printf "%d" $CID`), Cell ID $CELL (`printf "%d" $CELL`)"
-                    fi
-            ;;
-            "GSM")
-                    VALUE=`echo $HCSQ | cut -d "," -f2`
-                    RSSI=`awk "BEGIN {print -120+$VALUE}"` #dBm
-                    logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
-                    logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
-            ;;
-            *)
-                    logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
-                    logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
-            ;;
-        esac
-    elif [ "$TYPE" == "qmi_wwan" ]; then
-        SIGNAL=`uqmi -s -d "$DEVNR" --get-signal-info`
-        RSSI=`echo $SIGNAL | cut -d "," -f2 | cut -d ":" -f2`
-        RSRQ=`echo $SIGNAL | cut -d "," -f3 | cut -d ":" -f2`
-        RSRP=`echo $SIGNAL | cut -d "," -f4 | cut -d ":" -f2`
-        SNR=`echo $SIGNAL | cut -d ":" -f6 | cut -d "}" -f1`
-        logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dB, RSRQ $RSRQ dB, SNR $SNR dB"
-        sleep 1
-    fi
+				LOCINFO=$(MODE="AT^LOCINFO?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "LOCINFO:" | tr -d '\r')
+				[ -n "$LOCINFO" ] && {
+					MCCMNC=$(echo "$LOCINFO" | cut -d "," -f1 | cut -d ':' -f2)
+					LAC=$(echo "$LOCINFO" | cut -d "," -f2)
+					CID=$(echo "$LOCINFO" | cut -d "," -f3)
+					CELL=$(echo "$LOCINFO" | cut -d "," -f4)
+				}
+
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
+				[ -n "$CERSSI" ] && {
+					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB, CQI1 $CQI1, CQI2 $CQI2"
+				} || {
+					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+				}
+				[ -n "$HFREQINFO" ] && logger -t switch4g[$PID] "4G MODEM Carrier: $BBAND, Downlink FQ $DOWNFREQ MHz, Uplink FQ $UPFREQ MHz, Downlink BW $DOWNWIDTH MHz, Uplink BW $UPWIDTH MHz"
+				[ -n "$LOCINFO" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
+			;;
+		     "WCDMA")
+				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
+				RSSI=$(awk "BEGIN {print -120+$VALUE}")
+				VALUE=$(echo "$HCSQ" | cut -d "," -f3)
+				RSRP=$(awk "BEGIN {print -120+$VALUE}")
+				VALUE=$(echo "$HCSQ" | cut -d "," -f4)
+				ECIO=$(awk "BEGIN {print -32+$VALUE*0.5}")
+
+				LOCINFO=$(MODE="AT^LOCINFO?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "LOCINFO:" | tr -d '\r')
+				[ -n "$LOCINFO" ] && {
+					MCCMNC=$(echo "$LOCINFO" | cut -d "," -f1 | cut -d ':' -f2)
+					LAC=$(echo "$LOCINFO" | cut -d "," -f2)
+					CID=$(echo "$LOCINFO" | cut -d "," -f3)
+					CELL=$(echo "$LOCINFO" | cut -d "," -f4)
+				}
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSSP $RSRP dBm, ECIO $ECIO dB"
+				[ -n "$LOCINFO" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
+			;;
+		     "GSM")
+				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
+				RSSI=$(awk "BEGIN {print -120+$VALUE}")
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
+			;;
+		     *)
+				logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+			;;
+		esac
+
+	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		SIGNAL=$(uqmiCall "--get-signal-info")
+		SPEED=$(echo "$SIGNAL" | cut -d '"' -f4)
+		MCC=$(uqmiCall "--get-serving-system")
+		MCCMNC=$(echo "$MCC" | cut -d "," -f2 | cut -d ":" -f2)$(printf "%02d" $(echo "$MCC" | cut -d "," -f3 | cut -d ":" -f2))
+
+		case "$SPEED" in
+		     "lte")
+				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
+				RSRQ=$(echo "$SIGNAL" | cut -d "," -f3 | cut -d ":" -f2)
+				RSRP=$(echo "$SIGNAL" | cut -d "," -f4 | cut -d ":" -f2)
+				SINR=$(echo "$SIGNAL" | cut -d ":" -f6 | cut -d "}" -f1)
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: LTE"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+			;;
+		     "wcdma" | "umts")
+				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
+				ECIO=$(echo "$SIGNAL" | cut -d ":" -f4 | cut -d "}" -f1)
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: $(echo $SPEED | tr '[a-z]' '[A-Z]')"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, ECIO $ECIO dB"
+				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+			;;
+		     "gsm")
+				RSSI=$(echo "$SIGNAL" | cut -d ":" -f3 | cut -d "}" -f1)
+				nvram set "$PREFIX"_modem_signal="$RSSI"
+				logger -t switch4g[$PID] "4G MODEM Current Mode: GSM"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
+				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+			;;
+		     *)
+				logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
+				logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+			;;
+		esac
+
+	elif [ "$MTYPE" == "hilink" ]; then	# use huawei hilink api (for moded ie. E3372)
+# TODO: Auth
+		local BTS NET PCI WANIP=$(nvram get "$PREFIX"_gateway)
+		local URLHOME="http://$WANIP/html/home.html" URLAPI1="http://$WANIP/api/device/signal"
+		local URLAPI2="http://$WANIP/api/net/signal-para" URLAPI3="http://$WANIP/api/net/net-mode" URLAPI4="http://$WANIP/api/net/current-plmn"
+		local FCURL="/usr/sbin/curl" COOKIEFILE="/tmp/4g_"$PREFIX".apicookie"
+
+		SIGNAL=$($FCURL -sf -m 5 "$URLAPI1" -b $COOKIEFILE)
+
+		[ "$(echo "$SIGNAL" | grep "<code>125002</code>" | wc -l)" -ne 0 ] && {		# repeat needed
+			$FCURL -sf -m 5 "$URLHOME" -c $COOKIEFILE > /dev/null
+			SIGNAL=$($FCURL -sf -m 5 "$URLAPI1" -b $COOKIEFILE)
+		}
+		BTS=$($FCURL -sf -m 5 "$URLAPI2" -b $COOKIEFILE)
+		NET=$($FCURL -sf -m 5 "$URLAPI3" -b $COOKIEFILE)
+		MCC=$($FCURL -sf -m 5 "$URLAPI4" -b $COOKIEFILE)
+
+		[ "$(echo "$SIGNAL" | grep "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" | wc -l)" -gt 0 ] && {
+			RSSI=$(echo "$SIGNAL" | grep "<rssi>" | cut -d '>' -f2 | cut -d 'd' -f1)
+			CELL=$(echo "$SIGNAL" | grep "<cell_id>" | cut -d '>' -f2 | cut -d '<' -f1)
+			MCCMNC=$(echo "$MCC" | grep "<Numeric>" | cut -d '>' -f2 | cut -d '<' -f1)
+			SPEED=$(echo "$NET" | grep "<NetworkMode>" | cut -d '>' -f2 | cut -d '<' -f1)
+			[ -n "$MCCMNC" ] || SPEED=""
+
+			case "$SPEED" in
+			     "03")
+					RSRP=$(echo "$SIGNAL" | grep "<rsrp>" | cut -d '>' -f2 | cut -d 'd' -f1)
+					RSRQ=$(echo "$SIGNAL" | grep "<rsrq>" | cut -d '>' -f2 | cut -d 'd' -f1)
+					SINR=$(echo "$SIGNAL" | grep "<sinr>" | cut -d '>' -f2 | cut -d 'd' -f1)
+					PCI=$(echo "$SIGNAL" | grep "<pci>" | cut -d '>' -f2 | cut -d '<' -f1)
+					LAC=$(echo "$BTS" | grep "<Lac>" | cut -d '>' -f2 | cut -d '<' -f1)
+					BAND=$(echo "$NET" | grep "<LTEBand>" | cut -d '>' -f2 | cut -d '<' -f1)
+
+					case "$BAND" in
+					     "1")          BBAND="B1 (2100 MHz)" ;;
+					     "4")          BBAND="B3 (1800 MHz)" ;;
+					     "40")         BBAND="B7 (2600 MHz)" ;;
+					     "80")         BBAND="B8 (900 MHz)"  ;;
+					     "80000")      BBAND="B20 (800 MHz)" ;;
+					     "2000000000") BBAND="B38 (2600 MHz TDD)" ;;
+					     "8000000000") BBAND="B40 (2300 MHz TDD)" ;;
+					     "800C5")      BBAND="B1, 3, 7, 8, 20"    ;;
+					     "800D5")      BBAND="B1, 3, 5, 7, 8, 20" ;;
+					     "7FFFFFFFFFFFFFFF") BBAND="All available";;
+					     *)            BBAND="unknown"       ;;
+					esac
+
+					nvram set "$PREFIX"_modem_signal="$RSSI"
+					logger -t switch4g[$PID] "4G MODEM Current Mode: LTE"
+					[ -n "$RSSI" ] && logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC 0x$(printf "%X" $LAC) ($LAC), PCI 0x$(printf "%X" $PCI) ($PCI), Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+					logger -t switch4g[$PID] "4G MODEM Band(s): $BBAND"
+				;;
+			     "02")
+					ECIO=$(echo "$SIGNAL" | grep "<ecio>" | cut -d '>' -f2 | cut -d 'd' -f1)
+					RSCP=$(echo "$SIGNAL" | grep "<rscp>" | cut -d '>' -f2 | cut -d 'd' -f1)
+
+					nvram set "$PREFIX"_modem_signal="$RSSI"
+					logger -t switch4g[$PID] "4G MODEM Current Mode: UMTS"
+					[ -n "$RSSI" ] && logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSCP $RSCP dBm, ECIO $ECIO dB"
+					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+				;;
+			     "01")
+					nvram set "$PREFIX"_modem_signal="$RSSI"
+					logger -t switch4g[$PID] "4G MODEM Current Mode: GSM"
+					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
+					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+				;;
+			     *)
+					logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
+					logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+				;;
+			esac
+		}
+	fi
+}
+
+checkPid() {
+	local PRIORITY="$1" PIDNO
+
+	[ -f $PIDFILE ] && {
+		PIDNO=$(cat $PIDFILE)
+		cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
+
+		[ $? -eq 0 ] && {
+			logger -t switch4g[$PID] "4G MODEM - another process in action - exiting"
+			exit 0
+		} || {
+			[ "$PRIORITY" -eq 0 ] && break
+			# Process not found assume not running
+			echo $PID > $PIDFILE
+			[ $? -ne 0 ] && {
+				logger -t switch4g[$PID] "4G MODEM - could not create PID file"
+				exit 0
+			}
+		}
+	} || {
+		[ "$PRIORITY" -eq 0 ] && break
+		echo $PID > $PIDFILE
+		[ $? -ne 0 ] && {
+			logger -t switch4g[$PID] "4G MODEM - could not create PID file"
+			exit 0
+		}
+	}
+}
+
+uqmiCall() {
+	# for now, it's the only way to prevent uqmi hangups on two different calls at the same time and on the same device: https://forum.openwrt.org/viewtopic.php?id=63559
+	local COUNT=1 COMMAND="$1" IS_ITCONN="$2"
+	[[ -z $IS_ITCONN ]] && IS_ITCONN=0
+
+	# wait for another uqmi process to exit...
+	while [ "$COUNT" -lt 5 ]; do
+		[ "$(ps | grep uqmi | grep "$DEVNR" | grep -v "grep" | wc -l)" -eq 0 ] && {
+			[ "$IS_ITCONN" -eq 1 ] && {
+				uqmi -s -d "$DEVNR" $COMMAND \
+					${APN:+--apn "$APN"} \
+					${PROFILE:+--profile $PROFILE} \
+					${AUTH:+--auth-type $AUTH} \
+					${USERNAME:+--username $USERNAME} \
+					${PASSWORD:+--password $PASSWORD} \
+					${AUTOCONNECT:+--autoconnect}
+				return
+			} || {
+				uqmi -s -d "$DEVNR" $COMMAND
+				return
+			}
+		}
+		COUNT=$((COUNT+1))
+		sleep 1
+	done
+
+	wayOut "4G Modem - another uqmi process in action (hang up?) - exiting ..."
+}
+
+wayOut() {
+	local TEXT="$1"
+	[[ -z $TEXT ]] && TEXT="4G Modem - exiting"
+
+	logger -t switch4g[$PID] "$TEXT"
+	rm -f $READYFILE > /dev/null 2>&1
+	rm -f $PIDFILE > /dev/null 2>&1
+	exit 0
 }
 
 
@@ -755,30 +953,35 @@ signal() {
 
 
 if [ "$2" == "connect" ]; then
-    connect
+	checkPid 1
+	connect
 elif [ "$2" == "disconnect" ]; then
-    disconnect
+	checkPid 0
+	disconnect
+elif [ "$2" == "reset" ]; then
+	checkPid 0
+	modemReset
 elif [ "$2" == "signal" ]; then
-    signal
+	checkPid 0
+	signal
 else
-    #check pid file
-    checkPid
+	checkPid 1
 
-    if [ ! -f $READYFILE ]; then #modem not detected
-        switchMode
+	# modem not detected
+	[ ! -f $READYFILE ] && {
+		switchMode
 
-        searchWAN
+		searchWAN
 
-        if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" -o "$TYPE" == "qmi_wwan" ]; then #only for non-hilink
-            searchDiag
+		# only for non-hilink
+		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
+			searchDiag
 
-            setPIN
-        fi
-    fi
+			setPIN
+		}
+	}
 
-    #force connection after detect 4G modem
-    connect
+	connect
 
-    #remove pid file
-    rm -f $PIDFILE > /dev/null 2>&1
+	rm -f $PIDFILE > /dev/null 2>&1
 fi
