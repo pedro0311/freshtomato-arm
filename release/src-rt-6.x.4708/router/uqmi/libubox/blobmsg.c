@@ -20,6 +20,7 @@ static const int blob_type[__BLOBMSG_TYPE_LAST] = {
 	[BLOBMSG_TYPE_INT16] = BLOB_ATTR_INT16,
 	[BLOBMSG_TYPE_INT32] = BLOB_ATTR_INT32,
 	[BLOBMSG_TYPE_INT64] = BLOB_ATTR_INT64,
+	[BLOBMSG_TYPE_DOUBLE] = BLOB_ATTR_DOUBLE,
 	[BLOBMSG_TYPE_STRING] = BLOB_ATTR_STRING,
 	[BLOBMSG_TYPE_UNSPEC] = BLOB_ATTR_BINARY,
 };
@@ -134,6 +135,8 @@ int blobmsg_parse(const struct blobmsg_policy *policy, int policy_len,
 	int i;
 
 	memset(tb, 0, policy_len * sizeof(*tb));
+	if (!data || !len)
+		return -EINVAL;
 	pslen = alloca(policy_len);
 	for (i = 0; i < policy_len; i++) {
 		if (!policy[i].name)
@@ -227,29 +230,38 @@ blobmsg_open_nested(struct blob_buf *buf, const char *name, bool array)
 	return (void *)offset;
 }
 
-void
+int
 blobmsg_vprintf(struct blob_buf *buf, const char *name, const char *format, va_list arg)
 {
 	va_list arg2;
 	char cbuf;
-	int len;
+	char *sbuf;
+	int len, ret;
 
 	va_copy(arg2, arg);
 	len = vsnprintf(&cbuf, sizeof(cbuf), format, arg2);
 	va_end(arg2);
 
-	vsprintf(blobmsg_alloc_string_buffer(buf, name, len + 1), format, arg);
+	sbuf = blobmsg_alloc_string_buffer(buf, name, len + 1);
+	if (!sbuf)
+		return -1;
+	ret = vsprintf(sbuf, format, arg);
 	blobmsg_add_string_buffer(buf);
+
+	return ret;
 }
 
-void
+int
 blobmsg_printf(struct blob_buf *buf, const char *name, const char *format, ...)
 {
 	va_list ap;
+	int ret;
 
 	va_start(ap, format);
-	blobmsg_vprintf(buf, name, format, ap);
+	ret = blobmsg_vprintf(buf, name, format, ap);
 	va_end(ap);
+
+	return ret;
 }
 
 void *
@@ -262,7 +274,6 @@ blobmsg_alloc_string_buffer(struct blob_buf *buf, const char *name, unsigned int
 	if (!attr)
 		return NULL;
 
-	data_dest = blobmsg_data(attr);
 	blob_set_raw_len(buf->head, blob_pad_len(buf->head) - blob_pad_len(attr));
 	blob_set_raw_len(attr, blob_raw_len(attr) - maxlen);
 
@@ -279,7 +290,8 @@ blobmsg_realloc_string_buffer(struct blob_buf *buf, unsigned int maxlen)
 	if (required <= 0)
 		goto out;
 
-	blob_buf_grow(buf, required);
+	if (!blob_buf_grow(buf, required))
+		return NULL;
 	attr = blob_next(buf->head);
 
 out:

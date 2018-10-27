@@ -3,292 +3,289 @@
 #
 # Copyright (C) 2015 shibby
 #
+# changes/fixes: 2018 by pedro
+#
 
 
 PID=$$
 PIDFILE="/var/run/watchdog.pid"
-MWAN=`nvram get mwan_num`
-DLVL=`nvram get mwan_debug`
-DST=`nvram get mwan_ckdst`
-HOSTLIST=`echo $DST | sed 's/,/ /'`
+MWAN=$(nvram get mwan_num)
+DLVL=$(nvram get mwan_debug)
+DST=$(nvram get mwan_ckdst)
+HOSTLIST=$(echo $DST | sed 's/,/ /')
 
 
 MWANTABLE="wan"
 i=1
 while [ $i -le $MWAN ]; do
-    if [ "$i" -gt 1 ]; then
-        MWANTABLE="$MWANTABLE wan$i"
-    fi
-    i=`expr $i + 1`
+	[ "$i" -gt 1 ] && {
+		MWANTABLE="$MWANTABLE wan$i"
+	}
+	i=$((i+1))
 done
 
-if [ "$DLVL" -gt 0 ]; then
+[ "$DLVL" -gt 0 ] && {
     DEBUG="logger -p DEBUG -t watchdog[$PID]"
-else
+} || {
     DEBUG="# DEBUG DISABLED"
-fi
+}
 
 
 watchdogRun() {
-    for PREFIX in $MWANTABLE; do
-        # wan test by check_wanup, in case there is ppp mess and other wans active with the same
-        # interface name (ppp0 etc) all checks will be false-positive. wanuptime is real stuff!
-        ISUP=`wanuptime "$PREFIX"`
-        IFACE=`nvram get "$PREFIX"_iface`
-        WEIGHT=`nvram get "$PREFIX"_weight`
-        ADDR=`ifconfig "$IFACE" | grep inet | cut -d ":" -f2 | cut -d " " -f1`
-        MTD=`nvram get "$PREFIX"_ckmtd`
-        PROTO=`nvram get "$PREFIX"_proto`
-        RESULT=0
+	for PREFIX in $MWANTABLE; do
+		# wan test by check_wanup, in case there is ppp mess and other wans active with the same
+		# interface name (ppp0 etc) all checks will be false-positive. wanuptime is real stuff!
+		ISUP=$(wanuptime "$PREFIX")
+		IFACE=$(nvram get "$PREFIX"_iface)
+		WEIGHT=$(nvram get "$PREFIX"_weight)
+		MTD=$(nvram get "$PREFIX"_ckmtd)
+		PROTO=$(nvram get "$PREFIX"_proto)
+		RESULT=0
 
-        if [ "$PROTO" != "disabled" ]; then # don't check added but disabled wan
+		[ "$PROTO" != "disabled" ] && {		# don't check added but disabled wan
 
-            if [ "$PREFIX" == "wan" ]; then
-                METRIC="101"
-            else
-                PREFNR=`echo "$PREFIX" | cut -c 4-`
-                METRIC=`expr $PREFNR + 100`
-            fi
+			[ "$PREFIX" == "wan" ] && {
+				METRIC="101"
+			} || {
+				PREFNR=$(echo "$PREFIX" | cut -c 4-)
+				METRIC=$((PREFNR+100))
+			}
 
-            $DEBUG ""$PREFIX" metric="$METRIC" iface="$IFACE" uptime="$ISUP""
+			$DEBUG ""$PREFIX" metric="$METRIC" iface="$IFACE" uptime="$ISUP""
 
-            ADD=0
-            ISGW=`ip route | grep $IFACE | grep -v "link" | wc -l`
-            $DEBUG "ISGW="$ISGW", WEIGHT="$WEIGHT""
+			ADD=0
+			ISGW=$(ip route | grep $IFACE | grep -v "link" | wc -l)
+			$DEBUG "ISGW="$ISGW", WEIGHT="$WEIGHT""
 
-            if [ "$ISGW" -eq 0 -a "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
-                #failback required default gateway to check is indeed connection back to live
-                #so we have to add temporary gateway
-                GW=`ip route | grep $IFACE | grep -v "kernel" | awk {' printf $1'}`
-                if [ ! $GW ]; then # no GW found
-                    $DEBUG "no gw found for "$IFACE""
-                else
-                    $DEBUG "add test gw "$GW" for "$IFACE""
-                    if [ -n "$GW" -a ! "$GW" == "0.0.0.0" ]; then
-                        route add default gw $GW metric $METRIC
-                        ADD=1
-                        $DEBUG "add=1"
-                    fi
-                fi
-            fi
+			[ "$ISGW" -eq 0 -a "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
+				# failback required default gateway to check is indeed connection back to live
+				# so we have to add temporary gateway
+				GW=$(ip route | grep $IFACE | grep -v "kernel" | awk {' printf $1'})
+				[ ! $GW ] && {	# no GW found
+					$DEBUG "no gw found for "$IFACE""
+				} || {
+					$DEBUG "add test gw "$GW" for "$IFACE""
+					[ -n "$GW" -a ! "$GW" == "0.0.0.0" ] && {
+						route add default gw $GW metric $METRIC
+						ADD=1
+						$DEBUG "add=1"
+					}
+				}
+			}
 
-            if [ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ]; then
-                if [ "$MTD" -eq 1 ]; then
-                    $DEBUG "run ping-test"
-                    ckping
-                elif [ "$MTD" -eq 2 ]; then
-                    $DEBUG "run tracert-test"
-                    cktracert
-                else
-                    $DEBUG "run curl-test"
-                    ckcurl
-                fi
-            fi
+			[ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
+				if [ "$MTD" -eq 1 ]; then
+					$DEBUG "run ping-test"
+					ckping
+				elif [ "$MTD" -eq 2 ]; then
+					$DEBUG "run tracert-test"
+					cktracert
+				else
+					$DEBUG "run curl-test"
+					ckcurl
+				fi
+			}
 
-            #remove temporary added gateway
-            if [ "$ADD" -eq 1 ]; then
-                route del default gw $GW
-                $DEBUG "del test gw "$GW""
-            fi
+			# remove temporary added gateway
+			[ "$ADD" -eq 1 ] && {
+				route del default gw $GW
+				$DEBUG "del test gw "$GW""
+			}
 
-            if [ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ]; then
-                #failover does not have default gateway in route table
-                #so we can`t check connection to outside. Check only if interface exist
-                $DEBUG "run failover-test"
-                ckfailover
-            fi
+			[ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ] && {
+				# failover does not have default gateway in route table
+				# so we can`t check connection to outside. Check only if interface exist
+				$DEBUG "run failover-test"
+				ckfailover
+			}
 
-            if [ "$RESULT" -eq 0 ]; then #wan is down
-                logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
-                echo "0" > /tmp/state_$PREFIX
+			[ "$RESULT" -eq 0 ] && {	# wan is down
+				logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
+				echo "0" > /tmp/state_$PREFIX
 
-                if [ "$PROTO" == "lte" ]; then
-                    switch4g $PREFIX
-                else
-                    if [ "$PREFIX" == "wan" ]; then
-                        if [ "$MWAN" == "1" ]; then
-                            service wan restart
-                        else
-                            service wan1 restart
-                        fi
-                    else
-                        service $PREFIX restart
-                    fi
-                fi
-
-            else
-                echo "1" > /tmp/state_$PREFIX
-            fi
-        fi
-    done
+				[ "$PROTO" == "lte" ] && {
+					switch4g $PREFIX
+				} || {
+					[ "$PREFIX" == "wan" ] && {
+						[ "$MWAN" == "1" ] && {
+							service wan restart
+						} || {
+							service wan1 restart
+						}
+					} || {
+						service $PREFIX restart
+					}
+				}
+			} || {
+				echo "1" > /tmp/state_$PREFIX
+			}
+		}
+	done
 }
 
 cktracert() {
-    RXBYTES1=`cat /sys/class/net/$IFACE/statistics/rx_bytes`
-    for HOST in $HOSTLIST; do
-        # we need only send/receive few packages to be sure is connection works.
-        traceroute -i $IFACE -w 3 -m 4 $HOST > /dev/null 2>&1
-    done
-    RXBYTES2=`cat /sys/class/net/$IFACE/statistics/rx_bytes`
-    if [ "$RXBYTES2" -gt "$RXBYTES1" ]; then
-        RESULT=1
-    fi
-    $DEBUG "tracert for "$IFACE": RX2="$RXBYTES2" RX1="$RXBYTES1""
+	RXBYTES1=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
+
+	for HOST in $HOSTLIST; do
+		# we need only send/receive few packages to be sure is connection works.
+		traceroute -i $IFACE -w 3 -m 4 $HOST > /dev/null 2>&1
+	done
+
+	RXBYTES2=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
+
+	[ "$RXBYTES2" -gt "$RXBYTES1" ] && {
+		RESULT=1
+	}
+	$DEBUG "tracert for "$IFACE": RX2="$RXBYTES2" RX1="$RXBYTES1""
 }
 
 ckping() {
-    OK=0
+	local OK=0 CHECK
 
-    for HOST in $HOSTLIST; do
-        TEST=`ping -I $IFACE -c 4 $HOST | grep "received" | cut -d "," -f2 | cut -d " " -f2`
-        if [ "$TEST" -gt 0 ]; then  # "0" means 100% loss - not receive any package
-            OK=`expr $OK + 1`
-        fi
-        $DEBUG ""$IFACE" - "$HOST": "$TEST"; ping ok="$OK""
-    done
+	for HOST in $HOSTLIST; do
+		CHECK=$(ping -I $IFACE -c 4 $HOST | grep "received" | cut -d "," -f2 | cut -d " " -f2)
 
-    if [ "$OK" -gt 0 ]; then
-        RESULT=1
-        $DEBUG "ping for "$IFACE": OK=1"
-    fi
+		[ "$CHECK" -gt 0 ] && {	# "0" means 100% loss - not receive any package
+			OK=$((OK+1))
+		}
+		$DEBUG ""$IFACE" - "$HOST": "$CHECK"; ping ok="$OK""
+	done
+
+	[ "$OK" -gt 0 ] && {
+		RESULT=1
+		$DEBUG "ping for "$IFACE": OK=1"
+	}
 }
 
 ckcurl() {
-    OK=0
+	local OK=0 CHECK
 
-    for HOST in $HOSTLIST; do
-        TEST=`curl $HOST --interface $IFACE --connect-timeout 5 -ksfI -o /dev/null && echo 1 || echo 0`
-        if [ "$TEST" -gt 0 ]; then
-            OK=`expr $OK + 1`
-        fi
-        $DEBUG ""$IFACE" - "$HOST": "$TEST"; curl connect ok="$OK""
-    done
+	for HOST in $HOSTLIST; do
+		CHECK=$(curl $HOST --interface $IFACE --connect-timeout 5 -ksfI -o /dev/null && echo 1 || echo 0)
 
-    if [ "$OK" -gt 0 ]; then
-        RESULT=1
-        $DEBUG "curl connect for "$IFACE": OK=1"
-    fi
+		[ "$CHECK" -gt 0 ] && {
+			OK=$((OK+1))
+		}
+		$DEBUG ""$IFACE" - "$HOST": "$CHECK"; curl connect ok="$OK""
+	done
+
+	[ "$OK" -gt 0 ] && {
+		RESULT=1
+		$DEBUG "curl connect for "$IFACE": OK=1"
+	}
 }
 
 ckfailover() {
-    TEST=`ip route | grep $IFACE | wc -l`
+	[ "$(ip route | grep $IFACE | wc -l)" -gt 0 ] && {
+		[ "$PROTO" == "lte" ] && {
+			TYPE=$(nvram get "$PREFIX"_modem_type)
+			DEV=$(nvram get "$PREFIX"_modem_dev)
 
-    if [ "$TEST" -gt 0 ]; then
-        if [ "$PROTO" == "lte" ]; then
-            TYPE=`nvram get modem_type`
-            DEV=`nvram get modem_dev4g`
-            if [ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ]; then
-                MODE="AT+CGPADDR=1" gcom -d $DEV -s /etc/gcom/setverbose.gcom > /tmp/4g.mode
-                CHECK=`cat /tmp/4g.mode | grep "+CGPADDR:" | cut -d '"' -f2 | wc -l`
-                if [ "$CHECK" -gt 0 ]; then
-                    RESULT=1
-                    $DEBUG "failover=1, lte $TYPE, dev $DEV"
-                fi
-            else
-                RESULT=1
-                $DEBUG "failover=1, lte $TYPE"
-            fi
-        else
-            RESULT=1
-            $DEBUG "failover=1"
-        fi
-    fi
+			[ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ] && {
+				MODE="AT+CGPADDR=1" gcom -d "$DEV" -s /etc/gcom/setverbose.gcom > /tmp/4g_"$PREFIX".mode
+
+				[ $(cat /tmp/4g_"$PREFIX".mode | grep "+CGPADDR:" | cut -d '"' -f2 | wc -l) -gt 0 ] && {
+					RESULT=1
+					$DEBUG "failover=1, lte "$TYPE", dev "$DEV""
+				}
+			} || {
+				RESULT=1
+				$DEBUG "failover=1, lte "$TYPE""
+			}
+		} || {
+			RESULT=1
+			$DEBUG "failover=1"
+		}
+	}
 }
 
 watchdogAdd() {
-    CKTIME=`nvram get mwan_cktime`
-    MINS=`expr "$CKTIME" / 60`
+	local CKTIME=$(nvram get mwan_cktime)
+	local MINS=$((CKTIME/60))
 
-    if [ "$MINS" -gt 0 ]; then
-        ISSET=`cru l | grep watchdogJob | wc -l`
+	[ "$MINS" -gt 0 ] && {
 
-        if [ "$ISSET" == "0" ]; then
-            cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
-        fi
+		[ "$(cru l | grep watchdogJob | wc -l)" -eq 0 ] && {
+			cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
+		}
 
-    fi
+	}
 }
 
 watchdogDel() {
-    ISSET=`cru l | grep watchdogJob | wc -l`
-
-    if [ "$ISSET" == "1" ]; then
-        cru d watchdogJob
-    fi
+	[ "$(cru l | grep watchdogJob | wc -l)" -eq 1 ] && {
+		cru d watchdogJob
+	}
 }
 
 mwanJob() {
-    ISSET=`cru l | grep mwanJob | wc -l`
+	local ISSET=$(cru l | grep mwanJob | wc -l)
 
-    if [ "$MWAN" -gt 0 ]; then
-        if [ "$ISSET" == "0" ]; then
-            cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
-        fi
-    else
-        if [ "$ISSET" == "1" ]; then
-            cru d mwanJob
-        fi
-    fi
+	[ "$MWAN" -gt 0 ] && {
+		[ "$ISSET" -eq 0 ] && cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
+	} || {
+		[ "$ISSET" -eq 1 ] && cru d mwanJob
+	}
 }
 
 mwanAlive() {
-    if [ "$MWAN" -gt 1 ]; then
-        ALIVE=`ps | grep "mwanroute" | grep -v "grep" | wc -l`
-        if [ "$ALIVE" == "0" ]; then
-            $DEBUG "mwanroute not found, launch process"
-            mwanroute
-        fi
-    fi
+	[ "$MWAN" -gt 1 ] && {
+		[ "$(ps | grep "mwanroute" | grep -v "grep" | wc -l)" -eq 0 ] && {
+			$DEBUG "mwanroute not found, launch process"
+			mwanroute
+		}
+	}
 }
 
 checkPid() {
-    if [ -f $PIDFILE ]; then
+	[ -f $PIDFILE ] && {
 
-        PIDNO=$(cat $PIDFILE)
-        cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
+		PIDNO=$(cat $PIDFILE)
+		cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
 
-        if [ $? -eq 0 ]; then
-            logger -t watchdog[$PID] "Another proces in action - exiting"
-            exit 0
-        else
-            # Process not found assume not running
-            echo $PID > $PIDFILE
-            if [ $? -ne 0 ]; then
-                logger -t watchdog[$PID] "Could not create PID file"
-                exit 0
-            fi
-        fi
-    else
-        echo $PID > $PIDFILE
-        if [ $? -ne 0 ]; then
-            logger -t watchdog[$PID] "Could not create PID file"
-            exit 0
-        fi
-    fi
+		[ $? -eq 0 ] && {
+			logger -t watchdog[$PID] "Another process in action - exiting"
+			exit 0
+		} || {
+			# Process not found assume not running
+			echo $PID > $PIDFILE
+			[ $? -ne 0 ] && {
+				logger -t watchdog[$PID] "Could not create PID file"
+				exit 0
+			}
+		}
+	} || {
+		echo $PID > $PIDFILE
+		[ $? -ne 0 ] && {
+			logger -t watchdog[$PID] "Could not create PID file"
+			exit 0
+		}
+	}
 }
 
 checkPidSwitch() {
-    if [ -f /var/run/switch3g.pid ]; then
+	for PREFIX in $MWANTABLE; do
 
-        if [ `ps | grep switch3g | grep -v "grep" | wc -l` == "0" ]; then  #pid file exist but process doesn`t.
-            rm /var/run/switch3g.pid
-        else
-            logger -t watchdog[$PID] "Switch3g script in action - exiting"
-            rm -f $PIDFILE > /dev/null 2>&1
-            exit 0
-        fi
-    fi
+		[ -f /var/run/switch3g_$PREFIX.pid ] && {
+			[ "$(ps | grep switch3g | grep -v "grep" | wc -l)" == "0" ] && {  # pid file exists but process doesn`t.
+				rm /var/run/switch3g_$PREFIX.pid
+			} || {
+				logger -t watchdog[$PID] "Switch3g ("$PREFIX") script in action - exiting"
+				rm -f $PIDFILE > /dev/null 2>&1
+				exit 0
+			}
+		}
 
-    if [ -f /var/run/switch4g.pid ]; then
-
-        if [ `ps | grep switch4g | grep -v "grep" | wc -l` == "0" ]; then  #pid file exist but process doesn`t.
-            rm /var/run/switch4g.pid
-        else
-            logger -t watchdog[$PID] "Switch4g script in action - exiting"
-            rm -f $PIDFILE > /dev/null 2>&1
-            exit 0
-        fi
-    fi
+		[ -f /var/run/switch4g_$PREFIX.pid ] && {
+			[ "$(ps | grep switch4g | grep -v "grep" | wc -l)" == "0" ] && {  # pid file exists but process doesn`t.
+				rm /var/run/switch4g_$PREFIX.pid
+			} || {
+				logger -t watchdog[$PID] "Switch4g ("$PREFIX") script in action - exiting"
+				rm -f $PIDFILE > /dev/null 2>&1
+				exit 0
+			}
+		}
+	done
 }
 
 
@@ -296,18 +293,18 @@ checkPidSwitch() {
 
 
 if [ "$1" == "add" ]; then
-    watchdogAdd
-    mwanJob
+	watchdogAdd
+	mwanJob
 elif [ "$1" == "del" ]; then
-    watchdogDel
+	watchdogDel
 elif [ "$1" == "alive" ]; then
-    mwanAlive
+	mwanAlive
 else
-    checkPid
+	checkPid
 
-    checkPidSwitch
+	checkPidSwitch
 
-    watchdogRun
+	watchdogRun
 fi
 
 # remove pid file

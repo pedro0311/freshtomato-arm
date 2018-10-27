@@ -741,6 +741,7 @@ void dns_to_resolv(void)
 			!(get_wanx_proto(wan_prefix) == WP_PPTP || get_wanx_proto(wan_prefix) == WP_L2TP || nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp))))
 		*/
 		if (	(check_wanup(wan_prefix) == 0) &&
+			get_wanx_proto(wan_prefix) != WP_DISABLED &&
 			get_wanx_proto(wan_prefix) != WP_PPTP &&
 			get_wanx_proto(wan_prefix) != WP_L2TP &&
 			!nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))

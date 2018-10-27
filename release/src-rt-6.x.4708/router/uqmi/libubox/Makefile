@@ -11,7 +11,7 @@ CFLAGS  += -ffunction-sections -fdata-sections -I$(TOP)/libjson-c
 LDFLAGS += -Wl,--gc-sections -L$(TOP)/libjson-c
 
 TARGET = libubox.a
-SOURCES = avl.c avl-cmp.c blob.c blobmsg.c blobmsg_json.c uloop.c usock.c ustream.c ustream-fd.c vlist.c utils.c safe_list.c runqueue.c md5.c kvlist.c
+SOURCES = avl.c avl-cmp.c blob.c blobmsg.c blobmsg_json.c uloop.c usock.c ustream.c ustream-fd.c vlist.c utils.c safe_list.c runqueue.c md5.c kvlist.c ulog.c base64.c
 
 OBJS=$(SOURCES:.c=.o)
 
@@ -59,6 +59,7 @@ safe_list.o: safe_list.c safe_list.h
 runqueue.o: runqueue.c runqueue.h
 md5.o: md5.c md5.h
 kvlist.o: kvlist.c kvlist.h
+ulog.o: ulog.c ulog.h
 
 # Headers
 avl.h: list.h
