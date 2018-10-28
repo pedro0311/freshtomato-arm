@@ -20,7 +20,7 @@
 <script type="text/javascript" src="vpn.js"></script>
 <script type="text/javascript">
 
-//	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_enable,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_crt,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_enable,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_crt,vpn_server2_key,vpn_server2_dh,vpn_server2_br,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_enable,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_ca_key,vpn_server1_crt,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_enable,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_ca_key,vpn_server2_crt,vpn_server2_key,vpn_server2_dh,vpn_server2_br,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 function CCDGrid() { return this; }
 CCDGrid.prototype = new TomatoGrid;
@@ -128,7 +128,7 @@ function verifyFields(focused, quiet) {
 				if ( fom._service.value != "" ) fom._service.value += ",";
 				fom._service.value += 'vpnserver'+servernumber+'-restart';
 			}
-			
+
 			if ((focused.name.indexOf("_dns")>=0 || (focused.name.indexOf("_if")>=0 && E('_f_vpn_server'+servernumber+'_dns').checked)) &&
 			    fom._service.value.indexOf('dnsmasq') < 0)
 			{
@@ -174,8 +174,9 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_vpn_'+t+'_ca'), PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_dh'), PR('_vpn_'+t+'_key'),
 		             PR('_vpn_'+t+'_hmac'), PR('_f_vpn_'+t+'_rgw'), PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_static'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
-		elem.display(PR('_vpn_keygen_'+t+'_button'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
+		elem.display(PR('_vpn_keygen_static_'+t+'_button'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
 		elem.display(E(t+'_custom_crypto_text'), auth == "custom");
+		elem.display(PR('_vpn_keygen_'+t+'_button'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_sn'), PR('_f_vpn_'+t+'_plan'), PR('_f_vpn_'+t+'_plan1'),
  		             PR('_f_vpn_'+t+'_plan2'), PR('_f_vpn_'+t+'_plan3'), auth == "tls" && iface.value == "tun");
 		elem.display(PR('_f_vpn_'+t+'_dhcp'), auth == "tls" && iface.value == "tap");
@@ -482,14 +483,120 @@ var keyGenRequest = null
 function updateStaticKey(serverNumber)
 {
 	if (keyGenRequest) return;
-
+	disableKeyButtons(serverNumber, true);
+	changed = 1;
+	elem.display(E('server'+serverNumber+'_static_progress_div'), true);
 	keyGenRequest = new XmlHttp();
 	keyGenRequest.onCompleted = function(text, xml) {
 		E('_vpn_server'+serverNumber+'_static').value = text;
 		keyGenRequest = null;
+		elem.display(E('server'+serverNumber+'_static_progress_div'), false);
+		disableKeyButtons(serverNumber, false);
 	}
 	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
-	keyGenRequest.post('vpngenkey.cgi', '');
+	keyGenRequest.post('vpngenkey.cgi', '_mode=static');
+}
+
+function generateDHParams(serverNumber)
+{
+	if (keyGenRequest) return;
+	if (confirm('WARNING: DH Parameters generation can take long time.\nDo you want to proceed?')) {
+		changed = 1;
+		disableKeyButtons(serverNumber, true);
+		elem.display(E('server'+serverNumber+'_dh_progress_div'), true);
+		keyGenRequest = new XmlHttp();
+		keyGenRequest.onCompleted = function(text, xml) {
+			E('_vpn_server'+serverNumber+'_dh').value = text;
+			keyGenRequest = null;
+			elem.display(E('server'+serverNumber+'_dh_progress_div'), false);
+			disableKeyButtons(serverNumber, false);
+		}
+		keyGenRequest.onError = function(ex) { keyGenRequest = null; }
+		keyGenRequest.post('vpngenkey.cgi', '_mode=dh');
+	}
+}
+
+function generateKeys(serverNumber)
+{
+	if (keyGenRequest) return;
+	changed = 1;
+	let caKeyTextArea = E('_vpn_server'+serverNumber+'_ca_key');
+	let doGeneration = true;
+	if (caKeyTextArea.value == "") {
+		doGeneration = confirm("WARNING: You haven't provided Certificate Authority Key.\n \
+			This means, that CA Key needs to be regenerated, but it WILL break ALL your existing client certificates.\n \
+			You will need to reconfigure all your existing VPN clients!\n Are you sure to continue?");
+	}
+	if (doGeneration) {
+		disableKeyButtons(serverNumber,true);
+		showTLSProgressDivs(serverNumber,true);
+		var cakey, cacert, generated_crt, generated_key;
+		keyGenRequest = new XmlHttp();
+		keyGenRequest.onCompleted = function(text, xml) {
+			eval(text);
+			E('_vpn_server'+serverNumber+'_ca_key').value = cakey;
+			E('_vpn_server'+serverNumber+'_ca').value = cacert;
+			E('_vpn_server'+serverNumber+'_crt').value = generated_crt;
+			E('_vpn_server'+serverNumber+'_key').value = generated_key;
+			keyGenRequest = null;
+			disableKeyButtons(serverNumber,false);
+			showTLSProgressDivs(serverNumber,false);
+		}
+		keyGenRequest.onError = function(ex) { keyGenRequest = null; }
+		keyGenRequest.post('vpngenkey.cgi', '_mode=key&_server=' + serverNumber);
+	}
+}
+
+function disableKeyButtons(serverNumber, state)
+{
+	E('_vpn_keygen_static_server'+serverNumber+'_button').disabled = state;
+	E('_vpn_keygen_server'+serverNumber+'_button').disabled = state;
+	E('_vpn_dhgen_server'+serverNumber+'_button').disabled = state;
+}
+
+function showTLSProgressDivs(serverNumber, state)
+{
+	elem.display(E('server'+serverNumber+'_key_progress_div'), state);
+	elem.display(E('server'+serverNumber+'_cert_progress_div'), state);
+	elem.display(E('server'+serverNumber+'_ca_progress_div'), state);
+	elem.display(E('server'+serverNumber+'_ca_key_progress_div'), state);
+}
+
+function downloadClientConfig(serverNumber)
+{
+	if (keyGenRequest) return;
+	let caKeyTextArea = E('_vpn_server'+serverNumber+'_ca_key');
+	let caTextArea = E('_vpn_server'+serverNumber+'_ca');
+	let serverCrtTextArea = E('_vpn_server'+serverNumber+'_crt');
+	let serverCrtKeyTextArea = E('_vpn_server'+serverNumber+'_key');
+	if (caKeyTextArea.value == "" || caTextArea.value == "" || serverCrtTextArea.value == "" || serverCrtKeyTextArea.value == "") {
+				alert("Not all key fields has been entered!");
+				return;
+	}
+	if (changed) {
+		alert("Changes has been made. You need to save before continue!");
+		return;
+	}
+	elem.display(E('server'+serverNumber+'_gen_progress_div'), true);
+	keyGenRequest = new XmlHttp();
+	keyGenRequest.onCompleted = function(text, xml) {
+		elem.display(E('server'+serverNumber+'_gen_progress_div'), false);
+		keyGenRequest = null;
+
+		var downloadedFileFakeLink = document.createElement('a');
+		downloadedFileFakeLink.setAttribute('href', 'data:application/tomato-binary-file,' + encodeURIComponent(text));
+		downloadedFileFakeLink.setAttribute('download', 'ClientConfig.tgz');
+
+		downloadedFileFakeLink.style.display = 'none';
+		document.body.appendChild(downloadedFileFakeLink);
+
+		downloadedFileFakeLink.click();
+
+		document.body.removeChild(downloadedFileFakeLink);
+	}
+	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
+	keyGenRequest.responseType = 'blob';
+	keyGenRequest.get('vpn/ClientConfig.tgz','_server=' + serverNumber);
 }
 
 </script>
@@ -599,7 +706,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<\/div>');
 	W('<div id=\''+t+'-advanced\'>');
 	createFieldTable('', [
-		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 4, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' }, 
+		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 4, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Push LAN (br0) to clients', name: 'f_vpn_'+t+'_plan', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan' ) != 0 },
 		{ title: 'Push LAN1 (br1) to clients', name: 'f_vpn_'+t+'_plan1', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan1' ) != 0 },
 		{ title: 'Push LAN2 (br2) to clients', name: 'f_vpn_'+t+'_plan2', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan2' ) != 0 },
@@ -626,12 +733,25 @@ for (i = 0; i < tabs.length; ++i)
 	W('<div id=\''+t+'-keys\'>');
 	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>.<\/p>');
 	createFieldTable('', [
-		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ) },
-		{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
-		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ) },
-		{ title: 'Server Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ) },
-		{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_key' ) },
-		{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_dh' ) }
+		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ),
+			prefix: '<div id="'+t+'_static_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating static key...<img src="spin.gif"><\/p><\/div>' },
+		{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_static_'+t+'_button">' },
+		{ title: 'Certificate Authority Key', name: 'vpn_'+t+'_ca_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca_key' ),
+			prefix: '<div id="'+t+'_ca_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA key...<img src="spin.gif"><\/p><\/div>' },
+		{ title: '', custom: '<div id="'+t+'_ca_key_div_help"><p class="keyhelp">Optional, only used for client certificate generation.<br />Uncrypted (-nodes) private keys are supported.<\/p><\/div>' },
+		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ),
+			prefix: '<div id="'+t+'_ca_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA certificate...<img src="spin.gif"><\/p><\/div>' },
+		{ title: 'Server Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ),
+			prefix: '<div id="'+t+'_cert_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating certificate...<img src="spin.gif"><\/p><\/div>' },
+		{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_key' ),
+			prefix: '<div id="'+t+'_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating key...<img src="spin.gif"><\/p><\/div>' },
+		{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
+		{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_dh' ),
+			prefix: '<div id="'+t+'_dh_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating DH parameters...<img src="spin.gif"><\/p><\/div>' },
+		{ title: '', custom: '<input type="button" value="Generate DH Params" onclick="generateDHParams('+(i+1)+')" id="_vpn_dhgen_'+t+'_button">' },
+		null,
+		{ title: '', custom: '<input type="button" value="Generate client config" onclick="downloadClientConfig('+(i+1)+')" id="_vpn_client_gen_'+t+'_button">',
+			suffix: '<div id="'+t+'_gen_progress_div" style="display: none;"><p class="keyhelp">Please wait while your configuration is being generated...<img src="spin.gif"><\/p><\/div>' }
 	]);
 	W('<\/div>');
 	W('<div id=\''+t+'-status\'>');
