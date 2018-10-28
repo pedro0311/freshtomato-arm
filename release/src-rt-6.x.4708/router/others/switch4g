@@ -437,7 +437,7 @@ switchMode() {
 				sleep 1
 
 				VENDOR=$(cat /etc/usb_modeswitch.d/"$SWITCH" | grep TargetVendor | cut -d "=" -f2 | cut -d "x" -f2)
-				[ -n "$VENDOR" ] || VENDOR=$(cat "$PATHDEV"/idVendor)
+				[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDEV"/idVendor)
 
 				PRODUCT=$(cat "$PATHDEV"/idProduct)
 				[ -n "$PRODUCT" ] && {
@@ -505,14 +505,12 @@ searchDiag() {
 	local IS_MLOADED=0 MODIN="" TTYS=""
 	local PATHDIAG="/sys/bus/usb/devices"
 
-	[ -z "$DEVICENAME" -o -z "$VENDOR" -o -z "$PRODUCT" ] && {
-		DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
-		VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
-		PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
-	}
+	[ -z "$DEVICENAME" ] && DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
+	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
+	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
-		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 
 		[ -z "$TTYS" ] && {
 			logger -t switch4g[$PID] "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
@@ -525,23 +523,23 @@ searchDiag() {
 			}
 			sleep 1
 
-			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 		}
 
 		[ -n "$TTYS" ] && {
 			logger -t switch4g[$PID] "4G MODEM ready - DIAG(s) found ("$TTYS")"
-			DEVNR="/dev/$(echo "$TTYS" | cut -d " " -f1)"
+			DEVNR=$(echo "$TTYS" | cut -d " " -f1)
 			MODIN=$(nvram get "$PREFIX"_modem_modules)
 			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
 		}
 
 	elif [ "$MTYPE" == "qmi_wwan" ]; then
-		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/.*://g")
+		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" -e "s/.*://g")
 
 		[ -n "$TTYS" ] && {
 			logger -t switch4g[$PID] "4G MODEM ready - DIAG found ("$TTYS")"
-			DEVNR="/dev/$TTYS"
+			DEVNR=$TTYS
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
 		}
 	fi
@@ -891,7 +889,7 @@ checkPid() {
 			logger -t switch4g[$PID] "4G MODEM - another process in action - exiting"
 			exit 0
 		} || {
-			[ "$PRIORITY" -eq 0 ] && break
+			[ "$PRIORITY" -eq 0 ] && return
 			# Process not found assume not running
 			echo $PID > $PIDFILE
 			[ $? -ne 0 ] && {
@@ -900,7 +898,7 @@ checkPid() {
 			}
 		}
 	} || {
-		[ "$PRIORITY" -eq 0 ] && break
+		[ "$PRIORITY" -eq 0 ] && return
 		echo $PID > $PIDFILE
 		[ $? -ne 0 ] && {
 			logger -t switch4g[$PID] "4G MODEM - could not create PID file"
@@ -982,6 +980,6 @@ else
 	}
 
 	connect
-
-	rm -f $PIDFILE > /dev/null 2>&1
 fi
+
+rm -f $PIDFILE > /dev/null 2>&1
