@@ -14,6 +14,7 @@ PIDFILE="/var/run/switch4g_$PREFIX.pid"
 READYFILE="/tmp/switch4g_$PREFIX.ready"
 STATEFILE="/tmp/state_$PREFIX"
 MODE=$(nvram get "$PREFIX"_proto)
+LOGS="logger -t switch4g[$PID]"
 
 
 [ -z "$PREFIX" ] && {
@@ -41,7 +42,7 @@ connect() {
 		[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found - connection terminated!"
 	}
 
-	logger -t switch4g[$PID] "4G MODEM - connecting ..."
+	$$LOGS "4G MODEM - connecting ..."
 
 	# non-hilink/1st type
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
@@ -139,7 +140,7 @@ connect() {
 					MODEBAND=$RESBAND
 				}
 
-				logger -t switch4g[$PID] "4G MODEM - $TXTLOG (device $i)"
+				$$LOGS "4G MODEM - $TXTLOG (device $i)"
 
 				[ "$SPEED" != "$RESSPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
 					MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
@@ -153,13 +154,13 @@ connect() {
 				CGPADDR=$(MODE="AT+CGPADDR=1" gcom -d "$i" -s /etc/gcom/setverbose.gcom)
 
 				[ "$(echo "$CGPADDR" | grep "+CGPADDR:" | wc -l)" -eq 1 ] && {
-					logger -t switch4g[$PID] "4G MODEM - connected (device $i) ..."
+					$$LOGS "4G MODEM - connected (device $i) ..."
 					CONNECTED=1
 					nvram set "$PREFIX"_modem_dev="$i"
 					nvram commit
 					break
 				} || {
-					logger -t switch4g[$PID] "4G MODEM - connection failed (device $i) [$COUNT] ..."
+					$$LOGS "4G MODEM - connection failed (device $i) [$COUNT] ..."
 					COUNT=$((COUNT+1))
 					sleep 3
 				}
@@ -216,13 +217,13 @@ connect() {
 				wayOut "Device only supports raw-ip mode but is missing this required driver attribute: /sys/class/net/$IFA/qmi/raw_ip"
 			}
 
-			logger -t switch4g[$PID] "4G MODEM - device does not support 802.3 mode. Informing driver of raw-ip only for $IFA ..."
+			$$LOGS "4G MODEM - device does not support 802.3 mode. Informing driver of raw-ip only for $IFA ..."
 			echo "Y" > /sys/class/net/$IFA/qmi/raw_ip
 		}
 
 		uqmiCall "--sync"
 
-		logger -t switch4g[$PID] "4G MODEM - waiting for network registration ..."
+		$$LOGS "4G MODEM - waiting for network registration ..."
 
 		while [ $(echo "$(uqmiCall "--get-serving-system")" | grep searching | wc -l) -ne 0 ]; do
 			[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found!"
@@ -236,11 +237,11 @@ connect() {
 
 		# set network type (all,lte,umts,cdma,td-scdma)
 		uqmiCall "--set-network-modes $SPEEDTXT"
-		logger -t switch4g[$PID] "4G MODEM - network type is set to '$SPEEDTXT'"
+		$$LOGS "4G MODEM - network type is set to '$SPEEDTXT'"
 
 		# set roaming
 		uqmiCall "--set-network-roaming $ROAMTXT"
-		logger -t switch4g[$PID] "4G MODEM - roaming is set to '$ROAMTXT'"
+		$$LOGS "4G MODEM - roaming is set to '$ROAMTXT'"
 
 		# get client id for wds
 		CLID=$(uqmiCall "--get-client-id wds")
@@ -248,7 +249,7 @@ connect() {
 		[ $? -ne 0 ] && wayOut "4G MODEM - unable to obtain client ID!"
 
 		nvram set "$PREFIX"_modem_clid="$CLID"
-		logger -t switch4g[$PID] "4G MODEM - got new client ID: $CLID"
+		$$LOGS "4G MODEM - got new client ID: $CLID"
 
 		uqmiCall "--set-client-id wds,$CLID --set-ip-family ipv4"
 
@@ -259,12 +260,12 @@ connect() {
 
 				case $PDH in
 				     ''|*[!0-9]*)
-						logger -t switch4g[$PID] "4G MODEM - connection failed: $PDH (device $DEVNR) [$COUNT] ..."
+						$$LOGS "4G MODEM - connection failed: $PDH (device $DEVNR) [$COUNT] ..."
 						COUNT=$((COUNT+1))
 						sleep 5
 					;;
 				     *)
-						logger -t switch4g[$PID] "4G MODEM - connected (device $DEVNR) - session ID: $PDH"
+						$LOGS "4G MODEM - connected (device $DEVNR) - session ID: $PDH"
 						nvram set "$PREFIX"_modem_pdh="$PDH"
 						CONNECTED=1
 						break
@@ -311,7 +312,7 @@ connect() {
 		sleep 1
 
 		[ "$(ifconfig | grep "$IFA" | wc -l)" -eq 0 ] && {
-			logger -t switch4g[$PID] "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT] ..."
+			$LOGS "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT] ..."
 			COUNT=$((COUNT+1))
 			sleep 2
 		} || {
@@ -322,7 +323,7 @@ connect() {
 				dhcpc-renew $PREFIX
 			}
 
-			logger -t switch4g[$PID] "4G MODEM - WAN IFACE configured ($IFA)"
+			$LOGS "4G MODEM - WAN IFACE configured ($IFA)"
 			DONE=1
 			break
 		}
@@ -350,7 +351,7 @@ disconnect() {
 	PDH=$(nvram get "$PREFIX"_modem_pdh)
 	local DEVALL j
 
-	logger -t switch4g[$PID] "4G MODEM - disconnecting ..."
+	$LOGS "4G MODEM - disconnecting ..."
 	watchdog del
 	dhcpc-release $PREFIX
 
@@ -371,10 +372,10 @@ disconnect() {
 		nvram set "$PREFIX"_modem_pdh=""
 		nvram set "$PREFIX"_modem_clid=""
 
-		logger -t switch4g[$PID] "4G MODEM - release Client ID: $CLID"
+		$LOGS "4G MODEM - release Client ID: $CLID"
 	fi
 
-	logger -t switch4g[$PID] "4G MODEM - disconnected"
+	$LOGS "4G MODEM - disconnected"
 }
 
 switchMode() {
@@ -386,7 +387,7 @@ switchMode() {
 		modprobe -r $MODULE
 	done
 
-	logger -t switch4g[$PID] "4G MODEM - detecting ..."
+	$LOGS "4G MODEM - detecting ..."
 
 	# detect modem
 	DEVICES=$(lsusb | awk '{print $6}')
@@ -421,7 +422,7 @@ switchMode() {
 					COUNT=$((COUNT+1))
 				done
 
-				logger -t switch4g[$PID] "4G MODEM FOUND - $SWITCH - switching ..."
+				$LOGS "4G MODEM FOUND - $SWITCH - switching ..."
 
 				/usr/sbin/usb_modeswitch -Q -c /etc/usb_modeswitch.d/$SWITCH -v $DV -p $DP -b $DB -g $DG
 
@@ -441,7 +442,7 @@ switchMode() {
 
 				PRODUCT=$(cat "$PATHDEV"/idProduct)
 				[ -n "$PRODUCT" ] && {
-					logger -t switch4g[$PID] "4G MODEM ready - $VENDOR:$PRODUCT"
+					$LOGS "4G MODEM ready - $VENDOR:$PRODUCT"
 					SWITCHED=1
 					break
 				}
@@ -450,7 +451,7 @@ switchMode() {
 	done
 
 	[ "$SWITCHED" -eq 0 ] && {
-		logger -t switch4g[$PID] "4G MODEM not found in USB_ModeSwitch database - already switched? Loading modules..."
+		$LOGS "4G MODEM not found in USB_ModeSwitch database - already switched? Loading modules..."
 	}
 }
 
@@ -477,7 +478,7 @@ searchWAN() {
 			}
 		done
 
-		logger -t switch4g[$PID] "4G MODEM WAN ($MODULE) not found ..."
+		$LOGS "4G MODEM WAN ($MODULE) not found ..."
 		modprobe -r $MODULE
 		sleep 1
 	done
@@ -488,7 +489,7 @@ searchWAN() {
 		nvram set "$PREFIX"_modem_modules="$MODULE"	# add first one
 		nvram set "$PREFIX"_modem_if="$WAN"
 		nvram set "$PREFIX"_modem_type="$MTYPE"
-		logger -t switch4g[$PID] "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
+		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
 	} || {
 		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
 			watchdog add
@@ -513,7 +514,7 @@ searchDiag() {
 		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 
 		[ -z "$TTYS" ] && {
-			logger -t switch4g[$PID] "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
+			$LOGS "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
 			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
 
 			[ "$IS_MLOADED" -gt 0 ] && {
@@ -527,7 +528,7 @@ searchDiag() {
 		}
 
 		[ -n "$TTYS" ] && {
-			logger -t switch4g[$PID] "4G MODEM ready - DIAG(s) found ("$TTYS")"
+			$LOGS "4G MODEM ready - DIAG(s) found ("$TTYS")"
 			DEVNR=$(echo "$TTYS" | cut -d " " -f1)
 			MODIN=$(nvram get "$PREFIX"_modem_modules)
 			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
@@ -538,7 +539,7 @@ searchDiag() {
 		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" -e "s/.*://g")
 
 		[ -n "$TTYS" ] && {
-			logger -t switch4g[$PID] "4G MODEM ready - DIAG found ("$TTYS")"
+			$LOGS "4G MODEM ready - DIAG found ("$TTYS")"
 			DEVNR=$TTYS
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
 		}
@@ -575,7 +576,7 @@ modemReset() {
 	DEVNR=$(nvram get "$PREFIX"_modem_dev)
 	local DEVALL j
 
-	logger -t switch4g[$PID] "4G MODEM - resetting the modem ..."
+	$LOGS "4G MODEM - resetting the modem ..."
 
 	rm -f $READYFILE > /dev/null 2>&1
 
@@ -589,7 +590,7 @@ modemReset() {
 		# TODO: is it possible at all? maybe just remove qmi_wwan module...
 	fi
 
-	logger -t switch4g[$PID] "4G MODEM - reset of the modem is done"
+	$LOGS "4G MODEM - reset of the modem is done"
 }
 
 setPIN() {
@@ -619,7 +620,7 @@ setPIN() {
 	}
 
 	[ "$MTYPE" == "qmi_wwan" ] && {
-		logger -t switch4g[$PID] "4G MODEM - Waiting for SIM initialization"
+		$LOGS "4G MODEM - Waiting for SIM initialization"
 
 		while uqmiCall "--get-pin-status" | grep '"UIM uninitialized"'; do
 			[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found!"
@@ -643,7 +644,7 @@ setPIN() {
 		watchdog del
 		wayOut "4G MODEM - SIM locked - connection process terminated!"
 	} || {
-		logger -t switch4g[$PID] "4G MODEM - SIM ready"
+		$LOGS "4G MODEM - SIM ready"
 	}
 }
 
@@ -721,14 +722,14 @@ signal() {
 				}
 
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
+				$LOGS "4G MODEM Current Mode: $SPEED"
 				[ -n "$CERSSI" ] && {
-					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB, CQI1 $CQI1, CQI2 $CQI2"
+					$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB, CQI1 $CQI1, CQI2 $CQI2"
 				} || {
-					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+					$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
 				}
-				[ -n "$HFREQINFO" ] && logger -t switch4g[$PID] "4G MODEM Carrier: $BBAND, Downlink FQ $DOWNFREQ MHz, Uplink FQ $UPFREQ MHz, Downlink BW $DOWNWIDTH MHz, Uplink BW $UPWIDTH MHz"
-				[ -n "$LOCINFO" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
+				[ -n "$HFREQINFO" ] && $LOGS "4G MODEM Carrier: $BBAND, Downlink FQ $DOWNFREQ MHz, Uplink FQ $UPFREQ MHz, Downlink BW $DOWNWIDTH MHz, Uplink BW $UPWIDTH MHz"
+				[ -n "$LOCINFO" ] && $LOGS "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
 			;;
 		     "WCDMA")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
@@ -746,20 +747,20 @@ signal() {
 					CELL=$(echo "$LOCINFO" | cut -d "," -f4)
 				}
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSSP $RSRP dBm, ECIO $ECIO dB"
-				[ -n "$LOCINFO" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
+				$LOGS "4G MODEM Current Mode: $SPEED"
+				$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSSP $RSRP dBm, ECIO $ECIO dB"
+				[ -n "$LOCINFO" ] && $LOGS "4G MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
 			;;
 		     "GSM")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
 				RSSI=$(awk "BEGIN {print -120+$VALUE}")
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: $SPEED"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
+				$LOGS "4G MODEM Current Mode: $SPEED"
+				$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm"
 			;;
 		     *)
-				logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+				$LOGS "4G MODEM Current Mode: unknown"
+				$LOGS "4G MODEM Signal Strength: no data"
 			;;
 		esac
 
@@ -776,28 +777,28 @@ signal() {
 				RSRP=$(echo "$SIGNAL" | cut -d "," -f4 | cut -d ":" -f2)
 				SINR=$(echo "$SIGNAL" | cut -d ":" -f6 | cut -d "}" -f1)
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: LTE"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
-				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+				$LOGS "4G MODEM Current Mode: LTE"
+				$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+				$LOGS "4G MODEM BTS: MCCMNC $MCCMNC"
 			;;
 		     "wcdma" | "umts")
 				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
 				ECIO=$(echo "$SIGNAL" | cut -d ":" -f4 | cut -d "}" -f1)
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: $(echo $SPEED | tr '[a-z]' '[A-Z]')"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, ECIO $ECIO dB"
-				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+				$LOGS "4G MODEM Current Mode: $(echo $SPEED | tr '[a-z]' '[A-Z]')"
+				$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, ECIO $ECIO dB"
+				$LOGS "4G MODEM BTS: MCCMNC $MCCMNC"
 			;;
 		     "gsm")
 				RSSI=$(echo "$SIGNAL" | cut -d ":" -f3 | cut -d "}" -f1)
 				nvram set "$PREFIX"_modem_signal="$RSSI"
-				logger -t switch4g[$PID] "4G MODEM Current Mode: GSM"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
-				logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC"
+				$LOGS "4G MODEM Current Mode: GSM"
+				$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm"
+				$LOGS "4G MODEM BTS: MCCMNC $MCCMNC"
 			;;
 		     *)
-				logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
-				logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+				$LOGS "4G MODEM Current Mode: unknown"
+				$LOGS "4G MODEM Signal Strength: no data"
 			;;
 		esac
 
@@ -849,29 +850,29 @@ signal() {
 					esac
 
 					nvram set "$PREFIX"_modem_signal="$RSSI"
-					logger -t switch4g[$PID] "4G MODEM Current Mode: LTE"
-					[ -n "$RSSI" ] && logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
-					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, LAC 0x$(printf "%X" $LAC) ($LAC), PCI 0x$(printf "%X" $PCI) ($PCI), Cell ID 0x$(printf "%X" $CELL) ($CELL)"
-					logger -t switch4g[$PID] "4G MODEM Band(s): $BBAND"
+					$LOGS "4G MODEM Current Mode: LTE"
+					[ -n "$RSSI" ] && $LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
+					[ -n "$CELL" ] && $LOGS "4G MODEM BTS: MCCMNC $MCCMNC, LAC 0x$(printf "%X" $LAC) ($LAC), PCI 0x$(printf "%X" $PCI) ($PCI), Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+					$LOGS "4G MODEM Band(s): $BBAND"
 				;;
 			     "02")
 					ECIO=$(echo "$SIGNAL" | grep "<ecio>" | cut -d '>' -f2 | cut -d 'd' -f1)
 					RSCP=$(echo "$SIGNAL" | grep "<rscp>" | cut -d '>' -f2 | cut -d 'd' -f1)
 
 					nvram set "$PREFIX"_modem_signal="$RSSI"
-					logger -t switch4g[$PID] "4G MODEM Current Mode: UMTS"
-					[ -n "$RSSI" ] && logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm, RSCP $RSCP dBm, ECIO $ECIO dB"
-					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+					$LOGS "4G MODEM Current Mode: UMTS"
+					[ -n "$RSSI" ] && $LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm, RSCP $RSCP dBm, ECIO $ECIO dB"
+					[ -n "$CELL" ] && $LOGS "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
 				;;
 			     "01")
 					nvram set "$PREFIX"_modem_signal="$RSSI"
-					logger -t switch4g[$PID] "4G MODEM Current Mode: GSM"
-					logger -t switch4g[$PID] "4G MODEM Signal Strength: RSSI $RSSI dBm"
-					[ -n "$CELL" ] && logger -t switch4g[$PID] "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
+					$LOGS "4G MODEM Current Mode: GSM"
+					$LOGS "4G MODEM Signal Strength: RSSI $RSSI dBm"
+					[ -n "$CELL" ] && $LOGS "4G MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
 				;;
 			     *)
-					logger -t switch4g[$PID] "4G MODEM Current Mode: unknown"
-					logger -t switch4g[$PID] "4G MODEM Signal Strength: no data"
+					$LOGS "4G MODEM Current Mode: unknown"
+					$LOGS "4G MODEM Signal Strength: no data"
 				;;
 			esac
 		}
@@ -886,14 +887,14 @@ checkPid() {
 		cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
 
 		[ $? -eq 0 ] && {
-			logger -t switch4g[$PID] "4G MODEM - another process in action - exiting"
+			$LOGS "4G MODEM - another process in action - exiting"
 			exit 0
 		} || {
 			[ "$PRIORITY" -eq 0 ] && return
 			# Process not found assume not running
 			echo $PID > $PIDFILE
 			[ $? -ne 0 ] && {
-				logger -t switch4g[$PID] "4G MODEM - could not create PID file"
+				$LOGS "4G MODEM - could not create PID file"
 				exit 0
 			}
 		}
@@ -901,7 +902,7 @@ checkPid() {
 		[ "$PRIORITY" -eq 0 ] && return
 		echo $PID > $PIDFILE
 		[ $? -ne 0 ] && {
-			logger -t switch4g[$PID] "4G MODEM - could not create PID file"
+			$LOGS "4G MODEM - could not create PID file"
 			exit 0
 		}
 	}
@@ -940,7 +941,7 @@ wayOut() {
 	local TEXT="$1"
 	[[ -z $TEXT ]] && TEXT="4G Modem - exiting"
 
-	logger -t switch4g[$PID] "$TEXT"
+	$LOGS "$TEXT"
 	rm -f $READYFILE > /dev/null 2>&1
 	rm -f $PIDFILE > /dev/null 2>&1
 	exit 0
