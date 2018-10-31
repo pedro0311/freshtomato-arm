@@ -42,7 +42,7 @@ connect() {
 		[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found - connection terminated!"
 	}
 
-	$$LOGS "4G MODEM - connecting ..."
+	$LOGS "4G MODEM - connecting ..."
 
 	# non-hilink/1st type
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
@@ -140,7 +140,7 @@ connect() {
 					MODEBAND=$RESBAND
 				}
 
-				$$LOGS "4G MODEM - $TXTLOG (device $i)"
+				$LOGS "4G MODEM - $TXTLOG (device $i)"
 
 				[ "$SPEED" != "$RESSPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
 					MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
@@ -154,13 +154,13 @@ connect() {
 				CGPADDR=$(MODE="AT+CGPADDR=1" gcom -d "$i" -s /etc/gcom/setverbose.gcom)
 
 				[ "$(echo "$CGPADDR" | grep "+CGPADDR:" | wc -l)" -eq 1 ] && {
-					$$LOGS "4G MODEM - connected (device $i) ..."
+					$LOGS "4G MODEM - connected (device $i) ..."
 					CONNECTED=1
 					nvram set "$PREFIX"_modem_dev="$i"
 					nvram commit
 					break
 				} || {
-					$$LOGS "4G MODEM - connection failed (device $i) [$COUNT] ..."
+					$LOGS "4G MODEM - connection failed (device $i) [$COUNT] ..."
 					COUNT=$((COUNT+1))
 					sleep 3
 				}
@@ -217,13 +217,13 @@ connect() {
 				wayOut "Device only supports raw-ip mode but is missing this required driver attribute: /sys/class/net/$IFA/qmi/raw_ip"
 			}
 
-			$$LOGS "4G MODEM - device does not support 802.3 mode. Informing driver of raw-ip only for $IFA ..."
+			$LOGS "4G MODEM - device does not support 802.3 mode. Informing driver of raw-ip only for $IFA ..."
 			echo "Y" > /sys/class/net/$IFA/qmi/raw_ip
 		}
 
 		uqmiCall "--sync"
 
-		$$LOGS "4G MODEM - waiting for network registration ..."
+		$LOGS "4G MODEM - waiting for network registration ..."
 
 		while [ $(echo "$(uqmiCall "--get-serving-system")" | grep searching | wc -l) -ne 0 ]; do
 			[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found!"
@@ -237,11 +237,11 @@ connect() {
 
 		# set network type (all,lte,umts,cdma,td-scdma)
 		uqmiCall "--set-network-modes $SPEEDTXT"
-		$$LOGS "4G MODEM - network type is set to '$SPEEDTXT'"
+		$LOGS "4G MODEM - network type is set to '$SPEEDTXT'"
 
 		# set roaming
 		uqmiCall "--set-network-roaming $ROAMTXT"
-		$$LOGS "4G MODEM - roaming is set to '$ROAMTXT'"
+		$LOGS "4G MODEM - roaming is set to '$ROAMTXT'"
 
 		# get client id for wds
 		CLID=$(uqmiCall "--get-client-id wds")
@@ -249,7 +249,7 @@ connect() {
 		[ $? -ne 0 ] && wayOut "4G MODEM - unable to obtain client ID!"
 
 		nvram set "$PREFIX"_modem_clid="$CLID"
-		$$LOGS "4G MODEM - got new client ID: $CLID"
+		$LOGS "4G MODEM - got new client ID: $CLID"
 
 		uqmiCall "--set-client-id wds,$CLID --set-ip-family ipv4"
 
@@ -260,7 +260,7 @@ connect() {
 
 				case $PDH in
 				     ''|*[!0-9]*)
-						$$LOGS "4G MODEM - connection failed: $PDH (device $DEVNR) [$COUNT] ..."
+						$LOGS "4G MODEM - connection failed: $PDH (device $DEVNR) [$COUNT] ..."
 						COUNT=$((COUNT+1))
 						sleep 5
 					;;
