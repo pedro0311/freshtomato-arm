@@ -12,6 +12,7 @@ PREFIX="$1"
 PID=$$
 PIDFILE="/var/run/switch4g_$PREFIX.pid"
 READYFILE="/tmp/switch4g_$PREFIX.ready"
+DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 STATEFILE="/tmp/state_$PREFIX"
 MODE=$(nvram get "$PREFIX"_proto)
 LOGS="logger -t switch4g[$PID]"
@@ -35,7 +36,7 @@ connect() {
 	BAND=$(nvram get "$PREFIX"_modem_band)
 	ROAMING=$(nvram get "$PREFIX"_modem_roam)
 	IFA=$(nvram get "$PREFIX"_modem_if)
-	local TTY DEVS SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
+	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
 	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
@@ -73,11 +74,11 @@ connect() {
 		     *)       BANDTXT="unknown"       ;;
 		esac
 
-		TTY=$(ls /dev/ttyUSB* | grep -v "$DEVNR")
-		DEVS="$DEVNR $TTY $DEVNR $TTY $DEVNR $TTY"	# try 3x on every interface
+		TTY=$(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")
+		DEVALL="$DEVNR $TTY $DEVNR $TTY $DEVNR $TTY"	# try 3x on every interface
 
 		while [ "$CONNECTED" -eq 0 ]; do
-			for i in $DEVS; do
+			for i in $DEVALL; do
 
 				# disconnect first
 				MODE="AT^NDISDUP=1,0" gcom -d "$i" -s /etc/gcom/setmode.gcom
@@ -356,7 +357,7 @@ disconnect() {
 	dhcpc-release $PREFIX
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
-		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for j in $DEVALL; do	# on every interface
 			MODE="AT^NDISDUP=1,0" gcom -d "$j" -s /etc/gcom/setmode.gcom
@@ -529,6 +530,7 @@ searchDiag() {
 
 		[ -n "$TTYS" ] && {
 			$LOGS "4G MODEM ready - DIAG(s) found ("$TTYS")"
+			echo $TTYS > $DIAGSFILE
 			DEVNR=$(echo "$TTYS" | cut -d " " -f1)
 			MODIN=$(nvram get "$PREFIX"_modem_modules)
 			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
@@ -581,7 +583,7 @@ modemReset() {
 	rm -f $READYFILE > /dev/null 2>&1
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
-		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for j in $DEVALL; do	# find working interface
 			MODE="AT^RESET" gcom -d "$j" -s /etc/gcom/setmode.gcom
@@ -600,7 +602,7 @@ setPIN() {
 
 	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ] && {
 		[ "$IS_PIN" -eq 1 ] && {
-			DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+			DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 			for i in $DEVALL; do	# find working interface
 				[ -z $(MODE="ATI" gcom -d "$i" -s /etc/gcom/setverbose.gcom | grep "OK" | tr -d '\r') ] && {
@@ -654,7 +656,7 @@ signal() {
 	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND BBAND="" i
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
-		DEVALL="$DEVNR $(ls /dev/ttyUSB* | grep -v "$DEVNR")"
+		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for i in $DEVALL; do	# find working interface
 			HCSQ=$(MODE="AT^HCSQ?" gcom -d "$i" -s /etc/gcom/setverbose.gcom | grep "HCSQ:" | tr -d '\r')
