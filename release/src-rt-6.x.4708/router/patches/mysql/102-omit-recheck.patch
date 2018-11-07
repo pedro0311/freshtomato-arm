@@ -1,5 +1,5 @@
 --- mysql/Makefile.in
-+++ Makefile.in
++++ mysql/Makefile.in
 @@ -469,7 +469,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
  	esac;
  
