@@ -27,6 +27,11 @@ download() {
 	COUNT=1
 	ENTRIES=0
 
+	# fix race condition on wan-up
+	sleep 30
+
+	$LOGS "prepare to download ..."
+
 	# clean-up first
 	rm -rf $PREFIX/*
 	rm -f $FINAL
@@ -137,7 +142,6 @@ else
 			TIME_2HRS=$(($(date +%s)-7200))
 
 			if [ "$TIME_FILE" -lt "$TIME_2HRS" ]; then
-				$LOGS "prepare to download ..."
 				download
 			else
 				COUNT=$(cat $FINAL | wc -l)
@@ -145,7 +149,6 @@ else
 				cru d adblockDL
 			fi
 		else
-			$LOGS "prepare to download ..."
 			download
 		fi
 
