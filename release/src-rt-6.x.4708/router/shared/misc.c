@@ -290,6 +290,18 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 	if (model == MODEL_R6300v2) {
 		led(LED_WHITE,mode);
 	}
+	if (model == MODEL_R1D) {
+		// red led on / off
+		// led(LED_AOSS,mode);
+		// led(LED_WHITE,mode);
+		if (mode) {
+			led(LED_DIAG,LED_OFF);
+		//	led(LED_AMBER,LED_OFF);
+			led(LED_WHITE,LED_ON);
+		} else {
+			led(LED_WHITE,LED_OFF);
+		}
+	}
 
 	return mode;
 }
