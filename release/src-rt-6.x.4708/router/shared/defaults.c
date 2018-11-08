@@ -1070,7 +1070,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_custom",		""				, 0 },
 	{ "vpn_server2_static",		""				, 0 },
 	{ "vpn_server2_ca",		""				, 0 },
-	{ "vpn_server1_ca_key",		""				, 0 },
+	{ "vpn_server2_ca_key",		""				, 0 },
 	{ "vpn_server2_crt",		""				, 0 },
 	{ "vpn_server2_key",		""				, 0 },
 	{ "vpn_server2_dh",		""				, 0 },
