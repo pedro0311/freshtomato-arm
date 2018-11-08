@@ -246,6 +246,16 @@ int do_led(int which, int mode)
 
 	if ((which < 0) || (which >= LED_COUNT)) return ret;
 
+	// stealth mode
+	if (nvram_match("stealth_mode", "1")) {
+		// do OFF all LEDs first if enabled?
+
+		if (nvram_match("stealth_iled", "1") && which == LED_WHITE)
+			{} // don't disable INTERNET LED
+		else
+			return ret;
+	}
+
 	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : get_model()) {
 	case MODEL_WRT54G:
 		if (check_hw_type() == HW_BCM4702) {
