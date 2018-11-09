@@ -969,10 +969,10 @@ static inline void usbled_proc(char *device, int add)
 	}
 	/*End USB LED Patch provided by AndreDVJ at:  http://www.linksysinfo.org/index.php?threads/tomato-for-arm-routers.69719/page-21#post-269691  - Some fortification added by NULLing out vars after use*/
 
-	if (get_model() == MODEL_WS880) {
+	/* if (get_model() == MODEL_WS880) {
 		do_led(LED_USB3, (add) ? LED_ON : LED_OFF);
 		return;
-	}
+	} */
 
 	if (do_led(LED_USB, LED_PROBE) != 255) {
 		strncpy(param, device, sizeof(param));

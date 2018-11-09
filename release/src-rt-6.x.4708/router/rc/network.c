@@ -775,7 +775,7 @@ void enable_ipv6(int enable)
 {
 	DIR *dir;
 	struct dirent *dirent;
-	char s[256];
+	char s[128];
 
 	if ((dir = opendir("/proc/sys/net/ipv6/conf")) != NULL) {
 		while ((dirent = readdir(dir)) != NULL) {
@@ -786,7 +786,7 @@ void enable_ipv6(int enable)
 		    /*do nothing*/
 		  }
 		  else {
-		    sprintf(s, "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
+		    snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
 		    f_write_string(s, enable ? "0" : "1", 0, 0);
 		  }
 		}
@@ -796,13 +796,22 @@ void enable_ipv6(int enable)
 
 void accept_ra(const char *ifname)
 {
-	char s[256];
+	char s[128];
 
-	sprintf(s, "/proc/sys/net/ipv6/conf/%s/accept_ra", ifname);
+	/* possible values for accept_ra:
+	   0 Do not accept Router Advertisements
+	   1 Accept Router Advertisements if forwarding is disabled
+	   2 Overrule forwarding behaviour. Accept Router Advertisements even if forwarding is enabled
+	*/
+	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/accept_ra", ifname);
 	f_write_string(s, "2", 0, 0);
 
-	sprintf(s, "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
-	f_write_string(s, "2", 0, 0);
+	/* possible values for forwarding:
+	   0 Forwarding disabled
+	   1 Forwarding enabled
+	*/
+	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
+	f_write_string(s, "1", 0, 0);
 }
 #endif
 

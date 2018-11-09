@@ -176,6 +176,68 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 }
 // --- move end ---
 
+/*
+ * Led control code used by Stealth Mode. This function
+ * use other methods of enabling/disabling a LED
+ * beside gpio - required for some models
+ */
+void do_led_hw(int which, int mode)
+{
+	int model;
+	model = get_model();
+
+	switch(which) {
+		case LED_WLAN:
+			if (model == MODEL_RTAC56U) {
+				if (mode == LED_ON)
+					eval("wl", "-i", "eth1", "ledbh", "3", "7");
+				else if (mode == LED_OFF)
+					eval("wl", "-i", "eth1", "ledbh", "3", "0");
+			} else if (model == MODEL_RTAC68U) {
+				if (mode == LED_ON)
+					eval("wl", "-i", "eth1", "ledbh", "10", "7");
+				else if (mode == LED_OFF)
+					eval("wl", "-i", "eth1", "ledbh", "10", "0");
+			}
+			break;
+		case LED_5G:
+			if (model == MODEL_RTAC56U) {
+				if (mode == LED_ON)
+					eval("wl", "-i", "eth2", "ledbh", "3", "7");
+				else if (mode == LED_OFF)
+					eval("wl", "-i", "eth2", "ledbh", "3", "0");
+			} else if (model == MODEL_RTAC68U) {
+				if (mode == LED_ON)
+		                        eval("wl", "-i", "eth2", "ledbh", "10", "7");
+				else if (mode == LED_OFF)
+					eval("wl", "-i", "eth2", "ledbh", "10", "0");
+			}
+			break;
+		case LED_BRIDGE:
+			if ((model == MODEL_RTAC56U) || (model == MODEL_RTAC68U)) { // probably will work for all asus on 4708/9
+				if (mode == LED_ON) {
+ 					eval("et", "robowr", "0x00", "0x18", "0x01ff");
+					eval("et", "robowr", "0x00", "0x1a", "0x01ff");
+				} else if (mode == LED_OFF) {
+					eval("et", "robowr", "0x00", "0x18", "0x01e0");
+					eval("et", "robowr", "0x00", "0x1a", "0x01e0");
+				}
+			}
+			break;
+		case LED_WHITE:
+			if ((model == MODEL_R7000) || (model == MODEL_R8000)) {
+				if (mode == LED_ON) {
+					//activate WAN port led
+					system("/usr/sbin/et robowr 0x0 0x10 0x3000");
+					system("/usr/sbin/et robowr 0x0 0x12 0x78");
+					system("/usr/sbin/et robowr 0x0 0x14 0x01");
+				} else if (mode == LED_OFF) {
+					{} // FIXME!
+				}
+			}
+			break;
+	}
+}
 
 int do_led(int which, int mode)
 {
@@ -221,17 +283,17 @@ int do_led(int which, int mode)
 	static int ac68u[]	= { 100,  255,     3,  255,  255,    4,  100,    0,   14,  100,  255 };
 	static int ac56u[]	= { 100,  255,   255,  255,  255,   -3,  100,    0,   14,  100,  255 };
 	static int n18u[]	= { 255,  255,     6,  255,  255,  255,    9,    3,   14,  255,  255 };
-	static int r6250[]	= {  11,  255,    15,  255,  255,    1,  255,    8,    8,  255,  255 };
-	static int r6300v2[]	= {  11,  255,    10,  255,  255,    1,  255,    8,    8,  255,  255 };
-	static int r6400[]	= {   9,   -2,   255,  255,  255,  -11,  255,   12,   13,    8,  255 };
-	static int r7000[]	= {  13,  255,   255,  255,  255,  -15,  255,  -17,  -18,   12,  255 };
+	static int r6250[]	= {  11,  255,    15,    3,  255,    1,  255,     8,   8,  255,  255 };
+	static int r6300v2[]	= {  11,  255,    10,    3,  255,    1,  255,     8,   8,  255,  255 };
+	static int r6400[]	= {   9,  255,     7,    6,  255,  -11,  255,    12,  13,    8,  255 };
+	static int r7000[]	= {  13,  255,     9,    3,  255,  -15,  255,  -17,  -18,   12,  255 };
 	static int ac15[]	= { 255,    0,   255,  255,  255,   -6,  255,  -14,  255,   -2,  255 };
 	static int dir868[]	= { 255,  255,     3,  255,  255,   -0,  255,  255,  255,  255,  255 };
 // Assume the LED is the same as ea6700, needs to be verified
 	static int ea6400[]	= { 255,  255,     8,   255, 255,  255,  255,  255,  255,  255,  255 };
 	static int ea6700[]	= { 255,  255,    -6,   -6,  255,  255,  255,  255,  255,  255,  255 };
 	static int ea6900[]	= { 255,  255,     8,  255,  255,    6,  255,  255,  255,  255,  255 };
-	static int ws880[]	= {   0,  255,   -12,  255,  255,    6,    1,  255,   14,  255,  255 };
+	static int ws880[]	= {   0, 255,   -12,  255,  255,    6,    1,    14,   14,    6,  255 };
 	static int r1d[]	= { 255,    1,   255,    2,  255,    3,   -8,  255,  255,  255,  255 };
 	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255,  255 };
 #endif
@@ -249,7 +311,23 @@ int do_led(int which, int mode)
 
 	if ((which < 0) || (which >= LED_COUNT)) return ret;
 
-	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : get_model()) {
+	int model = get_model();
+
+	// stealth mode switch
+	if (nvram_match("stealth_mode", "1")) {
+		if (nvram_match("stealth_iled", "1") && which == LED_WHITE)
+			{} // don't disable INTERNET LED
+		else if (model == MODEL_R1D && which == LED_BRIDGE)
+			{} // don't disable fan control PIN on R1D
+		else
+			if (mode != LED_PROBE)
+				mode = LED_OFF;	// override mode ON to OFF for all other leds
+			//return ret;
+	}
+	// et / wl leds control
+	do_led_hw(which, mode);
+
+	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
 	case MODEL_WRT54G:
 		if (check_hw_type() == HW_BCM4702) {
 			// G v1.x
@@ -293,7 +371,7 @@ int do_led(int which, int mode)
 	case MODEL_WZRG108:
 		b = wzrg54[which];
 		break;
-/*		
+/*
 	case MODEL_WHR2A54G54:
 		if (which != LED_DIAG) return ret;
 		b = 7;
@@ -363,8 +441,8 @@ int do_led(int which, int mode)
 	case MODEL_D1800H:
 		if (which == LED_DIAG) {
 			// power led gpio: 0x02 - white, 0x13 - red 
-			b = (mode) ? 13 : 2;
-			c = (mode) ? 2 : 13;
+			b = (mode) ? 13 : -2;
+			c = (mode) ?  2 : 13;
 		} else
 			b = d1800h[which];
 		break;
@@ -372,7 +450,7 @@ int do_led(int which, int mode)
 	case MODEL_WNR3500LV2:
 		if (which == LED_DIAG) {
 			// power led gpio: 0x03 - green, 0x07 - amber
-			b = (mode) ? 7 : 3;
+			b = (mode) ? 7 :-3;
 			c = (mode) ? 3 : 7;
 		} else
 			b = wnr3500[which];
@@ -380,7 +458,7 @@ int do_led(int which, int mode)
 	case MODEL_WNR2000v2:
 		if (which == LED_DIAG) {
 			// power led gpio: 0x01 - green, 0x02 - amber
-			b = (mode) ? 2 : 1;
+			b = (mode) ? 2 :-1;
 			c = (mode) ? 1 : 2;
 		} else
 			b = wnr2000v2[which];
@@ -392,7 +470,7 @@ int do_led(int which, int mode)
 	case MODEL_F5D8235v3:
 		if (which == LED_DIAG) {
 			// power led gpio: 10 - green, 11 - red
-			b = (mode) ? 11 : -10;
+			b = (mode) ?  11 :-10;
 			c = (mode) ? -10 : 11;
 		} else
 			b = f7d[which];
@@ -453,7 +531,7 @@ int do_led(int which, int mode)
 	case MODEL_R6250:
 		if (which == LED_DIAG) {
 			// power led gpio: -3 - orange, -2 - green
-			b = (mode) ? 2 : 3;
+			b = (mode) ? 2 :-3;
 			c = (mode) ? 3 : 2;
 		} else
 			b = r6250[which];
@@ -461,7 +539,7 @@ int do_led(int which, int mode)
 	case MODEL_R6300v2:
 		if (which == LED_DIAG) {
 			// power led gpio: -3 - orange, -2 - green
-			b = (mode) ? 2 : 3;
+			b = (mode) ? 2 :-3;
 			c = (mode) ? 3 : 2;
 		} else
 			b = r6300v2[which];
@@ -469,7 +547,7 @@ int do_led(int which, int mode)
 	case MODEL_R6400:
 		if (which == LED_DIAG) {
 			// power led gpio: -2 - orange, -1 - white
-			b = (mode) ? 1 : 2;
+			b = (mode) ? 1 :-2;
 			c = (mode) ? 2 : 1;
 		} else
 			b = r6400[which];
@@ -477,7 +555,7 @@ int do_led(int which, int mode)
 	case MODEL_R7000:
 		if (which == LED_DIAG) {
 			// power led gpio: -3 - orange, -2 - white
-			b = (mode) ? 2 : 3;
+			b = (mode) ? 2 :-3;
 			c = (mode) ? 3 : 2;
 		} else
 			b = r7000[which];
@@ -496,17 +574,26 @@ int do_led(int which, int mode)
 	case MODEL_WS880:
 		b = ws880[which];
 		break;
-	case MODEL_R1D:
-		if (which == LED_DIAG) {
-			// power led gpio: -2 - orange, -3 - blue
-			b = (mode) ? 3 : 2;
-			c = (mode) ? 2 : 3;
-		} else
+	case MODEL_R1D: // power led gpio: -1 - red, -2 - orange, -3 - blue
+		if (which == LED_WHITE) {
+			if (!nvram_match("stealth_mode","1")) { // don't turn orange led on LED_OFF
+				// blue / orange switch
+				b = (mode) ?  3 :-2;
+				c = (mode) ?  2 : 3;
+			}
+/*			// blue / red switch
+			b = (mode) ?  3 :-1;
+			c = (mode) ?  1 : 3;
+		} else if (which == LED_DIAG) {
+			// red / orange switch (don't turn orange led back when off)
+			b = (mode) ?  1 : 2;
+			c = (mode) ?  2 :-1;
+*/		} else
 			b = r1d[which];
 		break;
 	case MODEL_EA6400: //need to be verified
 		b = ea6400[which];
-		break;		
+		break;
 	case MODEL_EA6700:
 	case MODEL_EA6900: //need to be verified
 		b = ea6700[which];
@@ -573,6 +660,7 @@ int do_led(int which, int mode)
 SET:
 	if (b < 16) {
 		if (mode != LED_PROBE) {
+			/* write b */
 			gpio_write(1 << b, mode);
 
 			if (c < 0) {
@@ -580,6 +668,7 @@ SET:
 				else c = -c;
 			}
 			else mode = !mode;
+			/* write c */
 			if (c < 16) gpio_write(1 << c, mode);
 		}
 	}

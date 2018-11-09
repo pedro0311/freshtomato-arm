@@ -294,7 +294,6 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 		led(LED_WHITE,mode);
 	}
 
-
 	return mode;
 }
 
