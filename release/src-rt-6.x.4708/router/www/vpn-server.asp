@@ -731,7 +731,7 @@ for (i = 0; i < tabs.length; ++i)
 	]);
 	W('<\/div>');
 	W('<div id=\''+t+'-keys\'>');
-	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>.<\/p>');
+	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>. All 6 keys take about 14kB of NVRAM, so check first if there is enough free space!<\/p>');
 	createFieldTable('', [
 		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ),
 			prefix: '<div id="'+t+'_static_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating static key...<img src="spin.gif"><\/p><\/div>' },
