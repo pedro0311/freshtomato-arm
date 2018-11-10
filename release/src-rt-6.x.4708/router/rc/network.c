@@ -770,6 +770,19 @@ void accept_ra(const char *ifname)
 	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
 	f_write_string(s, "1", 0, 0);
 }
+
+void accept_ra_reset(const char *ifname)
+{
+	char s[128];
+
+	/* set accept_ra (back) to 1 (default) */
+	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/accept_ra", ifname);
+	f_write_string(s, "1", 0, 0);
+
+	/* leave forwarding like it is right now and let function enable_ip6_forward(void) decide */
+	//snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
+	//f_write_string(s, "1", 0, 0);
+}
 #endif
 
 void start_lan(void)

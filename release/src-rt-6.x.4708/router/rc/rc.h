@@ -195,9 +195,11 @@ extern void load_wl(void);
 #ifdef TCONFIG_IPV6
 extern void enable_ipv6(int enable);
 extern void accept_ra(const char *ifname);
+extern void accept_ra_reset(const char *ifname);
 #else
 #define enable_ipv6(enable) do {} while (0)
 #define accept_ra(ifname) do {} while (0)
+#define accept_ra_reset(ifname) do {} while (0)
 #endif
 
 // dhcpc.c
