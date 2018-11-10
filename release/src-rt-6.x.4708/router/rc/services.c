@@ -1079,9 +1079,9 @@ void start_ipv6(void)
 	}
 
 	if (service != IPV6_DISABLED) {
-		/* Check if "ipv6_accept_ra" (bit 1) for lan is enabled (via GUI, basic-ipv6.asp) and "ipv6_radvd" (SLAAC with dnsmasq) is disabled (via GUI, advanced-dhcpdns.asp) */
+		/* Check if "ipv6_accept_ra" (bit 1) for lan is enabled (via GUI, basic-ipv6.asp) and "ipv6_radvd" AND "ipv6_dhcpd" (SLAAC and/or DHCP with dnsmasq) is disabled (via GUI, advanced-dhcpdns.asp) */
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
-		if ((nvram_get_int("ipv6_accept_ra") & 0x02) != 0 && !nvram_get_int("ipv6_radvd")) {
+		if ((nvram_get_int("ipv6_accept_ra") & 0x02) != 0 && !nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd")) {
 			/* Check lan / br0 - If available then accept_ra for br0 */
 			if(strcmp(nvram_safe_get("lan_ipaddr"),"")!=0) {
 				accept_ra(nvram_safe_get("lan_ifname"));
