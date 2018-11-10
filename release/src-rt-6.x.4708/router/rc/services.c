@@ -1092,11 +1092,28 @@ void start_ipv6(void)
 			}
 			/* Check lan2 / br2 - If available then accept_ra for br2 */
 			if (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0) {
-			accept_ra(nvram_safe_get("lan2_ifname"));
+				accept_ra(nvram_safe_get("lan2_ifname"));
 			}
 			/* Check lan3 / br3 - If available then accept_ra for br3 */
 			if (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0) {
 				accept_ra(nvram_safe_get("lan3_ifname"));
+			}
+		} else {
+			/* Check lan / br0 - If available then set accept_ra default value for br0 */
+			if (strcmp(nvram_safe_get("lan_ipaddr"),"")!=0) {
+				accept_ra_reset(nvram_safe_get("lan_ifname"));
+			}
+			/* Check lan1 / br1 - If available then set accept_ra default value for br1 */
+			if (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0) {
+				accept_ra_reset(nvram_safe_get("lan1_ifname"));
+			}
+			/* Check lan2 / br2 - If available then set accept_ra default value for br2 */
+			if (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0) {
+				accept_ra_reset(nvram_safe_get("lan2_ifname"));
+			}
+			/* Check lan3 / br3 - If available then set accept_ra default value for br3 */
+			if (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0) {
+				accept_ra_reset(nvram_safe_get("lan3_ifname"));
 			}
 		}
 	}

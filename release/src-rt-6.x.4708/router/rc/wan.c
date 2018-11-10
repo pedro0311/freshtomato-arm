@@ -1090,6 +1090,9 @@ void start_wan6_done(const char *wan_ifname)
 		/* Check if "ipv6_accept_ra" (bit 0) for wan is enabled (via GUI, basic-ipv6.asp) */
 		if ((nvram_get_int("ipv6_accept_ra") & 0x01) != 0) {
 			accept_ra(wan_ifname);
+		} else {
+			/* set default value */
+			accept_ra_reset(wan_ifname);
 		}
 	}
 

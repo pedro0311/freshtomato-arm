@@ -461,7 +461,8 @@ createFieldTable('', [
 <div class="section">
 <br/>
 	<ul>
-	<li><b>Request PD Only:</b> Check for ISP's that require only a Prefix Delegation (usually PPPOE (VDSL2, ADSL1/2(+), Fiber) connections).</li>
+	<li><b>Request PD Only</b> - Check for ISP's that require only a Prefix Delegation (usually PPPOE (VDSL2, ADSL1/2(+), Fiber) connections).</li>
+	<li><b>Accept RA from LAN</b> - Please disable Announce IPv6 on LAN (SLAAC) at <a href="advanced-dhcpdns.asp">DHCP/DNS</a> before enable that option.</li>
 	</ul>
 </div>
 
