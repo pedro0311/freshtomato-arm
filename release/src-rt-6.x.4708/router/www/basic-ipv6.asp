@@ -21,7 +21,7 @@
 <script type="text/javascript" src="debug.js"></script>
 
 <script type="text/javascript">
-//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_accept_ra,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
+//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_radvd,ipv6_dhcpd,ipv6_accept_ra,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
 
 nvram.ipv6_accept_ra = fixInt(nvram.ipv6_accept_ra, 0, 3, 0);
 
@@ -220,6 +220,12 @@ function verifyFields(focused, quiet) {
 		E('_f_lan1_ipv6').disabled = false;
 		E('_f_lan2_ipv6').disabled = false;
 		E('_f_lan3_ipv6').disabled = false;
+	}
+
+	<!-- check if ipv6_radvd or ipv6_dhcpd is enabled for RA (dnsmasq); If YES, then disable Accept RA from LAN option -->
+	if (nvram.ipv6_radvd == '1' || nvram.ipv6_dhcpd == '1') {
+		E('_f_ipv6_accept_ra_lan').checked = false;
+		E('_f_ipv6_accept_ra_lan').disabled = true;
 	}
 
 	if (vis._ipv6_ifname == 1) {
@@ -462,7 +468,7 @@ createFieldTable('', [
 <br/>
 	<ul>
 	<li><b>Request PD Only</b> - Check for ISP's that require only a Prefix Delegation (usually PPPOE (VDSL2, ADSL1/2(+), Fiber) connections).</li>
-	<li><b>Accept RA from LAN</b> - Please disable Announce IPv6 on LAN (SLAAC) at <a href="advanced-dhcpdns.asp">DHCP/DNS</a> before enable that option.</li>
+	<li><b>Accept RA from LAN</b> - Please disable Announce IPv6 on LAN (SLAAC) and Announce IPv6 on LAN (DHCP) at <a href="advanced-dhcpdns.asp">DHCP/DNS</a> to enable that option.</li>
 	</ul>
 </div>
 
