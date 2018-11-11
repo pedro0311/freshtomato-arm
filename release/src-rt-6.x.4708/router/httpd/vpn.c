@@ -230,8 +230,8 @@ void wo_vpn_genclientconfig(char *url)
 
 	strlcpy(s2, getNVRAMVar("vpn_server%d_comp", server), sizeof(s2));
 	if (strcmp(s2, "-1")) {
-		if (!strcmp(s2, "lz4")) {
-			fprintf(fp, "compress lz4\n");
+		if (!strcmp(s2, "lz4") || !strcmp(s2, "lz4-v2")) {
+			fprintf(fp, "compress %s\n", s2);
 		} else if (!strcmp(s2, "yes")) {
 			fprintf(fp, "compress lzo\n");
 		} else if (!strcmp(s2, "adaptive")) {
