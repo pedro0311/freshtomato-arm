@@ -37,7 +37,7 @@
 #ifdef DEBUG
 #define AGENT		"MDU - TEST DDNS CLIENT"
 #else
-#define AGENT		"MDU - Tomato Firmware " TOMATO_MAJOR "." TOMATO_MINOR
+#define AGENT		"MDU - FreshTomato Firmware " TOMATO_MAJOR "." TOMATO_MINOR
 #endif
 
 #define MAX_OPTION_LENGTH	256
@@ -288,7 +288,7 @@ static int _wget(int ssl, const char *host, int port, const char *request, char 
 
 		if (ssl) {
 			mssl_init(NULL, NULL);
-			f = ssl_client_fopen(sd);
+			f = ssl_client_fopen_name(sd, host);
 		}
 		else {
 			f = fdopen(sd, "r+");
