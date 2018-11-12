@@ -1472,7 +1472,7 @@ static void update_editdns(void)
 			error(M_INVALID_HOST);
 		}
 		else {
-			error(body);
+			error(M_UNKNOWN_RESPONSE__D, -1);
 		}
 	}
 
@@ -1506,8 +1506,7 @@ Bad responses:
 static void update_heipv6tb(void)
 {
 	int r;
-	char *body, *p;
-	const char *serr = "-ERROR: ";
+	char *body;
 	char query[2048];
 
 	// +opt +opt +opt
