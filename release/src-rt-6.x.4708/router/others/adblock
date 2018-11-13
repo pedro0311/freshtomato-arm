@@ -137,7 +137,7 @@ else
 	if [ "$ENABLE" == "1" ]; then
 
 		# do not download blacklists, if they're already successfully downloaded in less than 2 hours
-		if [ -f "$CHK_FILE" -a -f "$FINAL" ]; then
+		if [ -f "$CHK_FILE" -a -s "$FINAL" ]; then
 			TIME_FILE=$(date -r "$CHK_FILE" +%s)
 			TIME_2HRS=$(($(date +%s)-7200))
 
