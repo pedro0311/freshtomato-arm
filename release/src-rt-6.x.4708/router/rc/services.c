@@ -168,6 +168,19 @@ void start_dnsmasq()
 		fprintf(f, "server=127.0.0.1#5453\n");
 	}
 #endif
+#ifdef TCONFIG_TOR
+	if (nvram_match("tor_enable", "1")) {
+		char *t_ip;
+
+		if (nvram_match("tor_iface", "br0"))      { t_ip = nvram_safe_get("lan_ipaddr");  }
+		else if (nvram_match("tor_iface", "br1")) { t_ip = nvram_safe_get("lan1_ipaddr"); }
+		else if (nvram_match("tor_iface", "br2")) { t_ip = nvram_safe_get("lan2_ipaddr"); }
+		else if (nvram_match("tor_iface", "br3")) { t_ip = nvram_safe_get("lan3_ipaddr"); }
+		else                                      { t_ip = nvram_safe_get("lan_ipaddr");  }
+
+		fprintf(f, "server=/onion/%s#%s\n", t_ip, nvram_safe_get("tor_dnsport"));
+	}
+#endif
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 
 		get_wan_prefix(wan_unit, wan_prefix);

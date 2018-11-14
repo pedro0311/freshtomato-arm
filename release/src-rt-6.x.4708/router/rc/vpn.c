@@ -227,8 +227,8 @@ void start_vpnclient(int clientNum)
 	sprintf(&buffer[0], "vpn_client%d_comp", clientNum);
 	strlcpy(buffer2, nvram_safe_get(&buffer[0]), sizeof (buffer2));
 	if (strcmp(buffer2, "-1")) {
-		if (!strcmp(buffer2, "lz4")) {
-			fprintf(fp, "compress lz4\n");
+		if (!strcmp(buffer2, "lz4") || !strcmp(buffer2, "lz4-v2")) {
+			fprintf(fp, "compress %s\n", buffer2);
 		} else if (!strcmp(buffer2, "yes")) {
 			fprintf(fp, "compress lzo\n");
 		} else if (!strcmp(buffer2, "adaptive")) {
@@ -802,8 +802,8 @@ void start_vpnserver(int serverNum)
 	strlcpy(buffer2, nvram_safe_get(&buffer[0]), sizeof (buffer2));
 
 	if (strcmp(buffer2, "-1")) {
-		if (!strcmp(buffer2, "lz4")) {
-			fprintf(fp, "compress lz4\n");
+		if (!strcmp(buffer2, "lz4") || !strcmp(buffer2, "lz4-v2")) {
+			fprintf(fp, "compress %s\n", buffer2);
 		} else if (!strcmp(buffer2, "yes")) {
 			fprintf(fp, "compress lzo\n");
 		} else if (!strcmp(buffer2, "adaptive")) {
