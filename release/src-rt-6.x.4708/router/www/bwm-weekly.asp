@@ -96,7 +96,7 @@ function redraw() {
 	if (swk < 0) swk = 6;
 
 	if (summary) {
-		grid = '<table class="bwmg" cellspacing="1">';
+		grid = '<table class="bwmg" style="border-spacing:1px">';
 		grid += makeRow('header', 'Date', 'Download', 'Upload', 'Total');
 	} else {
 		grid = '';

@@ -50,12 +50,14 @@ function tabSelect(name) {
 function wordWrap() {
 	for (var i = 0; i < tabs.length; ++i) {
 		var e = E(tabs[i][0] + '-text');
-		var s = e.value;
+		var v = e.value;
+		var s = e.style.display;
 		var c = e.cloneNode(false);
 		wrap = E('as-wordwrap').checked;
-		c.setAttribute('wrap', wrap ? 'virtual' : 'off');
+		s = s ? s : "block";
+		c.setAttribute('style', wrap ? 'display:' + s + ';white-space:pre-wrap' : 'display:' + s + ';white-space:pre;overflow-wrap:normal;overflow-x:scroll');
 		e.parentNode.replaceChild(c, e);
-		c.value = s;
+		c.value = v;
 	}
 }
 
@@ -104,11 +106,10 @@ function earlyInit() {
 tabCreate.apply(this, tabs);
 
 wrap = cookie.get('scripts_wrap') || 0;
-y = Math.floor(docu.getViewSize().height * 0.65);
-s = 'height:' + ((y > 300) ? y : 300) + 'px;display:none';
+s = 'display:none;' + (wrap ? 'white-space:pre-wrap' : 'white-space:pre;overflow-wrap:normal;overflow-x:scroll');
 for (i = 0; i < tabs.length; ++i) {
 	t = tabs[i][0];
-	W('<textarea class="as-script" name="script_' + t.replace('as-', '') + '" id="' + t + '-text" wrap=' + (wrap ? 'virtual' : 'off') + ' style="' + s + '"><\/textarea>');
+	W('<textarea class="as-script" name="script_' + t.replace('as-', '') + '" id="' + t + '-text" style="' + s + '"><\/textarea>');
 }
 W('<br /><input type="checkbox" id="as-wordwrap" onclick="wordWrap()" onchange="wordWrap()" ' + (wrap ? 'checked' : '') + '> Word Wrap');
 </script>

@@ -101,7 +101,7 @@ function upgrade() {
 
 		<br/>
 		<br/>
-		<table border="0">
+		<table style="border:0">
 		<tr><td>Current Version:</td><td>&nbsp; <% version(1); %></td></tr>
 		<tr><td>Free Memory:</td><td>&nbsp; 
 			<script type="text/javascript">

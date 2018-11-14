@@ -82,7 +82,7 @@ function redraw() {
 	block = '';
 	gn = 0;
 
-	grid = '<table class="bwmg" cellspacing="1">';
+	grid = '<table class="bwmg" style="border-spacing:1px">';
 	grid += makeRow('header', 'Date', 'Download', 'Upload', 'Total');
 
 	for (i = 0; i < daily_history.length; ++i) {

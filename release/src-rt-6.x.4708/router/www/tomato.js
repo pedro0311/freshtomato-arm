@@ -1630,7 +1630,7 @@ TomatoGrid.prototype = {
 			if(this.editorFields[i].type != 'textarea'){
 				var c = row.insertCell(i);
 				c.innerHTML = s;
-				if (this.editorFields[i].vtop) c.vAlign = 'top';
+				if (this.editorFields[i].vtop) c.style = 'vertical-align:top';
 			}
 		}
 
@@ -2720,7 +2720,7 @@ function createFieldTable(flags, desc)
 				buf2.push('</select>');
 				break;
 			case 'textarea':
-				buf2.push('<textarea' + name + common + (f.wrap ? (' wrap=' + f.wrap) : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>');
+				buf2.push('<textarea' + name + common + (f.wrap ? (' style="white-space:' + f.wrap + ';overflow-wrap:normal;overflow-x:scroll"') : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>');
 				break;
 			default:
 				if (f.custom) buf2.push(f.custom);

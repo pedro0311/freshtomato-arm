@@ -587,9 +587,9 @@ function toggleVisibility(whichone) {
 
 	// -------- BEGIN SCRIPTS TAB -----------
 	t = "scripts";
-	W('<div id=\''+t+'-tab\'>');
+	W('<div id="'+t+'-tab">');
 	W('<br />');
-	W('<div class=\'section\'>');
+	W('<div class="section">');
 
 	createFieldTable('', [
 		{ title: 'Firewall Rules', name: 'tinc_manual_firewall', type: 'select', options: [['0','Automatic'],['1','Additional'],['2','Manual']], value: nvram.tinc_manual_firewall },
@@ -611,9 +611,9 @@ function toggleVisibility(whichone) {
 
 	// -------- BEGIN KEYS TAB -----------
 	t = "keys";
-	W('<div id=\''+t+'-tab\'>');
+	W('<div id="'+t+'-tab">');
 	W('<br />');
-	W('<div class=\'section\'>');
+	W('<div class="section">');
 
 	createFieldTable('', [
 		{ title: 'Ed25519 Private Key', name: 'ed25519_private_key', type: 'textarea', value: "" },
@@ -623,8 +623,8 @@ function toggleVisibility(whichone) {
 	]);
 
 	W('<\/div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Generate Keys\' onclick=\'generateKeys()\' id=\'execb\'><\/div>');
-	W('<div style=\"visibility:hidden;text-align:right\" id=\"generateWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
+	W('<div style="float:left"><input type="button" value="Generate Keys" onclick="generateKeys()" id="execb"><\/div>');
+	W('<div style="visibility:hidden;text-align:right" id="generateWait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"><\/div>');
 	W('<\/div>');
 
 	// -------- END KEY TAB -----------
@@ -633,21 +633,21 @@ function toggleVisibility(whichone) {
 	// -------- BEGIN STATUS TAB -----------
 	t = "status";
 
-	W('<div id=\''+t+'-tab\'>');
+	W('<div id="'+t+'-tab">');
 	W('<br />');
 
-	W('<div class=\'section\'>');
+	W('<div class="section">');
 	W('Tinc is currently '+(!tincup ? 'stopped.' : 'running.')+' ');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button4">');
 	W('<\/div>');
 
-	W('<div class=\'section\'>');
+	W('<div class="section">');
 
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Edges\' onclick=\'updateStatus(\"edges\")\' id=\'edges\' style=\"width:85px\"><\/div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Subnets\' onclick=\'updateStatus(\"subnets\")\' id=\'subnets\' style=\"width:85px\"><\/div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Connections\' onclick=\'updateStatus(\"connections\")\' id=\'connections\' style=\"width:85px\"><\/div>');
-	W('<div style=\'float:left\'><input type=\'button\' value=\'Nodes\' onclick=\'updateStatus(\"nodes\")\' id=\'nodes\' style=\"width:85px\"><\/div>');
-	W('<div style=\"visibility:hidden;text-align:right\" id=\"statusWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
+	W('<div style="float:left"><input type=\'button\' value=\'Edges\' onclick=\'updateStatus(\"edges\")\' id=\'edges\' style=\"width:85px\"><\/div>');
+	W('<div style="float:left"><input type=\'button\' value=\'Subnets\' onclick=\'updateStatus(\"subnets\")\' id=\'subnets\' style=\"width:85px\"><\/div>');
+	W('<div style="float:left"><input type=\'button\' value=\'Connections\' onclick=\'updateStatus(\"connections\")\' id=\'connections\' style=\"width:85px\"><\/div>');
+	W('<div style="float:left"><input type=\'button\' value=\'Nodes\' onclick=\'updateStatus(\"nodes\")\' id=\'nodes\' style=\"width:85px\"><\/div>');
+	W('<div style="visibility:hidden;text-align:right" id=\"statusWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
 
 	W('<\/div>');
 
