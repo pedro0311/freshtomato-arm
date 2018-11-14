@@ -19,8 +19,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -150,8 +150,9 @@ static void log_data(UPSINFO *ups)
    case USB_UPS:
    case TEST_UPS:
    case NETWORK_UPS:
-   case SNMP_UPS:
    case APCSMART_UPS:
+   case PCNET_UPS:
+   case SNMPLITE_UPS:
       toggle = !toggle;            /* flip bit */
       log_event(ups, LOG_INFO,
          "%05.1f,%05.1f,%05.1f,%05.2f,%05.2f,%04.1f,%04.1f,%05.1f,%05.1f,%05.1f,%05.1f,%d",
@@ -175,6 +176,7 @@ void do_reports(UPSINFO *ups)
 {
    static int first_time = TRUE;
    time_t now = time(NULL);
+   int fd;
 
    if (first_time) {
       first_time = FALSE;
@@ -184,7 +186,8 @@ void do_reports(UPSINFO *ups)
       last_time_status = 0;
 
       if (ups->stattime != 0) {
-         if ((statusfile = fopen(ups->statfile, "w")) == NULL) {
+         if ((fd = open(ups->statfile, O_WRONLY|O_TRUNC|O_CREAT|O_CLOEXEC, 0666)) == -1 ||
+             (statusfile = fdopen(fd, "w")) == NULL) {
             log_event(ups, LOG_ERR, "Cannot open STATUS file %s: %s\n",
                ups->statfile, strerror(errno));
           }

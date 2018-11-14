@@ -1,7 +1,7 @@
 Distribution:	Linux Slackware
 Maintainer:	Devin Reade <gdr@gno.org>
 
-$Id: README,v 1.1.1.1 2002/05/28 13:34:06 kerns Exp $
+$Id: README,v 1.1.1.1 2002-05-28 13:34:06 kerns Exp $
 
 The Slackware installation of apcupsd no longer replaces the /etc/rc.d/rc6
 (halt) script, but rather attempts to patch it.  This should be more

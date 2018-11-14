@@ -21,8 +21,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -69,6 +69,7 @@ static const GENINFO cables[] = {
    { "940-0024C",      "APC Cable 940-0024C",  CABLE_SMART   },
    { "940-1524C",      "APC Cable 940-1524C",  CABLE_SMART   },
    { "940-0024G",      "APC Cable 940-0024G",  CABLE_SMART   },
+   { "940-0625A",      "APC Cable 940-0625A",  CABLE_SMART   },
    { "940-0095A",      "APC Cable 940-0095A",  APC_940_0095A },
    { "940-0095B",      "APC Cable 940-0095B",  APC_940_0095B },
    { "940-0095C",      "APC Cable 940-0095C",  APC_940_0095C },
@@ -107,7 +108,7 @@ static const GENINFO types[] = {
    { "net",      "NETWORK UPS Driver",  NETWORK_UPS },
    { "test",     "TEST UPS Driver",     TEST_UPS },
    { "pcnet",    "PCNET UPS Driver",    PCNET_UPS },
-   { "netsnmp",  "NET-SNMP UPS Driver", SNMP_UPS },
+   { "modbus",   "MODBUS UPS Driver",   MODBUS_UPS },
    { NULL,       "*invalid-ups-type*",  NO_UPS },
 };
 
@@ -213,65 +214,6 @@ static int obsolete(UPSINFO *ups, int offset, const GENINFO * junk, const char *
    return FAILURE;
 }
 
-#ifdef UNSUPPORTED_CODE
-static int start_ups(UPSINFO *ups, int offset, const GENINFO * size, const char *v)
-{
-   char x[MAXSTRING];
-
-   if (!sscanf(v, "%s", x))
-      return FAILURE;
-
-   /* Verify that we don't already have an UPS with the same name. */
-   for (ups = NULL; (ups = getNextUps(ups)) != NULL;)
-      if (strncmp(x, ups->upsname, UPSNAMELEN) == 0) {
-         fprintf(stderr, "%s: duplicate upsname [%s] in config file.\n",
-            argvalue, ups->upsname);
-         return FAILURE;
-      }
-
-   /* Here start the definition of a new UPS to add to the linked list. */
-   ups = new_ups();
-
-   if (ups == NULL) {
-      Error_abort1("%s: not enough memory.\n", argvalue);
-      return FAILURE;
-   }
-
-   init_ups_struct(ups);
-
-
-   astrncpy((char *)AT(ups, offset), x, (int)size);
-
-   /* Terminate string */
-   *((char *)AT(ups, (offset + (int)size) - 1)) = 0;
-   return SUCCESS;
-}
-
-static int end_ups(UPSINFO *ups, int offset, const GENINFO * size, const char *v)
-{
-   char x[MAXSTRING];
-
-   if (!sscanf(v, "%s", x))
-      return FAILURE;
-
-   if (ups == NULL) {
-      fprintf(stderr, "%s: upsname [%s] mismatch in config file.\n", argvalue, x);
-      return FAILURE;
-   }
-
-   if (strncmp(x, ups->upsname, UPSNAMELEN) != 0) {
-      fprintf(stderr, "%s: upsname [%s] mismatch in config file.\n",
-         argvalue, ups->upsname);
-      return FAILURE;
-   }
-
-   insertUps(ups);
-
-   return SUCCESS;
-}
-#endif
-
-
 static int match_int(UPSINFO *ups, int offset, const GENINFO * junk, const char *v)
 {
    int x;
@@ -290,7 +232,7 @@ static int match_range(UPSINFO *ups, int offset, const GENINFO * vs, const char 
 
    if (!vs) {
       /* Shouldn't ever happen so abort if it ever does. */
-      Error_abort1("%s: Bogus configuration table! Fix and recompile.\n",
+      Error_abort("%s: Bogus configuration table! Fix and recompile.\n",
          argvalue);
    }
 
@@ -324,8 +266,8 @@ static int match_range(UPSINFO *ups, int offset, const GENINFO * vs, const char 
     * overwrite memory.
     */
    t->type = vs->type;
-   astrncpy(t->name, vs->name, sizeof(t->name));
-   astrncpy(t->long_name, vs->long_name, sizeof(t->long_name));
+   strlcpy(t->name, vs->name, sizeof(t->name));
+   strlcpy(t->long_name, vs->long_name, sizeof(t->long_name));
    return SUCCESS;
 }
 
@@ -339,7 +281,7 @@ static int match_index(UPSINFO *ups, int offset, const GENINFO * vs, const char 
 
    if (!vs) {
       /* Shouldn't ever happen so abort if it ever does. */
-      Error_abort1("%s: Bogus configuration table! Fix and recompile.\n",
+      Error_abort("%s: Bogus configuration table! Fix and recompile.\n",
          argvalue);
    }
 
@@ -379,7 +321,7 @@ static int match_str(UPSINFO *ups, int offset, const GENINFO * gen, const char *
    long size = (long)gen;
 
    /* Copy the string so we can edit it in place */
-   astrncpy(x, v, sizeof(x));
+   strlcpy(x, v, sizeof(x));
 
    /* Remove trailing comment, if there is one */
    char *ptr = strchr(x, '#');
@@ -391,7 +333,7 @@ static int match_str(UPSINFO *ups, int offset, const GENINFO * gen, const char *
    while (ptr >= x && isspace(*ptr))
       *ptr-- = '\0';
 
-   astrncpy((char *)AT(ups, offset), x, (int)size);
+   strlcpy((char *)AT(ups, offset), x, (int)size);
    return SUCCESS;
 }
 
@@ -555,8 +497,8 @@ void init_ups_struct(UPSINFO *ups)
 
    ups->set_plugged();
 
-   astrncpy(ups->nologin.name, logins[0].name, sizeof(ups->nologin.name));
-   astrncpy(ups->nologin.long_name, logins[0].long_name,
+   strlcpy(ups->nologin.name, logins[0].name, sizeof(ups->nologin.name));
+   strlcpy(ups->nologin.long_name, logins[0].long_name,
       sizeof(ups->nologin.long_name));
    ups->nologin.type = logins[0].type;
 
@@ -579,16 +521,16 @@ void init_ups_struct(UPSINFO *ups)
 
    /* EPROM values that can be changed with config directives */
 
-   astrncpy(ups->sensitivity, "-1", sizeof(ups->sensitivity));  /* no value */
+   strlcpy(ups->sensitivity, "-1", sizeof(ups->sensitivity));  /* no value */
    ups->dwake = -1;
    ups->dshutd = -1;
-   astrncpy(ups->selftest, "-1", sizeof(ups->selftest));        /* no value */
+   strlcpy(ups->selftest, "-1", sizeof(ups->selftest));        /* no value */
    ups->lotrans = -1;
    ups->hitrans = -1;
    ups->rtnpct = -1;
    ups->dlowbatt = -1;
    ups->NomOutputVoltage = -1;
-   astrncpy(ups->beepstate, "-1", sizeof(ups->beepstate));      /* no value */
+   strlcpy(ups->beepstate, "-1", sizeof(ups->beepstate));      /* no value */
 
    ups->nisip[0] = 0;              /* no nis IP file as default */
 
@@ -608,9 +550,9 @@ void init_ups_struct(UPSINFO *ups)
    ups->event_fd = -1;             /* no file open */
 
    /* Default paths */
-   astrncpy(ups->scriptdir, SYSCONFDIR, sizeof(ups->scriptdir));
-   astrncpy(ups->pwrfailpath, PWRFAILDIR, sizeof(ups->pwrfailpath));
-   astrncpy(ups->nologinpath, NOLOGDIR, sizeof(ups->nologinpath));
+   strlcpy(ups->scriptdir, SYSCONFDIR, sizeof(ups->scriptdir));
+   strlcpy(ups->pwrfailpath, PWRFAILDIR, sizeof(ups->pwrfailpath));
+   strlcpy(ups->nologinpath, NOLOGDIR, sizeof(ups->nologinpath));
    
    /* Initialize UPS function codes */
    ups->UPS_Cmd[CI_STATUS] = APC_CMD_STATUS;
@@ -664,12 +606,14 @@ void check_for_config(UPSINFO *ups, char *cfgfile)
    char line[MAXSTRING];
    int errors = 0;
    int erpos = 0;
+   int fd;
 
-   if ((apcconf = fopen(cfgfile, "r")) == NULL) {
-      Error_abort2("Error opening configuration file (%s): %s\n",
+   if ((fd = open(cfgfile, O_RDONLY|O_CLOEXEC)) == -1 ||
+       (apcconf = fdopen(fd, "r")) == NULL) {
+      Error_abort("Error opening configuration file (%s): %s\n",
          cfgfile, strerror(errno));
    }
-   astrncpy(ups->configfile, cfgfile, sizeof(ups->configfile));
+   strlcpy(ups->configfile, cfgfile, sizeof(ups->configfile));
 
    /* Check configuration file format is a suitable version */
    if (fgets(line, sizeof(line), apcconf) != NULL) {
@@ -706,8 +650,8 @@ jump_into_the_loop:
 
       if (ParseConfig(ups, line)) {
          errors++;
-         Dmsg1(100, "%s\n", line);
-         Dmsg2(100, "Parsing error at line %d of config file %s.\n", erpos, cfgfile);
+         Dmsg(100, "%s\n", line);
+         Dmsg(100, "Parsing error at line %d of config file %s.\n", erpos, cfgfile);
       }
    }
 
@@ -718,8 +662,15 @@ jump_into_the_loop:
     * Of course if here we have errors, the apc struct is not good
     * so don't bother to post-process it.
     */
-   if (errors)
-      goto bail_out;
+   if (errors) {
+      /*
+       * Lock path isn't valid until postprocessing below runs. Since we're
+       * aborting early we need to ensure that no lock file cleanup is
+       * attempted
+       */
+      ups->lockpath[0] = '\0';
+      Error_abort("Terminating due to configuration file errors.\n");
+   }
 
    /* post-process the configuration stored in the ups structure */
 
@@ -738,28 +689,33 @@ jump_into_the_loop:
 
    // Sanitize cable type & UPS mode. Since UPSTYPE (aka mode) and UPSCABLE
    // can contradict eachother, the rule is that UPSTYPE wins. In all cases
-   // except Dumb we can determine cable type from mode so we ignore user's 
-   // configured UPSCABLE and force it ourselves. In the case of Dumb UPSes we 
-   // just ensure they picked a simple cable type.
+   // except Dumb and MODBUS we can determine cable type from mode so we ignore 
+   // user's configured UPSCABLE and force it ourselves. In the case of Dumb 
+   // UPSes we just ensure they picked a simple cable type and for MODBUS we
+   // ensure they picked a smart (or USB) cable type.
    switch (ups->mode.type)
    {
    case USB_UPS:
       match_range(ups, WHERE(cable), cables, "usb");
       break;
    case SNMPLITE_UPS:
-   case SNMP_UPS: 
    case PCNET_UPS:
    case NETWORK_UPS:
       match_range(ups, WHERE(cable), cables, "ether");
       break;
+   case MODBUS_UPS:
+      // Abort if user specified MODBUS UPS type with dumb cable
+      if (ups->cable.type < CABLE_SMART)
+         Error_abort("Invalid cable specified for MODBUS UPS\n");
+       break;
    case APCSMART_UPS:
       match_range(ups, WHERE(cable), cables, "smart");
       break;
    case DUMB_UPS:
       // Abort if user specified dumb UPS type with smart cable
       if (ups->cable.type >= CABLE_SMART)
-         Error_abort0("Invalid cable specified for Dumb UPS\n");
-      break;
+         Error_abort("Invalid cable specified for Dumb UPS\n");
+      break;      
    case TEST_UPS:
       // Allow anything in test mode
       break;
@@ -782,25 +738,25 @@ jump_into_the_loop:
     * simplify, so don't bother.
     */
    if (ups->lockpath[0] == '\0')
-      astrncpy(ups->lockpath, LOCK_DEFAULT, sizeof(ups->lockpath));
+      strlcpy(ups->lockpath, LOCK_DEFAULT, sizeof(ups->lockpath));
 
    /* If APC_NET, the lockfile is not needed. */
    if (ups->cable.type != APC_NET) {
       char *dev = strrchr(ups->device, '/');
 
-      astrncat(ups->lockpath, APC_LOCK_PREFIX, sizeof(ups->lockpath));
-      astrncat(ups->lockpath, dev ? ++dev : ups->device, sizeof(ups->lockpath));
+      strlcat(ups->lockpath, APC_LOCK_PREFIX, sizeof(ups->lockpath));
+      strlcat(ups->lockpath, dev ? ++dev : ups->device, sizeof(ups->lockpath));
    } else {
       ups->lockpath[0] = 0;
       ups->lockfile = -1;
    }
 
    /* Append filenames to paths */
-   Dmsg1(200, "After config scriptdir: \"%s\"\n", ups->scriptdir);
-   Dmsg1(200, "After config pwrfailpath: \"%s\"\n", ups->pwrfailpath);
-   Dmsg1(200, "After config nologinpath: \"%s\"\n", ups->nologinpath);
-   astrncat(ups->nologinpath, NOLOGIN_FILE, sizeof(ups->nologinpath));
-   astrncat(ups->pwrfailpath, PWRFAIL_FILE, sizeof(ups->pwrfailpath));
+   Dmsg(200, "After config scriptdir: \"%s\"\n", ups->scriptdir);
+   Dmsg(200, "After config pwrfailpath: \"%s\"\n", ups->pwrfailpath);
+   Dmsg(200, "After config nologinpath: \"%s\"\n", ups->nologinpath);
+   strlcat(ups->nologinpath, NOLOGIN_FILE, sizeof(ups->nologinpath));
+   strlcat(ups->pwrfailpath, PWRFAIL_FILE, sizeof(ups->pwrfailpath));
 
    switch (ups->nologin.type) {
    case TIMEOUT:
@@ -820,10 +776,6 @@ jump_into_the_loop:
    default:
       break;
    }
-
-bail_out:
-   if (errors)
-      error_exit("Terminating due to configuration file errors.\n");
 
    return;
 }

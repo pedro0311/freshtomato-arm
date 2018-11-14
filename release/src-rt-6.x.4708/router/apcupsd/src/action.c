@@ -20,8 +20,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #include "apc.h"
@@ -86,7 +86,7 @@ void generate_event(UPSINFO *ups, int event)
 {
    /* Log message and execute script for this event */
    log_event(ups, event_msg[event].level, event_msg[event].msg);
-   Dmsg2(80, "calling execute_ups_event %s event=%d\n", ups_event[event], event);
+   Dmsg(80, "calling execute_ups_event %s event=%d\n", ups_event[event], event);
    execute_command(ups, ups_event[event]);
 
    /*
@@ -181,7 +181,7 @@ static void logonfail(UPSINFO *ups, int ok)
    unlink(ups->nologinpath);
 
    if (ok == 0 &&
-       ((lgnfd = open(ups->nologinpath, O_CREAT | O_WRONLY, 0644)) >= 0)) {
+       ((lgnfd = open(ups->nologinpath, O_CREAT | O_WRONLY | O_CLOEXEC, 0644)) >= 0)) {
       write(lgnfd, POWERFAIL, strlen(POWERFAIL));
       close(lgnfd);
    }
@@ -242,7 +242,8 @@ enum a_state {
    st_SelfTest,
    st_OnBattery,
    st_MainsBack,
-   st_OnMains
+   st_OnMains,
+   st_Calibration
 };
 
 /*
@@ -254,8 +255,10 @@ static enum a_state get_state(UPSINFO *ups, time_t now)
    enum a_state state;
 
    /* If we're on battery for calibration, treat as not on battery */
-   if (ups->is_onbatt() && !ups->is_calibration()) {
-      if (ups->chg_onbatt()) {
+   if (ups->is_onbatt()) {
+      if (ups->is_calibration()) {
+         state = st_Calibration;
+      } else if (ups->chg_onbatt()) {
          state = st_PowerFailure;  /* Power failure just detected */
       } else {
          if (ups->SelfTest)        /* see if UPS is doing self test */
@@ -418,10 +421,10 @@ void do_action(UPSINFO *ups)
     */
    if (ups->chg_battlow()) {
       if (ups->is_battlow()) {
-         Dmsg0(100, "BATTLOW asserted\n");
+         Dmsg(100, "BATTLOW asserted\n");
          ups->start_shut_lbatt = now;
       } else {
-         Dmsg0(100, "BATTLOW glitch\n");
+         Dmsg(100, "BATTLOW glitch\n");
       }
    }
 
@@ -439,7 +442,7 @@ void do_action(UPSINFO *ups)
       ups->set_fastpoll();       /* speed up polling */
 
       /* Check if selftest */
-      Dmsg1(80, "Power failure detected. 0x%x\n", ups->Status);
+      Dmsg(80, "Power failure detected. 0x%x\n", ups->Status);
       device_entry_point(ups, DEVICE_CMD_CHECK_SELFTEST, NULL);
 
       if (ups->SelfTest)
@@ -463,7 +466,7 @@ void do_action(UPSINFO *ups)
 
       /* Cancel self test, announce power failure */
       ups->SelfTest = 0;
-      Dmsg1(80, "UPS Self Test cancelled, fall-thru to On Battery. 0x%x\n",
+      Dmsg(80, "UPS Self Test cancelled, fall-thru to On Battery. 0x%x\n",
          ups->Status);
 
       /* ...FALL-THRU to st_OnBattery... */
@@ -504,25 +507,25 @@ void do_action(UPSINFO *ups)
           */
          if (ups->UPS_Cap[CI_BATTLEV] && ups->BattChg <= ups->percent) {
             if (!ups->is_shut_load()) {
-               Dmsg0(100, "CI_BATTLEV shutdown\n");
+               Dmsg(100, "CI_BATTLEV shutdown\n");
                ups->set_shut_load();
                ups->start_shut_load = now;
             }
          } else {
             if (ups->UPS_Cap[CI_BATTLEV] && ups->is_shut_load())
-               Dmsg0(100, "CI_BATTLEV glitch\n");
+               Dmsg(100, "CI_BATTLEV glitch\n");
             ups->clear_shut_load();
          }
 
          if (ups->UPS_Cap[CI_RUNTIM] && ups->TimeLeft <= ups->runtime) {
             if (!ups->is_shut_ltime()) {
-               Dmsg0(100, "CI_RUNTIM shutdown\n");
+               Dmsg(100, "CI_RUNTIM shutdown\n");
                ups->set_shut_ltime();
                ups->start_shut_ltime = now;
             }
          } else {
             if (ups->UPS_Cap[CI_RUNTIM] && ups->is_shut_ltime())
-               Dmsg0(100, "CI_RUNTIM glitch\n");
+               Dmsg(100, "CI_RUNTIM glitch\n");
             ups->clear_shut_ltime();
          }
 
@@ -633,6 +636,15 @@ void do_action(UPSINFO *ups)
 
       ups->cum_time_on_batt += (ups->last_offbatt_time - ups->last_onbatt_time);
       break;
+
+   case st_Calibration:
+      /*
+       * During calibration we ignore battery level, runtime remaining, etc.
+       * since the UPS will switch us back online when it is done. We also have
+       * no timeout here since we can't predict how long the calibration will
+       * take.
+       */
+       break;
 
    default:
       break;

@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #ifndef __SNMP_H
@@ -38,6 +38,11 @@ namespace Snmp
    // **************************************************************************
    struct Variable
    {
+      Variable() : valid(false) {}
+      Variable(Asn::Identifier t, unsigned int i) : 
+         valid (true), type(t), i32(i), u32(i) {}
+
+      bool valid;
       Asn::Identifier type;
       int i32;
       unsigned int u32;
@@ -188,7 +193,8 @@ namespace Snmp
       ~SnmpEngine();
 
       bool Open(const char *host, unsigned short port = SNMP_AGENT_PORT, 
-                const char *comm = "public", bool trap = false);
+                const char *comm = "public");
+      bool EnableTraps();
       void Close();
 
       struct OidVar
@@ -216,8 +222,8 @@ namespace Snmp
       static const unsigned short SNMP_TRAP_PORT = 162;
       static const unsigned short SNMP_AGENT_PORT = 161;
 
-      int _socket;
-      int _trapsock;
+      sock_t _socket;
+      sock_t _trapsock;
       int _reqid;
       astring _community;
       struct sockaddr_in _destaddr;

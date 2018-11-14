@@ -1,7 +1,7 @@
 Distribution:   OpenBSD
 Maintainer:     Devin Reade <gdr@gno.org>
 
-$Id: README,v 1.2 2004/08/26 09:20:07 kerns Exp $
+$Id: README,v 1.2 2004-08-26 09:20:07 kerns Exp $
 
 =======================================================
 MAKE SURE YOU READ THE "IMPORTANT NOTE" SECTION, BELOW!

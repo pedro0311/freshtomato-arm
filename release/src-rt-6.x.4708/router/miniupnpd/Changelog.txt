@@ -1,5 +1,8 @@
 $Id: Changelog.txt,v 1.442 2018/07/06 12:05:46 nanard Exp $
 
+2018/09/07:
+  Fix PCP Public address announcement
+
 2018/07/06:
   STUN support
 

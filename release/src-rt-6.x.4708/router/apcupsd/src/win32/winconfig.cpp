@@ -12,14 +12,15 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 // Implementation of the Config dialog
 
 #include <windows.h>
 #include <commctrl.h>
+#include <stdio.h>
 #include "winconfig.h"
 #include "resource.h"
 #include "instmgr.h"
@@ -104,9 +105,9 @@ BOOL upsConfig::DialogProcess(
 
       // Initialize fields with current config settings
       SendMessage(_hhost, WM_SETTEXT, 0, (LONG)_config.host.str());
-      snprintf(tmp, sizeof(tmp), "%d", _config.port);
+      snprintf(tmp, sizeof(tmp), "%lu", _config.port);
       SendMessage(_hport, WM_SETTEXT, 0, (LONG)tmp);
-      snprintf(tmp, sizeof(tmp), "%d", _config.refresh);
+      snprintf(tmp, sizeof(tmp), "%lu", _config.refresh);
       SendMessage(_hrefresh, WM_SETTEXT, 0, (LONG)tmp);
       SendMessage(_hpopups, BM_SETCHECK, 
          _config.popups ? BST_CHECKED : BST_UNCHECKED, 0);

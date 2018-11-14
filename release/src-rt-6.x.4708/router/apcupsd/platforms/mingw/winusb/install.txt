@@ -14,6 +14,8 @@ The USB driver supports the following operating systems:
    - Windows Vista (including 64 bit)
    - Windows 7 (including 64 bit)
    - Windows 2008 Server (including 64 bit)
+   - Windows 8 (including 64 bit)
+   - Windows 8.1 (including 64 bit)
 
 Notably, Windows 2000, Windows 98, and Windows ME are NOT supported.
 
@@ -25,6 +27,10 @@ TROUBLESHOOTING
   instead of "Human Interface Devices / American Power Conversion USB UPS". To
   fix this, uninstall the driver from the device that is giving the error code,
   then do an update driver on the correct device.
+
+- The driver INF has now been signed with Authenticode thanks to Jernej Simoncic 
+  <jernej's-sflist@eternallybored.org>. During driver installation you will be
+  asked to approve the signature.
 
 
 INSTALLATION

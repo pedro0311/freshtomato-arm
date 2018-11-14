@@ -18,26 +18,32 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1335, USA.
  */
 
 #ifndef _TESTDRIVER_H
 #define _TESTDRIVER_H
 
-/*********************************************************************/
-/* Function ProtoTypes                                               */
-/*********************************************************************/
+class TestUpsDriver: public UpsDriver
+{
+public:
+   TestUpsDriver(UPSINFO *ups);
+   virtual ~TestUpsDriver() {}
 
-extern int test_ups_get_capabilities(UPSINFO *ups);
-extern int test_ups_read_volatile_data(UPSINFO *ups);
-extern int test_ups_read_static_data(UPSINFO *ups);
-extern int test_ups_kill_power(UPSINFO *ups);
-extern int test_ups_check_state(UPSINFO *ups);
-extern int test_ups_open(UPSINFO *ups);
-extern int test_ups_close(UPSINFO *ups);
-extern int test_ups_setup(UPSINFO *ups);
-extern int test_ups_program_eeprom(UPSINFO *ups, int command, const char *data);
-extern int test_ups_entry_point(UPSINFO *ups, int command, void *data);
+   static UpsDriver *Factory(UPSINFO *ups)
+      { return new TestUpsDriver(ups); }
+
+   virtual bool get_capabilities();
+   virtual bool read_volatile_data();
+   virtual bool read_static_data();
+   virtual bool check_state();
+   virtual bool Open();
+   virtual bool Close();
+
+private:
+
+   bool open_test_device();
+};
 
 #endif   /* _TEST_DRIVER_H */
