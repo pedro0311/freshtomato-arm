@@ -109,7 +109,7 @@ function init() {
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Command', name: 'f_cmd', type: 'textarea', wrap: 'off', value: '' }
+	{ title: 'Command', name: 'f_cmd', type: 'textarea', wrap: 'pre', value: '' }
 ]);
 </script>
 <div style="float:left"><input type="button" value="Execute" onclick="execute()" id="execb"></div>

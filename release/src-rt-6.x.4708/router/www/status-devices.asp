@@ -309,7 +309,7 @@ dg.populate = function() {
 		this.insert(-1, e, [
 			e.ifname, b, (e.ip == '-') ? '' : e.ip, e.name,
 			(e.rssi != 0) ? e.rssi + ' <small>dBm<\/small>' : '',
-			(e.qual < 0) ? '' : '<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif">',
+			(e.qual < 0) ? '' : '<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif" alt="">',
 			e.txrx,	e.lease], false);
 	}
 }

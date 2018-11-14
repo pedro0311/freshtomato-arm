@@ -199,7 +199,7 @@ createFieldTable('', f);
 
 </script>
 <br/>
-<table border="0" cellpadding="1">
+<table style="border:0;padding:1px">
 	<tr><td>Router's LAN MAC Address:</td><td><b><script type="text/javascript">W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
 	<tr><td>Computer's MAC Address:</td><td><b><script type="text/javascript">W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
 </table>
