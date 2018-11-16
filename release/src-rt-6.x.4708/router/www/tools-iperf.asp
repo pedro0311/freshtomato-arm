@@ -39,7 +39,7 @@
 
 <script type="text/javascript">
 
-//	<% nvram(''); %>	// http_id
+//	<% nvram('lan_ipaddr'); %>	// http_id
 
 iperf_up = parseInt('<% psup("iperf"); %>');
 
@@ -70,14 +70,27 @@ function verifyFields(focused, quiet) {
 			PR('byte_limit').style.display = '';
 			PR('time_limit').style.display = 'none';
 		}
+		E('notice1').style.display = 'none';
 	} else {
 		PR(E('iperf_addr')).style.display = 'none';
 		PR(E('iperf_time_limited')).style.display = 'none';
 		PR(E('iperf_proto_tcp')).style.display = 'none';
 		PR(E('time_limit')).style.display = 'none';
 		PR(E('byte_limit')).style.display = 'none';
+		E('notice1').style.display = '';
 	}
 	toggleAllFields(!iperf_up);
+	E('client_commandline_helper').innerHTML = generateClientHelperString();
+}
+
+function generateClientHelperString() {
+	let helper = "iperf";
+	helper += " -p ";
+	helper += E('iperf_port').value;
+	helper += (E('iperf_proto_udp').checked == true) ? " -u " : "";
+	helper += " -c ";
+	helper += nvram.lan_ipaddr;
+	return helper;
 }
 
 function toggleAllFields(enable) {
@@ -136,14 +149,26 @@ function execute() {
 			if (respObj.end) { /* Test finished */
 				iperf_up = 0;
 				E('test_status').innerHTML = 'Finished';
-				E('test_xfered').innerHTML = scaleSize(respObj.end.sum_sent.bytes) + ' <small>uploaded<\/small>';
+				if (respObj.start.accepted_connection) {
+					E('test_xfered').innerHTML = scaleSize(respObj.end.sum_received.bytes) + ' <small>uploaded<\/small>';
+					E('test_speed').innerHTML = scaleSpeed(respObj.end.sum_received.bits_per_second);
+				} else {
+					E('test_xfered').innerHTML = scaleSize(respObj.end.sum_sent.bytes) + ' <small>uploaded<\/small>';
+					E('test_speed').innerHTML = scaleSpeed(respObj.end.sum_sent.bits_per_second);
+				}
 				E('test_time').innerHTML = respObj.end.sum_sent.seconds.toFixed(2) + ' <small>seconds<\/small>';
-				E('test_speed').innerHTML = scaleSpeed(respObj.end.sum_sent.bits_per_second);
 			} else { /* Interval has been send */
 				E('test_status').innerHTML = respObj.mode;
+				let sumSent = respObj.sum_sent;
+				if (sumSent && sumSent.bytes != 0) {
+					E('test_xfered').innerHTML = scaleSize(respObj.sum_sent.bytes) + ' <small>uploaded<\/small>';
+				} else {
+					if(respObj.sum_received && respObj.sum_received.bytes) {
+						E('test_xfered').innerHTML = scaleSize(respObj.sum_received.bytes) + ' <small>uploaded<\/small>';
+					}
+				}
 				if (respObj.sum) {
 					E('test_time').innerHTML = respObj.sum.end.toFixed(2) + ' <small>seconds<\/small>';
-					E('test_xfered').innerHTML = scaleSize(respObj.sum_sent.bytes) + ' <small>uploaded<\/small>';
 					E('test_speed').innerHTML = scaleSpeed(respObj.sum.bits_per_second);
 				}
 			}
@@ -281,6 +306,13 @@ createFieldTable('', [
 W('<input type="button" value="Start test" onclick="runButtonClick()" id="runtestbutton">');
 </script>
 </div>
+
+<div id="notice1">Please use following command on another network node to start test:
+<br /><br />
+<div id="client_commandline_helper" style="text-align:center;"><i><b>iperf -J -c </b></i></div>
+<br />
+IPerf in version 3 is required.
+</div><br style="clear:both">
 
 <div id="status_table">
 <script type="text/javascript">
