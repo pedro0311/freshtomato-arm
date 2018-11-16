@@ -2433,6 +2433,9 @@ function navi()
 			['Trace',			'trace.asp'],
 			['System Commands',		'shell.asp'],
 			['Wireless Survey',		'survey.asp'],
+/* IPERF-BEGIN */
+			['IPerf',			'iperf.asp'],
+/* IPERF-END */
 			['WOL',				'wol.asp'] ] ],
 		null,
 		['Basic', 			'basic', 0, [
