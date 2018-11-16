@@ -237,6 +237,7 @@ endif
 	done
 
 # Remove from html obsolete stuff
+	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp); do \
 		sed     -e "s,<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">,<!DOCTYPE html>," \
 			-e "s,<form action=\"\">,<form>," \
