@@ -60,14 +60,13 @@ static void prepareCAGeneration(int serverNum)
 	eval("rm", "-Rf", "/tmp/openssl");
 	eval("mkdir", "-p", "/tmp/openssl");
 	put_to_file("/tmp/openssl/index.txt", "");
-	put_to_file("/tmp/openssl/openssl.log", "w");
+	put_to_file("/tmp/openssl/openssl.log", "");
 
 	sprintf(&buffer[0], "vpn_server%d_ca_key", serverNum);
 
 	if (nvram_match(buffer, "")) {
 		syslog(LOG_WARNING, "No CA KEY was saved for server %d, regenerating", serverNum);
 		sprintf(&buffer2[0], "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
-		syslog(LOG_WARNING, "SUBJ is: %s", buffer2);
 		sprintf(&buffer[0], "openssl req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
 		syslog(LOG_WARNING, buffer);
 		run_program(buffer);
@@ -93,7 +92,6 @@ static void generateKey(const char *prefix)
 	char buffer[512];
 	put_to_file("/tmp/openssl/serial", "00");
 	sprintf(&subj_buf[0], "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
-	syslog(LOG_WARNING, "SUBJ is: %s", subj_buf);
 	sprintf(&buffer[0], "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, subj_buf);
 	syslog(LOG_WARNING, buffer);
 	run_program(buffer);
