@@ -313,6 +313,12 @@ ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 endif
 
+# Only include the Iperf page if it is compiled in
+ifneq ($(TCONFIG_IPERF),y)
+	rm -f $(INSTALLDIR)/www/tools-iperf.asp
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/IPERF-BEGIN/,/IPERF-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \

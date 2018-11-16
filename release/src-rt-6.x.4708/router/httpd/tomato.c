@@ -325,6 +325,11 @@ const struct mime_handler mime_handlers[] = {
 #ifdef TCONFIG_USB
 	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },	//!!TB - USB
 #endif
+#ifdef TCONFIG_IPERF
+	{ "iperfstatus.cgi",			mime_javascript,			0,	wi_generic,		wo_ttcpstatus,		1 },
+	{ "iperfrun.cgi",			mime_javascript,			0,	wi_generic,		wo_ttcprun,		1 },
+	{ "iperfkill.cgi",			mime_javascript,			0,	wi_generic,		wo_ttcpkill,		1 },
+#endif
 #ifdef BLACKHOLE
 	{ "blackhole.cgi",		NULL,					0,	wi_blackhole,		NULL,			1 },
 #endif

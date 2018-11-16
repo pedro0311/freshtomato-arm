@@ -249,3 +249,7 @@ config TCONFIG_TINC
 config TCONFIG_FANCTRL
 	bool "FANCTRL"
  	default n
+
+config TCONFIG_IPERF
+	bool "IP Bandwidth monitoring utility"
+	default n
