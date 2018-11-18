@@ -734,24 +734,24 @@ for (i = 0; i < tabs.length; ++i)
 	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>. All 6 keys take about 14kB of NVRAM, so check first if there is enough free space!<\/p>');
 	createFieldTable('', [
 		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ),
-			prefix: '<div id="'+t+'_static_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating static key...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_static_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating static key...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_static_'+t+'_button">' },
 		{ title: 'Certificate Authority Key', name: 'vpn_'+t+'_ca_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca_key' ),
-			prefix: '<div id="'+t+'_ca_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA key...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_ca_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA key...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: '', custom: '<div id="'+t+'_ca_key_div_help"><p class="keyhelp">Optional, only used for client certificate generation.<br />Uncrypted (-nodes) private keys are supported.<\/p><\/div>' },
 		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ),
-			prefix: '<div id="'+t+'_ca_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA certificate...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_ca_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA certificate...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: 'Server Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ),
-			prefix: '<div id="'+t+'_cert_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating certificate...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_cert_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating certificate...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_key' ),
-			prefix: '<div id="'+t+'_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating key...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating key...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
 		{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_dh' ),
-			prefix: '<div id="'+t+'_dh_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating DH parameters...<img src="spin.gif"><\/p><\/div>' },
+			prefix: '<div id="'+t+'_dh_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating DH parameters...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: '', custom: '<input type="button" value="Generate DH Params" onclick="generateDHParams('+(i+1)+')" id="_vpn_dhgen_'+t+'_button">' },
 		null,
 		{ title: '', custom: '<input type="button" value="Generate client config" onclick="downloadClientConfig('+(i+1)+')" id="_vpn_client_gen_'+t+'_button">',
-			suffix: '<div id="'+t+'_gen_progress_div" style="display: none;"><p class="keyhelp">Please wait while your configuration is being generated...<img src="spin.gif"><\/p><\/div>' }
+			suffix: '<div id="'+t+'_gen_progress_div" style="display: none;"><p class="keyhelp">Please wait while your configuration is being generated...<img src="spin.gif" alt=""><\/p><\/div>' }
 	]);
 	W('<\/div>');
 	W('<div id=\''+t+'-status\'>');

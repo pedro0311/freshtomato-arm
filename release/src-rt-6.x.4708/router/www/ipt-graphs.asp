@@ -317,7 +317,7 @@ function init() {
 <div id="cstats">
 
 	<div class="section">
-		<table border="0" width="100%">
+		<table style="border:0;width:100%">
 			<tr><td>
 				<script type="text/javascript">
 				W('<table style="width:250px">\n');
@@ -345,7 +345,7 @@ function init() {
 
 	<div class="section-title">Bandwidth Distribution (Inbound)</div>
 	<div class="section">
-		<table border="0" width="100%">
+		<table style="border:0;width:100%">
 			<tr><td>
 				<script type="text/javascript">
 					W('<table style="width:250px">\n');
@@ -377,7 +377,7 @@ function init() {
 
 	<div class="section-title">Bandwidth Distribution (Outbound)</div>
 	<div class="section">
-		<table border="0" width="100%">
+		<table style="border:0;width:100%">
 			<tr><td>
 				<script type="text/javascript">
 					W('<table style="width:250px">\n');
