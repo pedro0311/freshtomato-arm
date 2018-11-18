@@ -208,4 +208,8 @@ extern void wo_usb(char *url);
 extern char *utf8_to_js_string(const char *ins);
 extern char *utf8_to_html_string(const char *ins);
 
+extern void wo_ttcpstatus(char *url);
+extern void wo_ttcprun(char *url);
+extern void wo_ttcpkill(char *url);
+
 #endif

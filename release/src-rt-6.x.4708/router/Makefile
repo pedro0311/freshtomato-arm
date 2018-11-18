@@ -98,6 +98,9 @@ obj-y += utils$(BCMEX)
 obj-y += rstats
 obj-y += cstats
 obj-y += udpxy
+ifeq ($(TCONFIG_IPERF),y)
+obj-y += iperf
+endif
 
 ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
@@ -2957,6 +2960,34 @@ comgt-install:
 
 comgt-clean:
 	-@$(MAKE) -C comgt clean
+
+iperf/stamp-h1:
+	cd $(TOP)/iperf && CC=$(CC) STRIP=$(STRIP) \
+	autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	ac_cv_func_clock_gettime="no" \
+	ac_cv_func_daemon="no" \
+	$(CONFIGURE) --prefix=/usr --disable-profiling --without-openssl
+	touch ipset/stamp-h1
+
+iperf: iperf/stamp-h1
+	$(call patch_files,iperf)
+	$(MAKE) -C iperf
+
+iperf-install:
+	install -D iperf/src/.libs/iperf3 $(INSTALLDIR)/iperf/usr/sbin/iperf
+	install -d $(INSTALLDIR)/iperf/usr/lib/
+	install iperf/src/.libs/libiperf.so.0.0.0 $(INSTALLDIR)/iperf/usr/lib/libiperf.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/iperf/usr/lib/libiperf.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/iperf/usr/sbin/iperf
+	cd $(INSTALLDIR)/iperf/usr/lib/ && \
+		ln -sf libiperf.so.0.0.0 libiperf.so.0 && \
+		ln -sf libiperf.so.0.0.0 libiperf.so
+
+iperf-clean:
+	-@$(MAKE) -C iperf clean
+	-@rm -rf iperf/Makefile iperf/stamp-h1
+	$(call unpatch_files,iperf)
 
 #
 # Generic rules
