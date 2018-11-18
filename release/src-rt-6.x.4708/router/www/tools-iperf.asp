@@ -142,37 +142,51 @@ function execute() {
 		} else {
 			iperf_up = 1;
 		}
+		let statusText = '';
+		let xferedText = '';
+		let timeText = '';
+		let speedText = '';
 		if (respObj.error){ /* Error Happen, must be checked first */
 			iperf_up = 0;
-			E('test_status').innerHTML = respObj.error;
+			statusText = respObj.error;
 		} else {
 			if (respObj.end) { /* Test finished */
 				iperf_up = 0;
-				E('test_status').innerHTML = 'Finished';
+				statusText = 'Finished';
 				if (respObj.start.accepted_connection) {
-					E('test_xfered').innerHTML = scaleSize(respObj.end.sum_received.bytes) + ' <small>uploaded<\/small>';
-					E('test_speed').innerHTML = scaleSpeed(respObj.end.sum_received.bits_per_second);
+					if (E('iperf_recv').checked && E('iperf_proto_udp').checked) {
+						xferedText = 'See client side';
+						speedText = 'See client side';
+					} else {
+						xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_received.bytes) + ' <small>uploaded<\/small>';
+						speedText = scaleSpeed(respObj.end.sum ? respObj.end.sum.bits_per_second : respObj.end.sum_received.bits_per_second);
+					}
+					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_received.seconds.toFixed(2)) + ' <small>seconds<\/small>';
 				} else {
-					E('test_xfered').innerHTML = scaleSize(respObj.end.sum_sent.bytes) + ' <small>uploaded<\/small>';
-					E('test_speed').innerHTML = scaleSpeed(respObj.end.sum_sent.bits_per_second);
+					xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_sent.bytes) + ' <small>uploaded<\/small>';
+					speedText = scaleSpeed(respObj.end.sum ? respObj.end.sum.bits_per_second : respObj.end.sum_sent.bits_per_second);
+					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_sent.seconds.toFixed(2)) + ' <small>seconds<\/small>';
 				}
-				E('test_time').innerHTML = respObj.end.sum_sent.seconds.toFixed(2) + ' <small>seconds<\/small>';
 			} else { /* Interval has been send */
-				E('test_status').innerHTML = respObj.mode;
+				statusText = respObj.mode;
 				let sumSent = respObj.sum_sent;
 				if (sumSent && sumSent.bytes != 0) {
-					E('test_xfered').innerHTML = scaleSize(respObj.sum_sent.bytes) + ' <small>uploaded<\/small>';
+					xferedText = scaleSize(respObj.sum_sent.bytes) + ' <small>uploaded<\/small>';
 				} else {
 					if(respObj.sum_received && respObj.sum_received.bytes) {
-						E('test_xfered').innerHTML = scaleSize(respObj.sum_received.bytes) + ' <small>uploaded<\/small>';
+						xferedText = scaleSize(respObj.sum_received.bytes) + ' <small>uploaded<\/small>';
 					}
 				}
 				if (respObj.sum) {
-					E('test_time').innerHTML = respObj.sum.end.toFixed(2) + ' <small>seconds<\/small>';
-					E('test_speed').innerHTML = scaleSpeed(respObj.sum.bits_per_second);
+					timeText = respObj.sum.end.toFixed(2) + ' <small>seconds<\/small>';
+					speedText = scaleSpeed(respObj.sum.bits_per_second);
 				}
 			}
 		}
+		E('test_status').innerHTML = statusText;
+		E('test_time').innerHTML = timeText;
+		E('test_xfered').innerHTML = xferedText;
+		E('test_speed').innerHTML = speedText;
 		changeTestButtonText();
 		toggleAllFields(!iperf_up);
 		spin(0);
@@ -207,7 +221,7 @@ function loadCookies() {
 	let s;
 	if ((s = cookie.get('iperf_mode')) != null) {
 		 E('iperf_transm').checked = s == "true";
-		 E('iperf_recv').checked = s != "true";
+		 E('iperf_recv').checked = s == "false";
 	}
 	if ((s = cookie.get('iperf_transmit_address')) != null) E('iperf_addr').value = s;
 	if ((s = cookie.get('iperf_port')) != null) E('iperf_port').value = s;
@@ -220,15 +234,6 @@ function loadCookies() {
 		} else {
 			E('time_limit').checked = true;
 			E('byte_limit').checked = false;
-		}
-	}
-	if ((s = cookie.get('iperf_mode')) != null) {
-		if (s == '0') {
-			E('iperf_transm').checked = false;
-			E('iperf_recv').checked = true;
-		} else {
-			E('iperf_transm').checked = true;
-			E('iperf_recv').checked = false;
 		}
 	}
 }
@@ -323,7 +328,6 @@ createFieldTable('', [
 	{ title: 'Speed', text: '<div id="test_speed"><\/div>' }
 ]);
 </script>
-<!--<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>-->
 </div>
 
 <div style="height:10px;" onclick='E("debug").style.display=""'></div>
