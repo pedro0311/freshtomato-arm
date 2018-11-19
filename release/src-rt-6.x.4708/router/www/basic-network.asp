@@ -1756,7 +1756,7 @@ for (var uidx = 1; uidx <= maxwan_num; ++uidx) {
 			['disabled','Disabled']],
 			value: nvram['wan'+u+'_proto'] },
 		{ title: 'Wireless Client Mode', name: 'wan'+u+'_sta', type: 'select', options: sta_list, value: nvram['wan'+u+'_sta'] },
-		{ title: 'Modem device', name: 'wan'+u+'_modem_dev', type: 'select', options: [['ttyUSB0', '/dev/ttyUSB0'],['ttyUSB1', '/dev/ttyUSB1'],['ttyUSB2', '/dev/ttyUSB2'],['ttyUSB3', '/dev/ttyUSB3'],['ttyUSB4', '/dev/ttyUSB4'],['ttyUSB5', '/dev/ttyUSB5'],['ttyUSB6', '/dev/ttyUSB6'],['ttyACM0', '/dev/ttyACM0']], value: nvram['wan'+u+'_modem_dev'] },
+		{ title: 'Modem device', name: 'wan'+u+'_modem_dev', type: 'select', options: [['/dev/ttyUSB0', '/dev/ttyUSB0'],['/dev/ttyUSB1', '/dev/ttyUSB1'],['/dev/ttyUSB2', '/dev/ttyUSB2'],['/dev/ttyUSB3', '/dev/ttyUSB3'],['/dev/ttyUSB4', '/dev/ttyUSB4'],['/dev/ttyUSB5', '/dev/ttyUSB5'],['/dev/ttyUSB6', '/dev/ttyUSB6'],['/dev/ttyACM0', '/dev/ttyACM0']], value: nvram['wan'+u+'_modem_dev'] },
 		{ title: 'Load Balance Weight', name: 'wan'+u+'_weight', type: 'text', maxlen: 3, size: 8, value: nvram['wan'+u+'_weight'], suffix: '&nbsp; <small>Failover: 0; Load balancing: 1 - 256<\/small>' },
 		{ title: 'PIN Code', name: 'wan'+u+'_modem_pin', type: 'text', maxlen: 6, size: 8, value: nvram['wan'+u+'_modem_pin'], suffix: '&nbsp; <small>advised to turn off PIN Code<\/small>' },
 		{ title: 'Modem init string', name: 'wan'+u+'_modem_init', type: 'text', maxlen: 25, size: 32, value: nvram['wan'+u+'_modem_init'] },
