@@ -859,7 +859,8 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_6rd_borderrelay",	V_IP				},
 	{ "ipv6_6rd_ipv4masklen",	V_RANGE(0, 32)			},
 	{ "ipv6_vlan",			V_RANGE(0, 7)			},	// Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3
-	{ "ipv6_pdonly",		V_01				},	// Request DHCPv6 Prefix Delegation Only
+	{ "ipv6_isp_opt",		V_01				},	// see router/rc/wan.c --> add default route ::/0
+	{ "ipv6_pdonly",		V_01				},	// Request DHCPv6 Prefix Delegation Only (send ia-pd and NO send ia-na)
 	{ "ipv6_ipsec",			V_01				},	// Enable Incoming IPv6 IPSec
 	{ "ipv6_wan_addr",		V_IPV6(0)			},	// Static IPv6 Wan Address
 	{ "ipv6_prefix_len_wan",	V_RANGE(3, 64)			},	// Static IPv6 Wan Prefix Length
