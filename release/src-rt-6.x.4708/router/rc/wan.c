@@ -210,7 +210,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 
 		/* Add to options file */
 		fprintf(fp,
-			"/dev/%s\n"
+			"%s\n"
 			"460800\n"
 			"connect \"/usr/sbin/chat %s -t 30 -f %s\"\n"
 			"noipdefault\n"
