@@ -42,7 +42,7 @@ void wo_ttcpstatus(char *url)
 		web_puts("{ \"mode\": \"Stopped\" }");
 		return;
 	}
-	if (access( "/tmp/iperf.pid", F_OK ) != -1) {
+	if (access( "/var/run/iperf.pid", F_OK ) != -1) {
 		/* We know we're in server mode */
 		_dprintf("iperf.pid found, server mode\n");
 		if (access( "/tmp/iperf_interval", F_OK ) != -1) {
@@ -99,7 +99,7 @@ void wo_ttcprun(char *url)
 		if (!strcmp(v, "server")) {
 			_dprintf("Server\n");
 			sprintf(cmdBuffer, "iperf -J --logfile /tmp/iperf_log --intervalfile \
-			        /tmp/iperf_interval -I /tmp/iperf.pid -s -1 -D -p %d", port);
+			        /tmp/iperf_interval -I /var/run/iperf.pid -s -1 -D -p %d", port);
 		} else {
 			if ((host = webcgi_get("_host")) != NULL && (*host)) {
 				_dprintf("Client Address %s\n", host);
