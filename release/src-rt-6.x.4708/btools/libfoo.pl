@@ -180,7 +180,7 @@ sub fixDyn
 	fixDynDep("minidlna", "libid3tag.so.0");
 	fixDynDep("minidlna", "libexif.so.12");
 	fixDynDep("minidlna", "libFLAC.so.8");
-	fixDynDep("libjepg.so", "libc.so.0");
+	fixDynDep("libjpeg.so", "libc.so.0");
 	fixDynDep("libavcodec.so.52", "libpthread.so.0");
 
 #ipset modules
