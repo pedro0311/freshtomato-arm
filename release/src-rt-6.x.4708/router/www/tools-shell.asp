@@ -13,14 +13,36 @@
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script type="text/javascript" src="tomato.js"></script>
+<script type="text/javascript" src="termlib_min.js"></script>
 
 <!-- / / / -->
 
 <style type="text/css">
-textarea {
-	font: 12px monospace;
-	width: 99%;
-	height: 12em;
+
+#icommandsFromMobile {
+	font-size: 32px;
+	width: 512px;
+}
+
+.helperButton{
+	font-size: 32px;
+	height:64px;
+	width:259px;
+}
+.lh15 {
+	line-height: 15px;
+}
+
+.term {
+	font-family: "Courier New",courier,fixed,monospace;
+	font-size: 12px;
+	color: #d3d3d3;
+	background: none;
+	letter-spacing: 1px;
+}
+.term .termReverse {
+	color: #232e45;
+	background: #95a9d5;
 }
 </style>
 
@@ -29,70 +51,102 @@ textarea {
 
 //	<% nvram(''); %>	// http_id
 
-var cmdresult = '';
-var cmd = null;
-
-
-var ref = new TomatoRefresh('update.cgi', '', 0, 'tools-shell_refresh');
-
-ref.refresh = function(text) {
-	execute();
-}
-
+var term;
 
 function verifyFields(focused, quiet) {
 	return 1;
 }
 
-function escapeText(s) {
-	function esc(c) {
-		return '&#' + c.charCodeAt(0) + ';';
+function termOpen() {
+	if ((!term) || (term.closed)) {
+		term = new Terminal(
+			{
+				cols: 94,
+				rows: 35,
+				mapANSI: true,
+				crsrBlinkMode: true,
+				termDiv: 'termDiv',
+				handler: termHandler,
+				initHandler: initHandler,
+				wrapping: true
+			}
+		);
+		term.open();
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/ /g, '&nbsp;'.replace(/\n/g, ' <br />'));
+	window.addEventListener("paste", function(thePasteEvent) {
+		if (term) {
+			let clipboardData, pastedData;
+			thePasteEvent.stopPropagation();
+			thePasteEvent.preventDefault();
+			clipboardData = thePasteEvent.clipboardData || window.clipboardData;
+			pastedData = clipboardData.getData('Text');
+			term.type(pastedData);
+		}
+	}, false);
 }
 
-function spin(x) {
-	E('execb').disabled = x;
-	E('_f_cmd').disabled = x;
-	E('wait').style.visibility = x ? 'visible' : 'hidden';
-	if (!x) cmd = null;
+function initHandler() {
+	term.write('%+r FreshTomato Web Shell ready. %-r \n\n');
+	runCommand('mymotd');
 }
 
-function updateResult() {
-	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
-	cmdresult = '';
-	spin(0);
+function showWait(state) {
+	E('wait').style.visibility = state ? 'visible' : 'hidden';
 }
 
-function execute() {
-	// Opera 8 sometimes sends 2 clicks
-	if (cmd) return;
-	spin(1);
+function termHandler() {
+	this.newLine();
 
-	cmd = new XmlHttp();
+	this.lineBuffer = this.lineBuffer.replace(/^\s+/, '');
+	runCommand(this.lineBuffer);
+	return;
+}
+
+function runCommand(command) {
+	let cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		updateResult();
+		term.write(text.split('\n'), true);
+		showWait(false);
 	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: ' + x;
-		updateResult();
+	cmd.onError = function(text) {
+		term.type( '> ERROR: ' + text, 17 );
+		showWait(false);
+		term.prompt();
 	}
 
-	var s = E('_f_cmd').value;
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(s.replace(/\r/g, '')));
-	cookie.set('shellcmd', escape(s));
+	showWait(true);
+	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(command));
 }
 
-function init() {
-	var s;
-	if ((s = cookie.get('shellcmd')) != null) E('_f_cmd').value = unescape(s);
+function fakecommand() {
+	let command = E('icommandsFromMobile').value;
+	for (var i=0; i<command.length; i++) {
+		Terminal.prototype.globals.keyHandler({which: command.charCodeAt(i), _remapped:true});
+	}
+	sendCR();
+	E('icommandsFromMobile').value = '';
+	E('icommandsFromMobile').focus();
 }
+
+function sendSpace() {
+	Terminal.prototype.globals.keyHandler({which: 32, _remapped:false});
+	sendCR();
+}
+
+function sendCR() {
+	Terminal.prototype.globals.keyHandler({which: 0x0D, _remapped:false});
+}
+
+function toggleHWKeyHelper() {
+	E('noHWKeyHelperDiv').style.visibility = 'visible';
+	E('noHWKeyHelperLink').style.visibility = 'hidden';
+}
+
 </script>
 
 </head>
 
-<body onload="init()">
+<body onload="termOpen()">
 <form action="javascript:{}">
 <table id="container" cellspacing="0">
 <tr><td colspan="2" id="header">
@@ -107,15 +161,14 @@ function init() {
 
 <div class="section-title">Execute System Commands</div>
 <div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Command', name: 'f_cmd', type: 'textarea', wrap: 'pre', value: '' }
-]);
-</script>
-<div style="float:left"><input type="button" value="Execute" onclick="execute()" id="execb"></div>
-<script type="text/javascript">genStdRefresh(1,5,'ref.toggle()');</script>
+<div id="termDiv"></div>
 </div>
-
+<a href="#" onclick="toggleHWKeyHelper();" id="noHWKeyHelperLink">No hardware keyboard</a>
+<div style="visibility:hidden;text-align:left" id="noHWKeyHelperDiv">
+	<input type="button" class="helperButton" onclick="fakecommand()" value="Enter">
+	<input type="button" class="helperButton" onclick="sendSpace()" value="Space"><br>
+	<input type="text" id="icommandsFromMobile" name="commandsFromMobile" spellcheck="false" style="text-transform:none">
+</div>
 <div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"></div>
 <pre id="result"></pre>
 

@@ -192,9 +192,7 @@ static void wo_cgi_bin(char *url)
 
 static void wo_shell(char *url)
 {
-	web_puts("\ncmdresult = '");
-	_execute_command(NULL, webcgi_get("command"), NULL, WOF_JAVASCRIPT);
-	web_puts("';");
+	_execute_command(NULL, webcgi_get("command"), NULL, WOF_NONE);
 }
 
 static void wo_blank(char *url)
