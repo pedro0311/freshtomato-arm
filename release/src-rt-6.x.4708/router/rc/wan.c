@@ -210,7 +210,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 
 		/* Add to options file */
 		fprintf(fp,
-			"/dev/%s\n"
+			"%s\n"
 			"460800\n"
 			"connect \"/usr/sbin/chat %s -t 30 -f %s\"\n"
 			"noipdefault\n"
@@ -1106,7 +1106,11 @@ void start_wan6_done(const char *wan_ifname)
 		//eval("ip", "route", "add", "::/0", "dev", (char *)wan_ifname, "metric", "2048");
 		break;
 	case IPV6_NATIVE_DHCP:
-		if (nvram_get_int("ipv6_pdonly") == 1) {
+		/* IPv6 RA (via WAN) will take care of adding the default route, so that ipv6_isp_opt should not be enabled/required!
+		   BUT: some ISP's, Snap (NZ), Internode (AU) may need the default route / workaround --> Tomato User can decide
+		   see also https://www.linksysinfo.org/index.php?threads/ipv6-and-comcast.38006/
+		*/
+		if (nvram_get_int("ipv6_isp_opt") == 1) {
 			eval("ip", "route", "add", "::/0", "dev", (char *)wan_ifname);
 		}
 		stop_dhcp6c();

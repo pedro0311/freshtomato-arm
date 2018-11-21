@@ -68,3 +68,4 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_AC3200 is not set
 # TCONFIG_GROCTRL is not set
 # TCONFIG_BCMFA is not set
+# TCONFIG_IPERF is not set

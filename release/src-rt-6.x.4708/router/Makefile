@@ -2968,7 +2968,7 @@ iperf/stamp-h1:
 	ac_cv_func_clock_gettime="no" \
 	ac_cv_func_daemon="no" \
 	$(CONFIGURE) --prefix=/usr --disable-profiling --without-openssl
-	touch ipset/stamp-h1
+	touch iperf/stamp-h1
 
 iperf: iperf/stamp-h1
 	$(call patch_files,iperf)
