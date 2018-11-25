@@ -72,6 +72,7 @@ FreshTomato-ARM Changelog
 - router: shared: defaults.c: change default value for ntp_updates (Auto Update Time) to 1 (Auto interval)
 - router: shared: defaults.c: small fix for vpn ca key
 - router: config_base: add missing TCONFIG_IPERF
+- router: mssl: mssl.c: fix build break on dir868l target
 - small fix for IPv6 accept_ra: make it possible to change accept_ra value for WAN and LAN(br0...br3) without reboot/restart of the router
 - IPv6: restrict Accept RA from LAN option (with dnsmasq)
 - IPv6: small fix/changes for DHCPv6 with Prefix Delegation - let IPv6 RA via WAN take care of adding the default route
