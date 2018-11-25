@@ -43,6 +43,10 @@
 #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
 #endif
 
+#ifndef SSL_is_server
+#define SSL_is_server(s) ((s)->server)
+#endif
+
 typedef struct {
 	SSL* ssl;
 	int sd;
