@@ -1,6 +1,108 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2018.5.083-beta - 2018.11.25
+----------------------------
+- kernel: drivers: net: usb: qmi_wwan.c: fix CVE-2017-16650
+- kernel: net: ipv4: fix multipath RTM_GETROUTE behavior when iif is given
+- kernel: net: ipv6: accept RA and send RS while configured as router
+- kernel: proc/sysctl: fix the int overflow for jiffies conversion
+- OpenVPN: add TLS keys generator in GUI for VPN Server. Add ability to generate VPN client configuration for TLS
+- dnsmasq: change default dns priority to 'no-resolv'
+- dnsmasq: improve insecure ds syslog to handle servers that really do not support dnssec
+- dnsmasq: update to 2.80
+- stubby: make tls_authentication REQUIRED
+- nf_conntrack_rtsp and nf_nat_rtsp: update to version 0.7, correcting nat_rtsp's behavour so it now will strip destination addresses that are not a stunaddr and replace with the masquerade IP of the host.
+- tor: Updated to 0.3.4.9
+- tor: make tor fully functional, so users can solve xxx.onion website dns and visit tor sites
+- nano: Updated to 3.2
+- php: updated to 7.2.12
+- miniupnpd: update to git snapshot from 20181031 (includes PCP fix)
+- tinc: Updated to 1.1pre17
+- SQLite: Updated to 3.25.3
+- nginx: updated to 1.14.1
+- snmpd: Updated to 5.8
+- uqmi: update to uqmi-01944dd
+- apcupsd: update to 3.14.14
+- libubox: update to libubox-c83a84a, clean sources, add patch instead
+- libcurl: Updated to 7.62.0
+- libcurl: Updated CA certificate bundle as of 2018-10-17
+- dropbear: fix from upstream for CVE-2018-15599
+- Remove residues in the code after ARIA2
+- nano: bindings: when Ctrl+Shift+Delete has no keycode, don't use KEY_BSP
+- mssl: Updated cipher list
+- mssl: fix ssl context ciphers & options wasn't applied
+- mssl: fix CVE-2009-3555, various security improvements
+- mdu/mssl: add TLS SNI support
+- mdu: fix warnings in compiler + cosmetics
+- adblock: clean-up, fixes, improvements
+- adblock: decrease timeout for wget to a reasonable value
+- adblock: fix race condition when wan is up
+- IGMP: Resolve CVE-2012-0207 - Resolve potential for divide by 0, allowing remote attackers to cause a denial of service via IGMP packets
+- router: preparation of variables for new version of switch4g/switch3g
+- router: preparation of variables for new version of switch4g/switch3g part 2
+- router: Makefile: Fix nano not working on dir868l target due to missing library
+- router: Makefile: add libnfnetlink-clean target
+- router: Makefile: add stubby to targets o (R1D) and dir868l
+- router: Makefile: Filter support for PHP needs to be enabled for h5ai
+- router: Makefile: fix typo
+- btools: libfoo.pl: fix typo
+- router: www: qos-graphs.asp: Hide "Zoom Graphs" because it doesn't work anyway
+- router: www: status-devices.asp: fix the freeze in Vivaldi browser 
+- router: www: vpn-tinc.asp: small js fix
+- router: www: basic-ipv6.asp AND rc: dhcp.c - some cosmetic - add missing verifcation for lanX_ipv6 - add/change comments (also at file httpd/tomato.c) - add additional check before we request a prefix for br1/br2/br3
+- router: www: tomato.js: small fixes
+- router: www: red.css: cosmetics
+- router: www: Makefile: small fix regarding remove of obsolete stuff from html
+- router: www: Makefile: cleanup comments more aggressively
+- router: www: Makefile: cosmetics
+- router: httpd: increase HTTP_MAX_LISTENERS to 16
+- router: httpd: wl.c: fix popen/pclose
+- router: httpd: vpn.c: cosmetics
+- router: httpd: tomato.c: sync NVRAM variables sequence of OpenVPN Server 1 and Server 2 - add missing default-values for variables "vpn_server1_userpass" and "vpn_server1_nocert"
+- router: httpd: tomato.c: cosmetics
+- router: httpd: iperf.c: change the location of the pid file
+- router: rc: vpn.c: add some comments -protection/cosmetic within function start_vpn_eas() and stop_vpn_eas: add check that i (counter for Server X/Client Y) will always be < 4 before write value to nums[i]
+- router: rc: led.c: fix led applet - use proper led in case usb3
+- router: rc: init.c: cosmetics
+- router: rc: services.c: fix: Static DNS settings broken with WAN disabled (i.e. operating as AP)
+- router: rc: network.c: Do not enable IPv6 for 'all', 'eth0', 'eth1', 'eth2' (ethX) - IPv6 will live on the bridged instances
+- router: dhcp.c: add some comments -cosmetic -change *lanif to const char (pointer can be changed but not char), because of getifaddr return value (const char*) -remove semicolon after some if-conditions
+- router: shared: led.c: also for USB GPIO values in case AC56/68U
+- router: shared: defaults.c: change default value for ntp_updates (Auto Update Time) to 1 (Auto interval)
+- router: shared: defaults.c: small fix for vpn ca key
+- router: config_base: add missing TCONFIG_IPERF
+- small fix for IPv6 accept_ra: make it possible to change accept_ra value for WAN and LAN(br0...br3) without reboot/restart of the router
+- IPv6: restrict Accept RA from LAN option (with dnsmasq)
+- IPv6: small fix/changes for DHCPv6 with Prefix Delegation - let IPv6 RA via WAN take care of adding the default route
+- switch3g: change sleep time for switching modem
+- switch3g: rework (1/2)
+- switch4g: change the sleep time for 2nd type non-hilink modem, before send any command (some devices need this, otherwise they hang)
+- switch4g: add more possible options to Network Type and Roaming for 2nd type (qmi-wwan) non-hilink modems
+- switch4g: rework
+- switch4g: do not search all DIAGS every time - use already found for given device in searchDiag()
+- vpnrouting: cosmetics
+- GUI: adblock: add warning
+- GUI: stubby: add the ability to choose the level of logging
+- GUI: add CPU / WL temperature readings in Fahrenheit degrees
+- GUI: add feature to generate VPN static key from GUI
+- GUI: add warning on OpenVPN server page about needed free NVRAM space
+- GUI: add option for OpenVPN LZ4-V2 compression
+- GUI: Add IPERF bandwidth test tool with as an option
+- GUI: Generation of iperf commandline
+- GUI: IPerf: fix some minor JS bugs
+- Fix build when valgrind is installed on host
+- www: W3C never-ending-story
+- Final clean-up of UI files according to the Web Consortium W3C standard
+- Fix PHP build when libicu is installed
+- Fix build when LZMA is installed on host
+- Fix "cannot run test program while cross compiling"
+- patches: fix mysql re-check patch
+- cosmetic and small updates for IPv6
+- Stealth Mode switch for LEDs
+- LEDs and stealth mode rework
+
+
 2018.4 - 2018.09.12
 ----------------------------
 
