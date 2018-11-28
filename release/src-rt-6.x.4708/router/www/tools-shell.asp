@@ -52,6 +52,7 @@
 //	<% nvram(''); %>	// http_id
 
 var term;
+var working_dir = '/www';
 
 function verifyFields(focused, quiet) {
 	return 1;
@@ -65,6 +66,7 @@ function termOpen() {
 				rows: 35,
 				mapANSI: true,
 				crsrBlinkMode: true,
+				closeOnESC: false,
 				termDiv: 'termDiv',
 				handler: termHandler,
 				initHandler: initHandler,
@@ -98,8 +100,65 @@ function termHandler() {
 	this.newLine();
 
 	this.lineBuffer = this.lineBuffer.replace(/^\s+/, '');
-	runCommand(this.lineBuffer);
+	if (this.lineBuffer.startsWith("cd ")) {
+		let tmp = this.lineBuffer.slice(3);
+
+		if (tmp === ".") {
+			return; /* nothing to do here.. */
+		} else if (tmp === "..") {
+			workingDirUp();
+			term.write('%+r Switching to directory %+b' + working_dir + '%-b %-r \n');
+			term.prompt();
+		} else {
+			checkDirectoryExist(tmp);
+		}
+	} else if (this.lineBuffer === "clear") {
+		term.clear();
+		term.prompt();
+	} else {
+		runCommand(this.lineBuffer);
+	}
 	return;
+}
+
+function checkDirectoryExist(directoryToCheck) {
+	let cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		if (text.trim() === "OK") {
+			if (!directoryToCheck.startsWith("/")) {
+				working_dir = working_dir + "/" + directoryToCheck;
+			} else {
+				working_dir = directoryToCheck;
+			}
+			term.write('%+r Switching to directory %+b' + working_dir + '%-b %-r \n');
+		} else {
+			term.write( '%+r%c(red) ERROR directory ' + directoryToCheck + ' does not exist %c(default)%-r' );
+		}
+		showWait(false);
+		term.prompt();
+	}
+	cmd.onError = function(text) {
+		term.write( '%c(red) ERROR during switching directory: ' + text + ' %c(default)' );
+		showWait(false);
+		term.prompt();
+	}
+
+	showWait(true);
+	if (!directoryToCheck.startsWith("/")) {
+		directoryToCheck = working_dir + "/" + directoryToCheck;
+	}
+	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI("[ -d \"" + directoryToCheck + "\" ] && echo \"OK\""));
+}
+
+function workingDirUp() {
+	let tmp = working_dir.split("/");
+	if (tmp.length > 1) {
+		tmp.pop();
+		working_dir = tmp.join("/");
+		if (working_dir === "") { /* it was last dir; */
+			working_dir = "/";
+		}
+	}
 }
 
 function runCommand(command) {
@@ -115,7 +174,7 @@ function runCommand(command) {
 	}
 
 	showWait(true);
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(command));
+	cmd.post('shell.cgi', 'action=execute&working_dir=' + working_dir + '&command=' + escapeCGI(command));
 }
 
 function fakecommand() {

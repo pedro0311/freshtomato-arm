@@ -122,7 +122,7 @@ void wi_cgi_bin(char *url, int len, char *boundary)
 	}
 }
 
-static void _execute_command(char *url, char *command, char *query, wofilter_t wof)
+static void _execute_command(char *url, char *command, char *query, char *working_dir, wofilter_t wof)
 {
 	char webExecFile[]  = "/tmp/.wxXXXXXX";
 	char webQueryFile[] = "/tmp/.wqXXXXXX";
@@ -146,8 +146,9 @@ static void _execute_command(char *url, char *command, char *query, wofilter_t w
 			"export REQUEST_METHOD=\"%s\"\n"
 			"export PATH=%s\n"
 			". /etc/profile\n"
+			"cd %s\n"
 			"%s%s %s%s\n",
-			post ? "POST" : "GET", getenv("PATH"),
+			post ? "POST" : "GET", getenv("PATH"), working_dir,
 			command ? "" : "./", command ? command : url,
 			query ? "<" : "", query ? webQueryFile : "");
 		fclose(f);
@@ -183,7 +184,7 @@ static void _execute_command(char *url, char *command, char *query, wofilter_t w
 static void wo_cgi_bin(char *url)
 {
 	if (!header_sent) send_header(200, NULL, mime_html, 0);
-	_execute_command(url, NULL, post_buf, WOF_NONE);
+	_execute_command(url, NULL, post_buf, "/www", WOF_NONE);
 	if (post_buf) {
 		free(post_buf);
 		post_buf = NULL;
@@ -192,7 +193,7 @@ static void wo_cgi_bin(char *url)
 
 static void wo_shell(char *url)
 {
-	_execute_command(NULL, webcgi_get("command"), NULL, WOF_NONE);
+	_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
 }
 
 static void wo_blank(char *url)
