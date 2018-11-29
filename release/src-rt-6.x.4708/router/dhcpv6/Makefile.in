@@ -116,7 +116,7 @@ $(srcdir)/ianaopts.h: gentab.pl bootp-dhcp-parameters
 
 install::
 	-mkdir -p $(sbindir) $(mandir)/man5 $(mandir)/man8
-	$(INSTALL_PROGRAM) -s -o $(user) -g $(group) $(TARGET) $(sbindir)
+	$(INSTALL_PROGRAM) -o $(user) -g $(group) $(TARGET) $(sbindir)
 	$(INSTALL_DATA) -o $(user) -g $(group) dhcp6c.8 $(mandir)/man8
 	$(INSTALL_DATA) -o $(user) -g $(group) dhcp6s.8 $(mandir)/man8
 	$(INSTALL_DATA) -o $(user) -g $(group) dhcp6relay.8 $(mandir)/man8
