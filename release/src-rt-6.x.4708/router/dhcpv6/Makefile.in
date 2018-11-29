@@ -95,21 +95,21 @@ cftoken.c: cftoken.l y.tab.h
 	mv lex.yy.c $@	
 
 getaddrinfo.o:	$(srcdir)/missing/getaddrinfo.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 getnameinfo.o:	$(srcdir)/missing/getnameinfo.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 strlcat.o:	$(srcdir)/missing/strlcat.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 strlcpy.o:	$(srcdir)/missing/strlcpy.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 arc4random.o:	$(srcdir)/missing/arc4random.c
 	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 getifaddrs.o:	$(srcdir)/missing/getifaddrs.c
 	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 daemon.o:	$(srcdir)/missing/daemon.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 warnx.o:	$(srcdir)/missing/warnx.c
-	$(CC) -c $(srcdir)/missing/$*.c
+	$(CC) $(CFLAGS) -c $(srcdir)/missing/$*.c
 
 $(srcdir)/ianaopts.h: gentab.pl bootp-dhcp-parameters
 	expand bootp-dhcp-parameters | perl gentab.pl > ianaopts.h
