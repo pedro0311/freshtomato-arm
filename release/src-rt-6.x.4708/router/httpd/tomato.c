@@ -701,7 +701,7 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_USB
 	// 3G/4G MODEM
 	{ "wan_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
+	{ "wan_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
 	{ "wan_modem_init",		V_LENGTH(0,25)			},
 	{ "wan_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan_modem_speed",		V_LENGTH(0,6)			},
@@ -713,7 +713,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan2_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
+	{ "wan2_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
 	{ "wan2_modem_init",		V_LENGTH(0,25)			},
 	{ "wan2_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
@@ -726,7 +726,7 @@ static const nvset_t nvset_list[] = {
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan3_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
+	{ "wan3_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
 	{ "wan3_modem_init",		V_LENGTH(0,25)			},
 	{ "wan3_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
@@ -738,7 +738,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan4_modem_dev",		V_LENGTH(0,8)			},	// ttyUSB0, cdc-wdm1...
+	{ "wan4_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
 	{ "wan4_modem_init",		V_LENGTH(0,25)			},
 	{ "wan4_modem_apn",		V_LENGTH(0,25)			},
 	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
