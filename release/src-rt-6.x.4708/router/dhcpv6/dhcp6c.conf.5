@@ -36,7 +36,7 @@
 .Nd DHCPv6 client configuration file
 .\"
 .Sh SYNOPSIS
-.Pa /usr/local/etc/dhcp6c.conf
+.Pa /etc/wide-dhcpv6/dhcp6c.conf
 .\"
 .Sh DESCRIPTION
 The
@@ -630,7 +630,7 @@ execute the
 .Xr openssl 1
 command (when available) as follows,
 .Bd -literal -offset
-% openssl rand -base64 16
+% openssl rand \-base64 16
 .Ed
 .Pp
 and copy the output to the
