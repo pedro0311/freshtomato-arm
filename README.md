@@ -19,7 +19,7 @@ For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A
 Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!
 
 
-**HOW TO COMPILE FRESHTOMATO on Debian 9.x/64bit**
+**HOW TO PREPARE A WORK ENVIRONMENT FOR FRESHTOMATO COMPILATION (on Debian 9.x/64bit)**
 
 1. Login as root
 
@@ -76,5 +76,12 @@ Disclaimer: I am not responsible for any bricked routers, nor do I encourage oth
 
 14. Add your username to git config:  
     git config --global user.name <name>  
-  
-**You're ready**
+
+
+**HOW TO COMPILE**
+
+1. Change dir to git repository ie: ```$ cd /freshtomato-arm```  
+2. Before every compilation, use ```$ git clean -fdxq && git reset --hard```  
+3. To compile SDK6 image, use: ```$ git checkout arm-master``` then: ```$ cd release/src-rt-6.x.4708```, check for possible targets: ```$ make help```, use one (RT-N18U/AC56S without SMP build AIO): ```$ make n18z```  
+4. To compile SDK7 image, use: ```$ git checkout arm-sdk7``` then: ```$ cd release/src-rt-7.x.main/src```, check for possible targets: ```$ make help```, use one (RT-AC3200 build AIO): ```$ make ac3200z```  
+
