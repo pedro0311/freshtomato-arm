@@ -957,16 +957,15 @@ endif
 openssl/stamp-h1:
 	$(call patch_files,openssl)
 	cd openssl && \
-	./Configure $(HOSTCONFIG) --openssldir=/etc --cross-compile-prefix=' ' \
+	CC=$(CC:$(CROSS_COMPILE)%=%) \
+	AR=$(AR:$(CROSS_COMPILE)%=%) \
+	NM=$(NM:$(CROSS_COMPILE)%=%) \
+	RANLIB=$(RANLIB) \
+	./Configure $(HOSTCONFIG) --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
 	shared $(OPENSSL_CIPHERS)
-#	no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd \
-#	no-seed no-capieng no-gms no-gmp no-rfc3779 \
-#	no-err no-hw no-jpake \
-#	no-zlib no-engines no-sse2 no-libunbound no-ssl-trace \
-#	no-dtls1 no-store no-psk no-md2 no-mdc2 no-ts
 
-	@$(MAKE) -C openssl clean
+	@$(MAKE) -C openssl clean depend
 	@touch openssl/stamp-h1
 
 openssl: openssl/stamp-h1

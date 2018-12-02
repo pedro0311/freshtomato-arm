@@ -85,12 +85,11 @@ Use
 .Ar keyfile
 to provide the shared secret to communicate with the process.
 The default file name used when unspecified is
-.Pa /usr/local/etc/dhcp6cctlkey
+.Pa /etc/wide-dhcpv6/dhcp6cctlkey
 with a client,
 and
-.Pa /usr/local/etc/dhcp6sctlkey
+.Pa /etc/wide-dhcpv6/dhcp6sctlkey
 with a server.
-
 .It Fl p Ar port
 Specify
 .Ar port
@@ -99,7 +98,7 @@ The default port number used when unspecified is 5546 for a client,
 and 5547 for a server.
 .It Fl s Ar address
 Specify
-.A address
+.Ar address
 as the listening address of the process.
 The default address used when unspecified is ::1.
 .El
@@ -183,10 +182,10 @@ information (if any) and exits.
 .El
 .\"
 .Sh FILES
-.Bl -tag -width /usr/local/etc/dhcp6cctlkey -compact
-.It Pa /usr/local/etc/dhcp6cctlkey
+.Bl -tag -width /etc/wide-dhcpv6/dhcp6cctlkey -compact
+.It Pa /etc/wide-dhcpv6/dhcp6cctlkey
 is the default key file to communicate with a client.
-.It Pa /usr/local/etc/dhcp6sctlkey
+.It Pa /etc/wide-dhcpv6/dhcp6sctlkey
 is the default key file to communicate with a server.
 .El
 .\"

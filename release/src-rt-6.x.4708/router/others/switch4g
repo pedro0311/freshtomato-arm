@@ -576,6 +576,7 @@ findType() {
 modemReset() {
 # TODO: reset should be made also when the X connection fails at a given time
 	DEVNR=$(nvram get "$PREFIX"_modem_dev)
+	MTYPE=$(nvram get "$PREFIX"_modem_type)
 	local DEVALL j
 
 	$LOGS "4G MODEM - resetting the modem ..."

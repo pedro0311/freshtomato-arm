@@ -175,7 +175,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_USB
 	// 3G/4G Modem
 	{ "wan_modem_pin",		""				, 0 },
-	{ "wan_modem_dev",		""				, 0 },
+	{ "wan_modem_dev",		"/dev/ttyUSB0"			, 0 },
 	{ "wan_modem_init",		"*99#"				, 0 },
 	{ "wan_modem_apn",		"internet"			, 0 },
 	{ "wan_modem_speed",		"00"				, 0 },
