@@ -260,6 +260,18 @@ function show() {
 	elem.display('ip6_lan', stats.ip6_lan != '');
 	c('ip6_lan_ll', stats.ip6_lan_ll);
 	elem.display('ip6_lan_ll', stats.ip6_lan_ll != '');
+	c('ip6_lan1', stats.ip6_lan1);
+	elem.display('ip6_lan1', stats.ip6_lan1 != '');
+	c('ip6_lan1_ll', stats.ip6_lan1_ll);
+	elem.display('ip6_lan1_ll', stats.ip6_lan1_ll != '');
+	c('ip6_lan2', stats.ip6_lan2);
+	elem.display('ip6_lan2', stats.ip6_lan2 != '');
+	c('ip6_lan2_ll', stats.ip6_lan2_ll);
+	elem.display('ip6_lan2_ll', stats.ip6_lan2_ll != '');
+	c('ip6_lan3', stats.ip6_lan3);
+	elem.display('ip6_lan3', stats.ip6_lan3 != '');
+	c('ip6_lan3_ll', stats.ip6_lan3_ll);
+	elem.display('ip6_lan3_ll', stats.ip6_lan3_ll != '');
 /* IPV6-END */
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -496,8 +508,14 @@ createFieldTable('', [
 	{ title: 'Router IP Addresses', text: t },
 	{ title: 'Gateway', text: nvram.lan_gateway, ignore: nvram.wan_proto != 'disabled' },
 /* IPV6-BEGIN */
-	{ title: 'Router IPv6 Address', rid: 'ip6_lan', text: stats.ip6_lan, hidden: (stats.ip6_lan == '') },
-	{ title: 'IPv6 Link-local Address', rid: 'ip6_lan_ll', text: stats.ip6_lan_ll, hidden: (stats.ip6_lan_ll == '') },
+	{ title: 'LAN (br0) IPv6 Address', rid: 'ip6_lan', text: stats.ip6_lan, hidden: (stats.ip6_lan == '') },
+	{ title: 'LAN (br0) IPv6 LL Address', rid: 'ip6_lan_ll', text: stats.ip6_lan_ll, hidden: (stats.ip6_lan_ll == '') },
+	{ title: 'LAN1 (br1) IPv6 Address', rid: 'ip6_lan1', text: stats.ip6_lan1, hidden: (stats.ip6_lan1 == '') },
+	{ title: 'LAN1 (br1) IPv6 LL Address', rid: 'ip6_lan1_ll', text: stats.ip6_lan1_ll, hidden: (stats.ip6_lan1_ll == '') },
+	{ title: 'LAN2 (br2) IPv6 Address', rid: 'ip6_lan2', text: stats.ip6_lan2, hidden: (stats.ip6_lan2 == '') },
+	{ title: 'LAN2 (br2) IPv6 LL Address', rid: 'ip6_lan2_ll', text: stats.ip6_lan2_ll, hidden: (stats.ip6_lan2_ll == '') },
+	{ title: 'LAN3 (br3) IPv6 Address', rid: 'ip6_lan3', text: stats.ip6_lan3, hidden: (stats.ip6_lan3 == '') },
+	{ title: 'LAN3 (br3) IPv6 LL Address', rid: 'ip6_lan3_ll', text: stats.ip6_lan3_ll, hidden: (stats.ip6_lan3_ll == '') },
 /* IPV6-END */
 	{ title: 'DNS', rid: 'dns', text: stats.dns, ignore: nvram.wan_proto != 'disabled' },
 	{ title: 'DHCP', text: s }
