@@ -270,50 +270,115 @@ static int get_memory(meminfo_t *m)
 }
 
 #ifdef TCONFIG_IPV6
-#define IP6ADDR_MAX_CNT	3	// wan, lan, lan-ll
-static void print_ipv6_addrs(void)
+static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
-	char buf[INET6_ADDRSTRLEN];
-	int found;
-	char *addrtype;
-	struct ifaddrs *ifap, *ifa;
-	struct sockaddr_in6 *s6;
+	char buffer[INET6_ADDRSTRLEN];
+	const char *p_tmp;
 
-	if (!ipv6_enabled() || (getifaddrs(&ifap) != 0))
+	if (!ipv6_enabled()) {
 		return;
-
-	found = 0;
-	for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-		if ((ifa->ifa_addr == NULL) || (ifa->ifa_addr->sa_family != AF_INET6))
-			continue;
-
-		s6 = (struct sockaddr_in6 *)(ifa->ifa_addr);
-
-		if (strncmp(ifa->ifa_name, nvram_safe_get("lan_ifname"), IFNAMSIZ) == 0) {
-			if (IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr))
-				addrtype = "lan_ll";
-			else
-				addrtype = "lan";
-		}
-		else if (strncmp(ifa->ifa_name, get_wan6face(), IFNAMSIZ) == 0) {
-			if (!IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr))
-				addrtype = "wan";
-			else
-				continue;
-		}
-		else
-			continue;
-
-		if (inet_ntop(ifa->ifa_addr->sa_family, &(s6->sin6_addr), buf, sizeof(buf)) != NULL) {
-			web_printf("\tip6_%s: '%s',\n",
-				addrtype, buf);
-			if (++found >= IP6ADDR_MAX_CNT)
-				break;
-		}
 	}
-	freeifaddrs(ifap);
-}
 
+		/* check LAN */
+		if (strcmp(nvram_safe_get("lan_ipaddr"),"")!=0) {
+
+			/* check LAN IPv6 address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan: '%s',\n", buffer);
+			}
+			/* check LAN IPv6 link local address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 1); /* link local address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan_ll: '%s',\n", buffer);
+			}
+
+		}
+		/* check LAN1 */
+		if (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0) {
+
+			/* check LAN1 IPv6 address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan1: '%s',\n", buffer);
+			}
+			/* check LAN1 IPv6 link local address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 1); /* link local address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan1_ll: '%s',\n", buffer);
+			}
+
+		}
+		/* check LAN2 */
+		if (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0) {
+
+			/* check LAN2 IPv6 address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan2: '%s',\n", buffer);
+			}
+			/* check LAN2 IPv6 link local address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 1); /* link local address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan2_ll: '%s',\n", buffer);
+			}
+
+		}
+		/* check LAN3 */
+		if (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0) {
+
+			/* check LAN3 IPv6 address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan3: '%s',\n", buffer);
+			}
+			/* check LAN3 IPv6 link local address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 1); /* link local address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_lan3_ll: '%s',\n", buffer);
+			}
+
+		}
+		/* check WAN */
+		if (strcmp(get_wan6face(),"")!=0) {
+
+			/* check WAN IPv6 address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(get_wan6face(), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
+				web_printf("\tip6_wan: '%s',\n", buffer);
+			}
+
+		}
+		memset(buffer, 0, sizeof(buffer)); /* reset */
+		p_tmp = NULL;
+}
 
 void asp_calc6rdlocalprefix(int argc, char **argv)
 {
