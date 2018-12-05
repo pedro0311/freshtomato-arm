@@ -125,6 +125,7 @@ function verifyFields(focused, quiet) {
 				vis._f_ipv6_accept_ra_lan = 0;
 				vis._f_ipv6_accept_ra_wan = 0;
 				vis._f_ipv6_isp_opt = 0;
+				vis._f_ipv6_pdonly = 0;
 			}
 			// fall through
 		case 'native':
@@ -139,18 +140,15 @@ function verifyFields(focused, quiet) {
 			vis._ipv6_6rd_prefix_length = 0;
 			vis._ipv6_6rd_prefix = 0;
 			vis._ipv6_6rd_borderrelay = 0;
-			if (c != '6rd-pd') {
-				if (nvram.lan1_ifname == 'br1' && E('_f_ipv6_prefix_length').value <= 63){  //2x IPv6 /64 networks possible
+			if (c == 'native-pd') {
+				if (nvram.lan1_ifname == 'br1' && E('_f_ipv6_prefix_length').value <= 63){  /* 2x IPv6 /64 networks possible */
 					vis._f_lan1_ipv6 = 1;}
-				if (nvram.lan2_ifname == 'br2' && E('_f_ipv6_prefix_length').value <= 62){  //4x IPv6 /64 networks possible
+				if (nvram.lan2_ifname == 'br2' && E('_f_ipv6_prefix_length').value <= 62){  /* 4x IPv6 /64 networks possible */
 					vis._f_lan2_ipv6 = 1;}
-				if (nvram.lan3_ifname == 'br3' && E('_f_ipv6_prefix_length').value <= 62){  //4x IPv6 /64 networks possible
+				if (nvram.lan3_ifname == 'br3' && E('_f_ipv6_prefix_length').value <= 62){  /* 4x IPv6 /64 networks possible */
 					vis._f_lan3_ipv6 = 1;}
 			}
-			if (c != 'native-pd') {
-				vis._f_ipv6_pdonly = 0;
-			}
-			if ( c == 'native' ) {
+			if (c == 'native') {
 				vis._f_ipv6_pdonly         = 0;
 				vis._f_ipv6_wan_addr       = 1;
 				vis._f_ipv6_prefix_len_wan = 1;
