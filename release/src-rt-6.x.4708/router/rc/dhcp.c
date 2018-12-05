@@ -599,19 +599,22 @@ void start_dhcp6c(void)
 	FILE *f;
 	int prefix_len;
 	char *wan6face;
-	char *argv[] = { "dhcp6c", "-T", "LL", NULL, NULL, NULL };
+	char *argv[] = { "dhcp6c", "-T", "LL", NULL, NULL, NULL }; /* DUID type 3 (DUID-LL) */
 	int argc;
-	int ipv6_vlan = 0; /*bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3,
-			     1 == TRUE, 0 == FALSE*/
+	int ipv6_vlan = 0; /* bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3,
+			     1 == TRUE, 0 == FALSE */
 
 	TRACE_PT("begin\n");
 
-	/*Check if turned on*/
-	if (get_ipv6_service() != IPV6_NATIVE_DHCP) return;
+	/* Check if turned on */
+	if (get_ipv6_service() != IPV6_NATIVE_DHCP) {
+	  return;
+	}
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
-	if (prefix_len < 0)
-		prefix_len = 0;
+	if (prefix_len < 0) {
+	  prefix_len = 0;
+	}
 	wan6face = nvram_safe_get("wan_iface");
 	ipv6_vlan = nvram_get_int("ipv6_vlan");
 
@@ -619,7 +622,7 @@ void start_dhcp6c(void)
 	nvram_set("ipv6_rtr_addr", "");
 	nvram_set("ipv6_prefix", "");
 
-	/*Create dhcp6c.conf*/
+	/* Create dhcp6c.conf */
 	unlink("/var/dhcp6c_duid");
 	if ((f = fopen("/etc/dhcp6c.conf", "w"))) {
 		fprintf(f,
@@ -638,32 +641,36 @@ void start_dhcp6c(void)
 			" prefix-interface %s {\n"
 			"  sla-id 0;\n"
 			"  sla-len %d;\n"
+			"  ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
 			" 	};\n",
 			nvram_get_int("ipv6_prefix_length"),
 			nvram_safe_get("lan_ifname"),
 			prefix_len);
-		/*check IPv6 for LAN1*/
-		if ((ipv6_vlan & 0x01) && (prefix_len >= 1) && (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0)) { /*2x IPv6 /64 networks possible --> for LAN and LAN1*/
+		/* check IPv6 for LAN1 */
+		if ((ipv6_vlan & 0x01) && (prefix_len >= 1) && (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0)) { /* 2x IPv6 /64 networks possible --> for LAN and LAN1 */
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 1;\n"
 			"		sla-len %d;\n"
+			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
 			"	};\n", nvram_safe_get("lan1_ifname"), prefix_len);
 		}
-		/*check IPv6 for LAN2*/
-		if ((ipv6_vlan & 0x02) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
+		/* check IPv6 for LAN2 */
+		if ((ipv6_vlan & 0x02) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0)) { /* 4x IPv6 /64 networks possible --> for LAN to LAN3 */
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 2;\n"
 			"		sla-len %d;\n"
+			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
 			"	};\n", nvram_safe_get("lan2_ifname"), prefix_len);
 		}
-		/*check IPv6 for LAN3*/
-		if ((ipv6_vlan & 0x04) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0)) { /*4x IPv6 /64 networks possible --> for LAN to LAN3*/
+		/* check IPv6 for LAN3 */
+		if ((ipv6_vlan & 0x04) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0)) { /* 4x IPv6 /64 networks possible --> for LAN to LAN3 */
 		fprintf(f,
 			"	prefix-interface %s {\n"
 			"		sla-id 3;\n"
 			"		sla-len %d;\n"
+			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
 			"	};\n", nvram_safe_get("lan3_ifname"), prefix_len);
 		}
 		fprintf(f,
@@ -673,8 +680,9 @@ void start_dhcp6c(void)
 	}
 
 	argc = 3;
-	if (nvram_get_int("debug_ipv6"))
+	if (nvram_get_int("debug_ipv6")) {
 		argv[argc++] = "-D";
+	}
 	argv[argc++] = wan6face;
 	argv[argc] = NULL;
 	_eval(argv, NULL, 0, NULL);
