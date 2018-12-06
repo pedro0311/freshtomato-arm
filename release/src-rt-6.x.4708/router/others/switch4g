@@ -615,6 +615,7 @@ setPIN() {
 				[ "$(echo "$PINVAL" | grep successfully | wc -l)" -eq 1 ] && {
 					nvram set "$PREFIX"_modem_dev="$i"
 					IS_DONE=1
+					$LOGS "4G MODEM - PIN successfully verified"
 				}
 				# try only once on working interface (do not lock the sim)
 				break

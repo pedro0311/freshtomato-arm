@@ -217,6 +217,7 @@ setPIN() {
 			PINVAL=$(PINCODE="$PIN" gcom -d "$i" -s /etc/gcom/setpin.gcom)
 			[ "$(echo "$PINVAL" | grep successfully | wc -l)" -eq 1 ] && {
 				IS_DONE=1
+				$LOGS "3G MODEM - PIN successfully verified"
 			}
 			# try only once on working interface (do not lock the sim)
 			break
