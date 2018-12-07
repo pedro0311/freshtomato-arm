@@ -1,5 +1,56 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+06 Dec 2018, PHP 7.2.13
+
+- ftp:
+  . Fixed bug #77151 (ftp_close(): SSL_read on shutdown). (Remi)
+
+- CLI:
+  . Fixed bug #77111 (php-win.exe corrupts unicode symbols from cli
+    parameters). (Anatol)
+
+- Fileinfo:
+  . Fixed bug #77095 (slowness regression in 7.2/7.3 (compared to 7.1)).
+    (Anatol)
+
+- iconv:
+  . Fixed bug #77147 (Fixing 60494 ignored ICONV_MIME_DECODE_CONTINUE_ON_ERROR).
+    (cmb)
+
+- Core:
+  . Fixed bug #77231 (Segfault when using convert.quoted-printable-encode 
+    filter). (Stas)
+
+- IMAP:
+  . Fixed bug #77153 (imap_open allows to run arbitrary shell commands via
+    mailbox parameter). (Stas)
+
+- ODBC:
+  . Fixed bug #77079 (odbc_fetch_object has incorrect type signature).
+    (Jon Allen)
+
+- Opcache:
+  . Fixed bug #77058 (Type inference in opcache causes side effects). (Nikita)
+  . Fixed bug #77092 (array_diff_key() - segmentation fault). (Nikita)
+
+- Phar:
+  . Fixed bug #77022 (PharData always creates new files with mode 0666). (Stas)
+  . Fixed bug #77143 (Heap Buffer Overflow (READ: 4) in phar_parse_pharfile).
+    (Stas)
+
+- PGSQL:
+  . Fixed bug #77047 (pg_convert has a broken regex for the 'TIME WITHOUT
+    TIMEZONE' data type). (Andy Gajetzki)
+
+- SOAP:
+  . Fixed bug #50675 (SoapClient can't handle object references correctly).
+    (Cameron Porter)
+  . Fixed bug #76348 (WSDL_CACHE_MEMORY causes Segmentation fault). (cmb)
+  . Fixed bug #77141 (Signedness issue in SOAP when precision=-1). (cmb)
+
+- Sockets:
+  . Fixed bug #67619 (Validate length on socket_write). (thiagooak)
+
 08 Nov 2018, PHP 7.2.12
 
 - Core:
