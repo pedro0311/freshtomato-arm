@@ -2046,8 +2046,8 @@ static void filter6_input(void)
 	switch (get_ipv6_service()) {
 	case IPV6_ANYCAST_6TO4:
 	case IPV6_NATIVE_DHCP:
-		// allow responses from the dhcpv6 server
-		ip6t_write("-A INPUT -p udp --dport 546 -j %s\n", chain_in_accept);
+		/* allow responses from the dhcpv6 server (Port 547) to the client (Port 546) */
+		ip6t_write("-A INPUT -p udp --sport 547 --dport 546 -j %s\n", chain_in_accept);
 		break;
 	}
 
