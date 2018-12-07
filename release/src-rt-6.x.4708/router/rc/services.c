@@ -534,11 +534,11 @@ void start_dnsmasq()
 
 		// Only DHCPv6 and NO SLAAC
 		if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd"))
-			fprintf(f,"dhcp-range=::1, ::FFFF:FFFF, constructor:br*, 64, 12h\n");
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, 12h\n");
 
 		// SLAAC and DHCPv6 (2 IPv6 IPs)
 		if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd"))
-			fprintf(f,"dhcp-range=::1, ::FFFF:FFFF, constructor:br*, ra-names, 64, 12h\n");
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, 12h\n");
 	}
 #endif
 
