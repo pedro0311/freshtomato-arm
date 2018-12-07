@@ -421,7 +421,7 @@ check_fmt(struct magic_set *ms, struct magic *m)
 		return 0;
 
 	(void)setlocale(LC_CTYPE, "C");
-	pattern = zend_string_init("~%[-0-9.]*s~", sizeof("~%[-0-9.]*s~") - 1, 0);
+	pattern = zend_string_init("~%[-0-9\\.]*s~", sizeof("~%[-0-9\\.]*s~") - 1, 0);
 	if ((pce = pcre_get_compiled_regex(pattern, &re_extra, &re_options)) == NULL) {
 		rv = -1;
 	} else {
@@ -657,15 +657,12 @@ mprint(struct magic_set *ms, struct magic *m)
 		t = ms->offset + sizeof(double);
   		break;
 
+	case FILE_SEARCH:
 	case FILE_REGEX: {
 		char *cp;
 		int rval;
 
 		cp = estrndup((const char *)ms->search.s, ms->search.rm_len);
-		if (cp == NULL) {
-			file_oomem(ms, ms->search.rm_len);
-			return -1;
-		}
 		rval = file_printf(ms, F(ms, m, "%s"),
 		    file_printable(sbuf, sizeof(sbuf), cp));
 		efree(cp);
@@ -679,15 +676,6 @@ mprint(struct magic_set *ms, struct magic *m)
 			t = ms->search.offset + ms->search.rm_len;
 		break;
 	}
-
-	case FILE_SEARCH:
-		if (file_printf(ms, F(ms, m, "%s"), m->value.s) == -1)
-			return -1;
-		if ((m->str_flags & REGEX_OFFSET_START))
-			t = ms->search.offset;
-		else
-			t = ms->search.offset + m->vallen;
-		break;
 
 	case FILE_DEFAULT:
 	case FILE_CLEAR:
@@ -1203,28 +1191,21 @@ mcopy(struct magic_set *ms, union VALUETYPE *p, int type, int indir,
 				return 0;
 			}
 
-			/* bytecnt checks are to be kept for PHP, see cve-2014-3538.
-			 PCRE might get stuck if the input buffer is too big. */
-			linecnt = m->str_range;
-			bytecnt = linecnt * 80;
-
-			if (bytecnt == 0) {
-				bytecnt = 1 << 14;
+			if (m->str_flags & REGEX_LINE_COUNT) {
+				linecnt = m->str_range;
+				bytecnt = linecnt * 80;
+			} else {
+				linecnt = 0;
+				bytecnt = m->str_range;
 			}
 
-			if (bytecnt > nbytes) {
-				bytecnt = nbytes;
-			}
-			if (offset > bytecnt) {
-				offset = bytecnt;
-			}
-			if (s == NULL) {
-				ms->search.s_len = 0;
-				ms->search.s = NULL;
-				return 0;
-			}
+			if (bytecnt == 0 || bytecnt > nbytes - offset)
+				bytecnt = nbytes - offset;
+			if (bytecnt > ms->regex_max)
+				bytecnt = ms->regex_max;
+
 			buf = RCAST(const char *, s) + offset;
-			end = last = RCAST(const char *, s) + bytecnt;
+			end = last = RCAST(const char *, s) + bytecnt + offset;
 			/* mget() guarantees buf <= last */
 			for (lines = linecnt, b = buf; lines && b < end &&
 			     ((b = CAST(const char *,
