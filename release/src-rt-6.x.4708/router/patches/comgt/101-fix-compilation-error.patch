@@ -1,0 +1,15 @@
+--- comgt/Makefile
++++ comgt/Makefile
+@@ -70,10 +70,5 @@ clean:
+ 	-rm *~
+ 	-rm $(SCRIPTSRC)*~
+ 
+-
+-comgt: comgt.o
+-	cc comgt.o $(LDFLAGS) -o comgt
+-
+-comgt.o: comgt.c comgt.h
+-	cc comgt.c $(CFLAGS) 
+-
++comgt:  comgt.c comgt.h
++	$(CC) $(CFLAGS) -o comgt $< $(LDFLAGS)

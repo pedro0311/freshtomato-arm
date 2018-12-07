@@ -70,5 +70,10 @@ clean:
 	-rm *~
 	-rm $(SCRIPTSRC)*~
 
-comgt:  comgt.c comgt.h
-	$(CC) $(CFLAGS) -o comgt $< $(LDFLAGS)
+
+comgt: comgt.o
+	cc comgt.o $(LDFLAGS) -o comgt
+
+comgt.o: comgt.c comgt.h
+	cc comgt.c $(CFLAGS) 
+
