@@ -2821,6 +2821,7 @@ uqmi-clean: libjson-c-clean
 	-@$(MAKE) -C uqmi clean
 
 comgt:
+	$(call patch_files,comgt)
 	@$(MAKE) -C comgt CC=$(CC) CFLAGS="$(EXTRACFLAGS)" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" comgt
 
 comgt-install:
@@ -2833,6 +2834,7 @@ comgt-install:
 
 comgt-clean:
 	-@$(MAKE) -C comgt clean
+	$(call unpatch_files,comgt)
 
 iperf/stamp-h1:
 	cd $(TOP)/iperf && CC=$(CC) STRIP=$(STRIP) \
