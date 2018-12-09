@@ -2735,7 +2735,7 @@ function createFieldTable(flags, desc)
 
 		buf.push('<td class="title indent' + (v.indent ? v.indent : 1) + '">');
 		if (id1 != '')
-			buf.push('<label for="' + id + '">' + (v.title ? v.title : '&nbsp;') + '</label></td>');
+			buf.push('<label' + ((id && id != '_undefined' ) ? ' for="' + id + '"' : '') + '>' + (v.title ? v.title : '&nbsp;') + '</label></td>');
 		else
 			buf.push(+ v.title + '</td>');
 

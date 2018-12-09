@@ -151,7 +151,7 @@ function verifyFields(focused, quiet) {
 		if (E('_vpn_'+t+'_gw').value.length > 0 && !v_ip('_vpn_'+t+'_gw', quiet, 1)) ret = 0;
 	}
 
-	// Visability changes
+	// Visibility changes
 	for (i = 0; i < tabs.length; ++i)
 	{
 		t = tabs[i][0];

@@ -157,7 +157,7 @@ function verifyFields(focused, quiet) {
 		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647)) ret = 0;
 	}
 
-	// Visability changes
+	// Visibility changes
 	for (i = 0; i < tabs.length; ++i)
 	{
 		t = tabs[i][0];
@@ -205,6 +205,7 @@ function verifyFields(focused, quiet) {
 			keyHelp.href = helpURL['howto'];
 			break;
 		}
+		E('_vpn_'+t+'_ncp_ciphers').disabled = true;
 	}
 
 	var bridge1 = E('_vpn_server1_br');
@@ -715,7 +716,7 @@ for (i = 0; i < tabs.length; ++i)
 		{ title: 'Respond to DNS', name: 'f_vpn_'+t+'_dns', type: 'checkbox', value: nvram.vpn_server_dns.indexOf(''+(i+1)) >= 0 },
 		{ title: 'Advertise DNS to clients', name: 'f_vpn_'+t+'_pdns', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_pdns' ) != 0 },
 		{ title: 'Cipher Negotiation', name: 'vpn_'+t+'_ncp_enable', type: 'select', options: [[0, 'Disabled'],[1, 'Enabled (with fallback)'],[2, 'Enabled']], value: eval( 'nvram.vpn_'+t+'_ncp_enable' ) },
-		{ title: 'Negotiable ciphers', name: 'vpn_'+t+'_ncp_ciphers', suffix: '<div id="_vpn_'+t+'_ncp_ciphers">'+eval ( 'nvram.vpn_'+t+'_ncp_ciphers' )+'<\/div>' },
+		{ title: 'Negotiable ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 50, maxlen: 50, value: eval ( 'nvram.vpn_'+t+'_ncp_ciphers' ) },
 		{ title: 'Legacy/fallback cipher', name: 'vpn_'+t+'_cipher', type: 'select', options: ciphers, value: eval( 'nvram.vpn_'+t+'_cipher' ) },
 		{ title: 'Compression', name: 'vpn_'+t+'_comp', type: 'select', options: [ ['-1', 'Disabled'], ['no', 'None'], ['yes', 'LZO'], ['adaptive', 'LZO Adaptive'], ['lz4', 'LZ4'], ['lz4-v2', 'LZ4-V2']], value: eval( 'nvram.vpn_'+t+'_comp' ) },
 		{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval( 'nvram.vpn_'+t+'_reneg' ),
