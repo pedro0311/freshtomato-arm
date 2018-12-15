@@ -770,7 +770,7 @@ static int br_ip6_multicast_add_group(struct net_bridge *br,
 		return 0;
 
 	ipv6_addr_copy(&br_group.u.ip6, group);
-	br_group.proto = htons(ETH_P_IP);
+	br_group.proto = htons(ETH_P_IPV6);
 
 	return br_multicast_add_group(br, port, &br_group);
 }
@@ -999,18 +999,19 @@ static int br_ip6_multicast_mld2_report(struct net_bridge *br,
 
 		nsrcs = skb_header_pointer(skb,
 					   len + offsetof(struct mld2_grec,
-							  grec_mca),
+							  grec_nsrcs),
 					   sizeof(_nsrcs), &_nsrcs);
 		if (!nsrcs)
 			return -EINVAL;
 
 		if (!pskb_may_pull(skb,
 				   len + sizeof(*grec) +
-				   sizeof(struct in6_addr) * (*nsrcs)))
+				   sizeof(struct in6_addr) * ntohs(*nsrcs)))
 			return -EINVAL;
 
 		grec = (struct mld2_grec *)(skb->data + len);
-		len += sizeof(*grec) + sizeof(struct in6_addr) * (*nsrcs);
+		len += sizeof(*grec) +
+		       sizeof(struct in6_addr) * ntohs(*nsrcs);
 
 		/* We treat these as MLDv1 reports for now. */
 		switch (grec->grec_type) {
@@ -1453,7 +1454,7 @@ static int br_multicast_ipv6_rcv(struct net_bridge *br,
 	    ip6h->payload_len == 0)
 		return 0;
 
-	len = ntohs(ip6h->payload_len);
+	len = ntohs(ip6h->payload_len) + sizeof(*ip6h);
 	if (skb->len < len)
 		return -EINVAL;
 

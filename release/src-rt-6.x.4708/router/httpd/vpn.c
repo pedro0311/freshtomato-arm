@@ -33,12 +33,6 @@
 
 #ifdef TCONFIG_OPENVPN
 
-/* FIXME: Somehow, eval doesn't seem to work? */
-static void run_program(const char *program)
-{
-	pclose(popen(program, "r"));
-}
-
 static void put_to_file(const char *filePath, const char *content)
 {
 	FILE *fkey = fopen(filePath, "w");
@@ -69,7 +63,7 @@ static void prepareCAGeneration(int serverNum)
 		sprintf(&buffer2[0], "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
 		sprintf(&buffer[0], "openssl req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
 		syslog(LOG_WARNING, buffer);
-		run_program(buffer);
+		system(buffer);
 	} else {
 		syslog(LOG_WARNING, "Found CA KEY for server %d, creating from NVRAM", serverNum);
 		put_to_file("/tmp/openssl/cakey.pem", getNVRAMVar("vpn_server%d_ca_key", serverNum));
@@ -94,15 +88,15 @@ static void generateKey(const char *prefix)
 	sprintf(&subj_buf[0], "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
 	sprintf(&buffer[0], "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, subj_buf);
 	syslog(LOG_WARNING, buffer);
-	run_program(buffer);
+	system(buffer);
 
 	sprintf(&buffer[0], "openssl ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, subj_buf);
 	syslog(LOG_WARNING, buffer);
-	run_program(buffer);
+	system(buffer);
 
 	sprintf(&buffer[0], "openssl x509 -in /tmp/openssl/%s.crt -inform PEM -out /tmp/openssl/%s.crt -outform PEM >>/tmp/openssl/openssl.log 2>&1", prefix, prefix);
 	syslog(LOG_WARNING, buffer);
-	run_program(buffer);
+	system(buffer);
 }
 
 static void print_generated_keys_to_user(const char *prefix)
