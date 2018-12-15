@@ -100,6 +100,7 @@ function init() {
 <br/>
 Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br/>
 <br/>
+<b>FreshTomato project page: </b><a href="http://freshtomato.org" class="new_window">http://freshtomato.org</a><br/>
 <b>Forums about Tomato</b> - PL: <a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a> EN: <a href="https://www.linksysinfo.org" class="new_window">https://linksysinfo.org</a><br/>
 <b>FreshTomato team: </b><a href="https://bitbucket.org/kille72/freshtomato-arm" class="new_window">@kille72</a>, <a href="https://bitbucket.org/pedro311/freshtomato-arm" class="new_window">@pedro</a><br/>
 <br/>
