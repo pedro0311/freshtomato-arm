@@ -32,12 +32,13 @@ libipset_la_SOURCES = \
 	errcode.c \
 	icmp.c \
 	icmpv6.c \
+	list_sort.c \
 	mnl.c \
 	parse.c \
 	print.c \
 	session.c \
 	types.c \
-	ui.c \
+	ipset.c \
 	types_init.c
 
 EXTRA_libipset_la_SOURCES = \
@@ -47,6 +48,8 @@ EXTRA_DIST = $(IPSET_SETTYPE_LIST) libipset.map
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libipset.pc
+
+dist_man_MANS = libipset.3
 
 sparse-check: $(libipset_la_SOURCES:.c=.d)
 

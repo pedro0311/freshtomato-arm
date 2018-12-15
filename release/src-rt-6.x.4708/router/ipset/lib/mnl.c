@@ -13,7 +13,7 @@
 #include <libipset/linux_ip_set.h>		/* enum ipset_cmd */
 #include <libipset/debug.h>			/* D() */
 #include <libipset/session.h>			/* ipset_session_handle */
-#include <libipset/ui.h>			/* IPSET_ENV_EXIST */
+#include <libipset/ipset.h>			/* IPSET_ENV_EXIST */
 #include <libipset/utils.h>			/* UNUSED */
 #include <libipset/mnl.h>			/* prototypes */
 
@@ -115,7 +115,7 @@ ipset_mnl_query(struct ipset_handle *handle, void *buffer, size_t len)
 		ret = mnl_socket_recvfrom(handle->h, buffer, len);
 		D("message received, ret: %d", ret);
 	}
-	return ret > 0 ? 0 : ret;
+	return ret;
 }
 
 static struct ipset_handle *
