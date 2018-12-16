@@ -1,6 +1,61 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2018.5 - 2018.12.21
+----------------------------
+- openssl: updated to 1.0.2q
+- openssl: make proper call to openssl Configure script
+- gmp: Move .gitignore to proper directory
+- adminer: Updated to 4.7.0
+- SQLite: Updated to 3.26.0
+- xl2tpd: Updated to 1.3.13
+- php: updated to 7.2.13
+- nginx: updated to 1.14.2
+- rp-pppoe: updated to 3.13
+- miniupnpd: updated to git snapshot from 20181206
+- ipset: updated to 7.1
+- libcurl: updated to 7.63.0
+- libcurl: updated CA certificate bundle as of 2018-12-05
+- comgt: clean sources of v 0.32, add patches instead
+- GUI: new termlib based tools-shell.asp
+- GUI: simple workaround for supporting cd in tools-shell
+- router: httpd: tomato.c: fix the correct length of wanX_modem_dev variables
+- router: httpd: vpn.c: use system() instead run_program()
+- router: www: admin-access.asp: change allowed password length to 60 characters
+- router: www: vpn-client.asp: change allowed server address length to 40 characters
+- router: www: about.asp: Cosmetics
+- router: www: fixes for W3C + some cosmetics
+- router: www: qos-classify.asp: change allowed port length to 130 characters
+- router: rom: Makefile: decrease number of tries to 1 for wget. It's already in loop
+- router: rc: firewall.c: allow responses from the dhcpv6 server (Port 547) to the client (Port 546) (--> add Server Port 547)
+- switch4g: fix variable initialization in modemReset() function
+- switch3g/switch4g: add info to log about successful PIN verification
+- IPv6: extend GUI status page (status-overview.asp) - show IPv6 addresses for interface wan, br0, br1, br2 and br3
+- IPv6: DHCPv6 PD: small corrections - fix visibility for "Request /64 subnet for" --> right now only applicable for DHCPv6 with PD (and not for Native/Static IPv6) - cosmetic for ipv6_pdonly visibility
+- IPv6: DHCPv6 PD: - override the default EUI-64 address selection and create a very userfriendly address for br0...br3 (--> ends with ::1 now) - cosmetic - add some comments
+- IPv6: small change for DNSMASQ DHCPv6 start address (new ::2 up to ::FFFF:FFFF); leave ::1 address for the router interface brX --> used with DHCPv6-PD (WIDE-DHCPv6) now
+- WIDE-DHCPv6: Fix manpages This patch fixes wide-dhcpv6 manpages (paths, typos, ...)
+- WIDE-DHCPv6: Don't strip binaries This patch prevents wide-dhcpv6 build system from stripping built binaries
+- WIDE-DHCPv6: Make sla-len config optional
+- WIDE-DHCPv6: Make sla-id config optional
+- WIDE-DHCPv6: cflag patch
+- WIDE-DHCPv6: Fix parallel make race condition
+- WIDE-DHCPv6: Adding ifid option to the dhcp6c.conf prefix-interface statement
+- kernel: netfilter: ip6_tables: fix information leak to userspace
+- kernel: ipv6: Warn users if maximum number of routes is reached
+- kernel: ipv6: fix overlap check for fragments
+- kernel: netfilter: ipv6: fix overlap check for fragments
+- kernel: bridge: Fix IPv6 multicast snooping by storing correct protocol type
+- kernel: bridge: Fix IPv6 multicast snooping by correcting offset in MLDv2
+- kernel: bridge: Add missing ntohs()s for MLDv2 report parsing
+- kernel: inet6: prevent network storms caused by linux IPv6 routers
+- kernel: ipv6: udp: fix the wrong headroom check
+- kernel: bridge: mcast snooping, fix length check of snooped MLDv1/2
+- kernel: ipv4: correct IGMP behavior on v3 query during v2-compatibility mode
+- Revert "leds and stealth mode rework", it should be checked and tested with given router models first
+- Updated README.md, "HOW TO COMPILE"
+
+
 2018.5.083-beta - 2018.11.25
 ----------------------------
 - kernel: drivers: net: usb: qmi_wwan.c: fix CVE-2017-16650
