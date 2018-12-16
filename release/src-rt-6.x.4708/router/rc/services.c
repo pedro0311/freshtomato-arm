@@ -2582,46 +2582,6 @@ void check_services(void)
 
 // -----------------------------------------------------------------------------
 
-void setup_leds()
-{
-	int model;
-	model = get_model();
-
-	if (nvram_get_int("stealth_mode") == 1) {
-		do_led(LED_WLAN, LED_OFF);
-		do_led(LED_DIAG, LED_OFF);
-		do_led(LED_WHITE, LED_OFF);
-		do_led(LED_AMBER, LED_OFF);
-		do_led(LED_DMZ, LED_OFF);
-		do_led(LED_AOSS, LED_OFF);
-		do_led(LED_BRIDGE, LED_OFF);
-		do_led(LED_USB, LED_OFF);
-		do_led(LED_USB3, LED_OFF);
-		do_led(LED_5G, LED_OFF);
-	} else {
-		if (model != MODEL_R1D)
-			do_led(LED_BRIDGE, LED_ON);
-		if (model == MODEL_R6400) {
-			//activate WAN port led !?! why here and not by do_led on wan start?
-			//leave only white color
-			//system("gpio disable 6"); // orange
-			//system("gpio disable 7"); // white
-		}
-		if ((model == MODEL_R7000) || (model == MODEL_R8000)) {
-			//activate WAN port led !?! why here and not by do_led on wan start?
-			//system("gpio disable 9");
-		}
-		if (nvram_match("wl0_radio", "1")) {
-			do_led(LED_WLAN, LED_ON);
-		}
-		if (nvram_match("wl1_radio", "1")) {
-			do_led(LED_5G, LED_ON);
-		}
-	}
-}
-
-// -----------------------------------------------------------------------------
-
 void start_services(void)
 {
 	static int once = 1;
@@ -2673,7 +2633,11 @@ void start_services(void)
 	start_nfs();
 #endif
 
-/* moved to setup_leds() / do_led_hw();
+#ifdef TCONFIG_FANCTRL
+	start_phy_tempsense();
+#endif
+
+
 	if ((get_model() == MODEL_R6400)) {
 		//activate WAN port led
 		//leave only white color
@@ -2687,9 +2651,7 @@ void start_services(void)
 		system("/usr/sbin/et robowr 0x0 0x12 0x78");
 		system("/usr/sbin/et robowr 0x0 0x14 0x01");
 		system("gpio disable 9");
-	} */
-
-	setup_leds();
+	}
 }
 
 void stop_services(void)
@@ -3470,15 +3432,6 @@ TOP:
  		goto CLEAR;
  	}
 #endif
-
-	if (strcmp(service, "leds") == 0) {
-		if (action & A_STOP) nvram_set("stealth_mode","1"); setup_leds();
-		if (action & A_START)
-			if (!nvram_get_int("stealth_mode"))
-				nvram_set("stealth_mode","0");
-			setup_leds();
-		goto CLEAR;
-	}
 
 CLEAR:
 	if (next) goto TOP;

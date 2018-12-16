@@ -338,7 +338,7 @@ qosg.setup = function() {
 			{ type: 'select', prefix: '<div class="x2a">', suffix: '<\/div>', options: a },
 			{ type: 'select', prefix: '<div class="x2b">', suffix: '<\/div>',
 				options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
-			{ type: 'text', maxlen: 5, prefix: '<div class="x2c">', suffix: '<\/div>' },
+			{ type: 'text', maxlen: 130, prefix: '<div class="x2c">', suffix: '<\/div>' },
 
 			{ type: 'select', prefix: '<div class="x3a">', suffix: '<\/div>', options: ipp2p },
 			{ type: 'select', prefix: '<div class="x3b">', suffix: '<\/div>', options: layer7 },
@@ -346,8 +346,8 @@ qosg.setup = function() {
 			{ type: 'select', prefix: '<div class="x4a">', suffix: '<\/div>', options: dscp },
 			{ type: 'text', maxlen: 4, prefix: '<div class="x4b">', suffix: '<\/div>' },
 
-			{ type: 'text', maxlen: 10, prefix: '<div class="x5a">', suffix: '<\/div>' },
-			{ type: 'text', maxlen: 10, prefix: '<div class="x5b"> - <\/div><div class="x5c">', suffix: '<\/div><div class="x5d">KB Transferred<\/div>' }
+			{ type: 'text', maxlen: 14, prefix: '<div class="x5a">', suffix: '<\/div>' },
+			{ type: 'text', maxlen: 14, prefix: '<div class="x5b"> - <\/div><div class="x5c">', suffix: '<\/div><div class="x5d">KB Transferred<\/div>' }
 		] },
 		{ type: 'select', options: class1, vtop: 1 },
 		{ type: 'text', maxlen: 32, vtop: 1 },

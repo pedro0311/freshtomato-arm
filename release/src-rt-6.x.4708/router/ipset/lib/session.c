@@ -10,6 +10,7 @@
 #include <setjmp.h>				/* setjmp, longjmp */
 #include <stdio.h>				/* snprintf */
 #include <stdarg.h>				/* va_* */
+#include <stdbool.h>				/* bool */
 #include <stdlib.h>				/* free */
 #include <string.h>				/* str* */
 #include <unistd.h>				/* getpagesize */
@@ -25,10 +26,18 @@
 #include <libipset/transport.h>			/* transport */
 #include <libipset/mnl.h>			/* default backend */
 #include <libipset/utils.h>			/* STREQ */
-#include <libipset/ui.h>			/* IPSET_ENV_* */
+#include <libipset/ipset.h>			/* IPSET_ENV_* */
+#include <libipset/list_sort.h>			/* list_sort */
 #include <libipset/session.h>			/* prototypes */
 
 #define IPSET_NEST_MAX	4
+
+/* When we want to sort the entries */
+struct ipset_sorted {
+	struct list_head list;
+	size_t offset;				/* Offset in outbuf */
+};
+
 
 /* The session structure */
 struct ipset_session {
@@ -43,15 +52,24 @@ struct ipset_session {
 	const struct ipset_type *saved_type;	/* Saved type */
 	struct nlattr *nested[IPSET_NEST_MAX];	/* Pointer to nest levels */
 	uint8_t nestid;				/* Current nest level */
+	uint8_t protocol;			/* The protocol used */
 	bool version_checked;			/* Version checked */
 	/* Output buffer */
-	char outbuf[IPSET_OUTBUFLEN];		/* Output buffer */
+	char *outbuf;				/* Output buffer */
+	size_t outbuflen;			/* Output buffer size */
+	size_t pos;				/* Printing position in outbuf */
+	struct list_head sorted;		/* Sorted entries */
+	struct list_head pool;			/* Pool to reuse */
 	enum ipset_output_mode mode;		/* Output mode */
-	ipset_outfn outfn;			/* Output function */
+	ipset_print_outfn print_outfn;		/* Output function to file */
+	void *p;				/* Private data for print_outfn */
+	bool sort;				/* Print sorted hash:* types */
+	/* Session IO */
+	bool normal_io, full_io;		/* Default/normal/full IO */
+	FILE *istream, *ostream;		/* Session input/output stream */
 	/* Error/warning reporting */
 	char report[IPSET_ERRORBUFLEN];		/* Error/report buffer */
-	char *errmsg;
-	char *warnmsg;
+	enum ipset_err_type err_type;		/* ERROR/WARNING/NOTICE */
 	uint8_t envopts;			/* Session env opts */
 	/* Kernel message buffer */
 	size_t bufsize;
@@ -115,40 +133,23 @@ ipset_session_lineno(struct ipset_session *session, uint32_t lineno)
 	session->lineno = lineno;
 }
 
+/**
+ * ipset_session_printf_private - returns the session private pointer
+ * @session: session structure
+ *
+ * Returns the private pointer in the session structure,
+ * for private/custom print fuctions.
+ */
+void *
+ipset_session_printf_private(struct ipset_session *session)
+{
+	assert(session);
+	return session->p;
+}
+
 /*
  * Environment options
  */
-
-/**
- * ipset_envopt_parse - parse/set environment option
- * @session: session structure
- * @opt: environment option
- * @arg: option argument (unused)
- *
- * Parse and set an environment option.
- *
- * Returns 0 on success or a negative error code.
- */
-int
-ipset_envopt_parse(struct ipset_session *session, int opt,
-		   const char *arg UNUSED)
-{
-	assert(session);
-
-	switch (opt) {
-	case IPSET_ENV_SORTED:
-	case IPSET_ENV_QUIET:
-	case IPSET_ENV_RESOLVE:
-	case IPSET_ENV_EXIST:
-	case IPSET_ENV_LIST_SETNAME:
-	case IPSET_ENV_LIST_HEADER:
-		session->envopts |= opt;
-		return 0;
-	default:
-		break;
-	}
-	return -1;
-}
 
 /**
  * ipset_envopt_test - test environment option
@@ -164,6 +165,34 @@ ipset_envopt_test(struct ipset_session *session, enum ipset_envopt opt)
 {
 	assert(session);
 	return session->envopts & opt;
+}
+
+/**
+ * ipset_envopt_set - set environment option
+ * @session: session structure
+ * @opt: environment option
+ *
+ * Set an environment option of the session.
+ */
+void
+ipset_envopt_set(struct ipset_session *session, enum ipset_envopt opt)
+{
+	assert(session);
+	session->envopts |= opt;
+}
+
+/**
+ * ipset_envopt_unset - unset environment option
+ * @session: session structure
+ * @opt: environment option
+ *
+ * Unset an environment option of the session.
+ */
+void
+ipset_envopt_unset(struct ipset_session *session, enum ipset_envopt opt)
+{
+	assert(session);
+	session->envopts &= ~opt;
 }
 
 /**
@@ -211,6 +240,10 @@ ipset_session_report(struct ipset_session *session,
 	assert(session);
 	assert(fmt);
 
+	/* Suppress warning/notice when more important message is required */
+	if (session->err_type > IPSET_NO_ERROR && session->err_type < type)
+		session->report[0] = '\0';
+
 	if (session->lineno != 0 && type == IPSET_ERROR) {
 		sprintf(session->report, "Error in line %u: ",
 			session->lineno);
@@ -228,14 +261,10 @@ ipset_session_report(struct ipset_session *session,
 	if (strlen(session->report) < IPSET_ERRORBUFLEN - 1)
 		strcat(session->report, "\n");
 
-	if (type == IPSET_ERROR) {
-		session->errmsg = session->report;
-		session->warnmsg = NULL;
+	session->err_type = type;
+	if (type == IPSET_ERROR)
 		ipset_data_reset(ipset_session_data(session));
-	} else {
-		session->errmsg = NULL;
-		session->warnmsg = session->report;
-	}
+
 	return -1;
 }
 
@@ -248,8 +277,7 @@ ipset_session_report(struct ipset_session *session,
 int
 ipset_session_warning_as_error(struct ipset_session *session)
 {
-	session->errmsg = session->report;
-	session->warnmsg = NULL;
+	session->err_type = IPSET_ERROR;
 	ipset_data_reset(ipset_session_data(session));
 	return -1;
 }
@@ -265,37 +293,36 @@ ipset_session_report_reset(struct ipset_session *session)
 {
 	assert(session);
 	session->report[0] = '\0';
-	session->errmsg = session->warnmsg = NULL;
+	session->err_type = IPSET_NO_ERROR;
 }
 
 /**
- * ipset_session_error - return the report buffer as error
+ * ipset_session_report_msg - return the report buffer
  * @session: session structure
  *
- * Return the pointer to the report buffer as an error report.
- * If there is no error message in the buffer, NULL returned.
+ * Return the pointer to the report buffer.
+ * If there is no error message, the buffer is empty.
  */
 const char *
-ipset_session_error(const struct ipset_session *session)
+ipset_session_report_msg(const struct ipset_session *session)
 {
 	assert(session);
 
-	return session->errmsg;
+	return session->report;
 }
 
 /**
- * ipset_session_warning - return the report buffer as warning
+ * ipset_session_report_type - return the type of the report
  * @session: session structure
  *
- * Return the pointer to the report buffer as a warning report.
- * If there is no warning message in the buffer, NULL returned.
+ * Return the type of the message in the report buffer.
  */
-const char *
-ipset_session_warning(const struct ipset_session *session)
+enum ipset_err_type
+ipset_session_report_type(const struct ipset_session *session)
 {
 	assert(session);
 
-	return session->warnmsg;
+	return session->err_type;
 }
 
 /*
@@ -350,6 +377,10 @@ static const struct ipset_attr_policy cmd_attrs[] = {
 	[IPSET_ATTR_LINENO] = {
 		.type = MNL_TYPE_U32,
 		.opt = IPSET_OPT_LINENO,
+	},
+	[IPSET_ATTR_INDEX] = {
+		.type = MNL_TYPE_U16,
+		.opt = IPSET_OPT_INDEX,
 	},
 };
 
@@ -678,6 +709,10 @@ attr2data(struct ipset_session *session, struct nlattr *nla[],
 		default:
 			break;
 		}
+	} else if (attr->type == MNL_TYPE_NUL_STRING) {
+		if (!d || strlen(d) >= attr->len)
+			FAILURE("Broken kernel message: "
+				"string type attribute missing or too long!");
 	}
 #ifdef IPSET_DEBUG
 	 else
@@ -718,9 +753,11 @@ static const char cmd2name[][9] = {
 static inline int
 call_outfn(struct ipset_session *session)
 {
-	int ret = session->outfn("%s", session->outbuf);
+	int ret = session->print_outfn(session, session->p,
+				      "%s", session->outbuf);
 
 	session->outbuf[0] = '\0';
+	session->pos = 0;
 
 	return ret < 0 ? ret : 0;
 }
@@ -728,20 +765,39 @@ call_outfn(struct ipset_session *session)
 /* Handle printing failures */
 static jmp_buf printf_failure;
 
+static void
+realloc_outbuf(struct ipset_session *session)
+{
+	char *buf = realloc(session->outbuf,
+			    session->outbuflen + IPSET_OUTBUFLEN);
+	if (!buf) {
+		ipset_err(session,
+			  "Could not allocate memory to print sorted!");
+		longjmp(printf_failure, 1);
+	}
+	session->outbuf = buf;
+	session->outbuflen += IPSET_OUTBUFLEN;
+}
+
 static int
 handle_snprintf_error(struct ipset_session *session,
-		      int len, int ret, int loop)
+		      int ret, int loop)
 {
-	if (ret < 0 || ret >= IPSET_OUTBUFLEN - len) {
+	if (ret < 0 || ret + session->pos >= session->outbuflen) {
+		if (session->sort && !loop) {
+			realloc_outbuf(session);
+			return 1;
+		}
 		/* Buffer was too small, push it out and retry */
-		D("print buffer and try again: len: %u, ret: %d", len, ret);
+		D("print buffer and try again: outbuflen: %lu, pos %lu, ret: %d",
+		  session->outbuflen, session->pos, ret);
 		if (loop) {
 			ipset_err(session,
 				"Internal error at printing, loop detected!");
 			longjmp(printf_failure, 1);
 		}
 
-		session->outbuf[len] = '\0';
+		session->outbuf[session->pos] = '\0';
 		if (call_outfn(session)) {
 			ipset_err(session,
 				"Internal error, could not print output buffer!");
@@ -749,6 +805,7 @@ handle_snprintf_error(struct ipset_session *session,
 		}
 		return 1;
 	}
+	session->pos += ret;
 	return 0;
 }
 
@@ -756,17 +813,17 @@ static int __attribute__((format(printf, 2, 3)))
 safe_snprintf(struct ipset_session *session, const char *fmt, ...)
 {
 	va_list args;
-	int len, ret, loop = 0;
+	int ret, loop = 0;
 
 	do {
-		len = strlen(session->outbuf);
-		D("len: %u, retry %u", len, loop);
+		D("outbuflen: %lu, pos: %lu, retry %u",
+		  session->outbuflen, session->pos, loop);
 		va_start(args, fmt);
-		ret = vsnprintf(session->outbuf + len,
-				IPSET_OUTBUFLEN - len,
+		ret = vsnprintf(session->outbuf + session->pos,
+				session->outbuflen - session->pos,
 				fmt, args);
 		va_end(args);
-		loop = handle_snprintf_error(session, len, ret, loop);
+		loop = handle_snprintf_error(session, ret, loop);
 	} while (loop);
 
 	return ret;
@@ -776,14 +833,15 @@ static int
 safe_dprintf(struct ipset_session *session, ipset_printfn fn,
 	     enum ipset_opt opt)
 {
-	int len, ret, loop = 0;
+	int ret, loop = 0;
 
 	do {
-		len = strlen(session->outbuf);
-		D("len: %u, retry %u", len, loop);
-		ret = fn(session->outbuf + len, IPSET_OUTBUFLEN - len,
+		D("outbuflen: %lu, len: %lu, retry %u",
+		  session->outbuflen, session->pos, loop);
+		ret = fn(session->outbuf + session->pos,
+			 session->outbuflen - session->pos,
 			 session->data, opt, session->envopts);
-		loop = handle_snprintf_error(session, len, ret, loop);
+		loop = handle_snprintf_error(session, ret, loop);
 	} while (loop);
 
 	return ret;
@@ -795,6 +853,7 @@ list_adt(struct ipset_session *session, struct nlattr *nla[])
 	const struct ipset_data *data = session->data;
 	const struct ipset_type *type;
 	const struct ipset_arg *arg;
+	size_t offset = 0;
 	int i, found = 0;
 
 	D("enter");
@@ -815,6 +874,13 @@ list_adt(struct ipset_session *session, struct nlattr *nla[])
 	D("attr found %u", found);
 	if (!found)
 		return MNL_CB_OK;
+
+	if (session->sort) {
+		if (session->outbuflen <= session->pos + 1)
+			realloc_outbuf(session);
+		session->pos++;	/* \0 */
+		offset = session->pos;
+	}
 
 	switch (session->mode) {
 	case IPSET_LIST_SAVE:
@@ -868,6 +934,24 @@ list_adt(struct ipset_session *session, struct nlattr *nla[])
 	else
 		safe_snprintf(session, "\n");
 
+	if (session->sort) {
+		struct ipset_sorted *sorted;
+
+		if (!list_empty(&session->pool)) {
+			sorted = list_first_entry(&session->pool,
+					struct ipset_sorted, list);
+			list_del(&sorted->list);
+		} else {
+			sorted = calloc(1, sizeof(struct ipset_sorted));
+			if (!sorted) {
+				ipset_err(session,
+					  "Could not allocate memory to print sorted!");
+				longjmp(printf_failure, 1);
+			}
+		}
+		sorted->offset = offset;
+		list_add_tail(&sorted->list, &session->sorted);
+	}
 	return MNL_CB_OK;
 }
 
@@ -994,7 +1078,21 @@ list_create(struct ipset_session *session, struct nlattr *nla[])
 	}
 	session->printed_set++;
 
+	session->sort = strncmp(type->name, "hash:", 5) == 0 &&
+			ipset_envopt_test(session, IPSET_ENV_SORTED);
+
 	return MNL_CB_OK;
+}
+
+static int
+bystrcmp(void *priv, struct list_head *a, struct list_head *b)
+{
+	struct ipset_session *session = priv;
+	struct ipset_sorted *x = list_entry(a, struct ipset_sorted, list);
+	struct ipset_sorted *y = list_entry(b, struct ipset_sorted, list);
+
+	return strcmp(session->outbuf + x->offset,
+		      session->outbuf + y->offset);
 }
 
 static int
@@ -1002,6 +1100,28 @@ print_set_done(struct ipset_session *session, bool callback_done)
 {
 	D("called for %s", session->saved_setname[0] == '\0'
 		? "NONE" : session->saved_setname);
+	if (session->sort) {
+		struct ipset_sorted *pos;
+		int ret;
+
+		/* Print set header */
+		ret = call_outfn(session);
+
+		if (ret)
+			return MNL_CB_ERROR;
+
+		list_sort(session, &session->sorted, bystrcmp);
+
+		list_for_each_entry(pos, &session->sorted, list) {
+			ret = session->print_outfn(session, session->p,
+					"%s",
+					session->outbuf + pos->offset);
+			if (ret < 0)
+				return MNL_CB_ERROR;
+		}
+		list_splice(&session->sorted, &session->pool);
+		INIT_LIST_HEAD(&session->sorted);
+	}
 	switch (session->mode) {
 	case IPSET_LIST_XML:
 		if (session->envopts & IPSET_ENV_LIST_SETNAME)
@@ -1115,6 +1235,8 @@ callback_list(struct ipset_session *session, struct nlattr *nla[],
 			if (list_adt(session, adt) != MNL_CB_OK)
 				return MNL_CB_ERROR;
 		}
+		if (session->sort)
+			return MNL_CB_OK;
 	}
 	return call_outfn(session) ? MNL_CB_ERROR : MNL_CB_OK;
 }
@@ -1152,6 +1274,7 @@ callback_version(struct ipset_session *session, struct nlattr *nla[])
 			   "while userspace supports protocol versions %u-%u",
 			   min, max, IPSET_PROTOCOL_MIN, IPSET_PROTOCOL_MAX);
 
+	session->protocol = MIN(max, IPSET_PROTOCOL_MAX);
 	session->version_checked = true;
 
 	return MNL_CB_STOP;
@@ -1279,10 +1402,10 @@ callback_data(const struct nlmsghdr *nlh, void *data)
 	proto = mnl_attr_get_u8(nla[IPSET_ATTR_PROTOCOL]);
 
 	/* Check protocol */
-	if (cmd != IPSET_CMD_PROTOCOL && proto != IPSET_PROTOCOL)
+	if (cmd != IPSET_CMD_PROTOCOL && proto != session->protocol)
 		FAILURE("Giving up: kernel protocol version %u "
 			"does not match our protocol version %u",
-			proto, IPSET_PROTOCOL);
+			proto, session->protocol);
 
 	D("Message: %s", cmd2name[cmd]);
 	switch (cmd) {
@@ -1441,8 +1564,8 @@ callback_error(const struct nlmsghdr *nlh, void *cbdata)
 		if (!(session->envopts & IPSET_ENV_QUIET)) {
 			ipset_print_elem(session->report, IPSET_ERRORBUFLEN,
 					 session->data, IPSET_OPT_NONE, 0);
-			ipset_warn(session, " is NOT in set %s.",
-				   ipset_data_setname(data));
+			ipset_notice(session, " is NOT in set %s.",
+				     ipset_data_setname(data));
 		}
 		return ret;
 	}
@@ -1584,8 +1707,8 @@ data2attr(struct ipset_session *session, struct nlmsghdr *nlh,
 			    type, family, attrs);
 }
 
-#define ADDATTR_PROTOCOL(nlh)						\
-	mnl_attr_put_u8(nlh, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL)
+#define ADDATTR_PROTOCOL(nlh, protocol)					\
+	mnl_attr_put_u8(nlh, IPSET_ATTR_PROTOCOL, protocol)
 
 #define ADDATTR(session, nlh, data, type, family, attrs)		\
 	data2attr(session, nlh, data, type, family, attrs)
@@ -1637,7 +1760,8 @@ build_send_private_msg(struct ipset_session *session, enum ipset_cmd cmd)
 	/* Initialize header */
 	session->transport->fill_hdr(session->handle, cmd, buffer, len, 0);
 
-	ADDATTR_PROTOCOL(nlh);
+	ADDATTR_PROTOCOL(nlh,
+		cmd == IPSET_CMD_PROTOCOL ? IPSET_PROTOCOL : session->protocol);
 
 	switch (cmd) {
 	case IPSET_CMD_PROTOCOL:
@@ -1701,7 +1825,7 @@ build_msg(struct ipset_session *session, bool aggregate)
 					     session->buffer,
 					     session->bufsize,
 					     session->envopts);
-		ADDATTR_PROTOCOL(nlh);
+		ADDATTR_PROTOCOL(nlh, session->protocol);
 	}
 	D("Protocol added, aggregate %s", aggregate ? "yes" : "no");
 	switch (session->cmd) {
@@ -1947,7 +2071,7 @@ ipset_cmd(struct ipset_session *session, enum ipset_cmd cmd, uint32_t lineno)
 
 	assert(session);
 
-	if (cmd <= IPSET_CMD_NONE || cmd >= IPSET_MSG_MAX)
+	if (cmd < IPSET_CMD_NONE || cmd >= IPSET_MSG_MAX)
 		return 0;
 
 	/* Initialize transport method if not done yet */
@@ -1961,7 +2085,14 @@ ipset_cmd(struct ipset_session *session, enum ipset_cmd cmd, uint32_t lineno)
 	if (!session->version_checked) {
 		if (build_send_private_msg(session, IPSET_CMD_PROTOCOL) < 0)
 			return -1;
+		if (ipset_session_report_type(session) == IPSET_WARNING &&
+		    cmd != IPSET_CMD_NONE)
+			/* Suppress protocol warning */
+			ipset_session_report_reset(session);
 	}
+	/* IPSET_CMD_NONE: check protocol version only */
+	if (cmd == IPSET_CMD_NONE)
+		return 0;
 
 	/* Private commands */
 	if (cmd == IPSET_CMD_TYPE || cmd == IPSET_CMD_HEADER)
@@ -2030,29 +2161,57 @@ cleanup:
 	return ret;
 }
 
+static
+int __attribute__ ((format (printf, 3, 4)))
+default_print_outfn(struct ipset_session *session, void *p UNUSED,
+		    const char *fmt, ...)
+{
+	int len;
+	va_list args;
+
+	va_start(args, fmt);
+	len = vfprintf(session->ostream, fmt, args);
+	va_end(args);
+
+	return len;
+}
+
 /**
- * ipset_session_outfn - set session output printing function
+ * ipset_session_print_outfn - set session output printing function
+ * @session: session structure
+ * @outfn: output printing function
+ * @p: pointer to private area
  *
- * Set the session printing function.
+ * Set the session output printing function. If the @outfn is NULL,
+ * then the default output function is configured. You can set
+ * the @p pointer to a private area: the output printing function
+ * is called with @p in one of its arguments.
  *
+ * Returns 0 on success or a negative error code.
  */
 int
-ipset_session_outfn(struct ipset_session *session, ipset_outfn outfn)
+ipset_session_print_outfn(struct ipset_session *session,
+			  ipset_print_outfn outfn,
+			  void *p)
 {
-	session->outfn = outfn ? outfn : printf;
+	session->print_outfn = outfn ? outfn : default_print_outfn;
+	session->p = p;
 	return 0;
 }
 
 /**
  * ipset_session_init - initialize an ipset session
+ * @outfn: output printing function
+ * @p: pointer to private area
  *
  * Initialize an ipset session by allocating a session structure
- * and filling out with the initialization data.
+ * and filling out with the initialization data. The function
+ * calls ipset_session_print_outfn() to set @print_outfn, @p.
  *
  * Returns the created session sctructure on success or NULL.
  */
 struct ipset_session *
-ipset_session_init(ipset_outfn outfn)
+ipset_session_init(ipset_print_outfn print_outfn, void *p)
 {
 	struct ipset_session *session;
 	size_t bufsize = getpagesize();
@@ -2061,26 +2220,228 @@ ipset_session_init(ipset_outfn outfn)
 	session = calloc(1, sizeof(struct ipset_session) + bufsize);
 	if (session == NULL)
 		return NULL;
+	session->outbuf = calloc(1, IPSET_OUTBUFLEN);
+	if (session->outbuf == NULL)
+		goto free_session;
+	session->outbuflen = IPSET_OUTBUFLEN;
 	session->bufsize = bufsize;
 	session->buffer = session + 1;
+	session->istream = stdin;
+	session->ostream = stdout;
+	session->protocol = IPSET_PROTOCOL;
+	INIT_LIST_HEAD(&session->sorted);
+	INIT_LIST_HEAD(&session->pool);
 
 	/* The single transport method yet */
 	session->transport = &ipset_mnl_transport;
 
 	/* Output function */
-	session->outfn = outfn;
+	ipset_session_print_outfn(session, print_outfn, p);
 
 	/* Initialize data structures */
 	session->data = ipset_data_init();
 	if (session->data == NULL)
-		goto free_session;
+		goto free_outbuf;
 
 	ipset_cache_init();
 	return session;
 
+free_outbuf:
+	free(session->outbuf);
 free_session:
 	free(session);
 	return NULL;
+}
+
+/**
+ * ipset_session_io_full - set full IO for the session
+ * @session: session structure
+ * @filename: filename
+ * @what: operate on input/output
+ *
+ * The normal "-file" CLI interface does not provide an interface
+ * to set both the input (restore) and output (list/save) for
+ * a session. This function makes it possible to configure those.
+ *
+ * When a filename for input is passed, then the file will be opened
+ * for reading.
+ * When a filename for output is passed, then the file will be opened
+ * for writing.
+ * Previously opened files are closed.
+ * If NULL is passed as filename, stdin/stdout is set.
+ * Input/output files can be set separatedly.
+ * The function returns error if the file cannot be opened or
+ * normal IO mode is already set.
+ *
+ * Returns 0 on success or a negative error code.
+ */
+int
+ipset_session_io_full(struct ipset_session *session, const char *filename,
+		      enum ipset_io_type what)
+{
+	FILE *f;
+
+	assert(session);
+
+	if (session->normal_io)
+		return ipset_err(session,
+			"Normal IO is in use, full IO cannot be selected");
+
+	switch (what) {
+	case IPSET_IO_INPUT:
+		if (session->istream != stdin)
+			fclose(session->istream);
+		if (!filename) {
+			session->istream = stdin;
+		} else {
+			f = fopen(filename, "r");
+			if (!f)
+				return ipset_err(session,
+					"Cannot open %s for reading: %s",
+					filename, strerror(errno));
+			session->istream = f;
+		}
+		break;
+	case IPSET_IO_OUTPUT:
+		if (session->ostream != stdout)
+			fclose(session->ostream);
+		if (!filename) {
+			session->ostream = stdout;
+		} else {
+			f = fopen(filename, "w");
+			if (!f)
+				return ipset_err(session,
+					"Cannot open %s for writing: %s",
+					filename, strerror(errno));
+			session->ostream = f;
+		}
+		break;
+	default:
+		return ipset_err(session,
+				"Library error, invalid ipset_io_type");
+	}
+	session->full_io = !(session->istream == stdin &&
+			     session->ostream == stdout);
+	return 0;
+}
+
+/**
+ * ipset_session_io_normal - set normal IO for the session
+ * @session: session structure
+ * @filename: filename
+ * @what: operate on input/output
+ *
+ * The normal "-file" CLI interface to set either the input (restore)
+ * or output (list/save) for a session. This function does not make
+ * possible to set both independently.
+ *
+ * When a filename for input is passed, then the file will be opened
+ * for reading.
+ * When a filename for output is passed, then the file will be opened
+ * for writing.
+ * Previously opened files are closed.
+ * If NULL is passed as filename, stdin/stdout is set.
+ * Input/output files cannot be set separatedly.
+ * The function returns error if the file cannot be opened or
+ * full IO mode is already set.
+ *
+ * Returns 0 on success or a negative error code.
+ */
+int
+ipset_session_io_normal(struct ipset_session *session, const char *filename,
+			enum ipset_io_type what)
+{
+	FILE *f;
+
+	assert(session);
+	assert(filename);
+
+	if (session->full_io)
+		return ipset_err(session,
+			"Full IO is in use, normal IO cannot be selected");
+	if (session->istream != stdin) {
+		fclose(session->istream);
+		session->istream = stdin;
+	}
+	if (session->ostream != stdout) {
+		fclose(session->ostream);
+		session->ostream = stdout;
+	}
+	switch (what) {
+	case IPSET_IO_INPUT:
+		f = fopen(filename, "r");
+		if (!f)
+			return ipset_err(session,
+				"Cannot open %s for reading: %s",
+				filename, strerror(errno));
+		session->istream = f;
+		break;
+	case IPSET_IO_OUTPUT:
+		f = fopen(filename, "w");
+		if (!f)
+			return ipset_err(session,
+				"Cannot open %s for writing: %s",
+				filename, strerror(errno));
+		session->ostream = f;
+		break;
+	default:
+		return ipset_err(session,
+				"Library error, invalid ipset_io_type");
+	}
+	session->normal_io = !(session->istream == stdin &&
+			       session->ostream == stdout);
+	return 0;
+}
+
+/**
+ * ipset_session_io_stream - returns the input or output stream
+ * @what: operate on input/output
+ *
+ * Returns the input or output stream of the session.
+ */
+FILE *
+ipset_session_io_stream(struct ipset_session *session,
+			enum ipset_io_type what)
+{
+	switch (what) {
+	case IPSET_IO_INPUT:
+		return session->istream;
+	case IPSET_IO_OUTPUT:
+		return session->ostream;
+	default:
+		return NULL;
+	}
+}
+
+/**
+ * ipset_session_io_close - closes the input or output stream
+ * @what: operate on input/output
+ *
+ * Closes the input or output stream of the session.
+ *
+ * Returns 0 on success or a negative error code.
+ */
+int
+ipset_session_io_close(struct ipset_session *session,
+		       enum ipset_io_type what)
+{
+	switch (what) {
+	case IPSET_IO_INPUT:
+		if (session->istream != stdin) {
+			fclose(session->istream);
+			session->istream = stdin;
+		}
+		break;
+	case IPSET_IO_OUTPUT:
+		if (session->ostream != stdout) {
+			fclose(session->ostream);
+			session->ostream = stdout;
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
 }
 
 /**
@@ -2094,14 +2455,29 @@ free_session:
 int
 ipset_session_fini(struct ipset_session *session)
 {
+	struct ipset_sorted *pos, *n;
 	assert(session);
 
 	if (session->handle)
 		session->transport->fini(session->handle);
 	if (session->data)
 		ipset_data_fini(session->data);
+	if (session->istream != stdin)
+		fclose(session->istream);
+	if (session->ostream != stdout)
+		fclose(session->ostream);
 
 	ipset_cache_fini();
+
+	list_for_each_entry_safe(pos, n, &session->sorted, list) {
+		list_del(&pos->list);
+		free(pos);
+	}
+	list_for_each_entry_safe(pos, n, &session->pool, list) {
+		list_del(&pos->list);
+		free(pos);
+	}
+	free(session->outbuf);
 	free(session);
 	return 0;
 }
