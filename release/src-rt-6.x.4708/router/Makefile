@@ -2714,7 +2714,8 @@ tor-clean:
 	@rm -rf tor/stamp-h1 tor/Makefile
 
 udpxy/stamp-h1:
-	$(MAKE) -C udpxy CFLAGS="-Os -Wall --host=$(HOST) --target=$(HOST) $(EXTRACFLAGS)" \
+	$(call patch_files,udpxy)
+	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 	touch udpxy/stamp-h1
 
@@ -2724,6 +2725,7 @@ udpxy: udpxy/stamp-h1
 udpxy-clean:
 	-@$(MAKE) -C udpxy clean
 	@rm -f udpxy/stamp-h1
+	$(call unpatch_files,udpxy)
 
 udpxy-install:
 	@$(SEP)
