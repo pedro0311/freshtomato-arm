@@ -13,7 +13,6 @@ FreshTomato-ARM Changelog
 - nginx: updated to 1.14.2
 - rp-pppoe: updated to 3.13
 - miniupnpd: updated to git snapshot from 20181206
-- ipset: updated to 7.1
 - libcurl: updated to 7.63.0
 - libcurl: updated CA certificate bundle as of 2018-12-05
 - comgt: clean sources of v 0.32, add patches instead
