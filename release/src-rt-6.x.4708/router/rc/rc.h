@@ -217,7 +217,7 @@ extern void stop_dhcp6c(void);
 // services.c
 extern void start_cron(void);
 extern void stop_cron(void);
-extern void start_adblock(void);
+extern void start_adblock(int update);
 extern void stop_adblock(void);
 extern void start_upnp(void);
 extern void stop_upnp(void);

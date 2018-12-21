@@ -28,7 +28,7 @@ download() {
 	ENTRIES=0
 
 	# fix race condition on wan-up
-	sleep 30
+	[ "$1" -ne "1" ] && sleep 30
 
 	$LOGS "prepare to download ..."
 
@@ -37,34 +37,34 @@ download() {
 	rm -f $FINAL
 	rm -f $CHK_FILE
 
-	for i in $(echo $BLACKLIST | tr " " "_" | tr ">" "\n")
-	do
+	for i in $(echo $BLACKLIST | tr " " "_" | tr ">" "\n"); do
 		ENBL=$(echo $i | cut -d "<" -f1)
 		URL=$(echo $i | cut -d "<" -f2)
-		if [ "$ENBL" -eq "1" ]; then
+
+		[ "$ENBL" -eq "1" ] && {
 			$LOGS "[$COUNT] downloading blacklist - $URL"
 			$WGET "$URL" -O $PREFIX/_host$COUNT >/dev/null 2>&1
-			if [ ! -f "$PREFIX/_host$COUNT" ]; then
+
+			[ ! -f "$PREFIX/_host$COUNT" ] && {
 				$LOGS "... [$COUNT] download error! Please check URL"
-			else
+			} || {
 				ENTRIES=$(cat $PREFIX/_host$COUNT | wc -l)
 				$LOGS "... [$COUNT] found $ENTRIES entries"
-			fi
+			}
 			COUNT=$((COUNT+1))
-		else
+		} || {
 			$LOGS "skip disabled blacklist - $URL"
-		fi
+		}
 	done
 
 	# add custom blacklist
-	CHECK=$(echo "$CUSTOM" | wc -w)
-	if [ "$CHECK" -ne "0" ]; then
+	[ "$(echo "$CUSTOM" | wc -w)" -ne "0" ] && {
 		$LOGS "add custom hosts to blacklist"
 		echo "# custom blacklist" > $PREFIX/_host.custom
 		for i in $CUSTOM; do
 			echo "127.0.0.1 $i" >> $PREFIX/_host.custom
 		done
-	fi
+	}
 
 	# merge files, remove lines with unwanted chars
 	cat $PREFIX/_host* | sed 's/\r$//;/^[ \t]*#/d;/[\t ][[:alnum:]\._-]*$/!d' > $WORK1 && rm $PREFIX/_host*
@@ -83,13 +83,12 @@ download() {
 	mv $WORK1 $WORK2 && cat $WORK2 | sort -u > $WORK1 && rm $WORK2
 
 	# remove selected pages from the whitelist
-	CHECK=$(echo "$WHITELIST" | wc -w)
-	if [ "$CHECK" -ne "0" ]; then
+	[ "$(echo "$WHITELIST" | wc -w)" -ne "0" ] && {
 		$LOGS "remove whitelisted hosts from blacklist"
 		for i in $WHITELIST; do
 			sed -i $WORK1 -e "/$i/d"
 		done
-	fi
+	}
 
 	# change format for dnsmasq
 	# example: address=/badurl.com/0.0.0.0
@@ -98,63 +97,62 @@ download() {
 	# clean-up
 	rm -rf $PREFIX/*
 
-	if [ -f "$FINAL" -a "$ENTRIES" -gt 0 ]; then
+	[ -f "$FINAL" -a "$ENTRIES" -gt 0 ] && {
 		# count entries
 		COUNT=$(cat $FINAL | wc -l)
 		$LOGS "activated - $COUNT entries"
 		touch "$CHK_FILE"
 		cru d adblockDL
-	else
+	} || {
 		# for some reason we cannot download at least 1 blacklist
 		# so we will try in 5 mins once again
 		cru a adblockDL "*/5 * * * * /usr/sbin/adblock"
 		$LOGS "No internet, will try again in 5 minutes"
-	fi
+	}
 }
 
 cronAdd() {
-	ISSET=$(cru l | grep adblockJob | wc -l)
-	if [ "$ISSET" == "0" ]; then
+	[ "$(cru l | grep adblockJob | wc -l)" -eq "0" ] && {
 		MINS=$(($RANDOM % 59))
 		$LOGS "add cron job"
 		cru a adblockJob "$MINS 2 * * * /usr/sbin/adblock"
-	fi
+	}
 }
 
 cronDel() {
-	ISSET=$(cru l | grep adblockJob | wc -l)
-
-	if [ "$ISSET" == "1" ]; then
+	[ "$(cru l | grep adblockJob | wc -l)" -eq "1" ] && {
 		$LOGS "remove cron job"
 		cru d adblockJob
-	fi
+	}
 }
 
-if [ "$1" == "stop" ]; then
+[ "$1" == "stop" ] && {
 	$LOGS "stopped"
 	cronDel
-else
-	if [ "$ENABLE" == "1" ]; then
+} || {
+	[ "$ENABLE" -eq "1" ] && {
+		[ "$1" == "update" ] && {
+			download 1
+		} || {
+			# do not download blacklists, if they're already successfully downloaded in less than 2 hours
+			[ -f "$CHK_FILE" -a -s "$FINAL" ] && {
+				TIME_FILE=$(date -r "$CHK_FILE" +%s)
+				TIME_2HRS=$(($(date +%s)-7200))
 
-		# do not download blacklists, if they're already successfully downloaded in less than 2 hours
-		if [ -f "$CHK_FILE" -a -s "$FINAL" ]; then
-			TIME_FILE=$(date -r "$CHK_FILE" +%s)
-			TIME_2HRS=$(($(date +%s)-7200))
+				[ "$TIME_FILE" -lt "$TIME_2HRS" ] && {
+					download 0
+				} || {
+					COUNT=$(cat $FINAL | wc -l)
+					$LOGS "blacklists already downloaded (less than 2 hours ago), activated - $COUNT entries"
+					cru d adblockDL
+				}
+			} || {
+				download 0
+			}
 
-			if [ "$TIME_FILE" -lt "$TIME_2HRS" ]; then
-				download
-			else
-				COUNT=$(cat $FINAL | wc -l)
-				$LOGS "blacklists already downloaded (less than 2 hours ago), activated - $COUNT entries"
-				cru d adblockDL
-			fi
-		else
-			download
-		fi
+			cronAdd
+		}
+	}
+}
 
-		cronAdd
-	fi
-fi
-
-# restart dnsmasq
 service dnsmasq restart

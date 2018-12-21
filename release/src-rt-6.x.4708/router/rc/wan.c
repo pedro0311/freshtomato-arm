@@ -1303,12 +1303,9 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			}
 		}
 
-		if (wanup)
+		if (wanup) {
 			start_vpn_eas();
-
-		if (wanup && nvram_match("adblock_enable", "1")) {
-			killall("adblock", SIGHUP);
-			start_adblock();
+			start_adblock(0);
 		}
 
 #ifdef TCONFIG_TINC
