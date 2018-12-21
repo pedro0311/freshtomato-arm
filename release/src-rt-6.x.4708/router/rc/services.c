@@ -1604,11 +1604,22 @@ void stop_igmp_proxy(void)
 
 void start_udpxy(void)
 {
-	if (nvram_match("udpxy_enable", "1")) {
-		if (get_wan_proto() == WP_DISABLED)
-			return;
-		eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", nvram_safe_get("wan_ifname") );
-	}
+  char wan_prefix[] = "wan"; /* not yet mwan ready, use wan for now */
+  char buffer[32];
+
+  /* check if udpxy is enabled via GUI, advanced-firewall.asp */
+  if (nvram_match("udpxy_enable", "1")) {
+    if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
+      memset(buffer, 0, sizeof(buffer)); /* reset */
+      snprintf(buffer, sizeof(buffer),"%s", get_wanface(wan_prefix)); /* copy wanface to buffer */
+      eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer); /* start udpxy */
+    }
+    else {
+      /* do nothing */
+      syslog(LOG_DEBUG, "udpxy not started!\n");
+    }
+
+  }
 }
 
 void stop_udpxy(void)
