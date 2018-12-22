@@ -1612,7 +1612,29 @@ void start_udpxy(void)
     if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
       memset(buffer, 0, sizeof(buffer)); /* reset */
       snprintf(buffer, sizeof(buffer),"%s", get_wanface(wan_prefix)); /* copy wanface to buffer */
-      eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer); /* start udpxy */
+
+      /* check interface to listen on */
+      /* check udpxy enabled/selected for lan / br0 ? */
+      if (nvram_match("udpxy_lan", "1") && strcmp(nvram_safe_get("lan_ipaddr"),"")!=0) {
+	eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan_ifname"), "-m", buffer);
+      }
+      /* check udpxy enabled/selected for lan1 / br1 ? */
+      else if (nvram_match("udpxy_lan1", "1") && strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0) {
+	eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan1_ifname"), "-m", buffer);
+      }
+      /* check udpxy enabled/selected for lan2 / br2 ? */
+      else if (nvram_match("udpxy_lan2", "1") && strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0) {
+	eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan2_ifname"), "-m", buffer);
+      }
+      /* check udpxy enabled/selected for lan3 / br3 ? */
+      else if (nvram_match("udpxy_lan3", "1") && strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0) {
+	eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan3_ifname"), "-m", buffer);
+      }
+      else {
+	/* address/interface to listen on: default = 0.0.0.0 */
+	eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer);
+      }
+
     }
     else {
       /* do nothing */
