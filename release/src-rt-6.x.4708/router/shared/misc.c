@@ -393,7 +393,7 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 	}
 }
 
-/* function for rstats & cstats */
+/* function for rstats, cstats, httpd */
 long check_wanup_time(char *prefix)
 {
 	long wanuptime = 0; /* wanX uptime in seconds */
