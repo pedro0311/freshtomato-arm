@@ -669,12 +669,12 @@ static void calc(void)
 				c = counter[i];
 				sc = sp->last[i];
 				if (c < sc) {
-					wanup = check_wanup(prefix); // router/shared/misc.c
-					wanuptime = check_wanup_time(); // router/shared/misc.c
-					diff = ((0xFFFFFFFFUL) - sc + 1UL) + c; // rollover calculation
-					if(diff > MAX_ROLLOVER) diff = 0UL; // 3750 MByte / 120 sec => 250 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2
-					if(wanup && (wanuptime < (INTERVAL + 10))) diff = 0UL; // Try to catch traffic peaks at connection startup/reconnect (ADSL/PPPoE) - Part 2/2
-					// see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722
+					wanup = check_wanup(prefix); /* see router/shared/misc.c */
+					wanuptime = check_wanup_time(prefix); /* see router/shared/misc.c */
+					diff = ((0xFFFFFFFFUL) - sc + 1UL) + c; /* rollover calculation */
+					if(diff > MAX_ROLLOVER) diff = 0UL; /* 3750 MByte / 120 sec => 250 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
+					if(wanup && (wanuptime < (long)(INTERVAL + 10))) diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+					/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
 				}
 				else {
 					diff = c - sc;
