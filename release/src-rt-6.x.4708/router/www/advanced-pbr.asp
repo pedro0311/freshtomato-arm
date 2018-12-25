@@ -229,12 +229,12 @@ pbr.setup = function() {
 		{ multi: [
 			{ type: 'select', options: [['0','All'],['1','IP'],['2','MAC']], prefix: '<div class="x1a">', suffix: '<\/div>' },
 			{ type: 'text', maxlen: 17, prefix: '<div class="x1b">', suffix: '<\/div>' },
-			{ type: 'text', maxlen: 5, prefix: '<div class="x1c">Port', suffix: '<\/div>' }
+			{ type: 'text', maxlen: 80, prefix: '<div class="x1c">Port', suffix: '<\/div>' }
 		] },
 		{ multi: [
 			{ type: 'select', options: [['0','All'],['1','IP'],['3','Domain']], prefix: '<div class="x1a">', suffix: '<\/div>' },
 			{ type: 'text', maxlen: 32, prefix: '<div class="x1b">', suffix: '<\/div>' },
-			{ type: 'text', maxlen: 5, prefix: '<div class="x1c">Port', suffix: '<\/div>' }
+			{ type: 'text', maxlen: 80, prefix: '<div class="x1c">Port', suffix: '<\/div>' }
 		] },
 		{ type: 'select', options: class1, vtop: 1 },
 		{ type: 'text', maxlen: 32, vtop: 1 }
