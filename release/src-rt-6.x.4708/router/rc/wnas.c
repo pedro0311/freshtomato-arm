@@ -116,7 +116,7 @@ void start_nas(void)
 	_dprintf("%s: uptime=%ld\n", __FUNCTION__, si.uptime);
 #else
 	_dprintf("%s\n", __FUNCTION__);
-#endif	
+#endif
 
 #ifdef CONFIG_BCMWL5
 	setenv("UDP_BIND_IP", "127.0.0.1", 1);
@@ -206,7 +206,7 @@ void notify_nas(const char *ifname)
 #else	/* !CONFIG_BCMWL5 */
 
 	if (!foreach_wif(1, NULL, security_on)) return;
-	
+
 	int i;
 	int unit;
 
