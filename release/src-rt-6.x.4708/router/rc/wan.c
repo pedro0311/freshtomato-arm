@@ -151,7 +151,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 			nvram_get_int(strcat_r(prefix, "_mtu", tmp)),
 			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));
 		if (((p = nvram_get(strcat_r(prefix, "_ppp_service", tmp))) != NULL) && (*p)) {
-			fprintf(fp, "rp_pppoe_service '%s'\n", p); 
+			fprintf(fp, "rp_pppoe_service '%s'\n", p);
 		}
 		if (((p = nvram_get(strcat_r(prefix, "_ppp_ac", tmp))) != NULL) && (*p)) {
 			fprintf(fp, "rp_pppoe_ac '%s'\n", p);
@@ -665,6 +665,7 @@ static int config_l2tp(void)		/* shared xl2tpd.conf for all WAN */
 			fappend(fp, xl2tp_file);
 		}
 	}
+
 	fclose(fp);
 
 	return 0;
