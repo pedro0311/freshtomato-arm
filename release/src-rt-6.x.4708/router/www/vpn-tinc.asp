@@ -205,7 +205,7 @@ function verifyFields(focused, quiet) {
 	E('info').disabled = !tincup;
 	E('hostselect').disabled = !tincup;
 
-	// Element Verification
+	/* Element Verification */
 	if (E('_tinc_name').value == "" && E('_f_tinc_wanup').checked) {
 		ferror.set(E('_tinc_name'), "Host Name is required when 'Start With WAN' is checked.", quiet); return 0 ; }
 	else {  ferror.clear(E('_tinc_name')) }
@@ -249,7 +249,7 @@ function spin(x,which) {
 	if (!x) cmd = null;
 }
 
-// Borrowed from http://snipplr.com/view/14074/
+/* Borrowed from http://snipplr.com/view/14074/ */
 String.prototype.between = function(prefix, suffix) {
 	s = this;
 	var i = s.indexOf(prefix);
@@ -387,7 +387,7 @@ function updateNodes() {
 }
 
 function displayVersion() {
-	E('version').innerHTML = "<small>Tinc " + escapeText(cmdresult) + "<\/small>";
+	E('version').innerHTML = "<small>" + escapeText(cmdresult) + "<\/small>";
 	cmdresult = '';
 }
 
@@ -402,7 +402,7 @@ function getVersion() {
 		displayVersion();
 	}
 
-	var commands = "/usr/sbin/tinc --version | /bin/busybox awk 'NR==1  {print $3}'";
+	var commands = "/usr/sbin/tinc --version | /bin/busybox awk 'NR==1 {print $1 \" \" $3}'";
 	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
 }
 
@@ -521,10 +521,10 @@ function toggleVisibility(whichone) {
 	// -------- BEGIN CONFIG TAB -----------
 	tabCreate.apply(this, tabs);
 	t = "config";
-	W('<div id=\''+t+'-tab\'>');
+	W('<div id="'+t+'-tab">');
 	W('<br />');
-	W('<input type=\'hidden\' name=\'tinc_wanup\'>');
-	W('<div class=\'section\'>');
+	W('<input type="hidden" name="tinc_wanup">');
+	W('<div class="section">');
 	createFieldTable('', [
 		{ title: 'Start With WAN ', name: 'f_tinc_wanup', type: 'checkbox', value: (nvram.tinc_wanup == 1) },
 		{ title: 'Interface Type', name: 'tinc_devicetype', type: 'select', options: [['tun','TUN'],['tap','TAP']], value: nvram.tinc_devicetype },
@@ -537,7 +537,7 @@ function toggleVisibility(whichone) {
 		{ title: 'Custom', name: 'tinc_custom', type: 'textarea', value: nvram.tinc_custom }
 	]);
 
-	W('<small><b style=\'font-size: 1.5em\'>*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
+	W('<small><b style="font-size: 1.5em">*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
 	W('<\/div>');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button1">');
 	W('<\/div>');
@@ -546,10 +546,10 @@ function toggleVisibility(whichone) {
 
 	// -------- BEGIN HOSTS TAB -----------
 	t = "hosts";
-	W('<div id=\''+t+'-tab\'>');
+	W('<div id="'+t+'-tab">');
 	W('<br />');
-	W('<div class=\'section\'>');
-	W('<input type=\'hidden\' name=\'tinc_hosts\'>');
+	W('<div class="section">');
+	W('<input type="hidden" name="tinc_hosts">');
 	W('<div class="tomato-grid" id="th-grid"><\/div>');
 
 	th.setup();
@@ -560,15 +560,15 @@ function toggleVisibility(whichone) {
 		{ title: 'Custom', name: 'host_custom', type: 'textarea' }
 	]);
 
-	W('<small><b style=\'font-size: 1.5em\'>*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
+	W('<small><b style="font-size: 1.5em">*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
 	W('<\/div>');
 	W('<input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button2">');
 
 	W('<br />');
 	W('<br />');
 
-	W('<div class=\'section-title\'>Notes <small><i><a href=\'javascript:toggleVisibility(\"hosts\");\'><span id=\'sesdiv_hosts_showhide\'>(Click here to show)<\/span><\/a><\/i><\/small><\/div>');
-	W('<div class=\'section\' id=\'sesdiv_hosts\' style=\'display:none\'>');
+	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(\'hosts\');"><span id="sesdiv_hosts_showhide">(Click here to show)<\/span><\/a><\/i><\/small><\/div>');
+	W('<div class="section" id="sesdiv_hosts" style="display:none">');
 	W('<ul>');
 	W('<li><b>ConnectTo<\/b> - Tinc will try to establish a meta-connection to the host. Requires the Address field');
 	W('<li><b>Name<\/b> - Name of the host. There must be an entry for this host.');
@@ -643,20 +643,20 @@ function toggleVisibility(whichone) {
 
 	W('<div class="section">');
 
-	W('<div style="float:left"><input type=\'button\' value=\'Edges\' onclick=\'updateStatus(\"edges\")\' id=\'edges\' style=\"width:85px\"><\/div>');
-	W('<div style="float:left"><input type=\'button\' value=\'Subnets\' onclick=\'updateStatus(\"subnets\")\' id=\'subnets\' style=\"width:85px\"><\/div>');
-	W('<div style="float:left"><input type=\'button\' value=\'Connections\' onclick=\'updateStatus(\"connections\")\' id=\'connections\' style=\"width:85px\"><\/div>');
-	W('<div style="float:left"><input type=\'button\' value=\'Nodes\' onclick=\'updateStatus(\"nodes\")\' id=\'nodes\' style=\"width:85px\"><\/div>');
-	W('<div style="visibility:hidden;text-align:right" id=\"statusWait\">Please wait... <img src=\'spin.gif\' style=\"vertical-align:top\"><\/div>');
+	W('<div style="float:left"><input type="button" value="Edges" onclick="updateStatus(\'edges\')" id="edges" style="width:85px"><\/div>');
+	W('<div style="float:left"><input type="button" value="Subnets" onclick="updateStatus(\'subnets\')" id="subnets" style="width:85px"><\/div>');
+	W('<div style="float:left"><input type="button" value="Connections" onclick="updateStatus(\'connections\')" id="connections" style="width:85px"><\/div>');
+	W('<div style="float:left"><input type="button" value="Nodes" onclick="updateStatus(\'nodes\')" id="nodes" style="width:85px"><\/div>');
+	W('<div style="visibility:hidden;text-align:right" id="statusWait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"><\/div>');
 
 	W('<\/div>');
 
-	W('<div class=\'section\'>');
-	W('<input type=\'button\' value=\'Info\' onclick=\'updateStatus(\"info\")\' id=\'info\' style=\"width:85px\">');
-	W('<select id=\'hostselect\' style=\"width:170px\"><\/select>');
+	W('<div class="section">');
+	W('<input type="button" value="Info" onclick="updateStatus(\'info\')" id="info" style="width:85px">');
+	W('<select id="hostselect" style="width:170px"><\/select>');
 	W('<\/div>');
 
-	W('<pre id=\'result\'><\/pre>');
+	W('<pre id="result"><\/pre>');
 
 	W('<\/div>');
 	// -------- END KEY TAB -----------
