@@ -147,7 +147,7 @@ function checkDirectoryExist(directoryToCheck) {
 	if (!directoryToCheck.startsWith("/")) {
 		directoryToCheck = working_dir + "/" + directoryToCheck;
 	}
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI("[ -d \"" + directoryToCheck + "\" ] && echo \"OK\""));
+	cmd.post('shell.cgi', 'action=execute&nojs=1&command=' + escapeCGI("[ -d \"" + directoryToCheck + "\" ] && echo \"OK\""));
 }
 
 function workingDirUp() {
@@ -174,7 +174,7 @@ function runCommand(command) {
 	}
 
 	showWait(true);
-	cmd.post('shell.cgi', 'action=execute&working_dir=' + working_dir + '&command=' + escapeCGI(command));
+	cmd.post('shell.cgi', 'action=execute&nojs=1&working_dir=' + working_dir + '&command=' + escapeCGI(command));
 }
 
 function fakecommand() {
