@@ -203,8 +203,8 @@ function verifyFields(focused, quiet) {
 
 	// --- verify ---
 
-	<!-- disable and un-check IPv6 for lanX if prefix length is bigger than XYZ -->
-	<!-- only 1x IPv6 /64 network possible for lan -->
+	/* disable and un-check IPv6 for lanX if prefix length is bigger than XYZ */
+	/* only 1x IPv6 /64 network possible for lan */
 	if (E('_f_ipv6_prefix_length').value > 63) {
 		E('_f_lan1_ipv6').checked = false;
 		E('_f_lan2_ipv6').checked = false;
@@ -213,7 +213,7 @@ function verifyFields(focused, quiet) {
 		E('_f_lan2_ipv6').disabled = true;
 		E('_f_lan3_ipv6').disabled = true;
 	}
-	<!-- 2x IPv6 /64 networks possible for lan and lan1 -->
+	/* 2x IPv6 /64 networks possible for lan and lan1 */
 	else if (E('_f_ipv6_prefix_length').value > 62) {
 		E('_f_lan2_ipv6').checked = false;
 		E('_f_lan3_ipv6').checked = false;
@@ -221,14 +221,14 @@ function verifyFields(focused, quiet) {
 		E('_f_lan2_ipv6').disabled = true;
 		E('_f_lan3_ipv6').disabled = true;
 	}
-	<!-- 4x (or even more) IPv6 /64 networks possible for lan, lan1, lan2 and lan3 -->
+	/* 4x (or even more) IPv6 /64 networks possible for lan, lan1, lan2 and lan3 */
 	else {
 		E('_f_lan1_ipv6').disabled = false;
 		E('_f_lan2_ipv6').disabled = false;
 		E('_f_lan3_ipv6').disabled = false;
 	}
 
-	<!-- check if ipv6_radvd or ipv6_dhcpd is enabled for RA (dnsmasq); If YES, then disable Accept RA from LAN option -->
+	/* check if ipv6_radvd or ipv6_dhcpd is enabled for RA (dnsmasq); If YES, then disable Accept RA from LAN option */
 	if (nvram.ipv6_radvd == '1' || nvram.ipv6_dhcpd == '1') {
 		E('_f_ipv6_accept_ra_lan').checked = false;
 		E('_f_ipv6_accept_ra_lan').disabled = true;
@@ -329,10 +329,10 @@ function save() {
 	fom.ipv6_pdonly.value = fom.f_ipv6_pdonly.checked ? 1 : 0;
 	fom.ipv6_accept_ra.value = 0;
 	if (fom.f_ipv6_accept_ra_wan.checked && !fom.f_ipv6_accept_ra_wan.disabled) {
-		fom.ipv6_accept_ra.value = fom.ipv6_accept_ra.value | 0x01; //set bit 0,  accept_ra enabled for WAN
+		fom.ipv6_accept_ra.value = fom.ipv6_accept_ra.value | 0x01; /* set bit 0,  accept_ra enabled for WAN */
 	}
 	if (fom.f_ipv6_accept_ra_lan.checked && !fom.f_ipv6_accept_ra_lan.disabled) {
-		fom.ipv6_accept_ra.value = fom.ipv6_accept_ra.value | 0x02; //set bit 1,  accept_ra enabled for LAN (br0...br3 if available)
+		fom.ipv6_accept_ra.value = fom.ipv6_accept_ra.value | 0x02; /* set bit 1,  accept_ra enabled for LAN (br0...br3 if available) */
 	}
 
 	fom.ipv6_prefix_length.value  = fom.f_ipv6_prefix_length.value;
@@ -358,13 +358,13 @@ function save() {
 			fom.ipv6_prefix.value = '';
 			fom.ipv6_rtr_addr.value = '';
 			if (fom.f_lan1_ipv6.checked) {
-				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x01; //set bit 0,  IPv6 enabled for LAN1
+				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x01; /* set bit 0,  IPv6 enabled for LAN1 */
 			}
 			if (fom.f_lan2_ipv6.checked) {
-				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x02; //set bit 1,  IPv6 enabled for LAN2
+				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x02; /* set bit 1,  IPv6 enabled for LAN2 */
 			}
 			if (fom.f_lan3_ipv6.checked) {
-				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x04; //set bit 2,  IPv6 enabled for LAN3
+				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x04; /* set bit 2,  IPv6 enabled for LAN3 */
 			}
 			break;
 		case 'native':
@@ -475,7 +475,7 @@ createFieldTable('', [
 <div class="section-title">Notes</div>
 <div class="section">
 	<ul>
-	<li><b>Request PD Only</b> - Check for ISP's that require only a Prefix Delegation (usually PPPOE (VDSL2, ADSL1/2(+), Fiber) connections).</li>
+	<li><b>Request PD Only</b> - Check for ISP's that require only a Prefix Delegation (usually PPPoE (xDSL, Fiber) connections).</li>
 	<li><b>Add default route ::/0</b> - Some ISP's may need the default route (workaround).</li>
 	<li><b>Accept RA from LAN</b> - Please disable Announce IPv6 on LAN (SLAAC) and Announce IPv6 on LAN (DHCP) at <a href="advanced-dhcpdns.asp">DHCP/DNS</a> to enable that option.</li>
 	</ul>
