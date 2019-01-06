@@ -146,7 +146,7 @@ function verifyFields(focused, quiet) {
 	{
 		t = tabs[i][0];
 
-		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 1440)) ret = 0;
+		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30)) ret = 0;
 		if (!v_port('_vpn_'+t+'_port', quiet)) ret = 0;
 		if (!v_ip('_vpn_'+t+'_sn', quiet, 0)) ret = 0;
 		if (!v_netmask('_vpn_'+t+'_nm', quiet)) ret = 0;
@@ -707,7 +707,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<\/div>');
 	W('<div id=\''+t+'-advanced\'>');
 	createFieldTable('', [
-		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 4, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
+		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Push LAN (br0) to clients', name: 'f_vpn_'+t+'_plan', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan' ) != 0 },
 		{ title: 'Push LAN1 (br1) to clients', name: 'f_vpn_'+t+'_plan1', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan1' ) != 0 },
 		{ title: 'Push LAN2 (br2) to clients', name: 'f_vpn_'+t+'_plan2', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_plan2' ) != 0 },

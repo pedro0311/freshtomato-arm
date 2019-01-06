@@ -139,7 +139,7 @@ function verifyFields(focused, quiet) {
 	{
 		t = tabs[i][0];
 
-		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 1440)) ret = 0;
+		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30)) ret = 0;
 		if (!v_ip('_vpn_'+t+'_addr', true) && !v_domain('_vpn_'+t+'_addr', true)) { ferror.set(E('_vpn_'+t+'_addr'), "Invalid server address.", quiet); ret = 0; }
 		if (!v_port('_vpn_'+t+'_port', quiet)) ret = 0;
 		if (!v_ip('_vpn_'+t+'_local', quiet, 1)) ret = 0;
@@ -481,7 +481,7 @@ for (i = 0; i < tabs.length; ++i)
 	W('<\/div>');
 	W('<div id=\''+t+'-advanced\'>');
 	createFieldTable('', [
-		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 4, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' }, 
+		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Redirect Internet traffic', multi: [
 			{ name: 'f_vpn_'+t+'_rgw', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_rgw' ) != 0 },
 			{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval( 'nvram.vpn_'+t+'_gw' ), prefix: '<span id=\''+t+'_gateway\'> Gateway:&nbsp', suffix: '<\/span>'} ] },
