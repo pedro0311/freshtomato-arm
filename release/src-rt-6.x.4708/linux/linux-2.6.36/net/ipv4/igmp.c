@@ -114,7 +114,8 @@
 
 #define IGMP_V1_Router_Present_Timeout		(400*HZ)
 #define IGMP_V2_Router_Present_Timeout		(400*HZ)
-#define IGMP_Unsolicited_Report_Interval	(10*HZ)
+#define IGMP_V2_Unsolicited_Report_Interval	(10*HZ)
+#define IGMP_V3_Unsolicited_Report_Interval	(1*HZ)
 #define IGMP_Query_Response_Interval		(10*HZ)
 #define IGMP_Unsolicited_Report_Count		2
 
@@ -138,6 +139,14 @@
 	 IN_DEV_CONF_GET((in_dev), FORCE_IGMP_VERSION) == 2 || \
 	 ((in_dev)->mr_v2_seen && \
 	  time_before(jiffies, (in_dev)->mr_v2_seen)))
+
+static int unsolicited_report_interval(struct in_device *in_dev)
+{
+	if (IGMP_V1_SEEN(in_dev) || IGMP_V2_SEEN(in_dev))
+		return IGMP_V2_Unsolicited_Report_Interval;
+	else /* v3 */
+		return IGMP_V3_Unsolicited_Report_Interval;
+}
 
 static void igmpv3_add_delrec(struct in_device *in_dev, struct ip_mc_list *im);
 static void igmpv3_del_delrec(struct in_device *in_dev, __be32 multiaddr);
@@ -187,9 +196,14 @@ static void igmp_start_timer(struct ip_mc_list *im, int max_delay)
 static void igmp_gq_start_timer(struct in_device *in_dev)
 {
 	int tv = net_random() % in_dev->mr_maxdelay;
+	unsigned long exp = jiffies + tv + 2;
+
+	if (in_dev->mr_gq_running &&
+	    time_after_eq(exp, (in_dev->mr_gq_timer).expires))
+		return;
 
 	in_dev->mr_gq_running = 1;
-	if (!mod_timer(&in_dev->mr_gq_timer, jiffies+tv+2))
+	if (!mod_timer(&in_dev->mr_gq_timer, exp))
 		in_dev_hold(in_dev);
 }
 
@@ -708,7 +722,8 @@ static void igmp_ifc_timer_expire(unsigned long data)
 	igmpv3_send_cr(in_dev);
 	if (in_dev->mr_ifc_count) {
 		in_dev->mr_ifc_count--;
-		igmp_ifc_start_timer(in_dev, IGMP_Unsolicited_Report_Interval);
+		igmp_ifc_start_timer(in_dev,
+				     unsolicited_report_interval(in_dev));
 	}
 	__in_dev_put(in_dev);
 }
@@ -733,7 +748,7 @@ static void igmp_timer_expire(unsigned long data)
 
 	if (im->unsolicit_count) {
 		im->unsolicit_count--;
-		igmp_start_timer(im, IGMP_Unsolicited_Report_Interval);
+		igmp_start_timer(im, unsolicited_report_interval(in_dev));
 	}
 	im->reporter = 1;
 	spin_unlock(&im->lock);
@@ -1272,14 +1287,14 @@ void ip_mc_rejoin_group(struct ip_mc_list *im)
 	if (im->multiaddr == IGMP_ALL_HOSTS)
 		return;
 
-	if (IGMP_V1_SEEN(in_dev) || IGMP_V2_SEEN(in_dev)) {
-		igmp_mod_timer(im, IGMP_Initial_Report_Delay);
-		return;
-	}
-	/* else, v3 */
-	im->crcount = in_dev->mr_qrv ? in_dev->mr_qrv :
-		IGMP_Unsolicited_Report_Count;
-	igmp_ifc_event(in_dev);
+	/* a failover is happening and switches
+	 * must be notified immediately */
+	if (IGMP_V1_SEEN(in_dev))
+		igmp_send_report(in_dev, im, IGMP_HOST_MEMBERSHIP_REPORT);
+	else if (IGMP_V2_SEEN(in_dev))
+		igmp_send_report(in_dev, im, IGMPV2_HOST_MEMBERSHIP_REPORT);
+	else
+		igmp_send_report(in_dev, im, IGMPV3_HOST_MEMBERSHIP_REPORT);
 #endif
 }
 EXPORT_SYMBOL(ip_mc_rejoin_group);
