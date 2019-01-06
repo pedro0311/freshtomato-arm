@@ -20,7 +20,7 @@ void start_tinc(void)
 	int nvi;
 
 	// Don't try to start tinc if it is already running
-	if (pidof("tincd") >= 0 ){
+	if (pidof("tincd") >= 0) {
 		return;
 	}
 
@@ -266,7 +266,7 @@ void start_tinc(void)
 	run_tinc_firewall_script();
 	xstart( "/usr/sbin/tinc", "start" );
 
-	if ( (nvi = nvram_get_int("tinc_poll")) > 0 )
+	if ((nvi = nvram_get_int("tinc_poll")) > 0)
 	{
 		sprintf(cru, "*/%d * * * * service tinc start", nvi);
 		eval("cru", "a", "CheckTincDaemon", cru);

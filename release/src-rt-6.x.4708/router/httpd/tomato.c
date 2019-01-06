@@ -193,7 +193,13 @@ static void wo_cgi_bin(char *url)
 
 static void wo_shell(char *url)
 {
-	_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
+	if (atoi(webcgi_safeget("nojs", "0"))) {
+		_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
+	} else {
+		web_puts("\ncmdresult = '");
+		_execute_command(NULL, webcgi_get("command"), NULL, "/www", WOF_JAVASCRIPT);
+		web_puts("';");
+	}
 }
 
 static void wo_blank(char *url)
@@ -915,6 +921,10 @@ static const nvset_t nvset_list[] = {
 	{ "multicast_custom",		V_TEXT(0, 2048)			},
 	{ "block_loopback",		V_01				},
 	{ "udpxy_enable",		V_01				},
+	{ "udpxy_lan",			V_01				},
+	{ "udpxy_lan1",			V_01				},
+	{ "udpxy_lan2",			V_01				},
+	{ "udpxy_lan3",			V_01				},
 	{ "udpxy_stats",		V_01				},
 	{ "udpxy_clients",		V_RANGE(1, 5000)		},
 	{ "udpxy_port",			V_RANGE(0, 65535)		},

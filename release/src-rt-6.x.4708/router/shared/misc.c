@@ -396,20 +396,24 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 	}
 }
 
-//function for rstats & cstats
-long check_wanup_time(void)
+/* function for rstats, cstats, httpd */
+long check_wanup_time(char *prefix)
 {
-	long wanuptime = 0; // wanuptime in seconds
+	long wanuptime = 0; /* wanX uptime in seconds */
 	struct sysinfo si;
 	long uptime;
+	char wanuptime_file[128];
 
-	sysinfo(&si); //get time
-	if(f_read("/var/lib/misc/wan_time", &uptime, sizeof(uptime)) == sizeof(uptime)) {
-		wanuptime = si.uptime - uptime; //calculate the difference
-        	if(wanuptime < 0) wanuptime = 0; //something wrong?
+	sysinfo(&si); /* get time */
+	memset(wanuptime_file, 0, sizeof(wanuptime_file)); /* reset */
+	snprintf(wanuptime_file, sizeof(wanuptime_file), "/var/lib/misc/%s_time", prefix);
+
+	if(f_read(wanuptime_file, &uptime, sizeof(uptime)) == sizeof(uptime)) {
+		wanuptime = si.uptime - uptime; /* calculate the difference */
+		if(wanuptime < 0) wanuptime = 0; /* something wrong? */
 	}
 	else {
-		wanuptime = 0; //something wrong? f_read()?
+		wanuptime = 0; /* something wrong? f_read()? */
 	}
 
 	return wanuptime;

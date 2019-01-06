@@ -783,27 +783,21 @@ void asp_wanstatus(int argc, char **argv)
 
 void asp_link_uptime(int argc, char **argv)
 {
-	struct sysinfo si;
 	char buf[64];
 	long uptime;
 	char prefix[] = "wanXXXXXXXXXX_";
-	char wantime_file[256];
 
-	if(argc > 0){
-		strcpy(prefix, argv[0]); }
-	else{
-		strcpy(prefix, "wan"); }
-
+	if (argc > 0) {
+		strcpy(prefix, argv[0]);
+	}
+	else {
+		strcpy(prefix, "wan");
+	}
 	buf[0] = '-';
 	buf[1] = 0;
 	if (check_wanup(prefix)) {
-		sysinfo(&si);
-		memset(wantime_file, 0, 256);
-		sprintf(wantime_file, "/var/lib/misc/%s_time", prefix);
-		//syslog(LOG_INFO, "link_uptime, wantime_file=%s", wantime_file);
-		if (f_read(wantime_file, &uptime, sizeof(uptime)) == sizeof(uptime)) {
-			reltime(buf, si.uptime - uptime);
-		}
+		uptime = check_wanup_time(prefix); /* get wanX uptime */
+		reltime(buf, uptime);
 	}
 	web_puts(buf);
 }

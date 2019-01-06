@@ -29,13 +29,14 @@ GZIP  := /bin/gzip
 MKDEPOPT := -MM
 DEBUG_ON := -g
 
-#shibby
-#ALL_FLAGS = -W -Wall -Werror --pedantic $(CFLAGS)
-ALL_FLAGS = $(CFLAGS)
+ALL_CFLAGS = -W -Wall -Werror --pedantic $(CFLAGS)
 
 SYSTEM=$(shell uname 2>/dev/null)
-ifeq ($(SYSTEM), FreeBSD)
+ifneq (,$(filter $(SYSTEM),FreeBSD))
 MAKE := gmake
+GZIP := /usr/bin/gzip
+endif
+ifneq (,$(filter $(SYSTEM),Darwin))
 GZIP := /usr/bin/gzip
 endif
 
