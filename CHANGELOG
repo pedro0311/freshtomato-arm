@@ -1,8 +1,44 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2019.1.015-beta - 2019.01.10
+----------------------------
+
+- kernel: ipv6: use ND_REACHABLE_TIME and ND_RETRANS_TIMER instead of magic number
+- kernel: ipv6: drop packets when source address is multicast
+- kernel: ipv6: don't accept multicast traffic with scope 0
+- kernel: ipv6: don't accept node local multicast traffic from the wire
+- kernel: ipv6: drop non loopback packets claiming to originate from ::1
+- kernel: ipv6: ip6_forward: perform skb->pkt_type check at the beginning
+- kernel: ipv6: drop frames with attached skb->sk in forwarding
+- kernel: ipv4: ip_forward: perform skb->pkt_type check at the beginning
+- kernel: ipv4: ip_forward: Drop frames with attached skb->sk
+- kernel: net: ipv4: igmp.c: bonding: fix to rejoin multicast groups immediately
+- kernel: net: ipv4: igmp.c: igmp: Reduce Unsolicited report interval to 1s when using IGMPv3
+- kernel: net: ipv4: igmp.c: Make igmp group member RFC 3376 compliant
+- udpxy: update to 1.0.23-12, clean sources
+- udpxy: fix start with PPP connection
+- udpxy: extend GUI function (advanced-firewall.asp)
+- e2fsprogs: update to 1.44.5
+- miniupnpd: update to git snapshot from 20181218
+- miniupnpd: do not disable port forwarding when in double NAT / CGNAT
+- GUI: adblock: update lists immediately, if called from the GUI
+- GUI: MultiWAN Routing: increase the maximum number of digits to 80 for Port
+- GUI: tinc: fix errors caused by commits #eadba155 and #9a391ecc
+- GUI: basic-ipv6.asp - only small cosmetic changes/corrections
+- router: shared: misc.c: make function check_wanup_time() mwan-ready; small change/adjustment to rstats & cstats to use the new function; cosmetic for rstats & cstats at function calc(): add typecast (long) to meet variable wanuptime (long)
+- router: httpd: misc.c: use function check_wanup_time(char *prefix) for void asp_link_uptime(int argc, char **argv) to get the link uptime (wanX)
+- router: rc: vpn.c: cosmetics - as close as possible to MIPS version
+- router: rc: wan.c: cosmetics - stay as close as possible to MIPS version
+- router: rc: wnas.c: cosmetics - stay as close as possible to MIPS
+- router: rc: tomatoanon.c: cosmetics - stay as close as possible to MIPS version
+- router: rc: tinc.c: cosmetics
+- dnsmasq: fix router reboots, when connected to wifi with specific configuration (it's (theoretically) only needed in MIPS branch, but who knows)
+
+
 2018.5 - 2018.12.21
 ----------------------------
+
 - openssl: updated to 1.0.2q
 - openssl: make proper call to openssl Configure script
 - gmp: Move .gitignore to proper directory
@@ -57,6 +93,7 @@ FreshTomato-ARM Changelog
 
 2018.5.083-beta - 2018.11.25
 ----------------------------
+
 - kernel: drivers: net: usb: qmi_wwan.c: fix CVE-2017-16650
 - kernel: net: ipv4: fix multipath RTM_GETROUTE behavior when iif is given
 - kernel: net: ipv6: accept RA and send RS while configured as router
