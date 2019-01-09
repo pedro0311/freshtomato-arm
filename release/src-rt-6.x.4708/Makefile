@@ -72,8 +72,13 @@ EXTRA_64KDESC = ' -64K'
 EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_64K'
 else
 ifeq ($(NVRAM_128K),y)
+ifeq ($(NVSIZE),)
 EXTRA_64KDESC = '-128K'
 EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_128K'
+else
+EXTRA_64KDESC = '-128K'
+EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_128K -DCONFIG_NVSIZE_128'
+endif
 else
 EXTRA_64KDESC = ''
 EXTRA_64KCFLAG = ''
@@ -428,6 +433,10 @@ define RouterOptions
 	if [ "$(NGINX)" = "y" ]; then \
 		sed -i "/TCONFIG_NGINX/d" $(1); \
 		echo "TCONFIG_NGINX=y" >>$(1); \
+	fi; \
+	if [ "$(NVSIZE)" != "" ]; then \
+		sed -i "/TCONFIG_NV$(NVSIZE)/d" $(1); \
+		echo "TCONFIG_NV$(NVSIZE)=y" >>$(1); \
 	fi; \
 	sed -i "/TCONFIG_MULTIWAN/d" $(1); \
 	if [ "$(NVRAM_SIZE)" = "60" ] || [ "$(NVRAM_SIZE)" = "64" ] || [ "$(NVRAM_64K)" = "y" ] || [ "$(NVRAM_128K)" = "y" ]; then \
@@ -1017,17 +1026,17 @@ define KernelConfig
 			echo "CONFIG_BRIDGE_EBT_IP6=m" >>$(1); \
 		fi; \
 	fi; \
-        sed -i "/CONFIG_NVRAM_64K/d" $(1); \
-        if [ "$(NVRAM_64K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_64K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_64K/d" $(1); \
+	if [ "$(NVRAM_64K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_64K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
 	fi; \
-        sed -i "/CONFIG_NVRAM_128K/d" $(1); \
-        if [ "$(NVRAM_128K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_128K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_128K/d" $(1); \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_128K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
 	fi; \
 	if [ "$(SATA)" = "y" ]; then \
 		sed -i "/CONFIG_CMDLINE/d" $(1); \
@@ -1187,6 +1196,12 @@ ac3200e:
 
 ac3200z:
 	@$(MAKE) z ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y AC3200=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64
+
+ac3200-128e:
+	@$(MAKE) e ARM=y BCM7=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y AC3200=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64
+
+ac3200-128z:
+	@$(MAKE) z ARM=y BCM7=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y AC3200=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64
 endif
 
 setprofile:
@@ -1274,6 +1289,8 @@ ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e        RT-AC3200 build VPN"
 	@echo "ac3200z        RT-AC3200 build AIO"
+	@echo "ac3200-128e    RT-AC3200 build VPN - 128K NVRAM"
+	@echo "ac3200-128z    RT-AC3200 build AIO - 128K NVRAM"
 	@echo "r8000e         R8000 build VPN"
 	@echo "r8000z         R8000 build AIO"
 endif
