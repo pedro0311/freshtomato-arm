@@ -473,10 +473,15 @@ void start_vpnclient(int clientNum)
 		vpnlog(VPN_LOG_EXTRA,"Done running firewall rules");
 	}
 
-	// Set up cron job
+	/* Set up cron job */
 	sprintf(&buffer[0], "vpn_client%d_poll", clientNum);
 	if ( (nvi = nvram_get_int(&buffer[0])) > 0 )
 	{
+		/* check step value for cru minutes; values > 30 are not usefull;
+		   Example: vpn_client1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45 */
+		if (nvi > 30) {
+			nvi = 30;
+		}
 		vpnlog(VPN_LOG_EXTRA,"Adding cron job");
 		argv[0] = "cru";
 		argv[1] = "a";	
@@ -1194,10 +1199,15 @@ void start_vpnserver(int serverNum)
 		vpnlog(VPN_LOG_EXTRA,"Done running firewall rules");
 	}
 
-	// Set up cron job
+	/* Set up cron job */
 	sprintf(&buffer[0], "vpn_server%d_poll", serverNum);
 	if ( (nvi = nvram_get_int(&buffer[0])) > 0 )
 	{
+		/* check step value for cru minutes; values > 30 are not usefull;
+		   Example: vpn_server1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45 */
+		if (nvi > 30) {
+			nvi = 30;
+		}
 		vpnlog(VPN_LOG_EXTRA,"Adding cron job");
 		argv[0] = "cru";
 		argv[1] = "a";	
