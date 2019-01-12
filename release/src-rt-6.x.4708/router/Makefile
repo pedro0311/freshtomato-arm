@@ -523,7 +523,7 @@ endif
 
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh
 
-ifneq ($(TCONFIG_BBT),y)
+ifneq ($(TCONFIG_BBT)$(TCONFIG_SAMBA3),yy)
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_usr_share
 else
 ifeq ($(TCONFIG_TOR),y)
