@@ -61,6 +61,8 @@ void start_vpnclient(int clientNum)
 	int pid;
 	int userauth, useronly;
 	int i;
+	char cpulist[2];
+	int taskset_ret;
 
 	sprintf(&buffer[0], "vpnclient%d", clientNum);
 	if (getpid() != 1) {
@@ -406,10 +408,19 @@ void start_vpnclient(int clientNum)
 	vpnlog(VPN_LOG_EXTRA,"Done writing certs/keys");
 
 	// Start the VPN client
-	sprintf(&buffer[0], "/etc/openvpn/vpnclient%d --cd /etc/openvpn/client%d --config config.ovpn", clientNum, clientNum);
-	vpnlog(VPN_LOG_INFO,"Starting OpenVPN: %s",&buffer[0]);
-	for (argv[argc=0] = strtok(&buffer[0], " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
-	if ( _eval(argv, NULL, 0, &pid) )
+	sprintf(&buffer[0], "/etc/openvpn/vpnclient%d", clientNum);
+	sprintf(&buffer2[0], "/etc/openvpn/client%d", clientNum);
+
+	// Spread clients on cpu 1,0 or 1,2,3,0 (in that order)
+	i = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (i < 0) i = 0;
+	snprintf(cpulist, sizeof(cpulist), "%d", (clientNum & i));
+
+	taskset_ret = cpu_eval(NULL, cpulist, &buffer[0], "--cd", &buffer2[0], "--config", "config.ovpn");
+
+	vpnlog(VPN_LOG_INFO,"Starting OpenVPN client %d", clientNum);
+
+	if (taskset_ret)
 	{
 		vpnlog(VPN_LOG_ERROR,"Starting OpenVPN failed...");
 		stop_vpnclient(clientNum);
@@ -615,6 +626,9 @@ void start_vpnserver(int serverNum)
 	int nvi, ip[4], nm[4];
 	long int nvl;
 	int pid;
+	char cpulist[2];
+	int taskset_ret;
+	int i;
 
 	int current_security_level = 1;
 	sprintf(&buffer[0], "vpnserver%d", serverNum);
@@ -1131,10 +1145,20 @@ void start_vpnserver(int serverNum)
 	}
 	vpnlog(VPN_LOG_EXTRA,"Done writing certs/keys");
 
-	sprintf(&buffer[0], "/etc/openvpn/vpnserver%d --cd /etc/openvpn/server%d --config config.ovpn", serverNum, serverNum);
-	vpnlog(VPN_LOG_INFO,"Starting OpenVPN: %s",&buffer[0]);
-	for (argv[argc=0] = strtok(&buffer[0], " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
-	if ( _eval(argv, NULL, 0, &pid) )
+	// Start the VPN server
+	sprintf(&buffer[0], "/etc/openvpn/vpnserver%d", serverNum);
+	sprintf(&buffer2[0], "/etc/openvpn/server%d", serverNum);
+
+	// Spread servers on cpu 1,0 or 1,2 (in that order)
+	i = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (i < 0) i = 0;
+	snprintf(cpulist, sizeof(cpulist), "%d", (serverNum & i));
+
+	taskset_ret = cpu_eval(NULL, cpulist, &buffer[0], "--cd", &buffer2[0], "--config", "config.ovpn");
+
+	vpnlog(VPN_LOG_INFO,"Starting OpenVPN server %d", serverNum);
+
+	if (taskset_ret)
 	{
 		vpnlog(VPN_LOG_ERROR,"Starting VPN instance failed...");
 		stop_vpnserver(serverNum);
