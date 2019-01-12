@@ -2707,7 +2707,7 @@ tor: tor/stamp-h1
 	$(MAKE) -C tor $(PARALLEL_BUILD)
 
 tor-install:
-	install -D tor/src/or/tor $(INSTALLDIR)/tor/usr/sbin/tor
+	install -D tor/src/app/tor $(INSTALLDIR)/tor/usr/sbin/tor
 	$(STRIP) -s $(INSTALLDIR)/tor/usr/sbin/tor
 
 tor-clean:
