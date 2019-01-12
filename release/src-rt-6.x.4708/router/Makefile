@@ -698,8 +698,8 @@ endif
 
 ifeq ($(TCONFIG_PPTPD),y)
 	@mkdir -p $(TARGETDIR)/rom/etc/vpn
-	cp rc/vpn/* $(TARGETDIR)/rom/etc/vpn
-	chmod +x $(TARGETDIR)/rom/etc/vpn/*
+#	cp rc/vpn/* $(TARGETDIR)/rom/etc/vpn
+#	chmod +x $(TARGETDIR)/rom/etc/vpn/*
 endif
 
 	busybox/examples/depmod.pl -k $(LINUXDIR)/vmlinux -b $(TARGETDIR)/lib/modules/*/
