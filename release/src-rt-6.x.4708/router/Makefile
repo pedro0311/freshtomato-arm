@@ -430,7 +430,9 @@ endif
 ##!!TB
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv ext2/* . && rm -rf ext2 || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv ext3/* . && rm -rf ext3 || true
+	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv ext4/* . && rm -rf ext4 || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jbd/* . && rm -rf jbd || true
+	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jbd2/* . && rm -rf jbd2 || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv fat/* . && rm -rf fat || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv exfat/* . && rm -rf exfat || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jfs/* . && rm -rf jfs || true
