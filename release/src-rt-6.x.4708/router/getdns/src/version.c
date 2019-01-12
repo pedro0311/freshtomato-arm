@@ -35,12 +35,12 @@
 
 const char *getdns_get_version(void)
 {
-	return "1.4.2";
+	return "1.5.1";
 }
 
 uint32_t getdns_get_version_number(void)
 {
-	return 0x01040200;
+	return 0x01050100;
 }
 
 const char *getdns_get_api_version(void)

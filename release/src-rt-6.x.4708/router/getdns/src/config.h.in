@@ -74,6 +74,10 @@
    don't. */
 #undef HAVE_DECL_NID_ED25519
 
+/* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
+   don't. */
+#undef HAVE_DECL_NID_ED448
+
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
 #undef HAVE_DECL_NID_SECP384R1
@@ -98,9 +102,17 @@
    0 if you don't. */
 #undef HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
 
+/* Define to 1 if you have the declaration of `SSL_get_min_proto_version', and
+   to 0 if you don't. */
+#undef HAVE_DECL_SSL_GET_MIN_PROTO_VERSION
+
 /* Define to 1 if you have the declaration of `SSL_set1_curves_list', and to 0
    if you don't. */
 #undef HAVE_DECL_SSL_SET1_CURVES_LIST
+
+/* Define to 1 if you have the declaration of `SSL_set_min_proto_version', and
+   to 0 if you don't. */
+#undef HAVE_DECL_SSL_SET_MIN_PROTO_VERSION
 
 /* Define to 1 if you have the declaration of `strlcpy', and to 0 if you
    don't. */
@@ -241,6 +253,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Define to 1 if you have the <nettle/eddsa.h> header file. */
+#undef HAVE_NETTLE_EDDSA_H
+
 /* Does libuv have the new uv_time_cb signature */
 #undef HAVE_NEW_UV_TIMER_CB
 
@@ -307,6 +322,9 @@
 /* Define to 1 if you have the `SSL_CTX_dane_enable' function. */
 #undef HAVE_SSL_CTX_DANE_ENABLE
 
+/* Define to 1 if you have the `SSL_CTX_set_ciphersuites' function. */
+#undef HAVE_SSL_CTX_SET_CIPHERSUITES
+
 /* Define to 1 if you have the `SSL_CTX_set_min_proto_version' function. */
 #undef HAVE_SSL_CTX_SET_MIN_PROTO_VERSION
 
@@ -318,6 +336,9 @@
 
 /* Define if you have libssl with host name verification */
 #undef HAVE_SSL_HN_AUTH
+
+/* Define to 1 if you have the `SSL_set_ciphersuites' function. */
+#undef HAVE_SSL_SET_CIPHERSUITES
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
@@ -416,6 +437,12 @@
 /* Define to 1 if you have the `X509_check_host' function. */
 #undef HAVE_X509_CHECK_HOST
 
+/* Define to 1 if you have the `X509_get0_notAfter' function. */
+#undef HAVE_X509_GET0_NOTAFTER
+
+/* Define to 1 if you have the `X509_get_notAfter' function. */
+#undef HAVE_X509_GET_NOTAFTER
+
 /* Define to 1 if the system has the type `_sigset_t'. */
 #undef HAVE__SIGSET_T
 
@@ -509,6 +536,9 @@
 
 /* Define this to enable ED25519 support. */
 #undef USE_ED25519
+
+/* Define this to enable ED448 support. */
+#undef USE_ED448
 
 /* Define this to enable GOST support. */
 #undef USE_GOST
