@@ -14,7 +14,7 @@ This is my personal fork, If anyone wants to pick up my changes and merge them t
 
 **Downloads**: https://exotic.se/freshtomato-arm/
 
-**About me/Donate**: https://exotic.se
+**Project page/Donate**: http://freshtomato.org/
 
 For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880, **Dlink** DIR868L, **Xiaomi** R1D.
 
