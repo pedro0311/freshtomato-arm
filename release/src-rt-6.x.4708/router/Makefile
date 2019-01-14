@@ -2124,6 +2124,7 @@ mysql/stamp-h1: openssl zlib libncurses
 		--without-mysqlmanager \
 		--with-pthread \
 		--with-ssl \
+		--without-docs \
 		--with-geometry \
 		--with-low-memory \
 		--enable-assembler \
