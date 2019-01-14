@@ -1363,10 +1363,6 @@ iproute2-3.x-clean:
 	-@$(MAKE) -C iproute2-3.x clean
 	-rm -f iproute2-3.x/Config
 
-ntpclient: nvram$(BCMEX) shared
-
-ntpc: nvram$(BCMEX) shared
-
 dropbear: dropbear/config.h
 	@$(SEP)
 	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
