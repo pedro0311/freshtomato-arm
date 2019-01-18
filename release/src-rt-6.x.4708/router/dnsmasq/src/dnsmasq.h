@@ -126,9 +126,7 @@ typedef unsigned long long u64;
 #include <net/if_arp.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
-#ifdef HAVE_IPV6
 #include <netinet/ip6.h>
-#endif
 #include <netinet/ip_icmp.h>
 #include <sys/uio.h>
 #include <syslog.h>
@@ -158,6 +156,8 @@ extern int capget(cap_user_header_t header, cap_user_data_t data);
 
 /* daemon is function in the C library.... */
 #define daemon dnsmasq_daemon
+
+#define ADDRSTRLEN INET6_ADDRSTRLEN
 
 /* Async event queue */
 struct event_desc {
@@ -199,9 +199,6 @@ struct event_desc {
 #define EC_NOMEM       4
 #define EC_MISC        5
 #define EC_INIT_OFFSET 10
-
-/* Trust the compiler dead-code eliminator.... */
-#define option_bool(x) (((x) < 32) ? daemon->options & (1u << (x)) : daemon->options2 & (1u << ((x) - 32)))
 
 #define OPT_BOGUSPRIV      0
 #define OPT_FILTER         1
@@ -264,32 +261,54 @@ struct event_desc {
 #define OPT_UBUS           58
 #define OPT_LAST           59
 
+#define OPTION_BITS (sizeof(unsigned int)*8)
+#define OPTION_SIZE ( (OPT_LAST/OPTION_BITS)+((OPT_LAST%OPTION_BITS)!=0) )
+#define option_var(x) (daemon->options[(x) / OPTION_BITS])
+#define option_val(x) ((1u) << ((x) % OPTION_BITS))
+#define option_bool(x) (option_var(x) & option_val(x))
+
 /* extra flags for my_syslog, we use a couple of facilities since they are known 
    not to occupy the same bits as priorities, no matter how syslog.h is set up. */
 #define MS_TFTP   LOG_USER
 #define MS_DHCP   LOG_DAEMON
 #define MS_SCRIPT LOG_MAIL
 
-struct all_addr {
-  union {
-    struct in_addr addr4;
-#ifdef HAVE_IPV6
-    struct in6_addr addr6;
-#endif
-    /* for log_query */
-    struct {
-      unsigned short keytag, algo, digest;
-    } log;
-    /* for log_query */
-    struct {
-      unsigned int rcode;
-    } rcode;
-    /* for cache_insert of DNSKEY, DS */
-    struct {
-      unsigned short class, type;
-    } dnssec;      
-  } addr;
+/* Note that this is used widely as a container for IPv4/IPv6 addresses,
+   so for that reason, was well as to avoid wasting memory in almost every
+   cache entry, the other variants should not be larger than
+   sizeof(struct in6_addr) - 16 bytes.
+*/
+union all_addr {
+  struct in_addr addr4;
+  struct in6_addr addr6;
+  struct {
+    union {
+      struct crec *cache;
+      struct interface_name *int_name;
+    } target;
+    unsigned int uid; /* 0 if union is interface-name */
+  } cname;
+  struct {
+    struct blockdata *keydata;
+    unsigned short keylen, flags, keytag;
+    unsigned char algo;
+  } key; 
+  struct {
+    struct blockdata *keydata;
+    unsigned short keylen, keytag;
+    unsigned char algo;
+    unsigned char digest; 
+  } ds;
+  struct {
+    struct blockdata *target;
+    unsigned short targetlen, srvport, priority, weight;
+  } srv;
+  /* for log_query */
+  struct {
+    unsigned short keytag, algo, digest, rcode;
+  } log;
 };
+
 
 struct bogus_addr {
   struct in_addr addr;
@@ -355,7 +374,7 @@ struct ds_config {
 #define ADDRLIST_REVONLY 4
 
 struct addrlist {
-  struct all_addr addr;
+  union all_addr addr;
   int flags, prefixlen; 
   struct addrlist *next;
 };
@@ -383,9 +402,7 @@ struct host_record {
     struct name_list *next;
   } *names;
   struct in_addr addr;
-#ifdef HAVE_IPV6
   struct in6_addr addr6;
-#endif
   struct host_record *next;
 };
 
@@ -409,32 +426,11 @@ struct blockdata {
 
 struct crec { 
   struct crec *next, *prev, *hash_next;
-  /* union is 16 bytes when doing IPv6, 8 bytes on 32 bit machines without IPv6 */
-  union {
-    struct all_addr addr;
-    struct {
-      union {
-	struct crec *cache;
-	struct interface_name *int_name;
-      } target;
-      unsigned int uid; /* 0 if union is interface-name */
-    } cname;
-    struct {
-      struct blockdata *keydata;
-      unsigned short keylen, flags, keytag;
-      unsigned char algo;
-    } key; 
-    struct {
-      struct blockdata *keydata;
-      unsigned short keylen, keytag;
-      unsigned char algo;
-      unsigned char digest; 
-    } ds; 
-  } addr;
+  union all_addr addr;
   time_t ttd; /* time to die */
   /* used as class if DNSKEY/DS, index to source for F_HOSTS */
   unsigned int uid; 
-  unsigned short flags;
+  unsigned int flags;
   union {
     char sname[SMALLDNAME];
     union bigname *bname;
@@ -478,6 +474,7 @@ struct crec {
 #define F_NOEXTRA   (1u<<27)
 #define F_SERVFAIL  (1u<<28)
 #define F_RCODE     (1u<<29)
+#define F_SRV       (1u<<30)
 
 #define UID_NONE      0
 /* Values of uid in crecs with F_CONFIG bit set. */
@@ -496,9 +493,7 @@ struct crec {
 union mysockaddr {
   struct sockaddr sa;
   struct sockaddr_in in;
-#if defined(HAVE_IPV6)
   struct sockaddr_in6 in6;
-#endif
 };
 
 /* bits in flag param to IPv6 callbacks from iface_enumerate() */
@@ -657,12 +652,10 @@ struct hostsfile {
 
 struct frec {
   union mysockaddr source;
-  struct all_addr dest;
+  union all_addr dest;
   struct server *sentto; /* NULL means free */
   struct randfd *rfd4;
-#ifdef HAVE_IPV6
   struct randfd *rfd6;
-#endif
   unsigned int iface;
   unsigned short orig_id, new_id;
   int log_id, fd, forwardall, flags;
@@ -796,6 +789,7 @@ struct dhcp_config {
 #define CONFIG_BANK           2048    /* from dhcp hosts file */
 #define CONFIG_ADDR6          4096
 #define CONFIG_WILDCARD       8192
+#define CONFIG_ADDR6_HOSTS   16384    /* address added by from /etc/hosts */
 
 struct dhcp_opt {
   int opt, len, flags;
@@ -877,9 +871,7 @@ struct dhcp_bridge {
 struct cond_domain {
   char *domain, *prefix;
   struct in_addr start, end;
-#ifdef HAVE_IPV6
   struct in6_addr start6, end6;
-#endif
   int is6, indexed;
   struct cond_domain *next;
 }; 
@@ -977,7 +969,7 @@ struct tftp_prefix {
 };
 
 struct dhcp_relay {
-  struct all_addr local, server;
+  union all_addr local, server;
   char *interface; /* Allowable interface for replies from server, and dest for IPv6 multicast */
   int iface_index; /* working - interface in which requests arrived, for return */
   struct dhcp_relay *current, *next;
@@ -988,7 +980,7 @@ extern struct daemon {
      config file arguments. All set (including defaults)
      in option.c */
 
-  unsigned int options, options2;
+  unsigned int options[OPTION_SIZE];
   struct resolvc default_resolv, *resolv_files;
   time_t last_resolv;
   char *servers_file;
@@ -1091,6 +1083,8 @@ extern struct daemon {
   size_t packet_len;       /*      "        "        */
   struct randfd *rfd_save; /*      "        "        */
   pid_t tcp_pids[MAX_PROCS];
+  int tcp_pipes[MAX_PROCS];
+  int pipe_to_parent;
   struct randfd randomsocks[RANDOM_SOCKS];
   int v6pktinfo; 
   struct addrlist *interface_addrs; /* list of all addresses/prefix lengths associated with all local interfaces */
@@ -1141,21 +1135,22 @@ extern struct daemon {
 /* cache.c */
 void cache_init(void);
 void next_uid(struct crec *crecp);
-void log_query(unsigned int flags, char *name, struct all_addr *addr, char *arg); 
+void log_query(unsigned int flags, char *name, union all_addr *addr, char *arg); 
 char *record_source(unsigned int index);
 char *querystr(char *desc, unsigned short type);
 int cache_find_non_terminal(char *name, time_t now);
 struct crec *cache_find_by_addr(struct crec *crecp,
-				struct all_addr *addr, time_t now, 
+				union all_addr *addr, time_t now, 
 				unsigned int prot);
 struct crec *cache_find_by_name(struct crec *crecp, 
 				char *name, time_t now, unsigned int prot);
 void cache_end_insert(void);
 void cache_start_insert(void);
-struct crec *cache_insert(char *name, struct all_addr *addr,
-			  time_t now, unsigned long ttl, unsigned short flags);
+int cache_recv_insert(time_t now, int fd);
+struct crec *cache_insert(char *name, union all_addr *addr, unsigned short class, 
+			  time_t now, unsigned long ttl, unsigned int flags);
 void cache_reload(void);
-void cache_add_dhcp_entry(char *host_name, int prot, struct all_addr *host_address, time_t ttd);
+void cache_add_dhcp_entry(char *host_name, int prot, union all_addr *host_address, time_t ttd);
 struct in_addr a_record_from_hosts(char *name, time_t now);
 void cache_unhash_dhcp(void);
 void dump_cache(time_t now);
@@ -1169,21 +1164,19 @@ int read_hostsfile(char *filename, unsigned int index, int cache_size,
 		   struct crec **rhash, int hashsz);
 
 /* blockdata.c */
-#ifdef HAVE_DNSSEC
 void blockdata_init(void);
 void blockdata_report(void);
 struct blockdata *blockdata_alloc(char *data, size_t len);
 void *blockdata_retrieve(struct blockdata *block, size_t len, void *data);
+struct blockdata *blockdata_read(int fd, size_t len);
+void blockdata_write(struct blockdata *block, size_t len, int fd);
 void blockdata_free(struct blockdata *blocks);
-#endif
 
 /* domain.c */
 char *get_domain(struct in_addr addr);
-#ifdef HAVE_IPV6
 char *get_domain6(struct in6_addr *addr);
-#endif
-int is_name_synthetic(int flags, char *name, struct all_addr *addr);
-int is_rev_synth(int flag, struct all_addr *addr, char *name);
+int is_name_synthetic(int flags, char *name, union all_addr *addr);
+int is_rev_synth(int flag, union all_addr *addr, char *name);
 
 /* rfc1035.c */
 int extract_name(struct dns_header *header, size_t plen, unsigned char **pp, 
@@ -1194,7 +1187,7 @@ unsigned char *skip_section(unsigned char *ansp, int count, struct dns_header *h
 unsigned int extract_request(struct dns_header *header, size_t qlen, 
 			       char *name, unsigned short *typep);
 size_t setup_reply(struct dns_header *header, size_t  qlen,
-		   struct all_addr *addrp, unsigned int flags,
+		   union all_addr *addrp, unsigned int flags,
 		   unsigned long ttl);
 int extract_addresses(struct dns_header *header, size_t qlen, char *name,
 		      time_t now, char **ipsets, int is_sign, int check_rebind,
@@ -1215,7 +1208,7 @@ int add_resource_record(struct dns_header *header, char *limit, int *truncp,
 unsigned char *skip_questions(struct dns_header *header, size_t plen);
 int extract_name(struct dns_header *header, size_t plen, unsigned char **pp, 
 		 char *name, int isExtract, int extrabytes);
-int in_arpa_name_2_addr(char *namein, struct all_addr *addrp);
+int in_arpa_name_2_addr(char *namein, union all_addr *addrp);
 int private_net(struct in_addr addr, int ban_localhost);
 
 /* auth.c */
@@ -1265,11 +1258,9 @@ int hostname_issubdomain(char *a, char *b);
 time_t dnsmasq_time(void);
 int netmask_length(struct in_addr mask);
 int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask);
-#ifdef HAVE_IPV6
 int is_same_net6(struct in6_addr *a, struct in6_addr *b, int prefixlen);
 u64 addr6part(struct in6_addr *addr);
 void setaddr6part(struct in6_addr *addr, u64 host);
-#endif
 int retry_send(ssize_t rc);
 void prettyprint_time(char *buf, unsigned int t);
 int prettyprint_addr(union mysockaddr *addr, char *buf);
@@ -1316,7 +1307,7 @@ unsigned char *tcp_request(int confd, time_t now,
 void server_gone(struct server *server);
 struct frec *get_new_frec(time_t now, int *wait, int force);
 int send_from(int fd, int nowild, char *packet, size_t len, 
-	       union mysockaddr *to, struct all_addr *source,
+	       union mysockaddr *to, union all_addr *source,
 	       unsigned int iface);
 void resend_query(void);
 struct randfd *allocate_rfd(int family);
@@ -1343,14 +1334,12 @@ void warn_bound_listeners(void);
 void warn_wild_labels(void);
 void warn_int_names(void);
 int is_dad_listeners(void);
-int iface_check(int family, struct all_addr *addr, char *name, int *auth);
-int loopback_exception(int fd, int family, struct all_addr *addr, char *name);
-int label_exception(int index, int family, struct all_addr *addr);
+int iface_check(int family, union all_addr *addr, char *name, int *auth);
+int loopback_exception(int fd, int family, union all_addr *addr, char *name);
+int label_exception(int index, int family, union all_addr *addr);
 int fix_fd(int fd);
 int tcp_interface(int fd, int af);
-#ifdef HAVE_IPV6
 int set_ipv6pktinfo(int fd);
-#endif
 #ifdef HAVE_DHCP6
 void join_multicast(int dienow);
 #endif
@@ -1477,7 +1466,7 @@ void ubus_event_bcast(const char *type, const char *mac, const char *ip, const c
 /* ipset.c */
 #ifdef HAVE_IPSET
 void ipset_init(void);
-int add_to_ipset(const char *setname, const struct all_addr *ipaddr, int flags, int remove);
+int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, int remove);
 #endif
 
 /* helper.c */
@@ -1490,7 +1479,7 @@ void queue_script(int action, struct dhcp_lease *lease,
 void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer);
 #endif
 void queue_arp(int action, unsigned char *mac, int maclen,
-	       int family, struct all_addr *addr);
+	       int family, union all_addr *addr);
 int helper_buf_empty(void);
 #endif
 
@@ -1503,7 +1492,7 @@ int do_tftp_script_run(void);
 
 /* conntrack.c */
 #ifdef HAVE_CONNTRACK
-int get_incoming_mark(union mysockaddr *peer_addr, struct all_addr *local_addr,
+int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr,
 		      int istcp, unsigned int *markp);
 #endif
 
