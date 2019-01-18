@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -371,6 +375,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -336,6 +340,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -445,6 +453,9 @@ static char *compile_opts =
+@@ -404,6 +412,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h	2018-04-10 22:39:54.000000000 +0200
 +++ dnsmasq/src/dnsmasq.h	2018-04-11 18:21:30.807014530 +0200
-@@ -1434,6 +1434,12 @@ int make_icmp_sock(void);
+@@ -1423,6 +1423,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
@@ -132,7 +132,7 @@
  void send_event(int fd, int event, int data, char *msg);
 --- dnsmasq/src/lease.c	2017-05-22 23:58:46.000000000 +0200
 +++ dnsmasq/src/lease.c	2017-10-03 20:05:34.000000000 +0200
-@@ -108,12 +108,15 @@ static int read_leases(time_t now, FILE
+@@ -118,12 +118,15 @@ static int read_leases(time_t now, FILE
  
  	ei = atol(daemon->dhcp_buff3);
  
@@ -149,7 +149,7 @@
  #else
  	/* strictly time_t is opaque, but this hack should work on all sane systems,
  	   even when sizeof(time_t) == 8 */
-@@ -261,10 +264,19 @@ void lease_update_file(time_t now)
+@@ -269,10 +272,19 @@ void lease_update_file(time_t now)
  	    continue;
  #endif
  
@@ -171,7 +171,7 @@
  #endif
  
  	  if (lease->hwaddr_type != ARPHRD_ETHER || lease->hwaddr_len == 0) 
-@@ -305,12 +317,21 @@ void lease_update_file(time_t now)
+@@ -313,12 +325,21 @@ void lease_update_file(time_t now)
  	      if (!(lease->flags & (LEASE_TA | LEASE_NA)))
  		continue;
  
@@ -196,7 +196,7 @@
  	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
  	 
  	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
-@@ -1189,8 +1210,67 @@ void lease_add_extradata(struct dhcp_lea
+@@ -1197,8 +1218,67 @@ void lease_add_extradata(struct dhcp_lea
  }
  #endif
  

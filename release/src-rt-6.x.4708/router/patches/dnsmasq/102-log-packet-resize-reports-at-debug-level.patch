@@ -1,6 +1,6 @@
 --- dnsmasq/src/forward.c	2018-06-20 15:04:57.307223981 +0200
 +++ dnsmasq/src/forward.c	2018-07-02 01:09:28.000000000 +0200
-@@ -975,7 +975,7 @@ void reply_query(int fd, int family, tim
+@@ -949,7 +949,7 @@ void reply_query(int fd, int family, tim
        server->edns_pktsz = SAFE_PKTSZ;
        server->pktsz_reduced = now;
        prettyprint_addr(&server->addr, daemon->addrbuff);
