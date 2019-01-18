@@ -596,7 +596,7 @@ void stop_vpnclient(int clientNum)
 	}
 
 	sprintf(&buffer[0], "vpn_client%d_route", clientNum);
-	if ( nvram_match(&buffer[0], "0" )) {
+	if ( nvram_match(&buffer[0], "1" )) {
 		sprintf(&buffer[0], "client%d", clientNum);
 		xstart ("vpnrouting", &buffer[0], "stop");
 	}
