@@ -17,7 +17,7 @@ listen_addresses:
   - 127.0.0.1@5453
   -  0::1@5453
 
-round_robin_upstreams: 0
+round_robin_upstreams: 1
 
 upstream_recursive_servers:
 # IPv4 addresses
@@ -26,6 +26,11 @@ upstream_recursive_servers:
     tls_auth_name: "cloudflare-dns.com"
   - address_data: 1.0.0.1
     tls_auth_name: "cloudflare-dns.com"
+# Google
+  - address_data: 8.8.8.8
+    tls_auth_name: "dns.google"
+  - address_data: 8.8.4.4
+    tls_auth_name: "dns.google"
 # Quad 9 'secure' service - Filters, does DNSSEC, doesn't send ECS
   - address_data: 9.9.9.9
     tls_auth_name: "dns.quad9.net"
@@ -52,6 +57,11 @@ upstream_recursive_servers:
     tls_auth_name: "cloudflare-dns.com"
   - address_data: 2606:4700:4700::1001
     tls_auth_name: "cloudflare-dns.com"
+# Google
+  - address_data: 2001:4860:4860::8888
+    tls_auth_name: "dns.google"
+  - address_data: 2001:4860:4860::8844
+    tls_auth_name: "dns.google"
 # Quad 9 'secure' service - Filters, does DNSSEC, doesn't send ECS
   - address_data: 2620:fe::fe
     tls_auth_name: "dns.quad9.net"
