@@ -686,7 +686,7 @@ for (i = 0; i < tabs.length; ++i)
 			['br2','LAN2 (br2)'],
 			['br3','LAN3 (br3)']
 			], value: eval ( 'nvram.vpn_'+t+'_br' ), suffix: ' <small>* default<\/small> ' },
-		{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [ ['udp','UDP'], ['tcp-server','TCP'] ], value: eval( 'nvram.vpn_'+t+'_proto' ) },
+		{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [ ['udp','UDP'], ['tcp-server','TCP'], ['udp4','UDP4'], ['tcp4-server','TCP4'], ['udp6','UDP6'], ['tcp6-server','TCP6'] ], value: eval( 'nvram.vpn_'+t+'_proto' ) },
 		{ title: 'Port', name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 10, value: eval( 'nvram.vpn_'+t+'_port' ) },
 		{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [ ['auto', 'Automatic'], ['external', 'External Only'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_firewall' ) },
 		{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [ ['tls', 'TLS'], ['secret', 'Static Key'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_crypt' ),
