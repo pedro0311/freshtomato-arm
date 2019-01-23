@@ -737,7 +737,7 @@ void asp_time(int argc, char **argv)
 
 void asp_wanup(int argc, char **argv)
 {
-	char prefix[] = "wanXXXXXXXXXX_";
+	char prefix[] = "wanXX";
 
 	if(argc > 0){
 		strcpy(prefix, argv[0]); }
@@ -749,7 +749,7 @@ void asp_wanup(int argc, char **argv)
 
 void asp_wanstatus(int argc, char **argv)
 {
-	char prefix[] = "wanXXXXXXXXXX_";
+	char prefix[] = "wanXX";
 
 	if(argc > 0){
 		strcpy(prefix, argv[0]); }
@@ -785,7 +785,7 @@ void asp_link_uptime(int argc, char **argv)
 {
 	char buf[64];
 	long uptime;
-	char prefix[] = "wanXXXXXXXXXX_";
+	char prefix[] = "wanXX";
 
 	if (argc > 0) {
 		strcpy(prefix, argv[0]);
