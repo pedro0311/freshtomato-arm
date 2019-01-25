@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnssec.c	2018-05-10 12:26:25.000000000 +0200
 +++ dnsmasq/src/dnssec.c	2018-09-26 15:47:48.000000000 +0200
-@@ -876,7 +876,10 @@ int dnssec_validate_ds(time_t now, struc
+@@ -873,7 +873,10 @@ int dnssec_validate_ds(time_t now, struc
    
    if (rc == STAT_INSECURE)
      {

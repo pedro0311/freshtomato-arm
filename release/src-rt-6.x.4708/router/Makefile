@@ -1033,10 +1033,8 @@ dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	$(call patch_files,dnsmasq)
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
-	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_AUTH -DNO_GMP \
-		$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,) \
-		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) \
-		$(if $(CONFIG_LINUX26),-DUSE_IPSET,-DNO_IPSET)" \
+	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_AUTH -DNO_GMP -DUSE_IPSET \
+		$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 		$(if $(TCONFIG_DNSSEC),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
 		$(if $(TCONFIG_DNSSEC),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
@@ -2643,6 +2641,7 @@ nfs-utils-install:
 	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
 
 tinc/stamp-h1: openssl zlib lzo
+	$(call patch_files,tinc)
 	@cd tinc && autoreconf -fsi && \
 	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
@@ -2668,6 +2667,7 @@ tinc: tinc/stamp-h1
 tinc-clean:
 	-@$(MAKE) -C tinc clean
 	@rm -f tinc/stamp-h1
+	$(call unpatch_files,tinc)
 
 tinc-install:
 	install -D tinc/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
