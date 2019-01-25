@@ -218,7 +218,9 @@ void wo_vpn_genclientconfig(char *url)
 
 	fprintf(fp, "port %s\n", getNVRAMVar("vpn_server%d_port", server));
 
-	fprintf(fp, "proto %s\n", getNVRAMVar("vpn_server%d_proto", server));
+	strlcpy(s2, getNVRAMVar("vpn_server%d_proto", server), sizeof(s2));
+	str_replace(s2, "-server", "-client");
+	fprintf(fp, "proto %s\n", s2);
 
 	strlcpy(s2, getNVRAMVar("vpn_server%d_comp", server), sizeof(s2));
 	if (strcmp(s2, "-1")) {
@@ -234,13 +236,6 @@ void wo_vpn_genclientconfig(char *url)
 	}
 
 	fprintf(fp, "dev %s\n", getNVRAMVar("vpn_server%d_if", server));
-	if (nvram_contains_word(&s[0], "tap")) {
-		fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_local", server));
-		fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_nm", server));
-	} else {
-		fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_remote", server));
-		fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_local", server));
-	}
 
 	sprintf(&s[0], "vpn_server%d_cipher", server);
 	if (!nvram_contains_word(&s[0], "default"))
@@ -271,6 +266,14 @@ void wo_vpn_genclientconfig(char *url)
 		eval("cp", "/tmp/openssl/client.crt", "/tmp/ovpnclientconfig");
 		eval("cp", "/tmp/openssl/client.key", "/tmp/ovpnclientconfig");
 	} else {
+		sprintf(&s[0], "vpn_server%d_if", server);
+		if (nvram_contains_word(&s[0], "tap")) {
+			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_local", server));
+			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_nm", server));
+		} else {
+			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_remote", server));
+			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_local", server));
+		}
 		fprintf(fp, "secret static.key\n");
 		put_to_file("/tmp/ovpnclientconfig/static.key", getNVRAMVar("vpn_server%d_static", server));
 	}

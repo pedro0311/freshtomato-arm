@@ -18,7 +18,7 @@ void ipt_routerpolicy(void){
 	char *msport, *mdport;
 	int proto_num;
 	int wan_unit,mwan_num;
-	char prefix[] = "wanx";
+	char prefix[] = "wanXX";
 
 	/*
 	*mangle
@@ -51,10 +51,10 @@ void ipt_routerpolicy(void){
 	-A WAN_PBR -d 74.125.235.120 -j PPTP 
 	COMMIT
 	*/
-	
-	mwan_num = nvram_get_int("mwan_num");	
+
+	mwan_num = nvram_get_int("mwan_num");
 	if((mwan_num == 1 || mwan_num > MWAN_MAX)) return;
-	
+
 	for(wan_unit = 1 ; wan_unit <= mwan_num; ++wan_unit){
 		get_wan_prefix(wan_unit, prefix);
 		if(check_wanup(prefix)){
@@ -81,7 +81,7 @@ void ipt_routerpolicy(void){
 		"-A PREROUTING -i br+ -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark\n"
 		"-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark\n"
 		);
-		
+
 	nv = nvp = strdup(nvram_safe_get("pbr_rules"));
 
 	if(nv) {
@@ -90,7 +90,7 @@ void ipt_routerpolicy(void){
 			active<proto<srt_type<srt_addr<srt_port<dst_type<dst_addr<dst_port<wanx<desc
 
 			1<6<1<192.168.1.100<80<1<220.249.92.18<8080<1<test
-			
+
 			active:
 				1 = enable
 				0 = disable
@@ -121,7 +121,7 @@ void ipt_routerpolicy(void){
 			1<-2<0<<<1<220.249.92.18<<1<1
 			*/
 			if ((vstrsep(b, "<", &active, &proto, &srt_type, &srt_addr, &srt_port, &dst_type, &dst_addr, &dst_port, &wanx, &desc)!=10)) continue;
-			
+
 			// active is not 1, drop the rule
 			if (*active != '1') continue;
 
@@ -132,7 +132,7 @@ void ipt_routerpolicy(void){
 			else if(atoi(srt_type) == 2){
 				sprintf(msrt, "-m mac --mac-source %s", srt_addr);
 			}
-			
+
 			memset(jump, 0, sizeof(jump));
 			if(atoi(wanx) >= 1 && atoi(wanx) <= 4){
 				// wanup check fail, drop the rule
@@ -143,7 +143,7 @@ void ipt_routerpolicy(void){
 			else{
 				continue;
 			}
-			
+
 			if(atoi(dst_type) == 3){
 				int i;
 				struct hostent *he;
@@ -151,7 +151,7 @@ void ipt_routerpolicy(void){
 				if ((he = gethostbyname(dst_addr)) == NULL) continue;
 
 				addr_list = (struct in_addr **)he->h_addr_list;
-				
+
 				i = 0;
 				while(addr_list[i] != NULL){
 					memset(mdst, 0, sizeof(mdst));

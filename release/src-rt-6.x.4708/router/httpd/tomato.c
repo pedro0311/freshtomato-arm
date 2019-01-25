@@ -1533,7 +1533,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server_dns",		V_NONE				},
 	{ "vpn_server1_poll",		V_RANGE(0, 30)			},
 	{ "vpn_server1_if",		V_TEXT(3, 3)			},	// tap, tun
-	{ "vpn_server1_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_server1_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
 	{ "vpn_server1_port",		V_PORT				},
 	{ "vpn_server1_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
 	{ "vpn_server1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
@@ -1576,7 +1576,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_routing_val",	V_NONE				},
 	{ "vpn_server2_poll",		V_RANGE(0, 30)			},
 	{ "vpn_server2_if",		V_TEXT(3, 3)			},	// tap, tun
-	{ "vpn_server2_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_server2_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
 	{ "vpn_server2_port",		V_PORT				},
 	{ "vpn_server2_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
 	{ "vpn_server2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
@@ -1622,7 +1622,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client1_bridge",		V_01				},
 	{ "vpn_client1_nat",		V_01				},
-	{ "vpn_client1_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client1_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
 	{ "vpn_client1_addr",		V_NONE				},
 	{ "vpn_client1_port",		V_PORT				},
 	{ "vpn_client1_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
@@ -1661,7 +1661,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client2_bridge",		V_01				},
 	{ "vpn_client2_nat",		V_01				},
-	{ "vpn_client2_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client2_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
 	{ "vpn_client2_addr",		V_NONE				},
 	{ "vpn_client2_port",		V_PORT				},
 	{ "vpn_client2_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
@@ -1700,7 +1700,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client3_bridge",		V_01				},
 	{ "vpn_client3_nat",		V_01				},
-	{ "vpn_client3_proto",		V_TEXT(3, 10)			},	// udp, tcp-server
+	{ "vpn_client3_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
 	{ "vpn_client3_addr",		V_NONE				},
 	{ "vpn_client3_port",		V_PORT				},
 	{ "vpn_client3_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
