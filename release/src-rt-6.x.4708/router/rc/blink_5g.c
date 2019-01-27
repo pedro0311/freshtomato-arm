@@ -59,7 +59,7 @@ int get_lanports_status(void)
 				}
 			}
 		}
-		fclose(f);
+		pclose(f);
 	}
 
 	return r;
