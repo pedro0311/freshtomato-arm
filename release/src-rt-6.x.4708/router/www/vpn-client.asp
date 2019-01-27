@@ -498,7 +498,7 @@ for (i = 0; i < tabs.length; ++i)
 			suffix: '&nbsp;<small>(in seconds; -1 for infinite)<\/small>' },
 		{ title: 'Verify server certificate (remote-cert-tls)', multi: [
 			{ name: 'f_vpn_'+t+'_tlsremote', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_tlsremote' ) != 0 },
-			{ name: 'vpn_'+t+'_cn', type: 'text', maxlen: 64, size: 54,
+			{ name: 'vpn_'+t+'_cn', type: 'text', maxlen: 255, size: 54,
 				value: eval( 'nvram.vpn_'+t+'_cn' ), prefix: '<span id=\''+t+'_cn\'> Common Name:&nbsp', suffix: '<\/span>'} ] },
 		{ title: 'Custom Configuration', name: 'vpn_'+t+'_custom', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_custom' ) }
 	]);
