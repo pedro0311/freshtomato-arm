@@ -39,7 +39,7 @@ endef
 #
 #
 SEP=`$(eval progress=$(shell echo $$(($(progress)+1))))` \
-echo "\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;$@ ${progress}$\/${totalSteps}\007"
+echo "\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007"
 
 export CFLAGS += -DBCMWPA2
 ifeq ($(TCONFIG_BCMWL6),y)
@@ -368,6 +368,7 @@ else	# TCONFIG_BCMARM
 		$(MAKE) -C ${LINUXDIR} -f - $(SUBMAKE_SETTINGS) zImage
 	+$(MAKE) CONFIG_SQUASHFS=$(CONFIG_SQUASHFS) -C $(SRCBASE)/router/compressed ARCH=$(ARCH)
 
+	@$(SEP)
 	$(if $(shell grep "CONFIG_MODULES=y" ${LINUXDIR}/.config), \
 	(echo '.NOTPARALLEL:' ; cat ${LINUXDIR}/Makefile) | $(MAKE) -C ${LINUXDIR} -f - $(SUBMAKE_SETTINGS) MFG_WAR=1 zImage ; \
 	(echo '.NOTPARALLEL:' ; cat ${LINUXDIR}/Makefile) | $(MAKE) -C ${LINUXDIR} -f - ARCH=$(ARCH) modules)
@@ -390,14 +391,21 @@ lzma-loader-install: lzma-loader
 endif
 
 kmod: dummy
+	@$(SEP)
 	$(MAKE) -C $(LINUXDIR) modules CC=$(KERNELCC) $(PARALLEL_BUILD)
 
 testfind:
 	cd $(TARGETDIR)/lib/modules/* && find -name "*.o" -exec mv -i {} . \; || true
 	cd $(TARGETDIR)/lib/modules/* && find -type d -delete || true
 
-install package: $(obj-install) $(LINUXDIR)/.config
-	@$(SEP)
+countInstallSteps:
+	@totalSteps=0
+	@progress=0
+	$(foreach n, $(obj-install), $(eval totalSteps=$(shell echo $$(($(totalSteps)+1)))))
+	@echo ${totalSteps}
+
+install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
+	@echo "\033[41;1m   Installing \033[0m\033]2;Installing\007"
 	install -d $(TARGETDIR)
 
 
