@@ -187,6 +187,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 <div class="section">
 	<ul>
 	<li>To specify how and on which interface this list should work, use the <a href="advanced-wlanvifs.asp" class="new_window">Virtual Wireless Interfaces</a> page.</li>
+	<li>Warning: the filter supports only a certain number of MAC addresses, depending on the WL driver. Above this number, added addresses are not filtered!</li>
 	</ul>
 </div>
 
