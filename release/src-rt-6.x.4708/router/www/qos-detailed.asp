@@ -63,7 +63,7 @@
 
 <script type="text/javascript">
 
-//	<% nvram('qos_classnames,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,t_hidelr'); %>
+//	<% nvram('qos_enable,qos_classnames,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,t_hidelr'); %>
 
 var Unclassified = ['Unclassified'];
 var classNames = nvram.qos_classnames.split(' ');
@@ -503,29 +503,41 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="numtotalconn"></span></div>
-<div class="section">
-	<div id="grid" class="tomato-grid" style="float:left"></div>
-<div id="loading"><br/><b>Loading...</b></div>
+<div class="section-title" id="stitleoff" style="display:none">View Details</div>
+<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="numtotalconn"></span>
+	<div class="section">
+		<div id="grid" class="tomato-grid" style="float:left"></div>
+		<div id="loading"><br/><b>Loading...</b></div>
+	</div>
+
+<!-- / / / -->
+
+	<div class="section-title">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
+	<div class="section" id="sesdivfilters" style="display:none">
+		<script type="text/javascript">
+			var c;
+			c = [];
+			c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
+			c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
+			c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
+			c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
+			c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+			createFieldTable('',c);
+		</script>
+	</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
-<div class="section" id="sesdivfilters" style="display:none">
-<script type="text/javascript">
-	var c;
-	c = [];
-	c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-	c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-	c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
-	c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
-	c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
-	c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
-	c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-	createFieldTable('',c);
+<script type='text/javascript'>
+	if (nvram.qos_enable != '1') {
+		W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+		E('stitle').style.display = 'none';
+		E('stitleoff').style.display = '';
+	}
 </script>
-</div>
 
 <!-- / / / -->
 
