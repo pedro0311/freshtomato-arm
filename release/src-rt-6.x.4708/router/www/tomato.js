@@ -735,7 +735,7 @@ function ExpandIPv6Address(ip)
 	default:
 		return null;
 	}
-	
+
 	ip = ip.replace(/([a-f0-9]{1,4})/ig, '000$1');
 	ip = ip.replace(/0{0,3}([a-f0-9]{4})/ig, '$1');
 	return ip;
@@ -744,10 +744,10 @@ function ExpandIPv6Address(ip)
 function CompressIPv6Address(ip)
 {
 	var a, segments;
-	
+
 	ip = ExpandIPv6Address(ip);
 	if (!ip) return null;
-	
+
 	// if (ip.match(/(?:^00)|(?:^fe[8-9a-b])|(?:^ff)/)) return null; /* not valid routable unicast address */
 
 	ip = ip.replace(/(^|:)0{1,3}/g, '$1');
@@ -768,7 +768,7 @@ function ZeroIPv6PrefixBits(ip, prefix_length)
 		c = (parseInt(ip.charAt(n), 16) & (0xf << 4-b)).toString(16);
 	else
 		c = '';
-	
+
 	ip = ip.substring(0, n) + c + Array((m%4)+1).join('0') + (m>=4 ? '::' : '');
 	ip = ip.replace(/([a-f0-9]{4})(?=[a-f0-9])/g,'$1:');
 	ip = ip.replace(/(^|:)0{1,3}/g, '$1');
@@ -812,21 +812,6 @@ function _v_ipv6_addr(e, ip, ipt, quiet)
 	}
 
 	/* mask matches */
-	if ((ipt) && ip.match(/^([A-Fa-f0-9:]+)\/([A-Fa-f0-9:]+)$/)) {
-		a = RegExp.$1;
-		b = RegExp.$2;
-		a = CompressIPv6Address(a);
-		b = CompressIPv6Address(b);
-		if ((a == null) || (b == null)) {
-			ferror.set(e, oip + ' - invalid IPv6 address with mask', quiet);
-			return null;
-		}
-		ferror.clear(e);
-
-		return ip;
-	}
-
-	
 	if ((ipt) && ip.match(/^([A-Fa-f0-9:]+)\/(\d+)$/)) {
 		a = RegExp.$1;
 		b = parseInt(RegExp.$2, 10);
@@ -843,6 +828,20 @@ function _v_ipv6_addr(e, ip, ipt, quiet)
 
 		ip = ZeroIPv6PrefixBits(a, b);
 		return ip + '/' + b.toString(10);
+	}
+
+	if ((ipt) && ip.match(/^([A-Fa-f0-9:]+)\/([A-Fa-f0-9:]+)$/)) {
+		a = RegExp.$1;
+		b = RegExp.$2;
+		a = CompressIPv6Address(a);
+		b = CompressIPv6Address(b);
+		if ((a == null) || (b == null)) {
+			ferror.set(e, oip + ' - invalid IPv6 address with mask', quiet);
+			return null;
+		}
+		ferror.clear(e);
+
+		return ip;
 	}
 
 	ip = CompressIPv6Address(oip);
