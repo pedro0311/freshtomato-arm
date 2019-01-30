@@ -1337,57 +1337,6 @@ static void update_editdns(void)
 }
 
 /*
-	HE.net IPv6 TunnelBroker
-	https://ipv4.tunnelbroker.net/ipv4_end.php?ip=$IPV4ADDR&pass=$MD5PASS&apikey=$USERID&tid=$TUNNELID
-
-good:
-	+OK: Tunnel endpoint updated to: XXX.XXX.XXX.XXX
-	-ERROR: This tunnel is already associated with this IP address. Please try and limit your updates to IP changes.
-bad:
-	-ERROR: Tunnel not found
-	-ERROR: Invalid API key or password
-	-ERROR: IP is not in a valid format
-	-ERROR: Missing parameter(s).
-	-ERROR: IP is not ICMP pingable. Please make sure ICMP is not blocked. If you are blocking ICMP, please allow 66.220.2.74 through your firewall.
-	-ERROR: IP is blocked. (RFC1918 Private Address Space)
-*/
-static void update_heipv6tb(void)
-{
-	int r;
-	char *body;
-	char query[2048];
-
-	// +opt +opt +opt
-	sprintf(query, "/ipv4_end.php?pass=%s&apikey=%s&tid=%s",
-		md5_string(get_option_required("pass")),
-		get_option_required("user"),
-		get_option_required("host"));
-
-	// +opt
-	append_addr_option(query, "&ip=%s");
-
-	r = wget(1, 0, "ipv4.tunnelbroker.net", query, NULL, 0, &body);
-	if (r == 200) {
-		if ((strstr(body, "endpoint updated to")) || (strstr(body, "is already associated"))) {
-			success();
-		}
-		if (strstr(body, "Invalid API key or password")) {
-			error(M_INVALID_AUTH);
-		}
-		if (strstr(body, "Tunnel not found")) {
-			error(M_INVALID_PARAM__S, "Tunnel ID");
-		}
-		if (strstr(body, "IP is not in a valid format")) {
-			error(M_INVALID_PARAM__S, "IPv4 endpoint");
-		}
-
-		error(M_UNKNOWN_RESPONSE__D, -1);
-	}
-
-	error(M_UNKNOWN_ERROR__D, r);
-}
-
-/*
  * wget/custom
  */
 static void update_wget(void)
@@ -1656,9 +1605,6 @@ int main(int argc, char *argv[])
 	else if (strcmp(p, "minidns") == 0) {
 		update_minidns();
 	}
-	else if (strcmp(p, "heipv6tb") == 0) {
-		update_heipv6tb();
-	}
 	else if (strcmp(p, "pairnic") == 0) {
 		// pairNIC uses the same API as DynDNS
 		update_dua("pairnic", 0, "dynamic.pairnic.com", "/nic/update", 1);
@@ -1678,6 +1624,14 @@ int main(int argc, char *argv[])
 	else if (strcmp(p, "schangeip") == 0) {
 		// ChangeIP uses the same API as DynDNS
 		update_dua("dyndns", 1, "nic.changeip.com", "/nic/update", 1);
+	}
+	else if (strcmp(p, "heipv6tb") == 0) {
+		// Tunnel Broker uses the same API as DynDNS
+		update_dua("heipv6tb", 0, "ipv4.tunnelbroker.net", "/nic/update", 1);
+	}
+	else if (strcmp(p, "sheipv6tb") == 0) {
+		// Tunnel Broker uses the same API as DynDNS
+		update_dua("heipv6tb", 1, "ipv4.tunnelbroker.net", "/nic/update", 1);
 	}
 	else if ((strcmp(p, "wget") == 0) || (strcmp(p, "custom") == 0)) {
 		update_wget();
