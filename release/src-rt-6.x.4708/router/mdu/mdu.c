@@ -1158,20 +1158,17 @@ static void update_zoneedit(int ssl)
 
 	---
 
-http://freedns.afraid.org/dynamic/update.php?XXXXXXXXXXYYYYYYYYYYYZZZZZZZ1111222
+https://freedns.afraid.org/dynamic/update.php?XXXXXXXXXXYYYYYYYYYYYZZZZZZZ1111222&address=127.0.0.1
 
-"HTTP/1.0 200 OK
-...
-
-ERROR: Address 1.2.3.4 has not changed."
-
-"Updated 1 host(s) foobar.mooo.com to 1.2.3.4 in 1.234 seconds"
-
-"ERROR: Missing S/key and DataID, check your update URL."
-
-"fail, make sure you own this record, and the address does not already equal 1.2.3.4"
+good:
+	+"Updated foobar.mooo.com to 127.0.0.1 in 0.326 seconds"
+	-"ERROR: Address 127.0.0.1 has not changed."
+bad:
+	-"ERROR: "800.0.0.1" is an invalid IP address."
+	-"ERROR: Unable to locate this record (changed password recently? deleted and re-created this dns entry?)"
+	-"ERROR: Invalid update URL (2)"
 */
-static void update_afraid(void)
+static void update_afraid(int ssl)
 {
 	int r;
 	char *body;
@@ -1180,16 +1177,19 @@ static void update_afraid(void)
 	// +opt
 	sprintf(query, "/dynamic/update.php?%s", get_option_required("ahash"));
 
-	r = wget(0, 0, "freedns.afraid.org", query, NULL, 0, &body);
+	// +opt
+	append_addr_option(query, "&address=%s");
+
+	r = wget(ssl, 0, "freedns.afraid.org", query, NULL, 0, &body);
 	if (r == 200) {
-		if ((strstr(body, "ERROR")) || (strstr(body, "fail"))) {
+		if ((strstr(body, "Updated")) && (strstr(body, "seconds"))) {
+			success();
+		}
+		else if ((strstr(body, "ERROR")) || (strstr(body, "fail"))) {
 			if (strstr(body, "has not changed")) {
 				success();
 			}
 			error(M_INVALID_AUTH);
-		}
-		else if ((strstr(body, "Updated")) && (strstr(body, "host"))) {
-			success();
 		}
 		else {
 			error(M_UNKNOWN_RESPONSE__D, -1);
@@ -1594,7 +1594,10 @@ int main(int argc, char *argv[])
 		update_zoneedit(1);
 	}
 	else if (strcmp(p, "afraid") == 0) {
-		update_afraid();
+		update_afraid(0);
+	}
+	else if (strcmp(p, "safraid") == 0) {
+		update_afraid(1);
 	}
 	else if (strcmp(p, "everydns") == 0) {
 		update_everydns();
