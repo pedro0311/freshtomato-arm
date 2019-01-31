@@ -37,8 +37,7 @@ w = wildcard
 m = MX
 b = backup MX
 o = use OpenDNS
-a = freedns.afraid
-z = can't use client-given IP address
+n = token
 s = save state checkbox
 
 REMOVE-END */
@@ -62,8 +61,8 @@ var services = [
 	['everydns', 'EveryDNS', 'http://www.everydns.net/', 'uj', null, null, 'Domain <small>(optional)<\/small>'],
 	['minidns', 'miniDNS', 'http://www.minidns.net/', 'uh'],
 	['enom', 'eNom', 'http://www.enom.com/', 'ut', 'Domain'],
-	['afraid', 'FreeDNS', 'http://freedns.afraid.org/', 'a'],
-	['safraid', 'FreeDNS (https)', 'https://freedns.afraid.org/', 'a'],
+	['afraid', 'FreeDNS', 'http://freedns.afraid.org/', 'n'],
+	['safraid', 'FreeDNS (https)', 'https://freedns.afraid.org/', 'n'],
 	['heipv6tb', 'HE.net IPv6 Tunnel Broker', 'http://www.tunnelbroker.net/', 'uh', 'Account Name', null, 'Tunnel ID'],
 	['sheipv6tb', 'HE.net IPv6 Tunnel Broker (https)', 'https://www.tunnelbroker.net/', 'uh', 'Account Name', null, 'Tunnel ID'],
 	['ieserver', 'ieServer.net', 'http://www.ieserver.net/', 'uhz', 'Username / Hostname', null, 'Domain'],
@@ -144,7 +143,7 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_f_mx' + i), op.m);
 		elem.display(PR('_f_bmx' + i), op.b);
 		elem.display(PR('_f_opendns' + i), op.o);
-		elem.display(PR('_f_afraid' + i), op.a);
+		elem.display(PR('_f_token' + i), op.n);
 		elem.display(PR('_f_ddnsx_save' + i), op.s);
 
 		elem.display(PR('_f_force' + i), 'last-response' + i, enabled);
@@ -174,18 +173,15 @@ function verifyFields(focused, quiet) {
 					else ferror.clear(e);
 				}
 			}
-			else if (op.a) {
-				e = E('_f_afraid' + i);
+			else if (op.n) {
+				e = E('_f_token' + i);
 				e.value = e.value.trim();
-				if (e.value.match(/freedns\.afraid\.org\/dynamic\/update\.php\?([a-zA-Z0-9]+)/)) {
-					e.value = RegExp.$1;
-				}
 				if (e.value.search(/^[A-Za-z0-9]+/) == -1) {
-					ferror.set(e, 'Invalid hash or URL', quiet);
+					ferror.set(e, 'Invalid token', quiet);
 					r = 0;
 				}
 				else {
-					if (!v_nodelim('_f_afraid' + i, quiet, 'Token / URL')) r = 0;
+					if (!v_nodelim('_f_token' + i, quiet, 'Token')) r = 0;
 					else ferror.clear(e);
 				}
 			}
@@ -241,8 +237,7 @@ w = wildcard
 m = MX
 b = backup MX
 o = use OpenDNS
-a = freedns.afraid
-z = can't use client-given IP address
+n = token
 s = save state checkbox
 
 */
@@ -254,7 +249,7 @@ s = save state checkbox
 	wildcard<
 	mx<
 	backup mx<
-	custom url/afraid hash<
+	custom url/token<
 
 REMOVE-END */
 			op = mop(data[3]);
@@ -282,8 +277,8 @@ REMOVE-END */
 			if (op.c) {
 				s.push(E('_f_cust' + i).value);
 			}
-			else if (op.a) {
-				s.push(E('_f_afraid' + i).value);
+			else if (op.n) {
+				s.push(E('_f_token' + i).value);
 			}
 			else {
 				s.push('');
@@ -447,7 +442,7 @@ for (i = 0; i < 2; ++i) {
 		{ title: 'Backup MX', indent: 2, name: 'f_bmx' + i, type: 'checkbox', value: v[5] != '0', hidden: 1 },
 		{ title: 'Use as DNS', name: 'f_opendns' + i, type: 'checkbox', value: (opendnsInUse == opendns.length),
 			suffix: '<br /><small>(Current DNS: ' + dns  + ')<\/small>', hidden: 1 },
-		{ title: 'Token / URL', name: 'f_afraid' + i, type: 'text', maxlen: 255, size: 80, value: v[6], hidden: 1 },
+		{ title: 'Token', name: 'f_token' + i, type: 'text', maxlen: 255, size: 80, value: v[6], hidden: 1 },
 		{ title: 'Save state when IP changes (nvram commit)', name: 'f_ddnsx_save' + i, type: 'checkbox', value: nvram.ddnsx_save == '1', hidden: 1 },
 		{ title: 'Force next update', name: 'f_force' + i, type: 'checkbox', value: 0, hidden: 1 },
 		null,
