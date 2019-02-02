@@ -3,7 +3,9 @@
 #
 # Copyright (C) 2015 shibby
 #
-# changes/fixes: 2018 by pedro
+# - changes/fixes
+# - add support for rndis protocol
+# Copyright (C) 2018 - 2019 by pedro
 #
 
 
@@ -381,7 +383,7 @@ disconnect() {
 
 switchMode() {
 	VENDOR="" PRODUCT="" MTYPE="" MODULE="" DEVICENAME=""	# global
-	MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm"
+	MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm rndis_host"
 	local COUNT=1 SWITCHED=0 DVDP=0 PATHDEV SWITCH DEVICES IFN_BEFORE DV DP DB DG
 
 	for MODULE in $MODULES; do	# remove modules
@@ -568,6 +570,8 @@ findType() {
 		MTYPE="hw-ether"
 	elif [ "$MODULE" == "qmi_wwan" ]; then
 		MTYPE="qmi_wwan"
+	elif [ "$MODULE" == "rndis_host" ]; then
+		MTYPE="rndis_host"
 	else
 		MTYPE="unknown"
 	fi
