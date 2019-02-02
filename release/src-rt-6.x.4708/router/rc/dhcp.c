@@ -48,7 +48,7 @@ static void expires(unsigned int seconds, char *prefix)
 	char s[32];
 	char expires_file[256];
 
-   	sysinfo(&info);
+	sysinfo(&info);
 	sprintf(s, "%u", (unsigned int)info.uptime + seconds);
 
 	memset(expires_file, 0, 256);
@@ -56,8 +56,9 @@ static void expires(unsigned int seconds, char *prefix)
 	f_write_string(expires_file, s, 0, 0);
 }
 
-// copy env to nvram
-// returns 1 if new/changed, 0 if not changed/no env
+/* copy env to nvram
+ * returns 1 if new/changed, 0 if not changed/no env
+ */
 static int env2nv(char *env, char *nv)
 {
 	char *value;
@@ -79,7 +80,7 @@ static int env2nv_gateway(const char *nv)
 	r = 0;
 	if ((v = getenv("router")) != NULL) {
 		if ((b = strdup(v)) != NULL) {
-			if ((v = strchr(b, ' ')) != NULL) *v = 0;	// truncate multiple entries
+			if ((v = strchr(b, ' ')) != NULL) *v = 0;	/* truncate multiple entries */
 			if (!nvram_match((char *)nv, b)) {
 				nvram_set(nv, b);
 				r = 1;
@@ -106,8 +107,6 @@ static int env2nv_gateway(const char *nv)
 
 	return r;
 }
-
-//static const char renewing[] = "/var/lib/misc/dhcpc.renewing";
 
 static int deconfig(char *ifname,char *prefix)
 {
@@ -166,7 +165,7 @@ static int bound(char *ifname, int renew, char *prefix)
 	env2nv("domain", strcat_r(prefix, "_get_domain", tmp));
 	env2nv("lease", strcat_r(prefix, "_lease", tmp));
 	netmask = getenv("subnet") ? : "255.255.255.255";
-	if (wan_proto == WP_DHCP || wan_proto == WP_LTE || using_dhcpc(prefix)) { // netmask for DHCP MAN
+	if (wan_proto == WP_DHCP || wan_proto == WP_LTE || using_dhcpc(prefix)) { /* netmask for DHCP MAN */
 		nvram_set(strcat_r(prefix, "_netmask", tmp), netmask);
 		nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 	}
@@ -217,7 +216,7 @@ static int bound(char *ifname, int renew, char *prefix)
 	if (wan_proto != WP_DHCP && wan_proto != WP_LTE) {
 
 		/* setup dnsmasq and routes to dns / access servers */
-		gw = nvram_safe_get(strcat_r(prefix, "_gateway", tmp)); //"wan_getway"
+		gw = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
 		if ((*gw) && (strcmp(gw, "0.0.0.0") != 0)) {
 			mwanlog(LOG_DEBUG, "*** bound, do preset_wan ... ifname=%s gateway=%s netmask=%s prefix=%s", ifname, gw, netmask, prefix);
 			preset_wan(ifname, gw, netmask, prefix);
@@ -225,7 +224,7 @@ static int bound(char *ifname, int renew, char *prefix)
 			mwanlog(LOG_DEBUG, "*** bound, NO gateway! Just do DHCP DNS stuff ...");
 			dns_to_resolv();
 		}
-		/* don't clear dns sevrers for PPTP/L2TP wans, required for pptp/l2tp server name resolution */
+		/* don't clear dns servers for PPTP/L2TP wans, required for pptp/l2tp server name resolution */
 		dns = nvram_safe_get(strcat_r(prefix, "_get_dns", tmp));
 		if (wan_proto != WP_PPTP && wan_proto != WP_L2TP) {
 			nvram_set(strcat_r(prefix, "_get_dns", tmp), renew ? dns : "");
@@ -311,7 +310,7 @@ static int renew(char *ifname, char *prefix)
 
 	if (changed) {
 		set_host_domain_name();
-		start_dnsmasq();	// (re)start
+		start_dnsmasq();
 	}
 
 	if (routes_changed) {
@@ -340,7 +339,7 @@ int dhcpc_event_main(int argc, char **argv)
 {
 	char *ifname;
 	ifname = getenv("interface");
-	char prefix[] = "wanXXX";
+	char prefix[] = "wanXX";
 
 	if (nvram_match( "wan2_ifname", ifname )) strcpy(prefix, "wan2");
 #ifdef TCONFIG_MULTIWAN
@@ -364,14 +363,10 @@ int dhcpc_event_main(int argc, char **argv)
 	return 1;
 }
 
-
-// -----------------------------------------------------------------------------
-
-
 int dhcpc_release_main(int argc, char **argv)
 {
-	char prefix[] = "wanXXX";
-	if (argc > 1) {
+	char prefix[] = "wanXX";
+	if (argc > 0) {
 		strcpy(prefix, argv[1]);
 	} else {
 		strcpy(prefix, "wan");
@@ -441,10 +436,6 @@ int dhcpc_renew_main(int argc, char **argv)
 	return 0;
 }
 
-
-// -----------------------------------------------------------------------------
-
-
 void start_dhcpc(char *prefix)
 {
 	char cmd[256];
@@ -454,7 +445,6 @@ void start_dhcpc(char *prefix)
 	char tmp[100];
 
 	TRACE_PT("begin\n");
-
 
 	nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 
@@ -474,29 +464,6 @@ void start_dhcpc(char *prefix)
 		nvram_set(strcat_r(prefix, "_iface", tmp), ifname);
 	}
 
-#if 1	// REMOVEME after 1/1/2012
-	// temporary code for compatibility with old nvram variables
-	int changed = 0;
-	strcpy(cmd, nvram_safe_get("dhcpc_custom"));
-	if (strstr(cmd, "-V ") == NULL) {
-		if ((p = nvram_get("dhcpc_vendorclass")) && (*p)) {
-			changed++;
-			strcat(cmd, " -V ");
-			strcat(cmd, p);
-		}
-	}
-	if (strstr(cmd, "-r ") == NULL) {
-		if ((p = nvram_get("dhcpc_requestip")) && (*p) && (strcmp(p, "0.0.0.0") != 0)) {
-			changed++;
-			strcat(cmd, " -r ");
-			strcat(cmd, p);
-		}
-	}
-	if (changed) {
-		nvram_set("dhcpc_custom", cmd);
-	}
-#endif
-
 	char dhcpcpid_file[256];
 	memset(dhcpcpid_file, 0, 256);
 	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
@@ -504,7 +471,7 @@ void start_dhcpc(char *prefix)
 		"udhcpc -i %s -b -s dhcpc-event %s %s %s %s %s %s %s -p %s",
 		ifname,
 		nvram_invmatch("wan_hostname", "") ? "-H" : "", nvram_safe_get("wan_hostname"),
-		// This params required to get static / classless routes from DHCP server
+		/* This params required to get static / classless routes from DHCP server */
 		nvram_get_int("dhcp_routes") ? "-O 33 -O 121 -O 249" : "",
 		nvram_get_int("dhcpc_minpkt") ? "-m" : "",
 		nvram_contains_word("log_events", "dhcpc") ? "-S" : "",
@@ -532,7 +499,7 @@ void stop_dhcpc(char *prefix)
 	char dhcpcpid_file[256];
 	memset(dhcpcpid_file, 0, 256);
 	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
-	if (kill_pidfile_s(dhcpcpid_file, SIGUSR2) == 0) {	// release
+	if (kill_pidfile_s(dhcpcpid_file, SIGUSR2) == 0) {	/* release */
 		sleep(2);
 	}
 	kill_pidfile_s(dhcpcpid_file, SIGTERM);
@@ -546,10 +513,7 @@ void stop_dhcpc(char *prefix)
 	TRACE_PT("end\n");
 }
 
-// -----------------------------------------------------------------------------
-
 #ifdef TCONFIG_IPV6
-
 int dhcp6c_state_main(int argc, char **argv)
 {
 	char prefix[INET6_ADDRSTRLEN];
@@ -563,31 +527,29 @@ int dhcp6c_state_main(int argc, char **argv)
 
 	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
 	if (!nvram_match("ipv6_rtr_addr", lanif)) {
-	  nvram_set("ipv6_rtr_addr", lanif);
-	  /*extract prefix from configured IPv6 address*/
-	  if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
-            r = nvram_get_int("ipv6_prefix_length") ? : 64;
-            for (r = 128 - r, i = 15; r > 0; r -= 8) {
-	      if (r >= 8) {
-		addr.s6_addr[i--] = 0;
-	      }
-	      else {
-		addr.s6_addr[i--] &= (0xff << r);
-	      }
-            }
-            inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
-            nvram_set("ipv6_prefix", prefix);
-	  }
-	  /*(re)start dnsmasq and httpd*/
-	  set_host_domain_name();
-	  start_dnsmasq();
-	  start_httpd();
+		nvram_set("ipv6_rtr_addr", lanif);
+		/* extract prefix from configured IPv6 address */
+		if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
+			r = nvram_get_int("ipv6_prefix_length") ? : 64;
+			for (r = 128 - r, i = 15; r > 0; r -= 8) {
+				if (r >= 8) {
+					addr.s6_addr[i--] = 0;
+				} else {
+					addr.s6_addr[i--] &= (0xff << r);
+				}
+			}
+			inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
+			nvram_set("ipv6_prefix", prefix);
+		}
+		/* (re)start dnsmasq and httpd */
+		set_host_domain_name();
+		start_dnsmasq();
+		start_httpd();
 	}
 
 	if (env2nv("new_domain_name_servers", "ipv6_get_dns")) {
 		dns_to_resolv();
 	}
-
 
 	TRACE_PT("ipv6_get_dns=%s\n", nvram_safe_get("ipv6_get_dns"));
 	TRACE_PT("end\n");
@@ -608,7 +570,7 @@ void start_dhcp6c(void)
 
 	/* Check if turned on */
 	if (get_ipv6_service() != IPV6_NATIVE_DHCP) {
-	  return;
+		return;
 	}
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
@@ -642,36 +604,36 @@ void start_dhcp6c(void)
 			"  sla-id 0;\n"
 			"  sla-len %d;\n"
 			"  ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
-			" 	};\n",
+			" };\n",
 			nvram_get_int("ipv6_prefix_length"),
 			nvram_safe_get("lan_ifname"),
 			prefix_len);
 		/* check IPv6 for LAN1 */
 		if ((ipv6_vlan & 0x01) && (prefix_len >= 1) && (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0)) { /* 2x IPv6 /64 networks possible --> for LAN and LAN1 */
 		fprintf(f,
-			"	prefix-interface %s {\n"
-			"		sla-id 1;\n"
-			"		sla-len %d;\n"
-			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
-			"	};\n", nvram_safe_get("lan1_ifname"), prefix_len);
+			" prefix-interface %s {\n"
+			"  sla-id 1;\n"
+			"  sla-len %d;\n"
+			"  ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
+			" };\n", nvram_safe_get("lan1_ifname"), prefix_len);
 		}
 		/* check IPv6 for LAN2 */
 		if ((ipv6_vlan & 0x02) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0)) { /* 4x IPv6 /64 networks possible --> for LAN to LAN3 */
 		fprintf(f,
-			"	prefix-interface %s {\n"
-			"		sla-id 2;\n"
-			"		sla-len %d;\n"
-			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
-			"	};\n", nvram_safe_get("lan2_ifname"), prefix_len);
+			" prefix-interface %s {\n"
+			"  sla-id 2;\n"
+			"  sla-len %d;\n"
+			"  ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
+			" };\n", nvram_safe_get("lan2_ifname"), prefix_len);
 		}
 		/* check IPv6 for LAN3 */
 		if ((ipv6_vlan & 0x04) && (prefix_len >= 2) && (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0)) { /* 4x IPv6 /64 networks possible --> for LAN to LAN3 */
 		fprintf(f,
-			"	prefix-interface %s {\n"
-			"		sla-id 3;\n"
-			"		sla-len %d;\n"
-			"		ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
-			"	};\n", nvram_safe_get("lan3_ifname"), prefix_len);
+			" prefix-interface %s {\n"
+			"  sla-id 3;\n"
+			"  sla-len %d;\n"
+			"  ifid 1;\n" /* override the default EUI-64 address selection and create a very userfriendly address --> ::1 */
+			" };\n", nvram_safe_get("lan3_ifname"), prefix_len);
 		}
 		fprintf(f,
 			"};\n"
@@ -699,5 +661,4 @@ void stop_dhcp6c(void)
 
 	TRACE_PT("end\n");
 }
-
-#endif	//TCONFIG_IPV6
+#endif	/* TCONFIG_IPV6 */
