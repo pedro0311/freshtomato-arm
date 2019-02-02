@@ -50,10 +50,10 @@
 #define M_INVALID_AUTH			"Invalid authentication."
 #define M_INVALID_PARAM__D		"Invalid parameter (%d)."
 #define M_INVALID_PARAM__S		"Invalid parameter (%s)."
-#define M_TOOSOON				"Update was too soon or too frequent. Please try again later."
+#define M_TOOSOON			"Update was too soon or too frequent. Please try again later."
 #define M_ERROR_GET_IP			"Error obtaining IP address."
-#define M_SAME_IP				"The IP address is the same."
-#define M_DOWN					"Server temporarily down or under maintenance."
+#define M_SAME_IP			"The IP address is the same."
+#define M_DOWN				"Server temporarily down or under maintenance."
 
 char *blob = NULL;
 int error_exitcode = 1;
@@ -219,8 +219,6 @@ static void success(void)
 {
 	success_msg("Update successful.");
 }
-
-
 
 static const char *get_dump_name(void)
 {
@@ -402,8 +400,6 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 	return n;
 }
 
-
-
 int read_tmaddr(const char *name, long *tm, char *addr)
 {
 	char s[64];
@@ -540,9 +536,7 @@ static void append_addr_option(char *buffer, const char *format)
 
 // -----------------------------------------------------------------------------
 
-
 /*
-
 	DNS Update API
 	http://www.dyndns.com/developers/specs/
 
@@ -566,7 +560,6 @@ static void append_addr_option(char *buffer, const char *format)
 	Host: members.dyndns.org
 	Authorization: Basic username:pass
 	User-Agent: Company - Device - Version Number
-
 */
 static void update_dua(const char *type, int ssl, const char *server, const char *path, int reqhost)
 {
@@ -650,9 +643,7 @@ static void update_dua(const char *type, int ssl, const char *server, const char
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
 	namecheap.com
 	http://namecheap.simplekb.com/kb.aspx?show=article&articleid=27&categoryid=22
 
@@ -660,8 +651,7 @@ static void update_dua(const char *type, int ssl, const char *server, const char
 
 http://dynamicdns.park-your-domain.com/update?host=host_name&domain=domain.com&password=domain_password[&ip=your_ip]
 
-ok response:
-
+good:
 "HTTP/1.1 200 OK
 ...
 
@@ -685,8 +675,7 @@ ok response:
 </interface-response>"
 
 
-error response:
-
+bad:
 "HTTP/1.1 200 OK
 ...
 
@@ -716,7 +705,6 @@ error response:
 <Done>true</Done>
 <debug><![CDATA[]]></debug>
 </interface-response>"
-
 */
 static void update_namecheap(void)
 {
@@ -735,7 +723,7 @@ static void update_namecheap(void)
 
 	r = wget(0, 0, "dynamicdns.park-your-domain.com", query, NULL, 0, &body);
 	if (r == 200) {
-		if (strstr(body, "<ErrCount>0<") != NULL) {
+		if (strstr(body, "<ErrCount>0<")) {
 			success();
 		}
 		if ((p = strstr(body, "<Err1>")) != NULL) {
@@ -752,9 +740,7 @@ static void update_namecheap(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
 	eNom
 	http://www.enom.com/help/faq_dynamicdns.asp
 
@@ -797,7 +783,6 @@ IsRealTimeTLD=True
 TimeDifference=+08.00
 ExecTime=0.235
 Done=true
-
 */
 static void update_enom(void)
 {
@@ -818,7 +803,7 @@ static void update_enom(void)
 
 	r = wget(0, 0, "dynamic.name-services.com", query, NULL, 0, &body);
 	if (r == 200) {
-		if (strstr(body, "ErrCount=0") != NULL) {
+		if (strstr(body, "ErrCount=0")) {
 			success();
 		}
 		if ((p = strstr(body, "Err1=")) != NULL) {
@@ -836,12 +821,7 @@ static void update_enom(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
-
-
-
 /*
-
 	dnsExit
 	http://www.dnsexit.com/Direct.sv?cmd=ipClients
 
@@ -860,7 +840,6 @@ static void update_enom(void)
 4=Update too often. Please wait at least 8 minutes since the last update"
 
 " HTTP/1.1 200 OK" <-- extra in body?
-
 */
 static void update_dnsexit(void)
 {
@@ -879,16 +858,16 @@ static void update_dnsexit(void)
 	if (r == 200) {
 		// (\d+)=.+
 
-		if ((strstr(body, "0=Success") != NULL) || (strstr(body, "1=IP") != NULL)) {
+		if ((strstr(body, "0=Success")) || (strstr(body, "1=IP"))) {
 			success();
 		}
-		if ((strstr(body, "2=Invalid") != NULL) || (strstr(body, "3=User") != NULL)) {
+		if ((strstr(body, "2=Invalid")) || (strstr(body, "3=User"))) {
 			error(M_INVALID_AUTH);
 		}
-		if ((strstr(body, "10=Host") != NULL) || (strstr(body, "11=fail") != NULL)) {
+		if ((strstr(body, "10=Host")) || (strstr(body, "11=fail"))) {
 			error(M_INVALID_HOST);
 		}
-		if (strstr(body, "4=Update") != NULL) {
+		if (strstr(body, "4=Update")) {
 			error(M_TOOSOON);
 		}
 
@@ -898,100 +877,10 @@ static void update_dnsexit(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
-	no-ip.com
-
-	---
-
-	Example response:
-
-	mytest.testdomain.com:4
-
-*/
-/*
-static void update_noip(void)
-{
-	int r;
-	const char *c;
-	char *body;
-	char query[2048];
-
-	// +opt +opt
-	sprintf(query, "/dns?username=%s&password=%s&",
-		get_option_required("user"), get_option_required("pass"));
-
-	// +opt
-	if (((c = get_option("group")) != NULL) && (*c)) {
-		sprintf(query + strlen(query), "group=%s", c);
-	}
-	else {
-		sprintf(query + strlen(query), "hostname=%s", get_option_required("host"));
-	}
-
-	// +opt
-	append_addr_option(query, "&ip=%s");
-
-	r = wget(0, 0, "dynupdate.no-ip.com", query, NULL, 0, &body);
-	if (r == 200) {
-		if ((c = strchr(body, ':')) != NULL) {
-			++c;
-			r = atoi(c);
-			switch(r) {
-			case 0:		// host same addr
-				while (*c == ' ') ++c;
-				if (*c != '0') {
-					error(M_UNKNOWN_RESPONSE__D, -1);
-					break;
-				}
-				// drop
-			case 12:	// group same addr
-			case 1:		// host updated
-			case 11:	// group updated
-				success();
-				break;
-			case 2:		// invalid hostname
-			case 10:	// invalid group
-			case 6:		// account disabled
-			case 8:		// disabled hostname
-				error(M_INVALID_HOST);
-				break;
-			case 3:		// invalid password
-			case 4:		// invalid username
-				error(M_INVALID_AUTH);
-				break;
-			case 5:
-				error(M_TOOSOON);
-				break;
-			case 7:		// invalid IP supplied
-			case 99:	// client banned
-			case 100:	// invalid parameter
-			case 9:		// redirect type
-			case 13:	//
-				error(M_INVALID_PARAM__D, r);
-				break;
-			default:
-				error(M_UNKNOWN_RESPONSE__D, r);
-				break;
-			}
-		}
-		else {
-			r = -200;
-		}
-	}
-
-	error(M_UNKNOWN_ERROR__D, r);
-}
-*/
-
-
-/*
-
 	No-IP.com -- refresh
 
 	http://www.no-ip.com/hostactive.php?host=<host>&domain=<dom>
-
 */
 static void update_noip_refresh(void)
 {
@@ -1008,13 +897,9 @@ static void update_noip_refresh(void)
 	if (domain) sprintf(query + strlen(query), "&domain=%s", domain);
 
 	wget(0, 1, "www.no-ip.com", query, NULL, 0, NULL);
-	// return ignored
 }
 
-
-
 /*
-
 	ieserver.net
 	http://www.ieserver.net/tools.html
 
@@ -1024,9 +909,7 @@ static void update_noip_refresh(void)
 
 	username = hostname
 	domain = dip.jp, fam.cx, etc.
-
 */
-
 static void update_ieserver(void)
 {
 	int r;
@@ -1040,7 +923,7 @@ static void update_ieserver(void)
 
 	r = wget(0, 0, "ieserver.net", query, NULL, 0, &body);
 	if (r == 200) {
-		if (strstr(body, "<title>Error") != NULL) {
+		if (strstr(body, "<title>Error")) {
 
 			//	<p>yuuzaa na mata pasuwoodo (EUC-JP)
 			if ((p = strstr(body, "<p>\xA5\xE6\xA1\xBC\xA5\xB6\xA1\xBC")) != NULL) {	// <p>user
@@ -1056,10 +939,7 @@ static void update_ieserver(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
-
 /*
-
 	dyns.cx
 	http://www.dyns.cx/documentation/technical/protocol/v1.1.php
 
@@ -1069,9 +949,7 @@ static void update_ieserver(void)
 ...
 
 401 testuser not authenticated"
-
 */
-
 static void update_dyns(void)
 {
 	int r;
@@ -1119,10 +997,7 @@ static void update_dyns(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
-
 /*
-
 	TZO
 	http://www.tzo.com/
 
@@ -1169,7 +1044,6 @@ Update too soon:
 </p>
 </font> <br>
 ..."
-
 */
 static void update_tzo(void)
 {
@@ -1203,11 +1077,7 @@ static void update_tzo(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
-
-
 /*
-
 	ZoneEdit
 	http://www.zoneedit.com/doc/dynamic.html
 
@@ -1235,7 +1105,6 @@ ERROR CODE="708" TEXT="Login/authorization error"
 SUCCESS CODE="[200-201]" TEXT="Description of the success" ZONE="Zone that Succeeded"
 SUCCESS CODE="200" TEXT="Update succeeded." ZONE="%zone%" IP="%dnsto%"
 SUCCESS CODE="201" TEXT="No records need updating." ZONE="%zone%"
-
 */
 static void update_zoneedit(int ssl)
 {
@@ -1263,8 +1132,10 @@ static void update_zoneedit(int ssl)
 				error(M_INVALID_HOST);
 				break;
 			case 707:	// update is the same ip address? / too frequent updates
-				if (strstr(c, "Duplicate") != NULL) success();
-					else error(M_TOOSOON);
+				if (strstr(c, "Duplicate"))
+					success();
+				else
+					error(M_TOOSOON);
 				break;
 			case 708:	// authorization error
 				error(M_INVALID_AUTH);
@@ -1282,31 +1153,22 @@ static void update_zoneedit(int ssl)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
 	FreeDNS.afraid.org
 
 	---
 
+https://freedns.afraid.org/dynamic/update.php?XXXXXXXXXXYYYYYYYYYYYZZZZZZZ1111222&address=127.0.0.1
 
-http://freedns.afraid.org/dynamic/update.php?XXXXXXXXXXYYYYYYYYYYYZZZZZZZ1111222
-
-"HTTP/1.0 200 OK
-...
-
-ERROR: Address 1.2.3.4 has not changed."
-
-"Updated 1 host(s) foobar.mooo.com to 1.2.3.4 in 1.234 seconds"
-
-"ERROR: Missing S/key and DataID, check your update URL."
-
-"fail, make sure you own this record, and the address does not already equal 1.2.3.4"
-??
-
+good:
+	+"Updated foobar.mooo.com to 127.0.0.1 in 0.326 seconds"
+	-"ERROR: Address 127.0.0.1 has not changed."
+bad:
+	-"ERROR: "800.0.0.1" is an invalid IP address."
+	-"ERROR: Unable to locate this record (changed password recently? deleted and re-created this dns entry?)"
+	-"ERROR: Invalid update URL (2)"
 */
-
-static void update_afraid(void)
+static void update_afraid(int ssl)
 {
 	int r;
 	char *body;
@@ -1315,16 +1177,19 @@ static void update_afraid(void)
 	// +opt
 	sprintf(query, "/dynamic/update.php?%s", get_option_required("ahash"));
 
-	r = wget(0, 0, "freedns.afraid.org", query, NULL, 0, &body);
+	// +opt
+	append_addr_option(query, "&address=%s");
+
+	r = wget(ssl, 0, "freedns.afraid.org", query, NULL, 0, &body);
 	if (r == 200) {
-		if ((strstr(body, "ERROR") != NULL) || (strstr(body, "fail") != NULL)) {
-			if (strstr(body, "has not changed") != NULL) {
+		if ((strstr(body, "Updated")) && (strstr(body, "seconds"))) {
+			success();
+		}
+		else if ((strstr(body, "ERROR")) || (strstr(body, "fail"))) {
+			if (strstr(body, "has not changed")) {
 				success();
 			}
 			error(M_INVALID_AUTH);
-		}
-		else if ((strstr(body, "Updated") != NULL) && (strstr(body, "host") != NULL)) {
-			success();
 		}
 		else {
 			error(M_UNKNOWN_RESPONSE__D, -1);
@@ -1335,7 +1200,6 @@ static void update_afraid(void)
 }
 
 /*
-
 	everydns.net
 
 HTTP/1.1 200 OK
@@ -1347,7 +1211,6 @@ Content-Type: text/html; charset=utf-8
 Authentication given
 Authentication failed: Bad Username/password
 Exit code: 2
-
 */
 static void update_everydns(void)
 {
@@ -1384,9 +1247,7 @@ static void update_everydns(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
 	miniDNS.net
 	http://www.minidns.net/areg.php?opcode=ADD&host=bar.minidns.net&username=foo&password=topsecret&ip=1.2.3.4
 
@@ -1395,7 +1256,6 @@ static void update_everydns(void)
 "okay. BAR.MINIDNS.NET mapped to 1.2.3.4."
 "auth_fail. Incorrect username/password/hostname."
 "auth_fail. Host name format error."
-
 */
 static void update_minidns(void)
 {
@@ -1414,13 +1274,13 @@ static void update_minidns(void)
 
 	r = wget(0, 0, "www.minidns.net", query, NULL, 1, &body);
 	if (r == 200) {
-		if (strstr(body, "okay.") != NULL) {
+		if (strstr(body, "okay.")) {
 			success();
 		}
-		else if (strstr(body, "Host name format error") != NULL) {
+		else if (strstr(body, "Host name format error")) {
 			error(M_INVALID_HOST);
 		}
-		else if (strstr(body, "auth_fail") != NULL) {
+		else if (strstr(body, "auth_fail")) {
 			error(M_INVALID_AUTH);
 		}
 		else {
@@ -1431,9 +1291,7 @@ static void update_minidns(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
 /*
-
 	editdns.net
 	http://www.editdns.net/
 
@@ -1445,7 +1303,6 @@ static void update_minidns(void)
 
 	p = password
 	r = hostname
-
 */
 static void update_editdns(void)
 {
@@ -1459,16 +1316,16 @@ static void update_editdns(void)
 
 	r = wget(0, 1, "DynDNS.EditDNS.net", query, NULL, 0, &body);
 	if (r == 200) {
-		if (strstr(body, "Record has been updated") != NULL) {
+		if (strstr(body, "Record has been updated")) {
 			success();
 		}
-		if (strstr(body, "Record already exists") != NULL) {
+		if (strstr(body, "Record already exists")) {
 			error(M_SAME_IP);
 		}
-		else if (strstr(body, "Invalid Username") != NULL) {
+		else if (strstr(body, "Invalid Username")) {
 			error(M_INVALID_AUTH);
 		}
-		else if (strstr(body, "Invalid DynRecord") != NULL) {
+		else if (strstr(body, "Invalid DynRecord")) {
 			error(M_INVALID_HOST);
 		}
 		else {
@@ -1479,73 +1336,9 @@ static void update_editdns(void)
 	error(M_UNKNOWN_ERROR__D, r);
 }
 
-
-
 /*
-
-	HE.net IPv6 TunnelBroker
-	https://ipv4.tunnelbroker.net/ipv4_end.php?ip=$IPV4ADDR&pass=$MD5PASS&apikey=$USERID&tid=$TUNNELID
-
-	---
-
-"HTTP/1.1 200 OK
-...
-
-Good responses:
-	+OK: Tunnel endpoint updated to: XXX.XXX.XXX.XXX
-	-ERROR: This tunnel is already associated with this IP address. Please try and limit your updates to IP changes.
-Bad responses:
-	-ERROR: Tunnel not found
-	-ERROR: Invalid API key or password
-	-ERROR: IP is not in a valid format
-	-ERROR: Missing parameter(s).
-	-ERROR: IP is not ICMP pingable. Please make sure ICMP is not blocked. If you are blocking ICMP, please allow 66.220.2.74 through your firewall.
-	-ERROR: IP is blocked. (RFC1918 Private Address Space)
-
-*/
-static void update_heipv6tb(void)
-{
-	int r;
-	char *body;
-	char query[2048];
-
-	// +opt +opt +opt
-	sprintf(query, "/ipv4_end.php?pass=%s&apikey=%s&tid=%s",
-		md5_string(get_option_required("pass")),
-		get_option_required("user"),
-		get_option_required("host"));
-
-	// +opt
-	append_addr_option(query, "&ip=%s");
-
-	r = wget(1, 0, "ipv4.tunnelbroker.net", query, NULL, 0, &body);
-	if (r == 200) {
-		if ((strstr(body, "endpoint updated to") != NULL) || (strstr(body, "is already associated") != NULL)) {
-			success();
-		}
-		if (strstr(body, "Invalid API key or password") != NULL) {
-			error(M_INVALID_AUTH);
-		}
-		if (strstr(body, "Tunnel not found") != NULL) {
-			error(M_INVALID_PARAM__S, "Tunnel ID");
-		}
-		if (strstr(body, "IP is not in a valid format") != NULL) {
-			error(M_INVALID_PARAM__S, "IPv4 endpoint");
-		}
-
-		error(M_UNKNOWN_RESPONSE__D, -1);
-	}
-
-	error(M_UNKNOWN_ERROR__D, r);
-}
-
-
-
-/*
-
-	wget/custom
-
-*/
+ * wget/custom
+ */
 static void update_wget(void)
 {
 	int r;
@@ -1613,8 +1406,6 @@ static void update_wget(void)
 }
 
 // -----------------------------------------------------------------------------
-
-
 
 static void check_cookie(void)
 {
@@ -1740,15 +1531,12 @@ int main(int argc, char *argv[])
 		update_dua("dyndns", 1, NULL, NULL, 1);
 	}
 	else if (strcmp(p, "dyndns") == 0) {
-		//	test ok 9/14 -- zzz
 		update_dua("dyndns", 0, "members.dyndns.org", "/nic/update", 1);
 	}
 	else if (strcmp(p, "dyndns-static") == 0) {
-		// test ok 9/14 -- zzz
 		update_dua("statdns", 0, "members.dyndns.org", "/nic/update", 1);
 	}
 	else if (strcmp(p, "dyndns-custom") == 0) {
-		// test ok 9/14 -- zzz
 		update_dua("custom", 0, "members.dyndns.org", "/nic/update", 1);
 	}
 	else if (strcmp(p, "sdyndns") == 0) {
@@ -1761,69 +1549,57 @@ int main(int argc, char *argv[])
 		update_dua("custom", 1, "members.dyndns.org", "/nic/update", 1);
 	}
 	else if (strcmp(p, "easydns") == 0) {
-		// no account, test output ok, test 401 error parse ok 9/15 -- zzz
 		update_dua(NULL, 0, "members.easydns.com", "/dyn/dyndns.php", 1);
 	}
 	else if (strcmp(p, "seasydns") == 0) {
 		update_dua(NULL, 1, "members.easydns.com", "/dyn/dyndns.php", 1);
 	}
 	else if (strcmp(p, "3322") == 0) {
-		// no account, test output ok, test 401 error parse ok 9/16 -- zzz
 		update_dua(NULL, 0, "members.3322.org", "/dyndns/update", 1);
 	}
 	else if (strcmp(p, "3322-static") == 0) {
-		// no account, test output ok, test 401 error parse ok 9/16 -- zzz
 		update_dua("statdns", 0, "members.3322.org", "/dyndns/update", 1);
 	}
 	else if (strcmp(p, "opendns") == 0) {
-		// test ok 9/15 -- zzz
 		update_dua(NULL, 1, "updates.opendns.com", "/nic/update", 0);
 	}
 	else if (strcmp(p, "dnsomatic") == 0) {
-		// test ok 12/02 -- zzz
 		update_dua(NULL, 1, "updates.dnsomatic.com", "/nic/update", 0);
 	}
 	else if (strcmp(p, "noip") == 0) {
 		update_dua(NULL, 0, "dynupdate.no-ip.com", "/nic/update", 1);
-//		update_noip();
 	}
 	else if (strcmp(p, "namecheap") == 0) {
-		// test ok 9/14 -- zzz
 		update_namecheap();
 	}
 	else if (strcmp(p, "enom") == 0) {
-		// no account, test output ok, 12/03 -- zzz
 		update_enom();
 	}
 	else if (strcmp(p, "dnsexit") == 0) {
-		// test ok 9/14 -- zzz
 		update_dnsexit();
 	}
 	else if (strcmp(p, "ieserver") == 0) {
-		// test ok 9/14 -- zzz
 		update_ieserver();
 	}
 	else if (strcmp(p, "dyns") == 0) {
-		// no account, test output ok, test 401 error parse ok 9/15 -- zzz
 		update_dyns();
 	}
 	else if (strcmp(p, "tzo") == 0) {
-		// test ok 9/15 -- zzz
 		update_tzo();
 	}
 	else if (strcmp(p, "zoneedit") == 0) {
-		// test ok 9/16 -- zzz
 		update_zoneedit(0);
 	}
 	else if (strcmp(p, "szoneedit") == 0) {
 		update_zoneedit(1);
 	}
 	else if (strcmp(p, "afraid") == 0) {
-		// test ok 9/16 -- zzz
-		update_afraid();
+		update_afraid(0);
+	}
+	else if (strcmp(p, "safraid") == 0) {
+		update_afraid(1);
 	}
 	else if (strcmp(p, "everydns") == 0) {
-		// 07/2008 -- zzz
 		update_everydns();
 	}
 	else if (strcmp(p, "editdns") == 0) {
@@ -1831,9 +1607,6 @@ int main(int argc, char *argv[])
 	}
 	else if (strcmp(p, "minidns") == 0) {
 		update_minidns();
-	}
-	else if (strcmp(p, "heipv6tb") == 0) {
-		update_heipv6tb();
 	}
 	else if (strcmp(p, "pairnic") == 0) {
 		// pairNIC uses the same API as DynDNS
@@ -1855,14 +1628,20 @@ int main(int argc, char *argv[])
 		// ChangeIP uses the same API as DynDNS
 		update_dua("dyndns", 1, "nic.changeip.com", "/nic/update", 1);
 	}
+	else if (strcmp(p, "heipv6tb") == 0) {
+		// Tunnel Broker uses the same API as DynDNS
+		update_dua("heipv6tb", 0, "ipv4.tunnelbroker.net", "/nic/update", 1);
+	}
+	else if (strcmp(p, "sheipv6tb") == 0) {
+		// Tunnel Broker uses the same API as DynDNS
+		update_dua("heipv6tb", 1, "ipv4.tunnelbroker.net", "/nic/update", 1);
+	}
 	else if ((strcmp(p, "wget") == 0) || (strcmp(p, "custom") == 0)) {
-		// test ok 9/15 -- zzz
 		update_wget();
 	}
 	else {
 		error("Unknown service");
 	}
 
-//	free(blob);
 	return 1;
 }

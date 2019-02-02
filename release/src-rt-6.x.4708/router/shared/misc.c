@@ -364,7 +364,7 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 									}
 								}
 							}
-							fclose(f);
+							pclose(f);
 						}
                                         }
 				}
@@ -525,7 +525,7 @@ int check_wanup(char *prefix)
 						}
 					}
 				}
-				fclose(f);
+				pclose(f);
 			}
 		}
 	}
