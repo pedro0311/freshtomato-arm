@@ -2216,6 +2216,7 @@ static int init_nvram(void)
 			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
+			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			// fix WL mac`s
 			strcpy(s, nvram_safe_get("et0macaddr"));
