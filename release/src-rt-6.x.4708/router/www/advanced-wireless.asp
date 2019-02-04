@@ -23,7 +23,7 @@
 <script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script type="text/javascript">
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_antdiv,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf"); %>
 //	<% wlcountries(); %>
 
 hp = features('hpamp');
@@ -47,7 +47,6 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_dtim', quiet, 1, 255)) return 0;
 			if (!v_range('_wl'+u+'_frag', quiet, 256, 2346)) return 0;
 			if (!v_range('_wl'+u+'_rts', quiet, 0, 2347)) return 0;
-			if (!v_range(E('_wl'+u+'_txpwr'), quiet, hp ? 1 : 0, hp ? 251 : 400)) return 0;
 
 			var b = E('_wl'+u+'_wme').value == 'off';
 			E('_wl'+u+'_wme_no_ack').disabled = b;
@@ -177,15 +176,6 @@ if (wl_sunit(uidx) < 0) {
 			value: nvram['wl'+u+'_obss_coex'], hidden: !nphy },
 		{ title: 'RTS Threshold', name: 'wl'+u+'_rts', type: 'text', maxlen: 4, size: 6,
 			suffix: ' <small>(range: 0 - 2347; default: 2347)<\/small>', value: nvram['wl'+u+'_rts'] },
-		{ title: 'Receive Antenna', name: 'wl'+u+'_antdiv', type: 'select', options: [['3','Auto *'],['1','A'],['0','B']],
-			value: nvram['wl'+u+'_antdiv'] },
-		{ title: 'Transmit Antenna', name: 'wl'+u+'_txant', type: 'select', options: [['3','Auto *'],['1','A'],['0','B']],
-			value: nvram['wl'+u+'_txant'] },
-		{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 3, size: 5,
-			suffix: hp ?
-				' <small>mW (before amplification)<\/small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)<\/small>' :
-				' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 400, actual max depends on Country selected; use 0 for hardware default)<\/small>',
-				value: nvram['wl'+u+'_txpwr'] },
 		{ title: 'Transmission Rate', name: 'wl'+u+'_rate', type: 'select',
 			options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
 			value: nvram['wl'+u+'_rate'] },
