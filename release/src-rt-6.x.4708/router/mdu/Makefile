@@ -14,7 +14,7 @@ ifeq ($(FULL_OPENSSL),y)
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
 endif
 
-OBJS = mdu.o md5.o
+OBJS = mdu.o
 
 all: mdu
 	
