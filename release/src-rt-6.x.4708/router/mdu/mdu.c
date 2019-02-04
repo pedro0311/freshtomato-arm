@@ -29,7 +29,6 @@
 #include <shutils.h>
 #include <tomato_version.h>
 
-#include "md5.h"
 #include "mssl.h"
 
 
@@ -164,19 +163,6 @@ static int get_option_onoff(const char *name, int def)
 	fprintf(stderr, "--%s requires the value off/on or 0/1.\n", name);
 	exit(2);
 }
-
-static const char *md5_string(const char *value)
-{
-	static char buf[(MD5_DIGEST_BYTES + 1) * 2];
-	unsigned char digestbuf[MD5_DIGEST_BYTES];
-	int i;
-
-	md5_buffer(value, strlen(value), digestbuf);
-	for (i = 0; i < MD5_DIGEST_BYTES; i++)
-		sprintf(&buf[i * 2], "%02x", digestbuf[i]);
-	return buf;
-}
-
 
 static void save_msg(const char *s)
 {
