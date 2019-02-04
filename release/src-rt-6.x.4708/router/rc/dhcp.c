@@ -440,7 +440,6 @@ void start_dhcpc(char *prefix)
 {
 	char cmd[256];
 	char *ifname;
-	char *p;
 	int proto;
 	char tmp[100];
 
