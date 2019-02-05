@@ -235,6 +235,7 @@ int ipdown_main(int argc, char **argv)
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */
 
+	TRACE_PT("end\n");
 	return 1;
 }
 
