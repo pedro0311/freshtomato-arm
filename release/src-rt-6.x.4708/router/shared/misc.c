@@ -414,7 +414,6 @@ int check_wanup(char *prefix)
 	proto = get_wanx_proto(prefix);
 	if (proto == WP_DISABLED)
 	{
-		wan_led_off(prefix); // LED OFF?
 		return 0;
 	}
 
@@ -508,11 +507,6 @@ int check_wanup(char *prefix)
 			}
 		}
 	}
-	// WAN LED control
-	if (up)
-		wan_led(up); // LED ON!
-	else
-		wan_led_off(prefix); // LED OFF?
 
 	return up;
 }

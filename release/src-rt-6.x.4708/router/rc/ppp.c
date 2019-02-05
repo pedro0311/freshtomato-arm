@@ -232,6 +232,9 @@ int ipdown_main(int argc, char **argv)
 	//nvram_set(strcat_r(prefix, "_iface", tmp),"");	// ppp#
 	nvram_set(strcat_r(prefix, "_pppd_pid", tmp),"");
 
+	/* WAN LED control */
+	wan_led_off(prefix); /* LED OFF? */
+
 	return 1;
 }
 
