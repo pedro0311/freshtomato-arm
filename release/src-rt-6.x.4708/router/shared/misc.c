@@ -269,7 +269,7 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 
 	model = get_model();
 
-	if (model == MODEL_RTN18U || model == MODEL_RTAC68U || model == MODEL_DIR868L || model == MODEL_WS880 || model == MODEL_R6250 || model == MODEL_R6300v2) {
+	if (model == MODEL_RTN18U || model == MODEL_RTAC68U || model == MODEL_DIR868L || model == MODEL_WS880 || model == MODEL_R6250 || model == MODEL_R6300v2 || model == MODEL_EA6700) {
 		led(LED_WHITE, mode);
 	}
 
