@@ -785,10 +785,10 @@ void set_radio(int on, int unit)
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
 	if (!on) {
 		if (unit == 0) led(LED_WLAN, LED_OFF);
-		else led(LED_5G, LED_OFF);
+		if (unit == 1) led(LED_5G, LED_OFF);
 	} else {
 		if (unit == 0) led(LED_WLAN, LED_ON);
-		else led(LED_5G, LED_ON);
+		if (unit == 1) led(LED_5G, LED_ON);
 	}
 #else
 	n = on ? 0 : WL_RADIO_SW_DISABLE;
