@@ -789,9 +789,11 @@ void set_radio(int on, int unit)
 	if (!on) {
 		if (unit == 0) led(LED_WLAN, LED_OFF);
 		if (unit == 1) led(LED_5G, LED_OFF);
+		if (unit == 2) led(LED_52G, LED_OFF);
 	} else {
 		if (unit == 0) led(LED_WLAN, LED_ON);
 		if (unit == 1) led(LED_5G, LED_ON);
+		if (unit == 2) led(LED_52G, LED_ON);
 	}
 #else
 	n = on ? 0 : WL_RADIO_SW_DISABLE;
