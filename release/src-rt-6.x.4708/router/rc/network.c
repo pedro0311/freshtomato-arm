@@ -663,7 +663,7 @@ void start_wl(void)
 						if (unit == 0) {
 							led(LED_WLAN, LED_ON); /* enable WLAN LED for 2.4 GHz */
 							killall("blink", SIGKILL);
-							if (nvram_get_int("blink_wl")) /* check blink on ? */
+							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "wlan", "20", "8192");
 						}
 						else{
