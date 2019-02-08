@@ -720,8 +720,8 @@ void start_wl(void)
 							led(LED_5G, LED_ON);
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "5g", "20", "8192");
-						} else {
-							led(LED_52G, LED_ON);
+						} else if (unit == 2) {
+							led(LED_52G, LED_ON); /* enable WLAN LED for 2nd 5 GHz */
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "52g", "20", "8192");
 						}
