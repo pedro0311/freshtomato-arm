@@ -609,28 +609,19 @@ void restart_wl(void)
 	if (is_client)
 		xstart("radio", "join");
 
-	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
+	if (get_model() == MODEL_R8000) {
 		if (nvram_match("wl0_radio", "1"))
 			led(LED_WLAN, LED_ON);
 		if (nvram_match("wl1_radio", "1"))
 			led(LED_5G, LED_ON);
+		if (nvram_match("wl2_radio", "1"))
+			xstart("gpio", "disable", "16");
 		if (nvram_match("wl0_radio", "0"))
 			led(LED_WLAN, LED_OFF);
 		if (nvram_match("wl1_radio", "0"))
 			led(LED_5G, LED_OFF);
-		if (get_model() == MODEL_R8000) {
-			if (nvram_match("wl2_radio", "1"))
-				xstart( "gpio", "disable" , "16" );
-			if (nvram_match("wl2_radio", "0"))
-				xstart( "gpio", "enable" , "16" );
-		}
-	}
-
-	if (get_model() == MODEL_WS880) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
-			led(LED_WLAN, LED_ON);
-		else
-			led(LED_WLAN, LED_OFF);
+		if (nvram_match("wl2_radio", "0"))
+			xstart("gpio", "enable", "16");
 	}
 }
 
@@ -745,28 +736,19 @@ void start_wl(void)
 	if (is_client)
 		xstart("radio", "join");
 
-	if (get_model() == MODEL_WS880) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
-			led(LED_WLAN, LED_ON);
-		else
-			led(LED_WLAN, LED_OFF);
-	}
-
-	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
+	if (get_model() == MODEL_R8000) {
 		if (nvram_match("wl0_radio", "1"))
 			led(LED_WLAN, LED_ON);
 		if (nvram_match("wl1_radio", "1"))
 			led(LED_5G, LED_ON);
+		if (nvram_match("wl2_radio", "1"))
+			xstart("gpio", "disable", "16");
 		if (nvram_match("wl0_radio", "0"))
 			led(LED_WLAN, LED_OFF);
 		if (nvram_match("wl1_radio", "0"))
 			led(LED_5G, LED_OFF);
-		if (get_model() == MODEL_R8000) {
-			if (nvram_match("wl2_radio", "1"))
-				xstart( "gpio", "disable" , "16" );
-			if (nvram_match("wl2_radio", "0"))
-				xstart( "gpio", "enable" , "16" );
-		}
+		if (nvram_match("wl2_radio", "0"))
+			xstart("gpio", "enable", "16");
 	}
 }
 
