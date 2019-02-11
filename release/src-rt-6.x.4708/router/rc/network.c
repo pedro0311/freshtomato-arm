@@ -610,7 +610,7 @@ void restart_wl(void)
 		xstart("radio", "join");
 
 	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
 			led(LED_AOSS, LED_ON);
 		else
 			led(LED_AOSS, LED_OFF);
@@ -729,7 +729,7 @@ void start_wl(void)
 		xstart("radio", "join");
 
 	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
 			led(LED_AOSS, LED_ON);
 		else
 			led(LED_AOSS, LED_OFF);
