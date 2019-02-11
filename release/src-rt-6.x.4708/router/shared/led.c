@@ -59,7 +59,7 @@ int gpio_open(uint32_t mask)
 	int f = _gpio_open();
 
 	if ((f >= 0) && mask) {
-		for (i = 0; i <= 15; i++) {
+		for (i = 0; i <= 16; i++) {
 			bit = 1 << i;
 			if ((mask & bit) == bit) {
 				_gpio_ioctl(f, GPIO_IOC_RESERVE, bit, bit);
@@ -167,7 +167,7 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 	if (((p = nvram_get(name)) != NULL) && (*p)) {
 		n = strtoul(p, NULL, 0);
 		if ((n & 0xFFFFFF70) == 0) {
-			*gpio = (n & 15);
+			*gpio = (n & 16);
 			*inv = ((n & 0x80) != 0);
 			return 1;
 		}
@@ -302,7 +302,7 @@ int do_led(int which, int mode)
 	case MODEL_WZRG108:
 		b = wzrg54[which];
 		break;
-/*		
+/*
 	case MODEL_WHR2A54G54:
 		if (which != LED_DIAG) return ret;
 		b = 7;
@@ -515,7 +515,7 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_EA6400: //need to be verified
 		b = ea6400[which];
-		break;		
+		break;
 	case MODEL_EA6700:
 	case MODEL_EA6900: //need to be verified
 		b = ea6700[which];
@@ -580,7 +580,7 @@ int do_led(int which, int mode)
 	}
 
 SET:
-	if (b < 16) {
+	if (b <= 16) {
 		if (mode != LED_PROBE) {
 			gpio_write(1 << b, mode);
 
@@ -589,7 +589,7 @@ SET:
 				else c = -c;
 			}
 			else mode = !mode;
-			if (c < 16) gpio_write(1 << c, mode);
+			if (c <= 16) gpio_write(1 << c, mode);
 		}
 	}
 
