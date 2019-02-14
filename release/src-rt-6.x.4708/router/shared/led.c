@@ -48,12 +48,12 @@ static int _gpio_open()
 
 int gpio_open(uint32_t mask)
 {
-	uint32_t bit;
-	int i;
+	uint32_t bit = 0;
+	int i = 0 ;
 	int f = _gpio_open();
 
 	if ((f >= 0) && mask) {
-		for (i = 0; i <= 15; i++) {
+		for (i = TOMATO_GPIO_MIN; i <= TOMATO_GPIO_MAX; i++) {
 			bit = 1 << i;
 			if ((mask & bit) == bit) {
 				_gpio_ioctl(f, GPIO_IOC_RESERVE, bit, bit);
@@ -104,9 +104,10 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 	if (((p = nvram_get(name)) != NULL) && (*p)) {
 		n = strtoul(p, NULL, 0);
-		if ((n & 0xFFFFFF70) == 0) {
-			*gpio = (n & 15);
-			*inv = ((n & 0x80) != 0);
+		if ((n & 0xFFFFFF60) == 0) {		/* bin 0110 000 */
+			*gpio = (n & TOMATO_GPIO_MAX);	/* bin 0001 1111 */
+			*inv = ((n & 0x80) != 0);	/* bin 1000 0000 */
+			/* 0x60 + 0x1F (dec 31) + 0x80 = 0xFF */
 			return 1;
 		}
 	}
@@ -493,27 +494,31 @@ int do_led(int which, int mode)
 	}
 
 	ret = b;
-	if (b < 0) {
-		if (b == -99) b = 0;	/* -0 substitute */
-		else b = -b;
+	if (b < TOMATO_GPIO_MIN) {
+		if (b == -99)
+			b = TOMATO_GPIO_MIN;	/* -0 substitute */
+		else
+			b = -b;
 	}
 	else if (mode != LED_PROBE) {
 		mode = !mode;
 	}
 
 SET:
-	if (b <= 15) {
+	if (b <= TOMATO_GPIO_MAX) {
 		if (mode != LED_PROBE) {
 			gpio_write(1 << b, mode);
 
-			if (c < 0) {
-				if (c == -99) c = 0;
-				else c = -c;
+			if (c < TOMATO_GPIO_MIN) {
+				if (c == -99)
+					c = TOMATO_GPIO_MIN;
+				else
+					c = -c;
 			}
 			else
 				mode = !mode;
 
-			if (c <= 15) gpio_write(1 << c, mode);
+			if (c <= TOMATO_GPIO_MAX) gpio_write(1 << c, mode);
 		}
 	}
 
