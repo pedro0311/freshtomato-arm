@@ -1,4 +1,4 @@
-/* $Id: pcpserver.c,v 1.48 2018/05/08 21:28:28 nanard Exp $ */
+/* $Id: pcpserver.c,v 1.50 2019/02/10 11:58:16 nanard Exp $ */
 /* MiniUPnP project
  * Website : http://miniupnp.free.fr/
  * Author : Peter Tatrai
