@@ -40,6 +40,10 @@ extern const char *tomato_shortver;
 #define _dprintf(args...)	do { } while(0)
 #endif
 
+/* support up to 32 GPIO pins for buttons and leds */
+#define TOMATO_GPIO_MAX 31
+#define TOMATO_GPIO_MIN 0
+
 
 // misc.c
 #define	WP_DISABLED		0		// order must be synced with def in misc.c
