@@ -428,7 +428,11 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 		dev_err(&intf->dev, "rndis get ethaddr, %d\n", retval);
 		goto halt_fail_and_release;
 	}
-	memcpy(net->dev_addr, bp, ETH_ALEN);
+
+	if (bp[0] & 0x02)
+		eth_hw_addr_random(net);
+	else
+		ether_addr_copy(net->dev_addr, bp);
 
 	/* set a nonzero filter to enable data transfers */
 	memset(u.set, 0, sizeof *u.set);
@@ -626,6 +630,10 @@ static const struct usb_device_id	products [] = {
 }, {
 	/* RNDIS for tethering */
 	USB_INTERFACE_INFO(USB_CLASS_WIRELESS_CONTROLLER, 1, 3),
+	.driver_info = (unsigned long) &rndis_info,
+}, {
+	/* Novatel Verizon USB730L */
+	USB_INTERFACE_INFO(USB_CLASS_MISC, 4, 1),
 	.driver_info = (unsigned long) &rndis_info,
 },
 	{ },		// END
