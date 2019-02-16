@@ -125,9 +125,7 @@ static const applets_t applets[] = {
 #endif
 	{ "buttons",			buttons_main			},
 	{ "blink",			blink_main			},
-#ifdef CONFIG_BCMWL6
-	{ "blink_5g",			blink_5g_main			},
-#endif
+	{ "blink_br",			blink_br_main			},
 #ifdef TCONFIG_FANCTRL
 	{ "phy_tempsense",		phy_tempsense_main		},
 #endif

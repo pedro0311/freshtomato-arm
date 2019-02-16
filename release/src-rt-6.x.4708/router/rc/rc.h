@@ -444,10 +444,8 @@ extern int buttons_main(int argc, char *argv[]);
 // blink.c
 extern int blink_main(int argc, char *argv[]);
 
-#ifdef CONFIG_BCMWL6
-// blink_5g.c
-extern int blink_5g_main(int argc, char *argv[]);
-#endif
+// blink_br.c
+extern int blink_br_main(int argc, char *argv[]);
 
 #ifdef TCONFIG_FANCTRL
 // phy_tempsense.c

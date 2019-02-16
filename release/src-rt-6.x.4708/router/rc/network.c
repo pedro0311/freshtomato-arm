@@ -608,6 +608,7 @@ void restart_wl(void)
 
 	if (is_client)
 		xstart("radio", "join");
+
 	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1"))
 			led(LED_WLAN, LED_ON);
@@ -631,7 +632,6 @@ void restart_wl(void)
 		else
 			led(LED_WLAN, LED_OFF);
 	}
-
 }
 
 #ifdef CONFIG_BCMWL5
@@ -708,10 +708,10 @@ void start_wl(void)
 
 #ifdef CONFIG_BCMWL5
 					eval("wlconf", ifname, "start"); /* start wl iface */
-					// Enable LED if wireless interface is enabled, and turn on blink (traffic "control" of LED) if enabled
+					/* Enable WLAN LED if wireless interface is enabled, and turn on blink (traffic "control" of LED) if enabled */
 					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
 						if (unit == 0) {
-							led(LED_WLAN, LED_ON);
+							led(LED_WLAN, LED_ON); /* enable WLAN LED for 2.4 GHz */
 							killall("blink", SIGKILL);
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "wlan", "20", "8192");

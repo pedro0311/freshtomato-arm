@@ -269,26 +269,8 @@ int wan_led(int *mode) // mode: 0 - OFF, 1 - ON
 
 	model = get_model();
 
-	if (nvram_match("boardrev", "0x11")) { // Ovislink 1600GL - led "connected" on
-		led(LED_WHITE,mode);
-	}
-	if (nvram_match("boardtype", "0x052b") &&  nvram_match("boardrev", "0x1204")) { //rt-n15u wan led on
-		led(LED_WHITE,mode);
-	}
-	if (model == MODEL_RTN18U || model == MODEL_RTAC68U) {
-		led(LED_WHITE,mode);
-	}
-	if (model == MODEL_DIR868L) {
-		led(LED_WHITE,mode);
-	}
-	if (model == MODEL_WS880) {
-		led(LED_WHITE,mode);
-	}
-	if (model == MODEL_R6250) {
-		led(LED_WHITE,mode);
-	}
-	if (model == MODEL_R6300v2) {
-		led(LED_WHITE,mode);
+	if (model == MODEL_RTN18U || model == MODEL_RTAC68U || model == MODEL_DIR868L || model == MODEL_WS880 || model == MODEL_R6250 || model == MODEL_R6300v2 || model == MODEL_EA6700) {
+		led(LED_WHITE, mode);
 	}
 	if (model == MODEL_R8000) {
 		led(LED_WHITE,mode);
@@ -435,7 +417,6 @@ int check_wanup(char *prefix)
 	proto = get_wanx_proto(prefix);
 	if (proto == WP_DISABLED)
 	{
-		wan_led_off(prefix); // LED OFF?
 		return 0;
 	}
 
@@ -529,11 +510,6 @@ int check_wanup(char *prefix)
 			}
 		}
 	}
-	// WAN LED control
-	if (up)
-		wan_led(up); // LED ON!
-	else
-		wan_led_off(prefix); // LED OFF?
 
 	return up;
 }
@@ -810,22 +786,16 @@ void set_radio(int on, int unit)
 #if WL_BSS_INFO_VERSION >= 108
 	n = on ? (WL_RADIO_SW_DISABLE << 16) : ((WL_RADIO_SW_DISABLE << 16) | 1);
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
-	if (get_model() == MODEL_WS880) {
-		led(LED_5G, (on) ? LED_ON : LED_OFF);
-	}
 	if (!on) {
 		if (unit == 0) led(LED_WLAN, LED_OFF);
-		else led(LED_5G, LED_OFF);
+		if (unit == 1) led(LED_5G, LED_OFF);
 	} else {
 		if (unit == 0) led(LED_WLAN, LED_ON);
-		else led(LED_5G, LED_ON);
+		if (unit == 1) led(LED_5G, LED_ON);
 	}
 #else
 	n = on ? 0 : WL_RADIO_SW_DISABLE;
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
-	if (get_model() == MODEL_WS880) {
-		led(LED_WLAN, (on) ? LED_ON : LED_OFF);
-	}
 	if (!on) {
 		led(LED_WLAN, LED_OFF);
 	} else {

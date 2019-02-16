@@ -400,6 +400,10 @@ int dhcpc_release_main(int argc, char **argv)
 #ifdef TCONFIG_MULTIWAN
 	mwan_load_balance();
 #endif
+
+	/* WAN LED control */
+	wan_led_off(prefix); /* LED OFF? */
+
 	TRACE_PT("end\n");
 	return 0;
 }
@@ -440,7 +444,6 @@ void start_dhcpc(char *prefix)
 {
 	char cmd[256];
 	char *ifname;
-	char *p;
 	int proto;
 	char tmp[100];
 
@@ -509,6 +512,9 @@ void stop_dhcpc(char *prefix)
 	memset(renew_file, 0, 256);
 	sprintf(renew_file, "/var/lib/misc/%s_dhcpc.renewing", prefix);
 	unlink(renew_file);
+
+	/* WAN LED control */
+	wan_led_off(prefix); /* LED OFF? */
 
 	TRACE_PT("end\n");
 }
