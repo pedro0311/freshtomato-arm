@@ -47,23 +47,23 @@
 typedef struct _wlif_name_desc {
 	char		*name;		/* wlif name */
 	bool		wds;		/* wds interface */
-	bool		subunit;		/* subunit existance */
+	bool		subunit;	/* subunit existance */
 } wlif_name_desc_t;
 
 wlif_name_desc_t wlif_name_array[] = {
 /*	  name	wds		subunit */
 /* PARIMARY */
 #if defined(linux)
-	{ "eth",	0,		0}, /* primary */
+	{"eth", 0, 0},	/* primary */
 #else
-	{ "wl",	0,		0}, /* primary */
+	{"wl", 0, 0},	/* primary */
 #endif
 
 /* MBSS */
-	{ "wl",	0,		1}, /* mbss */
+	{"wl", 0, 1},	/* mbss */
 
 /* WDS */
-	{ "wds",	1,		1} /* wds */
+	{"wds", 1, 1}	/* wds */
 };
 
 /*
@@ -193,7 +193,7 @@ get_real_mac(char *mac, int maclen)
 	if (ptr == NULL)
 		return -1;
 
-	ether_atoe(ptr, mac);
+	ether_atoe(ptr, (unsigned char *) mac);
 	return 0;
 }
 
@@ -210,13 +210,13 @@ get_wlmacstr_by_unit(char *unit)
 	if (!macaddr)
 		return NULL;
 
-	return macaddr;
+	return (unsigned char *) macaddr;
 }
 
 int
 get_lan_mac(unsigned char *mac)
 {
-	unsigned char *lanmac_str = nvram_get("lan_hwaddr");
+	char *lanmac_str = nvram_get("lan_hwaddr");
 
 	if (mac)
 		memset(mac, 0, 6);
@@ -270,7 +270,8 @@ wl_wlif_is_psta(char *ifname)
 	if (wl_probe(ifname) < 0)
 		return FALSE;
 
-	wl_iovar_getint(ifname, "psta_if", &psta);
+	if (wl_iovar_getint(ifname, "psta_if", &psta) < 0)
+		return FALSE;
 
 	return psta ? TRUE : FALSE;
 }
@@ -284,9 +285,7 @@ wl_wlif_is_dwds(char *ifname)
 	if (wl_probe(ifname) < 0)
 		return FALSE;
 
-	wl_iovar_getint(ifname, "wds_type", &wds_type);
-
-	return (wds_type == WL_WDSIFTYPE_DWDS);
+	return (!wl_iovar_getint(ifname, "wds_type", &wds_type) && wds_type == WL_WDSIFTYPE_DWDS);
 #else
 	return FALSE;
 #endif
