@@ -326,9 +326,9 @@ int wan_led_off(char *prefix)	// off WAN LED only if no other WAN active
 						up = 0;
 					if (proto == WP_STATIC) {       // check port state for static
 
-						int *a;         /* port number: 0/1/2/3/4 */
-						char b[16];     /* port state: DOWN/SPEED */
-						int *c;         /* port vlan: 1/2/3/4/etc */
+						int a; 		/* port number: 0/1/2/3/4 */
+						char b[16]; 	/* port state: DOWN/SPEED */
+						int c; 		/* port vlan: 1/2/3/4/etc */
 						char d[4];
 						FILE *f;
 
@@ -484,9 +484,9 @@ int check_wanup(char *prefix)
 			Port 8:   DOWN enabled stp: none vlan: 1 jumbo: off mac: 00:00:00:00:00:00
 			*/
 
-			int *a;		/* port number: 0/1/2/3/4 */
+			int a;		/* port number: 0/1/2/3/4 */
 			char b[16];	/* port state: DOWN/SPEED */
-			int *c;		/* port vlan: 1/2/3/4/etc */
+			int c;		/* port vlan: 1/2/3/4/etc */
 			char d[4];
 			FILE *f;
 
