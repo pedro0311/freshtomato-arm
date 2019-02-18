@@ -803,8 +803,6 @@ static void __exit cdc_exit(void)
 }
 module_exit(cdc_exit);
 
-module_usb_driver(cdc_driver);
-
 MODULE_AUTHOR("David Brownell");
 MODULE_DESCRIPTION("USB CDC Ethernet devices");
 MODULE_LICENSE("GPL");
