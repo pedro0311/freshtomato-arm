@@ -276,12 +276,10 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    model == MODEL_WS880 ||
 	    model == MODEL_R6250 ||
 	    model == MODEL_R6300v2 ||
-	    model == MODEL_EA6700)
+	    model == MODEL_EA6700 ||
+	    model == MODEL_R8000)
 	{
 		led(LED_WHITE, mode);
-	}
-	if (model == MODEL_R8000) {
-		led(LED_WHITE,mode);
 	}
 
 	return mode;
