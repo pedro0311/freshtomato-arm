@@ -271,6 +271,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 
 	/* check router model according to shared/led.c table, LED WHITE */
 	if (model == MODEL_RTN18U ||
+	    model == MODEL_R7000 ||
 	    model == MODEL_RTAC68U ||
 	    model == MODEL_DIR868L ||
 	    model == MODEL_WS880 ||
