@@ -173,7 +173,7 @@ int do_led(int which, int mode)
 #endif
 #ifdef CONFIG_BCM7
 	static int ac3200[]	= { 255,  255,   255,  255,  255,   14,  255,  255,  255,  255,  255 };
-	static int r8000[]	= {  13,  255,   255,  255,   16,  -14,  255,   18,   17,   12,   16 };
+	static int r8000[]	= {  13,  255,   255,  255,   16,   14,  255,   18,   17,   12,   16 };
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
