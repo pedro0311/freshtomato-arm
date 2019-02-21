@@ -65,9 +65,6 @@ void wo_backup(char *url)
 {
 	char tmp[64];
 	char msg[64];
-//	static char *args[] = {
-//		NVRAMCMD, "save"
-//	};
 
 	char *args[3];
 	args[0] = NVRAMCMD;
@@ -80,7 +77,7 @@ void wo_backup(char *url)
 	sprintf(msg, ">%s.msg", tmp);
 
 	if (_eval(args, msg, 0, NULL) == 0) {
-		eval(args, msg);
+		eval((char * const) args, msg);
 		send_header(200, NULL, mime_binary, 0);
 		do_file(tmp);
 		unlink(tmp);
