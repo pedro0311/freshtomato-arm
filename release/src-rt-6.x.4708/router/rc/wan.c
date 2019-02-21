@@ -1032,7 +1032,7 @@ void start_wan_if(int mode, char *prefix)
 	/* Get current WAN hardware address */
 	strlcpy(ifr.ifr_name, wan_ifname, IFNAMSIZ);
 	if (ioctl(sd, SIOCGIFHWADDR, &ifr) == 0) {
-		nvram_set(strcat_r(prefix, "_hwaddr", tmp), ether_etoa(ifr.ifr_hwaddr.sa_data, buf));
+		nvram_set(strcat_r(prefix, "_hwaddr", tmp), ether_etoa((const unsigned char *) ifr.ifr_hwaddr.sa_data, buf));
 	}
 
 	/* Set initial QoS mode again now that WAN port is ready. */

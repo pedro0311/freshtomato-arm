@@ -21,7 +21,7 @@ void create_passwd(void)
 
 	strcpy(salt, "$1$");
 	f_read("/dev/urandom", s, 6);
-	base64_encode(s, salt + 3, 6);
+	base64_encode((unsigned char *) s, salt + 3, 6);
 	salt[3 + 8] = 0;
 	p = salt;
 	while (*p) {

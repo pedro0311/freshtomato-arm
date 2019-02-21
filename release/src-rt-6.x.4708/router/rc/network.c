@@ -937,8 +937,7 @@ void start_lan(void)
 		strcpy(tmp,"lan");
 		strcat(tmp,bridge);
 		strcat(tmp, "_hwaddr");
-//		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) nvram_set("lan_hwaddr", ether_etoa(ifr.ifr_hwaddr.sa_data, eabuf));
-		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) nvram_set(tmp, ether_etoa(ifr.ifr_hwaddr.sa_data, eabuf));
+		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) nvram_set(tmp, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
 
 		// Set initial QoS mode for LAN ports
 		set_et_qos_mode(sfd);

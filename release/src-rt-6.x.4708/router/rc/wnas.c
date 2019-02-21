@@ -68,6 +68,7 @@ int wl_security_on(void) {
 	return foreach_wif(1, NULL, security_on);
 }
 
+#ifndef CONFIG_BCMWL5
 static int nas_starter(int idx, int unit, int subunit, void *param) {
 	char unit_str[] = "000000";
 	char lanN_ifname[] = "lanXX_ifname";
@@ -103,6 +104,7 @@ static int nas_starter(int idx, int unit, int subunit, void *param) {
 	}
 	return 0;
 }
+#endif
 
 void start_nas(void)
 {
