@@ -245,7 +245,7 @@ static auth_t auth_check(const char *authorization)
 
 	if ((authorization != NULL) && (strncasecmp(authorization, "Basic ", 6) == 0)) {
 		if (base64_decoded_len(strlen(authorization + 6)) <= sizeof(buf)) {
-			len = base64_decode(authorization + 6, buf, strlen(authorization) - 6);
+			len = base64_decode(authorization + 6, (unsigned char *) buf, strlen(authorization) - 6);
 			buf[len] = 0;
 			if ((pass = strchr(buf, ':')) != NULL) {
 				*pass++ = 0;
@@ -292,7 +292,7 @@ static int check_wlaccess(void)
 		if (get_client_info(mac, ifname)) {
 			memset(&sti, 0, sizeof(sti));
 			strcpy((char *)&sti, "sta_info");	// sta_info0<mac>
-			ether_atoe(mac, (char *)&sti + 9);
+			ether_atoe(mac, (unsigned char *)&sti + 9);
 			if (foreach_wif(1, &sti, check_wif)) {
 				if (nvram_match("debug_logwlac", "1")) {
 					syslog(LOG_WARNING, "Wireless access from %s blocked.", mac);
@@ -1073,7 +1073,8 @@ int main(int argc, char **argv)
 			n = sizeof(sai);
 			_dprintf("%s: calling accept(listener=%d)...\n", __FUNCTION__, listeners.listener[i].listenfd);
 			connfd = accept(listeners.listener[i].listenfd,
-				(struct sockaddr *)&sai, &n);
+				(struct sockaddr *)&sai, (socklen_t *) &n);
+
 			if (connfd < 0) {
 				_dprintf("accept: %m");
 				continue;
