@@ -51,12 +51,9 @@ restore_defaults(void)
 {
 	struct nvram_tuple *t;
 	int restore_defaults;
-	//char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
-	//int unit;
-	//int model;
 
 	/* Restore defaults if told to or OS has changed */
-	if(!restore_defaults)
+	if (!restore_defaults)
 		restore_defaults = !nvram_match("restore_defaults", "0");
 
 	if (restore_defaults)

@@ -39,9 +39,9 @@
 #include <tomato_profile.h>
 #include <tomato_config.h>
 
-//	#define DEBUG_IPTFILE
-//	#define DEBUG_RCTEST
-//	#define DEBUG_NOISY
+// #define DEBUG_IPTFILE
+// #define DEBUG_RCTEST
+// #define DEBUG_NOISY
 
 #ifdef DEBUG_NOISY
 #define TRACE_PT(args...) do { _dprintf("[%d:%s +%ld] ", getpid(), __FUNCTION__, get_uptime()); _dprintf(args); } while(0)
@@ -52,7 +52,7 @@
 #define MOUNT_ROOT	"/tmp/mnt"
 #define PROC_SCSI_ROOT	"/proc/scsi"
 #define USB_STORAGE	"usb-storage"
- 
+
 #define BOOT		0
 #define REDIAL		1
 #define CONNECTING	2
@@ -71,24 +71,9 @@
 #define RELEASE_IP		0x02
 #define	GET_IP_ERROR		0x03
 #define RELEASE_WAN_CONTROL	0x04
-#define USB_DATA_ACCESS		0x05	//For WRTSL54GS
-#define USB_CONNECT		0x06	//For WRTSL54GS
-#define USB_DISCONNECT		0x07	//For WRTSL54GS
-
-/*
-// ?
-#define SET_LED(val) \
-{ \
-	int filep; \
-	if(check_hw_type() == BCM4704_BCM5325F_CHIP) { \
-		if ((filep = open("/dev/ctmisc", O_RDWR,0))) \
-		{ \
-			ioctl(filep, val, 0); \
-			close(filep); \
-		} \
-	} \
-}
-*/
+#define USB_DATA_ACCESS		0x05	/* For WRTSL54GS */
+#define USB_CONNECT		0x06	/* For WRTSL54GS */
+#define USB_DISCONNECT		0x07	/* For WRTSL54GS */
 
 #define SET_LED(val)	do { } while(0)
 
@@ -104,13 +89,13 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define IPT_ANY_AF	(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
 
-// init.c
+/* init.c */
 extern int init_main(int argc, char *argv[]);
 extern int reboothalt_main(int argc, char *argv[]);
 extern int console_main(int argc, char *argv[]);
 extern void restore_defaults_module(char *prefix);
 
-// interface.c
+/* interface.c */
 extern int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr);
 #define ifconfig(name, flags, addr, netmask) _ifconfig(name, flags, addr, netmask, NULL)
 extern int route_add(char *name, int metric, char *dst, char *gateway, char *genmask);
@@ -124,10 +109,10 @@ extern void config_loopback(void);
 extern int ipv6_mapaddr4(struct in6_addr *addr6, int ip6len, struct in_addr *addr4, int ip4mask);
 #endif
 
-// listen.c
+/* listen.c */
 extern int listen_main(int argc, char **argv);
 
-// ppp.c
+/* ppp.c */
 extern int ipup_main(int argc, char **argv);
 extern int ipdown_main(int argc, char **argv);
 extern int pppevent_main(int argc, char **argv);
@@ -136,15 +121,15 @@ extern int ip6up_main(int argc, char **argv);
 extern int ip6down_main(int argc, char **argv);
 #endif
 
-// rc.c
+/* rc.c */
 //extern void restore_defaults(void);
 
-// redial.c
+/* redial.c */
 extern int start_redial(char *prefix);
 extern int stop_redial(char *prefix);
 extern int redial_main(int argc, char **argv);
 
-// wan.c
+/* wan.c */
 extern void start_pptp(char *prefix);
 extern void stop_pptp(char *prefix);
 extern void start_pppoe(int, char *prefix);
@@ -164,7 +149,8 @@ extern void stop_wan();
 extern void force_to_dial(char *prefix);
 extern void do_wan_routes(char *ifname, int metric, int add, char *prefix);
 extern void preset_wan(char *ifname, char *gw, char *netmask, char *prefix);
-// mwan.c
+
+/* mwan.c */
 extern void get_wan_prefix(int iWan_unit, char *sPrefix);
 extern void get_wan_info(char *sPrefix);
 extern int get_wan_unit(char *sPrefix);
@@ -178,7 +164,7 @@ extern void mwan_state_files(void);
 // pbr.c
 extern void ipt_routerpolicy(void);
 
-// network.c
+/* network.c */
 extern void set_host_domain_name(void);
 extern void set_et_qos_mode(int sfd);
 extern void start_lan(void);
@@ -202,7 +188,7 @@ extern void accept_ra_reset(const char *ifname);
 #define accept_ra_reset(ifname) do {} while (0)
 #endif
 
-// dhcpc.c
+/* dhcpc.c */
 extern int dhcpc_event_main(int argc, char **argv);
 extern int dhcpc_release_main(int argc, char **argv);
 extern int dhcpc_renew_main(int argc, char **argv);
@@ -214,7 +200,7 @@ extern void start_dhcp6c(void);
 extern void stop_dhcp6c(void);
 #endif
 
-// services.c
+/* services.c */
 extern void start_cron(void);
 extern void stop_cron(void);
 extern void start_adblock(int update);
@@ -244,7 +230,7 @@ extern void stop_service(const char *name);
 extern void restart_service(const char *name);
 extern void start_services(void);
 extern void stop_services(void);
-// !!TB - USB and NAS
+/* !!TB - USB and NAS */
 #ifdef TCONFIG_USB
 extern void restart_nas_services(int stop, int start);
 #else
@@ -263,8 +249,7 @@ extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif
 
-// !!TB - USB Support
-// usb.c
+/* usb.c */
 #ifdef TCONFIG_USB
 extern void start_usb(void);
 extern void stop_usb(void);
@@ -279,14 +264,14 @@ extern void remove_storage_main(int shutdn);
 #define remove_storage_main(args...) do { } while(0)
 #endif
 
-// wnas.c
+/* wnas.c */
 extern int wds_enable(void);
 extern int wl_security_on(void);
 extern void start_nas(void);
 extern void stop_nas(void);
 extern void notify_nas(const char *ifname);
 
-// firewall.c
+/* firewall.c */
 extern wanface_list_t wanfaces;
 extern wanface_list_t wan2faces;
 #ifdef TCONFIG_MULTIWAN
@@ -313,14 +298,14 @@ extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
 #if defined(TCONFIG_IPV6) && defined(LINUX26)
 #define ip46t_write(args...) do { ipt_write(args); ip6t_write(args); } while(0)
-//#define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); if (do_ip6t) ip6t_write(args); } while(0)
+// #define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); if (do_ip6t) ip6t_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); if (do_ip46t & IPT_V6) ip6t_write(args); } while(0)
 #define ip46t_cond_write(do_ip6t, args...) do { if (do_ip6t) ip6t_write(args); else ipt_write(args); } while(0)
 #define ipt_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); if (do_ip46t & IPT_V6) ip6t_write(args); } while(0)
 #define ipt_cond_write(do_ip6t, args...) do { if (do_ip6t) ip6t_write(args); else ipt_write(args); } while(0)
 #else
 #define ip46t_write ipt_write
-//#define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); } while(0)
+// #define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
 #define ip46t_cond_write(do_ip6t, args...) ipt_write(args)
 #define ipt_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
@@ -342,7 +327,7 @@ extern void allow_fastnat(const char *service, int allow);
 extern void try_enabling_fastnat(void);
 #endif
 
-// forward.c
+/* forward.c */
 extern void ipt_forward(ipt_table_t table);
 extern void ipt_triggered(ipt_table_t table);
 
@@ -350,17 +335,17 @@ extern void ipt_triggered(ipt_table_t table);
 extern void ip6t_forward(void);
 #endif
 
-// restrict.c
+/* restrict.c */
 extern int rcheck_main(int argc, char *argv[]);
 extern void ipt_restrictions(void);
 extern void sched_restrictions(void);
 
-// qos.c
+/* qos.c */
 extern void ipt_qos(void);
 extern void start_qos(char *prefix);
 extern void stop_qos(char *prefix);
 
-// cifs.c
+/* cifs.c */
 #ifdef TCONFIG_CIFS
 extern void start_cifs(void);
 extern void stop_cifs(void);
@@ -370,7 +355,7 @@ static inline void start_cifs(void) { };
 static inline void stop_cifs(void) { };
 #endif
 
-// jffs2.c
+/* jffs2.c */
 #ifdef TCONFIG_JFFS2
 extern void init_jffs2(void);
 extern void start_jffs2(void);
@@ -381,7 +366,7 @@ static inline void start_jffs2(void) { };
 static inline void stop_jffs2(void) { };
 #endif
 
-// ddns.c
+/* ddns.c */
 #ifdef TCONFIG_DDNS
 extern void start_ddns(void);
 extern void stop_ddns(void);
@@ -391,7 +376,7 @@ static inline void start_ddns(void) { };
 static inline void stop_ddns(void) { };
 #endif
 
-// misc.c
+/* misc.c */
 extern void usage_exit(const char *cmd, const char *help) __attribute__ ((noreturn));
 #define modprobe(mod, args...) ({ char *argv[] = { "modprobe", "-s", mod, ## args, NULL }; _eval(argv, NULL, 0, NULL); })
 extern int modprobe_r(const char *mod);
@@ -418,14 +403,14 @@ extern long fappend_file(const char *path, const char *fname);
 extern char *conv_mac(char *mac, char *buf);
 extern char *conv_mac2(char *mac, char *buf);
 
-// telssh.c
+/* telssh.c */
 extern void create_passwd(void);
 extern void start_sshd(void);
 extern void stop_sshd(void);
 extern void start_telnetd(void);
 extern void stop_telnetd(void);
 
-// mtd.c
+/* mtd.c */
 extern int mtd_erase(const char *mtdname);
 extern int mtd_unlock(const char *mtdname);
 #ifdef TCONFIG_BCMARM
@@ -438,33 +423,33 @@ extern int mtd_write_main(int argc, char *argv[]);
 extern int mtd_unlock_erase_main(int argc, char *argv[]);
 #endif
 
-// buttons.c
+/* buttons.c */
 extern int buttons_main(int argc, char *argv[]);
 
-// blink.c
+/* blink.c */
 extern int blink_main(int argc, char *argv[]);
 
-// blink_br.c
+/* blink_br.c */
 extern int blink_br_main(int argc, char *argv[]);
 
+/* phy_tempsense.c */
 #ifdef TCONFIG_FANCTRL
-// phy_tempsense.c
 extern int phy_tempsense_main(int argc, char *argv[]);
 #endif
 
-// led.c
+/* led.c */
 extern int led_main(int argc, char *argv[]);
 
-// gpio.c
+/* gpio.c */
 extern int gpio_main(int argc, char *argv[]);
 
-// sched.c
+/* sched.c */
 extern int sched_main(int argc, char *argv[]);
 extern void start_sched(void);
 extern void stop_sched(void);
 
+/* pptp_client.c */
 #ifdef TCONFIG_PPTPD
-// pptp_client.c
 #define PPTP_CLIENT_TABLE_ID 5
 #define PPTP_CLIENT_TABLE_NAME "PPTP"
 extern void start_pptp_client(void);
@@ -473,16 +458,18 @@ extern int write_pptpvpn_resolv(FILE*);
 extern void clear_pptp_route(void);
 extern int pptpc_ipup_main(int argc, char **argv);
 extern int pptpc_ipdown_main(int argc, char **argv);
+extern void get_cidr(char *ipaddr, char *netmask, char *cidr);
 #else
 #define write_pptpvpn_resolv(f) (0)
 #endif
 
-// nvram
+/* nvram */
 extern int nvram_file2nvram(const char *name, const char *filename);
 extern int nvram_nvram2file(const char *name, const char *filename);
 
+
 #ifdef TOMATO_SL
-// usb.c
+/* usb.c */
 extern void hotplug_usb(void);
 extern int usbevent_main(int argc, char *argv[]);
 extern void start_usbevent(void);
@@ -496,49 +483,50 @@ extern int umountx_main(int argc, char *argv[]);
 void start_test_1(void);
 void stop_test_1(void);
 
-// samba.c
+/* samba.c */
 extern void start_smbd(void);
 extern void stop_smbd(void);
 #endif
 
-// transmission.c
+
+/* transmission.c */
 #ifdef TCONFIG_BT
 extern void start_bittorrent();
 extern void stop_bittorrent();
 #endif
 
-// nfs.c
+/* nfs.c */
 #ifdef TCONFIG_NFS
 extern void start_nfs();
 extern void stop_nfs();
 #endif
 
-// snmp.c
+/* snmp.c */
 #ifdef TCONFIG_SNMP
 extern void start_snmp();
 extern void stop_snmp();
 #endif
 
-// tor.c
+/* tor.c */
 #ifdef TCONFIG_TOR
 extern void start_tor();
 extern void stop_tor();
 #endif
 
-// apcupsd.c
+/* apcupsd.c */
 #ifdef TCONFIG_UPS
 extern void start_ups();
 extern void stop_ups();
 #endif
 
-// pptp.c
+/* pptp.c */
 #ifdef TCONFIG_PPTPD
 extern void start_pptpd(void);
 extern void stop_pptpd(void);
 extern void write_pptpd_dnsmasq_config(FILE* f);
 #endif
 
-// vpn.c
+/* vpn.c */
 #ifdef TCONFIG_OPENVPN
 extern void start_vpnclient(int clientNum);
 extern void stop_vpnclient(int clientNum);
@@ -550,20 +538,12 @@ extern void run_vpn_firewall_scripts();
 extern void write_vpn_dnsmasq_config(FILE*);
 extern int write_vpn_resolv(FILE*);
 #else
-/*
-static inline void start_vpnclient(int clientNum) {}
-static inline void stop_vpnclient(int clientNum) {}
-static inline void start_vpnserver(int serverNum) {}
-static inline void stop_vpnserver(int serverNum) {}
-static inline void run_vpn_firewall_scripts() {}
-static inline void write_vpn_dnsmasq_config(FILE*) {}
-*/
 static inline void start_vpn_eas() { }
 static inline void stop_vpn_eas() { }
 #define write_vpn_resolv(f) (0)
 #endif
 
-// tinc.c
+/* tinc.c */
 #ifdef TCONFIG_TINC
 extern void start_tinc();
 extern void start_tinc_wanup();
@@ -571,23 +551,23 @@ extern void stop_tinc();
 extern void run_tinc_firewall_script();
 #endif
 
-// new_qoslimit.c
+/* new_qoslimit.c */
 extern void ipt_qoslimit(int chain);
 extern void new_qoslimit_start(void);
 extern void new_qoslimit_stop(void);
 
-// arpbind.c
+/* arpbind.c */
 extern void start_arpbind(void);
 extern void stop_arpbind(void);
 
+/* nocat.c */
 #ifdef TCONFIG_NOCAT
-// nocat.c 
-extern void start_nocat(); 
-extern void stop_nocat(); 
-extern void reset_nocat(); 
+extern void start_nocat();
+extern void stop_nocat();
+extern void reset_nocat();
 #endif
 
-// nginx.c
+/* nginx.c */
 #ifdef TCONFIG_NGINX
 extern void nginx_write(const char *format, ...);
 extern void start_nginx();
@@ -598,10 +578,8 @@ extern void start_mysql();
 extern void stop_mysql();
 #endif
 
-// tomatoanon.c
-extern void start_tomatoanon(); 
-extern void stop_tomatoanon(); 
+/* tomatoanon.c */
+extern void start_tomatoanon();
+extern void stop_tomatoanon();
 
 #endif
-
-

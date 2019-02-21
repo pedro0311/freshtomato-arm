@@ -532,7 +532,7 @@ int dhcp6c_state_main(int argc, char **argv)
 	if (!wait_action_idle(10)) return 1;
 
 	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
-	if (!nvram_match("ipv6_rtr_addr", lanif)) {
+	if (!nvram_match("ipv6_rtr_addr", (char *) lanif)) {
 		nvram_set("ipv6_rtr_addr", lanif);
 		/* extract prefix from configured IPv6 address */
 		if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {

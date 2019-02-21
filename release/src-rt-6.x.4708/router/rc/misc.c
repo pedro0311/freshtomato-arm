@@ -156,7 +156,7 @@ static int endswith_filter(const struct dirent *entry)
 /* If the filename has an '&' character in it, don't wait at all. */
 void run_userfile(char *folder, char *extension, const char *arg1, int wtime)
 {
-	unsigned char buf[PATH_MAX + 1];
+	char buf[PATH_MAX + 1];
 	char *argv[] = { buf, (char *)arg1, NULL };
 	struct dirent **namelist;
 	int i, n;
@@ -280,7 +280,7 @@ void run_nvscript(const char *nv, const char *arg1, int wtime)
 
 static void write_ct_timeout(const char *type, const char *name, unsigned int val)
 {
-	unsigned char buf[128];
+	char buf[128];
 	char v[16];
 
 	sprintf(buf, "/proc/sys/net/ipv4/netfilter/ip_conntrack_%s_timeout%s%s",
@@ -300,13 +300,21 @@ static void write_ct_timeout(const char *type, const char *name, unsigned int va
 
 static unsigned int read_ct_timeout(const char *type, const char *name)
 {
-	unsigned char buf[128];
+	char buf[128];
 	unsigned int val = 0;
 	char v[16];
 
 	sprintf(buf, "/proc/sys/net/ipv4/netfilter/ip_conntrack_%s_timeout%s%s",
 		type, (name && name[0]) ? "_" : "", name ? name : "");
 	if (f_read_string(buf, v, sizeof(v)) > 0)
+/*
+misc.c: In function ‘read_ct_timeout’:
+misc.c:308:3: warning: pointer targets in passing argument 1 of ‘sprintf’ differ in signedness
+/home/pedro/freshtomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../arm-brcm-linux-uclibcgnueabi/sysroot/usr/include/stdio.h:332:12: note: 
+expected ‘char * __restrict__’ but argument is of type ‘unsigned char *’
+misc.c:309:2: warning: pointer targets in passing argument 1 of ‘f_read_string’ differ in signedness
+/home/pedro/freshtomato-arm/release/src-rt-6.x.4708/router/shared/shared.h:338:12: note: expected ‘const char *’ but argument is of type ‘unsigned char *
+*/
 		val = atoi(v);
 
 	return val;
