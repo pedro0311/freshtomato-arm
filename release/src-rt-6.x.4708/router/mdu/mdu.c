@@ -344,6 +344,13 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 	char a[512];
 	char b[512];
 	int n;
+	char *httpv;
+
+	if (strncmp(host, "updates.opendns.com", 19) == 0) {
+		httpv = "HTTP/1.1";
+	} else {
+		httpv = "HTTP/1.0";
+	}
 
 	if (!static_host) host = get_option_or("server", host);
 
@@ -352,10 +359,10 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 	if (n > (BLOB_SIZE - 512)) return -1;	// just don't go over 512 below...
 
 	sprintf(blob,
-		"GET %s HTTP/1.0\r\n"
+		"GET %s %s\r\n"
 		"Host: %s\r\n"
 		"User-Agent: " AGENT "\r\n",
-		get, host);
+		get, httpv, host);
 	if (auth) {
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
 		n = base64_encode((unsigned char *) a, b, strlen(a));
