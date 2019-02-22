@@ -59,6 +59,55 @@ wl_probe(char *name)
 
 #ifdef __CONFIG_DHDAP__
 #include <dhdioctl.h>
+int
+dhd_ioctl(char *name, int cmd, void *buf, int len)
+{
+	struct ifreq ifr;
+	dhd_ioctl_t ioc;
+	int ret = 0;
+	int s;
+	char buffer[WLC_IOCTL_SMLEN];
+
+	/* open socket to kernel */
+	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+		perror("socket");
+		return -1;
+	}
+
+	/* do it */
+	if (cmd == WLC_SET_VAR) {
+		cmd = DHD_SET_VAR;
+	} else if (cmd == WLC_GET_VAR) {
+		cmd = DHD_GET_VAR;
+	}
+
+	ioc.cmd = cmd;
+	ioc.buf = buf;
+	ioc.len = len;
+	ioc.set = FALSE;
+	ioc.driver = DHD_IOCTL_MAGIC;
+	ioc.used = 0;
+	ioc.needed = 0;
+
+	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name) - 1);
+	ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
+
+	ifr.ifr_data = (caddr_t) &ioc;
+	if ((ret = ioctl(s, SIOCDEVPRIVATE, &ifr)) < 0)
+		if (cmd != WLC_GET_MAGIC && cmd != WLC_GET_BSSID) {
+			if ((cmd == WLC_GET_VAR) || (cmd == WLC_SET_VAR)) {
+				snprintf(buffer, sizeof(buffer), "%s: WLC_%s_VAR(%s)", name,
+				         cmd == WLC_GET_VAR ? "GET" : "SET", (char *)buf);
+			} else {
+				snprintf(buffer, sizeof(buffer), "%s: cmd=%d", name, cmd);
+			}
+			perror(buffer);
+		}
+	/* cleanup */
+	close(s);
+	return ret;
+}
+
 /*
  * Probe the specified interface.
  * @param	name	interface name
@@ -280,55 +329,6 @@ wl_bssiovar_setbuf(char *ifname, char *iovar, int bssidx, void *param, int param
 }
 
 #ifdef __CONFIG_DHDAP__
-int
-dhd_ioctl(char *name, int cmd, void *buf, int len)
-{
-	struct ifreq ifr;
-	dhd_ioctl_t ioc;
-	int ret = 0;
-	int s;
-	char buffer[WLC_IOCTL_SMLEN];
-
-	/* open socket to kernel */
-	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
-		return -1;
-	}
-
-	/* do it */
-	if (cmd == WLC_SET_VAR) {
-		cmd = DHD_SET_VAR;
-	} else if (cmd == WLC_GET_VAR) {
-		cmd = DHD_GET_VAR;
-	}
-
-	ioc.cmd = cmd;
-	ioc.buf = buf;
-	ioc.len = len;
-	ioc.set = FALSE;
-	ioc.driver = DHD_IOCTL_MAGIC;
-	ioc.used = 0;
-	ioc.needed = 0;
-
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name) - 1);
-	ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
-
-	ifr.ifr_data = (caddr_t) &ioc;
-	if ((ret = ioctl(s, SIOCDEVPRIVATE, &ifr)) < 0)
-		if (cmd != WLC_GET_MAGIC && cmd != WLC_GET_BSSID) {
-			if ((cmd == WLC_GET_VAR) || (cmd == WLC_SET_VAR)) {
-				snprintf(buffer, sizeof(buffer), "%s: WLC_%s_VAR(%s)", name,
-				         cmd == WLC_GET_VAR ? "GET" : "SET", (char *)buf);
-			} else {
-				snprintf(buffer, sizeof(buffer), "%s: cmd=%d", name, cmd);
-			}
-			perror(buffer);
-		}
-	/* cleanup */
-	close(s);
-	return ret;
-}
-
 /*
  * set named & bss indexed driver variable to buffer value
  */
