@@ -358,7 +358,7 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 		get, host);
 	if (auth) {
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
-		n = base64_encode(a, b, strlen(a));
+		n = base64_encode((unsigned char *) a, b, strlen(a));
 		b[n] = 0;
 		sprintf(blob + strlen(blob), "Authorization: Basic %s\r\n", b);
 	}
@@ -1367,7 +1367,7 @@ static void update_wget(void)
 
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
-		s[base64_encode(host, s, c - host)] = 0;
+		s[base64_encode((unsigned char *) host, s, c - host)] = 0;
 		sprintf(he, "Authorization: Basic %s\r\n", s);
 		header = he;
 		host = c + 1;
