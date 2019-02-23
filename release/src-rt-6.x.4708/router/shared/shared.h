@@ -11,10 +11,10 @@
 #include <string.h>
 
 #ifdef TCONFIG_USB
-#include <mntent.h>	// !!TB
+#include <mntent.h>	/* !!TB */
 #endif
 
-#define Y2K			946684800UL		// seconds since 1970
+#define Y2K			946684800UL		/* seconds since 1970 */
 
 #define ASIZE(array)	(sizeof(array) / sizeof(array[0]))
 
@@ -28,7 +28,7 @@
 #define	DEV_GPIO(arg)	"/dev/gpio/"#arg
 #endif
 
-//version.c
+/* version.c */
 extern const char *tomato_version;
 extern const char *tomato_buildtime;
 extern const char *tomato_shortver;
@@ -45,8 +45,8 @@ extern const char *tomato_shortver;
 #define TOMATO_GPIO_MIN 0
 
 
-// misc.c
-#define	WP_DISABLED		0		// order must be synced with def in misc.c
+/* misc.c */
+#define	WP_DISABLED		0		/* order must be synced with def in misc.c */
 #define	WP_STATIC		1
 #define	WP_DHCP			2
 #define	WP_L2TP			3
@@ -111,7 +111,7 @@ extern int calc_6rd_local_prefix(const struct in6_addr *prefix,
 #endif
 extern int using_dhcpc(char *prefix);
 extern void notice_set(const char *path, const char *format, ...);
-extern int wan_led(int *mode);
+extern int wan_led(int mode);
 extern int wan_led_off(char *prefix);
 extern int check_wanup(char *prefix);
 extern long check_wanup_time(char *prefix);
@@ -132,7 +132,7 @@ extern char *wl_nvname(const char *nv, int unit, int subunit);
 extern int get_radio(int unit);
 extern void set_radio(int on, int unit);
 extern int nvram_get_int(const char *key);
-//	extern long nvram_xget_long(const char *name, long min, long max, long def);
+// extern long nvram_xget_long(const char *name, long min, long max, long def);
 extern int nvram_get_file(const char *key, const char *fname, int max);
 extern int nvram_set_file(const char *key, const char *fname, int max);
 extern int nvram_contains_word(const char *key, const char *word);
@@ -143,7 +143,7 @@ extern int mtd_getinfo(const char *mtdname, int *part, int *size);
 extern int foreach_wif(int include_vifs, void *param,
 	int (*func)(int idx, int unit, int subunit, void *param));
 
-// usb.c
+/* usb.c */
 #ifdef TCONFIG_USB
 extern struct mntent *findmntents(char *file, int swp,
 	int (*func)(struct mntent *mnt, uint flags), uint flags);
@@ -152,8 +152,7 @@ extern void add_remove_usbhost(char *host, int add);
 
 #define DEV_DISCS_ROOT	"/dev/discs"
 
-/* Flags used in exec_for_host calls
- */
+/* Flags used in exec_for_host calls */
 #define EFH_1ST_HOST	0x00000001	/* func is called for the 1st time for this host */
 #define EFH_1ST_DISC	0x00000002	/* func is called for the 1st time for this disc */
 #define EFH_HUNKNOWN	0x00000004	/* host is unknown */
@@ -171,9 +170,9 @@ extern void file_unlock(int lockfd);
 #else
 #define file_lock(args...) (-1)
 #define file_unlock(args...) do { } while(0)
-#endif //TCONFIG_USB
+#endif	/* TCONFIG_USB */
 
-// id.c
+/* id.c */
 enum {
 	MODEL_UNKNOWN,
 	MODEL_WRT54G,
@@ -315,38 +314,38 @@ enum {
 #define SUP_80211AC		(1 << 8)
 
 extern int check_hw_type(void);
-//	extern int get_hardware(void) __attribute__ ((weak, alias ("check_hw_type")));
+// extern int get_hardware(void) __attribute__ ((weak, alias ("check_hw_type")));
 extern int get_model(void);
 extern int supports(unsigned long attr);
 
 
-// process.c
+/* process.c */
 extern char *psname(int pid, char *buffer, int maxlen);
 extern int pidof(const char *name);
 extern int killall(const char *name, int sig);
 extern int ppid(int pid);
 
 
-// files.c
+/* files.c */
 #define FW_CREATE	0
 #define FW_APPEND	1
 #define FW_NEWLINE	2
 
 extern unsigned long f_size(const char *path);
 extern int f_exists(const char *file);
-//bwq518
+/* bwq518 */
 extern int d_exists(const char *file);
-extern int f_read(const char *file, void *buffer, int max);												// returns bytes read
-extern int f_write(const char *file, const void *buffer, int len, unsigned flags, unsigned cmode);		//
-extern int f_read_string(const char *file, char *buffer, int max);										// returns bytes read, not including term; max includes term
-extern int f_write_string(const char *file, const char *buffer, unsigned flags, unsigned cmode);		//
+extern int f_read(const char *file, void *buffer, int max);						/* returns bytes read */
+extern int f_write(const char *file, const void *buffer, int len, unsigned flags, unsigned cmode);
+extern int f_read_string(const char *file, char *buffer, int max);					/* returns bytes read, not including term; max includes term */
+extern int f_write_string(const char *file, const char *buffer, unsigned flags, unsigned cmode);
 extern int f_read_alloc(const char *path, char **buffer, int max);
 extern int f_read_alloc_string(const char *path, char **buffer, int max);
 extern int f_wait_exists(const char *name, int max);
 extern int f_wait_notexists(const char *name, int max);
 
 
-// led.c
+/* led.c */
 #define LED_WLAN			0
 #define LED_DIAG			1
 #define LED_WHITE			2
@@ -355,7 +354,7 @@ extern int f_wait_notexists(const char *name, int max);
 #define LED_AOSS			5
 #define LED_BRIDGE			6
 #define LED_USB				7
-#define LED_MYSTERY			LED_USB	// (unmarked LED between wireless and bridge on WHR-G54S)
+#define LED_MYSTERY			LED_USB	/* (unmarked LED between wireless and bridge on WHR-G54S) */
 #define LED_USB3			8
 #define LED_5G				9
 #define LED_52G				10
@@ -380,21 +379,21 @@ static inline int led(int which, int mode)
 }
 
 
-// base64.c
-extern int base64_encode(unsigned char *in, char *out, int inlen);		// returns amount of out buffer used
-extern int base64_decode(const char *in, unsigned char *out, int inlen);	// returns amount of out buffer used
+/* base64.c */
+extern int base64_encode(unsigned char *in, char *out, int inlen);		/* returns amount of out buffer used */
+extern int base64_decode(const char *in, unsigned char *out, int inlen);	/* returns amount of out buffer used */
 extern int base64_encoded_len(int len);
-extern int base64_decoded_len(int len);										// maximum possible, not actual
+extern int base64_decoded_len(int len);						/* maximum possible, not actual */
 
 
-// strings.c
+/* strings.c */
 extern const char *find_word(const char *buffer, const char *word);
 extern int remove_word(char *buffer, const char *word);
 
-// arctic
+/* arctic */
 extern int del_str_line(char *str);
 
-//bwq518
+/* bwq518 */
 #define MAX_PORTS 64
 #define PORT_SIZE 16
 extern int is_port(char *str);

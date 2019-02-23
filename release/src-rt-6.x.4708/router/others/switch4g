@@ -540,12 +540,13 @@ searchDiag() {
 		}
 
 	elif [ "$MTYPE" == "qmi_wwan" ]; then
-		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" -e "s/.*://g")
+		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*://g")
 
 		[ -n "$TTYS" ] && {
+			TTYS="/dev/$TTYS"
 			$LOGS "4G MODEM ready - DIAG found ("$TTYS")"
-			DEVNR=$TTYS
-			nvram set "$PREFIX"_modem_dev="$DEVNR"
+			DEVNR="$TTYS"
+			nvram set "$PREFIX"_modem_dev="$TTYS"
 		}
 	fi
 

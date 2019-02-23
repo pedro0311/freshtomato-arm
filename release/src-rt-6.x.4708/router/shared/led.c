@@ -160,7 +160,7 @@ int do_led(int which, int mode)
 	static int r6250[]	= {  11,  255,    15,  255,  255,    1,  255,    8,    8,  255,  255 };
 	static int r6300v2[]	= {  11,  255,    10,  255,  255,    1,  255,    8,    8,  255,  255 };
 	static int r6400[]	= {   9,   -2,   255,  255,  255,  -11,  255,   12,   13,    8,  255 };
-	static int r7000[]	= {  13,  255,   255,  255,  255,  -15,  255,  -17,  -18,   12,  255 };
+	static int r7000[]	= {  13,  255,   255,  255,  255,  -15,  255,   17,   18,   12,  255 };
 	static int ac15[]	= { 255,    0,   255,  255,  255,   -6,  255,  -14,  255,   -2,  255 };
 	static int dir868[]	= { 255,  255,     3,  255,  255,    0,  255,  255,  255,  255,  255 };
 /* Assume the LED is the same as ea6700, needs to be verified */
@@ -454,8 +454,10 @@ int do_led(int which, int mode)
 		b = ea6400[which];
 		break;
 	case MODEL_EA6700:
-	case MODEL_EA6900:	/* need to be verified */
 		b = ea6700[which];
+		break;
+	case MODEL_EA6900:	/* need to be verified */
+		b = ea6900[which];
 		break;
 	case MODEL_WZR1750:
 		b = wzr1750[which];

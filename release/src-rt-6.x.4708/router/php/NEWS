@@ -1,5 +1,57 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+07 Feb 2019, PHP 7.2.15
+
+- Core:
+  . Fixed bug #77339 (__callStatic may get incorrect arguments). (Dmitry)
+  . Fixed bug #77494 (Disabling class causes segfault on member access).
+    (Dmitry)
+  . Fixed bug #77530 (PHP crashes when parsing `(2)::class`). (Ekin)
+
+- Curl:
+  . Fixed bug #76675 (Segfault with H2 server push). (Pedro Magalhães)
+
+- GD:
+  . Fixed bug #73281 (imagescale(…, IMG_BILINEAR_FIXED) can cause black border).
+    (cmb)
+  . Fixed bug #73614 (gdImageFilledArc() doesn't properly draw pies). (cmb)
+  . Fixed bug #77272 (imagescale() may return image resource on failure). (cmb)
+  . Fixed bug #77391 (1bpp BMPs may fail to be loaded). (Romain Déoux, cmb)
+  . Fixed bug #77479 (imagewbmp() segfaults with very large images). (cmb)
+
+- ldap:
+  . Fixed bug #77440 (ldap_bind using ldaps or ldap_start_tls()=exception in
+    libcrypto-1_1-x64.dll). (Anatol)
+
+- Mbstring:
+  . Fixed bug #77454 (mb_scrub() silently truncates after a null byte).
+    (64796c6e69 at gmail dot com)
+
+- MySQLnd:
+  . Fixed bug #75684 (In mysqlnd_ext_plugin.h the plugin methods family has
+    no external visibility). (Anatol)
+
+- Opcache:
+  . Fixed bug #77361 (configure fails on 64-bit AIX when opcache enabled).
+    (Kevin Adler)
+
+- OpenSSL:
+  . Fixed bug #77390 (feof might hang on TLS streams in case of fragmented TLS
+    records). (Abyl Valg, Jakub Zelenka)
+
+- PDO:
+  . Fixed bug #77273 (array_walk_recursive corrupts value types leading to PDO
+    failure). (Nikita)
+
+- Sockets:
+  . Fixed bug #76839 (socket_recvfrom may return an invalid 'from' address
+    on MacOS). (Michael Meyer)
+
+- Standard:
+  . Fixed bug #77395 (segfault about array_multisort). (Laruence)
+  . Fixed bug #77439 (parse_str segfaults when inserting item into existing
+    array). (Nikita)
+
 10 Jan 2019, PHP 7.2.14
 
 - Core:

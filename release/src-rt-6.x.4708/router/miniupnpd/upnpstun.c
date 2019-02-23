@@ -1,4 +1,4 @@
-/* $Id: upnpstun.c,v 1.1 2018/07/06 11:43:31 nanard Exp $ */
+/* $Id: upnpstun.c,v 1.3 2019/02/10 11:45:53 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
