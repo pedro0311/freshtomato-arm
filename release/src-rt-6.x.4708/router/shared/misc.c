@@ -340,7 +340,7 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 						char b[16];	/* port state: DOWN/SPEED */
 						int c;		/* port vlan: 1/2/3/4/etc */
 						char d[4];
-						FILE *f;
+						FILE *f = NULL;
 
 						strcpy(d,&ifr.ifr_name[4]);	/* trim vlan */
 						int vlannum = atoi(d);
@@ -365,9 +365,12 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 		case WP_PPPOE:
 		case WP_PPP3G:
 			memset(ppplink_file , 0, 32);
+			FILE *f_tmp = NULL;
 			sprintf(ppplink_file, "/tmp/ppp/%s_link", names[i]);
-			if (fopen(ppplink_file, "r") != NULL)	/* have PPP link, assume ON */
+			if ((f_tmp = fopen(ppplink_file, "r")) != NULL) {	/* have PPP link, assume ON */
 				up = 1;
+				fclose(f_tmp);
+			}
 			if (up) ++count;
 			break;
 		default:
