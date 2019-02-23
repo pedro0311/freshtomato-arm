@@ -53,6 +53,7 @@ int buttons_main(int argc, char *argv[])
 	reset_pushed = 0;
 	brau_mask = 0;
 	brau_state = ~0;
+	reset_mask = 1 << 4;
 	ses_led = LED_DIAG;
 
 	// moveme

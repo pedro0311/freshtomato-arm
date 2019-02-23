@@ -2121,13 +2121,6 @@ static void kill_samba(int sig)
 	}
 }
 
-#if 0
-#ifdef TCONFIG_BCMARM
-extern void del_samba_rules(void);
-extern void add_samba_rules(void);
-#endif
-#endif
-
 #ifdef TCONFIG_GROCTRL
 void enable_gro(int interval)
 {
@@ -2162,8 +2155,10 @@ static void start_samba(void)
 	char *nv;
 	char *si;
 #ifdef TCONFIG_BCMARM
+#ifdef TCONFIG_BCMSMP
 	int cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 	int taskset_ret = -1;
+#endif
 #endif
 
 	if (getpid() != 1) {
@@ -2369,7 +2364,7 @@ static void start_samba(void)
 	else
 		taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D");
 
-        if (taskset_ret != 0)
+	if (taskset_ret != 0)
 #endif
 #endif
 		ret2 = xstart("smbd", "-D");
