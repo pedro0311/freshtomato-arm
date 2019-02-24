@@ -1,6 +1,107 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2019.1 - 2019.02.27
+----------------------------
+
+- OpenVPN: update to 2.4.7
+- tor: updated to 0.3.5.8
+- dnsmasq: update to 2.80-28cfe36 snapshot (add back ability to compile without IPv6 support to minimize size of dnsmasq (as a patch), cosmetics in other patches, little cleanup in router/Makefile)
+- miniupnpd: update to 2.1.20190210
+- SQLite: update to 3.27.1
+- php: update to 7.2.15
+- libcurl: update to 7.64.0
+- libcurl: Updated CA certificate bundle as of 2019-01-23
+- nettle: update to 3.4.1
+- adminer: update from 4.7.0 to 4.7.1 2019-01-24
+- getdns: update to 1.5.1 (stubby 0.2.5)
+- stubby: change round_robin_upstreams to 1
+- stubby: add Google DNSoTLS (ipv4/ipv6) to stubby.yml
+- tinc: revert: Use git describe to populate autoconf's VERSION
+- kernel: drivers: net: usb: rndis_host.c: fix init of the module
+- kernel: drivers: net: usb: rndis_host: Set valid random MAC on buggy devices
+- kernel: drivers: net: usb: rndis_host: support Novatel Verizon USB730L
+- kernel: etherdevice: Use ether_addr_copy to copy an Ethernet address
+- kernel: net: netfilter: nf_conntrack_proto_tcp.c: reduce TCP_CONNTRACK_ESTABLISHED default value to 20 minutes
+- DDNS: opendns requires now HTTP 1.1 in request header
+- router: httpd: fix warnings in compiler; clean-up
+- router: httpd: tomato.c: additional commit for #0660a82 and #c1d1c76
+- router: httpd: misc.c: cosmetics
+- router: mdu: mdu.c: clean-up & simplify some if conditions
+- router: mdu: fix compiler warnings
+- router: mdu: remove no more needed functions/files/includes
+- router: rc: fix warnings in compiler; clean-up
+- router: rc: init.c: enable blink on R8000
+- router: rc: network.c: include 2nd 5Ghz radio for Wifi LED status for Netgear R8000
+- router: rc: network.c: tweak blink startup code for 2nd 5Ghz LED
+- router: rc: network.c: turn on/off WiFi status LED according to the overall radio statuses
+- router: rc: network.c: tweak conditional for blink startup on 5Ghz radio
+- router: rc: network.c: clean-up
+- router: rc: network.c: cosmetics
+- router: rc: dhcp.c: remove unused variable
+- router: rc: dhcp.c: clean-up
+- router: rc: ppp.c: add missing TRACE_PT("end\n")
+- router: rc: wan.c: cleanup WAN LED control
+- router: rc: blink_5g.c: old blink 5g code is obsolete
+- router: rc: blink_5g.c: fix popen/pclose
+- router: rc: pbr.c: cosmetics
+- router: rc: vpn.c: make instance run code handle more than 1 CPU core
+- router: rom: etc: remove unneeded .gitignore file
+- router: Makefile: add build progress indicator
+- router: Makefile: mv huawei_ether to extras if needed, remove unneeded call to patch for nano
+- router: Makefile: clean-up, remove unused ntpclient and ntpc
+- router: Makefile: add missing pcre make
+- router: Makefile: build mysql --without-docs
+- router: Makefile: remove unused libsub
+- router: Makefile: move udpxy build
+- router: Makefile: add pptpd make part
+- router: Makefile: add missing make notices
+- router: Makefile: move kernel modules to proper directory
+- router: Makefile: pptp-client: remove (forgotten) obsolete sh ip scripts
+- router: Makefile: don't ln /usr/share to /tmp when samba3 is installed
+- router: Makefile: build nginx with http v2 module
+- router: Makefile: fix tor build failures
+- router: shared: fix warnings in compiler
+- router: shared: fix warnings in compiler; clean-up
+- router: shared: misc.c: correction of the "if" condition
+- router: shared: misc.c: add/fix missing fclose(...) and some cosmetic
+- router: shared: misc.c: change/fix function wan_led(int mode) --> call by value
+- router: shared: misc.c: fix a few typos (wrong type, pointer by mistake) at function wan_led_off(...) and check_wanup(...)
+- router: shared: misc.c: add 2nd 5Ghz LED for R8000
+- router: shared: misc.c: tweak behavior of WLAN/5G LEDs
+- router: shared: misc.c: cosmetic / optimization
+- router: shared: misc.c: fix popen/pclose
+- router: shared: led.c: increase value related to gpio indexing limit scheme to cater for Netgears R8000
+- router: shared: led.c: extend GPIO pin support from 0-15 to 0-31
+- router: shared: led.c: clean-up; remove unused code
+- router: shared: shared.h: add missing prototype declaration for function wan_led(...) and wan_led_off(...)
+- router: www: basic-ddns.asp: clean-up of vars, remove unneeded js code
+- router: www: vpn-client.asp: change allowed server address length to 60 characters (it's amazing that such long addresses exist ...)
+- router: www: about.asp: Cosmetics
+- vpnrouting: fix cleaning of routing after stopping the OpenVPN client with "Redirect through VPN" checked - not working from the very beginning (commit that adds this function, also responsible for the error: https://bitbucket.org/pedro311/freshtomato-mips/commits/4c75d36f6fb2c1da1de8d7db33e2a91714d045e8)
+- switch4g: fix path for DIAG device in qmi_wwan mode
+- switch4g: add support for rndis protocol
+- DDNS: FreeDNS: add possibility to update IP with custom value as on other services, add https
+- DDNS: HE.net IPv6 Tunnel Broker uses now Dyn DNS Update API http://dyn.com/support/developers/api/
+- GUI: Wireless Settings: remove obsolete settings
+- GUI: Wireless Filter: add a warning about the number of MAC addresses supported + cosmetics
+- GUI: fix IPv6 mask matches
+- GUI: fix generate vpn client config
+- GUI: QOS: hide View Details when QOS is disabled
+- GUI: OpenVPN: increase max length of client common name to 255 chararacters
+- GUI: add option for OpenVPN server to force IPv4 or IPv6 for connection
+- GUI: add option for OpenVPN client to choose IPv4 or IPv6 only connection
+- GUI: OpenVPN ServerX & ClientX - restrict option/setting "Poll Interval" to 0-30 minutes (values > 30 are not usefull)
+- Add support for Asus RT-AC3200 with 128k NVRAM - new targets: ac3200-128e and ac3200-128z, use CFE, Asus Firmware Restoration, tftp, DD-WRT fw page update, to upload the firmware to the router on Asus OFW (with already changed NVRAM size to 128k)
+- R8000: change LED table
+- R6400: change LED table
+- R7000: change LED table
+- R7000 / R6400: WLAN LED cleanup
+- EA6700: enable/activate WAN LED
+- WS880: WLAN LED cleanup - use blink for WLAN LED (same like for Netgear R7000)
+- Improved a little bit build progress indicator
+
+
 2019.1.015-beta - 2019.01.10
 ----------------------------
 
