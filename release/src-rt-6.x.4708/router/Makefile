@@ -1768,6 +1768,7 @@ wanuptime-install:
 
 ebtables: dummy
 	@$(SEP)
+	$(call patch_files,ebtables)
 	$(MAKE) -C ebtables CC=$(CC) LD=$(LD) \
 	CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
@@ -1792,6 +1793,7 @@ ebtables-install:
 
 ebtables-clean:
 	-@$(MAKE) -C ebtables clean
+	$(call unpatch_files,ebtables)
 
 #Roadkill
 spawn-fcgi/stamp-h1:
