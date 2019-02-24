@@ -852,7 +852,7 @@ openssl/stamp-h1:
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	shared $(OPENSSL_CIPHERS)
+	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3
 
 	@$(MAKE) -C openssl clean depend
 	@touch openssl/stamp-h1
