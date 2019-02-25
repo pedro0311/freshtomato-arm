@@ -2225,8 +2225,7 @@ openvpn/.conf: openssl lzo
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/openssl/include" \
 	$(CONFIGURE) --prefix= \
 	--with-crypto-library=openssl \
-	--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --with-plugindir=/lib --enable-management --disable-small \
-	--disable-selinux --disable-socks \
+	--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --with-plugindir=/lib --enable-management \
 	OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" \
 	OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
 	ac_cv_lib_resolv_gethostbyname=no
