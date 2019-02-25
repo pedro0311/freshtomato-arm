@@ -8,6 +8,7 @@ FreshTomato-ARM Changelog
 - tor: updated to 0.3.5.8
 - dnsmasq: update to 2.80-28cfe36 snapshot (add back ability to compile without IPv6 support to minimize size of dnsmasq (as a patch), cosmetics in other patches, little cleanup in router/Makefile)
 - miniupnpd: update to 2.1.20190210
+- patches: cosmetics in miniupnpd
 - SQLite: update to 3.27.1
 - php: update to 7.2.15
 - libcurl: update to 7.64.0

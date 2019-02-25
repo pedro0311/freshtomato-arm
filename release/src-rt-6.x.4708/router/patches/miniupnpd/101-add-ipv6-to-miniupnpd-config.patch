@@ -1,15 +1,15 @@
---- miniupnpd/Makefile.linux	2018-07-06 14:06:03.000000000 +0200
-+++ miniupnpd/Makefile.linux	2018-07-07 13:52:36.841469982 +0200
-@@ -25,7 +25,7 @@
- CFLAGS ?= -Os
- CFLAGS += -fno-strict-aliasing
+--- miniupnpd/Makefile.linux	2019-02-10 13:03:06.000000000 +0100
++++ miniupnpd/Makefile.linux	2019-02-24 16:48:42.102561446 +0100
+@@ -27,7 +27,7 @@ CFLAGS += -fno-strict-aliasing
  CFLAGS += -fno-common
+ CFLAGS += -fstack-protector -fPIE
+ CFLAGS += -D_FORTIFY_SOURCE=2
 -CPPFLAGS += -D_GNU_SOURCE
 +CFLAGS += -D_GNU_SOURCE
  CFLAGS += -Wall
  CFLAGS += -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
  #CFLAGS += -Wno-missing-field-initializers
-@@ -37,6 +37,8 @@ STRIP ?= strip
+@@ -40,6 +40,8 @@ STRIP ?= strip
  PKG_CONFIG ?= pkg-config
  CP = cp
  
@@ -18,7 +18,7 @@
  
  INSTALLPREFIX ?= $(PREFIX)/usr
  SBININSTALLDIR = $(INSTALLPREFIX)/sbin
-@@ -107,7 +109,13 @@ TEST := $(shell [ $(IPTVER1) -gt 1 ] ||
+@@ -110,7 +112,13 @@ TEST := $(shell [ $(IPTVER1) -gt 1 ] ||
  ifeq ($(TEST), 1)
  CPPFLAGS := $(CPPFLAGS) -DIPTABLES_143
  # the following sucks, but works
@@ -34,7 +34,7 @@
  LDLIBS = $(IPTABLESPATH)/libiptc/libiptc.a
 
 --- miniupnpd/getifaddr.c	2018-07-06 14:03:21.000000000 +0200
-+++ miniupnpd/getifaddr.c	2018-07-07 13:53:27.597503818 +0200
++++ miniupnpd/getifaddr.c	2019-02-24 16:50:23.498396862 +0100
 @@ -24,6 +24,8 @@
  #include "getifaddr.h"
  #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
