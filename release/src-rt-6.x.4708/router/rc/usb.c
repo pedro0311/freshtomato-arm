@@ -83,7 +83,7 @@ static int p9100d_sig(int sig)
 void start_usb(void)
 {
 	char param[32];
-	int i;
+	int i = 255;
 
 	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - initialize USB port
 		xstart("gpio", "enable", "20");
@@ -113,15 +113,19 @@ void start_usb(void)
         	mount(USBFS, "/proc/bus/usb", USBFS, MS_MGC_VAL, NULL);
 
 #ifdef LINUX26
+		/* check USB LED */
 		i = do_led(LED_USB, LED_PROBE);
 		if (i != 255) {
-			/*modprobe("ledtrig-usbdev");
-			modprobe("leds-usb");
-			sprintf(param, "%d", i);
-			f_write_string("/proc/leds-usb/gpio_pin", param, 0, 0);*/
-			do_led(LED_USB, LED_OFF);
+			do_led(LED_USB, LED_OFF);	/* turn off USB LED */
+		}
+		i = 255;	/* reset to 255 */
+		/* check USB3 LED */
+		i = do_led(LED_USB3, LED_PROBE);
+		if (i != 255) {
+			do_led(LED_USB3, LED_OFF);	/* turn off USB3 LED */
 		}
 #endif
+
 #ifdef TCONFIG_USBAP
 			char instance[20];
 			/* From Asus QTD cache params */
@@ -263,6 +267,7 @@ void stop_usb(void)
 {
 	int disabled = !nvram_get_int("usb_enable");
 
+	int i = 255;
 	int mwan_num;
 	int wan_unit;
 	char *module;
@@ -334,9 +339,17 @@ void stop_usb(void)
 	if (disabled || nvram_get_int("usb_usb2") != 1) modprobe_r(USB20_MOD);
 
 #ifdef LINUX26
-	//modprobe_r("leds-usb");
-	//modprobe_r("ledtrig-usbdev");
-	led(LED_USB, LED_OFF);
+	/* check USB LED */
+	i = do_led(LED_USB, LED_PROBE);
+	if (i != 255) {
+		do_led(LED_USB, LED_OFF);	/* turn off USB LED */
+	}
+	i = 255;	/* reset to 255 */
+	/* check USB3 LED */
+	i = do_led(LED_USB3, LED_PROBE);
+	if (i != 255) {
+		do_led(LED_USB3, LED_OFF);	/* turn off USB3 LED */
+	}
 #endif
 
 	// only unload core modules if usb is disabled
@@ -924,74 +937,102 @@ static inline void usbled_proc(char *device, int add)
 {
 	char *p;
 	char param[32];
-	
+	int model;
+
 	DIR *usb1=NULL;
 	DIR *usb2=NULL;
 	DIR *usb3=NULL;
 	DIR *usb4=NULL;
-	
-	/*Start USB LED Patch provided by AndreDVJ at:  http://www.linksysinfo.org/index.php?threads/tomato-for-arm-routers.69719/page-21#post-269691  - Some fortification added by NULLing out vars after use*/
-	if ((get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
-		usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");	// port 1 gpio 17
-		usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");	// port 2 gpio 18
-		usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");	// port 1 gpio 17
-		usb4 = opendir ("/sys/bus/usb/devices/1-2:1.0");	// port 2 gpio 18
-		
-		if(add) {
-			if (usb1 != NULL) {
-				xstart("gpio", "disable", "17");
-				(void) closedir (usb1);
-				usb1 = NULL;
-			}
-			if (usb2 != NULL) {
-				xstart("gpio", "disable", "18");
-				(void) closedir (usb2);
-				usb2 = NULL;
-			}
-			if (usb3 != NULL) {
-				xstart("gpio", "disable", "17");
-				(void) closedir (usb3);
-				usb3 = NULL;
-			}
-			if (usb4 != NULL) {
-				xstart("gpio", "disable", "18");
-				(void) closedir (usb4);
-				usb4 = NULL;
-			}
-		} else {
-			if (usb1 == NULL && usb3 == NULL) {
-				xstart("gpio", "enable", "17");
-			}
-			if (usb2 == NULL && usb4 == NULL) {
-				xstart("gpio", "enable", "18");
-			}
-		}
-	}
-	/*End USB LED Patch provided by AndreDVJ at:  http://www.linksysinfo.org/index.php?threads/tomato-for-arm-routers.69719/page-21#post-269691  - Some fortification added by NULLing out vars after use*/
 
-	/* if (get_model() == MODEL_WS880) {
-		do_led(LED_USB3, (add) ? LED_ON : LED_OFF);
-		return;
-	} */
-
-	if (do_led(LED_USB, LED_PROBE) != 255) {
+	/* check if there are two LEDs for USB and USB3, see LED table at shared/led.c */
+	if (do_led(LED_USB, LED_PROBE) != 255 && do_led(LED_USB3, LED_PROBE) != 255) {
 		strncpy(param, device, sizeof(param));
 		if ((p = strchr(param, ':')) != NULL)
 			*p = 0;
 
 		/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
 		p = nvram_safe_get("usb_noled");
-		if (strcmp(p, param) == 0)
-			return;
+		if (strcmp(p, param) == 0) return;
 
-		// Remove legacy approach in the code here - rather, use do_led() function, which is designed to do this
-		// The reason for changing this ... some HW (like Netgear WNDR4000) don't work with direct GPIO write -> use do_led()!
-		//f_write_string(add ? "/proc/leds-usb/add" : "/proc/leds-usb/remove", param, 0, 0);
-		if (add)
-			do_led(LED_USB, LED_ON);
-		else
-			do_led(LED_USB, LED_OFF);    
+		/* get router model */
+		model = get_model();
+
+		switch(model) {
+		case MODEL_RTN18U:
+		case MODEL_RTAC56U:
+		case MODEL_RTAC68U:
+			/* switch usb2 --> usb1 and usb4 --> usb3 */
+			usb2 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example RT-N18U: port 1 gpio 14 for USB3 */
+			usb1 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example RT-N18U: port 2 gpio 3 */
+			usb4 = opendir ("/sys/bus/usb/devices/1-1:1.0");
+			usb3 = opendir ("/sys/bus/usb/devices/1-2:1.0");
+			break;
+		case MODEL_R6400:
+		case MODEL_R7000:
+		case MODEL_R8000:	// for sdk7 only
+			/* fall through */
+		default:
+			/* default is Netgear config */
+			usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example R7000: port 1 gpio 17 */
+			usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
+			usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");	/* Example R7000: port 1 gpio 17 */
+			usb4 = opendir ("/sys/bus/usb/devices/1-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
+			break;
+		}
+
+		if (add) {
+			if (usb1 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb1);
+				usb1 = NULL;
+			}
+			if (usb3 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb3);
+				usb3 = NULL;
+			}
+			if (usb2 != NULL) {
+				do_led(LED_USB3, LED_ON);	/* USB3 LED On! */
+				(void) closedir (usb2);
+				usb2 = NULL;
+			}
+			if (usb4 != NULL) {
+				do_led(LED_USB3, LED_ON);	/* USB3 LED On! */
+				(void) closedir (usb4);
+				usb4 = NULL;
+			}
+		}
+		else {
+			if (usb1 == NULL && usb3 == NULL) {
+				do_led(LED_USB, LED_OFF);	/* USB LED Off! */
+			}
+			if (usb2 == NULL && usb4 == NULL) {
+				do_led(LED_USB3, LED_OFF);	/* USB3 LED Off! */
+			}
+		}
 	}
+	/* only one LED for USB */
+	else if (do_led(LED_USB, LED_PROBE) != 255) {
+		strncpy(param, device, sizeof(param));
+		if ((p = strchr(param, ':')) != NULL)
+			*p = 0;
+
+		/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
+		p = nvram_safe_get("usb_noled");
+		if (strcmp(p, param) == 0) return;
+
+		/* Remove legacy approach in the code here - rather, use do_led() function, which is designed to do this
+		   The reason for changing this ... some HW (like Netgear WNDR4000) don't work with direct GPIO write -> use do_led()!
+		   f_write_string(add ? "/proc/leds-usb/add" : "/proc/leds-usb/remove", param, 0, 0);
+		*/
+		if (add) {
+			do_led(LED_USB, LED_ON);	/* USB LED On! */
+		}
+		else {
+			do_led(LED_USB, LED_OFF);	/* USB LED Off! */
+		}
+	}
+
 }
 #endif
 
