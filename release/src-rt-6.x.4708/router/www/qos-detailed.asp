@@ -425,7 +425,7 @@ function init() {
 		toggleVisibility("filters");
 	}
 
-	if (viewClass != -1) E('stitle').innerHTML = 'View Details: ' + abc[viewClass] + ' <span id="numtotalconn"><\/span>';
+	if (viewClass != -1) E('stitle').firstChild.data = "View Details: " + abc[viewClass] + " ";
 
 	E('_f_shortcuts').checked = (((c = cookie.get('qos_detailed_shortcuts')) != null) && (c == '1'));
 
@@ -509,24 +509,24 @@ function verifyFields(focused, quiet) {
 		<div id="grid" class="tomato-grid" style="float:left"></div>
 		<div id="loading"><br/><b>Loading...</b></div>
 	</div>
+</div>
 
 <!-- / / / -->
 
-	<div class="section-title">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
-	<div class="section" id="sesdivfilters" style="display:none">
-		<script type="text/javascript">
-			var c;
-			c = [];
-			c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-			c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-			c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
-			c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
-			c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
-			c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
-			c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-			createFieldTable('',c);
-		</script>
-	</div>
+<div class="section-title" id="filters-head">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
+<div class="section" id="sesdivfilters" style="display:none">
+	<script type="text/javascript">
+		var c;
+		c = [];
+		c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
+		c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
+		c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
+		c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
+		c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+		createFieldTable('',c);
+	</script>
 </div>
 
 <!-- / / / -->
@@ -535,6 +535,7 @@ function verifyFields(focused, quiet) {
 	if (nvram.qos_enable != '1') {
 		W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
 		E('stitle').style.display = 'none';
+		E('filters-head').style.display = 'none';
 		E('stitleoff').style.display = '';
 	}
 </script>
