@@ -2684,11 +2684,11 @@ void start_services(void)
 	}
 
 	if ((get_model() == MODEL_R7000)) {
-		//activate WAN port led
+		/* activate WAN port led */
 		system("/usr/sbin/et robowr 0x0 0x10 0x3000");
 		system("/usr/sbin/et robowr 0x0 0x12 0x78");
 		system("/usr/sbin/et robowr 0x0 0x14 0x01");
-		system("gpio disable 9");
+		system("gpio disable 8"); /* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; add color white (9) with WAN up */
 	}
 }
 
