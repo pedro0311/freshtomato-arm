@@ -2672,6 +2672,9 @@ void start_services(void)
 	start_phy_tempsense();
 #endif
 
+	if ((get_model() == MODEL_RTAC56U)) {
+		system("gpio disable 4"); /* enable power supply for all LEDs, except for PowerLED */
+	}
 
 	if ((get_model() == MODEL_R6400)) {
 		//activate WAN port led
