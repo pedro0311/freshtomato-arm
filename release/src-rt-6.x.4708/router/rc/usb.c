@@ -84,23 +84,29 @@ void start_usb(void)
 {
 	char param[32];
 	int i = 255;
+	int model;
 
-	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - initialize USB port
-		xstart("gpio", "enable", "20");
-	}
-	else if (get_model() == MODEL_DIR868L) {
+	/* get router model */
+	model = get_model();
+
+	if ((model == MODEL_DIR868L)) {
 		xstart("gpio", "enable", "10");
 	}
-	else if (get_model() == MODEL_WS880) {
+	else if ((model == MODEL_WS880)) {
 		xstart("gpio", "enable", "7");
 	}
-	else if (get_model() == MODEL_R1D || get_model() == MODEL_R6400) {
+	else if ((model == MODEL_R1D) ||
+		 (model == MODEL_R6400)) {
 		xstart("gpio", "enable", "0");
 	}
-	else if (get_model() == MODEL_EA6400 || get_model() == MODEL_EA6700 || get_model() == MODEL_EA6900 || get_model() == MODEL_WZR1750) {
+	else if ((model == MODEL_EA6400) ||
+		 (model == MODEL_EA6700) ||
+		 (model == MODEL_EA6900) ||
+		 (model == MODEL_WZR1750)) {
 		xstart("gpio", "enable", "9");
-		if (get_model() == MODEL_WZR1750)
-			xstart("gpio", "disable", "10"); //usb3.0
+		if ((model == MODEL_WZR1750)) {
+		  xstart("gpio", "disable", "10"); /* usb3.0 */
+		}
 	}
 
 	_dprintf("%s\n", __FUNCTION__);
@@ -275,6 +281,10 @@ void stop_usb(void)
 	char *tofree;
 	char tmp[100];
 	char prefix[] = "wanXX";
+	int model;
+
+	/* get router model */
+	model = get_model();
 
 #ifdef TCONFIG_UPS
 		stop_ups();
@@ -398,22 +408,24 @@ void stop_usb(void)
 		}
 	}
 
-	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - disable USB port
-		xstart("gpio", "disable", "20");
-	}
-	else if (get_model() == MODEL_DIR868L) {
+	if ((model == MODEL_DIR868L)) {
 		xstart("gpio", "disable", "10");
 	}
-	else if (get_model() == MODEL_WS880) {
+	else if ((model == MODEL_WS880)) {
 		xstart("gpio", "disable", "7");
 	}
-	else if (get_model() == MODEL_R1D || get_model() == MODEL_R6400) {
+	else if ((model == MODEL_R1D) ||
+		 (model == MODEL_R6400)) {
 		xstart("gpio", "disable", "0");
 	}
-	else if (get_model() == MODEL_EA6400 || get_model() == MODEL_EA6700 || get_model() == MODEL_EA6900 || get_model() == MODEL_WZR1750) {
+	else if ((model == MODEL_EA6400) ||
+		 (model == MODEL_EA6700) ||
+		 (model == MODEL_EA6900) ||
+		 (model == MODEL_WZR1750)) {
 		xstart("gpio", "disable", "9");
-		if (get_model() == MODEL_WZR1750)
-			xstart("gpio", "enable", "10"); //usb3.0
+		if ((model == MODEL_WZR1750)) {
+		  xstart("gpio", "enable", "10"); /* usb3.0 */
+		}
 	}
 #endif
 

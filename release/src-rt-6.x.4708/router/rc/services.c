@@ -2620,6 +2620,7 @@ void check_services(void)
 void start_services(void)
 {
 	static int once = 1;
+	int model;
 
 	if (once) {
 		once = 0;
@@ -2672,18 +2673,20 @@ void start_services(void)
 	start_phy_tempsense();
 #endif
 
-	if ((get_model() == MODEL_RTAC56U)) {
+	/* get router model */
+	model = get_model();
+
+	/* LED setup/config/preparation for some router models */
+	if ((model == MODEL_RTAC56U)) {
 		system("gpio disable 4"); /* enable power supply for all LEDs, except for PowerLED */
 	}
-
-	if ((get_model() == MODEL_R6400)) {
-		//activate WAN port led
-		//leave only white color
-		//system("gpio disable 6"); // orange
+	else if ((model == MODEL_R6400)) {
+		/* activate WAN port led */
+		/* leave only white color */
+		/* system("gpio disable 6"); */ // orange
 		system("gpio disable 7"); // white
 	}
-
-	if ((get_model() == MODEL_R7000)) {
+	else if ((model == MODEL_R7000)) {
 		/* activate WAN port led */
 		system("/usr/sbin/et robowr 0x0 0x10 0x3000");
 		system("/usr/sbin/et robowr 0x0 0x12 0x78");
