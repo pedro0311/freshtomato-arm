@@ -37,16 +37,17 @@ int blink_br_main(int argc, char *argv[])
 	model = get_model();
 
 	while(1) {
-		if (model == MODEL_WS880 ||
-		    model == MODEL_RTN18U) {
+	      if ((model == MODEL_WS880) ||
+		  (model == MODEL_RTN18U) ||
+		  (model == MODEL_RTAC56U)) {
 			if (get_lanports_status()) {
 				led(LED_BRIDGE, LED_ON);
 			}
 			else {
 				led(LED_BRIDGE, LED_OFF);
 			}
-		}
-		/* sleep 3 sec before check again */
-		sleep(3);
+	      }
+	      /* sleep 3 sec before check again */
+	      sleep(3);
 	}
 }
