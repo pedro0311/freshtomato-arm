@@ -6,17 +6,36 @@ int get_lanports_status(void)
 	int r = 0;
 	FILE *f;
 	char s[128], a[16];
+	int model;
+
+	/* get Router model */
+	model = get_model();
 
 	if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
 		while (fgets(s, sizeof(s), f)) {
-			if ((sscanf(s, "Port 1: %s", a) == 1) ||
-			    (sscanf(s, "Port 2: %s", a) == 1) ||
-			    (sscanf(s, "Port 3: %s", a) == 1) ||
-			    (sscanf(s, "Port 4: %s", a) == 1)) {
-				if (strncmp(a, "DOWN", 4)) {
-					r++;
-				}
-			}
+		  /* LAN Ports: 1 2 3 4 */
+		  if ((model == MODEL_WS880) ||
+		      (model == MODEL_RTN18U)) {
+		    if ((sscanf(s, "Port 1: %s", a) == 1) ||
+			(sscanf(s, "Port 2: %s", a) == 1) ||
+			(sscanf(s, "Port 3: %s", a) == 1) ||
+			(sscanf(s, "Port 4: %s", a) == 1)) {
+		      if (strncmp(a, "DOWN", 4)) {
+			r++;
+		      }
+		    }
+		  }
+		  /* LAN Ports: 0 1 2 3 */
+		  else if ((model == MODEL_RTAC56U)) {
+		    if ((sscanf(s, "Port 0: %s", a) == 1) ||
+			(sscanf(s, "Port 1: %s", a) == 1) ||
+			(sscanf(s, "Port 2: %s", a) == 1) ||
+			(sscanf(s, "Port 3: %s", a) == 1)) {
+		      if (strncmp(a, "DOWN", 4)) {
+			r++;
+		      }
+		    }
+		  }
 		}
 		pclose(f);
 	}
