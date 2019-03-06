@@ -678,12 +678,12 @@ void start_wl(void)
 						if (unit == 0) {
 							led(LED_WLAN, LED_ON); /* enable WLAN LED for 2.4 GHz */
 							killall("blink", SIGKILL);
-							if (nvram_get_int("blink_wl"))
+							if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) /* start blink only if stealth mode is off */
 								eval("blink", ifname, "wlan", "20", "8192");
 						}
 						else if (unit == 1) {
 							 led(LED_5G, LED_ON); /* enable WLAN LED for 5 GHz */
-							 if (nvram_get_int("blink_wl"))
+							 if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) /* start blink only if stealth mode is off */
 							 	eval("blink", ifname, "5g", "20", "8192");
 						}
 					}

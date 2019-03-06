@@ -4522,8 +4522,11 @@ static void sysinit(void)
 
 	eval("buttons");
 
-	/* enable LED for LAN / Bridge */
-	eval("blink_br");
+	/* stealth mode */
+	if (nvram_match("stealth_mode", "0")) { /* start blink_br only if stealth mode is off */
+	  /* enable LED for LAN / Bridge */
+	  eval("blink_br");
+	}
 
 	if (!noconsole) xstart("console");
 
