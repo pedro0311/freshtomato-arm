@@ -171,8 +171,10 @@ function verifyFields(focused, quiet) {
 		dns = E('_f_vpn_'+t+'_dns');
 		ncp = E('_vpn_'+t+'_ncp_enable').value;
 
-		elem.display(PR('_vpn_'+t+'_ca'), PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_dh'), PR('_vpn_'+t+'_key'),
-		             PR('_vpn_'+t+'_hmac'), PR('_f_vpn_'+t+'_rgw'), PR('_vpn_'+t+'_reneg'), auth == "tls");
+		elem.display(PR('_vpn_'+t+'_ca'), PR('_vpn_'+t+'_ca_key'), PR('_vpn_'+t+'_ca_key_div_help'),
+			     PR('_vpn_dhgen_'+t+'_button'), PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_dh'),
+			     PR('_vpn_'+t+'_key'), PR('_vpn_'+t+'_hmac'), PR('_f_vpn_'+t+'_rgw'),
+			     PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_static'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
 		elem.display(PR('_vpn_keygen_static_'+t+'_button'), auth == "secret" || (auth == "tls" && hmac.value >= 0));
 		elem.display(E(t+'_custom_crypto_text'), auth == "custom");
@@ -739,7 +741,7 @@ for (i = 0; i < tabs.length; ++i)
 		{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_static_'+t+'_button">' },
 		{ title: 'Certificate Authority Key', name: 'vpn_'+t+'_ca_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca_key' ),
 			prefix: '<div id="'+t+'_ca_key_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA key...<img src="spin.gif" alt=""><\/p><\/div>' },
-		{ title: '', custom: '<div id="'+t+'_ca_key_div_help"><p class="keyhelp">Optional, only used for client certificate generation.<br />Uncrypted (-nodes) private keys are supported.<\/p><\/div>' },
+		{ title: '', custom: '<div id="_vpn_'+t+'_ca_key_div_help"><p class="keyhelp">Optional, only used for client certificate generation.<br />Uncrypted (-nodes) private keys are supported.<\/p><\/div>' },
 		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ),
 			prefix: '<div id="'+t+'_ca_progress_div" style="display: none;"><p class="keyhelp">Please wait while we\'re generating CA certificate...<img src="spin.gif" alt=""><\/p><\/div>' },
 		{ title: 'Server Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ),
