@@ -981,10 +981,9 @@ static inline void usbled_proc(char *device, int add)
 			break;
 		case MODEL_R6400:
 		case MODEL_R7000:
-/*		case MODEL_R8000: */ // for sdk7 only
 			/* fall through */
 		default:
-			/* default is Netgear config */
+			/* default is Netgear R7000 config */
 			usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example R7000: port 1 gpio 17 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
 			usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");	/* Example R7000: port 1 gpio 17 */
