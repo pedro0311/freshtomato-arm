@@ -973,6 +973,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTN18U:
 		case MODEL_RTAC56U:
 		case MODEL_RTAC68U:
+		case MODEL_R8000:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example RT-N18U: port 1 gpio 14 for USB3 */
 			usb1 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example RT-N18U: port 2 gpio 3 */
@@ -981,10 +982,9 @@ static inline void usbled_proc(char *device, int add)
 			break;
 		case MODEL_R6400:
 		case MODEL_R7000:
-		case MODEL_R8000:	// for sdk7 only
 			/* fall through */
 		default:
-			/* default is Netgear config */
+			/* default is Netgear R7000 config */
 			usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example R7000: port 1 gpio 17 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
 			usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");	/* Example R7000: port 1 gpio 17 */
