@@ -256,7 +256,7 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_R8000:
 		reset_mask = 1 << 6;
 		ses_mask = 1 << 4;
-		ses_led = LED_AOSS;
+		ses_led = LED_AMBER; /* dummy, not used right now. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 	case MODEL_WZR1750:
 //		reset_mask = 1 << 6;
