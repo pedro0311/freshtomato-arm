@@ -75,6 +75,11 @@
 #define USB_CONNECT		0x06	/* For WRTSL54GS */
 #define USB_DISCONNECT		0x07	/* For WRTSL54GS */
 
+/* see init.c - used for /proc/sys/vm/min_free_kbytes */
+#define TOMATO_RAM_HIGH_END	(200 * 1024)
+#define TOMATO_RAM_MID_END	(100 * 1024)
+#define TOMATO_RAM_LOW_END	(50 * 1024)
+
 #define SET_LED(val)	do { } while(0)
 
 typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
