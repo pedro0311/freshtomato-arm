@@ -109,6 +109,7 @@ R6300v2				BCM4708               0x0646       679       0x1110 // CH/Charter ver
 R6400				BCM4708               0x0646       32        0x1601
 
 DIR-868L			BCM4708               0x0646       24        0x1110
+DIR-868LC1			BCM4708               0x0646       24        0x1101 //same as rev a/b but different boardrev
 WS880				BCM4708               0x0646       1234      0x1101
 R1D				BCM4709               0x0665       32        0x1301 //same as R7000
 
@@ -373,6 +374,7 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32"))) return MODEL_R6400;
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("boardnum", "32"))) return MODEL_R7000;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;
+		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;  //rev c same as rev a/b but different boardrev
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "1234"))) return MODEL_WS880;
 		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6400;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6700;
