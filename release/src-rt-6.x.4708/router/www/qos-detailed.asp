@@ -504,11 +504,10 @@ function verifyFields(focused, quiet) {
 <!-- / / / -->
 
 <div class="section-title" id="stitleoff" style="display:none">View Details</div>
-<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="numtotalconn"></span>
-	<div class="section">
-		<div id="grid" class="tomato-grid" style="float:left"></div>
-		<div id="loading"><br/><b>Loading...</b></div>
-	</div>
+<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="numtotalconn"></span></div>
+<div class="section" id="grid-head">
+	<div id="grid" class="tomato-grid" style="float:left"></div>
+	<div id="loading"><br/><b>Loading...</b></div>
 </div>
 
 <!-- / / / -->
@@ -536,6 +535,7 @@ function verifyFields(focused, quiet) {
 		W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
 		E('stitle').style.display = 'none';
 		E('filters-head').style.display = 'none';
+		E('grid-head').style.display = 'none';
 		E('stitleoff').style.display = '';
 	}
 </script>

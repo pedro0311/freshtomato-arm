@@ -4787,8 +4787,11 @@ static void sysinit(void)
 
 	eval("buttons");
 
-	/* enable LED for LAN / Bridge */
-	eval("blink_br");
+	/* stealth mode */
+	if (nvram_match("stealth_mode", "0")) { /* start blink_br only if stealth mode is off */
+	  /* enable LED for LAN / Bridge */
+	  eval("blink_br");
+	}
 
 	if (!noconsole) xstart("console");
 
@@ -4899,12 +4902,9 @@ int init_main(int argc, char *argv[])
 			start_lan();
 			start_arpbind();
 			mwan_state_files();
+			start_wan(BOOT);
 			start_services();
 			start_wl();
-			/*
-			 * last one as ssh telnet httpd etc can fail to load untill start_wan_done
-			 */
-			start_wan(BOOT);
 
 #ifdef CONFIG_BCMWL5
 			if (wds_enable()) {
