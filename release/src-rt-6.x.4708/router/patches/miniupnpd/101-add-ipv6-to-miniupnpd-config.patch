@@ -1,3 +1,14 @@
+--- miniupnpd/genconfig.sh	2018-05-21 23:16:44.294686204 +0200
++++ miniupnpd/genconfig.sh	2018-05-21 23:21:15.000000000 +0200
+@@ -94,7 +94,7 @@ fi
+ # Tomato USB special case
+ if [ -f ../shared/tomato_version ]; then
+ 	OS_NAME=Tomato
+-	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f2,3`
++	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f1,2`
+ 	OS_VERSION="Tomato $TOMATO_VER"
+ fi
+ 
 --- miniupnpd/Makefile.linux	2019-02-10 13:03:06.000000000 +0100
 +++ miniupnpd/Makefile.linux	2019-02-24 16:48:42.102561446 +0100
 @@ -27,7 +27,7 @@ CFLAGS += -fno-strict-aliasing

@@ -558,9 +558,13 @@ void restart_wl(void)
 	char *lan_ifnames, *ifname, *p;
 	int unit, subunit;
 	int is_client = 0;
+	int model;
 
 	char tmp[32];
 	char br;
+
+	/* get router model */
+	model = get_model();
 
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
@@ -609,7 +613,9 @@ void restart_wl(void)
 	if (is_client)
 		xstart("radio", "join");
 
-	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
+	if ((model == MODEL_R6400) ||
+	    (model == MODEL_R7000) ||
+	    (model == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
 			led(LED_AOSS, LED_ON);
 		else
@@ -637,9 +643,13 @@ void start_wl(void)
 	char *lan_ifname, *lan_ifnames, *ifname, *p;
 	int unit, subunit;
 	int is_client = 0;
+	int model;
 
 	char tmp[32];
 	char br;
+
+	/* get router model */
+	model = get_model();
 
 #ifdef CONFIG_BCMWL5
 		// HACK: When a virtual SSID is disabled, it requires two initialisation
@@ -698,8 +708,7 @@ void start_wl(void)
 							killall("blink", SIGKILL);
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "wlan", "20", "8192");
-						}
-						else if (unit == 1) {
+						} else if (unit == 1) {
 							led(LED_5G, LED_ON);
 							if (nvram_get_int("blink_wl"))
 								eval("blink", ifname, "5g", "20", "8192");
@@ -728,7 +737,9 @@ void start_wl(void)
 	if (is_client)
 		xstart("radio", "join");
 
-	if ((get_model() == MODEL_R6400) || (get_model() == MODEL_R7000) || (get_model() == MODEL_R8000)) {
+	if ((model == MODEL_R6400) ||
+	    (model == MODEL_R7000) ||
+	    (model == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
 			led(LED_AOSS, LED_ON);
 		else

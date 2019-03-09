@@ -1247,6 +1247,7 @@ libnfnetlink-clean:
 	@rm -f libnfnetlink/stamp-h1
 
 miniupnpd-config:
+	$(call patch_files,miniupnpd)
 ifeq ($(TCONFIG_IPV6),y)
 	@cd miniupnpd && ./genconfig.sh --leasefile --ipv6 --vendorcfg --portinuse
 else
@@ -1255,8 +1256,7 @@ endif
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
-	$(call patch_files,miniupnpd)
-	$(MAKE) -C miniupnpd -f Makefile.linux
+	$(MAKE) -C miniupnpd -f Makefile.linux $(PARALLEL_BUILD)
 
 miniupnpd-clean:
 	-@$(MAKE) -C miniupnpd -f Makefile.linux clean
