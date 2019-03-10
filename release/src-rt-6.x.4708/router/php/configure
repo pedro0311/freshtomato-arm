@@ -3655,7 +3655,7 @@ ac_config_headers="$ac_config_headers main/php_config.h"
 
 PHP_MAJOR_VERSION=7
 PHP_MINOR_VERSION=2
-PHP_RELEASE_VERSION=15
+PHP_RELEASE_VERSION=16
 PHP_EXTRA_VERSION=""
 PHP_VERSION="$PHP_MAJOR_VERSION.$PHP_MINOR_VERSION.$PHP_RELEASE_VERSION$PHP_EXTRA_VERSION"
 PHP_VERSION_ID=`expr $PHP_MAJOR_VERSION \* 10000 + $PHP_MINOR_VERSION \* 100 + $PHP_RELEASE_VERSION`
@@ -16554,176 +16554,8 @@ fi
 
 
 
-
-
-
-# The cast to long int works around a bug in the HP C Compiler
-# version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
-# declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
-# This bug is HP SR number 8606223364.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of long" >&5
-$as_echo_n "checking size of long... " >&6; }
-if ${ac_cv_sizeof_long+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if ac_fn_c_compute_int "$LINENO" "(long int) (sizeof (long))" "ac_cv_sizeof_long"        "$ac_includes_default"; then :
-
-else
-  if test "$ac_cv_type_long" = yes; then
-     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error 77 "cannot compute sizeof (long)
-See \`config.log' for more details" "$LINENO" 5; }
-   else
-     ac_cv_sizeof_long=0
-   fi
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_long" >&5
-$as_echo "$ac_cv_sizeof_long" >&6; }
-
-
-
-cat >>confdefs.h <<_ACEOF
-#define SIZEOF_LONG $ac_cv_sizeof_long
-_ACEOF
-
-
-# The cast to long int works around a bug in the HP C Compiler
-# version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
-# declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
-# This bug is HP SR number 8606223364.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of int" >&5
-$as_echo_n "checking size of int... " >&6; }
-if ${ac_cv_sizeof_int+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if ac_fn_c_compute_int "$LINENO" "(long int) (sizeof (int))" "ac_cv_sizeof_int"        "$ac_includes_default"; then :
-
-else
-  if test "$ac_cv_type_int" = yes; then
-     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error 77 "cannot compute sizeof (int)
-See \`config.log' for more details" "$LINENO" 5; }
-   else
-     ac_cv_sizeof_int=0
-   fi
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_int" >&5
-$as_echo "$ac_cv_sizeof_int" >&6; }
-
-
-
-cat >>confdefs.h <<_ACEOF
-#define SIZEOF_INT $ac_cv_sizeof_int
-_ACEOF
-
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for int32_t" >&5
-$as_echo_n "checking for int32_t... " >&6; }
-if ${ac_cv_int_type_int32_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_INTTYPES_H
-# include <inttypes.h>
-#elif HAVE_STDINT_H
-# include <stdint.h>
-#endif
-int
-main ()
-{
-if ((int32_t *) 0)
-  return 0;
-if (sizeof (int32_t))
-  return 0;
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_int_type_int32_t=yes
-else
-  ac_cv_int_type_int32_t=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_int_type_int32_t" >&5
-$as_echo "$ac_cv_int_type_int32_t" >&6; }
-if test "$ac_cv_int_type_int32_t" = "yes"; then
-
-$as_echo "#define HAVE_INT32_T 1" >>confdefs.h
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for uint32_t" >&5
-$as_echo_n "checking for uint32_t... " >&6; }
-if ${ac_cv_int_type_uint32_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_INTTYPES_H
-# include <inttypes.h>
-#elif HAVE_STDINT_H
-# include <stdint.h>
-#endif
-int
-main ()
-{
-if ((uint32_t *) 0)
-  return 0;
-if (sizeof (uint32_t))
-  return 0;
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_int_type_uint32_t=yes
-else
-  ac_cv_int_type_uint32_t=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_int_type_uint32_t" >&5
-$as_echo "$ac_cv_int_type_uint32_t" >&6; }
-if test "$ac_cv_int_type_uint32_t" = "yes"; then
-
-$as_echo "#define HAVE_UINT32_T 1" >>confdefs.h
-
-fi
-
-
 for ac_header in  \
-sys/time.h \
-sys/types.h \
-stdint.h \
-dirent.h \
-string.h \
 strings.h \
-unistd.h \
 io.h
 
 do :
@@ -16739,7 +16571,7 @@ fi
 done
 
 
-for ac_func in strtoll atoll strftime gettimeofday
+for ac_func in strtoll atoll
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -16750,8 +16582,6 @@ _ACEOF
 
 fi
 done
-
-
 
 
 PHP_DATE_CFLAGS="-I@ext_builddir@/lib -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -DHAVE_TIMELIB_CONFIG_H=1"
@@ -44945,8 +44775,210 @@ ext_output=$PHP_ICU_DIR
     PHP_ICU_DIR=DEFAULT
   fi
 
-  if test "$PHP_ICU_DIR" = "DEFAULT"; then
-        # Extract the first word of "icu-config", so it can be a program name with args.
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for location of ICU headers and libraries" >&5
+$as_echo_n "checking for location of ICU headers and libraries... " >&6; }
+  found_icu=no
+
+    if test -z "$PKG_CONFIG"; then
+    # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_PKG_CONFIG" && ac_cv_path_PKG_CONFIG="no"
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+$as_echo "$PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  fi
+
+    if test "$PHP_ICU_DIR" = "DEFAULT" && test -x "$PKG_CONFIG" && $PKG_CONFIG --exists icu-uc icu-io icu-i18n; then
+    if $PKG_CONFIG --atleast-version=40 icu-uc; then
+      found_icu=yes
+      icu_version_full=`$PKG_CONFIG --modversion icu-uc`
+      ac_IFS=$IFS
+      IFS="."
+      set $icu_version_full
+      IFS=$ac_IFS
+      icu_version=`expr $1 \* 1000 + $2`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found $icu_version_full" >&5
+$as_echo "found $icu_version_full" >&6; }
+
+      ICU_LIBS=`$PKG_CONFIG --libs icu-uc icu-io icu-i18n`
+      ICU_INCS=`$PKG_CONFIG --cflags-only-I icu-uc icu-io icu-i18n`
+      ICU_CXXFLAGS="-DU_USING_ICU_NAMESPACE=1"
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found $ICU_VERSION" >&5
+$as_echo "found $ICU_VERSION" >&6; }
+
+
+  for ac_i in $ICU_LIBS; do
+    case $ac_i in
+    -pthread)
+      if test "$ext_shared" = "yes"; then
+        INTL_SHARED_LIBADD="$INTL_SHARED_LIBADD -pthread"
+      else
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS$unique=set"
+    EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+      fi
+    ;;
+    -l*)
+      ac_ii=`echo $ac_i|cut -c 3-`
+
+
+  case $ac_ii in
+  c|c_r|pthread*) ;;
+  *)
+    if test "$ext_shared" = "yes"; then
+        INTL_SHARED_LIBADD="$INTL_SHARED_LIBADD -l$ac_ii"
+    else
+
+
+  case $ac_ii in
+  c|c_r|pthread*) ;;
+  *)
+      LIBS="$LIBS -l$ac_ii"
+   ;;
+  esac
+
+
+    fi
+   ;;
+  esac
+
+
+    ;;
+    -L*)
+      ac_ii=`echo $ac_i|cut -c 3-`
+
+  if test "$ac_ii" != "/usr/$PHP_LIBDIR" && test "$ac_ii" != "/usr/lib"; then
+
+  if test -z "$ac_ii" || echo "$ac_ii" | grep '^/' >/dev/null ; then
+    ai_p=$ac_ii
+  else
+
+    ep_dir=`echo $ac_ii|$SED 's%/*[^/][^/]*/*$%%'`
+
+    ep_realdir=`(cd "$ep_dir" && pwd)`
+    ai_p="$ep_realdir"/`basename "$ac_ii"`
+  fi
+
+
+      if test "$ext_shared" = "yes"; then
+        INTL_SHARED_LIBADD="-L$ai_p $INTL_SHARED_LIBADD"
+        test -n "$ld_runpath_switch" && INTL_SHARED_LIBADD="$ld_runpath_switch$ai_p $INTL_SHARED_LIBADD"
+      else
+
+
+
+  unique=`echo $ai_p|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$LIBPATH$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "LIBPATH$unique=set"
+
+    test -n "$ld_runpath_switch" && LDFLAGS="$LDFLAGS $ld_runpath_switch$ai_p"
+    LDFLAGS="$LDFLAGS -L$ai_p"
+    PHP_RPATHS="$PHP_RPATHS $ai_p"
+
+  fi
+
+
+      fi
+
+  fi
+
+    ;;
+    esac
+  done
+
+
+  for ac_i in $ICU_INCS; do
+    case $ac_i in
+    -I*)
+      ac_ii=`echo $ac_i|cut -c 3-`
+
+  if test "$ac_ii" != "/usr/include"; then
+
+  if test -z "$ac_ii" || echo "$ac_ii" | grep '^/' >/dev/null ; then
+    ai_p=$ac_ii
+  else
+
+    ep_dir=`echo $ac_ii|$SED 's%/*[^/][^/]*/*$%%'`
+
+    ep_realdir=`(cd "$ep_dir" && pwd)`
+    ai_p="$ep_realdir"/`basename "$ac_ii"`
+  fi
+
+
+
+  unique=`echo $ai_p|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$INCLUDEPATH$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "INCLUDEPATH$unique=set"
+
+      if test ""; then
+        INCLUDES="-I$ai_p $INCLUDES"
+      else
+        INCLUDES="$INCLUDES -I$ai_p"
+      fi
+
+  fi
+
+  fi
+
+    ;;
+    esac
+  done
+
+    else
+      as_fn_error $? "ICU version 4.0 or later required." "$LINENO" 5
+    fi
+  fi
+
+    if test "$found_icu" = "no"; then
+    if test "$PHP_ICU_DIR" = "DEFAULT"; then
+            # Extract the first word of "icu-config", so it can be a program name with args.
 set dummy icu-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
@@ -44988,40 +45020,37 @@ $as_echo "no" >&6; }
 fi
 
 
-  else
-    ICU_CONFIG="$PHP_ICU_DIR/bin/icu-config"
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for location of ICU headers and libraries" >&5
-$as_echo_n "checking for location of ICU headers and libraries... " >&6; }
-
-    icu_install_prefix=`$ICU_CONFIG --prefix 2> /dev/null`
-  if test "$?" != "0" || test -z "$icu_install_prefix"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    as_fn_error $? "Unable to detect ICU prefix or $ICU_CONFIG failed. Please verify ICU install prefix and make sure icu-config works." "$LINENO" 5
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $icu_install_prefix" >&5
-$as_echo "$icu_install_prefix" >&6; }
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ICU 4.0 or greater" >&5
-$as_echo_n "checking for ICU 4.0 or greater... " >&6; }
-    icu_version_full=`$ICU_CONFIG --version`
-    ac_IFS=$IFS
-    IFS="."
-    set $icu_version_full
-    IFS=$ac_IFS
-    icu_version=`expr $1 \* 1000 + $2`
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: found $icu_version_full" >&5
-$as_echo "found $icu_version_full" >&6; }
-
-    if test "$icu_version" -lt "4000"; then
-      as_fn_error $? "ICU version 4.0 or later is required" "$LINENO" 5
+    else
+      ICU_CONFIG="$PHP_ICU_DIR/bin/icu-config"
     fi
 
-    ICU_VERSION=$icu_version
-    ICU_INCS=`$ICU_CONFIG --cppflags-searchpath`
-    ICU_LIBS=`$ICU_CONFIG --ldflags --ldflags-icuio`
+        icu_install_prefix=`$ICU_CONFIG --prefix 2> /dev/null`
+    if test "$?" != "0" || test -z "$icu_install_prefix"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+      as_fn_error $? "Unable to detect ICU prefix or $ICU_CONFIG failed. Please verify ICU install prefix and make sure icu-config works." "$LINENO" 5
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $icu_install_prefix" >&5
+$as_echo "$icu_install_prefix" >&6; }
+
+            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ICU 4.0 or greater" >&5
+$as_echo_n "checking for ICU 4.0 or greater... " >&6; }
+      icu_version_full=`$ICU_CONFIG --version`
+      ac_IFS=$IFS
+      IFS="."
+      set $icu_version_full
+      IFS=$ac_IFS
+      icu_version=`expr $1 \* 1000 + $2`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found $icu_version_full" >&5
+$as_echo "found $icu_version_full" >&6; }
+
+      if test "$icu_version" -lt "4000"; then
+        as_fn_error $? "ICU version 4.0 or later is required" "$LINENO" 5
+      fi
+
+      ICU_VERSION=$icu_version
+      ICU_INCS=`$ICU_CONFIG --cppflags-searchpath`
+      ICU_LIBS=`$ICU_CONFIG --ldflags --ldflags-icuio`
 
   for ac_i in $ICU_INCS; do
     case $ac_i in
@@ -45152,8 +45181,9 @@ $as_echo "found $icu_version_full" >&6; }
   done
 
 
-    ICU_CXXFLAGS=`$ICU_CONFIG --cxxflags`
-    ICU_CXXFLAGS="$ICU_CXXFLAGS -DU_USING_ICU_NAMESPACE=1"
+      ICU_CXXFLAGS=`$ICU_CONFIG --cxxflags`
+      ICU_CXXFLAGS="$ICU_CXXFLAGS -DU_USING_ICU_NAMESPACE=1"
+    fi
   fi
 
 
@@ -57170,119 +57200,6 @@ fi
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $msg" >&5
 $as_echo "$msg" >&6; }
-
-flock_type=unknown
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct flock layout" >&5
-$as_echo_n "checking for struct flock layout... " >&6; }
-
-if test "$flock_type" = "unknown"; then
-if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-  #include <fcntl.h>
-  struct flock lock = { 1, 2, 3, 4, 5, 6, 7 };
-  int main() {
-    if(lock.l_type == 1 && lock.l_whence == 2 && lock.l_start == 6 && lock.l_len== 7) {
-		return 0;
-    }
-    return 1;
-  }
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-
-    flock_type=aix64
-
-$as_echo "#define HAVE_FLOCK_AIX64 /**/" >>confdefs.h
-
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-
-if test "$flock_type" = "unknown"; then
-if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-  #include <fcntl.h>
-  struct flock lock = { 1, 2, 3, 4, 5 };
-  int main() {
-    if(lock.l_type == 1 && lock.l_whence == 2 && lock.l_start == 3 && lock.l_len == 4) {
-		return 0;
-    }
-    return 1;
-  }
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-
-	flock_type=linux
-
-$as_echo "#define HAVE_FLOCK_LINUX /**/" >>confdefs.h
-
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-
-if test "$flock_type" = "unknown"; then
-if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-  #include <fcntl.h>
-  struct flock lock = { 1, 2, 3, 4, 5 };
-  int main() {
-    if(lock.l_start == 1 && lock.l_len == 2 && lock.l_type == 4 && lock.l_whence == 5) {
-		return 0;
-    }
-    return 1;
-  }
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-
-	flock_type=bsd
-
-$as_echo "#define HAVE_FLOCK_BSD /**/" >>confdefs.h
-
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $flock_type" >&5
-$as_echo "$flock_type" >&6; }
-
-if test "$flock_type" = "unknown"; then
-	as_fn_error $? "Don't know how to define struct flock on this system, set --enable-opcache=no" "$LINENO" 5
-fi
 
 
   ext_builddir=ext/opcache
@@ -95619,7 +95536,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 95622 "configure"
+#line 95539 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -97658,7 +97575,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 97661 "configure"' > conftest.$ac_ext
+  echo '#line 97578 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -99056,7 +98973,7 @@ else
       LDFLAGS="$LDFLAGS -Wl,-exported_symbols_list,conftest.sym"
 
 cat > conftest.$ac_ext <<EOF
-#line 99059 "configure"
+#line 98976 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -99214,11 +99131,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99217: $lt_compile\"" >&5)
+   (eval echo "\"configure:99134: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99221: \$? = $ac_status" >&5
+   echo "configure:99138: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99512,11 +99429,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99515: $lt_compile\"" >&5)
+   (eval echo "\"configure:99432: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99519: \$? = $ac_status" >&5
+   echo "configure:99436: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99616,11 +99533,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99619: $lt_compile\"" >&5)
+   (eval echo "\"configure:99536: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:99623: \$? = $ac_status" >&5
+   echo "configure:99540: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -100080,7 +99997,7 @@ _LT_EOF
        # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 100083 "configure"
+#line 100000 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -100122,7 +100039,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	 # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 100125 "configure"
+#line 100042 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -101639,7 +101556,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101642 "configure"
+#line 101559 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -101739,7 +101656,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101742 "configure"
+#line 101659 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -102804,7 +102721,7 @@ case $host_os in
       # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102807 "configure"
+#line 102724 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -102847,7 +102764,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	# Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102850 "configure"
+#line 102767 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -104099,11 +104016,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:104102: $lt_compile\"" >&5)
+   (eval echo "\"configure:104019: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:104106: \$? = $ac_status" >&5
+   echo "configure:104023: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -104203,11 +104120,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:104206: $lt_compile\"" >&5)
+   (eval echo "\"configure:104123: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:104210: \$? = $ac_status" >&5
+   echo "configure:104127: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
