@@ -40,6 +40,7 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <string.h>
+#include <wlutils.h>
 
 // !!TB
 #include <sys/mount.h>
@@ -2428,9 +2429,9 @@ static void start_media_server(void)
 	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-r", NULL, NULL };
 	static int once = 1;
 	int index = 4;
-	int i;
 	char *msi;
-	char serial[16];
+	unsigned char ea[ETHER_ADDR_LEN];
+	char serial[18], uuid[37];
 
 	if (getpid() != 1) {
 		start_service("media");
@@ -2441,8 +2442,7 @@ static void start_media_server(void)
 		argv[index - 1] = NULL;
 	}
 	if (nvram_get_int("ms_enable") != 0) {
-		if (/* (once) && */(nvram_get_int("ms_rescan") == 1)) {
-			// force rebuild
+		if (nvram_get_int("ms_rescan") == 1) {	/* force rebuild */
 			argv[index - 1] = "-R";
 			nvram_unset("ms_rescan");
 		}
@@ -2459,14 +2459,13 @@ static void start_media_server(void)
 				mkdir_if_none(dbdir ? : "/var/run/"MEDIA_SERVER_APP);
 
 				msi = nvram_safe_get("ms_ifname");
-				//persistent ident (router's mac as serial)
-				conv_mac2(nvram_safe_get("et0macaddr"), serial);
- 				if (strlen(serial)) {
- 					for (i = 0; i < strlen(serial); i++)
- 						serial[i] = tolower(serial[i]);
- 					}
-				else
-					strcpy(serial, "554e4b4e4f57"); //default if no hwaddr
+
+				/* persistent ident (router's mac as serial) */
+				if (!ether_atoe(nvram_safe_get("et0macaddr"), ea))
+					f_read("/dev/urandom", ea, sizeof(ea));
+
+				snprintf(serial, sizeof(serial), "%02x:%02x:%02x:%02x:%02x:%02x", ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);
+				snprintf(uuid, sizeof(uuid), "4d696e69-444c-164e-9d41-%02x%02x%02x%02x%02x%02x", ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);
 
 				fprintf(f,
 					"network_interface=%s\n"
@@ -2478,25 +2477,23 @@ static void start_media_server(void)
 					"presentation_url=http%s://%s:%s/nas-media.asp\n"
 					"inotify=yes\n"
 					"notify_interval=600\n"
-					"album_art_names=Cover.jpg/cover.jpg/AlbumArtSmall.jpg/albumartsmall.jpg/AlbumArt.jpg/albumart.jpg/Album.jpg/album.jpg/Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg\n"
+					"album_art_names=Cover.jpg/cover.jpg/Album.jpg/album.jpg/Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg\n"
 					"log_dir=/var/log\n"
 					"log_level=general,artwork,database,inotify,scanner,metadata,http,ssdp,tivo=warn\n"
 					"serial=%s\n"
-					//add explicit uuid based on mac(serial)
-					//since some recent change has resulted in a changing uuid at boot
-					"uuid=4d696e69-444c-164e-9d41-%s\n"
-					"\n",
+					"uuid=%s\n"
+					"model_number=%s\n\n",
 					strlen(msi) ? msi : nvram_safe_get("lan_ifname"),
 					(port < 0) || (port >= 0xffff) ? 0 : port,
-					nvram_get("router_name") ? : "Tomato",
+					nvram_get("router_name") ? : "FreshTomato",
 					dbdir ? : "/var/run/"MEDIA_SERVER_APP,
 					nvram_get_int("ms_tivo") ? "yes" : "no",
 					nvram_get_int("ms_stdlna") ? "yes" : "no",
 					https ? "s" : "", nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport"),
-					serial, serial
+					serial, uuid, nvram_safe_get("os_version")
 				);
 
-				// media directories
+				/* media directories */
 				char *buf, *p, *q;
 				char *path, *restrict;
 
@@ -2519,8 +2516,6 @@ static void start_media_server(void)
 
 		if (nvram_get_int("ms_debug") == 1)
 			argv[index++] = "-v";
-
-		//syslog(LOG_DEBUG,"**** minidlna cmd: minidlna -f /etc/minidlna.conf %s %s", argv[3] ? argv[3] : "" , argv[4] ? argv[4] : "");
 
 		/* start media server if it's not already running */
 		if (pidof(MEDIA_SERVER_APP) <= 0) {
