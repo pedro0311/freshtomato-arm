@@ -405,8 +405,6 @@ extern int kill_pidfile_s(char *pidfile, int sig);
 extern int mkdir_if_none(const char *path);
 extern long fappend(FILE *out, const char *fname);
 extern long fappend_file(const char *path, const char *fname);
-extern char *conv_mac(char *mac, char *buf);
-extern char *conv_mac2(char *mac, char *buf);
 
 /* telssh.c */
 extern void create_passwd(void);
