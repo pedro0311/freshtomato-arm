@@ -184,7 +184,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_modem_if",		""				, 0 },
 	{ "wan_modem_type",		""				, 0 },
 	{ "wan_modem_modules",		""				, 0 },
-	{ "wan_modem_signal",		"-113"				, 0 },
 
 	{ "wan2_modem_pin",		""				, 0 },
 	{ "wan2_modem_dev",		""				, 0 },
@@ -196,7 +195,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_modem_if",		""				, 0 },
 	{ "wan2_modem_type",		""				, 0 },
 	{ "wan2_modem_modules",		""				, 0 },
-	{ "wan2_modem_signal",		"-113"				, 0 },
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		""				, 0 },
@@ -209,7 +207,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_modem_if",		""				, 0 },
 	{ "wan3_modem_type",		""				, 0 },
 	{ "wan3_modem_modules",		""				, 0 },
-	{ "wan3_modem_signal",		"-113"				, 0 },
 
 	{ "wan4_modem_pin",		""				, 0 },
 	{ "wan4_modem_dev",		""				, 0 },
@@ -221,7 +218,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_modem_if",		""				, 0 },
 	{ "wan4_modem_type",		""				, 0 },
 	{ "wan4_modem_modules",		""				, 0 },
-	{ "wan4_modem_signal",		"-113"				, 0 },
 #endif
 #endif
 

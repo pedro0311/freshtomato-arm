@@ -1,0 +1,248 @@
+function createWWANTableItem(value, unit, bar) {
+	let retVal = '<td class="content">';
+	let calculatedMargin = 4;
+
+	if (unit.length < 3) {	/* FIXME: db vs dBm width calculation...Crazy logic :/ */
+		calculatedMargin += (3 - unit.length) * 8;
+	}
+	retVal += '<span style="width: 34px;display:inline-block">' + value + '</span><small style="margin-right: ' + calculatedMargin + 'px;">' + unit + '</small>';
+	if (bar) {
+		retVal += '<img src="' + bar + '" alt=""/>';
+	}
+	retVal += '</td>';
+	return retVal;
+}
+
+function createWWANStatusSection() {
+	let code = '<table class="fields"><tbody>';
+	code += '<tr><td class="title indent1">Modem type</td>';
+	code += '<td class="content">' + nvram['wan_modem_type'] + '</td></tr>';
+	code += '<tr><td class="title indent1">Current Mode</td>';
+	code += '<td class="content">' + wwan_getCurrentMode(wwanstatus) + '</td></tr>';
+	let valMap = [];
+	wwan_getSignalStrengthMap(wwanstatus, valMap);
+	if (valMap['RSSI']) {
+		code += '<tr><td class="title indent1">RSSI</td>';
+		code += createWWANTableItem(valMap['RSSI'], 'dBm', wwan_getRSSIBar(valMap['RSSI']));
+	}
+	if (valMap['RSRP']) {
+		code += '<tr><td class="title indent1">RSRP</td>';
+		code += createWWANTableItem(valMap['RSRP'], 'dBm', wwan_getRSRPBar(valMap['RSRP']));
+	}
+	if (valMap['RSRQ']) {
+		code += '<tr><td class="title indent1">RSRQ</td>';
+		code += createWWANTableItem(valMap['RSRQ'], 'dBm', wwan_getRSRQBar(valMap['RSRQ']));
+	}
+	if (valMap['RSSP']) {
+		code += '<tr><td class="title indent1">RSSP</td>';
+		code += createWWANTableItem(valMap['RSSP'], 'dB', wwan_getRSSPBar(valMap['RSSP']));
+	}
+	if (valMap['RSCP']) {
+		code += '<tr><td class="title indent1">RSCP</td>';
+		code += createWWANTableItem(valMap['RSCP'], 'dBm', wwan_getRSCPBar(valMap['RSCP']));
+	}
+	if (valMap['SINR']) {
+		code += '<tr><td class="title indent1">SINR</td>';
+		code += createWWANTableItem(valMap['SINR'], 'dB', wwan_getRSRPBar(valMap['SINR']));
+	}
+	if (valMap['CQI1']) {
+		code += '<tr><td class="title indent1">CQI1</td>';
+		code += '<td class="content">' + valMap['CQI1'] + '</td></tr>';
+	}
+	if (valMap['CQI2']) {
+		code += '<tr><td class="title indent1">CQI2</td>';
+		code += '<td class="content">' + valMap['CQI2'] + '</td></tr>';
+	}
+	if (valMap['ECIO']) {
+		code += '<tr><td class="title indent1">ECIO</td>';
+		code += createWWANTableItem(valMap['ECIO'], 'dB');
+	}
+	valMap = [];
+	wwan_getLocationMap(wwanstatus, valMap);
+	if (valMap['MCC']) {
+		code += '<tr><td class="title indent1">Location</td>';
+		code += '<td class="content">';
+		code += '<span style="width: 46px;display:inline-block">MCC:</span>' + valMap['MCC'];
+		code += '<div><span style="width: 46px;display:inline-block">MNC:</span>' + valMap['MNC'] + '</div>';
+			if (valMap['LAC']) {
+				code += '<div><span style="width: 46px;display:inline-block">LAC:</span>'+ valMap['LAC']['HEX'] + ' (' + valMap['LAC']['DEC'] + ')</div>';
+			}
+			if (valMap['CID']) {
+				code += '<div><span style="width: 46px;display:inline-block">CID:</span>'+ valMap['CID']['HEX'] + ' (' + valMap['CID']['DEC'] + ')</div>';
+			}
+			if (valMap['Cell ID']) {
+				code += '<div><span style="width: 46px;display:inline-block">Cell ID:</span>'+ valMap['Cell ID']['HEX'] + ' (' + valMap['Cell ID']['DEC'] + ')</div>';
+			}
+			if (valMap['PCI']) {
+				code += '<div><span style="width: 46px;display:inline-block">PCI:</span>'+ valMap['PCI']['HEX'] + ' (' + valMap['PCI']['DEC'] + ')</div>';
+			}
+		code += '</td></tr>';
+	}
+	valMap = wwan_getCarrierMap(wwanstatus);
+	if (valMap) {
+		if (valMap['BBAND']) {
+			code += '<tr><td class="title indent1">Current Band</td>';
+			code += '<td class="content">' + valMap['BBAND'] + ' ('+ valMap['BBAND_FREQ']+' <small>MHz</small>)</td></tr>';
+		}
+		if (valMap['DOWN_FREQ']){
+			code += '<tr><td class="title indent1">Downlink Frequency</td>';
+			code += '<td class="content">' + valMap['DOWN_FREQ'] + ' <small>MHz</small></td></tr>';
+		}
+		if (valMap['UP_FREQ']) {
+			code += '<tr><td class="title indent1">Uplink Frequency</td>';
+			code += '<td class="content">' + valMap['UP_FREQ'] + ' <small>MHz</small></td></tr>';
+		}
+		if (valMap['DOWN_BW']) {
+			code += '<tr><td class="title indent1">Downlink Bandwidth</td>';
+			code += '<td class="content">' + valMap['DOWN_BW'] + ' <small>MHz</small></td></tr>';
+		}
+		if (valMap['UP_BW']) {
+			code += '<tr><td class="title indent1">Uplink Bandwidth</td>';
+			code += '<td class="content">' + valMap['UP_BW'] + ' <small>MHz</small></td></tr>';
+		}
+	}
+
+	code += '</tbody></table>';
+	return code;
+}
+
+function wwan_getSignalStrengthMap(buffer, returnMap) {
+	let itemsToFind = ['RSSI', 'RSRP', 'RSRQ', 'RSSP', 'RSCP', 'SINR', 'CQI1', 'CQI2', 'ECIO'];
+	for (index = 0; index < itemsToFind.length; ++index) {
+		let element = itemsToFind[index];
+	returnMap[element] = extractStringItem(element, buffer);
+	}
+}
+
+function wwan_getLocationMap(buffer, returnMap) {
+	let itemsToFind = ['LAC', 'CID', 'PCI', 'Cell ID'];
+	for (index = 0; index < itemsToFind.length; ++index) {
+		let element = itemsToFind[index];
+		returnMap[element] = extractLocationItem(element, buffer);
+	}
+	let extractedMCCMap = extractMCCMNC(buffer);
+	if (extractedMCCMap) {
+		returnMap['MCC'] = extractedMCCMap['MCC'];
+		returnMap['MNC'] = extractedMCCMap['MNC'];
+	}
+}
+
+function extractStringItem(tag, buffer) {
+	var regExtract = new RegExp(tag + " (.*?)(?:(\\s|\\,|$))", "gm");
+	let matchedArrs = regExtract.exec(buffer);
+	if (matchedArrs) {
+		return matchedArrs[1];
+	}
+	return undefined;
+}
+
+function extractMCCMNC(buffer) {
+	var regExtract = new RegExp("MCCMNC (\\d*)(?:\\,?)", "gm");
+	let matchedArrs = regExtract.exec(buffer);
+	if (matchedArrs) {
+		let returnMap = [];
+		let mccmncstring = matchedArrs[1];
+		returnMap['MCC'] = mccmncstring.substr(0, mccmncstring.length - 2);
+		returnMap['MNC'] = mccmncstring.substr(-2);
+		return returnMap;
+	}
+	return undefined;
+}
+
+function extractLocationItem(tag, buffer) {
+	var regExtract = new RegExp(tag + " ((.*?))\\((.*?)\\)", "gm");
+	let matchedArrs = regExtract.exec(buffer);
+	if (matchedArrs) {
+		let returnMap = [];
+		returnMap['HEX'] = matchedArrs[1].trim();
+		returnMap['DEC'] = matchedArrs[3];
+		return returnMap;
+	}
+	return undefined;
+}
+
+function wwan_getCarrierMap(buffer) {
+	var regExtract = new RegExp("MODEM Carrier: (.[0-9]) \\((.*) MHz\\)\\, Downlink FQ (.*) MHz, Uplink FQ (.*) MHz, Downlink BW (.*) MHz, Uplink BW (.*) MHz", "gm");
+	let matchedArrs = regExtract.exec(buffer);
+	if (matchedArrs) {
+		let returnMap = [];
+		returnMap['BBAND'] = matchedArrs[1];
+		returnMap['BBAND_FREQ'] = matchedArrs[2];
+		returnMap['DOWN_FREQ'] = matchedArrs[3];
+		returnMap['UP_FREQ'] = matchedArrs[4];
+		returnMap['DOWN_BW'] = matchedArrs[5];
+		returnMap['UP_BW'] = matchedArrs[6];
+		return returnMap;
+	}
+	return undefined;
+}
+
+function wwan_getRSSIBar(value) {
+	if (value >-51) {
+		return "bar6.gif";
+	} else if (value <=-51 && value >=-73) {
+		return "bar5.gif";
+	} else if (value <=-75 && value >=-85) {
+		return "bar4.gif";
+	} else if (value <=-87 && value >=-93) {
+		return "bar3.gif";
+	} else {
+		return "bar2.gif";
+	}
+}
+
+function wwan_getRSRPBar(value) {
+	if (value >-79) {
+		return "bar6.gif";
+	} else if (value <=-80 && value >=-90) {
+		return "bar5.gif";
+	} else if (value <=-91 && value >=-100) {
+		return "bar4.gif";
+	} else {
+		return "bar2.gif";
+	}
+}
+
+function wwan_getRSRQBar(value) {
+	if (value >=-9) {
+		return "bar6.gif";
+	} else if (value <=-10 && value >=-15) {
+		return "bar5.gif";
+	} else if (value <=-16 && value >=-20) {
+		return "bar4.gif";
+	} else {
+		return "bar2.gif";
+	}
+}
+
+function wwan_getSINRBar(value) {
+	if (value >=21) {
+		return "bar6.gif";
+	} else if (value <=20 && value >=13) {
+		return "bar5.gif";
+	} else if (value <=12 && value >=0) {
+		return "bar4.gif";
+	} else {
+		return "bar2.gif";
+	}
+}
+
+function wwan_getRSCPBar(value) {
+	if (value >-65) {
+		return "bar6.gif";
+	} else if (value <=-65 && value >-75) {
+		return "bar5.gif";
+	} else if (value <=-75 && value >-85) {
+		return "bar4.gif";
+	} else if (value <=-85 && value >-95) {
+		return "bar3.gif";
+	} else if (value <=-95 && value >-105) {
+		return "bar2.gif";
+	} else {
+		return "bar1.gif";
+	}
+}
+
+function wwan_getCurrentMode(buffer) {
+	return extractStringItem('MODEM Current Mode\\:', buffer);
+}

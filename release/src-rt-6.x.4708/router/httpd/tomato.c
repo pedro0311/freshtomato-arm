@@ -32,6 +32,9 @@ static void wo_update(char *url);
 static void wo_service(char *url);
 static void wo_shutdown(char *url);
 static void wo_nvcommit(char *url);
+#ifdef TCONFIG_USB
+static void wo_wwansignal(char *url);
+#endif
 //	static void wo_logout(char *url);
 
 
@@ -329,6 +332,7 @@ const struct mime_handler mime_handlers[] = {
 #endif
 #ifdef TCONFIG_USB
 	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },	//!!TB - USB
+	{ "wwansignal.cgi",		mime_html,				0,	wi_generic,		wo_wwansignal,		1 },
 #endif
 #ifdef TCONFIG_IPERF
 	{ "iperfstatus.cgi",			mime_javascript,			0,	wi_generic,		wo_ttcpstatus,		1 },
@@ -717,7 +721,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
 	{ "wan_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
-	{ "wan_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan2_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
@@ -729,7 +732,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
 	{ "wan2_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
-	{ "wan2_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
@@ -742,7 +744,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
 	{ "wan3_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
-	{ "wan3_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan4_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
@@ -754,7 +755,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
 	{ "wan4_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
-	{ "wan4_modem_signal",		V_LENGTH(0, 4)			},	// RSSI
 #endif
 #endif
 
@@ -2175,3 +2175,12 @@ static void wo_nvcommit(char *url)
 	web_close();
 	nvram_commit();
 }
+
+#ifdef TCONFIG_USB
+static void wo_wwansignal(char *url)
+{
+	web_puts("\nwwanstatus = '");
+	web_pipecmd("wwansignal wan -stdout", WOF_JAVASCRIPT);
+	web_puts("';");
+}
+#endif
