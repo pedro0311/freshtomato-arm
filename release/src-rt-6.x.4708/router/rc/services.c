@@ -1719,47 +1719,45 @@ void set_tz(void)
 	f_write_string("/etc/TZ", nvram_safe_get("tm_tz"), FW_CREATE|FW_NEWLINE, 0644);
 }
 
-void start_ntpc(void)
+void start_ntpd(void)
 {
-	char *servers=NULL, *ptr=NULL;
-	int servers_len=0, ntp_updates_int=0;
-	FILE *f=NULL;
+	char *servers, *ptr;
+	int servers_len = 0, ntp_updates_int = 0;
+	FILE *f;
+
+	if (getpid() != 1) {
+		start_service("ntpd");
+		return;
+	}
 
 	set_tz();
 
-	stop_ntpc();
+	stop_ntpd();
 
 	if (nvram_match("dnscrypt_proxy", "1") || nvram_match("stubby_proxy", "1")) {
 		eval("ntp2ip");
 	}
 
-		/* This is the nvram var defining how the server should be run / how often to sync */
+	/* This is the nvram var defining how the server should be run / how often to sync */
 	ntp_updates_int = nvram_get_int("ntp_updates");
 
-		/* Both a sanity check, and also to transition old nvram values to equivalent updated value */
-	if (ntp_updates_int > 1) {
-		nvram_set("ntp_updates", "1");
-		ntp_updates_int = 1;
-	}
-
-
-		/* The Tomato GUI allows the User to select an NTP Server region, and then string concats 1. 2. and 3. as prefix */
-		/* Therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to */
-		/* ntpd as separate parameters.  This code should continue to work if GUI is changed to only store 1 value in the NVRAM var */
-
+	/* The Tomato GUI allows the User to select an NTP Server region, and then string concats 1. 2. and 3. as prefix */
+	/* Therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to */
+	/* ntpd as separate parameters.  This code should continue to work if GUI is changed to only store 1 value in the NVRAM var */
 	if (ntp_updates_int >= 0) {
 		servers_len = strlen(nvram_safe_get("ntp_server"));
 
-								/* Allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
-		if ((servers = malloc(servers_len+1)) == NULL) {
-			return;				/* Just get out if we couldn't allocate memory */
+		/* Allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
+		if ((servers = malloc(servers_len + 1)) == NULL) {
+			syslog(LOG_DEBUG, "ntpd: failed allocating memory, exiting\n");
+			return;			/* Just get out if we couldn't allocate memory */
 		}
 		memset(servers, 0, sizeof(servers));
 
-				/* Get the space separated list of ntp servers */
+		/* Get the space separated list of ntp servers */
 		strcpy(servers, nvram_safe_get("ntp_server"));
 
-				/* Put the servers into the ntp config file */
+		/* Put the servers into the ntp config file */
 		if ((f = fopen("/etc/ntp.conf", "w")) != NULL) {
 			ptr = strtok(servers, " ");
 			while(ptr) {
@@ -1767,30 +1765,26 @@ void start_ntpc(void)
 				ptr = strtok(NULL, " ");
 			}
 		}
-		ptr=NULL;
 		fclose(f);
-	}
+		free(servers);
 
-				/* ntpd will be run based on user setting */
-	if (ntp_updates_int < 0) {
-		/* Do Nothing - User disabled updates */
+		if (ntp_updates_int == 0) {		/* Only at startup */
+			xstart("ntpd", "-q");
+		}
+		else if (ntp_updates_int >= 1) {	/* Auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
+			xstart("ntpd", "-l");
+		}
 	}
-	else if (ntp_updates_int == 0) {	/* Only at startup */
-		xstart("ntpd", "-q");
-	}
-	else {		/* Auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
-		xstart("ntpd", "-l");
-	}
-
-		/*** Clean up ***/
-	free(servers);
-	servers=NULL;
 }
 
-void stop_ntpc(void)
+void stop_ntpd(void)
 {
-	killall("ntpd", SIGTERM);
-	sleep(1);
+	if (getpid() != 1) {
+		stop_service("ntpd");
+		return;
+	}
+
+	killall_tk("ntpd");
 }
 
 // -----------------------------------------------------------------------------
@@ -3010,9 +3004,9 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "ntpc") == 0) {
-		if (action & A_STOP) stop_ntpc();
-		if (action & A_START) start_ntpc();
+	if (strcmp(service, "ntpd") == 0) {
+		if (action & A_STOP) stop_ntpd();
+		if (action & A_START) start_ntpd();
 		goto CLEAR;
 	}
 
@@ -3063,7 +3057,7 @@ TOP:
 			stop_jffs2();
 //			stop_cifs();
 			stop_cron();
-			stop_ntpc();
+			stop_ntpd();
 			stop_upnp();
 //			stop_dhcpc();
 			killall("rstats", SIGTERM);
