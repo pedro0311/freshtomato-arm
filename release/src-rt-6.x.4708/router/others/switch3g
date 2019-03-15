@@ -232,19 +232,6 @@ setPIN() {
 	}
 }
 
-signal() {
-	local CSQ RSSI
-
-	CSQ=$(gcom -d "$DEVNR" -s /etc/gcom/getstrength.gcom 2>/dev/null | tr -d '\r')
-
-	[ "$(echo "$CSQ" | grep OK | wc -l)" -eq 1 ] && {
-		CSQ=$(echo "$CSQ" | grep "CSQ:" | cut -d " " -f2 | cut -d "," -f1)
-		RSSI=$((-113+CSQ*2))
-		$LOGS "3G MODEM Signal Strength: $RSSI dBm"
-		nvram set "$PREFIX"_modem_signal="$RSSI"
-	}
-}
-
 checkPid() {
 	local PRIORITY="$1" PIDNO
 
@@ -289,13 +276,13 @@ wayOut() {
 
 [ "$2" == "signal" ] && {
 	checkPid 0
-	signal
+	wwansignal $PREFIX
 } || {
 	checkPid 1
 	switchMode
 	searchDiag
 	setPIN
-	signal
+	wwansignal $PREFIX
 	service $PREFIX restart
 }
 
