@@ -4355,6 +4355,63 @@ static inline void tune_min_free_kbytes(void)
 }
 #endif
 
+/*
+Example for RT-AC56U (default, without tune smp_affinity)
+# cat /proc/interrupts
+           CPU0       CPU1
+ 27:         33          0         GIC  mpcore_gtimer
+ 32:          0          0         GIC  L2C
+111:          0          0         GIC  ehci_hcd:usb2
+112:          1          0         GIC  xhci_hcd:usb1
+117:        240          0         GIC  serial
+163:      20012          0         GIC  eth1
+169:       3337          0         GIC  eth2
+179:     171514          0         GIC  eth0
+IPI:       3266       3852
+LOC:      60178      62030
+Err:          0
+
+Example for AC3200 (default, without tune smp_affinity)
+# cat /proc/interrupts
+           CPU0       CPU1
+ 27:         36          0         GIC  mpcore_gtimer
+ 32:          0          0         GIC  L2C
+111:    2824873          0         GIC  ehci_hcd:usb1
+117:     124872          0         GIC  serial
+163:        552    3558156         GIC  dhdpcie:0001:03:00.0, dhdpcie:0001:04:00.0
+169:          0     138911         GIC  dhdpcie:0002:01:00.0
+179:     390168          0         GIC  eth0
+IPI:     207105     908084
+LOC:    4037843    3667045
+Err:          0
+ */
+
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_USB)
+static inline void tune_smp_affinity(void)
+{
+	int fd;
+	int mode;
+
+	mode = nvram_get_int("smbd_enable");
+
+	if ((fd = open("/proc/irq/163/smp_affinity", O_RDWR)) >= 0) {
+		close(fd);
+
+		if (mode) {	/* samba is enabled */
+			f_write_string("/proc/irq/179/smp_affinity", TOMATO_CPUX, 0, 0);	/* eth0 --> CPU 0 and 1 (no change, default) */
+			f_write_string("/proc/irq/163/smp_affinity", TOMATO_CPU1, 0, 0);	/* eth1 --> CPU 1 (assign at least 163 to CPU1) */
+			f_write_string("/proc/irq/169/smp_affinity", TOMATO_CPUX, 0, 0);	/* eth2 --> CPU 0 and 1 (no change, default) */
+		}
+		else {
+			f_write_string("/proc/irq/179/smp_affinity", TOMATO_CPU0, 0, 0);	/* eth0 --> CPU 0 */
+			f_write_string("/proc/irq/163/smp_affinity", TOMATO_CPU1, 0, 0);	/* eth1 --> CPU 1 */
+			f_write_string("/proc/irq/169/smp_affinity", TOMATO_CPU1, 0, 0);	/* eth2 --> CPU 1 */
+		}
+	}
+
+}
+#endif
+
 static void sysinit(void)
 {
 	static int noconsole = 0;
@@ -4365,6 +4422,9 @@ static void sysinit(void)
 	struct dirent *de;
 	char s[256];
 	char t[256];
+#if defined(TCONFIG_USB)
+	int mode;
+#endif
 
 	mount("proc", "/proc", "proc", 0, NULL);
 	mount("tmpfs", "/tmp", "tmpfs", 0, NULL);
@@ -4479,6 +4539,18 @@ static void sysinit(void)
 		modprobe("ctf");
 #endif
 
+#if defined(TCONFIG_USB)
+	mode = nvram_get_int("smbd_enable");
+
+	/* check samba enabled ? */
+	if (mode) {
+	  nvram_set("txworkq", "1");	/* set txworkq to 1, see et/sys/et_linux.c */
+	}
+	else {
+	  nvram_unset("txworkq");
+	}
+#endif
+
 #ifdef TCONFIG_EMF
 	modprobe("emf");
 	modprobe("igs");
@@ -4521,6 +4593,11 @@ static void sysinit(void)
 #if defined(LINUX26) && defined(TCONFIG_USB)
 	tune_min_free_kbytes();
 #endif
+
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_USB)
+	tune_smp_affinity();
+#endif
+
 	setup_conntrack();
 	set_host_domain_name();
 

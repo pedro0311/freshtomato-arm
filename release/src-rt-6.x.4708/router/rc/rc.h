@@ -80,6 +80,13 @@
 #define TOMATO_RAM_MID_END	(100 * 1024)
 #define TOMATO_RAM_LOW_END	(50 * 1024)
 
+/* see init.c - used for tune_smp_affinity */
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_USB)
+#define TOMATO_CPU0 "1"	/* assign CPU 0 */
+#define TOMATO_CPU1 "2"	/* assign CPU 1 */
+#define TOMATO_CPUX "3"	/* assign CPU 1 and 2 */
+#endif
+
 #define SET_LED(val)	do { } while(0)
 
 typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
