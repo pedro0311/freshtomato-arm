@@ -4605,10 +4605,16 @@ static inline void tune_min_free_kbytes(void)
 
 	memset(&info, 0, sizeof(struct sysinfo));
 	sysinfo(&info);
-	if (info.totalram >= 55 * 1024 * 1024) {
-		// If we have 64MB+ RAM, tune min_free_kbytes
-		// to reduce page allocation failure errors.
-		f_write_string("/proc/sys/vm/min_free_kbytes", "8192", 0, 0);
+	if (info.totalram >= (TOMATO_RAM_HIGH_END * 1024)) { /* Router with 256 MB RAM and more */
+		f_write_string("/proc/sys/vm/min_free_kbytes", "20480", 0, 0);  /* 20 MByte */
+	}
+	else if (info.totalram >= (TOMATO_RAM_MID_END * 1024)) { /* Router with 128 MB RAM */
+		f_write_string("/proc/sys/vm/min_free_kbytes", "14336", 0, 0); /* 14 MByte */
+	}
+	else if (info.totalram >= (TOMATO_RAM_LOW_END * 1024)) {
+		/* If we have 64MB+ RAM, tune min_free_kbytes
+		   to reduce page allocation failure errors. */
+		f_write_string("/proc/sys/vm/min_free_kbytes", "8192", 0, 0); /* 8 MByte */
 	}
 }
 #endif

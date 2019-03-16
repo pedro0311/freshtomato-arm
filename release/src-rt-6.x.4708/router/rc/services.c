@@ -1511,11 +1511,10 @@ void start_igmp_proxy(void)
 
 	pid_igmp = -1;
 	if (nvram_match("multicast_pass", "1")) {
+		int ret = 0;
 
-//		if (get_wan_proto() == WP_DISABLED)
-//			return;
 		if (f_exists("/etc/igmp.alt")) {
-			eval("igmpproxy", "/etc/igmp.alt");
+			ret = eval("igmpproxy", "/etc/igmp.alt");
 		}
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
 		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
@@ -1526,7 +1525,7 @@ void start_igmp_proxy(void)
 		  if (nvram_match("multicast_lan", "0") && nvram_match("multicast_lan1", "0") && nvram_match("multicast_lan2", "0") && nvram_match("multicast_lan3", "0")) {
 			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
 			fclose(fp);
-			eval("igmpproxy", "/etc/igmp.conf");
+			ret = eval("igmpproxy", "/etc/igmp.conf");
 		  }
 		  /* create default config for upstream/downstream interface(s) */
 		  else {
@@ -1582,7 +1581,7 @@ void start_igmp_proxy(void)
 					}
 				}
 			fclose(fp);
-			eval("igmpproxy", "/etc/igmp.conf");
+			ret = eval("igmpproxy", "/etc/igmp.conf");
 		  }
 		}
 		else {
@@ -1591,6 +1590,11 @@ void start_igmp_proxy(void)
 		if (!nvram_contains_word("debug_norestart", "igmprt")) {
 			pid_igmp = -2;
 		}
+		if (ret) {
+			syslog(LOG_INFO, "starting igmpproxy failed ...\n");
+		} else {
+			syslog(LOG_INFO, "igmpproxy is started\n");
+		}
 	}
 }
 
@@ -1598,6 +1602,8 @@ void stop_igmp_proxy(void)
 {
 	pid_igmp = -1;
 	killall_tk("igmpproxy");
+
+	syslog(LOG_INFO, "igmpproxy is stopped\n");
 }
 
 // -----------------------------------------------------------------------------
@@ -2086,8 +2092,16 @@ static void start_ftpd(void)
 	killall("vsftpd", SIGHUP);
 
 	/* start vsftpd if it's not already running */
-	if (pidof("vsftpd") <= 0)
-		xstart("vsftpd");
+	if (pidof("vsftpd") <= 0) {
+		int ret = 0;
+
+		ret = xstart("vsftpd");
+		if (ret) {
+			syslog(LOG_INFO, "starting vsftpd failed ...\n");
+		} else {
+			syslog(LOG_INFO, "vsftpd is started\n");
+		}
+	}
 }
 
 static void stop_ftpd(void)
@@ -2101,6 +2115,8 @@ static void stop_ftpd(void)
 	unlink(vsftpd_passwd);
 	unlink(vsftpd_conf);
 	eval("rm", "-rf", vsftpd_users);
+
+	syslog(LOG_INFO, "vsftpd is stopped\n");
 }
 #endif	// TCONFIG_FTP
 
@@ -2353,9 +2369,11 @@ static void start_samba(void)
 
 	kill_samba(SIGHUP);
 	int ret1 = 0, ret2 = 0;
+
 	/* start samba if it's not already running */
 	if (pidof("nmbd") <= 0)
 		ret1 = xstart("nmbd", "-D");
+
 	if (pidof("smbd") <= 0) {
 #ifdef TCONFIG_BCMARM
 #ifdef TCONFIG_BCMSMP
@@ -2369,7 +2387,13 @@ static void start_samba(void)
 #endif
 		ret2 = xstart("smbd", "-D");
 	}
-	if (ret1 || ret2) kill_samba(SIGTERM);
+
+	if (ret1 || ret2) {
+		kill_samba(SIGTERM);
+		syslog(LOG_INFO, "starting samba daemon failed ...\n");
+	} else {
+		syslog(LOG_INFO, "samba daemon is started\n");
+	}
 }
 
 static void stop_samba(void)
@@ -2388,6 +2412,8 @@ static void stop_samba(void)
 #ifdef TCONFIG_GROCTRL
 	enable_gro(0);
 #endif
+
+	syslog(LOG_INFO, "samba daemon is stopped\n");
 }
 #endif	// TCONFIG_SAMBASRV
 
@@ -2505,10 +2531,15 @@ static void start_media_server(void)
 				 * disable forced once-after-reboot rescan.
 				 */
 				sleep(1);
-				if (pidof(MEDIA_SERVER_APP) > 0)
+				if (pidof(MEDIA_SERVER_APP) > 0) {
 					once = 0;
+				} else {
+					syslog(LOG_INFO, "starting "MEDIA_SERVER_APP" failed ...\n");
+					return;
+				}
 			}
 		}
+		syslog(LOG_INFO, MEDIA_SERVER_APP" is started\n");
 	}
 }
 
@@ -2520,6 +2551,8 @@ static void stop_media_server(void)
 	}
 
 	killall_tk(MEDIA_SERVER_APP);
+
+	syslog(LOG_INFO, MEDIA_SERVER_APP" is stopped\n");
 }
 #endif	// TCONFIG_MEDIA_SERVER
 

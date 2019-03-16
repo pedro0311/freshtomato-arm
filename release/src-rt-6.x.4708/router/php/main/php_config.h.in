@@ -678,15 +678,6 @@
 /* Define to 1 if you have the `flock' function. */
 #undef HAVE_FLOCK
 
-/* Struct flock is 64-bit AIX-type */
-#undef HAVE_FLOCK_AIX64
-
-/* Struct flock is BSD-type */
-#undef HAVE_FLOCK_BSD
-
-/* Struct flock is Linux-type */
-#undef HAVE_FLOCK_LINUX
-
 /* Define to 1 if you have the `floorf' function. */
 #undef HAVE_FLOORF
 
