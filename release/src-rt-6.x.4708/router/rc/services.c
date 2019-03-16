@@ -2251,6 +2251,14 @@ static void start_samba(void)
 	if ((fp = fopen("/etc/smb.conf", "w")) == NULL)
 		return;
 
+	/* check samba enabled ? */
+	if (mode) {
+		nvram_set("txworkq", "1");	/* set txworkq to 1, see et/sys/et_linux.c */
+	}
+	else {
+		nvram_unset("txworkq");
+	}
+
 #ifdef TCONFIG_GROCTRL
 // shibby - gro control may broke files transmitted between hosts. Disable it for now.
 //	enable_gro(2);
