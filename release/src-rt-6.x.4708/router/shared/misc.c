@@ -192,7 +192,7 @@ int foreach_wif(int include_vifs, void *param,
 #ifdef TCONFIG_MULTIWAN
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
 #else
-	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s",
+	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s",
 #endif
 		nvram_safe_get("lan_ifnames"),
 		nvram_safe_get("lan1_ifnames"),
