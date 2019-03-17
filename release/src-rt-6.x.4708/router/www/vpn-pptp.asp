@@ -63,7 +63,7 @@ function verifyFields(focused, quiet) {
 	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) { ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet); ret = 0; }
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) { ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet); ret = 0; }
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) { ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet); ret = 0; }
-	
+
 	changed |= ret;
 	return ret;
 }
@@ -120,7 +120,7 @@ textarea {
 <script type="text/javascript">
 createFieldTable('', [
 	{ title: 'Start with WAN', name: 'f_pptp_client_enable', type: 'checkbox', value: nvram.pptp_client_enable != 0 },
-	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 17, size: 17, value: nvram.pptp_client_srvip },
+	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
 	{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
 	{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },
 	{ title: 'Encryption', name: 'pptp_client_crypt', type: 'select', value: nvram.pptp_client_crypt,
