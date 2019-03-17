@@ -225,6 +225,7 @@ extern void stop_udpxy(void);
 extern void start_httpd(void);
 extern void stop_httpd(void);
 extern void clear_resolv(void);
+extern void start_led_setup(void);
 extern void dns_to_resolv(void);
 extern void start_dnsmasq(void);
 extern void stop_dnsmasq(void);
