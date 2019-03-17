@@ -208,6 +208,10 @@ extern void stop_dhcp6c(void);
 /* services.c */
 extern void start_cron(void);
 extern void stop_cron(void);
+#ifdef TCONFIG_FANCTRL
+extern void start_phy_tempsense(void);
+extern void stop_phy_tempsense(void);
+#endif
 extern void start_adblock(int update);
 extern void stop_adblock(void);
 extern void start_upnp(void);
