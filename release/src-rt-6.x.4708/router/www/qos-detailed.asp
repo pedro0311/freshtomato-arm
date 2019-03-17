@@ -75,8 +75,7 @@ var filteripe = [];
 
 if ((viewClass = '<% cgi_get("class"); %>') == '') {
 	viewClass = -1;
-}
-else if ((isNaN(viewClass *= 1)) || (viewClass < 0) || (viewClass > 10)) {
+} else if ((isNaN(viewClass *= 1)) || (viewClass < 0) || (viewClass > 10)) {
 	viewClass = 0;
 }
 
@@ -99,9 +98,10 @@ function resolve() {
 		}
 		if (queue.length == 0) {
 			if ((lock == 0) && (resolveCB) && (grid.sortColumn == 4)) grid.resort();
+		} else {
+			setTimeout(resolve, 500);
 		}
-		else setTimeout(resolve, 500);
-		xob = null;
+			xob = null;
 	}
 	xob.onError = function(ex) {
 		xob = null;
@@ -131,14 +131,14 @@ grid.dataToView = function(data) {
 	var s, v = [];
 	for (var col = 0; col < data.length; ++col) {
 		switch (col) {
-		case 5:		// Class
+		case 5:		/* Class */
 			s = abc[data[col]] || ('' + data[col]);
 			break;
-		case 6:		// Rule #
+		case 6:		/* Rule # */
 			s = (data[col] * 1 > 0) ? ('' + data[col]) : '';
 			break;
-		case 7:		// Bytes out
-		case 8:		// Bytes in
+		case 7:		/* Bytes out */
+		case 8:		/* Bytes in */
 			s = scaleSize(data[col] * 1);
 			break;
 		default:
@@ -158,15 +158,14 @@ grid.sortCompare = function(a, b) {
 	var r;
 
 	switch (col) {
-	case 0:		// Protocol
-	case 2:		// S port
-	case 4:		// D port
-	case 6:		// Rule #
-	case 7:		// Bytes out
-	case 8:		// Bytes in
+	case 2:		/* S port */
+	case 4:		/* D port */
+	case 6:		/* Rule # */
+	case 7:		/* Bytes out */
+	case 8:		/* Bytes in */
 		r = cmpInt(da[col], db[col]);
 		break;
-	case 5:		// Class
+	case 5:		/* Class */
 		r = cmpInt(da[col] ? da[col] : 10000, db[col] ? db[col] : 10000);
 		break;
 	case 1:
@@ -194,8 +193,7 @@ grid.onClick = function(cell) {
 			row.style.cursor = 'wait';
 			resolve();
 		}
-	}
-	else {
+	} else {
 		this.resolveAll();
 	}
 }
@@ -306,8 +304,8 @@ ref.refresh = function(text) {
 		}
 
 		if (E('_f_excludemcast').checked) {
-			var mmin = 3758096384; // aton('224.0.0.0')
-			var mmax = 4026531839; // aton('239.255.255.255')
+			var mmin = 3758096384;	/* aton('224.0.0.0') */
+			var mmax = 4026531839;	/* aton('239.255.255.255') */
 			if (((aton(b[2]) >= mmin) && (aton(b[2]) <= mmax)) || 
 				((aton(b[3]) >= mmin) && (aton(b[3]) <= mmax))) {
 				continue;
@@ -342,16 +340,14 @@ ref.refresh = function(text) {
 				c[ip] = cache[ip];
 				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
 				cursor = 'default';
-			}
-			else {
+			} else {
 				if (resolveCB) {
 					if (!q[ip]) {
 						q[ip] = 1;
 						queue.push(ip);
 					}
 					cursor = 'wait';
-				}
-				else cursor = null;
+				} else cursor = null;
 			}
 			if (E('_f_shortcuts').checked) {
 				if (cache[ip] == null) {
@@ -376,6 +372,7 @@ ref.refresh = function(text) {
 	--lock;
 
 	if (resolveCB) resolve();
+
 	if (numconnshown != numconntotal)
 		E('numtotalconn').innerHTML='<small><i>(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)<\/i><\/small>';
 	else
@@ -455,7 +452,7 @@ function dofilter() {
 }
 
 function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
+	if (E('sesdiv' + whichone).style.display=='') {
 		E('sesdiv' + whichone).style.display='none';
 		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
 		cookie.set('qos_details_' + whichone + '_vis', 0);
