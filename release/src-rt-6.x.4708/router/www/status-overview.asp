@@ -228,13 +228,13 @@ function ethstates() {
 	}
 
 	code += '<td class="content"> <\/td><\/tr>';
-	code += '<tr><td class="title indent1" colspan="7" align="right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
+	code += '<tr><td class="title indent1" colspan="6" style="text-align:right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
 	E("ports").innerHTML = code;
 }
 
 function anon_update() {
 	update = anonupdate.update;
-	if (update == "no" || update == "") { return 0; }
+	if (update == "no" || update == "" || update == null) { return 0; }
 
 	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
 	code += '<div class="fields" style="text-align:center">Newer version of FreshTomato ' + update + ' is now available. <a class="new_window" href="http://freshtomato.org/">Click here to download<\/a>.<\/div>';
@@ -332,7 +332,7 @@ function earlyInit() {
 
 	ethstates();
 
-	anon_update()
+	anon_update();
 
 	show();
 }
@@ -499,7 +499,6 @@ for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		}
 		t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br />' : '';
 		t += '<b>br' + i + '<\/b> (LAN' + j + ') - ' + nvram['lan' + j + '_ipaddr'] + '/' + numberOfBitsOnNetMask(nvram['lan' + j + '_netmask']);
-		
 	}
 }
 
