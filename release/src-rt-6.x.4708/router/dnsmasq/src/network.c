@@ -726,6 +726,11 @@ static int make_sock(union mysockaddr *addr, int type, int dienow)
   
   if (type == SOCK_STREAM)
     {
+#ifdef TCP_FASTOPEN
+      int qlen = 5;                           
+      setsockopt(fd, SOL_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen));
+#endif
+      
       if (listen(fd, TCP_BACKLOG) == -1)
 	goto err;
     }
@@ -1535,7 +1540,7 @@ void check_servers(void)
 		{
 		  count--;
 		  if (++locals <= LOCALS_LOGGED)
-			my_syslog(LOG_INFO, _("using local addresses only for %s %s"), s1, s2);
+			my_syslog(LOG_INFO, _("using only locally-known addresses for %s %s"), s1, s2);
 	        }
 	      else if (serv->flags & SERV_USE_RESOLV)
 		my_syslog(LOG_INFO, _("using standard nameservers for %s %s"), s1, s2);
