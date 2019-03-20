@@ -233,7 +233,7 @@ obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
 obj-$(TCONFIG_TINC) += tinc
-obj-$(TCONFIG_EMF) += emf
+obj-$(TCONFIG_EMF) += emf$(BCMEX)
 obj-$(TCONFIG_EMF) += igs
 
 # Tomato RAF
