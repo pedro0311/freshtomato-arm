@@ -7,16 +7,22 @@ function createWWANTableItem(value, unit, bar) {
 	}
 	retVal += '<span style="width: 34px;display:inline-block">' + value + '</span><small style="margin-right: ' + calculatedMargin + 'px;">' + unit + '</small>';
 	if (bar) {
-		retVal += '<img src="' + bar + '" alt=""/>';
+		let altText = getAltText(bar);
+		retVal += '<img src="' + bar + '" alt="' + altText + '" title="' + altText + '"/>';
 	}
 	retVal += '</td>';
 	return retVal;
 }
 
-function createWWANStatusSection() {
+function getAltText(bar) {
+	let altTextMap = {"bar6.gif" : "6/6", "bar5.gif" : "5/6", "bar4.gif" : "4/6", "bar3.gif" : "3/6", "bar2.gif" : "2/6", "bar1.gif" : "1/6"};
+	return altTextMap[bar];
+}
+
+function createWWANStatusSection(wannum, wwanstatus) {
 	let code = '<table class="fields"><tbody>';
 	code += '<tr><td class="title indent1">Modem type</td>';
-	code += '<td class="content">' + nvram['wan_modem_type'] + '</td></tr>';
+	code += '<td class="content">' + nvram['wan'+(wannum > 1 ? wannum : '')+'_modem_type'] + '</td></tr>';
 	code += '<tr><td class="title indent1">Current Mode</td>';
 	code += '<td class="content">' + wwan_getCurrentMode(wwanstatus) + '</td></tr>';
 	let valMap = [];
