@@ -61,8 +61,11 @@ void start_vpnclient(int clientNum)
 	int pid;
 	int userauth, useronly;
 	int i;
+	int taskset_ret = 0;
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
-	int taskset_ret;
+	int cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+#endif
 
 	sprintf(buffer, "vpnclient%d", clientNum);
 	if (getpid() != 1) {
@@ -411,14 +414,19 @@ void start_vpnclient(int clientNum)
 	sprintf(buffer, "/etc/openvpn/vpnclient%d", clientNum);
 	sprintf(buffer2, "/etc/openvpn/client%d", clientNum);
 
+	vpnlog(VPN_LOG_INFO,"Starting OpenVPN client %d", clientNum);
+
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	// Spread clients on cpu 1,0 or 1,2,3,0 (in that order)
-	i = sysconf(_SC_NPROCESSORS_CONF) - 1;
-	if (i < 0) i = 0;
-	snprintf(cpulist, sizeof(cpulist), "%d", (clientNum & i));
+	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (cpu_num < 0) cpu_num = 0;
+	snprintf(cpulist, sizeof(cpulist), "%d", (clientNum & cpu_num));
 
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
-	vpnlog(VPN_LOG_INFO,"Starting OpenVPN client %d", clientNum);
+	if (taskset_ret)
+#endif
+		taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
 	{
@@ -626,9 +634,11 @@ void start_vpnserver(int serverNum)
 	int nvi, ip[4], nm[4];
 	long int nvl;
 	int pid;
+	int taskset_ret = 0;
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
-	int taskset_ret;
-	int i;
+	int cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+#endif
 
 	int current_security_level = 1;
 	sprintf(buffer, "vpnserver%d", serverNum);
@@ -1149,14 +1159,19 @@ void start_vpnserver(int serverNum)
 	sprintf(buffer, "/etc/openvpn/vpnserver%d", serverNum);
 	sprintf(buffer2, "/etc/openvpn/server%d", serverNum);
 
+	vpnlog(VPN_LOG_INFO,"Starting OpenVPN server %d", serverNum);
+
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	// Spread servers on cpu 1,0 or 1,2 (in that order)
-	i = sysconf(_SC_NPROCESSORS_CONF) - 1;
-	if (i < 0) i = 0;
-	snprintf(cpulist, sizeof(cpulist), "%d", (serverNum & i));
+	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (cpu_num < 0) cpu_num = 0;
+	snprintf(cpulist, sizeof(cpulist), "%d", (serverNum & cpu_num));
 
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
-	vpnlog(VPN_LOG_INFO,"Starting OpenVPN server %d", serverNum);
+	if (taskset_ret)
+#endif
+		taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
 	{
