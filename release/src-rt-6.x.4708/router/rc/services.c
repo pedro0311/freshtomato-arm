@@ -2232,11 +2232,9 @@ static void start_samba(void)
 	int mode;
 	char *nv;
 	char *si;
-#ifdef TCONFIG_BCMARM
-#ifdef TCONFIG_BCMSMP
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	int cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 	int taskset_ret = -1;
-#endif
 #endif
 
 	if (getpid() != 1) {
@@ -2445,15 +2443,13 @@ static void start_samba(void)
 		ret1 = xstart("nmbd", "-D");
 
 	if (pidof("smbd") <= 0) {
-#ifdef TCONFIG_BCMARM
-#ifdef TCONFIG_BCMSMP
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	if (cpu_num > 1)
 		taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D");
 	else
 		taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D");
 
 	if (taskset_ret != 0)
-#endif
 #endif
 		ret2 = xstart("smbd", "-D");
 	}
