@@ -720,6 +720,13 @@ void start_led_setup(void) {
 			system("gpio disable 8");	/* disable LOGO led */
 			disable_led_wanlan();
 			break;
+		case MODEL_R8000:
+			system("gpio disable 9");	/* disable power led color amber */
+			disable_led_wanlan();
+			break;
+		case MODEL_RTAC3200:
+			disable_led_wanlan();
+			break;
 		default:
 			/* nothing to do right now */
 			break;
