@@ -318,7 +318,7 @@ lg.verifyFields = function(row, quiet) {
 		f[4].disabled = 1;
 	}
 /* dhcp enabled? */
-	if ( (f[4].checked) && (v_ip(f[2], 1)) && (v_netmask(f[3],1)) ) {
+	if ((f[4].checked) && (v_ip(f[2], 1)) && (v_netmask(f[3],1))) {
 		f[5].disabled = 0;
 		f[6].disabled = 0;
 		f[7].disabled = 0;
@@ -348,7 +348,7 @@ lg.verifyFields = function(row, quiet) {
 					return;
 				}
 				o--;
-			} while (((l = fixIP(ntoa(o), 1)) == null) || (l == f[2].value) );
+			} while (((l = fixIP(ntoa(o), 1)) == null) || (l == f[2].value));
 			f[6].value = l;
 		}
 /* first IP valid? */
@@ -508,7 +508,7 @@ function verifyFields(focused, quiet) {
 
 	var wanproto = new Array();
 	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
-	    u = (uidx>1) ? uidx : '';
+		u = (uidx>1) ? uidx : '';
 		if (uidx <= curr_mwan_num) {
 			vis['_wan'+u+'_proto'] = 1;
 			vis['_wan'+u+'_weight'] = 1;
@@ -705,18 +705,18 @@ function verifyFields(focused, quiet) {
 				E('_mwan_cktime').value = 0;
 				elem.display('mwan-title', 'mwan-section', false);
 				for (uidx = 1; uidx <= maxwan_num; ++uidx) {
-				    u = (uidx>1) ? uidx : '';
-				    vis['_wan'+u+'_proto'] = 0;
-				    E('_wan'+u+'_proto').value = 'disabled';
-				    wanproto[uidx-1] = 'disabled';
-				    elem.display('wan'+u+'-title', 'sesdiv_wan'+u, false);
+					u = (uidx>1) ? uidx : '';
+					vis['_wan'+u+'_proto'] = 0;
+					E('_wan'+u+'_proto').value = 'disabled';
+					wanproto[uidx-1] = 'disabled';
+					elem.display('wan'+u+'-title', 'sesdiv_wan'+u, false);
 				}
 			} else {
 				elem.display('mwan-title', 'mwan-section', true);
 				for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
-				    u = (uidx>1) ? uidx : '';
-				    vis['_wan'+u+'_proto'] = 1;
-				    elem.display('wan'+u+'-title', 'sesdiv_wan'+u, true);
+					u = (uidx>1) ? uidx : '';
+					vis['_wan'+u+'_proto'] = 1;
+					elem.display('wan'+u+'-title', 'sesdiv_wan'+u, true);
 				}
 			}
 
@@ -918,16 +918,16 @@ function verifyFields(focused, quiet) {
 				vis['_f_wan'+u+'_mtu'] = 2;
 				a = E('_f_wan'+u+'_mtu');
 				switch (E('_wan'+u+'_proto').value) {
-					case 'pppoe':
-						a.value = 1492;
-					break;
-					case 'pptp':
-					case 'l2tp':
-						a.value = 1460;
-					break;
-					default:
-						a.value = 1500;
-					break;
+				case 'pppoe':
+					a.value = 1492;
+				break;
+				case 'pptp':
+				case 'l2tp':
+					a.value = 1460;
+				break;
+				default:
+					a.value = 1500;
+				break;
 				}
 			}
 		}
@@ -1125,7 +1125,7 @@ REMOVE-END */
 				ferror.set('_wl'+u+'_security_mode', 'WPA2 is supported only in AP mode.', quiet || !ok);
 				ok = 0;
 			} else {
-			    ferror.clear('_wl'+u+'_security_mode');
+				ferror.clear('_wl'+u+'_security_mode');
 			}
 REMOVE-END */
 
@@ -1373,7 +1373,7 @@ function save() {
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 /*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
-		if (wl_sunit(uidx)<0) {
+		if (wl_sunit(uidx) < 0) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
 			sm2 = E('_wl'+u+'_security_mode').value;
@@ -1388,7 +1388,8 @@ function save() {
 
 			if (wmode == 'wet') {
 				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
-					var v = (wan_uidx>1) ? wan_uidx : '';
+					var v = (wan_uidx > 1) ? wan_uidx : '';
+					E('_wan'+v+'_proto').disabled = 0;
 					E('_wan'+v+'_proto').value = 'disabled';
 				}
 /* REMOVE-BEGIN */
@@ -1579,7 +1580,7 @@ alert('lan' + j + '_ifname=' + fom['lan' + j + '_ifname'].value + '\n' +
 //		(nvram.lan2_ipaddr != fom.lan2_ipaddr.value) || (nvram.lan3_ipaddr != fom.lan3_ipaddr.value)) {
 REMOVE-END */
 
-        for (uidx =1; uidx <= maxwan_num; ++uidx) {
+	for (uidx =1; uidx <= maxwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		fom['wan'+u+'_mtu'].value = fom['f_wan'+u+'_mtu'].value;
 		fom['wan'+u+'_mtu'].disabled = fom['f_wan'+u+'_mtu'].disabled;

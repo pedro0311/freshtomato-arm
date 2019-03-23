@@ -20,6 +20,9 @@
 <% css(); %>
 <script type="text/javascript" src="tomato.js"></script>
 <script type="text/javascript" src="interfaces.js"></script>
+/* USB-BEGIN */
+<script type="text/javascript" src="wwan_parser.js"></script>
+/* USB-END */
 
 <!-- / / / -->
 
@@ -108,6 +111,19 @@ ref.refresh = function(text) {
 	show();
 }
 
+/* USB-BEGIN */
+var updateWWAN = new TomatoRefresh('wwansignal.cgi', '', 30, 'wwan_signal_refresh');
+
+updateWWAN.refresh = function(text) {
+	try {
+		eval(text);
+		E("sesdiv_WWANStatus").innerHTML = createWWANStatusSection();
+	}
+	catch (ex) {
+		E("sesdiv_WWANStatus").innerHTML = '';
+	}
+}
+/* USB-END */
 
 function c(id, htm) {
 	E(id).cells[1].innerHTML = htm;
@@ -228,13 +244,13 @@ function ethstates() {
 	}
 
 	code += '<td class="content"> <\/td><\/tr>';
-	code += '<tr><td class="title indent1" colspan="7" align="right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
+	code += '<tr><td class="title indent1" colspan="6" style="text-align:right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
 	E("ports").innerHTML = code;
 }
 
 function anon_update() {
 	update = anonupdate.update;
-	if (update == "no" || update == "") { return 0; }
+	if (update == "no" || update == "" || update == null) { return 0; }
 
 	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
 	code += '<div class="fields" style="text-align:center">Newer version of FreshTomato ' + update + ' is now available. <a class="new_window" href="http://freshtomato.org/">Click here to download<\/a>.<\/div>';
@@ -332,7 +348,7 @@ function earlyInit() {
 
 	ethstates();
 
-	anon_update()
+	anon_update();
 
 	show();
 }
@@ -349,6 +365,12 @@ function init() {
 		u = wl_fface(uidx);
 		if (((c = cookie.get('status_overview_wl_'+u+'_vis')) != null) && (c != '1')) toggleVisibility("wl_"+u);
 	}
+/* USB-BEGIN */
+	if (nvram['wan_proto'] == 'ppp3g' || nvram['wan_proto'] == 'lte') {
+		E('sesdiv_WWANStatus_overall').style.display = '';
+		updateWWAN.initPage(1000, 1);
+	}
+/* USB-END */
 	ref.initPage(3000, 3);
 
 	var elements = document.getElementsByClassName("new_window");
@@ -419,6 +441,14 @@ createFieldTable('', [
 
 <div class="section" id="ports">
 </div>
+/* USB-BEGIN */
+<div class="section" id="sesdiv_WWANStatus_overall" style="display:none;">
+	<div class="section-title">WWAN Modem Status <small><i><a href='javascript:toggleVisibility("WWANStatus");'><span id="sesdiv_WWANStatus_showhide">(hide)</span></a></i></small></div>
+	<div id="sesdiv_WWANStatus">
+		<div class="fields">Please wait... Initial refresh...<img src="spin.gif" alt=""></div>
+	</div>
+</div>
+/* USB-END */
 
 <script type="text/javascript">
 for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -499,7 +529,6 @@ for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		}
 		t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br />' : '';
 		t += '<b>br' + i + '<\/b> (LAN' + j + ') - ' + nvram['lan' + j + '_ipaddr'] + '/' + numberOfBitsOnNetMask(nvram['lan' + j + '_netmask']);
-		
 	}
 }
 
@@ -567,6 +596,19 @@ REMOVE-END */
 	W('<input type=\'button\' class=\'controls\' onclick=\'wlenable('+uidx+', 0)\' id=\'b_wl'+uidx+'_disable\' value=\'Disable\' style=\'display:none\'>');
 	W('<\/div>');
 }
+
+function onRefToggle() {
+	ref.toggle();
+/* USB-BEGIN */
+	if (!ref.running) {
+		if (updateWWAN.running)
+			updateWWAN.stop();
+	} else {
+		let value = E('refresh-time').value;
+		value < 30 ? updateWWAN.toggle(30) : updateWWAN.toggle(value);
+	}
+/* USB-END */
+}
 </script>
 
 
@@ -574,7 +616,7 @@ REMOVE-END */
 
 </td></tr>
 <tr><td id="footer" colspan="2">
-	<script type="text/javascript">genStdRefresh(1,0,'ref.toggle()');</script>
+	<script type="text/javascript">genStdRefresh(1,0,'onRefToggle()');</script>
 </td></tr>
 </table>
 </form>
