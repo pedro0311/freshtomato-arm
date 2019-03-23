@@ -85,6 +85,9 @@ void start_usb(void)
 	char param[32];
 	int i = 255;
 	int model;
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_BCMARM)
+	int fd;
+#endif
 
 	/* get router model */
 	model = get_model();
@@ -207,6 +210,13 @@ void start_usb(void)
 
 		if (nvram_get_int("usb_usb3") == 1) {
 			modprobe(USBXHCI_MOD);
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_BCMARM)
+			sleep(1);
+			if ((fd = open("/proc/irq/163/smp_affinity", O_RDWR)) >= 0) {
+				close(fd);
+				f_write_string("/proc/irq/112/smp_affinity", TOMATO_CPU1, 0, 0);	/* xhci_hcd --> CPU 1 */
+			}
+#endif
 		}
 
 		/* if enabled, force USB2 before USB1.1 */
@@ -216,6 +226,13 @@ void start_usb(void)
 				i = 0;
 			sprintf(param, "log2_irq_thresh=%d", i);
 			modprobe(USB20_MOD, param);
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_BCMARM)
+			sleep(1);
+			if ((fd = open("/proc/irq/163/smp_affinity", O_RDWR)) >= 0) {
+				close(fd);
+				f_write_string("/proc/irq/111/smp_affinity", TOMATO_CPU1, 0, 0);	/* ehci_hcd --> CPU 1 */
+			}
+#endif
 		}
 
 
@@ -973,6 +990,8 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTN18U:
 		case MODEL_RTAC56U:
 		case MODEL_RTAC68U:
+		case MODEL_R6400:
+		case MODEL_R7000:
 		case MODEL_R8000:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example RT-N18U: port 1 gpio 14 for USB3 */
@@ -980,15 +999,13 @@ static inline void usbled_proc(char *device, int add)
 			usb4 = opendir ("/sys/bus/usb/devices/1-1:1.0");
 			usb3 = opendir ("/sys/bus/usb/devices/1-2:1.0");
 			break;
-		case MODEL_R6400:
-		case MODEL_R7000:
-			/* fall through */
 		default:
-			/* default is Netgear R7000 config */
-			usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example R7000: port 1 gpio 17 */
-			usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
-			usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");	/* Example R7000: port 1 gpio 17 */
-			usb4 = opendir ("/sys/bus/usb/devices/1-2:1.0");	/* Example R7000: port 2 gpio 18 for USB3 */
+			/* default - keep it in place (for the future), if there is a router with a different setup/config!
+			   Right now all router have USB3 connected to port 1 */
+			usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");
+			usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");
+			usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");
+			usb4 = opendir ("/sys/bus/usb/devices/1-2:1.0");
 			break;
 		}
 

@@ -80,6 +80,13 @@
 #define TOMATO_RAM_MID_END	(100 * 1024)
 #define TOMATO_RAM_LOW_END	(50 * 1024)
 
+/* see init.c - used for tune_smp_affinity */
+#if defined(TCONFIG_BCMSMP) && defined(TCONFIG_USB)
+#define TOMATO_CPU0 "1"	/* assign CPU 0 */
+#define TOMATO_CPU1 "2"	/* assign CPU 1 */
+#define TOMATO_CPUX "3"	/* assign CPU 1 and 2 */
+#endif
+
 #define SET_LED(val)	do { } while(0)
 
 typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
@@ -208,6 +215,10 @@ extern void stop_dhcp6c(void);
 /* services.c */
 extern void start_cron(void);
 extern void stop_cron(void);
+#ifdef TCONFIG_FANCTRL
+extern void start_phy_tempsense(void);
+extern void stop_phy_tempsense(void);
+#endif
 extern void start_adblock(int update);
 extern void stop_adblock(void);
 extern void start_upnp(void);
@@ -221,6 +232,7 @@ extern void stop_udpxy(void);
 extern void start_httpd(void);
 extern void stop_httpd(void);
 extern void clear_resolv(void);
+extern void start_led_setup(void);
 extern void dns_to_resolv(void);
 extern void start_dnsmasq(void);
 extern void stop_dnsmasq(void);
