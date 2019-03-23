@@ -677,6 +677,11 @@ void clear_resolv(void)
 	f_write(dmresolv, NULL, 0, 0, 0);	// blank
 }
 
+void disable_led_wanlan(void) {
+	system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
+	system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+}
+
 void start_led_setup(void) {
 
 	int model;
@@ -692,33 +697,28 @@ void start_led_setup(void) {
 		switch(model) {
 		case MODEL_R6400:
 			system("gpio enable 2");	/* disable power led color amber */
-			system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-			system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+			disable_led_wanlan();
 			break;
 		case MODEL_R7000:
 			system("gpio enable 3");	/* disable power led color amber */
-			system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-			system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+			disable_led_wanlan();
 			break;
 		case MODEL_RTN18U:
 			system("gpio enable 0");	/* disable power led color blue */
 			break;
 		case MODEL_RTAC56U:
 			system("gpio enable 3");	/* disable power led color blue */
-			system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-			system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+			disable_led_wanlan();
 			break;
 		case MODEL_RTAC68U:
 			system("gpio enable 3");	/* disable power led */
-			system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-			system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+			disable_led_wanlan();
 			break;
 		case MODEL_EA6400:
 		case MODEL_EA6700:
 		case MODEL_EA6900:
 			system("gpio disable 8");	/* disable LOGO led */
-			system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-			system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+			disable_led_wanlan();
 			break;
 		default:
 			/* nothing to do right now */
