@@ -187,7 +187,7 @@ function init() {
 	</div>
 
 	<br/><br/>
-	<table border="0" cellspacing="2" id="txt">
+	<table id="txt" style="border-style:none;border-collapse:separate;border-spacing:2px">
 	<tr>
 		<td style="width:8%;text-align:right;vertical-align:top"><b style="border-bottom:blue 1px solid" id="rx-name">RX</b></td>
 		<td style="width:15%;text-align:right;vertical-align:top"><span id="rx-current"></span></td>

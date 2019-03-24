@@ -393,7 +393,7 @@ lg.verifyFields = function(row, quiet) {
 	return ok;
 }
 
-W('\n<style type=\'text/css\'>\n');
+W('\n<style>\n');
 for (var u = 0; u < wl_ifaces.length; ++u) {
 	W('#spin'+wl_unit(u)+', \n');
 }
