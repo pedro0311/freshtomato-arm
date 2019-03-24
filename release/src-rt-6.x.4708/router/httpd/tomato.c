@@ -1025,6 +1025,7 @@ static const nvset_t nvset_list[] = {
 // advanced-routing
 	{ "routes_static",		V_LENGTH(0, 2048)		},
 	{ "dhcp_routes",		V_01				},
+	{ "force_igmpv2",		V_01				},
 	{ "lan_stp",			V_RANGE(0, 1)			},
 	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
 
