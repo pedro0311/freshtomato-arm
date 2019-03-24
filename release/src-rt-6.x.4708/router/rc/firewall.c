@@ -2215,6 +2215,17 @@ int start_firewall(void)
 	*/
 #endif
 
+	/* Force IGMPv2 if enabled via GUI (advanced-routing.asp) */
+	if (nvram_match("force_igmpv2", "1")) {
+		f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "2", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "2", 0, 0);
+	}
+	else {
+	/* 0 - (default) No enforcement of a IGMP version, IGMPv1/v2 fallback allowed. Will back to IGMPv3 mode again if all IGMPv1/v2 Querier Present timer expires. */
+		f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "0", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "0", 0, 0);
+	}
+
 	n = nvram_get_int("log_in");
 	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
 	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
