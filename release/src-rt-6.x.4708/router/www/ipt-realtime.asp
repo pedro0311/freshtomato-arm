@@ -196,16 +196,16 @@ function init() {
 
 	var theRules = document.styleSheets[document.styleSheets.length-1].cssRules;
 	switch (nvram['cstats_labels']) {
-		case '1':		// show hostnames only
+		case '1':		/* show hostnames only */
 			theRules[theRules.length-1].style.cssText = 'width: 140px;';
 /* REMOVE-BEGIN */
 //			document.styleSheets[2].deleteRule(theRules.length - 1);
 /* REMOVE-END */
 		break;
-		case '2':		// show IPs only
+		case '2':		/* show IPs only */
 			theRules[theRules.length-1].style.cssText = 'width: 140px;';
 		break;
-		case '0':		// show hostnames + IPs
+		case '0':		/* show hostnames + IPs */
 		default:
 /* REMOVE-BEGIN */
 //			theRules[theRules.length-1].style.cssText = 'width: 140px; height: 12px; font-size: 9px;';
@@ -288,7 +288,7 @@ function verifyFields(focused, quiet) {
 	</script>
 
 	<div id="bwm-controls">
-		<small>(<script type="text/javascript">W(5*updateInt);</script> minute window, <script type="text/javascript">W(updateInt);</script> second interval)</small><br/>
+		<small>(<script>W(5*updateInt);</script> minute window, <script>W(updateInt);</script> second interval)</small><br/>
 		<br/>
 		Avg:&nbsp;
 			<a href="javascript:switchAvg(1)" id="avg1">Off</a>,
