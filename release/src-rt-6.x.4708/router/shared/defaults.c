@@ -525,7 +525,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ddnsx_refresh",		"28"				, 0 },
 
 // basic-ident
-	{ "router_name",		"TomatoUSB"			, 0 },
+	{ "router_name",		"FreshTomato"			, 0 },
 	{ "wan_hostname",		"unknown"			, 0 },
 	{ "wan_domain",			""				, 0 },
 
