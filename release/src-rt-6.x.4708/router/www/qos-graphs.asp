@@ -269,12 +269,12 @@ function init() {
 <body onload="init()">
 <form id="t_fom" action="javascript:{}">
 <table id="container" cellspacing="0">
-<tr><td colspan="3" id="header">
+<tr><td colspan="2" id="header">
 	<div class="title">Tomato</div>
 	<div class="version">Version <% version(); %></div>
 </td></tr>
 <tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
-<td id="content" colspan="2">
+<td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
@@ -383,7 +383,7 @@ if (nvram.qos_enable != '1') {
 
 </td></tr>
 <tr>
-	<td id="footer" colspan="3">
+	<td id="footer" colspan="2">
 		<div style="display:none;width:528px"><input name="mybtn" style="width:100px" id="zoom-button" value="Zoom Graphs" type="button" onclick="showGraph()"></div>
 		<div style="display:inline-block;width:237px"><script type="text/javascript">genStdRefresh(1,2,'ref.toggle()');</script></div>
 	</td>
