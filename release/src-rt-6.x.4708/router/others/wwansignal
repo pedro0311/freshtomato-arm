@@ -33,6 +33,7 @@ signal() {
 }
 
 signal3g() {
+	DEVNR=$(nvram get "$PREFIX"_modem_dev)
 	local CSQ RSSI
 
 	CSQ=$(gcom -d "$DEVNR" -s /etc/gcom/getstrength.gcom 2>/dev/null | tr -d '\r')
