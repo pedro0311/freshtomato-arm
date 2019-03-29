@@ -1,13 +1,13 @@
 --- dropbear/localoptions.h	1969-12-31 21:00:00.000000000 -0300
-+++ dropbear/localoptions.h	2018-03-04 20:11:49.395872606 -0300
++++ dropbear/localoptions.h	2019-03-29 13:37:08.389828713 +0100
 @@ -0,0 +1,4 @@
 +#define DROPBEAR_X11FWD 0
 +#define XAUTH_COMMAND "/opt/X11R6/X11/xauth -q"
 +#define SFTPSERVER_PATH "/opt/libexec/sftp-server"
 +#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
---- dropbear/sysoptions.h	2018-02-27 11:25:12.000000000 -0300
-+++ dropbear/sysoptions.h	2018-03-04 20:12:38.820586699 -0300
-@@ -309,7 +309,7 @@ If you test it please contact the Dropbe
+--- dropbear/sysoptions.h	2019-03-27 15:15:23.000000000 +0100
++++ dropbear/sysoptions.h	2019-03-29 13:37:08.389828713 +0100
+@@ -311,7 +311,7 @@ If you test it please contact the Dropbe
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
