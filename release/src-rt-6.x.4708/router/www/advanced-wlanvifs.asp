@@ -478,7 +478,7 @@ function earlyInit() {
 		}
 	}
 
-	W('<style type=\'text/css\'>');
+	W('<style>');
 	for (var uidx in vifs_defined) {
 		if (typeof(vifs_defined[uidx][0]) == 'undefined') continue;
 

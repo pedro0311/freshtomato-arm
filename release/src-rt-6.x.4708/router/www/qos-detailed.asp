@@ -527,7 +527,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<script type='text/javascript'>
+<script>
 	if (nvram.qos_enable != '1') {
 		W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
 		E('stitle').style.display = 'none';

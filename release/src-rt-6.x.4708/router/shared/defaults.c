@@ -694,6 +694,7 @@ struct nvram_tuple router_defaults[] = {
 // advanced-routing
 	{ "routes_static",		""				, 0 },
 	{ "dhcp_routes",		"1"				, 0 },
+	{ "force_igmpv2",		"0"				, 0 },
 	{ "wk_mode",			"gateway"			, 0 },	// Network mode [gateway|router]
 
 // advanced-vlan
