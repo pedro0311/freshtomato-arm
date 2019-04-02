@@ -424,8 +424,14 @@ int do_led(int which, int mode)
 			/* power led gpio: -3 - orange, -2 - white */
 			b = (mode) ? 2 : 3;
 			c = (mode) ? 3 : 2;
-		} else
+		}
+		else if (which == LED_WHITE) {
+			b = 9; /* color white gpio 9 (active LOW) */
+			c = 8; /* color amber gpio 8 (active LOW) */
+		}
+		else {
 			b = r7000[which];
+		}
 		break;
 	case MODEL_AC15:
 		b = ac15[which];
