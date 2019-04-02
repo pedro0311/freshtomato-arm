@@ -374,6 +374,9 @@ static inline int led(int which, int mode)
 {
 	return (do_led(which, mode) != 255);
 }
+extern void disable_led_wanlan(void);
+extern void enable_led_wanlan(void);
+extern void led_setup(void);
 
 
 /* base64.c */
