@@ -699,7 +699,7 @@ void start_led_setup(void) {
 		}
 		else if ((model == MODEL_R6400)) {
 			/* activate WAN port led */
-			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; add color white (7) with WAN up */
+			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
 		}
 		else if ((model == MODEL_R7000)) {
 			/* activate WAN port led */
