@@ -482,8 +482,14 @@ int do_led(int which, int mode)
 			/* power led gpio: -3 - orange, -2 - white */
 			b = (mode) ? 2 : 3;
 			c = (mode) ? 3 : 2;
-		} else
+		}
+		else if (which == LED_WHITE) {
+			b = 8; /* color white gpio 8 (active LOW) */
+			c = -9; /* color amber gpio 9 (active HIGH) */
+		}
+		else {
 			b = r8000[which];
+		}
 		break;
 
 #endif

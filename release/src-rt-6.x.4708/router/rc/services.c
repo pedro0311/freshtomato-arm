@@ -719,8 +719,8 @@ void start_led_setup(void) {
 			/* activate WAN port led - not the same like R7000 */
 			system("/usr/sbin/et robowr 0x0 0x10 0x3000");
 			system("/usr/sbin/et robowr 0x0 0x12 0x78");
-			system("/usr/sbin/et robowr 0x0 0x14 0x10");	/* R8000 Netgear source - rc/rc.c*/
-			system("gpio enable 9");	/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active HIGH) if ethernet cable is connected; add color white (GPIO 8, active LOW) with WAN up */
+			system("/usr/sbin/et robowr 0x0 0x14 0x10");	/* R8000 Netgear source - rc/rc.c */
+			system("gpio enable 9");	/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active HIGH) if ethernet cable is connected; switch to color white (GPIO 8, active LOW) with WAN up */
 		}
 	}
 }
