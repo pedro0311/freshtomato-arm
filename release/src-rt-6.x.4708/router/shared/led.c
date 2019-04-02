@@ -479,9 +479,8 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_R8000:
 		if (which == LED_DIAG) {
-			/* power led gpio: -3 - orange, -2 - white */
-			b = (mode) ? 2 : 3;
-			c = (mode) ? 3 : 2;
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color white gpio 2 (active LOW) */
 		}
 		else if (which == LED_WHITE) {
 			b = 8; /* color white gpio 8 (active LOW) */
