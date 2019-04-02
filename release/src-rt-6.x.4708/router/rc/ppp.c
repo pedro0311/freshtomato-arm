@@ -37,26 +37,6 @@
 
 #define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
 
-/* // OBSOLETE 
-void ppp_prefix(char *wan_device, char *prefix)
-{
-	if (!wan_device || wan_device == "") {	// in case DEVICE is empty (PPTP/L2TP)
-		strcpy(prefix, safe_getenv("LINKNAME"));
-		mwanlog(LOG_DEBUG,"### ppp_prefix: empty DEVICE, set prefix to %s", prefix);
-	}
-	else if (!strcmp(wan_device, "/dev/ttyUSB0") || !strcmp(wan_device, "/dev/ttyACM0")) {	// DEVICE="/dev/ttyUSB0" (3G) etc
-		strcpy(prefix, safe_getenv("LINKNAME"));
-		mwanlog(LOG_DEBUG,"### ppp_prefix: DEVICE is 3G Modem, set prefix to %s", prefix);
-	}
-	else if(!strcmp(wan_device, nvram_safe_get("wan2_ifnameX"))) strcpy(prefix, "wan2");
-#ifdef TCONFIG_MULTIWAN
-	else if(!strcmp(wan_device, nvram_safe_get("wan3_ifnameX"))) strcpy(prefix, "wan3");
-	else if(!strcmp(wan_device, nvram_safe_get("wan4_ifnameX"))) strcpy(prefix, "wan4");
-#endif
-	else strcpy(prefix, "wan");	// default is wan
-	mwanlog(LOG_DEBUG,"### OUT ppp_prefix: wan_device = %s, prefix = %s", wan_device, prefix);
-}
-*/
 
 int ipup_main(int argc, char **argv)
 {
@@ -73,8 +53,9 @@ int ipup_main(int argc, char **argv)
 	TRACE_PT("begin\n");
 
 	/* don't kill all, only this wan listener!
-	   normally listen quits as link established
-	   and only one instance will run for a wan */
+	 * normally listen quits as link established
+	 * and only one instance will run for a wan
+	 */
 	// killall("listen", SIGKILL);
 
 	if (!wait_action_idle(10)) return -1;
@@ -82,7 +63,7 @@ int ipup_main(int argc, char **argv)
 	mwanlog(LOG_DEBUG,"IN ipup_main IFNAME=%s DEVICE=%s LINKNAME=%s IPREMOTE=%s IPLOCAL=%s DNS1=%s DNS2=%s", getenv("IFNAME"), getenv("DEVICE"), getenv("LINKNAME"), getenv("IPREMOTE"), getenv("IPLOCAL"), getenv("DNS1"), getenv("DNS2"));
 
 	wan_ifname = safe_getenv("IFNAME");
-	//ppp_prefix(safe_getenv("DEVICE"), prefix);
+	// ppp_prefix(safe_getenv("DEVICE"), prefix);
 	strcpy(prefix, safe_getenv("LINKNAME"));
 	mwanlog(LOG_DEBUG,"ipup_main, wan_ifname = %s, prefix = %s.", wan_ifname, prefix);
 	if ((!wan_ifname) || (!*wan_ifname)) return -1;
@@ -90,9 +71,10 @@ int ipup_main(int argc, char **argv)
 	nvram_set(strcat_r(prefix, "_iface", tmp), wan_ifname);	// ppp#
 	nvram_set(strcat_r(prefix, "_pppd_pid", tmp), safe_getenv("PPPD_PID"));	
 
-	// ipup receives six arguments:
-	//   <interface name>  <tty device>  <speed> <local IP address> <remote IP address> <ipparam>
-	//   ppp1 vlan1 0 71.135.98.32 151.164.184.87 0
+	/* ipup receives six arguments:
+	 *   <interface name>  <tty device>  <speed> <local IP address> <remote IP address> <ipparam>
+	 *   ppp1              vlan1         0       71.135.98.32       151.164.184.87      0
+	 */
 	memset(ppplink_file, 0, 256);
 	sprintf(ppplink_file, "/tmp/ppp/%s_link", prefix);
 	f_write_string(ppplink_file, argv[1], 0, 0);
@@ -108,12 +90,12 @@ int ipup_main(int argc, char **argv)
 
 		wan_proto = get_wanx_proto(prefix);
 
-		switch (wan_proto) {	// store last ip address for Web UI
+		switch (wan_proto) {	/* store last ip address for Web UI */
 		case WP_PPPOE:
 		case WP_PPP3G:
-			if (wan_proto == WP_PPPOE && using_dhcpc(prefix)) { // PPPoE with DHCP MAN
+			if (wan_proto == WP_PPPOE && using_dhcpc(prefix)) { /* PPPoE with DHCP MAN */
 				nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
-			} else {	// PPPoE / 3G
+			} else {	/* PPPoE / 3G */
 				nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
 				nvram_set(strcat_r(prefix, "_ipaddr", tmp), value);
 			}
@@ -123,7 +105,7 @@ int ipup_main(int argc, char **argv)
 			nvram_set(strcat_r(prefix, "_ipaddr_buf", tmp), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
 			break;
 		}
-		// set netmask in nvram only if not already set (MAN)
+		/* set netmask in nvram only if not already set (MAN) */
 		if (nvram_match(strcat_r(prefix, "_netmask", tmp), "0.0.0.0"))
 			nvram_set(strcat_r(prefix, "_netmask", tmp), "255.255.255.255");
 
@@ -158,19 +140,19 @@ int ipup_main(int argc, char **argv)
 int ipdown_main(int argc, char **argv)
 {
 	int proto;
-	char prefix[] = "wanXXX";
+	char prefix[] = "wanXX";
 	char tmp[100];
 	char ppplink_file[256];
 	struct in_addr ipaddr;
 
 	TRACE_PT("begin\n");
 
-	//ppp_prefix(safe_getenv("DEVICE"), prefix);
+	// ppp_prefix(safe_getenv("DEVICE"), prefix);
 	strcpy(prefix, safe_getenv("LINKNAME"));
 	if (!wait_action_idle(10)) return -1;
 
-	//stop_ddns();	// avoid to trigger DOD
-	//stop_ntpc();
+	// stop_ddns();	// avoid to trigger DOD
+	// stop_ntpc();
 
 	memset(ppplink_file, 0, 256);
 	sprintf(ppplink_file, "/tmp/ppp/%s_link", prefix);
@@ -199,24 +181,25 @@ int ipdown_main(int argc, char **argv)
 			}
 		}
 
-		if (!nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) { // don't setup temp gateway for demand connections
-			// Restore the default gateway for WAN interface
+		if (!nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) {	/* don't setup temp gateway for demand connections */
+			/* Restore the default gateway for WAN interface */
 			nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 			mwanlog(LOG_DEBUG,"*** ipdown_main: restore default gateway: nvram_set(%s_gateway_get,%s)", prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 
-			// Set default route to gateway if specified
+			/* Set default route to gateway if specified */
 			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
 			route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
 			mwanlog(LOG_DEBUG,"!!! ipdown_main: route_add(%s,0,0.0.0.0,%s,0.0.0.0)", nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 		}
 
-		// Unset received DNS entries (BAD for PPTP/L2TP here, it need DNS on reconnect!)
+		/* Unset received DNS entries (BAD for PPTP/L2TP here, it need DNS on reconnect!) */
 		// nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 	}
 
 	/* don't kill all, only this wan listener!
-	   normally listen quits as link established
-	   and only one instance will run for a wan */
+	 * normally listen quits as link established
+	 * and only one instance will run for a wan
+	 */
 	if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) {
 		//killall("listen", SIGKILL);
 		eval("listen", nvram_safe_get("lan_ifname"), prefix);
@@ -224,12 +207,12 @@ int ipdown_main(int argc, char **argv)
 
 	mwan_load_balance();
 
-	// Unset netmask in nvram only if equal to 255.255.255.255 (no MAN)
+	/* Unset netmask in nvram only if equal to 255.255.255.255 (no MAN) */
 	if (nvram_match(strcat_r(prefix, "_netmask", tmp), "255.255.255.255"))
 		nvram_set(strcat_r(prefix, "_netmask", tmp), "0.0.0.0");
 
 	/* don't clear active interface from nvram on disconnect. iface mandatory for mwan load balance */
-	//nvram_set(strcat_r(prefix, "_iface", tmp),"");	// ppp#
+	// nvram_set(strcat_r(prefix, "_iface", tmp),"");	// ppp#
 	nvram_set(strcat_r(prefix, "_pppd_pid", tmp),"");
 
 	/* WAN LED control */
@@ -274,7 +257,7 @@ int ip6down_main(int argc, char **argv)
 */
 	return 1;
 }
-#endif	// IPV6
+#endif	/* TCONFIG_IPV6 */
 
 int pppevent_main(int argc, char **argv)
 {
@@ -283,7 +266,7 @@ int pppevent_main(int argc, char **argv)
 
 	TRACE_PT("begin\n");
 
-	//ppp_prefix(safe_getenv("DEVICE"), prefix);
+	// ppp_prefix(safe_getenv("DEVICE"), prefix);
 	strcpy(prefix, safe_getenv("LINKNAME"));
 	int i;
 	for (i = 1; i < argc; ++i) {
@@ -294,7 +277,7 @@ int pppevent_main(int argc, char **argv)
 				memset(ppplog_file, 0, 256);
 				sprintf(ppplog_file, "/tmp/ppp/%s_log", prefix);
 				f_write_string(ppplog_file, argv[i], 0, 0);
-				notice_set(prefix, "Authentication failed");	// !!!
+				notice_set(prefix, "Authentication failed");	/* !!! */
 				return 0;
 			}
 		}
@@ -303,46 +286,3 @@ int pppevent_main(int argc, char **argv)
 	TRACE_PT("end\n");
 	return 1;
 }
-
-#if 0
-int set_pppoepid_main(int argc, char **argv)
-{
-	if (argc < 2) return 0;
-	char prefix[] = "wanXX";
-	char tmp[100];
-
-	ppp_prefix(safe_getenv("DEVICE"), prefix);
-	TRACE_PT("num=%s\n", argv[1]);
-
-	if (atoi(argv[1]) != 0) return 0;
-
-	nvram_set(strcat_r(prefix, "_pppoe_pid0", tmp), getenv("PPPD_PID"));
-	nvram_set(strcat_r(prefix, "_pppoe_ifname0", tmp), getenv("IFNAME"));
-	nvram_set(strcat_r(prefix, "_iface", tmp), getenv("IFNAME"));
-
-	TRACE_PT("IFNAME=%s DEVICE=%s\n", getenv("IFNAME"), getenv("DEVICE"));
-	return 0;
-}
-
-int pppoe_down_main(int argc, char **argv)
-{
-	if (argc < 2) return 0;
-
-	char prefix[] = "wanXX";
-	char tmp[100];
-	ppp_prefix(safe_getenv("DEVICE"), prefix);
-	TRACE_PT("num=%s\n", argv[1]);
-
-	if (atoi(argv[1]) != 0) return 0;
-
-	if ((nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp))) && (nvram_match("action_service", "")))	{
-		stop_singe_pppoe(0,prefix);
-		start_pppoe(0,prefix);
-
-		stop_dnsmasq();
-		dns_to_resolv();
-		start_dnsmasq();
-	}
-	return 0;
-}
-#endif	// 0
