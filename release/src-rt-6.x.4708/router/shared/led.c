@@ -413,9 +413,8 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_R6400:
 		if (which == LED_DIAG) {
-			/* power led gpio: -2 - orange, -1 - white */
-			b = (mode) ? 1 : 2;
-			c = (mode) ? 2 : 1;
+			b = 2; /* color amber gpio 2 (active LOW) */
+			c = 1; /* color white gpio 1 (active LOW) */
 		}
 		else if (which == LED_WHITE) {
 			b = 7; /* color white gpio 7 (active LOW) */
