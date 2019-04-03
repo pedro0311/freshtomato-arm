@@ -78,7 +78,6 @@
 #if defined(ultrix) || defined(NeXT)
 char *strdup __P((char *));
 #endif
-bool tx_only;			/* JYWeng 20031216: idle time counting on tx traffic */
 
 static const char rcsid[] = RCSID;
 
@@ -91,7 +90,6 @@ struct option_value {
 /*
  * Option variables and default values.
  */
-bool	nochecktime = 0;	/* Don't check time */
 int	debug = 0;		/* Debug flag */
 int	kdebugflag = 0;		/* Tell kernel to print debug messages */
 int	default_device = 1;	/* Using /dev/tty or equivalent */
@@ -105,8 +103,6 @@ bool	persist = 0;		/* Reopen link after it goes down */
 char	our_name[MAXNAMELEN];	/* Our name for authentication purposes */
 bool	demand = 0;		/* do dial-on-demand */
 char	*ipparam = NULL;	/* Extra parameter for ip up/down scripts */
-char	*chapseccustom = NULL;	/* Custom chap-secrets file */
-
 int	idle_time_limit = 0;	/* Disconnect if idle for this many seconds */
 int	holdoff = 30;		/* # seconds to pause before reconnecting */
 bool	holdoff_specified;	/* true if a holdoff value has been given */
@@ -117,9 +113,6 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
 bool	tune_kernel;		/* may alter kernel settings */
 int	connect_delay = 1000;	/* wait this many ms after connect script */
 int	req_unit = -1;		/* requested interface unit */
-int	req_minunit = -1;	/* requested minimal interface unit */
-char	path_ipup[MAXPATHLEN];	/* pathname of ip-up script */
-char	path_ipdown[MAXPATHLEN];/* pathname of ip-down script */
 bool	multilink = 0;		/* Enable multilink operation */
 char	*bundle_name = NULL;	/* bundle name for multilink */
 bool	dump_options;		/* print out option values */
@@ -193,8 +186,6 @@ static struct option_list *extra_options = NULL;
  * Valid arguments.
  */
 option_t general_options[] = {
-    { "nochecktime", o_bool, &nochecktime,
-      "Don't check time", OPT_PRIO | 1 },
     { "debug", o_int, &debug,
       "Increase debugging level", OPT_INC | OPT_NOARG | 1 },
     { "-d", o_int, &debug,
@@ -280,9 +271,6 @@ option_t general_options[] = {
     { "unit", o_int, &req_unit,
       "PPP interface unit number to use if possible",
       OPT_PRIO | OPT_LLIMIT, 0, 0 },
-    { "minunit", o_int, &req_minunit,
-      "PPP interface minimal unit number",
-      OPT_PRIO | OPT_LLIMIT, 0, 0 },
 
     { "dump", o_bool, &dump_options,
       "Print out option values after parsing all options", 1 },
@@ -292,13 +280,6 @@ option_t general_options[] = {
     { "child-timeout", o_int, &child_wait,
       "Number of seconds to wait for child processes at exit",
       OPT_PRIO },
-
-    { "ip-up-script", o_string, path_ipup,
-      "Set pathname of ip-up script",
-      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
-    { "ip-down-script", o_string, path_ipdown,
-      "Set pathname of ip-down script",
-      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
 
 #ifdef HAVE_MULTILINK
     { "multilink", o_bool, &multilink,
@@ -339,10 +320,6 @@ option_t general_options[] = {
     { "mo-timeout", o_int, &maxoctets_timeout,
       "Check for traffic limit every N seconds", OPT_PRIO | OPT_LLIMIT | 1 },
 #endif
-
-/* JYWeng 20031216: add for tx_only option*/
-    { "tx_only", o_bool, &tx_only,
-      "set idle time counting on tx_only or not", 1 },
 
     { NULL }
 };
@@ -1157,7 +1134,6 @@ getword(f, word, newlinep, filename)
     len = 0;
     escape = 0;
     comment = 0;
-    quoted = 0;
 
     /*
      * First skip white-space and comments.
@@ -1214,6 +1190,15 @@ getword(f, word, newlinep, filename)
 	if (!isspace(c))
 	    break;
     }
+
+    /*
+     * Save the delimiter for quoted strings.
+     */
+    if (!escape && (c == '"' || c == '\'')) {
+        quoted = c;
+	c = getc(f);
+    } else
+        quoted = 0;
 
     /*
      * Process characters until the end of the word.
@@ -1303,34 +1288,29 @@ getword(f, word, newlinep, filename)
 	    if (!got)
 		c = getc(f);
 	    continue;
+
 	}
 
 	/*
-	 * Backslash starts a new escape sequence.
+	 * Not escaped: see if we've reached the end of the word.
+	 */
+	if (quoted) {
+	    if (c == quoted)
+		break;
+	} else {
+	    if (isspace(c) || c == '#') {
+		ungetc (c, f);
+		break;
+	    }
+	}
+
+	/*
+	 * Backslash starts an escape sequence.
 	 */
 	if (c == '\\') {
 	    escape = 1;
 	    c = getc(f);
 	    continue;
-	}
-
-	/*
-	 * Not escaped: check for the start or end of a quoted
-	 * section and see if we've reached the end of the word.
-	 */
-	if (quoted) {
-	    if (c == quoted) {
-		quoted = 0;
-		c = getc(f);
-		continue;
-	    }
-	} else if (c == '"' || c == '\'') {
-	    quoted = c;
-	    c = getc(f);
-	    continue;
-	} else if (isspace(c) || c == '#') {
-	    ungetc (c, f);
-	    break;
 	}
 
 	/*
@@ -1359,9 +1339,6 @@ getword(f, word, newlinep, filename)
 	 */
 	if (len == 0)
 	    return 0;
-	if (quoted)
-	    option_error("warning: quoted word runs to end of file (%.20s...)",
-			 filename, word);
     }
 
     /*

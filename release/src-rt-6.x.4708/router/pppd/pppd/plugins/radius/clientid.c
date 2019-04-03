@@ -104,13 +104,13 @@ int rc_read_mapfile(char *filename)
 UINT4 rc_map2id(char *name)
 {
 	struct map2id_s *p;
-	char ttyname[PATH_MAX + 1];
+	char ttyname[PATH_MAX];
 
 	*ttyname = '\0';
 	if (*name != '/')
 		strcpy(ttyname, "/dev/");
 
-	strlcat(ttyname, name, sizeof(ttyname));
+	strncat(ttyname, name, sizeof(ttyname));
 
 	for(p = map2id_list; p; p = p->next)
 		if (!strcmp(ttyname, p->name)) return p->id;

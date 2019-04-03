@@ -1,0 +1,23 @@
+From b57ac315b910119f49fafe1f2cce590297c23976 Mon Sep 17 00:00:00 2001
+From: lly <lly@sf.net>
+Date: Sun, 12 Sep 2010 03:05:09 -0400
+Subject: [PATCH] pppd: chat: Allow TIMEOUT value to come from environment
+ variable
+
+---
+
+diff --git pppd/chat/chat.c pppd/chat/chat.c
+index 7aeb9cb..977413f 100644
+--- pppd/chat/chat.c
++++ pppd/chat/chat.c
+@@ -1173,6 +1173,7 @@ register char *s;
+ 
+     if (timeout_next) {
+ 	timeout_next = 0;
++	s = clean(s, 0);
+ 	timeout = atoi(s);
+ 	
+ 	if (timeout <= 0)
+-- 
+2.10.5
+

@@ -1,0 +1,272 @@
+From 716bd674a7cf881a18171256a13eb2986abad0e6 Mon Sep 17 00:00:00 2001
+From: Fedor <fedork@ubuntu.(none)>
+Date: Wed, 9 Mar 2011 13:59:43 -0500
+Subject: [PATCH] pppd: OpenWRT patches to reduce size - remove obsolete
+ protocol names - no wtmp - no file to record sent/received chars Ref:
+ https://dev.openwrt.org/changeset/25919
+
+---
+
+diff --git pppd/pppd/main.c pppd/pppd/main.c
+index d60d625..97a1906 100644
+--- pppd/pppd/main.c
++++ pppd/pppd/main.c
+@@ -883,14 +883,17 @@ struct protocol_list {
+     const char	*name;
+ } protocol_list[] = {
+     { 0x21,	"IP" },
++#if 0
+     { 0x23,	"OSI Network Layer" },
+     { 0x25,	"Xerox NS IDP" },
+     { 0x27,	"DECnet Phase IV" },
++#endif
+     { 0x29,	"Appletalk" },
+     { 0x2b,	"Novell IPX" },
+     { 0x2d,	"VJ compressed TCP/IP" },
+     { 0x2f,	"VJ uncompressed TCP/IP" },
+     { 0x31,	"Bridging PDU" },
++#if 0
+     { 0x33,	"Stream Protocol ST-II" },
+     { 0x35,	"Banyan Vines" },
+     { 0x39,	"AppleTalk EDDP" },
+@@ -904,8 +907,11 @@ struct protocol_list {
+     { 0x49,	"Serial Data Transport Protocol (PPP-SDTP)" },
+     { 0x4b,	"SNA over 802.2" },
+     { 0x4d,	"SNA" },
++#endif
+     { 0x4f,	"IP6 Header Compression" },
++#if 0
+     { 0x51,	"KNX Bridging Data" },
++#endif
+     { 0x53,	"Encryption" },
+     { 0x55,	"Individual Link Encryption" },
+     { 0x57,	"IPv6" },
+@@ -916,12 +922,15 @@ struct protocol_list {
+     { 0x65,	"RTP IPHC Compressed non-TCP" },
+     { 0x67,	"RTP IPHC Compressed UDP 8" },
+     { 0x69,	"RTP IPHC Compressed RTP 8" },
++#if 0
+     { 0x6f,	"Stampede Bridging" },
+     { 0x73,	"MP+" },
+     { 0xc1,	"NTCITS IPI" },
++#endif
+     { 0xfb,	"single-link compression" },
+     { 0xfd,	"Compressed Datagram" },
+     { 0x0201,	"802.1d Hello Packets" },
++#if 0
+     { 0x0203,	"IBM Source Routing BPDU" },
+     { 0x0205,	"DEC LANBridge100 Spanning Tree" },
+     { 0x0207,	"Cisco Discovery Protocol" },
+@@ -933,15 +942,19 @@ struct protocol_list {
+     { 0x0231,	"Luxcom" },
+     { 0x0233,	"Sigma Network Systems" },
+     { 0x0235,	"Apple Client Server Protocol" },
++#endif
+     { 0x0281,	"MPLS Unicast" },
+     { 0x0283,	"MPLS Multicast" },
++#if 0
+     { 0x0285,	"IEEE p1284.4 standard - data packets" },
+     { 0x0287,	"ETSI TETRA Network Protocol Type 1" },
++#endif
+     { 0x0289,	"Multichannel Flow Treatment Protocol" },
+     { 0x2063,	"RTP IPHC Compressed TCP No Delta" },
+     { 0x2065,	"RTP IPHC Context State" },
+     { 0x2067,	"RTP IPHC Compressed UDP 16" },
+     { 0x2069,	"RTP IPHC Compressed RTP 16" },
++#if 0
+     { 0x4001,	"Cray Communications Control Protocol" },
+     { 0x4003,	"CDPD Mobile Network Registration Protocol" },
+     { 0x4005,	"Expand accelerator protocol" },
+@@ -952,17 +965,23 @@ struct protocol_list {
+     { 0x4023,	"RefTek Protocol" },
+     { 0x4025,	"Fibre Channel" },
+     { 0x4027,	"EMIT Protocols" },
++#endif
+     { 0x405b,	"Vendor-Specific Protocol (VSP)" },
+     { 0x8021,	"Internet Protocol Control Protocol" },
++#if 0
+     { 0x8023,	"OSI Network Layer Control Protocol" },
+     { 0x8025,	"Xerox NS IDP Control Protocol" },
+     { 0x8027,	"DECnet Phase IV Control Protocol" },
++#endif
+     { 0x8029,	"Appletalk Control Protocol" },
+     { 0x802b,	"Novell IPX Control Protocol" },
++#if 0
+     { 0x8031,	"Bridging NCP" },
+     { 0x8033,	"Stream Protocol Control Protocol" },
+     { 0x8035,	"Banyan Vines Control Protocol" },
++#endif
+     { 0x803d,	"Multi-Link Control Protocol" },
++#if 0
+     { 0x803f,	"NETBIOS Framing Control Protocol" },
+     { 0x8041,	"Cisco Systems Control Protocol" },
+     { 0x8043,	"Ascom Timeplex" },
+@@ -971,18 +990,24 @@ struct protocol_list {
+     { 0x8049,	"Serial Data Control Protocol (PPP-SDCP)" },
+     { 0x804b,	"SNA over 802.2 Control Protocol" },
+     { 0x804d,	"SNA Control Protocol" },
++#endif
+     { 0x804f,	"IP6 Header Compression Control Protocol" },
++#if 0
+     { 0x8051,	"KNX Bridging Control Protocol" },
++#endif
+     { 0x8053,	"Encryption Control Protocol" },
+     { 0x8055,	"Individual Link Encryption Control Protocol" },
+     { 0x8057,	"IPv6 Control Protocol" },
+     { 0x8059,	"PPP Muxing Control Protocol" },
+     { 0x805b,	"Vendor-Specific Network Control Protocol (VSNCP)" },
++#if 0
+     { 0x806f,	"Stampede Bridging Control Protocol" },
+     { 0x8073,	"MP+ Control Protocol" },
+     { 0x80c1,	"NTCITS IPI Control Protocol" },
++#endif
+     { 0x80fb,	"Single Link Compression Control Protocol" },
+     { 0x80fd,	"Compression Control Protocol" },
++#if 0
+     { 0x8207,	"Cisco Discovery Protocol Control" },
+     { 0x8209,	"Netcs Twin Routing" },
+     { 0x820b,	"STP - Control Protocol" },
+@@ -991,24 +1016,29 @@ struct protocol_list {
+     { 0x8281,	"MPLSCP" },
+     { 0x8285,	"IEEE p1284.4 standard - Protocol Control" },
+     { 0x8287,	"ETSI TETRA TNP1 Control Protocol" },
++#endif
+     { 0x8289,	"Multichannel Flow Treatment Protocol" },
+     { 0xc021,	"Link Control Protocol" },
+     { 0xc023,	"Password Authentication Protocol" },
+     { 0xc025,	"Link Quality Report" },
++#if 0
+     { 0xc027,	"Shiva Password Authentication Protocol" },
+     { 0xc029,	"CallBack Control Protocol (CBCP)" },
+     { 0xc02b,	"BACP Bandwidth Allocation Control Protocol" },
+     { 0xc02d,	"BAP" },
++#endif
+     { 0xc05b,	"Vendor-Specific Authentication Protocol (VSAP)" },
+     { 0xc081,	"Container Control Protocol" },
+     { 0xc223,	"Challenge Handshake Authentication Protocol" },
+     { 0xc225,	"RSA Authentication Protocol" },
+     { 0xc227,	"Extensible Authentication Protocol" },
++#if 0
+     { 0xc229,	"Mitsubishi Security Info Exch Ptcl (SIEP)" },
+     { 0xc26f,	"Stampede Bridging Authorization Protocol" },
+     { 0xc281,	"Proprietary Authentication Protocol" },
+     { 0xc283,	"Proprietary Authentication Protocol" },
+     { 0xc481,	"Proprietary Node ID Authentication Protocol" },
++#endif
+     { 0,	NULL },
+ };
+ 
+diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
+index 5236f4e..9fbbc63 100644
+--- pppd/pppd/pppd.h
++++ pppd/pppd/pppd.h
+@@ -307,7 +307,6 @@ extern int	holdoff;	/* Dead time before restarting */
+ extern bool	holdoff_specified; /* true if user gave a holdoff value */
+ extern bool	notty;		/* Stdin/out is not a tty */
+ extern char	*pty_socket;	/* Socket to connect to pty */
+-extern char	*record_file;	/* File to record chars sent/received */
+ extern bool	sync_serial;	/* Device is synchronous serial device */
+ extern int	maxfail;	/* Max # of unsuccessful connection attempts */
+ extern char	linkname[MAXPATHLEN]; /* logical name for link */
+diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
+index d1163e8..1c7bad3 100644
+--- pppd/pppd/sys-linux.c
++++ pppd/pppd/sys-linux.c
+@@ -2167,6 +2167,7 @@ int ppp_available(void)
+ 
+ void logwtmp (const char *line, const char *name, const char *host)
+ {
++#if 0
+     struct utmp ut, *utp;
+     pid_t  mypid = getpid();
+ #if __GLIBC__ < 2
+@@ -2232,6 +2233,7 @@ void logwtmp (const char *line, const char *name, const char *host)
+ 	close (wtmp);
+     }
+ #endif
++#endif
+ }
+ 
+ 
+diff --git pppd/pppd/tty.c pppd/pppd/tty.c
+index d571b11..58bbc44 100644
+--- pppd/pppd/tty.c
++++ pppd/pppd/tty.c
+@@ -145,7 +145,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
+ char	*welcomer = NULL;	/* Script to run after phys link estab. */
+ char	*ptycommand = NULL;	/* Command to run on other side of pty */
+ bool	notty = 0;		/* Stdin/out is not a tty */
+-char	*record_file = NULL;	/* File to record chars sent/received */
++static char *record_file = NULL;	/* File to record chars sent/received */
+ int	max_data_rate;		/* max bytes/sec through charshunt */
+ bool	sync_serial = 0;	/* Device is synchronous serial device */
+ char	*pty_socket = NULL;	/* Socket to connect to pty */
+@@ -201,9 +201,6 @@ option_t tty_options[] = {
+       "Send and receive over socket, arg is host:port",
+       OPT_PRIO | OPT_DEVNAM },
+ 
+-    { "record", o_string, &record_file,
+-      "Record characters sent/received to file", OPT_PRIO },
+-
+     { "crtscts", o_int, &crtscts,
+       "Set hardware (RTS/CTS) flow control",
+       OPT_PRIO | OPT_NOARG | OPT_VAL(1) },
+@@ -623,28 +620,8 @@ int connect_tty()
+ 	 */
+ 	status = EXIT_PTYCMD_FAILED;
+ 	if (ptycommand != NULL) {
+-		if (record_file != NULL) {
+-			int ipipe[2], opipe[2], ok;
+-
+-			if (pipe(ipipe) < 0 || pipe(opipe) < 0)
+-				fatal("Couldn't create pipes for record option: %m");
+-
+-			/* don't leak these to the ptycommand */
+-			(void) fcntl(ipipe[0], F_SETFD, FD_CLOEXEC);
+-			(void) fcntl(opipe[1], F_SETFD, FD_CLOEXEC);
+-
+-			ok = device_script(ptycommand, opipe[0], ipipe[1], 1) == 0
+-				&& start_charshunt(ipipe[0], opipe[1]);
+-			close(ipipe[0]);
+-			close(ipipe[1]);
+-			close(opipe[0]);
+-			close(opipe[1]);
+-			if (!ok)
+-				goto errret;
+-		} else {
+ 			if (device_script(ptycommand, pty_master, pty_master, 1) < 0)
+ 				goto errret;
+-		}
+ 	} else if (pty_socket != NULL) {
+ 		int fd = open_socket(pty_socket);
+ 		if (fd < 0)
+@@ -661,10 +638,6 @@ int connect_tty()
+ 			log_to_fd = -1;
+ 		if (log_to_fd != 2)
+ 			dup2(fd_devnull, 2);
+-	} else if (record_file != NULL) {
+-		int fd = dup(ttyfd);
+-		if (!start_charshunt(fd, fd))
+-			goto errret;
+ 	}
+ 
+ 	if (using_pty || record_file != NULL) {
+@@ -1038,15 +1011,6 @@ charshunt(ifd, ofd, record_file)
+ 	fatal("internal error: file descriptor too large (%d, %d, %d)",
+ 	      ifd, ofd, pty_master);
+ 
+-    /*
+-     * Open the record file if required.
+-     */
+-    if (record_file != NULL) {
+-	recordf = fopen(record_file, "a");
+-	if (recordf == NULL)
+-	    error("Couldn't create record file %s: %m", record_file);
+-    }
+-
+     /* set all the fds to non-blocking mode */
+     flags = fcntl(pty_master, F_GETFL);
+     if (flags == -1
+-- 
+2.10.5
+

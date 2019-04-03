@@ -1,0 +1,2922 @@
+From 46accb658f095d68f2e8b5a4701eda32b4e7e9ca Mon Sep 17 00:00:00 2001
+From: Fedor <fedork@ubuntu.(none)>
+Date: Sat, 20 Feb 2010 00:31:03 -0500
+Subject: [PATCH] pppd patches from wl500g.googlecode.com project
+
+---
+
+diff --git pppd/chat/Makefile.linux pppd/chat/Makefile.linux
+index 1065ac5..a011814 100644
+--- pppd/chat/Makefile.linux
++++ pppd/chat/Makefile.linux
+@@ -11,7 +11,7 @@ CDEF4=	-DFNDELAY=O_NDELAY		# Old name value
+ CDEFS=	$(CDEF1) $(CDEF2) $(CDEF3) $(CDEF4)
+ 
+ COPTS=	-O2 -g -pipe
+-CFLAGS=	$(COPTS) $(CDEFS)
++CFLAGS=	$(COPTS) $(CDEFS) $(EXTRACFLAGS)
+ 
+ INSTALL= install
+ 
+diff --git pppd/chat/chat.c pppd/chat/chat.c
+index 0b88c27..7aeb9cb 100644
+--- pppd/chat/chat.c
++++ pppd/chat/chat.c
+@@ -199,8 +199,9 @@ struct termios saved_tty_parameters;
+ 
+ char *abort_string[MAX_ABORTS], *fail_reason = (char *)0,
+ 	fail_buffer[50];
+-int n_aborts = 0, abort_next = 0, timeout_next = 0, echo_next = 0;
++int n_aborts = 0, abort_next = 0, timeout_next = 0, echo_next = 0, hex_next = 0;
+ int clear_abort_next = 0;
++int hex = -1;
+ 
+ char *report_string[MAX_REPORTS] ;
+ char  report_buffer[256] ;
+@@ -613,7 +614,7 @@ void set_tty_parameters()
+     saved_tty_parameters = t;
+     have_tty_parameters  = 1;
+ 
+-    t.c_iflag     |= IGNBRK | ISTRIP | IGNPAR;
++    t.c_iflag     |= IGNBRK | IGNPAR;
+     t.c_oflag      = 0;
+     t.c_lflag      = 0;
+     t.c_cc[VERASE] =
+@@ -969,6 +970,11 @@ char *s;
+ 	return;
+     }
+ 
++    if (strcmp(s, "HEX") == 0) {
++	++hex_next;
++	return;
++    }
++
+ /*
+  * Fetch the expect and reply string.
+  */
+@@ -1177,6 +1183,12 @@ register char *s;
+ 
+ 	return;
+     }
++    
++    if (hex_next) {
++	hex_next = 0;
++    	hex = (strcmp(s, "ON") == 0);
++    	return;
++    }
+ 
+     /*
+      * The syntax @filename means read the string to send from the
+@@ -1233,7 +1245,7 @@ int get_char()
+ 
+     switch (status) {
+     case 1:
+-	return ((int)c & 0x7F);
++	return ((int)c & 0xFF);
+ 
+     default:
+ 	msgf("warning: read() on stdin returned %d", status);
+@@ -1430,7 +1442,9 @@ register char *string;
+ 	}
+ 
+ 	if (Verbose) {
+-	   if (c == '\n')
++	   if ((hex == 2) || (hex == 0))
++	       fprintf( stderr, "%.2X", c);
++	   else if (c == '\n')
+ 	       fputc( '\n', stderr );
+ 	   else if (c != '\r')
+ 	       fprintf( stderr, "%s", character(c) );
+@@ -1476,6 +1490,10 @@ register char *string;
+ 
+ 	    alarm(0);
+ 	    alarmed = 0;
++	    if (hex == 1)
++	      hex = 2;
++	    if (hex == 0)
++	      hex = -1;
+ 	    return (1);
+ 	}
+ 
+diff --git pppd/include/linux/ppp-comp.h pppd/include/linux/ppp-comp.h
+index d30cacb..e7f1a61 100644
+--- pppd/include/linux/ppp-comp.h
++++ pppd/include/linux/ppp-comp.h
+@@ -36,7 +36,7 @@
+  */
+ 
+ /*
+- *  ==FILEVERSION 20020319==
++ *  ==FILEVERSION 20020715==
+  *
+  *  NOTE TO MAINTAINERS:
+  *     If you modify this file at all, please set the above date.
+@@ -201,6 +201,33 @@ struct compressor {
+ #define CI_MPPE			18	/* config option for MPPE */
+ #define CILEN_MPPE		6	/* length of config option */
+ 
++/* MPPE/MPPC definitions by J.D.*/
++#define MPPE_STATELESS          MPPE_H_BIT	/* configuration bit H */
++#define MPPE_40BIT              MPPE_L_BIT	/* configuration bit L */
++#define MPPE_56BIT              MPPE_M_BIT	/* configuration bit M */
++#define MPPE_128BIT             MPPE_S_BIT	/* configuration bit S */
++#define MPPE_MPPC               MPPE_C_BIT	/* configuration bit C */
++
++/*
++ * Definitions for Stac LZS.
++ */
++
++#define CI_LZS			17	/* config option for Stac LZS */
++#define CILEN_LZS		5	/* length of config option */
++
++#define LZS_OVHD		4	/* max. LZS overhead */
++#define LZS_HIST_LEN		2048	/* LZS history size */
++#define LZS_MAX_CCOUNT		0x0FFF	/* max. coherency counter value */
++
++#define LZS_MODE_NONE		0
++#define LZS_MODE_LCB		1
++#define LZS_MODE_CRC		2
++#define LZS_MODE_SEQ		3
++#define LZS_MODE_EXT		4
++
++#define LZS_EXT_BIT_FLUSHED	0x80	/* bit A */
++#define LZS_EXT_BIT_COMP	0x20	/* bit C */
++
+ /*
+  * Definitions for other, as yet unsupported, compression methods.
+  */
+diff --git pppd/include/net/ppp-comp.h pppd/include/net/ppp-comp.h
+index 088c73e..704042c 100644
+--- pppd/include/net/ppp-comp.h
++++ pppd/include/net/ppp-comp.h
+@@ -168,6 +168,33 @@ struct compressor {
+ #define CI_MPPE			18	/* config option for MPPE */
+ #define CILEN_MPPE		6	/* length of config option */
+ 
++/* MPPE/MPPC definitions by J.D.*/
++#define MPPE_STATELESS          MPPE_H_BIT	/* configuration bit H */
++#define MPPE_40BIT              MPPE_L_BIT	/* configuration bit L */
++#define MPPE_56BIT              MPPE_M_BIT	/* configuration bit M */
++#define MPPE_128BIT             MPPE_S_BIT	/* configuration bit S */
++#define MPPE_MPPC               MPPE_C_BIT	/* configuration bit C */
++
++/*
++ * Definitions for Stac LZS.
++ */
++
++#define CI_LZS			17	/* config option for Stac LZS */
++#define CILEN_LZS		5	/* length of config option */
++
++#define LZS_OVHD		4	/* max. LZS overhead */
++#define LZS_HIST_LEN		2048	/* LZS history size */
++#define LZS_MAX_CCOUNT		0x0FFF	/* max. coherency counter value */
++
++#define LZS_MODE_NONE		0
++#define LZS_MODE_LCB		1
++#define LZS_MODE_CRC		2
++#define LZS_MODE_SEQ		3
++#define LZS_MODE_EXT		4
++
++#define LZS_EXT_BIT_FLUSHED	0x80	/* bit A */
++#define LZS_EXT_BIT_COMP	0x20	/* bit C */
++
+ /*
+  * Definitions for other, as yet unsupported, compression methods.
+  */
+diff --git pppd/pppd/Makefile.linux pppd/pppd/Makefile.linux
+index df12da0..08d5355 100644
+--- pppd/pppd/Makefile.linux
++++ pppd/pppd/Makefile.linux
+@@ -48,19 +48,19 @@ LIBS =
+ # Uncomment the next line to include support for PPP packet filtering.
+ # This requires that the libpcap library and headers be installed
+ # and that the kernel driver support PPP packet filtering.
+-FILTER=y
++#FILTER=y
+ 
+ # Uncomment the next line to enable multilink PPP (enabled by default)
+ # Linux distributions: Please leave multilink ENABLED in your builds
+ # of pppd!
+-HAVE_MULTILINK=y
++#HAVE_MULTILINK=y
+ 
+ # Uncomment the next line to enable the TDB database (enabled by default.)
+ # If you enable multilink, then TDB is automatically enabled also.
+ # Linux distributions: Please leave TDB ENABLED in your builds.
+-USE_TDB=y
++#USE_TDB=y
+ 
+-HAS_SHADOW=y
++#HAS_SHADOW=y
+ #USE_PAM=y
+ #HAVE_INET6=y
+ 
+@@ -73,13 +73,13 @@ PLUGIN=y
+ # Enable EAP SRP-SHA1 authentication (requires libsrp)
+ #USE_SRP=y
+ 
+-MAXOCTETS=y
++#MAXOCTETS=y
+ 
+ INCLUDE_DIRS= -I../include
+ 
+-COMPILE_FLAGS= -DHAVE_PATHS_H -DIPX_CHANGE -DHAVE_MMAP
++COMPILE_FLAGS= #-DHAVE_PATHS_H -DIPX_CHANGE -DHAVE_MMAP
+ 
+-CFLAGS= $(COPTS) $(COMPILE_FLAGS) $(INCLUDE_DIRS) '-DDESTDIR="@DESTDIR@"'
++CFLAGS= $(COPTS) $(COMPILE_FLAGS) $(EXTRACFLAGS) $(INCLUDE_DIRS) '-DDESTDIR="@DESTDIR@"'
+ 
+ ifdef CHAPMS
+ CFLAGS   += -DCHAPMS=1
+@@ -117,10 +117,10 @@ CFLAGS   += -DHAS_SHADOW
+ #LIBS     += -lshadow $(LIBS)
+ endif
+ 
+-ifneq ($(wildcard /usr/include/crypt.h),)
++#ifneq ($(wildcard /usr/include/crypt.h),)
+ CFLAGS  += -DHAVE_CRYPT_H=1
+ LIBS	+= -lcrypt
+-endif
++#endif
+ 
+ ifdef NEEDDES
+ ifndef USE_CRYPT
+diff --git pppd/pppd/auth.c pppd/pppd/auth.c
+index fb71944..c1774d3 100644
+--- pppd/pppd/auth.c
++++ pppd/pppd/auth.c
+@@ -555,6 +555,9 @@ void start_link(unit)
+ {
+     char *msg;
+ 
++     /* we are called via link_terminated, must be ignored */
++    if (phase == PHASE_DISCONNECT)
++	return;
+     new_phase(PHASE_SERIALCONN);
+ 
+     hungup = 0;
+@@ -665,6 +668,7 @@ link_terminated(unit)
+ 	the_channel->disconnect();
+ 	devfd = -1;
+     }
++    /* not only disconnect, cleanup should also be called to close the devices */
+     if (the_channel->cleanup)
+ 	(*the_channel->cleanup)();
+ 
+@@ -1189,6 +1193,10 @@ check_idle(arg)
+     if (idle_time_hook != 0) {
+ 	tlim = idle_time_hook(&idle);
+     } else {
++/* JYWeng 20031216: replace itime with idle.xmit_idle for only outgoing traffic is counted*/
++	if(tx_only) 
++		itime = idle.xmit_idle;
++	else
+ 	itime = MIN(idle.xmit_idle, idle.recv_idle);
+ 	tlim = idle_time_limit - itime;
+     }
+@@ -2354,7 +2362,8 @@ auth_script(script)
+     argv[3] = user_name;
+     argv[4] = devnam;
+     argv[5] = strspeed;
+-    argv[6] = NULL;
++    argv[6] = ipparam;
++    argv[7] = NULL;
+ 
+     auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
+ }
+diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
+index 5814f35..99eaa47 100644
+--- pppd/pppd/ccp.c
++++ pppd/pppd/ccp.c
+@@ -62,13 +62,6 @@ static int setdeflate __P((char **));
+ static char bsd_value[8];
+ static char deflate_value[8];
+ 
+-/*
+- * Option variables.
+- */
+-#ifdef MPPE
+-bool refuse_mppe_stateful = 1;		/* Allow stateful mode? */
+-#endif
+-
+ static option_t ccp_option_list[] = {
+     { "noccp", o_bool, &ccp_protent.enabled_flag,
+       "Disable CCP negotiation" },
+@@ -108,54 +101,87 @@ static option_t ccp_option_list[] = {
+       "don't allow Predictor-1", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
+       &ccp_allowoptions[0].predictor_1 },
+ 
++    { "lzs", o_bool, &ccp_wantoptions[0].lzs,
++      "request Stac LZS", 1, &ccp_allowoptions[0].lzs, OPT_PRIO },
++    { "+lzs", o_bool, &ccp_wantoptions[0].lzs,
++      "request Stac LZS", 1, &ccp_allowoptions[0].lzs, OPT_ALIAS | OPT_PRIO },
++    { "nolzs", o_bool, &ccp_wantoptions[0].lzs,
++      "don't allow Stac LZS", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].lzs },
++    { "-lzs", o_bool, &ccp_wantoptions[0].lzs,
++      "don't allow Stac LZS", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].lzs },
++
+ #ifdef MPPE
+-    /* MPPE options are symmetrical ... we only set wantoptions here */
++    { "mppc", o_bool, &ccp_wantoptions[0].mppc,
++      "request MPPC compression", 1, &ccp_allowoptions[0].mppc, OPT_PRIO },
++    { "+mppc", o_bool, &ccp_wantoptions[0].mppc,
++      "request MPPC compression", 1, &ccp_allowoptions[0].mppc,
++      OPT_ALIAS | OPT_PRIO },
++    { "nomppc", o_bool, &ccp_wantoptions[0].mppc,
++      "don't allow MPPC compression", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppc },
++    { "-mppc", o_bool, &ccp_wantoptions[0].mppc,
++      "don't allow MPPC compression", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppc },
++
+     { "require-mppe", o_bool, &ccp_wantoptions[0].mppe,
+-      "require MPPE encryption",
+-      OPT_PRIO | MPPE_OPT_40 | MPPE_OPT_128 },
++      "require MPPE encryption", 1, &ccp_allowoptions[0].mppe, OPT_PRIO },
+     { "+mppe", o_bool, &ccp_wantoptions[0].mppe,
+-      "require MPPE encryption",
+-      OPT_ALIAS | OPT_PRIO | MPPE_OPT_40 | MPPE_OPT_128 },
++      "require MPPE encryption", 1, &ccp_allowoptions[0].mppe,
++      OPT_ALIAS | OPT_PRIO },
+     { "nomppe", o_bool, &ccp_wantoptions[0].mppe,
+-      "don't allow MPPE encryption", OPT_PRIO },
++      "don't allow MPPE encryption", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe },
+     { "-mppe", o_bool, &ccp_wantoptions[0].mppe,
+-      "don't allow MPPE encryption", OPT_ALIAS | OPT_PRIO },
+-
+-    /* We use ccp_allowoptions[0].mppe as a junk var ... it is reset later */
+-    { "require-mppe-40", o_bool, &ccp_allowoptions[0].mppe,
+-      "require MPPE 40-bit encryption", OPT_PRIO | OPT_A2OR | MPPE_OPT_40,
+-      &ccp_wantoptions[0].mppe },
+-    { "+mppe-40", o_bool, &ccp_allowoptions[0].mppe,
+-      "require MPPE 40-bit encryption", OPT_PRIO | OPT_A2OR | MPPE_OPT_40,
+-      &ccp_wantoptions[0].mppe },
+-    { "nomppe-40", o_bool, &ccp_allowoptions[0].mppe,
+-      "don't allow MPPE 40-bit encryption",
+-      OPT_PRIOSUB | OPT_A2CLRB | MPPE_OPT_40, &ccp_wantoptions[0].mppe },
+-    { "-mppe-40", o_bool, &ccp_allowoptions[0].mppe,
+-      "don't allow MPPE 40-bit encryption",
+-      OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLRB | MPPE_OPT_40,
+-      &ccp_wantoptions[0].mppe },
+-
+-    { "require-mppe-128", o_bool, &ccp_allowoptions[0].mppe,
+-      "require MPPE 128-bit encryption", OPT_PRIO | OPT_A2OR | MPPE_OPT_128,
+-      &ccp_wantoptions[0].mppe },
+-    { "+mppe-128", o_bool, &ccp_allowoptions[0].mppe,
+-      "require MPPE 128-bit encryption",
+-      OPT_ALIAS | OPT_PRIO | OPT_A2OR | MPPE_OPT_128,
+-      &ccp_wantoptions[0].mppe },
+-    { "nomppe-128", o_bool, &ccp_allowoptions[0].mppe,
+-      "don't allow MPPE 128-bit encryption",
+-      OPT_PRIOSUB | OPT_A2CLRB | MPPE_OPT_128, &ccp_wantoptions[0].mppe },
+-    { "-mppe-128", o_bool, &ccp_allowoptions[0].mppe,
+-      "don't allow MPPE 128-bit encryption",
+-      OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLRB | MPPE_OPT_128,
+-      &ccp_wantoptions[0].mppe },
+-
+-    /* strange one; we always request stateless, but will we allow stateful? */
+-    { "mppe-stateful", o_bool, &refuse_mppe_stateful,
+-      "allow MPPE stateful mode", OPT_PRIO },
+-    { "nomppe-stateful", o_bool, &refuse_mppe_stateful,
+-      "disallow MPPE stateful mode", OPT_PRIO | 1 },
++      "don't allow MPPE encryption", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe },
++
++    { "require-mppe-40", o_bool, &ccp_wantoptions[0].mppe_40,
++      "require MPPE 40-bit encryption", 1, &ccp_allowoptions[0].mppe_40,
++      OPT_PRIO },
++    { "+mppe-40", o_bool, &ccp_wantoptions[0].mppe_40,
++      "require MPPE 40-bit encryption", 1, &ccp_allowoptions[0].mppe_40,
++      OPT_ALIAS | OPT_PRIO },
++    { "nomppe-40", o_bool, &ccp_wantoptions[0].mppe_40,
++      "don't allow MPPE 40-bit encryption", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_40 },
++    { "-mppe-40", o_bool, &ccp_wantoptions[0].mppe_40,
++      "don't allow MPPE 40-bit encryption", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_40 },
++
++    { "require-mppe-56", o_bool, &ccp_wantoptions[0].mppe_56,
++      "require MPPE 56-bit encryption", 1, &ccp_allowoptions[0].mppe_56,
++      OPT_PRIO },
++    { "+mppe-56", o_bool, &ccp_wantoptions[0].mppe_56,
++      "require MPPE 56-bit encryption", 1, &ccp_allowoptions[0].mppe_56,
++      OPT_ALIAS | OPT_PRIO },
++    { "nomppe-56", o_bool, &ccp_wantoptions[0].mppe_56,
++      "don't allow MPPE 56-bit encryption", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_56 },
++    { "-mppe-56", o_bool, &ccp_wantoptions[0].mppe_56,
++      "don't allow MPPE 56-bit encryption", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_56 },
++
++    { "require-mppe-128", o_bool, &ccp_wantoptions[0].mppe_128,
++      "require MPPE 128-bit encryption", 1, &ccp_allowoptions[0].mppe_128,
++      OPT_PRIO },
++    { "+mppe-128", o_bool, &ccp_wantoptions[0].mppe_128,
++      "require MPPE 128-bit encryption", 1, &ccp_allowoptions[0].mppe_128,
++      OPT_ALIAS | OPT_PRIO },
++    { "nomppe-128", o_bool, &ccp_wantoptions[0].mppe_40,
++      "don't allow MPPE 128-bit encryption", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_128 },
++    { "-mppe-128", o_bool, &ccp_wantoptions[0].mppe_128,
++      "don't allow MPPE 128-bit encryption", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_128 },
++
++    { "nomppe-stateful", o_bool, &ccp_wantoptions[0].mppe_stateless,
++      "disallow MPPE stateful mode", 1, &ccp_allowoptions[0].mppe_stateless,
++      OPT_PRIO },
++    { "mppe-stateful", o_bool, &ccp_wantoptions[0].mppe_stateless,
++      "allow MPPE stateful mode", OPT_PRIOSUB | OPT_A2CLR,
++      &ccp_allowoptions[0].mppe_stateless },
+ #endif /* MPPE */
+ 
+     { NULL }
+@@ -241,7 +267,7 @@ static fsm_callbacks ccp_callbacks = {
+  */
+ #define ANY_COMPRESS(opt)	((opt).deflate || (opt).bsd_compress \
+ 				 || (opt).predictor_1 || (opt).predictor_2 \
+-				 || (opt).mppe)
++				 || (opt).lzs || (opt).mppc || (opt).mppe)
+ 
+ /*
+  * Local state (mainly for handling reset-reqs and reset-acks).
+@@ -378,6 +404,30 @@ ccp_init(unit)
+     ccp_allowoptions[0].bsd_bits = BSD_MAX_BITS;
+ 
+     ccp_allowoptions[0].predictor_1 = 1;
++
++    ccp_wantoptions[0].lzs = 0; /* Stac LZS  - will be enabled in the future */
++    ccp_wantoptions[0].lzs_mode = LZS_MODE_SEQ;
++    ccp_wantoptions[0].lzs_hists = 1;
++    ccp_allowoptions[0].lzs = 0; /* Stac LZS  - will be enabled in the future */
++    ccp_allowoptions[0].lzs_mode = LZS_MODE_SEQ;
++    ccp_allowoptions[0].lzs_hists = 1;
++
++#ifdef MPPE
++    /* by default allow and request MPPC... */
++    ccp_wantoptions[0].mppc = ccp_allowoptions[0].mppc = 1;
++
++    /* ... and allow but don't request MPPE */
++    ccp_allowoptions[0].mppe = 1;
++    ccp_allowoptions[0].mppe_40 = 1;
++    ccp_allowoptions[0].mppe_56 = 1;
++    ccp_allowoptions[0].mppe_128 = 1;
++    ccp_allowoptions[0].mppe_stateless = 1;
++    ccp_wantoptions[0].mppe = 0;
++    ccp_wantoptions[0].mppe_40 = 0;
++    ccp_wantoptions[0].mppe_56 = 0;
++    ccp_wantoptions[0].mppe_128 = 0;
++    ccp_wantoptions[0].mppe_stateless = 0;
++#endif /* MPPE */
+ }
+ 
+ /*
+@@ -455,11 +505,11 @@ ccp_input(unit, p, len)
+     if (oldstate == OPENED && p[0] == TERMREQ && f->state != OPENED) {
+ 	notice("Compression disabled by peer.");
+ #ifdef MPPE
+-	if (ccp_gotoptions[unit].mppe) {
++	if (ccp_wantoptions[unit].mppe) {
+ 	    error("MPPE disabled, closing LCP");
+ 	    lcp_close(unit, "MPPE disabled by peer");
+ 	}
+-#endif
++#endif /* MPPE */
+     }
+ 
+     /*
+@@ -487,6 +537,15 @@ ccp_extcode(f, code, id, p, len)
+ 	    break;
+ 	/* send a reset-ack, which the transmitter will see and
+ 	   reset its compression state. */
++
++	/* In case of MPPE/MPPC or LZS we shouldn't send CCP_RESETACK,
++	   but we do it in order to reset compressor; CCP_RESETACK is
++	   then silently discarded. See functions ppp_send_frame and
++	   ppp_ccp_peek in ppp_generic.c (Linux only !!!). All the
++	   confusion is caused by the fact that CCP code is splited
++	   into two parts - one part is handled by pppd, the other one
++	   is handled by kernel. */
++
+ 	fsm_sdata(f, CCP_RESETACK, id, NULL, 0);
+ 	break;
+ 
+@@ -515,12 +574,11 @@ ccp_protrej(unit)
+     fsm_lowerdown(&ccp_fsm[unit]);
+ 
+ #ifdef MPPE
+-    if (ccp_gotoptions[unit].mppe) {
++    if (ccp_wantoptions[unit].mppe) {
+ 	error("MPPE required but peer negotiation failed");
+ 	lcp_close(unit, "MPPE required but peer negotiation failed");
+     }
+-#endif
+-
++#endif /* MPPE */
+ }
+ 
+ /*
+@@ -537,7 +595,7 @@ ccp_resetci(f)
+     all_rejected[f->unit] = 0;
+ 
+ #ifdef MPPE
+-    if (go->mppe) {
++    if (go->mppe || go->mppc) {
+ 	ccp_options *ao = &ccp_allowoptions[f->unit];
+ 	int auth_mschap_bits = auth_done[f->unit];
+ 	int numbits;
+@@ -551,80 +609,109 @@ ccp_resetci(f)
+ 	 * NB: If MPPE is required, all other compression opts are invalid.
+ 	 *     So, we return right away if we can't do it.
+ 	 */
++	if (ccp_wantoptions[f->unit].mppe) {
++	    /* Leave only the mschap auth bits set */
++	    auth_mschap_bits &= (CHAP_MS_WITHPEER  | CHAP_MS_PEER |
++				 CHAP_MS2_WITHPEER | CHAP_MS2_PEER);
++	    /* Count the mschap auths */
++	    auth_mschap_bits >>= CHAP_MS_SHIFT;
++	    numbits = 0;
++	    do {
++		numbits += auth_mschap_bits & 1;
++		auth_mschap_bits >>= 1;
++	    } while (auth_mschap_bits);
++	    if (numbits > 1) {
++		error("MPPE required, but auth done in both directions.");
++		lcp_close(f->unit, "MPPE required but not available");
++		return;
++	    }
++	    if (!numbits) {
++		error("MPPE required, but MS-CHAP[v2] auth not performed.");
++		lcp_close(f->unit, "MPPE required but not available");
++		return;
++	    }
+ 
+-	/* Leave only the mschap auth bits set */
+-	auth_mschap_bits &= (CHAP_MS_WITHPEER  | CHAP_MS_PEER |
+-			     CHAP_MS2_WITHPEER | CHAP_MS2_PEER);
+-	/* Count the mschap auths */
+-	auth_mschap_bits >>= CHAP_MS_SHIFT;
+-	numbits = 0;
+-	do {
+-	    numbits += auth_mschap_bits & 1;
+-	    auth_mschap_bits >>= 1;
+-	} while (auth_mschap_bits);
+-	if (numbits > 1) {
+-	    error("MPPE required, but auth done in both directions.");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
+-	}
+-	if (!numbits) {
+-	    error("MPPE required, but MS-CHAP[v2] auth not performed.");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
++	    /* A plugin (eg radius) may not have obtained key material. */
++	    if (!mppe_keys_set) {
++		error("MPPE required, but keys are not available.  "
++		      "Possible plugin problem?");
++		lcp_close(f->unit, "MPPE required but not available");
++		return;
++	    }
+ 	}
+ 
+-	/* A plugin (eg radius) may not have obtained key material. */
+-	if (!mppe_keys_set) {
+-	    error("MPPE required, but keys are not available.  "
+-		  "Possible plugin problem?");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
++	/*
++	 * Check whether the kernel knows about the various
++	 * compression methods we might request. Key material
++	 * unimportant here.
++	 */
++	if (go->mppc) {
++	    opt_buf[0] = CI_MPPE;
++	    opt_buf[1] = CILEN_MPPE;
++	    opt_buf[2] = 0;
++	    opt_buf[3] = 0;
++	    opt_buf[4] = 0;
++	    opt_buf[5] = MPPE_MPPC;
++	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE, 0) <= 0)
++		go->mppc = 0;
+ 	}
+-
+-	/* LM auth not supported for MPPE */
+-	if (auth_done[f->unit] & (CHAP_MS_WITHPEER | CHAP_MS_PEER)) {
+-	    /* This might be noise */
+-	    if (go->mppe & MPPE_OPT_40) {
+-		notice("Disabling 40-bit MPPE; MS-CHAP LM not supported");
+-		go->mppe &= ~MPPE_OPT_40;
+-		ccp_wantoptions[f->unit].mppe &= ~MPPE_OPT_40;
+-	    }
++	if (go->mppe_40) {
++	    opt_buf[0] = CI_MPPE;
++	    opt_buf[1] = CILEN_MPPE;
++	    opt_buf[2] = MPPE_STATELESS;
++	    opt_buf[3] = 0;
++	    opt_buf[4] = 0;
++	    opt_buf[5] = MPPE_40BIT;
++	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0) <= 0)
++		go->mppe_40 = 0;
+ 	}
+-
+-	/* Last check: can we actually negotiate something? */
+-	if (!(go->mppe & (MPPE_OPT_40 | MPPE_OPT_128))) {
+-	    /* Could be misconfig, could be 40-bit disabled above. */
+-	    error("MPPE required, but both 40-bit and 128-bit disabled.");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
++	if (go->mppe_56) {
++	    opt_buf[0] = CI_MPPE;
++	    opt_buf[1] = CILEN_MPPE;
++	    opt_buf[2] = MPPE_STATELESS;
++	    opt_buf[3] = 0;
++	    opt_buf[4] = 0;
++	    opt_buf[5] = MPPE_56BIT;
++	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0) <= 0)
++		go->mppe_56 = 0;
++	}
++	if (go->mppe_128) {
++	    opt_buf[0] = CI_MPPE;
++	    opt_buf[1] = CILEN_MPPE;
++	    opt_buf[2] = MPPE_STATELESS;
++	    opt_buf[3] = 0;
++	    opt_buf[4] = 0;
++	    opt_buf[5] = MPPE_128BIT;
++	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0) <= 0)
++		go->mppe_128 = 0;
++	}
++	if (!go->mppe_40 && !go->mppe_56 && !go->mppe_128) {
++	    if (ccp_wantoptions[f->unit].mppe) {
++		error("MPPE required, but kernel has no support.");
++		lcp_close(f->unit, "MPPE required but not available");
++	    }
++	    go->mppe = go->mppe_stateless = 0;
++	} else {
++	    /* MPPE is not compatible with other compression types */
++	    if (ccp_wantoptions[f->unit].mppe) {
++		ao->bsd_compress = go->bsd_compress = 0;
++		ao->predictor_1  = go->predictor_1  = 0;
++		ao->predictor_2  = go->predictor_2  = 0;
++		ao->deflate	 = go->deflate	    = 0;
++		ao->lzs		 = go->lzs	    = 0;
++	    }
+ 	}
+-
+-	/* sync options */
+-	ao->mppe = go->mppe;
+-	/* MPPE is not compatible with other compression types */
+-	ao->bsd_compress = go->bsd_compress = 0;
+-	ao->predictor_1  = go->predictor_1  = 0;
+-	ao->predictor_2  = go->predictor_2  = 0;
+-	ao->deflate      = go->deflate      = 0;
+     }
+ #endif /* MPPE */
+-
+-    /*
+-     * Check whether the kernel knows about the various
+-     * compression methods we might request.
+-     */
+-#ifdef MPPE
+-    if (go->mppe) {
+-	opt_buf[0] = CI_MPPE;
+-	opt_buf[1] = CILEN_MPPE;
+-	MPPE_OPTS_TO_CI(go->mppe, &opt_buf[2]);
+-	/* Key material unimportant here. */
+-	if (ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0) <= 0) {
+-	    error("MPPE required, but kernel has no support.");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	}
++    if (go->lzs) {
++	opt_buf[0] = CI_LZS;
++	opt_buf[1] = CILEN_LZS;
++	opt_buf[2] = go->lzs_hists >> 8;
++	opt_buf[3] = go->lzs_hists & 0xff;
++	opt_buf[4] = LZS_MODE_SEQ;
++	if (ccp_test(f->unit, opt_buf, CILEN_LZS, 0) <= 0)
++	    go->lzs = 0;
+     }
+-#endif
+     if (go->bsd_compress) {
+ 	opt_buf[0] = CI_BSD_COMPRESS;
+ 	opt_buf[1] = CILEN_BSD_COMPRESS;
+@@ -679,7 +766,8 @@ ccp_cilen(f)
+ 	+ (go->deflate? CILEN_DEFLATE: 0)
+ 	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
+ 	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
+-	+ (go->mppe? CILEN_MPPE: 0);
++	+ (go->lzs? CILEN_LZS: 0)
++	+ ((go->mppe || go->mppc)? CILEN_MPPE: 0);
+ }
+ 
+ /*
+@@ -693,6 +781,8 @@ ccp_addci(f, p, lenp)
+ {
+     int res;
+     ccp_options *go = &ccp_gotoptions[f->unit];
++    ccp_options *ao = &ccp_allowoptions[f->unit];
++    ccp_options *wo = &ccp_wantoptions[f->unit];
+     u_char *p0 = p;
+ 
+     /*
+@@ -701,22 +791,43 @@ ccp_addci(f, p, lenp)
+      * in case it gets Acked.
+      */
+ #ifdef MPPE
+-    if (go->mppe) {
++    if (go->mppe || go->mppc || (!wo->mppe && ao->mppe)) {
+ 	u_char opt_buf[CILEN_MPPE + MPPE_MAX_KEY_LEN];
+ 
+-	p[0] = opt_buf[0] = CI_MPPE;
+-	p[1] = opt_buf[1] = CILEN_MPPE;
+-	MPPE_OPTS_TO_CI(go->mppe, &p[2]);
+-	MPPE_OPTS_TO_CI(go->mppe, &opt_buf[2]);
++	p[0] = CI_MPPE;
++	p[1] = CILEN_MPPE;
++	p[2] = (go->mppe_stateless ? MPPE_STATELESS : 0);
++	p[3] = 0;
++	p[4] = 0;
++	p[5] = (go->mppe_40 ? MPPE_40BIT : 0) | (go->mppe_56 ? MPPE_56BIT : 0) |
++	    (go->mppe_128 ? MPPE_128BIT : 0) | (go->mppc ? MPPE_MPPC : 0);
++
++	BCOPY(p, opt_buf, CILEN_MPPE);
+ 	BCOPY(mppe_recv_key, &opt_buf[CILEN_MPPE], MPPE_MAX_KEY_LEN);
+ 	res = ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0);
+-	if (res > 0)
++	if (res > 0) {
+ 	    p += CILEN_MPPE;
+-	else
++	} else {
+ 	    /* This shouldn't happen, we've already tested it! */
+-	    lcp_close(f->unit, "MPPE required but not available in kernel");
++	    go->mppe = go->mppe_40 = go->mppe_56 = go->mppe_128 =
++		go->mppe_stateless = go->mppc = 0;
++	    if (ccp_wantoptions[f->unit].mppe)
++		lcp_close(f->unit, "MPPE required but not available in kernel");
++	}
++    }
++#endif /* MPPE */
++    if (go->lzs) {
++	p[0] = CI_LZS;
++	p[1] = CILEN_LZS;
++	p[2] = go->lzs_hists >> 8;
++	p[3] = go->lzs_hists & 0xff;
++	p[4] = LZS_MODE_SEQ;
++	res = ccp_test(f->unit, p, CILEN_LZS, 0);
++	if (res > 0) {
++	    p += CILEN_LZS;
++	} else
++	    go->lzs = 0;
+     }
+-#endif
+     if (go->deflate) {
+ 	p[0] = go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT;
+ 	p[1] = CILEN_DEFLATE;
+@@ -802,7 +913,7 @@ ccp_addci(f, p, lenp)
+ 
+ /*
+  * ccp_ackci - process a received configure-ack, and return
+- * 1 iff the packet was OK.
++ * 1 if the packet was OK.
+  */
+ static int
+ ccp_ackci(f, p, len)
+@@ -811,24 +922,44 @@ ccp_ackci(f, p, len)
+     int len;
+ {
+     ccp_options *go = &ccp_gotoptions[f->unit];
++    ccp_options *ao = &ccp_allowoptions[f->unit];
++    ccp_options *wo = &ccp_wantoptions[f->unit];
+     u_char *p0 = p;
+ 
+ #ifdef MPPE
+-    if (go->mppe) {
+-	u_char opt_buf[CILEN_MPPE];
+-
+-	opt_buf[0] = CI_MPPE;
+-	opt_buf[1] = CILEN_MPPE;
+-	MPPE_OPTS_TO_CI(go->mppe, &opt_buf[2]);
+-	if (len < CILEN_MPPE || memcmp(opt_buf, p, CILEN_MPPE))
++    if (go->mppe || go->mppc || (!wo->mppe && ao->mppe)) {
++	if (len < CILEN_MPPE
++	    || p[1] != CILEN_MPPE || p[0] != CI_MPPE
++	    || p[2] != (go->mppe_stateless ? MPPE_STATELESS : 0)
++	    || p[3] != 0
++	    || p[4] != 0
++	    || (p[5] != ((go->mppe_40 ? MPPE_40BIT : 0) |
++			 (go->mppc ? MPPE_MPPC : 0))
++		&& p[5] != ((go->mppe_56 ? MPPE_56BIT : 0) |
++			    (go->mppc ? MPPE_MPPC : 0))
++		&& p[5] != ((go->mppe_128 ? MPPE_128BIT : 0) |
++			    (go->mppc ? MPPE_MPPC : 0))))
+ 	    return 0;
++	if (go->mppe_40 || go->mppe_56 || go->mppe_128)
++	    go->mppe = 1;
+ 	p += CILEN_MPPE;
+ 	len -= CILEN_MPPE;
++	/* Cope with first/fast ack */
++	if (p == p0 && len == 0)
++	    return 1;
++    }
++#endif /* MPPE */
++    if (go->lzs) {
++	if (len < CILEN_LZS || p[0] != CI_LZS || p[1] != CILEN_LZS
++	    || p[2] != go->lzs_hists>>8 || p[3] != (go->lzs_hists&0xff)
++	    || p[4] != LZS_MODE_SEQ)
++	    return 0;
++	p += CILEN_LZS;
++	len -= CILEN_LZS;
+ 	/* XXX Cope with first/fast ack */
+-	if (len == 0)
++	if (p == p0 && len == 0)
+ 	    return 1;
+     }
+-#endif
+     if (go->deflate) {
+ 	if (len < CILEN_DEFLATE
+ 	    || p[0] != (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
+@@ -891,7 +1022,7 @@ ccp_ackci(f, p, len)
+ 
+ /*
+  * ccp_nakci - process received configure-nak.
+- * Returns 1 iff the nak was OK.
++ * Returns 1 if the nak was OK.
+  */
+ static int
+ ccp_nakci(f, p, len, treat_as_reject)
+@@ -901,6 +1032,8 @@ ccp_nakci(f, p, len, treat_as_reject)
+     int treat_as_reject;
+ {
+     ccp_options *go = &ccp_gotoptions[f->unit];
++    ccp_options *ao = &ccp_allowoptions[f->unit];
++    ccp_options *wo = &ccp_wantoptions[f->unit];
+     ccp_options no;		/* options we've seen already */
+     ccp_options try;		/* options to ask for next time */
+ 
+@@ -908,28 +1041,100 @@ ccp_nakci(f, p, len, treat_as_reject)
+     try = *go;
+ 
+ #ifdef MPPE
+-    if (go->mppe && len >= CILEN_MPPE
+-	&& p[0] == CI_MPPE && p[1] == CILEN_MPPE) {
+-	no.mppe = 1;
+-	/*
+-	 * Peer wants us to use a different strength or other setting.
+-	 * Fail if we aren't willing to use his suggestion.
+-	 */
+-	MPPE_CI_TO_OPTS(&p[2], try.mppe);
+-	if ((try.mppe & MPPE_OPT_STATEFUL) && refuse_mppe_stateful) {
+-	    error("Refusing MPPE stateful mode offered by peer");
+-	    try.mppe = 0;
+-	} else if (((go->mppe | MPPE_OPT_STATEFUL) & try.mppe) != try.mppe) {
+-	    /* Peer must have set options we didn't request (suggest) */
+-	    try.mppe = 0;
++    if ((go->mppe || go->mppc || (!wo->mppe && ao->mppe)) &&
++	len >= CILEN_MPPE && p[0] == CI_MPPE && p[1] == CILEN_MPPE) {
++
++	if (go->mppc) {
++	    no.mppc = 1;
++	    if (!(p[5] & MPPE_MPPC))
++		try.mppc = 0;
++	}
++
++	if (go->mppe)
++	    no.mppe = 1;
++	if (go->mppe_40)
++	    no.mppe_40 = 1;
++	if (go->mppe_56)
++	    no.mppe_56 = 1;
++	if (go->mppe_128)
++	    no.mppe_128 = 1;
++	if (go->mppe_stateless)
++	    no.mppe_stateless = 1;
++
++	if (ao->mppe_40) {
++	    if ((p[5] & MPPE_40BIT))
++		try.mppe_40 = 1;
++	    else
++		try.mppe_40 = (p[5] == 0) ? 1 : 0;
++	}
++	if (ao->mppe_56) {
++	    if ((p[5] & MPPE_56BIT))
++		try.mppe_56 = 1;
++	    else
++		try.mppe_56 = (p[5] == 0) ? 1 : 0;
++	}
++	if (ao->mppe_128) {
++	    if ((p[5] & MPPE_128BIT))
++		try.mppe_128 = 1;
++	    else
++		try.mppe_128 = (p[5] == 0) ? 1 : 0;
++	}
++
++	if (ao->mppe_stateless) {
++	    if ((p[2] & MPPE_STATELESS) || wo->mppe_stateless)
++		try.mppe_stateless = 1;
++	    else
++		try.mppe_stateless = 0;
+ 	}
+ 
+-	if (!try.mppe) {
+-	    error("MPPE required but peer negotiation failed");
+-	    lcp_close(f->unit, "MPPE required but peer negotiation failed");
++	if (!try.mppe_56 && !try.mppe_40 && !try.mppe_128) {
++	    try.mppe = try.mppe_stateless = 0;
++	    if (wo->mppe) {
++		/* we require encryption, but peer doesn't support it
++		   so we close connection */
++		wo->mppc = wo->mppe = wo->mppe_stateless = wo->mppe_40 =
++		    wo->mppe_56 = wo->mppe_128 = 0;
++		lcp_close(f->unit, "MPPE required but cannot negotiate MPPE "
++			  "key length");
++	    }
++        }
++	if (wo->mppe && (wo->mppe_40 != try.mppe_40) &&
++	    (wo->mppe_56 != try.mppe_56) && (wo->mppe_128 != try.mppe_128)) {
++	    /* cannot negotiate key length */
++	    wo->mppc = wo->mppe = wo->mppe_stateless = wo->mppe_40 =
++		wo->mppe_56 = wo->mppe_128 = 0;
++	    lcp_close(f->unit, "Cannot negotiate MPPE key length");
+ 	}
++	if (try.mppe_40 && try.mppe_56 && try.mppe_128)
++	    try.mppe_40 = try.mppe_56 = 0;
++	else
++	    if (try.mppe_56 && try.mppe_128)
++		try.mppe_56 = 0;
++	    else
++		if (try.mppe_40 && try.mppe_128)
++		    try.mppe_40 = 0;
++		else
++		    if (try.mppe_40 && try.mppe_56)
++			try.mppe_40 = 0;
++
++	p += CILEN_MPPE;
++	len -= CILEN_MPPE;
+     }
+ #endif /* MPPE */
++
++    if (go->lzs && len >= CILEN_LZS && p[0] == CI_LZS && p[1] == CILEN_LZS) {
++	no.lzs = 1;
++	if (((p[2]<<8)|p[3]) > 1 || (p[4] != LZS_MODE_SEQ &&
++				     p[4] != LZS_MODE_EXT))
++	    try.lzs = 0;
++	else {
++	    try.lzs_mode = p[4];
++	    try.lzs_hists = (p[2] << 8) | p[3];
++	}
++	p += CILEN_LZS;
++	len -= CILEN_LZS;
++    }
++
+     if (go->deflate && len >= CILEN_DEFLATE
+ 	&& p[0] == (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
+ 	&& p[1] == CILEN_DEFLATE) {
+@@ -1002,14 +1207,50 @@ ccp_rejci(f, p, len)
+ 	return -1;
+ 
+ #ifdef MPPE
+-    if (go->mppe && len >= CILEN_MPPE
++    if ((go->mppe || go->mppc) && len >= CILEN_MPPE
+ 	&& p[0] == CI_MPPE && p[1] == CILEN_MPPE) {
+-	error("MPPE required but peer refused");
+-	lcp_close(f->unit, "MPPE required but peer refused");
++	ccp_options *wo = &ccp_wantoptions[f->unit];
++	if (p[2] != (go->mppe_stateless ? MPPE_STATELESS : 0) ||
++	    p[3] != 0 ||
++	    p[4] != 0 ||
++	    p[5] != ((go->mppe_40 ? MPPE_40BIT : 0) |
++		     (go->mppe_56 ? MPPE_56BIT : 0) |
++		     (go->mppe_128 ? MPPE_128BIT : 0) |
++		     (go->mppc ? MPPE_MPPC : 0)))
++	    return 0;
++	if (go->mppc)
++	    try.mppc = 0;
++	if (go->mppe) {
++	    try.mppe = 0;
++	    if (go->mppe_40)
++		try.mppe_40 = 0;
++	    if (go->mppe_56)
++		try.mppe_56 = 0;
++	    if (go->mppe_128)
++		try.mppe_128 = 0;
++	    if (go->mppe_stateless)
++		try.mppe_stateless = 0;
++	    if (!try.mppe_56 && !try.mppe_40 && !try.mppe_128)
++		try.mppe = try.mppe_stateless = 0;
++	    if (wo->mppe) { /* we want MPPE but cannot negotiate key length */
++		wo->mppc = wo->mppe = wo->mppe_stateless = wo->mppe_40 =
++		    wo->mppe_56 = wo->mppe_128 = 0;
++		lcp_close(f->unit, "MPPE required but cannot negotiate MPPE "
++			  "key length");
++	    }
++	}
+ 	p += CILEN_MPPE;
+ 	len -= CILEN_MPPE;
+     }
+-#endif
++#endif /* MPPE */
++    if (go->lzs && len >= CILEN_LZS && p[0] == CI_LZS && p[1] == CILEN_LZS) {
++	if (p[2] != go->lzs_hists>>8 || p[3] != (go->lzs_hists&0xff) 
++	    || p[4] != go->lzs_mode)
++	    return 0;
++	try.lzs = 0;
++	p += CILEN_LZS;
++	len -= CILEN_LZS;
++    }
+     if (go->deflate_correct && len >= CILEN_DEFLATE
+ 	&& p[0] == CI_DEFLATE && p[1] == CILEN_DEFLATE) {
+ 	if (p[2] != DEFLATE_MAKE_OPT(go->deflate_size)
+@@ -1073,14 +1314,15 @@ ccp_reqci(f, p, lenp, dont_nak)
+     int dont_nak;
+ {
+     int ret, newret, res;
+-    u_char *p0, *retp;
++    u_char *p0, *retp, p2, p5;
+     int len, clen, type, nb;
+     ccp_options *ho = &ccp_hisoptions[f->unit];
+     ccp_options *ao = &ccp_allowoptions[f->unit];
++    ccp_options *wo = &ccp_wantoptions[f->unit];
+ #ifdef MPPE
+-    bool rej_for_ci_mppe = 1;	/* Are we rejecting based on a bad/missing */
+-				/* CI_MPPE, or due to other options?       */
+-#endif
++    u_char opt_buf[CILEN_MPPE + MPPE_MAX_KEY_LEN];
++/*     int mtu; */
++#endif /* MPPE */
+ 
+     ret = CONFACK;
+     retp = p0 = p;
+@@ -1103,106 +1345,299 @@ ccp_reqci(f, p, lenp, dont_nak)
+ 	    switch (type) {
+ #ifdef MPPE
+ 	    case CI_MPPE:
+-		if (!ao->mppe || clen != CILEN_MPPE) {
++		if ((!ao->mppc && !ao->mppe) || clen != CILEN_MPPE) {
+ 		    newret = CONFREJ;
+ 		    break;
+ 		}
+-		MPPE_CI_TO_OPTS(&p[2], ho->mppe);
+-
+-		/* Nak if anything unsupported or unknown are set. */
+-		if (ho->mppe & MPPE_OPT_UNSUPPORTED) {
+-		    newret = CONFNAK;
+-		    ho->mppe &= ~MPPE_OPT_UNSUPPORTED;
+-		}
+-		if (ho->mppe & MPPE_OPT_UNKNOWN) {
++		p2 = p[2];
++		p5 = p[5];
++		/* not sure what they want, tell 'em what we got */
++		if (((p[2] & ~MPPE_STATELESS) != 0 || p[3] != 0 || p[4] != 0 ||
++		     (p[5] & ~(MPPE_40BIT | MPPE_56BIT | MPPE_128BIT |
++			       MPPE_MPPC)) != 0 || p[5] == 0) ||
++		    (p[2] == 0 && p[3] == 0 && p[4] == 0 &&  p[5] == 0)) {
+ 		    newret = CONFNAK;
+-		    ho->mppe &= ~MPPE_OPT_UNKNOWN;
+ 		}
+ 
+-		/* Check state opt */
+-		if (ho->mppe & MPPE_OPT_STATEFUL) {
+-		    /*
+-		     * We can Nak and request stateless, but it's a
+-		     * lot easier to just assume the peer will request
+-		     * it if he can do it; stateful mode is bad over
+-		     * the Internet -- which is where we expect MPPE.
+-		     */
+-		   if (refuse_mppe_stateful) {
+-			error("Refusing MPPE stateful mode offered by peer");
++		if ((p[5] & MPPE_MPPC)) {
++		    if (ao->mppc) {
++			ho->mppc = 1;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			opt_buf[2] = opt_buf[3] = opt_buf[4] = 0;
++			opt_buf[5] = MPPE_MPPC;
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE, 1) <= 0) {
++			    ho->mppc = 0;
++			    p[5] &= ~MPPE_MPPC;
++			    newret = CONFNAK;
++			}
++		    } else {
+ 			newret = CONFREJ;
+-			break;
++			if (wo->mppe || ao->mppe) {
++			    p[5] &= ~MPPE_MPPC;
++			    newret = CONFNAK;
++			}
++		    }
++		}
++
++		if (ao->mppe)
++		    ho->mppe = 1;
++
++		if ((p[2] & MPPE_STATELESS)) {
++		    if (ao->mppe_stateless) {
++			if (wo->mppe_stateless)
++			    ho->mppe_stateless = 1;
++			else {
++			    newret = CONFNAK;
++			    if (!dont_nak)
++				p[2] &= ~MPPE_STATELESS;
++			}
++		    } else {
++			newret = CONFNAK;
++			if (!dont_nak)
++			    p[2] &= ~MPPE_STATELESS;
++		    }
++		} else {
++		    if (wo->mppe_stateless && !dont_nak) {
++			wo->mppe_stateless = 0;
++			newret = CONFNAK;
++			p[2] |= MPPE_STATELESS;
+ 		    }
+ 		}
+ 
+-		/* Find out which of {S,L} are set. */
+-		if ((ho->mppe & MPPE_OPT_128)
+-		     && (ho->mppe & MPPE_OPT_40)) {
+-		    /* Both are set, negotiate the strongest. */
++		if ((p[5] & ~MPPE_MPPC) == (MPPE_40BIT|MPPE_56BIT|MPPE_128BIT)) {
+ 		    newret = CONFNAK;
+-		    if (ao->mppe & MPPE_OPT_128)
+-			ho->mppe &= ~MPPE_OPT_40;
+-		    else if (ao->mppe & MPPE_OPT_40)
+-			ho->mppe &= ~MPPE_OPT_128;
+-		    else {
+-			newret = CONFREJ;
+-			break;
++		    if (ao->mppe_128) {
++			ho->mppe_128 = 1;
++			p[5] &= ~(MPPE_40BIT|MPPE_56BIT);
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_128 = 0;
++			    p[5] |= (MPPE_40BIT|MPPE_56BIT);
++			    p[5] &= ~MPPE_128BIT;
++			    goto check_mppe_56_40;
++			}
++			goto check_mppe;
+ 		    }
+-		} else if (ho->mppe & MPPE_OPT_128) {
+-		    if (!(ao->mppe & MPPE_OPT_128)) {
+-			newret = CONFREJ;
+-			break;
++		    p[5] &= ~MPPE_128BIT;
++		    goto check_mppe_56_40;
++		}
++		if ((p[5] & ~MPPE_MPPC) == (MPPE_56BIT|MPPE_128BIT)) {
++		    newret = CONFNAK;
++		    if (ao->mppe_128) {
++			ho->mppe_128 = 1;
++			p[5] &= ~MPPE_56BIT;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_128 = 0;
++			    p[5] |= MPPE_56BIT;
++			    p[5] &= ~MPPE_128BIT;
++			    goto check_mppe_56;
++			}
++			goto check_mppe;
+ 		    }
+-		} else if (ho->mppe & MPPE_OPT_40) {
+-		    if (!(ao->mppe & MPPE_OPT_40)) {
+-			newret = CONFREJ;
+-			break;
++		    p[5] &= ~MPPE_128BIT;
++		    goto check_mppe_56;
++		}
++		if ((p[5] & ~MPPE_MPPC) == (MPPE_40BIT|MPPE_128BIT)) {
++		    newret = CONFNAK;
++		    if (ao->mppe_128) {
++			ho->mppe_128 = 1;
++			p[5] &= ~MPPE_40BIT;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_128 = 0;
++			    p[5] |= MPPE_40BIT;
++			    p[5] &= ~MPPE_128BIT;
++			    goto check_mppe_40;
++			}
++			goto check_mppe;
++		    }
++		    p[5] &= ~MPPE_128BIT;
++		    goto check_mppe_40;
++		}
++		if ((p[5] & ~MPPE_MPPC) == MPPE_128BIT) {
++		    if (ao->mppe_128) {
++			ho->mppe_128 = 1;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_128 = 0;
++			    p[5] &= ~MPPE_128BIT;
++			    newret = CONFNAK;
++			}
++			goto check_mppe;
++		    }
++		    p[5] &= ~MPPE_128BIT;
++		    newret = CONFNAK;
++		    goto check_mppe;
++		}
++	    check_mppe_56_40:
++		if ((p[5] & ~MPPE_MPPC) == (MPPE_40BIT|MPPE_56BIT)) {
++		    newret = CONFNAK;
++		    if (ao->mppe_56) {
++			ho->mppe_56 = 1;
++			p[5] &= ~MPPE_40BIT;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_56 = 0;
++			    p[5] |= MPPE_40BIT;
++			    p[5] &= ~MPPE_56BIT;
++			    newret = CONFNAK;
++			    goto check_mppe_40;
++			}
++			goto check_mppe;
++		    }
++		    p[5] &= ~MPPE_56BIT;
++		    goto check_mppe_40;
++		}
++	    check_mppe_56:
++		if ((p[5] & ~MPPE_MPPC) == MPPE_56BIT) {
++		    if (ao->mppe_56) {
++			ho->mppe_56 = 1;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_56 = 0;
++			    p[5] &= ~MPPE_56BIT;
++			    newret = CONFNAK;
++			}
++			goto check_mppe;
++		    }
++		    p[5] &= ~MPPE_56BIT;
++		    newret = CONFNAK;
++		    goto check_mppe;
++		}
++	    check_mppe_40:
++		if ((p[5] & ~MPPE_MPPC) == MPPE_40BIT) {
++		    if (ao->mppe_40) {
++			ho->mppe_40 = 1;
++			BCOPY(p, opt_buf, CILEN_MPPE);
++			BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
++			      MPPE_MAX_KEY_LEN);
++			if (ccp_test(f->unit, opt_buf, CILEN_MPPE +
++				     MPPE_MAX_KEY_LEN, 1) <= 0) {
++			    ho->mppe_40 = 0;
++			    p[5] &= ~MPPE_40BIT;
++			    newret = CONFNAK;
++			}
++			goto check_mppe;
++		    }
++		    p[5] &= ~MPPE_40BIT;
++		}
++
++	    check_mppe:
++		if (!ho->mppe_40 && !ho->mppe_56 && !ho->mppe_128) {
++		    if (wo->mppe_40 || wo->mppe_56 || wo->mppe_128) {
++			newret = CONFNAK;
++			p[2] |= (wo->mppe_stateless ? MPPE_STATELESS : 0);
++			p[5] |= (wo->mppe_40 ? MPPE_40BIT : 0) |
++			    (wo->mppe_56 ? MPPE_56BIT : 0) |
++			    (wo->mppe_128 ? MPPE_128BIT : 0) |
++			    (wo->mppc ? MPPE_MPPC : 0);
++		    } else {
++			ho->mppe = ho->mppe_stateless = 0;
+ 		    }
+ 		} else {
+-		    /* Neither are set. */
++		    /* MPPE is not compatible with other compression types */
++		    if (wo->mppe) {
++			ao->bsd_compress = 0;
++			ao->predictor_1 = 0;
++			ao->predictor_2 = 0;
++			ao->deflate = 0;
++			ao->lzs = 0;
++		    }
++		}
++		if ((!ho->mppc || !ao->mppc) && !ho->mppe) {
++		    p[2] = p2;
++		    p[5] = p5;
+ 		    /* We cannot accept this.  */
+-		    newret = CONFNAK;
++		    newret = CONFREJ;
+ 		    /* Give the peer our idea of what can be used,
+ 		       so it can choose and confirm */
+ 		    ho->mppe = ao->mppe;
+ 		}
+ 
+-		/* rebuild the opts */
+-		MPPE_OPTS_TO_CI(ho->mppe, &p[2]);
+-		if (newret == CONFACK) {
+-		    u_char opt_buf[CILEN_MPPE + MPPE_MAX_KEY_LEN];
+-		    int mtu;
+-
+-		    BCOPY(p, opt_buf, CILEN_MPPE);
+-		    BCOPY(mppe_send_key, &opt_buf[CILEN_MPPE],
+-			  MPPE_MAX_KEY_LEN);
+-		    if (ccp_test(f->unit, opt_buf,
+-				 CILEN_MPPE + MPPE_MAX_KEY_LEN, 1) <= 0) {
+-			/* This shouldn't happen, we've already tested it! */
+-			error("MPPE required, but kernel has no support.");
+-			lcp_close(f->unit, "MPPE required but not available");
+-			newret = CONFREJ;
+-			break;
+-		    }
+-		    /*
+-		     * We need to decrease the interface MTU by MPPE_PAD
+-		     * because MPPE frames **grow**.  The kernel [must]
+-		     * allocate MPPE_PAD extra bytes in xmit buffers.
+-		     */
+-		    mtu = netif_get_mtu(f->unit);
+-		    if (mtu)
+-			netif_set_mtu(f->unit, mtu - MPPE_PAD);
+-		    else
+-			newret = CONFREJ;
+-		}
++		/*
++		 * I have commented the code below because according to RFC1547
++		 * MTU is only information for higher level protocols about
++		 * "the maximum allowable length for a packet (q.v.) transmitted
++		 * over a point-to-point link without incurring network layer
++		 * fragmentation." Of course a PPP implementation should be able
++		 * to handle overhead added by MPPE - in our case apropriate code
++		 * is located in drivers/net/ppp_generic.c in the kernel sources.
++		 *
++		 * According to RFC1661:
++		 * - when negotiated MRU is less than 1500 octets, a PPP
++		 *   implementation must still be able to receive at least 1500
++		 *   octets,
++		 * - when PFC is negotiated, a PPP implementation is still
++		 *   required to receive frames with uncompressed protocol field.
++		 *
++		 * So why not to handle MPPE overhead without changing MTU value?
++		 * I am sure that RFC3078, unfortunately silently, assumes that.
++		 */
+ 
+ 		/*
+-		 * We have accepted MPPE or are willing to negotiate
+-		 * MPPE parameters.  A CONFREJ is due to subsequent
+-		 * (non-MPPE) processing.
++		 * We need to decrease the interface MTU by MPPE_PAD
++		 * because MPPE frames **grow**.  The kernel [must]
++		 * allocate MPPE_PAD extra bytes in xmit buffers.
+ 		 */
+-		rej_for_ci_mppe = 0;
++/*
++		mtu = netif_get_mtu(f->unit);
++		if (mtu) {
++		    netif_set_mtu(f->unit, mtu - MPPE_PAD);
++		} else {
++		    newret = CONFREJ;
++		    if (ccp_wantoptions[f->unit].mppe) {
++			error("Cannot adjust MTU needed by MPPE.");
++			lcp_close(f->unit, "Cannot adjust MTU needed by MPPE.");
++		    }
++		}
++*/
+ 		break;
+ #endif /* MPPE */
++
++	    case CI_LZS:
++		if (!ao->lzs || clen != CILEN_LZS) {
++		    newret = CONFREJ;
++		    break;
++		}
++
++		ho->lzs = 1;
++		ho->lzs_hists = (p[2] << 8) | p[3];
++		ho->lzs_mode = p[4];
++		if ((ho->lzs_hists != ao->lzs_hists) ||
++		    (ho->lzs_mode != ao->lzs_mode)) {
++		    newret = CONFNAK;
++		    if (!dont_nak) {
++			p[2] = ao->lzs_hists >> 8;
++			p[3] = ao->lzs_hists & 0xff;
++			p[4] = ao->lzs_mode;
++		    } else
++			break;
++		}
++
++		if (p == p0 && ccp_test(f->unit, p, CILEN_LZS, 1) <= 0) {
++		    newret = CONFREJ;
++		}
++		break;
++
+ 	    case CI_DEFLATE:
+ 	    case CI_DEFLATE_DRAFT:
+ 		if (!ao->deflate || clen != CILEN_DEFLATE
+@@ -1344,12 +1779,6 @@ ccp_reqci(f, p, lenp, dont_nak)
+ 	else
+ 	    *lenp = retp - p0;
+     }
+-#ifdef MPPE
+-    if (ret == CONFREJ && ao->mppe && rej_for_ci_mppe) {
+-	error("MPPE required but peer negotiation failed");
+-	lcp_close(f->unit, "MPPE required but peer negotiation failed");
+-    }
+-#endif
+     return ret;
+ }
+ 
+@@ -1371,24 +1800,35 @@ method_name(opt, opt2)
+ 	char *p = result;
+ 	char *q = result + sizeof(result); /* 1 past result */
+ 
+-	slprintf(p, q - p, "MPPE ");
+-	p += 5;
+-	if (opt->mppe & MPPE_OPT_128) {
+-	    slprintf(p, q - p, "128-bit ");
+-	    p += 8;
+-	}
+-	if (opt->mppe & MPPE_OPT_40) {
+-	    slprintf(p, q - p, "40-bit ");
+-	    p += 7;
+-	}
+-	if (opt->mppe & MPPE_OPT_STATEFUL)
+-	    slprintf(p, q - p, "stateful");
+-	else
+-	    slprintf(p, q - p, "stateless");
+-
++	if (opt->mppe) {
++	    if (opt->mppc) {
++		slprintf(p, q - p, "MPPC/MPPE ");
++		p += 10;
++	    } else {
++		slprintf(p, q - p, "MPPE ");
++		p += 5;
++	    }
++	    if (opt->mppe_128) {
++		slprintf(p, q - p, "128-bit ");
++		p += 8;
++	    } else if (opt->mppe_56) {
++		slprintf(p, q - p, "56-bit ");
++		p += 7;
++	    } else if (opt->mppe_40) {
++		slprintf(p, q - p, "40-bit ");
++		p += 7;
++	    }
++	    if (opt->mppe_stateless)
++		slprintf(p, q - p, "stateless");
++	    else
++		slprintf(p, q - p, "stateful");
++	} else if (opt->mppc)
++	    slprintf(p, q - p, "MPPC");
+ 	break;
+     }
+-#endif
++#endif /* MPPE */
++    case CI_LZS:
++	return "Stac LZS";
+     case CI_DEFLATE:
+     case CI_DEFLATE_DRAFT:
+ 	if (opt2 != NULL && opt2->deflate_size != opt->deflate_size)
+@@ -1444,12 +1884,12 @@ ccp_up(f)
+     } else if (ANY_COMPRESS(*ho))
+ 	notice("%s transmit compression enabled", method_name(ho, NULL));
+ #ifdef MPPE
+-    if (go->mppe) {
++    if (go->mppe || go->mppc) {
+ 	BZERO(mppe_recv_key, MPPE_MAX_KEY_LEN);
+ 	BZERO(mppe_send_key, MPPE_MAX_KEY_LEN);
+ 	continue_networks(f->unit);		/* Bring up IP et al */
+     }
+-#endif
++#endif /* MPPE */
+ }
+ 
+ /*
+@@ -1472,7 +1912,7 @@ ccp_down(f)
+ 	    lcp_close(f->unit, "MPPE disabled");
+ 	}
+     }
+-#endif
++#endif /* MPPE */
+ }
+ 
+ /*
+@@ -1532,24 +1972,28 @@ ccp_printpkt(p, plen, printer, arg)
+ #ifdef MPPE
+ 	    case CI_MPPE:
+ 		if (optlen >= CILEN_MPPE) {
+-		    u_char mppe_opts;
+-
+-		    MPPE_CI_TO_OPTS(&p[2], mppe_opts);
+-		    printer(arg, "mppe %s %s %s %s %s %s%s",
+-			    (p[2] & MPPE_H_BIT)? "+H": "-H",
+-			    (p[5] & MPPE_M_BIT)? "+M": "-M",
+-			    (p[5] & MPPE_S_BIT)? "+S": "-S",
+-			    (p[5] & MPPE_L_BIT)? "+L": "-L",
++		    printer(arg, "mppe %s %s %s %s %s %s",
++			    (p[2] & MPPE_STATELESS)? "+H": "-H",
++			    (p[5] & MPPE_56BIT)? "+M": "-M",
++			    (p[5] & MPPE_128BIT)? "+S": "-S",
++			    (p[5] & MPPE_40BIT)? "+L": "-L",
+ 			    (p[5] & MPPE_D_BIT)? "+D": "-D",
+-			    (p[5] & MPPE_C_BIT)? "+C": "-C",
+-			    (mppe_opts & MPPE_OPT_UNKNOWN)? " +U": "");
+-		    if (mppe_opts & MPPE_OPT_UNKNOWN)
++			    (p[5] & MPPE_MPPC)? "+C": "-C");
++		    if ((p[5] & ~(MPPE_56BIT | MPPE_128BIT | MPPE_40BIT |
++				  MPPE_D_BIT | MPPE_MPPC)) ||
++			(p[2] & ~MPPE_STATELESS))
+ 			printer(arg, " (%.2x %.2x %.2x %.2x)",
+ 				p[2], p[3], p[4], p[5]);
+ 		    p += CILEN_MPPE;
+ 		}
+ 		break;
+-#endif
++#endif /* MPPE */
++	    case CI_LZS:
++		if (optlen >= CILEN_LZS) {
++		    printer(arg, "lzs %.2x %.2x %.2x", p[2], p[3], p[4]);
++		    p += CILEN_LZS;
++		}
++		break;
+ 	    case CI_DEFLATE:
+ 	    case CI_DEFLATE_DRAFT:
+ 		if (optlen >= CILEN_DEFLATE) {
+@@ -1635,6 +2079,7 @@ ccp_datainput(unit, pkt, len)
+ 	    error("Lost compression sync: disabling compression");
+ 	    ccp_close(unit, "Lost compression sync");
+ #ifdef MPPE
++	    /* My module dosn't need this. J.D., 2003-07-06 */
+ 	    /*
+ 	     * If we were doing MPPE, we must also take the link down.
+ 	     */
+@@ -1642,9 +2087,18 @@ ccp_datainput(unit, pkt, len)
+ 		error("Too many MPPE errors, closing LCP");
+ 		lcp_close(unit, "Too many MPPE errors");
+ 	    }
+-#endif
++#endif /* MPPE */
+ 	} else {
+ 	    /*
++	     * When LZS or MPPE/MPPC is negotiated we just send CCP_RESETREQ
++	     * and don't wait for CCP_RESETACK
++	     */
++	    if ((ccp_gotoptions[f->unit].method == CI_LZS) ||
++		(ccp_gotoptions[f->unit].method == CI_MPPE)) {
++		fsm_sdata(f, CCP_RESETREQ, f->reqid = ++f->id, NULL, 0);
++		return;
++	    }
++	    /*
+ 	     * Send a reset-request to reset the peer's compressor.
+ 	     * We don't do that if we are still waiting for an
+ 	     * acknowledgement to a previous reset-request.
+diff --git pppd/pppd/ccp.h pppd/pppd/ccp.h
+index 6f4a2fe..43fe095 100644
+--- pppd/pppd/ccp.h
++++ pppd/pppd/ccp.h
+@@ -37,9 +37,17 @@ typedef struct ccp_options {
+     bool predictor_2;		/* do Predictor-2? */
+     bool deflate_correct;	/* use correct code for deflate? */
+     bool deflate_draft;		/* use draft RFC code for deflate? */
++    bool lzs;			/* do Stac LZS? */
++    bool mppc;			/* do MPPC? */
+     bool mppe;			/* do MPPE? */
++    bool mppe_40;		/* allow 40 bit encryption? */
++    bool mppe_56;		/* allow 56 bit encryption? */
++    bool mppe_128;		/* allow 128 bit encryption? */
++    bool mppe_stateless;	/* allow stateless encryption */
+     u_short bsd_bits;		/* # bits/code for BSD Compress */
+     u_short deflate_size;	/* lg(window size) for Deflate */
++    u_short lzs_mode;		/* LZS check mode */
++    u_short lzs_hists;		/* number of LZS histories */
+     short method;		/* code for chosen compression method */
+ } ccp_options;
+ 
+diff --git pppd/pppd/chap_ms.c pppd/pppd/chap_ms.c
+index aec1226..f1cae5a 100644
+--- pppd/pppd/chap_ms.c
++++ pppd/pppd/chap_ms.c
+@@ -898,13 +898,17 @@ set_mppe_enc_types(int policy, int types)
+     /*
+      * Disable undesirable encryption types.  Note that we don't ENABLE
+      * any encryption types, to avoid overriding manual configuration.
++     *
++     * It seems that 56 bit keys are unsupported in MS-RADIUS (see RFC 2548)
+      */
+     switch(types) {
+ 	case MPPE_ENC_TYPES_RC4_40:
+-	    ccp_wantoptions[0].mppe &= ~MPPE_OPT_128;	/* disable 128-bit */
++	    ccp_wantoptions[0].mppe_128 = 0;	/* disable 128-bit */
++	    ccp_wantoptions[0].mppe_56 = 0;	/* disable 56-bit */
+ 	    break;
+ 	case MPPE_ENC_TYPES_RC4_128:
+-	    ccp_wantoptions[0].mppe &= ~MPPE_OPT_40;	/* disable 40-bit */
++	    ccp_wantoptions[0].mppe_56 = 0;	/* disable 56-bit */
++	    ccp_wantoptions[0].mppe_40 = 0;	/* disable 40-bit */
+ 	    break;
+ 	default:
+ 	    break;
+diff --git pppd/pppd/demand.c pppd/pppd/demand.c
+index 5e57658..3eddf30 100644
+--- pppd/pppd/demand.c
++++ pppd/pppd/demand.c
+@@ -36,6 +36,8 @@
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <netdb.h>
++#include <unistd.h>
++#include <syslog.h>
+ #include <sys/param.h>
+ #include <sys/types.h>
+ #include <sys/wait.h>
+@@ -43,6 +45,8 @@
+ #include <sys/resource.h>
+ #include <sys/stat.h>
+ #include <sys/socket.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
+ #ifdef PPP_FILTER
+ #include <pcap-bpf.h>
+ #endif
+@@ -221,6 +225,14 @@ loop_chars(p, n)
+     int c, rv;
+ 
+     rv = 0;
++
++/* check for synchronous connection... */
++
++    if ( (p[0] == 0xFF) && (p[1] == 0x03) ) {
++        rv = loop_frame(p,n);
++        return rv;
++    }
++
+     for (; n > 0; --n) {
+ 	c = *p++;
+ 	if (c == PPP_FLAG) {
+@@ -299,17 +311,102 @@ loop_frame(frame, len)
+  * loopback, now that the real serial link is up.
+  */
+ void
+-demand_rexmit(proto)
++demand_rexmit(proto, newip)
+     int proto;
++    u_int32_t newip;
+ {
+     struct packet *pkt, *prev, *nextpkt;
++    unsigned short checksum;
++    unsigned short pkt_checksum = 0;
++    unsigned iphdr;
++    struct timeval tv;
++    char cv = 0;
++    char ipstr[16];
+ 
+     prev = NULL;
+     pkt = pend_q;
+     pend_q = NULL;
++    tv.tv_sec = 1;
++    tv.tv_usec = 0;
++    select(0,NULL,NULL,NULL,&tv);	/* Sleep for 1 Seconds */
+     for (; pkt != NULL; pkt = nextpkt) {
+ 	nextpkt = pkt->next;
+ 	if (PPP_PROTOCOL(pkt->data) == proto) {
++            if ( (proto == PPP_IP) && newip ) {
++		/* Get old checksum */
++
++		iphdr = (pkt->data[4] & 15) << 2;
++		checksum = *((unsigned short *) (pkt->data+14));
++                if (checksum == 0xFFFF) {
++                    checksum = 0;
++                }
++
++ 
++                if (pkt->data[13] == 17) {
++                    pkt_checksum =  *((unsigned short *) (pkt->data+10+iphdr));
++		    if (pkt_checksum) {
++                        cv = 1;
++                        if (pkt_checksum == 0xFFFF) {
++                            pkt_checksum = 0;
++                        }
++                    }
++                    else {
++                       cv = 0;
++                    }
++                }
++
++		if (pkt->data[13] == 6) {
++		    pkt_checksum = *((unsigned short *) (pkt->data+20+iphdr));
++		    cv = 1;
++                    if (pkt_checksum == 0xFFFF) {
++                        pkt_checksum = 0;
++                    }
++		}
++
++		/* Delete old Source-IP-Address */
++                checksum -= *((unsigned short *) (pkt->data+16)) ^ 0xFFFF;
++                checksum -= *((unsigned short *) (pkt->data+18)) ^ 0xFFFF;
++
++		pkt_checksum -= *((unsigned short *) (pkt->data+16)) ^ 0xFFFF;
++		pkt_checksum -= *((unsigned short *) (pkt->data+18)) ^ 0xFFFF;
++
++		/* Change Source-IP-Address */
++                * ((u_int32_t *) (pkt->data + 16)) = newip;
++
++		/* Add new Source-IP-Address */
++                checksum += *((unsigned short *) (pkt->data+16)) ^ 0xFFFF;
++                checksum += *((unsigned short *) (pkt->data+18)) ^ 0xFFFF;
++
++                pkt_checksum += *((unsigned short *) (pkt->data+16)) ^ 0xFFFF;
++                pkt_checksum += *((unsigned short *) (pkt->data+18)) ^ 0xFFFF;
++
++		/* Write new checksum */
++                if (!checksum) {
++                    checksum = 0xFFFF;
++                }
++                *((unsigned short *) (pkt->data+14)) = checksum;
++		if (pkt->data[13] == 6) {
++		    *((unsigned short *) (pkt->data+20+iphdr)) = pkt_checksum;
++		}
++		if (cv && (pkt->data[13] == 17) ) {
++		    *((unsigned short *) (pkt->data+10+iphdr)) = pkt_checksum;
++		}
++
++		/* Log Packet */
++		strcpy(ipstr,inet_ntoa(*( (struct in_addr *) (pkt->data+16))));
++		if (pkt->data[13] == 1) {
++		    syslog(LOG_INFO,"Open ICMP %s -> %s\n",
++			ipstr,
++			inet_ntoa(*( (struct in_addr *) (pkt->data+20))));
++		} else {
++		    syslog(LOG_INFO,"Open %s %s:%d -> %s:%d\n",
++			pkt->data[13] == 6 ? "TCP" : "UDP",
++			ipstr,
++			ntohs(*( (short *) (pkt->data+iphdr+4))),
++			inet_ntoa(*( (struct in_addr *) (pkt->data+20))),
++			ntohs(*( (short *) (pkt->data+iphdr+6))));
++                }
++            }
+ 	    output(0, pkt->data, pkt->length);
+ 	    free(pkt);
+ 	} else {
+diff --git pppd/pppd/fsm.c pppd/pppd/fsm.c
+index c200cc3..cfd80be 100644
+--- pppd/pppd/fsm.c
++++ pppd/pppd/fsm.c
+@@ -70,6 +70,8 @@ static void fsm_sconfreq __P((fsm *, int));
+ 
+ int peer_mru[NUM_PPP];
+ 
++/* JYWeng 20031216: add to wanstatus.log */
++void saveWANStatus(char *currentstatus, int statusindex);
+ 
+ /*
+  * fsm_init - Initialize fsm.
+@@ -306,6 +308,10 @@ fsm_timeout(arg)
+     case ACKRCVD:
+     case ACKSENT:
+ 	if (f->retransmits <= 0) {
++/* JYWeng 20031216: add to wanstatus.log */
++	    int statusindex=0; 
++	    saveWANStatus("No response from ISP.", statusindex);
++/* JYWeng 20031216: add to wanstatus.log */
+ 	    warn("%s: timeout sending Config-Requests\n", PROTO_NAME(f));
+ 	    f->state = STOPPED;
+ 	    if( (f->flags & OPT_PASSIVE) == 0 && f->callbacks->finished )
+diff --git pppd/pppd/ipcp.c pppd/pppd/ipcp.c
+index 12bcc61..0de3e45 100644
+--- pppd/pppd/ipcp.c
++++ pppd/pppd/ipcp.c
+@@ -1864,7 +1864,7 @@ ipcp_up(f)
+ 		    proxy_arp_set[f->unit] = 1;
+ 
+ 	}
+-	demand_rexmit(PPP_IP);
++	demand_rexmit(PPP_IP,go->ouraddr);
+ 	sifnpmode(f->unit, PPP_IP, NPMODE_PASS);
+ 
+     } else {
+@@ -1939,7 +1939,7 @@ ipcp_up(f)
+      */
+     if (ipcp_script_state == s_down && ipcp_script_pid == 0) {
+ 	ipcp_script_state = s_up;
+-	ipcp_script(_PATH_IPUP, 0);
++	ipcp_script(path_ipup, 0);
+     }
+ }
+ 
+@@ -1989,7 +1989,7 @@ ipcp_down(f)
+     /* Execute the ip-down script */
+     if (ipcp_script_state == s_up && ipcp_script_pid == 0) {
+ 	ipcp_script_state = s_down;
+-	ipcp_script(_PATH_IPDOWN, 0);
++	ipcp_script(path_ipdown, 0);
+     }
+ }
+ 
+@@ -2043,13 +2043,13 @@ ipcp_script_done(arg)
+     case s_up:
+ 	if (ipcp_fsm[0].state != OPENED) {
+ 	    ipcp_script_state = s_down;
+-	    ipcp_script(_PATH_IPDOWN, 0);
++	    ipcp_script(path_ipdown, 0);
+ 	}
+ 	break;
+     case s_down:
+ 	if (ipcp_fsm[0].state == OPENED) {
+ 	    ipcp_script_state = s_up;
+-	    ipcp_script(_PATH_IPUP, 0);
++	    ipcp_script(path_ipup, 0);
+ 	}
+ 	break;
+     }
+diff --git pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
+index 4a09c9a..b05fe51 100644
+--- pppd/pppd/ipv6cp.c
++++ pppd/pppd/ipv6cp.c
+@@ -151,6 +151,7 @@
+  */
+ 
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
+ #include <netdb.h>
+@@ -234,6 +235,8 @@ static option_t ipv6cp_option_list[] = {
+ 
+     { "ipv6cp-accept-local", o_bool, &ipv6cp_allowoptions[0].accept_local,
+       "Accept peer's interface identifier for us", 1 },
++    { "ipv6cp-accept-remote", o_bool, &ipv6cp_allowoptions[0].accept_remote,
++      "Accept peer's interface identifier for itself", 1 },
+ 
+     { "ipv6cp-use-ipaddr", o_bool, &ipv6cp_allowoptions[0].use_ip,
+       "Use (default) IPv4 address as interface identifier", 1 },
+@@ -426,6 +429,7 @@ ipv6cp_init(unit)
+     memset(ao, 0, sizeof(*ao));
+ 
+     wo->accept_local = 1;
++    wo->accept_remote = 1;
+     wo->neg_ifaceid = 1;
+     ao->neg_ifaceid = 1;
+ 
+@@ -951,7 +955,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
+ 		orc = CONFREJ;		/* Reject CI */
+ 		break;
+ 	    }
+-	    if (!eui64_iszero(wo->hisid) && 
++	    if (!eui64_iszero(wo->hisid) && !wo->accept_remote &&
+ 		!eui64_equals(ifaceid, wo->hisid) && 
+ 		eui64_iszero(go->hisid)) {
+ 		    
+@@ -1064,7 +1068,9 @@ endswitch:
+     return (rc);			/* Return final code */
+ }
+ 
+-
++#if defined(SOL2) || defined(__linux__)
++int ether_to_eui64(eui64_t *p_eui64);
++#endif
+ /*
+  * ipv6_check_options - check that any IP-related options are OK,
+  * and assign appropriate defaults.
+@@ -1232,7 +1238,7 @@ ipv6cp_up(f)
+ 	    }
+ 
+ 	}
+-	demand_rexmit(PPP_IPV6);
++	demand_rexmit(PPP_IPV6,0);
+ 	sifnpmode(f->unit, PPP_IPV6, NPMODE_PASS);
+ 
+     } else {
+diff --git pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
+index cc4568d..8c7552e 100644
+--- pppd/pppd/ipv6cp.h
++++ pppd/pppd/ipv6cp.h
+@@ -150,7 +150,8 @@
+ typedef struct ipv6cp_options {
+     int neg_ifaceid;		/* Negotiate interface identifier? */
+     int req_ifaceid;		/* Ask peer to send interface identifier? */
+-    int accept_local;		/* accept peer's value for iface id? */
++    int accept_local;		/* accept peer's value for our iface id? */
++    int accept_remote;		/* accept peer's value for his iface id? */
+     int opt_local;		/* ourtoken set by option */
+     int opt_remote;		/* histoken set by option */
+     int use_ip;			/* use IP as interface identifier */
+diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
+index 5c77490..980bbb7 100644
+--- pppd/pppd/lcp.c
++++ pppd/pppd/lcp.c
+@@ -68,6 +68,9 @@ static const char rcsid[] = RCSID;
+ 
+ static void lcp_delayed_up __P((void *));
+ 
++/* JYWeng 20031216: add to wanstatus.log */
++void saveWANStatus(char *currentstatus, int statusindex);
++
+ /*
+  * LCP-related command-line options.
+  */
+@@ -397,6 +400,7 @@ lcp_close(unit, reason)
+     char *reason;
+ {
+     fsm *f = &lcp_fsm[unit];
++    int statusindex = 0;/* JYWeng 20031216: add to wanstatus.log */
+ 
+     if (phase != PHASE_DEAD && phase != PHASE_MASTER)
+ 	new_phase(PHASE_TERMINATE);
+@@ -412,6 +416,16 @@ lcp_close(unit, reason)
+ 
+     } else
+ 	fsm_close(f, reason);
++/* JYWeng 20031216: add to wanstatus.log */
++    if(strstr(reason, "Link inactive")) {
++	    statusindex = 1;
++	    saveWANStatus("Terminating connection due to lack of activity.", statusindex);
++    }
++    else {
++	    statusindex = 2;
++	    saveWANStatus(reason, statusindex);
++    }
++/* JYWeng 20031216: add to wanstatus.log */
+ }
+ 
+ 
+@@ -1904,12 +1918,12 @@ lcp_up(f)
+      * the interface MTU is set to the lowest of that, the
+      * MTU we want to use, and our link MRU.
+      */
+-    mtu = ho->neg_mru? ho->mru: PPP_MRU;
++    mtu = MIN(ho->neg_mru? ho->mru: PPP_MRU, ao->mru);
+     mru = go->neg_mru? MAX(wo->mru, go->mru): PPP_MRU;
+ #ifdef HAVE_MULTILINK
+     if (!(multilink && go->neg_mrru && ho->neg_mrru))
+ #endif /* HAVE_MULTILINK */
+-	netif_set_mtu(f->unit, MIN(MIN(mtu, mru), ao->mru));
++	netif_set_mtu(f->unit, MIN(mtu, mru));
+     ppp_send_config(f->unit, mtu,
+ 		    (ho->neg_asyncmap? ho->asyncmap: 0xffffffff),
+ 		    ho->neg_pcompression, ho->neg_accompression);
+diff --git pppd/pppd/main.c pppd/pppd/main.c
+index 014d614..0f56a21 100644
+--- pppd/pppd/main.c
++++ pppd/pppd/main.c
+@@ -90,6 +90,7 @@
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
++#include <sys/sysinfo.h>
+ 
+ #include "pppd.h"
+ #include "magic.h"
+@@ -228,6 +229,7 @@ static struct subprocess *children;
+ 
+ /* Prototypes for procedures local to this file. */
+ 
++static void check_time(void);
+ static void setup_signals __P((void));
+ static void create_pidfile __P((int pid));
+ static void create_linkpidfile __P((int pid));
+@@ -316,6 +318,9 @@ main(argc, argv)
+     struct protent *protp;
+     char numbuf[16];
+ 
++    strlcpy(path_ipup, _PATH_IPUP, sizeof(path_ipup));
++    strlcpy(path_ipdown, _PATH_IPDOWN, sizeof(path_ipdown));
++
+     link_stats_valid = 0;
+     new_phase(PHASE_INITIALIZE);
+ 
+@@ -530,6 +535,7 @@ main(argc, argv)
+ 	    info("Starting link");
+ 	}
+ 
++	check_time();
+ 	gettimeofday(&start_time, NULL);
+ 	script_unsetenv("CONNECT_TIME");
+ 	script_unsetenv("BYTES_SENT");
+@@ -1263,6 +1269,36 @@ struct	callout {
+ 
+ static struct callout *callout = NULL;	/* Callout list */
+ static struct timeval timenow;		/* Current time */
++static long uptime_diff = 0;
++static int uptime_diff_set = 0;
++
++static void check_time(void)
++{
++	long new_diff;
++	struct timeval t;
++	struct sysinfo i;
++    struct callout *p;
++	
++	gettimeofday(&t, NULL);
++	sysinfo(&i);
++	new_diff = t.tv_sec - i.uptime;
++	
++	if (!uptime_diff_set) {
++		uptime_diff = new_diff;
++		uptime_diff_set = 1;
++		return;
++	}
++
++	if ((new_diff - 5 > uptime_diff) || (new_diff + 5 < uptime_diff)) {
++		/* system time has changed, update counters and timeouts */
++		info("System time change detected.");
++		start_time.tv_sec += new_diff - uptime_diff;
++		
++    	for (p = callout; p != NULL; p = p->c_next)
++			p->c_time.tv_sec += new_diff - uptime_diff;
++	}
++	uptime_diff = new_diff;
++}
+ 
+ /*
+  * timeout - Schedule a timeout.
+@@ -1333,6 +1369,8 @@ calltimeout()
+ {
+     struct callout *p;
+ 
++	check_time();
++	
+     while (callout != NULL) {
+ 	p = callout;
+ 
+@@ -1360,6 +1398,8 @@ timeleft(tvp)
+ {
+     if (callout == NULL)
+ 	return NULL;
++	
++	check_time();
+ 
+     gettimeofday(&timenow, NULL);
+     tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
+@@ -1633,7 +1673,7 @@ device_script(program, in, out, dont_wait)
+     if (log_to_fd >= 0)
+ 	errfd = log_to_fd;
+     else
+-	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0600);
++	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0644);
+ 
+     ++conn_running;
+     pid = safe_fork(in, out, errfd);
+@@ -1957,9 +1997,11 @@ script_setenv(var, value, iskey)
+ 		free(p-1);
+ 		script_env[i] = newstring;
+ #ifdef USE_TDB
+-		if (iskey && pppdb != NULL)
+-		    add_db_key(newstring);
+-		update_db_entry();
++		if (pppdb != NULL) {
++		    if (iskey)
++			add_db_key(newstring);
++		    update_db_entry();
++		}
+ #endif
+ 		return;
+ 	    }
+diff --git pppd/pppd/options.c pppd/pppd/options.c
+index 482eab9..80f7bc6 100644
+--- pppd/pppd/options.c
++++ pppd/pppd/options.c
+@@ -78,6 +78,7 @@
+ #if defined(ultrix) || defined(NeXT)
+ char *strdup __P((char *));
+ #endif
++bool tx_only;			/* JYWeng 20031216: idle time counting on tx traffic */
+ 
+ static const char rcsid[] = RCSID;
+ 
+@@ -113,6 +114,9 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
+ bool	tune_kernel;		/* may alter kernel settings */
+ int	connect_delay = 1000;	/* wait this many ms after connect script */
+ int	req_unit = -1;		/* requested interface unit */
++int	req_minunit = -1;	/* requested minimal interface unit */
++char	path_ipup[MAXPATHLEN];	/* pathname of ip-up script */
++char	path_ipdown[MAXPATHLEN];/* pathname of ip-down script */
+ bool	multilink = 0;		/* Enable multilink operation */
+ char	*bundle_name = NULL;	/* bundle name for multilink */
+ bool	dump_options;		/* print out option values */
+@@ -271,6 +275,9 @@ option_t general_options[] = {
+     { "unit", o_int, &req_unit,
+       "PPP interface unit number to use if possible",
+       OPT_PRIO | OPT_LLIMIT, 0, 0 },
++    { "minunit", o_int, &req_minunit,
++      "PPP interface minimal unit number",
++      OPT_PRIO | OPT_LLIMIT, 0, 0 },
+ 
+     { "dump", o_bool, &dump_options,
+       "Print out option values after parsing all options", 1 },
+@@ -281,6 +288,13 @@ option_t general_options[] = {
+       "Number of seconds to wait for child processes at exit",
+       OPT_PRIO },
+ 
++    { "ip-up-script", o_string, path_ipup,
++      "Set pathname of ip-up script",
++      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
++    { "ip-down-script", o_string, path_ipdown,
++      "Set pathname of ip-down script",
++      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
++
+ #ifdef HAVE_MULTILINK
+     { "multilink", o_bool, &multilink,
+       "Enable multilink operation", OPT_PRIO | 1 },
+@@ -321,6 +335,10 @@ option_t general_options[] = {
+       "Check for traffic limit every N seconds", OPT_PRIO | OPT_LLIMIT | 1 },
+ #endif
+ 
++/* JYWeng 20031216: add for tx_only option*/
++    { "tx_only", o_bool, &tx_only,
++      "set idle time counting on tx_only or not", 1 },
++
+     { NULL }
+ };
+ 
+diff --git pppd/pppd/pathnames.h pppd/pppd/pathnames.h
+index a33f046..a1cb041 100644
+--- pppd/pppd/pathnames.h
++++ pppd/pppd/pathnames.h
+@@ -9,40 +9,40 @@
+ 
+ #else /* HAVE_PATHS_H */
+ #ifndef _PATH_VARRUN
+-#define _PATH_VARRUN 	"/etc/ppp/"
++#define _PATH_VARRUN 	"/var/run/"
+ #endif
+ #define _PATH_DEVNULL	"/dev/null"
+ #endif /* HAVE_PATHS_H */
+ 
+ #ifndef _ROOT_PATH
+-#define _ROOT_PATH
++#define _ROOT_PATH	"/tmp"
+ #endif
+ 
+-#define _PATH_UPAPFILE 	 _ROOT_PATH "/etc/ppp/pap-secrets"
+-#define _PATH_CHAPFILE 	 _ROOT_PATH "/etc/ppp/chap-secrets"
+-#define _PATH_SRPFILE 	 _ROOT_PATH "/etc/ppp/srp-secrets"
+-#define _PATH_SYSOPTIONS _ROOT_PATH "/etc/ppp/options"
+-#define _PATH_IPUP	 _ROOT_PATH "/etc/ppp/ip-up"
+-#define _PATH_IPDOWN	 _ROOT_PATH "/etc/ppp/ip-down"
+-#define _PATH_IPPREUP	 _ROOT_PATH "/etc/ppp/ip-pre-up"
+-#define _PATH_AUTHUP	 _ROOT_PATH "/etc/ppp/auth-up"
+-#define _PATH_AUTHDOWN	 _ROOT_PATH "/etc/ppp/auth-down"
+-#define _PATH_TTYOPT	 _ROOT_PATH "/etc/ppp/options."
+-#define _PATH_CONNERRS	 _ROOT_PATH "/etc/ppp/connect-errors"
+-#define _PATH_PEERFILES	 _ROOT_PATH "/etc/ppp/peers/"
+-#define _PATH_RESOLV	 _ROOT_PATH "/etc/ppp/resolv.conf"
++#define _PATH_UPAPFILE 	 _ROOT_PATH "/ppp/pap-secrets"
++#define _PATH_CHAPFILE 	 _ROOT_PATH "/ppp/chap-secrets"
++#define _PATH_SRPFILE 	 _ROOT_PATH "/ppp/srp-secrets"
++#define _PATH_SYSOPTIONS _ROOT_PATH "/ppp/options"
++#define _PATH_IPUP	 _ROOT_PATH "/ppp/ip-up"
++#define _PATH_IPDOWN	 _ROOT_PATH "/ppp/ip-down"
++#define _PATH_IPPREUP	 _ROOT_PATH "/ppp/ip-pre-up"
++#define _PATH_AUTHUP	 _ROOT_PATH "/ppp/auth-up"
++#define _PATH_AUTHDOWN	 _ROOT_PATH "/ppp/auth-down"
++#define _PATH_TTYOPT	 _ROOT_PATH "/ppp/options."
++#define _PATH_CONNERRS	 _ROOT_PATH "/var/log/ppp-connect-errors"
++#define _PATH_PEERFILES	 _ROOT_PATH "/ppp/peers/"
++#define _PATH_RESOLV	 _ROOT_PATH "/ppp/resolv.conf"
+ 
+ #define _PATH_USEROPT	 ".ppprc"
+ #define	_PATH_PSEUDONYM	 ".ppp_pseudonym"
+ 
+ #ifdef INET6
+-#define _PATH_IPV6UP     _ROOT_PATH "/etc/ppp/ipv6-up"
+-#define _PATH_IPV6DOWN   _ROOT_PATH "/etc/ppp/ipv6-down"
++#define _PATH_IPV6UP     _ROOT_PATH "/ppp/ipv6-up"
++#define _PATH_IPV6DOWN   _ROOT_PATH "/ppp/ipv6-down"
+ #endif
+ 
+ #ifdef IPX_CHANGE
+-#define _PATH_IPXUP	 _ROOT_PATH "/etc/ppp/ipx-up"
+-#define _PATH_IPXDOWN	 _ROOT_PATH "/etc/ppp/ipx-down"
++#define _PATH_IPXUP	 _ROOT_PATH "/ppp/ipx-up"
++#define _PATH_IPXDOWN	 _ROOT_PATH "/ppp/ipx-down"
+ #endif /* IPX_CHANGE */
+ 
+ #ifdef __STDC__
+@@ -51,13 +51,13 @@
+ #ifdef HAVE_PATHS_H
+ #define _PATH_PPPDB	"/var/run/pppd2.tdb"
+ #else
+-#define _PATH_PPPDB	"/etc/ppp/pppd2.tdb"
++#define _PATH_PPPDB	"/var/run/pppd2.tdb"
+ #endif
+ #endif /* __STDC__ */
+ 
+ #ifdef PLUGIN
+ #ifdef __STDC__
+-#define _PATH_PLUGIN	DESTDIR "/lib/pppd/" VERSION
++#define _PATH_PLUGIN	"/usr/lib/pppd/"
+ #else /* __STDC__ */
+ #define _PATH_PLUGIN	"/usr/lib/pppd"
+ #endif /* __STDC__ */
+diff --git pppd/pppd/plugins/Makefile.linux pppd/pppd/plugins/Makefile.linux
+index 0a7ec7b..832c79e 100644
+--- pppd/pppd/plugins/Makefile.linux
++++ pppd/pppd/plugins/Makefile.linux
+@@ -1,6 +1,6 @@
+ #CC	= gcc
+ COPTS	= -O2 -g
+-CFLAGS	= $(COPTS) -I.. -I../../include -fPIC
++CFLAGS	= $(COPTS) -I.. -I../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS	= -shared
+ INSTALL	= install
+ 
+diff --git pppd/pppd/plugins/pppol2tp/Makefile.linux pppd/pppd/plugins/pppol2tp/Makefile.linux
+index 19eff67..bf5134c 100644
+--- pppd/pppd/plugins/pppol2tp/Makefile.linux
++++ pppd/pppd/plugins/pppol2tp/Makefile.linux
+@@ -1,6 +1,6 @@
+ #CC	= gcc
+ COPTS	= -O2 -g
+-CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC
++CFLAGS	= $(COPTS) -I. -I../.. -I$(LINUXDIR)/include -fPIC
+ LDFLAGS	= -shared
+ INSTALL	= install
+ 
+diff --git pppd/pppd/plugins/pppol2tp/pppol2tp.c pppd/pppd/plugins/pppol2tp/pppol2tp.c
+index a7e3400..e6070dd 100644
+--- pppd/pppd/plugins/pppol2tp/pppol2tp.c
++++ pppd/pppd/plugins/pppol2tp/pppol2tp.c
+@@ -119,14 +119,8 @@ static option_t pppol2tp_options[] = {
+ 
+ static int setdevname_pppol2tp(char **argv)
+ {
+-	union {
+-		char buffer[128];
+-		struct sockaddr pppol2tp;
+-	} s;
+-	int len = sizeof(s);
+-	char **a;
+-	int tmp;
+-	int tmp_len = sizeof(tmp);
++	struct sockaddr_pppol2tp sax;
++	int len = sizeof(sax);
+ 
+ 	if (device_got_set)
+ 		return 0;
+@@ -134,21 +128,21 @@ static int setdevname_pppol2tp(char **argv)
+ 	if (!int_option(*argv, &pppol2tp_fd))
+ 		return 0;
+ 
+-	if(getsockname(pppol2tp_fd, (struct sockaddr *)&s, &len) < 0) {
++	if(getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len) < 0) {
+ 		fatal("Given FD for PPPoL2TP socket invalid (%s)",
+ 		      strerror(errno));
+ 	}
+-	if(s.pppol2tp.sa_family != AF_PPPOX) {
+-		fatal("Socket of not a PPPoX socket");
++	if(sax.sa_family != AF_PPPOX || sax.sa_protocol != PX_PROTO_OL2TP) {
++		fatal("Socket is not a PPPoL2TP socket");
+ 	}
+ 
+ 	/* Do a test getsockopt() to ensure that the kernel has the necessary
+ 	 * feature available.
+-	 */
++	 * driver returns -ENOTCONN until session established!
+ 	if (getsockopt(pppol2tp_fd, SOL_PPPOL2TP, PPPOL2TP_SO_DEBUG,
+ 		       &tmp, &tmp_len) < 0) {
+ 		fatal("PPPoL2TP kernel driver not installed");
+-	}
++	} */
+ 
+ 	/* Setup option defaults. Compression options are disabled! */
+ 
+@@ -177,10 +171,16 @@ static int setdevname_pppol2tp(char **argv)
+ 
+ static int connect_pppol2tp(void)
+ {
++	struct sockaddr_pppol2tp sax;
++	int len = sizeof(sax);
++
+ 	if(pppol2tp_fd == -1) {
+ 		fatal("No PPPoL2TP FD specified");
+ 	}
+ 
++	getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len);
++	sprintf(ppp_devnam,"l2tp (%s)",inet_ntoa(sax.pppol2tp.addr.sin_addr));
++
+ 	return pppol2tp_fd;
+ }
+ 
+@@ -479,13 +479,13 @@ static void pppol2tp_check_options(void)
+ 		snoop_send_hook = pppol2tp_lcp_snoop_send;
+ 	}
+ 
+-	/* Hook up ip up/down hooks to send indicator to openl2tpd
+-	 * that the link is up
+-	 */
+-	old_ip_up_hook = ip_up_hook;
+-	ip_up_hook = pppol2tp_ip_up_hook;
+-	old_ip_down_hook = ip_down_hook;
+-	ip_down_hook = pppol2tp_ip_down_hook;
++	/* If pppol2tp_ifname not supplied, use ip_up_hook to discover interface */
++	if (!pppol2tp_ifname[0]) {
++		old_ip_up_hook = ip_up_hook;
++		ip_up_hook = pppol2tp_ip_up_hook;
++		old_ip_down_hook = ip_down_hook;
++		ip_down_hook = pppol2tp_ip_down_hook;
++	}
+ }
+ 
+ /* Called just before pppd exits.
+diff --git pppd/pppd/plugins/radius/clientid.c pppd/pppd/plugins/radius/clientid.c
+index d49579c..91201b0 100644
+--- pppd/pppd/plugins/radius/clientid.c
++++ pppd/pppd/plugins/radius/clientid.c
+@@ -104,13 +104,13 @@ int rc_read_mapfile(char *filename)
+ UINT4 rc_map2id(char *name)
+ {
+ 	struct map2id_s *p;
+-	char ttyname[PATH_MAX];
++	char ttyname[PATH_MAX + 1];
+ 
+ 	*ttyname = '\0';
+ 	if (*name != '/')
+ 		strcpy(ttyname, "/dev/");
+ 
+-	strncat(ttyname, name, sizeof(ttyname));
++	strlcat(ttyname, name, sizeof(ttyname));
+ 
+ 	for(p = map2id_list; p; p = p->next)
+ 		if (!strcmp(ttyname, p->name)) return p->id;
+diff --git pppd/pppd/plugins/rp-pppoe/Makefile.linux pppd/pppd/plugins/rp-pppoe/Makefile.linux
+index 5d7a271..92d9ab5 100644
+--- pppd/pppd/plugins/rp-pppoe/Makefile.linux
++++ pppd/pppd/plugins/rp-pppoe/Makefile.linux
+@@ -23,7 +23,7 @@ PPPDVERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
+ INSTALL	= install
+ 
+ # Version is set ONLY IN THE MAKEFILE!  Don't delete this!
+-RP_VERSION=3.8p
++RP_VERSION=3.10p
+ 
+ COPTS=-O2 -g
+ CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"'
+diff --git pppd/pppd/plugins/rp-pppoe/discovery.c pppd/pppd/plugins/rp-pppoe/discovery.c
+index 6e25ae7..b2ba08a 100644
+--- pppd/pppd/plugins/rp-pppoe/discovery.c
++++ pppd/pppd/plugins/rp-pppoe/discovery.c
+@@ -22,6 +22,7 @@ static char const RCSID[] =
+ #ifdef HAVE_SYS_TIME_H
+ #include <sys/time.h>
+ #endif
++#include <time.h>
+ 
+ #ifdef HAVE_SYS_UIO_H
+ #include <sys/uio.h>
+@@ -280,6 +281,9 @@ waitForPADO(PPPoEConnection *conn, int timeout)
+     fd_set readable;
+     int r;
+     struct timeval tv;
++    struct timeval expire_at;
++    struct timeval now;
++
+     PPPoEPacket packet;
+     int len;
+ 
+@@ -291,10 +295,31 @@ waitForPADO(PPPoEConnection *conn, int timeout)
+     pc.seenServiceName = 0;
+     conn->error = 0;
+ 
++    if (gettimeofday(&expire_at, NULL) < 0) {
++	fatalSys("gettimeofday (waitForPADO)");
++    }
++    expire_at.tv_sec += timeout;
++
+     do {
+ 	if (BPF_BUFFER_IS_EMPTY) {
+-	    tv.tv_sec = timeout;
+-	    tv.tv_usec = 0;
++	    if (gettimeofday(&now, NULL) < 0) {
++		fatalSys("gettimeofday (waitForPADO)");
++	    }
++	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
++	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
++	    if (tv.tv_usec < 0) {
++		tv.tv_usec += 1000000;
++		if (tv.tv_sec) {
++		    tv.tv_sec--;
++		} else {
++		    /* Timed out */
++		    return;
++		}
++	    }
++	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
++		/* Timed out */
++		return;
++	    }
+ 
+ 	    FD_ZERO(&readable);
+ 	    FD_SET(conn->discoverySocket, &readable);
+@@ -307,7 +332,10 @@ waitForPADO(PPPoEConnection *conn, int timeout)
+ 		error("select (waitForPADO): %m");
+ 		return;
+ 	    }
+-	    if (r == 0) return;        /* Timed out */
++	    if (r == 0) {
++		/* Timed out */
++		return;
++	    }
+ 	}
+ 
+ 	/* Get the packet */
+@@ -329,8 +357,8 @@ waitForPADO(PPPoEConnection *conn, int timeout)
+ 	if (!packetIsForMe(conn, &packet)) continue;
+ 
+ 	if (packet.code == CODE_PADO) {
+-	    if (NOT_UNICAST(packet.ethHdr.h_source)) {
+-		error("Ignoring PADO packet from non-unicast MAC address");
++	    if (BROADCAST(packet.ethHdr.h_source)) {
++		error("Ignoring PADO packet from broadcast MAC address");
+ 		continue;
+ 	    }
+ 	    if (conn->req_peer
+@@ -450,14 +478,38 @@ waitForPADS(PPPoEConnection *conn, int timeout)
+     fd_set readable;
+     int r;
+     struct timeval tv;
++    struct timeval expire_at;
++    struct timeval now;
++
+     PPPoEPacket packet;
+     int len;
+ 
++    if (gettimeofday(&expire_at, NULL) < 0) {
++	fatalSys("gettimeofday (waitForPADS)");
++    }
++    expire_at.tv_sec += timeout;
++
+     conn->error = 0;
+     do {
+ 	if (BPF_BUFFER_IS_EMPTY) {
+-	    tv.tv_sec = timeout;
+-	    tv.tv_usec = 0;
++	    if (gettimeofday(&now, NULL) < 0) {
++		fatalSys("gettimeofday (waitForPADS)");
++	    }
++	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
++	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
++	    if (tv.tv_usec < 0) {
++		tv.tv_usec += 1000000;
++		if (tv.tv_sec) {
++		    tv.tv_sec--;
++		} else {
++		    /* Timed out */
++		    return;
++		}
++	    }
++	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
++		/* Timed out */
++		return;
++	    }
+ 
+ 	    FD_ZERO(&readable);
+ 	    FD_SET(conn->discoverySocket, &readable);
+@@ -470,7 +522,10 @@ waitForPADS(PPPoEConnection *conn, int timeout)
+ 		error("select (waitForPADS): %m");
+ 		return;
+ 	    }
+-	    if (r == 0) return;
++	    if (r == 0) {
++		/* Timed out */
++		return;
++	    }
+ 	}
+ 
+ 	/* Get the packet */
+diff --git pppd/pppd/plugins/rp-pppoe/plugin.c pppd/pppd/plugins/rp-pppoe/plugin.c
+index e94494b..bb99a1a 100644
+--- pppd/pppd/plugins/rp-pppoe/plugin.c
++++ pppd/pppd/plugins/rp-pppoe/plugin.c
+@@ -49,14 +49,13 @@ static char const RCSID[] =
+ #include <net/ethernet.h>
+ #include <net/if_arp.h>
+ #include <linux/ppp_defs.h>
+-#include <linux/if_ppp.h>
+ #include <linux/if_pppox.h>
+ 
+ #ifndef _ROOT_PATH
+ #define _ROOT_PATH ""
+ #endif
+ 
+-#define _PATH_ETHOPT         _ROOT_PATH "/etc/ppp/options."
++#define _PATH_ETHOPT         _ROOT_PATH "/ppp/options."
+ 
+ char pppd_version[] = VERSION;
+ 
+@@ -133,6 +132,17 @@ PPPOEConnectDevice(void)
+ {
+     struct sockaddr_pppox sp;
+ 
++    /* Open session socket before discovery phase, to avoid losing session */
++    /* packets sent by peer just after PADS packet (noted on some Cisco    */
++    /* server equipment).                                                  */
++    /* Opening this socket just before waitForPADS in the discovery()      */
++    /* function would be more appropriate, but it would mess-up the code   */
++    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
++    if (conn->sessionSocket < 0) {
++	error("Failed to create PPPoE socket: %m");
++	return -1;
++    }
++
+     strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
+     if (existingSession) {
+ 	unsigned int mac[ETH_ALEN];
+@@ -147,6 +157,8 @@ PPPOEConnectDevice(void)
+ 	    conn->peerEth[i] = (unsigned char) mac[i];
+ 	}
+     } else {
++        conn->discoverySocket =
++            openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
+ 	discovery(conn);
+ 	if (conn->discoveryState != STATE_SESSION) {
+ 	    error("Unable to complete PPPoE Discovery");
+@@ -157,12 +169,6 @@ PPPOEConnectDevice(void)
+     /* Set PPPoE session-number for further consumption */
+     ppp_session_number = ntohs(conn->session);
+ 
+-    /* Make the session socket */
+-    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
+-    if (conn->sessionSocket < 0) {
+-	error("Failed to create PPPoE socket: %m");
+-	goto errout;
+-    }
+     sp.sa_family = AF_PPPOX;
+     sp.sa_protocol = PX_PROTO_OE;
+     sp.sa_addr.pppoe.sid = conn->session;
+diff --git pppd/pppd/pppd.8 pppd/pppd/pppd.8
+index 8ea8200..c148652 100644
+--- pppd/pppd/pppd.8
++++ pppd/pppd/pppd.8
+@@ -449,6 +449,14 @@ scripts.  If this
+ option is given, the \fIstring\fR supplied is given as the 6th
+ parameter to those scripts.
+ .TP
++.B ipv6cp\-accept\-local
++With this option, pppd will accept the peer's idea of our local IPv6
++address, even if the local IPv6 address was specified in an option.
++.TP
++.B ipv6cp\-accept\-remote
++With this option, pppd will accept the peer's idea of its (remote) IPv6
++address, even if the remote IPv6 address was specified in an option.
++.TP
+ .B ipv6cp\-max\-configure \fIn
+ Set the maximum number of IPv6CP configure-request transmissions to
+ \fIn\fR (default 10).
+@@ -638,6 +646,9 @@ control, as for the \fIcrtscts\fR option.  This is the opposite of the
+ Enables the use of PPP multilink; this is an alias for the `multilink'
+ option.  This option is currently only available under Linux.
+ .TP
++.B mppc
++Enables MPPC (Microsoft Point to Point Compression).  This is the default.
++.TP
+ .B mppe\-stateful
+ Allow MPPE to use stateful mode.  Stateless mode is still attempted first.
+ The default is to disallow stateful mode.  
+@@ -778,12 +789,18 @@ peer is buggy.
+ Disables the use of PPP multilink.  This option is currently only
+ available under Linux.
+ .TP
++.B nomppc
++Disables MPPC (Microsoft Point to Point Compression).
++.TP
+ .B nomppe
+ Disables MPPE (Microsoft Point to Point Encryption).  This is the default.
+ .TP
+ .B nomppe\-40
+ Disable 40-bit encryption with MPPE.
+ .TP
++.B nomppe\-56
++Disable 56\-bit encryption with MPPE.
++.TP
+ .B nomppe\-128
+ Disable 128-bit encryption with MPPE.
+ .TP
+@@ -991,6 +1008,9 @@ kernel has been configured to include MPPE support.
+ .B require\-mppe\-40
+ Require the use of MPPE, with 40-bit encryption.
+ .TP
++.B require\-mppe\-56
++Require the use of MPPE, with 56\-bit encryption.
++.TP
+ .B require\-mppe\-128
+ Require the use of MPPE, with 128-bit encryption.
+ .TP
+@@ -1050,6 +1070,12 @@ under Linux and FreeBSD 2.2.8 and later.
+ Sets the ppp unit number (for a ppp0 or ppp1 etc interface name) for outbound
+ connections.
+ .TP
++.B minunit \fInum
++Such as unit, but always select bigger interface
++.TP
++.B minunit \fInum
++PPP interface minimal unit number. Such as unit, but always select bigger interface
++.TP
+ .B updetach
+ With this option, pppd will detach from its controlling terminal once
+ it has successfully established the ppp connection (to the point where
+diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
+index cf9840a..5236f4e 100644
+--- pppd/pppd/pppd.h
++++ pppd/pppd/pppd.h
+@@ -80,6 +80,7 @@
+ #define MAXARGS		1	/* max # args to a command */
+ #define MAXNAMELEN	256	/* max length of hostname or name for auth */
+ #define MAXSECRETLEN	256	/* max length of password or secret */
++#define MAXUNIT		255	/* max ppp interface */
+ 
+ /*
+  * Option descriptor structure.
+@@ -209,6 +210,7 @@ struct notifier {
+ /*
+  * Global variables.
+  */
++extern bool tx_only;			/* JYWeng 20031216: idle time counting on tx traffic */
+ 
+ extern int	hungup;		/* Physical layer has disconnected */
+ extern int	ifunit;		/* Interface unit number */
+@@ -313,6 +315,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
+ extern int	connect_delay;	/* Time to delay after connect script */
+ extern int	max_data_rate;	/* max bytes/sec through charshunt */
+ extern int	req_unit;	/* interface unit number to use */
++extern int	req_minunit;	/* interface minimal unit number to use */
++extern char	path_ipup[MAXPATHLEN]; /* pathname of ip-up script */
++extern char	path_ipdown[MAXPATHLEN]; /* pathname of ip-down script */
+ extern bool	multilink;	/* enable multilink operation */
+ extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
+ extern char	*bundle_name;	/* bundle name for multilink */
+@@ -564,7 +569,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
+ void demand_block __P((void));	/* set all NPs to queue up packets */
+ void demand_unblock __P((void)); /* set all NPs to pass packets */
+ void demand_discard __P((void)); /* set all NPs to discard packets */
+-void demand_rexmit __P((int));	/* retransmit saved frames for an NP */
++void demand_rexmit __P((int, u_int32_t)); /* retransmit saved frames for an NP*/
+ int  loop_chars __P((unsigned char *, int)); /* process chars from loopback */
+ int  loop_frame __P((unsigned char *, int)); /* should we bring link up? */
+ 
+diff --git pppd/pppd/sha1.c pppd/pppd/sha1.c
+index f4f975c..00835d0 100644
+--- pppd/pppd/sha1.c
++++ pppd/pppd/sha1.c
+@@ -21,9 +21,6 @@
+ #include <net/ppp_defs.h>
+ #include "sha1.h"
+ 
+-static void
+-SHA1_Transform(u_int32_t[5], const unsigned char[64]);
+-
+ #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+ 
+ /* blk0() and blk() perform the initial expand. */
+@@ -43,17 +40,17 @@ SHA1_Transform(u_int32_t[5], const unsigned char[64]);
+ /* Hash a single 512-bit block. This is the core of the algorithm. */
+ 
+ static void
+-SHA1_Transform(u_int32_t state[5], const unsigned char buffer[64])
++SHA1_Transform(u_int32_t state[5], u_int8_t buffer[64])
+ {
+     u_int32_t a, b, c, d, e;
+     typedef union {
+-	unsigned char c[64];
++	u_int8_t c[64];
+ 	u_int32_t l[16];
+     } CHAR64LONG16;
+     CHAR64LONG16 *block;
+ 
+ #ifdef SHA1HANDSOFF
+-    static unsigned char workspace[64];
++    static u_int8_t workspace[64];
+     block = (CHAR64LONG16 *) workspace;
+     memcpy(block, buffer, 64);
+ #else
+@@ -115,9 +112,9 @@ SHA1_Init(SHA1_CTX *context)
+ /* Run your data through this. */
+ 
+ void
+-SHA1_Update(SHA1_CTX *context, const unsigned char *data, unsigned int len)
++SHA1_Update(SHA1_CTX *context, const u_int8_t *data, u_int32_t len)
+ {
+-    unsigned int i, j;
++    u_int32_t i, j;
+ 
+     j = (context->count[0] >> 3) & 63;
+     if ((context->count[0] += len << 3) < (len << 3)) context->count[1]++;
+@@ -139,22 +136,22 @@ SHA1_Update(SHA1_CTX *context, const unsigned char *data, unsigned int len)
+ /* Add padding and return the message digest. */
+ 
+ void
+-SHA1_Final(unsigned char digest[20], SHA1_CTX *context)
++SHA1_Final(u_int8_t digest[20], SHA1_CTX *context)
+ {
+     u_int32_t i, j;
+-    unsigned char finalcount[8];
++    u_int8_t finalcount[8];
+ 
+     for (i = 0; i < 8; i++) {
+-        finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
++        finalcount[i] = (u_int8_t)((context->count[(i >= 4 ? 0 : 1)]
+          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
+     }
+-    SHA1_Update(context, (unsigned char *) "\200", 1);
++    SHA1_Update(context, (u_int8_t *) "\200", 1);
+     while ((context->count[0] & 504) != 448) {
+-	SHA1_Update(context, (unsigned char *) "\0", 1);
++	SHA1_Update(context, (u_int8_t *) "\0", 1);
+     }
+     SHA1_Update(context, finalcount, 8);  /* Should cause a SHA1Transform() */
+     for (i = 0; i < 20; i++) {
+-	digest[i] = (unsigned char)
++	digest[i] = (u_int8_t)
+ 		     ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
+     }
+     /* Wipe variables */
+diff --git pppd/pppd/sha1.h pppd/pppd/sha1.h
+index 83f64df..07c0332 100644
+--- pppd/pppd/sha1.h
++++ pppd/pppd/sha1.h
+@@ -8,6 +8,8 @@
+ 
+ #ifndef __SHA1_INCLUDE_
+ 
++#include <sys/types.h>
++
+ #ifndef SHA1_SIGNATURE_SIZE
+ #ifdef SHA_DIGESTSIZE
+ #define SHA1_SIGNATURE_SIZE SHA_DIGESTSIZE
+@@ -19,12 +21,12 @@
+ typedef struct {
+     u_int32_t state[5];
+     u_int32_t count[2];
+-    unsigned char buffer[64];
++    u_int8_t buffer[64];
+ } SHA1_CTX;
+ 
+ extern void SHA1_Init(SHA1_CTX *);
+-extern void SHA1_Update(SHA1_CTX *, const unsigned char *, unsigned int);
+-extern void SHA1_Final(unsigned char[SHA1_SIGNATURE_SIZE], SHA1_CTX *);
++extern void SHA1_Update(SHA1_CTX *, const u_int8_t *, u_int32_t);
++extern void SHA1_Final(u_int8_t[SHA1_SIGNATURE_SIZE], SHA1_CTX *);
+ 
+ #define __SHA1_INCLUDE_
+ #endif /* __SHA1_INCLUDE_ */
+diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
+index b675c97..c0b3961 100644
+--- pppd/pppd/sys-linux.c
++++ pppd/pppd/sys-linux.c
+@@ -453,6 +453,13 @@ int generic_establish_ppp (int fd)
+     if (new_style_driver) {
+ 	int flags;
+ 
++        /* if a ppp_fd is already open, close it first */
++        if(ppp_fd > 0) {
++          close(ppp_fd);
++          remove_fd(ppp_fd);
++          ppp_fd = -1;
++        }
++
+ 	/* Open an instance of /dev/ppp and connect the channel to it */
+ 	if (ioctl(fd, PPPIOCGCHAN, &chindex) == -1) {
+ 	    error("Couldn't get channel number: %m");
+@@ -627,13 +634,15 @@ static int make_ppp_unit()
+ 	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+ 		warn("Couldn't set /dev/ppp to nonblock: %m");
+ 
+-	ifunit = req_unit;
+-	x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+-	if (x < 0 && req_unit >= 0 && errno == EEXIST) {
+-		warn("Couldn't allocate PPP unit %d as it is already in use", req_unit);
+-		ifunit = -1;
++	ifunit = (req_unit >= 0) ? req_unit : req_minunit;
++	do {
+ 		x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+-	}
++		if (x < 0 && errno == EEXIST) {
++			warn("Couldn't allocate PPP unit %d as it is already in use", ifunit);
++			ifunit = (req_unit >= 0) ? -1 : ++req_minunit;
++		} else break;
++	} while (ifunit < MAXUNIT);
++
+ 	if (x < 0)
+ 		error("Couldn't create new ppp unit: %m");
+ 	return x;
+diff --git pppd/pppd/utils.c pppd/pppd/utils.c
+index 062b17e..2e038bc 100644
+--- pppd/pppd/utils.c
++++ pppd/pppd/utils.c
+@@ -1052,3 +1052,23 @@ unlock()
+     }
+ }
+ 
++/* JYWeng 20031216: add to wanstatus.log */
++
++void saveWANStatus(char *currentstatus, int statusindex)
++{
++	FILE *STATUSFILE;
++#ifdef ONWL500G_SHELL
++	if ((req_unit == 0) && (STATUSFILE = fopen("/etc/linuxigd/wanstatus.log", "w"))!=NULL)
++	{
++		fprintf(STATUSFILE, "StatusCode=\"%d\"\n", statusindex);
++		fprintf(STATUSFILE, "StatusReason=\"%s\"\n", currentstatus);
++		fclose(STATUSFILE);
++	}
++#else
++	if ((req_unit == 0) && (STATUSFILE = fopen("/tmp/wanstatus.log", "w"))!=NULL)
++	{
++		fprintf(STATUSFILE, "%d,%s\n", statusindex, currentstatus);
++		fclose(STATUSFILE);
++	}
++#endif
++}
+diff --git pppd/pppdump/bsd-comp.c pppd/pppdump/bsd-comp.c
+index 1413326..4c504a4 100644
+--- pppd/pppdump/bsd-comp.c
++++ pppd/pppdump/bsd-comp.c
+@@ -383,7 +383,7 @@ bsd_init(db, options, opt_len, unit, hdrlen, mru, debug, decomp)
+ 	|| options[0] != CI_BSD_COMPRESS || options[1] != CILEN_BSD_COMPRESS
+ 	|| BSD_VERSION(options[2]) != BSD_CURRENT_VERSION
+ 	|| BSD_NBITS(options[2]) != db->maxbits
+-	|| decomp && db->lens == NULL)
++	|| (decomp && db->lens == NULL))
+ 	return 0;
+ 
+     if (decomp) {
+@@ -556,11 +556,11 @@ bsd_decompress(state, cmsg, inlen, dmp, outlenp)
+     u_int n_bits = db->n_bits;
+     u_int tgtbitno = 32-n_bits;	/* bitno when we have a code */
+     struct bsd_dict *dictp;
+-    int explen, i, seq, len;
++    int explen, seq, len;
+     u_int incode, oldcode, finchar;
+     u_char *p, *rptr, *wptr;
+     int ilen;
+-    int dlen, space, codelen, extra;
++    int dlen=0, codelen, extra;
+ 
+     rptr = cmsg;
+     if (*rptr == 0)
+@@ -616,7 +616,7 @@ bsd_decompress(state, cmsg, inlen, dmp, outlenp)
+ 	}
+ 
+ 	if (incode > max_ent + 2 || incode > db->maxmaxcode
+-	    || incode > max_ent && oldcode == CLEAR) {
++	    || (incode > max_ent && oldcode == CLEAR)) {
+ 	    if (db->debug) {
+ 		printf("bsd_decomp%d: bad code 0x%x oldcode=0x%x ",
+ 		       db->unit, incode, oldcode);
+diff --git pppd/pppdump/deflate.c pppd/pppdump/deflate.c
+index 0136966..43c9c51 100644
+--- pppd/pppdump/deflate.c
++++ pppd/pppdump/deflate.c
+@@ -237,8 +237,8 @@ z_decompress(arg, mi, inlen, mo, outlenp)
+ {
+     struct deflate_state *state = (struct deflate_state *) arg;
+     u_char *rptr, *wptr;
+-    int rlen, olen, ospace;
+-    int seq, i, flush, r, decode_proto;
++    int rlen, olen;
++    int seq, r;
+ 
+     rptr = mi;
+     if (*rptr == 0)
+diff --git pppd/pppdump/pppdump.c pppd/pppdump/pppdump.c
+index 95e692c..901a937 100644
+--- pppd/pppdump/pppdump.c
++++ pppd/pppdump/pppdump.c
+@@ -34,6 +34,7 @@
+  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <time.h>
+@@ -191,7 +192,7 @@ dumplog(f)
+ 	    show_time(f, c);
+ 	    break;
+ 	default:
+-	    printf("?%.2x\n");
++	    printf("?%.2x\n", c);
+ 	}
+     }
+ }
+@@ -421,7 +422,7 @@ dumpppp(f)
+ 	    show_time(f, c);
+ 	    break;
+ 	default:
+-	    printf("?%.2x\n");
++	    printf("?%.2x\n", c);
+ 	}
+     }
+ }
+-- 
+2.10.5
+

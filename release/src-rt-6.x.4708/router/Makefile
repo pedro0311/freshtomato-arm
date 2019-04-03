@@ -1302,6 +1302,7 @@ pptpd-clean:
 	$(call unpatch_files,pptpd)
 
 pppd/Makefile: pppd/linux/Makefile.top
+	$(call patch_files,pppd)
 	cd pppd && $(CONFIGURE) --prefix=/usr --sysconfdir=/tmp
 
 pppd: pppd/Makefile
@@ -1311,6 +1312,7 @@ pppd: pppd/Makefile
 pppd-clean:
 	-@$(MAKE) -C pppd clean
 	@rm -f pppd/Makefile
+	$(call unpatch_files,pppd)
 
 pppd-install:
 	install -D pppd/pppd/pppd $(INSTALLDIR)/pppd/usr/sbin/pppd

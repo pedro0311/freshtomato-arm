@@ -453,13 +453,6 @@ int generic_establish_ppp (int fd)
     if (new_style_driver) {
 	int flags;
 
-        /* if a ppp_fd is already open, close it first */
-        if(ppp_fd > 0) {
-          close(ppp_fd);
-          remove_fd(ppp_fd);
-          ppp_fd = -1;
-        }
-
 	/* Open an instance of /dev/ppp and connect the channel to it */
 	if (ioctl(fd, PPPIOCGCHAN, &chindex) == -1) {
 	    error("Couldn't get channel number: %m");
@@ -634,15 +627,13 @@ static int make_ppp_unit()
 	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		warn("Couldn't set /dev/ppp to nonblock: %m");
 
-	ifunit = (req_unit >= 0) ? req_unit : req_minunit;
-	do {
+	ifunit = req_unit;
+	x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+	if (x < 0 && req_unit >= 0 && errno == EEXIST) {
+		warn("Couldn't allocate PPP unit %d as it is already in use", req_unit);
+		ifunit = -1;
 		x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
-		if (x < 0 && errno == EEXIST) {
-			warn("Couldn't allocate PPP unit %d as it is already in use", ifunit);
-			ifunit = (req_unit >= 0) ? -1 : ++req_minunit;
-		} else break;
-	} while (ifunit < MAXUNIT);
-
+	}
 	if (x < 0)
 		error("Couldn't create new ppp unit: %m");
 	return x;
@@ -1634,9 +1625,6 @@ int sifdefaultroute (int unit, u_int32_t ouraddr, u_int32_t gateway)
     memset (&rt, 0, sizeof (rt));
     SET_SA_FAMILY (rt.rt_dst, AF_INET);
 
-    SET_SA_FAMILY(rt.rt_gateway, AF_INET);
-    SIN_ADDR(rt.rt_gateway) = gateway;
-
     rt.rt_dev = ifname;
 
     if (kernel_version > KVERSION(2,1,0)) {
@@ -1644,7 +1632,7 @@ int sifdefaultroute (int unit, u_int32_t ouraddr, u_int32_t gateway)
 	SIN_ADDR(rt.rt_genmask) = 0L;
     }
 
-    rt.rt_flags = RTF_UP | RTF_GATEWAY;
+    rt.rt_flags = RTF_UP;
     if (ioctl(sock_fd, SIOCADDRT, &rt) < 0) {
 	if ( ! ok_error ( errno ))
 	    error("default route ioctl(SIOCADDRT): %m");
@@ -2167,7 +2155,6 @@ int ppp_available(void)
 
 void logwtmp (const char *line, const char *name, const char *host)
 {
-#if 0
     struct utmp ut, *utp;
     pid_t  mypid = getpid();
 #if __GLIBC__ < 2
@@ -2232,7 +2219,6 @@ void logwtmp (const char *line, const char *name, const char *host)
 
 	close (wtmp);
     }
-#endif
 #endif
 }
 

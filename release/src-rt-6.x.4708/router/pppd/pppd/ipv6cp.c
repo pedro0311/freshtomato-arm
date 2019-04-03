@@ -151,7 +151,6 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -176,8 +175,6 @@ ipv6cp_options ipv6cp_gotoptions[NUM_PPP];	/* Options that peer ack'd */
 ipv6cp_options ipv6cp_allowoptions[NUM_PPP];	/* Options we allow peer to request */
 ipv6cp_options ipv6cp_hisoptions[NUM_PPP];	/* Options that we ack'd */
 int no_ifaceid_neg = 0;
-char path_ipv6up[MAXPATHLEN];			/* pathname of ipv6-up script */
-char path_ipv6down[MAXPATHLEN];			/* pathname of ipv6-down script */
 
 /* local vars */
 static int ipv6cp_is_up;
@@ -237,8 +234,6 @@ static option_t ipv6cp_option_list[] = {
 
     { "ipv6cp-accept-local", o_bool, &ipv6cp_allowoptions[0].accept_local,
       "Accept peer's interface identifier for us", 1 },
-    { "ipv6cp-accept-remote", o_bool, &ipv6cp_allowoptions[0].accept_remote,
-      "Accept peer's interface identifier for itself", 1 },
 
     { "ipv6cp-use-ipaddr", o_bool, &ipv6cp_allowoptions[0].use_ip,
       "Use (default) IPv4 address as interface identifier", 1 },
@@ -256,13 +251,6 @@ static option_t ipv6cp_option_list[] = {
       "Set max #xmits for conf-reqs", OPT_PRIO },
     { "ipv6cp-max-failure", o_int, &ipv6cp_fsm[0].maxnakloops,
       "Set max #conf-naks for IPv6CP", OPT_PRIO },
-
-    { "ipv6-up-script", o_string, path_ipv6up,
-      "Set pathname of ipv6-up script",
-      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
-    { "ipv6-down-script", o_string, path_ipv6down,
-      "Set pathname of ipv6-down script",
-      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
 
    { NULL }
 };
@@ -438,7 +426,6 @@ ipv6cp_init(unit)
     memset(ao, 0, sizeof(*ao));
 
     wo->accept_local = 1;
-    wo->accept_remote = 1;
     wo->neg_ifaceid = 1;
     ao->neg_ifaceid = 1;
 
@@ -964,7 +951,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
 		orc = CONFREJ;		/* Reject CI */
 		break;
 	    }
-	    if (!eui64_iszero(wo->hisid) && !wo->accept_remote &&
+	    if (!eui64_iszero(wo->hisid) && 
 		!eui64_equals(ifaceid, wo->hisid) && 
 		eui64_iszero(go->hisid)) {
 		    
@@ -1077,9 +1064,7 @@ endswitch:
     return (rc);			/* Return final code */
 }
 
-#if defined(SOL2) || defined(__linux__)
-int ether_to_eui64(eui64_t *p_eui64);
-#endif
+
 /*
  * ipv6_check_options - check that any IP-related options are OK,
  * and assign appropriate defaults.
@@ -1247,7 +1232,7 @@ ipv6cp_up(f)
 	    }
 
 	}
-	demand_rexmit(PPP_IPV6,0);
+	demand_rexmit(PPP_IPV6);
 	sifnpmode(f->unit, PPP_IPV6, NPMODE_PASS);
 
     } else {
@@ -1303,7 +1288,7 @@ ipv6cp_up(f)
      */
     if (ipv6cp_script_state == s_down && ipv6cp_script_pid == 0) {
 	ipv6cp_script_state = s_up;
-	ipv6cp_script(path_ipv6up);
+	ipv6cp_script(_PATH_IPV6UP);
     }
 }
 
@@ -1354,7 +1339,7 @@ ipv6cp_down(f)
     /* Execute the ipv6-down script */
     if (ipv6cp_script_state == s_up && ipv6cp_script_pid == 0) {
 	ipv6cp_script_state = s_down;
-	ipv6cp_script(path_ipv6down);
+	ipv6cp_script(_PATH_IPV6DOWN);
     }
 }
 
@@ -1397,13 +1382,13 @@ ipv6cp_script_done(arg)
     case s_up:
 	if (ipv6cp_fsm[0].state != OPENED) {
 	    ipv6cp_script_state = s_down;
-	    ipv6cp_script(path_ipv6down);
+	    ipv6cp_script(_PATH_IPV6DOWN);
 	}
 	break;
     case s_down:
 	if (ipv6cp_fsm[0].state == OPENED) {
 	    ipv6cp_script_state = s_up;
-	    ipv6cp_script(path_ipv6up);
+	    ipv6cp_script(_PATH_IPV6UP);
 	}
 	break;
     }
