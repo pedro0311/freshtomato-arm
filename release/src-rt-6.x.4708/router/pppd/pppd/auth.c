@@ -227,7 +227,6 @@ bool refuse_eap = 0;		/* Don't wanna auth. ourselves with EAP */
 #ifdef CHAPMS
 bool refuse_mschap = 0;		/* Don't wanna auth. ourselves with MS-CHAP */
 bool refuse_mschap_v2 = 0;	/* Don't wanna auth. ourselves with MS-CHAPv2 */
-bool ms_ignore_domain = 0;
 #else
 bool refuse_mschap = 1;		/* Don't wanna auth. ourselves with MS-CHAP */
 bool refuse_mschap_v2 = 1;	/* Don't wanna auth. ourselves with MS-CHAPv2 */
@@ -298,8 +297,6 @@ option_t auth_options[] = {
       "Require CHAP authentication from peer",
       OPT_ALIAS | OPT_PRIOSUB | OPT_A2OR | MDTYPE_MD5,
       &lcp_wantoptions[0].chap_mdtype },
-    { "chap-secrets", o_string, &chapseccustom,
-      "Specify custom chap-secrets file", OPT_PRIO },
 #ifdef CHAPMS
     { "require-mschap", o_bool, &auth_required,
       "Require MS-CHAP authentication from peer",
@@ -317,9 +314,6 @@ option_t auth_options[] = {
       "Require MS-CHAPv2 authentication from peer",
       OPT_ALIAS | OPT_PRIOSUB | OPT_A2OR | MDTYPE_MICROSOFT_V2,
       &lcp_wantoptions[0].chap_mdtype },
-    { "ms-ignore-domain", o_bool, &ms_ignore_domain,
-      "Ignore any MS domain prefix in the username", 1 },
-
 #endif
 
     { "refuse-pap", o_bool, &refuse_pap,
@@ -561,10 +555,6 @@ void start_link(unit)
 {
     char *msg;
 
-     /* we are called via link_terminated, must be ignored */
-    if (phase == PHASE_DISCONNECT)
-	return;
-    status = EXIT_NEGOTIATION_FAILED;
     new_phase(PHASE_SERIALCONN);
 
     hungup = 0;
@@ -601,6 +591,7 @@ void start_link(unit)
 	notice("Starting negotiation on %s", ppp_devnam);
     add_fd(fd_ppp);
 
+    status = EXIT_NEGOTIATION_FAILED;
     new_phase(PHASE_ESTABLISH);
 
     lcp_lowerup(0);
@@ -674,7 +665,6 @@ link_terminated(unit)
 	the_channel->disconnect();
 	devfd = -1;
     }
-    /* not only disconnect, cleanup should also be called to close the devices */
     if (the_channel->cleanup)
 	(*the_channel->cleanup)();
 
@@ -1199,10 +1189,6 @@ check_idle(arg)
     if (idle_time_hook != 0) {
 	tlim = idle_time_hook(&idle);
     } else {
-/* JYWeng 20031216: replace itime with idle.xmit_idle for only outgoing traffic is counted*/
-	if(tx_only) 
-		itime = idle.xmit_idle;
-	else
 	itime = MIN(idle.xmit_idle, idle.recv_idle);
 	tlim = idle_time_limit - itime;
     }
@@ -1654,7 +1640,7 @@ have_chap_secret(client, server, need_ip, lacks_ipp)
 	}
     }
 
-    filename = chapseccustom ? chapseccustom : _PATH_CHAPFILE;
+    filename = _PATH_CHAPFILE;
     f = fopen(filename, "r");
     if (f == NULL)
 	return 0;
@@ -1749,7 +1735,7 @@ get_secret(unit, client, server, secret, secret_len, am_server)
 	    return 0;
 	}
     } else {
-	filename = chapseccustom ? chapseccustom : _PATH_CHAPFILE;
+	filename = _PATH_CHAPFILE;
 	addrs = NULL;
 	secbuf[0] = 0;
 
@@ -2368,8 +2354,7 @@ auth_script(script)
     argv[3] = user_name;
     argv[4] = devnam;
     argv[5] = strspeed;
-    argv[6] = ipparam;
-    argv[7] = NULL;
+    argv[6] = NULL;
 
     auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
 }

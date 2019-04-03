@@ -49,13 +49,14 @@ static char const RCSID[] =
 #include <net/ethernet.h>
 #include <net/if_arp.h>
 #include <linux/ppp_defs.h>
+#include <linux/if_ppp.h>
 #include <linux/if_pppox.h>
 
 #ifndef _ROOT_PATH
 #define _ROOT_PATH ""
 #endif
 
-#define _PATH_ETHOPT         _ROOT_PATH "/ppp/options."
+#define _PATH_ETHOPT         _ROOT_PATH "/etc/ppp/options."
 
 char pppd_version[] = VERSION;
 
@@ -107,6 +108,8 @@ PPPOEInitDevice(void)
 	novm("PPPoE session data");
     }
     memset(conn, 0, sizeof(PPPoEConnection));
+    conn->acName = acName;
+    conn->serviceName = pppd_pppoe_service;
     conn->ifName = devnam;
     conn->discoverySocket = -1;
     conn->sessionSocket = -1;
@@ -129,45 +132,7 @@ static int
 PPPOEConnectDevice(void)
 {
     struct sockaddr_pppox sp;
-    struct ifreq ifr;
-    int s;
 
-    /* Open session socket before discovery phase, to avoid losing session */
-    /* packets sent by peer just after PADS packet (noted on some Cisco    */
-    /* server equipment).                                                  */
-    /* Opening this socket just before waitForPADS in the discovery()      */
-    /* function would be more appropriate, but it would mess-up the code   */
-    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
-    if (conn->sessionSocket < 0) {
-	error("Failed to create PPPoE socket: %m");
-	return -1;
-    }
-
-    /* Restore configuration */
-    lcp_allowoptions[0].mru = conn->mtu;
-    lcp_wantoptions[0].mru = conn->mru;
-
-    /* Update maximum MRU */
-    s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s < 0) {
-	error("Can't get MTU for %s: %m", conn->ifName);
-	goto errout;
-    }
-    strncpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
-    if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
-	error("Can't get MTU for %s: %m", conn->ifName);
-	close(s);
-	goto errout;
-    }
-    close(s);
-
-    if (lcp_allowoptions[0].mru > ifr.ifr_mtu - TOTAL_OVERHEAD)
-	lcp_allowoptions[0].mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
-    if (lcp_wantoptions[0].mru > ifr.ifr_mtu - TOTAL_OVERHEAD)
-	lcp_wantoptions[0].mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
-
-    conn->acName = acName;
-    conn->serviceName = pppd_pppoe_service;
     strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
     if (existingSession) {
 	unsigned int mac[ETH_ALEN];
@@ -182,8 +147,6 @@ PPPOEConnectDevice(void)
 	    conn->peerEth[i] = (unsigned char) mac[i];
 	}
     } else {
-        conn->discoverySocket =
-            openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
 	discovery(conn);
 	if (conn->discoveryState != STATE_SESSION) {
 	    error("Unable to complete PPPoE Discovery");
@@ -194,6 +157,12 @@ PPPOEConnectDevice(void)
     /* Set PPPoE session-number for further consumption */
     ppp_session_number = ntohs(conn->session);
 
+    /* Make the session socket */
+    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
+    if (conn->sessionSocket < 0) {
+	error("Failed to create PPPoE socket: %m");
+	goto errout;
+    }
     sp.sa_family = AF_PPPOX;
     sp.sa_protocol = PX_PROTO_OE;
     sp.sa_addr.pppoe.sid = conn->session;
@@ -411,10 +380,6 @@ void pppoe_check_options(void)
 	lcp_allowoptions[0].mru = MAX_PPPOE_MTU;
     if (lcp_wantoptions[0].mru > MAX_PPPOE_MTU)
 	lcp_wantoptions[0].mru = MAX_PPPOE_MTU;
-
-    /* Save configuration */
-    conn->mtu = lcp_allowoptions[0].mru;
-    conn->mru = lcp_wantoptions[0].mru;
 
     ccp_allowoptions[0].deflate = 0;
     ccp_wantoptions[0].deflate = 0;

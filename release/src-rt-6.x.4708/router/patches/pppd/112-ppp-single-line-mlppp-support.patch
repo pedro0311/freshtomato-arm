@@ -1,0 +1,25 @@
+From 6dcc5dce08926f3924fb3d41080efac5872c4682 Mon Sep 17 00:00:00 2001
+From: James jleepblc <jleepblc@gmail.com>
+Date: Thu, 17 Nov 2011 08:28:42 +0100
+Subject: [PATCH] PPP: single line MLPPP support
+
+---
+
+diff -daurpN pppd/pppd/Makefile.linux pppd/pppd/Makefile.linux
+--- pppd/pppd/Makefile.linux
++++ pppd/pppd/Makefile.linux
+@@ -53,12 +53,12 @@ MPPE=y
+ # Uncomment the next line to enable multilink PPP (enabled by default)
+ # Linux distributions: Please leave multilink ENABLED in your builds
+ # of pppd!
+-#HAVE_MULTILINK=y
++HAVE_MULTILINK=y
+ 
+ # Uncomment the next line to enable the TDB database (enabled by default.)
+ # If you enable multilink, then TDB is automatically enabled also.
+ # Linux distributions: Please leave TDB ENABLED in your builds.
+-#USE_TDB=y
++USE_TDB=y
+ 
+ #HAS_SHADOW=y
+ #USE_PAM=y
