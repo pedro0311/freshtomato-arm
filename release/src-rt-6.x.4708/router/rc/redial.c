@@ -26,7 +26,7 @@
 #include <wait.h>
 
 
-// used in keepalive mode (ppp_demand=0)
+/* used in keepalive mode (ppp_demand=0) */
 
 
 int start_redial(char *prefix)
@@ -43,7 +43,7 @@ int stop_redial(char *prefix)
 	pid = nvram_get_int(strcat_r(prefix, "_ppp_redialpid", tmp));
 	if (pid > 1) {
 		while (kill(pid, SIGKILL) == 0) {
-		sleep(1);
+			sleep(1);
 		}
 	}
 	return 0;
@@ -58,7 +58,7 @@ int redial_main(int argc, char **argv)
 	char tmp[100];
 	memset(c_pid, 0, 10);
 	sprintf(c_pid, "%d", getpid());
-	char prefix[] = "wanXXX";
+	char prefix[] = "wanXX";
 
 	if (argc > 1) {
 		strcpy(prefix, argv[1]);
@@ -92,23 +92,6 @@ int redial_main(int argc, char **argv)
 
 			count = 0;
 		}
-
-#if 0
-		long ut;
-		char pppdisc_file[256];
-		if ((count < 3) && (get_wanx_proto(prefix) == WP_PPPOE) || (get_wanx_proto(prefix) == WP_PPP3G)) {
-			memset(pppdisc_file, 0, 256);
-			sprintf(pppdisc_file, "/var/lib/misc/%s_pppoe-disc", prefix);
-			if (f_read(pppdisc_file, &ut, sizeof(ut)) == sizeof(ut)) {
-				ut = (get_uptime() - ut);
-				if (ut <= 15) {
-					syslog(LOG_INFO, "Redial: %s PPPoE reconnect in progress (%ld)", prefix, ut);
-					++count;
-					continue;
-				}
-			}
-		}
-#endif
 
 		if ((!wait_action_idle(10)) || (check_wanup(prefix)))
 			continue;

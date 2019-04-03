@@ -60,7 +60,7 @@ static void prepareCAGeneration(int serverNum)
 
 	if (nvram_match(buffer, "")) {
 		syslog(LOG_WARNING, "No CA KEY was saved for server %d, regenerating", serverNum);
-		sprintf(buffer2, "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
+		sprintf(buffer2, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
 		sprintf(buffer, "openssl req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
 		syslog(LOG_WARNING, buffer);
 		system(buffer);
@@ -84,13 +84,23 @@ static void generateKey(const char *prefix)
 {
 	char subj_buf[512];
 	char buffer[512];
+	char *str;
+
+	if (strncmp(prefix, "server", 6) == 0) {
+		str = "-extensions server_cert";
+		syslog(LOG_WARNING, "Building Certs for Server");
+	} else {
+		str = "-extensions usr_cert";
+		syslog(LOG_WARNING, "Building Certs for Client");
+	}
+
 	put_to_file("/tmp/openssl/serial", "00");
-	sprintf(&subj_buf[0], "\"/C=GB/ST=Yorks/L=York/O=Company/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
-	sprintf(buffer, "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, subj_buf);
+	sprintf(subj_buf, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
+	sprintf(buffer, "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
-	sprintf(buffer, "openssl ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, subj_buf);
+	sprintf(buffer, "openssl ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
@@ -176,9 +186,9 @@ void wo_vpn_genkey(char *url)
 		}
 		server = atoi(serverStr);
 		prepareCAGeneration(server);
-		generateKey("client1");
+		generateKey("server");
 		print_generated_ca_to_user();
-		print_generated_keys_to_user("client1");
+		print_generated_keys_to_user("server");
 	}
 #endif
 }
@@ -248,7 +258,7 @@ void wo_vpn_genclientconfig(char *url)
 	sprintf(s, "vpn_server%d_crypt", server);
 	if (nvram_match(s, "tls")) {
 		fprintf(fp, "client\n");
-		fprintf(fp, "crypt tls\n");
+		fprintf(fp, "remote-cert-tls server\n");
 		fprintf(fp, "ca ca.pem\n");
 		put_to_file("/tmp/ovpnclientconfig/ca.pem", getNVRAMVar("vpn_server%d_ca", server));
 
@@ -277,6 +287,10 @@ void wo_vpn_genclientconfig(char *url)
 		fprintf(fp, "secret static.key\n");
 		put_to_file("/tmp/ovpnclientconfig/static.key", getNVRAMVar("vpn_server%d_static", server));
 	}
+	fprintf(fp, "verb3\n");
+	fprintf(fp, "status status\n");
+	fprintf(fp, "; log /var/log/openvpn.log\n");
+
 	fclose(fp);
 	eval("tar", "-cf", "/tmp/ovpnclientconfig.tar", "-C", "/tmp/ovpnclientconfig", ".");
 	do_file("/tmp/ovpnclientconfig.tar");

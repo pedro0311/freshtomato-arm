@@ -551,6 +551,7 @@ void start_pppoe(int num, char *prefix)
 			mwanlog(LOG_DEBUG, "*** start_pppoe(%s), (demand mode): start_tmp_ppp(%d, %s, %s) ***", prefix, num, pppname, prefix);
 			start_tmp_ppp(num, pppname, prefix);
 		} else {
+			mwanlog(LOG_DEBUG, "*** start_pppoe(%s), (keep alive mode): ifconfig(%s, IFUP, NULL, NULL); num: %d ***", prefix, pppname, num);
 			ifconfig(pppname, IFUP, NULL, NULL);
 		}
 	} else {
@@ -564,37 +565,6 @@ void stop_pppoe(char *prefix)
 {
 	stop_ppp(prefix);
 }
-
-#if 0
-void stop_singe_pppoe(int num, char *prefix)
-{
-	char tmp[100];
-	DBG("%s pppoe_num=%d\n", __FUNCTION__, num);
-
-	int i;
-
-	if (num != 0) return;
-
-	i = nvram_get_int(strcat_r(prefix, "_pppoe_pid0", tmp);
-	if ((i > 1) && (kill(i, SIGTERM) == 0)) {
-		do {
-			sleep(2);
-		} while (kill(i, SIGKILL) == 0);
-	}
-
-	char ppp_linkfile[256] ;
-	memset(ppp_optfile, 0, 256);
-	sprintf(ppp_linkfile, "/tmp/ppp/%s_link", prefix);
-
-	unlink(ppp_linkfile);
-	nvram_unset(strcat_r(prefix, "_pppoe_ifname0", tmp);
-
-	nvram_set(strcat_r(prefix, "_get_dns", "");
-	clear_resolv();
-}
-#endif
-
-/* ----------------------------------------------------------------------------- */
 
 static int config_l2tp(void)		/* shared xl2tpd.conf for all WAN */
 {

@@ -3,7 +3,8 @@
 #
 # Copyright (C) 2011 shibby
 #
-# changes/fixes: 2018 by pedro
+# - changes/fixes
+# Copyright (C) 2018 - 2019 by pedro
 #
 
 
@@ -47,6 +48,7 @@ switchMode() {
 			MODULE=$(cat $TTYS_PATH 2>/dev/null | grep ^DRIVER | cut -d "=" -f2 | head -n1)
 			findPath		# MODULE --> MPATH
 			echo "$VENDOR $PRODUCT" > $MPATH
+			nvram set "$PREFIX"_modem_type="$MODULE"
 
 			$LOGS "3G MODEM ready ($VENDOR:$PRODUCT) - DIAG interface(s) found ("$TTYS") - using already loaded $MODULE module"
 
@@ -127,8 +129,7 @@ switchMode() {
 
 searchDiag() {
 	local MODULES="cdc-acm option sierra"
-	local IS_MLOADED=0 ALRTXT="" MODULE
-	local PATHDIAG="/sys/bus/usb/devices"
+	local IS_MLOADED=0 PATHDIAG="/sys/bus/usb/devices"
 
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
 	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
@@ -176,12 +177,20 @@ searchDiag() {
 
 	[ -z "$TTYS" ] && {
 		nvram set "$PREFIX"_modem_modules=""
-		wayOut "3G MODEM not found - connection process terminated!"
+		nvram set "$PREFIX"_modem_type=""
+		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+			watchdog add
+			wayOut "3G MODEM not found - watchdog enabled"
+		} || {
+			watchdog del
+			wayOut "3G MODEM not found - connection process terminated!"
+		}
 	} || {
 		[ "$ALREADYFOUND" -eq 0 ] && $LOGS "3G MODEM ready - DIAG interface(s) found ("$TTYS")"
 
 		echo $TTYS > $DIAGSFILE
 		nvram set "$PREFIX"_modem_modules="$MODULE"
+		nvram set "$PREFIX"_modem_type="$MODULE"
 	}
 }
 
@@ -275,15 +284,11 @@ wayOut() {
 
 
 [ "$2" == "signal" ] && {
-	checkPid 0
 	wwansignal $PREFIX
 } || {
 	checkPid 1
 	switchMode
 	searchDiag
 	setPIN
-	wwansignal $PREFIX
-	service $PREFIX restart
+	rm -f $PIDFILE > /dev/null 2>&1
 }
-
-rm -f $PIDFILE > /dev/null 2>&1

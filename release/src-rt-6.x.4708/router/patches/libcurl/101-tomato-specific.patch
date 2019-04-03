@@ -1,6 +1,6 @@
---- libcurl/configure.ac    2018-09-03 18:25:08.000000000 -0300
-+++ libcurl/configure.ac        2018-09-07 22:55:53.000000000 -0300
-@@ -1599,11 +1599,9 @@ if test -z "$ssl_backends" -o "x$OPT_SSL
+--- libcurl/configure.ac
++++ libcurl/configure.ac
+@@ -1658,11 +1658,9 @@ if test -z "$ssl_backends" -o "x$OPT_SSL
      dnl specify PKG_CONFIG_LIBDIR we're only looking where
      dnl the user told us to look
      OPENSSL_PCDIR="$OPT_SSL/lib/pkgconfig"

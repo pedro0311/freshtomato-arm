@@ -12,42 +12,51 @@
 PREFIX="$1"
 
 PID=$$
-PIDFILE="/var/run/switch4g_$PREFIX.pid"
-DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 MODE=$(nvram get "$PREFIX"_proto)
+DEVNR=$(nvram get "$PREFIX"_modem_dev)
 MTYPE=$(nvram get "$PREFIX"_modem_type)
 LOGS="logger -t wwansignal[$PID]"
+
+
+[ -z "$PREFIX" ] && {
+	echo "usage: wwansignal INTERFACE [-stdout]"
+	exit 0
+}
 
 [[ "$2" == "-stdout" ]] && {
 	LOGS="echo "
 }
 
-signal() {
-	if [ "$MODE" == "ppp3g" ]; then
-		$LOGS "MODEM Type: 3G"
-		signal3g
-	else
-		$LOGS "MODEM Type: "$MTYPE
-		signal4g
-	fi
-}
 
 signal3g() {
-	local CSQ RSSI
+	local CSQ RSSI i
+	local DIAGSFILE="/tmp/switch3g_$PREFIX.diags"
+	local SDEVNR=$(nvram get "$PREFIX"_modem_sdev)
 
-	CSQ=$(gcom -d "$DEVNR" -s /etc/gcom/getstrength.gcom 2>/dev/null | tr -d '\r')
-
-	[ "$(echo "$CSQ" | grep OK | wc -l)" -eq 1 ] && {
-		CSQ=$(echo "$CSQ" | grep "CSQ:" | cut -d " " -f2 | cut -d "," -f1)
-		RSSI=$((-113+CSQ*2))
-		$LOGS "MODEM Signal Strength: RSSI $RSSI dBm"
+	[ -z "$SDEVNR" ] && {
+		DEVALL=$(cat "$DIAGSFILE")
+	} || {
+		DEVALL="$SDEVNR $(cat "$DIAGSFILE" | sed "s~"$SDEVNR"~~")"
 	}
+
+	for i in $DEVALL; do	# find working interface
+		CSQ=$(gcom -d "$i" -s /etc/gcom/getstrength.gcom 2>/dev/null | tr -d '\r')
+		[ "$(echo "$CSQ" | grep OK | wc -l)" -eq 0 ] && {
+			sleep 1
+		} || {
+			break
+		}
+	done
+	nvram set "$PREFIX"_modem_sdev="$i"
+
+	CSQ=$(echo "$CSQ" | grep "CSQ:" | cut -d " " -f2 | cut -d "," -f1)
+	RSSI=$((-113+CSQ*2))
+	$LOGS "MODEM Signal Strength: RSSI $RSSI dBm"
 }
 
 signal4g() {
-	MTYPE=$(nvram get "$PREFIX"_modem_type)
-	DEVNR=$(nvram get "$PREFIX"_modem_dev)
 	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND BBAND="" i
+	local DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
 		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
@@ -337,6 +346,20 @@ uqmiCall() {
 
 ###################################################
 
-checkPid 0
-signal
 
+if [ "$MODE" == "ppp3g" ]; then
+	$LOGS "MODEM Type: 3G"
+	PIDFILE="/var/run/switch3g_$PREFIX.pid"
+	checkPid 0
+	signal3g
+elif [ "$MODE" == "lte" ]; then
+	$LOGS "MODEM Type: "$MTYPE
+	PIDFILE="/var/run/switch4g_$PREFIX.pid"
+	checkPid 0
+	signal4g
+else
+	$LOGS "Warning, $PREFIX not in 3G/LTE mode. Aborting ..."
+	exit 0
+fi
+
+rm -f $PIDFILE > /dev/null 2>&1

@@ -344,7 +344,6 @@ connect() {
 
 	echo "1" > $STATEFILE
 	watchdog add
-	wwansignal $PREFIX
 }
 
 disconnect() {
@@ -739,21 +738,19 @@ elif [ "$2" == "reset" ]; then
 	checkPid 0
 	modemReset
 elif [ "$2" == "signal" ]; then
-	checkPid 0
 	wwansignal $PREFIX
+	exit
 else
 	checkPid 1
 
 	# modem not detected
 	[ ! -f $READYFILE ] && {
 		switchMode
-
 		searchWAN
 
 		# only for non-hilink
 		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
 			searchDiag
-
 			setPIN
 		}
 	}
