@@ -1,48 +1,90 @@
 #!/bin/sh
 
-cd /etc
+PID=$$
+WAITTIMER=0
 
-cp -L openssl.cnf openssl.config
+while [ -f "/var/run/gencert.pid" -a $WAITTIMER -lt 14 ]; do
+	WAITTIMER=$((WAITTIMER+2))
+	sleep $WAITTIMER
+done
+touch /var/run/gencert.pid
 
-NVCN=$(nvram get https_crt_cn)
+LANCN=$(nvram get https_crt_cn)
 LANIP=$(nvram get lan_ipaddr)
 LANHOSTNAME=$(nvram get lan_hostname)
+KEYNAME="key.pem"
+CERTNAME="cert.pem"
+OPENSSLCNF="/etc/openssl.config.$PID"
 
-if [ "$NVCN" == "" ]; then
-	NVCN=$(nvram get router_name)
-fi
+cd /etc
 
-I=0
-for CN in $NVCN; do
-	echo "$I.commonName=CN" >> openssl.config
-	echo "$I.commonName_value=$CN" >> openssl.config
-	echo "$I.organizationName=O" >> /etc/openssl.config
-	echo "$I.organizationName_value=$(uname -o)" >> /etc/openssl.config
-	I=$(($I + 1))
-done
+cp -L openssl.cnf $OPENSSLCNF
+
+[ "$LANCN" != "" ] && {
+	I=0
+	for CN in $LANCN; do
+		echo "$I.commonName=CN" >> $OPENSSLCNF
+		echo "$I.commonName_value=$CN" >> $OPENSSLCNF
+		echo "$I.organizationName=O" >> $OPENSSLCNF
+		echo "$I.organizationName_value=FreshTomato" >> $OPENSSLCNF
+		echo "$I.organizationalUnitName=OU" >> $OPENSSLCNF
+		echo "$I.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+		I=$(($I + 1))
+	done
+} || {
+	LANRN=$(nvram get router_name)
+	[ "$LANRN" == "" ] && {
+		LANRN=$LANIP
+	} || {
+		RAND=$(printf '%s' $RANDOM | md5sum | cut -c -8)
+		LANRN=$LANRN"-"$RAND	# fix problems in FF
+	}
+	echo "0.commonName=CN" >> $OPENSSLCNF
+	echo "0.commonName_value=$LANRN" >> $OPENSSLCNF
+	echo "0.organizationName=O" >> $OPENSSLCNF
+	echo "0.organizationName_value=FreshTomato" >> $OPENSSLCNF
+	echo "0.organizationalUnitName=OU" >> $OPENSSLCNF
+	echo "0.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+}
 
 I=0
 # Start of SAN extensions
-sed -i "/\[ CA_default \]/acopy_extensions = copy" openssl.config
-sed -i "/\[ v3_ca \]/asubjectAltName = @alt_names" openssl.config
-sed -i "/\[ v3_req \]/asubjectAltName = @alt_names" openssl.config
-echo "[alt_names]" >> openssl.config
+sed -i "/\[ CA_default \]/acopy_extensions = copy" $OPENSSLCNF
+sed -i "/\[ v3_ca \]/asubjectAltName = @alt_names" $OPENSSLCNF
+sed -i "/\[ v3_req \]/asubjectAltName = @alt_names" $OPENSSLCNF
+echo "[alt_names]" >> $OPENSSLCNF
 
 # IP
-echo "IP.0 = $LANIP" >> openssl.config
-echo "DNS.$I = $LANIP" >> openssl.config # For broken clients like IE
+echo "IP.0 = $LANIP" >> $OPENSSLCNF
+echo "DNS.$I = $LANIP" >> $OPENSSLCNF # For broken clients like IE
 I=$(($I + 1))
+
+# User-defined CN (if we have any)
+[ "$LANCN" != "" ] && {
+	for CN in $LANCN; do
+		echo "DNS.$I = $CN" >> $OPENSSLCNF
+		I=$(($I + 1))
+	done
+}
 
 # hostnames
-echo "DNS.$I = $LANHOSTNAME" >> openssl.config
-I=$(($I + 1))
+[ "$LANHOSTNAME" != "" ] && {
+	echo "DNS.$I = $LANHOSTNAME" >> $OPENSSLCNF
+	I=$(($I + 1))
+}
 
 # create the key
-openssl genrsa -out key.pem 2048 -config /etc/openssl.config
+openssl genrsa -out $KEYNAME.$PID 2048 -config $OPENSSLCNF
 # create certificate request and sign it
-openssl req -startdate 170101000000Z -enddate 261231235959Z -new -x509 -key key.pem -sha256 -out cert.pem -set_serial $1 -config /etc/openssl.config
+openssl req -startdate 190101000000Z -enddate 281231235959Z -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
 
 # server.pem for WebDav SSL
-cat key.pem cert.pem > server.pem
+cat $KEYNAME.$PID $CERTNAME.$PID > server.pem
 
-rm -f /tmp/cert.csr /tmp/privkey.pem openssl.config
+mv $KEYNAME.$PID $KEYNAME
+mv $CERTNAME.$PID $CERTNAME
+
+chmod 640 $KEYNAME
+chmod 640 $CERTNAME
+
+rm -f /tmp/privkey.pem.$PID $OPENSSLCNF /var/run/gencert.pid
