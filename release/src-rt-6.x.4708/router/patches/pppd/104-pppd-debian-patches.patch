@@ -12,26 +12,6 @@ Add support for the Framed-MTU Radius attribute
 (http://ppp.samba.org/cgi-bin/ppp-bugs/incoming?id=1532)
 ---
 
-diff --git pppd/pppd/auth.c pppd/pppd/auth.c
-index c1774d3..c94a5c4 100644
---- pppd/pppd/auth.c
-+++ pppd/pppd/auth.c
-@@ -558,6 +558,7 @@ void start_link(unit)
-      /* we are called via link_terminated, must be ignored */
-     if (phase == PHASE_DISCONNECT)
- 	return;
-+    status = EXIT_NEGOTIATION_FAILED;
-     new_phase(PHASE_SERIALCONN);
- 
-     hungup = 0;
-@@ -594,7 +595,6 @@ void start_link(unit)
- 	notice("Starting negotiation on %s", ppp_devnam);
-     add_fd(fd_ppp);
- 
--    status = EXIT_NEGOTIATION_FAILED;
-     new_phase(PHASE_ESTABLISH);
- 
-     lcp_lowerup(0);
 diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
 index a90b3c3..b94c5a1 100644
 --- pppd/pppd/lcp.c
@@ -80,7 +60,7 @@ diff --git pppd/pppd/plugins/radius/radius.c pppd/pppd/plugins/radius/radius.c
 index 44d1911..cd85812 100644
 --- pppd/pppd/plugins/radius/radius.c
 +++ pppd/pppd/plugins/radius/radius.c
-@@ -626,6 +626,9 @@ radius_setparams(VALUE_PAIR *vp, char *msg, REQUEST_INFO *req_info,
+@@ -651,6 +651,9 @@ radius_setparams(VALUE_PAIR *vp, char *msg, REQUEST_INFO *req_info,
  		    memcpy(rstate.class, vp->strvalue, rstate.class_len);
  		} /* else too big for our buffer - ignore it */
  		break;
@@ -94,7 +74,7 @@ diff --git pppd/pppd/pppd.8 pppd/pppd/pppd.8
 index ce7de25..6be85fc 100644
 --- pppd/pppd/pppd.8
 +++ pppd/pppd/pppd.8
-@@ -560,6 +560,11 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the
+@@ -562,6 +562,11 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the
  dynamic IP address option (i.e. set /proc/sys/net/ipv4/ip_dynaddr to
  1) in demand mode if the local address changes.
  .TP

@@ -54,7 +54,7 @@ index 0b88c27..7aeb9cb 100644
  /*
   * Fetch the expect and reply string.
   */
-@@ -1177,6 +1183,12 @@ register char *s;
+@@ -1178,6 +1184,12 @@ register char *s;
  
  	return;
      }
@@ -67,7 +67,7 @@ index 0b88c27..7aeb9cb 100644
  
      /*
       * The syntax @filename means read the string to send from the
-@@ -1233,7 +1245,7 @@ int get_char()
+@@ -1234,7 +1246,7 @@ int get_char()
  
      switch (status) {
      case 1:
@@ -76,7 +76,7 @@ index 0b88c27..7aeb9cb 100644
  
      default:
  	msgf("warning: read() on stdin returned %d", status);
-@@ -1430,7 +1442,9 @@ register char *string;
+@@ -1431,7 +1443,9 @@ register char *string;
  	}
  
  	if (Verbose) {
@@ -87,7 +87,7 @@ index 0b88c27..7aeb9cb 100644
  	       fputc( '\n', stderr );
  	   else if (c != '\r')
  	       fprintf( stderr, "%s", character(c) );
-@@ -1476,6 +1490,10 @@ register char *string;
+@@ -1477,6 +1491,10 @@ register char *string;
  
  	    alarm(0);
  	    alarmed = 0;
@@ -209,11 +209,11 @@ index df12da0..08d5355 100644
 -HAS_SHADOW=y
 +#HAS_SHADOW=y
  #USE_PAM=y
- #HAVE_INET6=y
+ HAVE_INET6=y
  
-@@ -73,13 +73,13 @@ PLUGIN=y
- # Enable EAP SRP-SHA1 authentication (requires libsrp)
- #USE_SRP=y
+@@ -76,13 +76,13 @@ PLUGIN=y
+ # Use libutil
+ USE_LIBUTIL=y
  
 -MAXOCTETS=y
 +#MAXOCTETS=y
@@ -228,7 +228,7 @@ index df12da0..08d5355 100644
  
  ifdef CHAPMS
  CFLAGS   += -DCHAPMS=1
-@@ -117,10 +117,10 @@ CFLAGS   += -DHAS_SHADOW
+@@ -120,10 +120,10 @@ CFLAGS   += -DHAS_SHADOW
  #LIBS     += -lshadow $(LIBS)
  endif
  
@@ -239,23 +239,23 @@ index df12da0..08d5355 100644
 -endif
 +#endif
  
- ifdef NEEDDES
- ifndef USE_CRYPT
+ ifdef USE_LIBUTIL
+ CFLAGS	+= -DHAVE_LOGWTMP=1
 diff --git pppd/pppd/auth.c pppd/pppd/auth.c
 index fb71944..c1774d3 100644
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
-@@ -555,6 +555,9 @@ void start_link(unit)
+@@ -553,6 +553,9 @@ void start_link(unit)
+ void start_link(unit)
+     int unit;
  {
-     char *msg;
- 
 +     /* we are called via link_terminated, must be ignored */
 +    if (phase == PHASE_DISCONNECT)
 +	return;
+     status = EXIT_CONNECT_FAILED;
      new_phase(PHASE_SERIALCONN);
  
-     hungup = 0;
-@@ -665,6 +668,7 @@ link_terminated(unit)
+@@ -662,6 +665,7 @@ link_terminated(unit)
  	the_channel->disconnect();
  	devfd = -1;
      }
@@ -263,7 +263,7 @@ index fb71944..c1774d3 100644
      if (the_channel->cleanup)
  	(*the_channel->cleanup)();
  
-@@ -1189,6 +1193,10 @@ check_idle(arg)
+@@ -1188,6 +1192,10 @@ check_idle(arg)
      if (idle_time_hook != 0) {
  	tlim = idle_time_hook(&idle);
      } else {
@@ -274,7 +274,7 @@ index fb71944..c1774d3 100644
  	itime = MIN(idle.xmit_idle, idle.recv_idle);
  	tlim = idle_time_limit - itime;
      }
-@@ -2354,7 +2362,8 @@ auth_script(script)
+@@ -2355,7 +2363,8 @@ auth_script(script)
      argv[3] = user_name;
      argv[4] = devnam;
      argv[5] = strspeed;
@@ -1606,7 +1606,7 @@ diff --git pppd/pppd/chap_ms.c pppd/pppd/chap_ms.c
 index aec1226..f1cae5a 100644
 --- pppd/pppd/chap_ms.c
 +++ pppd/pppd/chap_ms.c
-@@ -898,13 +898,17 @@ set_mppe_enc_types(int policy, int types)
+@@ -963,13 +963,17 @@ set_mppe_enc_types(int policy, int types)
      /*
       * Disable undesirable encryption types.  Note that we don't ENABLE
       * any encryption types, to avoid overriding manual configuration.
@@ -1795,7 +1795,7 @@ diff --git pppd/pppd/ipcp.c pppd/pppd/ipcp.c
 index 12bcc61..0de3e45 100644
 --- pppd/pppd/ipcp.c
 +++ pppd/pppd/ipcp.c
-@@ -1864,7 +1864,7 @@ ipcp_up(f)
+@@ -1883,7 +1883,7 @@ ipcp_up(f)
  		    proxy_arp_set[f->unit] = 1;
  
  	}
@@ -1804,7 +1804,7 @@ index 12bcc61..0de3e45 100644
  	sifnpmode(f->unit, PPP_IP, NPMODE_PASS);
  
      } else {
-@@ -1939,7 +1939,7 @@ ipcp_up(f)
+@@ -1958,7 +1958,7 @@ ipcp_up(f)
       */
      if (ipcp_script_state == s_down && ipcp_script_pid == 0) {
  	ipcp_script_state = s_up;
@@ -1813,7 +1813,7 @@ index 12bcc61..0de3e45 100644
      }
  }
  
-@@ -1989,7 +1989,7 @@ ipcp_down(f)
+@@ -2008,7 +2008,7 @@ ipcp_down(f)
      /* Execute the ip-down script */
      if (ipcp_script_state == s_up && ipcp_script_pid == 0) {
  	ipcp_script_state = s_down;
@@ -1822,7 +1822,7 @@ index 12bcc61..0de3e45 100644
      }
  }
  
-@@ -2043,13 +2043,13 @@ ipcp_script_done(arg)
+@@ -2062,13 +2062,13 @@ ipcp_script_done(arg)
      case s_up:
  	if (ipcp_fsm[0].state != OPENED) {
  	    ipcp_script_state = s_down;
@@ -1842,15 +1842,7 @@ diff --git pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
 index 4a09c9a..b05fe51 100644
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
-@@ -151,6 +151,7 @@
-  */
- 
- #include <stdio.h>
-+#include <stdlib.h>
- #include <string.h>
- #include <unistd.h>
- #include <netdb.h>
-@@ -234,6 +235,8 @@ static option_t ipv6cp_option_list[] = {
+@@ -245,6 +245,8 @@ static option_t ipv6cp_option_list[] = {
  
      { "ipv6cp-accept-local", o_bool, &ipv6cp_allowoptions[0].accept_local,
        "Accept peer's interface identifier for us", 1 },
@@ -1859,7 +1851,7 @@ index 4a09c9a..b05fe51 100644
  
      { "ipv6cp-use-ipaddr", o_bool, &ipv6cp_allowoptions[0].use_ip,
        "Use (default) IPv4 address as interface identifier", 1 },
-@@ -426,6 +429,7 @@ ipv6cp_init(unit)
+@@ -437,6 +439,7 @@ ipv6cp_init(unit)
      memset(ao, 0, sizeof(*ao));
  
      wo->accept_local = 1;
@@ -1867,7 +1859,7 @@ index 4a09c9a..b05fe51 100644
      wo->neg_ifaceid = 1;
      ao->neg_ifaceid = 1;
  
-@@ -951,7 +955,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
+@@ -962,7 +965,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
  		orc = CONFREJ;		/* Reject CI */
  		break;
  	    }
@@ -1876,7 +1868,7 @@ index 4a09c9a..b05fe51 100644
  		!eui64_equals(ifaceid, wo->hisid) && 
  		eui64_iszero(go->hisid)) {
  		    
-@@ -1064,7 +1068,9 @@ endswitch:
+@@ -1075,7 +1078,9 @@ endswitch:
      return (rc);			/* Return final code */
  }
  
@@ -1887,7 +1879,7 @@ index 4a09c9a..b05fe51 100644
  /*
   * ipv6_check_options - check that any IP-related options are OK,
   * and assign appropriate defaults.
-@@ -1232,7 +1238,7 @@ ipv6cp_up(f)
+@@ -1243,7 +1248,7 @@ ipv6cp_up(f)
  	    }
  
  	}
@@ -1929,13 +1921,13 @@ index 5c77490..980bbb7 100644
  {
      fsm *f = &lcp_fsm[unit];
 +    int statusindex = 0;/* JYWeng 20031216: add to wanstatus.log */
+     int oldstate;
  
      if (phase != PHASE_DEAD && phase != PHASE_MASTER)
- 	new_phase(PHASE_TERMINATE);
-@@ -412,6 +416,16 @@ lcp_close(unit, reason)
+@@ -409,6 +413,16 @@ lcp_close(unit, reason)
+     oldstate = f->state;
  
-     } else
- 	fsm_close(f, reason);
+     fsm_close(f, reason);
 +/* JYWeng 20031216: add to wanstatus.log */
 +    if(strstr(reason, "Link inactive")) {
 +	    statusindex = 1;
@@ -1946,10 +1938,10 @@ index 5c77490..980bbb7 100644
 +	    saveWANStatus(reason, statusindex);
 +    }
 +/* JYWeng 20031216: add to wanstatus.log */
- }
- 
- 
-@@ -1904,12 +1918,12 @@ lcp_up(f)
+     if (oldstate == STOPPED && f->flags & (OPT_PASSIVE|OPT_SILENT|DELAYED_UP)) {
+ 	/*
+ 	 * This action is not strictly according to the FSM in RFC1548,
+@@ -1914,12 +1928,12 @@ lcp_up(f)
       * the interface MTU is set to the lowest of that, the
       * MTU we want to use, and our link MRU.
       */
@@ -2057,7 +2049,7 @@ index 014d614..0f56a21 100644
  
      gettimeofday(&timenow, NULL);
      tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
-@@ -1633,7 +1673,7 @@ device_script(program, in, out, dont_wait)
+@@ -1679,7 +1719,7 @@ device_script(program, in, out, dont_wait)
      if (log_to_fd >= 0)
  	errfd = log_to_fd;
      else
@@ -2066,21 +2058,6 @@ index 014d614..0f56a21 100644
  
      ++conn_running;
      pid = safe_fork(in, out, errfd);
-@@ -1957,9 +1997,11 @@ script_setenv(var, value, iskey)
- 		free(p-1);
- 		script_env[i] = newstring;
- #ifdef USE_TDB
--		if (iskey && pppdb != NULL)
--		    add_db_key(newstring);
--		update_db_entry();
-+		if (pppdb != NULL) {
-+		    if (iskey)
-+			add_db_key(newstring);
-+		    update_db_entry();
-+		}
- #endif
- 		return;
- 	    }
 diff --git pppd/pppd/options.c pppd/pppd/options.c
 index 482eab9..80f7bc6 100644
 --- pppd/pppd/options.c
@@ -2093,7 +2070,7 @@ index 482eab9..80f7bc6 100644
  
  static const char rcsid[] = RCSID;
  
-@@ -113,6 +114,9 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
+@@ -114,6 +115,9 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
  bool	tune_kernel;		/* may alter kernel settings */
  int	connect_delay = 1000;	/* wait this many ms after connect script */
  int	req_unit = -1;		/* requested interface unit */
@@ -2103,7 +2080,7 @@ index 482eab9..80f7bc6 100644
  bool	multilink = 0;		/* Enable multilink operation */
  char	*bundle_name = NULL;	/* bundle name for multilink */
  bool	dump_options;		/* print out option values */
-@@ -271,6 +275,9 @@ option_t general_options[] = {
+@@ -282,6 +286,9 @@ option_t general_options[] = {
      { "unit", o_int, &req_unit,
        "PPP interface unit number to use if possible",
        OPT_PRIO | OPT_LLIMIT, 0, 0 },
@@ -2113,7 +2090,7 @@ index 482eab9..80f7bc6 100644
  
      { "dump", o_bool, &dump_options,
        "Print out option values after parsing all options", 1 },
-@@ -281,6 +288,13 @@ option_t general_options[] = {
+@@ -292,6 +299,13 @@ option_t general_options[] = {
        "Number of seconds to wait for child processes at exit",
        OPT_PRIO },
  
@@ -2124,10 +2101,10 @@ index 482eab9..80f7bc6 100644
 +      "Set pathname of ip-down script",
 +      OPT_PRIV|OPT_STATIC, NULL, MAXPATHLEN },
 +
- #ifdef HAVE_MULTILINK
-     { "multilink", o_bool, &multilink,
-       "Enable multilink operation", OPT_PRIO | 1 },
-@@ -321,6 +335,10 @@ option_t general_options[] = {
+     { "set", o_special, (void *)user_setenv,
+       "Set user environment variable",
+       OPT_A2PRINTER | OPT_NOPRINT, (void *)user_setprint },
+@@ -339,6 +353,10 @@ option_t general_options[] = {
        "Check for traffic limit every N seconds", OPT_PRIO | OPT_LLIMIT | 1 },
  #endif
  
@@ -2365,7 +2342,7 @@ diff --git pppd/pppd/plugins/rp-pppoe/discovery.c pppd/pppd/plugins/rp-pppoe/dis
 index 6e25ae7..b2ba08a 100644
 --- pppd/pppd/plugins/rp-pppoe/discovery.c
 +++ pppd/pppd/plugins/rp-pppoe/discovery.c
-@@ -22,6 +22,7 @@ static char const RCSID[] =
+@@ -24,6 +24,7 @@ static char const RCSID[] =
  #ifdef HAVE_SYS_TIME_H
  #include <sys/time.h>
  #endif
@@ -2373,63 +2350,7 @@ index 6e25ae7..b2ba08a 100644
  
  #ifdef HAVE_SYS_UIO_H
  #include <sys/uio.h>
-@@ -280,6 +281,9 @@ waitForPADO(PPPoEConnection *conn, int timeout)
-     fd_set readable;
-     int r;
-     struct timeval tv;
-+    struct timeval expire_at;
-+    struct timeval now;
-+
-     PPPoEPacket packet;
-     int len;
- 
-@@ -291,10 +295,31 @@ waitForPADO(PPPoEConnection *conn, int timeout)
-     pc.seenServiceName = 0;
-     conn->error = 0;
- 
-+    if (gettimeofday(&expire_at, NULL) < 0) {
-+	fatalSys("gettimeofday (waitForPADO)");
-+    }
-+    expire_at.tv_sec += timeout;
-+
-     do {
- 	if (BPF_BUFFER_IS_EMPTY) {
--	    tv.tv_sec = timeout;
--	    tv.tv_usec = 0;
-+	    if (gettimeofday(&now, NULL) < 0) {
-+		fatalSys("gettimeofday (waitForPADO)");
-+	    }
-+	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
-+	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
-+	    if (tv.tv_usec < 0) {
-+		tv.tv_usec += 1000000;
-+		if (tv.tv_sec) {
-+		    tv.tv_sec--;
-+		} else {
-+		    /* Timed out */
-+		    return;
-+		}
-+	    }
-+	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
-+		/* Timed out */
-+		return;
-+	    }
- 
- 	    FD_ZERO(&readable);
- 	    FD_SET(conn->discoverySocket, &readable);
-@@ -307,7 +332,10 @@ waitForPADO(PPPoEConnection *conn, int timeout)
- 		error("select (waitForPADO): %m");
- 		return;
- 	    }
--	    if (r == 0) return;        /* Timed out */
-+	    if (r == 0) {
-+		/* Timed out */
-+		return;
-+	    }
- 	}
- 
- 	/* Get the packet */
-@@ -329,8 +357,8 @@ waitForPADO(PPPoEConnection *conn, int timeout)
+@@ -406,8 +407,8 @@ waitForPADO(PPPoEConnection *conn, int timeout)
  	if (!packetIsForMe(conn, &packet)) continue;
  
  	if (packet.code == CODE_PADO) {
@@ -2440,71 +2361,11 @@ index 6e25ae7..b2ba08a 100644
  		continue;
  	    }
  	    if (conn->req_peer
-@@ -450,14 +478,38 @@ waitForPADS(PPPoEConnection *conn, int timeout)
-     fd_set readable;
-     int r;
-     struct timeval tv;
-+    struct timeval expire_at;
-+    struct timeval now;
-+
-     PPPoEPacket packet;
-     int len;
- 
-+    if (gettimeofday(&expire_at, NULL) < 0) {
-+	fatalSys("gettimeofday (waitForPADS)");
-+    }
-+    expire_at.tv_sec += timeout;
-+
-     conn->error = 0;
-     do {
- 	if (BPF_BUFFER_IS_EMPTY) {
--	    tv.tv_sec = timeout;
--	    tv.tv_usec = 0;
-+	    if (gettimeofday(&now, NULL) < 0) {
-+		fatalSys("gettimeofday (waitForPADS)");
-+	    }
-+	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
-+	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
-+	    if (tv.tv_usec < 0) {
-+		tv.tv_usec += 1000000;
-+		if (tv.tv_sec) {
-+		    tv.tv_sec--;
-+		} else {
-+		    /* Timed out */
-+		    return;
-+		}
-+	    }
-+	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
-+		/* Timed out */
-+		return;
-+	    }
- 
- 	    FD_ZERO(&readable);
- 	    FD_SET(conn->discoverySocket, &readable);
-@@ -470,7 +522,10 @@ waitForPADS(PPPoEConnection *conn, int timeout)
- 		error("select (waitForPADS): %m");
- 		return;
- 	    }
--	    if (r == 0) return;
-+	    if (r == 0) {
-+		/* Timed out */
-+		return;
-+	    }
- 	}
- 
- 	/* Get the packet */
 diff --git pppd/pppd/plugins/rp-pppoe/plugin.c pppd/pppd/plugins/rp-pppoe/plugin.c
 index e94494b..bb99a1a 100644
 --- pppd/pppd/plugins/rp-pppoe/plugin.c
 +++ pppd/pppd/plugins/rp-pppoe/plugin.c
-@@ -49,14 +49,13 @@ static char const RCSID[] =
- #include <net/ethernet.h>
- #include <net/if_arp.h>
- #include <linux/ppp_defs.h>
--#include <linux/if_ppp.h>
- #include <linux/if_pppox.h>
- 
- #ifndef _ROOT_PATH
+@@ -55,7 +55,7 @@ static char const RCSID[] =
  #define _ROOT_PATH ""
  #endif
  
@@ -2513,58 +2374,14 @@ index e94494b..bb99a1a 100644
  
  char pppd_version[] = VERSION;
  
-@@ -133,6 +132,17 @@ PPPOEConnectDevice(void)
- {
-     struct sockaddr_pppox sp;
- 
-+    /* Open session socket before discovery phase, to avoid losing session */
-+    /* packets sent by peer just after PADS packet (noted on some Cisco    */
-+    /* server equipment).                                                  */
-+    /* Opening this socket just before waitForPADS in the discovery()      */
-+    /* function would be more appropriate, but it would mess-up the code   */
-+    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
-+    if (conn->sessionSocket < 0) {
-+	error("Failed to create PPPoE socket: %m");
-+	return -1;
-+    }
-+
-     strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
-     if (existingSession) {
- 	unsigned int mac[ETH_ALEN];
-@@ -147,6 +157,8 @@ PPPOEConnectDevice(void)
- 	    conn->peerEth[i] = (unsigned char) mac[i];
- 	}
-     } else {
-+        conn->discoverySocket =
-+            openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
- 	discovery(conn);
- 	if (conn->discoveryState != STATE_SESSION) {
- 	    error("Unable to complete PPPoE Discovery");
-@@ -157,12 +169,6 @@ PPPOEConnectDevice(void)
-     /* Set PPPoE session-number for further consumption */
-     ppp_session_number = ntohs(conn->session);
- 
--    /* Make the session socket */
--    conn->sessionSocket = socket(AF_PPPOX, SOCK_STREAM, PX_PROTO_OE);
--    if (conn->sessionSocket < 0) {
--	error("Failed to create PPPoE socket: %m");
--	goto errout;
--    }
-     sp.sa_family = AF_PPPOX;
-     sp.sa_protocol = PX_PROTO_OE;
-     sp.sa_addr.pppoe.sid = conn->session;
 diff --git pppd/pppd/pppd.8 pppd/pppd/pppd.8
 index 8ea8200..c148652 100644
 --- pppd/pppd/pppd.8
 +++ pppd/pppd/pppd.8
-@@ -449,6 +449,14 @@ scripts.  If this
- option is given, the \fIstring\fR supplied is given as the 6th
- parameter to those scripts.
+@@ -458,6 +458,10 @@ scripts.  If this
+ interface identifier, even if the local IPv6 interface identifier
+ was specified in an option.
  .TP
-+.B ipv6cp\-accept\-local
-+With this option, pppd will accept the peer's idea of our local IPv6
-+address, even if the local IPv6 address was specified in an option.
-+.TP
 +.B ipv6cp\-accept\-remote
 +With this option, pppd will accept the peer's idea of its (remote) IPv6
 +address, even if the remote IPv6 address was specified in an option.
@@ -2572,7 +2389,7 @@ index 8ea8200..c148652 100644
  .B ipv6cp\-max\-configure \fIn
  Set the maximum number of IPv6CP configure-request transmissions to
  \fIn\fR (default 10).
-@@ -638,6 +646,9 @@ control, as for the \fIcrtscts\fR option.  This is the opposite of the
+@@ -655,6 +659,9 @@ control, as for the \fIcrtscts\fR option.  This is the opposite of the
  Enables the use of PPP multilink; this is an alias for the `multilink'
  option.  This option is currently only available under Linux.
  .TP
@@ -2582,7 +2399,7 @@ index 8ea8200..c148652 100644
  .B mppe\-stateful
  Allow MPPE to use stateful mode.  Stateless mode is still attempted first.
  The default is to disallow stateful mode.  
-@@ -778,12 +789,18 @@ peer is buggy.
+@@ -795,12 +802,18 @@ peer is buggy.
  Disables the use of PPP multilink.  This option is currently only
  available under Linux.
  .TP
@@ -2601,7 +2418,7 @@ index 8ea8200..c148652 100644
  .B nomppe\-128
  Disable 128-bit encryption with MPPE.
  .TP
-@@ -991,6 +1008,9 @@ kernel has been configured to include MPPE support.
+@@ -1009,6 +1022,9 @@ kernel has been configured to include MPPE support.
  .B require\-mppe\-40
  Require the use of MPPE, with 40-bit encryption.
  .TP
@@ -2611,7 +2428,7 @@ index 8ea8200..c148652 100644
  .B require\-mppe\-128
  Require the use of MPPE, with 128-bit encryption.
  .TP
-@@ -1050,6 +1070,12 @@ under Linux and FreeBSD 2.2.8 and later.
+@@ -1075,6 +1098,12 @@ under Linux and FreeBSD 2.2.8 and later.
  Sets the ppp unit number (for a ppp0 or ppp1 etc interface name) for outbound
  connections.
  .TP
@@ -2621,9 +2438,9 @@ index 8ea8200..c148652 100644
 +.B minunit \fInum
 +PPP interface minimal unit number. Such as unit, but always select bigger interface
 +.TP
- .B updetach
- With this option, pppd will detach from its controlling terminal once
- it has successfully established the ppp connection (to the point where
+ .B unset \fIname
+ Remove a variable from the environment variable for scripts that are
+ invoked by pppd.  When specified by a privileged source, the variable
 diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
 index cf9840a..5236f4e 100644
 --- pppd/pppd/pppd.h
@@ -2636,7 +2453,7 @@ index cf9840a..5236f4e 100644
  
  /*
   * Option descriptor structure.
-@@ -209,6 +210,7 @@ struct notifier {
+@@ -210,6 +211,7 @@ struct notifier {
  /*
   * Global variables.
   */
@@ -2644,7 +2461,7 @@ index cf9840a..5236f4e 100644
  
  extern int	hungup;		/* Physical layer has disconnected */
  extern int	ifunit;		/* Interface unit number */
-@@ -313,6 +315,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
+@@ -317,6 +319,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
  extern int	connect_delay;	/* Time to delay after connect script */
  extern int	max_data_rate;	/* max bytes/sec through charshunt */
  extern int	req_unit;	/* interface unit number to use */
@@ -2654,7 +2471,7 @@ index cf9840a..5236f4e 100644
  extern bool	multilink;	/* enable multilink operation */
  extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
  extern char	*bundle_name;	/* bundle name for multilink */
-@@ -564,7 +569,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
+@@ -582,7 +587,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
  void demand_block __P((void));	/* set all NPs to queue up packets */
  void demand_unblock __P((void)); /* set all NPs to pass packets */
  void demand_discard __P((void)); /* set all NPs to discard packets */
@@ -2812,7 +2629,7 @@ diff --git pppd/pppd/utils.c pppd/pppd/utils.c
 index 062b17e..2e038bc 100644
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
-@@ -1052,3 +1052,23 @@ unlock()
+@@ -1039,3 +1039,23 @@ unlock()
      }
  }
  
@@ -2836,87 +2653,6 @@ index 062b17e..2e038bc 100644
 +	}
 +#endif
 +}
-diff --git pppd/pppdump/bsd-comp.c pppd/pppdump/bsd-comp.c
-index 1413326..4c504a4 100644
---- pppd/pppdump/bsd-comp.c
-+++ pppd/pppdump/bsd-comp.c
-@@ -383,7 +383,7 @@ bsd_init(db, options, opt_len, unit, hdrlen, mru, debug, decomp)
- 	|| options[0] != CI_BSD_COMPRESS || options[1] != CILEN_BSD_COMPRESS
- 	|| BSD_VERSION(options[2]) != BSD_CURRENT_VERSION
- 	|| BSD_NBITS(options[2]) != db->maxbits
--	|| decomp && db->lens == NULL)
-+	|| (decomp && db->lens == NULL))
- 	return 0;
- 
-     if (decomp) {
-@@ -556,11 +556,11 @@ bsd_decompress(state, cmsg, inlen, dmp, outlenp)
-     u_int n_bits = db->n_bits;
-     u_int tgtbitno = 32-n_bits;	/* bitno when we have a code */
-     struct bsd_dict *dictp;
--    int explen, i, seq, len;
-+    int explen, seq, len;
-     u_int incode, oldcode, finchar;
-     u_char *p, *rptr, *wptr;
-     int ilen;
--    int dlen, space, codelen, extra;
-+    int dlen=0, codelen, extra;
- 
-     rptr = cmsg;
-     if (*rptr == 0)
-@@ -616,7 +616,7 @@ bsd_decompress(state, cmsg, inlen, dmp, outlenp)
- 	}
- 
- 	if (incode > max_ent + 2 || incode > db->maxmaxcode
--	    || incode > max_ent && oldcode == CLEAR) {
-+	    || (incode > max_ent && oldcode == CLEAR)) {
- 	    if (db->debug) {
- 		printf("bsd_decomp%d: bad code 0x%x oldcode=0x%x ",
- 		       db->unit, incode, oldcode);
-diff --git pppd/pppdump/deflate.c pppd/pppdump/deflate.c
-index 0136966..43c9c51 100644
---- pppd/pppdump/deflate.c
-+++ pppd/pppdump/deflate.c
-@@ -237,8 +237,8 @@ z_decompress(arg, mi, inlen, mo, outlenp)
- {
-     struct deflate_state *state = (struct deflate_state *) arg;
-     u_char *rptr, *wptr;
--    int rlen, olen, ospace;
--    int seq, i, flush, r, decode_proto;
-+    int rlen, olen;
-+    int seq, r;
- 
-     rptr = mi;
-     if (*rptr == 0)
-diff --git pppd/pppdump/pppdump.c pppd/pppdump/pppdump.c
-index 95e692c..901a937 100644
---- pppd/pppdump/pppdump.c
-+++ pppd/pppdump/pppdump.c
-@@ -34,6 +34,7 @@
-  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-  */
- #include <stdio.h>
-+#include <stdlib.h>
- #include <unistd.h>
- #include <stdlib.h>
- #include <time.h>
-@@ -191,7 +192,7 @@ dumplog(f)
- 	    show_time(f, c);
- 	    break;
- 	default:
--	    printf("?%.2x\n");
-+	    printf("?%.2x\n", c);
- 	}
-     }
- }
-@@ -421,7 +422,7 @@ dumpppp(f)
- 	    show_time(f, c);
- 	    break;
- 	default:
--	    printf("?%.2x\n");
-+	    printf("?%.2x\n", c);
- 	}
-     }
- }
 -- 
 2.10.5
 

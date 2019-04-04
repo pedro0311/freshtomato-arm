@@ -62,7 +62,7 @@ USE_TDB=y
 
 HAS_SHADOW=y
 #USE_PAM=y
-#HAVE_INET6=y
+HAVE_INET6=y
 
 # Enable plugins
 PLUGIN=y
@@ -72,6 +72,9 @@ PLUGIN=y
 
 # Enable EAP SRP-SHA1 authentication (requires libsrp)
 #USE_SRP=y
+
+# Use libutil
+USE_LIBUTIL=y
 
 MAXOCTETS=y
 
@@ -120,6 +123,11 @@ endif
 ifneq ($(wildcard /usr/include/crypt.h),)
 CFLAGS  += -DHAVE_CRYPT_H=1
 LIBS	+= -lcrypt
+endif
+
+ifdef USE_LIBUTIL
+CFLAGS	+= -DHAVE_LOGWTMP=1
+LIBS	+= -lutil
 endif
 
 ifdef NEEDDES
