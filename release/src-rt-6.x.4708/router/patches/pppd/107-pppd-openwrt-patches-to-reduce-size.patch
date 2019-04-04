@@ -160,7 +160,7 @@ diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
 index 5236f4e..9fbbc63 100644
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -311,7 +311,6 @@ extern int	holdoff;	/* Dead time before restarting */
+@@ -312,7 +312,6 @@ extern int	holdoff;	/* Dead time before restarting */
  extern bool	holdoff_specified; /* true if user gave a holdoff value */
  extern bool	notty;		/* Stdin/out is not a tty */
  extern char	*pty_socket;	/* Socket to connect to pty */
@@ -172,7 +172,7 @@ diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
 index d1163e8..1c7bad3 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
-@@ -2167,6 +2167,7 @@ int ppp_available(void)
+@@ -2175,6 +2175,7 @@ int ppp_available(void)
  
  void logwtmp (const char *line, const char *name, const char *host)
  {
@@ -180,7 +180,7 @@ index d1163e8..1c7bad3 100644
      struct utmp ut, *utp;
      pid_t  mypid = getpid();
  #if __GLIBC__ < 2
-@@ -2232,6 +2233,7 @@ void logwtmp (const char *line, const char *name, const char *host)
+@@ -2240,6 +2241,7 @@ void logwtmp (const char *line, const char *name, const char *host)
  	close (wtmp);
      }
  #endif
@@ -192,7 +192,7 @@ diff --git pppd/pppd/tty.c pppd/pppd/tty.c
 index d571b11..58bbc44 100644
 --- pppd/pppd/tty.c
 +++ pppd/pppd/tty.c
-@@ -145,7 +145,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
+@@ -146,7 +146,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
  char	*welcomer = NULL;	/* Script to run after phys link estab. */
  char	*ptycommand = NULL;	/* Command to run on other side of pty */
  bool	notty = 0;		/* Stdin/out is not a tty */
@@ -201,7 +201,7 @@ index d571b11..58bbc44 100644
  int	max_data_rate;		/* max bytes/sec through charshunt */
  bool	sync_serial = 0;	/* Device is synchronous serial device */
  char	*pty_socket = NULL;	/* Socket to connect to pty */
-@@ -201,9 +201,6 @@ option_t tty_options[] = {
+@@ -202,9 +202,6 @@ option_t tty_options[] = {
        "Send and receive over socket, arg is host:port",
        OPT_PRIO | OPT_DEVNAM },
  
@@ -211,7 +211,7 @@ index d571b11..58bbc44 100644
      { "crtscts", o_int, &crtscts,
        "Set hardware (RTS/CTS) flow control",
        OPT_PRIO | OPT_NOARG | OPT_VAL(1) },
-@@ -623,28 +620,8 @@ int connect_tty()
+@@ -627,28 +624,8 @@ int connect_tty()
  	 */
  	status = EXIT_PTYCMD_FAILED;
  	if (ptycommand != NULL) {
@@ -240,7 +240,7 @@ index d571b11..58bbc44 100644
  	} else if (pty_socket != NULL) {
  		int fd = open_socket(pty_socket);
  		if (fd < 0)
-@@ -661,10 +638,6 @@ int connect_tty()
+@@ -665,10 +642,6 @@ int connect_tty()
  			log_to_fd = -1;
  		if (log_to_fd != 2)
  			dup2(fd_devnull, 2);
@@ -251,7 +251,7 @@ index d571b11..58bbc44 100644
  	}
  
  	if (using_pty || record_file != NULL) {
-@@ -1038,15 +1011,6 @@ charshunt(ifd, ofd, record_file)
+@@ -1042,15 +1015,6 @@ charshunt(ifd, ofd, record_file)
  	fatal("internal error: file descriptor too large (%d, %d, %d)",
  	      ifd, ofd, pty_master);
  

@@ -83,7 +83,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
  
  /* local vars */
  static int ipv6cp_is_up;
-@@ -265,6 +267,13 @@ static option_t ipv6cp_option_list[] = {
+@@ -263,6 +265,13 @@ static option_t ipv6cp_option_list[] = {
      { "ipv6cp-max-failure", o_int, &ipv6cp_fsm[0].maxnakloops,
        "Set max #conf-naks for IPv6CP", OPT_PRIO },
  
@@ -97,7 +97,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
     { NULL }
  };
  
-@@ -1308,7 +1317,7 @@ ipv6cp_up(f)
+@@ -1274,7 +1283,7 @@ ipv6cp_up(f)
       */
      if (ipv6cp_script_state == s_down && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_up;
@@ -106,7 +106,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
      }
  }
  
-@@ -1362,7 +1371,7 @@ ipv6cp_down(f)
+@@ -1326,7 +1335,7 @@ ipv6cp_down(f)
      /* Execute the ipv6-down script */
      if (ipv6cp_script_state == s_up && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_down;
@@ -115,7 +115,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
      }
  }
  
-@@ -1405,13 +1414,13 @@ ipv6cp_script_done(arg)
+@@ -1369,13 +1378,13 @@ ipv6cp_script_done(arg)
      case s_up:
  	if (ipv6cp_fsm[0].state != OPENED) {
  	    ipv6cp_script_state = s_down;
@@ -134,7 +134,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
 diff -daurpN pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
 --- pppd/pppd/ipv6cp.h
 +++ pppd/pppd/ipv6cp.h
-@@ -170,3 +170,6 @@ extern ipv6cp_options ipv6cp_allowoption
+@@ -168,3 +168,6 @@ extern ipv6cp_options ipv6cp_allowoption
  extern ipv6cp_options ipv6cp_hisoptions[];
  
  extern struct protent ipv6cp_protent;
@@ -205,7 +205,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern int	debug;		/* Debug flag */
  extern int	kdebugflag;	/* Tell kernel to print debug messages */
  extern int	default_device;	/* Using /dev/tty or equivalent */
-@@ -305,6 +306,7 @@ extern char	remote_name[MAXNAMELEN]; /*
+@@ -306,6 +307,7 @@ extern char	remote_name[MAXNAMELEN]; /*
  extern bool	explicit_remote;/* remote_name specified with remotename opt */
  extern bool	demand;		/* Do dial-on-demand */
  extern char	*ipparam;	/* Extra parameter for ip up/down scripts */
@@ -213,7 +213,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern bool	cryptpap;	/* Others' PAP passwords are encrypted */
  extern int	idle_time_limit;/* Shut down link if idle for this long */
  extern int	holdoff;	/* Dead time before restarting */
-@@ -327,6 +329,9 @@ extern char	*bundle_name;	/* bundle name
+@@ -328,6 +330,9 @@ extern char	*bundle_name;	/* bundle name
  extern bool	dump_options;	/* print out option values */
  extern bool	dryrun;		/* check everything, print options, exit */
  extern int	child_wait;	/* # seconds to wait for children at end */

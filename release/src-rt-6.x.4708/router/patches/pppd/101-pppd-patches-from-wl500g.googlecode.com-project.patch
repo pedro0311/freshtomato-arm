@@ -1851,7 +1851,7 @@ index 4a09c9a..b05fe51 100644
  
      { "ipv6cp-use-ipaddr", o_bool, &ipv6cp_allowoptions[0].use_ip,
        "Use (default) IPv4 address as interface identifier", 1 },
-@@ -437,6 +439,7 @@ ipv6cp_init(unit)
+@@ -435,6 +437,7 @@ ipv6cp_init(unit)
      memset(ao, 0, sizeof(*ao));
  
      wo->accept_local = 1;
@@ -1859,7 +1859,7 @@ index 4a09c9a..b05fe51 100644
      wo->neg_ifaceid = 1;
      ao->neg_ifaceid = 1;
  
-@@ -962,7 +965,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
+@@ -960,7 +963,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
  		orc = CONFREJ;		/* Reject CI */
  		break;
  	    }
@@ -1868,7 +1868,7 @@ index 4a09c9a..b05fe51 100644
  		!eui64_equals(ifaceid, wo->hisid) && 
  		eui64_iszero(go->hisid)) {
  		    
-@@ -1075,7 +1078,9 @@ endswitch:
+@@ -1073,7 +1076,9 @@ endswitch:
      return (rc);			/* Return final code */
  }
  
@@ -1879,7 +1879,7 @@ index 4a09c9a..b05fe51 100644
  /*
   * ipv6_check_options - check that any IP-related options are OK,
   * and assign appropriate defaults.
-@@ -1243,7 +1248,7 @@ ipv6cp_up(f)
+@@ -1232,7 +1237,7 @@ ipv6cp_up(f)
  	    }
  
  	}
@@ -2223,7 +2223,7 @@ diff --git pppd/pppd/plugins/pppol2tp/pppol2tp.c pppd/pppd/plugins/pppol2tp/pppo
 index a7e3400..e6070dd 100644
 --- pppd/pppd/plugins/pppol2tp/pppol2tp.c
 +++ pppd/pppd/plugins/pppol2tp/pppol2tp.c
-@@ -119,14 +119,8 @@ static option_t pppol2tp_options[] = {
+@@ -117,14 +117,8 @@ static option_t pppol2tp_options[] = {
  
  static int setdevname_pppol2tp(char **argv)
  {
@@ -2240,7 +2240,7 @@ index a7e3400..e6070dd 100644
  
  	if (device_got_set)
  		return 0;
-@@ -134,21 +128,21 @@ static int setdevname_pppol2tp(char **argv)
+@@ -132,21 +126,21 @@ static int setdevname_pppol2tp(char **argv)
  	if (!int_option(*argv, &pppol2tp_fd))
  		return 0;
  
@@ -2267,7 +2267,7 @@ index a7e3400..e6070dd 100644
  
  	/* Setup option defaults. Compression options are disabled! */
  
-@@ -177,10 +171,16 @@ static int setdevname_pppol2tp(char **argv)
+@@ -175,10 +169,16 @@ static int setdevname_pppol2tp(char **argv)
  
  static int connect_pppol2tp(void)
  {
@@ -2284,17 +2284,10 @@ index a7e3400..e6070dd 100644
  	return pppol2tp_fd;
  }
  
-@@ -479,13 +479,13 @@ static void pppol2tp_check_options(void)
+@@ -472,6 +472,13 @@ static void pppol2tp_check_options(void)
+ 		snoop_recv_hook = pppol2tp_lcp_snoop_recv;
  		snoop_send_hook = pppol2tp_lcp_snoop_send;
  	}
- 
--	/* Hook up ip up/down hooks to send indicator to openl2tpd
--	 * that the link is up
--	 */
--	old_ip_up_hook = ip_up_hook;
--	ip_up_hook = pppol2tp_ip_up_hook;
--	old_ip_down_hook = ip_down_hook;
--	ip_down_hook = pppol2tp_ip_down_hook;
 +	/* If pppol2tp_ifname not supplied, use ip_up_hook to discover interface */
 +	if (!pppol2tp_ifname[0]) {
 +		old_ip_up_hook = ip_up_hook;
@@ -2461,7 +2454,7 @@ index cf9840a..5236f4e 100644
  
  extern int	hungup;		/* Physical layer has disconnected */
  extern int	ifunit;		/* Interface unit number */
-@@ -317,6 +319,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
+@@ -318,6 +320,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
  extern int	connect_delay;	/* Time to delay after connect script */
  extern int	max_data_rate;	/* max bytes/sec through charshunt */
  extern int	req_unit;	/* interface unit number to use */
@@ -2471,7 +2464,7 @@ index cf9840a..5236f4e 100644
  extern bool	multilink;	/* enable multilink operation */
  extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
  extern char	*bundle_name;	/* bundle name for multilink */
-@@ -582,7 +587,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
+@@ -583,7 +588,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
  void demand_block __P((void));	/* set all NPs to queue up packets */
  void demand_unblock __P((void)); /* set all NPs to pass packets */
  void demand_discard __P((void)); /* set all NPs to discard packets */
@@ -2589,7 +2582,7 @@ diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
 index b675c97..c0b3961 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
-@@ -453,6 +453,13 @@ int generic_establish_ppp (int fd)
+@@ -458,6 +458,13 @@ int generic_establish_ppp (int fd)
      if (new_style_driver) {
  	int flags;
  
@@ -2603,7 +2596,7 @@ index b675c97..c0b3961 100644
  	/* Open an instance of /dev/ppp and connect the channel to it */
  	if (ioctl(fd, PPPIOCGCHAN, &chindex) == -1) {
  	    error("Couldn't get channel number: %m");
-@@ -627,13 +634,15 @@ static int make_ppp_unit()
+@@ -632,13 +639,15 @@ static int make_ppp_unit()
  	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
  		warn("Couldn't set /dev/ppp to nonblock: %m");
  
