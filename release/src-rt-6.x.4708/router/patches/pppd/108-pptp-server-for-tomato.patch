@@ -35,7 +35,7 @@ diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
  #endif
  
      { "refuse-pap", o_bool, &refuse_pap,
-@@ -1648,7 +1654,7 @@ have_chap_secret(client, server, need_ip
+@@ -1649,7 +1655,7 @@ have_chap_secret(client, server, need_ip
  	}
      }
  
@@ -44,7 +44,7 @@ diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
      f = fopen(filename, "r");
      if (f == NULL)
  	return 0;
-@@ -1743,7 +1749,7 @@ get_secret(unit, client, server, secret,
+@@ -1744,7 +1750,7 @@ get_secret(unit, client, server, secret,
  	    return 0;
  	}
      } else {
@@ -83,7 +83,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
  
  /* local vars */
  static int ipv6cp_is_up;
-@@ -255,6 +257,13 @@ static option_t ipv6cp_option_list[] = {
+@@ -265,6 +267,13 @@ static option_t ipv6cp_option_list[] = {
      { "ipv6cp-max-failure", o_int, &ipv6cp_fsm[0].maxnakloops,
        "Set max #conf-naks for IPv6CP", OPT_PRIO },
  
@@ -97,7 +97,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
     { NULL }
  };
  
-@@ -1294,7 +1303,7 @@ ipv6cp_up(f)
+@@ -1308,7 +1317,7 @@ ipv6cp_up(f)
       */
      if (ipv6cp_script_state == s_down && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_up;
@@ -106,7 +106,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
      }
  }
  
-@@ -1345,7 +1354,7 @@ ipv6cp_down(f)
+@@ -1362,7 +1371,7 @@ ipv6cp_down(f)
      /* Execute the ipv6-down script */
      if (ipv6cp_script_state == s_up && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_down;
@@ -115,7 +115,7 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
      }
  }
  
-@@ -1388,13 +1397,13 @@ ipv6cp_script_done(arg)
+@@ -1405,13 +1414,13 @@ ipv6cp_script_done(arg)
      case s_up:
  	if (ipv6cp_fsm[0].state != OPENED) {
  	    ipv6cp_script_state = s_down;
@@ -176,7 +176,7 @@ diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
  int	debug = 0;		/* Debug flag */
  int	kdebugflag = 0;		/* Tell kernel to print debug messages */
  int	default_device = 1;	/* Using /dev/tty or equivalent */
-@@ -104,6 +105,8 @@ bool	persist = 0;		/* Reopen link after
+@@ -105,6 +106,8 @@ bool	persist = 0;		/* Reopen link after
  char	our_name[MAXNAMELEN];	/* Our name for authentication purposes */
  bool	demand = 0;		/* do dial-on-demand */
  char	*ipparam = NULL;	/* Extra parameter for ip up/down scripts */
@@ -185,7 +185,7 @@ diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
  int	idle_time_limit = 0;	/* Disconnect if idle for this many seconds */
  int	holdoff = 30;		/* # seconds to pause before reconnecting */
  bool	holdoff_specified;	/* true if a holdoff value has been given */
-@@ -190,6 +193,8 @@ static struct option_list *extra_options
+@@ -198,6 +201,8 @@ static struct option_list *extra_options
   * Valid arguments.
   */
  option_t general_options[] = {
@@ -197,7 +197,7 @@ diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
 diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -273,6 +273,7 @@ extern struct notifier *fork_notifier;	/
+@@ -276,6 +276,7 @@ extern struct notifier *fork_notifier;	/
   * Variables set by command-line options.
   */
  
@@ -205,7 +205,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern int	debug;		/* Debug flag */
  extern int	kdebugflag;	/* Tell kernel to print debug messages */
  extern int	default_device;	/* Using /dev/tty or equivalent */
-@@ -301,6 +302,7 @@ extern char	remote_name[MAXNAMELEN]; /*
+@@ -305,6 +306,7 @@ extern char	remote_name[MAXNAMELEN]; /*
  extern bool	explicit_remote;/* remote_name specified with remotename opt */
  extern bool	demand;		/* Do dial-on-demand */
  extern char	*ipparam;	/* Extra parameter for ip up/down scripts */
@@ -213,7 +213,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern bool	cryptpap;	/* Others' PAP passwords are encrypted */
  extern int	idle_time_limit;/* Shut down link if idle for this long */
  extern int	holdoff;	/* Dead time before restarting */
-@@ -323,6 +325,9 @@ extern char	*bundle_name;	/* bundle name
+@@ -327,6 +329,9 @@ extern char	*bundle_name;	/* bundle name
  extern bool	dump_options;	/* print out option values */
  extern bool	dryrun;		/* check everything, print options, exit */
  extern int	child_wait;	/* # seconds to wait for children at end */
@@ -226,7 +226,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
 diff -daurpN pppd/pppd/utils.c pppd/pppd/utils.c
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
-@@ -1057,6 +1057,11 @@ unlock()
+@@ -1044,6 +1044,11 @@ unlock()
  void saveWANStatus(char *currentstatus, int statusindex)
  {
  	FILE *STATUSFILE;
