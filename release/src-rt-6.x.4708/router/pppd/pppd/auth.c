@@ -227,7 +227,6 @@ bool refuse_eap = 0;		/* Don't wanna auth. ourselves with EAP */
 #ifdef CHAPMS
 bool refuse_mschap = 0;		/* Don't wanna auth. ourselves with MS-CHAP */
 bool refuse_mschap_v2 = 0;	/* Don't wanna auth. ourselves with MS-CHAPv2 */
-bool ms_ignore_domain = 0;
 #else
 bool refuse_mschap = 1;		/* Don't wanna auth. ourselves with MS-CHAP */
 bool refuse_mschap_v2 = 1;	/* Don't wanna auth. ourselves with MS-CHAPv2 */
@@ -298,8 +297,6 @@ option_t auth_options[] = {
       "Require CHAP authentication from peer",
       OPT_ALIAS | OPT_PRIOSUB | OPT_A2OR | MDTYPE_MD5,
       &lcp_wantoptions[0].chap_mdtype },
-    { "chap-secrets", o_string, &chapseccustom,
-      "Specify custom chap-secrets file", OPT_PRIO },
 #ifdef CHAPMS
     { "require-mschap", o_bool, &auth_required,
       "Require MS-CHAP authentication from peer",
@@ -317,9 +314,6 @@ option_t auth_options[] = {
       "Require MS-CHAPv2 authentication from peer",
       OPT_ALIAS | OPT_PRIOSUB | OPT_A2OR | MDTYPE_MICROSOFT_V2,
       &lcp_wantoptions[0].chap_mdtype },
-    { "ms-ignore-domain", o_bool, &ms_ignore_domain,
-      "Ignore any MS domain prefix in the username", 1 },
-
 #endif
 
     { "refuse-pap", o_bool, &refuse_pap,
@@ -559,17 +553,11 @@ link_required(unit)
 void start_link(unit)
     int unit;
 {
-    char *msg;
-
-     /* we are called via link_terminated, must be ignored */
-    if (phase == PHASE_DISCONNECT)
-	return;
-    status = EXIT_NEGOTIATION_FAILED;
+    status = EXIT_CONNECT_FAILED;
     new_phase(PHASE_SERIALCONN);
 
     hungup = 0;
     devfd = the_channel->connect();
-    msg = "Connect script failed";
     if (devfd < 0)
 	goto fail;
 
@@ -582,7 +570,6 @@ void start_link(unit)
      * gives us.  Thus we don't need the tdb_writelock/tdb_writeunlock.
      */
     fd_ppp = the_channel->establish_ppp(devfd);
-    msg = "ppp establishment failed";
     if (fd_ppp < 0) {
 	status = EXIT_FATAL_ERROR;
 	goto disconnect;
@@ -601,6 +588,7 @@ void start_link(unit)
 	notice("Starting negotiation on %s", ppp_devnam);
     add_fd(fd_ppp);
 
+    status = EXIT_NEGOTIATION_FAILED;
     new_phase(PHASE_ESTABLISH);
 
     lcp_lowerup(0);
@@ -674,14 +662,15 @@ link_terminated(unit)
 	the_channel->disconnect();
 	devfd = -1;
     }
-    /* not only disconnect, cleanup should also be called to close the devices */
     if (the_channel->cleanup)
 	(*the_channel->cleanup)();
 
     if (doing_multilink && multilink_master) {
-	if (!bundle_terminating)
+	if (!bundle_terminating) {
 	    new_phase(PHASE_MASTER);
-	else
+	    if (master_detach && !detached)
+		detach();
+	} else
 	    mp_bundle_terminated();
     } else
 	new_phase(PHASE_DEAD);
@@ -1199,10 +1188,6 @@ check_idle(arg)
     if (idle_time_hook != 0) {
 	tlim = idle_time_hook(&idle);
     } else {
-/* JYWeng 20031216: replace itime with idle.xmit_idle for only outgoing traffic is counted*/
-	if(tx_only) 
-		itime = idle.xmit_idle;
-	else
 	itime = MIN(idle.xmit_idle, idle.recv_idle);
 	tlim = idle_time_limit - itime;
     }
@@ -1456,9 +1441,11 @@ check_passwd(unit, auser, userlen, apasswd, passwdlen, msg)
 	    }
 	    if (secret[0] != 0 && !login_secret) {
 		/* password given in pap-secrets - must match */
-		if ((cryptpap || strcmp(passwd, secret) != 0)
-		    && strcmp(crypt(passwd, secret), secret) != 0)
-		    ret = UPAP_AUTHNAK;
+		if (cryptpap || strcmp(passwd, secret) != 0) {
+		    char *cbuf = crypt(passwd, secret);
+		    if (!cbuf || strcmp(cbuf, secret) != 0)
+			ret = UPAP_AUTHNAK;
+		}
 	    }
 	}
 	fclose(f);
@@ -1654,7 +1641,7 @@ have_chap_secret(client, server, need_ip, lacks_ipp)
 	}
     }
 
-    filename = chapseccustom ? chapseccustom : _PATH_CHAPFILE;
+    filename = _PATH_CHAPFILE;
     f = fopen(filename, "r");
     if (f == NULL)
 	return 0;
@@ -1749,7 +1736,7 @@ get_secret(unit, client, server, secret, secret_len, am_server)
 	    return 0;
 	}
     } else {
-	filename = chapseccustom ? chapseccustom : _PATH_CHAPFILE;
+	filename = _PATH_CHAPFILE;
 	addrs = NULL;
 	secbuf[0] = 0;
 
@@ -2368,8 +2355,7 @@ auth_script(script)
     argv[3] = user_name;
     argv[4] = devnam;
     argv[5] = strspeed;
-    argv[6] = ipparam;
-    argv[7] = NULL;
+    argv[6] = NULL;
 
     auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
 }

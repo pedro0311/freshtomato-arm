@@ -962,6 +962,21 @@ ipcp_ackci(f, p, len)
 	    goto bad; \
     }
 
+#define ACKCIWINS(opt, addr) \
+    if (addr) { \
+	u_int32_t l; \
+	if ((len -= CILEN_ADDR) < 0) \
+	    goto bad; \
+	GETCHAR(citype, p); \
+	GETCHAR(cilen, p); \
+	if (cilen != CILEN_ADDR || citype != opt) \
+	    goto bad; \
+	GETLONG(l, p); \
+	cilong = htonl(l); \
+	if (addr != cilong) \
+	    goto bad; \
+    }
+
     ACKCIADDRS(CI_ADDRS, !go->neg_addr && go->old_addrs, go->ouraddr,
 	       go->hisaddr);
 
@@ -973,6 +988,10 @@ ipcp_ackci(f, p, len)
     ACKCIDNS(CI_MS_DNS1, go->req_dns1, go->dnsaddr[0]);
 
     ACKCIDNS(CI_MS_DNS2, go->req_dns2, go->dnsaddr[1]);
+
+    ACKCIWINS(CI_MS_WINS1, go->winsaddr[0]);
+
+    ACKCIWINS(CI_MS_WINS2, go->winsaddr[1]);
 
     /*
      * If there are any remaining CIs, then this packet is bad.
@@ -1864,7 +1883,7 @@ ipcp_up(f)
 		    proxy_arp_set[f->unit] = 1;
 
 	}
-	demand_rexmit(PPP_IP,go->ouraddr);
+	demand_rexmit(PPP_IP);
 	sifnpmode(f->unit, PPP_IP, NPMODE_PASS);
 
     } else {
@@ -1939,7 +1958,7 @@ ipcp_up(f)
      */
     if (ipcp_script_state == s_down && ipcp_script_pid == 0) {
 	ipcp_script_state = s_up;
-	ipcp_script(path_ipup, 0);
+	ipcp_script(_PATH_IPUP, 0);
     }
 }
 
@@ -1989,7 +2008,7 @@ ipcp_down(f)
     /* Execute the ip-down script */
     if (ipcp_script_state == s_up && ipcp_script_pid == 0) {
 	ipcp_script_state = s_down;
-	ipcp_script(path_ipdown, 0);
+	ipcp_script(_PATH_IPDOWN, 0);
     }
 }
 
@@ -2043,13 +2062,13 @@ ipcp_script_done(arg)
     case s_up:
 	if (ipcp_fsm[0].state != OPENED) {
 	    ipcp_script_state = s_down;
-	    ipcp_script(path_ipdown, 0);
+	    ipcp_script(_PATH_IPDOWN, 0);
 	}
 	break;
     case s_down:
 	if (ipcp_fsm[0].state == OPENED) {
 	    ipcp_script_state = s_up;
-	    ipcp_script(path_ipup, 0);
+	    ipcp_script(_PATH_IPUP, 0);
 	}
 	break;
     }

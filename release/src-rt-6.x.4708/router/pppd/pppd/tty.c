@@ -136,6 +136,7 @@ struct stat devstat;		/* result of stat() on devnam */
 
 /* option variables */
 int	crtscts = 0;		/* Use hardware flow control */
+int	stop_bits = 1;		/* Number of serial port stop bits */
 bool	modem = 1;		/* Use modem control lines */
 int	inspeed = 0;		/* Input/Output speed requested */
 bool	lockflag = 0;		/* Create lock file to lock the serial dev */
@@ -145,7 +146,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
 char	*welcomer = NULL;	/* Script to run after phys link estab. */
 char	*ptycommand = NULL;	/* Command to run on other side of pty */
 bool	notty = 0;		/* Stdin/out is not a tty */
-static char *record_file = NULL;	/* File to record chars sent/received */
+char	*record_file = NULL;	/* File to record chars sent/received */
 int	max_data_rate;		/* max bytes/sec through charshunt */
 bool	sync_serial = 0;	/* Device is synchronous serial device */
 char	*pty_socket = NULL;	/* Socket to connect to pty */
@@ -201,6 +202,9 @@ option_t tty_options[] = {
       "Send and receive over socket, arg is host:port",
       OPT_PRIO | OPT_DEVNAM },
 
+    { "record", o_string, &record_file,
+      "Record characters sent/received to file", OPT_PRIO },
+
     { "crtscts", o_int, &crtscts,
       "Set hardware (RTS/CTS) flow control",
       OPT_PRIO | OPT_NOARG | OPT_VAL(1) },
@@ -218,6 +222,9 @@ option_t tty_options[] = {
       OPT_PRIOSUB | OPT_ALIAS | OPT_NOARG | OPT_VAL(-1) },
     { "xonxoff", o_special_noarg, (void *)setxonxoff,
       "Set software (XON/XOFF) flow control", OPT_PRIOSUB },
+    { "stop-bits", o_int, &stop_bits,
+      "Number of stop bits in serial port",
+      OPT_PRIO | OPT_PRIVFIX | OPT_LIMITS, NULL, 2, 1 },
 
     { "modem", o_bool, &modem,
       "Use modem control lines", OPT_PRIO | 1 },
@@ -620,8 +627,28 @@ int connect_tty()
 	 */
 	status = EXIT_PTYCMD_FAILED;
 	if (ptycommand != NULL) {
+		if (record_file != NULL) {
+			int ipipe[2], opipe[2], ok;
+
+			if (pipe(ipipe) < 0 || pipe(opipe) < 0)
+				fatal("Couldn't create pipes for record option: %m");
+
+			/* don't leak these to the ptycommand */
+			(void) fcntl(ipipe[0], F_SETFD, FD_CLOEXEC);
+			(void) fcntl(opipe[1], F_SETFD, FD_CLOEXEC);
+
+			ok = device_script(ptycommand, opipe[0], ipipe[1], 1) == 0
+				&& start_charshunt(ipipe[0], opipe[1]);
+			close(ipipe[0]);
+			close(ipipe[1]);
+			close(opipe[0]);
+			close(opipe[1]);
+			if (!ok)
+				goto errret;
+		} else {
 			if (device_script(ptycommand, pty_master, pty_master, 1) < 0)
 				goto errret;
+		}
 	} else if (pty_socket != NULL) {
 		int fd = open_socket(pty_socket);
 		if (fd < 0)
@@ -638,6 +665,10 @@ int connect_tty()
 			log_to_fd = -1;
 		if (log_to_fd != 2)
 			dup2(fd_devnull, 2);
+	} else if (record_file != NULL) {
+		int fd = dup(ttyfd);
+		if (!start_charshunt(fd, fd))
+			goto errret;
 	}
 
 	if (using_pty || record_file != NULL) {
@@ -1010,6 +1041,15 @@ charshunt(ifd, ofd, record_file)
     if (ifd >= FD_SETSIZE || ofd >= FD_SETSIZE || pty_master >= FD_SETSIZE)
 	fatal("internal error: file descriptor too large (%d, %d, %d)",
 	      ifd, ofd, pty_master);
+
+    /*
+     * Open the record file if required.
+     */
+    if (record_file != NULL) {
+	recordf = fopen(record_file, "a");
+	if (recordf == NULL)
+	    error("Couldn't create record file %s: %m", record_file);
+    }
 
     /* set all the fds to non-blocking mode */
     flags = fcntl(pty_master, F_GETFL);

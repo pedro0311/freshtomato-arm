@@ -199,9 +199,8 @@ struct termios saved_tty_parameters;
 
 char *abort_string[MAX_ABORTS], *fail_reason = (char *)0,
 	fail_buffer[50];
-int n_aborts = 0, abort_next = 0, timeout_next = 0, echo_next = 0, hex_next = 0;
+int n_aborts = 0, abort_next = 0, timeout_next = 0, echo_next = 0;
 int clear_abort_next = 0;
-int hex = -1;
 
 char *report_string[MAX_REPORTS] ;
 char  report_buffer[256] ;
@@ -614,7 +613,7 @@ void set_tty_parameters()
     saved_tty_parameters = t;
     have_tty_parameters  = 1;
 
-    t.c_iflag     |= IGNBRK | IGNPAR;
+    t.c_iflag     |= IGNBRK | ISTRIP | IGNPAR;
     t.c_oflag      = 0;
     t.c_lflag      = 0;
     t.c_cc[VERASE] =
@@ -970,11 +969,6 @@ char *s;
 	return;
     }
 
-    if (strcmp(s, "HEX") == 0) {
-	++hex_next;
-	return;
-    }
-
 /*
  * Fetch the expect and reply string.
  */
@@ -1184,12 +1178,6 @@ register char *s;
 
 	return;
     }
-    
-    if (hex_next) {
-	hex_next = 0;
-    	hex = (strcmp(s, "ON") == 0);
-    	return;
-    }
 
     /*
      * The syntax @filename means read the string to send from the
@@ -1246,7 +1234,7 @@ int get_char()
 
     switch (status) {
     case 1:
-	return ((int)c & 0xFF);
+	return ((int)c & 0x7F);
 
     default:
 	msgf("warning: read() on stdin returned %d", status);
@@ -1443,9 +1431,7 @@ register char *string;
 	}
 
 	if (Verbose) {
-	   if ((hex == 2) || (hex == 0))
-	       fprintf( stderr, "%.2X", c);
-	   else if (c == '\n')
+	   if (c == '\n')
 	       fputc( '\n', stderr );
 	   else if (c != '\r')
 	       fprintf( stderr, "%s", character(c) );
@@ -1491,10 +1477,6 @@ register char *string;
 
 	    alarm(0);
 	    alarmed = 0;
-	    if (hex == 1)
-	      hex = 2;
-	    if (hex == 0)
-	      hex = -1;
 	    return (1);
 	}
 

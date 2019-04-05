@@ -414,13 +414,7 @@ chap_verify_response(char *name, char *ourname, int id,
 	int ok;
 	unsigned char secret[MAXSECRETLEN];
 	int secret_len;
-#ifdef CHAPMS
-    char nametmp[MAXNAMELEN];
-    	if (ms_ignore_domain && strrchr(name, '\\')) {
-		strcpy(nametmp, strrchr(name, '\\') + 1);
-		strcpy(name, nametmp);
-	}
-#endif
+
 	/* Get the secret that the peer is supposed to know */
 	if (!get_secret(0, name, ourname, (char *)secret, &secret_len, 1)) {
 		error("No CHAP secret found for authenticating %q", name);
@@ -504,7 +498,7 @@ chap_handle_status(struct chap_client_state *cs, int code, int id,
 	if (code == CHAP_SUCCESS) {
 		/* used for MS-CHAP v2 mutual auth, yuck */
 		if (cs->digest->check_success != NULL) {
-			if (!(*cs->digest->check_success)(pkt, len, cs->priv))
+			if (!(*cs->digest->check_success)(id, pkt, len))
 				code = CHAP_FAILURE;
 		} else
 			msg = "CHAP authentication succeeded";

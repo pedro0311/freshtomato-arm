@@ -74,8 +74,6 @@ struct channel pppol2tp_channel;
 
 static void (*old_snoop_recv_hook)(unsigned char *p, int len) = NULL;
 static void (*old_snoop_send_hook)(unsigned char *p, int len) = NULL;
-static void (*old_ip_up_hook)(void) = NULL;
-static void (*old_ip_down_hook)(void) = NULL;
 
 /* Hook provided to allow other plugins to handle ACCM changes */
 void (*pppol2tp_send_accm_hook)(int tunnel_id, int session_id,
@@ -119,8 +117,14 @@ static option_t pppol2tp_options[] = {
 
 static int setdevname_pppol2tp(char **argv)
 {
-	struct sockaddr_pppol2tp sax;
-	int len = sizeof(sax);
+	union {
+		char buffer[128];
+		struct sockaddr pppol2tp;
+	} s;
+	int len = sizeof(s);
+	char **a;
+	int tmp;
+	int tmp_len = sizeof(tmp);
 
 	if (device_got_set)
 		return 0;
@@ -128,21 +132,21 @@ static int setdevname_pppol2tp(char **argv)
 	if (!int_option(*argv, &pppol2tp_fd))
 		return 0;
 
-	if(getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len) < 0) {
+	if(getsockname(pppol2tp_fd, (struct sockaddr *)&s, &len) < 0) {
 		fatal("Given FD for PPPoL2TP socket invalid (%s)",
 		      strerror(errno));
 	}
-	if(sax.sa_family != AF_PPPOX || sax.sa_protocol != PX_PROTO_OL2TP) {
-		fatal("Socket is not a PPPoL2TP socket");
+	if(s.pppol2tp.sa_family != AF_PPPOX) {
+		fatal("Socket of not a PPPoX socket");
 	}
 
 	/* Do a test getsockopt() to ensure that the kernel has the necessary
 	 * feature available.
-	 * driver returns -ENOTCONN until session established!
+	 */
 	if (getsockopt(pppol2tp_fd, SOL_PPPOL2TP, PPPOL2TP_SO_DEBUG,
 		       &tmp, &tmp_len) < 0) {
 		fatal("PPPoL2TP kernel driver not installed");
-	} */
+	}
 
 	/* Setup option defaults. Compression options are disabled! */
 
@@ -171,15 +175,9 @@ static int setdevname_pppol2tp(char **argv)
 
 static int connect_pppol2tp(void)
 {
-	struct sockaddr_pppol2tp sax;
-	int len = sizeof(sax);
-
 	if(pppol2tp_fd == -1) {
 		fatal("No PPPoL2TP FD specified");
 	}
-
-	getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len);
-	sprintf(ppp_devnam,"l2tp (%s)",inet_ntoa(sax.pppol2tp.addr.sin_addr));
 
 	return pppol2tp_fd;
 }
@@ -436,22 +434,18 @@ static void pppol2tp_lcp_snoop_send(unsigned char *p, int len)
  * Interface up/down events
  *****************************************************************************/
 
-static void pppol2tp_ip_up_hook(void)
+static void pppol2tp_ip_up(void *opaque, int arg)
 {
-	if (old_ip_up_hook != NULL)
-		(*old_ip_up_hook)();
-
+	/* may get called twice (for IPv4 and IPv6) but the hook handles that well */
 	if (pppol2tp_ip_updown_hook != NULL) {
 		(*pppol2tp_ip_updown_hook)(pppol2tp_tunnel_id,
 					   pppol2tp_session_id, 1);
 	}
 }
 
-static void pppol2tp_ip_down_hook(void)
+static void pppol2tp_ip_down(void *opaque, int arg)
 {
-	if (old_ip_down_hook != NULL)
-		(*old_ip_down_hook)();
-
+	/* may get called twice (for IPv4 and IPv6) but the hook handles that well */
 	if (pppol2tp_ip_updown_hook != NULL) {
 		(*pppol2tp_ip_updown_hook)(pppol2tp_tunnel_id,
 					   pppol2tp_session_id, 0);
@@ -478,14 +472,6 @@ static void pppol2tp_check_options(void)
 		snoop_recv_hook = pppol2tp_lcp_snoop_recv;
 		snoop_send_hook = pppol2tp_lcp_snoop_send;
 	}
-
-	/* If pppol2tp_ifname not supplied, use ip_up_hook to discover interface */
-	if (!pppol2tp_ifname[0]) {
-		old_ip_up_hook = ip_up_hook;
-		ip_up_hook = pppol2tp_ip_up_hook;
-		old_ip_down_hook = ip_down_hook;
-		ip_down_hook = pppol2tp_ip_down_hook;
-	}
 }
 
 /* Called just before pppd exits.
@@ -509,6 +495,14 @@ void plugin_init(void)
 	fatal("No PPPoL2TP support on this OS");
 #endif
 	add_options(pppol2tp_options);
+
+	/* Hook up ip up/down notifiers to send indicator to openl2tpd
+	 * that the link is up
+	 */
+	add_notifier(&ip_up_notifier, pppol2tp_ip_up, NULL);
+	add_notifier(&ip_down_notifier, pppol2tp_ip_down, NULL);
+	add_notifier(&ipv6_up_notifier, pppol2tp_ip_up, NULL);
+	add_notifier(&ipv6_down_notifier, pppol2tp_ip_down, NULL);
 }
 
 struct channel pppol2tp_channel = {

@@ -414,19 +414,29 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_R6400:
 		if (which == LED_DIAG) {
-			/* power led gpio: -2 - orange, -1 - white */
-			b = (mode) ? 1 : 2;
-			c = (mode) ? 2 : 1;
-		} else
+			b = 2; /* color amber gpio 2 (active LOW) */
+			c = 1; /* color white gpio 1 (active LOW) */
+		}
+		else if (which == LED_WHITE) {
+			b = 7; /* color white gpio 7 (active LOW) */
+			c = 6; /* color amber gpio 6 (active LOW) */
+		}
+		else {
 			b = r6400[which];
+		}
 		break;
 	case MODEL_R7000:
 		if (which == LED_DIAG) {
-			/* power led gpio: -3 - orange, -2 - white */
-			b = (mode) ? 2 : 3;
-			c = (mode) ? 3 : 2;
-		} else
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color white gpio 2 (active LOW) */
+		}
+		else if (which == LED_WHITE) {
+			b = 9; /* color white gpio 9 (active LOW) */
+			c = 8; /* color amber gpio 8 (active LOW) */
+		}
+		else {
 			b = r7000[which];
+		}
 		break;
 	case MODEL_AC15:
 		b = ac15[which];

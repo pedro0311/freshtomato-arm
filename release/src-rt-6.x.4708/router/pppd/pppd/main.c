@@ -90,7 +90,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/sysinfo.h>
 
 #include "pppd.h"
 #include "magic.h"
@@ -229,7 +228,6 @@ static struct subprocess *children;
 
 /* Prototypes for procedures local to this file. */
 
-static void check_time(void);
 static void setup_signals __P((void));
 static void create_pidfile __P((int pid));
 static void create_linkpidfile __P((int pid));
@@ -317,13 +315,6 @@ main(argc, argv)
     struct passwd *pw;
     struct protent *protp;
     char numbuf[16];
-
-    strlcpy(path_ipup, _PATH_IPUP, sizeof(path_ipup));
-    strlcpy(path_ipdown, _PATH_IPDOWN, sizeof(path_ipdown));
-#ifdef INET6
-    strlcpy(path_ipv6up, _PATH_IPV6UP, sizeof(path_ipv6up));
-    strlcpy(path_ipv6down, _PATH_IPV6DOWN, sizeof(path_ipv6down));
-#endif
 
     link_stats_valid = 0;
     new_phase(PHASE_INITIALIZE);
@@ -440,13 +431,6 @@ main(argc, argv)
     }
 
     /*
-     * pppd sends signals to the whole process group, so it must always
-     * create a new one or it may kill the parent process and its siblings.
-     */
-    setsid();
-    chdir("/");
-
-    /*
      * Initialize system-dependent stuff.
      */
     sys_init();
@@ -546,7 +530,6 @@ main(argc, argv)
 	    info("Starting link");
 	}
 
-	check_time();
 	gettimeofday(&start_time, NULL);
 	script_unsetenv("CONNECT_TIME");
 	script_unsetenv("BYTES_SENT");
@@ -791,6 +774,8 @@ detach()
 	    create_linkpidfile(pid);
 	exit(0);		/* parent dies */
     }
+    setsid();
+    chdir("/");
     dup2(fd_devnull, 0);
     dup2(fd_devnull, 1);
     dup2(fd_devnull, 2);
@@ -887,17 +872,14 @@ struct protocol_list {
     const char	*name;
 } protocol_list[] = {
     { 0x21,	"IP" },
-#if 0
     { 0x23,	"OSI Network Layer" },
     { 0x25,	"Xerox NS IDP" },
     { 0x27,	"DECnet Phase IV" },
-#endif
     { 0x29,	"Appletalk" },
     { 0x2b,	"Novell IPX" },
     { 0x2d,	"VJ compressed TCP/IP" },
     { 0x2f,	"VJ uncompressed TCP/IP" },
     { 0x31,	"Bridging PDU" },
-#if 0
     { 0x33,	"Stream Protocol ST-II" },
     { 0x35,	"Banyan Vines" },
     { 0x39,	"AppleTalk EDDP" },
@@ -911,11 +893,8 @@ struct protocol_list {
     { 0x49,	"Serial Data Transport Protocol (PPP-SDTP)" },
     { 0x4b,	"SNA over 802.2" },
     { 0x4d,	"SNA" },
-#endif
     { 0x4f,	"IP6 Header Compression" },
-#if 0
     { 0x51,	"KNX Bridging Data" },
-#endif
     { 0x53,	"Encryption" },
     { 0x55,	"Individual Link Encryption" },
     { 0x57,	"IPv6" },
@@ -926,15 +905,12 @@ struct protocol_list {
     { 0x65,	"RTP IPHC Compressed non-TCP" },
     { 0x67,	"RTP IPHC Compressed UDP 8" },
     { 0x69,	"RTP IPHC Compressed RTP 8" },
-#if 0
     { 0x6f,	"Stampede Bridging" },
     { 0x73,	"MP+" },
     { 0xc1,	"NTCITS IPI" },
-#endif
     { 0xfb,	"single-link compression" },
     { 0xfd,	"Compressed Datagram" },
     { 0x0201,	"802.1d Hello Packets" },
-#if 0
     { 0x0203,	"IBM Source Routing BPDU" },
     { 0x0205,	"DEC LANBridge100 Spanning Tree" },
     { 0x0207,	"Cisco Discovery Protocol" },
@@ -946,19 +922,15 @@ struct protocol_list {
     { 0x0231,	"Luxcom" },
     { 0x0233,	"Sigma Network Systems" },
     { 0x0235,	"Apple Client Server Protocol" },
-#endif
     { 0x0281,	"MPLS Unicast" },
     { 0x0283,	"MPLS Multicast" },
-#if 0
     { 0x0285,	"IEEE p1284.4 standard - data packets" },
     { 0x0287,	"ETSI TETRA Network Protocol Type 1" },
-#endif
     { 0x0289,	"Multichannel Flow Treatment Protocol" },
     { 0x2063,	"RTP IPHC Compressed TCP No Delta" },
     { 0x2065,	"RTP IPHC Context State" },
     { 0x2067,	"RTP IPHC Compressed UDP 16" },
     { 0x2069,	"RTP IPHC Compressed RTP 16" },
-#if 0
     { 0x4001,	"Cray Communications Control Protocol" },
     { 0x4003,	"CDPD Mobile Network Registration Protocol" },
     { 0x4005,	"Expand accelerator protocol" },
@@ -969,23 +941,17 @@ struct protocol_list {
     { 0x4023,	"RefTek Protocol" },
     { 0x4025,	"Fibre Channel" },
     { 0x4027,	"EMIT Protocols" },
-#endif
     { 0x405b,	"Vendor-Specific Protocol (VSP)" },
     { 0x8021,	"Internet Protocol Control Protocol" },
-#if 0
     { 0x8023,	"OSI Network Layer Control Protocol" },
     { 0x8025,	"Xerox NS IDP Control Protocol" },
     { 0x8027,	"DECnet Phase IV Control Protocol" },
-#endif
     { 0x8029,	"Appletalk Control Protocol" },
     { 0x802b,	"Novell IPX Control Protocol" },
-#if 0
     { 0x8031,	"Bridging NCP" },
     { 0x8033,	"Stream Protocol Control Protocol" },
     { 0x8035,	"Banyan Vines Control Protocol" },
-#endif
     { 0x803d,	"Multi-Link Control Protocol" },
-#if 0
     { 0x803f,	"NETBIOS Framing Control Protocol" },
     { 0x8041,	"Cisco Systems Control Protocol" },
     { 0x8043,	"Ascom Timeplex" },
@@ -994,24 +960,18 @@ struct protocol_list {
     { 0x8049,	"Serial Data Control Protocol (PPP-SDCP)" },
     { 0x804b,	"SNA over 802.2 Control Protocol" },
     { 0x804d,	"SNA Control Protocol" },
-#endif
     { 0x804f,	"IP6 Header Compression Control Protocol" },
-#if 0
     { 0x8051,	"KNX Bridging Control Protocol" },
-#endif
     { 0x8053,	"Encryption Control Protocol" },
     { 0x8055,	"Individual Link Encryption Control Protocol" },
     { 0x8057,	"IPv6 Control Protocol" },
     { 0x8059,	"PPP Muxing Control Protocol" },
     { 0x805b,	"Vendor-Specific Network Control Protocol (VSNCP)" },
-#if 0
     { 0x806f,	"Stampede Bridging Control Protocol" },
     { 0x8073,	"MP+ Control Protocol" },
     { 0x80c1,	"NTCITS IPI Control Protocol" },
-#endif
     { 0x80fb,	"Single Link Compression Control Protocol" },
     { 0x80fd,	"Compression Control Protocol" },
-#if 0
     { 0x8207,	"Cisco Discovery Protocol Control" },
     { 0x8209,	"Netcs Twin Routing" },
     { 0x820b,	"STP - Control Protocol" },
@@ -1020,29 +980,24 @@ struct protocol_list {
     { 0x8281,	"MPLSCP" },
     { 0x8285,	"IEEE p1284.4 standard - Protocol Control" },
     { 0x8287,	"ETSI TETRA TNP1 Control Protocol" },
-#endif
     { 0x8289,	"Multichannel Flow Treatment Protocol" },
     { 0xc021,	"Link Control Protocol" },
     { 0xc023,	"Password Authentication Protocol" },
     { 0xc025,	"Link Quality Report" },
-#if 0
     { 0xc027,	"Shiva Password Authentication Protocol" },
     { 0xc029,	"CallBack Control Protocol (CBCP)" },
     { 0xc02b,	"BACP Bandwidth Allocation Control Protocol" },
     { 0xc02d,	"BAP" },
-#endif
     { 0xc05b,	"Vendor-Specific Authentication Protocol (VSAP)" },
     { 0xc081,	"Container Control Protocol" },
     { 0xc223,	"Challenge Handshake Authentication Protocol" },
     { 0xc225,	"RSA Authentication Protocol" },
     { 0xc227,	"Extensible Authentication Protocol" },
-#if 0
     { 0xc229,	"Mitsubishi Security Info Exch Ptcl (SIEP)" },
     { 0xc26f,	"Stampede Bridging Authorization Protocol" },
     { 0xc281,	"Proprietary Authentication Protocol" },
     { 0xc283,	"Proprietary Authentication Protocol" },
     { 0xc481,	"Proprietary Node ID Authentication Protocol" },
-#endif
     { 0,	NULL },
 };
 
@@ -1308,39 +1263,6 @@ struct	callout {
 
 static struct callout *callout = NULL;	/* Callout list */
 static struct timeval timenow;		/* Current time */
-static long uptime_diff = 0;
-static int uptime_diff_set = 0;
-
-static void check_time(void)
-{
-	long new_diff;
-	struct timeval t;
-	struct sysinfo i;
-    struct callout *p;
-	
-	if(nochecktime)
-		return;
-
-	gettimeofday(&t, NULL);
-	sysinfo(&i);
-	new_diff = t.tv_sec - i.uptime;
-	
-	if (!uptime_diff_set) {
-		uptime_diff = new_diff;
-		uptime_diff_set = 1;
-		return;
-	}
-
-	if ((new_diff - 5 > uptime_diff) || (new_diff + 5 < uptime_diff)) {
-		/* system time has changed, update counters and timeouts */
-		info("System time change detected.");
-		start_time.tv_sec += new_diff - uptime_diff;
-		
-    	for (p = callout; p != NULL; p = p->c_next)
-			p->c_time.tv_sec += new_diff - uptime_diff;
-	}
-	uptime_diff = new_diff;
-}
 
 /*
  * timeout - Schedule a timeout.
@@ -1411,8 +1333,6 @@ calltimeout()
 {
     struct callout *p;
 
-	check_time();
-	
     while (callout != NULL) {
 	p = callout;
 
@@ -1440,8 +1360,6 @@ timeleft(tvp)
 {
     if (callout == NULL)
 	return NULL;
-	
-	check_time();
 
     gettimeofday(&timenow, NULL);
     tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
@@ -1697,6 +1615,52 @@ safe_fork(int infd, int outfd, int errfd)
 	return 0;
 }
 
+static bool
+add_script_env(pos, newstring)
+    int pos;
+    char *newstring;
+{
+    if (pos + 1 >= s_env_nalloc) {
+	int new_n = pos + 17;
+	char **newenv = realloc(script_env, new_n * sizeof(char *));
+	if (newenv == NULL) {
+	    free(newstring - 1);
+	    return 0;
+	}
+	script_env = newenv;
+	s_env_nalloc = new_n;
+    }
+    script_env[pos] = newstring;
+    script_env[pos + 1] = NULL;
+    return 1;
+}
+
+static void
+remove_script_env(pos)
+    int pos;
+{
+    free(script_env[pos] - 1);
+    while ((script_env[pos] = script_env[pos + 1]) != NULL)
+	pos++;
+}
+
+/*
+ * update_system_environment - process the list of set/unset options
+ * and update the system environment.
+ */
+static void
+update_system_environment()
+{
+    struct userenv *uep;
+
+    for (uep = userenv_list; uep != NULL; uep = uep->ue_next) {
+	if (uep->ue_isset)
+	    setenv(uep->ue_name, uep->ue_value, 1);
+	else
+	    unsetenv(uep->ue_name);
+    }
+}
+
 /*
  * device_script - run a program to talk to the specified fds
  * (e.g. to run the connector or disconnector script).
@@ -1715,7 +1679,7 @@ device_script(program, in, out, dont_wait)
     if (log_to_fd >= 0)
 	errfd = log_to_fd;
     else
-	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0644);
+	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0600);
 
     ++conn_running;
     pid = safe_fork(in, out, errfd);
@@ -1752,12 +1716,51 @@ device_script(program, in, out, dont_wait)
 	fprintf(stderr, "pppd: setuid failed\n");
 	exit(1);
     }
+    update_system_environment();
     execl("/bin/sh", "sh", "-c", program, (char *)0);
     perror("pppd: could not exec /bin/sh");
     _exit(99);
     /* NOTREACHED */
 }
 
+
+/*
+ * update_script_environment - process the list of set/unset options
+ * and update the script environment.  Note that we intentionally do
+ * not update the TDB.  These changes are layered on top right before
+ * exec.  It is not possible to use script_setenv() or
+ * script_unsetenv() safely after this routine is run.
+ */
+static void
+update_script_environment()
+{
+    struct userenv *uep;
+
+    for (uep = userenv_list; uep != NULL; uep = uep->ue_next) {
+	int i;
+	char *p, *newstring;
+	int nlen = strlen(uep->ue_name);
+
+	for (i = 0; (p = script_env[i]) != NULL; i++) {
+	    if (strncmp(p, uep->ue_name, nlen) == 0 && p[nlen] == '=')
+		break;
+	}
+	if (uep->ue_isset) {
+	    nlen += strlen(uep->ue_value) + 2;
+	    newstring = malloc(nlen + 1);
+	    if (newstring == NULL)
+		continue;
+	    *newstring++ = 0;
+	    slprintf(newstring, nlen, "%s=%s", uep->ue_name, uep->ue_value);
+	    if (p != NULL)
+		script_env[i] = newstring;
+	    else
+		add_script_env(i, newstring);
+	} else {
+	    remove_script_env(i);
+	}
+    }
+}
 
 /*
  * run_program - execute a program with given arguments,
@@ -1829,6 +1832,7 @@ run_program(prog, args, must_exist, done, arg, wait)
 #endif
 
     /* run the program */
+    update_script_environment();
     execve(prog, args, script_env);
     if (must_exist || errno != ENOENT) {
 	/* have to reopen the log, there's nowhere else
@@ -2051,25 +2055,16 @@ script_setenv(var, value, iskey)
     } else {
 	/* no space allocated for script env. ptrs. yet */
 	i = 0;
-	script_env = (char **) malloc(16 * sizeof(char *));
-	if (script_env == 0)
+	script_env = malloc(16 * sizeof(char *));
+	if (script_env == 0) {
+	    free(newstring - 1);
 	    return;
+	}
 	s_env_nalloc = 16;
     }
 
-    /* reallocate script_env with more space if needed */
-    if (i + 1 >= s_env_nalloc) {
-	int new_n = i + 17;
-	char **newenv = (char **) realloc((void *)script_env,
-					  new_n * sizeof(char *));
-	if (newenv == 0)
-	    return;
-	script_env = newenv;
-	s_env_nalloc = new_n;
-    }
-
-    script_env[i] = newstring;
-    script_env[i+1] = 0;
+    if (!add_script_env(i, newstring))
+	return;
 
 #ifdef USE_TDB
     if (pppdb != NULL) {
@@ -2100,9 +2095,7 @@ script_unsetenv(var)
 	    if (p[-1] && pppdb != NULL)
 		delete_db_key(p);
 #endif
-	    free(p-1);
-	    while ((script_env[i] = script_env[i+1]) != 0)
-		++i;
+	    remove_script_env(i);
 	    break;
 	}
     }

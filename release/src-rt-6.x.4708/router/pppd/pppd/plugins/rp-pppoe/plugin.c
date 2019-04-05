@@ -55,7 +55,7 @@ static char const RCSID[] =
 #define _ROOT_PATH ""
 #endif
 
-#define _PATH_ETHOPT         _ROOT_PATH "/ppp/options."
+#define _PATH_ETHOPT         _ROOT_PATH "/etc/ppp/options."
 
 char pppd_version[] = VERSION;
 
@@ -182,12 +182,12 @@ PPPOEConnectDevice(void)
 	    conn->peerEth[i] = (unsigned char) mac[i];
 	}
     } else {
-        conn->discoverySocket =
+	conn->discoverySocket =
             openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
 	discovery(conn);
 	if (conn->discoveryState != STATE_SESSION) {
 	    error("Unable to complete PPPoE Discovery");
-	    return -1;
+	    goto errout;
 	}
     }
 
@@ -223,7 +223,6 @@ PPPOEConnectDevice(void)
     if (connect(conn->sessionSocket, (struct sockaddr *) &sp,
 		sizeof(struct sockaddr_pppox)) < 0) {
 	error("Failed to connect PPPoE socket: %d %m", errno);
-	close(conn->sessionSocket);
 	goto errout;
     }
 
@@ -235,6 +234,7 @@ PPPOEConnectDevice(void)
 	close(conn->discoverySocket);
 	conn->discoverySocket = -1;
     }
+    close(conn->sessionSocket);
     return -1;
 }
 

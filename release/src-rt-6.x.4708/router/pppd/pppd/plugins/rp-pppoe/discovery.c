@@ -24,7 +24,6 @@ static char const RCSID[] =
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
-#include <time.h>
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
@@ -40,6 +39,30 @@ static char const RCSID[] =
 #endif
 
 #include <signal.h>
+
+/* Calculate time remaining until *exp, return 0 if now >= *exp */
+static int time_left(struct timeval *diff, struct timeval *exp)
+{
+    struct timeval now;
+
+    if (gettimeofday(&now, NULL) < 0) {
+	error("gettimeofday: %m");
+	return 0;
+    }
+
+    if (now.tv_sec > exp->tv_sec
+	|| (now.tv_sec == exp->tv_sec && now.tv_usec >= exp->tv_usec))
+	return 0;
+
+    diff->tv_sec = exp->tv_sec - now.tv_sec;
+    diff->tv_usec = exp->tv_usec - now.tv_usec;
+    if (diff->tv_usec < 0) {
+	diff->tv_usec += 1000000;
+	--diff->tv_sec;
+    }
+
+    return 1;
+}
 
 /**********************************************************************
 *%FUNCTION: parseForHostUniq
@@ -325,7 +348,6 @@ waitForPADO(PPPoEConnection *conn, int timeout)
     int r;
     struct timeval tv;
     struct timeval expire_at;
-    struct timeval now;
 
     PPPoEPacket packet;
     int len;
@@ -340,30 +362,15 @@ waitForPADO(PPPoEConnection *conn, int timeout)
     conn->error = 0;
 
     if (gettimeofday(&expire_at, NULL) < 0) {
-	fatalSys("gettimeofday (waitForPADO)");
+	error("gettimeofday (waitForPADO): %m");
+	return;
     }
     expire_at.tv_sec += timeout;
 
     do {
 	if (BPF_BUFFER_IS_EMPTY) {
-	    if (gettimeofday(&now, NULL) < 0) {
-		fatalSys("gettimeofday (waitForPADO)");
-	    }
-	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
-	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
-	    if (tv.tv_usec < 0) {
-		tv.tv_usec += 1000000;
-		if (tv.tv_sec) {
-		    tv.tv_sec--;
-		} else {
-		    /* Timed out */
-		    return;
-		}
-	    }
-	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
-		/* Timed out */
-		return;
-	    }
+	    if (!time_left(&tv, &expire_at))
+		return;		/* Timed out */
 
 	    FD_ZERO(&readable);
 	    FD_SET(conn->discoverySocket, &readable);
@@ -376,10 +383,8 @@ waitForPADO(PPPoEConnection *conn, int timeout)
 		error("select (waitForPADO): %m");
 		return;
 	    }
-	    if (r == 0) {
-		/* Timed out */
-		return;
-	    }
+	    if (r == 0)
+		return;		/* Timed out */
 	}
 
 	/* Get the packet */
@@ -401,8 +406,8 @@ waitForPADO(PPPoEConnection *conn, int timeout)
 	if (!packetIsForMe(conn, &packet)) continue;
 
 	if (packet.code == CODE_PADO) {
-	    if (BROADCAST(packet.ethHdr.h_source)) {
-		error("Ignoring PADO packet from broadcast MAC address");
+	    if (NOT_UNICAST(packet.ethHdr.h_source)) {
+		error("Ignoring PADO packet from non-unicast MAC address");
 		continue;
 	    }
 	    if (conn->req_peer
@@ -536,37 +541,21 @@ waitForPADS(PPPoEConnection *conn, int timeout)
     int r;
     struct timeval tv;
     struct timeval expire_at;
-    struct timeval now;
 
     PPPoEPacket packet;
     int len;
 
     if (gettimeofday(&expire_at, NULL) < 0) {
-	fatalSys("gettimeofday (waitForPADS)");
+	error("gettimeofday (waitForPADS): %m");
+	return;
     }
     expire_at.tv_sec += timeout;
 
     conn->error = 0;
     do {
 	if (BPF_BUFFER_IS_EMPTY) {
-	    if (gettimeofday(&now, NULL) < 0) {
-		fatalSys("gettimeofday (waitForPADS)");
-	    }
-	    tv.tv_sec = expire_at.tv_sec - now.tv_sec;
-	    tv.tv_usec = expire_at.tv_usec - now.tv_usec;
-	    if (tv.tv_usec < 0) {
-		tv.tv_usec += 1000000;
-		if (tv.tv_sec) {
-		    tv.tv_sec--;
-		} else {
-		    /* Timed out */
-		    return;
-		}
-	    }
-	    if (tv.tv_sec <= 0 && tv.tv_usec <= 0) {
-		/* Timed out */
-		return;
-	    }
+	    if (!time_left(&tv, &expire_at))
+		return;		/* Timed out */
 
 	    FD_ZERO(&readable);
 	    FD_SET(conn->discoverySocket, &readable);
@@ -579,10 +568,8 @@ waitForPADS(PPPoEConnection *conn, int timeout)
 		error("select (waitForPADS): %m");
 		return;
 	    }
-	    if (r == 0) {
-		/* Timed out */
-		return;
-	    }
+	    if (r == 0)
+		return;		/* Timed out */
 	}
 
 	/* Get the packet */
@@ -644,9 +631,6 @@ discovery(PPPoEConnection *conn)
     int padiAttempts = 0;
     int padrAttempts = 0;
     int timeout = conn->discoveryTimeout;
-
-    conn->discoverySocket =
-	openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
 
     do {
 	padiAttempts++;

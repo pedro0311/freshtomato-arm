@@ -706,14 +706,14 @@ void start_led_setup(void) {
 		}
 		else if ((model == MODEL_R6400)) {
 			/* activate WAN port led */
-			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; add color white (7) with WAN up */
+			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
 		}
 		else if ((model == MODEL_R7000)) {
 			/* activate WAN port led */
 			system("/usr/sbin/et robowr 0x0 0x10 0x3000");	/* basic LED setup, RT-N18U & RT-AC56 have 0x0220 for example */
 			system("/usr/sbin/et robowr 0x0 0x12 0x78");
 			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
-			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; add color white (9) with WAN up */
+			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 		}
 		else if ((model == MODEL_R8000)) {
 			/* activate WAN port led - not the same like R7000 */
