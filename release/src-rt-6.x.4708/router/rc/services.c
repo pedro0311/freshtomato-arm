@@ -644,87 +644,6 @@ void clear_resolv(void)
 	f_write(dmresolv, NULL, 0, 0, 0);	/* blank */
 }
 
-void disable_led_wanlan(void) {
-	system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-	system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
-}
-
-void start_led_setup(void) {
-
-	int model;
-
-	/* get router model */
-	model = get_model();
-
-	/* stealth mode on ? */
-	if (nvram_match("stealth_mode", "1")) {
-
-		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
-		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
-		switch(model) {
-		case MODEL_R6400:
-			system("gpio enable 2");	/* disable power led color amber */
-			disable_led_wanlan();
-			break;
-		case MODEL_R7000:
-			system("gpio enable 3");	/* disable power led color amber */
-			disable_led_wanlan();
-			break;
-		case MODEL_RTN18U:
-			system("gpio enable 0");	/* disable power led color blue */
-			break;
-		case MODEL_RTAC56U:
-			system("gpio enable 3");	/* disable power led color blue */
-			disable_led_wanlan();
-			break;
-		case MODEL_RTAC68U:
-			system("gpio enable 3");	/* disable power led */
-			disable_led_wanlan();
-			break;
-		case MODEL_EA6400:
-		case MODEL_EA6700:
-		case MODEL_EA6900:
-			system("gpio disable 8");	/* disable LOGO led */
-			disable_led_wanlan();
-			break;
-		case MODEL_R8000:
-			system("gpio disable 9");	/* disable power led color amber */
-			disable_led_wanlan();
-			break;
-		case MODEL_RTAC3200:
-			disable_led_wanlan();
-			break;
-		default:
-			/* nothing to do right now */
-			break;
-		}
-	}
-	else {
-		/* LED setup/config/preparation for some router models */
-		if ((model == MODEL_RTAC56U)) {
-			system("gpio disable 4");	/* enable power supply for all LEDs, except for PowerLED */
-		}
-		else if ((model == MODEL_R6400)) {
-			/* activate WAN port led */
-			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
-		}
-		else if ((model == MODEL_R7000)) {
-			/* activate WAN port led */
-			system("/usr/sbin/et robowr 0x0 0x10 0x3000");	/* basic LED setup, RT-N18U & RT-AC56 have 0x0220 for example */
-			system("/usr/sbin/et robowr 0x0 0x12 0x78");
-			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
-			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
-		}
-		else if ((model == MODEL_R8000)) {
-			/* activate WAN port led - not the same like R7000 */
-			system("/usr/sbin/et robowr 0x0 0x10 0x3000");
-			system("/usr/sbin/et robowr 0x0 0x12 0x78");
-			system("/usr/sbin/et robowr 0x0 0x14 0x10");	/* R8000 Netgear source - rc/rc.c */
-			system("gpio enable 9");	/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active HIGH) if ethernet cable is connected; switch to color white (GPIO 8, active LOW) with WAN up */
-		}
-	}
-}
-
 #ifdef TCONFIG_FANCTRL
 static pid_t pid_phy_tempsense = -1;
 
@@ -2686,8 +2605,8 @@ void start_services(void)
 	start_phy_tempsense();
 #endif
 
-	/* start LED setup for Router */
-	start_led_setup();
+	/* do LED setup for Router */
+	led_setup();
 
 }
 
