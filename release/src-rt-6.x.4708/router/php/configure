@@ -3655,7 +3655,7 @@ ac_config_headers="$ac_config_headers main/php_config.h"
 
 PHP_MAJOR_VERSION=7
 PHP_MINOR_VERSION=2
-PHP_RELEASE_VERSION=16
+PHP_RELEASE_VERSION=17
 PHP_EXTRA_VERSION=""
 PHP_VERSION="$PHP_MAJOR_VERSION.$PHP_MINOR_VERSION.$PHP_RELEASE_VERSION$PHP_EXTRA_VERSION"
 PHP_VERSION_ID=`expr $PHP_MAJOR_VERSION \* 10000 + $PHP_MINOR_VERSION \* 100 + $PHP_RELEASE_VERSION`
@@ -9966,15 +9966,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/phpdbg_webhelper.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_phpdbg_webhelper) $(PHPDBG_WEBHELPER_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/phpdbg_webhelper.so '$ext_builddir'/phpdbg_webhelper.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_phpdbg_webhelper) $(PHPDBG_WEBHELPER_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -9991,7 +9987,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/phpdbg_webhelper.$suffix \$(phplibdir)
 
 $ext_builddir/phpdbg_webhelper.$suffix: \$(shared_objects_phpdbg_webhelper) \$(PHPDBG_WEBHELPER_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_phpdbg_webhelper) \$(PHPDBG_WEBHELPER_SHARED_LIBADD)
 
 EOF
 
@@ -16690,15 +16686,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/date.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_date) $(DATE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/date.so '$ext_builddir'/date.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_date) $(DATE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -16715,7 +16707,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/date.$suffix \$(phplibdir)
 
 $ext_builddir/date.$suffix: \$(shared_objects_date) \$(DATE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_date) \$(DATE_SHARED_LIBADD)
 
 EOF
 
@@ -17414,15 +17406,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/libxml.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_libxml) $(LIBXML_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/libxml.so '$ext_builddir'/libxml.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_libxml) $(LIBXML_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -17439,7 +17427,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/libxml.$suffix \$(phplibdir)
 
 $ext_builddir/libxml.$suffix: \$(shared_objects_libxml) \$(LIBXML_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_libxml) \$(LIBXML_SHARED_LIBADD)
 
 EOF
 
@@ -17787,15 +17775,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/openssl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_openssl) $(OPENSSL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/openssl.so '$ext_builddir'/openssl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_openssl) $(OPENSSL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -17812,7 +17796,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/openssl.$suffix \$(phplibdir)
 
 $ext_builddir/openssl.$suffix: \$(shared_objects_openssl) \$(OPENSSL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_openssl) \$(OPENSSL_SHARED_LIBADD)
 
 EOF
 
@@ -19476,15 +19460,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pcre.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcre) $(PCRE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pcre.so '$ext_builddir'/pcre.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcre) $(PCRE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -19501,7 +19481,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pcre.$suffix \$(phplibdir)
 
 $ext_builddir/pcre.$suffix: \$(shared_objects_pcre) \$(PCRE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pcre) \$(PCRE_SHARED_LIBADD)
 
 EOF
 
@@ -19759,15 +19739,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pcre.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcre) $(PCRE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pcre.so '$ext_builddir'/pcre.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcre) $(PCRE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -19784,7 +19760,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pcre.$suffix \$(phplibdir)
 
 $ext_builddir/pcre.$suffix: \$(shared_objects_pcre) \$(PCRE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pcre) \$(PCRE_SHARED_LIBADD)
 
 EOF
 
@@ -21154,15 +21130,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sqlite3.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sqlite3) $(SQLITE3_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sqlite3.so '$ext_builddir'/sqlite3.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sqlite3) $(SQLITE3_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -21179,7 +21151,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sqlite3.$suffix \$(phplibdir)
 
 $ext_builddir/sqlite3.$suffix: \$(shared_objects_sqlite3) \$(SQLITE3_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sqlite3) \$(SQLITE3_SHARED_LIBADD)
 
 EOF
 
@@ -21487,15 +21459,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/zlib.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zlib) $(ZLIB_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/zlib.so '$ext_builddir'/zlib.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zlib) $(ZLIB_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -21512,7 +21480,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/zlib.$suffix \$(phplibdir)
 
 $ext_builddir/zlib.$suffix: \$(shared_objects_zlib) \$(ZLIB_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_zlib) \$(ZLIB_SHARED_LIBADD)
 
 EOF
 
@@ -22087,15 +22055,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/bcmath.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_bcmath) $(BCMATH_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/bcmath.so '$ext_builddir'/bcmath.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_bcmath) $(BCMATH_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -22112,7 +22076,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/bcmath.$suffix \$(phplibdir)
 
 $ext_builddir/bcmath.$suffix: \$(shared_objects_bcmath) \$(BCMATH_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_bcmath) \$(BCMATH_SHARED_LIBADD)
 
 EOF
 
@@ -22708,15 +22672,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/bz2.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_bz2) $(BZ2_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/bz2.so '$ext_builddir'/bz2.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_bz2) $(BZ2_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -22733,7 +22693,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/bz2.$suffix \$(phplibdir)
 
 $ext_builddir/bz2.$suffix: \$(shared_objects_bz2) \$(BZ2_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_bz2) \$(BZ2_SHARED_LIBADD)
 
 EOF
 
@@ -23014,15 +22974,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/calendar.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_calendar) $(CALENDAR_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/calendar.so '$ext_builddir'/calendar.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_calendar) $(CALENDAR_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -23039,7 +22995,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/calendar.$suffix \$(phplibdir)
 
 $ext_builddir/calendar.$suffix: \$(shared_objects_calendar) \$(CALENDAR_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_calendar) \$(CALENDAR_SHARED_LIBADD)
 
 EOF
 
@@ -23317,15 +23273,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/ctype.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ctype) $(CTYPE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/ctype.so '$ext_builddir'/ctype.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ctype) $(CTYPE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -23342,7 +23294,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/ctype.$suffix \$(phplibdir)
 
 $ext_builddir/ctype.$suffix: \$(shared_objects_ctype) \$(CTYPE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_ctype) \$(CTYPE_SHARED_LIBADD)
 
 EOF
 
@@ -24615,15 +24567,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/curl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_curl) $(CURL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/curl.so '$ext_builddir'/curl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_curl) $(CURL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -24640,7 +24588,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/curl.$suffix \$(phplibdir)
 
 $ext_builddir/curl.$suffix: \$(shared_objects_curl) \$(CURL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_curl) \$(CURL_SHARED_LIBADD)
 
 EOF
 
@@ -28885,15 +28833,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/dba.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_dba) $(DBA_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/dba.so '$ext_builddir'/dba.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_dba) $(DBA_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -28910,7 +28854,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/dba.$suffix \$(phplibdir)
 
 $ext_builddir/dba.$suffix: \$(shared_objects_dba) \$(DBA_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_dba) \$(DBA_SHARED_LIBADD)
 
 EOF
 
@@ -29541,15 +29485,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/dom.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_dom) $(DOM_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/dom.so '$ext_builddir'/dom.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_dom) $(DOM_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -29566,7 +29506,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/dom.$suffix \$(phplibdir)
 
 $ext_builddir/dom.$suffix: \$(shared_objects_dom) \$(DOM_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_dom) \$(DOM_SHARED_LIBADD)
 
 EOF
 
@@ -29906,15 +29846,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/enchant.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_enchant) $(ENCHANT_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/enchant.so '$ext_builddir'/enchant.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_enchant) $(ENCHANT_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -29931,7 +29867,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/enchant.$suffix \$(phplibdir)
 
 $ext_builddir/enchant.$suffix: \$(shared_objects_enchant) \$(ENCHANT_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_enchant) \$(ENCHANT_SHARED_LIBADD)
 
 EOF
 
@@ -30518,15 +30454,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/exif.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_exif) $(EXIF_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/exif.so '$ext_builddir'/exif.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_exif) $(EXIF_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -30543,7 +30475,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/exif.$suffix \$(phplibdir)
 
 $ext_builddir/exif.$suffix: \$(shared_objects_exif) \$(EXIF_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_exif) \$(EXIF_SHARED_LIBADD)
 
 EOF
 
@@ -30882,15 +30814,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/fileinfo.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_fileinfo) $(FILEINFO_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/fileinfo.so '$ext_builddir'/fileinfo.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_fileinfo) $(FILEINFO_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -30907,7 +30835,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/fileinfo.$suffix \$(phplibdir)
 
 $ext_builddir/fileinfo.$suffix: \$(shared_objects_fileinfo) \$(FILEINFO_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_fileinfo) \$(FILEINFO_SHARED_LIBADD)
 
 EOF
 
@@ -31281,15 +31209,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/filter.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_filter) $(FILTER_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/filter.so '$ext_builddir'/filter.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_filter) $(FILTER_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -31306,7 +31230,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/filter.$suffix \$(phplibdir)
 
 $ext_builddir/filter.$suffix: \$(shared_objects_filter) \$(FILTER_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_filter) \$(FILTER_SHARED_LIBADD)
 
 EOF
 
@@ -31649,15 +31573,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/ftp.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ftp) $(FTP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/ftp.so '$ext_builddir'/ftp.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ftp) $(FTP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -31674,7 +31594,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/ftp.$suffix \$(phplibdir)
 
 $ext_builddir/ftp.$suffix: \$(shared_objects_ftp) \$(FTP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_ftp) \$(FTP_SHARED_LIBADD)
 
 EOF
 
@@ -37434,15 +37354,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/gd.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gd) $(GD_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/gd.so '$ext_builddir'/gd.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gd) $(GD_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -37459,7 +37375,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/gd.$suffix \$(phplibdir)
 
 $ext_builddir/gd.$suffix: \$(shared_objects_gd) \$(GD_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_gd) \$(GD_SHARED_LIBADD)
 
 EOF
 
@@ -38099,15 +38015,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/gettext.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gettext) $(GETTEXT_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/gettext.so '$ext_builddir'/gettext.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gettext) $(GETTEXT_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -38124,7 +38036,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/gettext.$suffix \$(phplibdir)
 
 $ext_builddir/gettext.$suffix: \$(shared_objects_gettext) \$(GETTEXT_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_gettext) \$(GETTEXT_SHARED_LIBADD)
 
 EOF
 
@@ -39004,15 +38916,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/gmp.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gmp) $(GMP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/gmp.so '$ext_builddir'/gmp.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_gmp) $(GMP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -39029,7 +38937,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/gmp.$suffix \$(phplibdir)
 
 $ext_builddir/gmp.$suffix: \$(shared_objects_gmp) \$(GMP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_gmp) \$(GMP_SHARED_LIBADD)
 
 EOF
 
@@ -39626,15 +39534,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/hash.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_hash) $(HASH_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/hash.so '$ext_builddir'/hash.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_hash) $(HASH_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -39651,7 +39555,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/hash.$suffix \$(phplibdir)
 
 $ext_builddir/hash.$suffix: \$(shared_objects_hash) \$(HASH_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_hash) \$(HASH_SHARED_LIBADD)
 
 EOF
 
@@ -40965,15 +40869,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/iconv.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_iconv) $(ICONV_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/iconv.so '$ext_builddir'/iconv.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_iconv) $(ICONV_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -40990,7 +40890,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/iconv.$suffix \$(phplibdir)
 
 $ext_builddir/iconv.$suffix: \$(shared_objects_iconv) \$(ICONV_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_iconv) \$(ICONV_SHARED_LIBADD)
 
 EOF
 
@@ -41353,15 +41253,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/imap.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_imap) $(IMAP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/imap.so '$ext_builddir'/imap.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_imap) $(IMAP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -41378,7 +41274,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/imap.$suffix \$(phplibdir)
 
 $ext_builddir/imap.$suffix: \$(shared_objects_imap) \$(IMAP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_imap) \$(IMAP_SHARED_LIBADD)
 
 EOF
 
@@ -44547,15 +44443,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/interbase.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_interbase) $(INTERBASE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/interbase.so '$ext_builddir'/interbase.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_interbase) $(INTERBASE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -44572,7 +44464,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/interbase.$suffix \$(phplibdir)
 
 $ext_builddir/interbase.$suffix: \$(shared_objects_interbase) \$(INTERBASE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_interbase) \$(INTERBASE_SHARED_LIBADD)
 
 EOF
 
@@ -45805,15 +45697,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CXX) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/intl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_intl) $(INTL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/intl.so '$ext_builddir'/intl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CXX) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_intl) $(INTL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -45830,7 +45718,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/intl.$suffix \$(phplibdir)
 
 $ext_builddir/intl.$suffix: \$(shared_objects_intl) \$(INTL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CXX) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_intl) \$(INTL_SHARED_LIBADD)
 
 EOF
 
@@ -46521,15 +46409,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/json.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_json) $(JSON_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/json.so '$ext_builddir'/json.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_json) $(JSON_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -46546,7 +46430,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/json.$suffix \$(phplibdir)
 
 $ext_builddir/json.$suffix: \$(shared_objects_json) \$(JSON_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_json) \$(JSON_SHARED_LIBADD)
 
 EOF
 
@@ -46886,15 +46770,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/ldap.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ldap) $(LDAP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/ldap.so '$ext_builddir'/ldap.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_ldap) $(LDAP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -46911,7 +46791,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/ldap.$suffix \$(phplibdir)
 
 $ext_builddir/ldap.$suffix: \$(shared_objects_ldap) \$(LDAP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_ldap) \$(LDAP_SHARED_LIBADD)
 
 EOF
 
@@ -51489,15 +51369,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/mbstring.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mbstring) $(MBSTRING_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/mbstring.so '$ext_builddir'/mbstring.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mbstring) $(MBSTRING_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -51514,7 +51390,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/mbstring.$suffix \$(phplibdir)
 
 $ext_builddir/mbstring.$suffix: \$(shared_objects_mbstring) \$(MBSTRING_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_mbstring) \$(MBSTRING_SHARED_LIBADD)
 
 EOF
 
@@ -52718,15 +52594,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/mysqli.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mysqli) $(MYSQLI_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/mysqli.so '$ext_builddir'/mysqli.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mysqli) $(MYSQLI_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -52743,7 +52615,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/mysqli.$suffix \$(phplibdir)
 
 $ext_builddir/mysqli.$suffix: \$(shared_objects_mysqli) \$(MYSQLI_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_mysqli) \$(MYSQLI_SHARED_LIBADD)
 
 EOF
 
@@ -53799,15 +53671,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/oci8.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_oci8) $(OCI8_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/oci8.so '$ext_builddir'/oci8.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_oci8) $(OCI8_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -53824,7 +53692,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/oci8.$suffix \$(phplibdir)
 
 $ext_builddir/oci8.$suffix: \$(shared_objects_oci8) \$(OCI8_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_oci8) \$(OCI8_SHARED_LIBADD)
 
 EOF
 
@@ -54392,15 +54260,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/oci8.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_oci8) $(OCI8_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/oci8.so '$ext_builddir'/oci8.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_oci8) $(OCI8_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -54417,7 +54281,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/oci8.$suffix \$(phplibdir)
 
 $ext_builddir/oci8.$suffix: \$(shared_objects_oci8) \$(OCI8_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_oci8) \$(OCI8_SHARED_LIBADD)
 
 EOF
 
@@ -56510,15 +56374,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/odbc.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_odbc) $(ODBC_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/odbc.so '$ext_builddir'/odbc.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_odbc) $(ODBC_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -56535,7 +56395,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/odbc.$suffix \$(phplibdir)
 
 $ext_builddir/odbc.$suffix: \$(shared_objects_odbc) \$(ODBC_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_odbc) \$(ODBC_SHARED_LIBADD)
 
 EOF
 
@@ -57369,15 +57229,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/opcache.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_opcache) $(OPCACHE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/opcache.so '$ext_builddir'/opcache.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_opcache) $(OPCACHE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -57394,7 +57250,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/opcache.$suffix \$(phplibdir)
 
 $ext_builddir/opcache.$suffix: \$(shared_objects_opcache) \$(OPCACHE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_opcache) \$(OPCACHE_SHARED_LIBADD)
 
 EOF
 
@@ -57852,15 +57708,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pcntl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcntl) $(PCNTL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pcntl.so '$ext_builddir'/pcntl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pcntl) $(PCNTL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -57877,7 +57729,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pcntl.$suffix \$(phplibdir)
 
 $ext_builddir/pcntl.$suffix: \$(shared_objects_pcntl) \$(PCNTL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pcntl) \$(PCNTL_SHARED_LIBADD)
 
 EOF
 
@@ -58182,15 +58034,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo) $(PDO_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo.so '$ext_builddir'/pdo.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo) $(PDO_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -58207,7 +58055,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo.$suffix \$(phplibdir)
 
 $ext_builddir/pdo.$suffix: \$(shared_objects_pdo) \$(PDO_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo) \$(PDO_SHARED_LIBADD)
 
 EOF
 
@@ -58737,15 +58585,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_dblib.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_dblib) $(PDO_DBLIB_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_dblib.so '$ext_builddir'/pdo_dblib.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_dblib) $(PDO_DBLIB_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -58762,7 +58606,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_dblib.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_dblib.$suffix: \$(shared_objects_pdo_dblib) \$(PDO_DBLIB_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_dblib) \$(PDO_DBLIB_SHARED_LIBADD)
 
 EOF
 
@@ -60018,15 +59862,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_firebird.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_firebird) $(PDO_FIREBIRD_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_firebird.so '$ext_builddir'/pdo_firebird.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_firebird) $(PDO_FIREBIRD_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -60043,7 +59883,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_firebird.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_firebird.$suffix: \$(shared_objects_pdo_firebird) \$(PDO_FIREBIRD_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_firebird) \$(PDO_FIREBIRD_SHARED_LIBADD)
 
 EOF
 
@@ -61443,15 +61283,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_mysql.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_mysql) $(PDO_MYSQL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_mysql.so '$ext_builddir'/pdo_mysql.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_mysql) $(PDO_MYSQL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -61468,7 +61304,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_mysql.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_mysql.$suffix: \$(shared_objects_pdo_mysql) \$(PDO_MYSQL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_mysql) \$(PDO_MYSQL_SHARED_LIBADD)
 
 EOF
 
@@ -63477,15 +63313,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_oci.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_oci) $(PDO_OCI_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_oci.so '$ext_builddir'/pdo_oci.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_oci) $(PDO_OCI_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -63502,7 +63334,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_oci.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_oci.$suffix: \$(shared_objects_pdo_oci) \$(PDO_OCI_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_oci) \$(PDO_OCI_SHARED_LIBADD)
 
 EOF
 
@@ -64620,15 +64452,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_odbc.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_odbc) $(PDO_ODBC_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_odbc.so '$ext_builddir'/pdo_odbc.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_odbc) $(PDO_ODBC_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -64645,7 +64473,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_odbc.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_odbc.$suffix: \$(shared_objects_pdo_odbc) \$(PDO_ODBC_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_odbc) \$(PDO_ODBC_SHARED_LIBADD)
 
 EOF
 
@@ -65438,15 +65266,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_pgsql.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_pgsql) $(PDO_PGSQL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_pgsql.so '$ext_builddir'/pdo_pgsql.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_pgsql) $(PDO_PGSQL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -65463,7 +65287,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_pgsql.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_pgsql.$suffix: \$(shared_objects_pdo_pgsql) \$(PDO_PGSQL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_pgsql) \$(PDO_PGSQL_SHARED_LIBADD)
 
 EOF
 
@@ -66410,15 +66234,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_sqlite.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_sqlite) $(PDO_SQLITE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_sqlite.so '$ext_builddir'/pdo_sqlite.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_sqlite) $(PDO_SQLITE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -66435,7 +66255,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_sqlite.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_sqlite.$suffix: \$(shared_objects_pdo_sqlite) \$(PDO_SQLITE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_sqlite) \$(PDO_SQLITE_SHARED_LIBADD)
 
 EOF
 
@@ -66722,15 +66542,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pdo_sqlite.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_sqlite) $(PDO_SQLITE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pdo_sqlite.so '$ext_builddir'/pdo_sqlite.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pdo_sqlite) $(PDO_SQLITE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -66747,7 +66563,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pdo_sqlite.$suffix \$(phplibdir)
 
 $ext_builddir/pdo_sqlite.$suffix: \$(shared_objects_pdo_sqlite) \$(PDO_SQLITE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pdo_sqlite) \$(PDO_SQLITE_SHARED_LIBADD)
 
 EOF
 
@@ -68769,15 +68585,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pgsql.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pgsql) $(PGSQL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pgsql.so '$ext_builddir'/pgsql.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pgsql) $(PGSQL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -68794,7 +68606,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pgsql.$suffix \$(phplibdir)
 
 $ext_builddir/pgsql.$suffix: \$(shared_objects_pgsql) \$(PGSQL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pgsql) \$(PGSQL_SHARED_LIBADD)
 
 EOF
 
@@ -69069,15 +68881,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/phar.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_phar) $(PHAR_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/phar.so '$ext_builddir'/phar.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_phar) $(PHAR_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -69094,7 +68902,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/phar.$suffix \$(phplibdir)
 
 $ext_builddir/phar.$suffix: \$(shared_objects_phar) \$(PHAR_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_phar) \$(PHAR_SHARED_LIBADD)
 
 EOF
 
@@ -69468,15 +69276,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/posix.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_posix) $(POSIX_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/posix.so '$ext_builddir'/posix.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_posix) $(POSIX_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -69493,7 +69297,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/posix.$suffix \$(phplibdir)
 
 $ext_builddir/posix.$suffix: \$(shared_objects_posix) \$(POSIX_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_posix) \$(POSIX_SHARED_LIBADD)
 
 EOF
 
@@ -69878,15 +69682,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/pspell.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pspell) $(PSPELL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/pspell.so '$ext_builddir'/pspell.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_pspell) $(PSPELL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -69903,7 +69703,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/pspell.$suffix \$(phplibdir)
 
 $ext_builddir/pspell.$suffix: \$(shared_objects_pspell) \$(PSPELL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_pspell) \$(PSPELL_SHARED_LIBADD)
 
 EOF
 
@@ -72557,15 +72357,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/readline.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_readline) $(READLINE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/readline.so '$ext_builddir'/readline.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_readline) $(READLINE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -72582,7 +72378,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/readline.$suffix \$(phplibdir)
 
 $ext_builddir/readline.$suffix: \$(shared_objects_readline) \$(READLINE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_readline) \$(READLINE_SHARED_LIBADD)
 
 EOF
 
@@ -73314,15 +73110,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/recode.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_recode) $(RECODE_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/recode.so '$ext_builddir'/recode.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_recode) $(RECODE_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -73339,7 +73131,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/recode.$suffix \$(phplibdir)
 
 $ext_builddir/recode.$suffix: \$(shared_objects_recode) \$(RECODE_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_recode) \$(RECODE_SHARED_LIBADD)
 
 EOF
 
@@ -73572,15 +73364,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/reflection.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_reflection) $(REFLECTION_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/reflection.so '$ext_builddir'/reflection.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_reflection) $(REFLECTION_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -73597,7 +73385,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/reflection.$suffix \$(phplibdir)
 
 $ext_builddir/reflection.$suffix: \$(shared_objects_reflection) \$(REFLECTION_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_reflection) \$(REFLECTION_SHARED_LIBADD)
 
 EOF
 
@@ -74117,15 +73905,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/session.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_session) $(SESSION_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/session.so '$ext_builddir'/session.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_session) $(SESSION_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -74142,7 +73926,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/session.$suffix \$(phplibdir)
 
 $ext_builddir/session.$suffix: \$(shared_objects_session) \$(SESSION_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_session) \$(SESSION_SHARED_LIBADD)
 
 EOF
 
@@ -74647,15 +74431,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/shmop.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_shmop) $(SHMOP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/shmop.so '$ext_builddir'/shmop.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_shmop) $(SHMOP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -74672,7 +74452,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/shmop.$suffix \$(phplibdir)
 
 $ext_builddir/shmop.$suffix: \$(shared_objects_shmop) \$(SHMOP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_shmop) \$(SHMOP_SHARED_LIBADD)
 
 EOF
 
@@ -75264,15 +75044,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/simplexml.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_simplexml) $(SIMPLEXML_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/simplexml.so '$ext_builddir'/simplexml.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_simplexml) $(SIMPLEXML_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -75289,7 +75065,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/simplexml.$suffix \$(phplibdir)
 
 $ext_builddir/simplexml.$suffix: \$(shared_objects_simplexml) \$(SIMPLEXML_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_simplexml) \$(SIMPLEXML_SHARED_LIBADD)
 
 EOF
 
@@ -76156,15 +75932,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/snmp.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_snmp) $(SNMP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/snmp.so '$ext_builddir'/snmp.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_snmp) $(SNMP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -76181,7 +75953,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/snmp.$suffix \$(phplibdir)
 
 $ext_builddir/snmp.$suffix: \$(shared_objects_snmp) \$(SNMP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_snmp) \$(SNMP_SHARED_LIBADD)
 
 EOF
 
@@ -76776,15 +76548,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/soap.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_soap) $(SOAP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/soap.so '$ext_builddir'/soap.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_soap) $(SOAP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -76801,7 +76569,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/soap.$suffix \$(phplibdir)
 
 $ext_builddir/soap.$suffix: \$(shared_objects_soap) \$(SOAP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_soap) \$(SOAP_SHARED_LIBADD)
 
 EOF
 
@@ -77323,15 +77091,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sockets.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sockets) $(SOCKETS_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sockets.so '$ext_builddir'/sockets.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sockets) $(SOCKETS_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -77348,7 +77112,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sockets.$suffix \$(phplibdir)
 
 $ext_builddir/sockets.$suffix: \$(shared_objects_sockets) \$(SOCKETS_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sockets) \$(SOCKETS_SHARED_LIBADD)
 
 EOF
 
@@ -78143,15 +77907,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sodium.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sodium) $(SODIUM_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sodium.so '$ext_builddir'/sodium.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sodium) $(SODIUM_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -78168,7 +77928,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sodium.$suffix \$(phplibdir)
 
 $ext_builddir/sodium.$suffix: \$(shared_objects_sodium) \$(SODIUM_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sodium) \$(SODIUM_SHARED_LIBADD)
 
 EOF
 
@@ -78401,15 +78161,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/spl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_spl) $(SPL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/spl.so '$ext_builddir'/spl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_spl) $(SPL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -78426,7 +78182,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/spl.$suffix \$(phplibdir)
 
 $ext_builddir/spl.$suffix: \$(shared_objects_spl) \$(SPL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_spl) \$(SPL_SHARED_LIBADD)
 
 EOF
 
@@ -82439,15 +82195,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/standard.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_standard) $(STANDARD_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/standard.so '$ext_builddir'/standard.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_standard) $(STANDARD_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -82464,7 +82216,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/standard.$suffix \$(phplibdir)
 
 $ext_builddir/standard.$suffix: \$(shared_objects_standard) \$(STANDARD_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_standard) \$(STANDARD_SHARED_LIBADD)
 
 EOF
 
@@ -82798,15 +82550,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sysvmsg.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvmsg) $(SYSVMSG_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sysvmsg.so '$ext_builddir'/sysvmsg.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvmsg) $(SYSVMSG_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -82823,7 +82571,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sysvmsg.$suffix \$(phplibdir)
 
 $ext_builddir/sysvmsg.$suffix: \$(shared_objects_sysvmsg) \$(SYSVMSG_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sysvmsg) \$(SYSVMSG_SHARED_LIBADD)
 
 EOF
 
@@ -83098,15 +82846,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sysvsem.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvsem) $(SYSVSEM_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sysvsem.so '$ext_builddir'/sysvsem.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvsem) $(SYSVSEM_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -83123,7 +82867,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sysvsem.$suffix \$(phplibdir)
 
 $ext_builddir/sysvsem.$suffix: \$(shared_objects_sysvsem) \$(SYSVSEM_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sysvsem) \$(SYSVSEM_SHARED_LIBADD)
 
 EOF
 
@@ -83447,15 +83191,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/sysvshm.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvshm) $(SYSVSHM_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/sysvshm.so '$ext_builddir'/sysvshm.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_sysvshm) $(SYSVSHM_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -83472,7 +83212,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/sysvshm.$suffix \$(phplibdir)
 
 $ext_builddir/sysvshm.$suffix: \$(shared_objects_sysvshm) \$(SYSVSHM_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_sysvshm) \$(SYSVSHM_SHARED_LIBADD)
 
 EOF
 
@@ -84211,15 +83951,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/tidy.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_tidy) $(TIDY_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/tidy.so '$ext_builddir'/tidy.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_tidy) $(TIDY_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -84236,7 +83972,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/tidy.$suffix \$(phplibdir)
 
 $ext_builddir/tidy.$suffix: \$(shared_objects_tidy) \$(TIDY_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_tidy) \$(TIDY_SHARED_LIBADD)
 
 EOF
 
@@ -84518,15 +84254,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/tokenizer.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_tokenizer) $(TOKENIZER_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/tokenizer.so '$ext_builddir'/tokenizer.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_tokenizer) $(TOKENIZER_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -84543,7 +84275,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/tokenizer.$suffix \$(phplibdir)
 
 $ext_builddir/tokenizer.$suffix: \$(shared_objects_tokenizer) \$(TOKENIZER_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_tokenizer) \$(TOKENIZER_SHARED_LIBADD)
 
 EOF
 
@@ -85369,15 +85101,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/wddx.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_wddx) $(WDDX_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/wddx.so '$ext_builddir'/wddx.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_wddx) $(WDDX_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -85394,7 +85122,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/wddx.$suffix \$(phplibdir)
 
 $ext_builddir/wddx.$suffix: \$(shared_objects_wddx) \$(WDDX_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_wddx) \$(WDDX_SHARED_LIBADD)
 
 EOF
 
@@ -86204,15 +85932,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xml.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xml) $(XML_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xml.so '$ext_builddir'/xml.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xml) $(XML_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -86229,7 +85953,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xml.$suffix \$(phplibdir)
 
 $ext_builddir/xml.$suffix: \$(shared_objects_xml) \$(XML_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xml) \$(XML_SHARED_LIBADD)
 
 EOF
 
@@ -86845,15 +86569,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xmlreader.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlreader) $(XMLREADER_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xmlreader.so '$ext_builddir'/xmlreader.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlreader) $(XMLREADER_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -86870,7 +86590,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xmlreader.$suffix \$(phplibdir)
 
 $ext_builddir/xmlreader.$suffix: \$(shared_objects_xmlreader) \$(XMLREADER_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xmlreader) \$(XMLREADER_SHARED_LIBADD)
 
 EOF
 
@@ -88844,15 +88564,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xmlrpc.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlrpc) $(XMLRPC_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xmlrpc.so '$ext_builddir'/xmlrpc.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlrpc) $(XMLRPC_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -88869,7 +88585,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xmlrpc.$suffix \$(phplibdir)
 
 $ext_builddir/xmlrpc.$suffix: \$(shared_objects_xmlrpc) \$(XMLRPC_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xmlrpc) \$(XMLRPC_SHARED_LIBADD)
 
 EOF
 
@@ -89266,15 +88982,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xmlrpc.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlrpc) $(XMLRPC_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xmlrpc.so '$ext_builddir'/xmlrpc.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlrpc) $(XMLRPC_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -89291,7 +89003,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xmlrpc.$suffix \$(phplibdir)
 
 $ext_builddir/xmlrpc.$suffix: \$(shared_objects_xmlrpc) \$(XMLRPC_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xmlrpc) \$(XMLRPC_SHARED_LIBADD)
 
 EOF
 
@@ -89884,15 +89596,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xmlwriter.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlwriter) $(XMLWRITER_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xmlwriter.so '$ext_builddir'/xmlwriter.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xmlwriter) $(XMLWRITER_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -89909,7 +89617,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xmlwriter.$suffix \$(phplibdir)
 
 $ext_builddir/xmlwriter.$suffix: \$(shared_objects_xmlwriter) \$(XMLWRITER_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xmlwriter) \$(XMLWRITER_SHARED_LIBADD)
 
 EOF
 
@@ -90508,15 +90216,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/xsl.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xsl) $(XSL_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/xsl.so '$ext_builddir'/xsl.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_xsl) $(XSL_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -90533,7 +90237,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/xsl.$suffix \$(phplibdir)
 
 $ext_builddir/xsl.$suffix: \$(shared_objects_xsl) \$(XSL_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_xsl) \$(XSL_SHARED_LIBADD)
 
 EOF
 
@@ -90829,15 +90533,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/zend_test.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zend_test) $(ZEND_TEST_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/zend_test.so '$ext_builddir'/zend_test.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zend_test) $(ZEND_TEST_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -90854,7 +90554,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/zend_test.$suffix \$(phplibdir)
 
 $ext_builddir/zend_test.$suffix: \$(shared_objects_zend_test) \$(ZEND_TEST_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_zend_test) \$(ZEND_TEST_SHARED_LIBADD)
 
 EOF
 
@@ -92106,15 +91806,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/zip.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zip) $(ZIP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/zip.so '$ext_builddir'/zip.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zip) $(ZIP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -92131,7 +91827,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/zip.$suffix \$(phplibdir)
 
 $ext_builddir/zip.$suffix: \$(shared_objects_zip) \$(ZIP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_zip) \$(ZIP_SHARED_LIBADD)
 
 EOF
 
@@ -92400,15 +92096,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/zip.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zip) $(ZIP_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/zip.so '$ext_builddir'/zip.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_zip) $(ZIP_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -92425,7 +92117,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/zip.$suffix \$(phplibdir)
 
 $ext_builddir/zip.$suffix: \$(shared_objects_zip) \$(ZIP_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_zip) \$(ZIP_SHARED_LIBADD)
 
 EOF
 
@@ -94093,15 +93785,11 @@ EOF
 
 
   install_modules="install-modules"
+  suffix=la
 
   case $host_alias in
     *aix*)
-      suffix=so
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -Wl,-G -o '$ext_builddir'/mysqlnd.la -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mysqlnd) $(MYSQLND_SHARED_LIBADD) && mv -f '$ext_builddir'/.libs/mysqlnd.so '$ext_builddir'/mysqlnd.so'
-      ;;
-    *)
-      suffix=la
-      link_cmd='$(LIBTOOL) --mode=link $(CC) $(COMMON_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) -o $@ -export-dynamic -avoid-version -prefer-pic -module -rpath $(phplibdir) $(EXTRA_LDFLAGS) $(shared_objects_mysqlnd) $(MYSQLND_SHARED_LIBADD)'
+      additional_flags="-Wl,-G"
       ;;
   esac
 
@@ -94118,7 +93806,7 @@ EOF
 	\$(LIBTOOL) --mode=install cp $ext_builddir/mysqlnd.$suffix \$(phplibdir)
 
 $ext_builddir/mysqlnd.$suffix: \$(shared_objects_mysqlnd) \$(MYSQLND_SHARED_DEPENDENCIES)
-	$link_cmd
+	\$(LIBTOOL) --mode=link \$(CC) \$(COMMON_FLAGS) \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(LDFLAGS) $additional_flags -o \$@ -export-dynamic -avoid-version -prefer-pic -module -rpath \$(phplibdir) \$(EXTRA_LDFLAGS) \$(shared_objects_mysqlnd) \$(MYSQLND_SHARED_LIBADD)
 
 EOF
 
@@ -95536,7 +95224,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 95539 "configure"
+#line 95227 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -97575,7 +97263,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 97578 "configure"' > conftest.$ac_ext
+  echo '#line 97266 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -98973,7 +98661,7 @@ else
       LDFLAGS="$LDFLAGS -Wl,-exported_symbols_list,conftest.sym"
 
 cat > conftest.$ac_ext <<EOF
-#line 98976 "configure"
+#line 98664 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -99131,11 +98819,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99134: $lt_compile\"" >&5)
+   (eval echo "\"configure:98822: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99138: \$? = $ac_status" >&5
+   echo "configure:98826: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99429,11 +99117,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99432: $lt_compile\"" >&5)
+   (eval echo "\"configure:99120: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99436: \$? = $ac_status" >&5
+   echo "configure:99124: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99533,11 +99221,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99536: $lt_compile\"" >&5)
+   (eval echo "\"configure:99224: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:99540: \$? = $ac_status" >&5
+   echo "configure:99228: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -99997,7 +99685,7 @@ _LT_EOF
        # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 100000 "configure"
+#line 99688 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -100039,7 +99727,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	 # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 100042 "configure"
+#line 99730 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -101556,7 +101244,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101559 "configure"
+#line 101247 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -101656,7 +101344,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101659 "configure"
+#line 101347 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -102721,7 +102409,7 @@ case $host_os in
       # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102724 "configure"
+#line 102412 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -102764,7 +102452,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	# Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102767 "configure"
+#line 102455 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -104016,11 +103704,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:104019: $lt_compile\"" >&5)
+   (eval echo "\"configure:103707: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:104023: \$? = $ac_status" >&5
+   echo "configure:103711: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -104120,11 +103808,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:104123: $lt_compile\"" >&5)
+   (eval echo "\"configure:103811: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:104127: \$? = $ac_status" >&5
+   echo "configure:103815: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized

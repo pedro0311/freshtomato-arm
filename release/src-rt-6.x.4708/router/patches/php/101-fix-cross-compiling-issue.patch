@@ -1,6 +1,6 @@
---- php/configure	2018-07-17 07:35:58.000000000 +0200
-+++ php/configure	2018-07-29 13:29:03.759940168 +0200
-@@ -30724,6 +30724,9 @@ if test "$PHP_FILEINFO" != "no"; then
+--- php/configure
++++ php/configure
+@@ -30656,6 +30656,9 @@ if test "$PHP_FILEINFO" != "no"; then
      libmagic/is_tar.c libmagic/magic.c libmagic/print.c \
      libmagic/readcdf.c libmagic/softmagic.c libmagic/der.c"
  
@@ -10,7 +10,7 @@
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for strcasestr" >&5
  $as_echo_n "checking for strcasestr... " >&6; }
    if test "$cross_compiling" = yes; then :
-@@ -30779,7 +30782,7 @@ rm -f core *.core core.conftest.* gmon.o
+@@ -30711,7 +30714,7 @@ rm -f core *.core core.conftest.* gmon.o
    conftest.$ac_objext conftest.beam conftest.$ac_ext
  fi
  
