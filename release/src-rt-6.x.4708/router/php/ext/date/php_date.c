@@ -543,6 +543,7 @@ const zend_function_entry date_funcs_period[] = {
 	PHP_ME(DatePeriod,                getStartDate,                NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(DatePeriod,                getEndDate,                  NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(DatePeriod,                getDateInterval,             NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(DatePeriod,                getRecurrences,              NULL, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 
@@ -4435,12 +4436,21 @@ PHP_FUNCTION(date_interval_create_from_date_string)
 		Z_PARAM_STR(time_str)
 	ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-	php_date_instantiate(date_ce_interval, return_value);
-
 	time = timelib_strtotime(ZSTR_VAL(time_str), ZSTR_LEN(time_str), &err, DATE_TIMEZONEDB, php_date_parse_tzfile_wrapper);
+
+	if (err->error_count > 0)  {
+		php_error_docref(NULL, E_WARNING, "Unknown or bad format (%s) at position %d (%c): %s", ZSTR_VAL(time_str),
+			err->error_messages[0].position, err->error_messages[0].character ? err->error_messages[0].character : ' ', err->error_messages[0].message);
+		RETVAL_FALSE;
+		goto cleanup;
+	}
+
+	php_date_instantiate(date_ce_interval, return_value);
 	diobj = Z_PHPINTERVAL_P(return_value);
 	diobj->diff = timelib_rel_time_clone(&time->relative);
 	diobj->initialized = 1;
+
+cleanup:
 	timelib_time_dtor(time);
 	timelib_error_container_dtor(err);
 }
@@ -4724,6 +4734,27 @@ PHP_METHOD(DatePeriod, getDateInterval)
 	diobj = Z_PHPINTERVAL_P(return_value);
 	diobj->diff = timelib_rel_time_clone(dpobj->interval);
 	diobj->initialized = 1;
+}
+/* }}} */
+
+/* {{{ proto int DatePeriod::getRecurrences()
+   Get recurrences.
+*/
+PHP_METHOD(DatePeriod, getRecurrences)
+{
+	php_period_obj *dpobj;
+
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+
+	dpobj = Z_PHPPERIOD_P(getThis());
+
+	if (0 == dpobj->recurrences - dpobj->include_start_date) {
+		return;
+	}
+
+	RETURN_LONG(dpobj->recurrences - dpobj->include_start_date);
 }
 /* }}} */
 
