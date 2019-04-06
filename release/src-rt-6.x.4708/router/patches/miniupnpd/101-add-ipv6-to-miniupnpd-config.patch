@@ -1,5 +1,5 @@
---- miniupnpd/genconfig.sh	2018-05-21 23:16:44.294686204 +0200
-+++ miniupnpd/genconfig.sh	2018-05-21 23:21:15.000000000 +0200
+--- miniupnpd/genconfig.sh
++++ miniupnpd/genconfig.sh
 @@ -94,7 +94,7 @@ fi
  # Tomato USB special case
  if [ -f ../shared/tomato_version ]; then
@@ -9,8 +9,8 @@
  	OS_VERSION="Tomato $TOMATO_VER"
  fi
  
---- miniupnpd/Makefile.linux	2019-02-10 13:03:06.000000000 +0100
-+++ miniupnpd/Makefile.linux	2019-02-24 16:48:42.102561446 +0100
+--- miniupnpd/Makefile.linux
++++ miniupnpd/Makefile.linux
 @@ -27,7 +27,7 @@ CFLAGS += -fno-strict-aliasing
  CFLAGS += -fno-common
  CFLAGS += -fstack-protector -fPIE
@@ -44,8 +44,8 @@
  else # ifeq ($(TEST), 1)
  LDLIBS = $(IPTABLESPATH)/libiptc/libiptc.a
 
---- miniupnpd/getifaddr.c	2018-07-06 14:03:21.000000000 +0200
-+++ miniupnpd/getifaddr.c	2019-02-24 16:50:23.498396862 +0100
+--- miniupnpd/getifaddr.c
++++ miniupnpd/getifaddr.c
 @@ -24,6 +24,8 @@
  #include "getifaddr.h"
  #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)

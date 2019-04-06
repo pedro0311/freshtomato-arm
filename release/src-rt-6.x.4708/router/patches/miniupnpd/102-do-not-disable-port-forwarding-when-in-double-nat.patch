@@ -1,5 +1,5 @@
---- miniupnpd/miniupnpd.c	2019-02-10 13:03:06.000000000 +0100
-+++ miniupnpd/miniupnpd.c	2019-02-24 16:56:35.021717399 +0100
+--- miniupnpd/miniupnpd.c
++++ miniupnpd/miniupnpd.c
 @@ -1058,7 +1058,7 @@ int update_ext_ip_addr_from_stun(int ini
  		else
  			syslog(LOG_INFO, "STUN: ext interface %s has now public IP address %s: Port forwarding is now enabled", ext_if_name, if_addr_str);
