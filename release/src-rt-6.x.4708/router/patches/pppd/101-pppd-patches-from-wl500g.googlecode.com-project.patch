@@ -2284,20 +2284,6 @@ index a7e3400..e6070dd 100644
  	return pppol2tp_fd;
  }
  
-@@ -472,6 +472,13 @@ static void pppol2tp_check_options(void)
- 		snoop_recv_hook = pppol2tp_lcp_snoop_recv;
- 		snoop_send_hook = pppol2tp_lcp_snoop_send;
- 	}
-+	/* If pppol2tp_ifname not supplied, use ip_up_hook to discover interface */
-+	if (!pppol2tp_ifname[0]) {
-+		old_ip_up_hook = ip_up_hook;
-+		ip_up_hook = pppol2tp_ip_up_hook;
-+		old_ip_down_hook = ip_down_hook;
-+		ip_down_hook = pppol2tp_ip_down_hook;
-+	}
- }
- 
- /* Called just before pppd exits.
 diff --git pppd/pppd/plugins/radius/clientid.c pppd/pppd/plugins/radius/clientid.c
 index d49579c..91201b0 100644
 --- pppd/pppd/plugins/radius/clientid.c

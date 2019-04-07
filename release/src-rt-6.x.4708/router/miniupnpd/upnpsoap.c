@@ -1,4 +1,4 @@
-/* $Id: upnpsoap.c,v 1.153 2019/02/10 11:47:11 nanard Exp $ */
+/* $Id: upnpsoap.c,v 1.154 2019/04/03 16:25:54 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -598,7 +598,7 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 	if(leaseduration == 0)
 		leaseduration = 604800;
 
-	if (!int_ip || !ext_port || !int_port)
+	if (!int_ip || !ext_port || !int_port || !protocol)
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 402, "Invalid Args");

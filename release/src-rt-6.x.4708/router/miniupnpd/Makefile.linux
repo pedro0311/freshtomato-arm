@@ -1,4 +1,4 @@
-# $Id: Makefile.linux,v 1.99 2019/02/10 11:37:14 nanard Exp $
+# $Id: Makefile.linux,v 1.100 2019/04/03 16:25:54 nanard Exp $
 # MiniUPnP project
 # (c) 2006-2019 Thomas Bernard
 # http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -192,6 +192,8 @@ clean:
 	$(RM) testupnppermissions.o testgetifaddr.o
 	$(RM) testgetroute.o testasyncsendto.o
 	$(RM) testportinuse.o
+	$(RM) testminissdp.o
+	$(RM) testssdppktgen.o
 	$(RM) miniupnpdctl.o
 	$(RM) validateupnppermissions validategetifaddr validatessdppktgen
 
