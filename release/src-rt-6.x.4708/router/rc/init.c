@@ -4720,9 +4720,12 @@ int init_main(int argc, char *argv[])
 			start_lan();
 			start_arpbind();
 			mwan_state_files();
-			start_wan(BOOT);
 			start_services();
 			start_wl();
+			/*
+			 * last one as ssh telnet httpd samba etc can fail to load until start_wan_done
+			 */
+			start_wan(BOOT);
 
 #ifdef CONFIG_BCMWL5
 			if (wds_enable()) {
