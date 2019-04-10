@@ -158,7 +158,7 @@ int do_led(int which, int mode)
 	static int ac68u[]	= { 255,  255,     4,  255,  255,   -3,  255,    0,   14,  255};
 	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6};
 	static int n18u[]	= { 255,  255,     6,  255,  255,  -99,    9,    3,   14,  255};
-	static int r6250[]	= {  11,  255,    15,  255,  255,    1,  255,    8,  255,  255};
+	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255};
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8};
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  255,   18,   17,   12};
@@ -397,11 +397,11 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_R6250:
 		if (which == LED_DIAG) {
-			/* power led gpio: -3 - orange, -2 - green */
-			b = (mode) ? 2 : 3;
-			c = (mode) ? 3 : 2;
-		} else
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color green gpio 2 (active LOW) */
+		} else {
 			b = r6250[which];
+		}
 		break;
 	case MODEL_R6300v2:
 		if (which == LED_DIAG) {
