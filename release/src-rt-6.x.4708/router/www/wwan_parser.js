@@ -20,9 +20,10 @@ function getAltText(bar) {
 }
 
 function createWWANStatusSection(wannum, wwanstatus) {
+	let wanNumStr = 'wan'+(wannum > 1 ? wannum : '');
 	let code = '<table class="fields"><tbody>';
 	code += '<tr><td class="title indent1">Modem type</td>';
-	code += '<td class="content">' + nvram['wan'+(wannum > 1 ? wannum : '')+'_modem_type'] + '</td></tr>';
+	code += '<td class="content">' + nvram[wanNumStr + '_modem_type'] + '</td></tr>';
 	code += '<tr><td class="title indent1">Current Mode</td>';
 	code += '<td class="content">' + wwan_getCurrentMode(wwanstatus) + '</td></tr>';
 	let valMap = [];
@@ -108,8 +109,22 @@ function createWWANStatusSection(wannum, wwanstatus) {
 		}
 	}
 
-	code += '</tbody></table>';
+	code += '</tbody>'
+	let modemType = nvram[wanNumStr + '_modem_type'];
+	let connType = nvram[wanNumStr + '_proto'];
+	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'hw-ether') {
+			code += '<tr><td class="title indent1"></td>';
+			code += '<td class="content"> \
+			<a href="#" onclick="showSMSForWWAN(' + wannum + ')"> \
+			Click to view SMS</a></td></tr>';
+	}
+	code += '</table>';
 	return code;
+}
+
+function showSMSForWWAN(wwannum) {
+	cookie.set("wwansms_selection", wwannum);
+	document.location.href = 'wwan-sms.asp';
 }
 
 function wwan_getSignalStrengthMap(buffer, returnMap) {

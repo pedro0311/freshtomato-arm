@@ -98,6 +98,9 @@ extern void asp_calc6rdlocalprefix(int argc, char **argv);
 #ifdef TCONFIG_USB
 extern void asp_usbdevices(int argc, char **argv);
 extern void wo_usbcommand(char *url);
+extern void wo_wwansignal(char *url);
+extern void wo_wwansms(char *url);
+extern void wo_wwansms_delete(char *url);
 #endif
 
 //pptpd.c
