@@ -162,7 +162,7 @@ int do_led(int which, int mode)
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8};
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  255,   18,   17,   12};
-	static int ac15[]	= { 255,    0,   255,  255,  255,   -6,  255,  -14,  255,   -2};
+	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  255,  -14,  255,   -2};
 	static int dir868[]	= { 255,  255,     3,  255,  255,    0,  255,  255,  255,  255};
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
@@ -559,6 +559,10 @@ void led_setup(void) {
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
 		switch(model) {
+		case MODEL_AC15:
+			system("gpio disable 0");	/* disable power led */
+			disable_led_wanlan();
+			break;
 		case MODEL_R6250:
 		case MODEL_R6300v2:
 			system("gpio enable 3");	/* disable power led color amber */
@@ -613,6 +617,7 @@ void led_setup(void) {
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn on WAN and LAN LEDs */
 		switch(model) {
+		case MODEL_AC15:
 		case MODEL_R6400:
 		case MODEL_R7000:
 		case MODEL_RTAC56U:
