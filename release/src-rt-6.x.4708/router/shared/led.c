@@ -559,6 +559,10 @@ void led_setup(void) {
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
 		switch(model) {
+		case MODEL_R6250:
+		case MODEL_R6300v2:
+			system("gpio enable 3");	/* disable power led color amber */
+			break;
 		case MODEL_R6400:
 			system("gpio enable 2");	/* disable power led color amber */
 			disable_led_wanlan();
