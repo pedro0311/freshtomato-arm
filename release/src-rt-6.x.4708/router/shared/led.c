@@ -163,7 +163,7 @@ int do_led(int which, int mode)
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8};
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  255,   18,   17,   12};
 	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  255,  -14,  255,   -2};
-	static int dir868[]	= { 255,  255,     3,  255,  255,  255,  255,  255,  255,  255};
+	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
@@ -441,11 +441,16 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_DIR868L:
 		if (which == LED_DIAG) {
-			/* power led gpio: -0 - orange, -2 - white */
-			b = (mode) ? 2 : 0;
-			c = (mode) ? 0 : 2;
-		} else
+			b = 0; /* color amber gpio 0 (active LOW) */
+			c = 2; /* color green gpio 2 (active LOW) */
+		}
+		else if (which == LED_WHITE) {
+			b = 3; /* color green gpio 3 (active LOW) */
+			c = 1; /* color amber gpio 1 (active LOW) */
+		}
+		else {
 			b = dir868[which];
+		}
 		break;
 	case MODEL_WS880:
 		b = ws880[which];
@@ -601,6 +606,10 @@ void led_setup(void) {
 		/* LED setup/config/preparation for some router models */
 		if ((model == MODEL_RTAC56U)) {
 			system("gpio disable 4");	/* enable power supply for all LEDs, except for PowerLED */
+		}
+		else if ((model == MODEL_DIR868L)) {
+			/* activate WAN port led */
+			system("gpio disable 1");	/* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
 		}
 		else if ((model == MODEL_R6400)) {
 			/* activate WAN port led */
