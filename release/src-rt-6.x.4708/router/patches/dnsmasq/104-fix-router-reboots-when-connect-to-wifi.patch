@@ -1,5 +1,5 @@
---- dnsmasq/src/dhcp.c	2018-12-28 22:41:17.520853408 +0100
-+++ dnsmasq/src/dhcp.c	2018-12-30 18:04:50.000000000 +0100
+--- dnsmasq/src/dhcp.c
++++ dnsmasq/src/dhcp.c
 @@ -152,8 +152,10 @@ void dhcp_packet(time_t now, int pxe_fd)
    time_t recvtime = now;
  #ifdef HAVE_LINUX_NETWORK
