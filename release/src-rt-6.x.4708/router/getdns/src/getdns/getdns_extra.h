@@ -120,8 +120,8 @@ extern "C" {
  * \defgroup versions Version values
  *  @{
  */
-#define GETDNS_VERSION "1.5.1"
-#define GETDNS_NUMERIC_VERSION 0x01050100
+#define GETDNS_VERSION "1.5.2"
+#define GETDNS_NUMERIC_VERSION 0x01050200
 #define GETDNS_API_VERSION "December 2015"
 #define GETDNS_API_NUMERIC_VERSION 0x07df0c00
 /** @}
@@ -1470,14 +1470,14 @@ getdns_context_get_tls_curves_list(
 /**
  * Get the version number of this implementation.
  * @see versions
- * @return The version number as string.  For example "1.5.1".
+ * @return The version number as string.  For example "1.5.2".
  */
 const char *getdns_get_version(void);
 
 /**
  * Get the version number of this implementation as number.
  * @see versions
- * @return The version number as number.  For example 0x01050100.
+ * @return The version number as number.  For example 0x01050200.
  *         - The most significant byte of this uint32_t is the Major version.
  *         - The second most significant byte is the Minor version.
  *         - The third most significant byte the Patch version.

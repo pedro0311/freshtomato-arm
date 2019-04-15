@@ -1,24 +1,24 @@
---- getdns/stubby/src/stubby.c	2018-06-14 12:02:48.000000000 +0200
-+++ getdns/stubby/src/stubby.c	2018-09-25 16:30:33.000000000 +0200
-@@ -139,6 +139,8 @@ print_usage(FILE *out)
- 	fprintf(out, "\t\t\t\"%s/stubby.yml\"\n", STUBBYCONFDIR);
- 	fprintf(out, "\t\tAn default file (Using Strict mode) is installed as\n");
- 	fprintf(out, "\t\t\t\"%s/stubby.yml\"\n", STUBBYCONFDIR);
+--- getdns/stubby/src/stubby.c
++++ getdns/stubby/src/stubby.c
+@@ -192,6 +192,8 @@ print_usage(FILE *out)
+ 	fprintf(out, "\t\t\t\"%s\"\n", system_conf_fn);
+ 	fprintf(out, "\t\tA default file (Using Strict mode) is installed as\n");
+ 	fprintf(out, "\t\t\t\"%s\"\n", system_conf_fn);
 +	fprintf(out, "\t-F\t<filename>\n");
 +	fprintf(out, "\t\tWrite log output to <filename> (used with -g background mode)\n");
  #if !defined(STUBBY_ON_WINDOWS) && !defined(GETDNS_ON_WINDOWS)
  	fprintf(out, "\t-g\tRun stubby in background (default is foreground)\n");
  #endif
-@@ -704,6 +706,8 @@ main(int argc, char **argv)
+@@ -759,6 +761,8 @@ main(int argc, char **argv)
  {
- 	char home_stubby_conf_fn_spc[1024], *home_stubby_conf_fn = NULL;
+ 	char *conf_fn;
  	const char *custom_config_fn = NULL;
 +	const char *custom_log_fn = NULL;
 +	FILE *lfn;
- 	int fn_sz;
+ 	int found_conf = 0;
  	int print_api_info = 0;
  	int log_connections = 0;
-@@ -715,11 +719,22 @@ main(int argc, char **argv)
+@@ -770,11 +774,22 @@ main(int argc, char **argv)
  	getdns_list *api_info_keys = NULL;
  	getdns_bindata *api_info_key = NULL;
  
@@ -42,7 +42,7 @@
  		case 'g':
  			run_in_foreground = 0;
  			break;
-@@ -743,7 +758,7 @@ main(int argc, char **argv)
+@@ -798,7 +813,7 @@ main(int argc, char **argv)
  				exit(EXIT_FAILURE);
  			}
  			break;
