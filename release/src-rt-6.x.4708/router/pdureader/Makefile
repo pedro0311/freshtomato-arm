@@ -1,7 +1,7 @@
 include ../common.mak
 
 CFLAGS	= -Os -Wall $(EXTRACFLAGS) #-mips32
-CFLAGS	+= -I$(SRCBASE)/include
+CFLAGS	+= -I$(SRCBASE)/include -D_GNU_SOURCE
 LDFLAGS	=
 
 ifeq ($(TCONFIG_BCMARM),y)
