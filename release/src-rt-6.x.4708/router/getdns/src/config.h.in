@@ -70,6 +70,10 @@
    don't. */
 #undef HAVE_DECL_INET_PTON
 
+/* Define to 1 if you have the declaration of `MSG_FASTOPEN', and to 0 if you
+   don't. */
+#undef HAVE_DECL_MSG_FASTOPEN
+
 /* Define to 1 if you have the declaration of `NID_ED25519', and to 0 if you
    don't. */
 #undef HAVE_DECL_NID_ED25519
@@ -118,8 +122,22 @@
    don't. */
 #undef HAVE_DECL_STRLCPY
 
+/* Define to 1 if you have the declaration of `TCP_FASTOPEN', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_FASTOPEN
+
+/* Define to 1 if you have the declaration of `TCP_FASTOPEN_CONNECT', and to 0
+   if you don't. */
+#undef HAVE_DECL_TCP_FASTOPEN_CONNECT
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `DSA_set0_key' function. */
+#undef HAVE_DSA_SET0_KEY
+
+/* Define to 1 if you have the `DSA_set0_pqg' function. */
+#undef HAVE_DSA_SET0_PQG
 
 /* Define to 1 if you have the `DSA_SIG_set0' function. */
 #undef HAVE_DSA_SIG_SET0
@@ -220,6 +238,9 @@
 /* if the function 'ioctlsocket' is available */
 #undef HAVE_IOCTLSOCKET
 
+/* Define to 1 if you have the `crypto' library (-lcrypto). */
+#undef HAVE_LIBCRYPTO
+
 /* Define to 1 if you have the <libev/ev.h> header file. */
 #undef HAVE_LIBEV_EV_H
 
@@ -228,9 +249,6 @@
 
 /* Define to 1 if you have the `idn2' library (-lidn). */
 #undef HAVE_LIBIDN2
-
-/* Define if we have LibreSSL */
-#undef HAVE_LIBRESSL
 
 /* Define to 1 if you have the `unbound' library (-lunbound). */
 #undef HAVE_LIBUNBOUND
@@ -253,8 +271,20 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
+
+/* Use libnettle for crypto */
+#undef HAVE_NETTLE
+
+/* Define to 1 if you have the <nettle/dsa-compat.h> header file. */
+#undef HAVE_NETTLE_DSA_COMPAT_H
+
 /* Define to 1 if you have the <nettle/eddsa.h> header file. */
 #undef HAVE_NETTLE_EDDSA_H
+
+/* Define to 1 if you have the <nettle/nettle-meta.h> header file. */
+#undef HAVE_NETTLE_NETTLE_META_H
 
 /* Does libuv have the new uv_time_cb signature */
 #undef HAVE_NEW_UV_TIMER_CB
@@ -277,6 +307,9 @@
 /* Define to 1 if you have the <openssl/err.h> header file. */
 #undef HAVE_OPENSSL_ERR_H
 
+/* Define to 1 if you have the `OPENSSL_init_crypto' function. */
+#undef HAVE_OPENSSL_INIT_CRYPTO
+
 /* Define to 1 if you have the <openssl/rand.h> header file. */
 #undef HAVE_OPENSSL_RAND_H
 
@@ -292,11 +325,17 @@
 /* Define to 1 if you have the `OpenSSL_version_num' function. */
 #undef HAVE_OPENSSL_VERSION_NUM
 
+/* Define to 1 if you have the <openssl/x509.h> header file. */
+#undef HAVE_OPENSSL_X509_H
+
 /* Define to 1 if you have the <poll.h> header file. */
 #undef HAVE_POLL_H
 
 /* Have pthreads library */
 #undef HAVE_PTHREAD
+
+/* Define to 1 if you have the `RSA_set0_key' function. */
+#undef HAVE_RSA_SET0_KEY
 
 /* Define to 1 if you have the `SHA512_Update' function. */
 #undef HAVE_SHA512_UPDATE
@@ -324,9 +363,6 @@
 
 /* Define to 1 if you have the `SSL_CTX_set_ciphersuites' function. */
 #undef HAVE_SSL_CTX_SET_CIPHERSUITES
-
-/* Define to 1 if you have the `SSL_CTX_set_min_proto_version' function. */
-#undef HAVE_SSL_CTX_SET_MIN_PROTO_VERSION
 
 /* Define to 1 if you have the `SSL_dane_enable' function. */
 #undef HAVE_SSL_DANE_ENABLE
@@ -461,6 +497,45 @@
 /* The maximum number of cname referrals. */
 #undef MAX_CNAME_REFERRALS
 
+/* Algorithm AES in nettle library */
+#undef NETTLE_WITH_AES
+
+/* Algorithm ARCTWO in nettle library */
+#undef NETTLE_WITH_ARCTWO
+
+/* Algorithm BLOWFISH in nettle library */
+#undef NETTLE_WITH_BLOWFISH
+
+/* Algorithm CAST128 in nettle library */
+#undef NETTLE_WITH_CAST128
+
+/* Algorithm DES in nettle library */
+#undef NETTLE_WITH_DES
+
+/* Algorithm DES3 in nettle library */
+#undef NETTLE_WITH_DES3
+
+/* Algorithm MD2 in nettle library */
+#undef NETTLE_WITH_MD2
+
+/* Algorithm MD4 in nettle library */
+#undef NETTLE_WITH_MD4
+
+/* Algorithm MD5 in nettle library */
+#undef NETTLE_WITH_MD5
+
+/* Algorithm SERPENT in nettle library */
+#undef NETTLE_WITH_SERPENT
+
+/* Algorithm SHA1 in nettle library */
+#undef NETTLE_WITH_SHA1
+
+/* Algorithm SHA256 in nettle library */
+#undef NETTLE_WITH_SHA256
+
+/* Algorithm TWOFISH in nettle library */
+#undef NETTLE_WITH_TWOFISH
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
@@ -539,6 +614,9 @@
 
 /* Define this to enable ED448 support. */
 #undef USE_ED448
+
+/* Use the GnuTLS library */
+#undef USE_GNUTLS
 
 /* Define this to enable GOST support. */
 #undef USE_GOST
@@ -744,6 +822,10 @@ static inline int _gldns_custom_vsnprintf(char *str, size_t size, const char *fo
 #include <sys/socket.h>
 #endif
 
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
@@ -762,10 +844,6 @@ static inline int _gldns_custom_vsnprintf(char *str, size_t size, const char *fo
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
-#endif
-
-#ifdef HAVE_OPENSSL_SSL_H
-#include <openssl/ssl.h>
 #endif
 
 #ifdef HAVE_INTTYPES_H

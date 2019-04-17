@@ -32,9 +32,6 @@ static void wo_update(char *url);
 static void wo_service(char *url);
 static void wo_shutdown(char *url);
 static void wo_nvcommit(char *url);
-#ifdef TCONFIG_USB
-static void wo_wwansignal(char *url);
-#endif
 //	static void wo_logout(char *url);
 
 
@@ -333,6 +330,8 @@ const struct mime_handler mime_handlers[] = {
 #ifdef TCONFIG_USB
 	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },	//!!TB - USB
 	{ "wwansignal.cgi",		mime_html,				0,	wi_generic,		wo_wwansignal,		1 },
+	{ "wwansms.cgi",		mime_html,				0,	wi_generic,		wo_wwansms,		1 },
+	{ "wwansmsdelete.cgi",		mime_html,				0,	wi_generic,		wo_wwansms_delete,		1 },
 #endif
 #ifdef TCONFIG_IPERF
 	{ "iperfstatus.cgi",			mime_javascript,			0,	wi_generic,		wo_ttcpstatus,		1 },
@@ -2176,20 +2175,3 @@ static void wo_nvcommit(char *url)
 	web_close();
 	nvram_commit();
 }
-
-#ifdef TCONFIG_USB
-static void wo_wwansignal(char *url)
-{
-	char wancmd[24];
-
-	int desired_wan = atoi(webcgi_safeget("mwan_num", "1"));
-	if (desired_wan == 1) {
-		sprintf(wancmd, "wwansignal wan -stdout");
-	} else {
-		sprintf(wancmd, "wwansignal wan%d -stdout", desired_wan);
-	}
-	web_puts("\nwwanstatus = '");
-	web_pipecmd(wancmd, WOF_JAVASCRIPT);
-	web_puts("';");
-}
-#endif

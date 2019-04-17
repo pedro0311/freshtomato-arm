@@ -142,6 +142,7 @@ obj-$(TCONFIG_NOCAT) += nocat
 obj-$(TCONFIG_USB) += p910nd
 obj-$(TCONFIG_USB) += comgt
 obj-$(TCONFIG_USB) += uqmi
+obj-$(TCONFIG_USB) += pdureader
 
 obj-$(TCONFIG_UPS) += apcupsd
 

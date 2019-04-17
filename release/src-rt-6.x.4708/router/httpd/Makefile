@@ -18,6 +18,7 @@ OBJS += cpuinfo.o
 OBJS += iptraffic.o
 ifeq ($(TCONFIG_USB),y)
 OBJS += usb.o
+OBJS += wwan.o
 endif
 
 ifeq ($(TCONFIG_NOCAT),y)
