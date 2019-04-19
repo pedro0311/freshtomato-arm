@@ -1,6 +1,108 @@
 FreshTomato-ARM Changelog
 ===========================
 
+2019.2 - 2019.04.20
+----------------------------
+
+- openssl: update to 1.0.2r
+- SQLite: update to 3.27.2
+- php: update to 7.2.17
+- dnsmasq: update to 2.80-343b7b4 snapshot
+- libcurl: update to 7.64.1
+- nano: update to 4.0
+- dropbear: update to 2019.78
+- pppd: clean sources 2.4.5, add patches instead
+- pppd: update to 2.4.6
+- pppd: update to 2.4.7
+- pppd: fixes from upstream
+- miniupnpd: update to 2.1.20190408
+- libyaml: update to 0.2.2
+- getdns: update to 1.5.2 + upstream build error fix
+- getdns: add patch to fix missing define for log_warn
+- libubox: update to eeef7b5 snapshot
+- patches: miniupnpd: fix naming, cosmetics
+- patches: libcurl: cosmetics
+- ebtables: add 2 patches (Check -C parameters correctly, Check port range correctly)
+- OpenVPN: change the default order of Negotiable Ciphers
+- OpenVPN: fix generating an openvpn client configuration on server with TLS authorization (enable remote-cert-tls)
+- router: Makefile: build openssl with no SSLv2 and SSLv3 support
+- router: Makefile: clean-up openvpn recipe
+- router: Makefile: clean-up miniupnpd build recipe
+- router: Makefile: build dnsmasq with HAVE_AUTH flag
+- router: Makefile: fix emf install
+- router: rc: misc.c: clean-up
+- router: rc: usb.c: add support for Router with two USB LEDs / Ports (according to LED table at shared/led.c)
+- router: rc: usb.c: change R8000 assignment for USB2/USB3 (and some cosmetic)
+- router: rc: usb.c: some cosmetic at function usbled_proc(...) / align to sdk7
+- router: rc: usb.c: change R7000 assignment for USB2/USB3 (only cosmetic)
+- router: rc: services.c/network.c/usb.c: clean-up and cosmetics
+- router: rc: services.c: add function disable_led_wanlan() to have more compact code
+- router: rc: services.c: add stealth mode also for R8000 and AC3200
+- router: rc: network.c - change blink behaviour / start
+- router: rc: services.c: add some logging when starting/stopping services
+- router: rc: services.c: change the way how "serial" and "uuid" are created in minidlna config
+- router: rc: services.c: cosmetics
+- router: rc: rc.h - add missing prototype declaration for function start_phy_tempsense() and stop_phy_tempsense()
+- router: shared: misc.c: correct insufficient number of snprintf arguments
+- router: rc: change the name of the ntpc service to ntpd + some code changes, in accordance with other start/stop functions
+- router: rc: blink_br.c - small fix for the Router RT-AC56U - distinguish two cases right now: LAN Port 0-1-2-3 or 1-2-3-4
+- router: rc: init.c: change back to where the start_wan() function is called
+- router: rc: init.c: Reverted "Change back to where the start_wan () function is called"
+- router: rc: init.c: change min_free_kbytes setting - catch up to AsusWRT / Merlin and also Netgear (case 20 MByte right now, was 14 MByte)
+- router: rc: init.c: tune SMP
+- router: rc: vpn.c: fix client/server start on NOSMP routers
+- router: rc: vpn.c: increase interface queue length from 100 to 1000 bytes
+- router: rc: clean-up (cosmetics)
+- router: rc: services.c and shared: led.c: do some cleanup and cosmetic - move all functions for LEDs into led.c - rename start_led_setup() to led_setup - add function enable_led_wanlan()
+- router: others: wwansignal: fix showing the 3G signal level
+- router: others: switch3g/switch4g/wwansignal: some improvements/fixes
+- router: www: tools-shell.asp: support of multiple lines pasted into termlib window
+- router: www: status-overview.asp: a few W3C fixes
+- router: www: Makefile: remove more obsolete stuff from html
+- router: www: qos-graphs.asp: fix W3C again
+- router: www: another W3C fixes
+- router: httpd/rc: vpn.c: replace &buffer[0] (and &buffer2[0], &buf[0]) references in openvpn with straight buffer, for better readability and reduced risk of errors
+- router: httpd: correct generation of HTTPS certificate
+- router: httpd: wwan.c: fix compiler warning
+- router: nvram: defaults.c: cosmetics - rebranding ;)
+- router: pdureader: fix compiler warning
+- router: utils: robocfg.c - catch up to AsusWRT / Merlin (thx) - one file for both, ARM and MIPS
+- GUI: Reverted "Wireless Settings: remove obsolete settings"
+- GUI: Wireless Settings: remove obsolete settings (antennas)
+- GUI: PPTP Client: increase max length of "server address" to 50 chararacters
+- GUI: QOS: fix JS error on View Details page, when view in given class
+- GUI: QOS: fix (again) some problems on View Details page
+- GUI: QOS: fix table sorting by "Protocol" on View Details page
+- GUI: OpenVPN: remove support for the RC ciphers. DES is kept for now, for legacy reasons
+- GUI: OpenVPN: Fix vpn-server.asp visible key fields
+- GUI: fix at last Wireless Ethernet Bridge mode - just refresh (Ctrl + F5) Basic -> Network page, and click "Save"
+- GUI: fix ports order caused by commit #7cb2220 + clean-up
+- GUI: add support of WWAN modem signal - use a minimum of 10 seconds of refresh time for best readings on Status -> Overview page
+- GUI: add support of multi WAN in modem status
+- GUI: add support of SMS inbox for 4G non-hilink/3G modems
+- GUI: advanced-routing.asp - add option to force IGMPv2 - cosmetic
+- R6250: change LED table + LED table cleanup
+- R6300v2: change LED table + LED table cleanup
+- R6400: change LED table + LED table cleanup
+- R7000: change LED table + LED table cleanup
+- R8000: change LED table + LED table cleanup
+- WS880: change LED table + LED table cleanup
+- RT-N18U: change LED table + LED table cleanup
+- RT-AC56U: change LED table + LED table cleanup
+- RT-AC68U: change LED table + LED table cleanup
+- EA6400: change LED table + LED table cleanup
+- EA6700: change LED table + LED table cleanup
+- EA6900: change LED table + LED table cleanup
+- DIR868L: change LED table + LED table cleanup
+- LEDs: stealth mode (part 1) - extend already existing stealth mode and turn off GPIO LEDs - do not start blink / blink_br with stealth mode turned on
+- LEDs: stealth mode (part 2) - extend already existing stealth mode and turn off WAN & LAN Port LEDs at the ethernet connectors or front panel/case - reboot is requiered right now after enabling stealth mode! - code/stealth mode will be extended...
+- R6250/R6300v2/AC15U/DIR868L: add to stealth mode
+- Add support for D-Link DIR868L rev C
+- WL: update wireless driver for SDK7 to GPL 382.51374
+- Raise revision level to allow initial files install from stock NETGEAR
+- Raise revision level to allow initial files install from stock NETGEAR (for SDK7)
+
+
 2019.1 - 2019.02.27
 ----------------------------
 
