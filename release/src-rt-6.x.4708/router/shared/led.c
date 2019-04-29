@@ -463,13 +463,13 @@ int do_led(int which, int mode)
 		} else
 			b = r1d[which];
 		break;
-	case MODEL_EA6400:	/* need to be verified */
+	case MODEL_EA6400:
 		b = ea6400[which];
 		break;
 	case MODEL_EA6700:
 		b = ea6700[which];
 		break;
-	case MODEL_EA6900:	/* need to be verified */
+	case MODEL_EA6900:
 		b = ea6900[which];
 		break;
 	case MODEL_WZR1750:
