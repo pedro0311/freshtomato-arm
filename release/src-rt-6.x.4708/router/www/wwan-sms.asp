@@ -53,7 +53,7 @@ var wwansms_error;
 var smsGrid = new TomatoGrid();
 
 smsGrid.setup = function() {
-	this.init('tp-grid', 'sort', ['delete']);
+	this.init('tp-grid', ['sort', 'delete']);
 	this.headerSet(['ID', 'State', 'Date', 'Sender', 'Message']);
 }
 smsGrid.rpDel = function(e) {
