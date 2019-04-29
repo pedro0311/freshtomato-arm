@@ -250,8 +250,9 @@ int buttons_main(int argc, char *argv[])
 		break;
 	case MODEL_R6250:
 	case MODEL_R6300v2:
-		reset_mask = 1 << 6;
-		ses_mask = 1 << 5;
+		reset_mask = 1 << 6; /* reset button (active LOW) */
+		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
+		ses_mask = 1 << 4; /* wps button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_R7000:
