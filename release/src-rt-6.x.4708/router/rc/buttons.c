@@ -182,8 +182,8 @@ int buttons_main(int argc, char *argv[])
 		ses_mask = 1 << 4;
 		break;
 	case MODEL_RTN18U:
-		reset_mask = 1 << 7;
-		ses_mask = 1 << 11;
+		reset_mask = 1 << 7; /* reset button (active LOW) */
+		ses_mask = 1 << 11; /* wps button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_RTAC56U:
