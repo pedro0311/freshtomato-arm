@@ -193,6 +193,11 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_RTAC68U:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		wlan_mask = 1 << 15;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS;
+		break;
 	case MODEL_DIR868L:
 		reset_mask = 1 << 11;
 		ses_mask = 1 << 7;
