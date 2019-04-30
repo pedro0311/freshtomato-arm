@@ -165,6 +165,7 @@ int do_led(int which, int mode)
 	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  255,  -14,  255,   -2};
 	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
+	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255};
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6};
@@ -467,7 +468,12 @@ int do_led(int which, int mode)
 		b = ea6400[which];
 		break;
 	case MODEL_EA6700:
-		b = ea6700[which];
+		if (strstr(nvram_safe_get("modelNumber"), "EA6500") != NULL) { /* check for ea6500v2 --> same boardtype/num/rev like EA6700! */
+			b = ea6500v2[which];
+		}
+		else {
+			b = ea6700[which];
+		}
 		break;
 	case MODEL_EA6900:
 		b = ea6900[which];
