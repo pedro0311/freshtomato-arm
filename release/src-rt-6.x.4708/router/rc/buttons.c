@@ -252,14 +252,14 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_R6250:
 	case MODEL_R6300v2:
 		reset_mask = 1 << 6; /* reset button (active LOW) */
-		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
 		ses_mask = 1 << 4; /* wps button (active LOW) */
+		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_R7000:
 		reset_mask = 1 << 6; /* reset button (active LOW) */
-		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
 		ses_mask = 1 << 4; /* wps button (active LOW) */
+		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 	case MODEL_WZR1750:
