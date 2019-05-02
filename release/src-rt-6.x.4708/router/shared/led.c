@@ -104,7 +104,7 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 	if (((p = nvram_get(name)) != NULL) && (*p)) {
 		n = strtoul(p, NULL, 0);
-		if ((n & 0xFFFFFF60) == 0) {		/* bin 0110 000 */
+		if ((n & 0xFFFFFF60) == 0) {		/* bin 0110 0000 */
 			*gpio = (n & TOMATO_GPIO_MAX);	/* bin 0001 1111 */
 			*inv = ((n & 0x80) != 0);	/* bin 1000 0000 */
 			/* 0x60 + 0x1F (dec 31) + 0x80 = 0xFF */
@@ -399,7 +399,8 @@ int do_led(int which, int mode)
 		if (which == LED_DIAG) {
 			b = 3; /* color amber gpio 3 (active LOW) */
 			c = 2; /* color green gpio 2 (active LOW) */
-		} else {
+		}
+		else {
 			b = r6250[which];
 		}
 		break;
@@ -407,7 +408,8 @@ int do_led(int which, int mode)
 		if (which == LED_DIAG) {
 			b = 3; /* color amber gpio 3 (active LOW) */
 			c = 2; /* color green gpio 2 (active LOW) */
-		} else {
+		}
+		else {
 			b = r6300v2[which];
 		}
 		break;
@@ -461,8 +463,10 @@ int do_led(int which, int mode)
 			/* power led gpio: -2 - orange, -3 - blue */
 			b = (mode) ? 3 : 2;
 			c = (mode) ? 2 : 3;
-		} else
+		}
+		else {
 			b = r1d[which];
+		}
 		break;
 	case MODEL_EA6400:
 		b = ea6400[which];
