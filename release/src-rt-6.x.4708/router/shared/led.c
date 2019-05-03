@@ -605,9 +605,17 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6400:
-		case MODEL_EA6700:
 		case MODEL_EA6900:
 			system("gpio disable 8");	/* disable LOGO led */
+			disable_led_wanlan();
+			break;
+		case MODEL_EA6700:
+			if (strstr(nvram_safe_get("modelNumber"), "EA6500") != NULL) { /* check for ea6500v2 --> same boardtype/num/rev like EA6700! */
+				system("gpio enable 6");	/* disable LOGO led for EA6500 */
+			}
+			else {
+				system("gpio disable 8");	/* disable LOGO led for EA6700 */
+			}
 			disable_led_wanlan();
 			break;
 		default:
