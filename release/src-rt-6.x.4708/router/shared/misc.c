@@ -283,6 +283,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_EA6400) ||
 	    (model == MODEL_EA6700) ||
 	    (model == MODEL_EA6900) ||
+	    (model == MODEL_RTAC3200) ||
 	    (model == MODEL_R8000))
 	{
 		led(LED_WHITE, mode);
