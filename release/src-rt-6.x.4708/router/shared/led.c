@@ -642,6 +642,8 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC3200:
+			system("gpio enable 3");	/* disable power led */
+			system("gpio disable 15");	/* disable button led */
 			disable_led_wanlan();
 			break;
 		default:
