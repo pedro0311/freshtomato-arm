@@ -67,14 +67,6 @@
 #define MWAN_MAX	2
 #endif
 
-#define GOT_IP			0x01
-#define RELEASE_IP		0x02
-#define	GET_IP_ERROR		0x03
-#define RELEASE_WAN_CONTROL	0x04
-#define USB_DATA_ACCESS		0x05	/* For WRTSL54GS */
-#define USB_CONNECT		0x06	/* For WRTSL54GS */
-#define USB_DISCONNECT		0x07	/* For WRTSL54GS */
-
 /* see init.c - used for /proc/sys/vm/min_free_kbytes */
 #define TOMATO_RAM_HIGH_END	(200 * 1024)
 #define TOMATO_RAM_MID_END	(100 * 1024)
@@ -86,8 +78,6 @@
 #define TOMATO_CPU1 "2"	/* assign CPU 1 */
 #define TOMATO_CPUX "3"	/* assign CPU 1 and 2 */
 #endif
-
-#define SET_LED(val)	do { } while(0)
 
 typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 

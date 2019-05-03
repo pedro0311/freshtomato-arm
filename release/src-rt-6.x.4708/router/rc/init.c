@@ -4698,7 +4698,6 @@ int init_main(int argc, char *argv[])
 			/* SIGHUP (RESTART) falls through */
 
 		case SIGUSR2:		/* START */
-			SET_LED(RELEASE_WAN_CONTROL);
 			start_syslog();
 
 #ifndef TCONFIG_BCMARM
