@@ -940,6 +940,7 @@ with_litespeed
 enable_phpdbg
 enable_phpdbg_webhelper
 enable_phpdbg_debug
+enable_phpdbg_readline
 enable_cgi
 with_valgrind
 enable_gcov
@@ -1751,6 +1752,7 @@ SAPI modules:
   --enable-phpdbg            Build phpdbg
   --enable-phpdbg-webhelper  Build phpdbg web SAPI support
   --enable-phpdbg-debug      Build phpdbg in debug mode
+  --enable-phpdbg-readline   Enable readline support in phpdbg (depends on static ext/readline)
   --disable-cgi           Disable building CGI version of PHP
   --with-valgrind=DIR     Enable valgrind support
 
@@ -3655,7 +3657,7 @@ ac_config_headers="$ac_config_headers main/php_config.h"
 
 PHP_MAJOR_VERSION=7
 PHP_MINOR_VERSION=2
-PHP_RELEASE_VERSION=17
+PHP_RELEASE_VERSION=18
 PHP_EXTRA_VERSION=""
 PHP_VERSION="$PHP_MAJOR_VERSION.$PHP_MINOR_VERSION.$PHP_RELEASE_VERSION$PHP_EXTRA_VERSION"
 PHP_VERSION_ID=`expr $PHP_MAJOR_VERSION \* 10000 + $PHP_MINOR_VERSION \* 100 + $PHP_RELEASE_VERSION`
@@ -9627,6 +9629,29 @@ $as_echo "$ext_output" >&6; }
 
 
 
+
+php_enable_phpdbg_readline=no
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for phpdbg readline support" >&5
+$as_echo_n "checking for phpdbg readline support... " >&6; }
+# Check whether --enable-phpdbg-readline was given.
+if test "${enable_phpdbg_readline+set}" = set; then :
+  enableval=$enable_phpdbg_readline; PHP_PHPDBG_READLINE=$enableval
+else
+
+  PHP_PHPDBG_READLINE=no
+
+
+fi
+
+
+ext_output=$PHP_PHPDBG_READLINE
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ext_output" >&5
+$as_echo "$ext_output" >&6; }
+
+
+
+
 if test "$BUILD_PHPDBG" = "" && test "$PHP_PHPDBG" != "no"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether termios.h defines TIOCGWINSZ" >&5
 $as_echo_n "checking whether termios.h defines TIOCGWINSZ... " >&6; }
@@ -9705,8 +9730,23 @@ $as_echo "#define PHPDBG_DEBUG 0" >>confdefs.h
   PHP_PHPDBG_CFLAGS="-D_GNU_SOURCE -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
   PHP_PHPDBG_FILES="phpdbg.c phpdbg_parser.c phpdbg_lexer.c phpdbg_prompt.c phpdbg_help.c phpdbg_break.c phpdbg_print.c phpdbg_bp.c phpdbg_opcode.c phpdbg_list.c phpdbg_utils.c phpdbg_info.c phpdbg_cmd.c phpdbg_set.c phpdbg_frame.c phpdbg_watch.c phpdbg_btree.c phpdbg_sigsafe.c phpdbg_wait.c phpdbg_io.c phpdbg_eol.c phpdbg_out.c"
 
-  if test "$PHP_READLINE" != "no" -o  "$PHP_LIBEDIT" != "no"; then
-  	PHPDBG_EXTRA_LIBS="$PHP_READLINE_LIBS"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for phpdbg and readline integration" >&5
+$as_echo_n "checking for phpdbg and readline integration... " >&6; }
+  if test "$PHP_PHPDBG_READLINE" = "yes"; then
+    if test "$PHP_READLINE" != "no" -o  "$PHP_LIBEDIT" != "no"; then
+
+$as_echo "#define HAVE_PHPDBG_READLINE 1" >>confdefs.h
+
+  	  PHPDBG_EXTRA_LIBS="$PHP_READLINE_LIBS"
+  	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+  	else
+  	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: readline is not available" >&5
+$as_echo "readline is not available" >&6; }
+    fi
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
+$as_echo "disabled" >&6; }
   fi
 
 
@@ -10002,7 +10042,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PHPDBG_WEBHELPER_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -16722,7 +16762,7 @@ _ACEOF
   if test "no" != "shared" && test "no" != "yes" && test "" = "cli"; then
     PHP_DATE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -17442,7 +17482,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_LIBXML_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -17811,7 +17851,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_OPENSSL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -19496,7 +19536,7 @@ _ACEOF
   if test "no" != "shared" && test "no" != "yes" && test "" = "cli"; then
     PHP_PCRE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -19775,7 +19815,7 @@ _ACEOF
   if test "no" != "shared" && test "no" != "yes" && test "" = "cli"; then
     PHP_PCRE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -21166,7 +21206,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SQLITE3_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -21495,7 +21535,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ZLIB_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -22091,7 +22131,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_BCMATH_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -22708,7 +22748,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_BZ2_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -23010,7 +23050,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_CALENDAR_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -23309,7 +23349,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_CTYPE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -24603,7 +24643,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_CURL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -28869,7 +28909,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_DBA_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -29521,7 +29561,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_DOM_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -29882,7 +29922,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ENCHANT_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -30490,7 +30530,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_EXIF_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -30850,7 +30890,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_FILEINFO_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -31245,7 +31285,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_FILTER_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -31609,7 +31649,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_FTP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -37390,7 +37430,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_GD_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -38051,7 +38091,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_GETTEXT_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -38952,7 +38992,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_GMP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -39570,7 +39610,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_HASH_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -40905,7 +40945,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ICONV_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -41289,7 +41329,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_IMAP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -44479,7 +44519,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_INTERBASE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -45733,7 +45773,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_INTL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -46445,7 +46485,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_JSON_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -46806,7 +46846,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_LDAP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -51405,7 +51445,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_MBSTRING_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -52630,7 +52670,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_MYSQLI_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -53707,7 +53747,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_OCI8_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -54296,7 +54336,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_OCI8_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -56410,7 +56450,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ODBC_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -57265,7 +57305,7 @@ _ACEOF
   if test "shared" != "shared" && test "shared" != "yes" && test "" = "cli"; then
     PHP_OPCACHE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -57744,7 +57784,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "cli" = "cli"; then
     PHP_PCNTL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -58070,7 +58110,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -58621,7 +58661,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_DBLIB_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -59898,7 +59938,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_FIREBIRD_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -61319,7 +61359,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_MYSQL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -63349,7 +63389,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_OCI_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -64488,7 +64528,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_ODBC_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -65302,7 +65342,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_PGSQL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -66270,7 +66310,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_SQLITE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -66578,7 +66618,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PDO_SQLITE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -68621,7 +68661,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PGSQL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -68917,7 +68957,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PHAR_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -69312,7 +69352,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_POSIX_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -69718,7 +69758,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_PSPELL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -72393,7 +72433,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "cli" = "cli"; then
     PHP_READLINE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -73146,7 +73186,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_RECODE_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -73400,7 +73440,7 @@ _ACEOF
   if test "no" != "shared" && test "no" != "yes" && test "" = "cli"; then
     PHP_REFLECTION_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -73941,7 +73981,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SESSION_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -74467,7 +74507,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SHMOP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -75080,7 +75120,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SIMPLEXML_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -75968,7 +76008,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SNMP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -76584,7 +76624,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SOAP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -77127,7 +77167,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SOCKETS_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -77943,7 +77983,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SODIUM_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -78197,7 +78237,7 @@ _ACEOF
   if test "no" != "shared" && test "no" != "yes" && test "" = "cli"; then
     PHP_SPL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -82231,7 +82271,7 @@ _ACEOF
   if test "" != "shared" && test "" != "yes" && test "" = "cli"; then
     PHP_STANDARD_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -82586,7 +82626,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SYSVMSG_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -82882,7 +82922,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SYSVSEM_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -83227,7 +83267,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_SYSVSHM_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -83987,7 +84027,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_TIDY_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -84290,7 +84330,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_TOKENIZER_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -85137,7 +85177,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_WDDX_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -85968,7 +86008,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XML_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -86605,7 +86645,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XMLREADER_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -88600,7 +88640,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XMLRPC_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -89018,7 +89058,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XMLRPC_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -89632,7 +89672,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XMLWRITER_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -90252,7 +90292,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_XSL_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -90569,7 +90609,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ZEND_TEST_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -91842,7 +91882,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ZIP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -92132,7 +92172,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_ZIP_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -93821,7 +93861,7 @@ _ACEOF
   if test "$ext_shared" != "shared" && test "$ext_shared" != "yes" && test "" = "cli"; then
     PHP_MYSQLND_SHARED=no
     case "$PHP_SAPI" in
-      cgi|embed)
+      cgi|embed|phpdbg)
 
 
   case $ext_dir in
@@ -95224,7 +95264,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 95227 "configure"
+#line 95267 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -97263,7 +97303,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 97266 "configure"' > conftest.$ac_ext
+  echo '#line 97306 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -98661,7 +98701,7 @@ else
       LDFLAGS="$LDFLAGS -Wl,-exported_symbols_list,conftest.sym"
 
 cat > conftest.$ac_ext <<EOF
-#line 98664 "configure"
+#line 98704 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -98819,11 +98859,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:98822: $lt_compile\"" >&5)
+   (eval echo "\"configure:98862: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:98826: \$? = $ac_status" >&5
+   echo "configure:98866: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99117,11 +99157,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99120: $lt_compile\"" >&5)
+   (eval echo "\"configure:99160: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99124: \$? = $ac_status" >&5
+   echo "configure:99164: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99221,11 +99261,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99224: $lt_compile\"" >&5)
+   (eval echo "\"configure:99264: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:99228: \$? = $ac_status" >&5
+   echo "configure:99268: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -99685,7 +99725,7 @@ _LT_EOF
        # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 99688 "configure"
+#line 99728 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -99727,7 +99767,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	 # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 99730 "configure"
+#line 99770 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -101244,7 +101284,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101247 "configure"
+#line 101287 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -101344,7 +101384,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101347 "configure"
+#line 101387 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -102409,7 +102449,7 @@ case $host_os in
       # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102412 "configure"
+#line 102452 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -102452,7 +102492,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	# Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102455 "configure"
+#line 102495 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -103704,11 +103744,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:103707: $lt_compile\"" >&5)
+   (eval echo "\"configure:103747: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:103711: \$? = $ac_status" >&5
+   echo "configure:103751: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -103808,11 +103848,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:103811: $lt_compile\"" >&5)
+   (eval echo "\"configure:103851: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:103815: \$? = $ac_status" >&5
+   echo "configure:103855: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized

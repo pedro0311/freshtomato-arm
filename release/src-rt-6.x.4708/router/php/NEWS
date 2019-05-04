@@ -1,5 +1,56 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+02 May 2019, PHP 7.2.18
+
+- CLI:
+  . Fixed bug #77794 (Incorrect Date header format in built-in server).
+    (kelunik)
+
+- EXIF
+  . Fixed bug #77950 (Heap-buffer-overflow in _estrndup via exif_process_IFD_TAG).
+    (CVE-2019-11036) (Stas)
+
+- Interbase:
+  . Fixed bug #72175 (Impossibility of creating multiple connections to
+    Interbase with php 7.x). (Nikita)
+
+- Intl:
+  . Fixed bug #77895 (IntlDateFormatter::create fails in strict mode if $locale
+    = null). (Nikita)
+
+- litespeed:
+  . LiteSpeed SAPI 7.3.1, better process management, new API function
+    litespeed_finish_request(). (George Wang)
+
+- Mail
+  . Fixed bug #77821 (Potential heap corruption in TSendMail()). (cmb)
+
+- PCRE:
+  . Fixed bug #77827 (preg_match does not ignore \r in regex flags). (requinix,
+    cmb)
+
+- PDO:
+  . Fixed bug #77849 (Disable cloning of PDO handle/connection objects).
+    (camporter)
+
+- phpdbg:
+  . Fixed bug #76801 (too many open files). (alekitto)
+  . Fixed bug #77800 (phpdbg segfaults on listing some conditional breakpoints).
+    (krakjoe)
+  . Fixed bug #77805 (phpdbg build fails when readline is shared). (krakjoe)
+    
+- Reflection:
+  . Fixed bug #77772 (ReflectionClass::getMethods(null) doesn't work). (Nikita)
+  . Fixed bug #77882 (Different behavior: always calls destructor). (Nikita)
+
+- Standard:
+  . Fixed bug #77680 (recursive mkdir on ftp stream wrapper is incorrect).
+    (Vlad Temian)
+  . Fixed bug #77844 (Crash due to null pointer in parse_ini_string with
+    INI_SCANNER_TYPED). (Nikita)
+  . Fixed bug #77853 (Inconsistent substr_compare behaviour with empty
+    haystack). (Nikita)
+
 04 Apr 2019, PHP 7.2.17
 
 - Core:
@@ -22,10 +73,6 @@ PHP                                                                        NEWS
     (Derick)
   . Fixed bug #75113 (Added DatePeriod::getRecurrences() method). (Ignace
     Nyamagana Butera)
-
-- EXIF:
-  . Fixed bug #77753 (Heap-buffer-overflow in php_ifd_get32s). (Stas)
-  . Fixed bug #77831 (Heap-buffer-overflow in exif_iif_add_value). (Stas)
 
 - FPM:
   . Fixed bug #77677 (FPM fails to build on AIX due to missing WCOREDUMP).
