@@ -1,5 +1,5 @@
---- nginx/auto/cc/conf	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/cc/conf	2018-01-18 19:54:29.721598110 +0100
+--- nginx/auto/cc/conf
++++ nginx/auto/cc/conf
 @@ -183,7 +183,7 @@
      else
          ngx_feature="gcc builtin atomic operations"
@@ -27,8 +27,8 @@
      ngx_feature_incs="#include <stdio.h>
  #define var(dummy, args...)  sprintf(args)"
      ngx_feature_path=
---- nginx/auto/cc/name	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/cc/name	2018-01-15 17:33:30.050044000 +0100
+--- nginx/auto/cc/name
++++ nginx/auto/cc/name
 @@ -7,7 +7,7 @@
  
      ngx_feature="C compiler"
@@ -38,8 +38,8 @@
      ngx_feature_incs=
      ngx_feature_path=
      ngx_feature_libs=
---- nginx/auto/endianness	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/endianness	2018-01-15 17:34:48.046107000 +0100
+--- nginx/auto/endianness
++++ nginx/auto/endianness
 @@ -26,7 +26,7 @@
  
  END
@@ -49,8 +49,8 @@
            -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_LD_OPT $ngx_feature_libs"
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
---- nginx/auto/feature	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/feature	2018-01-15 17:35:51.150183000 +0100
+--- nginx/auto/feature
++++ nginx/auto/feature
 @@ -39,7 +39,7 @@
  END
  
@@ -60,8 +60,8 @@
            -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_TEST_LD_OPT $ngx_feature_libs"
  
  ngx_feature_inc_path=
---- nginx/auto/include	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/include	2018-01-15 17:36:30.210240000 +0100
+--- nginx/auto/include
++++ nginx/auto/include
 @@ -27,7 +27,7 @@
  END
  
@@ -71,8 +71,8 @@
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
  
---- nginx/auto/lib/pcre/make	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/lib/pcre/make	2018-01-15 17:41:32.690826000 +0100
+--- nginx/auto/lib/pcre/make
++++ nginx/auto/lib/pcre/make
 @@ -53,7 +53,7 @@
  	cd $PCRE \\
  	&& if [ -f Makefile ]; then \$(MAKE) distclean; fi \\
@@ -82,8 +82,8 @@
  
  $PCRE/.libs/libpcre.a:	$PCRE/Makefile
  	cd $PCRE \\
---- nginx/auto/os/linux	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/os/linux	2018-01-15 17:43:18.642430000 +0100
+--- nginx/auto/os/linux
++++ nginx/auto/os/linux
 @@ -36,7 +36,7 @@
  
  ngx_feature="epoll"
@@ -120,8 +120,8 @@
  ngx_feature_incs="#include <sys/prctl.h>"
  ngx_feature_path=
  ngx_feature_libs=
---- nginx/auto/types/sizeof	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/auto/types/sizeof	2018-01-15 17:45:43.737533000 +0100
+--- nginx/auto/types/sizeof
++++ nginx/auto/types/sizeof
 @@ -25,8 +25,13 @@
  $NGX_INCLUDE_INTTYPES_H
  $NGX_INCLUDE_AUTO_CONFIG_H
@@ -146,8 +146,8 @@
      echo " $ngx_size bytes"
  fi
  
---- nginx/auto/unix	2018-04-03 16:38:10.000000000 +0200
-+++ nginx/auto/unix	2018-04-04 10:47:17.091799504 +0200
+--- nginx/auto/unix
++++ nginx/auto/unix
 @@ -840,7 +840,7 @@
  
  ngx_feature="mmap(MAP_ANON|MAP_SHARED)"
@@ -184,8 +184,8 @@
  ngx_feature_incs="#include <semaphore.h>"
  ngx_feature_path=
  ngx_feature_libs=
---- nginx/conf/nginx.conf	2017-12-26 17:01:12.000000000 +0100
-+++ nginx/conf/nginx.conf	2018-01-15 17:49:03.196723000 +0100
+--- nginx/conf/nginx.conf
++++ nginx/conf/nginx.conf
 @@ -1,5 +1,5 @@
  
 -#user  nobody;
@@ -202,8 +202,8 @@
  
      #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
      #                  '$status $body_bytes_sent "$http_referer" '
---- nginx/src/os/unix/ngx_errno.c	2017-12-26 17:01:13.000000000 +0100
-+++ nginx/src/os/unix/ngx_errno.c	2018-01-15 17:51:46.588322000 +0100
+--- nginx/src/os/unix/ngx_errno.c
++++ nginx/src/os/unix/ngx_errno.c
 @@ -8,6 +8,9 @@
  #include <ngx_config.h>
  #include <ngx_core.h>

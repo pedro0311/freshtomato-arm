@@ -265,6 +265,7 @@ void wo_vpn_genclientconfig(char *url)
 		sprintf(s, "vpn_server%d_hmac", server);
 		hmac = nvram_get_int(s);
 		if (hmac >= 0) {
+			if (hmac == 0) fprintf(fp, "key-direction 1\n");
 			fprintf(fp, "tls-auth static.key\n");
 			put_to_file("/tmp/ovpnclientconfig/static.key", getNVRAMVar("vpn_server%d_static", server));
 		}
@@ -287,7 +288,7 @@ void wo_vpn_genclientconfig(char *url)
 		fprintf(fp, "secret static.key\n");
 		put_to_file("/tmp/ovpnclientconfig/static.key", getNVRAMVar("vpn_server%d_static", server));
 	}
-	fprintf(fp, "verb3\n");
+	fprintf(fp, "verb 3\n");
 	fprintf(fp, "status status\n");
 	fprintf(fp, "; log /var/log/openvpn.log\n");
 

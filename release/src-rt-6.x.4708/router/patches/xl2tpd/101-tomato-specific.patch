@@ -1,6 +1,6 @@
---- xl2tpd/call.c	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/call.c	2017-09-06 01:28:26.000000000 -0300
-@@ -679,6 +679,9 @@ struct call *get_call (int tunnel, int c
+--- xl2tpd/call.c
++++ xl2tpd/call.c
+@@ -681,6 +681,9 @@ struct call *get_call (int tunnel, int c
          st->next = tunnels.head;
          tunnels.head = st;
          tunnels.count++;
@@ -10,17 +10,8 @@
          return st->self;
      }
  }
---- xl2tpd/file.h	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/file.h	2017-11-27 07:24:18.000000000 -0200
-@@ -16,7 +16,7 @@
- #ifndef _FILE_H
- #define _FILE_H
- 
--#define STRLEN 100              /* Length of a string */
-+#define STRLEN 100               /* Length of a string */
- 
- /* Definition of a keyword */
- struct keyword
+--- xl2tpd/file.h
++++ xl2tpd/file.h
 @@ -50,13 +50,13 @@ struct host
  #define SENSE_DENY 0
  
@@ -39,8 +30,8 @@
  #define DEFAULT_PID_FILE "/var/run/xl2tpd.pid"
  
  /* Definition of an LNS */
---- xl2tpd/ipsecmast.h	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/ipsecmast.h	2017-09-06 01:28:26.000000000 -0300
+--- xl2tpd/ipsecmast.h
++++ xl2tpd/ipsecmast.h
 @@ -2,10 +2,7 @@
  #define _IPSECMAST_H
  
@@ -53,8 +44,8 @@
  #endif
  
  #ifndef IPSEC_SAREF_NULL
---- xl2tpd/l2tp.h	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/l2tp.h	2017-11-27 07:24:18.000000000 -0200
+--- xl2tpd/l2tp.h
++++ xl2tpd/l2tp.h
 @@ -38,8 +38,9 @@ typedef unsigned long long _u64;
  #include "aaa.h"
  #include "common.h"
@@ -64,9 +55,9 @@
 -#define CONTROL_PIPE "/var/run/xl2tpd/l2tp-control"
 +#define CONTROL_PIPE "/var/run/l2tp-control"
  #define CONTROL_PIPE_MESSAGE_SIZE 1024
+ #define UNUSED(x) (void)(x)
  
- /* Control pip request types */
-@@ -183,6 +184,7 @@ struct tunnel
+@@ -184,6 +185,7 @@ struct tunnel
      struct lns *lns;            /* LNS that owns us */
      struct lac *lac;            /* LAC that owns us */
      struct in_pktinfo my_addr;  /* Address of my endpoint */
@@ -74,7 +65,7 @@
      char hostname[MAXSTRLEN];   /* Remote hostname */
      char vendor[MAXSTRLEN];     /* Vendor of remote product */
      struct challenge chal_us;   /* Their Challenge to us */
-@@ -250,6 +252,10 @@ extern int get_entropy (unsigned char *,
+@@ -251,6 +253,10 @@ extern int get_entropy (unsigned char *,
  #endif
  #endif
  
@@ -83,11 +74,11 @@
 +extern int route_add(const struct in_addr inetaddr, struct rtentry *rt);
 +extern int route_del(struct rtentry *rt);
  
- /* 
+ /*
   * This is just some stuff to take
---- xl2tpd/Makefile	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/Makefile	2017-09-06 01:28:26.000000000 -0300
-@@ -47,7 +47,7 @@
+--- xl2tpd/Makefile
++++ xl2tpd/Makefile
+@@ -50,7 +50,7 @@ include Makefile.ver
  # trust pppd. This work around will be removed in the near future.
  
  # DFLAGS= -g -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_FLOW -DDEBUG_PAYLOAD -DDEBUG_CONTROL -DDEBUG_CONTROL_XMIT -DDEBUG_FLOW_MORE -DDEBUG_MAGIC -DDEBUG_ENTROPY -DDEBUG_HIDDEN -DDEBUG_PPPD -DDEBUG_AAA -DDEBUG_FILE -DDEBUG_FLOW -DDEBUG_HELLO -DDEBUG_CLOSE -DDEBUG_ZLB -DDEBUG_AUTH
@@ -96,8 +87,8 @@
  
  # Uncomment the next line for Linux. KERNELSRC is needed for if_pppol2tp.h,
  # but we use a local copy if we don't find it.
---- xl2tpd/network.c	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/network.c	2017-11-27 07:24:18.000000000 -0200
+--- xl2tpd/network.c
++++ xl2tpd/network.c
 @@ -37,6 +37,52 @@ int server_socket;              /* Serve
  int kernel_support;             /* Kernel Support there or not? */
  #endif
@@ -151,8 +142,8 @@
  int init_network (void)
  {
      long arg;
---- xl2tpd/xl2tpd.c	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/xl2tpd.c	2017-09-06 01:28:26.000000000 -0300
+--- xl2tpd/xl2tpd.c
++++ xl2tpd/xl2tpd.c
 @@ -41,6 +41,8 @@
  #include <fcntl.h>
  #include <netinet/in.h>
@@ -162,7 +153,7 @@
  #include "l2tp.h"
  
  struct tunnel_list tunnels;
-@@ -693,6 +695,14 @@ struct tunnel *l2tp_call (char *host, in
+@@ -704,6 +706,14 @@ static struct tunnel *l2tp_call (char *h
      struct call *tmp = NULL;
      struct hostent *hp;
      struct in_addr addr;
@@ -177,14 +168,15 @@
      port = htons (port);
      hp = gethostbyname (host);
      if (!hp)
-@@ -1896,3 +1906,96 @@ int main (int argc, char *argv[])
+@@ -1921,3 +1931,95 @@ int main (int argc, char *argv[])
+     network_thread ();
      return 0;
  }
- 
++
++
 +/* Route manipulation */
 +
-+static int
-+route_ctrl(int ctrl, struct rtentry *rt)
++static int route_ctrl(int ctrl, struct rtentry *rt)
 +{
 +	int s;
 +
@@ -197,8 +189,7 @@
 +	return errno;
 +}
 +
-+int
-+route_del(struct rtentry *rt)
++int route_del(struct rtentry *rt)
 +{
 +	if (rt->rt_dev) {
 +		route_ctrl(SIOCDELRT, rt);
@@ -208,8 +199,7 @@
 +	return 0;
 +}
 +
-+int
-+route_add(const struct in_addr inetaddr, struct rtentry *rt)
++int route_add(const struct in_addr inetaddr, struct rtentry *rt)
 +{
 +	char buf[256], dev[64];
 +	int metric, flags;
@@ -217,13 +207,13 @@
 +
 +	FILE *f = fopen("/proc/net/route", "r");
 +	if (f == NULL) {
-+	        l2tp_log (LOG_ERR, "/proc/net/route: %s", strerror(errno));
++		l2tp_log (LOG_ERR, "/proc/net/route: %s", strerror(errno));
 +		return -1;
 +	}
 +
 +	while (fgets(buf, sizeof(buf), f)) {
 +		if (sscanf(buf, "%63s %x %x %X %*s %*s %d %x", dev, &dest,
-+		    	&sin_addr(&rt->rt_gateway).s_addr, &flags, &metric, &mask) != 6)
++			&sin_addr(&rt->rt_gateway).s_addr, &flags, &metric, &mask) != 6)
 +			continue;
 +		if ((flags & RTF_UP) == (RTF_UP) && (inetaddr.s_addr & mask) == dest &&
 +		    (dest || strncmp(dev, "ppp", 3)) /* avoid default via pppX to avoid on-demand loops*/) {
@@ -237,14 +227,14 @@
 +
 +	/* check for no route */
 +	if (rt->rt_gateway.sa_family != AF_INET) {
-+	        /* l2tp_log (LOG_ERR, "route_add: no route to host"); */
++		/* l2tp_log (LOG_ERR, "route_add: no route to host"); */
 +		return -1;
 +	}
 +
 +	/* check for existing route to this host, 
 +	add if missing based on the existing routes */
 +	if (flags & RTF_HOST) {
-+	        /* l2tp_log (LOG_ERR, "route_add: not adding existing route"); */
++		/* l2tp_log (LOG_ERR, "route_add: not adding existing route"); */
 +		return -1;
 +	}
 +
@@ -262,7 +252,7 @@
 +	rt->rt_dev = strdup(dev);
 +
 +	if (!rt->rt_dev) {
-+	        l2tp_log (LOG_ERR, "route_add: no memory");
++		l2tp_log (LOG_ERR, "route_add: no memory");
 +		return -1;
 +	}
 +
@@ -274,8 +264,8 @@
 +
 +	return -1;
 +}
---- xl2tpd/xl2tpd-control.c	2017-11-16 19:18:33.000000000 -0200
-+++ xl2tpd/xl2tpd-control.c	2017-10-07 15:24:28.000000000 -0300
+--- xl2tpd/xl2tpd-control.c
++++ xl2tpd/xl2tpd-control.c
 @@ -28,7 +28,7 @@
   * xl2tpd-control capture the output, instead of creating tmp files?
   */
