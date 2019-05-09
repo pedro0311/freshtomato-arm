@@ -38,7 +38,7 @@
      }
 --- pppd/pppd/plugins/rp-pppoe/plugin.c
 +++ pppd/pppd/plugins/rp-pppoe/plugin.c
-@@ -270,11 +270,12 @@ PPPOEDisconnectDevice(void)
+@@ -270,12 +270,13 @@ PPPOEDisconnectDevice(void)
      memcpy(sp.sa_addr.pppoe.dev, conn->ifName, IFNAMSIZ);
      memcpy(sp.sa_addr.pppoe.remote, conn->peerEth, ETH_ALEN);
      if (connect(conn->sessionSocket, (struct sockaddr *) &sp,
@@ -54,6 +54,7 @@
 +    }
  }
  
+ static void
 --- pppd/pppd/ipxcp.c
 +++ pppd/pppd/ipxcp.c
 @@ -1194,7 +1194,7 @@ ipxcp_reqci(f, inp, len, reject_if_disag
@@ -67,7 +68,7 @@
  		memcpy (ho->name, p, name_size);
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
-@@ -763,7 +763,8 @@ ccp_cilen(f)
+@@ -764,7 +764,8 @@ ccp_cilen(f)
      ccp_options *go = &ccp_gotoptions[f->unit];
  
      return (go->bsd_compress? CILEN_BSD_COMPRESS: 0)

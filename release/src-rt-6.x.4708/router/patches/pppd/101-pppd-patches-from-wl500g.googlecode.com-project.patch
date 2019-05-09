@@ -187,7 +187,7 @@ diff --git pppd/pppd/Makefile.linux pppd/pppd/Makefile.linux
 index df12da0..08d5355 100644
 --- pppd/pppd/Makefile.linux
 +++ pppd/pppd/Makefile.linux
-@@ -48,19 +48,19 @@ LIBS =
+@@ -48,7 +48,7 @@ LIBS =
  # Uncomment the next line to include support for PPP packet filtering.
  # This requires that the libpcap library and headers be installed
  # and that the kernel driver support PPP packet filtering.
@@ -196,15 +196,9 @@ index df12da0..08d5355 100644
  
  # Uncomment the next line to enable multilink PPP (enabled by default)
  # Linux distributions: Please leave multilink ENABLED in your builds
- # of pppd!
--HAVE_MULTILINK=y
-+#HAVE_MULTILINK=y
- 
- # Uncomment the next line to enable the TDB database (enabled by default.)
- # If you enable multilink, then TDB is automatically enabled also.
+@@ -60,7 +60,7 @@ LIBS =
  # Linux distributions: Please leave TDB ENABLED in your builds.
--USE_TDB=y
-+#USE_TDB=y
+ USE_TDB=y
  
 -HAS_SHADOW=y
 +#HAS_SHADOW=y
@@ -288,7 +282,7 @@ diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
 index 5814f35..99eaa47 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
-@@ -62,13 +62,6 @@ static int setdeflate __P((char **));
+@@ -62,12 +62,6 @@ static int setdeflate __P((char **));
  static char bsd_value[8];
  static char deflate_value[8];
  
@@ -298,11 +292,10 @@ index 5814f35..99eaa47 100644
 -#ifdef MPPE
 -bool refuse_mppe_stateful = 1;		/* Allow stateful mode? */
 -#endif
--
+ 
  static option_t ccp_option_list[] = {
      { "noccp", o_bool, &ccp_protent.enabled_flag,
-       "Disable CCP negotiation" },
-@@ -108,54 +101,87 @@ static option_t ccp_option_list[] = {
+@@ -108,54 +102,87 @@ static option_t ccp_option_list[] = {
        "don't allow Predictor-1", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
        &ccp_allowoptions[0].predictor_1 },
  
@@ -433,7 +426,7 @@ index 5814f35..99eaa47 100644
  #endif /* MPPE */
  
      { NULL }
-@@ -241,7 +267,7 @@ static fsm_callbacks ccp_callbacks = {
+@@ -241,7 +268,7 @@ static fsm_callbacks ccp_callbacks = {
   */
  #define ANY_COMPRESS(opt)	((opt).deflate || (opt).bsd_compress \
  				 || (opt).predictor_1 || (opt).predictor_2 \
@@ -442,7 +435,7 @@ index 5814f35..99eaa47 100644
  
  /*
   * Local state (mainly for handling reset-reqs and reset-acks).
-@@ -378,6 +404,30 @@ ccp_init(unit)
+@@ -378,6 +405,30 @@ ccp_init(unit)
      ccp_allowoptions[0].bsd_bits = BSD_MAX_BITS;
  
      ccp_allowoptions[0].predictor_1 = 1;
@@ -473,7 +466,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -455,11 +505,11 @@ ccp_input(unit, p, len)
+@@ -455,11 +506,11 @@ ccp_input(unit, p, len)
      if (oldstate == OPENED && p[0] == TERMREQ && f->state != OPENED) {
  	notice("Compression disabled by peer.");
  #ifdef MPPE
@@ -487,7 +480,7 @@ index 5814f35..99eaa47 100644
      }
  
      /*
-@@ -487,6 +537,15 @@ ccp_extcode(f, code, id, p, len)
+@@ -487,6 +538,15 @@ ccp_extcode(f, code, id, p, len)
  	    break;
  	/* send a reset-ack, which the transmitter will see and
  	   reset its compression state. */
@@ -503,7 +496,7 @@ index 5814f35..99eaa47 100644
  	fsm_sdata(f, CCP_RESETACK, id, NULL, 0);
  	break;
  
-@@ -515,12 +574,11 @@ ccp_protrej(unit)
+@@ -515,12 +575,11 @@ ccp_protrej(unit)
      fsm_lowerdown(&ccp_fsm[unit]);
  
  #ifdef MPPE
@@ -518,7 +511,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -537,7 +595,7 @@ ccp_resetci(f)
+@@ -537,7 +596,7 @@ ccp_resetci(f)
      all_rejected[f->unit] = 0;
  
  #ifdef MPPE
@@ -527,7 +520,7 @@ index 5814f35..99eaa47 100644
  	ccp_options *ao = &ccp_allowoptions[f->unit];
  	int auth_mschap_bits = auth_done[f->unit];
  	int numbits;
-@@ -551,80 +609,109 @@ ccp_resetci(f)
+@@ -551,80 +610,109 @@ ccp_resetci(f)
  	 * NB: If MPPE is required, all other compression opts are invalid.
  	 *     So, we return right away if we can't do it.
  	 */
@@ -702,7 +695,7 @@ index 5814f35..99eaa47 100644
      if (go->bsd_compress) {
  	opt_buf[0] = CI_BSD_COMPRESS;
  	opt_buf[1] = CILEN_BSD_COMPRESS;
-@@ -679,7 +766,8 @@ ccp_cilen(f)
+@@ -679,7 +767,8 @@ ccp_cilen(f)
  	+ (go->deflate? CILEN_DEFLATE: 0)
  	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
  	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
@@ -712,7 +705,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -693,6 +781,8 @@ ccp_addci(f, p, lenp)
+@@ -693,6 +782,8 @@ ccp_addci(f, p, lenp)
  {
      int res;
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -721,7 +714,7 @@ index 5814f35..99eaa47 100644
      u_char *p0 = p;
  
      /*
-@@ -701,22 +791,43 @@ ccp_addci(f, p, lenp)
+@@ -701,22 +792,43 @@ ccp_addci(f, p, lenp)
       * in case it gets Acked.
       */
  #ifdef MPPE
@@ -774,7 +767,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	p[0] = go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT;
  	p[1] = CILEN_DEFLATE;
-@@ -802,7 +913,7 @@ ccp_addci(f, p, lenp)
+@@ -802,7 +914,7 @@ ccp_addci(f, p, lenp)
  
  /*
   * ccp_ackci - process a received configure-ack, and return
@@ -783,7 +776,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_ackci(f, p, len)
-@@ -811,24 +922,44 @@ ccp_ackci(f, p, len)
+@@ -811,24 +923,44 @@ ccp_ackci(f, p, len)
      int len;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -837,7 +830,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	if (len < CILEN_DEFLATE
  	    || p[0] != (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
-@@ -891,7 +1022,7 @@ ccp_ackci(f, p, len)
+@@ -891,7 +1023,7 @@ ccp_ackci(f, p, len)
  
  /*
   * ccp_nakci - process received configure-nak.
@@ -846,7 +839,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_nakci(f, p, len, treat_as_reject)
-@@ -901,6 +1032,8 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -901,6 +1033,8 @@ ccp_nakci(f, p, len, treat_as_reject)
      int treat_as_reject;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -855,7 +848,7 @@ index 5814f35..99eaa47 100644
      ccp_options no;		/* options we've seen already */
      ccp_options try;		/* options to ask for next time */
  
-@@ -908,28 +1041,100 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -908,28 +1042,100 @@ ccp_nakci(f, p, len, treat_as_reject)
      try = *go;
  
  #ifdef MPPE
@@ -973,7 +966,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate && len >= CILEN_DEFLATE
  	&& p[0] == (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
  	&& p[1] == CILEN_DEFLATE) {
-@@ -1002,14 +1207,50 @@ ccp_rejci(f, p, len)
+@@ -1002,14 +1208,50 @@ ccp_rejci(f, p, len)
  	return -1;
  
  #ifdef MPPE
@@ -1028,7 +1021,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate_correct && len >= CILEN_DEFLATE
  	&& p[0] == CI_DEFLATE && p[1] == CILEN_DEFLATE) {
  	if (p[2] != DEFLATE_MAKE_OPT(go->deflate_size)
-@@ -1073,14 +1314,15 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1073,14 +1315,15 @@ ccp_reqci(f, p, lenp, dont_nak)
      int dont_nak;
  {
      int ret, newret, res;
@@ -1048,7 +1041,7 @@ index 5814f35..99eaa47 100644
  
      ret = CONFACK;
      retp = p0 = p;
-@@ -1103,106 +1345,299 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1103,106 +1346,299 @@ ccp_reqci(f, p, lenp, dont_nak)
  	    switch (type) {
  #ifdef MPPE
  	    case CI_MPPE:
@@ -1422,7 +1415,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (!ao->deflate || clen != CILEN_DEFLATE
-@@ -1344,12 +1779,6 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1344,12 +1780,6 @@ ccp_reqci(f, p, lenp, dont_nak)
  	else
  	    *lenp = retp - p0;
      }
@@ -1435,7 +1428,7 @@ index 5814f35..99eaa47 100644
      return ret;
  }
  
-@@ -1371,24 +1800,35 @@ method_name(opt, opt2)
+@@ -1371,24 +1801,35 @@ method_name(opt, opt2)
  	char *p = result;
  	char *q = result + sizeof(result); /* 1 past result */
  
@@ -1487,7 +1480,7 @@ index 5814f35..99eaa47 100644
      case CI_DEFLATE:
      case CI_DEFLATE_DRAFT:
  	if (opt2 != NULL && opt2->deflate_size != opt->deflate_size)
-@@ -1444,12 +1884,12 @@ ccp_up(f)
+@@ -1444,12 +1885,12 @@ ccp_up(f)
      } else if (ANY_COMPRESS(*ho))
  	notice("%s transmit compression enabled", method_name(ho, NULL));
  #ifdef MPPE
@@ -1502,7 +1495,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1472,7 +1912,7 @@ ccp_down(f)
+@@ -1472,7 +1913,7 @@ ccp_down(f)
  	    lcp_close(f->unit, "MPPE disabled");
  	}
      }
@@ -1511,7 +1504,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1532,24 +1972,28 @@ ccp_printpkt(p, plen, printer, arg)
+@@ -1532,24 +1973,28 @@ ccp_printpkt(p, plen, printer, arg)
  #ifdef MPPE
  	    case CI_MPPE:
  		if (optlen >= CILEN_MPPE) {
@@ -1552,7 +1545,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (optlen >= CILEN_DEFLATE) {
-@@ -1635,6 +2079,7 @@ ccp_datainput(unit, pkt, len)
+@@ -1635,6 +2080,7 @@ ccp_datainput(unit, pkt, len)
  	    error("Lost compression sync: disabling compression");
  	    ccp_close(unit, "Lost compression sync");
  #ifdef MPPE
@@ -1560,7 +1553,7 @@ index 5814f35..99eaa47 100644
  	    /*
  	     * If we were doing MPPE, we must also take the link down.
  	     */
-@@ -1642,9 +2087,18 @@ ccp_datainput(unit, pkt, len)
+@@ -1642,9 +2088,18 @@ ccp_datainput(unit, pkt, len)
  		error("Too many MPPE errors, closing LCP");
  		lcp_close(unit, "Too many MPPE errors");
  	    }
@@ -2407,7 +2400,7 @@ index 8ea8200..c148652 100644
  .B require\-mppe\-128
  Require the use of MPPE, with 128-bit encryption.
  .TP
-@@ -1075,6 +1098,12 @@ under Linux and FreeBSD 2.2.8 and later.
+@@ -1075,6 +1091,12 @@ under Linux and FreeBSD 2.2.8 and later.
  Sets the ppp unit number (for a ppp0 or ppp1 etc interface name) for outbound
  connections.
  .TP
@@ -2466,10 +2459,10 @@ index f4f975c..00835d0 100644
 @@ -21,9 +21,6 @@
  #include <net/ppp_defs.h>
  #include "sha1.h"
- 
+-
 -static void
 -SHA1_Transform(u_int32_t[5], const unsigned char[64]);
--
+ 
  #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
  
  /* blk0() and blk() perform the initial expand. */
