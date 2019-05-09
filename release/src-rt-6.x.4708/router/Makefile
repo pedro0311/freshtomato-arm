@@ -20,7 +20,7 @@ export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
   ( if ! patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
-   patch -p0 < $$FILE; \
+   patch -p0 -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
 endef
@@ -28,7 +28,7 @@ endef
 define unpatch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n -r | while read FILE; do \
   ( if patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
-   patch -p0 -Rf < $$FILE; \
+   patch -p0 -R -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
 endef
