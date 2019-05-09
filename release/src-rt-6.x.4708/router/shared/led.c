@@ -116,6 +116,12 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 int do_led(int which, int mode)
 {
+  /*
+   * valid GPIO values: 0 to 31 (default active LOW, inverted or active HIGH with -[value])
+   * value 255: not known / disabled / not possible
+   * value -99: special case for -0 substitute (active HIGH for GPIO 0)
+   * value 254: non GPIO LED (special case, to show there is something!)
+   */
 //				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDGE USB2 USB3    5G
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 	static int wrt54g[]	= { 255,    1,     2,    3,    7,  255,  255,  255,  255,  255};
@@ -181,20 +187,24 @@ int do_led(int which, int mode)
 	int n;
 	int b = 255, c = 255;
 	int ret = 255;
+	int model;
 
 	if ((which < 0) || (which >= LED_COUNT)) return ret;
 
-	/* stealth mode */
-	if (nvram_match("stealth_mode", "1")) {
-		/* do OFF all LEDs first if enabled? */
+	/* get router model */
+	model = get_model();
 
-		if (nvram_match("stealth_iled", "1") && which == LED_WHITE)
-			{} /* don't disable INTERNET LED */
-		else
-			return ret;
+	/* stealth mode ON ? */
+	if (nvram_match("stealth_mode", "1")) {
+		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LET_WHITE */
+			/* nothing to do right now */
+		}
+		else {
+			return ret; /* stealth mode ON: no LED work to do, set return value to 255 / disabled */
+		}
 	}
 
-	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : get_model()) {
+	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
 	case MODEL_WRT54G:
 		if (check_hw_type() == HW_BCM4702) {
 			/* G v1.x */
