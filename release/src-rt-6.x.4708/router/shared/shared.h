@@ -370,6 +370,7 @@ extern uint32_t gpio_read(void);
 extern uint32_t _gpio_read(int f);
 extern int nvget_gpio(const char *name, int *gpio, int *inv);
 extern int do_led(int which, int mode);
+extern void do_led_nongpio(int model, int which, int mode);
 static inline int led(int which, int mode)
 {
 	return (do_led(which, mode) != 255);
