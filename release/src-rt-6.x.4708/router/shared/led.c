@@ -163,7 +163,7 @@ int do_led(int which, int mode)
 #ifdef CONFIG_BCMWL6A
 	static int ac68u[]	= { 255,  255,     4,  255,  255,   -3,  255,    0,   14,  255};
 	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6};
-	static int n18u[]	= { 255,  255,     6,  255,  255,  -99,    9,    3,   14,  255};
+	static int n18u[]	= { 254,  255,     6,  255,  255,  -99,    9,    3,   14,  255};
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255};
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8};
@@ -196,6 +196,11 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
+		/* turn off WLAN LEDs for some Asus Router: RT-N18U */
+		if ((model == MODEL_RTN18U)) {
+			do_led_nongpio(model, which, LED_OFF);
+		}
+
 		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LET_WHITE */
 			/* nothing to do right now */
 		}
@@ -404,6 +409,9 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_RTN18U:
 		b = n18u[which];
+		if (which == LED_WLAN) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
 		break;
 	case MODEL_R6250:
 		if (which == LED_DIAG) {
@@ -673,4 +681,22 @@ void led_setup(void) {
 		}
 
 	}
+}
+
+/* control non GPIO LEDs for some Asus Router: RT-N18U */
+void do_led_nongpio(int model, int which, int mode) {
+
+	switch(model) {
+	case MODEL_RTN18U:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 7");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	default:
+	/* nothing to do right now */
+	break;
+	}
+
 }
