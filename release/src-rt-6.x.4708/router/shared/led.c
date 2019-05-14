@@ -178,7 +178,7 @@ int do_led(int which, int mode)
 	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255,  255 };
 #endif
 #ifdef CONFIG_BCM7
-	static int ac3200[]	= { 255,  -15,     5,  255,   14,   -3,  255,  255,  255,  255,  255 };
+	static int ac3200[]	= { 254,  -15,     5,  255,   14,   -3,  255,  255,  255,  254,  254 };
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  255,   18,   17,   12,   16 };
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
@@ -197,9 +197,10 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus Router: RT-N18U, RT-AC68U */
+		/* turn off WLAN LEDs for some Asus Router: RT-N18U, RT-AC68U, RT-AC3200 */
 		if ((model == MODEL_RTN18U) ||
-		    (model == MODEL_RTAC68U)) {
+		    (model == MODEL_RTAC68U) ||
+		    (model == MODEL_RTAC3200)) {
 			do_led_nongpio(model, which, LED_OFF);
 		}
 
@@ -513,6 +514,11 @@ int do_led(int which, int mode)
 #ifdef CONFIG_BCM7
 	case MODEL_RTAC3200:
 		b = ac3200[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G) ||
+		    (which == LED_52G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
 		break;
 	case MODEL_R8000:
 		if (which == LED_DIAG) {
@@ -725,7 +731,7 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus Router: RT-N18U, RT-AC68U */
+/* control non GPIO LEDs for some Asus Router: RT-N18U, RT-AC68U, RT-AC3200 */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch(model) {
@@ -745,6 +751,23 @@ void do_led_nongpio(int model, int which, int mode) {
 		else if (which == LED_5G) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
 			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	case MODEL_RTAC3200:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1"); /* 2.4 GHz - eth2, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1"); /* 5 GHz - eth1, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_52G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth3 ledbh 10 1"); /* second 5 GHz - eth3, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth3 ledbh 10 0");
 			else if (mode == LED_PROBE) return;
 		}
 		break;
