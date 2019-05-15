@@ -1,5 +1,5 @@
 
-mainmenu "Tomato Configuration"
+mainmenu "FreshTomato Configuration"
 
 config TCONFIG_OPTIMIZE_SHARED_LIBS
 	bool "Optimize shared libraries (remove unused symbols)"
