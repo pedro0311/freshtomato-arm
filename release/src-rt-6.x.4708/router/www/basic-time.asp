@@ -22,7 +22,7 @@
 
 <script type="text/javascript">
 
-//	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server,ntp_tdod,ntp_kiss"); %>
+//	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server"); %>
 
 
 var ntpList = [
@@ -100,7 +100,7 @@ function verifyFields(focused, quiet) {
 	return 1;
 }
 
-function save(clearKiss) {
+function save() {
 	if (!verifyFields(null, 0)) return;
 
 	var fom, a, i;
@@ -121,16 +121,10 @@ function save(clearKiss) {
 		fom.ntp_server.value = a.join(' ');
 	}
 
-	fom.ntp_tdod.value = fom.f_ntp_tdod.checked ? 1 : 0;
-	fom.ntp_kiss.disabled = !clearKiss;
 	form.submit(fom);
 }
 
 function earlyInit() {
-	if (nvram.ntp_kiss != '') {
-		E('ntpkiss-ip').innerHTML = nvram.ntp_kiss;
-		E('ntpkiss').style.display = '';
-	}
 	verifyFields(null, 1);
 }
 </script>
@@ -156,8 +150,6 @@ function earlyInit() {
 <input type="hidden" name="tm_dst">
 <input type="hidden" name="tm_tz">
 <input type="hidden" name="ntp_server">
-<input type="hidden" name="ntp_tdod">
-<input type="hidden" name="ntp_kiss" value="" disabled="disabled">
 
 
 <div class="section-title">Time</div>
@@ -261,7 +253,6 @@ createFieldTable('', [
 	null,
 	{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Auto interval']],
 		value: nvram.ntp_updates },
-	{ title: 'Trigger Connect On Demand', indent: 2, name: 'f_ntp_tdod', type: 'checkbox', value: nvram.ntp_tdod != '0' },
 	{ title: 'NTP Time Server', name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
 	{ title: '&nbsp;', text: '<small><span id="ntp-preset">xx<\/span><\/small>', hidden: 1 },
 	{ title: '', name: 'f_ntp_1', type: 'text', maxlen: 48, size: 50, value: ntp[0] || 'pool.ntp.org', hidden: 1 },
@@ -272,20 +263,12 @@ createFieldTable('', [
 </div>
 <br/><br/>
 
-<div id="ntpkiss" style="display:none">
-The following NTP servers have been automatically blocked by request from the server:
-<b id="ntpkiss-ip"></b>
-<div>
-	<input type="button" value="Clear" onclick="save(1)">
-</div>
-</div>
-
 <!-- / / / -->
 
 </td></tr>
 <tr><td id="footer" colspan="2">
 	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save(0)">
+	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </td></tr>
 </table>
