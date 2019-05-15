@@ -533,8 +533,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "ntp_updates",		"1"				, 0 },
 	{ "ntp_tdod",			"0"				, 0 },
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" , 0 },
-	{ "ntp_kiss",			""				, 0 },
-	{ "ntp_kiss_ignore",		""				, 0 },
 
 /* basic-static */
 	{ "dhcpd_static",		""				, 0 },
@@ -716,8 +714,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "smbd_on",			"0"				, 0 },
 	{ "nmbd_on",			"0"				, 0 },
 	{ "smbd_wgroup",		"WORKGROUP"			, 0 },
-	{ "smbd_nbname",		"TOMATO"			, 0 },
-	{ "smbd_adminpass",		"admin"				, 0 },
 #endif
 
 /* admin-access */

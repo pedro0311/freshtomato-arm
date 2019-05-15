@@ -525,9 +525,7 @@ static const nvset_t nvset_list[] = {
 	{ "tm_sel",			V_LENGTH(1, 64)			},	// PST8PDT
 	{ "tm_dst",			V_01				},
 	{ "ntp_updates",		V_RANGE(-1, 24)			},
-	{ "ntp_tdod",			V_01				},
 	{ "ntp_server",			V_LENGTH(1, 150)		},	// x y z
-	{ "ntp_kiss",			V_LENGTH(0, 255)		},
 
 // basic-static
 	{ "dhcpd_static",		V_LENGTH(0, 108*251)		},	// 108 (max chars per entry) x 250 entries
