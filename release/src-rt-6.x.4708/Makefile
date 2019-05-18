@@ -561,6 +561,10 @@ define RouterOptions
 		sed -i "/TCONFIG_IPERF/d" $(1); \
 		echo "TCONFIG_IPERF=y" >>$(1); \
 	fi; \
+	if [ "$(NVRAM_SIZE)" = "32" ]; then \
+		sed -i "/TCONFIG_NVRAM_32K/d" $(1); \
+		echo "TCONFIG_NVRAM_32K=y" >>$(1); \
+	fi; \
 	)
 endef
 
