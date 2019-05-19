@@ -80,6 +80,11 @@ startRouting() {
 	ip route add table $ID default via $VPN_GW dev $IFACE
 	ip rule add fwmark $ID table $ID priority 1000
 
+	# copy routes from main routing table (exclude vpns and default gateway)
+	ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
+		ip route add table $ID $ROUTE
+	done
+
 	modprobe xt_set
 	modprobe ip_set
 	modprobe ip_set_hash_ip
