@@ -70,3 +70,4 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_GROCTRL is not set
 # TCONFIG_BCMFA is not set
 # TCONFIG_IPERF is not set
+# TCONFIG_NVRAM_32K is not set

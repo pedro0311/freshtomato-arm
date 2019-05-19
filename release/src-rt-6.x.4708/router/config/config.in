@@ -294,3 +294,7 @@ config TCONFIG_FANCTRL
 config TCONFIG_IPERF
 	bool "IP Bandwidth monitoring utility"
 	default n
+
+config TCONFIG_NVRAM_32K
+	bool "NVRAM_32K"
+	default n

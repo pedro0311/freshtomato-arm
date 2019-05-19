@@ -115,6 +115,12 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 int do_led(int which, int mode)
 {
+  /*
+   * valid GPIO values: 0 to 31 (default active LOW, inverted or active HIGH with -[value])
+   * value 255: not known / disabled / not possible
+   * value -99: special case for -0 substitute (active HIGH for GPIO 0)
+   * value 254: non GPIO LED (special case, to show there is something!)
+   */
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 	static int wrt54g[]	= { 255,    1,     2,    3,    7,  255,  255,  255,  255,  255,  255 };
@@ -154,9 +160,9 @@ int do_led(int which, int mode)
 	static int tdn6[]	= { 255,   -6,     8,  255,  255,  255,  255,  255,  255,  255,  255 };
 #endif
 #ifdef CONFIG_BCMWL6A
-	static int ac68u[]	= { 255,  255,     4,  255,  255,   -3,  255,    0,   14,  255,  255 };
+	static int ac68u[]	= { 254,  255,     4,  255,  255,   -3,  255,    0,   14,  254,  255 };
 	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6,  255 };
-	static int n18u[]	= { 255,  255,     6,  255,  255,  -99,    9,    3,   14,  255,  255 };
+	static int n18u[]	= { 254,  255,     6,  255,  255,  -99,    9,    3,   14,  255,  255 };
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8,  255 };
@@ -182,20 +188,30 @@ int do_led(int which, int mode)
 	int n;
 	int b = 255, c = 255;
 	int ret = 255;
+	int model;
 
 	if ((which < 0) || (which >= LED_COUNT)) return ret;
 
-	/* stealth mode */
-	if (nvram_match("stealth_mode", "1")) {
-		/* do OFF all LEDs first if enabled? */
+	/* get router model */
+	model = get_model();
 
-		if (nvram_match("stealth_iled", "1") && which == LED_WHITE)
-			{} /* don't disable INTERNET LED */
-		else
-			return ret;
+	/* stealth mode ON ? */
+	if (nvram_match("stealth_mode", "1")) {
+		/* turn off WLAN LEDs for some Asus Router: RT-N18U, RT-AC68U */
+		if ((model == MODEL_RTN18U) ||
+		    (model == MODEL_RTAC68U)) {
+			do_led_nongpio(model, which, LED_OFF);
+		}
+
+		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LET_WHITE */
+			/* nothing to do right now */
+		}
+		else {
+			return ret; /* stealth mode ON: no LED work to do, set return value to 255 / disabled */
+		}
 	}
 
-	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : get_model()) {
+	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
 	case MODEL_WRT54G:
 		if (check_hw_type() == HW_BCM4702) {
 			/* G v1.x */
@@ -389,12 +405,19 @@ int do_led(int which, int mode)
 #ifdef CONFIG_BCMWL6A
 	case MODEL_RTAC68U:
 		b = ac68u[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
 		break;
 	case MODEL_RTAC56U:
 		b = ac56u[which];
 		break;
 	case MODEL_RTN18U:
 		b = n18u[which];
+		if (which == LED_WLAN) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
 		break;
 	case MODEL_R6250:
 		if (which == LED_DIAG) {
@@ -700,4 +723,34 @@ void led_setup(void) {
 		}
 
 	}
+}
+
+/* control non GPIO LEDs for some Asus Router: RT-N18U, RT-AC68U */
+void do_led_nongpio(int model, int which, int mode) {
+
+	switch(model) {
+	case MODEL_RTN18U:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 7");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	case MODEL_RTAC68U:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	default:
+	/* nothing to do right now */
+	break;
+	}
+
 }

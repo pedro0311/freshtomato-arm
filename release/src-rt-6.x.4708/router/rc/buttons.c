@@ -47,6 +47,10 @@ int buttons_main(int argc, char *argv[])
 	char *p;
 	int n;
 	int ses_led;
+	int model;
+
+	/* get Router model */
+	model = get_model();
 
 	ses_mask = ses_pushed = 0;
 	wlan_mask = wlan_pushed = 0;
@@ -56,8 +60,8 @@ int buttons_main(int argc, char *argv[])
 	reset_mask = 1 << 4;
 	ses_led = LED_DIAG;
 
-	// moveme
-	switch (nvram_get_int("btn_override") ? MODEL_UNKNOWN : get_model()) {
+	/* move me */
+	switch (nvram_get_int("btn_override") ? MODEL_UNKNOWN : model) {
 	case MODEL_WRT54G:
 	case MODEL_WRTSL54GS:
 		reset_mask = 1 << 6;
@@ -205,9 +209,9 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_DIR868L:
-		reset_mask = 1 << 11;
-		ses_mask = 1 << 7;
-		ses_led = LED_AOSS;
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed */
 		break;
 	case MODEL_AC15:
 		reset_mask = 1 << 11;
@@ -408,12 +412,12 @@ int buttons_main(int argc, char *argv[])
 			cprintf("reset down\n");
 #endif
 
-			led(LED_DIAG, 0);
+			led(LED_DIAG, LED_OFF);
 
 			count = 0;
 			do {
 				sleep(1);
-				if (++count == 3) led(LED_DIAG, 1);
+				if (++count == 3) led(LED_DIAG, LED_ON);
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & reset_mask) == reset_pushed));
 
 #ifdef DEBUG_TEST
@@ -427,7 +431,7 @@ int buttons_main(int argc, char *argv[])
 				reboot(RB_AUTOBOOT);
 			}
 			else {
-				led(LED_DIAG, 1);
+				led(LED_DIAG, LED_ON);
 				set_action(ACT_REBOOT);
 				kill(1, SIGTERM);
 			}
@@ -448,7 +452,7 @@ int buttons_main(int argc, char *argv[])
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & ses_mask) == ses_pushed));
 			gpio &= mask;
 
-			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, 1);
+			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 
 			//	syslog(LOG_DEBUG, "ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
 			syslog(LOG_INFO, "SES pushed. Count was %d.", count);
@@ -470,22 +474,22 @@ int buttons_main(int argc, char *argv[])
 				//	syslog(LOG_DEBUG, "ses-func: count=%d %s='%s'", count, s, nvram_safe_get(s));
 				if ((p = nvram_get(s)) != NULL) {
 					switch (*p) {
-					case '1':	// toggle wl
+					case '1':	/* toggle wl */
 						nvram_set("rrules_radio", "-1");
 						eval("radio", "toggle");
 						break;
-					case '2':	// reboot
+					case '2':	/* reboot */
 						kill(1, SIGTERM);
 						break;
-					case '3':	// shutdown
+					case '3':	/* shutdown */
 						kill(1, SIGQUIT);
 						break;
-					case '4':	// run a script
+					case '4':	/* run a script */
 						sprintf(s, "%d", count);
 						run_nvscript("sesx_script", s, 2);
 						break;
 #ifdef TCONFIG_USB
-					case '5':	// !!TB: unmount all USB drives
+					case '5':	/* !!TB: unmount all USB drives */
 						add_remove_usbhost("-2", 0);
 						break;
 #endif
@@ -520,13 +524,13 @@ int buttons_main(int argc, char *argv[])
 				sleep(1);
 			last = (gpio & brau_mask);
 			if (brau_state != last) {
-				brau_flag = (brau_state != ~0); // set to 1 to run at startup
+				brau_flag = (brau_state != ~0); /* set to 1 to run at startup */
 				brau_state = last;
 				brau_count_stable = 0;
 			}
-			else if (brau_flag && ++brau_count_stable > 2) { // stable for 2+ seconds
+			else if (brau_flag && ++brau_count_stable > 2) { /* stable for 2+ seconds */
 				brau_flag = 0;
-				switch (nvram_get_int("btn_override") ? MODEL_UNKNOWN : get_model()) {
+				switch (nvram_get_int("btn_override") ? MODEL_UNKNOWN : model) {
 #ifdef CONFIG_BCMWL5
 				case MODEL_RTN12:
 					p = (brau_state & (1 << 4)) ? "ap" : (brau_state & (1 << 5)) ? "repeater" : "router";
