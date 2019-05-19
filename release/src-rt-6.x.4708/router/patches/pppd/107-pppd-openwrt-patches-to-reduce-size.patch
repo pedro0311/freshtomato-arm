@@ -204,10 +204,10 @@ index d571b11..58bbc44 100644
 @@ -202,9 +202,6 @@ option_t tty_options[] = {
        "Send and receive over socket, arg is host:port",
        OPT_PRIO | OPT_DEVNAM },
- 
+-
 -    { "record", o_string, &record_file,
 -      "Record characters sent/received to file", OPT_PRIO },
--
+ 
      { "crtscts", o_int, &crtscts,
        "Set hardware (RTS/CTS) flow control",
        OPT_PRIO | OPT_NOARG | OPT_VAL(1) },
@@ -254,7 +254,7 @@ index d571b11..58bbc44 100644
 @@ -1042,15 +1015,6 @@ charshunt(ifd, ofd, record_file)
  	fatal("internal error: file descriptor too large (%d, %d, %d)",
  	      ifd, ofd, pty_master);
- 
+-
 -    /*
 -     * Open the record file if required.
 -     */
@@ -263,7 +263,7 @@ index d571b11..58bbc44 100644
 -	if (recordf == NULL)
 -	    error("Couldn't create record file %s: %m", record_file);
 -    }
--
+ 
      /* set all the fds to non-blocking mode */
      flags = fcntl(pty_master, F_GETFL);
      if (flags == -1
