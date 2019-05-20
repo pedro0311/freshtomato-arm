@@ -143,20 +143,21 @@ stopRouting() {
 }
 
 startFirewall() {
-	local ip_mask i
+	local ip_mask INBOUND="DROP" i
 
 	[ "$(NV vpn_"$SERVICE"_firewall)" == "custom" ] && return
+	[ "$(NV vpn_"$SERVICE"_fw)" -eq 0 ] && INBOUND="ACCEPT"
 
 	$LOGS "Creating firewall rules for $SERVICE"
 	echo "#!/bin/sh" > $FIREWALL_VPN
-	echo "iptables -I INPUT -i $IFACE -j ACCEPT" >> $FIREWALL_VPN
-	echo "iptables -I FORWARD -i $IFACE -j ACCEPT" >> $FIREWALL_VPN
+	echo "iptables -I INPUT -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
+	echo "iptables -I FORWARD -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
 
 	[ -n "$ifconfig_ipv6_remote" ] && {
 		$LOGS "startFirewall(): ifconfig_ipv6_remote=$ifconfig_ipv6_remote for $SERVICE"
 
-		echo "ip6tables -I INPUT -i $IFACE -j ACCEPT" >> $FIREWALL_VPN
-		echo "ip6tables -I FORWARD -i $IFACE -j ACCEPT" >> $FIREWALL_VPN
+		echo "ip6tables -I INPUT -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
+		echo "ip6tables -I FORWARD -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
 	}
 
 	[ "$(NV vpn_"$SERVICE"_nat)" -eq 1 ] && ([ "$(NV vpn_"$SERVICE"_if)" == "tun" ] || [ "$(NV vpn_"$SERVICE"_bridge)" -eq 0 ]) && {
