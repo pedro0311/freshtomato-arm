@@ -187,12 +187,14 @@ int do_led(int which, int mode)
 	int n;
 	int b = 255, c = 255;
 	int ret = 255;
-	int model;
+	static int model = 0; /* initialize with 0 / MODEL_UNKNOWN */
 
 	if ((which < 0) || (which >= LED_COUNT)) return ret;
 
-	/* get router model */
-	model = get_model();
+	if (model == 0) { /* router model unknown OR detect router model for the first time at function do_led(). */
+		/* get router model */
+		model = get_model();
+	}
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
@@ -202,7 +204,7 @@ int do_led(int which, int mode)
 			do_led_nongpio(model, which, LED_OFF);
 		}
 
-		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LET_WHITE */
+		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LED_WHITE */
 			/* nothing to do right now */
 		}
 		else {
