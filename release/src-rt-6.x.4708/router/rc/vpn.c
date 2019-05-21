@@ -56,11 +56,10 @@ void start_vpnclient(int clientNum)
 	enum { TLS, SECRET, CUSTOM } cryptMode = CUSTOM;
 	enum { TAP, TUN } ifType = TUN;
 	enum { BRIDGE, NAT, NONE } routeMode = NONE;
-	int nvi, ip[4], nm[4];
+	int nvi;
 	long int nvl;
 	int pid;
 	int userauth, useronly;
-	int i;
 	int taskset_ret = 0;
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
@@ -288,15 +287,11 @@ void start_vpnclient(int clientNum)
 	fprintf(fp, "verb 3\n");
 	if (cryptMode == TLS)
 	{
-		sprintf(buffer, "vpn_client%d_adns", clientNum);
-		if (nvram_get_int(buffer) > 0)
-		{
-			sprintf(buffer, "/etc/openvpn/client%d/updown.sh", clientNum);
-			symlink("/rom/openvpn/updown.sh", buffer);
-			fprintf(fp, "script-security 2\n");
-			fprintf(fp, "up updown.sh\n");
-			fprintf(fp, "down updown.sh\n");
-		}
+		sprintf(buffer, "/etc/openvpn/client%d/updown.sh", clientNum);
+		symlink("/rom/openvpn/updown.sh", buffer);
+		fprintf(fp, "script-security 2\n");
+		fprintf(fp, "up updown.sh\n");
+		fprintf(fp, "down updown.sh\n");
 
 		sprintf(buffer, "vpn_client%d_hmac", clientNum);
 		nvi = nvram_get_int(buffer);
@@ -437,62 +432,6 @@ void start_vpnclient(int clientNum)
 	}
 	vpnlog(VPN_LOG_EXTRA,"Done starting openvpn");
 
-	// Handle firewall rules if appropriate
-	sprintf(buffer, "vpn_client%d_firewall", clientNum);
-	if ( !nvram_contains_word(buffer, "custom") )
-	{
-		// Create firewall rules
-		vpnlog(VPN_LOG_EXTRA,"Creating firewall rules");
-		mkdir("/etc/openvpn/fw", 0700);
-		sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
-		fp = fopen(buffer, "w");
-		chmod(buffer, S_IRUSR|S_IWUSR|S_IXUSR);
-		fprintf(fp, "#!/bin/sh\n");
-		fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n", iface);
-		fprintf(fp, "iptables -I FORWARD -i %s -j ACCEPT\n", iface);
-		if ( routeMode == NAT )
-		{
-			// Add the nat for the main lan addresses
-			sscanf(nvram_safe_get("lan_ipaddr"), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-			sscanf(nvram_safe_get("lan_netmask"), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
-			fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n",
-				ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get("lan_netmask"), iface);
-
-			// Add the nat for other bridges, too
-			for(i=1; i < 4; i++) {
-				int ret1, ret2;
-
-				sprintf(buffer,"lan%d_ipaddr",i);
-				ret1 = sscanf(nvram_safe_get(buffer), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-				sprintf(buffer,"lan%d_netmask",i);
-				ret2 = sscanf(nvram_safe_get(buffer), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
-				if (ret1 == 4 && ret2 == 4) {
-					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n",
-			        		ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get("lan_netmask"), iface);
-				}
-			}
-		}
-
-	/*Create firewall rules for IPv6*/
-#ifdef TCONFIG_IPV6
-	if (ipv6_enabled()) {
-		fprintf(fp, "ip6tables -I INPUT -i %s -j ACCEPT\n", iface);
-		fprintf(fp, "ip6tables -I FORWARD -i %s -j ACCEPT\n", iface);
-	}
-#endif
-
-		fclose(fp);
-		vpnlog(VPN_LOG_EXTRA,"Done creating firewall rules");
-
-		// Run the firewall rules
-		vpnlog(VPN_LOG_EXTRA,"Running firewall rules");
-		sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
-		argv[0] = buffer;
-		argv[1] = NULL;
-		_eval(argv, NULL, 0, NULL);
-		vpnlog(VPN_LOG_EXTRA,"Done running firewall rules");
-	}
-
 	/* Set up cron job */
 	sprintf(buffer, "vpn_client%d_poll", clientNum);
 	if ( (nvi = nvram_get_int(buffer)) > 0 )
@@ -513,16 +452,6 @@ void start_vpnclient(int clientNum)
 		_eval(argv, NULL, 0, NULL);
 		vpnlog(VPN_LOG_EXTRA,"Done adding cron job");
 	}
-
-	sprintf(buffer, "vpn_client%d_route", clientNum);
-	if ( nvram_match(buffer, "1" )) {
-		sprintf(buffer, "client%d", clientNum);
-		xstart ("vpnrouting", buffer, "start");
-	} else {
-		sprintf(buffer, "client%d", clientNum);
-		xstart ("vpnrouting", buffer, "stop");
-	}
-
 #ifdef LINUX26
 	sprintf(buffer, "vpn_client%d", clientNum);
 	allow_fastnat(buffer, 0);
@@ -536,6 +465,7 @@ void stop_vpnclient(int clientNum)
 	int argc;
 	char *argv[7];
 	char buffer[BUF_SIZE];
+	enum { TAP, TUN } ifType = TUN;
 
 	sprintf(buffer, "vpnclient%d", clientNum);
 	if (getpid() != 1) {
@@ -554,22 +484,6 @@ void stop_vpnclient(int clientNum)
 	argv[3] = NULL;
 	_eval(argv, NULL, 0, NULL);
 	vpnlog(VPN_LOG_EXTRA,"Done removing cron job");
-
-	// Remove firewall rules
-	vpnlog(VPN_LOG_EXTRA,"Removing firewall rules.");
-	sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
-	argv[0] = "sed";
-	argv[1] = "-i";
-	argv[2] = "s/-A/-D/g;s/-I/-D/g";
-	argv[3] = buffer;
-	argv[4] = NULL;
-	if (!_eval(argv, NULL, 0, NULL))
-	{
-		argv[0] = buffer;
-		argv[1] = NULL;
-		_eval(argv, NULL, 0, NULL);
-	}
-	vpnlog(VPN_LOG_EXTRA,"Done removing firewall rules.");
 
 	// Stop the VPN client
 	vpnlog(VPN_LOG_EXTRA,"Stopping OpenVPN client.");
@@ -604,12 +518,17 @@ void stop_vpnclient(int clientNum)
 		vpnlog(VPN_LOG_EXTRA,"Done removing generated files.");
 	}
 
-	sprintf(buffer, "vpn_client%d_route", clientNum);
-	if ( nvram_match(buffer, "1" )) {
-		sprintf(buffer, "client%d", clientNum);
-		xstart ("vpnrouting", buffer, "stop");
+	/* Determine interface */
+	sprintf(buffer, "vpn_client%d_if", clientNum);
+	if (nvram_contains_word(buffer, "tap"))
+		ifType = TAP;
+	else if (nvram_contains_word(buffer, "tun"))
+		ifType = TUN;
+	else
+	{
+		vpnlog(VPN_LOG_ERROR, "Invalid interface type, %.3s", nvram_safe_get(buffer));
+		return;
 	}
-
 #ifdef LINUX26
 	sprintf(buffer, "vpn_client%d", clientNum);
 	allow_fastnat(buffer, 1);
@@ -1510,7 +1429,6 @@ void write_vpn_dnsmasq_config(FILE* f)
 	int cur;
 	DIR *dir;
 	struct dirent *file;
-	FILE *dnsf;
 
 	strlcpy(buf, nvram_safe_get("vpn_server_dns"), sizeof(buf));
 	for ( pos = strtok(buf,","); pos != NULL; pos=strtok(NULL, ",") )
@@ -1545,18 +1463,8 @@ void write_vpn_dnsmasq_config(FILE* f)
 
 			if ( sscanf(file->d_name, "client%d.con%c", &cur, &ch) == 2 )
 			{
-				if ( (dnsf = fopen(file->d_name, "r")) != NULL )
-				{
-					vpnlog(VPN_LOG_INFO, "Adding Dnsmasq config from %s", file->d_name);
-
-					while( !feof(dnsf) )
-					{
-						ch = fgetc(dnsf);
-						fputc(ch==EOF?'\n':ch, f);
-					}
-
-					fclose(dnsf);
-				}
+				vpnlog(VPN_LOG_INFO, "Adding Dnsmasq config from %s", file->d_name);
+				fappend(f, file->d_name);
 			}
 		}
 	}
@@ -1569,6 +1477,7 @@ int write_vpn_resolv(FILE* f)
 	char *fn, ch, num, buf[24];
 	FILE *dnsf;
 	int exclusive = 0;
+	int adns = 0;
 
 	if ( chdir("/etc/openvpn/dns") )
 		return 0;
@@ -1585,21 +1494,15 @@ int write_vpn_resolv(FILE* f)
 
 		if ( sscanf(fn, "client%c.resol%c", &num, &ch) == 2 )
 		{
+			snprintf(buf, sizeof(buf), "vpn_client%c_adns", num);
+			adns = nvram_get_int(buf);
 			if ( (dnsf = fopen(fn, "r")) == NULL )
 				continue;
 
 			vpnlog(VPN_LOG_INFO,"Adding DNS entries from %s", fn);
+			fappend(f, file->d_name);
 
-			while( !feof(dnsf) )
-			{
-				ch = fgetc(dnsf);
-				fputc(ch==EOF?'\n':ch, f);
-			}
-
-			fclose(dnsf);
-
-			snprintf(buf, sizeof(buf), "vpn_client%c_adns", num);
-			if ( nvram_get_int(buf) == 3 )
+			if (adns == 3)
 				exclusive = 1;
 		}
 	}
