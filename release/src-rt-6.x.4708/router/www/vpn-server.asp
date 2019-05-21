@@ -728,7 +728,7 @@ for (i = 0; i < tabs.length; ++i)
 		{ title: 'Allow Only These Clients', name: 'f_vpn_'+t+'_ccd_excl', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_ccd_excl' ) != 0 },
 		{ title: '', suffix: '<div class="tomato-grid" id="table_'+t+'_ccd"><\/div>' },
 		{ title: 'Allow User/Pass Auth', name: 'f_vpn_'+t+'_userpass', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_userpass' ) != 0 },
-		{ title: 'Allow Only User/Pass(Without cert) Auth', name: 'f_vpn_'+t+'_nocert', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_nocert' ) != 0 },
+		{ title: 'Allow Only User/Pass (without cert) Auth', name: 'f_vpn_'+t+'_nocert', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_nocert' ) != 0 },
 		{ title: '', suffix: '<div class="tomato-grid" id="table_'+t+'_users"><\/div>' },
 		{ title: 'Custom Configuration', name: 'vpn_'+t+'_custom', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_custom' ) }
 	]);
