@@ -20,7 +20,10 @@ static void help(void)
 			strcat(s, led_names[i]);
 		}
 	}
-	if (s[0] == 0) {
+	if (nvram_match("stealth_mode", "1")) { /* stealth mode ON ? */
+		fprintf(stderr, "Stealth mode is turned ON. Please disable stealth mode if you want to use led command.\n");
+	}
+	else if (s[0] == 0) {
 		fprintf(stderr, "Not supported.\n");
 	}
 	else {
@@ -39,14 +42,14 @@ int led_main(int argc, char *argv[])
 	if ((argc < 3) || ((argc % 2) != 1)) help();
 
 	for (j = 1; j < argc; j += 2) {
-		a = argv[j]; // led name
+		a = argv[j]; /* led name */
 		for (i = 0; i < LED_COUNT; ++i) {
-			if ((strncmp(led_names[i], a, 2) == 0) && (strcmp("usb3",a) != 0 )) // first 2 chars except usb3
+			if ((strncmp(led_names[i], a, 2) == 0) && (strcmp("usb3",a) != 0 )) /* first 2 chars except usb3 */
 				break;
-			else if (strcmp(led_names[i], a) == 0) // full led name (usb/usb3 workaround)
+			else if (strcmp(led_names[i], a) == 0) /* full led name (usb/usb3 workaround) */
 				break;
 		}
-		a = argv[j + 1]; // action (on/off)
+		a = argv[j + 1]; /* action (on/off) */
 		if ((i >= LED_COUNT) || ((strcmp(a, "on") != 0) && (strcmp(a, "off") != 0))) help();
 		if (!led(i, (a[1] == 'n'))) help();
 	}
