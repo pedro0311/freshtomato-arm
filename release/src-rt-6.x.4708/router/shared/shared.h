@@ -359,8 +359,7 @@ extern int f_wait_notexists(const char *name, int max);
 
 #define	LED_OFF				0
 #define	LED_ON				1
-#define LED_BLINK			2
-#define LED_PROBE			3
+#define LED_PROBE			2
 
 extern const char *led_names[];
 
