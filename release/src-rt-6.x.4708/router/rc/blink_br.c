@@ -1,15 +1,11 @@
 #include "rc.h"
 #include <shared.h>
 
-int get_lanports_status(void)
+int get_lanports_status(int model)
 {
 	int r = 0;
 	FILE *f;
 	char s[128], a[16];
-	int model;
-
-	/* get Router model */
-	model = get_model();
 
 	if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
 		while (fgets(s, sizeof(s), f)) {
@@ -59,7 +55,7 @@ int blink_br_main(int argc, char *argv[])
 	      if ((model == MODEL_WS880) ||
 		  (model == MODEL_RTN18U) ||
 		  (model == MODEL_RTAC56U)) {
-			if (get_lanports_status()) {
+			if (get_lanports_status(model)) {
 				led(LED_BRIDGE, LED_ON);
 			}
 			else {
