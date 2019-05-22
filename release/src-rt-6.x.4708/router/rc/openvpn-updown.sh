@@ -95,35 +95,38 @@ startRouting() {
 	echo "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter" >> $FIREWALL_ROUTING
 	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
 
-	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
-	for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do
-		VAL1=$(echo $i | cut -d "<" -f1)
-		VAL2=$(echo $i | cut -d "<" -f2)
-		VAL3=$(echo $i | cut -d "<" -f3)
+	# only if Routing Policy is enabled and route-nopull or route-noexec is checked
+	[ "$(NV vpn_"$SERVICE"_route)" -eq 1 ] && ([ "$(NV vpn_"$SERVICE"_noexec)" -eq 1 ] || [ "$(NV vpn_"$SERVICE"_nopull)" -eq 1 ]) && {
+		# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
+		for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do
+			VAL1=$(echo $i | cut -d "<" -f1)
+			VAL2=$(echo $i | cut -d "<" -f2)
+			VAL3=$(echo $i | cut -d "<" -f3)
 
-		# only if rule is enabled
-		[ "$VAL1" -eq 1 ] && {
-			case "$VAL2" in
-				1)	# from source
-					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
-				;;
-				2)	# to destination
-					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
-				;;
-				3)	# to domain
-					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "ipset=/$VAL3/vpnrouting$ID" >> $DNSMASQ_IPSET
-					# try to add ipset rule using forced query to DNS server
-					nslookup $VAL3 127.0.0.1 > /dev/null
+			# only if rule is enabled
+			[ "$VAL1" -eq 1 ] && {
+				case "$VAL2" in
+					1)	# from source
+						$LOGS "Type: $VAL2 - add $VAL3"
+						echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					;;
+					2)	# to destination
+						$LOGS "Type: $VAL2 - add $VAL3"
+						echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					;;
+					3)	# to domain
+						$LOGS "Type: $VAL2 - add $VAL3"
+						echo "ipset=/$VAL3/vpnrouting$ID" >> $DNSMASQ_IPSET
+						# try to add ipset rule using forced query to DNS server
+						nslookup $VAL3 127.0.0.1 > /dev/null
 
-					DNSMASQ=1
-				;;
-				*) continue ;;
-			esac
-		}
-	done
+						DNSMASQ=1
+					;;
+					*) continue ;;
+				esac
+			}
+		done
+	}
 
 	chmod +x $FIREWALL_ROUTING
 	$LOGS "Running firewall routing rules for $SERVICE"
