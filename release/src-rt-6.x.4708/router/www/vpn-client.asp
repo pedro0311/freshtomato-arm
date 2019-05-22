@@ -516,7 +516,7 @@ for (i = 0; i < tabs.length; ++i)
 		{ title: '', suffix: '<div class="tomato-grid" id="table_'+t+'_routing"><\/div>' }
 	]);
 	W('<\/div>');
-	W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN interface and check no-pull or no-exec option.<\/b><\/div><\/div>');
+	W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN interface and check no-pull or no-exec option.<\/b><\/div><\/div><\/div>');
 	W('<div>');
 	W('<ul>');
 	W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
