@@ -109,7 +109,7 @@ function verifyFields(focused, quiet) {
 
 	var ret = 1;
 
-	// When settings change, make sure we restart the right client
+	/* When settings change, make sure we restart the right client */
 	if (focused)
 	{
 		changed = 1;
@@ -134,7 +134,7 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	// Element varification
+	/* Element varification */
 	for (i = 0; i < tabs.length; ++i)
 	{
 		t = tabs[i][0];
@@ -151,7 +151,7 @@ function verifyFields(focused, quiet) {
 		if (E('_vpn_'+t+'_gw').value.length > 0 && !v_ip('_vpn_'+t+'_gw', quiet, 1)) ret = 0;
 	}
 
-	// Visibility changes
+	/* Visibility changes */
 	for (i = 0; i < tabs.length; ++i)
 	{
 		t = tabs[i][0];
@@ -165,13 +165,14 @@ function verifyFields(focused, quiet) {
 		rgw = E('_f_vpn_'+t+'_rgw').checked;
 		nopull = E('_f_vpn_'+t+'_nopull').checked;
 		noexec = E('_f_vpn_'+t+'_noexec').checked;
+		rbutton = (iface == "tun" && (nopull == 1 || noexec == 1));
 		route = E('_f_vpn_'+t+'_route');
 		ncp = E('_vpn_'+t+'_ncp_enable').value;
 
 		userauth =  E('_f_vpn_'+t+'_userauth').checked && auth == "tls";
 		useronly = userauth && E('_f_vpn_'+t+'_useronly').checked;
 
-		// Page Basic
+		/* Page Basic */
 		elem.display(PR('_f_vpn_'+t+'_userauth'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_username'), PR('_vpn_'+t+'_password'), userauth );
 		elem.display(PR('_f_vpn_'+t+'_useronly'), userauth);
@@ -187,21 +188,22 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_vpn_'+t+'_local'), iface == "tun" && auth == "secret");
 		elem.display(PR('_f_vpn_'+t+'_local'), iface == "tap" && !bridge && auth != "custom");
 
-		// Page Advanced
+		/* Page Advanced */
 		elem.display(PR('_vpn_'+t+'_adns'), PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(E(t+'_gateway'), iface == "tap" && rgw > 0);
 		elem.display(PR('_f_vpn_'+t+'_nopull'), rgw == 0);
 		elem.display(PR('_f_vpn_'+t+'_noexec'), rgw == 0);
-		elem.display(PR('_f_vpn_'+t+'_rgw'),nopull == 0 && noexec == 0);
+		elem.display(PR('_f_vpn_'+t+'_rgw'), nopull == 0 && noexec == 0);
 		elem.display(PR('_vpn_'+t+'_cipher'), (ncp != 2));
 		elem.display(PR('_vpn_'+t+'_ncp_enable'), (auth == "tls"));
 		elem.display(PR('_vpn_'+t+'_ncp_ciphers'), ((ncp > 0) && (auth == "tls")));
 
-		// Page Routing Policy
-		elem.display(PR('_f_vpn_'+t+'_route'), iface == "tun");
-		elem.display(PR('table_'+t+'_routing'), route.checked);
+		/* Page Routing Policy */
+		elem.display(E(t+'-policy-head'), rbutton);
+		elem.display(PR('table_'+t+'_routing'), route.checked && rbutton);
+		elem.display(E('_vpn_'+t+'_routing_div_help'), !rbutton);
 
-		// Page Key
+		/* Page Key */
 		elem.display(PR('_vpn_'+t+'_static'), auth == "secret" || (auth == "tls" && hmac >= 0));
 		elem.display(PR('_vpn_'+t+'_ca'), auth == "tls");
 		elem.display(PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_key'), auth == "tls" && !useronly);
@@ -276,7 +278,7 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 	}
 	var f = fields.getAll(row);
 
-	// Verify fields in this row of the table
+	/* Verify fields in this row of the table */
 	if (f[2].value == "" ) { ferror.set(f[2], "Value is mandatory.", quiet); ret = 0; }
 	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) { ferror.set(f[2], "Value cannot contain '<' or '>' characters.", quiet); ret = 0; }
 	if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0) { ferror.set(f[2], "Value cannot contain 'space' or ',' characters. Only one IP or Domain per entry.", quiet); ret = 0; }
@@ -508,38 +510,41 @@ for (i = 0; i < tabs.length; ++i)
 	]);
 	W('<\/div>');
 	W('<div id=\''+t+'-policy\'>');
+	W('<div id=\''+t+'-policy-head\'>');
 	createFieldTable('', [
 		{ title: 'Redirect through VPN', name: 'f_vpn_'+t+'_route', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_route' ) != 0 },
 		{ title: '', suffix: '<div class="tomato-grid" id="table_'+t+'_routing"><\/div>' }
 	]);
-	    W('<div>');
-		W('<ul>');
-		W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
-		W('<li><b>Type -> To Destination IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
-		W('<li><b>Type -> To Domain<\/b> - Ex: "domain.com". Please enter one domain per line');
-		W('<\/ul>');
-	    W('<\/div>');
-		W('<\/div>');
-		W('<div id=\''+t+'-keys\'>');
-		W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>.<\/p>');
+	W('<\/div>');
+	W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN interface and check no-pull or no-exec option.<\/b><\/div><\/div>');
+	W('<div>');
+	W('<ul>');
+	W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
+	W('<li><b>Type -> To Destination IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
+	W('<li><b>Type -> To Domain<\/b> - Ex: "domain.com". Please enter one domain per line');
+	W('<\/ul>');
+	W('<\/div>');
+	W('<\/div>');
+	W('<div id=\''+t+'-keys\'>');
+	W('<p class=\'keyhelp\'>For help generating keys, refer to the OpenVPN <a id=\''+t+'-keyhelp\'>HOWTO<\/a>.<\/p>');
 	createFieldTable('', [
 		{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_static' ) },
 		{ title: 'Certificate Authority', name: 'vpn_'+t+'_ca', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_ca' ) },
 		{ title: 'Client Certificate', name: 'vpn_'+t+'_crt', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_crt' ) },
 		{ title: 'Client Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval( 'nvram.vpn_'+t+'_key' ) },
 	]);
-		W('<\/div>');
-		W('<div id=\''+t+'-status\'>');
-		W('<div id=\''+t+'-no-status\'><p>Client is not running or status could not be read.<\/p><\/div>');
-		W('<div id=\''+t+'-status-content\' style=\'display:none\' class=\'status-content\'>');
-		W('<div id=\''+t+'-status-header\' class=\'status-header\'><p>Data current as of <span id=\''+t+'-status-time\'><\/span>.<\/p><\/div>');
-		W('<div id=\''+t+'-status-stats\'><div class=\'section-title\'>General Statistics<\/div><div class="tomato-grid status-table" id="'+t+'-status-stats-table"><\/div><br /><\/div>');
-		W('<div id=\''+t+'-status-errors\' class=\'error\'><\/div>');
-		W('<\/div>');
-		W('<div style=\'text-align:right\'><a href=\'javascript:updateStatus('+i+')\'>Refresh Status<\/a><\/div>');
-		W('<\/div>');
-		W('<input type="button" value="' + (eval('vpn'+(i+1)+'up') ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'vpn'+t+'\', vpn'+(i+1)+'up)" id="_vpn'+t+'_button">');
-		W('<\/div>');
+	W('<\/div>');
+	W('<div id=\''+t+'-status\'>');
+	W('<div id=\''+t+'-no-status\'><p>Client is not running or status could not be read.<\/p><\/div>');
+	W('<div id=\''+t+'-status-content\' style=\'display:none\' class=\'status-content\'>');
+	W('<div id=\''+t+'-status-header\' class=\'status-header\'><p>Data current as of <span id=\''+t+'-status-time\'><\/span>.<\/p><\/div>');
+	W('<div id=\''+t+'-status-stats\'><div class=\'section-title\'>General Statistics<\/div><div class="tomato-grid status-table" id="'+t+'-status-stats-table"><\/div><br /><\/div>');
+	W('<div id=\''+t+'-status-errors\' class=\'error\'><\/div>');
+	W('<\/div>');
+	W('<div style=\'text-align:right\'><a href=\'javascript:updateStatus('+i+')\'>Refresh Status<\/a><\/div>');
+	W('<\/div>');
+	W('<input type="button" value="' + (eval('vpn'+(i+1)+'up') ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'vpn'+t+'\', vpn'+(i+1)+'up)" id="_vpn'+t+'_button">');
+	W('<\/div>');
 }
 
 </script>
