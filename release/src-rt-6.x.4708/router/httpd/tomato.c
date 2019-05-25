@@ -1570,8 +1570,6 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_key",		V_NONE				},
 	{ "vpn_server1_dh",		V_NONE				},
 	{ "vpn_server1_br",		V_LENGTH(0, 50)			},
-	{ "vpn_server1_route",		V_01				},
-	{ "vpn_server1_routing_val",	V_NONE				},
 	{ "vpn_server2_poll",		V_RANGE(0, 30)			},
 	{ "vpn_server2_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_server2_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
@@ -1613,8 +1611,6 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_key",		V_NONE				},
 	{ "vpn_server2_dh",		V_NONE				},
 	{ "vpn_server2_br",		V_LENGTH(0, 50)			},
-	{ "vpn_server2_route",		V_01				},
-	{ "vpn_server2_routing_val",	V_NONE				},
 	{ "vpn_client_eas",		V_NONE				},
 	{ "vpn_client1_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client1_if",		V_TEXT(3, 3)			},	// tap, tun
@@ -1655,6 +1651,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_noexec",		V_01				},
 	{ "vpn_client1_route",		V_01				},
 	{ "vpn_client1_routing_val",	V_NONE				},
+	{ "vpn_client1_fw",		V_01				},
 	{ "vpn_client2_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client2_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client2_bridge",		V_01				},
@@ -1694,6 +1691,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_noexec",		V_01				},
 	{ "vpn_client2_route",		V_01				},
 	{ "vpn_client2_routing_val",	V_NONE				},
+	{ "vpn_client2_fw",		V_01				},
 	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client3_bridge",		V_01				},
@@ -1733,6 +1731,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_noexec",		V_01				},
 	{ "vpn_client3_route",		V_01				},
 	{ "vpn_client3_routing_val",	V_NONE				},
+	{ "vpn_client3_fw",		V_01				},
 #endif
 
 #ifdef TCONFIG_PPTPD

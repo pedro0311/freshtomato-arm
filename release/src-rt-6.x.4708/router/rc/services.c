@@ -510,11 +510,10 @@ void start_dnsmasq()
 	}
 #endif
 
-	fprintf(f, "%s\n\n", nvram_safe_get("dnsmasq_custom"));
+	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
 
 	fappend(f, "/etc/dnsmasq.custom");
 	fappend(f, "/etc/dnsmasq.ipset");
-	//
 
 	fclose(f);
 
@@ -3373,16 +3372,6 @@ TOP:
  	if (strcmp(service, "pptpclient") == 0) {
  		if (action & A_STOP) stop_pptp_client();
  		if (action & A_START) start_pptp_client();
-		/* ???
-		if (action & (A_START | A_STOP))
-		{
-			stop_dnsmasq();
-			dns_to_resolv();
-			start_dnsmasq();
-			if ((action & A_START) == 0)
-				clear_pptp_route();
-		}
-		??? */
  		goto CLEAR;
  	}
 #endif

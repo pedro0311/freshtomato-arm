@@ -1105,8 +1105,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_key",		""				, 0 },
 	{ "vpn_server1_dh",		""				, 0 },
 	{ "vpn_server1_br",		"br0"				, 0 },
-	{ "vpn_server1_route"		"0"				, 0 },
-	{ "vpn_server1_routing_val",	""				, 0 },
 	{ "vpn_server2_poll",		"0"				, 0 },
 	{ "vpn_server2_if",		"tun"				, 0 },
 	{ "vpn_server2_proto",		"udp"				, 0 },
@@ -1147,8 +1145,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_key",		""				, 0 },
 	{ "vpn_server2_dh",		""				, 0 },
 	{ "vpn_server2_br",		"br0"				, 0 },
-	{ "vpn_server2_route"		"0"				, 0 },
-	{ "vpn_server2_routing_val",	""				, 0 },
 	{ "vpn_client_eas",		""				, 0 },
 	{ "vpn_client1_poll",		"0"				, 0 },
 	{ "vpn_client1_if",		"tun"				, 0 },
@@ -1185,6 +1181,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_nobind",		"1"				, 0 },
 	{ "vpn_client1_route",		"0"				, 0 },
 	{ "vpn_client1_routing_val",	""				, 0 },
+	{ "vpn_client1_fw",		"1"				, 0 },
 	{ "vpn_client2_poll",		"0"				, 0 },
 	{ "vpn_client2_if",		"tun"				, 0 },
 	{ "vpn_client2_bridge",		"1"				, 0 },
@@ -1220,6 +1217,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_nobind",		"1"				, 0 },
 	{ "vpn_client2_route",		"0"				, 0 },
 	{ "vpn_client2_routing_val",	""				, 0 },
+	{ "vpn_client2_fw",		"1"				, 0 },
 	{ "vpn_client3_poll",		"0"				, 0 },
 	{ "vpn_client3_if",		"tun"				, 0 },
 	{ "vpn_client3_bridge",		"1"				, 0 },
@@ -1255,6 +1253,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_nobind",		"1"				, 0 },
 	{ "vpn_client3_route",		"0"				, 0 },
 	{ "vpn_client3_routing_val",	""				, 0 },
+	{ "vpn_client3_fw",		"1"				, 0 },
 #endif
 
 #ifdef TCONFIG_PPTPD
