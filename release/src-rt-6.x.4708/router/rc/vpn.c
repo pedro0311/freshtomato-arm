@@ -861,7 +861,7 @@ void start_vpnserver(int serverNum)
 					{
 						chp[strcspn(chp,"<")] = '\0';
 						vpnlog(VPN_LOG_EXTRA,"CCD: Common name: %s", chp);
-						ccd = fopen(chp, "w");
+						ccd = fopen(chp, "a");
 						chmod(chp, S_IRUSR|S_IWUSR);
 
 						nvi -= strlen(chp)+1;
