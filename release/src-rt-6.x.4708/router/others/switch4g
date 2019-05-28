@@ -30,14 +30,18 @@ LOGS="logger -t switch4g[$PID]"
 }
 
 
+NV() {
+	nvram get "$1"
+}
+
 connect() {
-	MTYPE=$(nvram get "$PREFIX"_modem_type)
-	DEVNR=$(nvram get "$PREFIX"_modem_dev)
-	APN=$(nvram get "$PREFIX"_modem_apn)
-	SPEED=$(nvram get "$PREFIX"_modem_speed)
-	BAND=$(nvram get "$PREFIX"_modem_band)
-	ROAMING=$(nvram get "$PREFIX"_modem_roam)
-	IFA=$(nvram get "$PREFIX"_modem_if)
+	MTYPE=$(NV "$PREFIX"_modem_type)
+	DEVNR=$(NV "$PREFIX"_modem_dev)
+	APN=$(NV "$PREFIX"_modem_apn)
+	SPEED=$(NV "$PREFIX"_modem_speed)
+	BAND=$(NV "$PREFIX"_modem_band)
+	ROAMING=$(NV "$PREFIX"_modem_roam)
+	IFA=$(NV "$PREFIX"_modem_if)
 	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
@@ -121,7 +125,7 @@ connect() {
 				esac
 
 				# change network type, band and roaming if required
-				[ "$SPEED" != "$RESSPEED" ] & {
+				[ "$SPEED" != "$RESSPEED" ] && {
 					TXTLOG="Network type changed: was $RSPEEDTXT, now $SPEEDTXT."
 					MODESPEED=$SPEED
 				} || {
@@ -172,7 +176,7 @@ connect() {
 			# still not connected?
 			[ "$CONNECTED" -eq 0 ] && {
 				disconnect
-				[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+				[ "$(NV mwan_cktime)" -gt 0 ] && {
 					modemReset
 					watchdog add
 					wayOut "4G MODEM - connection failed - watchdog enabled"
@@ -278,7 +282,7 @@ connect() {
 				# checked 5 times but still not connected?
 				uqmiCall "--set-client-id wds,$CLID --release-client-id wds"
 
-				[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+				[ "$(NV mwan_cktime)" -gt 0 ] && {
 					modemReset
 					watchdog add
 					wayOut "4G MODEM - connection failed - watchdog enabled"
@@ -294,7 +298,7 @@ connect() {
 		[ "$CONNSTAT" == '"connected"' ] || {
 			uqmiCall "--set-client-id wds,$CLID --release-client-id wds"
 
-			[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+			[ "$(NV mwan_cktime)" -gt 0 ] && {
 				modemReset
 				watchdog add
 				wayOut "4G MODEM - no data link - watchdog enabled"
@@ -333,7 +337,7 @@ connect() {
 	done
 
 	[ "$DONE" -eq 0 ] && {
-		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add
 			wayOut "4G MODEM - WAN IFACE failed - watchdog enabled"
 		} || {
@@ -347,10 +351,10 @@ connect() {
 }
 
 disconnect() {
-	MTYPE=$(nvram get "$PREFIX"_modem_type)
-	DEVNR=$(nvram get "$PREFIX"_modem_dev)
-	CLID=$(nvram get "$PREFIX"_modem_clid)
-	PDH=$(nvram get "$PREFIX"_modem_pdh)
+	MTYPE=$(NV "$PREFIX"_modem_type)
+	DEVNR=$(NV "$PREFIX"_modem_dev)
+	CLID=$(NV "$PREFIX"_modem_clid)
+	PDH=$(NV "$PREFIX"_modem_pdh)
 	local DEVALL j
 
 	$LOGS "4G MODEM - disconnecting ..."
@@ -493,7 +497,7 @@ searchWAN() {
 		nvram set "$PREFIX"_modem_type="$MTYPE"
 		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
 	} || {
-		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add
 			wayOut "4G MODEM WAN not found - watchdog enabled"
 		} || {
@@ -533,7 +537,7 @@ searchDiag() {
 			$LOGS "4G MODEM ready - DIAG(s) found ("$TTYS")"
 			echo $TTYS > $DIAGSFILE
 			DEVNR=$(echo "$TTYS" | cut -d " " -f1)
-			MODIN=$(nvram get "$PREFIX"_modem_modules)
+			MODIN=$(NV "$PREFIX"_modem_modules)
 			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
 		}
@@ -550,7 +554,7 @@ searchDiag() {
 	fi
 
 	[ -z "$TTYS" ] && {
-		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
+		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add
 			modemReset
 			wayOut "4G MODEM - DIAG not found - watchdog enabled"
@@ -579,8 +583,8 @@ findType() {
 
 modemReset() {
 # TODO: reset should be made also when the X connection fails at a given time
-	DEVNR=$(nvram get "$PREFIX"_modem_dev)
-	MTYPE=$(nvram get "$PREFIX"_modem_type)
+	DEVNR=$(NV "$PREFIX"_modem_dev)
+	MTYPE=$(NV "$PREFIX"_modem_type)
 	local DEVALL j
 
 	$LOGS "4G MODEM - resetting the modem ..."
@@ -601,8 +605,8 @@ modemReset() {
 }
 
 setPIN() {
-	local PIN=$(nvram get "$PREFIX"_modem_pin)
-	local IS_PIN=$(nvram get "$PREFIX"_modem_pin | wc -w)
+	local PIN=$(NV "$PREFIX"_modem_pin)
+	local IS_PIN=$(NV "$PREFIX"_modem_pin | wc -w)
 	local IS_DONE=0 COUNT=1 TIMEOUT=30 PINVAL DEVALL i
 
 	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ] && {
