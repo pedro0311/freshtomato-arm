@@ -78,8 +78,6 @@ function verifyFields(focused, quiet) {
 		a = 0;
 		break;
 	}
-	elem.display(PR('_f_ntp_tdod'), a);
-
 	elem.display(PR('_f_ntp_server'), b);
 	a = (E('_f_ntp_server').value == 'custom');
 	elem.display(PR('_f_ntp_1'), PR('_f_ntp_2'), PR('_f_ntp_3'), a && b);
