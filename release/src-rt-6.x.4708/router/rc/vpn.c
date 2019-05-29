@@ -299,7 +299,11 @@ void start_vpnclient(int clientNum)
 		sprintf(buffer, "vpn_client%d_static", clientNum);
 		if (!nvram_is_empty(buffer) && nvi >= 0)
 		{
-			fprintf(fp, "tls-auth static.key");
+			if (nvi == 3)
+				fprintf(fp, "tls-crypt static.key");
+			else
+				fprintf(fp, "tls-auth static.key");
+
 			if ( nvi < 2 )
 				fprintf(fp, " %d", nvi);
 			fprintf(fp, "\n");
@@ -980,7 +984,11 @@ void start_vpnserver(int serverNum)
 		sprintf(buffer, "vpn_server%d_static", serverNum);
 		if ( !nvram_is_empty(buffer) && nvi >= 0 )
 		{
-			fprintf(fp, "tls-auth static.key");
+			if (nvi == 3)
+				fprintf(fp, "tls-crypt static.key");
+			else
+				fprintf(fp, "tls-auth static.key");
+
 			if ( nvi < 2 )
 				fprintf(fp, " %d", nvi);
 			fprintf(fp, "\n");
