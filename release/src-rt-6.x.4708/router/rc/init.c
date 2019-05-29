@@ -1940,6 +1940,9 @@ static int init_nvram(void)
 			inc_mac(s, +1);
 			nvram_set("pci/2/1/macaddr", s);
 
+			/* enable 5 GHz WLAN */
+			nvram_unset("devpath1");
+
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
 			nvram_set("xhci_ports", "1-1");
