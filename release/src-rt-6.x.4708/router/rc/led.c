@@ -60,6 +60,23 @@ int led_main(int argc, char *argv[])
 				help();
 			}
 		}
+		else if (i == LED_BRIDGE) { /* For BRIDGE LED(s) */
+			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
+				killall("blink_br", SIGKILL); /* kill all blink_br */
+				usleep(50000); /* wait 50 ms */
+
+				if (a[1] == 'n') { /* case LED on */
+					led(i, LED_ON); /* turn BRIDGE LED(s) on */
+					eval("blink_br"); /* and also start blink_br again */
+				}
+				else {
+					led(i, LED_OFF); /* turn BRIDGE LED(s) off */
+				}
+			}
+			else {
+				help();
+			}
+		}
 		else if (!led(i, (a[1] == 'n'))) help(); /* default case */
 	}
 
