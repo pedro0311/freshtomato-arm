@@ -49,7 +49,18 @@ int led_main(int argc, char *argv[])
 		}
 		a = argv[j + 1]; /* action (on/off) */
 		if ((i >= LED_COUNT) || ((strcmp(a, "on") != 0) && (strcmp(a, "off") != 0))) help();
-		if (!led(i, (a[1] == 'n'))) help();
+
+		if (((i == LED_WLAN) || (i == LED_5G)) && nvram_get_int("blink_wl")) { /* For WLAN LEDs with blink turned on; If TRUE, stop/kill blink first */
+			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
+				killall("blink", SIGKILL); /* kill all blink */
+				usleep(50000); /* wait 50 ms */
+				led(i, (a[1] == 'n')); /* turn LED on/off */
+			}
+			else {
+				help();
+			}
+		}
+		else if (!led(i, (a[1] == 'n'))) help(); /* default case */
 	}
 
 	return 0;
