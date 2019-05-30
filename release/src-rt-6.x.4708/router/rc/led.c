@@ -37,9 +37,13 @@ int led_main(int argc, char *argv[])
 
 	int i;
 	int j;
+	int model;
 	char *a;
 
 	if ((argc < 3) || ((argc % 2) != 1)) help();
+
+	/* get Router model */
+	model = get_model();
 
 	for (j = 1; j < argc; j += 2) {
 		a = argv[j]; /* led name */
@@ -72,6 +76,18 @@ int led_main(int argc, char *argv[])
 				else {
 					led(i, LED_OFF); /* turn BRIDGE LED(s) off */
 				}
+			}
+			else {
+				help();
+			}
+		}
+		else if ((i == LED_AOSS) &&
+			 ((model == MODEL_RTN18U) ||
+			  (model == MODEL_RTAC56U) ||
+			  (model == MODEL_RTAC68U))) { /* special case for ASUS Router with FreshTomato: use LED_AOSS for Power LED (active LOW, inverted! --> see LED table at shared/led.c ) */
+
+			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
+				led(i, !(a[1] == 'n')); /* turn LED on/off (inverted!) */
 			}
 			else {
 				help();
