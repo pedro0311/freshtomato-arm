@@ -1542,6 +1542,7 @@ void write_vpn_dnsmasq_config(FILE* f)
 				fappend(f, fn);
 			}
 		}
+		closedir(dir);
 	}
 }
 
