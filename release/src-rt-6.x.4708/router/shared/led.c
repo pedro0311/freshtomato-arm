@@ -421,7 +421,7 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_R8000:
-			system("gpio disable 9");	/* disable power led color amber */
+			system("gpio enable 3");	/* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC3200:
