@@ -272,19 +272,14 @@ void start_vpnclient(int clientNum)
 
 	/* Routing */
 	sprintf(buffer, "vpn_client%d_rgw", clientNum);
-	sprintf(buffer2, "vpn_client%d_nopull", clientNum);
-	if (nvram_get_int(buffer))
-	{
+	nvi = nvram_get_int(buffer);
+	if (nvi == 1) {
 		sprintf(buffer, "vpn_client%d_gw", clientNum);
 		if (ifType == TAP && nvram_safe_get(buffer)[0] != '\0')
 			fprintf(fp, "route-gateway %s\n", nvram_safe_get(buffer));
 		fprintf(fp, "redirect-gateway def1\n");
-	} else {
-		if (nvram_get_int(buffer2) > 0)
-			fprintf(fp, "route-nopull\n");
-		sprintf(buffer2, "vpn_client%d_noexec", clientNum);
-		if (nvram_get_int(buffer2) > 0)
-			fprintf(fp, "route-noexec\n");
+	} else if (nvi >= 2) {
+		fprintf(fp, "route-noexec\n");
 	}
 
 	sprintf(buffer, "/etc/openvpn/client%d/updown-client.sh", clientNum);

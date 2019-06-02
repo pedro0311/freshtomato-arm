@@ -8,9 +8,9 @@ vpnciphers = vpnciphers.concat(['BF-CBC','BF-CFB','BF-OFB','CAST5-CBC','CAST5-CF
 var vpndigests = ['DSA','DSA-SHA','DSA-SHA1','DSA-SHA1-old','ecdsa-with-SHA1','MD4','MD5','MDC2','RIPEMD160','RSA-MD4','RSA-MD5','RSA-MDC2','RSA-RIPEMD160','RSA-SHA','RSA-SHA1','RSA-SHA1-2','RSA-SHA224','RSA-SHA256','RSA-SHA384','RSA-SHA512','SHA','SHA1','SHA224','SHA256','SHA384','SHA512','whirlpool'];
 
 var helpURL = new Array();
-helpURL['howto'] = 'http://openvpn.net/index.php/open-source/documentation/howto.html';
-helpURL['staticKeys'] = 'http://openvpn.net/index.php/open-source/documentation/miscellaneous/78-static-key-mini-howto.html';
-helpURL['TLSKeys'] = 'http://openvpn.net/index.php/open-source/documentation/howto.html#pki';
+helpURL['howto'] = 'https://openvpn.net/community-resources/1xhowto/';
+helpURL['staticKeys'] = 'https://openvpn.net/community-resources/static-key-mini-howto/';
+helpURL['TLSKeys'] = 'https://openvpn.net/community-resources/how-to/';
 
 // Handles parsing status files and displaying the information
 function StatusUpdater(clients, routes, stats, time, cDiv, ncDiv, eDiv)
