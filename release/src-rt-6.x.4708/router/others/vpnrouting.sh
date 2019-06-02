@@ -1,14 +1,9 @@
 #!/bin/sh
 
 #
-# VPN Client up down script
+# VPN Client selective routing up down script
 #
-# Thanks to Phil Wiggum <p1mail2015@mail.com> for general idea
-#
-# Edited/corrected/rewritten/tested by pedro - 2019
-#
-# Environmental Variables
-# ref: # ref: https://openvpn.net/community-resources/reference-manual-for-openvpn-2-4/ (Scripting and Environmental Variables)
+# Copyright by pedro 2019
 #
 
 
@@ -17,12 +12,8 @@ PID=$$
 IFACE=$dev
 SERVICE=$(echo $dev | sed 's/\(tun\|tap\)1/client/;s/\(tun\|tap\)2/server/')
 FIREWALL_ROUTING="/etc/openvpn/fw/$SERVICE-fw-routing.sh"
-DNSDIR="/etc/openvpn/dns"
-DNSCONFFILE="$DNSDIR/$SERVICE.conf"
-DNSRESOLVFILE="$DNSDIR/$SERVICE.resolv"
 DNSMASQ_IPSET="/etc/dnsmasq.ipset"
 RESTART_DNSMASQ=0
-FOREIGN_OPTIONS=$(set | grep "^foreign_option_" | sed "s/^\(.*\)=.*$/\1/g")
 LOGS="logger -t openvpn-updown.sh[$PID][$IFACE]"
 [ -d /etc/openvpn/fw ] || mkdir -m 0700 "/etc/openvpn/fw"
 
@@ -140,54 +131,6 @@ startRouting() {
 	$LOGS "Completed routing policy configuration for $SERVICE"
 }
 
-stopRouting() {
-	cleanupRouting
-}
-
-startAdns() {
-	local fileexists="" optionname option
-
-	[ "$(NV "vpn_"$SERVICE"_adns")" -eq 0 ] && return
-
-	[ ! -d $DNSDIR ] && mkdir $DNSDIR
-	[ -f $DNSCONFFILE ] && {
-		rm $DNSCONFFILE
-		fileexists=1
-	}
-	[ -f $DNSRESOLVFILE ] && {
-		rm $DNSRESOLVFILE
-		fileexists=1
-	}
-
-	[ -n "$FOREIGN_OPTIONS" ] & {
-		$LOGS "FOREIGN_OPTIONS: $FOREIGN_OPTIONS"
-		for optionname in $FOREIGN_OPTIONS; do
-			option=$(eval "echo \\$$optionname")
-			$LOGS "Optionname: $optionname, Option: $option"
-			if echo $option | grep "dhcp-option WINS ";	then echo $option | sed "s/ WINS /=44,/" >> $DNSCONFFILE; fi
-			if echo $option | grep "dhcp-option DNS";	then echo $option | sed "s/dhcp-option DNS/nameserver/" >> $DNSRESOLVFILE; fi
-			if echo $option | grep "dhcp-option DOMAIN";	then echo $option | sed "s/dhcp-option DOMAIN/search/" >> $DNSRESOLVFILE; fi
-		done
-	}
-
-	[ -f $DNSCONFFILE -o -f $DNSRESOLVFILE -o -n "$fileexists" ] && RESTART_DNSMASQ=1
-}
-
-stopAdns() {
-	local fileexists=""
-
-	[ -f $DNSCONFFILE ] && {
-		rm $DNSCONFFILE
-		fileexists=1
-	}
-	[ -f $DNSRESOLVFILE ] && {
-		rm $DNSRESOLVFILE
-		fileexists=1
-	}
-
-	[ -n "$fileexists" ] && RESTART_DNSMASQ=1
-}
-
 checkRestart() {
 	[ "$RESTART_DNSMASQ" -eq 1 -o "$(NV "vpn_client"${ID#??}"_rdnsmasq")" -eq 1 ] && service dnsmasq restart
 }
@@ -230,26 +173,21 @@ checkPid() {
 ###################################################
 
 
-if [ "$script_type" == "up" ]; then
-	find_iface
+find_iface
+checkPid
 
-	checkPid
-	startAdns
+[ "$script_type" == "route-pre-down" ] && {
+	cleanupRouting
+	checkRestart
+}
+
+[ "$script_type" == "route-up" ] && {
 	startRouting
 	checkRestart
+}
 
-elif [ "$script_type" == "down" ]; then
-	find_iface
-
-	checkPid
-	stopAdns
-	stopRouting
-	checkRestart
-
-else
-	$LOGS "Unsupported command"
-	exit 0
-fi
-
+ip route flush cache
 
 rm -f $PIDFILE > /dev/null 2>&1
+
+exit 0
