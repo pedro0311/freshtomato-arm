@@ -17,7 +17,6 @@ PID=$$
 IFACE=$dev
 SERVICE=$(echo $dev | sed 's/\(tun\|tap\)1/client/;s/\(tun\|tap\)2/server/')
 FIREWALL_ROUTING="/etc/openvpn/fw/$SERVICE-fw-routing.sh"
-FIREWALL_VPN="/etc/openvpn/fw/$SERVICE-fw.sh"
 DNSDIR="/etc/openvpn/dns"
 DNSCONFFILE="$DNSDIR/$SERVICE.conf"
 DNSRESOLVFILE="$DNSDIR/$SERVICE.resolv"
@@ -145,49 +144,6 @@ stopRouting() {
 	cleanupRouting
 }
 
-startFirewall() {
-	local ip_mask INBOUND="DROP" i
-
-	[ "$(NV vpn_"$SERVICE"_firewall)" == "custom" ] && return
-	[ "$(NV vpn_"$SERVICE"_fw)" -eq 0 ] && INBOUND="ACCEPT"
-
-	$LOGS "Creating firewall rules for $SERVICE"
-	echo "#!/bin/sh" > $FIREWALL_VPN
-	echo "iptables -I INPUT -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
-	echo "iptables -I FORWARD -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
-
-	[ -n "$ifconfig_ipv6_remote" ] && {
-		$LOGS "startFirewall(): ifconfig_ipv6_remote=$ifconfig_ipv6_remote for $SERVICE"
-
-		echo "ip6tables -I INPUT -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
-		echo "ip6tables -I FORWARD -i $IFACE -m state --state NEW -j $INBOUND" >> $FIREWALL_VPN
-	}
-
-	[ "$(NV vpn_"$SERVICE"_nat)" -eq 1 ] && ([ "$(NV vpn_"$SERVICE"_if)" == "tun" ] || [ "$(NV vpn_"$SERVICE"_bridge)" -eq 0 ]) && {
-		ip_mask="$(NV 'lan_ipaddr')"/"$(NV 'lan_netmask')"
-
-		# Add the nat for the main lan addresses
-		echo "iptables -t nat -I POSTROUTING -s $ip_mask -o $IFACE -j MASQUERADE" >> $FIREWALL_VPN
-
-		# Add the nat for other bridges, too
-		for i in 1 2 3; do
-			ip_mask="$(NV lan"$i"_ipaddr)/$(NV lan"$i"_netmask)"
-			expr "$ip_mask" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\/[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' > /dev/null || continue
-
-			echo "iptables -t nat -I POSTROUTING -s $ip_mask -o $IFACE -j MASQUERADE" >> $FIREWALL_VPN
-		done
-	}
-
-	chmod +x $FIREWALL_VPN
-	$LOGS "Running firewall rules for $SERVICE"
-	$FIREWALL_VPN
-}
-
-stopFirewall() {
-	deleteRules $FIREWALL_VPN
-	rm -f $FIREWALL_VPN > /dev/null 2>&1
-}
-
 startAdns() {
 	local fileexists="" optionname option
 
@@ -279,7 +235,6 @@ if [ "$script_type" == "up" ]; then
 
 	checkPid
 	startAdns
-	startFirewall
 	startRouting
 	checkRestart
 
@@ -288,7 +243,6 @@ elif [ "$script_type" == "down" ]; then
 
 	checkPid
 	stopAdns
-	stopFirewall
 	stopRouting
 	checkRestart
 

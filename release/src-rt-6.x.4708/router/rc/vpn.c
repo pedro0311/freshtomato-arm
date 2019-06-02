@@ -56,10 +56,11 @@ void start_vpnclient(int clientNum)
 	enum { TLS, SECRET, CUSTOM } cryptMode = CUSTOM;
 	enum { TAP, TUN } ifType = TUN;
 	enum { BRIDGE, NAT, NONE } routeMode = NONE;
-	int nvi;
+	int nvi, ip[4], nm[4];
 	long int nvl;
 	int pid;
 	int userauth, useronly;
+	int i;
 	int taskset_ret = 0;
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
@@ -411,6 +412,64 @@ void start_vpnclient(int clientNum)
 	}
 	vpnlog(VPN_LOG_EXTRA,"Done writing certs/keys");
 
+	/* Handle firewall rules if appropriate */
+	sprintf(buffer, "vpn_client%d_firewall", clientNum);
+	if (!nvram_contains_word(buffer, "custom")) {
+		/* Create firewall rules */
+		vpnlog(VPN_LOG_EXTRA,"Creating firewall rules");
+		mkdir("/etc/openvpn/fw", 0700);
+		sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
+		fp = fopen(buffer, "w");
+		chmod(buffer, S_IRUSR|S_IWUSR|S_IXUSR);
+		fprintf(fp, "#!/bin/sh\n");
+
+		sprintf(buffer, "vpn_client%d_fw", clientNum);
+		nvi = nvram_get_int(buffer);
+		fprintf(fp, "iptables -I INPUT -i %s -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+		fprintf(fp, "iptables -I FORWARD -i %s -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+
+		if (routeMode == NAT) {
+			/* Add the nat for the main lan addresses */
+			sscanf(nvram_safe_get("lan_ipaddr"), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+			sscanf(nvram_safe_get("lan_netmask"), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
+			fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n",
+				ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get("lan_netmask"), iface);
+
+			/* Add the nat for other bridges, too */
+			for(i = 1; i < 4; i++) {
+				int ret1, ret2;
+
+				sprintf(buffer,"lan%d_ipaddr",i);
+				ret1 = sscanf(nvram_safe_get(buffer), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+				sprintf(buffer,"lan%d_netmask",i);
+				ret2 = sscanf(nvram_safe_get(buffer), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
+				if (ret1 == 4 && ret2 == 4) {
+					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n",
+						ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get("lan_netmask"), iface);
+				}
+			}
+		}
+
+		/* Create firewall rules for IPv6 */
+#ifdef TCONFIG_IPV6
+		if (ipv6_enabled()) {
+			fprintf(fp, "ip6tables -I INPUT -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+			fprintf(fp, "ip6tables -I FORWARD -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+		}
+#endif
+
+		fclose(fp);
+		vpnlog(VPN_LOG_EXTRA,"Done creating firewall rules");
+
+		/* Run the firewall rules */
+		vpnlog(VPN_LOG_EXTRA,"Running firewall rules");
+		sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
+		argv[0] = buffer;
+		argv[1] = NULL;
+		_eval(argv, NULL, 0, NULL);
+		vpnlog(VPN_LOG_EXTRA,"Done running firewall rules");
+	}
+
 	// Start the VPN client
 	sprintf(buffer, "/etc/openvpn/vpnclient%d", clientNum);
 	sprintf(buffer2, "/etc/openvpn/client%d", clientNum);
@@ -507,38 +566,43 @@ void stop_vpnclient(int clientNum)
 	_eval(argv, NULL, 0, NULL);
 	vpnlog(VPN_LOG_EXTRA,"VPN device removed.");
 
+	/* Remove firewall rules after VPN exit */
+	vpnlog(VPN_LOG_EXTRA,"Removing firewall rules.");
+	sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
+	argv[0] = "sed";
+	argv[1] = "-i";
+	argv[2] = "s/-A/-D/g;s/-I/-D/g";
+	argv[3] = buffer;
+	argv[4] = NULL;
+	if (!_eval(argv, NULL, 0, NULL))
+	{
+		argv[0] = buffer;
+		argv[1] = NULL;
+		_eval(argv, NULL, 0, NULL);
+	}
+	vpnlog(VPN_LOG_EXTRA,"Done removing firewall rules.");
+
+	// TODO:
 	modprobe_r("tun");
 
 	if ( nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA )
 	{
 		vpnlog(VPN_LOG_EXTRA,"Removing generated files.");
-		// Delete all files for this client
+		/* Delete all files for this client */
 		sprintf(buffer, "rm -rf /etc/openvpn/client%d /etc/openvpn/fw/client%d-fw.sh /etc/openvpn/vpnclient%d",clientNum,clientNum,clientNum);
 		for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 		_eval(argv, NULL, 0, NULL);
 
-		// Attempt to remove directories.  Will fail if not empty
+		/* Attempt to remove directories.  Will fail if not empty */
 		rmdir("/etc/openvpn/fw");
 		rmdir("/etc/openvpn");
 		vpnlog(VPN_LOG_EXTRA,"Done removing generated files.");
 	}
 
-	/* Determine interface */
-	sprintf(buffer, "vpn_client%d_if", clientNum);
-	if (nvram_contains_word(buffer, "tap"))
-		ifType = TAP;
-	else if (nvram_contains_word(buffer, "tun"))
-		ifType = TUN;
-	else
-	{
-		vpnlog(VPN_LOG_ERROR, "Invalid interface type, %.3s", nvram_safe_get(buffer));
-		return;
-	}
-#ifdef LINUX26
 	sprintf(buffer, "vpn_client%d", clientNum);
 	allow_fastnat(buffer, 1);
 	try_enabling_fastnat();
-#endif
+
 	vpnlog(VPN_LOG_INFO,"VPN GUI client backend stopped.");
 }
 
