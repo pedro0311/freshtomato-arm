@@ -20,7 +20,7 @@ DNSCONFFILE="$DNSDIR/$SERVICE.conf"
 DNSRESOLVFILE="$DNSDIR/$SERVICE.resolv"
 RESTART_DNSMASQ=0
 FOREIGN_OPTIONS=$(set | grep "^foreign_option_" | sed "s/^\(.*\)=.*$/\1/g")
-LOGS="logger -t openvpn-updown.sh[$PID][$IFACE]"
+LOGS="logger -t openvpn-updown-client.sh[$PID][$IFACE]"
 
 
 find_iface() {
@@ -92,12 +92,12 @@ find_iface
 
 [ "$script_type" == "up" ] && {
 	startAdns
-	checkRestart
 }
 
 [ "$script_type" == "down" ] && {
 	stopAdns
-	checkRestart
 }
+
+checkRestart
 
 exit 0
