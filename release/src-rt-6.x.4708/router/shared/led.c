@@ -142,8 +142,8 @@ int do_led(int which, int mode)
 	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255,  255 };
 #endif
 #ifdef CONFIG_BCM7
-	static int ac3200[]	= { 254,  -15,     5,  255,   14,   -3,  255,  255,  255,  254,  254 };
-	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  255,   18,   17,   12,   16 };
+	static int ac3200[]	= { 254,  -15,     5,  255,   14,   -3,  254,  255,  255,  254,  254 };
+	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
@@ -321,6 +321,9 @@ int do_led(int which, int mode)
 		    (which == LED_52G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
 		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
 		break;
 	case MODEL_R8000:
 		if (which == LED_DIAG) {
@@ -331,12 +334,16 @@ int do_led(int which, int mode)
 			b = 8; /* color white gpio 8 (active LOW) */
 			c = -9; /* color amber gpio 9 (active HIGH) */
 		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+			b = r8000[which];
+		}
 		else {
 			b = r8000[which];
 		}
 		break;
 
-#endif
+#endif /* CONFIG_BCM7 */
 	default:
 		sprintf(s, "led_%s", led_names[which]);
 		if (nvget_gpio(s, &b, &n)) {

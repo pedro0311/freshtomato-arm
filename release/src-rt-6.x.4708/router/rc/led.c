@@ -54,7 +54,7 @@ int led_main(int argc, char *argv[])
 		a = argv[j + 1]; /* action (on/off) */
 		if ((i >= LED_COUNT) || ((strcmp(a, "on") != 0) && (strcmp(a, "off") != 0))) help();
 
-		if (((i == LED_WLAN) || (i == LED_5G)) && nvram_get_int("blink_wl")) { /* For WLAN LEDs with blink turned on; If TRUE, stop/kill blink first */
+		if (((i == LED_WLAN) || (i == LED_5G) || (i == LED_52G)) && nvram_get_int("blink_wl")) { /* For WLAN LEDs with blink turned on; If TRUE, stop/kill blink first */
 			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
 				killall("blink", SIGKILL); /* kill all blink */
 				usleep(50000); /* wait 50 ms */
@@ -84,7 +84,8 @@ int led_main(int argc, char *argv[])
 		else if ((i == LED_AOSS) &&
 			 ((model == MODEL_RTN18U) ||
 			  (model == MODEL_RTAC56U) ||
-			  (model == MODEL_RTAC68U))) { /* special case for ASUS Router with FreshTomato: use LED_AOSS for Power LED (active LOW, inverted! --> see LED table at shared/led.c ) */
+			  (model == MODEL_RTAC68U) ||
+			  (model == MODEL_RTAC3200))) { /* special case for ASUS Router with FreshTomato: use LED_AOSS for Power LED (active LOW, inverted! --> see LED table at shared/led.c ) */
 
 			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
 				led(i, !(a[1] == 'n')); /* turn LED on/off (inverted!) */
