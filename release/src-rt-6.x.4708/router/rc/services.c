@@ -96,9 +96,7 @@ void start_dnsmasq()
 	int do_dhcpd_hosts;
 
 #ifdef TCONFIG_IPV6
-//	char *prefix, *ipv6, *mtu;
-//	int do_6to4, do_6rd;
-//	int service;
+	int ipv6_lease; /* DHCP IPv6 lease time */
 #endif
 
 	char wan_prefix[] = "wanXX";
@@ -492,21 +490,31 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+
+		ipv6_lease = nvram_get_int("ipv6_lease_time"); /* get DHCP IPv6 lease time */
+		if ((ipv6_lease < 1) || (ipv6_lease > 720)) { /* check lease time and limit the range (1...720 hours, 30 days should be enough) */
+			ipv6_lease = 12;
+		}
+
 		/* enable-ra should be enabled in both cases */
-		if (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd"))
+		if (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd")) {
 			fprintf(f,"enable-ra\n");
+		}
 
 		/* Only SLAAC and NO DHCPv6 */
-		if (nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
-			fprintf(f,"dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, 12h\n");
+		if (nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd")) {
+			fprintf(f,"dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %dh\n", ipv6_lease);
+		}
 
 		/* Only DHCPv6 and NO SLAAC */
-		if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd"))
-			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, 12h\n");
+		if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd")) {
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %dh\n", ipv6_lease);
+		}
 
 		/* SLAAC and DHCPv6 (2 IPv6 IPs) */
-		if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd"))
-			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, 12h\n");
+		if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd")) {
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+		}
 	}
 #endif
 
