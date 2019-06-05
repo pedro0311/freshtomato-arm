@@ -353,8 +353,11 @@ function earlyInit() {
 		elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
 	}
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if (wl_sunit(uidx)<0)
+		if (wl_sunit(uidx)<0) {
 			elem.display('b_wl'+wl_fface(uidx)+'_enable', 'b_wl'+wl_fface(uidx)+'_disable', show_radio[uidx]);
+			if (nvram['wl' + uidx + '_radio'] == '1' && nvram['wl' + uidx + '_net_mode'] != 'disabled' && nvram['wl' + uidx + '_security_mode'] == 'disabled')
+				E('wifiwarn').style.display = '';
+		}
 	}
 
 	ethstates();
@@ -417,6 +420,13 @@ function toggleVisibility(whichone) {
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
+<div style="display:none" id="wifiwarn">
+	<div class="section-title" style="text-align:center"><b>!! Notice: Wifi Security Disabled !!</b></div>
+	<div class="fields" style="text-align:center"> The Wifi Radios are <b>Enabled</b> without having a <b>Wifi Password</b> set.
+	<br/><b>Please make sure to <a href="basic-network.asp">Set a Wifi Password</a></b></div>
+	<br/>
+</div>
+
 <div class="section" id="nversion" style="display:none"></div>
 
 <div style="display:none" id="att1">
