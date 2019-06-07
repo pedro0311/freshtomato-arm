@@ -1456,6 +1456,7 @@ static pid_t pid_igmp = -1;
 void start_igmp_proxy(void)
 {
 	FILE *fp;
+	char igmp_buffer[32];
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num, count = 0;
 
@@ -1499,10 +1500,41 @@ void start_igmp_proxy(void)
 					 * altnet 193.158.35.0/24
 					 */
 					fprintf(fp,
-						"phyint %s upstream ratelimit 0 threshold 1\n"
-						"\taltnet %s\n",
-						get_wanface(wan_prefix),
-						nvram_get("multicast_altnet") ? : "0.0.0.0/0");
+						"phyint %s upstream ratelimit 0 threshold 1\n",
+						get_wanface(wan_prefix));
+					if ((nvram_get("multicast_altnet_1") != NULL) ||
+					    (nvram_get("multicast_altnet_2") != NULL) ||
+					    (nvram_get("multicast_altnet_3") != NULL)) { /* check for allowed remote network address, see note at GUI advanced-firewall.asp */
+						if (nvram_get("multicast_altnet_1") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_1")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s\n", igmp_buffer);
+
+						}
+						if (nvram_get("multicast_altnet_2") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_2")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s\n", igmp_buffer);
+
+						}
+						if (nvram_get("multicast_altnet_3") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_3")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s\n", igmp_buffer);
+
+						}
+
+					}
+					else {
+						fprintf(fp,
+							"\taltnet 0.0.0.0/0\n"); /* default, allow all! */
+					}
 				}
 			}
 			if (!count) {
