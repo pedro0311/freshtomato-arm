@@ -916,6 +916,7 @@ static const nvset_t nvset_list[] = {
 	{ "multicast_lan1",		V_01				},
 	{ "multicast_lan2",		V_01				},
 	{ "multicast_lan3",		V_01				},
+	{ "multicast_quickleave",	V_01				},
 	{ "multicast_custom",		V_TEXT(0, 2048)			},
 	{ "block_loopback",		V_01				},
 	{ "udpxy_enable",		V_01				},
