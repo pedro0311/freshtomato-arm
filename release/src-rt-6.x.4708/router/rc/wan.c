@@ -1281,7 +1281,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		}
 
 		if (wanup) {
-			start_vpn_eas();
+			start_ovpn_eas();
 			start_adblock(0);
 		}
 
@@ -1403,7 +1403,7 @@ void stop_wan(void)
 	nvram_set("ipv6_get_dns", "");
 #endif
 
-	stop_vpn_eas();
+	stop_ovpn_eas();
 	stop_adblock();
 	clear_resolv();
 	stop_wan_if("wan");

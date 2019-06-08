@@ -320,9 +320,9 @@ const struct mime_handler mime_handlers[] = {
 // see httpd.c
 	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
 #ifdef TCONFIG_OPENVPN
-	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_status,		1 },
-	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_genkey,		1 },
-	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_vpn_genclientconfig,	1 },
+	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_status,		1 },
+	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_genkey,		1 },
+	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_ovpn_genclientconfig,1 },
 #endif
 #ifdef TCONFIG_PPTPD
 	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD

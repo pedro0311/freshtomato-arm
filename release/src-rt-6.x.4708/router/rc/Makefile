@@ -59,7 +59,7 @@ ifeq ($(TCONFIG_JFFS2),y)
 OBJS += jffs2.o
 endif
 ifeq ($(TCONFIG_OPENVPN),y)
-OBJS += vpn.o
+OBJS += openvpn.o
 endif
 ifeq ($(TCONFIG_TINC),y)
 OBJS += tinc.o

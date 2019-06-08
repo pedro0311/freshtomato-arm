@@ -483,7 +483,7 @@ void start_dnsmasq()
 	//
 
 #ifdef TCONFIG_OPENVPN
-	write_vpn_dnsmasq_config(f);
+	write_ovpn_dnsmasq_config(f);
 #endif
 
 #ifdef TCONFIG_PPTPD
@@ -734,7 +734,7 @@ void dns_to_resolv(void)
 		m = umask(022);	/* 077 from pppoecd */
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	/* write / append */
 			if (append == 1)
-				exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); /* Check for VPN DNS entries */
+				exclusive = ( write_pptpvpn_resolv(f) || write_ovpn_resolv(f) ); /* Check for VPN DNS entries */
 			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
@@ -3311,14 +3311,14 @@ TOP:
 
 #ifdef TCONFIG_OPENVPN
 	if (strncmp(service, "vpnclient", 9) == 0) {
-		if (action & A_STOP) stop_vpnclient(atoi(&service[9]));
-		if (action & A_START) start_vpnclient(atoi(&service[9]));
+		if (action & A_STOP) stop_ovpn_client(atoi(&service[9]));
+		if (action & A_START) start_ovpn_client(atoi(&service[9]));
 		goto CLEAR;
 	}
 
 	if (strncmp(service, "vpnserver", 9) == 0) {
-		if (action & A_STOP) stop_vpnserver(atoi(&service[9]));
-		if (action & A_START) start_vpnserver(atoi(&service[9]));
+		if (action & A_STOP) stop_ovpn_server(atoi(&service[9]));
+		if (action & A_START) start_ovpn_server(atoi(&service[9]));
 		goto CLEAR;
 	}
 #endif
