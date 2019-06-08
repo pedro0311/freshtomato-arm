@@ -530,21 +530,21 @@ extern void stop_pptpd(void);
 extern void write_pptpd_dnsmasq_config(FILE* f);
 #endif
 
-/* vpn.c */
+/* openvpn.c */
 #ifdef TCONFIG_OPENVPN
-extern void start_vpnclient(int clientNum);
-extern void stop_vpnclient(int clientNum);
-extern void start_vpnserver(int serverNum);
-extern void stop_vpnserver(int serverNum);
-extern void start_vpn_eas();
-extern void stop_vpn_eas();
-extern void run_vpn_firewall_scripts();
-extern void write_vpn_dnsmasq_config(FILE*);
-extern int write_vpn_resolv(FILE*);
+extern void start_ovpn_client(int clientNum);
+extern void stop_ovpn_client(int clientNum);
+extern void start_ovpn_server(int serverNum);
+extern void stop_ovpn_server(int serverNum);
+extern void start_ovpn_eas();
+extern void stop_ovpn_eas();
+extern void run_ovpn_firewall_scripts();
+extern void write_ovpn_dnsmasq_config(FILE*);
+extern int write_ovpn_resolv(FILE*);
 #else
-static inline void start_vpn_eas() { }
-static inline void stop_vpn_eas() { }
-#define write_vpn_resolv(f) (0)
+static inline void start_ovpn_eas() { }
+static inline void stop_ovpn_eas() { }
+#define write_ovpn_resolv(f) (0)
 #endif
 
 /* tinc.c */

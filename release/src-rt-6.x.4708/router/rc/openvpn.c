@@ -45,7 +45,7 @@ static int waitfor(const char *name)
 	return (pid >= 0);
 }
 
-void start_vpnclient(int clientNum)
+void start_ovpn_client(int clientNum)
 {
 	FILE *fp;
 	char iface[IF_SIZE];
@@ -132,7 +132,7 @@ void start_vpnclient(int clientNum)
 	if ( symlink("/usr/sbin/openvpn", buffer) )
 	{
 		vpnlog(VPN_LOG_ERROR,"Creating symlink failed...");
-		stop_vpnclient(clientNum);
+		stop_ovpn_client(clientNum);
 		return;
 	}
 
@@ -146,7 +146,7 @@ void start_vpnclient(int clientNum)
 	if ( _eval(argv, NULL, 0, NULL) )
 	{
 		vpnlog(VPN_LOG_ERROR,"Creating tunnel interface failed...");
-		stop_vpnclient(clientNum);
+		stop_ovpn_client(clientNum);
 		return;
 	}
 
@@ -161,7 +161,7 @@ void start_vpnclient(int clientNum)
 			if ( _eval(argv, NULL, 0, NULL) )
 			{
 				vpnlog(VPN_LOG_ERROR,"Adding tunnel interface to bridge failed...");
-				stop_vpnclient(clientNum);
+				stop_ovpn_client(clientNum);
 				return;
 			}
 		}
@@ -171,7 +171,7 @@ void start_vpnclient(int clientNum)
 		if ( _eval(argv, NULL, 0, NULL) )
 		{
 			vpnlog(VPN_LOG_ERROR,"Bringing interface up failed...");
-			stop_vpnclient(clientNum);
+			stop_ovpn_client(clientNum);
 			return;
 		}
 	}
@@ -493,7 +493,7 @@ void start_vpnclient(int clientNum)
 
 	if (taskset_ret) {
 		vpnlog(VPN_LOG_ERROR,"Starting OpenVPN failed...");
-		stop_vpnclient(clientNum);
+		stop_ovpn_client(clientNum);
 		return;
 	}
 	vpnlog(VPN_LOG_EXTRA,"Done starting openvpn");
@@ -525,7 +525,7 @@ void start_vpnclient(int clientNum)
 	vpnlog(VPN_LOG_INFO,"VPN GUI client backend complete.");
 }
 
-void stop_vpnclient(int clientNum)
+void stop_ovpn_client(int clientNum)
 {
 	int argc;
 	char *argv[7];
@@ -606,7 +606,7 @@ void stop_vpnclient(int clientNum)
 	vpnlog(VPN_LOG_INFO,"VPN GUI client backend stopped.");
 }
 
-void start_vpnserver(int serverNum)
+void start_ovpn_server(int serverNum)
 {
 	FILE *fp, *ccd;
 	char iface[IF_SIZE];
@@ -685,7 +685,7 @@ void start_vpnserver(int serverNum)
 	if ( symlink("/usr/sbin/openvpn", buffer) )
 	{
 		vpnlog(VPN_LOG_ERROR,"Creating symlink failed...");
-		stop_vpnserver(serverNum);
+		stop_ovpn_server(serverNum);
 		return;
 	}
 
@@ -699,7 +699,7 @@ void start_vpnserver(int serverNum)
 	if ( _eval(argv, NULL, 0, NULL) )
 	{
 		vpnlog(VPN_LOG_ERROR,"Creating tunnel interface failed...");
-		stop_vpnserver(serverNum);
+		stop_ovpn_server(serverNum);
 		return;
 	}
 
@@ -712,7 +712,7 @@ void start_vpnserver(int serverNum)
 		if ( _eval(argv, NULL, 0, NULL) )
 		{
 			vpnlog(VPN_LOG_ERROR,"Adding tunnel interface to bridge failed...");
-			stop_vpnserver(serverNum);
+			stop_ovpn_server(serverNum);
 			return;
 		}
 	}
@@ -723,7 +723,7 @@ void start_vpnserver(int serverNum)
 	if ( _eval(argv, NULL, 0, NULL) )
 	{
 		vpnlog(VPN_LOG_ERROR,"Bringing up tunnel interface failed...");
-		stop_vpnserver(serverNum);
+		stop_ovpn_server(serverNum);
 		return;
 	}
 
@@ -1168,7 +1168,7 @@ void start_vpnserver(int serverNum)
 
 	if (taskset_ret) {
 		vpnlog(VPN_LOG_ERROR,"Starting VPN instance failed...");
-		stop_vpnserver(serverNum);
+		stop_ovpn_server(serverNum);
 		return;
 	}
 	vpnlog(VPN_LOG_EXTRA,"Done starting openvpn");
@@ -1259,7 +1259,7 @@ void start_vpnserver(int serverNum)
 	vpnlog(VPN_LOG_INFO,"VPN GUI server backend complete.");
 }
 
-void stop_vpnserver(int serverNum)
+void stop_ovpn_server(int serverNum)
 {
 	int argc;
 	char *argv[9];
@@ -1338,7 +1338,7 @@ void stop_vpnserver(int serverNum)
 	vpnlog(VPN_LOG_INFO,"VPN GUI server backend stopped.");
 }
 
-void start_vpn_eas()
+void start_ovpn_eas()
 {
 	char buffer[16], *cur;
 	int nums[4] = {0,0,0,0};
@@ -1375,11 +1375,11 @@ void start_vpn_eas()
 
 		if ( pidof(buffer) >= 0 ) {
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d (eas)", nums[i]);
-			stop_vpnserver(nums[i]);
+			stop_ovpn_server(nums[i]);
 		}
 
 		vpnlog(VPN_LOG_INFO, "Starting OpenVPN server %d (eas)", nums[i]);
-		start_vpnserver(nums[i]);
+		start_ovpn_server(nums[i]);
 	}
 
 	/* Parse and start clients */
@@ -1402,15 +1402,15 @@ void start_vpn_eas()
 
 		if ( pidof(buffer) >= 0 ) {
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d (eas)", nums[i]);
-			stop_vpnclient(nums[i]);
+			stop_ovpn_client(nums[i]);
 		}
 
 		vpnlog(VPN_LOG_INFO, "Starting OpenVPN client %d (eas)", nums[i]);
-		start_vpnclient(nums[i]);
+		start_ovpn_client(nums[i]);
 	}
 }
 
-void stop_vpn_eas()
+void stop_ovpn_eas()
 {
 	char buffer[16], *cur;
 	int nums[4] = {0,0,0,0};
@@ -1438,7 +1438,7 @@ void stop_vpn_eas()
 
 		if ( pidof(buffer) >= 0 ) {
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d (eas)", nums[i]);
-			stop_vpnserver(nums[i]);
+			stop_ovpn_server(nums[i]);
 		}
 	}
 
@@ -1461,12 +1461,12 @@ void stop_vpn_eas()
 		sprintf(buffer, "vpnclient%d", nums[i]);
 		if ( pidof(buffer) >= 0 ) {
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d (eas)", nums[i]);
-			stop_vpnclient(nums[i]);
+			stop_ovpn_client(nums[i]);
 		}
 	}
 }
 
-void run_vpn_firewall_scripts()
+void run_ovpn_firewall_scripts()
 {
 	DIR *dir;
 	struct dirent *file;
@@ -1496,7 +1496,7 @@ void run_vpn_firewall_scripts()
 	closedir(dir);
 }
 
-void write_vpn_dnsmasq_config(FILE* f)
+void write_ovpn_dnsmasq_config(FILE* f)
 {
 	char nv[16];
 	char buf[24];
@@ -1541,7 +1541,7 @@ void write_vpn_dnsmasq_config(FILE* f)
 	}
 }
 
-int write_vpn_resolv(FILE* f)
+int write_ovpn_resolv(FILE* f)
 {
 	DIR *dir;
 	struct dirent *file;
