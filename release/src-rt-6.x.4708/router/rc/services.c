@@ -2615,6 +2615,14 @@ void start_services(void)
 	/* do LED setup for Router */
 	led_setup();
 
+#ifdef CONFIG_BCM7
+if (!nvram_get_int("debug_wireless")) { /* suppress dhd debug messages ( default 0x01 ) */
+	system("/usr/sbin/dhd -i eth1 msglevel 0x00");
+	system("/usr/sbin/dhd -i eth2 msglevel 0x00");
+	system("/usr/sbin/dhd -i eth3 msglevel 0x00");
+}
+#endif
+
 }
 
 void stop_services(void)
