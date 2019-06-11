@@ -320,9 +320,9 @@ const struct mime_handler mime_handlers[] = {
 // see httpd.c
 	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
 #ifdef TCONFIG_OPENVPN
-	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_status,		1 },
-	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_vpn_genkey,		1 },
-	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_vpn_genclientconfig,	1 },
+	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_status,		1 },
+	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_genkey,		1 },
+	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_ovpn_genclientconfig,1 },
 #endif
 #ifdef TCONFIG_PPTPD
 	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD
@@ -847,6 +847,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_rtr_addr",		V_IPV6(0)			},
 	{ "ipv6_radvd",			V_01				},
 	{ "ipv6_dhcpd",			V_01				},
+	{ "ipv6_lease_time",		V_RANGE(1, 720)			},	// 1 ... up to 720 hours (30 days) IPv6 lease time
 	{ "ipv6_accept_ra",		V_NUM				},
 	{ "ipv6_tun_addr",		V_IPV6(1)			},
 	{ "ipv6_tun_addrlen",		V_RANGE(3, 127)			},
@@ -915,6 +916,7 @@ static const nvset_t nvset_list[] = {
 	{ "multicast_lan1",		V_01				},
 	{ "multicast_lan2",		V_01				},
 	{ "multicast_lan3",		V_01				},
+	{ "multicast_quickleave",	V_01				},
 	{ "multicast_custom",		V_TEXT(0, 2048)			},
 	{ "block_loopback",		V_01				},
 	{ "udpxy_enable",		V_01				},

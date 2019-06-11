@@ -33,7 +33,7 @@ textarea {
 
 <script type="text/javascript">
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,block_wan_limit_tr,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,block_wan_limit_tr,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat"); %>
 
 function verifyFields(focused, quiet) {
 /* ICMP */
@@ -47,6 +47,7 @@ function verifyFields(focused, quiet) {
 	E('_f_multicast_lan1').disabled = ((!enable_mcast) || (nvram.lan1_ifname.length < 1));
 	E('_f_multicast_lan2').disabled = ((!enable_mcast) || (nvram.lan2_ifname.length < 1));
 	E('_f_multicast_lan3').disabled = ((!enable_mcast) || (nvram.lan3_ifname.length < 1));
+	E('_f_multicast_quickleave').disabled = (!enable_mcast);
 	if(nvram.lan_ifname.length < 1)
 		E('_f_multicast_lan').checked = false;
 	if(nvram.lan1_ifname.length < 1)
@@ -141,6 +142,7 @@ function save() {
 	fom.multicast_lan1.value = E('_f_multicast_lan1').checked ? 1 : 0;
 	fom.multicast_lan2.value = E('_f_multicast_lan2').checked ? 1 : 0;
 	fom.multicast_lan3.value = E('_f_multicast_lan3').checked ? 1 : 0;
+	fom.multicast_quickleave.value = E('_f_multicast_quickleave').checked ? 1 : 0;
 	fom.udpxy_enable.value = E('_f_udpxy_enable').checked ? 1 : 0;
 	fom.udpxy_lan.value = E('_f_udpxy_lan').checked ? 1 : 0;
 	fom.udpxy_lan1.value = E('_f_udpxy_lan1').checked ? 1 : 0;
@@ -188,6 +190,7 @@ function init() {
 <input type="hidden" name="multicast_lan1">
 <input type="hidden" name="multicast_lan2">
 <input type="hidden" name="multicast_lan3">
+<input type="hidden" name="multicast_quickleave">
 <input type="hidden" name="udpxy_enable">
 <input type="hidden" name="udpxy_lan">
 <input type="hidden" name="udpxy_lan1">
@@ -232,6 +235,7 @@ createFieldTable('', [
 	{ title: 'LAN1', indent: 2, name: 'f_multicast_lan1', type: 'checkbox', value: (nvram.multicast_lan1 == '1') },
 	{ title: 'LAN2', indent: 2, name: 'f_multicast_lan2', type: 'checkbox', value: (nvram.multicast_lan2 == '1') },
 	{ title: 'LAN3', indent: 2, name: 'f_multicast_lan3', type: 'checkbox', value: (nvram.multicast_lan3 == '1') },
+	{ title: 'Enable quickleave', indent: 2, name: 'f_multicast_quickleave', type: 'checkbox', value: (nvram.multicast_quickleave == '1') },
 	{ title: '<a href="https://github.com/pali/igmpproxy" class="new_window">IGMP proxy<\/a><br />Custom configuration', name: 'multicast_custom', type: 'textarea', value: nvram.multicast_custom },
 	null,
 	{ title: 'Enable Udpxy', name: 'f_udpxy_enable', type: 'checkbox', value: (nvram.udpxy_enable == '1') },
@@ -255,8 +259,10 @@ createFieldTable('', [
 <i>IGMP proxy:</i><br/>
 <ul>
 	<li><b>LAN / LAN1 / LAN2 / LAN3</b> - Add interface br0 / br1 / br2 / br3 to igmp.conf (Ex.: phyint br0 downstream ratelimit 0 threshold 1).</li>
+	<li><b>Enable quickleave</b> - Send a Leave IGMP message upstream as soon as it receives a Leave message for any downstream interface.</li>
 	<li><b>Custom configuration</b> - Use custom config for IGMP proxy instead of tomato default config. You must define one (or more) upstream interface(s) and one or more downstream interfaces. Refer to the <a href="https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf" class="new_window">IGMP proxy example configuration</a> and <a href="https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f" class="new_window">IGMP proxy commit b55e0125c79fc9d</a> for details.</li>
 	<li><b>Other hints</b> - For error messages please check the <a href="status-log.asp">log file</a>.</li>
+	<li><b>Hidden settings (only optional)</b> - To define sources for multicasting and IGMP data you can use NVRAM variable <b>multicast_altnet_1</b>, <b>multicast_altnet_2</b> and <b>multicast_altnet_3</b> without using a (complete) custom configuration. Format: a.b.c.d/n (Example: 10.0.0.0/16).</li>
 </ul>
 
 <i>Udpxy:</i><br/>

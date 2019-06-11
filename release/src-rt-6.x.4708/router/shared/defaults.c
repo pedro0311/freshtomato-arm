@@ -286,6 +286,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_rtr_addr",		""				, 0 },	// defaults to $ipv6_prefix::1
 	{ "ipv6_radvd",			"1"				, 0 },	// Enable Router Advertisement (radvd)
 	{ "ipv6_dhcpd",			"1"				, 0 },	// Enable DHCPv6
+	{ "ipv6_lease_time",		"12"				, 0 },	// DHCP IPv6 default lease time in hours
 	{ "ipv6_accept_ra",		"1"				, 0 },	// Enable Accept RA on WAN (bit 0) and/or LAN (bit 1) interfaces (br0...br3 if available)
 	{ "ipv6_ifname",		"six0"				, 0 },	// The interface facing the rest of the IPv6 world
 	{ "ipv6_tun_v4end",		"0.0.0.0"			, 0 },	// Foreign IPv4 endpoint of SIT tunnel
@@ -675,6 +676,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "multicast_lan1",		"0"				, 0 },	// on LAN1 (br1)
 	{ "multicast_lan2",		"0"				, 0 },	// on LAN2 (br2)
 	{ "multicast_lan3",		"0"				, 0 },	// on LAN3 (br3)
+	{ "multicast_quickleave",	"1"				, 0 },	// enable quickleave mode
 	{ "multicast_custom",		""				, 0 },	// custom config for IGMP proxy instead of default config
 	{ "udpxy_enable",		"0"				, 0 },
 	{ "udpxy_lan",			"0"				, 0 },	// listen on LAN (br0)
