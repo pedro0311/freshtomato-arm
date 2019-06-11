@@ -833,7 +833,7 @@ void start_ipv6_tunnel(void)
 	char ip[INET6_ADDRSTRLEN + 4];
 	struct in_addr addr4;
 	struct in6_addr addr;
-	const char *wanip, *mtu, *tun_dev;
+	char *wanip, *mtu, *tun_dev;
 	int service;
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num;
@@ -848,43 +848,51 @@ void start_ipv6_tunnel(void)
 	}
 
 	service = get_ipv6_service();
-	tun_dev = get_wan6face();
-	wanip = get_wanip(wan_prefix);
+	tun_dev = (char *)get_wan6face();
+	wanip = (char *)get_wanip(wan_prefix);
+
 	mtu = (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_safe_get("ipv6_tun_mtu") : "1480";
 	modprobe("sit");
 
-	if (service == IPV6_ANYCAST_6TO4)
-		snprintf(ip, sizeof(ip), "192.88.99.%d", nvram_get_int("ipv6_relay"));
-	else
-		strlcpy(ip, (char *)nvram_safe_get("ipv6_tun_v4end"), sizeof(ip));
-	eval("ip", "tunnel", "add", (char *)tun_dev, "mode", "sit",
-		"remote", ip,
-		"local", (char *)wanip,
+	eval("ip", "tunnel", "add", tun_dev, "mode", "sit",
+		"remote", (service == IPV6_ANYCAST_6TO4) ? "any" : nvram_safe_get("ipv6_tun_v4end"),
+		"local", wanip,
 		"ttl", nvram_safe_get("ipv6_tun_ttl"));
+	eval("ip", "link", "set", tun_dev, "mtu", mtu, "up");
 
-	eval("ip", "link", "set", (char *)tun_dev, "mtu", (char *)mtu, "up");
-	nvram_set("ipv6_ifname", (char *)tun_dev);
+	nvram_set("ipv6_ifname", tun_dev);
 
 	if (service == IPV6_ANYCAST_6TO4) {
-		add_ip6_lanaddr();
+		int prefixlen = 16;
+		int mask4size = 0;
+
 		addr4.s_addr = 0;
 		memset(&addr, 0, sizeof(addr));
 		inet_aton(wanip, &addr4);
 		addr.s6_addr16[0] = htons(0x2002);
-		ipv6_mapaddr4(&addr, 16, &addr4, 0);
+		ipv6_mapaddr4(&addr, prefixlen, &addr4, mask4size);
 		addr.s6_addr16[7] = htons(0x0001);
 		inet_ntop(AF_INET6, &addr, ip, sizeof(ip));
-		strncat(ip, "/16", sizeof(ip));
+		snprintf(ip, sizeof(ip), "%s/%d", ip, prefixlen);
+		add_ip6_lanaddr();
 	}
+	/* static tunnel 6to4 */
 	else {
 		snprintf(ip, sizeof(ip), "%s/%d",
 			nvram_safe_get("ipv6_tun_addr"),
 			nvram_get_int("ipv6_tun_addrlen") ? : 64);
 	}
-	eval("ip", "addr", "add", ip, "dev", (char *)tun_dev);
-	eval("ip", "route", "add", "::/0", "dev", (char *)tun_dev);
 
-	// (re)start radvd - now dnsmasq provided
+	eval("ip", "-6", "addr", "add", ip, "dev", tun_dev);
+
+	if (service == IPV6_ANYCAST_6TO4) {
+		snprintf(ip, sizeof(ip), "::192.88.99.%d", nvram_get_int("ipv6_relay"));
+		eval("ip", "-6", "route", "add", "2000::/3", "via", ip, "dev", tun_dev, "metric", "1");
+	} else {
+		eval("ip", "-6", "route", "add", "::/0", "dev", tun_dev, "metric", "1");
+	}
+
+	/* (re)start dnsmasq */
 	if (service == IPV6_ANYCAST_6TO4)
 		start_dnsmasq();
 }
@@ -893,7 +901,7 @@ void stop_ipv6_tunnel(void)
 {
 	eval("ip", "tunnel", "del", (char *)get_wan6face());
 	if (get_ipv6_service() == IPV6_ANYCAST_6TO4) {
-		// get rid of old IPv6 address from lan iface
+		/* get rid of old IPv6 address from lan iface */
 		eval("ip", "-6", "addr", "flush", "dev", nvram_safe_get("lan_ifname"), "scope", "global");
 	}
 	modprobe_r("sit");
