@@ -124,19 +124,19 @@ int do_led(int which, int mode)
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 #ifdef CONFIG_BCMWL6A
-	static int ac68u[]	= { 254,  255,     4,  255,  255,   -3,  255,    0,   14,  254,  255 };
+	static int ac68u[]	= { 254,  255,     4,  255,  255,   -3,  254,    0,   14,  254,  255 };
 	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6,  255 };
 	static int n18u[]	= { 254,  255,     6,  255,  255,  -99,    9,    3,   14,  255,  255 };
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255,  255 };
-	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  255,   12,   13,    8,  255 };
-	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  255,   18,   17,   12,  255 };
-	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  255,  -14,  255,   -2,  255 };
+	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
+	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
+	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
 	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255,  255 };
-	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255,  255 };
-	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  255,  255,  255,  255,  255 };
-	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255,  255 };
-	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  255,  255,  255,  255,  255 };
+	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
+	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  254,  255,  255,  255,  255 };
+	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
+	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6,  255 };
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255,  255 };
 	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255,  255 };
@@ -186,6 +186,9 @@ int do_led(int which, int mode)
 		    (which == LED_5G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
 		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
 		break;
 	case MODEL_RTAC56U:
 		b = ac56u[which];
@@ -223,6 +226,10 @@ int do_led(int which, int mode)
 			b = 7; /* color white gpio 7 (active LOW) */
 			c = 6; /* color amber gpio 6 (active LOW) */
 		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+			b = r6400[which];
+		}
 		else {
 			b = r6400[which];
 		}
@@ -236,12 +243,19 @@ int do_led(int which, int mode)
 			b = 9; /* color white gpio 9 (active LOW) */
 			c = 8; /* color amber gpio 8 (active LOW) */
 		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+			b = r7000[which];
+		}
 		else {
 			b = r7000[which];
 		}
 		break;
 	case MODEL_AC15:
 		b = ac15[which];
+		if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
 		break;
 	case MODEL_DIR868L:
 		if (which == LED_DIAG) {
@@ -271,17 +285,29 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_EA6400:
 		b = ea6400[which];
+		if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
 		break;
 	case MODEL_EA6700:
 		if (strstr(nvram_safe_get("modelNumber"), "EA6500") != NULL) { /* check for ea6500v2 --> same boardtype/num/rev like EA6700! */
 			b = ea6500v2[which];
+			if (which == LED_BRIDGE) { /* non GPIO LED */
+				do_led_bridge(mode);
+			}
 		}
 		else {
 			b = ea6700[which];
+			if (which == LED_BRIDGE) { /* non GPIO LED */
+				do_led_bridge(mode);
+			}
 		}
 		break;
 	case MODEL_EA6900:
 		b = ea6900[which];
+		if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
 		break;
 	case MODEL_WZR1750:
 		b = wzr1750[which];
@@ -361,6 +387,18 @@ void disable_led_wanlan(void) {
 void enable_led_wanlan(void) {
 	system("/usr/sbin/et robowr 0x0 0x18 0x01ff");	/* turn on all LAN and WAN LEDs Part 1/2 */
 	system("/usr/sbin/et robowr 0x0 0x1a 0x01ff");	/* turn on all LAN and WAN LEDs Part 2/2 */
+}
+
+void do_led_bridge(int mode) {
+	if (mode == LED_ON) {
+		enable_led_wanlan();
+	}
+	else if (mode == LED_OFF) {
+		disable_led_wanlan();
+	}
+	else if (mode == LED_PROBE) {
+		return;
+	}
 }
 
 void led_setup(void) {

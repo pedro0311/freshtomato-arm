@@ -379,6 +379,7 @@ static inline int led(int which, int mode)
 }
 extern void disable_led_wanlan(void);
 extern void enable_led_wanlan(void);
+extern void do_led_bridge(int mode);
 extern void led_setup(void);
 
 

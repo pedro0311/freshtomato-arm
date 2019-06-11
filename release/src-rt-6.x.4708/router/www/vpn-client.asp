@@ -21,7 +21,7 @@
 <script type="text/javascript" src="vpn.js"></script>
 <script type="text/javascript">
 
-//	<% nvram("vpn_client_eas,vpn_client1_poll,vpn_client1_if,vpn_client1_bridge,vpn_client1_nat,vpn_client1_proto,vpn_client1_addr,vpn_client1_port,vpn_client1_retry,vpn_client1_firewall,vpn_client1_crypt,vpn_client1_comp,vpn_client1_cipher,vpn_client1_ncp_enable,vpn_client1_ncp_ciphers,vpn_client1_local,vpn_client1_remote,vpn_client1_nm,vpn_client1_reneg,vpn_client1_hmac,vpn_client1_adns,vpn_client1_rgw,vpn_client1_gw,vpn_client1_custom,vpn_client1_static,vpn_client1_ca,vpn_client1_crt,vpn_client1_key,vpn_client1_userauth,vpn_client1_username,vpn_client1_password,vpn_client1_useronly,vpn_client1_tlsremote,vpn_client1_cn,vpn_client1_br,vpn_client1_digest,vpn_client1_nopull,vpn_client1_noexec,vpn_client1_route,vpn_client1_routing_val,vpn_client1_fw,vpn_client2_poll,vpn_client2_if,vpn_client2_bridge,vpn_client2_nat,vpn_client2_proto,vpn_client2_addr,vpn_client2_port,vpn_client2_retry,vpn_client2_firewall,vpn_client2_crypt,vpn_client2_comp,vpn_client2_cipher,vpn_client2_ncp_enable,vpn_client2_ncp_ciphers,vpn_client2_local,vpn_client2_remote,vpn_client2_nm,vpn_client2_reneg,vpn_client2_hmac,vpn_client2_adns,vpn_client2_rgw,vpn_client2_gw,vpn_client2_custom,vpn_client2_static,vpn_client2_ca,vpn_client2_crt,vpn_client2_key,vpn_client2_userauth,vpn_client2_username,vpn_client2_password,vpn_client2_useronly,vpn_client2_tlsremote,vpn_client2_cn,vpn_client2_br,vpn_client2_digest,vpn_client2_nopull,vpn_client2_noexec,vpn_client2_route,vpn_client2_routing_val,vpn_client2_fw,vpn_client3_poll,vpn_client3_if,vpn_client3_bridge,vpn_client3_nat,vpn_client3_proto,vpn_client3_addr,vpn_client3_port,vpn_client3_retry,vpn_client3_firewall,vpn_client3_crypt,vpn_client3_comp,vpn_client3_cipher,vpn_client3_ncp_enable,vpn_client3_ncp_ciphers,vpn_client3_local,vpn_client3_remote,vpn_client3_nm,vpn_client3_reneg,vpn_client3_hmac,vpn_client3_adns,vpn_client3_rgw,vpn_client3_gw,vpn_client3_custom,vpn_client3_static,vpn_client3_ca,vpn_client3_crt,vpn_client3_key,vpn_client3_userauth,vpn_client3_username,vpn_client3_password,vpn_client3_useronly,vpn_client3_tlsremote,vpn_client3_cn,vpn_client3_br,vpn_client3_digest,vpn_client3_nopull,vpn_client3_noexec,vpn_client3_route,vpn_client3_routing_val,vpn_client3_fw,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("vpn_client_eas,vpn_client1_poll,vpn_client1_if,vpn_client1_bridge,vpn_client1_nat,vpn_client1_proto,vpn_client1_addr,vpn_client1_port,vpn_client1_retry,vpn_client1_firewall,vpn_client1_crypt,vpn_client1_comp,vpn_client1_cipher,vpn_client1_ncp_enable,vpn_client1_ncp_ciphers,vpn_client1_local,vpn_client1_remote,vpn_client1_nm,vpn_client1_reneg,vpn_client1_hmac,vpn_client1_adns,vpn_client1_rgw,vpn_client1_gw,vpn_client1_custom,vpn_client1_static,vpn_client1_ca,vpn_client1_crt,vpn_client1_key,vpn_client1_userauth,vpn_client1_username,vpn_client1_password,vpn_client1_useronly,vpn_client1_tlsremote,vpn_client1_cn,vpn_client1_br,vpn_client1_digest,vpn_client1_routing_val,vpn_client1_fw,vpn_client2_poll,vpn_client2_if,vpn_client2_bridge,vpn_client2_nat,vpn_client2_proto,vpn_client2_addr,vpn_client2_port,vpn_client2_retry,vpn_client2_firewall,vpn_client2_crypt,vpn_client2_comp,vpn_client2_cipher,vpn_client2_ncp_enable,vpn_client2_ncp_ciphers,vpn_client2_local,vpn_client2_remote,vpn_client2_nm,vpn_client2_reneg,vpn_client2_hmac,vpn_client2_adns,vpn_client2_rgw,vpn_client2_gw,vpn_client2_custom,vpn_client2_static,vpn_client2_ca,vpn_client2_crt,vpn_client2_key,vpn_client2_userauth,vpn_client2_username,vpn_client2_password,vpn_client2_useronly,vpn_client2_tlsremote,vpn_client2_cn,vpn_client2_br,vpn_client2_digest,vpn_client2_routing_val,vpn_client2_fw,vpn_client3_poll,vpn_client3_if,vpn_client3_bridge,vpn_client3_nat,vpn_client3_proto,vpn_client3_addr,vpn_client3_port,vpn_client3_retry,vpn_client3_firewall,vpn_client3_crypt,vpn_client3_comp,vpn_client3_cipher,vpn_client3_ncp_enable,vpn_client3_ncp_ciphers,vpn_client3_local,vpn_client3_remote,vpn_client3_nm,vpn_client3_reneg,vpn_client3_hmac,vpn_client3_adns,vpn_client3_rgw,vpn_client3_gw,vpn_client3_custom,vpn_client3_static,vpn_client3_ca,vpn_client3_crt,vpn_client3_key,vpn_client3_userauth,vpn_client3_username,vpn_client3_password,vpn_client3_useronly,vpn_client3_tlsremote,vpn_client3_cn,vpn_client3_br,vpn_client3_digest,vpn_client3_routing_val,vpn_client3_fw,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 function RouteGrid() {return this;}
 RouteGrid.prototype = new TomatoGrid;
@@ -162,13 +162,16 @@ function verifyFields(focused, quiet) {
 		bridge = E('_f_vpn_'+t+'_bridge').checked;
 		nat = E('_f_vpn_'+t+'_nat').checked;
 		hmac = E('_vpn_'+t+'_hmac').value;
-		rgw = E('_f_vpn_'+t+'_rgw').checked;
-		nopull = E('_f_vpn_'+t+'_nopull').checked;
-		noexec = E('_f_vpn_'+t+'_noexec').checked;
-		rbutton = (iface == "tun" && (nopull == 1 || noexec == 1));
-		route = E('_f_vpn_'+t+'_route');
+		rgw = E('_vpn_'+t+'_rgw').value;
 		ncp = E('_vpn_'+t+'_ncp_enable').value;
 
+		E('_vpn_'+t+'_rgw').options[2].disabled = (iface == "tap");
+		if (iface == "tap" && rgw >= 2) {
+			rgw = 1;
+			E('_vpn_'+t+'_rgw').value = 1;
+		}
+
+		rtable = (iface == "tun" && rgw >= 2);
 		userauth =  E('_f_vpn_'+t+'_userauth').checked && auth == "tls";
 		useronly = userauth && E('_f_vpn_'+t+'_useronly').checked;
 
@@ -191,17 +194,13 @@ function verifyFields(focused, quiet) {
 		/* Page Advanced */
 		elem.display(PR('_vpn_'+t+'_adns'), PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(E(t+'_gateway'), iface == "tap" && rgw > 0);
-		elem.display(PR('_f_vpn_'+t+'_nopull'), rgw == 0);
-		elem.display(PR('_f_vpn_'+t+'_noexec'), rgw == 0);
-		elem.display(PR('_f_vpn_'+t+'_rgw'), nopull == 0 && noexec == 0);
 		elem.display(PR('_vpn_'+t+'_cipher'), (ncp != 2));
 		elem.display(PR('_vpn_'+t+'_ncp_enable'), (auth == "tls"));
 		elem.display(PR('_vpn_'+t+'_ncp_ciphers'), ((ncp > 0) && (auth == "tls")));
 
 		/* Page Routing Policy */
-		elem.display(E(t+'-policy-head'), rbutton);
-		elem.display(PR('table_'+t+'_routing'), route.checked && rbutton);
-		elem.display(E('_vpn_'+t+'_routing_div_help'), !rbutton);
+		elem.display(E('table_'+t+'_routing'), rtable);
+		elem.display(E('_vpn_'+t+'_routing_div_help'), !rtable);
 
 		/* Page Key */
 		elem.display(PR('_vpn_'+t+'_static'), auth == "secret" || (auth == "tls" && hmac >= 0));
@@ -293,7 +292,7 @@ RouteGrid.prototype.dataToView = function(data) {
 	var temp = ['<input type=\'checkbox\' style="opacity:1" disabled'+(data[0]!=0?' checked':'')+'>',
 	            ['From Source IP', 'To Destination IP', 'To Domain'][data[1] - 1],
 	            data[2]
-                ];
+	           ];
 	var v = [];
 	for (var i = 0; i < temp.length; ++i){
 		v.push(i==0?temp[i]:escapeHTML('' + temp[i]));
@@ -328,13 +327,9 @@ function save() {
 		E('vpn_'+t+'_bridge').value = E('_f_vpn_'+t+'_bridge').checked ? 1 : 0;
 		E('vpn_'+t+'_nat').value = E('_f_vpn_'+t+'_nat').checked ? 1 : 0;
 		E('vpn_'+t+'_fw').value = E('_f_vpn_'+t+'_fw').checked ? 1 : 0;
-		E('vpn_'+t+'_rgw').value = E('_f_vpn_'+t+'_rgw').checked ? 1 : 0;
 		E('vpn_'+t+'_userauth').value = E('_f_vpn_'+t+'_userauth').checked ? 1 : 0;
 		E('vpn_'+t+'_useronly').value = E('_f_vpn_'+t+'_useronly').checked ? 1 : 0;
 		E('vpn_'+t+'_tlsremote').value = E('_f_vpn_'+t+'_tlsremote').checked ? 1 : 0;
-		E('vpn_'+t+'_nopull').value = E('_f_vpn_'+t+'_nopull').checked ? 1 : 0;
-		E('vpn_'+t+'_noexec').value = E('_f_vpn_'+t+'_noexec').checked ? 1 : 0;
-		E('vpn_'+t+'_route').value = E('_f_vpn_'+t+'_route').checked ? 1 : 0;
 		E('vpn_'+t+'_routing_val').value = routing;
 	}
 
@@ -432,13 +427,9 @@ for (i = 0; i < tabs.length; ++i)
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_bridge\' name=\'vpn_'+t+'_bridge\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_nat\' name=\'vpn_'+t+'_nat\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_fw\' name=\'vpn_'+t+'_fw\'>');
-	W('<input type=\'hidden\' id=\'vpn_'+t+'_rgw\' name=\'vpn_'+t+'_rgw\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_userauth\' name=\'vpn_'+t+'_userauth\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_useronly\' name=\'vpn_'+t+'_useronly\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_tlsremote\' name=\'vpn_'+t+'_tlsremote\'>');
-	W('<input type=\'hidden\' id=\'vpn_'+t+'_nopull\' name=\'vpn_'+t+'_nopull\'>');
-	W('<input type=\'hidden\' id=\'vpn_'+t+'_noexec\' name=\'vpn_'+t+'_noexec\'>');
-	W('<input type=\'hidden\' id=\'vpn_'+t+'_route\' name=\'vpn_'+t+'_route\'>');
 	W('<input type=\'hidden\' id=\'vpn_'+t+'_routing_val\' name=\'vpn_'+t+'_routing_val\'>');
 
 	W('<ul class="tabs">');
@@ -489,10 +480,8 @@ for (i = 0; i < tabs.length; ++i)
 	createFieldTable('', [
 		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Redirect Internet traffic', multi: [
-			{ name: 'f_vpn_'+t+'_rgw', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_rgw' ) != 0 },
+			{ name: 'vpn_'+t+'_rgw', type: 'select', options: [ [0, 'No'], [1, 'All'], [2, 'Routing Policy'] ], value: eval('nvram.vpn_'+t+'_rgw') },
 			{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval( 'nvram.vpn_'+t+'_gw' ), prefix: '<span id=\''+t+'_gateway\'> Gateway:&nbsp', suffix: '<\/span>'} ] },
-		{ title: 'Ignore Redirect Gateway (route-nopull)', name: 'f_vpn_'+t+'_nopull', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_nopull' ) != 0 },
-		{ title: 'Ignore Redirect Gateway (route-noexec)', name: 'f_vpn_'+t+'_noexec', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_noexec' ) != 0 },
 		{ title: 'Accept DNS configuration', name: 'vpn_'+t+'_adns', type: 'select', options: [[0, 'Disabled'],[1, 'Relaxed'],[2, 'Strict'],[3, 'Exclusive']], value: eval( 'nvram.vpn_'+t+'_adns' ) },
 		{ title: 'Cipher Negotiation', name: 'vpn_'+t+'_ncp_enable', type: 'select', options: [[0, 'Disabled'],[1, 'Enabled (with fallback)'],[2, 'Enabled']], value: eval( 'nvram.vpn_'+t+'_ncp_enable' ) },
 		{ title: 'Negotiable ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 50, maxlen: 50, value: eval ( 'nvram.vpn_'+t+'_ncp_ciphers' ) },
@@ -510,13 +499,8 @@ for (i = 0; i < tabs.length; ++i)
 	]);
 	W('<\/div>');
 	W('<div id=\''+t+'-policy\'>');
-	W('<div id=\''+t+'-policy-head\'>');
-	createFieldTable('', [
-		{ title: 'Redirect through VPN', name: 'f_vpn_'+t+'_route', type: 'checkbox', value: eval( 'nvram.vpn_'+t+'_route' ) != 0 },
-		{ title: '', suffix: '<div class="tomato-grid" id="table_'+t+'_routing"><\/div>' }
-	]);
-	W('<\/div>');
-	W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN interface and check no-pull or no-exec option.<\/b><\/div><\/div><\/div>');
+	W('<div class="tomato-grid" id="table_'+t+'_routing"><\/div>');
+	W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN as interface and "Routing Policy" in "Redirect Internet Traffic".<\/b><\/div><\/div><\/div>');
 	W('<div>');
 	W('<ul>');
 	W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
