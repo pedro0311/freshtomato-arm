@@ -3,9 +3,14 @@
 #include <string.h>
 #include <wlutils.h>
 
-// Remove defines below, rather pass as parameters ...
-//#define BLINK_MAXSPEED		10			// Maximum Blink Speed, on/off cycles per second (floating point)
-//#define BLINK_THRESHOLD		32768		// Data threshold ... once this much data received, then blink
+/* Min/Max and default values */
+//#define BLINK_MAXSPEED_DEF	10		/* Default Blink Speed, on/off cycles per second (floating point) */
+#define BLINK_MAXSPEED_MAX	50		/* Maximum Blink Speed MAX */
+#define BLINK_MAXSPEED_MIN	3		/* Maximum Blink Speed MIN */
+//#define BLINK_THRESHOLD_DEF	(1024 * 8)	/* Default Data threshold ... once this much data received, then blink */
+#define BLINK_THRESHOLD_MAX	(1024 * 128)	/* Maximum Data threshold */
+#define BLINK_THRESHOLD_MIN	(1024 * 2)	/* Minimum Data threshold */
+
 
 static int find_led_name(char *ledname)
 {
@@ -68,17 +73,28 @@ int blink_main(int argc, char *argv[])
 		return(1);
 	}
 	
+	/* Check and get the LED Index for the targeted LED */
+	ledindex = find_led_name(argv[2]);	
+	
+	/* Check blink parameter rate */
+	maxspeed = atof(argv[3]);
+	if ((maxspeed > BLINK_MAXSPEED_MAX) || (maxspeed < BLINK_MAXSPEED_MIN)) {
+		fprintf(stderr, "blink rate not valid! (Range: %d up to %d)\n", BLINK_MAXSPEED_MIN, BLINK_MAXSPEED_MAX);
+		return(1);
+	}
+
+	/* Check blink parameter threshold */
+	threshold = atol(argv[4]);
+	if ((threshold > BLINK_THRESHOLD_MAX) || (threshold < BLINK_THRESHOLD_MIN)) {
+		fprintf(stderr, "blink threshold not valid! (Range: %d up to %d [Bytes])\n", BLINK_THRESHOLD_MIN, BLINK_THRESHOLD_MAX);
+		return(1);
+	}
+
 	/* Fork new process, run in the background (daemon) */
 	if (fork() != 0) return 0;
 	setsid();
 	signal(SIGCHLD, chld_reap);
-	
-	/* Get the LED Index for the targeted LED */
-	ledindex = find_led_name(argv[2]);	
-	
-	/* And determine blink parameters */
-	maxspeed = atof(argv[3]);
-	threshold = atol(argv[4]);
+
 		
 	/* Loop Through, checking for new data (and blink accordingly ... max speed at max or higher data rate) */
 	while(1){
