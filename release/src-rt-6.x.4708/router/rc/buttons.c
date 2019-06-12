@@ -131,9 +131,9 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 	case MODEL_WZR1750:
-//		reset_mask = 1 << 6;
-		ses_mask = 1 << 12;
-		ses_led = LED_AOSS;
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 12; /* wps button (active LOW) */
+		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. */
 		break;
 #endif /* CONFIG_BCMWL6A */
 	default:
