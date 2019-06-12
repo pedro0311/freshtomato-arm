@@ -10,13 +10,11 @@
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for strcasestr" >&5
  $as_echo_n "checking for strcasestr... " >&6; }
    if test "$cross_compiling" = yes; then :
-@@ -30750,8 +30753,8 @@ rm -f core *.core core.conftest.* gmon.o
- rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+@@ -30751,6 +30754,7 @@ rm -f core *.core core.conftest.* gmon.o
    conftest.$ac_objext conftest.beam conftest.$ac_ext
  fi
--
+ 
 +fi
  
  
    ext_builddir=ext/fileinfo
-   ext_srcdir=$abs_srcdir/ext/fileinfo
