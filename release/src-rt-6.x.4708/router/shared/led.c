@@ -140,7 +140,7 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6};
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255};
-	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255};
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  255,  255,   -7};
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G
@@ -308,7 +308,17 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_WZR1750:
-		b = wzr1750[which];
+		if (which == LED_DIAG) {
+			b = -1; /* color red gpio 1 (active HIGH) */
+			c = 2; /* color white gpio 2 (active HIGH, inverted) */
+		}
+		else if (which == LED_AOSS) {
+			b = -3; /* color blue gpio 3 (active HIGH) */
+			c = 4; /* color amber gpio 4 (active HIGH, inverted) */
+		}
+		else {
+			b = wzr1750[which];
+		}
 		break;
 #endif /* CONFIG_BCMWL6A */
 	default:
