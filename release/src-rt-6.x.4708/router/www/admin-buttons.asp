@@ -65,7 +65,7 @@ function earlyInit() {
 
 	if (brau) E('braudiv').style.display = '';
 	E('sesdiv').style.display = '';
-	if ((wham) || (aoss) || (brau)) E('leddiv').style.display = '';
+	E('leddiv').style.display = '';
 }
 </script>
 </head>
@@ -136,10 +136,10 @@ createFieldTable('', [
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Amber SES', name: '_led0', type: 'checkbox', value: nvram.sesx_led & 1, hidden: !wham },
-	{ title: 'White SES', name: '_led1', type: 'checkbox', value: nvram.sesx_led & 2, hidden: !wham },
-	{ title: 'AOSS', name: '_led2', type: 'checkbox', value: nvram.sesx_led & 4, hidden: !aoss },
-	{ title: 'Bridge', name: '_led3', type: 'checkbox', value: nvram.sesx_led & 8, hidden: !brau }
+	{ title: 'Amber', name: '_led0', type: 'checkbox', value: nvram.sesx_led & 0x01},
+	{ title: 'White', name: '_led1', type: 'checkbox', value: nvram.sesx_led & 0x02},
+	{ title: 'AOSS', name: '_led2', type: 'checkbox', value: nvram.sesx_led & 0x04},
+	{ title: 'Bridge', name: '_led3', type: 'checkbox', value: nvram.sesx_led & 0x08}
 ]);
 </script>
 </div>

@@ -470,25 +470,6 @@ void led_setup(void) {
 			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
 			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 		}
-
-		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
-		/* turn on WAN and LAN LEDs */
-		switch(model) {
-		case MODEL_AC15:
-		case MODEL_R6400:
-		case MODEL_R7000:
-		case MODEL_RTAC56U:
-		case MODEL_RTAC68U:
-		case MODEL_EA6400:
-		case MODEL_EA6700:
-		case MODEL_EA6900:
-			enable_led_wanlan();
-			break;
-		default:
-			/* nothing to do right now */
-			break;
-		}
-
 	}
 }
 
