@@ -442,6 +442,9 @@ void led_setup(void) {
 			}
 			disable_led_wanlan();
 			break;
+		case MODEL_WZR1750:
+			system("gpio disable 1");	/* disable power led color red */
+			break;
 		default:
 			/* nothing to do right now */
 			break;
