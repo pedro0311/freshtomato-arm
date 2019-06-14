@@ -1,13 +1,59 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+30 May 2019, PHP 7.2.19
+
+- EXIF:
+  . Fixed bug #77988 (heap-buffer-overflow on php_jpg_get16).
+    (CVE-2019-11040) (Stas)
+
+- FPM:
+  . Fixed bug #77934 (php-fpm kill -USR2 not working). (Jakub Zelenka)
+  . Fixed bug #77921 (static.php.net doesn't work anymore). (Peter Kokot)
+
+- GD:
+  . Fixed bug #77943 (imageantialias($image, false); does not work). (cmb)
+  . Fixed bug #77973 (Uninitialized read in gdImageCreateFromXbm).
+    (CVE-2019-11038) (cmb)
+
+- Iconv:
+  . Fixed bug #78069 (Out-of-bounds read in iconv.c:_php_iconv_mime_decode()
+    due to integer overflow). (CVE-2019-11039). (maris dot adam)
+
+- JSON:
+  . Fixed bug #77843 (Use after free with json serializer). (Nikita)
+
+- Opcache:
+  . Fixed possible crashes, because of inconsistent PCRE cache and opcache
+    SHM reset. (Alexey Kalinin, Dmitry)
+
+- PDO_MySQL:
+  . Fixed bug #77944 (Wrong meta pdo_type for bigint on LLP64). (cmb)
+
+- Reflection:
+  . Fixed bug #75186 (Inconsistent reflection of Closure:::__invoke()). (Nikita)
+
+- Session:
+  . Fixed bug #77911 (Wrong warning for session.sid_bits_per_character). (cmb)
+
+- SPL:
+  . Fixed bug #77024 (SplFileObject::__toString() may return array). (Craig
+    Duncan)
+
+- SQLite:
+  . Fixed bug #77967 (Bypassing open_basedir restrictions via file uris). (Stas)
+
 02 May 2019, PHP 7.2.18
 
 - CLI:
   . Fixed bug #77794 (Incorrect Date header format in built-in server).
     (kelunik)
 
+- Date:
+  . Fixed bug #77909 (DatePeriod::__construct() with invalid recurrence count
+    value). (Ignace Nyamagana Butera)
+
 - EXIF
-  . Fixed bug #77950 (Heap-buffer-overflow in _estrndup via exif_process_IFD_TAG).
+  . Fixed bug #77950 (Heap-buffer-overflow in _estrndup via exif_process_IFD_TAG). 
     (CVE-2019-11036) (Stas)
 
 - Interbase:
@@ -43,6 +89,10 @@ PHP                                                                        NEWS
   . Fixed bug #77772 (ReflectionClass::getMethods(null) doesn't work). (Nikita)
   . Fixed bug #77882 (Different behavior: always calls destructor). (Nikita)
 
+- SOAP:
+  . Fixed bug #77945 (Segmentation fault when constructing SoapClient with
+    WSDL_CACHE_BOTH). (Nikita)
+
 - Standard:
   . Fixed bug #77680 (recursive mkdir on ftp stream wrapper is incorrect).
     (Vlad Temian)
@@ -73,6 +123,12 @@ PHP                                                                        NEWS
     (Derick)
   . Fixed bug #75113 (Added DatePeriod::getRecurrences() method). (Ignace
     Nyamagana Butera)
+
+- EXIF:
+  . Fixed bug #77753 (Heap-buffer-overflow in php_ifd_get32s). (CVE-2019-11034)
+    (Stas)
+  . Fixed bug #77831 (Heap-buffer-overflow in exif_iif_add_value). 
+    (CVE-2019-11035) (Stas)
 
 - FPM:
   . Fixed bug #77677 (FPM fails to build on AIX due to missing WCOREDUMP).
