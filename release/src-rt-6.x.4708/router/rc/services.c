@@ -96,9 +96,7 @@ void start_dnsmasq()
 	int do_dhcpd_hosts;
 
 #ifdef TCONFIG_IPV6
-//	char *prefix, *ipv6, *mtu;
-//	int do_6to4, do_6rd;
-//	int service;
+	int ipv6_lease; /* DHCP IPv6 lease time */
 #endif
 
 	char wan_prefix[] = "wanXX";
@@ -483,7 +481,7 @@ void start_dnsmasq()
 	//
 
 #ifdef TCONFIG_OPENVPN
-	write_vpn_dnsmasq_config(f);
+	write_ovpn_dnsmasq_config(f);
 #endif
 
 #ifdef TCONFIG_PPTPD
@@ -492,21 +490,31 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+
+		ipv6_lease = nvram_get_int("ipv6_lease_time"); /* get DHCP IPv6 lease time */
+		if ((ipv6_lease < 1) || (ipv6_lease > 720)) { /* check lease time and limit the range (1...720 hours, 30 days should be enough) */
+			ipv6_lease = 12;
+		}
+
 		/* enable-ra should be enabled in both cases */
-		if (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd"))
+		if (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd")) {
 			fprintf(f,"enable-ra\n");
+		}
 
 		/* Only SLAAC and NO DHCPv6 */
-		if (nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
-			fprintf(f,"dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, 12h\n");
+		if (nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd")) {
+			fprintf(f,"dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %dh\n", ipv6_lease);
+		}
 
 		/* Only DHCPv6 and NO SLAAC */
-		if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd"))
-			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, 12h\n");
+		if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd")) {
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %dh\n", ipv6_lease);
+		}
 
 		/* SLAAC and DHCPv6 (2 IPv6 IPs) */
-		if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd"))
-			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, 12h\n");
+		if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd")) {
+			fprintf(f,"dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+		}
 	}
 #endif
 
@@ -734,7 +742,7 @@ void dns_to_resolv(void)
 		m = umask(022);	/* 077 from pppoecd */
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	/* write / append */
 			if (append == 1)
-				exclusive = ( write_pptpvpn_resolv(f) || write_vpn_resolv(f) ); /* Check for VPN DNS entries */
+				exclusive = ( write_pptpvpn_resolv(f) || write_ovpn_resolv(f) ); /* Check for VPN DNS entries */
 			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
@@ -833,7 +841,7 @@ void start_ipv6_tunnel(void)
 	char ip[INET6_ADDRSTRLEN + 4];
 	struct in_addr addr4;
 	struct in6_addr addr;
-	const char *wanip, *mtu, *tun_dev;
+	char *wanip, *mtu, *tun_dev;
 	int service;
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num;
@@ -848,43 +856,51 @@ void start_ipv6_tunnel(void)
 	}
 
 	service = get_ipv6_service();
-	tun_dev = get_wan6face();
-	wanip = get_wanip(wan_prefix);
+	tun_dev = (char *)get_wan6face();
+	wanip = (char *)get_wanip(wan_prefix);
+
 	mtu = (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_safe_get("ipv6_tun_mtu") : "1480";
 	modprobe("sit");
 
-	if (service == IPV6_ANYCAST_6TO4)
-		snprintf(ip, sizeof(ip), "192.88.99.%d", nvram_get_int("ipv6_relay"));
-	else
-		strlcpy(ip, (char *)nvram_safe_get("ipv6_tun_v4end"), sizeof(ip));
-	eval("ip", "tunnel", "add", (char *)tun_dev, "mode", "sit",
-		"remote", ip,
-		"local", (char *)wanip,
+	eval("ip", "tunnel", "add", tun_dev, "mode", "sit",
+		"remote", (service == IPV6_ANYCAST_6TO4) ? "any" : nvram_safe_get("ipv6_tun_v4end"),
+		"local", wanip,
 		"ttl", nvram_safe_get("ipv6_tun_ttl"));
+	eval("ip", "link", "set", tun_dev, "mtu", mtu, "up");
 
-	eval("ip", "link", "set", (char *)tun_dev, "mtu", (char *)mtu, "up");
-	nvram_set("ipv6_ifname", (char *)tun_dev);
+	nvram_set("ipv6_ifname", tun_dev);
 
 	if (service == IPV6_ANYCAST_6TO4) {
-		add_ip6_lanaddr();
+		int prefixlen = 16;
+		int mask4size = 0;
+
 		addr4.s_addr = 0;
 		memset(&addr, 0, sizeof(addr));
 		inet_aton(wanip, &addr4);
 		addr.s6_addr16[0] = htons(0x2002);
-		ipv6_mapaddr4(&addr, 16, &addr4, 0);
+		ipv6_mapaddr4(&addr, prefixlen, &addr4, mask4size);
 		addr.s6_addr16[7] = htons(0x0001);
 		inet_ntop(AF_INET6, &addr, ip, sizeof(ip));
-		strncat(ip, "/16", sizeof(ip));
+		snprintf(ip, sizeof(ip), "%s/%d", ip, prefixlen);
+		add_ip6_lanaddr();
 	}
+	/* static tunnel 6to4 */
 	else {
 		snprintf(ip, sizeof(ip), "%s/%d",
 			nvram_safe_get("ipv6_tun_addr"),
 			nvram_get_int("ipv6_tun_addrlen") ? : 64);
 	}
-	eval("ip", "addr", "add", ip, "dev", (char *)tun_dev);
-	eval("ip", "route", "add", "::/0", "dev", (char *)tun_dev);
 
-	// (re)start radvd - now dnsmasq provided
+	eval("ip", "-6", "addr", "add", ip, "dev", tun_dev);
+
+	if (service == IPV6_ANYCAST_6TO4) {
+		snprintf(ip, sizeof(ip), "::192.88.99.%d", nvram_get_int("ipv6_relay"));
+		eval("ip", "-6", "route", "add", "2000::/3", "via", ip, "dev", tun_dev, "metric", "1");
+	} else {
+		eval("ip", "-6", "route", "add", "::/0", "dev", tun_dev, "metric", "1");
+	}
+
+	/* (re)start dnsmasq */
 	if (service == IPV6_ANYCAST_6TO4)
 		start_dnsmasq();
 }
@@ -893,7 +909,7 @@ void stop_ipv6_tunnel(void)
 {
 	eval("ip", "tunnel", "del", (char *)get_wan6face());
 	if (get_ipv6_service() == IPV6_ANYCAST_6TO4) {
-		// get rid of old IPv6 address from lan iface
+		/* get rid of old IPv6 address from lan iface */
 		eval("ip", "-6", "addr", "flush", "dev", nvram_safe_get("lan_ifname"), "scope", "global");
 	}
 	modprobe_r("sit");
@@ -1440,6 +1456,7 @@ static pid_t pid_igmp = -1;
 void start_igmp_proxy(void)
 {
 	FILE *fp;
+	char igmp_buffer[32];
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num, count = 0;
 
@@ -1458,8 +1475,8 @@ void start_igmp_proxy(void)
 		else if ((fp = fopen("/etc/igmp.conf", "w")) != NULL) {
 		  /* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
 		  /* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
-		     see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
-		     see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
+		   * see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
+		   * see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
 		   */
 		  if (nvram_match("multicast_lan", "0") && nvram_match("multicast_lan1", "0") && nvram_match("multicast_lan2", "0") && nvram_match("multicast_lan3", "0")) {
 			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
@@ -1468,23 +1485,56 @@ void start_igmp_proxy(void)
 		  }
 		  /* create default config for upstream/downstream interface(s) */
 		  else {
-			fprintf(fp,
-				"quickleave\n");
+			if (nvram_match("multicast_quickleave", "1")) {
+				fprintf(fp,
+					"quickleave\n");
+			}
 			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 				get_wan_prefix(wan_unit, wan_prefix);
 				if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
 					count++;
 					/*
-					  Configuration for Upstream Interface
-					  Example:
-					  phyint ppp0 upstream ratelimit 0 threshold 1
-					  altnet 193.158.35.0/24
+					 * Configuration for Upstream Interface
+					 * Example:
+					 * phyint ppp0 upstream ratelimit 0 threshold 1
+					 * altnet 193.158.35.0/24
 					 */
 					fprintf(fp,
-						"phyint %s upstream ratelimit 0 threshold 1\n"
-						"\taltnet %s\n",
-						get_wanface(wan_prefix),
-						nvram_get("multicast_altnet") ? : "0.0.0.0/0");
+						"phyint %s upstream ratelimit 0 threshold 1\n",
+						get_wanface(wan_prefix));
+					if ((nvram_get("multicast_altnet_1") != NULL) ||
+					    (nvram_get("multicast_altnet_2") != NULL) ||
+					    (nvram_get("multicast_altnet_3") != NULL)) { /* check for allowed remote network address, see note at GUI advanced-firewall.asp */
+						if (nvram_get("multicast_altnet_1") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_1")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s\n", igmp_buffer);
+
+						}
+						if (nvram_get("multicast_altnet_2") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_2")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s\n", igmp_buffer);
+
+						}
+						if (nvram_get("multicast_altnet_3") != NULL) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nvram_safe_get("multicast_altnet_3")); /* copy to buffer */
+							fprintf(fp,
+								"\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							syslog(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s\n", igmp_buffer);
+
+						}
+
+					}
+					else {
+						fprintf(fp,
+							"\taltnet 0.0.0.0/0\n"); /* default, allow all! */
+					}
 				}
 			}
 			if (!count) {
@@ -1492,7 +1542,6 @@ void start_igmp_proxy(void)
 				unlink("/etc/igmp.conf");
 				return;
 			}
-				// nvram_safe_get("lan_ifname"));
 				char lanN_ifname[] = "lanXX_ifname";
 				char multicast_lanN[] = "multicast_lanXX";
 				char br;
@@ -1509,9 +1558,9 @@ void start_igmp_proxy(void)
 
 					if ((strcmp(nvram_safe_get(multicast_lanN),"1")==0) && (strcmp(nvram_safe_get(lanN_ifname),"")!=0)) {
 					/*
-					  Configuration for Downstream Interface
-					  Example:
-					  phyint br0 downstream ratelimit 0 threshold 1
+					 * Configuration for Downstream Interface
+					 * Example:
+					 * phyint br0 downstream ratelimit 0 threshold 1
 					 */
 						fprintf(fp,
 							"phyint %s downstream ratelimit 0 threshold 1\n",
@@ -3303,14 +3352,14 @@ TOP:
 
 #ifdef TCONFIG_OPENVPN
 	if (strncmp(service, "vpnclient", 9) == 0) {
-		if (action & A_STOP) stop_vpnclient(atoi(&service[9]));
-		if (action & A_START) start_vpnclient(atoi(&service[9]));
+		if (action & A_STOP) stop_ovpn_client(atoi(&service[9]));
+		if (action & A_START) start_ovpn_client(atoi(&service[9]));
 		goto CLEAR;
 	}
 
 	if (strncmp(service, "vpnserver", 9) == 0) {
-		if (action & A_STOP) stop_vpnserver(atoi(&service[9]));
-		if (action & A_START) start_vpnserver(atoi(&service[9]));
+		if (action & A_STOP) stop_ovpn_server(atoi(&service[9]));
+		if (action & A_START) start_ovpn_server(atoi(&service[9]));
 		goto CLEAR;
 	}
 #endif
