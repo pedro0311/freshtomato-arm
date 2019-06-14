@@ -81,19 +81,6 @@ int led_main(int argc, char *argv[])
 				help();
 			}
 		}
-		else if ((i == LED_AOSS) &&
-			 ((model == MODEL_RTN18U) ||
-			  (model == MODEL_RTAC56U) ||
-			  (model == MODEL_RTAC68U) ||
-			  (model == MODEL_RTAC3200))) { /* special case for ASUS Router with FreshTomato: use LED_AOSS for Power LED (active LOW, inverted! --> see LED table at shared/led.c ) */
-
-			if (led(i, LED_PROBE)) { /* check for GPIO and non GPIO */
-				led(i, !(a[1] == 'n')); /* turn LED on/off (inverted!) */
-			}
-			else {
-				help();
-			}
-		}
 		else if (!led(i, (a[1] == 'n'))) help(); /* default case */
 	}
 
