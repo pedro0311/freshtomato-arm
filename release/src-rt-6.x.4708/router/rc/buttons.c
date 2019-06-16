@@ -213,6 +213,10 @@ int buttons_main(int argc, char *argv[])
 
 			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 
+			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
+			    ((model == MODEL_RTN18U) || (model == MODEL_RTAC56U) || (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
+
 			//	syslog(LOG_DEBUG, "ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
 			syslog(LOG_INFO, "SES pushed. Count was %d.", count);
 
@@ -271,6 +275,10 @@ int buttons_main(int argc, char *argv[])
 				++count;
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & wlan_mask) == wlan_pushed));
 			gpio &= mask;
+
+			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
+			    ((model == MODEL_RTAC56U) || (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);
 			syslog(LOG_INFO, "WLAN pushed. Count was %d.", count);
