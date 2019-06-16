@@ -28,12 +28,9 @@ textarea {
 <script type="text/javascript" src="debug.js"></script>
 
 <script type="text/javascript">
-//	<% nvram("stealth_mode,stealth_iled,sesx_led,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,script_brau,t_model,t_features"); %>
+//	<% nvram("stealth_mode,stealth_iled,sesx_led,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,t_model,t_features"); %>
 
 var ses = features('ses');
-var brau = features('brau');
-var aoss = features('aoss');
-var wham = features('wham');
 
 function verifyFields(focused, quiet) {
 	var a = !E('_f_stealth_mode').checked;
@@ -58,12 +55,11 @@ function save() {
 }
 
 function earlyInit() {
-	if ((!brau) && (!ses)) {
+	if (!ses) {
 		E('save-button').disabled = 1;
 		return;
 	}
 
-	if (brau) E('braudiv').style.display = '';
 	E('sesdiv').style.display = '';
 	E('leddiv').style.display = '';
 }
@@ -108,17 +104,6 @@ createFieldTable('', [
 </div>
 </div>
 
-<div id="braudiv" style="display:none">
-<div class="section-title">Bridge/Auto Switch</div>
-<div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Custom Script', indent: 2, name: 'script_brau', type: 'textarea', value: nvram.script_brau }
-]);
-</script>
-</div>
-</div>
-
 <div id="stealthdiv">
 <div class="section-title">Stealth Mode</div>
 <div class="section">
@@ -146,8 +131,24 @@ createFieldTable('', [
 </div>
 
 <script type="text/javascript">
-if ((!ses) && (!brau)) W('<i>This feature is not supported on this router.<\/i>');
+if (!ses) W('<i>This feature is not supported on this router.<\/i>');
 </script>
+
+<!-- / / / -->
+
+<div class="section-title">Notes</div>
+<div class="section">
+
+<i>Startup LED:</i><br/>
+<ul>
+	<li><b>Amber</b> - Enable LED Amber at Startup (No use case right now).</li>
+	<li><b>White</b> - Enable LED White (Internet LED) at Startup.</li>
+	<li><b>AOSS</b> - Enable LED AOSS (Power LED for Asus Router; Wifi Summary LED for Netgear Router) at Startup.</li>
+	<li><b>Bridge</b> - Enable LED Bridge (WAN & LAN Port X LED(s)) at Startup.</li>
+	<li><b>Other hints</b> - LED function is router dependent. Check command <i>led [LED_NAME/help] [on/off]</i> for advanced LED control, see <a href="tools-shell.asp">Web Shell</a>.</li>
+</ul>
+
+</div>
 
 <!-- / / / -->
 
