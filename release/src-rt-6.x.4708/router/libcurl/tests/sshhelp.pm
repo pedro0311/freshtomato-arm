@@ -430,16 +430,6 @@ sub sshversioninfo {
                 $error = undef;
                 last;
             }
-            if($tmpstr =~ /OpenSSH[_-]for[_-]Windows[_-](\d+)\.(\d+)(\.(\d+))*/i) {
-                $major = $1;
-                $minor = $2;
-                $patch = $4?$4:0;
-                $sshid = 'OpenSSH-Windows';
-                $versnum = (100*$major) + (10*$minor) + $patch;
-                $versstr = "$sshid $major.$minor.$patch";
-                $error = undef;
-                last;
-            }
             if($tmpstr =~ /Sun[_-]SSH[_-](\d+)\.(\d+)(\.(\d+))*/i) {
                 $major = $1;
                 $minor = $2;

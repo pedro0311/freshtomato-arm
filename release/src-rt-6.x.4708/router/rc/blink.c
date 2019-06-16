@@ -66,6 +66,7 @@ int blink_main(int argc, char *argv[])
 	unsigned long threshold;
 	float currblinkspeed;
 	int iter;
+	int i = 255;
 
 	/* Check for correct number of arguments */
 	if (argc != 5) {
@@ -74,8 +75,15 @@ int blink_main(int argc, char *argv[])
 	}
 	
 	/* Check and get the LED Index for the targeted LED */
-	ledindex = find_led_name(argv[2]);	
-	
+	ledindex = find_led_name(argv[2]);
+
+	/* check for valid LED: use blink only for GPIO LEDs! */
+	i = do_led(ledindex, LED_PROBE);
+	if ((i == 255) || (i == 254)) {
+		fprintf(stderr, "blink led NOT valid or useable!d\n");
+		return(1);
+	}
+
 	/* Check blink parameter rate */
 	maxspeed = atof(argv[3]);
 	if ((maxspeed > BLINK_MAXSPEED_MAX) || (maxspeed < BLINK_MAXSPEED_MIN)) {

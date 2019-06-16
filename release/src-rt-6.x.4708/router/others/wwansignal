@@ -226,7 +226,7 @@ signal4g() {
 			[ -n "$MCCMNC" ] || SPEED=""
 
 			SINR=$(echo "$SIGNAL" | grep "<sinr>" | cut -d '>' -f2 | cut -d 'd' -f1)
-			[ "$SPEED" == "0302" ] && {
+			[ "$SPEED" == "0302" -o "$SPEED" == "00" ] && {
 				[ -n "$SINR" ] && {
 					SPEED="03"
 				} || {
@@ -240,6 +240,7 @@ signal4g() {
 					RSRQ=$(echo "$SIGNAL" | grep "<rsrq>" | cut -d '>' -f2 | cut -d 'd' -f1)
 					PCI=$(echo "$SIGNAL" | grep "<pci>" | cut -d '>' -f2 | cut -d '<' -f1)
 					LAC=$(echo "$BTS" | grep "<Lac>" | cut -d '>' -f2 | cut -d '<' -f1)
+					LAC=${LAC:-0}
 					BAND=$(echo "$NET" | grep "<LTEBand>" | cut -d '>' -f2 | cut -d '<' -f1)
 
 					case "$BAND" in

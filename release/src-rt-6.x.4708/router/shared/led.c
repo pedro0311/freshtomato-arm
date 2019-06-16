@@ -125,9 +125,9 @@ int do_led(int which, int mode)
 //				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDGE USB2 USB3    5G
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
-	static int ac68u[]	= { 254,  255,     4,  255,  255,   -3,  254,    0,   14,  254};
-	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6};
-	static int n18u[]	= { 254,  255,     6,  255,  255,  -99,    9,    3,   14,  255};
+	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac56u[]	= { 255,  255,     1,  255,  255,    3,    2,   14,    0,    6};
+	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255};
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255};
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8};
@@ -140,7 +140,7 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6};
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255};
-	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255};
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  255,  255,   -7};
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G
@@ -308,7 +308,17 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_WZR1750:
-		b = wzr1750[which];
+		if (which == LED_DIAG) {
+			b = -1; /* color red gpio 1 (active HIGH) */
+			c = 2; /* color white gpio 2 (active HIGH, inverted) */
+		}
+		else if (which == LED_AOSS) {
+			b = -3; /* color blue gpio 3 (active HIGH) */
+			c = 4; /* color amber gpio 4 (active HIGH, inverted) */
+		}
+		else {
+			b = wzr1750[which];
+		}
 		break;
 #endif /* CONFIG_BCMWL6A */
 	default:
@@ -432,6 +442,9 @@ void led_setup(void) {
 			}
 			disable_led_wanlan();
 			break;
+		case MODEL_WZR1750:
+			system("gpio disable 1");	/* disable power led color red */
+			break;
 		default:
 			/* nothing to do right now */
 			break;
@@ -457,25 +470,6 @@ void led_setup(void) {
 			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
 			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 		}
-
-		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
-		/* turn on WAN and LAN LEDs */
-		switch(model) {
-		case MODEL_AC15:
-		case MODEL_R6400:
-		case MODEL_R7000:
-		case MODEL_RTAC56U:
-		case MODEL_RTAC68U:
-		case MODEL_EA6400:
-		case MODEL_EA6700:
-		case MODEL_EA6900:
-			enable_led_wanlan();
-			break;
-		default:
-			/* nothing to do right now */
-			break;
-		}
-
 	}
 }
 

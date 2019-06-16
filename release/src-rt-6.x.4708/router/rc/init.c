@@ -4624,6 +4624,7 @@ static void sysinit(void)
 
 	if (!noconsole) xstart("console");
 
+	/* Startup LED setup, see GUI (admin-buttons.asp) */
 	i = nvram_get_int("sesx_led");
 	led(LED_AMBER, (i & 1) != 0);
 	led(LED_WHITE, (i & 2) != 0);

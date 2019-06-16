@@ -617,8 +617,8 @@ struct SingleRequest {
   bit upload_done:1;  /* set to TRUE when doing chunked transfer-encoding
                          upload and we're uploading the last chunk */
   bit ignorebody:1;   /* we read a response-body but we ignore it! */
-  bit http_bodyless:1; /* HTTP response status code is between 100 and 199,
-                          204 or 304 */
+  bit ignorecl:1;     /* This HTTP response has no body so we ignore the
+                         Content-Length: header */
   bit chunk:1; /* if set, this is a chunked transfer-encoding */
   bit upload_chunky:1; /* set TRUE if we are doing chunked transfer-encoding
                           on upload */
@@ -1081,9 +1081,8 @@ struct PureInfo {
   const char *conn_scheme;
   unsigned int conn_protocol;
   struct curl_certinfo certs; /* info about the certs, only populated in
-                                 OpenSSL, GnuTLS, Schannel, NSS and GSKit
-                                 builds. Asked for with CURLOPT_CERTINFO
-                                 / CURLINFO_CERTINFO */
+                                 OpenSSL builds. Asked for with
+                                 CURLOPT_CERTINFO / CURLINFO_CERTINFO */
 
   bit timecond:1;  /* set to TRUE if the time condition didn't match, which
                       thus made the document NOT get fetched */
@@ -1779,7 +1778,6 @@ struct Curl_easy {
   struct connectdata *conn;
   struct curl_llist_element connect_queue;
   struct curl_llist_element sh_queue; /* list per Curl_sh_entry */
-  struct Curl_sh_entry *sh_entry; /* the socket hash this was added to */
   struct curl_llist_element conn_queue; /* list per connectdata */
 
   CURLMstate mstate;  /* the handle's state */
