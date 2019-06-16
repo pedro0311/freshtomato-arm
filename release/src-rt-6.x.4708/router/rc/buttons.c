@@ -76,12 +76,6 @@ int buttons_main(int argc, char *argv[])
 		wlan_mask = 1 << 15;  /* wifi button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
-	case MODEL_RTAC3200:
-		reset_mask = 1 << 11; /* reset button (active LOW) */
-		ses_mask = 1 << 7; /* wps button (active LOW) */
-		wlan_mask = 1 << 4;  /* wifi button (active LOW) */
-		ses_led = LED_AOSS;
-		break;
 	case MODEL_DIR868L:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 7; /* wps button (active LOW) */
@@ -136,18 +130,26 @@ int buttons_main(int argc, char *argv[])
 		wlan_mask = 1 << 5;  /* wifi button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
-	case MODEL_R8000:
-		reset_mask = 1 << 6; /* reset button (active LOW) */
-		ses_mask = 1 << 5; /* wps button (active LOW) */
-		wlan_mask = 1 << 4; /* wifi button (active LOW) */
-		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
-		break;
 	case MODEL_WZR1750:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 12; /* wps button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. */
 		break;
 #endif /* CONFIG_BCMWL6A */
+#ifdef CONFIG_BCM7
+	case MODEL_RTAC3200:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		wlan_mask = 1 << 4;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+	case MODEL_R8000:
+		reset_mask = 1 << 6; /* reset button (active LOW) */
+		ses_mask = 1 << 5; /* wps button (active LOW) */
+		wlan_mask = 1 << 4; /* wifi button (active LOW) */
+		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
+		break;
+#endif /* CONFIG_BCM7 */
 	default:
 		get_btn("btn_ses", &ses_mask, &ses_pushed);
 		if (!get_btn("btn_reset", &reset_mask, &reset_pushed)) {
@@ -225,6 +227,10 @@ int buttons_main(int argc, char *argv[])
 
 			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 
+			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
+			    ((model == MODEL_RTN18U) || (model == MODEL_RTAC56U) || (model == MODEL_RTAC68U) || (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
+
 			//	syslog(LOG_DEBUG, "ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
 			syslog(LOG_INFO, "SES pushed. Count was %d.", count);
 
@@ -283,6 +289,10 @@ int buttons_main(int argc, char *argv[])
 				++count;
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & wlan_mask) == wlan_pushed));
 			gpio &= mask;
+
+			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
+			    ((model == MODEL_RTAC56U) || (model == MODEL_RTAC68U) || (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);
 			syslog(LOG_INFO, "WLAN pushed. Count was %d.", count);
