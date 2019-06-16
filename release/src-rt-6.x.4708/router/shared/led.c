@@ -140,7 +140,7 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6};
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255};
-	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  255,  255,   -7};
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* 8 bit shift register (SPI GPIO 0 to 7), active HIGH */
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G
@@ -308,6 +308,10 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_WZR1750:
+		/* tbd.: no support yet for 8-Bit Shift Registers at arm branch */
+		b = 255; /* disabled */
+		c = 255;
+#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		if (which == LED_DIAG) {
 			b = -1; /* color red gpio 1 (active HIGH) */
 			c = 2; /* color white gpio 2 (active HIGH, inverted) */
@@ -319,6 +323,7 @@ int do_led(int which, int mode)
 		else {
 			b = wzr1750[which];
 		}
+#endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		break;
 #endif /* CONFIG_BCMWL6A */
 	default:
@@ -443,7 +448,9 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_WZR1750:
+#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			system("gpio disable 1");	/* disable power led color red */
+#endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
 		default:
 			/* nothing to do right now */
