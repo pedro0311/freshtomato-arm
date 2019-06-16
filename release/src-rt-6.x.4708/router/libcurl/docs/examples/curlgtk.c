@@ -45,12 +45,13 @@ int my_progress_func(GtkWidget *bar,
 void *my_thread(void *ptr)
 {
   CURL *curl;
+  FILE *outfile;
+  gchar *url = ptr;
 
   curl = curl_easy_init();
   if(curl) {
-    gchar *url = ptr;
     const char *filename = "test.curl";
-    FILE *outfile = fopen(filename, "wb");
+    outfile = fopen(filename, "wb");
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
