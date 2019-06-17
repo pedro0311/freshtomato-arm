@@ -46,6 +46,8 @@ static void my_unlock(CURL *handle, curl_lock_data data, void *useptr)
 
 int main(void)
 {
+  CURL *curl;
+  CURLcode res;
   CURLSH *share;
   int i;
 
@@ -59,10 +61,8 @@ int main(void)
      still reuse connections since the pool is in the shared object! */
 
   for(i = 0; i < 3; i++) {
-    CURL *curl = curl_easy_init();
+    curl = curl_easy_init();
     if(curl) {
-      CURLcode res;
-
       curl_easy_setopt(curl, CURLOPT_URL, "https://curl.haxx.se/");
 
       /* use the share object */

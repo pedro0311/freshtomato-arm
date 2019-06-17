@@ -61,8 +61,6 @@
     Curl_share_unlock((x), CURL_LOCK_DATA_CONNECT)
 #endif
 
-#define HASHKEY_SIZE 128
-
 static void conn_llist_dtor(void *user, void *element)
 {
   struct connectdata *conn = element;
@@ -161,27 +159,23 @@ void Curl_conncache_destroy(struct conncache *connc)
 
 /* creates a key to find a bundle for this connection */
 static void hashkey(struct connectdata *conn, char *buf,
-                    size_t len,  /* something like 128 is fine */
-                    const char **hostp)
+                    size_t len) /* something like 128 is fine */
 {
   const char *hostname;
-  long port = conn->remote_port;
 
-  if(conn->bits.httpproxy && !conn->bits.tunnel_proxy) {
+  if(conn->bits.socksproxy)
+    hostname = conn->socks_proxy.host.name;
+  else if(conn->bits.httpproxy)
     hostname = conn->http_proxy.host.name;
-    port = conn->port;
-  }
   else if(conn->bits.conn_to_host)
     hostname = conn->conn_to_host.name;
   else
     hostname = conn->host.name;
 
-  if(hostp)
-    /* report back which name we used */
-    *hostp = hostname;
+  DEBUGASSERT(len > 32);
 
   /* put the number first so that the hostname gets cut off if too long */
-  msnprintf(buf, len, "%ld%s", port, hostname);
+  msnprintf(buf, len, "%ld%s", conn->port, hostname);
 }
 
 void Curl_conncache_unlock(struct Curl_easy *data)
@@ -218,14 +212,13 @@ size_t Curl_conncache_bundle_size(struct connectdata *conn)
 
    **NOTE**: When it returns, it holds the connection cache lock! */
 struct connectbundle *Curl_conncache_find_bundle(struct connectdata *conn,
-                                                 struct conncache *connc,
-                                                 const char **hostp)
+                                                 struct conncache *connc)
 {
   struct connectbundle *bundle = NULL;
   CONN_LOCK(conn->data);
   if(connc) {
-    char key[HASHKEY_SIZE];
-    hashkey(conn, key, sizeof(key), hostp);
+    char key[128];
+    hashkey(conn, key, sizeof(key));
     bundle = Curl_hash_pick(&connc->hash, key, strlen(key));
   }
 
@@ -274,17 +267,17 @@ CURLcode Curl_conncache_add_conn(struct conncache *connc,
   struct Curl_easy *data = conn->data;
 
   /* *find_bundle() locks the connection cache */
-  bundle = Curl_conncache_find_bundle(conn, data->state.conn_cache, NULL);
+  bundle = Curl_conncache_find_bundle(conn, data->state.conn_cache);
   if(!bundle) {
     int rc;
-    char key[HASHKEY_SIZE];
+    char key[128];
 
     result = bundle_create(data, &new_bundle);
     if(result) {
       goto unlock;
     }
 
-    hashkey(conn, key, sizeof(key), NULL);
+    hashkey(conn, key, sizeof(key));
     rc = conncache_add_bundle(data->state.conn_cache, key, new_bundle);
 
     if(!rc) {
