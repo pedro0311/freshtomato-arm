@@ -116,9 +116,7 @@ startRouting() {
 	done
 
 	chmod +x $FIREWALL_ROUTING
-	$LOGS "Running firewall routing rules for $SERVICE"
-	$FIREWALL_ROUTING
-	$LOGS "Done running firewall routing rules for $SERVICE"
+	service firewall restart
 
 	[ "$DNSMASQ" -eq 1 ] && {
 		nvram set vpn_client"${ID#??}"_rdnsmasq=1

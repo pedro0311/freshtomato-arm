@@ -81,7 +81,7 @@ stopAdns() {
 }
 
 checkRestart() {
-	[ "$RESTART_DNSMASQ" -eq 1 -o "$(nvram get "vpn_client"${ID#??}"_rdnsmasq")" -eq 1 ] && service dnsmasq restart
+	[ "$RESTART_DNSMASQ" -eq 1 ] && service dnsmasq restart
 }
 
 
