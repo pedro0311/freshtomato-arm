@@ -742,7 +742,13 @@ void dns_to_resolv(void)
 		m = umask(022);	/* 077 from pppoecd */
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	/* write / append */
 			if (append == 1)
-				exclusive = ( write_pptpvpn_resolv(f) || write_ovpn_resolv(f) ); /* Check for VPN DNS entries */
+				/* Check for VPN DNS entries */
+				exclusive = (write_pptpvpn_resolv(f)
+#ifdef TCONFIG_OPENVPN
+				            || write_ovpn_resolv(f)
+#endif
+				);
+
 			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6

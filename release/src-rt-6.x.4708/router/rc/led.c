@@ -37,13 +37,9 @@ int led_main(int argc, char *argv[])
 
 	int i;
 	int j;
-	int model;
 	char *a;
 
 	if ((argc < 3) || ((argc % 2) != 1)) help();
-
-	/* get Router model */
-	model = get_model();
 
 	for (j = 1; j < argc; j += 2) {
 		a = argv[j]; /* led name */

@@ -124,9 +124,9 @@ int do_led(int which, int mode)
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 #ifdef CONFIG_BCMWL6A
-	static int ac68u[]	= { 254,  255,     4,  255,  255,   -3,  254,    0,   14,  254,  255 };
-	static int ac56u[]	= { 255,  255,     1,  255,  255,   -3,    2,   14,    0,    6,  255 };
-	static int n18u[]	= { 254,  255,     6,  255,  255,  -99,    9,    3,   14,  255,  255 };
+	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254,  255 };
+	static int ac56u[]	= { 255,  255,     1,  255,  255,    3,    2,   14,    0,    6,  255 };
+	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255,  255 };
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
@@ -139,7 +139,7 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6,  255 };
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255,  255 };
-	static int wzr1750[]	= { 255,  255,   255,  255,  255,   -5,  255,  255,  255,  255,  255 };
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  255,  255,   -7,  255 };
 #endif
 #ifdef CONFIG_BCM7
 	static int ac3200[]	= { 254,  -15,     5,  255,   14,    3,  254,  255,  255,  254,  254 };
@@ -310,7 +310,17 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_WZR1750:
-		b = wzr1750[which];
+		if (which == LED_DIAG) {
+			b = -1; /* color red gpio 1 (active HIGH) */
+			c = 2; /* color white gpio 2 (active HIGH, inverted) */
+		}
+		else if (which == LED_AOSS) {
+			b = -3; /* color blue gpio 3 (active HIGH) */
+			c = 4; /* color amber gpio 4 (active HIGH, inverted) */
+		}
+		else {
+			b = wzr1750[which];
+		}
 		break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
@@ -465,6 +475,9 @@ void led_setup(void) {
 			}
 			disable_led_wanlan();
 			break;
+		case MODEL_WZR1750:
+			system("gpio disable 1");	/* disable power led color red */
+			break;
 		case MODEL_R8000:
 			system("gpio enable 3");	/* disable power led color amber */
 			disable_led_wanlan();
@@ -526,7 +539,6 @@ void led_setup(void) {
 			/* nothing to do right now */
 			break;
 		}
-
 	}
 }
 
