@@ -2278,10 +2278,11 @@ libcurl/stamp-h1: zlib openssl
 		./buildconf && \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib" \
 		LDFLAGS="-L$(TOP)/zlib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=$(TOP)/libcurl/staged --disable-thread --enable-shared --enable-static \
+		$(CONFIGURE) --prefix=$(TOP)/libcurl/staged --enable-shared --enable-static \
 		--enable-ares --enable-cookies --enable-crypto-auth --enable-nonblocking \
-		--enable-file --enable-ftp --enable-http --enable-ipv6 --enable-tftp \
-		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher \
+		--enable-file --enable-ftp --enable-http --enable-tftp \
+		$(if $(TCONFIG_IPV6),--enable-ipv6,) \
+		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 		--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
 		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
 		--without-gnutls --without-krb4 --without-libidn \
