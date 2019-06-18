@@ -1993,7 +1993,6 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	--enable-json \
 	--without-ldap \
 	--enable-mbstring \
-	--without-mcrypt \
 	--without-openssl \
 	--disable-pcntl \
 	--with-mysqli \
