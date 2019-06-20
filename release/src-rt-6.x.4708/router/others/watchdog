@@ -3,14 +3,13 @@
 #
 # Copyright (C) 2015 shibby
 #
-# changes/fixes: 2018 by pedro
+# changes/fixes: 2018 - 2019 by pedro
 #
 
 
 PID=$$
 PIDFILE="/var/run/watchdog.pid"
 MWAN=$(nvram get mwan_num)
-DLVL=$(nvram get mwan_debug)
 DST=$(nvram get mwan_ckdst)
 HOSTLIST=$(echo $DST | sed 's/,/ /')
 
@@ -24,25 +23,27 @@ while [ $i -le $MWAN ]; do
 	i=$((i+1))
 done
 
-[ "$DLVL" -gt 0 ] && {
-    DEBUG="logger -p DEBUG -t watchdog[$PID]"
+LOGS="logger -t watchdog[$PID]"
+[ "$(nvram get mwan_debug)" -gt 0 ] && {
+	DEBUG="logger -p DEBUG -t watchdog[$PID]"
 } || {
-    DEBUG="# DEBUG DISABLED"
+	DEBUG="echo"
 }
 
 
 watchdogRun() {
 	for PREFIX in $MWANTABLE; do
-		# wan test by check_wanup, in case there is ppp mess and other wans active with the same
-		# interface name (ppp0 etc) all checks will be false-positive. wanuptime is real stuff!
 		ISUP=$(wanuptime "$PREFIX")
 		IFACE=$(nvram get "$PREFIX"_iface)
+		ISPPPD=$(ps | grep pppd$PREFIX | grep -v "grep" | wc -l)
 		WEIGHT=$(nvram get "$PREFIX"_weight)
 		MTD=$(nvram get "$PREFIX"_ckmtd)
 		PROTO=$(nvram get "$PREFIX"_proto)
+		DEMAND=$(nvram get "$PREFIX"_ppp_demand)
 		RESULT=0
+		PREFIX_MWAN=$PREFIX
 
-		[ "$PROTO" != "disabled" ] && {		# don't check added but disabled wan
+		[ "$PROTO" != "disabled" ] && {
 
 			[ "$PREFIX" == "wan" ] && {
 				METRIC="101"
@@ -58,8 +59,7 @@ watchdogRun() {
 			$DEBUG "ISGW="$ISGW", WEIGHT="$WEIGHT""
 
 			[ "$ISGW" -eq 0 -a "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
-				# failback required default gateway to check is indeed connection back to live
-				# so we have to add temporary gateway
+				# failback required default gateway to check is indeed connection back to live, so we have to add temporary gateway
 				GW=$(ip route | grep $IFACE | grep -v "kernel" | awk {' printf $1'})
 				[ ! $GW ] && {	# no GW found
 					$DEBUG "no gw found for "$IFACE""
@@ -93,27 +93,39 @@ watchdogRun() {
 			}
 
 			[ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ] && {
-				# failover does not have default gateway in route table
-				# so we can`t check connection to outside. Check only if interface exist
+				# failover does not have default gateway in route table, so we can`t check connection to outside. Check only if interface exist
 				$DEBUG "run failover-test"
 				ckfailover
 			}
 
 			[ "$RESULT" -eq 0 ] && {	# wan is down
-				logger -t watchdog[$PID] "Connection $PREFIX DOWN - Reconnecting ..."
-				echo "0" > /tmp/state_$PREFIX
-
 				[ "$PROTO" == "lte" ] && {
+					$LOGS "Connection $PREFIX DOWN - Reconnecting ..."
+					echo "0" > /tmp/state_$PREFIX
 					switch4g $PREFIX
 				} || {
-					[ "$PREFIX" == "wan" ] && {
-						[ "$MWAN" == "1" ] && {
-							service wan restart
-						} || {
-							service wan1 restart
-						}
+					[ "$PREFIX" == "wan" -a "$MWAN" -gt 1 ] && PREFIX_MWAN="wan1"
+
+					[ "$(nvram get action_service)" == "wan-restart" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart" -o "$(nvram get action_service)" == "wan-restart-c" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart-c" ] && {
+						$LOGS "Connection $PREFIX DOWN - Reconnect is already in progress ..."
 					} || {
-						service $PREFIX restart
+						echo "0" > /tmp/state_$PREFIX
+
+						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
+							$LOGS "Killing orphaned connect-on-demand listen process ..."
+							LISTEN_PID=$(ps | grep listen | grep $PREFIX | awk '{print $1}' | head -n1)
+							if [ -n $LISTEN_PID ]; then
+								kill -9 $LISTEN_PID
+								$LOGS "Killed $LISTEN_PID"
+							else
+								$LOGS "Connect-on-demand listen not running."
+							fi
+
+							$LOGS "Connection $PREFIX DOWN - Reconnecting ..."
+							service $PREFIX_MWAN restart
+						else
+							$LOGS "Connection $PREFIX DOWN - Reconnect will be handled by another process ..."
+						fi
 					}
 				}
 			} || {
@@ -244,20 +256,20 @@ checkPid() {
 		cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
 
 		[ $? -eq 0 ] && {
-			logger -t watchdog[$PID] "Another process in action - exiting"
+			$LOGS "Another process in action - exiting"
 			exit 0
 		} || {
 			# Process not found assume not running
 			echo $PID > $PIDFILE
 			[ $? -ne 0 ] && {
-				logger -t watchdog[$PID] "Could not create PID file"
+				$LOGS "Could not create PID file"
 				exit 0
 			}
 		}
 	} || {
 		echo $PID > $PIDFILE
 		[ $? -ne 0 ] && {
-			logger -t watchdog[$PID] "Could not create PID file"
+			$LOGS "Could not create PID file"
 			exit 0
 		}
 	}
@@ -267,20 +279,20 @@ checkPidSwitch() {
 	for PREFIX in $MWANTABLE; do
 
 		[ -f /var/run/switch3g_$PREFIX.pid ] && {
-			[ "$(ps | grep switch3g | grep -v "grep" | wc -l)" == "0" ] && {  # pid file exists but process doesn`t.
+			[ "$(ps | grep switch3g | grep -v "grep" | wc -l)" == "0" ] && {	# pid file exists but process doesn`t.
 				rm /var/run/switch3g_$PREFIX.pid
 			} || {
-				logger -t watchdog[$PID] "Switch3g ("$PREFIX") script in action - exiting"
+				$LOGS "Switch3g ("$PREFIX") script in action - exiting"
 				rm -f $PIDFILE > /dev/null 2>&1
 				exit 0
 			}
 		}
 
 		[ -f /var/run/switch4g_$PREFIX.pid ] && {
-			[ "$(ps | grep switch4g | grep -v "grep" | wc -l)" == "0" ] && {  # pid file exists but process doesn`t.
+			[ "$(ps | grep switch4g | grep -v "grep" | wc -l)" == "0" ] && {	# pid file exists but process doesn`t.
 				rm /var/run/switch4g_$PREFIX.pid
 			} || {
-				logger -t watchdog[$PID] "Switch4g ("$PREFIX") script in action - exiting"
+				$LOGS "Switch4g ("$PREFIX") script in action - exiting"
 				rm -f $PIDFILE > /dev/null 2>&1
 				exit 0
 			}
@@ -307,5 +319,4 @@ else
 	watchdogRun
 fi
 
-# remove pid file
 rm -f $PIDFILE > /dev/null 2>&1

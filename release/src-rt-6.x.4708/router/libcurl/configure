@@ -926,7 +926,6 @@ USE_NSS
 USE_MESALINK
 USE_CYASSL
 USE_MBEDTLS
-USE_POLARSSL
 HAVE_GNUTLS_SRP
 USE_GNUTLS_NETTLE
 USE_GNUTLS
@@ -1172,7 +1171,6 @@ with_egd_socket
 with_random
 enable_openssl_auto_load_config
 with_gnutls
-with_polarssl
 with_mbedtls
 with_cyassl
 with_wolfssl
@@ -1996,9 +1994,6 @@ Optional Packages:
   --with-gnutls=PATH      where to look for GnuTLS, PATH points to the
                           installation root
   --without-gnutls        disable GnuTLS detection
-  --with-polarssl=PATH    where to look for PolarSSL, PATH points to the
-                          installation root
-  --without-polarssl      disable PolarSSL detection
   --with-mbedtls=PATH     where to look for mbedTLS, PATH points to the
                           installation root
   --without-mbedtls       disable mbedTLS detection
@@ -5799,7 +5794,7 @@ PKGADD_VENDOR="curl.haxx.se"
 
 
 
-    curl_ssl_msg="no      (--with-{ssl,gnutls,nss,polarssl,mbedtls,cyassl,schannel,secure-transport,mesalink,amissl} )"
+    curl_ssl_msg="no      (--with-{ssl,gnutls,nss,mbedtls,cyassl,schannel,secure-transport,mesalink,amissl} )"
     curl_ssh_msg="no      (--with-libssh2)"
    curl_zlib_msg="no      (--with-zlib)"
  curl_brotli_msg="no      (--with-brotli)"
@@ -24259,167 +24254,6 @@ fi
 fi
 
 
-OPT_POLARSSL=no
-
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-# Check whether --with-polarssl was given.
-if test "${with_polarssl+set}" = set; then :
-  withval=$with_polarssl; OPT_POLARSSL=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_POLARSSL" != xno; then
-  ssl_msg=
-
-  if test X"$OPT_POLARSSL" != Xno; then
-
-    if test "$OPT_POLARSSL" = "yes"; then
-      OPT_POLARSSL=""
-    fi
-
-    if test -z "$OPT_POLARSSL" ; then
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for havege_init in -lpolarssl" >&5
-$as_echo_n "checking for havege_init in -lpolarssl... " >&6; }
-if ${ac_cv_lib_polarssl_havege_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpolarssl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char havege_init ();
-int main (void)
-{
-return havege_init ();
- ;
- return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_polarssl_havege_init=yes
-else
-  ac_cv_lib_polarssl_havege_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_polarssl_havege_init" >&5
-$as_echo "$ac_cv_lib_polarssl_havege_init" >&6; }
-if test "x$ac_cv_lib_polarssl_havege_init" = xyes; then :
-
-
-$as_echo "#define USE_POLARSSL 1" >>confdefs.h
-
-         USE_POLARSSL=1
-
-         POLARSSL_ENABLED=1
-         USE_POLARSSL="yes"
-         ssl_msg="PolarSSL"
-	 test polarssl != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-fi
-
-    fi
-
-    addld=""
-    addlib=""
-    addcflags=""
-    polarssllib=""
-
-    if test "x$USE_POLARSSL" != "xyes"; then
-            addld=-L$OPT_POLARSSL/lib$libsuff
-      addcflags=-I$OPT_POLARSSL/include
-      polarssllib=$OPT_POLARSSL/lib$libsuff
-
-      LDFLAGS="$LDFLAGS $addld"
-      if test "$addcflags" != "-I/usr/include"; then
-         CPPFLAGS="$CPPFLAGS $addcflags"
-      fi
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ssl_init in -lpolarssl" >&5
-$as_echo_n "checking for ssl_init in -lpolarssl... " >&6; }
-if ${ac_cv_lib_polarssl_ssl_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpolarssl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char ssl_init ();
-int main (void)
-{
-return ssl_init ();
- ;
- return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_polarssl_ssl_init=yes
-else
-  ac_cv_lib_polarssl_ssl_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_polarssl_ssl_init" >&5
-$as_echo "$ac_cv_lib_polarssl_ssl_init" >&6; }
-if test "x$ac_cv_lib_polarssl_ssl_init" = xyes; then :
-
-
-$as_echo "#define USE_POLARSSL 1" >>confdefs.h
-
-       USE_POLARSSL=1
-
-       POLARSSL_ENABLED=1
-       USE_POLARSSL="yes"
-       ssl_msg="PolarSSL"
-       test polarssl != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-else
-
-         CPPFLAGS=$_cppflags
-         LDFLAGS=$_ldflags
-
-fi
-
-    fi
-
-    if test "x$USE_POLARSSL" = "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: detected PolarSSL" >&5
-$as_echo "$as_me: detected PolarSSL" >&6;}
-      check_for_ca_bundle=1
-      LIBS="-lpolarssl $LIBS"
-
-      if test -n "$polarssllib"; then
-                                        if test "x$cross_compiling" != "xyes"; then
-          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$polarssllib"
-          export CURL_LIBRARY_PATH
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $polarssllib to CURL_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $polarssllib to CURL_LIBRARY_PATH" >&6;}
-        fi
-      fi
-    fi
-
-  fi
-  test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
-fi
-
-
 OPT_MBEDTLS=no
 
 _cppflags=$CPPFLAGS
@@ -25518,12 +25352,12 @@ $as_echo "$as_me: Added $nssprefix/lib$libsuff to CURL_LIBRARY_PATH" >&6;}
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
 
-case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$POLARSSL_ENABLED$MBEDTLS_ENABLED$CYASSL_ENABLED$WINSSL_ENABLED$SECURETRANSPORT_ENABLED$MESALINK_ENABLED$AMISSL_ENABLED" in
+case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$CYASSL_ENABLED$WINSSL_ENABLED$SECURETRANSPORT_ENABLED$MESALINK_ENABLED$AMISSL_ENABLED" in
 x)
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: SSL disabled, you will not be able to use HTTPS, FTPS, NTLM and more." >&5
 $as_echo "$as_me: WARNING: SSL disabled, you will not be able to use HTTPS, FTPS, NTLM and more." >&2;}
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use --with-ssl, --with-gnutls, --with-polarssl, --with-cyassl, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink or --with-amissl to address this." >&5
-$as_echo "$as_me: WARNING: Use --with-ssl, --with-gnutls, --with-polarssl, --with-cyassl, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink or --with-amissl to address this." >&2;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use --with-ssl, --with-gnutls, --with-cyassl, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink or --with-amissl to address this." >&5
+$as_echo "$as_me: WARNING: Use --with-ssl, --with-gnutls, --with-cyassl, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink or --with-amissl to address this." >&2;}
   ;;
 x1)
   # one SSL backend is enabled
@@ -26969,8 +26803,6 @@ $as_echo "yes" >&6; }
           versioned_symbols_flavour="GNUTLS_"
         elif test "x$NSS_ENABLED" = "x1"; then
           versioned_symbols_flavour="NSS_"
-        elif test "x$POLARSSL_ENABLED" = "x1"; then
-          versioned_symbols_flavour="POLARSSL_"
         elif test "x$CYASSL_ENABLED" = "x1"; then
           versioned_symbols_flavour="CYASSL_"
         elif test "x$WINSSL_ENABLED" = "x1"; then
@@ -34157,6 +33989,170 @@ _ACEOF
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     curl_cv_func_getsockname="no"
+  fi
+
+
+curl_includes_netif="\
+/* includes start */
+#ifdef HAVE_NET_IF_H
+#  include <net/if.h>
+#endif
+/* includes end */"
+  for ac_header in net/if.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "net/if.h" "ac_cv_header_net_if_h" "$curl_includes_netif
+"
+if test "x$ac_cv_header_net_if_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NET_IF_H 1
+_ACEOF
+
+fi
+
+done
+
+
+
+        #
+  tst_links_if_nametoindex="unknown"
+  tst_proto_if_nametoindex="unknown"
+  tst_compi_if_nametoindex="unknown"
+  tst_allow_if_nametoindex="unknown"
+  #
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if if_nametoindex can be linked" >&5
+$as_echo_n "checking if if_nametoindex can be linked... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+      $curl_includes_winsock2
+      $curl_includes_bsdsocket
+      #include <net/if.h>
+
+int main (void)
+{
+
+      if(0 != if_nametoindex(""))
+        return 1;
+
+ ;
+ return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    tst_links_if_nametoindex="yes"
+
+else
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    tst_links_if_nametoindex="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+  #
+  if test "$tst_links_if_nametoindex" = "yes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if if_nametoindex is prototyped" >&5
+$as_echo_n "checking if if_nametoindex is prototyped... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+      $curl_includes_winsock2
+      $curl_includes_netif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "if_nametoindex" >/dev/null 2>&1; then :
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      tst_proto_if_nametoindex="yes"
+
+else
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      tst_proto_if_nametoindex="no"
+
+fi
+rm -f conftest*
+
+  fi
+  #
+  if test "$tst_proto_if_nametoindex" = "yes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if if_nametoindex is compilable" >&5
+$as_echo_n "checking if if_nametoindex is compilable... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        $curl_includes_winsock2
+        $curl_includes_netif
+
+int main (void)
+{
+
+        if(0 != if_nametoindex(""))
+          return 1;
+
+ ;
+ return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      tst_compi_if_nametoindex="yes"
+
+else
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      tst_compi_if_nametoindex="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  fi
+  #
+  if test "$tst_compi_if_nametoindex" = "yes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if if_nametoindex usage allowed" >&5
+$as_echo_n "checking if if_nametoindex usage allowed... " >&6; }
+    if test "x$curl_disallow_if_nametoindex" != "xyes"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      tst_allow_if_nametoindex="yes"
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      tst_allow_if_nametoindex="no"
+    fi
+  fi
+  #
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if if_nametoindex might be used" >&5
+$as_echo_n "checking if if_nametoindex might be used... " >&6; }
+  if test "$tst_links_if_nametoindex" = "yes" &&
+     test "$tst_proto_if_nametoindex" = "yes" &&
+     test "$tst_compi_if_nametoindex" = "yes" &&
+     test "$tst_allow_if_nametoindex" = "yes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_IF_NAMETOINDEX 1
+_ACEOF
+
+    curl_cv_func_if_nametoindex="yes"
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    curl_cv_func_if_nametoindex="no"
   fi
 
 

@@ -68,7 +68,7 @@ startRouting() {
 	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID - GW $VPN_GW"
 
 	ip route add table $ID default via $VPN_GW dev $IFACE
-	ip rule add fwmark $ID table $ID priority 1000
+	ip rule add fwmark $ID table $ID priority 90
 
 	# copy routes from main routing table (exclude vpns and default gateway)
 	ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
@@ -116,9 +116,7 @@ startRouting() {
 	done
 
 	chmod +x $FIREWALL_ROUTING
-	$LOGS "Running firewall routing rules for $SERVICE"
-	$FIREWALL_ROUTING
-	$LOGS "Done running firewall routing rules for $SERVICE"
+	service firewall restart
 
 	[ "$DNSMASQ" -eq 1 ] && {
 		nvram set vpn_client"${ID#??}"_rdnsmasq=1

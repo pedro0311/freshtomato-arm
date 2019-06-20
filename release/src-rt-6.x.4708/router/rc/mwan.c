@@ -231,11 +231,36 @@ void mwan_table_add(char *sPrefix)
 		}
 
 		// ip route add 192.168.1.0/24 dev br0 proto kernel scope link  src 192.168.1.1  table 2
-		get_cidr(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), ip_cidr);
-		memset(cmd, 0, 256);
-		sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, nvram_safe_get("lan_ifname"), nvram_safe_get("lan_ipaddr"), table);
-		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
-		system(cmd);
+		for (i = 0; i < 4; i++) {
+			char nvram_var[64];
+			char* lan_ifname;
+			char* lan_ipaddr;
+			char* lan_netmask;
+
+			if (i > 0) {
+				sprintf(nvram_var, "lan%d_ifname", i);
+				lan_ifname = nvram_safe_get(nvram_var);
+				sprintf(nvram_var, "lan%d_ipaddr", i);
+				lan_ipaddr = nvram_safe_get(nvram_var);
+				sprintf(nvram_var, "lan%d_netmask", i);
+				lan_netmask = nvram_safe_get(nvram_var);
+			}
+			else {
+				lan_ifname = nvram_safe_get("lan_ifname");
+				lan_ipaddr = nvram_safe_get("lan_ipaddr");
+				lan_netmask = nvram_safe_get("lan_netmask");
+			}
+
+			if (lan_ifname[0] == '\0' || lan_ipaddr[0] == '\0' || lan_netmask[0] == '\0') {
+				continue;
+			}
+
+			get_cidr(lan_ipaddr, lan_netmask, ip_cidr);
+			memset(cmd, 0, 256);
+			sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, lan_ifname, lan_ipaddr, table);
+			mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
+			system(cmd);
+		}
 
 		// ip route add 127.0.0.0/8 dev lo scope link table 1
 		memset(cmd, 0, 256);
