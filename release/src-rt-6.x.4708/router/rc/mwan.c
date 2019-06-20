@@ -240,21 +240,14 @@ void mwan_table_add(char *sPrefix)
 			if (i > 0) {
 				sprintf(nvram_var, "lan%d_ifname", i);
 				lan_ifname = nvram_safe_get(nvram_var);
-			} else {
-				lan_ifname = nvram_safe_get("lan_ifname");
-			}
-
-			if (i > 0) {
 				sprintf(nvram_var, "lan%d_ipaddr", i);
 				lan_ipaddr = nvram_safe_get(nvram_var);
-			} else {
-				lan_ipaddr = nvram_safe_get("lan_ipaddr");
-			}
-
-			if (i > 0) {
 				sprintf(nvram_var, "lan%d_netmask", i);
 				lan_netmask = nvram_safe_get(nvram_var);
-			} else {
+			}
+			else {
+				lan_ifname = nvram_safe_get("lan_ifname");
+				lan_ipaddr = nvram_safe_get("lan_ipaddr");
 				lan_netmask = nvram_safe_get("lan_netmask");
 			}
 
