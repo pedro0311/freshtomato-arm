@@ -2235,10 +2235,12 @@ openvpn/.conf: openssl lzo
 
 openvpn: openvpn/.conf
 	@$(SEP)
+	$(call patch_files,openvpn)
 	@$(MAKE) -C openvpn $(PARALLEL_BUILD)
 
 openvpn-clean:
 	-@$(MAKE) -C openvpn clean
+	$(call unpatch_files,openvpn)
 	@rm -f openvpn/.conf
 
 openvpn-install:
