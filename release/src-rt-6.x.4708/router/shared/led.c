@@ -163,9 +163,18 @@ int do_led(int which, int mode)
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
 		/* turn off WLAN LEDs for some Asus Router: RT-N18U, RT-AC68U */
-		if ((model == MODEL_RTN18U) ||
-		    (model == MODEL_RTAC68U)) {
-			do_led_nongpio(model, which, LED_OFF);
+		switch (model) {
+#ifdef CONFIG_BCMWL6A
+			case MODEL_RTN18U:
+			case MODEL_RTAC68U:
+#endif /* CONFIG_BCMWL6A */
+#if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCM7)
+				do_led_nongpio(model, which, LED_OFF);
+				break;
+#endif /* CONFIG_BCMWL6A OR CONFIG_BCM7 */
+			default:
+				/* nothing to do right now */
+				break;
 		}
 
 		if (nvram_match("stealth_iled", "1") && which == LED_WHITE) { /* do not disable WAN / INTERNET LED and set LED_WHITE */
@@ -402,7 +411,8 @@ void led_setup(void) {
 
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
-		switch(model) {
+		switch (model) {
+#ifdef CONFIG_BCMWL6A
 		case MODEL_DIR868L:
 			system("gpio enable 0");	/* disable power led color amber */
 			break;
@@ -452,6 +462,7 @@ void led_setup(void) {
 			system("gpio disable 1");	/* disable power led color red */
 #endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
+#endif /* CONFIG_BCMWL6A */
 		default:
 			/* nothing to do right now */
 			break;
@@ -459,23 +470,30 @@ void led_setup(void) {
 	}
 	else {
 		/* LED setup/config/preparation for some router models */
-		if ((model == MODEL_RTAC56U)) {
-			system("gpio disable 4");	/* enable power supply for all LEDs, except for PowerLED */
-		}
-		else if ((model == MODEL_DIR868L)) {
+		switch (model) {
+#ifdef CONFIG_BCMWL6A
+		case MODEL_DIR868L:
 			/* activate WAN port led */
 			system("gpio disable 1");	/* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
-		}
-		else if ((model == MODEL_R6400)) {
+			break;
+		case MODEL_RTAC56U:
+			system("gpio disable 4");	/* enable power supply for all LEDs, except for PowerLED */
+			break;
+		case MODEL_R6400:
 			/* activate WAN port led */
 			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
-		}
-		else if ((model == MODEL_R7000)) {
+			break;
+		case MODEL_R7000:
 			/* activate WAN port led */
 			system("/usr/sbin/et robowr 0x0 0x10 0x3000");	/* basic LED setup, RT-N18U & RT-AC56U have 0x0220 for example */
 			system("/usr/sbin/et robowr 0x0 0x12 0x78");
 			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
 			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			break;
+#endif /* CONFIG_BCMWL6A */
+		default:
+			/* nothing to do right now */
+			break;
 		}
 	}
 }
@@ -483,7 +501,8 @@ void led_setup(void) {
 /* control non GPIO LEDs for some Asus Router: RT-N18U, RT-AC68U */
 void do_led_nongpio(int model, int which, int mode) {
 
-	switch(model) {
+	switch (model) {
+#ifdef CONFIG_BCMWL6A
 	case MODEL_RTN18U:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 7");
@@ -503,9 +522,10 @@ void do_led_nongpio(int model, int which, int mode) {
 			else if (mode == LED_PROBE) return;
 		}
 		break;
+#endif /* CONFIG_BCMWL6A */
 	default:
-	/* nothing to do right now */
-	break;
+		/* nothing to do right now */
+		break;
 	}
 
 }
