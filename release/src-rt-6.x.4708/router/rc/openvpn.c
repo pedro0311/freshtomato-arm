@@ -479,6 +479,25 @@ void start_ovpn_client(int clientNum)
 		}
 #endif
 
+		sprintf(buffer, "vpn_client%d_rgw", clientNum);
+		nvi = nvram_get_int(buffer);
+		if (nvi >= OVPN_RGW_POLICY) {
+			/* Disable rp_filter when in policy mode */
+			fprintf(fp, "echo 0 > /proc/sys/net/ipv4/conf/%s/rp_filter\n", iface);
+			fprintf(fp, "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter\n");
+
+#if defined(TCONFIG_BCMARM)
+			modprobe("xt_set");
+			modprobe("ip_set");
+			modprobe("ip_set_hash_ip");
+#else
+			modprobe("ipt_set");
+			modprobe("ip_set");
+			modprobe("ip_set_iphash");
+#endif
+
+		}
+
 		fclose(fp);
 		vpnlog(VPN_LOG_EXTRA,"Done creating firewall rules");
 
