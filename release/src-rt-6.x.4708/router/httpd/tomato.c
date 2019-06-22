@@ -1203,6 +1203,7 @@ static const nvset_t nvset_list[] = {
 	{ "script_shut", 		V_TEXT(0, 4096)			},
 	{ "script_fire", 		V_TEXT(0, 8192)			},
 	{ "script_wanup", 		V_TEXT(0, 4096)			},
+	{ "script_mwanup", 		V_TEXT(0, 4096)			},
 
 // admin-log
 	{ "log_remote",			V_01				},
