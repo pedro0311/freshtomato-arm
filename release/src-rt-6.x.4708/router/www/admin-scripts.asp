@@ -32,9 +32,9 @@
 
 <script type="text/javascript">
 
-//	<% nvram("script_init,script_shut,script_fire,script_wanup"); %>
+//	<% nvram("script_init,script_shut,script_fire,script_wanup,script_mwanup"); %>
 
-tabs = [['as-init', 'Init'],['as-shut', 'Shutdown'],['as-fire','Firewall'],['as-wanup', 'WAN Up']];
+tabs = [['as-init', 'Init'],['as-shut', 'Shutdown'],['as-fire','Firewall'],['as-wanup', 'WAN Up (main)'],['as-mwanup', 'MultiWAN Up']];
 
 function tabSelect(name) {
 	tabHigh(name);
@@ -101,6 +101,7 @@ function earlyInit() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-scripts.asp">
+<p>Note: For <b>MultiWAN Up</b>, the active WAN number is passed as $1</p>
 
 <script type="text/javascript">
 tabCreate.apply(this, tabs);
