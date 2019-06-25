@@ -131,7 +131,7 @@ int do_led(int which, int mode)
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
-	static int ac15[]	= { 255,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
+	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
 	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255,  255 };
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
 	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  254,  255,  255,  255,  255 };
@@ -139,7 +139,7 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6,  255 };
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255,  255 };
-	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  255,  255,   -7,  255 };
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7,  255 }; /* 8 bit shift register (SPI GPIO 0 to 7), active HIGH */
 #endif
 #ifdef CONFIG_BCM7
 	static int ac3200[]	= { 254,  -15,     5,  255,   14,    3,  254,  255,  255,  254,  254 };
@@ -163,9 +163,10 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus Router: RT-N18U, RT-AC68U, RT-AC3200 */
+		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, RT-N18U, RT-AC68U, RT-AC3200 */
 		switch (model) {
 #ifdef CONFIG_BCMWL6A
+			case MODEL_AC15:
 			case MODEL_RTN18U:
 			case MODEL_RTAC68U:
 #endif /* CONFIG_BCMWL6A */
@@ -264,7 +265,10 @@ int do_led(int which, int mode)
 		break;
 	case MODEL_AC15:
 		b = ac15[which];
-		if (which == LED_BRIDGE) { /* non GPIO LED */
+		if (which == LED_WLAN) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
 			do_led_bridge(mode);
 		}
 		break;
@@ -321,6 +325,10 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_WZR1750:
+		/* tbd.: no support yet for 8-Bit Shift Registers at arm branch */
+		b = 255; /* disabled */
+		c = 255;
+#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		if (which == LED_DIAG) {
 			b = -1; /* color red gpio 1 (active HIGH) */
 			c = 2; /* color white gpio 2 (active HIGH, inverted) */
@@ -332,6 +340,7 @@ int do_led(int which, int mode)
 		else {
 			b = wzr1750[which];
 		}
+#endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
@@ -446,7 +455,7 @@ void led_setup(void) {
 			system("gpio enable 0");	/* disable power led color amber */
 			break;
 		case MODEL_AC15:
-			system("gpio disable 0");	/* disable power led */
+			system("gpio disable 0");	/* disable sys led */
 			disable_led_wanlan();
 			break;
 		case MODEL_R6250:
@@ -487,7 +496,9 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_WZR1750:
+#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			system("gpio disable 1");	/* disable power led color red */
+#endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
@@ -545,11 +556,12 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus Router: RT-N18U, RT-AC68U, RT-AC3200 */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, RT-N18U, RT-AC68U, RT-AC3200 */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch (model) {
 #ifdef CONFIG_BCMWL6A
+	case MODEL_AC15:
 	case MODEL_RTN18U:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 7");

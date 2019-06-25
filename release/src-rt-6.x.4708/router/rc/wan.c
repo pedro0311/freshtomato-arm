@@ -1247,12 +1247,20 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 
 		start_httpd();
+	}
 
-		if (wanup) {
-			notice_set(prefix, "");
+	if (wanup) {
+		char wan_unit_str[16];
+		sprintf(wan_unit_str, "%d", get_wan_unit(prefix));
+
+		notice_set(prefix, "");
+		run_nvscript("script_mwanup", wan_unit_str, 0);
+		if (is_primary) {
 			run_nvscript("script_wanup", NULL, 0);
 		}
+	}
 
+	if (is_primary) {
 		/* WAN LED control */
 		if (wanup) {
 			wan_led(wanup); /* LED ON! */

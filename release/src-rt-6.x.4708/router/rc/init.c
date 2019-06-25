@@ -1855,6 +1855,7 @@ static int init_nvram(void)
 			nvram_set("wl1_txpwr","0");
 			nvram_set("wl1_chanspec", "100/40");
 			nvram_set("wl1_nctrlsb", "lower");
+			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			nvram_set("1:rpcal5gb0", "0x7052"); /* in CFE x is capitalized?? */
 			nvram_set("1:rpcal5gb1", "0x7F52"); /* in CFE x is capitalized?? */

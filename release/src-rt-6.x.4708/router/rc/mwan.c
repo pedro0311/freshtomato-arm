@@ -194,8 +194,15 @@ void mwan_table_add(char *sPrefix)
 
 	get_wan_info(sPrefix);
 	proto = get_wanx_proto(sPrefix);
-	
+
 	if (check_wanup(sPrefix)) {
+		// disable rp_filter for multiwan pbr
+		memset(cmd, 0, 256);
+		mwanlog(LOG_DEBUG, "Disabling rp_filter for multiwan policy-based routing");
+		f_write_string("/proc/sys/net/ipv4/conf/all/rp_filter", "0", 0, 0);
+		sprintf(cmd, "/proc/sys/net/ipv4/conf/%s/rp_filter", wan_info.wan_iface);
+		f_write_string(cmd, "0", 0, 0);
+
 		// ip rule add from WAN_IP table route_id pref 10X
 		memset(cmd, 0, 256);
 		sprintf(cmd, "ip rule add from %s table %d pref 10%d", wan_info.wan_ipaddr, table, wan_unit);
@@ -231,11 +238,36 @@ void mwan_table_add(char *sPrefix)
 		}
 
 		// ip route add 192.168.1.0/24 dev br0 proto kernel scope link  src 192.168.1.1  table 2
-		get_cidr(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), ip_cidr);
-		memset(cmd, 0, 256);
-		sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, nvram_safe_get("lan_ifname"), nvram_safe_get("lan_ipaddr"), table);
-		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
-		system(cmd);
+		for (i = 0; i < 4; i++) {
+			char nvram_var[64];
+			char* lan_ifname;
+			char* lan_ipaddr;
+			char* lan_netmask;
+
+			if (i > 0) {
+				sprintf(nvram_var, "lan%d_ifname", i);
+				lan_ifname = nvram_safe_get(nvram_var);
+				sprintf(nvram_var, "lan%d_ipaddr", i);
+				lan_ipaddr = nvram_safe_get(nvram_var);
+				sprintf(nvram_var, "lan%d_netmask", i);
+				lan_netmask = nvram_safe_get(nvram_var);
+			}
+			else {
+				lan_ifname = nvram_safe_get("lan_ifname");
+				lan_ipaddr = nvram_safe_get("lan_ipaddr");
+				lan_netmask = nvram_safe_get("lan_netmask");
+			}
+
+			if (lan_ifname[0] == '\0' || lan_ipaddr[0] == '\0' || lan_netmask[0] == '\0') {
+				continue;
+			}
+
+			get_cidr(lan_ipaddr, lan_netmask, ip_cidr);
+			memset(cmd, 0, 256);
+			sprintf(cmd, "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, lan_ifname, lan_ipaddr, table);
+			mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
+			system(cmd);
+		}
 
 		// ip route add 127.0.0.0/8 dev lo scope link table 1
 		memset(cmd, 0, 256);

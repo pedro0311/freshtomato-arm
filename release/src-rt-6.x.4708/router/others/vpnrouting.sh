@@ -7,7 +7,6 @@
 #
 
 
-VPN_GW="$route_vpn_gateway"
 PID=$$
 IFACE=$dev
 SERVICE=$(echo $dev | sed 's/\(tun\|tap\)1/client/;s/\(tun\|tap\)2/server/')
@@ -65,24 +64,19 @@ startRouting() {
 	cleanupRouting
 	nvram set vpn_client"${ID#??}"_rdnsmasq=0
 
-	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID - GW $VPN_GW"
+	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID"
 
-	ip route add table $ID default via $VPN_GW dev $IFACE
-	ip rule add fwmark $ID table $ID priority 1000
+	ip route add table $ID default dev $IFACE
+	ip rule add fwmark $ID table $ID priority 90
 
 	# copy routes from main routing table (exclude vpns and default gateway)
 	ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
 		ip route add table $ID $ROUTE
 	done
 
-	modprobe xt_set
-	modprobe ip_set
-	modprobe ip_set_hash_ip
 	ipset create vpnrouting$ID hash:ip
 
 	echo "#!/bin/sh" > $FIREWALL_ROUTING
-	echo "echo 0 > /proc/sys/net/ipv4/conf/$IFACE/rp_filter" >> $FIREWALL_ROUTING
-	echo "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter" >> $FIREWALL_ROUTING
 	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
 
 	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
@@ -116,9 +110,7 @@ startRouting() {
 	done
 
 	chmod +x $FIREWALL_ROUTING
-	$LOGS "Running firewall routing rules for $SERVICE"
-	$FIREWALL_ROUTING
-	$LOGS "Done running firewall routing rules for $SERVICE"
+	service firewall restart
 
 	[ "$DNSMASQ" -eq 1 ] && {
 		nvram set vpn_client"${ID#??}"_rdnsmasq=1

@@ -1042,7 +1042,7 @@ dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
 	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
 	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DUSE_IPSET \
-		$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC,)" \
+		$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 		$(if $(TCONFIG_DNSSEC),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
 		$(if $(TCONFIG_DNSSEC),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
@@ -2079,12 +2079,12 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
-		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/include" \
+		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
-		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/lib" \
+		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib" \
 	CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
-	LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -lz \
-		-lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl" \
+	LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs \
+		-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl" \
 	PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
 	ac_cv_func_memcmp_working=yes \
 	cv_php_mbstring_stdarg=yes \
@@ -2104,7 +2104,7 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	--enable-cgi \
 	--disable-calendar \
 	--enable-ctype \
-	--with-curl="$(TOP)/libcurl/staged" \
+	--with-curl="$(TOP)/libcurl/staged/usr" \
 	--enable-fileinfo \
 	--without-gettext \
 	--enable-dom \
@@ -2120,7 +2120,6 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	--enable-json \
 	--without-ldap \
 	--enable-mbstring \
-	--without-mcrypt \
 	--without-openssl \
 	--disable-pcntl \
 	--with-mysqli \
@@ -2362,10 +2361,12 @@ openvpn/.conf: openssl lzo
 
 openvpn: openvpn/.conf
 	@$(SEP)
+	$(call patch_files,openvpn)
 	@$(MAKE) -C openvpn $(PARALLEL_BUILD)
 
 openvpn-clean:
 	-@$(MAKE) -C openvpn clean
+	$(call unpatch_files,openvpn)
 	@rm -f openvpn/.conf
 
 openvpn-install:
@@ -2404,42 +2405,38 @@ libcurl/stamp-h1: zlib openssl
 	$(call patch_files,libcurl)
 	cd libcurl && CC=$(CC) STRIP=$(STRIP) \
 		./buildconf && \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib" \
-		LDFLAGS="-L$(TOP)/zlib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=$(TOP)/libcurl/staged --disable-thread --enable-shared --enable-static \
-		--enable-ares --enable-cookies --enable-crypto-auth --enable-nonblocking \
-		--enable-file --enable-ftp --enable-http --enable-ipv6 --enable-tftp \
-		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher \
+		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
+		CPPFLAGS="$(EXTRACFLAGS)" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+		--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
+		--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
+		$(if $(TCONFIG_IPV6),--enable-ipv6,) \
+		--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 		--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
 		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
 		--without-gnutls --without-krb4 --without-libidn \
 		--with-linux-headers=$(LINUXDIR)/include \
-		--with-ca-bundle=/rom/cacert.pem \
-		OPENSSL_CFLAGS="-I$(TOP)/openssl/include" \
-		OPENSSL_LIBS="-L$(TOP)/openssl -lcrypto -lssl"
+		--with-ca-bundle=/rom/cacert.pem
 		touch libcurl/stamp-h1
 
 libcurl: libcurl/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C libcurl $(PARALLEL_BUILD)
-	@$(MAKE) -C libcurl install
+	@$(MAKE) -C libcurl DESTDIR=$(TOP)/libcurl/staged install
+
+libcurl-install:
+	install -D libcurl/lib/.libs/libcurl.so.4.5.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
+	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.5.0 libcurl.so && ln -sf libcurl.so.4.5.0 libcurl.so.4
+	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 
 libcurl-clean:
 	-@$(MAKE) -C libcurl clean
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
 	$(call unpatch_files,libcurl)
-
-libcurl-install:
-	install -d $(INSTALLDIR)/libcurl/usr/sbin
-	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
-	install -d $(INSTALLDIR)/libcurl/usr/lib
-	install -D libcurl/lib/.libs/libcurl.so.4.5.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
-	cd $(INSTALLDIR)/libcurl/usr/lib/ && \
-		ln -sf libcurl.so.4.5.0 libcurl.so.4 && \
-		ln -sf libcurl.so.4.5.0 libcurl.so
 
 libevent/stamp-h1:
 	cd libevent && CC=$(CC) \

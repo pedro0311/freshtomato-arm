@@ -82,10 +82,10 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed */
 		break;
 	case MODEL_AC15:
-		reset_mask = 1 << 11;
-		ses_mask = 1 << 7;
-		wlan_mask = 1 << 15;
-		ses_led = LED_AOSS;
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		wlan_mask = 1 << 15; /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
 	case MODEL_WS880:
 		reset_mask = 1 << 2;
@@ -227,9 +227,13 @@ int buttons_main(int argc, char *argv[])
 
 			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 
-			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
-			    ((model == MODEL_RTN18U) || (model == MODEL_RTAC56U) || (model == MODEL_RTAC68U) || (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
+			    ((model == MODEL_AC15) ||
+			     (model == MODEL_RTN18U) ||
+			     (model == MODEL_RTAC56U) ||
+			     (model == MODEL_RTAC68U) ||
+			     (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
 			syslog(LOG_INFO, "SES pushed. Count was %d.", count);
@@ -290,9 +294,12 @@ int buttons_main(int argc, char *argv[])
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & wlan_mask) == wlan_pushed));
 			gpio &= mask;
 
-			/* turn LED_AOSS (Power LED for Asus Router) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
-			    ((model == MODEL_RTAC56U) || (model == MODEL_RTAC68U) || (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
+			    ((model == MODEL_AC15) ||
+			     (model == MODEL_RTAC56U) ||
+			     (model == MODEL_RTAC68U) ||
+			     (model == MODEL_RTAC3200))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);
 			syslog(LOG_INFO, "WLAN pushed. Count was %d.", count);
