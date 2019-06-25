@@ -44,7 +44,7 @@ watchdogRun() {
 		PREFIX_MWAN=$PREFIX
 
 		[ "$PROTO" != "disabled" ] && {
-        
+
 			[ "$PREFIX" == "wan" ] && {
 				METRIC="101"
 			} || {
@@ -110,7 +110,7 @@ watchdogRun() {
 						$LOGS "Connection $PREFIX DOWN - Reconnect is already in progress ..."
 					} || {
 						echo "0" > /tmp/state_$PREFIX
-                        
+
 						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
 							$LOGS "Killing orphaned connect-on-demand listen process ..."
 							LISTEN_PID=$(ps | grep listen | grep $PREFIX | awk '{print $1}' | head -n1)
