@@ -996,6 +996,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "script_shut",		""				, 0 },
 	{ "script_fire",		""				, 0 },
 	{ "script_wanup",		""				, 0 },
+	{ "script_mwanup",		""				, 0 },
 
 #ifdef TCONFIG_NFS
 	{ "nfs_enable",			"0"				, 0 },
