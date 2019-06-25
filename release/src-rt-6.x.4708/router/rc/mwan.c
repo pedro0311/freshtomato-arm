@@ -194,8 +194,15 @@ void mwan_table_add(char *sPrefix)
 
 	get_wan_info(sPrefix);
 	proto = get_wanx_proto(sPrefix);
-	
+
 	if (check_wanup(sPrefix)) {
+		// disable rp_filter for multiwan pbr
+		memset(cmd, 0, 256);
+		mwanlog(LOG_DEBUG, "Disabling rp_filter for multiwan policy-based routing");
+		f_write_string("/proc/sys/net/ipv4/conf/all/rp_filter", "0", 0, 0);
+		sprintf(cmd, "/proc/sys/net/ipv4/conf/%s/rp_filter", wan_info.wan_iface);
+		f_write_string(cmd, "0", 0, 0);
+
 		// ip rule add from WAN_IP table route_id pref 10X
 		memset(cmd, 0, 256);
 		sprintf(cmd, "ip rule add from %s table %d pref 10%d", wan_info.wan_ipaddr, table, wan_unit);
