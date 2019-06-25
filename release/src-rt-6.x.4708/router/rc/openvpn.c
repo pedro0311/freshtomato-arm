@@ -446,8 +446,9 @@ void start_ovpn_client(int clientNum)
 
 		sprintf(buffer, "vpn_client%d_fw", clientNum);
 		nvi = nvram_get_int(buffer);
-		fprintf(fp, "iptables -I INPUT -i %s -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
-		fprintf(fp, "iptables -I FORWARD -i %s -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+		fprintf(fp, "iptables -I INPUT -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+		fprintf(fp, "iptables -I FORWARD -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+		fprintf(fp, "iptables -I FORWARD -o %s -j ACCEPT\n", iface);
 
 		if (routeMode == NAT) {
 			/* Add the nat for the main lan addresses */
@@ -476,6 +477,7 @@ void start_ovpn_client(int clientNum)
 		if (ipv6_enabled()) {
 			fprintf(fp, "ip6tables -I INPUT -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
 			fprintf(fp, "ip6tables -I FORWARD -i %s -m state --state NEW -j %s\n", iface, (nvi ? "DROP" : "ACCEPT"));
+			fprintf(fp, "ip6tables -I FORWARD -o %s -j ACCEPT\n", iface);
 		}
 #endif
 

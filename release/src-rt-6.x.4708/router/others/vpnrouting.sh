@@ -7,7 +7,6 @@
 #
 
 
-VPN_GW="$route_vpn_gateway"
 PID=$$
 IFACE=$dev
 SERVICE=$(echo $dev | sed 's/\(tun\|tap\)1/client/;s/\(tun\|tap\)2/server/')
@@ -65,10 +64,10 @@ startRouting() {
 	cleanupRouting
 	nvram set vpn_client"${ID#??}"_rdnsmasq=0
 
-	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID - GW $VPN_GW"
+	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID"
 
-	ip route add table $ID default via $VPN_GW dev $IFACE
-	ip rule add fwmark $ID table $ID priority 1000
+	ip route add table $ID default dev $IFACE
+	ip rule add fwmark $ID table $ID priority 90
 
 	# copy routes from main routing table (exclude vpns and default gateway)
 	ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
