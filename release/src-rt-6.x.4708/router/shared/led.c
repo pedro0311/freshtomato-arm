@@ -140,7 +140,9 @@ int do_led(int which, int mode)
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ws880[]	= {   0,  255,   -12,  255,  255,  255,    1,   14,  255,    6};
 	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255};
+#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* 8 bit shift register (SPI GPIO 0 to 7), active HIGH */
+#endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 #endif
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G
