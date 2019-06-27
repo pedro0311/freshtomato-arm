@@ -16,9 +16,15 @@ SWAN=$(cat /tmp/ethernet.state.tmp | grep "Port $VPORT" | awk '{print $3}')
 echo "Port 0: $SWAN" > /tmp/ethernet.state
 sed -n -e "/Port $VPORT:/!p" /tmp/ethernet.state.tmp > /tmp/ethernet.state1
 
-[ "$(nvram get model)" == "R1D" ] && {
+ROUTERNAME=$(nvram get t_fix1)
+#Xiaomi MiWiFi X-R1D (only 3 Ports; Port 0,2 for LAN and Port 4 for WAN)
+[ "$ROUTERNAME" == "MiWiFi" ] && {
 	sed -i '/Port 1/d' /tmp/ethernet.state1
 	sed -i '/Port 3/d' /tmp/ethernet.state1
+}
+#Tenda AC15 (only 4 Ports; Port 2,3,4 for LAN and Port 0 for WAN)
+[ "$ROUTERNAME" == "AC15" ] && {
+	sed -i '/Port 1/d' /tmp/ethernet.state1
 }
 
 sed -i '/Port 5/d' /tmp/ethernet.state1
