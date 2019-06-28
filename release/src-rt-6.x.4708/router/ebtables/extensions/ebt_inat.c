@@ -379,8 +379,7 @@ static struct ebt_u_target idnat_target =
 	.extra_ops	= opts_d,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+static void _INIT(void)
 {
 	register_target(&isnat_target);
 	register_target(&idnat_target);

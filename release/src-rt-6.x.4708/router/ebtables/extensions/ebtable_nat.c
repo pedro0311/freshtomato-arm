@@ -30,7 +30,7 @@ ebt_u_table table =
 	.help		= print_help,
 };
 
-void _init(void)
+static void _INIT(void)
 {
 	ebt_register_table(&table);
 }

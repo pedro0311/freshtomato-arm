@@ -1768,33 +1768,34 @@ wanuptime-install:
 	install -D wanuptime/wanuptime $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
 	$(STRIP) $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
 
-ebtables: dummy
-	@$(SEP)
+ebtables/stamp-h1: dummy
 	$(call patch_files,ebtables)
-	$(MAKE) -C ebtables CC=$(CC) LD=$(LD) \
+	cd $(TOP)/ebtables && CC=$(CC) LD=$(LD) STRIP=$(CROSS_COMPILE)strip \
+	./autogen.sh && \
+	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib \
 	CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	LOCKFILE="/var/lock/ebtables" LOCKDIR="/var/lock" \
-	BINDIR="/usr/sbin" LIBDIR="/usr/lib/ebtables" KERNEL_DIR=$(LINUXDIR) KERNEL_INCLUDES=$(LINUXDIR)/include $(if $(TCONFIG_IPV6),DO_IPV6=1,)
+	LOCKFILE="/var/lock/ebtables"
+	touch ebtables/stamp-h1
+
+ebtables: ebtables/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C ebtables
 
 ebtables-install:
-	install -D ebtables/ebtables $(INSTALLDIR)/ebtables/usr/sbin/ebtables
-
 	@mkdir -p $(TARGETDIR)/rom/etc
 	@sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < $(TOP)/ebtables/ethertypes > $(TARGETDIR)/rom/etc/ethertypes
 	chmod 0644 $(TARGETDIR)/rom/etc/ethertypes
-
-	install -d $(INSTALLDIR)/ebtables/usr/lib
-	install -d $(INSTALLDIR)/ebtables/usr/lib/ebtables
-	install -D ebtables/*.so $(INSTALLDIR)/ebtables/usr/lib/
-	install -D ebtables/extensions/*.so $(INSTALLDIR)/ebtables/usr/lib/ebtables/
-
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/ebtables/*.so
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/libebt*.so
+	install -D ebtables/.libs/ebtables-legacy $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	install -D ebtables/.libs/libebtc.so.0.0.0 $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
+	cd $(INSTALLDIR)/ebtables/usr/sbin/ && ln -sf ebtables-legacy ebtables
+	cd $(INSTALLDIR)/ebtables/usr/lib/ && ln -sf libebtc.so.0.0.0 libebtc.so && ln -sf libebtc.so.0.0.0 libebtc.so.0
 
 ebtables-clean:
 	-@$(MAKE) -C ebtables clean
+	rm -f ebtables/stamp-h1
 	$(call unpatch_files,ebtables)
 
 #Roadkill

@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <libgen.h>
 
 static void decrease_chain_jumps(struct ebt_u_replace *replace);
 static int iterate_entries(struct ebt_u_replace *replace, int type);
@@ -134,21 +135,18 @@ void ebt_list_extensions()
 	}
 }
 
-#ifndef LOCKFILE
-#define LOCKDIR "/var/lib/ebtables"
-#define LOCKFILE LOCKDIR"/lock"
-#endif
 int use_lockfd;
 /* Returns 0 on success, -1 when the file is locked by another process
  * or -2 on any other error. */
 static int lock_file()
 {
+	char pathbuf[] = LOCKFILE;
 	int fd, try = 0;
 
 retry:
 	fd = open(LOCKFILE, O_CREAT, 00600);
 	if (fd < 0) {
-		if (try == 1 || mkdir(LOCKDIR, 00700))
+		if (try == 1 || mkdir(dirname(pathbuf), 00700))
 			return -2;
 		try = 1;
 		goto retry;
