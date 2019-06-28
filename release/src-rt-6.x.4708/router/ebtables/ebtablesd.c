@@ -52,7 +52,7 @@ int main(int argc_, char *argv_[])
 	char *argv[EBTD_ARGC_MAX], *args[4], name[] = "mkdir",
 	     mkdir_option[] = "-p", mkdir_dir[] = EBTD_PIPE_DIR,
 	     cmdline[EBTD_CMDLINE_MAXLN];
-	int readfd, base = 0, offset = 0, n = 0, ret = 0, quotemode = 0;
+	int readfd, base = 0, offset = 0, n = 0, quotemode = 0;
 
 	/* Make sure the pipe directory exists */
 	args[0] = name;
@@ -74,19 +74,16 @@ int main(int argc_, char *argv_[])
 
 	if (mkfifo(EBTD_PIPE, 0600) < 0 && errno != EEXIST) {
 		printf("Error creating FIFO " EBTD_PIPE "\n");
-		ret = -1;
 		goto do_exit;
 	}
 
 	if ((readfd = open(EBTD_PIPE, O_RDONLY | O_NONBLOCK, 0)) == -1) {
 		perror("open");
-		ret = -1;
 		goto do_exit;
 	}
 
 	if (signal(SIGPIPE, sigpipe_handler) == SIG_ERR) {
 		perror("signal");
-		ret = -1;
 		goto do_exit;
 	}
 

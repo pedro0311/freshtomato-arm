@@ -25,7 +25,7 @@
 #define EBTABLES_U_H
 #include <netinet/in.h>
 #include <netinet/ether.h>
-#include "ebtables.h"
+#include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter/x_tables.h>
 
 #ifndef IPPROTO_SCTP
@@ -43,6 +43,8 @@
 #endif
 #define EBT_ALIGN(s) (((s) + (EBT_MIN_ALIGN-1)) & ~(EBT_MIN_ALIGN-1))
 #define ERRORMSG_MAXLEN 128
+
+#define _INIT __attribute__((constructor)) _init
 
 struct ebt_u_entries
 {
@@ -393,7 +395,7 @@ extern int ebt_printstyle_mac;
 #define BASE_CHAIN (hookmask & (1 << NF_BR_NUMHOOKS))
 /* Clear the bit in the hook_mask that tells if the rule is on a base chain */
 #define CLEAR_BASE_CHAIN_BIT (hookmask &= ~(1 << NF_BR_NUMHOOKS))
-#define PRINT_VERSION printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n")
+#define PRINT_VERSION printf(PROGNAME" v"PROGVERSION" (legacy) ("PROGDATE")\n")
 #ifndef PROC_SYS_MODPROBE
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif

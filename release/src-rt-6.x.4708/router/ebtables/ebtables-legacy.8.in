@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "$(DATE)"
+.TH EBTABLES 8  "@PACKAGE_DATE@"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -24,7 +24,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v$(VERSION)) \- Ethernet bridge frame table administration
+ebtables-legacy (@PACKAGE_VERSION@) \- Ethernet bridge frame table administration (legacy)
 .SH SYNOPSIS
 .BR "ebtables " [ -t " table ] " - [ ACDI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
@@ -50,6 +50,18 @@ ebtables (v$(VERSION)) \- Ethernet bridge frame table administration
 .br
 .BR "ebtables " [ -t " table ] [" --atomic-file " file] " --atomic-save
 .br
+
+.SH LEGACY
+This tool uses the old xtables/setsockopt framework, and is a legacy version
+of ebtables. That means that a new, more modern tool exists with the same
+functionality using the nf_tables framework and you are encouraged to migrate now.
+The new binaries (known as ebtables-nft and formerly known as ebtables-compat)
+uses the same syntax and semantics than this legacy one.
+
+You can still use this legacy tool. You should probably get some specific
+information from your Linux distribution or vendor.
+More docs are available at https://wiki.nftables.org
+
 .SH DESCRIPTION
 .B ebtables
 is an application program used to set up and maintain the
@@ -1123,7 +1135,7 @@ arp message and the hardware address length in the arp header is 6 bytes.
 .br
 .SH FILES
 .I /etc/ethertypes
-.I $(LOCKFILE)
+.I @LOCKFILE@
 .SH ENVIRONMENT VARIABLES
 .I EBTABLES_ATOMIC_FILE
 .SH MAILINGLISTS

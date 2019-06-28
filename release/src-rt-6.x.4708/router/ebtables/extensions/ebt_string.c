@@ -168,7 +168,9 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		ebt_check_option2(flags, OPT_STRING_ALGO);
 		if (ebt_check_inverse2(optarg))
 			ebt_print_error2("Unexpected `!' after --string-algo");
-		strncpy(info->algo, optarg, XT_STRING_MAX_ALGO_NAME_SIZE);
+		if (snprintf(info->algo, sizeof(info->algo), "%s", optarg) >=
+				sizeof(info->algo))
+			ebt_print_error2("\"%s\" is truncated", info->algo);
 		break;
 	case STRING_ICASE:
 		ebt_check_option2(flags, OPT_STRING_ICASE);
@@ -310,7 +312,7 @@ static struct ebt_u_match string_match =
 	.extra_ops	= opts,
 };
 
-void _init(void)
+static void _INIT(void)
 {
 	ebt_register_match(&string_match);
 }
