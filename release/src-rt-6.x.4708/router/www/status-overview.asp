@@ -160,97 +160,177 @@ function ethstates() {
 	}
 	code += '<tr>';
 
-	if (port == "DOWN") {
+	if (port == null) {
+		state = '<img id="eth_off_0" src="eth_off.png" alt=""><br />';
+		state2 = "NOSUPPORT";
+	}
+	else if (port == "DOWN") {
 		state = '<img id="eth_off_0" src="eth_off.png" alt=""><br />';
 		state2 = port.replace("DOWN","Unplugged");
-	} else if ((port == "1000FD") || (port == "1000HD")) {
+	}
+	else if ((port == "1000FD") || (port == "1000HD")) {
 		state = '<img id="eth_1000_0" src="eth_1000.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
-	} else {
+	}
+	else if ((port == "100FD") || (port == "100HD")) {
 		state = '<img id="eth_100_0" src="eth_100.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
+	else if ((port == "10FD") || (port == "10HD")) {
+		state = '<img id="eth_100_0" src="eth_100.gif" alt=""><br />';
+		state1 = port.replace("HD","M Half");
+		state2 = state1.replace("FD","M Full");
+	}
+	else {
+		state = '<img id="eth_1000_0" src="eth_1000.gif" alt=""><br />';
+		state2 = "AUTO";
+	}
 	if (stats.lan_desc == '1') {
 		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	} else {
+	}
+	else {
 		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port1;
-	if (port == "DOWN") {
+	if (port == null) {
+		state = '<img id="eth_off_1" src="eth_off.png" alt=""><br />';
+		state2 = "NOSUPPORT";
+	}
+	else if (port == "DOWN") {
 		state = '<img id="eth_off_1" src="eth_off.png" alt=""><br />';
 		state2 = port.replace("DOWN","Unplugged");
-	} else if ((port == "1000FD") || (port == "1000HD")) {
+	}
+	else if ((port == "1000FD") || (port == "1000HD")) {
 		state = '<img id="eth_1000_1" src="eth_1000.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
-	} else {
+	}
+	else if ((port == "100FD") || (port == "100HD")) {
 		state = '<img id="eth_100_1" src="eth_100.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
+	else if ((port == "10FD") || (port == "10HD")) {
+		state = '<img id="eth_100_1" src="eth_100.gif" alt=""><br />';
+		state1 = port.replace("HD","M Half");
+		state2 = state1.replace("FD","M Full");
+	}
+	else {
+		state = '<img id="eth_1000_1" src="eth_1000.gif" alt=""><br />';
+		state2 = "AUTO";
+	}
 	if (stats.lan_desc == '1') {
 		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	} else {
+	}
+	else {
 		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port2;
-	if (port == "DOWN") {
+	if (port == null) {
+		state = '<img id="eth_off_2" src="eth_off.png" alt=""><br />';
+		state2 = "NOSUPPORT";
+	}
+	else if (port == "DOWN") {
 		state = '<img id="eth_off_2" src="eth_off.png" alt=""><br />';
 		state2 = port.replace("DOWN","Unplugged");
-	} else if ((port == "1000FD") || (port == "1000HD")) {
+	}
+	else if ((port == "1000FD") || (port == "1000HD")) {
 		state = '<img id="eth_1000_2" src="eth_1000.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
-	} else {
+	}
+	else if ((port == "100FD") || (port == "100HD")) {
 		state = '<img id="eth_100_2" src="eth_100.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
+	else if ((port == "10FD") || (port == "10HD")) {
+		state = '<img id="eth_100_2" src="eth_100.gif" alt=""><br />';
+		state1 = port.replace("HD","M Half");
+		state2 = state1.replace("FD","M Full");
+	}
+	else {
+		state = '<img id="eth_1000_2" src="eth_1000.gif" alt=""><br />';
+		state2 = "AUTO";
+	}
 	if (stats.lan_desc == '1') {
 		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	} else {
+	}
+	else {
 		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port3;
-	if (port == "DOWN") {
+	if (port == null) {
+		state = '<img id="eth_off_3" src="eth_off.png" alt=""><br />';
+		state2 = "NOSUPPORT";
+	}
+	else if (port == "DOWN") {
 		state = '<img id="eth_off_3" src="eth_off.png" alt=""><br />';
 		state2 = port.replace("DOWN","Unplugged");
-	} else if ((port == "1000FD") || (port == "1000HD")) {
+	}
+	else if ((port == "1000FD") || (port == "1000HD")) {
 		state = '<img id="eth_1000_3" src="eth_1000.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
-	} else {
+	}
+	else if ((port == "100FD") || (port == "100HD")) {
 		state = '<img id="eth_100_3" src="eth_100.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
+	else if ((port == "10FD") || (port == "10HD")) {
+		state = '<img id="eth_100_3" src="eth_100.gif" alt=""><br />';
+		state1 = port.replace("HD","M Half");
+		state2 = state1.replace("FD","M Full");
+	}
+	else {
+		state = '<img id="eth_1000_3" src="eth_1000.gif" alt=""><br />';
+		state2 = "AUTO";
+	}
 	if (stats.lan_desc == '1') {
 		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	} else {
+	}
+	else {
 		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
 	port = etherstates.port4;
-	if (port == "DOWN") {
+	if (port == null) {
+		state = '<img id="eth_off_4" src="eth_off.png" alt=""><br />';
+		state2 = "NOSUPPORT";
+	}
+	else if (port == "DOWN") {
 		state = '<img id="eth_off_4" src="eth_off.png" alt=""><br />';
 		state2 = port.replace("DOWN","Unplugged");
-	} else if ((port == "1000FD") || (port == "1000HD")) {
+	}
+	else if ((port == "1000FD") || (port == "1000HD")) {
 		state = '<img id="eth_1000_4" src="eth_1000.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
-	} else {
+	}
+	else if ((port == "100FD") || (port == "100HD")) {
 		state = '<img id="eth_100_4" src="eth_100.gif" alt=""><br />';
 		state1 = port.replace("HD","M Half");
 		state2 = state1.replace("FD","M Full");
 	}
+	else if ((port == "10FD") || (port == "10HD")) {
+		state = '<img id="eth_100_4" src="eth_100.gif" alt=""><br />';
+		state1 = port.replace("HD","M Half");
+		state2 = state1.replace("FD","M Full");
+	}
+	else {
+		state = '<img id="eth_1000_4" src="eth_1000.gif" alt=""><br />';
+		state2 = "AUTO";
+	}
 	if (stats.lan_desc == '1') {
 		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	} else {
+	}
+	else {
 		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
 	}
 
