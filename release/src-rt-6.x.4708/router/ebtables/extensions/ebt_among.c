@@ -436,14 +436,14 @@ static void print(const struct ebt_u_entry *entry,
 
 	if (info->wh_dst_ofs) {
 		printf("--among-dst ");
-		if (info->bitmask && EBT_AMONG_DST_NEG) {
+		if (info->bitmask & EBT_AMONG_DST_NEG) {
 			printf("! ");
 		}
 		wormhash_printout(ebt_among_wh_dst(info));
 	}
 	if (info->wh_src_ofs) {
 		printf("--among-src ");
-		if (info->bitmask && EBT_AMONG_SRC_NEG) {
+		if (info->bitmask & EBT_AMONG_SRC_NEG) {
 			printf("! ");
 		}
 		wormhash_printout(ebt_among_wh_src(info));
@@ -491,7 +491,7 @@ static struct ebt_u_match among_match = {
 	.extra_ops 	= opts,
 };
 
-void _init(void)
+static void _INIT(void)
 {
 	ebt_register_match(&among_match);
 }

@@ -341,10 +341,13 @@ int dhcpc_event_main(int argc, char **argv)
 	ifname = getenv("interface");
 	char prefix[] = "wanXX";
 
-	if (nvram_match( "wan2_ifname", ifname )) strcpy(prefix, "wan2");
+	if (nvram_match("wan2_ifname", ifname)) strcpy(prefix, "wan2");
+	else if (nvram_match("wan2_iface", ifname)) strcpy(prefix, "wan2");
 #ifdef TCONFIG_MULTIWAN
-	else if (nvram_match( "wan3_ifname", ifname )) strcpy(prefix, "wan3");
-	else if (nvram_match( "wan4_ifname", ifname )) strcpy(prefix, "wan4");
+	else if (nvram_match("wan3_ifname", ifname)) strcpy(prefix, "wan3");
+	else if (nvram_match("wan3_iface", ifname)) strcpy(prefix, "wan3");
+	else if (nvram_match("wan4_ifname", ifname)) strcpy(prefix, "wan4");
+	else if (nvram_match("wan4_iface", ifname)) strcpy(prefix, "wan4");
 #endif
 	else strcpy(prefix, "wan");
 

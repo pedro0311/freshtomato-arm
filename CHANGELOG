@@ -1,6 +1,160 @@
 FreshTomato-ARM Changelog
 ===========================
 
+
+
+2019.3.118-beta - 2019.07.06
+----------------------------
+
+Recommendations:
+- clear your NVRAM after upgrade!
+- users using OpenVPN client: check your settings!
+- GUI problems: use Ctrl+F5 and/or clean your browser cache.
+
+- openssl: update to 1.0.2s
+- nano: update to 4.3
+- sqlite: update to 3.28.0
+- miniupnpd: update to 2.1.20190630
+- php: update to 7.2.19
+- tor: update to 0.4.0.5
+- nginx: update to 1.16.0 - Stable Branch
+- pcre: update to 8.43
+- xl2tpd: update to v1.3.14les
+- libcurl: update to 7.65.1
+- libcurl: update CA certificate bundle as of 2019-05-15
+- e2fsprogs: update to 1.45.2
+- ebtables: update to 2019.06.28 snapshot
+- pppd: various fixes for errors found by coverity static analysis
+- patches: update patch for xl2tpd + cosmetics
+- patches: cosmetics in php patch
+- patches: ebtables: build ipv6 extension only if needed
+- patches: fixes in pppd patches
+- kernel: XZ: fix incorrect XZ_BUF_ERROR
+- kernel: Backport ida_simple_* kernel functions
+- kernel: improve sack handling and resource usage
+- kernel: xfrm: Return error on unknown encap_type in init_state
+- kernel: netfilter: ebtables: Revert "fix wrong name length while copying to user-space" (it breaks ebtables totally...)
+- kernel: update netfilter_bridge headers
+- kernel sdk7: XZ: fix incorrect XZ_BUF_ERROR
+- kernel sdk7: Backport ida_simple_* kernel functions
+- kernel sdk7: improve sack handling and resource usage
+- kernel sdk7: update netfilter_bridge headers
+- kernel sdk7: fix for CVE-2011-0726
+- switch4g: Fix 4g wan restart causing wrong restart of wan1 due to dhcpc-event bound event behavior and missing wanX_iface nvram var
+- switch4g: cosmetics and fix minor display bug
+- wwansignal: fix problems with signal level and LAC value on some modems (ie. Huawei E8372)
+- watchdog/redial: Fix race condition between ppp watchdog and redial (for keepalive mode)
+- MultiWAN: Add routes for all LAN bridges when creating multiwan routing tables
+- MultiWAN: Improve code layout, merge if branches
+- MultiWAN: Disable rp_filter on multiwan routing add to allow policy-based routing to work
+- MultiWAN: Implement MultiWAN Up script (WAN number passed as $1) that runs regardless of which one is considered the "primary" one
+- IPv6: fix IPv6 6to4 tunnel (if remote host was on 6to4, the packets were dropped because of wrong routing and tunnel settings; this fixes issue #51; Reference: http://tomatousb.org/forum/t-461151/6to4-tunnel-in-tomatousb-is-done-wrong)
+- IPv4: ip_input.c / ip_output.c - sync sdk7 with sdk6
+- OpenVPN: fix generating an openvpn client configuration on server with TLS authorization [2]
+- OpenVPN: key generation: add also "key-direction" in the second case
+- OpenVPN: use of the OpenVPN scripting engine
+- OpenVPN: rename files and functions from vpn to ovpn/openvpn for better consistency
+- OpenVPN: configurable inbound allow/drop firewall policy for clients
+- OpenVPN: fix the visibility of the Routing Policy table and when the rules are to be applied
+- OpenVPN: "Manage Client-Specific Options" Fix bug when more than one subnet per client is defined in ccd (only the last one was stored in ccd)
+- OpenVPN: Client: also run up/down script for Static Key auth
+- OpenVPN: Client: move back firewall rules to vpn.c script
+- OpenVPN: Client: split updown script
+- OpenVPN: Client: simplify use of Routing Policy (remove route-nopull and route-noexec options, add in "Redirect Internet traffic" option "Routing Policy" instead, remove unused variables from NVRAM, fix links to OpenVPN howtos)
+- OpenVPN: Client/Server: add tls-crypt as an option - encrypt and authenticate all control channel packets with the key
+- OpenVPN: Routing Policy: copy routes from the main table to the alternate routing table
+- OpenVPN: some improvements: updown-client.sh: remove unneeded dnsmasq restart, vpnrouting.sh: add a FW restart instead of a simple local script call - when kill switch will be ready, it can be change back
+- OpenVPN: Fix password validation to actually accept 70 characters
+- OpenVPN: Integrate OpenVPN 2.4.7 Tunnelblick XOR patch (allows using obfuscated servers)
+- OpenVPN: Adjust OpenVPN policy routing priority to come before multiwan rules
+- OpenVPN: Fix OpenVPN policy based routing in case of using route-nopull or no pushed routes
+- OpenVPN: When OpenVPN inbound firewall is enabled, adjust fw rules to allow reply packets
+- OpenVPN: move loading of the policy routing modules (hash:ip) to openvpn.c script
+- GUI: fix removal of the WWAN SMS
+- GUI: fix undefined Modem Type on "WWAN Modem Status" (also lack of link to view WWAN SMS) when modem on different wan than the first one
+- GUI: OpenVPN Client: extend password field to 70 characters
+- GUI: add "Wifi Security Disabled" warning on Status Overview page
+- GUI: advanced-dhcpdns.asp - add DHCP IPv6 lease time option
+- GUI: advanced-firewall.asp - add IGMP proxy option quickleave
+- GUI: advanced-firewall.asp - Add note for hidden IGMP proxy settings
+- GUI: admin-buttons.asp - add/show Startup LED
+- GUI: admin-buttons.asp - remove brau mask (not needed/used at ARM branch)
+- GUI: status-overview.asp - extend Ethernet Ports State - distinguish all possible speed modes (1000 FD/HD, 100 FD/HD, 10 FD/HD and Auto
+- www: vpn-server.asp: cosmetics
+- www: basic-ipv6.asp: cosmetics
+- www: vpn-client.asp: fix missing </div>
+- www: basic-time.asp: fix javascript error
+- router: clean-up of unused files and variables
+- router: Makefile: save space in NVRAM for routers with 32k NVRAM
+- router: Makefile: cosmetics
+- router: Makefile: fix logic in applying/unapplaying the patches
+- router: Makefile: remove the patches in reverse order
+- router: Makefile: clean-up and simplify libcurl recipe
+- router: Makefile: php: remove deprecated option - --without-mcrypt
+- router: Makefile: libcurl: fix build break
+- router: Makefile: dnsmasq: skip gost validation with nettle, it's not supported anyway
+- router: config: config.in: cosmetics
+- router: ebtables: restore original #include in ebt_ip.c
+- router: shared: led.c: remove not needed comments
+- router: shared: led.c: cosmectic for function do_led() - add some comments - prepare for non GPIO LEDs
+- router: shared: led.c: remove/clean-up MIPS Router at function do_led() (--> not needed at ARM branch) and make LED table much smaller (--> save space/memory)
+- router: shared: led.c: do call get_model() only once (only cosmetic / optimization)
+- router: shared: led.c: extend LED table and make it possible to turn on/off bridge LEDs for most Router (R6400, R7000, RT-AC68U, EA6400, EA6500v2, EA6700, EA6900, AC15)
+- router: shared: led.c: adjust LED table LED_AOSS (used for Power LED, active LOW) for Asus Router RT-AC3200
+- router: shared: led.c: adjust LED table LED_AOSS (used for Power LED, active LOW) for Asus Router RT-N18U, RT-AC56U, RT-AC68U
+- router: shared: led.c: add conditional compilation and some cosmetic
+- router: shared: led.c: avoid compiler warning because of unused variable wzr1750
+- router: shared: defaults.c: cosmetics
+- router: shared: shared.h: remove not used define LED_BLINK (and cosmetic)
+- router: rc: optimizing code, cosmetics - (mainly for openvpn part; based on @RMerlin - thanks!)
+- router: rc/shared: led.c: corrections for sdk7 - add case for second 5 GHz WLAN and special case for LED AOSS
+- router: rc: vpn.c: add missing closedir() in write_vpn_dnsmasq_config() function
+- router: rc: vpn.c: cosmetics, clean-up
+- router: rc: openvpn.c: Make firewall rules consistent in both IPv4 and IPv6
+- router: rc: init.c / rc: button.c / shared: led.c - do some clean-up - use LED_ON and LED_OFF - cosmetic
+- router: rc: rc.c / init.c / wan.c - remove obsolete SET_LED() and defines - clean-up
+- router: rc: led.c: add/show a note if stealth mode is turned ON (and some cosmetic)
+- router: rc: led.c: small optimization for led_main(), compare (full) led name only once
+- router: rc: led.c: extend led cmd to react properly with blink turned on
+- router: rc: led.c: extend led cmd to react properly with blink_br turned on
+- router: rc: led.c: add special case for ASUS Router with FreshTomato: LED_AOSS is used for Power LED (active LOW, inverted! --> see LED table at shared/led.c )
+- router: rc: button.c: do some clean-up/cosmetic - use LED_ON and LED_OFF - call get_model() only once - add some comments
+- router: rc: button.c: remove/clean-up MIPS Router (--> not needed at ARM branch) and remove brau mask (not needed/used at ARM branch)
+- router: rc: button.c: turn on Power LED again (LED_AOSS) after WPS- OR WLAN- Button has been pressed
+- router: rc: blink.c: remove/clean-up unused variables - some cosmetic - adjust sleep time between checks
+- router: rc: blink.c: add checks for rate and threshold command line parameters
+- router: rc: blink.c: prevent the start of blink for non GPIO leds and/or unknown LEDs
+- router: rc: blink_br.c: do call get_model() only once (only cosmetic / optimization)
+- router: others: watchdog: Cosmetics
+- SDK7 dhd logging: turn off/suppress dhd debug messages
+- R8000: add wifi button - reset button gpio 6 active LOW (no change) - wifi button gpio 4 active LOW (change assignment) - wps button gpio 5 active LOW (new/change)
+- R8000: fix stealth mode, Power LED was still turned on
+- R7000: add wifi button - reset button gpio 6 active LOW (no change) - wifi button gpio 5 active LOW (change assignment) - wps button gpio 4 active LOW (new/change)
+- R6400: add wifi button - reset button gpio 5 active LOW (no change) - wifi button gpio 4 active LOW (change assignment) - wps button gpio 3 active LOW (new/change)
+- RT-AC3200: add wifi button - reset button gpio 11 active LOW (no change) - wps button gpio 7 active LOW (no change) - wifi button gpio 4 active LOW (new/cange)
+- RT-AC3200: change LED table - catch up to RT-N18U / RT-AC56U / RT-AC68U LED FT behavior
+- RT-AC3200: extend LED table - assign return value 254 (non GPIO) for 2.4/5.0/5.0(second) GHz WLAN LEDs - add the ability to control/set all WLAN LEDs on/off
+- RT-AC3200: extend stealth mode (part 1)
+- RT-AC68U: add wifi button - reset button gpio 11 active LOW (no change) - wps button gpio 7 active LOW (no change) - wifi button gpio 15 active LOW (new/change)
+- RT-AC68U: extend LED table - assign return value 254 (non GPIO) for 2.4/5.0 GHz WLAN LEDs - add the ability to conrol/set both WLAN LEDs on/off
+- RT-AC56U: add wifi button - reset button gpio 11 active LOW (no change) - wps button gpio 15 active LOW (no change) - wifi button gpio 7 active LOW (new/change)
+- RT-N18U: add some comments for buttons (only cosmetic) - reset button gpio 7 active LOW (no change) - wps button gpio 11 active LOW (no change)
+- RT-N18U: extend LED table - assign WLAN return value 254 (non GPIO)
+- R6250 / R6300v2: add wifi button - reset button gpio 6 active LOW (no change) - wifi button gpio 5 active LOW (change assignment) - wps button gpio 4 active LOW (new/change)
+- EA6500v2: add new/extra LED table for that router - assign GPIO pin 6 for LED_WHITE (active LOW)
+- EA6500v2: add to stealth mode (extended --> Logo LED was missing)
+- DIR868L: Use LED Diag (toggle green / amber) for feedback if a button is pushed (and some cosmetic)
+- DIR868L: enable 5 GHz WLAN radio after full NVRAM erase
+- WZR-1750DHP: add reset button and use LED_DIAG for feedback (was missing so far)
+- WZR-1750DHP: add to stealth mode
+- WZR-1750DHP: change LED table
+- WZR-1750DHP: change LED table (Part 2) - assign GPIO 0 with color blue for LED_USB / USB LED (active HIGH)
+- AC15: change LED table and button feedback - add support for 2.4 GHz LED (non GPIO) - turn on WPS LED again (LED_AOSS) after WPS- OR WLAN- Button has been pressed
+- AC15: enable blink for 5 GHz Wifi
+- AC15: adjust GUI Ethernet Ports State - start with LAN Port 1 now (fix for Issue #60) (LAN Port 4 ==> Show "NOSUPPORT" for the not available Port)
+- README: DIR868L: add supported rev (A1/B1/C1)
+
+
 2019.2 - 2019.04.20
 ----------------------------
 

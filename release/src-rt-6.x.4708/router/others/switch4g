@@ -496,6 +496,7 @@ searchWAN() {
 		nvram set "$PREFIX"_modem_if="$WAN"
 		nvram set "$PREFIX"_modem_type="$MTYPE"
 		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
+		nvram set "$PREFIX"_iface="$WAN"
 	} || {
 		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add

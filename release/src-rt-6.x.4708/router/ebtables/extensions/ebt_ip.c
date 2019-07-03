@@ -16,7 +16,7 @@
 #include <getopt.h>
 #include <netdb.h>
 #include "../include/ebtables_u.h"
-#include "../include/linux/netfilter_bridge/ebt_ip.h"
+#include <linux/netfilter_bridge/ebt_ip.h>
 
 #define IP_SOURCE '1'
 #define IP_DEST   '2'
@@ -472,7 +472,7 @@ static struct ebt_u_match ip_match =
 	.extra_ops	= opts,
 };
 
-void _init(void)
+static void _INIT(void)
 {
 	ebt_register_match(&ip_match);
 }
