@@ -1,7 +1,8 @@
-C x86_64/sha1-compress.asm
+/* hogweed-internal.h
 
-ifelse(<
-   Copyright (C) 2004, 2008, 2013, 2018 Niels Möller
+   Bignum operations that are missing from gmp.
+
+   Copyright (C) 2001 Niels Möller
 
    This file is part of GNU Nettle.
 
@@ -28,33 +29,26 @@ ifelse(<
    You should have received copies of the GNU General Public License and
    the GNU Lesser General Public License along with this program.  If
    not, see http://www.gnu.org/licenses/.
->)
+*/
 
-C Register usage.
+#ifndef NETTLE_HOGWEED_INTERNAL_H_INCLUDED
+#define NETTLE_HOGWEED_INTERNAL_H_INCLUDED
 
-C Arguments
-define(<STATE>,<%rdi>)dnl
-define(<INPUT>,<%rsi>)dnl
+void
+_nettle_generate_pocklington_prime (mpz_t p, mpz_t r,
+				    unsigned bits, int top_bits_set,
+				    void *ctx, nettle_random_func *random,
+				    const mpz_t p0,
+				    const mpz_t q,
+				    const mpz_t p0q);
 
-C Constants
-define(<K1VALUE>, <0x5A827999>)dnl		C  Rounds  0-19
-define(<K2VALUE>, <0x6ED9EBA1>)dnl		C  Rounds 20-39
-define(<K3VALUE>, <0x8F1BBCDC>)dnl		C  Rounds 40-59
-define(<K4VALUE>, <0xCA62C1D6>)dnl		C  Rounds 60-79
+#define _pkcs1_signature_prefix _nettle_pkcs1_signature_prefix
 
-	.file "sha1-compress.asm"
+uint8_t *
+_pkcs1_signature_prefix(unsigned key_size,
+			uint8_t *buffer,
+			unsigned id_size,
+			const uint8_t *id,
+			unsigned digest_size);
 
-	C _nettle_sha1_compress(uint32_t *state, uint8_t *input)
-	
-	.text
-	ALIGN(16)
-PROLOGUE(_nettle_sha1_compress)
-	C save all registers that need to be saved XXX
-	movups (INPUT), W0
-	movups 16(INPUT), W1
-	movups 32(INPUT), W2
-	movups 48(INPUT), W3
-
-	ret
-EPILOGUE(_nettle_sha1_compress)
-
+#endif /* NETTLE_HOGWEED_INTERNAL_H_INCLUDED */
