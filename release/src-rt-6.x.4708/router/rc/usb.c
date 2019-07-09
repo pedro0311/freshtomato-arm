@@ -106,6 +106,7 @@ void start_usb(void)
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
+		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
 		xstart("gpio", "enable", "9");
 		if ((model == MODEL_WZR1750)) {
@@ -440,6 +441,7 @@ void stop_usb(void)
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
+		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
 		xstart("gpio", "disable", "9");
 		if ((model == MODEL_WZR1750)) {
