@@ -16,7 +16,7 @@ This is my personal fork, If anyone wants to pick up my changes and merge them t
 
 **Project page/Donate**: http://freshtomato.org/
 
-For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880, **Dlink** DIR868L (rev A1/B1/C1), **Xiaomi** R1D.
+For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6350v1, EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, **Huawei** WS880, **Dlink** DIR868L (rev A1/B1/C1), **Xiaomi** R1D.
 
 Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!
 

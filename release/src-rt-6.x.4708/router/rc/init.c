@@ -610,6 +610,7 @@ static int init_vlan_ports(void)
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
 		break;
+	case MODEL_EA6350v1:
 	case MODEL_EA6400:
 	case MODEL_EA6700:
 	case MODEL_WZR1750:
@@ -2708,6 +2709,220 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/venid", "0x14E4");
 			nvram_set("pci/1/1/xtalfreq", "0x40000");
 		}
+		break;
+	case MODEL_EA6350v1:
+		mfr = "Cisco Linksys";
+		name = "EA6350v1";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+			//nvram_set("wl0_country_code", "Q2");
+			//nvram_set("wl1_country_code", "Q2");
+			//nvram_set("wl0_country_rev", "33");
+			//nvram_set("wl1_country_rev", "33");
+
+			/* fix wifi channels */
+			nvram_set("0:ccode", "#a");
+			nvram_set("1:ccode", "#a");
+			nvram_set("0:regrev", "0");
+			nvram_set("1:regrev", "0");
+			nvram_set("wl0_country_code", "#a");
+			nvram_set("wl0_country_rev", "0");
+			nvram_set("wl0_reg_mode", "off");
+			nvram_set("wl1_country_code", "#a");
+			nvram_set("wl1_country_rev", "0");
+			nvram_set("wl1_reg_mode", "off");
+
+			/* fix WL mac`s */
+			strcpy(s, nvram_safe_get("et0macaddr"));
+			inc_mac(s, +2);
+			nvram_set("0:macaddr", s);
+			inc_mac(s, +4);
+			nvram_set("1:macaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "1");
+
+			/* 2.4GHz module defaults */
+			nvram_set("0:aa2g", "3");
+			nvram_set("0:ag0", "0");
+			nvram_set("0:ag1", "0");
+			nvram_set("0:ag2", "0");
+			nvram_set("0:antswctl2g", "0");
+			nvram_set("0:antswitch", "0");
+			nvram_set("0:boardflags", "0x80001200");
+			nvram_set("0:boardflags2", "0x00001000");
+			nvram_set("0:bwduppo", "0x0");
+			nvram_set("0:bw40po", "0x0");
+			nvram_set("0:cddpo", "0x0");
+			nvram_set("0:cck2gpo", "0x0000");
+			nvram_set("0:devid", "0x43a9");
+			nvram_set("0:elna2g", "2");
+			nvram_set("0:extpagain2g", "3");
+			nvram_set("0:ledbh0", "11");
+			nvram_set("0:ledbh1", "11");
+			nvram_set("0:ledbh2", "11");
+			nvram_set("0:ledbh3", "11");
+			nvram_set("0:leddc", "0xffff");
+			nvram_set("0:maxp2ga0", "0x68");
+			nvram_set("0:maxp2ga1", "0x68");
+			nvram_set("0:mcs2gpo0", "0x4444");
+			nvram_set("0:mcs2gpo1", "0x4444");
+			nvram_set("0:mcs2gpo2", "0x4444");
+			nvram_set("0:mcs2gpo3", "0x4444");
+			nvram_set("0:mcs2gpo4", "0x6666");
+			nvram_set("0:mcs2gpo5", "0x6666");
+			nvram_set("0:mcs2gpo6", "0x6666");
+			nvram_set("0:mcs2gpo7", "0x6666");
+			nvram_set("0:ofdm2gpo", "0x44444444");
+			nvram_set("0:pa2gw0a0", "0xfeaa");
+			nvram_set("0:pa2gw0a1", "0xfebb");
+			nvram_set("0:pa2gw1a0", "0x1afd");
+			nvram_set("0:pa2gw1a1", "0x1a7d");
+			nvram_set("0:pa2gw2a0", "0xfa30");
+			nvram_set("0:pa2gw2a1", "0xfa61");
+			nvram_set("0:pdetrange2g", "3");
+			nvram_set("0:phycal_tempdelta", "0");
+			nvram_set("0:regrev", "76");
+			nvram_set("0:rxchain", "3");
+			nvram_set("0:stbcpo", "0x0");
+			nvram_set("0:sromrev", "8");
+			nvram_set("0:tempoffset", "0");
+			nvram_set("0:temps_hysteresis", "5");
+			nvram_set("0:temps_period", "5");
+			nvram_set("0:tempthresh", "120");
+			nvram_set("0:triso2g", "4");
+			nvram_set("0:tssipos2g", "1");
+			nvram_set("0:txchain", "3");
+			nvram_set("0:venid", "0x14e4");
+			nvram_set("0:xtalfreq", "20000");
+
+			/* 5GHz module defaults */
+			nvram_set("1:aa5g", "3");
+			nvram_set("1:aga0", "0");
+			nvram_set("1:aga1", "0");
+			nvram_set("1:antswitch", "0");
+			nvram_set("1:boardflags", "0x30000000");
+			nvram_set("1:boardflags2", "0x00200002");
+			nvram_set("1:boardflags3", "0x00000000");
+			nvram_set("1:devid", "0x43B3");
+			nvram_set("1:dot11agduphrpo", "0x0000");
+			nvram_set("1:dot11agduplrpo", "0x0000");
+			nvram_set("1:epagain5g", "0");
+			nvram_set("1:femctrl", "3");
+			nvram_set("1:gainctrlsph", "0");
+			nvram_set("1:ledbh0", "11");
+			nvram_set("1:ledbh1", "11");
+			nvram_set("1:ledbh2", "11");
+			nvram_set("1:ledbh3", "11");
+			nvram_set("1:leddc", "0xFFFF");
+			nvram_set("1:maxp5ga0", "0x4C,0x4C,0x4C,0x56");
+			nvram_set("1:maxp5ga1", "0x4C,0x4C,0x4C,0x56");
+			nvram_set("1:mcsbw205ghpo", "0xA8642000");
+			nvram_set("1:mcsbw205glpo", "0x00000000");
+			nvram_set("1:mcsbw205gmpo", "0xA8642000");
+			nvram_set("1:mcsbw405ghpo", "0xA8642000");
+			nvram_set("1:mcsbw405glpo", "0x00000000");
+			nvram_set("1:mcsbw405gmpo", "0xA8642000");
+			nvram_set("1:mcsbw805ghpo", "0xA8642000");
+			nvram_set("1:mcsbw805glpo", "0x00000000");
+			nvram_set("1:mcsbw805gmpo", "0xA8642000");
+			nvram_set("1:mcslr5ghpo", "0x0000");
+			nvram_set("1:mcslr5glpo", "0x0000");
+			nvram_set("1:mcslr5gmpo", "0x0000");
+			nvram_set("1:pa5ga0", "0xff3a,0x1992,0xfce9,0xff32,0x190e,0xfcee,0xff2f,0x1911,0xfcef,0xff45,0x1a7b,0xfcdc");
+			nvram_set("1:pa5ga1", "0xff2d,0x1961,0xfce1,0xff25,0x18ab,0xfcec,0xff37,0x19f1,0xfcdd,0xff3d,0x1a3e,0xfcd7");
+			nvram_set("1:papdcap5g", "0");
+			nvram_set("1:parefldovoltage", "35");
+			nvram_set("1:pdgain5g", "4");
+			nvram_set("1:pdoffset40ma0", "0x0000");
+			nvram_set("1:pdoffset40ma1", "0x0000");
+			nvram_set("1:pdoffset80ma0", "0x0000");
+			nvram_set("1:pdoffset80ma1", "0x0000");
+			nvram_set("1:phycal_tempdelta", "0");
+			nvram_set("1:regrev", "76");
+			nvram_set("1:rxchain", "3");
+			nvram_set("1:rxgains5gelnagaina0", "1");
+			nvram_set("1:rxgains5gelnagaina1", "1");
+			nvram_set("1:rxgains5gelnagaina2", "1");
+			nvram_set("1:rxgains5ghelnagaina2", "3");
+			nvram_set("1:rxgains5ghelnagaina0", "2");
+			nvram_set("1:rxgains5ghelnagaina1", "2");
+			nvram_set("1:rxgains5ghtrelnabypa0", "1");
+			nvram_set("1:rxgains5ghtrelnabypa1", "1");
+			nvram_set("1:rxgains5ghtrelnabypa2", "1");
+			nvram_set("1:rxgains5ghtrisoa0", "5");
+			nvram_set("1:rxgains5ghtrisoa1", "4");
+			nvram_set("1:rxgains5ghtrisoa2", "4");
+			nvram_set("1:rxgains5gtrelnabypa0", "1");
+			nvram_set("1:rxgains5gtrelnabypa1", "1");
+			nvram_set("1:rxgains5gtrelnabypa2", "1");
+			nvram_set("1:rxgains5gtrisoa0", "7");
+			nvram_set("1:rxgains5gtrisoa1", "6");
+			nvram_set("1:rxgains5gtrisoa2", "5");
+			nvram_set("1:rxgains5gmelnagaina0", "2");
+			nvram_set("1:rxgains5gmelnagaina1", "2");
+			nvram_set("1:rxgains5gmelnagaina2", "3");
+			nvram_set("1:rxgains5gmtrelnabypa0", "1");
+			nvram_set("1:rxgains5gmtrelnabypa1", "1");
+			nvram_set("1:rxgains5gmtrelnabypa2", "1");
+			nvram_set("1:rxgains5gmtrisoa0", "5");
+			nvram_set("1:rxgains5gmtrisoa1", "4");
+			nvram_set("1:rxgains5gmtrisoa2", "4");
+			nvram_set("1:sb20in40hrpo", "0x0000");
+			nvram_set("1:sb20in40lrpo", "0x0000");
+			nvram_set("1:sb20in80and160hr5ghpo", "0x0000");
+			nvram_set("1:sb20in80and160hr5glpo", "0x0000");
+			nvram_set("1:sb20in80and160hr5gmpo", "0x0000");
+			nvram_set("1:sb20in80and160lr5ghpo", "0x0000");
+			nvram_set("1:sb20in80and160lr5glpo", "0x0000");
+			nvram_set("1:sb20in80and160lr5gmpo", "0x0000");
+			nvram_set("1:sb40and80hr5ghpo", "0x0000");
+			nvram_set("1:sb40and80hr5glpo", "0x0000");
+			nvram_set("1:sb40and80hr5gmpo", "0x0000");
+			nvram_set("1:sb40and80lr5ghpo", "0x0000");
+			nvram_set("1:sb40and80lr5glpo", "0x0000");
+			nvram_set("1:sb40and80lr5gmpo", "0x0000");
+			nvram_set("1:sromrev", "11");
+			nvram_set("1:subband5gver", "4");
+			nvram_set("1:tempoffset", "0");
+			nvram_set("1:temps_hysteresis", "5");
+			nvram_set("1:temps_period", "5");
+			nvram_set("1:tempthresh", "120");
+			nvram_set("1:tssiposslope5g", "1");
+			nvram_set("1:tworangetssi5g", "0");
+			nvram_set("1:txchain", "3");
+			nvram_set("1:venid", "0x14E4");
+			nvram_set("1:xtalfreq", "40000");
+		}
+		nvram_set("acs_2g_ch_no_ovlp", "1");
+		nvram_set("acs_2g_ch_no_restrict", "1");
+
+		nvram_set("devpath0", "pci/1/1/");
+		nvram_set("devpath1", "pci/2/1/");
+		nvram_set("partialboots", "0");
 		break;
 	case MODEL_EA6400:
 		mfr = "Cisco Linksys";

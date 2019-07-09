@@ -134,6 +134,7 @@ int do_led(int which, int mode)
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12};
 	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2};
 	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255};
+	static int ea6350v1[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  254,  255,  255,  255};
 	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
@@ -294,6 +295,12 @@ int do_led(int which, int mode)
 		}
 		else {
 			b = r1d[which];
+		}
+		break;
+	case MODEL_EA6350v1:
+		b = ea6350v1[which];
+		if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
 		}
 		break;
 	case MODEL_EA6400:
