@@ -268,7 +268,8 @@ enum {
 	MODEL_EA6900,
 	MODEL_WZR1750,
 	MODEL_R1D,
-	MODEL_AC15
+	MODEL_AC15,
+	MODEL_AC18
 };
 
 /* NOTE: Do not insert new entries in the middle of this enum,

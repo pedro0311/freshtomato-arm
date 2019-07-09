@@ -78,6 +78,7 @@ ZTE H618B			HW_BCM5354G           0x048e     1105        0x35      0x0750
 Tenda N60                      BCM47186              0x052B       60        0x1400    0x00000710 //8MB/64MB/2.4/5G/USB
 Tenda N6                       BCM5357               0x0550       6         0x1444    0x710 //8MB/64MB/2.4/5G/USB
 TENDA W1800R                   HW_BCM4706            0x05d8       18/21(EU)/60(CN)   0x1200  0x00000110
+Tenda AC18			BCM4708               0x0646       30        0x1100 //model=AC18V1.0
 
 TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 
@@ -384,6 +385,7 @@ int get_model(void)
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "00"))) return MODEL_WZR1750;
 		if ((nvram_match("boardtype","0xD646")) && (nvram_match("boardrev", "0x1100"))) return MODEL_EA6900;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("1:boardnum", "AC155g"))) return MODEL_AC15;//Fallback to Tenda AC15
+		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "AC18V1.0"))) return MODEL_AC18; /* Tenda AC18 */
 	}
 #endif
 	switch (strtoul(nvram_safe_get("boardnum"), NULL, 0)) {

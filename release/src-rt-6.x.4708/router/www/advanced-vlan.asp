@@ -92,6 +92,7 @@ switch (nvram['t_model_name']) {
 		COL_P4N = '4';
 	break;
 	case 'vlan-testid1':
+	case 'Tenda AC18':
 	case 'Asus RT-N18U':
 	case 'Asus RT-AC68R/U':
 	case 'Asus RT-AC68P':

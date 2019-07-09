@@ -169,6 +169,14 @@ ifeq ($(ASUS_TRX),TENDA)
 #	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
 #	cat ctools/tendahead.bin image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
 endif
+# for Tenda AC18
+ifeq ($(ASUS_TRX),AC18)
+	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC18,3.0.0.4,image/freshtomato-TendaAC18-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+#	The following lines help to create .bin file that is uploadable from original firmware. Process is semi-manual so it is disabled for now
+#	crc32 image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx
+#	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
+#	cat ctools/tendahead.bin image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
+endif
 # for dlink
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,image/freshtomato-DIR868L-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1021,6 +1029,12 @@ n18z:
 ac15:
 	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="TENDA" TUXERA=y
 
+ac18e:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
+
+ac18z:
+	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
+
 dir868l:
 	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="special" USB="USB" DNSSEC=y DNSCRYPT=y STUBBY=y UPS=y NO_SSH=y NANO=y
 
@@ -1135,6 +1149,8 @@ help:
 	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"
 	@echo "ac15          Tenda AC15"
+	@echo "ac18e         Tenda AC18 VPN"
+	@echo "ac18z         Tenda AC18 AIO"
 	@echo "DLINK ARM Builds"
 	@echo "dir868l       DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
