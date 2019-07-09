@@ -80,6 +80,7 @@ switch (nvram['t_model_name']) {
 	case 'vlan-testid0':
 	case 'Asus RT-AC56U':
 	case 'D-Link DIR868L':
+	case 'Cisco Linksys EA6350v1':
 	case 'Cisco Linksys EA6400':
 	case 'Cisco Linksys EA6500v2':
 	case 'Cisco Linksys EA6700':
