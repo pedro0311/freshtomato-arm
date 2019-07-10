@@ -28,7 +28,7 @@ textarea {
 <script type="text/javascript" src="debug.js"></script>
 
 <script type="text/javascript">
-//	<% nvram("stealth_mode,stealth_iled,sesx_led,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,t_model,t_features"); %>
+//	<% nvram("stealth_mode,stealth_iled,sesx_led,blink_wl,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,t_model,t_features"); %>
 
 var ses = features('ses');
 
@@ -49,6 +49,7 @@ function save() {
 	if (fom._led2.checked) n |= 4;
 	if (fom._led3.checked) n |= 8;
 	fom.sesx_led.value = n;
+	fom.blink_wl.value = E('_f_blink_wl').checked ? 1 : 0;
 	fom.stealth_mode.value = E('_f_stealth_mode').checked ? 1 : 0;
 	fom.stealth_iled.value = E('_f_stealth_iled').checked ? 1 : 0;
 	form.submit(fom, 1);
@@ -79,9 +80,10 @@ function earlyInit() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-buttons.asp">
-<input type="hidden" name="sesx_led" value="0">
-<input type="hidden" name="stealth_mode" value="0">
-<input type="hidden" name="stealth_iled" value="0">
+<input type="hidden" name="sesx_led">
+<input type="hidden" name="blink_wl">
+<input type="hidden" name="stealth_mode">
+<input type="hidden" name="stealth_iled">
 
 <div id="sesdiv" style="display:none">
 <div class="section-title">SES/WPS/AOSS Button</div>
@@ -109,8 +111,8 @@ createFieldTable('', [
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Enable Stealth Mode', name: 'f_stealth_mode', type: 'checkbox', value: (nvram.stealth_mode == 1), suffix: '&nbsp;<small>(reboot required to turn off LEDs)<\/small>' },
-	{ title: 'Exclude INTERNET LED', name: 'f_stealth_iled', type: 'checkbox', value: (nvram.stealth_iled == 1) }
+	{ title: 'Enable Stealth Mode', name: 'f_stealth_mode', type: 'checkbox', value: (nvram.stealth_mode == '1'), suffix: '&nbsp;<small>(reboot required to turn off LEDs)<\/small>' },
+	{ title: 'Exclude INTERNET LED', name: 'f_stealth_iled', type: 'checkbox', value: (nvram.stealth_iled == '1') }
 ]);
 </script>
 </div>
@@ -121,10 +123,11 @@ createFieldTable('', [
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Amber', name: '_led0', type: 'checkbox', value: nvram.sesx_led & 0x01},
-	{ title: 'White', name: '_led1', type: 'checkbox', value: nvram.sesx_led & 0x02},
-	{ title: 'AOSS', name: '_led2', type: 'checkbox', value: nvram.sesx_led & 0x04},
-	{ title: 'Bridge', name: '_led3', type: 'checkbox', value: nvram.sesx_led & 0x08}
+	{ title: 'Amber', name: '_led0', type: 'checkbox', value: (nvram.sesx_led & 0x01) },
+	{ title: 'White', name: '_led1', type: 'checkbox', value: (nvram.sesx_led & 0x02) },
+	{ title: 'AOSS', name: '_led2', type: 'checkbox', value: (nvram.sesx_led & 0x04) },
+	{ title: 'Bridge', name: '_led3', type: 'checkbox', value: (nvram.sesx_led & 0x08) },
+	{ title: 'Enable blink', name: 'f_blink_wl', type: 'checkbox', value: (nvram.blink_wl == '1'), suffix: ' <small> (for WiFi)<\/small>' }
 ]);
 </script>
 </div>
@@ -145,7 +148,8 @@ if (!ses) W('<i>This feature is not supported on this router.<\/i>');
 	<li><b>White</b> - Enable LED White (Internet LED) at Startup.</li>
 	<li><b>AOSS</b> - Enable LED AOSS (Power LED for Asus Router; Wifi Summary LED for Netgear Router) at Startup.</li>
 	<li><b>Bridge</b> - Enable LED Bridge (WAN & LAN Port X LED(s)) at Startup.</li>
-	<li><b>Other hints</b> - LED function is router dependent. Check command <i>led [LED_NAME/help] [on/off]</i> for advanced LED control, see <a href="tools-shell.asp">Web Shell</a>.</li>
+	<li><b>Enable blink</b> - Enable blink for WiFi LEDs.</li>
+	<li><b>Other hints</b> - LED function and blink support is router dependent. Check command <i>led [LED_NAME/help] [on/off]</i> for advanced LED control, see <a href="tools-shell.asp">Web Shell</a>.</li>
 </ul>
 
 </div>

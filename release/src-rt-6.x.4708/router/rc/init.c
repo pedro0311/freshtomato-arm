@@ -1287,7 +1287,6 @@ static int init_nvram(void)
 			nvram_set("wl0_chanspec","1l");
 			nvram_set("wl1_bw_cap","7");
 			nvram_set("wl1_chanspec","36/80");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 			/* nvram_set("landevs", "vlan1 wl0 wl1"); */
 			/* nvram_set("wandevs", "vlan2"); */
 
@@ -1316,7 +1315,6 @@ static int init_nvram(void)
 			nvram_set("wl0_chanspec","1l");
 			nvram_set("wl1_bw_cap","7");
 			nvram_set("wl1_chanspec","36/80");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 		/* fix WL mac`s */
 		nvram_set("wl0_hwaddr", nvram_safe_get("sb/1/macaddr"));
@@ -1597,7 +1595,6 @@ static int init_nvram(void)
 			nvram_set("wl1_txpwr", "0");
 			nvram_set("wl1_chanspec", "100/40");
 			nvram_set("wl1_nctrlsb", "lower");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* 2.4 GHz defaults */
 			nvram_set("devpath0", "pci/1/1/");
@@ -1852,7 +1849,6 @@ static int init_nvram(void)
 			nvram_set("wl1_txpwr", "0");
 			nvram_set("wl1_chanspec", "100/40");
 			nvram_set("wl1_nctrlsb", "lower");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* 2.4 GHz defaults */
 			nvram_set("devpath0", "pci/1/1/");
@@ -2123,7 +2119,6 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 			nvram_set("wl_country", "SG");
 			nvram_set("wl_country_code", "SG");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* bcm4360ac_defaults - fix problem of loading driver failed with code 21 */
 			nvram_set("pci/1/1/aa2g", "7");
@@ -2665,7 +2660,6 @@ static int init_nvram(void)
 			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* fix WL mac`s */
 			strcpy(s, nvram_safe_get("et0macaddr"));
@@ -4327,7 +4321,6 @@ static int init_nvram(void)
 			nvram_set("wl1_chanspec","36/80");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* fix WL mac`s */
 			strcpy(s, nvram_safe_get("et0macaddr"));
@@ -4445,7 +4438,6 @@ static int init_nvram(void)
 			nvram_set("wl0_chanspec","36/80");
 			nvram_set("wl1_bw_cap","3");
 			nvram_set("wl1_chanspec","1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 			//nvram_set("landevs", "vlan1 wl0 wl1");
 			//nvram_set("wandevs", "vlan2");
 
@@ -4486,7 +4478,6 @@ static int init_nvram(void)
 			nvram_set("wl0_chanspec","36/80");
 			nvram_set("wl1_bw_cap","3");
 			nvram_set("wl1_chanspec","1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* fix WL mac`s */
 			strcpy(s, nvram_safe_get("et0macaddr"));
@@ -4571,7 +4562,6 @@ static int init_nvram(void)
 			nvram_set("wl0_chanspec","36/80");
 			nvram_set("wl1_bw_cap","3");
 			nvram_set("wl1_chanspec","1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
 			/* fix ssid according to 5G(eth1) and 2.4G(eth2) */
 			nvram_set("wl_ssid","Tomato50");
