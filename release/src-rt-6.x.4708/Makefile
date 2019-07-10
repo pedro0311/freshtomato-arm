@@ -161,8 +161,8 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56S-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 endif
-# for Tenda
-ifeq ($(ASUS_TRX),TENDA)
+# for Tenda AC15
+ifeq ($(ASUS_TRX),AC15)
 	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC15,3.0.0.4,image/freshtomato-TendaAC15-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 #	The following lines help to create .bin file that is uploadable from original firmware. Process is semi-manual so it is disabled for now
 #	crc32 image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx
@@ -1026,8 +1026,8 @@ n18e:
 n18z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS"
 
-ac15:
-	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="TENDA" TUXERA=y
+ac15e:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="AC15" TUXERA=y
 
 ac18e:
 	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
@@ -1148,7 +1148,7 @@ help:
 	@echo "n18e          RT-N18U/AC56S without SMP build VPN"
 	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"
-	@echo "ac15          Tenda AC15"
+	@echo "ac15e         Tenda AC15 VPN"
 	@echo "ac18e         Tenda AC18 VPN"
 	@echo "ac18z         Tenda AC18 AIO"
 	@echo "DLINK ARM Builds"
