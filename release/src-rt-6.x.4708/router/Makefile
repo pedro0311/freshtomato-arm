@@ -2353,11 +2353,11 @@ libiconv-clean:
 
 libiconv-install:
 	install -d $(INSTALLDIR)/libiconv/usr/lib
-	install libiconv/lib/.libs/libiconv.so.2.6.0 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
-	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
+	install libiconv/lib/.libs/libiconv.so.2.6.1 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
+	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
 	cd $(INSTALLDIR)/libiconv/usr/lib/ && \
-		ln -sf libiconv.so.2.6.0 libiconv.so.2 && \
-		ln -sf libiconv.so.2.6.0 libiconv.so
+		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
+		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: openssl libcurl libevent zlib
 	cd transmission && CC=$(CC) STRIP=$(STRIP) \
