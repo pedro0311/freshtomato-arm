@@ -272,16 +272,6 @@ extern struct lh_entry* lh_table_lookup_entry(struct lh_table *t, const void *k)
 extern struct lh_entry* lh_table_lookup_entry_w_hash(struct lh_table *t, const void *k, const unsigned long h);
 
 /**
- * Lookup a record into the table.
- *
- * @param t the table to lookup
- * @param k a pointer to the key to lookup
- * @return a pointer to the found value or NULL if it does not exist.
- * @deprecated Use lh_table_lookup_ex() instead.
- */
-THIS_FUNCTION_IS_DEPRECATED(extern const void* lh_table_lookup(struct lh_table *t, const void *k));
-
-/**
  * Lookup a record in the table.
  *
  * @param t the table to lookup
@@ -317,21 +307,6 @@ extern int lh_table_delete_entry(struct lh_table *t, struct lh_entry *e);
 extern int lh_table_delete(struct lh_table *t, const void *k);
 
 extern int lh_table_length(struct lh_table *t);
-
-/**
- * Prints a message to <code>stdout</code>,
- * then exits the program with an exit code of <code>1</code>.
- *
- * @param msg Message format string, like for <code>printf</code>.
- * @param ... Format args.
- *
- * @deprecated Since it is not a good idea to exit the entire program
- * 	because of an internal library failure, json-c will no longer
- * 	use this function internally.
- * 	However, because its interface is public, it will remain part of
- * 	the API on the off chance of legacy software using it externally.
- */
-THIS_FUNCTION_IS_DEPRECATED(void lh_abort(const char *msg, ...));
 
 /**
  * Resizes the specified table.
