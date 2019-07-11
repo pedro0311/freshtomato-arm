@@ -199,9 +199,10 @@ endif
 ifeq ($(ASUS_TRX),BUFFALO)
 	ctools/trx_asus -i image/linux-lzma.trx -r WZR1750,3.0.0.4,image/freshtomato-WZR1750-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
-# for ea6350v1
+# for EA6200, EA6350v1
 ifeq ($(ASUS_TRX),CISCO)
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6350v1,3.0.0.4,image/freshtomato-EA6350v1-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r EA6200,3.0.0.4,image/freshtomato-EA6200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 #for linksys EA series -- EA6400 EA6700 EA6500v2 EA6900
 ifeq ($(ASUS_TRX),LINKSYS)
@@ -1173,8 +1174,8 @@ help:
 	@echo "LINKSYS ARM Builds"
 	@echo "ea6700e       EA6700/EA6400/EA6500v2/EA6900 build VPN"
 	@echo "ea6700z       EA6700/EA6400/EA6500v2/EA6900 build AIO"
-	@echo "ea6350v1e     EA6350v1 build VPN"
-	@echo "ea6350v1z     EA6350v1 build AIO"
+	@echo "ea6350v1e     EA6200/EA6350v1 build VPN"
+	@echo "ea6350v1z     EA6200/EA6350v1 build AIO"
 	@echo ""
 	@echo "..etc..      other build configs"
 	@echo "clean        -C router clean"
