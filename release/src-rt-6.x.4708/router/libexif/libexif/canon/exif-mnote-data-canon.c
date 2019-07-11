@@ -30,8 +30,6 @@
 #include <libexif/exif-utils.h>
 #include <libexif/exif-data.h>
 
-#define DEBUG
-
 static void
 exif_mnote_data_canon_clear (ExifMnoteDataCanon *n)
 {
@@ -101,6 +99,8 @@ exif_mnote_data_canon_set_byte_order (ExifMnoteData *d, ExifByteOrder o)
 	o_orig = n->order;
 	n->order = o;
 	for (i = 0; i < n->count; i++) {
+		if (n->entries[i].components && (n->entries[i].size/n->entries[i].components < exif_format_get_size (n->entries[i].format)))
+			continue;
 		n->entries[i].order = o;
 		exif_array_set_byte_order (n->entries[i].format, n->entries[i].data,
 				n->entries[i].components, o_orig, o);
@@ -268,7 +268,7 @@ exif_mnote_data_canon_load (ExifMnoteData *ne,
 				exif_log (ne->log, EXIF_LOG_CODE_DEBUG,
 					"ExifMnoteCanon",
 					"Tag data past end of buffer (%u > %u)",
-					dataofs + s, buf_size);
+					(unsigned)(dataofs + s), buf_size);
 				continue;
 			}
 
@@ -350,6 +350,8 @@ int
 exif_mnote_data_canon_identify (const ExifData *ed, const ExifEntry *e)
 {
 	char value[8];
+
+	(void) e;  /* unused */
 	ExifEntry *em = exif_data_get_entry (ed, EXIF_TAG_MAKE);
 	if (!em) 
 		return 0;

@@ -78,13 +78,13 @@ exif_mnote_data_pentax_save (ExifMnoteData *ne,
 		unsigned char **buf, unsigned int *buf_size)
 {
 	ExifMnoteDataPentax *n = (ExifMnoteDataPentax *) ne;
-	size_t i,
-	   base = 0,		/* internal MakerNote tag number offset */
-	   o2 = 4 + 2;  	/* offset to first tag entry, past header */
-        size_t datao = n->offset; /* this MakerNote style uses offsets
-        			  based on main IFD, not makernote IFD */
+	size_t i, datao,
+	  base = 0,	/* internal MakerNote tag number offset */
+	  o2 = 4 + 2;  	/* offset to first tag entry, past header */
 
 	if (!n || !buf || !buf_size) return;
+	datao = n->offset; /* this MakerNote style uses offsets
+			      based on main IFD, not makernote IFD */
 
 	/*
 	 * Allocate enough memory for header, the number of entries, entries,
@@ -308,7 +308,7 @@ exif_mnote_data_pentax_load (ExifMnoteData *en,
 				(dataofs + s > buf_size)) {
 				exif_log (en->log, EXIF_LOG_CODE_DEBUG,
 						  "ExifMnoteDataPentax", "Tag data past end "
-					  "of buffer (%u > %u)", dataofs + s, buf_size);
+					  "of buffer (%u > %u)", (unsigned)(dataofs + s), buf_size);
 				continue;
 			}
 
@@ -391,6 +391,8 @@ exif_mnote_data_pentax_set_byte_order (ExifMnoteData *d, ExifByteOrder o)
 	o_orig = n->order;
 	n->order = o;
 	for (i = 0; i < n->count; i++) {
+		if (n->entries[i].components && (n->entries[i].size/n->entries[i].components < exif_format_get_size (n->entries[i].format)))
+			continue;
 		n->entries[i].order = o;
 		exif_array_set_byte_order (n->entries[i].format, n->entries[i].data,
 				n->entries[i].components, o_orig, o);
@@ -400,6 +402,7 @@ exif_mnote_data_pentax_set_byte_order (ExifMnoteData *d, ExifByteOrder o)
 int
 exif_mnote_data_pentax_identify (const ExifData *ed, const ExifEntry *e)
 {
+	(void) ed;  /* unused */
 	if ((e->size >= 8) && !memcmp (e->data, "AOC", 4)) {
 		if (((e->data[4] == 'I') && (e->data[5] == 'I')) ||
 		    ((e->data[4] == 'M') && (e->data[5] == 'M')))

@@ -28,8 +28,6 @@
 #include <libexif/exif-utils.h>
 #include <libexif/exif-data.h>
 
-#define DEBUG
-
 /* Uncomment this to fix a problem with Sanyo MakerNotes. It's probably best
  * not to in most cases because it seems to only affect the thumbnail tag
  * which is duplicated in IFD 1, and fixing the offset could actually cause
@@ -346,7 +344,7 @@ exif_mnote_data_olympus_load (ExifMnoteData *en,
 
 	case nikonV2:
 		o2 += 6;
-		if (o2 >= buf_size) return;
+		if (o2 + 8 >= buf_size) return;
 		exif_log (en->log, EXIF_LOG_CODE_DEBUG, "ExifMnoteDataOlympus",
 			"Parsing Nikon maker note v2 (0x%02x, %02x, %02x, "
 			"%02x, %02x, %02x, %02x, %02x)...",
@@ -483,7 +481,7 @@ exif_mnote_data_olympus_load (ExifMnoteData *en,
 				exif_log (en->log, EXIF_LOG_CODE_DEBUG,
 					  "ExifMnoteOlympus",
 					  "Tag data past end of buffer (%u > %u)",
-					  dataofs + s, buf_size);
+					  (unsigned)(dataofs + s), buf_size);
 				continue;
 			}
 
@@ -560,6 +558,8 @@ exif_mnote_data_olympus_set_byte_order (ExifMnoteData *d, ExifByteOrder o)
 	o_orig = n->order;
 	n->order = o;
 	for (i = 0; i < n->count; i++) {
+		if (n->entries[i].components && (n->entries[i].size/n->entries[i].components < exif_format_get_size (n->entries[i].format)))
+			continue;
 		n->entries[i].order = o;
 		exif_array_set_byte_order (n->entries[i].format, n->entries[i].data,
 				n->entries[i].components, o_orig, o);
