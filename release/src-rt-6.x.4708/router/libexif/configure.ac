@@ -1,29 +1,14 @@
 AC_PREREQ(2.59)
-AC_INIT([EXIF library], [0.6.21], [libexif-devel@lists.sourceforge.net], [libexif])
+AC_INIT([EXIF library], [0.6.21.1], [libexif-devel@lists.sourceforge.net], [libexif])
 AC_CONFIG_SRCDIR([libexif/exif-data.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([auto-m4])
-AM_INIT_AUTOMAKE([-Wall gnu 1.9 dist-bzip2 dist-zip check-news])
+AM_INIT_AUTOMAKE([-Wall gnu 1.9 dist-bzip2 dist-zip check-news subdir-objects])
 AM_MAINTAINER_MODE
 
 # Use the silent-rules feature when possible.
 m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])
-AM_SILENT_RULES([no])
-
-if test ! -d "$srcdir/m4m"; then
-AC_MSG_ERROR([
-You are missing the m4m/ directory in your top
-$PACKAGE_TARNAME source directory.
-
-You are probably using an ill-maintained CVS tree.
-Running
-
-    cd $srcdir
-    cvs co m4m
-
-and re-running autogen.sh might help.
-])
-fi
+AM_SILENT_RULES([yes])
 
 GP_CHECK_SHELL_ENVIRONMENT
 GP_CONFIG_MSG([Build])
@@ -70,14 +55,16 @@ AC_SUBST([LIBEXIF_CURRENT_MIN],[`expr $LIBEXIF_CURRENT - $LIBEXIF_AGE`])
 LIBEXIF_VERSION_INFO="$LIBEXIF_CURRENT:$LIBEXIF_REVISION:$LIBEXIF_AGE"
 AC_SUBST([LIBEXIF_VERSION_INFO])
 
-AC_PROG_CC
+AM_PROG_CC_C_O
 AC_C_CONST
 AC_C_INLINE
 dnl FIXME: AC_LIBTOOL_WIN32_DLL
+AM_PROG_AR
 AM_PROG_LIBTOOL
 AM_CPPFLAGS="$CPPFLAGS"
 GP_CONFIG_MSG([Compiler],[${CC}])
 
+AC_SYS_LARGEFILE
 
 dnl Create a stdint.h-like file containing size-specific integer definitions
 dnl that will always be available
@@ -118,31 +105,32 @@ dnl ---------------------------------------------------------------------------
 LIBS_orig="$LIBS"
 LIBS="$LIBS -lm"
 AC_MSG_CHECKING([for math functions in libm])
-AC_LINK_IFELSE([
-	#include <math.h>
-	int main() {
-	  double s = sqrt(0);
-	  double p = pow(s,s);
-	  return (int)p;
-	}
-], [AC_MSG_RESULT(yes)], [
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+	  #include <math.h>
+	  ],[
+	    double s = sqrt(0);
+	    double p = pow(s,s);
+	  ])],
+	[AC_MSG_RESULT(yes)], [
 	AC_MSG_RESULT(no)
 	LIBS="$LIBS_orig"
 	AC_MSG_CHECKING([for math functions without libm])
-	AC_LINK_IFELSE([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		#include <math.h>
-		int main() {
+		],[
 		  double s = sqrt(0);
 		  double p = pow(s,s);
-		  return (int)p;
-		}
-	], [
+		])],
+	[
 		AC_MSG_RESULT(yes)
 	],[
 		AC_MSG_RESULT(no)
 		AC_MSG_ERROR([*** Could not find sqrt() & pow() functions])
 	])
 ])
+
+# Check whether libfailmalloc is available for tests
+CHECK_FAILMALLOC
 
 # doc support
 GP_CHECK_DOC_DIR
@@ -177,7 +165,7 @@ AM_CONDITIONAL([ENABLE_INTERNAL_DOCS], [test "x${set_enable_internal_docs}" = "x
 # ---------------------------------------------------------------------------
 # i18n support
 # ---------------------------------------------------------------------------
-ALL_LINGUAS="be bs cs da de en_AU en_CA en_GB es fr it ja nl pl pt pt_BR ru sk sq sr sv tr uk vi zh_CN"
+ALL_LINGUAS="be bs cs da de en_AU en_CA en_GB es fr it ja ms nl pl pt pt_BR ru sk sq sr sv tr uk vi zh_CN"
 AM_PO_SUBDIRS
 GP_GETTEXT_HACK([${PACKAGE}-${LIBEXIF_CURRENT_MIN}],
                 [Lutz Mueller and others])
@@ -219,6 +207,7 @@ AC_CONFIG_FILES([  po/Makefile.in
   libexif.spec
   libexif/Makefile
   test/Makefile
+  test/check-vars.sh
   test/nls/Makefile
   m4m/Makefile
   doc/Makefile

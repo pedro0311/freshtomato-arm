@@ -1,3 +1,26 @@
+2016-09-01  Dan Fandrich <dan@coneharvesters.com>
+	* po/sv.po: Updated Swedish translation by Sebastian Rasmussen
+	* Updated many translations from launchpad.net
+	* Added new translation from launchpad.net's "yakkety" translations:
+	* po/ms.po: Added Malay translation by abuyop
+
+2014-01-05  Dan Fandrich <dan@coneharvesters.com>
+
+	* po/es.po: Updated Spanish translation by Antonio Ceballos
+
+2013-07-13  Dan Fandrich <dan@coneharvesters.com>
+
+	* Fixed a C89 compatibility issue (bug #117 reported by
+	  Guenter Knauf)
+	* po/da.po: Updated Danish translation by Joe Hansen
+	* po/de.po: Updated German translation by Christian Kirbach
+	* po/fr.po: Updated French translation by Frédéric Marchal
+	* po/uk.po: Updated Ukrainian translation by Yuri Chornoivan
+
+2013-02-23  Dan Fandrich <dan@coneharvesters.com>
+
+	* po/pl.po: Updated Polish translation by Jakub Bogusz
+
 2012-07-12  Dan Fandrich <dan@coneharvesters.com>
 
 	* Fixed some buffer overflows in exif_entry_format_value()

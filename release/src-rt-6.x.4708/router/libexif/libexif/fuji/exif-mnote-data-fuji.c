@@ -225,7 +225,7 @@ exif_mnote_data_fuji_load (ExifMnoteData *en,
 				(dataofs + s >= buf_size)) {
 				exif_log (en->log, EXIF_LOG_CODE_CORRUPT_DATA,
 						  "ExifMnoteDataFuji", "Tag data past end of "
-					  "buffer (%u >= %u)", dataofs + s, buf_size);
+					  "buffer (%u >= %u)", (unsigned)(dataofs + s), buf_size);
 				continue;
 			}
 
@@ -302,6 +302,8 @@ exif_mnote_data_fuji_set_byte_order (ExifMnoteData *d, ExifByteOrder o)
 	o_orig = n->order;
 	n->order = o;
 	for (i = 0; i < n->count; i++) {
+		if (n->entries[i].components && (n->entries[i].size/n->entries[i].components < exif_format_get_size (n->entries[i].format)))
+			continue;
 		n->entries[i].order = o;
 		exif_array_set_byte_order (n->entries[i].format, n->entries[i].data,
 				n->entries[i].components, o_orig, o);
@@ -317,6 +319,7 @@ exif_mnote_data_fuji_set_offset (ExifMnoteData *n, unsigned int o)
 int
 exif_mnote_data_fuji_identify (const ExifData *ed, const ExifEntry *e)
 {
+	(void) ed;  /* unused */
 	return ((e->size >= 12) && !memcmp (e->data, "FUJIFILM", 8));
 }
 
