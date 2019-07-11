@@ -44,7 +44,8 @@ EA6500v1            BCM4706               0xC617       ${serno}  0x1103    0x000
 EA6400		    BCM4708		  0x0646	01	 0x1100	   0x0110	0:devid=0x43A9
 EA6500v2	    BCM4708		  0xF646	01	 0x1100	   0x0110	0:devid=0x4332
 EA6700		    BCM4708		  0xF646	01	 0x1100	   0x0110	0:devid=0x4332
-EA6900		    BCM4708		  0xD646	01	 0x1100	   0x0110	
+EA6900		    BCM4708		  0xD646	01	 0x1100	   0x0110
+EA6200		    BCM4708		  0xE646	20130125	0x1100
 EA6350v1	    BCM4708		  0xE646	20140309	0x1200	   0x00000110	0:devid=0x43A9
 
 WHR-G54S            BCM5352E              0x467        00        0x13      0x2758      melco_id=30182
@@ -236,7 +237,7 @@ int check_hw_type(void)
 	case 0x0665:	/* R7000,R1D */
 	case 0xf646:	/* EA6700,WZR-1750, R6400 */
 	case 0xd646:	/* EA6900 */
-	case 0xe646:	/* EA6350v1 */
+	case 0xe646:	/* EA6200, EA6350v1 */
 		return HW_BCM4708;
 #endif
 	}
@@ -381,6 +382,7 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;  //rev c same as rev a/b but different boardrev
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "1234"))) return MODEL_WS880;
 		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20140309"))) return MODEL_EA6350v1;
+		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20130125"))) return MODEL_EA6350v1; /* EA6200 --> same like EA6350v1, AC1200 class router */
 		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6400;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6700;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "00"))) return MODEL_WZR1750;

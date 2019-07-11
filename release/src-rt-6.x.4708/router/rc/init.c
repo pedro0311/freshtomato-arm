@@ -3202,7 +3202,7 @@ static int init_nvram(void)
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "1");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			nvram_set("0:aa2g", "3");
