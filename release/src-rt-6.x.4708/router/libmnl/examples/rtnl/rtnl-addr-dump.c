@@ -1,8 +1,10 @@
 /* This example is placed in the public domain. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include <libmnl/libmnl.h>
 #include <linux/if.h>
@@ -11,48 +13,68 @@
 
 static int data_attr_cb(const struct nlattr *attr, void *data)
 {
+	const struct nlattr **tb = data;
+	int type = mnl_attr_get_type(attr);
+
 	/* skip unsupported attribute in user-space */
-	if (mnl_attr_type_valid(attr, IFLA_MAX) < 0)
+	if (mnl_attr_type_valid(attr, IFA_MAX) < 0)
 		return MNL_CB_OK;
 
-	switch(mnl_attr_get_type(attr)) {
-	case IFLA_MTU:
-		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0) {
+	switch(type) {
+	case IFA_ADDRESS:
+		if (mnl_attr_validate(attr, MNL_TYPE_BINARY) < 0) {
 			perror("mnl_attr_validate");
 			return MNL_CB_ERROR;
 		}
-		printf("mtu=%d ", mnl_attr_get_u32(attr));
-		break;
-	case IFLA_IFNAME:
-		if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0) {
-			perror("mnl_attr_validate");
-			return MNL_CB_ERROR;
-		}
-		printf("name=%s ", mnl_attr_get_str(attr));
 		break;
 	}
+	tb[type] = attr;
 	return MNL_CB_OK;
 }
 
 static int data_cb(const struct nlmsghdr *nlh, void *data)
 {
-	struct ifinfomsg *ifm = mnl_nlmsg_get_payload(nlh);
+	struct nlattr *tb[IFA_MAX + 1] = {};
+	struct ifaddrmsg *ifa = mnl_nlmsg_get_payload(nlh);
 
-	printf("index=%d type=%d flags=%d family=%d ", 
-		ifm->ifi_index, ifm->ifi_type,
-		ifm->ifi_flags, ifm->ifi_family);
+	printf("index=%d family=%d ", ifa->ifa_index, ifa->ifa_family);
 
-	if (ifm->ifi_flags & IFF_RUNNING)
-		printf("[RUNNING] ");
-	else
-		printf("[NOT RUNNING] ");
+	mnl_attr_parse(nlh, sizeof(*ifa), data_attr_cb, tb);
+	printf("addr=");
+	if (tb[IFA_ADDRESS]) {
+		void *addr = mnl_attr_get_payload(tb[IFA_ADDRESS]);
+		char out[INET6_ADDRSTRLEN];
 
-	mnl_attr_parse(nlh, sizeof(*ifm), data_attr_cb, NULL);
+		if (inet_ntop(ifa->ifa_family, addr, out, sizeof(out)))
+			printf("%s ", out);
+	}
+	printf("scope=");
+	switch(ifa->ifa_scope) {
+	case 0:
+		printf("global ");
+		break;
+	case 200:
+		printf("site ");
+		break;
+	case 253:
+		printf("link ");
+		break;
+	case 254:
+		printf("host ");
+		break;
+	case 255:
+		printf("nowhere ");
+		break;
+	default:
+		printf("%d ", ifa->ifa_scope);
+		break;
+	}
+
 	printf("\n");
 	return MNL_CB_OK;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	struct mnl_socket *nl;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
@@ -61,12 +83,20 @@ int main(void)
 	int ret;
 	unsigned int seq, portid;
 
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s <inet|inet6>\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
 	nlh = mnl_nlmsg_put_header(buf);
-	nlh->nlmsg_type	= RTM_GETLINK;
+	nlh->nlmsg_type	= RTM_GETADDR;
 	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
 	nlh->nlmsg_seq = seq = time(NULL);
 	rt = mnl_nlmsg_put_extra_header(nlh, sizeof(struct rtgenmsg));
-	rt->rtgen_family = AF_PACKET;
+	if (strcmp(argv[1], "inet") == 0)
+		rt->rtgen_family = AF_INET;
+	else if (strcmp(argv[1], "inet6") == 0)
+		rt->rtgen_family = AF_INET6;
 
 	nl = mnl_socket_open(NETLINK_ROUTE);
 	if (nl == NULL) {

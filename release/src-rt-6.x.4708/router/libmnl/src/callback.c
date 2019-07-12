@@ -45,10 +45,11 @@ static const mnl_cb_t default_cb_array[NLMSG_MIN_TYPE] = {
 	[NLMSG_OVERRUN]	= mnl_cb_noop,
 };
 
-static inline int
-__mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
-	     unsigned int portid, mnl_cb_t cb_data, void *data,
-	     mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
+static inline int __mnl_cb_run(const void *buf, size_t numbytes,
+			       unsigned int seq, unsigned int portid,
+			       mnl_cb_t cb_data, void *data,
+			       const mnl_cb_t *cb_ctl_array,
+			       unsigned int cb_ctl_array_len)
 {
 	int ret = MNL_CB_OK, len = numbytes;
 	const struct nlmsghdr *nlh = buf;
@@ -62,6 +63,12 @@ __mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
 		/* perform sequence tracking */
 		if (!mnl_nlmsg_seq_ok(nlh, seq)) {
 			errno = EPROTO;
+			return -1;
+		}
+
+		/* dump was interrupted */
+		if (nlh->nlmsg_flags & NLM_F_DUMP_INTR) {
+			errno = EINTR;
 			return -1;
 		}
 
@@ -117,17 +124,17 @@ out:
  * This function propagates the callback return value. On error, it returns
  * -1 and errno is explicitly set. If the portID is not the expected, errno
  * is set to ESRCH. If the sequence number is not the expected, errno is set
- * to EPROTO.
+ * to EPROTO. If the dump was interrupted, errno is set to EINTR and you should
+ * request a new fresh dump again.
  */
-int
-mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq,
-	    unsigned int portid, mnl_cb_t cb_data, void *data,
-	    mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
+EXPORT_SYMBOL(mnl_cb_run2);
+int mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq,
+		unsigned int portid, mnl_cb_t cb_data, void *data,
+		const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
 {
 	return __mnl_cb_run(buf, numbytes, seq, portid, cb_data, data,
 			    cb_ctl_array, cb_ctl_array_len);
 }
-EXPORT_SYMBOL(mnl_cb_run2);
 
 /**
  * mnl_cb_run - callback runqueue for netlink messages (simplified version)
@@ -148,13 +155,12 @@ EXPORT_SYMBOL(mnl_cb_run2);
  *
  * This function propagates the callback return value.
  */
-int
-mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
-	   unsigned int portid, mnl_cb_t cb_data, void *data)
+EXPORT_SYMBOL(mnl_cb_run);
+int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
+	       unsigned int portid, mnl_cb_t cb_data, void *data)
 {
 	return __mnl_cb_run(buf, numbytes, seq, portid, cb_data, data, NULL, 0);
 }
-EXPORT_SYMBOL(mnl_cb_run);
 
 /**
  * @}

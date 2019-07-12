@@ -17,22 +17,22 @@ int main(int argc, char *argv[])
 	struct mnl_socket *nl;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
 	struct nlmsghdr *nlh;
-	struct rtmsg *rtm;
-	uint32_t prefix, seq, portid;
+	struct ifaddrmsg *ifm;
+	uint32_t seq, portid;
 	union {
 		in_addr_t ip;
 		struct in6_addr ip6;
-	} dst;
-	union {
-		in_addr_t ip;
-		struct in6_addr ip6;
-	} gw;
-	int iface, ret, family = AF_INET;
+	} addr;
+	int ret, family = AF_INET;
+
+	uint32_t prefix;
+	int iface;
+
 
 	if (argc <= 3) {
-		printf("Usage: %s iface destination cidr [gateway]\n", argv[0]);
-		printf("Example: %s eth0 10.0.1.12 32 10.0.1.11\n", argv[0]);
-		printf("	 %s eth0 ffff::10.0.1.12 128 fdff::1\n", argv[0]);
+		printf("Usage: %s iface destination cidr\n", argv[0]);
+		printf("Example: %s eth0 10.0.1.12 32\n", argv[0]);
+		printf("	 %s eth0 ffff::10.0.1.12 128\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (!inet_pton(AF_INET, argv[2], &dst)) {
-		if (!inet_pton(AF_INET6, argv[2], &dst)) {
+	if (!inet_pton(AF_INET, argv[2], &addr)) {
+		if (!inet_pton(AF_INET6, argv[2], &addr)) {
 			perror("inet_pton");
 			exit(EXIT_FAILURE);
 		}
@@ -55,41 +55,33 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (argc == 5 && !inet_pton(family, argv[4], &gw)) {
-		perror("inet_pton");
-		exit(EXIT_FAILURE);
-	}
-
 	nlh = mnl_nlmsg_put_header(buf);
-	nlh->nlmsg_type	= RTM_NEWROUTE;
-	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK;
+	nlh->nlmsg_type	= RTM_NEWADDR;
+
+	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_REPLACE | NLM_F_ACK;
 	nlh->nlmsg_seq = seq = time(NULL);
 
-	rtm = mnl_nlmsg_put_extra_header(nlh, sizeof(struct rtmsg));
-	rtm->rtm_family = family;
-	rtm->rtm_dst_len = prefix;
-	rtm->rtm_src_len = 0;
-	rtm->rtm_tos = 0;
-	rtm->rtm_protocol = RTPROT_STATIC;
-	rtm->rtm_table = RT_TABLE_MAIN;
-	rtm->rtm_type = RTN_UNICAST;
-	/* is there any gateway? */
-	rtm->rtm_scope = (argc == 4) ? RT_SCOPE_LINK : RT_SCOPE_UNIVERSE;
-	rtm->rtm_flags = 0;
+	ifm = mnl_nlmsg_put_extra_header(nlh, sizeof(struct ifaddrmsg));
 
-	if (family == AF_INET)
-		mnl_attr_put_u32(nlh, RTA_DST, dst.ip);
-	else
-		mnl_attr_put(nlh, RTA_DST, sizeof(struct in6_addr), &dst);
+	ifm->ifa_family = family;
+	ifm->ifa_prefixlen = prefix;
+	ifm->ifa_flags = IFA_F_PERMANENT;
 
-	mnl_attr_put_u32(nlh, RTA_OIF, iface);
-	if (argc == 5) {
-		if (family == AF_INET)
-			mnl_attr_put_u32(nlh, RTA_GATEWAY, gw.ip);
-		else {
-			mnl_attr_put(nlh, RTA_GATEWAY, sizeof(struct in6_addr),
-					&gw.ip6);
-		}
+	ifm->ifa_scope = RT_SCOPE_UNIVERSE;
+	ifm->ifa_index = iface;
+
+	/*
+	 * The exact meaning of IFA_LOCAL and IFA_ADDRESS depend
+	 * on the address family being used and the device type.
+	 * For broadcast devices (like the interfaces we use),
+	 * for IPv4 we specify both and they are used interchangeably.
+	 * For IPv6, only IFA_ADDRESS needs to be set.
+	 */
+	if (family == AF_INET) {
+		mnl_attr_put_u32(nlh, IFA_LOCAL, addr.ip);
+		mnl_attr_put_u32(nlh, IFA_ADDRESS, addr.ip);
+	} else {
+		mnl_attr_put(nlh, IFA_ADDRESS, sizeof(struct in6_addr), &addr);
 	}
 
 	nl = mnl_socket_open(NETLINK_ROUTE);
