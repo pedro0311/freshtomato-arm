@@ -2407,6 +2407,10 @@ static int init_nvram(void)
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
 
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
 			/* force wl1 settings */
 			nvram_set("wl1_bw", "3");
 			nvram_set("wl1_bw_cap", "7");
@@ -2691,8 +2695,8 @@ static int init_nvram(void)
 			nvram_set("ohci_ports", "3-1 3-2");
 
 			/* misc settings */
-			nvram_set("boot_wait", "off");
-			nvram_set("wait_time", "1");
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			nvram_set("devpath0", "pci/1/1");
