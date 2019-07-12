@@ -1,8 +1,8 @@
 #ifndef _IFTABLE_H
 #define _IFTABLE_H
 
-int iftable_delete(u_int32_t dst, u_int32_t mask, u_int32_t gw, u_int32_t oif);
-int iftable_insert(u_int32_t dst, u_int32_t mask, u_int32_t gw, u_int32_t oif);
+int iftable_delete(uint32_t dst, uint32_t mask, uint32_t gw, uint32_t oif);
+int iftable_insert(uint32_t dst, uint32_t mask, uint32_t gw, uint32_t oif);
 
 int iftable_init(void);
 void iftable_fini(void);

@@ -1095,10 +1095,7 @@ upnp: nvram$(BCMEX) shared iptables
 	@$(SEP)
 
 libnfnetlink/stamp-h1:
-# tomatoraf.com, Victek
-# last sources is dated March 22,2014 from netfilter.org git
-# ./genconfig.sh and make with automake 1.13
-	cd $(TOP)/libnfnetlink && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libnfnetlink && ./autogen.sh && CC=$(CC) STRIP=$(STRIP) \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
