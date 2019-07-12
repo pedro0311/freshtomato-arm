@@ -1700,6 +1700,10 @@ static int init_nvram(void)
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
 
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
 			// force wl settings
 			// wl0 (1:) - 2,4GHz
 			nvram_set("wl0_bw_cap","3");
@@ -1771,6 +1775,10 @@ static int init_nvram(void)
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
 
 			// force wl settings
 			// wl0 (0:) - 2,4GHz
