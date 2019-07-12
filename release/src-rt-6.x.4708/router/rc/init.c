@@ -2922,7 +2922,7 @@ static int init_nvram(void)
 
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("boot_wait", "on");	/* failsafe for CFE flash */
-			nvram_set("wait_time", "30");	/* failsafe for CFE flash */
+			nvram_set("wait_time", "10");	/* failsafe for CFE flash */
 			nvram_set("uart_en", "1");	/* failsafe for CFE flash */
 			nvram_set("router_name", "X-R1D");
 			nvram_set("lan_hostname", "MiWiFi");
@@ -3440,7 +3440,7 @@ static int init_nvram(void)
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "1");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			//nvram_set("devpath0", "pci/1/1");
@@ -3665,7 +3665,7 @@ static int init_nvram(void)
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "1");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			//nvram_set("devpath0", "pci/1/1");
@@ -3889,7 +3889,7 @@ static int init_nvram(void)
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "1");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			nvram_set("0:aa2g", "7");
@@ -4121,7 +4121,7 @@ static int init_nvram(void)
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "1");
+			nvram_set("wait_time", "3");
 
 			/* 2.4GHz module defaults */
 			nvram_set("devpath0", "pci/2/1");
