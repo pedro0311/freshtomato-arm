@@ -205,6 +205,15 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 	struct nlattr *tb[RTA_MAX+1] = {};
 	struct rtmsg *rm = mnl_nlmsg_get_payload(nlh);
 
+	switch(nlh->nlmsg_type) {
+	case RTM_NEWROUTE:
+		printf("[NEW] ");
+		break;
+	case RTM_DELROUTE:
+		printf("[DEL] ");
+		break;
+	}
+
 	/* protocol family = AF_INET | AF_INET6 */
 	printf("family=%u ", rm->rtm_family);
 
@@ -300,26 +309,7 @@ int main(int argc, char *argv[])
 {
 	struct mnl_socket *nl;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
-	struct nlmsghdr *nlh;
-	struct rtmsg *rtm;
 	int ret;
-	unsigned int seq, portid;
-
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s <inet|inet6>\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
-	nlh = mnl_nlmsg_put_header(buf);
-	nlh->nlmsg_type = RTM_GETROUTE;
-	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-	nlh->nlmsg_seq = seq = time(NULL);
-	rtm = mnl_nlmsg_put_extra_header(nlh, sizeof(struct rtmsg));
-
-	if (strcmp(argv[1], "inet") == 0)
-		rtm->rtm_family = AF_INET;
-	else if (strcmp(argv[1], "inet6") == 0)
-		rtm->rtm_family = AF_INET6;
 
 	nl = mnl_socket_open(NETLINK_ROUTE);
 	if (nl == NULL) {
@@ -327,20 +317,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
+	if (mnl_socket_bind(nl, RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE,
+			    MNL_SOCKET_AUTOPID) < 0) {
 		perror("mnl_socket_bind");
-		exit(EXIT_FAILURE);
-	}
-	portid = mnl_socket_get_portid(nl);
-
-	if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
-		perror("mnl_socket_sendto");
 		exit(EXIT_FAILURE);
 	}
 
 	ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
 	while (ret > 0) {
-		ret = mnl_cb_run(buf, ret, seq, portid, data_cb, NULL);
+		ret = mnl_cb_run(buf, ret, 0, 0, data_cb, NULL);
 		if (ret <= MNL_CB_STOP)
 			break;
 		ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));

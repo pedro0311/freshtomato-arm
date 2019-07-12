@@ -2765,6 +2765,7 @@ libmnl/stamp-h1:
 	cd $(TOP)/libmnl && CC=$(CC) STRIP=$(STRIP) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr
 	touch libmnl/stamp-h1
 
