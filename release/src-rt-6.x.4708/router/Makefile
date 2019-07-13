@@ -1059,7 +1059,7 @@ nettle/stamp-h1: gmp
 	CPPFLAGS="-I$(TOP)/gmp" \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared
+	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared --disable-openssl
 	@touch nettle/stamp-h1
 
 nettle: nettle/stamp-h1
@@ -2028,7 +2028,7 @@ libxml2/stamp-h1:
 	autoreconf -fsi && \
 	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
-		--includedir="$(TOP)/libxml2/include" --without-lzma
+		--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	touch $@
 
 libxml2: libxml2/stamp-h1
@@ -2037,11 +2037,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C libxml2 DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
+	install -D libxml2/.libs/libxml2.so.2.9.9 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.9
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.9
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.3 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.3 libxml2.so
+		ln -sf libxml2.so.2.9.9 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.9 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2060,16 +2060,16 @@ libpng: libpng/stamp-h1
 	@$(MAKE) -C libpng DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/.libs/libpng.so.3.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
+	install -D libpng/.libs/libpng.so.3.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng.so.3.57.0 libpng.so && \
-		ln -sf libpng.so.3.57.0 libpng.so.3
-	install -D libpng/.libs/libpng12.so.0.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
+		ln -sf libpng.so.3.59.0 libpng.so && \
+		ln -sf libpng.so.3.59.0 libpng.so.3
+	install -D libpng/.libs/libpng12.so.0.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng12.so.0.57.0 libpng12.so && \
-		ln -sf libpng12.so.0.57.0 libpng12.so.0
+		ln -sf libpng12.so.0.59.0 libpng12.so && \
+		ln -sf libpng12.so.0.59.0 libpng12.so.0
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
