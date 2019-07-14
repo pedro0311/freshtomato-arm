@@ -2776,11 +2776,11 @@ libmnl: libmnl/stamp-h1
 
 libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
-	install libmnl/src/.libs/libmnl.so.0.1.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
-	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
+	install libmnl/src/.libs/libmnl.so.0.2.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
+	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
 	cd $(INSTALLDIR)/libmnl/usr/lib/ && \
-		ln -sf libmnl.so.0.1.0 libmnl.so.0 && \
-		ln -sf libmnl.so.0.1.0 libmnl.so
+		ln -sf libmnl.so.0.2.0 libmnl.so.0 && \
+		ln -sf libmnl.so.0.2.0 libmnl.so
 
 libmnl-clean:
 	-@$(MAKE) -C libmnl clean
