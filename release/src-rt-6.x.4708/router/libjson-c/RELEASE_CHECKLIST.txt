@@ -1,7 +1,7 @@
 
 Release checklist:
 
-release=0.13
+release=0.14
 git clone https://github.com/json-c/json-c json-c-${release}
 cd json-c-${release}
 
@@ -22,6 +22,7 @@ Update the version in json_c_version.h
 Update the version in Doxyfile
 Update the version in configure.ac
 Update the version in CMakeLists.txt
+Update the version in config.h.win32
 	Use ${release}.
 
 Update the libjson_la_LDFLAGS line in Makefile.am to the new version.
@@ -37,7 +38,7 @@ Generate the configure script and other files:
   git add -f Makefile.in aclocal.m4 config.guess config.h.in \
        config.sub configure depcomp install-sh \
        ltmain.sh missing tests/Makefile.in \
-       INSTALL
+       INSTALL compile test-driver
 
   # check for anything else to be added:
   git status --ignored
@@ -90,9 +91,10 @@ Update the version in json_c_version.h
 Update the version in Doxyfile
 Update the version in configure.ac
 Update the version in CMakeLists.txt
+Update the version in config.h.win32
     Use ${release}.99 to indicate a version "newer" than anything on the branch.
 
-Leave the libjson_la_LDFLAGS line in Makefile.am alone.
+Update the libjson_la_LDFLAGS line in Makefile.am to match the release branch.
 	For more details see:
 	http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 
@@ -108,7 +110,6 @@ git clone -b gh-pages https://github.com/json-c/json-c json-c-pages
 cd json-c-pages
 mkdir json-c-${release}
 cp -R ../json-c-${release}/doc json-c-${release}/.
-cp ../json-c-${release}/README-WIN32.html json-c-${release}/.
 git add json-c-${release}
 git commit
 

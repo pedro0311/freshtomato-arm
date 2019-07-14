@@ -240,6 +240,7 @@ static ZEND_INI_MH(OnEnable)
 			return FAILURE;
 		} else {
 			*p = 0;
+			ZCG(accelerator_enabled) = 0;
 			return SUCCESS;
 		}
 	}
@@ -768,7 +769,10 @@ static ZEND_FUNCTION(opcache_reset)
 		RETURN_FALSE;
 	}
 
+	/* exclusive lock */
+	zend_shared_alloc_lock();
 	zend_accel_schedule_restart(ACCEL_RESTART_USER);
+	zend_shared_alloc_unlock();
 	RETURN_TRUE;
 }
 

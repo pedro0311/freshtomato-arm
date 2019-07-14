@@ -1222,10 +1222,7 @@ upnp: nvram$(BCMEX) shared iptables
 	@$(SEP)
 
 libnfnetlink/stamp-h1:
-# tomatoraf.com, Victek
-# last sources is dated March 22,2014 from netfilter.org git
-# ./genconfig.sh and make with automake 1.13
-	cd $(TOP)/libnfnetlink && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libnfnetlink && ./autogen.sh && CC=$(CC) STRIP=$(STRIP) \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
@@ -1697,7 +1694,7 @@ endif
 	@true
 
 libexif/stamp-h1:
-	cd libexif && CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+	cd libexif && autoreconf -fsi && CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' \
 		--disable-docs --disable-rpath --disable-nls --without-libiconv-prefix --without-libintl-prefix
@@ -2480,11 +2477,11 @@ libiconv-clean:
 
 libiconv-install:
 	install -d $(INSTALLDIR)/libiconv/usr/lib
-	install libiconv/lib/.libs/libiconv.so.2.6.0 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
-	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
+	install libiconv/lib/.libs/libiconv.so.2.6.1 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
+	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
 	cd $(INSTALLDIR)/libiconv/usr/lib/ && \
-		ln -sf libiconv.so.2.6.0 libiconv.so.2 && \
-		ln -sf libiconv.so.2.6.0 libiconv.so
+		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
+		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: openssl libcurl libevent zlib
 	cd transmission && CC=$(CC) STRIP=$(STRIP) \
@@ -2895,6 +2892,7 @@ libmnl/stamp-h1:
 	cd $(TOP)/libmnl && CC=$(CC) STRIP=$(STRIP) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr
 	touch libmnl/stamp-h1
 

@@ -1,14 +1,9 @@
 #ifndef _LIBMNL_H_
 #define _LIBMNL_H_
 
-#ifdef __cplusplus
-#	include <cstdio>
-#	include <cstdint>
-#else
-#	include <stdbool.h> /* not in C++ */
-#	include <stdio.h>
-#	include <stdint.h>
-#endif
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/socket.h> /* for sa_family_t */
 #include <linux/netlink.h>
@@ -22,11 +17,13 @@ extern "C" {
  */
 
 #define MNL_SOCKET_AUTOPID	0
-#define MNL_SOCKET_BUFFER_SIZE (getpagesize() < 8192L ? getpagesize() : 8192L)
+#define MNL_SOCKET_BUFFER_SIZE (sysconf(_SC_PAGESIZE) < 8192L ? sysconf(_SC_PAGESIZE) : 8192L)
 
 struct mnl_socket;
 
-extern struct mnl_socket *mnl_socket_open(int type);
+extern struct mnl_socket *mnl_socket_open(int bus);
+extern struct mnl_socket *mnl_socket_open2(int bus, int flags);
+extern struct mnl_socket *mnl_socket_fdopen(int fd);
 extern int mnl_socket_bind(struct mnl_socket *nl, unsigned int groups, pid_t pid);
 extern int mnl_socket_close(struct mnl_socket *nl);
 extern int mnl_socket_get_fd(const struct mnl_socket *nl);
@@ -182,7 +179,8 @@ extern int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
 
 extern int mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq,
 		       unsigned int portid, mnl_cb_t cb_data, void *data,
-		       mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len);
+		       const mnl_cb_t *cb_ctl_array,
+		       unsigned int cb_ctl_array_len);
 
 /*
  * other declarations

@@ -7,7 +7,7 @@
 struct rtnl_handler {
 	struct rtnl_handler *next;
 
-	u_int16_t	nlmsg_type;
+	uint16_t	nlmsg_type;
 	int		(*handlefn)(struct nlmsghdr *h, void *arg);
 	void		*arg;
 };

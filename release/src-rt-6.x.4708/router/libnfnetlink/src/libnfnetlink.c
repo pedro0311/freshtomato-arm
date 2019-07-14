@@ -72,9 +72,9 @@
 
 struct nfnl_subsys_handle {
 	struct nfnl_handle 	*nfnlh;
-	u_int32_t		subscriptions;
-	u_int8_t		subsys_id;
-	u_int8_t		cb_count;
+	uint32_t		subscriptions;
+	uint8_t			subsys_id;
+	uint8_t			cb_count;
 	struct nfnl_callback 	*cb;	/* array of callbacks */
 };
 
@@ -86,11 +86,11 @@ struct nfnl_handle {
 	int			fd;
 	struct sockaddr_nl	local;
 	struct sockaddr_nl	peer;
-	u_int32_t		subscriptions;
-	u_int32_t		seq;
-	u_int32_t		dump;
-	u_int32_t		rcv_buffer_size;	/* for nfnl_catch */
-	u_int32_t		flags;
+	uint32_t		subscriptions;
+	uint32_t		seq;
+	uint32_t		dump;
+	uint32_t		rcv_buffer_size;	/* for nfnl_catch */
+	uint32_t		flags;
 	struct nlmsghdr 	*last_nlhdr;
 	struct nfnl_subsys_handle subsys[NFNL_MAX_SUBSYS+1];
 };
@@ -145,7 +145,7 @@ unsigned int nfnl_portid(const struct nfnl_handle *h)
 static int recalc_rebind_subscriptions(struct nfnl_handle *nfnlh)
 {
 	int i, err;
-	u_int32_t new_subscriptions = nfnlh->subscriptions;
+	uint32_t new_subscriptions = nfnlh->subscriptions;
 
 	for (i = 0; i < NFNL_MAX_SUBSYS; i++)
 		new_subscriptions |= nfnlh->subsys[i].subscriptions;
@@ -273,8 +273,8 @@ void nfnl_set_rcv_buffer_size(struct nfnl_handle *h, unsigned int size)
  * a valid address that points to a nfnl_subsys_handle structure is returned.
  */
 struct nfnl_subsys_handle *
-nfnl_subsys_open(struct nfnl_handle *nfnlh, u_int8_t subsys_id,
-		 u_int8_t cb_count, u_int32_t subscriptions)
+nfnl_subsys_open(struct nfnl_handle *nfnlh, uint8_t subsys_id,
+		 uint8_t cb_count, uint32_t subscriptions)
 {
 	struct nfnl_subsys_handle *ssh;
 
@@ -435,10 +435,10 @@ int nfnl_sendiov(const struct nfnl_handle *nfnlh, const struct iovec *iov,
  */
 void nfnl_fill_hdr(struct nfnl_subsys_handle *ssh,
 		    struct nlmsghdr *nlh, unsigned int len, 
-		    u_int8_t family,
-		    u_int16_t res_id,
-		    u_int16_t msg_type,
-		    u_int16_t msg_flags)
+		    uint8_t family,
+		    uint16_t res_id,
+		    uint16_t msg_type,
+		    uint16_t msg_flags)
 {
 	assert(ssh);
 	assert(nlh);
@@ -809,12 +809,13 @@ int nfnl_addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	nfa->nfa_type = type;
 	nfa->nfa_len = len;
 	memcpy(NFA_DATA(nfa), data, alen);
+	memset((uint8_t *)nfa + nfa->nfa_len, 0, NFA_ALIGN(alen) - alen);
 	n->nlmsg_len = (NLMSG_ALIGN(n->nlmsg_len) + NFA_ALIGN(len));
 	return 0;
 }
 
 /**
- * nfnl_nfa_addattr_l - Add variable length attribute to struct nfattr 
+ * nfnl_nfa_addattr_l - Add variable length attribute to struct nfattr
  *
  * @nfa: struct nfattr
  * @maxlen: maximal length of nfattr buffer
@@ -848,14 +849,14 @@ int nfnl_nfa_addattr_l(struct nfattr *nfa, int maxlen, int type,
 }
 
 /**
- * nfnl_addattr8 - Add u_int8_t attribute to nlmsghdr
+ * nfnl_addattr8 - Add uint8_t attribute to nlmsghdr
  *
  * @n: netlink message header to which attribute is to be added
  * @maxlen: maximum length of netlink message header
  * @type: type of new attribute
  * @data: content of new attribute
  */
-int nfnl_addattr8(struct nlmsghdr *n, int maxlen, int type, u_int8_t data)
+int nfnl_addattr8(struct nlmsghdr *n, int maxlen, int type, uint8_t data)
 {
 	assert(n);
 	assert(maxlen > 0);
@@ -865,7 +866,7 @@ int nfnl_addattr8(struct nlmsghdr *n, int maxlen, int type, u_int8_t data)
 }
 
 /**
- * nfnl_nfa_addattr16 - Add u_int16_t attribute to struct nfattr 
+ * nfnl_nfa_addattr16 - Add uint16_t attribute to struct nfattr
  *
  * @nfa: struct nfattr
  * @maxlen: maximal length of nfattr buffer
@@ -874,7 +875,7 @@ int nfnl_addattr8(struct nlmsghdr *n, int maxlen, int type, u_int8_t data)
  *
  */
 int nfnl_nfa_addattr16(struct nfattr *nfa, int maxlen, int type, 
-		       u_int16_t data)
+		       uint16_t data)
 {
 	assert(nfa);
 	assert(maxlen > 0);
@@ -884,7 +885,7 @@ int nfnl_nfa_addattr16(struct nfattr *nfa, int maxlen, int type,
 }
 
 /**
- * nfnl_addattr16 - Add u_int16_t attribute to nlmsghdr
+ * nfnl_addattr16 - Add uint16_t attribute to nlmsghdr
  *
  * @n: netlink message header to which attribute is to be added
  * @maxlen: maximum length of netlink message header
@@ -893,7 +894,7 @@ int nfnl_nfa_addattr16(struct nfattr *nfa, int maxlen, int type,
  *
  */
 int nfnl_addattr16(struct nlmsghdr *n, int maxlen, int type,
-		   u_int16_t data)
+		   uint16_t data)
 {
 	assert(n);
 	assert(maxlen > 0);
@@ -903,7 +904,7 @@ int nfnl_addattr16(struct nlmsghdr *n, int maxlen, int type,
 }
 
 /**
- * nfnl_nfa_addattr32 - Add u_int32_t attribute to struct nfattr 
+ * nfnl_nfa_addattr32 - Add uint32_t attribute to struct nfattr
  *
  * @nfa: struct nfattr
  * @maxlen: maximal length of nfattr buffer
@@ -912,7 +913,7 @@ int nfnl_addattr16(struct nlmsghdr *n, int maxlen, int type,
  *
  */
 int nfnl_nfa_addattr32(struct nfattr *nfa, int maxlen, int type, 
-		       u_int32_t data)
+		       uint32_t data)
 {
 	assert(nfa);
 	assert(maxlen > 0);
@@ -922,7 +923,7 @@ int nfnl_nfa_addattr32(struct nfattr *nfa, int maxlen, int type,
 }
 
 /**
- * nfnl_addattr32 - Add u_int32_t attribute to nlmsghdr
+ * nfnl_addattr32 - Add uint32_t attribute to nlmsghdr
  *
  * @n: netlink message header to which attribute is to be added
  * @maxlen: maximum length of netlink message header
@@ -931,7 +932,7 @@ int nfnl_nfa_addattr32(struct nfattr *nfa, int maxlen, int type,
  *
  */
 int nfnl_addattr32(struct nlmsghdr *n, int maxlen, int type,
-		   u_int32_t data)
+		   uint32_t data)
 {
 	assert(n);
 	assert(maxlen > 0);
@@ -979,7 +980,7 @@ int nfnl_parse_attr(struct nfattr *tb[], int max, struct nfattr *nfa, int len)
  *
  */ 
 void nfnl_build_nfa_iovec(struct iovec *iov, struct nfattr *nfa, 
-			  u_int16_t type, u_int32_t len, unsigned char *val)
+			  uint16_t type, uint32_t len, unsigned char *val)
 {
 	assert(iov);
 	assert(nfa);
@@ -1114,7 +1115,7 @@ struct nlmsghdr *nfnl_get_msg_next(struct nfnl_handle *h,
  * appropiately.
  */
 int nfnl_callback_register(struct nfnl_subsys_handle *ssh,
-			   u_int8_t type, struct nfnl_callback *cb)
+			   uint8_t type, struct nfnl_callback *cb)
 {
 	assert(ssh);
 	assert(cb);
@@ -1137,7 +1138,7 @@ int nfnl_callback_register(struct nfnl_subsys_handle *ssh,
  * On sucess, 0 is returned. On error, -1 is returned and errno is
  * set appropiately.
  */
-int nfnl_callback_unregister(struct nfnl_subsys_handle *ssh, u_int8_t type)
+int nfnl_callback_unregister(struct nfnl_subsys_handle *ssh, uint8_t type)
 {
 	assert(ssh);
 
@@ -1160,8 +1161,8 @@ int nfnl_check_attributes(const struct nfnl_handle *h,
 	assert(nfa);
 
 	int min_len;
-	u_int8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
-	u_int8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
+	uint8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
+	uint8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
 	const struct nfnl_subsys_handle *ssh;
 	struct nfnl_callback *cb;
 
@@ -1211,8 +1212,8 @@ static int __nfnl_handle_msg(struct nfnl_handle *h, struct nlmsghdr *nlh,
 			     int len)
 {
 	struct nfnl_subsys_handle *ssh;
-	u_int8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
-	u_int8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
+	uint8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
+	uint8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
 	int err = 0;
 
 	if (subsys_id > NFNL_MAX_SUBSYS)
@@ -1242,7 +1243,7 @@ int nfnl_handle_packet(struct nfnl_handle *h, char *buf, int len)
 {
 
 	while (len >= NLMSG_SPACE(0)) {
-		u_int32_t rlen;
+		uint32_t rlen;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)buf;
 
 		if (nlh->nlmsg_len < sizeof(struct nlmsghdr)
@@ -1284,8 +1285,8 @@ static int nfnl_is_error(struct nfnl_handle *h, struct nlmsghdr *nlh)
 static int nfnl_step(struct nfnl_handle *h, struct nlmsghdr *nlh)
 {
 	struct nfnl_subsys_handle *ssh;
-	u_int8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
-	u_int8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
+	uint8_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
+	uint8_t subsys_id = NFNL_SUBSYS_ID(nlh->nlmsg_type);
 
 	/* Is this an error message? */
 	if (nfnl_is_error(h, nlh)) {

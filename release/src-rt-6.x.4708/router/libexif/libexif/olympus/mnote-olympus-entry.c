@@ -80,7 +80,7 @@
 #define R2D(n) ((n).denominator ? (double)(n).numerator/(n).denominator : 0.0)
 
 static const struct {
-	ExifTag tag;
+	MnoteOlympusTag tag;
 	ExifFormat fmt;
 	struct {
 		int index;
@@ -274,6 +274,7 @@ mnote_olympus_entry_get_value (MnoteOlympusEntry *entry, char *v, unsigned int m
 {
 	char         buf[30];
 	ExifLong     vl;
+	ExifSLong    vsl;
 	ExifShort    vs = 0;
 	ExifSShort   vss = 0;
 	ExifRational vr, vr2;
@@ -299,7 +300,7 @@ mnote_olympus_entry_get_value (MnoteOlympusEntry *entry, char *v, unsigned int m
 	case MNOTE_NIKON_TAG_FIRMWARE:
 		CF (entry->format,  EXIF_FORMAT_UNDEFINED, v, maxlen);
 		CC (entry->components, 4, v, maxlen);
-		vl = exif_get_long (entry->data, entry->order);
+		vl = exif_get_long (entry->data, EXIF_BYTE_ORDER_INTEL);
 		if ((vl & 0xF0F0F0F0) == 0x30303030) {
 			memcpy (v, entry->data, MIN (maxlen, 4));
 		} else {
@@ -346,11 +347,11 @@ mnote_olympus_entry_get_value (MnoteOlympusEntry *entry, char *v, unsigned int m
 		break;
 	case MNOTE_NIKON_TAG_LENS_FSTOPS:
 	case MNOTE_NIKON_TAG_EXPOSUREDIFF: {
-		unsigned char a,b,c,d;
+		unsigned char a,b,c;
 		CF (entry->format, EXIF_FORMAT_UNDEFINED, v, maxlen);
 		CC (entry->components, 4, v, maxlen);
 		vl =  exif_get_long (entry->data, entry->order);
-		a = (vl>>24)&0xff; b = (vl>>16)&0xff; c = (vl>>8)&0xff; d = (vl)&0xff;
+		a = (vl>>24)&0xff; b = (vl>>16)&0xff; c = (vl>>8)&0xff;
 		snprintf (v, maxlen, "%.1f",  c?(float)a*((float)b/(float)c):0 );
 		break;
 	}
@@ -785,10 +786,20 @@ mnote_olympus_entry_get_value (MnoteOlympusEntry *entry, char *v, unsigned int m
 			vs = exif_get_short (entry->data, entry->order);
 			snprintf (v, maxlen, "%hu", vs);
 			break;
+		case EXIF_FORMAT_SSHORT:
+			CC (entry->components, 1, v, maxlen);
+			vss = exif_get_sshort (entry->data, entry->order);
+			snprintf (v, maxlen, "%hi", vss);
+			break;
 		case EXIF_FORMAT_LONG:
 			CC (entry->components, 1, v, maxlen);
 			vl = exif_get_long (entry->data, entry->order);
-			snprintf (v, maxlen, "%li", (long int) vl);
+			snprintf (v, maxlen, "%lu", (long unsigned) vl);
+			break;
+		case EXIF_FORMAT_SLONG:
+			CC (entry->components, 1, v, maxlen);
+			vsl = exif_get_slong (entry->data, entry->order);
+			snprintf (v, maxlen, "%li", (long int) vsl);
 			break;
 		case EXIF_FORMAT_RATIONAL:
 			CC (entry->components, 1, v, maxlen);

@@ -1,12 +1,13 @@
-`json-c`                       {#mainpage}
+`json-c`
 ========
 
 1. [Overview and Build Status](#overview)
 2. [Building on Unix](#buildunix)
 3. [Install Prerequisites](#installprereq)
 4. [Building with partial threading support](#buildthreaded)
-5. [Linking to libjson-c](#linking)
-6. [Using json-c](#using)
+5. [Building with CMake](#CMake)
+6. [Linking to libjson-c](#linking)
+7. [Using json-c](#using)
 
 JSON-C - A JSON implementation in C <a name="overview"></a>
 -----------------------------------
@@ -15,8 +16,8 @@ Build Status
 * [AppVeyor Build](https://ci.appveyor.com/project/hawicz/json-c) ![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/json-c/json-c?branch=master&svg=true)
 * [Travis Build](https://travis-ci.org/json-c/json-c) ![Travis Build Status](https://travis-ci.org/json-c/json-c.svg?branch=master)
 
-JSON-C implements a reference counting object model that allows you to easily 
-construct JSON objects in C, output them as JSON formatted strings and parse 
+JSON-C implements a reference counting object model that allows you to easily
+construct JSON objects in C, output them as JSON formatted strings and parse
 JSON formatted strings back into the C representation of JSON objects.
 It aims to conform to [RFC 7159](https://tools.ietf.org/html/rfc7159).
 
@@ -72,7 +73,7 @@ Install prerequisites <a name="installprereq"></a>
 -----------------------
 
 If you are on a relatively modern system, you'll likely be able to install
-the prerequisites using your OS's packaging system.  
+the prerequisites using your OS's packaging system.
 
 ### Install using apt (e.g. Ubuntu 16.04.2 LTS)
 ```sh
@@ -85,7 +86,7 @@ Then start from the "git clone" command, above.
 
 ### Manually install and build autoconf, automake and libtool
 
-For older OS's that don't have up-to-date version of the packages will
+For older OS's that don't have up-to-date versions of the packages will
 require a bit more work. For example, CentOS release 5.11, etc...
 
 ```sh
@@ -134,6 +135,32 @@ lh_char_hash, uses a compare-and-swap operation to ensure the randomly
 seed is only generated once.  Because this is a one-time operation, it
 is always compiled in when the compare-and-swap operation is available.
 
+Building with CMake <a name="CMake"></a>
+--------------------
+
+To use [CMake](https://cmake.org/cmake-tutorial/), build it like:
+
+```sh
+mkdir build
+cd build
+cmake ../
+make
+```
+
+CMake can take a few options.
+
+Variable             | Type   | Description
+---------------------|--------|--------------
+CMAKE_INSTALL_PREFIX | String | The install location.
+BUILD_SHARED_LIBS    | Bool   | The default build generates a dynamic (dll/so) library.  Set this to OFF to create a static library instead.
+ENABLE_RDRAND        | Bool   | Enable RDRAND Hardware RNG Hash Seed
+ENABLE_THREADING     | Bool   | Enable partial threading support
+
+Pass these options as `-D` on CMake's command-line.
+
+```sh
+cmake -DBUILD_SHARED_LIBS=OFF ...
+```
 
 Linking to `libjson-c` <a name="linking">
 ----------------------
@@ -169,5 +196,5 @@ following more specific header files:
 * json_visit.h   - Methods for walking a tree of json-c objects.
 * json_util.h    - Miscelleanous utility functions.
 
-For a full list of headers see [files.html](files.html)
+For a full list of headers see [files.html](http://json-c.github.io/json-c/json-c-0.13.1/doc/html/files.html)
 

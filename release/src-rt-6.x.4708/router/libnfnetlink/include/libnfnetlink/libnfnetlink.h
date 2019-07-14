@@ -15,6 +15,7 @@
 #define aligned_u64 unsigned long long __attribute__((aligned(8)))
 #endif
 
+#include <stdint.h>
 #include <sys/socket.h>	/* for sa_family_t */
 #include <linux/netlink.h>
 #include <libnfnetlink/linux_nfnetlink.h>
@@ -43,6 +44,10 @@
 
 #define NFNL_BUFFSIZE		8192
 
+#ifndef NFNL_EXPORT
+#define NFNL_EXPORT
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,69 +60,69 @@ struct nfnlhdr {
 struct nfnl_callback {
 	int (*call)(struct nlmsghdr *nlh, struct nfattr *nfa[], void *data);
 	void *data;
-	u_int16_t attr_count;
+	uint16_t attr_count;
 };
 
 struct nfnl_handle;
 struct nfnl_subsys_handle;
 
-extern int nfnl_fd(struct nfnl_handle *h);
-extern unsigned int nfnl_portid(const struct nfnl_handle *h);
+extern NFNL_EXPORT int nfnl_fd(struct nfnl_handle *h);
+extern NFNL_EXPORT unsigned int nfnl_portid(const struct nfnl_handle *h);
 
 /* get a new library handle */
-extern struct nfnl_handle *nfnl_open(void);
-extern int nfnl_close(struct nfnl_handle *);
+extern NFNL_EXPORT struct nfnl_handle *nfnl_open(void);
+extern NFNL_EXPORT int nfnl_close(struct nfnl_handle *);
 
-extern struct nfnl_subsys_handle *nfnl_subsys_open(struct nfnl_handle *, 
-						   u_int8_t, u_int8_t, 
+extern NFNL_EXPORT struct nfnl_subsys_handle *nfnl_subsys_open(struct nfnl_handle *,
+						   uint8_t, uint8_t,
 						   unsigned int);
-extern void nfnl_subsys_close(struct nfnl_subsys_handle *);
+extern NFNL_EXPORT void nfnl_subsys_close(struct nfnl_subsys_handle *);
 
 /* set and unset sequence tracking */
-void nfnl_set_sequence_tracking(struct nfnl_handle *h);
-void nfnl_unset_sequence_tracking(struct nfnl_handle *h);
+extern NFNL_EXPORT void nfnl_set_sequence_tracking(struct nfnl_handle *h);
+extern NFNL_EXPORT void nfnl_unset_sequence_tracking(struct nfnl_handle *h);
 
 /* set receive buffer size (for nfnl_catch) */
-extern void nfnl_set_rcv_buffer_size(struct nfnl_handle *h, unsigned int size);
+extern NFNL_EXPORT void nfnl_set_rcv_buffer_size(struct nfnl_handle *h, unsigned int size);
 
 /* sending of data */
-extern int nfnl_send(struct nfnl_handle *, struct nlmsghdr *);
-extern int nfnl_sendmsg(const struct nfnl_handle *, const struct msghdr *msg,
+extern NFNL_EXPORT int nfnl_send(struct nfnl_handle *, struct nlmsghdr *);
+extern NFNL_EXPORT int nfnl_sendmsg(const struct nfnl_handle *, const struct msghdr *msg,
 			unsigned int flags);
-extern int nfnl_sendiov(const struct nfnl_handle *nfnlh,
+extern NFNL_EXPORT int nfnl_sendiov(const struct nfnl_handle *nfnlh,
 			const struct iovec *iov, unsigned int num,
 			unsigned int flags);
-extern void nfnl_fill_hdr(struct nfnl_subsys_handle *, struct nlmsghdr *,
-			  unsigned int, u_int8_t, u_int16_t, u_int16_t,
-			  u_int16_t);
-extern __attribute__((deprecated)) int
+extern NFNL_EXPORT void nfnl_fill_hdr(struct nfnl_subsys_handle *, struct nlmsghdr *,
+			  unsigned int, uint8_t, uint16_t, uint16_t,
+			  uint16_t);
+extern NFNL_EXPORT __attribute__((deprecated)) int
 nfnl_talk(struct nfnl_handle *, struct nlmsghdr *, pid_t,
           unsigned, struct nlmsghdr *,
           int (*)(struct sockaddr_nl *, struct nlmsghdr *, void *), void *);
 
 /* simple challenge/response */
-extern __attribute__((deprecated)) int
+extern NFNL_EXPORT __attribute__((deprecated)) int
 nfnl_listen(struct nfnl_handle *,
             int (*)(struct sockaddr_nl *, struct nlmsghdr *, void *), void *);
 
 /* receiving */
-extern ssize_t nfnl_recv(const struct nfnl_handle *h, unsigned char *buf, size_t len);
-extern int nfnl_callback_register(struct nfnl_subsys_handle *,
-				  u_int8_t type, struct nfnl_callback *cb);
-extern int nfnl_callback_unregister(struct nfnl_subsys_handle *, u_int8_t type);
-extern int nfnl_handle_packet(struct nfnl_handle *, char *buf, int len);
+extern NFNL_EXPORT ssize_t nfnl_recv(const struct nfnl_handle *h, unsigned char *buf, size_t len);
+extern NFNL_EXPORT int nfnl_callback_register(struct nfnl_subsys_handle *,
+				  uint8_t type, struct nfnl_callback *cb);
+extern NFNL_EXPORT int nfnl_callback_unregister(struct nfnl_subsys_handle *, uint8_t type);
+extern NFNL_EXPORT int nfnl_handle_packet(struct nfnl_handle *, char *buf, int len);
 
 /* parsing */
-extern struct nfattr *nfnl_parse_hdr(const struct nfnl_handle *nfnlh, 
+extern NFNL_EXPORT struct nfattr *nfnl_parse_hdr(const struct nfnl_handle *nfnlh,
 				     const struct nlmsghdr *nlh,
 				     struct nfgenmsg **genmsg);
-extern int nfnl_check_attributes(const struct nfnl_handle *nfnlh,
+extern NFNL_EXPORT int nfnl_check_attributes(const struct nfnl_handle *nfnlh,
 				 const struct nlmsghdr *nlh,
 				 struct nfattr *tb[]);
-extern struct nlmsghdr *nfnl_get_msg_first(struct nfnl_handle *h,
+extern NFNL_EXPORT struct nlmsghdr *nfnl_get_msg_first(struct nfnl_handle *h,
 					   const unsigned char *buf,
 					   size_t len);
-extern struct nlmsghdr *nfnl_get_msg_next(struct nfnl_handle *h,
+extern NFNL_EXPORT struct nlmsghdr *nfnl_get_msg_next(struct nfnl_handle *h,
 					  const unsigned char *buf,
 					  size_t len);
 
@@ -129,33 +134,33 @@ enum {
 };
 
 /* join a certain netlink multicast group */
-extern int nfnl_join(const struct nfnl_handle *nfnlh, unsigned int group);
+extern NFNL_EXPORT int nfnl_join(const struct nfnl_handle *nfnlh, unsigned int group);
 
 /* process a netlink message */
-extern int nfnl_process(struct nfnl_handle *h,
+extern NFNL_EXPORT int nfnl_process(struct nfnl_handle *h,
 			const unsigned char *buf,
 			size_t len);
 
 /* iterator API */
 
-extern struct nfnl_iterator *
+extern NFNL_EXPORT struct nfnl_iterator *
 nfnl_iterator_create(const struct nfnl_handle *h,
 		     const char *buf,
 		     size_t len);
 
-extern void nfnl_iterator_destroy(struct nfnl_iterator *it);
+extern NFNL_EXPORT void nfnl_iterator_destroy(struct nfnl_iterator *it);
 
-extern int nfnl_iterator_process(struct nfnl_handle *h,
+extern NFNL_EXPORT int nfnl_iterator_process(struct nfnl_handle *h,
 				 struct nfnl_iterator *it);
 
-extern int nfnl_iterator_next(const struct nfnl_handle *h,
+extern NFNL_EXPORT int nfnl_iterator_next(const struct nfnl_handle *h,
 			      struct nfnl_iterator *it);
 
 /* replacement for nfnl_listen */
-extern int nfnl_catch(struct nfnl_handle *h);
+extern NFNL_EXPORT int nfnl_catch(struct nfnl_handle *h);
 
 /* replacement for nfnl_talk */
-extern int nfnl_query(struct nfnl_handle *h, struct nlmsghdr *nlh);
+extern NFNL_EXPORT int nfnl_query(struct nfnl_handle *h, struct nlmsghdr *nlh);
 
 #define nfnl_attr_present(tb, attr)			\
 	(tb[attr-1])
@@ -179,14 +184,14 @@ extern int nfnl_query(struct nfnl_handle *h, struct nlmsghdr *nlh);
 #endif
 
 /* nfnl attribute handling functions */
-extern int nfnl_addattr_l(struct nlmsghdr *, int, int, const void *, int);
-extern int nfnl_addattr8(struct nlmsghdr *, int, int, u_int8_t);
-extern int nfnl_addattr16(struct nlmsghdr *, int, int, u_int16_t);
-extern int nfnl_addattr32(struct nlmsghdr *, int, int, u_int32_t);
-extern int nfnl_nfa_addattr_l(struct nfattr *, int, int, const void *, int);
-extern int nfnl_nfa_addattr16(struct nfattr *, int, int, u_int16_t);
-extern int nfnl_nfa_addattr32(struct nfattr *, int, int, u_int32_t);
-extern int nfnl_parse_attr(struct nfattr **, int, struct nfattr *, int);
+extern NFNL_EXPORT int nfnl_addattr_l(struct nlmsghdr *, int, int, const void *, int);
+extern NFNL_EXPORT int nfnl_addattr8(struct nlmsghdr *, int, int, uint8_t);
+extern NFNL_EXPORT int nfnl_addattr16(struct nlmsghdr *, int, int, uint16_t);
+extern NFNL_EXPORT int nfnl_addattr32(struct nlmsghdr *, int, int, uint32_t);
+extern NFNL_EXPORT int nfnl_nfa_addattr_l(struct nfattr *, int, int, const void *, int);
+extern NFNL_EXPORT int nfnl_nfa_addattr16(struct nfattr *, int, int, uint16_t);
+extern NFNL_EXPORT int nfnl_nfa_addattr32(struct nfattr *, int, int, uint32_t);
+extern NFNL_EXPORT int nfnl_parse_attr(struct nfattr **, int, struct nfattr *, int);
 #define nfnl_parse_nested(tb, max, nfa) \
 	nfnl_parse_attr((tb), (max), NFA_DATA((nfa)), NFA_PAYLOAD((nfa)))
 #define nfnl_nest(nlh, bufsize, type) 				\
@@ -196,14 +201,14 @@ extern int nfnl_parse_attr(struct nfattr **, int, struct nfattr *, int);
 #define nfnl_nest_end(nlh, tail) 				\
 ({	(tail)->nfa_len = (void *) NLMSG_TAIL(nlh) - (void *) tail; })
 
-extern void nfnl_build_nfa_iovec(struct iovec *iov, struct nfattr *nfa, 
-				 u_int16_t type, u_int32_t len,
+extern NFNL_EXPORT void nfnl_build_nfa_iovec(struct iovec *iov, struct nfattr *nfa,
+				 uint16_t type, uint32_t len,
 				 unsigned char *val);
-extern unsigned int nfnl_rcvbufsiz(const struct nfnl_handle *h, 
+extern NFNL_EXPORT unsigned int nfnl_rcvbufsiz(const struct nfnl_handle *h,
 				   unsigned int size);
 
 
-extern void nfnl_dump_packet(struct nlmsghdr *, int, char *);
+extern NFNL_EXPORT void nfnl_dump_packet(struct nlmsghdr *, int, char *);
 
 /*
  * index to interface name API
@@ -215,17 +220,17 @@ extern void nfnl_dump_packet(struct nlmsghdr *, int, char *);
 
 struct nlif_handle;
 
-struct nlif_handle *nlif_open(void);
-void nlif_close(struct nlif_handle *orig);
-int nlif_fd(struct nlif_handle *nlif_handle);
-int nlif_query(struct nlif_handle *nlif_handle);
-int nlif_catch(struct nlif_handle *nlif_handle);
-int nlif_index2name(struct nlif_handle *nlif_handle, 
-		    unsigned int if_index, 
-		    char *name);
-int nlif_get_ifflags(const struct nlif_handle *h,
-		     unsigned int index,
-		     unsigned int *flags);
+extern NFNL_EXPORT struct nlif_handle *nlif_open(void);
+extern NFNL_EXPORT void nlif_close(struct nlif_handle *orig);
+extern NFNL_EXPORT int nlif_fd(struct nlif_handle *nlif_handle);
+extern NFNL_EXPORT int nlif_query(struct nlif_handle *nlif_handle);
+extern NFNL_EXPORT int nlif_catch(struct nlif_handle *nlif_handle);
+extern NFNL_EXPORT int nlif_index2name(struct nlif_handle *nlif_handle,
+				       unsigned int if_index,
+				       char *name);
+extern NFNL_EXPORT int nlif_get_ifflags(const struct nlif_handle *h,
+					unsigned int index,
+					unsigned int *flags);
 
 #ifdef __cplusplus
 } /* extern "C" */

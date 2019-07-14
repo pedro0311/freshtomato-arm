@@ -170,6 +170,9 @@ extern struct json_object* json_object_get(struct json_object *jso)
 {
 	if (!jso) return jso;
 
+	// Don't overflow the refcounter.
+	assert(jso->_ref_count < UINT32_MAX);
+
 #if defined(HAVE_ATOMIC_BUILTINS) && defined(ENABLE_THREADING)
 	__sync_add_and_fetch(&jso->_ref_count, 1);
 #else
@@ -392,7 +395,7 @@ static int json_object_object_to_json_string(struct json_object* jso,
 				printbuf_strappend(pb, "\n");
 		}
 		had_children = 1;
-		if (flags & JSON_C_TO_STRING_SPACED)
+		if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
 		indent(pb, level+1, flags);
 		printbuf_strappend(pb, "\"");
@@ -413,7 +416,7 @@ static int json_object_object_to_json_string(struct json_object* jso,
 			printbuf_strappend(pb, "\n");
 		indent(pb,level,flags);
 	}
-	if (flags & JSON_C_TO_STRING_SPACED)
+	if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 		return printbuf_strappend(pb, /*{*/ " }");
 	else
 		return printbuf_strappend(pb, /*{*/ "}");
@@ -535,7 +538,7 @@ json_bool json_object_object_get_ex(const struct json_object* jso, const char *k
 		*value = NULL;
 
 	if (NULL == jso)
-		return FALSE;
+		return 0;
 
 	switch(jso->o_type)
 	{
@@ -545,7 +548,7 @@ json_bool json_object_object_get_ex(const struct json_object* jso, const char *k
 	default:
 		if (value != NULL)
 			*value = NULL;
-		return FALSE;
+		return 0;
 	}
 }
 
@@ -581,7 +584,7 @@ struct json_object* json_object_new_boolean(json_bool b)
 json_bool json_object_get_boolean(const struct json_object *jso)
 {
 	if (!jso)
-		return FALSE;
+		return 0;
 	switch(jso->o_type)
 	{
 	case json_type_boolean:
@@ -593,7 +596,7 @@ json_bool json_object_get_boolean(const struct json_object *jso)
 	case json_type_string:
 		return (jso->o.c_string.len != 0);
 	default:
-		return FALSE;
+		return 0;
 	}
 }
 
@@ -807,6 +810,7 @@ static int json_object_double_to_json_string_format(struct json_object* jso,
 	{
 		const char *std_format = "%.17g";
 		int format_drops_decimals = 0;
+		int looks_numeric = 0;
 
 		if (!format)
 		{
@@ -834,11 +838,15 @@ static int json_object_double_to_json_string_format(struct json_object* jso,
 		if (format == std_format || strstr(format, ".0f") == NULL)
 			format_drops_decimals = 1;
 
+		looks_numeric = /* Looks like *some* kind of number */
+		    isdigit((unsigned char)buf[0]) ||
+		    (size > 1 && buf[0] == '-' && isdigit((unsigned char)buf[1]));
+
 		if (size < (int)sizeof(buf) - 2 &&
-		    isdigit((int)buf[0]) && /* Looks like *some* kind of number */
-			!p && /* Has no decimal point */
+		    looks_numeric &&
+		    !p && /* Has no decimal point */
 		    strchr(buf, 'e') == NULL && /* Not scientific notation */
-			format_drops_decimals)
+		    format_drops_decimals)
 		{
 			// Ensure it looks like a float, even if snprintf didn't,
 			//  unless a custom format is set to omit the decimal.
@@ -948,7 +956,10 @@ double json_object_get_double(const struct json_object *jso)
 
     /* if conversion stopped at the first character, return 0.0 */
     if (errPtr == get_string_component(jso))
-        return 0.0;
+    {
+      errno = EINVAL;
+      return 0.0;
+    }
 
     /*
      * Check that the conversion terminated on something sensible
@@ -956,7 +967,10 @@ double json_object_get_double(const struct json_object *jso)
      * For example, { "pay" : 123AB } would parse as 123.
      */
     if (*errPtr != '\0')
-        return 0.0;
+    {
+      errno = EINVAL;
+      return 0.0;
+    }
 
     /*
      * If strtod encounters a string which would exceed the
@@ -974,6 +988,7 @@ double json_object_get_double(const struct json_object *jso)
             cdouble = 0.0;
     return cdouble;
   default:
+    errno = EINVAL;
     return 0.0;
   }
 }
@@ -1027,7 +1042,7 @@ struct json_object* json_object_new_string(const char *s)
 	return jso;
 }
 
-struct json_object* json_object_new_string_len(const char *s, int len)
+struct json_object* json_object_new_string_len(const char *s, const int len)
 {
 	char *dstbuf;
 	struct json_object *jso = json_object_new(json_type_string);
@@ -1124,7 +1139,7 @@ static int json_object_array_to_json_string(struct json_object* jso,
 				printbuf_strappend(pb, "\n");
 		}
 		had_children = 1;
-		if (flags & JSON_C_TO_STRING_SPACED)
+		if (flags & JSON_C_TO_STRING_SPACED && !(flags&JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
 		indent(pb, level + 1, flags);
 		val = json_object_array_get_idx(jso, ii);
@@ -1141,7 +1156,7 @@ static int json_object_array_to_json_string(struct json_object* jso,
 		indent(pb,level,flags);
 	}
 
-	if (flags & JSON_C_TO_STRING_SPACED)
+	if (flags & JSON_C_TO_STRING_SPACED && !(flags&JSON_C_TO_STRING_PRETTY))
 		return printbuf_strappend(pb, " ]");
 	return printbuf_strappend(pb, "]");
 }
