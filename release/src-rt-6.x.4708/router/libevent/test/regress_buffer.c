@@ -564,6 +564,60 @@ end:
 	evbuffer_free(buf);
 }
 
+static void
+test_evbuffer_add1(void *ptr)
+{
+	struct evbuffer *buf;
+	char *str;
+
+	buf = evbuffer_new();
+	evbuffer_add(buf, "1", 1);
+	evbuffer_validate(buf);
+	evbuffer_expand(buf, 2048);
+	evbuffer_validate(buf);
+	evbuffer_add(buf, "2", 1);
+	evbuffer_validate(buf);
+	evbuffer_add_printf(buf, "3");
+	evbuffer_validate(buf);
+
+	tt_assert(evbuffer_get_length(buf) == 3);
+	str = (char *)evbuffer_pullup(buf, -1);
+	tt_assert(str[0] == '1');
+	tt_assert(str[1] == '2');
+	tt_assert(str[2] == '3');
+end:
+	evbuffer_free(buf);
+}
+
+static void
+test_evbuffer_add2(void *ptr)
+{
+	struct evbuffer *buf;
+	static char data[4096];
+	int data_len = MIN_BUFFER_SIZE-EVBUFFER_CHAIN_SIZE-10;
+	char *str;
+	int len;
+
+	memset(data, 'P', sizeof(data));
+	buf = evbuffer_new();
+	evbuffer_add(buf, data, data_len);
+	evbuffer_validate(buf);
+	evbuffer_expand(buf, 100);
+	evbuffer_validate(buf);
+	evbuffer_add(buf, "2", 1);
+	evbuffer_validate(buf);
+	evbuffer_add_printf(buf, "3");
+	evbuffer_validate(buf);
+
+	len = evbuffer_get_length(buf);
+	tt_assert(len == data_len+2);
+	str = (char *)evbuffer_pullup(buf, -1);
+	tt_assert(str[len-3] == 'P');
+	tt_assert(str[len-2] == '2');
+	tt_assert(str[len-1] == '3');
+end:
+	evbuffer_free(buf);
+}
 
 static int reference_cb_called;
 static void
@@ -620,86 +674,192 @@ test_evbuffer_reference(void *ptr)
 	evbuffer_free(src);
 }
 
+static void
+test_evbuffer_reference2(void *ptr)
+{
+	struct evbuffer *buf;
+	static char data[4096];
+	int data_len = MIN_BUFFER_SIZE-EVBUFFER_CHAIN_SIZE-10;
+	char *str;
+	int len;
+
+	memset(data, 'P', sizeof(data));
+	buf = evbuffer_new();
+	evbuffer_add(buf, data, data_len);
+	evbuffer_validate(buf);
+	evbuffer_expand(buf, 100);
+	evbuffer_validate(buf);
+	evbuffer_add_reference(buf, "2", 1, no_cleanup, NULL);
+	evbuffer_validate(buf);
+	evbuffer_add_printf(buf, "3");
+	evbuffer_validate(buf);
+
+	len = evbuffer_get_length(buf);
+	tt_assert(len == data_len+2);
+	str = (char *)evbuffer_pullup(buf, -1);
+	tt_assert(str[len-3] == 'P');
+	tt_assert(str[len-2] == '2');
+	tt_assert(str[len-1] == '3');
+end:
+	evbuffer_free(buf);
+}
+
 int _evbuffer_testing_use_sendfile(void);
 int _evbuffer_testing_use_mmap(void);
 int _evbuffer_testing_use_linear_file_access(void);
 
+static struct event_base *addfile_test_event_base;
+static int addfile_test_done_writing;
+static int addfile_test_total_written;
+static int addfile_test_total_read;
+
 static void
-test_evbuffer_add_file(void *ptr)
+addfile_test_writecb(evutil_socket_t fd, short what, void *arg)
 {
-	const char *impl = ptr;
-	struct evbuffer *src = evbuffer_new();
-	const char *data = "this is what we add as file system data.";
-	size_t datalen;
+	struct evbuffer *b = arg;
+	int r;
+	evbuffer_validate(b);
+	while (evbuffer_get_length(b)) {
+		r = evbuffer_write(b, fd);
+		if (r > 0) {
+			addfile_test_total_written += r;
+			TT_BLATHER(("Wrote %d/%d bytes", r, addfile_test_total_written));
+		} else {
+			int e = evutil_socket_geterror(fd);
+			if (EVUTIL_ERR_RW_RETRIABLE(e))
+				return;
+			tt_fail_perror("write");
+			event_base_loopexit(addfile_test_event_base,NULL);
+		}
+		evbuffer_validate(b);
+	}
+	addfile_test_done_writing = 1;
+	return;
+end:
+	event_base_loopexit(addfile_test_event_base,NULL);
+}
+
+static void
+addfile_test_readcb(evutil_socket_t fd, short what, void *arg)
+{
+	struct evbuffer *b = arg;
+	int e, r = 0;
+	do {
+		r = evbuffer_read(b, fd, 1024);
+		if (r > 0) {
+			addfile_test_total_read += r;
+			TT_BLATHER(("Read %d/%d bytes", r, addfile_test_total_read));
+		}
+	} while (r > 0);
+	if (r < 0) {
+		e = evutil_socket_geterror(fd);
+		if (! EVUTIL_ERR_RW_RETRIABLE(e)) {
+			tt_fail_perror("read");
+			event_base_loopexit(addfile_test_event_base,NULL);
+		}
+	}
+	if (addfile_test_done_writing &&
+	    addfile_test_total_read >= addfile_test_total_written) {
+		event_base_loopexit(addfile_test_event_base,NULL);
+	}
+}
+
+static void
+test_evbuffer_add_file(void *_testdata)
+{
+	struct basic_test_data *testdata = _testdata;
+	const char *impl = testdata->setup_data;
+	struct evbuffer *src = evbuffer_new(), *dest = evbuffer_new();
+	char *data = strdup("this is what we add as file system data.");
+	size_t datalen = strlen(data), toread = datalen;
 	const char *compare;
 	int fd = -1;
-	evutil_socket_t pair[2] = {-1, -1};
-	int r=0, n_written=0;
-
-	/* Add a test for a big file. XXXX */
+	ev_off_t offset = 0;
+	struct event *rev=NULL, *wev=NULL;
+	struct event_base *base = testdata->base;
+	int *pair = testdata->pair;
 
 	tt_assert(impl);
-	if (!strcmp(impl, "sendfile")) {
+	if (strstr(impl, "_sendfile")) {
 		if (!_evbuffer_testing_use_sendfile())
 			tt_skip();
 		TT_BLATHER(("Using sendfile-based implementaion"));
-	} else if (!strcmp(impl, "mmap")) {
+	} else if (strstr(impl, "_mmap")) {
 		if (!_evbuffer_testing_use_mmap())
 			tt_skip();
 		TT_BLATHER(("Using mmap-based implementaion"));
-	} else if (!strcmp(impl, "linear")) {
+	} else if (strstr(impl, "_linear")) {
 		if (!_evbuffer_testing_use_linear_file_access())
 			tt_skip();
 		TT_BLATHER(("Using read-based implementaion"));
-	} else {
-		TT_DIE(("Didn't recognize the implementation"));
+	}
+
+	if (strstr(impl, "_big")) {
+		int i;
+		toread = datalen = 1 << 16;
+		data = realloc(data, datalen);
+		for (i = 0; i < 1 << 16; ++i) {
+			data[i] = (char)_evutil_weakrand() % sizeof(char);
+		}
+		TT_BLATHER(("Big file"));
+	}
+	if (strstr(impl, "_offset")) {
+		offset = datalen / 4;
+		toread = datalen - offset;
+		TT_BLATHER(("Read from offset"));
+	}
+	if (strstr(impl, "_noalign")) {
+		++offset;
+		--toread;
+		TT_BLATHER(("Read from non aligned offset"));
 	}
 
 	/* Say that it drains to a fd so that we can use sendfile. */
 	evbuffer_set_flags(src, EVBUFFER_FLAG_DRAINS_TO_FD);
 
-#if defined(_EVENT_HAVE_SENDFILE) && defined(__sun__) && defined(__svr4__)
-	/* We need to use a pair of AF_INET sockets, since Solaris
-	   doesn't support sendfile() over AF_UNIX. */
-	if (evutil_ersatz_socketpair(AF_INET, SOCK_STREAM, 0, pair) == -1)
-		tt_abort_msg("ersatz_socketpair failed");
-#else
-	if (evutil_socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1)
-		tt_abort_msg("socketpair failed");
-#endif
-
-	datalen = strlen(data);
 	fd = regress_make_tmpfile(data, datalen);
-
 	tt_assert(fd != -1);
 
-	tt_assert(evbuffer_add_file(src, fd, 0, datalen) != -1);
-
+	tt_assert(evbuffer_add_file(src, fd, offset, toread) != -1);
 	evbuffer_validate(src);
 
-	while (evbuffer_get_length(src) &&
-	    (r = evbuffer_write(src, pair[0])) > 0) {
-		evbuffer_validate(src);
-		n_written += r;
-	}
-	tt_int_op(r, !=, -1);
-	tt_int_op(n_written, ==, datalen);
+	addfile_test_event_base = base;
+	addfile_test_done_writing = 0;
+	addfile_test_total_written = 0;
+	addfile_test_total_read = 0;
+
+	wev = event_new(base, pair[0], EV_WRITE|EV_PERSIST,
+	    addfile_test_writecb, src);
+	rev = event_new(base, pair[1], EV_READ|EV_PERSIST,
+	    addfile_test_readcb, dest);
+
+	event_add(wev, NULL);
+	event_add(rev, NULL);
+	event_base_dispatch(base);
 
 	evbuffer_validate(src);
-	tt_int_op(evbuffer_read(src, pair[1], (int)strlen(data)), ==, datalen);
-	evbuffer_validate(src);
-	compare = (char *)evbuffer_pullup(src, datalen);
+	evbuffer_validate(dest);
+
+	tt_assert(addfile_test_done_writing);
+	tt_int_op(addfile_test_total_written, ==, toread);
+	tt_int_op(addfile_test_total_read, ==, toread);
+
+	compare = (char *)evbuffer_pullup(dest, toread);
 	tt_assert(compare != NULL);
-	if (memcmp(compare, data, datalen))
+	if (memcmp(compare, data + offset, toread))
 		tt_abort_msg("Data from add_file differs.");
 
-	evbuffer_validate(src);
+	evbuffer_validate(dest);
  end:
-	if (pair[0] >= 0)
-		evutil_closesocket(pair[0]);
-	if (pair[1] >= 0)
-		evutil_closesocket(pair[1]);
-	evbuffer_free(src);
+	if (src)
+		evbuffer_free(src);
+	if (dest)
+		evbuffer_free(dest);
+	if (rev)
+		event_free(rev);
+	if (wev)
+		event_free(wev);
+	free(data);
 }
 
 #ifndef _EVENT_DISABLE_MM_REPLACEMENT
@@ -1652,7 +1812,10 @@ struct testcase_t evbuffer_testcases[] = {
 	{ "reserve_many2", test_evbuffer_reserve_many, 0, &nil_setup, (void*)"add" },
 	{ "reserve_many3", test_evbuffer_reserve_many, 0, &nil_setup, (void*)"fill" },
 	{ "expand", test_evbuffer_expand, 0, NULL, NULL },
+	{ "add1", test_evbuffer_add1, 0, NULL, NULL },
+	{ "add2", test_evbuffer_add2, 0, NULL, NULL },
 	{ "reference", test_evbuffer_reference, 0, NULL, NULL },
+	{ "reference2", test_evbuffer_reference2, 0, NULL, NULL },
 	{ "iterative", test_evbuffer_iterative, 0, NULL, NULL },
 	{ "readln", test_evbuffer_readln, TT_NO_LOGS, &basic_setup, NULL },
 	{ "search_eol", test_evbuffer_search_eol, 0, NULL, NULL },
@@ -1666,12 +1829,20 @@ struct testcase_t evbuffer_testcases[] = {
 	{ "freeze_start", test_evbuffer_freeze, 0, &nil_setup, (void*)"start" },
 	{ "freeze_end", test_evbuffer_freeze, 0, &nil_setup, (void*)"end" },
 	/* TODO: need a temp file implementation for Windows */
-	{ "add_file_sendfile", test_evbuffer_add_file, TT_FORK, &nil_setup,
-	  (void*)"sendfile" },
-	{ "add_file_mmap", test_evbuffer_add_file, TT_FORK, &nil_setup,
-	  (void*)"mmap" },
-	{ "add_file_linear", test_evbuffer_add_file, TT_FORK, &nil_setup,
-	  (void*)"linear" },
+
+#define ADD_FILE_TEST(name) \
+	{ name, test_evbuffer_add_file, TT_FORK|TT_NEED_BASE|TT_NEED_SOCKETPAIR, \
+	  &basic_setup, (void*)name },
+#define ADD_FILE_TEST_GROUP(name) \
+	ADD_FILE_TEST(name) \
+	ADD_FILE_TEST(name "_offset") \
+	ADD_FILE_TEST(name "_big") \
+	ADD_FILE_TEST(name "_big_offset") \
+	ADD_FILE_TEST(name "_big_offset_noalign") \
+
+	ADD_FILE_TEST_GROUP("add_file_sendfile")
+	ADD_FILE_TEST_GROUP("add_file_mmap")
+	ADD_FILE_TEST_GROUP("add_file_linear")
 
 	END_OF_TESTCASES
 };
