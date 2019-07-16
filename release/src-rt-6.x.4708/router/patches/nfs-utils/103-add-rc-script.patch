@@ -1,0 +1,55 @@
+--- nfs-utils/nfs.rc
++++ nfs-utils/nfs.rc
+@@ -0,0 +1,52 @@
++#!/bin/sh
++
++[ "$(nvram get nfs_enable)" -eq 0 ] && {
++	logger Stopping NFS Server ...
++
++	/usr/bin/killall portmap 2>/dev/null
++	/usr/bin/killall statd 2>/dev/null
++	/usr/bin/killall nfsd 2>/dev/null
++	/usr/bin/killall mountd 2>/dev/null
++
++	logger NFS Server stopped ...
++} || {
++	logger Starting NFS Server ...
++
++	[ ! -d /var/lib/nfs ] && {
++		mkdir -p /var/lib/nfs
++		touch /var/lib/nfs/etab
++		touch /var/lib/nfs/rmtab
++		touch /var/lib/nfs/xtab
++	}
++
++	[ -z "$(pidof portmap)" ] && {
++		logger portmap ON
++		portmap
++	}
++
++	sleep 1
++
++	[ -z "$(pidof statd)" ] && {
++		logger statd ON
++		statd
++	}
++
++	sleep 2
++
++	logger exportfs ON
++	exportfs -r
++
++	[ -z "$(pidof nfsd)" ] && {
++		logger nfsd ON
++		nfsd
++	}
++
++	sleep 1
++
++	[ -z "$(pidof mountd)" ] && {
++		logger mountd ON
++		mountd
++	}
++
++	logger NFS Server started ...
++}
