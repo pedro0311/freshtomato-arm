@@ -40,51 +40,10 @@
 
 #include "nfsrpc.h"
 
-#ifdef HAVE_TIRPC_NETCONFIG_H
-
-/*
- * Most of the headers under /usr/include/tirpc are currently
- * unusable for various reasons.  We statically define the bits
- * we need here until the official headers are fixed.
- *
- * The commonly used RPC calls such as CLNT_CALL and CLNT_DESTROY
- * are actually virtual functions in both the legacy and TI-RPC
- * implementations.  The proper _CALL or _DESTROY will be invoked
- * no matter if we used a legacy clnt_create() or clnt_tli_create()
- * from libtirpc.
- */
-
-#include <tirpc/netconfig.h>
-#include <tirpc/rpc/rpcb_prot.h>
-
-/* definitions from tirpc/rpc/types.h */
-
-/*
- * The netbuf structure is used for transport-independent address storage.
- */
-struct netbuf {
-	unsigned int	maxlen;
-	unsigned int	len;
-	void		*buf;
-};
-
-/* definitions from tirpc/rpc/clnt.h */
-
-/*
- * Low level clnt create routine for connectionless transports, e.g. udp.
- */
-extern CLIENT *clnt_dg_create(const int, const struct netbuf *,
-			      const rpcprog_t, const rpcvers_t,
-			      const u_int, const u_int);
-
-/*
- * Low level clnt create routine for connectionful transports, e.g. tcp.
- */
-extern CLIENT *clnt_vc_create(const int, const struct netbuf *,
-			      const rpcprog_t, const rpcvers_t,
-			      u_int, u_int);
-
-#endif	/* HAVE_TIRPC_NETCONFIG_H */
+#ifdef HAVE_LIBTIRPC
+#include <netconfig.h>
+#include <rpc/rpcb_prot.h>
+#endif	/* HAVE_LIBTIRPC */
 
 /*
  * If "-1" is specified in the tv_sec field, use these defaults instead.
@@ -107,14 +66,14 @@ static CLIENT *nfs_get_localclient(const struct sockaddr *sap,
 				   const rpcvers_t version,
 				   struct timeval *timeout)
 {
-#ifdef HAVE_CLNT_VC_CREATE
+#ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
 		.maxlen		= sizeof(struct sockaddr_un),
 		.len		= (size_t)salen,
 		.buf		= &address,
 	};
-#endif	/* HAVE_CLNT_VC_CREATE */
+#endif	/* HAVE_LIBTIRPC */
 	CLIENT *client;
 	int sock;
 
@@ -128,13 +87,13 @@ static CLIENT *nfs_get_localclient(const struct sockaddr *sap,
 	if (timeout->tv_sec == -1)
 		timeout->tv_sec = NFSRPC_TIMEOUT_TCP;
 
-#ifdef HAVE_CLNT_VC_CREATE
+#ifdef HAVE_LIBTIRPC
 	memcpy(nbuf.buf, sap, (size_t)salen);
 	client = clnt_vc_create(sock, &nbuf, program, version, 0, 0);
-#else	/* HAVE_CLNT_VC_CREATE */
+#else	/* !HAVE_LIBTIRPC */
 	client = clntunix_create((struct sockaddr_un *)sap,
 					program, version, &sock, 0, 0);
-#endif	/* HAVE_CLNT_VC_CREATE */
+#endif	/* !HAVE_LIBTIRPC */
 	if (client != NULL)
 		CLNT_CONTROL(client, CLSET_FD_CLOSE, NULL);
 	else
@@ -172,6 +131,56 @@ static int nfs_bind(const int sock, const sa_family_t family)
 	errno = EAFNOSUPPORT;
 	return -1;
 }
+
+#ifdef HAVE_LIBTIRPC
+
+/*
+ * Bind a socket using an unused privileged source port.
+ *
+ * Returns zero on success, or returns -1 on error.  errno is
+ * set to reflect the nature of the error.
+ */
+static int nfs_bindresvport(const int sock, const sa_family_t family)
+{
+	struct sockaddr_in sin = {
+		.sin_family		= AF_INET,
+		.sin_addr.s_addr	= htonl(INADDR_ANY),
+	};
+	struct sockaddr_in6 sin6 = {
+		.sin6_family		= AF_INET6,
+		.sin6_addr		= IN6ADDR_ANY_INIT,
+	};
+
+	switch (family) {
+	case AF_INET:
+		return bindresvport_sa(sock, (struct sockaddr *)&sin);
+	case AF_INET6:
+		return bindresvport_sa(sock, (struct sockaddr *)&sin6);
+	}
+
+	errno = EAFNOSUPPORT;
+	return -1;
+}
+
+#else	/* !HAVE_LIBTIRPC */
+
+/*
+ * Bind a socket using an unused privileged source port.
+ *
+ * Returns zero on success, or returns -1 on error.  errno is
+ * set to reflect the nature of the error.
+ */
+static int nfs_bindresvport(const int sock, const sa_family_t family)
+{
+	if (family != AF_INET) {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	return bindresvport(sock, NULL);
+}
+
+#endif	/* !HAVE_LIBTIRPC */
 
 /*
  * Perform a non-blocking connect on the socket fd.
@@ -259,25 +268,26 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 				 const socklen_t salen,
 				 const rpcprog_t program,
 				 const rpcvers_t version,
-				 struct timeval *timeout)
+				 struct timeval *timeout,
+				 const int resvport)
 {
-#ifdef HAVE_CLNT_DG_CREATE
+	CLIENT *client;
+	int ret, sock;
+#ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
 		.maxlen		= salen,
 		.len		= salen,
 		.buf		= &address,
 	};
-#endif	/* HAVE_CLNT_DG_CREATE */
-	CLIENT *client;
-	int ret, sock;
 
-#ifndef HAVE_CLNT_DG_CREATE
+#else	/* !HAVE_LIBTIRPC */
+
 	if (sap->sa_family != AF_INET) {
 		rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
 		return NULL;
 	}
-#endif	/* !HAVE_CLNT_DG_CREATE */
+#endif	/* !HAVE_LIBTIRPC */
 
 	sock = socket((int)sap->sa_family, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock == -1) {
@@ -286,7 +296,10 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	ret = nfs_bind(sock, sap->sa_family);
+	if (resvport)
+		ret = nfs_bindresvport(sock, sap->sa_family);
+	else
+		ret = nfs_bind(sock, sap->sa_family);
 	if (ret < 0) {
 		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		rpc_createerr.cf_error.re_errno = errno;
@@ -305,15 +318,17 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-#ifdef HAVE_CLNT_DG_CREATE
+#ifdef HAVE_LIBTIRPC
 	memcpy(nbuf.buf, sap, (size_t)salen);
 	client = clnt_dg_create(sock, &nbuf, program, version, 0, 0);
-#else	/* HAVE_CLNT_DG_CREATE */
+#else	/* !HAVE_LIBTIRPC */
 	client = clntudp_create((struct sockaddr_in *)sap, program,
 					version, *timeout, &sock);
-#endif	/* HAVE_CLNT_DG_CREATE */
+#endif	/* !HAVE_LIBTIRPC */
 	if (client != NULL) {
-		CLNT_CONTROL(client, CLSET_RETRY_TIMEOUT, (char *)timeout);
+		struct timeval retry_timeout = { 1, 0 };
+		CLNT_CONTROL(client, CLSET_RETRY_TIMEOUT,
+						(char *)&retry_timeout);
 		CLNT_CONTROL(client, CLSET_FD_CLOSE, NULL);
 	} else
 		(void)close(sock);
@@ -335,25 +350,26 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 				 const socklen_t salen,
 				 const rpcprog_t program,
 				 const rpcvers_t version,
-				 struct timeval *timeout)
+				 struct timeval *timeout,
+				 const int resvport)
 {
-#ifdef HAVE_CLNT_VC_CREATE
+	CLIENT *client;
+	int ret, sock;
+#ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
 		.maxlen		= salen,
 		.len		= salen,
 		.buf		= &address,
 	};
-#endif	/* HAVE_CLNT_VC_CREATE */
-	CLIENT *client;
-	int ret, sock;
 
-#ifndef HAVE_CLNT_VC_CREATE
+#else	/* !HAVE_LIBTIRPC */
+
 	if (sap->sa_family != AF_INET) {
 		rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
 		return NULL;
 	}
-#endif	/* !HAVE_CLNT_VC_CREATE */
+#endif	/* !HAVE_LIBTIRPC */
 
 	sock = socket((int)sap->sa_family, SOCK_STREAM, IPPROTO_TCP);
 	if (sock == -1) {
@@ -362,7 +378,10 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	ret = nfs_bind(sock, sap->sa_family);
+	if (resvport)
+		ret = nfs_bindresvport(sock, sap->sa_family);
+	else
+		ret = nfs_bind(sock, sap->sa_family);
 	if (ret < 0) {
 		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		rpc_createerr.cf_error.re_errno = errno;
@@ -381,19 +400,62 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-#ifdef HAVE_CLNT_VC_CREATE
+#ifdef HAVE_LIBTIRPC
 	memcpy(nbuf.buf, sap, (size_t)salen);
 	client = clnt_vc_create(sock, &nbuf, program, version, 0, 0);
-#else	/* HAVE_CLNT_VC_CREATE */
+#else	/* !HAVE_LIBTIRPC */
 	client = clnttcp_create((struct sockaddr_in *)sap,
 					program, version, &sock, 0, 0);
-#endif	/* HAVE_CLNT_VC_CREATE */
+#endif	/* !HAVE_LIBTIRPC */
 	if (client != NULL)
 		CLNT_CONTROL(client, CLSET_FD_CLOSE, NULL);
 	else
 		(void)close(sock);
 
 	return client;
+}
+
+/**
+ * nfs_get_port - extract port value from a socket address
+ * @sap: pointer to socket address
+ *
+ * Returns port value in host byte order.
+ */
+uint16_t
+nfs_get_port(const struct sockaddr *sap)
+{
+       const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
+       const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)sap;
+
+       switch (sap->sa_family) {
+       case AF_INET:
+               return ntohs(sin->sin_port);
+       case AF_INET6:
+               return ntohs(sin6->sin6_port);
+       }
+       return 0;
+}
+
+/**
+ * nfs_set_port - set port value in a socket address
+ * @sap: pointer to socket address
+ * @port: port value to set
+ *
+ */
+void
+nfs_set_port(struct sockaddr *sap, const uint16_t port)
+{
+       struct sockaddr_in *sin = (struct sockaddr_in *)sap;
+       struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
+
+       switch (sap->sa_family) {
+       case AF_INET:
+               sin->sin_port = htons(port);
+               break;
+       case AF_INET6:
+               sin6->sin6_port = htons(port);
+               break;
+       }
 }
 
 /**
@@ -406,7 +468,8 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
  * @timeout: pointer to request timeout (must not be NULL)
  *
  * Set up an RPC client for communicating with an RPC program @program
- * and @version on the server @sap over @transport.
+ * and @version on the server @sap over @transport.  An unprivileged
+ * source port is used.
  *
  * Returns a pointer to a prepared RPC client if successful, and
  * @timeout is initialized; caller must destroy a non-NULL returned RPC
@@ -420,36 +483,89 @@ CLIENT *nfs_get_rpcclient(const struct sockaddr *sap,
 			  const rpcvers_t version,
 			  struct timeval *timeout)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
+	nfs_clear_rpc_createerr();
 
 	switch (sap->sa_family) {
 	case AF_LOCAL:
 		return nfs_get_localclient(sap, salen, program,
 						version, timeout);
 	case AF_INET:
-		if (sin->sin_port == 0) {
-			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
-			return NULL;
-		}
-		break;
 	case AF_INET6:
-		if (sin6->sin6_port == 0) {
+		if (nfs_get_port(sap) == 0) {
 			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 			return NULL;
 		}
 		break;
 	default:
-		rpc_createerr.cf_stat = RPC_UNKNOWNHOST;
+		rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 		return NULL;
 	}
 
 	switch (transport) {
 	case IPPROTO_TCP:
-		return nfs_get_tcpclient(sap, salen, program, version, timeout);
+		return nfs_get_tcpclient(sap, salen, program, version,
+						timeout, 0);
 	case 0:
 	case IPPROTO_UDP:
-		return nfs_get_udpclient(sap, salen, program, version, timeout);
+		return nfs_get_udpclient(sap, salen, program, version,
+						timeout, 0);
+	}
+
+	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
+	return NULL;
+}
+
+/**
+ * nfs_get_priv_rpcclient - acquire an RPC client
+ * @sap: pointer to socket address of RPC server
+ * @salen: length of socket address
+ * @transport: IPPROTO_ value of transport protocol to use
+ * @program: RPC program number
+ * @version: RPC version number
+ * @timeout: pointer to request timeout (must not be NULL)
+ *
+ * Set up an RPC client for communicating with an RPC program @program
+ * and @version on the server @sap over @transport.  A privileged
+ * source port is used.
+ *
+ * Returns a pointer to a prepared RPC client if successful, and
+ * @timeout is initialized; caller must destroy a non-NULL returned RPC
+ * client.  Otherwise returns NULL, and rpc_createerr.cf_stat is set to
+ * reflect the error.
+ */
+CLIENT *nfs_get_priv_rpcclient(const struct sockaddr *sap,
+			       const socklen_t salen,
+			       const unsigned short transport,
+			       const rpcprog_t program,
+			       const rpcvers_t version,
+			       struct timeval *timeout)
+{
+	nfs_clear_rpc_createerr();
+
+	switch (sap->sa_family) {
+	case AF_LOCAL:
+		return nfs_get_localclient(sap, salen, program,
+						version, timeout);
+	case AF_INET:
+	case AF_INET6:
+		if (nfs_get_port(sap) == 0) {
+			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
+			return NULL;
+		}
+		break;
+	default:
+		rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
+		return NULL;
+	}
+
+	switch (transport) {
+	case IPPROTO_TCP:
+		return nfs_get_tcpclient(sap, salen, program, version,
+						timeout, 1);
+	case 0:
+	case IPPROTO_UDP:
+		return nfs_get_udpclient(sap, salen, program, version,
+						timeout, 1);
 	}
 
 	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;

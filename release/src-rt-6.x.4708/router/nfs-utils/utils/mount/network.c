@@ -50,6 +50,7 @@
 #include "nfsrpc.h"
 #include "parse_opt.h"
 #include "network.h"
+#include "conffile.h"
 
 #define PMAP_TIMEOUT	(10)
 #define CONNECT_TIMEOUT	(20)
@@ -90,6 +91,7 @@ static const char *nfs_transport_opttbl[] = {
 static const char *nfs_version_opttbl[] = {
 	"v2",
 	"v3",
+	"v4",
 	"vers",
 	"nfsvers",
 	NULL,
@@ -170,54 +172,53 @@ static const unsigned long probe_mnt3_first[] = {
 	0,
 };
 
-static void nfs_set_port(struct sockaddr *sap, const unsigned short port)
+static const unsigned int *nfs_default_proto(void);
+#ifdef MOUNT_CONFIG
+static const unsigned int *nfs_default_proto()
 {
-	switch (sap->sa_family) {
-	case AF_INET:
-		((struct sockaddr_in *)sap)->sin_port = htons(port);
-		break;
-	case AF_INET6:
-		((struct sockaddr_in6 *)sap)->sin6_port = htons(port);
-		break;
-	default:
-		nfs_error(_("%s: unrecognized address family in %s"),
-			progname, __func__);
-	}
-}
+	extern unsigned long config_default_proto;
+	/*
+	 * If the default proto has been set and 
+	 * its not TCP, start with UDP
+	 */
+	if (config_default_proto && config_default_proto != IPPROTO_TCP)
+		return probe_udp_first;
 
-#ifdef HAVE_DECL_AI_ADDRCONFIG
-/**
- * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
- * @hostname: pointer to C string containing DNS hostname to resolve
- * @af_hint: hint to restrict resolution to one address family
- * @sap: pointer to buffer to fill with socket address
- * @len: IN: size of buffer to fill; OUT: size of socket address
- *
- * Returns 1 and places a socket address at @sap if successful;
- * otherwise zero.
- */
-int nfs_name_to_address(const char *hostname,
-			const sa_family_t af_hint,
-			struct sockaddr *sap, socklen_t *salen)
+	return probe_tcp_first; 
+}
+#else
+static const unsigned int *nfs_default_proto() 
+{
+	return probe_tcp_first; 
+}
+#endif /* MOUNT_CONFIG */
+
+static int nfs_lookup(const char *hostname, const sa_family_t family,
+		      struct sockaddr *sap, socklen_t *salen)
 {
 	struct addrinfo *gai_results;
 	struct addrinfo gai_hint = {
-		.ai_family	= af_hint,
+#ifdef HAVE_DECL_AI_ADDRCONFIG
 		.ai_flags	= AI_ADDRCONFIG,
+#endif	/* HAVE_DECL_AI_ADDRCONFIG */
+		.ai_family	= family,
 	};
 	socklen_t len = *salen;
 	int error, ret = 0;
 
-	if (af_hint == AF_INET6)
-		gai_hint.ai_flags |= AI_V4MAPPED|AI_ALL;
-
 	*salen = 0;
 
 	error = getaddrinfo(hostname, NULL, &gai_hint, &gai_results);
-	if (error) {
+	switch (error) {
+	case 0:
+		break;
+	case EAI_SYSTEM:
 		nfs_error(_("%s: DNS resolution failed for %s: %s"),
-			progname, hostname, (error == EAI_SYSTEM ?
-				strerror(errno) : gai_strerror(error)));
+			progname, hostname, strerror(errno));
+		return ret;
+	default:
+		nfs_error(_("%s: DNS resolution failed for %s: %s"),
+			progname, hostname, gai_strerror(error));
 		return ret;
 	}
 
@@ -240,61 +241,25 @@ int nfs_name_to_address(const char *hostname,
 	freeaddrinfo(gai_results);
 	return ret;
 }
-#else	/* HAVE_DECL_AI_ADDRCONFIG */
+
 /**
- * nfs_name_to_address - resolve hostname to an IPv4 socket address
+ * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
  * @hostname: pointer to C string containing DNS hostname to resolve
- * @af_hint: hint to restrict resolution to one address family
  * @sap: pointer to buffer to fill with socket address
  * @len: IN: size of buffer to fill; OUT: size of socket address
  *
  * Returns 1 and places a socket address at @sap if successful;
  * otherwise zero.
- *
- * Some older getaddrinfo(3) implementations don't support
- * AI_ADDRCONFIG or AI_V4MAPPED properly.  For those cases, a DNS
- * resolver based on the traditional gethostbyname(3) is provided.
  */
 int nfs_name_to_address(const char *hostname,
-			const sa_family_t af_hint,
 			struct sockaddr *sap, socklen_t *salen)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-	socklen_t len = *salen;
-	struct hostent *hp;
-
-	*salen = 0;
-
-	if (af_hint != AF_INET) {
-		nfs_error(_("%s: address family not supported by DNS resolver\n"),
-				progname, hostname);
-		return 0;
-	}
-
-	sin->sin_family = AF_INET;
-	if (inet_aton(hostname, &sin->sin_addr)) {
-		*salen = sizeof(*sin);
-		return 1;
-	}
-
-	hp = gethostbyname(hostname);
-	if (hp == NULL) {
-		nfs_error(_("%s: DNS resolution failed for %s: %s"),
-				progname, hostname, hstrerror(h_errno));
-		return 0;
-	}
-
-	if (hp->h_length > len) {
-		nfs_error(_("%s: DNS resolution results too long for buffer\n"),
-				progname);
-		return 0;
-	}
-
-	memcpy(&sin->sin_addr, hp->h_addr, hp->h_length);
-	*salen = sizeof(struct sockaddr_in);
-	return 1;
+#ifdef IPV6_SUPPORTED
+	return nfs_lookup(hostname, AF_UNSPEC, sap, salen);
+#else	/* !IPV6_SUPPORTED */
+	return nfs_lookup(hostname, AF_INET, sap, salen);
+#endif	/* !IPV6_SUPPORTED */
 }
-#endif	/* HAVE_DECL_AI_ADDRCONFIG */
 
 /**
  * nfs_gethostbyname - resolve a hostname to an IPv4 address
@@ -307,14 +272,12 @@ int nfs_gethostbyname(const char *hostname, struct sockaddr_in *sin)
 {
 	socklen_t len = sizeof(*sin);
 
-	return nfs_name_to_address(hostname, AF_INET,
-					(struct sockaddr *)sin, &len);
+	return nfs_lookup(hostname, AF_INET, (struct sockaddr *)sin, &len);
 }
 
 /**
  * nfs_string_to_sockaddr - convert string address to sockaddr
  * @address:	pointer to presentation format address to convert
- * @addrlen:	length of presentation address
  * @sap:	pointer to socket address buffer to fill in
  * @salen:	IN: length of address buffer
  *		OUT: length of converted socket address
@@ -328,8 +291,8 @@ int nfs_gethostbyname(const char *hostname, struct sockaddr_in *sin)
  * See RFC 4038 section 5.1 or RFC 3513 section 2.2 for more details
  * on presenting IPv6 addresses as text strings.
  */
-int nfs_string_to_sockaddr(const char *address, const size_t addrlen,
-			   struct sockaddr *sap, socklen_t *salen)
+int nfs_string_to_sockaddr(const char *address, struct sockaddr *sap,
+			   socklen_t *salen)
 {
 	struct addrinfo *gai_results;
 	struct addrinfo gai_hint = {
@@ -553,6 +516,21 @@ static void nfs_pp_debug(const struct sockaddr *sap, const socklen_t salen,
 			port);
 }
 
+static void nfs_pp_debug2(const char *str)
+{
+	if (!verbose)
+		return;
+
+	if (rpc_createerr.cf_error.re_status == RPC_CANTRECV ||
+	    rpc_createerr.cf_error.re_status == RPC_CANTSEND)
+		nfs_error(_("%s: portmap query %s%s - %s"),
+				progname, str, clnt_spcreateerror(""),
+				strerror(rpc_createerr.cf_error.re_errno));
+	else
+		nfs_error(_("%s: portmap query %s%s"),
+				progname, str, clnt_spcreateerror(""));
+}
+
 /*
  * Use the portmapper to discover whether or not the service we want is
  * available. The lists 'versions' and 'protos' define ordered sequences
@@ -582,9 +560,11 @@ static int nfs_probe_port(const struct sockaddr *sap, const socklen_t salen,
 	memcpy(saddr, sap, salen);
 	p_prot = prot ? &prot : protos;
 	p_vers = vers ? &vers : versions;
-	rpc_createerr.cf_stat = 0;
 
 	for (;;) {
+		if (verbose)
+			printf(_("%s: prog %lu, trying vers=%lu, prot=%u\n"),
+				progname, prog, *p_vers, *p_prot);
 		p_port = nfs_getport(saddr, salen, prog, *p_vers, *p_prot);
 		if (p_port) {
 			if (!port || port == p_port) {
@@ -594,28 +574,31 @@ static int nfs_probe_port(const struct sockaddr *sap, const socklen_t salen,
 				if (nfs_rpc_ping(saddr, salen, prog,
 							*p_vers, *p_prot, NULL))
 					goto out_ok;
-			}
+			} else
+				rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
 		}
 		if (rpc_createerr.cf_stat != RPC_PROGNOTREGISTERED &&
 		    rpc_createerr.cf_stat != RPC_TIMEDOUT &&
 		    rpc_createerr.cf_stat != RPC_CANTRECV &&
 		    rpc_createerr.cf_stat != RPC_PROGVERSMISMATCH)
-			goto out_bad;
+			break;
 
 		if (!prot) {
-			if (*++p_prot)
+			if (*++p_prot) {
+				nfs_pp_debug2("retrying");
 				continue;
+			}
 			p_prot = protos;
 		}
 		if (rpc_createerr.cf_stat == RPC_TIMEDOUT ||
 		    rpc_createerr.cf_stat == RPC_CANTRECV)
-			goto out_bad;
+			break;
 
 		if (vers || !*++p_vers)
 			break;
 	}
 
-out_bad:
+	nfs_pp_debug2("failed");
 	return 0;
 
 out_ok:
@@ -625,10 +608,9 @@ out_ok:
 		pmap->pm_prot = *p_prot;
 	if (!port)
 		pmap->pm_port = p_port;
-	rpc_createerr.cf_stat = 0;
+	nfs_clear_rpc_createerr();
 	return 1;
 }
-
 /*
  * Probe a server's NFS service to determine which versions and
  * transport protocols are supported.
@@ -648,10 +630,14 @@ static int nfs_probe_nfsport(const struct sockaddr *sap, const socklen_t salen,
 	if (pmap->pm_vers && pmap->pm_prot && pmap->pm_port)
 		return 1;
 
-	if (nfs_mount_data_version >= 4)
+	if (nfs_mount_data_version >= 4) {
+		const unsigned int *probe_proto;
+
+		probe_proto = nfs_default_proto();
+
 		return nfs_probe_port(sap, salen, pmap,
-					probe_nfs3_first, probe_tcp_first);
-	else
+					probe_nfs3_first, probe_proto);
+	} else
 		return nfs_probe_port(sap, salen, pmap,
 					probe_nfs2_only, probe_udp_only);
 }
@@ -822,8 +808,8 @@ int start_statd(void)
 				execl(START_STATD, START_STATD, NULL);
 				exit(1);
 			case -1: /* error */
-				nfs_error(_("fork failed: %s"),
-							strerror(errno));
+				nfs_error(_("%s: fork failed: %s"),
+						progname, strerror(errno));
 				break;
 			default: /* parent */
 				waitpid(pid, NULL,0);
@@ -863,17 +849,24 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
 	CLIENT *client;
 	enum clnt_stat res = 0;
 
-	if (nfs_probe_mntport(sap, salen, &mnt_pmap) == 0)
-		return 0;
-
 	memcpy(saddr, sap, salen);
+	if (nfs_probe_mntport(saddr, salen, &mnt_pmap) == 0) {
+		if (verbose)
+			nfs_error(_("%s: Failed to discover mountd port%s"),
+				progname, clnt_spcreateerror(""));
+		return 0;
+	}
 	nfs_set_port(saddr, mnt_pmap.pm_port);
 
-	client = nfs_get_rpcclient(saddr, salen, mnt_pmap.pm_prot,
+	client = nfs_get_priv_rpcclient(saddr, salen, mnt_pmap.pm_prot,
 					mnt_pmap.pm_prog, mnt_pmap.pm_vers,
 					&timeout);
-	if (client == NULL)
+	if (client == NULL) {
+		if (verbose)
+			nfs_error(_("%s: Failed to create RPC client%s"),
+				progname, clnt_spcreateerror(""));
 		return 0;
+	}
 
 	client->cl_auth = authunix_create_default();
 
@@ -881,13 +874,19 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
 			(xdrproc_t)xdr_dirpath, (caddr_t)argp,
 			(xdrproc_t)xdr_void, NULL,
 			timeout);
+	if (res != RPC_SUCCESS) {
+		rpc_createerr.cf_stat = res;
+		CLNT_GETERR(client, &rpc_createerr.cf_error);
+		if (verbose)
+			nfs_error(_("%s: UMNT call failed: %s"),
+				progname, clnt_sperrno(res));
 
+	}
 	auth_destroy(client->cl_auth);
 	CLNT_DESTROY(client);
 
 	if (res != RPC_SUCCESS)
 		return 0;
-
 	return 1;
 }
 
@@ -1133,7 +1132,7 @@ static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
  *
  * Returns 1 and fills in @buf if successful; otherwise, zero.
  */
-static int nfs_ca_gai(const struct sockaddr *sap, const socklen_t salen,
+static int nfs_ca_gai(const struct sockaddr *sap,
 		      struct sockaddr *buf, socklen_t *buflen)
 {
 	struct addrinfo *gai_results;
@@ -1174,7 +1173,7 @@ int nfs_callback_address(const struct sockaddr *sap, const socklen_t salen,
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)buf;
 
 	if (nfs_ca_sockname(sap, salen, buf, buflen) == 0)
-		if (nfs_ca_gai(sap, salen, buf, buflen) == 0)
+		if (nfs_ca_gai(sap, buf, buflen) == 0)
 			goto out_failed;
 
 	/*
@@ -1189,173 +1188,288 @@ int nfs_callback_address(const struct sockaddr *sap, const socklen_t salen,
 out_failed:
 	*buflen = 0;
 	if (verbose)
-		nfs_error(_("%s: failed to construct callback address"));
+		nfs_error(_("%s: failed to construct callback address"),
+				progname);
 	return 0;
-
 }
 
 /*
- * "nfsprog" is only supported by the legacy mount command.  The
+ * "nfsprog" is supported only by the legacy mount command.  The
  * kernel mount client does not support this option.
  *
- * Returns the value set by the nfsprog= option, the value of
- * the RPC NFS program specified in /etc/rpc, or a baked-in
- * default program number, if all fails.
+ * Returns TRUE if @program contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static rpcprog_t nfs_nfs_program(struct mount_options *options)
+static int
+nfs_nfs_program(struct mount_options *options, unsigned long *program)
 {
 	long tmp;
 
-	if (po_get_numeric(options, "nfsprog", &tmp) == PO_FOUND)
-		if (tmp >= 0)
-			return tmp;
-	return nfs_getrpcbyname(NFSPROG, nfs_nfs_pgmtbl);
+	switch (po_get_numeric(options, "nfsprog", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp > 0) {
+			*program = tmp;
+			return 1;
+		}
+	case PO_BAD_VALUE:
+		return 0;
+	}
+
+	/*
+	 * NFS RPC program wasn't specified.  The RPC program
+	 * cannot be determined via an rpcbind query.
+	 */
+	*program = nfs_getrpcbyname(NFSPROG, nfs_nfs_pgmtbl);
+	return 1;
 }
 
-
 /*
- * Returns the RPC version number specified by the given mount
- * options for the NFS service, or zero if all fails.
+ * Returns TRUE if @version contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static rpcvers_t nfs_nfs_version(struct mount_options *options)
+int
+nfs_nfs_version(struct mount_options *options, unsigned long *version)
 {
 	long tmp;
 
 	switch (po_rightmost(options, nfs_version_opttbl)) {
 	case 0:	/* v2 */
-		return 2;
+		*version = 2;
+		return 1;
 	case 1: /* v3 */
-		return 3;
-	case 2:	/* vers */
-		if (po_get_numeric(options, "vers", &tmp) == PO_FOUND)
-			if (tmp >= 2 && tmp <= 3)
-				return tmp;
-		break;
-	case 3: /* nfsvers */
-		if (po_get_numeric(options, "nfsvers", &tmp) == PO_FOUND)
-			if (tmp >= 2 && tmp <= 3)
-				return tmp;
-		break;
+		*version = 3;
+		return 1;
+	case 2: /* v4 */
+		*version = 4;
+		return 1;
+	case 3:	/* vers */
+		switch (po_get_numeric(options, "vers", &tmp)) {
+		case PO_FOUND:
+			if (tmp >= 2 && tmp <= 4) {
+				*version = tmp;
+				return 1;
+			}
+			return 0;
+		case PO_NOT_FOUND:
+			nfs_error(_("%s: option parsing error\n"),
+					progname);
+		case PO_BAD_VALUE:
+			return 0;
+		}
+	case 4: /* nfsvers */
+		switch (po_get_numeric(options, "nfsvers", &tmp)) {
+		case PO_FOUND:
+			if (tmp >= 2 && tmp <= 4) {
+				*version = tmp;
+				return 1;
+			}
+			return 0;
+		case PO_NOT_FOUND:
+			nfs_error(_("%s: option parsing error\n"),
+					progname);
+		case PO_BAD_VALUE:
+			return 0;
+		}
 	}
 
-	return 0;
+	/*
+	 * NFS version wasn't specified.  The pmap version value
+	 * will be filled in later by an rpcbind query in this case.
+	 */
+	*version = 0;
+	return 1;
 }
 
 /*
- * Returns the NFS transport protocol specified by the given mount options
- *
- * Returns the IPPROTO_ value specified by the given mount options, or
- * IPPROTO_UDP if all fails.
+ * Returns TRUE if @protocol contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static unsigned short nfs_nfs_protocol(struct mount_options *options)
+int
+nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol)
 {
 	char *option;
 
 	switch (po_rightmost(options, nfs_transport_opttbl)) {
+	case 0:	/* udp */
+		*protocol = IPPROTO_UDP;
+		return 1;
 	case 1: /* tcp */
-		return IPPROTO_TCP;
+		*protocol = IPPROTO_TCP;
+		return 1;
 	case 2: /* proto */
 		option = po_get(options, "proto");
 		if (option) {
-			if (strcmp(option, "tcp") == 0)
-				return IPPROTO_TCP;
-			if (strcmp(option, "udp") == 0)
-				return IPPROTO_UDP;
+			if (strcmp(option, "tcp") == 0) {
+				*protocol = IPPROTO_TCP;
+				return 1;
+			}
+			if (strcmp(option, "udp") == 0) {
+				*protocol = IPPROTO_UDP;
+				return 1;
+			}
+			return 0;
 		}
 	}
 
-	return IPPROTO_UDP;
+	/*
+	 * NFS transport protocol wasn't specified.  The pmap
+	 * protocol value will be filled in later by an rpcbind
+	 * query in this case.
+	 */
+	*protocol = 0;
+	return 1;
 }
 
 /*
- * Returns the NFS server's port number specified by the given
- * mount options, or zero if all fails.  Zero results in a portmap
- * query to discover the server's mountd service port.
- *
- * port=0 will guarantee an rpcbind request precedes the first
- * NFS RPC so the client can determine the server's port number.
+ * Returns TRUE if @port contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static unsigned short nfs_nfs_port(struct mount_options *options)
+static int
+nfs_nfs_port(struct mount_options *options, unsigned long *port)
 {
 	long tmp;
 
-	if (po_get_numeric(options, "port", &tmp) == PO_FOUND)
-		if (tmp >= 0 && tmp <= 65535)
-			return tmp;
-	return 0;
+	switch (po_get_numeric(options, "port", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp >= 1 && tmp <= 65535) {
+			*port = tmp;
+			return 1;
+		}
+	case PO_BAD_VALUE:
+		return 0;
+	}
+
+	/*
+	 * NFS service port wasn't specified.  The pmap port value
+	 * will be filled in later by an rpcbind query in this case.
+	 */
+	*port = 0;
+	return 1;
 }
 
 /*
- * "mountprog" is only supported by the legacy mount command.  The
+ * "mountprog" is supported only by the legacy mount command.  The
  * kernel mount client does not support this option.
  *
- * Returns the value set by the mountprog= option, the value of
- * the RPC mount program specified in /etc/rpc, or a baked-in
- * default program number, if all fails.
+ * Returns TRUE if @program contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static rpcprog_t nfs_mount_program(struct mount_options *options)
+static int
+nfs_mount_program(struct mount_options *options, unsigned long *program)
 {
 	long tmp;
 
-	if (po_get_numeric(options, "mountprog", &tmp) == PO_FOUND)
-		if (tmp >= 0)
-			return tmp;
-	return nfs_getrpcbyname(MOUNTPROG, nfs_mnt_pgmtbl);
+	switch (po_get_numeric(options, "mountprog", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp > 0) {
+			*program = tmp;
+			return 1;
+		}
+	case PO_BAD_VALUE:
+		return 0;
+	}
+
+	/*
+	 * MNT RPC program wasn't specified.  The RPC program
+	 * cannot be determined via an rpcbind query.
+	 */
+	*program = nfs_getrpcbyname(MOUNTPROG, nfs_mnt_pgmtbl);
+	return 1;
 }
 
 /*
- * Returns the RPC version number specified by the given mount options,
- * or the version "3" if all fails.
+ * Returns TRUE if @version contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static rpcvers_t nfs_mount_version(struct mount_options *options)
+static int
+nfs_mount_version(struct mount_options *options, unsigned long *version)
 {
 	long tmp;
 
-	if (po_get_numeric(options, "mountvers", &tmp) == PO_FOUND)
-		if (tmp >= 1 && tmp <= 4)
-			return tmp;
+	switch (po_get_numeric(options, "mountvers", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp >= 1 && tmp <= 4) {
+			*version = tmp;
+			return 1;
+		}
+	case PO_BAD_VALUE:
+		return 0;
+	}
 
-	return nfsvers_to_mnt(nfs_nfs_version(options));
+	/*
+	 * MNT version wasn't specified.  The pmap version value
+	 * will be filled in later by an rpcbind query in this case.
+	 */
+	*version = 0;
+	return 1;
 }
 
 /*
- * Returns the transport protocol to use for the mount service
- *
- * Returns the IPPROTO_ value specified by the mountproto option, or
- * if that doesn't exist, the IPPROTO_ value specified for NFS
- * itself.
+ * Returns TRUE if @protocol contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static unsigned short nfs_mount_protocol(struct mount_options *options)
+static int
+nfs_mount_protocol(struct mount_options *options, unsigned long *protocol)
 {
 	char *option;
 
 	option = po_get(options, "mountproto");
 	if (option) {
-		if (strcmp(option, "tcp") == 0)
-			return IPPROTO_TCP;
-		if (strcmp(option, "udp") == 0)
-			return IPPROTO_UDP;
+		if (strcmp(option, "tcp") == 0) {
+			*protocol = IPPROTO_TCP;
+			return 1;
+		}
+		if (strcmp(option, "udp") == 0) {
+			*protocol = IPPROTO_UDP;
+			return 1;
+		}
+		return 0;
 	}
 
-	return nfs_nfs_version(options);
+	/*
+	 * MNT transport protocol wasn't specified.  If the NFS
+	 * transport protocol was specified, use that; otherwise
+	 * set @protocol to zero.  The pmap protocol value will
+	 * be filled in later by an rpcbind query in this case.
+	 */
+	return nfs_nfs_protocol(options, protocol);
 }
 
 /*
- * Returns the mountd server's port number specified by the given
- * mount options, or zero if all fails.  Zero results in a portmap
- * query to discover the server's mountd service port.
- *
- * port=0 will guarantee an rpcbind request precedes the mount
- * RPC so the client can determine the server's port number.
+ * Returns TRUE if @port contains a valid value for this option,
+ * or FALSE if the option was specified with an invalid value.
  */
-static unsigned short nfs_mount_port(struct mount_options *options)
+static int
+nfs_mount_port(struct mount_options *options, unsigned long *port)
 {
 	long tmp;
 
-	if (po_get_numeric(options, "mountport", &tmp) == PO_FOUND)
-		if (tmp >= 0 && tmp <= 65535)
-			return tmp;
-	return 0;
+	switch (po_get_numeric(options, "mountport", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp >= 1 && tmp <= 65535) {
+			*port = tmp;
+			return 1;
+		}
+	case PO_BAD_VALUE:
+		return 0;
+	}
+
+	/*
+	 * MNT service port wasn't specified.  The pmap port value
+	 * will be filled in later by an rpcbind query in this case.
+	 */
+	*port = 0;
+	return 1;
 }
 
 /**
@@ -1364,17 +1478,29 @@ static unsigned short nfs_mount_port(struct mount_options *options)
  * @nfs_pmap: OUT: pointer to pmap arguments for NFS server
  * @mnt_pmap: OUT: pointer to pmap arguments for mountd server
  *
+ * Returns TRUE if the pmap options specified in @options have valid
+ * values; otherwise FALSE is returned.
  */
-void nfs_options2pmap(struct mount_options *options,
-		      struct pmap *nfs_pmap, struct pmap *mnt_pmap)
+int nfs_options2pmap(struct mount_options *options,
+		     struct pmap *nfs_pmap, struct pmap *mnt_pmap)
 {
-	nfs_pmap->pm_prog = nfs_nfs_program(options);
-	nfs_pmap->pm_vers = nfs_nfs_version(options);
-	nfs_pmap->pm_prot = nfs_nfs_protocol(options);
-	nfs_pmap->pm_port = nfs_nfs_port(options);
+	if (!nfs_nfs_program(options, &nfs_pmap->pm_prog))
+		return 0;
+	if (!nfs_nfs_version(options, &nfs_pmap->pm_vers))
+		return 0;
+	if (!nfs_nfs_protocol(options, &nfs_pmap->pm_prot))
+		return 0;
+	if (!nfs_nfs_port(options, &nfs_pmap->pm_port))
+		return 0;
 
-	mnt_pmap->pm_prog = nfs_mount_program(options);
-	mnt_pmap->pm_vers = nfs_mount_version(options);
-	mnt_pmap->pm_prot = nfs_mount_protocol(options);
-	mnt_pmap->pm_port = nfs_mount_port(options);
+	if (!nfs_mount_program(options, &mnt_pmap->pm_prog))
+		return 0;
+	if (!nfs_mount_version(options, &mnt_pmap->pm_vers))
+		return 0;
+	if (!nfs_mount_protocol(options, &mnt_pmap->pm_prot))
+		return 0;
+	if (!nfs_mount_port(options, &mnt_pmap->pm_port))
+		return 0;
+
+	return 1;
 }

@@ -37,6 +37,7 @@
 #include "xcommon.h"
 #include "nls.h"
 #include "mount_constants.h"
+#include "mount_config.h"
 #include "nfs_paths.h"
 #include "nfs_mntent.h"
 
@@ -156,7 +157,7 @@ static void parse_opts(const char *options, int *flags, char **extra_opts);
  */
 static void discover_nfs_mount_data_version(void)
 {
-	int kernel_version = linux_version_code();
+	unsigned int kernel_version = linux_version_code();
 
 	if (kernel_version) {
 		if (kernel_version < MAKE_VERSION(2, 1, 32))
@@ -417,7 +418,7 @@ static int chk_mountpoint(char *mount_point)
 
 static int try_mount(char *spec, char *mount_point, int flags,
 			char *fs_type, char **extra_opts, char *mount_opts,
-			int fake, int nomtab, int bg)
+			int fake, int bg)
 {
 	int ret;
 
@@ -473,6 +474,8 @@ int main(int argc, char *argv[])
 
 	spec = argv[1];
 	mount_point = argv[2];
+
+	mount_config_init(progname);
 
 	argv[2] = argv[0]; /* so that getopt error messages are correct */
 	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hs",
@@ -559,6 +562,10 @@ int main(int argc, char *argv[])
 		mnt_err = EX_USAGE;
 		goto out;
 	}
+	/*
+	 * Concatenate mount options from the configuration file
+	 */
+	mount_opts = mount_config_opts(spec, mount_point, mount_opts);
 
 	parse_opts(mount_opts, &flags, &extra_opts);
 
@@ -582,7 +589,7 @@ int main(int argc, char *argv[])
 	}
 
 	mnt_err = try_mount(spec, mount_point, flags, fs_type, &extra_opts,
-				mount_opts, fake, nomtab, FOREGROUND);
+				mount_opts, fake, FOREGROUND);
 	if (mnt_err == EX_BG) {
 		printf(_("%s: backgrounding \"%s\"\n"),
 			progname, spec);
@@ -600,7 +607,7 @@ int main(int argc, char *argv[])
 
 		mnt_err = try_mount(spec, mount_point, flags, fs_type,
 					&extra_opts, mount_opts, fake,
-					nomtab, BACKGROUND);
+					BACKGROUND);
 		if (verbose && mnt_err)
 			printf(_("%s: giving up \"%s\"\n"),
 				progname, spec);

@@ -174,7 +174,14 @@ static int nfs_umount_do_umnt(struct mount_options *options,
 	socklen_t salen = sizeof(address);
 	struct pmap nfs_pmap, mnt_pmap;
 
-	nfs_options2pmap(options, &nfs_pmap, &mnt_pmap);
+	if (!nfs_options2pmap(options, &nfs_pmap, &mnt_pmap)) {
+		nfs_error(_("%s: bad mount options"), progname);
+		return EX_FAIL;
+	}
+
+	/* Skip UMNT call for vers=4 mounts */
+	if (nfs_pmap.pm_vers == 4)
+		return EX_SUCCESS;
 
 	*hostname = nfs_umount_hostname(options, *hostname);
 	if (!*hostname) {
@@ -182,14 +189,15 @@ static int nfs_umount_do_umnt(struct mount_options *options,
 		return EX_FAIL;
 	}
 
-	if (nfs_name_to_address(*hostname, AF_UNSPEC, sap, &salen)) {
-		if (nfs_advise_umount(sap, salen, &mnt_pmap, dirname) != 0)
-			return EX_SUCCESS;
-		else
-			nfs_error(_("%s: Server failed to unmount '%s:%s'"),
-					progname, *hostname, *dirname);
-	}
-	return EX_FAIL;
+	if (nfs_name_to_address(*hostname, sap, &salen) == 0)
+		/* nfs_name_to_address reports any errors */
+		return EX_FAIL;
+
+	if (nfs_advise_umount(sap, salen, &mnt_pmap, dirname) == 0)
+		/* nfs_advise_umount reports any errors */
+		return EX_FAIL;
+
+	return EX_SUCCESS;
 }
 
 /*
@@ -332,7 +340,7 @@ int nfsumount(int argc, char *argv[])
 			char *opt = hasmntopt(&mc->m, "user");
 			struct passwd *pw;
 			char *comma;
-			int len;
+			size_t len;
 			if (!opt)
 				goto only_root;
 			if (opt[4] != '=')

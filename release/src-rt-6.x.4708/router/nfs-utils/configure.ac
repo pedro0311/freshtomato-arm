@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.1.5],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.1],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -118,6 +118,11 @@ AC_ARG_ENABLE(mount,
 	enable_mount=$enableval,
 	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
+AC_ARG_ENABLE(tirpc,
+	[AC_HELP_STRING([--enable-tirpc],
+			[enable use of TI-RPC @<:@default=yes@:>@])],
+	enable_tirpc=$enableval,
+	enable_tirpc='yes')
 AC_ARG_ENABLE(ipv6,
 	[AC_HELP_STRING([--enable-ipv6],
                         [enable support for IPv6 @<:@default=no@:>@])],
@@ -131,13 +136,35 @@ AC_ARG_ENABLE(ipv6,
 	AC_SUBST(enable_ipv6)
 	AM_CONDITIONAL(CONFIG_IPV6, [test "$enable_ipv6" = "yes"])
 
-AC_ARG_ENABLE(tirpc,
-	[AC_HELP_STRING([--enable-tirpc],
-                        [enable use of TI-RPC @<:@default=no@:>@])],
-	enable_tirpc=$enableval,
-	enable_tirpc=no)
-	AC_SUBST(enable_tirpc)
-	AM_CONDITIONAL(CONFIG_TIRPC, [test "$enable_tirpc" = "yes"])
+if test "$enable_mount" = yes; then
+	AC_ARG_ENABLE(mountconfig,
+	[AC_HELP_STRING([--enable-mountconfig],
+                        [enable mount to use a configuration file])],
+	mountconfig=$enableval,
+	mountconfig=no)
+	if test "$enable_mountconfig" = yes; then
+		AC_DEFINE(MOUNT_CONFIG, 1, 
+			[Define this if you want mount to read a configuration file])
+		AC_ARG_WITH(mountfile,
+			[AC_HELP_STRING([--with-mountfile=filename],
+			[Using filename as the NFS mount options file [/etc/nfsmounts.conf]]
+			)],
+		mountfile=$withval,
+		mountfile=/etc/nfsmount.conf)
+		AC_SUBST(mountfile)
+		AC_DEFINE_UNQUOTED(MOUNTOPTS_CONFFILE, "$mountfile", 
+			[This defines the location of the NFS mount configuration file])
+	else
+		enable_mountconfig=
+	fi
+	AC_SUBST(enable_mountconfig)
+	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mountconfig" = "yes"])
+else
+	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mount" = "yes"])
+fi
+
+dnl Check for TI-RPC library and headers
+AC_LIBTIRPC
 
 # Check whether user wants TCP wrappers support
 AC_TCP_WRAPPERS
@@ -176,39 +203,40 @@ AC_BSD_SIGNALS
 dnl *************************************************************
 dnl * Check for required libraries
 dnl *************************************************************
-AC_CHECK_FUNC(gethostbyname, , [AC_CHECK_LIB(nsl, gethostbyname, [LIBNSL="-lnsl"])])
+
+AC_CHECK_FUNC([gethostbyname], ,
+              [AC_CHECK_LIB([nsl], [gethostbyname], [LIBNSL="-lnsl"])])
 AC_SUBST(LIBNSL)
 
-AC_CHECK_FUNC(connect, ,
-      AC_CHECK_LIB(socket, connect, [LIBSOCKET="-lsocket"],
-                AC_MSG_ERROR(Function 'socket' not found.), $LIBNSL))
+AC_CHECK_FUNC([connect], ,
+              [AC_CHECK_LIB([socket], [connect], [LIBSOCKET="-lsocket"],
+                    [AC_MSG_ERROR([Function 'socket' not found.])], [$LIBNSL])])
 
-AC_CHECK_FUNC(getaddrinfo, , ,
-                AC_MSG_ERROR(Function 'getaddrinfo' not found.))
+AC_CHECK_FUNC([getaddrinfo], ,
+              [AC_MSG_ERROR([Function 'getaddrinfo' not found.])])
 
-AC_CHECK_FUNC(getrpcbynumber, , ,
-                AC_MSG_ERROR(Function 'getrpcbynumber' not found.))
+AC_CHECK_FUNC([getrpcbynumber], ,
+              [AC_MSG_ERROR([Function 'getrpcbynumber' not found.])])
 
-AC_CHECK_FUNC(getservbyname, , ,
-                AC_MSG_ERROR(Function 'getservbyname' not found.))
+AC_CHECK_FUNC([getservbyname], ,
+              [AC_MSG_ERROR([Function 'getservbyname' not found.])])
 
-AC_CHECK_LIB(crypt, crypt, [LIBCRYPT="-lcrypt"])
+AC_CHECK_LIB([crypt], [crypt], [LIBCRYPT="-lcrypt"])
+
 if test "$enable_nfsv4" = yes; then
-    AC_CHECK_LIB(event, event_dispatch, [libevent=1], AC_MSG_ERROR([libevent needed for nfsv4 support]))
-    AC_CHECK_LIB(nfsidmap, nfs4_init_name_mapping, [libnfsidmap=1], AC_MSG_ERROR([libnfsidmap needed for nfsv4 support]))
-    AC_CHECK_HEADERS(event.h, ,AC_MSG_ERROR([libevent needed for nfsv4 support]))
-    AC_CHECK_HEADERS(nfsidmap.h, ,AC_MSG_ERROR([libnfsidmap needed for nfsv4 support]))
-    dnl librpcsecgss already has a dependency on libgssapi,
-    dnl but we need to make sure we get the right version
-    if test "$enable_gss" = yes; then
-     PKG_CHECK_MODULES(RPCSECGSS, librpcsecgss >= 0.16, ,
-      [AC_MSG_ERROR([Unable to locate information required to use librpcsecgss.  If you have pkgconfig installed, you might try setting environment variable PKG_CONFIG_PATH to /usr/local/lib/pkgconfig])
-      ]
-     )
-    PKG_CHECK_MODULES(GSSGLUE, libgssglue >= 0.1)
-    fi
+  dnl check for libevent libraries and headers
+  AC_LIBEVENT
 
+  dnl check for nfsidmap libraries and headers
+  AC_LIBNFSIDMAP
+
+  dnl librpcsecgss already has a dependency on libgssapi,
+  dnl but we need to make sure we get the right version
+  if test "$enable_gss" = yes; then
+    AC_RPCSEC_VERSION
+  fi
 fi
+
 if test "$knfsd_cv_glibc2" = no; then
     AC_CHECK_LIB(bsd, daemon, [LIBBSD="-lbsd"])
 fi
@@ -235,50 +263,25 @@ AC_SUBST(LIBBSD)
 AC_SUBST(LIBBLKID)
 
 if test "$enable_gss" = yes; then
+  dnl 'gss' requires getnameinfo - at least for gssd_proc.c
+  AC_CHECK_FUNC([getnameinfo], , [AC_MSG_ERROR([GSSAPI support requires 'getnameinfo' function])])
+
   dnl 'gss' also depends on nfsidmap.h - at least for svcgssd_proc.c
-  AC_CHECK_HEADERS(nfsidmap.h, ,AC_MSG_ERROR([libnfsidmap needed for gss support]))
-  AC_CHECK_HEADERS(spkm3.h, ,AC_MSG_WARN([could not locate SPKM3 header; will not have SPKM3 support]))
-  dnl the nfs4_set_debug function doesn't appear in all version of the library
-  AC_CHECK_LIB(nfsidmap, nfs4_set_debug,
-	       AC_DEFINE(HAVE_NFS4_SET_DEBUG,1,
-			 [Whether nfs4_set_debug() is present in libnfsidmap]),)
+  AC_LIBNFSIDMAP
+
+  AC_CHECK_HEADERS([spkm3.h], ,
+                   [AC_MSG_WARN([Could not locate SPKM3 header; will not have SPKM3 support])])
 
   dnl Check for Kerberos V5
   AC_KERBEROS_V5
 
-  dnl This is not done until here because we need to have KRBLIBS set
-  dnl ("librpcsecgss=1" is so that it doesn't get added to LIBS)
-  AC_CHECK_LIB(rpcsecgss, authgss_create_default, [librpcsecgss=1], AC_MSG_ERROR([librpcsecgss needed for nfsv4 support]), -lgssglue -ldl)
-  AC_CHECK_LIB(rpcsecgss, authgss_set_debug_level,
-  	       AC_DEFINE(HAVE_AUTHGSS_SET_DEBUG_LEVEL, 1, [Define this if the rpcsec_gss library has the function authgss_set_debug_level]),, -lgssglue -ldl)
+  dnl Invoked after AC_KERBEROS_V5; AC_LIBRPCSECGSS needs to have KRBLIBS set
+  AC_LIBRPCSECGSS
 
 fi
 
-AC_CHECK_DECL([AI_ADDRCONFIG],
-              AC_DEFINE([HAVE_DECL_AI_ADDRCONFIG], 1,
-                         [Define this to 1 if AI_ADDRCONFIG macro is defined]), ,
-              [ #include <netdb.h> ] )
-
-if test "$enable_tirpc" = yes; then
-  AC_CHECK_LIB(tirpc, clnt_tli_create, ,
-           AC_MSG_ERROR([libtirpc not found.]))
-  AC_CHECK_HEADERS(tirpc/netconfig.h, ,
-                   AC_MSG_ERROR([libtirpc headers not found.]))
-  AC_CHECK_FUNCS([bindresvport_sa getnetconfig \
-                  clnt_create clnt_create_timed \
-                  clnt_vc_create clnt_dg_create xdr_rpcb])
-fi
-
-if test "$enable_ipv6" = yes; then
-  if test "$enable_tirpc" = no; then
-    AC_MSG_ERROR('--enable-ipv6' requires '--enable-tirpc'.)
-  fi
-  AC_CHECK_FUNC(getnameinfo, , ,
-               AC_MSG_ERROR(Function 'getnameinfo' not found.))
-  AC_CHECK_DECL([AI_ADDRCONFIG], ,
-               AC_MSG_ERROR([full getaddrinfo(3) implementation needed for IPv6 support]),
-               [ #include <netdb.h> ] )
-fi
+dnl Check for IPv6 support
+AC_IPV6
 
 dnl *************************************************************
 dnl Check for headers

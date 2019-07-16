@@ -24,6 +24,7 @@
 #define __NFS_UTILS_NFSRPC_H
 
 #include <rpc/types.h>
+#include <rpc/clnt.h>
 
 /*
  * Conventional RPC program numbers
@@ -48,13 +49,32 @@
 #define NSMPROG		((rpcprog_t)100024)
 #endif
 
+/**
+ * nfs_clear_rpc_createerr - zap all error reporting fields
+ *
+ */
+static inline void nfs_clear_rpc_createerr(void)
+{
+	memset(&rpc_createerr, 0, sizeof(rpc_createerr));
+}
+
+/*
+ * Extract port value from a socket address
+ */
+extern uint16_t		nfs_get_port(const struct sockaddr *);
+
+/*
+ * Set port value in a socket address
+ */
+extern void		nfs_set_port(struct sockaddr *, const uint16_t);
+
 /*
  * Look up an RPC program name in /etc/rpc
  */
 extern rpcprog_t	nfs_getrpcbyname(const rpcprog_t, const char *table[]);
 
 /*
- * Acquire an RPC CLIENT *
+ * Acquire an RPC CLIENT * with an ephemeral source port
  */
 extern CLIENT		*nfs_get_rpcclient(const struct sockaddr *,
 				const socklen_t, const unsigned short,
@@ -62,10 +82,17 @@ extern CLIENT		*nfs_get_rpcclient(const struct sockaddr *,
 				struct timeval *);
 
 /*
+ * Acquire an RPC CLIENT * with a privileged source port
+ */
+extern CLIENT		*nfs_get_priv_rpcclient( const struct sockaddr *,
+				const socklen_t, const unsigned short,
+				const rpcprog_t, const rpcvers_t,
+				struct timeval *);
+
+/*
  * Convert a socket address to a universal address
  */
-extern char		*nfs_sockaddr2universal(const struct sockaddr *,
-				const socklen_t);
+extern char		*nfs_sockaddr2universal(const struct sockaddr *);
 
 /*
  * Extract port number from a universal address
@@ -105,7 +132,6 @@ extern unsigned short	nfs_rpcb_getaddr(const struct sockaddr *,
 				const socklen_t,
 				const unsigned short,
 				const struct sockaddr *,
-				const socklen_t,
 				const rpcprog_t,
 				const rpcvers_t,
 				const unsigned short,
