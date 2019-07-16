@@ -2398,10 +2398,10 @@ static int init_nvram(void)
 			/* fix WL mac`s */
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
-			nvram_set("pci/1/1/macaddr", s); /* fix WL mac for 2,4G */
+			nvram_set("pci/1/1/macaddr", s);	/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +1);
-			nvram_set("pci/2/1/macaddr", s); /* fix WL mac for 5G */
+			inc_mac(s, +4);				/* do not overlap with VIFS */
+			nvram_set("pci/2/1/macaddr", s);	/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
 			/* usb3.0 settings */
