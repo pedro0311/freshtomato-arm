@@ -285,7 +285,7 @@ handler (int sig) {
 }
 
 static void
-setlkw_timeout (int sig) {
+setlkw_timeout (__attribute__((unused)) int sig) {
      /* nothing, fcntl will fail anyway */
 }
 
@@ -546,8 +546,12 @@ update_mtab (const char *dir, struct mntent *instead)
 	   * from the present mtab before renaming.
 	   */
 	    struct stat sbuf;
-	    if (stat (MOUNTED, &sbuf) == 0)
-		chown (MOUNTED_TEMP, sbuf.st_uid, sbuf.st_gid);
+	    if (stat (MOUNTED, &sbuf) == 0) {
+			if (chown (MOUNTED_TEMP, sbuf.st_uid, sbuf.st_gid) < 0) {
+				nfs_error(_("%s: error changing owner of %s: %s"),
+					progname, MOUNTED_TEMP, strerror (errno));
+			}
+		}
 	}
 
 	/* rename mtemp to mtab */

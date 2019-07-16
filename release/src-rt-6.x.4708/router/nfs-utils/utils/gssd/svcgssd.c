@@ -117,10 +117,16 @@ mydaemon(int nochdir, int noclose)
 
 	if (noclose == 0) {
 		tempfd = open("/dev/null", O_RDWR);
-		dup2(tempfd, 0);
-		dup2(tempfd, 1);
-		dup2(tempfd, 2);
-		closeall(3);
+		if (tempfd >= 0) {
+			dup2(tempfd, 0);
+			dup2(tempfd, 1);
+			dup2(tempfd, 2);
+			close(tempfd);
+		} else {
+			printerr(1, "mydaemon: can't open /dev/null: errno %d "
+				    "(%s)\n", errno, strerror(errno));
+			exit(1);
+		}
 	}
 
 	return;
@@ -132,7 +138,11 @@ release_parent(void)
 	int status;
 
 	if (pipefds[1] > 0) {
-		write(pipefds[1], &status, 1);
+		if (write(pipefds[1], &status, 1) != 1) {
+			printerr(1, 
+				"WARN: writing to parent pipe failed: errno %d (%s)\n",
+				errno, strerror(errno));
+		}
 		close(pipefds[1]);
 		pipefds[1] = -1;
 	}
@@ -204,6 +214,8 @@ main(int argc, char *argv[])
 
 	initerr(progname, verbosity, fg);
 #ifdef HAVE_AUTHGSS_SET_DEBUG_LEVEL
+	if (verbosity && rpc_verbosity == 0)
+		rpc_verbosity = verbosity;
 	authgss_set_debug_level(rpc_verbosity);
 #else
 	if (rpc_verbosity > 0)
@@ -211,6 +223,8 @@ main(int argc, char *argv[])
 			    "support setting debug level\n");
 #endif
 #ifdef HAVE_NFS4_SET_DEBUG
+		if (verbosity && idmap_verbosity == 0)
+			idmap_verbosity = verbosity;
         nfs4_set_debug(idmap_verbosity, NULL);
 #else
 	if (idmap_verbosity > 0)

@@ -66,7 +66,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "xlog.h"
-#include "cfg.h"
+#include "conffile.h"
 #include "queue.h"
 #include "nfslib.h"
 
@@ -139,6 +139,7 @@ static void nametoidres(struct idmap_msg *);
 
 static int nfsdopen(void);
 static int nfsdopenone(struct idmap_client *);
+static void nfsdreopen_one(struct idmap_client *);
 static void nfsdreopen(void);
 
 size_t  strlcat(char *, const char *, size_t);
@@ -156,7 +157,7 @@ static char *nobodyuser, *nobodygroup;
 static uid_t nobodyuid;
 static gid_t nobodygid;
 
-/* Used by cfg.c */
+/* Used by conffile.c in libnfs.a */
 char *conf_path;
 
 static int
@@ -169,7 +170,10 @@ flush_nfsd_cache(char *path, time_t now)
 	fd = open(path, O_RDWR);
 	if (fd == -1)
 		return -1;
-	write(fd, stime, strlen(stime));
+	if (write(fd, stime, strlen(stime)) != strlen(stime)) {
+		errx(1, "Flushing nfsd cache failed: errno %d (%s)",
+			errno, strerror(errno));
+	}
 	close(fd);
 	return 0;
 }
@@ -499,7 +503,8 @@ nfsdcb(int fd, short which, void *data)
 		xlog_warn("nfsdcb: read(%s) failed: errno %d (%s)",
 			     ic->ic_path, len?errno:0, 
 			     len?strerror(errno):"End of File");
-		goto out;
+		nfsdreopen_one(ic);
+		return;
 	}
 
 	/* Get rid of newline and terminate buffer*/
@@ -511,11 +516,11 @@ nfsdcb(int fd, short which, void *data)
 	/* Authentication name -- ignored for now*/
 	if (getfield(&bp, authbuf, sizeof(authbuf)) == -1) {
 		xlog_warn("nfsdcb: bad authentication name in upcall\n");
-		return;
+		goto out;
 	}
 	if (getfield(&bp, typebuf, sizeof(typebuf)) == -1) {
 		xlog_warn("nfsdcb: bad type in upcall\n");
-		return;
+		goto out;
 	}
 	if (verbose > 0)
 		xlog_warn("nfsdcb: authbuf=%s authtype=%s",
@@ -529,26 +534,26 @@ nfsdcb(int fd, short which, void *data)
 		im.im_conv = IDMAP_CONV_NAMETOID;
 		if (getfield(&bp, im.im_name, sizeof(im.im_name)) == -1) {
 			xlog_warn("nfsdcb: bad name in upcall\n");
-			return;
+			goto out;
 		}
 		break;
 	case IC_IDNAME:
 		im.im_conv = IDMAP_CONV_IDTONAME;
 		if (getfield(&bp, buf1, sizeof(buf1)) == -1) {
 			xlog_warn("nfsdcb: bad id in upcall\n");
-			return;
+			goto out;
 		}
 		tmp = strtoul(buf1, (char **)NULL, 10);
 		im.im_id = (u_int32_t)tmp;
 		if ((tmp == ULONG_MAX && errno == ERANGE)
 				|| (unsigned long)im.im_id != tmp) {
 			xlog_warn("nfsdcb: id '%s' too big!\n", buf1);
-			return;
+			goto out;
 		}
 		break;
 	default:
 		xlog_warn("nfsdcb: Unknown which type %d", ic->ic_which);
-		return;
+		goto out;
 	}
 
 	imconv(ic, &im);
@@ -609,7 +614,7 @@ nfsdcb(int fd, short which, void *data)
 		break;
 	default:
 		xlog_warn("nfsdcb: Unknown which type %d", ic->ic_which);
-		return;
+		goto out;
 	}
 
 	bsiz = sizeof(buf) - bsiz;
@@ -975,9 +980,12 @@ mydaemon(int nochdir, int noclose)
 			dup2(tempfd, 0);
 			dup2(tempfd, 1);
 			dup2(tempfd, 2);
-			closeall(3);
-		} else
-			closeall(0);
+			close(tempfd);
+		} else {
+			err(1, "mydaemon: can't open /dev/null: errno %d",
+			       errno);
+			exit(1);
+		}
 	}
 
 	return;
@@ -988,7 +996,10 @@ release_parent(void)
 	int status;
 
 	if (pipefds[1] > 0) {
-		write(pipefds[1], &status, 1);
+		if (write(pipefds[1], &status, 1) != 1) {
+			err(1, "Writing to parent pipe failed: errno %d (%s)\n",
+				errno, strerror(errno));
+		}
 		close(pipefds[1]);
 		pipefds[1] = -1;
 	}

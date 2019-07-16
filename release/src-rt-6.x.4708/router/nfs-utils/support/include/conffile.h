@@ -30,10 +30,11 @@
  * This code was written under funding by Ericsson Radio Systems.
  */
 
-#ifndef _CONF_H_
-#define _CONF_H_
+#ifndef _CONFFILE_H_
+#define _CONFFILE_H_
 
-#include "queue.h"
+#include <sys/queue.h>
+#include <ctype.h>
 
 struct conf_list_node {
 	TAILQ_ENTRY(conf_list_node) link;
@@ -56,12 +57,24 @@ extern struct conf_list *conf_get_list(char *, char *);
 extern struct conf_list *conf_get_tag_list(char *);
 extern int      conf_get_num(char *, char *, int);
 extern char    *conf_get_str(char *, char *);
+extern char    *conf_get_section(char *, char *, char *);
 extern void     conf_init(void);
 extern int      conf_match_num(char *, char *, int);
 extern void     conf_reinit(void);
 extern int      conf_remove(int, char *, char *);
 extern int      conf_remove_section(int, char *);
-extern int      conf_set(int, char *, char *, char *, int, int);
 extern void     conf_report(void);
 
-#endif				/* _CONF_H_ */
+/*
+ * Convert letter from upper case to lower case
+ */
+static inline void upper2lower(char *str)
+{
+	char c;
+
+	while ((c = tolower(*str)))
+		*str++ = c;
+}
+
+
+#endif				/* _CONFFILE_H_ */

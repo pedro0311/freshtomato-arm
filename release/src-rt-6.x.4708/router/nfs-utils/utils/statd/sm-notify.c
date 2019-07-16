@@ -118,17 +118,33 @@ static void smn_set_port(struct sockaddr *sap, const unsigned short port)
 	}
 }
 
-static struct addrinfo *smn_lookup(const sa_family_t family, const char *name)
+static struct addrinfo *smn_lookup(const char *name)
 {
 	struct addrinfo	*ai, hint = {
-		.ai_family	= family,
+#if HAVE_DECL_AI_ADDRCONFIG
+		.ai_flags	= AI_ADDRCONFIG,
+#endif	/* HAVE_DECL_AI_ADDRCONFIG */
+		.ai_family	= AF_INET,
 		.ai_protocol	= IPPROTO_UDP,
 	};
+	int error;
 
-	if (getaddrinfo(name, NULL, &hint, &ai) != 0)
-		return NULL;
+	error = getaddrinfo(name, NULL, &hint, &ai);
+	switch (error) {
+	case 0:
+		return ai;
+	case EAI_SYSTEM: 
+		if (opt_debug)
+			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
+					strerror(errno));
+		break;
+	default:
+		if (opt_debug)
+			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
+					gai_strerror(error));
+	}
 
-	return ai;
+	return NULL;
 }
 
 static void smn_forget_host(struct nsm_host *host)
@@ -291,7 +307,7 @@ notify(void)
 
 	/* Bind source IP if provided on command line */
 	if (opt_srcaddr) {
-		struct addrinfo *ai = smn_lookup(AF_INET, opt_srcaddr);
+		struct addrinfo *ai = smn_lookup(opt_srcaddr);
 		if (!ai) {
 			nsm_log(LOG_ERR,
 				"Not a valid hostname or address: \"%s\"",
@@ -402,13 +418,12 @@ notify_host(int sock, struct nsm_host *host)
 		host->xid = xid++;
 
 	if (host->ai == NULL) {
-		host->ai = smn_lookup(AF_UNSPEC, host->name);
+		host->ai = smn_lookup(host->name);
 		if (host->ai == NULL) {
 			nsm_log(LOG_WARNING,
-				"%s doesn't seem to be a valid address,"
-				" skipped", host->name);
-			smn_forget_host(host);
-			return 1;
+				"DNS resolution of %s failed; "
+				"retrying later", host->name);
+			return 0;
 		}
 	}
 
@@ -424,19 +439,27 @@ notify_host(int sock, struct nsm_host *host)
 	 * point.
 	 */
 	if (host->retries >= 4) {
-		struct addrinfo *first = host->ai;
-		struct addrinfo **next = &host->ai;
+		/* don't rotate if there is only one addrinfo */
+		if (host->ai->ai_next == NULL)
+			memcpy(&host->addr, host->ai->ai_addr,
+						host->ai->ai_addrlen);
+		else {
+			struct addrinfo *first = host->ai;
+			struct addrinfo **next = &host->ai;
 
-		/* remove the first entry from the list */
-		host->ai = first->ai_next;
-		first->ai_next = NULL;
-		/* find the end of the list */
-		next = &first->ai_next;
-		while ( *next )
-			next = & (*next)->ai_next;
-		/* put first entry at end */
-		*next = first;
-		memcpy(&host->addr, first->ai_addr, first->ai_addrlen);
+			/* remove the first entry from the list */
+			host->ai = first->ai_next;
+			first->ai_next = NULL;
+			/* find the end of the list */
+			next = &first->ai_next;
+			while ( *next )
+				next = & (*next)->ai_next;
+			/* put first entry at end */
+			*next = first;
+			memcpy(&host->addr, first->ai_addr,
+						first->ai_addrlen);
+		}
+
 		smn_set_port((struct sockaddr *)&host->addr, 0);
 		host->retries = 0;
 	}
@@ -782,7 +805,10 @@ static int record_pid(void)
 	fd = open("/var/run/sm-notify.pid", O_CREAT|O_EXCL|O_WRONLY, 0600);
 	if (fd < 0)
 		return 0;
-	write(fd, pid, strlen(pid));
+	if (write(fd, pid, strlen(pid)) != strlen(pid))  {
+		nsm_log(LOG_WARNING, "Writing to pid file failed: errno %d(%s)",
+			errno, strerror(errno));
+	}
 	close(fd);
 	return 1;
 }
@@ -818,12 +844,16 @@ static void drop_privs(void)
 static void set_kernel_nsm_state(int state)
 {
 	int fd;
+	const char *file = "/proc/sys/fs/nfs/nsm_local_state";
 
-	fd = open("/proc/sys/fs/nfs/nsm_local_state",O_WRONLY);
+	fd = open(file ,O_WRONLY);
 	if (fd >= 0) {
 		char buf[20];
 		snprintf(buf, sizeof(buf), "%d", state);
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+			nsm_log(LOG_WARNING, "Writing to '%s' failed: errno %d (%s)",
+				file, errno, strerror(errno));
+		}
 		close(fd);
 	}
 }

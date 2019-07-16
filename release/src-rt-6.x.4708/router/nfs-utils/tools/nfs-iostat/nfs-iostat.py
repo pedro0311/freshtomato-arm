@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- python-mode -*-
 """Emulate iostat for NFS mount points using /proc/self/mountstats
 """
@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 """
 
 import sys, os, time
+from optparse import OptionParser, OptionGroup
 
 Iostats_version = '0.2'
 
@@ -353,6 +354,12 @@ class DeviceData:
         print '\t%7.3f' % rtt_per_op,
         print '\t%7.3f' % exe_per_op
 
+    def ops(self, sample_time):
+        sends = float(self.__rpc_data['rpcsends'])
+        if sample_time == 0:
+            sample_time = float(self.__nfs_data['age'])
+        return (sends / sample_time)
+
     def display_iostats(self, sample_time, which):
         """Display NFS and RPC stats in an iostat-like way
         """
@@ -395,33 +402,6 @@ class DeviceData:
 # Functions
 #
 
-def print_iostat_help(name):
-    print 'usage: %s [ <interval> [ <count> ] ] [ <options> ] [ <mount point> ] ' % name
-    print
-    print ' Version %s' % Iostats_version
-    print
-    print ' Sample iostat-like program to display NFS client per-mount statistics.'
-    print
-    print ' The <interval> parameter specifies the amount of time in seconds between'
-    print ' each report.  The first report contains statistics for the time since each'
-    print ' file system was mounted.  Each subsequent report contains statistics'
-    print ' collected during the interval since the previous report.'
-    print
-    print ' If the <count> parameter is specified, the value of <count> determines the'
-    print ' number of reports generated at <interval> seconds apart.  If the interval'
-    print ' parameter is specified without the <count> parameter, the command generates'
-    print ' reports continuously.'
-    print
-    print ' Options include "--attr", which displays statistics related to the attribute'
-    print ' cache, "--dir", which displays statistics related to directory operations,'
-    print ' and "--page", which displays statistics related to the page cache.'
-    print ' By default, if no option is specified, statistics related to file I/O are'
-    print ' displayed.'
-    print
-    print ' If one or more <mount point> names are specified, statistics for only these'
-    print ' mount points will be displayed.  Otherwise, all NFS mount points on the'
-    print ' client are listed.'
-
 def parse_stats_file(filename):
     """pop the contents of a mountstats file into a dictionary,
     keyed by mount point.  each value object is a list of the
@@ -446,109 +426,198 @@ def parse_stats_file(filename):
 
     return ms_dict
 
-def print_iostat_summary(old, new, devices, time, ac):
-    for device in devices:
-        stats = DeviceData()
-        stats.parse_stats(new[device])
-        if not old:
-            stats.display_iostats(time, ac)
-        else:
+def print_iostat_summary(old, new, devices, time, options):
+    stats = {}
+    diff_stats = {}
+
+    if old:
+        # Trim device list to only include intersection of old and new data,
+        # this addresses umounts due to autofs mountpoints
+        devicelist = filter(lambda x:x in devices,old)
+    else:
+        devicelist = devices
+
+    for device in devicelist:
+        stats[device] = DeviceData()
+        stats[device].parse_stats(new[device])
+        if old:
             old_stats = DeviceData()
             old_stats.parse_stats(old[device])
-            diff_stats = stats.compare_iostats(old_stats)
-            diff_stats.display_iostats(time, ac)
+            diff_stats[device] = stats[device].compare_iostats(old_stats)
+
+    if options.sort:
+        if old:
+            # We now have compared data and can print a comparison
+            # ordered by mountpoint ops per second
+            devicelist.sort(key=lambda x: diff_stats[x].ops(time), reverse=True)
+        else:
+            # First iteration, just sort by newly parsed ops/s
+            devicelist.sort(key=lambda x: stats[x].ops(time), reverse=True)
+
+    count = 1
+    for device in devicelist:
+        if old:
+            diff_stats[device].display_iostats(time, options.which)
+        else:
+            stats[device].display_iostats(time, options.which)
+
+        count += 1
+        if (count > options.list):
+            return
+
+
+def list_nfs_mounts(givenlist, mountstats):
+    """return a list of NFS mounts given a list to validate or
+       return a full list if the given list is empty -
+       may return an empty list if none found
+    """
+    list = []
+    if len(givenlist) > 0:
+        for device in givenlist:
+            stats = DeviceData()
+            stats.parse_stats(mountstats[device])
+            if stats.is_nfs_mountpoint():
+                list += [device]
+    else:
+        for device, descr in mountstats.iteritems():
+            stats = DeviceData()
+            stats.parse_stats(descr)
+            if stats.is_nfs_mountpoint():
+                list += [device]
+    return list
 
 def iostat_command(name):
     """iostat-like command for NFS mount points
     """
     mountstats = parse_stats_file('/proc/self/mountstats')
     devices = []
-    which = 0
+    origdevices = []
     interval_seen = False
     count_seen = False
 
-    for arg in sys.argv:
-        if arg in ['-h', '--help', 'help', 'usage']:
-            print_iostat_help(name)
-            return
+    mydescription= """
+Sample iostat-like program to display NFS client per-mount'
+statistics.  The <interval> parameter specifies the amount of time in seconds
+between each report.  The first report contains statistics for the time since
+each file system was mounted.  Each subsequent report contains statistics
+collected during the interval since the previous report.  If the <count>
+parameter is specified, the value of <count> determines the number of reports
+generated at <interval> seconds apart.  If the interval parameter is specified
+without the <count> parameter, the command generates reports continuously.
+If one or more <mount point> names are specified, statistics for only these
+mount points will be displayed.  Otherwise, all NFS mount points on the
+client are listed.
+"""
+    parser = OptionParser(
+        usage="usage: %prog [ <interval> [ <count> ] ] [ <options> ] [ <mount point> ]",
+        description=mydescription,
+        version='version %s' % Iostats_version)
+    parser.set_defaults(which=0, sort=False, list=sys.maxint)
 
-        if arg in ['-v', '--version', 'version']:
-            print '%s version %s' % (name, Iostats_version)
-            return
+    statgroup = OptionGroup(parser, "Statistics Options",
+                            'File I/O is displayed unless one of the following is specified:')
+    statgroup.add_option('-a', '--attr',
+                            action="store_const",
+                            dest="which",
+                            const=1,
+                            help='displays statistics related to the attribute cache')
+    statgroup.add_option('-d', '--dir',
+                            action="store_const",
+                            dest="which",
+                            const=2,
+                            help='displays statistics related to directory operations')
+    statgroup.add_option('-p', '--page',
+                            action="store_const",
+                            dest="which",
+                            const=3,
+                            help='displays statistics related to the page cache')
+    parser.add_option_group(statgroup)
+    displaygroup = OptionGroup(parser, "Display Options",
+                               'Options affecting display format:')
+    displaygroup.add_option('-s', '--sort',
+                            action="store_true",
+                            dest="sort",
+                            help="Sort NFS mount points by ops/second")
+    displaygroup.add_option('-l','--list',
+                            action="store",
+                            type="int",
+                            dest="list",
+                            help="only print stats for first LIST mount points")
+    parser.add_option_group(displaygroup)
 
-        if arg in ['-a', '--attr']:
-            which = 1
-            continue
+    (options, args) = parser.parse_args(sys.argv)
 
-        if arg in ['-d', '--dir']:
-            which = 2
-            continue
-
-        if arg in ['-p', '--page']:
-            which = 3
-            continue
+    for arg in args:
 
         if arg == sys.argv[0]:
             continue
 
         if arg in mountstats:
-            devices += [arg]
+            origdevices += [arg]
         elif not interval_seen:
-            interval = int(arg)
+            try:
+                interval = int(arg)
+            except:
+                print 'Illegal <interval> value %s' % arg
+                return
             if interval > 0:
                 interval_seen = True
             else:
-                print 'Illegal <interval> value'
+                print 'Illegal <interval> value %s' % arg
                 return
         elif not count_seen:
-            count = int(arg)
+            try:
+                count = int(arg)
+            except:
+                print 'Ilegal <count> value %s' % arg
+                return
             if count > 0:
                 count_seen = True
             else:
-                print 'Illegal <count> value'
+                print 'Illegal <count> value %s' % arg
                 return
 
     # make certain devices contains only NFS mount points
-    if len(devices) > 0:
-        check = []
-        for device in devices:
-            stats = DeviceData()
-            stats.parse_stats(mountstats[device])
-            if stats.is_nfs_mountpoint():
-                check += [device]
-        devices = check
-    else:
-        for device, descr in mountstats.iteritems():
-            stats = DeviceData()
-            stats.parse_stats(descr)
-            if stats.is_nfs_mountpoint():
-                devices += [device]
+    devices = list_nfs_mounts(origdevices, mountstats)
     if len(devices) == 0:
         print 'No NFS mount points were found'
         return
+
 
     old_mountstats = None
     sample_time = 0.0
 
     if not interval_seen:
-        print_iostat_summary(old_mountstats, mountstats, devices, sample_time, which)
+        print_iostat_summary(old_mountstats, mountstats, devices, sample_time, options)
         return
 
     if count_seen:
         while count != 0:
-            print_iostat_summary(old_mountstats, mountstats, devices, sample_time, which)
+            print_iostat_summary(old_mountstats, mountstats, devices, sample_time, options)
             old_mountstats = mountstats
             time.sleep(interval)
             sample_time = interval
             mountstats = parse_stats_file('/proc/self/mountstats')
+            # automount mountpoints add and drop, if automount is involved
+            # we need to recheck the devices list when reparsing
+            devices = list_nfs_mounts(origdevices,mountstats)
+            if len(devices) == 0:
+                print 'No NFS mount points were found'
+                return
             count -= 1
     else: 
         while True:
-            print_iostat_summary(old_mountstats, mountstats, devices, sample_time, which)
+            print_iostat_summary(old_mountstats, mountstats, devices, sample_time, options)
             old_mountstats = mountstats
             time.sleep(interval)
             sample_time = interval
             mountstats = parse_stats_file('/proc/self/mountstats')
+            # automount mountpoints add and drop, if automount is involved
+            # we need to recheck the devices list when reparsing
+            devices = list_nfs_mounts(origdevices,mountstats)
+            if len(devices) == 0:
+                print 'No NFS mount points were found'
+                return
 
 #
 # Main

@@ -44,10 +44,8 @@ int nfs_probe_bothports(const struct sockaddr *, const socklen_t,
 			struct pmap *, const struct sockaddr *,
 			const socklen_t, struct pmap *);
 int nfs_gethostbyname(const char *, struct sockaddr_in *);
-int nfs_name_to_address(const char *, const sa_family_t,
-		struct sockaddr *, socklen_t *);
-int nfs_string_to_sockaddr(const char *, const size_t,
-			   struct sockaddr *, socklen_t *);
+int nfs_name_to_address(const char *, struct sockaddr *, socklen_t *);
+int nfs_string_to_sockaddr(const char *, struct sockaddr *, socklen_t *);
 int nfs_present_sockaddr(const struct sockaddr *,
 			 const socklen_t, char *, const size_t);
 int nfs_callback_address(const struct sockaddr *, const socklen_t,
@@ -58,7 +56,10 @@ int clnt_ping(struct sockaddr_in *, const unsigned long,
 
 struct mount_options;
 
-void nfs_options2pmap(struct mount_options *,
+int nfs_nfs_version(struct mount_options *options, unsigned long *version);
+int  nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol);
+
+int nfs_options2pmap(struct mount_options *,
 		      struct pmap *, struct pmap *);
 
 int start_statd(void);
