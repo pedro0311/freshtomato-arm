@@ -2483,8 +2483,8 @@ e2fsprogs-clean:
 	@rm -rf e2fsprogs/staged
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
-	$(call patch_files,nfs-utils)
 	cd nfs-utils && ./autogen.sh && STRIP=$(STRIP) \
+	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
 	    -I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
 	    -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
@@ -2492,34 +2492,28 @@ nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
 	    -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	    ac_cv_func_malloc_0_nonnull=yes \
 	    ac_cv_func_realloc_0_nonnull=yes \
-	$(CONFIGURE) --disable-gss --without-tcp-wrappers --enable-static --enable-shared \
-	    --enable-nfsv4 --enable-nfsv3 --disable-tirpc --disable-dependency-tracking
+	    knfsd_cv_bsd_signals=no \
+	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
+	    --disable-nfsv4 --disable-ipv6 --disable-nfsdcltrack \
+	    --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
 	touch nfs-utils/stamp-h1
 
 nfs-utils: nfs-utils/stamp-h1
 	@$(SEP)
 	$(MAKE) -C nfs-utils $(PARALLEL_BUILD)
 
-nfs-utils-clean:
-	-@$(MAKE) -C nfs-utils clean
-	@rm -f nfs-utils/stamp-h1
-	$(call unpatch_files,nfs-utils)
-
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
-	install -D nfs-utils/utils/mount/mount.nfs $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
 	install -D nfs-utils/utils/nfsd/nfsd $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
 	install -D nfs-utils/utils/showmount/showmount $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
 	install -D nfs-utils/utils/exportfs/exportfs $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
 	install -D nfs-utils/utils/statd/statd $(INSTALLDIR)/nfs-utils/usr/sbin/statd
 	install -D nfs-utils/utils/mountd/mountd $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
-	install -D nfs-utils/nfs.rc $(INSTALLDIR)/nfs-utils/usr/sbin/nfs.rc
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/statd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
+	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/*
+
+nfs-utils-clean:
+	-@$(MAKE) -C nfs-utils clean
+	@rm -f nfs-utils/stamp-h1
 
 tinc/stamp-h1: openssl zlib lzo
 	$(call patch_files,tinc)

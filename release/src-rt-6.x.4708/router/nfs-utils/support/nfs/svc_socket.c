@@ -13,8 +13,8 @@
 
    You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-   02111-1307 USA.  */
+   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 0211-1301 USA */
 
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +24,9 @@
 #include <sys/socket.h>
 #include <sys/fcntl.h>
 #include <errno.h>
+#include "xlog.h"
+
+#include "config.h"
 
 #ifdef _LIBC
 # include <libintl.h>
@@ -35,20 +38,89 @@
 # define __close(f)		close ((f))
 #endif
 
+int getservport(u_long number, const char *proto)
+{
+	char servdata[1024];
+	struct rpcent *rpcp;
+	struct servent servbuf, *servp = NULL;
+	int ret = 0;
+#if HAVE_GETRPCBYNUMBER_R
+	char rpcdata[1024];
+	struct rpcent rpcbuf;
+
+	ret = getrpcbynumber_r(number, &rpcbuf, rpcdata, sizeof rpcdata,
+				&rpcp);
+#else
+	rpcp = getrpcbynumber(number);
+#endif
+
+	if (ret == 0 && rpcp != NULL) {
+		/* First try name.  */
+		ret = getservbyname_r(rpcp->r_name, proto, &servbuf, servdata,
+					sizeof servdata, &servp);
+		if ((ret != 0 || servp == NULL) && rpcp->r_aliases) {
+			const char **a;
+
+			/* Then we try aliases.  */
+			for (a = (const char **) rpcp->r_aliases; *a != NULL; a++) {
+				ret = getservbyname_r(*a, proto, &servbuf, servdata,
+							sizeof servdata, &servp);
+				if (ret == 0 && servp != NULL)
+					break;
+			}
+		}
+	}
+
+	if (ret == 0 && servp != NULL)
+		return ntohs(servp->s_port);
+
+	return 0;
+}
+
+int
+svcsock_nonblock(int sock)
+{
+	int flags;
+
+	if (sock < 0)
+		return sock;
+
+	/* This socket might be shared among multiple processes
+	 * if mountd is run multi-threaded.  So it is safest to
+	 * make it non-blocking, else all threads might wake
+	 * one will get the data, and the others will block
+	 * indefinitely.
+	 * In all cases, transaction on this socket are atomic
+	 * (accept for TCP, packet-read and packet-write for UDP)
+	 * so O_NONBLOCK will not confuse unprepared code causing
+	 * it to corrupt messages.
+	 * It generally safest to have O_NONBLOCK when doing an accept
+	 * as if we get a RST after the SYN and before accept runs,
+	 * we can block despite being told there was an acceptable
+	 * connection.
+	 */
+	if ((flags = fcntl(sock, F_GETFL)) < 0)
+		xlog(L_ERROR, "svc_socket: can't get socket flags: %m");
+	else if (fcntl(sock, F_SETFL, flags|O_NONBLOCK) < 0)
+		xlog(L_ERROR, "svc_socket: can't set socket flags: %m");
+	else
+		return sock;
+
+	(void) __close(sock);
+	return -1;
+}
+
 static int
 svc_socket (u_long number, int type, int protocol, int reuse)
 {
   struct sockaddr_in addr;
   socklen_t len = sizeof (struct sockaddr_in);
-  char rpcdata [1024], servdata [1024];
-  struct rpcent rpcbuf, *rpcp;
-  struct servent servbuf, *servp = NULL;
   int sock, ret;
   const char *proto = protocol == IPPROTO_TCP ? "tcp" : "udp";
 
   if ((sock = __socket (AF_INET, type, protocol)) < 0)
     {
-      perror (_("svc_socket: socket creation problem"));
+      xlog(L_ERROR, "svc_socket: socket creation problem: %m");
       return sock;
     }
 
@@ -59,89 +131,23 @@ svc_socket (u_long number, int type, int protocol, int reuse)
 			sizeof (ret));
       if (ret < 0)
 	{
-	  perror (_("svc_socket: socket reuse problem"));
+	  xlog(L_ERROR, "svc_socket: socket reuse problem: %m");
 	  return ret;
 	}
     }
 
   memset (&addr, 0, sizeof (addr));
   addr.sin_family = AF_INET;
+  addr.sin_port = htons(getservport(number, proto));
 
-  ret = getrpcbynumber_r (number, &rpcbuf, rpcdata, sizeof rpcdata,
-			  &rpcp);
-  if (ret == 0 && rpcp != NULL)
+  if (bind(sock, (struct sockaddr *) &addr, len) < 0)
     {
-      /* First try name.  */
-      ret = getservbyname_r (rpcp->r_name, proto, &servbuf, servdata,
-			     sizeof servdata, &servp);
-      if ((ret != 0 || servp == NULL) && rpcp->r_aliases)
-	{
-	  const char **a;
-
-	  /* Then we try aliases.  */
-	  for (a = (const char **) rpcp->r_aliases; *a != NULL; a++) 
-	    {
-	      ret = getservbyname_r (*a, proto, &servbuf, servdata,
-				     sizeof servdata, &servp);
-	      if (ret == 0 && servp != NULL)
-		break;
-	    }
-	}
+      xlog(L_ERROR, "svc_socket: bind problem: %m");
+      (void) __close(sock);
+      sock = -1;
     }
 
-  if (ret == 0 && servp != NULL)
-    {
-      addr.sin_port = servp->s_port;
-      if (bind (sock, (struct sockaddr *) &addr, len) < 0)
-	{
-	  perror (_("svc_socket: bind problem"));
-	  (void) __close (sock);
-	  sock = -1;
-	}
-    }
-  else
-    {
-	  addr.sin_port = 0;
-	  if (bind (sock, (struct sockaddr *) &addr, len) < 0)
-	    {
-	      perror (_("svc_socket: bind problem"));
-	      (void) __close (sock);
-	      sock = -1;
-	    }
-    }
-
-  if (sock >= 0)
-    {
-	    /* This socket might be shared among multiple processes
-	     * if mountd is run multi-threaded.  So it is safest to
-	     * make it non-blocking, else all threads might wake
-	     * one will get the data, and the others will block
-	     * indefinitely.
-	     * In all cases, transaction on this socket are atomic
-	     * (accept for TCP, packet-read and packet-write for UDP)
-	     * so O_NONBLOCK will not confuse unprepared code causing
-	     * it to corrupt messages.
-	     * It generally safest to have O_NONBLOCK when doing an accept
-	     * as if we get a RST after the SYN and before accept runs,
-	     * we can block despite being told there was an acceptable
-	     * connection.
-	     */
-	int flags;
-	if ((flags = fcntl(sock, F_GETFL)) < 0)
-	  {
-	      perror (_("svc_socket: can't get socket flags"));
-	      (void) __close (sock);
-	      sock = -1;
-	  }
-	else if (fcntl(sock, F_SETFL, flags|O_NONBLOCK) < 0)
-	  {
-	      perror (_("svc_socket: can't set socket flags"));
-	      (void) __close (sock);
-	      sock = -1;
-	  }
-    }
-
-  return sock;
+  return svcsock_nonblock(sock);
 }
 
 /*
@@ -157,9 +163,9 @@ svctcp_socket (u_long number, int reuse)
  * Create and bind a UDP socket based on program number
  */
 int
-svcudp_socket (u_long number, int reuse)
+svcudp_socket (u_long number)
 {
-  return svc_socket (number, SOCK_DGRAM, IPPROTO_UDP, 0);
+  return svc_socket (number, SOCK_DGRAM, IPPROTO_UDP, FALSE);
 }
 
 #ifdef TEST
@@ -174,7 +180,7 @@ check (u_long number, u_short port, int protocol, int reuse)
   if (protocol == IPPROTO_TCP)
     socket = svctcp_socket (number, reuse);
   else
-    socket = svcudp_socket (number, reuse);
+    socket = svcudp_socket (number);
 
   if (socket < 0)
     return 1;

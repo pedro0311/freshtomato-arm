@@ -49,7 +49,9 @@
 #include "conffile.h"
 #include "xlog.h"
 
-static void conf_load_defaults (int);
+#pragma GCC visibility push(hidden)
+
+static void conf_load_defaults(void);
 static int conf_set(int , char *, char *, char *, 
 	char *, int , int );
 
@@ -70,10 +72,10 @@ TAILQ_HEAD (conf_trans_head, conf_trans) conf_trans_queue;
 /*
  * Radix-64 Encoding.
  */
-static const u_int8_t bin2asc[]
+static const uint8_t bin2asc[]
   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static const u_int8_t asc2bin[] =
+static const uint8_t asc2bin[] =
 {
   255, 255, 255, 255, 255, 255, 255, 255,
   255, 255, 255, 255, 255, 255, 255, 255,
@@ -107,10 +109,10 @@ LIST_HEAD (conf_bindings, conf_binding) conf_bindings[256];
 
 static char *conf_addr;
 
-static __inline__ u_int8_t
+static __inline__ uint8_t
 conf_hash(char *s)
 {
-	u_int8_t hash = 0;
+	uint8_t hash = 0;
 
 	while (*s) {
 		hash = ((hash << 1) | (hash >> 7)) ^ tolower (*s);
@@ -211,8 +213,8 @@ static void
 conf_parse_line(int trans, char *line, size_t sz)
 {
 	char *val, *ptr;
-	size_t i;
-	int j;
+	size_t i, valsize;
+	size_t j;
 	static char *section = 0;
 	static char *arg = 0;
 	static int ln = 0;
@@ -251,17 +253,19 @@ conf_parse_line(int trans, char *line, size_t sz)
 		}
 		/* Strip off any blanks before ']' */
 		val = line;
+		j=0;
 		while (*val && !isblank(*val)) 
 			val++, j++;
 		if (*val)
 			i = j;
-		section = malloc(i);
+		section = malloc(i+1);
 		if (!section) {
 			xlog_warn("conf_parse_line: %d: malloc (%lu) failed", ln,
 						(unsigned long)i);
 			return;
 		}
 		strncpy(section, line, i);
+		section[i] = '\0';
 
 		if (arg) 
 			free(arg);
@@ -271,9 +275,9 @@ conf_parse_line(int trans, char *line, size_t sz)
 		if (ptr == NULL)
 			return;
 		line = ++ptr;
-		while (*ptr && *ptr != '"')
+		while (*ptr && *ptr != '"' && *ptr != ']')
 			ptr++;
-		if (*ptr == '\0') {
+		if (*ptr == '\0' || *ptr == ']') {
 			xlog_warn("config file error: line %d: "
  				"non-matched '\"', ignoring until next section", ln);
 		}  else {
@@ -296,23 +300,16 @@ conf_parse_line(int trans, char *line, size_t sz)
 			}
 			line[strcspn (line, " \t=")] = '\0';
 			val = line + i + 1 + strspn (line + i + 1, " \t");
+			valsize = 0;
+			while (val[valsize++]);
 
-			/* Skip trailing comments, if any */
-			for (j = 0; j < sz - (val - line); j++) {
-				if (val[j] == '#' || val[j] == ';') {
+			/* Skip trailing spaces and comments */
+			for (j = 0; j < valsize; j++) {
+				if (val[j] == '#' || val[j] == ';' || isspace(val[j])) {
 					val[j] = '\0';
 					break;
 				}
 			}
-
-			/* Skip trailing whitespace, if any */
-			for (j--; j > 0; j--) {
-				if (isspace(val[j]))
-					val[j] = '\0';
-				else 
-					break;
-			}
-
 			/* XXX Perhaps should we not ignore errors?  */
 			conf_set(trans, section, arg, line, val, 0, 0);
 			return;
@@ -353,7 +350,7 @@ conf_parse(int trans, char *buf, size_t sz)
 }
 
 static void
-conf_load_defaults(int tr)
+conf_load_defaults(void)
 {
 	/* No defaults */
 	return;
@@ -412,7 +409,7 @@ conf_reinit(void)
 		trans = conf_begin();
 
 	/* Load default configuration values.  */
-	conf_load_defaults(trans);
+	conf_load_defaults();
 
 	/* Free potential existing configuration.  */
 	if (conf_addr) {
@@ -568,7 +565,7 @@ cleanup:
 }
 
 struct conf_list *
-conf_get_tag_list(char *section)
+conf_get_tag_list(char *section, char *arg)
 {
 	struct conf_list *list = 0;
 	struct conf_list_node *node;
@@ -582,6 +579,8 @@ conf_get_tag_list(char *section)
 	cb = LIST_FIRST(&conf_bindings[conf_hash (section)]);
 	for (; cb; cb = LIST_NEXT(cb, link)) {
 		if (strcasecmp (section, cb->section) == 0) {
+			if (arg != NULL && strcasecmp(arg, cb->arg) != 0)
+				continue;
 			list->cnt++;
 			node = calloc(1, sizeof *node);
 			if (!node)
@@ -604,10 +603,10 @@ cleanup:
 
 /* Decode a PEM encoded buffer.  */
 int
-conf_decode_base64 (u_int8_t *out, u_int32_t *len, u_char *buf)
+conf_decode_base64 (uint8_t *out, uint32_t *len, unsigned char *buf)
 {
-	u_int32_t c = 0;
-	u_int8_t c1, c2, c3, c4;
+	uint32_t c = 0;
+	uint8_t c1, c2, c3, c4;
 
 	while (*buf) {
 		if (*buf > 127 || (c1 = asc2bin[*buf]) == 255)

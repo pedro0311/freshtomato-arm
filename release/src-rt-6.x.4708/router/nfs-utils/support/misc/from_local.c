@@ -37,32 +37,100 @@
 static char sccsid[] = "@(#) from_local.c 1.3 96/05/31 15:52:57";
 #endif
 
-#ifdef TEST
-#undef perror
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include <syslog.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "sockaddr.h"
+#include "tcpwrapper.h"
+#include "xlog.h"
 
 #ifndef TRUE
 #define	TRUE	1
 #define FALSE	0
 #endif
 
- /*
-  * With virtual hosting, each hardware network interface can have multiple
-  * network addresses. On such machines the number of machine addresses can
-  * be surprisingly large.
-  */
+#ifdef HAVE_GETIFADDRS
+
+#include <ifaddrs.h>
+#include <time.h>
+
+/**
+ * from_local - determine whether request comes from the local system
+ * @sap: pointer to socket address to check
+ *
+ * With virtual hosting, each hardware network interface can have
+ * multiple network addresses. On such machines the number of machine
+ * addresses can be surprisingly large.
+ *
+ * We also expect the local network configuration to change over time,
+ * so call getifaddrs(3) more than once, but not too often.
+ *
+ * Returns TRUE if the sockaddr contains an address of one of the local
+ * network interfaces.  Otherwise FALSE is returned.
+ */
+int
+from_local(const struct sockaddr *sap)
+{
+	static struct ifaddrs *ifaddr = NULL;
+	static time_t last_update = 0;
+	struct ifaddrs *ifa;
+	unsigned int count;
+	time_t now;
+
+	if (time(&now) == ((time_t)-1)) {
+		xlog(L_ERROR, "%s: time(2): %m", __func__);
+
+		/* If we don't know what time it is, use the
+		 * existing ifaddr list, if one exists  */
+		now = last_update;
+		if (ifaddr == NULL)
+			now++;
+	}
+	if (now != last_update) {
+		xlog(D_GENERAL, "%s: updating local if addr list", __func__);
+
+		if (ifaddr)
+			freeifaddrs(ifaddr);
+
+		if (getifaddrs(&ifaddr) == -1) {
+			xlog(L_ERROR, "%s: getifaddrs(3): %m", __func__);
+			return FALSE;
+		}
+
+		last_update = now;
+	}
+
+	count = 0;
+	for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+		if ((ifa->ifa_flags & IFF_UP) &&
+		    nfs_compare_sockaddr(sap, ifa->ifa_addr)) {
+			xlog(D_GENERAL, "%s: incoming address matches "
+					"local interface address", __func__);
+			return TRUE;
+		} else
+			count++;
+	}
+
+	xlog(D_GENERAL, "%s: checked %u local if addrs; "
+			"incoming address not found", __func__, count);
+	return FALSE;
+}
+
+#else	/* !HAVE_GETIFADDRS */
+
 static int num_local;
 static int num_addrs;
 static struct in_addr *addrs;
@@ -81,7 +149,7 @@ static int grow_addrs(void)
     new_num = (addrs == 0) ? 1 : num_addrs + num_addrs;
     new_addrs = (struct in_addr *) malloc(sizeof(*addrs) * new_num);
     if (new_addrs == 0) {
-	perror("portmap: out of memory");
+	xlog_warn("%s: out of memory", __func__);
 	return (0);
     } else {
 	if (addrs != 0) {
@@ -112,13 +180,13 @@ find_local(void)
      */
 
     if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-	perror("socket");
+	xlog_warn("%s: socket(2): %m", __func__);
 	return (0);
     }
     ifc.ifc_len = sizeof(buf);
     ifc.ifc_buf = buf;
     if (ioctl(sock, SIOCGIFCONF, (char *) &ifc) < 0) {
-	perror("SIOCGIFCONF");
+	xlog_warn("%s: ioctl(SIOCGIFCONF): %m", __func__);
 	(void) close(sock);
 	return (0);
     }
@@ -130,10 +198,10 @@ find_local(void)
 	if (ifr->ifr_addr.sa_family == AF_INET) {	/* IP net interface */
 	    ifreq = *ifr;
 	    if (ioctl(sock, SIOCGIFFLAGS, (char *) &ifreq) < 0) {
-		perror("SIOCGIFFLAGS");
+		xlog_warn("%s: ioctl(SIOCGIFFLAGS): %m", __func__);
 	    } else if (ifreq.ifr_flags & IFF_UP) {	/* active interface */
 		if (ioctl(sock, SIOCGIFADDR, (char *) &ifreq) < 0) {
-		    perror("SIOCGIFADDR");
+		    xlog_warn("%s: ioctl(SIOCGIFADDR): %m", __func__);
 		} else {
 		    if (num_local >= num_addrs)
 			if (grow_addrs() == 0)
@@ -153,14 +221,28 @@ find_local(void)
     return (num_local);
 }
 
-/* from_local - determine whether request comes from the local system */
+/**
+ * from_local - determine whether request comes from the local system
+ * @sap: pointer to socket address to check
+ *
+ * With virtual hosting, each hardware network interface can have
+ * multiple network addresses. On such machines the number of machine
+ * addresses can be surprisingly large.
+ *
+ * Returns TRUE if the sockaddr contains an address of one of the local
+ * network interfaces.  Otherwise FALSE is returned.
+ */
 int
-from_local(struct sockaddr_in *addr)
+from_local(const struct sockaddr *sap)
 {
+    const struct sockaddr_in *addr = (const struct sockaddr_in *)sap;
     int     i;
 
+    if (sap->sa_family != AF_INET)
+	return (FALSE);
+
     if (addrs == 0 && find_local() == 0)
-	syslog(LOG_ERR, "cannot find any active local network interfaces");
+	xlog(L_ERROR, "Cannot find any active local network interfaces");
 
     for (i = 0; i < num_local; i++) {
 	if (memcmp((char *) &(addr->sin_addr), (char *) &(addrs[i]),
@@ -172,9 +254,8 @@ from_local(struct sockaddr_in *addr)
 
 #ifdef TEST
 
-main()
+int main(void)
 {
-    char   *inet_ntoa();
     int     i;
 
     find_local();
@@ -182,4 +263,6 @@ main()
 	printf("%s\n", inet_ntoa(addrs[i]));
 }
 
-#endif
+#endif	/* TEST */
+
+#endif	/* !HAVE_GETIFADDRS */

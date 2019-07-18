@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -26,6 +26,8 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+
+#include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -38,6 +40,7 @@
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
 
+#include "sockaddr.h"
 #include "nfsrpc.h"
 
 #ifdef HAVE_LIBTIRPC
@@ -50,6 +53,7 @@
  */
 #define NFSRPC_TIMEOUT_UDP	(3)
 #define NFSRPC_TIMEOUT_TCP	(10)
+
 
 /*
  * Set up an RPC client for communicating via a AF_LOCAL socket.
@@ -102,36 +106,6 @@ static CLIENT *nfs_get_localclient(const struct sockaddr *sap,
 	return client;
 }
 
-/*
- * Bind a socket using an unused ephemeral source port.
- *
- * Returns zero on success, or returns -1 on error.  errno is
- * set to reflect the nature of the error.
- */
-static int nfs_bind(const int sock, const sa_family_t family)
-{
-	struct sockaddr_in sin = {
-		.sin_family		= AF_INET,
-		.sin_addr.s_addr	= htonl(INADDR_ANY),
-	};
-	struct sockaddr_in6 sin6 = {
-		.sin6_family		= AF_INET6,
-		.sin6_addr		= IN6ADDR_ANY_INIT,
-	};
-
-	switch (family) {
-	case AF_INET:
-		return bind(sock, (struct sockaddr *)&sin,
-					(socklen_t)sizeof(sin));
-	case AF_INET6:
-		return bind(sock, (struct sockaddr *)&sin6,
-					(socklen_t)sizeof(sin6));
-	}
-
-	errno = EAFNOSUPPORT;
-	return -1;
-}
-
 #ifdef HAVE_LIBTIRPC
 
 /*
@@ -153,9 +127,9 @@ static int nfs_bindresvport(const int sock, const sa_family_t family)
 
 	switch (family) {
 	case AF_INET:
-		return bindresvport_sa(sock, (struct sockaddr *)&sin);
+		return bindresvport_sa(sock, (struct sockaddr *)(char *)&sin);
 	case AF_INET6:
-		return bindresvport_sa(sock, (struct sockaddr *)&sin6);
+		return bindresvport_sa(sock, (struct sockaddr *)(char *)&sin6);
 	}
 
 	errno = EAFNOSUPPORT;
@@ -211,7 +185,7 @@ static int nfs_connect_nb(const int fd, const struct sockaddr *sap,
 	 * use it later.
 	 */
 	ret = connect(fd, sap, salen);
-	if (ret < 0 && errno != EINPROGRESS) {
+	if (ret < 0 && errno != EINPROGRESS && errno != EINTR) {
 		ret = -1;
 		goto done;
 	}
@@ -223,10 +197,16 @@ static int nfs_connect_nb(const int fd, const struct sockaddr *sap,
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 
-	ret = select(fd + 1, NULL, &rset, NULL, timeout);
-	if (ret <= 0) {
-		if (ret == 0)
-			errno = ETIMEDOUT;
+	while ((ret = select(fd + 1, NULL, &rset, NULL, timeout)) < 0) {
+		if (errno != EINTR) {
+			ret = -1;
+			goto done;
+		} else {
+			continue;
+		}
+	}
+	if (ret == 0) {
+		errno = ETIMEDOUT;
 		ret = -1;
 		goto done;
 	}
@@ -272,7 +252,8 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 				 const int resvport)
 {
 	CLIENT *client;
-	int ret, sock;
+	int ret = 0;
+	int sock = 0;
 #ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
@@ -296,15 +277,15 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	if (resvport)
+	if (resvport) {
 		ret = nfs_bindresvport(sock, sap->sa_family);
-	else
-		ret = nfs_bind(sock, sap->sa_family);
-	if (ret < 0) {
-		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-		rpc_createerr.cf_error.re_errno = errno;
-		(void)close(sock);
-		return NULL;
+
+		if (ret < 0) {
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+			rpc_createerr.cf_error.re_errno = errno;
+			(void)close(sock);
+			return NULL;
+		}
 	}
 
 	if (timeout->tv_sec == -1)
@@ -354,7 +335,8 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 				 const int resvport)
 {
 	CLIENT *client;
-	int ret, sock;
+	int ret = 0;
+	int sock = 0;
 #ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
@@ -378,15 +360,15 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	if (resvport)
+	if (resvport) {
 		ret = nfs_bindresvport(sock, sap->sa_family);
-	else
-		ret = nfs_bind(sock, sap->sa_family);
-	if (ret < 0) {
-		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-		rpc_createerr.cf_error.re_errno = errno;
-		(void)close(sock);
-		return NULL;
+
+		if (ret < 0) {
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+			rpc_createerr.cf_error.re_errno = errno;
+			(void)close(sock);
+			return NULL;
+		}
 	}
 
 	if (timeout->tv_sec == -1)
@@ -413,49 +395,6 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 		(void)close(sock);
 
 	return client;
-}
-
-/**
- * nfs_get_port - extract port value from a socket address
- * @sap: pointer to socket address
- *
- * Returns port value in host byte order.
- */
-uint16_t
-nfs_get_port(const struct sockaddr *sap)
-{
-       const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
-       const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)sap;
-
-       switch (sap->sa_family) {
-       case AF_INET:
-               return ntohs(sin->sin_port);
-       case AF_INET6:
-               return ntohs(sin6->sin6_port);
-       }
-       return 0;
-}
-
-/**
- * nfs_set_port - set port value in a socket address
- * @sap: pointer to socket address
- * @port: port value to set
- *
- */
-void
-nfs_set_port(struct sockaddr *sap, const uint16_t port)
-{
-       struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-       struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
-
-       switch (sap->sa_family) {
-       case AF_INET:
-               sin->sin_port = htons(port);
-               break;
-       case AF_INET6:
-               sin6->sin6_port = htons(port);
-               break;
-       }
 }
 
 /**
@@ -595,4 +534,25 @@ rpcprog_t nfs_getrpcbyname(const rpcprog_t program, const char *table[])
 #endif	/* HAVE_GETRPCBYNAME */
 
 	return program;
+}
+
+/*
+ * AUTH_SYS doesn't allow more than 16 gids in the supplemental group list.
+ * If there are more than that, trying to determine which ones to include
+ * in the list is problematic. This function creates an auth handle that
+ * only has the primary gid in the supplemental gids list. It's intended to
+ * be used for protocols where credentials really don't matter much (the MNT
+ * protocol, for instance).
+ */
+AUTH *
+nfs_authsys_create(void)
+{
+	char machname[MAXHOSTNAMELEN + 1];
+	uid_t	uid = geteuid();
+	gid_t	gid = getegid();
+
+	if (gethostname(machname, sizeof(machname)) == -1)
+		return NULL;
+
+	return authunix_create(machname, uid, gid, 1, &gid);
 }

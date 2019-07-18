@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  * To Do:
  *  + Proper support for internationalization
@@ -215,8 +215,12 @@ void mount_error(const char *spec, const char *mount_point, int error)
 				progname);
 		break;
 	case ENOTDIR:
-		nfs_error(_("%s: mount point %s is not a directory"),
-				progname, mount_point);
+		if (spec)
+			nfs_error(_("%s: mount spec %s or point %s is not a "
+				  "directory"),	progname, spec, mount_point);
+		else
+			nfs_error(_("%s: mount point %s is not a directory"),
+				  progname, mount_point);
 		break;
 	case EBUSY:
 		nfs_error(_("%s: %s is busy or already mounted"),
@@ -225,7 +229,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
 	case ENOENT:
 		if (spec)
 			nfs_error(_("%s: mounting %s failed, "
-				"reason given by server:\n  %s"),
+				"reason given by server: %s"),
 				progname, spec, strerror(error));
 		else
 			nfs_error(_("%s: mount point %s does not exist"),
@@ -242,6 +246,9 @@ void mount_error(const char *spec, const char *mount_point, int error)
 				progname);
 		nfs_error(_("%s: please report the error to" PACKAGE_BUGREPORT),
 				progname);
+		break;
+	case EALREADY:
+		/* Error message has already been provided */
 		break;
 	default:
 		nfs_error(_("%s: %s"),

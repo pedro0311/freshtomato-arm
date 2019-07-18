@@ -1,4 +1,4 @@
-This is version 1.1.0 of nfs-utils, the Linux NFS utility package.
+This is nfs-utils, the Linux NFS userland utility package.
 
 
 0. PROJECT RESOURCES
@@ -15,6 +15,8 @@ libraries.  They are available from
    http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/
 Otherwise use --disable-nfsv4
 
+To use the nfsdcld tracking daemon, nfsv4 support must be enabled,
+and the libsqlite3 development libraries must be installed.
 
 1. COMPILING
 
@@ -80,7 +82,7 @@ scripts can be written to work correctly.
        and starting the nfsd server is not important.
        idmapd is only needed for NFSv4 support.
        svcgssd is only needed if exportfs NFS filesystem with crypto-
-       security (Kerberos or SPKM3).
+       security (Kerberos).
 
    C/ exportfs -av ; rpc.mountd
        It is important that exportfs be run before mountd so that
@@ -130,7 +132,7 @@ scripts can be written to work correctly.
    B/ gssd ; idmapd
       idmapd should be started before mounting any NFSv4 filesystems.
       gssd should be started before mounting any NFS filesystems
-      securely (with Kerberos of SPKM3).
+      securely (with Kerberos).
 
    C/ statd should be run before any NFSv2 or NFSv3 filesystem is
       mounted with remote locking (i.e. without -o nolock).

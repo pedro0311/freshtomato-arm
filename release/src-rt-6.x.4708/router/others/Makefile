@@ -83,4 +83,9 @@ endif
 # nas starter # AB multiSSID
 	install -m 0700 nas.sh $(INSTALLDIR)/usr/sbin
 
+# nfs rc script
+ifeq ($(TCONFIG_NFS),y)
+	install -m 0755 nfs.rc $(INSTALLDIR)/usr/sbin
+endif
+
 clean:

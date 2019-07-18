@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -45,6 +45,7 @@
 #include <rpc/rpcb_prot.h>
 #endif
 
+#include "sockaddr.h"
 #include "nfsrpc.h"
 
 /*
@@ -199,7 +200,88 @@ static CLIENT *nfs_gp_get_rpcbclient(struct sockaddr *sap,
 	return clnt;
 }
 
-/*
+/**
+ * nfs_get_proto - Convert a netid to an address family and protocol number
+ * @netid: C string containing a netid
+ * @family: OUT: address family
+ * @protocol: OUT: protocol number
+ *
+ * Returns 1 and fills in @protocol if the netid was recognized;
+ * otherwise zero is returned.
+ */
+#ifdef HAVE_LIBTIRPC
+int
+nfs_get_proto(const char *netid, sa_family_t *family, unsigned long *protocol)
+{
+	struct netconfig *nconf;
+	struct protoent *proto;
+
+	/*
+	 * IANA does not define a protocol number for rdma netids,
+	 * since "rdma" is not an IP protocol.
+	 */
+	if (strcmp(netid, "rdma") == 0) {
+		*family = AF_INET;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+	if (strcmp(netid, "rdma6") == 0) {
+		*family = AF_INET6;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+
+	nconf = getnetconfigent(netid);
+	if (nconf == NULL)
+		return 0;
+
+	proto = getprotobyname(nconf->nc_proto);
+	if (proto == NULL) {
+		freenetconfigent(nconf);
+		return 0;
+	}
+
+	*family = AF_UNSPEC;
+	if (strcmp(nconf->nc_protofmly, NC_INET) == 0)
+		*family = AF_INET;
+	if (strcmp(nconf->nc_protofmly, NC_INET6) == 0)
+		*family = AF_INET6;
+	freenetconfigent(nconf);
+
+	*protocol = (unsigned long)proto->p_proto;
+	return 1;
+}
+#else	/* !HAVE_LIBTIRPC */
+int
+nfs_get_proto(const char *netid, sa_family_t *family, unsigned long *protocol)
+{
+	struct protoent *proto;
+
+	/*
+	 * IANA does not define a protocol number for rdma netids,
+	 * since "rdma" is not an IP protocol.
+	 */
+	if (strcmp(netid, "rdma") == 0) {
+		*family = AF_INET;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+
+	proto = getprotobyname(netid);
+	if (proto == NULL)
+		return 0;
+
+	*family = AF_INET;
+	*protocol = (unsigned long)proto->p_proto;
+	return 1;
+}
+#endif /* !HAVE_LIBTIRPC */
+
+/**
+ * nfs_get_netid - Convert a protocol family and protocol name to a netid
+ * @family: protocol family
+ * @protocol: protocol number
+ *
  * One of the arguments passed when querying remote rpcbind services
  * via rpcbind v3 or v4 is a netid string.  This replaces the pm_prot
  * field used in legacy PMAP_GETPORT calls.
@@ -213,13 +295,12 @@ static CLIENT *nfs_gp_get_rpcbclient(struct sockaddr *sap,
  * first entry that matches @family and @protocol and whose netid string
  * fits in the provided buffer.
  *
- * Returns a '\0'-terminated string if successful; otherwise NULL.
+ * Returns a '\0'-terminated string if successful.  Caller must
+ * free the returned string.  Otherwise NULL is returned, and
  * rpc_createerr.cf_stat is set to reflect the error.
  */
 #ifdef HAVE_LIBTIRPC
-
-static char *nfs_gp_get_netid(const sa_family_t family,
-			      const unsigned short protocol)
+char *nfs_get_netid(const sa_family_t family, const unsigned long protocol)
 {
 	char *nc_protofmly, *nc_proto, *nc_netid;
 	struct netconfig *nconf;
@@ -255,6 +336,9 @@ static char *nfs_gp_get_netid(const sa_family_t family,
 
 		nc_netid = strdup(nconf->nc_netid);
 		endnetconfig(handle);
+
+		if (nc_netid == NULL)
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		return nc_netid;
 	}
 	endnetconfig(handle);
@@ -263,8 +347,28 @@ out:
 	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
 	return NULL;
 }
+#else	/* !HAVE_LIBTIRPC */
+char *nfs_get_netid(const sa_family_t family, const unsigned long protocol)
+{
+	struct protoent *proto;
+	char *netid;
 
-#endif	/* HAVE_LIBTIRPC */
+	if (family != AF_INET)
+		goto out;
+	proto = getprotobynumber((int)protocol);
+	if (proto == NULL)
+		goto out;
+
+	netid = strdup(proto->p_name);
+	if (netid == NULL)
+		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+	return netid;
+
+out:
+	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
+	return NULL;
+}
+#endif	/* !HAVE_LIBTIRPC */
 
 /*
  * Extract a port number from a universal address, and terminate the
@@ -421,7 +525,7 @@ static int nfs_gp_init_rpcb_parms(const struct sockaddr *sap,
 {
 	char *netid, *addr;
 
-	netid = nfs_gp_get_netid(sap->sa_family, protocol);
+	netid = nfs_get_netid(sap->sa_family, protocol);
 	if (netid == NULL)
 		return 0;
 
@@ -627,8 +731,8 @@ int nfs_rpc_ping(const struct sockaddr *sap, const socklen_t salen,
 		 const rpcprog_t program, const rpcvers_t version,
 		 const unsigned short protocol, const struct timeval *timeout)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	CLIENT *client;
 	struct timeval tout = { -1, 0 };
 	int result = 0;
@@ -696,8 +800,8 @@ unsigned short nfs_getport(const struct sockaddr *sap,
 			   const rpcvers_t version,
 			   const unsigned short protocol)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	struct timeval timeout = { -1, 0 };
 	unsigned short port = 0;
 	CLIENT *client;
@@ -755,8 +859,8 @@ int nfs_getport_ping(struct sockaddr *sap, const socklen_t salen,
 	}
 
 	if (port != 0) {
-		struct sockaddr_storage address;
-		struct sockaddr *saddr = (struct sockaddr *)&address;
+		union nfs_sockaddr address;
+		struct sockaddr *saddr = &address.sa;
 
 		memcpy(saddr, sap, (size_t)salen);
 		nfs_set_port(saddr, port);
@@ -807,8 +911,8 @@ unsigned short nfs_getlocalport(const rpcprot_t program,
 				const rpcvers_t version,
 				const unsigned short protocol)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *lb_addr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *lb_addr = &address.sa;
 	socklen_t lb_len = sizeof(*lb_addr);
 	unsigned short port = 0;
 
@@ -891,8 +995,8 @@ unsigned short nfs_rpcb_getaddr(const struct sockaddr *sap,
 				const unsigned short protocol,
 				const struct timeval *timeout)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	CLIENT *client;
 	struct rpcb parms;
 	struct timeval tout = { -1, 0 };
@@ -997,4 +1101,26 @@ unsigned long nfs_pmap_getport(const struct sockaddr_in *sin,
 	}
 
 	return port;
+}
+
+static const char *nfs_ns_pgmtbl[] = {
+        "status",
+        NULL,
+};
+
+/*
+ * nfs_probe_statd - use nfs_pmap_getport to see if statd is running locally
+ *
+ * Returns non-zero if statd is running locally.
+ */
+int nfs_probe_statd(void)
+{
+        struct sockaddr_in addr = {
+                .sin_family             = AF_INET,
+                .sin_addr.s_addr        = htonl(INADDR_LOOPBACK),
+        };
+        rpcprog_t program = nfs_getrpcbyname(NSMPROG, nfs_ns_pgmtbl);
+
+        return nfs_getport_ping((struct sockaddr *)(char *)&addr, sizeof(addr),
+                                program, (rpcvers_t)1, IPPROTO_UDP);
 }

@@ -2,7 +2,7 @@
 .\" nfsd(8)
 .\"
 .\" Copyright (C) 1999 Olaf Kirch <okir@monad.swb.de>
-.TH rpc.nfsd 8 "7 Aug 2006"
+.TH rpc.nfsd 8 "20 Feb 2014"
 .SH NAME
 rpc.nfsd \- NFS server process
 .SH SYNOPSIS
@@ -35,19 +35,29 @@ Note that
 .B lockd
 (which performs file locking services for NFS) may still accept
 request on all known network addresses.  This may change in future
-releases of the Linux Kernel.
+releases of the Linux Kernel. This option can be used multiple time 
+to listen to more than one interface.
 .TP
 .B \-p " or " \-\-port  port
-specify a diferent port to listen on for NFS requests. By default,
+specify a different port to listen on for NFS requests. By default,
 .B rpc.nfsd
 will listen on port 2049.
+.TP
+.B \-r " or " \-\-rdma
+specify that NFS requests on the standard RDMA port ("nfsrdma", port
+20049) should be honored.
+.TP
+.BI \-\-rdma= port
+Listen for RDMA requests on an alternate port - may be a number or a
+name listed in
+.BR /etc/services .
 .TP
 .B \-N " or " \-\-no-nfs-version vers
 This option can be used to request that 
 .B rpc.nfsd
 does not offer certain versions of NFS. The current version of
 .B rpc.nfsd
-can support both NFS version 2,3 and the newer version 4.
+can support NFS versions 2,3,4 and the newer version 4.1.
 .TP
 .B \-s " or " \-\-syslog
 By default,
@@ -66,6 +76,23 @@ from accepting TCP connections from clients.
 Disable
 .B rpc.nfsd
 from accepting UDP connections from clients.
+.TP
+.B \-V " or " \-\-nfs-version vers
+This option can be used to request that 
+.B rpc.nfsd
+offer certain versions of NFS. The current version of
+.B rpc.nfsd
+can support NFS versions 2,3,4 and the newer version 4.1.
+.TP
+.B \-L " or " \-\-lease-time seconds
+Set the lease-time used for NFSv4.  This corresponds to how often
+clients need to confirm their state with the server. Valid range is
+from 10 to 3600 seconds.
+.TP
+.B \-G " or " \-\-grace-time seconds
+Set the grace-time used for NFSv4 and NLM (for NFSv2 and NFSv3).
+New file open requests (NFSv4) and new file locks (NLM) will not be
+allowed until after this time has passed to allow clients to recover state.
 .TP
 .I nproc
 specify the number of NFS server threads. By default, just one
@@ -94,6 +121,7 @@ address family combinations that are marked visible in the
 database.
 
 .SH SEE ALSO
+.BR nfsd (7),
 .BR rpc.mountd (8),
 .BR exports (5),
 .BR exportfs (8),

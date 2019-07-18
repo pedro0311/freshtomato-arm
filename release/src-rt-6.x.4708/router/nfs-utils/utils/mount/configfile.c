@@ -73,6 +73,8 @@ struct mnt_alias {
 };
 int mnt_alias_sz = (sizeof(mnt_alias_tab)/sizeof(mnt_alias_tab[0]));
 
+static int strict;
+
 /*
  * See if the option is an alias, if so return the 
  * real mount option along with the argument type.
@@ -162,6 +164,20 @@ add_entry(char *opt)
 	SLIST_INSERT_HEAD(&head, entry, entries);
 }
 /*
+ * Check the alias list to see if the given 
+ * opt is a alias
+ */
+char *is_alias(char *opt)
+{
+	int i;
+
+	for (i=0; i < mnt_alias_sz; i++) {
+		if (strcasecmp(opt, mnt_alias_tab[i].alias) == 0)
+			return mnt_alias_tab[i].opt; 
+	}
+	return NULL;
+}
+/*
  * See if the given entry exists if the link list,
  * if so return that entry
  */
@@ -169,10 +185,31 @@ inline static
 char *lookup_entry(char *opt)
 {
 	struct entry *entry;
+	char *alias = is_alias(opt);
+	char *ptr;
 
 	SLIST_FOREACH(entry, &head, entries) {
+		/*
+		 * Only check the left side or options that use '='
+		 */
+		if ((ptr = strchr(entry->opt, '=')) != 0) {
+			int len = (int) (ptr - entry->opt);
+
+			if (strncasecmp(entry->opt, opt, len) == 0)
+				return opt;
+		}
 		if (strcasecmp(entry->opt, opt) == 0)
 			return opt;
+		if (alias && strcasecmp(entry->opt, alias) == 0)
+			return opt;
+		if (alias && strcasecmp(alias, "fg") == 0) {
+			if (strcasecmp(entry->opt, "bg") == 0)
+				return opt;
+		}
+		if (alias && strcasecmp(alias, "bg") == 0) {
+			if (strcasecmp(entry->opt, "fg") == 0)
+				return opt;
+		}
 	}
 	return NULL;
 }
@@ -191,27 +228,18 @@ void free_all(void)
 		free(entry);
 	}
 }
-static char *versions[] = {"v2", "v3", "v4", "vers", "nfsvers", NULL};
-int inline check_vers(char *mopt, char *field)
-{
-	int i;
 
-	if (strncmp("mountvers", field, strlen("mountvers")) != 0) {
-		for (i=0; versions[i]; i++) 
-			if (strcasestr(mopt, versions[i]) != NULL)
-				return 1;
-	}
-	return 0;
-}
-
-unsigned long config_default_vers;
+struct nfs_version config_default_vers;
 unsigned long config_default_proto;
+extern sa_family_t config_default_family;
+
 /*
  * Check to see if a default value is being set.
  * If so, set the appropriate global value which will 
  * be used as the initial value in the server negation.
  */
-int inline default_value(char *mopt)
+static int 
+default_value(char *mopt)
 {
 	struct mount_options *options = NULL;
 	int dftlen = strlen("default");
@@ -225,6 +253,10 @@ int inline default_value(char *mopt)
 		if ((options = po_split(field)) != NULL) {
 			if (!nfs_nfs_protocol(options, &config_default_proto)) {
 				xlog_warn("Unable to set default protocol : %s", 
+					strerror(errno));
+			}
+			if (!nfs_nfs_proto_family(options, &config_default_family)) {
+				xlog_warn("Unable to set default family : %s", 
 					strerror(errno));
 			}
 		} else {
@@ -262,18 +294,13 @@ conf_parse_mntopts(char *section, char *arg, char *opts)
 	char *nvalue, *ptr;
 	int argtype;
 
-	list = conf_get_tag_list(section);
+	list = conf_get_tag_list(section, arg);
 	TAILQ_FOREACH(node, &list->fields, link) {
 		/*
 		 * Do not overwrite options if already exists 
 		 */
 		snprintf(buf, BUFSIZ, "%s=", node->field);
 		if (opts && strcasestr(opts, buf) != NULL)
-			continue;
-		/* 
-		 * Protocol verions can be set in a number of ways
-		 */
-		if (opts && check_vers(opts, node->field))
 			continue;
 
 		if (lookup_entry(node->field) != NULL)
@@ -286,7 +313,15 @@ conf_parse_mntopts(char *section, char *arg, char *opts)
 		if (strcasecmp(value, "false") == 0) {
 			if (argtype != MNT_NOARG)
 				snprintf(buf, BUFSIZ, "no%s", field);
+			else if (strcasecmp(field, "bg") == 0)
+				snprintf(buf, BUFSIZ, "fg");
+			else if (strcasecmp(field, "fg") == 0)
+				snprintf(buf, BUFSIZ, "bg");
+			else if (strcasecmp(field, "sloppy") == 0)
+				strict = 1;
 		} else if (strcasecmp(value, "true") == 0) {
+			if ((strcasecmp(field, "sloppy") == 0) && strict)
+				continue;
 			snprintf(buf, BUFSIZ, "%s", field);
 		} else {
 			nvalue = strdup(value);
@@ -321,6 +356,7 @@ char *conf_get_mntopts(char *spec, char *mount_point,
 	char *ptr, *server, *config_opts;
 	int optlen = 0;
 
+	strict = 0;
 	SLIST_INIT(&head);
 	list_size = 0;
 	/*
