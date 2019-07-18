@@ -1,11 +1,14 @@
 #ifndef _NFS_NFS_H
 #define _NFS_NFS_H
 
+#include <config.h>
+
 #include <linux/posix_types.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <rpcsvc/nfs_prot.h>
 #include <nfs/export.h>
+#include <limits.h>
 
 #define	NFS3_FHSIZE	64
 #define	NFS_FHSIZE	32
@@ -13,8 +16,8 @@
 #define NFSD_MINVERS 2
 #define NFSD_MAXVERS 4
 
-#define NFSD_MINMINORVERS4 1
-#define NFSD_MAXMINORVERS4 1
+#define NFS4_MINMINOR 1
+#define NFS4_MAXMINOR WORD_BIT
 
 struct nfs_fh_len {
 	int		fh_size;
@@ -53,6 +56,8 @@ struct nfs_fh_old {
 #define NFSCTL_UDPISSET(_cltbits)     ((_cltbits) & NFSCTL_UDPBIT) 
 #define NFSCTL_TCPISSET(_cltbits)     ((_cltbits) & NFSCTL_TCPBIT) 
 
+#define NFSCTL_VERDEFAULT (0xc)       /* versions 3 and 4 */
+#define NFSCTL_VERSET(_cltbits, _v)   ((_cltbits) |= (1 << ((_v) - 1))) 
 #define NFSCTL_UDPSET(_cltbits)       ((_cltbits) |= NFSCTL_UDPBIT)
 #define NFSCTL_TCPSET(_cltbits)       ((_cltbits) |= NFSCTL_TCPBIT)
 

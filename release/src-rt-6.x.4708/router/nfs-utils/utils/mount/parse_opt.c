@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -391,7 +391,7 @@ po_return_t po_append(struct mount_options *options, char *str)
 }
 
 /**
- * po_contains - check for presense of an option in a group
+ * po_contains - check for presence of an option in a group
  * @options: pointer to mount options
  * @keyword: pointer to a C string containing option keyword for which to search
  *
@@ -404,6 +404,30 @@ po_found_t po_contains(struct mount_options *options, char *keyword)
 		for (option = options->head; option; option = option->next)
 			if (strcmp(option->keyword, keyword) == 0)
 				return PO_FOUND;
+	}
+
+	return PO_NOT_FOUND;
+}
+
+/**
+ * po_contains_prefix - check for presence of an option matching a prefix
+ * @options: pointer to mount options
+ * @prefix: pointer to prefix to match against a keyword
+ * @keyword: pointer to a C string containing the option keyword if found
+ *
+ * On success, *keyword contains the pointer of the matching option's keyword.
+ */
+po_found_t po_contains_prefix(struct mount_options *options,
+								const char *prefix, char **keyword)
+{
+	struct mount_option *option;
+
+	if (options && prefix) {
+		for (option = options->head; option; option = option->next)
+			if (strncmp(option->keyword, prefix, strlen(prefix)) == 0) {
+				*keyword = option->keyword;
+				return PO_FOUND;
+			}
 	}
 
 	return PO_NOT_FOUND;
@@ -508,7 +532,7 @@ po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *va
 int po_rightmost(struct mount_options *options, const char *keys[])
 {
 	struct mount_option *option;
-	unsigned int i;
+	int i;
 
 	if (options) {
 		for (option = options->tail; option; option = option->prev) {

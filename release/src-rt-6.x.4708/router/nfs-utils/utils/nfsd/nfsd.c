@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <netdb.h>
+#include <libgen.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -27,14 +28,9 @@
 #include "nfssvc.h"
 #include "xlog.h"
 
-/*
- * IPv6 support for nfsd was finished before some of the other daemons (mountd
- * and statd in particular). That could be a problem in the future if someone
- * were to boot a kernel that supports IPv6 serving with  an older nfs-utils. For
- * now, hardcode the IPv6 switch into the off position until the other daemons
- * are functional.
- */
-#undef IPV6_SUPPORTED
+#ifndef NFSD_NPROC
+#define NFSD_NPROC 8
+#endif
 
 static void	usage(const char *);
 
@@ -43,71 +39,33 @@ static struct option longopts[] =
 	{ "host", 1, 0, 'H' },
 	{ "help", 0, 0, 'h' },
 	{ "no-nfs-version", 1, 0, 'N' },
+	{ "nfs-version", 1, 0, 'V' },
 	{ "no-tcp", 0, 0, 'T' },
 	{ "no-udp", 0, 0, 'U' },
 	{ "port", 1, 0, 'P' },
 	{ "port", 1, 0, 'p' },
 	{ "debug", 0, 0, 'd' },
 	{ "syslog", 0, 0, 's' },
+	{ "rdma", 2, 0, 'R' },
+	{ "grace-time", 1, 0, 'G'},
+	{ "lease-time", 1, 0, 'L'},
 	{ NULL, 0, 0, 0 }
 };
-
-/* given a family and ctlbits, disable any that aren't listed in netconfig */
-#ifdef HAVE_LIBTIRPC
-static void
-nfsd_enable_protos(unsigned int *proto4, unsigned int *proto6)
-{
-	struct netconfig *nconf;
-	unsigned int *famproto;
-	void *handle;
-
-	xlog(D_GENERAL, "Checking netconfig for visible protocols.");
-
-	handle = setnetconfig();
-	while((nconf = getnetconfig(handle))) {
-		if (!(nconf->nc_flag & NC_VISIBLE))
-			continue;
-
-		if (!strcmp(nconf->nc_protofmly, NC_INET))
-			famproto = proto4;
-		else if (!strcmp(nconf->nc_protofmly, NC_INET6))
-			famproto = proto6;
-		else
-			continue;
-
-		if (!strcmp(nconf->nc_proto, NC_TCP))
-			NFSCTL_TCPSET(*famproto);
-		else if (!strcmp(nconf->nc_proto, NC_UDP))
-			NFSCTL_UDPSET(*famproto);
-
-		xlog(D_GENERAL, "Enabling %s %s.", nconf->nc_protofmly,
-			nconf->nc_proto);
-	}
-	endnetconfig(handle);
-	return;
-}
-#else /* HAVE_LIBTIRPC */
-static void
-nfsd_enable_protos(unsigned int *proto4, unsigned int *proto6)
-{
-	/* Enable all IPv4 protocols if no TIRPC support */
-	*proto4 = NFSCTL_ALLBITS;
-	*proto6 = 0;
-}
-#endif /* HAVE_LIBTIRPC */
 
 int
 main(int argc, char **argv)
 {
-	int	count = 1, c, error = 0, portnum = 0, fd, found_one;
-	char *p, *progname, *port;
-	char *haddr = NULL;
+	int	count = NFSD_NPROC, c, i, error = 0, portnum = 0, fd, found_one;
+	char *p, *progname, *port, *rdma_port = NULL;
+	char **haddr = NULL;
+	int hcounter = 0;
 	int	socket_up = 0;
-	int minorvers4 = NFSD_MAXMINORVERS4;	/* nfsv4 minor version */
-	unsigned int versbits = NFSCTL_ALLBITS;
+	unsigned int minorvers = 0;
+	unsigned int minorversset = 0;
+	unsigned int versbits = NFSCTL_VERDEFAULT;
 	unsigned int protobits = NFSCTL_ALLBITS;
-	unsigned int proto4 = 0;
-	unsigned int proto6 = 0;
+	int grace = -1;
+	int lease = -1;
 
 	progname = strdup(basename(argv[0]));
 	if (!progname) {
@@ -121,26 +79,37 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
+	haddr = malloc(sizeof(char *));
+	if (!haddr) {
+		fprintf(stderr, "%s: unable to allocate memory.\n", progname);
+		exit(1);
+	}
+	haddr[0] = NULL;
+
 	xlog_syslog(0);
 	xlog_stderr(1);
 
-	while ((c = getopt_long(argc, argv, "dH:hN:p:P:sTU", longopts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "dH:hN:V:p:P:sTUrG:L:", longopts, NULL)) != EOF) {
 		switch(c) {
 		case 'd':
 			xlog_config(D_ALL, 1);
 			break;
 		case 'H':
-			/*
-			 * for now, this only handles one -H option. Use the
-			 * last one specified.
-			 */
-			free(haddr);
-			haddr = strdup(optarg);
-			if (!haddr) {
+			if (hcounter) {
+				haddr = realloc(haddr, sizeof(char*) * hcounter+1);
+				if(!haddr) {
+					fprintf(stderr, "%s: unable to allocate "
+							"memory.\n", progname);
+					exit(1);
+				}
+			}
+			haddr[hcounter] = strdup(optarg);
+			if (!haddr[hcounter]) {
 				fprintf(stderr, "%s: unable to allocate "
 					"memory.\n", progname);
 				exit(1);
 			}
+			hcounter++;
 			break;
 		case 'P':	/* XXX for nfs-server compatibility */
 		case 'p':
@@ -159,16 +128,54 @@ main(int argc, char **argv)
 				exit(1);
 			}
 			break;
+		case 'r':
+			rdma_port = "nfsrdma";
+			break;
+		case 'R': /* --rdma */
+			if (optarg)
+				rdma_port = optarg;
+			else
+				rdma_port = "nfsrdma";
+			break;
+
 		case 'N':
 			switch((c = strtol(optarg, &p, 0))) {
 			case 4:
 				if (*p == '.') {
-					minorvers4 = -atoi(p + 1);
+					int i = atoi(p+1);
+					if (i > NFS4_MAXMINOR) {
+						fprintf(stderr, "%s: unsupported minor version\n", optarg);
+						exit(1);
+					}
+					NFSCTL_VERSET(minorversset, i);
+					NFSCTL_VERUNSET(minorvers, i);
 					break;
 				}
 			case 3:
 			case 2:
 				NFSCTL_VERUNSET(versbits, c);
+				break;
+			default:
+				fprintf(stderr, "%s: Unsupported version\n", optarg);
+				exit(1);
+			}
+			break;
+		case 'V':
+			switch((c = strtol(optarg, &p, 0))) {
+			case 4:
+				if (*p == '.') {
+					int i = atoi(p+1);
+					if (i > NFS4_MAXMINOR) {
+						fprintf(stderr, "%s: unsupported minor version\n", optarg);
+						exit(1);
+					}
+					NFSCTL_VERSET(minorversset, i);
+					NFSCTL_VERSET(minorvers, i);
+					break;
+				}
+			case 3:
+			case 2:
+				NFSCTL_VERSET(versbits, c);
 				break;
 			default:
 				fprintf(stderr, "%s: Unsupported version\n", optarg);
@@ -184,6 +191,20 @@ main(int argc, char **argv)
 			break;
 		case 'U':
 			NFSCTL_UDPUNSET(protobits);
+			break;
+		case 'G':
+			grace = strtol(optarg, &p, 0);
+			if (*p || grace <= 0) {
+				fprintf(stderr, "%s: Unrecognized grace time.\n", optarg);
+				exit(1);
+			}
+			break;
+		case 'L':
+			lease = strtol(optarg, &p, 0);
+			if (*p || lease <= 0) {
+				fprintf(stderr, "%s: Unrecognized lease time.\n", optarg);
+				exit(1);
+			}
 			break;
 		default:
 			fprintf(stderr, "Invalid argument: '%c'\n", c);
@@ -211,18 +232,6 @@ main(int argc, char **argv)
 
 	xlog_open(progname);
 
-	nfsd_enable_protos(&proto4, &proto6);
-
-	if (!NFSCTL_TCPISSET(protobits)) {
-		NFSCTL_TCPUNSET(proto4);
-		NFSCTL_TCPUNSET(proto6);
-	}
-
-	if (!NFSCTL_UDPISSET(protobits)) {
-		NFSCTL_UDPUNSET(proto4);
-		NFSCTL_UDPUNSET(proto6);
-	}
-
 	/* make sure that at least one version is enabled */
 	found_one = 0;
 	for (c = NFSD_MINVERS; c <= NFSD_MAXVERS; c++) {
@@ -232,11 +241,10 @@ main(int argc, char **argv)
 	if (!found_one) {
 		xlog(L_ERROR, "no version specified");
 		exit(1);
-	}			
+	}
 
 	if (NFSCTL_VERISSET(versbits, 4) &&
-	    !NFSCTL_TCPISSET(proto4) &&
-	    !NFSCTL_TCPISSET(proto6)) {
+	    !NFSCTL_TCPISSET(protobits)) {
 		xlog(L_ERROR, "version 4 requires the TCP protocol");
 		exit(1);
 	}
@@ -246,6 +254,9 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
+	/* make sure nfsdfs is mounted if it's available */
+	nfssvc_mount_nfsdfs(progname);
+
 	/* can only change number of threads if nfsd is already up */
 	if (nfssvc_inuse()) {
 		socket_up = 1;
@@ -253,22 +264,30 @@ main(int argc, char **argv)
 	}
 
 	/*
-	 * must set versions before the fd's so that the right versions get
+	 * Must set versions before the fd's so that the right versions get
 	 * registered with rpcbind. Note that on older kernels w/o the right
 	 * interfaces, these are a no-op.
+	 * Timeouts must also be set before ports are created else we get
+	 * EBUSY.
 	 */
-	nfssvc_setvers(versbits, minorvers4);
- 
-	error = nfssvc_set_sockets(AF_INET, proto4, haddr, port);
-	if (!error)
-		socket_up = 1;
+	nfssvc_setvers(versbits, minorvers, minorversset);
+	if (grace > 0)
+		nfssvc_set_time("grace", grace);
+	if (lease  > 0)
+		nfssvc_set_time("lease", lease);
 
-#ifdef IPV6_SUPPORTED
-	error = nfssvc_set_sockets(AF_INET6, proto6, haddr, port);
-	if (!error)
-		socket_up = 1;
-#endif /* IPV6_SUPPORTED */
+	i = 0;
+	do {
+		error = nfssvc_set_sockets(protobits, haddr[i], port);
+		if (!error)
+			socket_up = 1;
+	} while (++i < hcounter);
 
+	if (rdma_port) {
+		error = nfssvc_set_rdmaport(rdma_port);
+		if (!error)
+			socket_up = 1;
+	}
 set_threads:
 	/* don't start any threads if unable to hand off any sockets */
 	if (!socket_up) {
@@ -300,6 +319,8 @@ set_threads:
 		xlog(L_ERROR, "error starting threads: errno %d (%m)", errno);
 out:
 	free(port);
+	for(i=0; i < hcounter; i++)
+		free(haddr[i]);
 	free(haddr);
 	free(progname);
 	return (error != 0);
@@ -309,7 +330,10 @@ static void
 usage(const char *prog)
 {
 	fprintf(stderr, "Usage:\n"
-		"%s [-d|--debug] [-H hostname] [-p|-P|--port port] [-N|--no-nfs-version version ] [-s|--syslog] [-T|--no-tcp] [-U|--no-udp] nrservs\n", 
+		"%s [-d|--debug] [-H hostname] [-p|-P|--port port]\n"
+		"     [-N|--no-nfs-version version] [-V|--nfs-version version]\n"
+		"     [-s|--syslog] [-T|--no-tcp] [-U|--no-udp] [-r|--rdma=]\n"
+		"     [-G|--grace-time secs] [-L|--leasetime secs] nrservs\n",
 		prog);
 	exit(2);
 }

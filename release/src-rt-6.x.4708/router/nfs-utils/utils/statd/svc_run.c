@@ -78,7 +78,7 @@ my_svc_exit(void)
  * The heart of the server.  A crib from libc for the most part...
  */
 void
-my_svc_run(void)
+my_svc_run(int sockfd)
 {
 	FD_SET_TYPE	readfds;
 	int             selret;
@@ -96,17 +96,19 @@ my_svc_run(void)
 		}
 
 		readfds = SVC_FDSET;
+		/* Set notify sockfd for waiting for reply */
+		FD_SET(sockfd, &readfds);
 		if (notify) {
 			struct timeval	tv;
 
 			tv.tv_sec  = NL_WHEN(notify) - now;
 			tv.tv_usec = 0;
-			dprintf(N_DEBUG, "Waiting for reply... (timeo %d)",
+			xlog(D_GENERAL, "Waiting for reply... (timeo %d)",
 							tv.tv_sec);
 			selret = select(FD_SETSIZE, &readfds,
 				(void *) 0, (void *) 0, &tv);
 		} else {
-			dprintf(N_DEBUG, "Waiting for client connections.");
+			xlog(D_GENERAL, "Waiting for client connections");
 			selret = select(FD_SETSIZE, &readfds,
 				(void *) 0, (void *) 0, (struct timeval *) 0);
 		}
@@ -116,8 +118,7 @@ my_svc_run(void)
 			if (errno == EINTR || errno == ECONNREFUSED
 			 || errno == ENETUNREACH || errno == EHOSTUNREACH)
 				continue;
-			note(N_ERROR, "my_svc_run() - select: %s",
-				strerror (errno));
+			xlog(L_ERROR, "my_svc_run() - select: %m");
 			return;
 
 		case 0:
@@ -126,8 +127,10 @@ my_svc_run(void)
 
 		default:
 			selret -= process_reply(&readfds);
-			if (selret)
+			if (selret) {
+				FD_CLR(sockfd, &readfds);
 				svc_getreqset(&readfds);
+			}
 		}
 	}
 }

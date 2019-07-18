@@ -8,6 +8,7 @@
 #include <config.h>
 #endif
 
+#include <err.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -28,129 +29,222 @@
 #include <errno.h>
 #include <grp.h>
 
-#ifndef BASEDIR
-# ifdef NFS_STATEDIR
-#  define BASEDIR		NFS_STATEDIR
-# else
-#  define BASEDIR		"/var/lib/nfs"
-# endif
+#include "sockaddr.h"
+#include "xlog.h"
+#include "nsm.h"
+#include "nfsrpc.h"
+
+/* glibc before 2.3.4 */
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV	0
 #endif
 
-#define DEFAULT_SM_STATE_PATH	BASEDIR "/state"
-#define	DEFAULT_SM_DIR_PATH	BASEDIR "/sm"
-#define	DEFAULT_SM_BAK_PATH	DEFAULT_SM_DIR_PATH ".bak"
-
-char *_SM_BASE_PATH = BASEDIR;
-char *_SM_STATE_PATH = DEFAULT_SM_STATE_PATH;
-char *_SM_DIR_PATH = DEFAULT_SM_DIR_PATH;
-char *_SM_BAK_PATH = DEFAULT_SM_BAK_PATH;
-
-#define NSM_PROG	100024
-#define NSM_PROGRAM	100024
-#define NSM_VERSION	1
 #define NSM_TIMEOUT	2
-#define NSM_NOTIFY	6
 #define NSM_MAX_TIMEOUT	120	/* don't make this too big */
-#define MAXMSGSIZE	256
+
+#define NLM_END_GRACE_FILE	"/proc/fs/lockd/nlm_end_grace"
 
 struct nsm_host {
 	struct nsm_host *	next;
 	char *			name;
-	char *			path;
-	struct sockaddr_storage	addr;
+	const char *		mon_name;
+	const char *		my_name;
+	char *			notify_arg;
 	struct addrinfo		*ai;
 	time_t			last_used;
 	time_t			send_next;
 	unsigned int		timeout;
 	unsigned int		retries;
-	unsigned int		xid;
+	uint32_t		xid;
 };
 
-static char		nsm_hostname[256];
-static uint32_t		nsm_state;
+static char		nsm_hostname[SM_MAXSTRLEN + 1];
+static int		nsm_state;
+static int		nsm_family = AF_INET;
 static int		opt_debug = 0;
-static int		opt_quiet = 0;
-static int		opt_update_state = 1;
+static _Bool		opt_update_state = true;
 static unsigned int	opt_max_retry = 15 * 60;
-static char *		opt_srcaddr = 0;
-static uint16_t		opt_srcport = 0;
-static int		log_syslog = 0;
+static char *		opt_srcaddr = NULL;
+static char *		opt_srcport = NULL;
 
-static unsigned int	nsm_get_state(int);
-static void		notify(void);
+static void		notify(const int sock);
 static int		notify_host(int, struct nsm_host *);
 static void		recv_reply(int);
-static void		backup_hosts(const char *, const char *);
-static void		get_hosts(const char *);
 static void		insert_host(struct nsm_host *);
 static struct nsm_host *find_host(uint32_t);
-static void		nsm_log(int fac, const char *fmt, ...);
 static int		record_pid(void);
-static void		drop_privs(void);
-static void		set_kernel_nsm_state(int state);
 
 static struct nsm_host *	hosts = NULL;
 
-/*
- * Address handling utilities
- */
-
-static unsigned short smn_get_port(const struct sockaddr *sap)
+__attribute__((__malloc__))
+static struct addrinfo *
+smn_lookup(const char *name)
 {
-	switch (sap->sa_family) {
-	case AF_INET:
-		return ntohs(((struct sockaddr_in *)sap)->sin_port);
-	case AF_INET6:
-		return ntohs(((struct sockaddr_in6 *)sap)->sin6_port);
-	}
-	return 0;
-}
-
-static void smn_set_port(struct sockaddr *sap, const unsigned short port)
-{
-	switch (sap->sa_family) {
-	case AF_INET:
-		((struct sockaddr_in *)sap)->sin_port = htons(port);
-		break;
-	case AF_INET6:
-		((struct sockaddr_in6 *)sap)->sin6_port = htons(port);
-		break;
-	}
-}
-
-static struct addrinfo *smn_lookup(const char *name)
-{
-	struct addrinfo	*ai, hint = {
-#if HAVE_DECL_AI_ADDRCONFIG
-		.ai_flags	= AI_ADDRCONFIG,
-#endif	/* HAVE_DECL_AI_ADDRCONFIG */
-		.ai_family	= AF_INET,
-		.ai_protocol	= IPPROTO_UDP,
+	struct addrinfo	*ai = NULL;
+	struct addrinfo hint = {
+		.ai_family	= (nsm_family == AF_INET ? AF_INET: AF_UNSPEC),
+		.ai_protocol	= (int)IPPROTO_UDP,
 	};
+	int error;
+
+	error = getaddrinfo(name, NULL, &hint, &ai);
+	if (error != 0) {
+		xlog(D_GENERAL, "getaddrinfo(3): %s", gai_strerror(error));
+		return NULL;
+	}
+
+	return ai;
+}
+
+#ifdef HAVE_GETNAMEINFO
+static char *
+smn_get_hostname(const struct sockaddr *sap, const socklen_t salen,
+		const char *name)
+{
+	char buf[NI_MAXHOST];
+	int error;
+
+	error = getnameinfo(sap, salen, buf, sizeof(buf), NULL, 0, NI_NAMEREQD);
+	if (error != 0) {
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, gai_strerror(error));
+		return NULL;
+	}
+	return strdup(buf);
+}
+#else	/* !HAVE_GETNAMEINFO */
+static char *
+smn_get_hostname(const struct sockaddr *sap,
+		__attribute__ ((unused)) const socklen_t salen,
+		const char *name)
+{
+	const struct sockaddr_in *sin = (const struct sockaddr_in *)(char *)sap;
+	const struct in_addr *addr = &sin->sin_addr;
+	struct hostent *hp;
+
+	if (sap->sa_family != AF_INET) {
+		xlog(L_ERROR, "my_name '%s' is unusable: Bad address family",
+			name);
+		return NULL;
+	}
+
+	hp = gethostbyaddr(addr, (socklen_t)sizeof(addr), AF_INET);
+	if (hp == NULL) {
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, hstrerror(h_errno));
+		return NULL;
+	}
+	return strdup(hp->h_name);
+}
+#endif	/* !HAVE_GETNAMEINFO */
+
+/*
+ * Presentation addresses are converted to their canonical hostnames.
+ * If the IP address does not map to a hostname, it is an error:
+ * we never send a presentation address as the argument of SM_NOTIFY.
+ *
+ * If "name" is not a presentation address, it is left alone.  This
+ * allows the administrator some flexibility if DNS isn't configured
+ * exactly how sm-notify prefers it.
+ *
+ * Returns NUL-terminated C string containing the result, or NULL
+ * if the canonical name doesn't exist or cannot be determined.
+ * The caller must free the result with free(3).
+ */
+__attribute__((__malloc__))
+static char *
+smn_verify_my_name(const char *name)
+{
+	struct addrinfo *ai = NULL;
+	struct addrinfo hint = {
+#ifdef IPV6_SUPPORTED
+		.ai_family	= AF_UNSPEC,
+#else	/* !IPV6_SUPPORTED */
+		.ai_family	= AF_INET,
+#endif	/* !IPV6_SUPPORTED */
+		.ai_flags	= AI_NUMERICHOST,
+	};
+	char *retval;
 	int error;
 
 	error = getaddrinfo(name, NULL, &hint, &ai);
 	switch (error) {
 	case 0:
-		return ai;
-	case EAI_SYSTEM: 
-		if (opt_debug)
-			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
-					strerror(errno));
+		/* @name was a presentation address */
+		retval = smn_get_hostname(ai->ai_addr, ai->ai_addrlen, name);
+		freeaddrinfo(ai);
+		if (retval == NULL)
+			return NULL;
+		break;
+	case EAI_NONAME:
+		/* @name was not a presentation address */
+		retval = strdup(name);
 		break;
 	default:
-		if (opt_debug)
-			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
-					gai_strerror(error));
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, gai_strerror(error));
+		return NULL;
 	}
 
+	xlog(D_GENERAL, "Canonical name for my_name '%s': %s",
+			name, retval);
+	return retval;
+}
+
+__attribute__((__malloc__))
+static struct nsm_host *
+smn_alloc_host(const char *hostname, const char *mon_name,
+		const char *my_name, const time_t timestamp)
+{
+	struct nsm_host	*host;
+
+	host = calloc(1, sizeof(*host));
+	if (host == NULL)
+		goto out_nomem;
+
+	/*
+	 * mon_name and my_name are preserved so sm-notify can
+	 * find the right monitor record to remove when it is
+	 * done processing this host.
+	 */
+	host->name = strdup(hostname);
+	host->mon_name = (const char *)strdup(mon_name);
+	host->my_name = (const char *)strdup(my_name);
+	host->notify_arg = strdup(opt_srcaddr != NULL ?
+					nsm_hostname : my_name);
+	if (host->name == NULL ||
+	    host->mon_name == NULL ||
+	    host->my_name == NULL ||
+	    host->notify_arg == NULL) {
+		free(host->notify_arg);
+		free((void *)host->my_name);
+		free((void *)host->mon_name);
+		free(host->name);
+		free(host);
+		goto out_nomem;
+	}
+
+	host->last_used = timestamp;
+	host->timeout = NSM_TIMEOUT;
+	host->retries = 100;		/* force address retry */
+
+	return host;
+
+out_nomem:
+	xlog_warn("Unable to allocate memory");
 	return NULL;
 }
 
 static void smn_forget_host(struct nsm_host *host)
 {
-	unlink(host->path);
-	free(host->path);
+	xlog(D_CALL, "Removing %s (%s, %s) from notify list",
+			host->name, host->mon_name, host->my_name);
+
+	nsm_delete_notified_host(host->name, host->mon_name, host->my_name);
+
+	free(host->notify_arg);
+	free((void *)host->my_name);
+	free((void *)host->mon_name);
 	free(host->name);
 	if (host->ai)
 		freeaddrinfo(host->ai);
@@ -158,13 +252,241 @@ static void smn_forget_host(struct nsm_host *host)
 	free(host);
 }
 
+static unsigned int
+smn_get_host(const char *hostname,
+		__attribute__ ((unused)) const struct sockaddr *sap,
+		const struct mon *m, const time_t timestamp)
+{
+	struct nsm_host	*host;
+
+	host = smn_alloc_host(hostname,
+		m->mon_id.mon_name, m->mon_id.my_id.my_name, timestamp);
+	if (host == NULL)
+		return 0;
+
+	insert_host(host);
+	return 1;
+}
+
+#ifdef IPV6_SUPPORTED
+static int smn_socket(void)
+{
+	int sock;
+
+	/*
+	 * Use an AF_INET socket if IPv6 is disabled on the
+	 * local system.
+	 */
+	sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	if (sock == -1) {
+		if (errno != EAFNOSUPPORT) {
+			xlog(L_ERROR, "Failed to create RPC socket: %m");
+			return -1;
+		}
+		sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sock < 0) {
+			xlog(L_ERROR, "Failed to create RPC socket: %m");
+			return -1;
+		}
+	} else
+		nsm_family = AF_INET6;
+
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
+		xlog(L_ERROR, "fcntl(3) on RPC socket failed: %m");
+		goto out_close;
+	}
+
+	/*
+	 * TI-RPC over IPv6 (udp6/tcp6) does not handle IPv4.  However,
+	 * since sm-notify open-codes all of its RPC support, it can
+	 * use a single socket and let the local network stack provide
+	 * the correct mapping between address families automatically.
+	 * This is the same thing that is done in the kernel.
+	 */
+	if (nsm_family == AF_INET6) {
+		const int zero = 0;
+		socklen_t zerolen = (socklen_t)sizeof(zero);
+
+		if (setsockopt(sock, SOL_IPV6, IPV6_V6ONLY,
+					(char *)&zero, zerolen) == -1) {
+			xlog(L_ERROR, "setsockopt(3) on RPC socket failed: %m");
+			goto out_close;
+		}
+	}
+
+	return sock;
+
+out_close:
+	(void)close(sock);
+	return -1;
+}
+#else	/* !IPV6_SUPPORTED */
+static int smn_socket(void)
+{
+	int sock;
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock == -1) {
+		xlog(L_ERROR, "Failed to create RPC socket: %m");
+		return -1;
+	}
+
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
+		xlog(L_ERROR, "fcntl(3) on RPC socket failed: %m");
+		(void)close(sock);
+		return -1;
+	}
+
+	return sock;
+}
+#endif	/* !IPV6_SUPPORTED */
+
+/*
+ * If admin specified a source address or srcport, then convert those
+ * to a sockaddr and return it.   Otherwise, return an ANYADDR address.
+ */
+__attribute__((__malloc__))
+static struct addrinfo *
+smn_bind_address(const char *srcaddr, const char *srcport)
+{
+	struct addrinfo *ai = NULL;
+	struct addrinfo hint = {
+		.ai_flags	= AI_NUMERICSERV | AI_V4MAPPED,
+		.ai_family	= nsm_family,
+		.ai_protocol	= (int)IPPROTO_UDP,
+	};
+	int error;
+
+	if (srcaddr == NULL)
+		hint.ai_flags |= AI_PASSIVE;
+
+	/* Do not allow "node" and "service" parameters both to be NULL */
+	if (srcport == NULL)
+		error = getaddrinfo(srcaddr, "", &hint, &ai);
+	else
+		error = getaddrinfo(srcaddr, srcport, &hint, &ai);
+	if (error != 0) {
+		xlog(L_ERROR,
+			"Invalid bind address or port for RPC socket: %s",
+				gai_strerror(error));
+		return NULL;
+	}
+
+	return ai;
+}
+
+#ifdef HAVE_LIBTIRPC
+static int
+smn_bindresvport(int sock, struct sockaddr *sap)
+{
+	return bindresvport_sa(sock, sap);
+}
+
+#else	/* !HAVE_LIBTIRPC */
+static int
+smn_bindresvport(int sock, struct sockaddr *sap)
+{
+	if (sap->sa_family != AF_INET) {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	return bindresvport(sock, (struct sockaddr_in *)(char *)sap);
+}
+#endif	/* !HAVE_LIBTIRPC */
+
+/*
+ * Prepare a socket for sending RPC requests
+ *
+ * Returns a bound datagram socket file descriptor, or -1 if
+ * an error occurs.
+ */
+static int
+smn_create_socket(const char *srcaddr, const char *srcport)
+{
+	int sock, retry_cnt = 0;
+	struct addrinfo *ai;
+
+retry:
+	sock = smn_socket();
+	if (sock == -1)
+		return -1;
+
+	ai = smn_bind_address(srcaddr, srcport);
+	if (ai == NULL) {
+		(void)close(sock);
+		return -1;
+	}
+
+	/* Use source port if provided on the command line,
+	 * otherwise use bindresvport */
+	if (srcport) {
+		if (bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+			xlog(L_ERROR, "Failed to bind RPC socket: %m");
+			freeaddrinfo(ai);
+			(void)close(sock);
+			return -1;
+		}
+	} else {
+		struct servent *se;
+
+		if (smn_bindresvport(sock, ai->ai_addr) == -1) {
+			xlog(L_ERROR,
+				"bindresvport on RPC socket failed: %m");
+			freeaddrinfo(ai);
+			(void)close(sock);
+			return -1;
+		}
+
+		/* try to avoid known ports */
+		se = getservbyport((int)nfs_get_port(ai->ai_addr), "udp");
+		if (se != NULL && retry_cnt < 100) {
+			retry_cnt++;
+			freeaddrinfo(ai);
+			(void)close(sock);
+			goto retry;
+		}
+	}
+
+	freeaddrinfo(ai);
+	return sock;
+}
+
+/* Inform the kernel that it's OK to lift lockd's grace period */
+static void
+nsm_lift_grace_period(void)
+{
+	int fd;
+
+	fd = open(NLM_END_GRACE_FILE, O_WRONLY);
+	if (fd < 0) {
+		/* Don't warn if file isn't present */
+		if (errno != ENOENT)
+			xlog(L_WARNING, "Unable to open %s: %m",
+				NLM_END_GRACE_FILE);
+		return;
+	}
+
+	if (write(fd, "Y", 1) < 0)
+		xlog(L_WARNING, "Unable to write to %s: %m", NLM_END_GRACE_FILE);
+
+	close(fd);
+	return;
+}
+
 int
 main(int argc, char **argv)
 {
-	int	c;
-	int	force = 0;
+	int	c, sock, force = 0;
+	char *	progname;
 
-	while ((c = getopt(argc, argv, "dm:np:v:qP:f")) != -1) {
+	progname = strrchr(argv[0], '/');
+	if (progname != NULL)
+		progname++;
+	else
+		progname = argv[0];
+
+	while ((c = getopt(argc, argv, "dm:np:v:P:f")) != -1) {
 		switch (c) {
 		case 'f':
 			force = 1;
@@ -176,32 +498,17 @@ main(int argc, char **argv)
 			opt_max_retry = atoi(optarg) * 60;
 			break;
 		case 'n':
-			opt_update_state = 0;
+			opt_update_state = false;
 			break;
 		case 'p':
-			opt_srcport = atoi(optarg);
+			opt_srcport = optarg;
 			break;
 		case 'v':
 			opt_srcaddr = optarg;
 			break;
-		case 'q':
-			opt_quiet = 1;
-			break;
 		case 'P':
-			_SM_BASE_PATH = strdup(optarg);
-			_SM_STATE_PATH = malloc(strlen(optarg)+1+sizeof("state"));
-			_SM_DIR_PATH = malloc(strlen(optarg)+1+sizeof("sm"));
-			_SM_BAK_PATH = malloc(strlen(optarg)+1+sizeof("sm.bak"));
-			if (_SM_BASE_PATH == NULL ||
-			    _SM_STATE_PATH == NULL ||
-			    _SM_DIR_PATH == NULL ||
-			    _SM_BAK_PATH == NULL) {
-				nsm_log(LOG_ERR, "unable to allocate memory");
+			if (!nsm_setup_pathnames(argv[0], optarg))
 				exit(1);
-			}
-			strcat(strcpy(_SM_STATE_PATH, _SM_BASE_PATH), "/state");
-			strcat(strcpy(_SM_DIR_PATH, _SM_BASE_PATH), "/sm");
-			strcat(strcpy(_SM_BAK_PATH, _SM_BASE_PATH), "/sm.bak");
 			break;
 
 		default:
@@ -211,51 +518,60 @@ main(int argc, char **argv)
 
 	if (optind < argc) {
 usage:		fprintf(stderr,
-			"Usage: sm-notify [-dfq] [-m max-retry-minutes] [-p srcport]\n"
-			"            [-P /path/to/state/directory] [-v my_host_name]\n");
+			"Usage: %s -notify [-dfq] [-m max-retry-minutes] [-p srcport]\n"
+			"            [-P /path/to/state/directory] [-v my_host_name]\n",
+			progname);
 		exit(1);
 	}
 
-	log_syslog = 1;
-	openlog("sm-notify", LOG_PID, LOG_DAEMON);
+	if (opt_debug) {
+		xlog_syslog(0);
+		xlog_stderr(1);
+		xlog_config(D_ALL, 1);
+	} else {
+		xlog_syslog(1);
+		xlog_stderr(0);
+	}
 
-	if (strcmp(_SM_BASE_PATH, BASEDIR) == 0) {
-		if (record_pid() == 0 && force == 0 && opt_update_state == 1) {
+	xlog_open(progname);
+	xlog(L_NOTICE, "Version " VERSION " starting");
+
+	if (nsm_is_default_parentdir()) {
+		if (record_pid() == 0 && force == 0 && opt_update_state) {
 			/* already run, don't try again */
-			nsm_log(LOG_NOTICE, "Already notifying clients; Exiting!");
+			xlog(L_NOTICE, "Already notifying clients; Exiting!");
 			exit(0);
 		}
 	}
 
-	if (opt_srcaddr) {
-		strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname)-1);
-	} else
-	if (gethostname(nsm_hostname, sizeof(nsm_hostname)) < 0) {
-		nsm_log(LOG_ERR, "Failed to obtain name of local host: %s",
-			strerror(errno));
-		exit(1);
+	if (opt_srcaddr != NULL) {
+		char *name;
+
+		name = smn_verify_my_name(opt_srcaddr);
+		if (name == NULL)
+			exit(1);
+
+		strncpy(nsm_hostname, name, sizeof(nsm_hostname));
+		free(name);
 	}
 
-	backup_hosts(_SM_DIR_PATH, _SM_BAK_PATH);
-	get_hosts(_SM_BAK_PATH);
-
-	/* If there are not hosts to notify, just exit */
-	if (!hosts) {
-		nsm_log(LOG_DEBUG, "No hosts to notify; exiting");
+	(void)nsm_retire_monitored_hosts();
+	if (nsm_load_notify_list(smn_get_host) == 0) {
+		xlog(D_GENERAL, "No hosts to notify; exiting");
+		nsm_lift_grace_period();
 		return 0;
 	}
 
-	/* Get and update the NSM state. This will call sync() */
 	nsm_state = nsm_get_state(opt_update_state);
-	set_kernel_nsm_state(nsm_state);
+	if (nsm_state == 0)
+		exit(1);
+	nsm_update_kernel_state(nsm_state);
 
 	if (!opt_debug) {
-		if (!opt_quiet)
-			printf("Backgrounding to notify hosts...\n");
+		xlog(L_NOTICE, "Backgrounding to notify hosts...\n");
 
 		if (daemon(0, 0) < 0) {
-			nsm_log(LOG_ERR, "unable to background: %s",
-					strerror(errno));
+			xlog(L_ERROR, "unable to background: %m");
 			exit(1);
 		}
 
@@ -264,15 +580,21 @@ usage:		fprintf(stderr,
 		close(2);
 	}
 
-	notify();
+	sock = smn_create_socket(opt_srcaddr, opt_srcport);
+	if (sock == -1)
+		exit(1);
+
+	if (!nsm_drop_privileges(-1))
+		exit(1);
+
+	notify(sock);
 
 	if (hosts) {
 		struct nsm_host	*hp;
 
 		while ((hp = hosts) != 0) {
 			hosts = hp->next;
-			nsm_log(LOG_NOTICE,
-				"Unable to notify %s, giving up",
+			xlog(L_NOTICE, "Unable to notify %s, giving up",
 				hp->name);
 		}
 		exit(1);
@@ -285,68 +607,12 @@ usage:		fprintf(stderr,
  * Notify hosts
  */
 static void
-notify(void)
+notify(const int sock)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *local_addr = (struct sockaddr *)&address;
 	time_t	failtime = 0;
-	int	sock = -1;
-	int retry_cnt = 0;
-
- retry:
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0) {
-		nsm_log(LOG_ERR, "Failed to create RPC socket: %s",
-			strerror(errno));
-		exit(1);
-	}
-	fcntl(sock, F_SETFL, O_NONBLOCK);
-
-	memset(&address, 0, sizeof(address));
-	local_addr->sa_family = AF_INET;	/* Default to IPv4 */
-
-	/* Bind source IP if provided on command line */
-	if (opt_srcaddr) {
-		struct addrinfo *ai = smn_lookup(opt_srcaddr);
-		if (!ai) {
-			nsm_log(LOG_ERR,
-				"Not a valid hostname or address: \"%s\"",
-				opt_srcaddr);
-			exit(1);
-		}
-
-		/* We know it's IPv4 at this point */
-		memcpy(local_addr, ai->ai_addr, ai->ai_addrlen);
-
-		freeaddrinfo(ai);
-	}
-
-	/* Use source port if provided on the command line,
-	 * otherwise use bindresvport */
-	if (opt_srcport) {
-		smn_set_port(local_addr, opt_srcport);
-		if (bind(sock, local_addr, sizeof(struct sockaddr_in)) < 0) {
-			nsm_log(LOG_ERR, "Failed to bind RPC socket: %s",
-				strerror(errno));
-			exit(1);
-		}
-	} else {
-		struct servent *se;
-		struct sockaddr_in *sin = (struct sockaddr_in *)local_addr;
-		(void) bindresvport(sock, sin);
-		/* try to avoid known ports */
-		se = getservbyport(sin->sin_port, "udp");
-		if (se && retry_cnt < 100) {
-			retry_cnt++;
-			close(sock);
-			goto retry;
-		}
-	}
 
 	if (opt_max_retry)
 		failtime = time(NULL) + opt_max_retry;
-
-	drop_privs();
 
 	while (hosts) {
 		struct pollfd	pfd;
@@ -383,7 +649,7 @@ notify(void)
 		if (hosts == NULL)
 			return;
 
-		nsm_log(LOG_DEBUG, "Host %s due in %ld seconds",
+		xlog(D_GENERAL, "Host %s due in %ld seconds",
 				hosts->name, wait);
 
 		pfd.fd = sock;
@@ -405,33 +671,17 @@ notify(void)
 static int
 notify_host(int sock, struct nsm_host *host)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *dest = (struct sockaddr *)&address;
-	socklen_t destlen = sizeof(address);
-	static unsigned int	xid = 0;
-	uint32_t		msgbuf[MAXMSGSIZE], *p;
-	unsigned int		len;
-
-	if (!xid)
-		xid = getpid() + time(NULL);
-	if (!host->xid)
-		host->xid = xid++;
+	struct sockaddr *sap;
+	socklen_t salen;
 
 	if (host->ai == NULL) {
 		host->ai = smn_lookup(host->name);
 		if (host->ai == NULL) {
-			nsm_log(LOG_WARNING,
-				"DNS resolution of %s failed; "
+			xlog_warn("DNS resolution of %s failed; "
 				"retrying later", host->name);
 			return 0;
 		}
 	}
-
-	memset(msgbuf, 0, sizeof(msgbuf));
-	p = msgbuf;
-	*p++ = htonl(host->xid);
-	*p++ = 0;
-	*p++ = htonl(2);
 
 	/* If we retransmitted 4 times, reset the port to force
 	 * a new portmap lookup (in case statd was restarted).
@@ -440,10 +690,7 @@ notify_host(int sock, struct nsm_host *host)
 	 */
 	if (host->retries >= 4) {
 		/* don't rotate if there is only one addrinfo */
-		if (host->ai->ai_next == NULL)
-			memcpy(&host->addr, host->ai->ai_addr,
-						host->ai->ai_addrlen);
-		else {
+		if (host->ai->ai_next != NULL) {
 			struct addrinfo *first = host->ai;
 			struct addrinfo **next = &host->ai;
 
@@ -456,58 +703,82 @@ notify_host(int sock, struct nsm_host *host)
 				next = & (*next)->ai_next;
 			/* put first entry at end */
 			*next = first;
-			memcpy(&host->addr, first->ai_addr,
-						first->ai_addrlen);
 		}
 
-		smn_set_port((struct sockaddr *)&host->addr, 0);
+		nfs_set_port(host->ai->ai_addr, 0);
 		host->retries = 0;
 	}
 
-	memcpy(dest, &host->addr, destlen);
-	if (smn_get_port(dest) == 0) {
-		/* Build a PMAP packet */
-		nsm_log(LOG_DEBUG, "Sending portmap query to %s", host->name);
+	sap = host->ai->ai_addr;
+	salen = host->ai->ai_addrlen;
 
-		smn_set_port(dest, 111);
-		*p++ = htonl(100000);
-		*p++ = htonl(2);
-		*p++ = htonl(3);
+	if (nfs_get_port(sap) == 0)
+		host->xid = nsm_xmit_rpcbind(sock, sap, SM_PROG, SM_VERS);
+	else
+		host->xid = nsm_xmit_notify(sock, sap, salen,
+					SM_PROG, host->notify_arg, nsm_state);
 
-		/* Auth and verf */
-		*p++ = 0; *p++ = 0;
-		*p++ = 0; *p++ = 0;
-
-		*p++ = htonl(NSM_PROGRAM);
-		*p++ = htonl(NSM_VERSION);
-		*p++ = htonl(IPPROTO_UDP);
-		*p++ = 0;
-	} else {
-		/* Build an SM_NOTIFY packet */
-		nsm_log(LOG_DEBUG, "Sending SM_NOTIFY to %s", host->name);
-
-		*p++ = htonl(NSM_PROGRAM);
-		*p++ = htonl(NSM_VERSION);
-		*p++ = htonl(NSM_NOTIFY);
-
-		/* Auth and verf */
-		*p++ = 0; *p++ = 0;
-		*p++ = 0; *p++ = 0;
-
-		/* state change */
-		len = strlen(nsm_hostname);
-		*p++ = htonl(len);
-		memcpy(p, nsm_hostname, len);
-		p += (len + 3) >> 2;
-		*p++ = htonl(nsm_state);
-	}
-	len = (p - msgbuf) << 2;
-
-	if (sendto(sock, msgbuf, len, 0, dest, destlen) < 0)
-		nsm_log(LOG_WARNING, "Sending Reboot Notification to "
-			"'%s' failed: errno %d (%s)", host->name, errno, strerror(errno));
-	
 	return 0;
+}
+
+static void
+smn_defer(struct nsm_host *host)
+{
+	host->xid = 0;
+	host->send_next = time(NULL) + NSM_MAX_TIMEOUT;
+	host->timeout = NSM_MAX_TIMEOUT;
+	insert_host(host);
+}
+
+static void
+smn_schedule(struct nsm_host *host)
+{
+	host->retries = 0;
+	host->xid = 0;
+	host->send_next = time(NULL);
+	host->timeout = NSM_TIMEOUT;
+	insert_host(host);
+}
+
+/*
+ * Extract the returned port number and set up the SM_NOTIFY call.
+ */
+static void
+recv_rpcbind_reply(struct sockaddr *sap, struct nsm_host *host, XDR *xdr)
+{
+	uint16_t port = nsm_recv_rpcbind(sap->sa_family, xdr);
+
+	if (port == 0) {
+		/* No binding for statd... */
+		xlog(D_GENERAL, "No statd on host %s", host->name);
+		smn_defer(host);
+	} else {
+		xlog(D_GENERAL, "Processing rpcbind reply for %s (port %u)",
+			host->name, port);
+		nfs_set_port(sap, port);
+		smn_schedule(host);
+	}
+}
+
+/*
+ * Successful NOTIFY call. Server returns void.
+ *
+ * Try sending another SM_NOTIFY with an unqualified "my_name"
+ * argument.  Reuse the port number.  If "my_name" is already
+ * unqualified, we're done.
+ */
+static void
+recv_notify_reply(struct nsm_host *host)
+{
+	char *dot = strchr(host->notify_arg, '.');
+
+	if (dot != NULL) {
+		*dot = '\0';
+		smn_schedule(host);
+	} else {
+		xlog(D_GENERAL, "Host %s notified successfully", host->name);
+		smn_forget_host(host);
+	}
 }
 
 /*
@@ -518,155 +789,41 @@ recv_reply(int sock)
 {
 	struct nsm_host	*hp;
 	struct sockaddr *sap;
-	uint32_t	msgbuf[MAXMSGSIZE], *p, *end;
+	char msgbuf[NSM_MAXMSGSIZE];
 	uint32_t	xid;
-	int		res;
+	ssize_t		msglen;
+	XDR		xdr;
 
-	res = recv(sock, msgbuf, sizeof(msgbuf), 0);
-	if (res < 0)
+	memset(msgbuf, 0 , sizeof(msgbuf));
+	msglen = recv(sock, msgbuf, sizeof(msgbuf), 0);
+	if (msglen < 0)
 		return;
 
-	nsm_log(LOG_DEBUG, "Received packet...");
+	xlog(D_GENERAL, "Received packet...");
 
-	p = msgbuf;
-	end = p + (res >> 2);
-
-	xid = ntohl(*p++);
-	if (*p++ != htonl(1)	/* must be REPLY */
-	 || *p++ != htonl(0)	/* must be ACCEPTED */
-	 || *p++ != htonl(0)	/* must be NULL verifier */
-	 || *p++ != htonl(0)
-	 || *p++ != htonl(0))	/* must be SUCCESS */
-		return;
+	memset(&xdr, 0, sizeof(xdr));
+	xdrmem_create(&xdr, msgbuf, (unsigned int)msglen, XDR_DECODE);
+	xid = nsm_parse_reply(&xdr);
+	if (xid == 0)
+		goto out;
 
 	/* Before we look at the data, find the host struct for
 	   this reply */
 	if ((hp = find_host(xid)) == NULL)
-		return;
-	sap = (struct sockaddr *)&hp->addr;
+		goto out;
 
-	if (smn_get_port(sap) == 0) {
-		/* This was a portmap request */
-		unsigned int	port;
+	sap = hp->ai->ai_addr;
+	if (nfs_get_port(sap) == 0)
+		recv_rpcbind_reply(sap, hp, &xdr);
+	else
+		recv_notify_reply(hp);
 
-		port = ntohl(*p++);
-		if (p > end)
-			goto fail;
-
-		hp->send_next = time(NULL);
-		if (port == 0) {
-			/* No binding for statd. Delay the next
-			 * portmap query for max timeout */
-			nsm_log(LOG_DEBUG, "No statd on %s", hp->name);
-			hp->timeout = NSM_MAX_TIMEOUT;
-			hp->send_next += NSM_MAX_TIMEOUT;
-		} else {
-			smn_set_port(sap, port);
-			if (hp->timeout >= NSM_MAX_TIMEOUT / 4)
-				hp->timeout = NSM_MAX_TIMEOUT / 4;
-		}
-		hp->xid = 0;
-	} else {
-		/* Successful NOTIFY call. Server returns void,
-		 * so nothing we need to do here (except
-		 * check that we didn't read past the end of the
-		 * packet)
-		 */
-		if (p <= end) {
-			nsm_log(LOG_DEBUG, "Host %s notified successfully",
-					hp->name);
-			smn_forget_host(hp);
-			return;
-		}
-	}
-
-fail:	/* Re-insert the host */
-	insert_host(hp);
+out:
+	xdr_destroy(&xdr);
 }
 
 /*
- * Back up all hosts from the sm directory to sm.bak
- */
-static void
-backup_hosts(const char *dirname, const char *bakname)
-{
-	struct dirent	*de;
-	DIR		*dir;
-
-	if (!(dir = opendir(dirname))) {
-		nsm_log(LOG_WARNING,
-			"Failed to open %s: %s", dirname, strerror(errno));
-		return;
-	}
-
-	while ((de = readdir(dir)) != NULL) {
-		char	src[1024], dst[1024];
-
-		if (de->d_name[0] == '.')
-			continue;
-
-		snprintf(src, sizeof(src), "%s/%s", dirname, de->d_name);
-		snprintf(dst, sizeof(dst), "%s/%s", bakname, de->d_name);
-		if (rename(src, dst) < 0) {
-			nsm_log(LOG_WARNING,
-				"Failed to rename %s -> %s: %m",
-				src, dst);
-		}
-	}
-	closedir(dir);
-}
-
-/*
- * Get all entries from sm.bak and convert them to host entries
- */
-static void
-get_hosts(const char *dirname)
-{
-	struct nsm_host	*host;
-	struct dirent	*de;
-	DIR		*dir;
-
-	if (!(dir = opendir(dirname))) {
-		nsm_log(LOG_WARNING,
-			"Failed to open %s: %s", dirname, strerror(errno));
-		return;
-	}
-
-	host = NULL;
-	while ((de = readdir(dir)) != NULL) {
-		struct stat	stb;
-		char		path[1024];
-
-		if (de->d_name[0] == '.')
-			continue;
-		if (host == NULL)
-			host = calloc(1, sizeof(*host));
-		if (host == NULL) {
-			nsm_log(LOG_WARNING, "Unable to allocate memory");
-			return;
-		}
-
-		snprintf(path, sizeof(path), "%s/%s", dirname, de->d_name);
-		if (stat(path, &stb) < 0)
-			continue;
-
-		host->last_used = stb.st_mtime;
-		host->timeout = NSM_TIMEOUT;
-		host->path = strdup(path);
-		host->name = strdup(de->d_name);
-		host->retries = 100; /* force address retry */
-
-		insert_host(host);
-		host = NULL;
-	}
-	closedir(dir);
-
-	if (host)
-		free(host);
-}
-
-/*
- * Insert host into sorted list
+ * Insert host into notification list, sorted by next send time
  */
 static void
 insert_host(struct nsm_host *host)
@@ -691,6 +848,7 @@ insert_host(struct nsm_host *host)
 
 	host->next = *where;
 	*where = host;
+	xlog(D_GENERAL, "Added host %s to notify list", host->name);
 }
 
 /*
@@ -712,84 +870,6 @@ find_host(uint32_t xid)
 	return NULL;
 }
 
-
-/*
- * Retrieve the current NSM state
- */
-static unsigned int
-nsm_get_state(int update)
-{
-	char		newfile[PATH_MAX];
-	int		fd, state;
-
-	if ((fd = open(_SM_STATE_PATH, O_RDONLY)) < 0) {
-		if (!opt_quiet) {
-			nsm_log(LOG_WARNING, "%s: %m", _SM_STATE_PATH);
-			nsm_log(LOG_WARNING, "Creating %s, set initial state 1",
-				_SM_STATE_PATH);
-		}
-		state = 1;
-		update = 1;
-	} else {
-		if (read(fd, &state, sizeof(state)) != sizeof(state)) {
-			nsm_log(LOG_WARNING,
-				"%s: bad file size, setting state = 1",
-				_SM_STATE_PATH);
-			state = 1;
-			update = 1;
-		} else {
-			if (!(state & 1))
-				state += 1;
-		}
-		close(fd);
-	}
-
-	if (update) {
-		state += 2;
-		snprintf(newfile, sizeof(newfile),
-				"%s.new", _SM_STATE_PATH);
-		if ((fd = open(newfile, O_CREAT|O_WRONLY, 0644)) < 0) {
-			nsm_log(LOG_ERR, "Cannot create %s: %m", newfile);
-			exit(1);
-		}
-		if (write(fd, &state, sizeof(state)) != sizeof(state)) {
-			nsm_log(LOG_ERR,
-				"Failed to write state to %s", newfile);
-			exit(1);
-		}
-		close(fd);
-		if (rename(newfile, _SM_STATE_PATH) < 0) {
-			nsm_log(LOG_ERR,
-				"Cannot create %s: %m", _SM_STATE_PATH);
-			exit(1);
-		}
-		sync();
-	}
-
-	return state;
-}
-
-/*
- * Log a message
- */
-static void
-nsm_log(int fac, const char *fmt, ...)
-{
-	va_list	ap;
-
-	if (fac == LOG_DEBUG && !opt_debug)
-		return;
-
-	va_start(ap, fmt);
-	if (log_syslog)
-		vsyslog(fac, fmt, ap);
-	else {
-		vfprintf(stderr, fmt, ap);
-		fputs("\n", stderr);
-	}
-	va_end(ap);
-}
-
 /*
  * Record pid in /var/run/sm-notify.pid
  * This file should remain until a reboot, even if the
@@ -799,61 +879,20 @@ nsm_log(int fac, const char *fmt, ...)
 static int record_pid(void)
 {
 	char pid[20];
+	ssize_t len;
 	int fd;
 
-	snprintf(pid, 20, "%d\n", getpid());
+	(void)snprintf(pid, sizeof(pid), "%d\n", (int)getpid());
 	fd = open("/var/run/sm-notify.pid", O_CREAT|O_EXCL|O_WRONLY, 0600);
 	if (fd < 0)
 		return 0;
-	if (write(fd, pid, strlen(pid)) != strlen(pid))  {
-		nsm_log(LOG_WARNING, "Writing to pid file failed: errno %d(%s)",
-			errno, strerror(errno));
+
+	len = write(fd, pid, strlen(pid));
+	if ((len < 0) || ((size_t)len != strlen(pid))) {
+		xlog_warn("Writing to pid file failed: errno %d (%m)",
+				errno);
 	}
-	close(fd);
+
+	(void)close(fd);
 	return 1;
-}
-
-/* Drop privileges to match owner of state-directory
- * (in case a reply triggers some unknown bug).
- */
-static void drop_privs(void)
-{
-	struct stat st;
-
-	if (stat(_SM_DIR_PATH, &st) == -1 &&
-	    stat(_SM_BASE_PATH, &st) == -1) {
-		st.st_uid = 0;
-		st.st_gid = 0;
-	}
-
-	if (st.st_uid == 0) {
-		nsm_log(LOG_WARNING,
-			"sm-notify running as root. chown %s to choose different user",
-		    _SM_DIR_PATH);
-		return;
-	}
-
-	setgroups(0, NULL);
-	if (setgid(st.st_gid) == -1
-	    || setuid(st.st_uid) == -1) {
-		nsm_log(LOG_ERR, "Fail to drop privileges");
-		exit(1);
-	}
-}
-
-static void set_kernel_nsm_state(int state)
-{
-	int fd;
-	const char *file = "/proc/sys/fs/nfs/nsm_local_state";
-
-	fd = open(file ,O_WRONLY);
-	if (fd >= 0) {
-		char buf[20];
-		snprintf(buf, sizeof(buf), "%d", state);
-		if (write(fd, buf, strlen(buf)) != strlen(buf)) {
-			nsm_log(LOG_WARNING, "Writing to '%s' failed: errno %d (%s)",
-				file, errno, strerror(errno));
-		}
-		close(fd);
-	}
 }

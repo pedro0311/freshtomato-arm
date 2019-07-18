@@ -25,33 +25,22 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <grp.h>
+
 #include "statd.h"
-#include "version.h"
 #include "nfslib.h"
+#include "nfsrpc.h"
+#include "nsm.h"
 
 /* Socket operations */
 #include <sys/types.h>
 #include <sys/socket.h>
-
-/* Added to enable specification of state directory path at run-time
- * j_carlos_gomez@yahoo.com
- */
-
-char * DIR_BASE = DEFAULT_DIR_BASE;
-
-char *  SM_DIR = DEFAULT_SM_DIR;
-char *  SM_BAK_DIR =  DEFAULT_SM_BAK_DIR;
-char *  SM_STAT_PATH = DEFAULT_SM_STAT_PATH;
-
-/* ----- end of state directory path stuff ------- */
 
 int	run_mode = 0;		/* foreground logging mode */
 
 /* LH - I had these local to main, but it seemed silly to have 
  * two copies of each - one in main(), one static in log.c... 
  * It also eliminates the 256-char static in log.c */
-char *name_p = NULL;
-const char *version_p = NULL;
+static char *name_p = NULL;
 
 /* PRC: a high-availability callout program can be specified with -H
  * When this is done, the program will receive callouts whenever clients
@@ -71,11 +60,12 @@ static struct option longopts[] =
 	{ "notify-mode", 0, 0, 'N' },
 	{ "ha-callout", 1, 0, 'H' },
 	{ "no-notify", 0, 0, 'L' },
+	{ "nlm-port", 1, 0, 'T'},
+	{ "nlm-udp-port", 1, 0, 'U'},
 	{ NULL, 0, 0, 0 }
 };
 
 extern void sm_prog_1 (struct svc_req *, register SVCXPRT *);
-static void load_state_number(void);
 
 #ifdef SIMULATIONS
 extern void simulator (int, char **);
@@ -88,11 +78,8 @@ extern void simulator (int, char **);
 static void 
 sm_prog_1_wrapper (struct svc_req *rqstp, register SVCXPRT *transp)
 {
-	struct sockaddr_in *sin = nfs_getrpccaller_in(transp);
-
 	/* remote host authorization check */
-	if (sin->sin_family == AF_INET &&
-	    !check_default("statd", sin, rqstp->rq_proc, SM_PROG)) {
+	if (!check_default("statd", nfs_getrpccaller(transp), SM_PROG)) {
 		svcerr_auth (transp, AUTH_FAILED);
 		return;
 	}
@@ -103,23 +90,27 @@ sm_prog_1_wrapper (struct svc_req *rqstp, register SVCXPRT *transp)
 #define sm_prog_1 sm_prog_1_wrapper
 #endif
 
+static void
+statd_unregister(void) {
+	nfs_svc_unregister(SM_PROG, SM_VERS);
+}
+
 /*
  * Signal handler.
  */
 static void 
 killer (int sig)
 {
-	note (N_FATAL, "Caught signal %d, un-registering and exiting.", sig);
-	pmap_unset (SM_PROG, SM_VERS);
-
-	exit (0);
+	statd_unregister ();
+	xlog(D_GENERAL, "Caught signal %d, un-registering and exiting", sig);
+	exit(0);
 }
 
 static void
 sigusr (int sig)
 {
 	extern void my_svc_exit (void);
-	dprintf (N_DEBUG, "Caught signal %d, re-notifying (state %d).", sig,
+	xlog(D_GENERAL, "Caught signal %d, re-notifying (state %d)", sig,
 								MY_STATE);
 	my_svc_exit();
 }
@@ -140,8 +131,11 @@ static void log_modes(void)
 		strcat(buf,"No-Daemon ");
 	if (run_mode & MODE_LOG_STDERR)
 		strcat(buf,"Log-STDERR ");
+#ifdef HAVE_LIBTIRPC
+	strcat(buf, "TI-RPC ");
+#endif
 
-	note(N_WARNING,buf);
+	xlog_warn(buf);
 }
 
 /*
@@ -175,13 +169,12 @@ static void create_pidfile(void)
 	unlink(pidfile);
 	fp = fopen(pidfile, "w");
 	if (!fp)
-		die("Opening %s failed: %s\n",
-		    pidfile, strerror(errno));
+		xlog_err("Opening %s failed: %m\n", pidfile);
 	fprintf(fp, "%d\n", getpid());
 	pidfd = dup(fileno(fp));
 	if (fclose(fp) < 0) {
-		note(N_WARNING, "Flushing pid file failed: errno %d (%s)\n",
-			errno, strerror(errno));
+		xlog_warn("Flushing pid file failed: errno %d (%m)\n",
+			errno);
 	}
 }
 
@@ -189,41 +182,9 @@ static void truncate_pidfile(void)
 {
 	if (pidfd >= 0) {
 		if (ftruncate(pidfd, 0) < 0) {
-			note(N_WARNING, "truncating pid file failed: errno %d (%s)\n",
-				errno, strerror(errno));
+			xlog_warn("truncating pid file failed: errno %d (%m)\n",
+				errno);
 		}
-	}
-}
-
-static void drop_privs(void)
-{
-	struct stat st;
-
-	if (stat(SM_DIR, &st) == -1 &&
-	    stat(DIR_BASE, &st) == -1) {
-		st.st_uid = 0;
-		st.st_gid = 0;
-	}
-
-	if (st.st_uid == 0) {
-		note(N_WARNING, "statd running as root. chown %s to choose different user\n",
-		    SM_DIR);
-		return;
-	}
-	/* better chown the pid file before dropping, as if it
-	 * if over nfs we might loose access
-	 */
-	if (pidfd >= 0) {
-		if (fchown(pidfd, st.st_uid, st.st_gid) < 0) {
-			note(N_ERROR, "Unable to change owner of %s: %d (%s)",
-					SM_DIR, strerror (errno));
-		}
-	}
-	setgroups(0, NULL);
-	if (setgid(st.st_gid) == -1
-	    || setuid(st.st_uid) == -1) {
-		note(N_ERROR, "Fail to drop privileges");
-		exit(1);
 	}
 }
 
@@ -250,7 +211,32 @@ static void run_sm_notify(int outport)
 	exit(2);
 
 }
-/* 
+
+static void set_nlm_port(char *type, int port)
+{
+	char nbuf[20];
+	char pathbuf[40];
+	int fd;
+	if (!port)
+		return;
+	snprintf(nbuf, sizeof(nbuf), "%d", port);
+	snprintf(pathbuf, sizeof(pathbuf), "/proc/sys/fs/nfs/nlm_%sport", type);
+	fd = open(pathbuf, O_WRONLY);
+	if (fd < 0 && errno == ENOENT) {
+		/* probably module not loaded */
+		system("modprobe lockd");
+		fd = open(pathbuf, O_WRONLY);
+	}
+	if (fd >= 0) {
+		if (write(fd, nbuf, strlen(nbuf)) != (ssize_t)strlen(nbuf))
+			fprintf(stderr, "%s: fail to set NLM %s port: %m\n",
+				name_p, type);
+		close(fd);
+	} else
+		fprintf(stderr, "%s: failed to open %s: %m\n", name_p, pathbuf);
+}
+
+/*
  * Entry routine/main loop.
  */
 int main (int argc, char **argv)
@@ -259,13 +245,16 @@ int main (int argc, char **argv)
 	int pid;
 	int arg;
 	int port = 0, out_port = 0;
+	int nlm_udp = 0, nlm_tcp = 0;
 	struct rlimit rlim;
-
-	int pipefds[2] = { -1, -1};
-	char status;
+	int notify_sockfd;
 
 	/* Default: daemon mode, no other options */
 	run_mode = 0;
+
+	/* Log to stderr if there's an error during startup */
+	xlog_stderr(1);
+	xlog_syslog(0);
 
 	/* Set the basename */
 	if ((name_p = strrchr(argv[0],'/')) != NULL) {
@@ -274,22 +263,15 @@ int main (int argc, char **argv)
 		name_p = argv[0];
 	}
 
-	/* Get the version */
-	if ((version_p = strrchr(VERSION,' ')) != NULL) {
-		version_p++;
-	} else {
-		version_p = VERSION;
-	}
-	
 	/* Set hostname */
 	MY_NAME = NULL;
 
 	/* Process command line switches */
-	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:L", longopts, NULL)) != EOF) {
+	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:LT:U:", longopts, NULL)) != EOF) {
 		switch (arg) {
 		case 'V':	/* Version */
 		case 'v':
-			printf("%s version %s\n",name_p,version_p);
+			printf("%s version " VERSION "\n",name_p);
 			exit(0);
 		case 'F':	/* Foreground/nodaemon mode */
 			run_mode |= MODE_NODAEMON;
@@ -321,39 +303,33 @@ int main (int argc, char **argv)
 				exit(1);
 			}
 			break;
+		case 'T': /* NLM TCP and UDP port */
+			nlm_tcp = atoi(optarg);
+			if (nlm_tcp < 1 || nlm_tcp > 65535) {
+				fprintf(stderr, "%s: bad nlm port number: %s\n",
+					argv[0], optarg);
+				usage();
+				exit(1);
+			}
+			if (nlm_udp == 0)
+				nlm_udp = nlm_tcp;
+			break;
+		case 'U': /* NLM  UDP port */
+			nlm_udp = atoi(optarg);
+			if (nlm_udp < 1 || nlm_udp > 65535) {
+				fprintf(stderr, "%s: bad nlm UDP port number: %s\n",
+					argv[0], optarg);
+				usage();
+				exit(1);
+			}
+			break;
 		case 'n':	/* Specify local hostname */
 			run_mode |= STATIC_HOSTNAME;
 			MY_NAME = xstrdup(optarg);
 			break;
 		case 'P':
-
-			if ((DIR_BASE = xstrdup(optarg)) == NULL) {
-				fprintf(stderr, "%s: xstrdup(%s) failed!\n",
-					argv[0], optarg);
+			if (!nsm_setup_pathnames(argv[0], optarg))
 				exit(1);
-			}
-
-			SM_DIR = xmalloc(strlen(DIR_BASE) + 1 + sizeof("sm"));
-			SM_BAK_DIR = xmalloc(strlen(DIR_BASE) + 1 + sizeof("sm.bak"));
-			SM_STAT_PATH = xmalloc(strlen(DIR_BASE) + 1 + sizeof("state"));
-
-			if ((SM_DIR == NULL) 
-			    || (SM_BAK_DIR == NULL) 
-			    || (SM_STAT_PATH == NULL)) {
-
-				fprintf(stderr, "%s: xmalloc() failed!\n",
-					argv[0]);
-				exit(1);
-			}
-			if (DIR_BASE[strlen(DIR_BASE)-1] == '/') {
-				sprintf(SM_DIR, "%ssm", DIR_BASE );
-				sprintf(SM_BAK_DIR, "%ssm.bak", DIR_BASE );
-				sprintf(SM_STAT_PATH, "%sstate", DIR_BASE );
-			} else {
-				sprintf(SM_DIR, "%s/sm", DIR_BASE );
-				sprintf(SM_BAK_DIR, "%s/sm.bak", DIR_BASE );
-				sprintf(SM_STAT_PATH, "%s/state", DIR_BASE );
-			}
 			break;
 		case 'H': /* PRC: specify the ha-callout program */
 			if ((ha_callout_prog = xstrdup(optarg)) == NULL) {
@@ -372,6 +348,12 @@ int main (int argc, char **argv)
 		}
 	}
 
+	/* Refuse to start if another statd is running */
+	if (nfs_probe_statd()) {
+		fprintf(stderr, "Statd service already running!\n");
+		exit(1);
+	}
+
 	if (port == out_port && port != 0) {
 		fprintf(stderr, "Listening and outgoing ports cannot be the same!\n");
 		exit(-1);
@@ -382,7 +364,6 @@ int main (int argc, char **argv)
 			name_p);
 		run_sm_notify(out_port);
 	}
-
 
 	if (!(run_mode & MODE_NODAEMON)) {
 		run_mode &= ~MODE_LOG_STDERR;	/* Never log to console in
@@ -404,58 +385,28 @@ int main (int argc, char **argv)
 		}
 	}
 
+	set_nlm_port("tcp", nlm_tcp);
+	set_nlm_port("udp", nlm_udp);
+
 #ifdef SIMULATIONS
 	if (argc > 1)
 		/* LH - I _really_ need to update simulator... */
 		simulator (--argc, ++argv);	/* simulator() does exit() */
 #endif
-	
-	if (!(run_mode & MODE_NODAEMON)) {
-		int tempfd;
 
-		if (pipe(pipefds)<0) {
-			perror("statd: unable to create pipe");
-			exit(1);
-		}
-		if ((pid = fork ()) < 0) {
-			perror ("statd: Could not fork");
-			exit (1);
-		} else if (pid != 0) {
-			/* Parent.
-			 * Wait for status from child.
-			 */
-			close(pipefds[1]);
-			if (read(pipefds[0], &status, 1) != 1)
-				exit(1);
-			exit (0);
-		}
-		/* Child.	*/
-		close(pipefds[0]);
-		setsid ();
-		if (chdir (DIR_BASE) == -1) {
-			perror("statd: Could not chdir");
-			exit(1);
-		}
+	daemon_init((run_mode & MODE_NODAEMON));
 
-		while (pipefds[1] <= 2) {
-			pipefds[1] = dup(pipefds[1]);
-			if (pipefds[1]<0) {
-				perror("statd: dup");
-				exit(1);
-			}
-		}
-		tempfd = open("/dev/null", O_RDWR);
-		dup2(tempfd, 0);
-		dup2(tempfd, 1);
-		dup2(tempfd, 2);
-		dup2(pipefds[1], 3);
-		pipefds[1] = 3;
-		closeall(4);
+	if (run_mode & MODE_LOG_STDERR) {
+		xlog_syslog(0);
+		xlog_stderr(1);
+		xlog_config(D_ALL, 1);
+	} else {
+		xlog_syslog(1);
+		xlog_stderr(0);
 	}
 
-	/* Child. */
-
-	log_init (/*name_p,version_p*/);
+	xlog_open(name_p);
+	xlog(L_NOTICE, "Version " VERSION " starting");
 
 	log_modes();
 
@@ -487,7 +438,7 @@ int main (int argc, char **argv)
 		}
 
 	/* Make sure we have a privilege port for calling into the kernel */
-	if (statd_get_socket() < 0)
+	if ((notify_sockfd = statd_get_socket()) < 0)
 		exit(1);
 
 	/* If sm-notify didn't take all the state files, load
@@ -495,31 +446,46 @@ int main (int argc, char **argv)
 	 * pass on any SM_NOTIFY that arrives
 	 */
 	load_state();
-	load_state_number();
-	pmap_unset (SM_PROG, SM_VERS);
 
-	/* this registers both UDP and TCP services */
-	rpc_init("statd", SM_PROG, SM_VERS, sm_prog_1, port);
+	MY_STATE = nsm_get_state(0);
+	if (MY_STATE == 0)
+		exit(1);
+	xlog(D_GENERAL, "Local NSM state number: %d", MY_STATE);
+	nsm_update_kernel_state(MY_STATE);
 
-	/* If we got this far, we have successfully started, so notify parent */
-	if (pipefds[1] > 0) {
-		status = 0;
-		if (write(pipefds[1], &status, 1) != 1) {
-			note(N_WARNING, "writing to parent pipe failed: errno %d (%s)\n",
-				errno, strerror(errno));
-		}
-		close(pipefds[1]);
-		pipefds[1] = -1;
+	/*
+	 * ORDER
+	 * Clear old listeners while still root, to override any
+	 * permission checking done by rpcbind.
+	 */
+	statd_unregister();
+
+	/*
+	 * ORDER
+	 */
+	if (!nsm_drop_privileges(pidfd))
+		exit(1);
+
+	/*
+	 * ORDER
+	 * Create RPC listeners after dropping privileges.  This permits
+	 * statd to unregister its own listeners when it exits.
+	 */
+	if (nfs_svc_create("statd", SM_PROG, SM_VERS, sm_prog_1, port) == 0) {
+		xlog(L_ERROR, "failed to create RPC listeners, exiting");
+		exit(1);
 	}
+	atexit(statd_unregister);
 
-	drop_privs();
+	/* If we got this far, we have successfully started */
+	daemon_ready();
 
 	for (;;) {
 		/*
 		 * Handle incoming requests:  SM_NOTIFY socket requests, as
 		 * well as callbacks from lockd.
 		 */
-		my_svc_run();	/* I rolled my own, Olaf made it better... */
+		my_svc_run(notify_sockfd);	/* I rolled my own, Olaf made it better... */
 
 		/* Only get here when simulating a crash so we should probably
 		 * start sm-notify running again.  As we have already dropped
@@ -540,30 +506,4 @@ int main (int argc, char **argv)
 
 	}
 	return 0;
-}
-
-static void
-load_state_number(void)
-{
-	int fd;
-	const char *file = "/proc/sys/fs/nfs/nsm_local_state";
-
-	if ((fd = open(SM_STAT_PATH, O_RDONLY)) == -1)
-		return;
-
-	if (read(fd, &MY_STATE, sizeof(MY_STATE)) != sizeof(MY_STATE)) {
-		note(N_WARNING, "Unable to read state from '%s': errno %d (%s)",
-				SM_STAT_PATH, errno, strerror(errno));
-	}
-	close(fd);
-	fd = open(file, O_WRONLY);
-	if (fd >= 0) {
-		char buf[20];
-		snprintf(buf, sizeof(buf), "%d", MY_STATE);
-		if (write(fd, buf, strlen(buf)) != strlen(buf))
-			note(N_WARNING, "Writing to '%s' failed: errno %d (%s)",
-				file, errno, strerror(errno));
-		close(fd);
-	}
-
 }

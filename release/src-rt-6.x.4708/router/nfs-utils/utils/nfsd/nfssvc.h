@@ -16,12 +16,15 @@
  *
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
+void	nfssvc_mount_nfsdfs(char *progname);
 int	nfssvc_inuse(void);
-int	nfssvc_set_sockets(const int family, const unsigned int protobits,
+int	nfssvc_set_sockets(const unsigned int protobits,
 			   const char *host, const char *port);
-void	nfssvc_setvers(unsigned int ctlbits, int minorvers4);
+void	nfssvc_set_time(const char *type, const int seconds);
+int	nfssvc_set_rdmaport(const char *port);
+void	nfssvc_setvers(unsigned int ctlbits, unsigned int minorvers4, unsigned int minorvers4set);
 int	nfssvc_threads(unsigned short port, int nrservs);

@@ -1,0 +1,52 @@
+#!/bin/sh
+
+PID=$$
+LOGS="logger -t nfs.rc[$PID]"
+
+[ "$(nvram get nfs_enable)" -eq 0 ] && {
+	$LOGS Stopping NFS Server ...
+
+	/usr/bin/killall portmap 2>/dev/null
+	/usr/bin/killall statd 2>/dev/null
+	/usr/bin/killall nfsd 2>/dev/null
+	/usr/bin/killall mountd 2>/dev/null
+
+	$LOGS NFS Server stopped
+} || {
+	$LOGS Starting NFS Server ...
+
+	[ ! -d /var/lib/nfs/sm ] && {
+		mkdir -p /var/lib/nfs/sm
+	}
+
+	[ -z "$(pidof portmap)" ] && {
+		$LOGS portmap ON
+		portmap
+	}
+
+	sleep 1
+
+	[ -z "$(pidof statd)" ] && {
+		$LOGS statd ON
+		statd
+	}
+
+	sleep 2
+
+	$LOGS exportfs ON
+	exportfs -r
+
+	[ -z "$(pidof nfsd)" ] && {
+		$LOGS nfsd ON
+		nfsd
+	}
+
+	sleep 1
+
+	[ -z "$(pidof mountd)" ] && {
+		$LOGS mountd ON
+		mountd
+	}
+
+	$LOGS NFS Server started
+}

@@ -29,8 +29,7 @@ xmalloc (size_t size)
     return ((void *)NULL);
 
   if (!(ptr = malloc (size)))
-    /* SHIT!  SHIT!  SHIT! */
-    die ("malloc failed");
+    xlog_err ("malloc failed");
 
   return (ptr);
 }
@@ -46,32 +45,7 @@ xstrdup (const char *string)
 
   /* Will only fail if underlying malloc() fails (ENOMEM). */
   if (!(result = strdup (string)))
-    die ("strdup failed");
+    xlog_err ("strdup failed");
 
   return (result);
-}
-
-
-/*
- * Unlinking a file.
- */
-void
-xunlink (char *path, char *host)
-{
-	char *tozap;
-
-	tozap = malloc(strlen(path)+strlen(host)+2);
-	if (tozap == NULL) {
-		note(N_ERROR, "xunlink: malloc failed: errno %d (%s)", 
-			errno, strerror(errno));
-		return;
-	}
-	sprintf (tozap, "%s/%s", path, host);
-
-	if (unlink (tozap) == -1)
-		note(N_ERROR, "unlink (%s): %s", tozap, strerror (errno));
-	else
-		dprintf (N_DEBUG, "Unlinked %s", tozap);
-
-	free(tozap);
 }

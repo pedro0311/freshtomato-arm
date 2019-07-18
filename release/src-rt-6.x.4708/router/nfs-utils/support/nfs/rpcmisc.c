@@ -39,7 +39,7 @@
 
 #define _RPCSVC_CLOSEDOWN	120
 int	_rpcpmstart = 0;
-int	_rpcfdtype = 0;
+unsigned int _rpcprotobits = (NFSCTL_UDPBIT|NFSCTL_TCPBIT);
 int	_rpcsvcdirty = 0;
 
 static void
@@ -51,7 +51,7 @@ closedown(int sig)
 		static int size;
 		int i, openfd;
 
-		if (_rpcfdtype == SOCK_DGRAM)
+		if (NFSCTL_TCPISSET(_rpcprotobits) == 0)
 			exit(0);
 
 		if (size == 0)
@@ -104,7 +104,7 @@ makesock(int port, int proto)
 		return -1;
 	}
 
-	return sock;
+	return svcsock_nonblock(sock);
 }
 
 void
@@ -130,7 +130,16 @@ rpc_init(char *name, int prog, int vers,
 		 * listen will fail on a connected TCP socket(passed by rsh).
 		 */
 		if (!(fdtype == SOCK_STREAM && listen(0,5) == -1)) {
-			_rpcfdtype = fdtype;
+			switch(fdtype) {
+			case SOCK_DGRAM:
+				NFSCTL_UDPSET(_rpcprotobits);
+				break;
+			case SOCK_STREAM:
+				NFSCTL_TCPSET(_rpcprotobits);
+				break;
+			default:
+				xlog(L_FATAL, "getsockopt returns bad socket type: %d", fdtype);
+			}
 			_rpcpmstart = 1;
 		}
 	}
@@ -139,7 +148,7 @@ rpc_init(char *name, int prog, int vers,
 		sock = RPC_ANYSOCK;
 	}
 
-	if ((_rpcfdtype == 0) || (_rpcfdtype == SOCK_DGRAM)) {
+	if (NFSCTL_UDPISSET(_rpcprotobits)) {
 		static SVCXPRT *last_transp = NULL;
 
 		if (_rpcpmstart == 0) {
@@ -154,7 +163,7 @@ rpc_init(char *name, int prog, int vers,
 				sock = makesock(defport, IPPROTO_UDP);
 		}
 		if (sock == RPC_ANYSOCK)
-			sock = svcudp_socket (prog, 1);
+			sock = svcudp_socket (prog);
 		transp = svcudp_create(sock);
 		if (transp == NULL) {
 			xlog(L_FATAL, "cannot create udp service.");
@@ -167,7 +176,7 @@ rpc_init(char *name, int prog, int vers,
 		last_transp = transp;
 	}
 
-	if ((_rpcfdtype == 0) || (_rpcfdtype == SOCK_STREAM)) {
+	if (NFSCTL_TCPISSET(_rpcprotobits)) {
 		static SVCXPRT *last_transp = NULL;
 
 		if (_rpcpmstart == 0) {
