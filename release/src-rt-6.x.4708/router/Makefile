@@ -2433,23 +2433,23 @@ libnfsidmap-install:
 	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
 
 portmap/stamp-h1:
+	$(call patch_files,portmap)
 	cd portmap \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB) RPCUSER="nobody"
+	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB)
 	touch portmap/stamp-h1
 
 portmap: portmap/stamp-h1
 	@$(SEP)
-	$(MAKE) -C portmap $(PARALLEL_BUILD)
+	$(MAKE) -C portmap CFLAGS="-Os -Wall $(EXTRACFLAGS)" NO_TCP_WRAPPER=y RPCUSER=nobody $(PARALLEL_BUILD)
+
+portmap-install:
+	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
 
 portmap-clean:
 	-@$(MAKE) -C portmap clean
 	@rm -f portmap/stamp-h1
-
-portmap-install:
-	install -d $(INSTALLDIR)/portmap/usr/sbin
-	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
-	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(call unpatch_files,portmap)
 
 e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
