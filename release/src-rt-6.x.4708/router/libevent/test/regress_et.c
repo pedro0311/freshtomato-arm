@@ -26,19 +26,19 @@
 #include "../util-internal.h"
 #include "event2/event-config.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef _EVENT_HAVE_SYS_SOCKET_H
+#ifdef EVENT__HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/time.h>
 #include <unistd.h>
 #endif
@@ -75,23 +75,14 @@ read_cb(evutil_socket_t fd, short event, void *arg)
 		event_del(arg);
 }
 
-#ifndef SHUT_WR
-#define SHUT_WR 1
-#endif
-
-#ifdef WIN32
-#define LOCAL_SOCKETPAIR_AF AF_INET
-#else
-#define LOCAL_SOCKETPAIR_AF AF_UNIX
-#endif
-
 static void
-test_edgetriggered(void *et)
+test_edgetriggered(void *data_)
 {
+	struct basic_test_data *data = data_;
+	struct event_base *base = data->base;
+	evutil_socket_t *pair = data->pair;
 	struct event *ev = NULL;
-	struct event_base *base = NULL;
 	const char *test = "test string";
-	evutil_socket_t pair[2] = {-1,-1};
 	int supports_et;
 
 	/* On Linux 3.2.1 (at least, as patched by Fedora and tested by Nick),
@@ -100,23 +91,11 @@ test_edgetriggered(void *et)
 	 * get edge-triggered behavior.  Yuck!  Linux 3.1.9 didn't have this
 	 * problem.
 	 */
-#ifdef __linux__
-	if (evutil_ersatz_socketpair(AF_INET, SOCK_STREAM, 0, pair) == -1) {
-		tt_abort_perror("socketpair");
-	}
-#else
-	if (evutil_socketpair(LOCAL_SOCKETPAIR_AF, SOCK_STREAM, 0, pair) == -1) {
-		tt_abort_perror("socketpair");
-	}
-#endif
 
 	called = was_et = 0;
 
 	tt_int_op(send(pair[0], test, (int)strlen(test)+1, 0), >, 0);
-	shutdown(pair[0], SHUT_WR);
-
-	/* Initalize the event library */
-	base = event_base_new();
+	tt_int_op(shutdown(pair[0], EVUTIL_SHUT_WR), ==, 0);
 
 	supports_et = base_supports_et(base);
 	TT_BLATHER(("Checking for edge-triggered events with %s, which should %s"
@@ -125,8 +104,8 @@ test_edgetriggered(void *et)
 
 	/* Initalize one event */
 	ev = event_new(base, pair[1], EV_READ|EV_ET|EV_PERSIST, read_cb, &ev);
-
-	event_add(ev, NULL);
+	tt_assert(ev != NULL);
+	tt_int_op(event_add(ev, NULL), ==, 0);
 
 	/* We're going to call the dispatch function twice.  The first invocation
 	 * will read a single byte from pair[1] in either case.  If we're edge
@@ -135,8 +114,8 @@ test_edgetriggered(void *et)
 	 * do nothing.  If we're level triggered, the second invocation of
 	 * event_base_loop will also activate the event (because there's still
 	 * data to read). */
-	event_base_loop(base,EVLOOP_NONBLOCK|EVLOOP_ONCE);
-	event_base_loop(base,EVLOOP_NONBLOCK|EVLOOP_ONCE);
+	tt_int_op(event_base_loop(base,EVLOOP_NONBLOCK|EVLOOP_ONCE), ==, 0);
+	tt_int_op(event_base_loop(base,EVLOOP_NONBLOCK|EVLOOP_ONCE), ==, 0);
 
 	if (supports_et) {
 		tt_int_op(called, ==, 1);
@@ -146,15 +125,11 @@ test_edgetriggered(void *et)
 		tt_assert(!was_et);
 	}
 
- end:
+end:
 	if (ev) {
 		event_del(ev);
 		event_free(ev);
 	}
-	if (base)
-		event_base_free(base);
-	evutil_closesocket(pair[0]);
-	evutil_closesocket(pair[1]);
 }
 
 static void
@@ -164,12 +139,13 @@ test_edgetriggered_mix_error(void *data_)
 	struct event_base *base = NULL;
 	struct event *ev_et=NULL, *ev_lt=NULL;
 
-#ifdef _EVENT_DISABLE_DEBUG_MODE
+#ifdef EVENT__DISABLE_DEBUG_MODE
 	if (1)
 		tt_skip();
 #endif
 
-	event_enable_debug_mode();
+	if (!libevent_tests_running_in_debug_mode)
+		event_enable_debug_mode();
 
 	base = event_base_new();
 
@@ -233,7 +209,7 @@ test_edge_triggered_multiple_events(void *data_)
 	struct event *write_ev = NULL;
 	const char c = 'A';
 	struct event_base *base = data->base;
-	int *pair = data->pair;
+	evutil_socket_t *pair = data->pair;
 
 	if (!base_supports_et(base)) {
 		tt_skip();
@@ -284,7 +260,8 @@ end:
 }
 
 struct testcase_t edgetriggered_testcases[] = {
-	{ "et", test_edgetriggered, TT_FORK, NULL, NULL },
+	{ "et", test_edgetriggered,
+	  TT_FORK|TT_NEED_BASE|TT_NEED_SOCKETPAIR, &basic_setup, NULL },
 	{ "et_mix_error", test_edgetriggered_mix_error,
 	  TT_FORK|TT_NEED_SOCKETPAIR|TT_NO_LOGS, &basic_setup, NULL },
 	{ "et_multiple_events", test_edge_triggered_multiple_events,

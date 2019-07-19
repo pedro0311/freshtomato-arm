@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2000-2007 Niels Provos <provos@citi.umich.edu>
  * Copyright (c) 2007-2012 Niels Provos and Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,22 +23,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _EVRPC_H_
-#define _EVRPC_H_
+#ifndef EVENT1_EVUTIL_H_INCLUDED_
+#define EVENT1_EVUTIL_H_INCLUDED_
 
-/** @file evrpc.h
+/** @file evutil.h
 
-  An RPC system for Libevent.
+  Utility and compatibility functions for Libevent.
 
-  The <evrpc.h> header is deprecated in Libevent 2.0 and later; please
-  use <event2/rpc.h> instead.  Depending on what functionality you
-  need, you may also want to include more of the other <event2/...>
-  headers.
- */
+  The <evutil.h> header is deprecated in Libevent 2.0 and later; please
+  use <event2/util.h> instead.
+*/
 
-#include <event.h>
-#include <event2/rpc.h>
-#include <event2/rpc_struct.h>
-#include <event2/rpc_compat.h>
+#include <event2/util.h>
 
-#endif /* _EVRPC_H_ */
+#endif /* EVENT1_EVUTIL_H_INCLUDED_ */
