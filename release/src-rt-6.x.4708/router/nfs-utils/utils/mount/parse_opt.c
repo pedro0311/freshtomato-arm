@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -98,6 +98,37 @@ static struct mount_option *option_create(char *str)
 
 fail:
 	free(option);
+	return NULL;
+}
+
+static struct mount_option *option_dup(const struct mount_option *option)
+{
+	struct mount_option *new;
+
+	new = malloc(sizeof(*new));
+	if (!new)
+		return NULL;
+	
+	new->next = NULL;
+	new->prev = NULL;
+
+	new->keyword = strdup(option->keyword);
+	if (!new->keyword)
+		goto fail;
+
+	new->value = NULL;
+	if (option->value) {
+		new->value = strdup(option->value);
+		if (!new->value) {
+			free(new->keyword);
+			goto fail;
+		}
+	}
+
+	return new;
+
+fail:
+	free(new);
 	return NULL;
 }
 
@@ -229,6 +260,40 @@ fail:
 }
 
 /**
+ * po_dup - duplicate an existing list of options
+ * @options: pointer to mount options
+ *
+ */
+struct mount_options *po_dup(struct mount_options *source)
+{
+	struct mount_options *target;
+	struct mount_option *current;
+
+	if (!source)
+		return NULL;
+
+	target = options_create();
+	if (options_empty(source) || target == NULL)
+		return target;
+
+	current = source->head;
+	while (target->count < source->count) {
+		struct mount_option *option;
+
+		option = option_dup(current);
+		if (!option) {
+			po_destroy(target);
+			return NULL;
+		}
+
+		options_tail_insert(target, option);
+		current = current->next;
+	}
+
+	return target;
+}
+
+/**
  * po_replace - replace mount options in one mount_options object with another
  * @target: pointer to previously instantiated object to replace
  * @source: pointer to object containing source mount options
@@ -326,7 +391,7 @@ po_return_t po_append(struct mount_options *options, char *str)
 }
 
 /**
- * po_contains - check for presense of an option in a group
+ * po_contains - check for presence of an option in a group
  * @options: pointer to mount options
  * @keyword: pointer to a C string containing option keyword for which to search
  *
@@ -339,6 +404,30 @@ po_found_t po_contains(struct mount_options *options, char *keyword)
 		for (option = options->head; option; option = option->next)
 			if (strcmp(option->keyword, keyword) == 0)
 				return PO_FOUND;
+	}
+
+	return PO_NOT_FOUND;
+}
+
+/**
+ * po_contains_prefix - check for presence of an option matching a prefix
+ * @options: pointer to mount options
+ * @prefix: pointer to prefix to match against a keyword
+ * @keyword: pointer to a C string containing the option keyword if found
+ *
+ * On success, *keyword contains the pointer of the matching option's keyword.
+ */
+po_found_t po_contains_prefix(struct mount_options *options,
+								const char *prefix, char **keyword)
+{
+	struct mount_option *option;
+
+	if (options && prefix) {
+		for (option = options->head; option; option = option->next)
+			if (strncmp(option->keyword, prefix, strlen(prefix)) == 0) {
+				*keyword = option->keyword;
+				return PO_FOUND;
+			}
 	}
 
 	return PO_NOT_FOUND;
@@ -443,7 +532,7 @@ po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *va
 int po_rightmost(struct mount_options *options, const char *keys[])
 {
 	struct mount_option *option;
-	unsigned int i;
+	int i;
 
 	if (options) {
 		for (option = options->tail; option; option = option->prev) {

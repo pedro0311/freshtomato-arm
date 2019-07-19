@@ -34,64 +34,66 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <gssapi/gssapi.h>
+#include <event.h>
+#include <stdbool.h>
+#include <pthread.h>
 
-#define MAX_FILE_NAMELEN	32
-#define FD_ALLOC_BLOCK		256
 #ifndef GSSD_PIPEFS_DIR
 #define GSSD_PIPEFS_DIR		"/var/lib/nfs/rpc_pipefs"
 #endif
-#define INFO			"info"
-#define KRB5			"krb5"
 #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
 
 #define GSSD_DEFAULT_CRED_DIR			"/tmp"
-#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc_"
+#define GSSD_USER_CRED_DIR			"/run/user/%U"
+#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc"
 #define GSSD_DEFAULT_MACHINE_CRED_SUFFIX	"machine"
 #define GSSD_DEFAULT_KEYTAB_FILE		"/etc/krb5.keytab"
 #define GSSD_SERVICE_NAME			"nfs"
-#define GSSD_SERVICE_NAME_LEN			3
-#define GSSD_MAX_CCACHE_SEARCH			16
-
+#define RPC_CHAN_BUF_SIZE			32768
 /*
  * The gss mechanisms that we can handle
  */
-enum {AUTHTYPE_KRB5, AUTHTYPE_SPKM3, AUTHTYPE_LIPKEY};
+enum {AUTHTYPE_KRB5, AUTHTYPE_LIPKEY};
 
-
-
-extern char			pipefs_dir[PATH_MAX];
-extern char			pipefs_nfsdir[PATH_MAX];
-extern char			keytabfile[PATH_MAX];
-extern char			*ccachesearch[];
+extern char		       *keytabfile;
+extern char		      **ccachesearch;
 extern int			use_memcache;
 extern int			root_uses_machine_creds;
 extern unsigned int 		context_timeout;
+extern unsigned int rpc_timeout;
 extern char			*preferred_realm;
-
-TAILQ_HEAD(clnt_list_head, clnt_info) clnt_list;
+extern pthread_mutex_t ple_lock;
+extern pthread_cond_t pcond;
+extern pthread_mutex_t pmutex;
+extern int thread_started;
 
 struct clnt_info {
 	TAILQ_ENTRY(clnt_info)	list;
-	char			*dirname;
-	int			dir_fd;
+	int			wd;
+	bool			scanned;
+	char			*name;
+	char			*relpath;
 	char			*servicename;
 	char			*servername;
 	int			prog;
 	int			vers;
 	char			*protocol;
 	int			krb5_fd;
-	int			krb5_poll_index;
-	int			spkm3_fd;
-	int			spkm3_poll_index;
-	int			port;
+	struct event		krb5_ev;
+	int			gssd_fd;
+	struct event		gssd_ev;
+	struct			sockaddr_storage addr;
 };
 
-void init_client_list(void);
-int update_client_list(void);
-void handle_krb5_upcall(struct clnt_info *clp);
-void handle_spkm3_upcall(struct clnt_info *clp);
-int gssd_acquire_cred(char *server_name);
-void gssd_run(void);
+struct clnt_upcall_info {
+	struct clnt_info 	*clp;
+	char			lbuf[RPC_CHAN_BUF_SIZE];
+	int			lbuflen;
+	uid_t			uid;
+};
+
+void handle_krb5_upcall(struct clnt_upcall_info *clp);
+void handle_gssd_upcall(struct clnt_upcall_info *clp);
 
 
 #endif /* _RPC_GSSD_H_ */

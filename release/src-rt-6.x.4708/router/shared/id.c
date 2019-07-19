@@ -44,7 +44,9 @@ EA6500v1            BCM4706               0xC617       ${serno}  0x1103    0x000
 EA6400		    BCM4708		  0x0646	01	 0x1100	   0x0110	0:devid=0x43A9
 EA6500v2	    BCM4708		  0xF646	01	 0x1100	   0x0110	0:devid=0x4332
 EA6700		    BCM4708		  0xF646	01	 0x1100	   0x0110	0:devid=0x4332
-EA6900		    BCM4708		  0xD646	01	 0x1100	   0x0110	
+EA6900		    BCM4708		  0xD646	01	 0x1100	   0x0110
+EA6200		    BCM4708		  0xE646	20130125	0x1100
+EA6350v1	    BCM4708		  0xE646	20140309	0x1200	   0x00000110	0:devid=0x43A9
 
 WHR-G54S            BCM5352E              0x467        00        0x13      0x2758      melco_id=30182
 WHR-HP-G54S         BCM5352E              0x467        00        0x13      0x2758      melco_id=30189
@@ -77,6 +79,8 @@ ZTE H618B			HW_BCM5354G           0x048e     1105        0x35      0x0750
 Tenda N60                      BCM47186              0x052B       60        0x1400    0x00000710 //8MB/64MB/2.4/5G/USB
 Tenda N6                       BCM5357               0x0550       6         0x1444    0x710 //8MB/64MB/2.4/5G/USB
 TENDA W1800R                   HW_BCM4706            0x05d8       18/21(EU)/60(CN)   0x1200  0x00000110
+Tenda AC15			BCM4708               0x0646       30        0x1100 //model=AC15V1.0
+Tenda AC18			BCM4708               0x0646       30        0x1100 //model=AC18V1.0
 
 TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 
@@ -233,6 +237,7 @@ int check_hw_type(void)
 	case 0x0665:	/* R7000,R1D */
 	case 0xf646:	/* EA6700,WZR-1750, R6400 */
 	case 0xd646:	/* EA6900 */
+	case 0xe646:	/* EA6200, EA6350v1 */
 		return HW_BCM4708;
 #endif
 	}
@@ -376,11 +381,14 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;  //rev c same as rev a/b but different boardrev
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "1234"))) return MODEL_WS880;
+		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20140309"))) return MODEL_EA6350v1;
+		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20130125"))) return MODEL_EA6350v1; /* EA6200 --> same like EA6350v1, AC1200 class router */
 		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6400;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6700;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "00"))) return MODEL_WZR1750;
 		if ((nvram_match("boardtype","0xD646")) && (nvram_match("boardrev", "0x1100"))) return MODEL_EA6900;
-		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("1:boardnum", "AC155g"))) return MODEL_AC15;//Fallback to Tenda AC15
+		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "AC15V1.0"))) return MODEL_AC15; /* Tenda AC15 */
+		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "AC18V1.0"))) return MODEL_AC18; /* Tenda AC18 */
 	}
 #endif
 	switch (strtoul(nvram_safe_get("boardnum"), NULL, 0)) {

@@ -87,9 +87,20 @@ int buttons_main(int argc, char *argv[])
 		wlan_mask = 1 << 15; /* wifi button (active LOW) */
 		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
+	case MODEL_AC18:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		wlan_mask = 1 << 15; /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
+		break;
 	case MODEL_WS880:
 		reset_mask = 1 << 2;
 		ses_mask = 1 << 3;
+		ses_led = LED_AOSS;
+		break;
+	case MODEL_EA6350v1:
+		ses_mask = 1 << 7;
+		reset_mask = 1 << 11;
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_EA6400:
@@ -213,9 +224,10 @@ int buttons_main(int argc, char *argv[])
 
 			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 
-			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15/AC18) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
 			    ((model == MODEL_AC15) ||
+			     (model == MODEL_AC18) ||
 			     (model == MODEL_RTN18U) ||
 			     (model == MODEL_RTAC56U) ||
 			     (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
@@ -279,9 +291,10 @@ int buttons_main(int argc, char *argv[])
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & wlan_mask) == wlan_pushed));
 			gpio &= mask;
 
-			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15/AC18) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
 			    ((model == MODEL_AC15) ||
+			     (model == MODEL_AC18) ||
 			     (model == MODEL_RTAC56U) ||
 			     (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
 

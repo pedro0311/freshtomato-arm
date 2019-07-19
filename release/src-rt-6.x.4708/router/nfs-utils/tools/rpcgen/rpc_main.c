@@ -1,31 +1,29 @@
 /*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user or with the express written consent of
- * Sun Microsystems, Inc.
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
  *
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived
+ *   from this software without specific prior written permission.
  *
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- *
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- *
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- *
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if 0
@@ -46,6 +44,7 @@ static char sccsid[] = "@(#)rpc_main.c 1.30 89/03/30 (C) 1987 SMI";
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
+#include <libgen.h>
 #include "rpc_parse.h"
 #include "rpc_util.h"
 #include "rpc_scan.h"
@@ -391,7 +390,7 @@ c_output(char *infile, char *define, int extend, char *outfile)
 	open_output(infile, outfilename);
 	add_warning();
 	if (infile && (include = extendfile(infile, ".h"))) {
-		f_print(fout, "#include \"%s\"\n", include);
+		f_print(fout, "#include \"%s\"\n", basename(include));
 		free(include);
 		/* .h file already contains rpc/rpc.h */
 	} else
@@ -525,7 +524,7 @@ s_output(int argc, char **argv, char *infile, char *define, int extend,
 	open_output(infile, outfilename);
 	add_warning();
 	if (infile && (include = extendfile(infile, ".h"))) {
-		f_print(fout, "#include \"%s\"\n", include);
+		f_print(fout, "#include \"%s\"\n", basename(include));
 		free(include);
 	} else
 	  f_print(fout, "#include <rpc/rpc.h>\n");
@@ -550,7 +549,7 @@ s_output(int argc, char **argv, char *infile, char *define, int extend,
 	  f_print(fout, "#include <sys/ttycom.h>/* TIOCNOTTY */\n");
 #else
 	if( !tirpcflag )
-	  f_print(fout, "#include <sys/ttycom.h>/* TIOCNOTTY */\n");
+	  f_print(fout, "#include <sys/ioctl.h>/* TIOCNOTTY */\n");
 #endif
 	if( Cflag && (inetdflag || pmflag ) ) {
 	  f_print(fout, "#ifdef __cplusplus\n");
@@ -632,7 +631,7 @@ l_output(char *infile, char *define, int extend, char *outfile)
 	if (Cflag)
 	  f_print (fout, "#include <memory.h> /* for memset */\n");
 	if (infile && (include = extendfile(infile, ".h"))) {
-		f_print(fout, "#include \"%s\"\n", include);
+		f_print(fout, "#include \"%s\"\n", basename(include));
 		free(include);
 	} else
 	  f_print(fout, "#include <rpc/rpc.h>\n");

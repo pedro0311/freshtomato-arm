@@ -25,13 +25,30 @@
 
 #define MAXNRVALS	32
 
-static unsigned int	srvproc2info[20], srvproc2info_old[20];	/* NFSv2 call counts ([0] == 18) */
-static unsigned int	cltproc2info[20], cltproc2info_old[20];	/* NFSv2 call counts ([0] == 18) */
-static unsigned int	srvproc3info[24], srvproc3info_old[24];	/* NFSv3 call counts ([0] == 22) */
-static unsigned int	cltproc3info[24], cltproc3info_old[24];	/* NFSv3 call counts ([0] == 22) */
-static unsigned int	srvproc4info[4], srvproc4info_old[4];	/* NFSv4 call counts ([0] == 2) */
-static unsigned int	cltproc4info[37], cltproc4info_old[37];	/* NFSv4 call counts ([0] == 35) */
-static unsigned int	srvproc4opsinfo[42], srvproc4opsinfo_old[42];	/* NFSv4 call counts ([0] == 40) */
+enum {
+	SRVPROC2_SZ = 18,
+	CLTPROC2_SZ = 18,
+	SRVPROC3_SZ = 22,
+	CLTPROC3_SZ = 22,
+	SRVPROC4_SZ = 2,
+	CLTPROC4_SZ = 59,
+	SRVPROC4OPS_SZ = 71,
+};
+
+static unsigned int	srvproc2info[SRVPROC2_SZ+2],
+			srvproc2info_old[SRVPROC2_SZ+2];	/* NFSv2 call counts ([0] == 18) */
+static unsigned int	cltproc2info[CLTPROC2_SZ+2],
+			cltproc2info_old[CLTPROC2_SZ+2];	/* NFSv2 call counts ([0] == 18) */
+static unsigned int	srvproc3info[SRVPROC3_SZ+2],
+			srvproc3info_old[SRVPROC3_SZ+2];	/* NFSv3 call counts ([0] == 22) */
+static unsigned int	cltproc3info[CLTPROC3_SZ+2],
+			cltproc3info_old[CLTPROC3_SZ+2];	/* NFSv3 call counts ([0] == 22) */
+static unsigned int	srvproc4info[SRVPROC4_SZ+2],
+			srvproc4info_old[SRVPROC4_SZ+2];	/* NFSv4 call counts ([0] == 2) */
+static unsigned int	cltproc4info[CLTPROC4_SZ+2],
+			cltproc4info_old[CLTPROC4_SZ+2];	/* NFSv4 call counts ([0] == 49) */
+static unsigned int	srvproc4opsinfo[SRVPROC4OPS_SZ+2],
+			srvproc4opsinfo_old[SRVPROC4OPS_SZ+2];	/* NFSv4 call counts ([0] == 59) */
 static unsigned int	srvnetinfo[5], srvnetinfo_old[5];	/* 0  # of received packets
 								 * 1  UDP packets
 								 * 2  TCP packets
@@ -75,48 +92,116 @@ static unsigned int	srvfhinfo[7], srvfhinfo_old[7];		/* (for kernels >= 2.4.0)
 								 *    compatability.
 								 */
 
-static const char *	nfsv2name[18] = {
+static unsigned int	srvioinfo[3], srvioinfo_old[3];		/* 0  bytes read
+								 * 1  bytes written
+								 */
+
+static unsigned int	srvrainfo[13], srvrainfo_old[13];	/* 0  ra cache size
+								 * 1..11 depth of ra cache hit
+								 * 12 ra cache misses
+								 */
+
+static const char *	nfsv2name[SRVPROC2_SZ] = {
 	"null", "getattr", "setattr", "root",   "lookup",  "readlink",
 	"read", "wrcache", "write",   "create", "remove",  "rename",
 	"link", "symlink", "mkdir",   "rmdir",  "readdir", "fsstat"
 };
 
-static const char *	nfsv3name[22] = {
+static const char *	nfsv3name[SRVPROC3_SZ] = {
 	"null",   "getattr", "setattr",  "lookup", "access",  "readlink",
 	"read",   "write",   "create",   "mkdir",  "symlink", "mknod",
 	"remove", "rmdir",   "rename",   "link",   "readdir", "readdirplus",
 	"fsstat", "fsinfo",  "pathconf", "commit"
 };
 
-static const char *	nfssrvproc4name[2] = {
+static const char *	nfssrvproc4name[SRVPROC4_SZ] = {
 	"null",
 	"compound",
 };
 
-static const char *	nfscltproc4name[35] = {
+static const char *	nfscltproc4name[CLTPROC4_SZ] = {
 	"null",      "read",      "write",   "commit",      "open",        "open_conf",
 	"open_noat", "open_dgrd", "close",   "setattr",     "fsinfo",      "renew",
 	"setclntid", "confirm",   "lock",
 	"lockt",     "locku",     "access",  "getattr",     "lookup",      "lookup_root",
 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
-	"setacl",    "fs_locations"
+	"setacl",    "fs_locations",
+	"rel_lkowner", "secinfo", "fsid_present",
+	/* nfsv4.1 client ops */
+	"exchange_id",
+	"create_session",
+	"destroy_session",
+	"sequence",
+	"get_lease_time",
+	"reclaim_comp",
+	"layoutget",
+	"getdevinfo",
+	"layoutcommit",
+	"layoutreturn",
+	"secinfo_no",
+	"test_stateid",
+	"free_stateid",
+	"getdevicelist",
+	"bind_conn_to_ses",
+	"destroy_clientid",
+	/* nfsv4.2 client ops */
+	"seek",
+	"allocate",
+	"deallocate",
+	"layoutstats",
+	"clone",
 };
 
-static const char *     nfssrvproc4opname[40] = {
+static const char *     nfssrvproc4opname[SRVPROC4OPS_SZ] = {
         "op0-unused",   "op1-unused", "op2-future",  "access",     "close",       "commit",
         "create",       "delegpurge", "delegreturn", "getattr",    "getfh",       "link",
         "lock",         "lockt",      "locku",       "lookup",     "lookup_root", "nverify",
         "open",         "openattr",   "open_conf",   "open_dgrd",  "putfh",       "putpubfh",
         "putrootfh",    "read",       "readdir",     "readlink",   "remove",      "rename",
         "renew",        "restorefh",  "savefh",      "secinfo",    "setattr",     "setcltid",
-        "setcltidconf", "verify",     "write",       "rellockowner"
+        "setcltidconf", "verify",     "write",       "rellockowner",
+	/* nfsv4.1 server ops */
+	"bc_ctl",
+	"bind_conn",
+	"exchange_id",
+	"create_ses",
+	"destroy_ses",
+	"free_stateid",
+	"getdirdeleg",
+	"getdevinfo",
+	"getdevlist",
+	"layoutcommit",
+	"layoutget",
+	"layoutreturn",
+	"secinfononam",
+	"sequence",
+	"set_ssv",
+	"test_stateid",
+	"want_deleg",
+	"destroy_clid",
+	"reclaim_comp",
+	/* nfsv4.2 server ops */
+	"allocate",
+	"copy",
+	"copy_notify",
+	"deallocate",
+	"ioadvise",
+	"layouterror",
+	"layoutstats",
+	"offloadcancel",
+	"offloadstatus",
+	"readplus",
+	"seek",
+	"write_same",
 };
 
 #define LABEL_srvnet		"Server packet stats:\n"
 #define LABEL_srvrpc		"Server rpc stats:\n"
 #define LABEL_srvrc		"Server reply cache:\n"
 #define LABEL_srvfh		"Server file handle cache:\n"
+#define LABEL_srvio		"Server io stats:\n"
+#define LABEL_srvra		"Server read ahead cache:\n"
 #define LABEL_srvproc2		"Server nfs v2:\n"
 #define LABEL_srvproc3		"Server nfs v3:\n"
 #define LABEL_srvproc4		"Server nfs v4:\n"
@@ -148,6 +233,8 @@ typedef struct statinfo {
 					SRV(rpc,s), \
 					SRV(rc,s), \
 					SRV(fh,s), \
+					SRV(io,s), \
+					SRV(ra,s), \
 					SRV(proc2,s), \
 					SRV(proc3,s),\
 					SRV(proc4,s), \
@@ -167,9 +254,15 @@ DECLARE_SRV(srvinfo, _old);
 DECLARE_CLT(cltinfo);
 DECLARE_CLT(cltinfo, _old);
 
+static void		print_all_stats(int, int, int);
+static void		print_server_stats(int);
+static void		print_client_stats(int);
+static void		print_stats_list(int, int, int);
 static void		print_numbers(const char *, unsigned int *,
 					unsigned int);
 static void		print_callstats(const char *, const char **,
+					unsigned int *, unsigned int);
+static void		print_callstats_list(const char *, const char **,
 					unsigned int *, unsigned int);
 static int		parse_raw_statfile(const char *, struct statinfo *);
 static int 		parse_pretty_statfile(const char *, struct statinfo *);
@@ -180,9 +273,11 @@ static int		mounts(const char *);
 
 static void		get_stats(const char *, struct statinfo *, int *, int,
 					int);
-static int		has_stats(const unsigned int *);
+static int		has_stats(const unsigned int *, int);
+static int		has_rpcstats(const unsigned int *, int);
 static void 		diff_stats(struct statinfo *, struct statinfo *, int);
 static void 		unpause(int);
+static void 		update_old_counters(struct statinfo *, struct statinfo *);
 
 static time_t		starttime;
 
@@ -191,6 +286,8 @@ static time_t		starttime;
 #define PRNT_NET	0x0004
 #define PRNT_FH		0x0008
 #define PRNT_RC		0x0010
+#define PRNT_IO		0x0020
+#define PRNT_RA		0x0040
 #define PRNT_AUTO	0x1000
 #define PRNT_V2		0x2000
 #define PRNT_V3		0x4000
@@ -207,26 +304,32 @@ void usage(char *name)
 {
 	printf("Usage: %s [OPTION]...\n\
 \n\
-  -m, --mounts\t\tShow statistics on mounted NFS filesystems\n\
-  -c, --client\t\tShow NFS client statistics\n\
-  -s, --server\t\tShow NFS server statistics\n\
-  -2\t\t\tShow NFS version 2 statistics\n\
-  -3\t\t\tShow NFS version 3 statistics\n\
-  -4\t\t\tShow NFS version 4 statistics\n\
-  -o [facility]\t\tShow statistics on particular facilities.\n\
-     nfs\tNFS protocol information\n\
-     rpc\tGeneral RPC information\n\
-     net\tNetwork layer statistics\n\
-     fh\t\tUsage information on the server's file handle cache\n\
-     rc\t\tUsage information on the server's request reply cache\n\
-     all\tSelect all of the above\n\
-  -v, --verbose, --all\tSame as '-o all'\n\
-  -r, --rpc\t\tShow RPC statistics\n\
-  -n, --nfs\t\tShow NFS statistics\n\
-  -Z, --sleep\t\tSaves stats, pauses, diffs current and saved\n\
-  -S, --since file\tShows difference between current stats and those in 'file'\n\
-  --version\t\tShow program version\n\
-  --help\t\tWhat you just did\n\
+  -m, --mounts		Show statistics on mounted NFS filesystems\n\
+  -c, --client		Show NFS client statistics\n\
+  -s, --server		Show NFS server statistics\n\
+  -2			Show NFS version 2 statistics\n\
+  -3			Show NFS version 3 statistics\n\
+  -4			Show NFS version 4 statistics\n\
+  -o [facility]		Show statistics on particular facilities.\n\
+     nfs		NFS protocol information\n\
+     rpc		General RPC information\n\
+     net		Network layer statistics\n\
+     fh			Usage information on the server's file handle cache\n\
+     io			Usage information on the server's io statistics\n\
+     ra			Usage information on the server's read ahead cache\n\
+     rc			Usage information on the server's request reply cache\n\
+     all		Select all of the above\n\
+  -v, --verbose, --all	Same as '-o all'\n\
+  -r, --rpc		Show RPC statistics\n\
+  -n, --nfs		Show NFS statistics\n\
+  -Z[#], --sleep[=#]	Collects stats until interrupted.\n\
+			    Cumulative stats are then printed\n\
+          		    If # is provided, stats will be output every\n\
+			    # seconds.\n\
+  -S, --since file	Shows difference between current stats and those in 'file'\n\
+  -l, --list		Prints stats in list format\n\
+  --version		Show program version\n\
+  --help		What you just did\n\
 \n", name);
 	exit(0);
 }
@@ -245,10 +348,12 @@ static struct option longopts[] =
 	{ "zero", 0, 0, 'z' },
 	{ "help", 0, 0, '\1' },
 	{ "version", 0, 0, '\2' },
-	{ "sleep", 0, 0, 'Z' },
+	{ "sleep", 2, 0, 'Z' },
 	{ "since", 1, 0, 'S' },
+	{ "list", 0, 0, 'l' },
 	{ NULL, 0, 0, 0 }
 };
+int opt_sleep;
 
 int
 main(int argc, char **argv)
@@ -257,7 +362,8 @@ main(int argc, char **argv)
 			opt_srv = 0,
 			opt_clt = 0,
 			opt_prt = 0,
-			opt_sleep = 0,
+			sleep_time = 0,
+			opt_list =0,
 			opt_since = 0;
 	int		c;
 	char           *progname,
@@ -271,7 +377,7 @@ main(int argc, char **argv)
 
 	struct sigaction act = {
 		.sa_handler = unpause,
-		.sa_flags = SA_ONESHOT,
+		.sa_flags = SA_RESETHAND,
 	};
 
 	if ((progname = strrchr(argv[0], '/')))
@@ -279,7 +385,7 @@ main(int argc, char **argv)
 	else
 		progname = argv[0];
 
-	while ((c = getopt_long(argc, argv, "234acmno:ZS:vrsz\1\2", longopts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "234acmno:Z::S:vrslz\1\2", longopts, NULL)) != EOF) {
 		switch (c) {
 		case 'a':
 			fprintf(stderr, "nfsstat: nfs acls are not yet supported.\n");
@@ -301,8 +407,12 @@ main(int argc, char **argv)
 				opt_prt |= PRNT_RC;
 			else if (!strcmp(optarg, "fh"))
 				opt_prt |= PRNT_FH;
+			else if (!strcmp(optarg, "io"))
+				opt_prt |= PRNT_IO;
+			else if (!strcmp(optarg, "ra"))
+				opt_prt |= PRNT_RA;
 			else if (!strcmp(optarg, "all"))
-				opt_prt |= PRNT_CALLS | PRNT_RPC | PRNT_NET | PRNT_RC | PRNT_FH;
+				opt_prt |= PRNT_CALLS | PRNT_RPC | PRNT_NET | PRNT_RC | PRNT_FH | PRNT_IO | PRNT_RA;
 			else {
 				fprintf(stderr, "nfsstat: unknown category: "
 						"%s\n", optarg);
@@ -311,6 +421,9 @@ main(int argc, char **argv)
 			break;
 		case 'Z':
 			opt_sleep = 1;
+			if (optarg) {
+				sleep_time = atoi(optarg);
+			}
 			break;
 		case 'S':
 			opt_since = 1;
@@ -333,6 +446,9 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			opt_srv = 1;
+			break;
+		case 'l':
+			opt_list = 1;
 			break;
 		case 'z':
 			fprintf(stderr, "nfsstat: zeroing of nfs statistics "
@@ -364,9 +480,9 @@ main(int argc, char **argv)
 	if (!(opt_prt & 0xe000)) {
 		opt_prt |= PRNT_AUTO;
 	}
-	if ((opt_prt & (PRNT_FH|PRNT_RC)) && !opt_srv) {
+	if ((opt_prt & (PRNT_FH|PRNT_RC|PRNT_IO|PRNT_RA)) && !opt_srv) {
 		fprintf(stderr,
-			"You requested file handle or request cache "
+			"You requested fh/io/ra/rc "
 			"statistics while using the -c option.\n"
 			"This information is available only for the NFS "
 			"server.\n");
@@ -384,7 +500,7 @@ main(int argc, char **argv)
 	if (opt_clt)
 		get_stats(clientfile, clientinfo, &opt_clt, opt_srv, 0);
 
-	if (opt_sleep) {
+	if (opt_sleep && !sleep_time) {
 		starttime = time(NULL);
 		printf("Collecting statistics; press CTRL-C to view results from interval (i.e., from pause to CTRL-C).\n");
 		if (sigaction(SIGINT, &act, NULL) != 0) {
@@ -394,7 +510,7 @@ main(int argc, char **argv)
 		pause();
 	}
 
-	if (opt_since || opt_sleep) {
+	if (opt_since || (opt_sleep && !sleep_time)) {
 		if (opt_srv) {
 			get_stats(NFSSRVSTAT, serverinfo_tmp, &opt_srv, opt_clt, 1);
 			diff_stats(serverinfo_tmp, serverinfo, 1);
@@ -404,119 +520,294 @@ main(int argc, char **argv)
 			diff_stats(clientinfo_tmp, clientinfo, 0);
 		}
 	}
-
-	if (opt_srv) {
-		if (opt_prt & PRNT_NET) {
-			print_numbers(
-			LABEL_srvnet
-			"packets    udp        tcp        tcpconn\n",
-			srvnetinfo, 4
-			);
-			printf("\n");
-		}
-		if (opt_prt & PRNT_RPC) {
-			print_numbers(
-			LABEL_srvrpc
-			"calls      badcalls   badauth    badclnt    xdrcall\n",
-			srvrpcinfo, 5
-			);
-			printf("\n");
-		}
-		if (opt_prt & PRNT_RC) {
-			print_numbers(
-			LABEL_srvrc
-			"hits       misses     nocache\n",
-			srvrcinfo, 3
-			);
-			printf("\n");
-		}
-
-		/*
-		 * 2.2 puts all fh-related info after the 'rc' header
-		 * 2.4 puts all fh-related info after the 'fh' header, but relocates
-		 *     'stale' to the start and swaps dir and nondir :-(  
-		 *     We preseve the 2.2 order
-		 */
-		if (opt_prt & PRNT_FH) {
-			if (get_stat_info("fh", srvinfo)) {	/* >= 2.4 */
-				int t = srvfhinfo[3];
-				srvfhinfo[3]=srvfhinfo[4];
-				srvfhinfo[4]=t;
-				
-				srvfhinfo[5]=srvfhinfo[0]; /* relocate 'stale' */
-				
-				print_numbers(
-					LABEL_srvfh
-					"lookup     anon       ncachedir  ncachedir  stale\n",
-					srvfhinfo + 1, 5);
-			} else					/* < 2.4 */
-				print_numbers(
-					LABEL_srvfh
-					"lookup     anon       ncachedir  ncachedir  stale\n",
-					srvrcinfo + 3, 5);
-			printf("\n");
-		}
-		if (opt_prt & PRNT_CALLS) {
-			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc2info)))
-				print_callstats(
-				LABEL_srvproc2,
-				nfsv2name, srvproc2info + 1, sizeof(nfsv2name)/sizeof(char *)
-				);
-			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc3info)))
-				print_callstats(
-				LABEL_srvproc3,
-				nfsv3name, srvproc3info + 1, sizeof(nfsv3name)/sizeof(char *)
-				);
-			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc4info))) {
-				print_callstats(
-				LABEL_srvproc4,
-				nfssrvproc4name, srvproc4info + 1, sizeof(nfssrvproc4name)/sizeof(char *)
-				);
-				print_callstats(
-				LABEL_srvproc4ops,
-				nfssrvproc4opname, srvproc4opsinfo + 1, sizeof(nfssrvproc4opname)/sizeof(char *)
-				);
+	if(sleep_time) {
+		while(1) {
+			if (opt_srv) {
+				get_stats(NFSSRVSTAT, serverinfo_tmp , &opt_srv, opt_clt, 1);
+				diff_stats(serverinfo_tmp, serverinfo, 1);
 			}
-		}
-	}
+			if (opt_clt) {
+				get_stats(NFSCLTSTAT, clientinfo_tmp, &opt_clt, opt_srv, 0);
+				diff_stats(clientinfo_tmp, clientinfo, 0);
+			}
+			if (opt_list) {
+				print_stats_list(opt_srv, opt_clt, opt_prt);
+			} else {
+				print_all_stats(opt_srv, opt_clt, opt_prt);
+			}
+			fflush(stdout);
 
-	if (opt_clt) {
-		if (opt_prt & PRNT_NET) {
-			print_numbers(
-			LABEL_cltnet
-			"packets    udp        tcp        tcpconn\n",
-			cltnetinfo, 4
-			);
-			printf("\n");
-		}
-		if (opt_prt & PRNT_RPC) {
-			print_numbers(
-			LABEL_cltrpc
-			"calls      retrans    authrefrsh\n",
-			cltrpcinfo, 3
-			);
-			printf("\n");
-		}
-		if (opt_prt & PRNT_CALLS) {
-			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc2info)))
-				print_callstats(
-				LABEL_cltproc2,
-				nfsv2name, cltproc2info + 1,  sizeof(nfsv2name)/sizeof(char *)
-				);
-			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc3info)))
-				print_callstats(
-				LABEL_cltproc3,
-				nfsv3name, cltproc3info + 1, sizeof(nfsv3name)/sizeof(char *)
-				);
-			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc4info)))
-				print_callstats(
-				LABEL_cltproc4,
-				nfscltproc4name, cltproc4info + 1,  sizeof(nfscltproc4name)/sizeof(char *)
-				);
+			if (opt_srv)
+				update_old_counters(serverinfo_tmp, serverinfo);
+			if (opt_clt)
+				update_old_counters(clientinfo_tmp, clientinfo);
+
+			sleep(sleep_time);
+		}	
+	} else {
+		if (opt_list) {
+			print_stats_list(opt_srv, opt_clt, opt_prt);
+		} else {
+			print_all_stats(opt_srv, opt_clt, opt_prt);
 		}
 	}
 
 	return 0;
+}
+
+static void
+print_all_stats (int opt_srv, int opt_clt, int opt_prt)
+{
+	if (opt_srv)
+		print_server_stats(opt_prt);
+
+	if (opt_clt)
+		print_client_stats(opt_prt);
+}
+
+static void 
+print_server_stats(int opt_prt) 
+{
+	if (opt_prt & PRNT_NET) {
+		if (opt_sleep && !has_rpcstats(srvnetinfo, 4)) {
+		} else {
+			print_numbers( LABEL_srvnet
+				"packets    udp        tcp        tcpconn\n",
+			srvnetinfo, 4);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_RPC) {
+		if (opt_sleep && !has_rpcstats(srvrpcinfo, 5)) {
+			;
+		} else {
+			print_numbers(LABEL_srvrpc
+				"calls      badcalls   badfmt     badauth    badclnt\n",
+				srvrpcinfo, 5);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_RC) {
+		if (opt_sleep && !has_rpcstats(srvrcinfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_srvrc
+				"hits       misses     nocache\n",
+				srvrcinfo, 3);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_IO) {
+		if (opt_sleep && !has_rpcstats(srvioinfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_srvio
+				"read       write\n",
+				srvioinfo, 2);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_RA) {
+		if (opt_sleep && !has_rpcstats(srvrainfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_srvra
+				"size       0-10%      10-20%     20-30%     30-40%     40-50%     50-60%     60-70%     70-80%     80-90%     90-100%    notfound\n",
+				srvrainfo, 12);
+			printf("\n");
+		}
+	}
+
+	/*
+	 * 2.2 puts all fh-related info after the 'rc' header
+	 * 2.4 puts all fh-related info after the 'fh' header, but relocates
+	 *     'stale' to the start and swaps dir and nondir :-(  
+	 *     We preseve the 2.2 order
+	 */
+	if (opt_prt & PRNT_FH) {
+		if (get_stat_info("fh", srvinfo)) {	/* >= 2.4 */
+			int t = srvfhinfo[3];
+			srvfhinfo[3]=srvfhinfo[4];
+			srvfhinfo[4]=t;
+			
+			srvfhinfo[5]=srvfhinfo[0]; /* relocate 'stale' */
+			
+			print_numbers(
+				LABEL_srvfh
+				"lookup     anon       ncachedir  ncachenondir  stale\n",
+				srvfhinfo + 1, 5);
+		} else					/* < 2.4 */
+			print_numbers(
+				LABEL_srvfh
+				"lookup     anon       ncachedir  ncachedir  stale\n",
+				srvrcinfo + 3, 5);
+		printf("\n");
+	}
+	if (opt_prt & PRNT_CALLS) {
+		int has_v2_stats = has_stats(srvproc2info, SRVPROC2_SZ+2);
+		int has_v3_stats = has_stats(srvproc3info, SRVPROC3_SZ+2);
+		int has_v4_stats = has_stats(srvproc4info, SRVPROC4_SZ+2);
+
+		if ((opt_prt & PRNT_V2) || 
+				((opt_prt & PRNT_AUTO) && has_v2_stats)) {
+			if (!opt_sleep || has_v2_stats) {
+				print_callstats(LABEL_srvproc2,
+					nfsv2name, srvproc2info + 1, 
+					sizeof(nfsv2name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V3) || 
+				((opt_prt & PRNT_AUTO) && has_v3_stats)) {
+			if (!opt_sleep || has_v3_stats) {
+				print_callstats(LABEL_srvproc3,
+					nfsv3name, srvproc3info + 1, 
+					sizeof(nfsv3name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V4) || 
+				((opt_prt & PRNT_AUTO) && has_v4_stats)) {
+			if (!opt_sleep || has_v4_stats) {
+				print_callstats( LABEL_srvproc4,
+					nfssrvproc4name, srvproc4info + 1, 
+					sizeof(nfssrvproc4name)/sizeof(char *));
+				print_callstats(LABEL_srvproc4ops,
+					nfssrvproc4opname, srvproc4opsinfo + 1, 
+					sizeof(nfssrvproc4opname)/sizeof(char *));
+			}
+		}
+	}
+}
+static void
+print_client_stats(int opt_prt) 
+{
+	if (opt_prt & PRNT_NET) {
+		if (opt_sleep && !has_rpcstats(cltnetinfo, 4)) {
+			;
+		} else { 
+			print_numbers(LABEL_cltnet
+				"packets    udp        tcp        tcpconn\n",
+				cltnetinfo, 4);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_RPC) {
+		if (opt_sleep && !has_rpcstats(cltrpcinfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_cltrpc
+				"calls      retrans    authrefrsh\n",
+				cltrpcinfo, 3);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_CALLS) {
+		int has_v2_stats = has_stats(cltproc2info, CLTPROC2_SZ+2);
+		int has_v3_stats = has_stats(cltproc3info, CLTPROC3_SZ+2);
+		int has_v4_stats = has_stats(cltproc4info, CLTPROC4_SZ+2);
+		if ((opt_prt & PRNT_V2) || 
+				((opt_prt & PRNT_AUTO) && has_v2_stats)) {
+			if (!opt_sleep || has_v2_stats) {
+				print_callstats(LABEL_cltproc2,
+					nfsv2name, cltproc2info + 1,  
+					sizeof(nfsv2name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V3) || 
+				((opt_prt & PRNT_AUTO) && has_v3_stats)) {
+			if (!opt_sleep || has_v3_stats) {
+				print_callstats(LABEL_cltproc3,
+					nfsv3name, cltproc3info + 1, 
+					sizeof(nfsv3name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V4) || 
+				((opt_prt & PRNT_AUTO) && has_v4_stats)) {
+			if (!opt_sleep || has_v4_stats) {
+				print_callstats(LABEL_cltproc4,
+					nfscltproc4name, cltproc4info + 1,  
+					sizeof(nfscltproc4name)/sizeof(char *));
+			}
+		}
+	}
+}
+
+static void
+print_clnt_list(int opt_prt) 
+{
+	if (opt_prt & PRNT_CALLS) {
+		int has_v2_stats = has_stats(cltproc2info, CLTPROC2_SZ+2);
+		int has_v3_stats = has_stats(cltproc3info, CLTPROC3_SZ+2);
+		int has_v4_stats = has_stats(cltproc4info, CLTPROC4_SZ+2);
+		if ((opt_prt & PRNT_V2) || 
+				((opt_prt & PRNT_AUTO) && has_v2_stats)) {
+			if (!opt_sleep || has_v2_stats) {
+				print_callstats_list("nfs v2 client",
+					nfsv2name, cltproc2info + 1,  
+					sizeof(nfsv2name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V3) || 
+				((opt_prt & PRNT_AUTO) && has_v3_stats)) {
+			if (!opt_sleep || has_v3_stats) {
+				print_callstats_list("nfs v3 client",
+					nfsv3name, cltproc3info + 1, 
+					sizeof(nfsv3name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V4) || 
+				((opt_prt & PRNT_AUTO) && has_v4_stats)) {
+			if (!opt_sleep || has_v4_stats) {
+				print_callstats_list("nfs v4 client",
+					nfscltproc4name, cltproc4info + 1,  
+					sizeof(nfscltproc4name)/sizeof(char *));
+			}
+		}
+	}
+}
+static void
+print_serv_list(int opt_prt) 
+{
+	if (opt_prt & PRNT_CALLS) {
+		int has_v2_stats = has_stats(srvproc2info, SRVPROC2_SZ+2);
+		int has_v3_stats = has_stats(srvproc3info, SRVPROC3_SZ+2);
+		int has_v4_stats = has_stats(srvproc4info, SRVPROC4_SZ+2);
+		if ((opt_prt & PRNT_V2) || 
+				((opt_prt & PRNT_AUTO) && has_v2_stats)) {
+			if (!opt_sleep || has_v2_stats) {
+				print_callstats_list("nfs v2 server",
+					nfsv2name, srvproc2info + 1, 
+					sizeof(nfsv2name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V3) || 
+				((opt_prt & PRNT_AUTO) && has_v3_stats)) {
+			if (!opt_sleep || has_v3_stats) {
+				print_callstats_list("nfs v3 server",
+					nfsv3name, srvproc3info + 1, 
+					sizeof(nfsv3name)/sizeof(char *));
+			}
+		}
+		if ((opt_prt & PRNT_V4) || 
+				((opt_prt & PRNT_AUTO) && has_v4_stats)) {
+			if (!opt_sleep || has_v4_stats) {
+				print_callstats_list("nfs v4 server",
+					nfssrvproc4name, srvproc4info + 1, 
+					sizeof(nfssrvproc4name)/sizeof(char *));
+				print_callstats_list("nfs v4 servop",
+					nfssrvproc4opname, srvproc4opsinfo + 1, 
+					sizeof(nfssrvproc4opname)/sizeof(char *));
+			}
+		}
+	}
+}
+static void
+print_stats_list(int opt_srv, int opt_clt, int opt_prt) 
+{
+	if (opt_srv)
+		print_serv_list(opt_prt);
+
+	if (opt_clt)
+		print_clnt_list(opt_prt);
 }
 
 static statinfo *
@@ -549,25 +840,48 @@ print_callstats(const char *hdr, const char **names,
 {
 	unsigned long long	total;
 	unsigned long long	pct;
-	int		i, j;
+	unsigned int		i, j;
 
 	fputs(hdr, stdout);
 	for (i = 0, total = 0; i < nr; i++)
 		total += info[i];
 	if (!total)
 		total = 1;
-	for (i = 0; i < nr; i += 6) {
-		for (j = 0; j < 6 && i + j < nr; j++)
-			printf("%-13s", names[i+j]);
+	for (i = 0; i < nr; i += 5) {
+		for (j = 0; j < 5 && i + j < nr; j++)
+			printf("%-17s", names[i+j]);
 		printf("\n");
-		for (j = 0; j < 6 && i + j < nr; j++) {
+		for (j = 0; j < 5 && i + j < nr; j++) {
 			pct = ((unsigned long long) info[i+j]*100)/total;
-			printf("%-8u%3llu%% ", info[i+j], pct);
+			printf("%-8u%3llu%%     ", info[i+j], pct);
 		}
 		printf("\n");
 	}
 	printf("\n");
 }
+
+static void
+print_callstats_list(const char *hdr, const char **names,
+		 	unsigned int *callinfo, unsigned int nr)
+{
+	unsigned long long	calltotal;
+	unsigned int			i;
+
+	for (i = 0, calltotal = 0; i < nr; i++) {
+		calltotal += callinfo[i];
+	}
+	if (!calltotal)
+		return;
+	printf("%13s %13s %8llu \n", hdr, "total:", calltotal);
+	printf("------------- ------------- --------\n");
+	for (i = 0; i < nr; i++) {
+			if (callinfo[i])
+				printf("%13s %12s: %8u \n", hdr, names[i], callinfo[i]);
+	}
+	printf("\n");
+		
+}
+
 
 /* returns 0 on success, 1 otherwise */
 static int
@@ -788,9 +1102,18 @@ out:
  * there are stats if the sum's greater than the entry-count.
  */
 static int
-has_stats(const unsigned int *info)
+has_stats(const unsigned int *info, int nr)
 {
-	return (info[0] && info[info[0] + 1] > info[0]);
+	return (info[0] && info[nr-1] > info[0]);
+}
+static int
+has_rpcstats(const unsigned int *info, int size)
+{
+	int i, cnt;
+
+	for (i=0, cnt=0; i < size; i++)
+		cnt += info[i];
+	return cnt;
 }
 
 /*
@@ -844,5 +1167,15 @@ unpause(int sig)
 	time_diff = difftime(endtime, starttime);
 	minutes = time_diff / 60;
 	seconds = (int)time_diff % 60;
-	printf("Signal received; displaying (only) statistics gathered over the last %d minutes, %d seconds:\n\n", minutes, seconds);
+	printf("Signal %d received; displaying (only) statistics gathered over the last %d minutes, %d seconds:\n\n", sig, minutes, seconds);
+}
+
+static void
+update_old_counters(struct statinfo *new, struct statinfo *old)
+{
+	int z, i;
+	for (z = 0; old[z].tag; z++) 
+		for (i = 0; i <= old[z].nrvals; i++) 
+			old[z].valptr[i] += new[z].valptr[i];
+
 }

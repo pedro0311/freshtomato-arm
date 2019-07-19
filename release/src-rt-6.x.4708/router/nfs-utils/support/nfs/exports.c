@@ -39,12 +39,6 @@ struct flav_info flav_map[] = {
 	{ "krb5",	RPC_AUTH_GSS_KRB5	},
 	{ "krb5i",	RPC_AUTH_GSS_KRB5I	},
 	{ "krb5p",	RPC_AUTH_GSS_KRB5P	},
-	{ "lipkey",	RPC_AUTH_GSS_LKEY	},
-	{ "lipkey-i",	RPC_AUTH_GSS_LKEYI	},
-	{ "lipkey-p",	RPC_AUTH_GSS_LKEYP	},
-	{ "spkm3",	RPC_AUTH_GSS_SPKM	},
-	{ "spkm3i",	RPC_AUTH_GSS_SPKMI	},
-	{ "spkm3p",	RPC_AUTH_GSS_SPKMP	},
 	{ "unix",	AUTH_UNIX		},
 	{ "sys",	AUTH_SYS		},
 	{ "null",	AUTH_NULL		},
@@ -52,8 +46,6 @@ struct flav_info flav_map[] = {
 };
 
 const int flav_map_size = sizeof(flav_map)/sizeof(flav_map[0]);
-
-int export_errno;
 
 static char	*efname = NULL;
 static XFILE	*efp = NULL;
@@ -69,6 +61,7 @@ static int	parsesquash(char *list, int **idp, int *lenp, char **ep);
 static int	parsenum(char **cpp);
 static void	freesquash(void);
 static void	syntaxerr(char *msg);
+static struct flav_info *find_flavor(char *name);
 
 void
 setexportent(char *fname, char *type)
@@ -82,6 +75,32 @@ setexportent(char *fname, char *type)
 				fname, strcmp(type, "r")? "writ" : "read");
 	efname = strdup(fname);
 	first = 1;
+}
+
+static void init_exportent (struct exportent *ee, int fromkernel)
+{
+	ee->e_flags = EXPORT_DEFAULT_FLAGS;
+	/* some kernels assume the default is sync rather than
+	 * async.  More recent kernels always report one or other,
+	 * but this test makes sure we assume same as kernel
+	 * Ditto for wgather
+	 */
+	if (fromkernel) {
+		ee->e_flags &= ~NFSEXP_ASYNC;
+		ee->e_flags &= ~NFSEXP_GATHERED_WRITES;
+	}
+	ee->e_anonuid = 65534;
+	ee->e_anongid = 65534;
+	ee->e_squids = NULL;
+	ee->e_sqgids = NULL;
+	ee->e_mountpoint = NULL;
+	ee->e_fslocmethod = FSLOC_NONE;
+	ee->e_fslocdata = NULL;
+	ee->e_secinfo[0].flav = NULL;
+	ee->e_nsquids = 0;
+	ee->e_nsqgids = 0;
+	ee->e_uuid = NULL;
+	ee->e_ttl = DEFAULT_TTL;
 }
 
 struct exportent *
@@ -102,26 +121,7 @@ getexportent(int fromkernel, int fromexports)
 		has_default_opts = 0;
 		has_default_subtree_opts = 0;
 	
-		def_ee.e_flags = EXPORT_DEFAULT_FLAGS;
-		/* some kernels assume the default is sync rather than
-		 * async.  More recent kernels always report one or other,
-		 * but this test makes sure we assume same as kernel
-		 * Ditto for wgather
-		 */
-		if (fromkernel) {
-			def_ee.e_flags &= ~NFSEXP_ASYNC;
-			def_ee.e_flags &= ~NFSEXP_GATHERED_WRITES;
-		}
-		def_ee.e_anonuid = 65534;
-		def_ee.e_anongid = 65534;
-		def_ee.e_squids = NULL;
-		def_ee.e_sqgids = NULL;
-		def_ee.e_mountpoint = NULL;
-		def_ee.e_fslocmethod = FSLOC_NONE;
-		def_ee.e_fslocdata = NULL;
-		def_ee.e_secinfo[0].flav = NULL;
-		def_ee.e_nsquids = 0;
-		def_ee.e_nsqgids = 0;
+		init_exportent(&def_ee, fromkernel);
 
 		ok = getpath(def_ee.e_path, sizeof(def_ee.e_path));
 		if (ok <= 0)
@@ -131,17 +131,16 @@ getexportent(int fromkernel, int fromexports)
 	}
 	if (ok < 0) {
 		xlog(L_ERROR, "expected client(options...)");
-		export_errno = EINVAL;
 		return NULL;
 	}
 	first = 0;
-		
+
 	/*
-	* Check for default options.  The kernel will never have default
-	* options in /proc/fs/nfs/exports, however due to the initial '-' in
-	* the -test-client- string from the test export we have to check that
-	* we're not reading from the kernel.
-	*/
+	 * Check for default options.  The kernel will never have default
+	 * options in /proc/fs/nfs/exports, however due to the initial '-' in
+	 * the -test-client- string from the test export we have to check that
+	 * we're not reading from the kernel.
+	 */
 	if (exp[0] == '-' && !fromkernel) {
 		if (parseopts(exp + 1, &def_ee, 0, &has_default_subtree_opts) < 0)
 			return NULL;
@@ -151,11 +150,11 @@ getexportent(int fromkernel, int fromexports)
 		ok = getexport(exp, sizeof(exp));
 		if (ok < 0) {
 			xlog(L_ERROR, "expected client(options...)");
-			export_errno = EINVAL;
 			return NULL;
 		}
 	}
 
+	xfree(ee.e_hostname);
 	ee = def_ee;
 
 	/* Check for default client */
@@ -171,7 +170,6 @@ getexportent(int fromkernel, int fromexports)
 		*opt++ = '\0';
 		if (!(sp = strchr(opt, ')')) || sp[1] != '\0') {
 			syntaxerr("bad option list");
-			export_errno = EINVAL;
 			return NULL;
 		}
 		*sp = '\0';
@@ -179,7 +177,6 @@ getexportent(int fromkernel, int fromexports)
 		if (!has_default_opts)
 			xlog(L_WARNING, "No options for %s %s: suggest %s(sync) to avoid warning", ee.e_path, exp, exp);
 	}
-	xfree(ee.e_hostname);
 	ee.e_hostname = xstrdup(hostname);
 
 	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
@@ -195,11 +192,38 @@ getexportent(int fromkernel, int fromexports)
 	return &ee;
 }
 
+static const struct secinfo_flag_displaymap {
+	unsigned int flag;
+	const char *set;
+	const char *unset;
+} secinfo_flag_displaymap[] = {
+	{ NFSEXP_READONLY, "ro", "rw" },
+	{ NFSEXP_INSECURE_PORT, "insecure", "secure" },
+	{ NFSEXP_ROOTSQUASH, "root_squash", "no_root_squash" },
+	{ NFSEXP_ALLSQUASH, "all_squash", "no_all_squash" },
+	{ 0, NULL, NULL }
+};
+
+static void secinfo_flags_show(FILE *fp, unsigned int flags, unsigned int mask)
+{
+	const struct secinfo_flag_displaymap *p;
+
+	for (p = &secinfo_flag_displaymap[0]; p->flag != 0; p++) {
+		if (!(mask & p->flag))
+			continue;
+		fprintf(fp, ",%s", (flags & p->flag) ? p->set : p->unset);
+	}
+}
+
 void secinfo_show(FILE *fp, struct exportent *ep)
 {
+	const struct export_features *ef;
 	struct sec_entry *p1, *p2;
-	int flags;
 
+	ef = get_export_features();
+
+	if (ep->e_secinfo[0].flav == NULL)
+		secinfo_addflavor(find_flavor("sys"), ep);
 	for (p1=ep->e_secinfo; p1->flav; p1=p2) {
 
 		fprintf(fp, ",sec=%s", p1->flav->flavour);
@@ -207,12 +231,7 @@ void secinfo_show(FILE *fp, struct exportent *ep)
 								p2++) {
 			fprintf(fp, ":%s", p2->flav->flavour);
 		}
-		flags = p1->flags;
-		fprintf(fp, ",%s", (flags & NFSEXP_READONLY) ? "ro" : "rw");
-		fprintf(fp, ",%sroot_squash", (flags & NFSEXP_ROOTSQUASH)?
-				"" : "no_");
-		fprintf(fp, ",%sall_squash", (flags & NFSEXP_ALLSQUASH)?
-				"" : "no_");
+		secinfo_flags_show(fp, p1->flags, ef->secinfo_flags);
 	}
 }
 
@@ -254,6 +273,9 @@ putexportent(struct exportent *ep)
 		"in" : "");
 	fprintf(fp, "%sacl,", (ep->e_flags & NFSEXP_NOACL)?
 		"no_" : "");
+	if (ep->e_flags & NFSEXP_NOREADDIRPLUS)
+		fprintf(fp, "nordirplus,");
+	fprintf(fp, "%spnfs,", (ep->e_flags & NFSEXP_PNFS)? "" : "no_");
 	if (ep->e_flags & NFSEXP_FSID) {
 		fprintf(fp, "fsid=%d,", ep->e_fsid);
 	}
@@ -331,6 +353,8 @@ dupexportent(struct exportent *dst, struct exportent *src)
 		dst->e_mountpoint = strdup(src->e_mountpoint);
 	if (src->e_fslocdata)
 		dst->e_fslocdata = strdup(src->e_fslocdata);
+	if (src->e_uuid)
+		dst->e_uuid = strdup(src->e_uuid);
 	dst->e_hostname = NULL;
 }
 
@@ -339,24 +363,13 @@ mkexportent(char *hname, char *path, char *options)
 {
 	static struct exportent	ee;
 
-	ee.e_flags = EXPORT_DEFAULT_FLAGS;
-	ee.e_anonuid = 65534;
-	ee.e_anongid = 65534;
-	ee.e_squids = NULL;
-	ee.e_sqgids = NULL;
-	ee.e_mountpoint = NULL;
-	ee.e_fslocmethod = FSLOC_NONE;
-	ee.e_fslocdata = NULL;
-	ee.e_secinfo[0].flav = NULL;
-	ee.e_nsquids = 0;
-	ee.e_nsqgids = 0;
-	ee.e_uuid = NULL;
+	init_exportent(&ee, 0);
 
 	xfree(ee.e_hostname);
 	ee.e_hostname = xstrdup(hname);
 
 	if (strlen(path) >= sizeof(ee.e_path)) {
-		xlog(L_WARNING, "path name %s too long", path);
+		xlog(L_ERROR, "path name %s too long", path);
 		return NULL;
 	}
 	strncpy(ee.e_path, path, sizeof (ee.e_path));
@@ -390,12 +403,12 @@ static int valid_uuid(char *uuid)
  * do nothing if it's already there.  Returns the index of flavor
  * in the resulting array in any case.
  */
-static int secinfo_addflavor(struct flav_info *flav, struct exportent *ep)
+int secinfo_addflavor(struct flav_info *flav, struct exportent *ep)
 {
 	struct sec_entry *p;
 
 	for (p=ep->e_secinfo; p->flav; p++) {
-		if (p->flav == flav)
+		if (p->flav == flav || p->flav->fnum == flav->fnum)
 			return p - ep->e_secinfo;
 	}
 	if (p - ep->e_secinfo >= SECFLAVOR_COUNT) {
@@ -472,9 +485,20 @@ static void clearflags(int mask, unsigned int active, struct exportent *ep)
 	}
 }
 
-/* options that can vary per flavor: */
-#define NFSEXP_SECINFO_FLAGS (NFSEXP_READONLY | NFSEXP_ROOTSQUASH \
-					| NFSEXP_ALLSQUASH)
+/*
+ * For those flags which are not allowed to vary by pseudoflavor,
+ * ensure that the export flags agree with the flags on each
+ * pseudoflavor:
+ */
+void fix_pseudoflavor_flags(struct exportent *ep)
+{
+	struct export_features *ef;
+	struct sec_entry *p;
+
+	ef = get_export_features();
+	for (p = ep->e_secinfo; p->flav; p++)
+		p->flags |= ep->e_flags & ~ef->secinfo_flags;
+}
 
 /*
  * Parse option string pointed to by cp and set mount options accordingly.
@@ -482,7 +506,6 @@ static void clearflags(int mask, unsigned int active, struct exportent *ep)
 static int
 parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 {
-	struct sec_entry *p;
 	int	had_subtree_opt = 0;
 	char 	*flname = efname?efname:"command line";
 	int	flline = efp?efp->x_line:0;
@@ -512,25 +535,27 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 		else if (strcmp(opt, "rw") == 0)
 			clearflags(NFSEXP_READONLY, active, ep);
 		else if (!strcmp(opt, "secure"))
-			ep->e_flags &= ~NFSEXP_INSECURE_PORT;
+			clearflags(NFSEXP_INSECURE_PORT, active, ep);
 		else if (!strcmp(opt, "insecure"))
-			ep->e_flags |= NFSEXP_INSECURE_PORT;
+			setflags(NFSEXP_INSECURE_PORT, active, ep);
 		else if (!strcmp(opt, "sync"))
-			ep->e_flags &= ~NFSEXP_ASYNC;
+			clearflags(NFSEXP_ASYNC, active, ep);
 		else if (!strcmp(opt, "async"))
-			ep->e_flags |= NFSEXP_ASYNC;
+			setflags(NFSEXP_ASYNC, active, ep);
+		else if (!strcmp(opt, "nordirplus"))
+			setflags(NFSEXP_NOREADDIRPLUS, active, ep);
 		else if (!strcmp(opt, "nohide"))
-			ep->e_flags |= NFSEXP_NOHIDE;
+			setflags(NFSEXP_NOHIDE, active, ep);
 		else if (!strcmp(opt, "hide"))
-			ep->e_flags &= ~NFSEXP_NOHIDE;
+			clearflags(NFSEXP_NOHIDE, active, ep);
 		else if (!strcmp(opt, "crossmnt"))
-			ep->e_flags |= NFSEXP_CROSSMOUNT;
+			setflags(NFSEXP_CROSSMOUNT, active, ep);
 		else if (!strcmp(opt, "nocrossmnt"))
-			ep->e_flags &= ~NFSEXP_CROSSMOUNT;
+			clearflags(NFSEXP_CROSSMOUNT, active, ep);
 		else if (!strcmp(opt, "wdelay"))
-			ep->e_flags |= NFSEXP_GATHERED_WRITES;
+			setflags(NFSEXP_GATHERED_WRITES, active, ep);
 		else if (!strcmp(opt, "no_wdelay"))
-			ep->e_flags &= ~NFSEXP_GATHERED_WRITES;
+			clearflags(NFSEXP_GATHERED_WRITES, active, ep);
 		else if (strcmp(opt, "root_squash") == 0)
 			setflags(NFSEXP_ROOTSQUASH, active, ep);
 		else if (!strcmp(opt, "no_root_squash"))
@@ -541,22 +566,26 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			clearflags(NFSEXP_ALLSQUASH, active, ep);
 		else if (strcmp(opt, "subtree_check") == 0) {
 			had_subtree_opt = 1;
-			ep->e_flags &= ~NFSEXP_NOSUBTREECHECK;
+			clearflags(NFSEXP_NOSUBTREECHECK, active, ep);
 		} else if (strcmp(opt, "no_subtree_check") == 0) {
 			had_subtree_opt = 1;
-			ep->e_flags |= NFSEXP_NOSUBTREECHECK;
+			setflags(NFSEXP_NOSUBTREECHECK, active, ep);
 		} else if (strcmp(opt, "auth_nlm") == 0)
-			ep->e_flags &= ~NFSEXP_NOAUTHNLM;
+			clearflags(NFSEXP_NOAUTHNLM, active, ep);
 		else if (strcmp(opt, "no_auth_nlm") == 0)
-			ep->e_flags |= NFSEXP_NOAUTHNLM;
+			setflags(NFSEXP_NOAUTHNLM, active, ep);
 		else if (strcmp(opt, "secure_locks") == 0)
-			ep->e_flags &= ~NFSEXP_NOAUTHNLM;
+			clearflags(NFSEXP_NOAUTHNLM, active, ep);
 		else if (strcmp(opt, "insecure_locks") == 0)
-			ep->e_flags |= NFSEXP_NOAUTHNLM;
+			setflags(NFSEXP_NOAUTHNLM, active, ep);
 		else if (strcmp(opt, "acl") == 0)
-			ep->e_flags &= ~NFSEXP_NOACL;
+			clearflags(NFSEXP_NOACL, active, ep);
 		else if (strcmp(opt, "no_acl") == 0)
-			ep->e_flags |= NFSEXP_NOACL;
+			setflags(NFSEXP_NOACL, active, ep);
+		else if (!strcmp(opt, "pnfs"))
+			setflags(NFSEXP_PNFS, active, ep);
+		else if (!strcmp(opt, "no_pnfs"))
+			clearflags(NFSEXP_PNFS, active, ep);
 		else if (strncmp(opt, "anonuid=", 8) == 0) {
 			char *oe;
 			ep->e_anonuid = strtol(opt+8, &oe, 10);
@@ -565,7 +594,6 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 				     flname, flline, opt);	
 bad_option:
 				free(opt);
-				export_errno = EINVAL;
 				return -1;
 			}
 		} else if (strncmp(opt, "anongid=", 8) == 0) {
@@ -588,11 +616,11 @@ bad_option:
 			char *oe;
 			if (strcmp(opt+5, "root") == 0) {
 				ep->e_fsid = 0;
-				ep->e_flags |= NFSEXP_FSID;
+				setflags(NFSEXP_FSID, active, ep);
 			} else {
 				ep->e_fsid = strtoul(opt+5, &oe, 0);
 				if (opt[5]!='\0' && *oe == '\0') 
-					ep->e_flags |= NFSEXP_FSID;
+					setflags(NFSEXP_FSID, active, ep);
 				else if (valid_uuid(opt+5))
 					ep->e_uuid = strdup(opt+5);
 				else {
@@ -633,22 +661,15 @@ bad_option:
 		} else {
 			xlog(L_ERROR, "%s:%d: unknown keyword \"%s\"\n",
 					flname, flline, opt);
-			ep->e_flags |= NFSEXP_ALLSQUASH | NFSEXP_READONLY;
+			setflags(NFSEXP_ALLSQUASH | NFSEXP_READONLY, active, ep);
 			goto bad_option;
 		}
 		free(opt);
 		while (isblank(*cp))
 			cp++;
 	}
-	/*
-	 * Turn on nohide which will allow this export to cross over
-	 * the 'mount --bind' mount point.
-	 */
-	if (ep->e_fslocdata)
-		ep->e_flags |= NFSEXP_NOHIDE;
 
-	for (p = ep->e_secinfo; p->flav; p++)
-		p->flags |= ep->e_flags & ~NFSEXP_SECINFO_FLAGS;
+	fix_pseudoflavor_flags(ep);
 	ep->e_squids = squids;
 	ep->e_sqgids = sqgids;
 	ep->e_nsquids = nsquids;
@@ -765,4 +786,35 @@ syntaxerr(char *msg)
 	xlog(L_ERROR, "%s:%d: syntax error: %s",
 			efname, efp?efp->x_line:0, msg);
 }
+struct export_features *get_export_features(void)
+{
+	static char *path = "/proc/fs/nfsd/export_features";
+	static struct export_features ef;
+	static int cached = 0;
+	char buf[50];
+	int c;
+	int fd;
 
+	if (cached)
+		return &ef;
+
+	ef.flags = NFSEXP_OLDFLAGS;
+	ef.secinfo_flags = NFSEXP_OLD_SECINFO_FLAGS;
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1)
+		goto good;
+	c = read(fd, buf, 50);
+	close(fd);
+	if (c == -1)
+		goto err;
+	c = sscanf(buf, "%x %x", &ef.flags, &ef.secinfo_flags);
+	if (c != 2)
+		goto err;
+good:
+	cached = 1;
+	return &ef;
+err:
+	xlog(L_WARNING, "unexpected error reading %s", path);
+	return &ef;
+}

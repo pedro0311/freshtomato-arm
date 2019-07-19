@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -40,11 +40,12 @@
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
 
-#ifdef HAVE_TIRPC_NETCONFIG_H
-#include <tirpc/netconfig.h>
-#include <tirpc/rpc/rpcb_prot.h>
+#ifdef HAVE_LIBTIRPC
+#include <netconfig.h>
+#include <rpc/rpcb_prot.h>
 #endif
 
+#include "sockaddr.h"
 #include "nfsrpc.h"
 
 /*
@@ -53,88 +54,63 @@
  * Rpcbind's local socket service does not seem to be working.
  * Disable this logic for now.
  */
-#ifdef HAVE_XDR_RPCB
+#ifdef HAVE_LIBTIRPC
 #undef NFS_GP_LOCAL
-#else	/* HAVE_XDR_RPCB */
+#else	/* !HAVE_LIBTIRPC */
 #undef NFS_GP_LOCAL
-#endif	/* HAVE_XDR_RPCB */
+#endif	/* !HAVE_LIBTIRPC */
 
-#ifdef HAVE_XDR_RPCB
-const static rpcvers_t default_rpcb_version = RPCBVERS_4;
-#else
-const static rpcvers_t default_rpcb_version = PMAPVERS;
-#endif
+#ifdef HAVE_LIBTIRPC
+static const rpcvers_t default_rpcb_version = RPCBVERS_4;
+#else	/* !HAVE_LIBTIRPC */
+static const rpcvers_t default_rpcb_version = PMAPVERS;
+#endif	/* !HAVE_LIBTIRPC */
 
-#ifdef HAVE_DECL_AI_ADDRCONFIG
 /*
- * getaddrinfo(3) generates a usable loopback address based on how the
- * local network interfaces are configured.  RFC 3484 requires that the
- * results are sorted so that the first result has the best likelihood
- * of working, so we try just that first result.
+ * Historical: Map TCP connect timeouts to timeout
+ * error code used by UDP.
+ */
+static void
+nfs_gp_map_tcp_errorcodes(const unsigned short protocol)
+{
+	if (protocol != IPPROTO_TCP)
+		return;
+
+	switch (rpc_createerr.cf_error.re_errno) {
+	case ETIMEDOUT:
+		rpc_createerr.cf_stat = RPC_TIMEDOUT;
+		break;
+	case ECONNREFUSED:
+		rpc_createerr.cf_stat = RPC_CANTRECV;
+		break;
+	}
+}
+
+/*
+ * There's no easy way to tell how the local system's networking
+ * and rpcbind is configured (ie. whether we want to use IPv6 or
+ * IPv4 loopback to contact RPC services on the local host).  We
+ * punt and simply try to look up "localhost".
  *
  * Returns TRUE on success.
  */
 static int nfs_gp_loopback_address(struct sockaddr *sap, socklen_t *salen)
 {
 	struct addrinfo *gai_results;
-	struct addrinfo gai_hint = {
-		.ai_flags	= AI_ADDRCONFIG,
-	};
-	socklen_t len = *salen;
 	int ret = 0;
 
-	if (getaddrinfo(NULL, "sunrpc", &gai_hint, &gai_results))
+	if (getaddrinfo("localhost", NULL, NULL, &gai_results))
 		return 0;
 
-	switch (gai_results->ai_addr->sa_family) {
-	case AF_INET:
-	case AF_INET6:
-		if (len >= gai_results->ai_addrlen) {
-			memcpy(sap, gai_results->ai_addr,
-					gai_results->ai_addrlen);
-			*salen = gai_results->ai_addrlen;
-			ret = 1;
-		}
+	if (*salen >= gai_results->ai_addrlen) {
+		memcpy(sap, gai_results->ai_addr,
+				gai_results->ai_addrlen);
+		*salen = gai_results->ai_addrlen;
+		ret = 1;
 	}
 
 	freeaddrinfo(gai_results);
 	return ret;
-}
-#else
-/*
- * Old versions of getaddrinfo(3) don't support AI_ADDRCONFIG, so we
- * have a fallback for building on legacy systems.
- */
-static int nfs_gp_loopback_address(struct sockaddr *sap, socklen_t *salen)
-{
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-
-	memset(sin, 0, sizeof(*sin));
-
-	sin->sin_family = AF_INET;
-	sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	*salen = sizeof(*sin);
-
-	return 1;
-}
-#endif
-
-/*
- * Plant port number in @sap.  @port is already in network byte order.
- */
-static void nfs_gp_set_port(struct sockaddr *sap, const in_port_t port)
-{
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
-
-	switch (sap->sa_family) {
-	case AF_INET:
-		sin->sin_port = port;
-		break;
-	case AF_INET6:
-		sin6->sin6_port = port;
-		break;
-	}
 }
 
 /*
@@ -201,7 +177,7 @@ static in_port_t nfs_gp_get_rpcb_port(const unsigned short protocol)
  * client.  Otherwise returns NULL, and rpc_createerr.cf_stat is set to
  * reflect the error.
  */
-static CLIENT *nfs_gp_get_rpcbclient(const struct sockaddr *sap,
+static CLIENT *nfs_gp_get_rpcbclient(struct sockaddr *sap,
 				     const socklen_t salen,
 				     const unsigned short transport,
 				     const rpcvers_t version,
@@ -214,18 +190,98 @@ static CLIENT *nfs_gp_get_rpcbclient(const struct sockaddr *sap,
 		"sunrpc",
 		NULL,
 	};
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
 	rpcprog_t rpcb_prog = nfs_getrpcbyname(RPCBPROG, rpcb_pgmtbl);
+	CLIENT *clnt;
 
-	memcpy(saddr, sap, (size_t)salen);
-	nfs_gp_set_port(saddr, nfs_gp_get_rpcb_port(transport));
-
-	return nfs_get_rpcclient(saddr, salen, transport, rpcb_prog,
-					version, timeout);
+	nfs_set_port(sap, ntohs(nfs_gp_get_rpcb_port(transport)));
+	clnt = nfs_get_rpcclient(sap, salen, transport, rpcb_prog,
+							version, timeout);
+	nfs_gp_map_tcp_errorcodes(transport);
+	return clnt;
 }
 
-/*
+/**
+ * nfs_get_proto - Convert a netid to an address family and protocol number
+ * @netid: C string containing a netid
+ * @family: OUT: address family
+ * @protocol: OUT: protocol number
+ *
+ * Returns 1 and fills in @protocol if the netid was recognized;
+ * otherwise zero is returned.
+ */
+#ifdef HAVE_LIBTIRPC
+int
+nfs_get_proto(const char *netid, sa_family_t *family, unsigned long *protocol)
+{
+	struct netconfig *nconf;
+	struct protoent *proto;
+
+	/*
+	 * IANA does not define a protocol number for rdma netids,
+	 * since "rdma" is not an IP protocol.
+	 */
+	if (strcmp(netid, "rdma") == 0) {
+		*family = AF_INET;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+	if (strcmp(netid, "rdma6") == 0) {
+		*family = AF_INET6;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+
+	nconf = getnetconfigent(netid);
+	if (nconf == NULL)
+		return 0;
+
+	proto = getprotobyname(nconf->nc_proto);
+	if (proto == NULL) {
+		freenetconfigent(nconf);
+		return 0;
+	}
+
+	*family = AF_UNSPEC;
+	if (strcmp(nconf->nc_protofmly, NC_INET) == 0)
+		*family = AF_INET;
+	if (strcmp(nconf->nc_protofmly, NC_INET6) == 0)
+		*family = AF_INET6;
+	freenetconfigent(nconf);
+
+	*protocol = (unsigned long)proto->p_proto;
+	return 1;
+}
+#else	/* !HAVE_LIBTIRPC */
+int
+nfs_get_proto(const char *netid, sa_family_t *family, unsigned long *protocol)
+{
+	struct protoent *proto;
+
+	/*
+	 * IANA does not define a protocol number for rdma netids,
+	 * since "rdma" is not an IP protocol.
+	 */
+	if (strcmp(netid, "rdma") == 0) {
+		*family = AF_INET;
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	}
+
+	proto = getprotobyname(netid);
+	if (proto == NULL)
+		return 0;
+
+	*family = AF_INET;
+	*protocol = (unsigned long)proto->p_proto;
+	return 1;
+}
+#endif /* !HAVE_LIBTIRPC */
+
+/**
+ * nfs_get_netid - Convert a protocol family and protocol name to a netid
+ * @family: protocol family
+ * @protocol: protocol number
+ *
  * One of the arguments passed when querying remote rpcbind services
  * via rpcbind v3 or v4 is a netid string.  This replaces the pm_prot
  * field used in legacy PMAP_GETPORT calls.
@@ -239,13 +295,12 @@ static CLIENT *nfs_gp_get_rpcbclient(const struct sockaddr *sap,
  * first entry that matches @family and @protocol and whose netid string
  * fits in the provided buffer.
  *
- * Returns a '\0'-terminated string if successful; otherwise NULL.
+ * Returns a '\0'-terminated string if successful.  Caller must
+ * free the returned string.  Otherwise NULL is returned, and
  * rpc_createerr.cf_stat is set to reflect the error.
  */
-#ifdef HAVE_XDR_RPCB
-
-static char *nfs_gp_get_netid(const sa_family_t family,
-			      const unsigned short protocol)
+#ifdef HAVE_LIBTIRPC
+char *nfs_get_netid(const sa_family_t family, const unsigned long protocol)
 {
 	char *nc_protofmly, *nc_proto, *nc_netid;
 	struct netconfig *nconf;
@@ -281,6 +336,9 @@ static char *nfs_gp_get_netid(const sa_family_t family,
 
 		nc_netid = strdup(nconf->nc_netid);
 		endnetconfig(handle);
+
+		if (nc_netid == NULL)
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		return nc_netid;
 	}
 	endnetconfig(handle);
@@ -289,8 +347,28 @@ out:
 	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
 	return NULL;
 }
+#else	/* !HAVE_LIBTIRPC */
+char *nfs_get_netid(const sa_family_t family, const unsigned long protocol)
+{
+	struct protoent *proto;
+	char *netid;
 
-#endif	/* HAVE_XDR_RPCB */
+	if (family != AF_INET)
+		goto out;
+	proto = getprotobynumber((int)protocol);
+	if (proto == NULL)
+		goto out;
+
+	netid = strdup(proto->p_name);
+	if (netid == NULL)
+		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+	return netid;
+
+out:
+	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
+	return NULL;
+}
+#endif	/* !HAVE_LIBTIRPC */
 
 /*
  * Extract a port number from a universal address, and terminate the
@@ -352,7 +430,6 @@ int nfs_universal2port(const char *uaddr)
 /**
  * nfs_sockaddr2universal - convert a sockaddr to a "universal address"
  * @sap: pointer to a socket address
- * @salen: length of socket address
  *
  * Universal addresses (defined in RFC 1833) are used when calling an
  * rpcbind daemon via protocol versions 3 or 4..
@@ -361,80 +438,55 @@ int nfs_universal2port(const char *uaddr)
  * the returned string.  Otherwise NULL is returned and
  * rpc_createerr.cf_stat is set to reflect the error.
  *
+ * inet_ntop(3) is used here, since getnameinfo(3) is not available
+ * in some earlier glibc releases, and we don't require support for
+ * scope IDs for universal addresses.
  */
-#ifdef HAVE_GETNAMEINFO
-
-char *nfs_sockaddr2universal(const struct sockaddr *sap,
-			     const socklen_t salen)
+char *nfs_sockaddr2universal(const struct sockaddr *sap)
 {
-	struct sockaddr_un *sun = (struct sockaddr_un *)sap;
-	char buf[NI_MAXHOST];
+	const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)sap;
+	const struct sockaddr_un *sun = (const struct sockaddr_un *)sap;
+	const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
+	char buf[INET6_ADDRSTRLEN + 8 /* for port information */];
 	uint16_t port;
+	size_t count;
+	char *result;
+	int len;
 
 	switch (sap->sa_family) {
 	case AF_LOCAL:
 		return strndup(sun->sun_path, sizeof(sun->sun_path));
 	case AF_INET:
-		if (getnameinfo(sap, salen, buf, (socklen_t)sizeof(buf),
-					NULL, 0, NI_NUMERICHOST) != 0)
+		if (inet_ntop(AF_INET, (const void *)&sin->sin_addr.s_addr,
+					buf, (socklen_t)sizeof(buf)) == NULL)
 			goto out_err;
-		port = ntohs(((struct sockaddr_in *)sap)->sin_port);
+		port = ntohs(sin->sin_port);
 		break;
 	case AF_INET6:
-		if (getnameinfo(sap, salen, buf, (socklen_t)sizeof(buf),
-					NULL, 0, NI_NUMERICHOST) != 0)
+		if (inet_ntop(AF_INET6, (const void *)&sin6->sin6_addr,
+					buf, (socklen_t)sizeof(buf)) == NULL)
 			goto out_err;
-		port = ntohs(((struct sockaddr_in6 *)sap)->sin6_port);
+		port = ntohs(sin6->sin6_port);
 		break;
 	default:
 		goto out_err;
 	}
 
-	(void)snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ".%u.%u",
+	count = sizeof(buf) - strlen(buf);
+	len = snprintf(buf + strlen(buf), count, ".%u.%u",
 			(unsigned)(port >> 8), (unsigned)(port & 0xff));
-
-	return strdup(buf);
-
-out_err:
-	rpc_createerr.cf_stat = RPC_N2AXLATEFAILURE;
-	return NULL;
-}
-
-#else	/* HAVE_GETNAMEINFO */
-
-char *nfs_sockaddr2universal(const struct sockaddr *sap,
-			     const socklen_t salen)
-{
-	struct sockaddr_un *sun = (struct sockaddr_un *)sap;
-	char buf[NI_MAXHOST];
-	uint16_t port;
-	char *addr;
-
-	switch (sap->sa_family) {
-	case AF_LOCAL:
-		return strndup(sun->sun_path, sizeof(sun->sun_path));
-	case AF_INET:
-		addr = inet_ntoa(((struct sockaddr_in *)sap)->sin_addr);
-		if (addr != NULL && strlen(addr) > sizeof(buf))
-			goto out_err;
-		strcpy(buf, addr);
-		port = ntohs(((struct sockaddr_in *)sap)->sin_port);
-		break;
-	default:
+	/* before glibc 2.0.6, snprintf(3) could return -1 */
+	if (len < 0 || (size_t)len > count)
 		goto out_err;
-	}
 
-	(void)snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ".%u.%u",
-			(unsigned)(port >> 8), (unsigned)(port & 0xff));
-
-	return strdup(buf);
+	result = strdup(buf);
+	if (result != NULL)
+		return result;
 
 out_err:
 	rpc_createerr.cf_stat = RPC_N2AXLATEFAILURE;
 	return NULL;
 }
-
-#endif	/* HAVE_GETNAMEINFO */
 
 /*
  * Send a NULL request to the indicated RPC service.
@@ -450,23 +502,22 @@ static int nfs_gp_ping(CLIENT *client, struct timeval timeout)
 			   (xdrproc_t)xdr_void, NULL,
 			   timeout);
 
+	if (status != RPC_SUCCESS) {
+		rpc_createerr.cf_stat = status;
+		CLNT_GETERR(client, &rpc_createerr.cf_error);
+	}
 	return (int)(status == RPC_SUCCESS);
 }
 
-#ifdef HAVE_XDR_RPCB
+#ifdef HAVE_LIBTIRPC
 
 /*
  * Initialize the rpcb argument for a GETADDR request.
- *
- * The rpcbind daemon ignores the parms.r_owner field in GETADDR
- * requests, but we plant an eye-catcher to help distinguish these
- * requests in network traces.
  *
  * Returns 1 if successful, and caller must free strings pointed
  * to by r_netid and r_addr; otherwise 0.
  */
 static int nfs_gp_init_rpcb_parms(const struct sockaddr *sap,
-				  const socklen_t salen,
 				  const rpcprog_t program,
 				  const rpcvers_t version,
 				  const unsigned short protocol,
@@ -474,11 +525,11 @@ static int nfs_gp_init_rpcb_parms(const struct sockaddr *sap,
 {
 	char *netid, *addr;
 
-	netid = nfs_gp_get_netid(sap->sa_family, protocol);
+	netid = nfs_get_netid(sap->sa_family, protocol);
 	if (netid == NULL)
 		return 0;
 
-	addr = nfs_sockaddr2universal(sap, salen);
+	addr = nfs_sockaddr2universal(sap);
 	if (addr == NULL) {
 		free(netid);
 		return 0;
@@ -489,7 +540,7 @@ static int nfs_gp_init_rpcb_parms(const struct sockaddr *sap,
 	parms->r_vers	= version;
 	parms->r_netid	= netid;
 	parms->r_addr	= addr;
-	parms->r_owner	= "nfs-utils";	/* eye-catcher */
+	parms->r_owner	= "";
 
 	return 1;
 }
@@ -531,7 +582,7 @@ static unsigned short nfs_gp_rpcb_getaddr(CLIENT *client,
 		case RPC_SUCCESS:
 			if ((uaddr == NULL) || (uaddr[0] == '\0')) {
 				rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
-				continue;
+				return 0;
 			}
 
 			port = nfs_universal2port(uaddr);
@@ -565,7 +616,7 @@ static unsigned short nfs_gp_rpcb_getaddr(CLIENT *client,
 	return port;
 }
 
-#endif	/* HAVE_XDR_RPCB */
+#endif	/* HAVE_LIBTIRPC */
 
 /*
  * Try GETPORT request via rpcbind version 2.
@@ -587,7 +638,7 @@ static unsigned long nfs_gp_pmap_getport(CLIENT *client,
 
 	if (status != RPC_SUCCESS) {
 		rpc_createerr.cf_stat = status;
-		clnt_geterr(client, &rpc_createerr.cf_error);
+		CLNT_GETERR(client, &rpc_createerr.cf_error);
 		port = 0;
 	} else if (port == 0)
 		rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
@@ -595,11 +646,10 @@ static unsigned long nfs_gp_pmap_getport(CLIENT *client,
 	return port;
 }
 
-#ifdef HAVE_XDR_RPCB
+#ifdef HAVE_LIBTIRPC
 
 static unsigned short nfs_gp_getport_rpcb(CLIENT *client,
 					  const struct sockaddr *sap,
-					  const socklen_t salen,
 					  const rpcprog_t program,
 					  const rpcvers_t version,
 					  const unsigned short protocol,
@@ -608,8 +658,8 @@ static unsigned short nfs_gp_getport_rpcb(CLIENT *client,
 	unsigned short port = 0;
 	struct rpcb parms;
 
-	if (nfs_gp_init_rpcb_parms(sap, salen, program,
-					version, protocol, &parms) != 0) {
+	if (nfs_gp_init_rpcb_parms(sap, program, version,
+					protocol, &parms) != 0) {
 		port = nfs_gp_rpcb_getaddr(client, &parms, timeout);
 		nfs_gp_free_rpcb_parms(&parms);
 	}
@@ -617,7 +667,7 @@ static unsigned short nfs_gp_getport_rpcb(CLIENT *client,
 	return port;
 }
 
-#endif	/* HAVE_XDR_RPCB */
+#endif	/* HAVE_LIBTIRPC */
 
 static unsigned long nfs_gp_getport_pmap(CLIENT *client,
 					 const rpcprog_t program,
@@ -645,18 +695,17 @@ static unsigned long nfs_gp_getport_pmap(CLIENT *client,
  */
 static unsigned short nfs_gp_getport(CLIENT *client,
 				     const struct sockaddr *sap,
-				     const socklen_t salen,
 				     const rpcprog_t program,
 				     const rpcvers_t version,
 				     const unsigned short protocol,
 				     struct timeval timeout)
 {
 	switch (sap->sa_family) {
-#ifdef HAVE_XDR_RPCB
+#ifdef HAVE_LIBTIRPC
 	case AF_INET6:
-		return nfs_gp_getport_rpcb(client, sap, salen, program,
+		return nfs_gp_getport_rpcb(client, sap, program,
 						version, protocol, timeout);
-#endif	/* HAVE_XDR_RPCB */
+#endif	/* HAVE_LIBTIRPC */
 	case AF_INET:
 		return nfs_gp_getport_pmap(client, program, version,
 							protocol, timeout);
@@ -667,7 +716,7 @@ static unsigned short nfs_gp_getport(CLIENT *client,
 }
 
 /**
- * nfs_rcp_ping - Determine if RPC service is responding to requests
+ * nfs_rpc_ping - Determine if RPC service is responding to requests
  * @sap: pointer to address of server to query (port is already filled in)
  * @salen: length of server address
  * @program: requested RPC program number
@@ -682,6 +731,8 @@ int nfs_rpc_ping(const struct sockaddr *sap, const socklen_t salen,
 		 const rpcprog_t program, const rpcvers_t version,
 		 const unsigned short protocol, const struct timeval *timeout)
 {
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	CLIENT *client;
 	struct timeval tout = { -1, 0 };
 	int result = 0;
@@ -689,9 +740,14 @@ int nfs_rpc_ping(const struct sockaddr *sap, const socklen_t salen,
 	if (timeout != NULL)
 		tout = *timeout;
 
-	client = nfs_get_rpcclient(sap, salen, protocol, program, version, &tout);
+	nfs_clear_rpc_createerr();
+
+	memcpy(saddr, sap, (size_t)salen);
+	client = nfs_get_rpcclient(saddr, salen, protocol,
+						program, version, &tout);
 	if (client != NULL) {
 		result = nfs_gp_ping(client, tout);
+		nfs_gp_map_tcp_errorcodes(protocol);
 		CLNT_DESTROY(client);
 	}
 
@@ -744,14 +800,19 @@ unsigned short nfs_getport(const struct sockaddr *sap,
 			   const rpcvers_t version,
 			   const unsigned short protocol)
 {
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	struct timeval timeout = { -1, 0 };
 	unsigned short port = 0;
 	CLIENT *client;
 
-	client = nfs_gp_get_rpcbclient(sap, salen, protocol,
+	nfs_clear_rpc_createerr();
+
+	memcpy(saddr, sap, (size_t)salen);
+	client = nfs_gp_get_rpcbclient(saddr, salen, protocol,
 						default_rpcb_version, &timeout);
 	if (client != NULL) {
-		port = nfs_gp_getport(client, sap, salen, program,
+		port = nfs_gp_getport(client, saddr, program,
 					version, protocol, timeout);
 		CLNT_DESTROY(client);
 	}
@@ -786,32 +847,37 @@ int nfs_getport_ping(struct sockaddr *sap, const socklen_t salen,
 	CLIENT *client;
 	int result = 0;
 	
+	nfs_clear_rpc_createerr();
+
 	client = nfs_gp_get_rpcbclient(sap, salen, protocol,
 						default_rpcb_version, &timeout);
 	if (client != NULL) {
-		port = nfs_gp_getport(client, sap, salen, program,
+		port = nfs_gp_getport(client, sap, program,
 					version, protocol, timeout);
 		CLNT_DESTROY(client);
 		client = NULL;
 	}
 
 	if (port != 0) {
-		struct sockaddr_storage address;
-		struct sockaddr *saddr = (struct sockaddr *)&address;
+		union nfs_sockaddr address;
+		struct sockaddr *saddr = &address.sa;
 
 		memcpy(saddr, sap, (size_t)salen);
-		nfs_gp_set_port(saddr, htons(port));
+		nfs_set_port(saddr, port);
+
+		nfs_clear_rpc_createerr();
 
 		client = nfs_get_rpcclient(saddr, salen, protocol,
 						program, version, &timeout);
 		if (client != NULL) {
 			result = nfs_gp_ping(client, timeout);
+			nfs_gp_map_tcp_errorcodes(protocol);
 			CLNT_DESTROY(client);
 		}
 	}
 
 	if (result)
-		nfs_gp_set_port(sap, htons(port));
+		nfs_set_port(sap, port);
 
 	return result;
 }
@@ -840,20 +906,13 @@ int nfs_getport_ping(struct sockaddr *sap, const socklen_t salen,
  * isn't listening on /var/run/rpcbind.sock), send a query via UDP to localhost
  * (UDP doesn't leave a socket in TIME_WAIT, and the timeout is a relatively
  * short 3 seconds).
- *
- * getaddrinfo(3) generates a usable loopback address.  RFC 3484 requires that
- * the results are sorted so that the first result has the best likelihood of
- * working, so we try just that first result.  If IPv6 is all that is
- * available, we are sure to generate an AF_INET6 loopback address and use
- * rpcbindv4/v3 GETADDR.  AF_INET6 requests go via rpcbind v4/3 in order to
- * detect if the requested RPC service supports AF_INET6 or not.
  */
 unsigned short nfs_getlocalport(const rpcprot_t program,
 				const rpcvers_t version,
 				const unsigned short protocol)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *lb_addr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *lb_addr = &address.sa;
 	socklen_t lb_len = sizeof(*lb_addr);
 	unsigned short port = 0;
 
@@ -867,11 +926,13 @@ unsigned short nfs_getlocalport(const rpcprot_t program,
 	CLIENT *client;
 	struct timeval timeout = { -1, 0 };
 
+	nfs_clear_rpc_createerr();
+
 	client = nfs_gp_get_rpcbclient(sap, salen, 0, RPCBVERS_4, &timeout);
 	if (client != NULL) {
 		struct rpcb parms;
 
-		if (nfs_gp_init_rpcb_parms(sap, salen, program, version,
+		if (nfs_gp_init_rpcb_parms(sap, program, version,
 						protocol, &parms) != 0) {
 			port = nfs_gp_rpcb_getaddr(client, &parms, timeout);
 			nfs_gp_free_rpcb_parms(&parms);
@@ -881,6 +942,8 @@ unsigned short nfs_getlocalport(const rpcprot_t program,
 #endif	/* NFS_GP_LOCAL */
 
 	if (port == 0) {
+		nfs_clear_rpc_createerr();
+
 		if (nfs_gp_loopback_address(lb_addr, &lb_len)) {
 			port = nfs_getport(lb_addr, lb_len,
 						program, version, protocol);
@@ -897,7 +960,6 @@ unsigned short nfs_getlocalport(const rpcprot_t program,
  * @salen: length of server address
  * @transport: transport protocol to use for the query
  * @addr: pointer to r_addr address
- * @addrlen: length of address
  * @program: requested RPC program number
  * @version: requested RPC version number
  * @protocol: requested IPPROTO_ value of transport protocol
@@ -922,18 +984,19 @@ unsigned short nfs_getlocalport(const rpcprot_t program,
  * address of the same address family.  In this way an RPC server can
  * advertise via rpcbind that it does not support AF_INET6.
  */
-#ifdef HAVE_XDR_RPCB
+#ifdef HAVE_LIBTIRPC
 
 unsigned short nfs_rpcb_getaddr(const struct sockaddr *sap,
 				const socklen_t salen,
 				const unsigned short transport,
 				const struct sockaddr *addr,
-				const socklen_t addrlen,
 				const rpcprog_t program,
 				const rpcvers_t version,
 				const unsigned short protocol,
 				const struct timeval *timeout)
 {
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	CLIENT *client;
 	struct rpcb parms;
 	struct timeval tout = { -1, 0 };
@@ -942,9 +1005,13 @@ unsigned short nfs_rpcb_getaddr(const struct sockaddr *sap,
 	if (timeout != NULL)
 		tout = *timeout;
 
-	client = nfs_gp_get_rpcbclient(sap, salen, transport, RPCBVERS_4, &tout);
+	nfs_clear_rpc_createerr();
+
+	memcpy(saddr, sap, (size_t)salen);
+	client = nfs_gp_get_rpcbclient(saddr, salen, transport,
+							RPCBVERS_4, &tout);
 	if (client != NULL) {
-		if (nfs_gp_init_rpcb_parms(addr, addrlen, program, version,
+		if (nfs_gp_init_rpcb_parms(addr, program, version,
 						protocol, &parms) != 0) {
 			port = nfs_gp_rpcb_getaddr(client, &parms, tout);
 			nfs_gp_free_rpcb_parms(&parms);
@@ -955,23 +1022,24 @@ unsigned short nfs_rpcb_getaddr(const struct sockaddr *sap,
 	return port;
 }
 
-#else	/* HAVE_XDR_RPCB */
+#else	/* !HAVE_LIBTIRPC */
 
-unsigned short nfs_rpcb_getaddr(const struct sockaddr *sap,
-				const socklen_t salen,
-				const unsigned short transport,
-				const struct sockaddr *addr,
-				const socklen_t addrlen,
-				const rpcprog_t program,
-				const rpcvers_t version,
-				const unsigned short protocol,
-				const struct timeval *timeout)
+unsigned short nfs_rpcb_getaddr(__attribute__((unused)) const struct sockaddr *sap,
+				__attribute__((unused)) const socklen_t salen,
+				__attribute__((unused)) const unsigned short transport,
+				__attribute__((unused)) const struct sockaddr *addr,
+				__attribute__((unused)) const rpcprog_t program,
+				__attribute__((unused)) const rpcvers_t version,
+				__attribute__((unused)) const unsigned short protocol,
+				__attribute__((unused)) const struct timeval *timeout)
 {
+	nfs_clear_rpc_createerr();
+
 	rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 	return 0;
 }
 
-#endif	/* HAVE_XDR_RPCB */
+#endif	/* !HAVE_LIBTIRPC */
 
 /**
  * nfs_pmap_getport - query rpcbind via the portmap protocol (rpcbindv2)
@@ -1008,6 +1076,8 @@ unsigned long nfs_pmap_getport(const struct sockaddr_in *sin,
 			       const unsigned long protocol,
 			       const struct timeval *timeout)
 {
+	struct sockaddr_in address;
+	struct sockaddr *saddr = (struct sockaddr *)&address;
 	CLIENT *client;
 	struct pmap parms = {
 		.pm_prog	= program,
@@ -1020,8 +1090,10 @@ unsigned long nfs_pmap_getport(const struct sockaddr_in *sin,
 	if (timeout != NULL)
 		tout = *timeout;
 
-	client = nfs_gp_get_rpcbclient((struct sockaddr *)sin,
-					(socklen_t)sizeof(*sin),
+	nfs_clear_rpc_createerr();
+
+	memcpy(saddr, sin, sizeof(address));
+	client = nfs_gp_get_rpcbclient(saddr, (socklen_t)sizeof(*sin),
 					transport, PMAPVERS, &tout);
 	if (client != NULL) {
 		port = nfs_gp_pmap_getport(client, &parms, tout);
@@ -1029,4 +1101,26 @@ unsigned long nfs_pmap_getport(const struct sockaddr_in *sin,
 	}
 
 	return port;
+}
+
+static const char *nfs_ns_pgmtbl[] = {
+        "status",
+        NULL,
+};
+
+/*
+ * nfs_probe_statd - use nfs_pmap_getport to see if statd is running locally
+ *
+ * Returns non-zero if statd is running locally.
+ */
+int nfs_probe_statd(void)
+{
+        struct sockaddr_in addr = {
+                .sin_family             = AF_INET,
+                .sin_addr.s_addr        = htonl(INADDR_LOOPBACK),
+        };
+        rpcprog_t program = nfs_getrpcbyname(NSMPROG, nfs_ns_pgmtbl);
+
+        return nfs_getport_ping((struct sockaddr *)(char *)&addr, sizeof(addr),
+                                program, (rpcvers_t)1, IPPROTO_UDP);
 }

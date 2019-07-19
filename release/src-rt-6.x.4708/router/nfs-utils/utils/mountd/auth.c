@@ -10,16 +10,20 @@
 #include <config.h>
 #endif
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
+
+#include "sockaddr.h"
 #include "misc.h"
 #include "nfslib.h"
 #include "exportfs.h"
 #include "mountd.h"
-#include "xmalloc.h"
+#include "v4root.h"
 
 enum auth_error
 {
@@ -32,7 +36,6 @@ enum auth_error
 };
 
 static void		auth_fixpath(char *path);
-static char	*export_file = NULL;
 static nfs_export my_exp;
 static nfs_client my_client;
 
@@ -40,10 +43,8 @@ extern int new_cache;
 extern int use_ipaddr;
 
 void
-auth_init(char *exports)
+auth_init(void)
 {
-
-	export_file = exports;
 	auth_reload();
 	xtab_mount_write();
 }
@@ -81,7 +82,7 @@ auth_reload()
 {
 	struct stat		stb;
 	static ino_t		last_inode;
-	static int		last_fd;
+	static int		last_fd = -1;
 	static unsigned int	counter;
 	int			fd;
 
@@ -89,11 +90,22 @@ auth_reload()
 		xlog(L_FATAL, "couldn't open %s", _PATH_ETAB);
 	} else if (fstat(fd, &stb) < 0) {
 		xlog(L_FATAL, "couldn't stat %s", _PATH_ETAB);
-	} else if (stb.st_ino == last_inode) {
+		close(fd);
+	} else if (last_fd != -1 && stb.st_ino == last_inode) {
+		/* We opened the etab file before, and its inode
+		 * number hasn't changed since then.
+		 */
 		close(fd);
 		return counter;
 	} else {
-		close(last_fd);
+		/* Need to process entries from the etab file.  Close
+		 * the file descriptor from the previous open (last_fd),
+		 * and keep the current file descriptor open to prevent
+		 * the file system reusing the current inode number
+		 * (last_inode).
+		 */
+		if (last_fd != -1)
+			close(last_fd);
 		last_fd = fd;
 		last_inode = stb.st_ino;
 	}
@@ -102,75 +114,116 @@ auth_reload()
 	memset(&my_client, 0, sizeof(my_client));
 	xtab_export_read();
 	check_useipaddr();
+	v4root_set();
+
 	++counter;
 
 	return counter;
 }
 
+static char *get_client_ipaddr_name(const struct sockaddr *caller)
+{
+	char buf[INET6_ADDRSTRLEN + 1];
+
+	buf[0] = '$';
+	host_ntop(caller, buf + 1, sizeof(buf) - 1);
+	return strdup(buf);
+}
+
+static char *
+get_client_hostname(const struct sockaddr *caller, struct addrinfo *ai,
+		enum auth_error *error)
+{
+	char *n;
+
+	if (use_ipaddr)
+		return get_client_ipaddr_name(caller);
+	n = client_compose(ai);
+	*error = unknown_host;
+	if (!n)
+		return NULL;
+	if (*n)
+		return n;
+	free(n);
+	return strdup("DEFAULT");
+}
+
+bool ipaddr_client_matches(nfs_export *exp, struct addrinfo *ai)
+{
+	return client_check(exp->m_client, ai);
+}
+
+bool namelist_client_matches(nfs_export *exp, char *dom)
+{
+	return client_member(dom, exp->m_client->m_hostname);
+}
+
+bool client_matches(nfs_export *exp, char *dom, struct addrinfo *ai)
+{
+	if (is_ipaddr_client(dom))
+		return ipaddr_client_matches(exp, ai);
+	return namelist_client_matches(exp, dom);
+}
+
+/* return static nfs_export with details filled in */
 static nfs_export *
-auth_authenticate_internal(char *what, struct sockaddr_in *caller,
-			   char *path, struct hostent *hp,
+auth_authenticate_newcache(const struct sockaddr *caller,
+			   const char *path, struct addrinfo *ai,
 			   enum auth_error *error)
 {
-	nfs_export		*exp;
+	nfs_export *exp;
+	int i;
+
+	free(my_client.m_hostname);
+
+	my_client.m_hostname = get_client_hostname(caller, ai, error);
+	if (my_client.m_hostname == NULL)
+		return NULL;
+
+	my_client.m_naddr = 1;
+	set_addrlist(&my_client, 0, caller);
+	my_exp.m_client = &my_client;
+
+	exp = NULL;
+	for (i = 0; !exp && i < MCL_MAXTYPES; i++)
+		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
+			if (strcmp(path, exp->m_export.e_path))
+				continue;
+			if (!client_matches(exp, my_client.m_hostname, ai))
+				continue;
+			if (exp->m_export.e_flags & NFSEXP_V4ROOT)
+				/* not acceptable for v[23] export */
+				continue;
+			break;
+		}
+	*error = not_exported;
+	if (!exp)
+		return NULL;
+
+	my_exp.m_export = exp->m_export;
+	exp = &my_exp;
+	return exp;
+}
+
+static nfs_export *
+auth_authenticate_internal(const struct sockaddr *caller, const char *path,
+		struct addrinfo *ai, enum auth_error *error)
+{
+	nfs_export *exp;
 
 	if (new_cache) {
-		int i;
-		/* return static nfs_export with details filled in */
-		char *n;
-		free(my_client.m_hostname);
-		if (use_ipaddr) {
-			my_client.m_hostname =
-				strdup(inet_ntoa(caller->sin_addr));
-		} else {
-			n = client_compose(hp);
-			*error = unknown_host;
-			if (!n)
-				my_client.m_hostname = NULL;
-			else if (*n)
-				my_client.m_hostname = n;
-			else {
-				free(n);
-				my_client.m_hostname = strdup("DEFAULT");
-			}
-		}
-		if (my_client.m_hostname == NULL)
-			return NULL;
-		my_client.m_naddr = 1;
-		my_client.m_addrlist[0] = caller->sin_addr;
-		my_exp.m_client = &my_client;
-
-		exp = NULL;
-		for (i = 0; !exp && i < MCL_MAXTYPES; i++) 
-			for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
-				if (strcmp(path, exp->m_export.e_path))
-					continue;
-				if (!use_ipaddr && !client_member(my_client.m_hostname, exp->m_client->m_hostname))
-					continue;
-				if (use_ipaddr && !client_check(exp->m_client, hp))
-					continue;
-				break;
-			}
-		*error = not_exported;
+		exp = auth_authenticate_newcache(caller, path, ai, error);
 		if (!exp)
-			return exp;
-
-		my_exp.m_export = exp->m_export;
-		exp = &my_exp;
-
-	} else {
-		if (!(exp = export_find(hp, path))) {
-			*error = no_entry;
 			return NULL;
-		}
-		if (!exp->m_mayexport) {
-			*error = not_exported;
+	} else {
+		exp = export_find(ai, path);
+		if (exp == NULL) {
+			*error = no_entry;
 			return NULL;
 		}
 	}
 	if (!(exp->m_export.e_flags & NFSEXP_INSECURE_PORT) &&
-		    (ntohs(caller->sin_port) <  IPPORT_RESERVED/2 ||
-		     ntohs(caller->sin_port) >= IPPORT_RESERVED)) {
+		     nfs_get_port(caller) >= IPPORT_RESERVED) {
 		*error = illegal_port;
 		return NULL;
 	}
@@ -180,18 +233,19 @@ auth_authenticate_internal(char *what, struct sockaddr_in *caller,
 }
 
 nfs_export *
-auth_authenticate(char *what, struct sockaddr_in *caller, char *path)
+auth_authenticate(const char *what, const struct sockaddr *caller,
+		const char *path)
 {
 	nfs_export	*exp = NULL;
 	char		epath[MAXPATHLEN+1];
 	char		*p = NULL;
-	struct hostent	*hp = NULL;
-	struct in_addr	addr = caller->sin_addr;
+	char		buf[INET6_ADDRSTRLEN];
+	struct addrinfo *ai = NULL;
 	enum auth_error	error = bad_path;
 
-	if (path [0] != '/') {
-		xlog(L_WARNING, "bad path in %s request from %s: \"%s\"",
-		     what, inet_ntoa(addr), path);
+	if (path[0] != '/') {
+		xlog(L_WARNING, "Bad path in %s request from %s: \"%s\"",
+			     what, host_ntop(caller, buf, sizeof(buf)), path);
 		return exp;
 	}
 
@@ -199,14 +253,13 @@ auth_authenticate(char *what, struct sockaddr_in *caller, char *path)
 	epath[sizeof (epath) - 1] = '\0';
 	auth_fixpath(epath); /* strip duplicate '/' etc */
 
-	hp = client_resolve(caller->sin_addr);
-	if (!hp)
+	ai = client_resolve(caller);
+	if (ai == NULL)
 		return exp;
 
 	/* Try the longest matching exported pathname. */
 	while (1) {
-		exp = auth_authenticate_internal(what, caller, epath,
-						 hp, &error);
+		exp = auth_authenticate_internal(caller, epath, ai, &error);
 		if (exp || (error != not_exported && error != no_entry))
 			break;
 		/* We have to treat the root, "/", specially. */
@@ -219,41 +272,40 @@ auth_authenticate(char *what, struct sockaddr_in *caller, char *path)
 	switch (error) {
 	case bad_path:
 		xlog(L_WARNING, "bad path in %s request from %s: \"%s\"",
-		     what, inet_ntoa(addr), path);
+		     what, host_ntop(caller, buf, sizeof(buf)), path);
 		break;
 
 	case unknown_host:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): unmatched host",
-		     what, inet_ntoa(addr), path, epath);
+		     what, host_ntop(caller, buf, sizeof(buf)), path, epath);
 		break;
 
 	case no_entry:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): no export entry",
-		     what, hp->h_name, path, epath);
+		     what, ai->ai_canonname, path, epath);
 		break;
 
 	case not_exported:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): not exported",
-		     what, hp->h_name, path, epath);
+		     what, ai->ai_canonname, path, epath);
 		break;
 
 	case illegal_port:
-		xlog(L_WARNING, "refused %s request from %s for %s (%s): illegal port %d",
-		     what, hp->h_name, path, epath, ntohs(caller->sin_port));
+		xlog(L_WARNING, "refused %s request from %s for %s (%s): illegal port %u",
+		     what, ai->ai_canonname, path, epath, nfs_get_port(caller));
 		break;
 
 	case success:
-		xlog(L_NOTICE, "authenticated %s request from %s:%d for %s (%s)",
-		     what, hp->h_name, ntohs(caller->sin_port), path, epath);
+		xlog(L_NOTICE, "authenticated %s request from %s:%u for %s (%s)",
+		     what, ai->ai_canonname, nfs_get_port(caller), path, epath);
 		break;
 	default:
-		xlog(L_NOTICE, "%s request from %s:%d for %s (%s) gave %d",
-		     what, hp->h_name, ntohs(caller->sin_port), path, epath, error);
+		xlog(L_NOTICE, "%s request from %s:%u for %s (%s) gave %d",
+		     what, ai->ai_canonname, nfs_get_port(caller),
+			path, epath, error);
 	}
 
-	if (hp)
-		free (hp);
-
+	freeaddrinfo(ai);
 	return exp;
 }
 

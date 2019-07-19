@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <paths.h>
 #include <rpcsvc/nfs_prot.h>
 #include <nfs/nfs.h>
@@ -24,6 +25,12 @@
 
 #ifndef _PATH_EXPORTS
 #define _PATH_EXPORTS		"/etc/exports"
+#endif
+#ifndef _PATH_EXPORTS_D
+#define _PATH_EXPORTS_D         "/etc/exports.d"
+#endif
+#ifndef _EXT_EXPORT
+#define _EXT_EXPORT             ".exports"
 #endif
 #ifndef _PATH_IDMAPDCONF
 #define _PATH_IDMAPDCONF	"/etc/idmapd.conf"
@@ -34,17 +41,26 @@
 #ifndef _PATH_XTABTMP
 #define _PATH_XTABTMP		NFS_STATEDIR "/xtab.tmp"
 #endif
+#ifndef _PATH_XTABLCK
+#define _PATH_XTABLCK		NFS_STATEDIR "/.xtab.lock"
+#endif
 #ifndef _PATH_ETAB
 #define _PATH_ETAB		NFS_STATEDIR "/etab"
 #endif
 #ifndef _PATH_ETABTMP
 #define _PATH_ETABTMP		NFS_STATEDIR "/etab.tmp"
 #endif
+#ifndef _PATH_ETABLCK
+#define _PATH_ETABLCK		NFS_STATEDIR "/.etab.lock"
+#endif
 #ifndef _PATH_RMTAB
 #define _PATH_RMTAB		NFS_STATEDIR "/rmtab"
 #endif
 #ifndef _PATH_RMTABTMP
 #define _PATH_RMTABTMP		_PATH_RMTAB ".tmp"
+#endif
+#ifndef _PATH_RMTABLCK
+#define _PATH_RMTABLCK		NFS_STATEDIR "/.rmtab.lock"
 #endif
 #ifndef _PATH_PROC_EXPORTS
 #define	_PATH_PROC_EXPORTS	"/proc/fs/nfs/exports"
@@ -74,12 +90,13 @@ struct exportent {
 	int		e_nsquids;
 	int *		e_sqgids;
 	int		e_nsqgids;
-	int		e_fsid;
+	unsigned int	e_fsid;
 	char *		e_mountpoint;
 	int             e_fslocmethod;
 	char *          e_fslocdata;
 	char *		e_uuid;
 	struct sec_entry e_secinfo[SECFLAVOR_COUNT+1];
+	unsigned int	e_ttl;
 };
 
 struct rmtabent {
@@ -112,6 +129,10 @@ void			fputrmtabent(FILE *fp, struct rmtabent *xep, long *pos);
 void			fendrmtabent(FILE *fp);
 void			frewindrmtabent(FILE *fp);
 
+/* mydaemon */
+void daemon_init(bool fg);
+void daemon_ready(void);
+
 /*
  * wildmat borrowed from INN
  */
@@ -121,20 +142,17 @@ int			wildmat(char *text, char *pattern);
  * nfsd library functions.
  */
 int			nfsctl(int, struct nfsctl_arg *, union nfsctl_res *);
-int			nfssvc(int port, int nrservs, unsigned int versbits, unsigned int portbits, char *haddr);
 int			nfsaddclient(struct nfsctl_client *clp);
 int			nfsdelclient(struct nfsctl_client *clp);
 int			nfsexport(struct nfsctl_export *exp);
 int			nfsunexport(struct nfsctl_export *exp);
-struct nfs_fh_len *	getfh_old(struct sockaddr *addr, dev_t dev, ino_t ino);
-struct nfs_fh_len *	getfh(struct sockaddr *addr, const char *);
-struct nfs_fh_len *	getfh_size(struct sockaddr *addr, const char *, int size);
 
-void qword_print(FILE *f, char *str);
-void qword_printhex(FILE *f, char *str, int slen);
-void qword_printint(FILE *f, int num);
-int qword_eol(FILE *f);
-int readline(int fd, char **buf, int *lenp);
+struct nfs_fh_len *	getfh_old(const struct sockaddr_in *sin,
+					const dev_t dev, const ino_t ino);
+struct nfs_fh_len *	getfh(const struct sockaddr_in *sin, const char *path);
+struct nfs_fh_len *	getfh_size(const struct sockaddr_in *sin,
+					const char *path, int const size);
+
 int qword_get(char **bpp, char *dest, int bufsize);
 int qword_get_int(char **bpp, int *anint);
 void cache_flush(int force);
@@ -144,10 +162,24 @@ void qword_addhex(char **bpp, int *lp, char *buf, int blen);
 void qword_addint(char **bpp, int *lp, int n);
 void qword_adduint(char **bpp, int *lp, unsigned int n);
 void qword_addeol(char **bpp, int *lp);
+int qword_get_uint(char **bpp, unsigned int *anint);
 
 void closeall(int min);
 
 int			svctcp_socket (u_long __number, int __reuse);
-int			svcudp_socket (u_long __number, int __reuse);
+int			svcudp_socket (u_long __number);
+int			svcsock_nonblock (int __sock);
+
+/* Misc shared code prototypes */
+size_t  strlcat(char *, const char *, size_t);
+size_t  strlcpy(char *, const char *, size_t);
+ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
+		 int, void *, size_t);
+
+#ifdef HAVE_LIBTIRPC_SET_DEBUG
+void  libtirpc_set_debug(char *name, int level, int use_stderr);
+#endif
+
+#define UNUSED(x) UNUSED_ ## x __attribute__((unused))
 
 #endif /* NFSLIB_H */

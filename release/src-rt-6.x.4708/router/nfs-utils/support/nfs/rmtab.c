@@ -19,6 +19,18 @@
 #include <signal.h>
 #include "nfslib.h"
 
+/*
+ * Colons in incoming IPv6 presentation addresses have to
+ * replaced with another character, since rmtab already
+ * uses colons to delineate fields.
+ *
+ * Use a printable character, but one that would never be
+ * found in a presentation address or domain name
+ */
+#define IPV6_COLON	';'
+
+#define LINELEN		(2048)
+
 static FILE	*rmfp = NULL;
 
 int
@@ -56,7 +68,8 @@ struct rmtabent *
 fgetrmtabent(FILE *fp, int log, long *pos)
 {
 	static struct rmtabent	re;
-	char	buf[2048], *count, *host, *path;
+	char		*count, *host, *path, *c;
+	static char	buf[LINELEN];
 
 	errno = 0;
 	if (!fp)
@@ -84,10 +97,16 @@ fgetrmtabent(FILE *fp, int log, long *pos)
 		else
 			re.r_count = 1;
 	} while (0);
+
 	strncpy(re.r_client, host, sizeof (re.r_client) - 1);
 	re.r_client[sizeof (re.r_client) - 1] = '\0';
+	for (c = re.r_client; *c != '\0'; c++)
+		if (*c == IPV6_COLON)
+			*c = ':';
+
 	strncpy(re.r_path, path, sizeof (re.r_path) - 1);
 	re.r_path[sizeof (re.r_path) - 1] = '\0';
+
 	return &re;
 }
 
@@ -100,10 +119,27 @@ putrmtabent(struct rmtabent *rep, long *pos)
 void
 fputrmtabent(FILE *fp, struct rmtabent *rep, long *pos)
 {
+	static char	buf[LINELEN];
+	char		*c;
+
 	if (!fp || (pos && fseek (fp, *pos, SEEK_SET) != 0))
 		return;
-	fprintf(fp, "%s:%s:0x%.8x\n", rep->r_client, rep->r_path,
-		rep->r_count);
+
+	/*
+	 * To avoid confusing the token parser in fgetrmtabent(),
+	 * convert colons in incoming IPv6 presentation addresses
+	 * to semicolons.
+	 */
+	if (strlen(rep->r_client) > sizeof(buf)) {
+		xlog(L_ERROR, "client name too large");
+		return;
+	}
+	strncpy(buf, rep->r_client, sizeof(buf));
+	for (c = buf; *c != '\0'; c++)
+		if (*c == ':')
+			*c = IPV6_COLON;
+
+	(void)fprintf(fp, "%s:%s:0x%.8x\n", buf, rep->r_path, rep->r_count);
 }
 
 void
@@ -117,11 +153,24 @@ void
 fendrmtabent(FILE *fp)
 {
 	if (fp) {
-		/* If it was written to, we really want
-		 * to flush to disk before returning
-		 */
-		fflush(fp);
-		fdatasync(fileno(fp));
+		static int have_new_cache = -1;
+		if (have_new_cache == -1) /* check only once */
+			have_new_cache = check_new_cache();
+
+		if (!have_new_cache) {
+			/*
+			 * If we are using the old caching interface: exportfs
+			 * uses the rmtab to determine what should be exported,
+			 * so it is important that it be up-to-date.
+			 *
+			 * If we are using the new caching interface: the rmtab
+			 * is ignored by exportfs and the fdatasync only serves
+			 * to slow us down.
+			 */
+			fflush(fp);
+			fdatasync(fileno(fp));
+		}
+
 		fclose(fp);
 	}
 }

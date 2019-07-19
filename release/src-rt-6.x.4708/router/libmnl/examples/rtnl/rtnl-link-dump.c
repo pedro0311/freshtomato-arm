@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include <libmnl/libmnl.h>
 #include <linux/if.h>
@@ -19,6 +20,12 @@ static int data_attr_cb(const struct nlattr *attr, void *data)
 		return MNL_CB_OK;
 
 	switch(type) {
+	case IFLA_ADDRESS:
+		if (mnl_attr_validate(attr, MNL_TYPE_BINARY) < 0) {
+			perror("mnl_attr_validate");
+			return MNL_CB_ERROR;
+		}
+		break;
 	case IFLA_MTU:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0) {
 			perror("mnl_attr_validate");
@@ -27,7 +34,7 @@ static int data_attr_cb(const struct nlattr *attr, void *data)
 		break;
 	case IFLA_IFNAME:
 		if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0) {
-			perror("mnl_attr_validate2");
+			perror("mnl_attr_validate");
 			return MNL_CB_ERROR;
 		}
 		break;
@@ -55,7 +62,18 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 		printf("mtu=%d ", mnl_attr_get_u32(tb[IFLA_MTU]));
 	}
 	if (tb[IFLA_IFNAME]) {
-		printf("name=%s", mnl_attr_get_str(tb[IFLA_IFNAME]));
+		printf("name=%s ", mnl_attr_get_str(tb[IFLA_IFNAME]));
+	}
+	if (tb[IFLA_ADDRESS]) {
+		uint8_t *hwaddr = mnl_attr_get_payload(tb[IFLA_ADDRESS]);
+		int i;
+
+		printf("hwaddr=");
+		for (i=0; i<mnl_attr_get_payload_len(tb[IFLA_ADDRESS]); i++) {
+			printf("%.2x", hwaddr[i] & 0xff);
+			if (i+1 != mnl_attr_get_payload_len(tb[IFLA_ADDRESS]))
+				printf(":");
+		}
 	}
 	printf("\n");
 	return MNL_CB_OK;
@@ -90,7 +108,7 @@ int main(void)
 	portid = mnl_socket_get_portid(nl);
 
 	if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
-		perror("mnl_socket_send");
+		perror("mnl_socket_sendto");
 		exit(EXIT_FAILURE);
 	}
 

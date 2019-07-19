@@ -62,102 +62,26 @@
 #include "gss_util.h"
 #include "err_util.h"
 
-/*
- * mydaemon creates a pipe between the partent and child
- * process. The parent process will wait until the
- * child dies or writes a '1' on the pipe signaling
- * that it started successfully.
- */
-int pipefds[2] = { -1, -1};
-
-static void
-mydaemon(int nochdir, int noclose)
-{
-	int pid, status, tempfd;
-
-	if (pipe(pipefds) < 0) {
-		printerr(1, "mydaemon: pipe() failed: errno %d (%s)\n",
-			errno, strerror(errno));
-		exit(1);
-	}
-	if ((pid = fork ()) < 0) {
-		printerr(1, "mydaemon: fork() failed: errno %d (%s)\n",
-			errno, strerror(errno));
-		exit(1);
-	}
-
-	if (pid != 0) {
-		/*
-		 * Parent. Wait for status from child.
-		 */
-		close(pipefds[1]);
-		if (read(pipefds[0], &status, 1) != 1)
-			exit(1);
-		exit (0);
-	}
-	/* Child.	*/
-	close(pipefds[0]);
-	setsid ();
-	if (nochdir == 0) {
-		if (chdir ("/") == -1) {
-			printerr(1, "mydaemon: chdir() failed: errno %d (%s)\n",
-				errno, strerror(errno));
-			exit(1);
-		}
-	}
-
-	while (pipefds[1] <= 2) {
-		pipefds[1] = dup(pipefds[1]);
-		if (pipefds[1] < 0) {
-			printerr(1, "mydaemon: dup() failed: errno %d (%s)\n",
-				errno, strerror(errno));
-			exit(1);
-		}
-	}
-
-	if (noclose == 0) {
-		tempfd = open("/dev/null", O_RDWR);
-		dup2(tempfd, 0);
-		dup2(tempfd, 1);
-		dup2(tempfd, 2);
-		closeall(3);
-	}
-
-	return;
-}
-
-static void
-release_parent(void)
-{
-	int status;
-
-	if (pipefds[1] > 0) {
-		write(pipefds[1], &status, 1);
-		close(pipefds[1]);
-		pipefds[1] = -1;
-	}
-}
-
 void
 sig_die(int signal)
 {
 	/* destroy krb5 machine creds */
 	printerr(1, "exiting on signal %d\n", signal);
-	exit(1);
+	exit(0);
 }
 
 void
 sig_hup(int signal)
 {
 	/* don't exit on SIGHUP */
-	printerr(1, "Received SIGHUP... Ignoring.\n");
+	printerr(1, "Received SIGHUP(%d)... Ignoring.\n", signal);
 	return;
 }
 
 static void
 usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [-n] [-f] [-v] [-r] [-i]\n",
+	fprintf(stderr, "usage: %s [-n] [-f] [-v] [-r] [-i] [-p principal]\n",
 		progname);
 	exit(1);
 }
@@ -170,9 +94,10 @@ main(int argc, char *argv[])
 	int verbosity = 0;
 	int rpc_verbosity = 0;
 	int idmap_verbosity = 0;
-	int opt;
+	int opt, status;
 	extern char *optarg;
 	char *progname;
+	char *principal = NULL;
 
 	while ((opt = getopt(argc, argv, "fivrnp:")) != -1) {
 		switch (opt) {
@@ -191,6 +116,9 @@ main(int argc, char *argv[])
 			case 'r':
 				rpc_verbosity++;
 				break;
+			case 'p':
+				principal = optarg;
+				break;
 			default:
 				usage(argv[0]);
 				break;
@@ -204,13 +132,24 @@ main(int argc, char *argv[])
 
 	initerr(progname, verbosity, fg);
 #ifdef HAVE_AUTHGSS_SET_DEBUG_LEVEL
+	if (verbosity && rpc_verbosity == 0)
+		rpc_verbosity = verbosity;
 	authgss_set_debug_level(rpc_verbosity);
+#elif HAVE_LIBTIRPC_SET_DEBUG
+        /*
+	 * Only set the libtirpc debug level if explicitly requested via -r...
+	 * svcgssd is chatty enough as it is.
+	 */
+        if (rpc_verbosity > 0)
+                libtirpc_set_debug(progname, rpc_verbosity, fg);
 #else
 	if (rpc_verbosity > 0)
 		printerr(0, "Warning: rpcsec_gss library does not "
 			    "support setting debug level\n");
 #endif
 #ifdef HAVE_NFS4_SET_DEBUG
+		if (verbosity && idmap_verbosity == 0)
+			idmap_verbosity = verbosity;
         nfs4_set_debug(idmap_verbosity, NULL);
 #else
 	if (idmap_verbosity > 0)
@@ -223,24 +162,38 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (!fg)
-		mydaemon(0, 0);
+	daemon_init(fg);
 
 	signal(SIGINT, sig_die);
 	signal(SIGTERM, sig_die);
 	signal(SIGHUP, sig_hup);
 
-	if (get_creds && !gssd_acquire_cred(GSSD_SERVICE_NAME)) {
-                printerr(0, "unable to obtain root (machine) credentials\n");
-                printerr(0, "do you have a keytab entry for "
-			    "nfs/<your.host>@<YOUR.REALM> in "
-			    "/etc/krb5.keytab?\n");
-		exit(1);
+	if (get_creds) {
+		if (principal)
+			status = gssd_acquire_cred(principal, 
+				((const gss_OID)GSS_C_NT_USER_NAME));
+		else
+			status = gssd_acquire_cred(GSSD_SERVICE_NAME, 
+				(const gss_OID)GSS_C_NT_HOSTBASED_SERVICE);
+		if (status == FALSE) {
+			printerr(0, "unable to obtain root (machine) credentials\n");
+			printerr(0, "do you have a keytab entry for "
+				"nfs/<your.host>@<YOUR.REALM> in "
+				"/etc/krb5.keytab?\n");
+			exit(1);
+		}
+	} else {
+		status = gssd_acquire_cred(NULL,
+			(const gss_OID)GSS_C_NT_HOSTBASED_SERVICE);
+		if (status == FALSE) {
+			printerr(0, "unable to obtain nameless credentials\n");
+			exit(1);
+		}
 	}
 
-	if (!fg)
-		release_parent();
+	daemon_ready();
 
+	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
 	gssd_run();
 	printerr(0, "gssd_run returned!\n");
 	abort();

@@ -1,4 +1,4 @@
-#ACLOCAL_AMFLAGS = -I autoconf-archive/m4
+ACLOCAL_AMFLAGS = -I autoconf-archive/m4
 
 EXTRA_DIST = README.md README.html
 EXTRA_DIST += config.h.win32
@@ -20,7 +20,6 @@ pkgconfig_DATA = json-c.pc
 libjson_cincludedir = $(includedir)/json-c
 libjson_cinclude_HEADERS = \
 	arraylist.h \
-	bits.h \
 	debug.h \
 	json.h \
 	json_c_version.h \

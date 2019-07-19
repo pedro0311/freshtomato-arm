@@ -66,7 +66,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "xlog.h"
-#include "cfg.h"
+#include "conffile.h"
 #include "queue.h"
 #include "nfslib.h"
 
@@ -117,8 +117,24 @@ struct idmap_client {
 	TAILQ_ENTRY(idmap_client)  ic_next;
 };
 static struct idmap_client nfsd_ic[2] = {
-{IC_IDNAME, "Server", "", IC_IDNAME_CHAN, -1, -1, 0},
-{IC_NAMEID, "Server", "", IC_NAMEID_CHAN, -1, -1, 0},
+{
+	.ic_which = IC_IDNAME, 
+	.ic_clid = "", 
+	.ic_id = "Server", 
+	.ic_path = IC_IDNAME_CHAN, 
+	.ic_fd = -1, 
+	.ic_dirfd = -1, 
+	.ic_scanned = 0
+},
+{
+	.ic_which = IC_NAMEID, 
+	.ic_clid = "", 
+	.ic_id = "Server", 
+	.ic_path = IC_NAMEID_CHAN, 
+	.ic_fd = -1, 
+	.ic_dirfd = -1, 
+	.ic_scanned = 0
+},
 };
 
 TAILQ_HEAD(idmap_clientq, idmap_client);
@@ -129,7 +145,6 @@ static void svrreopen(int, short, void *);
 static int  nfsopen(struct idmap_client *);
 static void nfscb(int, short, void *);
 static void nfsdcb(int, short, void *);
-static int  validateascii(char *, u_int32_t);
 static int  addfield(char **, ssize_t *, char *);
 static int  getfield(char **, char *, size_t);
 
@@ -139,14 +154,8 @@ static void nametoidres(struct idmap_msg *);
 
 static int nfsdopen(void);
 static int nfsdopenone(struct idmap_client *);
+static void nfsdreopen_one(struct idmap_client *);
 static void nfsdreopen(void);
-
-size_t  strlcat(char *, const char *, size_t);
-size_t  strlcpy(char *, const char *, size_t);
-ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
-		 int, void *, size_t);
-void    mydaemon(int, int);
-void    release_parent(void);
 
 static int verbose = 0;
 #define DEFAULT_IDMAP_CACHE_EXPIRY 600 /* seconds */
@@ -156,7 +165,7 @@ static char *nobodyuser, *nobodygroup;
 static uid_t nobodyuid;
 static gid_t nobodygid;
 
-/* Used by cfg.c */
+/* Used by conffile.c in libnfs.a */
 char *conf_path;
 
 static int
@@ -169,7 +178,10 @@ flush_nfsd_cache(char *path, time_t now)
 	fd = open(path, O_RDWR);
 	if (fd == -1)
 		return -1;
-	write(fd, stime, strlen(stime));
+	if (write(fd, stime, strlen(stime)) != (ssize_t)strlen(stime)) {
+		errx(1, "Flushing nfsd cache failed: errno %d (%s)",
+			errno, strerror(errno));
+	}
 	close(fd);
 	return 0;
 }
@@ -185,6 +197,12 @@ flush_nfsd_idmap_cache(void)
 		return ret;
 	ret = flush_nfsd_cache(IC_NAMEID_FLUSH, now);
 	return ret;
+}
+
+void usage(char *progname)
+{
+	fprintf(stderr, "Usage: %s [-hfvCS] [-p path] [-c path]\n",
+		basename(progname));
 }
 
 int
@@ -213,16 +231,18 @@ main(int argc, char **argv)
 		progname = argv[0];
 	xlog_open(progname);
 
-#define GETOPTSTR "vfd:p:U:G:c:CS"
+#define GETOPTSTR "hvfd:p:U:G:c:CS"
 	opterr=0; /* Turn off error messages */
 	while ((opt = getopt(argc, argv, GETOPTSTR)) != -1) {
 		if (opt == 'c')
 			conf_path = optarg;
 		if (opt == '?') {
 			if (strchr(GETOPTSTR, optopt))
-				errx(1, "'-%c' option requires an argument.", optopt);
+				warnx("'-%c' option requires an argument.", optopt);
 			else
-				errx(1, "'-%c' is an invalid argument.", optopt);
+				warnx("'-%c' is an invalid argument.", optopt);
+			usage(progname);
+			exit(1);
 		}
 	}
 	optind = 1;
@@ -264,6 +284,9 @@ main(int argc, char **argv)
 		case 'S':
 			clientstart = 0;
 			break;
+		case 'h':
+			usage(progname);
+			exit(0);
 		default:
 			break;
 		}
@@ -289,8 +312,7 @@ main(int argc, char **argv)
 	if (nfs4_init_name_mapping(conf_path))
 		errx(1, "Unable to create name to user id mappings.");
 
-	if (!fg)
-		mydaemon(0, 0);
+	daemon_init(fg);
 
 	event_init();
 
@@ -367,7 +389,7 @@ main(int argc, char **argv)
 	if (nfsdret != 0 && fd == 0)
 		xlog_err("main: Neither NFS client nor NFSd found");
 
-	release_parent();
+	daemon_ready();
 
 	if (event_dispatch() < 0)
 		xlog_err("main: event_dispatch returns errno %d (%s)",
@@ -377,7 +399,7 @@ main(int argc, char **argv)
 }
 
 static void
-dirscancb(int fd, short which, void *data)
+dirscancb(int UNUSED(fd), short UNUSED(which), void *data)
 {
 	int nent, i;
 	struct dirent **ents;
@@ -409,7 +431,8 @@ dirscancb(int fd, short which, void *data)
 			    pipefsdir, ents[i]->d_name);
 
 			if ((ic->ic_dirfd = open(path, O_RDONLY, 0)) == -1) {
-				xlog_warn("dirscancb: open(%s): %s", path, strerror(errno));
+				if (verbose > 0)
+					xlog_warn("dirscancb: open(%s): %s", path, strerror(errno));
 				free(ic);
 				goto out;
 			}
@@ -461,13 +484,13 @@ out:
 }
 
 static void
-svrreopen(int fd, short which, void *data)
+svrreopen(int UNUSED(fd), short UNUSED(which), void *UNUSED(data))
 {
 	nfsdreopen();
 }
 
 static void
-clntscancb(int fd, short which, void *data)
+clntscancb(int UNUSED(fd), short UNUSED(which), void *data)
 {
 	struct idmap_clientq *icq = data;
 	struct idmap_client *ic;
@@ -481,12 +504,12 @@ clntscancb(int fd, short which, void *data)
 }
 
 static void
-nfsdcb(int fd, short which, void *data)
+nfsdcb(int UNUSED(fd), short which, void *data)
 {
 	struct idmap_client *ic = data;
 	struct idmap_msg im;
 	u_char buf[IDMAP_MAXMSGSZ + 1];
-	size_t len;
+	ssize_t len;
 	ssize_t bsiz;
 	char *bp, typebuf[IDMAP_MAXMSGSZ],
 		buf1[IDMAP_MAXMSGSZ], authbuf[IDMAP_MAXMSGSZ], *p;
@@ -495,11 +518,16 @@ nfsdcb(int fd, short which, void *data)
 	if (which != EV_READ)
 		goto out;
 
-	if ((len = read(ic->ic_fd, buf, sizeof(buf))) <= 0) {
+	len = read(ic->ic_fd, buf, sizeof(buf));
+	if (len == 0)
+		/* No upcall to read; not necessarily a problem: */
+		return;
+	if (len < 0) {
 		xlog_warn("nfsdcb: read(%s) failed: errno %d (%s)",
-			     ic->ic_path, len?errno:0, 
-			     len?strerror(errno):"End of File");
-		goto out;
+			     ic->ic_path, errno,
+			     strerror(errno));
+		nfsdreopen_one(ic);
+		return;
 	}
 
 	/* Get rid of newline and terminate buffer*/
@@ -511,11 +539,11 @@ nfsdcb(int fd, short which, void *data)
 	/* Authentication name -- ignored for now*/
 	if (getfield(&bp, authbuf, sizeof(authbuf)) == -1) {
 		xlog_warn("nfsdcb: bad authentication name in upcall\n");
-		return;
+		goto out;
 	}
 	if (getfield(&bp, typebuf, sizeof(typebuf)) == -1) {
 		xlog_warn("nfsdcb: bad type in upcall\n");
-		return;
+		goto out;
 	}
 	if (verbose > 0)
 		xlog_warn("nfsdcb: authbuf=%s authtype=%s",
@@ -529,26 +557,26 @@ nfsdcb(int fd, short which, void *data)
 		im.im_conv = IDMAP_CONV_NAMETOID;
 		if (getfield(&bp, im.im_name, sizeof(im.im_name)) == -1) {
 			xlog_warn("nfsdcb: bad name in upcall\n");
-			return;
+			goto out;
 		}
 		break;
 	case IC_IDNAME:
 		im.im_conv = IDMAP_CONV_IDTONAME;
 		if (getfield(&bp, buf1, sizeof(buf1)) == -1) {
 			xlog_warn("nfsdcb: bad id in upcall\n");
-			return;
+			goto out;
 		}
 		tmp = strtoul(buf1, (char **)NULL, 10);
 		im.im_id = (u_int32_t)tmp;
 		if ((tmp == ULONG_MAX && errno == ERANGE)
 				|| (unsigned long)im.im_id != tmp) {
 			xlog_warn("nfsdcb: id '%s' too big!\n", buf1);
-			return;
+			goto out;
 		}
 		break;
 	default:
 		xlog_warn("nfsdcb: Unknown which type %d", ic->ic_which);
-		return;
+		goto out;
 	}
 
 	imconv(ic, &im);
@@ -609,7 +637,7 @@ nfsdcb(int fd, short which, void *data)
 		break;
 	default:
 		xlog_warn("nfsdcb: Unknown which type %d", ic->ic_which);
-		return;
+		goto out;
 	}
 
 	bsiz = sizeof(buf) - bsiz;
@@ -625,6 +653,8 @@ out:
 static void
 imconv(struct idmap_client *ic, struct idmap_msg *im)
 {
+	u_int32_t len;
+
 	switch (im->im_conv) {
 	case IDMAP_CONV_IDTONAME:
 		idtonameres(im);
@@ -635,10 +665,10 @@ imconv(struct idmap_client *ic, struct idmap_msg *im)
 			    im->im_id, im->im_name);
 		break;
 	case IDMAP_CONV_NAMETOID:
-		if (validateascii(im->im_name, sizeof(im->im_name)) == -1) {
-			im->im_status |= IDMAP_STATUS_INVALIDMSG;
+		len = strnlen(im->im_name, IDMAP_NAMESZ - 1);
+		/* Check for NULL termination just to be careful */
+		if (im->im_name[len+1] != '\0')
 			return;
-		}
 		nametoidres(im);
 		if (verbose > 1)
 			xlog_warn("%s %s: (%s) name \"%s\" -> id \"%d\"",
@@ -655,7 +685,7 @@ imconv(struct idmap_client *ic, struct idmap_msg *im)
 }
 
 static void
-nfscb(int fd, short which, void *data)
+nfscb(int UNUSED(fd), short which, void *data)
 {
 	struct idmap_client *ic = data;
 	struct idmap_msg im;
@@ -695,7 +725,7 @@ nfsdreopen_one(struct idmap_client *ic)
 		xlog_warn("ReOpening %s", ic->ic_path);
 
 	if ((fd = open(ic->ic_path, O_RDWR, 0)) != -1) {
-		if ((ic->ic_event.ev_flags & EVLIST_INIT))
+		if ((event_initialized(&ic->ic_event)))
 			event_del(&ic->ic_event);
 		if (ic->ic_fd != -1)
 			close(ic->ic_fd);
@@ -761,8 +791,8 @@ nfsopen(struct idmap_client *ic)
 	} else {
 		event_set(&ic->ic_event, ic->ic_fd, EV_READ, nfscb, ic);
 		event_add(&ic->ic_event, NULL);
-		fcntl(ic->ic_dirfd, F_SETSIG, 0);
 		fcntl(ic->ic_dirfd, F_NOTIFY, 0);
+		fcntl(ic->ic_dirfd, F_SETSIG, 0);
 		if (verbose > 0)
 			xlog_warn("Opened %s", ic->ic_path);
 	}
@@ -838,25 +868,6 @@ nametoidres(struct idmap_msg *im)
 }
 
 static int
-validateascii(char *string, u_int32_t len)
-{
-	int i;
-
-	for (i = 0; i < len; i++) {
-		if (string[i] == '\0')
-			break;
-
-		if (string[i] & 0x80)
-			return (-1);
-	}
-
-	if ((i >= len) || string[i] != '\0')
-		return (-1);
-
-	return (i + 1);
-}
-
-static int
 addfield(char **bpp, ssize_t *bsizp, char *fld)
 {
 	char ch, *bp = *bpp;
@@ -896,7 +907,7 @@ static int
 getfield(char **bpp, char *fld, size_t fldsz)
 {
 	char *bp;
-	u_int val, n;
+	int val, n;
 
 	while ((bp = strsep(bpp, " ")) != NULL && bp[0] == '\0')
 		;
@@ -908,9 +919,9 @@ getfield(char **bpp, char *fld, size_t fldsz)
 		if (*bp == '\\') {
 			if ((n = sscanf(bp, "\\%03o", &val)) != 1)
 				return (-1);
-			if (val > (char)-1)
+			if (val > UCHAR_MAX)
 				return (-1);
-			*fld++ = (char)val;
+			*fld++ = val;
 			bp += 4;
 		} else {
 			*fld++ = *bp;
@@ -924,72 +935,4 @@ getfield(char **bpp, char *fld, size_t fldsz)
 	*fld = '\0';
 
 	return (0);
-}
-/*
- * mydaemon creates a pipe between the partent and child
- * process. The parent process will wait until the
- * child dies or writes a '1' on the pipe signaling
- * that it started successfully.
- */
-int pipefds[2] = { -1, -1};
-
-void
-mydaemon(int nochdir, int noclose)
-{
-	int pid, status, tempfd;
-
-	if (pipe(pipefds) < 0)
-		err(1, "mydaemon: pipe() failed: errno %d", errno);
-
-	if ((pid = fork ()) < 0)
-		err(1, "mydaemon: fork() failed: errno %d", errno);
-
-	if (pid != 0) {
-		/*
-		 * Parent. Wait for status from child.
-		 */
-		close(pipefds[1]);
-		if (read(pipefds[0], &status, 1) != 1)
-			exit(1);
-		exit (0);
-	}
-	/* Child.	*/
-	close(pipefds[0]);
-	setsid ();
-	if (nochdir == 0) {
-		if (chdir ("/") == -1)
-			err(1, "mydaemon: chdir() failed: errno %d", errno);
-	}
-
-	while (pipefds[1] <= 2) {
-		pipefds[1] = dup(pipefds[1]);
-		if (pipefds[1] < 0)
-			err(1, "mydaemon: dup() failed: errno %d", errno);
-	}
-
-	if (noclose == 0) {
-		tempfd = open("/dev/null", O_RDWR);
-		if (tempfd < 0)
-			tempfd = open("/", O_RDONLY);
-		if (tempfd >= 0) {
-			dup2(tempfd, 0);
-			dup2(tempfd, 1);
-			dup2(tempfd, 2);
-			closeall(3);
-		} else
-			closeall(0);
-	}
-
-	return;
-}
-void
-release_parent(void)
-{
-	int status;
-
-	if (pipefds[1] > 0) {
-		write(pipefds[1], &status, 1);
-		close(pipefds[1]);
-		pipefds[1] = -1;
-	}
 }

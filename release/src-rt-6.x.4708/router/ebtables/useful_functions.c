@@ -416,16 +416,41 @@ char *ebt_ip6_to_numeric(const struct in6_addr *addrp)
 	return (char *)inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
 }
 
+int ebt_ip6mask_to_cidr(const struct in6_addr *k)
+{
+	unsigned int bits = 0;
+	uint32_t a, b, c, d;
+
+	a = ntohl(k->s6_addr32[0]);
+	b = ntohl(k->s6_addr32[1]);
+	c = ntohl(k->s6_addr32[2]);
+	d = ntohl(k->s6_addr32[3]);
+	while (a & 0x80000000U) {
+		++bits;
+		a <<= 1;
+		a  |= (b >> 31) & 1;
+		b <<= 1;
+		b  |= (c >> 31) & 1;
+		c <<= 1;
+		c  |= (d >> 31) & 1;
+		d <<= 1;
+	}
+	if (a != 0 || b != 0 || c != 0 || d != 0)
+		return -1;
+	return bits;
+}
+
 char *ebt_ip6_mask_to_string(const struct in6_addr *msk)
 {
-   	/* /0000:0000:0000:0000:0000:000.000.000.000
-	 * /0000:0000:0000:0000:0000:0000:0000:0000 */
+	int l = ebt_ip6mask_to_cidr(msk);
 	static char buf[51+1];
-	if (msk->s6_addr32[0] == 0xFFFFFFFFL && msk->s6_addr32[1] == 0xFFFFFFFFL &&
-	    msk->s6_addr32[2] == 0xFFFFFFFFL && msk->s6_addr32[3] == 0xFFFFFFFFL)
+
+	if (l == 128)
 		*buf = '\0';
-	else
+	else if (l == -1)
 		sprintf(buf, "/%s", ebt_ip6_to_numeric(msk));
+	else
+		sprintf(buf, "/%d", l);
 	return buf;
 }
 

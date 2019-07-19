@@ -21,7 +21,7 @@
  * Wed Oct  1 23:55:28 1997: Dick Streefland <dick_streefland@tasking.com>
  * Implemented the "bg", "fg" and "retry" mount options for NFS.
  *
- * 1999-02-22 Arkadiusz Mi¶kiewicz <misiek@pld.ORG.PL>
+ * 1999-02-22 Arkadiusz Miskiewicz <misiek@pld.ORG.PL>
  * - added Native Language Support
  *
  * Modified by Olaf Kirch and Trond Myklebust for new NFS code,
@@ -170,7 +170,7 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 	struct pmap *mnt_pmap = &mnt_server->pmap;
 	struct pmap *nfs_pmap = &nfs_server->pmap;
 	int len;
-	char *opt, *opteq, *p, *opt_b;
+	char *opt, *opteq, *p, *opt_b, *tmp_opts;
 	char *mounthost = NULL;
 	char cbuf[128];
 	int open_quote = 0;
@@ -179,7 +179,8 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 	*bg = 0;
 
 	len = strlen(new_opts);
-	for (p=old_opts, opt_b=NULL; p && *p; p++) {
+	tmp_opts = xstrdup(old_opts);
+	for (p=tmp_opts, opt_b=NULL; p && *p; p++) {
 		if (!opt_b)
 			opt_b = p;		/* begin of the option item */
 		if (*p == '"')
@@ -293,18 +294,6 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 					data->pseudoflavor = AUTH_GSS_KRB5I;
 				else if (!strcmp(secflavor, "krb5p"))
 					data->pseudoflavor = AUTH_GSS_KRB5P;
-				else if (!strcmp(secflavor, "lipkey"))
-					data->pseudoflavor = AUTH_GSS_LKEY;
-				else if (!strcmp(secflavor, "lipkey-i"))
-					data->pseudoflavor = AUTH_GSS_LKEYI;
-				else if (!strcmp(secflavor, "lipkey-p"))
-					data->pseudoflavor = AUTH_GSS_LKEYP;
-				else if (!strcmp(secflavor, "spkm3"))
-					data->pseudoflavor = AUTH_GSS_SPKM;
-				else if (!strcmp(secflavor, "spkm3i"))
-					data->pseudoflavor = AUTH_GSS_SPKMI;
-				else if (!strcmp(secflavor, "spkm3p"))
-					data->pseudoflavor = AUTH_GSS_SPKMP;
 				else if (sloppy)
 					continue;
 				else {
@@ -457,10 +446,12 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 			goto out_bad;
 		*mnt_server->hostname = mounthost;
 	}
+	free(tmp_opts);
 	return 1;
  bad_parameter:
 	nfs_error(_("%s: Bad nfs mount parameter: %s\n"), progname, opt);
  out_bad:
+	free(tmp_opts);
 	return 0;
 }
 
@@ -507,8 +498,12 @@ nfsmount(const char *spec, const char *node, int flags,
 	int val;
 	static int doonce = 0;
 
-	clnt_addr_t mnt_server = { &mounthost, };
-	clnt_addr_t nfs_server = { &hostname, };
+	clnt_addr_t mnt_server = { 
+		.hostname = &mounthost 
+	};
+	clnt_addr_t nfs_server = { 
+		.hostname = &hostname 
+	};
 	struct sockaddr_in *nfs_saddr = &nfs_server.saddr;
 	struct pmap  *mnt_pmap = &mnt_server.pmap,
 		     *nfs_pmap = &nfs_server.pmap;

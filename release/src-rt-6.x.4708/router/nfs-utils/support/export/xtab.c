@@ -14,16 +14,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include "xmalloc.h"
+
 #include "nfslib.h"
 #include "exportfs.h"
 #include "xio.h"
 #include "xlog.h"
+#include "v4root.h"
 
+int v4root_needed;
 static void cond_rename(char *newfile, char *oldfile);
 
 static int
-xtab_read(char *xtab, int is_export)
+xtab_read(char *xtab, char *lockfn, int is_export)
 {
     /* is_export == 0  => reading /proc/fs/nfs/exports - we know these things are exported to kernel
      * is_export == 1  => reading /var/lib/nfs/etab - these things are allowed to be exported
@@ -33,9 +35,11 @@ xtab_read(char *xtab, int is_export)
 	nfs_export		*exp;
 	int			lockid;
 
-	if ((lockid = xflock(xtab, "r")) < 0)
+	if ((lockid = xflock(lockfn, "r")) < 0)
 		return 0;
 	setexportent(xtab, "r");
+	if (is_export == 1)
+		v4root_needed = 1;
 	while ((xp = getexportent(is_export==0, 0)) != NULL) {
 		if (!(exp = export_lookup(xp->e_hostname, xp->e_path, is_export != 1)) &&
 		    !(exp = export_create(xp, is_export!=1))) {
@@ -48,6 +52,8 @@ xtab_read(char *xtab, int is_export)
 		case 1:
 			exp->m_xtabent = 1;
 			exp->m_mayexport = 1;
+			if ((xp->e_flags & NFSEXP_FSID) && xp->e_fsid == 0)
+				v4root_needed = 0;
 			break;
 		case 2:
 			exp->m_exported = -1;/* may be exported */
@@ -66,18 +72,20 @@ xtab_mount_read(void)
 	int fd;
 	if ((fd=open(_PATH_PROC_EXPORTS, O_RDONLY))>=0) {
 		close(fd);
-		return xtab_read(_PATH_PROC_EXPORTS, 0);
+		return xtab_read(_PATH_PROC_EXPORTS,
+				 _PATH_PROC_EXPORTS, 0);
 	} else if ((fd=open(_PATH_PROC_EXPORTS_ALT, O_RDONLY) >= 0)) {
 		close(fd);
-		return xtab_read(_PATH_PROC_EXPORTS_ALT, 0);
+		return xtab_read(_PATH_PROC_EXPORTS_ALT,
+				 _PATH_PROC_EXPORTS_ALT, 0);
 	} else
-		return xtab_read(_PATH_XTAB, 2);
+		return xtab_read(_PATH_XTAB, _PATH_XTABLCK, 2);
 }
 
 int
 xtab_export_read(void)
 {
-	return xtab_read(_PATH_ETAB, 1);
+	return xtab_read(_PATH_ETAB, _PATH_ETABLCK, 1);
 }
 
 /*
@@ -87,13 +95,13 @@ xtab_export_read(void)
  * fix the auth_reload logic as well...
  */
 static int
-xtab_write(char *xtab, char *xtabtmp, int is_export)
+xtab_write(char *xtab, char *xtabtmp, char *lockfn, int is_export)
 {
 	struct exportent	xe;
 	nfs_export		*exp;
 	int			lockid, i;
 
-	if ((lockid = xflock(xtab, "w")) < 0) {
+	if ((lockid = xflock(lockfn, "w")) < 0) {
 		xlog(L_ERROR, "can't lock %s for writing", xtab);
 		return 0;
 	}
@@ -124,13 +132,13 @@ xtab_write(char *xtab, char *xtabtmp, int is_export)
 int
 xtab_export_write()
 {
-	return xtab_write(_PATH_ETAB, _PATH_ETABTMP, 1);
+	return xtab_write(_PATH_ETAB, _PATH_ETABTMP, _PATH_ETABLCK, 1);
 }
 
 int
 xtab_mount_write()
 {
-	return xtab_write(_PATH_XTAB, _PATH_XTABTMP, 0);
+	return xtab_write(_PATH_XTAB, _PATH_XTABTMP, _PATH_XTABLCK, 0);
 }
 
 void
@@ -139,7 +147,7 @@ xtab_append(nfs_export *exp)
 	struct exportent xe;
 	int		lockid;
 
-	if ((lockid = xflock(_PATH_XTAB, "w")) < 0)
+	if ((lockid = xflock(_PATH_XTABLCK, "w")) < 0)
 		return;
 	setexportent(_PATH_XTAB, "a");
 	xe = exp->m_export;

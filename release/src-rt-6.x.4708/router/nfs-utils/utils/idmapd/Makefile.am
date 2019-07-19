@@ -1,6 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-man5_MANS	= idmapd.conf.man
 man8_MANS	= idmapd.man
 
 RPCPREFIX	= rpc.
@@ -8,22 +7,15 @@ KPREFIX		= @kprefix@
 sbin_PROGRAMS	= idmapd
 
 EXTRA_DIST = \
-	$(man5_MANS) \
-	$(man8_MANS) \
-	idmapd.conf
+	$(man8_MANS)
 
 idmapd_SOURCES = \
-	atomicio.c \
-	cfg.c \
 	idmapd.c \
-	strlcat.c \
-	strlcpy.c \
 	\
-	cfg.h \
 	nfs_idmap.h \
 	queue.h
 
-idmapd_LDADD = -levent -lnfsidmap ../../support/nfs/libnfs.a
+idmapd_LDADD = $(LIBEVENT) $(LIBNFSIDMAP) ../../support/nfs/libnfs.a
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -49,8 +41,8 @@ uninstall-hook:
 
 # XXX This makes some assumptions about what automake does.
 # XXX But there is no install-man-hook or install-man-local.
-install-man: install-man5 install-man8 install-man-links
-uninstall-man: uninstall-man5 uninstall-man8 uninstall-man-links
+install-man: install-man8 install-man-links
+uninstall-man: uninstall-man8 uninstall-man-links
 
 install-man-links:
 	(cd $(DESTDIR)$(man8dir) && \

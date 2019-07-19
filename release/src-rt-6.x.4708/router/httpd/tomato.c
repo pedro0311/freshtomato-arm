@@ -1163,6 +1163,7 @@ static const nvset_t nvset_list[] = {
 
 // admin-buttons
 	{ "sesx_led",			V_RANGE(0, 255)			},	// amber, white, aoss
+	{ "blink_wl",			V_01				},	// turn blink on/off for wifi
 	{ "btn_led_mode",		V_01				},	// Asus RT-AC68 Turbo Mode
 	{ "stealth_mode",		V_01				},
 	{ "stealth_iled",		V_01				},

@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <syslog.h>
+#include <errno.h>
 #include "nfslib.h"
 
 #undef	VERBOSE_PRINTF
@@ -37,6 +38,8 @@ static int  logging = 0;		/* enable/disable DEBUG logs	*/
 static int  logmask = 0;		/* What will be logged		*/
 static char log_name[256];		/* name of this program		*/
 static int  log_pid = -1;		/* PID of this program		*/
+
+int export_errno = 0;
 
 static void	xlog_toggle(int sig);
 static struct xlog_debugfac	debugnames[] = {
@@ -190,6 +193,9 @@ xlog(int kind, const char* fmt, ...)
 {
 	va_list args;
 
+	if (kind & (L_ERROR|D_GENERAL))
+		export_errno = 1;
+
 	va_start(args, fmt);
 	xlog_backend(kind, fmt, args);
 	va_end(args);
@@ -211,6 +217,17 @@ xlog_err(const char* fmt, ...)
 {
 	va_list args;
 
+	va_start(args, fmt);
+	xlog_backend(L_FATAL, fmt, args);
+	va_end(args);
+}
+
+void
+xlog_errno(int err, const char *fmt, ...)
+{
+	va_list args;
+
+	errno = err;
 	va_start(args, fmt);
 	xlog_backend(L_FATAL, fmt, args);
 	va_end(args);

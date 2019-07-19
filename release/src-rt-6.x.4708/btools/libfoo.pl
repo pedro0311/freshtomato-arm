@@ -157,12 +157,12 @@ sub fixDyn
 	fixDynDep("libcrypto.so.1.0.0", "libssl.so.1.0.0");
 
 #shibby
-	fixDynDep("transmission-daemon", "libevent-2.0.so.5");
+	fixDynDep("transmission-daemon", "libevent-2.1.so.6");
 	fixDynDep("transmission-daemon", "libcurl.so.4.5.0");
-#	fixDynDep("transmission-daemon", "libiconv.so.2.6.0");
-	fixDynDep("transmission-remote", "libevent-2.0.so.5");
+#	fixDynDep("transmission-daemon", "libiconv.so.2.6.1");
+	fixDynDep("transmission-remote", "libevent-2.1.so.6");
 	fixDynDep("transmission-remote", "libcurl.so.4.5.0");
-#	fixDynDep("transmission-remote", "libiconv.so.2.6.0");
+#	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
 #	fixDynDep("radvd", "libdaemon.so.0.5.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("dnscrypt-proxy", "libsodium.so.23.0.0");
@@ -172,7 +172,7 @@ sub fixDyn
 #minidlna module, bwq518
 	fixDynDep("minidlna", "libz.so.1");
 	fixDynDep("minidlna", "libstdc.so.6");
-	fixDynDep("minidlna", "libiconv.so.2.6.0");
+	fixDynDep("minidlna", "libiconv.so.2.6.1");
 	fixDynDep("minidlna", "libssl.so.1.0.0");
 	fixDynDep("minidlna", "libjpeg.so");
 	fixDynDep("minidlna", "libogg.so.0");
@@ -519,15 +519,15 @@ genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a"
 
 #shibby
 genSO("${root}/usr/lib/libcurl.so.4.5.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib");
-genSO("${root}/usr/lib/libevent-2.0.so.5", "${router}/libevent/.libs/libevent.a");
+genSO("${root}/usr/lib/libevent-2.1.so.6", "${router}/libevent/.libs/libevent.a");
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
-genSO("${root}/usr/lib/libiconv.so.2.6.0", "${router}/libiconv/lib/.libs/libiconv.a");
+genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
 genSO("${root}/usr/lib/libsodium.so.23.0.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
-genSO("${root}/usr/lib/libpng.so.3.57.0", "${router}/libpng/.libs/libpng.a");
-genSO("${root}/usr/lib/libpng12.so.0.57.0", "${router}/libpng/.libs/libpng12.a");
+genSO("${root}/usr/lib/libpng.so.3.59.0", "${router}/libpng/.libs/libpng.a");
+genSO("${root}/usr/lib/libpng12.so.0.59.0", "${router}/libpng/.libs/libpng12.a");
 genSO("${root}/usr/lib/libjpeg.so", "${router}/libjpeg/.libs/libjpeg.a");
-genSO("${root}/usr/lib/libxml2.so.2.9.3", "${router}/libxml2/.libs/libxml2.a");
+genSO("${root}/usr/lib/libxml2.so.2.9.9", "${router}/libxml2/.libs/libxml2.a");
 genSO("${root}/usr/lib/libipset.so.11.0.0", "${router}/ipset/lib/.libs/libipset.a");
 genSO("${root}/usr/lib/libpcre.so.1.2.10", "${router}/pcre/.libs/libpcre.a");
 genSO("${root}/usr/lib/libpcreposix.so.0.0.6", "${router}/pcre/.libs/libpcreposix.a");

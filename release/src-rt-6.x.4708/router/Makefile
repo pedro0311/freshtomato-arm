@@ -932,7 +932,7 @@ nettle/stamp-h1: gmp
 	CPPFLAGS="-I$(TOP)/gmp" \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared
+	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared --disable-openssl
 	@touch nettle/stamp-h1
 
 nettle: nettle/stamp-h1
@@ -1095,10 +1095,7 @@ upnp: nvram$(BCMEX) shared iptables
 	@$(SEP)
 
 libnfnetlink/stamp-h1:
-# tomatoraf.com, Victek
-# last sources is dated March 22,2014 from netfilter.org git
-# ./genconfig.sh and make with automake 1.13
-	cd $(TOP)/libnfnetlink && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libnfnetlink && ./autogen.sh && CC=$(CC) STRIP=$(STRIP) \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
@@ -1570,7 +1567,7 @@ endif
 	@true
 
 libexif/stamp-h1:
-	cd libexif && CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+	cd libexif && autoreconf -fsi && CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' \
 		--disable-docs --disable-rpath --disable-nls --without-libiconv-prefix --without-libintl-prefix
@@ -1768,33 +1765,34 @@ wanuptime-install:
 	install -D wanuptime/wanuptime $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
 	$(STRIP) $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
 
-ebtables: dummy
-	@$(SEP)
+ebtables/stamp-h1: dummy
 	$(call patch_files,ebtables)
-	$(MAKE) -C ebtables CC=$(CC) LD=$(LD) \
+	cd $(TOP)/ebtables && CC=$(CC) LD=$(LD) STRIP=$(CROSS_COMPILE)strip \
+	./autogen.sh && \
+	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib \
 	CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	LOCKFILE="/var/lock/ebtables" LOCKDIR="/var/lock" \
-	BINDIR="/usr/sbin" LIBDIR="/usr/lib/ebtables" KERNEL_DIR=$(LINUXDIR) KERNEL_INCLUDES=$(LINUXDIR)/include $(if $(TCONFIG_IPV6),DO_IPV6=1,)
+	LOCKFILE="/var/lock/ebtables"
+	touch ebtables/stamp-h1
+
+ebtables: ebtables/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C ebtables
 
 ebtables-install:
-	install -D ebtables/ebtables $(INSTALLDIR)/ebtables/usr/sbin/ebtables
-
 	@mkdir -p $(TARGETDIR)/rom/etc
 	@sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < $(TOP)/ebtables/ethertypes > $(TARGETDIR)/rom/etc/ethertypes
 	chmod 0644 $(TARGETDIR)/rom/etc/ethertypes
-
-	install -d $(INSTALLDIR)/ebtables/usr/lib
-	install -d $(INSTALLDIR)/ebtables/usr/lib/ebtables
-	install -D ebtables/*.so $(INSTALLDIR)/ebtables/usr/lib/
-	install -D ebtables/extensions/*.so $(INSTALLDIR)/ebtables/usr/lib/ebtables/
-
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/ebtables/*.so
-	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/libebt*.so
+	install -D ebtables/.libs/ebtables-legacy $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	install -D ebtables/.libs/libebtc.so.0.0.0 $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
+	cd $(INSTALLDIR)/ebtables/usr/sbin/ && ln -sf ebtables-legacy ebtables
+	cd $(INSTALLDIR)/ebtables/usr/lib/ && ln -sf libebtc.so.0.0.0 libebtc.so && ln -sf libebtc.so.0.0.0 libebtc.so.0
 
 ebtables-clean:
 	-@$(MAKE) -C ebtables clean
+	rm -f ebtables/stamp-h1
 	$(call unpatch_files,ebtables)
 
 #Roadkill
@@ -1900,7 +1898,7 @@ libxml2/stamp-h1:
 	autoreconf -fsi && \
 	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
-		--includedir="$(TOP)/libxml2/include" --without-lzma
+		--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	touch $@
 
 libxml2: libxml2/stamp-h1
@@ -1909,11 +1907,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C libxml2 DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.3
+	install -D libxml2/.libs/libxml2.so.2.9.9 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.9
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.9
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.3 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.3 libxml2.so
+		ln -sf libxml2.so.2.9.9 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.9 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -1932,16 +1930,16 @@ libpng: libpng/stamp-h1
 	@$(MAKE) -C libpng DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/.libs/libpng.so.3.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.57.0
+	install -D libpng/.libs/libpng.so.3.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng.so.3.57.0 libpng.so && \
-		ln -sf libpng.so.3.57.0 libpng.so.3
-	install -D libpng/.libs/libpng12.so.0.57.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.57.0
+		ln -sf libpng.so.3.59.0 libpng.so && \
+		ln -sf libpng.so.3.59.0 libpng.so.3
+	install -D libpng/.libs/libpng12.so.0.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng12.so.0.57.0 libpng12.so && \
-		ln -sf libpng12.so.0.57.0 libpng12.so.0
+		ln -sf libpng12.so.0.59.0 libpng12.so && \
+		ln -sf libpng12.so.0.59.0 libpng12.so.0
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
@@ -2312,7 +2310,7 @@ libcurl-clean:
 	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
-	cd libevent && CC=$(CC) \
+	cd libevent && ./autogen.sh && CC=$(CC) \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE)
@@ -2330,8 +2328,8 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.0.so.5.1.9 $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
-	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
+	install libevent/.libs/libevent-2.1.so.6.0.4 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
+	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
 
 libiconv/stamp-h1:
 	cd libiconv && CC=$(CC) \
@@ -2352,11 +2350,11 @@ libiconv-clean:
 
 libiconv-install:
 	install -d $(INSTALLDIR)/libiconv/usr/lib
-	install libiconv/lib/.libs/libiconv.so.2.6.0 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
-	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.0
+	install libiconv/lib/.libs/libiconv.so.2.6.1 $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
+	$(STRIP) -s $(INSTALLDIR)/libiconv/usr/lib/libiconv.so.2.6.1
 	cd $(INSTALLDIR)/libiconv/usr/lib/ && \
-		ln -sf libiconv.so.2.6.0 libiconv.so.2 && \
-		ln -sf libiconv.so.2.6.0 libiconv.so
+		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
+		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: openssl libcurl libevent zlib
 	cd transmission && CC=$(CC) STRIP=$(STRIP) \
@@ -2435,23 +2433,23 @@ libnfsidmap-install:
 	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
 
 portmap/stamp-h1:
+	$(call patch_files,portmap)
 	cd portmap \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB) RPCUSER="nobody"
+	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB)
 	touch portmap/stamp-h1
 
 portmap: portmap/stamp-h1
 	@$(SEP)
-	$(MAKE) -C portmap $(PARALLEL_BUILD)
+	$(MAKE) -C portmap CFLAGS="-Os -Wall $(EXTRACFLAGS)" NO_TCP_WRAPPER=y RPCUSER=nobody $(PARALLEL_BUILD)
+
+portmap-install:
+	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
 
 portmap-clean:
 	-@$(MAKE) -C portmap clean
 	@rm -f portmap/stamp-h1
-
-portmap-install:
-	install -d $(INSTALLDIR)/portmap/usr/sbin
-	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
-	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(call unpatch_files,portmap)
 
 e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
@@ -2485,41 +2483,37 @@ e2fsprogs-clean:
 	@rm -rf e2fsprogs/staged
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
-	cd nfs-utils && STRIP=$(STRIP) \
+	cd nfs-utils && ./autogen.sh && STRIP=$(STRIP) \
+	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-	-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
-	-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+	    -I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+	    -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
-	-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	ac_cv_func_malloc_0_nonnull=yes \
-	ac_cv_func_realloc_0_nonnull=yes \
-	$(CONFIGURE) --disable-gss --without-tcp-wrappers --enable-static --enable-shared \
-	--enable-nfsv4 --enable-nfsv3
+	    -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+	    ac_cv_func_malloc_0_nonnull=yes \
+	    ac_cv_func_realloc_0_nonnull=yes \
+	    knfsd_cv_bsd_signals=no \
+	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
+	    --disable-nfsv4 --disable-ipv6 --disable-nfsdcltrack \
+	    --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
 	touch nfs-utils/stamp-h1
 
 nfs-utils: nfs-utils/stamp-h1
 	@$(SEP)
 	$(MAKE) -C nfs-utils $(PARALLEL_BUILD)
 
-nfs-utils-clean:
-	-@$(MAKE) -C nfs-utils clean
-	@rm -f nfs-utils/stamp-h1
-
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
-	install -D nfs-utils/utils/mount/mount.nfs $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
 	install -D nfs-utils/utils/nfsd/nfsd $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
 	install -D nfs-utils/utils/showmount/showmount $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
 	install -D nfs-utils/utils/exportfs/exportfs $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
 	install -D nfs-utils/utils/statd/statd $(INSTALLDIR)/nfs-utils/usr/sbin/statd
 	install -D nfs-utils/utils/mountd/mountd $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
-	install -D nfs-utils/nfs.rc $(INSTALLDIR)/nfs-utils/usr/sbin/nfs.rc
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/statd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
+	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/*
+
+nfs-utils-clean:
+	-@$(MAKE) -C nfs-utils clean
+	@rm -f nfs-utils/stamp-h1
 
 tinc/stamp-h1: openssl zlib lzo
 	$(call patch_files,tinc)
@@ -2764,7 +2758,7 @@ mdadm-clean:
 	-@$(MAKE) -C mdadm clean
 
 libmnl/stamp-h1:
-	cd $(TOP)/libmnl && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libmnl && ./autogen.sh && CC=$(CC) STRIP=$(STRIP) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --prefix=/usr
@@ -2777,11 +2771,11 @@ libmnl: libmnl/stamp-h1
 
 libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
-	install libmnl/src/.libs/libmnl.so.0.1.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
-	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
+	install libmnl/src/.libs/libmnl.so.0.2.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
+	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
 	cd $(INSTALLDIR)/libmnl/usr/lib/ && \
-		ln -sf libmnl.so.0.1.0 libmnl.so.0 && \
-		ln -sf libmnl.so.0.1.0 libmnl.so
+		ln -sf libmnl.so.0.2.0 libmnl.so.0 && \
+		ln -sf libmnl.so.0.2.0 libmnl.so
 
 libmnl-clean:
 	-@$(MAKE) -C libmnl clean

@@ -1,15 +1,20 @@
 ## Process this file with automake to produce Makefile.in
 
-man8_MANS	= gssd.man svcgssd.man
+man8_MANS	= gssd.man
+if CONFIG_SVCGSS
+man8_MANS	+= svcgssd.man
+endif
 
 RPCPREFIX	= rpc.
 KPREFIX		= @kprefix@
-sbin_PREFIXED	= gssd svcgssd
-sbin_PROGRAMS	= $(sbin_PREFIXED) gss_clnt_send_err
-sbin_SCRIPTS	= gss_destroy_creds
+sbin_PREFIXED	= gssd
+if CONFIG_SVCGSS
+sbin_PREFIXED	+= svcgssd
+endif
+
+sbin_PROGRAMS	= $(sbin_PREFIXED)
 
 EXTRA_DIST = \
-	gss_destroy_creds \
 	$(man8_MANS)
 
 COMMON_SRCS = \
@@ -17,20 +22,20 @@ COMMON_SRCS = \
 	context_mit.c \
 	context_heimdal.c \
 	context_lucid.c \
-	context_spkm3.c \
 	gss_util.c \
 	gss_oids.c \
+	gss_names.c \
 	err_util.c \
 	\
 	context.h \
 	err_util.h \
 	gss_oids.h \
+	gss_names.h \
 	gss_util.h
 
 gssd_SOURCES = \
 	$(COMMON_SRCS) \
 	gssd.c \
-	gssd_main_loop.c \
 	gssd_proc.c \
 	krb5_util.c \
 	\
@@ -38,12 +43,24 @@ gssd_SOURCES = \
 	krb5_util.h \
 	write_bytes.h
 
-gssd_LDADD =	../../support/nfs/libnfs.a \
-		$(RPCSECGSS_LIBS) $(KRBLIBS)
-gssd_LDFLAGS = $(KRBLDFLAGS)
+gssd_LDADD = \
+	../../support/nfs/libnfs.a \
+	$(LIBEVENT) \
+	$(RPCSECGSS_LIBS) \
+	$(KRBLIBS) \
+	$(GSSAPI_LIBS) \
+	$(LIBTIRPC) \
+	$(LIBPTHREAD)
 
-gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-	      $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+gssd_LDFLAGS = \
+	$(KRBLDFLAGS)
+
+gssd_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(CFLAGS) \
+	$(RPCSECGSS_CFLAGS) \
+	$(KRBCFLAGS) \
+	$(GSSAPI_CFLAGS)
 
 svcgssd_SOURCES = \
 	$(COMMON_SRCS) \
@@ -51,23 +68,20 @@ svcgssd_SOURCES = \
 	svcgssd_main_loop.c \
 	svcgssd_mech2file.c \
 	svcgssd_proc.c \
+	svcgssd_krb5.c \
 	\
+	svcgssd_krb5.h \
 	svcgssd.h
 
 svcgssd_LDADD = \
 	../../support/nfs/libnfs.a \
-	$(RPCSECGSS_LIBS) -lnfsidmap \
-	$(KRBLIBS)
+	$(RPCSECGSS_LIBS) $(LIBNFSIDMAP) \
+	$(KRBLIBS) $(GSSAPI_LIBS) $(LIBTIRPC)
 
 svcgssd_LDFLAGS = $(KRBLDFLAGS)
 
 svcgssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
-
-gss_clnt_send_err_SOURCES = gss_clnt_send_err.c
-
-gss_clnt_send_err_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS) $(GSSAPI_CFLAGS)
 
 MAINTAINERCLEANFILES = Makefile.in
 
