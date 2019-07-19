@@ -1449,8 +1449,11 @@ static int init_nvram(void)
 			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 
-			/* fix WL mac`s */
-			nvram_set("wl0_hwaddr", nvram_safe_get("0:macaddr"));
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
@@ -1488,9 +1491,14 @@ static int init_nvram(void)
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
 
-			/* fix WL mac`s */
-			nvram_set("wl0_hwaddr", nvram_safe_get("0:macaddr"));
-			nvram_set("wl1_hwaddr", nvram_safe_get("1:macaddr"));
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);			/* fix WL mac for 5G */
+			nvram_set("wl1_hwaddr", s);
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
@@ -1537,9 +1545,14 @@ static int init_nvram(void)
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
 
-			/* fix WL mac`s */
-			nvram_set("wl0_hwaddr", nvram_safe_get("0:macaddr"));
-			nvram_set("wl1_hwaddr", nvram_safe_get("1:macaddr"));
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);			/* fix WL mac for 5G */
+			nvram_set("wl1_hwaddr", s);
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
