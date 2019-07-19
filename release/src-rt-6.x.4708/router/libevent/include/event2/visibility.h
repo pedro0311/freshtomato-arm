@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * Copyright (c) 2007-2012 Niels Provos and Nick Mathewson
  *
@@ -23,17 +24,44 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _EVUTIL_H_
-#define _EVUTIL_H_
+#ifndef EVENT2_VISIBILITY_H_INCLUDED_
+#define EVENT2_VISIBILITY_H_INCLUDED_
 
-/** @file evutil.h
+#include <event2/event-config.h>
 
-  Utility and compatibility functions for Libevent.
+#if defined(event_shared_EXPORTS) || \
+    defined(event_extra_shared_EXPORTS) || \
+    defined(event_core_shared_EXPORTS) || \
+    defined(event_pthreads_shared_EXPORTS) || \
+    defined(event_openssl_shared_EXPORTS)
 
-  The <evutil.h> header is deprecated in Libevent 2.0 and later; please
-  use <event2/util.h> instead.
-*/
+# if defined (__SUNPRO_C) && (__SUNPRO_C >= 0x550)
+#  define EVENT2_EXPORT_SYMBOL __global
+# elif defined __GNUC__
+#  define EVENT2_EXPORT_SYMBOL __attribute__ ((visibility("default")))
+# elif defined(_MSC_VER)
+#  define EVENT2_EXPORT_SYMBOL __declspec(dllexport)
+# else
+#  define EVENT2_EXPORT_SYMBOL /* unknown compiler */
+# endif
 
-#include <event2/util.h>
+#else /* event_*_EXPORTS */
 
-#endif /* _EVUTIL_H_ */
+# define EVENT2_EXPORT_SYMBOL
+
+#endif /* event_*_EXPORTS */
+
+/** We need to dllimport event_debug_logging_mask_ into event_extra */
+#if defined(_MSC_VER)
+# if defined(event_core_shared_EXPORTS) /** from core export */
+#  define EVENT2_CORE_EXPORT_SYMBOL __declspec(dllexport)
+# elif defined(event_extra_shared_EXPORTS) || /** from extra import */ \
+       defined(EVENT_VISIBILITY_WANT_DLLIMPORT)
+#  define EVENT2_CORE_EXPORT_SYMBOL __declspec(dllimport)
+# endif
+#endif /* _MSC_VER */
+#if !defined(EVENT2_CORE_EXPORT_SYMBOL)
+# define EVENT2_CORE_EXPORT_SYMBOL EVENT2_EXPORT_SYMBOL
+#endif
+
+#endif /* EVENT2_VISIBILITY_H_INCLUDED_ */
