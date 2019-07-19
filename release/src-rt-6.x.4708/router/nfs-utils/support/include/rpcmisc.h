@@ -31,7 +31,7 @@ struct rpc_dentry {
 
 struct rpc_dtable {
 	struct rpc_dentry *entries;
-	int		nproc;
+	rpcproc_t		nproc;
 };
 
 #define dtable_ent(func, vers, arg_type, res_type) \
@@ -41,26 +41,32 @@ struct rpc_dtable {
 		(xdrproc_t)xdr_##res_type, sizeof(res_type), \
 	}
 
-
+void		nfs_svc_unregister(const rpcprog_t program,
+				const rpcvers_t version);
+unsigned int	nfs_svc_create(char *name, const rpcprog_t program,
+				const rpcvers_t version,
+				void (*dispatch)(struct svc_req *, SVCXPRT *),
+				const uint16_t port);
 void		rpc_init(char *name, int prog, int vers,
 				void (*dispatch)(struct svc_req *, SVCXPRT *),
 				int defport);
 void		rpc_dispatch(struct svc_req *rq, SVCXPRT *xprt,
 				struct rpc_dtable *dtable, int nvers,
 				void *argp, void *resp);
+int		getservport(u_long number, const char *proto);
 
 extern int	_rpcpmstart;
-extern int	_rpcfdtype;
+extern unsigned int	_rpcprotobits;
 extern int	_rpcsvcdirty;
 
 static inline struct sockaddr_in *nfs_getrpccaller_in(SVCXPRT *xprt)
 {
-	return (struct sockaddr_in *)svc_getcaller(xprt);
+	return (struct sockaddr_in *)(char *)svc_getcaller(xprt);
 }
 
 static inline struct sockaddr *nfs_getrpccaller(SVCXPRT *xprt)
 {
-	return (struct sockaddr *)svc_getcaller(xprt);
+	return (struct sockaddr *)(char *)svc_getcaller(xprt);
 }
 
 #endif /* RPCMISC_H */

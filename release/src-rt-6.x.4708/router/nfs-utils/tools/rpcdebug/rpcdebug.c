@@ -26,6 +26,7 @@
 #include <malloc.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <libgen.h>
 /* RPC debug flags
    #include <sunrpc/debug.h> */
 /* NFS debug flags
@@ -167,6 +168,10 @@ static struct flagmap {
 	FLAG(NFS,       CALLBACK),
 	FLAG(NFS,       CLIENT),
 	FLAG(NFS,       MOUNT),
+	FLAG(NFS,       FSCACHE),
+	FLAG(NFS,       PNFS),
+	FLAG(NFS,       PNFS_LD),
+	FLAG(NFS,	STATE),
 	FLAG(NFS,	ALL),
 
 	/* nfsd */

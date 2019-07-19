@@ -17,7 +17,6 @@
 #endif
 
 #include <string.h>
-#include "misc.h"
 #include "statd.h"
 #include "notlist.h"
 
@@ -190,7 +189,6 @@ nlist_clone(notify_list *entry)
 	NL_MY_PROG(new) = NL_MY_PROG(entry);
 	NL_MY_VERS(new) = NL_MY_VERS(entry);
 	NL_MY_PROC(new) = NL_MY_PROC(entry);
-	NL_ADDR(new)    = NL_ADDR(entry);
 	memcpy(NL_PRIV(new), NL_PRIV(entry), SM_PRIV_SIZE);
 
 	return new;
@@ -234,7 +232,8 @@ nlist_gethost(notify_list *list, char *host, int myname)
 	notify_list	*lp;
 
 	for (lp = list; lp; lp = lp->next) {
-		if (matchhostname(host, myname? NL_MY_NAME(lp) : NL_MON_NAME(lp)))
+		if (statd_matchhostname(host,
+				myname? NL_MY_NAME(lp) : NL_MON_NAME(lp)))
 			return lp;
 	}
 

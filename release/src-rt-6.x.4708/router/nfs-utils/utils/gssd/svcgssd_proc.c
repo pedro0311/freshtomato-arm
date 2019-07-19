@@ -56,6 +56,10 @@
 #include "gss_util.h"
 #include "err_util.h"
 #include "context.h"
+#include "misc.h"
+#include "gss_oids.h"
+#include "svcgssd_krb5.h"
+#include "gss_names.h"
 
 extern char * mech2file(gss_OID mech);
 #define SVCGSSD_CONTEXT_CHANNEL "/proc/net/rpc/auth.rpcsec.context/channel"
@@ -73,43 +77,53 @@ struct svc_cred {
 static int
 do_svc_downcall(gss_buffer_desc *out_handle, struct svc_cred *cred,
 		gss_OID mech, gss_buffer_desc *context_token,
-		int32_t endtime)
+		int32_t endtime, char *client_name)
 {
-	FILE *f;
-	int i;
+	char buf[RPC_CHAN_BUF_SIZE], *bp;
+	int i, f, err, blen;
 	char *fname = NULL;
-	int err;
 
 	printerr(1, "doing downcall\n");
 	if ((fname = mech2file(mech)) == NULL)
 		goto out_err;
-	f = fopen(SVCGSSD_CONTEXT_CHANNEL, "w");
-	if (f == NULL) {
+
+	f = open(SVCGSSD_CONTEXT_CHANNEL, O_WRONLY);
+	if (f < 0) {
 		printerr(0, "WARNING: unable to open downcall channel "
 			     "%s: %s\n",
 			     SVCGSSD_CONTEXT_CHANNEL, strerror(errno));
 		goto out_err;
 	}
-	qword_printhex(f, out_handle->value, out_handle->length);
+	bp = buf, blen = sizeof(buf);
+	qword_addhex(&bp, &blen, out_handle->value, out_handle->length);
 	/* XXX are types OK for the rest of this? */
 	/* For context cache, use the actual context endtime */
-	qword_printint(f, endtime);
-	qword_printint(f, cred->cr_uid);
-	qword_printint(f, cred->cr_gid);
-	qword_printint(f, cred->cr_ngroups);
+	qword_addint(&bp, &blen, endtime);
+	qword_addint(&bp, &blen, cred->cr_uid);
+	qword_addint(&bp, &blen, cred->cr_gid);
+	qword_addint(&bp, &blen, cred->cr_ngroups);
 	printerr(2, "mech: %s, hndl len: %d, ctx len %d, timeout: %d (%d from now), "
-		 "uid: %d, gid: %d, num aux grps: %d:\n",
+		 "clnt: %s, uid: %d, gid: %d, num aux grps: %d:\n",
 		 fname, out_handle->length, context_token->length,
 		 endtime, endtime - time(0),
+		 client_name ? client_name : "<null>",
 		 cred->cr_uid, cred->cr_gid, cred->cr_ngroups);
 	for (i=0; i < cred->cr_ngroups; i++) {
-		qword_printint(f, cred->cr_groups[i]);
+		qword_addint(&bp, &blen, cred->cr_groups[i]);
 		printerr(2, "  (%4d) %d\n", i+1, cred->cr_groups[i]);
 	}
-	qword_print(f, fname);
-	qword_printhex(f, context_token->value, context_token->length);
-	err = qword_eol(f);
-	fclose(f);
+	qword_add(&bp, &blen, fname);
+	qword_addhex(&bp, &blen, context_token->value, context_token->length);
+	if (client_name)
+		qword_add(&bp, &blen, client_name);
+	qword_addeol(&bp, &blen);
+	err = 0;
+	if (blen <= 0 || write(f, buf, bp - buf) != bp - buf) {
+		printerr(1, "WARNING: error writing to downcall channel "
+			 "%s: %s\n", SVCGSSD_CONTEXT_CHANNEL, strerror(errno));
+		err = -1;
+	}
+	close(f);
 	return err;
 out_err:
 	printerr(1, "WARNING: downcall failed\n");
@@ -124,7 +138,7 @@ struct gss_verifier {
 #define RPCSEC_GSS_SEQ_WIN	5
 
 static int
-send_response(FILE *f, gss_buffer_desc *in_handle, gss_buffer_desc *in_token,
+send_response(gss_buffer_desc *in_handle, gss_buffer_desc *in_token,
 	      u_int32_t maj_stat, u_int32_t min_stat,
 	      gss_buffer_desc *out_handle, gss_buffer_desc *out_token)
 {
@@ -233,7 +247,7 @@ get_ids(gss_name_t client_name, gss_OID mech, struct svc_cred *cred)
 			"file for name '%s'\n", sname);
 		goto out_free;
 	}
-	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+
 	res = nfs4_gss_princ_to_ids(secname, sname, &uid, &gid);
 	if (res < 0) {
 		/*
@@ -304,7 +318,7 @@ print_hexl(const char *description, unsigned char *cp, int length)
 #endif
 
 void
-handle_nullreq(FILE *f) {
+handle_nullreq(int f) {
 	/* XXX initialize to a random integer to reduce chances of unnecessary
 	 * invalidation of existing ctx's on restarting svcgssd. */
 	static u_int32_t	handle_seq = 0;
@@ -321,23 +335,26 @@ handle_nullreq(FILE *f) {
 				null_token = {.value = NULL};
 	u_int32_t		ret_flags;
 	gss_ctx_id_t		ctx = GSS_C_NO_CONTEXT;
-	gss_name_t		client_name;
+	gss_name_t		client_name = NULL;
 	gss_OID			mech = GSS_C_NO_OID;
 	u_int32_t		maj_stat = GSS_S_FAILURE, min_stat = 0;
 	u_int32_t		ignore_min_stat;
 	struct svc_cred		cred;
-	static char		*lbuf = NULL;
-	static int		lbuflen = 0;
-	static char		*cp;
+	char			lbuf[RPC_CHAN_BUF_SIZE];
+	int			lbuflen = 0;
+	char			*cp;
 	int32_t			ctx_endtime;
+	char			*hostbased_name = NULL;
 
 	printerr(1, "handling null request\n");
 
-	if (readline(fileno(f), &lbuf, &lbuflen) != 1) {
+	lbuflen = read(f, lbuf, sizeof(lbuf));
+	if (lbuflen <= 0 || lbuf[lbuflen-1] != '\n') {
 		printerr(0, "WARNING: handle_nullreq: "
 			    "failed reading request\n");
 		return;
 	}
+	lbuf[lbuflen-1] = 0;
 
 	cp = lbuf;
 
@@ -353,12 +370,6 @@ handle_nullreq(FILE *f) {
 	print_hexl("in_tok", in_tok.value, in_tok.length);
 #endif
 
-	if (in_tok.length < 0) {
-		printerr(0, "WARNING: handle_nullreq: "
-			    "failed parsing request\n");
-		goto out_err;
-	}
-
 	if (in_handle.length != 0) { /* CONTINUE_INIT case */
 		if (in_handle.length != sizeof(ctx)) {
 			printerr(0, "WARNING: handle_nullreq: "
@@ -369,6 +380,10 @@ handle_nullreq(FILE *f) {
 		/* in_handle is the context id stored in the out_handle
 		 * for the GSS_S_CONTINUE_NEEDED case below.  */
 		memcpy(&ctx, in_handle.value, in_handle.length);
+	}
+
+	if (svcgssd_limit_krb5_enctypes()) {
+		goto out_err;
 	}
 
 	maj_stat = gss_accept_sec_context(&min_stat, &ctx, gssd_creds,
@@ -392,11 +407,13 @@ handle_nullreq(FILE *f) {
 	if (get_ids(client_name, mech, &cred)) {
 		/* get_ids() prints error msg */
 		maj_stat = GSS_S_BAD_NAME; /* XXX ? */
-		gss_release_name(&ignore_min_stat, &client_name);
 		goto out_err;
 	}
-	gss_release_name(&ignore_min_stat, &client_name);
-
+	if (get_hostbased_client_name(client_name, mech, &hostbased_name)) {
+		/* get_hostbased_client_name() prints error msg */
+		maj_stat = GSS_S_BAD_NAME; /* XXX ? */
+		goto out_err;
+	}
 
 	/* Context complete. Pass handle_seq in out_handle to use
 	 * for context lookup in the kernel. */
@@ -406,7 +423,7 @@ handle_nullreq(FILE *f) {
 
 	/* kernel needs ctx to calculate verifier on null response, so
 	 * must give it context before doing null call: */
-	if (serialize_context_for_kernel(ctx, &ctx_token, mech, &ctx_endtime)) {
+	if (serialize_context_for_kernel(&ctx, &ctx_token, mech, &ctx_endtime)) {
 		printerr(0, "WARNING: handle_nullreq: "
 			    "serialize_context_for_kernel failed\n");
 		maj_stat = GSS_S_FAILURE;
@@ -415,22 +432,26 @@ handle_nullreq(FILE *f) {
 	/* We no longer need the gss context */
 	gss_delete_sec_context(&ignore_min_stat, &ctx, &ignore_out_tok);
 
-	do_svc_downcall(&out_handle, &cred, mech, &ctx_token, ctx_endtime);
+	do_svc_downcall(&out_handle, &cred, mech, &ctx_token, ctx_endtime,
+			hostbased_name);
 continue_needed:
-	send_response(f, &in_handle, &in_tok, maj_stat, min_stat,
+	send_response(&in_handle, &in_tok, maj_stat, min_stat,
 			&out_handle, &out_tok);
 out:
 	if (ctx_token.value != NULL)
 		free(ctx_token.value);
 	if (out_tok.value != NULL)
 		gss_release_buffer(&ignore_min_stat, &out_tok);
+	if (client_name)
+		gss_release_name(&ignore_min_stat, &client_name);
+	free(hostbased_name);
 	printerr(1, "finished handling null request\n");
 	return;
 
 out_err:
 	if (ctx != GSS_C_NO_CONTEXT)
 		gss_delete_sec_context(&ignore_min_stat, &ctx, &ignore_out_tok);
-	send_response(f, &in_handle, &in_tok, maj_stat, min_stat,
+	send_response(&in_handle, &in_tok, maj_stat, min_stat,
 			&null_token, &null_token);
 	goto out;
 }

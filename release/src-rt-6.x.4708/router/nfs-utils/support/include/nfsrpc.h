@@ -15,15 +15,23 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
 #ifndef __NFS_UTILS_NFSRPC_H
 #define __NFS_UTILS_NFSRPC_H
 
+#include <string.h>
 #include <rpc/types.h>
+#include <rpc/clnt.h>
+
+/*
+ * IANA does not define an IP protocol number for RDMA transports.
+ * Choose an arbitrary value we can use locally.
+ */
+#define NFSPROTO_RDMA		(3939)
 
 /*
  * Conventional RPC program numbers
@@ -48,13 +56,22 @@
 #define NSMPROG		((rpcprog_t)100024)
 #endif
 
+/**
+ * nfs_clear_rpc_createerr - zap all error reporting fields
+ *
+ */
+static inline void nfs_clear_rpc_createerr(void)
+{
+	memset(&rpc_createerr, 0, sizeof(rpc_createerr));
+}
+
 /*
  * Look up an RPC program name in /etc/rpc
  */
 extern rpcprog_t	nfs_getrpcbyname(const rpcprog_t, const char *table[]);
 
 /*
- * Acquire an RPC CLIENT *
+ * Acquire an RPC CLIENT * with an ephemeral source port
  */
 extern CLIENT		*nfs_get_rpcclient(const struct sockaddr *,
 				const socklen_t, const unsigned short,
@@ -62,10 +79,29 @@ extern CLIENT		*nfs_get_rpcclient(const struct sockaddr *,
 				struct timeval *);
 
 /*
+ * Acquire an RPC CLIENT * with a privileged source port
+ */
+extern CLIENT		*nfs_get_priv_rpcclient( const struct sockaddr *,
+				const socklen_t, const unsigned short,
+				const rpcprog_t, const rpcvers_t,
+				struct timeval *);
+
+/*
+ * Convert a netid to a protocol number and protocol family
+ */
+extern int		nfs_get_proto(const char *netid, sa_family_t *family,
+				unsigned long *protocol);
+
+/*
+ * Convert a protocol family and protocol name to a netid
+ */
+extern char		*nfs_get_netid(const sa_family_t family,
+				const unsigned long protocol);
+
+/*
  * Convert a socket address to a universal address
  */
-extern char		*nfs_sockaddr2universal(const struct sockaddr *,
-				const socklen_t);
+extern char		*nfs_sockaddr2universal(const struct sockaddr *);
 
 /*
  * Extract port number from a universal address
@@ -105,7 +141,6 @@ extern unsigned short	nfs_rpcb_getaddr(const struct sockaddr *,
 				const socklen_t,
 				const unsigned short,
 				const struct sockaddr *,
-				const socklen_t,
 				const rpcprog_t,
 				const rpcvers_t,
 				const unsigned short,
@@ -122,6 +157,11 @@ extern unsigned long	nfs_pmap_getport(const struct sockaddr_in *,
 				const struct timeval *);
 
 /*
+ * Use nfs_pmap_getport to see if statd is running locally
+ */
+extern int nfs_probe_statd(void);
+
+/*
  * Contact a remote RPC service to discover whether it is responding
  * to requests.
  */
@@ -132,4 +172,7 @@ extern int		nfs_rpc_ping(const struct sockaddr *sap,
 				const unsigned short protocol,
 				const struct timeval *timeout);
 
-#endif	/* __NFS_UTILS_NFSRPC_H */
+/* create AUTH_SYS handle with no supplemental groups */
+extern AUTH *			 nfs_authsys_create(void);
+
+#endif	/* !__NFS_UTILS_NFSRPC_H */

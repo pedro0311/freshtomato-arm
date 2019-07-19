@@ -35,6 +35,7 @@ struct xlog_debugfac {
 	int		df_fac;
 };
 
+extern int export_errno;
 void			xlog_open(char *progname);
 void			xlog_stderr(int on);
 void			xlog_syslog(int on);
@@ -44,6 +45,7 @@ int			xlog_enabled(int fac);
 void			xlog(int fac, const char *fmt, ...);
 void			xlog_warn(const char *fmt, ...);
 void			xlog_err(const char *fmt, ...);
+void			xlog_errno(int err, const char *fmt, ...);
 void			xlog_backend(int fac, const char *fmt, va_list args);
 
 #endif /* XLOG_H */

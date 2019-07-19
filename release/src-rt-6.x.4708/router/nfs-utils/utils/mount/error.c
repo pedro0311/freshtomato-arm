@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  * To Do:
  *  + Proper support for internationalization
@@ -70,9 +70,15 @@ static int rpc_strerror(int spos)
 			pos = snprintf(tmp, (erreob - tmp),
 					_("System Error: %s"),
 						strerror(cf_errno));
-		else
-			pos = snprintf(tmp, (erreob - tmp),
-					_("RPC Error:%s"), estr);
+		else {
+			if (cf_errno) 
+				pos = snprintf(tmp, (erreob - tmp),
+					_("RPC Error:%s; errno = %s"), 
+					estr, strerror(cf_errno));
+			else
+				pos = snprintf(tmp, (erreob - tmp),
+						_("RPC Error:%s"), estr);
+		}
 	}
 	return pos;
 }
@@ -209,8 +215,12 @@ void mount_error(const char *spec, const char *mount_point, int error)
 				progname);
 		break;
 	case ENOTDIR:
-		nfs_error(_("%s: mount point %s is not a directory"),
-				progname, mount_point);
+		if (spec)
+			nfs_error(_("%s: mount spec %s or point %s is not a "
+				  "directory"),	progname, spec, mount_point);
+		else
+			nfs_error(_("%s: mount point %s is not a directory"),
+				  progname, mount_point);
 		break;
 	case EBUSY:
 		nfs_error(_("%s: %s is busy or already mounted"),
@@ -219,7 +229,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
 	case ENOENT:
 		if (spec)
 			nfs_error(_("%s: mounting %s failed, "
-				"reason given by server:\n  %s"),
+				"reason given by server: %s"),
 				progname, spec, strerror(error));
 		else
 			nfs_error(_("%s: mount point %s does not exist"),
@@ -236,6 +246,9 @@ void mount_error(const char *spec, const char *mount_point, int error)
 				progname);
 		nfs_error(_("%s: please report the error to" PACKAGE_BUGREPORT),
 				progname);
+		break;
+	case EALREADY:
+		/* Error message has already been provided */
 		break;
 	default:
 		nfs_error(_("%s: %s"),
@@ -300,6 +313,8 @@ void umount_error(int err, const char *dev)
 #define EDQUOT	ENOSPC
 #endif
 
+#define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0])) 
+
 static struct {
 	enum nfsstat stat;
 	int errnum;
@@ -329,19 +344,17 @@ static struct {
 #endif
 	/* Throw in some NFSv3 values for even more fun (HP returns these) */
 	{ 71,			EREMOTE		},
-
-	{ -1,			EIO		}
 };
 
-char *nfs_strerror(int stat)
+char *nfs_strerror(unsigned int stat)
 {
-	int i;
+	unsigned int i;
 	static char buf[256];
 
-	for (i = 0; nfs_errtbl[i].stat != -1; i++) {
+	for (i = 0; i < ARRAY_SIZE(nfs_errtbl); i++) {
 		if (nfs_errtbl[i].stat == stat)
 			return strerror(nfs_errtbl[i].errnum);
 	}
-	sprintf(buf, _("unknown nfs status return value: %d"), stat);
+	sprintf(buf, _("unknown nfs status return value: %u"), stat);
 	return buf;
 }

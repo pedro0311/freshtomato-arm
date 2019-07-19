@@ -2455,7 +2455,7 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.0.so.5.1.9 $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
+	install libevent/.libs/libevent-2.0.so.5.1.11 $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
 
 libiconv/stamp-h1:
@@ -2560,23 +2560,23 @@ libnfsidmap-install:
 	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
 
 portmap/stamp-h1:
+	$(call patch_files,portmap)
 	cd portmap \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB) RPCUSER="nobody"
+	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB)
 	touch portmap/stamp-h1
 
 portmap: portmap/stamp-h1
 	@$(SEP)
-	$(MAKE) -C portmap $(PARALLEL_BUILD)
+	$(MAKE) -C portmap CFLAGS="-Os -Wall $(EXTRACFLAGS)" NO_TCP_WRAPPER=y RPCUSER=nobody $(PARALLEL_BUILD)
+
+portmap-install:
+	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
 
 portmap-clean:
 	-@$(MAKE) -C portmap clean
 	@rm -f portmap/stamp-h1
-
-portmap-install:
-	install -d $(INSTALLDIR)/portmap/usr/sbin
-	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
-	$(STRIP) -s $(INSTALLDIR)/portmap/usr/sbin/portmap
+	$(call unpatch_files,portmap)
 
 e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
@@ -2610,41 +2610,37 @@ e2fsprogs-clean:
 	@rm -rf e2fsprogs/staged
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
-	cd nfs-utils && STRIP=$(STRIP) \
+	cd nfs-utils && ./autogen.sh && STRIP=$(STRIP) \
+	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-	-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
-	-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+	    -I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+	    -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
-	-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	ac_cv_func_malloc_0_nonnull=yes \
-	ac_cv_func_realloc_0_nonnull=yes \
-	$(CONFIGURE) --disable-gss --without-tcp-wrappers --enable-static --enable-shared \
-	--enable-nfsv4 --enable-nfsv3
+	    -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+	    ac_cv_func_malloc_0_nonnull=yes \
+	    ac_cv_func_realloc_0_nonnull=yes \
+	    knfsd_cv_bsd_signals=no \
+	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
+	    --disable-nfsv4 --disable-ipv6 --disable-nfsdcltrack \
+	    --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
 	touch nfs-utils/stamp-h1
 
 nfs-utils: nfs-utils/stamp-h1
 	@$(SEP)
 	$(MAKE) -C nfs-utils $(PARALLEL_BUILD)
 
-nfs-utils-clean:
-	-@$(MAKE) -C nfs-utils clean
-	@rm -f nfs-utils/stamp-h1
-
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
-	install -D nfs-utils/utils/mount/mount.nfs $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
 	install -D nfs-utils/utils/nfsd/nfsd $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
 	install -D nfs-utils/utils/showmount/showmount $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
 	install -D nfs-utils/utils/exportfs/exportfs $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
 	install -D nfs-utils/utils/statd/statd $(INSTALLDIR)/nfs-utils/usr/sbin/statd
 	install -D nfs-utils/utils/mountd/mountd $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
-	install -D nfs-utils/nfs.rc $(INSTALLDIR)/nfs-utils/usr/sbin/nfs.rc
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/statd
-	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/mountd
+	$(STRIP) -s $(INSTALLDIR)/nfs-utils/usr/sbin/*
+
+nfs-utils-clean:
+	-@$(MAKE) -C nfs-utils clean
+	@rm -f nfs-utils/stamp-h1
 
 tinc/stamp-h1: openssl zlib lzo
 	$(call patch_files,tinc)
@@ -2889,10 +2885,9 @@ mdadm-clean:
 	-@$(MAKE) -C mdadm clean
 
 libmnl/stamp-h1:
-	cd $(TOP)/libmnl && CC=$(CC) STRIP=$(STRIP) \
+	cd $(TOP)/libmnl && ./autogen.sh && CC=$(CC) STRIP=$(STRIP) \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr
 	touch libmnl/stamp-h1
 
@@ -2903,11 +2898,11 @@ libmnl: libmnl/stamp-h1
 
 libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
-	install libmnl/src/.libs/libmnl.so.0.1.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
-	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.1.0
+	install libmnl/src/.libs/libmnl.so.0.2.0 $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
+	$(STRIP) $(INSTALLDIR)/libmnl/usr/lib/libmnl.so.0.2.0
 	cd $(INSTALLDIR)/libmnl/usr/lib/ && \
-		ln -sf libmnl.so.0.1.0 libmnl.so.0 && \
-		ln -sf libmnl.so.0.1.0 libmnl.so
+		ln -sf libmnl.so.0.2.0 libmnl.so.0 && \
+		ln -sf libmnl.so.0.2.0 libmnl.so
 
 libmnl-clean:
 	-@$(MAKE) -C libmnl clean

@@ -174,14 +174,6 @@ function init() {
 
 </div>
 
-<div class="section-title">NFS Client</div>
-<div class="section">
-<br/>
-	<ul>
-	<li>If you want to mount an NFS share from other NFS Server, you can use the mount.nfs tool via telnet/ssh.
-	</li></ul>
-</div>
-
 <!-- / / / -->
 
 </td></tr>

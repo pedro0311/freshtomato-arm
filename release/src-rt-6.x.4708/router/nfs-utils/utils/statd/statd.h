@@ -11,29 +11,7 @@
 
 #include "sm_inter.h"
 #include "system.h"
-#include "log.h"
-
-/*
- * Paths and filenames.
- */
-#if defined(NFS_STATEDIR)
-# define DEFAULT_DIR_BASE	NFS_STATEDIR "/"
-#else
-# define DEFAULT_DIR_BASE	"/var/lib/nfs/"
-#endif
-
-#define DEFAULT_SM_DIR		DEFAULT_DIR_BASE "sm"
-#define DEFAULT_SM_BAK_DIR	DEFAULT_DIR_BASE "sm.bak"
-#define DEFAULT_SM_STAT_PATH	DEFAULT_DIR_BASE "state"
-
-/* Added to support run-time specification of state directory path.
- * j_carlos_gomez@yahoo.com
- */
-
-extern char * DIR_BASE;
-extern char *  SM_DIR;
-extern char *  SM_BAK_DIR;
-extern char *  SM_STAT_PATH;
+#include "xlog.h"
 
 /*
  * Status definitions.
@@ -44,8 +22,13 @@ extern char *  SM_STAT_PATH;
 /*
  * Function prototypes.
  */
-extern void	change_state(void);
-extern void	my_svc_run(void);
+extern _Bool	statd_matchhostname(const char *hostname1, const char *hostname2);
+extern _Bool	statd_present_address(const struct sockaddr *sap, char *buf,
+					const size_t buflen);
+__attribute__((__malloc__))
+extern char *	statd_canonical_name(const char *hostname);
+
+extern void	my_svc_run(int);
 extern void	notify_hosts(void);
 extern void	shuffle_dirs(void);
 extern int	statd_get_socket(void);
@@ -53,7 +36,6 @@ extern int	process_notify_list(void);
 extern int	process_reply(FD_SET_TYPE *);
 extern char *	xstrdup(const char *);
 extern void *	xmalloc(size_t);
-extern void	xunlink (char *, char *);
 extern void	load_state(void);
 
 /*
@@ -84,10 +66,3 @@ extern int run_mode;
  * another host.... */
 #define STATIC_HOSTNAME 8	/* Always use the hostname set by -n */
 #define	MODE_NO_NOTIFY	16	/* Don't notify peers of a reboot */
-/*
- * Program name and version pointers -- See statd.c for the reasoning
- * as to why they're global.
- */
-extern char *name_p;		/* program basename */
-extern const char *version_p;	/* program version */
-
