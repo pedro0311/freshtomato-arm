@@ -861,6 +861,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "stealth_mode",		"0"				, 0 },
 	{ "stealth_iled",		"0"				, 0 },
 	{ "sesx_led",			"12"				, 0 },	// enable LEDs at startup: bit 0 = LED_AMBER, bit 1 = LED_WHITE, bit 2 = LED_AOSS, bit 3 = LED_BRIDGE; Default: LED_AOSS + LED_Bridge turned On
+	{ "blink_wl",			"1"				, 0 },	// enable blink by default (for wifi)
 	{ "sesx_b0",			"1"				, 0 },
 	{ "sesx_b1",			"4"				, 0 },
 	{ "sesx_b2",			"4"				, 0 },

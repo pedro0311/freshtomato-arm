@@ -93,6 +93,11 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
+ifeq ($(ASUS_TRX),CISCO)
+ifneq ($(BCMSMP),y)
+	NOSMP_DESC = '-NOSMP'
+endif
+endif
 
 -include tomato_profile.mak
 
@@ -165,13 +170,21 @@ else
 endif
 endif
 endif
-# for Tenda
-ifeq ($(ASUS_TRX),TENDA)
+# for Tenda AC15
+ifeq ($(ASUS_TRX),AC15)
 	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC15,3.0.0.4,image/freshtomato-TendaAC15-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 #	The following lines help to create .bin file that is uploadable from original firmware. Process is semi-manual so it is disabled for now
 #	crc32 image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx
 #	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
 #	cat ctools/tendahead.bin image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC15-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
+endif
+# for Tenda AC18
+ifeq ($(ASUS_TRX),AC18)
+	ctools/trx_asus -i image/linux-lzma.trx -r TendaAC18,3.0.0.4,image/freshtomato-TendaAC18-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+#	The following lines help to create .bin file that is uploadable from original firmware. Process is semi-manual so it is disabled for now
+#	crc32 image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx
+#	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
+#	cat ctools/tendahead.bin image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
 endif
 # for dlink
 ifeq ($(ASUS_TRX),DLINK)
@@ -199,7 +212,11 @@ endif
 ifeq ($(ASUS_TRX),BUFFALO)
 	ctools/trx_asus -i image/linux-lzma.trx -r WZR1750,3.0.0.4,image/freshtomato-WZR1750-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
-
+# for EA6200, EA6350v1
+ifeq ($(ASUS_TRX),CISCO)
+	ctools/trx_asus -i image/linux-lzma.trx -r EA6350v1,3.0.0.4,image/freshtomato-EA6350v1-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r EA6200,3.0.0.4,image/freshtomato-EA6200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 #for linksys EA series -- EA6400 EA6700 EA6500v2 EA6900
 ifeq ($(ASUS_TRX),LINKSYS)
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6900,3.0.0.4,image/freshtomato-EA6900-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1136,8 +1153,14 @@ n18e:
 n18z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS"
 
-ac15:
-	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="TENDA" TUXERA=y
+ac15e:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="AC15" TUXERA=y
+
+ac18e:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
+
+ac18z:
+	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
 
 dir868l:
 	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="special" USB="USB" DNSSEC=y DNSCRYPT=y STUBBY=y UPS=y NO_SSH=y NANO=y
@@ -1183,6 +1206,12 @@ ea6700e:
 
 ea6700z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n
+
+ea6350v1e:
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="CISCO" FAILSAFE_UPGRADE=n
+
+ea6350v1z:
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="CISCO" FAILSAFE_UPGRADE=n
 
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y
@@ -1268,7 +1297,9 @@ help:
 	@echo "n18e          RT-N18U/AC56S without SMP build VPN"
 	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"
-	@echo "ac15          Tenda AC15"
+	@echo "ac15e         Tenda AC15 VPN"
+	@echo "ac18e         Tenda AC18 VPN"
+	@echo "ac18z         Tenda AC18 AIO"
 	@echo "DLINK ARM Builds"
 	@echo "dir868l       DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
@@ -1291,6 +1322,8 @@ help:
 	@echo "LINKSYS ARM Builds"
 	@echo "ea6700e       EA6700/EA6400/EA6500v2/EA6900 build VPN"
 	@echo "ea6700z       EA6700/EA6400/EA6500v2/EA6900 build AIO"
+	@echo "ea6350v1e     EA6200/EA6350v1 build VPN"
+	@echo "ea6350v1z     EA6200/EA6350v1 build AIO"
 ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e        RT-AC3200 build VPN"
