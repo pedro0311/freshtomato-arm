@@ -3227,12 +3227,12 @@ static int init_nvram(void)
 			nvram_set("wl0_ifname", "eth2");
 			nvram_set("wl1_ifname", "eth1");
 
-			/* fix WL mac`s */
+			/* fix MAC addresses */
 			strcpy(s, nvram_safe_get("et0macaddr"));
 			inc_mac(s, +2);
 			nvram_set("pci/2/1/macaddr", s);
 			nvram_set("wl1_hwaddr", s);
-			inc_mac(s, +1);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
 			nvram_set("pci/1/1/macaddr", s);
 			nvram_set("wl0_hwaddr", s);
 
