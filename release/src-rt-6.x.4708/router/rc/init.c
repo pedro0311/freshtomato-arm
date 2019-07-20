@@ -4399,12 +4399,13 @@ static int init_nvram(void)
 			nvram_set("wl_country", "SG");
 			nvram_set("wl_country_code", "SG");
 
-			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", nvram_safe_get("0:macaddr"));
-
-			/* fix WL mac for 5G */
-			strcpy(s, nvram_safe_get("0:macaddr"));
-			inc_mac(s, +1);
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for 2,4G */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
 			/* usb3.0 settings */
