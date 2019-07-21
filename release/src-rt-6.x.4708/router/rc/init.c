@@ -1464,6 +1464,11 @@ static int init_nvram(void)
 			/* misc settings */
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			nvram_set("0:ccode", "#a");
+			nvram_set("wl0_country_code", "#a");
+			nvram_set("wl0_txpwr", "0");
 		}
 		break;
 	case MODEL_RTAC56U:
@@ -1592,15 +1597,15 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			/* force wl1 settings */
-			nvram_set("wl1_bw", "3");
-			nvram_set("wl1_bw_cap", "7");
+			/* wifi settings/channels */
+			nvram_set("0:ccode", "#a");
+			nvram_set("1:ccode", "#a");
+			nvram_set("wl0_country_code", "#a");
+			nvram_set("wl1_country_code", "#a");
+			nvram_set("wl0_txpwr", "0");
+			nvram_set("wl1_txpwr", "0");
 			nvram_set("wl1_chanspec", "149/80");
 			nvram_set("wl1_nctrlsb", "lower");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
-			nvram_set("wl_country", "SG");
-			nvram_set("wl_country_code", "SG");
 		}
 		break;
 	case MODEL_AC15:
