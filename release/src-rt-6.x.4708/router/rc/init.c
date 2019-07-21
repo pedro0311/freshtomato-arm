@@ -1510,18 +1510,46 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			/* force wl1 settings */
-			nvram_set("wl1_bw", "3");
-			nvram_set("wl1_bw_cap", "7");
+			/* wifi settings/channels */
+			nvram_set("0:ccode", "#a");
+			nvram_set("1:ccode", "#a");
+			nvram_set("wl0_country_code", "#a");
+			nvram_set("wl1_country_code", "#a");
+			nvram_set("wl0_txpwr", "0");
+			nvram_set("wl1_txpwr", "0");
 			nvram_set("wl1_chanspec", "149/80");
 			nvram_set("wl1_nctrlsb", "lower");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
-			nvram_set("wl_country", "SG");
-			nvram_set("wl_country_code", "SG");
 
-			nvram_set("1:ledbh6", "136");   /* fixup 5 ghz led - from dd-wrt */
-			nvram_unset("1:ledbh10");       /* fixup 5 ghz led - from dd-wrt */
+			/* fixes from dd wrt (START) */
+			nvram_set("1:ledbh6", "136");
+			nvram_unset("1:ledbh10");
+
+			/* tx power fixup */
+			nvram_set("0:maxp2ga0", "0x68"); /* old/orig. value = 0x64 */
+			nvram_set("0:maxp2ga1", "0x68"); /* old/orig. value = 0x64 */
+			nvram_set("0:cck2gpo", "0x1111");
+			nvram_set("0:ofdm2gpo", "0x54333333");
+			nvram_set("0:mcs2gpo0", "0x3333");
+			nvram_set("0:mcs2gpo1", "0x9753");
+			nvram_set("0:mcs2gpo2", "0x3333");
+			nvram_set("0:mcs2gpo3", "0x9753");
+			nvram_set("0:mcs2gpo4", "0x5555");
+			nvram_set("0:mcs2gpo5", "0xB755");
+			nvram_set("0:mcs2gpo6", "0x5555");
+			nvram_set("0:mcs2gpo7", "0xB755");
+
+			nvram_set("1:maxp5ga0", "104,104,104,104"); /* old/orig. value = 100,100,100,100 */
+			nvram_set("1:maxp5ga1", "104,104,104,104"); /* old/orig. value = 100,100,100,100 */
+			nvram_set("1:mcsbw205glpo", "0xAA864433"); /* old/orig. value = 0x99753333 */
+			nvram_set("1:mcsbw405glpo", "0xAA864433");
+			nvram_set("1:mcsbw805glpo", "0xAA864433");
+			nvram_set("1:mcsbw205gmpo", "0xAA864433");
+			nvram_set("1:mcsbw405gmpo", "0xAA864433");
+			nvram_set("1:mcsbw805gmpo", "0xAA864433");
+			nvram_set("1:mcsbw205ghpo", "0xAA864433");
+			nvram_set("1:mcsbw405ghpo", "0xAA864433");
+			nvram_set("1:mcsbw805ghpo", "0xAA864433");
+			/* fixes from dd wrt (END) */
 		}
 		break;
 	case MODEL_RTAC68U:
