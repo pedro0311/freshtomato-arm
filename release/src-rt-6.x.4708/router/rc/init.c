@@ -1825,13 +1825,9 @@ static int init_nvram(void)
 			nvram_set("devpath1", "pcie/2/3");
 			nvram_set("devpath2", "pcie/2/4");
 
-			/* enable blink */
-			nvram_set("blink_wl", "1");
-
 			wl_defaults();
 			bsd_defaults();
 			set_r8000_vars();
-
 		}
 		break;
 	case MODEL_AC15:
