@@ -1867,6 +1867,7 @@ nocat-install:
 
 #Tomato RAF
 pcre/stamp-h1:
+	$(call patch_files,pcre)
 	cd pcre && \
 	autoreconf -fsi && \
 	CC=$(CC) CXX=$(HOST)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
@@ -1892,6 +1893,7 @@ pcre-clean:
 		$(MAKE) -C pcre clean; \
 		rm -rf pcre/stamp-h1; \
 	fi )
+	$(call unpatch_files,pcre)
 
 libxml2/stamp-h1:
 	cd libxml2 && \
