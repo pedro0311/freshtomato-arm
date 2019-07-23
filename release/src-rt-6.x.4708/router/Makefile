@@ -1194,7 +1194,7 @@ libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
 	cd $(INSTALLDIR)/libusb10/usr/lib && \
-		ln -sf libusb-1.0.so libusb-1.0.so.0
+		ln -sf libusb-1.0.so libusb-1.0.so.1
 
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
