@@ -1,5 +1,5 @@
---- patches/pcregrep.c
-+++ patches/pcregrep.c
+--- pcre/pcregrep.c
++++ pcre/pcregrep.c
 @@ -870,7 +870,7 @@ static void
  help(void)
  {
