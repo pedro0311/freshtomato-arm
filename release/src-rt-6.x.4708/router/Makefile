@@ -2226,12 +2226,10 @@ openvpn/.conf: openssl lzo
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/openssl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/openssl/include" \
-	$(CONFIGURE) --prefix= \
-	--with-crypto-library=openssl \
-	--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --with-plugindir=/lib --enable-management \
-	OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" \
-	OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
-	ac_cv_lib_resolv_gethostbyname=no
+	$(CONFIGURE) --prefix= --with-crypto-library=openssl --disable-debug \
+		--disable-plugin-auth-pam --disable-plugin-down-root --enable-management \
+		OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
+		PLUGINDIR="/lib" ac_cv_lib_resolv_gethostbyname=no
 	touch openvpn/.conf
 
 openvpn: openvpn/.conf
