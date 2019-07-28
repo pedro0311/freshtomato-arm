@@ -598,8 +598,9 @@ modemReset() {
 		for j in $DEVALL; do	# find working interface
 			MODE="AT^RESET" gcom -d "$j" -s /etc/gcom/setmode.gcom
 		done
-	# elif [ "$MTYPE" == "qmi_wwan" ]; then
-		# TODO: is it possible at all? maybe just remove qmi_wwan module...
+	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		uqmiCall "--set-device-operating-mode offline"
+		uqmiCall "--set-device-operating-mode reset"
 	fi
 
 	$LOGS "4G MODEM - reset of the modem is done"
