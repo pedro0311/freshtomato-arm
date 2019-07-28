@@ -1743,12 +1743,19 @@ static int init_nvram(void)
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
 
-			// fix WL mac`s
-			nvram_set("wl0_hwaddr", nvram_safe_get("1:macaddr"));
-			nvram_set("wl1_hwaddr", nvram_safe_get("0:macaddr"));
-			nvram_set("wl2_hwaddr", nvram_safe_get("2:macaddr"));
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("1:macaddr", s);			/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("0:macaddr", s);			/* fix WL mac for wl1 (0:) - 5GHz low (first one) - eth1 */
+			nvram_set("wl1_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("2:macaddr", s);			/* fix WL mac for wl2 (2:) - 5GHz high (second one) - eth3 */
+			nvram_set("wl2_hwaddr", s);
 
-			// usb3.0 settings
+			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
@@ -1758,8 +1765,8 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			// force wl settings
-			// wl0 (1:) - 2,4GHz
+			/* wifi settings/channels */
+			/* wl0 (1:) - 2,4GHz */
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1767,7 +1774,7 @@ static int init_nvram(void)
 			nvram_set("wl0_nctrlsb", "upper");
 			nvram_set("1:ccode", "SG");
 			nvram_set("1:regrev", "0");
-			// wl1 (0:) - 5GHz low
+			/* wl1 (0:) - 5GHz low */
 			nvram_set("wl1_bw_cap", "7");
 			nvram_set("wl1_chanspec", "36/80");
 			nvram_set("wl1_channel", "36");
@@ -1776,7 +1783,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 			nvram_set("0:ccode", "SG");
 			nvram_set("0:regrev", "0");
-			// wl2 (2:) - 5GHz high
+			/* wl2 (2:) - 5GHz high */
 			nvram_set("wl2_bw_cap", "7");
 			nvram_set("wl2_chanspec", "104/80");
 			nvram_set("wl2_channel", "104");
