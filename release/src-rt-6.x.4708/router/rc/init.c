@@ -910,17 +910,12 @@ static void check_bootnv(void)
 #endif
 #ifdef CONFIG_BCM7
 	case MODEL_R8000:
-		strcpy(mac, nvram_safe_get("et2macaddr"));
-		inc_mac(mac, 1);
-		inc_mac(mac, 1);
-		nvram_set("0:macaddr", mac);
-		inc_mac(mac, 1);
-		nvram_set("1:macaddr", mac);
-		inc_mac(mac, 1);
-		nvram_set("2:macaddr", mac);
+		nvram_unset("et1macaddr");
+		dirty |= check_nv("wl0_ifname", "eth2");
+		dirty |= check_nv("wl1_ifname", "eth1");
+		dirty |= check_nv("wl2_ifname", "eth3");
 		break;
 #endif
-
 	case MODEL_WRT54G:
 	if (strncmp(nvram_safe_get("pmon_ver"), "CFE", 3) != 0) return;
 
@@ -1824,12 +1819,25 @@ static int init_nvram(void)
 			nvram_set("wl1_atf", "1");
 			nvram_set("wl2_atf", "1");
 
-			//GMAC3 variables
+			/* GMAC3 variables */
 			nvram_set("fwd_cpumap", "d:x:2:169:1 d:l:5:169:1 d:u:5:163:0");
 			nvram_set("fwd_wlandevs", "");
 			nvram_set("fwddevs", "");
 
-			// usb3.0 settings
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et2macaddr"));	/* get et2 MAC address for LAN */
+			nvram_set("et0macaddr", s); 			/* copy et2macaddr to et0macaddr (see also function start_vlan(void) at rc/interface.c */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("1:macaddr", s);			/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("0:macaddr", s);			/* fix WL mac for wl1 (0:) - 5GHz high - eth1 */
+			nvram_set("wl1_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("2:macaddr", s);			/* fix WL mac for wl2 (2:) - 5GHz low - eth3 */
+			nvram_set("wl2_hwaddr", s);
+
+			/* usb3.0 settings */
 			nvram_set("usb_usb3", "1");
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
@@ -1839,25 +1847,25 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			// force wl settings
-			// wl0 (0:) - 2,4GHz
+			/* wifi settings/channels */
+			/* wl0 (1:) - 2,4GHz */
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
 			nvram_set("wl0_nbw","40");
 			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("0:ccode", "SG");
-			nvram_set("0:regrev", "0");
-			// wl1 (1:) - 5GHz low
+			nvram_set("1:ccode", "SG");
+			nvram_set("1:regrev", "0");
+			/* wl1 (0:) - 5GHz high */
 			nvram_set("wl1_bw_cap", "7");
 			nvram_set("wl1_chanspec", "100/80");
 			nvram_set("wl1_channel", "100");
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
-			nvram_set("1:ccode", "SG");
-			nvram_set("1:regrev", "0");
-			// wl2 (2:) - 5GHz high
+			nvram_set("0:ccode", "SG");
+			nvram_set("0:regrev", "0");
+			/* wl2 (2:) - 5GHz low */
 			nvram_set("wl2_bw_cap", "7");
 			nvram_set("wl2_chanspec", "40/80");
 			nvram_set("wl2_channel", "40");
@@ -1867,7 +1875,7 @@ static int init_nvram(void)
 			nvram_set("2:ccode", "SG");
 			nvram_set("2:regrev", "0");
 
-			//fix devpath
+			/* fix devpath */
 			nvram_set("devpath0", "pcie/1/1");
 			nvram_set("devpath1", "pcie/2/3");
 			nvram_set("devpath2", "pcie/2/4");
