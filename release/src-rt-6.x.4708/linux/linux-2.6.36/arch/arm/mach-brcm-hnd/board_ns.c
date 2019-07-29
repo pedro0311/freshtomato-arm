@@ -200,7 +200,7 @@ void soc_watchdog(void)
 		si_watchdog_ms(sih, watchdog);
 }
 
-#define CFE_UPDATE 1            // added by Chen-I for mac/regulation update
+#define CFE_UPDATE 1            /* added by Chen-I for mac/regulation update */
 
 #ifdef CFE_UPDATE
 void bcm947xx_watchdog_disable(void)
@@ -511,7 +511,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	}
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
 
-	/* limit size for R6300V2/R6250 */
+	/* limit size for R6300V2 / R6250 */
 	 if (nvram_match("boardnum", "679") && nvram_match("boardtype", "0x0646")
 	            && nvram_match("boardrev", "0x1110")) {
 	        maxsize = 0x200000;
@@ -835,11 +835,13 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 	uint32 nvsz = 0;
 	uint32 bootossz = nfl_boot_os_size(nfl);
 	uint boardnum = bcm_strtoul(nvram_safe_get("boardnum"), NULL, 0);
-	//EA6700 EA6900
+
+	/* EA6700 */
 	if (((boardnum == 1) || (nvram_get("boardnum") == NULL)) && nvram_match("boardtype", "0xF646") && nvram_match("boardrev", "0x1100")) 		{
 		bootossz = 0x4000000;
 		nvsz = 0x100000;
 	}
+	/* EA6900 */
 	else if (((boardnum == 1) || (nvram_get("boardnum") == NULL)) && nvram_match("boardtype","0xD646") && nvram_match("boardrev","0x1100")) {
 		bootossz = 0x4000000;	
 		nvsz = 0x100000;
@@ -914,7 +916,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 				(bootossz - nfl_boot_size(nfl)) :
 				nfl_boot_os_size(nfl);
 		}
-		/* fix linux offset for the R6300V2/R6250 units */
+		/* fix linux offset for the R6300V2 / R6250 units */
 		if (nvram_match("boardnum","679") && nvram_match("boardtype", "0x0646") && nvram_match("boardrev", "0x1110")) {
 			offset += 0x180000;
 			bcm947xx_nflash_parts[nparts].size -= 0x180000;
@@ -923,7 +925,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0665") && nvram_match("boardrev", "0x1301")) {
 			bcm947xx_nflash_parts[nparts].size += 0x200000;
 		}
-		/* R7000 */
+		/* R6400 */
 		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0646") && nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x200000;
 		}
@@ -968,7 +970,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
                 nparts++;
 #endif /* End of ASUS 2nd FW partition*/
 
-		/* again, to fix R6300V2, 6400 and R7000 */
+		/* again, to fix R7000 */
 		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0665") && nvram_match("boardrev", "0x1301")) {
 			
 			bcm947xx_nflash_parts[nparts].name = "board_data";
@@ -976,7 +978,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
 			nparts++;
 		}
-		
+		/* again, to fix R6400 */
 		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0646") && nvram_match("boardrev", "0x1601")) {
 			
 			bcm947xx_nflash_parts[nparts].name = "board_data";
@@ -984,7 +986,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
 			nparts++;
 		}
-		
+		/* again, to fix R6300V2 and R6250 */
 		if ( nvram_match("boardnum","679") && nvram_match("boardtype", "0x0646") && (nvram_match("boardrev", "0x1110")) ) {
 			bcm947xx_nflash_parts[nparts].name = "board_data";
 			bcm947xx_nflash_parts[nparts].size = 0x20000;
