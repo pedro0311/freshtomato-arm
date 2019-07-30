@@ -1,0 +1,11 @@
+--- ebtables/Makefile.am
++++ ebtables/Makefile.am
+@@ -35,7 +35,7 @@ lib_LTLIBRARIES = libebtc.la
+ 	communication.c ebtables.c getethertype.c \
+ 	libebtc.c useful_functions.c \
+ 	extensions/ebt_arp.c \
+-	extensions/ebt_arpreply.c extensions/ebt_ip.c extensions/ebt_ip6.c \
++	extensions/ebt_arpreply.c extensions/ebt_ip.c \
+ 	extensions/ebt_limit.c extensions/ebt_log.c extensions/ebt_mark.c \
+ 	extensions/ebt_nat.c \
+ 	extensions/ebt_pkttype.c extensions/ebt_redirect.c \
