@@ -1509,14 +1509,13 @@ endif
 	@true
 
 flac/stamp-h1: libogg
-	cd flac && \
-	autoreconf -fsi && \
+	cd $(TOP)/flac && autoreconf -fsi && \
 	CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include" \
 	LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' --disable-rpath \
-		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs \
-		--without-libiconv-prefix --disable-altivec --disable-3dnow --disable-sse
+		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
+		--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking
 	touch flac/stamp-h1
 
 flac: flac/stamp-h1 libogg
