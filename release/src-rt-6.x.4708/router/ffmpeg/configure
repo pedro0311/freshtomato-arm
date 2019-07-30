@@ -181,6 +181,7 @@ External library support:
   --enable-libschroedinger enable Dirac support via libschroedinger [no]
   --enable-libspeex        enable Speex decoding via libspeex [no]
   --enable-libtheora       enable Theora encoding via libtheora [no]
+  --enable-libvo-aacenc    enable AAC encoding via libvo-aacenc [no]
   --enable-libvorbis       enable Vorbis encoding via libvorbis,
                            native implementation exists [no]
   --enable-libvpx          enable VP8 support via libvpx [no]
@@ -929,6 +930,7 @@ CONFIG_LIST="
     libschroedinger
     libspeex
     libtheora
+    libvo_aacenc
     libvorbis
     libvpx
     libx264
@@ -1035,6 +1037,7 @@ HAVE_LIST="
     dlfcn_h
     dlopen
     dos_paths
+    dxva_h
     ebp_available
     ebx_available
     exp2
@@ -1357,6 +1360,7 @@ libschroedinger_decoder_deps="libschroedinger"
 libschroedinger_encoder_deps="libschroedinger"
 libspeex_decoder_deps="libspeex"
 libtheora_encoder_deps="libtheora"
+libvo_aacenc_encoder_deps="libvo_aacenc"
 libvorbis_encoder_deps="libvorbis"
 libvpx_decoder_deps="libvpx"
 libvpx_encoder_deps="libvpx"
@@ -1409,7 +1413,7 @@ oss_indev_deps_any="soundcard_h sys_soundcard_h"
 oss_outdev_deps_any="soundcard_h sys_soundcard_h"
 v4l_indev_deps="linux_videodev_h"
 v4l2_indev_deps_any="linux_videodev2_h sys_videoio_h"
-vfwcap_indev_deps="capCreateCaptureWindow"
+vfwcap_indev_deps="capCreateCaptureWindow vfwcap_defines"
 vfwcap_indev_extralibs="-lavicap32"
 x11_grab_device_indev_deps="x11grab XShmCreateImage"
 x11_grab_device_indev_extralibs="-lX11 -lXext -lXfixes"
@@ -2206,7 +2210,7 @@ case $target_os in
         LIBTARGET=i386
         if enabled x86_64; then
             enable malloc_aligned
-            LIBTARGET=x64
+            LIBTARGET="i386:x86-64"
         elif enabled arm; then
             LIBTARGET=arm
         fi
@@ -2216,7 +2220,7 @@ case $target_os in
         SLIBSUF=".dll"
         SLIBNAME_WITH_VERSION='$(SLIBPREF)$(FULLNAME)-$(LIBVERSION)$(SLIBSUF)'
         SLIBNAME_WITH_MAJOR='$(SLIBPREF)$(FULLNAME)-$(LIBMAJOR)$(SLIBSUF)'
-        SLIB_EXTRA_CMD='-lib.exe /machine:$(LIBTARGET) /def:$$(@:$(SLIBSUF)=.def) /out:$(SUBDIR)$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.lib)'
+        SLIB_EXTRA_CMD=-'$(DLLTOOL) -m $(LIBTARGET) -d $$(@:$(SLIBSUF)=.def) -l $(SUBDIR)$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.lib) -D $(SLIBNAME_WITH_MAJOR)'
         SLIB_INSTALL_EXTRA_CMD='-install -m 644 $(SUBDIR)$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.lib) "$(SHLIBDIR)/$(SLIBNAME:$(SLIBSUF)=.lib)"; \
             install -m 644 $(SUBDIR)$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.lib) "$(SHLIBDIR)/$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.lib)"; \
             install -d "$(LIBDIR)"; \
@@ -2224,15 +2228,12 @@ case $target_os in
         SLIB_UNINSTALL_EXTRA_CMD='rm -f "$(SHLIBDIR)/$(SLIBNAME:$(SLIBSUF)=.lib)"'
         SHFLAGS='-shared -Wl,--output-def,$$(@:$(SLIBSUF)=.def) -Wl,--out-implib,$(SUBDIR)lib$(SLIBNAME:$(SLIBSUF)=.dll.a) -Wl,--enable-runtime-pseudo-reloc -Wl,--enable-auto-image-base'
         objformat="win32"
+        dlltool="${cross_prefix}dlltool"
         enable dos_paths
         check_cflags -fno-common
-        if ! enabled x86_64; then
-            check_cpp_condition _mingw.h "(__MINGW32_MAJOR_VERSION > 3) || (__MINGW32_MAJOR_VERSION == 3 && __MINGW32_MINOR_VERSION >= 15)" ||
+        check_cpp_condition _mingw.h "defined (__MINGW64_VERSION_MAJOR) || (__MINGW32_MAJOR_VERSION > 3) \
+                                      || (__MINGW32_MAJOR_VERSION == 3 && __MINGW32_MINOR_VERSION >= 15)" ||
                 die "ERROR: MinGW runtime version must be >= 3.15."
-            enabled_any avisynth vfwcap_indev &&
-                { check_cpp_condition w32api.h "(__W32API_MAJOR_VERSION > 3) || (__W32API_MAJOR_VERSION == 3 && __W32API_MINOR_VERSION >= 13)" ||
-                  die "ERROR: avisynth and vfwcap_indev require w32api version 3.13 or later."; }
-        fi
         ;;
     cygwin*)
         target_os=cygwin
@@ -2346,6 +2347,7 @@ die_license_disabled nonfree libfaac
 
 die_license_disabled version3 libopencore_amrnb
 die_license_disabled version3 libopencore_amrwb
+die_license_disabled version3 libvo_aacenc
 
 enabled version3 && { enabled gpl && enable gplv3 || enable lgplv3; }
 
@@ -2542,6 +2544,7 @@ check_func_headers windows.h VirtualAlloc
 
 check_header conio.h
 check_header dlfcn.h
+check_header dxva.h
 check_header dxva2api.h
 check_header malloc.h
 check_header poll.h
@@ -2622,6 +2625,7 @@ enabled libschroedinger && add_cflags $(pkg-config --cflags schroedinger-1.0) &&
                            require libschroedinger schroedinger/schro.h schro_init $(pkg-config --libs schroedinger-1.0)
 enabled libspeex   && require  libspeex speex/speex.h speex_decoder_init -lspeex
 enabled libtheora  && require  libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
+enabled libvo_aacenc && require libvo_aacenc vo-aacenc/voAAC.h voGetAACEncAPI -lvo-aacenc
 enabled libvorbis  && require  libvorbis vorbis/vorbisenc.h vorbis_info_init -lvorbisenc -lvorbis -logg
 enabled libvpx     && require2 libvpx "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_dec_init_ver" -lvpx &&
                       require2 libvpx "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_enc_init_ver" -lvpx
@@ -2683,6 +2687,9 @@ check_header linux/videodev2.h
 check_header sys/videoio.h
 
 check_func_headers "windows.h vfw.h" capCreateCaptureWindow "$vfwcap_indev_extralibs"
+# check that WM_CAP_DRIVER_CONNECT is defined to the proper value
+# w32api 3.12 had it defined wrong
+check_cpp_condition vfw.h "WM_CAP_DRIVER_CONNECT > WM_USER" && enable vfwcap_defines
 
 # check for ioctl_meteor.h, ioctl_bt848.h and alternatives
 { check_header dev/bktr/ioctl_meteor.h &&
@@ -2789,8 +2796,10 @@ elif enabled gcc; then
     check_cflags -fno-tree-vectorize
     check_cflags -Werror=implicit
     check_cflags -Werror=missing-prototypes
+    check_cflags -Werror=return-type
 elif enabled clang; then
     check_cflags -Qunused-arguments
+    check_cflags -Werror=return-type
 elif enabled armcc; then
     # 2523: use of inline assembler is deprecated
     add_cflags -Wrvct,--diag_suppress=2523
@@ -2902,6 +2911,7 @@ echo "librtmp enabled           ${librtmp-no}"
 echo "libschroedinger enabled   ${libschroedinger-no}"
 echo "libspeex enabled          ${libspeex-no}"
 echo "libtheora enabled         ${libtheora-no}"
+echo "libvo-aacenc support      ${libvo_aacenc-no}"
 echo "libvorbis enabled         ${libvorbis-no}"
 echo "libvpx enabled            ${libvpx-no}"
 echo "libx264 enabled           ${libx264-no}"
@@ -3002,6 +3012,7 @@ CPPFLAGS=$CPPFLAGS
 CFLAGS=$CFLAGS
 ASFLAGS=$ASFLAGS
 CC_O=$CC_O
+DLLTOOL=$dlltool
 LDFLAGS=$LDFLAGS
 FFSERVERLDFLAGS=$FFSERVERLDFLAGS
 SHFLAGS=$SHFLAGS

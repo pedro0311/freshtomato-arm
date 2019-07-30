@@ -1449,7 +1449,7 @@ FFMPEG_DISABLED_DEMUXERS:=amr apc ape ass bethsoftvid bfi c93 daud dnxhd dsicin 
 FFMPEG_CONFIGURE_DEMUXERS:=$(call FFMPEG_FILTER_CONFIG,disable-demuxer,$(FFMPEG_DISABLED_DEMUXERS))
 
 ffmpeg/stamp-h1: zlib
-	cd ffmpeg && symver_asm_label=no symver_gnu_asm=no symver=no CC=$(CC) \
+	cd $(TOP)/ffmpeg && symver_asm_label=no symver_gnu_asm=no symver=no \
 		./configure --enable-cross-compile --arch=$(ARCH) --target_os=linux \
 		--cross-prefix=$(CROSS_COMPILE) --enable-shared --enable-gpl --disable-doc \
 		--enable-pthreads --enable-small --disable-encoders --disable-filters \

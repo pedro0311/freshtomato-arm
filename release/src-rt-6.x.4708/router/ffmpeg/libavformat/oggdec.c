@@ -94,14 +94,24 @@ ogg_restore (AVFormatContext * s, int discard)
     ogg->state = ost->next;
 
     if (!discard){
+        struct ogg_stream *old_streams = ogg->streams;
+
         for (i = 0; i < ogg->nstreams; i++)
             av_free (ogg->streams[i].buf);
 
         url_fseek (bc, ost->pos, SEEK_SET);
         ogg->curidx = ost->curidx;
         ogg->nstreams = ost->nstreams;
-        memcpy(ogg->streams, ost->streams,
-               ost->nstreams * sizeof(*ogg->streams));
+        ogg->streams = av_realloc (ogg->streams,
+                                   ogg->nstreams * sizeof (*ogg->streams));
+
+        if (ogg->streams) {
+            memcpy(ogg->streams, ost->streams,
+                   ost->nstreams * sizeof(*ogg->streams));
+        } else {
+            av_free(old_streams);
+            ogg->nstreams = 0;
+        }
     }
 
     av_free (ost);
@@ -577,20 +587,19 @@ ogg_read_close (AVFormatContext * s)
 }
 
 
-static int64_t
-ogg_read_timestamp (AVFormatContext * s, int stream_index, int64_t * pos_arg,
-                    int64_t pos_limit)
+static int64_t ogg_read_timestamp (AVFormatContext * s, int stream_index,
+                                   int64_t * pos_arg, int64_t pos_limit)
 {
     struct ogg *ogg = s->priv_data;
-    struct ogg_stream *os = ogg->streams + stream_index;
     ByteIOContext *bc = s->pb;
     int64_t pts = AV_NOPTS_VALUE;
-    int i;
+    int i = -1;
     url_fseek(bc, *pos_arg, SEEK_SET);
     ogg_reset(ogg);
 
     while (url_ftell(bc) < pos_limit && !ogg_packet(s, &i, NULL, NULL, pos_arg)) {
         if (i == stream_index) {
+            struct ogg_stream *os = ogg->streams + stream_index;
             pts = ogg_calc_pts(s, i, NULL);
             if (os->keyframe_seek && !(os->pflags & AV_PKT_FLAG_KEY))
                 pts = AV_NOPTS_VALUE;
@@ -615,6 +624,7 @@ static int ogg_read_seek(AVFormatContext *s, int stream_index, int64_t timestamp
         os->keyframe_seek = 1;
 
     ret = av_seek_frame_binary(s, stream_index, timestamp, flags);
+    os = ogg->streams + stream_index;
     if (ret < 0)
         os->keyframe_seek = 0;
     return ret;

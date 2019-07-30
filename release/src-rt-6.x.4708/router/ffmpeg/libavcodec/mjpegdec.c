@@ -792,6 +792,10 @@ static int mjpeg_decode_scan(MJpegDecodeContext *s, int nb_components, int Ah, i
             if (s->restart_interval && !s->restart_count)
                 s->restart_count = s->restart_interval;
 
+            if(get_bits_count(&s->gb)>s->gb.size_in_bits){
+                av_log(s->avctx, AV_LOG_ERROR, "overread %d\n", get_bits_count(&s->gb) - s->gb.size_in_bits);
+                return -1;
+            }
             for(i=0;i<nb_components;i++) {
                 uint8_t *ptr;
                 int n, h, v, x, y, c, j;
@@ -835,9 +839,12 @@ static int mjpeg_decode_scan(MJpegDecodeContext *s, int nb_components, int Ah, i
                 }
             }
 
-            if (s->restart_interval && !--s->restart_count) {
+            if (s->restart_interval && show_bits(&s->gb, 8) == 0xFF){ /* skip RSTn */
+                --s->restart_count;
                 align_get_bits(&s->gb);
-                skip_bits(&s->gb, 16); /* skip RSTn */
+                while(show_bits(&s->gb, 8) == 0xFF)
+                    skip_bits(&s->gb, 8);
+                skip_bits(&s->gb, 8);
                 for (i=0; i<nb_components; i++) /* reset dc */
                     s->last_dc[i] = 1024;
             }
