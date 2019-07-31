@@ -1527,7 +1527,8 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 
 			/* fixes from dd wrt (START) */
-			nvram_set("1:ledbh6", "136");
+			nvram_set("1:ledbh6", "136"); /* pull up for 5 GHz LED */
+			nvram_set("0:ledbh3", "136"); /* pull up for 2.4 GHz LED */
 			nvram_unset("1:ledbh10");
 
 			/* tx power fixup */
