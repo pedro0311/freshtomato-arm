@@ -3152,7 +3152,7 @@ static int init_nvram(void)
 		}
 		break;
 	case MODEL_EA6350v1:
-		mfr = "Cisco Linksys";
+		mfr = "Linksys";
 		name = nvram_match("boardnum", "20140309") ? "EA6350v1" : "EA6200";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
