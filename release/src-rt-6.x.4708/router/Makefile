@@ -2275,21 +2275,20 @@ nano-install:
 
 libcurl/stamp-h1: zlib openssl
 	$(call patch_files,libcurl)
-	cd libcurl && CC=$(CC) STRIP=$(STRIP) \
-		./buildconf && \
+	cd $(TOP)/libcurl && ./buildconf && \
 		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
-		CPPFLAGS="$(EXTRACFLAGS)" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-		--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
-		--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
-		$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-		--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
-		--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
-		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
-		--without-gnutls --without-krb4 --without-libidn \
-		--with-linux-headers=$(LINUXDIR)/include \
-		--with-ca-bundle=/rom/cacert.pem
+			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
+			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
+			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
+			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
+			--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
+			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
+			--with-linux-headers=$(LINUXDIR)/include \
+			--with-ca-bundle=/rom/cacert.pem
 		touch libcurl/stamp-h1
 
 libcurl: libcurl/stamp-h1
