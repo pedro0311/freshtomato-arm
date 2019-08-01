@@ -1182,8 +1182,8 @@ ntfs-3g-install:
 		ln -sf ../bin/ntfs-3g mount.ntfs
 
 libusb10/Makefile: libusb10/Makefile.in
-	cd libusb10 && CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
-	autoreconf -fsi && \
+	cd libusb10 && autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
 	$(CONFIGURE) --disable-udev --prefix=/usr ac_cv_lib_rt_clock_gettime=no
 
 libusb10: libusb10/Makefile
@@ -1193,8 +1193,7 @@ libusb10: libusb10/Makefile
 libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
-	cd $(INSTALLDIR)/libusb10/usr/lib && \
-		ln -sf libusb-1.0.so libusb-1.0.so.1
+	cd $(INSTALLDIR)/libusb10/usr/lib && ln -sf libusb-1.0.so libusb-1.0.so.1
 
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
