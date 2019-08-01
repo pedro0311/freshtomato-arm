@@ -45,6 +45,7 @@ export AS := $(CROSS_COMPILE)as
 export LD := $(CROSS_COMPILE)ld
 export NM := $(CROSS_COMPILE)nm
 export OBJCOPY := $(CROSS_COMPILE)objcopy
+export OBJDUMP := $(CROSS_COMPILE)objdump
 export RANLIB := $(CROSS_COMPILE)ranlib
 ifeq ($(TCONFIG_BCMARM),y)
 export STRIP := $(CROSS_COMPILE)strip
