@@ -258,7 +258,6 @@ obj-$(TCONFIG_NANO) += nano
 
 obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission
-obj-$(TCONFIG_BT) += btgui
 
 obj-$(CONFIG_LINUX26) += hotplug2
 obj-$(CONFIG_LINUX26) += udevtrigger
@@ -2401,13 +2400,6 @@ ifeq ($(TCONFIG_TR_EXTRAS),y)
 else
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-remote
 endif
-
-btgui:
-	@$(SEP)
-
-btgui-install:
-	install -d $(INSTALLDIR)/btgui/usr/bin
-	install -D patches/transmission/btcheck $(INSTALLDIR)/btgui/usr/bin/btcheck
 
 libnfsidmap/stamp-h1:
 	cd libnfsidmap && autoreconf -fsi && \
