@@ -1182,8 +1182,8 @@ ntfs-3g-install:
 		ln -sf ../bin/ntfs-3g mount.ntfs
 
 libusb10/Makefile: libusb10/Makefile.in
-	cd libusb10 && CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
-	autoreconf -fsi && \
+	cd libusb10 && autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
 	$(CONFIGURE) --disable-udev --prefix=/usr ac_cv_lib_rt_clock_gettime=no
 
 libusb10: libusb10/Makefile
@@ -1193,8 +1193,7 @@ libusb10: libusb10/Makefile
 libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
-	cd $(INSTALLDIR)/libusb10/usr/lib && \
-		ln -sf libusb-1.0.so libusb-1.0.so.0
+	cd $(INSTALLDIR)/libusb10/usr/lib && ln -sf libusb-1.0.so libusb-1.0.so.1
 
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
@@ -1275,8 +1274,7 @@ accel-pptp-install:
 pptpd/stamp-h1:
 	$(call patch_files,pptpd)
 	ln -sf ../../pppd/pppd/ pptpd/plugins/pppd
-	cd pptpd && $(CONFIGURE) --prefix=$(INSTALLDIR)/pptpd --enable-bcrelay \
-		CC=$(CC) RANLIB=$(RANLIB) LD=$(LD) STRIP=$(STRIP)
+	cd $(TOP)/pptpd && $(CONFIGURE) --prefix=$(INSTALLDIR)/pptpd --enable-bcrelay
 	touch pptpd/stamp-h1
 
 pptpd: pptpd/stamp-h1
@@ -1284,13 +1282,10 @@ pptpd: pptpd/stamp-h1
 	@$(MAKE) -C pptpd
 
 pptpd-install:
-	@echo pptpd
 	@install -D pptpd/pptpd $(INSTALLDIR)/pptpd/usr/sbin/pptpd
 	@install -D pptpd/bcrelay $(INSTALLDIR)/pptpd/usr/sbin/bcrelay
 	@install -D pptpd/pptpctrl $(INSTALLDIR)/pptpd/usr/sbin/pptpctrl
-	@$(STRIP) $(INSTALLDIR)/pptpd/usr/sbin/pptpd
-	@$(STRIP) $(INSTALLDIR)/pptpd/usr/sbin/bcrelay
-	@$(STRIP) $(INSTALLDIR)/pptpd/usr/sbin/pptpctrl
+	@$(STRIP) $(INSTALLDIR)/pptpd/usr/sbin/*
 
 pptpd-clean:
 	-@$(MAKE) -C pptpd clean
@@ -1449,7 +1444,7 @@ FFMPEG_DISABLED_DEMUXERS:=amr apc ape ass bethsoftvid bfi c93 daud dnxhd dsicin 
 FFMPEG_CONFIGURE_DEMUXERS:=$(call FFMPEG_FILTER_CONFIG,disable-demuxer,$(FFMPEG_DISABLED_DEMUXERS))
 
 ffmpeg/stamp-h1: zlib
-	cd ffmpeg && symver_asm_label=no symver_gnu_asm=no symver=no CC=$(CC) \
+	cd $(TOP)/ffmpeg && symver_asm_label=no symver_gnu_asm=no symver=no \
 		./configure --enable-cross-compile --arch=$(ARCH) --target_os=linux \
 		--cross-prefix=$(CROSS_COMPILE) --enable-shared --enable-gpl --disable-doc \
 		--enable-pthreads --enable-small --disable-encoders --disable-filters \
@@ -1509,14 +1504,13 @@ endif
 	@true
 
 flac/stamp-h1: libogg
-	cd flac && \
-	autoreconf -fsi && \
+	cd $(TOP)/flac && autoreconf -fsi && \
 	CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include" \
 	LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' --disable-rpath \
-		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs \
-		--without-libiconv-prefix --disable-altivec --disable-3dnow --disable-sse
+		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
+		--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking
 	touch flac/stamp-h1
 
 flac: flac/stamp-h1 libogg
@@ -1766,13 +1760,17 @@ wanuptime-install:
 	$(STRIP) $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
 
 ebtables/stamp-h1: dummy
+ifeq ($(TCONFIG_IPV6),y)
+	mv patches/ebtables/104-do-not-build-ipv6-extension.patch patches/ebtables/104-do-not-build-ipv6-extension.patch.tmp || true
+else
+	mv patches/ebtables/104-do-not-build-ipv6-extension.patch.tmp patches/ebtables/104-do-not-build-ipv6-extension.patch || true
+endif
 	$(call patch_files,ebtables)
-	cd $(TOP)/ebtables && CC=$(CC) LD=$(LD) STRIP=$(CROSS_COMPILE)strip \
-	./autogen.sh && \
+	cd $(TOP)/ebtables && ./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib \
-	CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	LOCKFILE="/var/lock/ebtables"
+		CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		LOCKFILE="/var/lock/ebtables"
 	touch ebtables/stamp-h1
 
 ebtables: ebtables/stamp-h1
@@ -1867,6 +1865,7 @@ nocat-install:
 
 #Tomato RAF
 pcre/stamp-h1:
+	$(call patch_files,pcre)
 	cd pcre && \
 	autoreconf -fsi && \
 	CC=$(CC) CXX=$(HOST)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
@@ -1892,6 +1891,7 @@ pcre-clean:
 		$(MAKE) -C pcre clean; \
 		rm -rf pcre/stamp-h1; \
 	fi )
+	$(call unpatch_files,pcre)
 
 libxml2/stamp-h1:
 	cd libxml2 && \
@@ -2199,7 +2199,9 @@ mysql-install:
 
 lzo/stamp-h1:
 	cd lzo && \
-	CFLAGS="-O3 -Wall -fPIC $(EXTRACFLAGS)" $(CONFIGURE) --enable-shared --enable-static
+	CFLAGS="-O3 -Wall -fPIC $(EXTRACFLAGS)" \
+	CPPFLAGS="-O3 -Wall" \
+	$(CONFIGURE) --enable-shared --enable-static
 	touch lzo/stamp-h1
 
 lzo: lzo/stamp-h1
@@ -2222,12 +2224,10 @@ openvpn/.conf: openssl lzo
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/openssl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/openssl/include" \
-	$(CONFIGURE) --prefix= \
-	--with-crypto-library=openssl \
-	--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --with-plugindir=/lib --enable-management \
-	OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" \
-	OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
-	ac_cv_lib_resolv_gethostbyname=no
+	$(CONFIGURE) --prefix= --with-crypto-library=openssl --disable-debug \
+		--disable-plugin-auth-pam --disable-plugin-down-root --enable-management \
+		OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
+		PLUGINDIR="/lib" ac_cv_lib_resolv_gethostbyname=no
 	touch openvpn/.conf
 
 openvpn: openvpn/.conf
@@ -2274,21 +2274,20 @@ nano-install:
 
 libcurl/stamp-h1: zlib openssl
 	$(call patch_files,libcurl)
-	cd libcurl && CC=$(CC) STRIP=$(STRIP) \
-		./buildconf && \
+	cd $(TOP)/libcurl && ./buildconf && \
 		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
-		CPPFLAGS="$(EXTRACFLAGS)" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-		--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
-		--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
-		$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-		--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
-		--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
-		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
-		--without-gnutls --without-krb4 --without-libidn \
-		--with-linux-headers=$(LINUXDIR)/include \
-		--with-ca-bundle=/rom/cacert.pem
+			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
+			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
+			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
+			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
+			--disable-ldap --disable-proxy --disable-manual --disable-libcurl-option --disable-telnet --disable-verbose \
+			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
+			--with-linux-headers=$(LINUXDIR)/include \
+			--with-ca-bundle=/rom/cacert.pem
 		touch libcurl/stamp-h1
 
 libcurl: libcurl/stamp-h1
@@ -2411,9 +2410,8 @@ btgui-install:
 	install -D patches/transmission/btcheck $(INSTALLDIR)/btgui/usr/bin/btcheck
 
 libnfsidmap/stamp-h1:
-	cd libnfsidmap && \
+	cd libnfsidmap && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	autoreconf -fsi && \
 	ac_cv_func_malloc_0_nonnull=yes \
 	ac_cv_func_realloc_0_nonnull=yes \
 	$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
@@ -2707,12 +2705,12 @@ getdns-clean:
 	$(call unpatch_files,getdns)
 
 tor/stamp-h1: openssl zlib libevent
-	cd $(TOP)/tor && CC=$(CC) STRIP=$(STRIP) \
-	autoreconf && \
+	cd $(TOP)/tor && autoreconf -fsi && \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 		--with-openssl-dir=$(TOP)/openssl --with-zlib-dir=$(TOP)/zlib \
-		--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma
+		--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
+		--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis --disable-dependency-tracking
 	touch tor/stamp-h1
 
 tor: tor/stamp-h1

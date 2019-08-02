@@ -1365,7 +1365,7 @@ static void vc1_decode_ac_coeff(VC1Context *v, int *last, int *skip, int *value,
     if (index != vc1_ac_sizes[codingset] - 1) {
         run = vc1_index_decode_table[codingset][index][0];
         level = vc1_index_decode_table[codingset][index][1];
-        lst = index >= vc1_last_decode_table[codingset];
+        lst = index >= vc1_last_decode_table[codingset] || get_bits_left(gb) < 0;
         if(get_bits1(gb))
             level = -level;
     } else {
@@ -3328,6 +3328,7 @@ AVCodec vc1_decoder = {
     vc1_decode_frame,
     CODEC_CAP_DR1 | CODEC_CAP_DELAY,
     NULL,
+    .flush          = ff_mpeg_flush,
     .long_name = NULL_IF_CONFIG_SMALL("SMPTE VC-1"),
     .pix_fmts = ff_hwaccel_pixfmt_list_420
 };
@@ -3344,6 +3345,7 @@ AVCodec wmv3_decoder = {
     vc1_decode_frame,
     CODEC_CAP_DR1 | CODEC_CAP_DELAY,
     NULL,
+    .flush          = ff_mpeg_flush,
     .long_name = NULL_IF_CONFIG_SMALL("Windows Media Video 9"),
     .pix_fmts = ff_hwaccel_pixfmt_list_420
 };
