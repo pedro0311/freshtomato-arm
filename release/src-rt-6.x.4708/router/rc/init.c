@@ -535,7 +535,7 @@ static int init_nvram(void)
 			nvram_set("wl0_country_code", "#a");
 			nvram_set("wl0_txpwr", "0");
 		}
-		system("gpio enable 13");	/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
+		set_gpio(13, T_HIGH);		/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
 		break;
 	case MODEL_RTAC56U:
 		mfr = "Asus";

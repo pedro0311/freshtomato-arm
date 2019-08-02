@@ -97,6 +97,19 @@ uint32_t gpio_read(void)
 	return r;
 }
 
+uint32_t set_gpio(uint32_t gpio, uint32_t value)
+{
+	uint32_t bit = 0;
+
+	if ( gpio <= TOMATO_GPIO_MAX && gpio >= TOMATO_GPIO_MIN ) {
+		bit = 1 << gpio;
+//		_dprintf("set_gpio: %d %d\n", bit, value);
+		gpio_write(bit, value);
+		return 0;
+	}
+	else return 1;
+}
+
 int nvget_gpio(const char *name, int *gpio, int *inv)
 {
 	char *p;
@@ -442,56 +455,56 @@ void led_setup(void) {
 		switch (model) {
 #ifdef CONFIG_BCMWL6A
 		case MODEL_DIR868L:
-			system("gpio enable 0");	/* disable power led color amber */
+			set_gpio(0, T_HIGH);		/* disable power led color amber */
 			break;
 		case MODEL_AC15:
-			system("gpio disable 0");	/* disable sys led */
+			set_gpio(0, T_LOW);		/* disable sys led */
 			disable_led_wanlan();
 			break;
 		case MODEL_AC18:
-			system("gpio disable 0");	/* disable sys led */
+			set_gpio(0, T_LOW);		/* disable sys led */
 			disable_led_wanlan();
 			break;
 		case MODEL_R6250:
 		case MODEL_R6300v2:
-			system("gpio enable 3");	/* disable power led color amber */
+			set_gpio(3, T_HIGH);		/* disable power led color amber */
 			break;
 		case MODEL_R6400:
-			system("gpio enable 2");	/* disable power led color amber */
+			set_gpio(2, T_HIGH);		/* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_R7000:
-			system("gpio enable 3");	/* disable power led color amber */
+			set_gpio(3, T_HIGH);		/* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTN18U:
-			system("gpio enable 0");	/* disable power led color blue */
+			set_gpio(0, T_HIGH);		/* disable power led color blue */
 			break;
 		case MODEL_RTAC56U:
-			system("gpio enable 3");	/* disable power led color blue */
+			set_gpio(3, T_HIGH);		/* disable power led color blue */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC68U:
-			system("gpio enable 3");	/* disable power led */
+			set_gpio(3, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6400:
 		case MODEL_EA6900:
-			system("gpio disable 8");	/* disable LOGO led */
+			set_gpio(8, T_LOW);		/* disable LOGO led */
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6700:
 			if (strstr(nvram_safe_get("modelNumber"), "EA6500") != NULL) { /* check for ea6500v2 --> same boardtype/num/rev like EA6700! */
-				system("gpio enable 6");	/* disable LOGO led for EA6500 */
+				set_gpio(6, T_HIGH);		/* disable LOGO led for EA6500 */
 			}
 			else {
-				system("gpio disable 8");	/* disable LOGO led for EA6700 */
+				set_gpio(8, T_LOW);		/* disable LOGO led for EA6700 */
 			}
 			disable_led_wanlan();
 			break;
 		case MODEL_WZR1750:
 #if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
-			system("gpio disable 1");	/* disable power led color red */
+			set_gpio(1, T_LOW);		/* disable power led color red */
 #endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
 #endif /* CONFIG_BCMWL6A */
@@ -506,21 +519,21 @@ void led_setup(void) {
 #ifdef CONFIG_BCMWL6A
 		case MODEL_DIR868L:
 			/* activate WAN port led */
-			system("gpio disable 1");	/* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
+			set_gpio(1, T_LOW);		/* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
 			break;
 		case MODEL_RTAC56U:
-			system("gpio disable 4");	/* enable power supply for all LEDs, except for PowerLED */
+			set_gpio(4, T_LOW);		/* enable power supply for all LEDs, except for PowerLED */
 			break;
 		case MODEL_R6400:
 			/* activate WAN port led */
-			system("gpio disable 6");	/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
+			set_gpio(6, T_LOW);		/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
 			break;
 		case MODEL_R7000:
 			/* activate WAN port led */
 			system("/usr/sbin/et robowr 0x0 0x10 0x3000");	/* basic LED setup, RT-N18U & RT-AC56U have 0x0220 for example */
 			system("/usr/sbin/et robowr 0x0 0x12 0x78");
 			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
-			system("gpio disable 8");	/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			set_gpio(8, T_LOW);		/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			break;
 #endif /* CONFIG_BCMWL6A */
 		default:
