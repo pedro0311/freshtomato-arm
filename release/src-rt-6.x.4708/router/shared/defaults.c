@@ -420,7 +420,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_nbw",			"40"				, 0 },	// BW: 20 / 40 MHz
 	{ "wl_nbw_cap",			"1"				, 0 },	// BW: def 20inB and 40inA
 	{ "wl_mimo_preamble",		"mm"				, 0 },	// 802.11n Preamble: mm/gf/auto/gfbcm
-	{ "wl_nctrlsb",			"upper"				, 0 },	// N-CTRL SB (none/lower/upper)
+	{ "wl_nctrlsb",			"lower"				, 0 },	// N-CTRL SB (none/lower/upper)
 	{ "wl_nmode_protection",	"off"				, 0 },	// 802.11n RTS/CTS protection (off|auto)
 	{ "wl_rxstreams",		"0"				, 0 },	// 802.11n Rx Streams, 0 is invalid, WLCONF will change it to a radio appropriate default
 	{ "wl_txstreams",		"0"				, 0 },	// 802.11n Tx Streams 0, 0 is invalid, WLCONF will change it to a radio appropriate default
@@ -579,7 +579,7 @@ struct nvram_tuple router_defaults[] = {
 
 /* advanced-misc */
 	{ "boot_wait",			"on"				, 0 },
-	{ "wait_time",			"5"				, 0 },
+	{ "wait_time",			"3"				, 0 },
 	{ "wan_speed",			"4"				, 0 },	// 0=10 Mb Full, 1=10 Mb Half, 2=100 Mb Full, 3=100 Mb Half, 4=Auto
 	{ "jumbo_frame_enable",		"0"				, 0 },	// Jumbo Frames support (for RT-N16/WNR3500L)
 	{ "jumbo_frame_size",		"2000"				, 0 },
