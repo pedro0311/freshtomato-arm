@@ -465,16 +465,15 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_mcast_regen_bss_enable",	"1"				, 0 },	// MCAST REGEN Enable/Disable
 #endif
 #ifdef TCONFIG_BCMWL6
-	{ "wl_ack_ratio",		"0"},
-	{ "wl_ampdu_mpdu",		"0"},
-	{ "wl_ampdu_rts",		"1"},
+	{ "wl_ack_ratio",		"0"				, 0 },
+	{ "wl_ampdu_mpdu",		"0"				, 0 },
+	{ "wl_ampdu_rts",		"1"				, 0 },
 #ifdef TCONFIG_BCMARM
-	{ "wl_turbo_qam",		"1"},
-	{ "wl_itxbf",			"1"},
-	{ "wl0_itxbf",			"0"},
+	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
+	{ "wl_itxbf",			"1"				, 0 },
+	{ "wl0_itxbf",			"0"				, 0 },
 #endif
 #endif
-
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
 
 	/* for firewall */
