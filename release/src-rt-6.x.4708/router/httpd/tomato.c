@@ -1066,6 +1066,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_obss_coex",		V_01				},
 	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
 	{ "wl_atf",			V_01				},	// Air Time Fairness support (for R7000/R8000)
+	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
 
 // forward-dmz
 	{ "dmz_enable",			V_01				},
