@@ -23,7 +23,7 @@
 <script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script type="text/javascript">
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf,wl_turbo_qam"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 //	<% wlcountries(); %>
 
 hp = features('hpamp');
@@ -75,6 +75,13 @@ function save() {
 
 			E('_wl'+u+'_country').value = E('_wl'+u+'_country_code').value;
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
+
+			/* for Explicit TX Beamforming */
+			E('_wl'+u+'_txbf_bfr_cap').value = E('_wl'+u+'_txbf').value; /* turn on (1)/off (0) with wl_txbf */
+			E('_wl'+u+'_txbf_bfe_cap').value = E('_wl'+u+'_txbf').value;
+
+			/* for Implicit TX Beamforming */
+			E('_wl'+u+'_txbf_imp').value = E('_wl'+u+'_itxbf').value; /* turn on (1)/off (0) with wl_itxbf */
 		}
 	}
 
@@ -122,6 +129,10 @@ if (wl_sunit(uidx) < 0) {
 	W('<input type=\'hidden\' id=\'_wl'+u+'_distance\' name=\'wl'+u+'_distance\'>');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_country\' name=\'wl'+u+'_country\'>');
 	W('<input type=\'hidden\' id=\'_wl'+u+'_nmode_protection\' name=\'wl'+u+'_nmode_protection\'>');
+
+	W('<input type=\'hidden\' id=\'_wl'+u+'_txbf_bfr_cap\' name=\'wl'+u+'_txbf_bfr_cap\'>');
+	W('<input type=\'hidden\' id=\'_wl'+u+'_txbf_bfe_cap\' name=\'wl'+u+'_txbf_bfe_cap\'>');
+	W('<input type=\'hidden\' id=\'_wl'+u+'_txbf_imp\' name=\'wl'+u+'_txbf_imp\'>');
 
 	W('<div class=\'section-title\'>Wireless Settings ');
 	W('(' + wl_display_ifname(uidx) + ') ');
@@ -197,6 +208,10 @@ if (wl_sunit(uidx) < 0) {
 			value: nvram['wl'+u+'_wmf_bss_enable'] },
 		{ title: 'Turbo QAM (WiFi Mode must be set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']],
 			value: nvram['wl'+u+'_turbo_qam'] },
+		{ title: 'Explicit beamforming', name: 'wl'+u+'_txbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
+			value: nvram['wl'+u+'_txbf'] },
+		{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable *'],['1','Enable']],
+			value: nvram['wl'+u+'_itxbf'] },
 		{ title: 'Air Time Fairness', name: 'wl'+u+'_atf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 			value: nvram['wl'+u+'_atf'], suffix: ' <small>(applies only to Netgear R7000 and R8000)<\/small>', hidden: atf_display }
 	]);

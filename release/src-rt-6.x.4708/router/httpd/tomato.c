@@ -1067,6 +1067,11 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
 	{ "wl_atf",			V_01				},	// Air Time Fairness support (for R7000/R8000)
 	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
+	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_bfr_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_txbf_bfe_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
+	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 
 // forward-dmz
 	{ "dmz_enable",			V_01				},
