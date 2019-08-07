@@ -470,8 +470,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_ampdu_rts",		"1"				, 0 },
 #ifdef TCONFIG_BCMARM
 	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
-	{ "wl_itxbf",			"1"				, 0 },
-	{ "wl0_itxbf",			"0"				, 0 },
+	{ "wl_txbf",			"1"				, 0 },	// Explicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_bfr_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_txbf_bfe_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_itxbf",			"0"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
+	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 #endif
 #endif
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
