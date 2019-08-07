@@ -469,6 +469,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_ampdu_mpdu",		"0"				, 0 },
 	{ "wl_ampdu_rts",		"1"				, 0 },
 #ifdef TCONFIG_BCMARM
+	{ "wl_atf",			"0"				, 0 },	// Air Time Fairness support on = 1, off = 0 (default: off)
 	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
 	{ "wl_txbf",			"1"				, 0 },	// Explicit Beamforming on = 1 , off = 0 (default: on)
 	{ "wl_txbf_bfr_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case

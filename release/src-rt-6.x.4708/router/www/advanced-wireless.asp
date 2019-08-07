@@ -29,13 +29,6 @@
 hp = features('hpamp');
 nphy = features('11n');
 
-var atf_display = 'none';
-switch(nvram['t_model_name']) {
-	case 'Netgear R7000':
-	case 'Netgear R8000':
-		atf_display = '';
-}
-
 function verifyFields(focused, quiet) {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
@@ -212,8 +205,8 @@ if (wl_sunit(uidx) < 0) {
 			value: nvram['wl'+u+'_txbf'] },
 		{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable *'],['1','Enable']],
 			value: nvram['wl'+u+'_itxbf'] },
-		{ title: 'Air Time Fairness', name: 'wl'+u+'_atf', type: 'select', options: [['0','Disable'],['1','Enable *']],
-			value: nvram['wl'+u+'_atf'], suffix: ' <small>(applies only to Netgear R7000 and R8000)<\/small>', hidden: atf_display }
+		{ title: 'Air Time Fairness', name: 'wl'+u+'_atf', type: 'select', options: [['0','Disable *'],['1','Enable']],
+			value: nvram['wl'+u+'_atf'] }
 	]);
 	W('<\/div>');
 	}
