@@ -537,6 +537,14 @@ static int init_nvram(void)
 			nvram_set("wl0_channel", "6");
 			nvram_set("wl0_nctrlsb", "lower");
 			nvram_set("wl0_nbw_cap", "1");
+
+			/* modify/adjust 2,4 GHz WiFi TX parameter (taken from Asus 384 - Aug 2019) */
+			nvram_set("0:pa2ga0", "0xFF4A,0x1B7E,0xFCB9");
+			nvram_set("0:pa2ga1", "0xFF49,0x1C58,0xFCA2");
+			nvram_set("0:pa2ga2", "0xFF4E,0x1B67,0xFCC3");
+
+			/* modify/adjust 2,4 GHz WiFi TX beamforming parameter (taken from Asus 384 - Aug 2019) */
+			nvram_set("0:rpcal2g", "0xe3ce");
 		}
 		set_gpio(13, T_HIGH);		/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
 		break;
