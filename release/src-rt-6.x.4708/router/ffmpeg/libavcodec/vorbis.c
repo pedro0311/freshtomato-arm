@@ -123,7 +123,8 @@ int ff_vorbis_len2vlc(uint8_t *bits, uint32_t *codes, uint_fast32_t num)
     return 0;
 }
 
-void ff_vorbis_ready_floor1_list(vorbis_floor1_entry * list, int values)
+int ff_vorbis_ready_floor1_list(AVCodecContext *avccontext,
+                                vorbis_floor1_entry *list, int values)
 {
     int i;
     list[0].sort = 0;
@@ -147,6 +148,11 @@ void ff_vorbis_ready_floor1_list(vorbis_floor1_entry * list, int values)
     for (i = 0; i < values - 1; i++) {
         int j;
         for (j = i + 1; j < values; j++) {
+            if (list[i].x == list[j].x) {
+                av_log(avccontext, AV_LOG_ERROR,
+                       "Duplicate value found in floor 1 X coordinates\n");
+                return AVERROR_INVALIDDATA;
+            }
             if (list[list[i].sort].x > list[list[j].sort].x) {
                 int tmp = list[i].sort;
                 list[i].sort = list[j].sort;
@@ -154,9 +160,10 @@ void ff_vorbis_ready_floor1_list(vorbis_floor1_entry * list, int values)
             }
         }
     }
+    return 0;
 }
 
-static inline void render_line_unrolled(intptr_t x, intptr_t y, int x1,
+static inline void render_line_unrolled(intptr_t x, uint8_t y, int x1,
                                         intptr_t sy, int ady, int adx,
                                         float *buf)
 {
@@ -179,7 +186,7 @@ static inline void render_line_unrolled(intptr_t x, intptr_t y, int x1,
     }
 }
 
-static void render_line(int x0, int y0, int x1, int y1, float *buf)
+static void render_line(int x0, uint8_t y0, int x1, int y1, float *buf)
 {
     int dy  = y1 - y0;
     int adx = x1 - x0;
@@ -189,10 +196,10 @@ static void render_line(int x0, int y0, int x1, int y1, float *buf)
     if (ady*2 <= adx) { // optimized common case
         render_line_unrolled(x0, y0, x1, sy, ady, adx, buf);
     } else {
-        int base = dy / adx;
-        int x    = x0;
-        int y    = y0;
-        int err  = -adx;
+        int base  = dy / adx;
+        int x     = x0;
+        uint8_t y = y0;
+        int err   = -adx;
         ady -= FFABS(base) * adx;
         while (++x < x1) {
             y += base;
@@ -210,7 +217,8 @@ void ff_vorbis_floor1_render_list(vorbis_floor1_entry * list, int values,
                                   uint_fast16_t *y_list, int *flag,
                                   int multiplier, float *out, int samples)
 {
-    int lx, ly, i;
+    int lx, i;
+    uint8_t ly;
     lx = 0;
     ly = y_list[0] * multiplier;
     for (i = 1; i < values; i++) {
