@@ -1321,7 +1321,7 @@ libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
 	cd $(INSTALLDIR)/libusb10/usr/lib && \
-		ln -sf libusb-1.0.so libusb-1.0.so.0
+		ln -sf libusb-1.0.so libusb-1.0.so.1
 
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
@@ -2437,7 +2437,7 @@ libcurl-clean:
 	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
-	cd libevent && CC=$(CC) \
+	cd libevent && ./autogen.sh && CC=$(CC) \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE)
@@ -2455,8 +2455,8 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.0.so.5.1.11 $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
-	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.0.so.5
+	install libevent/.libs/libevent-2.1.so.6.0.4 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
+	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
 
 libiconv/stamp-h1:
 	cd libiconv && CC=$(CC) \
