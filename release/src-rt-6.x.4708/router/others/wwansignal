@@ -226,12 +226,16 @@ signal4g() {
 			[ -n "$MCCMNC" ] || SPEED=""
 
 			SINR=$(echo "$SIGNAL" | grep "<sinr>" | cut -d '>' -f2 | cut -d 'd' -f1)
-			[ "$SPEED" == "0302" -o "$SPEED" == "00" ] && {
+			[ "$SPEED" == "0302" -o "$SPEED" == "0301" -o "$SPEED" == "00" ] && {
 				[ -n "$SINR" ] && {
 					SPEED="03"
 				} || {
 					SPEED="02"
 				}
+			}
+
+			[ "$SPEED" == "0201" -o "$SPEED" == "02" ] && {
+				SPEED="02"
 			}
 
 			case "$SPEED" in
