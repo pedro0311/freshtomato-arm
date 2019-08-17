@@ -1026,6 +1026,10 @@ void start_wan(int mode)
 		mwan_num = 1;
 	}
 
+	syslog(LOG_INFO, "start_wan: Restarting wireless");
+	stop_wireless();
+	start_wireless();
+
 	syslog(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -1034,8 +1038,6 @@ void start_wan(int mode)
 		start_wan_if (mode, prefix);
 	}
 
-	stop_wireless();
-	start_wireless();
 	start_firewall();
 	set_host_domain_name();
 
