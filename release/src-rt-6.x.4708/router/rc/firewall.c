@@ -2290,20 +2290,56 @@ int start_firewall(void)
 			    or using static routes.
 			0 - No source validation.
 	*/
-	c = nvram_get("wan_ifname");
-	/* mcast needs rp filter to be turned off only for non default iface */
-	if (!(nvram_match("multicast_pass", "1")) || !(nvram_match("udpxy_enable", "1")) || strcmp(wanface, c) == 0) c = NULL;
+	gateway_mode = !nvram_match("wk_mode", "router");
+
+#ifdef TCONFIG_MULTIWAN
+	const char* multiwan_wanfaces[] = { wanface, wan2face, wan3face, wan4face };
+	const int multiwan_wanfaces_count = 4;
+#else
+	const char* multiwan_wanfaces[] = { wanface, wan2face };
+	const int multiwan_wanfaces_count = 2;
+#endif
 
 	if ((dir = opendir("/proc/sys/net/ipv4/conf")) != NULL) {
 		while ((dirent = readdir(dir)) != NULL) {
+			if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0) {
+				continue;
+			}
+			
 			sprintf(s, "/proc/sys/net/ipv4/conf/%s/rp_filter", dirent->d_name);
-			f_write_string(s, (c && strcmp(dirent->d_name, c) == 0) ? "0" : "1", 0, 0);
+			bool enable_rp_filter = 1;
+
+			for (n = 1; n <= multiwan_wanfaces_count; n++) {
+				char tmp[16];
+				char nvram_var_name[255];
+
+				sprintf(tmp, "%d", n);
+				sprintf(nvram_var_name, "wan%s_ifname", n == 1 ? "" : tmp);
+				c = nvram_get(nvram_var_name);
+
+				/* mcast needs rp filter to be turned off only for non default iface */
+				if (!(nvram_match("multicast_pass", "1")) 
+					|| !(nvram_match("udpxy_enable", "1")) 
+					|| strcmp(multiwan_wanfaces[n - 1], c) == 0) {
+					c = NULL;
+				}
+
+				/* in gateway mode, rp_filter blocks pbr */
+				if ((c != NULL && strcmp(dirent->d_name, c) == 0) 
+					|| (gateway_mode && strcmp(dirent->d_name, multiwan_wanfaces[n - 1]) == 0)) {
+					enable_rp_filter = 0;
+					break;
+				}
+			}
+
+			f_write_string(s, enable_rp_filter == 1 ? "1" : "0", 0, 0);
 		}
 		closedir(dir);
 	}
+	f_write_string("/proc/sys/net/ipv4/conf/default/rp_filter", "1", 0, 0);
+	f_write_string("/proc/sys/net/ipv4/conf/all/rp_filter", "0", 0, 0);
 
 	remotemanage = 0;
-	gateway_mode = !nvram_match("wk_mode", "router");
 	if (gateway_mode) {
 		/* Remote management */
 		if (nvram_match("remote_management", "1") && nvram_invmatch("http_wanport", "") &&
