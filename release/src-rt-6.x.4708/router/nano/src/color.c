@@ -282,6 +282,15 @@ void color_update(void)
 	openfile->colorstrings = (sint == NULL ? NULL : sint->color);
 }
 
+/* Allocate and initialize (for the given line) the cache for multiline info. */
+void set_up_multicache(linestruct *line)
+{
+	line->multidata = (short *)nmalloc(openfile->syntax->nmultis * sizeof(short));
+
+	for (int index = 0; index < openfile->syntax->nmultis; index++)
+		line->multidata[index] = -1;
+}
+
 /* Determine whether the matches of multiline regexes are still the same,
  * and if not, schedule a screen refresh, so things will be repainted. */
 void check_the_multis(linestruct *line)
@@ -295,12 +304,13 @@ void check_the_multis(linestruct *line)
 	if (openfile->syntax == NULL || openfile->syntax->nmultis == 0)
 		return;
 
+	if (line->multidata == NULL)
+		set_up_multicache(line);
+
 	for (ink = openfile->colorstrings; ink != NULL; ink = ink->next) {
 		/* If it's not a multiline regex, skip. */
 		if (ink->end == NULL)
 			continue;
-
-		alloc_multidata_if_needed(line);
 
 		astart = (regexec(ink->start, line->data, 1, &startmatch, 0) == 0);
 		afterstart = line->data + (astart ? startmatch.rm_eo : 0);
@@ -328,17 +338,6 @@ void check_the_multis(linestruct *line)
 	}
 }
 
-/* Allocate (for one line) the cache space for multiline color regexes. */
-void alloc_multidata_if_needed(linestruct *fileptr)
-{
-	if (fileptr->multidata == NULL) {
-		fileptr->multidata = (short *)nmalloc(openfile->syntax->nmultis * sizeof(short));
-
-		for (int i = 0; i < openfile->syntax->nmultis; i++)
-			fileptr->multidata[i] = -1;
-	}
-}
-
 /* Precalculate the multi-line start and end regex info so we can
  * speed up rendering (with any hope at all...). */
 void precalc_multicolorinfo(void)
@@ -350,6 +349,10 @@ void precalc_multicolorinfo(void)
 	if (openfile->colorstrings == NULL || ISSET(NO_COLOR_SYNTAX))
 		return;
 
+	/* For each line, allocate cache space for the multiline-regex info. */
+	for (line = openfile->filetop; line != NULL; line = line->next)
+		set_up_multicache(line);
+
 	for (ink = openfile->colorstrings; ink != NULL; ink = ink->next) {
 		/* If this is not a multi-line regex, skip it. */
 		if (ink->end == NULL)
@@ -358,7 +361,6 @@ void precalc_multicolorinfo(void)
 		for (line = openfile->filetop; line != NULL; line = line->next) {
 			int index = 0;
 
-			alloc_multidata_if_needed(line);
 			/* Assume nothing applies until proven otherwise below. */
 			line->multidata[ink->id] = CNONE;
 
@@ -410,12 +412,9 @@ void precalc_multicolorinfo(void)
 				 * the lines in between and the end properly. */
 				line->multidata[ink->id] = CENDAFTER;
 
-				for (line = line->next; line != tailline; line = line->next) {
-					alloc_multidata_if_needed(line);
+				for (line = line->next; line != tailline; line = line->next)
 					line->multidata[ink->id] = CWHOLELINE;
-				}
 
-				alloc_multidata_if_needed(tailline);
 				tailline->multidata[ink->id] = CBEGINBEFORE;
 
 				/* Begin looking for a new start after the end match. */

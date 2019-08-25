@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 4.3.
+This manual documents the GNU ‘nano’ editor, version 4.4.
 
 * Menu:
 
@@ -67,9 +67,16 @@ The usual way to invoke ‘nano’ is:
 section), and to edit several files in a row.  Additionally, the cursor
 can be put on a specific line of a file by adding the line number with a
 plus sign before the filename, and even in a specific column by adding
-it with a comma.  So a more complete command synopsis is:
+it with a comma.  The cursor can also be put on the first or last
+occurrence of a specific string by specifying that string after ‘+/’ or
+‘+?’ before the filename.  The string can be made case sensitive and/or
+caused to be interpreted as a regular expression by inserting a ‘c’
+and/or ‘r’ after the plus sign.  These search modes can be explicitly
+disabled by using the uppercase variant of those letters: ‘C’ and/or
+‘R’.  When the string contains spaces, it needs to be enclosed in
+quotes.  A more complete command synopsis thus is:
 
-     nano [OPTION]... [[+LINE[,COLUMN]|+,COLUMN] FILE]...
+     nano [OPTION]... [[+LINE[,COLUMN]|+[crCR](/|?)STRING] FILE]...
 
    Normally, however, you set your preferred options in a ‘nanorc’ file
 (*note Nanorc Files::).  And when using ‘set positionlog’ (making ‘nano’
@@ -325,8 +332,8 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
      wrap point to vary along with the width of the screen if the screen
      is resized.  The default value is -8.
 
-‘-s PROGRAM’
-‘--speller=PROGRAM’
+‘-s "PROGRAM [ARG ...]"’
+‘--speller="PROGRAM [ARG ...]"’
      Use the given program to do spell checking and correcting.  By
      default, ‘nano’ uses the command specified in the ‘SPELL’
      environment variable.  If ‘SPELL’ is not set, and ‘--speller’ is
@@ -877,7 +884,7 @@ The supported settings in a nanorc file are:
 ‘set softwrap’
      Enable soft line wrapping for easier viewing of very long lines.
 
-‘set speller "PROGRAM"’
+‘set speller "PROGRAM [ARG ...]"’
      Use the given program to do spell checking and correcting.  *Note
      --speller:: for details.
 
@@ -951,16 +958,16 @@ imperfect, because regular expressions are not powerful enough to fully
 parse a file.  Nevertheless, regular expressions can do a lot and are
 easy to make, so they are a good fit for a small editor like ‘nano’.
 
-   All regular expressions in ‘nano’ are extended regular expressions
-(ERE). This means that ‘.’, ‘?’, ‘*’, ‘+’, ‘^’, ‘$’, and several other
-characters are special.  The period ‘.’ matches any single character,
-‘?’ means the preceding item is optional, ‘*’ means the preceding item
-may be matched zero or more times, ‘+’ means the preceding item must be
-matched one or more times, ‘^’ matches the beginning of a line, and ‘$’
-the end, ‘\<’ matches the start of a word, and ‘\>’ the end, and ‘\s’
-matches a blank.  It also means that lookahead and lookbehind are not
-possible.  A complete explanation can be found in the manual of GNU
-grep: ‘info grep regular’.
+   All regular expressions in ‘nano’ are POSIX extended regular
+expressions (ERE). This means that ‘.’, ‘?’, ‘*’, ‘+’, ‘^’, ‘$’, and
+several other characters are special.  The period ‘.’ matches any single
+character, ‘?’ means the preceding item is optional, ‘*’ means the
+preceding item may be matched zero or more times, ‘+’ means the
+preceding item must be matched one or more times, ‘^’ matches the
+beginning of a line, and ‘$’ the end, ‘\<’ matches the start of a word,
+and ‘\>’ the end, and ‘\s’ matches a blank.  It also means that
+lookahead and lookbehind are not possible.  A complete explanation can
+be found in the manual of GNU grep: ‘info grep regular’.
 
    A separate syntax can be defined for each kind of file via the
 following commands in a nanorc file:
@@ -976,9 +983,9 @@ following commands in a nanorc file:
      ‘-Y’ or ‘--syntax’ command-line option followed by the NAME.
 
      The ‘default’ syntax is special: it takes no FILEREGEX, and applies
-     to files that don’t match any syntax’s FILEREGEX.  The ‘none’
-     syntax is reserved; specifying it on the command line is the same
-     as not having a syntax at all.
+     to files that don’t match any syntax’s regexes.  The ‘none’ syntax
+     is reserved; specifying it on the command line is the same as not
+     having a syntax at all.
 
 ‘header "REGEX" ...’
      If from all defined syntaxes no FILEREGEX matched, then compare
@@ -1008,28 +1015,27 @@ following commands in a nanorc file:
      for example, "" for JSON. The default value is "#".
 
 ‘color FGCOLOR,BGCOLOR "REGEX" ...’
-     Display all pieces of text that match the extended regular
-     expression "regex" with foreground color "fgcolor" and background
-     color "bgcolor", at least one of which must be specified.  Valid
-     names for foreground and background color are: ‘white’, ‘black’,
-     ‘blue’, ‘green’, ‘red’, ‘cyan’, ‘yellow’, ‘magenta’, and ‘normal’ —
-     where ‘normal’ means the default foreground or background color.
-     You may use the prefix ‘bright’ to get a stronger color highlight
-     for the foreground.  If your terminal supports transparency, not
-     specifying a "bgcolor" tells ‘nano’ to attempt to use a transparent
-     background.
+     Paint all pieces of text that match the extended regular expression
+     "regex" with the given foreground and background colors, at least
+     one of which must be specified.  Valid color names are: ‘white’,
+     ‘black’, ‘blue’, ‘green’, ‘red’, ‘cyan’, ‘yellow’, ‘magenta’, and
+     ‘normal’ — where ‘normal’ means the default foreground or
+     background color.  You may use the prefix ‘bright’ for the
+     foreground color to get a stronger highlight.  If your terminal
+     supports transparency, not specifying a "bgcolor" tells ‘nano’ to
+     attempt to use a transparent background.
 
 ‘icolor FGCOLOR,BGCOLOR "REGEX" ...’
      Same as above, except that the matching is case insensitive.
 
 ‘color FGCOLOR,BGCOLOR start="FROMRX" end="TORX"’
-     Display all pieces of text whose start matches extended regular
+     Paint all pieces of text whose start matches extended regular
      expression "fromrx" and whose end matches extended regular
-     expression "torx" with foreground color "fgcolor" and background
-     color "bgcolor", at least one of which must be specified.  This
-     means that, after an initial instance of "fromrx", all text until
-     the first instance of "torx" will be colored.  This allows syntax
-     highlighting to span multiple lines.
+     expression "torx" with the given foreground and background colors,
+     at least one of which must be specified.  This means that, after an
+     initial instance of "fromrx", all text until the first instance of
+     "torx" will be colored.  This allows syntax highlighting to span
+     multiple lines.
 
 ‘icolor FGCOLOR,BGCOLOR start="FROMRX" end="TORX"’
      Same as above, except that the matching is case insensitive.
@@ -1623,57 +1629,55 @@ familiar with compiling programs with autoconf support:
    The possible options to ‘./configure’ are:
 
 ‘--disable-browser’
-     Disable the mini file browser that can be called with ‘^T’ when
-     reading or writing files.
+     Exclude the mini file browser that can be called with ‘^T’ when
+     wanting to read or write a file.
 
 ‘--disable-color’
-     Disable support for the syntax coloring of files.  This also
-     eliminates the ‘-Y’ command-line option, which chooses a specific
-     syntax.
+     Exclude support for syntax coloring.  This also eliminates the ‘-Y’
+     command-line option, which allows choosing a specific syntax.
 
 ‘--disable-comment’
-     Disable the single-keystroke comment/uncomment function (‘M-3’).
+     Exclude the single-keystroke comment/uncomment function (‘M-3’).
 
 ‘--disable-extra’
-     Disable the Easter egg: a crawl of major contributors.
+     Exclude the Easter egg: a crawl of major contributors.
 
 ‘--disable-help’
-     Disable the help function.  Doing this makes the binary much
-     smaller, but makes it difficult for new users to learn more than
-     very basic things about using the editor.
+     Exclude the help texts (‘^G’).  This makes the binary much smaller,
+     but also makes it difficult for new users to learn more than very
+     basic things about using the editor.
 
 ‘--disable-histories’
-     Disable the code for the handling of the history files: the search
-     and replace strings that were used, and the cursor position at
-     which each file was closed.  This also eliminates the ‘-H’ and ‘-P’
+     Exclude the code for handling the history files: the search and
+     replace strings that were used, and the cursor position at which
+     each file was closed.  This also eliminates the ‘-H’ and ‘-P’
      command-line options, which switch on the logging of search/replace
      strings and cursor positions.
 
 ‘--disable-justify’
-     Disable the justify and unjustify functions.
+     Exclude the justify functions (‘^J’ and ‘M-J’).
 
 ‘--disable-libmagic’
-     Disable the use of the library of magic-number tests (for
-     determining the file type and thus which syntax to use for
-     colouring — often the tests on filename extension and header line
-     will be enough).
+     Exclude the code for using the library of magic-number tests (for
+     determining the file type and thus which syntax to use for coloring
+     — often the regexes for filename and header line will be enough).
 
 ‘--disable-linenumbers’
-     Disable the line-numbering function (‘M-#’).  This also eliminates
+     Exclude the line-numbering function (‘M-N’).  This also eliminates
      the ‘-l’ command-line option, which turns line numbering on.
 
 ‘--disable-mouse’
-     Disable all mouse functionality.  This also eliminates the ‘-m’
+     Exclude all mouse functionality.  This also eliminates the ‘-m’
      command-line option, which enables the mouse functionality.
 
 ‘--disable-multibuffer’
-     Disable support for opening multiple files at a time and switching
+     Exclude support for opening multiple files at a time and switching
      between them on the fly.  This also eliminates the ‘-F’
      command-line option, which causes a file to be read into a separate
      buffer by default.
 
 ‘--disable-nanorc’
-     Disable support for reading the nanorc files at startup.  With such
+     Exclude support for reading the nanorc files at startup.  With such
      support, you can store custom settings in a system-wide and a
      per-user nanorc file rather than having to pass command-line
      options to get the desired behavior.  *Note Nanorc Files:: for more
@@ -1681,25 +1685,26 @@ familiar with compiling programs with autoconf support:
      which inhibits the reading of nanorc files.
 
 ‘--disable-operatingdir’
-     Disable setting the operating directory.  This also eliminates the
-     ‘-o’ command-line option, which sets the operating directory.
+     Exclude the code for setting the operating directory.  This also
+     eliminates the ‘-o’ command-line option, which sets the operating
+     directory.
 
 ‘--disable-speller’
-     Disable use of the spell checker.  This also eliminates the ‘-s’
+     Exclude the code for spell checking.  This also eliminates the ‘-s’
      command-line option, which allows specifying an alternate spell
      checker.
 
 ‘--disable-tabcomp’
-     Disable tab completion (when nano asks for a filename or a search
+     Exclude tab completion (when nano asks for a filename or a search
      string).
 
 ‘--disable-wordcomp’
-     Disable word completion (‘^]’).
+     Exclude word completion (‘^]’).
 
 ‘--disable-wrapping’
-     Disable all hard-wrapping of overlong lines.  This also eliminates
-     the ‘-w’ command-line option, which switches long-line wrapping
-     off.
+     Exclude all hard-wrapping of overlong lines.  This also eliminates
+     the ‘-b’ and ‘-w’ command-line options, which switch automatic
+     long-line wrapping on and off, respectively.
 
 ‘--enable-tiny’
      This option implies all of the above.  It also disables some other
@@ -1710,21 +1715,21 @@ familiar with compiling programs with autoconf support:
      few cannot.
 
 ‘--enable-debug’
-     Enable support for runtime debug output.  This can get pretty
-     messy, so chances are you only want this feature when you’re
+     Include some code for runtime debugging output.  This can get
+     pretty messy, so chances are you only want this feature when you’re
      working on the nano source.
 
 ‘--disable-nls’
-     Disables Native Language support.  This will disable the use of any
+     Exclude Native Language support.  This will disable the use of any
      available GNU ‘nano’ translations.
 
 ‘--enable-utf8’
-     Enable support for reading and writing Unicode files.  This will
+     Include support for reading and writing Unicode files.  This will
      require either a wide version of curses, or a UTF-8-enabled version
      of Slang.
 
 ‘--disable-utf8’
-     Disable support for reading and writing Unicode files.  Normally
+     Exclude support for reading and writing Unicode files.  Normally
      the configure script auto-detects whether to enable UTF-8 support
      or not.  You can use this or the previous option to override that
      detection.
@@ -1743,29 +1748,29 @@ Tag Table:
 Node: Top199
 Node: Introduction554
 Node: Invoking1698
-Node: Command-line Options2744
-Ref: --speller11114
-Ref: Expert Mode12543
-Node: Editor Basics13580
-Node: Entering Text13864
-Node: Commands14853
-Node: The Cutbuffer15650
-Node: The Mark16371
-Node: Screen Layout17370
-Node: Search and Replace18549
-Node: Using the Mouse19284
-Node: Limitations19901
-Node: Built-in Help20226
-Node: Feature Toggles20650
-Node: Nanorc Files22450
-Node: Settings23920
-Ref: set functioncolor27005
-Ref: Whitespace34311
-Node: Syntax Highlighting35041
-Node: Rebinding Keys41329
-Node: The File Browser53489
-Node: Pico Compatibility54382
-Node: Building and Configure Options58923
+Node: Command-line Options3254
+Ref: --speller11624
+Ref: Expert Mode13077
+Node: Editor Basics14114
+Node: Entering Text14398
+Node: Commands15387
+Node: The Cutbuffer16184
+Node: The Mark16905
+Node: Screen Layout17904
+Node: Search and Replace19083
+Node: Using the Mouse19818
+Node: Limitations20435
+Node: Built-in Help20760
+Node: Feature Toggles21184
+Node: Nanorc Files22984
+Node: Settings24454
+Ref: set functioncolor27539
+Ref: Whitespace34855
+Node: Syntax Highlighting35585
+Node: Rebinding Keys41809
+Node: The File Browser53969
+Node: Pico Compatibility54862
+Node: Building and Configure Options59403
 
 End Tag Table
 

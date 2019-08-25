@@ -2640,6 +2640,42 @@ EXTRA_libgnu_a_SOURCES += wcwidth.c
 
 ## end   gnulib module wcwidth
 
+## begin gnulib module windows-mutex
+
+
+EXTRA_DIST += windows-initguard.h windows-mutex.c windows-mutex.h
+
+EXTRA_libgnu_a_SOURCES += windows-mutex.c
+
+## end   gnulib module windows-mutex
+
+## begin gnulib module windows-once
+
+
+EXTRA_DIST += windows-once.c windows-once.h
+
+EXTRA_libgnu_a_SOURCES += windows-once.c
+
+## end   gnulib module windows-once
+
+## begin gnulib module windows-recmutex
+
+
+EXTRA_DIST += windows-initguard.h windows-recmutex.c windows-recmutex.h
+
+EXTRA_libgnu_a_SOURCES += windows-recmutex.c
+
+## end   gnulib module windows-recmutex
+
+## begin gnulib module windows-rwlock
+
+
+EXTRA_DIST += windows-initguard.h windows-rwlock.c windows-rwlock.h
+
+EXTRA_libgnu_a_SOURCES += windows-rwlock.c
+
+## end   gnulib module windows-rwlock
+
 ## begin gnulib module xalloc-oversized
 
 
