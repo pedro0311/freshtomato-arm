@@ -55,6 +55,8 @@ extern bool more_than_one;
 
 extern bool also_the_last;
 
+extern bool is_shorter;
+
 extern int didfind;
 
 extern int controlleft, controlright;
@@ -233,6 +235,7 @@ char *mbrevstrpbrk(const char *head, const char *accept, const char *index);
 #if defined(ENABLE_NANORC) && (!defined(NANO_TINY) || defined(ENABLE_JUSTIFY))
 bool has_blank_char(const char *s);
 #endif
+bool white_string(const char *s);
 #ifdef ENABLE_UTF8
 bool is_valid_unicode(wchar_t wc);
 #endif
@@ -242,8 +245,8 @@ bool is_valid_unicode(wchar_t wc);
 void set_colorpairs(void);
 void color_init(void);
 void color_update(void);
+void set_up_multicache(linestruct *line);
 void check_the_multis(linestruct *line);
-void alloc_multidata_if_needed(linestruct *fileptr);
 void precalc_multicolorinfo(void);
 #endif
 
@@ -255,7 +258,7 @@ void chop_previous_word(void);
 void chop_next_word(void);
 void cut_marked(bool *right_side_up);
 #endif
-void do_cut_text(bool copying, bool marked, bool until_eof, bool append);
+void do_snip(bool copying, bool marked, bool until_eof, bool append);
 bool is_cuttable(bool test_cliff);
 void cut_text(void);
 #ifndef NANO_TINY
@@ -476,6 +479,8 @@ void do_rcfiles(void);
 #endif /* ENABLE_NANORC */
 
 /* Most functions in search.c. */
+bool regexp_init(const char *regexp);
+void tidy_up_after_search(void);
 int findnextstr(const char *needle, bool whole_word_only, int modus,
 		size_t *match_len, bool skipone, const linestruct *begin, size_t begin_x);
 void do_search(void);
@@ -506,7 +511,6 @@ void do_tab(void);
 void do_indent(void);
 void do_unindent(void);
 #endif
-bool white_string(const char *s);
 #ifdef ENABLE_COMMENT
 void do_comment(void);
 #endif
@@ -531,6 +535,7 @@ ssize_t break_line(const char *line, ssize_t goal, bool snap_at_nl);
 size_t indent_length(const char *line);
 #endif
 #ifdef ENABLE_JUSTIFY
+size_t quote_length(const char *line);
 bool begpar(const linestruct *const foo, int depth);
 bool inpar(const linestruct *const foo);
 void do_justify(bool full_justify);
@@ -613,7 +618,6 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count);
 int get_mouseinput(int *mouse_row, int *mouse_col, bool allow_shortcuts);
 #endif
 const keystruct *get_shortcut(int *kbinput);
-void blank_row(WINDOW *win, int y, int x, int n);
 void blank_edit(void);
 void blank_statusbar(void);
 void wipe_statusbar(void);
@@ -628,8 +632,6 @@ void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void post_one_key(const char *keystroke, const char *tag, int width);
 void place_the_cursor(void);
-void edit_draw(linestruct *fileptr, const char *converted,
-		int line, size_t from_col);
 int update_line(linestruct *fileptr, size_t index);
 #ifndef NANO_TINY
 int update_softwrapped_line(linestruct *fileptr);
