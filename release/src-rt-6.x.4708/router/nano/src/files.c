@@ -178,8 +178,7 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 	/* First run things that might fail before blowing away the old state. */
 	if ((mypwuid = getpwuid(myuid)) == NULL) {
 		/* TRANSLATORS: Keep the next eight messages at most 76 characters. */
-		statusline(MILD, _("Couldn't determine my identity for lock file "
-								"(getpwuid() failed)"));
+		statusline(MILD, _("Couldn't determine my identity for lock file"));
 		goto free_the_data;
 	}
 
@@ -187,8 +186,7 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 		if (errno == ENAMETOOLONG)
 			myhostname[31] = '\0';
 		else {
-			statusline(MILD, _("Couldn't determine hostname for lock file: %s"),
-						strerror(errno));
+			statusline(MILD, _("Couldn't determine hostname: %s"), strerror(errno));
 			goto free_the_data;
 		}
 	}
@@ -542,7 +540,7 @@ bool replace_buffer(const char *filename, undo_type action, bool marked)
 #ifndef NANO_TINY
 	add_undo(action);
 #endif
-	do_cut_text(FALSE, marked, !marked, FALSE);
+	do_snip(FALSE, marked, !marked, FALSE);
 #ifndef NANO_TINY
 	update_undo(action);
 #endif
