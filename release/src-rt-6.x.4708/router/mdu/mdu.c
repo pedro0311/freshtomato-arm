@@ -54,7 +54,7 @@
 #define M_TOOSOON			"Update was too soon or too frequent. Please try again later."
 #define M_ERROR_GET_IP			"Error obtaining IP address."
 #define M_SAME_IP			"The IP address is the same."
-#define M_SAME_RECORD		"Record already up-to-date."
+#define M_SAME_RECORD			"Record already up-to-date."
 #define M_DOWN				"Server temporarily down or under maintenance."
 
 char *blob = NULL;
@@ -349,8 +349,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	int n;
 	char *httpv;
 
-	if (strncmp(host, "updates.opendns.com", 19) == 0
-		|| strncmp(host, "api.cloudflare.com", 18) == 0) {
+	if (strncmp(host, "updates.opendns.com", 19) == 0 || strncmp(host, "api.cloudflare.com", 18) == 0) {
 		httpv = "HTTP/1.1";
 	} else {
 		httpv = "HTTP/1.0";
@@ -1454,7 +1453,7 @@ static void update_cloudflare(void)
 	char *found;
 	char data[QUARTER_BLOB];
 
-	// +opt +opt
+	/* +opt +opt */
 	snprintf(header, HALF_BLOB,
 		"X-Auth-Email: %s\r\n"
 		"X-Auth-Key: %s\r\n"
@@ -1463,7 +1462,7 @@ static void update_cloudflare(void)
 
 	zone = get_option_required("url");
 	host = get_option_required("host");
-	// +opt +opt
+	/* +opt +opt */
 	snprintf(query, QUARTER_BLOB,
 			"/client/v4/zones/%s/dns_records?"
 			"type=A&name=%s&order=name&direction=asc",
@@ -1486,7 +1485,7 @@ static void update_cloudflare(void)
 	}
 	else if (r == 0)
 	{
-		// check the current IP to see if we actually need to update
+		/* check the current IP to see if we actually need to update */
 		find = "\"content\":\"";
 		if ((found = strstr(body, find)) == NULL)
 			error(M_UNKNOWN_RESPONSE__D, -1);
@@ -1498,27 +1497,27 @@ static void update_cloudflare(void)
 				if (strstr(body, "\"proxied\":true") != NULL)
 				{
 					if (prox)
-						success_msg(M_SAME_RECORD); // use success to update the cookie
+						success_msg(M_SAME_RECORD); /* use success to update the cookie */
 				}
 				else if (!prox)
-					success_msg(M_SAME_RECORD); // use success to update the cookie
+					success_msg(M_SAME_RECORD); /* use success to update the cookie */
 			}
 			else
-				success_msg(M_SAME_RECORD); // use success to update the cookie
+				success_msg(M_SAME_RECORD); /* use success to update the cookie */
 		}
 
 		find = "\"id\":\"";
 		if ((found = strstr(body, find)) == NULL)
 			error(M_UNKNOWN_RESPONSE__D, -1);
 		found += strlen(find);
-		*strchr(found, '"') = 0; // assume we can find the closing quote
+		*strchr(found, '"') = 0; /* assume we can find the closing quote */
 
 		snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records/%s", zone, found);
 	}
 	else
 		error(M_UNKNOWN_ERROR__D, r);
 
-	// +opt +opt
+	/* +opt +opt */
 	snprintf(data, QUARTER_BLOB,
 			"{\"type\":\"A\",\"name\":\"%s\",\"content\":\"%s\",\"proxied\":%s}",
 			host, addr, prox ? "true" : "false");

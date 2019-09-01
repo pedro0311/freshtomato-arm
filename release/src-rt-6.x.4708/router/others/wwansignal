@@ -236,7 +236,7 @@ signal4g() {
 
 			[ "$SPEED" == "0201" -o "$SPEED" == "02" ] && {
 				SPEED="02"
- 			}
+			}
 
 			case "$SPEED" in
 			     "03")
