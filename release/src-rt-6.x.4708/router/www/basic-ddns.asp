@@ -77,6 +77,7 @@ var services = [
 	['ovh', 'OVH', 'http://www.ovh.com/', 'uh'],
 	['sovh', 'OVH (https)', 'https://www.ovh.com/', 'uh'],
 	['schangeip', 'ChangeIP (https)', 'https://www.changeip.com/', 'uh'],
+	['cloudflare', 'Cloudflare (https)', 'https://www.cloudflare.com/', 'uhbnws', 'Email Address', 'API Key', null, 'Proxied', 'Create record if needed', 'Zone ID'],
 	['custom', 'Custom URL', '', 'c']];
 
 var opendns = ['208.67.222.222', '208.67.220.220'];
@@ -153,6 +154,9 @@ function verifyFields(focused, quiet) {
 			PR('_f_user' + i).cells[0].innerHTML = data[4] || 'Username';
 			PR('_f_pass' + i).cells[0].innerHTML = data[5] || 'Password';
 			PR('_f_host' + i).cells[0].innerHTML = data[6] || 'Hostname';
+			PR('_f_wild' + i).cells[0].innerHTML = data[7] || 'Wildcard';
+			PR('_f_bmx' + i).cells[0].innerHTML = data[8] || 'Backup MX';
+			PR('_f_token' + i).cells[0].innerHTML = data[9] || 'Token';
 
 			e = E('url' + i);
 			e.href = data[2];
@@ -366,7 +370,7 @@ function init() {
 <div class="section">
 <script type="text/javascript">
 s = nvram.ddnsx_ip;
-a = (s != '') && (s != 'wan') && (s != 'wan2') && (s != 'wan3') && (s != 'wan4') && (s.indexOf('@') != 0) && (s != '0.0.0.0') && (s != '1.1.1.1') && (s != '10.1.1.1');
+a = (s != '') && (s != 'wan') && (s != 'wan2') && (s != 'wan3') && (s != 'wan4') && (s.indexOf('@') != 0) && (s != '0.0.0.0') && (s != '10.1.1.1');
 createFieldTable('', [
 	{ title: 'IP address', name: 'f_ddnsx_ip', type: 'select',
 		options: [
@@ -378,7 +382,6 @@ createFieldTable('', [
 /* MULTIWAN-END */
 			['@', 'Use External IP Address Checker (every 10 minutes)'],
 			['0.0.0.0', 'Offline (0.0.0.0)'],
-			['1.1.1.1', 'Offline (1.1.1.1)'],
 			['10.1.1.1', 'Offline (10.1.1.1)'],
 			['custom', 'Custom IP Address...']
 			],
