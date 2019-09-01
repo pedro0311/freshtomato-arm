@@ -42,7 +42,7 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	}
 	if (valMap['RSSP']) {
 		code += '<tr><td class="title indent1">RSSP</td>';
-		code += createWWANTableItem(valMap['RSSP'], 'dB', wwan_getRSSPBar(valMap['RSSP']));
+		code += createWWANTableItem(valMap['RSSP'], 'dB', wwan_getRSSIBar(valMap['RSSP']));
 	}
 	if (valMap['RSCP']) {
 		code += '<tr><td class="title indent1">RSCP</td>';
