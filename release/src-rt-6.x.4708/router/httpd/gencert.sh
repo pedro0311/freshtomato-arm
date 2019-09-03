@@ -47,6 +47,9 @@ cp -L openssl.cnf $OPENSSLCNF
 	echo "0.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
 }
 
+# Required extension
+sed -i "/\[ v3_ca \]/aextendedKeyUsage = serverAuth" $OPENSSLCNF
+
 I=0
 # Start of SAN extensions
 sed -i "/\[ CA_default \]/acopy_extensions = copy" $OPENSSLCNF
