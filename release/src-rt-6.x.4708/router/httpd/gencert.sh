@@ -16,6 +16,14 @@ KEYNAME="key.pem"
 CERTNAME="cert.pem"
 OPENSSLCNF="/etc/openssl.config.$PID"
 
+[ "$(date +%s)" -gt 946684800 ] && {
+	nvram set https_crt_timeset=1
+	CERTTIME="-days 720"
+} || {
+	nvram set https_crt_timeset=0
+	CERTTIME="-startdate 190101000000Z -enddate 281231235959Z"
+}
+
 cd /etc
 
 cp -L openssl.cnf $OPENSSLCNF
@@ -79,7 +87,7 @@ I=$(($I + 1))
 # create the key
 openssl genrsa -out $KEYNAME.$PID 2048 -config $OPENSSLCNF
 # create certificate request and sign it
-openssl req -startdate 190101000000Z -enddate 281231235959Z -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
+openssl req $CERTTIME -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
 
 # server.pem for WebDav SSL
 cat $KEYNAME.$PID $CERTNAME.$PID > server.pem
