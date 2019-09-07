@@ -2315,7 +2315,7 @@ int start_firewall(void)
 
 				sprintf(tmp, "%d", n);
 				sprintf(nvram_var_name, "wan%s_ifname", n == 1 ? "" : tmp);
-				c = nvram_get(nvram_var_name);
+				c = nvram_safe_get(nvram_var_name);
 
 				/* mcast needs rp filter to be turned off only for non default iface */
 				if (!(nvram_match("multicast_pass", "1"))
