@@ -41,6 +41,8 @@
 
 #define MAX_OPTION_LENGTH	256
 #define BLOB_SIZE	(4 * 1024)
+#define HALF_BLOB	(BLOB_SIZE >> 1)
+#define QUARTER_BLOB	(BLOB_SIZE >> 2)
 
 
 #define M_UNKNOWN_ERROR__D		"Unknown error (%d)."
@@ -52,6 +54,7 @@
 #define M_TOOSOON			"Update was too soon or too frequent. Please try again later."
 #define M_ERROR_GET_IP			"Error obtaining IP address."
 #define M_SAME_IP			"The IP address is the same."
+#define M_SAME_RECORD			"Record already up-to-date."
 #define M_DOWN				"Server temporarily down or under maintenance."
 
 char *blob = NULL;
@@ -215,7 +218,7 @@ static const char *get_dump_name(void)
 #endif
 }
 
-static int _wget(int ssl, const char *host, int port, const char *request, char *buffer, int bufsize, char **body)
+static int _http_req(int ssl, const char *host, int port, const char *request, char *buffer, int bufsize, char **body)
 {
 	struct hostent *he;
 	struct sockaddr_in sa;
@@ -232,7 +235,7 @@ static int _wget(int ssl, const char *host, int port, const char *request, char 
 	sd = -1;	// for gcc warning
 
 	for (trys = 4; trys > 0; --trys) {
-		_dprintf("_wget trys=%d\n", trys);
+		_dprintf("_http_req trys=%d\n", trys);
 
 		for (i = 4; i > 0; --i) {
 			if ((he = gethostbyname(host)) != NULL) {
@@ -337,7 +340,7 @@ static int _wget(int ssl, const char *host, int port, const char *request, char 
 	return -1;
 }
 
-static int wget(int ssl, int static_host, const char *host, const char *get, const char *header, int auth, char **body)
+static int http_req(int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
 {
 	char *p;
 	int port;
@@ -346,7 +349,7 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 	int n;
 	char *httpv;
 
-	if (strncmp(host, "updates.opendns.com", 19) == 0) {
+	if (strncmp(host, "updates.opendns.com", 19) == 0 || strncmp(host, "api.cloudflare.com", 18) == 0) {
 		httpv = "HTTP/1.1";
 	} else {
 		httpv = "HTTP/1.0";
@@ -354,15 +357,16 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 
 	if (!static_host) host = get_option_or("server", host);
 
-	n = strlen(get);
+	n = strlen(query);
 	if (header) n += strlen(header);
+	if (data) n += strlen(data);
 	if (n > (BLOB_SIZE - 512)) return -1;	// just don't go over 512 below...
 
 	sprintf(blob,
-		"GET %s %s\r\n"
+		"%s %s %s\r\n"
 		"Host: %s\r\n"
 		"User-Agent: " AGENT "\r\n",
-		get, httpv, host);
+		req, query, httpv, host);
 	if (auth) {
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
 		n = base64_encode((unsigned char *) a, b, strlen(a));
@@ -373,7 +377,12 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 		strcat(blob, header);
 		if (header[n - 1] != '\n') strcat(blob, "\r\n");
 	}
+	if (data)
+		sprintf(blob + strlen(blob), "Content-Length: %d\r\n", strlen(data));
 	strcat(blob, "\r\n");
+
+	if (data)
+		strcat(blob, data);
 
 
 	_dprintf("blob=[%s]\n", blob);
@@ -386,11 +395,16 @@ static int wget(int ssl, int static_host, const char *host, const char *get, con
 	}
 
 	if ((p = strdup(blob)) == NULL) return -1;
-	n = _wget(ssl, a, port, p, blob, BLOB_SIZE, body);
+	n = _http_req(ssl, a, port, p, blob, BLOB_SIZE, body);
 	free(p);
 
 	_dprintf("%s: n=%d\n", __FUNCTION__, n);
 	return n;
+}
+
+static int wget(int ssl, int static_host, const char *host, const char *get, const char *header, int auth, char **body)
+{
+	return http_req(ssl, static_host, host, "GET", get, header, auth, NULL, body);
 }
 
 int read_tmaddr(const char *name, long *tm, char *addr)
@@ -1330,6 +1344,193 @@ static void update_editdns(void)
 }
 
 /*
+	cloudflare.com
+	https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
+
+	---
+
+PUT https://api.cloudflare.com/client/v4/zones/zone_id/dns_records/record_id
+Headers: X-Auth-Email: user_email
+         X-Auth-Key: user_api_key
+		 Content-Type: application/json
+Data:    {"type":"A","name":"e.example.com","content":"198.51.100.4","proxied":false}
+good:
+"HTTP/1.1 200 OK
+ {
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": {
+    "id": "372e67954025e0ba6aaa6d586b9e0b59",
+    "type": "A",
+    "name": "e.example.com",
+    "content": "198.51.100.4",
+    "proxiable": true,
+    "proxied": false,
+    "ttl": {},
+    "locked": false,
+    "zone_id": "023e105f4ecef8ad9ca31a8372d0c353",
+    "zone_name": "example.com",
+    "created_on": "2014-01-01T05:20:00.12345Z",
+    "modified_on": "2014-01-01T05:20:00.12345Z",
+    "data": {}
+  }
+}"
+bad: HTTP non-200 response and JSON response has 'success:"false"'; 400 and 403
+     mean bad or invalid auth and JSON response will include "code:6003" for 400
+	 and "code:9103" for 403
+	 HTTP 200 response but JSON response has "total_count:0", which means the
+	 search for the given hostname produced no results
+
+records can be created via a POST request to the same URL, minus the record_id:
+PUT https://api.cloudflare.com/client/v4/zones/zone_id/dns_records
+and relevant reponses are similar.
+
+record_id can be retrieved via
+GET https://api.cloudflare.com/client/v4/zones/zone_id/dns_records?type=A&name=e.example.com
+good:
+"{
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": [
+    {
+      "id": "372e67954025e0ba6aaa6d586b9e0b59",
+      "type": "A",
+      "name": "e.example.com",
+      "content": "198.51.100.4",
+      "proxiable": true,
+      "proxied": false,
+      "ttl": {},
+      "locked": false,
+      "zone_id": "zone_id",
+      "zone_name": "example.com",
+      "created_on": "2014-01-01T05:20:00.12345Z",
+      "modified_on": "2014-01-01T05:20:00.12345Z",
+      "data": {}
+    }
+  ]
+}"
+
+zone_id can be retrieved via
+GET https://api.cloudflare.com/client/v4/zones?name=example.com&status=active
+but this is unimplemented here.
+*/
+static int cloudflare_errorcheck(int code, const char *req, char *body)
+{
+	if (code == 200)
+	{
+		if (strstr(body, "\"success\":true") != NULL)
+		{
+			if (strstr(body, "\"total_count\":0") != NULL)
+				return 1;
+			return 0;
+		}
+		else
+			error(M_UNKNOWN_RESPONSE__D, -1);
+	}
+	else if (code == 400 && strstr(body, "\"code\":6003") != NULL)
+		error(M_INVALID_AUTH);
+	else if (code == 403 && strstr(body, "\"code\":9103") != NULL)
+		error(M_INVALID_AUTH);
+
+	error("%s returned HTTP code %d.", req, code);
+	return -1; // silence compiler warning
+}
+
+static void update_cloudflare(void)
+{
+	char header[HALF_BLOB];
+	const char *zone;
+	const char *host;
+	char query[QUARTER_BLOB];
+	char *body;
+	int r;
+	const char *req;
+	const char *addr;
+	int prox;
+	const char *find;
+	char *found;
+	char data[QUARTER_BLOB];
+
+	/* +opt +opt */
+	snprintf(header, HALF_BLOB,
+		"X-Auth-Email: %s\r\n"
+		"X-Auth-Key: %s\r\n"
+		"Content-Type: application/json\r\n",
+		get_option_required("user"), get_option_required("pass"));
+
+	zone = get_option_required("url");
+	host = get_option_required("host");
+	/* +opt +opt */
+	snprintf(query, QUARTER_BLOB,
+			"/client/v4/zones/%s/dns_records?"
+			"type=A&name=%s&order=name&direction=asc",
+			zone, host);
+
+	r = wget(1, 1, "api.cloudflare.com", query, header, 0, &body);
+	r = cloudflare_errorcheck(r, "GET", body);
+	req = "PUT";
+	addr = get_address(1);
+	prox = get_option_onoff("wildcard", 0);
+	if (r == 1)
+	{
+		if (get_option_onoff("backmx", 0))
+		{
+			req = "POST";
+			snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records", zone);
+		}
+		else
+			error(M_INVALID_HOST);
+	}
+	else if (r == 0)
+	{
+		/* check the current IP to see if we actually need to update */
+		find = "\"content\":\"";
+		if ((found = strstr(body, find)) == NULL)
+			error(M_UNKNOWN_RESPONSE__D, -1);
+		found += strlen(find);
+		if (strncmp(addr, found, strlen(addr)) == 0)
+		{
+			if (strstr(body, "\"proxiable\":true") != NULL)
+			{
+				if (strstr(body, "\"proxied\":true") != NULL)
+				{
+					if (prox)
+						success_msg(M_SAME_RECORD); /* use success to update the cookie */
+				}
+				else if (!prox)
+					success_msg(M_SAME_RECORD); /* use success to update the cookie */
+			}
+			else
+				success_msg(M_SAME_RECORD); /* use success to update the cookie */
+		}
+
+		find = "\"id\":\"";
+		if ((found = strstr(body, find)) == NULL)
+			error(M_UNKNOWN_RESPONSE__D, -1);
+		found += strlen(find);
+		*strchr(found, '"') = 0; /* assume we can find the closing quote */
+
+		snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records/%s", zone, found);
+	}
+	else
+		error(M_UNKNOWN_ERROR__D, r);
+
+	/* +opt +opt */
+	snprintf(data, QUARTER_BLOB,
+			"{\"type\":\"A\",\"name\":\"%s\",\"content\":\"%s\",\"proxied\":%s}",
+			host, addr, prox ? "true" : "false");
+
+	r = http_req(1, 1, "api.cloudflare.com", req, query, header, 0, data, &body);
+	r = cloudflare_errorcheck(r, req, body);
+	if (r != 0)
+		error(M_UNKNOWN_ERROR__D, r);
+
+	success();
+}
+
+/*
  * wget/custom
  */
 static void update_wget(void)
@@ -1628,6 +1829,9 @@ int main(int argc, char *argv[])
 	else if (strcmp(p, "sheipv6tb") == 0) {
 		// Tunnel Broker uses the same API as DynDNS
 		update_dua("heipv6tb", 1, "ipv4.tunnelbroker.net", "/nic/update", 1);
+	}
+	else if (strcmp(p, "cloudflare") == 0) {
+		update_cloudflare();
 	}
 	else if ((strcmp(p, "wget") == 0) || (strcmp(p, "custom") == 0)) {
 		update_wget();

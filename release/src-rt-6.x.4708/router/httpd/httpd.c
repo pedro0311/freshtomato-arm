@@ -618,9 +618,7 @@ static void erase_cert(void)
 
 static void start_ssl(void)
 {
-	int ok;
-	int save;
-	int retry;
+	int ok = 0, retry = 2, save;
 	unsigned long long sn;
 	char t[32];
 
@@ -628,24 +626,24 @@ static void start_ssl(void)
 		erase_cert();
 	}
 
-	retry = 1;
 	while (1) {
 		save = nvram_match("https_crt_save", "1");
 
-		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem"))) {
-			ok = 0;
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || ((nvram_get_int("https_crt_timeset") != 1) && (time(NULL) > Y2K))) {
 			if (save && nvram_match("crt_ver", HTTPS_CRT_VER)) {
 				if (nvram_get_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
-					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0)
+					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0) {
 						ok = 1;
+					}
 					unlink("/tmp/cert.tgz");
 				}
 			}
+
 			if (!ok) {
 				erase_cert();
 				syslog(LOG_INFO, "Generating SSL certificate...");
 
-				// browsers seems to like this when the ip address moves...	-- zzz
+				/* browsers seems to like this when the ip address moves... - zzz */
 				f_read("/dev/urandom", &sn, sizeof(sn));
 
 				sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
@@ -657,13 +655,17 @@ static void start_ssl(void)
 			save_cert();
 		}
 
-		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) return;
-
+		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) {
+			return;
+		}
 		erase_cert();
 
 		syslog(retry ? LOG_WARNING : LOG_ERR, "Unable to start SSL");
-		if (!retry) exit(1);
-		retry = 0;
+
+		if (!retry) {
+			exit(1);
+		}
+		retry -= 1;
 	}
 }
 #endif

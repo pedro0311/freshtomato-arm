@@ -432,7 +432,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_nbw",			"40"				, 0 },	// BW: 20 / 40 MHz
 	{ "wl_nbw_cap",			"1"				, 0 },	// BW: def 20inB and 40inA
 	{ "wl_mimo_preamble",		"mm"				, 0 },	// 802.11n Preamble: mm/gf/auto/gfbcm
-	{ "wl_nctrlsb",			"upper"				, 0 },	// N-CTRL SB (none/lower/upper)
+	{ "wl_nctrlsb",			"lower"				, 0 },	// N-CTRL SB (none/lower/upper)
 	{ "wl_nmode_protection",	"off"				, 0 },	// 802.11n RTS/CTS protection (off|auto)
 	{ "wl_rxstreams",		"0"				, 0 },	// 802.11n Rx Streams, 0 is invalid, WLCONF will change it to a radio appropriate default
 	{ "wl_txstreams",		"0"				, 0 },	// 802.11n Tx Streams 0, 0 is invalid, WLCONF will change it to a radio appropriate default
@@ -477,13 +477,17 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_mcast_regen_bss_enable",	"1"				, 0 },	// MCAST REGEN Enable/Disable
 #endif
 #ifdef TCONFIG_BCMWL6
-	{ "wl_ack_ratio",		"0"},
-	{ "wl_ampdu_mpdu",		"0"},
-	{ "wl_ampdu_rts",		"1"},
+	{ "wl_ack_ratio",		"0"				, 0 },
+	{ "wl_ampdu_mpdu",		"0"				, 0 },
+	{ "wl_ampdu_rts",		"1"				, 0 },
 #ifdef TCONFIG_BCMARM
-	{ "wl_turbo_qam",		"1"},
-	{ "wl_itxbf",			"1"},
-	{ "wl0_itxbf",			"0"},
+	{ "wl_atf",			"0"				, 0 },	// Air Time Fairness support on = 1, off = 0 (default: off)
+	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
+	{ "wl_txbf",			"1"				, 0 },	// Explicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_bfr_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_txbf_bfe_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_itxbf",			"0"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
+	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 #endif
 #endif
 
@@ -639,7 +643,7 @@ struct nvram_tuple router_defaults[] = {
 
 /* advanced-misc */
 	{ "boot_wait",			"on"				, 0 },
-	{ "wait_time",			"5"				, 0 },
+	{ "wait_time",			"3"				, 0 },
 	{ "wan_speed",			"4"				, 0 },	// 0=10 Mb Full, 1=10 Mb Half, 2=100 Mb Full, 3=100 Mb Half, 4=Auto
 	{ "jumbo_frame_enable",		"0"				, 0 },	// Jumbo Frames support (for RT-N16/WNR3500L)
 	{ "jumbo_frame_size",		"2000"				, 0 },

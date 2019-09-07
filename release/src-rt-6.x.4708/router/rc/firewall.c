@@ -2305,7 +2305,7 @@ int start_firewall(void)
 			if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0) {
 				continue;
 			}
-			
+
 			sprintf(s, "/proc/sys/net/ipv4/conf/%s/rp_filter", dirent->d_name);
 			bool enable_rp_filter = 1;
 
@@ -2315,17 +2315,17 @@ int start_firewall(void)
 
 				sprintf(tmp, "%d", n);
 				sprintf(nvram_var_name, "wan%s_ifname", n == 1 ? "" : tmp);
-				c = nvram_get(nvram_var_name);
+				c = nvram_safe_get(nvram_var_name);
 
 				/* mcast needs rp filter to be turned off only for non default iface */
-				if (!(nvram_match("multicast_pass", "1")) 
-					|| !(nvram_match("udpxy_enable", "1")) 
+				if (!(nvram_match("multicast_pass", "1"))
+					|| !(nvram_match("udpxy_enable", "1"))
 					|| strcmp(multiwan_wanfaces[n - 1], c) == 0) {
 					c = NULL;
 				}
 
 				/* in gateway mode, rp_filter blocks pbr */
-				if ((c != NULL && strcmp(dirent->d_name, c) == 0) 
+				if ((c != NULL && strcmp(dirent->d_name, c) == 0)
 					|| (gateway_mode && strcmp(dirent->d_name, multiwan_wanfaces[n - 1]) == 0)) {
 					enable_rp_filter = 0;
 					break;
