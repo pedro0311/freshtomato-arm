@@ -46,9 +46,6 @@ endif
 #Ethernet state report
 	install -m 0700 ethstate $(INSTALLDIR)/usr/sbin
 
-#stealthMode
-#	install -m 0700 stealthMode $(INSTALLDIR)/usr/sbin
-
 #MOTD
 	install -m 0700 mymotd $(INSTALLDIR)/usr/sbin
 
