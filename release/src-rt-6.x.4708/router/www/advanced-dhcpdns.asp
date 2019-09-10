@@ -29,7 +29,7 @@ textarea {
 
 <script type="text/javascript">
 
-//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_norw,dhcpd_lmax,dhcpc_custom,dns_norebind,dhcpd_static_only,dnsmasq_debug"); %>
+//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dhcpd_static_only,dnsmasq_debug"); %>
 
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1)) nvram.dhcpd_lmax = 255;
 
@@ -64,6 +64,9 @@ function save() {
 	fom.dhcpc_minpkt.value = E('_f_dhcpc_minpkt').checked ? 1 : 0;
 	fom.dhcpd_static_only.value = E('_f_dhcpd_static_only').checked ? '1' : '0';
 	fom.dnsmasq_debug.value = E('_f_dnsmasq_debug').checked ? '1' : '0';
+/* TOR-BEGIN */
+	fom.dnsmasq_onion_support.value = E('_f_dnsmasq_onion_support').checked ? '1' : '0';
+/* TOR-END */
 	fom.ipv6_radvd.value = E('_f_ipv6_radvd').checked ? '1' : '0';
 	fom.ipv6_dhcpd.value = E('_f_ipv6_dhcpd').checked ? '1' : '0';
 	fom.ipv6_lease_time.value = E('_f_ipv6_lease_time').value;
@@ -152,6 +155,9 @@ function init() {
 <input type="hidden" name="ipv6_dhcpd">
 <input type="hidden" name="ipv6_lease_time">
 <input type="hidden" name="dnsmasq_q">
+/* TOR-BEGIN */
+<input type="hidden" name="dnsmasq_onion_support">
+/* TOR-END */
 
 <div class="section-title">DHCP / DNS Server (LAN)</div>
 <div class="section">
@@ -164,6 +170,9 @@ createFieldTable('', [
 	{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == '1' },
 	{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == '1' },
 	{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == '1' },
+/* TOR-BEGIN */
+	{ title: 'Solve .onion using Tor<br />(<a href="advanced-tor.asp" class="new_window">enable Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', value: nvram.dnsmasq_onion_support == '1' },
+/* TOR-END */
 	{ title: 'Maximum active DHCP leases', name: 'dhcpd_lmax', type: 'text', maxlen: 5, size: 8, value: nvram.dhcpd_lmax },
 	{ title: 'Static lease time', multi: [
 		{ name: 'f_dhcpd_sltsel', type: 'select', options: [[0,'Same as normal lease time'],[-1,'"Infinite"'],[1,'Custom']],
