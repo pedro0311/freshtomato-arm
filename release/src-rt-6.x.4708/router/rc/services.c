@@ -160,7 +160,7 @@ void start_dnsmasq()
 	}
 #endif
 #ifdef TCONFIG_TOR
-	if (nvram_match("tor_enable", "1")) {
+	if ((nvram_match("tor_enable", "1")) && (nvram_match("dnsmasq_onion_support", "1"))) {
 		char *t_ip;
 
 		if (nvram_match("tor_iface", "br0"))      { t_ip = nvram_safe_get("lan_ipaddr");  }
