@@ -500,7 +500,7 @@ for (i = 0; i < tabs.length; ++i)
 	createFieldTable('', [
 		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Redirect Internet traffic', multi: [
-			{ name: 'vpn_'+t+'_rgw', type: 'select', options: [ [0, 'No'], [1, 'All'], [2, 'Routing Policy'] ], value: eval('nvram.vpn_'+t+'_rgw') },
+			{ name: 'vpn_'+t+'_rgw', type: 'select', options: [ [0, 'No'], [1, 'All'], [2, 'Routing Policy'], [3, 'Routing Policy (strict)'] ], value: eval('nvram.vpn_'+t+'_rgw') },
 			{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval( 'nvram.vpn_'+t+'_gw' ), prefix: '<span id=\''+t+'_gateway\'> Gateway:&nbsp', suffix: '<\/span>'} ] },
 		{ title: 'Accept DNS configuration', name: 'vpn_'+t+'_adns', type: 'select', options: [[0, 'Disabled'],[1, 'Relaxed'],[2, 'Strict'],[3, 'Exclusive']], value: eval( 'nvram.vpn_'+t+'_adns' ) },
 		{ title: 'Cipher Negotiation', name: 'vpn_'+t+'_ncp_enable', type: 'select', options: [[0, 'Disabled'],[1, 'Enabled (with fallback)'],[2, 'Enabled']], value: eval( 'nvram.vpn_'+t+'_ncp_enable' ) },
