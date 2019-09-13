@@ -32,7 +32,7 @@ static char* getModemDiagPort(const char *wannum)
 		return nvram_safe_get(tmp);
 	} else if (nvram_match(tmp, "lte")) {
 		sprintf(tmp, "%s_modem_type", wannum);
-		if (nvram_match(tmp, "non-hilink") || nvram_match(tmp, "hw-ether")) {
+		if (nvram_match(tmp, "non-hilink") || nvram_match(tmp, "huawei-non-hilink")) {
 			sprintf(tmp, "%s_modem_dev", wannum);
 			return nvram_safe_get(tmp);
 		} else {	/* QMI or HiLink */
