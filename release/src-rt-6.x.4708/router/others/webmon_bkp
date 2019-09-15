@@ -35,7 +35,7 @@
 		cp /proc/webmon_recent_domains $BKP_DIR/webmon_recent_domains > /dev/null 2>&1
 		cp /proc/webmon_recent_searches $BKP_DIR/webmon_recent_searches > /dev/null 2>&1
 	else
-		LOGS="logger -t Webmon Backup"
+		LOGS="logger -t Webmon-Backup"
 
 		# try create a file (check directory rw permission)
 		touch $BKP_DIR/$DATA > /dev/null 2>&1
