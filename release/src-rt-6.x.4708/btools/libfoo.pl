@@ -157,10 +157,10 @@ sub fixDyn
 	fixDynDep("libcrypto.so.1.0.0", "libssl.so.1.0.0");
 
 #shibby
-	fixDynDep("transmission-daemon", "libevent-2.1.so.6");
+	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
 	fixDynDep("transmission-daemon", "libcurl.so.4.6.0");
 #	fixDynDep("transmission-daemon", "libiconv.so.2.6.1");
-	fixDynDep("transmission-remote", "libevent-2.1.so.6");
+	fixDynDep("transmission-remote", "libevent-2.1.so.7");
 	fixDynDep("transmission-remote", "libcurl.so.4.6.0");
 #	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
 #	fixDynDep("radvd", "libdaemon.so.0.5.0");
@@ -519,7 +519,7 @@ genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a"
 
 #shibby
 genSO("${root}/usr/lib/libcurl.so.4.6.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib");
-genSO("${root}/usr/lib/libevent-2.1.so.6", "${router}/libevent/.libs/libevent.a");
+genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a");
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
