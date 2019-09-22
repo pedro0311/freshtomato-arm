@@ -1705,16 +1705,6 @@ igmpproxy-clean:
 	-@$(MAKE) -C igmpproxy/src clean
 	@rm -f igmpproxy/src/Makefile
 
-udev:
-	@$(SEP)
-	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) EXTRACFLAGS="$(EXTRACFLAGS)" \
-	    PROGRAMS=udevtrigger
-
-udev-install:
-	install -d $(INSTALLDIR)
-	install -d $(TARGETDIR)
-	$(MAKE) -C udev DESTDIR=$(INSTALLDIR) prefix=/udev install-udevtrigger
-
 hotplug2:
 	@$(SEP)
 	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) CC=$(CC) EXTRACFLAGS="$(EXTRACFLAGS)"
@@ -2295,9 +2285,9 @@ libcurl: libcurl/stamp-h1
 	@$(MAKE) -C libcurl DESTDIR=$(TOP)/libcurl/staged install
 
 libcurl-install:
-	install -D libcurl/lib/.libs/libcurl.so.4.5.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.5.0
-	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.5.0 libcurl.so && ln -sf libcurl.so.4.5.0 libcurl.so.4
+	install -D libcurl/lib/.libs/libcurl.so.4.6.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.6.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.6.0
+	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.6.0 libcurl.so && ln -sf libcurl.so.4.6.0 libcurl.so.4
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 
@@ -2326,8 +2316,8 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.1.so.6.0.4 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
-	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.6
+	install libevent/.libs/libevent-2.1.so.7.0.0 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 
 libiconv/stamp-h1:
 	cd libiconv && CC=$(CC) \

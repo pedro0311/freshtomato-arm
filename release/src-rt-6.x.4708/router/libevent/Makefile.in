@@ -20,7 +20,7 @@
 #
 # See LICENSE for copying information.
 
-# include/Makefile.am for libevent
+# include/include.am for libevent
 # Copyright 2000-2007 Niels Provos
 # Copyright 2007-2012 Niels Provos and Nick Mathewson
 #
@@ -122,31 +122,32 @@ host_triplet = @host@
 @OPENSSL_TRUE@am__append_4 = libevent_openssl.pc
 noinst_PROGRAMS = $(am__EXEEXT_4) $(am__EXEEXT_6)
 EXTRA_PROGRAMS = $(am__EXEEXT_1)
-@INSTALL_LIBEVENT_FALSE@am__append_5 = $(EVENT2_EXPORT)
-@OPENSSL_TRUE@am__append_6 = sample/le-proxy sample/https-client
-@OPENSSL_TRUE@am__append_7 = \
+@OPENSSL_TRUE@am__append_5 = include/event2/bufferevent_ssl.h
+@INSTALL_LIBEVENT_FALSE@am__append_6 = $(EVENT2_EXPORT)
+@OPENSSL_TRUE@am__append_7 = sample/le-proxy sample/https-client
+@OPENSSL_TRUE@am__append_8 = \
 @OPENSSL_TRUE@	sample/hostcheck.h \
 @OPENSSL_TRUE@	sample/openssl_hostname_validation.h
 
-@BUILD_SAMPLES_TRUE@am__append_8 = $(SAMPLES)
-@BUILD_REGRESS_TRUE@am__append_9 = $(TESTPROGRAMS)
-@BUILD_REGRESS_TRUE@am__append_10 = test/regress
-@BUILD_REGRESS_TRUE@am__append_11 = test/regress.gen.c test/regress.gen.h
-@PTHREADS_TRUE@am__append_12 = libevent_pthreads.la
-@BUILD_WIN32_TRUE@am__append_13 = test/regress_iocp.c
-@OPENSSL_TRUE@am__append_14 = test/regress_ssl.c
-@OPENSSL_TRUE@am__append_15 = $(OPENSSL_INCS)
-@OPENSSL_TRUE@am__append_16 = libevent_openssl.la $(OPENSSL_LIBS) ${OPENSSL_LIBADD}
-@BUILD_WIN32_TRUE@@THREADS_TRUE@am__append_17 = evthread_win32.c
-@STRLCPY_IMPL_TRUE@am__append_18 = strlcpy.c
-@SELECT_BACKEND_TRUE@am__append_19 = select.c
-@POLL_BACKEND_TRUE@am__append_20 = poll.c
-@DEVPOLL_BACKEND_TRUE@am__append_21 = devpoll.c
-@KQUEUE_BACKEND_TRUE@am__append_22 = kqueue.c
-@EPOLL_BACKEND_TRUE@am__append_23 = epoll.c
-@EVPORT_BACKEND_TRUE@am__append_24 = evport.c
-@SIGNAL_SUPPORT_TRUE@am__append_25 = signal.c
-@INSTALL_LIBEVENT_FALSE@am__append_26 = $(EVENT1_HDRS)
+@BUILD_SAMPLES_TRUE@am__append_9 = $(SAMPLES)
+@BUILD_REGRESS_TRUE@am__append_10 = $(TESTPROGRAMS)
+@BUILD_REGRESS_TRUE@am__append_11 = test/regress
+@BUILD_REGRESS_TRUE@am__append_12 = test/regress.gen.c test/regress.gen.h
+@PTHREADS_TRUE@am__append_13 = libevent_pthreads.la
+@BUILD_WIN32_TRUE@am__append_14 = test/regress_iocp.c
+@OPENSSL_TRUE@am__append_15 = test/regress_ssl.c
+@OPENSSL_TRUE@am__append_16 = $(OPENSSL_INCS)
+@OPENSSL_TRUE@am__append_17 = libevent_openssl.la $(OPENSSL_LIBS) ${OPENSSL_LIBADD}
+@BUILD_WIN32_TRUE@@THREADS_TRUE@am__append_18 = evthread_win32.c
+@STRLCPY_IMPL_TRUE@am__append_19 = strlcpy.c
+@SELECT_BACKEND_TRUE@am__append_20 = select.c
+@POLL_BACKEND_TRUE@am__append_21 = poll.c
+@DEVPOLL_BACKEND_TRUE@am__append_22 = devpoll.c
+@KQUEUE_BACKEND_TRUE@am__append_23 = kqueue.c
+@EPOLL_BACKEND_TRUE@am__append_24 = epoll.c
+@EVPORT_BACKEND_TRUE@am__append_25 = evport.c
+@SIGNAL_SUPPORT_TRUE@am__append_26 = signal.c
+@INSTALL_LIBEVENT_FALSE@am__append_27 = $(EVENT1_HDRS)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ac_backport_259_ssizet.m4 \
@@ -403,7 +404,7 @@ am_test_regress_OBJECTS = test/regress-regress.$(OBJEXT) \
 	test/regress-tinytest.$(OBJEXT) $(am__objects_13) \
 	$(am__objects_14) $(am__objects_15) $(am__objects_16)
 test_regress_OBJECTS = $(am_test_regress_OBJECTS)
-am__DEPENDENCIES_3 = $(am__append_12)
+am__DEPENDENCIES_3 = $(am__append_13)
 @OPENSSL_TRUE@am__DEPENDENCIES_4 = libevent_openssl.la \
 @OPENSSL_TRUE@	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 test_regress_DEPENDENCIES = $(am__DEPENDENCIES_1) libevent_core.la \
@@ -578,21 +579,6 @@ am__include_HEADERS_DIST = include/evdns.h include/event.h \
 am__include_event2_HEADERS_DIST = include/event2/buffer.h \
 	include/event2/buffer_compat.h include/event2/bufferevent.h \
 	include/event2/bufferevent_compat.h \
-	include/event2/bufferevent_ssl.h \
-	include/event2/bufferevent_struct.h include/event2/dns.h \
-	include/event2/dns_compat.h include/event2/dns_struct.h \
-	include/event2/event.h include/event2/event_compat.h \
-	include/event2/event_struct.h include/event2/http.h \
-	include/event2/http_compat.h include/event2/http_struct.h \
-	include/event2/keyvalq_struct.h include/event2/listener.h \
-	include/event2/rpc.h include/event2/rpc_compat.h \
-	include/event2/rpc_struct.h include/event2/tag.h \
-	include/event2/tag_compat.h include/event2/thread.h \
-	include/event2/util.h include/event2/visibility.h
-am__noinst_HEADERS_DIST = include/event2/buffer.h \
-	include/event2/buffer_compat.h include/event2/bufferevent.h \
-	include/event2/bufferevent_compat.h \
-	include/event2/bufferevent_ssl.h \
 	include/event2/bufferevent_struct.h include/event2/dns.h \
 	include/event2/dns_compat.h include/event2/dns_struct.h \
 	include/event2/event.h include/event2/event_compat.h \
@@ -603,10 +589,24 @@ am__noinst_HEADERS_DIST = include/event2/buffer.h \
 	include/event2/rpc_struct.h include/event2/tag.h \
 	include/event2/tag_compat.h include/event2/thread.h \
 	include/event2/util.h include/event2/visibility.h \
-	sample/hostcheck.h sample/openssl_hostname_validation.h \
-	test/regress.h test/regress_thread.h test/tinytest.h \
-	test/tinytest_local.h test/tinytest_macros.h \
-	WIN32-Code/nmake/evconfig-private.h \
+	include/event2/bufferevent_ssl.h
+am__noinst_HEADERS_DIST = include/event2/buffer.h \
+	include/event2/buffer_compat.h include/event2/bufferevent.h \
+	include/event2/bufferevent_compat.h \
+	include/event2/bufferevent_struct.h include/event2/dns.h \
+	include/event2/dns_compat.h include/event2/dns_struct.h \
+	include/event2/event.h include/event2/event_compat.h \
+	include/event2/event_struct.h include/event2/http.h \
+	include/event2/http_compat.h include/event2/http_struct.h \
+	include/event2/keyvalq_struct.h include/event2/listener.h \
+	include/event2/rpc.h include/event2/rpc_compat.h \
+	include/event2/rpc_struct.h include/event2/tag.h \
+	include/event2/tag_compat.h include/event2/thread.h \
+	include/event2/util.h include/event2/visibility.h \
+	include/event2/bufferevent_ssl.h sample/hostcheck.h \
+	sample/openssl_hostname_validation.h test/regress.h \
+	test/regress_thread.h test/tinytest.h test/tinytest_local.h \
+	test/tinytest_macros.h WIN32-Code/nmake/evconfig-private.h \
 	WIN32-Code/nmake/event2/event-config.h WIN32-Code/getopt.h \
 	WIN32-Code/getopt.c WIN32-Code/getopt_long.c WIN32-Code/tree.h \
 	bufferevent-internal.h changelist-internal.h \
@@ -913,7 +913,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
-PTHREAD_LIBS = @PTHREAD_LIBS@ $(am__append_12)
+PTHREAD_LIBS = @PTHREAD_LIBS@ $(am__append_13)
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -976,8 +976,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # 'foreign' means that we're not enforcing GNU package rules strictly.
-# '1.9' means that we need automake 1.9 or later (and we do).
-AUTOMAKE_OPTIONS = foreign 1.9 subdir-objects
+# '1.11.2' means that we need automake 1.11.2 or later (and we do).
+AUTOMAKE_OPTIONS = foreign 1.11.2 subdir-objects
 ACLOCAL_AMFLAGS = -I m4
 
 # This is the "Release" of the Libevent ABI.  It takes precedence over
@@ -1008,7 +1008,7 @@ RELEASE = -release 2.1
 #
 # Once an RC is out, DO NOT MAKE ANY ABI-BREAKING CHANGES IN THAT SERIES
 # UNLESS YOU REALLY REALLY HAVE TO.
-VERSION_INFO = 6:4:0
+VERSION_INFO = 7:0:0
 
 # History:          RELEASE    VERSION_INFO
 #  2.0.1-alpha --     2.0        1:0:0
@@ -1043,7 +1043,8 @@ VERSION_INFO = 6:4:0
 #  2.1.7-beta  --     2.1        6:1:0 (ABI changed slightly)
 #  2.1.8-stable--     2.1        6:2:0 (No ABI change)
 #  2.1.9-beta--       2.1        6:3:0 (No ABI change)
-#  2.1.10-stable--    2.1        6:4:0 (No ABI change)
+#  2.1.10-stable--    2.1        6:4:0 (No ABI change, WRONG)
+#  2.1.11-stable--    2.1        7:0:0 (ABI changed)
 
 # ABI version history for this package effectively restarts every time
 # we change RELEASE.  Version 1.4.x had RELEASE of 1.4.
@@ -1100,17 +1101,18 @@ CMAKE_FILES = \
 EXTRA_DIST = ChangeLog-1.4 ChangeLog-2.0 Doxyfile LICENSE \
 	Makefile.nmake test/Makefile.nmake autogen.sh event_rpcgen.py \
 	libevent.pc.in make-event-config.sed whatsnew-2.0.txt \
-	whatsnew-2.1.txt $(CMAKE_FILES) $(PLATFORM_DEPENDENT_SRC) \
-	test/check-dumpevents.py test/regress.gen.c test/regress.gen.h \
-	test/regress.rpc test/rpcgen_wrapper.sh \
-	test/print-winsock-errors.c test/test.sh
+	whatsnew-2.1.txt README.md $(CMAKE_FILES) \
+	$(PLATFORM_DEPENDENT_SRC) test/check-dumpevents.py \
+	test/regress.gen.c test/regress.gen.h test/regress.rpc \
+	test/rpcgen_wrapper.sh test/print-winsock-errors.c \
+	test/test.sh
 LIBEVENT_LIBS_LA = libevent.la libevent_core.la libevent_extra.la \
 	$(am__append_1) $(am__append_3)
 @INSTALL_LIBEVENT_TRUE@lib_LTLIBRARIES = $(LIBEVENT_LIBS_LA)
 @INSTALL_LIBEVENT_TRUE@pkgconfig_DATA = $(LIBEVENT_PKGCONFIG)
 @INSTALL_LIBEVENT_FALSE@noinst_LTLIBRARIES = $(LIBEVENT_LIBS_LA)
 EXTRA_SOURCE = 
-noinst_HEADERS = $(am__append_5) $(am__append_7) test/regress.h \
+noinst_HEADERS = $(am__append_6) $(am__append_8) test/regress.h \
 	test/regress_thread.h test/tinytest.h test/tinytest_local.h \
 	test/tinytest_macros.h WIN32-Code/nmake/evconfig-private.h \
 	WIN32-Code/nmake/event2/event-config.h WIN32-Code/getopt.h \
@@ -1123,46 +1125,33 @@ noinst_HEADERS = $(am__append_5) $(am__append_7) test/regress.h \
 	kqueue-internal.h log-internal.h minheap-internal.h \
 	mm-internal.h ratelim-internal.h ratelim-internal.h \
 	strlcpy-internal.h time-internal.h util-internal.h \
-	openssl-compat.h $(am__append_26)
+	openssl-compat.h $(am__append_27)
 CLEANFILES = test/rpcgen-attempted
 DISTCLEANFILES = test/regress.gen.c test/regress.gen.h *~ libevent.pc \
 	libevent_core.pc libevent_extra.pc \
 	./include/event2/event-config.h
-BUILT_SOURCES = $(am__append_11) include/event2/event-config.h
+BUILT_SOURCES = $(am__append_12) include/event2/event-config.h
 include_event2dir = $(includedir)/event2
-EVENT2_EXPORT = \
-	include/event2/buffer.h \
-	include/event2/buffer_compat.h \
+EVENT2_EXPORT = include/event2/buffer.h include/event2/buffer_compat.h \
 	include/event2/bufferevent.h \
 	include/event2/bufferevent_compat.h \
-	include/event2/bufferevent_ssl.h \
-	include/event2/bufferevent_struct.h \
-	include/event2/dns.h \
-	include/event2/dns_compat.h \
-	include/event2/dns_struct.h \
-	include/event2/event.h \
-	include/event2/event_compat.h \
-	include/event2/event_struct.h \
-	include/event2/http.h \
-	include/event2/http_compat.h \
-	include/event2/http_struct.h \
-	include/event2/keyvalq_struct.h \
-	include/event2/listener.h \
-	include/event2/rpc.h \
-	include/event2/rpc_compat.h \
-	include/event2/rpc_struct.h \
-	include/event2/tag.h \
-	include/event2/tag_compat.h \
-	include/event2/thread.h \
-	include/event2/util.h \
-	include/event2/visibility.h
-
+	include/event2/bufferevent_struct.h include/event2/dns.h \
+	include/event2/dns_compat.h include/event2/dns_struct.h \
+	include/event2/event.h include/event2/event_compat.h \
+	include/event2/event_struct.h include/event2/http.h \
+	include/event2/http_compat.h include/event2/http_struct.h \
+	include/event2/keyvalq_struct.h include/event2/listener.h \
+	include/event2/rpc.h include/event2/rpc_compat.h \
+	include/event2/rpc_struct.h include/event2/tag.h \
+	include/event2/tag_compat.h include/event2/thread.h \
+	include/event2/util.h include/event2/visibility.h \
+	$(am__append_5)
 @INSTALL_LIBEVENT_TRUE@include_event2_HEADERS = $(EVENT2_EXPORT)
 @INSTALL_LIBEVENT_TRUE@nodist_include_event2_HEADERS = include/event2/event-config.h
 @INSTALL_LIBEVENT_FALSE@nodist_noinst_HEADERS = include/event2/event-config.h
 SAMPLES = sample/dns-example sample/event-read-fifo sample/hello-world \
 	sample/http-server sample/http-connect sample/signal-test \
-	sample/time-test $(am__append_6)
+	sample/time-test $(am__append_7)
 @OPENSSL_TRUE@sample_le_proxy_SOURCES = sample/le-proxy.c
 @OPENSSL_TRUE@sample_le_proxy_LDADD = libevent.la libevent_openssl.la $(OPENSSL_LIBS) $(OPENSSL_LIBADD)
 @OPENSSL_TRUE@sample_le_proxy_CPPFLAGS = $(AM_CPPFLAGS) $(OPENSSL_INCS)
@@ -1244,15 +1233,15 @@ test_regress_SOURCES = test/regress.c test/regress.gen.c \
 	test/regress_minheap.c test/regress_rpc.c \
 	test/regress_testutils.c test/regress_testutils.h \
 	test/regress_util.c test/tinytest.c $(regress_thread_SOURCES) \
-	$(regress_zlib_SOURCES) $(am__append_13) $(am__append_14)
+	$(regress_zlib_SOURCES) $(am__append_14) $(am__append_15)
 @BUILD_WIN32_TRUE@@THREADS_TRUE@regress_thread_SOURCES = test/regress_thread.c
 @PTHREADS_TRUE@regress_thread_SOURCES = test/regress_thread.c
 @ZLIB_REGRESS_TRUE@regress_zlib_SOURCES = test/regress_zlib.c
 test_regress_LDADD = $(LIBEVENT_GC_SECTIONS) libevent_core.la \
 	libevent_extra.la $(PTHREAD_LIBS) $(ZLIB_LIBS) \
-	$(am__append_16)
+	$(am__append_17)
 test_regress_CPPFLAGS = $(AM_CPPFLAGS) $(PTHREAD_CFLAGS) \
-	$(ZLIB_CFLAGS) -Itest $(am__append_15)
+	$(ZLIB_CFLAGS) -Itest $(am__append_16)
 test_regress_LDFLAGS = $(PTHREAD_CFLAGS)
 test_bench_SOURCES = test/bench.c
 test_bench_LDADD = $(LIBEVENT_GC_SECTIONS) libevent.la
@@ -1264,16 +1253,16 @@ test_bench_httpclient_SOURCES = test/bench_httpclient.c
 test_bench_httpclient_LDADD = $(LIBEVENT_GC_SECTIONS) libevent_core.la
 @BUILD_WIN32_FALSE@SYS_LIBS = 
 @BUILD_WIN32_TRUE@SYS_LIBS = -lws2_32 -lshell32 -ladvapi32
-@BUILD_WIN32_FALSE@SYS_SRC = $(am__append_18) $(am__append_19) \
-@BUILD_WIN32_FALSE@	$(am__append_20) $(am__append_21) \
-@BUILD_WIN32_FALSE@	$(am__append_22) $(am__append_23) \
-@BUILD_WIN32_FALSE@	$(am__append_24) $(am__append_25)
+@BUILD_WIN32_FALSE@SYS_SRC = $(am__append_19) $(am__append_20) \
+@BUILD_WIN32_FALSE@	$(am__append_21) $(am__append_22) \
+@BUILD_WIN32_FALSE@	$(am__append_23) $(am__append_24) \
+@BUILD_WIN32_FALSE@	$(am__append_25) $(am__append_26)
 @BUILD_WIN32_TRUE@SYS_SRC = win32select.c buffer_iocp.c event_iocp.c \
-@BUILD_WIN32_TRUE@	bufferevent_async.c $(am__append_17) \
-@BUILD_WIN32_TRUE@	$(am__append_18) $(am__append_19) \
-@BUILD_WIN32_TRUE@	$(am__append_20) $(am__append_21) \
-@BUILD_WIN32_TRUE@	$(am__append_22) $(am__append_23) \
-@BUILD_WIN32_TRUE@	$(am__append_24) $(am__append_25)
+@BUILD_WIN32_TRUE@	bufferevent_async.c $(am__append_18) \
+@BUILD_WIN32_TRUE@	$(am__append_19) $(am__append_20) \
+@BUILD_WIN32_TRUE@	$(am__append_21) $(am__append_22) \
+@BUILD_WIN32_TRUE@	$(am__append_23) $(am__append_24) \
+@BUILD_WIN32_TRUE@	$(am__append_25) $(am__append_26)
 @BUILD_WIN32_FALSE@SYS_INCLUDES = 
 @BUILD_WIN32_TRUE@SYS_INCLUDES = -IWIN32-Code -IWIN32-Code/nmake
 CORE_SRC = \
