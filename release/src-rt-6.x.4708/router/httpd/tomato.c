@@ -904,7 +904,9 @@ static const nvset_t nvset_list[] = {
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
 	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
-//	{ "dnsmasq_norw",		V_01				},
+#ifdef TCONFIG_TOR
+	{ "dnsmasq_onion_support",	V_01				},
+#endif
 
 // advanced-firewall
 	{ "block_wan",			V_01				},
@@ -1643,7 +1645,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client1_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client1_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client1_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client1_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client1_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client1_custom",		V_NONE				},
 	{ "vpn_client1_static",		V_NONE				},
@@ -1680,7 +1682,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client2_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client2_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client2_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client2_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client2_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client2_custom",		V_NONE				},
 	{ "vpn_client2_static",		V_NONE				},
@@ -1717,7 +1719,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client3_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client3_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client3_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client3_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client3_custom",		V_NONE				},
 	{ "vpn_client3_static",		V_NONE				},

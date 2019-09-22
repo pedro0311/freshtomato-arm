@@ -267,11 +267,10 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 		if (routingTables[i] == this)
 		{
 			clientnum = i+1;
-			if (eval('vpn'+(i+1)+'up') && fom._service.value.indexOf('client'+(i+1)) < 0)
+			if (eval('vpn'+clientnum+'up') && fom._service.value.indexOf('client'+clientnum) < 0)
 			{
-				if ( fom._service.value != "" )
-					fom._service.value += ",";
-				fom._service.value += 'vpnclient'+(i+1)+'-restart';
+				if (fom._service.value != "") fom._service.value += ",";
+				fom._service.value += 'vpnclient'+clientnum+'-restart';
 			}
 		}
 	}
@@ -280,8 +279,8 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 	/* Verify fields in this row of the table */
 	if (f[2].value == "" ) { ferror.set(f[2], "Value is mandatory.", quiet); ret = 0; }
 	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) { ferror.set(f[2], "Value cannot contain '<' or '>' characters.", quiet); ret = 0; }
-	if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0) { ferror.set(f[2], "Value cannot contain 'space' or ',' characters. Only one IP or Domain per entry.", quiet); ret = 0; }
-	if (f[2].value.indexOf(' ') >= 0) { ferror.set(f[2], "Value cannot contain '-' character. IP range is not supported.", quiet); ret = 0; }
+	if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0 || f[2].value.indexOf('\t') >= 0) { ferror.set(f[2], "Value cannot contain 'space', 'tab'  or ',' characters. Only one IP or Domain per entry.", quiet); ret = 0; }
+	if (f[2].value.indexOf('-') >= 0 && f[1].value != 3) { ferror.set(f[2], "Value cannot contain '-' character. IP range is not supported.", quiet); ret = 0; }
 	return ret;
 }
 RouteGrid.prototype.fieldValuesToData = function(row) {
@@ -336,6 +335,27 @@ function save() {
 	form.submit(fom, 1);
 
 	changed = 0;
+}
+
+RouteGrid.prototype.rpDel = function(row) {
+	var fom = E('t_fom');
+	var clientnum = 1;
+
+	row = PR(row);
+	TGO(row).moving = null;
+	row.parentNode.removeChild(row);
+	this.recolor();
+	this.rpHide();
+
+	for (i = 0; i < tabs.length; ++i) {
+		if (routingTables[i] == this) {
+			clientnum = i+1;
+			if (eval('vpn'+clientnum+'up') && fom._service.value.indexOf('client'+clientnum) < 0) {
+				if (fom._service.value != "") fom._service.value += ",";
+				fom._service.value += 'vpnclient'+clientnum+'-restart';
+			}
+		}
+	}
 }
 
 function init() {
@@ -480,7 +500,7 @@ for (i = 0; i < tabs.length; ++i)
 	createFieldTable('', [
 		{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval( 'nvram.vpn_'+t+'_poll' ), suffix: '&nbsp;<small>(in minutes, 0 to disable)<\/small>' },
 		{ title: 'Redirect Internet traffic', multi: [
-			{ name: 'vpn_'+t+'_rgw', type: 'select', options: [ [0, 'No'], [1, 'All'], [2, 'Routing Policy'] ], value: eval('nvram.vpn_'+t+'_rgw') },
+			{ name: 'vpn_'+t+'_rgw', type: 'select', options: [ [0, 'No'], [1, 'All'], [2, 'Routing Policy'], [3, 'Routing Policy (strict)'] ], value: eval('nvram.vpn_'+t+'_rgw') },
 			{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval( 'nvram.vpn_'+t+'_gw' ), prefix: '<span id=\''+t+'_gateway\'> Gateway:&nbsp', suffix: '<\/span>'} ] },
 		{ title: 'Accept DNS configuration', name: 'vpn_'+t+'_adns', type: 'select', options: [[0, 'Disabled'],[1, 'Relaxed'],[2, 'Strict'],[3, 'Exclusive']], value: eval( 'nvram.vpn_'+t+'_adns' ) },
 		{ title: 'Cipher Negotiation', name: 'vpn_'+t+'_ncp_enable', type: 'select', options: [[0, 'Disabled'],[1, 'Enabled (with fallback)'],[2, 'Enabled']], value: eval( 'nvram.vpn_'+t+'_ncp_enable' ) },

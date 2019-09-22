@@ -1247,6 +1247,8 @@ struct packet_type {
 #include <linux/interrupt.h>
 #include <linux/notifier.h>
 
+int call_netdevice_notifiers(unsigned long val, struct net_device *dev);
+
 extern rwlock_t				dev_base_lock;		/* Device list lock */
 
 
@@ -1322,6 +1324,12 @@ extern void		free_netdev(struct net_device *dev);
 extern void		synchronize_net(void);
 extern int 		register_netdevice_notifier(struct notifier_block *nb);
 extern int		unregister_netdevice_notifier(struct notifier_block *nb);
+
+struct netdev_notifier_info {
+    struct net_device	*dev;
+    struct netlink_ext_ack	*extack;
+};
+
 extern int		init_dummy_netdev(struct net_device *dev);
 extern void		netdev_resync_ops(struct net_device *dev);
 
@@ -1967,6 +1975,15 @@ static inline void __netif_tx_unlock_bh(struct netdev_queue *txq)
 static inline void txq_trans_update(struct netdev_queue *txq)
 {
 	if (txq->xmit_lock_owner != -1)
+		txq->trans_start = jiffies;
+}
+
+/* legacy drivers only, netdev_start_xmit() sets txq->trans_start */
+static inline void netif_trans_update(struct net_device *dev)
+{
+	struct netdev_queue *txq = netdev_get_tx_queue(dev, 0);
+
+	if (txq->trans_start != jiffies)
 		txq->trans_start = jiffies;
 }
 

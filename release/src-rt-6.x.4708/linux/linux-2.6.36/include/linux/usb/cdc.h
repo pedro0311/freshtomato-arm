@@ -1,11 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
+ * USB CDC common helpers
+ * +
  * USB Communications Device Class (CDC) definitions
  *
  * CDC says how to talk to lots of different types of network adapters,
  * notably ethernet adapters and various modems.  It's used mostly with
  * firmware based USB peripherals.
+ *
+ * Copyright (c) 2015 Oliver Neukum <oneukum@suse.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  */
-
 #ifndef __LINUX_USB_CDC_H
 #define __LINUX_USB_CDC_H
 
@@ -56,6 +64,7 @@
 #define USB_CDC_OBEX_TYPE		0x15
 #define USB_CDC_NCM_TYPE		0x1a
 #define USB_CDC_MBIM_TYPE		0x1b
+#define USB_CDC_MBIM_EXTENDED_TYPE	0x1c
 
 /* "Header Functional Descriptor" from CDC spec  5.2.3.1 */
 struct usb_cdc_header_desc {
@@ -198,12 +207,24 @@ struct usb_cdc_mbim_desc {
 	__u8	bDescriptorSubType;
 
 	__le16	bcdMBIMVersion;
-	__le16	wMaxControlMessage;
-	__u8	bNumberFilters;
-	__u8	bMaxFilterSize;
-	__le16	wMaxSegmentSize;
-	__u8	bmNetworkCapabilities;
-} __attribute__	((packed));
+	__le16  wMaxControlMessage;
+	__u8    bNumberFilters;
+	__u8    bMaxFilterSize;
+	__le16  wMaxSegmentSize;
+	__u8    bmNetworkCapabilities;
+} __attribute__ ((packed));
+
+/* "MBIM Extended Functional Descriptor" from CDC MBIM spec 1.0 errata-1 */
+struct usb_cdc_mbim_extended_desc {
+	__u8	bLength;
+	__u8	bDescriptorType;
+	__u8	bDescriptorSubType;
+
+	__le16	bcdMBIMExtendedVersion;
+	__u8	bMaxOutstandingCommandMessages;
+	__le16	wMTU;
+} __attribute__ ((packed));
+
 /*-------------------------------------------------------------------------*/
 
 /*
@@ -349,10 +370,10 @@ struct usb_cdc_ncm_nth32 {
 #define USB_CDC_NCM_NDP32_CRC_SIGN	0x316D636E /* ncm1 */
 #define USB_CDC_NCM_NDP32_NOCRC_SIGN	0x306D636E /* ncm0 */
 
-#define USB_CDC_MBIM_NDP16_IPS_SIGN	0x00535049 /* IPS<sessionID> : IPS0 for now */
-#define USB_CDC_MBIM_NDP32_IPS_SIGN	0x00737069 /* ips<sessionID> : ips0 for now */
-#define USB_CDC_MBIM_NDP16_DSS_SIGN	0x00535344 /* DSS<sessionID> */
-#define USB_CDC_MBIM_NDP32_DSS_SIGN	0x00737364 /* dss<sessionID> */
+#define USB_CDC_MBIM_NDP16_IPS_SIGN     0x00535049 /* IPS<sessionID> : IPS0 for now */
+#define USB_CDC_MBIM_NDP32_IPS_SIGN     0x00737069 /* ips<sessionID> : ips0 for now */
+#define USB_CDC_MBIM_NDP16_DSS_SIGN     0x00535344 /* DSS<sessionID> */
+#define USB_CDC_MBIM_NDP32_DSS_SIGN     0x00737364 /* dss<sessionID> */
 
 /* 16-bit NCM Datagram Pointer Entry */
 struct usb_cdc_ncm_dpe16 {
@@ -430,5 +451,42 @@ struct usb_cdc_ncm_ndp_input_size {
 /* CDC NCM subclass 6.2.11 SetCrcMode */
 #define USB_CDC_NCM_CRC_NOT_APPENDED			0x00
 #define USB_CDC_NCM_CRC_APPENDED			0x01
+
+
+/*
+ * inofficial magic numbers
+ */
+
+#define CDC_PHONET_MAGIC_NUMBER		0xAB
+
+/*
+ * parsing CDC headers
+ */
+
+struct usb_cdc_parsed_header {
+	struct usb_cdc_union_desc *usb_cdc_union_desc;
+	struct usb_cdc_header_desc *usb_cdc_header_desc;
+
+	struct usb_cdc_call_mgmt_descriptor *usb_cdc_call_mgmt_descriptor;
+	struct usb_cdc_acm_descriptor *usb_cdc_acm_descriptor;
+	struct usb_cdc_country_functional_desc *usb_cdc_country_functional_desc;
+	struct usb_cdc_network_terminal_desc *usb_cdc_network_terminal_desc;
+	struct usb_cdc_ether_desc *usb_cdc_ether_desc;
+	struct usb_cdc_dmm_desc *usb_cdc_dmm_desc;
+	struct usb_cdc_mdlm_desc *usb_cdc_mdlm_desc;
+	struct usb_cdc_mdlm_detail_desc *usb_cdc_mdlm_detail_desc;
+	struct usb_cdc_obex_desc *usb_cdc_obex_desc;
+	struct usb_cdc_ncm_desc *usb_cdc_ncm_desc;
+	struct usb_cdc_mbim_desc *usb_cdc_mbim_desc;
+	struct usb_cdc_mbim_extended_desc *usb_cdc_mbim_extended_desc;
+
+	bool phonet_magic_present;
+};
+
+struct usb_interface;
+int cdc_parse_cdc_header(struct usb_cdc_parsed_header *hdr,
+				struct usb_interface *intf,
+				u8 *buffer,
+				int buflen);
 
 #endif /* __LINUX_USB_CDC_H */
