@@ -93,14 +93,14 @@ void start_usb(void)
 	model = get_model();
 
 	if ((model == MODEL_DIR868L)) {
-		xstart("gpio", "enable", "10");
+		set_gpio(10, T_HIGH);
 	}
 	else if ((model == MODEL_WS880)) {
-		xstart("gpio", "enable", "7");
+		set_gpio(7, T_HIGH);
 	}
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400)) {
-		xstart("gpio", "enable", "0");
+		set_gpio(0, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
 		 (model == MODEL_EA6400) ||
@@ -108,9 +108,9 @@ void start_usb(void)
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
-		xstart("gpio", "enable", "9");
+		set_gpio(9, T_HIGH);
 		if ((model == MODEL_WZR1750)) {
-		  xstart("gpio", "disable", "10"); /* usb3.0 */
+			 set_gpio(10, T_LOW); /* usb3.0 */
 		}
 	}
 
@@ -428,14 +428,14 @@ void stop_usb(void)
 	}
 
 	if ((model == MODEL_DIR868L)) {
-		xstart("gpio", "disable", "10");
+		set_gpio(10, T_LOW);
 	}
 	else if ((model == MODEL_WS880)) {
-		xstart("gpio", "disable", "7");
+		set_gpio(7, T_LOW);
 	}
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400)) {
-		xstart("gpio", "disable", "0");
+		set_gpio(0, T_LOW);
 	}
 	else if ((model == MODEL_EA6350v1) ||
 		 (model == MODEL_EA6400) ||
@@ -443,10 +443,10 @@ void stop_usb(void)
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
-		xstart("gpio", "disable", "9");
-		if ((model == MODEL_WZR1750)) {
-		  xstart("gpio", "enable", "10"); /* usb3.0 */
-		}
+		set_gpio(9, T_LOW);
+			if ((model == MODEL_WZR1750)) {
+				set_gpio(10, T_HIGH); /* usb3.0 */
+			}
 	}
 #endif
 

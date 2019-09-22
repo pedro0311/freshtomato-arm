@@ -594,28 +594,6 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 	close(sfd);
 }
 
-/*
-const char *default_wanif(void)
-{
-	return ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) ||
-		(check_hw_type() == HW_BCM4712)) ? "vlan1" : "eth1";
-}
-*/
-
-/*
-const char *default_wlif(void)
-{
-	switch (check_hw_type()) {
-	case HW_BCM4702:
-	case HW_BCM4704_BCM5325F:
-	case HW_BCM4704_BCM5325F_EWC:
-		return "eth2";
-	}
-	return "eth1";
-
-}
-*/
-
 int _vstrsep(char *buf, const char *sep, ...)
 {
 	va_list ap;

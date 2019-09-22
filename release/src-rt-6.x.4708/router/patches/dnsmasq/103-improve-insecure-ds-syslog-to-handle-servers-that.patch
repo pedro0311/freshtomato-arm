@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnssec.c
 +++ dnsmasq/src/dnssec.c
-@@ -873,7 +873,10 @@ int dnssec_validate_ds(time_t now, struc
+@@ -898,7 +898,10 @@ int dnssec_validate_ds(time_t now, struc
    
    if (rc == STAT_INSECURE)
      {

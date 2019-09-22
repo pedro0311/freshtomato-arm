@@ -5004,7 +5004,6 @@ static void sysinit(void)
 {
 	static int noconsole = 0;
 	static const time_t tm = 0;
-	int hardware;
 	int i;
 	DIR *d;
 	struct dirent *de;
@@ -5144,14 +5143,7 @@ static void sysinit(void)
 	modprobe("igs");
 #endif
 
-	switch (hardware = check_hw_type()) {
-	case HW_BCM4785:
-		modprobe("bcm57xx");
-		break;
-	default:
-		modprobe("et");
-		break;
-	}
+	modprobe("et");
 
 	/* load after initnvram as Broadcom Wl require pci/x/1/devid and pci/x/1/macaddr nvram to be set first for DIR-865L
 	 * else 5G interface will not start!
