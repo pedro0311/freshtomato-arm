@@ -134,16 +134,7 @@ unsigned long get_register_value(unsigned short id, unsigned short num)
 // xref: set_register_value
 static char *get_device_name(void)
 {
-	switch (check_hw_type()){
-	case BCM5325E_CHIP:
-	case BCM4704_BCM5325F_CHIP:
-	case BCM5352E_CHIP:
-		return "eth0";
-	case BCM4702_CHIP:
-	case BCM4712_CHIP:
-	default:
-		return "qos0";
-	}
+	return "qos0";
 }
 
 // xref: sys_netdev_ioctl

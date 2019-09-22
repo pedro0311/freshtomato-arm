@@ -58,6 +58,26 @@ cleanupRouting() {
 	sed -i $DNSMASQ_IPSET -e "/vpnrouting$ID/d"
 }
 
+initTable() {
+	local LANIFNAME=$(nvram get lan_ifname)
+	$LOGS "Creating VPN routing table (mode $VPN_REDIR)"
+
+	# copy LAN routes and only those related to the intended tunnel
+	[ "$VPN_REDIR" -eq 3 ] && {
+		ip route show table main dev $LANIFNAME | while read ROUTE; do
+			ip route add table $ID $ROUTE dev $LANIFNAME
+		done
+		ip route show table main dev $dev | while read ROUTE; do
+			ip route add table $ID $ROUTE dev $dev
+		done
+	# copy routes from main routing table (exclude vpns and default gateway)
+	} || {
+		ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
+			ip route add table $ID $ROUTE
+		done
+	}
+}
+
 startRouting() {
 	local DNSMASQ=0 VAL1 VAL2 VAL3 ROUTE
 
@@ -69,10 +89,7 @@ startRouting() {
 	ip route add table $ID default dev $IFACE
 	ip rule add fwmark $ID table $ID priority 90
 
-	# copy routes from main routing table (exclude vpns and default gateway)
-	ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
-		ip route add table $ID $ROUTE
-	done
+	initTable
 
 	ipset create vpnrouting$ID hash:ip
 
@@ -164,8 +181,9 @@ checkPid() {
 
 find_iface
 checkPid
+VPN_REDIR=$(NV vpn_"$SERVICE"_rgw)
 
-[ "$script_type" == "route-up" -a "$(NV vpn_"$SERVICE"_rgw)" -lt 2 ] && {
+[ "$script_type" == "route-up" -a "$VPN_REDIR" -lt 2 ] && {
 	$LOGS "Skipping, $SERVICE not in routing policy mode"
 	checkRestart
 	exit 0

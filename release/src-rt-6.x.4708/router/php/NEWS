@@ -1,5 +1,40 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+29 Aug 2019, PHP 7.2.22
+
+- Core:
+  . Fixed bug #78363 (Buffer overflow in zendparse). (Nikita)
+  . Fixed bug #78379 (Cast to object confuses GC, causes crash). (Dmitry)
+
+- Curl:
+  . Fixed bug #77946 (Bad cURL resources returned by curl_multi_info_read()).
+    (Abyr Valg)
+
+- Exif:
+  . Fixed bug #78333 (Exif crash (bus error) due to wrong alignment and
+    invalid cast). (Nikita)
+
+- Iconv:
+  . Fixed bug #78342 (Bus error in configure test for iconv //IGNORE). (Rainer
+    Jung)
+
+- LiteSpeed:
+  . Updated to LiteSpeed SAPI V7.5 (Fixed clean shutdown). (George Wang)
+
+- MySQLnd:
+  . Fixed bug #78179 (MariaDB server version incorrectly detected). (cmb)
+
+- Opcache:
+  . Fixed bug #77191 (Assertion failure in dce_live_ranges() when silencing is
+    used). (Nikita)
+
+- Standard:
+  . Fixed bug #69100 (Bus error from stream_copy_to_stream (file -> SSL stream)
+    with invalid length). (Nikita)
+  . Fixed bug #78282 (atime and mtime mismatch). (cmb)
+  . Fixed bug #78326 (improper memory deallocation on stream_get_contents()
+    with fixed length buffer). (Albert Casademont)
+
 01 Aug 2019, PHP 7.2.21
 
 - Date:
