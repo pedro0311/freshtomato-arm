@@ -1319,7 +1319,7 @@ libusb10: libusb10/Makefile
 libusb10-install:
 	install -D libusb10/libusb/.libs/libusb-1.0.so $(INSTALLDIR)/libusb10/usr/lib/libusb-1.0.so
 	$(STRIP) $(INSTALLDIR)/libusb10/usr/lib/*.so
-	cd $(INSTALLDIR)/libusb10/usr/lib && ln -sf libusb-1.0.so libusb-1.0.so.1
+	cd $(INSTALLDIR)/libusb10/usr/lib && ln -sf libusb-1.0.so libusb-1.0.so.0
 
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
@@ -2336,14 +2336,16 @@ lzo-install:
 		ln -sf liblzo2.so.2.0.0 liblzo2.so
 
 openvpn/.conf: openssl lzo
-	cd openvpn && autoreconf && \
+	cd $(TOP)/openvpn && autoreconf && \
+	OPENSSL_CFLAGS="-I$(TOP)/openssl/include" \
+	OPENSSL_LIBS="-L$(TOP)/openssl -lcrypto -lssl" \
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/openssl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/openssl/include" \
-	$(CONFIGURE) --prefix= --with-crypto-library=openssl --disable-debug \
-		--disable-plugin-auth-pam --disable-plugin-down-root --enable-management \
-		OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl/include" OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl" \
-		PLUGINDIR="/lib" ac_cv_lib_resolv_gethostbyname=no
+	PLUGINDIR="/lib" \
+	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+		--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+		ac_cv_lib_resolv_gethostbyname=no
 	touch openvpn/.conf
 
 openvpn: openvpn/.conf
