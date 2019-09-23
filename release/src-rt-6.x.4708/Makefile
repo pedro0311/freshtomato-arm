@@ -88,7 +88,7 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
-ifeq ($(ASUS_TRX),CISCO)
+ifeq ($(ASUS_TRX),LINKSYS2)
 ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
