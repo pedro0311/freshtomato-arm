@@ -58,9 +58,9 @@ int check_hw_type(void)
 
 	switch (strtoul(s, NULL, 0)) {
 #ifdef CONFIG_BCMWL6A
-	case 0x0646:	/* EA6400 */
-	case 0x0665:	/* R7000,R1D */
-	case 0xf646:	/* EA6700,WZR-1750, R6400 */
+	case 0x0646:	/* EA6400, R6400 */
+	case 0x0665:	/* R7000, R1D */
+	case 0xf646:	/* EA6700, WZR-1750 */
 	case 0xd646:	/* EA6900 */
 	case 0xe646:	/* EA6200, EA6350v1 */
 		return HW_BCM4708; /* and also for 4709 right now!  */
@@ -80,10 +80,8 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("model", "R1D"))) return MODEL_R1D;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-N18U"))) return MODEL_RTN18U;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC56U"))) return MODEL_RTAC56U;
-		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U;
-		/* REMOVE: Same as RT-AC68U, no nvram "model=RT-AC68R" according to CFE for RT-AC68R */
-//		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68R"))) return MODEL_RTAC68U;
-		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U;
+		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68R/U */
+		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68P/U B1 */
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H245T00_NETGEAR"))) return MODEL_R6250;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H240T00_NETGEAR"))) return MODEL_R6300v2;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H240T70_NETGEAR"))) return MODEL_R6300v2;
