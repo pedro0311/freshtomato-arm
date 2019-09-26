@@ -88,7 +88,7 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
-ifeq ($(ASUS_TRX),CISCO)
+ifeq ($(ASUS_TRX),LINKSYS2)
 ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
@@ -726,6 +726,10 @@ define BusyboxOptions
 		sed -i "/CONFIG_FEATURE_SHOW_THREADS/d" $(1); \
 		echo "CONFIG_FEATURE_SHOW_THREADS=y" >>$(1); \
 	fi; \
+	if [ "$(FANCTRL)" = "y" ]; then \
+		sed -i "/CONFIG_RENICE/d" $(1); \
+		echo "CONFIG_RENICE=y" >>$(1); \
+	fi; \
 	)
 endef
 
@@ -923,17 +927,17 @@ define KernelConfig
 			echo "CONFIG_BRIDGE_EBT_IP6=m" >>$(1); \
 		fi; \
 	fi; \
-        sed -i "/CONFIG_NVRAM_64K/d" $(1); \
-        if [ "$(NVRAM_64K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_64K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_64K/d" $(1); \
+	if [ "$(NVRAM_64K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_64K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
 	fi; \
-        sed -i "/CONFIG_NVRAM_128K/d" $(1); \
-        if [ "$(NVRAM_128K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_128K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_128K/d" $(1); \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_128K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
 	fi; \
 	if [ "$(SATA)" = "y" ]; then \
 		sed -i "/CONFIG_CMDLINE/d" $(1); \
