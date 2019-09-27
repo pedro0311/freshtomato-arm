@@ -4,7 +4,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: wlioctl.h 455621 2014-02-14 20:59:32Z $
+ * $Id: wlioctl.h 532344 2015-02-05 19:21:37Z $
  */
 
 #ifndef _wlioctl_h_
@@ -59,6 +59,36 @@ typedef struct remote_ioctl {
 #endif
 } rem_ioctl_t;
 #define REMOTE_SIZE	sizeof(rem_ioctl_t)
+
+typedef struct {
+	uint32 num;
+	chanspec_t list[1];
+} chanspec_list_t;
+
+#define DFS_SCAN_S_IDLE				-1
+#define DFS_SCAN_S_RADAR_FREE			0
+#define DFS_SCAN_S_RADAR_FOUND			1
+#define DFS_SCAN_S_INPROGESS			2
+#define DFS_SCAN_S_SCAN_ABORTED			3
+#define DFS_SCAN_S_SCAN_MODESW_INPROGRESS	4
+
+/* DFS Forced param */
+typedef struct wl_dfs_forced_params {
+	chanspec_t chspec;
+	uint16 version;
+	chanspec_list_t chspec_list;
+} wl_dfs_forced_t;
+
+#define DFS_PREFCHANLIST_VER 0x01
+#define WL_CHSPEC_LIST_FIXED_SIZE	OFFSETOF(chanspec_list_t, list)
+/* size of dfs forced param size given n channels are in the list */
+#define WL_DFS_FORCED_PARAMS_SIZE(n) \
+	(sizeof(wl_dfs_forced_t) + (((n) < 1) ? (0) : (((n) - 1)* sizeof(chanspec_t))))
+#define WL_DFS_FORCED_PARAMS_FIXED_SIZE \
+	(WL_CHSPEC_LIST_FIXED_SIZE + OFFSETOF(wl_dfs_forced_t, chspec_list))
+#define WL_DFS_FORCED_PARAMS_MAX_SIZE \
+	WL_DFS_FORCED_PARAMS_FIXED_SIZE + (WL_NUMCHANSPECS * sizeof(chanspec_t))
+
 #ifdef EFI
 #define BCMWL_IOCTL_GUID \
 	{0xB4910A35, 0x88C5, 0x4328, { 0x90, 0x08, 0x9F, 0xB2, 0x00, 0x00, 0x0, 0x0 } }
@@ -1214,6 +1244,8 @@ typedef struct {
 
 #define WL_STA_AID(a)		((a) &~ 0xc000)
 
+#define STAMON_MODULE_VER	1
+
 /* Flags for sta_info_t indicating properties of STA */
 #define WL_STA_BRCM		0x00000001	/* Running a Broadcom driver */
 #define WL_STA_WME		0x00000002	/* WMM association */
@@ -1316,10 +1348,21 @@ typedef struct channel_info {
 } channel_info_t;
 
 /* For ioctls that take a list of MAC addresses */
-struct maclist {
+typedef struct maclist {
 	uint count;			/* number of MAC addresses */
 	struct ether_addr ea[1];	/* variable length array of MAC addresses */
-};
+} maclist_t;
+
+typedef struct stamon_data {
+	struct ether_addr  ea;
+	int rssi;
+} stamon_data_t;
+
+typedef struct stamon_info {
+	int version;
+	uint count;
+	stamon_data_t sta_data[1];
+} stamon_info_t;
 
 #ifndef LINUX_POSTMOGRIFY_REMOVAL
 /* get pkt count struct passed through ioctl */
@@ -1824,8 +1867,8 @@ typedef struct wlc_iov_trx_s {
 #define WLC_SET_TXBF_RATESET			319
 #define WLC_SCAN_CQ				320
 #define WLC_GET_RSSI_QDB			321 /* qdB portion of the RSSI */
-
-#define WLC_LAST				322
+#define WLC_DUMP_RATESET                       322
+#define WLC_LAST				323
 
 #ifndef EPICTRL_COOKIE
 #define EPICTRL_COOKIE		0xABADCEDE
@@ -2950,7 +2993,7 @@ typedef struct {
 	uint32	cfgrestore;	/* configspace restore by driver */
 
 	uint32  rxdma_frame;	/* count for rx dma */
-	uint32  rxdma_inactivity;	/* cleared when rxdma handler is serviced or increased in watchdog */
+	uint32  rxdma_inactivity; /* cleared when rxdma handler is serviced or increased in watchdog */
 	uint32  rxdma_stuck;	/* count for rx stuck */
 	uint32  reset_countdown;
 } wl_cnt_t;
@@ -6100,7 +6143,8 @@ typedef enum wl_stamon_cfg_cmd_type {
 	STAMON_CFG_CMD_DEL = 0,
 	STAMON_CFG_CMD_ADD = 1,
 	STAMON_CFG_CMD_ENB = 2,
-	STAMON_CFG_CMD_DSB = 3
+	STAMON_CFG_CMD_DSB = 3,
+	STAMON_CFG_CMD_GET_STATS =4
 } wl_stamon_cfg_cmd_type_t;
 
 typedef struct wlc_stamon_sta_config {
@@ -6176,5 +6220,14 @@ typedef struct {
 	uint32 config;	/* MODE: AUTO (-1), Disable (0), Enable (1) */
 	uint32 status;	/* Current state: Disabled (0), Enabled (1) */
 } wl_config_t;
+
+#ifdef BCM_SECURE_DMA
+/* cma mem details */
+typedef struct cma_meminfo {
+	dma_addr_t	mem_base; /* support both 32/64 bit platform */
+	uint32		mem_size; /* reserved cma memory size */
+}
+cma_meminfo_t;
+#endif /* BCM_SECURE_DMA */
 
 #endif /* _wlioctl_h_ */

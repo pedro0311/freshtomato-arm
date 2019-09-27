@@ -2,7 +2,7 @@
  * Chip-specific hardware definitions for
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -10,7 +10,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: d11.h 454474 2014-02-10 22:56:34Z $
+ * $Id: d11.h 460918 2014-03-10 15:05:05Z $
  */
 
 #ifndef	_D11_H
@@ -1327,9 +1327,6 @@ BWL_PRE_PACKED_STRUCT struct d11txh {
 #define ABI_MAS_FBR_ANT_PTN_MASK	0x00f0
 #define ABI_MAS_FBR_ANT_PTN_SHIFT	4
 #define ABI_MAS_MRT_ANT_PTN_MASK	0x000f
-#ifdef WLAWDL
-#define ABI_MAS_AWDL_TS_INSERT		0x1000	/* bit 12 */
-#endif
 #define ABI_MAS_TIMBC_TSF		0x2000  /* Enable TIMBC tsf field present */
 
 /* MinMBytes */
@@ -1402,7 +1399,7 @@ BWL_PRE_PACKED_STRUCT struct d11actxh_cache {
 	uint8   FallbackMpduMax;                /* 3 */
 	uint16  AmpduDur;                       /* 4 - 5 */
 	uint8   BAWin;                          /* 6 */
-	uint8   Pad;                            /* 7 */
+	uint8   MaxAggLen;                      /* 7 */
 	uint8   TkipPH1Key[10];                 /*  8 - 17 */
 	uint8   TSCPN[6];                       /* 18 - 23 */
 } BWL_POST_PACKED_STRUCT;

@@ -119,6 +119,35 @@ static inline void vlan_set_encap_proto(struct sk_buff *skb,
 		skb->protocol = htons(ETH_P_802_2);
 }
 
+#ifdef HNDCTF
+void BCMFASTPATH vlan_rxstats_upd(struct net_device *vldev,
+	struct sk_buff *skb, int packets, int bytes)
+{
+	struct vlan_rx_stats *rx_stats;
+
+	rcu_read_lock();
+	rx_stats = per_cpu_ptr(vlan_dev_info(vldev)->vlan_rx_stats,
+					smp_processor_id());
+	u64_stats_update_begin(&rx_stats->syncp);
+	rx_stats->rx_packets += packets;
+	rx_stats->rx_bytes += bytes;
+	u64_stats_update_end(&rx_stats->syncp);
+	rcu_read_unlock();
+}
+EXPORT_SYMBOL(vlan_rxstats_upd);
+
+void BCMFASTPATH vlan_txstats_upd(struct net_device *vldev,
+	struct sk_buff *skb, int packets, int bytes)
+{
+	int i = skb_get_queue_mapping(skb);
+	struct netdev_queue *txq = netdev_get_tx_queue(vldev, i);
+
+	txq->tx_packets += packets;
+	txq->tx_bytes += bytes;
+}
+EXPORT_SYMBOL(vlan_txstats_upd);
+#endif /* HNDCTF */
+
 /*
  *	Determine the packet's protocol ID. The rule here is that we
  *	assume 802.3 if the type field is short enough to be a length.
@@ -989,7 +1018,7 @@ void vlan_setup(struct net_device *dev)
 	ether_setup(dev);
 
 	dev->priv_flags		|= IFF_802_1Q_VLAN;
-	dev->priv_flags		&= ~(IFF_XMIT_DST_RELEASE | IFF_TX_SKB_SHARING);
+	dev->priv_flags		&= ~IFF_XMIT_DST_RELEASE;
 	dev->tx_queue_len	= 0;
 
 	dev->netdev_ops		= &vlan_netdev_ops;

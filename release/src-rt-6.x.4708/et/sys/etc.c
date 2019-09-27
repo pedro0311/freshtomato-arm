@@ -16,7 +16,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: etc.c 436117 2013-11-13 06:54:29Z $
+ * $Id: etc.c 456614 2014-02-19 10:18:50Z $
  */
 
 #include <et_cfg.h>
@@ -245,6 +245,10 @@ etc_down(etc_info_t *etc, int reset)
 	return (callback);
 }
 
+#ifdef CONFIG_DUMP_PREV_OOPS_MSG
+extern void dump_previous_oops(void);
+#endif
+
 /* common iovar handler. return 0=ok, -1=error */
 int
 etc_iovar(etc_info_t *etc, uint cmd, uint set, void *arg, int len)
@@ -362,6 +366,12 @@ etc_iovar(etc_info_t *etc, uint cmd, uint set, void *arg, int len)
 				etc_dumpetc(etc, &b);
 			}
 			break;
+
+#ifdef CONFIG_DUMP_PREV_OOPS_MSG
+		case IOV_DUMP_OOPS:
+			dump_previous_oops();
+			break;
+#endif
 
 #ifdef HNDCTF
 		case IOV_DUMP_CTF:
@@ -621,6 +631,8 @@ etc_ioctl(etc_info_t *etc, int cmd, void *arg)
 			robo->ops->write_reg(etc->robo, page, vec[0], &val, len);
 			ET_TRACE(("etc_ioctl: ETCROBOWR to page 0x%x, reg 0x%x <= 0x%016llX\n",
 			          page, reg, val));
+
+			bcm_robo_check_gphy_reset(robo, page, vec[0], &val, len);
 		}
 		break;
 #endif /* ETROBO */
@@ -682,20 +694,6 @@ etc_watchdog(etc_info_t *etc)
 		}
 	}
 #endif /* ETROBO && !_CFE_ */
-
-	if (etc->coreid == GMAC_CORE_ID && etc->corerev >= 4) {
-		if ((*etc->chops->dmaerrors)(etc->ch)) {
-			if (etc->reset_countdown == 0)
-				etc->reset_countdown = ETC_TXERR_COUNTDOWN;
-				etc->reset_countdown--;
-			if (etc->reset_countdown == 0) {
-				et_reset(etc->et);
-				et_init(etc->et, ET_INIT_FULL | ET_INIT_INTRON);
-				ASSERT(0);
-			}
-		} else
-			etc->reset_countdown = 0;
-	}
 
 	/* no local phy registers */
 	if (etc->phyaddr == EPHY_NOREG) {

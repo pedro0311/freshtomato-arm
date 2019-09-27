@@ -1,7 +1,7 @@
 /*
  * NVRAM variable manipulation
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,6 +37,10 @@ struct nvram_header {
 struct nvram_tuple {
 	char *name;
 	char *value;
+	unsigned short len;
+	unsigned short type;
+	unsigned short acc_level;
+	unsigned short enc;
 	struct nvram_tuple *next;
 };
 
@@ -188,6 +192,13 @@ extern int nvram_commit(void);
 extern int nvram_getall(char *nvram_buf, int count);
 
 /*
+ * Get get buff translated
+ * @param	buf	string buffer would like to be translated
+ * @return	translated string buffer
+ */
+extern char * nvram_xfr(const char *buf);
+
+/*
  * returns the crc value of the nvram
  * @param	nvh	nvram header pointer
  */
@@ -213,11 +224,11 @@ extern int nvram_space;
     #endif
     #define DEF_NVRAM_SPACE		0x20000
 #else
-    /* This definition is for precommit staging, and will be removed */
-    #define NVRAM_SPACE			0x10000
-    /* For CFE builds this gets passed in thru the makefile */
-    #ifndef MAX_NVRAM_SPACE
-    #define MAX_NVRAM_SPACE		0x10000
+/* This definition is for precommit staging, and will be removed */
+#define NVRAM_SPACE		0x10000
+/* For CFE builds this gets passed in thru the makefile */
+#ifndef MAX_NVRAM_SPACE
+#define MAX_NVRAM_SPACE		0x10000
     #endif
     #define DEF_NVRAM_SPACE		0x10000
 #endif

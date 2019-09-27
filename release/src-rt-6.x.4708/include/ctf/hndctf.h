@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +13,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: hndctf.h 418247 2013-08-14 11:16:42Z $
+ * $Id: hndctf.h 485723 2014-06-17 05:07:54Z $
  */
 
 #ifndef _HNDCTF_H_
@@ -42,9 +42,19 @@
 #define CTF_ACTION_BYTECNT	(1 << 7)
 #define CTF_ACTION_PPPOE_ADD	(1 << 8)
 #define CTF_ACTION_PPPOE_DEL	(1 << 9)
+#define CTF_ACTION_BR_AS_TXIF	(1 << 10)
+#if defined(CTF_PPTP) || defined(CTF_L2TP)
+#define CTF_ACTION_PPTP_ADD	(1 << 11)
+#define CTF_ACTION_PPTP_DEL	(1 << 12)
+#define CTF_ACTION_L2TP_ADD	(1 << 13)
+#define CTF_ACTION_L2TP_DEL	(1 << 14)
+#endif
 
 #define CTF_SUSPEND_TCP		(1 << 0)
 #define CTF_SUSPEND_UDP		(1 << 1)
+
+#define CTF_SUSPEND_TCP_MASK		0x55555555
+#define CTF_SUSPEND_UDP_MASK		0xAAAAAAAA
 
 #define	ctf_attach(osh, n, m, c, a) \
 	(ctf_attach_fn ? ctf_attach_fn(osh, n, m, c, a) : NULL)
@@ -92,8 +102,27 @@
 #define ctf_live(ci, i, v6)		(CTF_ENAB(ci) ? (ci)->fn.live(ci, i, v6) : FALSE)
 #endif /* BCMFA */
 
+/* For broadstream iqos */
+#define ctf_fwdcb_register(ci, cb)           \
+		(CTF_ENAB(ci) ? (ci)->fn.ctf_fwdcb_register(ci, cb) : BCME_OK)
+
 #define CTFCNTINCR(s) ((s)++)
 #define CTFCNTADD(s, c) ((s) += (c))
+
+#define NIPQUAD(addr) \
+	((unsigned char *)&addr)[0], \
+	((unsigned char *)&addr)[1], \
+	((unsigned char *)&addr)[2], \
+	((unsigned char *)&addr)[3]
+
+#ifdef CTF_IPV6
+#define FRAG_IPV6_UDP_PROTO	0xF6
+#endif
+
+#ifdef CTF_PPTP
+#define ctf_pptp_cache(ci,f,h)	\
+	(CTF_ENAB((ci)) ? ((ci))->fn.pptp_cache((ci), (f), (h)) : BCME_OK)
+#endif /* CTF_PPTP */
 
 #define PPPOE_ETYPE_OFFSET	12
 #define PPPOE_VER_OFFSET	14
@@ -106,6 +135,7 @@
 #define PPPOE_PROT_PPP		0x0021
 #define PPPOE_PROT_PPP_IP6	0x0057
 
+#define CTF_DROP_PACKET	-2	/* Don't osl_startxmit if fwdcb return this */
 
 typedef struct ctf_pub	ctf_t;
 typedef struct ctf_brc	ctf_brc_t;
@@ -151,6 +181,14 @@ typedef int32 (*ctf_fa_register_t)(ctf_t *ci, ctf_fa_cb_t facb, void *fa);
 typedef void (*ctf_live_t)(ctf_t *ci, ctf_ipc_t *ipc, bool v6);
 #endif /* BCMFA */
 
+#ifdef CTF_PPTP
+typedef int32 (*ctf_pptp_cache_t)(ctf_t *ci, uint32 lock_fgoff, uint32 hoplmt);
+#endif /* CTF_PPTP */
+
+/* For broadstream iqos */
+typedef int (*ctf_fwdcb_t)(void *skb, ctf_ipc_t *ipc);
+typedef int32 (*ctf_fwdcb_register_t)(ctf_t *ci, ctf_fwdcb_t fwdcb);
+
 struct ctf_brc_hot {
 	struct ether_addr	ea;	/* Dest address */
 	ctf_brc_t		*brcp;	/* BRC entry corresp to dest mac */
@@ -184,10 +222,15 @@ typedef struct ctf_fn {
 	ctf_dev_vlan_delete_t	dev_vlan_delete;
 	ctf_dump_t		dump;
 	ctf_cfg_req_process_t	cfg_req_process;
+#ifdef CTF_PPTP
+	ctf_pptp_cache_t 	pptp_cache;
+#endif /* CTF_PPTP */
 #ifdef BCMFA
 	ctf_fa_register_t	fa_register;
 	ctf_live_t		live;
 #endif /* BCMFA */
+	/* For broadstream iqos */
+	ctf_fwdcb_register_t	ctf_fwdcb_register;
 } ctf_fn_t;
 
 struct ctf_pub {
@@ -208,6 +251,8 @@ struct ctf_brc {
 	uint32			live;		/* Counter used to expire the entry */
 	uint32			hits;		/* Num frames matching brc entry */
 	uint64			*bytecnt_ptr;	/* Pointer to the byte counter */
+	uint32			hitting;	/* Indicate how fresh the entry is been used */
+	uint32			ip;
 };
 
 #ifdef CTF_IPV6
@@ -220,6 +265,7 @@ struct ctf_conn_tuple {
 	uint32	sip[IPADDR_U32_SZ], dip[IPADDR_U32_SZ];
 	uint16	sp, dp;
 	uint8	proto;
+	uint16	sid;
 };
 
 typedef struct ctf_nat {
@@ -241,6 +287,7 @@ struct ctf_ipc {
 	struct	ether_addr	dhost;		/* Destination MAC address */
 	struct	ether_addr	shost;		/* Source MAC address */
 	void			*txif;		/* Target interface to send */
+	void			*txbif;		/* Target Bridge interface to send */
 	uint32			action;		/* NAT and/or VLAN actions */
 	ctf_brc_t		*brcp;		/* BRC entry corresp to source mac */
 	uint32			live;		/* Counter used to expire the entry */
@@ -252,12 +299,61 @@ struct ctf_ipc {
 	uint32			hits;		/* Num frames matching ipc entry */
 	uint64			*bytecnt_ptr;	/* Pointer to the byte counter */
 	struct	ctf_mark	mark;		/* Mark value to use for the connection */
+#if defined(CTF_PPTP) || defined(CTF_L2TP)
+	void			*pppox_opt;
+#endif	/*CTF_PPTP || CTF_L2TP */
 #ifdef BCMFA
 	void			*rxif;		/* Receive interface */
 	void			*pkt;		/* Received packet */
 	uint8			flags;		/* Flags for multiple purpose */
 #endif /* BCMFA */
+	/* For broadstream iqos, counter is increased by ipc_tcp_susp or ipc_udp_susp */
+	int			susp_cnt;
 };
+
+#if defined(CTF_PPTP) || defined(CTF_L2TP)
+struct ctf_ppp_sk {
+	struct pppox_sock 	*po;			/*pointer to pppoe socket*/
+	unsigned char		pppox_protocol;	/*0:pppoe/1:l2tp/ 2:pptp*/
+	struct	ether_addr	dhost;			/*Remote MAC addr of host the pppox socket is bound to*/
+};
+
+typedef struct ctf_ppp {
+	struct ctf_ppp_sk		psk;
+	unsigned short			pppox_id;	/*PPTP peer call id if wan type is pptp, PPPOE session ID if wan type is PPPOE*/
+} ctf_ppp_t;
+
+#ifdef CTF_PPTP
+/* PPTP */
+typedef struct ctf_pppopptp {
+	uint8 	sk_pmtudisc;//iph->frag_off
+	uint32	rt_dst_mtrc_lock_fgoff;//iph->frag_off
+	uint32	rt_dst_mtrc_hoplmt;//iph->ttl
+}ctf_pppopptp_t;
+#endif /*CTF_PPTP*/
+
+#ifdef CTF_L2TP
+/* L2TP */
+struct ctf_pppol2tp_inet {
+	uint32 saddr;		/* src IP address of tunnel */
+	uint32 daddr;		/* src IP address of tunnel */
+	uint16 sport;		/* src port                 */
+	uint16 dport;		/* dst port                 */
+	uint8  tos;         /* IP tos                   */
+	uint8 ttl;
+};
+
+struct ctf_pppol2tp_session
+{
+	uint16			optver;
+	uint32			l2tph_len;
+	uint32			tunnel_id;
+	uint32			session_id;
+	uint32			peer_tunnel_id;
+	uint32			peer_session_id;
+};
+#endif /* CTF_L2TP */
+#endif
 
 extern ctf_t *ctf_kattach(osl_t *osh, uint8 *name);
 extern void ctf_kdetach(ctf_t *kci);
@@ -267,13 +363,13 @@ extern ctf_t *_ctf_attach(osl_t *osh, uint8 *name, uint32 *msg_level,
 extern ctf_t *kcih;
 
 /* Hot bridge cache lkup */
-#define MAXBRCHOT		4
+#define MAXBRCHOT		64
 #define MAXBRCHOTIF		4
 #define CTF_BRC_HOT_HASH(da) 	((((uint8 *)da)[4] ^ ((uint8 *)da)[5]) & (MAXBRCHOT - 1))
 #define CTF_HOTBRC_CMP(hbrc, da, rxifp) \
 ({ \
 	ctf_brc_hot_t *bh = (hbrc) + CTF_BRC_HOT_HASH(da); \
-	((eacmp((bh)->ea.octet, (da)) == 0) && (bh->brcp->txifp != (rxifp))); \
+	((bh->brcp) && (eacmp((bh)->ea.octet, (da)) == 0) && (bh->brcp->txifp != (rxifp))); \
 })
 
 /* Header prep for packets matching hot bridge cache entry */
@@ -297,4 +393,5 @@ do { \
 } while (0)
 
 
+#define	CTF_IS_PKTTOBR(p)	PKTISTOBR(p)
 #endif /* _HNDCTF_H_ */
