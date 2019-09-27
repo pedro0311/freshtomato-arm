@@ -93,7 +93,7 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
-ifeq ($(ASUS_TRX),CISCO)
+ifeq ($(ASUS_TRX),LINKSYS2)
 ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
@@ -770,6 +770,10 @@ define BusyboxOptions
 		echo "CONFIG_FEATURE_TOPMEM=y" >>$(1); \
 		sed -i "/CONFIG_FEATURE_SHOW_THREADS/d" $(1); \
 		echo "CONFIG_FEATURE_SHOW_THREADS=y" >>$(1); \
+	fi; \
+	if [ "$(FANCTRL)" = "y" ]; then \
+		sed -i "/CONFIG_RENICE/d" $(1); \
+		echo "CONFIG_RENICE=y" >>$(1); \
 	fi; \
 	)
 endef
