@@ -612,6 +612,7 @@ void restart_wl(void)
 
 	/* do some LED setup */
 	if ((model == MODEL_R6400) ||
+	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R7000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
 			led(LED_AOSS, LED_ON);
@@ -749,6 +750,7 @@ void start_wl(void)
 
 	/* do some LED setup */
 	if ((model == MODEL_R6400) ||
+	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R7000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
 			led(LED_AOSS, LED_ON);
