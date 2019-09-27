@@ -154,6 +154,7 @@ ifneq ($(ASUS_TRX),0)
 ifeq ($(ASUS_TRX),ASUS)
 ifeq ($(BCMSMP),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56U-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC66U_B1,3.0.0.4,image/freshtomato-RT-AC66U_B1-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC68U,3.0.0.4,image/freshtomato-RT-AC68U-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-N18U,3.0.0.4,image/freshtomato-RT-N18U-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
@@ -1152,8 +1153,8 @@ setprofile:
 
 help:
 	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P"
-	@echo "ac68e         RT-N18U/AC56U/AC68U(R/P) build VPN"
-	@echo "ac68z         RT-N18U/AC56U/AC68U(R/P) build AIO"
+	@echo "ac68e         RT-N18U/AC56U/AC68U(R/P)/AC66U B1 build VPN"
+	@echo "ac68z         RT-N18U/AC56U/AC68U(R/P)/AC66U B1 build AIO"
 	@echo "n18e          RT-N18U/AC56S without SMP build VPN"
 	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"

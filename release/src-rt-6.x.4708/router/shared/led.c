@@ -139,6 +139,7 @@ int do_led(int which, int mode)
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac66u_b1[]   = { 254,  255,     4,  255,  255,  255,  254,    0,   14,  254};
 	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6};
 	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255};
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255};
@@ -187,6 +188,7 @@ int do_led(int which, int mode)
 			case MODEL_AC18:
 			case MODEL_RTN18U:
 			case MODEL_RTAC56U:
+			case MODEL_RTAC66U_B1:
 			case MODEL_RTAC68U:
 #endif /* CONFIG_BCMWL6A */
 #if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCM7)
@@ -210,6 +212,16 @@ int do_led(int which, int mode)
 #ifdef CONFIG_BCMWL6A
 	case MODEL_RTAC68U:
 		b = ac68u[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		break;
+	case MODEL_RTAC66U_B1:
+		b = ac66u_b1[which];
 		if ((which == LED_WLAN) ||
 		    (which == LED_5G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
@@ -503,6 +515,10 @@ void led_setup(void) {
 			set_gpio(3, T_HIGH);		/* disable power led color blue */
 			disable_led_wanlan();
 			break;
+		case MODEL_RTAC66U_B1:
+			set_gpio(3, T_HIGH);		/* disable power led */
+			disable_led_wanlan();
+			break;
 		case MODEL_RTAC68U:
 			set_gpio(3, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
@@ -563,7 +579,7 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC68U */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC68U */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch (model) {
@@ -581,6 +597,18 @@ void do_led_nongpio(int model, int which, int mode) {
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 3 1");
 			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 3 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	case MODEL_RTAC66U_B1:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
 			else if (mode == LED_PROBE) return;
 		}
 		break;

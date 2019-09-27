@@ -407,6 +407,7 @@ static int init_vlan_ports(void)
 	case MODEL_R6400v2:
 	case MODEL_R7000:
 	case MODEL_RTN18U:
+	case MODEL_RTAC66U_B1:
 	case MODEL_RTAC68U:
 	case MODEL_AC15:
 	case MODEL_AC18:
@@ -643,7 +644,67 @@ static int init_nvram(void)
 		break;
 	case MODEL_RTAC68U:
 		mfr = "Asus";
-		name = nvram_match("boardrev", "0x1103") ? "RT-AC68P/U B1" : "RT-AC68R/U";
+		if (nvram_match("cpurev", "c0")) { /* check for C0 CPU first */
+			name = "RT-AC68U C1";
+		}
+		else { /* all the other versions R/P/U ... A1/A2/B1 */
+			name = nvram_match("boardrev", "0x1103") ? "RT-AC68P/U B1" : "RT-AC68R/U";
+		}
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);			/* fix WL mac for 5G */
+			nvram_set("wl1_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			nvram_set("0:ccode", "#a");
+			nvram_set("1:ccode", "#a");
+			nvram_set("wl0_country_code", "#a");
+			nvram_set("wl1_country_code", "#a");
+			nvram_set("wl0_txpwr", "0");
+			nvram_set("wl1_txpwr", "0");
+			nvram_set("wl0_channel", "6");
+			nvram_set("wl1_channel", "149");
+			nvram_set("wl0_nctrlsb", "lower");
+			nvram_set("wl1_nctrlsb", "lower");
+			nvram_set("wl0_nbw_cap", "1");
+			nvram_set("wl1_nbw_cap", "1");
+		}
+		break;
+	case MODEL_RTAC66U_B1:
+		mfr = "Asus";
+		name = "RT-AC66U B1";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
