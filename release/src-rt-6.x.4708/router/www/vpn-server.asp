@@ -464,7 +464,7 @@ function init() {
 		ccdTables[i].showNewEditor();
 		ccdTables[i].resetNewEditor();
 
-		usersTables[i].init('table_' + t + '_users','sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }]);
+		usersTables[i].init('table_' + t + '_users','sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 25 }, { type: 'text', maxlen: 15 }]);
 		usersTables[i].headerSet(['Enable', 'Username', 'Password']);
 		var usersVal = eval('nvram.vpn_' + t + '_users_val');
 		if(usersVal.length) {
