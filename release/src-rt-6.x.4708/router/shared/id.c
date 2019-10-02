@@ -26,7 +26,7 @@ EA6350v1	    		BCM47081A0            0xE646       20140309  0x1200    0x00000110
 
 WZR-1750DHP	    		BCM4708               0xF646       00        0x1100    0x0110      0:devid=0x4332
 
-Tenda AC15			BCM4708               0x0646       30        0x1100 //model=AC15V1.0
+Tenda AC15			BCM4708               0x0646       30        0x1100 //1:boardnum=AC155g  HINT: model=AC15V1.0 only available for some HW-Versions, so at least 2 different cfe´s from Tenda!
 Tenda AC18			BCM4708               0x0646       30        0x1100 //model=AC18V1.0
 
 TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
@@ -96,7 +96,7 @@ int get_model(void)
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6700;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "00"))) return MODEL_WZR1750;
 		if ((nvram_match("boardtype","0xD646")) && (nvram_match("boardrev", "0x1100"))) return MODEL_EA6900;
-		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "AC15V1.0"))) return MODEL_AC15; /* Tenda AC15 */
+		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("1:boardnum", "AC155g"))) return MODEL_AC15; /* Tenda AC15 */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "AC18V1.0"))) return MODEL_AC18; /* Tenda AC18 */
 	}
 #endif /* CONFIG_BCMWL6A */
