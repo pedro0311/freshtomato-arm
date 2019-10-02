@@ -72,8 +72,11 @@ int check_hw_type(void)
 
 int get_model(void)
 {
-	int hw;
-	hw = check_hw_type();
+	static int hw = 0;  /* initialize with 0 / HW_UNKNOWN */
+
+	if (hw == 0) { /* hw unknown OR detect hw for the first time at function get_model(). */
+		hw = check_hw_type();
+	}
 
 #ifdef CONFIG_BCMWL6A
 	if (hw == HW_BCM4708) {
