@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.91 2018/07/06 12:04:47 nanard Exp $
+# $Id: Makefile,v 1.92 2019/09/24 10:30:43 nanard Exp $
 # MiniUPnP project
 # http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
 # Author: Thomas Bernard
@@ -29,6 +29,7 @@ RM = rm -f
 MV = mv
 INSTALL = install
 STRIP = strip
+DOXYGEN ?= doxygen
 
 # OSNAME and FWNAME are used for building OS or FW dependent code.
 OSNAME != uname -s
@@ -224,6 +225,9 @@ depend:	config.h
     testupnppermissions.c miniupnpdctl.c testgetifaddr.c \
 	testgetroute.c testportinuse.c testasyncsendto.c \
 	testssdppktgen.c
+
+dox:	miniupnpd.doxyconf
+	$(DOXYGEN) $>
 
 miniupnpd: config.h $(ALLOBJS)
 	$(CC) $(LDFLAGS) -o $@ $(ALLOBJS) $(LIBS)

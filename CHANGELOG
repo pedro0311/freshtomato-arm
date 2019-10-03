@@ -6,6 +6,9 @@ FreshTomato-ARM Changelog
 2019.3.220-beta - 2019.09.29
 ----------------------------
 
+Recommendations:
+- clear your NVRAM after upgrade! (Erase all data in NVRAM memory (thorough))
+
 - Add Cisco Linksys EA6350v1 support
 - Add Tenda AC18 support
 - Add Cisco Linksys EA6200 support
