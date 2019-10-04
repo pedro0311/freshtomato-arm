@@ -43,7 +43,8 @@ extern const char *tomato_shortver;
 /* support up to 32 GPIO pins for buttons and leds */
 #define TOMATO_GPIO_MAX 31
 #define TOMATO_GPIO_MIN 0
-
+#define T_HIGH 1
+#define T_LOW 0
 
 /* misc.c */
 #define	WP_DISABLED		0		/* order must be synced with def in misc.c */
@@ -175,87 +176,9 @@ extern void file_unlock(int lockfd);
 /* id.c */
 enum {
 	MODEL_UNKNOWN,
-	MODEL_WRT54G,
-	MODEL_WRTSL54GS,
-	MODEL_WHRG54S,
-	MODEL_WHRHPG54,
-	MODEL_WR850GV1,
-	MODEL_WR850GV2,
-	MODEL_WZRG54,
-	MODEL_WL500W,
-	MODEL_WL500GP,
-	MODEL_WL500GPv2,
-	MODEL_WL500GE,
-	MODEL_WL500GD,
-	MODEL_WL520GU,
-	MODEL_DIR320,
-	MODEL_L600N,
-	MODEL_DIR620C1,
-	MODEL_H618B,
-	MODEL_CW5358U,
-	MODEL_HG320,
-	MODEL_RG200E_CA,
-	MODEL_H218N,
-	MODEL_TDN60,
-	MODEL_TDN6,
-	MODEL_WL1600GL,
-	MODEL_WBRG54,
-	MODEL_WBR2G54,
-	MODEL_WX6615GT,
-	MODEL_WZRHPG54,
-	MODEL_WZRRSG54,
-	MODEL_WZRRSG54HP,
-	MODEL_WVRG54NF,
-	MODEL_WHR2A54G54,
-	MODEL_WHR3AG54,
-	MODEL_RT390W,
-	MODEL_RTN10,
-	MODEL_RTN10U,
-	MODEL_RTN10P,
-	MODEL_RTN12,
-	MODEL_RTN12B1,
-	MODEL_RTN15U,
-	MODEL_RTN16,
-	MODEL_RTN53,
-	MODEL_RTN53A1,
-	MODEL_RTN66U,
 	MODEL_RTN18U,
 	MODEL_RTAC56U,
 	MODEL_RTAC68U,
-	MODEL_WNR3500L,
-	MODEL_WNR3500LV2,
-	MODEL_WNR2000v2,
-	MODEL_F7D3301,
-	MODEL_F7D3302,
-	MODEL_F7D4301,
-	MODEL_F7D4302,
-	MODEL_F5D8235v3,
-	MODEL_WRT160Nv1,
-	MODEL_WRT160Nv3,
-	MODEL_WRT320N,
-	MODEL_WRT610Nv2,
-	MODEL_WRT310Nv1,
-	MODEL_E900,
-	MODEL_E1000v2,
-	MODEL_E1500,
-	MODEL_E1550,
-	MODEL_E2500,
-	MODEL_E3200,
-	MODEL_E4200,
-	MODEL_MN700,
-	MODEL_WRH54G,
-	MODEL_WHRG125,
-	MODEL_WZRG108,
-	MODEL_WTR54GS,
-	MODEL_WR100,
-	MODEL_WLA2G54L,
-	MODEL_TM2300,
-	MODEL_WZRG300N,
-	MODEL_WRT300N,
-	MODEL_WL330GE,
-	MODEL_W1800R,
-	MODEL_D1800H,
-	MODEL_EA6500V1,
 	MODEL_R6250,
 	MODEL_R6300v2,
 	MODEL_R6400,
@@ -278,29 +201,8 @@ enum {
  * whether or not this config file can be restored on the router.
  */
 enum {
-	HW_BCM4702,
-	HW_BCM4712,
-	HW_BCM5325E,
-	HW_BCM4704_BCM5325F,
-	HW_BCM5352E,
-	HW_BCM5354G,
-	HW_BCM4712_BCM5325E,
-	HW_BCM4704_BCM5325F_EWC,
-	HW_BCM4705L_BCM5325E_EWC,
-	HW_BCM5350,
-	HW_BCM5356,
-	HW_BCM5357,
-	HW_BCM53572,
-	HW_BCM5358U,
-	HW_BCM4716,
-	HW_BCM4718,
-	HW_BCM47186,
-	HW_BCM4717,
-	HW_BCM5365,
-	HW_BCM4785,
-	HW_BCM4706,
-	HW_BCM4708,
-	HW_UNKNOWN
+	HW_UNKNOWN,
+	HW_BCM4708
 };
 
 #define SUP_SES			(1 << 0)
@@ -367,8 +269,9 @@ extern const char *led_names[];
 
 extern int gpio_open(uint32_t mask);
 extern void gpio_write(uint32_t bit, int en);
-extern uint32_t gpio_read(void);
 extern uint32_t _gpio_read(int f);
+extern uint32_t gpio_read(void);
+extern uint32_t set_gpio(uint32_t gpio, uint32_t value);
 extern int nvget_gpio(const char *name, int *gpio, int *inv);
 extern int do_led(int which, int mode);
 extern void do_led_nongpio(int model, int which, int mode);

@@ -67,7 +67,7 @@ static networkstatus_t *dummy_consensus = NULL;
 
 static smartlist_t *big_fake_net_nodes = NULL;
 
-static smartlist_t *
+static const smartlist_t *
 bfn_mock_nodelist_get_list(void)
 {
   return big_fake_net_nodes;
@@ -197,6 +197,7 @@ big_fake_network_setup(const struct testcase_t *testcase)
       n->md->exit_policy = parse_short_policy("accept 443");
     }
 
+    n->nodelist_idx = smartlist_len(big_fake_net_nodes);
     smartlist_add(big_fake_net_nodes, n);
   }
 
@@ -1731,7 +1732,8 @@ test_entry_guard_manage_primary(void *arg)
     dir_info_str =guard_selection_get_err_str_if_dir_info_missing(gs, 1, 2, 3);
     tt_str_op(dir_info_str, OP_EQ,
               "We're missing descriptors for 1/2 of our primary entry guards "
-              "(total microdescriptors: 2/3).");
+              "(total microdescriptors: 2/3). That's ok. We will try to fetch "
+              "missing descriptors soon.");
     tor_free(dir_info_str);
   }
 

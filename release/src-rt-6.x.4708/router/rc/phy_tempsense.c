@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -35,15 +36,13 @@
 #include <shutils.h>
 #include <wlutils.h>
 
-//#define DEBUG
-
-#define FAN_NORMAL_PERIOD	5 * 1000	/* microsecond */
-#define TEMP_MAX		94.000
-#define TEMP_3			88.000
-#define TEMP_2			82.000
-#define TEMP_1			76.000
-#define TEMP_MIN		70.000
-#define TEMP_H			3.000
+#define FAN_NORMAL_PERIOD	2.5 * 1000	/* microseconds */
+#define TEMP_MAX		90.000		/* note: this not degrees */
+#define TEMP_4			84.000		/* actual degrees math is */
+#define TEMP_3			78.000		/* Celsius: val / 2 + 20, */
+#define TEMP_2			72.000		/* 72.000 = 56 C          */
+#define TEMP_MIN		66.000		/* 66.000 = 53 C          */
+#define TEMP_H			3.000		/* temp delta             */
 
 #define max(a,b)  (((a) > (b)) ? (a) : (b))
 #define min(a,b)  (((a) < (b)) ? (a) : (b))
@@ -52,15 +51,14 @@ static int count = -2;
 static int status = -1;
 static int duty_cycle = 0;
 static int status_old = 0;
-static double tempavg_24 = 0.000;
-static double tempavg_50 = 0.000;
+static double tempavg_1 = 0.000;
+static double tempavg_2 = 0.000;
 static double tempavg_max = 0.000;
 static struct itimerval itv;
 static int count_timer = 0;
 static int base = 1;
 
-static void
-alarmtimer(unsigned long sec, unsigned long usec)
+static void alarmtimer(unsigned long sec, unsigned long usec)
 {
 	itv.it_value.tv_sec  = sec;
 	itv.it_value.tv_usec = usec;
@@ -68,8 +66,7 @@ alarmtimer(unsigned long sec, unsigned long usec)
 	setitimer(ITIMER_REAL, &itv, NULL);
 }
 
-static int
-fan_status()
+static int fan_status()
 {
 	int idx;
 
@@ -86,110 +83,113 @@ fan_status()
 		return 1;
 }
 
-static void
-phy_tempsense_exit(int sig)
+static void phy_tempsense_exit(int sig)
 {
 	alarmtimer(0, 0);
-	led(LED_BRIDGE, LED_OFF);
-
-        remove("/var/run/phy_tempsense.pid");
-        exit(0);
+	//led(LED_BRIDGE, LED_OFF);
+	remove("/var/run/phy_tempsense.pid");
+	exit(0);
 }
 
-static int
-phy_tempsense_mon()
+static int phy_tempsense_mon()
 {
-	char buf[WLC_IOCTL_SMLEN];
+	char buf1[WLC_IOCTL_SMLEN];
 	char buf2[WLC_IOCTL_SMLEN];
 	char w[32];
-	int ret;
-	unsigned int *ret_int = NULL;
+	int ret, tmin, tmp2, tmp3, tmp4, tmax;
+	unsigned int r0 = 1;	/* fake val r0, in case interface is down */
+	unsigned int *ret_int1 = NULL;
 	unsigned int *ret_int2 = NULL;
 
-	strcpy(buf, "phy_tempsense");
+	strcpy(buf1, "phy_tempsense");
 	strcpy(buf2, "phy_tempsense");
 
-	if ((ret = wl_ioctl("eth1", WLC_GET_VAR, buf, sizeof(buf))))
-		return ret;
+	if ((ret = wl_ioctl("eth1", WLC_GET_VAR, buf1, sizeof(buf1))) == 0)
+		ret_int1 = (unsigned int *)buf1;
+	else {
+		ret_int1 = &r0;	/* fake val r0 */
+	}
 
-	if ((ret = wl_ioctl("eth2", WLC_GET_VAR, buf2, sizeof(buf2))))
-		return ret;
+	if ((ret = wl_ioctl("eth2", WLC_GET_VAR, buf2, sizeof(buf2))) == 0)
+		ret_int2 = (unsigned int *)buf2;
+	else {
+		ret_int2 = &r0;	/* fake val r0 */
+	}
 
-	ret_int = (unsigned int *)buf;
-	ret_int2 = (unsigned int *)buf2;
-
-	if (count == -2)
-	{
+	if (count == -2) {
 		count++;
-		tempavg_24 = *ret_int;
-		tempavg_50 = *ret_int2;
+		tempavg_1 = *ret_int1;
+		tempavg_2 = *ret_int2;
+	} else {
+		tempavg_1 = (tempavg_1 * 4 + *ret_int1) / 5;
+		tempavg_2 = (tempavg_2 * 4 + *ret_int2) / 5;
 	}
-	else
-	{
-		tempavg_24 = (tempavg_24 * 4 + *ret_int) / 5;
-		tempavg_50 = (tempavg_50 * 4 + *ret_int2) / 5;
-	}
-#if 0
-	tempavg_max = (((tempavg_24) > (tempavg_50)) ? (tempavg_24) : (tempavg_50));
+
+#if 1	/* use highest, not average val (better in case only one radio enabled) */
+	tempavg_max = (((tempavg_1) > (tempavg_2)) ? (tempavg_1) : (tempavg_2));
 #else
-	tempavg_max = (tempavg_24 + tempavg_50) / 2;
+	tempavg_max = (tempavg_1 + tempavg_2) / 2;
 #endif
-#ifdef DEBUG
-	dbG("phy_tempsense 2.4G: %d (%.3f), 5G: %d (%.3f), Max: %.3f\n", 
-		*ret_int, tempavg_24, *ret_int2, tempavg_50, tempavg_max);
-#endif
+
 	duty_cycle = nvram_get_int("fanctrl_dutycycle");
-	if ((duty_cycle < 0) || (duty_cycle > 5))
+
+	if ((duty_cycle < 0) || (duty_cycle > 10))
 		duty_cycle = 0;
 
-	if (duty_cycle && (tempavg_max < TEMP_MAX))
-	{
+	/* allow user redefine values via nvram */
+	tmin = (nvram_get_int("fanctrl_t1") ? ((nvram_get_int("fanctrl_t1") - 20) * 2) : TEMP_MIN);
+	tmp2 = (nvram_get_int("fanctrl_t2") ? ((nvram_get_int("fanctrl_t2") - 20) * 2) : TEMP_2);
+	tmp3 = (nvram_get_int("fanctrl_t3") ? ((nvram_get_int("fanctrl_t3") - 20) * 2) : TEMP_3);
+	tmp4 = (nvram_get_int("fanctrl_t4") ? ((nvram_get_int("fanctrl_t4") - 20) * 2) : TEMP_4);
+	tmax = (nvram_get_int("fanctrl_t5") ? ((nvram_get_int("fanctrl_t5") - 20) * 2) : TEMP_MAX);
+
+	/* some failsafe checks (revert to defaults on wrong / incomplete user settings) */
+	if ((tmp2 <= tmin) || (tmin < 0)) { tmin = TEMP_MIN; tmp2 = TEMP_2; }
+	if (tmp3 <= tmp2) tmp3 = TEMP_3;
+	if (tmp4 <= tmp3) tmp4 = TEMP_4;
+	if (tmax <= tmp4) tmax = TEMP_MAX;
+
+	if (duty_cycle && (tempavg_max < tmax)) {
 		base = duty_cycle;
-	}
-	else
-	{
-		if (tempavg_max < TEMP_MIN - TEMP_H)
+	} else {
+		if (tempavg_max <= tmin - TEMP_H)
 			base = 1;
 		else
-		if ((tempavg_max > TEMP_MIN) && (tempavg_max < TEMP_1 - TEMP_H))
+		if ((tempavg_max > tmin) && (tempavg_max < tmp2 - TEMP_H))
 			base = 2;
 		else
-		if ((tempavg_max > TEMP_1) && (tempavg_max < TEMP_2 - TEMP_H))
+		if ((tempavg_max > tmp2) && (tempavg_max < tmp3 - TEMP_H))
 			base = 3;
 		else
-		if ((tempavg_max > TEMP_2) && (tempavg_max < TEMP_3 - TEMP_H))
+		if ((tempavg_max > tmp3) && (tempavg_max < tmp4 - TEMP_H))
 			base = 4;
 		else
-		if ((tempavg_max > TEMP_3) && (tempavg_max < TEMP_MAX - TEMP_H))
+		if ((tempavg_max > tmp4) && (tempavg_max < tmax - TEMP_H))
 			base = 5;
 		else
-		if (tempavg_max > TEMP_MAX)
-			base = 0;
+		if (tempavg_max > tmax)	/* overheat! */
+			base = 0;	/* max revs, no pwm */
 	}
 
+	/* this param do nothing, just for user info */
 	if (!base) {
-		nvram_set("fanctrl_dutycycle_ex", "5");
+		nvram_set("fanctrl_dutycycle_ex", "0");
 	} else {
-		sprintf(w, "%d", base - 1);
+		sprintf(w, "%d", base);
 		nvram_set("fanctrl_dutycycle_ex", w);
 	}
 
 	return 0;
 }
 
-static void
-phy_tempsense(int sig)
+static void phy_tempsense(int sig)
 {
-	int count_local = count_timer % 30;
-
+	int count_local = count_timer % 400;	/* monitor period */
 	if (!count_local)
 		phy_tempsense_mon();
 
-        status_old = status;
-        status = fan_status();
-#ifdef DEBUG
-	dbG("tempavg: %.3f, fan status: %d\n", tempavg_max, status);
-#endif
+	status_old = status;
+	status = fan_status();
 
 	if (status != status_old)
 	{
@@ -199,37 +199,31 @@ phy_tempsense(int sig)
 			led(LED_BRIDGE, LED_OFF);
 	}
 
-	count_timer = (count_timer + 1) % 60;
+	count_timer = (count_timer + 1) % 800;	/* monitor period */
 
-	alarmtimer(0, FAN_NORMAL_PERIOD);
+	alarmtimer(0, FAN_NORMAL_PERIOD);	/* fan pwm period */
 }
 
-static void
-update_dutycycle(int sig)
+static void update_dutycycle(int sig)
 {
 	alarmtimer(0, 0);
-
 	count = -1;
 	status = -1;
 	count_timer = 0;
 
 	duty_cycle = nvram_get_int("fanctrl_dutycycle");
-	if ((duty_cycle < 0) || (duty_cycle > 5))
-		duty_cycle = 0;
 
-#ifdef DEBUG
-	dbG("\nduty cycle: %d\n", duty_cycle);
-#endif
+	if ((duty_cycle < 0) || (duty_cycle > 10))
+		duty_cycle = 0;	/* switch to auto */
 
 	phy_tempsense(sig);
 }
 
-int 
-phy_tempsense_main(int argc, char *argv[])
+int phy_tempsense_main(int argc, char *argv[])
 {
 	FILE *fp;
 	sigset_t sigs_to_catch;
-	char w[32];
+	int t1,t2,t3,t4,t5;
 
 	/* write pid */
 	if ((fp = fopen("/var/run/phy_tempsense.pid", "w")) != NULL)
@@ -249,20 +243,32 @@ phy_tempsense_main(int argc, char *argv[])
 	signal(SIGTERM, phy_tempsense_exit);
 	signal(SIGUSR1, update_dutycycle);
 
-	sprintf(w, "%d", base);
-	nvram_set("fanctrl_dutycycle_ex", w);
-
 	duty_cycle = nvram_get_int("fanctrl_dutycycle");
-	if ((duty_cycle < 0) || (duty_cycle > 4))
-		duty_cycle = 0;
 
-#ifdef DEBUG
-	dbG("\nduty cycle: %d\n", duty_cycle);
-#endif
+	if ((duty_cycle < 0) || (duty_cycle > 10))
+		duty_cycle = 0;	// switch to auto
+
+	/* note user about fan control in syslog on start */
+	if (duty_cycle)
+		syslog(LOG_INFO,"Manual mode set for fan control!!! Possible router overheat!!! Use: 'nvram unset fanctrl_dutycycle; nvram commit' to reset. Fan speed (fanctrl_dutycycle) = %d", duty_cycle);
+	else {
+		t1 = (nvram_get_int("fanctrl_t1") ? nvram_get_int("fanctrl_t1") : TEMP_MIN / 2 + 20);
+		t2 = (nvram_get_int("fanctrl_t2") ? nvram_get_int("fanctrl_t2") : TEMP_2 / 2 + 20);
+		t3 = (nvram_get_int("fanctrl_t3") ? nvram_get_int("fanctrl_t3") : TEMP_3 / 2 + 20);
+		t4 = (nvram_get_int("fanctrl_t4") ? nvram_get_int("fanctrl_t4") : TEMP_4 / 2 + 20);
+		t5 = (nvram_get_int("fanctrl_t5") ? nvram_get_int("fanctrl_t5") : TEMP_MAX / 2 + 20);
+
+		if ((t2 <= t1) || (t1 < 20)) { t1 = TEMP_MIN / 2 + 20; t2 = TEMP_2 / 2 + 20; }
+		if (t3 <= t2) t3 = TEMP_3 / 2 + 20;
+		if (t4 <= t3) t4 = TEMP_4 / 2 + 20;
+		if (t5 <= t4) t5 = TEMP_MAX / 2 + 20;
+
+		syslog(LOG_INFO,"Fan works in auto mode, switch wl temps (Celsius): %d %d %d %d %d", t1, t2, t3, t4, t5);
+	}
 
 	alarmtimer(0, FAN_NORMAL_PERIOD);
 
-	/* Most of time it goes to sleep */
+	/* most of time it goes to sleep */
 	while (1)
 	{
 		pause();
@@ -271,9 +277,7 @@ phy_tempsense_main(int argc, char *argv[])
 	return 0;
 }
 
-void
-restart_fanctrl()
+void restart_fanctrl()
 {
-	kill_pidfile_s("/var/run/phy_tempsense.pid", SIGUSR1);	
+	kill_pidfile_s("/var/run/phy_tempsense.pid", SIGUSR1);
 }
-

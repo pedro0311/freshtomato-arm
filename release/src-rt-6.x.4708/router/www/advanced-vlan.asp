@@ -80,8 +80,8 @@ switch (nvram['t_model_name']) {
 	case 'vlan-testid0':
 	case 'Asus RT-AC56U':
 	case 'D-Link DIR868L':
-	case 'Cisco Linksys EA6200':
-	case 'Cisco Linksys EA6350v1':
+	case 'Linksys EA6200':
+	case 'Linksys EA6350v1':
 	case 'Cisco Linksys EA6400':
 	case 'Cisco Linksys EA6500v2':
 	case 'Cisco Linksys EA6700':
@@ -96,7 +96,6 @@ switch (nvram['t_model_name']) {
 	case 'Tenda AC18':
 	case 'Asus RT-N18U':
 	case 'Asus RT-AC68R/U':
-	case 'Asus RT-AC68P':
 	case 'Asus RT-AC68P/U B1':
 	case 'Huawei WS880':
 	case 'Linksys EA6900':

@@ -362,8 +362,13 @@ void begin_new_syntax(char *ptr)
 void check_for_nonempty_syntax(void)
 {
 #ifdef ENABLE_COLOR
-	if (opensyntax && !seen_color_command)
+	if (opensyntax && !seen_color_command) {
+		size_t current_lineno = lineno;
+
+		lineno = live_syntax->lineno;
 		jot_error(N_("Syntax \"%s\" has no color commands"), live_syntax->name);
+		lineno = current_lineno;
+	}
 
 	opensyntax = FALSE;
 #endif
@@ -557,9 +562,12 @@ bool is_good_file(char *file)
 }
 
 #ifdef ENABLE_COLOR
-/* Read and parse one included syntax file. */
+/* Partially parse the syntaxes in the given file, or (when syntax
+ * is not NULL) fully parse one specific syntax from the file . */
 void parse_one_include(char *file, syntaxtype *syntax)
 {
+	char *was_nanorc = nanorc;
+	size_t was_lineno = lineno;
 	augmentstruct *extra;
 	FILE *rcstream;
 
@@ -567,7 +575,6 @@ void parse_one_include(char *file, syntaxtype *syntax)
 	if (!is_good_file(file))
 		return;
 
-	/* Open the included syntax file. */
 	rcstream = fopen(file, "rb");
 
 	if (rcstream == NULL) {
@@ -583,6 +590,8 @@ void parse_one_include(char *file, syntaxtype *syntax)
 	/* If this is the first pass, parse only the prologue. */
 	if (syntax == NULL) {
 		parse_rcfile(rcstream, TRUE, TRUE);
+		nanorc = was_nanorc;
+		lineno = was_lineno;
 		return;
 	}
 
@@ -610,16 +619,19 @@ void parse_one_include(char *file, syntaxtype *syntax)
 
 	free(syntax->filename);
 	syntax->filename = NULL;
+
+	nanorc = was_nanorc;
+	lineno = was_lineno;
 }
 
 /* Expand globs in the passed name, and parse the resultant files. */
 void parse_includes(char *ptr)
 {
 	char *pattern, *expanded;
-	char *was_nanorc = nanorc;
-	size_t was_lineno = lineno;
 	glob_t files;
 	int result;
+
+	check_for_nonempty_syntax();
 
 	pattern = ptr;
 	if (*pattern == '"')
@@ -640,11 +652,6 @@ void parse_includes(char *ptr)
 
 	globfree(&files);
 	free(expanded);
-
-	/* We're done with the included file(s).  Restore the original
-	 * filename and line number position. */
-	nanorc = was_nanorc;
-	lineno = was_lineno;
 }
 
 /* Return the short value corresponding to the color named in colorname,

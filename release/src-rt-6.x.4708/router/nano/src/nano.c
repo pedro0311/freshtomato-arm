@@ -288,10 +288,8 @@ void extract(linestruct *top, size_t top_x, linestruct *bot, size_t bot_x)
 	bool mark_inside = FALSE;
 	bool same_line = FALSE;
 
-	if (top == bot && top_x == bot_x) {
-		statusline(ALERT, "Extracting nothing -- please report a bug");
+	if (top == bot && top_x == bot_x)
 		return;
-	}
 #endif
 
 	/* Partition the buffer so that it contains only the text from
@@ -2583,10 +2581,37 @@ int main(int argc, char **argv)
 	/* Read the files mentioned on the command line into new buffers. */
 	while (optind < argc && (!openfile || read_them_all)) {
 		ssize_t givenline = 0, givencol = 0;
-
+#ifndef NANO_TINY
+		char *searchstring = NULL;
+#endif
 		/* If there's a +LINE[,COLUMN] argument here, eat it up. */
 		if (optind < argc - 1 && argv[optind][0] == '+') {
-			if (!parse_line_column(&argv[optind++][1], &givenline, &givencol))
+			int n = 1;
+
+#ifndef NANO_TINY
+			while (isalpha(argv[optind][n])) {
+				switch (argv[optind][n++]) {
+					case 'c': SET(CASE_SENSITIVE); break;
+					case 'C': UNSET(CASE_SENSITIVE); break;
+					case 'r': SET(USE_REGEXP); break;
+					case 'R': UNSET(USE_REGEXP); break;
+					default:
+						statusline(ALERT, _("Invalid search modifier '%c'"),
+											argv[optind][n - 1]);
+				}
+			}
+
+			if (argv[optind][n] == '/' || argv[optind][n] == '?') {
+				if (argv[optind][n + 1]) {
+					searchstring = mallocstrcpy(NULL, &argv[optind][n + 1]);
+					if (argv[optind][n] == '?')
+						SET(BACKWARDS_SEARCH);
+				} else if (n == 1)
+					statusline(ALERT, _("Empty search string"));
+				optind++;
+			} else
+#endif
+			if (!parse_line_column(&argv[optind++][n], &givenline, &givencol))
 				statusline(ALERT, _("Invalid line or column number"));
 		}
 
@@ -2602,6 +2627,22 @@ int main(int argc, char **argv)
 		/* If a position was given on the command line, go there. */
 		if (givenline != 0 || givencol != 0)
 			do_gotolinecolumn(givenline, givencol, FALSE, FALSE);
+#ifndef NANO_TINY
+		else if (searchstring != NULL) {
+			if (ISSET(USE_REGEXP))
+				regexp_init(searchstring);
+			if (!findnextstr(searchstring, FALSE, JUSTFIND, NULL, TRUE,
+											openfile->filetop, 0))
+				not_found_msg(searchstring);
+			else if (lastmessage == HUSH)
+				wipe_statusbar();
+			if (ISSET(USE_REGEXP))
+				tidy_up_after_search();
+			free(last_search);
+			last_search = searchstring;
+			searchstring = NULL;
+		}
+#endif
 #ifdef ENABLE_HISTORIES
 		else if (ISSET(POSITIONLOG) && openfile->filename[0] != '\0') {
 			ssize_t savedline, savedcol;

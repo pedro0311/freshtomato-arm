@@ -3,6 +3,103 @@ FreshTomato-ARM Changelog
 
 
 
+2019.3.220-beta - 2019.09.29
+----------------------------
+
+Recommendations:
+- clear your NVRAM after upgrade! (Erase all data in NVRAM memory (thorough))
+
+- Add Cisco Linksys EA6350v1 support
+- Add Tenda AC18 support
+- Add Cisco Linksys EA6200 support
+- kernel: tcp: refine memory limit test in tcp_fragment()
+- kernel: support Huawei CDC NCM driver (backported from newer kernels)
+- kernel: drivers: net: usb: fixes/additions from the upstream
+- nettle: update to 3.5.1
+- uqmi: update to 2019.06.27 (1965c71) snapshot
+- sqlite: update to 3.29.0
+- php: update to 7.2.22
+- nfs-utils: update to 1.3.4
+- e2fsprogs: update to 1.45.3
+- ffmpeg: update to 0.6.7
+- nginx: update to 1.16.1
+- nano: update to 4.4
+- tor: update to 0.4.1.5
+- miniupnpd: update to 2.1.20190902
+- dnsmasq: update to 2.80-e24abf2 snapshot
+- openssl: update to 1.0.2t
+- tor: update to 0.4.1.6
+- Updated adminer from 4.7.2 to 4.7.3 2019-08-27
+- portmap: clean-sources 6.0, add patch instead
+- libxml2: update to 2.9.9 + libs optimization
+- libpng: update to 1.2.59 + libs optimization
+- libubox: update to 2019.06.16 (ecf5617) snapshot
+- libjson-c: update to 2019.06.09 (07ea04e) snaphot
+- libexif: update to 2019.06.15 (a0c04d9) snaphot
+- libiconv: update to 1.16 + libs optimization
+- libnfnetlink: update to 2018.05.11 (5087de4) snapshot
+- libmnl: update to 2019.05.06 (5937dfc) snaphot
+- libevent: update to 2.1.11-stable + libs optimization
+- libcurl: update to 7.66.0 + libs optimization
+- libusb: update to 1.0.23
+- libcurl: Updated CA certificate bundle as of 2019-08-28
+- pcre: reduce size
+- lzo: set optimize flag also for CPP
+- ebtables: build ipv6 extension only if needed
+- Move disabling of rp_filter from mwan to firewall and make it multiwan aware
+- Test and fix wwansignal with all possible modes of Huawei E8372
+- Fix race condition starting wireless WAN causing route addition failure.
+- Add Cloudflare DDNS support
+- Fix undefined function reference in wwan_parser.js
+- Revert "libcurl: disable proxy and libcurl output options"
+- httpd: gencert.sh: add "TLS Web Server Authentication" to certificate's extended attributes
+- httpd: limit SSL certificate to 2 years if clock is accurate
+- OpenVPN: add Strict Mode to client's Routing Policy
+- Make solving domain .onion using Tor optional
+- GUI: admin-buttons.asp - add option to turn on/off blink for WiFi LEDs (and some cosmetic)
+- GUI: advanced-wireless.asp - add Turbo QAM option (Default: On --> like before/no change)
+- GUI: advanced-wireless.asp - add options for TX Beamforming (align to Asus SRC)
+- GUI: advanced-wireless.asp - add option Air Time Fairness (remove restriction only for R7000 / R8000)
+- GUI: fix/add conditional OpenVPN client restart, if the entry was removed from Routing Policy table only by clicking the "x" sign
+- router: Makefile: cosmetics in libmnl recipe
+- router: Makefile: fix/tune OpenVPN recipe
+- router: wanuptime: fix compiler warnings
+- router: others: -clean-up and remove obsolete (mips) stealthMode script completely from ARM branch
+- router: others: mymotd: remove unused stealthmode support + cosmetics
+- router: shared: led.c add function set_gpio() and replace system calls (and also at rc: inti.c)
+- router: rc: init.c - remove blink_wl for R8000 because it is now turned on by default (sync with sdk6)
+- router: rc: / shared: clean-up and remove MIPS hardware and router completely from ARM branch
+- router: rc: usb.c: replace xstart() calls with set_gpio()
+- switch4g: also try to reset modem in QMI mode
+- RT-N18U / RT-AC56U / RT-AC68U: set boot_wait=on (default for Asus) and set wait_time=3
+- R6250/R6300v2/R6400/R7000: set boot_wait=on and set wait_time=3
+- DIR868L / WS880: set boot_wait=on and set wait_time=3
+- R1D / EA6400 / EA6700 / EA6900 / WZR-1750DHP: set boot_wait=on and set wait_time=3 (10 for R1D)
+- R7000: setup/init Wifi modules with extra default parameter - split up Netgear R Series Router to init WiFi modules parameter (not the same for all models...) - clean up, remove 5 GHz WiFi parameter from 2,4 GHz init/setup - clean up, remove 2,4 GHz WiFi parameter from 5 GHz init/setup - align to dd wrt default values
+- R7000: fix overlapping MAC addresses with more than one VIF per WiFi module
+- R6400 / R6300v2 / R6250: fix overlapping MAC addresses with more than one VIF per WiFi module
+- RT-N18U / RT-AC56U / RT-AC68U: fix identical MAC addresses for LAN and WiFi module
+- Tenda A15 / AC18: assign unique MAC addresses for WAN, LAN and WiFi modules
+- DIR868L / WS880: assign unique MAC addresses for WAN, LAN and WiFi modules
+- Xiaomi MiWiFi R1D: fix overlapping MAC addresses with more than one VIF per WiFi module
+- Buffalo WZR-1750DHP: assign unique MAC addresses for WAN, LAN and WiFi modules
+- R6300v2: setup/init Wifi modules with extra default parameter - split up Netgear R Series Router to init WiFi modules parameter (not the same for all models...) - clean up, remove 5 GHz WiFi parameter from 2,4 GHz init/setup - clean up, remove 2,4 GHz WiFi parameter from 5 GHz init/setup - align to dd wrt default values
+- RT-AC56U: small change for init of Wifi modules (align to values of dd wrt and some cosmetic/alignment to other tomato router)
+- RT-N18U / RT-AC68U: small change for init of Wifi modules (align to other tomato router)
+- R6400: setup/init Wifi modules with extra default parameter - split up Netgear R Series Router to init WiFi modules parameter (not the same for all models...) - clean up, remove 5 GHz WiFi parameter from 2,4 GHz init/setup - clean up, remove 2,4 GHz WiFi parameter from 5 GHz init/setup - align to dd wrt default values
+- R6250: setup/init Wifi modules with extra default parameter - split up Netgear R Series Router to init WiFi modules parameter (not the same for all models... Last one! :-) ) - clean up, remove 5 GHz WiFi parameter from 2,4 GHz init/setup - clean up, remove 2,4 GHz WiFi parameter from 5 GHz init/setup - align to dd wrt default values
+- RT-N18U: make sure to enable gpio 13 for WiFi IC after re-/boot (only for safety)
+- EA6200: extend/fix support - show correct name at GUI - load correct cfe default parameter/config (fix for initial support)
+- DIR868L rev C1: improve support - load correct cfe default parameter for rev C1 (not the same like for rev A1/B1) - small change for init of Wifi modules (align to other tomato router)
+- RT-AC56U: extend LED table (add missing 2.4 GHz WLAN Led finally!)
+- EA6200 / EA6350v1: rebranding - boxes/units are shipped with "AC1200 Linksys EA6350v1" and "AC900 Linksys EA6200" (remove Cisco, only Linksys)
+- RT-N18U: modify/adjust 2,4 GHz WiFi setup/init parameter (align to Asus 384)
+- Xiaomi R1D: automatic fanctrl rework
+- RT-AC3200 / R8000: set boot_wait=on and set wait_time=3
+- RT-AC3200: fix identical MAC addresses for LAN and 2,4 GHz WiFi module (eth2)
+- R8000: fix overlapping MAC addresses with more than one VIF per WiFi module
+
+
 2019.3.118-beta - 2019.07.06
 ----------------------------
 

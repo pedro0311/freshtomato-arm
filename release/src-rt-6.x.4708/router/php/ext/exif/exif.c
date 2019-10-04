@@ -1541,6 +1541,20 @@ static void php_ifd_set32u(char *data, size_t value, int motorola_intel)
 }
 /* }}} */
 
+static float php_ifd_get_float(char *data) {
+	/* Copy to avoid alignment issues */
+	float f;
+	memcpy(&f, data, sizeof(float));
+	return f;
+}
+
+static double php_ifd_get_double(char *data) {
+	/* Copy to avoid alignment issues */
+	double f;
+	memcpy(&f, data, sizeof(double));
+	return f;
+}
+
 #ifdef EXIF_DEBUG
 char * exif_dump_data(int *dump_free, int format, int components, int length, int motorola_intel, char *value_ptr) /* {{{ */
 {
@@ -1653,12 +1667,12 @@ static double exif_convert_any_format(void *value, int format, int motorola_inte
 #ifdef EXIF_DEBUG
 			php_error_docref(NULL, E_NOTICE, "Found value of type single");
 #endif
-			return (double)*(float *)value;
+			return (double) php_ifd_get_float(value);
 		case TAG_FMT_DOUBLE:
 #ifdef EXIF_DEBUG
 			php_error_docref(NULL, E_NOTICE, "Found value of type double");
 #endif
-			return *(double *)value;
+			return php_ifd_get_double(value);
 	}
 	return 0;
 }
@@ -1716,12 +1730,12 @@ static size_t exif_convert_any_to_int(void *value, int format, int motorola_inte
 #ifdef EXIF_DEBUG
 			php_error_docref(NULL, E_NOTICE, "Found value of type single");
 #endif
-			return (size_t)*(float *)value;
+			return (size_t) php_ifd_get_float(value);
 		case TAG_FMT_DOUBLE:
 #ifdef EXIF_DEBUG
 			php_error_docref(NULL, E_NOTICE, "Found value of type double");
 #endif
-			return (size_t)*(double *)value;
+			return (size_t) php_ifd_get_double(value);
 	}
 	return 0;
 }
@@ -2188,13 +2202,13 @@ static void exif_iif_add_value(image_info_type *image_info, int section_index, c
 #ifdef EXIF_DEBUG
 						php_error_docref(NULL, E_WARNING, "Found value of type single");
 #endif
-						info_value->f = *(float *)value;
+						info_value->f = php_ifd_get_float(value);
 						break;
 					case TAG_FMT_DOUBLE:
 #ifdef EXIF_DEBUG
 						php_error_docref(NULL, E_WARNING, "Found value of type double");
 #endif
-						info_value->d = *(double *)value;
+						info_value->d = php_ifd_get_double(value);
 						break;
 				}
 			}
@@ -3040,11 +3054,11 @@ static int exif_process_user_comment(image_info_type *ImageInfo, char **pszInfoP
 			/* First try to detect BOM: ZERO WIDTH NOBREAK SPACE (FEFF 16)
 			 * since we have no encoding support for the BOM yet we skip that.
 			 */
-			if (!memcmp(szValuePtr, "\xFE\xFF", 2)) {
+			if (ByteCount >=2 && !memcmp(szValuePtr, "\xFE\xFF", 2)) {
 				decode = "UCS-2BE";
 				szValuePtr = szValuePtr+2;
 				ByteCount -= 2;
-			} else if (!memcmp(szValuePtr, "\xFF\xFE", 2)) {
+			} else if (ByteCount >=2 && !memcmp(szValuePtr, "\xFF\xFE", 2)) {
 				decode = "UCS-2LE";
 				szValuePtr = szValuePtr+2;
 				ByteCount -= 2;
@@ -3919,7 +3933,7 @@ static int exif_scan_thumbnail(image_info_type *ImageInfo)
 	size_t          length=2, pos=0;
 	jpeg_sof_info   sof_info;
 
-	if (!data) {
+	if (!data || ImageInfo->Thumbnail.size < 4) {
 		return FALSE; /* nothing to do here */
 	}
 	if (memcmp(data, "\xFF\xD8\xFF", 3)) {

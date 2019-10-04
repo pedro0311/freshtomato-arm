@@ -160,7 +160,7 @@ void start_dnsmasq()
 	}
 #endif
 #ifdef TCONFIG_TOR
-	if (nvram_match("tor_enable", "1")) {
+	if ((nvram_match("tor_enable", "1")) && (nvram_match("dnsmasq_onion_support", "1"))) {
 		char *t_ip;
 
 		if (nvram_match("tor_iface", "br0"))      { t_ip = nvram_safe_get("lan_ipaddr");  }
@@ -657,8 +657,8 @@ static pid_t pid_phy_tempsense = -1;
 void start_phy_tempsense()
 {
 	stop_phy_tempsense();
-
-	char *phy_tempsense_argv[] = {"phy_tempsense", NULL};
+	/* renice to high priority (10) - avoid revs fluctuations on high CPU load */
+	char *phy_tempsense_argv[] = {"nice", "-n", "-10", "phy_tempsense", NULL};
 	_eval(phy_tempsense_argv, NULL, 0, &pid_phy_tempsense);
 }
 

@@ -904,7 +904,9 @@ static const nvset_t nvset_list[] = {
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
 	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
-//	{ "dnsmasq_norw",		V_01				},
+#ifdef TCONFIG_TOR
+	{ "dnsmasq_onion_support",	V_01				},
+#endif
 
 // advanced-firewall
 	{ "block_wan",			V_01				},
@@ -1065,7 +1067,13 @@ static const nvset_t nvset_list[] = {
 	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
 	{ "wl_obss_coex",		V_01				},
 	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
-	{ "wl_atf",			V_01				},	// Air Time Fairness support (for R7000/R8000)
+	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
+	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
+	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_bfr_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_txbf_bfe_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
+	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 
 // forward-dmz
 	{ "dmz_enable",			V_01				},
@@ -1637,7 +1645,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client1_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client1_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client1_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client1_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client1_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client1_custom",		V_NONE				},
 	{ "vpn_client1_static",		V_NONE				},
@@ -1674,7 +1682,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client2_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client2_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client2_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client2_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client2_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client2_custom",		V_NONE				},
 	{ "vpn_client2_static",		V_NONE				},
@@ -1711,7 +1719,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
 	{ "vpn_client3_hmac",		V_RANGE(-1, 3)			},
 	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
-	{ "vpn_client3_rgw",		V_RANGE(0, 2)			},
+	{ "vpn_client3_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client3_gw",		V_TEXT(0, 15)			},
 	{ "vpn_client3_custom",		V_NONE				},
 	{ "vpn_client3_static",		V_NONE				},

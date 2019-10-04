@@ -88,7 +88,7 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
-ifeq ($(ASUS_TRX),CISCO)
+ifeq ($(ASUS_TRX),LINKSYS2)
 ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
@@ -200,7 +200,7 @@ ifeq ($(ASUS_TRX),BUFFALO)
 	ctools/trx_asus -i image/linux-lzma.trx -r WZR1750,3.0.0.4,image/freshtomato-WZR1750-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 # for EA6200, EA6350v1
-ifeq ($(ASUS_TRX),CISCO)
+ifeq ($(ASUS_TRX),LINKSYS2)
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6350v1,3.0.0.4,image/freshtomato-EA6350v1-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6200,3.0.0.4,image/freshtomato-EA6200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
@@ -726,6 +726,10 @@ define BusyboxOptions
 		sed -i "/CONFIG_FEATURE_SHOW_THREADS/d" $(1); \
 		echo "CONFIG_FEATURE_SHOW_THREADS=y" >>$(1); \
 	fi; \
+	if [ "$(FANCTRL)" = "y" ]; then \
+		sed -i "/CONFIG_RENICE/d" $(1); \
+		echo "CONFIG_RENICE=y" >>$(1); \
+	fi; \
 	)
 endef
 
@@ -923,17 +927,17 @@ define KernelConfig
 			echo "CONFIG_BRIDGE_EBT_IP6=m" >>$(1); \
 		fi; \
 	fi; \
-        sed -i "/CONFIG_NVRAM_64K/d" $(1); \
-        if [ "$(NVRAM_64K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_64K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_64K/d" $(1); \
+	if [ "$(NVRAM_64K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_64K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
 	fi; \
-        sed -i "/CONFIG_NVRAM_128K/d" $(1); \
-        if [ "$(NVRAM_128K)" = "y" ]; then \
-                echo "CONFIG_NVRAM_128K=y" >>$(1); \
-        else \
-                echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
+	sed -i "/CONFIG_NVRAM_128K/d" $(1); \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		echo "CONFIG_NVRAM_128K=y" >>$(1); \
+	else \
+		echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
 	fi; \
 	if [ "$(SATA)" = "y" ]; then \
 		sed -i "/CONFIG_CMDLINE/d" $(1); \
@@ -1082,10 +1086,10 @@ ea6700z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n
 
 ea6350v1e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="CISCO" FAILSAFE_UPGRADE=n
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n
 
 ea6350v1z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="CISCO" FAILSAFE_UPGRADE=n
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n
 
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y

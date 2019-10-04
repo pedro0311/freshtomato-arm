@@ -1026,6 +1026,10 @@ void start_wan(int mode)
 		mwan_num = 1;
 	}
 
+	syslog(LOG_INFO, "start_wan: Restarting wireless");
+	stop_wireless();
+	start_wireless();
+
 	syslog(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -1034,8 +1038,6 @@ void start_wan(int mode)
 		start_wan_if (mode, prefix);
 	}
 
-	stop_wireless();
-	start_wireless();
 	start_firewall();
 	set_host_domain_name();
 
@@ -1264,28 +1266,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		/* WAN LED control */
 		if (wanup) {
 			wan_led(wanup); /* LED ON! */
-		}
-
-		/* We don't need STP after wireless led is lighted		// no idea why... toggling it if necessary	-- zzz */
-		if (check_hw_type() == HW_BCM4702) {
-			eval("brctl", "stp", nvram_safe_get("lan_ifname"), "0");
-			if (nvram_match("lan_stp", "1")) 
-				eval("brctl", "stp", nvram_safe_get("lan_ifname"), "1");
-			if (strcmp(nvram_safe_get("lan1_ifname"),"") != 0) {
-				eval("brctl", "stp", nvram_safe_get("lan1_ifname"), "0");
-				if (nvram_match("lan1_stp", "1")) 
-					eval("brctl", "stp", nvram_safe_get("lan1_ifname"), "1");
-			}
-			if (strcmp(nvram_safe_get("lan2_ifname"),"") != 0) {
-				eval("brctl", "stp", nvram_safe_get("lan2_ifname"), "0");
-				if (nvram_match("lan2_stp", "1")) 
-					eval("brctl", "stp", nvram_safe_get("lan2_ifname"), "1");
-			}
-			if (strcmp(nvram_safe_get("lan3_ifname"),"") != 0) {
-				eval("brctl", "stp", nvram_safe_get("lan3_ifname"), "0");
-				if (nvram_match("lan3_stp", "1")) 
-					eval("brctl", "stp", nvram_safe_get("lan3_ifname"), "1");
-			}
 		}
 
 		if (wanup) {

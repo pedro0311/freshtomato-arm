@@ -283,7 +283,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 	for (;;) {
 		if (!pSetupDiEnumDeviceInfo(dev_info, *_index, dev_info_data)) {
 			if (GetLastError() != ERROR_NO_MORE_ITEMS) {
-				usbi_err(ctx, "Could not obtain device info data for %s index %u: %s",
+				usbi_err(ctx, "Could not obtain device info data for %s index %lu: %s",
 					guid_to_string(guid), *_index, windows_error_str(0));
 				return LIBUSB_ERROR_OTHER;
 			}
@@ -299,7 +299,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 			break;
 
 		if (GetLastError() != ERROR_NO_MORE_ITEMS) {
-			usbi_err(ctx, "Could not obtain interface data for %s devInst %X: %s",
+			usbi_err(ctx, "Could not obtain interface data for %s devInst %lX: %s",
 				guid_to_string(guid), dev_info_data->DevInst, windows_error_str(0));
 			return LIBUSB_ERROR_OTHER;
 		}
@@ -311,7 +311,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 	if (!pSetupDiGetDeviceInterfaceDetailA(dev_info, &dev_interface_data, NULL, 0, &size, NULL)) {
 		// The dummy call should fail with ERROR_INSUFFICIENT_BUFFER
 		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-			usbi_err(ctx, "could not access interface data (dummy) for %s devInst %X: %s",
+			usbi_err(ctx, "could not access interface data (dummy) for %s devInst %lX: %s",
 				guid_to_string(guid), dev_info_data->DevInst, windows_error_str(0));
 			return LIBUSB_ERROR_OTHER;
 		}
@@ -322,7 +322,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 
 	dev_interface_details = malloc(size);
 	if (dev_interface_details == NULL) {
-		usbi_err(ctx, "could not allocate interface data for %s devInst %X",
+		usbi_err(ctx, "could not allocate interface data for %s devInst %lX",
 			guid_to_string(guid), dev_info_data->DevInst);
 		return LIBUSB_ERROR_NO_MEM;
 	}
@@ -330,7 +330,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 	dev_interface_details->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_A);
 	if (!pSetupDiGetDeviceInterfaceDetailA(dev_info, &dev_interface_data,
 		dev_interface_details, size, NULL, NULL)) {
-		usbi_err(ctx, "could not access interface data (actual) for %s devInst %X: %s",
+		usbi_err(ctx, "could not access interface data (actual) for %s devInst %lX: %s",
 			guid_to_string(guid), dev_info_data->DevInst, windows_error_str(0));
 		free(dev_interface_details);
 		return LIBUSB_ERROR_OTHER;
@@ -340,7 +340,7 @@ static int get_interface_details(struct libusb_context *ctx, HDEVINFO dev_info,
 	free(dev_interface_details);
 
 	if (*dev_interface_path == NULL) {
-		usbi_err(ctx, "could not allocate interface path for %s devInst %X",
+		usbi_err(ctx, "could not allocate interface path for %s devInst %lX",
 			guid_to_string(guid), dev_info_data->DevInst);
 		return LIBUSB_ERROR_NO_MEM;
 	}
@@ -909,6 +909,8 @@ static int init_device(struct libusb_device *dev, struct libusb_device *parent_d
 				&conn_info_v2, sizeof(conn_info_v2), &conn_info_v2, sizeof(conn_info_v2), &size, NULL)) {
 				usbi_warn(ctx, "could not get node connection information (V2) for device '%s': %s",
 					  priv->dev_id,  windows_error_str(0));
+			} else if (conn_info_v2.Flags.DeviceIsOperatingAtSuperSpeedPlusOrHigher) {
+				conn_info.Speed = 4;
 			} else if (conn_info_v2.Flags.DeviceIsOperatingAtSuperSpeedOrHigher) {
 				conn_info.Speed = 3;
 			}
@@ -926,6 +928,7 @@ static int init_device(struct libusb_device *dev, struct libusb_device *parent_d
 		case 1: dev->speed = LIBUSB_SPEED_FULL; break;
 		case 2: dev->speed = LIBUSB_SPEED_HIGH; break;
 		case 3: dev->speed = LIBUSB_SPEED_SUPER; break;
+		case 4: dev->speed = LIBUSB_SPEED_SUPER_PLUS; break;
 		default:
 			usbi_warn(ctx, "unknown device speed %u", conn_info.Speed);
 			break;
@@ -952,9 +955,9 @@ static int enumerate_hcd_root_hub(struct libusb_context *ctx, const char *dev_id
 	unsigned long session_id;
 	DEVINST child_devinst;
 
-	if (CM_Get_Child(&child_devinst, devinst, 0) != CR_SUCCESS) {
-		usbi_err(ctx, "could not get child devinst for '%s'", dev_id);
-		return LIBUSB_ERROR_OTHER;
+	if ((CM_Get_Child(&child_devinst, devinst, 0)) != CR_SUCCESS) {
+		usbi_warn(ctx, "could not get child devinst for '%s'", dev_id);
+		return LIBUSB_SUCCESS;
 	}
 
 	session_id = (unsigned long)child_devinst;
@@ -1251,7 +1254,7 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 
 			// Read the Device ID path
 			if (!pSetupDiGetDeviceInstanceIdA(*dev_info, &dev_info_data, dev_id, sizeof(dev_id), NULL)) {
-				usbi_warn(ctx, "could not read the device instance ID for devInst %X, skipping",
+				usbi_warn(ctx, "could not read the device instance ID for devInst %lX, skipping",
 					  dev_info_data.DevInst);
 				continue;
 			}
@@ -2418,11 +2421,11 @@ static int get_valid_interface(struct libusb_device_handle *dev_handle, int api_
 */
 static int check_valid_interface(struct libusb_device_handle *dev_handle, unsigned short interface, int api_id)
 {
-	if (interface >= USB_MAXINTERFACES)
-		return -1;
-
 	struct winusb_device_handle_priv *handle_priv = _device_handle_priv(dev_handle);
 	struct winusb_device_priv *priv = _device_priv(dev_handle->dev);
+
+	if (interface >= USB_MAXINTERFACES)
+		return -1;
 
 	if ((api_id < USB_API_WINUSBX) || (api_id > USB_API_HID)) {
 		usbi_dbg("unsupported API ID");
@@ -2567,7 +2570,7 @@ static enum libusb_transfer_status usbd_status_to_libusb_transfer_status(USBD_ST
 		case 0xC0007000: /* USBD_STATUS_DEVICE_GONE */
 			return LIBUSB_TRANSFER_NO_DEVICE;
 		default:
-			usbi_dbg("USBD_STATUS 0x%08x translated to LIBUSB_TRANSFER_ERROR", status);
+			usbi_dbg("USBD_STATUS 0x%08lx translated to LIBUSB_TRANSFER_ERROR", status);
 			return LIBUSB_TRANSFER_ERROR;
 		}
 	}
@@ -3358,7 +3361,7 @@ static int _hid_get_report(struct hid_device_priv *dev, HANDLE hid_handle, int i
 		usbi_dbg("program assertion failed: hid_buffer is not NULL");
 
 	if ((*size == 0) || (*size > MAX_HID_REPORT_SIZE)) {
-		usbi_dbg("invalid size (%u)", *size);
+		usbi_dbg("invalid size (%zu)", *size);
 		return LIBUSB_ERROR_INVALID_PARAM;
 	}
 
@@ -3437,7 +3440,7 @@ static int _hid_set_report(struct hid_device_priv *dev, HANDLE hid_handle, int i
 		usbi_dbg("program assertion failed: hid_buffer is not NULL");
 
 	if ((*size == 0) || (*size > max_report_size)) {
-		usbi_dbg("invalid size (%u)", *size);
+		usbi_dbg("invalid size (%zu)", *size);
 		return LIBUSB_ERROR_INVALID_PARAM;
 	}
 
@@ -4115,8 +4118,17 @@ static int composite_open(int sub_api, struct libusb_device_handle *dev_handle)
 		}
 	}
 
-	if (available[SUB_API_MAX]) // HID driver
+	if (available[SUB_API_MAX]) { // HID driver
 		r = hid_open(SUB_API_NOTSET, dev_handle);
+
+		// On Windows 10 version 1903 (OS Build 18362) and later Windows blocks attempts to
+		// open HID devices with a U2F usage unless running as administrator. We ignore this
+		// failure and proceed without the HID device opened.
+		if (r == LIBUSB_ERROR_ACCESS) {
+			usbi_dbg("ignoring access denied error while opening HID interface of composite device");
+			r = LIBUSB_SUCCESS;
+		}
+	}
 
 	return r;
 }

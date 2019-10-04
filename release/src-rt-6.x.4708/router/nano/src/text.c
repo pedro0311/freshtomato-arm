@@ -297,15 +297,6 @@ void handle_indent_action(undo *u, bool undoing, bool add_indent)
 }
 #endif /* !NANO_TINY */
 
-/* Return TRUE when the given string is empty or consists of only blanks. */
-bool white_string(const char *s)
-{
-	while (*s != '\0' && (is_blank_mbchar(s) || *s == '\r'))
-		s += char_length(s);
-
-	return !*s;
-}
-
 #ifdef ENABLE_COMMENT
 /* Test whether the given line can be uncommented, or add or remove a comment,
  * depending on action.  Return TRUE if the line is uncommentable, or when
@@ -503,7 +494,7 @@ void redo_cut(undo *u)
 	openfile->mark = line_from_number(u->mark_begin_lineno);
 	openfile->mark_x = (u->xflags & WAS_WHOLE_LINE) ? 0 : u->mark_begin_x;
 
-	do_cut_text(FALSE, TRUE, FALSE, u->type == ZAP);
+	do_snip(FALSE, TRUE, FALSE, u->type == ZAP);
 
 	free_lines(cutbuffer);
 	cutbuffer = oldcutbuffer;
@@ -1001,7 +992,7 @@ bool execute_command(const char *command)
 		if (ISSET(MULTIBUFFER)) {
 			openfile = openfile->prev;
 			if (openfile->mark)
-				do_cut_text(TRUE, TRUE, FALSE, FALSE);
+				do_snip(TRUE, TRUE, FALSE, FALSE);
 		} else
 #endif
 		{
@@ -1012,7 +1003,7 @@ bool execute_command(const char *command)
 				openfile->current_x = 0;
 			}
 			add_undo(CUT);
-			do_cut_text(FALSE, openfile->mark != NULL, openfile->mark == NULL, FALSE);
+			do_snip(FALSE, openfile->mark != NULL, openfile->mark == NULL, FALSE);
 			update_undo(CUT);
 		}
 
@@ -1426,6 +1417,13 @@ bool do_wrap(void)
 
 	add_undo(SPLIT_BEGIN);
 #endif
+#ifdef ENABLE_JUSTIFY
+	bool autowhite = ISSET(AUTOINDENT);
+	size_t lead_len = quote_length(line->data);
+
+	if (lead_len > 0)
+		UNSET(AUTOINDENT);
+#endif
 
 	/* The remainder is the text that will be wrapped to the next line. */
 	remainder = line->data + wrap_loc;
@@ -1455,10 +1453,19 @@ bool do_wrap(void)
 #endif
 		}
 
-		/* Join the next line to this one, and delete any extra blanks. */
-		do {
+		/* Join the next line to this one. */
+		do_delete();
+
+#ifdef ENABLE_JUSTIFY
+		/* If the quoting part of the current line equals the quoting part of
+		 * what was the next line, then strip this second quoting part. */
+		if (strncmp(line->data, line->data + openfile->current_x, lead_len) == 0)
+			for (size_t i = lead_len; i > 0; i--)
+				do_delete();
+#endif
+		/* Remove any extra blanks. */
+		while (is_blank_mbchar(&line->data[openfile->current_x]))
 			do_delete();
-		} while (is_blank_mbchar(&line->data[openfile->current_x]));
 	}
 
 	/* Go to the wrap location. */
@@ -1479,6 +1486,27 @@ bool do_wrap(void)
 
 	/* Now split the line. */
 	do_enter();
+
+#ifdef ENABLE_JUSTIFY
+	/* If the original line has quoting, copy it to the spillage line. */
+	if (lead_len > 0) {
+		lead_len += indent_length(line->data + lead_len);
+
+		line = line->next;
+		line_len = strlen(line->data);
+		line->data = charealloc(line->data, lead_len + line_len + 1);
+
+		charmove(line->data + lead_len, line->data, line_len + 1);
+		strncpy(line->data, line->prev->data, lead_len);
+
+		openfile->current_x += lead_len;
+#ifndef NANO_TINY
+		update_undo(ENTER);
+#endif
+		if (autowhite)
+			SET(AUTOINDENT);
+	}
+#endif
 
 	openfile->spillage_line = openfile->current;
 

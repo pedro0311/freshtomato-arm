@@ -1570,7 +1570,9 @@ static zend_persistent_script *opcache_compile_file(zend_file_handle *file_handl
 
 	/* check blacklist right after ensuring that file was opened */
 	if (file_handle->opened_path && zend_accel_blacklist_is_blacklisted(&accel_blacklist, ZSTR_VAL(file_handle->opened_path))) {
+		SHM_UNPROTECT();
 		ZCSG(blacklist_misses)++;
+		SHM_PROTECT();
 		*op_array_p = accelerator_orig_compile_file(file_handle, type);
 		return NULL;
 	}
@@ -1601,7 +1603,9 @@ static zend_persistent_script *opcache_compile_file(zend_file_handle *file_handl
 		}
 
 		if (ZCG(accel_directives).max_file_size > 0 && size > (size_t)ZCG(accel_directives).max_file_size) {
+			SHM_UNPROTECT();
 			ZCSG(blacklist_misses)++;
+			SHM_PROTECT();
 			*op_array_p = accelerator_orig_compile_file(file_handle, type);
 			return NULL;
 		}
@@ -1760,6 +1764,29 @@ zend_op_array *file_cache_compile_file(zend_file_handle *file_handle, int type)
 }
 #endif
 
+int check_persistent_script_access(zend_persistent_script *persistent_script)
+{
+    char *phar_path, *ptr;
+    int ret;
+    if ((ZSTR_LEN(persistent_script->script.filename)<sizeof("phar://.phar")) ||
+         memcmp(ZSTR_VAL(persistent_script->script.filename), "phar://", sizeof("phar://")-1)) {
+
+        return access(ZSTR_VAL(persistent_script->script.filename), R_OK) != 0;
+
+    } else {
+        /* we got a cached file from .phar, so we have to strip prefix and path inside .phar to check access() */
+        phar_path = estrdup(ZSTR_VAL(persistent_script->script.filename)+sizeof("phar://")-1);
+        if ((ptr = strstr(phar_path, ".phar/")) != NULL)
+        {
+            *(ptr+sizeof(".phar/")-2) = 0; /* strip path inside .phar file */
+        }
+        ret = access(phar_path, R_OK) != 0;
+        efree(phar_path);
+        return ret;
+    }
+}
+
+
 /* zend_compile() replacement */
 zend_op_array *persistent_compile_file(zend_file_handle *file_handle, int type)
 {
@@ -1896,7 +1923,7 @@ zend_op_array *persistent_compile_file(zend_file_handle *file_handle, int type)
 	if (EXPECTED(persistent_script != NULL) &&
 	    UNEXPECTED(ZCG(accel_directives).validate_permission) &&
 	    file_handle->type == ZEND_HANDLE_FILENAME &&
-	    UNEXPECTED(access(ZSTR_VAL(persistent_script->script.filename), R_OK) != 0)) {
+	    UNEXPECTED(check_persistent_script_access(persistent_script))) {
 		if (type == ZEND_REQUIRE) {
 			zend_message_dispatcher(ZMSG_FAILED_REQUIRE_FOPEN, file_handle->filename);
 			zend_bailout();
@@ -1980,11 +2007,16 @@ zend_op_array *persistent_compile_file(zend_file_handle *file_handle, int type)
 			return accelerator_orig_compile_file(file_handle, type);
 		}
 
+		SHM_PROTECT();
+		HANDLE_UNBLOCK_INTERRUPTIONS();
+		persistent_script = opcache_compile_file(file_handle, type, key, &op_array);
+		HANDLE_BLOCK_INTERRUPTIONS();
+		SHM_UNPROTECT();
+
 		/* Try and cache the script and assume that it is returned from_shared_memory.
          * If it isn't compile_and_cache_file() changes the flag to 0
          */
        	from_shared_memory = 0;
-		persistent_script = opcache_compile_file(file_handle, type, key, &op_array);
 		if (persistent_script) {
 			persistent_script = cache_script_in_shared_memory(persistent_script, key, key ? key_length : 0, &from_shared_memory);
 		}
