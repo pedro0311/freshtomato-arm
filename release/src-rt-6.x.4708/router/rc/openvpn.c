@@ -466,8 +466,7 @@ void start_ovpn_client(int clientNum)
 				sprintf(buffer,"lan%d_netmask",i);
 				ret2 = sscanf(nvram_safe_get(buffer), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
 				if (ret1 == 4 && ret2 == 4) {
-					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n",
-						ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get("lan_netmask"), iface);
+					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n", ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], nvram_safe_get(buffer), iface);
 				}
 			}
 		}
