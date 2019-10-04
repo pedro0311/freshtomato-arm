@@ -182,11 +182,12 @@ endif
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,image/freshtomato-DIR868L-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
-# for R7000, R6400, R6400v2, R6300v2, R6250
+# for R7000, R6700v3, R6400, R6400v2, R6300v2, R6250
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(NVRAM_128K),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400,3.0.0.4,image/freshtomato-R6400-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400v2,3.0.0.4,image/freshtomato-R6400v2-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r R6700v3,3.0.0.4,image/freshtomato-R6700v3-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
 	ctools/trx_asus -i image/linux-lzma.trx -r R7000,3.0.0.4,image/freshtomato-R7000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6300v2,3.0.0.4,image/freshtomato-R6300v2-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1072,6 +1073,9 @@ r6400init:
 r6400v2init:
 	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y BUILD_DESC="initial" NETGEAR_CHK="R6400v2" BOARDID_FILE="compatible_r6400v2.txt" FW_CFG_FILE="tomato_cfg.h"
 
+r6700v3init:
+	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y BUILD_DESC="initial" NETGEAR_CHK="R6700v3" BOARDID_FILE="compatible_r6700v3.txt" FW_CFG_FILE="tomato_cfg.h"
+
 ws880e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI"
 
@@ -1166,13 +1170,14 @@ help:
 	@echo "NETGEAR ARM Builds"
 	@echo "r7000e        R7000/R6300v2/R6250 build VPN"
 	@echo "r7000z        R7000/R6300v2/R6250 build AIO"
-	@echo "r6400e        R6400/R6400v2 build VPN - 128K NVRAM"
-	@echo "r6400z        R6400/R6400v2 build AIO - 128K NVRAM"
+	@echo "r6400e        R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
+	@echo "r6400z        R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
 	@echo "r7000init     R7000 init build"
 	@echo "r6250init     R6250 init build"
 	@echo "r6300v2init   R6300v2 init build"
 	@echo "r6400init     R6400 init build"
 	@echo "r6400v2init   R6400v2 init build"
+	@echo "r6700v3init   R6700v3 init build"
 	@echo "Xiaomi ARM Builds"
 	@echo "r1do          R1D custom build"
 	@echo "HUAWEI ARM Builds"

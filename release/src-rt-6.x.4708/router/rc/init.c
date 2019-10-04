@@ -405,6 +405,7 @@ static int init_vlan_ports(void)
 		break;
 	case MODEL_R6400:
 	case MODEL_R6400v2:
+	case MODEL_R6700v3:
 	case MODEL_R7000:
 	case MODEL_RTN18U:
 	case MODEL_RTAC66U_B1:
@@ -447,6 +448,7 @@ static void check_bootnv(void)
 	switch (model) {
 #ifdef CONFIG_BCMWL6A
 	case MODEL_R7000:
+	case MODEL_R6700v3:
 	case MODEL_R6400:
 	case MODEL_R6400v2:
 	case MODEL_R6250:
@@ -1993,8 +1995,9 @@ static int init_nvram(void)
 		}
 		break;
 	case MODEL_R6400v2:
+	case MODEL_R6700v3:
 		mfr = "Netgear";
-		name = "R6400v2";
+		name = nvram_match("board_id", "U12H332T77_NETGEAR") ? "R6700v3" : "R6400v2";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
