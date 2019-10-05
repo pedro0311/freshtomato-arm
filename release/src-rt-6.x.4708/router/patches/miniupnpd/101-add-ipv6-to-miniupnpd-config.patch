@@ -20,16 +20,16 @@
  CFLAGS += -Wall
  CFLAGS += -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
  #CFLAGS += -Wno-missing-field-initializers
-@@ -40,6 +40,8 @@ STRIP ?= strip
- PKG_CONFIG ?= pkg-config
+@@ -41,6 +41,8 @@ STRIP ?= strip
  CP = cp
+ DOXYGEN ?= doxygen
  
 +# for Tomato ARM (router/shared)
 +CFLAGS += -I$(TOP)/shared
  
  INSTALLPREFIX ?= $(PREFIX)/usr
  SBININSTALLDIR = $(INSTALLPREFIX)/sbin
-@@ -110,7 +112,13 @@ TEST := $(shell [ $(IPTVER1) -gt 1 ] ||
+@@ -114,7 +116,13 @@ TEST := $(shell [ $(IPTVER1) -gt 1 ] ||
  ifeq ($(TEST), 1)
  CPPFLAGS := $(CPPFLAGS) -DIPTABLES_143
  # the following sucks, but works
