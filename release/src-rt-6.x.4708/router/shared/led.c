@@ -586,9 +586,6 @@ void led_setup(void) {
 			break;
 		case MODEL_R7000:
 			/* activate WAN port led */
-			system("/usr/sbin/et robowr 0x0 0x10 0x3000");	/* basic LED setup, RT-N18U & RT-AC56U have 0x0220 for example */
-			system("/usr/sbin/et robowr 0x0 0x12 0x78");
-			system("/usr/sbin/et robowr 0x0 0x14 0x01");	/* force port 0 (WAN) to use LED function 1 (blink); 0 == blink off and 1 == blink on; bit 0 = port 0 */
 			set_gpio(8, T_LOW);		/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			break;
 #endif /* CONFIG_BCMWL6A */
