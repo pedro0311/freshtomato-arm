@@ -398,8 +398,8 @@ int do_led(int which, int mode)
 			c = 2; /* color white gpio 2 (active LOW) */
 		}
 		else if (which == LED_WHITE) {
-			b = 8; /* color white gpio 8 (active LOW) */
-			c = -9; /* color amber gpio 9 (active HIGH) */
+			b = -8; /* color white gpio 8 (active LOW) */
+			c = 9; /* color amber gpio 9 (active HIGH) */
 		}
 		else if (which == LED_BRIDGE) { /* non GPIO LED */
 			do_led_bridge(mode);
@@ -580,11 +580,9 @@ void led_setup(void) {
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
 		case MODEL_R8000:
-			/* activate WAN port led - not the same like R7000 */
-			system("/usr/sbin/et robowr 0x0 0x10 0x3000");
-			system("/usr/sbin/et robowr 0x0 0x12 0x78");
-			system("/usr/sbin/et robowr 0x0 0x14 0x10");	/* R8000 Netgear source - rc/rc.c */
-			set_gpio(9, T_HIGH);		/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active HIGH) if ethernet cable is connected; switch to color white (GPIO 8, active LOW) with WAN up */
+			/* activate WAN port led */
+			set_gpio(8, T_HIGH);
+			set_gpio(9, T_LOW);	/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active LOW) if ethernet cable is connected; switch to color white (GPIO 8, active HIGH) with WAN up */
 			break;
 #endif /* CONFIG_BCM7 */
 		default:
