@@ -658,7 +658,7 @@ void start_ovpn_server(int serverNum)
 	char buffer2[BUF_SIZE];
 	char *argv[6], *chp, *route;
 	char *br_ipaddr, *br_netmask;
-	int push_lan[3] = {0};
+	int push_lan[4] = {0};
 	int dont_push_active = 0;
 	int argc = 0;
 	int c2c = 0;
