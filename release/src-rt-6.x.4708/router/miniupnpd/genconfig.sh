@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: genconfig.sh,v 1.101 2019/09/24 11:52:15 nanard Exp $
+# $Id: genconfig.sh,v 1.104 2019/10/06 20:51:51 nanard Exp $
 # vim: tabstop=4 shiftwidth=4 noexpandtab
 #
 # miniupnp daemon
@@ -18,6 +18,7 @@ case "$argv" in
 	--ipv6) IPV6=1 ;;
 	--igd2) IGD2=1 ;;
 	--strict) STRICT=1 ;;
+	--debug) DEBUG=1 ;;
 	--leasefile) LEASEFILE=1 ;;
 	--vendorcfg) VENDORCFG=1 ;;
 	--pcp-peer) PCP_PEER=1 ;;
@@ -32,17 +33,21 @@ case "$argv" in
 			exit 1
 		fi ;;
 	--disable-pppconn) DISABLEPPPCONN=1 ;;
+	--firewall=*)
+	    FW=$(echo $argv | cut -d= -f2) ;;
 	--help|-h)
 		echo "Usage : $0 [options]"
 		echo " --ipv6      enable IPv6"
 		echo " --igd2      build an IGDv2 instead of an IGDv1"
 		echo " --strict    be more strict regarding compliance with UPnP specifications"
+		echo " --debug     #define DEBUG 1"
 		echo " --leasefile enable lease file"
 		echo " --vendorcfg enable configuration of manufacturer info"
 		echo " --pcp-peer  enable PCP PEER operation"
 		echo " --portinuse enable port in use check"
 		echo " --uda-version=x.x  set advertised UPnP version (default to ${UPNP_VERSION_MAJOR}.${UPNP_VERSION_MINOR})"
 		echo " --disable-pppconn  disable WANPPPConnection"
+		echo " --firewall=<name>  force the firewall type (only for linux)"
 		exit 1
 		;;
 	*)
@@ -119,6 +124,11 @@ echo "#define MINIUPNPD_VERSION \"`cat VERSION`\"" >> ${CONFIGFILE}
 echo "#define MINIUPNPD_DATE	\"$MINIUPNPD_DATE\"" >> ${CONFIGFILE}
 echo "" >> ${CONFIGFILE}
 
+if [ -n "$DEBUG" ] ; then
+	echo "#define DEBUG 1" >> ${CONFIGFILE}
+	echo "" >> ${CONFIGFILE}
+fi
+
 cat >> ${CONFIGFILE} <<EOF
 #ifndef XSTR
 #define XSTR(s) STR(s)
@@ -143,6 +153,10 @@ case $OS_NAME in
 		MAJORVER=`echo $OS_VERSION | cut -d. -f1`
 		MINORVER=`echo $OS_VERSION | cut -d. -f2`
 		#echo "OpenBSD majorversion=$MAJORVER minorversion=$MINORVER"
+		# The pledge() system call first appeared in OpenBSD 5.9.
+		if [ \( $MAJORVER -ge 6 \) -o \( $MAJORVER -eq 5 -a $MINORVER -ge 9 \) ]; then
+			echo "#define HAS_PLEDGE" >> ${CONFIGFILE}
+		fi
 		# rtableid was introduced in OpenBSD 4.0
 		if [ $MAJORVER -ge 4 ]; then
 			echo "#define PFRULE_HAS_RTABLEID" >> ${CONFIGFILE}
@@ -164,7 +178,11 @@ case $OS_NAME in
 		OS_URL=http://www.openbsd.org/
 		# net.inet6.ip6.v6only has been removed in recent OpenBSD versions
 		# Default to 1 in that case
-		V6SOCKETS_ARE_V6ONLY=`sysctl -n net.inet6.ip6.v6only || echo 1`
+		if sysctl net.inet6.ip6 | grep net.inet6.ip6.v6only ; then
+			V6SOCKETS_ARE_V6ONLY=`sysctl -n net.inet6.ip6.v6only`
+		else
+			V6SOCKETS_ARE_V6ONLY=1
+		fi
 		;;
 	FreeBSD | GNU/kFreeBSD)
 		VER=`grep '#define __FreeBSD_version' /usr/include/sys/param.h | awk '{print $3}'`
@@ -312,11 +330,14 @@ case $OS_NAME in
 			esac
 		fi
 		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
-		# Would be better to check for actual presence of nftable rules, but that requires root privileges
-		if [ -x "$(command -v nft)" ]; then
-			FW=nftables
-		else
-			FW=iptables
+		if [ -z ${FW} ]; then
+			# test the current environment to determine which to use
+			# Would be better to check for actual presence of nftable rules, but that requires root privileges
+			if [ -x "$(command -v nft)" ]; then
+				FW=nftables
+			else
+				FW=iptables
+			fi
 		fi
 		V6SOCKETS_ARE_V6ONLY=`/sbin/sysctl -n net.ipv6.bindv6only`
 		;;
