@@ -1,41 +1,47 @@
 #!/bin/sh
 
+#
 # Shibby 2013
+# Fix memory leak + cosmetics - pedro 2019
+#
 
-[ ! "$(nvram get web_css)" == "online" ] && {
-	exit 0
-}
+[ ! "$(nvram get web_css)" == "online" ] && exit 0
 
+PID=$$
 LOCK="/tmp/ttb.lock"
+DIR="/www/ext"
+LOGS="logger -t TTB[$PID]"
 
 # script in action
 [ -f $LOCK ] && {
-	logger TTB: Another process is already working. Exiting...
+	$LOGS "Another process in action - exiting"
 	exit 0
 } || {
 	touch $LOCK
 	TTB=$(nvram get ttb_css)
 
 	# no skin
-	[ ! -f /www/ext/$TTB.css ] && {
+	[ ! -f $DIR/$TTB.css ] && {
 		# no skin but zip with skin is available
-		[ -f /www/ext/$TTB.zip ] && {
-			unzip -o /www/ext/$TTB.zip -d /www/ext/
+		[ -f $DIR/$TTB.zip ] && {
+			unzip -o $DIR/$TTB.zip -d $DIR/
+			$LOGS "Online theme ($TTB) has been applied"
+			cru d ttbDL
 		# no skin either zip
 		} || {
-			rm /www/ext/*.css /www/ext/*.zip /www/ext/*.png /www/ext/*.gif /www/ext/*.jpg
-			wget http://www.tomatothemebase.eu/wp-content/uploads/$TTB.zip -O /www/ext/$TTB.zip
-			sleep 5
+			rm $DIR/*.css $DIR/*.zip $DIR/*.png $DIR/*.gif $DIR/*.jpg
+			wget -T 10 -t 1 http://www.tomatothemebase.eu/wp-content/uploads/$TTB.zip -O $DIR/$TTB.zip
+			sleep 1
 
 			# zip downloaded
-			[ -f /www/ext/$TTB.zip ] && {
-				unzip -o /www/ext/$TTB.zip -d /www/ext/
+			[ -f $DIR/$TTB.zip ] && {
+				unzip -o $DIR/$TTB.zip -d $DIR/
+				$LOGS "Online theme ($TTB) has been downloaded and applied"
+				cru d ttbDL
 			# can't download zip!!
 			} || {
-				logger TTB: Cannot download Online themes. Will try again soon...
-				sleep 30
-				rm $LOCK
-				/usr/sbin/ttb
+				$LOGS "Cannot download Online theme. Will try again soon ..."
+				cru a ttbDL "* * * * * /usr/sbin/ttb"
 			}
 		}
 	}
