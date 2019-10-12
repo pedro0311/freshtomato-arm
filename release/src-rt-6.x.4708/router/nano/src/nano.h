@@ -59,11 +59,9 @@
 #define ISSET(flag) ((FLAGS(flag) & FLAGMASK(flag)) != 0)
 #define TOGGLE(flag) FLAGS(flag) ^= FLAGMASK(flag)
 
-/* Macros for character allocation and more. */
-#define charalloc(howmuch) (char *)nmalloc((howmuch) * sizeof(char))
-#define charealloc(ptr, howmuch) (char *)nrealloc(ptr, (howmuch) * sizeof(char))
-#define charmove(dest, src, n) memmove(dest, src, (n) * sizeof(char))
-#define charset(dest, src, n) memset(dest, src, (n) * sizeof(char))
+/* Macros for allocation of character strings. */
+#define charalloc(howmuch) (char *)nmalloc(howmuch)
+#define charealloc(ptr, howmuch) (char *)nrealloc(ptr, howmuch)
 
 /* In UTF-8 a character is at most six bytes long. */
 #ifdef ENABLE_UTF8
@@ -149,7 +147,7 @@
 /* Enumeration types. */
 typedef enum {
 	NIX_FILE, DOS_FILE, MAC_FILE
-} file_format;
+} format_type;
 
 typedef enum {
 	HUSH, NOTICE, MILD, ALERT
@@ -236,6 +234,8 @@ typedef struct syntaxtype {
 		/* The list of libmagic results that this syntax applies to. */
 	char *linter;
 		/* The command with which to lint this type of file. */
+	char *tab;
+		/* What the Tab key should produce; NULL for default behavior. */
 #ifdef ENABLE_COMMENT
 	char *comment;
 		/* The line comment prefix (and postfix) for this type of file. */
@@ -295,41 +295,43 @@ typedef struct linestruct {
 } linestruct;
 
 #ifndef NANO_TINY
-typedef struct undo_group {
+typedef struct groupstruct {
 	ssize_t top_line;
 		/* First line of group. */
 	ssize_t bottom_line;
 		/* Last line of group. */
 	char **indentations;
 		/* String data used to restore the affected lines; one per line. */
-	struct undo_group *next;
-} undo_group;
+	struct groupstruct *next;
+		/* The next group, if any. */
+} groupstruct;
 
-typedef struct undo {
-	ssize_t lineno;
+typedef struct undostruct {
 	undo_type type;
-		/* What type of undo this was. */
+		/* The operation type that this undo item is for. */
+	int xflags;
+		/* Some flag data to mark certain corner cases. */
+	ssize_t lineno;
+		/* The line number where the operation began or ended. */
 	size_t begin;
-		/* Where did this action begin or end. */
+		/* The x position where the operation began or ended. */
 	char *strdata;
-		/* String type data we will use for copying the affected line back. */
+		/* String data to help restore the affected line. */
 	size_t wassize;
 		/* The file size before the action. */
 	size_t newsize;
 		/* The file size after the action. */
-	int xflags;
-		/* Some flag data we need. */
-	undo_group *grouping;
+	groupstruct *grouping;
 		/* Undo info specific to groups of lines. */
 	linestruct *cutbuffer;
-		/* Copy of the cutbuffer. */
+		/* A copy of the cutbuffer. */
 	ssize_t mark_begin_lineno;
 		/* Mostly the line number of the current line; sometimes something else. */
 	size_t mark_begin_x;
 		/* The x position corresponding to the above line number. */
-	struct undo *next;
+	struct undostruct *next;
 		/* A pointer to the undo item of the preceding action. */
-} undo;
+} undostruct;
 #endif /* !NANO_TINY */
 
 #ifdef ENABLE_HISTORIES
@@ -339,8 +341,9 @@ typedef struct poshiststruct {
 	ssize_t lineno;
 		/* Line number we left off on. */
 	ssize_t xno;
-		/* x position in the file we left off on. */
+		/* The x position in the file we left off on. */
 	struct poshiststruct *next;
+		/* The next item of position history. */
 } poshiststruct;
 #endif
 
@@ -366,8 +369,6 @@ typedef struct openfilestruct {
 		/* The file's x position we would like. */
 	ssize_t current_y;
 		/* The file's y-coordinate position. */
-	bool modified;
-		/* Whether the file has been modified. */
 	struct stat *current_stat;
 		/* The file's current stat information. */
 #ifdef ENABLE_WRAPPING
@@ -381,19 +382,21 @@ typedef struct openfilestruct {
 		/* The mark's x position in the above line. */
 	mark_type kind_of_mark;
 		/* Whether it is a soft (with Shift) or a hard mark. */
-	file_format fmt;
+	format_type fmt;
 		/* The file's format -- Unix or DOS or Mac or mixed. */
-	undo *undotop;
+	char *lock_filename;
+		/* The path of the lockfile, if we created one. */
+	undostruct *undotop;
 		/* The top of the undo list. */
-	undo *current_undo;
+	undostruct *current_undo;
 		/* The current (i.e. next) level of undo. */
-	undo *last_saved;
+	undostruct *last_saved;
 		/* The undo item at which the file was last saved. */
 	undo_type last_action;
 		/* The type of the last action the user performed. */
-	char *lock_filename;
-		/* The path of the lockfile, if we created one. */
 #endif
+	bool modified;
+		/* Whether the file has been modified. */
 #ifdef ENABLE_COLOR
 	syntaxtype *syntax;
 		/* The  syntax struct for this file, if any. */
@@ -605,6 +608,9 @@ enum
 #define SHIFT_DELETE 0x45D
 #define SHIFT_TAB 0x45F
 
+/* A special keycode for when <Tab> is pressed while the mark is on. */
+#define INDENT_KEY 0x4F1
+
 #ifdef USE_SLANG
 #ifdef ENABLE_UTF8
 #define KEY_BAD 0xFF  /* Clipped error code. */
@@ -625,9 +631,6 @@ enum
 #define MARK_WAS_SET          (1<<4)
 #define WAS_MARKED_FORWARD    (1<<5)
 #endif /* !NANO_TINY */
-
-/* The maximum number of entries displayed in the main shortcut list. */
-#define MAIN_VISIBLE (((COLS + 40) / 20) * 2)
 
 /* The default number of columns from end of line where wrapping occurs. */
 #define COLUMNS_FROM_EOL 8
