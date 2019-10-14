@@ -973,24 +973,25 @@ void wo_resolve(char *url)
 
 char* get_cfeversion(char *buf)
 {
- 	FILE *f;
-	char s[16];
+	FILE *f;
+	char s[16] = "";
 	int len;
 
 	strcpy(buf, "");
 
-	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2 2>&1", "r")) != NULL) {
-		fgets(s, sizeof(s), f);
+	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL) {
+		fgets (s, 15, f);
 		pclose(f);
 	}
-	strcpy(buf, s);
+	len = strlen(s);
 
-	len = strlen(buf);
-	if (len == 0 || len >= 16)
+	if (len == 0) {
 		strcpy(buf, "--");
-	else {
-		trimstr(buf);
-		buf[strcspn(buf, "\r\n")] = 0;
 	}
+	else {
+		strcpy(buf, s);
+		buf[strcspn(buf, "\n")] = 0;
+	}
+
 	return buf;
 }
