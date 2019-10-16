@@ -975,15 +975,16 @@ char* get_cfeversion(char *buf)
 {
 	FILE *f;
 	char s[16] = "";
-	int len;
+	int len = 0;
 
 	strcpy(buf, "");
 
 	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL) {
-		fgets (s, 15, f);
+		if (fgets(s, 15, f) != NULL) {
+			len = strlen(s);
+		}
 		pclose(f);
 	}
-	len = strlen(s);
 
 	if (len == 0) {
 		strcpy(buf, "--");
