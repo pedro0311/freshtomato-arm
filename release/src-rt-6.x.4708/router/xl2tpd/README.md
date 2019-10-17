@@ -33,7 +33,6 @@ NOTE: In Linux kernel 4.15+ there is a kernel bug with ancillary IP_PKTINFO.
     make
     sudo make install
 
-
 ## Mailing Lists
 
 https://lists.openswan.org/cgi-bin/mailman/listinfo/xl2tpd is home of the mailing list.
