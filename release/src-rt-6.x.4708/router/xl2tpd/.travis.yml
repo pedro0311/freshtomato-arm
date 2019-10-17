@@ -1,0 +1,32 @@
+matrix:
+  include:
+    - os: linux
+      dist: precise
+    - os: linux
+      dist: xenial
+
+
+language: c
+compiler:
+  - gcc
+  - clang
+
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - make
+      - gcc-multilib
+      - libpcap0.8
+      - libpcap0.8-dev
+
+cache:
+  directories:
+    - $HOME/.ccache
+
+before_script:
+  make clean
+
+script:
+  make
