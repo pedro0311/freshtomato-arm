@@ -277,7 +277,7 @@ static const func_info_t func_infos[] = {
 	F0("sleep",                        MAY_BE_FALSE | MAY_BE_LONG),
 	F0("usleep",                       MAY_BE_NULL | MAY_BE_FALSE),
 #if HAVE_NANOSLEEP
-	F0("time_nanosleep",               MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_TRUE),
+	F0("time_nanosleep",               MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_TRUE | MAY_BE_ARRAY | MAY_BE_ARRAY_KEY_STRING | MAY_BE_ARRAY_OF_LONG),
 	F0("time_sleep_until",             MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_TRUE),
 #endif
 #if HAVE_STRPTIME
@@ -404,7 +404,7 @@ static const func_info_t func_infos[] = {
 	F1("system",                       MAY_BE_FALSE | MAY_BE_STRING),
 	F1("escapeshellcmd",               MAY_BE_NULL | MAY_BE_STRING),
 	F1("escapeshellarg",               MAY_BE_NULL | MAY_BE_STRING),
-	F1("passthru",                     MAY_BE_FALSE | MAY_BE_STRING),
+	F1("passthru",                     MAY_BE_NULL | MAY_BE_FALSE),
 	F1("shell_exec",                   MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_STRING),
 #ifdef PHP_CAN_SUPPORT_PROC_OPEN
 	F1("proc_open",                    MAY_BE_FALSE | MAY_BE_RESOURCE),
@@ -1192,7 +1192,7 @@ static const func_info_t func_infos[] = {
 	F1("hash_hmac_file",                        MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_STRING),
 	F1("hash_init",                             MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_OBJECT),
 	F0("hash_update",                           MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_TRUE),
-	F0("hash_update_stream",                    MAY_BE_NULL | MAY_BE_LONG),
+	F0("hash_update_stream",                    MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_LONG),
 	F0("hash_update_file",                      MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_TRUE),
 	F1("hash_final",                            MAY_BE_NULL | MAY_BE_STRING),
 	F1("hash_copy",                             MAY_BE_NULL | MAY_BE_FALSE | MAY_BE_OBJECT),

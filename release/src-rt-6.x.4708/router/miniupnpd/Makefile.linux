@@ -1,4 +1,4 @@
-# $Id: Makefile.linux,v 1.102 2019/09/24 10:30:43 nanard Exp $
+# $Id: Makefile.linux,v 1.105 2019/10/05 21:30:36 nanard Exp $
 # MiniUPnP project
 # (c) 2006-2019 Thomas Bernard
 # http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -21,6 +21,7 @@
 # ./configure them and build them then miniupnpd will build using :
 # $ IPTABLESPATH=/path/to/iptables-1.4.1 make -f Makefile.linux
 #
+CONFIG_OPTIONS += --firewall=iptables
 #CFLAGS = -O -g -DDEBUG
 CFLAGS ?= -Os
 CFLAGS += -fno-strict-aliasing
@@ -46,6 +47,8 @@ INSTALLPREFIX ?= $(PREFIX)/usr
 SBININSTALLDIR = $(INSTALLPREFIX)/sbin
 ETCINSTALLDIR = $(PREFIX)/etc/miniupnpd
 MANINSTALLDIR = $(INSTALLPREFIX)/share/man/man8
+
+include gitrev.mk
 
 BASEOBJS = miniupnpd.o upnphttp.o upnpdescgen.o upnpsoap.o \
            upnpreplyparse.o minixml.o portinuse.o \
@@ -193,6 +196,7 @@ EXECUTABLES = miniupnpd testupnpdescgen testgetifstats \
 all:	$(EXECUTABLES)
 
 clean:
+	$(RM) config.h
 	$(RM) $(ALLOBJS)
 	$(RM) $(EXECUTABLES)
 	$(RM) testupnpdescgen.o testgetifstats.o
@@ -236,7 +240,13 @@ else
 	sed -i -e "s/^uuid=[-0-9a-f]*/uuid=`($(STAGING_DIR_HOST)/bin/genuuid||$(STAGING_DIR_HOST)/bin/uuidgen||$(STAGING_DIR_HOST)/bin/uuid) 2>/dev/null`/" miniupnpd.conf
 endif
 
-check:	validateupnppermissions validategetifaddr validatessdppktgen
+check:	validateupnppermissions validategetifaddr validatessdppktgen \
+	validateversion
+
+validateversion:	miniupnpd VERSION
+	./miniupnpd --version
+	[ "`./miniupnpd --version | head -1 | cut -d' ' -f-2`" = "miniupnpd `cat VERSION`" ]
+	touch $@
 
 validateupnppermissions:	testupnppermissions testupnppermissions.sh
 	./testupnppermissions.sh

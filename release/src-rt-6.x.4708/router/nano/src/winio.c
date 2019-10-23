@@ -658,12 +658,8 @@ int parse_kbinput(WINDOW *win)
 
 #ifndef NANO_TINY
 	/* When <Tab> is pressed while the mark is on, do an indent. */
-	if (retval == TAB_CODE && openfile->mark && currmenu == MMAIN) {
-		const keystruct *command = first_sc_for(MMAIN, do_indent);
-
-		meta_key = command->meta;
-		return command->keycode;
-	}
+	if (retval == TAB_CODE && openfile->mark && currmenu == MMAIN)
+		return INDENT_KEY;
 #endif
 
 	switch (retval) {
@@ -1695,17 +1691,14 @@ int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 				return 0;
 			}
 
-			/* Determine how many shortcuts will be shown. */
-			number = length_of_list(currmenu);
-			if (number > MAIN_VISIBLE)
-				number = MAIN_VISIBLE;
+			/* Determine how many shortcuts are being shown. */
+			number = shown_entries_for(currmenu);
 
-			/* Calculate the width of each non-rightmost shortcut item;
-			 * the rightmost ones will "absorb" any remaining slack. */
-			if (number < 2)
-				width = COLS / (MAIN_VISIBLE / 2);
+			/* Calculate the clickable width of each menu item. */
+			if (number < 5)
+				width = COLS / 2;
 			else
-				width = COLS / ((number / 2) + (number % 2));
+				width = COLS / ((number + 1) / 2);
 
 			/* Calculate the one-based index in the shortcut list. */
 			index = (*mouse_x / width) * 2 + *mouse_y;
@@ -1767,28 +1760,6 @@ int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 	return 2;
 }
 #endif /* ENABLE_MOUSE */
-
-/* Return the shortcut that corresponds to the values of kbinput (the
- * key itself) and meta_key (whether the key is a meta sequence).  The
- * returned shortcut will be the first in the list that corresponds to
- * the given sequence. */
-const keystruct *get_shortcut(int *kbinput)
-{
-	keystruct *s;
-
-	/* Plain characters cannot be shortcuts, so just skip those. */
-	if (!meta_key && ((*kbinput >= 0x20 && *kbinput < 0x7F) ||
-						(*kbinput >= 0xA0 && *kbinput <= 0xFF)))
-		return NULL;
-
-	for (s = sclist; s != NULL; s = s->next) {
-		if ((s->menus & currmenu) && *kbinput == s->keycode &&
-										meta_key == s->meta)
-			return s;
-	}
-
-	return NULL;
-}
 
 /* Move (in the given window) to the given row and wipe it clean. */
 void blank_row(WINDOW *window, int row)
@@ -1919,11 +1890,13 @@ char *display_string(const char *buf, size_t column, size_t span,
 
 #ifdef ENABLE_UTF8
 #define ISO8859_CHAR  FALSE
+#define ZEROWIDTH_CHAR  (mbwidth(buf) == 0)
 #else
 #define ISO8859_CHAR  ((unsigned char)*buf > 0x9F)
+#define ZEROWIDTH_CHAR  FALSE
 #endif
 
-	while (*buf != '\0' && (column < beyond || mbwidth(buf) == 0)) {
+	while (*buf != '\0' && (column < beyond || ZEROWIDTH_CHAR)) {
 		/* A plain printable ASCII character is one byte, one column. */
 		if (((signed char)*buf > 0x20 && *buf != DEL_CODE) || ISO8859_CHAR) {
 			converted[index++] = *(buf++);
@@ -2011,15 +1984,17 @@ char *display_string(const char *buf, size_t column, size_t span,
 
 	/* If there is more text than can be shown, make room for the ">". */
 	if (column > beyond || (*buf != '\0' && (isprompt ||
-					(isdata && !ISSET(SOFTWRAP))))) {
+							(isdata && !ISSET(SOFTWRAP))))) {
+#ifdef ENABLE_UTF8
 		do {
 			index = step_left(converted, index);
 		} while (mbwidth(converted + index) == 0);
 
-#ifdef ENABLE_UTF8
 		/* Display the left half of a two-column character as '['. */
 		if (mbwidth(converted + index) == 2)
 			converted[index++] = '[';
+#else
+		index--;
 #endif
 	}
 
@@ -2316,14 +2291,11 @@ void bottombars(int menu)
 	if (ISSET(NO_HELP) || LINES < 5)
 		return;
 
-	/* Determine how many shortcuts there are to show. */
-	number = length_of_list(menu);
-
-	if (number > MAIN_VISIBLE)
-		number = MAIN_VISIBLE;
+	/* Determine how many shortcuts must be shown. */
+	number = shown_entries_for(menu);
 
 	/* Compute the width of each keyname-plus-explanation pair. */
-	itemwidth = COLS / ((number / 2) + (number % 2));
+	itemwidth = COLS / ((number + 1) / 2);
 
 	/* If there is no room, don't print anything. */
 	if (itemwidth == 0)

@@ -152,7 +152,7 @@ static linestruct *errors_tail = NULL;
 		/* Beginning and end of a list of errors in rcfiles, if any. */
 
 /* Send the gathered error messages (if any) to the terminal. */
-void display_rcfile_errors()
+void display_rcfile_errors(void)
 {
 	for (linestruct *error = errors_head; error != NULL; error = error->next)
 		fprintf(stderr, "%s\n", error->data);
@@ -333,6 +333,7 @@ void begin_new_syntax(char *ptr)
 	live_syntax->headers = NULL;
 	live_syntax->magics = NULL;
 	live_syntax->linter = NULL;
+	live_syntax->tab = NULL;
 #ifdef ENABLE_COMMENT
 	live_syntax->comment = mallocstrcpy(NULL, GENERAL_COMMENT_CHARACTER);
 #endif
@@ -948,6 +949,10 @@ bool parse_syntax_commands(char *keyword, char *ptr)
 #ifdef ENABLE_COMMENT
 		pick_up_name("comment", ptr, &live_syntax->comment);
 #endif
+	} else if (strcasecmp(keyword, "tabgives") == 0) {
+#ifdef ENABLE_COLOR
+		pick_up_name("tabgives", ptr, &live_syntax->tab);
+#endif
 	} else if (strcasecmp(keyword, "linter") == 0)
 		pick_up_name("linter", ptr, &live_syntax->linter);
 	else
@@ -1090,6 +1095,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		} else if (intros_only && (strcasecmp(keyword, "color") == 0 ||
 								strcasecmp(keyword, "icolor") == 0 ||
 								strcasecmp(keyword, "comment") == 0 ||
+								strcasecmp(keyword, "tabgives") == 0 ||
 								strcasecmp(keyword, "linter") == 0)) {
 			if (!opensyntax)
 				jot_error(N_("A '%s' command requires a preceding "
@@ -1163,8 +1169,6 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			option++;
 		ptr = parse_argument(ptr);
 
-		option = mallocstrcpy(NULL, option);
-
 #ifdef ENABLE_UTF8
 		/* When in a UTF-8 locale, ignore arguments with invalid sequences. */
 		if (using_utf8() && mbstowcs(NULL, option, 0) == (size_t)-1) {
@@ -1172,6 +1176,8 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			continue;
 		}
 #endif
+		option = mallocstrcpy(NULL, option);
+
 #ifdef ENABLE_COLOR
 		if (strcasecmp(rcopts[i].name, "titlecolor") == 0)
 			color_combo[TITLE_BAR] = parse_interface_color(option);
@@ -1294,7 +1300,7 @@ void parse_one_nanorc(void)
 		jot_error(N_("Error reading %s: %s"), nanorc, strerror(errno));
 }
 
-bool have_nanorc(const char *path, char *name)
+bool have_nanorc(const char *path, const char *name)
 {
 	if (path == NULL)
 		return FALSE;
