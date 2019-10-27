@@ -286,7 +286,7 @@ extern void led_setup(void);
 
 
 /* base64.c */
-extern int base64_encode(unsigned char *in, char *out, int inlen);		/* returns amount of out buffer used */
+extern int base64_encode(const char *in, char *out, int inlen);			/* returns amount of out buffer used */
 extern int base64_decode(const char *in, unsigned char *out, int inlen);	/* returns amount of out buffer used */
 extern int base64_encoded_len(int len);
 extern int base64_decoded_len(int len);						/* maximum possible, not actual */

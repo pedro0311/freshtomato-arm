@@ -128,7 +128,7 @@
 		[ "$(NV landevs | /bin/grep wl1 | /usr/bin/wc -l)" -eq 1 ] && {
 			GETCH=$(NV wl1_channel)
 			[ "$GETCH" -eq 0 ] && CH="auto" || CH=$GETCH
-			[ "($NV wl1_nband)" == 2 ] && BAND="2,4GHz" || BAND="5GHz"
+			[ "$(NV wl1_nband)" == 2 ] && BAND="2,4GHz" || BAND="5GHz"
 			/bin/echo " WL1 : $BAND @ $(NV wl1_ssid) @ channel: $(NV wl1_country)$CH @ $(NV wl1_hwaddr)"
 		}
 		[ "$(NV landevs | /bin/grep wl2 | /usr/bin/wc -l)" -eq 1 ] && {

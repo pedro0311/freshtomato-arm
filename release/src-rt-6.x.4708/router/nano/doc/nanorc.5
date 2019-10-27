@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 4.4" "August 2019"
+.TH NANORC 5 "version 4.5" "October 2019"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -395,6 +395,11 @@ character is present, the full string is prepended; for example, "\fB#\fR"
 for Python files.  If empty double quotes are specified, the comment/uncomment
 function is disabled; for example, "" for JSON.
 The default value is "\fB#\fP".
+.TP
+.BI "tabgives """ string """
+Make the <Tab> key produce the given \fIstring\fR.  Useful for languages like
+Python that want to see only spaces for indentation.
+This overrides the setting of the \fBtabstospaces\fR option.
 .TP
 .BI "color " fgcolor , bgcolor " """ regex """ " \fR...
 Paint all pieces of text that match the extended regular expression
