@@ -1,6 +1,6 @@
 # **FreshTomato-ARM** #
 
-**Forked off from Tomato-ARM by Shibby, builds compiled by @kille72**
+**Forked off from Tomato-ARM by Shibby, builds compiled by pedro**
 
 Forums about Tomato:
 
@@ -10,11 +10,11 @@ EN: https://www.linksysinfo.org/
 
 This is my personal fork, If anyone wants to pick up my changes and merge them to your repository, feel free and go ahead. That's the reason Tomato is an open-source project.
 
-**Source code**: https://bitbucket.org/kille72/freshtomato-arm/commits/all
+**Source code**: https://bitbucket.org/pedro311/freshtomato-arm/commits/all
 
 **Downloads**: https://exotic.se/freshtomato-arm/
 
-**Project page/Donate**: http://freshtomato.org/
+**Project page**: http://freshtomato.org/
 
 For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6200, EA6350v1, EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, AC18, **Huawei** WS880, **Dlink** DIR868L (rev A1/B1/C1), **Xiaomi** R1D.
 
@@ -64,7 +64,7 @@ Disclaimer: I am not responsible for any bricked routers, nor do I encourage oth
     sudo apt-get install libelf1:i386 libelf-dev:i386  
 
 10. Clone/download repository:  
-    git clone https://bitbucket.org/kille72/freshtomato-arm.git <chosen-subdir>  
+    git clone https://bitbucket.org/pedro311/freshtomato-arm.git <chosen-subdir>  
 
 11. Edit profile file:  
     PATH="$PATH:/home/<username>/<chosen-subdir>/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin"  
@@ -86,6 +86,6 @@ Disclaimer: I am not responsible for any bricked routers, nor do I encourage oth
 
 1. Change dir to git repository ie: ```$ cd /freshtomato-arm```  
 2. Before every compilation, use ```$ git clean -fdxq && git reset --hard```  
-3. To compile SDK6 image, use: ```$ git checkout shibby-arm``` then: ```$ cd release/src-rt-6.x.4708```, check for possible targets: ```$ make help```, use one (RT-N18U/AC56S without SMP build AIO): ```$ make n18z```  
-4. To compile SDK7 image, use: ```$ git checkout shibby-arm7``` then: ```$ cd release/src-rt-7.x.main/src```, check for possible targets: ```$ make help```, use one (RT-AC3200 build AIO): ```$ make ac3200z```  
+3. To compile SDK6 image, use: ```$ git checkout arm-master``` then: ```$ cd release/src-rt-6.x.4708```, check for possible targets: ```$ make help```, use one (RT-N18U/AC56S without SMP build AIO): ```$ make n18z```  
+4. To compile SDK7 image, use: ```$ git checkout arm-sdk7``` then: ```$ cd release/src-rt-7.x.main/src```, check for possible targets: ```$ make help```, use one (RT-AC3200 build AIO): ```$ make ac3200z```  
 
