@@ -3,6 +3,7 @@
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * (c) 2015 Tomofumi Hayashi
+ * (c) 2019 Paul Chambers
  *
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution.
@@ -20,14 +21,18 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
+#include <net/if.h>
 
 #include <linux/version.h>
 
 #include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/nf_tables.h>
 
 #include <libmnl/libmnl.h>
+#include <libnftnl/table.h>
+#include <libnftnl/chain.h>
 #include <libnftnl/rule.h>
 #include <libnftnl/expr.h>
 
@@ -35,8 +40,8 @@
 
 #include "../macros.h"
 #include "../config.h"
+#include "../commonrdr.h"
 #include "nftnlrdr.h"
-#include "../upnpglobalvars.h"
 
 #include "nftnlrdr_misc.h"
 
@@ -56,15 +61,125 @@ struct timestamp_entry {
 
 static struct timestamp_entry * timestamp_list = NULL;
 
-/* dummy init and shutdown functions */
-int init_redirect(void)
+#define NAT_CHAIN_TYPE		"nat"
+#define FILTER_CHAIN_TYPE	"filter"
+
+/* init and shutdown functions */
+int
+init_redirect(void)
 {
-	return 0;
+	int result;
+
+	/* requires elevated privileges */
+	result = nft_mnl_connect();
+
+	/* 'inet' family */
+	if (result == 0) {
+		result = table_op(NFT_MSG_NEWTABLE, NFPROTO_INET, nft_table);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_NEWCHAIN, NFPROTO_INET, nft_table,
+						  nft_forward_chain, FILTER_CHAIN_TYPE, NF_INET_FORWARD, NF_IP_PRI_FILTER - 25);
+	}
+
+	/* 'ip' family */
+	if (result == 0) {
+		result = table_op(NFT_MSG_NEWTABLE, NFPROTO_IPV4, nft_table);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_NEWCHAIN, NFPROTO_IPV4, nft_table,
+						  nft_prerouting_chain, NAT_CHAIN_TYPE, NF_INET_PRE_ROUTING, NF_IP_PRI_NAT_DST);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_NEWCHAIN, NFPROTO_IPV4, nft_table,
+						  nft_postrouting_chain, NAT_CHAIN_TYPE, NF_INET_POST_ROUTING, NF_IP_PRI_NAT_SRC);
+	}
+
+	/* 'ip6' family */
+	if (result == 0) {
+		result = table_op(NFT_MSG_NEWTABLE, NFPROTO_IPV6, nft_table);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_NEWCHAIN, NFPROTO_IPV6, nft_table,
+						  nft_prerouting_chain, NAT_CHAIN_TYPE, NF_INET_PRE_ROUTING, NF_IP_PRI_NAT_DST);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_NEWCHAIN, NFPROTO_IPV6, nft_table,
+						  nft_postrouting_chain, NAT_CHAIN_TYPE, NF_INET_POST_ROUTING, NF_IP_PRI_NAT_SRC);
+	}
+
+	return result;
 }
 
-void shutdown_redirect(void)
+void
+shutdown_redirect(void)
 {
-	return;
+	int result;
+
+	/* 'inet' family */
+	result = chain_op(NFT_MSG_DELCHAIN, NFPROTO_INET, nft_table,
+					  nft_forward_chain, FILTER_CHAIN_TYPE, NF_INET_FORWARD, NF_IP_PRI_FILTER - 25);
+	if (result == 0) {
+		result = table_op(NFT_MSG_DELTABLE, NFPROTO_INET, nft_table);
+	}
+
+	/* 'ip' family */
+	result = chain_op(NFT_MSG_DELCHAIN, NFPROTO_IPV4, nft_table,
+					  nft_prerouting_chain, NAT_CHAIN_TYPE, NF_INET_PRE_ROUTING, NF_IP_PRI_NAT_DST);
+	if (result == 0) {
+		result = chain_op(NFT_MSG_DELCHAIN, NFPROTO_IPV4, nft_table,
+						  nft_postrouting_chain, NAT_CHAIN_TYPE, NF_INET_POST_ROUTING, NF_IP_PRI_NAT_SRC);
+	}
+	if (result == 0) {
+		result = table_op(NFT_MSG_DELTABLE, NFPROTO_IPV4, nft_table);
+	}
+
+	/* 'ip6' family */
+	if (result == 0) {
+		result = chain_op(NFT_MSG_DELCHAIN, NFPROTO_IPV6, nft_table,
+						  nft_prerouting_chain, NAT_CHAIN_TYPE, NF_INET_PRE_ROUTING, NF_IP_PRI_NAT_DST);
+	}
+	if (result == 0) {
+		result = chain_op(NFT_MSG_DELCHAIN, NFPROTO_IPV6, nft_table,
+						  nft_postrouting_chain, NAT_CHAIN_TYPE, NF_INET_POST_ROUTING, NF_IP_PRI_NAT_SRC);
+	}
+	if (result == 0) {
+		result = table_op(NFT_MSG_DELTABLE, NFPROTO_IPV6, nft_table);
+	}
+
+	nft_mnl_disconnect();
+}
+
+/**
+ * used by the core to override default chain names if specified in config file
+ * @param param which string to set
+ * @param string the new name to use. Do not dispose after setting (i.e. use strdup if not static).
+ * @return 0 if successful
+ */
+int
+set_rdr_name(rdr_name_type param, const char *string)
+{
+	if (string == NULL || strlen(string) > 30) {
+		return -1;
+	}
+	switch (param) {
+	case RDR_TABLE_NAME:
+		nft_table = string;
+		break;
+	case RDR_NAT_PREROUTING_CHAIN_NAME:
+		nft_prerouting_chain = string;
+		break;
+	case RDR_NAT_POSTROUTING_CHAIN_NAME:
+		nft_postrouting_chain = string;
+		break;
+	case RDR_FORWARD_CHAIN_NAME:
+		nft_forward_chain = string;
+		break;
+	default:
+		syslog(LOG_ERR, "tried to set invalid string parameter: %d", param);
+		return -2;
+	}
+	return 0;
 }
 
 static unsigned int
@@ -136,7 +251,7 @@ add_redirect_rule2(const char * ifname,
 	                  0, eport,
 	                  inet_addr(iaddr), iport,  desc, NULL);
 
-	return nft_send_request(r, NFT_MSG_NEWRULE, RULE_CHAIN_REDIRECT);
+	return nft_send_rule(r, NFT_MSG_NEWRULE, RULE_CHAIN_REDIRECT);
 }
 
 /*
@@ -162,7 +277,7 @@ add_peer_redirect_rule2(const char * ifname,
 	                  inet_addr(eaddr), eport,
 	                  inet_addr(iaddr), iport, desc, NULL);
 
-	return nft_send_request(r, NFT_MSG_NEWRULE, RULE_CHAIN_PEER);
+	return nft_send_rule(r, NFT_MSG_NEWRULE, RULE_CHAIN_PEER);
 }
 
 /*
@@ -191,7 +306,7 @@ add_filter_rule2(const char * ifname,
 	                    eport, iport, 0,
 	                    desc, 0);
 
-	return nft_send_request(r, NFT_MSG_NEWRULE, RULE_CHAIN_FILTER);
+	return nft_send_rule(r, NFT_MSG_NEWRULE, RULE_CHAIN_FILTER);
 }
 
 /*
@@ -219,11 +334,11 @@ delete_filter_rule(const char * ifname, unsigned short port, int proto)
 	struct nftnl_rule *r;
 	UNUSED(ifname);
 
-	reflesh_nft_cache_filter();
+	refresh_nft_cache_filter();
 	LIST_FOREACH(p, &head_filter, entry) {
 		if (p->eport == port && p->proto == proto && p->type == RULE_FILTER) {
 			r = rule_del_handle(p);
-			nft_send_request(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
+			nft_send_rule(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
 			break;
 		}
 	}
@@ -243,7 +358,7 @@ delete_redirect_and_filter_rules(unsigned short eport, int proto)
 	uint16_t iport = 0;
 
 	d_printf(("delete_redirect_and_filter_rules(%d %d)\n", eport, proto));
-	reflesh_nft_cache_redirect();
+	refresh_nft_cache_redirect();
 
 	// Delete Redirect Rule
 	LIST_FOREACH(p, &head_redirect, entry) {
@@ -254,20 +369,20 @@ delete_redirect_and_filter_rules(unsigned short eport, int proto)
 
 			r = rule_del_handle(p);
 			/* Todo: send bulk request */
-			nft_send_request(r, NFT_MSG_DELRULE, RULE_CHAIN_REDIRECT);
+			nft_send_rule(r, NFT_MSG_DELRULE, RULE_CHAIN_REDIRECT);
 			break;
 		}
 	}
 
 	if (iaddr != 0 && iport != 0) {
-		reflesh_nft_cache_filter();
+		refresh_nft_cache_filter();
 		// Delete Forward Rule
 		LIST_FOREACH(p, &head_filter, entry) {
 			if (p->eport == iport &&
 				p->iaddr == iaddr && p->type == RULE_FILTER) {
 				r = rule_del_handle(p);
 				/* Todo: send bulk request */
-				nft_send_request(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
+				nft_send_rule(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
 				break;
 			}
 		}
@@ -276,7 +391,7 @@ delete_redirect_and_filter_rules(unsigned short eport, int proto)
 	iaddr = 0;
 	iport = 0;
 
-	reflesh_nft_cache_peer();
+	refresh_nft_cache_peer();
 	// Delete Peer Rule
 	LIST_FOREACH(p, &head_peer, entry) {
 		if (p->eport == eport && p->proto == proto &&
@@ -286,20 +401,20 @@ delete_redirect_and_filter_rules(unsigned short eport, int proto)
 
 			r = rule_del_handle(p);
 			/* Todo: send bulk request */
-			nft_send_request(r, NFT_MSG_DELRULE, RULE_CHAIN_PEER);
+			nft_send_rule(r, NFT_MSG_DELRULE, RULE_CHAIN_PEER);
 			break;
 		}
 	}
 
 	if (iaddr != 0 && iport != 0) {
-		reflesh_nft_cache_filter();
+		refresh_nft_cache_filter();
 		// Delete Forward Rule
 		LIST_FOREACH(p, &head_filter, entry) {
 			if (p->eport == iport &&
 				p->iaddr == iaddr && p->type == RULE_FILTER) {
 				r = rule_del_handle(p);
 				/* Todo: send bulk request */
-				nft_send_request(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
+				nft_send_rule(r, NFT_MSG_DELRULE, RULE_CHAIN_FILTER);
 				break;
 			}
 		}
@@ -327,7 +442,7 @@ get_peer_rule_by_index(int index,
 	UNUSED(timestamp);
 
 	d_printf(("get_peer_rule_by_index()\n"));
-	reflesh_nft_cache_peer();
+	refresh_nft_cache_peer();
 
 	LIST_FOREACH(r, &head_peer, entry) {
 		if (r->index == index) {
@@ -396,7 +511,7 @@ get_redirect_rule(const char * ifname, unsigned short eport, int proto,
 		  unsigned int * timestamp,
 		  u_int64_t * packets, u_int64_t * bytes)
 {
-	return get_nat_redirect_rule(NFT_TABLE_NAT,
+	return get_nat_redirect_rule(nft_prerouting_chain,
 	                             ifname, eport, proto,
 	                             iaddr, iaddrlen, iport,
 	                             desc, desclen,
@@ -423,7 +538,7 @@ get_redirect_rule_by_index(int index,
 	UNUSED(timestamp);
 
 	d_printf(("get_redirect_rule_by_index()\n"));
-	reflesh_nft_cache_redirect();
+	refresh_nft_cache_redirect();
 
 	LIST_FOREACH(r, &head_redirect, entry) {
 		if (r->index == index) {
@@ -504,7 +619,7 @@ get_nat_redirect_rule(const char * nat_chain_name, const char * ifname,
 	UNUSED(rhost);
 	UNUSED(rhostlen);
 
-	reflesh_nft_cache_redirect();
+	refresh_nft_cache_redirect();
 
 	LIST_FOREACH(p, &head_redirect, entry) {
 		if (p->proto == proto &&
@@ -556,7 +671,7 @@ get_portmappings_in_range(unsigned short startport, unsigned short endport,
 		return NULL;
 	}
 
-	reflesh_nft_cache_redirect();
+	refresh_nft_cache_redirect();
 
 	LIST_FOREACH(p, &head_redirect, entry) {
 		if (p->proto == proto &&
@@ -623,83 +738,3 @@ update_portmapping(const char * ifname, unsigned short eport, int proto,
 
 	return 0;
 }
-
-#ifdef DEBUG
-/* for debug */
-
-extern void print_rule(rule_t *r);
-
-/* read the "filter" and "nat" tables */
-int
-list_redirect_rule(const char * ifname)
-{
-	rule_t *p;
-	UNUSED(ifname);
-
-	reflesh_nft_cache_filter();
-	LIST_FOREACH(p, &head_filter, entry) {
-		print_rule(p);
-	}
-
-	reflesh_nft_cache_redirect();
-	LIST_FOREACH(p, &head_redirect, entry) {
-		print_rule(p);
-	}
-
-	reflesh_nft_cache_peer();
-	LIST_FOREACH(p, &head_peer, entry) {
-		print_rule(p);
-	}
-
-	return 0;
-}
-#endif
-
-
-#if 0
-/* delete_rule_and_commit() :
- * subfunction used in delete_redirect_and_filter_rules() */
-static int
-delete_rule_and_commit(unsigned int index, IPTC_HANDLE h,
-		       const char * miniupnpd_chain,
-		       const char * logcaller)
-{
-/* TODO: Implement it */
-}
-
-/* TODO: Implement it */
-static void
-print_iface(const char * iface, const unsigned char * mask, int invert)
-{
-	unsigned i;
-	if(mask[0] == 0)
-		return;
-	if(invert)
-		printf("! ");
-	for(i=0; i<IFNAMSIZ; i++)
-	{
-		if(mask[i])
-		{
-			if(iface[i])
-				putchar(iface[i]);
-		}
-		else
-		{
-			if(iface[i-1])
-				putchar('+');
-			break;
-		}
-	}
-	return ;
-}
-
-#ifdef DEBUG
-static void
-printip(uint32_t ip)
-{
-	printf("%u.%u.%u.%u", ip >> 24, (ip >> 16) & 0xff,
-	       (ip >> 8) & 0xff, ip & 0xff);
-}
-#endif
-
-#endif /* if 0 */
