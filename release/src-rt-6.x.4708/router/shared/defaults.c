@@ -310,7 +310,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_isp_gw",		""				, 0 },	// Static IPv6 ISP Gateway
 #endif
 
-#ifdef RTCONFIG_FANCTRL
+#ifdef TCONFIG_FANCTRL
 	{ "fanctrl_dutycycle",		"0"				, 0 },
 #endif
 

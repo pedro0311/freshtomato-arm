@@ -1,6 +1,9 @@
-dist: precise
+git:
+  quiet: true
+
+dist: trusty
 language: c
-sudo: false
+sudo: required
 addons:
   apt:
     packages:
@@ -9,15 +12,17 @@ addons:
       - re2c
       - libgmp-dev
       - libicu-dev
-      - libmcrypt-dev
       - libtidy-dev
       - libenchant-dev
       - libaspell-dev
       - libpspell-dev
       - librecode-dev
+      - libsasl2-dev
+      - libxpm-dev
+      - libt1-dev
 
 notifications:
-    email: 
+    email:
        on_failure: change
     irc:
       template:
@@ -27,8 +32,9 @@ notifications:
       on_success: change
       on_failure: always
 
-cache: 
-    - apt
+cache:
+    apt: true
+    ccache: true
 
 env:
     global:
@@ -44,16 +50,23 @@ env:
       - ENABLE_MAINTAINER_ZTS=1 ENABLE_DEBUG=1
 
 before_script:
+    - ccache --version
+    - ccache --zero-stats
+    - export USE_CCACHE=1
+    # Enable IPv6
+    - sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6'
     # Compile PHP
     - ./travis/compile.sh
-    # Setup Extensions 
+    # Setup Extensions
     - . ./travis/ext/mysql/setup.sh
     - . ./travis/ext/mysqli/setup.sh
     - . ./travis/ext/pdo_mysql/setup.sh
     - . ./travis/ext/pgsql/setup.sh
     - . ./travis/ext/pdo_pgsql/setup.sh
 
-# Run PHPs run-tests.php 
+# Run PHPs run-tests.php
 script:
-    - ./sapi/cli/php run-tests.php -p `pwd`/sapi/cli/php -g "FAIL,XFAIL,BORK,WARN,LEAK,SKIP" --offline --show-diff --set-timeout 120
-    - ./sapi/cli/php sapi/phpdbg/tests/run-tests.php -diff2stdout --phpdbg sapi/phpdbg/phpdbg
+    - ./sapi/cli/php run-tests.php -p `pwd`/sapi/cli/php $(if [ $ENABLE_DEBUG == 0 ]; then echo "-d opcache.enable_cli=1 -d zend_extension=`pwd`/modules/opcache.so"; fi) -g "FAIL,XFAIL,BORK,WARN,LEAK,SKIP" --offline --show-diff --show-slow 1000 --set-timeout 120
+
+after_success:
+    - ccache --show-stats

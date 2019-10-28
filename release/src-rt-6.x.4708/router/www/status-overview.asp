@@ -524,6 +524,7 @@ var a = nvstat.free / nvstat.size * 100.0;
 createFieldTable('', [
 	{ title: 'Name', text: nvram.router_name },
 	{ title: 'Model', text: nvram.t_model_name },
+	{ title: 'Bootloader (CFE)', text: stats.cfeversion },
 	{ title: 'Chipset', text: stats.systemtype },
 	{ title: 'CPU Frequency', text: stats.cpumhz, suffix: ' <small>(dual-core)<\/small>' },
 	{ title: 'Flash Size', text: stats.flashsize },

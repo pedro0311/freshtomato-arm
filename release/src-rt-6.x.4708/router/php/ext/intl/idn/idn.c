@@ -223,11 +223,23 @@ static void php_intl_idn_to(INTERNAL_FUNCTION_PARAMETERS,
 		UParseError parse_error;
 
 		status = U_ZERO_ERROR;
+#if defined(__clang__)
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif ZEND_GCC_VERSION >= 4008
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 		if (mode == INTL_IDN_TO_ASCII) {
 			converted_ret_len = uidna_IDNToASCII(ustring, ustring_len, converted, MAXPATHLEN, (int32_t)option, &parse_error, &status);
 		} else {
 			converted_ret_len = uidna_IDNToUnicode(ustring, ustring_len, converted, MAXPATHLEN, (int32_t)option, &parse_error, &status);
 		}
+#if defined(__clang__)
+# pragma clang diagnostic pop
+#elif ZEND_GCC_VERSION >= 4008
+# pragma GCC diagnostic pop
+#endif
 		efree(ustring);
 
 		if (U_FAILURE(status)) {

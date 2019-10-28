@@ -236,7 +236,8 @@ usage(void)
 {
 	fprintf(stderr,
 	        "usage: nvram [get name] [set name=value] "
-	        "[unset name] [show] [commit] [save] [restore] [erase] ...\n");
+	        "[unset name] [show] [commit] [erase]"
+                "[save filetosave.cfg] [restore filetorestore.cfg] ...\n");
 	exit(0);
 }
 

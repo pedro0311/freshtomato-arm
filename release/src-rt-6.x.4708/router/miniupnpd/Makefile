@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.92 2019/09/24 10:30:43 nanard Exp $
+# $Id: Makefile,v 1.93 2019/10/05 19:22:10 nanard Exp $
 # MiniUPnP project
 # http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
 # Author: Thomas Bernard
@@ -96,6 +96,13 @@ CFLAGS += -m64 -mcmodel=kernel -mno-red-zone -ffreestanding
 .elif $(ARCH) == "sparc64"
 CFLAGS += -m64 -mcmodel=medlow
 .endif
+.endif
+
+ISGITREPO != git rev-parse --is-inside-work-tree
+.if $(ISGITREPO) == "true"
+GITREF != git rev-parse --short HEAD
+GITBRANCH != git rev-parse --abbrev-ref HEAD
+CFLAGS += -DMINIUPNPD_GIT_REF=\"$(GITBRANCH)-$(GITREF)\"
 .endif
 
 STDOBJS = miniupnpd.o upnphttp.o upnpdescgen.o upnpsoap.o \

@@ -89,6 +89,7 @@ extern void asp_anonupdate(int argc, char **argv);
 extern void wo_wakeup(char *url);
 extern void asp_dns(int argc, char **argv);
 extern void wo_resolve(char *url);
+extern char* get_cfeversion(char *);
 
 #ifdef TCONFIG_IPV6
 extern void asp_calc6rdlocalprefix(int argc, char **argv);
