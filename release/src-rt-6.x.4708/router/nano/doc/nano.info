@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 4.4.
+This manual documents the GNU ‘nano’ editor, version 4.5.
 
 * Menu:
 
@@ -1014,6 +1014,11 @@ following commands in a nanorc file:
      quotes are specified, the comment/uncomment functions are disabled;
      for example, "" for JSON. The default value is "#".
 
+‘tabgives "STRING"’
+     Make the <Tab> key produce the given STRING.  Useful for languages
+     like Python that want to see only spaces for indentation.  This
+     overrides the setting of the ‘tabstospaces’ option.
+
 ‘color FGCOLOR,BGCOLOR "REGEX" ...’
      Paint all pieces of text that match the extended regular expression
      "regex" with the given foreground and background colors, at least
@@ -1767,10 +1772,10 @@ Node: Settings24454
 Ref: set functioncolor27539
 Ref: Whitespace34855
 Node: Syntax Highlighting35585
-Node: Rebinding Keys41809
-Node: The File Browser53969
-Node: Pico Compatibility54862
-Node: Building and Configure Options59403
+Node: Rebinding Keys42036
+Node: The File Browser54196
+Node: Pico Compatibility55089
+Node: Building and Configure Options59630
 
 End Tag Table
 

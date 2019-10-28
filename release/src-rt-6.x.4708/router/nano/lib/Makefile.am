@@ -280,12 +280,14 @@ fcntl.h: fcntl.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
 	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
 	      -e 's|@''NEXT_FCNTL_H''@|$(NEXT_FCNTL_H)|g' \
+	      -e 's/@''GNULIB_CREAT''@/$(GNULIB_CREAT)/g' \
 	      -e 's/@''GNULIB_FCNTL''@/$(GNULIB_FCNTL)/g' \
 	      -e 's/@''GNULIB_NONBLOCKING''@/$(GNULIB_NONBLOCKING)/g' \
 	      -e 's/@''GNULIB_OPEN''@/$(GNULIB_OPEN)/g' \
 	      -e 's/@''GNULIB_OPENAT''@/$(GNULIB_OPENAT)/g' \
 	      -e 's|@''HAVE_FCNTL''@|$(HAVE_FCNTL)|g' \
 	      -e 's|@''HAVE_OPENAT''@|$(HAVE_OPENAT)|g' \
+	      -e 's|@''REPLACE_CREAT''@|$(REPLACE_CREAT)|g' \
 	      -e 's|@''REPLACE_FCNTL''@|$(REPLACE_FCNTL)|g' \
 	      -e 's|@''REPLACE_OPEN''@|$(REPLACE_OPEN)|g' \
 	      -e 's|@''REPLACE_OPENAT''@|$(REPLACE_OPENAT)|g' \
@@ -2189,6 +2191,7 @@ unistd.h: unistd.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
 	      -e 's|@''NEXT_UNISTD_H''@|$(NEXT_UNISTD_H)|g' \
 	      -e 's|@''WINDOWS_64_BIT_OFF_T''@|$(WINDOWS_64_BIT_OFF_T)|g' \
+	      -e 's/@''GNULIB_ACCESS''@/$(GNULIB_ACCESS)/g' \
 	      -e 's/@''GNULIB_CHDIR''@/$(GNULIB_CHDIR)/g' \
 	      -e 's/@''GNULIB_CHOWN''@/$(GNULIB_CHOWN)/g' \
 	      -e 's/@''GNULIB_CLOSE''@/$(GNULIB_CLOSE)/g' \
@@ -2288,7 +2291,8 @@ unistd.h: unistd.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''HAVE_OS_H''@|$(HAVE_OS_H)|g' \
 	      -e 's|@''HAVE_SYS_PARAM_H''@|$(HAVE_SYS_PARAM_H)|g' \
 	  | \
-	  sed -e 's|@''REPLACE_CHOWN''@|$(REPLACE_CHOWN)|g' \
+	  sed -e 's|@''REPLACE_ACCESS''@|$(REPLACE_ACCESS)|g' \
+	      -e 's|@''REPLACE_CHOWN''@|$(REPLACE_CHOWN)|g' \
 	      -e 's|@''REPLACE_CLOSE''@|$(REPLACE_CLOSE)|g' \
 	      -e 's|@''REPLACE_DUP''@|$(REPLACE_DUP)|g' \
 	      -e 's|@''REPLACE_DUP2''@|$(REPLACE_DUP2)|g' \

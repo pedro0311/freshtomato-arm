@@ -1,4 +1,4 @@
-/* $Id: upnpglobalvars.h,v 1.48 2019/05/21 08:39:45 nanard Exp $ */
+/* $Id: upnpglobalvars.h,v 1.49 2019/10/02 22:02:58 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -142,7 +142,7 @@ extern const char * queue;
 extern const char * tag;
 #endif
 
-#ifdef USE_NETFILTER
+#ifdef USE_IPTABLES
 extern const char * miniupnpd_nat_chain;
 extern const char * miniupnpd_nat_postrouting_chain;
 extern const char * miniupnpd_forward_chain;

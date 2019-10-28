@@ -89,7 +89,7 @@ int shiftaltleft, shiftaltright, shiftaltup, shiftaltdown;
 #ifdef ENABLED_WRAPORJUSTIFY
 ssize_t fill = -COLUMNS_FROM_EOL;
 		/* The relative column where we will wrap lines. */
-ssize_t wrap_at = 0;
+size_t wrap_at = 0;
 		/* The actual column where we will wrap lines, based on fill. */
 #endif
 
@@ -272,19 +272,6 @@ size_t light_from_col = 0;
 size_t light_to_col = 0;
 	/* Where the spotlighted text ends. */
 
-/* Return the number of entries in the shortcut list for a given menu. */
-size_t length_of_list(int menu)
-{
-	funcstruct *f;
-	size_t i = 0;
-
-	for (f = allfuncs; f != NULL; f = f->next)
-		if ((f->menus & menu) && first_sc_for(menu, f->func) != NULL)
-			i++;
-
-	return i;
-}
-
 /* To make the functions and shortcuts lists clearer. */
 #define VIEW  TRUE    /* Is allowed in view mode. */
 #define NOVIEW  FALSE
@@ -361,9 +348,9 @@ void do_cancel(void)
 {
 }
 
-/* Add a function to the function list. */
-void add_to_funcs(void (*func)(void), int menus, const char *desc, const char *help,
-	bool blank_after, bool viewok)
+/* Add a function to the linked list of functions. */
+void add_to_funcs(void (*func)(void), int menus, const char *desc,
+					const char *help, bool blank_after, bool viewok)
 {
 	funcstruct *f = nmalloc(sizeof(funcstruct));
 
@@ -384,7 +371,7 @@ void add_to_funcs(void (*func)(void), int menus, const char *desc, const char *h
 #endif
 }
 
-/* Add a key combo to the shortcut list. */
+/* Add a key combo to the linked list of shortcuts. */
 void add_to_sclist(int menus, const char *scstring, const int keycode,
 						void (*func)(void), int toggle)
 {
@@ -441,6 +428,46 @@ int the_code_for(void (*func)(void), int defaultval)
 	return s->keycode;
 }
 
+/* Return the number of entries that can be shown in the given menu. */
+size_t shown_entries_for(int menu)
+{
+	funcstruct *item = allfuncs;
+	size_t maximum = ((COLS + 40) / 20) * 2;
+	size_t count = 0;
+
+	while (count < maximum && item != NULL) {
+		if (item->menus & menu)
+			count++;
+		item = item->next;
+	}
+
+	/* When --tempfile is not used, widen the grid of the WriteOut menu. */
+	if (menu == MWRITEFILE && first_sc_for(menu, discard_buffer) == NULL)
+		count--;
+
+	return count;
+}
+
+/* Return the shortcut that corresponds to the values of kbinput (the
+ * key itself) and meta_key (whether the key is a meta sequence).  The
+ * returned shortcut will be the first in the list that corresponds to
+ * the given sequence. */
+const keystruct *get_shortcut(int *kbinput)
+{
+	/* Plain characters cannot be shortcuts, so just skip those. */
+	if (!meta_key && ((*kbinput >= 0x20 && *kbinput < 0x7F) ||
+						(*kbinput >= 0xA0 && *kbinput <= 0xFF)))
+		return NULL;
+
+	for (keystruct *s = sclist; s != NULL; s = s->next) {
+		if ((s->menus & currmenu) && *kbinput == s->keycode &&
+										meta_key == s->meta)
+			return s;
+	}
+
+	return NULL;
+}
+
 /* Return a pointer to the function that is bound to the given key. */
 functionptrtype func_from_key(int *kbinput)
 {
@@ -450,18 +477,6 @@ functionptrtype func_from_key(int *kbinput)
 		return s->func;
 	else
 		return NULL;
-}
-
-/* Set the string and its corresponding keycode for the given shortcut s. */
-void assign_keyinfo(keystruct *s, const char *keystring, const int keycode)
-{
-	s->keystr = keystring;
-	s->meta = (keystring[0] == 'M' && keycode == 0);
-
-	if (keycode)
-		s->keycode = keycode;
-	else
-		s->keycode = keycode_from_string(keystring);
 }
 
 /* Parse the given keystring and return the corresponding keycode,
@@ -497,6 +512,18 @@ int keycode_from_string(const char *keystring)
 		return KEY_DC;
 	else
 		return -1;
+}
+
+/* Set the string and its corresponding keycode for the given shortcut s. */
+void assign_keyinfo(keystruct *s, const char *keystring, const int keycode)
+{
+	s->keystr = keystring;
+	s->meta = (keystring[0] == 'M' && keycode == 0);
+
+	if (keycode)
+		s->keycode = keycode;
+	else
+		s->keycode = keycode_from_string(keystring);
 }
 
 /* These two tags are used elsewhere too, so they are global. */
@@ -678,8 +705,7 @@ void shortcut_init(void)
 	/* Start populating the different menus with functions. */
 
 	add_to_funcs(do_help_void, (MMOST | MBROWSER) & ~MFINDINHELP,
-		/* TRANSLATORS: Try to keep the next ninety strings or so at most 10
-		 * characters.  Some strings may be longer -- run nano and see. */
+		/* TRANSLATORS: Try to keep the next eleven strings at most 10 characters. */
 		N_("Get Help"), WITHORSANS(help_gist), TOGETHER, VIEW);
 
 	add_to_funcs(do_cancel, ((MMOST & ~MMAIN) | MYESNO),
@@ -727,14 +753,6 @@ void shortcut_init(void)
 	add_to_funcs(do_replace, MMAIN,
 		N_("Replace"), WITHORSANS(replace_gist), TOGETHER, NOVIEW);
 
-#ifdef ENABLE_BROWSER
-	add_to_funcs(goto_dir_void, MBROWSER,
-		N_("Go To Dir"), WITHORSANS(gotodir_gist), TOGETHER, VIEW);
-
-	add_to_funcs(total_refresh, MBROWSER,
-		N_("Refresh"), WITHORSANS(browserrefresh_gist), BLANKAFTER, VIEW);
-#endif
-
 	add_to_funcs(cut_text, MMAIN,
 		N_("Cut Text"), WITHORSANS(cut_gist), TOGETHER, NOVIEW);
 
@@ -753,6 +771,7 @@ void shortcut_init(void)
 	}
 
 	add_to_funcs(do_cursorpos_void, MMAIN,
+		/* TRANSLATORS: Try to keep the next thirteen strings at most 12 characters. */
 		N_("Cur Pos"), WITHORSANS(cursorpos_gist), TOGETHER, VIEW);
 
 #if (defined(ENABLE_JUSTIFY) && (defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)) || \
@@ -803,12 +822,14 @@ void shortcut_init(void)
 		N_("FullJstify"), WITHORSANS(fulljustify_gist), BLANKAFTER, NOVIEW);
 #endif
 
-#ifndef NANO_TINY
-	add_to_funcs(do_find_bracket, MMAIN,
-		N_("To Bracket"), WITHORSANS(bracket_gist), BLANKAFTER, VIEW);
-#endif
-
 #ifdef ENABLE_BROWSER
+	add_to_funcs(goto_dir_void, MBROWSER,
+		/* TRANSLATORS: Try to keep the next seven strings at most 10 characters. */
+		N_("Go To Dir"), WITHORSANS(gotodir_gist), TOGETHER, VIEW);
+
+	add_to_funcs(total_refresh, MBROWSER,
+		N_("Refresh"), WITHORSANS(browserrefresh_gist), BLANKAFTER, VIEW);
+
 	add_to_funcs(do_search_forward, MBROWSER,
 		N_("Where Is"), WITHORSANS(browserwhereis_gist), TOGETHER, VIEW);
 	add_to_funcs(do_search_backward, MBROWSER,
@@ -816,6 +837,9 @@ void shortcut_init(void)
 #endif
 
 #ifndef NANO_TINY
+	add_to_funcs(do_find_bracket, MMAIN,
+		N_("To Bracket"), WITHORSANS(bracket_gist), BLANKAFTER, VIEW);
+
 	add_to_funcs(do_search_backward, MMAIN|MHELP,
 		/* TRANSLATORS: This starts a backward search. */
 		N_("Where Was"), WITHORSANS(wherewas_gist), TOGETHER, VIEW);
@@ -850,6 +874,7 @@ void shortcut_init(void)
 #endif
 
 	add_to_funcs(do_prev_word_void, MMAIN,
+		/* TRANSLATORS: Try to keep the next eighteen strings at most 12 characters. */
 		N_("Prev Word"), WITHORSANS(prevword_gist), TOGETHER, VIEW);
 	add_to_funcs(do_next_word_void, MMAIN,
 		N_("Next Word"), WITHORSANS(nextword_gist), TOGETHER, VIEW);
@@ -1061,7 +1086,7 @@ void shortcut_init(void)
 
 #ifdef ENABLE_COLOR
 	add_to_funcs(do_page_up, MLINTER,
-		/* TRANSLATORS: Try to keep the next two strings at most 20 characters. */
+		/* TRANSLATORS: The next two strings may be up to 37 characters each. */
 		N_("Prev Lint Msg"), WITHORSANS(prevlint_gist), TOGETHER, VIEW);
 	add_to_funcs(do_page_down, MLINTER,
 		N_("Next Lint Msg"), WITHORSANS(nextlint_gist), TOGETHER, VIEW);
@@ -1124,7 +1149,7 @@ void shortcut_init(void)
 	add_to_sclist(MMAIN, "M-6", 0, copy_text, 0);
 	add_to_sclist(MMAIN, "M-^", 0, copy_text, 0);
 	add_to_sclist(MMAIN, "M-}", 0, do_indent, 0);
-	add_to_sclist(MMAIN, "Tab", TAB_CODE, do_indent, 0);
+	add_to_sclist(MMAIN, "Tab", INDENT_KEY, do_indent, 0);
 	add_to_sclist(MMAIN, "M-{", 0, do_unindent, 0);
 	add_to_sclist(MMAIN, "Sh-Tab", SHIFT_TAB, do_unindent, 0);
 	add_to_sclist(MMAIN, "M-:", 0, record_macro, 0);
@@ -1384,7 +1409,7 @@ const char *flagtostr(int flag)
 {
 	switch (flag) {
 		case NO_HELP:
-			/* TRANSLATORS: The next fourteen strings are toggle descriptions;
+			/* TRANSLATORS: The next thirteen strings are toggle descriptions;
 			 * they are best kept shorter than 40 characters, but may be longer. */
 			return N_("Help mode");
 		case CONSTANT_SHOW:

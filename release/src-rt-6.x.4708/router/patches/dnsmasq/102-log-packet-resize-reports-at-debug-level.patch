@@ -1,9 +1,9 @@
 --- dnsmasq/src/forward.c
 +++ dnsmasq/src/forward.c
-@@ -952,7 +952,7 @@ void reply_query(int fd, int family, tim
-       server->edns_pktsz = SAFE_PKTSZ;
-       server->pktsz_reduced = now;
-       prettyprint_addr(&server->addr, daemon->addrbuff);
+@@ -956,7 +956,7 @@ void reply_query(int fd, int family, tim
+       forward->sentto->edns_pktsz = SAFE_PKTSZ;
+       forward->sentto->pktsz_reduced = now;
+       prettyprint_addr(&forward->sentto->addr, daemon->addrbuff);
 -      my_syslog(LOG_WARNING, _("reducing DNS packet size for nameserver %s to %d"), daemon->addrbuff, SAFE_PKTSZ);
 +      my_syslog(LOG_DEBUG, _("reducing DNS packet size for nameserver %s to %d"), daemon->addrbuff, SAFE_PKTSZ);
      }
