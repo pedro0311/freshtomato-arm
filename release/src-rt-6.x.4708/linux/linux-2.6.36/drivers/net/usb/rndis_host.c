@@ -383,7 +383,7 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 
 	/* REVISIT:  peripheral "alignment" request is ignored ... */
 	dev_dbg(&intf->dev,
-		"hard mtu %u (%u from dev), rx buflen %Zu, align %d\n",
+		"hard mtu %u (%u from dev), rx buflen %zu, align %d\n",
 		dev->hard_mtu, tmp, dev->rx_urb_size,
 		1 << le32_to_cpu(u.init_c->packet_alignment));
 
@@ -577,7 +577,7 @@ rndis_tx_fixup(struct usbnet *dev, struct sk_buff *skb, gfp_t flags)
 	 * packets; Linux minimizes wasted bandwidth through tx queues.
 	 */
 fill:
-	hdr = (void *) __skb_push(skb, sizeof *hdr);
+	hdr = __skb_push(skb, sizeof *hdr);
 	memset(hdr, 0, sizeof *hdr);
 	hdr->msg_type = cpu_to_le32(RNDIS_MSG_PACKET);
 	hdr->msg_len = cpu_to_le32(skb->len);
@@ -650,17 +650,7 @@ static struct usb_driver rndis_driver = {
 	.disable_hub_initiated_lpm = 1,
 };
 
-static int __init rndis_init(void)
-{
-	return usb_register(&rndis_driver);
-}
-module_init(rndis_init);
-
-static void __exit rndis_exit(void)
-{
-	usb_deregister(&rndis_driver);
-}
-module_exit(rndis_exit);
+module_usb_driver(rndis_driver);
 
 MODULE_AUTHOR("David Brownell");
 MODULE_DESCRIPTION("USB Host side RNDIS driver");

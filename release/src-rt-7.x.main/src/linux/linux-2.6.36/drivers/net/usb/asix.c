@@ -20,12 +20,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// #define	DEBUG			// error path messages, extra info
-// #define	VERBOSE			// more; success messages
-
 #include <linux/module.h>
 #include <linux/kmod.h>
-#include <linux/init.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
@@ -426,6 +422,8 @@ static struct sk_buff *asix_tx_fixup(struct usbnet *dev, struct sk_buff *skb,
 		memcpy(skb_tail_pointer(skb), &padbytes, sizeof(padbytes));
 		skb_put(skb, sizeof(padbytes));
 	}
+
+	usbnet_set_skb_tx_stats(skb, 1, 0);
 	return skb;
 }
 
@@ -1566,17 +1564,7 @@ static struct usb_driver asix_driver = {
 	.supports_autosuspend = 1
 };
 
-static int __init asix_init(void)
-{
- 	return usb_register(&asix_driver);
-}
-module_init(asix_init);
-
-static void __exit asix_exit(void)
-{
- 	usb_deregister(&asix_driver);
-}
-module_exit(asix_exit);
+module_usb_driver(asix_driver);
 
 MODULE_AUTHOR("David Hollis");
 MODULE_DESCRIPTION("ASIX AX8817X based USB 2.0 Ethernet Devices");
