@@ -8,13 +8,13 @@ PL: https://openlinksys.info/forum/
 
 EN: https://www.linksysinfo.org/
 
-This is my personal fork, If anyone wants to pick up my changes and merge them to your repository, feel free and go ahead. That's the reason Tomato is an open-source project.
+This is a FreshTomato fork, If anyone wants to pick up changes and merge them to your repository, feel free and go ahead. That's the reason Tomato is an open-source project.
 
 **Source code**: https://bitbucket.org/pedro311/freshtomato-arm/commits/all
 
-**Downloads**: https://exotic.se/freshtomato-arm/
+**Project page**: https://freshtomato.org/
 
-**Project page**: http://freshtomato.org/
+**Donations**: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=B4FDH9TH6Z8FU  BTC: 1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y  
 
 For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC68U(A1,A2,B1)/R/P, AC3200, **Netgear** R6250, R6300v2, R6400, R7000, R8000, **Linksys** EA6200, EA6350v1, EA6300v1/EA6400, EA6500v2, EA6700, EA6900, **Tenda** AC15, AC18, **Huawei** WS880, **Dlink** DIR868L (rev A1/B1/C1), **Xiaomi** R1D.
 
