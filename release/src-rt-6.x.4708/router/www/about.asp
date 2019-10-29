@@ -269,7 +269,7 @@ Built on <% build_time(); %> by Pedro
 <br/>
 <br/>
 <br/>
-Click below to send a "Thank you" gift through PayPal
+<b>Click below to send a "Thank you" gift through PayPal</b>
 <br/>
 <br/>
 <div id="donate">
@@ -281,6 +281,14 @@ Click below to send a "Thank you" gift through PayPal
 	</div>
 	</form>
 </div>
+<br/>
+<div id="donate"><b>...Or by Bitcoin: </b> 1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y</div>
+<br/>
+<hr>
+<br/>
+<br/>
+<br/>
+<br/>
 <br/>
 <br/>
 <b>Based on Tomato Firmware v1.28</b><br/>
