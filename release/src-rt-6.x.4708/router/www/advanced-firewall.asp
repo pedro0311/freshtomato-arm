@@ -209,7 +209,7 @@ createFieldTable('', [
 	{ title: 'ICMP', indent: 2, name: 'f_icmp_limit_icmp', type: 'text', maxlen: 3, size: 3, suffix: ' <small> request per second<\/small>', value: fixInt(nvram.block_wan_limit_icmp || 1, 1, 300, 5) },
 	{ title: 'Traceroute', indent: 2, name: 'f_icmp_limit_traceroute', type: 'text', maxlen: 3, size: 3, suffix: ' <small> request per second<\/small>', value: fixInt(nvram.block_wan_limit_tr || 5, 1, 300, 5) },
 	null,
-	{ title: 'Enable SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
+	{ title: 'Enable TCP SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
 	{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' <small>Fixes Comcast incorrect DSCP<\/small>' },
 	{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' }
 ]);
