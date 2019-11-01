@@ -310,7 +310,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_isp_gw",		""				, 0 },	// Static IPv6 ISP Gateway
 #endif
 
-#ifdef RTCONFIG_FANCTRL
+#ifdef TCONFIG_FANCTRL
 	{ "fanctrl_dutycycle",		"0"				, 0 },
 #endif
 
@@ -643,9 +643,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "dhcp_routes",		"1"				, 0 },
 	{ "force_igmpv2",		"0"				, 0 },
 	{ "wk_mode",			"gateway"			, 0 },	// Network mode [gateway|router]
-
-/* advanced-vlan */
-	{ "trunk_vlan_so",		"0"				, 0 },	// VLAN trunk support override
 
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },

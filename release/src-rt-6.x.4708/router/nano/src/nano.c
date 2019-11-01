@@ -53,8 +53,8 @@ static int oldinterval = -1;
 		/* Used to store the user's original mouse click interval. */
 #endif
 #ifdef HAVE_TERMIOS_H
-static struct termios oldterm;
-		/* The user's original terminal settings. */
+static struct termios original_state;
+		/* The original settings of the user's terminal. */
 #else
 # define tcsetattr(...)
 # define tcgetattr(...)
@@ -239,11 +239,11 @@ void partition_buffer(linestruct *top, size_t top_x,
 	bot->data[bot_x] = '\0';
 
 	/* At the beginning of the partition, remove all text before top_x. */
-	charmove(top->data, top->data + top_x, strlen(top->data) - top_x + 1);
+	memmove(top->data, top->data + top_x, strlen(top->data) - top_x + 1);
 }
 
 /* Unpartition the current buffer so that it is complete again. */
-void unpartition_buffer()
+void unpartition_buffer(void)
 {
 	/* Reattach the line that was above the top of the partition. */
 	openfile->filetop->prev = foreline;
@@ -253,7 +253,7 @@ void unpartition_buffer()
 	/* Restore the text that was on the first partition line before its start. */
 	openfile->filetop->data = charealloc(openfile->filetop->data,
 				strlen(antedata) + strlen(openfile->filetop->data) + 1);
-	charmove(openfile->filetop->data + strlen(antedata),
+	memmove(openfile->filetop->data + strlen(antedata),
 				openfile->filetop->data, strlen(openfile->filetop->data) + 1);
 	strncpy(openfile->filetop->data, antedata, strlen(antedata));
 	free(antedata);
@@ -498,7 +498,7 @@ void finish(void)
 	endwin();
 
 	/* Restore the old terminal settings. */
-	tcsetattr(0, TCSANOW, &oldterm);
+	tcsetattr(0, TCSANOW, &original_state);
 
 #ifdef ENABLE_NANORC
 	display_rcfile_errors();
@@ -529,7 +529,7 @@ void die(const char *msg, ...)
 	endwin();
 
 	/* Restore the old terminal settings. */
-	tcsetattr(0, TCSANOW, &oldterm);
+	tcsetattr(0, TCSANOW, &original_state);
 
 #ifdef ENABLE_NANORC
 	display_rcfile_errors();
@@ -649,11 +649,12 @@ void window_init(void)
 
 #ifdef ENABLED_WRAPORJUSTIFY
 	/* Set up the wrapping point, accounting for screen width when negative. */
-	wrap_at = fill;
-	if (wrap_at <= 0)
-		wrap_at += COLS;
-	if (wrap_at < 0)
+	if (COLS + fill < 0)
 		wrap_at = 0;
+	else if (fill <= 0)
+		wrap_at = COLS + fill;
+	else
+		wrap_at = fill;
 #endif
 }
 
@@ -683,7 +684,18 @@ void mouse_init(void)
 /* Print the usage line for the given option to the screen. */
 void print_opt(const char *shortflag, const char *longflag, const char *desc)
 {
-	printf(" %-14s %-23s %s\n", shortflag, longflag, _(desc));
+	int firstwidth = breadth(shortflag);
+	int secondwidth = breadth(longflag);
+
+	printf(" %s", shortflag);
+	if (firstwidth < 14)
+		printf("%*s", 14 - firstwidth, " ");
+
+	printf(" %s", longflag);
+	if (secondwidth < 24)
+		printf("%*s", 24 - secondwidth, " ");
+
+	printf("%s\n", _(desc));
 }
 
 /* Explain how to properly use nano and its command-line options. */
@@ -696,7 +708,7 @@ void usage(void)
 				"a '+' before the filename.  The column number can be added after a comma.\n"));
 	printf(_("When a filename is '-', nano reads data from standard input.\n\n"));
 	/* TRANSLATORS: The next three are column headers of the --help output. */
-	printf("%-16s%-26s%s\n", _("Option"), _("Long option"), _("Meaning"));
+	print_opt(_("Option"), _("Long option"), N_("Meaning"));
 #ifndef NANO_TINY
 	/* TRANSLATORS: The next forty or so strings are option descriptions
 	 * for the --help output.  Try to keep them at most 40 characters. */
@@ -728,7 +740,7 @@ void usage(void)
 	print_opt("-I", "--ignorercfiles", N_("Don't look at nanorc files"));
 #endif
 #ifndef NANO_TINY
-	print_opt("-J <number>", "--guidestripe=<number>",
+	print_opt(_("-J <number>"), _("--guidestripe=<number>"),
 					N_("Show a guiding bar at this column"));
 #endif
 	print_opt("-K", "--rawsequences",
@@ -752,7 +764,9 @@ void usage(void)
 #endif
 #ifdef ENABLE_JUSTIFY
 	print_opt(_("-Q <regex>"), _("--quotestr=<regex>"),
-					 N_("Regular expression to match quoting"));
+					/* TRANSLATORS: This refers to email quoting,
+					 * like the > in: > quoted text. */
+					N_("Regular expression to match quoting"));
 #endif
 	if (!ISSET(RESTRICTED))
 		print_opt("-R", "--restricted", N_("Restricted mode"));
@@ -1068,7 +1082,7 @@ void reconnect_and_store_state(void)
 
 	/* If input was not cut short, store the current state of the terminal. */
 	if (!control_C_was_pressed)
-		tcgetattr(0, &oldterm);
+		tcgetattr(0, &original_state);
 }
 
 /* Read whatever comes from standard input into a new buffer. */
@@ -1078,7 +1092,7 @@ bool scoop_stdin(void)
 
 	/* Exit from curses mode and put the terminal into its original state. */
 	endwin();
-	tcsetattr(0, TCSANOW, &oldterm);
+	tcsetattr(0, TCSANOW, &original_state);
 
 	/* When input comes from a terminal, show a helpful message. */
 	if (isatty(STANDARD_INPUT))
@@ -1203,7 +1217,7 @@ RETSIGTYPE do_suspend(int signal)
 	fflush(stdout);
 
 	/* Restore the old terminal settings. */
-	tcsetattr(0, TCSANOW, &oldterm);
+	tcsetattr(0, TCSANOW, &original_state);
 
 	/* The suspend keystroke must not elicit cursor-position display. */
 	suppress_cursorpos=TRUE;
@@ -1378,12 +1392,12 @@ void do_toggle(int flag)
 void disable_extended_io(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term = {0};
+	struct termios settings = {0};
 
-	tcgetattr(0, &term);
-	term.c_lflag &= ~IEXTEN;
-	term.c_oflag &= ~OPOST;
-	tcsetattr(0, TCSANOW, &term);
+	tcgetattr(0, &settings);
+	settings.c_lflag &= ~IEXTEN;
+	settings.c_oflag &= ~OPOST;
+	tcsetattr(0, TCSANOW, &settings);
 #endif
 }
 
@@ -1391,11 +1405,11 @@ void disable_extended_io(void)
 void disable_kb_interrupt(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term = {0};
+	struct termios settings = {0};
 
-	tcgetattr(0, &term);
-	term.c_lflag &= ~ISIG;
-	tcsetattr(0, TCSANOW, &term);
+	tcgetattr(0, &settings);
+	settings.c_lflag &= ~ISIG;
+	tcsetattr(0, TCSANOW, &settings);
 #endif
 }
 
@@ -1403,11 +1417,11 @@ void disable_kb_interrupt(void)
 void enable_kb_interrupt(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term = {0};
+	struct termios settings = {0};
 
-	tcgetattr(0, &term);
-	term.c_lflag |= ISIG;
-	tcsetattr(0, TCSANOW, &term);
+	tcgetattr(0, &settings);
+	settings.c_lflag |= ISIG;
+	tcsetattr(0, TCSANOW, &settings);
 #endif
 }
 
@@ -1415,11 +1429,11 @@ void enable_kb_interrupt(void)
 void disable_flow_control(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term;
+	struct termios settings;
 
-	tcgetattr(0, &term);
-	term.c_iflag &= ~IXON;
-	tcsetattr(0, TCSANOW, &term);
+	tcgetattr(0, &settings);
+	settings.c_iflag &= ~IXON;
+	tcsetattr(0, TCSANOW, &settings);
 #endif
 }
 
@@ -1427,11 +1441,11 @@ void disable_flow_control(void)
 void enable_flow_control(void)
 {
 #ifdef HAVE_TERMIOS_H
-	struct termios term;
+	struct termios settings;
 
-	tcgetattr(0, &term);
-	term.c_iflag |= IXON;
-	tcsetattr(0, TCSANOW, &term);
+	tcgetattr(0, &settings);
+	settings.c_iflag |= IXON;
+	tcsetattr(0, TCSANOW, &settings);
 #endif
 }
 
@@ -1452,27 +1466,27 @@ void terminal_init(void)
 	 * disable the special control keys and interpretation of the flow
 	 * control characters using termios, save the terminal state after
 	 * the first call, and restore it on subsequent calls. */
-	static struct termios newterm;
-	static bool newterm_set = FALSE;
+	static struct termios desired_state;
+	static bool have_new_state = FALSE;
 
-	if (!newterm_set) {
+	if (!have_new_state) {
 #endif
 		raw();
 		nonl();
 		noecho();
 		disable_extended_io();
+		disable_kb_interrupt();
+
 		if (ISSET(PRESERVE))
 			enable_flow_control();
-
-		disable_kb_interrupt();
 #ifdef USE_SLANG
-		if (!ISSET(PRESERVE))
+		else
 			disable_flow_control();
 
-		tcgetattr(0, &newterm);
-		newterm_set = TRUE;
+		tcgetattr(0, &desired_state);
+		have_new_state = TRUE;
 	} else
-		tcsetattr(0, TCSANOW, &newterm);
+		tcsetattr(0, TCSANOW, &desired_state);
 #endif
 }
 
@@ -1808,7 +1822,7 @@ void do_output(char *output, size_t output_len, bool allow_cntrls)
 		/* Make room for the new character and copy it into the line. */
 		openfile->current->data = charealloc(openfile->current->data,
 										current_len + charlen + 1);
-		charmove(openfile->current->data + openfile->current_x + charlen,
+		memmove(openfile->current->data + openfile->current_x + charlen,
 						openfile->current->data + openfile->current_x,
 						current_len - openfile->current_x + 1);
 		strncpy(openfile->current->data + openfile->current_x, onechar,
@@ -1991,7 +2005,7 @@ int main(int argc, char **argv)
 #endif
 
 	/* Back up the terminal settings so that they can be restored. */
-	tcgetattr(0, &oldterm);
+	tcgetattr(0, &original_state);
 
 	/* Get the state of standard input and ensure it uses blocking mode. */
 	stdin_flags = fcntl(0, F_GETFL, 0);
@@ -2315,18 +2329,8 @@ int main(int argc, char **argv)
 #ifdef ENABLE_SPELLER
 		alt_speller = NULL;
 #endif
-
-//#define TIMEIT 12
-#ifdef TIMEIT
-#include <time.h>
-	clock_t start = clock();
-#endif
 		/* Now process the system's and the user's nanorc file, if any. */
 		do_rcfiles();
-#ifdef TIMEIT
-		fprintf(stderr, "Took: %.3f\n",
-						 (double)(clock() - start) / CLOCKS_PER_SEC);
-#endif
 
 		/* If the backed-up command-line options have a value, restore them. */
 #ifdef ENABLED_WRAPORJUSTIFY
@@ -2631,11 +2635,12 @@ int main(int argc, char **argv)
 		else if (searchstring != NULL) {
 			if (ISSET(USE_REGEXP))
 				regexp_init(searchstring);
-			if (!findnextstr(searchstring, FALSE, JUSTFIND, NULL, TRUE,
-											openfile->filetop, 0))
+			if (!findnextstr(searchstring, FALSE, JUSTFIND, NULL,
+							ISSET(BACKWARDS_SEARCH), openfile->filetop, 0))
 				not_found_msg(searchstring);
 			else if (lastmessage == HUSH)
 				wipe_statusbar();
+			openfile->placewewant = xplustabs();
 			if (ISSET(USE_REGEXP))
 				tidy_up_after_search();
 			free(last_search);

@@ -102,7 +102,7 @@ Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br
 <br/>
 <b>FreshTomato project page: </b><a href="http://freshtomato.org" class="new_window">http://freshtomato.org</a><br/>
 <b>Forums about Tomato</b> - PL: <a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a> EN: <a href="https://www.linksysinfo.org" class="new_window">https://linksysinfo.org</a><br/>
-<b>FreshTomato team: </b><a href="https://bitbucket.org/kille72/freshtomato-arm" class="new_window">@kille72</a>, <a href="https://bitbucket.org/pedro311/freshtomato-arm" class="new_window">@pedro</a><br/>
+<b>FreshTomato team: </b><a href="https://bitbucket.org/pedro311/freshtomato-arm" class="new_window">@pedro</a><br/>
 <br/>
 <hr>
 <!-- / / / -->
@@ -265,16 +265,30 @@ We want to express our gratitude to all people not mentioned here but contribute
 Copyright (C) 2016-2019 FreshTomato team
 <br/>
 <br/>
-Built on <% build_time(); %> by <a href='https://exotic.se' class='new_window'>@kille72</a>
+Built on <% build_time(); %> by Pedro
 <br/>
 <br/>
 <br/>
-Click below to send a "Thank you" gift through PayPal
+<b>Click below to send a "Thank you" gift through PayPal</b>
 <br/>
 <br/>
 <div id="donate">
-	<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=ZSMTVT4WQN2W2&amp;lc=GB&amp;item_name=Thank%20you%20for%20FreshTomato%2e%20Keep%20it%20up&amp;item_number=Kille72&amp;currency_code=EUR&amp;bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted" class="new_window"><img style="border:none" alt="Donate" src="donate.gif"/></a><br/>
+	<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+	<div>
+		<input type="hidden" name="cmd" value="_s-xclick">
+		<input type="image" src="donate.gif" style="border:0" name="submit" alt="Donate">
+		<input type="hidden" name="hosted_button_id" value="B4FDH9TH6Z8FU">
+	</div>
+	</form>
 </div>
+<br/>
+<div id="donate"><b>...Or by Bitcoin: </b> 1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y</div>
+<br/>
+<hr>
+<br/>
+<br/>
+<br/>
+<br/>
 <br/>
 <br/>
 <b>Based on Tomato Firmware v1.28</b><br/>

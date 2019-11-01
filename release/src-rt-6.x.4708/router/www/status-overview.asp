@@ -354,6 +354,7 @@ function show() {
 	c('cpu', stats.cpuload);
 	c('cpupercent', stats.cpupercent);
 	c('wlsense', stats.wlsense);
+	c('temps', stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1)*1.8+32) + '°F');
 	c('uptime', stats.uptime);
 	c('time', stats.time);
 	c('memory', stats.memory);
@@ -523,6 +524,7 @@ var a = nvstat.free / nvstat.size * 100.0;
 createFieldTable('', [
 	{ title: 'Name', text: nvram.router_name },
 	{ title: 'Model', text: nvram.t_model_name },
+	{ title: 'Bootloader (CFE)', text: stats.cfeversion },
 	{ title: 'Chipset', text: stats.systemtype },
 	{ title: 'CPU Frequency', text: stats.cpumhz, suffix: ' <small>(dual-core)<\/small>' },
 	{ title: 'Flash Size', text: stats.flashsize },

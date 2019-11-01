@@ -77,7 +77,8 @@ extern int shiftaltup, shiftaltdown;
 #endif
 
 #ifdef ENABLED_WRAPORJUSTIFY
-extern ssize_t fill, wrap_at;
+extern ssize_t fill;
+extern size_t wrap_at;
 #endif
 
 extern char *last_search;
@@ -212,9 +213,12 @@ bool is_ascii_cntrl_char(int c);
 bool is_cntrl_mbchar(const char *c);
 bool is_word_mbchar(const char *c, bool allow_punct);
 char control_mbrep(const char *c, bool isdata);
+#ifdef ENABLE_UTF8
 int mbwidth(const char *c);
+#endif
 char *make_mbchar(long chr, int *chr_mb_len);
 int char_length(const char *pointer);
+size_t mbstrlen(const char *s);
 int parse_mbchar(const char *buf, char *chr, size_t *col);
 size_t step_left(const char *buf, size_t pos);
 size_t step_right(const char *buf, size_t pos);
@@ -223,7 +227,6 @@ int mbstrncasecmp(const char *s1, const char *s2, size_t n);
 char *mbstrcasestr(const char *haystack, const char *needle);
 char *revstrstr(const char *haystack, const char *needle, const char *index);
 char *mbrevstrcasestr(const char *haystack, const char *needle, const char *index);
-size_t mbstrlen(const char *s);
 #if !defined(NANO_TINY) || defined(ENABLE_JUSTIFY)
 char *mbstrchr(const char *s, const char *c);
 #endif
@@ -317,9 +320,10 @@ char *input_tab(char *buf, bool allow_files, size_t *place,
 #endif
 
 /* Some functions in global.c. */
-size_t length_of_list(int menu);
 const keystruct *first_sc_for(int menu, void (*func)(void));
 int the_code_for(void (*func)(void), int defaultval);
+size_t shown_entries_for(int menu);
+const keystruct *get_shortcut(int *kbinput);
 functionptrtype func_from_key(int *kbinput);
 int keycode_from_string(const char *keystring);
 void assign_keyinfo(keystruct *s, const char *keystring, const int keycode);
@@ -333,7 +337,7 @@ char *menu_to_name(int menu);
 
 /* All functions in help.c. */
 #ifdef ENABLE_HELP
-void wrap_help_text_into_buffer();
+void wrap_help_text_into_buffer(void);
 void do_help(void);
 void help_init(void);
 functionptrtype parse_help_input(int *kbinput);
@@ -399,7 +403,7 @@ void free_lines(linestruct *src);
 void renumber_from(linestruct *line);
 void partition_buffer(linestruct *top, size_t top_x,
 		linestruct *bot, size_t bot_x);
-void unpartition_buffer();
+void unpartition_buffer(void);
 void extract(linestruct *top, size_t top_x, linestruct *bot, size_t bot_x);
 void ingraft_buffer(linestruct *somebuffer);
 void copy_from_buffer(linestruct *somebuffer);
@@ -468,7 +472,7 @@ int do_yesno_prompt(bool all, const char *msg);
 
 /* Most functions in rcfile.c. */
 #ifdef ENABLE_NANORC
-void display_rcfile_errors();
+void display_rcfile_errors(void);
 #ifdef ENABLE_COLOR
 void parse_one_include(char *file, syntaxtype *syntax);
 void grab_and_store(const char *kind, char *ptr, regexlisttype **storage);
@@ -520,7 +524,7 @@ void do_enter(void);
 #ifndef NANO_TINY
 RETSIGTYPE cancel_command(int signal);
 bool execute_command(const char *command);
-void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep);
+void discard_until(const undostruct *thisitem, openfilestruct *thefile, bool keep);
 void add_undo(undo_type action);
 void update_multiline_undo(ssize_t lineno, char *indentation);
 void update_undo(undo_type action);
@@ -617,7 +621,6 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count);
 #ifdef ENABLE_MOUSE
 int get_mouseinput(int *mouse_row, int *mouse_col, bool allow_shortcuts);
 #endif
-const keystruct *get_shortcut(int *kbinput);
 void blank_edit(void);
 void blank_statusbar(void);
 void wipe_statusbar(void);

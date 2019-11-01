@@ -76,12 +76,17 @@ const char *invocation_error(const char *name)
  * of spaces that a tab would normally take up. */
 void do_tab(void)
 {
+#ifdef ENABLE_COLOR
+	if (openfile->syntax && openfile->syntax->tab)
+		do_output(openfile->syntax->tab, strlen(openfile->syntax->tab), TRUE);
+	else
+#endif
 #ifndef NANO_TINY
 	if (ISSET(TABS_TO_SPACES)) {
 		char *spaces = charalloc(tabsize + 1);
 		size_t length = tabsize - (xplustabs() % tabsize);
 
-		charset(spaces, ' ', length);
+		memset(spaces, ' ', length);
 		spaces[length] = '\0';
 
 		do_output(spaces, length, TRUE);
@@ -105,7 +110,7 @@ void indent_a_line(linestruct *line, char *indentation)
 
 	/* Add the fabricated indentation to the beginning of the line. */
 	line->data = charealloc(line->data, length + indent_len + 1);
-	charmove(line->data + indent_len, line->data, length + 1);
+	memmove(line->data + indent_len, line->data, length + 1);
 	strncpy(line->data, indentation, indent_len);
 
 	openfile->totsize += indent_len;
@@ -141,8 +146,13 @@ void do_indent(void)
 	indentation = charalloc(tabsize + 1);
 
 	/* Set the indentation to either a bunch of spaces or a single tab. */
+#ifdef ENABLE_COLOR
+	if (openfile->syntax && openfile->syntax->tab)
+		indentation = mallocstrcpy(indentation, openfile->syntax->tab);
+	else
+#endif
 	if (ISSET(TABS_TO_SPACES)) {
-		charset(indentation, ' ', tabsize);
+		memset(indentation, ' ', tabsize);
 		indentation[tabsize] = '\0';
 	} else {
 		indentation[0] = '\t';
@@ -172,16 +182,28 @@ void do_indent(void)
  * but at most a tab's worth. */
 size_t length_of_white(const char *text)
 {
-	size_t bytes_of_white = 0;
+	size_t white_count = 0;
+
+#ifdef ENABLE_COLOR
+	if (openfile->syntax && openfile->syntax->tab) {
+		size_t thelength = strlen(openfile->syntax->tab);
+
+		while (text[white_count] == openfile->syntax->tab[white_count])
+			if (++white_count == thelength)
+				return thelength;
+
+		white_count = 0;
+	}
+#endif
 
 	while (TRUE) {
 		if (*text == '\t')
-			return ++bytes_of_white;
+			return ++white_count;
 
 		if (*text != ' ')
-			return bytes_of_white;
+			return white_count;
 
-		if (++bytes_of_white == tabsize)
+		if (++white_count == tabsize)
 			return tabsize;
 
 		text++;
@@ -217,7 +239,7 @@ void unindent_a_line(linestruct *line, size_t indent_len)
 		return;
 
 	/* Remove the first tab's worth of whitespace from this line. */
-	charmove(line->data, line->data + indent_len, length - indent_len + 1);
+	memmove(line->data, line->data + indent_len, length - indent_len + 1);
 
 	openfile->totsize -= indent_len;
 
@@ -265,9 +287,9 @@ void do_unindent(void)
 }
 
 /* Perform an undo or redo for an indent or unindent action. */
-void handle_indent_action(undo *u, bool undoing, bool add_indent)
+void handle_indent_action(undostruct *u, bool undoing, bool add_indent)
 {
-	undo_group *group = u->grouping;
+	groupstruct *group = u->grouping;
 	linestruct *line = line_from_number(group->top_line);
 
 	if (group->next != NULL)
@@ -319,10 +341,10 @@ bool comment_line(undo_type action, linestruct *line, const char *comment_seq)
 		/* Make room for the comment sequence(s), move the text right and
 		 * copy them in. */
 		line->data = charealloc(line->data, line_len + pre_len + post_len + 1);
-		charmove(line->data + pre_len, line->data, line_len + 1);
-		charmove(line->data, comment_seq, pre_len);
+		memmove(line->data + pre_len, line->data, line_len + 1);
+		memmove(line->data, comment_seq, pre_len);
 		if (post_len > 0)
-			charmove(line->data + pre_len + line_len, post_seq, post_len + 1);
+			memmove(line->data + pre_len + line_len, post_seq, post_len + 1);
 
 		openfile->totsize += pre_len + post_len;
 
@@ -345,7 +367,7 @@ bool comment_line(undo_type action, linestruct *line, const char *comment_seq)
 			return TRUE;
 
 		/* Erase the comment prefix by moving the non-comment part. */
-		charmove(line->data, line->data + pre_len, line_len - pre_len);
+		memmove(line->data, line->data + pre_len, line_len - pre_len);
 		/* Truncate the postfix if there was one. */
 		line->data[line_len - pre_len - post_len] = '\0';
 
@@ -422,9 +444,9 @@ void do_comment(void)
 }
 
 /* Perform an undo or redo for a comment or uncomment action. */
-void handle_comment_action(undo *u, bool undoing, bool add_comment)
+void handle_comment_action(undostruct *u, bool undoing, bool add_comment)
 {
-	undo_group *group = u->grouping;
+	groupstruct *group = u->grouping;
 
 	/* When redoing, reposition the cursor and let the commenter adjust it. */
 	if (!undoing)
@@ -454,10 +476,9 @@ void handle_comment_action(undo *u, bool undoing, bool add_comment)
 #define redo_paste undo_cut
 #define undo_paste redo_cut
 
-/* Undo a cut, or redo an uncut. */
-void undo_cut(undo *u)
+/* Undo a cut, or redo a paste. */
+void undo_cut(undostruct *u)
 {
-	/* Get to where we need to uncut from. */
 	if (u->xflags & WAS_WHOLE_LINE)
 		goto_line_posx(u->mark_begin_lineno, 0);
 	else
@@ -478,8 +499,8 @@ void undo_cut(undo *u)
 		goto_line_posx(u->mark_begin_lineno, u->mark_begin_x);
 }
 
-/* Redo a cut, or undo an uncut. */
-void redo_cut(undo *u)
+/* Redo a cut, or undo a paste. */
+void redo_cut(undostruct *u)
 {
 	linestruct *oldcutbuffer = cutbuffer;
 
@@ -503,7 +524,7 @@ void redo_cut(undo *u)
 /* Undo the last thing(s) we did. */
 void do_undo(void)
 {
-	undo *u = openfile->current_undo;
+	undostruct *u = openfile->current_undo;
 	linestruct *f = NULL, *t = NULL;
 	linestruct *oldcutbuffer;
 	char *data, *undidmsg = NULL;
@@ -518,6 +539,7 @@ void do_undo(void)
 		f = line_from_number(u->mark_begin_lineno);
 
 	openfile->current_x = u->begin;
+
 	switch (u->type) {
 	case ADD:
 		/* TRANSLATORS: The next thirteen strings describe actions
@@ -672,7 +694,7 @@ void do_redo(void)
 {
 	linestruct *f = NULL, *shoveline;
 	char *data, *redidmsg = NULL;
-	undo *u = openfile->undotop;
+	undostruct *u = openfile->undotop;
 
 	if (u == NULL || u == openfile->current_undo) {
 		statusbar(_("Nothing to redo"));
@@ -1062,10 +1084,10 @@ bool execute_command(const char *command)
 
 /* Discard undo items that are newer than the given one, or all if NULL.
  * When keep is TRUE, do not touch the last_saved pointer. */
-void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep)
+void discard_until(const undostruct *thisitem, openfilestruct *thefile, bool keep)
 {
-	undo *dropit = thefile->undotop;
-	undo_group *group;
+	undostruct *dropit = thefile->undotop;
+	groupstruct *group;
 
 	while (dropit != NULL && dropit != thisitem) {
 		thefile->undotop = dropit->next;
@@ -1073,7 +1095,7 @@ void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep)
 		free_lines(dropit->cutbuffer);
 		group = dropit->grouping;
 		while (group != NULL) {
-			undo_group *next = group->next;
+			groupstruct *next = group->next;
 			free_chararray(group->indentations,
 								group->bottom_line - group->top_line);
 			free(group);
@@ -1084,7 +1106,7 @@ void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep)
 	}
 
 	/* Adjust the pointer to the top of the undo stack. */
-	thefile->current_undo = (undo *)thisitem;
+	thefile->current_undo = (undostruct *)thisitem;
 
 	/* Prevent a chain of editing actions from continuing. */
 	thefile->last_action = OTHER;
@@ -1092,20 +1114,15 @@ void discard_until(const undo *thisitem, openfilestruct *thefile, bool keep)
 	/* When requested, record that the undo stack was chopped, and
 	 * that thus there is no point at which the file was last saved. */
 	if (!keep)
-		thefile->last_saved = (undo *)0xbeeb;
+		thefile->last_saved = (undostruct *)0xbeeb;
 }
 
 /* Add a new undo item of the given type to the top of the current pile. */
 void add_undo(undo_type action)
 {
-	undo *u = openfile->current_undo;
-		/* The thing we did previously. */
+	undostruct *u = nmalloc(sizeof(undostruct));
 
-	/* Blow away newer undo items if we add somewhere in the middle. */
-	discard_until(u, openfile, TRUE);
-
-	/* Allocate and initialize a new undo item. */
-	u = (undo *) nmalloc(sizeof(undo));
+	/* Initialize the newly allocated undo item. */
 	u->type = action;
 	u->strdata = NULL;
 	u->cutbuffer = NULL;
@@ -1115,8 +1132,11 @@ void add_undo(undo_type action)
 	u->mark_begin_x = openfile->current_x;
 	u->wassize = openfile->totsize;
 	u->newsize = openfile->totsize;
-	u->xflags = 0;
 	u->grouping = NULL;
+	u->xflags = 0;
+
+	/* Blow away any undone items. */
+	discard_until(openfile->current_undo, openfile, TRUE);
 
 #ifdef ENABLE_WRAPPING
 	/* If some action caused automatic long-line wrapping, insert the
@@ -1228,7 +1248,7 @@ void add_undo(undo_type action)
  * added or removed is saved separately for each line in the undo item. */
 void update_multiline_undo(ssize_t lineno, char *indentation)
 {
-	undo *u = openfile->current_undo;
+	undostruct *u = openfile->current_undo;
 
 	/* If there already is a group and the current line is contiguous with it,
 	 * extend the group; otherwise, create a new group. */
@@ -1243,7 +1263,7 @@ void update_multiline_undo(ssize_t lineno, char *indentation)
 		u->grouping->indentations[number_of_lines - 1] = mallocstrcpy(NULL,
 																indentation);
 	} else {
-		undo_group *born = (undo_group *)nmalloc(sizeof(undo_group));
+		groupstruct *born = nmalloc(sizeof(groupstruct));
 
 		born->next = u->grouping;
 		u->grouping = born;
@@ -1262,7 +1282,7 @@ void update_multiline_undo(ssize_t lineno, char *indentation)
  * cursor position after the given action. */
 void update_undo(undo_type action)
 {
-	undo *u = openfile->undotop;
+	undostruct *u = openfile->undotop;
 	char *char_buf;
 	int charlen;
 
@@ -1496,7 +1516,7 @@ bool do_wrap(void)
 		line_len = strlen(line->data);
 		line->data = charealloc(line->data, lead_len + line_len + 1);
 
-		charmove(line->data + lead_len, line->data, line_len + 1);
+		memmove(line->data + lead_len, line->data, line_len + 1);
 		strncpy(line->data, line->prev->data, lead_len);
 
 		openfile->current_x += lead_len;
@@ -2047,7 +2067,7 @@ void do_justify(bool full_justify)
 		if (needed_top_extra > 0) {
 			cutbuffer->data = charealloc(cutbuffer->data,
 									line_len + needed_top_extra + 1);
-			charmove(cutbuffer->data + needed_top_extra, cutbuffer->data,
+			memmove(cutbuffer->data + needed_top_extra, cutbuffer->data,
 									line_len + 1);
 			strncpy(cutbuffer->data, the_lead, needed_top_extra);
 			line_len += needed_top_extra;
@@ -2061,7 +2081,7 @@ void do_justify(bool full_justify)
 
 		/* Remove extra whitespace after the leading part. */
 		if (indent_len > 0)
-			charmove(cutbuffer->data + lead_len,
+			memmove(cutbuffer->data + lead_len,
 						cutbuffer->data + lead_len + indent_len,
 						line_len - indent_len + 1);
 
@@ -2088,7 +2108,7 @@ void do_justify(bool full_justify)
 		 * remove the (now-redundant) addition we made earlier. */
 		if (top_x > 0) {
 			if (needed_top_extra > 0)
-				charmove(cutbuffer->data, cutbuffer->data + needed_top_extra,
+				memmove(cutbuffer->data, cutbuffer->data + needed_top_extra,
 							strlen(cutbuffer->data) - needed_top_extra + 1);
 			else {
 				cutbuffer->prev = make_new_node(NULL);
@@ -3182,6 +3202,7 @@ void complete_a_word(void)
 
 	/* If there is no word fragment before the cursor, do nothing. */
 	if (start_of_shard == openfile->current_x) {
+		/* TRANSLATORS: Shown when no text is directly left of the cursor. */
 		statusbar(_("No word fragment"));
 		pletion_line = NULL;
 		return;

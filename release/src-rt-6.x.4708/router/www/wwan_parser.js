@@ -112,7 +112,7 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	code += '</tbody>'
 	let modemType = nvram[wanNumStr + '_modem_type'];
 	let connType = nvram[wanNumStr + '_proto'];
-	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'hw-ether') {
+	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'huawei-non-hilink') {
 			code += '<tr><td class="title indent1"></td>';
 			code += '<td class="content"> \
 			<a href="#" onclick="showSMSForWWAN(' + wannum + ')"> \

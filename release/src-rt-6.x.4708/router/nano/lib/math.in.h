@@ -67,20 +67,20 @@ _gl_cxx_ ## func ## l (long double l)                               \
 {                                                                   \
   return func (l);                                                  \
 }
-# define _GL_MATH_CXX_REAL_FLOATING_DECL_2(func) \
+# define _GL_MATH_CXX_REAL_FLOATING_DECL_2(func,rpl_func,rettype) \
 _GL_BEGIN_NAMESPACE                                                 \
-inline int                                                          \
-func (float f)                                                      \
+inline rettype                                                      \
+rpl_func (float f)                                                  \
 {                                                                   \
   return _gl_cxx_ ## func ## f (f);                                 \
 }                                                                   \
-inline int                                                          \
-func (double d)                                                     \
+inline rettype                                                      \
+rpl_func (double d)                                                 \
 {                                                                   \
   return _gl_cxx_ ## func ## d (d);                                 \
 }                                                                   \
-inline int                                                          \
-func (long double l)                                                \
+inline rettype                                                      \
+rpl_func (long double l)                                            \
 {                                                                   \
   return _gl_cxx_ ## func ## l (l);                                 \
 }                                                                   \
@@ -2207,7 +2207,14 @@ _GL_EXTERN_C int gl_isfinitel (long double x);
 #  if defined isfinite || defined GNULIB_NAMESPACE
 _GL_MATH_CXX_REAL_FLOATING_DECL_1 (isfinite)
 #   undef isfinite
-_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isfinite)
+#   if __GNUC__ >= 6 || defined __clang__
+  /* This platform's <cmath> possibly defines isfinite through a set of inline
+     functions.  */
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isfinite, rpl_isfinite, bool)
+#    define isfinite rpl_isfinite
+#   else
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isfinite, isfinite, bool)
+#   endif
 #  endif
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -2234,7 +2241,14 @@ _GL_EXTERN_C int gl_isinfl (long double x);
 #  if defined isinf || defined GNULIB_NAMESPACE
 _GL_MATH_CXX_REAL_FLOATING_DECL_1 (isinf)
 #   undef isinf
-_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isinf)
+#   if __GNUC__ >= 6 || defined __clang__
+  /* This platform's <cmath> possibly defines isinf through a set of inline
+     functions.  */
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isinf, rpl_isinf, bool)
+#    define isinf rpl_isinf
+#   else
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isinf, isinf, bool)
+#   endif
 #  endif
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -2352,7 +2366,14 @@ _GL_EXTERN_C int rpl_isnanl (long double x) _GL_ATTRIBUTE_CONST;
 #  if defined isnan || defined GNULIB_NAMESPACE
 _GL_MATH_CXX_REAL_FLOATING_DECL_1 (isnan)
 #   undef isnan
-_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isnan)
+#   if __GNUC__ >= 6 || defined __clang__
+  /* This platform's <cmath> possibly defines isnan through a set of inline
+     functions.  */
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isnan, rpl_isnan, bool)
+#    define isnan rpl_isnan
+#   else
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (isnan, isnan, bool)
+#   endif
 #  endif
 # else
 /* Ensure isnan is a macro.  */
@@ -2428,7 +2449,14 @@ _GL_EXTERN_C int gl_signbitl (long double arg);
 #  if defined signbit || defined GNULIB_NAMESPACE
 _GL_MATH_CXX_REAL_FLOATING_DECL_1 (signbit)
 #   undef signbit
-_GL_MATH_CXX_REAL_FLOATING_DECL_2 (signbit)
+#   if __GNUC__ >= 6 || defined __clang__
+  /* This platform's <cmath> possibly defines signbit through a set of inline
+     functions.  */
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (signbit, rpl_signbit, bool)
+#    define signbit rpl_signbit
+#   else
+_GL_MATH_CXX_REAL_FLOATING_DECL_2 (signbit, signbit, bool)
+#   endif
 #  endif
 # endif
 #elif defined GNULIB_POSIXCHECK

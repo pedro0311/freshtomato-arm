@@ -1,4 +1,4 @@
-/* $Id: minissdp.c,v 1.97 2019/09/24 11:00:10 nanard Exp $ */
+/* $Id: minissdp.c,v 1.98 2019/10/06 20:51:23 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -1072,7 +1072,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 #endif /* defined(UPNP_STRICT) || defined(DELAY_MSEARCH_RESPONSE) */
 #if defined(UPNP_STRICT)
 			/* Fix UDA-1.2.10 Man header empty or invalid */
-			else if((i < n - 4) && (strncasecmp(bufr+i, "man:", 3) == 0))
+			else if((i < n - 4) && (strncasecmp(bufr+i, "man:", 4) == 0))
 			{
 				const char * man;
 				int man_len;

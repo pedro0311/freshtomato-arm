@@ -145,7 +145,7 @@ createFieldTable('', [
 	{ title: 'Upload file size limit', name: 'nginx_upload', type: 'text', maxlen: 5, size: 7, value: nvram.nginx_upload, suffix: '<small> MB<\/small>'},
 	{ title: 'Allow Remote Access', name: 'f_nginx_remote', type: 'checkbox', value: nvram.nginx_remote == '1' },
 	{ title: 'Web Server Name', name: 'nginx_fqdn', type: 'text', maxlen: 255, size: 20, value: nvram.nginx_fqdn },
-	{ title: 'Server Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php<\/small>' },
+	{ title: 'Document Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php<\/small>' },
 	{ title: 'Server Priority', name: 'nginx_priority', type: 'text', maxlen: 8, size:3, value: nvram.nginx_priority, suffix:'<small> Max. Perfor: -20, Min.Perfor: 19, default: 10<\/small>' }
 ]);
 </script>
@@ -168,25 +168,22 @@ createFieldTable('', [
 <div class="section">
 	<ul>
 		<li><b> Status Button:</b> Quick Start-Stop Service. Enable Web Server must be checked to modify settings.</li>
-		<li><b> Enable Server on Start:</b> To activate the Web Server tick and save this screen.</li>
-		<li><b> Enable PHP support:</b> To activate the PHP support (php-cgi) tick and save this screen.</li>
+		<li><b> Enable Server on Start:</b> Check to activate the Web Server.</li>
+		<li><b> Enable PHP support:</b> Check to enable PHP support (php-cgi).</li>
 		<li><b> Run As:</b> Select user used to start nginx and php-cgi daemon.</li>
 		<li><b> Keep Config Files:</b> Have you modified the configuration file manually? Tick this box and changes will be maintained.</li> 
 		<li><b> Web Server Port:</b> The Port used by the Web Server to be accessed. Check conflict when the port is used by other services.</li>
 		<li><b> Allow remote access:</b> This option will open the Web Server GUI port from the WAN side. Service will be accessed from the internet.</li>
 		<li><b> Web Server Name:</b> Name that will appear on top of your Internet Browser.</li>
-		<li><b> Document Root Path:</b> The path in your router where documents are stored.</li>
-		<li><b> Examples:</b><br/>
-			/tmp/mnt/HDD/www as you can find in USB mount path.</li>
+		<li><b> Document Root Path:</b> The path in your router where documents are stored (ex: /tmp/mnt/HDD/www).</li>
 		<li><b> NGINX Custom Configuration:</b> You can add other values to nginx.conf to suit your needs.</li>
 		<li><b> NGINX HTTP Section Custom Configuration:</b> You can add other values to nginx.conf in declaration of http {} to suit your needs.</li>
 		<li><b> NGINX SERVER Section Custom Configuration:</b> You can add other values to nginx.conf in declaration of server {} to suit your needs.</li>
 		<li><b> PHP Custom Configuration:</b> You can add other values to php.ini to suit your needs.</li>
 		<li><b> Server Priority:</b> Sets the service priority over other processes running on the router.<br/><br/>
 			The operating system kernel has priority -5.<br/>
-			Never select a lower value than the kernel uses. Do not use the service test page to adjust the<br/>
-			server performance, it's performance is lower than the definitive media where files will be <br/>
-			located, i.e; USB Stick, Hard Drive or SSD.</li>
+			Never select a lower value than the kernel uses. Do not use the service test page to adjust the server performance, 
+			its performance is lower than the definitive media where files will be located, i.e; USB Stick, Hard Drive or SSD.</li>
 	</ul>
 </div>
 </form>

@@ -45,14 +45,14 @@ connect() {
 	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
-	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "qmi_wwan" -o "$MTYPE" == "huawei-non-hilink" ] && {
 		[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found - connection terminated!"
 	}
 
 	$LOGS "4G MODEM - connecting ..."
 
 	# non-hilink/1st type
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
 		case "$SPEED" in
 		     "00")   SPEEDTXT="Auto" ;;
 		     "03")   SPEEDTXT="4G only" ;;
@@ -126,10 +126,10 @@ connect() {
 
 				# change network type, band and roaming if required
 				[ "$SPEED" != "$RESSPEED" ] && {
-					TXTLOG="Network type changed: was $RSPEEDTXT, now $SPEEDTXT."
+					TXTLOG="Network type changed: was '$RSPEEDTXT', now '$SPEEDTXT'."
 					MODESPEED=$SPEED
 				} || {
-					TXTLOG="Network type is $RSPEEDTXT."
+					TXTLOG="Network type is '$RSPEEDTXT'."
 					MODESPEED=$RESSPEED
 				}
 				[ "$ROAMING" != "$RESROAM" ] && {
@@ -361,7 +361,7 @@ disconnect() {
 	watchdog del
 	dhcpc-release $PREFIX
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
 		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for j in $DEVALL; do	# on every interface
@@ -386,7 +386,7 @@ disconnect() {
 
 switchMode() {
 	VENDOR="" PRODUCT="" MTYPE="" MODULE="" DEVICENAME=""	# global
-	MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm rndis_host"
+	MODULES="qmi_wwan cdc_ether huawei_cdc_ncm cdc_ncm rndis_host"
 	local COUNT=1 SWITCHED=0 DVDP=0 PATHDEV SWITCH DEVICES IFN_BEFORE DV DP DB DG
 
 	for MODULE in $MODULES; do	# remove modules
@@ -517,7 +517,7 @@ searchDiag() {
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
 	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
 		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 
 		[ -z "$TTYS" ] && {
@@ -549,6 +549,7 @@ searchDiag() {
 		[ -n "$TTYS" ] && {
 			TTYS="/dev/$TTYS"
 			$LOGS "4G MODEM ready - DIAG found ("$TTYS")"
+			echo $TTYS > $DIAGSFILE
 			DEVNR="$TTYS"
 			nvram set "$PREFIX"_modem_dev="$TTYS"
 		}
@@ -571,8 +572,8 @@ findType() {
 		MTYPE="hilink"
 	elif [ "$MODULE" == "cdc_ncm" ]; then
 		MTYPE="non-hilink"
-	elif [ "$MODULE" == "huawei_ether" ]; then
-		MTYPE="hw-ether"
+	elif [ "$MODULE" == "huawei_cdc_ncm" ]; then
+		MTYPE="huawei-non-hilink"
 	elif [ "$MODULE" == "qmi_wwan" ]; then
 		MTYPE="qmi_wwan"
 	elif [ "$MODULE" == "rndis_host" ]; then
@@ -611,7 +612,7 @@ setPIN() {
 	local IS_PIN=$(NV "$PREFIX"_modem_pin | wc -w)
 	local IS_DONE=0 COUNT=1 TIMEOUT=30 PINVAL DEVALL i
 
-	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ] && {
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink"  ] && {
 		[ "$IS_PIN" -eq 1 ] && {
 			DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
@@ -755,7 +756,7 @@ else
 		searchWAN
 
 		# only for non-hilink
-		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
+		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "qmi_wwan" -o "$MTYPE" == "huawei-non-hilink" ] && {
 			searchDiag
 			setPIN
 		}
