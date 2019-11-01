@@ -163,7 +163,6 @@ void start_dnsmasq()
 	if ((nvram_match("tor_enable", "1")) && (nvram_match("dnsmasq_onion_support", "1"))) {
 		char *t_ip = nvram_safe_get("lan_ipaddr");
 
-		if (nvram_match("tor_iface", "br0")) t_ip = nvram_safe_get("lan_ipaddr");
 		if (nvram_match("tor_iface", "br1")) t_ip = nvram_safe_get("lan1_ipaddr");
 		if (nvram_match("tor_iface", "br2")) t_ip = nvram_safe_get("lan2_ipaddr");
 		if (nvram_match("tor_iface", "br3")) t_ip = nvram_safe_get("lan3_ipaddr");
@@ -1058,7 +1057,8 @@ void stop_6rd_tunnel(void)
 
 void start_ipv6(void)
 {
-	int service;
+	int service, i;
+	char buffer[16];
 
 	service = get_ipv6_service();
 	enable_ip6_forward();
@@ -1081,39 +1081,23 @@ void start_ipv6(void)
 		/* Check if "ipv6_accept_ra" (bit 1) for lan is enabled (via GUI, basic-ipv6.asp) and "ipv6_radvd" AND "ipv6_dhcpd" (SLAAC and/or DHCP with dnsmasq) is disabled (via GUI, advanced-dhcpdns.asp) */
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
 		if ((nvram_get_int("ipv6_accept_ra") & 0x02) != 0 && !nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd")) {
-			/* Check lan / br0 - If available then accept_ra for br0 */
-			if (strcmp(nvram_safe_get("lan_ipaddr"), "") != 0) {
-				accept_ra(nvram_safe_get("lan_ifname"));
-			}
-			/* Check lan1 / br1 - If available then accept_ra for br1 */
-			if (strcmp(nvram_safe_get("lan1_ipaddr"), "") != 0) {
-				accept_ra(nvram_safe_get("lan1_ifname"));
-			}
-			/* Check lan2 / br2 - If available then accept_ra for br2 */
-			if (strcmp(nvram_safe_get("lan2_ipaddr"), "") != 0) {
-				accept_ra(nvram_safe_get("lan2_ifname"));
-			}
-			/* Check lan3 / br3 - If available then accept_ra for br3 */
-			if (strcmp(nvram_safe_get("lan3_ipaddr"), "") != 0) {
-				accept_ra(nvram_safe_get("lan3_ifname"));
+			/* Check lanX / brX - If available then accept_ra for brX */
+			for (i = 0; i < 4; i++) {
+				sprintf(buffer, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+				if (strcmp(nvram_safe_get(buffer), "") != 0) {
+					sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+					accept_ra(nvram_safe_get(buffer));
+				}
 			}
 		}
 		else {
-			/* Check lan / br0 - If available then set accept_ra default value for br0 */
-			if (strcmp(nvram_safe_get("lan_ipaddr"), "") != 0) {
-				accept_ra_reset(nvram_safe_get("lan_ifname"));
-			}
-			/* Check lan1 / br1 - If available then set accept_ra default value for br1 */
-			if (strcmp(nvram_safe_get("lan1_ipaddr"), "") != 0) {
-				accept_ra_reset(nvram_safe_get("lan1_ifname"));
-			}
-			/* Check lan2 / br2 - If available then set accept_ra default value for br2 */
-			if (strcmp(nvram_safe_get("lan2_ipaddr"), "") != 0) {
-				accept_ra_reset(nvram_safe_get("lan2_ifname"));
-			}
-			/* Check lan3 / br3 - If available then set accept_ra default value for br3 */
-			if (strcmp(nvram_safe_get("lan3_ipaddr"), "") != 0) {
-				accept_ra_reset(nvram_safe_get("lan3_ifname"));
+			/* Check lanX / brX - If available then set accept_ra default value for brX */
+			for (i = 0; i < 4; i++) {
+				sprintf(buffer, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+				if (strcmp(nvram_safe_get(buffer), "") != 0) {
+					sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+					accept_ra_reset(nvram_safe_get(buffer));
+				}
 			}
 		}
 	}
@@ -1601,33 +1585,31 @@ void stop_igmp_proxy(void)
 void start_udpxy(void)
 {
 	char wan_prefix[] = "wan";	/* not yet mwan ready, use wan for now */
-	char buffer[32];
+	char buffer[32], buffer2[12];
+	int i, bind_lan = 0;
 
 	/* check if udpxy is enabled via GUI, advanced-firewall.asp */
 	if (nvram_match("udpxy_enable", "1")) {
 		if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
 			memset(buffer, 0, sizeof(buffer));				/* reset */
-			snprintf(buffer, sizeof(buffer),"%s", get_wanface(wan_prefix));	/* copy wanface to buffer */
+			snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix));	/* copy wanface to buffer */
 
 			/* check interface to listen on */
-			/* check udpxy enabled/selected for lan / br0 ? */
-			if (nvram_match("udpxy_lan", "1") && strcmp(nvram_safe_get("lan_ipaddr"), "") != 0) {
-				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan_ifname"), "-m", buffer);
+			/* check udpxy enabled/selected for br0 - br3 */
+			for (i = 0; i < 4; i++) {
+				int ret1 = 0, ret2 = 0;
+				sprintf(buffer2, (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
+				ret1 = nvram_match(buffer2, "1");
+				sprintf(buffer2, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+				ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
+				if (ret1 && ret2) {
+					sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+					eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get(buffer2), "-m", buffer);
+					bind_lan = 1;
+				}
 			}
-			/* check udpxy enabled/selected for lan1 / br1 ? */
-			else if (nvram_match("udpxy_lan1", "1") && strcmp(nvram_safe_get("lan1_ipaddr"), "") != 0) {
-				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan1_ifname"), "-m", buffer);
-			}
-			/* check udpxy enabled/selected for lan2 / br2 ? */
-			else if (nvram_match("udpxy_lan2", "1") && strcmp(nvram_safe_get("lan2_ipaddr"), "") != 0) {
-				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan2_ifname"), "-m", buffer);
-			}
-			/* check udpxy enabled/selected for lan3 / br3 ? */
-			else if (nvram_match("udpxy_lan3", "1") && strcmp(nvram_safe_get("lan3_ipaddr"), "") != 0) {
-				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get("lan3_ifname"), "-m", buffer);
-			}
-			else {
-				/* address/interface to listen on: default = 0.0.0.0 */
+			/* address/interface to listen on: default = 0.0.0.0 */
+			if (!bind_lan) {
 				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer);
 			}
 		}
@@ -1873,7 +1855,7 @@ static char *nvram_storage_path(char *var)
 	return get_full_storage_path(val);
 }
 
-char vsftpd_conf[] = "/etc/vsftpd.conf";
+char vsftpd_conf[] =  "/etc/vsftpd.conf";
 char vsftpd_users[] = "/etc/vsftpd.users";
 char vsftpd_passwd[] = "/etc/vsftpd.passwd";
 
@@ -2715,7 +2697,7 @@ void exec_service(void)
 	const int A_START = 1;
 	const int A_STOP = 2;
 	const int A_RESTART = 1|2;
-	char buffer[128];
+	char buffer[128], buffer2[8];
 	char *service;
 	char *act;
 	char *next;
@@ -3038,25 +3020,24 @@ TOP:
 	if (strcmp(service, "routing") == 0) {
 		if (act_stop) {
 			do_static_routes(0);	/* remove old '_saved' */
-			eval("brctl", "stp", nvram_safe_get("lan_ifname"), "0");
-			if (strcmp(nvram_safe_get("lan1_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan1_ifname"), "0");
-			if (strcmp(nvram_safe_get("lan2_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan2_ifname"), "0");
-			if (strcmp(nvram_safe_get("lan3_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan3_ifname"), "0");
+			for (i = 0; i < 4; i++) {
+				sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				if ((i == 0) || (strcmp(nvram_safe_get(buffer), "") != 0)) {
+					eval("brctl", "stp", nvram_safe_get(buffer), "0");
+				}
+			}
 		}
 		stop_firewall();
 		start_firewall();
 		if (act_start) {
 			do_static_routes(1);	/* add new */
-			eval("brctl", "stp", nvram_safe_get("lan_ifname"), nvram_safe_get("lan_stp"));
-			if (strcmp(nvram_safe_get("lan1_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan1_ifname"), nvram_safe_get("lan1_stp"));
-			if (strcmp(nvram_safe_get("lan2_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan2_ifname"), nvram_safe_get("lan2_stp"));
-			if (strcmp(nvram_safe_get("lan3_ifname"),"") != 0)
-				eval("brctl", "stp", nvram_safe_get("lan3_ifname"), nvram_safe_get("lan3_stp"));
+			for (i = 0; i < 4; i++) {
+				sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				if ((i == 0) || (strcmp(nvram_safe_get(buffer), "") != 0)) {
+					sprintf(buffer2, (i == 0 ? "lan_stp" : "lan%d_stp"), i);
+					eval("brctl", "stp", nvram_safe_get(buffer), nvram_safe_get(buffer2));
+				}
+			}
 		}
 		goto CLEAR;
 	}
@@ -3213,27 +3194,25 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "rstats") == 0) {
+	if (strncmp(service, "rstats", 6) == 0) {
 		if (act_stop) stop_rstats();
-		if (act_start) start_rstats(0);
+		if (act_start) {
+			if (strcmp(service, "rstatsnew") == 0)
+				start_rstats(1);
+			else
+				start_rstats(0);
+		}
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "rstatsnew") == 0) {
-		if (act_stop) stop_rstats();
-		if (act_start) start_rstats(1);
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "cstats") == 0) {
+	if (strncmp(service, "cstats", 6) == 0) {
 		if (act_stop) stop_cstats();
-		if (act_start) start_cstats(0);
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "cstatsnew") == 0) {
-		if (act_stop) stop_cstats();
-		if (act_start) start_cstats(1);
+		if (act_start) {
+			if (strcmp(service, "cstatsnew") == 0)
+				start_cstats(1);
+			else
+				start_cstats(0);
+		}
 		goto CLEAR;
 	}
 
