@@ -289,7 +289,7 @@ signal4g() {
 }
 
 checkPid() {
-	local PIDNO
+	local PRIORITY="$1" PIDNO
 
 	[ -f $PIDFILE ] && {
 		PIDNO=$(cat $PIDFILE)
@@ -297,6 +297,21 @@ checkPid() {
 
 		[ $? -eq 0 ] && {
 			$LOGS "MODEM - another process in action - exiting"
+			exit 0
+		} || {
+			[ "$PRIORITY" -eq 0 ] && return
+			# Process not found assume not running
+			echo $PID > $PIDFILE
+			[ $? -ne 0 ] && {
+				$LOGS "MODEM - could not create PID file"
+				exit 0
+			}
+		}
+	} || {
+		[ "$PRIORITY" -eq 0 ] && return
+		echo $PID > $PIDFILE
+		[ $? -ne 0 ] && {
+			$LOGS "MODEM - could not create PID file"
 			exit 0
 		}
 	}
@@ -340,12 +355,12 @@ uqmiCall() {
 if [ "$MODE" == "ppp3g" ]; then
 	$LOGS "MODEM Type: 3G"
 	PIDFILE="/var/run/switch3g_$PREFIX.pid"
-	checkPid
+	checkPid 0
 	signal3g
 elif [ "$MODE" == "lte" ]; then
 	$LOGS "MODEM Type: "$MTYPE
 	PIDFILE="/var/run/switch4g_$PREFIX.pid"
-	checkPid
+	checkPid 0
 	signal4g
 else
 	$LOGS "Warning, $PREFIX not in 3G/LTE mode. Aborting ..."
