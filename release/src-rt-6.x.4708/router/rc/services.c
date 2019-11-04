@@ -1585,13 +1585,13 @@ void stop_igmp_proxy(void)
 void start_udpxy(void)
 {
 	char wan_prefix[] = "wan";	/* not yet mwan ready, use wan for now */
-	char buffer[32], buffer2[12];
+	char buffer[32], buffer2[16];
 	int i, bind_lan = 0;
 
 	/* check if udpxy is enabled via GUI, advanced-firewall.asp */
 	if (nvram_match("udpxy_enable", "1")) {
 		if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
-			memset(buffer, 0, sizeof(buffer));				/* reset */
+			memset(buffer, 0, sizeof(buffer));					/* reset */
 			snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix));	/* copy wanface to buffer */
 
 			/* check interface to listen on */
@@ -1606,6 +1606,7 @@ void start_udpxy(void)
 					sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
 					eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get(buffer2), "-m", buffer);
 					bind_lan = 1;
+					break;	/* start udpxy only once and only for one lanX */
 				}
 			}
 			/* address/interface to listen on: default = 0.0.0.0 */
@@ -2697,7 +2698,7 @@ void exec_service(void)
 	const int A_START = 1;
 	const int A_STOP = 2;
 	const int A_RESTART = 1|2;
-	char buffer[128], buffer2[8];
+	char buffer[128], buffer2[16];
 	char *service;
 	char *act;
 	char *next;
