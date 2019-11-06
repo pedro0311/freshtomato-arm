@@ -79,7 +79,7 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_RTAC66U_B1:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 7; /* wps button (active LOW) */
-		wlan_mask = 1 << 15;  /* wifi button (active LOW) */
+		wlan_mask = 1 << 15;  /* wifi button (active LOW); Hint: there is a compiler option at ASUS SRC, but with version B1 there is no wifi toggle button available... */
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_DIR868L:
@@ -305,7 +305,7 @@ int buttons_main(int argc, char *argv[])
 			    ((model == MODEL_AC15) ||
 			     (model == MODEL_AC18) ||
 			     (model == MODEL_RTAC56U) ||
-			     (model == MODEL_RTAC66U_B1) ||
+			     (model == MODEL_RTAC66U_B1) || /* there is a compiler option at ASUS SRC, but with version B1 there is no wifi toggle button available... */
 			     (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);

@@ -139,7 +139,7 @@ int do_led(int which, int mode)
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
-	static int ac66u_b1[]   = { 254,  255,     4,  255,  255,  255,  254,    0,   14,  254};
+	static int ac66u_b1[]   = { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6};
 	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255};
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255};
@@ -535,7 +535,7 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC66U_B1:
-			set_gpio(3, T_HIGH);		/* disable power led */
+			set_gpio(0, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC68U:
