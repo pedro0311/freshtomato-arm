@@ -10,7 +10,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Admin: TomatoAnon Project</title>
+<title>[<% ident(); %>] Admin: TomatoAnon</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script type="text/javascript" src="tomato.js"></script>
@@ -61,34 +61,26 @@ function init() {
 <input type="hidden" name="_nextpage" value="admin-tomatoanon.asp">
 <input type="hidden" name="_service" value="tomatoanon-restart">
 <input type="hidden" name="tomatoanon_notify">
-<div class="section-title">About TomatoAnon Project</div>
+<div class="section-title">TomatoAnon</div>
 <div class="fields"><div class="about">
-<b>Hello,</b><br/>
 <br/>
-I would like to present you with a new project I've been working on, called TomatoAnon.<br/>
-The TomatoAnon script will send (to a database) information about your router's model and installed version of Tomato.<br/>
-The information submitted is 100% anonymous and will ONLY be used for statistical purposes.<br/>
-<b>This script does NOT send any private or personal information whatsoever (like MAC`s, IP`s etc)!</b><br/>
-Script is fully open, and written in bash. Anyone is free to look at the content that is submitted to the database.<br/>
+The script sends (to the database) information about the router model and the installed version of Tomato.<br/>
+The information submitted is 100% anonymous and will be used ONLY for statistical purposes.<br/>
+<b>This script does NOT send any private or personal information (such as MAC, IP addresses, etc.)</b><br/>
+The script is fully open and written in bash. Everyone can freely view the content sent to the database.<br/>
 <br/>
 The submitted results can be viewed on the <a href="http://anon.groov.pl" class="new_window"><b>http://anon.groov.pl</b></a> page.<br/>
-This information may help you when choosing the best and most popular router available in your country.<br/>
-You can check which version of Tomato is most commonly used and which one is the most stable.<br/>
 <br/>
-If you don't agree with this script, or do not wish to use it, you can simply disable it.<br/>
-You can always re-enable it at any time.<br/>
 <br/>
 The following data is sent by TomatoAnon:<br/>
- - MD5SUM of WAN+LAN MAC addresses - this will identify a router. Ex: 1c1dbd4202d794251ec1acf1211bb2c8<br/>
- - Model of router. Ex: Asus RT-N66U<br/>
- - Installed version of Tomato. Ex: 102 K26 USB<br/>
- - Builtype. Ex: Mega-VPN-64K<br/>
- - Uptime of your router. Ex: 3 days<br/>
-That`s it !!<br/>
+ - MD5SUM of WAN+LAN MAC addresses - this identifies the router, ex: 1c1dbd4202d794251ec1acf1211bb2c8<br/>
+ - Router model, ex: Asus RT-AC3200<br/>
+ - Tomato version installed, ex: 2019.3 K26ARM USB<br/>
+ - Builtype, ex: AIO-64K<br/>
+ - Tomato MOD, ex: FreshTomato<br/>
+ - Uptime of your router, ex: 7 days<br/>
 <br/>
-Thank you for reading and please make the right choice to help this project.<br/>
 <br/>
-<b>Best Regards!</b>
 </div></div>
 <br/>
 <br/>
@@ -96,13 +88,13 @@ Thank you for reading and please make the right choice to help this project.<br/
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Do you know what TomatoAnon doing ?', name: 'tomatoanon_answer', type: 'select', options: [ ['0','No, i don`t. Have to read all information, before i will make a choice'], ['1','Yes, i do and want to make a choice'] ], value: nvram.tomatoanon_answer, suffix: ' '},
-	{ title: 'Do you want enable TomatoAnon ?', name: 'tomatoanon_enable', type: 'select', options: [ ['-1','I`m not sure right now'], ['1','Yes, i`m sure i do'], ['0','No, i definitely wont enable it'] ], value: nvram.tomatoanon_enable, suffix: ' '}
+	{ title: 'Do you know what TomatoAnon does?', name: 'tomatoanon_answer', type: 'select', options: [ ['0','No, I don\'t. Have to read all information, before I will make a choice'], ['1','Yes, I do and want to make a choice'] ], value: nvram.tomatoanon_answer, suffix: ' '},
+	{ title: 'Do you want enable TomatoAnon?', name: 'tomatoanon_enable', type: 'select', options: [ ['-1','I\'m not sure right now'], ['1','Yes, I\'m sure I do'], ['0','No, I definitely wont enable it'] ], value: nvram.tomatoanon_enable, suffix: ' '}
 ]);
 </script>
 </div>
 
-<div class="section-title">Tomato Update Notification System</div>
+<div class="section-title">FreshTomato Update Notification System</div>
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
@@ -110,7 +102,7 @@ createFieldTable('', [
 ]);
 </script>
 <ul>
-	<li>When new tomato version will be available, you will be notified about this on status-overview page.
+	<li>When a new version of FreshTomato is available, you will be notified on the status-overview page.
 </li></ul>
 </div>
 </div>
