@@ -1,6 +1,6 @@
 --- libcurl/configure.ac
 +++ libcurl/configure.ac
-@@ -1658,11 +1658,9 @@ if test -z "$ssl_backends" -o "x$OPT_SSL
+@@ -1655,11 +1655,9 @@ if test -z "$ssl_backends" -o "x$OPT_SSL
      dnl specify PKG_CONFIG_LIBDIR we're only looking where
      dnl the user told us to look
      OPENSSL_PCDIR="$OPT_SSL/lib/pkgconfig"
