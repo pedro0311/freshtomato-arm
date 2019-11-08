@@ -994,7 +994,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_ifnameX",		V_TEXT(0,8)			},
 	{ "lan_ifnames",		V_TEXT(0,64)			},
 	{ "manual_boot_nv",		V_01				},
-	{ "trunk_vlan_so",		V_01				},
 	{ "vlan0tag",			V_TEXT(0,5)			},
 	{ "vlan0vid",			V_TEXT(0,5)			},
 	{ "vlan1vid",			V_TEXT(0,5)			},

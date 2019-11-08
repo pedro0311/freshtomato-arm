@@ -705,9 +705,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "force_igmpv2",		"0"				, 0 },
 	{ "wk_mode",			"gateway"			, 0 },	// Network mode [gateway|router]
 
-/* advanced-vlan */
-	{ "trunk_vlan_so",		"0"				, 0 },	// VLAN trunk support override
-
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },
 	{ "wl_txpwr",			"0"				, 0 },
