@@ -1002,7 +1002,6 @@ static tag_info_array tag_table_VND_PANASONIC = {
   { 0x0001, "Quality"},
   { 0x0002, "FirmwareVersion"},
   { 0x0003, "WhiteBalance"},
-  { 0x0004, "0x0004"},
   { 0x0007, "FocusMode"},
   { 0x000f, "AFMode"},
   { 0x001a, "ImageStabilization"},
@@ -1010,12 +1009,10 @@ static tag_info_array tag_table_VND_PANASONIC = {
   { 0x001f, "ShootingMode"},
   { 0x0020, "Audio"},
   { 0x0021, "DataDump"},
-  { 0x0022, "0x0022"},
   { 0x0023, "WhiteBalanceBias"},
   { 0x0024, "FlashBias"},
   { 0x0025, "InternalSerialNumber"},
   { 0x0026, "ExifVersion"},
-  { 0x0027, "0x0027"},
   { 0x0028, "ColorEffect"},
   { 0x0029, "TimeSincePowerOn"},
   { 0x002a, "BurstMode"},
@@ -1023,7 +1020,6 @@ static tag_info_array tag_table_VND_PANASONIC = {
   { 0x002c, "Contrast"},
   { 0x002d, "NoiseReduction"},
   { 0x002e, "SelfTimer"},
-  { 0x002f, "0x002f"},
   { 0x0030, "Rotation"},
   { 0x0031, "AFAssistLamp"},
   { 0x0032, "ColorMode"},
@@ -1090,7 +1086,6 @@ static tag_info_array tag_table_VND_PANASONIC = {
   { 0x00a3, "ClearRetouchValue"},
   { 0x00ab, "TouchAE"},
   { 0x0e00, "PrintIM"},
-  { 0x4449, "0x4449"},
   { 0x8000, "MakerNoteVersion"},
   { 0x8001, "SceneMode"},
   { 0x8004, "WBRedLevel"},
@@ -1125,22 +1120,20 @@ static tag_info_array tag_table_VND_SONY = {
   { 0x0112, "WhiteBalanceFineTune"},
   { 0x0114, "CameraSettings"},
   { 0x0115, "WhiteBalance"},
-  { 0x0116, "0x0116"},
+  { 0x0116, "ExtraInfo"},
   { 0x0e00, "PrintIM"},
   { 0x1000, "MultiBurstMode"},
   { 0x1001, "MultiBurstImageWidth"},
   { 0x1002, "MultiBurstImageHeight"},
   { 0x1003, "Panorama"},
-  { 0x2000, "0x2000"},
   { 0x2001, "PreviewImage"},
-  { 0x2002, "0x2002"},
-  { 0x2003, "0x2003"},
+  { 0x2002, "Rating"},
   { 0x2004, "Contrast"},
   { 0x2005, "Saturation"},
-  { 0x2006, "0x2006"},
-  { 0x2007, "0x2007"},
-  { 0x2008, "0x2008"},
-  { 0x2009, "0x2009"},
+  { 0x2006, "Sharpness"},
+  { 0x2007, "Brightness"},
+  { 0x2008, "LongExposureNoiseReduction"},
+  { 0x2009, "HighISONoiseReduction"},
   { 0x200a, "AutoHDR"},
   { 0x3000, "ShotInfo"},
   { 0xb000, "FileFormat"},
@@ -1167,8 +1160,9 @@ static tag_info_array tag_table_VND_SONY = {
   { 0xb049, "ReleaseMode"},
   { 0xb04a, "SequenceNumber"},
   { 0xb04b, "AntiBlur"},
-  { 0xb04e, "LongExposureNoiseReduction"},
+  { 0xb04e, "FocusMode"},
   { 0xb04f, "DynamicRangeOptimizer"},
+  { 0xb050, "HighISONoiseReduction2"},
   { 0xb052, "IntelligentAuto"},
   { 0xb054, "WhiteBalance2"},
   TAG_TABLE_END
@@ -1273,7 +1267,6 @@ static tag_info_array tag_table_VND_MINOLTA = {
   { 0x0100, "SceneMode"},
   { 0x0101, "ColorMode"},
   { 0x0102, "Quality"},
-  { 0x0103, "0x0103"},
   { 0x0104, "FlashExposureComp"},
   { 0x0105, "Teleconverter"},
   { 0x0107, "ImageStabilization"},
@@ -1369,6 +1362,7 @@ static const maker_note_type maker_note_array[] = {
   { tag_table_VND_PANASONIC, "Panasonic",               NULL, "Panasonic\x00\x00\x00",			 12, 12, MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
   { tag_table_VND_DJI,       "DJI",                     NULL, NULL,								 0, 0,   MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
   { tag_table_VND_SONY,      "SONY",                    NULL, "SONY DSC \x00\x00\x00",	         12, 12, MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
+  { tag_table_VND_SONY,      "SONY",                    NULL,								     0, 0,   MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
   { tag_table_VND_PENTAX,    "PENTAX",                  NULL, "AOC\x00",						 6,  6,  MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
   { tag_table_VND_MINOLTA,   "Minolta, KONICA MINOLTA", NULL, NULL,								 0,  0,  MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
   { tag_table_VND_SIGMA,     "SIGMA, FOVEON",           NULL, "SIGMA\x00\x00\x00",				 10, 10, MN_ORDER_NORMAL,   MN_OFFSET_NORMAL},
@@ -2328,14 +2322,11 @@ static void exif_iif_free(image_info_type *image_info, int section_index) {
 				efree(f);
 			}
 			switch(image_info->info_list[section_index].list[i].format) {
-				case TAG_FMT_SBYTE:
-				case TAG_FMT_BYTE:
-					/* in contrast to strings bytes do not need to allocate buffer for NULL if length==0 */
-					if (image_info->info_list[section_index].list[i].length<1)
-						break;
-				default:
 				case TAG_FMT_UNDEFINED:
 				case TAG_FMT_STRING:
+				case TAG_FMT_SBYTE:
+				case TAG_FMT_BYTE:
+				default:
 					if ((f=image_info->info_list[section_index].list[i].value.s) != NULL) {
 						efree(f);
 					}
@@ -3262,6 +3253,14 @@ static int exif_process_IFD_in_MAKERNOTE(image_info_type *ImageInfo, char * valu
 }
 /* }}} */
 
+#define REQUIRE_NON_EMPTY() do { \
+	if (byte_count == 0) { \
+		exif_error_docref("exif_read_data#error_ifd" EXIFERR_CC, ImageInfo, E_WARNING, "Process tag(x%04X=%s): Cannot be empty", tag, exif_get_tagname(tag, tagname, -12, tag_table)); \
+		return FALSE; \
+	} \
+} while (0)
+
+
 /* {{{ exif_process_IFD_TAG
  * Process one of the nested IFDs directories. */
 static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, char *offset_base, size_t IFDlength, size_t displacement, int section_index, int ReadNextIFD, tag_table_type tag_table)
@@ -3295,7 +3294,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 		/*return TRUE;*/
 	}
 
-	if (components <= 0) {
+	if (components < 0) {
 		exif_error_docref("exif_read_data#error_ifd" EXIFERR_CC, ImageInfo, E_WARNING, "Process tag(x%04X=%s): Illegal components(%d)", tag, exif_get_tagname(tag, tagname, -12, tag_table), components);
 		return FALSE;
 	}
@@ -3379,8 +3378,12 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 	}
 #endif
 
+	/* NB: The following code may not assume that there is at least one component!
+	 * byte_count may be zero! */
+
 	if (section_index==SECTION_THUMBNAIL) {
 		if (!ImageInfo->Thumbnail.data) {
+			REQUIRE_NON_EMPTY();
 			switch(tag) {
 				case TAG_IMAGEWIDTH:
 				case TAG_COMP_IMAGE_WIDTH:
@@ -3424,6 +3427,9 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 				if (byte_count>1 && (length=php_strnlen(value_ptr, byte_count)) > 0) {
 					if (length<byte_count-1) {
 						/* When there are any characters after the first NUL */
+						EFREE_IF(ImageInfo->CopyrightPhotographer);
+						EFREE_IF(ImageInfo->CopyrightEditor);
+						EFREE_IF(ImageInfo->Copyright);
 						ImageInfo->CopyrightPhotographer  = estrdup(value_ptr);
 						ImageInfo->CopyrightEditor        = estrndup(value_ptr+length+1, byte_count-length-1);
 						spprintf(&ImageInfo->Copyright, 0, "%s, %s", ImageInfo->CopyrightPhotographer, ImageInfo->CopyrightEditor);
@@ -3431,6 +3437,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 						/* but we are not supposed to change this                   */
 						/* keep in mind that image_info does not store editor value */
 					} else {
+						EFREE_IF(ImageInfo->Copyright);
 						ImageInfo->Copyright = estrndup(value_ptr, byte_count);
 					}
 				}
@@ -3459,6 +3466,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 			case TAG_FNUMBER:
 				/* Simplest way of expressing aperture, so I trust it the most.
 				   (overwrite previously computed value if there is one) */
+				REQUIRE_NON_EMPTY();
 				ImageInfo->ApertureFNumber = (float)exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel);
 				break;
 
@@ -3467,6 +3475,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 				/* More relevant info always comes earlier, so only use this field if we don't
 				   have appropriate aperture information yet. */
 				if (ImageInfo->ApertureFNumber == 0) {
+					REQUIRE_NON_EMPTY();
 					ImageInfo->ApertureFNumber
 						= (float)exp(exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel)*log(2)*0.5);
 				}
@@ -3478,6 +3487,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 				   SHUTTERSPEED comes after EXPOSURE TIME
 				  */
 				if (ImageInfo->ExposureTime == 0) {
+					REQUIRE_NON_EMPTY();
 					ImageInfo->ExposureTime
 						= (float)(1/exp(exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel)*log(2)));
 				}
@@ -3487,20 +3497,24 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 				break;
 
 			case TAG_COMP_IMAGE_WIDTH:
+				REQUIRE_NON_EMPTY();
 				ImageInfo->ExifImageWidth = exif_convert_any_to_int(value_ptr, exif_rewrite_tag_format_to_unsigned(format), ImageInfo->motorola_intel);
 				break;
 
 			case TAG_FOCALPLANE_X_RES:
+				REQUIRE_NON_EMPTY();
 				ImageInfo->FocalplaneXRes = exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel);
 				break;
 
 			case TAG_SUBJECT_DISTANCE:
 				/* Inidcates the distacne the autofocus camera is focused to.
 				   Tends to be less accurate as distance increases. */
+				REQUIRE_NON_EMPTY();
 				ImageInfo->Distance = (float)exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel);
 				break;
 
 			case TAG_FOCALPLANE_RESOLUTION_UNIT:
+				REQUIRE_NON_EMPTY();
 				switch((int)exif_convert_any_format(value_ptr, format, ImageInfo->motorola_intel)) {
 					case 1: ImageInfo->FocalplaneUnits = 25.4; break; /* inch */
 					case 2:
@@ -3526,9 +3540,11 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 				break;
 
 			case TAG_MAKE:
+				EFREE_IF(ImageInfo->make);
 				ImageInfo->make = estrndup(value_ptr, byte_count);
 				break;
 			case TAG_MODEL:
+				EFREE_IF(ImageInfo->model);
 				ImageInfo->model = estrndup(value_ptr, byte_count);
 				break;
 
@@ -3543,6 +3559,7 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 			case TAG_GPS_IFD_POINTER:
 			case TAG_INTEROP_IFD_POINTER:
 				if (ReadNextIFD) {
+					REQUIRE_NON_EMPTY();
 					char *Subdir_start;
 					int sub_section_index = 0;
 					switch(tag) {
@@ -3571,9 +3588,11 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 					Subdir_start = offset_base + php_ifd_get32u(value_ptr, ImageInfo->motorola_intel);
 					if (Subdir_start < offset_base || Subdir_start > offset_base+IFDlength) {
 						exif_error_docref("exif_read_data#error_ifd" EXIFERR_CC, ImageInfo, E_WARNING, "Illegal IFD Pointer");
+						EFREE_IF(outside);
 						return FALSE;
 					}
 					if (!exif_process_IFD_in_JPEG(ImageInfo, Subdir_start, offset_base, IFDlength, displacement, sub_section_index, tag)) {
+						EFREE_IF(outside);
 						return FALSE;
 					}
 #ifdef EXIF_DEBUG
