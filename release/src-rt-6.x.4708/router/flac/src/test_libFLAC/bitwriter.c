@@ -1,6 +1,6 @@
 /* test_libFLAC - Unit tester for libFLAC
  * Copyright (C) 2000-2009  Josh Coalson
- * Copyright (C) 2011-2016  Xiph.Org Foundation
+ * Copyright (C) 2011-2018  Xiph.Org Foundation
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -52,9 +52,9 @@ typedef FLAC__uint64 bwword;
 struct FLAC__BitWriter {
 	bwword *buffer;
 	bwword accum; /* accumulator; bits are right-justified; when full, accum is appended to buffer */
-	unsigned capacity; /* capacity of buffer in words */
-	unsigned words; /* # of complete words in buffer */
-	unsigned bits; /* # of used bits in accum */
+	uint32_t capacity; /* capacity of buffer in words */
+	uint32_t words; /* # of complete words in buffer */
+	uint32_t bits; /* # of used bits in accum */
 };
 
 #define WORDS_TO_BITS(words) ((words) * FLAC__BITS_PER_WORD)
@@ -65,7 +65,7 @@ FLAC__bool test_bitwriter(void)
 {
 	FLAC__BitWriter *bw;
 	FLAC__bool ok;
-	unsigned i, j;
+	uint32_t i, j;
 #if FLAC__BYTES_PER_WORD == 4
 #if WORDS_BIGENDIAN
 	static bwword test_pattern1[5] = { 0xaaf0aabe, 0xaaaaaaa8, 0x300aaaaa, 0xaaadeadb, 0x00eeface };
@@ -81,7 +81,7 @@ FLAC__bool test_bitwriter(void)
 #else
 #error FLAC__BYTES_PER_WORD is neither 4 nor 8 -- not implemented
 #endif
-	unsigned words, bits; /* what we think bw->words and bw->bits should be */
+	uint32_t words, bits; /* what we think bw->words and bw->bits should be */
 
 	printf("\n+++ libFLAC unit test: bitwriter\n\n");
 
@@ -112,9 +112,8 @@ FLAC__bool test_bitwriter(void)
 	printf("OK\n");
 
 	printf("testing init... ");
-	FLAC__bitwriter_init(bw);
-	if(0 == bw) {
-		printf("FAILED, returned NULL\n");
+	if(!FLAC__bitwriter_init(bw)) {
+		printf("FAILED, returned false\n");
 		return false;
 	}
 	printf("OK\n");
@@ -135,19 +134,14 @@ FLAC__bool test_bitwriter(void)
 	printf("OK\n");
 
 	printf("testing init... ");
-	FLAC__bitwriter_init(bw);
-	if(0 == bw) {
-		printf("FAILED, returned NULL\n");
+	if(!FLAC__bitwriter_init(bw)) {
+		printf("FAILED, returned false\n");
 		return false;
 	}
 	printf("OK\n");
 
 	printf("testing clear... ");
 	FLAC__bitwriter_clear(bw);
-	if(0 == bw) {
-		printf("FAILED, returned NULL\n");
-		return false;
-	}
 	printf("OK\n");
 
 	printf("testing delete... ");
@@ -166,10 +160,11 @@ FLAC__bool test_bitwriter(void)
 	printf("OK\n");
 
 	printf("testing init... ");
-	ok = FLAC__bitwriter_init(bw);
-	printf("%s\n", ok?"OK":"FAILED");
-	if(!ok)
+	if(!FLAC__bitwriter_init(bw)) {
+		printf("FAILED, returned false\n");
 		return false;
+	}
+	printf("OK\n");
 
 	printf("testing clear... ");
 	FLAC__bitwriter_clear(bw);
@@ -204,7 +199,7 @@ FLAC__bool test_bitwriter(void)
 	bits = 152 - words*FLAC__BITS_PER_WORD;
 
 	if(bw->words != words) {
-		printf("FAILED byte count %u != %u\n", bw->words, words);
+		printf("FAILED word count %u != %u\n", bw->words, words);
 		FLAC__bitwriter_dump(bw, stdout);
 		return false;
 	}
@@ -237,7 +232,7 @@ FLAC__bool test_bitwriter(void)
 	test_pattern1[words] <<= 6;
 	test_pattern1[words] |= 0x3d;
 	if(bw->words != words) {
-		printf("FAILED byte count %u != %u\n", bw->words, words);
+		printf("FAILED word count %u != %u\n", bw->words, words);
 		FLAC__bitwriter_dump(bw, stdout);
 		return false;
 	}
