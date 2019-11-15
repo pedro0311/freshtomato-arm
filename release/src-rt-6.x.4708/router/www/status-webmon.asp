@@ -275,7 +275,7 @@ WMGrid.prototype.sortCompare = function(a, b) {
 	default:
 		r = cmpText(a.cells[col].innerHTML, b.cells[col].innerHTML);
 	}
-	return this.sortAscending ? r : -r;
+	return this.sortAscending ? -r : r;
 }
 
 var dg = new WMGrid();
