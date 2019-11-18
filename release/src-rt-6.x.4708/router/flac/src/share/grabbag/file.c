@@ -29,7 +29,7 @@
 #include <sys/types.h> /* some flavors of BSD (like OS X) require this to get time_t */
 #include <utime.h> /* for utime() */
 #endif
-#if defined __CYGWIN__ || defined __EMX__
+#if defined __EMX__
 #include <io.h> /* for setmode(), O_BINARY */
 #include <fcntl.h> /* for _O_BINARY */
 #endif
@@ -47,6 +47,7 @@
 #include <winbase.h>
 #endif
 #include "share/grabbag.h"
+#include "share/compat.h"
 
 
 void grabbag__file_copy_metadata(const char *srcpath, const char *destpath)
@@ -116,9 +117,9 @@ FLAC__bool grabbag__file_change_stats(const char *filename, FLAC__bool read_only
 
 FLAC__bool grabbag__file_are_same(const char *f1, const char *f2)
 {
-#if defined _MSC_VER || defined __MINGW32__
+#if defined _WIN32 && !defined __CYGWIN__
 	/* see
-	 * http://www.hydrogenaudio.org/forums/index.php?showtopic=49439&pid=444300&st=0
+	 *  http://www.hydrogenaudio.org/forums/index.php?showtopic=49439&pid=444300&st=0
 	 *  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/fs/getfileinformationbyhandle.asp
 	 *  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/fs/by_handle_file_information_str.asp
 	 *  http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/fs/createfile.asp
@@ -164,9 +165,6 @@ FILE *grabbag__file_get_binary_stdin(void)
 	 */
 #if defined _MSC_VER || defined __MINGW32__
 	_setmode(_fileno(stdin), _O_BINARY);
-#elif defined __CYGWIN__
-	/* almost certainly not needed for any modern Cygwin, but let's be safe... */
-	setmode(_fileno(stdin), _O_BINARY);
 #elif defined __EMX__
 	setmode(fileno(stdin), O_BINARY);
 #endif
@@ -182,9 +180,6 @@ FILE *grabbag__file_get_binary_stdout(void)
 	 */
 #if defined _MSC_VER || defined __MINGW32__
 	_setmode(_fileno(stdout), _O_BINARY);
-#elif defined __CYGWIN__
-	/* almost certainly not needed for any modern Cygwin, but let's be safe... */
-	setmode(_fileno(stdout), _O_BINARY);
 #elif defined __EMX__
 	setmode(fileno(stdout), O_BINARY);
 #endif

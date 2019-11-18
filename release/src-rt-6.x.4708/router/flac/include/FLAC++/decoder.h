@@ -94,7 +94,7 @@ namespace FLAC {
 		 * Only the read, write, and error callbacks are mandatory.  The
 		 * others are optional; this class provides default
 		 * implementations that do nothing.  In order for seeking to work
-		 * you must overide seek_callback(), tell_callback(),
+		 * you must override seek_callback(), tell_callback(),
 		 * length_callback(), and eof_callback().
 		 */
 		class FLACPP_API Stream {
@@ -115,7 +115,7 @@ namespace FLAC {
 			virtual ~Stream();
 
 			//@{
-			/** Call after construction to check the that the object was created
+			/** Call after construction to check that the object was created
 			 *  successfully.  If not, use get_state() to find out why not.
 			 */
 			virtual bool is_valid() const;
@@ -135,11 +135,11 @@ namespace FLAC {
 			State get_state() const;                                          ///< See FLAC__stream_decoder_get_state()
 			virtual bool get_md5_checking() const;                            ///< See FLAC__stream_decoder_get_md5_checking()
 			virtual FLAC__uint64 get_total_samples() const;                   ///< See FLAC__stream_decoder_get_total_samples()
-			virtual unsigned get_channels() const;                            ///< See FLAC__stream_decoder_get_channels()
+			virtual uint32_t get_channels() const;                            ///< See FLAC__stream_decoder_get_channels()
 			virtual ::FLAC__ChannelAssignment get_channel_assignment() const; ///< See FLAC__stream_decoder_get_channel_assignment()
-			virtual unsigned get_bits_per_sample() const;                     ///< See FLAC__stream_decoder_get_bits_per_sample()
-			virtual unsigned get_sample_rate() const;                         ///< See FLAC__stream_decoder_get_sample_rate()
-			virtual unsigned get_blocksize() const;                           ///< See FLAC__stream_decoder_get_blocksize()
+			virtual uint32_t get_bits_per_sample() const;                     ///< See FLAC__stream_decoder_get_bits_per_sample()
+			virtual uint32_t get_sample_rate() const;                         ///< See FLAC__stream_decoder_get_sample_rate()
+			virtual uint32_t get_blocksize() const;                           ///< See FLAC__stream_decoder_get_blocksize()
 			virtual bool get_decode_position(FLAC__uint64 *position) const;   ///< See FLAC__stream_decoder_get_decode_position()
 
 			virtual ::FLAC__StreamDecoderInitStatus init();      ///< Seek FLAC__stream_decoder_init_stream()
