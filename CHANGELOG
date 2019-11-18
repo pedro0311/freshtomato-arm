@@ -3,6 +3,71 @@ FreshTomato-ARM Changelog
 
 
 
+2019.3          2019.11.23
+--------------------------
+
+- SDK6 update (as new branch: arm-ng): Add support for C0 CPU (based on the work of Don Bushway aka snowman58)
+- Add Netgear R6400v2 support
+- Add Netgear R6700v3 support (same like R6400v2)
+- Add Asus RT-AC66U B1 / RT-AC68U (C1/E1) support
+- kernel (all): drivers: net: usb: usbnet: sanity checking of packet sizes and device mtu
+- kernel (all): drivers: net: usb: cdc_ncm: fix divide-by-zero caused by invalid wMaxPacketSize 
+- kernel (all): drivers: net: usb: usbnet: ignore endpoints with invalid wMaxPacketSize
+- kernel (all): drivers: net: usb: cdc_ncm: handle incomplete transfer of MTU
+- kernel (all): drivers: net: usb: fixes/additions from upstream (cdc_ncm: Signedness bug in cdc_ncm_set_dgram_size(); qmi_wwan: add support for Cinterion CLS8 devices; qmi_wwan: add Telit 0x1050 composition; qmi_wwan: add support for DW5821e with eSIM support; qmi_wwan: add support for Foxconn T77W968 LTE modules)
+- miniupnpd: update to 2.1.20191006
+- dnsmasq: update to 936bd82 snapshot
+- sqlite: update to 3.30.1
+- e2fsprogs: update to 1.45.4
+- nano: update to 4.5
+- php: update to 7.2.24
+- xl2tpd: update to 1.3.15
+- libogg: update to 1.3.4
+- openvpn: update to 2.4.8
+- libxml2: update to 2.9.10
+- libcurl: update to 7.67.0
+- flac: update to 1.3.3
+- libcurl: Updated CA certificate bundle as of 2019-10-16
+- WL: update wireless driver for SDK7 to GPL 382.51640
+- GUI: OpenVPN server: extend Username field to 25 chars
+- GUI: Report CFE version on status-overview.asp page
+- GUI: rename “Enable SYN cookies” to “Enable TCP SYN cookies”
+- GUI: reading webmon logs from end to beginning to repair display
+- GUI: Hide references to TOR on advanced-dhcpdns.asp if image was built without it
+- TTB: fix memory leak, when WAN or tomatothemebase.eu is down (bug present from the very beginning)
+- Modified prompt of nvram utility
+- hiding nvram size summary when displaying mymotd
+- RTCONFIG_FANCTRL not defined or used, TCONFIG_FANCTRL is used
+- Makefile: we need to distinguish arm-ng images with names in relation to the arm-master
+- router: httpd: misc.c: tune-up function get_cfeversion()
+- router: httpd/shared: remove unused variable “trunk_vlan_so”
+- router: others: mymotd: fix typo in #0f5379b
+- router: others: wwansignal: simplify checkPid(), cause we have only low priority process here
+- router: rc: firewall.c: fix compiler warning
+- router: rc: nginx.c: clean-up, code optimization - size reduced by almost 4kB
+- router: rc: openvpn.c: fix typo causing wrong netmask to be added to the nat for bridges 2 - 4
+- router: rc: openvpn.c: clean-up, code optimization - size reduced by almost 4kB
+- router: rc: services.c: make reading stubby version more secure
+- router: rc: services.c: clean-up, code optimization - size reduced by almost 3kB
+- router: rc/shared: fix compiler warnings
+- router: shared: id.c: do call check_hw_type() only once (only cosmetic / optimization –> save cpu work/load) 
+- router: www: about.asp: add BT donation address to the page + cosmetics
+- router: www: status-overview.asp: fix CPU temperature refreshing
+- Tenda AC15: correct/fix detection, caused by (earlier) commit
+- Tenda AC15: rely on tenda cfe default / init parameter (for each router)
+- Tenda AC18: use variable 1:boardnum=AC18_5G to determine Tenda AC18 (and add some more infos)
+- Tenda AC18: rely on tenda cfe default / init parameter (for each router)
+- R6400v2 / R6700v3: align extra default parameter for Wifi modules to values from dd wrt
+- Revert include/ctf files from commit c943223. Causing boot loop
+- Updated bcmrobo.c and bcmdevs.h to fix R6400v2 WAN LED not working
+- Updated led.c to work with updated bcmrobo.c
+- Update bcmrobo to support R7000, R6400v2 and update led.c . WAN led support now in bcmrobo
+- EA6200 / EA6350v1: rely on linksys cfe default / init parameter (for each router)
+- Update bcmrobo to support R8000. Switch not being properly initialized for WAN led. Update led.c to fix WAN led color from amber to white
+- AC66U_B1 being identified as a U68 C1 rearranged checks
+- RT-AC66U B1: change/fix LED table (not the same like RT-AC68U)
+- RT-AC66U B1: clean-up button setup and remove wifi button
+
 2019.3.220-beta - 2019.09.29
 ----------------------------
 

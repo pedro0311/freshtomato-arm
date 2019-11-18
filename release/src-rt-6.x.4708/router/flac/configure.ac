@@ -19,13 +19,20 @@
 # instead of FLAC__ since autoconf triggers off 'AC_' in strings
 
 AC_PREREQ(2.60)
-AC_INIT([flac], [1.3.2], [flac-dev@xiph.org], [flac], [https://www.xiph.org/flac/])
+AC_INIT([flac], [1.3.3], [flac-dev@xiph.org], [flac], [https://www.xiph.org/flac/])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([src/flac/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign 1.10 -Wall tar-pax no-dist-gzip dist-xz subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+AC_MSG_CHECKING([whether configure should try to set CFLAGS/CXXFLAGS/CPPFLAGS/LDFLAGS])
+AS_IF([test "x${CFLAGS+set}" = "xset" || test "x${CXXFLAGS+set}" = "xset" || test "x${CPPFLAGS+set}" = "xset" || test "x${LDFLAGS+set}" = "xset"],
+	[enable_flags_setting=no],
+	[enable_flags_setting=yes]
+)
+AC_MSG_RESULT([${enable_flags_setting}])
+AX_CHECK_ENABLE_DEBUG
 user_cflags=$CFLAGS
 
 #Prefer whatever the current ISO standard is.
@@ -134,7 +141,16 @@ case "$host_cpu" in
 		AH_TEMPLATE(FLAC__CPU_IA32, [define if building for ia32/i386])
 		asm_optimisation=$asm_opt
 		;;
-	powerpc|powerpc64)
+	powerpc64|powerpc64le)
+		cpu_ppc64=true
+		cpu_ppc=true
+		AC_DEFINE(FLAC__CPU_PPC)
+		AH_TEMPLATE(FLAC__CPU_PPC, [define if building for PowerPC])
+		AC_DEFINE(FLAC__CPU_PPC64)
+		AH_TEMPLATE(FLAC__CPU_PPC64, [define if building for PowerPC64])
+		asm_optimisation=$asm_opt
+		;;
+	powerpc|powerpcle)
 		cpu_ppc=true
 		AC_DEFINE(FLAC__CPU_PPC)
 		AH_TEMPLATE(FLAC__CPU_PPC, [define if building for PowerPC])
@@ -150,6 +166,7 @@ esac
 AM_CONDITIONAL(FLAC__CPU_X86_64, test "x$cpu_x86_64" = xtrue)
 AM_CONDITIONAL(FLaC__CPU_IA32, test "x$cpu_ia32" = xtrue)
 AM_CONDITIONAL(FLaC__CPU_PPC, test "x$cpu_ppc" = xtrue)
+AM_CONDITIONAL(FLaC__CPU_PPC64, test "x$cpu_ppc64" = xtrue)
 AM_CONDITIONAL(FLaC__CPU_SPARC, test "x$cpu_sparc" = xtrue)
 
 if test "x$ac_cv_header_x86intrin_h" = xyes; then
@@ -158,26 +175,39 @@ else
 AC_DEFINE([FLAC__HAS_X86INTRIN], 0)
 fi
 
+if test x"$cpu_ppc64" = xtrue ; then
+
+AC_C_ATTRIBUTE([target("cpu=power8")],
+  [have_cpu_power8=yes],
+  [have_cpu_power8=no])
+if test x"$have_cpu_power8" = xyes ; then
+  AC_DEFINE(FLAC__HAS_TARGET_POWER8)
+  AH_TEMPLATE(FLAC__HAS_TARGET_POWER8, [define if compiler has __attribute__((target("cpu=power8"))) support])
+fi
+
+AC_C_ATTRIBUTE([target("cpu=power9")],
+  [have_cpu_power9=yes],
+  [have_cpu_power9=no])
+if test x"$have_cpu_power9" = xyes ; then
+  AC_DEFINE(FLAC__HAS_TARGET_POWER9)
+  AH_TEMPLATE(FLAC__HAS_TARGET_POWER9, [define if compiler has __attribute__((target("cpu=power9"))) support])
+fi
+
+fi
+
 case "$host" in
 	i386-*-openbsd3.[[0-3]]) OBJ_FORMAT=aoutb ;;
 	*-*-cygwin|*mingw*) OBJ_FORMAT=win32 ;;
 	*-*-darwin*) OBJ_FORMAT=macho ;;
 	*emx*) OBJ_FORMAT=aout ;;
+	*djgpp) OBJ_FORMAT=coff ;;
 	*) OBJ_FORMAT=elf ;;
 esac
 AC_SUBST(OBJ_FORMAT)
-case "$host" in
-	*-gnuspe)
-		abi_spe=true
-		AC_DEFINE(FLAC__CPU_PPC_SPE)
-		AH_TEMPLATE(FLAC__CPU_PPC_SPE, [define if building for PowerPC with SPE ABI])
-		;;
-esac
-AM_CONDITIONAL(FLaC__CPU_PPC_SPE, test "x$abi_spe" = xtrue)
 
 os_is_windows=no
 case "$host" in
-	*-*-cygwin|*mingw*)
+	*mingw*)
 		CPPFLAGS="-D__MSVCRT_VERSION__=0x0601 $CPPFLAGS"
 		os_is_windows=yes
 		;;
@@ -186,7 +216,7 @@ esac
 AM_CONDITIONAL(OS_IS_WINDOWS, test "x$os_is_windows" = xyes)
 
 case "$host" in
-	*-pc-linux-gnu)
+	*-linux-*)
 		sys_linux=true
 		AC_DEFINE(FLAC__SYS_LINUX)
 		AH_TEMPLATE(FLAC__SYS_LINUX, [define if building for Linux])
@@ -205,14 +235,7 @@ AC_DEFINE(FLAC__ALIGN_MALLOC_DATA)
 AH_TEMPLATE(FLAC__ALIGN_MALLOC_DATA, [define to align allocated memory on 32-byte boundaries])
 fi
 
-AC_ARG_ENABLE(debug,
-AC_HELP_STRING([--enable-debug], [Turn on debugging]),
-[case "${enableval}" in
-	yes) debug=true ;;
-	no)  debug=false ;;
-	*) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
-esac],[debug=false])
-AM_CONDITIONAL(DEBUG, test "x$debug" = xtrue)
+AM_CONDITIONAL([DEBUG], [test "x${ax_enable_debug}" = "xyes" || test "x${ax_enable_debug}" = "xinfo"])
 
 AC_ARG_ENABLE(sse,
 AC_HELP_STRING([--disable-sse], [Disable passing of -msse2 to the compiler]),
@@ -233,6 +256,19 @@ AM_CONDITIONAL(FLaC__USE_ALTIVEC, test "x$use_altivec" = xtrue)
 if test "x$use_altivec" = xtrue ; then
 AC_DEFINE(FLAC__USE_ALTIVEC)
 AH_TEMPLATE(FLAC__USE_ALTIVEC, [define to enable use of Altivec instructions])
+fi
+
+AC_ARG_ENABLE(vsx,
+AC_HELP_STRING([--disable-vsx], [Disable VSX optimizations]),
+[case "${enableval}" in
+	yes) use_vsx=true ;;
+	no)  use_vsx=false ;;
+	*) AC_MSG_ERROR(bad value ${enableval} for --enable-vsx) ;;
+esac],[use_vsx=true])
+AM_CONDITIONAL(FLaC__USE_VSX, test "x$use_vsx" = xtrue)
+if test "x$use_vsx" = xtrue ; then
+AC_DEFINE(FLAC__USE_VSX)
+AH_TEMPLATE(FLAC__USE_VSX, [define to enable use of VSX instructions])
 fi
 
 AC_ARG_ENABLE(avx,
@@ -344,7 +380,7 @@ AC_ARG_ENABLE([ogg],
 	[ want_ogg=$enableval ], [ want_ogg=yes ] )
 
 if test "x$want_ogg" != "xno"; then
-	XIPH_PATH_OGG(have_ogg=yes, AC_MSG_WARN([*** Ogg development enviroment not installed - Ogg support will not be built]))
+	XIPH_PATH_OGG(have_ogg=yes, AC_MSG_WARN([*** Ogg development environment not installed - Ogg support will not be built]))
 fi
 
 FLAC__HAS_OGG=0
@@ -359,6 +395,11 @@ AC_DEFINE_UNQUOTED([FLAC__HAS_OGG],$FLAC__HAS_OGG,[define if you have the ogg li
 AC_SUBST(FLAC__HAS_OGG)
 AC_SUBST(OGG_PACKAGE)
 
+dnl Build examples?
+AC_ARG_ENABLE([examples],
+	AS_HELP_STRING([--disable-examples], [Don't build and install examples]))
+AM_CONDITIONAL([EXAMPLES], [test "x$enable_examples" != "xno"])
+
 dnl check for i18n(internationalization); these are from libiconv/gettext
 AM_ICONV
 AM_LANGINFO_CODESET
@@ -370,11 +411,11 @@ AC_DEFINE(FLAC__HAS_DOCBOOK_TO_MAN)
 AH_TEMPLATE(FLAC__HAS_DOCBOOK_TO_MAN, [define if you have docbook-to-man or docbook2man])
 fi
 
-AC_CHECK_LIB(rt, clock_gettime, have_clock_gettime=yes)
-if test x$have_clock_gettime = xyes; then
+AC_CHECK_LIB(rt, clock_gettime,
+        LIB_CLOCK_GETTIME=-lrt
         AC_DEFINE(HAVE_CLOCK_GETTIME)
-        AH_TEMPLATE(HAVE_CLOCK_GETTIME, [define if you have clock_gettime])
-fi
+        AH_TEMPLATE(HAVE_CLOCK_GETTIME, [define if you have clock_gettime]))
+AC_SUBST(LIB_CLOCK_GETTIME)
 
 # only matters for x86
 AC_CHECK_PROGS(NASM, nasm)
@@ -384,14 +425,11 @@ AC_DEFINE(FLAC__HAS_NASM)
 AH_TEMPLATE(FLAC__HAS_NASM, [define if you are compiling for x86 and have the NASM assembler])
 fi
 
-if test "x$debug" = xtrue; then
-	CPPFLAGS="-DDEBUG $CPPFLAGS"
-	CFLAGS="-g $CFLAGS"
-else
-	CPPFLAGS="-DNDEBUG $CPPFLAGS"
-	CFLAGS=$(echo "$CFLAGS" | sed 's/-O2//')
-	CFLAGS="-O3 -funroll-loops $CFLAGS"
-fi
+dnl If debugging is disabled AND no CFLAGS/CXXFLAGS/CPPFLAGS/LDFLAGS
+dnl are provided, we can set defaults to our liking
+AS_IF([test "x${ax_enable_debug}" = "xno" && test "x${enable_flags_setting}" = "xyes"], [
+	CFLAGS="-O3 -funroll-loops"
+])
 
 XIPH_GCC_VERSION
 
@@ -400,7 +438,11 @@ if test x$ac_cv_c_compiler_gnu = xyes ; then
 	CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wcast-align -Wshadow -Wwrite-strings -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Wsign-promo -Wundef " # -Wcast-qual -Wbad-function-cast -Wwrite-strings -Woverloaded-virtual -Wmissing-declarations
 
 	XIPH_ADD_CFLAGS([-Wdeclaration-after-statement])
-	XIPH_ADD_CFLAGS([-D_FORTIFY_SOURCE=2])
+
+	dnl some distributions (such as Gentoo) have _FORTIFY_SOURCE always
+	dnl enabled. We test for this situation in order to prevent polluting
+	dnl the console with messages of macro redefinitions.
+	AX_ADD_FORTIFY_SOURCE
 
 	AC_LANG_PUSH([C++])
 	XIPH_ADD_CXXFLAGS([-Weffc++])
@@ -450,11 +492,6 @@ if test x$enable_stack_smash_protection = "xyes" ; then
 	XIPH_GCC_STACK_PROTECTOR
 	XIPH_GXX_STACK_PROTECTOR
 	fi
-
-if test "x$sys_linux" = xtrue ; then
-       LIB_CLOCK_GETTIME=-lrt
-       fi
-AC_SUBST(LIB_CLOCK_GETTIME)
 
 AC_CONFIG_FILES([ \
 	Makefile \

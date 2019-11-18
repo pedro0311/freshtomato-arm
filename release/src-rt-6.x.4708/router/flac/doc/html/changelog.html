@@ -42,7 +42,120 @@
 	</div>
 	<div class="box_header"></div>
 	<div class="box_body">
-		This is an informal changelog, a summary of changes in each release.  (See also <a href="documentation_bugs.html">known bugs</a>.)  Particulary important for developers is the precise description of changes to the library interfaces.  See also the <a href="api/group__porting.html">porting guide</a> for specific instructions on porting to newer versions of FLAC.<br />
+		This is an informal changelog, a summary of changes in each release.  (See also <a href="documentation_bugs.html">known bugs</a>.)  Particularly important for developers is the precise description of changes to the library interfaces.  See also the <a href="api/group__porting.html">porting guide</a> for specific instructions on porting to newer versions of FLAC.<br />
+
+
+
+
+
+
+		<a name="flac_1.3.3"><b>FLAC 1.3.3</b> (14-Jul-2019)</a>
+
+		<br />
+
+		<ul>
+			<li>
+				General:
+				<ul>
+					<li>Fix CPU detection (Janne Hyvärinen).</li>
+					<li>Switch from unsigned types to uint32_t (erikd).</li>
+					<li>CppCheck fixes (erikd).</li>
+					<li>Improve SIMD decoding of 24 bit files (lvqcl).</li>
+					<li>POWER* amnd POWER9 improvements (Anton Blanchard).</li>
+					<li>More tests.</li>
+				</ul>
+			</li>
+			<li>
+				FLAC format:
+				<ul>
+					<li>(none)</li>
+				</ul>
+			</li>
+			<li>
+				Ogg FLAC format:
+				<ul>
+					<li>(none)</li>
+				</ul>
+			</li>
+			<li>
+				flac:
+				<ul>
+					<li>When converting to WAV, use WAVEFORMATEXTENSIBLE when bits per second is not 8 or 16 (erikd).</li>
+					<li>Fix --output-prefix with input-files in sub-directories (orbea).</li>
+				</ul>
+			</li>
+			<li>
+				metaflac:
+				<ul>
+					<li>(none)</li>
+				</ul>
+			</li>
+			<li>
+				plugins:
+				<ul>
+					<li>(none)</li>
+				</ul>
+			</li>
+			<li>
+				build system:
+				<ul>
+					<li>Cmake support (Vitaliy Kirsanov, evpobr).</li>
+					<li>Visual Studio updates (Janne Hyvärinen).</li>
+					<li>Fix for MSVC when UNICODE is enabled (lvqcl).</li>
+					<li>Fix for OpenBSD/i386 (Christian Weisgerber).</li>
+				</ul>
+			</li>
+
+			<li>
+				documentation:
+				<ul>
+					<li>(none)</li>
+				</ul>
+			</li>
+			<li>
+				libraries:
+				<ul>
+					<li>(none).</li>
+				</ul>
+			</li>
+			<li>
+				Interface changes:
+				<ul>
+					<li>
+						libFLAC:
+						<ul>
+							<li>(none)</li>
+						</ul>
+					</li>
+					<li>
+						libFLAC++:
+						<ul>
+							<li>(none)</li>
+						</ul>
+					</li>
+				</ul>
+			</li>
+		</ul>
+
+		<br />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		<a name="flac_1_3_2"><b>FLAC 1.3.2</b> (01-Jan-2017)</a>
 
@@ -331,7 +444,7 @@
 					<li>
 						libFLAC++:
 						<ul>
-							<li>Add a number of convienience methods.</li>
+							<li>Add a number of convenience methods.</li>
 						</ul>
 					</li>
 				</ul>
@@ -718,8 +831,8 @@
 			<li>
 				libraries:
 				<ul>
-					<li>Merged libOggFLAC into libFLAC; both formats are now supporte through the same API.</li>
-					<li>Merged libOggFLAC++ into libFLAC++; both formats are now supporte through the same API.</li>
+					<li>Merged libOggFLAC into libFLAC; both formats are now supported through the same API.</li>
+					<li>Merged libOggFLAC++ into libFLAC++; both formats are now supported through the same API.</li>
 					<li>libFLAC and libFLAC++: Simplified encoder setup with new <span class="argument">FLAC__stream_encoder_set_compression_level()</span> function.</li>
 					<li>libFLAC: Improved compression with no impact on FLAC format or decoding time by adding a windowing stage before LPC analysis.</li>
 					<li>libFLAC: Fixed a bug where missing STREAMINFO fields (min/max framesize, total samples, MD5 sum) and seek point offsets were not getting rewritten back to Ogg FLAC file (<a href="http://sourceforge.net/p/flac/bugs/197/">SF #1338969</a>).</li>
@@ -734,8 +847,8 @@
 					<li>
 						all libraries;
 						<ul>
-							<li>Merged libOggFLAC into libFLAC; both formats are now supporte through the same API.</li>
-							<li>Merged libOggFLAC++ into libFLAC++; both formats are now supporte through the same API.</li>
+							<li>Merged libOggFLAC into libFLAC; both formats are now supported through the same API.</li>
+							<li>Merged libOggFLAC++ into libFLAC++; both formats are now supported through the same API.</li>
 							<li>Merged seekable stream decoder and file decoder into the stream decoder.</li>
 							<li>Merged seekable stream encoder and file encoder into the stream encoder.</li>
 							<li>Added #defines for the API version number to make porting easier; see <tt>include/lib*FLAC*/export.h</tt>.</li>
@@ -1461,9 +1574,6 @@
 				Copyright (c) 2004-2009  Josh Coalson
 				<br/>
 				Copyright (c) 2011-2016  Xiph.Org Foundation
-			</td>
-			<td width="1%" align="right">
-				<a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" border="0" hspace="0" /></a>
 			</td>
 		</tr>
 	</table>
