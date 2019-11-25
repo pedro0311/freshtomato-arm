@@ -296,7 +296,7 @@ var m = [
 	{ title: 'Allow Wireless Access', name: 'f_http_wireless', type: 'checkbox', value:  nvram.web_wl_filter == 0 },
 	null,
 	{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
-		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: ' <small>Please be sure of your decision before change this settings!<\/small>' },
+		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: '<br \/><small>Please be sure of your decision before change this settings!<\/small>' },
 	{ title: 'Color Scheme', name: 'web_css', type: 'select',
 		options: [['default','Default'],['openlinksys','USB Blue - OpenLinksys'],['usbred','USB Red - OpenLinksys'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
 		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], value: nvram.web_css },
