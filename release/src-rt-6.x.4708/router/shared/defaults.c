@@ -817,7 +817,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "web_wl_filter",		"0"				, 0 },	// Allow/Deny Wireless Access Web
 	{ "web_css",			"default"			, 0 },
 	{ "web_dir",			"default"			, 0 },	// jffs, opt, tmp or default (/www)
-	{ "ttb_css",			"example"			, 0 },	//Tomato Themes Base
+	{ "ttb_css",			"example"			, 0 },	// Tomato Themes Base - default theme name
+	{ "ttb_loc",			""				, 0 },	// Tomato Themes Base - default files location
+	{ "ttb_url",			"http://www.tomatothemebase.eu/wp-content/uploads", 0 },	// Tomato Themes Base - default URL
 	{ "web_svg",			"1"				, 0 },
 	{ "telnetd_eas",		"1"				, 0 },
 	{ "telnetd_port",		"23"				, 0 },

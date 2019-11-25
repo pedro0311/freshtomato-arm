@@ -29,7 +29,7 @@ textarea {
 
 <script type="text/javascript">
 
-//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_dir,ttb_css,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username,http_root"); %>
+//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username,http_root"); %>
 
 changed = 0;
 tdup = parseInt('<% psup("telnetd"); %>');
@@ -68,12 +68,18 @@ function verifyFields(focused, quiet) {
 	var o = (E('_web_css').value == 'online');
 	var p = nvram.ttb_css;
 	elem.display(PR('_ttb_css'), o);
+	var q = nvram.ttb_loc;
+	elem.display(PR('_ttb_loc'), o);
+	var r = nvram.ttb_url;
+	elem.display(PR('_ttb_url'), o);
 
 	try {
 		a = E('_web_css').value;
 		if (a == 'online') {
 			E('guicss').href = 'ext/' + p + '.css';
 			nvram.web_css = a;
+			nvram.ttb_loc = q;
+			nvram.ttb_url = r;
 		} else {
 			if (a != nvram.web_css) {
 				E('guicss').href = a + '.css';
@@ -290,11 +296,13 @@ var m = [
 	{ title: 'Allow Wireless Access', name: 'f_http_wireless', type: 'checkbox', value:  nvram.web_wl_filter == 0 },
 	null,
 	{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
-		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: ' <small>Please be sure of your decision before change this settings!<\/small>' },
+		options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: '<br \/><small>Please be sure of your decision before change this settings!<\/small>' },
 	{ title: 'Color Scheme', name: 'web_css', type: 'select',
 		options: [['default','Default'],['openlinksys','USB Blue - OpenLinksys'],['usbred','USB Red - OpenLinksys'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
-		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'On-line from TTB']], value: nvram.web_css },
-		{ title: 'TTB ID#', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 30, value: nvram.ttb_css, suffix: ' Theme name from <a href="http://www.tomatothemebase.eu"  class="new_window"><u><i>TTB themes gallery<\/i><\/u><\/a>' },
+		['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], value: nvram.web_css },
+		{ title: 'TTB theme name', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 35, value: nvram.ttb_css, suffix: ' <small>TTB theme <a href="http://tomatothemebase.eu/wp-content/uploads/themes.txt" class="new_window"><u><i>list<\/i><\/u><\/a> and full <a href="http://www.tomatothemebase.eu" class="new_window"><u><i>gallery<\/i><\/u><\/a><\/small>' },
+		{ title: 'TTB save folder', indent: 2, name: 'ttb_loc', type: 'text', maxlen: 35, size: 35, value: nvram.ttb_loc, suffix: '/TomatoThemeBase <small>(optional)<\/small>' },
+		{ title: 'TTB URL', indent: 2, name: 'ttb_url', type: 'text', maxlen: 128, size: 70, value: nvram.ttb_url },
 	null,
 	{ title: 'Open Menus' }
 ];
