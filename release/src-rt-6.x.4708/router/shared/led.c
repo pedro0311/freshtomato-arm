@@ -139,6 +139,7 @@ int do_led(int which, int mode)
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac66u_b1[]   = { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6};
 	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255};
@@ -182,7 +183,7 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC68U */
+		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC68U RT-AC1900P */
 		switch (model) {
 #ifdef CONFIG_BCMWL6A
 			case MODEL_AC15:
@@ -191,6 +192,7 @@ int do_led(int which, int mode)
 			case MODEL_RTAC56U:
 			case MODEL_RTAC66U_B1:
 			case MODEL_RTAC68U:
+           		case MODEL_RTAC1900P:
 #endif /* CONFIG_BCMWL6A */
 #if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCM7)
 				do_led_nongpio(model, which, LED_OFF);
@@ -213,6 +215,16 @@ int do_led(int which, int mode)
 #ifdef CONFIG_BCMWL6A
 	case MODEL_RTAC68U:
 		b = ac68u[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		break;
+	case MODEL_RTAC1900P:
+		b = ac1900p[which];
 		if ((which == LED_WLAN) ||
 		    (which == LED_5G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
@@ -539,6 +551,7 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC68U:
+        	case MODEL_RTAC1900P:
 			set_gpio(3, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
 			break;
@@ -596,7 +609,7 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC68U */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC68U RT-AC1900P */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch (model) {
@@ -630,6 +643,18 @@ void do_led_nongpio(int model, int which, int mode) {
 		}
 		break;
 	case MODEL_RTAC68U:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	case MODEL_RTAC1900P:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
 			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
