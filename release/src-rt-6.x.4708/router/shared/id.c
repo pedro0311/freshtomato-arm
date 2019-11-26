@@ -37,7 +37,7 @@ RT-AC68U			BCM4708               0x0646       <MAC>     0x1100    0x00001000
 RT-AC68U C1			BCM4709C0             0x0646       <MAC>     0x1103    0x00001000
 RT-AC68P			BCM4709               0x0665       <MAC>     0x1103    0x00001000
 RT-AC66U_B1			BCM4708C0   	      0x0646       00        0x1103    0x00000110
-RT-AC1900P          BCM4708C0
+RT-AC1900P			BCM4708C0
 R7000				BCM4709               0x0665       32        0x1301    0x1000
 R6250				BCM4708               0x0646       679       0x1110 // same as R6300v2 well we use the same MODEL definition
 R6300v2				BCM4708               0x0646       679       0x1110 // CH/Charter version has the same signature
