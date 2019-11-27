@@ -36,14 +36,14 @@ function toggle(service, isup) {
 		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
 	}
 	E('_' + service + '_button').disabled = true;
-	form.submitHidden('/service.cgi', {
+	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-pptp.asp',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }
 
 function verifyFields(focused, quiet) {
-    var ret = 1;
+	var ok = 1;
 
 	elem.display(PR('_pptp_client_srvsub'), PR('_pptp_client_srvsubmsk'), !E('_f_pptp_client_dfltroute').checked);
 
@@ -58,14 +58,14 @@ function verifyFields(focused, quiet) {
 	}
 	E('_pptp_client_mru').disabled = f;
 
-	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ret = 0;
-	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ret = 0;
-	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) { ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet); ret = 0; }
-	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) { ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet); ret = 0; }
-	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) { ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet); ret = 0; }
+	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ok = 0;
+	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ok = 0;
+	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) { ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet); ok = 0; }
+	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) { ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet); ok = 0; }
+	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) { ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet); ok = 0; }
 
-	changed |= ret;
-	return ret;
+	changed |= ok;
+	return ok;
 }
 
 function save() {
@@ -82,6 +82,10 @@ function save() {
 
 	changed = 0;
 }
+
+function init() {
+	changed = 0;
+}
 </script>
 
 <style type="text/css">
@@ -92,7 +96,7 @@ textarea {
 </style>
 
 </head>
-<body>
+<body onload="init()">
 <form id="t_fom" method="post" action="/tomato.cgi">
 <table id="container" cellspacing="0">
 <tr><td colspan="2" id="header">
@@ -154,6 +158,6 @@ createFieldTable('', [
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, true);</script>
 </body>
 </html>
