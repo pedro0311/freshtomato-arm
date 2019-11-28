@@ -37,6 +37,8 @@ cp -L openssl.cnf $OPENSSLCNF
 		echo "$I.organizationName_value=FreshTomato" >> $OPENSSLCNF
 		echo "$I.organizationalUnitName=OU" >> $OPENSSLCNF
 		echo "$I.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+		echo "$I.emailAddress=E" >> $OPENSSLCNF
+		echo "$I.emailAddress_value=root@localhost" >> $OPENSSLCNF
 		I=$(($I + 1))
 	done
 } || {
@@ -53,6 +55,8 @@ cp -L openssl.cnf $OPENSSLCNF
 	echo "0.organizationName_value=FreshTomato" >> $OPENSSLCNF
 	echo "0.organizationalUnitName=OU" >> $OPENSSLCNF
 	echo "0.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+	echo "0.emailAddress=E" >> $OPENSSLCNF
+	echo "0.emailAddress_value=root@localhost" >> $OPENSSLCNF
 }
 
 # Required extension
