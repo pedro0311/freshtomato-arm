@@ -517,9 +517,9 @@ endif
 	install $(LIBDIR)/libdl.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libm.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libnsl.so.0 $(TARGETDIR)/lib/
-ifeq ($(TCONFIG_SSH),y)
+#ifeq ($(TCONFIG_SSH),y)
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
-endif
+#endif
 ifeq ($(TCONFIG_BBT),y)
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
 endif
