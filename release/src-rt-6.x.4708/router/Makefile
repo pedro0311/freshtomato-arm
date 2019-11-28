@@ -850,8 +850,8 @@ openssl/stamp-h1:
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
 	RANLIB=$(RANLIB) \
-	./Configure $(HOSTCONFIG) --openssldir=/etc \
-	-ffunction-sections -fdata-sections -Wl,--gc-sections \
+	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
+	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3 no-err
 	@$(MAKE) -C openssl depend clean
 	@touch openssl/stamp-h1
@@ -884,14 +884,15 @@ openssl-1.1.x/stamp-h1:
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
-	-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0
+	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0 \
+	no-aria no-sm2 no-sm3 no-sm4
 	-@$(MAKE) -C openssl-1.1.x depend clean
 	@touch $@
 
 openssl-1.1.x: openssl-1.1.x/stamp-h1
 	$(SEP)
-	$(MAKE) -C openssl-1.1.x
+	$(MAKE) -C openssl-1.1.x $(PARALLEL_BUILD)
 
 openssl-1.1.x-clean:
 	[ ! -f openssl-1.1.x/stamp-h1 ] || $(MAKE) -C openssl-1.1.x clean
