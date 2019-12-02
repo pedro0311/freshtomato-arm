@@ -32,12 +32,12 @@ pptpup = parseInt('<% psup("pptpclient"); %>');
 var changed = 0;
 
 function toggle(service, isup) {
-	if (changed) {
-		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
-	}
+	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
+
 	E('_' + service + '_button').disabled = true;
 	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-pptp.asp',
+		_sleep: '3',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }
