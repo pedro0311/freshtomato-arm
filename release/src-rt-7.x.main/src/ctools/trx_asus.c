@@ -107,12 +107,8 @@ void load_image(const char *fname)
 
 void finalize_trx(void)
 {
-	uint32_t len;
-
 	if (trx_final) return;
 	trx_final = 1;
-
-	len = trx->length;
 
 	trx->magic = TRX_MAGIC;
 	trx->flag_version = trx_version << 16;
@@ -190,7 +186,6 @@ int create_asus(const char *optarg)
 int main(int argc, char **argv)
 {
 	int o;
-	unsigned l;
 
 	printf("\n");
 	
@@ -215,7 +210,6 @@ int main(int argc, char **argv)
 	}
 
 	finalize_trx();
-	l = trx->length - trx_header_size();
 	printf("\nTRX Image:\n");
 	printf(" Total Size .... : %u (%.1f KB) (%.1f MB)\n", trx->length, trx->length / 1024.0, trx->length / 1024.0 / 1024.0);
 	printf(" CRC-32 ........ : %8X\n", trx->crc32);
