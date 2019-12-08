@@ -340,7 +340,12 @@ void stop_pptpd(void)
 
 void write_pptpd_dnsmasq_config(FILE* f) {
 	if (nvram_match("pptpd_enable", "1")) {
-		fprintf(f, "interface=ppp1*\n");		/* Listen on the specified interfaces (wildcard *); we start with 10 and up ...  see minunit 10 */
-		fprintf(f, "no-dhcp-interface=ppp1*\n");	/* Do not provide DHCP, but do provide DNS service */
+		fprintf(f,
+			"interface=ppp1*\n"			/* Listen on the ppp1* interfaces (wildcard *); we start with 10 and up ...  see minunit 10 */
+			"no-dhcp-interface=ppp1*\n"		/* Do not provide DHCP, but do provide DNS service */
+			"interface=vlan*\n"			/* Listen on the vlan* interfaces (wildcard *) */
+			"no-dhcp-interface=vlan*\n"		/* Do not provide DHCP, but do provide DNS service */
+			"interface=eth*\n"			/* Listen on the eth* interfaces (wildcard *) */
+			"no-dhcp-interface=eth*\n");		/* Do not provide DHCP, but do provide DNS service */
 	}
 }
