@@ -68,7 +68,7 @@ obj-y += eapd$(BCMEX)/linux
 obj-y += libbcmcrypto
 obj-y += wlconf$(BCMEX)
 obj-y += nas$(BCMEX)
-obj-y += prebuilt
+#obj-y += prebuilt
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)
