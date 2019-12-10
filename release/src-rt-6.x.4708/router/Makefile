@@ -1280,7 +1280,7 @@ accel-pptp: pppd accel-pptp/Makefile
 	@$(MAKE) -C accel-pptp
 
 accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
-	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS) $(if $(TCONFIG_VPNC), -DTCONFIG_VPNC,)" \
+	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
 
 accel-pptp-clean:
