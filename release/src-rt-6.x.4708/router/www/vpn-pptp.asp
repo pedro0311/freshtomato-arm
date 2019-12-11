@@ -25,7 +25,7 @@
 <script type="text/javascript">
 
 
-//	<% nvram("pptp_client_enable,pptp_client_peerdns,pptp_client_mtuenable,pptp_client_mtu,pptp_client_mruenable,pptp_client_mru,pptp_client_nat,pptp_client_srvip,pptp_client_srvsub,pptp_client_srvsubmsk,pptp_client_username,pptp_client_passwd,pptp_client_mppeopt,pptp_client_crypt,pptp_client_custom,pptp_client_dfltroute,pptp_client_stateless"); %>
+//	<% nvram("pptp_client_eas,pptp_client_usewan,pptp_client_peerdns,pptp_client_mtuenable,pptp_client_mtu,pptp_client_mruenable,pptp_client_mru,pptp_client_nat,pptp_client_srvip,pptp_client_srvsub,pptp_client_srvsubmsk,pptp_client_username,pptp_client_passwd,pptp_client_mppeopt,pptp_client_crypt,pptp_client_custom,pptp_client_dfltroute,pptp_client_stateless"); %>
 
 pptpup = parseInt('<% psup("pptpclient"); %>');
 
@@ -73,7 +73,7 @@ function save() {
 
 	var fom = E('t_fom');
 
-	E('pptp_client_enable').value = E('_f_pptp_client_enable').checked ? 1 : 0;
+	E('pptp_client_eas').value = E('_f_pptp_client_eas').checked ? 1 : 0;
 	E('pptp_client_nat').value = E('_f_pptp_client_nat').checked ? 1 : 0;
 	E('pptp_client_dfltroute').value = E('_f_pptp_client_dfltroute').checked ? 1 : 0;
 	E('pptp_client_stateless').value = E('_f_pptp_client_stateless').checked ? 1 : 0;
@@ -113,8 +113,7 @@ textarea {
 <input type="hidden" name="_service" value="">
 <input type="hidden" name="_nextwait" value="5">
 
-<input type="hidden" id="pptp_client_enable" name="pptp_client_enable">
-<input type="hidden" id="pptp_client_peerdns" name="pptp_client_peerdns">
+<input type="hidden" id="pptp_client_eas" name="pptp_client_eas">
 <input type="hidden" id="pptp_client_nat" name="pptp_client_nat">
 <input type="hidden" id="pptp_client_dfltroute" name="pptp_client_dfltroute">
 <input type="hidden" id="pptp_client_stateless" name="pptp_client_stateless">
@@ -123,7 +122,13 @@ textarea {
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Start with WAN', name: 'f_pptp_client_enable', type: 'checkbox', value: nvram.pptp_client_enable != 0 },
+	{ title: 'Start with WAN', name: 'f_pptp_client_eas', type: 'checkbox', value: nvram.pptp_client_eas != 0 },
+	{ title: 'Bind to', name: 'pptp_client_usewan', type: 'select',
+		options: [['wan','WAN'],['wan2','WAN2'],
+/* MULTIWAN-BEGIN */
+			['wan3','WAN3'],['wan4','WAN4'],
+/* MULTIWAN-END */
+			['none','none']], value: nvram.pptp_client_usewan },
 	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
 	{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
 	{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },
@@ -146,6 +151,15 @@ createFieldTable('', [
 ]);
 	W('<input type="button" value="' + (pptpup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'pptpclient\', pptpup)" id="_pptpclient_button">');
 </script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Notes</div>
+<div class="section">
+	<ul>
+		<li><b>Do not change and save</b> the settings when client <b>is running</b> - you may end up with a downed firewall or broken routing table!</li>
+	</ul>
 </div>
 
 <!-- / / / -->

@@ -1197,7 +1197,7 @@ struct nvram_tuple router_defaults[] = {
 #endif
 
 #ifdef TCONFIG_PPTPD
-	{ "pptp_client_enable",		"0"				, 0 },
+	{ "pptp_client_eas",		"0"				, 0 },
 	{ "pptp_client_usewan",		"wan"				, 0 },
 	{ "pptp_client_peerdns",	"0"				, 0 },
 	{ "pptp_client_mtuenable",	"0"				, 0 },
