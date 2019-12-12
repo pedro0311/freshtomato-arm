@@ -25,25 +25,25 @@
 <script type="text/javascript">
 
 
-//	<% nvram("pptp_client_enable,pptp_client_peerdns,pptp_client_mtuenable,pptp_client_mtu,pptp_client_mruenable,pptp_client_mru,pptp_client_nat,pptp_client_srvip,pptp_client_srvsub,pptp_client_srvsubmsk,pptp_client_username,pptp_client_passwd,pptp_client_mppeopt,pptp_client_crypt,pptp_client_custom,pptp_client_dfltroute,pptp_client_stateless"); %>
+//	<% nvram("pptp_client_eas,pptp_client_usewan,pptp_client_peerdns,pptp_client_mtuenable,pptp_client_mtu,pptp_client_mruenable,pptp_client_mru,pptp_client_nat,pptp_client_srvip,pptp_client_srvsub,pptp_client_srvsubmsk,pptp_client_username,pptp_client_passwd,pptp_client_mppeopt,pptp_client_crypt,pptp_client_custom,pptp_client_dfltroute,pptp_client_stateless"); %>
 
 pptpup = parseInt('<% psup("pptpclient"); %>');
 
 var changed = 0;
 
 function toggle(service, isup) {
-	if (changed) {
-		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
-	}
+	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
+
 	E('_' + service + '_button').disabled = true;
-	form.submitHidden('/service.cgi', {
+	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-pptp.asp',
+		_sleep: '3',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }
 
 function verifyFields(focused, quiet) {
-    var ret = 1;
+	var ok = 1;
 
 	elem.display(PR('_pptp_client_srvsub'), PR('_pptp_client_srvsubmsk'), !E('_f_pptp_client_dfltroute').checked);
 
@@ -58,14 +58,14 @@ function verifyFields(focused, quiet) {
 	}
 	E('_pptp_client_mru').disabled = f;
 
-	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ret = 0;
-	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ret = 0;
-	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) { ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet); ret = 0; }
-	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) { ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet); ret = 0; }
-	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) { ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet); ret = 0; }
+	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ok = 0;
+	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ok = 0;
+	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) { ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet); ok = 0; }
+	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) { ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet); ok = 0; }
+	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) { ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet); ok = 0; }
 
-	changed |= ret;
-	return ret;
+	changed |= ok;
+	return ok;
 }
 
 function save() {
@@ -73,13 +73,17 @@ function save() {
 
 	var fom = E('t_fom');
 
-	E('pptp_client_enable').value = E('_f_pptp_client_enable').checked ? 1 : 0;
+	E('pptp_client_eas').value = E('_f_pptp_client_eas').checked ? 1 : 0;
 	E('pptp_client_nat').value = E('_f_pptp_client_nat').checked ? 1 : 0;
 	E('pptp_client_dfltroute').value = E('_f_pptp_client_dfltroute').checked ? 1 : 0;
 	E('pptp_client_stateless').value = E('_f_pptp_client_stateless').checked ? 1 : 0;
 
 	form.submit(fom, 1);
 
+	changed = 0;
+}
+
+function init() {
 	changed = 0;
 }
 </script>
@@ -92,7 +96,7 @@ textarea {
 </style>
 
 </head>
-<body>
+<body onload="init()">
 <form id="t_fom" method="post" action="/tomato.cgi">
 <table id="container" cellspacing="0">
 <tr><td colspan="2" id="header">
@@ -109,8 +113,7 @@ textarea {
 <input type="hidden" name="_service" value="">
 <input type="hidden" name="_nextwait" value="5">
 
-<input type="hidden" id="pptp_client_enable" name="pptp_client_enable">
-<input type="hidden" id="pptp_client_peerdns" name="pptp_client_peerdns">
+<input type="hidden" id="pptp_client_eas" name="pptp_client_eas">
 <input type="hidden" id="pptp_client_nat" name="pptp_client_nat">
 <input type="hidden" id="pptp_client_dfltroute" name="pptp_client_dfltroute">
 <input type="hidden" id="pptp_client_stateless" name="pptp_client_stateless">
@@ -119,7 +122,13 @@ textarea {
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Start with WAN', name: 'f_pptp_client_enable', type: 'checkbox', value: nvram.pptp_client_enable != 0 },
+	{ title: 'Start with WAN', name: 'f_pptp_client_eas', type: 'checkbox', value: nvram.pptp_client_eas != 0 },
+	{ title: 'Bind to', name: 'pptp_client_usewan', type: 'select',
+		options: [['wan','WAN'],['wan2','WAN2'],
+/* MULTIWAN-BEGIN */
+			['wan3','WAN3'],['wan4','WAN4'],
+/* MULTIWAN-END */
+			['none','none']], value: nvram.pptp_client_usewan },
 	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
 	{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
 	{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },
@@ -146,6 +155,15 @@ createFieldTable('', [
 
 <!-- / / / -->
 
+<div class="section-title">Notes</div>
+<div class="section">
+	<ul>
+		<li><b>Do not change and save</b> the settings when client <b>is running</b> - you may end up with a downed firewall or broken routing table!</li>
+	</ul>
+</div>
+
+<!-- / / / -->
+
 </td></tr>
 <tr><td id="footer" colspan="2">
 	<span id="footer-msg"></span>
@@ -154,6 +172,6 @@ createFieldTable('', [
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, true);</script>
 </body>
 </html>

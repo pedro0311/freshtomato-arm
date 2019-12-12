@@ -260,8 +260,8 @@ function InNewWindow () {
 	<div id="survey-controls">
 		<img src="spin.gif" alt="" id="refresh-spinner">
 		<script type="text/javascript">
-		genStdTimeList('expire-time', 'Auto Expire', 0);
-		genStdTimeList('refresh-time', 'Auto Refresh', 0);
+		genStdTimeList('expire-time', 'Expire After', 0);
+		genStdTimeList('refresh-time', 'Refresh Every', 0);
 		</script>
 		<input type="button" value="Refresh" onclick="ref.toggle()" id="refresh-button">
 	</div>

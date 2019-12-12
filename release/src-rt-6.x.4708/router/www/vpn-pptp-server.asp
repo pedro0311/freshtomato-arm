@@ -14,7 +14,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] VPN: PPTP Server</title>
+<title>[<% ident(); %>] PPTP: Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script type="text/javascript" src="tomato.js"></script>

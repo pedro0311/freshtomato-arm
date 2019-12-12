@@ -101,7 +101,6 @@ function earlyInit() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-scripts.asp">
-<p>Note: For <b>MultiWAN Up</b>, the active WAN number is passed as $1</p>
 
 <script type="text/javascript">
 tabCreate.apply(this, tabs);
@@ -114,6 +113,20 @@ for (i = 0; i < tabs.length; ++i) {
 }
 W('<br /><input type="checkbox" id="as-wordwrap" onclick="wordWrap()" onchange="wordWrap()" ' + (wrap ? 'checked' : '') + '> Word Wrap');
 </script>
+
+<!-- / / / -->
+
+<br />
+<br />
+<br />
+<div class="section-title">Notes</div>
+<div class="section">
+
+<ul>
+	<li>For <b>MultiWAN Up</b>, the active WAN number is passed as <b>$1</b>.</li>
+</ul>
+
+</div>
 
 <!-- / / / -->
 

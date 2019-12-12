@@ -574,6 +574,10 @@ define RouterOptions
 		sed -i "/TCONFIG_TINC/d" $(1); \
 		echo "TCONFIG_TINC=y" >>$(1); \
 	fi; \
+	if [ "$(OPENSSL11)" = "y" ]; then \
+		sed -i "/TCONFIG_OPENSSL11/d" $(1); \
+		echo "TCONFIG_OPENSSL11=y" >>$(1); \
+	fi; \
 	if [ "$(FANCTRL)" = "y" ]; then \
 		sed -i "/TCONFIG_FANCTRL/d" $(1); \
 		echo "TCONFIG_FANCTRL=y" >>$(1); \

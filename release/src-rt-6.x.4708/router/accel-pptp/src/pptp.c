@@ -81,11 +81,11 @@ int call_ID;
 
 //static struct in_addr get_ip_address(char *name);
 static int open_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int window);
-static void launch_callmgr(int call_is,struct in_addr inetaddr, char *phonenr,int window);
+static void launch_callmgr(int call_id, struct in_addr inetaddr, char *phonenr, int window);
 static int get_call_id(int sock, pid_t gre, pid_t pppd, u_int16_t *peer_call_id);
 
 static int route_add(const struct in_addr inetaddr, struct rtentry *rt);
-static int route_del(struct rtentry *rt);
+//static int route_del(struct rtentry *rt);
 
 //static int pptp_devname_hook(char *cmd, char **argv, int doit);
 static option_t Options[] =
@@ -341,7 +341,7 @@ static int get_call_id(int sock, pid_t gre, pid_t pppd,
     /* don't bother with network byte order, because pid's are meaningless
      * outside the local host.
      */
-    int rc;
+    ssize_t rc;
     rc = write(sock, &gre, sizeof(gre));
     if (rc != sizeof(gre))
         return -1;
@@ -396,7 +396,7 @@ route_ctrl(int ctrl, struct rtentry *rt)
 	close(s);
 	return errno;
 }
-
+/*
 static int
 route_del(struct rtentry *rt)
 {
@@ -407,7 +407,7 @@ route_del(struct rtentry *rt)
 
 	return 0;
 }
-
+*/
 static int
 route_add(const struct in_addr inetaddr, struct rtentry *rt)
 {

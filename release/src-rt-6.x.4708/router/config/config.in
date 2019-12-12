@@ -246,6 +246,10 @@ config TCONFIG_TINC
 	bool "TINC"
 	default n
 
+config TCONFIG_OPENSSL11
+	bool "OpenSSL 1.1.x"
+	default n
+
 config TCONFIG_FANCTRL
 	bool "FANCTRL"
  	default n

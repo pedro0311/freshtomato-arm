@@ -7,7 +7,7 @@ echo "ARP TABLE"; ip -4 neigh show; echo
 echo "IPv6 NEIGHBOR TABLE"; ip -6 neigh show; echo
 echo "IP TABLES"; echo ":filter"; iptables -nvL --line-numbers; echo; echo ":nat"; iptables -t nat -nvL --line-numbers; echo; echo ":mangle"; iptables -t mangle -nvL --line-numbers; echo
 [ -x /usr/sbin/ip6tables ] && ( echo "IP6 TABLES"; echo ":filter"; ip6tables -nvL --line-numbers; echo; echo ":mangle"; ip6tables -t mangle -nvL --line-numbers; echo )
-echo "NET STATS"; netstat -ln; echo
+echo "NET STATS"; netstat -lnp; echo
 echo "FILE SYSTEMS"; df; echo
 echo "MOUNTPOINTS"; mount; echo
 [ -f /proc/swaps ] && ( echo "SWAPS" && cat /proc/swaps && echo )
