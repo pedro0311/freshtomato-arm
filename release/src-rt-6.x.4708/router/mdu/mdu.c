@@ -498,7 +498,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 static int http_req(int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
 {
 #ifdef USE_LIBCURL
-	struct curl_slist *headers;
+	struct curl_slist *headers = NULL;
 	char url[HALF_BLOB];
 	FILE *curl_wbuf = NULL;
 	FILE *curl_rbuf = NULL;
@@ -519,8 +519,11 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	else
 		snprintf(url, HALF_BLOB, "http://%s%s", host, query);
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-	headers = curl_headers(header);
-	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+	if (header)
+	{
+		headers = curl_headers(header);
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+	}
 
 	if (auth) {
 		curl_easy_setopt(curl_handle, CURLOPT_USERNAME, get_option_required("user"));
