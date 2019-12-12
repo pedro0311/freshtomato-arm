@@ -744,7 +744,7 @@ void dns_to_resolv(void)
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	/* write / append */
 			if (append == 1)
 				/* Check for VPN DNS entries */
-				exclusive = (write_pptpvpn_resolv(f)
+				exclusive = (write_pptp_client_resolv(f)
 #ifdef TCONFIG_OPENVPN
 				             || write_ovpn_resolv(f)
 #endif

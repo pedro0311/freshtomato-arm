@@ -1,6 +1,6 @@
 --- miniupnpd/genconfig.sh
 +++ miniupnpd/genconfig.sh
-@@ -94,7 +94,7 @@ fi
+@@ -99,7 +99,7 @@ fi
  # Tomato USB special case
  if [ -f ../shared/tomato_version ]; then
  	OS_NAME=Tomato

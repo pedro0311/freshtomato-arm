@@ -1,13 +1,20 @@
 #!/bin/sh
 
 PID=$$
+PIDFILE="/var/run/gencert.pid"
 WAITTIMER=0
 
-while [ -f "/var/run/gencert.pid" -a $WAITTIMER -lt 14 ]; do
+while [ -f "$PIDFILE" -a $WAITTIMER -lt 14 ]; do
 	WAITTIMER=$((WAITTIMER+2))
 	sleep $WAITTIMER
 done
-touch /var/run/gencert.pid
+touch $PIDFILE
+
+[ -f /usr/sbin/openssl11 ] && {
+	OPENSSL=/usr/sbin/openssl11
+} || {
+	OPENSSL=/usr/sbin/openssl
+}
 
 LANCN=$(nvram get https_crt_cn)
 LANIP=$(nvram get lan_ipaddr)
@@ -18,10 +25,10 @@ OPENSSLCNF="/etc/openssl.config.$PID"
 
 [ "$(date +%s)" -gt 946684800 ] && {
 	nvram set https_crt_timeset=1
-	CERTTIME="-days 720"
+	DAYS=720
 } || {
 	nvram set https_crt_timeset=0
-	CERTTIME="-startdate 190101000000Z -enddate 281231235959Z"
+	DAYS=3653
 }
 
 cd /etc
@@ -37,6 +44,8 @@ cp -L openssl.cnf $OPENSSLCNF
 		echo "$I.organizationName_value=FreshTomato" >> $OPENSSLCNF
 		echo "$I.organizationalUnitName=OU" >> $OPENSSLCNF
 		echo "$I.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+		echo "$I.emailAddress=E" >> $OPENSSLCNF
+		echo "$I.emailAddress_value=root@localhost" >> $OPENSSLCNF
 		I=$(($I + 1))
 	done
 } || {
@@ -53,6 +62,8 @@ cp -L openssl.cnf $OPENSSLCNF
 	echo "0.organizationName_value=FreshTomato" >> $OPENSSLCNF
 	echo "0.organizationalUnitName=OU" >> $OPENSSLCNF
 	echo "0.organizationalUnitName_value=FreshTomato Team" >> $OPENSSLCNF
+	echo "0.emailAddress=E" >> $OPENSSLCNF
+	echo "0.emailAddress_value=root@localhost" >> $OPENSSLCNF
 }
 
 # Required extension
@@ -85,9 +96,9 @@ I=$(($I + 1))
 }
 
 # create the key
-openssl genrsa -out $KEYNAME.$PID 2048 -config $OPENSSLCNF
+$OPENSSL genpkey -out $KEYNAME.$PID -algorithm rsa -pkeyopt rsa_keygen_bits:2048
 # create certificate request and sign it
-openssl req $CERTTIME -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
+$OPENSSL req -days $DAYS -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
 
 # server.pem for WebDav SSL
 cat $KEYNAME.$PID $CERTNAME.$PID > server.pem
@@ -98,4 +109,4 @@ mv $CERTNAME.$PID $CERTNAME
 chmod 640 $KEYNAME
 chmod 640 $CERTNAME
 
-rm -f /tmp/privkey.pem.$PID $OPENSSLCNF /var/run/gencert.pid
+rm -f /tmp/privkey.pem.$PID $OPENSSLCNF $PIDFILE

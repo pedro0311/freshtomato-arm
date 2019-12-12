@@ -259,7 +259,7 @@ main(int argc, char **argv)
 	for (; *argv; ++argv) {
 		if (!strcmp(*argv, "get")) {
 			if (*++argv) {
-				if ((value = nvram_get(*argv)))
+				if ((value = nvram_get(*argv)) && (*value))
 					puts(value);
 			}
 		} else if (!strcmp(*argv, "set")) {
