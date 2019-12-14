@@ -652,14 +652,6 @@ define BusyboxOptions
 			echo "CONFIG_E2LABEL=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_VOLUMEID_EXFAT/d" $(1); \
 			echo "CONFIG_FEATURE_VOLUMEID_EXFAT=y" >>$(1); \
-			if [ "$(CONFIG_LINUX26)" = "y" ]; then \
-				sed -i "/CONFIG_LSUSB/d" $(1); \
-				echo "CONFIG_LSUSB=y" >>$(1); \
-				sed -i "/CONFIG_FEATURE_WGET_STATUSBAR/d" $(1); \
-				echo "CONFIG_FEATURE_WGET_STATUSBAR=y" >>$(1); \
-				sed -i "/CONFIG_FEATURE_VERBOSE_USAGE/d" $(1); \
-				echo "CONFIG_FEATURE_VERBOSE_USAGE=y" >>$(1); \
-			fi; \
 		fi; \
 	else \
 		sed -i "/CONFIG_FEATURE_MOUNT_LOOP/d" $(1); \
