@@ -1830,6 +1830,14 @@ int main(int argc, char *argv[])
 		// Tunnel Broker uses the same API as DynDNS
 		update_dua("heipv6tb", 1, "ipv4.tunnelbroker.net", "/nic/update", 1);
 	}
+	else if (strcmp(p, "dnshenet") == 0) {
+		// dns.he.net uses the same API as DynDNS
+		update_dua(NULL, 0, "dyn.dns.he.net", "/nic/update", 0);
+	}
+	else if (strcmp(p, "sdnshenet") == 0) {
+		// dns.he.net uses the same API as DynDNS
+		update_dua(NULL, 1, "dyn.dns.he.net", "/nic/update", 0);
+	}
 	else if (strcmp(p, "cloudflare") == 0) {
 		update_cloudflare();
 	}
