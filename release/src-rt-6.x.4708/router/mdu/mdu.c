@@ -29,8 +29,11 @@
 #include <shutils.h>
 #include <tomato_version.h>
 
+#ifdef USE_LIBCURL
+#include <curl/curl.h>
+#else
 #include "mssl.h"
-
+#endif
 
 
 #ifdef DEBUG
@@ -56,6 +59,12 @@
 #define M_SAME_IP			"The IP address is the same."
 #define M_SAME_RECORD			"Record already up-to-date."
 #define M_DOWN				"Server temporarily down or under maintenance."
+
+#ifdef USE_LIBCURL
+int curl_sslerr = 1;
+FILE *curl_dfile = NULL;
+CURL *curl_handle = NULL;
+#endif
 
 char *blob = NULL;
 int error_exitcode = 1;
@@ -218,6 +227,151 @@ static const char *get_dump_name(void)
 #endif
 }
 
+#ifdef USE_LIBCURL
+static int curl_dump(CURL *handle, curl_infotype type, char *data, size_t size,
+		void *userptr)
+{
+	const char *prefix;
+	FILE *f_out;
+	size_t i;
+	char c;
+	int is_info;
+
+	is_info = 0;
+	switch (type)
+	{
+		case CURLINFO_HEADER_OUT:
+			prefix = ">H ";
+			break;
+		case CURLINFO_DATA_OUT:
+			prefix = ">D ";
+			break;
+		case CURLINFO_HEADER_IN:
+			prefix = "<H ";
+			break;
+		case CURLINFO_DATA_IN:
+			prefix = "<D ";
+			break;
+		case CURLINFO_TEXT:
+			prefix = "=I ";
+			is_info = 1;
+			break;
+		default:
+			return 0;
+	}
+
+	// pretty up a bit
+	if (is_info)
+	{
+		if (data[size - 1] == '\n')
+			size -= 1;
+		if (data[size - 1] == ':')
+			size -= 1;
+	}
+	else if (data[size - 2] == '\r' && data[size-1] == '\n')
+		size -= 2;
+
+	f_out = (FILE *)userptr;
+	fputs(prefix, f_out);
+
+	c = 0;
+	for (i = 0; i < size; ++i)
+	{
+		c = data[i];
+		if (c == '\r' && !is_info)
+			fputc('\n', f_out);
+		else if (c == '\n')
+		{
+			if (is_info)
+				fputc('\n', f_out);
+			fputs(prefix, f_out);
+		}
+		else
+			fputc(c >= 0x20 && c < 0x80 ? c : '.', f_out);
+	}
+	fputc('\n', f_out);
+
+	return 0;
+}
+
+static void curl_setup()
+{
+	CURLsslset result;
+	const char *dump;
+
+	result = curl_global_sslset(CURLSSLBACKEND_OPENSSL, NULL, NULL);
+	if (result == CURLSSLSET_OK || result == CURLSSLSET_TOO_LATE)
+		curl_sslerr = 0;
+	if (curl_global_init(CURL_GLOBAL_ALL) || !(curl_handle = curl_easy_init()))
+		error("libcurl initialization failure.");
+
+	curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl_handle, CURLOPT_MAXREDIRS, 20);
+	curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10);
+
+	if ((dump = get_dump_name()) != NULL)
+	{
+		curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+		if ((curl_dfile = fopen(dump, "a")) != NULL)
+		{
+			curl_easy_setopt(curl_handle, CURLOPT_DEBUGFUNCTION, curl_dump);
+			curl_easy_setopt(curl_handle, CURLOPT_DEBUGDATA, (void *)curl_dfile);
+		}
+	}
+}
+
+static void curl_cleanup()
+{
+	if (curl_dfile != NULL)
+		fclose(curl_dfile);
+	curl_easy_cleanup(curl_handle);
+	curl_global_cleanup();
+}
+
+static struct curl_slist *curl_headers(const char *header)
+{
+	char *sub;
+	struct curl_slist *headers = NULL;
+	struct curl_slist *tmp;
+	size_t n = strlen(header);
+
+	if (!header)
+		return NULL;
+
+	sub = strstr(header, "\r\n");
+	while (sub || n > 0)
+	{
+		if (sub)
+			*sub = 0;
+		if (header)
+		{
+			tmp = curl_slist_append(headers, header);
+			if (tmp == NULL)
+			{
+				curl_slist_free_all(headers);
+				curl_cleanup();
+				error("libcurl header failure.");
+			}
+		}
+		if (sub)
+		{
+			n -= sub + 2 - header;
+			headers = tmp;
+			header = sub + 2;
+			*sub = '\r';
+			sub = strstr(header, "\r\n");
+		}
+		else
+		{
+			n = 0;
+			headers = tmp;
+		}
+	}
+
+	return headers;
+}
+#else
 static int _http_req(int ssl, const char *host, int port, const char *request, char *buffer, int bufsize, char **body)
 {
 	struct hostent *he;
@@ -339,9 +493,97 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 
 	return -1;
 }
+#endif
 
 static int http_req(int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
 {
+#ifdef USE_LIBCURL
+	struct curl_slist *headers = NULL;
+	char url[HALF_BLOB];
+	FILE *curl_wbuf = NULL;
+	FILE *curl_rbuf = NULL;
+	CURLcode r;
+	int trys;
+	long code;
+
+	if (!static_host) host = get_option_or("server", host);
+	if (ssl)
+	{
+		if (curl_sslerr)
+		{
+			curl_cleanup();
+			error("SSL failure with libcurl.");
+		}
+		snprintf(url, HALF_BLOB, "https://%s%s", host, query);
+	}
+	else
+		snprintf(url, HALF_BLOB, "http://%s%s", host, query);
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	if (header)
+	{
+		headers = curl_headers(header);
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+	}
+
+	if (auth) {
+		curl_easy_setopt(curl_handle, CURLOPT_USERNAME, get_option_required("user"));
+		curl_easy_setopt(curl_handle, CURLOPT_PASSWORD, get_option_required("pass"));
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	}
+	else
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPAUTH, CURLAUTH_NONE);
+
+	curl_wbuf = fmemopen(blob, HALF_BLOB, "w");
+	setbuf(curl_wbuf, NULL);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_wbuf);
+	if (data)
+	{
+		curl_rbuf = fmemopen(data, strlen(data), "r");
+		curl_easy_setopt(curl_handle, CURLOPT_READDATA, (void *)curl_rbuf);
+		curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, strlen(data));
+		curl_easy_setopt(curl_handle, CURLOPT_UPLOAD, 1L);
+	}
+	else
+	{
+		curl_easy_setopt(curl_handle, CURLOPT_READDATA, NULL);
+		curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, 0);
+		curl_easy_setopt(curl_handle, CURLOPT_UPLOAD, 0L);
+	}
+
+	if (!strcmp(req, "POST"))
+		curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
+	else if (!strcmp(req, "GET"))
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1L);
+
+	for (trys = 4; trys > 0; --trys)
+	{
+		r = curl_easy_perform(curl_handle);
+		if (r != CURLE_COULDNT_CONNECT)
+			break;
+#ifdef DEBUG
+		perror("connect");
+#endif
+		sleep(2);
+	}
+	curl_slist_free_all(headers);
+	curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &code);
+	fclose(curl_wbuf);
+	if (curl_rbuf)
+		fclose(curl_rbuf);
+	if (curl_dfile)
+	{
+		fputc('\n', curl_dfile);
+		fflush(curl_dfile);
+	}
+	if (r != CURLE_OK)
+	{
+		curl_cleanup();
+		error("Unknown libcurl error %d with response code %ld.", r, code);
+	}
+
+	*body = blob;
+	return code;
+#else
 	char *p;
 	int port;
 	char a[512];
@@ -369,7 +611,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 		req, query, httpv, host);
 	if (auth) {
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
-		n = base64_encode((unsigned char *) a, b, strlen(a));
+		n = base64_encode((const char *) a, b, strlen(a));
 		b[n] = 0;
 		sprintf(blob + strlen(blob), "Authorization: Basic %s\r\n", b);
 	}
@@ -400,6 +642,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 
 	_dprintf("%s: n=%d\n", __FUNCTION__, n);
 	return n;
+#endif
 }
 
 static int wget(int ssl, int static_host, const char *host, const char *get, const char *header, int auth, char **body)
@@ -1434,7 +1677,7 @@ static int cloudflare_errorcheck(int code, const char *req, char *body)
 	else if (code == 403 && strstr(body, "\"code\":9103") != NULL)
 		error(M_INVALID_AUTH);
 
-	error("%s returned HTTP code %d.", req, code);
+	error("%s returned HTTP error code %d.", req, code);
 	return -1; // silence compiler warning
 }
 
@@ -1575,7 +1818,7 @@ static void update_wget(void)
 
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
-		s[base64_encode((unsigned char *) host, s, c - host)] = 0;
+		s[base64_encode((const char *) host, s, c - host)] = 0;
 		sprintf(he, "Authorization: Basic %s\r\n", s);
 		header = he;
 		host = c + 1;
@@ -1717,6 +1960,10 @@ int main(int argc, char *argv[])
 */
 	check_cookie();
 
+#ifdef USE_LIBCURL
+	curl_setup();
+#endif
+
 	p = get_option_required("service");
 	if (strcmp(p, "dua") == 0) {
 		update_dua("dyndns", 0, NULL, NULL, 1);
@@ -1847,6 +2094,10 @@ int main(int argc, char *argv[])
 	else {
 		error("Unknown service");
 	}
+
+#ifdef USE_LIBCURL
+	curl_cleanup();
+#endif
 
 	return 1;
 }
