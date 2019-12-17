@@ -43,9 +43,6 @@ char lan3face[IFNAMSIZ + 1];
 #ifdef TCONFIG_IPV6
 char wan6face[IFNAMSIZ + 1];
 #endif
-#ifdef TCONFIG_PPTPD
-char *pptpcface;
-#endif
 
 char lan_cclass[sizeof("xxx.xxx.xxx.") + 1];
 static int can_enable_fastnat;
@@ -1149,14 +1146,7 @@ static void nat_table(void)
 
 #ifdef TCONFIG_PPTPD
 		/* PPTP Client NAT */
-		if (nvram_match("pptp_client_enable", "1") && nvram_match("pptp_client_nat", "1") && (pidof("pptpclient") >= 0)) {
-			if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0)) {
-				if (nvram_get_int("ne_snat") != 1)
-					ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, pptpcface);
-				else
-					ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, pptpcface, nvram_safe_get("pptp_client_ipaddr"));
-			}
-		}
+		pptp_client_firewall("POSTROUTING", p, ipt_write);
 #endif
 		char *wan_modem_ipaddr;
 		if ((nvram_match("wan_proto", "pppoe") || nvram_match("wan_proto", "dhcp") || nvram_match("wan_proto", "static"))
@@ -1464,13 +1454,8 @@ static void filter_input(void)
 		ipt_write("-A INPUT -p tcp --dport 1723 -j ACCEPT\n");
 		ipt_write("-A INPUT -p 47 -j ACCEPT\n");
 	}
-	/* Add for pptp client: pptp_client_srvsub pptp_client_srvsubmsk
-	 * ex: iptables --insert INPUT --source $REMOTESUB/$REMOTENET --destination 0.0.0.0/0.0.0.0 --jump ACCEPT --in-interface ppp+
-	 */
-	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
-		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0))
-			ipt_write("-A INPUT -s %s/%s -i %s -j ACCEPT\n", nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
-	}
+	/* Add for pptp client */
+	pptp_client_firewall("INPUT", "", ipt_write);
 #endif
 
 	// if logging
@@ -1658,19 +1643,8 @@ static void filter_forward(void)
 #endif
 
 #ifdef TCONFIG_PPTPD
-	/* Add for pptp client: pptp_client_srvsub/pptp_client_srvsubmsk
-	 * iptables --insert FORWARD --source 0.0.0.0/0.0.0.0 --destination $REMOTESUB/$REMOTENET --jump ACCEPT --out-interface ppp+
-	 * iptables --insert FORWARD --source $REMOTESUB/$REMOTENET --destination 0.0.0.0/0.0.0.0 --jump ACCEPT --in-interface ppp+
-	 * iptables --insert FORWARD --protocol tcp --tcp-flags SYN,RST SYN --jump TCPMSS --clamp-mss-to-pmtu
-	 */
-	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
-		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0)) {
-			ipt_write("-A FORWARD -d %s/%s -o %s -j ACCEPT\n",
-				nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
-			ipt_write("-A FORWARD -s %s/%s -i %s -j ACCEPT\n",
-				nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
-		}
-	}
+	/* Add for pptp client */
+	pptp_client_firewall("FORWARD", "", ipt_write);
 #endif
 
 	for(br=0 ; br<=3 ; br++) {
@@ -1921,13 +1895,8 @@ static void filter_table(void)
 #endif
 
 #ifdef TCONFIG_PPTPD
-	/* Add for pptp client: pptp_client_srvsub pptp_client_srvsubmsk pptp_client_iface
-	 * iptables --insert OUTPUT --source 0.0.0.0/0.0.0.0 --destination $REMOTESUB/$REMOTENET --jump ACCEPT --out-interface ppp+
-	 */
-	if (nvram_match("pptp_client_enable", "1") && (pidof("pptpclient") >= 0)) {
-		if (((pptpcface = nvram_safe_get("pptp_client_iface")) != NULL) && (*pptpcface) && (strcmp(pptpcface, "none") != 0))
-			ipt_write("-A OUTPUT -d %s/%s -o %s -j ACCEPT\n", nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), pptpcface);
-	}
+	/* Add for pptp client */
+	pptp_client_firewall("OUTPUT", "", ipt_write);
 #endif
 
 	if ((gateway_mode) || (nvram_match("wk_mode_x", "1"))) {

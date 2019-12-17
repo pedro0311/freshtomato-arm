@@ -435,7 +435,9 @@ void start_dnsmasq()
 	n = nvram_get_int("dhcpd_lmax");
 	fprintf(f, "dhcp-lease-max=%d\n", (n > 0) ? n : 255);
 	if (nvram_get_int("dhcpd_auth") >= 0) {
-		fprintf(f, "dhcp-authoritative\n");
+	fprintf(f,
+		"dhcp-option=lan,252,\"\\n\"\n"
+		"dhcp-authoritative\n");
 	}
 
 	if (nvram_match("dnsmasq_debug", "1")) {
@@ -744,7 +746,7 @@ void dns_to_resolv(void)
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) {	/* write / append */
 			if (append == 1)
 				/* Check for VPN DNS entries */
-				exclusive = (write_pptpvpn_resolv(f)
+				exclusive = (write_pptp_client_resolv(f)
 #ifdef TCONFIG_OPENVPN
 				             || write_ovpn_resolv(f)
 #endif
