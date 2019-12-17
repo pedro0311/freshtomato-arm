@@ -885,7 +885,11 @@ openssl-install:
 
 mssl:	openssl
 
+ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
+mdu:	shared libcurl
+else
 mdu:	shared mssl
+endif
 
 rc: nvram$(BCMEX) shared
 
