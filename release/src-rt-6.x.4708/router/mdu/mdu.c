@@ -234,7 +234,7 @@ static int curl_dump(CURL *handle, curl_infotype type, char *data, size_t size,
 	const char *prefix;
 	FILE *f_out;
 	size_t i;
-	char c;
+	unsigned char c;
 	int is_info;
 
 	is_info = 0;
@@ -287,7 +287,7 @@ static int curl_dump(CURL *handle, curl_infotype type, char *data, size_t size,
 			fputs(prefix, f_out);
 		}
 		else
-			fputc(c >= 0x20 && c < 0x80 ? c : '.', f_out);
+			fputc((c >= 0x20 && c < 0x80) ? c : '.', f_out);
 	}
 	fputc('\n', f_out);
 
@@ -333,7 +333,7 @@ static struct curl_slist *curl_headers(const char *header)
 {
 	char *sub;
 	struct curl_slist *headers = NULL;
-	struct curl_slist *tmp;
+	struct curl_slist *tmp = NULL;
 	size_t n = strlen(header);
 
 	if (!header)
