@@ -68,7 +68,7 @@ obj-y += eapd$(BCMEX)/linux
 obj-y += libbcmcrypto
 obj-y += wlconf$(BCMEX)
 obj-y += nas$(BCMEX)
-obj-y += prebuilt
+#obj-y += prebuilt
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)
@@ -101,6 +101,7 @@ ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
 endif
 ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
+obj-$(TCONFIG_OPENSSL11) += openssl-1.1.x
 obj-y += openssl
 endif
 ifneq ($(TCONFIG_TOR)$(TCONFIG_NFS)$(TCONFIG_BBT),)
@@ -516,9 +517,9 @@ endif
 	install $(LIBDIR)/libdl.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libm.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libnsl.so.0 $(TARGETDIR)/lib/
-ifeq ($(TCONFIG_SSH),y)
+#ifeq ($(TCONFIG_SSH),y)
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
-endif
+#endif
 ifeq ($(TCONFIG_BBT),y)
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
 endif
@@ -709,12 +710,6 @@ ifeq ($(TCONFIG_L7PAT),y)
 	cp layer7/squished/*.pat $(TARGETDIR)/rom/etc/l7-protocols
 endif
 
-ifeq ($(TCONFIG_PPTPD),y)
-	@mkdir -p $(TARGETDIR)/rom/etc/vpn
-#	cp rc/vpn/* $(TARGETDIR)/rom/etc/vpn
-#	chmod +x $(TARGETDIR)/rom/etc/vpn/*
-endif
-
 	busybox/examples/depmod.pl -k $(LINUXDIR)/vmlinux -b $(TARGETDIR)/lib/modules/*/
 #	@mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
 	@echo ---
@@ -844,16 +839,15 @@ endif
 
 openssl/stamp-h1:
 	$(call patch_files,openssl)
-	cd openssl && \
+	cd $(TOP)/openssl && \
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
 	RANLIB=$(RANLIB) \
-	./Configure $(HOSTCONFIG) --openssldir=/etc \
-	-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3
-
-	@$(MAKE) -C openssl clean depend
+	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
+	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3 no-err
+	@$(MAKE) -C openssl depend clean
 	@touch openssl/stamp-h1
 
 openssl: openssl/stamp-h1
@@ -867,28 +861,55 @@ openssl-clean:
 
 openssl-install:
 	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
+	install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
 	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
+	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
 	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so
-
+	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so
 	install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl
 	$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl
 	chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl
-
 	install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
 
+openssl-1.1.x/stamp-h1:
+	cd $(TOP)/openssl-1.1.x && \
+	CC=$(CC:$(CROSS_COMPILE)%=%) \
+	AR=$(AR:$(CROSS_COMPILE)%=%) \
+	NM=$(NM:$(CROSS_COMPILE)%=%) \
+	RANLIB=$(RANLIB) \
+	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
+	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0 \
+	no-aria no-sm2 no-sm3 no-sm4
+	-@$(MAKE) -C openssl-1.1.x depend clean
+	@touch $@
 
-#ifeq ($(FULL_OPENSSL),y)
-	install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
-	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
-	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so
-#endif
+openssl-1.1.x: openssl-1.1.x/stamp-h1
+	$(SEP)
+	$(MAKE) -C openssl-1.1.x $(PARALLEL_BUILD)
 
-mssl:	openssl
+openssl-1.1.x-clean:
+	[ ! -f openssl-1.1.x/stamp-h1 ] || $(MAKE) -C openssl-1.1.x clean
+	@rm -f openssl-1.1.x/stamp-h1
+
+openssl-1.1.x-install:
+	if [ -f openssl-1.1.x/stamp-h1 ] ; then \
+		install -D openssl-1.1.x/libcrypto.so.1.1 $(INSTALLDIR)/openssl-1.1.x/usr/lib/libcrypto.so.1.1 ; \
+		install -D openssl-1.1.x/libssl.so.1.1 $(INSTALLDIR)/openssl-1.1.x/usr/lib/libssl.so.1.1 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/lib/libssl.so.1.1 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/lib/libcrypto.so.1.1 ; \
+		install -D openssl-1.1.x/apps/openssl $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
+		chmod 0500 $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
+	fi
+	@true
+
+mssl: openssl
 
 ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
-mdu:	shared libcurl
+mdu: shared libcurl
 else
-mdu:	shared mssl
+mdu: shared mssl
 endif
 
 rc: nvram$(BCMEX) shared
@@ -1263,7 +1284,7 @@ accel-pptp: pppd accel-pptp/Makefile
 	@$(MAKE) -C accel-pptp
 
 accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
-	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS) $(if $(TCONFIG_VPNC), -DTCONFIG_VPNC,)" \
+	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
 
 accel-pptp-clean:

@@ -245,7 +245,7 @@ void dhcp6_packet(time_t now)
     {
       from.sin6_port = htons(port);
       while (retry_send(sendto(daemon->dhcp6fd, daemon->outpacket.iov_base, 
-			       save_counter(0), 0, (struct sockaddr *)&from, 
+			       save_counter(-1), 0, (struct sockaddr *)&from, 
 			       sizeof(from))));
     }
 }
@@ -423,7 +423,7 @@ struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct 
 }
 
 struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
-				       int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans)   
+				       unsigned int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans)
 {
   /* Find a free address: exclude anything in use and anything allocated to
      a particular hwaddr/clientid/hostname in our configuration.

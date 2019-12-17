@@ -72,10 +72,10 @@ UTILS += et
 vpath %.c $(SRCBASE)/et/linux
 endif
 
-ifneq ($(wildcard $(SRCBASE)/wl/exe),)
-CFLAGS += -I$(SRCBASE)/wl/exe
+ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc),)
+CFLAGS += -I$(SRCBASE)/wl/arm-uclibc
 UTILS += wl
-vpath %.c $(SRCBASE)/wl/exe $(SRCBASE)/shared
+vpath %.c $(SRCBASE)/wl/arm-uclibc $(SRCBASE)/shared
 endif
 
 ifeq ($(RWL),1)
@@ -98,11 +98,9 @@ vpath %.c $(SRCBASE)/wl/exe $(SRCBASE)/shared
 endif
 endif
 
-ifneq ($(wildcard ./prebuilt),)
-all: robocfg
-	-cp prebuilt/et ./
-	-cp prebuilt/wl ./
-	-cp prebuilt/epi_ttcp ./
+ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc),)
+all: robocfg et epi_ttcp
+	-cp $(SRCBASE)/wl/arm-uclibc/wl wl
 else
 all: $(UTILS)
 endif
