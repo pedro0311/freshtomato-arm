@@ -979,13 +979,15 @@ static inline void usbled_proc(char *device, int add)
 
 	/* check if there are two LEDs for USB and USB3, see LED table at shared/led.c */
 	if (do_led(LED_USB, LED_PROBE) != 255 && do_led(LED_USB3, LED_PROBE) != 255) {
-		strncpy(param, device, sizeof(param));
-		if ((p = strchr(param, ':')) != NULL)
-			*p = 0;
+		if (device != NULL) {
+			strncpy(param, device, sizeof(param));
+			if ((p = strchr(param, ':')) != NULL)
+				*p = 0;
 
-		/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
-		p = nvram_safe_get("usb_noled");
-		if (strcmp(p, param) == 0) return;
+			/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
+			p = nvram_safe_get("usb_noled");
+			if (strcmp(p, param) == 0) return;
+		}
 
 		/* get router model */
 		model = get_model();
@@ -1045,13 +1047,16 @@ static inline void usbled_proc(char *device, int add)
 	}
 	/* only one LED for USB */
 	else if (do_led(LED_USB, LED_PROBE) != 255) {
-		strncpy(param, device, sizeof(param));
-		if ((p = strchr(param, ':')) != NULL)
-			*p = 0;
 
-		/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
-		p = nvram_safe_get("usb_noled");
-		if (strcmp(p, param) == 0) return;
+		if (device != NULL) {
+			strncpy(param, device, sizeof(param));
+			if ((p = strchr(param, ':')) != NULL)
+				*p = 0;
+
+			/* verify if we need to ignore this device (i.e. an internal SD/MMC slot ) */
+			p = nvram_safe_get("usb_noled");
+			if (strcmp(p, param) == 0) return;
+		}
 
 		/* Remove legacy approach in the code here - rather, use do_led() function, which is designed to do this
 		   The reason for changing this ... some HW (like Netgear WNDR4000) don't work with direct GPIO write -> use do_led()!
@@ -1192,6 +1197,10 @@ void hotplug_usb(void)
 		/* Unmount or remount all partitions of the host. */
 		hotplug_usb_storage_device(host < 0 ? -1 : host, add ? -1 : 0,
 			host == -2 ? 0 : EFH_USER);
+
+		if (device == NULL) {
+			usbled_proc(device, add);
+		}
 	}
 #ifdef LINUX26
 	else if (is_block && strcmp(getenv("MAJOR") ? : "", "8") == 0 && strcmp(getenv("PHYSDEVBUS") ? : "", "scsi") == 0) {
