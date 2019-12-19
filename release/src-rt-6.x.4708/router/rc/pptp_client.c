@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-//#define PPPD_DEBUG
+//#define PPTPC_DEBUG
 #define BUF_SIZE 128
 
 /* Line number as text string */
@@ -85,26 +85,33 @@ void start_pptp_client(void)
 			"maxfail 0\n"
 			"persist\n"
 			"plugin pptp.so\n"
-			"pptp_server %s\n"
+			"pptp_server '%s'\n"
 			"idle 0\n"
-			"ipparam kelokepptpd\n",
+			"ipparam kelokepptpd\n"
+			"ktune\n"
+			"default-asyncmap nopcomp noaccomp\n"
+			"novj nobsdcomp nodeflate\n"
+			"holdoff 10\n"
+			"lcp-echo-adaptive\n"
+			"ipcp-accept-remote ipcp-accept-local noipdefault\n",
 			srv_addr);
 
 		if (nvram_get_int("pptp_client_peerdns"))	/* 0: disable, 1 enable */
 			fprintf(fd, "usepeerdns\n");
 
 		/* MTU */
+		/* see KB Q189595 -- historyless & mtu */
 		if ((p = nvram_get("pptp_client_mtu")) == NULL)
-			p = "1450";
+			p = "1400";
 		if (!nvram_get_int("pptp_client_mtuenable"))
-			p = "1450";
+			p = "1400";
 		fprintf(fd, "mtu %s\n", p);
 
 		/* MRU */
 		if ((p = nvram_get("pptp_client_mru")) == NULL)
-			p = "1450";
+			p = "1400";
 		if (!nvram_get_int("pptp_client_mruenable"))
-			p = "1450";
+			p = "1400";
 		fprintf(fd, "mru %s\n", p);
 
 		/* Login */
@@ -124,15 +131,20 @@ void start_pptp_client(void)
 		switch (nvram_get_int("pptp_client_crypt"))
 		{
 			case 1:
-				fprintf(fd, "nomppe\n");
+				fprintf(fd, "nomppe nomppc\n");
 				break;
 			case 2:
-				fprintf(fd, "nomppe-40\n");
-				fprintf(fd, "require-mppe-128\n");
+				fprintf(fd,
+					"nomppe-40\n"
+					"require-mppe\n"
+					"require-mppe-128\n");
 				break;
 			case 3:
-				fprintf(fd, "require-mppe-40\n");
-				fprintf(fd, "require-mppe-128\n");
+				fprintf(fd,
+					"require-mppe\n"
+					"require-mppe-40\n"
+					"require-mppe-56\n"
+					"require-mppe-128\n");
 				break;
 			default:
 				break;
@@ -167,7 +179,7 @@ void start_pptp_client(void)
 			system(buffer);
 		}
 
-#ifdef PPPD_DEBUG
+#ifdef PPTPC_DEBUG
 		sprintf(buffer, "/etc/vpn/pptpclient file /etc/vpn/pptpc_options debug");
 #else
 		sprintf(buffer, "/etc/vpn/pptpclient file /etc/vpn/pptpc_options");

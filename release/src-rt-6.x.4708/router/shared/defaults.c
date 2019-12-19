@@ -1262,9 +1262,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "pptp_client_usewan",		"wan"				, 0 },
 	{ "pptp_client_peerdns",	"0"				, 0 },
 	{ "pptp_client_mtuenable",	"0"				, 0 },
-	{ "pptp_client_mtu",		"1450"				, 0 },
+	{ "pptp_client_mtu",		"1400"				, 0 },
 	{ "pptp_client_mruenable",	"0"				, 0 },
-	{ "pptp_client_mru",		"1450"				, 0 },
+	{ "pptp_client_mru",		"1400"				, 0 },
 	{ "pptp_client_nat",		"0"				, 0 },
 	{ "pptp_client_srvip",		""				, 0 },
 	{ "pptp_client_srvsub",		"10.0.0.0"			, 0 },
@@ -1274,6 +1274,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "pptp_client_crypt",		"0"				, 0 },
 	{ "pptp_client_custom",		""				, 0 },
 	{ "pptp_client_dfltroute",	"0"				, 0 },
+	{ "pptp_client_stateless",	"1"				, 0 },
+	{ "pptpd_chap",			"0"				, 0 },	/* 0/1/2 (Auto/MS-CHAPv1/MS-CHAPv2) */
 #endif
 
 #ifdef TCONFIG_TINC
