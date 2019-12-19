@@ -9,7 +9,7 @@ diff --git pppd/pppd/main.c pppd/pppd/main.c
 index aa575d3..d60d625 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -436,6 +436,13 @@ main(argc, argv)
+@@ -435,6 +435,13 @@ main(argc, argv)
      }
  
      /*
@@ -23,7 +23,7 @@ index aa575d3..d60d625 100644
       * Initialize system-dependent stuff.
       */
      sys_init();
-@@ -780,8 +787,6 @@ detach()
+@@ -779,8 +786,6 @@ detach()
  	    create_linkpidfile(pid);
  	exit(0);		/* parent dies */
      }

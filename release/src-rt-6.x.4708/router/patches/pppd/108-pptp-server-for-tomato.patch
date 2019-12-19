@@ -35,7 +35,7 @@ diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
  #endif
  
      { "refuse-pap", o_bool, &refuse_pap,
-@@ -1649,7 +1655,7 @@ have_chap_secret(client, server, need_ip
+@@ -1653,7 +1659,7 @@ have_chap_secret(client, server, need_ip
  	}
      }
  
@@ -44,7 +44,7 @@ diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
      f = fopen(filename, "r");
      if (f == NULL)
  	return 0;
-@@ -1744,7 +1750,7 @@ get_secret(unit, client, server, secret,
+@@ -1748,7 +1754,7 @@ get_secret(unit, client, server, secret,
  	    return 0;
  	}
      } else {
@@ -144,7 +144,7 @@ diff -daurpN pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
 diff -daurpN pppd/pppd/main.c pppd/pppd/main.c
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -320,6 +320,10 @@ main(argc, argv)
+@@ -319,6 +319,10 @@ main(argc, argv)
  
      strlcpy(path_ipup, _PATH_IPUP, sizeof(path_ipup));
      strlcpy(path_ipdown, _PATH_IPDOWN, sizeof(path_ipdown));
@@ -155,7 +155,7 @@ diff -daurpN pppd/pppd/main.c pppd/pppd/main.c
  
      link_stats_valid = 0;
      new_phase(PHASE_INITIALIZE);
-@@ -1314,6 +1318,9 @@ static void check_time(void)
+@@ -1313,6 +1317,9 @@ static void check_time(void)
  	struct sysinfo i;
      struct callout *p;
  	

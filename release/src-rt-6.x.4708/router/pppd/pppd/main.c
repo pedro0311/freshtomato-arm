@@ -257,7 +257,6 @@ static void cleanup_db __P((void));
 static void handle_events __P((void));
 void print_link_stats __P((void));
 
-extern	char	*ttyname __P((int));
 extern	char	*getlogin __P((void));
 int main __P((int, char *[]));
 
@@ -1756,7 +1755,7 @@ update_script_environment()
 		script_env[i] = newstring;
 	    else
 		add_script_env(i, newstring);
-	} else {
+	} else if (p != NULL) {
 	    remove_script_env(i);
 	}
     }

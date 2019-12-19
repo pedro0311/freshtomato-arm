@@ -33,7 +33,7 @@ index 0b88c27..7aeb9cb 100644
  
  char *report_string[MAX_REPORTS] ;
  char  report_buffer[256] ;
-@@ -613,7 +614,7 @@ void set_tty_parameters()
+@@ -615,7 +616,7 @@ void set_tty_parameters()
      saved_tty_parameters = t;
      have_tty_parameters  = 1;
  
@@ -42,7 +42,7 @@ index 0b88c27..7aeb9cb 100644
      t.c_oflag      = 0;
      t.c_lflag      = 0;
      t.c_cc[VERASE] =
-@@ -969,6 +970,11 @@ char *s;
+@@ -971,6 +972,11 @@ char *s;
  	return;
      }
  
@@ -54,7 +54,7 @@ index 0b88c27..7aeb9cb 100644
  /*
   * Fetch the expect and reply string.
   */
-@@ -1178,6 +1184,12 @@ register char *s;
+@@ -1180,6 +1186,12 @@ register char *s;
  
  	return;
      }
@@ -67,7 +67,7 @@ index 0b88c27..7aeb9cb 100644
  
      /*
       * The syntax @filename means read the string to send from the
-@@ -1234,7 +1246,7 @@ int get_char()
+@@ -1236,7 +1248,7 @@ int get_char()
  
      switch (status) {
      case 1:
@@ -76,7 +76,7 @@ index 0b88c27..7aeb9cb 100644
  
      default:
  	msgf("warning: read() on stdin returned %d", status);
-@@ -1431,7 +1443,9 @@ register char *string;
+@@ -1433,7 +1445,9 @@ register char *string;
  	}
  
  	if (Verbose) {
@@ -87,7 +87,7 @@ index 0b88c27..7aeb9cb 100644
  	       fputc( '\n', stderr );
  	   else if (c != '\r')
  	       fprintf( stderr, "%s", character(c) );
-@@ -1477,6 +1491,10 @@ register char *string;
+@@ -1479,6 +1493,10 @@ register char *string;
  
  	    alarm(0);
  	    alarmed = 0;
@@ -239,7 +239,7 @@ diff --git pppd/pppd/auth.c pppd/pppd/auth.c
 index fb71944..c1774d3 100644
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
-@@ -553,6 +553,9 @@ void start_link(unit)
+@@ -557,6 +557,9 @@ void start_link(unit)
  void start_link(unit)
      int unit;
  {
@@ -249,7 +249,7 @@ index fb71944..c1774d3 100644
      status = EXIT_CONNECT_FAILED;
      new_phase(PHASE_SERIALCONN);
  
-@@ -662,6 +665,7 @@ link_terminated(unit)
+@@ -666,6 +669,7 @@ link_terminated(unit)
  	the_channel->disconnect();
  	devfd = -1;
      }
@@ -257,7 +257,7 @@ index fb71944..c1774d3 100644
      if (the_channel->cleanup)
  	(*the_channel->cleanup)();
  
-@@ -1188,6 +1192,10 @@ check_idle(arg)
+@@ -1192,6 +1196,10 @@ check_idle(arg)
      if (idle_time_hook != 0) {
  	tlim = idle_time_hook(&idle);
      } else {
@@ -268,7 +268,7 @@ index fb71944..c1774d3 100644
  	itime = MIN(idle.xmit_idle, idle.recv_idle);
  	tlim = idle_time_limit - itime;
      }
-@@ -2355,7 +2363,8 @@ auth_script(script)
+@@ -2359,7 +2367,8 @@ auth_script(script)
      argv[3] = user_name;
      argv[4] = devnam;
      argv[5] = strspeed;
@@ -695,8 +695,8 @@ index 5814f35..99eaa47 100644
      if (go->bsd_compress) {
  	opt_buf[0] = CI_BSD_COMPRESS;
  	opt_buf[1] = CILEN_BSD_COMPRESS;
-@@ -679,7 +767,8 @@ ccp_cilen(f)
- 	+ (go->deflate? CILEN_DEFLATE: 0)
+@@ -680,7 +768,8 @@ ccp_cilen(f)
+	+ (go->deflate && go->deflate_draft? CILEN_DEFLATE: 0)
  	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
  	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
 -	+ (go->mppe? CILEN_MPPE: 0);
@@ -705,7 +705,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -693,6 +782,8 @@ ccp_addci(f, p, lenp)
+@@ -694,6 +783,8 @@ ccp_addci(f, p, lenp)
  {
      int res;
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -714,7 +714,7 @@ index 5814f35..99eaa47 100644
      u_char *p0 = p;
  
      /*
-@@ -701,22 +792,43 @@ ccp_addci(f, p, lenp)
+@@ -702,22 +793,43 @@ ccp_addci(f, p, lenp)
       * in case it gets Acked.
       */
  #ifdef MPPE
@@ -767,7 +767,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	p[0] = go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT;
  	p[1] = CILEN_DEFLATE;
-@@ -802,7 +914,7 @@ ccp_addci(f, p, lenp)
+@@ -803,7 +915,7 @@ ccp_addci(f, p, lenp)
  
  /*
   * ccp_ackci - process a received configure-ack, and return
@@ -776,7 +776,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_ackci(f, p, len)
-@@ -811,24 +923,44 @@ ccp_ackci(f, p, len)
+@@ -812,24 +924,44 @@ ccp_ackci(f, p, len)
      int len;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -830,7 +830,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	if (len < CILEN_DEFLATE
  	    || p[0] != (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
-@@ -891,7 +1023,7 @@ ccp_ackci(f, p, len)
+@@ -892,7 +1024,7 @@ ccp_ackci(f, p, len)
  
  /*
   * ccp_nakci - process received configure-nak.
@@ -839,7 +839,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_nakci(f, p, len, treat_as_reject)
-@@ -901,6 +1033,8 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -902,6 +1034,8 @@ ccp_nakci(f, p, len, treat_as_reject)
      int treat_as_reject;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -848,7 +848,7 @@ index 5814f35..99eaa47 100644
      ccp_options no;		/* options we've seen already */
      ccp_options try;		/* options to ask for next time */
  
-@@ -908,28 +1042,100 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -909,28 +1043,100 @@ ccp_nakci(f, p, len, treat_as_reject)
      try = *go;
  
  #ifdef MPPE
@@ -966,7 +966,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate && len >= CILEN_DEFLATE
  	&& p[0] == (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
  	&& p[1] == CILEN_DEFLATE) {
-@@ -1002,14 +1208,50 @@ ccp_rejci(f, p, len)
+@@ -1003,14 +1209,50 @@ ccp_rejci(f, p, len)
  	return -1;
  
  #ifdef MPPE
@@ -1021,7 +1021,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate_correct && len >= CILEN_DEFLATE
  	&& p[0] == CI_DEFLATE && p[1] == CILEN_DEFLATE) {
  	if (p[2] != DEFLATE_MAKE_OPT(go->deflate_size)
-@@ -1073,14 +1315,15 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1074,14 +1316,15 @@ ccp_reqci(f, p, lenp, dont_nak)
      int dont_nak;
  {
      int ret, newret, res;
@@ -1041,7 +1041,7 @@ index 5814f35..99eaa47 100644
  
      ret = CONFACK;
      retp = p0 = p;
-@@ -1103,106 +1346,299 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1104,106 +1347,299 @@ ccp_reqci(f, p, lenp, dont_nak)
  	    switch (type) {
  #ifdef MPPE
  	    case CI_MPPE:
@@ -1415,7 +1415,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (!ao->deflate || clen != CILEN_DEFLATE
-@@ -1344,12 +1780,6 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1345,12 +1781,6 @@ ccp_reqci(f, p, lenp, dont_nak)
  	else
  	    *lenp = retp - p0;
      }
@@ -1428,7 +1428,7 @@ index 5814f35..99eaa47 100644
      return ret;
  }
  
-@@ -1371,24 +1801,35 @@ method_name(opt, opt2)
+@@ -1372,24 +1802,35 @@ method_name(opt, opt2)
  	char *p = result;
  	char *q = result + sizeof(result); /* 1 past result */
  
@@ -1480,7 +1480,7 @@ index 5814f35..99eaa47 100644
      case CI_DEFLATE:
      case CI_DEFLATE_DRAFT:
  	if (opt2 != NULL && opt2->deflate_size != opt->deflate_size)
-@@ -1444,12 +1885,12 @@ ccp_up(f)
+@@ -1445,12 +1886,12 @@ ccp_up(f)
      } else if (ANY_COMPRESS(*ho))
  	notice("%s transmit compression enabled", method_name(ho, NULL));
  #ifdef MPPE
@@ -1495,7 +1495,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1472,7 +1913,7 @@ ccp_down(f)
+@@ -1473,7 +1914,7 @@ ccp_down(f)
  	    lcp_close(f->unit, "MPPE disabled");
  	}
      }
@@ -1504,7 +1504,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1532,24 +1973,28 @@ ccp_printpkt(p, plen, printer, arg)
+@@ -1533,24 +1974,28 @@ ccp_printpkt(p, plen, printer, arg)
  #ifdef MPPE
  	    case CI_MPPE:
  		if (optlen >= CILEN_MPPE) {
@@ -1545,7 +1545,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (optlen >= CILEN_DEFLATE) {
-@@ -1635,6 +2080,7 @@ ccp_datainput(unit, pkt, len)
+@@ -1636,6 +2081,7 @@ ccp_datainput(unit, pkt, len)
  	    error("Lost compression sync: disabling compression");
  	    ccp_close(unit, "Lost compression sync");
  #ifdef MPPE
@@ -1553,7 +1553,7 @@ index 5814f35..99eaa47 100644
  	    /*
  	     * If we were doing MPPE, we must also take the link down.
  	     */
-@@ -1642,9 +2088,18 @@ ccp_datainput(unit, pkt, len)
+@@ -1643,9 +2089,18 @@ ccp_datainput(unit, pkt, len)
  		error("Too many MPPE errors, closing LCP");
  		lcp_close(unit, "Too many MPPE errors");
  	    }
@@ -1969,7 +1969,7 @@ index 014d614..0f56a21 100644
  static void setup_signals __P((void));
  static void create_pidfile __P((int pid));
  static void create_linkpidfile __P((int pid));
-@@ -316,6 +318,9 @@ main(argc, argv)
+@@ -315,6 +317,9 @@ main(argc, argv)
      struct protent *protp;
      char numbuf[16];
  
@@ -1979,7 +1979,7 @@ index 014d614..0f56a21 100644
      link_stats_valid = 0;
      new_phase(PHASE_INITIALIZE);
  
-@@ -530,6 +535,7 @@ main(argc, argv)
+@@ -529,6 +534,7 @@ main(argc, argv)
  	    info("Starting link");
  	}
  
@@ -1987,7 +1987,7 @@ index 014d614..0f56a21 100644
  	gettimeofday(&start_time, NULL);
  	script_unsetenv("CONNECT_TIME");
  	script_unsetenv("BYTES_SENT");
-@@ -1263,6 +1269,36 @@ struct	callout {
+@@ -1262,6 +1268,36 @@ struct	callout {
  
  static struct callout *callout = NULL;	/* Callout list */
  static struct timeval timenow;		/* Current time */
@@ -2024,7 +2024,7 @@ index 014d614..0f56a21 100644
  
  /*
   * timeout - Schedule a timeout.
-@@ -1333,6 +1369,8 @@ calltimeout()
+@@ -1332,6 +1368,8 @@ calltimeout()
  {
      struct callout *p;
  
@@ -2033,7 +2033,7 @@ index 014d614..0f56a21 100644
      while (callout != NULL) {
  	p = callout;
  
-@@ -1360,6 +1398,8 @@ timeleft(tvp)
+@@ -1359,6 +1397,8 @@ timeleft(tvp)
  {
      if (callout == NULL)
  	return NULL;
@@ -2042,7 +2042,7 @@ index 014d614..0f56a21 100644
  
      gettimeofday(&timenow, NULL);
      tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
-@@ -1679,7 +1719,7 @@ device_script(program, in, out, dont_wait)
+@@ -1678,7 +1718,7 @@ device_script(program, in, out, dont_wait)
      if (log_to_fd >= 0)
  	errfd = log_to_fd;
      else

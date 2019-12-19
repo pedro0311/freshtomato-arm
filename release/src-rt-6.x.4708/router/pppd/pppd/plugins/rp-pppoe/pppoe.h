@@ -15,12 +15,11 @@
 
 #include "config.h"
 
-#if defined(HAVE_NETPACKET_PACKET_H) || defined(HAVE_LINUX_IF_PACKET_H)
-#define _POSIX_SOURCE 1 /* For sigaction defines */
-#endif
 
 #include <stdio.h>		/* For FILE */
 #include <sys/types.h>		/* For pid_t */
+
+#include "pppd/pppd.h"		/* For error */
 
 /* How do we access raw Ethernet devices? */
 #undef USE_LINUX_PACKET
