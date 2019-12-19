@@ -77,6 +77,8 @@ var services = [
 	['ovh', 'OVH', 'http://www.ovh.com/', 'uh'],
 	['sovh', 'OVH (https)', 'https://www.ovh.com/', 'uh'],
 	['schangeip', 'ChangeIP (https)', 'https://www.changeip.com/', 'uh'],
+	['dnshenet', 'dns.he.net', 'http://dns.he.net/', 'u', 'Host name', 'DDNS key'],
+	['sdnshenet', 'dns.he.net (https)', 'https://dns.he.net/', 'u', 'Host name', 'DDNS key'],
 	['cloudflare', 'Cloudflare (https)', 'https://www.cloudflare.com/', 'uhbnws', 'Email Address', 'API Key', null, 'Proxied', 'Create record if needed', 'Zone ID'],
 	['custom', 'Custom URL', '', 'c']];
 

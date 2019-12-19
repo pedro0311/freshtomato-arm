@@ -1,9 +1,9 @@
 include ../common.mak
 
 CFLAGS	= -Os -Wall $(EXTRACFLAGS)
-CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -I$(TOP)/mssl
+CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared
 LDFLAGS	=
-LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -L$(TOP)/mssl -lmssl
+LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 #LIBS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared $(TOP)/mssl/libmssl.a $(TOP)/matrixssl/src/libmatrixsslstatic.a
 
 ifeq ($(TCONFIG_BCMARM),y)
@@ -12,6 +12,14 @@ endif
 
 ifeq ($(FULL_OPENSSL),y)
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
+endif
+
+ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
+CFLAGS += -DUSE_LIBCURL -I$(TOP)/libcurl/staged/usr/include
+LIBS += -lpthread -L$(TOP)/libcurl/lib/.libs -lcurl
+else
+CFLAGS+= -I$(TOP)/mssl
+LIBS += -L$(TOP)/mssl -lmssl
 endif
 
 OBJS = mdu.o

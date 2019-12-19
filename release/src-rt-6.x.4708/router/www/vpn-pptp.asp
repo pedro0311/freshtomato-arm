@@ -37,7 +37,7 @@ function toggle(service, isup) {
 	E('_' + service + '_button').disabled = true;
 	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-pptp.asp',
-		_sleep: '3',
+		_sleep: '5',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }
@@ -49,12 +49,12 @@ function verifyFields(focused, quiet) {
 
 	var f = E('_pptp_client_mtuenable').value == '0';
 	if (f) {
-		E('_pptp_client_mtu').value = '1450';
+		E('_pptp_client_mtu').value = '1400';
 	}
 	E('_pptp_client_mtu').disabled = f;
 	f = E('_pptp_client_mruenable').value == '0';
 	if (f) {
-		E('_pptp_client_mru').value = '1450';
+		E('_pptp_client_mru').value = '1400';
 	}
 	E('_pptp_client_mru').disabled = f;
 
@@ -128,12 +128,12 @@ createFieldTable('', [
 /* MULTIWAN-BEGIN */
 			['wan3','WAN3'],['wan4','WAN4'],
 /* MULTIWAN-END */
-			['none','none']], value: nvram.pptp_client_usewan },
+			['none','none']], value: nvram.pptp_client_usewan, suffix: '&nbsp; <small>In Wireless Client or WET mode, disable bind (set to <i>none<\/i>)<\/small>' },
 	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
 	{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
 	{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },
 	{ title: 'Encryption', name: 'pptp_client_crypt', type: 'select', value: nvram.pptp_client_crypt,
-		options: [['0', 'Auto'],['1', 'None'],['2','Maximum (128 bit only)'],['3','Required (128 or 40 bit)']] },
+		options: [['0', 'Auto'],['1', 'None'],['2','Maximum (128 bit only)'],['3','Required (128, 56 or 40 bit)']] },
 	{ title: 'Stateless MPPE connection', name: 'f_pptp_client_stateless', type: 'checkbox', value: nvram.pptp_client_stateless != 0 },
 	{ title: 'Accept DNS configuration', name: 'pptp_client_peerdns', type: 'select', options: [[0, 'Disabled'],[1, 'Yes'],[2, 'Exclusive']], value: nvram.pptp_client_peerdns },
 	{ title: 'Redirect Internet traffic', name: 'f_pptp_client_dfltroute', type: 'checkbox', value: nvram.pptp_client_dfltroute != 0 },
@@ -158,7 +158,9 @@ createFieldTable('', [
 <div class="section-title">Notes</div>
 <div class="section">
 	<ul>
-		<li><b>Do not change and save</b> the settings when client <b>is running</b> - you may end up with a downed firewall or broken routing table!</li>
+		<li><b>Do not change (and save)</b> the settings when client <b>is running</b> - you may end up with a downed firewall or broken routing table!</li>
+		<li>In case of connection problems, reduce the MTU and/or MRU values.</li>
+		<li>To boost connection performance, you can try to increase MTU/MRU values.</li>
 	</ul>
 </div>
 
