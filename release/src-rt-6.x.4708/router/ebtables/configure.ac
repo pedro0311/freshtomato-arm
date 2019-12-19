@@ -1,4 +1,4 @@
-AC_INIT([ebtables], [2.0.10.4])
+AC_INIT([ebtables], [2.0.11])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
