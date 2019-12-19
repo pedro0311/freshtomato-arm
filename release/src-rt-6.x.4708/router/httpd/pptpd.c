@@ -19,7 +19,7 @@
 #include "tomato.h"
 
 #ifndef PPTP_CONNECTED
-#define PPTP_CONNECTED	"/tmp/pptp_connected"
+#define PPTP_CONNECTED	"/etc/vpn/pptpd_connected"
 #endif
 
 #ifndef IF_SIZE

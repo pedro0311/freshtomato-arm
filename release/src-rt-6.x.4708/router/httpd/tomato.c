@@ -1841,6 +1841,7 @@ wl_ap_ssid
 	{ "pptp_client_custom",		V_NONE				},
 	{ "pptp_client_dfltroute",	V_01				},
 	{ "pptp_client_stateless",	V_01				},
+	{ "pptpd_chap",			V_RANGE(0,2)			},
 #endif
 
 	{ NULL }

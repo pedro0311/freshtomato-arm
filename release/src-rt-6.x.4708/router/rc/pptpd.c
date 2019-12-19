@@ -1,5 +1,5 @@
 /*
- * pptp.c
+ * pptpd.c
  *
  * Copyright (C) 2007 Sebastian Gottschall <gottschall@dd-wrt.com>
  *
@@ -26,153 +26,129 @@
 #include <shutils.h>
 #include <utils.h>
 #include <syslog.h>
-#include <signal.h>
 #include <errno.h>
 #include <sys/stat.h>
 
-void get_broadcast(char *ipaddr, char *netmask)
+
+char *ip2bcast(char *ip, char *netmask, char *buf)
 {
-        int ip2[4], mask2[4];
-        unsigned char ip[4], mask[4];
+	struct in_addr addr;
 
-        if (!ipaddr || !netmask)
-                return;
+	addr.s_addr = inet_addr(ip) | ~inet_addr(netmask);
+	if (buf)
+		sprintf(buf, "%s", inet_ntoa(addr));
 
-        sscanf(ipaddr, "%d.%d.%d.%d", &ip2[0], &ip2[1], &ip2[2], &ip2[3]);
-        sscanf(netmask, "%d.%d.%d.%d", &mask2[0], &mask2[1], &mask2[2],
-               &mask2[3]);
-        int i = 0;
-
-        for (i = 0; i < 4; i++) {
-                ip[i] = ip2[i];
-                mask[i] = mask2[i];
-                ip[i] = (ip[i] & mask[i]) | (0xff & ~mask[i]);
-        }
-
-        sprintf(ipaddr, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-
-        //fprintf(stderr, "get_broadcast return %s\n", value);
+	return buf;
 }
 
 void write_chap_secret(char *file)
 {
-        FILE *fp;
-        char *nv, *nvp, *b;
-        char *username, *passwd;
-//        char buf[64];
+	FILE *fp;
+	char *nv, *nvp, *b;
+	char *username, *passwd;
 
-        fp=fopen(file, "w");
+	if ((fp = fopen(file, "w")) == NULL) {
+		perror(file);
+		return;
+	}
 
-        if (fp==NULL) return;
+	nv = nvp = strdup(nvram_safe_get("pptpd_users"));
 
-//        nv = nvp = strdup(nvram_safe_get("pptpd_clientlist"));
-        nv = nvp = strdup(nvram_safe_get("pptpd_users"));
+	if (nv) {
+		while ((b = strsep(&nvp, ">")) != NULL) {
+			if ((vstrsep(b, "<", &username, &passwd) != 2))
+				continue;
 
-        if(nv) {
-            	while ((b = strsep(&nvp, ">")) != NULL) {
-                	if((vstrsep(b, "<", &username, &passwd)!=2)) continue;
-	                if(strlen(username)==0||strlen(passwd)==0) continue;
-        	        fprintf(fp, "%s * %s *\n", username, passwd);
-            	}
-            	free(nv);
-        }
-        fclose(fp);
+			if (*username =='\0' || *passwd == '\0')
+				continue;
+
+			fprintf(fp, "%s * %s *\n", username, passwd);
+		}
+		free(nv);
+	}
+	fclose(fp);
 }
 
 void start_pptpd(void)
 {
-	int ret = 0, mss = 0, manual_dns = 0;
-//	char *lpTemp;
 	FILE *fp;
-
-//	int pid = getpid();
-//	_dprintf("start_pptpd: getpid= %d\n", pid);
-
-//	if(getpid() != 1) {
-//		notify_rc("start_pptpd");
-//		return;
-//	}
+	int count = 0, ret = 0, nowins = 0, pptpd_opt;
+	char bcast[32];
+	char options[] = "/etc/vpn/pptpd_options";
+	char conffile[] = "/etc/vpn/pptpd.conf";
 
 	if (!nvram_match("pptpd_enable", "1")) {
 		return;
 	}
-	// cprintf("stop vpn modules\n");
-	// stop_vpn_modules ();
 
-	// Create directory for use by pptpd daemon and its supporting files
-	mkdir("/tmp/pptpd", 0744);
-	cprintf("open options file\n");
-	// Create options file that will be unique to pptpd to avoid interference 
-	// with pppoe and pptp
-	fp = fopen("/tmp/pptpd/options.pptpd", "w");
-	fprintf(fp, "logfile /var/log/pptpd-pppd.log\ndebug\n");
-/*
-	if (nvram_match("pptpd_radius", "1"))
-		fprintf(fp, "plugin radius.so\nplugin radattr.so\n"
-			"radius-config-file /tmp/pptpd/radius/radiusclient.conf\n");
-*/
-	cprintf("check if wan_wins = zero\n");
-	int nowins = 0;
+	/* Make sure vpn directory exists */
+	mkdir("/etc/vpn", 0700);
 
-	if (nvram_match("wan_wins", "0.0.0.0")) {
-		nvram_set("wan_wins", "");
-		nowins = 1;
+	/* Create unique options file */
+	if ((fp = fopen(options, "w")) == NULL) {
+		perror(options);
+		return;
 	}
-	if (strlen(nvram_safe_get("wan_wins")) == 0)
-		nowins = 1;
 
-	cprintf("write config\n");
+	fprintf(fp,
+		"logfile /var/log/pptpd-pppd.log\n"
+		"debug\n");
+
+#if 0
+	if (nvram_match("pptpd_radius", "1") && nvram_invmatch("pptpd_radserver", "") && nvram_invmatch("pptpd_radpass", "")) {
+		fprintf(fp,
+			"plugin radius.so\n"
+			"plugin radattr.so\n"
+			"radius-config-file /etc/vpn/radius/radiusclient.conf\n");
+#endif
+
 	fprintf(fp, "lock\n"
 		"name *\n"
 		"proxyarp\n"
 //		"ipcp-accept-local\n"
 //		"ipcp-accept-remote\n"
-		"minunit 10\n"			// AB !! - we leave ppp0-ppp3 for WAN and/or other ppp connections (PPTP client, ADSL, etc... perhaps)?
-		"nobsdcomp\n"
 		"lcp-echo-failure 10\n"
 		"lcp-echo-interval 5\n"
-//		"deflate 0\n" "auth\n" "-chap\n" "-mschap\n" "+mschap-v2\n");
+		"lcp-echo-adaptive\n"
+		"auth\n"
+		"nobsdcomp\n"
 		"refuse-pap\n"
 		"refuse-chap\n"
-		"refuse-mschap\n"
-		"require-mschap-v2\n");
+		"nomppe-stateful\n");
 
-//	if (nvram_match("pptpd_forcemppe", "none")) {
-	if (nvram_match("pptpd_forcemppe", "0")) {
-//		fprintf(fp, "-mppc\n");
-		fprintf(fp, "nomppe\n");
-	} else {
-//		fprintf(fp, "+mppc\n");
-/*		if (nvram_match("pptpd_forcemppe", "auto")) {
-			fprintf(fp, "+mppe-40\n");
-			fprintf(fp, "+mppe-56\n");
-			fprintf(fp, "+mppe-128\n");
-		}
-		else if (nvram_match("pptpd_forcemppe", "+mppe-40")) {
-                        fprintf(fp, "+mppe\n");
-                        fprintf(fp, "+mppe-40\n");
-			fprintf(fp, "-mppe-56\n");
-			fprintf(fp, "-mppe-128\n");
-                }
-                else if (nvram_match("pptpd_forcemppe", "+mppe-128")) {
-                        fprintf(fp, "+mppe\n");
-			fprintf(fp, "-mppe-40\n");
-			fprintf(fp, "-mppe-56\n");
-                        fprintf(fp, "+mppe-128\n");
-*/
-			fprintf(fp, "require-mppe-128\n");
-                }
-		fprintf(fp, "nomppe-stateful\n");
-//	}
+	pptpd_opt = nvram_get_int("pptpd_chap");
+	fprintf(fp, "%s-mschap\n", (pptpd_opt == 0 || pptpd_opt & 1) ? "require" : "refuse");
+	fprintf(fp, "%s-mschap-v2\n", (pptpd_opt == 0 || pptpd_opt & 2) ? "require" : "refuse");
 
-	fprintf(fp, "ms-ignore-domain\n"
-		"chap-secrets /tmp/pptpd/chap-secrets\n"
-		"ip-up-script /tmp/pptpd/ip-up\n"
-		"ip-down-script /tmp/pptpd/ip-down\n"
-		"mtu %s\n" "mru %s\n",
-		nvram_get("pptpd_mtu") ? nvram_get("pptpd_mtu") : "1450",
-		nvram_get("pptpd_mru") ? nvram_get("pptpd_mru") : "1450");
-	//WINS Server
+	if (nvram_match("pptpd_forcemppe", "0"))
+		fprintf(fp, "nomppe nomppc\n");
+	else
+		fprintf(fp, "require-mppe-128\n");
+
+	fprintf(fp,
+		"ms-ignore-domain\n"
+		"chap-secrets /etc/vpn/chap-secrets\n"
+		"ip-up-script /etc/vpn/pptpd_ip-up\n"
+		"ip-down-script /etc/vpn/pptpd_ip-down\n"
+		"mtu %d\n"
+		"mru %d\n",
+		nvram_get_int("pptpd_mtu") ? : 1400,
+		nvram_get_int("pptpd_mru") ? : 1400);
+
+	/* DNS Server */
+	if (nvram_invmatch("pptpd_dns1", ""))
+		count += fprintf(fp, "ms-dns %s\n", nvram_safe_get("pptpd_dns1")) > 0 ? 1 : 0;
+	if (nvram_invmatch("pptpd_dns2", ""))
+		count += fprintf(fp, "ms-dns %s\n", nvram_safe_get("pptpd_dns2")) > 0 ? 1 : 0;
+	if (count == 0 && nvram_invmatch("lan_ipaddr", ""))
+		fprintf(fp, "ms-dns %s\n", nvram_safe_get("lan_ipaddr"));
+
+	/* WINS Server */
+	if (nvram_match("wan_wins", "0.0.0.0") || (strlen(nvram_safe_get("wan_wins")) == 0)) {
+		nvram_set("wan_wins", "");
+		nowins = 1;
+	}
+
 	if (!nowins) {
 		fprintf(fp, "ms-wins %s\n", nvram_safe_get("wan_wins"));
 	}
@@ -182,143 +158,121 @@ void start_pptpd(void)
 	if (strlen(nvram_safe_get("pptpd_wins2"))) {
 		fprintf(fp, "ms-wins %s\n", nvram_safe_get("pptpd_wins2"));
 	}
-	//DNS Server
-	if (strlen(nvram_safe_get("pptpd_dns1"))) {
-		fprintf(fp, "ms-dns %s\n", nvram_safe_get("pptpd_dns1"));
-		manual_dns=1;
-	}
-	if (strlen(nvram_safe_get("pptpd_dns2"))) {
-		fprintf(fp, "ms-dns %s\n", nvram_safe_get("pptpd_dns2"));
-		manual_dns=1;
-	}
-	if(!manual_dns && !nvram_match("lan_ipaddr", ""))
-                fprintf(fp, "ms-dns %s\n", nvram_safe_get("lan_ipaddr"));
 
-	fprintf(fp, "%s\n\n", nvram_safe_get("pptpd_custom"));
-
-	// Following is all crude and need to be revisited once testing confirms
-	// that it does work
-	// Should be enough for testing..
-/*	if (nvram_match("pptpd_radius", "1")) {
-		if (nvram_get("pptpd_radserver") != NULL
-		    && nvram_get("pptpd_radpass") != NULL) {
-
-			fclose(fp);
-
-			mkdir("/tmp/pptpd/radius", 0744);
-
-			fp = fopen("/tmp/pptpd/radius/radiusclient.conf", "w");
-			fprintf(fp, "auth_order radius\n"
-				"login_tries 4\n"
-				"login_timeout 60\n"
-				"radius_timeout 10\n"
-				"nologin /etc/nologin\n"
-				"servers /tmp/pptpd/radius/servers\n"
-				"dictionary /etc/dictionary\n"
-				"seqfile /var/run/radius.seq\n"
-				"mapfile /etc/port-id-map\n"
-				"radius_retries 3\n"
-				"authserver %s:%s\n",
-				nvram_get("pptpd_radserver"),
-				nvram_get("pptpd_radport") ?
-				nvram_get("pptpd_radport") : "radius");
-
-			if (nvram_get("pptpd_radserver") != NULL
-			    && nvram_get("pptpd_acctport") != NULL)
-				fprintf(fp, "acctserver %s:%s\n",
-					nvram_get("pptpd_radserver"),
-					nvram_get("pptpd_acctport") ?
-					nvram_get("pptpd_acctport") :
-					"radacct");
-			fclose(fp);
-
-			fp = fopen("/tmp/pptpd/radius/servers", "w");
-			fprintf(fp, "%s\t%s\n", nvram_get("pptpd_radserver"),
-				nvram_get("pptpd_radpass"));
-			fclose(fp);
-
-		} else
-			fclose(fp);
-	} else
-*/		fclose(fp);
-
-	// Create pptpd.conf options file for pptpd daemon
-	fp = fopen("/tmp/pptpd/pptpd.conf", "w");
-	fprintf(fp, "bcrelay %s\n", nvram_safe_get("pptpd_broadcast"));
-	fprintf(fp, "localip %s\n"
-		"remoteip %s\n", nvram_safe_get("lan_ipaddr"),
-		nvram_safe_get("pptpd_remoteip"));
+	fprintf(fp,
+		"minunit 10\n"		/* force ppp interface starting from 10 */
+		"%s\n\n", nvram_safe_get("pptpd_custom"));
 	fclose(fp);
 
-	// Create ip-up and ip-down scripts that are unique to pptpd to avoid
-	// interference with pppoe and pptp
-	/*
-	 * adjust for tunneling overhead (mtu - 40 byte IP - 108 byte tunnel
-	 * overhead) 
+	/* Following is all crude and need to be revisited once testing confirms that it does work
+	 * Should be enough for testing..
 	 */
-	if (nvram_match("mtu_enable", "1"))
-		mss = atoi(nvram_safe_get("wan_mtu")) - 40 - 108;
-	else
-		mss = 1500 - 40 - 108;
-	char bcast[32];
+#if 0
+	if (nvram_get_int("pptpd_radius") && nvram_invmatch("pptpd_radserver", "") && nvram_invmatch("pptpd_radpass", "")) {
+		mkdir("/etc/vpn/radius", 0700);
 
-	strcpy(bcast, nvram_safe_get("lan_ipaddr"));
-	get_broadcast(bcast, nvram_safe_get("lan_netmask"));
+		fp = fopen("/etc/vpn/radius/radiusclient.conf", "w");
+		fprintf(fp,
+			"auth_order radius\n"
+			"login_tries 4\n"
+			"login_timeout 60\n"
+			"radius_timeout 10\n"
+			"nologin /etc/nologin\n"
+			"servers /etc/vpn/radius/servers\n"
+			"dictionary /etc/dictionary\n"
+			"seqfile /var/run/radius.seq\n"
+			"mapfile /etc/port-id-map\n"
+			"radius_retries 3\n"
+			"authserver %s:%s\n",
+			nvram_get("pptpd_radserver"),
+			nvram_get("pptpd_radport") ? nvram_get("pptpd_radport") : "radius");
 
-	fp = fopen("/tmp/pptpd/ip-up", "w");
-//	fprintf(fp, "#!/bin/sh\n" "startservice set_routes\n"	// reinitialize 
-	fprintf(fp, "#!/bin/sh\n" //"startservice set_routes\n"	// reinitialize 
-		"echo $PPPD_PID $1 $5 $6 $PEERNAME `date +%%s`>> /tmp/pptp_connected\n" 
-		"iptables -I FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n" 
+		if ((nvram_get("pptpd_radserver") != NULL) && (nvram_get("pptpd_acctport") != NULL))
+			fprintf(fp,
+				"acctserver %s:%s\n",
+				nvram_get("pptpd_radserver"),
+				nvram_get("pptpd_acctport") ? nvram_get("pptpd_acctport") : "radacct");
+		fclose(fp);
+
+		fp = fopen("/etc/vpn/radius/servers", "w");
+		fprintf(fp,
+			"%s\t%s\n",
+			nvram_get("pptpd_radserver"),
+			nvram_get("pptpd_radpass"));
+		fclose(fp);
+#endif
+
+	/* Create pptpd.conf options file for pptpd daemon */
+	fp = fopen(conffile, "w");
+	fprintf(fp,
+		"localip %s\n"
+		"remoteip %s\n"
+		"bcrelay %s\n",
+		nvram_safe_get("lan_ipaddr"),
+		nvram_safe_get("pptpd_remoteip"),
+		nvram_safe_get("pptpd_broadcast"));
+	fclose(fp);
+
+	ip2bcast(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), bcast);
+
+	/* Create ip-up and ip-down scripts that are unique to pptpd to avoid interference with pppoe and pptpc */
+	fp = fopen("/etc/vpn/pptpd_ip-up", "w");
+	fprintf(fp,
+		"#!/bin/sh\n"
+		"echo \"$PPPD_PID $1 $5 $6 $PEERNAME $(date +%%s)\" >> /etc/vpn/pptpd_connected\n"
 		"iptables -I INPUT -i $1 -j ACCEPT\n"
 		"iptables -I FORWARD -i $1 -j ACCEPT\n"
-		"iptables -I FORWARD -o $1 -j ACCEPT\n" // AB!!
-		"iptables -t nat -I PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n"	// rule for wake on lan over pptp tunnel
-		"%s\n", bcast,
+		"iptables -I FORWARD -o $1 -j ACCEPT\n"
+		"iptables -I FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
+		"iptables -t nat -I PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n"	/* rule for wake on lan over pptp tunnel */
+		"%s\n",
+		bcast,
 		nvram_get("pptpd_ipup_script") ? nvram_get("pptpd_ipup_script") : "");
 	fclose(fp);
-	fp = fopen("/tmp/pptpd/ip-down", "w");
-	fprintf(fp, "#!/bin/sh\n" "grep -v $1  /tmp/pptp_connected > /tmp/pptp_connected.new\n" 
-		"mv /tmp/pptp_connected.new /tmp/pptp_connected\n" 
-		"iptables -D FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n" 
-		"iptables -D INPUT -i $1 -j ACCEPT\n" 
-		"iptables -D FORWARD -i $1 -j ACCEPT\n" 
-		"iptables -D FORWARD -o $1 -j ACCEPT\n" // AB!!
-		"iptables -t nat -D PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n"	// rule for wake on lan over pptp tunnel
-		"%s\n", bcast,
+
+	fp = fopen("/etc/vpn/pptpd_ip-down", "w");
+	fprintf(fp,
+		"#!/bin/sh\n" "grep -v $1 /etc/vpn/pptpd_connected > /etc/vpn/pptpd_connected.new\n"
+		"mv /etc/vpn/pptpd_connected.new /etc/vpn/pptpd_connected\n"
+		"iptables -D FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
+		"iptables -D INPUT -i $1 -j ACCEPT\n"
+		"iptables -D FORWARD -i $1 -j ACCEPT\n"
+		"iptables -D FORWARD -o $1 -j ACCEPT\n"
+		"iptables -t nat -D PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n"	/* rule for wake on lan over pptp tunnel */
+		"%s\n",
+		bcast,
 		nvram_get("pptpd_ipdown_script") ? nvram_get("pptpd_ipdown_script") : "");
 	fclose(fp);
-	chmod("/tmp/pptpd/ip-up", 0744);
-	chmod("/tmp/pptpd/ip-down", 0744);
 
-	// Extract chap-secrets from nvram
-	write_chap_secret("/tmp/pptpd/chap-secrets");
+	chmod("/etc/vpn/pptpd_ip-up", 0744);
+	chmod("/etc/vpn/pptpd_ip-down", 0744);
 
-	chmod("/tmp/pptpd/chap-secrets", 0600);
+	/* Extract chap-secrets from nvram */
+	write_chap_secret("/etc/vpn/chap-secrets");
 
-	// Execute pptpd daemon
-	ret =
-	    eval("pptpd", "-c", "/tmp/pptpd/pptpd.conf", "-o",
-		 "/tmp/pptpd/options.pptpd",
-		 "-C", "50");
+	chmod("/etc/vpn/chap-secrets", 0600);
+
+	/* Execute pptpd daemon */
+	ret = eval("pptpd", "-c", conffile, "-o", options, "-C", "50");
 
 	_dprintf("start_pptpd: ret= %d\n", ret);
-	//dd_syslog(LOG_INFO, "pptpd : pptp daemon successfully started\n");
-	return;
 }
 
 void stop_pptpd(void)
 {
 	FILE *fp;
+	int argc;
+	char *argv[7];
 	int ppppid;
 	char line[128];
 
-	eval("cp", "/tmp/pptp_connected", "/tmp/pptp_shutdown");
+	eval("cp", "/etc/vpn/pptpd_connected", "/etc/vpn/pptpd_shutdown");
 
-	fp = fopen("/tmp/pptp_shutdown", "r");
-	if (fp) {
+	if ((fp = fopen("/etc/vpn/pptpd_shutdown", "r")) != NULL) {
 		while (fgets(line, sizeof(line), fp) != NULL) {
-			if (sscanf(line, "%d %*s %*s %*s %*s %*d", &ppppid) != 1) continue;
+			if (sscanf(line, "%d %*s %*s %*s %*s %*d", &ppppid) != 1)
+				continue;
+
 			int n = 10;
 			while ((kill(ppppid, SIGTERM) == 0) && (n > 1)) {
 				sleep(1);
@@ -327,15 +281,19 @@ void stop_pptpd(void)
 		}
 		fclose(fp);
 	}
-	unlink("/tmp/pptp_shutdown");
-
-//	if (getpid() != 1) {
-//		notify_rc("stop_pptpd");
-//	}
 
 	killall_tk("pptpd");
 	killall_tk("bcrelay");
-	return;
+
+	/* Delete all files for this server */
+	unlink("/etc/vpn/pptpd_shutdown");
+	memset(line, 0, sizeof(line));
+	sprintf(line, "rm -rf /etc/vpn/pptpd.conf /etc/vpn/pptpd_options /etc/vpn/pptpd_ip-down /etc/vpn/pptpd_ip-up /etc/vpn/chap-secrets");
+	for (argv[argc = 0] = strtok(line, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
+	_eval(argv, NULL, 0, NULL);
+
+	/* Attempt to remove directory. Will fail if not empty */
+	rmdir("/etc/vpn");
 }
 
 void write_pptpd_dnsmasq_config(FILE* f) {
