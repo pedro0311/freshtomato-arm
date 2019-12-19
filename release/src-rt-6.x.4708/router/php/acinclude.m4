@@ -398,6 +398,8 @@ AC_DEFUN([PHP_EVAL_LIBLINE],[
         $2="[$]$2 -pthread"
       else
         PHP_RUN_ONCE(EXTRA_LDFLAGS, [$ac_i], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"])
+        PHP_RUN_ONCE(EXTRA_LDFLAGS_PROGRAM, [$ac_i],
+            [EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"])
       fi
     ;;
     -l*[)]
@@ -2219,7 +2221,8 @@ AC_DEFUN([PHP_SETUP_ICU],[
 
       ICU_LIBS=`$PKG_CONFIG --libs icu-uc icu-io icu-i18n`
       ICU_INCS=`$PKG_CONFIG --cflags-only-I icu-uc icu-io icu-i18n`
-      ICU_CXXFLAGS="-DU_USING_ICU_NAMESPACE=1"
+      ICU_CXXFLAGS=`$PKG_CONFIG --variable=CXXFLAGS icu-uc`
+      ICU_CXXFLAGS="$ICU_CXXFLAGS -DU_USING_ICU_NAMESPACE=1"
 
       AC_MSG_RESULT([found $ICU_VERSION])
 
