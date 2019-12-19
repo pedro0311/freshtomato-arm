@@ -22,10 +22,10 @@
 
 #include "proto.h"
 
+#ifdef ENABLE_HELP
+
 #include <errno.h>
 #include <string.h>
-
-#ifdef ENABLE_HELP
 
 static char *help_text = NULL;
 		/* The text displayed in the help window. */
@@ -64,7 +64,7 @@ void wrap_help_text_into_buffer(void)
 		do {
 			openfile->current->next = make_new_node(openfile->current);
 			openfile->current = openfile->current->next;
-			openfile->current->data = mallocstrcpy(NULL, "");
+			openfile->current->data = copy_of("");
 		} while (*(++ptr) == '\n');
 	}
 
@@ -103,7 +103,7 @@ void do_help(void)
 #ifdef ENABLE_COLOR
 	char *was_syntax = syntaxstr;
 #endif
-	char *saved_answer = (answer != NULL) ? strdup(answer) : NULL;
+	char *saved_answer = (answer != NULL) ? copy_of(answer) : NULL;
 		/* The current answer when the user invokes help at the prompt. */
 	unsigned stash[sizeof(flags) / sizeof(flags[0])];
 		/* A storage place for the current flag settings. */
@@ -150,8 +150,7 @@ void do_help(void)
 
 	/* Extract the title from the head of the help text. */
 	length = break_line(help_text, MAX_BUF_SIZE, TRUE);
-	title = charalloc(length * sizeof(char) + 1);
-	strncpy(title, help_text, length);
+	title = measured_copy(help_text, length + 1);
 	title[length] = '\0';
 
 	titlebar(title);
@@ -247,7 +246,6 @@ void do_help(void)
 	inhelp = FALSE;
 
 	curs_set(0);
-	refresh_needed = TRUE;
 
 	if (ISSET(NO_HELP)) {
 		currmenu = oldmenu;
@@ -262,7 +260,10 @@ void do_help(void)
 		browser_refresh();
 	else
 #endif
+	{
 		titlebar(NULL);
+		edit_refresh();
+	}
 }
 
 /* Allocate space for the help text for the current menu, and concatenate
@@ -547,7 +548,6 @@ functionptrtype parse_help_input(int *kbinput)
 {
 	if (!meta_key) {
 		switch (*kbinput) {
-			case BS_CODE:
 			case '-':
 				return do_page_up;
 			case ' ':

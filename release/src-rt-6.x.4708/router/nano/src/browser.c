@@ -21,12 +21,12 @@
 
 #include "proto.h"
 
+#ifdef ENABLE_BROWSER
+
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-
-#ifdef ENABLE_BROWSER
 
 static char **filelist = NULL;
 		/* The list of files to display in the file browser. */
@@ -221,7 +221,7 @@ char *do_browser(char *path)
 			selected = filelist_len - 1;
 		} else if (func == goto_dir_void) {
 			/* Ask for the directory to go to. */
-			if (do_prompt(TRUE, FALSE, MGOTODIR, NULL, NULL,
+			if (do_prompt(TRUE, FALSE, MGOTODIR, "", NULL,
 							/* TRANSLATORS: This is a prompt. */
 							browser_refresh, _("Go To Directory")) < 0) {
 				statusbar(_("Cancelled"));
@@ -285,7 +285,7 @@ char *do_browser(char *path)
 
 			/* If it isn't a directory, a file was selected -- we're done. */
 			if (!S_ISDIR(st.st_mode)) {
-				retval = mallocstrcpy(NULL, filelist[selected]);
+				retval = copy_of(filelist[selected]);
 				break;
 			}
 
@@ -314,7 +314,7 @@ char *do_browser(char *path)
 		/* If the window resized, refresh the file list. */
 		if (kbinput == KEY_WINCH) {
 			/* Remember the selected file, to be able to reselect it. */
-			present_name = mallocstrcpy(NULL, filelist[selected]);
+			present_name = copy_of(filelist[selected]);
 			/* Reread the contents of the current directory. */
 			goto read_directory_contents;
 		}
@@ -453,7 +453,6 @@ functionptrtype parse_browser_input(int *kbinput)
 {
 	if (!meta_key) {
 		switch (*kbinput) {
-			case BS_CODE:
 			case '-':
 				return do_page_up;
 			case ' ':
@@ -547,17 +546,17 @@ void browser_refresh(void)
 		 * "(dir)" for directories, and the file size for normal files. */
 		if (lstat(filelist[i], &st) == -1 || S_ISLNK(st.st_mode)) {
 			if (stat(filelist[i], &st) == -1 || !S_ISDIR(st.st_mode))
-				info = mallocstrcpy(NULL, "--");
+				info = copy_of("--");
 			else
 				/* TRANSLATORS: Try to keep this at most 7 characters. */
-				info = mallocstrcpy(NULL, _("(dir)"));
+				info = copy_of(_("(dir)"));
 		} else if (S_ISDIR(st.st_mode)) {
 			if (strcmp(thename, "..") == 0) {
 				/* TRANSLATORS: Try to keep this at most 12 characters. */
-				info = mallocstrcpy(NULL, _("(parent dir)"));
+				info = copy_of(_("(parent dir)"));
 				infomaxlen = 12;
 			} else
-				info = mallocstrcpy(NULL, _("(dir)"));
+				info = copy_of(_("(dir)"));
 		} else {
 			off_t result = st.st_size;
 			char modifier;
@@ -665,10 +664,10 @@ int filesearch_init(bool forwards)
 				(breadth(last_search) > COLS / 3) ? "..." : "");
 		free(disp);
 	} else
-		thedefault = mallocstrcpy(NULL, "");
+		thedefault = copy_of("");
 
 	/* Now ask what to search for. */
-	response = do_prompt(FALSE, FALSE, MWHEREISFILE, NULL, &search_history,
+	response = do_prompt(FALSE, FALSE, MWHEREISFILE, "", &search_history,
 						browser_refresh, "%s%s%s", _("Search"),
 						/* TRANSLATORS: A modifier of the Search prompt. */
 						!forwards ? _(" [Backwards]") : "", thedefault);
@@ -793,7 +792,7 @@ void to_last_file(void)
  * The returned string is dynamically allocated, and should be freed. */
 char *strip_last_component(const char *path)
 {
-	char *copy = mallocstrcpy(NULL, path);
+	char *copy = copy_of(path);
 	char *last_slash = strrchr(copy, '/');
 
 	if (last_slash != NULL)

@@ -19,9 +19,6 @@
  *                                                                        *
  **************************************************************************/
 
-#ifndef NANO_H
-#define NANO_H 1
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -234,6 +231,8 @@ typedef struct syntaxtype {
 		/* The list of libmagic results that this syntax applies to. */
 	char *linter;
 		/* The command with which to lint this type of file. */
+	char *formatter;
+		/* The command with which to format/modify/arrange this type of file. */
 	char *tab;
 		/* What the Tab key should produce; NULL for default behavior. */
 #ifdef ENABLE_COMMENT
@@ -650,5 +649,3 @@ enum
 
 /* The largest size_t number that doesn't have the high bit set. */
 #define HIGHEST_POSITIVE ((~(size_t)0) >> 1)
-
-#endif /* !NANO_H */

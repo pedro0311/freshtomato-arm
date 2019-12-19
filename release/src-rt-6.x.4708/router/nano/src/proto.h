@@ -18,9 +18,6 @@
  *                                                                        *
  **************************************************************************/
 
-#ifndef PROTO_H
-#define PROTO_H 1
-
 #include "nano.h"
 
 /* All external variables.  See global.c for their descriptions. */
@@ -176,8 +173,8 @@ extern int interface_color_pair[NUMBER_OF_ELEMENTS];
 
 extern char *homedir;
 extern char *statedir;
-#ifdef ENABLE_NANORC
-extern char *rcfile_with_errors;
+#if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
+extern char *startup_problem;
 #endif
 
 extern bool spotlighted;
@@ -219,7 +216,8 @@ int mbwidth(const char *c);
 char *make_mbchar(long chr, int *chr_mb_len);
 int char_length(const char *pointer);
 size_t mbstrlen(const char *s);
-int parse_mbchar(const char *buf, char *chr, size_t *col);
+int collect_char(const char *buf, char *chr);
+int advance_over(const char *string, size_t *column);
 size_t step_left(const char *buf, size_t pos);
 size_t step_right(const char *buf, size_t pos);
 int mbstrcasecmp(const char *s1, const char *s2);
@@ -276,7 +274,8 @@ void make_new_buffer(void);
 void set_modified(void);
 bool open_buffer(const char *filename, bool new_buffer);
 #ifdef ENABLE_SPELLER
-bool replace_buffer(const char *filename, undo_type action, bool marked);
+bool replace_buffer(const char *filename, undo_type action, bool marked,
+		const char *operation);
 #endif
 void prepare_for_display(void);
 #ifdef ENABLE_MULTIBUFFER
@@ -408,7 +407,7 @@ void extract(linestruct *top, size_t top_x, linestruct *bot, size_t bot_x);
 void ingraft_buffer(linestruct *somebuffer);
 void copy_from_buffer(linestruct *somebuffer);
 void print_view_warning(void);
-void show_restricted_warning(void);
+bool in_restricted_mode(void);
 #ifndef ENABLE_HELP
 void say_there_is_no_help(void);
 #endif
@@ -471,8 +470,11 @@ int do_prompt(bool allow_tabs, bool allow_files,
 int do_yesno_prompt(bool all, const char *msg);
 
 /* Most functions in rcfile.c. */
-#ifdef ENABLE_NANORC
+#if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
 void display_rcfile_errors(void);
+void jot_error(const char *msg, ...);
+#endif
+#ifdef ENABLE_NANORC
 #ifdef ENABLE_COLOR
 void parse_one_include(char *file, syntaxtype *syntax);
 void grab_and_store(const char *kind, char *ptr, regexlisttype **storage);
@@ -525,7 +527,7 @@ void do_enter(void);
 RETSIGTYPE cancel_command(int signal);
 bool execute_command(const char *command);
 void discard_until(const undostruct *thisitem, openfilestruct *thefile, bool keep);
-void add_undo(undo_type action);
+void add_undo(undo_type action, const char *message);
 void update_multiline_undo(ssize_t lineno, char *indentation);
 void update_undo(undo_type action);
 #endif /* !NANO_TINY */
@@ -551,6 +553,7 @@ void do_spell(void);
 #endif
 #ifdef ENABLE_COLOR
 void do_linter(void);
+void do_formatter(void);
 #endif
 #ifndef NANO_TINY
 void do_wordlinechar_count(void);
@@ -567,8 +570,8 @@ int digits(ssize_t n);
 #endif
 bool parse_num(const char *str, ssize_t *val);
 bool parse_line_column(const char *str, ssize_t *line, ssize_t *column);
-void unsunder(char *str, size_t true_len);
-void sunder(char *str);
+void unsunder(char *string, size_t length);
+void sunder(char *string);
 #if !defined(ENABLE_TINY) || defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
 void free_chararray(char **array, size_t len);
 #endif
@@ -579,8 +582,9 @@ const char *strstrwrapper(const char *haystack, const char *needle,
 		const char *start);
 void *nmalloc(size_t howmuch);
 void *nrealloc(void *ptr, size_t howmuch);
-char *mallocstrncpy(char *dest, const char *src, size_t n);
+char *measured_copy(const char *src, size_t n);
 char *mallocstrcpy(char *dest, const char *src);
+char *copy_of(const char *string);
 char *free_and_assign(char *dest, char *src);
 size_t get_page_start(size_t column);
 size_t xplustabs(void);
@@ -629,9 +633,9 @@ void check_statusblank(void);
 char *display_string(const char *buf, size_t column, size_t span,
 						bool isdata, bool isprompt);
 void titlebar(const char *path);
+void statusline(message_type importance, const char *msg, ...);
 void statusbar(const char *msg);
 void warn_and_shortly_pause(const char *msg);
-void statusline(message_type importance, const char *msg, ...);
 void bottombars(int menu);
 void post_one_key(const char *keystroke, const char *tag, int width);
 void place_the_cursor(void);
@@ -698,5 +702,3 @@ void flip_newbuffer(void);
 #endif
 void discard_buffer(void);
 void do_cancel(void);
-
-#endif /* !PROTO_H */

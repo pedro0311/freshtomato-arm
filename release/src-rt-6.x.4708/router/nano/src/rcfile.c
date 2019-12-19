@@ -23,13 +23,13 @@
 
 #include "proto.h"
 
+#ifdef ENABLE_NANORC
+
 #include <ctype.h>
 #include <errno.h>
 #include <glob.h>
 #include <string.h>
 #include <unistd.h>
-
-#ifdef ENABLE_NANORC
 
 #ifndef RCFILE_NAME
 #define HOME_RC_NAME ".nanorc"
@@ -67,7 +67,7 @@ static const rcoption rcopts[] = {
 #endif
 	{"nohelp", NO_HELP},
 	{"nonewlines", NO_NEWLINES},
-	{"nopauses", NO_PAUSES},
+	{"nopauses", NO_PAUSES},  /* Obsolete; remove in 2021. */
 #ifdef ENABLE_WRAPPING
 	{"nowrap", NO_WRAP},  /* Deprecated; remove in 2021. */
 #endif
@@ -146,7 +146,9 @@ static bool seen_color_command = FALSE;
 static colortype *lastcolor = NULL;
 		/* The end of the color list for the current syntax. */
 #endif
+#endif /* ENABLE_NANORC */
 
+#if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
 static linestruct *errors_head = NULL;
 static linestruct *errors_tail = NULL;
 		/* Beginning and end of a list of errors in rcfiles, if any. */
@@ -174,13 +176,20 @@ void jot_error(const char *msg, ...)
 		errors_tail->next = error;
 	errors_tail = error;
 
-	if (rcfile_with_errors == NULL)
-		rcfile_with_errors = strdup(nanorc);
-
+	if (startup_problem == NULL) {
+#ifdef ENABLE_NANORC
+		if (nanorc != NULL) {
+			snprintf(textbuf, MAXSIZE, _("Mistakes in '%s'"), nanorc);
+			startup_problem = copy_of(textbuf);
+		} else
+#endif
+			startup_problem = copy_of(_("Problems with history file"));
+	}
+#ifdef ENABLE_NANORC
 	if (lineno > 0)
 		length = snprintf(textbuf, MAXSIZE, _("Error in %s on line %zu: "),
 											nanorc, lineno);
-
+#endif
 	va_start(ap, msg);
 	length += vsnprintf(textbuf + length, MAXSIZE - length, _(msg), ap);
 	va_end(ap);
@@ -188,7 +197,9 @@ void jot_error(const char *msg, ...)
 	error->data = nmalloc(length + 1);
 	sprintf(error->data, "%s", textbuf);
 }
+#endif /* ENABLE_NANORC || ENABLE_HISTORIES */
 
+#ifdef ENABLE_NANORC
 /* Parse the next word from the string, null-terminate it, and return
  * a pointer to the first character after the null terminator.  The
  * returned pointer will point to '\0' if we hit the end of the line. */
@@ -325,17 +336,18 @@ void begin_new_syntax(char *ptr)
 
 	/* Initialize a new syntax struct. */
 	live_syntax = (syntaxtype *)nmalloc(sizeof(syntaxtype));
-	live_syntax->name = mallocstrcpy(NULL, nameptr);
-	live_syntax->filename = strdup(nanorc);
+	live_syntax->name = copy_of(nameptr);
+	live_syntax->filename = copy_of(nanorc);
 	live_syntax->lineno = lineno;
 	live_syntax->augmentations = NULL;
 	live_syntax->extensions = NULL;
 	live_syntax->headers = NULL;
 	live_syntax->magics = NULL;
 	live_syntax->linter = NULL;
+	live_syntax->formatter = NULL;
 	live_syntax->tab = NULL;
 #ifdef ENABLE_COMMENT
-	live_syntax->comment = mallocstrcpy(NULL, GENERAL_COMMENT_CHARACTER);
+	live_syntax->comment = copy_of(GENERAL_COMMENT_CHARACTER);
 #endif
 	live_syntax->color = NULL;
 	live_syntax->nmultis = 0;
@@ -405,7 +417,7 @@ void parse_binding(char *ptr, bool dobind)
 
 	keyptr = ptr;
 	ptr = parse_next_word(ptr);
-	keycopy = mallocstrcpy(NULL, keyptr);
+	keycopy = copy_of(keyptr);
 
 	if (strlen(keycopy) < 2) {
 		jot_error(N_("Key name is too short"));
@@ -463,7 +475,7 @@ void parse_binding(char *ptr, bool dobind)
 		if (*funcptr == '"') {
 			newsc = nmalloc(sizeof(keystruct));
 			newsc->func = (functionptrtype)implant;
-			newsc->expansion = mallocstrcpy(NULL, funcptr + 1);
+			newsc->expansion = copy_of(funcptr + 1);
 #ifndef NANO_TINY
 			newsc->toggle = 0;
 #endif
@@ -501,13 +513,12 @@ void parse_binding(char *ptr, bool dobind)
 	if (newsc->func == do_toggle_void)
 		mask = MMAIN;
 #endif
-#ifdef ENABLE_NANORC
 	/* Handle the special case of a key defined as a string. */
 	if (newsc->func == (functionptrtype)implant)
-		mask = MMOST | MHELP;
-#endif
+		mask = MMOST|MBROWSER|MHELP;
+
 	/* Now limit the given menu to those where the function exists. */
-	menu = menu & (is_universal(newsc->func) ? MMOST : mask);
+	menu = menu & (is_universal(newsc->func) ? (MMOST|MBROWSER) : mask);
 
 	if (!menu) {
 		if (!ISSET(RESTRICTED) && !ISSET(VIEW_MODE))
@@ -900,7 +911,7 @@ void grab_and_store(const char *kind, char *ptr, regexlisttype **storage)
 
 		/* Copy the regex into a struct, and hook this in at the end. */
 		newthing = (regexlisttype *)nmalloc(sizeof(regexlisttype));
-		newthing->full_regex = mallocstrcpy(NULL, regexstring);
+		newthing->full_regex = copy_of(regexstring);
 		newthing->next = NULL;
 
 		if (lastthing == NULL)
@@ -955,6 +966,8 @@ bool parse_syntax_commands(char *keyword, char *ptr)
 #endif
 	} else if (strcasecmp(keyword, "linter") == 0)
 		pick_up_name("linter", ptr, &live_syntax->linter);
+	else if (strcasecmp(keyword, "formatter") == 0)
+		pick_up_name("formatter", ptr, &live_syntax->formatter);
 	else
 		return FALSE;
 
@@ -1000,7 +1013,10 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 	size_t size = 0;
 
 	while ((len = getline(&buffer, &size, rcstream)) > 0) {
-		char *ptr, *keyword, *option;
+		char *ptr, *keyword, *option, *argument;
+#ifdef ENABLE_COLOR
+		bool drop_open = FALSE;
+#endif
 		int set = 0;
 		size_t i;
 
@@ -1047,23 +1063,35 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 				continue;
 			}
 
-			newitem = nmalloc(sizeof(augmentstruct));;
+			keyword = ptr;
+			argument = copy_of(ptr);
+			ptr = parse_next_word(ptr);
 
-			/* Store the content of an 'extendsyntax', for later parsing. */
-			newitem->filename = strdup(nanorc);
-			newitem->lineno = lineno;
-			newitem->data = strdup(ptr);
-			newitem->next = NULL;
+			/* File-matching commands need to be processed immediately;
+			 * other commands are stored for possible later processing. */
+			if (strcmp(keyword, "header") == 0 || strcmp(keyword, "magic") == 0) {
+				free(argument);
+				live_syntax = sint;
+				opensyntax = TRUE;
+				drop_open = TRUE;
+			} else {
+				newitem = nmalloc(sizeof(augmentstruct));;
 
-			if (sint->augmentations != NULL) {
-				extra = sint->augmentations;
-				while (extra->next != NULL)
-					extra = extra->next;
-				extra->next = newitem;
-			} else
-				sint->augmentations = newitem;
+				newitem->filename = copy_of(nanorc);
+				newitem->lineno = lineno;
+				newitem->data = argument;
+				newitem->next = NULL;
 
-			continue;
+				if (sint->augmentations != NULL) {
+					extra = sint->augmentations;
+					while (extra->next != NULL)
+						extra = extra->next;
+					extra->next = newitem;
+				} else
+					sint->augmentations = newitem;
+
+				continue;
+			}
 		}
 
 		/* Try to parse the keyword. */
@@ -1096,7 +1124,8 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 								strcasecmp(keyword, "icolor") == 0 ||
 								strcasecmp(keyword, "comment") == 0 ||
 								strcasecmp(keyword, "tabgives") == 0 ||
-								strcasecmp(keyword, "linter") == 0)) {
+								strcasecmp(keyword, "linter") == 0 ||
+								strcasecmp(keyword, "formatter") == 0)) {
 			if (!opensyntax)
 				jot_error(N_("A '%s' command requires a preceding "
 									"'syntax' command"), keyword);
@@ -1120,6 +1149,10 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		else if (intros_only)
 			jot_error(N_("Command \"%s\" not understood"), keyword);
 
+#ifdef ENABLE_COLOR
+		if (drop_open)
+			opensyntax = FALSE;
+#endif
 		if (set == 0)
 			continue;
 
@@ -1155,125 +1188,125 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 
 		/* An option that takes an argument cannot be unset. */
 		if (set == -1) {
-			jot_error(N_("Cannot unset option \"%s\""), rcopts[i].name);
+			jot_error(N_("Cannot unset option \"%s\""), option);
 			continue;
 		}
 
 		if (*ptr == '\0') {
-			jot_error(N_("Option \"%s\" requires an argument"), rcopts[i].name);
+			jot_error(N_("Option \"%s\" requires an argument"), option);
 			continue;
 		}
 
-		option = ptr;
-		if (*option == '"')
-			option++;
+		argument = ptr;
+		if (*argument == '"')
+			argument++;
 		ptr = parse_argument(ptr);
 
 #ifdef ENABLE_UTF8
 		/* When in a UTF-8 locale, ignore arguments with invalid sequences. */
-		if (using_utf8() && mbstowcs(NULL, option, 0) == (size_t)-1) {
+		if (using_utf8() && mbstowcs(NULL, argument, 0) == (size_t)-1) {
 			jot_error(N_("Argument is not a valid multibyte string"));
 			continue;
 		}
 #endif
-		option = mallocstrcpy(NULL, option);
+		argument = copy_of(argument);
 
 #ifdef ENABLE_COLOR
-		if (strcasecmp(rcopts[i].name, "titlecolor") == 0)
-			color_combo[TITLE_BAR] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "numbercolor") == 0)
-			color_combo[LINE_NUMBER] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "stripecolor") == 0)
-			color_combo[GUIDE_STRIPE] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "selectedcolor") == 0)
-			color_combo[SELECTED_TEXT] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "statuscolor") == 0)
-			color_combo[STATUS_BAR] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "errorcolor") == 0)
-			color_combo[ERROR_MESSAGE] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "keycolor") == 0)
-			color_combo[KEY_COMBO] = parse_interface_color(option);
-		else if (strcasecmp(rcopts[i].name, "functioncolor") == 0)
-			color_combo[FUNCTION_TAG] = parse_interface_color(option);
+		if (strcasecmp(option, "titlecolor") == 0)
+			color_combo[TITLE_BAR] = parse_interface_color(argument);
+		else if (strcasecmp(option, "numbercolor") == 0)
+			color_combo[LINE_NUMBER] = parse_interface_color(argument);
+		else if (strcasecmp(option, "stripecolor") == 0)
+			color_combo[GUIDE_STRIPE] = parse_interface_color(argument);
+		else if (strcasecmp(option, "selectedcolor") == 0)
+			color_combo[SELECTED_TEXT] = parse_interface_color(argument);
+		else if (strcasecmp(option, "statuscolor") == 0)
+			color_combo[STATUS_BAR] = parse_interface_color(argument);
+		else if (strcasecmp(option, "errorcolor") == 0)
+			color_combo[ERROR_MESSAGE] = parse_interface_color(argument);
+		else if (strcasecmp(option, "keycolor") == 0)
+			color_combo[KEY_COMBO] = parse_interface_color(argument);
+		else if (strcasecmp(option, "functioncolor") == 0)
+			color_combo[FUNCTION_TAG] = parse_interface_color(argument);
 		else
 #endif
 #ifdef ENABLE_OPERATINGDIR
-		if (strcasecmp(rcopts[i].name, "operatingdir") == 0)
-			operating_dir = option;
+		if (strcasecmp(option, "operatingdir") == 0)
+			operating_dir = argument;
 		else
 #endif
 #ifdef ENABLED_WRAPORJUSTIFY
-		if (strcasecmp(rcopts[i].name, "fill") == 0) {
-			if (!parse_num(option, &fill)) {
-				jot_error(N_("Requested fill size \"%s\" is invalid"), option);
+		if (strcasecmp(option, "fill") == 0) {
+			if (!parse_num(argument, &fill)) {
+				jot_error(N_("Requested fill size \"%s\" is invalid"), argument);
 				fill = -COLUMNS_FROM_EOL;
 			}
-			free(option);
+			free(argument);
 		} else
 #endif
 #ifndef NANO_TINY
-		if (strcasecmp(rcopts[i].name, "guidestripe") == 0) {
-			if (!parse_num(option, &stripe_column) || stripe_column <= 0) {
-				jot_error(N_("Guide column \"%s\" is invalid"), option);
+		if (strcasecmp(option, "guidestripe") == 0) {
+			if (!parse_num(argument, &stripe_column) || stripe_column <= 0) {
+				jot_error(N_("Guide column \"%s\" is invalid"), argument);
 				stripe_column = 0;
 			}
-			free(option);
-		} else if (strcasecmp(rcopts[i].name, "matchbrackets") == 0) {
-			if (has_blank_char(option)) {
+			free(argument);
+		} else if (strcasecmp(option, "matchbrackets") == 0) {
+			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
-				free(option);
-			} else if (mbstrlen(option) % 2 != 0) {
+				free(argument);
+			} else if (mbstrlen(argument) % 2 != 0) {
 				jot_error(N_("Even number of characters required"));
-				free(option);
+				free(argument);
 			} else
-				matchbrackets = option;
-		} else if (strcasecmp(rcopts[i].name, "whitespace") == 0) {
-			if (mbstrlen(option) != 2 || breadth(option) != 2) {
+				matchbrackets = argument;
+		} else if (strcasecmp(option, "whitespace") == 0) {
+			if (mbstrlen(argument) != 2 || breadth(argument) != 2) {
 				jot_error(N_("Two single-column characters required"));
-				free(option);
+				free(argument);
 			} else {
-				whitespace = option;
+				whitespace = argument;
 				whitelen[0] = char_length(whitespace);
 				whitelen[1] = char_length(whitespace + whitelen[0]);
 			}
 		} else
 #endif
 #ifdef ENABLE_JUSTIFY
-		if (strcasecmp(rcopts[i].name, "punct") == 0) {
-			if (has_blank_char(option)) {
+		if (strcasecmp(option, "punct") == 0) {
+			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
-				free(option);
+				free(argument);
 			} else
-				punct = option;
-		} else if (strcasecmp(rcopts[i].name, "brackets") == 0) {
-			if (has_blank_char(option)) {
+				punct = argument;
+		} else if (strcasecmp(option, "brackets") == 0) {
+			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
-				free(option);
+				free(argument);
 			} else
-				brackets = option;
-		} else if (strcasecmp(rcopts[i].name, "quotestr") == 0)
-			quotestr = option;
+				brackets = argument;
+		} else if (strcasecmp(option, "quotestr") == 0)
+			quotestr = argument;
 		else
 #endif
 #ifndef NANO_TINY
-		if (strcasecmp(rcopts[i].name, "backupdir") == 0)
-			backup_dir = option;
+		if (strcasecmp(option, "backupdir") == 0)
+			backup_dir = argument;
 		else
-		if (strcasecmp(rcopts[i].name, "wordchars") == 0)
-			word_chars = option;
+		if (strcasecmp(option, "wordchars") == 0)
+			word_chars = argument;
 		else
 #endif
 #ifdef ENABLE_SPELLER
-		if (strcasecmp(rcopts[i].name, "speller") == 0)
-			alt_speller = option;
+		if (strcasecmp(option, "speller") == 0)
+			alt_speller = argument;
 		else
 #endif
-		if (strcasecmp(rcopts[i].name, "tabsize") == 0) {
-			if (!parse_num(option, &tabsize) || tabsize <= 0) {
-				jot_error(N_("Requested tab size \"%s\" is invalid"), option);
+		if (strcasecmp(option, "tabsize") == 0) {
+			if (!parse_num(argument, &tabsize) || tabsize <= 0) {
+				jot_error(N_("Requested tab size \"%s\" is invalid"), argument);
 				tabsize = -1;
 			}
-			free(option);
+			free(argument);
 		}
 	}
 
@@ -1336,6 +1369,7 @@ void do_rcfiles(void)
 	check_vitals_mapped();
 
 	free(nanorc);
+	nanorc = NULL;
 }
 
 #endif /* ENABLE_NANORC */
