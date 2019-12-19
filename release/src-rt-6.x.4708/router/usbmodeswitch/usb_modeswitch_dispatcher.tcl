@@ -9,8 +9,8 @@
 # the mode switching program with the matching parameter
 # file from /usr/share/usb_modeswitch
 #
-# Part of usb-modeswitch-2.5.2 package
-# (C) Josua Dietze 2009-2017
+# Part of usb-modeswitch-2.6.0 package
+# (C) Josua Dietze 2009-2019
 
 set arg0 [lindex $argv 0]
 if [regexp {\.tcl$} $arg0] {
@@ -24,7 +24,7 @@ if [regexp {\.tcl$} $arg0] {
 # Setting of these switches is done in the global config
 # file (/etc/usb_modeswitch.conf) if available
 
-set flags(logging) 1
+set flags(logging) 0
 set flags(noswitching) 0
 set flags(stordelay) 0
 set flags(nombim) 0
@@ -41,11 +41,38 @@ proc {Main} {argv argc} {
 global scsi usb config match device flags setup devdir loginit
 
 set flags(config) ""
-Log "[ParseGlobalConfig]"
 
-if {$flags(stordelay) > 0} {
-	SetStorageDelay $flags(stordelay)
+# arg0: optional custom location of configuration file
+# arg1: the "kernel name" for the device to switch (udev: %k)
+# The parameter "bus id" for the device (udev: %b) is now deprecated
+#
+# From version 2.5.0 upward %b is removed by udev sh script
+# which can handle old and new udev params ('%b/%k' and '%k')
+
+Log "Raw parameters: $argv"
+set device "noname"
+set arg0 ""
+for {set i 0} {$i < [llength $argv]} {incr i} {
+	set option [lindex $argv $i]
+	switch -glob -- $option {
+		"--config-file" {
+			if [regexp {config-file=(\"[^\"]+\"|[^ ]+)} $option d param] {
+				set arg0 [string trim $param {"}]
+			} else {
+				set arg0 [lindex $argv $i+1]
+			}
+		}
+		"--switch-mode" {
+			if [regexp {switch-mode=(.+)} $option d param] {
+				set arg1 $param
+			} else {
+				set arg1 [lindex $argv $i+1]
+			}
+		}
+	}
 }
+Log "[ParseGlobalConfig $arg0]"
+set flags(logwrite) 1
 
 
 # The facility to add a symbolic link pointing to the
@@ -63,33 +90,30 @@ if {[lindex $argv 0] == "--symlink-name"} {
 	SafeExit
 }
 
-# arg0: the bus id for the device (udev: %b), now deprecated
-# arg1: the "kernel name" for the device (udev: %k)
-#
-# From version 2.5.0 upward %b is removed by udev sh script
-# which can handle old and new udev params ('%b/%k' and '%k')
 
-Log "Raw parameters: $argv"
-set device "noname"
-if {[lindex $argv 0] == "--switch-mode"} {
-	if [string length [lindex $argv 1]] {
-		set arg1 [lindex $argv 1]
-	} else {
-		Log "\nNo data from udev. Exit"
+if {$flags(stordelay) > 0} {
+	SetStorageDelay $flags(stordelay)
+}
+
+if [info exists arg1] {
+	if {[string length $arg1] == 0} {
+		ShowUsage
+		Log "\nNo device provided for mode-switching. Exit"
 		SafeExit
 	}
 } else {
-	Log "\nNo command given. Exit"
+	ShowUsage
+	Log "\nNo command option given. Exit"
 	SafeExit
 }
 
 if {![regexp {(.*?):.*$} $arg1 d device]} {
 	if {![regexp {([0-9]+-[0-9]+\.?[0-9]*.*)} $arg1 d device]} {
+		ShowUsage
 		Log "Could not determine device dir from udev values! Exit"
 		SafeExit
 	}
 }
-set flags(logwrite) 1
 
 set setup(dbdir) /usr/share/usb_modeswitch
 set setup(dbdir_etc) /etc/usb_modeswitch.d
@@ -496,37 +520,35 @@ return 1
 # end of proc {MatchDevice}
 
 
-proc {ParseGlobalConfig} {} {
+proc {ParseGlobalConfig} {path} {
 
 global flags
 set configFile ""
-set places [list /etc/usb_modeswitch.conf /etc/sysconfig/usb_modeswitch /etc/default/usb_modeswitch]
+if [string length $path] {
+	set places [list $path]
+} else {
+	set places [list /etc/usb_modeswitch.conf /etc/sysconfig/usb_modeswitch /etc/default/usb_modeswitch]
+}
 foreach cfg $places {
 	if [file exists $cfg] {
 		set configFile $cfg
 		break
 	}
 }
-if {$configFile == ""} {return}
+if {$configFile == ""} {return "No configuration file found, using defaults"}
 
 set rc [open $configFile r]
 while {![eof $rc]} {
 	gets $rc line
 	if [regexp {^#} [string trim $line]] {continue}
 	if [regexp {DisableMBIMGlobal\s*=\s*([^\s]+)} $line d val] {
-		if [regexp -nocase {1|yes|true} $val] {
-			set flags(nombim) 1
-		}
+		set flags(nombim) [regexp -nocase {1|yes|true} $val]
 	}
 	if [regexp {DisableSwitching\s*=\s*([^\s]+)} $line d val] {
-		if [regexp -nocase {1|yes|true} $val] {
-			set flags(noswitching) 1
-		}
+		set flags(noswitching) [regexp -nocase {1|yes|true} $val]
 	}
 	if [regexp {EnableLogging\s*=\s*([^\s]+)} $line d val] {
-		if [regexp -nocase {0|no|false} $val] {
-			set flags(logging) 0
-		}
+		set flags(logging) [regexp -nocase {1|yes|true} $val]
 	}
 	if [regexp {SetStorageDelay\s*=\s*([^\s]+)} $line d val] {
 		if [regexp {\d+} $val] {
@@ -534,9 +556,7 @@ while {![eof $rc]} {
 		}
 	}
 	if [regexp {HuaweiAltModeGlobal\s*=\s*([^\s]+)} $line d val] {
-		if [regexp -nocase {1|yes|true} $val] {
-			set flags(althuawei) 1
-		}
+		set flags(althuawei) [regexp -nocase {1|yes|true} $val]
 	}
 
 }
@@ -623,6 +643,7 @@ proc {Log} {msg} {
 
 global flags device loginit
 
+if {$flags(logwrite) == 0} {append loginit $msg\n}
 if {$flags(logging) == 0} {return}
 
 if $flags(logwrite) {
@@ -676,8 +697,6 @@ proc {hasInterrupt} {ifDir} {
 	return 0
 }
 
-set loginit "usb_modeswitch called with --symlink-name\n parameter: $path\n"
-
 # In case the device path is returned as /class/tty/ttyUSB,
 # get the USB device path from linked tree "device"
 set linkpath /sys$path/device
@@ -694,15 +713,14 @@ if [file exists $linkpath] {
 if {![regexp {([0-9]+-[0-9]+[\.0-9]*:[^/]*).*(ttyUSB[0-9]+)} $path d myDev myPort]} {
 	if $flags(logging) {
 		set device [clock clicks]
-		set flags(logwrite) 1
-		Log "$loginit\nThis is not a ttyUSB port. Abort"
+		Log "This is not a ttyUSB port. Abort"
 	}
 	return ""
 }
 
 set device ttyUSB_$myDev
 set flags(logwrite) 1
-Log "$loginit\nMy name is $myPort\n"
+Log "My name is $myPort\n"
 
 if {![regexp {(.*?[0-9]+)\.([0-9]+)/ttyUSB} /sys$path d ifRoot ifNum]} {
 	Log "Could not find interface in path\n $path. Abort"
@@ -891,6 +909,14 @@ return [string trim $c]
 
 }
 # end of proc {IfClass}
+
+
+proc {ShowUsage} {} {
+	puts "Dispatcher for 'usb_modeswitch'; usually run by udev, not intended for interactive operation"
+	puts "Usage: usb_modeswitch_dispatcher [--config-file=<path>] --switch-mode=<device kernel name>"
+	puts "       usb_modeswitch_dispatcher --symlink-name=<sys path to device>"
+}
+# end of proc {ShowUsage}
 
 
 proc {SysLog} {msg} {
