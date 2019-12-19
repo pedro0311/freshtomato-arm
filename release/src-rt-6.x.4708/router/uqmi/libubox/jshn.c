@@ -178,12 +178,15 @@ static int jshn_parse(const char *str)
 
 	obj = json_tokener_parse(str);
 	if (!obj || json_object_get_type(obj) != json_type_object) {
+		if (obj)
+			json_object_put(obj);
 		fprintf(stderr, "Failed to parse message data\n");
 		return 1;
 	}
 	fprintf(stdout, "json_init;\n");
 	add_json_object(obj);
 	fflush(stdout);
+	json_object_put(obj);
 
 	return 0;
 }
@@ -275,7 +278,7 @@ out:
 	return obj;
 }
 
-static int jshn_format(bool no_newline, bool indent)
+static int jshn_format(bool no_newline, bool indent, FILE *stream)
 {
 	json_object *obj;
 	const char *output;
@@ -297,7 +300,7 @@ static int jshn_format(bool no_newline, bool indent)
 			goto out;
 		output = blobmsg_output;
 	}
-	fprintf(stdout, "%s%s", output, no_newline ? "" : "\n");
+	fprintf(stream, "%s%s", output, no_newline ? "" : "\n");
 	free(blobmsg_output);
 	ret = 0;
 
@@ -308,7 +311,7 @@ out:
 
 static int usage(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-n] [-i] -r <message>|-R <file>|-w\n", progname);
+	fprintf(stderr, "Usage: %s [-n] [-i] -r <message>|-R <file>|-o <file>|-p <prefix>|-w\n", progname);
 	return 2;
 }
 
@@ -333,6 +336,61 @@ static int avl_strcmp_var(const void *k1, const void *k2, void *ptr)
 	return c1 - c2;
 }
 
+static int jshn_parse_file(const char *path)
+{
+	struct stat sb;
+	int ret = 0;
+	char *fbuf;
+	int fd;
+
+	if ((fd = open(path, O_RDONLY)) == -1) {
+		fprintf(stderr, "Error opening %s\n", path);
+		return 3;
+	}
+
+	if (fstat(fd, &sb) == -1) {
+		fprintf(stderr, "Error getting size of %s\n", path);
+		close(fd);
+		return 3;
+	}
+
+	if (!(fbuf = calloc(1, sb.st_size+1))) {
+		fprintf(stderr, "Error allocating memory for %s\n", path);
+		close(fd);
+		return 3;
+	}
+
+	if (read(fd, fbuf, sb.st_size) != sb.st_size) {
+		fprintf(stderr, "Error reading %s\n", path);
+		free(fbuf);
+		close(fd);
+		return 3;
+	}
+
+	ret = jshn_parse(fbuf);
+	free(fbuf);
+	close(fd);
+
+	return ret;
+}
+
+static int jshn_format_file(const char *path, bool no_newline, bool indent)
+{
+	FILE *fp = NULL;
+	int ret = 0;
+
+	fp = fopen(path, "w");
+	if (!fp) {
+		fprintf(stderr, "Error opening %s\n", path);
+		return 3;
+	}
+
+	ret = jshn_format(no_newline, indent, fp);
+	fclose(fp);
+
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	extern char **environ;
@@ -340,11 +398,8 @@ int main(int argc, char **argv)
 	bool indent = false;
 	struct env_var *vars;
 	int i;
+	int ret = 0;
 	int ch;
-	int fd;
-	struct stat sb;
-	char *fbuf;
-	int ret;
 
 	avl_init(&env_vars, avl_strcmp_var, false, NULL);
 	for (i = 0; environ[i]; i++);
@@ -366,41 +421,24 @@ int main(int argc, char **argv)
 		avl_insert(&env_vars, &vars[i].avl);
 	}
 
-	while ((ch = getopt(argc, argv, "p:nir:R:w")) != -1) {
+	while ((ch = getopt(argc, argv, "p:nir:R:o:w")) != -1) {
 		switch(ch) {
 		case 'p':
 			var_prefix = optarg;
 			var_prefix_len = strlen(var_prefix);
 			break;
 		case 'r':
-			return jshn_parse(optarg);
+			ret = jshn_parse(optarg);
+			goto exit;
 		case 'R':
-			if ((fd = open(optarg, O_RDONLY)) == -1) {
-				fprintf(stderr, "Error opening %s\n", optarg);
-				return 3;
-			}
-			if (fstat(fd, &sb) == -1) {
-				fprintf(stderr, "Error getting size of %s\n", optarg);
-				close(fd);
-				return 3;
-			}
-			if (!(fbuf = malloc(sb.st_size))) {
-				fprintf(stderr, "Error allocating memory for %s\n", optarg);
-				close(fd);
-				return 3;
-			}
-			if (read(fd, fbuf, sb.st_size) != sb.st_size) {
-				fprintf(stderr, "Error reading %s\n", optarg);
-				free(fbuf);
-				close(fd);
-				return 3;
-			}
-			ret = jshn_parse(fbuf);
-			free(fbuf);
-			close(fd);
-			return ret;
+			ret = jshn_parse_file(optarg);
+			goto exit;
 		case 'w':
-			return jshn_format(no_newline, indent);
+			ret = jshn_format(no_newline, indent, stdout);
+			goto exit;
+		case 'o':
+			ret = jshn_format_file(optarg, no_newline, indent);
+			goto exit;
 		case 'n':
 			no_newline = true;
 			break;
@@ -408,8 +446,15 @@ int main(int argc, char **argv)
 			indent = true;
 			break;
 		default:
+			free(vars);
 			return usage(argv[0]);
 		}
 	}
+
+	free(vars);
 	return usage(argv[0]);
+
+exit:
+	free(vars);
+	return ret;
 }

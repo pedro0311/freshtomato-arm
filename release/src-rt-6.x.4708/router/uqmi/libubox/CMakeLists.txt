@@ -3,7 +3,7 @@ INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
 
 PROJECT(ubox C)
-ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations)
+ADD_DEFINITIONS(-Os -Wextra -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations -Wno-unused-parameter)
 
 OPTION(BUILD_LUA "build Lua plugin" ON)
 OPTION(BUILD_EXAMPLES "build examples" ON)
@@ -41,6 +41,11 @@ INSTALL(TARGETS ubox ubox-static
 
 ADD_SUBDIRECTORY(lua)
 ADD_SUBDIRECTORY(examples)
+
+IF(UNIT_TESTING)
+  ENABLE_TESTING()
+  ADD_SUBDIRECTORY(tests)
+ENDIF()
 
 find_library(json NAMES json-c)
 IF(EXISTS ${json})

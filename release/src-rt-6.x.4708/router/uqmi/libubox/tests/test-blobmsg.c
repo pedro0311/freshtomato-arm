@@ -15,7 +15,7 @@ static const char *indent_str = "\t\t\t\t\t\t\t\t\t\t\t\t\t";
 static void dump_attr_data(struct blob_attr *data, int indent, int next_indent);
 
 static void
-dump_table(struct blob_attr *head, int len, int indent, bool array)
+dump_table(struct blob_attr *head, size_t len, int indent, bool array)
 {
 	struct blob_attr *attr;
 	struct blobmsg_hdr *hdr;
@@ -131,15 +131,22 @@ fill_message(struct blob_buf *buf)
 
 int main(int argc, char **argv)
 {
+	char *json = NULL;
 	static struct blob_buf buf;
 
 	blobmsg_buf_init(&buf);
 	fill_message(&buf);
 	dump_message(&buf);
-	fprintf(stderr, "json: %s\n", blobmsg_format_json(buf.head, true));
+
+	json = blobmsg_format_json(buf.head, true);
+	if (!json)
+		exit(EXIT_FAILURE);
+
+	fprintf(stderr, "json: %s\n", json);
 
 	if (buf.buf)
 		free(buf.buf);
+	free(json);
 
 	return 0;
 }
