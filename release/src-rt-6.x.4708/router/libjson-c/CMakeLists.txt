@@ -2,8 +2,12 @@
 # specially true in old embedded systems (OpenWRT and friends) where CMake isn't necessarily upgraded.
 cmake_minimum_required(VERSION 2.8)
 
+if(POLICY CMP0048)
+	cmake_policy(SET CMP0048 NEW)
+endif()
+
 # JSON-C library is C only project.
-project(json-c C)
+project(json-c LANGUAGES C VERSION 0.13.99)
 
 # If we've got 3.0 then it's good, let's provide support. Otherwise, leave it be.
 if(POLICY CMP0038)
@@ -15,11 +19,25 @@ if(POLICY CMP0054)
     cmake_policy(SET CMP0054 NEW)
 endif()
 
+# Include file check macros honor CMAKE_REQUIRED_LIBRARIES
+# i.e. the check_include_file() calls will include -lm when checking.
+if(POLICY CMP0075)
+	cmake_policy(SET CMP0075 NEW)
+endif()
+
+include(CTest)
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
+   (NOT MSVC OR NOT (MSVC_VERSION LESS 1800)) # Tests need at least VS2013
+   )
+add_subdirectory(tests)
+endif()
+
 # Set some packaging variables.
 set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
-set(CPACK_PACKAGE_VERSION_MAJOR     "0")
-set(CPACK_PACKAGE_VERSION_MINOR     "13")
-set(CPACK_PACKAGE_VERSION_PATCH     "99")
+set(CPACK_PACKAGE_VERSION_MAJOR     "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR     "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH     "${PROJECT_VERSION_PATCH}")
 set(JSON_C_BUGREPORT                "json-c@googlegroups.com")
 
 include(CheckSymbolExists)
@@ -36,7 +54,8 @@ option(BUILD_SHARED_LIBS  "Default to building shared libraries" ON)
 # Enable or disable features. By default, all features are turned off.
 option(ENABLE_RDRAND                "Enable RDRAND Hardware RNG Hash Seed"          OFF)
 option(ENABLE_THREADING             "Enable partial threading support."             OFF)
-option(HAS_GNU_WARNING_LONG         "Define if .gnu.warning accepts long strings."  OFF)
+option(DISABLE_WERROR               "Avoid treating compiler warnings as fatal errors"    OFF)
+option(DISABLE_BSYMBOLIC            "Avoid linking with -Bsymbolic-function"   OFF)
 
 if (UNIX OR MINGW OR CYGWIN)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
@@ -57,6 +76,7 @@ check_include_file(stdarg.h         HAVE_STDARG_H)
 check_include_file(strings.h        HAVE_STRINGS_H)
 check_include_file(string.h         HAVE_STRING_H)
 check_include_file(syslog.h         HAVE_SYSLOG_H)
+
 
 check_include_files("stdlib.h;stdarg.h;string.h;float.h" STDC_HEADERS)
 
@@ -135,11 +155,20 @@ if (MSVC)
     endif()
 endif()
 
+
 check_type_size(int                 SIZEOF_INT)
 check_type_size(int64_t             SIZEOF_INT64_T)
 check_type_size(long                SIZEOF_LONG)
 check_type_size("long long"         SIZEOF_LONG_LONG)
 check_type_size("size_t"            SIZEOF_SIZE_T)
+
+check_c_source_compiles(
+[=[
+extern void json_object_get();
+__asm__(".section .gnu.json_object_get\\n\\t.ascii \\"Please link against libjson-c instead of libjson\\"\\n\\t.text");
+int main(int c, char *v) { return 0;}
+]=]
+HAS_GNU_WARNING_LONG)
 
 check_c_source_compiles(
   "int main() { int i, x = 0; i = __sync_add_and_fetch(&x,1); return x; }"
@@ -168,8 +197,15 @@ message(STATUS "Written ${PROJECT_BINARY_DIR}/json_config.h")
 
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
-    # There's a catch here.
-    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Werror")
+	if ("${DISABLE_WERROR}" STREQUAL "OFF")
+	    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Werror")
+	endif()
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall")
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wcast-qual")
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-error=deprecated-declarations")
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wextra")
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wwrite-strings")
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-unused-parameter")
 
     add_definitions(-D_GNU_SOURCE)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
@@ -181,6 +217,35 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4702")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4127")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4701")
+endif()
+
+if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
+	check_c_source_compiles(
+	[=[
+	/* uClibc toolchains without threading barf when _REENTRANT is defined */
+	#define _REENTRANT 1
+	#include <sys/types.h>
+	int main ()
+	{
+	  return 0;
+	}
+	]=]
+	REENTRANT_WORKS
+	)
+	if (REENTRANT_WORKS)
+		add_compile_options("-D_REENTRANT")
+	endif()
+
+	if (DISABLE_BSYMBOLIC STREQUAL "OFF")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKED_FLAGS} -Wl,-Bsymbolic-functions")
+		# XXX need cmake>=3.13 for this:
+		#add_link_options("-Wl,-Bsymbolic-functions")
+	endif()
+endif()
+
+if ($ENV{VALGRIND})
+	# Build so that valgrind doesn't complain about linkhash.c
+    add_definitions(-DVALGRIND=1)
 endif()
 
 set(JSON_C_PUBLIC_HEADERS
@@ -197,6 +262,7 @@ set(JSON_C_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/json_pointer.h
     ${PROJECT_SOURCE_DIR}/json_tokener.h
     ${PROJECT_SOURCE_DIR}/json_util.h
+    ${PROJECT_SOURCE_DIR}/json_visit.h
     ${PROJECT_SOURCE_DIR}/linkhash.h
     ${PROJECT_SOURCE_DIR}/printbuf.h
 )
@@ -232,13 +298,16 @@ set(JSON_C_SOURCES
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_BINARY_DIR})
 
-# If -DBUILD_SHARED_LIBS is set in the CMake command-line, we'll be able to create shared libs, otherwise this would
-# generate static libs. Good enough for most use-cases unless there's some serious requirement to create both
-# simultaneously.
+# XXX for a normal full distribution we'll need to figure out
+# XXX how to build both shared and static libraries.
+# Probably leverage that to build a local VALGRIND=1 library for testing too.
 add_library(${PROJECT_NAME}
     ${JSON_C_SOURCES}
     ${JSON_C_HEADERS}
 )
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION 4.0.0
+    SOVERSION 4)
 
 # If json-c is used as subroject it set to target correct interface -I flags and allow
 # to build external target without extra include_directories(...)
@@ -280,6 +349,7 @@ if (UNIX OR MINGW OR CYGWIN)
     SET(exec_prefix ${CMAKE_INSTALL_PREFIX})
     SET(libdir ${CMAKE_INSTALL_FULL_LIBDIR})
     SET(includedir ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+    SET(VERSION ${PROJECT_VERSION})
     configure_file(json-c.pc.in json-c.pc @ONLY)
     set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
     install(FILES ${PROJECT_BINARY_DIR}/json-c.pc DESTINATION "${INSTALL_PKGCONFIG_DIR}")
