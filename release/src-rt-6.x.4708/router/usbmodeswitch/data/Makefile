@@ -1,6 +1,6 @@
 PROG        = usb-modeswitch-data
-VERS        = 20170806
-RM          = /bin/rm -f
+VERS        = 20191128
+MV          = /bin/mv -f
 PREFIX      = $(DESTDIR)/usr
 ETCDIR      = $(DESTDIR)/etc
 RULESDIR    = $(DESTDIR)/lib/udev/rules.d
@@ -11,7 +11,7 @@ RULESDIR    = $(DESTDIR)/lib/udev/rules.d
 all: 40-usb_modeswitch.rules
 
 clean:
-	$(RM) 40-usb_modeswitch.rules
+	$(MV) 40-usb_modeswitch.rules 40-usb_modeswitch.rules.old
 
 install: all files-install db-install
 
