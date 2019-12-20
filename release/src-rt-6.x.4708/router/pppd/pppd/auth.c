@@ -115,7 +115,6 @@
 #include "pathnames.h"
 #include "session.h"
 
-static const char rcsid[] = RCSID;
 
 /* Bits in scan_authfile return value */
 #define NONWILD_SERVER	1

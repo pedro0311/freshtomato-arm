@@ -196,16 +196,16 @@ index df12da0..08d5355 100644
  
  # Uncomment the next line to enable multilink PPP (enabled by default)
  # Linux distributions: Please leave multilink ENABLED in your builds
-@@ -60,7 +60,7 @@ LIBS =
- # Linux distributions: Please leave TDB ENABLED in your builds.
- USE_TDB=y
+@@ -65,7 +65,7 @@ LIBS =
+ # pppd will not detach and will notify systemd when up.
+ #SYSTEMD=y
  
 -HAS_SHADOW=y
 +#HAS_SHADOW=y
  #USE_PAM=y
  HAVE_INET6=y
  
-@@ -76,13 +76,13 @@ PLUGIN=y
+@@ -81,13 +81,13 @@ PLUGIN=y
  # Use libutil
  USE_LIBUTIL=y
  
@@ -222,24 +222,11 @@ index df12da0..08d5355 100644
  
  ifdef CHAPMS
  CFLAGS   += -DCHAPMS=1
-@@ -120,10 +120,10 @@ CFLAGS   += -DHAS_SHADOW
- #LIBS     += -lshadow $(LIBS)
- endif
- 
--ifneq ($(wildcard /usr/include/crypt.h),)
-+#ifneq ($(wildcard /usr/include/crypt.h),)
- CFLAGS  += -DHAVE_CRYPT_H=1
- LIBS	+= -lcrypt
--endif
-+#endif
- 
- ifdef USE_LIBUTIL
- CFLAGS	+= -DHAVE_LOGWTMP=1
 diff --git pppd/pppd/auth.c pppd/pppd/auth.c
 index fb71944..c1774d3 100644
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
-@@ -557,6 +557,9 @@ void start_link(unit)
+@@ -556,6 +556,9 @@ void start_link(unit)
  void start_link(unit)
      int unit;
  {
@@ -249,7 +236,7 @@ index fb71944..c1774d3 100644
      status = EXIT_CONNECT_FAILED;
      new_phase(PHASE_SERIALCONN);
  
-@@ -666,6 +669,7 @@ link_terminated(unit)
+@@ -665,6 +668,7 @@ link_terminated(unit)
  	the_channel->disconnect();
  	devfd = -1;
      }
@@ -257,7 +244,7 @@ index fb71944..c1774d3 100644
      if (the_channel->cleanup)
  	(*the_channel->cleanup)();
  
-@@ -1192,6 +1196,10 @@ check_idle(arg)
+@@ -1191,6 +1195,10 @@ check_idle(arg)
      if (idle_time_hook != 0) {
  	tlim = idle_time_hook(&idle);
      } else {
@@ -268,7 +255,7 @@ index fb71944..c1774d3 100644
  	itime = MIN(idle.xmit_idle, idle.recv_idle);
  	tlim = idle_time_limit - itime;
      }
-@@ -2359,7 +2367,8 @@ auth_script(script)
+@@ -2358,7 +2366,8 @@ auth_script(script)
      argv[3] = user_name;
      argv[4] = devnam;
      argv[5] = strspeed;
@@ -282,7 +269,7 @@ diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
 index 5814f35..99eaa47 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
-@@ -62,12 +62,6 @@ static int setdeflate __P((char **));
+@@ -61,12 +61,6 @@ static int setdeflate __P((char **));
  static char bsd_value[8];
  static char deflate_value[8];
  
@@ -295,7 +282,7 @@ index 5814f35..99eaa47 100644
  
  static option_t ccp_option_list[] = {
      { "noccp", o_bool, &ccp_protent.enabled_flag,
-@@ -108,54 +102,87 @@ static option_t ccp_option_list[] = {
+@@ -107,54 +101,87 @@ static option_t ccp_option_list[] = {
        "don't allow Predictor-1", OPT_ALIAS | OPT_PRIOSUB | OPT_A2CLR,
        &ccp_allowoptions[0].predictor_1 },
  
@@ -426,7 +413,7 @@ index 5814f35..99eaa47 100644
  #endif /* MPPE */
  
      { NULL }
-@@ -241,7 +268,7 @@ static fsm_callbacks ccp_callbacks = {
+@@ -240,7 +267,7 @@ static fsm_callbacks ccp_callbacks = {
   */
  #define ANY_COMPRESS(opt)	((opt).deflate || (opt).bsd_compress \
  				 || (opt).predictor_1 || (opt).predictor_2 \
@@ -435,7 +422,7 @@ index 5814f35..99eaa47 100644
  
  /*
   * Local state (mainly for handling reset-reqs and reset-acks).
-@@ -378,6 +405,30 @@ ccp_init(unit)
+@@ -377,6 +404,30 @@ ccp_init(unit)
      ccp_allowoptions[0].bsd_bits = BSD_MAX_BITS;
  
      ccp_allowoptions[0].predictor_1 = 1;
@@ -466,7 +453,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -455,11 +506,11 @@ ccp_input(unit, p, len)
+@@ -454,11 +505,11 @@ ccp_input(unit, p, len)
      if (oldstate == OPENED && p[0] == TERMREQ && f->state != OPENED) {
  	notice("Compression disabled by peer.");
  #ifdef MPPE
@@ -480,7 +467,7 @@ index 5814f35..99eaa47 100644
      }
  
      /*
-@@ -487,6 +538,15 @@ ccp_extcode(f, code, id, p, len)
+@@ -486,6 +537,15 @@ ccp_extcode(f, code, id, p, len)
  	    break;
  	/* send a reset-ack, which the transmitter will see and
  	   reset its compression state. */
@@ -496,7 +483,7 @@ index 5814f35..99eaa47 100644
  	fsm_sdata(f, CCP_RESETACK, id, NULL, 0);
  	break;
  
-@@ -515,12 +575,11 @@ ccp_protrej(unit)
+@@ -514,12 +574,11 @@ ccp_protrej(unit)
      fsm_lowerdown(&ccp_fsm[unit]);
  
  #ifdef MPPE
@@ -511,7 +498,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -537,7 +596,7 @@ ccp_resetci(f)
+@@ -536,7 +595,7 @@ ccp_resetci(f)
      all_rejected[f->unit] = 0;
  
  #ifdef MPPE
@@ -520,7 +507,7 @@ index 5814f35..99eaa47 100644
  	ccp_options *ao = &ccp_allowoptions[f->unit];
  	int auth_mschap_bits = auth_done[f->unit];
  	int numbits;
-@@ -551,80 +610,109 @@ ccp_resetci(f)
+@@ -550,80 +609,109 @@ ccp_resetci(f)
  	 * NB: If MPPE is required, all other compression opts are invalid.
  	 *     So, we return right away if we can't do it.
  	 */
@@ -695,7 +682,7 @@ index 5814f35..99eaa47 100644
      if (go->bsd_compress) {
  	opt_buf[0] = CI_BSD_COMPRESS;
  	opt_buf[1] = CILEN_BSD_COMPRESS;
-@@ -680,7 +768,8 @@ ccp_cilen(f)
+@@ -679,7 +767,8 @@ ccp_cilen(f)
 	+ (go->deflate && go->deflate_draft? CILEN_DEFLATE: 0)
  	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
  	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
@@ -705,7 +692,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -694,6 +783,8 @@ ccp_addci(f, p, lenp)
+@@ -693,6 +782,8 @@ ccp_addci(f, p, lenp)
  {
      int res;
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -714,7 +701,7 @@ index 5814f35..99eaa47 100644
      u_char *p0 = p;
  
      /*
-@@ -702,22 +793,43 @@ ccp_addci(f, p, lenp)
+@@ -701,22 +792,43 @@ ccp_addci(f, p, lenp)
       * in case it gets Acked.
       */
  #ifdef MPPE
@@ -767,7 +754,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	p[0] = go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT;
  	p[1] = CILEN_DEFLATE;
-@@ -803,7 +915,7 @@ ccp_addci(f, p, lenp)
+@@ -802,7 +914,7 @@ ccp_addci(f, p, lenp)
  
  /*
   * ccp_ackci - process a received configure-ack, and return
@@ -776,7 +763,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_ackci(f, p, len)
-@@ -812,24 +924,44 @@ ccp_ackci(f, p, len)
+@@ -811,24 +923,44 @@ ccp_ackci(f, p, len)
      int len;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -830,7 +817,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate) {
  	if (len < CILEN_DEFLATE
  	    || p[0] != (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
-@@ -892,7 +1024,7 @@ ccp_ackci(f, p, len)
+@@ -891,7 +1023,7 @@ ccp_ackci(f, p, len)
  
  /*
   * ccp_nakci - process received configure-nak.
@@ -839,7 +826,7 @@ index 5814f35..99eaa47 100644
   */
  static int
  ccp_nakci(f, p, len, treat_as_reject)
-@@ -902,6 +1034,8 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -901,6 +1033,8 @@ ccp_nakci(f, p, len, treat_as_reject)
      int treat_as_reject;
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -848,7 +835,7 @@ index 5814f35..99eaa47 100644
      ccp_options no;		/* options we've seen already */
      ccp_options try;		/* options to ask for next time */
  
-@@ -909,28 +1043,100 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -908,28 +1042,100 @@ ccp_nakci(f, p, len, treat_as_reject)
      try = *go;
  
  #ifdef MPPE
@@ -966,7 +953,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate && len >= CILEN_DEFLATE
  	&& p[0] == (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
  	&& p[1] == CILEN_DEFLATE) {
-@@ -1003,14 +1209,50 @@ ccp_rejci(f, p, len)
+@@ -1002,14 +1208,50 @@ ccp_rejci(f, p, len)
  	return -1;
  
  #ifdef MPPE
@@ -1021,7 +1008,7 @@ index 5814f35..99eaa47 100644
      if (go->deflate_correct && len >= CILEN_DEFLATE
  	&& p[0] == CI_DEFLATE && p[1] == CILEN_DEFLATE) {
  	if (p[2] != DEFLATE_MAKE_OPT(go->deflate_size)
-@@ -1074,14 +1316,15 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1073,14 +1315,15 @@ ccp_reqci(f, p, lenp, dont_nak)
      int dont_nak;
  {
      int ret, newret, res;
@@ -1041,7 +1028,7 @@ index 5814f35..99eaa47 100644
  
      ret = CONFACK;
      retp = p0 = p;
-@@ -1104,106 +1347,299 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1103,106 +1346,299 @@ ccp_reqci(f, p, lenp, dont_nak)
  	    switch (type) {
  #ifdef MPPE
  	    case CI_MPPE:
@@ -1415,7 +1402,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (!ao->deflate || clen != CILEN_DEFLATE
-@@ -1345,12 +1781,6 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1344,12 +1780,6 @@ ccp_reqci(f, p, lenp, dont_nak)
  	else
  	    *lenp = retp - p0;
      }
@@ -1428,7 +1415,7 @@ index 5814f35..99eaa47 100644
      return ret;
  }
  
-@@ -1372,24 +1802,35 @@ method_name(opt, opt2)
+@@ -1371,24 +1801,35 @@ method_name(opt, opt2)
  	char *p = result;
  	char *q = result + sizeof(result); /* 1 past result */
  
@@ -1480,7 +1467,7 @@ index 5814f35..99eaa47 100644
      case CI_DEFLATE:
      case CI_DEFLATE_DRAFT:
  	if (opt2 != NULL && opt2->deflate_size != opt->deflate_size)
-@@ -1445,12 +1886,12 @@ ccp_up(f)
+@@ -1444,12 +1885,12 @@ ccp_up(f)
      } else if (ANY_COMPRESS(*ho))
  	notice("%s transmit compression enabled", method_name(ho, NULL));
  #ifdef MPPE
@@ -1495,7 +1482,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1473,7 +1914,7 @@ ccp_down(f)
+@@ -1472,7 +1913,7 @@ ccp_down(f)
  	    lcp_close(f->unit, "MPPE disabled");
  	}
      }
@@ -1504,7 +1491,7 @@ index 5814f35..99eaa47 100644
  }
  
  /*
-@@ -1533,24 +1974,28 @@ ccp_printpkt(p, plen, printer, arg)
+@@ -1532,24 +1973,28 @@ ccp_printpkt(p, plen, printer, arg)
  #ifdef MPPE
  	    case CI_MPPE:
  		if (optlen >= CILEN_MPPE) {
@@ -1545,7 +1532,7 @@ index 5814f35..99eaa47 100644
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (optlen >= CILEN_DEFLATE) {
-@@ -1636,6 +2081,7 @@ ccp_datainput(unit, pkt, len)
+@@ -1635,6 +2080,7 @@ ccp_datainput(unit, pkt, len)
  	    error("Lost compression sync: disabling compression");
  	    ccp_close(unit, "Lost compression sync");
  #ifdef MPPE
@@ -1553,7 +1540,7 @@ index 5814f35..99eaa47 100644
  	    /*
  	     * If we were doing MPPE, we must also take the link down.
  	     */
-@@ -1643,9 +2089,18 @@ ccp_datainput(unit, pkt, len)
+@@ -1642,9 +2088,18 @@ ccp_datainput(unit, pkt, len)
  		error("Too many MPPE errors, closing LCP");
  		lcp_close(unit, "Too many MPPE errors");
  	    }
@@ -1599,7 +1586,7 @@ diff --git pppd/pppd/chap_ms.c pppd/pppd/chap_ms.c
 index aec1226..f1cae5a 100644
 --- pppd/pppd/chap_ms.c
 +++ pppd/pppd/chap_ms.c
-@@ -963,13 +963,17 @@ set_mppe_enc_types(int policy, int types)
+@@ -962,13 +962,17 @@ set_mppe_enc_types(int policy, int types)
      /*
       * Disable undesirable encryption types.  Note that we don't ENABLE
       * any encryption types, to avoid overriding manual configuration.
@@ -1641,7 +1628,7 @@ index 5e57658..3eddf30 100644
  #ifdef PPP_FILTER
  #include <pcap-bpf.h>
  #endif
-@@ -221,6 +225,14 @@ loop_chars(p, n)
+@@ -220,6 +224,14 @@ loop_chars(p, n)
      int c, rv;
  
      rv = 0;
@@ -1656,7 +1643,7 @@ index 5e57658..3eddf30 100644
      for (; n > 0; --n) {
  	c = *p++;
  	if (c == PPP_FLAG) {
-@@ -299,17 +311,102 @@ loop_frame(frame, len)
+@@ -298,17 +310,102 @@ loop_frame(frame, len)
   * loopback, now that the real serial link is up.
   */
  void
@@ -1764,7 +1751,7 @@ diff --git pppd/pppd/fsm.c pppd/pppd/fsm.c
 index c200cc3..cfd80be 100644
 --- pppd/pppd/fsm.c
 +++ pppd/pppd/fsm.c
-@@ -70,6 +70,8 @@ static void fsm_sconfreq __P((fsm *, int));
+@@ -69,6 +69,8 @@ static void fsm_sconfreq __P((fsm *, int));
  
  int peer_mru[NUM_PPP];
  
@@ -1773,7 +1760,7 @@ index c200cc3..cfd80be 100644
  
  /*
   * fsm_init - Initialize fsm.
-@@ -306,6 +308,10 @@ fsm_timeout(arg)
+@@ -305,6 +307,10 @@ fsm_timeout(arg)
      case ACKRCVD:
      case ACKSENT:
  	if (f->retransmits <= 0) {
@@ -1788,7 +1775,7 @@ diff --git pppd/pppd/ipcp.c pppd/pppd/ipcp.c
 index 12bcc61..0de3e45 100644
 --- pppd/pppd/ipcp.c
 +++ pppd/pppd/ipcp.c
-@@ -1883,7 +1883,7 @@ ipcp_up(f)
+@@ -1882,7 +1882,7 @@ ipcp_up(f)
  		    proxy_arp_set[f->unit] = 1;
  
  	}
@@ -1797,7 +1784,7 @@ index 12bcc61..0de3e45 100644
  	sifnpmode(f->unit, PPP_IP, NPMODE_PASS);
  
      } else {
-@@ -1958,7 +1958,7 @@ ipcp_up(f)
+@@ -1957,7 +1957,7 @@ ipcp_up(f)
       */
      if (ipcp_script_state == s_down && ipcp_script_pid == 0) {
  	ipcp_script_state = s_up;
@@ -1806,7 +1793,7 @@ index 12bcc61..0de3e45 100644
      }
  }
  
-@@ -2008,7 +2008,7 @@ ipcp_down(f)
+@@ -2007,7 +2007,7 @@ ipcp_down(f)
      /* Execute the ip-down script */
      if (ipcp_script_state == s_up && ipcp_script_pid == 0) {
  	ipcp_script_state = s_down;
@@ -1815,7 +1802,7 @@ index 12bcc61..0de3e45 100644
      }
  }
  
-@@ -2062,13 +2062,13 @@ ipcp_script_done(arg)
+@@ -2061,13 +2061,13 @@ ipcp_script_done(arg)
      case s_up:
  	if (ipcp_fsm[0].state != OPENED) {
  	    ipcp_script_state = s_down;
@@ -1835,7 +1822,7 @@ diff --git pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
 index 4a09c9a..b05fe51 100644
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
-@@ -245,6 +245,8 @@ static option_t ipv6cp_option_list[] = {
+@@ -244,6 +244,8 @@ static option_t ipv6cp_option_list[] = {
  
      { "ipv6cp-accept-local", o_bool, &ipv6cp_allowoptions[0].accept_local,
        "Accept peer's interface identifier for us", 1 },
@@ -1844,7 +1831,7 @@ index 4a09c9a..b05fe51 100644
  
      { "ipv6cp-use-ipaddr", o_bool, &ipv6cp_allowoptions[0].use_ip,
        "Use (default) IPv4 address as interface identifier", 1 },
-@@ -435,6 +437,7 @@ ipv6cp_init(unit)
+@@ -434,6 +436,7 @@ ipv6cp_init(unit)
      memset(ao, 0, sizeof(*ao));
  
      wo->accept_local = 1;
@@ -1852,7 +1839,7 @@ index 4a09c9a..b05fe51 100644
      wo->neg_ifaceid = 1;
      ao->neg_ifaceid = 1;
  
-@@ -960,7 +963,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
+@@ -959,7 +962,7 @@ ipv6cp_reqci(f, inp, len, reject_if_disagree)
  		orc = CONFREJ;		/* Reject CI */
  		break;
  	    }
@@ -1861,7 +1848,7 @@ index 4a09c9a..b05fe51 100644
  		!eui64_equals(ifaceid, wo->hisid) && 
  		eui64_iszero(go->hisid)) {
  		    
-@@ -1073,7 +1076,9 @@ endswitch:
+@@ -1072,7 +1075,9 @@ endswitch:
      return (rc);			/* Return final code */
  }
  
@@ -1872,7 +1859,7 @@ index 4a09c9a..b05fe51 100644
  /*
   * ipv6_check_options - check that any IP-related options are OK,
   * and assign appropriate defaults.
-@@ -1232,7 +1237,7 @@ ipv6cp_up(f)
+@@ -1231,7 +1236,7 @@ ipv6cp_up(f)
  	    }
  
  	}
@@ -1899,7 +1886,7 @@ diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
 index 5c77490..980bbb7 100644
 --- pppd/pppd/lcp.c
 +++ pppd/pppd/lcp.c
-@@ -68,6 +68,9 @@ static const char rcsid[] = RCSID;
+@@ -67,6 +67,9 @@ static const char rcsid[] = RCSID;
  
  static void lcp_delayed_up __P((void *));
  
@@ -1909,7 +1896,7 @@ index 5c77490..980bbb7 100644
  /*
   * LCP-related command-line options.
   */
-@@ -397,6 +400,7 @@ lcp_close(unit, reason)
+@@ -396,6 +399,7 @@ lcp_close(unit, reason)
      char *reason;
  {
      fsm *f = &lcp_fsm[unit];
@@ -1917,7 +1904,7 @@ index 5c77490..980bbb7 100644
      int oldstate;
  
      if (phase != PHASE_DEAD && phase != PHASE_MASTER)
-@@ -409,6 +413,16 @@ lcp_close(unit, reason)
+@@ -408,6 +412,16 @@ lcp_close(unit, reason)
      oldstate = f->state;
  
      fsm_close(f, reason);
@@ -1934,7 +1921,7 @@ index 5c77490..980bbb7 100644
      if (oldstate == STOPPED && f->flags & (OPT_PASSIVE|OPT_SILENT|DELAYED_UP)) {
  	/*
  	 * This action is not strictly according to the FSM in RFC1548,
-@@ -1914,12 +1928,12 @@ lcp_up(f)
+@@ -1913,12 +1927,12 @@ lcp_up(f)
       * the interface MTU is set to the lowest of that, the
       * MTU we want to use, and our link MRU.
       */
@@ -1953,7 +1940,7 @@ diff --git pppd/pppd/main.c pppd/pppd/main.c
 index 014d614..0f56a21 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -90,6 +90,7 @@
+@@ -89,6 +89,7 @@
  #include <sys/socket.h>
  #include <netinet/in.h>
  #include <arpa/inet.h>
@@ -1961,7 +1948,7 @@ index 014d614..0f56a21 100644
  
  #include "pppd.h"
  #include "magic.h"
-@@ -228,6 +229,7 @@ static struct subprocess *children;
+@@ -226,6 +227,7 @@ static struct subprocess *children;
  
  /* Prototypes for procedures local to this file. */
  
@@ -1969,7 +1956,7 @@ index 014d614..0f56a21 100644
  static void setup_signals __P((void));
  static void create_pidfile __P((int pid));
  static void create_linkpidfile __P((int pid));
-@@ -315,6 +317,9 @@ main(argc, argv)
+@@ -313,6 +315,9 @@ main(argc, argv)
      struct protent *protp;
      char numbuf[16];
  
@@ -1979,7 +1966,7 @@ index 014d614..0f56a21 100644
      link_stats_valid = 0;
      new_phase(PHASE_INITIALIZE);
  
-@@ -529,6 +534,7 @@ main(argc, argv)
+@@ -527,6 +532,7 @@ main(argc, argv)
  	    info("Starting link");
  	}
  
@@ -1987,7 +1974,7 @@ index 014d614..0f56a21 100644
  	gettimeofday(&start_time, NULL);
  	script_unsetenv("CONNECT_TIME");
  	script_unsetenv("BYTES_SENT");
-@@ -1262,6 +1268,36 @@ struct	callout {
+@@ -1269,6 +1275,36 @@ struct	callout {
  
  static struct callout *callout = NULL;	/* Callout list */
  static struct timeval timenow;		/* Current time */
@@ -2024,7 +2011,7 @@ index 014d614..0f56a21 100644
  
  /*
   * timeout - Schedule a timeout.
-@@ -1332,6 +1368,8 @@ calltimeout()
+@@ -1339,6 +1375,8 @@ calltimeout()
  {
      struct callout *p;
  
@@ -2033,7 +2020,7 @@ index 014d614..0f56a21 100644
      while (callout != NULL) {
  	p = callout;
  
-@@ -1359,6 +1397,8 @@ timeleft(tvp)
+@@ -1366,6 +1404,8 @@ timeleft(tvp)
  {
      if (callout == NULL)
  	return NULL;
@@ -2042,7 +2029,7 @@ index 014d614..0f56a21 100644
  
      gettimeofday(&timenow, NULL);
      tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
-@@ -1678,7 +1718,7 @@ device_script(program, in, out, dont_wait)
+@@ -1686,7 +1726,7 @@ device_script(program, in, out, dont_wait)
      if (log_to_fd >= 0)
  	errfd = log_to_fd;
      else
@@ -2061,9 +2048,9 @@ index 482eab9..80f7bc6 100644
  #endif
 +bool tx_only;			/* JYWeng 20031216: idle time counting on tx traffic */
  
- static const char rcsid[] = RCSID;
  
-@@ -114,6 +115,9 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
+ struct option_value {
+@@ -113,6 +114,9 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
  bool	tune_kernel;		/* may alter kernel settings */
  int	connect_delay = 1000;	/* wait this many ms after connect script */
  int	req_unit = -1;		/* requested interface unit */
@@ -2073,7 +2060,7 @@ index 482eab9..80f7bc6 100644
  bool	multilink = 0;		/* Enable multilink operation */
  char	*bundle_name = NULL;	/* bundle name for multilink */
  bool	dump_options;		/* print out option values */
-@@ -282,6 +286,9 @@ option_t general_options[] = {
+@@ -281,6 +285,9 @@ option_t general_options[] = {
      { "unit", o_int, &req_unit,
        "PPP interface unit number to use if possible",
        OPT_PRIO | OPT_LLIMIT, 0, 0 },
@@ -2083,7 +2070,7 @@ index 482eab9..80f7bc6 100644
  
      { "dump", o_bool, &dump_options,
        "Print out option values after parsing all options", 1 },
-@@ -292,6 +299,13 @@ option_t general_options[] = {
+@@ -291,6 +298,13 @@ option_t general_options[] = {
        "Number of seconds to wait for child processes at exit",
        OPT_PRIO },
  
@@ -2097,7 +2084,7 @@ index 482eab9..80f7bc6 100644
      { "set", o_special, (void *)user_setenv,
        "Set user environment variable",
        OPT_A2PRINTER | OPT_NOPRINT, (void *)user_setprint },
-@@ -339,6 +353,10 @@ option_t general_options[] = {
+@@ -338,6 +352,10 @@ option_t general_options[] = {
        "Check for traffic limit every N seconds", OPT_PRIO | OPT_LLIMIT | 1 },
  #endif
  
@@ -2456,7 +2443,7 @@ diff --git pppd/pppd/sha1.c pppd/pppd/sha1.c
 index f4f975c..00835d0 100644
 --- pppd/pppd/sha1.c
 +++ pppd/pppd/sha1.c
-@@ -21,9 +21,6 @@
+@@ -22,9 +22,6 @@
  #include <net/ppp_defs.h>
  #include "sha1.h"
 -
@@ -2466,7 +2453,7 @@ index f4f975c..00835d0 100644
  #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
  
  /* blk0() and blk() perform the initial expand. */
-@@ -43,17 +40,17 @@ SHA1_Transform(u_int32_t[5], const unsigned char[64]);
+@@ -44,17 +41,17 @@ SHA1_Transform(u_int32_t[5], const unsigned char[64]);
  /* Hash a single 512-bit block. This is the core of the algorithm. */
  
  static void
@@ -2487,7 +2474,7 @@ index f4f975c..00835d0 100644
      block = (CHAR64LONG16 *) workspace;
      memcpy(block, buffer, 64);
  #else
-@@ -115,9 +112,9 @@ SHA1_Init(SHA1_CTX *context)
+@@ -116,9 +113,9 @@ SHA1_Init(SHA1_CTX *context)
  /* Run your data through this. */
  
  void
@@ -2499,7 +2486,7 @@ index f4f975c..00835d0 100644
  
      j = (context->count[0] >> 3) & 63;
      if ((context->count[0] += len << 3) < (len << 3)) context->count[1]++;
-@@ -139,22 +136,22 @@ SHA1_Update(SHA1_CTX *context, const unsigned char *data, unsigned int len)
+@@ -140,22 +137,22 @@ SHA1_Update(SHA1_CTX *context, const unsigned char *data, unsigned int len)
  /* Add padding and return the message digest. */
  
  void
@@ -2601,7 +2588,7 @@ diff --git pppd/pppd/utils.c pppd/pppd/utils.c
 index 062b17e..2e038bc 100644
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
-@@ -1039,3 +1039,23 @@ unlock()
+@@ -1038,3 +1038,23 @@ unlock()
      }
  }
  

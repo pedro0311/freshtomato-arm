@@ -11,7 +11,7 @@ diff --git pppd/pppd/main.c pppd/pppd/main.c
 index d60d625..97a1906 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -882,14 +882,17 @@ struct protocol_list {
+@@ -889,14 +889,17 @@ struct protocol_list {
      const char	*name;
  } protocol_list[] = {
      { 0x21,	"IP" },
@@ -29,7 +29,7 @@ index d60d625..97a1906 100644
      { 0x33,	"Stream Protocol ST-II" },
      { 0x35,	"Banyan Vines" },
      { 0x39,	"AppleTalk EDDP" },
-@@ -903,8 +906,11 @@ struct protocol_list {
+@@ -910,8 +913,11 @@ struct protocol_list {
      { 0x49,	"Serial Data Transport Protocol (PPP-SDTP)" },
      { 0x4b,	"SNA over 802.2" },
      { 0x4d,	"SNA" },
@@ -41,7 +41,7 @@ index d60d625..97a1906 100644
      { 0x53,	"Encryption" },
      { 0x55,	"Individual Link Encryption" },
      { 0x57,	"IPv6" },
-@@ -915,12 +921,15 @@ struct protocol_list {
+@@ -922,12 +928,15 @@ struct protocol_list {
      { 0x65,	"RTP IPHC Compressed non-TCP" },
      { 0x67,	"RTP IPHC Compressed UDP 8" },
      { 0x69,	"RTP IPHC Compressed RTP 8" },
@@ -57,7 +57,7 @@ index d60d625..97a1906 100644
      { 0x0203,	"IBM Source Routing BPDU" },
      { 0x0205,	"DEC LANBridge100 Spanning Tree" },
      { 0x0207,	"Cisco Discovery Protocol" },
-@@ -932,15 +941,19 @@ struct protocol_list {
+@@ -939,15 +948,19 @@ struct protocol_list {
      { 0x0231,	"Luxcom" },
      { 0x0233,	"Sigma Network Systems" },
      { 0x0235,	"Apple Client Server Protocol" },
@@ -77,7 +77,7 @@ index d60d625..97a1906 100644
      { 0x4001,	"Cray Communications Control Protocol" },
      { 0x4003,	"CDPD Mobile Network Registration Protocol" },
      { 0x4005,	"Expand accelerator protocol" },
-@@ -951,17 +964,23 @@ struct protocol_list {
+@@ -958,17 +971,23 @@ struct protocol_list {
      { 0x4023,	"RefTek Protocol" },
      { 0x4025,	"Fibre Channel" },
      { 0x4027,	"EMIT Protocols" },
@@ -101,7 +101,7 @@ index d60d625..97a1906 100644
      { 0x803f,	"NETBIOS Framing Control Protocol" },
      { 0x8041,	"Cisco Systems Control Protocol" },
      { 0x8043,	"Ascom Timeplex" },
-@@ -970,18 +989,24 @@ struct protocol_list {
+@@ -977,18 +996,24 @@ struct protocol_list {
      { 0x8049,	"Serial Data Control Protocol (PPP-SDCP)" },
      { 0x804b,	"SNA over 802.2 Control Protocol" },
      { 0x804d,	"SNA Control Protocol" },
@@ -126,7 +126,7 @@ index d60d625..97a1906 100644
      { 0x8207,	"Cisco Discovery Protocol Control" },
      { 0x8209,	"Netcs Twin Routing" },
      { 0x820b,	"STP - Control Protocol" },
-@@ -990,24 +1015,29 @@ struct protocol_list {
+@@ -997,24 +1022,29 @@ struct protocol_list {
      { 0x8281,	"MPLSCP" },
      { 0x8285,	"IEEE p1284.4 standard - Protocol Control" },
      { 0x8287,	"ETSI TETRA TNP1 Control Protocol" },
@@ -192,7 +192,7 @@ diff --git pppd/pppd/tty.c pppd/pppd/tty.c
 index d571b11..58bbc44 100644
 --- pppd/pppd/tty.c
 +++ pppd/pppd/tty.c
-@@ -146,7 +146,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
+@@ -145,7 +145,7 @@ char	*disconnect_script = NULL; /* Script to disestablish physical link */
  char	*welcomer = NULL;	/* Script to run after phys link estab. */
  char	*ptycommand = NULL;	/* Command to run on other side of pty */
  bool	notty = 0;		/* Stdin/out is not a tty */
@@ -201,7 +201,7 @@ index d571b11..58bbc44 100644
  int	max_data_rate;		/* max bytes/sec through charshunt */
  bool	sync_serial = 0;	/* Device is synchronous serial device */
  char	*pty_socket = NULL;	/* Socket to connect to pty */
-@@ -202,9 +202,6 @@ option_t tty_options[] = {
+@@ -201,9 +201,6 @@ option_t tty_options[] = {
        "Send and receive over socket, arg is host:port",
        OPT_PRIO | OPT_DEVNAM },
 -
@@ -211,7 +211,7 @@ index d571b11..58bbc44 100644
      { "crtscts", o_int, &crtscts,
        "Set hardware (RTS/CTS) flow control",
        OPT_PRIO | OPT_NOARG | OPT_VAL(1) },
-@@ -627,28 +624,8 @@ int connect_tty()
+@@ -626,28 +623,8 @@ int connect_tty()
  	 */
  	status = EXIT_PTYCMD_FAILED;
  	if (ptycommand != NULL) {
@@ -240,7 +240,7 @@ index d571b11..58bbc44 100644
  	} else if (pty_socket != NULL) {
  		int fd = open_socket(pty_socket);
  		if (fd < 0)
-@@ -665,10 +642,6 @@ int connect_tty()
+@@ -664,10 +641,6 @@ int connect_tty()
  			log_to_fd = -1;
  		if (log_to_fd != 2)
  			dup2(fd_devnull, 2);
@@ -251,7 +251,7 @@ index d571b11..58bbc44 100644
  	}
  
  	if (using_pty || record_file != NULL) {
-@@ -1042,15 +1015,6 @@ charshunt(ifd, ofd, record_file)
+@@ -1041,15 +1014,6 @@ charshunt(ifd, ofd, record_file)
  	fatal("internal error: file descriptor too large (%d, %d, %d)",
  	      ifd, ofd, pty_master);
 -
