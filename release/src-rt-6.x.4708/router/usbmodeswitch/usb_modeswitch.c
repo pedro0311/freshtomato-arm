@@ -1,8 +1,8 @@
 /*
   Mode switching tool for controlling mode of 'multi-state' USB devices
-  Version 2.5.2, 2017/12/31
+  Version 2.6.0, 2019/11/28
 
-  Copyright (C) 2007 - 2017 Josua Dietze (mail to "usb_admin" at the domain
+  Copyright (C) 2007 - 2019 Josua Dietze (mail to "usb_admin" at the domain
   of the home page; or write a personal message through the forum to "Josh".
   NO SUPPORT VIA E-MAIL - please use the forum for that)
 
@@ -45,7 +45,7 @@
 
 /* Recommended tab size: 4 */
 
-#define VERSION "2.5.2"
+#define VERSION "2.6.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -979,13 +979,14 @@ void resetUSB ()
 			fflush(output);
 		}
 		bpoint++;
-		if (bpoint > 100)
+		if (bpoint > 100) {
+			SHOW_PROGRESS(output," Reset USB device failed with error %d", success);
+			fprintf(stderr,"Reset USB device failed with error %d", success);
 			success = 1;
+		}
 	} while (success < 0);
 
-	if ( success ) {
-		SHOW_PROGRESS(output,"\n Device reset failed.\n");
-	} else
+	if ( success == 0 )
 		SHOW_PROGRESS(output,"\n Device was reset\n");
 }
 
@@ -1074,9 +1075,12 @@ int switchConfiguration ()
 
 	SHOW_PROGRESS(output,"Change configuration to %i ...\n", Configuration);
 	detachDrivers();
-	ret = libusb_set_configuration(devh, -1);
+//	ret = libusb_set_configuration(devh, -1);
+	ret = libusb_set_configuration(devh, 0);
 	if (ret < 0) {
 		SHOW_PROGRESS(output," Resetting the configuration failed (error %d). Try to continue\n", ret);
+	} else {
+		SHOW_PROGRESS(output," Configuration was reset\n");
 	}
 	/* Empirically tested wait period, improves reliability of configuration change */
 	usleep(100000);
@@ -2078,9 +2082,9 @@ void printHelp()
 	" -g, --device-num NUM          system device number (for hard ID)\n"
 	" -m, --message-endpoint NUM    direct the message transfer there (optional)\n"
 	" -M, --message-content <msg>   message to send (hex number as string)\n"
-	" -2, --message-content2 <msg>  additional messages to send (-n recommended)\n"
-	" -3, --message-content3 <msg>  additional messages to send (-n recommended)\n"
-	" -w, --release-delay NUM       wait NUM ms before releasing the interface\n"
+	" -2, --message-content2 <msg>\n"
+	" -3, --message-content3 <msg>  additional messages to send if needed\n"
+	" -w, --release-delay <msecs>   wait a while before releasing the interface\n"
 	" -n, --need-response           obsolete, no effect (always on)\n"
 	" -r, --response-endpoint NUM   read response from there (optional)\n"
 	" -K, --std-eject               send standard EJECT sequence\n"
@@ -2104,7 +2108,7 @@ void printHelp()
 	" -Q, --quiet                   don't show progress or error messages\n"
 	" -W, --verbose                 print all settings and debug output\n"
 	" -D, --sysmode                 specific result and syslog message\n"
-	" -s, --check-success <seconds> switching result check with timeout\n"
+	" -s, --check-success <seconds> check switching result, with timeout\n"
 	" -I, --inquire                 obsolete, no effect\n\n"
 	" -c, --config-file <filename>  load long configuration from file\n\n"
 	" -t, --stdinput                read long configuration from stdin\n\n"

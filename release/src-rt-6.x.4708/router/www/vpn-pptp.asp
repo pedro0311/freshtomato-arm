@@ -128,7 +128,7 @@ createFieldTable('', [
 /* MULTIWAN-BEGIN */
 			['wan3','WAN3'],['wan4','WAN4'],
 /* MULTIWAN-END */
-			['none','none']], value: nvram.pptp_client_usewan, suffix: '&nbsp; <small>In Wireless Client or WET mode, disable bind (set to <i>none<\/i>)<\/small>' },
+			['none','none']], value: nvram.pptp_client_usewan },
 	{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
 	{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
 	{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },

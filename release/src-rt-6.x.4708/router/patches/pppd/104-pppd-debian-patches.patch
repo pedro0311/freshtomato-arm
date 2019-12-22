@@ -16,7 +16,7 @@ diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
 index a90b3c3..b94c5a1 100644
 --- pppd/pppd/lcp.c
 +++ pppd/pppd/lcp.c
-@@ -76,6 +76,7 @@ void saveWANStatus(char *currentstatus, int statusindex);
+@@ -75,6 +75,7 @@ void saveWANStatus(char *currentstatus, int statusindex);
   */
  int	lcp_echo_interval = 0; 	/* Interval between LCP echo-requests */
  int	lcp_echo_fails = 0;	/* Tolerance to unanswered echo-requests */
@@ -24,7 +24,7 @@ index a90b3c3..b94c5a1 100644
  bool	lax_recv = 0;		/* accept control chars in asyncmap */
  bool	noendpoint = 0;		/* don't send/accept endpoint discriminator */
  
-@@ -154,6 +155,8 @@ static option_t lcp_option_list[] = {
+@@ -153,6 +154,8 @@ static option_t lcp_option_list[] = {
        OPT_PRIO },
      { "lcp-echo-interval", o_int, &lcp_echo_interval,
        "Set time in seconds between LCP echo requests", OPT_PRIO },
@@ -33,7 +33,7 @@ index a90b3c3..b94c5a1 100644
      { "lcp-restart", o_int, &lcp_fsm[0].timeouttime,
        "Set time in seconds between LCP retransmissions", OPT_PRIO },
      { "lcp-max-terminate", o_int, &lcp_fsm[0].maxtermtransmits,
-@@ -2346,6 +2349,22 @@ LcpSendEchoRequest (f)
+@@ -2345,6 +2348,22 @@ LcpSendEchoRequest (f)
      }
  
      /*

@@ -259,10 +259,12 @@ int menusymbols[NUMBER_OF_MENUS] = { MMAIN, MWHEREIS, MREPLACE, MREPLACEWITH,
 									MYESNO, MGOTOLINE, MWRITEFILE, MINSERTFILE,
 									MEXTCMD, MHELP, MSPELL, MLINTER,
 									MBROWSER, MWHEREISFILE, MGOTODIR,
-									MMOST|MHELP|MYESNO };
+									MMOST|MBROWSER|MHELP|MYESNO };
+#endif
 
-char *rcfile_with_errors = NULL;
-		/* The first nanorc file, if any, that produced warnings. */
+#if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
+char *startup_problem = NULL;
+		/* An error message (if any) about nanorc files or history files. */
 #endif
 
 bool spotlighted = FALSE;
@@ -490,6 +492,8 @@ int keycode_from_string(const char *keystring)
 		if (strcasecmp(keystring, "^H") == 0)
 			return KEY_BACKSPACE;
 #endif
+		if (keystring[1] == '/' && strlen(keystring) == 2)
+			return 31;
 		if (keystring[1] <= '_' && strlen(keystring) == 2)
 			return keystring[1] - 64;
 		else
@@ -503,7 +507,7 @@ int keycode_from_string(const char *keystring)
 			return -1;
 	} else if (keystring[0] == 'F') {
 		int fn = atoi(&keystring[1]);
-		if (fn < 1 || fn > 16)
+		if (fn < 1 || fn > 24)
 			return -1;
 		return KEY_F0 + fn;
 	} else if (!strcasecmp(keystring, "Ins"))
@@ -693,6 +697,10 @@ void shortcut_init(void)
 	const char *lint_gist = N_("Invoke the linter, if available");
 	const char *prevlint_gist = N_("Go to previous linter msg");
 	const char *nextlint_gist = N_("Go to next linter msg");
+#ifdef ENABLE_SPELLER
+	const char *formatter_gist =
+		N_("Invoke a program to format/arrange/manipulate the buffer");
+#endif
 #endif
 #endif /* ENABLE_HELP */
 
@@ -1001,9 +1009,14 @@ void shortcut_init(void)
 		N_("Zap Text"), WITHORSANS(zap_gist), BLANKAFTER, NOVIEW);
 
 #ifdef ENABLE_COLOR
-	if (!ISSET(RESTRICTED))
+	if (!ISSET(RESTRICTED)) {
 		add_to_funcs(do_linter, MMAIN,
-				N_("To Linter"), WITHORSANS(lint_gist), BLANKAFTER, NOVIEW);
+				N_("To Linter"), WITHORSANS(lint_gist), TOGETHER, NOVIEW);
+#ifdef ENABLE_SPELLER
+		add_to_funcs(do_formatter, MMAIN,
+				N_("Formatter"), WITHORSANS(formatter_gist), BLANKAFTER, NOVIEW);
+#endif
+	}
 #endif
 #endif
 	add_to_funcs(do_savefile, MMAIN,
@@ -1124,6 +1137,9 @@ void shortcut_init(void)
 #endif
 #ifdef ENABLE_COLOR
 	add_to_sclist(MMAIN, "M-B", 0, do_linter, 0);
+#ifdef ENABLE_SPELLER
+	add_to_sclist(MMAIN, "M-F", 0, do_formatter, 0);
+#endif
 #endif
 	add_to_sclist(MMAIN, "^C", 0, do_cursorpos_void, 0);
 	add_to_sclist(MMAIN, "^_", 0, do_gotolinecolumn_void, 0);
@@ -1502,6 +1518,10 @@ keystruct *strtosc(const char *input)
 #ifdef ENABLE_COLOR
 	else if (!strcasecmp(input, "linter"))
 		s->func = do_linter;
+#ifdef ENABLE_SPELLER
+	else if (!strcasecmp(input, "formatter"))
+		s->func = do_formatter;
+#endif
 #endif
 	else if (!strcasecmp(input, "curpos"))
 		s->func = do_cursorpos_void;

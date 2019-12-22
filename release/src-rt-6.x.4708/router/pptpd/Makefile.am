@@ -54,7 +54,7 @@ bcrelay_SOURCES = bcrelay.c defaults.h our_syslog.h our_getopt.h
 subdirs = plugins
 
 all-local:
-	for d in $(subdirs); do $(MAKE) $(MFLAGS) -C $$d all; done
+	for d in $(subdirs); do $(MAKE) $(MFLAGS) 'CC=$(CC)' -C $$d all; done
 
 install-exec-local:
 	for d in $(subdirs); do $(MAKE) $(MFLAGS) -C $$d prefix=$(prefix) DESTDIR=$(DESTDIR) install; done

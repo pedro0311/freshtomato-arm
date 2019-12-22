@@ -9,7 +9,7 @@ diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
 index 99eaa47..52617f7 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
-@@ -170,7 +170,7 @@ static option_t ccp_option_list[] = {
+@@ -169,7 +169,7 @@ static option_t ccp_option_list[] = {
      { "+mppe-128", o_bool, &ccp_wantoptions[0].mppe_128,
        "require MPPE 128-bit encryption", 1, &ccp_allowoptions[0].mppe_128,
        OPT_ALIAS | OPT_PRIO },

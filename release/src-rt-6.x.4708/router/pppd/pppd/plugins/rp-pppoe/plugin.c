@@ -153,7 +153,7 @@ PPPOEConnectDevice(void)
 	error("Can't get MTU for %s: %m", conn->ifName);
 	goto errout;
     }
-    strncpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
     if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
 	error("Can't get MTU for %s: %m", conn->ifName);
 	close(s);
@@ -270,19 +270,22 @@ PPPOEDisconnectDevice(void)
     memcpy(sp.sa_addr.pppoe.dev, conn->ifName, IFNAMSIZ);
     memcpy(sp.sa_addr.pppoe.remote, conn->peerEth, ETH_ALEN);
     if (connect(conn->sessionSocket, (struct sockaddr *) &sp,
-		sizeof(struct sockaddr_pppox)) < 0)
+		sizeof(struct sockaddr_pppox)) < 0 && errno != EALREADY)
 	error("Failed to disconnect PPPoE socket: %d %m", errno);
     close(conn->sessionSocket);
-    /* don't send PADT?? */
-    if (conn->discoverySocket >= 0)
+    if (conn->discoverySocket >= 0) {
+        sendPADT(conn, NULL);
 	close(conn->discoverySocket);
+    }
 }
 
 static void
 PPPOEDeviceOptions(void)
 {
-    char buf[256];
-    snprintf(buf, 256, _PATH_ETHOPT "%s", devnam);
+    char buf[MAXPATHLEN];
+
+    strlcpy(buf, _PATH_ETHOPT, MAXPATHLEN);
+    strlcat(buf, devnam, MAXPATHLEN);
     if (!options_from_file(buf, 0, 0, 1))
 	exit(EXIT_OPTION_ERROR);
 
@@ -326,7 +329,7 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 
     /* Try getting interface index */
     if (r) {
-	strncpy(ifr.ifr_name, cmd, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, cmd, sizeof(ifr.ifr_name));
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
 	    r = 0;
 	} else {
@@ -345,7 +348,7 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
     /* Close socket */
     close(fd);
     if (r && doit) {
-	strncpy(devnam, cmd, sizeof(devnam));
+	strlcpy(devnam, cmd, sizeof(devnam));
 	if (the_channel != &pppoe_channel) {
 
 	    the_channel = &pppoe_channel;

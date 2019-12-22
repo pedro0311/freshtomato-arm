@@ -570,7 +570,7 @@ exif_entry_format_value(ExifEntry *e, char *val, size_t maxlen)
 			v_srat = exif_get_srational (
 				e->data + 8 * i, o);
 			if (v_srat.denominator) {
-				int decimals = (int)(log10(fabs(v_srat.denominator))-0.08+1.0);
+				int decimals = (int)(log10(abs(v_srat.denominator))-0.08+1.0);
 				snprintf (val+len, maxlen-len, "%2.*f",
 					  decimals,
 					  (double) v_srat.numerator /
@@ -859,7 +859,7 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 
 	(void) bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
 
-	if (!e || !e->parent || !e->parent->parent || !maxlen)
+	if (!e || !e->parent || !e->parent->parent || !maxlen || !val)
 		return val;
 
 	/* make sure the returned string is zero terminated */
@@ -1040,12 +1040,12 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 		d = 0.;
 		entry = exif_content_get_entry (
 			e->parent->parent->ifd[EXIF_IFD_0], EXIF_TAG_MAKE);
-		if (entry && entry->data &&
+		if (entry && entry->data && entry->size >= 7 &&
 		    !strncmp ((char *)entry->data, "Minolta", 7)) {
 			entry = exif_content_get_entry (
 					e->parent->parent->ifd[EXIF_IFD_0],
 					EXIF_TAG_MODEL);
-			if (entry && entry->data) {
+			if (entry && entry->data && entry->size >= 8) {
 				if (!strncmp ((char *)entry->data, "DiMAGE 7", 8))
 					d = 3.9;
 				else if (!strncmp ((char *)entry->data, "DiMAGE 5", 8))
@@ -1053,9 +1053,9 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 			}
 		}
 		if (d)
-			snprintf (b, sizeof (b), _(" (35 equivalent: %d mm)"),
-				  (int) (d * (double) v_rat.numerator /
-				  	     (double) v_rat.denominator));
+			snprintf (b, sizeof (b), _(" (35 equivalent: %.0f mm)"),
+				  (d * (double) v_rat.numerator /
+				       (double) v_rat.denominator));
 		else
 			b[0] = 0;
 
@@ -1084,9 +1084,9 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 		}
 		d = (double) v_rat.numerator / (double) v_rat.denominator;
 		if (d < 1)
-			snprintf (val, maxlen, _("1/%i"), (int) (0.5 + 1. / d));
+			snprintf (val, maxlen, _("1/%.0f"), 1. / d);
 		else
-			snprintf (val, maxlen, "%i", (int) d);
+			snprintf (val, maxlen, "%.0f", d);
 		strncat (val, _(" sec."), maxlen-1 - strlen (val));
 		break;
 	case EXIF_TAG_SHUTTER_SPEED_VALUE:
@@ -1101,9 +1101,9 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 		snprintf (val, maxlen, _("%.02f EV"), d);
 		d = 1. / pow (2, d);
 		if (d < 1)
-		  snprintf (b, sizeof (b), _(" (1/%d sec.)"), (int) (1. / d));
+		  snprintf (b, sizeof (b), _(" (1/%.0f sec.)"), 1. / d);
 		else
-		  snprintf (b, sizeof (b), _(" (%d sec.)"), (int) d);
+		  snprintf (b, sizeof (b), _(" (%.0f sec.)"), d);
 		strncat (val, b, maxlen-1 - strlen (val));
 		break;
 	case EXIF_TAG_BRIGHTNESS_VALUE:
@@ -1368,17 +1368,24 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 	case EXIF_TAG_XP_KEYWORDS:
 	case EXIF_TAG_XP_SUBJECT:
 	{
-		unsigned short *utf16;
+		unsigned char *utf16;
 
 		/* Sanity check the size to prevent overflow */
-		if (e->size+sizeof(unsigned short) < e->size) break;
+		if (e->size+sizeof(uint16_t)+1 < e->size) break;
 
 		/* The tag may not be U+0000-terminated , so make a local
 		   U+0000-terminated copy before converting it */
-		utf16 = exif_mem_alloc (e->priv->mem, e->size+sizeof(unsigned short));
+		utf16 = exif_mem_alloc (e->priv->mem, e->size+sizeof(uint16_t)+1);
 		if (!utf16) break;
 		memcpy(utf16, e->data, e->size);
-		utf16[e->size/sizeof(unsigned short)] = 0;
+
+		/* NUL terminate the string. If the size is odd (which isn't possible
+		 * for a valid UTF16 string), then this will overwrite the high byte of
+		 * the final half word, plus add a full zero NUL word at the end.
+		 */
+		utf16[e->size] = 0;
+		utf16[e->size+1] = 0;
+		utf16[e->size+2] = 0;
 
 		/* Warning! The texts are converted from UTF16 to UTF8 */
 		/* FIXME: use iconv to convert into the locale encoding */

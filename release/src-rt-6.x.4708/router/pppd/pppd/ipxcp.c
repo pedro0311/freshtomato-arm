@@ -62,7 +62,6 @@
 #include "pathnames.h"
 #include "magic.h"
 
-static const char rcsid[] = RCSID;
 
 /* global vars */
 ipxcp_options ipxcp_wantoptions[NUM_PPP];	/* Options that we want to request */
@@ -1194,7 +1193,7 @@ ipxcp_reqci(f, inp, len, reject_if_disagree)
 	case IPX_ROUTER_NAME:
 	    if (cilen >= CILEN_NAME) {
 		int name_size = cilen - CILEN_NAME;
-		if (name_size > sizeof (ho->name))
+		if (name_size >= sizeof (ho->name))
 		    name_size = sizeof (ho->name) - 1;
 		memset (ho->name, 0, sizeof (ho->name));
 		memcpy (ho->name, p, name_size);

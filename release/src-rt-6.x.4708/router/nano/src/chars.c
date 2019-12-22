@@ -160,7 +160,7 @@ bool is_word_mbchar(const char *c, bool allow_punct)
 
 	if (word_chars != NULL && *word_chars != '\0') {
 		char symbol[MAXCHARLEN + 1];
-		int symlen = parse_mbchar(c, symbol, NULL);
+		int symlen = collect_char(c, symbol);
 
 		symbol[symlen] = '\0';
 		return (strstr(word_chars, symbol) != NULL);
@@ -244,7 +244,7 @@ char *make_mbchar(long code, int *length)
 	} else
 #endif
 	{
-		mb_char = mallocstrncpy(NULL, (char *)&code, 1);
+		mb_char = measured_copy((char *)&code, 1);
 		*length = 1;
 	}
 
@@ -286,50 +286,67 @@ size_t mbstrlen(const char *pointer)
 	return count;
 }
 
-/* Parse a multibyte character from buf.  Return the number of bytes
- * used.  If chr isn't NULL, store the multibyte character in it.  If
- * col isn't NULL, add the character's width (in columns) to it. */
-int parse_mbchar(const char *buf, char *chr, size_t *col)
+/* Return the length (in bytes) of the character at the start of the
+ * given string, and return a copy of this character in *thechar. */
+int collect_char(const char *string, char *thechar)
 {
-	int length;
+	int charlen;
 
 #ifdef ENABLE_UTF8
 	/* If this is a UTF-8 starter byte, get the number of bytes of the character. */
-	if ((signed char)*buf < 0) {
-		length = mblen(buf, MAXCHARLEN);
+	if ((signed char)*string < 0) {
+		charlen = mblen(string, MAXCHARLEN);
 
 		/* When the multibyte sequence is invalid, only take the first byte. */
-		if (length <= 0)
-			length = 1;
+		if (charlen <= 0)
+			charlen = 1;
 	} else
 #endif
-		length = 1;
+		charlen = 1;
 
-	/* When requested, store the multibyte character in chr. */
-	if (chr != NULL)
-		for (int i = 0; i < length; i++)
-			chr[i] = buf[i];
+	for (int i = 0; i < charlen; i++)
+		thechar[i] = string[i];
 
-	/* When requested, add the width of the character to col. */
-	if (col != NULL) {
-		/* If we have a tab, compute its width in columns based on the
-		 * current value of col. */
-		if (*buf == '\t')
-			*col += tabsize - *col % tabsize;
-		/* If we have a control character, it's two columns wide: one
-		 * column for the "^", and one for the visible character. */
-		else if (is_cntrl_mbchar(buf))
-			*col += 2;
-		/* If we have a normal character, get its width normally. */
-		else if (length == 1)
-			*col += 1;
+	return charlen;
+}
+
+/* Return the length (in bytes) of the character at the start of
+ * the given string, and add this character's width to *column. */
+int advance_over(const char *string, size_t *column)
+{
 #ifdef ENABLE_UTF8
-		else
-			*col += mbwidth(buf);
-#endif
-	}
+	if ((signed char)*string < 0) {
+		int charlen = mblen(string, MAXCHARLEN);
 
-	return length;
+		if (charlen > 0) {
+			if (is_cntrl_mbchar(string))
+				*column += 2;
+			else
+				*column += mbwidth(string);
+		} else {
+			charlen = 1;
+			*column += 1;
+		}
+
+		return charlen;
+	}
+#endif
+
+	if ((unsigned char)*string < 0x20) {
+		if (*string == '\t')
+			*column += tabsize - *column % tabsize;
+		else
+			*column += 2;
+	} else if (*string == 0x7F)
+		*column += 2;
+#ifndef ENABLE_UTF8
+	else if (0x7F < (unsigned char)*string && (unsigned char)*string < 0xA0)
+		*column += 2;
+#endif
+	else
+		*column += 1;
+
+	return 1;
 }
 
 /* Return the index in buf of the beginning of the multibyte character
@@ -593,7 +610,7 @@ bool has_blank_char(const char *string)
 	char symbol[MAXCHARLEN];
 
 	while (*string != '\0') {
-		string += parse_mbchar(string, symbol, NULL);
+		string += collect_char(string, symbol);
 
 		if (is_blank_mbchar(symbol))
 			return TRUE;

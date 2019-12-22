@@ -156,7 +156,9 @@ _GL_CXXALIAS_RPL (localeconv, struct lconv *, (void));
 # else
 _GL_CXXALIAS_SYS (localeconv, struct lconv *, (void));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (localeconv);
+# endif
 #elif @REPLACE_STRUCT_LCONV@
 # undef localeconv
 # define localeconv localeconv_used_without_requesting_gnulib_module_localeconv
@@ -181,7 +183,9 @@ _GL_CXXALIAS_RPL (setlocale, char *, (int category, const char *locale));
 # else
 _GL_CXXALIAS_SYS (setlocale, char *, (int category, const char *locale));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (setlocale);
+# endif
 #elif defined GNULIB_POSIXCHECK
 # undef setlocale
 # if HAVE_RAW_DECL_SETLOCALE
@@ -254,7 +258,9 @@ _GL_FUNCDECL_RPL (freelocale, void, (locale_t locale) _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_RPL (freelocale, void, (locale_t locale));
 # else
 #  if @HAVE_FREELOCALE@
-_GL_CXXALIAS_SYS (freelocale, void, (locale_t locale));
+/* Need to cast, because on FreeBSD and Mac OS X 10.13, the return type is
+                                   int.  */
+_GL_CXXALIAS_SYS_CAST (freelocale, void, (locale_t locale));
 #  endif
 # endif
 # if @HAVE_FREELOCALE@

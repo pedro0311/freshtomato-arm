@@ -21,6 +21,18 @@ construct JSON objects in C, output them as JSON formatted strings and parse
 JSON formatted strings back into the C representation of JSON objects.
 It aims to conform to [RFC 7159](https://tools.ietf.org/html/rfc7159).
 
+Building on Unix and Windows with `vcpkg`, `gcc`/`g++`, `curl`, `unzip`, and `tar`
+--------------------------------------------------
+
+You can download and install JSON-C using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    vcpkg install json-c
+
+The JSON-C port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 Building on Unix with `git`, `gcc` and `autotools` <a name="buildunix"></a>
 --------------------------------------------------
@@ -121,7 +133,7 @@ Building with partial threading support <a name="buildthreaded"></a>
 ----------------------------------------
 
 Although json-c does not support fully multi-threaded access to
-object trees, it has some code to help make use in threaded programs
+object trees, it has some code to help make its use in threaded programs
 a bit safer.  Currently, this is limited to using atomic operations for
 json_object_get() and json_object_put().
 
@@ -131,7 +143,7 @@ default.  You may turn it on by adjusting your configure command with:
    --enable-threading
 
 Separately, the default hash function used for object field keys,
-lh_char_hash, uses a compare-and-swap operation to ensure the randomly
+lh_char_hash, uses a compare-and-swap operation to ensure the random
 seed is only generated once.  Because this is a one-time operation, it
 is always compiled in when the compare-and-swap operation is available.
 
@@ -161,6 +173,41 @@ Pass these options as `-D` on CMake's command-line.
 ```sh
 cmake -DBUILD_SHARED_LIBS=OFF ...
 ```
+
+Testing with cmake:
+
+By default, if valgrind is available running tests uses it.
+That can slow the tests down considerably, so to disable it use:
+```sh
+export USE_VALGRIND=0
+```
+
+To run tests:
+```sh
+mkdir build-test
+cd build-test
+# VALGRIND=1 causes -DVALGRIND=1 to be included when building
+VALGRIND=1 cmake ..
+make
+
+make test
+# By default, if valgrind is available running tests uses it.
+make USE_VALGRIND=0 test   # optionally skip using valgrind
+```
+
+If a test fails, check `Testing/Temporary/LastTest.log`, 
+`tests/testSubDir/${testname}/${testname}.vg.out`, and other similar files.
+If there is insufficient output try:
+```sh
+VERBOSE=1 make test
+```
+or
+```sh
+JSONC_TEST_TRACE=1 make test
+```
+and check the log files again.
+
+
 
 Linking to `libjson-c` <a name="linking">
 ----------------------

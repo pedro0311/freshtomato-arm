@@ -76,7 +76,7 @@ void search_init(bool replacing, bool keep_the_answer)
 
 	/* When starting a new search, clear the current answer. */
 	if (!keep_the_answer)
-		answer = mallocstrcpy(answer, NULL);
+		answer = mallocstrcpy(answer, "");
 
 	/* If something was searched for earlier, include it in the prompt. */
 	if (*last_search != '\0') {
@@ -88,7 +88,7 @@ void search_init(bool replacing, bool keep_the_answer)
 				(breadth(last_search) > COLS / 3) ? "..." : "");
 		free(disp);
 	} else
-		thedefault = mallocstrcpy(NULL, "");
+		thedefault = copy_of("");
 
 	while (TRUE) {
 		functionptrtype func;
@@ -598,7 +598,7 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 			size_t length_change;
 
 #ifndef NANO_TINY
-			add_undo(REPLACE);
+			add_undo(REPLACE, NULL);
 #endif
 			copy = replace_line(needle);
 
@@ -699,7 +699,7 @@ void ask_for_replacement(void)
 	linestruct *edittop_save, *begin;
 	size_t firstcolumn_save, begin_x;
 	ssize_t numreplaced;
-	int response = do_prompt(FALSE, FALSE, MREPLACEWITH, NULL,
+	int response = do_prompt(FALSE, FALSE, MREPLACEWITH, "",
 						/* TRANSLATORS: This is a prompt. */
 						&replace_history, edit_refresh, _("Replace with"));
 
@@ -758,7 +758,7 @@ void do_gotolinecolumn(ssize_t line, ssize_t column, bool use_answer,
 	if (interactive) {
 		/* Ask for the line and column. */
 		int response = do_prompt(FALSE, FALSE, MGOTOLINE,
-						use_answer ? answer : NULL, NULL, edit_refresh,
+						use_answer ? answer : "", NULL, edit_refresh,
 						/* TRANSLATORS: This is a prompt. */
 						_("Enter line number, column number"));
 

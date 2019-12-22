@@ -35,10 +35,10 @@ endif
 COPTS = -O2 -pipe -Wall -g
 LIBS =
 
-# Uncomment the next 2 lines to include support for Microsoft's
+# Uncomment the next line to include support for Microsoft's
 # MS-CHAP authentication protocol.  Also, edit plugins/radius/Makefile.linux.
 CHAPMS=y
-USE_CRYPT=y
+#USE_CRYPT=y
 # Don't use MSLANMAN unless you really know what you're doing.
 #MSLANMAN=y
 # Uncomment the next line to include support for MPPE.  CHAPMS (above) must
@@ -59,6 +59,11 @@ HAVE_MULTILINK=y
 # If you enable multilink, then TDB is automatically enabled also.
 # Linux distributions: Please leave TDB ENABLED in your builds.
 USE_TDB=y
+
+# Uncomment the next line to enable Type=notify services in systemd
+# If enabled, and the user sets the up_sdnotify option, then
+# pppd will not detach and will notify systemd when up.
+#SYSTEMD=y
 
 HAS_SHADOW=y
 #USE_PAM=y
@@ -120,7 +125,7 @@ CFLAGS   += -DHAS_SHADOW
 #LIBS     += -lshadow $(LIBS)
 endif
 
-ifneq ($(wildcard /usr/include/crypt.h),)
+ifneq ($(wildcard $(shell $(CC) --print-sysroot)/usr/include/crypt.h),)
 CFLAGS  += -DHAVE_CRYPT_H=1
 LIBS	+= -lcrypt
 endif
@@ -132,7 +137,8 @@ endif
 
 ifdef NEEDDES
 ifndef USE_CRYPT
-LIBS     += -ldes $(LIBS)
+CFLAGS   += -I$(shell $(CC) --print-sysroot)/usr/include/openssl
+LIBS     += -lcrypto
 else
 CFLAGS   += -DUSE_CRYPT=1
 endif
@@ -170,9 +176,14 @@ LIBS     += -llock
 CFLAGS   += -DLOCKLIB=1
 endif
 
+ifdef SYSTEMD
+LIBS += -lsystemd
+CFLAGS   += -DSYSTEMD=1
+endif
+
 ifdef PLUGIN
 CFLAGS	+= -DPLUGIN
-LDFLAGS	+= -Wl,-E
+LDFLAGS_PLUGIN	+= -Wl,-E
 LIBS	+= -ldl
 endif
 
@@ -214,7 +225,7 @@ install: pppd
 	$(INSTALL) -c -m 444 pppd.8 $(MANDIR)
 
 pppd: $(PPPDOBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o pppd $(PPPDOBJS) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_PLUGIN) -o pppd $(PPPDOBJS) $(LIBS)
 
 srp-entry:	srp-entry.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ srp-entry.c $(LIBS)

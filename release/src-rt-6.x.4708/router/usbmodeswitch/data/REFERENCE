@@ -1,7 +1,7 @@
 Configuration File Reference for USB_ModeSwitch
 -----------------------------------------------
 
-Last modified: 2017-08-06
+Last modified: 2019-11-26
 
 
 
@@ -19,9 +19,9 @@ one MessageContent is used.
 
 Parameter Reference:
 
-Note: if there is a short command line flag for a parameter, then it
-is appended to the line. For the full command line parameter reference
-see the usb_modeswitch(1) man page.
+Note: if there is a matching command line flag for any of the parameters
+then it is appended to the respective line. For the full command line
+parameter reference see the usb_modeswitch(1) man page.
 
 
 * DefaultVendor            -v <hex number>

@@ -2094,8 +2094,8 @@ void titlebar(const char *path)
 			state = _("View");
 		else if (ISSET(RESTRICTED))
 			state = _("Restricted");
-
-		pluglen = breadth(_("Modified")) + 1;
+		else
+			pluglen = breadth(_("Modified")) + 1;
 	}
 
 	/* Determine the widths of the four elements, including their padding. */
@@ -2105,10 +2105,8 @@ void titlebar(const char *path)
 		prefixlen++;
 	pathlen = breadth(path);
 	statelen = breadth(state) + 2;
-	if (statelen > 2) {
+	if (statelen > 2)
 		pathlen++;
-		pluglen = 0;
-	}
 
 	/* Only print the version message when there is room for it. */
 	if (verlen + prefixlen + pathlen + pluglen + statelen <= COLS)
@@ -2164,30 +2162,15 @@ void titlebar(const char *path)
 	wrefresh(topwin);
 }
 
-/* Display a normal message on the statusbar, quietly. */
-void statusbar(const char *msg)
-{
-	statusline(HUSH, msg);
-}
-
-/* Warn the user on the statusbar and pause for a moment, so that the
- * message can be noticed and read. */
-void warn_and_shortly_pause(const char *msg)
-{
-	statusline(ALERT, msg);
-	napms(1800);
-}
-
 /* Display a message on the statusbar, and set suppress_cursorpos to
  * TRUE, so that the message won't be immediately overwritten if
  * constant cursor position display is on. */
 void statusline(message_type importance, const char *msg, ...)
 {
 	va_list ap;
-	static int alerts = 0;
 	int colorpair;
 	char *compound, *message;
-	size_t start_col;
+	static size_t start_col = 0;
 	bool bracketed;
 #ifndef NANO_TINY
 	bool old_whitespace = ISSET(WHITESPACE_DISPLAY);
@@ -2210,20 +2193,23 @@ void statusline(message_type importance, const char *msg, ...)
 	}
 #endif
 
-	/* If the ALERT status has been reset, reset the counter. */
-	if (lastmessage == HUSH)
-		alerts = 0;
-
-	/* Shortly pause after each of the first three alert messages,
-	 * to give the user time to read them. */
-	if (lastmessage == ALERT && alerts < 4 && !ISSET(NO_PAUSES))
-		napms(1200);
+	/* If there are multiple alert messages, add trailing dots to the first. */
+	if (lastmessage == ALERT) {
+		if (start_col > 4) {
+			wmove(bottomwin, 0, COLS + 2 - start_col);
+			wattron(bottomwin, interface_color_pair[ERROR_MESSAGE]);
+			waddstr(bottomwin, "...");
+			wattroff(bottomwin, interface_color_pair[ERROR_MESSAGE]);
+			wnoutrefresh(bottomwin);
+			start_col = 0;
+			napms(100);
+			beep();
+		}
+		return;
+	}
 
 	if (importance == ALERT) {
-		if (++alerts > 3 && !ISSET(NO_PAUSES))
-			msg = _("Further warnings were suppressed");
-		else if (alerts < 4)
-			beep();
+		beep();
 		colorpair = interface_color_pair[ERROR_MESSAGE];
 	} else if (importance == NOTICE)
 		colorpair = interface_color_pair[SELECTED_TEXT];
@@ -2275,6 +2261,20 @@ void statusline(message_type importance, const char *msg, ...)
 		statusblank = 1;
 	else
 		statusblank = 26;
+}
+
+/* Display a normal message on the statusbar, quietly. */
+void statusbar(const char *msg)
+{
+	statusline(HUSH, msg);
+}
+
+/* Warn the user on the statusbar and pause for a moment, so that the
+ * message can be noticed and read. */
+void warn_and_shortly_pause(const char *msg)
+{
+	statusline(ALERT, msg);
+	napms(1800);
 }
 
 /* Display the shortcut list corresponding to menu on the last two rows
@@ -2684,7 +2684,7 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		size_t charlen = 1;
 
 		if (*(converted + target_x) != '\0') {
-			charlen = parse_mbchar(converted + target_x, striped_char, NULL);
+			charlen = collect_char(converted + target_x, striped_char);
 			target_column = wideness(converted, target_x);
 		} else if (target_column + 1 == editwincols) {
 			/* Defeat a VTE bug -- see https://sv.gnu.org/bugs/?55896. */
@@ -3043,7 +3043,7 @@ size_t get_softwrap_breakpoint(const char *text, size_t leftedge,
 
 	/* First find the place in text where the current chunk starts. */
 	while (*text != '\0' && column < leftedge)
-		text += parse_mbchar(text, NULL, &column);
+		text += advance_over(text, &column);
 
 	/* Now find the place in text where this chunk should end. */
 	while (*text != '\0' && column <= goal_column) {
@@ -3054,7 +3054,7 @@ size_t get_softwrap_breakpoint(const char *text, size_t leftedge,
 		}
 
 		breaking_col = (*text == '\t' ? goal_column : column);
-		text += parse_mbchar(text, NULL, &column);
+		text += advance_over(text, &column);
 	}
 
 	/* If we didn't overshoot the limit, we've found a breaking point;
@@ -3067,7 +3067,7 @@ size_t get_softwrap_breakpoint(const char *text, size_t leftedge,
 	/* If we're softwrapping at blanks and we found at least one blank, break
 	 * after that blank -- if it doesn't overshoot the screen's edge. */
 	if (farthest_blank != NULL) {
-		parse_mbchar(farthest_blank, NULL, &last_blank_col);
+		advance_over(farthest_blank, &last_blank_col);
 
 		if (last_blank_col <= goal_column)
 			return last_blank_col;
@@ -3431,7 +3431,7 @@ void spotlight(size_t from_col, size_t to_col)
 
 	/* This is so we can show zero-length matches. */
 	if (to_col == from_col) {
-		word = mallocstrcpy(NULL, " ");
+		word = copy_of(" ");
 		to_col++;
 	} else
 		word = display_string(openfile->current->data, from_col,
@@ -3474,7 +3474,7 @@ void spotlight_softwrapped(size_t from_col, size_t to_col)
 
 		/* This is so we can show zero-length matches. */
 		if (break_col == from_col) {
-			word = mallocstrcpy(NULL, " ");
+			word = copy_of(" ");
 			break_col++;
 		} else
 			word = display_string(openfile->current->data, from_col,

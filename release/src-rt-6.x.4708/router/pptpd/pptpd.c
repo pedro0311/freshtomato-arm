@@ -115,7 +115,7 @@ static void showusage(char *prog)
         printf("                           (default is /etc/ppp/options).\n");
 #endif
         printf(" [-p] [--pidfile file]     Specifies the file to write the process ID to\n");
-        printf("                           (default is /var/run/pptpd.pid).\n");
+        printf("                           (default is %s).\n", PIDFILE_DEFAULT);
 #if !defined(BSDUSER_PPP)
         printf(" [-s] [--speed baud]       Specifies the baud speed for the PPP daemon\n");
         printf("                           (default is 115200).\n");
