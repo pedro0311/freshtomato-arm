@@ -5,8 +5,8 @@ LD ?= $(CROSS_COMPILE)ld
 AR ?= $(CROSS_COMPILE)ar
 RANLIB ?= $(CROSS_COMPILE)ranlib
 
-CFLAGS  := --std=gnu99 -g -Os $(EXTRACFLAGS)
-CFLAGS  += -Wall -Wmissing-declarations
+CFLAGS  := --std=gnu99 -g0 -Os $(EXTRACFLAGS)
+CFLAGS  += -Wextra -Wall -Wmissing-declarations -Wno-unused-parameter
 CFLAGS  += -ffunction-sections -fdata-sections -I$(TOP)/libjson-c
 LDFLAGS += -Wl,--gc-sections -L$(TOP)/libjson-c
 

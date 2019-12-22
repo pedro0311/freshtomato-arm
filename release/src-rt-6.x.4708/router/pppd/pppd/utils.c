@@ -59,7 +59,6 @@
 #include "fsm.h"
 #include "lcp.h"
 
-static const char rcsid[] = RCSID;
 
 #if defined(SUNOS4)
 extern char *strerror();
@@ -625,7 +624,7 @@ print_string(p, len, printer, arg)
 		printer(arg, "\\t");
 		break;
 	    default:
-		printer(arg, "\\%.3o", c);
+		printer(arg, "\\%.3o", (unsigned char) c);
 	    }
 	}
     }

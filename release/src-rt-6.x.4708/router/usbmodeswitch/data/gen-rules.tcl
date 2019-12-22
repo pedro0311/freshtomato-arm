@@ -8,10 +8,13 @@
 #
 # A config file is expected to have one comment line containing
 # a model name or other concise device specifications
+#
+# Note that you need this script only in case of wanting to add
+# your own new device IDs
 
 
 # Default version string
-set version "20170806"
+set version "20191128"
 
 # Devices excluded from Huawei catch-all rule
 set x_huaweiList {12d1:1573 12d1:15c1}
@@ -46,10 +49,12 @@ puts $wc {#
 ACTION!="add|change", GOTO="modeswitch_rules_end"
 
 # Adds a symlink "gsmmodem[n]" to the lowest ttyUSB port with interrupt
-# transfer; checked against a list of known modems, or else no action
+# transfer; checked against a list of modems already known to the system,
+# or else no action
 KERNEL=="ttyUSB*", ATTRS{bNumConfigurations}=="*", PROGRAM="usb_modeswitch --symlink-name %p %s{idVendor} %s{idProduct} %E{PRODUCT}", SYMLINK+="%c"
 
-SUBSYSTEM!="usb", ACTION!="add",, GOTO="modeswitch_rules_end"
+SUBSYSTEM!="usb", GOTO="modeswitch_rules_end"
+ACTION!="add", GOTO="modeswitch_rules_end"
 
 # Generic entry for most Huawei devices, excluding Android phones
 ATTRS{idVendor}=="12d1", ATTRS{manufacturer}!="Android", ATTR{bInterfaceNumber}=="00", ATTR{bInterfaceClass}=="08", RUN+="usb_modeswitch '/%k'"}

@@ -3657,7 +3657,7 @@ ac_config_headers="$ac_config_headers main/php_config.h"
 
 PHP_MAJOR_VERSION=7
 PHP_MINOR_VERSION=2
-PHP_RELEASE_VERSION=24
+PHP_RELEASE_VERSION=26
 PHP_EXTRA_VERSION=""
 PHP_VERSION="$PHP_MAJOR_VERSION.$PHP_MINOR_VERSION.$PHP_RELEASE_VERSION$PHP_EXTRA_VERSION"
 PHP_VERSION_ID=`expr $PHP_MAJOR_VERSION \* 10000 + $PHP_MINOR_VERSION \* 100 + $PHP_RELEASE_VERSION`
@@ -8903,6 +8903,16 @@ $as_echo "#define HAVE_SYSTEMD 1" >>confdefs.h
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -17169,6 +17179,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -18036,6 +18056,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -18435,6 +18465,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -18661,6 +18701,16 @@ rm -f conftest*
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -18836,6 +18886,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -19184,6 +19244,16 @@ $as_echo "$PCRE_LIBDIR" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -20154,6 +20224,16 @@ $as_echo_n "checking for SQLite 3.3.9+... " >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -20436,6 +20516,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -20584,6 +20674,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -20736,6 +20836,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -20885,6 +20995,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -21709,6 +21829,16 @@ $as_echo "$ZLIB_VERSION" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -22350,6 +22480,16 @@ $as_echo "not found" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -23659,6 +23799,16 @@ $as_echo "$curl_version_full" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -24069,6 +24219,16 @@ $as_echo "no" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -24224,6 +24384,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -24375,6 +24545,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -25075,6 +25255,16 @@ if test "$PHP_QDBM" != "no"; then
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -25417,6 +25607,16 @@ $as_echo "no" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -25731,6 +25931,16 @@ if test "$PHP_NDBM" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -26081,6 +26291,16 @@ if test "$PHP_TCADB" != "no"; then
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -26427,6 +26647,16 @@ if test "$PHP_LMDB" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -27995,6 +28225,16 @@ $as_echo "no" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -28412,6 +28652,16 @@ elif test "$PHP_CDB" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -29228,6 +29478,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -30205,6 +30465,16 @@ $as_echo "#define HAVE_ENCHANT 1" >>confdefs.h
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -31846,6 +32116,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -32072,6 +32352,16 @@ rm -f conftest*
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -32247,6 +32537,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -32794,6 +33094,16 @@ if test "$PHP_GD" != "no"; then
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -33099,6 +33409,16 @@ $as_echo "If configure fails try --with-webp-dir=<DIR>" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -33396,6 +33716,16 @@ $as_echo "If configure fails try --with-jpeg-dir=<DIR>" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -33790,6 +34120,16 @@ $as_echo "If configure fails try --with-png-dir=<DIR> and --with-zlib-dir=<DIR>"
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -34221,6 +34561,16 @@ $as_echo "If configure fails try --with-xpm-dir=<DIR>" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -34465,6 +34815,16 @@ else
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -34770,6 +35130,16 @@ $as_echo "If configure fails try --with-webp-dir=<DIR>" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -35067,6 +35437,16 @@ $as_echo "If configure fails try --with-jpeg-dir=<DIR>" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -35461,6 +35841,16 @@ $as_echo "If configure fails try --with-png-dir=<DIR> and --with-zlib-dir=<DIR>"
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -35894,6 +36284,16 @@ $as_echo "If configure fails try --with-xpm-dir=<DIR>" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -36010,6 +36410,16 @@ $as_echo "If configure fails try --with-freetype-dir=<DIR>" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -36262,6 +36672,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -36408,6 +36828,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -36558,6 +36988,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -36704,6 +37144,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -36854,6 +37304,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -37002,6 +37462,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -37148,6 +37618,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -37639,6 +38119,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -38597,6 +39087,16 @@ if test "$PHP_GMP" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -39888,6 +40388,16 @@ $as_echo "#define HAVE_GICONV_H 1" >>confdefs.h
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -40047,6 +40557,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -41671,6 +42191,16 @@ rm -f conftest*
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -41843,6 +42373,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -42203,6 +42743,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -42623,6 +43173,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -42849,6 +43409,16 @@ rm -f conftest*
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -43024,6 +43594,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -43674,6 +44254,16 @@ $as_echo "version $FB_VERSION" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -43819,6 +44409,16 @@ $as_echo "version $FB_VERSION" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -43968,6 +44568,16 @@ else
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -44113,6 +44723,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -44772,7 +45392,8 @@ $as_echo "found $icu_version_full" >&6; }
 
       ICU_LIBS=`$PKG_CONFIG --libs icu-uc icu-io icu-i18n`
       ICU_INCS=`$PKG_CONFIG --cflags-only-I icu-uc icu-io icu-i18n`
-      ICU_CXXFLAGS="-DU_USING_ICU_NAMESPACE=1"
+      ICU_CXXFLAGS=`$PKG_CONFIG --variable=CXXFLAGS icu-uc`
+      ICU_CXXFLAGS="$ICU_CXXFLAGS -DU_USING_ICU_NAMESPACE=1"
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found $ICU_VERSION" >&5
 $as_echo "found $ICU_VERSION" >&6; }
@@ -44792,6 +45413,16 @@ $as_echo "found $ICU_VERSION" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -45041,6 +45672,16 @@ $as_echo "found $icu_version_full" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -49396,6 +50037,16 @@ $as_echo "#define HAVE_LDAP_SASL_H 1" >>confdefs.h
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -50520,6 +51171,16 @@ $as_echo "#define HAVE_ONIG 1" >>confdefs.h
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -50763,6 +51424,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -51082,6 +51753,16 @@ $as_echo "#define HAVE_MBREGEX 1" >>confdefs.h
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -51916,6 +52597,16 @@ $as_echo "mysql_config not found" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -52088,6 +52779,16 @@ if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -52184,6 +52885,16 @@ $as_echo "#define HAVE_MYSQLILIB 1" >>confdefs.h
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -52349,6 +53060,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -53352,6 +54073,16 @@ $as_echo "$OCI8_LIB_DIR" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -53440,6 +54171,16 @@ $as_echo "$OCI8_LIB_DIR" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -54042,6 +54783,16 @@ $as_echo "$OCISDKMANINC" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -56197,6 +56948,16 @@ if test -n "$ODBC_TYPE"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -59065,6 +59826,16 @@ $as_echo "version $FB_VERSION" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -59214,6 +59985,16 @@ $as_echo "version $FB_VERSION" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -59361,6 +60142,16 @@ else
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -59506,6 +60297,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -60369,6 +61170,16 @@ $as_echo "not found" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -60539,6 +61350,16 @@ if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -60744,6 +61565,16 @@ else
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -60919,6 +61750,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -61106,6 +61947,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -62036,6 +62887,16 @@ $as_echo "$PDO_OCI_LIB_DIR" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -62124,6 +62985,16 @@ $as_echo "$PDO_OCI_LIB_DIR" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -62309,6 +63180,16 @@ $as_echo "$PDO_OCI_VERSION" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -62460,6 +63341,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -62615,6 +63506,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -62762,6 +63663,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -62944,6 +63855,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -63095,6 +64016,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -64014,6 +64945,16 @@ $as_echo "no" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -64108,6 +65049,16 @@ $as_echo "no" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -64246,6 +65197,16 @@ if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -65643,6 +66604,16 @@ $as_echo "not found" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -65894,6 +66865,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -66042,6 +67023,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -66830,6 +67821,16 @@ done
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -70012,6 +71013,16 @@ EOF
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -70572,6 +71583,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -70821,6 +71842,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -70970,6 +72001,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -71125,6 +72166,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -71276,6 +72327,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -71609,6 +72670,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -71858,6 +72929,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -72011,6 +73092,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -72162,6 +73253,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -72646,6 +73747,16 @@ if test "$PHP_RECODE" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -74810,6 +75921,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -75478,6 +76599,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -75584,6 +76715,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -75741,6 +76882,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -76312,6 +77463,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -77425,6 +78586,16 @@ $as_echo "version $LIBSODIUM_VERSION found using pkg-config" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -77710,6 +78881,16 @@ $as_echo "found in $i" >&6; }
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -83482,6 +84663,16 @@ $as_echo "#define HAVE_TIDYBUFFIO_H 1" >>confdefs.h
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -83627,6 +84818,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -84664,6 +85865,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -85528,6 +86739,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -86335,6 +87556,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -87066,6 +88297,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -87545,6 +88786,16 @@ $as_echo "#define HAVE_GICONV_H 1" >>confdefs.h
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -87704,6 +88955,16 @@ else
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -89362,6 +90623,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -89886,6 +91157,16 @@ if test "$PHP_XSL" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -91110,6 +92391,16 @@ $as_echo "not found" >&6; }
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -91360,6 +92651,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -91613,6 +92914,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -93135,6 +94446,16 @@ fi
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -93361,6 +94682,16 @@ rm -f conftest*
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
   fi
 
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
+  fi
+
       fi
     ;;
     -l*)
@@ -93536,6 +94867,16 @@ fi
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -94073,6 +95414,16 @@ if test "$PHP_RECODE" != "no"; then
   if test -n "$unique" && test "`eval $cmd`" = "" ; then
     eval "EXTRA_LDFLAGS$unique=set"
     EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ac_i"
+  fi
+
+
+
+  unique=`echo $ac_i|$SED 's/[^a-zA-Z0-9]/_/g'`
+
+  cmd="echo $ac_n \"\$EXTRA_LDFLAGS_PROGRAM$unique$ac_c\""
+  if test -n "$unique" && test "`eval $cmd`" = "" ; then
+    eval "EXTRA_LDFLAGS_PROGRAM$unique=set"
+    EXTRA_LDFLAGS_PROGRAM="$EXTRA_LDFLAGS_PROGRAM $ac_i"
   fi
 
       fi
@@ -95307,7 +96658,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 95310 "configure"
+#line 96661 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -97346,7 +98697,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 97349 "configure"' > conftest.$ac_ext
+  echo '#line 98700 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -98744,7 +100095,7 @@ else
       LDFLAGS="$LDFLAGS -Wl,-exported_symbols_list,conftest.sym"
 
 cat > conftest.$ac_ext <<EOF
-#line 98747 "configure"
+#line 100098 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -98902,11 +100253,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:98905: $lt_compile\"" >&5)
+   (eval echo "\"configure:100256: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:98909: \$? = $ac_status" >&5
+   echo "configure:100260: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99200,11 +100551,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99203: $lt_compile\"" >&5)
+   (eval echo "\"configure:100554: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:99207: \$? = $ac_status" >&5
+   echo "configure:100558: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -99304,11 +100655,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:99307: $lt_compile\"" >&5)
+   (eval echo "\"configure:100658: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:99311: \$? = $ac_status" >&5
+   echo "configure:100662: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -99768,7 +101119,7 @@ _LT_EOF
        # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 99771 "configure"
+#line 101122 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -99810,7 +101161,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	 # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 99813 "configure"
+#line 101164 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -101327,7 +102678,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101330 "configure"
+#line 102681 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -101427,7 +102778,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 101430 "configure"
+#line 102781 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -102492,7 +103843,7 @@ case $host_os in
       # Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102495 "configure"
+#line 103846 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -102535,7 +103886,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	# Determine the default libpath from the value encoded in an empty executable.
 
 cat > conftest.$ac_ext <<EOF
-#line 102538 "configure"
+#line 103889 "configure"
 #include "confdefs.h"
 int main() {
 ; return 0; }
@@ -103787,11 +105138,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:103790: $lt_compile\"" >&5)
+   (eval echo "\"configure:105141: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "configure:103794: \$? = $ac_status" >&5
+   echo "configure:105145: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -103891,11 +105242,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"configure:103894: $lt_compile\"" >&5)
+   (eval echo "\"configure:105245: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "configure:103898: \$? = $ac_status" >&5
+   echo "configure:105249: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized

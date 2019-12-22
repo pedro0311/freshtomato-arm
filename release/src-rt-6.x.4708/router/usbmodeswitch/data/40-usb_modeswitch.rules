@@ -1,4 +1,4 @@
-# Part of usb-modeswitch-data, version 20170805
+# Part of usb-modeswitch-data, version 20191128
 #
 # Works with usb_modeswitch versions >= 2.4.0. Slash before %k parameter
 # is for compatibility only. Versions >= 2.5.0 don't need it.
@@ -19,6 +19,18 @@ ATTR{idVendor}=="03f0", ATTR{idProduct}=="002a", RUN+="usb_modeswitch '/%k'"
 
 # HP LaserJet Professional P1102w
 ATTR{idVendor}=="03f0", ATTR{idProduct}=="032a", RUN+="usb_modeswitch '/%k'"
+
+# HP lt4220 NGFF Card
+ATTR{idVendor}=="03f0", ATTR{idProduct}=="0857", RUN+="usb_modeswitch '/%k'"
+
+# HP un2430
+ATTR{idVendor}=="03f0", ATTR{idProduct}=="371d", RUN+="usb_modeswitch '/%k'"
+
+# HP hs2434
+ATTR{idVendor}=="03f0", ATTR{idProduct}=="4b1d", RUN+="usb_modeswitch '/%k'"
+
+# HP lt4111
+ATTR{idVendor}=="03f0", ATTR{idProduct}=="4e1d", RUN+="usb_modeswitch '/%k'"
 
 # HP hs3110
 ATTR{idVendor}=="03f0", ATTR{idProduct}=="521d", RUN+="usb_modeswitch '/%k'"
@@ -52,6 +64,9 @@ ATTR{idVendor}=="03f0", ATTR{idProduct}=="9a1d", RUN+="usb_modeswitch '/%k'"
 
 # HP lt4120
 ATTR{idVendor}=="03f0", ATTR{idProduct}=="9d1d", RUN+="usb_modeswitch '/%k'"
+
+# HP lt4132
+ATTR{idVendor}=="03f0", ATTR{idProduct}=="a31d", RUN+="usb_modeswitch '/%k'"
 
 # Quanta MU-Q101
 ATTR{idVendor}=="0408", ATTR{idProduct}=="1000", RUN+="usb_modeswitch '/%k'"
@@ -149,7 +164,7 @@ ATTR{idVendor}=="0586", ATTR{idProduct}=="2030", RUN+="usb_modeswitch '/%k'"
 # Axesstel Modems (w/ initial idProduct 0x0010)
 ATTR{idVendor}=="05c6", ATTR{idProduct}=="0010", RUN+="usb_modeswitch '/%k'"
 
-# Samsung SGH-Z810, Option GlobeTrotter GX0201, Celot K-300 a.o., Celot CT-680, Older Option devices, AnyDATA devices, Bless UC165, StrongRising device, Prolink P2000 CDMA, TechFaith Venus VT-18, Vertex Wireless 100 Series
+# Samsung SGH-Z810, Option GlobeTrotter GX0201 and many other devices
 ATTR{idVendor}=="05c6", ATTR{idProduct}=="1000", RUN+="usb_modeswitch '/%k'"
 
 # Various USB modems
@@ -187,6 +202,9 @@ ATTR{idVendor}=="07d1", ATTR{idProduct}=="a804", RUN+="usb_modeswitch '/%k'"
 
 # D-Link DWM-151 A1
 ATTR{idVendor}=="07d1", ATTR{idProduct}=="f000", RUN+="usb_modeswitch '/%k'"
+
+# Netgear AirCard 779S
+ATTR{idVendor}=="0846", ATTR{idProduct}=="0fff", RUN+="usb_modeswitch '/%k'"
 
 # Dymo LabelManager
 ATTR{idVendor}=="0922", ATTR{idProduct}=="1001", RUN+="usb_modeswitch '/%k'"
@@ -395,6 +413,9 @@ ATTR{idVendor}=="0b3c", ATTR{idProduct}=="f00c", RUN+="usb_modeswitch '/%k'"
 # Olivetti Olicard 500
 ATTR{idVendor}=="0b3c", ATTR{idProduct}=="f017", RUN+="usb_modeswitch '/%k'"
 
+# D-Link DWA-171 Wifi Dongle
+ATTR{idVendor}=="0bda", ATTR{idProduct}=="1a2b", RUN+="usb_modeswitch '/%k'"
+
 # Ericsson F5521gw
 ATTR{idVendor}=="0bdb", ATTR{idProduct}=="190d", RUN+="usb_modeswitch '/%k'"
 
@@ -415,6 +436,9 @@ ATTR{idVendor}=="0df7", ATTR{idProduct}=="0800", RUN+="usb_modeswitch '/%k'"
 
 # MediaTek/Medion S4222 and probably others, MediaTek MT6276M and others
 ATTR{idVendor}=="0e8d", ATTR{idProduct}=="0002", RUN+="usb_modeswitch '/%k'"
+
+# COMFAST CF-WU782AC WiFi Dongle
+ATTR{idVendor}=="0e8d", ATTR{idProduct}=="2870", RUN+="usb_modeswitch '/%k'"
 
 # MediaTek Wimax USB Card
 ATTR{idVendor}=="0e8d", ATTR{idProduct}=="7109", RUN+="usb_modeswitch '/%k'"
@@ -460,9 +484,6 @@ ATTR{idVendor}=="1004", ATTR{idProduct}=="6156", RUN+="usb_modeswitch '/%k'"
 
 # LG AD600
 ATTR{idVendor}=="1004", ATTR{idProduct}=="6190", RUN+="usb_modeswitch '/%k'"
-
-# LG VL600
-ATTR{idVendor}=="1004", ATTR{idProduct}=="61aa", RUN+="usb_modeswitch '/%k'"
 
 # LG L-02C LTE
 ATTR{idVendor}=="1004", ATTR{idProduct}=="61dd", RUN+="usb_modeswitch '/%k'"
@@ -578,6 +599,12 @@ ATTR{idVendor}=="1410", ATTR{idProduct}=="7001", RUN+="usb_modeswitch '/%k'"
 # Novatel U620L
 ATTR{idVendor}=="1410", ATTR{idProduct}=="9020", RUN+="usb_modeswitch '/%k'"
 
+# Novatel USB730L
+ATTR{idVendor}=="1410", ATTR{idProduct}=="9030", RUN+="usb_modeswitch '/%k'"
+
+# Novatel MiFi 6620L
+ATTR{idVendor}=="1410", ATTR{idProduct}=="b00c", RUN+="usb_modeswitch '/%k'"
+
 # Sequans SQN1210/SQN1220 (generic chipsets)
 ATTR{idVendor}=="148e", ATTR{idProduct}=="a000", RUN+="usb_modeswitch '/%k'"
 
@@ -590,11 +617,17 @@ ATTR{idVendor}=="148f", ATTR{idProduct}=="2878", RUN+="usb_modeswitch '/%k'"
 # China TeleCom CBP7.0
 ATTR{idVendor}=="15eb", ATTR{idProduct}=="7153", RUN+="usb_modeswitch '/%k'"
 
+# Abit AK-020
+ATTR{idVendor}=="15eb", ATTR{idProduct}=="a403", RUN+="usb_modeswitch '/%k'"
+
 # Amoi H-01
 ATTR{idVendor}=="1614", ATTR{idProduct}=="0800", RUN+="usb_modeswitch '/%k'"
 
 # Amoi H-02
 ATTR{idVendor}=="1614", ATTR{idProduct}=="0802", RUN+="usb_modeswitch '/%k'"
+
+# KuWfi 4g LTE
+ATTR{idVendor}=="161c", ATTR{idProduct}=="f010", RUN+="usb_modeswitch '/%k'"
 
 # Anydata ADU-890WH
 ATTR{idVendor}=="16d5", ATTR{idProduct}=="f000", RUN+="usb_modeswitch '/%k'"
@@ -797,6 +830,9 @@ ATTR{idVendor}=="19d2", ATTR{idProduct}=="1238", RUN+="usb_modeswitch '/%k'"
 # ZTE MF730
 ATTR{idVendor}=="19d2", ATTR{idProduct}=="1420", RUN+="usb_modeswitch '/%k'"
 
+# ZTE MF833V, Telewell TW-LTE v2
+ATTR{idVendor}=="19d2", ATTR{idProduct}=="1421", RUN+="usb_modeswitch '/%k'"
+
 # ZTE MFxxx
 ATTR{idVendor}=="19d2", ATTR{idProduct}=="1511", RUN+="usb_modeswitch '/%k'"
 
@@ -890,6 +926,9 @@ ATTR{idVendor}=="1bbb", ATTR{idProduct}=="f052", RUN+="usb_modeswitch '/%k'"
 # Alcatel One Touch X020
 ATTR{idVendor}=="1c9e", ATTR{idProduct}=="1001", RUN+="usb_modeswitch '/%k'"
 
+# 4G System XS W21s
+ATTR{idVendor}=="1c9e", ATTR{idProduct}=="3003", RUN+="usb_modeswitch '/%k'"
+
 # TU930, IVIO IV-2010u
 ATTR{idVendor}=="1c9e", ATTR{idProduct}=="6000", RUN+="usb_modeswitch '/%k'"
 
@@ -928,6 +967,9 @@ ATTR{idVendor}=="1c9e", ATTR{idProduct}=="f000", RUN+="usb_modeswitch '/%k'"
 
 # Micromax MMX400R / 4G Systems XSBOXGO
 ATTR{idVendor}=="1c9e", ATTR{idProduct}=="f010", RUN+="usb_modeswitch '/%k'"
+
+# JioFi JMR1040
+ATTR{idVendor}=="1c9e", ATTR{idProduct}=="f030", RUN+="usb_modeswitch '/%k'"
 
 # TechFaith BSNL Capitel
 ATTR{idVendor}=="1d09", ATTR{idProduct}=="1000", RUN+="usb_modeswitch '/%k'"
@@ -1070,6 +1112,9 @@ ATTR{idVendor}=="2001", ATTR{idProduct}=="a80b", RUN+="usb_modeswitch '/%k'"
 # D-Link DWM-222
 ATTR{idVendor}=="2001", ATTR{idProduct}=="ab00", RUN+="usb_modeswitch '/%k'"
 
+# D-Link DWM-222 A2
+ATTR{idVendor}=="2001", ATTR{idProduct}=="ac01", RUN+="usb_modeswitch '/%k'"
+
 # Venus VT-18
 ATTR{idVendor}=="2015", ATTR{idProduct}=="0001", RUN+="usb_modeswitch '/%k'"
 
@@ -1081,6 +1126,9 @@ ATTR{idVendor}=="201e", ATTR{idProduct}=="2009", RUN+="usb_modeswitch '/%k'"
 
 # Mediatek MT6229, Micromax MMX 377G, Olicard 300
 ATTR{idVendor}=="2020", ATTR{idProduct}=="0002", RUN+="usb_modeswitch '/%k'"
+
+# Telewell TW-LTE, Olicard 600, Digisol BG-BA4305
+ATTR{idVendor}=="2020", ATTR{idProduct}=="2030", RUN+="usb_modeswitch '/%k'"
 
 # SpeedUp SU-8000 and others
 ATTR{idVendor}=="2020", ATTR{idProduct}=="f00e", RUN+="usb_modeswitch '/%k'"
@@ -1151,6 +1199,9 @@ ATTR{idVendor}=="230d", ATTR{idProduct}=="0103", RUN+="usb_modeswitch '/%k'"
 # TP-Link MA180
 ATTR{idVendor}=="2357", ATTR{idProduct}=="0200", RUN+="usb_modeswitch '/%k'"
 
+# TP-Link UE300
+ATTR{idVendor}=="2357", ATTR{idProduct}=="0600", RUN+="usb_modeswitch '/%k'"
+
 # TP-Link MA260
 ATTR{idVendor}=="2357", ATTR{idProduct}=="f000", RUN+="usb_modeswitch '/%k'"
 
@@ -1168,6 +1219,33 @@ ATTR{idVendor}=="257a", ATTR{idProduct}=="c000", RUN+="usb_modeswitch '/%k'"
 
 # Unknown devices
 ATTR{idVendor}=="257a", ATTR{idProduct}=="d000", RUN+="usb_modeswitch '/%k'"
+
+# 4G Systems W1208
+ATTR{idVendor}=="2fd4", ATTR{idProduct}=="9aff", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5806
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81a2", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5570
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81a3", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5570e
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81a4", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5808
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81a8", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5809e
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81b1", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5809e
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81b3", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5821e
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81d7", RUN+="usb_modeswitch '/%k'"
+
+# Dell DW5821e-eSIM
+ATTR{idVendor}=="413c", ATTR{idProduct}=="81e0", RUN+="usb_modeswitch '/%k'"
 
 # BlueLink BL-EV08C
 ATTR{idVendor}=="6000", ATTR{idProduct}=="1000", RUN+="usb_modeswitch '/%k'"

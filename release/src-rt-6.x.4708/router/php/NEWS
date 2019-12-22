@@ -1,7 +1,78 @@
 PHP                                                                        NEWS
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-24 Oct 2019, PHP 7.2.24
+19 Dec 2019, PHP 7.2.26
 
+- Bcmath:
+  . Fixed bug #78878 (Buffer underflow in bc_shift_addsub). (CVE-2019-11046).
+    (cmb)
+
+- Core:
+  . Fixed bug #78862 (link() silently truncates after a null byte on Windows).
+    (CVE-2019-11044). (cmb)
+  . Fixed bug #78863 (DirectoryIterator class silently truncates after a null
+    byte). (CVE-2019-11045). (cmb)
+
+- EXIF:
+  . Fixed bug #78793 (Use-after-free in exif parsing under memory sanitizer).
+    (CVE-2019-11050). (Nikita)
+  . Fixed bug #78910 (Heap-buffer-overflow READ in exif). (CVE-2019-11047).
+    (Nikita)
+
+- GD:
+  . Fixed bug #78849 (GD build broken with -D SIGNED_COMPARE_SLOW). (cmb)
+
+- Intl:
+  . Fixed bug #78804 (Segmentation fault in Locale::filterMatches). (Stas)
+
+- OPcache:
+  . Fixed $x = (bool)$x; with opcache (should emit undeclared variable notice).
+    (Tyson Andre)
+
+- Standard:
+  . Fixed bug #78759 (array_search in $GLOBALS). (Nikita)
+  . Fixed bug #78833 (Integer overflow in pack causes out-of-bound access).
+    (cmb)
+  . Fixed bug #78814 (strip_tags allows / in tag name => whitelist bypass).
+    (cmb)
+
+21 Nov 2019, PHP 7.2.25
+
+- Core:
+  . Fixed bug #78656 (Parse errors classified as highest log-level). (Erik
+    Lundin)
+  . Fixed bug #78752 (Segfault if GC triggered while generator stack frame is
+    being destroyed). (Nikita)
+  . Fixed bug #78689 (Closure::fromCallable() doesn't handle
+    [Closure, '__invoke']). (Nikita)
+
+- COM:
+  . Fixed bug #78694 (Appending to a variant array causes segfault). (cmb)
+
+- Date:
+  . Fixed bug #70153 (\DateInterval incorrectly unserialized). (Maksim Iakunin)
+  . Fixed bug #78751 (Serialising DatePeriod converts DateTimeImmutable). (cmb)
+
+- Iconv:
+  . Fixed bug #78642 (Wrong libiconv version displayed). (gedas at martynas,
+    cmb).
+
+- OpCache:
+  . Fixed bug #78654 (Incorrectly computed opcache checksum on files with
+    non-ascii characters). (mhagstrand)
+  . Fixed bug #78747 (OpCache corrupts custom extension result). (Nikita)
+
+- OpenSSL:
+  . Fixed bug #78775 (TLS issues from HTTP request affecting other encrypted
+    connections). (Nikita)
+
+- Reflection:
+  . Fixed bug #78697 (ReflectionClass::ImplementsInterface - inaccurate error
+    message with traits). (villfa)
+
+- Sockets:
+  . Fixed bug #78665 (Multicasting may leak memory). (cmb)
+
+24 Oct 2019, PHP 7.2.24
 
 - Core:
   . Fixed bug #78535 (auto_detect_line_endings value not parsed as bool).
