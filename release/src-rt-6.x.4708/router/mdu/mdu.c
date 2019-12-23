@@ -518,12 +518,15 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	}
 	else
 		snprintf(url, HALF_BLOB, "http://%s%s", host, query);
+
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-	if (header)
-	{
+	if (header) {
 		headers = curl_headers(header);
-		curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
 	}
+	else {
+		headers = curl_headers("User-Agent: " AGENT);
+	}
+	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
 
 	if (auth) {
 		curl_easy_setopt(curl_handle, CURLOPT_USERNAME, get_option_required("user"));
