@@ -3,6 +3,65 @@ FreshTomato-ARM Changelog
 
 
 
+2019.4          2019.12.29
+--------------------------
+
+- Add AC1900P Router Support (thanks Don Bushway aka snowman58)
+- openssl11: add OpenSSL 1.1.1d to the tree
+- dnsmasq: update to 7d04e17 (2019.12.12) snapshot
+- pptpd: update poptop to 3b7a80c (2019.10.14) snapshot
+- ebtables: up version to 2.0.11
+- libusb: fixes from upstream
+- tor: update to 0.4.2.5
+- nano: update to 4.6
+- php: update to 7.2.26
+- libjson-c: update to d6b968d (2019.12.13) snapshot
+- libexif: update to da025b3 (2019.12.13) snapshot
+- libubox: update to 07413cc (2019.11.24) snapshot
+- usb-modeswitch: update to 2.6.0
+- usb_modeswitch: update data package to 20191128
+- pppd: fixes/updates from upstream
+- adminer: update to 4.7.5
+- openssl11: add build recipes
+- busybox: enable TAC command 
+- busybox: enable support for lspci. Enable lsusb, CONFIG_FEATURE_WGET_STATUSBAR, and CONFIG_FEATURE_VERBOSE_USAGE in config_base instead of Makefile
+- build: update libfoo.pl for OpenSSL 1.1.x
+- GUI: PPTP Client Configuration: fix problems with “Start/Stop Now” button
+- GUI: OpenVPN Client: cosmetic as suggested by @rs232: https://www.linksysinfo.org/index.php?threads/fork-freshtomato-arm-development-thread.74117/post-309967
+- GUI: add Model Name to the header
+- TTBv2 - add local storage and custom URL support
+- NFS: fix connection problems: "nfsd: unable to resolve ANYADDR:nfs: Servname not supported for ai_socktype"; (fixes issue #3)
+- VPN PPTP Client: changes and improvements - tested on 2 ARM routers as client and server, working (both: lan and internet access)
+- VPN PPTP: changes and improvements (part 2) - tested on Android and MIPS/ARM routers in different configurations, working (both: lan access and internet)
+- mdu: use libcurl if available for DDNS
+- mdu: Add dns.he.net DDNS support
+- mdu: fixes and improvements
+- nvram utility: fix unwanted new line in output when variable in nvram is set but empty (fixes problems with e.g: “nvram get VAR | wc -l”)
+- pppd: merge patches 109-fixes-from-upstream and 110-various-fixes-for-errors-found-by-coverity-static-analysis with the sources
+- Makefile: clearly identify the AC68U (C1 E1) model in the image name
+- patches: portmap: fix patch
+- patches: ebtables: fix patch
+- httpd: gencert.sh: add emailAddress attribute to generated certificate
+- httpd: gencert.sh: use openssl11 when available for certificate generation; replace deprecated genrsa command with genpkey 
+- router: Makefile: openssl: openssl11: tweak build recipes; removed unused ciphers
+- router: Makefile: do not add /rom/etc/vpn to image
+- router: mdu: fix missing User-Agent curl header
+- router: accel-pptp: fix some warnings from code analyzer
+- router: others: sysinfo: add -p switch to netstat (thanks @tvlz)
+- router: rc: mdu: mdu.c: cosmetic, stay as close as possible to MIPS version
+- router: rc: pptpd.c: add interface ppp1* to dnsmasq config (only for DNS); (fix for: PPTP Client Android 9 cellphone/smartphone can now successfully connect and use the tunnel)
+- router: rc: pptpd.c: add interfaces vlan* and eth* to dnsmasq config (only for DNS); (fix for: PPTP Client Android 9 cellphone/smartphone can now successfully connect and can access local lan / samba / et cetera)
+- router: rc: pptp_client.c: fix the inability to enable pptp when “Start with WAN” is unchecked
+- router: rc: services.c: c: Add WPAD DHCP option for Win7/8 by default if dhcpd_auth >=0 is fixed in nvram
+- router: rc: usb.c: set USB LED(s) after saving settings (case web admin)
+- router: utils: use src files / compile from src
+- router: www: vpn-pptp.asp: fix annoying bug that clicking “Start Now” causing pop-up window with warning “Unsaved changes will be lost. Continue anyway?"
+- router: www: tomato.js: cosmetic (thanks @tvlz)
+- router: www: tools-survey.asp: cosmetic (thanks @tvlz)
+- Revert “nocat: Attempts to make Captive Portal work”
+- DIR868L: add libutil to all builds, including the special build for DIR868L Router A1/B1/C1 (PPPoE working again)
+
+
 2019.3          2019.11.23
 --------------------------
 
@@ -67,6 +126,7 @@ FreshTomato-ARM Changelog
 - AC66U_B1 being identified as a U68 C1 rearranged checks
 - RT-AC66U B1: change/fix LED table (not the same like RT-AC68U)
 - RT-AC66U B1: clean-up button setup and remove wifi button
+
 
 2019.3.220-beta - 2019.09.29
 ----------------------------
