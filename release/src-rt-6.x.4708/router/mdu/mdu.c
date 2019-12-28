@@ -696,7 +696,8 @@ const char *get_address(int required)
 					}
 				}
 
-				if (strcmp(c, "dyndns") == 0) {			/* main IP checker */
+				/* main IP checker */
+				if (strcmp(c, "dyndns") == 0) {
 					if ((wget(0, 1, "checkip.dyndns.org:8245", "/", NULL, 0, &body) != 200) && (wget(0, 1, "checkip.dyndns.org", "/", NULL, 0, &body) != 200)) {
 						/* "<html><head><title>Current IP Check</title></head><body>Current IP Address: 1.2.3.4</body></html>" */
 						error(M_ERROR_GET_IP);
@@ -750,7 +751,7 @@ const char *get_address(int required)
 				q = p;
 				while (((*q >= '0') && (*q <= '9')) || (*q == '.')) ++q;
 				strncpy(addr, p, (q - p));
-				q = 0;
+				q = NULL;
 
 				if ((ia.s_addr = inet_addr(addr)) != -1) {
 					q = inet_ntoa(ia);
@@ -1649,46 +1650,8 @@ static void check_cookie(void)
 		return;
 	}
 
-#if 0
-	long now;
-	long u;
-
-	now = time(NULL);
-	if ((now < Y2K) || (now < tm)) {
-		mdulog(LOG_INFO, "%s: time rolled back (now=%ld, tm=%ld)\n", __FUNCTION__, now, tm);
-		return;
-	}
-	tm = now - tm;
-
-	mdulog(LOG_INFO, "%s: addr=%s tm=%ld (relative)\n", __FUNCTION__, addr, tm);
-
-	if ((c = get_option("maxtime")) != NULL) {
-		u = strtol(c, NULL, 0);
-		if (u > 0) {
-			if (tm > u) {
-				mdulog(LOG_INFO, "%s: %s expired (%ld > %ld)\n", __FUNCTION__, addr, tm, u);
-				return;
-			}
-			mdulog(LOG_INFO, "%s: maxtime=%ld tm=%ld\n", __FUNCTION__, u, tm);
-
-			puts(M_TOOSOON);
-			exit(3);
-		}
-	}
-
-	if ((c = get_option("mintime")) != NULL) {
-		u = strtol(c, NULL, 0);
-		if ((u > 0) && (tm < u)) {
-			mdulog(LOG_INFO, "%s: %s recently updated (%ld < %ld)\n", __FUNCTION__, addr, tm, u);
-
-			puts(M_TOOSOON);
-			exit(3);
-		}
-	}
-
-#endif
-
 	puts(M_SAME_IP);
+
 	exit(3);
 }
 
@@ -1737,11 +1700,11 @@ int main(int argc, char *argv[])
 	mkdir("/var/lib/mdu", 0700);
 	chdir("/var/lib/mdu");
 
-	check_cookie();
-
 #ifdef USE_LIBCURL
 	curl_setup();
 #endif
+
+	check_cookie();
 
 	p = get_option_required("service");
 
