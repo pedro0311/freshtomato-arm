@@ -260,9 +260,13 @@ Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br
 - WWAN modem status<br/>
 - WWAN SMS Inbox support<br/>
 <!-- USB-END -->
+<!-- IPERF-BEGIN -->
 - IPerf integration<br/>
+<!-- IPERF-END -->
 - termlib based system command line<br/>
+<!-- OPENVPN-BEGIN -->
 - OpenVPN client config generator<br/>
+<!-- OPENVPN-END -->
 - Build progress indicator
 <br/>
 <i>Copyright (C) 2017-2019 Michał Obrembski</i><br/>

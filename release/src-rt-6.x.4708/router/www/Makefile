@@ -321,6 +321,7 @@ endif
 ifneq ($(TCONFIG_IPERF),y)
 	rm -f $(INSTALLDIR)/www/tools-iperf.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/IPERF-BEGIN/,/IPERF-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
 endif
 
 # clean up
