@@ -31,6 +31,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#if defined(__APPLE__) && !defined(st_mtim)
+#define st_mtim  st_mtimespec
+#endif
+
 #ifndef NANO_TINY
 static pid_t pid_of_command = -1;
 		/* The PID of the forked process -- needed when wanting to abort it. */
@@ -98,7 +102,7 @@ void indent_a_line(linestruct *line, char *indentation)
 	/* Add the fabricated indentation to the beginning of the line. */
 	line->data = charealloc(line->data, length + indent_len + 1);
 	memmove(line->data + indent_len, line->data, length + 1);
-	strncpy(line->data, indentation, indent_len);
+	memcpy(line->data, indentation, indent_len);
 
 	openfile->totsize += indent_len;
 
@@ -1401,6 +1405,14 @@ bool do_wrap(void)
 		/* The line to be wrapped, if needed and possible. */
 	size_t line_len = strlen(line->data);
 		/* The length of this line. */
+#ifdef ENABLE_JUSTIFY
+	size_t quot_len = quote_length(line->data);
+		/* The length of the quoting part of this line. */
+	size_t lead_len = quot_len + indent_length(line->data + quot_len);
+		/* The length of the quoting part plus subsequent whitespace. */
+#else
+	size_t lead_len = indent_length(line->data);
+#endif
 	size_t cursor_x = openfile->current_x;
 		/* The current cursor position, for comparison with the wrap point. */
 	ssize_t wrap_loc;
@@ -1411,31 +1423,28 @@ bool do_wrap(void)
 		/* The length of the remainder. */
 
 	/* First find the last blank character where we can break the line. */
-	wrap_loc = break_line(line->data, wrap_at, FALSE);
+	wrap_loc = break_line(line->data + lead_len,
+							wrap_at - wideness(line->data, lead_len), FALSE);
 
 	/* If no wrapping point was found before end-of-line, we don't wrap. */
-	if (wrap_loc == -1 || line->data[wrap_loc] == '\0')
+	if (wrap_loc < 0 || lead_len + wrap_loc == line_len)
 		return FALSE;
 
-	/* Step forward to the character just after the blank. */
-	wrap_loc = step_right(line->data, wrap_loc);
+	/* Adjust the wrap location to its position in the full line,
+	 * and step forward to the character just after the blank. */
+	wrap_loc = lead_len + step_right(line->data + lead_len, wrap_loc);
 
 	/* When now at end-of-line, no need to wrap. */
 	if (line->data[wrap_loc] == '\0')
 		return FALSE;
 
 #ifndef NANO_TINY
-	/* When autoindenting, we don't wrap right after the indentation. */
-	if (ISSET(AUTOINDENT) && wrap_loc == indent_length(line->data))
-		return FALSE;
-
 	add_undo(SPLIT_BEGIN, NULL);
 #endif
 #ifdef ENABLE_JUSTIFY
 	bool autowhite = ISSET(AUTOINDENT);
-	size_t lead_len = quote_length(line->data);
 
-	if (lead_len > 0)
+	if (quot_len > 0)
 		UNSET(AUTOINDENT);
 #endif
 
@@ -1471,8 +1480,8 @@ bool do_wrap(void)
 		do_delete();
 
 #ifdef ENABLE_JUSTIFY
-		/* If the quoting part of the current line equals the quoting part of
-		 * what was the next line, then strip this second quoting part. */
+		/* If the leading part of the current line equals the leading part of
+		 * what was the next line, then strip this second leading part. */
 		if (strncmp(line->data, line->data + openfile->current_x, lead_len) == 0)
 			for (size_t i = lead_len; i > 0; i--)
 				do_delete();
@@ -1503,9 +1512,7 @@ bool do_wrap(void)
 
 #ifdef ENABLE_JUSTIFY
 	/* If the original line has quoting, copy it to the spillage line. */
-	if (lead_len > 0) {
-		lead_len += indent_length(line->data + lead_len);
-
+	if (quot_len > 0) {
 		line = line->next;
 		line_len = strlen(line->data);
 		line->data = charealloc(line->data, lead_len + line_len + 1);
@@ -1559,13 +1566,14 @@ ssize_t break_line(const char *line, ssize_t goal, bool snap_at_nl)
 
 	/* Find the last blank that does not overshoot the target column. */
 	while (*line != '\0' && ((ssize_t)column <= goal)) {
-		if (is_blank_mbchar(line) || (snap_at_nl && *line == '\n')) {
+		if (is_blank_mbchar(line))
 			lastblank = index;
-
-			if (*line == '\n')
-				break;
+#ifdef ENABLE_HELP
+		else if (snap_at_nl && *line == '\n') {
+			lastblank = index;
+			break;
 		}
-
+#endif
 		charlen = advance_over(line, &column);
 		line += charlen;
 		index += charlen;
@@ -1614,7 +1622,7 @@ ssize_t break_line(const char *line, ssize_t goal, bool snap_at_nl)
 }
 #endif /* ENABLE_HELP || ENABLED_WRAPORJUSTIFY */
 
-#if !defined(NANO_TINY) || defined(ENABLE_JUSTIFY)
+#if !defined(NANO_TINY) || defined(ENABLED_WRAPORJUSTIFY)
 /* Return the length of the indentation part of the given line.  The
  * "indentation" of a line is the leading consecutive whitespace. */
 size_t indent_length(const char *line)
@@ -1635,7 +1643,7 @@ size_t indent_length(const char *line)
 
 	return len;
 }
-#endif /* !NANO_TINY || ENABLE_JUSTIFY */
+#endif
 
 #ifdef ENABLE_JUSTIFY
 /* Copy a character from one place to another. */
@@ -1747,10 +1755,9 @@ bool begpar(const linestruct *const line, int depth)
 	if (line->prev->data[quote_len + prev_dent_len] == '\0')
 		return TRUE;
 
-	/* If the indentation of the preceding line equals the indentation
-	 * of this line, this is not a BOP. */
-	if (prev_dent_len == indent_len && strncmp(line->prev->data + quote_len,
-									line->data + quote_len, indent_len) == 0)
+	/* If indentation of this and preceding line are equal, this is not a BOP. */
+	if (wideness(line->prev->data, quote_len + prev_dent_len) ==
+						wideness(line->data, quote_len + indent_len))
 		return FALSE;
 
 	/* Otherwise, this is a BOP if the preceding line is not. */
@@ -1838,7 +1845,7 @@ void rewrap_paragraph(linestruct **line, char *lead_string, size_t lead_len)
 						wrap_at - wideness((*line)->data, lead_len), FALSE);
 
 		/* If we can't break the line, or don't need to, we're done. */
-		if (break_pos == -1 || break_pos + lead_len == line_len)
+		if (break_pos < 0 || lead_len + break_pos == line_len)
 			break;
 
 		/* Adjust the breaking position for the leading part and
@@ -1852,10 +1859,9 @@ void rewrap_paragraph(linestruct **line, char *lead_string, size_t lead_len)
 		strncpy((*line)->next->data, lead_string, lead_len);
 		strcpy((*line)->next->data + lead_len, (*line)->data + break_pos);
 
-		/* When requested, snip all trailing blanks. */
+		/* When requested, snip the one or two trailing spaces. */
 		if (ISSET(TRIM_BLANKS)) {
-			while (break_pos > 0 &&
-						is_blank_mbchar(&(*line)->data[break_pos - 1]))
+			while (break_pos > 0 && (*line)->data[break_pos - 1] == ' ')
 				break_pos--;
 		}
 
@@ -2979,14 +2985,15 @@ void do_linter(void)
 		if (func == do_cancel || func == do_enter) {
 			wipe_statusbar();
 			break;
-		} else if (func == do_help_void) {
+		} else if (func == do_help) {
 			tmplint = NULL;
-			do_help_void();
+			do_help();
 		} else if (func == do_page_up || func == do_prev_block) {
 			if (curlint->prev != NULL)
 				curlint = curlint->prev;
 			else if (last_wait != time(NULL)) {
 				statusbar(_("At first message"));
+				beep();
 				napms(600);
 				last_wait = time(NULL);
 				statusline(NOTICE, curlint->msg);
@@ -2996,6 +3003,7 @@ void do_linter(void)
 				curlint = curlint->next;
 			else if (last_wait != time(NULL)) {
 				statusbar(_("At last message"));
+				beep();
 				napms(600);
 				last_wait = time(NULL);
 				statusline(NOTICE, curlint->msg);
