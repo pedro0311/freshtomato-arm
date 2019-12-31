@@ -362,6 +362,7 @@ endif
 		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d"\
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
+		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		|| true; \
 	done
 
