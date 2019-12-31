@@ -1,6 +1,6 @@
 /*
     ifconfig.c -- Generate platform specific interface configuration commands
-    Copyright (C) 2016-2017 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2016-2018 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -71,10 +71,12 @@ void ifconfig_dhcp(FILE *out) {
 }
 
 void ifconfig_dhcp6(FILE *out) {
+	(void)out;
 	fprintf(stderr, "DHCPv6 requested, but not supported by tinc on this platform\n");
 }
 
 void ifconfig_slaac(FILE *out) {
+	(void)out;
 	// It's the default?
 }
 
@@ -126,7 +128,7 @@ void ifconfig_address(FILE *out, const char *value) {
 		return;
 	}
 
-#elif defined(HAVE_MINGW) || defined(HAVE_CYGWIN)
+#elif defined(HAVE_MINGW)
 
 	switch(address.type) {
 	case SUBNET_MAC:
@@ -134,11 +136,11 @@ void ifconfig_address(FILE *out, const char *value) {
 		break;
 
 	case SUBNET_IPV4:
-		fprintf(out, "netsh inetface ipv4 set address \"$INTERFACE\" static %s\n", address_str);
+		fprintf(out, "netsh interface ipv4 set address \"%%INTERFACE%%\" static %s\n", address_str);
 		break;
 
 	case SUBNET_IPV6:
-		fprintf(out, "netsh inetface ipv6 set address \"$INTERFACE\" static %s\n", address_str);
+		fprintf(out, "netsh interface ipv6 set address \"%%INTERFACE%%\" %s\n", address_str);
 		break;
 
 	default:
@@ -199,11 +201,11 @@ void ifconfig_route(FILE *out, const char *value) {
 	if(*gateway_str) {
 		switch(subnet.type) {
 		case SUBNET_IPV4:
-			fprintf(out, "ip route add %s via %s dev \"$INTERFACE\"\n", subnet_str, gateway_str);
+			fprintf(out, "ip route add %s via %s dev \"$INTERFACE\" onlink\n", subnet_str, gateway_str);
 			break;
 
 		case SUBNET_IPV6:
-			fprintf(out, "ip route add %s via %s dev \"$INTERFACE\"\n", subnet_str, gateway_str);
+			fprintf(out, "ip route add %s via %s dev \"$INTERFACE\" onlink\n", subnet_str, gateway_str);
 			break;
 
 		default:
@@ -224,16 +226,16 @@ void ifconfig_route(FILE *out, const char *value) {
 		}
 	}
 
-#elif defined(HAVE_MINGW) || defined(HAVE_CYGWIN)
+#elif defined(HAVE_MINGW)
 
 	if(*gateway_str) {
 		switch(subnet.type) {
 		case SUBNET_IPV4:
-			fprintf(out, "netsh inetface ipv4 add route %s \"%%INTERFACE%%\" %s\n", subnet_str, gateway_str);
+			fprintf(out, "netsh interface ipv4 add route %s \"%%INTERFACE%%\" %s\n", subnet_str, gateway_str);
 			break;
 
 		case SUBNET_IPV6:
-			fprintf(out, "netsh inetface ipv6 add route %s \"%%INTERFACE%%\" %s\n", subnet_str, gateway_str);
+			fprintf(out, "netsh interface ipv6 add route %s \"%%INTERFACE%%\" %s\n", subnet_str, gateway_str);
 			break;
 
 		default:
@@ -242,11 +244,11 @@ void ifconfig_route(FILE *out, const char *value) {
 	} else {
 		switch(subnet.type) {
 		case SUBNET_IPV4:
-			fprintf(out, "netsh inetface ipv4 add route %s \"%%INTERFACE%%\"\n", subnet_str);
+			fprintf(out, "netsh interface ipv4 add route %s \"%%INTERFACE%%\"\n", subnet_str);
 			break;
 
 		case SUBNET_IPV6:
-			fprintf(out, "netsh inetface ipv6 add route %s \"%%INTERFACE%%\"\n", subnet_str);
+			fprintf(out, "netsh interface ipv6 add route %s \"%%INTERFACE%%\"\n", subnet_str);
 			break;
 
 		default:

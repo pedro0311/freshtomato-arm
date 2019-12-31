@@ -114,7 +114,7 @@ If
 .Qq any
 is selected, then depending on the operating system both IPv4 and IPv6 or just
 IPv6 listening sockets will be created.
-.It Va AutoConnect Li = yes | no Po yes
+.It Va AutoConnect Li = yes | no Pq yes
 If set to yes,
 .Nm tinc
 will automatically set up meta connections to other nodes,
@@ -683,7 +683,7 @@ this means that tinc will temporarily stop processing packets until the called s
 This guarantees that scripts will execute in the exact same order as the events that trigger them.
 If you need to run commands asynchronously, you have to ensure yourself that they are being run in the background.
 .Pp
-Under Windows (not Cygwin), the scripts must have the extension
+Under Windows, the scripts must have the extension
 .Pa .bat
 or
 .Pa .cmd .

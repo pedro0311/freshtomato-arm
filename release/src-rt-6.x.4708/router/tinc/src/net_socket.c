@@ -1,7 +1,7 @@
 /*
     net_socket.c -- Handle various kinds of sockets.
     Copyright (C) 1998-2005 Ivo Timmermans,
-                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
                   2006      Scott Lamb <slamb@slamb.org>
                   2009      Florian Forster <octo@verplant.org>
 
@@ -122,6 +122,7 @@ static bool bind_to_interface(int sd) {
 	}
 
 #else /* if !defined(SOL_SOCKET) || !defined(SO_BINDTODEVICE) */
+	(void)sd;
 	logger(DEBUG_ALWAYS, LOG_WARNING, "%s not supported on this platform", "BindToInterface");
 #endif
 
@@ -387,7 +388,7 @@ void finish_connecting(connection_t *c) {
 	send_id(c);
 }
 
-static void do_outgoing_pipe(connection_t *c, char *command) {
+static void do_outgoing_pipe(connection_t *c, const char *command) {
 #ifndef HAVE_MINGW
 	int fd[2];
 
@@ -435,6 +436,8 @@ static void do_outgoing_pipe(connection_t *c, char *command) {
 
 	exit(result);
 #else
+	(void)c;
+	(void)command;
 	logger(DEBUG_ALWAYS, LOG_ERR, "Proxy type exec not supported on this platform!");
 	return;
 #endif
@@ -524,7 +527,7 @@ bool do_outgoing_connection(outgoing_t *outgoing) {
 	int result;
 
 begin:
-	sa = get_recent_address(outgoing->address_cache);
+	sa = get_recent_address(outgoing->node->address_cache);
 
 	if(!sa) {
 		logger(DEBUG_CONNECTIONS, LOG_ERR, "Could not set up a meta connection to %s", outgoing->node->name);
@@ -629,6 +632,10 @@ void setup_outgoing_connection(outgoing_t *outgoing, bool verbose) {
 
 	node_t *n = outgoing->node;
 
+	if(!n->address_cache) {
+		n->address_cache = open_address_cache(n);
+	}
+
 	if(n->connection) {
 		logger(DEBUG_CONNECTIONS, LOG_INFO, "Already connected to %s", n->name);
 
@@ -638,10 +645,6 @@ void setup_outgoing_connection(outgoing_t *outgoing, bool verbose) {
 		} else {
 			goto remove;
 		}
-	}
-
-	if(!outgoing->address_cache) {
-		outgoing->address_cache = open_address_cache(n);
 	}
 
 	do_outgoing_connection(outgoing);
@@ -784,11 +787,6 @@ void handle_new_unix_connection(void *data, int flags) {
 
 static void free_outgoing(outgoing_t *outgoing) {
 	timeout_del(&outgoing->ev);
-
-	if(outgoing->address_cache) {
-		close_address_cache(outgoing->address_cache);
-	}
-
 	free(outgoing);
 }
 

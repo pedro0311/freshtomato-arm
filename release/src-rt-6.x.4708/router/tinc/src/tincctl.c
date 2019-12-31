@@ -725,6 +725,24 @@ static void logcontrol(int fd, FILE *out, int level) {
 	}
 }
 
+static bool stop_tincd(void) {
+	if(!connect_tincd(true)) {
+		return false;
+	}
+
+	sendline(fd, "%d %d", CONTROL, REQ_STOP);
+
+	while(recvline(fd, line, sizeof(line))) {
+		// wait for tincd to close the connection...
+	}
+
+	close(fd);
+	pid = 0;
+	fd = -1;
+
+	return true;
+}
+
 #ifdef HAVE_MINGW
 static bool remove_service(void) {
 	SC_HANDLE manager = NULL;
@@ -742,7 +760,12 @@ static bool remove_service(void) {
 	service = OpenService(manager, identname, SERVICE_ALL_ACCESS);
 
 	if(!service) {
-		fprintf(stderr, "Could not open %s service: %s\n", identname, winerror(GetLastError()));
+		if(GetLastError() == ERROR_SERVICE_DOES_NOT_EXIST) {
+			success = stop_tincd();
+		} else {
+			fprintf(stderr, "Could not open %s service: %s\n", identname, winerror(GetLastError()));
+		}
+
 		goto exit;
 	}
 
@@ -883,7 +906,6 @@ bool connect_tincd(bool verbose) {
 		return false;
 	}
 
-#ifdef HAVE_MINGW
 	unsigned long arg = 0;
 
 	if(ioctlsocket(fd, FIONBIO, &arg) != 0) {
@@ -891,8 +913,6 @@ bool connect_tincd(bool verbose) {
 			fprintf(stderr, "System call `%s' failed: %s\n", "ioctlsocket", sockstrerror(sockerrno));
 		}
 	}
-
-#endif
 
 	if(connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
 		if(verbose) {
@@ -1083,9 +1103,11 @@ static int cmd_stop(int argc, char *argv[]) {
 		return 1;
 	}
 
-#ifndef HAVE_MINGW
+#ifdef HAVE_MINGW
+	return remove_service();
+#else
 
-	if(!connect_tincd(true)) {
+	if(!stop_tincd()) {
 		if(pid) {
 			if(kill(pid, SIGTERM)) {
 				fprintf(stderr, "Could not send TERM signal to process with PID %d: %s\n", pid, strerror(errno));
@@ -1100,24 +1122,8 @@ static int cmd_stop(int argc, char *argv[]) {
 		return 1;
 	}
 
-	sendline(fd, "%d %d", CONTROL, REQ_STOP);
-
-	while(recvline(fd, line, sizeof(line))) {
-		// Wait for tincd to close the connection...
-	}
-
-#else
-
-	if(!remove_service()) {
-		return 1;
-	}
-
-#endif
-	close(fd);
-	pid = 0;
-	fd = -1;
-
 	return 0;
+#endif
 }
 
 static int cmd_restart(int argc, char *argv[]) {
@@ -1346,7 +1352,7 @@ static int cmd_dump(int argc, char *argv[]) {
 					color = "green";
 				}
 
-				printf(" %s [label = \"%s\", color = \"%s\"%s];\n", node, node, color, strcmp(host, "MYSELF") ? "" : ", style = \"filled\"");
+				printf(" \"%s\" [label = \"%s\", color = \"%s\"%s];\n", node, node, color, strcmp(host, "MYSELF") ? "" : ", style = \"filled\"");
 			} else {
 				if(only_reachable && !status.reachable) {
 					continue;
@@ -1376,9 +1382,9 @@ static int cmd_dump(int argc, char *argv[]) {
 				float w = 1 + 65536.0 / weight;
 
 				if(do_graph == 1 && strcmp(node1, node2) > 0) {
-					printf(" %s -- %s [w = %f, weight = %f];\n", node1, node2, w, w);
+					printf(" \"%s\" -- \"%s\" [w = %f, weight = %f];\n", node1, node2, w, w);
 				} else if(do_graph == 2) {
-					printf(" %s -> %s [w = %f, weight = %f];\n", node1, node2, w, w);
+					printf(" \"%s\" -> \"%s\" [w = %f, weight = %f];\n", node1, node2, w, w);
 				}
 			} else {
 				printf("%s to %s at %s port %s local %s port %s options %x weight %d\n", from, to, host, port, local_host, local_port, options, weight);
@@ -1717,18 +1723,18 @@ ecdsa_t *get_pubkey(FILE *f) {
 
 const var_t variables[] = {
 	/* Server configuration */
-	{"AddressFamily", VAR_SERVER},
+	{"AddressFamily", VAR_SERVER | VAR_SAFE},
 	{"AutoConnect", VAR_SERVER | VAR_SAFE},
 	{"BindToAddress", VAR_SERVER | VAR_MULTIPLE},
 	{"BindToInterface", VAR_SERVER},
 	{"Broadcast", VAR_SERVER | VAR_SAFE},
 	{"BroadcastSubnet", VAR_SERVER | VAR_MULTIPLE | VAR_SAFE},
 	{"ConnectTo", VAR_SERVER | VAR_MULTIPLE | VAR_SAFE},
-	{"DecrementTTL", VAR_SERVER},
+	{"DecrementTTL", VAR_SERVER | VAR_SAFE},
 	{"Device", VAR_SERVER},
 	{"DeviceStandby", VAR_SERVER},
 	{"DeviceType", VAR_SERVER},
-	{"DirectOnly", VAR_SERVER},
+	{"DirectOnly", VAR_SERVER | VAR_SAFE},
 	{"Ed25519PrivateKeyFile", VAR_SERVER},
 	{"ExperimentalProtocol", VAR_SERVER},
 	{"Forwarding", VAR_SERVER},
@@ -1738,34 +1744,34 @@ const var_t variables[] = {
 	{"IffOneQueue", VAR_SERVER},
 	{"Interface", VAR_SERVER},
 	{"InvitationExpire", VAR_SERVER},
-	{"KeyExpire", VAR_SERVER},
+	{"KeyExpire", VAR_SERVER | VAR_SAFE},
 	{"ListenAddress", VAR_SERVER | VAR_MULTIPLE},
-	{"LocalDiscovery", VAR_SERVER},
+	{"LocalDiscovery", VAR_SERVER | VAR_SAFE},
 	{"LogLevel", VAR_SERVER},
-	{"MACExpire", VAR_SERVER},
-	{"MaxConnectionBurst", VAR_SERVER},
-	{"MaxOutputBufferSize", VAR_SERVER},
-	{"MaxTimeout", VAR_SERVER},
+	{"MACExpire", VAR_SERVER | VAR_SAFE},
+	{"MaxConnectionBurst", VAR_SERVER | VAR_SAFE},
+	{"MaxOutputBufferSize", VAR_SERVER | VAR_SAFE},
+	{"MaxTimeout", VAR_SERVER | VAR_SAFE},
 	{"Mode", VAR_SERVER | VAR_SAFE},
 	{"Name", VAR_SERVER},
-	{"PingInterval", VAR_SERVER},
-	{"PingTimeout", VAR_SERVER},
+	{"PingInterval", VAR_SERVER | VAR_SAFE},
+	{"PingTimeout", VAR_SERVER | VAR_SAFE},
 	{"PriorityInheritance", VAR_SERVER},
 	{"PrivateKey", VAR_SERVER | VAR_OBSOLETE},
 	{"PrivateKeyFile", VAR_SERVER},
 	{"ProcessPriority", VAR_SERVER},
 	{"Proxy", VAR_SERVER},
-	{"ReplayWindow", VAR_SERVER},
+	{"ReplayWindow", VAR_SERVER | VAR_SAFE},
 	{"ScriptsExtension", VAR_SERVER},
 	{"ScriptsInterpreter", VAR_SERVER},
-	{"StrictSubnets", VAR_SERVER},
-	{"TunnelServer", VAR_SERVER},
-	{"UDPDiscovery", VAR_SERVER},
-	{"UDPDiscoveryKeepaliveInterval", VAR_SERVER},
-	{"UDPDiscoveryInterval", VAR_SERVER},
-	{"UDPDiscoveryTimeout", VAR_SERVER},
-	{"MTUInfoInterval", VAR_SERVER},
-	{"UDPInfoInterval", VAR_SERVER},
+	{"StrictSubnets", VAR_SERVER | VAR_SAFE},
+	{"TunnelServer", VAR_SERVER | VAR_SAFE},
+	{"UDPDiscovery", VAR_SERVER | VAR_SAFE},
+	{"UDPDiscoveryKeepaliveInterval", VAR_SERVER | VAR_SAFE},
+	{"UDPDiscoveryInterval", VAR_SERVER | VAR_SAFE},
+	{"UDPDiscoveryTimeout", VAR_SERVER | VAR_SAFE},
+	{"MTUInfoInterval", VAR_SERVER | VAR_SAFE},
+	{"UDPInfoInterval", VAR_SERVER | VAR_SAFE},
 	{"UDPRcvBuf", VAR_SERVER},
 	{"UDPSndBuf", VAR_SERVER},
 	{"UPnP", VAR_SERVER},
@@ -1776,12 +1782,12 @@ const var_t variables[] = {
 	/* Host configuration */
 	{"Address", VAR_HOST | VAR_MULTIPLE},
 	{"Cipher", VAR_SERVER | VAR_HOST},
-	{"ClampMSS", VAR_SERVER | VAR_HOST},
-	{"Compression", VAR_SERVER | VAR_HOST},
+	{"ClampMSS", VAR_SERVER | VAR_HOST | VAR_SAFE},
+	{"Compression", VAR_SERVER | VAR_HOST | VAR_SAFE},
 	{"Digest", VAR_SERVER | VAR_HOST},
 	{"Ed25519PublicKey", VAR_HOST},
 	{"Ed25519PublicKeyFile", VAR_SERVER | VAR_HOST},
-	{"IndirectData", VAR_SERVER | VAR_HOST},
+	{"IndirectData", VAR_SERVER | VAR_HOST | VAR_SAFE},
 	{"MACLength", VAR_SERVER | VAR_HOST},
 	{"PMTU", VAR_SERVER | VAR_HOST},
 	{"PMTUDiscovery", VAR_SERVER | VAR_HOST},
@@ -1789,7 +1795,7 @@ const var_t variables[] = {
 	{"PublicKey", VAR_HOST | VAR_OBSOLETE},
 	{"PublicKeyFile", VAR_SERVER | VAR_HOST | VAR_OBSOLETE},
 	{"Subnet", VAR_HOST | VAR_MULTIPLE | VAR_SAFE},
-	{"TCPOnly", VAR_SERVER | VAR_HOST},
+	{"TCPOnly", VAR_SERVER | VAR_HOST | VAR_SAFE},
 	{"Weight", VAR_HOST | VAR_SAFE},
 	{NULL, 0}
 };
@@ -2301,6 +2307,7 @@ static int cmd_init(int argc, char *argv[]) {
 
 static int cmd_generate_keys(int argc, char *argv[]) {
 #ifdef DISABLE_LEGACY
+	(void)argv;
 
 	if(argc > 1) {
 #else
@@ -2440,10 +2447,14 @@ static int cmd_edit(int argc, char *argv[]) {
 	char *command;
 #ifndef HAVE_MINGW
 	const char *editor = getenv("VISUAL");
-	if (!editor)
+
+	if(!editor) {
 		editor = getenv("EDITOR");
-	if (!editor)
+	}
+
+	if(!editor) {
 		editor = "vi";
+	}
 
 	xasprintf(&command, "\"%s\" \"%s\"", editor, filename);
 #else
