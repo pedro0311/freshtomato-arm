@@ -67,6 +67,7 @@ int check_hw_type(void)
 	case 0xf646:	/* EA6700, WZR-1750 */
 	case 0xd646:	/* EA6900 */
 	case 0xe646:	/* EA6200, EA6350v1 */
+	case 0x072f:	/* RT-AC1900P */
 		return HW_BCM4708; /* and also for 4709 right now!  */
 #endif /* CONFIG_BCMWL6A */
 	}
