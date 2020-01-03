@@ -658,7 +658,8 @@ int parse_kbinput(WINDOW *win)
 
 #ifndef NANO_TINY
 	/* When <Tab> is pressed while the mark is on, do an indent. */
-	if (retval == TAB_CODE && openfile->mark && currmenu == MMAIN)
+	if (retval == TAB_CODE && openfile->mark && currmenu == MMAIN &&
+							openfile->mark != openfile->current)
 		return INDENT_KEY;
 #endif
 
@@ -2403,11 +2404,12 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		wattron(edit, interface_color_pair[LINE_NUMBER]);
 #ifndef NANO_TINY
 		if (ISSET(SOFTWRAP) && from_col != 0)
-			mvwprintw(edit, row, 0, "%*s", margin, " ");
+			mvwprintw(edit, row, 0, "%*s", margin - 1, " ");
 		else
 #endif
-			mvwprintw(edit, row, 0, "%*zd ", margin - 1, line->lineno);
+			mvwprintw(edit, row, 0, "%*zd", margin - 1, line->lineno);
 		wattroff(edit, interface_color_pair[LINE_NUMBER]);
+		wprintw(edit, " ");
 	}
 #endif
 
@@ -3118,14 +3120,14 @@ size_t chunk_for(size_t column, linestruct *line)
  * column is on. */
 size_t leftedge_for(size_t column, linestruct *line)
 {
-	size_t leftedge;
+	if (ISSET(SOFTWRAP)) {
+		size_t leftedge;
 
-	if (!ISSET(SOFTWRAP))
+		get_chunk_and_edge(column, line, &leftedge);
+
+		return leftedge;
+	} else
 		return 0;
-
-	get_chunk_and_edge(column, line, &leftedge);
-
-	return leftedge;
 }
 
 /* Return the row of the last softwrapped chunk of the given line, relative to

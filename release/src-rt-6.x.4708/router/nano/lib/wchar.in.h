@@ -137,12 +137,16 @@ typedef unsigned int rpl_wint_t;
 
 /* Override mbstate_t if it is too small.
    On IRIX 6.5, sizeof (mbstate_t) == 1, which is not sufficient for
-   implementing mbrtowc for encodings like UTF-8.  */
+   implementing mbrtowc for encodings like UTF-8.
+   On AIX and MSVC, mbrtowc needs to be overridden, but mbstate_t exists and is
+   large enough and overriding it would cause problems in C++ mode.  */
 #if !(@HAVE_MBSINIT@ && @HAVE_MBRTOWC@) || @REPLACE_MBSTATE_T@
 # if !GNULIB_defined_mbstate_t
+#  if !(defined _AIX || defined _MSC_VER)
 typedef int rpl_mbstate_t;
-#  undef mbstate_t
-#  define mbstate_t rpl_mbstate_t
+#   undef mbstate_t
+#   define mbstate_t rpl_mbstate_t
+#  endif
 #  define GNULIB_defined_mbstate_t 1
 # endif
 #endif
@@ -161,7 +165,8 @@ _GL_CXXALIAS_RPL (btowc, wint_t, (int c));
 #  if !@HAVE_BTOWC@
 _GL_FUNCDECL_SYS (btowc, wint_t, (int c) _GL_ATTRIBUTE_PURE);
 #  endif
-_GL_CXXALIAS_SYS (btowc, wint_t, (int c));
+/* Need to cast, because on mingw, the return type is 'unsigned short'.  */
+_GL_CXXALIAS_SYS_CAST (btowc, wint_t, (int c));
 # endif
 # if __GLIBC__ >= 2
 _GL_CXXALIASWARN (btowc);
@@ -435,7 +440,7 @@ _GL_CXXALIAS_RPL (wcsnrtombs, size_t,
                   (char *dest, const wchar_t **srcp, size_t srclen, size_t len,
                    mbstate_t *ps));
 # else
-#  if !@HAVE_WCSNRTOMBS@
+#  if !@HAVE_WCSNRTOMBS@ || (defined __cplusplus && defined __sun)
 _GL_FUNCDECL_SYS (wcsnrtombs, size_t,
                   (char *dest, const wchar_t **srcp, size_t srclen, size_t len,
                    mbstate_t *ps)
@@ -445,7 +450,9 @@ _GL_CXXALIAS_SYS (wcsnrtombs, size_t,
                   (char *dest, const wchar_t **srcp, size_t srclen, size_t len,
                    mbstate_t *ps));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (wcsnrtombs);
+# endif
 #elif defined GNULIB_POSIXCHECK
 # undef wcsnrtombs
 # if HAVE_RAW_DECL_WCSNRTOMBS
@@ -471,7 +478,9 @@ _GL_FUNCDECL_SYS (wcwidth, int, (wchar_t) _GL_ATTRIBUTE_PURE);
 #  endif
 _GL_CXXALIAS_SYS (wcwidth, int, (wchar_t));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (wcwidth);
+# endif
 #elif defined GNULIB_POSIXCHECK
 # undef wcwidth
 # if HAVE_RAW_DECL_WCWIDTH
@@ -1037,12 +1046,23 @@ _GL_WARN_ON_USE (wcsstr, "wcsstr is unportable - "
 
 /* Divide WCS into tokens separated by characters in DELIM.  */
 #if @GNULIB_WCSTOK@
-# if !@HAVE_WCSTOK@
+# if @REPLACE_WCSTOK@
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef wcstok
+#   define wcstok rpl_wcstok
+#  endif
+_GL_FUNCDECL_RPL (wcstok, wchar_t *,
+                  (wchar_t *wcs, const wchar_t *delim, wchar_t **ptr));
+_GL_CXXALIAS_RPL (wcstok, wchar_t *,
+                  (wchar_t *wcs, const wchar_t *delim, wchar_t **ptr));
+# else
+#  if !@HAVE_WCSTOK@
 _GL_FUNCDECL_SYS (wcstok, wchar_t *,
                   (wchar_t *wcs, const wchar_t *delim, wchar_t **ptr));
-# endif
+#  endif
 _GL_CXXALIAS_SYS (wcstok, wchar_t *,
                   (wchar_t *wcs, const wchar_t *delim, wchar_t **ptr));
+# endif
 # if __GLIBC__ >= 2
 _GL_CXXALIASWARN (wcstok);
 # endif
@@ -1073,7 +1093,9 @@ _GL_FUNCDECL_SYS (wcswidth, int, (const wchar_t *s, size_t n)
 #  endif
 _GL_CXXALIAS_SYS (wcswidth, int, (const wchar_t *s, size_t n));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (wcswidth);
+# endif
 #elif defined GNULIB_POSIXCHECK
 # undef wcswidth
 # if HAVE_RAW_DECL_WCSWIDTH

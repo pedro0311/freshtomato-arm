@@ -321,6 +321,7 @@ endif
 ifneq ($(TCONFIG_IPERF),y)
 	rm -f $(INSTALLDIR)/www/tools-iperf.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/IPERF-BEGIN/,/IPERF-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
 endif
 
 # clean up
@@ -361,6 +362,7 @@ endif
 		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d"\
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
+		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		|| true; \
 	done
 

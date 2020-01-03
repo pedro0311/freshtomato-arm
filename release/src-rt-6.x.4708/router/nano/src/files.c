@@ -244,7 +244,7 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 	lockdata[27] = mypid / (256 * 256 * 256);
 	snprintf(&lockdata[2], 11, "nano %s", VERSION);
 	strncpy(&lockdata[28], mypwuid->pw_name, 16);
-	strncpy(&lockdata[68], myhostname, 31);
+	strncpy(&lockdata[68], myhostname, 32);
 	if (origfilename != NULL)
 		strncpy(&lockdata[108], origfilename, 768);
 	if (modified == TRUE)
@@ -2074,7 +2074,7 @@ int do_writeout(bool exiting, bool withprompt)
 			continue;
 		}
 #endif /* !NANO_TINY */
-		if (func == do_help_void) {
+		if (func == do_help) {
 			continue;
 		}
 #ifdef ENABLE_EXTRA

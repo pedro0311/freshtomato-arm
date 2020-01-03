@@ -836,8 +836,12 @@ make_names:
 			fprintf(stderr, "Ignoring unknown variable '%s' in invitation.\n", l);
 			continue;
 		} else if(!(variables[i].type & VAR_SAFE)) {
-			fprintf(stderr, "Ignoring unsafe variable '%s' in invitation.\n", l);
-			continue;
+			if(force) {
+				fprintf(stderr, "Warning: unsafe variable '%s' in invitation.\n", l);
+			} else {
+				fprintf(stderr, "Ignoring unsafe variable '%s' in invitation.\n", l);
+				continue;
+			}
 		}
 
 		// Copy the safe variable to the right config file
@@ -983,7 +987,12 @@ ask_netname:
 
 	char filename2[PATH_MAX];
 	snprintf(filename, sizeof(filename), "%s" SLASH "tinc-up.invitation", confbase);
+
+#ifdef HAVE_MINGW
+	snprintf(filename2, sizeof(filename2), "%s" SLASH "tinc-up.bat", confbase);
+#else
 	snprintf(filename2, sizeof(filename2), "%s" SLASH "tinc-up", confbase);
+#endif
 
 	if(valid_tinc_up) {
 		if(tty) {
@@ -1013,10 +1022,14 @@ ask_netname:
 					char *command;
 #ifndef HAVE_MINGW
 					const char *editor = getenv("VISUAL");
-					if (!editor)
+
+					if(!editor) {
 						editor = getenv("EDITOR");
-					if (!editor)
+					}
+
+					if(!editor) {
 						editor = "vi";
+					}
 
 					xasprintf(&command, "\"%s\" \"%s\"", editor, filename);
 #else

@@ -172,8 +172,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/gettime.m4 $(top_srcdir)/m4/gettimeofday.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/glob.m4 \
 	$(top_srcdir)/m4/glob_h.m4 $(top_srcdir)/m4/gnulib-common.m4 \
-	$(top_srcdir)/m4/gnulib-comp.m4 \
-	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
+	$(top_srcdir)/m4/gnulib-comp.m4 $(top_srcdir)/m4/iconv.m4 \
 	$(top_srcdir)/m4/include_next.m4 \
 	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/intmax_t.m4 \
 	$(top_srcdir)/m4/inttypes_h.m4 $(top_srcdir)/m4/isblank.m4 \
@@ -188,13 +187,13 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/locale-zh.m4 $(top_srcdir)/m4/locale_h.m4 \
 	$(top_srcdir)/m4/localeconv.m4 \
 	$(top_srcdir)/m4/localtime-buffer.m4 $(top_srcdir)/m4/lock.m4 \
-	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/lstat.m4 \
-	$(top_srcdir)/m4/malloc.m4 $(top_srcdir)/m4/malloca.m4 \
-	$(top_srcdir)/m4/math_h.m4 $(top_srcdir)/m4/mbrtowc.m4 \
-	$(top_srcdir)/m4/mbsinit.m4 $(top_srcdir)/m4/mbsrtowcs.m4 \
-	$(top_srcdir)/m4/mbstate_t.m4 $(top_srcdir)/m4/mbtowc.m4 \
-	$(top_srcdir)/m4/memchr.m4 $(top_srcdir)/m4/mempcpy.m4 \
-	$(top_srcdir)/m4/mmap-anon.m4 $(top_srcdir)/m4/msvc-inval.m4 \
+	$(top_srcdir)/m4/lstat.m4 $(top_srcdir)/m4/malloc.m4 \
+	$(top_srcdir)/m4/malloca.m4 $(top_srcdir)/m4/math_h.m4 \
+	$(top_srcdir)/m4/mbrtowc.m4 $(top_srcdir)/m4/mbsinit.m4 \
+	$(top_srcdir)/m4/mbsrtowcs.m4 $(top_srcdir)/m4/mbstate_t.m4 \
+	$(top_srcdir)/m4/mbtowc.m4 $(top_srcdir)/m4/memchr.m4 \
+	$(top_srcdir)/m4/mempcpy.m4 $(top_srcdir)/m4/mmap-anon.m4 \
+	$(top_srcdir)/m4/msvc-inval.m4 \
 	$(top_srcdir)/m4/msvc-nothrow.m4 $(top_srcdir)/m4/multiarch.m4 \
 	$(top_srcdir)/m4/nl_langinfo.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/nocrash.m4 $(top_srcdir)/m4/off_t.m4 \
@@ -204,8 +203,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/progtest.m4 \
 	$(top_srcdir)/m4/pthread_rwlock_rdlock.m4 \
 	$(top_srcdir)/m4/raise.m4 $(top_srcdir)/m4/readdir.m4 \
-	$(top_srcdir)/m4/regex.m4 $(top_srcdir)/m4/sigaction.m4 \
-	$(top_srcdir)/m4/signal_h.m4 \
+	$(top_srcdir)/m4/regex.m4 $(top_srcdir)/m4/setlocale_null.m4 \
+	$(top_srcdir)/m4/sigaction.m4 $(top_srcdir)/m4/signal_h.m4 \
 	$(top_srcdir)/m4/signalblocking.m4 $(top_srcdir)/m4/signbit.m4 \
 	$(top_srcdir)/m4/size_max.m4 \
 	$(top_srcdir)/m4/snprintf-posix.m4 \
@@ -252,8 +251,8 @@ am__libgnu_a_SOURCES_DIST = gettext.h gettime.c hard-locale.c \
 	math.c printf-frexp.c printf-frexpl.c \
 	malloc/scratch_buffer_grow.c \
 	malloc/scratch_buffer_grow_preserve.c \
-	malloc/scratch_buffer_set_array_size.c sig-handler.c \
-	size_max.h stat-time.c strnlen1.h strnlen1.c \
+	malloc/scratch_buffer_set_array_size.c setlocale_null.c \
+	sig-handler.c size_max.h stat-time.c strnlen1.h strnlen1.c \
 	glthread/threadlib.c timespec.c unistd.c uniwidth/width.c \
 	utimens.c wctype-h.c xsize.h xsize.c
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -264,7 +263,8 @@ am_libgnu_a_OBJECTS = gettime.$(OBJEXT) hard-locale.$(OBJEXT) \
 	printf-frexpl.$(OBJEXT) malloc/scratch_buffer_grow.$(OBJEXT) \
 	malloc/scratch_buffer_grow_preserve.$(OBJEXT) \
 	malloc/scratch_buffer_set_array_size.$(OBJEXT) \
-	sig-handler.$(OBJEXT) stat-time.$(OBJEXT) strnlen1.$(OBJEXT) \
+	setlocale_null.$(OBJEXT) sig-handler.$(OBJEXT) \
+	stat-time.$(OBJEXT) strnlen1.$(OBJEXT) \
 	glthread/threadlib.$(OBJEXT) timespec.$(OBJEXT) \
 	unistd.$(OBJEXT) $(am__objects_1) utimens.$(OBJEXT) \
 	wctype-h.$(OBJEXT) xsize.$(OBJEXT)
@@ -313,6 +313,7 @@ am__depfiles_remade = ./$(DEPDIR)/alloca.Po ./$(DEPDIR)/asnprintf.Po \
 	./$(DEPDIR)/raise.Po ./$(DEPDIR)/readdir.Po \
 	./$(DEPDIR)/regcomp.Po ./$(DEPDIR)/regex.Po \
 	./$(DEPDIR)/regex_internal.Po ./$(DEPDIR)/regexec.Po \
+	./$(DEPDIR)/setlocale-lock.Po ./$(DEPDIR)/setlocale_null.Po \
 	./$(DEPDIR)/sig-handler.Po ./$(DEPDIR)/sigaction.Po \
 	./$(DEPDIR)/signbitd.Po ./$(DEPDIR)/signbitf.Po \
 	./$(DEPDIR)/signbitl.Po ./$(DEPDIR)/sigprocmask.Po \
@@ -725,6 +726,7 @@ GNULIB_SECURE_GETENV = @GNULIB_SECURE_GETENV@
 GNULIB_SETENV = @GNULIB_SETENV@
 GNULIB_SETHOSTNAME = @GNULIB_SETHOSTNAME@
 GNULIB_SETLOCALE = @GNULIB_SETLOCALE@
+GNULIB_SETLOCALE_NULL = @GNULIB_SETLOCALE_NULL@
 GNULIB_SIGACTION = @GNULIB_SIGACTION@
 GNULIB_SIGNAL_H_SIGPIPE = @GNULIB_SIGNAL_H_SIGPIPE@
 GNULIB_SIGNBIT = @GNULIB_SIGNBIT@
@@ -1024,7 +1026,6 @@ HAVE_LOGBF = @HAVE_LOGBF@
 HAVE_LOGBL = @HAVE_LOGBL@
 HAVE_LOGF = @HAVE_LOGF@
 HAVE_LOGL = @HAVE_LOGL@
-HAVE_LONG_LONG_INT = @HAVE_LONG_LONG_INT@
 HAVE_LSTAT = @HAVE_LSTAT@
 HAVE_MAX_ALIGN_T = @HAVE_MAX_ALIGN_T@
 HAVE_MBRLEN = @HAVE_MBRLEN@
@@ -1141,7 +1142,6 @@ HAVE_TZSET = @HAVE_TZSET@
 HAVE_UNISTD_H = @HAVE_UNISTD_H@
 HAVE_UNLINKAT = @HAVE_UNLINKAT@
 HAVE_UNLOCKPT = @HAVE_UNLOCKPT@
-HAVE_UNSIGNED_LONG_LONG_INT = @HAVE_UNSIGNED_LONG_LONG_INT@
 HAVE_USLEEP = @HAVE_USLEEP@
 HAVE_UTIME = @HAVE_UTIME@
 HAVE_UTIMENSAT = @HAVE_UTIMENSAT@
@@ -1206,12 +1206,19 @@ LIBICONV = @LIBICONV@
 LIBINTL = @LIBINTL@
 LIBMULTITHREAD = @LIBMULTITHREAD@
 LIBOBJS = @LIBOBJS@
+LIBPMULTITHREAD = @LIBPMULTITHREAD@
+LIBPTHREAD = @LIBPTHREAD@
 LIBS = @LIBS@
+LIBSTDTHREAD = @LIBSTDTHREAD@
 LIBTHREAD = @LIBTHREAD@
 LIBUNISTRING_UNITYPES_H = @LIBUNISTRING_UNITYPES_H@
 LIBUNISTRING_UNIWIDTH_H = @LIBUNISTRING_UNIWIDTH_H@
 LIB_CLOCK_GETTIME = @LIB_CLOCK_GETTIME@
 LIB_GETLOGIN = @LIB_GETLOGIN@
+LIB_HARD_LOCALE = @LIB_HARD_LOCALE@
+LIB_NL_LANGINFO = @LIB_NL_LANGINFO@
+LIB_SCHED_YIELD = @LIB_SCHED_YIELD@
+LIB_SETLOCALE_NULL = @LIB_SETLOCALE_NULL@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
 LOCALCHARSET_TESTS_ENVIRONMENT = @LOCALCHARSET_TESTS_ENVIRONMENT@
@@ -1546,6 +1553,7 @@ REPLACE_WCRTOMB = @REPLACE_WCRTOMB@
 REPLACE_WCSFTIME = @REPLACE_WCSFTIME@
 REPLACE_WCSNRTOMBS = @REPLACE_WCSNRTOMBS@
 REPLACE_WCSRTOMBS = @REPLACE_WCSRTOMBS@
+REPLACE_WCSTOK = @REPLACE_WCSTOK@
 REPLACE_WCSWIDTH = @REPLACE_WCSWIDTH@
 REPLACE_WCTOB = @REPLACE_WCTOB@
 REPLACE_WCTOMB = @REPLACE_WCTOMB@
@@ -1648,13 +1656,12 @@ EXTRA_DIST = alloca.c alloca.in.h btowc.c closedir.c dirent-private.h \
 	getopt-pfx-core.h getopt-pfx-ext.h getopt.c getopt.in.h \
 	getopt1.c getopt_int.h gettimeofday.c glob.c glob_internal.h \
 	glob_pattern_p.c globfree.c glob-libc.h glob.in.h \
-	hard-locale.h $(top_srcdir)/./config.rpath intprops.h \
-	isblank.c float+.h isnan.c isnand-nolibm.h isnand.c float+.h \
-	isnan.c isnanf-nolibm.h isnanf.c float+.h isnan.c \
-	isnanl-nolibm.h isnanl.c iswblank.c langinfo.in.h cdefs.h \
-	libc-config.h limits.in.h localcharset.h locale.in.h \
-	localeconv.c localtime-buffer.c localtime-buffer.h lstat.c \
-	malloc.c malloca.h math.in.h mbrtowc.c mbsinit.c \
+	hard-locale.h intprops.h isblank.c float+.h isnan.c \
+	isnand-nolibm.h isnand.c float+.h isnan.c isnanf-nolibm.h \
+	isnanf.c float+.h isnan.c isnanl-nolibm.h isnanl.c iswblank.c \
+	langinfo.in.h cdefs.h libc-config.h limits.in.h localcharset.h \
+	locale.in.h localeconv.c localtime-buffer.c localtime-buffer.h \
+	lstat.c malloc.c malloca.h math.in.h mbrtowc.c mbsinit.c \
 	mbsrtowcs-impl.h mbsrtowcs-state.c mbsrtowcs.c mbtowc-impl.h \
 	mbtowc.c memchr.c memchr.valgrind mempcpy.c msvc-inval.c \
 	msvc-inval.h msvc-nothrow.c msvc-nothrow.h nl_langinfo.c \
@@ -1662,17 +1669,17 @@ EXTRA_DIST = alloca.c alloca.in.h btowc.c closedir.c dirent-private.h \
 	printf-frexp.c printf-frexpl.h raise.c dirent-private.h \
 	readdir.c regcomp.c regex.c regex.h regex_internal.c \
 	regex_internal.h regexec.c malloc/scratch_buffer.h \
-	scratch_buffer.h sig-handler.h sigaction.c signal.in.h \
-	float+.h signbitd.c signbitf.c signbitl.c sigprocmask.c \
-	_Noreturn.h arg-nonnull.h c++defs.h warn-on-use.h snprintf.c \
-	stat-w32.c stat-w32.h stat.c stat-time.h stdarg.in.h \
-	stdbool.in.h stddef.in.h stdint.in.h stdio.in.h stdlib.in.h \
-	strcasecmp.c strncasecmp.c str-two-way.h strcasestr.c streq.h \
-	string.in.h strings.in.h strnlen.c sys_stat.in.h sys_time.in.h \
-	sys_types.in.h sys_wait.in.h $(top_srcdir)/./config.rpath \
-	time.in.h timespec.h unistd.in.h unitypes.in.h localcharset.h \
-	uniwidth.in.h uniwidth/cjk.h utime.c utime.in.h utimens.h \
-	asnprintf.c float+.h printf-args.c printf-args.h \
+	scratch_buffer.h setlocale-lock.c windows-initguard.h \
+	sig-handler.h sigaction.c signal.in.h float+.h signbitd.c \
+	signbitf.c signbitl.c sigprocmask.c _Noreturn.h arg-nonnull.h \
+	c++defs.h warn-on-use.h snprintf.c stat-w32.c stat-w32.h \
+	stat.c stat-time.h stdarg.in.h stdbool.in.h stddef.in.h \
+	stdint.in.h stdio.in.h stdlib.in.h strcasecmp.c strncasecmp.c \
+	str-two-way.h strcasestr.c streq.h string.in.h strings.in.h \
+	strnlen.c sys_stat.in.h sys_time.in.h sys_types.in.h \
+	sys_wait.in.h time.in.h timespec.h unistd.in.h unitypes.in.h \
+	localcharset.h uniwidth.in.h uniwidth/cjk.h utime.c utime.in.h \
+	utimens.h asnprintf.c float+.h printf-args.c printf-args.h \
 	printf-parse.c printf-parse.h vasnprintf.c vasnprintf.h \
 	verify.h vsnprintf.c wchar.in.h wcrtomb.c wctype.in.h \
 	wcwidth.c windows-initguard.h windows-mutex.c windows-mutex.h \
@@ -1711,8 +1718,8 @@ libgnu_a_SOURCES = gettext.h gettime.c hard-locale.c localcharset.c \
 	glthread/lock.h glthread/lock.c malloca.c math.c \
 	printf-frexp.c printf-frexpl.c malloc/scratch_buffer_grow.c \
 	malloc/scratch_buffer_grow_preserve.c \
-	malloc/scratch_buffer_set_array_size.c sig-handler.c \
-	size_max.h stat-time.c strnlen1.h strnlen1.c \
+	malloc/scratch_buffer_set_array_size.c setlocale_null.c \
+	sig-handler.c size_max.h stat-time.c strnlen1.h strnlen1.c \
 	glthread/threadlib.c timespec.c unistd.c $(am__append_1) \
 	utimens.c wctype-h.c xsize.h xsize.c
 libgnu_a_LIBADD = $(gl_LIBOBJS) @ALLOCA@
@@ -1727,12 +1734,12 @@ EXTRA_libgnu_a_SOURCES = alloca.c btowc.c closedir.c dirfd.c float.c \
 	mbsrtowcs-state.c mbsrtowcs.c mbtowc.c memchr.c mempcpy.c \
 	msvc-inval.c msvc-nothrow.c nl_langinfo.c opendir.c \
 	printf-frexp.c raise.c readdir.c regcomp.c regex.c \
-	regex_internal.c regexec.c sigaction.c signbitd.c signbitf.c \
-	signbitl.c sigprocmask.c snprintf.c stat-w32.c stat.c \
-	strcasecmp.c strncasecmp.c strcasestr.c strnlen.c utime.c \
-	asnprintf.c printf-args.c printf-parse.c vasnprintf.c \
-	vsnprintf.c wcrtomb.c wcwidth.c windows-mutex.c windows-once.c \
-	windows-recmutex.c windows-rwlock.c
+	regex_internal.c regexec.c setlocale-lock.c sigaction.c \
+	signbitd.c signbitf.c signbitl.c sigprocmask.c snprintf.c \
+	stat-w32.c stat.c strcasecmp.c strncasecmp.c strcasestr.c \
+	strnlen.c utime.c asnprintf.c printf-args.c printf-parse.c \
+	vasnprintf.c vsnprintf.c wcrtomb.c wcwidth.c windows-mutex.c \
+	windows-once.c windows-recmutex.c windows-rwlock.c
 
 # Use this preprocessor expression to decide whether #include_next works.
 # Do not rely on a 'configure'-time test for this, since the expression
@@ -1909,6 +1916,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regex.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regex_internal.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regexec.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/setlocale-lock.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/setlocale_null.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sig-handler.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sigaction.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/signbitd.Po@am__quote@ # am--include-marker
@@ -2236,6 +2245,8 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/regex.Po
 	-rm -f ./$(DEPDIR)/regex_internal.Po
 	-rm -f ./$(DEPDIR)/regexec.Po
+	-rm -f ./$(DEPDIR)/setlocale-lock.Po
+	-rm -f ./$(DEPDIR)/setlocale_null.Po
 	-rm -f ./$(DEPDIR)/sig-handler.Po
 	-rm -f ./$(DEPDIR)/sigaction.Po
 	-rm -f ./$(DEPDIR)/signbitd.Po
@@ -2374,6 +2385,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/regex.Po
 	-rm -f ./$(DEPDIR)/regex_internal.Po
 	-rm -f ./$(DEPDIR)/regexec.Po
+	-rm -f ./$(DEPDIR)/setlocale-lock.Po
+	-rm -f ./$(DEPDIR)/setlocale_null.Po
 	-rm -f ./$(DEPDIR)/sig-handler.Po
 	-rm -f ./$(DEPDIR)/sigaction.Po
 	-rm -f ./$(DEPDIR)/signbitd.Po
@@ -2706,6 +2719,7 @@ locale.h: locale.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''NEXT_LOCALE_H''@|$(NEXT_LOCALE_H)|g' \
 	      -e 's/@''GNULIB_LOCALECONV''@/$(GNULIB_LOCALECONV)/g' \
 	      -e 's/@''GNULIB_SETLOCALE''@/$(GNULIB_SETLOCALE)/g' \
+	      -e 's/@''GNULIB_SETLOCALE_NULL''@/$(GNULIB_SETLOCALE_NULL)/g' \
 	      -e 's/@''GNULIB_DUPLOCALE''@/$(GNULIB_DUPLOCALE)/g' \
 	      -e 's/@''GNULIB_LOCALENAME''@/$(GNULIB_LOCALENAME)/g' \
 	      -e 's|@''HAVE_NEWLOCALE''@|$(HAVE_NEWLOCALE)|g' \
@@ -3111,8 +3125,6 @@ signal.h: signal.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''HAVE_SYS_INTTYPES_H''@/$(HAVE_SYS_INTTYPES_H)/g' \
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''HAVE_SYS_BITYPES_H''@/$(HAVE_SYS_BITYPES_H)/g' \
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''HAVE_WCHAR_H''@/$(HAVE_WCHAR_H)/g' \
-@GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''HAVE_LONG_LONG_INT''@/$(HAVE_LONG_LONG_INT)/g' \
-@GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''HAVE_UNSIGNED_LONG_LONG_INT''@/$(HAVE_UNSIGNED_LONG_LONG_INT)/g' \
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''APPLE_UNIVERSAL_BUILD''@/$(APPLE_UNIVERSAL_BUILD)/g' \
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''BITSIZEOF_PTRDIFF_T''@/$(BITSIZEOF_PTRDIFF_T)/g' \
 @GL_GENERATE_STDINT_H_TRUE@	      -e 's/@''PTRDIFF_T_SUFFIX''@/$(PTRDIFF_T_SUFFIX)/g' \
@@ -3941,6 +3953,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''REPLACE_WCWIDTH''@|$(REPLACE_WCWIDTH)|g' \
 	      -e 's|@''REPLACE_WCSWIDTH''@|$(REPLACE_WCSWIDTH)|g' \
 	      -e 's|@''REPLACE_WCSFTIME''@|$(REPLACE_WCSFTIME)|g' \
+	      -e 's|@''REPLACE_WCSTOK''@|$(REPLACE_WCSTOK)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)'; \

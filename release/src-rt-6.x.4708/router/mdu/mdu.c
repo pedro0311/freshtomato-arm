@@ -17,9 +17,6 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <stdarg.h>
 #include <sys/stat.h>
@@ -81,7 +78,6 @@ int f_argc = -1;
 int refresh = 0;
 
 static void save_cookie(void);
-static void update_noip_refresh(void);
 
 
 static void trimamp(char *s)
@@ -192,7 +188,7 @@ static void error(const char *fmt, ...)
 	s[sizeof(s) - 1] = 0;
 	va_end(args);
 
-	mdulog(LOG_INFO, "%s: %s\n", __FUNCTION__, s);
+	mdulog(LOG_DEBUG, "%s: %s\n", __FUNCTION__, s);
 
 	printf("%s\n", s);
 	save_msg(s);
@@ -203,7 +199,7 @@ static void success_msg(const char *msg)
 {
 	save_cookie();
 
-	mdulog(LOG_INFO, "%s\n", __FUNCTION__);
+	mdulog(LOG_DEBUG, "%s\n", __FUNCTION__);
 
 	printf("%s\n", msg);
 	save_msg(msg);
@@ -381,12 +377,12 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 	const char *c;
 	struct timeval tv;
 
-	mdulog(LOG_INFO, "\n*** %s\n", host);
+	mdulog(LOG_DEBUG, "\n*** %s\n", host);
 
 	sd = -1;	// for gcc warning
 
 	for (trys = 4; trys > 0; --trys) {
-		mdulog(LOG_INFO, "_http_req trys=%d\n", trys);
+		mdulog(LOG_DEBUG, "_http_req trys=%d\n", trys);
 
 		for (i = 4; i > 0; --i) {
 			if ((he = gethostbyname(host)) != NULL) {
@@ -402,12 +398,12 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 				struct in_addr ia;
 				ia.s_addr = sa.sin_addr.s_addr;
 
-				mdulog(LOG_INFO, "[%s][%d]\n", inet_ntoa(ia), port);
-				mdulog(LOG_INFO, "connecting...\n");
+				mdulog(LOG_DEBUG, "[%s][%d]\n", inet_ntoa(ia), port);
+				mdulog(LOG_DEBUG, "connecting...\n");
 #endif
 
 				if (connect_timeout(sd, (struct sockaddr *)&sa, sizeof(sa), 10) == 0) {
-					mdulog(LOG_INFO, "connected\n");
+					mdulog(LOG_DEBUG, "connected\n");
 					break;
 				}
 #ifdef MDU_DEBUG
@@ -432,30 +428,30 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 			f = fdopen(sd, "r+");
 		}
 		if (f == NULL) {
-			mdulog(LOG_INFO, "error opening\n");
+			mdulog(LOG_DEBUG, "error opening\n");
 			close(sd);
 			continue;
 		}
 
 		i = strlen(request);
 		if (fwrite(request, 1, i, f) != i) {
-			mdulog(LOG_INFO, "error writing i=%d\n", i);
+			mdulog(LOG_DEBUG, "error writing i=%d\n", i);
 			fclose(f);
 			close(sd);
 			continue;
 		}
-		mdulog(LOG_INFO, "sent request\n");
+		mdulog(LOG_DEBUG, "sent request\n");
 
 		i = fread(buffer, 1, bufsize, f);
 		if (i <= 0) {
 			fclose(f);
 			close(sd);
-			mdulog(LOG_INFO, "error reading i=%d\n", i);
+			mdulog(LOG_DEBUG, "error reading i=%d\n", i);
 			continue;
 		}
 		buffer[i] = 0;
 
-		mdulog(LOG_INFO, "recvd=[%s], i=%d\n", buffer, i);
+		mdulog(LOG_DEBUG, "recvd=[%s], i=%d\n", buffer, i);
 
 		fclose(f);
 		close(sd);
@@ -472,18 +468,18 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 		}
 
 		if ((sscanf(buffer, "HTTP/1.%*d %d", &i) == 1) && (i >= 100) && (i <= 999)) {
-			mdulog(LOG_INFO, "HTTP/1.* i=%d\n", i);
+			mdulog(LOG_DEBUG, "HTTP/1.* i=%d\n", i);
 			if ((p = strstr(buffer, "\r\n\r\n")) != NULL) p += 4;
 				else if ((p = strstr(buffer, "\n\n")) != NULL) p += 2;
 			if (p) {
 				if (body) {
 					*body = p;
-					mdulog(LOG_INFO, "body=[%s]\n", p);
+					mdulog(LOG_DEBUG, "body=[%s]\n", p);
 				}
 				return i;
 			}
 			else {
-				mdulog(LOG_INFO, "!p\n");
+				mdulog(LOG_DEBUG, "!p\n");
 			}
 		}
 	}
@@ -627,7 +623,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	if (data)
 		strcat(blob, data);
 
-	mdulog(LOG_INFO, "blob=[%s]\n", blob);
+	mdulog(LOG_DEBUG, "blob=[%s]\n", blob);
 
 	port = ssl ? 443 : 80;
 	strlcpy(a, host, sizeof(a));
@@ -640,7 +636,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	n = _http_req(ssl, a, port, p, blob, BLOB_SIZE, body);
 	free(p);
 
-	mdulog(LOG_INFO, "%s: n=%d\n", __FUNCTION__, n);
+	mdulog(LOG_DEBUG, "%s: n=%d\n", __FUNCTION__, n);
 
 	return n;
 #endif
@@ -657,11 +653,11 @@ int read_tmaddr(const char *name, long *tm, char *addr)
 
 	if (f_read_string(name, s, sizeof(s)) > 0) {
 		if (sscanf(s, "%ld,%15s", tm, addr) == 2) {
-			mdulog(LOG_INFO, "%s: s=%s tm=%ld addr=%s\n", __FUNCTION__, s, *tm, addr);
+			mdulog(LOG_DEBUG, "%s: s=%s tm=%ld addr=%s\n", __FUNCTION__, s, *tm, addr);
 			if ((tm > 0) && (inet_addr(addr) != -1)) return 1;
 		}
 		else {
-			mdulog(LOG_INFO, "%s: unknown=%s\n", __FUNCTION__, s);
+			mdulog(LOG_DEBUG, "%s: unknown=%s\n", __FUNCTION__, s);
 		}
 	}
 	return 0;
@@ -691,7 +687,7 @@ const char *get_address(int required)
 
 				if (read_tmaddr(cache_name, &et, addr)) {
 					if ((et > ut) && ((et - ut) <= (10 * 60))) {
-						mdulog(LOG_INFO, "%s: Using cached address %s from %s. Expires in %ld seconds.\n", __FUNCTION__, addr, cache_name, et - ut);
+						mdulog(LOG_DEBUG, "%s: Using cached address %s from %s. Expires in %ld seconds.\n", __FUNCTION__, addr, cache_name, et - ut);
 						return addr;
 					}
 				}
@@ -700,42 +696,42 @@ const char *get_address(int required)
 				if (strcmp(c, "dyndns") == 0) {
 					if ((wget(0, 1, "checkip.dyndns.org:8245", "/", NULL, 0, &body) != 200) && (wget(0, 1, "checkip.dyndns.org", "/", NULL, 0, &body) != 200)) {
 						/* "<html><head><title>Current IP Check</title></head><body>Current IP Address: 1.2.3.4</body></html>" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (dyndns)");
 					}
 				}
 				/* other IP checkers - see/add/remove: rc/ddns.c */
 				else if (strcmp(c, "zoneedit") == 0) {
 					if (wget(0, 1, "dynamic.zoneedit.com", "/checkip.html", NULL, 0, &body) != 200) {
 						/* "1.2.3.4" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (zoneedit)");
 					}
 				}
 				else if (strcmp(c, "noip") == 0) {
-					if (wget(0, 1, "ip1.dynupdate.no-ip.com", "/", NULL, 0, &body) != 200) {
+					if ((wget(0, 1, "ip1.dynupdate.no-ip.com:8245", "/", NULL, 0, &body) != 200) && (wget(0, 1, "ip1.dynupdate.no-ip.com", "/", NULL, 0, &body) != 200)) {
 						/* "1.2.3.4" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (noip)");
 					}
 				}
 				else if (strcmp(c, "dnsomatic") == 0) {
 					if (wget(0, 1, "myip.dnsomatic.com", "/", NULL, 0, &body) != 200) {
 						/* "1.2.3.4" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (dnsomatic)");
 					}
 				}
 				else if (strcmp(c, "pairdomains") == 0) {
 					if (wget(0, 1, "myip.pairnic.com", "/", NULL, 0, &body) != 200) {	/* myip.pairdomains.com redirects to https */
 						/* "Current IP Address: 1.2.3.4" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (pairdomains)");
 					}
 				}
 				else if (strcmp(c, "changeip") == 0) {
 					if (wget(0, 1, "ip.changeip.com", "/", NULL, 0, &body) != 200) {
 						/* "1.2.3.4\n<!--IPADDR=1.2.3.4-->" */
-						error(M_ERROR_GET_IP);
+						error(M_ERROR_GET_IP " (changeip)");
 					}
 				}
 
-				mdulog(LOG_INFO, "%s: external IP checker - '%s'\n", __FUNCTION__, c);
+				mdulog(LOG_DEBUG, "%s: external IP checker - '%s'\n", __FUNCTION__, c);
 
 				if ((p = strstr(body, "Address:")) != NULL) {
 					/* dyndns, pairdomains */
@@ -747,18 +743,19 @@ const char *get_address(int required)
 				}
 
 				while (*p == ' ') ++p;
-
 				q = p;
 				while (((*q >= '0') && (*q <= '9')) || (*q == '.')) ++q;
-				strncpy(addr, p, (q - p));
-				q = NULL;
 
+				memset(addr, 0, 16);	/* reset */
+				strncpy(addr, p, (q - p));
+
+				q = NULL;
 				if ((ia.s_addr = inet_addr(addr)) != -1) {
 					q = inet_ntoa(ia);
 					sprintf(s, "%ld,%s", ut + (10 * 60), q);
 					f_write_string(cache_name, s, 0, 0);
 
-					mdulog(LOG_INFO, "%s: saved '%s'\n", __FUNCTION__, s);
+					mdulog(LOG_DEBUG, "%s: saved '%s'\n", __FUNCTION__, s);
 					return q;
 				}
 			}
@@ -866,15 +863,7 @@ static void update_dua(const char *type, int ssl, const char *server, const char
 			error(M_TOOSOON);
 		}
 
-		if (strstr(body, "nochg")) {
-			if ((strcmp(get_option("service"), "noip") == 0) && (refresh)) {
-				update_noip_refresh();
-			}
-			success();
-			return;
-		}
-
-		if ((strstr(body, "good")) || (strstr(body, "NOERROR"))) {
+		if ((strstr(body, "nochg")) || (strstr(body, "good")) || (strstr(body, "NOERROR"))) {
 			success();
 			return;
 		}
@@ -1121,28 +1110,6 @@ static void update_dnsexit(int ssl)
 	}
 
 	error(M_UNKNOWN_ERROR__D, r);
-}
-
-/*
-	No-IP.com -- refresh
-
-	http://www.no-ip.com/hostactive.php?host=<host>&domain=<dom>
-*/
-static void update_noip_refresh(void)
-{
-	char query[2048];
-	char host[256];
-	char *domain;
-
-	strlcpy(host, get_option_required("host"), sizeof(host));
-	if ((domain = strchr(host, '.')) != NULL) {
-		*domain++ = 0;
-	}
-
-	sprintf(query, "/hostactive.php?host=%s", host);
-	if (domain) sprintf(query + strlen(query), "&domain=%s", domain);
-
-	wget(0, 1, "www.no-ip.com", query, NULL, 0, NULL);
 }
 
 /*
@@ -1636,17 +1603,17 @@ static void check_cookie(void)
 	long tm;
 
 	if (((c = get_option("cookie")) == NULL) || (!read_tmaddr(c, &tm, addr))) {
-		mdulog(LOG_INFO, "%s: no cookie\n", __FUNCTION__);
+		mdulog(LOG_DEBUG, "%s: no cookie\n", __FUNCTION__);
 		refresh = 1;
 		return;
 	}
 
 	if ((c = get_address(0)) == NULL) {
-		mdulog(LOG_INFO, "%s: no address specified\n", __FUNCTION__);
+		mdulog(LOG_DEBUG, "%s: no address specified\n", __FUNCTION__);
 		return;
 	}
 	if (strcmp(c, addr) != 0) {
-		mdulog(LOG_INFO, "%s: address is different (%s != %s)\n", __FUNCTION__, c, addr);
+		mdulog(LOG_DEBUG, "%s: address is different (%s != %s)\n", __FUNCTION__, c, addr);
 		return;
 	}
 
@@ -1664,24 +1631,24 @@ static void save_cookie(void)
 
 	now = time(NULL);
 	if (now < Y2K) {
-		mdulog(LOG_INFO, "%s: no time", __FUNCTION__);
+		mdulog(LOG_DEBUG, "%s: no time", __FUNCTION__);
 		return;
 	}
 
 	if ((cookie = get_option("cookie")) == NULL) {
-		mdulog(LOG_INFO, "%s: no cookie\n", __FUNCTION__);
+		mdulog(LOG_DEBUG, "%s: no cookie\n", __FUNCTION__);
 		return;
 	}
 
 	if ((c = get_address(0)) == NULL) {
-		mdulog(LOG_INFO, "%s: no address specified\n", __FUNCTION__);
+		mdulog(LOG_DEBUG, "%s: no address specified\n", __FUNCTION__);
 		return;
 	}
 
 	sprintf(s, "%ld,%s", now, c);
 	f_write_string(cookie, s, FW_NEWLINE, 0);
 
-	mdulog(LOG_INFO, "%s: cookie=%s\n", __FUNCTION__, s);
+	mdulog(LOG_DEBUG, "%s: cookie=%s\n", __FUNCTION__, s);
 }
 
 int main(int argc, char *argv[])

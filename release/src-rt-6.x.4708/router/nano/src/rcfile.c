@@ -146,6 +146,18 @@ static bool seen_color_command = FALSE;
 static colortype *lastcolor = NULL;
 		/* The end of the color list for the current syntax. */
 #endif
+
+#define NUMBER_OF_MENUS  16
+char *menunames[NUMBER_OF_MENUS] = { "main", "search", "replace", "replacewith",
+									"yesno", "gotoline", "writeout", "insert",
+									"extcmd", "help", "spell", "linter",
+									"browser", "whereisfile", "gotodir",
+									"all" };
+int menusymbols[NUMBER_OF_MENUS] = { MMAIN, MWHEREIS, MREPLACE, MREPLACEWITH,
+									MYESNO, MGOTOLINE, MWRITEFILE, MINSERTFILE,
+									MEXTCMD, MHELP, MSPELL, MLINTER,
+									MBROWSER, MWHEREISFILE, MGOTODIR,
+									MMOST|MBROWSER|MHELP|MYESNO };
 #endif /* ENABLE_NANORC */
 
 #if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
@@ -200,6 +212,295 @@ void jot_error(const char *msg, ...)
 #endif /* ENABLE_NANORC || ENABLE_HISTORIES */
 
 #ifdef ENABLE_NANORC
+/* Interpret a function string given in the rc file, and return a
+ * shortcut record with the corresponding function filled in. */
+keystruct *strtosc(const char *input)
+{
+	keystruct *s = nmalloc(sizeof(keystruct));
+
+#ifndef NANO_TINY
+	s->toggle = 0;
+#endif
+
+	if (!strcmp(input, "cancel"))
+		s->func = do_cancel;
+#ifdef ENABLE_HELP
+	else if (!strcmp(input, "help"))
+		s->func = do_help;
+#endif
+	else if (!strcmp(input, "exit"))
+		s->func = do_exit;
+	else if (!strcmp(input, "discardbuffer"))
+		s->func = discard_buffer;
+	else if (!strcmp(input, "writeout"))
+		s->func = do_writeout_void;
+	else if (!strcmp(input, "savefile"))
+		s->func = do_savefile;
+	else if (!strcmp(input, "insert"))
+		s->func = do_insertfile_void;
+	else if (!strcmp(input, "whereis"))
+		s->func = do_search_forward;
+	else if (!strcmp(input, "wherewas"))
+		s->func = do_search_backward;
+	else if (!strcmp(input, "findprevious"))
+		s->func = do_findprevious;
+	else if (!strcmp(input, "findnext"))
+		s->func = do_findnext;
+	else if (!strcmp(input, "replace"))
+		s->func = do_replace;
+	else if (!strcmp(input, "cut"))
+		s->func = cut_text;
+	else if (!strcmp(input, "paste"))
+		s->func = paste_text;
+#ifndef NANO_TINY
+	else if (!strcmp(input, "cutrestoffile"))
+		s->func = cut_till_eof;
+	else if (!strcmp(input, "copy"))
+		s->func = copy_text;
+	else if (!strcmp(input, "zap"))
+		s->func = zap_text;
+	else if (!strcmp(input, "mark"))
+		s->func = do_mark;
+#endif
+#ifdef ENABLE_SPELLER
+	else if (!strcmp(input, "tospell") ||
+			 !strcmp(input, "speller"))
+		s->func = do_spell;
+#endif
+#ifdef ENABLE_COLOR
+	else if (!strcmp(input, "linter"))
+		s->func = do_linter;
+#ifdef ENABLE_SPELLER
+	else if (!strcmp(input, "formatter"))
+		s->func = do_formatter;
+#endif
+#endif
+	else if (!strcmp(input, "curpos"))
+		s->func = do_cursorpos_void;
+	else if (!strcmp(input, "gotoline"))
+		s->func = do_gotolinecolumn_void;
+#ifdef ENABLE_JUSTIFY
+	else if (!strcmp(input, "justify"))
+		s->func = do_justify_void;
+	else if (!strcmp(input, "fulljustify"))
+		s->func = do_full_justify;
+	else if (!strcmp(input, "beginpara"))
+		s->func = do_para_begin_void;
+	else if (!strcmp(input, "endpara"))
+		s->func = do_para_end_void;
+#endif
+#ifdef ENABLE_COMMENT
+	else if (!strcmp(input, "comment"))
+		s->func = do_comment;
+#endif
+#ifdef ENABLE_WORDCOMPLETION
+	else if (!strcmp(input, "complete"))
+		s->func = complete_a_word;
+#endif
+#ifndef NANO_TINY
+	else if (!strcmp(input, "indent"))
+		s->func = do_indent;
+	else if (!strcmp(input, "unindent"))
+		s->func = do_unindent;
+	else if (!strcmp(input, "chopwordleft") ||
+			 !strcmp(input, "cutwordleft"))  /* Deprecated; remove in 2021. */
+		s->func = chop_previous_word;
+	else if (!strcmp(input, "chopwordright") ||
+			 !strcmp(input, "cutwordright"))  /* Deprecated; remove in 2021. */
+		s->func = chop_next_word;
+	else if (!strcmp(input, "findbracket"))
+		s->func = do_find_bracket;
+	else if (!strcmp(input, "wordcount"))
+		s->func = do_wordlinechar_count;
+	else if (!strcmp(input, "recordmacro"))
+		s->func = record_macro;
+	else if (!strcmp(input, "runmacro"))
+		s->func = run_macro;
+	else if (!strcmp(input, "undo"))
+		s->func = do_undo;
+	else if (!strcmp(input, "redo"))
+		s->func = do_redo;
+#endif
+	else if (!strcmp(input, "left") ||
+			 !strcmp(input, "back"))
+		s->func = do_left;
+	else if (!strcmp(input, "right") ||
+			 !strcmp(input, "forward"))
+		s->func = do_right;
+	else if (!strcmp(input, "up") ||
+			 !strcmp(input, "prevline"))
+		s->func = do_up;
+	else if (!strcmp(input, "down") ||
+			 !strcmp(input, "nextline"))
+		s->func = do_down;
+#if !defined(NANO_TINY) || defined(ENABLE_HELP)
+	else if (!strcmp(input, "scrollup"))
+		s->func = do_scroll_up;
+	else if (!strcmp(input, "scrolldown"))
+		s->func = do_scroll_down;
+#endif
+	else if (!strcmp(input, "prevword"))
+		s->func = do_prev_word_void;
+	else if (!strcmp(input, "nextword"))
+		s->func = do_next_word_void;
+	else if (!strcmp(input, "home"))
+		s->func = do_home;
+	else if (!strcmp(input, "end"))
+		s->func = do_end;
+	else if (!strcmp(input, "prevblock"))
+		s->func = do_prev_block;
+	else if (!strcmp(input, "nextblock"))
+		s->func = do_next_block;
+	else if (!strcmp(input, "pageup") ||
+			 !strcmp(input, "prevpage"))
+		s->func = do_page_up;
+	else if (!strcmp(input, "pagedown") ||
+			 !strcmp(input, "nextpage"))
+		s->func = do_page_down;
+	else if (!strcmp(input, "firstline"))
+		s->func = to_first_line;
+	else if (!strcmp(input, "lastline"))
+		s->func = to_last_line;
+#ifdef ENABLE_MULTIBUFFER
+	else if (!strcmp(input, "prevbuf"))
+		s->func = switch_to_prev_buffer;
+	else if (!strcmp(input, "nextbuf"))
+		s->func = switch_to_next_buffer;
+#endif
+	else if (!strcmp(input, "verbatim"))
+		s->func = do_verbatim_input;
+	else if (!strcmp(input, "tab"))
+		s->func = do_tab;
+	else if (!strcmp(input, "enter"))
+		s->func = do_enter;
+	else if (!strcmp(input, "delete"))
+		s->func = do_delete;
+	else if (!strcmp(input, "backspace"))
+		s->func = do_backspace;
+	else if (!strcmp(input, "refresh"))
+		s->func = total_refresh;
+	else if (!strcmp(input, "suspend"))
+		s->func = do_suspend_void;
+	else if (!strcmp(input, "casesens"))
+		s->func = case_sens_void;
+	else if (!strcmp(input, "regexp"))
+		s->func = regexp_void;
+	else if (!strcmp(input, "backwards"))
+		s->func = backwards_void;
+	else if (!strcmp(input, "flipreplace"))
+		s->func = flip_replace;
+	else if (!strcmp(input, "flipgoto"))
+		s->func = flip_goto;
+#ifdef ENABLE_HISTORIES
+	else if (!strcmp(input, "older"))
+		s->func = get_history_older_void;
+	else if (!strcmp(input, "newer"))
+		s->func = get_history_newer_void;
+#endif
+#ifndef NANO_TINY
+	else if (!strcmp(input, "dosformat"))
+		s->func = dos_format_void;
+	else if (!strcmp(input, "macformat"))
+		s->func = mac_format_void;
+	else if (!strcmp(input, "append"))
+		s->func = append_void;
+	else if (!strcmp(input, "prepend"))
+		s->func = prepend_void;
+	else if (!strcmp(input, "backup"))
+		s->func = backup_file_void;
+	else if (!strcmp(input, "flipexecute"))
+		s->func = flip_execute;
+	else if (!strcmp(input, "flippipe"))
+		s->func = flip_pipe;
+	else if (!strcmp(input, "flipconvert"))
+		s->func = flip_convert;
+#endif
+#ifdef ENABLE_MULTIBUFFER
+	else if (!strcmp(input, "flipnewbuffer"))
+		s->func = flip_newbuffer;
+#endif
+#ifdef ENABLE_BROWSER
+	else if (!strcmp(input, "tofiles") ||
+			 !strcmp(input, "browser"))
+		s->func = to_files_void;
+	else if (!strcmp(input, "gotodir"))
+		s->func = goto_dir_void;
+	else if (!strcmp(input, "firstfile"))
+		s->func = to_first_file;
+	else if (!strcmp(input, "lastfile"))
+		s->func = to_last_file;
+#endif
+	else {
+#ifndef NANO_TINY
+		s->func = do_toggle_void;
+		if (!strcmp(input, "nohelp"))
+			s->toggle = NO_HELP;
+		else if (!strcmp(input, "constantshow"))
+			s->toggle = CONSTANT_SHOW;
+		else if (!strcmp(input, "softwrap"))
+			s->toggle = SOFTWRAP;
+#ifdef ENABLE_LINENUMBERS
+		else if (!strcmp(input, "linenumbers"))
+			s->toggle = LINE_NUMBERS;
+#endif
+		else if (!strcmp(input, "whitespacedisplay"))
+			s->toggle = WHITESPACE_DISPLAY;
+#ifdef ENABLE_COLOR
+		else if (!strcmp(input, "nosyntax"))
+			s->toggle = NO_COLOR_SYNTAX;
+#endif
+		else if (!strcmp(input, "smarthome"))
+			s->toggle = SMART_HOME;
+		else if (!strcmp(input, "autoindent"))
+			s->toggle = AUTOINDENT;
+		else if (!strcmp(input, "cutfromcursor"))
+			s->toggle = CUT_FROM_CURSOR;
+#ifdef ENABLE_WRAPPING
+		else if (!strcmp(input, "nowrap"))
+			s->toggle = BREAK_LONG_LINES;
+#endif
+		else if (!strcmp(input, "tabstospaces"))
+			s->toggle = TABS_TO_SPACES;
+#ifdef ENABLE_MOUSE
+		else if (!strcmp(input, "mouse"))
+			s->toggle = USE_MOUSE;
+#endif
+		else if (!strcmp(input, "suspendenable"))
+			s->toggle = SUSPEND;
+		else
+#endif /* !NANO_TINY */
+		{
+			free(s);
+			return NULL;
+		}
+	}
+	return s;
+}
+
+/* Return the symbol that corresponds to the given menu name. */
+int name_to_menu(const char *name)
+{
+	int index = -1;
+
+	while (++index < NUMBER_OF_MENUS)
+		if (strcmp(name, menunames[index]) == 0)
+			return menusymbols[index];
+
+	return -1;
+}
+
+/* Return the name that corresponds to the given menu symbol. */
+char *menu_to_name(int menu)
+{
+	int index = -1;
+
+	while (++index < NUMBER_OF_MENUS)
+		if (menusymbols[index] == menu)
+			return menunames[index];
+
+	return "boooo";
+}
+
 /* Parse the next word from the string, null-terminate it, and return
  * a pointer to the first character after the null terminator.  The
  * returned pointer will point to '\0' if we hit the end of the line. */
@@ -419,7 +720,7 @@ void parse_binding(char *ptr, bool dobind)
 	ptr = parse_next_word(ptr);
 	keycopy = copy_of(keyptr);
 
-	if (strlen(keycopy) < 2) {
+	if (keycopy[1] == '\0') {
 		jot_error(N_("Key name is too short"));
 		goto free_things;
 	}
@@ -428,12 +729,11 @@ void parse_binding(char *ptr, bool dobind)
 	keycopy[0] = toupper((unsigned char)keycopy[0]);
 	keycopy[1] = toupper((unsigned char)keycopy[1]);
 	if (keycopy[0] == 'M' && keycopy[1] == '-') {
-		if (strlen(keycopy) > 2)
-			keycopy[2] = toupper((unsigned char)keycopy[2]);
-		else {
+		if (keycopy[2] == '\0') {
 			jot_error(N_("Key name is too short"));
 			goto free_things;
-		}
+		} else
+			keycopy[2] = toupper((unsigned char)keycopy[2]);
 	}
 
 	/* Allow the codes for Insert and Delete to be rebound, but apart
@@ -676,23 +976,23 @@ short color_to_short(const char *colorname, bool *bright)
 	} else
 		*bright = FALSE;
 
-	if (strcasecmp(colorname, "green") == 0)
+	if (strcmp(colorname, "green") == 0)
 		return COLOR_GREEN;
-	else if (strcasecmp(colorname, "red") == 0)
+	else if (strcmp(colorname, "red") == 0)
 		return COLOR_RED;
-	else if (strcasecmp(colorname, "blue") == 0)
+	else if (strcmp(colorname, "blue") == 0)
 		return COLOR_BLUE;
-	else if (strcasecmp(colorname, "white") == 0)
+	else if (strcmp(colorname, "white") == 0)
 		return COLOR_WHITE;
-	else if (strcasecmp(colorname, "yellow") == 0)
+	else if (strcmp(colorname, "yellow") == 0)
 		return COLOR_YELLOW;
-	else if (strcasecmp(colorname, "cyan") == 0)
+	else if (strcmp(colorname, "cyan") == 0)
 		return COLOR_CYAN;
-	else if (strcasecmp(colorname, "magenta") == 0)
+	else if (strcmp(colorname, "magenta") == 0)
 		return COLOR_MAGENTA;
-	else if (strcasecmp(colorname, "black") == 0)
+	else if (strcmp(colorname, "black") == 0)
 		return COLOR_BLACK;
-	else if (strcasecmp(colorname, "normal") == 0)
+	else if (strcmp(colorname, "normal") == 0)
 		return USE_THE_DEFAULT;
 
 	jot_error(N_("Color \"%s\" not understood"), colorname);
@@ -952,21 +1252,21 @@ void pick_up_name(const char *kind, char *ptr, char **storage)
 /* Handle the four syntax-only commands. */
 bool parse_syntax_commands(char *keyword, char *ptr)
 {
-	if (strcasecmp(keyword, "color") == 0)
+	if (strcmp(keyword, "color") == 0)
 		parse_colors(ptr, NANO_REG_EXTENDED);
-	else if (strcasecmp(keyword, "icolor") == 0)
+	else if (strcmp(keyword, "icolor") == 0)
 		parse_colors(ptr, NANO_REG_EXTENDED | REG_ICASE);
-	else if (strcasecmp(keyword, "comment") == 0) {
+	else if (strcmp(keyword, "comment") == 0) {
 #ifdef ENABLE_COMMENT
 		pick_up_name("comment", ptr, &live_syntax->comment);
 #endif
-	} else if (strcasecmp(keyword, "tabgives") == 0) {
+	} else if (strcmp(keyword, "tabgives") == 0) {
 #ifdef ENABLE_COLOR
 		pick_up_name("tabgives", ptr, &live_syntax->tab);
 #endif
-	} else if (strcasecmp(keyword, "linter") == 0)
+	} else if (strcmp(keyword, "linter") == 0)
 		pick_up_name("linter", ptr, &live_syntax->linter);
-	else if (strcasecmp(keyword, "formatter") == 0)
+	else if (strcmp(keyword, "formatter") == 0)
 		pick_up_name("formatter", ptr, &live_syntax->formatter);
 	else
 		return FALSE;
@@ -979,14 +1279,12 @@ bool parse_syntax_commands(char *keyword, char *ptr)
  * function that we consider 'vital' (such as "Exit"). */
 static void check_vitals_mapped(void)
 {
-	funcstruct *f;
-	int v;
-#define VITALS 3
-	void (*vitals[VITALS])(void) = { do_exit, do_exit, do_cancel };
-	int inmenus[VITALS] = { MMAIN, MHELP, MYESNO };
+#define VITALS  4
+	void (*vitals[VITALS])(void) = { do_exit, do_exit, do_exit, do_cancel };
+	int inmenus[VITALS] = { MMAIN, MBROWSER, MHELP, MYESNO };
 
-	for  (v = 0; v < VITALS; v++) {
-		for (f = allfuncs; f != NULL; f = f->next) {
+	for (int v = 0; v < VITALS; v++) {
+		for (funcstruct *f = allfuncs; f != NULL; f = f->next) {
 			if (f->func == vitals[v] && f->menus & inmenus[v]) {
 				const keystruct *s = first_sc_for(inmenus[v], f->func);
 				if (!s) {
@@ -1045,7 +1343,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 
 #ifdef ENABLE_COLOR
 		/* Handle extending first... */
-		if (!just_syntax && strcasecmp(keyword, "extendsyntax") == 0) {
+		if (!just_syntax && strcmp(keyword, "extendsyntax") == 0) {
 			augmentstruct *newitem, *extra;
 			char *syntaxname = ptr;
 			syntaxtype *sint;
@@ -1095,37 +1393,37 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		}
 
 		/* Try to parse the keyword. */
-		if (strcasecmp(keyword, "syntax") == 0) {
+		if (strcmp(keyword, "syntax") == 0) {
 			if (intros_only) {
 				check_for_nonempty_syntax();
 				begin_new_syntax(ptr);
 			} else
 				break;
-		} else if (strcasecmp(keyword, "header") == 0) {
+		} else if (strcmp(keyword, "header") == 0) {
 			if (intros_only)
 				grab_and_store("header", ptr, &live_syntax->headers);
-		} else if (strcasecmp(keyword, "magic") == 0) {
+		} else if (strcmp(keyword, "magic") == 0) {
 #ifdef HAVE_LIBMAGIC
 			if (intros_only)
 				grab_and_store("magic", ptr, &live_syntax->magics);
 #endif
-		} else if (just_syntax && (strcasecmp(keyword, "set") == 0 ||
-								strcasecmp(keyword, "unset") == 0 ||
-								strcasecmp(keyword, "bind") == 0 ||
-								strcasecmp(keyword, "unbind") == 0 ||
-								strcasecmp(keyword, "include") == 0 ||
-								strcasecmp(keyword, "extendsyntax") == 0)) {
+		} else if (just_syntax && (strcmp(keyword, "set") == 0 ||
+								strcmp(keyword, "unset") == 0 ||
+								strcmp(keyword, "bind") == 0 ||
+								strcmp(keyword, "unbind") == 0 ||
+								strcmp(keyword, "include") == 0 ||
+								strcmp(keyword, "extendsyntax") == 0)) {
 			if (intros_only)
 				jot_error(N_("Command \"%s\" not allowed in included file"),
 									keyword);
 			else
 				break;
-		} else if (intros_only && (strcasecmp(keyword, "color") == 0 ||
-								strcasecmp(keyword, "icolor") == 0 ||
-								strcasecmp(keyword, "comment") == 0 ||
-								strcasecmp(keyword, "tabgives") == 0 ||
-								strcasecmp(keyword, "linter") == 0 ||
-								strcasecmp(keyword, "formatter") == 0)) {
+		} else if (intros_only && (strcmp(keyword, "color") == 0 ||
+								strcmp(keyword, "icolor") == 0 ||
+								strcmp(keyword, "comment") == 0 ||
+								strcmp(keyword, "tabgives") == 0 ||
+								strcmp(keyword, "linter") == 0 ||
+								strcmp(keyword, "formatter") == 0)) {
 			if (!opensyntax)
 				jot_error(N_("A '%s' command requires a preceding "
 									"'syntax' command"), keyword);
@@ -1134,17 +1432,17 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			continue;
 		} else if (parse_syntax_commands(keyword, ptr))
 			;
-		else if (strcasecmp(keyword, "include") == 0)
+		else if (strcmp(keyword, "include") == 0)
 			parse_includes(ptr);
 		else
 #endif /* ENABLE_COLOR */
-		if (strcasecmp(keyword, "set") == 0)
+		if (strcmp(keyword, "set") == 0)
 			set = 1;
-		else if (strcasecmp(keyword, "unset") == 0)
+		else if (strcmp(keyword, "unset") == 0)
 			set = -1;
-		else if (strcasecmp(keyword, "bind") == 0)
+		else if (strcmp(keyword, "bind") == 0)
 			parse_binding(ptr, TRUE);
-		else if (strcasecmp(keyword, "unbind") == 0)
+		else if (strcmp(keyword, "unbind") == 0)
 			parse_binding(ptr, FALSE);
 		else if (intros_only)
 			jot_error(N_("Command \"%s\" not understood"), keyword);
@@ -1168,7 +1466,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 
 		/* Find the just parsed option name among the existing names. */
 		for (i = 0; rcopts[i].name != NULL; i++) {
-			if (strcasecmp(option, rcopts[i].name) == 0)
+			if (strcmp(option, rcopts[i].name) == 0)
 				break;
 		}
 
@@ -1212,31 +1510,31 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		argument = copy_of(argument);
 
 #ifdef ENABLE_COLOR
-		if (strcasecmp(option, "titlecolor") == 0)
+		if (strcmp(option, "titlecolor") == 0)
 			color_combo[TITLE_BAR] = parse_interface_color(argument);
-		else if (strcasecmp(option, "numbercolor") == 0)
+		else if (strcmp(option, "numbercolor") == 0)
 			color_combo[LINE_NUMBER] = parse_interface_color(argument);
-		else if (strcasecmp(option, "stripecolor") == 0)
+		else if (strcmp(option, "stripecolor") == 0)
 			color_combo[GUIDE_STRIPE] = parse_interface_color(argument);
-		else if (strcasecmp(option, "selectedcolor") == 0)
+		else if (strcmp(option, "selectedcolor") == 0)
 			color_combo[SELECTED_TEXT] = parse_interface_color(argument);
-		else if (strcasecmp(option, "statuscolor") == 0)
+		else if (strcmp(option, "statuscolor") == 0)
 			color_combo[STATUS_BAR] = parse_interface_color(argument);
-		else if (strcasecmp(option, "errorcolor") == 0)
+		else if (strcmp(option, "errorcolor") == 0)
 			color_combo[ERROR_MESSAGE] = parse_interface_color(argument);
-		else if (strcasecmp(option, "keycolor") == 0)
+		else if (strcmp(option, "keycolor") == 0)
 			color_combo[KEY_COMBO] = parse_interface_color(argument);
-		else if (strcasecmp(option, "functioncolor") == 0)
+		else if (strcmp(option, "functioncolor") == 0)
 			color_combo[FUNCTION_TAG] = parse_interface_color(argument);
 		else
 #endif
 #ifdef ENABLE_OPERATINGDIR
-		if (strcasecmp(option, "operatingdir") == 0)
+		if (strcmp(option, "operatingdir") == 0)
 			operating_dir = argument;
 		else
 #endif
 #ifdef ENABLED_WRAPORJUSTIFY
-		if (strcasecmp(option, "fill") == 0) {
+		if (strcmp(option, "fill") == 0) {
 			if (!parse_num(argument, &fill)) {
 				jot_error(N_("Requested fill size \"%s\" is invalid"), argument);
 				fill = -COLUMNS_FROM_EOL;
@@ -1245,13 +1543,13 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		} else
 #endif
 #ifndef NANO_TINY
-		if (strcasecmp(option, "guidestripe") == 0) {
+		if (strcmp(option, "guidestripe") == 0) {
 			if (!parse_num(argument, &stripe_column) || stripe_column <= 0) {
 				jot_error(N_("Guide column \"%s\" is invalid"), argument);
 				stripe_column = 0;
 			}
 			free(argument);
-		} else if (strcasecmp(option, "matchbrackets") == 0) {
+		} else if (strcmp(option, "matchbrackets") == 0) {
 			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
 				free(argument);
@@ -1260,7 +1558,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 				free(argument);
 			} else
 				matchbrackets = argument;
-		} else if (strcasecmp(option, "whitespace") == 0) {
+		} else if (strcmp(option, "whitespace") == 0) {
 			if (mbstrlen(argument) != 2 || breadth(argument) != 2) {
 				jot_error(N_("Two single-column characters required"));
 				free(argument);
@@ -1272,36 +1570,36 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		} else
 #endif
 #ifdef ENABLE_JUSTIFY
-		if (strcasecmp(option, "punct") == 0) {
+		if (strcmp(option, "punct") == 0) {
 			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
 				free(argument);
 			} else
 				punct = argument;
-		} else if (strcasecmp(option, "brackets") == 0) {
+		} else if (strcmp(option, "brackets") == 0) {
 			if (has_blank_char(argument)) {
 				jot_error(N_("Non-blank characters required"));
 				free(argument);
 			} else
 				brackets = argument;
-		} else if (strcasecmp(option, "quotestr") == 0)
+		} else if (strcmp(option, "quotestr") == 0)
 			quotestr = argument;
 		else
 #endif
 #ifndef NANO_TINY
-		if (strcasecmp(option, "backupdir") == 0)
+		if (strcmp(option, "backupdir") == 0)
 			backup_dir = argument;
 		else
-		if (strcasecmp(option, "wordchars") == 0)
+		if (strcmp(option, "wordchars") == 0)
 			word_chars = argument;
 		else
 #endif
 #ifdef ENABLE_SPELLER
-		if (strcasecmp(option, "speller") == 0)
+		if (strcmp(option, "speller") == 0)
 			alt_speller = argument;
 		else
 #endif
-		if (strcasecmp(option, "tabsize") == 0) {
+		if (strcmp(option, "tabsize") == 0) {
 			if (!parse_num(argument, &tabsize) || tabsize <= 0) {
 				jot_error(N_("Requested tab size \"%s\" is invalid"), argument);
 				tabsize = -1;
