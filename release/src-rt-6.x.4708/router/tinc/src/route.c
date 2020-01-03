@@ -1,7 +1,7 @@
 /*
     route.c -- routing
     Copyright (C) 2000-2005 Ivo Timmermans,
-                  2000-2013 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -59,31 +59,28 @@ static const size_t opt_size = sizeof(struct nd_opt_hdr);
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-volatile int dummy;
 static timeout_t age_subnets_timeout;
 
 /* RFC 1071 */
 
-static uint16_t inet_checksum(void *data, int len, uint16_t prevsum) {
-	uint16_t *p = data;
+static uint16_t inet_checksum(void *vdata, int len, uint16_t prevsum) {
+	uint8_t *data = vdata;
+	uint16_t word;
 	uint32_t checksum = prevsum ^ 0xFFFF;
 
 	while(len >= 2) {
-		checksum += *p++;
+		memcpy(&word, data, sizeof(word));
+		checksum += word;
+		data += 2;
 		len -= 2;
 	}
 
 	if(len) {
-		checksum += *(uint8_t *)p;
+		checksum += *data;
 	}
 
 	while(checksum >> 16) {
 		checksum = (checksum & 0xFFFF) + (checksum >> 16);
-	}
-
-	// Work around a compiler optimization bug.
-	if(checksum) {
-		dummy = 1;
 	}
 
 	return ~checksum;
@@ -165,7 +162,7 @@ static void route_ipv4_unreachable(node_t *source, vpn_packet_t *packet, length_
 				addr.sin_family = AF_INET;
 				socklen_t addrlen = sizeof(addr);
 
-				if(!getsockname(sockfd, (struct sockaddr *) &addr, &addrlen) && addrlen <= sizeof(addr)) {
+				if(!getsockname(sockfd, (struct sockaddr *) &addr, &addrlen) && (size_t)addrlen <= sizeof(addr)) {
 					ip_dst = addr.sin_addr;
 				}
 			}
@@ -270,7 +267,7 @@ static void route_ipv6_unreachable(node_t *source, vpn_packet_t *packet, length_
 				addr.sin6_family = AF_INET6;
 				socklen_t addrlen = sizeof(addr);
 
-				if(!getsockname(sockfd, (struct sockaddr *) &addr, &addrlen) && addrlen <= sizeof(addr)) {
+				if(!getsockname(sockfd, (struct sockaddr *) &addr, &addrlen) && (size_t)addrlen <= sizeof(addr)) {
 					pseudo.ip6_src = addr.sin6_addr;
 				}
 			}
@@ -598,7 +595,7 @@ static void fragment_ipv4_packet(node_t *dest, vpn_packet_t *packet, length_t et
 	logger(DEBUG_TRAFFIC, LOG_INFO, "Fragmenting packet of %d bytes to %s (%s)", packet->len, dest->name, dest->hostname);
 
 	offset = DATA(packet) + ether_size + ip_size;
-	maxlen = (dest->mtu - ether_size - ip_size) & ~0x7;
+	maxlen = (MAX(dest->mtu, 590) - ether_size - ip_size) & ~0x7;
 	ip_off = ntohs(ip.ip_off);
 	origf = ip_off & ~IP_OFFMASK;
 	ip_off &= IP_OFFMASK;

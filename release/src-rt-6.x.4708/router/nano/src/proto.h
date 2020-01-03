@@ -328,21 +328,15 @@ int keycode_from_string(const char *keystring);
 void assign_keyinfo(keystruct *s, const char *keystring, const int keycode);
 void shortcut_init(void);
 const char *flagtostr(int flag);
-#ifdef ENABLE_NANORC
-keystruct *strtosc(const char *input);
-int name_to_menu(const char *name);
-char *menu_to_name(int menu);
-#endif
 
 /* All functions in help.c. */
 #ifdef ENABLE_HELP
 void wrap_help_text_into_buffer(void);
-void do_help(void);
 void help_init(void);
 functionptrtype parse_help_input(int *kbinput);
 size_t help_line_len(const char *ptr);
 #endif
-void do_help_void(void);
+void do_help(void);
 
 /* Most functions in history.c. */
 #ifdef ENABLE_HISTORIES
@@ -537,7 +531,7 @@ bool do_wrap(void);
 #if defined(ENABLE_HELP) || defined(ENABLED_WRAPORJUSTIFY)
 ssize_t break_line(const char *line, ssize_t goal, bool snap_at_nl);
 #endif
-#if !defined(NANO_TINY) || defined(ENABLE_JUSTIFY)
+#if !defined(NANO_TINY) || defined(ENABLED_WRAPORJUSTIFY)
 size_t indent_length(const char *line);
 #endif
 #ifdef ENABLE_JUSTIFY

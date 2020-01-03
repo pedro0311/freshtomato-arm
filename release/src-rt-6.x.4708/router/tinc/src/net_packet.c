@@ -1,7 +1,7 @@
 /*
     net_packet.c -- Handles in- and outgoing VPN packets
     Copyright (C) 1998-2005 Ivo Timmermans,
-                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
                   2010      Timothy Redaelli <timothy@redaelli.eu>
                   2010      Brandon Black <blblack@gmail.com>
 
@@ -152,11 +152,12 @@ static void udp_probe_h(node_t *n, vpn_packet_t *packet, length_t len) {
 		len = ntohs(len16);
 	}
 
-	if(n->udp_ping_sent.tv_sec != 0) {  // a probe in flight
+	if(n->status.ping_sent) {  // a probe in flight
 		gettimeofday(&now, NULL);
 		struct timeval rtt;
 		timersub(&now, &n->udp_ping_sent, &rtt);
 		n->udp_ping_rtt = rtt.tv_sec * 1000000 + rtt.tv_usec;
+		n->status.ping_sent = false;
 		logger(DEBUG_TRAFFIC, LOG_INFO, "Got type %d UDP probe reply %d from %s (%s) rtt=%d.%03d", DATA(packet)[0], len, n->name, n->hostname, n->udp_ping_rtt / 1000, n->udp_ping_rtt % 1000);
 	} else {
 		logger(DEBUG_TRAFFIC, LOG_INFO, "Got type %d UDP probe reply %d from %s (%s)", DATA(packet)[0], len, n->name, n->hostname);
@@ -175,8 +176,7 @@ static void udp_probe_h(node_t *n, vpn_packet_t *packet, length_t len) {
 		reset_address_cache(n->address_cache, &n->address);
 	}
 
-	// Reset the UDP ping timer. (no probe in flight)
-	n->udp_ping_sent.tv_sec = 0;
+	// Reset the UDP ping timer.
 
 	if(udp_discovery) {
 		timeout_del(&n->udp_ping_timeout);
@@ -314,13 +314,6 @@ static bool try_mac(node_t *n, const vpn_packet_t *inpkt) {
 }
 
 static bool receive_udppacket(node_t *n, vpn_packet_t *inpkt) {
-	vpn_packet_t pkt1, pkt2;
-	vpn_packet_t *pkt[] = { &pkt1, &pkt2, &pkt1, &pkt2 };
-	int nextpkt = 0;
-	size_t outlen;
-	pkt1.offset = DEFAULT_PACKET_OFFSET;
-	pkt2.offset = DEFAULT_PACKET_OFFSET;
-
 	if(n->status.sptps) {
 		if(!n->sptps.state) {
 			if(!n->status.waitingforkey) {
@@ -356,6 +349,12 @@ static bool receive_udppacket(node_t *n, vpn_packet_t *inpkt) {
 #ifdef DISABLE_LEGACY
 	return false;
 #else
+	vpn_packet_t pkt1, pkt2;
+	vpn_packet_t *pkt[] = { &pkt1, &pkt2, &pkt1, &pkt2 };
+	int nextpkt = 0;
+	size_t outlen;
+	pkt1.offset = DEFAULT_PACKET_OFFSET;
+	pkt2.offset = DEFAULT_PACKET_OFFSET;
 
 	if(!n->status.validkey_in) {
 		logger(DEBUG_TRAFFIC, LOG_DEBUG, "Got packet from %s (%s) but he hasn't got our key yet", n->name, n->hostname);
@@ -699,18 +698,6 @@ static void choose_local_address(const node_t *n, const sockaddr_t **sa, int *so
 }
 
 static void send_udppacket(node_t *n, vpn_packet_t *origpkt) {
-	vpn_packet_t pkt1, pkt2;
-	vpn_packet_t *pkt[] = { &pkt1, &pkt2, &pkt1, &pkt2 };
-	vpn_packet_t *inpkt = origpkt;
-	int nextpkt = 0;
-	vpn_packet_t *outpkt;
-	int origlen = origpkt->len;
-	size_t outlen;
-	int origpriority = origpkt->priority;
-
-	pkt1.offset = DEFAULT_PACKET_OFFSET;
-	pkt2.offset = DEFAULT_PACKET_OFFSET;
-
 	if(!n->status.reachable) {
 		logger(DEBUG_TRAFFIC, LOG_INFO, "Trying to send UDP packet to unreachable node %s (%s)", n->name, n->hostname);
 		return;
@@ -724,6 +711,18 @@ static void send_udppacket(node_t *n, vpn_packet_t *origpkt) {
 #ifdef DISABLE_LEGACY
 	return;
 #else
+	vpn_packet_t pkt1, pkt2;
+	vpn_packet_t *pkt[] = { &pkt1, &pkt2, &pkt1, &pkt2 };
+	vpn_packet_t *inpkt = origpkt;
+	int nextpkt = 0;
+	vpn_packet_t *outpkt;
+	int origlen = origpkt->len;
+	size_t outlen;
+	int origpriority = origpkt->priority;
+
+	pkt1.offset = DEFAULT_PACKET_OFFSET;
+	pkt2.offset = DEFAULT_PACKET_OFFSET;
+
 	/* Make sure we have a valid key */
 
 	if(!n->status.validkey) {
@@ -1133,6 +1132,7 @@ static void try_udp(node_t *n) {
 	if(ping_tx_elapsed.tv_sec >= interval) {
 		gettimeofday(&now, NULL);
 		n->udp_ping_sent = now; // a probe in flight
+		n->status.ping_sent = true;
 		send_udp_probe_packet(n, MIN_PROBE_SIZE);
 
 		if(localdiscovery && !n->status.udp_confirmed && n->prevedge) {
@@ -1229,9 +1229,8 @@ static length_t choose_initial_maxmtu(node_t *n) {
 	return mtu;
 
 #else
-
+	(void)n;
 	return MTU;
-
 #endif
 }
 
@@ -1776,13 +1775,13 @@ void handle_incoming_vpn_data(void *data, int flags) {
 
 #else
 	vpn_packet_t pkt;
-	sockaddr_t addr = {};
+	sockaddr_t addr = {0};
 	socklen_t addrlen = sizeof(addr);
 
 	pkt.offset = 0;
 	int len = recvfrom(ls->udp.fd, (void *)DATA(&pkt), MAXSIZE, 0, &addr.sa, &addrlen);
 
-	if(len <= 0 || len > MAXSIZE) {
+	if(len <= 0 || (size_t)len > MAXSIZE) {
 		if(!sockwouldblock(sockerrno)) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Receiving packet failed: %s", sockstrerror(sockerrno));
 		}

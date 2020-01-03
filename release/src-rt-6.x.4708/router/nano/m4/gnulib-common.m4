@@ -1,4 +1,4 @@
-# gnulib-common.m4 serial 45
+# gnulib-common.m4 serial 46
 dnl Copyright (C) 2007-2019 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
@@ -19,7 +19,14 @@ AC_DEFUN([gl_COMMON_BODY], [
 #ifndef _Noreturn
 # if (defined __cplusplus \
       && ((201103 <= __cplusplus && !(__GNUC__ == 4 && __GNUC_MINOR__ == 7)) \
-          || (defined _MSC_VER && 1900 <= _MSC_VER)))
+          || (defined _MSC_VER && 1900 <= _MSC_VER)) \
+      && 0)
+    /* [[noreturn]] is not practically usable, because with it the syntax
+         extern _Noreturn void func (...);
+       would not be valid; such a declaration would only be valid with 'extern'
+       and '_Noreturn' swapped, or without the 'extern' keyword.  However, some
+       AIX system header files and several gnulib header files use precisely
+       this syntax with 'extern'.  */
 #  define _Noreturn [[noreturn]]
 # elif ((!defined __cplusplus || defined __clang__) \
         && (201112 <= (defined __STDC_VERSION__ ? __STDC_VERSION__ : 0)  \
@@ -408,12 +415,13 @@ AC_DEFUN([AC_C_RESTRICT],
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
 #undef restrict
-/* Work around a bug in Sun C++: it does not support _Restrict or
-   __restrict__, even though the corresponding Sun C compiler ends up with
-   "#define restrict _Restrict" or "#define restrict __restrict__" in the
-   previous line.  Perhaps some future version of Sun C++ will work with
-   restrict; if so, hopefully it defines __RESTRICT like Sun C does.  */
-#if defined __SUNPRO_CC && !defined __RESTRICT
+/* Work around a bug in older versions of Sun C++, which did not
+   #define __restrict__ or support _Restrict or __restrict__
+   even though the corresponding Sun C compiler ended up with
+   "#define restrict _Restrict" or "#define restrict __restrict__"
+   in the previous line.  This workaround can be removed once
+   we assume Oracle Developer Studio 12.5 (2016) or later.  */
+#if defined __SUNPRO_CC && !defined __RESTRICT && !defined __restrict__
 # define _Restrict
 # define __restrict__
 #endif])

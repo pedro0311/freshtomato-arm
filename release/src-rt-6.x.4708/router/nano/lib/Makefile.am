@@ -571,13 +571,6 @@ EXTRA_DIST += hard-locale.h
 
 ## end   gnulib module hard-locale
 
-## begin gnulib module havelib
-
-
-EXTRA_DIST += $(top_srcdir)/./config.rpath
-
-## end   gnulib module havelib
-
 ## begin gnulib module intprops
 
 
@@ -723,6 +716,7 @@ locale.h: locale.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''NEXT_LOCALE_H''@|$(NEXT_LOCALE_H)|g' \
 	      -e 's/@''GNULIB_LOCALECONV''@/$(GNULIB_LOCALECONV)/g' \
 	      -e 's/@''GNULIB_SETLOCALE''@/$(GNULIB_SETLOCALE)/g' \
+	      -e 's/@''GNULIB_SETLOCALE_NULL''@/$(GNULIB_SETLOCALE_NULL)/g' \
 	      -e 's/@''GNULIB_DUPLOCALE''@/$(GNULIB_DUPLOCALE)/g' \
 	      -e 's/@''GNULIB_LOCALENAME''@/$(GNULIB_LOCALENAME)/g' \
 	      -e 's|@''HAVE_NEWLOCALE''@|$(HAVE_NEWLOCALE)|g' \
@@ -1247,6 +1241,16 @@ EXTRA_DIST += malloc/scratch_buffer.h scratch_buffer.h
 
 ## end   gnulib module scratch_buffer
 
+## begin gnulib module setlocale-null
+
+libgnu_a_SOURCES += setlocale_null.c
+
+EXTRA_DIST += setlocale-lock.c windows-initguard.h
+
+EXTRA_libgnu_a_SOURCES += setlocale-lock.c
+
+## end   gnulib module setlocale-null
+
 ## begin gnulib module sigaction
 
 libgnu_a_SOURCES += sig-handler.c
@@ -1501,8 +1505,6 @@ stdint.h: stdint.in.h $(top_builddir)/config.status
 	      -e 's/@''HAVE_SYS_INTTYPES_H''@/$(HAVE_SYS_INTTYPES_H)/g' \
 	      -e 's/@''HAVE_SYS_BITYPES_H''@/$(HAVE_SYS_BITYPES_H)/g' \
 	      -e 's/@''HAVE_WCHAR_H''@/$(HAVE_WCHAR_H)/g' \
-	      -e 's/@''HAVE_LONG_LONG_INT''@/$(HAVE_LONG_LONG_INT)/g' \
-	      -e 's/@''HAVE_UNSIGNED_LONG_LONG_INT''@/$(HAVE_UNSIGNED_LONG_LONG_INT)/g' \
 	      -e 's/@''APPLE_UNIVERSAL_BUILD''@/$(APPLE_UNIVERSAL_BUILD)/g' \
 	      -e 's/@''BITSIZEOF_PTRDIFF_T''@/$(BITSIZEOF_PTRDIFF_T)/g' \
 	      -e 's/@''PTRDIFF_T_SUFFIX''@/$(PTRDIFF_T_SUFFIX)/g' \
@@ -2107,8 +2109,6 @@ EXTRA_DIST += sys_wait.in.h
 
 libgnu_a_SOURCES += glthread/threadlib.c
 
-EXTRA_DIST += $(top_srcdir)/./config.rpath
-
 ## end   gnulib module threadlib
 
 ## begin gnulib module time
@@ -2573,6 +2573,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''REPLACE_WCWIDTH''@|$(REPLACE_WCWIDTH)|g' \
 	      -e 's|@''REPLACE_WCSWIDTH''@|$(REPLACE_WCSWIDTH)|g' \
 	      -e 's|@''REPLACE_WCSFTIME''@|$(REPLACE_WCSFTIME)|g' \
+	      -e 's|@''REPLACE_WCSTOK''@|$(REPLACE_WCSTOK)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)'; \

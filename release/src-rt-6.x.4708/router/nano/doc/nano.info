@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 4.6.
+This manual documents the GNU ‘nano’ editor, version 4.7.
 
 * Menu:
 
@@ -67,14 +67,15 @@ The usual way to invoke ‘nano’ is:
 section), and to edit several files in a row.  Additionally, the cursor
 can be put on a specific line of a file by adding the line number with a
 plus sign before the filename, and even in a specific column by adding
-it with a comma.  The cursor can also be put on the first or last
-occurrence of a specific string by specifying that string after ‘+/’ or
-‘+?’ before the filename.  The string can be made case sensitive and/or
-caused to be interpreted as a regular expression by inserting a ‘c’
-and/or ‘r’ after the plus sign.  These search modes can be explicitly
-disabled by using the uppercase variant of those letters: ‘C’ and/or
-‘R’.  When the string contains spaces, it needs to be enclosed in
-quotes.  A more complete command synopsis thus is:
+it with a comma.  (Negative numbers count from the end of the file or
+line.)  The cursor can also be put on the first or last occurrence of a
+specific string by specifying that string after ‘+/’ or ‘+?’ before the
+filename.  The string can be made case sensitive and/or caused to be
+interpreted as a regular expression by inserting a ‘c’ and/or ‘r’ after
+the plus sign.  These search modes can be explicitly disabled by using
+the uppercase variant of those letters: ‘C’ and/or ‘R’.  When the string
+contains spaces, it needs to be enclosed in quotes.  A more complete
+command synopsis thus is:
 
      nano [OPTION]... [[+LINE[,COLUMN]|+[crCR](/|?)STRING] FILE]...
 
@@ -645,7 +646,8 @@ from ‘~/.nanorc’ or from ‘$XDG_CONFIG_HOME/nano/nanorc’ or from
 can be used to configure ‘nano’ on startup without using command-line
 options.  Additionally, there are some commands to define syntax
 highlighting and to rebind keys — *note Syntax Highlighting:: and *note
-Rebinding Keys::.  ‘nano’ will read one command per line.
+Rebinding Keys::.  ‘nano’ will read one command per line.  All commands
+and keywords should be written in lowercase.
 
    Options in nanorc files take precedence over ‘nano’’s defaults, and
 command-line options override nanorc settings.  Also, options that do
@@ -1759,29 +1761,29 @@ Tag Table:
 Node: Top199
 Node: Introduction554
 Node: Invoking1698
-Node: Command-line Options3254
-Ref: --speller11624
-Ref: Expert Mode13095
-Node: Editor Basics14132
-Node: Entering Text14416
-Node: Commands15405
-Node: The Cutbuffer16202
-Node: The Mark16923
-Node: Screen Layout17922
-Node: Search and Replace19101
-Node: Using the Mouse19836
-Node: Limitations20453
-Node: Built-in Help20778
-Node: Feature Toggles21202
-Node: Nanorc Files23002
-Node: Settings24472
-Ref: set functioncolor27557
-Ref: Whitespace34769
-Node: Syntax Highlighting35499
-Node: Rebinding Keys41744
-Node: The File Browser54411
-Node: Pico Compatibility55304
-Node: Building and Configure Options59845
+Node: Command-line Options3314
+Ref: --speller11684
+Ref: Expert Mode13155
+Node: Editor Basics14192
+Node: Entering Text14476
+Node: Commands15465
+Node: The Cutbuffer16262
+Node: The Mark16983
+Node: Screen Layout17982
+Node: Search and Replace19161
+Node: Using the Mouse19896
+Node: Limitations20513
+Node: Built-in Help20838
+Node: Feature Toggles21262
+Node: Nanorc Files23062
+Node: Settings24591
+Ref: set functioncolor27676
+Ref: Whitespace34888
+Node: Syntax Highlighting35618
+Node: Rebinding Keys41863
+Node: The File Browser54530
+Node: Pico Compatibility55423
+Node: Building and Configure Options59964
 
 End Tag Table
 

@@ -1,5 +1,0 @@
-@set VERSION 1.1pre17
-@set PACKAGE tinc
-@set sysconfdir /etc
-@set localstatedir /var
-@set runstatedir /var/run
