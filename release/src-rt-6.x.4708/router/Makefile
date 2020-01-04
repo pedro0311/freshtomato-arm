@@ -2722,11 +2722,12 @@ getdns-clean:
 	@rm -rf getdns/stamp-h1 getdns/src/.libs getdns/src/tools/.libs
 	$(call unpatch_files,getdns)
 
-tor/stamp-h1: openssl zlib libevent
+tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 	cd $(TOP)/tor && autoreconf -fsi && \
-	CFLAGS="-O2 -Wall $(EXTRACFLAGS)" \
+	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include" \
+	CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 	$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
-		--with-openssl-dir=$(TOP)/openssl --with-zlib-dir=$(TOP)/zlib \
+		--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 		--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 		--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis --disable-dependency-tracking
 	touch tor/stamp-h1
