@@ -879,6 +879,7 @@ openssl-install:
 	install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
 
 openssl-1.1/stamp-h1:
+	$(call patch_files,openssl-1.1)
 	cd $(TOP)/openssl-1.1 && \
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
@@ -898,6 +899,7 @@ openssl-1.1: openssl-1.1/stamp-h1
 openssl-1.1-clean:
 	[ ! -f openssl-1.1/stamp-h1 ] || $(MAKE) -C openssl-1.1 clean
 	@rm -f openssl-1.1/stamp-h1
+	$(call unpatch_files,openssl-1.1)
 
 openssl-1.1-install:
 	if [ -f openssl-1.1/stamp-h1 ] ; then \
