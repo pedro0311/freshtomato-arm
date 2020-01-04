@@ -101,7 +101,7 @@ ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
 endif
 ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
-obj-$(TCONFIG_OPENSSL11) += openssl-1.1.x
+obj-$(TCONFIG_OPENSSL11) += openssl-1.1
 obj-y += openssl
 endif
 ifneq ($(TCONFIG_TOR)$(TCONFIG_NFS)$(TCONFIG_BBT),)
@@ -871,8 +871,8 @@ openssl-install:
 	chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl
 	install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
 
-openssl-1.1.x/stamp-h1:
-	cd $(TOP)/openssl-1.1.x && \
+openssl-1.1/stamp-h1:
+	cd $(TOP)/openssl-1.1 && \
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
@@ -881,26 +881,26 @@ openssl-1.1.x/stamp-h1:
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0 \
 	no-aria no-sm2 no-sm3 no-sm4
-	-@$(MAKE) -C openssl-1.1.x depend clean
+	-@$(MAKE) -C openssl-1.1 depend clean
 	@touch $@
 
-openssl-1.1.x: openssl-1.1.x/stamp-h1
+openssl-1.1: openssl-1.1/stamp-h1
 	$(SEP)
-	$(MAKE) -C openssl-1.1.x $(PARALLEL_BUILD)
+	$(MAKE) -C openssl-1.1 $(PARALLEL_BUILD)
 
-openssl-1.1.x-clean:
-	[ ! -f openssl-1.1.x/stamp-h1 ] || $(MAKE) -C openssl-1.1.x clean
-	@rm -f openssl-1.1.x/stamp-h1
+openssl-1.1-clean:
+	[ ! -f openssl-1.1/stamp-h1 ] || $(MAKE) -C openssl-1.1 clean
+	@rm -f openssl-1.1/stamp-h1
 
-openssl-1.1.x-install:
-	if [ -f openssl-1.1.x/stamp-h1 ] ; then \
-		install -D openssl-1.1.x/libcrypto.so.1.1 $(INSTALLDIR)/openssl-1.1.x/usr/lib/libcrypto.so.1.1 ; \
-		install -D openssl-1.1.x/libssl.so.1.1 $(INSTALLDIR)/openssl-1.1.x/usr/lib/libssl.so.1.1 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/lib/libssl.so.1.1 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/lib/libcrypto.so.1.1 ; \
-		install -D openssl-1.1.x/apps/openssl $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
-		chmod 0500 $(INSTALLDIR)/openssl-1.1.x/usr/sbin/openssl11 ; \
+openssl-1.1-install:
+	if [ -f openssl-1.1/stamp-h1 ] ; then \
+		install -D openssl-1.1/libcrypto.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1 ; \
+		install -D openssl-1.1/libssl.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1 ; \
+		install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
+		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
+		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 	fi
 	@true
 
