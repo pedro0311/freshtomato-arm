@@ -1,28 +1,16 @@
-include ../common.mak
-
 # Makefile for systems with GNU tools
-
-#CC 	=	gcc
-#INSTALL	=	install
+CC 	=	gcc
+INSTALL	=	install
 IFLAGS  = -idirafter dummyinc
 #CFLAGS = -g
-CFLAGS	= -O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -W -Wshadow #-pedantic -Werror -Wconversion
-LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
+CFLAGS	=	-O2 -fPIE -fstack-protector --param=ssp-buffer-size=4 \
+	-Wall -W -Wshadow -Werror -Wformat-security \
+	-D_FORTIFY_SOURCE=2 \
+	#-pedantic -Wconversion
 
-#LIBS	=	`./vsf_findlibs.sh`
-#LINK	=	-Wl,-s
-LIBS	=	-lcrypt -lnsl
-LINK	=	
-
-CFLAGS	+=	-I$(TOP)/shared
-
-ifeq ($(TCONFIG_FTP_SSL),y)
-OPENSSLDIR = $(TOP)/openssl
-OPENSSLINC = $(OPENSSLDIR)/include
-LIBS	+=	-L$(OPENSSLDIR)/ -lssl -lcrypto
-CFLAGS	+=	-I$(OPENSSLINC)
-endif
-
+LIBS	=	`./vsf_findlibs.sh`
+LINK	=	-Wl,-s
+LDFLAGS	=	-fPIE -pie -Wl,-z,relro -Wl,-z,now
 
 OBJS	=	main.o utility.o prelogin.o ftpcmdio.o postlogin.o privsock.o \
 		tunables.o ftpdataio.o secbuf.o ls.o \
