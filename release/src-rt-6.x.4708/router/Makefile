@@ -2679,11 +2679,12 @@ dnscrypt-clean:
 	@rm -rf dnscrypt/stamp-h1 dnscrypt/src/dnscrypt-proxy/.deps dnscrypt/Makefile
 
 libyaml/stamp-h1:
-	cd $(TOP)/libyaml && CC=$(CC) AR=$(AR) LD=$(LD) STRIP=$(STRIP) \
-	autoreconf -sfi && \
+	cd libyaml && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	$(CONFIGURE) --prefix=/usr
-	touch libyaml/stamp-h1
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	$(CONFIGURE) --prefix=/usr --sysconfdir=/etc \
+		--enable-static --disable-shared
+	@touch $@
 
 libyaml: libyaml/stamp-h1
 	@$(SEP)
@@ -2696,16 +2697,19 @@ libyaml-clean:
 	-$(MAKE) -C libyaml clean
 	@rm -rf libyaml/stamp-h1 libyaml/src/.deps libyaml/src/tests/.deps
 
-getdns/stamp-h1: openssl libyaml
+getdns/stamp-h1: $(OPENSSLDIR) libyaml
 	$(call patch_files,getdns)
-	cd $(TOP)/getdns && CC=$(CC) AR=$(AR) LD=$(LD) STRIP=$(STRIP) \
-	autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	CPPFLAGS="-I$(TOP)/libyaml/include -I$(TOP)/openssl" \
-	LDFLAGS="-static -L$(TOP)/libyaml/src/.libs -lyaml -L$(TOP)/openssl -lcrypto -lssl" \
-	$(CONFIGURE) --enable-static --disable-shared --prefix=/usr --sysconfdir=/etc --localstatedir=/var --without-libidn --without-libidn2 \
-	--without-libunbound --enable-stub-only --with-ssl=$(TOP)/openssl --with-libyaml=$(TOP)/libyaml --with-stubby
-	touch getdns/stamp-h1
+	cd getdns && autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libyaml/include -ffunction-sections -fdata-sections" \
+	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libyaml/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	LIBS="-lcrypto -lssl -lyaml" \
+	$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--enable-static --disable-shared --disable-gost \
+		--without-libidn --without-libidn2 \
+		--without-getdns_query --without-getdns_server_mon \
+		--without-libunbound --enable-stub-only --with-stubby \
+		--with-ssl=$(TOP)/$(OPENSSLDIR) --with-libyaml=$(TOP)/libyaml
+	@touch $@
 
 getdns: getdns/stamp-h1
 	@$(SEP)
