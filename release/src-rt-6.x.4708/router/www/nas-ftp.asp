@@ -347,6 +347,14 @@ createFieldTable('', [
 
 <!-- / / / -->
 
+<div class="section-title">Notes</div>
+<ul>
+<li>FTP Server is SSL/TLS ready. See <a href="https://www.digitalocean.com/community/tutorials/how-to-configure-vsftpd-to-use-ssl-tls-on-an-ubuntu-vps" class="new_window"><b>here</b></a> for details (section 'Add the SSL Details to the vsftpd').</li>
+<li>Don't use the same username as when logging into the web panel - it will be rejected until you select<br />'Allow Admin Login' (with all the consequences).</li>
+</ul>
+
+<!-- / / / -->
+
 </td></tr>
 <tr><td id="footer" colspan="2">
 	<span id="footer-msg"></span>
