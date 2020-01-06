@@ -1973,13 +1973,19 @@ libpng-clean:
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
 
+ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
+LDFPHPADD:=-Wl,-rpath,$(TOP)/$(OPENSSLDIR)
+else
+LDFPHPADD:=
+endif
+
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
-		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib" \
+		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib $(LDFPHPADD)" \
 	CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
 	LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs \
 		-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl" \
@@ -2300,23 +2306,23 @@ nano-install:
 	install -D nano/src/nano $(INSTALLDIR)/nano/usr/sbin/nano
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
-libcurl/stamp-h1: zlib openssl
+libcurl/stamp-h1: zlib $(OPENSSLDIR)
 	$(call patch_files,libcurl)
-	cd $(TOP)/libcurl && ./buildconf && \
+	cd libcurl && ./buildconf && \
 		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR) -lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
 			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-			--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl" \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/ssl" --with-zlib="$(TOP)/zlib/staged/usr" \
 			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
 			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
 			--with-linux-headers=$(LINUXDIR)/include \
 			--with-ca-bundle=/rom/cacert.pem
-		touch libcurl/stamp-h1
+		@touch $@
 
 libcurl: libcurl/stamp-h1
 	@$(SEP)
@@ -2383,14 +2389,13 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
-transmission/stamp-h1: openssl libcurl libevent zlib
-	cd transmission && CC=$(CC) STRIP=$(STRIP) \
-		autoreconf && \
+transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
+	cd transmission && autoreconf && \
 		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
 			--param large-function-growth=800 --param max-inline-insns-single=3000 \
 			-ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
-			-L$(TOP)/zlib -L$(TOP)/openssl -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
+			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
 		HAVE_CXX=yes \
 		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
 			--enable-lightweight --enable-largefile --enable-utp --without-gtk \
@@ -2400,8 +2405,8 @@ transmission/stamp-h1: openssl libcurl libevent zlib
 			LIBEVENT_CFLAGS="-I$(TOP)/libevent/include" \
 			LIBEVENT_LDFLAGS="-L$(TOP)/libevent/.libs" \
 			LIBEVENT_LIBS="-levent" \
-			OPENSSL_CFLAGS="-I$(TOP)/openssl/include" \
-			OPENSSL_LDFLAGS="-L$(TOP)/openssl" \
+			OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
+			OPENSSL_LDFLAGS="-L$(TOP)/$(OPENSSLDIR)" \
 			OPENSSL_LIBS="-lcrypto -lssl" \
 			ZLIB_CFLAGS="-I$(TOP)/zlib" \
 			ZLIB_LDFLAGS="-L$(TOP)/zlib" \
