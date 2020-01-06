@@ -1173,7 +1173,7 @@ miniupnpd-install:
 # !!TB
 shared: busybox
 
-vsftpd: $(if $(TCONFIG_FTP_SSL),openssl,)
+vsftpd: $(if $(TCONFIG_FTP_SSL),$(OPENSSLDIR),)
 	@$(SEP)
 	$(call patch_files,vsftpd)
 	$(MAKE) -C vsftpd $(PARALLEL_BUILD)
