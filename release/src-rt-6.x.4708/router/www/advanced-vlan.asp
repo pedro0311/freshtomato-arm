@@ -305,7 +305,7 @@ REMOVE-END */
 //		'lan3_ifnames=' + fom['lan3_ifnames'].value);
 REMOVE-END */
 
-	fom['manual_boot_nv'].value = 1 /* Prevent vlan reset to default */
+	fom['manual_boot_nv'].value = 1; /* Prevent vlan reset to default at init */
 
 	var e = E('footer-msg');
 
