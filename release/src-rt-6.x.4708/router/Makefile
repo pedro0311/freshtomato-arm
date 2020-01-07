@@ -2539,25 +2539,24 @@ nfs-utils-clean:
 	-@$(MAKE) -C nfs-utils clean
 	@rm -f nfs-utils/stamp-h1
 
-tinc/stamp-h1: openssl zlib lzo
+tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 	$(call patch_files,tinc)
 	@cd tinc && autoreconf -fsi && \
-	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include -lpthread" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
 	$(CONFIGURE) \
-	--prefix=/usr \
-	--sysconfdir=/etc \
-	--localstatedir=/var \
-	--with-zlib-include="$(TOP)/zlib" \
-	--with-zlib-lib="$(TOP)/zlib" \
-	--with-lzo-include="$(TOP)/lzo/include" \
-	--with-lzo-lib="$(TOP)/lzo/src/.libs" \
-	--with-openssl-include="$(TOP)/openssl/include" \
-	--with-openssl-lib="$(TOP)/openssl" \
-	--disable-curses \
-	--disable-readline
-	@touch tinc/stamp-h1
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--with-zlib-include="$(TOP)/zlib" \
+		--with-zlib-lib="$(TOP)/zlib" \
+		--with-lzo-include="$(TOP)/lzo/include" \
+		--with-lzo-lib="$(TOP)/lzo/src/.libs" \
+		--with-openssl-include="$(TOP)/$(OPENSSLDIR)/include" \
+		--with-openssl-lib="$(TOP)/$(OPENSSLDIR)" \
+		--disable-curses \
+		--disable-readline
+	@touch $@
 
 tinc: tinc/stamp-h1
 	@$(SEP)
