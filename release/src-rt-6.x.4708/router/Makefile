@@ -2150,17 +2150,17 @@ libncurses-install:
 		ln -sf libform.so.6 libform.so && \
 		ln -sf libmenu.so.6 libmenu.so
 
-mysql/stamp-h1: openssl zlib libncurses
+mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
 	$(call patch_files,mysql)
 	cd mysql && \
 	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
-		-I$(TOP)/openssl/include -I$(TOP)/libncurses/include" \
+		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
 	CPPFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -I$(TOP)/zlib \
-		-I$(TOP)/openssl/include -I$(TOP)/libncurses/include" \
-	LDFLAGS="-L$(TOP)/openssl -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC -EL" \
+		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
+	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC -EL" \
 	LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
 	$(CONFIGURE) --host=$(HOST) --build=x86_64-linux-gnu  --prefix=/usr \
 		--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
@@ -2175,7 +2175,7 @@ mysql/stamp-h1: openssl zlib libncurses
 		--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 		ac_cv_c_stack_direction=-1
 	cd mysql && tar xvfz .host.tgz
-	touch mysql/stamp-h1
+	@touch $@
 
 mysql: mysql/stamp-h1
 	@$(SEP)
