@@ -102,11 +102,11 @@ obj-y += zlib
 endif
 
 ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
-obj-y += openssl
 ifeq ($(TCONFIG_OPENSSL11),y)
 obj-y += openssl-1.1
 OPENSSLDIR = openssl-1.1
 else
+obj-y += openssl
 OPENSSLDIR = openssl
 endif
 endif
@@ -911,6 +911,7 @@ openssl-1.1-install:
 		install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
+		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl-1.1/usr/sbin/gencert.sh ; \
 	fi
 	@true
 
