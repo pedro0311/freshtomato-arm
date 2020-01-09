@@ -61,7 +61,11 @@ static void prepareCAGeneration(int serverNum)
 	if (nvram_match(buffer, "")) {
 		syslog(LOG_WARNING, "No CA KEY was saved for server %d, regenerating", serverNum);
 		sprintf(buffer2, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
+#ifdef TCONFIG_OPENSSL11
+		sprintf(buffer, "openssl11 req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
+#else
 		sprintf(buffer, "openssl req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
+#endif
 		syslog(LOG_WARNING, buffer);
 		system(buffer);
 	} else {
@@ -96,15 +100,27 @@ static void generateKey(const char *prefix)
 
 	put_to_file("/tmp/openssl/serial", "00");
 	sprintf(subj_buf, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
+#ifdef TCONFIG_OPENSSL11
+	sprintf(buffer, "openssl11 req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+#else
 	sprintf(buffer, "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+#endif
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
+#ifdef TCONFIG_OPENSSL11
+	sprintf(buffer, "openssl11 ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+#else
 	sprintf(buffer, "openssl ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+#endif
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
+#ifdef TCONFIG_OPENSSL11
+	sprintf(buffer, "openssl11 x509 -in /tmp/openssl/%s.crt -inform PEM -out /tmp/openssl/%s.crt -outform PEM >>/tmp/openssl/openssl.log 2>&1", prefix, prefix);
+#else
 	sprintf(buffer, "openssl x509 -in /tmp/openssl/%s.crt -inform PEM -out /tmp/openssl/%s.crt -outform PEM >>/tmp/openssl/openssl.log 2>&1", prefix, prefix);
+#endif
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 }
@@ -174,9 +190,17 @@ void wo_ovpn_genkey(char *url)
 	if (!strcmp(modeStr, "static")) {
 		web_pipecmd("openvpn --genkey --secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
 	} else if (!strcmp(modeStr, "dh")) {
+#ifdef TCONFIG_OPENSSL11
+		web_pipecmd("openssl11 dhparam -out /tmp/dh1024.pem 1024 >/dev/null 2>&1 && cat /tmp/dh1024.pem && rm /tmp/dh1024.pem", WOF_NONE);
+#else
 		web_pipecmd("openssl dhparam -out /tmp/dh1024.pem 1024 >/dev/null 2>&1 && cat /tmp/dh1024.pem && rm /tmp/dh1024.pem", WOF_NONE);
+#endif
 	} else if (!strcmp(modeStr, "stop")) {
+#ifdef TCONFIG_OPENSSL11
+		killall("openssl11", SIGTERM);
+#else
 		killall("openssl", SIGTERM);
+#endif
 	} else {
 		strlcpy(buffer, webcgi_safeget("_server", ""), sizeof(buffer));
 		serverStr = js_string(buffer);	/* quicky scrub */
