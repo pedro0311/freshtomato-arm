@@ -40,7 +40,7 @@ function verifyFields(focused, quiet) {
 	if (!v_length('_dnsmasq_custom', quiet, 0, 2048)) return 0;
 	if (!v_range('_dhcpd_lmax', quiet, 1, 0xFFFF)) return 0;
 	if (!v_range('_f_ipv6_lease_time', quiet, 1, 720)) return 0;
-	if (!v_length('_dhcpc_custom', quiet, 0, 80)) return 0;
+	if (!v_length('_dhcpc_custom', quiet, 0, 256)) return 0;
 	return 1;
 }
 
@@ -195,7 +195,7 @@ createFieldTable('', [
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 80, size: 34, value: nvram.dhcpc_custom },
+	{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'textarea', value: nvram.dhcpc_custom },
 	{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == '1' }
 ]);
 </script>

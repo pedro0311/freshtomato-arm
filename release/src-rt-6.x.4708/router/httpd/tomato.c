@@ -899,7 +899,7 @@ static const nvset_t nvset_list[] = {
 	{ "dns_addget",			V_01				},
 	{ "dns_intcpt",			V_01				},
 	{ "dhcpc_minpkt",		V_01				},
-	{ "dhcpc_custom",		V_LENGTH(0, 80)			},
+	{ "dhcpc_custom",		V_TEXT(0, 256)			},
 	{ "dns_norebind",		V_01				},
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
