@@ -32,7 +32,11 @@ endif
 LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 LIBS += -L$(TOP)/mssl -lmssl
 
-ifeq ($(FULL_OPENSSL),y)
+ifeq ($(TCONFIG_OPENSSL11),y)
+CFLAGS += -I$(TOP)/openssl-1.1/include
+LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto -lpthread
+else
+CFLAGS += -I$(TOP)/openssl/include
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
 endif
 

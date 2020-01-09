@@ -913,7 +913,7 @@ openssl-1.1-install:
 	fi
 	@true
 
-mssl: openssl
+mssl: $(OPENSSLDIR)
 
 ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
 mdu: shared libcurl
