@@ -1,7 +1,7 @@
 #
 # Router Wireless Interface Configuration Utility Makefile
 #
-# Copyright (C) 2012, Broadcom Corporation
+# Copyright (C) 2013, Broadcom Corporation
 # All Rights Reserved.
 # 
 # This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -11,14 +11,13 @@
 #
 # $Id: Makefile 401201 2013-05-09 03:06:42Z $
 #
+include ../common.mak
 
-include $(SRCBASE)/router/.config
-
-CFLAGS	+= -I. -I$(TOP)/shared -I$(SRCBASE)/include -Wall
+CFLAGS	+= -I. -I$(TOP)/shared -I$(SRCBASE)/include -I$(SRCBASE)/common/include -Wall
 CFLAGS	+= $(WLAN_ComponentIncPath)
 #CFLAGS	+= -g -DDEBUG
 CFLAGS	+= -s
-ifeq ($(CONFIG_RTR_OPTIMIZE_SIZE),y)
+ifeq ($(CONFIG_TR_OPTIMIZE_SIZE),y)
 CFLAGS  += -Os
 else
 CFLAGS  += -O2
@@ -27,14 +26,11 @@ LDFLAGS	+= -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 LDFLAGS += -lgcc_s
 
 
-OBJS := wlconf.o
+vpath %.c $(SRCBASE)/shared $(WLAN_ComponentSrcDirs)
 
-ifeq ($(wildcard $(SRCBASE)/wlconf$(BCMEX)/*.c),)
-all:
-	-cp -f prebuilt/wlconf wlconf
-else
+OBJS := wlconf.o bcmwifi_channels.o
+
 all: wlconf
-endif
 
 clean:
 	rm -f *.o wlconf
@@ -45,4 +41,4 @@ install: all
 	$(STRIP) $(INSTALLDIR)/usr/sbin/wlconf
 
 wlconf: $(OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

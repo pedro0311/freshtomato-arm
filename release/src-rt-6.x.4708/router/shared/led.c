@@ -553,6 +553,7 @@ void led_setup(void) {
 		case MODEL_RTAC68U:
         	case MODEL_RTAC1900P:
 			set_gpio(3, T_HIGH);		/* disable power led */
+			set_gpio(4, T_HIGH);		/* disable asus logo led */
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6400:

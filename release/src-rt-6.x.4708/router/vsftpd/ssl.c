@@ -28,7 +28,6 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/bio.h>
-#include <openssl/ec.h>
 #include <errno.h>
 #include <limits.h>
 
