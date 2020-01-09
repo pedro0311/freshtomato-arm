@@ -1,0 +1,1205 @@
+--- dnsmasq/Makefile
++++ dnsmasq/Makefile
+@@ -51,6 +51,14 @@ top!=pwd
+ # GNU make way.
+ top?=$(CURDIR)
+ 
++ifeq ($(CRYPTO),openssl)
++crypto_pkg = libcrypto
++crypto_opt = -DHAVE_OPENSSL
++else
++crypto_pkg = nettle hogweed
++crypto_opt = -DHAVE_NETTLE
++endif
++
+ dbus_cflags =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --cflags dbus-1` 
+ dbus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --libs dbus-1` 
+ ubus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_UBUS "" --copy -lubox -lubus`
+@@ -62,8 +70,9 @@ ct_cflags =     `echo $(COPTS) | $(top)/
+ ct_libs =       `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_CONNTRACK $(PKG_CONFIG) --libs libnetfilter_conntrack`
+ lua_cflags =    `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --cflags lua5.2` 
+ lua_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --libs lua5.2` 
+-nettle_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --cflags nettle hogweed`
+-nettle_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --libs nettle hogweed`
++crypto_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --cflags $(crypto_pkg)` \
++                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC "" --copy $(crypto_opt)`
++crypto_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --libs $(crypto_pkg)`
+ gmp_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC NO_GMP --copy -lgmp`
+ sunos_libs =    `if uname | grep SunOS >/dev/null 2>&1; then echo -lsocket -lnsl -lposix4; fi`
+ version =     -DVERSION='\"`$(top)/bld/get-version $(top)`\"'
+@@ -77,7 +86,7 @@ objs = cache.o rfc1035.o util.o option.o
+        helper.o tftp.o log.o conntrack.o dhcp6.o rfc3315.o \
+        dhcp-common.o outpacket.o radv.o slaac.o auth.o ipset.o \
+        domain.o dnssec.o blockdata.o tables.o loop.o inotify.o \
+-       poll.o rrfilter.o edns0.o arp.o crypto.o dump.o ubus.o metrics.o
++       poll.o rrfilter.o edns0.o arp.o crypto.o crypto-openssl.o dump.o ubus.o metrics.o
+ 
+ hdrs = dnsmasq.h config.h dhcp-protocol.h dhcp6-protocol.h \
+        dns-protocol.h radv-protocol.h ip6addr.h metrics.h
+@@ -85,8 +94,8 @@ hdrs = dnsmasq.h config.h dhcp-protocol.
+ all : $(BUILDDIR)
+ 	@cd $(BUILDDIR) && $(MAKE) \
+  top="$(top)" \
+- build_cflags="$(version) $(dbus_cflags) $(idn2_cflags) $(idn_cflags) $(ct_cflags) $(lua_cflags) $(nettle_cflags)" \
+- build_libs="$(dbus_libs) $(idn2_libs) $(idn_libs) $(ct_libs) $(lua_libs) $(sunos_libs) $(nettle_libs) $(gmp_libs) $(ubus_libs)" \
++ build_cflags="$(version) $(dbus_cflags) $(idn2_cflags) $(idn_cflags) $(ct_cflags) $(lua_cflags) $(crypto_cflags)" \
++ build_libs="$(dbus_libs) $(idn2_libs) $(idn_libs) $(ct_libs) $(lua_libs) $(sunos_libs) $(crypto_libs) $(gmp_libs)" \
+  -f $(top)/Makefile dnsmasq 
+ 
+ mostly_clean :
+--- dnsmasq/src/config.h
++++ dnsmasq/src/config.h
+@@ -149,6 +149,8 @@ NO_INOTIFY
+    with something like "make COPTS=-DNO_SCRIPT" will do the trick.
+ NO_GMP
+    Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
++NO_GOST
++   Disable DNSSEC GOST algo support.
+ 
+ LEASEFILE
+ CONFFILE
+@@ -189,6 +191,8 @@ RESOLVFILE
+ /* #define HAVE_LIBIDN2 */
+ /* #define HAVE_CONNTRACK */
+ /* #define HAVE_DNSSEC */
++/* #define HAVE_NETTLE */
++/* #define HAVE_OPENSSL */
+ 
+ 
+ /* Default locations for important system files. */
+--- dnsmasq/src/crypto.c
++++ dnsmasq/src/crypto.c
+@@ -16,16 +16,19 @@
+ 
+ #include "dnsmasq.h"
+ 
+-#ifdef HAVE_DNSSEC
++#if defined(HAVE_DNSSEC) && defined(HAVE_NETTLE)
+ 
+ #include <nettle/rsa.h>
+-#include <nettle/dsa.h>
+ #include <nettle/ecdsa.h>
+ #include <nettle/ecc-curve.h>
+ #include <nettle/eddsa.h>
+ #include <nettle/nettle-meta.h>
+ #include <nettle/bignum.h>
+ 
++#ifdef HAVE_DSA
++#include <nettle/dsa.h>
++#endif
++
+ /* Implement a "hash-function" to the nettle API, which simply returns
+    the input data, concatenated into a single, statically maintained, buffer.
+ 
+@@ -99,7 +102,7 @@ static struct nettle_hash null_hash = {
+ };
+ 
+ /* Find pointer to correct hash function in nettle library */
+-const struct nettle_hash *hash_find(char *name)
++const void *hash_find(char *name)
+ {
+   if (!name)
+     return NULL;
+@@ -129,8 +132,9 @@ const struct nettle_hash *hash_find(char
+ }
+ 
+ /* expand ctx and digest memory allocations if necessary and init hash function */
+-int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
++int hash_init(const void *hashv, void **ctxp, unsigned char **digestp)
+ {
++  const struct nettle_hash *hash = (const struct nettle_hash *)hashv;
+   static void *ctx = NULL;
+   static unsigned char *digest = NULL;
+   static unsigned int ctx_sz = 0;
+@@ -166,6 +170,21 @@ int hash_init(const struct nettle_hash *
+   return 1;
+ }
+   
++void hash_update(const void *hash, void *ctx, size_t length, const unsigned char *src)
++{
++  return ((struct nettle_hash *)hash)->update(ctx, length, src);
++}
++
++void hash_digest(const void *hash, void *ctx, size_t length, unsigned char *dst)
++{
++  return ((struct nettle_hash *)hash)->digest(ctx, length, dst);
++}
++
++size_t hash_length(const void *hash)
++{
++  return ((struct nettle_hash *)hash)->digest_size;
++}
++
+ static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+ 			      unsigned char *digest, size_t digest_len, int algo)
+ {
+@@ -220,6 +239,7 @@ static int dnsmasq_rsa_verify(struct blo
+   return 0;
+ }  
+ 
++#ifdef HAVE_DSA
+ static int dnsmasq_dsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+ 			      unsigned char *digest, size_t digest_len, int algo)
+ {
+@@ -263,6 +283,7 @@ static int dnsmasq_dsa_verify(struct blo
+   
+   return nettle_dsa_verify(params, y, digest_len, digest, sig_struct);
+ } 
++#endif
+  
+ static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len, 
+ 				unsigned char *sig, size_t sig_len,
+@@ -383,8 +404,10 @@ static int (*verify_func(int algo))(stru
+     case 1: case 5: case 7: case 8: case 10:
+       return dnsmasq_rsa_verify;
+       
++#ifdef HAVE_DSA
+     case 3: case 6: 
+       return dnsmasq_dsa_verify;
++#endif
+     
+     case 13: case 14:
+       return dnsmasq_ecdsa_verify;
+@@ -423,7 +446,9 @@ char *ds_digest_name(int digest)
+     {
+     case 1: return "sha1";
+     case 2: return "sha256";
++#ifndef NO_GOST
+     case 3: return "gosthash94";
++#endif
+     case 4: return "sha384";
+     default: return NULL;
+     }
+@@ -436,13 +461,17 @@ char *algo_digest_name(int algo)
+     {
+     case 1: return NULL;          /* RSA/MD5 - Must Not Implement.  RFC 6944 para 2.3. */
+     case 2: return NULL;          /* Diffie-Hellman */
+-    case 3: return "sha1";        /* DSA/SHA1 */ 
++#ifdef HAVE_DSA
++    case 3: return "sha1";        /* DSA/SHA1 - Must Not Implement. RFC 8624 para 1.3. */
++    case 6: return "sha1";        /* DSA-NSEC3-SHA1 - Must Not Implement. RFC 8624 para 1.3. */
++#endif
+     case 5: return "sha1";        /* RSA/SHA1 */
+-    case 6: return "sha1";        /* DSA-NSEC3-SHA1 */
+     case 7: return "sha1";        /* RSASHA1-NSEC3-SHA1 */
+     case 8: return "sha256";      /* RSA/SHA-256 */
+     case 10: return "sha512";     /* RSA/SHA-512 */
++#ifndef NO_GOST
+     case 12: return NULL;         /* ECC-GOST */
++#endif
+     case 13: return "sha256";     /* ECDSAP256SHA256 */
+     case 14: return "sha384";     /* ECDSAP384SHA384 */ 	
+     case 15: return "null_hash";  /* ED25519 */
+@@ -461,4 +490,9 @@ char *nsec3_digest_name(int digest)
+     }
+ }
+ 
++void crypto_init(void)
++{
++  /* dummy */
++}
++
+ #endif
+--- dnsmasq/src/crypto-openssl.c
++++ dnsmasq/src/crypto-openssl.c
+@@ -0,0 +1,762 @@
++/* crypto-openssl.c is Copyright (c) 2019 Vladislav Grishenko <themiron@mail.ru>
++                   and Copyright (c) 2012-2020 Simon Kelley
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; version 2 dated June, 1991, or
++   (at your option) version 3 dated 29 June, 2007.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
++#include "dnsmasq.h"
++
++#if defined(HAVE_DNSSEC) && defined(HAVE_OPENSSL)
++
++#include <openssl/opensslv.h>
++#include <openssl/crypto.h>
++#include <openssl/evp.h>
++#include <openssl/rsa.h>
++#include <openssl/ecdsa.h>
++#include <openssl/x509.h>
++#include <openssl/err.h>
++
++#if !defined(OPENSSL_NO_DSA) && defined(HAVE_DSA)
++#include <openssl/dsa.h>
++#else
++#undef HAVE_DSA
++#endif
++
++#if !defined(OPENSSL_NO_ENGINE) && !defined(NO_GOST)
++#include <openssl/engine.h>
++#define HAVE_GOST
++static ENGINE *gost_engine = NULL;
++static char *gost_hash = NULL;
++#endif
++
++#if OPENSSL_VERSION_NUMBER >= 0x10101000L
++#define HAVE_EDDSA
++#endif
++
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#define EVP_MD_CTX_new EVP_MD_CTX_create
++#define EVP_MD_CTX_reset EVP_MD_CTX_cleanup
++
++static void BN_set(BIGNUM **bp, BIGNUM *b)
++{
++  if (b != NULL) {
++    BN_free(*bp);
++    *bp = b;
++  }
++}
++
++static int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
++{
++  BN_set(&r->n, n);
++  BN_set(&r->e, e);
++  BN_set(&r->d, d);
++  return 1;
++}
++
++#ifdef HAVE_DSA
++static int DSA_set0_pqg(DSA *d, BIGNUM *p, BIGNUM *q, BIGNUM *g)
++{
++  BN_set(&d->p, p);
++  BN_set(&d->q, q);
++  BN_set(&d->g, g);
++  return 1;
++}
++
++static int DSA_set0_key(DSA *d, BIGNUM *pub_key, BIGNUM *priv_key)
++{
++  BN_set(&d->pub_key, pub_key);
++  BN_set(&d->priv_key, priv_key);
++  return 1;
++}
++
++static int DSA_SIG_set0(DSA_SIG *sig, BIGNUM *r, BIGNUM *s)
++{
++  BN_set(&sig->r, r);
++  BN_set(&sig->s, s);
++  return 1;
++}
++#endif
++
++static int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s)
++{
++  BN_set(&sig->r, r);
++  BN_set(&sig->s, s);
++  return 1;
++}
++#endif
++
++#ifdef HAVE_EDDSA
++/* Implement a "hash-function" to the nettle API, which simply returns
++   the input data, concatenated into a single, statically maintained, buffer.
++
++   Used for the EdDSA sigs, which operate on the whole message, rather
++   than a digest. */
++
++struct null_hash_digest
++{
++  uint8_t *buff;
++  size_t len;
++};
++
++struct null_hash_ctx
++{
++  size_t len;
++};
++
++static size_t null_hash_buff_sz = 0;
++static uint8_t *null_hash_buff = NULL;
++#define BUFF_INCR 128
++
++static int null_hash_init(void **ctxp, unsigned char **digestp)
++{
++  static struct null_hash_ctx ctx;
++  static struct null_hash_digest digest;
++
++  ctx.len = 0;
++
++  *ctxp = &ctx;
++  *digestp = (void *)&digest;
++
++  return 1;
++}
++
++static void null_hash_update(void *ctxv, size_t length, const unsigned char *src)
++{
++  struct null_hash_ctx *ctx = ctxv;
++  size_t new_len = ctx->len + length;
++
++  if (new_len > null_hash_buff_sz)
++    {
++      uint8_t *new;
++
++      if (!(new = whine_malloc(new_len + BUFF_INCR)))
++	return;
++
++      if (null_hash_buff)
++	{
++	  if (ctx->len != 0)
++	    memcpy(new, null_hash_buff, ctx->len);
++	  free(null_hash_buff);
++	}
++
++      null_hash_buff_sz = new_len + BUFF_INCR;
++      null_hash_buff = new;
++    }
++
++  memcpy(null_hash_buff + ctx->len, src, length);
++  ctx->len += length;
++}
++
++static void null_hash_digest(void *ctx, size_t length, unsigned char *dst)
++{
++  (void)length;
++
++  ((struct null_hash_digest *)dst)->buff = null_hash_buff;
++  ((struct null_hash_digest *)dst)->len = ((struct null_hash_ctx *)ctx)->len;
++}
++
++static size_t null_hash_length()
++{
++  return sizeof(struct null_hash_digest);
++}
++
++static struct {
++  char *name;
++} null_hash = {
++  "null_hash"
++};
++#endif
++
++/* Find pointer to correct hash function in openssl library */
++const void *hash_find(char *name)
++{
++  if (!name)
++    return NULL;
++
++#ifdef HAVE_EDDSA
++  /* We provide a "null" hash which returns the input data as digest. */
++  if (strcmp(null_hash.name, name) == 0)
++    return &null_hash;
++#endif
++
++  return EVP_get_digestbyname(name);
++}
++
++int hash_init(const void *hash, void **ctxp, unsigned char **digestp)
++{
++  const EVP_MD *md = (const EVP_MD *)hash;
++  static EVP_MD_CTX *mdctx = NULL;
++  static unsigned char *digest = NULL;
++  static int digest_sz = 0;
++
++  void *new;
++
++#ifdef HAVE_EDDSA
++  if (hash == &null_hash)
++      return null_hash_init(ctxp, digestp);
++#endif
++
++  if (mdctx)
++    EVP_MD_CTX_reset(mdctx);
++  else if (!(mdctx = EVP_MD_CTX_new()))
++    return 0;
++
++  if (EVP_DigestInit_ex(mdctx, md, NULL) == 0)
++    return 0;
++
++  if (digest_sz < EVP_MD_size(md))
++    {
++      if (!(new = whine_malloc(EVP_MD_size(md))))
++	return 0;
++      if (digest)
++	free(digest);
++      digest = new;
++      digest_sz = EVP_MD_size(md);
++    }
++
++  *ctxp = mdctx;
++  *digestp = digest;
++
++  return 1;
++}
++
++void hash_update(const void *hash, void *ctx, size_t length, const unsigned char *src)
++{
++  EVP_MD_CTX *mdctx = (EVP_MD_CTX *)ctx;
++
++#ifdef HAVE_EDDSA
++  if (hash == &null_hash)
++    return null_hash_update(ctx, length, src);
++#else
++  (void)hash;
++#endif
++
++  EVP_DigestUpdate(mdctx, src, length);
++}
++
++void hash_digest(const void *hash, void *ctx, size_t length, unsigned char *dst)
++{
++  EVP_MD_CTX *mdctx = (EVP_MD_CTX *)ctx;
++
++  (void)length;
++
++#ifdef HAVE_EDDSA
++  if (hash == &null_hash)
++    return null_hash_digest(ctx, length, dst);
++#else
++  (void)hash;
++#endif
++
++  EVP_DigestFinal_ex(mdctx, dst, NULL);
++
++  /* hash_name calls update/digest multiple times w/o init */
++  EVP_DigestInit_ex(mdctx, EVP_MD_CTX_md(mdctx), NULL);
++}
++
++size_t hash_length(const void *hash)
++{
++  const EVP_MD *md = (const EVP_MD *)hash;
++
++#ifdef HAVE_EDDSA
++  if (hash == &null_hash)
++    return null_hash_length();
++#endif
++
++  return EVP_MD_size(md);
++}
++
++static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
++			      unsigned char *digest, size_t digest_len, int algo)
++{
++  static RSA *rsa = NULL;
++  BIGNUM *E, *N;
++
++  unsigned char *p;
++  size_t exp_len;
++  int r;
++
++  switch (algo)
++    {
++    case 1: r = NID_md5; break;
++    case 5: r = NID_sha1; break;
++    case 7: r = NID_sha1; break;
++    case 8: r = NID_sha256; break;
++    case 10: r = NID_sha512; break;
++    default:
++      return 0;
++    }
++
++  if (!rsa && !(rsa = RSA_new()))
++    return 0;
++
++  if ((key_len < 3) || !(p = blockdata_retrieve(key_data, key_len, NULL)))
++    return 0;
++
++  key_len--;
++  if ((exp_len = *p++) == 0)
++    {
++      GETSHORT(exp_len, p);
++      key_len -= 2;
++    }
++
++  if (exp_len >= key_len)
++    return 0;
++
++  E = BN_bin2bn(p, exp_len, NULL);
++  N = BN_bin2bn(p + exp_len, key_len - exp_len, NULL);
++  if (!E || !N)
++    goto err;
++  if (!RSA_set0_key(rsa, N, E, NULL))
++    goto err;
++
++  r = RSA_verify(r, digest, digest_len, sig, sig_len, rsa);
++
++  RSA_free(rsa), rsa = NULL;
++
++  return (r > 0);
++
++err:
++  BN_free(E);
++  BN_free(N);
++
++  return 0;
++}
++
++#ifdef HAVE_DSA
++static int dnsmasq_dsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
++			      unsigned char *digest, size_t digest_len, int algo)
++{
++  static DSA *dsa = NULL;
++  static DSA_SIG *dsasig = NULL;
++  BIGNUM *Q, *P, *G, *Y, *R, *S;
++
++  unsigned char *p;
++  unsigned int t, l;
++  int r;
++
++  (void)algo;
++
++  if (!dsa && !(dsa = DSA_new()))
++    return 0;
++
++  if (!dsasig && !(dsasig = DSA_SIG_new()))
++    return 0;
++
++  if ((sig_len < 41) || !(p = blockdata_retrieve(key_data, key_len, NULL)))
++    return 0;
++
++  t = *p++;
++  l = 64 + (t*8);
++
++  if (key_len < (213 + (t * 24)))
++    return 0;
++
++  Q = BN_bin2bn(p, 20, NULL); p += 20;
++  P = BN_bin2bn(p, l, NULL); p += l;
++  G = BN_bin2bn(p, l, NULL); p += l;
++  Y = BN_bin2bn(p, l, NULL);
++  R = BN_bin2bn(sig + 1, 20, NULL);
++  S = BN_bin2bn(sig + 21, 20, NULL);
++  if (!Q || !P || !G || !Y || !R || !Y || !DSA_set0_pqg(dsa, P, Q, G))
++    goto err;
++  if (!DSA_set0_key(dsa, Y, NULL))
++    goto err_y;
++  if (!DSA_SIG_set0(dsasig, R, S))
++    goto err_rs;
++
++  r = DSA_do_verify(digest, digest_len, dsasig, dsa);
++
++  DSA_free(dsa), dsa = NULL;
++
++  return (r > 0);
++
++err:
++  BN_free(Q);
++  BN_free(P);
++  BN_free(G);
++err_y:
++  BN_free(Y);
++err_rs:
++  BN_free(R);
++  BN_free(S);
++
++  return 0;
++}
++#endif
++
++static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len,
++				unsigned char *sig, size_t sig_len,
++				unsigned char *digest, size_t digest_len, int algo)
++{
++  static EC_KEY *eckey = NULL;
++  static ECDSA_SIG *ecsig = NULL;
++  BIGNUM *R, *S;
++
++  unsigned char keybuf[256 + 2];
++  const unsigned char *p = keybuf;
++  unsigned int t;
++  int r;
++
++  switch (algo)
++    {
++    case 13:
++      if (!eckey && !(eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)))
++        return 0;
++      t = 32;
++      break;
++
++    case 14:
++      if (!eckey && !(eckey = EC_KEY_new_by_curve_name(NID_secp384r1)))
++        return 0;
++      t = 48;
++      break;
++
++    default:
++      return 0;
++    }
++
++  if (!ecsig && !(ecsig = ECDSA_SIG_new()))
++    return 0;
++
++  if (sig_len != 2*t || key_len != 2*t ||
++      !blockdata_retrieve(key_data, key_len, keybuf + 1))
++    return 0;
++
++  keybuf[0] = POINT_CONVERSION_UNCOMPRESSED;
++  if (!o2i_ECPublicKey(&eckey, &p, (int)key_len + 1))
++    return 0;
++
++  R = BN_bin2bn(sig, t, NULL);
++  S = BN_bin2bn(sig + t, t, NULL);
++  if (!R || !S || !ECDSA_SIG_set0(ecsig, R, S))
++    goto err;
++
++  r = ECDSA_do_verify(digest, digest_len, ecsig, eckey);
++
++  EC_KEY_free(eckey), eckey = NULL;
++
++  return (r > 0);
++
++err:
++  BN_free(R);
++  BN_free(S);
++
++  return 0;
++}
++
++#ifdef HAVE_GOST
++static int dnsmasq_gost_init(void)
++{
++  ENGINE *engine;
++
++  if (!EVP_PKEY_asn1_find_str(NULL, SN_id_GostR3410_2001, -1))
++    {
++      if (!(engine = ENGINE_by_id("gost")))
++	{
++	  ENGINE_load_builtin_engines();
++	  ENGINE_load_dynamic();
++	  if (!(engine = ENGINE_by_id("gost")))
++	    return 0;
++	}
++
++      if (ENGINE_set_default(engine, ENGINE_METHOD_ALL) <= 0 ||
++	  !EVP_PKEY_asn1_find_str(&engine, SN_id_GostR3410_2001, -1))
++	{
++	  ENGINE_finish(engine);
++	  ENGINE_free(engine);
++	  return 0;
++	}
++
++      gost_engine = engine;
++    }
++
++  gost_hash = SN_id_GostR3411_94;
++
++  return 1;
++}
++
++static int dnsmasq_gost_verify(struct blockdata *key_data, unsigned int key_len,
++			       unsigned char *sig, size_t sig_len,
++			       unsigned char *digest, size_t digest_len, int algo)
++{
++  static const unsigned char hdr[37] = {
++    0x30, 0x63, 0x30, 0x1c, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x13, 0x30,
++    0x12, 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x23, 0x01, 0x06, 0x07, 0x2a,
++    0x85, 0x03, 0x02, 0x02, 0x1e, 0x01, 0x03, 0x43, 0x00, 0x04, 0x40 };
++  static EVP_PKEY *pkey = NULL;
++  static EVP_PKEY_CTX *pkctx = NULL;
++
++  unsigned char keybuf[sizeof(hdr) + 64];
++  const unsigned char *p = keybuf;
++  int r;
++
++  if (key_len != 64 || sig_len != 64)
++    return 0;
++
++  memcpy(keybuf, hdr, sizeof(hdr));
++  if (!blockdata_retrieve(key_data, key_len, keybuf + sizeof(hdr)) ||
++      !d2i_PUBKEY(&pkey, &p, (int)key_len + sizeof(hdr)))
++    return 0;
++
++  if (!pkctx && !(pkctx = EVP_PKEY_CTX_new(pkey, NULL)))
++    return 0;
++
++  if (EVP_PKEY_verify_init(pkctx) <= 0)
++    return 0;
++
++  r = EVP_PKEY_verify(pkctx, sig, sig_len, digest, digest_len);
++
++  EVP_PKEY_CTX_free(pkctx), pkctx = NULL;
++
++  return (r > 0);
++}
++#endif
++
++#ifdef HAVE_EDDSA
++static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len,
++				unsigned char *sig, size_t sig_len,
++				unsigned char *digest, size_t digest_len, int algo)
++{
++  static const unsigned char ed25519_hdr[] = { 0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00 };
++  static const unsigned char ed448_hdr[] = { 0x30, 0x43, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x71, 0x03, 0x3a, 0x00 };
++  static EVP_MD_CTX *mdctx = NULL;
++  static EVP_PKEY *pkey = NULL;
++
++  unsigned char keybuf[256];
++  const unsigned char *p = keybuf;
++  int r, hdr_len;
++
++#define ED25519_KEY_SIZE 32
++#define ED25519_SIGNATURE_SIZE 64
++#define ED448_KEY_SIZE 57
++#define ED448_SIGNATURE_SIZE 114
++
++  if (digest_len != sizeof(struct null_hash_digest))
++    return 0;
++
++  switch (algo)
++    {
++    case 15:
++      if (key_len != ED25519_KEY_SIZE ||
++	  sig_len != ED25519_SIGNATURE_SIZE)
++	return 0;
++      hdr_len = sizeof(ed25519_hdr);
++      memcpy(keybuf, ed25519_hdr, hdr_len);
++      break;
++
++    case 16:
++      if (key_len != ED448_KEY_SIZE ||
++	  sig_len != ED448_SIGNATURE_SIZE)
++	return 0;
++      hdr_len = sizeof(ed448_hdr);
++      memcpy(keybuf, ed448_hdr, hdr_len);
++      break;
++
++    default:
++      return 0;
++    }
++
++  if (!blockdata_retrieve(key_data, key_len, keybuf + hdr_len) ||
++      !d2i_PUBKEY(&pkey, &p, (int)key_len + hdr_len))
++    return 0;
++
++  if (mdctx)
++    EVP_MD_CTX_reset(mdctx);
++  else if (!(mdctx = EVP_MD_CTX_new()))
++    return 0;
++
++  if (EVP_DigestVerifyInit(mdctx, NULL, NULL, NULL, pkey) <= 0)
++    return 0;
++
++  r = EVP_DigestVerify(mdctx, sig, sig_len,
++		       ((struct null_hash_digest *)digest)->buff,
++		       ((struct null_hash_digest *)digest)->len);
++
++  return (r > 0);
++}
++#endif
++
++static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
++			     unsigned char *digest, size_t digest_len, int algo)
++{
++  /* Enure at runtime that we have support for this digest */
++  if (!hash_find(algo_digest_name(algo)))
++    return NULL;
++
++  /* This switch defines which sig algorithms we support. */
++  switch (algo)
++    {
++    case 1: case 5: case 7: case 8: case 10:
++      return dnsmasq_rsa_verify;
++
++#ifdef HAVE_DSA
++    case 3: case 6:
++      return dnsmasq_dsa_verify;
++#endif
++
++#ifdef HAVE_GOST
++    case 12:
++      return dnsmasq_gost_verify;
++#endif
++
++    case 13: case 14:
++      return dnsmasq_ecdsa_verify;
++
++#ifdef HAVE_EDDSA
++    case 15: case 16:
++      return dnsmasq_eddsa_verify;
++#endif
++    }
++
++  return NULL;
++}
++
++int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
++	   unsigned char *digest, size_t digest_len, int algo)
++{
++
++  int (*func)(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
++	      unsigned char *digest, size_t digest_len, int algo);
++
++  func = verify_func(algo);
++
++  if (!func)
++    return 0;
++
++  return (*func)(key_data, key_len, sig, sig_len, digest, digest_len, algo);
++}
++
++/* Note the ds_digest_name(), algo_digest_name() and nsec3_digest_name()
++   define which algo numbers we support. If algo_digest_name() returns
++   non-NULL for an algorithm number, we assume that algorithm is
++   supported by verify(). */
++
++/* http://www.iana.org/assignments/ds-rr-types/ds-rr-types.xhtml */
++char *ds_digest_name(int digest)
++{
++  switch (digest)
++    {
++    case 1: return SN_sha1;
++    case 2: return SN_sha256;
++#ifdef HAVE_GOST
++    case 3: return gost_hash;
++#endif
++    case 4: return SN_sha384;
++    default: return NULL;
++    }
++}
++
++/* http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml */
++char *algo_digest_name(int algo)
++{
++  switch (algo)
++    {
++    case 1: return NULL;          /* RSA/MD5 - Must Not Implement.  RFC 6944 para 2.3. */
++    case 2: return NULL;          /* Diffie-Hellman */
++#ifdef HAVE_DSA
++    case 3: return SN_sha1;       /* DSA/SHA1 - Must Not Implement. RFC 8624 para 1.3. */
++    case 6: return SN_sha1;       /* DSA-NSEC3-SHA1 - Must Not Implement. RFC 8624 para 1.3. */
++#endif
++    case 5: return SN_sha1;       /* RSA/SHA1 */
++    case 7: return SN_sha1;       /* RSASHA1-NSEC3-SHA1 */
++    case 8: return SN_sha256;     /* RSA/SHA-256 */
++    case 10: return SN_sha512;    /* RSA/SHA-512 */
++#ifdef HAVE_GOST
++    case 12: return gost_hash;    /* ECC-GOST */
++#endif
++    case 13: return SN_sha256;    /* ECDSAP256SHA256 */
++    case 14: return SN_sha384;    /* ECDSAP384SHA384 */
++#ifdef HAVE_EDDSA
++    case 15: return "null_hash";  /* ED25519 */
++    case 16: return "null_hash";  /* ED448 */
++#endif
++    default: return NULL;
++    }
++}
++
++/* http://www.iana.org/assignments/dnssec-nsec3-parameters/dnssec-nsec3-parameters.xhtml */
++char *nsec3_digest_name(int digest)
++{
++  switch (digest)
++    {
++    case 1: return SN_sha1;
++    default: return NULL;
++    }
++}
++
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++static void *dnsmasq_malloc(size_t size, const char *file, int line)
++#else
++static void *dnsmasq_malloc(size_t size)
++#endif
++{
++  void *ret = malloc(size);
++
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++  (void)file;
++  (void)line;
++#endif
++
++  if (!ret)
++    my_syslog(LOG_ERR, _("failed to allocate %d bytes"), (int) size);
++
++  return ret;
++}
++
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++static void *dnsmasq_realloc(void *p, size_t size, const char *file, int line)
++#else
++static void *dnsmasq_realloc(void *p, size_t size)
++#endif
++{
++  void *ret = realloc(p, size);
++
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++  (void)file;
++  (void)line;
++#endif
++
++  if (!ret)
++    my_syslog(LOG_ERR, _("failed to allocate %d bytes"), (int) size);
++
++  return ret;
++}
++
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++static void dnsmasq_free(void *p, const char *file, int line)
++#else
++static void dnsmasq_free(void *p)
++#endif
++{
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++  (void)file;
++  (void)line;
++#endif
++
++  free(p);
++}
++
++void crypto_init(void)
++{
++  CRYPTO_set_mem_functions(dnsmasq_malloc,
++			   dnsmasq_realloc,
++			   dnsmasq_free);
++  OPENSSL_add_all_algorithms_conf();
++
++#ifdef HAVE_GOST
++  dnsmasq_gost_init();
++#endif
++}
++
++#endif
+--- dnsmasq/src/dnsmasq.c
++++ dnsmasq/src/dnsmasq.c
+@@ -165,6 +165,8 @@ int main (int argc, char **argv)
+       /* one char flag per possible RR in answer section (may get extended). */
+       daemon->rr_status_sz = 64;
+       daemon->rr_status = safe_malloc(sizeof(*daemon->rr_status) * daemon->rr_status_sz);
++
++      crypto_init();
+     }
+ #endif
+ 
+--- dnsmasq/src/dnsmasq.h
++++ dnsmasq/src/dnsmasq.h
+@@ -152,10 +152,6 @@ extern int capget(cap_user_header_t head
+ #include <priv.h>
+ #endif
+ 
+-#ifdef HAVE_DNSSEC
+-#  include <nettle/nettle-meta.h>
+-#endif
+-
+ /* daemon is function in the C library.... */
+ #define daemon dnsmasq_daemon
+ 
+@@ -644,6 +640,7 @@ struct hostsfile {
+ #define FREC_HAS_EXTRADATA    512        
+ 
+ #ifdef HAVE_DNSSEC
++#define HASH_NAME "sha1"
+ #define HASH_SIZE 20 /* SHA-1 digest size */
+ #else
+ #define HASH_SIZE sizeof(int)
+@@ -1243,13 +1240,17 @@ unsigned char* hash_questions(struct dns
+ int setup_timestamp(void);
+ 
+ /* crypto.c */
+-const struct nettle_hash *hash_find(char *name);
+-int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp);
++const void *hash_find(char *name);
++int hash_init(const void *hash, void **ctxp, unsigned char **digestp);
++void hash_update(const void *hash, void *ctx, size_t length, const unsigned char *src);
++void hash_digest(const void *hash, void *ctx, size_t length, unsigned char *dst);
++size_t hash_length(const void *hash);
+ int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+ 	   unsigned char *digest, size_t digest_len, int algo);
+ char *ds_digest_name(int digest);
+ char *algo_digest_name(int algo);
+ char *nsec3_digest_name(int digest);
++void crypto_init(void);
+ 
+ /* util.c */
+ void rand_init(void);
+--- dnsmasq/src/dnssec.c
++++ dnsmasq/src/dnssec.c
+@@ -517,7 +517,7 @@ static int validate_rrset(time_t now, st
+     {
+       unsigned char *psav, *sig, *digest;
+       int i, wire_len, sig_len;
+-      const struct nettle_hash *hash;
++      const void *hash;
+       void *ctx;
+       char *name_start;
+       u32 nsigttl, ttl, orig_ttl;
+@@ -565,9 +565,9 @@ static int validate_rrset(time_t now, st
+               
+       nsigttl = htonl(orig_ttl);
+       
+-      hash->update(ctx, 18, psav);
++      hash_update(hash, ctx, 18, psav);
+       wire_len = to_wire(keyname);
+-      hash->update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
++      hash_update(hash, ctx, (unsigned int)wire_len, (unsigned char*)keyname);
+       from_wire(keyname);
+       
+       for (i = 0; i < rrsetidx; ++i)
+@@ -603,9 +603,9 @@ static int validate_rrset(time_t now, st
+ 	    }
+ 	  
+ 	  wire_len = to_wire(name_start);
+-	  hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name_start);
+-	  hash->update(ctx, 4, p); /* class and type */
+-	  hash->update(ctx, 4, (unsigned char *)&nsigttl);
++	  hash_update(hash, ctx, (unsigned int)wire_len, (unsigned char *)name_start);
++	  hash_update(hash, ctx, 4, p); /* class and type */
++	  hash_update(hash, ctx, 4, (unsigned char *)&nsigttl);
+ 	  
+ 	  p += 8; /* skip class, type, ttl */
+ 	  GETSHORT(rdlen, p);
+@@ -621,18 +621,18 @@ static int validate_rrset(time_t now, st
+ 	  for (len = 0; (seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)) != 0; len += seg);
+ 	  len += end - cp;
+ 	  len = htons(len);
+-	  hash->update(ctx, 2, (unsigned char *)&len); 
++	  hash_update(hash, ctx, 2, (unsigned char *)&len);
+ 	  
+ 	  /* Now canonicalise again and digest. */
+ 	  cp = p;
+ 	  dp = rr_desc;
+ 	  while ((seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)))
+-	    hash->update(ctx, seg, (unsigned char *)name);
++	    hash_update(hash, ctx, seg, (unsigned char *)name);
+ 	  if (cp != end)
+-	    hash->update(ctx, end - cp, cp);
++	    hash_update(hash, ctx, end - cp, cp);
+ 	}
+      
+-      hash->digest(ctx, hash->digest_size, digest);
++      hash_digest(hash, ctx, hash_length(hash), digest);
+       
+       /* namebuff used for workspace above, restore to leave unchanged on exit */
+       p = (unsigned char*)(rrset[0]);
+@@ -641,7 +641,7 @@ static int validate_rrset(time_t now, st
+       if (key)
+ 	{
+ 	  if (algo_in == algo && keytag_in == key_tag &&
+-	      verify(key, keylen, sig, sig_len, digest, hash->digest_size, algo))
++	      verify(key, keylen, sig, sig_len, digest, hash_length(hash), algo))
+ 	    return STAT_SECURE;
+ 	}
+       else
+@@ -651,7 +651,7 @@ static int validate_rrset(time_t now, st
+ 	    if (crecp->addr.key.algo == algo && 
+ 		crecp->addr.key.keytag == key_tag &&
+ 		crecp->uid == (unsigned int)class &&
+-		verify(crecp->addr.key.keydata, crecp->addr.key.keylen, sig, sig_len, digest, hash->digest_size, algo))
++		verify(crecp->addr.key.keydata, crecp->addr.key.keylen, sig, sig_len, digest, hash_length(hash), algo))
+ 	      return (labels < name_labels) ? STAT_SECURE_WILDCARD : STAT_SECURE;
+ 	}
+     }
+@@ -747,7 +747,7 @@ int dnssec_validate_by_ds(time_t now, st
+ 	{
+ 	  void *ctx;
+ 	  unsigned char *digest, *ds_digest;
+-	  const struct nettle_hash *hash;
++	  const void *hash;
+ 	  int sigcnt, rrcnt;
+ 
+ 	  if (recp1->addr.ds.algo == algo && 
+@@ -761,14 +761,14 @@ int dnssec_validate_by_ds(time_t now, st
+ 	      
+ 	      /* Note that digest may be different between DSs, so 
+ 		 we can't move this outside the loop. */
+-	      hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name);
+-	      hash->update(ctx, (unsigned int)rdlen, psave);
+-	      hash->digest(ctx, hash->digest_size, digest);
++	      hash_update(hash, ctx, (unsigned int)wire_len, (unsigned char *)name);
++	      hash_update(hash, ctx, (unsigned int)rdlen, psave);
++	      hash_digest(hash, ctx, hash_length(hash), digest);
+ 	      
+ 	      from_wire(name);
+ 	      
+ 	      if (!(recp1->flags & F_NEG) &&
+-		  recp1->addr.ds.keylen == (int)hash->digest_size &&
++		  recp1->addr.ds.keylen == (int)hash_length(hash) &&
+ 		  (ds_digest = blockdata_retrieve(recp1->addr.ds.keydata, recp1->addr.ds.keylen, NULL)) &&
+ 		  memcmp(ds_digest, digest, recp1->addr.ds.keylen) == 0 &&
+ 		  explore_rrset(header, plen, class, T_DNSKEY, name, keyname, &sigcnt, &rrcnt) &&
+@@ -1193,7 +1193,7 @@ static int prove_non_existence_nsec(stru
+ }
+ 
+ /* return digest length, or zero on error */
+-static int hash_name(char *in, unsigned char **out, struct nettle_hash const *hash, 
++static int hash_name(char *in, unsigned char **out, const void *hash, 
+ 		     unsigned char *salt, int salt_len, int iterations)
+ {
+   void *ctx;
+@@ -1203,21 +1203,21 @@ static int hash_name(char *in, unsigned
+   if (!hash_init(hash, &ctx, &digest))
+     return 0;
+  
+-  hash->update(ctx, to_wire(in), (unsigned char *)in);
+-  hash->update(ctx, salt_len, salt);
+-  hash->digest(ctx, hash->digest_size, digest);
++  hash_update(hash, ctx, to_wire(in), (unsigned char *)in);
++  hash_update(hash, ctx, salt_len, salt);
++  hash_digest(hash, ctx, hash_length(hash), digest);
+ 
+   for(i = 0; i < iterations; i++)
+     {
+-      hash->update(ctx, hash->digest_size, digest);
+-      hash->update(ctx, salt_len, salt);
+-      hash->digest(ctx, hash->digest_size, digest);
++      hash_update(hash, ctx, hash_length(hash), digest);
++      hash_update(hash, ctx, salt_len, salt);
++      hash_digest(hash, ctx, hash_length(hash), digest);
+     }
+    
+   from_wire(in);
+ 
+   *out = digest;
+-  return hash->digest_size;
++  return hash_length(hash);
+ }
+ 
+ /* Decode base32 to first "." or end of string */
+@@ -1367,7 +1367,7 @@ static int prove_non_existence_nsec3(str
+ {
+   unsigned char *salt, *p, *digest;
+   int digest_len, i, iterations, salt_len, base32_len, algo = 0;
+-  struct nettle_hash const *hash;
++  const void *hash;
+   char *closest_encloser, *next_closest, *wildcard;
+   
+   if (nons)
+@@ -2064,11 +2064,11 @@ unsigned char* hash_questions(struct dns
+   int q;
+   unsigned int len;
+   unsigned char *p = (unsigned char *)(header+1);
+-  const struct nettle_hash *hash;
++  const void *hash;
+   void *ctx;
+   unsigned char *digest;
+   
+-  if (!(hash = hash_find("sha1")) || !hash_init(hash, &ctx, &digest))
++  if (!(hash = hash_find(HASH_NAME)) || !hash_init(hash, &ctx, &digest))
+     return NULL;
+   
+   for (q = ntohs(header->qdcount); q != 0; q--) 
+@@ -2077,16 +2077,16 @@ unsigned char* hash_questions(struct dns
+ 	break; /* bad packet */
+       
+       len = to_wire(name);
+-      hash->update(ctx, len, (unsigned char *)name);
++      hash_update(hash, ctx, len, (unsigned char *)name);
+       /* CRC the class and type as well */
+-      hash->update(ctx, 4, p);
++      hash_update(hash, ctx, 4, p);
+ 
+       p += 4;
+       if (!CHECK_LEN(header, p, plen, 0))
+ 	break; /* bad packet */
+     }
+   
+-  hash->digest(ctx, hash->digest_size, digest);
++  hash_digest(hash, ctx, hash_length(hash), digest);
+   return digest;
+ }
+ 

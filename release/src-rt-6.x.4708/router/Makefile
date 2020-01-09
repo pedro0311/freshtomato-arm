@@ -942,16 +942,33 @@ bridge-install:
 	install -D bridge/brctl/brctl $(INSTALLDIR)/bridge/usr/sbin/brctl
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
 
-dnsmasq: $(if $(TCONFIG_DNSSEC),nettle,)
+ifeq ($(TCONFIG_DNSSEC),y)
+ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX)$(TCONFIG_OPENSSL11),)
+DNSSEC_BACKEND := $(OPENSSLDIR)
+DNSSEC_OPENSSL := y
+else
+DNSSEC_BACKEND := nettle
+DNSSEC_NETTLE := y
+endif
+else
+DNSSEC_BACKEND :=
+DNSSEC_OPENSSL :=
+DNSSEC_NETTLE :=
+endif
+
+dnsmasq: $(DNSSEC_BACKEND)
 	@$(SEP)
 	$(call patch_files,dnsmasq)
-	@$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
+	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
 	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DUSE_IPSET \
-		$(if $(TCONFIG_DNSSEC),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,)" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
-		$(if $(TCONFIG_DNSSEC),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
-		$(if $(TCONFIG_DNSSEC),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
+		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/include -DHAVE_DNSSEC,) \
+		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,)" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
+		$(if $(DNSSEC_OPENSSL),-pthread -L$(TOP)/$(OPENSSLDIR),) \
+		$(if $(DNSSEC_NETTLE),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
+	$(if $(DNSSEC_OPENSSL),PKG_CONFIG_PATH="$(TOP)/$(OPENSSLDIR)" CRYPTO=openssl,) \
+	$(if $(DNSSEC_NETTLE),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
 
 dnsmasq-install:
 	install -D dnsmasq/src/dnsmasq $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
@@ -961,12 +978,12 @@ dnsmasq-clean:
 	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
-	@cd nettle && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
+	@cd nettle && \
 	CPPFLAGS="-I$(TOP)/gmp" \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared --disable-openssl
-	@touch nettle/stamp-h1
+	@touch $@
 
 nettle: nettle/stamp-h1
 	@$(SEP)
