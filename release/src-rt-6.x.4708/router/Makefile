@@ -1170,18 +1170,16 @@ libnfnetlink-clean:
 
 miniupnpd-config:
 	$(call patch_files,miniupnpd)
-ifeq ($(TCONFIG_IPV6),y)
-	@cd miniupnpd && ./genconfig.sh --leasefile --ipv6 --vendorcfg --portinuse
-else
-	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse
-endif
+	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,)
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
-	$(MAKE) -C miniupnpd -f Makefile.linux $(PARALLEL_BUILD)
+	$(MAKE) -C miniupnpd -f Makefile.freshtomato $(PARALLEL_BUILD) \
+		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 miniupnpd-clean:
-	-@$(MAKE) -C miniupnpd -f Makefile.linux clean
+	-@$(MAKE) -C miniupnpd -f Makefile.freshtomato clean
 	@rm -f miniupnpd/config.h
 	$(call unpatch_files,miniupnpd)
 
@@ -1189,7 +1187,6 @@ miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 
-# !!TB
 shared: busybox
 
 vsftpd: $(if $(TCONFIG_FTP_SSL),$(OPENSSLDIR),)
