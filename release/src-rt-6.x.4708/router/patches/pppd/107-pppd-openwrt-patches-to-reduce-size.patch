@@ -160,7 +160,7 @@ diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
 index 5236f4e..9fbbc63 100644
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -312,7 +312,6 @@ extern int	holdoff;	/* Dead time before restarting */
+@@ -314,7 +314,6 @@ extern int	holdoff;	/* Dead time before restarting */
  extern bool	holdoff_specified; /* true if user gave a holdoff value */
  extern bool	notty;		/* Stdin/out is not a tty */
  extern char	*pty_socket;	/* Socket to connect to pty */
