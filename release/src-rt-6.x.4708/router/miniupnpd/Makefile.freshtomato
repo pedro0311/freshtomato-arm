@@ -123,7 +123,6 @@ LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libmnl)
 LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libnetfilter_conntrack)
 endif # ($(TEST),1)
 
-LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l)
 
 TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
 ifeq ($(TEST),1)
@@ -212,7 +211,6 @@ testportinuse:	testportinuse.o portinuse.o getifaddr.o \
 
 testminissdp:	testminissdp.o minissdp.o upnputils.o upnpglobalvars.o \
 	asyncsendto.o linux/getroute.o
-
 
 miniupnpdctl:	miniupnpdctl.o
 
