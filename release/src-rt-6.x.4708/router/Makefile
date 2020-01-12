@@ -2476,8 +2476,8 @@ libnfsidmap-install:
 portmap/stamp-h1:
 	$(call patch_files,portmap)
 	cd portmap \
-	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB)
-	touch portmap/stamp-h1
+	$(MAKE) -C portmap
+	@touch $@
 
 portmap: portmap/stamp-h1
 	@$(SEP)
