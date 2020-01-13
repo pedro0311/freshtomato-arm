@@ -3,12 +3,7 @@
 #
 # VPN Client up down script
 #
-# Thanks to Phil Wiggum <p1mail2015@mail.com> for general idea
-#
-# Edited/corrected/rewritten/tested by pedro - 2019
-#
-# Environmental Variables
-# ref: # ref: https://openvpn.net/community-resources/reference-manual-for-openvpn-2-4/ (Scripting and Environmental Variables)
+# 2019 - 2020 by pedro
 #
 
 
@@ -53,13 +48,18 @@ startAdns() {
 
 	[ -n "$FOREIGN_OPTIONS" ] & {
 		$LOGS "FOREIGN_OPTIONS: $FOREIGN_OPTIONS"
+
 		for optionname in $FOREIGN_OPTIONS; do
-			option=$(eval "echo \\$$optionname")
+			option=$(eval "echo \$$optionname")
 			$LOGS "Optionname: $optionname, Option: $option"
 			if echo $option | grep "dhcp-option WINS ";	then echo $option | sed "s/ WINS /=44,/" >> $DNSCONFFILE; fi
 			if echo $option | grep "dhcp-option DNS";	then echo $option | sed "s/dhcp-option DNS/nameserver/" >> $DNSRESOLVFILE; fi
 			if echo $option | grep "dhcp-option DOMAIN";	then echo $option | sed "s/dhcp-option DOMAIN/search/" >> $DNSRESOLVFILE; fi
 		done
+	}
+
+	[ ! -f $DNSCONFFILE -a ! -f $DNSRESOLVFILE ] && {
+		$LOGS "Warning: 'Accept DNS configuration' is enabled but no foreign options (push dhcp-option) have been received from the OpenVPN server!"
 	}
 
 	[ -f $DNSCONFFILE -o -f $DNSRESOLVFILE -o -n "$fileexists" ] && RESTART_DNSMASQ=1

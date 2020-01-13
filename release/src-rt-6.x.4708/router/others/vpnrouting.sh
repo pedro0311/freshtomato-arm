@@ -13,6 +13,7 @@ SERVICE=$(echo $dev | sed 's/\(tun\|tap\)1/client/;s/\(tun\|tap\)2/server/')
 FIREWALL_ROUTING="/etc/openvpn/fw/$SERVICE-fw-routing.sh"
 DNSMASQ_IPSET="/etc/dnsmasq.ipset"
 RESTART_DNSMASQ=0
+RESTART_FW=0
 LOGS="logger -t openvpn-vpnrouting.sh[$PID][$IFACE]"
 [ -d /etc/openvpn/fw ] || mkdir -m 0700 "/etc/openvpn/fw"
 
@@ -127,7 +128,7 @@ startRouting() {
 	done
 
 	chmod +x $FIREWALL_ROUTING
-	service firewall restart
+	RESTART_FW=1
 
 	[ "$DNSMASQ" -eq 1 ] && {
 		nvram set vpn_client"${ID#??}"_rdnsmasq=1
@@ -139,6 +140,7 @@ startRouting() {
 
 checkRestart() {
 	[ "$RESTART_DNSMASQ" -eq 1 -o "$(NV "vpn_client"${ID#??}"_rdnsmasq")" -eq 1 ] && service dnsmasq restart
+	[ "$RESTART_FW" -eq 1 ] && service firewall restart
 }
 
 checkPid() {
