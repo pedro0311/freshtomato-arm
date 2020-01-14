@@ -458,6 +458,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_radio_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
 	{ "wl_radio_pwrsave_on_time",	"50"				, 0 },	// Radio on time for power save
 	{ "acs_mode", 			"legacy"			, 0 },	/* Legacy mode if ACS is enabled */
+	{ "acs_2g_ch_no_restrict", 	"1"				, 0 },	/* 0: only pick from channel 1, 6, 11 */
+	{ "acs_no_restrict_align", 	"1"				, 0 },	/* 0: only aligned chanspec(few) can be picked (non-20Hz) */
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				, 0 },	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				, 0 },	// RIFS mode advertisement

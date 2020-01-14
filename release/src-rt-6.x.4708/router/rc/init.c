@@ -2861,7 +2861,6 @@ static int init_nvram(void)
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
-		nvram_set("acs_2g_ch_no_restrict", "1");
 
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
@@ -3088,7 +3087,6 @@ static int init_nvram(void)
 			nvram_set("1:xtalfreq", "40000");
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
-		nvram_set("acs_2g_ch_no_restrict", "1");
 
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
@@ -3318,7 +3316,6 @@ static int init_nvram(void)
 			nvram_set("1:xtalfreq", "40000");
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
-		nvram_set("acs_2g_ch_no_restrict", "1");
 
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
@@ -3557,7 +3554,6 @@ static int init_nvram(void)
 			nvram_set("1:xtalfreq", "40000");
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
-		nvram_set("acs_2g_ch_no_restrict", "1");
 
 		nvram_set("devpath0", "pci/1/1/");
 		nvram_set("devpath1", "pci/2/1/");
