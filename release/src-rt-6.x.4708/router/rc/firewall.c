@@ -2173,14 +2173,14 @@ int start_firewall(void)
 
 	notice_set("iptables", "");
 	if (_eval(iptrestore_argv, ">/var/notice/iptables", 0, NULL) == 0) {
-		led(LED_DIAG, 0);
+		led(LED_DIAG, LED_OFF);
 		notice_set("iptables", "");
 	}
 	else {
 		sprintf(s, "%s.error", ipt_fname);
 		rename(ipt_fname, s);
 		syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
-		led(LED_DIAG, 1);
+		led(LED_DIAG, LED_ON);
 
 		/*
 
@@ -2207,7 +2207,7 @@ int start_firewall(void)
 			sprintf(s, "%s.error", ip6t_fname);
 			rename(ip6t_fname, s);
 			syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
-			led(LED_DIAG, 1);
+			led(LED_DIAG, LED_ON);
 		}
 	}
 	else {
@@ -2270,7 +2270,7 @@ int start_firewall(void)
 
 int stop_firewall(void)
 {
-	led(LED_DMZ, 0);
+	led(LED_DMZ, LED_OFF);
 	return 0;
 }
 

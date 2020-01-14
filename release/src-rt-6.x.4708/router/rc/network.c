@@ -1417,7 +1417,7 @@ HELP:
 		op = foreach_wif(0, &op, radio_toggle);
 		
 	if (!op) {
-		led(LED_DIAG, 0);
+		led(LED_DIAG, LED_OFF);
 		return 0;
 	}
 JOIN:
