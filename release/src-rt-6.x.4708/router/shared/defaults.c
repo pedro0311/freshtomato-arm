@@ -340,6 +340,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_key3",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_key4",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_channel",			"6"				, 0 },	// Channel number
+	{ "wl_assoc_retry_max", 	"3"				, 0 },	/* Non-zero limit for association retries */
 	{ "wl1_channel",		"0"				, 0 },
 	{ "wl_rate",			"0"				, 0 },	// Rate (bps, 0 for auto)
 	{ "wl_mrate",			"0"				, 0 },	// Mcast Rate (bps, 0 for auto)
