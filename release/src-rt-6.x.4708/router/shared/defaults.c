@@ -1515,12 +1515,20 @@ struct nvram_tuple router_defaults_override_type1[] = {
 	{ "wl_wmf_bss_enable",		"1"				, 0 },	/* WMF Enable for IPTV Media or WiFi+PLC */
 	{ "wl_reg_mode",		"h"				, 0 },	/* Regulatory: 802.11H(h) */
 	{ "wl_wet_tunnel",		"1"				, 0 },	/* Enable wet tunnel */
+#ifndef TCONFIG_BCM7
 	{ "wl_taf_enable",		"1"				, 0 },	/* Enable TAF */
+	{ "wl_taf_rule",		"0x15"				, 0 },	/* Default TAF rule on SSID, RATE and AID */
 
 	/* EBOS feature Media router default */
 	{ "wl_ebos_enable",		"0"				, 0 },	/* EBOS feature on */
-	{ "wl_ebos_flags",		"104"				, 0 },	/* 104(0x68) pseudo-round robin */
+	{ "wl_ebos_flags",		"0x68"				, 0 },	/* 104(0x68) video links */
+	{ "wl_ebos_transit",		"-1"				, 0 },	/* transit limit for video links */
+	{ "wl_ebos_prr_flags",		"0xa41"				, 0 },	/* pseudo-round robin data links */
 	{ "wl_ebos_prr_threshold",	"0x0f000000"			, 0 },	/* pseudo-round robin threshold */
+	{ "wl_ebos_prr_transit",	"-1"				, 0 },	/* pseudo-round robin transit limit */
+#else
+	{ "wl_taf_enable", 		"0"				, 0 },	/* Disable TAF */
+#endif /* TCONFIG_BCM7 */
 
 #ifdef __CONFIG_EMF__
 	{ "emf_enable",			"1"				, 0 },	/* Enable EMF by default */
@@ -1534,11 +1542,17 @@ struct nvram_tuple router_defaults_override_type1[] = {
 	/* Exclude ACSD to select 140l, 144u, 140/80, 144/80 to compatible with Ducati 11N */
 	{ "wl_acs_excl_chans",		"0xd98e,0xd88e,0xe28a,0xe38a"	, 0 },
 	{ "wl_pspretend_retry_limit",	"5"				, 0 },	/* Enable PsPretend */
+#ifndef TCONFIG_BCM7
 	{ "wl_pspretend_threshold",	"0"				, 0 },	/* Disable PsPretend Threshold */
 	{ "wl_acs_chan_dwell_time",	"70"				, 0 },	/* WAR for AP to stay on DFS chan */
 	{ "wl_frameburst",		"on"				, 0 },	/* BRCM Frambursting mode (off|on) */
+#if defined (TCONFIG_BCMARM) && !defined (TCONFIG_BCM7)
+	{ "frameburst_dyn",		"0"				, 0 },	/* Frameburst controlled dynamically if on */
+#endif
+#endif
 	{ "wl_amsdu",			"off"				, 0 },	/* Default IPTV AMSDU setting */
 	{ "wl_rx_amsdu_in_ampdu",	"off"				, 0 },	/* Media RX AMSDU In AMPDU setting */
+	{ "wl_cal_period", 		"0"				, 0 },	/* Disable periodic cal */
 	{ 0, 0, 0 }
 };
 
