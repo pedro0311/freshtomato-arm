@@ -1006,6 +1006,7 @@ struct nvram_tuple router_defaults[] = {
 
 #ifdef TCONFIG_NFS
 	{ "nfs_enable",			"0"				, 0 },
+	{ "nfs_enable_v2",		"0"				, 0 },
 	{ "nfs_exports",		""				, 0 },
 #endif
 

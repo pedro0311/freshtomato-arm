@@ -2524,24 +2524,22 @@ e2fsprogs-clean:
 	@rm -rf e2fsprogs/staged
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
-	cd nfs-utils && ./autogen.sh && STRIP=$(STRIP) \
+	cd nfs-utils && ./autogen.sh && \
 	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-	    -I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
-	    -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+		-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+		-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
-	    -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	    ac_cv_func_malloc_0_nonnull=yes \
-	    ac_cv_func_realloc_0_nonnull=yes \
-	    knfsd_cv_bsd_signals=no \
+		-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		knfsd_cv_bsd_signals=no \
 	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
-	    --disable-nfsv4 --disable-ipv6 --disable-nfsdcltrack \
-	    --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
-	touch nfs-utils/stamp-h1
+		--disable-nfsv4 --disable-nfsv41 --disable-ipv6 --disable-nfsdcltrack \
+		--disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
+	@touch $@
 
 nfs-utils: nfs-utils/stamp-h1
 	@$(SEP)
-	$(MAKE) -C nfs-utils $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
