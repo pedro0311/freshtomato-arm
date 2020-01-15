@@ -68,6 +68,10 @@ obj-y += eapd$(BCMEX)/linux
 obj-y += libbcmcrypto
 obj-y += wlconf$(BCMEX)
 obj-y += nas$(BCMEX)
+ifeq ($(TCONFIG_EMF),y)
+obj-y += emf$(BCMEX)
+obj-y += igs$(BCMEX)
+endif
 #obj-y += prebuilt
 obj-y += igmpproxy
 obj-y += rc
@@ -238,8 +242,6 @@ obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
 obj-$(TCONFIG_TINC) += tinc
-obj-$(TCONFIG_EMF) += emf
-obj-$(TCONFIG_EMF) += igs
 
 # Tomato RAF
 # additional modules for nginx
@@ -327,7 +329,9 @@ export CFLAGS += -O2
 export OPTCFLAGS = -O2
 WLCFGDIR=$(SRCBASE)/wl/config
 
+ifeq ($(TCONFIG_EMF),y)
 export CFLAGS += -D__CONFIG_EMF__
+endif
 
 ROOT_IMG := target.squashfs
 CRAMFSDIR := cramfs
@@ -1779,16 +1783,16 @@ endif
 emf$(BCMEX)-clean:
 	-@$(MAKE) -C emf$(BCMEX)/emfconf clean
 
-igs:
+igs$(BCMEX):
 	$(MAKE) -C emf$(BCMEX)/igsconf CROSS=$(CROSS_COMPILE)
 
-igs-install:
+igs$(BCMEX)-install:
 ifeq ($(TCONFIG_EMF),y)
 	install -d $(TARGETDIR)
 	$(MAKE) -C emf$(BCMEX)/igsconf CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install
 endif
 
-igs-clean:
+igs$(BCMEX)-clean:
 	-@$(MAKE) -C emf$(BCMEX)/igsconf clean
 
 wanuptime: nvram$(BCMEX) shared
