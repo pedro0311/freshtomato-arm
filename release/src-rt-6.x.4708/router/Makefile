@@ -2328,16 +2328,16 @@ nano-install:
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
 libcurl/stamp-h1: zlib $(OPENSSLDIR)
-	$(call patch_files,libcurl)
 	cd libcurl && ./buildconf && \
-		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR) -lpthread" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
 			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/ssl" --with-zlib="$(TOP)/zlib/staged/usr" \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)" --with-zlib="$(TOP)/zlib/staged/usr" \
 			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
 			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
@@ -2361,7 +2361,6 @@ libcurl-clean:
 	-@$(MAKE) -C libcurl clean
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
-	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && CC=$(CC) \
