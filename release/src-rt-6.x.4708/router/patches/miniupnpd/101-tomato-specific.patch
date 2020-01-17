@@ -1,0 +1,39 @@
+--- miniupnpd/genconfig.sh
++++ miniupnpd/genconfig.sh
+@@ -96,11 +96,11 @@ if [ -f ./os.astlinux ]; then
+ 	OS_VERSION=$(cat ./os.astlinux)
+ fi
+ 
+-# Tomato USB special case
++# Tomato special case
+ if [ -f ../shared/tomato_version ]; then
+ 	OS_NAME=Tomato
+-	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f2,3`
+-	OS_VERSION="Tomato $TOMATO_VER"
++	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f1,2`
++	OS_VERSION="FreshTomato $TOMATO_VER"
+ fi
+ 
+ ${RM} ${CONFIGFILE}
+@@ -352,8 +352,8 @@ case $OS_NAME in
+ 		FW=iptables
+ 		;;
+ 	Tomato)
+-		OS_NAME=UPnP
+-		OS_URL=http://tomatousb.org/
++		OS_NAME=FreshTomato
++		OS_URL=https://freshtomato.org/
+ 		echo "" >> ${CONFIGFILE}
+ 		echo "#ifndef TOMATO" >> ${CONFIGFILE}
+ 		echo "#define TOMATO" >> ${CONFIGFILE}
+--- miniupnpd/getifaddr.c
++++ miniupnpd/getifaddr.c
+@@ -24,6 +24,8 @@
+ #include "getifaddr.h"
+ #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
+ #include <ifaddrs.h>
++/* for Tomato ARM - Add getifaddr support to Tomato ARM builds (missing) */
++#include "ifaddrs.c"
+ #endif
+ 
+ int

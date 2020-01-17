@@ -1462,6 +1462,7 @@ static const nvset_t nvset_list[] = {
 
 #ifdef TCONFIG_NFS
 	{ "nfs_enable",			V_01				},
+	{ "nfs_enable_v2",		V_01				},
 	{ "nfs_exports",		V_LENGTH(0, 4096)		},
 #endif
 

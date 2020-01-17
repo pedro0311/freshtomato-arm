@@ -606,9 +606,9 @@ void start_dnsmasq()
 		}
 
 		eval("ntp2ip");
-		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml", "-F", "/var/log/stubby.log");
 
 		syslog(LOG_INFO, "Starting stubby %s, DNS-o-TLS Proxy\n", stv);
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml", "-F", "/var/log/stubby.log");
 	}
 #endif
 

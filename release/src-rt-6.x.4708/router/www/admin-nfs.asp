@@ -46,7 +46,7 @@
 
 <script type="text/javascript">
 
-//	<% nvram("nfs_enable,nfs_exports"); %>
+//	<% nvram("nfs_enable,nfs_enable_v2,nfs_exports"); %>
 
 var access = [['rw', 'Read/Write'], ['ro', 'Read only']];
 var sync = [['sync', 'Yes'], ['async', 'No']];
@@ -121,6 +121,7 @@ function save() {
 
 	var fom = E('t_fom');
 	fom.nfs_enable.value = E('_f_nfs_enable').checked ? 1 : 0;
+	fom.nfs_enable_v2.value = E('_f_nfs_enable_v2').checked ? 1 : 0;
 	fom.nfs_exports.value = exports;
 	form.submit(fom, 1);
 }
@@ -147,16 +148,18 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-nfs.asp">
-<input type="hidden" name="_service" value="nfs-start">
+<input type="hidden" name="_service" value="nfs-restart">
 
 <input type="hidden" name="nfs_enable">
+<input type="hidden" name="nfs_enable_v2">
 <input type="hidden" name="nfs_exports">
 
 <div class="section-title">NFS Server</div>
 <div class="section">
 	<script type="text/javascript">
 	createFieldTable('', [
-		{ title: 'Enable NFS Server', name: 'f_nfs_enable', type: 'checkbox', value: nvram.nfs_enable != '0' }
+		{ title: 'Enable NFS Server', name: 'f_nfs_enable', type: 'checkbox', value: nvram.nfs_enable != '0' },
+		{ title: 'Enable legacy (NFS V2) support', indent: 2, name: 'f_nfs_enable_v2', type: 'checkbox', value: nvram.nfs_enable_v2 != '0' }
 	]);
 	</script>
 <br/>
@@ -167,7 +170,7 @@ function init() {
 	<script type="text/javascript">nfsg.setup();</script>
 <br/>
 	<ul>
-	<li>You can find more information on proper NFS configuration at the following website: <a href="http://nfs.sourceforge.net/nfs-howto/" class="new_window"><b>http://nfs.sourceforge.net</b></a>.
+	<li>You can find more information on proper NFS configuration at the following website: <a href="https://nfs.sourceforge.net/nfs-howto/" class="new_window"><b>https://nfs.sourceforge.net</b></a>.
 	</li></ul>
 <br/>
 </div>

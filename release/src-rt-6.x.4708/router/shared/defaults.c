@@ -349,6 +349,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_key3",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_key4",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_channel",			"6"				, 0 },	// Channel number
+	{ "wl_assoc_retry_max", 	"3"				, 0 },	/* Non-zero limit for association retries */
 	{ "wl_rate",			"0"				, 0 },	// Rate (bps, 0 for auto)
 	{ "wl_mrate",			"0"				, 0 },	// Mcast Rate (bps, 0 for auto)
 	{ "wl_rateset",			"default"			, 0 },	// "default" or "all" or "12"
@@ -470,6 +471,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_radio_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
 	{ "wl_radio_pwrsave_on_time",	"50"				, 0 },	// Radio on time for power save
 	{ "acs_mode", 			"legacy"			, 0 },	/* Legacy mode if ACS is enabled */
+	{ "acs_2g_ch_no_restrict", 	"1"				, 0 },	/* 0: only pick from channel 1, 6, 11 */
+	{ "acs_no_restrict_align", 	"1"				, 0 },	/* 0: only aligned chanspec(few) can be picked (non-20Hz) */
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				, 0 },	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				, 0 },	// RIFS mode advertisement
@@ -1067,6 +1070,7 @@ struct nvram_tuple router_defaults[] = {
 
 #ifdef TCONFIG_NFS
 	{ "nfs_enable",			"0"				, 0 },
+	{ "nfs_enable_v2",		"0"				, 0 },
 	{ "nfs_exports",		""				, 0 },
 #endif
 

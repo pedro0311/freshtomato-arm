@@ -1,6 +1,6 @@
 --- dnsmasq/src/forward.c
 +++ dnsmasq/src/forward.c
-@@ -956,7 +956,7 @@ void reply_query(int fd, int family, tim
+@@ -958,7 +958,7 @@ void reply_query(int fd, int family, tim
        forward->sentto->edns_pktsz = SAFE_PKTSZ;
        forward->sentto->pktsz_reduced = now;
        prettyprint_addr(&forward->sentto->addr, daemon->addrbuff);

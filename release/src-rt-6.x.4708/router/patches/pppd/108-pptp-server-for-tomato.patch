@@ -197,7 +197,7 @@ diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
 diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -276,6 +276,7 @@ extern struct notifier *fork_notifier;	/
+@@ -278,6 +278,7 @@ extern struct notifier *fork_notifier;	/
   * Variables set by command-line options.
   */
  
@@ -205,7 +205,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern int	debug;		/* Debug flag */
  extern int	kdebugflag;	/* Tell kernel to print debug messages */
  extern int	default_device;	/* Using /dev/tty or equivalent */
-@@ -306,6 +307,7 @@ extern char	remote_name[MAXNAMELEN]; /*
+@@ -308,6 +309,7 @@ extern char	remote_name[MAXNAMELEN]; /*
  extern bool	explicit_remote;/* remote_name specified with remotename opt */
  extern bool	demand;		/* Do dial-on-demand */
  extern char	*ipparam;	/* Extra parameter for ip up/down scripts */
@@ -213,7 +213,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern bool	cryptpap;	/* Others' PAP passwords are encrypted */
  extern int	idle_time_limit;/* Shut down link if idle for this long */
  extern int	holdoff;	/* Dead time before restarting */
-@@ -328,6 +330,9 @@ extern char	*bundle_name;	/* bundle name
+@@ -330,6 +332,9 @@ extern char	*bundle_name;	/* bundle name
  extern bool	dump_options;	/* print out option values */
  extern bool	dryrun;		/* check everything, print options, exit */
  extern int	child_wait;	/* # seconds to wait for children at end */
@@ -226,7 +226,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
 diff -daurpN pppd/pppd/utils.c pppd/pppd/utils.c
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
-@@ -1043,6 +1043,11 @@ unlock()
+@@ -1048,6 +1048,11 @@ unlock()
  void saveWANStatus(char *currentstatus, int statusindex)
  {
  	FILE *STATUSFILE;
