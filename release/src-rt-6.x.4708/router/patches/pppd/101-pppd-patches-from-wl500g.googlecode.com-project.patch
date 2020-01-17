@@ -2404,7 +2404,7 @@ diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
 index cf9840a..5236f4e 100644
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -80,6 +80,7 @@
+@@ -82,6 +82,7 @@
  #define MAXARGS		1	/* max # args to a command */
  #define MAXNAMELEN	256	/* max length of hostname or name for auth */
  #define MAXSECRETLEN	256	/* max length of password or secret */
@@ -2412,7 +2412,7 @@ index cf9840a..5236f4e 100644
  
  /*
   * Option descriptor structure.
-@@ -210,6 +211,7 @@ struct notifier {
+@@ -212,6 +213,7 @@ struct notifier {
  /*
   * Global variables.
   */
@@ -2420,7 +2420,7 @@ index cf9840a..5236f4e 100644
  
  extern int	hungup;		/* Physical layer has disconnected */
  extern int	ifunit;		/* Interface unit number */
-@@ -318,6 +320,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
+@@ -320,6 +322,9 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
  extern int	connect_delay;	/* Time to delay after connect script */
  extern int	max_data_rate;	/* max bytes/sec through charshunt */
  extern int	req_unit;	/* interface unit number to use */
@@ -2430,7 +2430,7 @@ index cf9840a..5236f4e 100644
  extern bool	multilink;	/* enable multilink operation */
  extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
  extern char	*bundle_name;	/* bundle name for multilink */
-@@ -583,7 +588,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
+@@ -585,7 +590,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
  void demand_block __P((void));	/* set all NPs to queue up packets */
  void demand_unblock __P((void)); /* set all NPs to pass packets */
  void demand_discard __P((void)); /* set all NPs to discard packets */
@@ -2588,7 +2588,7 @@ diff --git pppd/pppd/utils.c pppd/pppd/utils.c
 index 062b17e..2e038bc 100644
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
-@@ -1038,3 +1038,23 @@ unlock()
+@@ -1043,3 +1043,23 @@ unlock()
      }
  }
  

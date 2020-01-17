@@ -707,7 +707,11 @@ static int spawn_https_helper_openssl(const char *host, unsigned port)
 		 */
 		xmove_fd(2, 3);
 		xopen("/dev/null", O_RDWR);
+#ifdef OPENSSL11
+		argv[0] = (char*)"openssl11";
+#else
 		argv[0] = (char*)"openssl";
+#endif
 		argv[1] = (char*)"s_client";
 		argv[2] = (char*)"-quiet";
 		argv[3] = (char*)"-connect";

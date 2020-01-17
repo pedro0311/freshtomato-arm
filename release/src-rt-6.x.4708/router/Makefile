@@ -68,6 +68,10 @@ obj-y += eapd$(BCMEX)/linux
 obj-y += libbcmcrypto
 obj-y += wlconf$(BCMEX)
 obj-y += nas$(BCMEX)
+ifeq ($(TCONFIG_EMF),y)
+obj-y += emf$(BCMEX)
+obj-y += igs$(BCMEX)
+endif
 #obj-y += prebuilt
 obj-y += igmpproxy
 obj-y += rc
@@ -238,8 +242,6 @@ obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
 obj-$(TCONFIG_TINC) += tinc
-obj-$(TCONFIG_EMF) += emf
-obj-$(TCONFIG_EMF) += igs
 
 # Tomato RAF
 # additional modules for nginx
@@ -327,7 +329,9 @@ export CFLAGS += -O2
 export OPTCFLAGS = -O2
 WLCFGDIR=$(SRCBASE)/wl/config
 
+ifeq ($(TCONFIG_EMF),y)
 export CFLAGS += -D__CONFIG_EMF__
+endif
 
 ROOT_IMG := target.squashfs
 CRAMFSDIR := cramfs
@@ -817,11 +821,11 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 
 busybox: dummy
 	@$(SEP)
-	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" $(PARALLEL_BUILD)
+	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS) $(if $(TCONFIG_OPENSSL11),-DOPENSSL11,)" $(PARALLEL_BUILD)
 
 busybox-install:
 	rm -rf $(INSTALLDIR)/busybox
-	$(MAKE) -C busybox install EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" CONFIG_PREFIX=$(INSTALLDIR)/busybox
+	$(MAKE) -C busybox install EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS) $(if $(TCONFIG_OPENSSL11),-DOPENSSL11,)" CONFIG_PREFIX=$(INSTALLDIR)/busybox
 
 busybox-clean:
 	-@$(MAKE) -C busybox distclean
@@ -1170,18 +1174,16 @@ libnfnetlink-clean:
 
 miniupnpd-config:
 	$(call patch_files,miniupnpd)
-ifeq ($(TCONFIG_IPV6),y)
-	@cd miniupnpd && ./genconfig.sh --leasefile --ipv6 --vendorcfg --portinuse
-else
-	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse
-endif
+	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,)
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
 	@$(SEP)
-	$(MAKE) -C miniupnpd -f Makefile.linux $(PARALLEL_BUILD)
+	$(MAKE) -C miniupnpd -f Makefile.freshtomato $(PARALLEL_BUILD) \
+		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 miniupnpd-clean:
-	-@$(MAKE) -C miniupnpd -f Makefile.linux clean
+	-@$(MAKE) -C miniupnpd -f Makefile.freshtomato clean
 	@rm -f miniupnpd/config.h
 	$(call unpatch_files,miniupnpd)
 
@@ -1189,7 +1191,6 @@ miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 
-# !!TB
 shared: busybox
 
 vsftpd: $(if $(TCONFIG_FTP_SSL),$(OPENSSLDIR),)
@@ -1782,16 +1783,16 @@ endif
 emf$(BCMEX)-clean:
 	-@$(MAKE) -C emf$(BCMEX)/emfconf clean
 
-igs:
+igs$(BCMEX):
 	$(MAKE) -C emf$(BCMEX)/igsconf CROSS=$(CROSS_COMPILE)
 
-igs-install:
+igs$(BCMEX)-install:
 ifeq ($(TCONFIG_EMF),y)
 	install -d $(TARGETDIR)
 	$(MAKE) -C emf$(BCMEX)/igsconf CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install
 endif
 
-igs-clean:
+igs$(BCMEX)-clean:
 	-@$(MAKE) -C emf$(BCMEX)/igsconf clean
 
 wanuptime: nvram$(BCMEX) shared
@@ -2327,16 +2328,16 @@ nano-install:
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
 libcurl/stamp-h1: zlib $(OPENSSLDIR)
-	$(call patch_files,libcurl)
 	cd libcurl && ./buildconf && \
-		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR) -lpthread" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
 			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/ssl" --with-zlib="$(TOP)/zlib/staged/usr" \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)" --with-zlib="$(TOP)/zlib/staged/usr" \
 			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
 			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
@@ -2360,7 +2361,6 @@ libcurl-clean:
 	-@$(MAKE) -C libcurl clean
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
-	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && CC=$(CC) \
@@ -2479,8 +2479,8 @@ libnfsidmap-install:
 portmap/stamp-h1:
 	$(call patch_files,portmap)
 	cd portmap \
-	$(MAKE) -C portmap CC=$(CC) AR=$(AR) LD=$(LD) RANLIB=$(RANLIB)
-	touch portmap/stamp-h1
+	$(MAKE) -C portmap
+	@touch $@
 
 portmap: portmap/stamp-h1
 	@$(SEP)
@@ -2527,24 +2527,22 @@ e2fsprogs-clean:
 	@rm -rf e2fsprogs/staged
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
-	cd nfs-utils && ./autogen.sh && STRIP=$(STRIP) \
+	cd nfs-utils && ./autogen.sh && \
 	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-	    -I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
-	    -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+		-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+		-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
-	    -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	    ac_cv_func_malloc_0_nonnull=yes \
-	    ac_cv_func_realloc_0_nonnull=yes \
-	    knfsd_cv_bsd_signals=no \
+		-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		knfsd_cv_bsd_signals=no \
 	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
-	    --disable-nfsv4 --disable-ipv6 --disable-nfsdcltrack \
-	    --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
-	touch nfs-utils/stamp-h1
+		--disable-nfsv4 --disable-nfsv41 --disable-ipv6 --disable-nfsdcltrack \
+		--disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
+	@touch $@
 
 nfs-utils: nfs-utils/stamp-h1
 	@$(SEP)
-	$(MAKE) -C nfs-utils $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin

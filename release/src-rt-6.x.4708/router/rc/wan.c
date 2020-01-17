@@ -1049,7 +1049,7 @@ void start_wan(int mode)
 	if (nvram_get_int("mwan_cktime") > 0)
 		xstart("watchdog", "add");
 
-	led(LED_DIAG, 0);	/* For 4712, 5325E (?) */
+	led(LED_DIAG, LED_OFF);
 	led(LED_DMZ, nvram_match("dmz_enable", "1"));
 }
 

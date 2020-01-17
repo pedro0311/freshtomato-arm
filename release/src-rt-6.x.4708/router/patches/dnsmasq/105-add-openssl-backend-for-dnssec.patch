@@ -989,7 +989,7 @@
  /* daemon is function in the C library.... */
  #define daemon dnsmasq_daemon
  
-@@ -644,6 +640,7 @@ struct hostsfile {
+@@ -645,6 +641,7 @@ struct hostsfile {
  #define FREC_HAS_EXTRADATA    512        
  
  #ifdef HAVE_DNSSEC
@@ -997,7 +997,7 @@
  #define HASH_SIZE 20 /* SHA-1 digest size */
  #else
  #define HASH_SIZE sizeof(int)
-@@ -1243,13 +1240,17 @@ unsigned char* hash_questions(struct dns
+@@ -1235,13 +1232,17 @@ unsigned char* hash_questions(struct dns
  int setup_timestamp(void);
  
  /* crypto.c */
