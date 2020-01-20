@@ -16,17 +16,18 @@
 <script type="text/javascript" src="tomato.js"></script>
 <style type="text/css">
 textarea {
- width: 98%;
- height: 15em;
+	width: 98%;
+	height: 15em;
 }
 </style>
 <script type="text/javascript">
-//	<% nvram("tor_enable,tor_socksport,tor_transport,tor_dnsport,tor_datadir,tor_users,tor_ports,tor_ports_custom,tor_custom,tor_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("tor_enable,tor_solve_only,tor_socksport,tor_transport,tor_dnsport,tor_datadir,tor_users,tor_ports,tor_ports_custom,tor_custom,tor_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	var a = E('_f_tor_enable').checked;
+	var b = E('_f_tor_solve_only').checked;
 	var o = (E('_tor_iface').value == 'custom');
 	var p = (E('_tor_ports').value == 'custom');
 
@@ -34,60 +35,69 @@ function verifyFields(focused, quiet) {
 	E('_tor_transport').disabled = !a;
 	E('_tor_dnsport').disabled = !a;
 	E('_tor_datadir').disabled = !a;
-	E('_tor_iface').disabled = !a;
-	E('_tor_ports').disabled = !a;
+	E('_tor_iface').disabled = !a || b;
+	E('_tor_ports').disabled = !a || b;
 	E('_tor_custom').disabled = !a;
 
-	elem.display('_tor_users', o && a);
-	elem.display('_tor_ports_custom', p && a);
+	elem.display('_tor_users', o && a && !b);
+	elem.display('_tor_ports_custom', p && a && !b);
 
 	var bridge = E('_tor_iface');
 	if(nvram.lan_ifname.length < 1)
-		bridge.options[0].disabled=true;
+		bridge.options[0].disabled = true;
 	if(nvram.lan1_ifname.length < 1)
-		bridge.options[1].disabled=true;
+		bridge.options[1].disabled = true;
 	if(nvram.lan2_ifname.length < 1)
-		bridge.options[2].disabled=true;
+		bridge.options[2].disabled = true;
 	if(nvram.lan3_ifname.length < 1)
-		bridge.options[3].disabled=true;
+		bridge.options[3].disabled = true;
 
 	var s = E('_tor_custom');
 
 	if (s.value.indexOf('SocksBindAddress') != -1) {
 		ferror.set(s, 'Cannot set "SocksBindAddress" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('AllowUnverifiedNodes') != -1) {
 		ferror.set(s, 'Cannot set "AllowUnverifiedNodes" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('Log') != -1) {
 		ferror.set(s, 'Cannot set "Log" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('DataDirectory') != -1) {
 		ferror.set(s, 'Cannot set "DataDirectory" option here. You can set it in Tomato GUI', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('TransPort') != -1) {
 		ferror.set(s, 'Cannot set "TransPort" option here. You can set it in Tomato GUI', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('TransListenAddress') != -1) {
 		ferror.set(s, 'Cannot set "TransListenAddress" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('DNSPort') != -1) {
 		ferror.set(s, 'Cannot set "DNSPort" option here. You can set it in Tomato GUI', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('DNSListenAddress') != -1) {
 		ferror.set(s, 'Cannot set "DNSListenAddress" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	if (s.value.indexOf('User') != -1) {
 		ferror.set(s, 'Cannot set "User" option here.', quiet);
-		ok = 0; }
+		ok = 0;
+	}
 
 	return ok;
 }
@@ -96,6 +106,7 @@ function save() {
 	if (verifyFields(null, 0) == 0) return;
 	var fom = E('t_fom');
 	fom.tor_enable.value = E('_f_tor_enable').checked ? 1 : 0;
+	fom.tor_solve_only.value = E('_f_tor_solve_only').checked ? 1 : 0;
 
 	if (fom.tor_enable.value == 0) {
 		fom._service.value = 'tor-stop';
@@ -104,13 +115,10 @@ function save() {
 	}
 	form.submit('t_fom', 1);
 }
-
-function init() {
-}
 </script>
 </head>
 
-<body onload="init()">
+<body>
 <table id="container" cellspacing="0">
 <tr><td colspan="2" id="header">
 <div class="title">Tomato</div>
@@ -126,6 +134,7 @@ function init() {
 <input type="hidden" name="_nextpage" value="advanced-tor.asp">
 <input type="hidden" name="_service" value="tor-restart">
 <input type="hidden" name="tor_enable">
+<input type="hidden" name="tor_solve_only">
 
 <script type="text/javascript">
 createFieldTable('', [
@@ -136,21 +145,12 @@ createFieldTable('', [
 	{ title: 'DNS Port', name: 'tor_dnsport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.tor_dnsport, 9053) },
 	{ title: 'Data Directory', name: 'tor_datadir', type: 'text', maxlen: 24, size: 28, value: nvram.tor_datadir },
 	null,
+	{ title: 'Only solve .onion/.exit domains', name: 'f_tor_solve_only', type: 'checkbox', value: nvram.tor_solve_only == '1' },
 	{ title: 'Redirect all users from', multi: [
-		{ name: 'tor_iface', type: 'select', options: [
-			['br0','LAN (br0)'],
-			['br1','LAN1 (br1)'],
-			['br2','LAN2 (br2)'],
-			['br3','LAN3 (br3)'],
-			['custom','Selected IP`s']
-				], value: nvram.tor_iface },
+		{ name: 'tor_iface', type: 'select', options: [['br0','LAN (br0)'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)'],['custom','Selected IP`s']], value: nvram.tor_iface },
 		{ name: 'tor_users', type: 'text', maxlen: 512, size: 64, value: nvram.tor_users } ] },
 	{ title: 'Redirect TCP Ports', multi: [
-		{ name: 'tor_ports', type: 'select', options: [
-			['80','HTTP only (TCP 80)'],
-			['80,443','HTTP/HTTPS (TCP 80,443)'],
-			['custom','Selected Ports']
-				], value: nvram.tor_ports },
+		{ name: 'tor_ports', type: 'select', options: [['80','HTTP only (TCP 80)'],['80,443','HTTP/HTTPS (TCP 80,443)'],['custom','Selected Ports']], value: nvram.tor_ports },
 		{ name: 'tor_ports_custom', type: 'text', maxlen: 512, size: 64, value: nvram.tor_ports_custom } ] },
 	null,
 	{ title: 'Custom Configuration', name: 'tor_custom', type: 'textarea', value: nvram.tor_custom }
@@ -179,6 +179,6 @@ createFieldTable('', [
 	</form>
 </td></tr>
 </table>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script type="text/javascript">verifyFields(null, true);</script>
 </body>
 </html>
