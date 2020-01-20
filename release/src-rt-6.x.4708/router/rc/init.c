@@ -648,7 +648,7 @@ static int init_nvram(void)
 	case MODEL_RTAC68U:
 		mfr = "Asus";
 		if (nvram_match("cpurev", "c0")) { /* check for C0 CPU first */
-			name = "RT-AC68U C1";
+			name = "RT-AC68U C1"; /* C1 (and E1; share name) */
 		}
 		else { /* all the other versions R/P/U ... A1/A2/B1 */
 			name = nvram_match("boardrev", "0x1103") ? "RT-AC68P/U B1" : "RT-AC68R/U";
@@ -705,9 +705,9 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw_cap", "1");
 		}
 		break;
-	case MODEL_RTAC1900P:
+	case MODEL_RTAC1900P: /* also for RT-AC68U B2; both are dual-core 1400 MHz / 800 RAM Router */
 		mfr = "Asus";
-		name = "RT-AC1900P";
+		name = nvram_match("odmpid", "RT-AC68U") ? "RT-AC68U B2" : "RT-AC1900P";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
