@@ -2101,19 +2101,18 @@ int start_firewall(void)
 	f_write_string("/proc/sys/net/ipv4/conf/default/rp_filter", "1", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/conf/all/rp_filter", "0", 0, 0);
 
+	/* Remote management */
 	remotemanage = 0;
-	if (gateway_mode) {
-		/* Remote management */
-		if (nvram_match("remote_management", "1") && nvram_invmatch("http_wanport", "") && nvram_invmatch("http_wanport", "0"))
-			remotemanage = 1;
 
-		if (nvram_match("remote_mgt_https", "1")) {
-			web_lanport = nvram_get_int("https_lanport");
-			if (web_lanport <= 0) web_lanport = 443;
-		} else {
-			web_lanport = nvram_get_int("http_lanport");
-			if (web_lanport <= 0) web_lanport = 80;
-		}
+	if (nvram_match("remote_management", "1") && nvram_invmatch("http_wanport", "") && nvram_invmatch("http_wanport", "0"))
+		remotemanage = 1;
+
+	if (nvram_match("remote_mgt_https", "1")) {
+		web_lanport = nvram_get_int("https_lanport");
+		if (web_lanport <= 0) web_lanport = 443;
+	} else {
+		web_lanport = nvram_get_int("http_lanport");
+		if (web_lanport <= 0) web_lanport = 80;
 	}
 
 	if ((ipt_file = fopen(ipt_fname, "w")) == NULL) {
