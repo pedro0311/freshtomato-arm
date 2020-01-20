@@ -3,6 +3,54 @@ FreshTomato-ARM Changelog
 
 
 
+2020.1          2020.01.20
+--------------------------
+
+- openssl: update to 1.0.2u
+- nano: update to 4.7
+- tinc: update to de7d5a0 (2019.07.17) snapshot
+- dnsmasq: update to ab53883 (2020.01.11) snapshot
+- e2fsprogs: update to 1.45.5
+- libcurl: update to 7.68.0
+- openssl-1.1: move folder to openssl-1.1
+- openssl11: Enable OpenSSL 1.1.1 in router/Makefile
+- openssl11: add patch
+- openssl11: tor: enable OpenSSL 1.1.x support
+- openssl11: OpenVPN: enable OpenSSL 1.1.x support
+- openssl11: getdns/stubby: enable OpenSSL 1.1.x support
+- openssl11: vsftpd: enable OpenSSL 1.1.x support
+- openssl11: enable OpenSSL 1.1.x for libcurl, mdu (if built with libcurl), transmission
+- openssl11: tinc: enable OpenSSL 1.1.x support
+- openssl11: nginx: enable OpenSSL 1.1.x support
+- openssl11: mysql: enable OpenSSL 1.1.x support
+- openssl11: enable OpenSSL 1.1.1 for httpd, mssl, mdu (if built with mssl)
+- openssl11: dnsmasq: add openssl backend for DNSSEC 
+- openssl11: Add OPENSSL_PREFER_CHACHA_OVER_GCM option
+- openssl11: priorize CHACHA over GCM for models with no AES acceleration
+- openssl11: don’t build test and fuzz to shorten build time
+- openssl11: enable OpenSSL 1.1.x on all targets
+- GUI: FTP Server Configuration: add usage notes
+- GUI: advanced-vlan.asp - make it possible to create a VLAN with all ports (including tag on!)
+- GUI: Static DHCP/ARP/IPT: also restart dnsmasq when saving
+- GUI: Advanced: DHCP / DNS Server (LAN): change the ‘DHCPC Options’ format to a 256 character textarea
+- vsftpd: clean 3.0.3 sources, add patch instead
+- mdu: fix some bugs (again)
+- stubby: add syslog support
+- pppd: restore the use of libcrypt to support DES instead of OpenSSL (commit #5c08f06 introduced an upstream change: 'Use openssl for DES instead of libcrypt / glibc', with no choice of libcrypt (only libdes and OpenSSL). It requires OpenSSL 1.0.2 and prevents compilation with OpenSSL 1.1. This commit fixes it))
+- pppd: fixes from upstream (pppd.h: Add missing headers; pppd: Don't free static string; pppd: Limit memory accessed by string formats with max length specified; pppd: Make sure word read from options file is null-terminated; pppd: Avoid use of strnlen (and strlen) in vslprintf)
+- miniupnpd: get rid of OpenSSL dependencies in miniupnpd
+- vpnrouting: fix the extraction of foreign options from the OpenVPN server, add a warning if the option is enabled but nothing was received from the server, change firewall restart - move to the very end
+- busybox: wget: openssl11: fix ssl when built with OpenSSL-1.1.x
+- NFS: allow selection of protocol version; optimization and clean-up; move code from nfs.rc script to nfs.c
+- router: Makefile: correct/adjust/fix emf & igs targets 
+- router: wlconf: use src files / compile from sources
+- router: shared: defaults.c: align type1 nvram settings to Asus SRC
+- router: shared: defaults: add nvram acs variables (align to Asus SRC)
+- router: shared: defaults: add limit for association retries (align to Asus SRC)
+- Asus RT-AC1900P: fix detection
+- RT-AC68U: extend stealth mode (add / turn off Asus Logo LED also)
+
+
 2019.4          2019.12.29
 --------------------------
 
