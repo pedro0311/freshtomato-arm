@@ -2378,12 +2378,13 @@ libiconv-install:
 
 transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
 	cd transmission && autoreconf && \
-		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
+		CFLAGS="-Os -Wall -pipe -marm -fno-delete-null-pointer-checks -funit-at-a-time \
 			--param large-function-growth=800 --param max-inline-insns-single=3000 \
 			-ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
 		HAVE_CXX=yes \
+		CXXFLAGS="-Os -Wall -pipe -marm -ffunction-sections -fdata-sections" \
 		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
 			--enable-lightweight --enable-largefile --enable-utp --without-gtk \
 			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
@@ -2398,7 +2399,7 @@ transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
 			ZLIB_CFLAGS="-I$(TOP)/zlib" \
 			ZLIB_LDFLAGS="-L$(TOP)/zlib" \
 			ZLIB_LIBS="-lz"
-		touch transmission/stamp-h1
+		@touch $@
 
 transmission: transmission/stamp-h1
 	@$(SEP)
@@ -2526,9 +2527,9 @@ nfs-utils-clean:
 
 tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 	$(call patch_files,tinc)
-	@cd tinc && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include -lpthread" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+	cd tinc && autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include -lpthread" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
 	$(CONFIGURE) \
 		--prefix=/usr \
 		--sysconfdir=/etc \
@@ -2601,14 +2602,14 @@ snmp-install:
 	$(STRIP) $(INSTALLDIR)/snmp/usr/sbin/snmpd
 
 apcupsd/stamp-h1:
-	cd apcupsd && touch autoconf/variables.mak && CC=$(CC) STRIP=$(STRIP) \
+	cd apcupsd && touch autoconf/variables.mak && \
 	$(MAKE) configure && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 	LDFLAGS="-L$(TOOLCHAIN)/lib -ffunction-sections -fdata-sections" \
 	$(CONFIGURE) --prefix=/usr --without-x --enable-usb --disable-pcnet --enable-cgi \
 		--disable-lgd --enable-net --sysconfdir=/usr/local/apcupsd --bindir=/bin \
-		--disable-dumb --disable-snmp --disable-net-snmp --with-cgi-bin=/www/apcupsd --with-serial-dev=
-	touch apcupsd/stamp-h1
+		--disable-dumb --disable-snmp --with-cgi-bin=/www/apcupsd --with-serial-dev=
+	@touch $@
 
 apcupsd: apcupsd/stamp-h1
 	@$(SEP)
@@ -2826,10 +2827,10 @@ ipset-clean:
 	$(call unpatch_files,ipset)
 
 libjson-c/stamp-h1:
-	cd $(TOP)/libjson-c && CC=$(CC) STRIP=$(CROSS_COMPILE)strip \
+	cd libjson-c && \
 	./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr
-	touch libjson-c/stamp-h1
+	@touch $@
 
 libjson-c: libjson-c/stamp-h1
 	@$(SEP)
