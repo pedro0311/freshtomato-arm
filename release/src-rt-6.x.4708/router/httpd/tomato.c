@@ -1780,6 +1780,7 @@ static const nvset_t nvset_list[] = {
 
 #ifdef TCONFIG_TOR
 	{ "tor_enable",			V_01				},
+	{ "tor_solve_only",		V_01				},
 	{ "tor_socksport",		V_RANGE(1,65535)		},
 	{ "tor_transport",		V_RANGE(1,65535)		},
 	{ "tor_dnsport",		V_RANGE(1,65535)		},

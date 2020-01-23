@@ -1461,6 +1461,7 @@ struct nvram_tuple router_defaults[] = {
 
 #ifdef TCONFIG_TOR
 	{ "tor_enable",			"0"				, 0 },
+	{ "tor_solve_only",		"0"				, 0 },
 	{ "tor_socksport",		"9050"				, 0 },
 	{ "tor_transport",		"9040"				, 0 },
 	{ "tor_dnsport",		"9053"				, 0 },

@@ -108,7 +108,7 @@ ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
 endif
 
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
+ifneq ($(TCONFIG_HTTPS),)
 ifeq ($(TCONFIG_OPENSSL11),y)
 obj-y += openssl-1.1
 OPENSSLDIR = openssl-1.1
@@ -154,26 +154,19 @@ obj-$(TCONFIG_USB) += p910nd
 obj-$(TCONFIG_USB) += comgt
 obj-$(TCONFIG_USB) += uqmi
 obj-$(TCONFIG_USB) += pdureader
+obj-$(TCONFIG_USB) += sd-idle
 
 obj-$(TCONFIG_UPS) += apcupsd
-
-ifeq ($(CONFIG_LINUX26),y)
-obj-$(TCONFIG_USB) += sd-idle
-else
-obj-$(TCONFIG_USB) += scsi-idle
-endif
 
 obj-y += libusb10
 obj-y += usbmodeswitch
 obj-$(TCONFIG_FTP) += vsftpd
 
-ifeq ($(CONFIG_LINUX26),y)
 ifeq ($(TCONFIG_SAMBASRV),y)
 NEED_EX_NLS = y
 endif
 ifeq ($(TCONFIG_USB_EXTRAS),y)
 NEED_EX_USB = y
-endif
 endif
 
 ifeq ($(TCONFIG_SAMBASRV),y)
@@ -230,8 +223,8 @@ MEDIA_SERVER_STATIC=y
 
 obj-y += libnfnetlink
 obj-y += miniupnpd
-obj-$(CONFIG_LINUX26) += libmnl
-obj-$(CONFIG_LINUX26) += ipset
+obj-y += libmnl
+obj-y += ipset
 
 
 #
@@ -272,8 +265,8 @@ obj-$(TCONFIG_NANO) += nano
 obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission
 
-obj-$(CONFIG_LINUX26) += hotplug2
-obj-$(CONFIG_LINUX26) += udevtrigger
+obj-y += hotplug2
+obj-y += udevtrigger
 
 ifneq ($(TCONFIG_OPENVPN)$(TCONFIG_FTP_SSL)$(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_TINC),)
     export FULL_OPENSSL := y
@@ -414,9 +407,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	if grep -q "CONFIG_MODULES=y" $(LINUXDIR)/.config ; then \
 	    $(MAKE) -C $(LINUXDIR) modules CC=$(KERNELCC) $(PARALLEL_BUILD); \
 	fi
-ifeq ($(CONFIG_LINUX26),y)
 	$(MAKE) -C $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed srctree=$(LINUXDIR) $(PARALLEL_BUILD)
-endif
 else	# TCONFIG_BCMARM
 	$(MAKE) compressed-clean #shibby
 	(echo '.NOTPARALLEL:' ; cat ${LINUXDIR}/Makefile) |\
@@ -468,18 +459,6 @@ install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
 	$(MAKE) -C $(LINUXDIR) modules_install \
 	INSTALL_MOD_STRIP="--strip-debug -x -R .comment -R .note -R .pdr -R .mdebug.abi32 -R .note.gnu.build-id -R .gnu.attributes -R .reginfo" \
 	DEPMOD=/bin/true INSTALL_MOD_PATH=$(TARGETDIR)
-
-ifneq ($(CONFIG_LINUX26),y)
-	find $(TARGETDIR)/lib/modules -name wl.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name et.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name bcm57*.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name ctf.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name emf.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name igs.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name jffs*.*o -exec $(STRIP) --strip-unneeded -x {} \;
-	find $(TARGETDIR)/lib/modules -name *.*o -exec $(STRIP) --strip-debug -x -R .mdebug.abi32 {} \;
-endif
-
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv diag/* . && rm -rf diag
 
 # nice and clean
@@ -960,14 +939,12 @@ busybox-clean:
 busybox-config:
 	$(MAKE) -C busybox menuconfig
 
-
 httpd: shared nvram$(BCMEX) mssl
 	@$(SEP)
 	@$(MAKE) -C httpd
 
 www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
-
 
 ifeq ($(FULL_OPENSSL),y)
 OPENSSL_CIPHERS:=enable-rc5
@@ -1076,7 +1053,7 @@ bridge-install:
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
 
 ifeq ($(TCONFIG_DNSSEC),y)
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX)$(TCONFIG_OPENSSL11),)
+ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
 DNSSEC_BACKEND := $(OPENSSLDIR)
 DNSSEC_OPENSSL := y
 else
@@ -1146,29 +1123,19 @@ gmp-clean:
 	$(call unpatch_files,gmp)
 
 iptables:
-ifeq ($(CONFIG_LINUX26),y)
-	cp -f iptables/extensions/libipt_ipp2p_K26.c iptables/extensions/libipt_ipp2p.c
-else
-	cp -f iptables/extensions/libipt_ipp2p_K24.c iptables/extensions/libipt_ipp2p.c
-endif
 	@$(SEP)
+	cp -f iptables/extensions/libipt_ipp2p_K26.c iptables/extensions/libipt_ipp2p.c
 	$(MAKE) -C iptables BINDIR=/usr/sbin LIBDIR=/usr/lib KERNEL_DIR=$(LINUXDIR) COPT_FLAGS="-Os $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE"
 
 iptables-install:
 	install -D iptables/iptables $(INSTALLDIR)/iptables/usr/sbin/iptables
-	cd $(INSTALLDIR)/iptables/usr/sbin && \
-		ln -sf iptables iptables-restore && \
-		ln -sf iptables iptables-save
-
+	cd $(INSTALLDIR)/iptables/usr/sbin && ln -sf iptables iptables-restore && ln -sf iptables iptables-save
 	install -d $(INSTALLDIR)/iptables/usr/lib/iptables
 	install -D iptables/extensions/*.so $(INSTALLDIR)/iptables/usr/lib/iptables/
-
 	install -D iptables/libiptc.so $(INSTALLDIR)/iptables/usr/lib/libiptc.so
-
 	$(STRIP) $(INSTALLDIR)/iptables/usr/sbin/iptables
 	$(STRIP) $(INSTALLDIR)/iptables/usr/lib/iptables/*.so
 	$(STRIP) $(INSTALLDIR)/iptables/usr/lib/libiptc.so
-
 ifeq ($(TCONFIG_IPV6),y)
 	install iptables/ip6tables $(INSTALLDIR)/iptables/usr/sbin/ip6tables
 	$(STRIP) $(INSTALLDIR)/iptables/usr/sbin/ip6tables
@@ -2120,7 +2087,7 @@ libpng-clean:
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
 
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_BBT)$(TCONFIG_NGINX),)
+ifneq ($(TCONFIG_HTTPS),)
 LDFPHPADD:=-Wl,-rpath,$(TOP)/$(OPENSSLDIR)
 else
 LDFPHPADD:=
@@ -2538,12 +2505,13 @@ libiconv-install:
 
 transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
 	cd transmission && autoreconf && \
-		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
+		CFLAGS="-Os -Wall -pipe -marm -fno-delete-null-pointer-checks -funit-at-a-time \
 			--param large-function-growth=800 --param max-inline-insns-single=3000 \
 			-ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
 		HAVE_CXX=yes \
+		CXXFLAGS="-Os -Wall -pipe -marm -ffunction-sections -fdata-sections" \
 		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
 			--enable-lightweight --enable-largefile --enable-utp --without-gtk \
 			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
@@ -2558,7 +2526,7 @@ transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
 			ZLIB_CFLAGS="-I$(TOP)/zlib" \
 			ZLIB_LDFLAGS="-L$(TOP)/zlib" \
 			ZLIB_LIBS="-lz"
-		touch transmission/stamp-h1
+		@touch $@
 
 transmission: transmission/stamp-h1
 	@$(SEP)
@@ -2686,9 +2654,9 @@ nfs-utils-clean:
 
 tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 	$(call patch_files,tinc)
-	@cd tinc && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include -lpthread" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+	cd tinc && autoreconf -fsi && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include -lpthread" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
 	$(CONFIGURE) \
 		--prefix=/usr \
 		--sysconfdir=/etc \
@@ -2761,14 +2729,14 @@ snmp-install:
 	$(STRIP) $(INSTALLDIR)/snmp/usr/sbin/snmpd
 
 apcupsd/stamp-h1:
-	cd apcupsd && touch autoconf/variables.mak && CC=$(CC) STRIP=$(STRIP) \
+	cd apcupsd && touch autoconf/variables.mak && \
 	$(MAKE) configure && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 	LDFLAGS="-L$(TOOLCHAIN)/lib -ffunction-sections -fdata-sections" \
 	$(CONFIGURE) --prefix=/usr --without-x --enable-usb --disable-pcnet --enable-cgi \
 		--disable-lgd --enable-net --sysconfdir=/usr/local/apcupsd --bindir=/bin \
-		--disable-dumb --disable-snmp --disable-net-snmp --with-cgi-bin=/www/apcupsd --with-serial-dev=
-	touch apcupsd/stamp-h1
+		--disable-dumb --disable-snmp --with-cgi-bin=/www/apcupsd --with-serial-dev=
+	@touch $@
 
 apcupsd: apcupsd/stamp-h1
 	@$(SEP)
@@ -2986,10 +2954,10 @@ ipset-clean:
 	$(call unpatch_files,ipset)
 
 libjson-c/stamp-h1:
-	cd $(TOP)/libjson-c && CC=$(CC) STRIP=$(CROSS_COMPILE)strip \
+	cd libjson-c && \
 	./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr
-	touch libjson-c/stamp-h1
+	@touch $@
 
 libjson-c: libjson-c/stamp-h1
 	@$(SEP)
