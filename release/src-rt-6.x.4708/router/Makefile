@@ -2685,7 +2685,7 @@ libyaml: libyaml/stamp-h1
 	$(MAKE) -C libyaml $(PARALLEL_BUILD)
 
 libyaml-install:
-	install -d $(INSTALLDIR)/libyaml/usr/lib
+	@true
 
 libyaml-clean:
 	-$(MAKE) -C libyaml clean
