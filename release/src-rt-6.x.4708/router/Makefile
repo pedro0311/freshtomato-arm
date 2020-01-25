@@ -264,13 +264,6 @@ obj-$(TCONFIG_BBT) += transmission
 
 obj-y += hotplug2
 obj-y += udevtrigger
-
-ifneq ($(TCONFIG_OPENVPN)$(TCONFIG_FTP_SSL)$(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_TINC),)
-    export FULL_OPENSSL := y
-else
-    FULL_OPENSSL :=
-endif
-
 obj-y += wanuptime
 
 ifeq ($(TCONFIG_IPV6),y)
@@ -728,7 +721,6 @@ libc:	$(LIBDIR)/ld-uClibc.so.0
 clean: clean-build $(obj-clean)
 	rm -rf layer7/squished
 	rm -f .ipv6-y .ipv6-n
-	rm -f .fullssl-y .fullssl-n
 	make -C config clean
 
 clean-build: dummy
@@ -784,12 +776,7 @@ menuconfig mconf: rmconf kmconf
 	@$(MAKE) $(IPTABLES_TARGET)-clean ebtables-clean pppd-clean dnsmasq-clean $(IPROUTE_TARGET)-clean
 	@touch $@
 
-.fullssl-y .fullssl-n:
-	@rm -f .fullssl-y .fullssl-n
-	@$(MAKE) openssl-clean vsftpd-clean mssl-clean mdu-clean httpd-clean
-	@touch $@
-
-dependconf: .ipv6-$(if $(TCONFIG_IPV6),y,n) .fullssl-$(if $(FULL_OPENSSL),y,n)
+dependconf: .ipv6-$(if $(TCONFIG_IPV6),y,n)
 
 oldconfig oldconf: koldconf roldconf dependconf bboldconf
 
@@ -819,12 +806,6 @@ httpd: shared nvram$(BCMEX) mssl
 www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
 
-ifeq ($(FULL_OPENSSL),y)
-OPENSSL_CIPHERS:=enable-rc5
-else
-OPENSSL_CIPHERS:=
-endif
-
 openssl/stamp-h1:
 	$(call patch_files,openssl)
 	cd $(TOP)/openssl && \
@@ -834,7 +815,7 @@ openssl/stamp-h1:
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3 no-err
+	shared enable-rc5 no-ssl2 no-ssl3 no-err
 	@$(MAKE) -C openssl depend clean
 	@touch openssl/stamp-h1
 
@@ -868,7 +849,7 @@ openssl-1.1/stamp-h1:
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0 \
+	shared no-ssl3 no-err no-async --api=1.0.0 \
 	no-aria no-sm2 no-sm3 no-sm4 \
 	-DOPENSSL_PREFER_CHACHA_OVER_GCM
 	-@$(MAKE) -C openssl-1.1 depend clean
