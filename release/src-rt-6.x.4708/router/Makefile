@@ -1329,6 +1329,7 @@ xl2tpd-install:
 	$(STRIP) $(INSTALLDIR)/xl2tpd/usr/sbin/xl2tpd
 
 xl2tpd-clean:
+	-@$(MAKE) -C xl2tpd clean
 	$(call unpatch_files,xl2tpd)
 
 bpalogin-install:
