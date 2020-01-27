@@ -49,31 +49,17 @@ int modprobe_r(const char *mod)
 }
 
 #ifndef ct_modprobe
-#ifdef LINUX26
 #define ct_modprobe(mod, args...) ({ \
 		modprobe("nf_conntrack_"mod, ## args); \
 		modprobe("nf_nat_"mod); \
 })
-#else
-#define ct_modprobe(mod, args...) ({ \
-		modprobe("ip_conntrack_"mod, ## args); \
-		modprobe("ip_nat_"mod, ## args); \
-})
-#endif
 #endif
 
 #ifndef ct_modprobe_r
-#ifdef LINUX26
 #define ct_modprobe_r(mod) ({ \
 	modprobe_r("nf_nat_"mod); \
 	modprobe_r("nf_conntrack_"mod); \
 })
-#else
-#define ct_modprobe_r(mod) ({ \
-	modprobe_r("ip_nat_"mod); \
-	modprobe_r("ip_conntrack_"mod); \
-})
-#endif
 #endif
 
 /* 
@@ -377,7 +363,6 @@ void setup_conntrack(void)
 		nvram_set("ct_timeout", buf);
 	}
 
-#ifdef LINUX26
 	p = nvram_safe_get("ct_hashsize");
 	i = atoi(p);
 	if (i >= 127) {
@@ -386,7 +371,6 @@ void setup_conntrack(void)
 	else if (f_read_string("/sys/module/nf_conntrack/parameters/hashsize", buf, sizeof(buf)) > 0) {
 		if (atoi(buf) > 0) nvram_set("ct_hashsize", buf);
 	}
-#endif
 
 	p = nvram_safe_get("ct_max");
 	i = atoi(p);
@@ -411,14 +395,12 @@ void setup_conntrack(void)
 		ct_modprobe_r("h323");
 	}
 
-#ifdef LINUX26
 	if (!nvram_match("nf_sip", "0")) {
 		ct_modprobe("sip");
 	}
 	else {
 		ct_modprobe_r("sip");
 	}
-#endif
 
 	// !!TB - FTP Server
 #ifdef TCONFIG_FTP
