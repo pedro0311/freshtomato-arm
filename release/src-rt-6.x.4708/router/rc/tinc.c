@@ -11,7 +11,6 @@
 
 void start_tinc(void)
 {
-
 	char *nv, *nvp, *b;
 	const char *connecto, *name, *address, *port, *compression, *subnet, *rsa, *ed25519, *custom, *tinc_tmp_value;
 	char buffer[BUF_SIZE];
@@ -30,8 +29,8 @@ void start_tinc(void)
 
 
 	// write private rsa key
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_private_rsa"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/rsa_key.priv", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_private_rsa"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/rsa_key.priv", "w" ))) {
 			perror( "/etc/tinc/rsa_key.priv" );
 			return;
 		}
@@ -42,8 +41,8 @@ void start_tinc(void)
 
 
 	// write private ed25519 key
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_private_ed25519"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/ed25519_key.priv", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_private_ed25519"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/ed25519_key.priv", "w" ))) {
 			perror( "/etc/tinc/ed25519_key.priv" );
 			return;
 		}
@@ -54,23 +53,19 @@ void start_tinc(void)
 
 
 	// create tinc.conf
-	if ( !( fp = fopen( "/etc/tinc/tinc.conf", "w" ))){
+	if ( !( fp = fopen( "/etc/tinc/tinc.conf", "w" ))) {
 		perror( "/etc/tinc/tinc.conf" );
 		return;
 	}
 
-
 	fprintf(fp, "Name = %s\n", nvram_safe_get( "tinc_name" ));
-
 	fprintf(fp, "Interface = tinc\n" );
-
 	fprintf(fp, "DeviceType = %s\n", nvram_safe_get( "tinc_devicetype" ));
 
-
-	if (nvram_match("tinc_devicetype", "tun")){
+	if (nvram_match("tinc_devicetype", "tun")) {
 		fprintf(fp, "Mode = router\n");
 	}
-	else if (nvram_match("tinc_devicetype", "tap")){
+	else if (nvram_match("tinc_devicetype", "tap")) {
 		fprintf(fp, "Mode = %s\n", nvram_safe_get( "tinc_mode" ));
 	}
 
@@ -83,13 +78,13 @@ void start_tinc(void)
 		if (vstrsep(b, "<", &connecto, &name, &address, &port, &compression, &subnet, &rsa, &ed25519, &custom) != 9) continue;
 
 		sprintf(&buffer[0], "/etc/tinc/hosts/%s", name);
-		if ( !( hp = fopen( &buffer[0], "w" ))){
+		if ( !( hp = fopen( &buffer[0], "w" ))) {
 			perror( &buffer[0] );
 			return;
 		}
 
 		// write Connecto's to tinc.conf, excluding the host system if connecto is enabled
-		if ( (strcmp( connecto, "1") == 0 ) && (strcmp( nvram_safe_get("tinc_name"), name) != 0 ) ){
+		if ( (strcmp( connecto, "1") == 0 ) && (strcmp( nvram_safe_get("tinc_name"), name) != 0 ) ) {
 			fprintf(fp, "ConnectTo = %s\n", name );
 		}
 
@@ -117,11 +112,11 @@ void start_tinc(void)
 		fclose(hp);
 
 		// generate tinc-up and firewall scripts
-		if ( strcmp( nvram_safe_get("tinc_name"), name)  == 0 ){
+		if ( strcmp( nvram_safe_get("tinc_name"), name)  == 0 ) {
 
 			// create tinc-up script if this is the host system.
 
-			if ( !( hp = fopen( "/etc/tinc/tinc-up", "w" ))){
+			if ( !( hp = fopen( "/etc/tinc/tinc-up", "w" ))) {
 				perror( "/etc/tinc/tinc-up" );
 				return;
 			}
@@ -129,12 +124,12 @@ void start_tinc(void)
 			fprintf(hp, "#!/bin/sh\n" );
 
 			// Determine whether automatically generate tinc-up, or use manually supplied script.
-			if ( !nvram_match("tinc_manual_tinc_up", "1") ){
+			if ( !nvram_match("tinc_manual_tinc_up", "1") ) {
 
-				if (nvram_match("tinc_devicetype", "tun")){
+				if (nvram_match("tinc_devicetype", "tun")) {
 					fprintf(hp, "ifconfig $INTERFACE %s netmask %s\n", nvram_safe_get("lan_ipaddr"), nvram_safe_get("tinc_vpn_netmask") );
 				}
-				else if (nvram_match("tinc_devicetype", "tap")){
+				else if (nvram_match("tinc_devicetype", "tap")) {
 					fprintf(hp, "brctl addif %s $INTERFACE\n", nvram_safe_get("lan_ifname") );
 					fprintf(hp, "ifconfig $INTERFACE 0.0.0.0 promisc up\n" );
 				}
@@ -147,43 +142,43 @@ void start_tinc(void)
 			chmod("/etc/tinc/tinc-up", 0744);
 
 			// Create firewall script.
-			if ( !( hp = fopen( "/etc/tinc/tinc-fw.sh", "w" ))){
+			if ( !( hp = fopen( "/etc/tinc/tinc-fw.sh", "w" ))) {
 				perror( "/etc/tinc/tinc-fw.sh" );
 				return;
 			}
 
 			fprintf(hp, "#!/bin/sh\n" );
 
-			if ( !nvram_match("tinc_manual_firewall", "2") ){
+			if ( !nvram_match("tinc_manual_firewall", "2") ) {
 
-				if ( strcmp( port, "") == 0 )
+				if (strcmp(port, "") == 0)
 					port = "655";
 
-				fprintf(hp, "iptables -I INPUT -p udp --dport %s -j ACCEPT\n", port );
-				fprintf(hp, "iptables -I INPUT -p tcp --dport %s -j ACCEPT\n", port );
-
-
-				fprintf(hp, "iptables -I INPUT -i tinc -j ACCEPT\n" );
-				fprintf(hp, "iptables -I FORWARD -i tinc -j ACCEPT\n" );
+				fprintf(hp,
+					"iptables -I INPUT -p udp --dport %s -j ACCEPT\n"
+					"iptables -I INPUT -p tcp --dport %s -j ACCEPT\n"
+					"iptables -I INPUT -i tinc -j ACCEPT\n"
+					"iptables -I FORWARD -i tinc -j ACCEPT\n",
+					port,
+					port);
 
 #ifdef TCONFIG_IPV6
-				if (ipv6_enabled()){
-
-					fprintf(hp, "\n" );
-					fprintf(hp, "ip6tables -I INPUT -p udp --dport %s -j ACCEPT\n", port );
-					fprintf(hp, "ip6tables -I INPUT -p tcp --dport %s -j ACCEPT\n", port );
-
-					fprintf(hp, "ip6tables -I INPUT -i tinc -j ACCEPT\n" );
-					fprintf(hp, "ip6tables -I FORWARD -i tinc -j ACCEPT\n" );
+				if (ipv6_enabled()) {
+					fprintf(hp,
+						"\n"
+						"ip6tables -I INPUT -p udp --dport %s -j ACCEPT\n"
+						"ip6tables -I INPUT -p tcp --dport %s -j ACCEPT\n"
+						"ip6tables -I INPUT -i tinc -j ACCEPT\n"
+						"ip6tables -I FORWARD -i tinc -j ACCEPT\n",
+						port,
+						port);
 				}
 #endif
 			}
 
-			if ( !nvram_match("tinc_manual_firewall", "0") ){
-
+			if ( !nvram_match("tinc_manual_firewall", "0") ) {
 				fprintf(hp, "\n" );
 				fprintf(hp, "%s\n", nvram_safe_get("tinc_firewall") );
-
 			}
 
 			fclose(hp);
@@ -199,8 +194,8 @@ void start_tinc(void)
 	free(nv);
 
 	// write tinc-down
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_tinc_down"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/tinc-down", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_tinc_down"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/tinc-down", "w" ))) {
 			perror( "/etc/tinc/tinc-down" );
 			return;
 		}
@@ -208,11 +203,11 @@ void start_tinc(void)
 		fprintf(fp, "%s\n", tinc_tmp_value );
 		fclose(fp);
 		chmod("/etc/tinc/tinc-down", 0744);
-        }
+	}
 
 	// write host-up
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_host_up"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/host-up", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_host_up"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/host-up", "w" ))) {
 			perror( "/etc/tinc/host-up" );
 			return;
 		}
@@ -223,8 +218,8 @@ void start_tinc(void)
 	}
 
 	// write host-down
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_host_down"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/host-down", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_host_down"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/host-down", "w" ))) {
 			perror( "/etc/tinc/host-down" );
 			return;
 		}
@@ -235,8 +230,8 @@ void start_tinc(void)
 	}
 
 	// write subnet-up
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_subnet_up"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/subnet-up", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_subnet_up"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/subnet-up", "w" ))) {
 			perror( "/etc/tinc/subnet-up" );
 			return;
 		}
@@ -247,8 +242,8 @@ void start_tinc(void)
 	}
 
 	// write subnet-down
-	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_subnet_down"), "") != 0 ){
-		if ( !( fp = fopen( "/etc/tinc/subnet-down", "w" ))){
+	if ( strcmp( tinc_tmp_value = nvram_safe_get("tinc_subnet_down"), "") != 0 ) {
+		if ( !( fp = fopen( "/etc/tinc/subnet-down", "w" ))) {
 			perror( "/etc/tinc/subnet-down" );
 			return;
 		}
@@ -266,8 +261,7 @@ void start_tinc(void)
 	run_tinc_firewall_script();
 	xstart( "/usr/sbin/tinc", "start" );
 
-	if ((nvi = nvram_get_int("tinc_poll")) > 0)
-	{
+	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
 		sprintf(cru, "*/%d * * * * service tinc start", nvi);
 		eval("cru", "a", "CheckTincDaemon", cru);
 	}
@@ -281,14 +275,15 @@ void stop_tinc(void)
 	run_tinc_firewall_script();
 	system( "/bin/rm -rf /etc/tinc\n" );
 	eval("cru", "d", "CheckTincDaemon");
+
 	return;
 }
 
-void run_tinc_firewall_script(void){
-
+void run_tinc_firewall_script(void)
+{
 	FILE *fp;
 
-	if ((fp = fopen( "/etc/tinc/tinc-fw.sh", "r" ))){
+	if ((fp = fopen( "/etc/tinc/tinc-fw.sh", "r" ))) {
 
 		fclose(fp);
 		system( "/etc/tinc/tinc-fw.sh" );
@@ -297,8 +292,8 @@ void run_tinc_firewall_script(void){
 	return;
 }
 
-void start_tinc_wanup(void){
-
+void start_tinc_wanup(void)
+{
 	if ( nvram_match("tinc_wanup", "1") )
 		start_tinc();
 
