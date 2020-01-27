@@ -936,6 +936,7 @@ dnsmasq-install:
 	$(STRIP) $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
 
 dnsmasq-clean:
+	-@$(MAKE) -C dnsmasq clean
 	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
