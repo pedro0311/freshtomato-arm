@@ -12,6 +12,7 @@ No part of this file may be used without permission.
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Please Wait...</title>
 <script type="text/javascript">
+var spun = 1;
 wait = parseInt('<% cgi_get("_nextwait"); %>', 10);
 if (isNaN(wait)) wait = 5;
 function tick() {

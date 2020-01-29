@@ -42,7 +42,7 @@ static int in_sched(int now_mins, int now_dow, int sched_begin, int sched_end, i
 
 	// ror now_dow, 1
 	if (now_dow == 1) now_dow = (1 << 6);
-		else now_dow >>= 1;
+	else              now_dow >>= 1;
 
 	if ((now_dow & sched_dow) != 0) {
 		if (now_mins < sched_end) return 1;
@@ -79,9 +79,7 @@ int rcheck_main(int argc, char *argv[])
 #ifdef TCONFIG_IPV6
 	int r6;
 #endif
-#ifdef LINUX26
 	int ipt_active;
-#endif
 
 	if (!nvram_contains_word("log_events", "acre")) {
 		setlogmask(LOG_MASK(LOG_EMERG));	// can't set to 0
@@ -103,10 +101,7 @@ int rcheck_main(int argc, char *argv[])
 		now_mins = (tms->tm_hour * 60) + tms->tm_min;
 	}
 
-#ifdef LINUX26
 	ipt_active = 0;
-#endif
-
 	activated = strtoull(nvram_safe_get("rrules_activated"), NULL, 16);
 	count = 0;
 	radio = foreach_wif(0, NULL, radio_on) ? -1 : -2;
@@ -126,10 +121,8 @@ int rcheck_main(int argc, char *argv[])
 			insch = in_sched(now_mins, now_dow, sched_begin, sched_end, sched_dow);
 		}
 
-#ifdef LINUX26
 		if ((insch) && (comp != '~'))
 			++ipt_active;
-#endif
 
 		n = 1 << nrule;
 		if ((insch) == ((activated & n) != 0)) {
@@ -147,7 +140,6 @@ int rcheck_main(int argc, char *argv[])
 			r = eval("iptables", "-D", "restrict", "-j", buf);
 			if (insch) {
 				// ignore error above (if any)
-
 				r = eval("iptables", "-A", "restrict", "-j", buf);
 			}
 
@@ -156,7 +148,6 @@ int rcheck_main(int argc, char *argv[])
 			if (ipv6_enabled()) {
 				if (insch) {
 					// ignore error above (if any)
-
 					r6 = eval("ip6tables", "-A", "restrict", "-j", buf);
 				}
 				r |= r6;
@@ -171,7 +162,7 @@ int rcheck_main(int argc, char *argv[])
 		}
 
 		if (insch) activated |= n;
-			else activated &= ~n;
+		else       activated &= ~n;
 	}
 
 	sprintf(buf, "%llx", activated);
@@ -203,10 +194,8 @@ int rcheck_main(int argc, char *argv[])
 #endif
 	}
 
-#ifdef LINUX26
 	allow_fastnat("restrictions", (ipt_active == 0));
 	try_enabling_fastnat();
-#endif
 	simple_unlock("restrictions");
 	return 0;
 }
@@ -272,7 +261,7 @@ void ipt_restrictions(void)
 #ifdef TCONFIG_IPV6
 			if (*wan6face)
 				ip6t_write("-A FORWARD -o %s -j restrict\n",
-					  wan6face);
+					   wan6face);
 #endif
 			for (n = 0; n < wanfaces.count; ++n) {
 				if (*(wanfaces.iface[n].name)) {
@@ -353,8 +342,6 @@ void ipt_restrictions(void)
 			}
 		}
 
-		//
-
 		p = http;
 		while (*p) {
 			if ((*p == '\t') || (*p == '\r') || (*p == '\n') || (*p == '"')) *p = ' ';
@@ -378,8 +365,6 @@ void ipt_restrictions(void)
 			http = p + 1;
 		}
 
-
-		//
 		app[0] = 0;
 		if (http_file & 1) strcat(app, ".ocx$ .cab$ ");
 		if (http_file & 2) strcpy(app, ".swf$ ");
