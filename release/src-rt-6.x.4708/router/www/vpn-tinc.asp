@@ -62,14 +62,15 @@ textarea
 
 //	<% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
 
+tincup = parseInt ('<% psup("tincd"); %>');
+
+tabs = [['config', 'Config'],['hosts', 'Hosts'],['scripts', 'Scripts'],['keys', 'Generate Keys'],['status', 'Status']];
+
 var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
 var th = new TomatoGrid();
 var cmd = null;
 var cmdresult = '';
-
-tabs = [['config', 'Config'],['hosts', 'Hosts'],['scripts', 'Scripts'],['keys', 'Generate Keys'],['status', 'Status']];
-changed = 0;
-tincup = parseInt ('<% psup("tincd"); %>');
+var changed = 0;
 
 th.setup = function() {
 	this.init('th-grid', '', 50, [
@@ -87,7 +88,7 @@ th.setup = function() {
 	var nv = nvram.tinc_hosts.split('>');
 	for (var i = 0; i < nv.length; ++i) {
 		var t = nv[i].split('<');
-		if (t.length == 9){
+		if (t.length == 9) {
 			t[0] *= 1;
 			this.insertData(-1, t);
 		}
@@ -96,12 +97,12 @@ th.setup = function() {
 }
 
 th.dataToView = function(data) {
-	return [(data[0] != '0') ? 'On' : '', data[1], data[2], data[3], data[4] ,data[5] ];
+	return [(data[0] != '0') ? 'On' : '', data[1], data[2], data[3], data[4] ,data[5]];
 }
 
 th.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
-	return [f[0].checked ? 1 : 0, f[1].value, f[2].value, f[3].value, f[4].value, f[5].value, E('_host_rsa_key').value, E('_host_ed25519_key').value, E('_host_custom').value ];
+	return [f[0].checked ? 1 : 0, f[1].value, f[2].value, f[3].value, f[4].value, f[5].value, E('_host_rsa_key').value, E('_host_ed25519_key').value, E('_host_custom').value];
 }
 
 th.resetNewEditor = function() {
@@ -123,36 +124,51 @@ th.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 
 	if (f[1].value == "") {
-		ferror.set(f[1], "Host Name is required.", quiet); return 0 ; }
-	else {  ferror.clear(f[1]) }
+		ferror.set(f[1], "Host Name is required.", quiet);
+		return 0;
+	} else {
+		ferror.clear(f[1]);
+	}
 	if (f[0].checked && f[2].value == "") {
-		ferror.set(f[2], "Address must be supplied when ConnectTo is checked.", quiet); return 0 ; }
-	else {  ferror.clear(f[2]) }
+		ferror.set(f[2], "Address must be supplied when ConnectTo is checked.", quiet);
+		return 0;
+	} else {
+		ferror.clear(f[2]);
+	}
 	if (!f[3].value == "" ) {
-		if (!v_port(f[3], quiet)) return 0 ;
+		if (!v_port(f[3], quiet));
+		return 0;
 	}
 	
-	if(E('_tinc_devicetype').value == 'tun'){
+	if (E('_tinc_devicetype').value == 'tun') {
 		if ((!v_subnet(f[5], 1)) && (!v_ip(f[5], 1))) {
-			ferror.set(f[5], "Invalid Subnet or IP address.", quiet); return 0 ; }
-		else {  ferror.clear(f[5]) }
+			ferror.set(f[5], "Invalid Subnet or IP address.", quiet);
+			return 0;
+		} else {
+			ferror.clear(f[5]);
+		}
 	}
-	else if (E('_tinc_devicetype').value == 'tap'){
+	else if (E('_tinc_devicetype').value == 'tap') {
 		if (f[5].value != '') {
-			ferror.set(f[5], "Subnet is left blank when using the TAP Interface Type.", quiet); return 0 ; }
-		else {  ferror.clear(f[5]) }
+			ferror.set(f[5], "Subnet is left blank when using the TAP Interface Type.", quiet);
+			return 0;
+		} else {
+			ferror.clear(f[5]);
+		}
 	}
 
 	if (E('_host_ed25519_key').value == "") {
-		ferror.set(E('_host_ed25519_key'), "Ed25519 Public Key is required.", quiet); return 0 ; }
-	else {  ferror.clear(E('_host_ed25519_key')) }
+		ferror.set(E('_host_ed25519_key'), "Ed25519 Public Key is required.", quiet);
+		return 0;
+	} else {
+		ferror.clear(E('_host_ed25519_key'));
+	}
 
 	return 1;
 }
 
 function verifyFields(focused, quiet) {
-	if (focused)
-	{
+	if (focused) {
 		changed = 1;
 	}
 
@@ -165,29 +181,29 @@ function verifyFields(focused, quiet) {
 	switch (E('_tinc_devicetype').value) {
 		case 'tun':
 			vis._tinc_mode = 0;
-			vis._tinc_vpn_netmask = 1 ;
+			vis._tinc_vpn_netmask = 1;
 		break;
 		case 'tap':
 			vis._tinc_mode = 1;
-			vis._tinc_vpn_netmask = 0 ;
+			vis._tinc_vpn_netmask = 0;
 		break;
 	}
 
-	switch(E('_tinc_manual_tinc_up').value) {
-		case '0' :
-			E('_tinc_tinc_up').disabled = 1 ;
+	switch (E('_tinc_manual_tinc_up').value) {
+		case '0':
+			E('_tinc_tinc_up').disabled = 1;
 		break;
-		case '1' :
-			E('_tinc_tinc_up').disabled = 0 ;
+		case '1':
+			E('_tinc_tinc_up').disabled = 0;
 		break;
 	}
 
-	switch(E('_tinc_manual_firewall').value) {
-		case '0' :
-			E('_tinc_firewall').disabled = 1 ;
+	switch (E('_tinc_manual_firewall').value) {
+		case '0':
+			E('_tinc_firewall').disabled = 1;
 		break;
-		default :
-			E('_tinc_firewall').disabled = 0 ;
+		default:
+			E('_tinc_firewall').disabled = 0;
 		break;
 	}
 
@@ -207,32 +223,42 @@ function verifyFields(focused, quiet) {
 
 	/* Element Verification */
 	if (E('_tinc_name').value == "" && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_name'), "Host Name is required when 'Start With WAN' is checked.", quiet); return 0 ; }
-	else {  ferror.clear(E('_tinc_name')) }
+		ferror.set(E('_tinc_name'), "Host Name is required when 'Start With WAN' is checked.", quiet);
+		return 0;
+	} else {
+		ferror.clear(E('_tinc_name'));
+	}
 
 	if (E('_tinc_private_ed25519').value == "" && E('_tinc_custom').value == "" && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_private_ed25519'), "Ed25519 Private Key is required when 'Start With WAN' is checked.", quiet); return 0 ; }
-	else {  ferror.clear(E('_tinc_private_ed25519')) }
+		ferror.set(E('_tinc_private_ed25519'), "Ed25519 Private Key is required when 'Start With WAN' is checked.", quiet);
+		return 0;
+	} else {
+		ferror.clear(E('_tinc_private_ed25519'));
+	}
 
 	if (!v_netmask('_tinc_vpn_netmask', quiet)) return 0;
 
 	if (!v_range('_tinc_poll', quiet, 0, 1440)) return 0;
 
 	if (!E('_host_ed25519_key').value == "") {
-		ferror.clear(E('_host_ed25519_key')) }
+		ferror.clear(E('_host_ed25519_key'));
+	}
 
 	var hostdefined = false;
 	var hosts = th.getAllData();
 	for (var i = 0; i < hosts.length; ++i) {
-		if(hosts[i][1] == E('_tinc_name').value){
+		if (hosts[i][1] == E('_tinc_name').value) {
 			hostdefined = true;
 			break;
 		}
 	}
 
 	if (!hostdefined && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_name'), "Host Name \"" + E('_tinc_name').value + "\" must be defined in the hosts area when 'Start With WAN' is checked.", quiet); return 0 ; }
-	else {  ferror.clear(E('_tinc_name')) };
+		ferror.set(E('_tinc_name'), "Host Name \"" + E('_tinc_name').value + "\" must be defined in the hosts area when 'Start With WAN' is checked.", quiet);
+		return 0;
+	} else {
+		ferror.clear(E('_tinc_name'));
+	}
 
 	return 1;
 }
@@ -255,16 +281,14 @@ String.prototype.between = function(prefix, suffix) {
 	var i = s.indexOf(prefix);
 	if (i >= 0) {
 		s = s.substring(i + prefix.length);
-	}
-	else {
+	} else {
 		return '';
 	}
 	if (suffix) {
 		i = s.indexOf(suffix);
 		if (i >= 0) {
 			s = s.substring(0, i);
-		}
-		else {
+		} else {
 			return '';
 		}
 	}
@@ -284,7 +308,7 @@ function displayKeys() {
 
 function generateKeys() {
 	E('execb').disabled = 1;
-	spin(1,'generateWait');
+	spin(1, 'generateWait');
 
 	E('_rsa_private_key').value = "";
 	E('_rsa_public_key').value = "";
@@ -315,12 +339,12 @@ function generateKeys() {
 function displayStatus() {
 	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
 	cmdresult = '';
-	spin(0,'statusWait');
+	spin(0, 'statusWait');
 }
 
 function updateStatus(type) {
 	E('result').innerHTML = '';
-	spin(1,'statusWait');
+	spin(1, 'statusWait');
 
 	cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
@@ -332,11 +356,9 @@ function updateStatus(type) {
 		displayStatus();
 	}
 
-	if(type != "info") {
+	if (type != "info") {
 		var commands = "/usr/sbin/tinc dump " + type + "\n";
-	}
-	else
-	{
+	} else {
 		var selects = document.getElementById("hostselect");
 		var commands = "/usr/sbin/tinc " + type + " " + selects.options[selects.selectedIndex].text + "\n";
 	}
@@ -346,20 +368,19 @@ function updateStatus(type) {
 }
 
 function displayNodes() {
-	var hostselect=document.getElementById("hostselect")
+	var hostselect = document.getElementById("hostselect");
 	var selected = hostselect.value;
 
-	while(hostselect.firstChild) {
+	while (hostselect.firstChild) {
 		hostselect.removeChild(hostselect.firstChild);
 	}
 
 	var hosts = cmdresult.split("\n");
 
-	for (var i = 0; i < hosts.length; ++i)
-	{
+	for (var i = 0; i < hosts.length; ++i) {
 		if (hosts[i] != '') {
-			hostselect.options[hostselect.options.length]=new Option(hosts[i],hosts[i]);
-			if(hosts[i] == selected) {
+			hostselect.options[hostselect.options.length] = new Option(hosts[i],hosts[i]);
+			if (hosts[i] == selected) {
 				hostselect.value = selected;
 			}
 		}
@@ -369,8 +390,7 @@ function displayNodes() {
 }
 
 function updateNodes() {
-	if (tincup)
-	{
+	if (tincup) {
 		cmd = new XmlHttp();
 		cmd.onCompleted = function(text, xml) {
 			eval(text);
@@ -411,8 +431,7 @@ function tabSelect(name) {
 	cookie.set('vpn_tinc_tab', name);
 	tabHigh(name);
 
-	for (var i = 0; i < tabs.length; ++i)
-	{
+	for (var i = 0; i < tabs.length; ++i) {
 		var on = (name == tabs[i][0]);
 		elem.display(tabs[i][0] + '-tab', on);
 	}
@@ -425,20 +444,20 @@ function toggle(service, isup) {
 		s += data[i].join('<') + '>';
 	}
 
-	if (nvram.tinc_hosts != s)
-	changed = 1;
-
-	if (changed) {
-		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
+	if (nvram.tinc_hosts != s) {
+		changed = 1;
 	}
+
+	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
 
 	E('_' + service + '_button1').disabled = true;
 	E('_' + service + '_button2').disabled = true;
 	E('_' + service + '_button3').disabled = true;
 	E('_' + service + '_button4').disabled = true;
-	form.submitHidden('/service.cgi', {
+
+	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-tinc.asp',
-		_sleep: ((service == 'tinc') && (!isup)) ? '3' : '3',
+		_sleep: '3',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }
@@ -454,16 +473,16 @@ function save() {
 	}
 	var fom = E('t_fom');
 	fom.tinc_hosts.value = s;
+	nvram.tinc_hosts = s;
 	fom.tinc_wanup.value = fom.f_tinc_wanup.checked ? 1 : 0;
 
-	if ( tincup )
-	{
+	if (tincup) {
 		fom._service.value = 'tinc-restart';
 	}
 
-	changed = 0;
-
 	form.submit(fom, 1);
+
+	changed = 0;
 }
 
 function init() {
@@ -474,6 +493,9 @@ function init() {
 	if (((c = cookie.get('vpn_tinc_hosts_vis')) != null) && (c == '1')) toggleVisibility("hosts");
 	getVersion();
 	updateNodes();
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
 function earlyInit() {
@@ -662,6 +684,19 @@ function toggleVisibility(whichone) {
 	// -------- END KEY TAB -----------
 
 </script>
+
+<!-- / / / -->
+
+<br />
+<div class="section-title">Tutorial</div>
+<div class="section">
+	<ul>
+		<li><a href="https://www.linksysinfo.org/index.php?threads/tinc-mesh-vpn.70257/" class="new_window">At this address</a> you can find a good one.</li>
+	</ul>
+</div>
+
+<!-- / / / -->
+
 </td></tr>
 <tr><td id="footer" colspan="2">
 	<span id="footer-msg"></span>
@@ -672,7 +707,7 @@ function toggleVisibility(whichone) {
 </form>
 <script type="text/javascript">
 	earlyInit();
-	verifyFields(null,true);
+	verifyFields(null, true);
 </script>
 </body>
 </html>

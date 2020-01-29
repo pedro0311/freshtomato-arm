@@ -1014,7 +1014,7 @@ static void nat_table(void)
 
 #ifdef TCONFIG_TOR
 		/* TOR */
-		if (nvram_match("tor_enable", "1")) {
+		if (nvram_match("tor_enable", "1") && nvram_match("tor_solve_only", "0")) {
 			char *torports;
 
 			if (nvram_match("tor_ports", "custom")) {

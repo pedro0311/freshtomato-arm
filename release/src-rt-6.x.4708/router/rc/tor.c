@@ -11,40 +11,51 @@ void start_tor(void) {
 	FILE *fp;
 	char *ip;
 
-	// only if enable...
+	/* only if enabled... */
 	if (nvram_match("tor_enable", "1")) {
 
-		if (nvram_match("tor_iface", "br0"))      { ip = nvram_safe_get("lan_ipaddr");  }
-		else if (nvram_match("tor_iface", "br1")) { ip = nvram_safe_get("lan1_ipaddr"); }
-		else if (nvram_match("tor_iface", "br2")) { ip = nvram_safe_get("lan2_ipaddr"); }
-		else if (nvram_match("tor_iface", "br3")) { ip = nvram_safe_get("lan3_ipaddr"); }
-		else                                      { ip = nvram_safe_get("lan_ipaddr");  }
+		if (nvram_match("tor_solve_only", "1")) {
+			/* dnsmasq uses this IP for nameserver to resolv .onion/.exit domains */
+			ip = nvram_safe_get("lan_ipaddr");
+		}
+		else {
+			if (nvram_match("tor_iface", "br0"))      { ip = nvram_safe_get("lan_ipaddr");  }
+			else if (nvram_match("tor_iface", "br1")) { ip = nvram_safe_get("lan1_ipaddr"); }
+			else if (nvram_match("tor_iface", "br2")) { ip = nvram_safe_get("lan2_ipaddr"); }
+			else if (nvram_match("tor_iface", "br3")) { ip = nvram_safe_get("lan3_ipaddr"); }
+			else                                      { ip = nvram_safe_get("lan_ipaddr");  }
+		}
 
-
-		// writing data to file
-		if(!(fp = fopen( "/etc/tor.conf", "w"))) {
+		/* writing data to file */
+		if (!(fp = fopen( "/etc/tor.conf", "w"))) {
 			perror("/etc/tor.conf");
 			return;
 		}
 		/* localhost ports, NoPreferIPv6Automap doesn't matter when applied only to DNSPort, but works fine with SocksPort */
-		fprintf(fp, "SocksPort %d NoPreferIPv6Automap\n", nvram_get_int("tor_socksport"));
-		/* .exit .onion domains support for LAN clients */
-		fprintf(fp, "AutomapHostsOnResolve 1\n");
-		fprintf(fp, "VirtualAddrNetworkIPv4 172.16.0.0/12\n");
-		fprintf(fp, "VirtualAddrNetworkIPv6 [FC00::]/7\n");
-		fprintf(fp, "AvoidDiskWrites 1\n");
-		fprintf(fp, "RunAsDaemon 1\n");
-		fprintf(fp, "Log notice syslog\n");
-		fprintf(fp, "DataDirectory %s\n", nvram_safe_get("tor_datadir"));
-		fprintf(fp, "TransPort %s:%s\n", ip, nvram_safe_get("tor_transport"));
-		fprintf(fp, "DNSPort %s:%s\n", ip, nvram_safe_get("tor_dnsport"));
-		fprintf(fp, "User nobody\n");
-		fprintf(fp, "%s\n", nvram_safe_get("tor_custom"));
-
+		fprintf(fp,
+			"SocksPort %d NoPreferIPv6Automap\n"
+			"AutomapHostsOnResolve 1\n"		/* .exit/.onion domains support for LAN clients */
+			"VirtualAddrNetworkIPv4 172.16.0.0/12\n"
+			"VirtualAddrNetworkIPv6 [FC00::]/7\n"
+			"AvoidDiskWrites 1\n"
+			"RunAsDaemon 1\n"
+			"Log notice syslog\n"
+			"DataDirectory %s\n"
+			"TransPort %s:%s\n"
+			"DNSPort %s:%s\n"
+			"User nobody\n"
+			"%s\n",
+			nvram_get_int("tor_socksport"),
+			nvram_safe_get("tor_datadir"),
+			ip,
+			nvram_safe_get("tor_transport"),
+			ip,
+			nvram_safe_get("tor_dnsport"),
+			nvram_safe_get("tor_custom"));
 		fclose(fp);
+
 		chmod("/etc/tor.conf", 0644);
 		chmod("/dev/null", 0666);
-
 		mkdir(nvram_safe_get("tor_datadir"), 0777);
 		xstart("chown", "nobody:nobody", nvram_safe_get("tor_datadir"));
 
