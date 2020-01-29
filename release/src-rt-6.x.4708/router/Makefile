@@ -2334,16 +2334,18 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
+	$(call patch_files,transmission)
 	cd transmission && autoreconf && \
 		CFLAGS="-Os -Wall -pipe -marm -fno-delete-null-pointer-checks -funit-at-a-time \
 			--param large-function-growth=800 --param max-inline-insns-single=3000 \
 			-ffunction-sections -fdata-sections" \
+		CPPFLAGS="--param large-function-growth=800 --param max-inline-insns-single=3000" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
 		HAVE_CXX=yes \
 		CXXFLAGS="-Os -Wall -pipe -marm -ffunction-sections -fdata-sections" \
 		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
-			--enable-lightweight --enable-largefile --enable-utp --without-gtk \
+			--enable-lightweight --enable-largefile --enable-utp --without-gtk --disable-cli --without-systemd-daemon \
 			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
 			LIBCURL_LDFLAGS="-L$(TOP)/libcurl/lib/.libs/" \
 			LIBCURL_LIBS="-lcurl" \
@@ -2365,19 +2367,16 @@ transmission: transmission/stamp-h1
 transmission-clean:
 	-@$(MAKE) -C transmission clean
 	@rm -f transmission/stamp-h1 transmission/Makefile
+	$(call unpatch_files,transmission)
 
 transmission-install:
 	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
 	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-cli
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-show
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-edit
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-create
 	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-daemon
-ifeq ($(TCONFIG_TR_EXTRAS),y)
-	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
-else
+ifneq ($(TCONFIG_TR_EXTRAS),y)
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-remote
+else
+	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
 endif
 
 libnfsidmap/stamp-h1:
