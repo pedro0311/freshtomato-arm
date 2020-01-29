@@ -142,196 +142,70 @@ function c(id, htm) {
 
 function ethstates() {
 	port = etherstates.port0;
-	if (port == "disabled") { return 0; }
+	if (port == "disabled") return 0;
 
-	var state, state1, state2;
+	var state1, state2, fn, i;
 	var code = '<div class="section-title">Ethernet Ports State<\/div>';
 	code += '<table class="fields"><tr>';
 	var v = 0;
-	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
-		u = (uidx>1) ? uidx : '';
+	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
 		if ((nvram['wan'+u+'_sta'] == '') && (nvram['wan'+u+'_proto'] != 'lte') && (nvram['wan'+u+'_proto'] != 'ppp3g')) {
 			code += '<td class="title indent2" style="text-align:center"><b>WAN'+u+'<\/b><\/td>';
 			++v;
 		}
 	}
-	for (uidx = v ; uidx <= 4; ++uidx){
+	for (uidx = v; uidx <= 4; ++uidx) {
 		code += '<td class="title indent2" style="text-align:center"><b>LAN'+uidx+'<\/b><\/td>';
 	}
 	code += '<tr>';
 
-	if (port == null) {
-		state = '<img id="eth_off_0" src="eth_off.png" alt=""><br />';
-		state2 = "NOSUPPORT";
-	}
-	else if (port == "DOWN") {
-		state = '<img id="eth_off_0" src="eth_off.png" alt=""><br />';
-		state2 = port.replace("DOWN","Unplugged");
-	}
-	else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000_0" src="eth_1000.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "100FD") || (port == "100HD")) {
-		state = '<img id="eth_100_0" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "10FD") || (port == "10HD")) {
-		state = '<img id="eth_100_0" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else {
-		state = '<img id="eth_1000_0" src="eth_1000.gif" alt=""><br />';
-		state2 = "AUTO";
-	}
-	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	}
-	else {
-		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
-	}
+	for (i = 0; i <= 4; ++i) {
+		port = eval('etherstates.port'+i);
 
-	port = etherstates.port1;
-	if (port == null) {
-		state = '<img id="eth_off_1" src="eth_off.png" alt=""><br />';
-		state2 = "NOSUPPORT";
-	}
-	else if (port == "DOWN") {
-		state = '<img id="eth_off_1" src="eth_off.png" alt=""><br />';
-		state2 = port.replace("DOWN","Unplugged");
-	}
-	else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000_1" src="eth_1000.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "100FD") || (port == "100HD")) {
-		state = '<img id="eth_100_1" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "10FD") || (port == "10HD")) {
-		state = '<img id="eth_100_1" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else {
-		state = '<img id="eth_1000_1" src="eth_1000.gif" alt=""><br />';
-		state2 = "AUTO";
-	}
-	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	}
-	else {
-		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
-	}
-
-	port = etherstates.port2;
-	if (port == null) {
-		state = '<img id="eth_off_2" src="eth_off.png" alt=""><br />';
-		state2 = "NOSUPPORT";
-	}
-	else if (port == "DOWN") {
-		state = '<img id="eth_off_2" src="eth_off.png" alt=""><br />';
-		state2 = port.replace("DOWN","Unplugged");
-	}
-	else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000_2" src="eth_1000.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "100FD") || (port == "100HD")) {
-		state = '<img id="eth_100_2" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "10FD") || (port == "10HD")) {
-		state = '<img id="eth_100_2" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else {
-		state = '<img id="eth_1000_2" src="eth_1000.gif" alt=""><br />';
-		state2 = "AUTO";
-	}
-	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	}
-	else {
-		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
-	}
-
-	port = etherstates.port3;
-	if (port == null) {
-		state = '<img id="eth_off_3" src="eth_off.png" alt=""><br />';
-		state2 = "NOSUPPORT";
-	}
-	else if (port == "DOWN") {
-		state = '<img id="eth_off_3" src="eth_off.png" alt=""><br />';
-		state2 = port.replace("DOWN","Unplugged");
-	}
-	else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000_3" src="eth_1000.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "100FD") || (port == "100HD")) {
-		state = '<img id="eth_100_3" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "10FD") || (port == "10HD")) {
-		state = '<img id="eth_100_3" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else {
-		state = '<img id="eth_1000_3" src="eth_1000.gif" alt=""><br />';
-		state2 = "AUTO";
-	}
-	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	}
-	else {
-		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
-	}
-
-	port = etherstates.port4;
-	if (port == null) {
-		state = '<img id="eth_off_4" src="eth_off.png" alt=""><br />';
-		state2 = "NOSUPPORT";
-	}
-	else if (port == "DOWN") {
-		state = '<img id="eth_off_4" src="eth_off.png" alt=""><br />';
-		state2 = port.replace("DOWN","Unplugged");
-	}
-	else if ((port == "1000FD") || (port == "1000HD")) {
-		state = '<img id="eth_1000_4" src="eth_1000.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "100FD") || (port == "100HD")) {
-		state = '<img id="eth_100_4" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else if ((port == "10FD") || (port == "10HD")) {
-		state = '<img id="eth_100_4" src="eth_100.gif" alt=""><br />';
-		state1 = port.replace("HD","M Half");
-		state2 = state1.replace("FD","M Full");
-	}
-	else {
-		state = '<img id="eth_1000_4" src="eth_1000.gif" alt=""><br />';
-		state2 = "AUTO";
-	}
-	if (stats.lan_desc == '1') {
-		code += '<td class="title indent2" style="text-align:center">' + state + state2 + '<\/td>';
-	}
-	else {
-		code += '<td class="title indent2" style="text-align:center">' + state + '<\/td>';
+		if (port == null) {
+			fn = 'eth_off';
+			state2 = "NOSUPPORT";
+		}
+		else if (port == "DOWN") {
+			fn = 'eth_off';
+			state2 = port.replace("DOWN","Unplugged");
+		}
+		else if (port == "1000FD") {
+			fn = 'eth_1000_fd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else if (port == "1000HD") {
+			fn = 'eth_1000_hd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else if (port == "100FD") {
+			fn = 'eth_100_fd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else if (port == "100HD") {
+			fn = 'eth_100_hd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else if (port == "10FD") {
+			fn = 'eth_10_fd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else if (port == "10HD") {
+			fn = 'eth_10_hd';
+			state1 = port.replace("HD","M Half");
+			state2 = state1.replace("FD","M Full");
+		}
+		else {
+			fn = 'eth_1000_fd';
+			state2 = "AUTO";
+		}
+		code += '<td class="title indent2" style="text-align:center"><img id="'+fn+'_'+i+'" src="'+fn+'.gif"><br>'+(stats.lan_desc == '1' ? state2 : "")+'<\/td>';
 	}
 
 	code += '<td class="content"> <\/td><\/tr>';
@@ -341,10 +215,10 @@ function ethstates() {
 
 function anon_update() {
 	update = anonupdate.update;
-	if (update == "no" || update == "" || update == null) { return 0; }
+	if (update == "no" || update == "" || update == null) return 0;
 
 	var code = '<div class="section-title" style="text-align:center">!! Attention !!<\/div>';
-	code += '<div class="fields" style="text-align:center">Newer version of FreshTomato ' + update + ' is now available. <a class="new_window" href="http://freshtomato.org/">Click here to download<\/a>.<\/div>';
+	code += '<div class="fields" style="text-align:center">Newer version of FreshTomato ' + update + ' is now available. <a class="new_window" href="https://freshtomato.org/">Click here to download<\/a>.<\/div>';
 	code += '<\/div>';
 	E("nversion").style.display = "block";
 	E("nversion").innerHTML = code;
@@ -502,7 +376,7 @@ function toggleVisibility(whichone) {
 
 <!-- / / / -->
 <div style="display:none" id="wifiwarn">
-	<div class="section-title" style="text-align:center"><b>!! Notice: Wifi Security Disabled !!</b></div>
+	<div class="section-title" style="text-align:center"><b>!! Warning: Wifi Security Disabled !!</b></div>
 	<div class="fields" style="text-align:center"> The Wifi Radios are <b>Enabled</b> without having a <b>Wifi Password</b> set.
 	<br/><b>Please make sure to <a href="basic-network.asp">Set a Wifi Password</a></b></div>
 	<br/>
@@ -511,9 +385,9 @@ function toggleVisibility(whichone) {
 <div class="section" id="nversion" style="display:none"></div>
 
 <div style="display:none" id="att1">
-<div class="section-title" style="text-align:center">!! Attention !!</div>
-<div class="fields" style="text-align:center">You did not configure <b>TomatoAnon project</b> setting.
-<br/>Please go to <a href="admin-tomatoanon.asp">TomatoAnon configuration page</a> and make a choice.</div>
+	<div class="section-title" style="text-align:center">!! Attention !!</div>
+	<div class="fields" style="text-align:center">You did not configure <b>TomatoAnon project</b> setting.
+	<br/>Please go to <a href="admin-tomatoanon.asp">TomatoAnon configuration page</a> and make a choice.</div>
 <br/>
 </div>
 
