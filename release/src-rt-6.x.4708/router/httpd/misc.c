@@ -207,7 +207,6 @@ SwapFree:            0 kB
 typedef struct {
 	unsigned long total;
 	unsigned long free;
-	unsigned long shared;
 	unsigned long buffers;
 	unsigned long cached;
 	unsigned long swaptotal;
@@ -224,7 +223,6 @@ static int get_memory(meminfo_t *m)
 	memset(m, 0, sizeof(*m));
 	if ((f = fopen("/proc/meminfo", "r")) != NULL) {
 		while (fgets(s, sizeof(s), f)) {
-#ifdef LINUX26
 			if (strncmp(s, "MemTotal:", 9) == 0) {
 				m->total = strtoul(s + 12, NULL, 10) * 1024;
 				++ok;
@@ -241,12 +239,6 @@ static int get_memory(meminfo_t *m)
 				m->cached = strtoul(s + 12, NULL, 10) * 1024;
 				++ok;
 			}
-#else
-			if (strncmp(s, "Mem:", 4) == 0) {
-				if (sscanf(s + 6, "%ld %*d %ld %ld %ld %ld", &m->total, &m->free, &m->shared, &m->buffers, &m->cached) == 5)
-					++ok;
-			}
-#endif
 			else if (strncmp(s, "SwapTotal:", 10) == 0) {
 				m->swaptotal = strtoul(s + 12, NULL, 10) * 1024;
 				++ok;
@@ -254,9 +246,6 @@ static int get_memory(meminfo_t *m)
 			else if (strncmp(s, "SwapFree:", 9) == 0) {
 				m->swapfree = strtoul(s + 11, NULL, 10) * 1024;
 				++ok;
-#ifndef LINUX26
-				break;
-#endif
 			}
 		}
 		fclose(f);
@@ -429,6 +418,7 @@ mtd1: 007d0000 00010000 "linux"
 		}
 		fclose(f);
 	}
+
 #ifdef TCONFIG_NAND
 	return 128; //little trick for now. FIXIT.
 #else
@@ -565,14 +555,13 @@ void asp_sysinfo(int argc, char **argv)
 		"\tuptime: %ld,\n"
 		"\tuptime_s: '%s',\n"
 		"\tloads: [%ld, %ld, %ld],\n"
-		"\ttotalram: %ld,\n"
-		"\tfreeram: %ld,\n"
-		"\tshareram: %ld,\n"
-		"\tbufferram: %ld,\n"
-		"\tcached: %ld,\n"
-		"\ttotalswap: %ld,\n"
-		"\tfreeswap: %ld,\n"
-		"\ttotalfreeram: %ld,\n"
+		"\ttotalram: %lu,\n"
+		"\tfreeram: %lu,\n"
+		"\tbufferram: %lu,\n"
+		"\tcached: %lu,\n"
+		"\ttotalswap: %lu,\n"
+		"\tfreeswap: %lu,\n"
+		"\ttotalfreeram: %lu,\n"
 		"\tprocs: %d,\n"
 		"\tflashsize: %d,\n"
 		"\tsystemtype: '%s',\n"
@@ -586,7 +575,7 @@ void asp_sysinfo(int argc, char **argv)
 			reltime(s, si.uptime),
 			si.loads[0], si.loads[1], si.loads[2],
 			mem.total, mem.free,
-			mem.shared, mem.buffers, mem.cached,
+			mem.buffers, mem.cached,
 			mem.swaptotal, mem.swapfree,
 			mem.maxfreeram,
 			si.procs,
