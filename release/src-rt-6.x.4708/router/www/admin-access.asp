@@ -367,7 +367,7 @@ createFieldTable('', [
 <div class="section">
 <script type="text/javascript">
 createFieldTable('', [
-	{ title: 'Username', name: 'http_username', type: 'text', maxlen: 20, value: nvram.http_username, suffix: '&nbsp;<small>(empty field means "admin")<\/small>' },
+	{ title: 'Username', name: 'http_username', type: 'text', maxlen: 20, value: nvram.http_username, suffix: '&nbsp;<small>(empty field means "root")<\/small>' },
 	{ title: 'Allow web login as "root"', name: 'f_http_root', type: 'checkbox', value: nvram.http_root == 1 },
 	null,
 	{ title: 'Password', name: 'set_password_1', type: 'password', maxlen: 60, value: '**********' },
