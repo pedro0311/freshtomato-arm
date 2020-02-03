@@ -4,7 +4,6 @@ CFLAGS	= -Os -Wall $(EXTRACFLAGS)
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared
 LDFLAGS	=
 LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
-#LIBS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared $(TOP)/mssl/libmssl.a $(TOP)/matrixssl/src/libmatrixsslstatic.a
 
 ifeq ($(TCONFIG_BCMARM),y)
 LIBS += -lgcc_s
@@ -12,7 +11,7 @@ endif
 
 ifeq ($(TCONFIG_OPENSSL11),y)
 CFLAGS += -I$(TOP)/openssl-1.1/include
-LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto
+LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto -lpthread
 else
 CFLAGS += -I$(TOP)/openssl/include
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
