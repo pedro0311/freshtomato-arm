@@ -9,34 +9,37 @@
 
 void start_snmp(void)
 {
-    FILE *fp;
+	FILE *fp;
 
-//  only if enable...
-    if( nvram_match( "snmp_enable", "1" ) )
-    {
+	/*  only if enabled... */
+	if (nvram_match("snmp_enable", "1")) {
+		/* writing data to file */
+		if (!(fp = fopen("/etc/snmpd.conf", "w"))) {
+			perror("/etc/snmpd.conf");
+			return;
+		}
+		fprintf(fp,
+			"agentaddress udp:%d\n"
+			"syslocation %s\n"
+			"syscontact %s <%s>\n"
+			"rocommunity %s\n",
+			nvram_get_int("snmp_port"),
+			nvram_safe_get("snmp_location"),
+			nvram_safe_get("snmp_contact"),
+			nvram_safe_get("snmp_contact"),
+			nvram_safe_get("snmp_ro"));
+		fclose(fp);
 
-//      writing data to file
-        if( !( fp = fopen( "/etc/snmpd.conf", "w" ) ) )
-        {
-            perror( "/etc/snmpd.conf" );
-            return;
-        }
-            fprintf(fp, "agentaddress udp:%d\n", nvram_get_int( "snmp_port" ) );
-            fprintf(fp, "syslocation %s\n", nvram_safe_get( "snmp_location" ) );
-            fprintf(fp, "syscontact %s <%s>\n", nvram_safe_get( "snmp_contact" ),nvram_safe_get( "snmp_contact" ) );
-            fprintf(fp, "rocommunity %s\n", nvram_safe_get( "snmp_ro" ) );
+		chmod("/etc/snmpd.conf", 0644);
 
-    fclose( fp );
-    chmod( "/etc/snmpd.conf", 0644 );
+		xstart("snmpd", "-c", "/etc/snmpd.conf");
+	}
 
-    xstart( "snmpd", "-c", "/etc/snmpd.conf" );
-    }
-
-    return;
+	return;
 }
 
 void stop_snmp(void)
 {
-    killall("snmpd", SIGTERM);
-    return;
+	killall("snmpd", SIGTERM);
+	return;
 }

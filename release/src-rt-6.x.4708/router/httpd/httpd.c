@@ -249,16 +249,16 @@ static auth_t auth_check(const char *authorization)
 			buf[len] = 0;
 			if ((pass = strchr(buf, ':')) != NULL) {
 				*pass++ = 0;
-				if (((u = nvram_get("http_username")) == NULL) || (*u == 0)) u = "admin";
-				if ((strcmp(buf, "root") == 0) || (strcmp(buf, u) == 0)) {
 
-					if ((nvram_match("http_root", "0")) && (strcmp(buf, "root") == 0)) {
-						return AUTH_BAD;
-					} else {
-						if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0)) p = "admin";
-						if (strcmp(pass, p) == 0) {
-							return AUTH_OK;
-						}
+				if (((u = nvram_get("http_username")) == NULL) || (*u == 0))	/* special case: empty username => root */
+					u = "root";
+
+				if (strcmp(buf, u) == 0) {
+					if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0))	/* special case: empty password => admin */
+						p = "admin";
+
+					if (strcmp(pass, p) == 0) {
+						return AUTH_OK;
 					}
 				}
 			}

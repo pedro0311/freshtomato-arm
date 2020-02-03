@@ -9,6 +9,7 @@ PID=$$
 PREFIX="/tmp/adblock"
 mkdir -p $PREFIX
 
+LOCK=$PREFIX.lock
 ENABLE=$(nvram get adblock_enable)
 WORK1="$PREFIX/hosts.work1"
 WORK2="$PREFIX/hosts.work2"
@@ -65,6 +66,8 @@ download() {
 			echo "127.0.0.1 $i" >> $PREFIX/_host.custom
 		done
 	}
+
+	$LOGS "parsing lists - this may take a while ..."
 
 	# merge files, remove lines with unwanted chars
 	cat $PREFIX/_host* | sed 's/\r$//;/^[ \t]*#/d;/[\t ][[:alnum:]\._-]*$/!d' > $WORK1 && rm $PREFIX/_host*
@@ -126,6 +129,11 @@ cronDel() {
 	}
 }
 
+[ -f $LOCK ] && {
+	$LOGS "WARNING - Another process in action - exiting"
+	exit 1
+}
+
 [ "$1" == "stop" ] && {
 	$LOGS "stopped"
 	cronDel
@@ -156,3 +164,5 @@ cronDel() {
 }
 
 service dnsmasq restart
+
+rm $LOCK >/dev/null 2>&1

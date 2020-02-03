@@ -103,10 +103,7 @@ obj-y += udpxy
 ifeq ($(TCONFIG_IPERF),y)
 obj-y += iperf
 endif
-
-ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
-endif
 
 ifneq ($(TCONFIG_HTTPS),)
 ifeq ($(TCONFIG_OPENSSL11),y)
@@ -267,13 +264,6 @@ obj-$(TCONFIG_BBT) += transmission
 
 obj-y += hotplug2
 obj-y += udevtrigger
-
-ifneq ($(TCONFIG_OPENVPN)$(TCONFIG_FTP_SSL)$(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_TINC),)
-    export FULL_OPENSSL := y
-else
-    FULL_OPENSSL :=
-endif
-
 obj-y += wanuptime
 
 ifeq ($(TCONFIG_IPV6),y)
@@ -772,7 +762,6 @@ libc:	$(LIBDIR)/ld-uClibc.so.0
 clean: clean-build $(obj-clean)
 	rm -rf layer7/squished
 	rm -f .ipv6-y .ipv6-n
-	rm -f .fullssl-y .fullssl-n
 	make -C config clean
 
 clean-build: dummy
@@ -844,12 +833,7 @@ menuconfig mconf: rmconf kmconf
 	@$(MAKE) $(IPTABLES_TARGET)-clean ebtables-clean pppd-clean dnsmasq-clean $(IPROUTE_TARGET)-clean
 	@touch $@
 
-.fullssl-y .fullssl-n:
-	@rm -f .fullssl-y .fullssl-n
-	@$(MAKE) openssl-clean vsftpd-clean mssl-clean mdu-clean httpd-clean
-	@touch $@
-
-dependconf: .ipv6-$(if $(TCONFIG_IPV6),y,n) .fullssl-$(if $(FULL_OPENSSL),y,n)
+dependconf: .ipv6-$(if $(TCONFIG_IPV6),y,n)
 
 oldconfig oldconf: koldconf roldconf dependconf bboldconf
 
@@ -946,12 +930,6 @@ httpd: shared nvram$(BCMEX) mssl
 www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
 
-ifeq ($(FULL_OPENSSL),y)
-OPENSSL_CIPHERS:=enable-rc5
-else
-OPENSSL_CIPHERS:=
-endif
-
 openssl/stamp-h1:
 	$(call patch_files,openssl)
 	cd $(TOP)/openssl && \
@@ -961,7 +939,7 @@ openssl/stamp-h1:
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3 no-err
+	shared enable-rc5 no-ssl2 no-ssl3 no-err
 	@$(MAKE) -C openssl depend clean
 	@touch openssl/stamp-h1
 
@@ -995,7 +973,7 @@ openssl-1.1/stamp-h1:
 	RANLIB=$(RANLIB) \
 	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared $(OPENSSL_CIPHERS) no-ssl3 no-err no-async --api=1.0.0 \
+	shared no-ssl3 no-err no-async --api=1.0.0 \
 	no-aria no-sm2 no-sm3 no-sm4 \
 	-DOPENSSL_PREFER_CHACHA_OVER_GCM
 	-@$(MAKE) -C openssl-1.1 depend clean
@@ -1085,6 +1063,7 @@ dnsmasq-install:
 	$(STRIP) $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
 
 dnsmasq-clean:
+	-@$(MAKE) -C dnsmasq clean
 	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
@@ -1392,7 +1371,8 @@ dhcpv6-clean:
 	@rm -f dhcpv6/Makefile dhcpv6/stamp-h1
 
 p910nd:
-samba3:
+
+samba3: $(if $(TCONFIG_MEDIA_SERVER)$(TCONFIG_NGINX),libiconv,)
 
 nvram_arm: shared
 
@@ -1477,6 +1457,7 @@ xl2tpd-install:
 	$(STRIP) $(INSTALLDIR)/xl2tpd/usr/sbin/xl2tpd
 
 xl2tpd-clean:
+	-@$(MAKE) -C xl2tpd clean
 	$(call unpatch_files,xl2tpd)
 
 bpalogin-install:
@@ -1735,7 +1716,7 @@ endif
 
 zlib/stamp-h1:
 	cd zlib && \
-	CC=$(CC) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" LDSHAREDLIBC="$(EXTRALDFLAGS)" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" LDSHAREDLIBC="$(EXTRALDFLAGS)" \
 	./configure --shared --prefix=/usr --libdir=/usr/lib
 	touch zlib/stamp-h1
 
@@ -1750,27 +1731,9 @@ zlib-clean:
 	@rm -rf zlib/staged
 
 zlib-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -d $(INSTALLDIR)/zlib/usr/lib
 	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
 	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
-endif
-ifeq ($(TCONFIG_BT),y)
-	install -d $(INSTALLDIR)/zlib/usr/lib
-	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
-	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
-endif
-ifeq ($(TCONFIG_TOR),y)
-	install -d $(INSTALLDIR)/zlib/usr/lib
-	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
-	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
-endif
-ifeq ($(TCONFIG_SNMP),y)
-	install -d $(INSTALLDIR)/zlib/usr/lib
-	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
-	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
-endif
-	@true
 
 libid3tag/stamp-h1: zlib
 	$(call patch_files,libid3tag)
@@ -2087,19 +2050,13 @@ libpng-clean:
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
 
-ifneq ($(TCONFIG_HTTPS),)
-LDFPHPADD:=-Wl,-rpath,$(TOP)/$(OPENSSLDIR)
-else
-LDFPHPADD:=
-endif
-
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
-		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib $(LDFPHPADD)" \
+		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
 	CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
 	LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs \
 		-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl" \
@@ -2504,16 +2461,18 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
+	$(call patch_files,transmission)
 	cd transmission && autoreconf && \
 		CFLAGS="-Os -Wall -pipe -marm -fno-delete-null-pointer-checks -funit-at-a-time \
 			--param large-function-growth=800 --param max-inline-insns-single=3000 \
 			-ffunction-sections -fdata-sections" \
+		CPPFLAGS="--param large-function-growth=800 --param max-inline-insns-single=3000" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
 			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
 		HAVE_CXX=yes \
 		CXXFLAGS="-Os -Wall -pipe -marm -ffunction-sections -fdata-sections" \
 		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
-			--enable-lightweight --enable-largefile --enable-utp --without-gtk \
+			--enable-lightweight --enable-largefile --enable-utp --without-gtk --disable-cli --without-systemd-daemon \
 			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
 			LIBCURL_LDFLAGS="-L$(TOP)/libcurl/lib/.libs/" \
 			LIBCURL_LIBS="-lcurl" \
@@ -2535,19 +2494,16 @@ transmission: transmission/stamp-h1
 transmission-clean:
 	-@$(MAKE) -C transmission clean
 	@rm -f transmission/stamp-h1 transmission/Makefile
+	$(call unpatch_files,transmission)
 
 transmission-install:
 	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
 	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-cli
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-show
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-edit
-	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-create
 	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-daemon
-ifeq ($(TCONFIG_TR_EXTRAS),y)
-	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
-else
+ifneq ($(TCONFIG_TR_EXTRAS),y)
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-remote
+else
+	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
 endif
 
 libnfsidmap/stamp-h1:
@@ -2812,7 +2768,7 @@ libyaml: libyaml/stamp-h1
 	$(MAKE) -C libyaml $(PARALLEL_BUILD)
 
 libyaml-install:
-	install -d $(INSTALLDIR)/libyaml/usr/lib
+	@true
 
 libyaml-clean:
 	-$(MAKE) -C libyaml clean
