@@ -112,9 +112,15 @@ void start_dnsmasq()
 
 	stop_dnsmasq();
 
-	if (foreach_wif(1, NULL, is_wet)) return;
+	if (foreach_wif(1, NULL, is_wet)) {
+		syslog(LOG_INFO, "Starting dnsmasq is skipped due to the WEB mode enabled\n");
+		return;
+	}
 
-	if ((f = fopen("/etc/dnsmasq.conf", "w")) == NULL) return;
+	if ((f = fopen("/etc/dnsmasq.conf", "w")) == NULL) {
+		perror("/etc/dnsmasq.conf");
+		return;
+	}
 
 	router_ip = nvram_safe_get("lan_ipaddr");
 
