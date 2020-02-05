@@ -972,6 +972,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "smbd_user",			"nas"				, 0 },
 	{ "smbd_passwd",		""				, 0 },
 	{ "smbd_ifnames",		"br0"				, 0 },
+#ifdef TCONFIG_GROCTRL
+	{ "gro_disable",		"1"				, 0 }, /* GRO enalbe - 0 ; disable - 1 (default) */
+#endif
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER

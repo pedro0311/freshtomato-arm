@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins"); %>
+//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins,gro_disable"); %>
 
 var cprefix = 'nas_samba';
 var ssg = new TomatoGrid();
@@ -133,6 +133,8 @@ function verifyFields(focused, quiet) {
 	E('_smbd_autoshare').disabled = (a == 0);
 	E('_f_smbd_master').disabled = (a == 0);
 	E('_f_smbd_wins').disabled = (a == 0 || (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0'));
+	E('_f_gro_disable').disabled = (a == 0);
+	if (a == 0) E('_f_gro_disable').checked = true; /* disable gro (default) if smbd off */
 
 	if (a != 0 && !v_length('_smbd_ifnames', quiet, 0, 50)) return 0;
 	if (a != 0 && !v_length('_smbd_custom', quiet, 0, 2048)) return 0;
@@ -169,6 +171,7 @@ function save() {
 	else
 		fom.smbd_wins.value = nvram.smbd_wins;
 
+	fom.gro_disable.value = E('_f_gro_disable').checked ? 1 : 0;
 	form.submit(fom, 1);
 }
 
@@ -208,6 +211,7 @@ function earlyInit() {
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">
+<input type="hidden" name="gro_disable">
 
 <!-- / / / -->
 
@@ -223,6 +227,7 @@ function earlyInit() {
 			{ title: 'Password', indent: 2, name: 'smbd_passwd', type: 'password', maxlen: 50, size: 32, peekaboo: 1,
 				value: nvram.smbd_passwd },
 			null,
+			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == '1', suffix: ' <small>Default: GRO off (checked)<\/small>' },
 			{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 20, size: 32,
 				value: nvram.smbd_wgroup },
 			{ title: 'Client Codepage', name: 'smbd_cpage', type: 'select',
@@ -267,6 +272,7 @@ function earlyInit() {
 				<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
 			</ul>
 		</li>
+		<li><b>Disable GRO</b> - Disable/Enable Generic Receive Offload</li>
 	</ul>
 </div>
 

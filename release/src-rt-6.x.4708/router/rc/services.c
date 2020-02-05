@@ -2099,7 +2099,7 @@ void enable_gro(int interval)
 	if(nvram_get_int("gro_disable"))
 		return;
 
-	/* enabled gso on vlan interface */
+	/* enabled gro on vlan interface */
 	lan_ifnames = nvram_safe_get("lan_ifnames");
 	foreach(lan_ifname, lan_ifnames, next) {
 		if (!strncmp(lan_ifname, "vlan", 4)) {
@@ -2147,8 +2147,8 @@ static void start_samba(void)
 	}
 
 #ifdef TCONFIG_GROCTRL
-// shibby - gro control may broke files transmitted between hosts. Disable it for now.
-//	enable_gro(2);
+	/* enable / disable gro via GUI nas-samba.asp; Default: off */
+	enable_gro(2);
 #endif
 
 	si = nvram_safe_get("smbd_ifnames");
