@@ -11,6 +11,8 @@ No part of this file may be used without permission.
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Shutting down...</title>
+<link rel="stylesheet" type="text/css" href="tomato.css">
+<% css(); %>
 <script type="text/javascript">
 var n = 31;
 function tick() {
@@ -23,36 +25,38 @@ function tick() {
 }
 </script>
 <style type="text/css">
-body {
-	background:rgb(0,0,0) url(tomatousb_bg.png);
-	font:14px Tahoma,Arial,sans-serif;
-	color:rgb(255,255,255);
-}
-input {
-	width:80px;
-	height:24px;
-}
-.div {
+#div {
 	width:400px;
 	height:40px;
-	background-color:rgb(47,61,64);
+	color:rgb(200,200,200);
+	background-color:rgb(22,22,22);
 	position:absolute;
 	top:0;
 	bottom:0;
 	left:0;
 	right:0;
+	font:14px Tahoma,Arial,sans-serif;
 	text-align:center;
 	margin:auto;
 	padding:10px 10px;
 	border-radius:5px;
 }
+#sptime {
+	display:inline;
+	background:rgb(140,10,10);
+	padding:2px 2px;
+	border-radius:2px;
+}
+input {
+	width:80px;
+	height:24px;
+}
 </style>
 </head>
 <body onload="tick()">
-	<div class="div">
+	<div id="div">
 		<div style="padding:10px 0">
-			<div id="msg">Please wait while the router shuts down... &nbsp;
-			<div id="sptime" style="display:inline;background:rgb(110,10,10);padding:2px 2px;border-radius:2px"></div></div>
+			<div id="msg">Please wait while the router shuts down... &nbsp;<div id="sptime"></div></div>
 		</div>
 	</div>
 </body>

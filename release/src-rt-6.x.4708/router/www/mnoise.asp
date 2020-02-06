@@ -12,6 +12,8 @@
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Measuring Noise...</title>
+<link rel="stylesheet" type="text/css" href="tomato.css">
+<% css(); %>
 <script type="text/javascript">
 function tick() {
 	t.innerHTML = tock;
@@ -28,37 +30,36 @@ function init() {
 }
 </script>
 <style type="text/css">
-body {
-	background:rgb(0,0,0) url(tomatousb_bg.png);
-	font:14px Tahoma,Arial,sans-serif;
-	color:rgb(255,255,255);
-}
-input {
-	width:80px;
-	height:24px;
-}
-.div {
+#div {
 	width:600px;
 	height:75px;
-	background-color:rgb(47,61,64);
+	color:rgb(200,200,200);
+	background-color:rgb(22,22,22);
 	position:absolute;
 	top:0;
 	bottom:0;
 	left:0;
 	right:0;
+	font:14px Tahoma,Arial,sans-serif;
 	text-align:center;
 	margin:auto;
 	padding:10px 10px;
 	border-radius:5px;
 }
+#sptime {
+	display:inline;
+	background:rgb(140,10,10);
+	padding:2px 2px;
+	border-radius:2px;
+}
 </style>
 </head>
 
 <body onload="init()" onclick="go()">
-	<div class="div">
-		<div style="font-size:25px">Measuring radio noise floor...</div>
+	<div id="div">
+		<div style="font-size:20px">Measuring radio noise floor...</div>
 		<br/>
-		<div>Wireless access has been temporarily disabled for <div id="sptime" style="display:inline;background:rgb(110,10,10);padding:2px 2px;border-radius:2px"></div> second(s)</div>
+		<div>Wireless access has been temporarily disabled for <div id="sptime"></div> second(s)</div>
 	</div>
 </body>
 </html>

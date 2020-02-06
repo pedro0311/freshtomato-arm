@@ -11,6 +11,8 @@ No part of this file may be used without permission.
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Restarting...</title>
+<link rel="stylesheet" type="text/css" href="tomato.css">
+<% css(); %>
 <script type="text/javascript">
 var n = 20;
 function tick() {
@@ -32,35 +34,37 @@ function go() {
 }
 </script>
 <style type="text/css">
-body {
-	background:rgb(0,0,0) url(tomatousb_bg.png);
-	font:14px Tahoma,Arial,sans-serif;
-	color:rgb(255,255,255);
-}
-input {
-	width:80px;
-	height:24px;
-}
-.div {
+#div {
 	width:600px;
 	height:70px;
-	background-color:rgb(47,61,64);
+	color:rgb(200,200,200);
+	background-color:rgb(22,22,22);
 	position:absolute;
 	top:0;
 	bottom:0;
 	left:0;
 	right:0;
+	font:14px Tahoma,Arial,sans-serif;
 	text-align:center;
 	margin:auto;
 	padding:10px 10px;
 	border-radius:5px;
 }
+#msg {
+	border-bottom:1px solid #aaa;
+	margin:auto auto 5px;
+	padding:0 0 5px;
+}
+input {
+	width:80px;
+	height:24px;
+}
 </style>
 </head>
 <body onload="tick()">
-	<div class="div">
+	<div id="div">
 		<form action="">
-			<div style="border-bottom:1px solid #aaa;margin:auto auto 5px;padding:0 0 5px;font-size:14px">
+			<div id="msg">
 				The router's new IP address is <% nv("lan_ipaddr"); %>. You may need to release then renew your computer's DHCP lease before continuing.
 			</div>
 			<div id="but" style="display:inline-block">
