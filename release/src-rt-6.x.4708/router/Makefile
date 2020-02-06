@@ -1769,22 +1769,23 @@ ebtables-clean:
 	rm -f ebtables/stamp-h1
 	$(call unpatch_files,ebtables)
 
-#Roadkill
 spawn-fcgi/stamp-h1:
-	cd spawn-fcgi && autoreconf && CC=$(CC) \
+	$(call patch_files,spawn-fcgi)
+	cd spawn-fcgi && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	ac_cv_func_malloc_0_nonnull=yes \
 	$(CONFIGURE) --prefix=/usr
-	touch spawn-fcgi/stamp-h1
+	@touch $@
 
 spawn-fcgi: spawn-fcgi/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C spawn-fcgi $(PARALLEL_BUILD)
+	@$(MAKE) -C spawn-fcgi
 
 spawn-fcgi-clean:
 	-@$(MAKE) -C spawn-fcgi clean
 	rm -f spawn-fcgi/stamp-h1
+	$(call unpatch_files,spawn-fcgi)
 
 spawn-fcgi-install:
 	install -d $(INSTALLDIR)/spawn-fcgi/usr/bin
