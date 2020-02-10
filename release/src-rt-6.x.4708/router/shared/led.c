@@ -391,6 +391,13 @@ int do_led(int which, int mode)
 		else if (which == LED_BRIDGE) { /* non GPIO LED */
 			do_led_bridge(mode);
 		}
+		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With WiFi bridge ON on any module, disable second WAN LED */
+			if (nvram_match("wl0_mode", "wet") ||
+			    nvram_match("wl1_mode", "wet") ||
+			    nvram_match("wl2_mode", "wet")) {
+				b = 255; /* disabled */
+			}
+		}
 		break;
 	case MODEL_R8000:
 		if (which == LED_DIAG) {
