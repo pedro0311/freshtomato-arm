@@ -51,6 +51,7 @@ restore_defaults(void)
 {
 	struct nvram_tuple *t;
 	int restore_defaults;
+	struct sysinfo info;
 
 	/* Restore defaults if told to or OS has changed */
 	if (!restore_defaults)
@@ -70,6 +71,25 @@ restore_defaults(void)
 	nvram_set("os_version", tomato_version);
 	nvram_set("os_date", tomato_buildtime);
 
+	/* Adjust et and wl thresh value after reset (for wifi-driver and et_linux.c) */
+	if (restore_defaults) {
+		memset(&info, 0, sizeof(struct sysinfo));
+		sysinfo(&info);
+		if (info.totalram <= (TOMATO_RAM_LOW_END * 1024)) { /* Router with less than 50 MB RAM */
+			/* Set to 512 as long as onboard memory <= 50 MB RAM */
+			nvram_set("wl_txq_thresh", "512");
+			nvram_set("et_txq_thresh", "512");	
+		}
+		else if (info.totalram <= (TOMATO_RAM_MID_END * 1024)) { /* Router with less than 100 MB RAM */
+			nvram_set("wl_txq_thresh", "1024");
+			nvram_set("et_txq_thresh", "1536");
+		}
+		else { /* Router with more than 100 MB RAM */
+			nvram_set("wl_txq_thresh", "1024");
+			nvram_set("et_txq_thresh", "3300");
+		}
+	}
+	
 #ifdef TCONFIG_BCMARM
 	if (!nvram_match("extendno_org", nvram_safe_get("extendno")))
 	{
