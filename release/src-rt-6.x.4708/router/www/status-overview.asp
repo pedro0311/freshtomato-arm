@@ -309,7 +309,7 @@ function earlyInit() {
 	}
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx)<0) {
-			elem.display('b_wl'+wl_fface(uidx)+'_enable', 'b_wl'+wl_fface(uidx)+'_disable', show_radio[uidx]);
+			elem.display('b_wl'+uidx+'_enable', 'b_wl'+uidx+'_disable', show_radio[uidx]);
 			if (nvram['wl' + uidx + '_radio'] == '1' && nvram['wl' + uidx + '_net_mode'] != 'disabled' && nvram['wl' + uidx + '_security_mode'] == 'disabled')
 				E('wifiwarn').style.display = '';
 		}
