@@ -50,7 +50,7 @@ static void
 restore_defaults(void)
 {
 	struct nvram_tuple *t;
-	int restore_defaults;
+	int restore_defaults = 0;
 	struct sysinfo info;
 
 	/* Restore defaults if told to or OS has changed */
@@ -91,11 +91,9 @@ restore_defaults(void)
 	}
 	
 #ifdef TCONFIG_BCMARM
-	if (!nvram_match("extendno_org", nvram_safe_get("extendno")))
-	{
+	if (restore_defaults) {
 		/* modify default options for TX Beamforming after reset */
 		dbg("Reset TxBF settings...\n");
-		nvram_set("extendno_org", nvram_safe_get("extendno"));
 		nvram_set("wl0_txbf", "1");	/* Explicit Beamforming ON for WiFi 0 (usually 2,4 GHz) */
 		nvram_set("wl1_txbf", "1");	/* Explicit Beamforming ON for WiFi 1 (usually 5 GHz) */
 		nvram_set("wl0_itxbf", "0");	/* Universal/Implicit Beamforming OFF for WiFi 0 (usually 2,4 GHz) */
