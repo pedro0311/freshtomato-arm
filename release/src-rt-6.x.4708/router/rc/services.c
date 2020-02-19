@@ -2918,18 +2918,18 @@ TOP:
 	}
 #endif
 
-	if (strcmp(service, "admin") == 0) {
+	if (strncmp(service, "admin", 5) == 0) {
 		if (act_stop) {
-			stop_sshd();
+			if (!(strcmp(service, "adminnosshd") == 0)) stop_sshd();
 			stop_telnetd();
 			stop_httpd();
 		}
 		stop_firewall(); start_firewall();		/* always restarted */
 		if (act_start) {
 			start_httpd();
-			create_passwd();
+			if (!(strcmp(service, "adminnosshd") == 0)) create_passwd();
 			if (nvram_match("telnetd_eas", "1")) start_telnetd();
-			if (nvram_match("sshd_eas", "1")) start_sshd();
+			if (nvram_match("sshd_eas", "1") && (!(strcmp(service, "adminnosshd") == 0))) start_sshd();
 		}
 		goto CLEAR;
 	}

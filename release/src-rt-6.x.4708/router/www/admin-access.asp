@@ -218,6 +218,12 @@ function save() {
 	fom.sshd_motd.value = E('_f_sshd_motd').checked ? 1 : 0;
 	fom.sshd_forwarding.value = E('_f_sshd_forwarding').checked ? 1 : 0;
 
+	/* do not restart sshd if no changes in its configuration */
+	if ((fom.sshd_pass.value == nvram.sshd_pass) && (fom.sshd_remote.value == nvram.sshd_remote) && (fom.sshd_motd.value == nvram.sshd_motd) && (fom.sshd_forwarding.value == nvram.sshd_forwarding) && 
+	    (E('_sshd_rport').value == nvram.sshd_rport) && (E('_sshd_port').value == nvram.sshd_port) && (E('_sshd_authkeys').value == nvram.sshd_authkeys)) {
+		fom._service.value = 'adminnosshd-restart';
+	}
+
 	fom.rmgt_sip.value = fom.f_rmgt_sip.value.split(/\s*,\s*/).join(',');
 
 	fom.ne_shlimit.value = ((E('_f_limit_ssh').checked ? 1 : 0) | (E('_f_limit_telnet').checked ? 2 : 0)) +
