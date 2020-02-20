@@ -2336,6 +2336,7 @@ static int init_nvram(void)
 			/* misc settings */
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
+			nvram_set("blink_wl", "0");			/* disable blink by default for WS880 */
 
 			/* wifi settings/channels */
 			nvram_set("0:ccode", "#a");
