@@ -476,7 +476,8 @@ void restart_wl(void)
 		xstart("radio", "join");
 
 	/* do some LED setup */
-	if ((model == MODEL_R6400) ||
+	if ((model == MODEL_WS880) ||
+	    (model == MODEL_R6400) ||
 	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_R7000)) {

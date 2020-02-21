@@ -105,9 +105,10 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
 	case MODEL_WS880:
-		reset_mask = 1 << 2;
-		ses_mask = 1 << 3;
-		ses_led = LED_AOSS;
+		reset_mask = 1 << 2; /* reset button (active LOW) */
+		ses_mask = 1 << 3; /* wps button (active LOW) */
+		wlan_mask = 1 << 15; /* power button (active LOW) --> use it to toggle wifi */
+		ses_led = LED_AMBER; /* Use LED Amber (only Dummy) for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 	case MODEL_EA6350v1:
 		ses_mask = 1 << 7;
