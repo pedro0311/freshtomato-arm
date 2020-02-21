@@ -511,7 +511,8 @@ void restart_wl(void)
 		xstart("radio", "join");
 
 	/* do some LED setup */
-	if ((model == MODEL_R6400) ||
+	if ((model == MODEL_WS880) ||
+	    (model == MODEL_R6400) ||
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
