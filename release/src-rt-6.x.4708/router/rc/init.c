@@ -34,6 +34,7 @@
 #define SHELL "/bin/sh"
 
 extern struct nvram_tuple router_defaults[];
+int restore_defaults_fb = 0;
 
 void
 restore_defaults_module(char *prefix)
@@ -59,6 +60,8 @@ restore_defaults(void)
 
 	if (restore_defaults)
 		fprintf(stderr, "\n## Restoring defaults... ##\n");
+
+	restore_defaults_fb = restore_defaults;
 
 	/* Restore defaults */
 	for (t = router_defaults; t->name; t++) {
@@ -4146,15 +4149,6 @@ static void sysinit(void)
 
 	modprobe("et");
 
-	/* load after initnvram as Broadcom Wl require pci/x/1/devid and pci/x/1/macaddr nvram to be set first for DIR-865L
-	 * else 5G interface will not start!
-	 * must be tested on other routers to determine if loading nvram 1st will cause problems!
-	 */
-	//load_wl();
-
-	//config_loopback();
-
-//	eval("nvram", "defaults", "--initcheck");
 	restore_defaults(); /* restore default if necessary */
 	init_nvram();
 
@@ -4166,9 +4160,9 @@ static void sysinit(void)
 	}
 
 	/* load after init_nvram */
-	load_wl();
+	//load_wl(); /* see function start_lan() */
 
-	config_loopback();
+	//config_loopback(); /* see function start_lan() */
 
 	klogctl(8, NULL, nvram_get_int("console_loglevel"));
 
@@ -4253,7 +4247,9 @@ int init_main(int argc, char *argv[])
 			run_nvscript("script_shut", NULL, 10);
 
 			stop_services();
+			stop_nas();
 			stop_wan();
+			stop_arpbind();
 			stop_lan();
 			stop_vlan();
 			stop_syslog();
@@ -4271,6 +4267,9 @@ int init_main(int argc, char *argv[])
 			}
 
 			/* SIGHUP (RESTART) falls through */
+
+			//nvram_set("wireless_restart_req", "1"); /* restart wifi twice to make sure all is working ok! not needed right now M_ars */
+			syslog(LOG_INFO, "FreshTomato RESTART ...");
 
 		case SIGUSR2:		/* START */
 			start_syslog();
@@ -4302,9 +4301,26 @@ int init_main(int argc, char *argv[])
 			start_vlan();
 			start_lan();
 			start_arpbind();
+			start_nas();
 			mwan_state_files();
 			start_services();
-			start_wl();
+
+			if (restore_defaults_fb /*|| nvram_match("wireless_restart_req", "1")*/) {
+				syslog(LOG_INFO, "%s: FreshTomato WiFi restarting ... (restore defaults)", nvram_safe_get("t_model_name"));
+				restore_defaults_fb = 0; /* reset */
+				//nvram_set("wireless_restart_req", "0");
+				restart_wireless();
+			}
+			else {
+				start_wl();
+#ifdef CONFIG_BCMWL5
+				/* If a virtual SSID is disabled, it requires two initialisations */
+				if (foreach_wif(1, NULL, disabled_wl)) {
+					syslog(LOG_INFO, "%s: FreshTomato WiFi restarting ... (virtual SSID disabled)", nvram_safe_get("t_model_name"));
+					restart_wireless();
+				}
+#endif
+			}
 			/*
 			 * last one as ssh telnet httpd samba etc can fail to load until start_wan_done
 			 */
