@@ -168,7 +168,7 @@ extern void ipt_routerpolicy(void);
 
 /* network.c */
 extern void set_host_domain_name(void);
-extern void set_et_qos_mode(int sfd);
+extern void set_et_qos_mode(void);
 extern void start_lan(void);
 extern void stop_lan(void);
 extern void hotplug_net(void);
@@ -177,7 +177,9 @@ extern int radio_main(int argc, char *argv[]);
 extern int wldist_main(int argc, char *argv[]);
 extern void stop_wireless(void);
 extern void start_wireless(void);
+extern void restart_wireless(void);
 extern void start_wl(void);
+extern int disabled_wl(int idx, int unit, int subunit, void *param);
 extern void unload_wl(void);
 extern void load_wl(void);
 #ifdef TCONFIG_IPV6
