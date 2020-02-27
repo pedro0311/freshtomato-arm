@@ -11,7 +11,10 @@ No part of this file may be used without permission.
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Please Wait...</title>
+<link rel="stylesheet" type="text/css" href="tomato.css">
+<% css(); %>
 <script type="text/javascript">
+var spun = 1;
 wait = parseInt('<% cgi_get("_nextwait"); %>', 10);
 if (isNaN(wait)) wait = 5;
 function tick() {
@@ -48,37 +51,43 @@ function init() {
 }
 </script>
 <style type="text/css">
-body {
-	background:rgb(0,0,0) url(tomatousb_bg.png);
-	font:14px Tahoma,Arial,sans-serif;
-	color:rgb(255,255,255);
-}
-input {
-	width:80px;
-	height:24px;
-}
-.div {
+#div {
 	width:600px;
 	height:40px;
-	background-color:rgb(47,61,64);
+	color:rgb(200,200,200);
+	background-color:rgb(22,22,22);
 	position:absolute;
 	top:0;
 	bottom:0;
 	left:0;
 	right:0;
+	font:14px Tahoma,Arial,sans-serif;
 	text-align:center;
 	margin:auto;
 	padding:10px 10px;
 	border-radius:5px;
 }
+#xclock {
+	background:rgb(140,10,10);
+	padding:2px 2px;
+	border-radius:2px;
+	visibility:hidden;
+}
+#spin {
+	vertical-align:bottom;
+}
+input {
+	width:80px;
+	height:24px;
+}
 </style>
 </head>
 <body onload="init()" onclick="go()">
-	<div class="div">
+	<div id="div">
 		<form action="">
 			<div style="padding:10px 0">
 				<div id="l1" style="display:none"><b>Changes Saved... </b> <input type="button" value="Continue" onclick="go()"></div>
-				<div id="l2" style="display:none"><b>Please Wait... </b> &nbsp;<span id="xclock" style="background:rgb(110,10,10);padding:2px 2px;border-radius:2px;visibility:hidden"></span> &nbsp;<img src="spin.gif" id="spin" style="vertical-align:bottom" alt=""></div>
+				<div id="l2" style="display:none"><b>Please Wait... </b> &nbsp;<span id="xclock"></span> &nbsp;<img src="spin.gif" id="spin" alt=""></div>
 			</div>
 		</form>
 	</div>
