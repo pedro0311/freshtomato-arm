@@ -2104,6 +2104,7 @@ libncurses-install:
 	install -D -m 0644 libncurses/staged/usr/share/terminfo/v/vt100 $(INSTALLDIR)/libncurses/usr/share/terminfo/v
 	install -D -m 0644 libncurses/staged/usr/share/terminfo/v/vt220 $(INSTALLDIR)/libncurses/usr/share/terminfo/v
 	install -D -m 0644 libncurses/staged/usr/share/terminfo/x/xterm $(INSTALLDIR)/libncurses/usr/share/terminfo/x
+	install -D -m 0644 libncurses/staged/usr/share/terminfo/x/xterm-256color $(INSTALLDIR)/libncurses/usr/share/terminfo/x
 	cd $(INSTALLDIR)/libncurses/usr/lib && ln -sf ../share/terminfo terminfo
 	install libncurses/lib/libncurses.so.6.1 $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
