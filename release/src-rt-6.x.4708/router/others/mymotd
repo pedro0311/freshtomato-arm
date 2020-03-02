@@ -88,20 +88,20 @@
 			}
 		}
 
-		[ "$WAN1" -eq 1 ] && {
+		[ "$WAN1" == "1" ] && {
 			[ "$WANPDHCP" -eq 1 ] && [ "$WANPROTO" == "pppoe" ] || [ "$WANPROTO" == "pptp" ] || [ "$WANPROTO" == "l2tp" ] && WAN1_NUMBITS="32" || WAN1_NUMBITS=$(mask2cidr $(NV wan_netmask))
 			/bin/echo " WAN : $(NV wan_$WANIP)/$WAN1_NUMBITS @ $(NV wan_hwaddr)"
 		}
-		[ "$WAN2" -eq 1 ] && {
+		[ "$WAN2" == "1" ] && {
 			[ "$WAN2PDHCP" -eq 1 ] && [ "$WAN2PROTO" == "pppoe" ] || [ "$WAN2PROTO" == "pptp" ] || [ "$WAN2PROTO" == "l2tp" ] && WAN2_NUMBITS="32" || WAN2_NUMBITS=$(mask2cidr $(NV wan2_netmask))
 			/bin/echo " WAN2: $(NV wan2_$WAN2IP)/$WAN2_NUMBITS @ $(NV wan2_hwaddr)"
 		}
 		[ "$MULTIWAN" -eq 1 ] && {
-			[ "$WAN3" -eq 1 ] && {
+			[ "$WAN3" == "1" ] && {
 				[ "$WAN3PDHCP" -eq 1 ] && [ "$WAN3PROTO" == "pppoe" ] || [ "$WAN3PROTO" == "pptp" ] || [ "$WAN3PROTO" == "l2tp" ] && WAN3_NUMBITS="32" || WAN3_NUMBITS=$(mask2cidr $(NV wan3_netmask))
 				/bin/echo " WAN3: $(NV wan3_$WAN3IP)/$WAN3_NUMBITS @ $(NV wan3_hwaddr)"
 			}
-			[ "$WAN4" -eq 1 ] && {
+			[ "$WAN4" == "1" ] && {
 				[ "$WAN4PDHCP" -eq 1 ] && [ "$WAN4PROTO" == "pppoe" ] || [ "$WAN4PROTO" == "pptp" ] || [ "$WAN4PROTO" == "l2tp" ] && WAN4_NUMBITS="32" || WAN4_NUMBITS=$(mask2cidr $(NV wan4_netmask))
 				/bin/echo " WAN4: $(NV wan4_$WAN4IP)/$WAN4_NUMBITS @ $(NV wan4_hwaddr)"
 			}
