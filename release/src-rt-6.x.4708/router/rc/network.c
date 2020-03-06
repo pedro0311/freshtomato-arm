@@ -139,6 +139,13 @@ static int wlconf(char *ifname, int unit, int subunit)
 	/* Check interface - fail for non-wl interfaces */
 	if ((unit < 0) || wl_probe(ifname)) return r;
 
+#ifndef TCONFIG_BCMARM
+	/* Tomato MIPS needs a little help here: wlconf() will not validate/restore all per-interface related variables right now; */
+	snprintf(wl, sizeof(wl), "--wl%d", unit);
+	eval("nvram", "validate", wl); /* sync wl_ and wlX ; (MIPS does not use nvram_tuple router_defaults; ARM branch does ... ) */
+	memset(wl, 0, sizeof(wl)); /* reset */
+#endif
+
 	r = eval("wlconf", ifname, "up");
 	if (r == 0) {
 		if (unit >= 0 && subunit <= 0) {
