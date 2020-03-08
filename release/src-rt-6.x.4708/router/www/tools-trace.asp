@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,47 +7,27 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: Trace</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#ttr-grid .co1, #ttr-grid .co3 {
-	text-align: right;
-}
-#ttr-grid .co1 {
-	width: 30px;
-}
-#ttr-grid .co2 {
-	width: 410px;
-}
-#ttr-grid .co4, #ttr-grid .co5, #ttr-grid .co6 {
-	text-align: right;
-	width: 70px;
-}
-#ttr-grid .header .co1 {
-	text-align: left;
-}
-</style>
+<script>
 
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 var tracedata = '';
 
 var tg = new TomatoGrid();
 tg.setup = function() {
-	this.init('ttr-grid');
+	this.init('tools-grid');
 	this.headerSet(['Hop', 'Address', 'Min (ms)', 'Max (ms)', 'Avg (ms)', '+/- (ms)']);
 }
+
 tg.populate = function() {
 	var seq = 1;
 	var buf = tracedata.split('\n');
@@ -68,11 +48,13 @@ tg.populate = function() {
 			addr = RegExp.$1;
 			if (addr != RegExp.$2) addr += ' (' + RegExp.$2 + ')';
 		}
-		else addr = '*';
+		else {
+			addr = '*';
+		}
 
 		min = max = avg = '';
 		change = '';
-		if (time = s.match(/(\d+\.\d+) ms/g)) {		// odd: captures 'ms'
+		if (time = s.match(/(\d+\.\d+) ms/g)) { /* odd: captures 'ms' */
 			min = 0xFFFF;
 			avg = max = 0;
 			k = 0;
@@ -100,10 +82,14 @@ tg.populate = function() {
 				last = -1;
 			}
 		}
-		else last = -1;
+		else {
+			last = -1;
+		}
 
-		if (s.match(/ (![<>\w+-]+)/)) emsg = RegExp.$1;
-			else emsg = null;
+		if (s.match(/ (![<>\w+-]+)/))
+			emsg = RegExp.$1;
+		else
+			emsg = null;
 
 		this.insertData(-1, [seq, addr, min, max, avg, change])
 		++seq;
@@ -136,17 +122,17 @@ function spin(x) {
 	E('_f_addr').disabled = x;
 	E('_f_hops').disabled = x;
 	E('_f_wait').disabled = x;
-	E('wait').style.visibility = x ? 'visible' : 'hidden';
+	E('spin').style.display = (x ? 'inline-block' : 'none');
 	if (!x) tracer = null;
 }
 
 function trace() {
-	// Opera 8 sometimes sends 2 clicks
+	/* Opera 8 sometimes sends 2 clicks */
 	if (tracer) return;
 
 	if (!verifyFields(null, 0)) return;
 	spin(1);
-	E('trace-error').style.visibility = 'hidden';
+	E('trace-error').style.display = 'none';
 
 	tracer = new XmlHttp();
 	tracer.onCompleted = function(text, xml) {
@@ -156,7 +142,7 @@ function trace() {
 	tracer.onError = function(x) {
 		spin(0);
 		E('trace-error').innerHTML = 'ERROR: ' + E('_f_addr').value + ' - ' + x;
-		E('trace-error').style.visibility = 'visible';
+		E('trace-error').style.display = 'inline-block';
 	}
 
 	var addr = E('_f_addr').value;
@@ -179,16 +165,16 @@ function init() {
 	E('_f_addr').onkeypress = function(ev) { if (checkEvent(ev).keyCode == 13) trace(); }
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -196,30 +182,37 @@ function init() {
 
 <div class="section-title">Traceroute</div>
 <div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '', suffix: ' <input type="button" value="Trace" onclick="trace()" id="traceb">' },
-	{ title: 'Maximum Hops', name: 'f_hops', type: 'text', maxlen: 2, size: 4, value: '20' },
-	{ title: 'Maximum Wait Time', name: 'f_wait', type: 'text', maxlen: 2, size: 4, value: '3', suffix: ' <small>(seconds per hop)<\/small>' }
-]);
-</script>
+	<script>
+		createFieldTable('', [
+			{ title: 'Address', name: 'f_addr', type: 'text', maxlen: 64, size: 32, value: '', suffix: ' <input type="button" value="Trace" onclick="trace()" id="traceb"> <img src="spin.gif" alt="" id="spin">' },
+			{ title: 'Maximum Hops', name: 'f_hops', type: 'text', maxlen: 2, size: 4, value: '20' },
+			{ title: 'Maximum Wait Time', name: 'f_wait', type: 'text', maxlen: 2, size: 4, value: '3', suffix: ' <small>(seconds per hop)<\/small>' }
+		]);
+	</script>
 </div>
-
-<div style="visibility:hidden" id="trace-error"></div>
-
-<div style="visibility:hidden;text-align:right" id="wait">Please wait... <img src="spin.gif" alt="" style="vertical-align:top"></div>
-
-<div id="ttr-grid" class="tomato-grid"></div>
-
-<div style="height:10px;" onclick='E("debug").style.display=""'></div>
-<textarea id="debug" style="width:99%;height:300px;display:none" cols="50" rows="10"></textarea>
 
 <!-- / / / -->
 
+<div id="trace-error" style="display:none"></div>
+
+<!-- / / / -->
+
+<div class="tomato-grid" id="tools-grid"></div>
+
+<!-- / / / -->
+
+<div style="height:10px;" onclick='E("debug").style.display=""'></div>
+<textarea id="debug" style="display:none"></textarea>
+
+<!-- / / / -->
+
+<div id="footer">
+	&nbsp;
+</div>
+
 </td></tr>
-<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type="text/javascript">tg.setup();</script>
+<script>tg.setup()</script>
 </body>
 </html>

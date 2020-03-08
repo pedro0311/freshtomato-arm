@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2007 Jonathan Zarate
@@ -7,41 +7,21 @@
 	No part of this file may be used without permission.
 	LAN Access admin module by Augusto Bott
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: LAN Access</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
-<style type="text/css">
-#la-grid .co1 {
-	text-align: center;
-	width: 30px;
-}
-#la-grid .co3,
-#la-grid .co5 {
-	text-align: center;
-	width: 120px;
-}
-#la-grid .co6 {
-	text-align: center;
-	width: 250px;
-}
-#la-grid .co2,
-#la-grid .co4 {
-	text-align: center;
-}
+<script src="tomato.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 
-#la-grid .centered {
-	text-align: center;
-}
-</style>
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript">
-<% nvram ("lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_access");%> 
+<script>
 
+//	<% nvram ("lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_access");%> 
+
+var cprefix = 'advanced_access';
 var MAX_BRIDGE_ID = 3;
 
 var la = new TomatoGrid();
@@ -81,15 +61,15 @@ la.sortCompare = function(a, b) {
 	case 2:	// src
 	case 4:	// dst
 		r = cmpIP(da[col], db[col]);
-		break;
+	break;
 	case 0:	// on
 	case 1: // src br
 	case 3:	// dst br
 		r = cmpInt(da[col], db[col]);
-		break;
+	break;
 	default:
 		r = cmpText(da[col], db[col]);
-		break;
+	break;
 	}
 
 	return this.sortAscending ? r : -r;
@@ -201,58 +181,58 @@ function save() {
 function init() {
 	la.setup();
 	var c;
-	if (((c = cookie.get('advanced_access_notes_vis')) != null) && (c == '1')) toggleVisibility("notes");
-}
-
-function toggleVisibility(whichone) {
-	if (E('sesdiv_' + whichone).style.display == '') {
-		E('sesdiv_' + whichone).style.display = 'none';
-		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to show)';
-		cookie.set('advanced_access_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv_' + whichone).style.display='';
-		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to hide)';
-		cookie.set('advanced_access_' + whichone + '_vis', 1);
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "notes");
 	}
 }
-
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
+
+<!-- / / / -->
+
 <input type="hidden" name="_nextpage" value="advanced-access.asp">
 <input type="hidden" name="_nextwait" value="10">
 <input type="hidden" name="_service" value="firewall-restart">
 <input type="hidden" name="lan_access">
+
+<!-- / / / -->
 
 <div class="section-title">LAN Access</div>
 <div class="section">
 	<div class="tomato-grid" id="la-grid"></div>
 </div>
 
-<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<!-- / / / -->
+
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
-<ul>
-	<li><b>Src</b> - Source LAN bridge.</li>
-	<li><b>Src Address</b> <i>(optional)</i> - Source address allowed. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
-	<li><b>Dst</b> - Destination LAN bridge.</li>
-	<li><b>Dst Address</b> <i>(optional)</i> - Destination address inside the LAN.</li>
-</ul>
+	<ul>
+		<li><b>Src</b> - Source LAN bridge.</li>
+		<li><b>Src Address</b> <i>(optional)</i> - Source address allowed. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
+		<li><b>Dst</b> - Destination LAN bridge.</li>
+		<li><b>Dst Address</b> <i>(optional)</i> - Destination address inside the LAN.</li>
+	</ul>
 </div>
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,30 +7,16 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Scheduler</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-
-<style type="text/css">
-textarea {
-	width: 98%;
-	height: 10em;
-}
-.empty {
-	height: 2em;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("sch_rboot,sch_rcon,sch_c1,sch_c1_cmd,sch_c2,sch_c2_cmd,sch_c3,sch_c3_cmd,sch_c4,sch_c4_cmd,sch_c5,sch_c5_cmd"); %>
 
@@ -72,7 +58,8 @@ function makeSched(key, custom) {
 
 	if (custom) {
 		t = tm;
-	} else {
+	}
+	else {
 		t = [];
 		for (i = 0; i < tm.length; ++i) {
 			if ((tm[i][0] >= 0) || (tm[i][0] <= -60) || (tm[i][0] == 'e')) t.push(tm[i]);
@@ -119,7 +106,7 @@ function verifySched(focused, quiet, key) {
 
 	eTime = E(key + 'time');
 	eEvery = E(key + 'every');
-	eEvery.style.visibility = E(key + 'mins').style.visibility = (eTime.value == 'e') ? 'visible' : 'hidden';
+	eEvery.style.display = E(key + 'mins').style.display = ((eTime.value == 'e') ? 'inline-block' : 'none');
 
 	eCmd = E('_sch' + key + 'cmd');
 	eEveryday = E(key + 'everyday');
@@ -136,7 +123,8 @@ function verifySched(focused, quiet, key) {
 				f.disabled = 0;
 				f.checked = eEveryday.checked;
 			}
-		} else {
+		}
+		else {
 			n = 0;
 			for (i = 0; i < 7; ++i) {
 				f = E(key + dowLow[i]);
@@ -149,7 +137,8 @@ function verifySched(focused, quiet, key) {
 		if ((eTime.value == 'e') && (!v_mins(eEvery, quiet, eCmd ? 1 : 60, 60 * 24 * 60))) return 0;
 
 		if ((eCmd) && (!v_length(eCmd, quiet, quiet ? 0 : 1, 2048))) return 0;
-	} else {
+	}
+	else {
 		eEveryday.disabled = 1;
 		eTime.disabled = 1;
 		eEvery.disabled = 1;
@@ -162,7 +151,8 @@ function verifySched(focused, quiet, key) {
 	if (eCmd) {
 		if ((eCmd.value.length) || (!eTime.disabled)) {
 			elem.removeClass(eCmd, 'empty');
-		} else {
+		}
+		else {
 			elem.addClass(eCmd, 'empty');
 		}
 	}
@@ -172,8 +162,10 @@ function verifySched(focused, quiet, key) {
 
 function verifyFields(focused, quiet) {
 	for (var i = 0; i < scheds.length; ++i) {
-		if (!verifySched(focused, quiet, scheds[i])) return 0;
+		if (!verifySched(focused, quiet, scheds[i]))
+			return 0;
 	}
+
 	return 1;
 }
 
@@ -187,12 +179,15 @@ function saveSched(fom, key) {
 	s += ',';
 
 	e = E(k + 'time').value;
-	if (e == 'e') s += -(E(k + 'every').value * 1);
-		else s += e;
+	if (e == 'e')
+		s += -(E(k + 'every').value * 1);
+	else
+		s += e;
 
 	n = 0;
 	for (i = 0; i < 7; ++i) {
-		if (E(k + dowLow[i]).checked) n |= (1 << i);
+		if (E(k + dowLow[i]).checked)
+			n |= (1 << i);
 	}
 	if (n == 0) {
 		n = 0x7F;
@@ -220,19 +215,19 @@ function save() {
 
 function init() {
 	verifyFields(null, 1);
-	E('content').style.visibility = 'visible';
 }
 </script>
 </head>
+
 <body onload="init()">
 <form name="t_fom" id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
-<td id="content" style="visibility:hidden">
+<tr id="body"><td id="navi"><script>navi()</script></td>
+<td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
@@ -247,62 +242,77 @@ function init() {
 <input type="hidden" name="sch_c4" value="">
 <input type="hidden" name="sch_c5" value="">
 
+<!-- / / / -->
+
 <div class="section-title">Reboot</div>
 <div class="section">
-<script type="text/javascript">
-	makeSched('rboot');
-</script>
-</div>
-
-<div class="section-title">Reconnect</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('rcon');
-</script>
-</div>
-
-<div class="section-title">Custom 1</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('c1', 1);
-</script>
-</div>
-
-<div class="section-title">Custom 2</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('c2', 1);
-</script>
-</div>
-
-<div class="section-title">Custom 3</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('c3', 1);
-</script>
-</div>
-
-<div class="section-title">Custom 4</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('c4', 1);
-</script>
-</div>
-
-<div class="section-title">Custom 5</div>
-<div class="section">
-<script type="text/javascript">
-	makeSched('c5', 1);
-</script>
+	<script>
+		makeSched('rboot');
+	</script>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div class="section-title">Reconnect</div>
+<div class="section">
+	<script>
+		makeSched('rcon');
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Custom 1</div>
+<div class="section">
+	<script>
+		makeSched('c1', 1);
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Custom 2</div>
+<div class="section">
+	<script>
+		makeSched('c2', 1);
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Custom 3</div>
+<div class="section">
+	<script>
+		makeSched('c3', 1);
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Custom 4</div>
+<div class="section">
+	<script>
+		makeSched('c4', 1);
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Custom 5</div>
+<div class="section">
+	<script>
+		makeSched('c5', 1);
+	</script>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>

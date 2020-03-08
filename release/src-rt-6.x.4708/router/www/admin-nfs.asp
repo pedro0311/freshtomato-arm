@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2007-2011 Shibby
@@ -6,45 +6,16 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: NFS Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#nfsg-grid {
-	width: 100%;
-}
-#nfsg-grid .co1 {
-	width: 15%;
-}
-#nfsg-grid .co2 {
-	width: 20%;
-}
-#nfsg-grid .co3 {
-	width: 10%;
-}
-#nfsg-grid .co4 {
-	width: 7%;
-}
-#nfsg-grid .co5 {
-	width: 13%;
-}
-#nfsg-grid .co6 {
-	width: 35%;
-}
-
-
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("nfs_enable,nfs_enable_v2,nfs_exports"); %>
 
@@ -106,6 +77,7 @@ nfsg.setup = function() {
 
 function verifyFields(focused, quiet) {
 	var ok = 1;
+
 	return ok;
 }
 
@@ -128,20 +100,27 @@ function save() {
 
 function init() {
 	nfsg.recolor();
+
 	var elements = document.getElementsByClassName("new_window");
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
+
+function earlyInit() {
+	nfsg.setup();
+	verifyFields(null, true);
+}
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -149,44 +128,43 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="admin-nfs.asp">
 <input type="hidden" name="_service" value="nfs-restart">
-
 <input type="hidden" name="nfs_enable">
 <input type="hidden" name="nfs_enable_v2">
 <input type="hidden" name="nfs_exports">
 
+<!-- / / / -->
+
 <div class="section-title">NFS Server</div>
 <div class="section">
-	<script type="text/javascript">
-	createFieldTable('', [
-		{ title: 'Enable NFS Server', name: 'f_nfs_enable', type: 'checkbox', value: nvram.nfs_enable != '0' },
-		{ title: 'Enable legacy (NFS V2) support', indent: 2, name: 'f_nfs_enable_v2', type: 'checkbox', value: nvram.nfs_enable_v2 != '0' }
-	]);
+	<script>
+		createFieldTable('', [
+			{ title: 'Enable NFS Server', name: 'f_nfs_enable', type: 'checkbox', value: nvram.nfs_enable != '0' },
+			{ title: 'Enable legacy (NFS V2) support', indent: 2, name: 'f_nfs_enable_v2', type: 'checkbox', value: nvram.nfs_enable_v2 != '0' }
+		]);
 	</script>
-<br/>
-
-<div class="section-title">Exports</div>
-<div class="section">
-	<div class="tomato-grid" id="nfsg-grid"></div>
-	<script type="text/javascript">nfsg.setup();</script>
-<br/>
-	<ul>
-	<li>You can find more information on proper NFS configuration at the following website: <a href="https://nfs.sourceforge.net/nfs-howto/" class="new_window"><b>https://nfs.sourceforge.net</b></a>.
-	</li></ul>
-<br/>
-</div>
-
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div class="section-title">Exports</div>
+<div class="section">
+	<div class="tomato-grid" id="nfsg-grid"></div>
+	<ul>
+		<li>You can find more information on proper NFS configuration at the following website: <a href="https://nfs.sourceforge.net/nfs-howto/" class="new_window"><b>https://nfs.sourceforge.net</b></a>.</li>
+	</ul>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script>earlyInit();</script>
 </body>
 </html>

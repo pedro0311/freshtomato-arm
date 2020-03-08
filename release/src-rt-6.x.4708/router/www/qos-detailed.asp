@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -11,60 +11,22 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] QoS: View Details</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="protocols.js"></script>
+<script src="interfaces.js"></script>
 
-<!-- / / / -->
-
-<style type="text/css">
-#grid .co1 {
-	text-align: center;
-	width: 30px;
-}
-#grid .co2 {
-	width: 180px;
-	word-break: break-all;
-}
-#grid .co3 {
-	width: 55px;
-}
-#grid .co4 {
-	width: 180px;
-	word-break: break-all;
-}
-#grid .co5 {
-	width: 55px;
-}
-#grid .co6 {
-	width: 60px;
-}
-#grid .co7 {
-	width: 30px;
-}
-#grid .co8 {
-	text-align: right;
-	width: 75px;
-}
-#grid .co9 {
-	text-align: right;
-	width: 75px;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="protocols.js"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram('qos_enable,qos_classnames,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,t_hidelr'); %>
 
+var cprefix = 'qos_detailed';
 var Unclassified = ['Unclassified'];
 var classNames = nvram.qos_classnames.split(' ');
 var abc = Unclassified.concat(classNames);
@@ -75,7 +37,8 @@ var filteripe = [];
 
 if ((viewClass = '<% cgi_get("class"); %>') == '') {
 	viewClass = -1;
-} else if ((isNaN(viewClass *= 1)) || (viewClass < 0) || (viewClass > 10)) {
+}
+else if ((isNaN(viewClass *= 1)) || (viewClass < 0) || (viewClass > 10)) {
 	viewClass = 0;
 }
 
@@ -98,7 +61,8 @@ function resolve() {
 		}
 		if (queue.length == 0) {
 			if ((lock == 0) && (resolveCB) && (grid.sortColumn == 4)) grid.resort();
-		} else {
+		}
+		else {
 			setTimeout(resolve, 500);
 		}
 			xob = null;
@@ -120,7 +84,7 @@ function resolveChanged() {
 	b = E('_f_autoresolve').checked ? 1 : 0;
 	if (b != resolveCB) {
 		resolveCB = b;
-		cookie.set('qos_resolve', b);
+		cookie.set(cprefix + '_resolve', b);
 	}
 	if (b) grid.resolveAll();
 }
@@ -131,18 +95,18 @@ grid.dataToView = function(data) {
 	var s, v = [];
 	for (var col = 0; col < data.length; ++col) {
 		switch (col) {
-		case 5:		/* Class */
-			s = abc[data[col]] || ('' + data[col]);
+			case 5:		/* Class */
+				s = abc[data[col]] || ('' + data[col]);
 			break;
-		case 6:		/* Rule # */
-			s = (data[col] * 1 > 0) ? ('' + data[col]) : '';
+			case 6:		/* Rule # */
+				s = (data[col] * 1 > 0) ? ('' + data[col]) : '';
 			break;
-		case 7:		/* Bytes out */
-		case 8:		/* Bytes in */
-			s = scaleSize(data[col] * 1);
+			case 7:		/* Bytes out */
+			case 8:		/* Bytes in */
+				s = scaleSize(data[col] * 1);
 			break;
-		default:
-			s = '' + data[col];
+			default:
+				s = '' + data[col];
 			break;
 		}
 		v.push(s);
@@ -193,7 +157,8 @@ grid.onClick = function(cell) {
 			row.style.cursor = 'wait';
 			resolve();
 		}
-	} else {
+	}
+	else {
 		this.resolveAll();
 	}
 }
@@ -229,10 +194,11 @@ grid.setName = function(ip, name) {
 		data = row.getRowData();
 		for (j = cols.length-1; j >= 0; j--) {
 			if (data[cols[j]].indexOf(ip) != -1 ) {
-				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
+				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')<\/small>';
 				row.setRowData(data);
 				if (E('_f_shortcuts').checked)
-					data[cols[j]] = data[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Exclude from List">[Hide]<\/a><\/small>';
+					data[cols[j]] = data[cols[j]] + ' <small class="pics"><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
+
 				row.cells[cols[j]].innerHTML = data[cols[j]];
 				row.style.cursor = 'default';
 			}
@@ -241,7 +207,7 @@ grid.setName = function(ip, name) {
 }
 
 grid.setup = function() {
-	this.init('grid', 'sort');
+	this.init('qos-det-grid', 'sort');
 	this.headerSet(['Protocol', 'Source', 'S Port', 'Destination', 'D Port', 'Class', 'Rule', 'Bytes Out', 'Bytes In']);
 }
 
@@ -334,26 +300,30 @@ ref.refresh = function(text) {
 			if (fskip == 1) continue;
 		}
 
-		for (j = cols.length-1; j >= 0; j--) {
+		for (j = cols.length - 1; j >= 0; j--) {
 			ip = b[cols[j]];
 			if (cache[ip] != null) {
 				c[ip] = cache[ip];
-				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
+				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')<\/small>';
 				cursor = 'default';
-			} else {
+			}
+			else {
 				if (resolveCB) {
 					if (!q[ip]) {
 						q[ip] = 1;
 						queue.push(ip);
 					}
 					cursor = 'wait';
-				} else cursor = null;
+				}
+				else
+					cursor = null;
 			}
 			if (E('_f_shortcuts').checked) {
+				b[cols[j]] = b[cols[j]] + ' <small class="pics">';
 				if (cache[ip] == null) {
-					b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]<\/a><\/small>';
+					b[cols[j]] = b[cols[j]] + '<a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]<\/a>';
 				}
-				b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
+				b[cols[j]] = b[cols[j]] + ' <a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
 			}
 		}
 
@@ -367,22 +337,23 @@ ref.refresh = function(text) {
 	q = null;
 
 	grid.resort();
-	setTimeout(function() { E('loading').style.visibility = 'hidden'; }, 100);
+	setTimeout(function() { E('loading').style.display = 'none'; }, 100);
 
 	--lock;
 
 	if (resolveCB) resolve();
 
 	if (numconnshown != numconntotal)
-		E('numtotalconn').innerHTML='<small><i>(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)<\/i><\/small>';
+		E('qos_numtotalconn').innerHTML='(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)';
 	else
-		E('numtotalconn').innerHTML='<small><i>(' + numconntotal + ' connections)<\/i><\/small>';
+		E('qos_numtotalconn').innerHTML='(' + numconntotal + ' connections)';
 }
 
 function addExcludeList(address) {
 	if (E('_f_filter_ipe').value.length<6) {
 		E('_f_filter_ipe').value = address;
-	} else {
+	}
+	else {
 		if (E('_f_filter_ipe').value.indexOf(address) < 0) {
 			E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + address;
 		}
@@ -396,35 +367,44 @@ function addToResolveQueue(ip) {
 }
 
 function init() {
+	if (nvram.qos_enable != '1') {
+		E('stitle').style.display = 'none';
+		E('filters-head').style.display = 'none';
+		E('grid-head').style.display = 'none';
+		E('stitleoff').style.display = 'block';
+		E('note-disabled').style.display = 'block';
+		return;
+	}
+
 	var c;
 
-	if ((c = cookie.get('qos_filterip')) != null) {
-		cookie.set('qos_filterip', '', 0);
+	if ((c = cookie.get(cprefix + '_filterip')) != null) {
+		cookie.set(cprefix + '_filterip', '', 0);
 		if (c.length>6) {
 			E('_f_filter_ip').value = c;
 			filterip = c.split(',');
 		}
 	}
 
-	if (((c = cookie.get('qos_resolve')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_resolve')) != null) && (c == '1')) {
 		E('_f_autoresolve').checked = resolveCB = 1;
 	}
 
-	if (((c = cookie.get('qos_bcast')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_bcast')) != null) && (c == '1')) {
 		E('_f_excludebcast').checked = bcastCB = 1;
 	}
 
-	if (((c = cookie.get('qos_mcast')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_mcast')) != null) && (c == '1')) {
 		E('_f_excludemcast').checked = mcastCB = 1;
 	}
 
-	if (((c = cookie.get('qos_details_filters_vis')) != null) && (c == '1')) {
-		toggleVisibility("filters");
+	if (((c = cookie.get(cprefix + '_filters_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "filters");
 	}
 
 	if (viewClass != -1) E('stitle').firstChild.data = "View Details: " + abc[viewClass] + " ";
 
-	E('_f_shortcuts').checked = (((c = cookie.get('qos_detailed_shortcuts')) != null) && (c == '1'));
+	E('_f_shortcuts').checked = (((c = cookie.get(cprefix + '_shortcuts')) != null) && (c == '1'));
 
 	grid.setup();
 	ref.postData = 'exec=ctdump&arg0=' + viewClass;
@@ -437,30 +417,20 @@ function init() {
 function dofilter() {
 	if (E('_f_filter_ip').value.length>6) {
 		filterip = E('_f_filter_ip').value.split(',');
-	} else {
+	}
+	else {
 		filterip = [];
 	}
 
 	if (E('_f_filter_ipe').value.length>6) {
 		filteripe = E('_f_filter_ipe').value.split(',');
-	} else {
+	}
+	else {
 		filteripe = [];
 	}
 
 	if (!ref.running) ref.once = 1;
 	ref.start();
-}
-
-function toggleVisibility(whichone) {
-	if (E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('qos_details_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('qos_details_' + whichone + '_vis', 1);
-	}
 }
 
 function verifyFields(focused, quiet) {
@@ -469,16 +439,16 @@ function verifyFields(focused, quiet) {
 	b = E('_f_excludebcast').checked ? 1 : 0;
 	if (b != bcastCB) {
 		bcastCB = b;
-		cookie.set('qos_bcast', b);
+		cookie.set(cprefix + '_bcast', b);
 	}
 
 	b = E('_f_excludemcast').checked ? 1 : 0;
 	if (b != mcastCB) {
 		mcastCB = b;
-		cookie.set('qos_mcast', b);
+		cookie.set(cprefix + '_mcast', b);
 	}
 
-	cookie.set('qos_detailed_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
 
 	dofilter();
 	resolveChanged();
@@ -489,29 +459,30 @@ function verifyFields(focused, quiet) {
 </head>
 <body onload="init()">
 <form id="t_fom" action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title" id="stitleoff" style="display:none">View Details</div>
-<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="numtotalconn"></span></div>
+<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="qos_numtotalconn"></span></div>
 <div class="section" id="grid-head">
-	<div id="grid" class="tomato-grid" style="float:left"></div>
-	<div id="loading"><br/><b>Loading...</b></div>
+	<div class="tomato-grid" id="qos-det-grid"></div>
+
+	<div id="loading">Loading...</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title" id="filters-head">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
-<div class="section" id="sesdivfilters" style="display:none">
-	<script type="text/javascript">
+<div class="section-title" id="filters-head">Filters: <small><i><a href="javascript:toggleVisibility(cprefix,'filters');"><span id="sesdiv_filters_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_filters" style="display:none">
+	<script>
 		var c;
 		c = [];
 		c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
@@ -527,21 +498,14 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<script>
-	if (nvram.qos_enable != '1') {
-		W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
-		E('stitle').style.display = 'none';
-		E('filters-head').style.display = 'none';
-		E('grid-head').style.display = 'none';
-		E('stitleoff').style.display = '';
-	}
-</script>
+<div class="note-disabled" id="note-disabled" style="display:none"><b>QoS disabled.</b><br><br><a href="qos-settings.asp">Enable &raquo;</a></div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
-	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
+<div id="footer">
+	<script>genStdRefresh(1,1,'ref.toggle()');</script>
+</div>
+
 </td></tr>
 </table>
 </form>

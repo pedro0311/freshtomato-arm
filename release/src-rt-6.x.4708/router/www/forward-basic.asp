@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,47 +7,19 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Forwarding: Basic</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#fo-grid .co1 {
-	width: 25px;
-	text-align: center;
-}
-#fo-grid .co2 {
-	width: 70px;
-}
-#fo-grid .co3 {
-	width: 120px;
-}
-#fo-grid .co4 {
-	width: 80px;
-}
-#fo-grid .co5 {
-	width: 55px;
-}
-#fo-grid .co6 {
-	width: 110px;
-}
-#fo-grid .co7 {
-	width: 300px;
-}
-
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("portforward"); %>
+
 var lipp = '<% lipp(); %>.';
 
 var fog = new TomatoGrid();
@@ -59,30 +31,31 @@ fog.sortCompare = function(a, b) {
 	var r;
 
 	switch (col) {
-	case 2:	// src
-	case 5:	// ia
+	case 2:
+	case 5:
 		r = cmpIP(da[col], db[col]);
-		break;
-	case 0:	// on
-	case 1: // protocol
-	case 3:	// ext prt
-	case 4:	// int prt
+	break;
+	case 0:
+	case 1:
+	case 3:
+	case 4:
 		r = cmpInt(da[col], db[col]);
-		break;
+	break;
 	default:
 		r = cmpText(da[col], db[col]);
-		break;
+	break;
 	}
 
 	return this.sortAscending ? r : -r;
 }
 
 fog.dataToView = function(data) {
-	return [(data[0] != '0') ? 'On' : '', ['TCP', 'UDP', 'Both'][data[1] - 1], (data[2].match(/(.+)-(.+)/)) ? (RegExp.$1 + ' -<br />' + RegExp.$2) : data[2], data[3], data[4], data[5], data[6]];
+	return [(data[0] != '0') ? 'On' : '', ['TCP', 'UDP', 'Both'][data[1] - 1], (data[2].match(/(.+)-(.+)/)) ? (RegExp.$1 + ' -<br>' + RegExp.$2) : data[2], data[3], data[4], data[5], data[6]];
 }
 
 fog.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
+
 	return [f[0].checked ? 1 : 0, f[1].value, f[2].value, f[3].value, f[4].value, f[5].value, f[6].value];
 }
 
@@ -115,6 +88,7 @@ fog.verifyFields = function(row, quiet) {
 
 	f[6].value = f[6].value.replace(/>/g, '_');
 	if (!v_nodelim(f[6], quiet, 'Description')) return 0;
+
 	return 1;
 }
 
@@ -144,7 +118,7 @@ fog.setup = function() {
 	for (var i = 0; i < nv.length; ++i) {
 		var r;
 
-		// temp: <=1.06
+		/* temp: <=1.06 */
 		if (r = nv[i].match(/^(\d)<(\d)<([\d\-\:,]+)<(\d*)<(.*)<(.*)$/)) {
 			r[1] *= 1;
 			r[2] *= 1;
@@ -152,7 +126,7 @@ fog.setup = function() {
 			if (r[5].match(/^ *\d+ *$/)) r[5] = lipp + r[5];
 			fog.insertData(-1, [r[1], r[2], '', r[3], r[4], r[5], r[6]]);
 		}
-		// >=1.07
+		/* >=1.07 */
 		else if (r = nv[i].match(/^(\d)<(\d)<(.*)<(.+?)<(\d*)<(.*)<(.*)$/)) {
 			r[1] *= 1;
 			r[2] *= 1;
@@ -168,6 +142,7 @@ fog.setup = function() {
 function srcSort(a, b) {
 	if (a[2].length) return -1;
 	if (b[2].length) return 1;
+
 	return 0;
 }
 
@@ -191,14 +166,15 @@ function init() {
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -206,14 +182,16 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="forward-basic.asp">
 <input type="hidden" name="_service" value="firewall-restart">
-
 <input type="hidden" name="portforward">
+
+<!-- / / / -->
 
 <div class="section-title">Port Forwarding</div>
 <div class="section">
 	<div class="tomato-grid" id="fo-grid"></div>
-	<script type="text/javascript">fog.setup();</script>
 </div>
+
+<!-- / / / -->
 
 <div class="section-title">Notes</div>
 <div class="section">
@@ -221,22 +199,27 @@ function init() {
 		<li><b>Src Address</b> <i>(optional)</i> - Forward only if from this address. Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24", "me.example.com".</li>
 		<li><b>Ext Ports</b> - The ports to be forwarded, as seen from the WAN. Ex: "2345", "200,300", "200-300,400".</li>
 		<li><b>Int Port</b> <i>(optional)</i> - The destination port inside the LAN. If blank, the destination port is the same as <i>Ext Ports</i>. Only one port per entry is supported when forwarding to a different internal port.</li>
-		<li><b>Int Address</b> - The destination address inside the LAN.
-	</li></ul>
+		<li><b>Int Address</b> - The destination address inside the LAN.</li>
+	</ul>
 </div>
-
-<br/>
-<script type="text/javascript">show_notice1('<% notice("iptables"); %>');</script>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<script>
+	show_notice1('<% notice("iptables"); %>');
+</script>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
+<script>fog.setup();</script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -6,64 +6,27 @@
 
 	Tomato VLAN GUI
 	Copyright (C) 2011 Augusto Bott
-	http://code.google.com/p/tomato-sdhc-vlan/
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Status: Device List</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#dev-grid .co1 {
-	width: 8%;
-}
-#dev-grid .co2 {
-	width: 20%;
-}
-#dev-grid .co3 {
-	width: 13%;
-}
-#dev-grid .co4 {
-	width: 21%;
-}
-#dev-grid .co5 {
-	width: 8%;
-	text-align: right;
-}
-#dev-grid .co6 {
-	width: 8%;
-	text-align: center;
-}
-#dev-grid .co7 {
-	width: 9%;
-	text-align: right;
-}
-#dev-grid .co8 {
-	width: 13%;
-	text-align: right;
-}
-#dev-grid .header {
-	text-align: left;
-}
-</style>
+//	<% nvram('lan_ifname,wl_ifname,wl_mode,wl_radio'); %>
 
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript">
+//	<% devlist(); %>
 
 ipp = '<% lipp(); %>.';
-//<% nvram('lan_ifname,wl_ifname,wl_mode,wl_radio'); %>
-//	<% devlist(); %>
 
 list = [];
 
@@ -176,20 +139,22 @@ dg.sortCompare = function(a, b) {
 	switch (col) {
 	case 2:
 		r = cmpIP(ra.ip, rb.ip);
-		break;
+	break;
 	case 4:
 		r = cmpInt(ra.rssi, rb.rssi);
-		break;
+	break;
 	case 5:
 		r = cmpInt(ra.qual, rb.qual);
-		break;
+	break;
 	default:
 		r = cmpText(a.cells[col].innerHTML, b.cells[col].innerHTML);
 	}
+
 	if (r == 0) {
 		r = cmpIP(ra.ip, rb.ip);
 		if (r == 0) r = cmpText(ra.ifname, rb.ifname);
 	}
+
 	return this.sortAscending ? r : -r;
 }
 
@@ -230,7 +195,7 @@ dg.populate = function() {
 		e.rssi = a[2];
 
 		if ((a[3] >= 1000) || (a[4] >= 1000))
-		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-'); //+ '<br /><small>Mbps<\/small>';
+		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-'); //+ '<br><small>Mbps<\/small>';
 
 	}
 
@@ -276,13 +241,13 @@ dg.populate = function() {
 
 		b = e.mac;
 		if (e.mac.match(/^(..):(..):(..)/)) {
-			b += '<br /><small>' +
+			b += '<br><small class="pics">' +
 				'<a href="http://api.macvendors.com/' + RegExp.$1 + '-' + RegExp.$2 + '-' + RegExp.$3 + '" class="new_window" title="OUI Search">[oui]<\/a> ' +
-				'<a href="javascript:addStatic(' + i + ')" title="Static Lease...">[static]<\/a> ' +
+				'<a href="javascript:addStatic(' + i + ')" title="Static Lease">[static]<\/a> ' +
 				'<a href="javascript:addbwlimit(' + i + ')" title="BW Limiter">[bwlimit]<\/a>';
 
 			if (e.rssi != '') {
-				b += ' <a href="javascript:addWF(' + i + ')" title="Wireless Filter...">[wfilter]<\/a>';
+				b += ' <a href="javascript:addWF(' + i + ')" title="Wireless Filter">[wfilter]<\/a>';
 			}
 			b += '<\/small>';
 		}
@@ -293,13 +258,16 @@ dg.populate = function() {
 		var ifidx = wl_uidx(e.unit);
 		if ((e.rssi !== '') && (ifidx >= 0) && (wlnoise[ifidx] < 0)) {
 			if (e.rssi >= -50) {
-			    e.qual = 100;
-			} else if (e.rssi >= -80) { // between -50 ~ -80dbm
-			    e.qual = Math.round(24 + ((e.rssi + 80) * 26)/10);
-			} else if (e.rssi >= -90) { // between -80 ~ -90dbm
-			    e.qual = Math.round(24 + ((e.rssi + 90) * 26)/10);
-			} else {
-			    e.qual = 0;
+				e.qual = 100;
+			}
+			else if (e.rssi >= -80) { /* between -50 ~ -80dbm */
+				e.qual = Math.round(24 + ((e.rssi + 80) * 26)/10);
+			}
+			else if (e.rssi >= -90) { /* between -80 ~ -90dbm */
+				e.qual = Math.round(24 + ((e.rssi + 90) * 26)/10);
+			}
+			else {
+				e.qual = 0;
 			}
 		}
 		else {
@@ -321,16 +289,6 @@ dg.setup = function() {
 	this.sort(2);
 }
 
-function earlyInit() {
-	dg.setup();
-}
-
-function init() {
-	new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true });
-	dg.recolor();
-	ref.initPage(3000, 3);
-}
-
 var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
 function InNewWindow () {
@@ -338,15 +296,27 @@ function InNewWindow () {
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
+
+function earlyInit() {
+	if (observer)
+		new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true });
+	dg.setup();
+}
+
+function init() {
+	dg.recolor();
+	ref.initPage(3000, 3);
+}
 </script>
 </head>
+
 <body onload="init()">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -354,36 +324,38 @@ function InNewWindow () {
 
 <div class="section-title">Device List</div>
 <div class="section">
-	<div id="dev-grid" class="tomato-grid"></div>
+	<div class="tomato-grid" id="dev-grid"></div>
 
-<script type="text/javascript">
-f = [];
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	var u = wl_unit(uidx);
-	if (nvram['wl'+u+'_radio'] == '1') {
-		if (wl_sunit(uidx)<0) {
-			var a = '';
-			if ((nvram['wl'+u+'_mode'] == 'ap') || (nvram['wl'+u+'_mode'] == 'wds'))
-				a = '&nbsp;&nbsp;&nbsp; <input type="button" value="Measure" onclick="javascript:window.location=\'wlmnoise.cgi?_http_id=' + nvram.http_id + '&_wl_unit=' + u +'\'">';
-			f.push( { title: '<b>Noise Floor (' + wl_ifaces[uidx][0] + ')&nbsp;:<\/b>',
-				prefix: '<span id="noise'+uidx+'">',
-				custom: wlnoise[uidx],
-				suffix: '<\/span>&nbsp;<small>dBm<\/small>' + a } );
+	<script>
+		f = [];
+		for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+			var u = wl_unit(uidx);
+			if (nvram['wl'+u+'_radio'] == '1') {
+				if (wl_sunit(uidx) < 0) {
+					var a = '';
+					if ((nvram['wl'+u+'_mode'] == 'ap') || (nvram['wl'+u+'_mode'] == 'wds'))
+						a = '&nbsp;&nbsp;&nbsp; <input type="button" value="Measure" onclick="javascript:window.location=\'wlmnoise.cgi?_http_id=' + nvram.http_id + '&_wl_unit=' + u +'\'">';
+
+					f.push( { title: '<b>Noise Floor (' + wl_ifaces[uidx][0] + ')&nbsp;:<\/b>',
+						prefix: '<span id="noise'+uidx+'">',
+						custom: wlnoise[uidx],
+						suffix: '<\/span>&nbsp;<small>dBm<\/small>' + a } );
+				}
+			}
 		}
-	}
-}
-createFieldTable('', f);
-</script>
-
+		createFieldTable('', f);
+	</script>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
-	<script type="text/javascript">genStdRefresh(1,0,'ref.toggle()');</script>
+<div id="footer">
+	<script>genStdRefresh(1,0,'ref.toggle()');</script>
+</div>
+
 </td></tr>
 </table>
-<script type="text/javascript">earlyInit();</script>
+<script>earlyInit();</script>
+</form>
 </body>
 </html>

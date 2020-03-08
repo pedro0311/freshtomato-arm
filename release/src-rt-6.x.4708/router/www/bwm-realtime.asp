@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,40 +7,22 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Bandwidth: Real-Time</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script src="bwm-common.js"></script>
+<script src="bwm-hist.js"></script>
+<script src="interfaces.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#txt {
-	width: 550px;
-	white-space: nowrap;
-}
-#bwm-controls {
-	text-align: right;
-	margin-right: 5px;
-	margin-top: 5px;
-	float: right;
-	visibility: hidden;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript" src="bwm-common.js"></script>
-<script type="text/javascript" src="bwm-hist.js"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-
-<script type="text/javascript">
-//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,rstats_colors,rstats_enable"); %>
+//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_colors,rstats_enable"); %>
 
 var cprefix = 'bw_r';
 var updateInt = 2;
@@ -136,93 +118,105 @@ function init() {
 	ref.start();
 }
 </script>
-
 </head>
+
 <body onload="init()">
-<form action="">
-<table id="container" cellspacing="0">
+<form>
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title">WAN Bandwidth - Real-Time</div>
-<div id="rstats">
-	<div id="tab-area"></div>
+<div class="section">
 
-	<script type="text/javascript">
-	if ((nvram.web_svg != '0') && (nvram.rstats_enable == '1')) {
-		W('<div style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;visibility:hidden;padding:0;margin:0" id="graph"><embed src="bwm-graph.svg?<% version(); %>" style="width:760px;height:300px;margin:0;padding:0" type="image/svg+xml"><\/embed><\/div>\n');
-	}
-	</script>
+	<div id="rstats">
+		<div id="tab-area"></div>
 
-	<div id="bwm-controls">
-		<small>(10 minute window, 2 second interval)</small><br/>
-		<br/>
-		Avg:&nbsp;
+		<script>
+			if ((nvram.web_svg != '0') && (nvram.rstats_enable == '1')) {
+				W('<div id="graph"><embed src="bwm-graph.svg" type="image/svg+xml" style="width:760px;height:300px"><\/embed><\/div>');
+			}
+		</script>
+
+		<div id="bwm-controls">
+			<small>(10 minute window, 2 second interval)</small><br>
+
+			<br>
+
+			Avg:&nbsp;
 			<a href="javascript:switchAvg(1)" id="avg1">Off</a>,
 			<a href="javascript:switchAvg(2)" id="avg2">2x</a>,
 			<a href="javascript:switchAvg(4)" id="avg4">4x</a>,
 			<a href="javascript:switchAvg(6)" id="avg6">6x</a>,
-			<a href="javascript:switchAvg(8)" id="avg8">8x</a><br/>
-		Max:&nbsp;
+			<a href="javascript:switchAvg(8)" id="avg8">8x</a><br>
+			Max:&nbsp;
 			<a href="javascript:switchScale(0)" id="scale0">Uniform</a>,
-			<a href="javascript:switchScale(1)" id="scale1">Per IF</a><br/>
-		Unit:&nbsp;
+			<a href="javascript:switchScale(1)" id="scale1">Per IF</a><br>
+			Unit:&nbsp;
 			<a href="javascript:switchUnit(0)" id="unit0">kbit/KB</a>,
-			<a href="javascript:switchUnit(1)" id="unit1">Mbit/MB</a><br/>
-		Display:&nbsp;
+			<a href="javascript:switchUnit(1)" id="unit1">Mbit/MB</a><br>
+			Display:&nbsp;
 			<a href="javascript:switchDraw(0)" id="draw0">Solid</a>,
-			<a href="javascript:switchDraw(1)" id="draw1">Line</a><br/>
-		Color:&nbsp; <a href="javascript:switchColor()" id="drawcolor">-</a><br/>
-		<small><a href="javascript:switchColor(1)" id="drawrev">[reverse]</a></small><br/>
+			<a href="javascript:switchDraw(1)" id="draw1">Line</a><br>
+			Color:&nbsp; <a href="javascript:switchColor()" id="drawcolor">-</a><br>
+			<small><a href="javascript:switchColor(1)" id="drawrev">[reverse]</a></small><br>
 
-		<br/><br/>
-		&nbsp; &raquo; <a href="admin-bwm.asp">Configure</a>
-	</div>
+			<br><br>
 
-	<br/><br/>
-	<table id="txt" style="border-style:none;border-collapse:separate;border-spacing:2px">
-	<tr>
-		<td style="width:8%;text-align:right;vertical-align:top"><b style="border-bottom:blue 1px solid" id="rx-name">RX</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top"><span id="rx-current"></span></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Avg</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top" id="rx-avg"></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Peak</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top" id="rx-max"></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Total</b></td>
-		<td style="width:14%;text-align:right;vertical-align:top" id="rx-total"></td>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td style="width:8%;text-align:right;vertical-align:top"><b style="border-bottom:blue 1px solid" id="tx-name">TX</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top"><span id="tx-current"></span></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Avg</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top" id="tx-avg"></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Peak</b></td>
-		<td style="width:15%;text-align:right;vertical-align:top" id="tx-max"></td>
-		<td style="width:8%;text-align:right;vertical-align:top"><b>Total</b></td>
-		<td style="width:14%;text-align:right;vertical-align:top" id="tx-total"></td>
-		<td>&nbsp;</td>
-	</tr>
-	</table>
-</div>
+			&nbsp; &raquo; <a href="admin-bwm.asp">Configure</a>
+		</div>
 
+		<br><br>
+<!-- / / / -->
 
-<script type="text/javascript">checkRstats();</script>
+		<table id="bwm-stats">
+			<tr>
+				<td><b id="rx-name">RX</b></td>
+				<td><span id="rx-current"></span></td>
+				<td><b>Avg</b></td>
+				<td id="rx-avg"></td>
+				<td><b>Peak</b></td>
+				<td id="rx-max"></td>
+				<td><b>Total</b></td>
+				<td id="rx-total"></td>
+			</tr>
+			<tr>
+				<td><b id="tx-name">TX</b></td>
+				<td><span id="tx-current"></span></td>
+				<td><b>Avg</b></td>
+				<td id="tx-avg"></td>
+				<td><b>Peak</b></td>
+				<td id="tx-max"></td>
+				<td><b>Total</b></td>
+				<td id="tx-total"></td>
+			</tr>
+		</table>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+	</div>
+
+</div>
+
+<!-- / / / -->
+
+<script>checkRstats();</script>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="warnwd" style="display:none">Warning: 10 second timeout, restarting...&nbsp;</span>
 	<span id="dtime"></span>
 	<img src="spin.gif" id="refresh-spinner" alt="" onclick="debugTime=1">
+</div>
+
 </td></tr>
 </table>
 </form>
