@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,52 +7,37 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Access Restrictions</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#res-over-grid .co1 {
-	width: 40%;
-}
-#res-over-grid .co2 {
-	width: 60%;
-}
-#res-over-grid .footer {
-	text-align: right;
-}
-#res-over-add {
-	width: 100px;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
+
 //	<% nvramseq("rrules", "rrule%d", 0, 49); %>
 
 var dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 var og = new TomatoGrid();
+
 og.setup = function() {
 	this.init('res-over-grid', 'sort');
 	this.headerSet(['Description', 'Schedule']);
-	var r = this.footerSet(['<input type="button" value="Add" onclick="TGO(this).addEntry()" id="res-over-add">']);
+	var r = this.footerSet(['<input type="button" value="Add" onclick="TGO(this).addEntry()" id="res-add-button">']);
 	r.cells[0].colSpan = 2;
 }
+
 og.populate = function() {
 	this.removeAllData();
 	for (var i = 0; i < rrules.length; ++i) {
 		var v;
-		if ((v = rrules[i].match(/^(\d+)\|(-?\d+)\|(-?\d+)\|(\d+)\|(.*?)\|(.*?)\|([^|]*?)\|(\d+)\|(.*)$/m)) == null)    {
+		if ((v = rrules[i].match(/^(\d+)\|(-?\d+)\|(-?\d+)\|(\d+)\|(.*?)\|(.*?)\|([^|]*?)\|(\d+)\|(.*)$/m)) == null) {
 			rrules[i] = '';
 			continue;
 		}
@@ -75,21 +60,24 @@ og.populate = function() {
 		}
 
 		if ((v[1] >= 0) && (v[2] >= 0)) {
-			s += '<br />' + timeString(v[1]) + ' to ' + timeString(v[2]);
+			s += '<br>' + timeString(v[1]) + ' to ' + timeString(v[2]);
 			if (v[2] <= v[1]) s += ' <small>(the following day)<\/small>';
 		}
-		if (v[0] != '1') s += '<br /><i><b>Disabled<\/b><\/i>';
+		if (v[0] != '1') s += '<br><i><b>Disabled<\/b><\/i>';
 		this.insertData(-1, [i, v[8], s]);
 	}
 	og.sort(0);
 }
+
 og.dataToView = function(data) {
 	return [escapeHTML(data[1]), data[2]];
 }
+
 og.onClick = function(cell) {
 	E('t_rruleN').value = PR(cell).getRowData()[0];
 	form.submit('t_fom');
 }
+
 og.addEntry = function() {
 	for (var i = 0; i < 140; ++i) {
 		if ((rrules[i] == null) || (rrules[i] == '')) {
@@ -105,14 +93,15 @@ function init() {
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -122,22 +111,25 @@ function init() {
 <input type="hidden" name="_commit" value="0">
 <input type="hidden" name="rruleN" id="t_rruleN" value="">
 
+<!-- / / / -->
+
 <div class="section-title">Access Restriction Overview</div>
 <div class="section">
 	<div class="tomato-grid" id="res-over-grid"></div>
 </div>
 
-<br/>
-<script type="text/javascript">show_notice1('<% notice("iptables"); %>');</script>
-<br/>
-<script type="text/javascript">show_notice1('<% notice("ip6tables"); %>');</script>
+<script>show_notice1('<% notice("iptables"); %>');</script>
+<script>show_notice1('<% notice("ip6tables"); %>');</script>
 
 <!-- / / / -->
 
+<div id="footer">
+	&nbsp;
+</div>
+
 </td></tr>
-<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
+<script>og.setup();</script>
 </form>
-<script type="text/javascript">og.setup();</script>
 </body>
 </html>

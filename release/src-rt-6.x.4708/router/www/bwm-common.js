@@ -31,26 +31,23 @@ var colors = [
 	['Red &amp; Black', '#d00', '#000']];
 /* var hostnamecache = []; */
 
-function xpsb(byt)
-{
+function xpsb(byt) {
 /* REMOVE-BEGIN
 	kbit/s = 1000 bits/s
 	125 = 1000 / 8
 	((B * 8) / 1000)
 REMOVE-END */
 	if (cookie.get(cprefix + 'unit') == 0)
-		return (byt / 125).toFixed(2) + ' <small>kbit/s<\/small><br \/>(' + (byt / 1024).toFixed(2) + ' <small>KB/s<\/small>)';
+		return (byt / 125).toFixed(2) + ' <small>kbit/s<\/small><br>(' + (byt / 1024).toFixed(2) + ' <small>KB/s<\/small>)';
 	else
-		return (byt / (125 * 1024)).toFixed(2) + ' <small>Mbit/s<\/small><br \/>(' + (byt / (1024 * 1024)).toFixed(2) + ' <small>MB/s<\/small>)';
+		return (byt / (125 * 1024)).toFixed(2) + ' <small>Mbit/s<\/small><br>(' + (byt / (1024 * 1024)).toFixed(2) + ' <small>MB/s<\/small>)';
 }
 
-function showCTab()
-{
+function showCTab() {
 	showTab('speed-tab-' + ifname);
 }
 
-function showSelectedOption(prefix, prev, now)
-{
+function showSelectedOption(prefix, prev, now) {
 	var e;
 
 	elem.removeClass(prefix + prev, 'selected');	/* safe if prev doesn't exist */
@@ -60,15 +57,13 @@ function showSelectedOption(prefix, prev, now)
 	}
 }
 
-function showDraw()
-{
+function showDraw() {
 	if (drawLast == drawMode) return;
 	showSelectedOption('draw', drawLast, drawMode);
 	drawLast = drawMode;
 }
 
-function switchDraw(n)
-{
+function switchDraw(n) {
 	if ((!svgReady) || (updating)) return;
 	drawMode = n;
 	showDraw();
@@ -76,15 +71,13 @@ function switchDraw(n)
 	cookie.set(cprefix + 'draw', drawMode);
 }
 
-function showUnit()
-{
+function showUnit() {
 	if (unitMode == unitLast) return;
 	showSelectedOption('unit', unitLast, unitMode);
 	unitLast = unitMode;
 }
 
-function switchUnit(n)
-{
+function switchUnit(n) {
 	if ((!svgReady) || (updating)) return;
 	unitMode = n;
 	showUnit();
@@ -92,47 +85,44 @@ function switchUnit(n)
 	showCTab();
 }
 
-function showColor()
-{
+function showColor() {
 	E('drawcolor').innerHTML = colors[drawColor][0] + ' &raquo;';
 	E('rx-name').style.borderBottom = '2px dashed ' + colors[drawColor][1 + colorX];
 	E('tx-name').style.borderBottom = '2px dashed ' + colors[drawColor][1 + (colorX ^ 1)];
 }
 
-function switchColor(rev)
-{
+function switchColor(rev) {
 	if ((!svgReady) || (updating)) return;
-	if (rev) colorX ^= 1;
-		else drawColor = (drawColor + 1) % colors.length;
+	if (rev)
+		colorX ^= 1;
+	else
+		drawColor = (drawColor + 1) % colors.length;
+
 	showColor();
 	showCTab();
 	cookie.set(cprefix + 'color', drawColor + ',' + colorX);
 }
 
-function showScale()
-{
+function showScale() {
 	if (scaleMode == scaleLast) return;
 	showSelectedOption('scale', scaleLast, scaleMode);
 	scaleLast = scaleMode;
 }
 
-function switchScale(n)
-{
+function switchScale(n) {
 	scaleMode = n;
 	showScale();
 	showTab('speed-tab-' + ifname);
 	cookie.set(cprefix + 'scale', scaleMode);
 }
 
-function showAvg()
-{
+function showAvg() {
 	if (avgMode == avgLast) return;
 	showSelectedOption('avg', avgLast, avgMode);
 	avgLast = avgMode;
 }
 
-function switchAvg(n)
-{
+function switchAvg(n) {
 	if ((!svgReady) || (updating)) return;
 	avgMode = n;
 	showAvg();
@@ -140,13 +130,11 @@ function switchAvg(n)
 	cookie.set(cprefix + 'avg', avgMode);
 }
 
-function tabSelect(name)
-{
+function tabSelect(name) {
 	if (!updating) showTab(name);
 }
 
-function showTab(name)
-{
+function showTab(name) {
 	var h;
 	var max;
 	var i;
@@ -173,16 +161,16 @@ function showTab(name)
 
 	if (svgReady) {
 		max = (scaleMode ? MAX(h.rx_max, h.tx_max) : xx_max);
-		if (max > 12500) max = Math.round((max + 12499) / 12500) * 12500;
-			else max += 100;
-		updateSVG(h.rx, h.tx, max, drawMode,
-			colors[drawColor][1 + colorX], colors[drawColor][1 + (colorX ^ 1)],
-			updateInt, updateMaxL, updateDiv, avgMode, unitMode, clock);
+		if (max > 12500)
+			max = Math.round((max + 12499) / 12500) * 12500;
+		else
+			max += 100;
+
+		updateSVG(h.rx, h.tx, max, drawMode, colors[drawColor][1 + colorX], colors[drawColor][1 + (colorX ^ 1)], updateInt, updateMaxL, updateDiv, avgMode, unitMode, clock);
 	}
 }
 
-function loadData()
-{
+function loadData() {
 	var old;
 	var t, e;
 	var name;
@@ -255,33 +243,12 @@ function loadData()
 			else if (nvram.lan1_ifname == i) t = 'LAN2 <small>(' + i + ')<\/small>';
 			else if (nvram.lan2_ifname == i) t = 'LAN3 <small>(' + i + ')<\/small>';
 			else if (nvram.lan3_ifname == i) t = 'LAN4 <small>(' + i + ')<\/small>';
-/* REMOVE-BEGIN */
-			/* MAN + WAN label (for PPP) */
-//			else if ((nvram.wan_proto == 'pptp') || (nvram.wan_proto == 'l2tp')
-//				|| (nvram.wan2_proto == 'pptp') || (nvram.wan2_proto == 'l2tp')
-/* MULTIWAN-BEGIN */
-//			    || (nvram.wan3_proto == 'pptp') || (nvram.wan3_proto == 'l2tp')
-//			    || (nvram.wan4_proto == 'pptp') || (nvram.wan4_proto == 'l2tp')
-/* MULTIWAN-END */
-//			) {
-//				if (nvram.wan_ifname == i) t = 'MAN <small>(' + i + ')<\/small>';
-//				else if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')<\/small>';
-//				else if (nvram.wan2_ifname == i) t = 'MAN2 <small>(' + i + ')<\/small>';
-//				else if (nvram.wan2_iface == i) t = 'WAN2 <small>(' + i + ')<\/small>';
-/* MULTIWAN-BEGIN */
-//				else if (nvram.wan3_ifname == i) t = 'MAN3 <small>(' + i + ')<\/small>';
-//				else if (nvram.wan3_iface == i) t = 'WAN3 <small>(' + i + ')<\/small>';
-//				else if (nvram.wan4_ifname == i) t = 'MAN4 <small>(' + i + ')<\/small>';
-//				else if (nvram.wan4_iface == i) t = 'WAN4 <small>(' + i + ')<\/small>';
-/* MULTIWAN-END */
-//			}
-/* REMOVE-END */
 			/* WAN label (for PPP wan_iface) */
 			else if ((nvram.wan_proto == 'pppoe') || (nvram.wan_proto == 'ppp3g') || (nvram.wan_proto == 'pptp') || (nvram.wan_proto == 'l2tp')
-			    || (nvram.wan2_proto == 'pppoe') || (nvram.wan2_proto == 'ppp3g') || (nvram.wan2_proto == 'pptp') || (nvram.wan2_proto == 'l2tp')
+				 || (nvram.wan2_proto == 'pppoe') || (nvram.wan2_proto == 'ppp3g') || (nvram.wan2_proto == 'pptp') || (nvram.wan2_proto == 'l2tp')
 /* MULTIWAN-BEGIN */
-			    || (nvram.wan3_proto == 'pppoe') || (nvram.wan3_proto == 'ppp3g') || (nvram.wan3_proto == 'pptp') || (nvram.wan3_proto == 'l2tp')
-			    || (nvram.wan4_proto == 'pppoe') || (nvram.wan4_proto == 'ppp3g') || (nvram.wan4_proto == 'pptp') || (nvram.wan4_proto == 'l2tp')
+				 || (nvram.wan3_proto == 'pppoe') || (nvram.wan3_proto == 'ppp3g') || (nvram.wan3_proto == 'pptp') || (nvram.wan3_proto == 'l2tp')
+				 || (nvram.wan4_proto == 'pppoe') || (nvram.wan4_proto == 'ppp3g') || (nvram.wan4_proto == 'pptp') || (nvram.wan4_proto == 'l2tp')
 /* MULTIWAN-END */
 			) {
 				if (nvram.wan_iface == i) t = 'WAN <small>(' + i + ')<\/small>';
@@ -294,7 +261,7 @@ function loadData()
 			/* WAN label (for wan_ifname) */
 			else if ((nvram.wan_proto != 'disabled') || (nvram.wan2_proto != 'disabled')
 /* MULTIWAN-BEGIN */
-			    || (nvram.wan3_proto != 'disabled') || (nvram.wan4_proto != 'disabled')
+				 || (nvram.wan3_proto != 'disabled') || (nvram.wan4_proto != 'disabled')
 /* MULTIWAN-END */
 			) {
 				if (nvram.wan_ifname == i) t = 'WAN <small>(' + i + ')<\/small>';
@@ -320,7 +287,8 @@ function loadData()
 			if (tabs[i][0] != old[i][0]) break;
 		changed = i > 0;
 	}
-	else changed = 1;
+	else
+		changed = 1;
 
 	if (changed) {
 		E('tab-area').innerHTML = _tabCreate.apply(this, tabs);
@@ -332,19 +300,17 @@ function loadData()
 	if (tabs.length) showTab(tabs[0][0]);
 }
 
-function initData()
-{
+function initData() {
 	if (htmReady) {
 		loadData();
 		if (svgReady) {
-			E('graph').style.visibility = 'visible';
-			E('bwm-controls').style.visibility = 'visible';
+			E('graph').style.opacity = '1';
+			E('bwm-controls').style.opacity = '1';
 		}
 	}
 }
 
-function initCommon(defAvg, defDrawMode, defDrawColor, defUnit)
-{
+function initCommon(defAvg, defDrawMode, defDrawColor, defUnit) {
 	drawMode = fixInt(cookie.get(cprefix + 'draw'), 0, 1, defDrawMode);
 	showDraw();
 
@@ -383,7 +349,7 @@ function initCommon(defAvg, defDrawMode, defDrawColor, defUnit)
 
 	htmReady = 1;
 	initData();
-	E('refresh-spinner').style.visibility = 'hidden';
+	E('refresh-spinner').style.display = 'none';
 }
 
 function populateCache() {
@@ -418,4 +384,3 @@ function populateCache() {
 					}
 	}
 }
-

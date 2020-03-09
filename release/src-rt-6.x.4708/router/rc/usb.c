@@ -1065,17 +1065,40 @@ static inline void usbled_proc(char *device, int add)
 			if (strcmp(p, param) == 0) return;
 		}
 
-		/* Remove legacy approach in the code here - rather, use do_led() function, which is designed to do this
-		   The reason for changing this ... some HW (like Netgear WNDR4000) don't work with direct GPIO write -> use do_led()!
-		   f_write_string(add ? "/proc/leds-usb/add" : "/proc/leds-usb/remove", param, 0, 0);
-		*/
+		usb1 = opendir ("/sys/bus/usb/devices/2-1:1.0");
+		usb2 = opendir ("/sys/bus/usb/devices/2-2:1.0");
+		usb3 = opendir ("/sys/bus/usb/devices/1-1:1.0");
+		usb4 = opendir ("/sys/bus/usb/devices/1-2:1.0");
+
 		if (add) {
-			do_led(LED_USB, LED_ON);	/* USB LED On! */
+			if (usb1 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb1);
+				usb1 = NULL;
+			}
+			if (usb3 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb3);
+				usb3 = NULL;
+			}
+			if (usb2 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb2);
+				usb2 = NULL;
+			}
+			if (usb4 != NULL) {
+				do_led(LED_USB, LED_ON);	/* USB LED On! */
+				(void) closedir (usb4);
+				usb4 = NULL;
+			}
 		}
 		else {
-			do_led(LED_USB, LED_OFF);	/* USB LED Off! */
+			if (usb1 == NULL && usb3 == NULL &&
+			    usb2 == NULL && usb4 == NULL) {
+				do_led(LED_USB, LED_OFF);	/* USB LED Off! */
+			}
 		}
-	}
+	} /* else if (only one LED for USB) */
 
 }
 #endif

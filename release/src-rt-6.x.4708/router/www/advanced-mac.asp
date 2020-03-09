@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,21 +7,17 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: MAC Address</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript">
+<script>
 
 //	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr"); %>
 
@@ -35,6 +31,7 @@ function et0plus(plus) {
 			if (n != 0) break;
 		}
 	}
+
 	return mac.join(':');
 }
 
@@ -45,10 +42,11 @@ function defmac(which) {
 	if (which == 'wan3') return et0plus(18);
 	if (which == 'wan4') return et0plus(19);
 /* MULTIWAN-END */
-	else {	// wlX
-/* REMOVE-BEGIN */
+	else {
+/* REMOVE-BEGIN
 // trying to mimic the behaviour of static int set_wlmac(int idx, int unit, int subunit, void *param) in router/rc/network.c when we have wlX or wlX.X
-/* REMOVE-END */
+REMOVE-END */
+		/* wlX */
 		var u, s, t, v;
 		u = which.substr(2, which.length) * 1;
 		s = parseInt(u.toString().substr(u.toString().indexOf(".") + 1, u.toString().length) * 1);
@@ -72,6 +70,7 @@ function brand(which) {
 	mac = ['00'];
 	for (i = 5; i > 0; --i)
 		mac.push(Math.floor(Math.random() * 255).hex(2));
+
 	E('_f_' + which + '_hwaddr').value = mac.join(':');
 	verifyFields(null, true);
 }
@@ -82,8 +81,8 @@ function bclone(which) {
 }
 
 function findPrevMAC(mac, maxidx) {
-	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
-		var u = (uidx>1) ? uidx : '';
+	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
 		if (E('_f_wan'+u+'_hwaddr').value == mac) return 1;
 	}
 
@@ -98,7 +97,7 @@ function verifyFields(focused, quiet) {
 	var uidx, u, a;
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
-		u = (uidx>1) ? uidx : '';
+		u = (uidx > 1) ? uidx : '';
 		a = E('_f_wan'+u+'_hwaddr');
 		if (!v_mac(a, quiet)) return 0;
 	}
@@ -113,6 +112,7 @@ function verifyFields(focused, quiet) {
 			return 0;
 		}
 	}
+
 	return 1;
 }
 
@@ -124,7 +124,7 @@ function save() {
 
 	var fom = E('t_fom');
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
-		u = (uidx>1) ? uidx : '';
+		u = (uidx > 1) ? uidx : '';
 		v = E('_f_wan'+u+'_hwaddr').value;
 		fom['wan'+u+'_mac'].value= (v == defmac('wan'+u)) ? '' : v;
 	}
@@ -137,18 +137,17 @@ function save() {
 
 	form.submit(fom, 1);
 }
-
 </script>
 </head>
 
 <body>
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -157,66 +156,63 @@ function save() {
 <input type="hidden" name="_nextpage" value="advanced-mac.asp">
 <input type="hidden" name="_nextwait" value="10">
 <input type="hidden" name="_service" value="*">
-
 <input type="hidden" name="wan_mac">
 <input type="hidden" name="wan2_mac">
-/* MULTIWAN-BEGIN */
+<!-- MULTIWAN-BEGIN -->
 <input type="hidden" name="wan3_mac">
 <input type="hidden" name="wan4_mac">
-/*MULTIWAN-END */
-
-<script type="text/javascript">
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	var u = wl_fface(uidx);
-	W('<input type=\'hidden\' id=\'_wl'+u+'_hwaddr\' name=\'wl'+u+'_hwaddr\'>');
-}
+<!-- MULTIWAN-END -->
+<script>
+	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		var u = wl_fface(uidx);
+		W('<input type="hidden" id="_wl'+u+'_hwaddr" name="wl'+u+'_hwaddr">');
+	}
 </script>
-
-<div class="section-title">MAC Address</div>
-<div class="section">
-<script type="text/javascript">
-
-var f = [];
-for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx){
-	var u = (uidx>1) ? uidx : '';
-	f.push(
-		{ title: 'WAN'+u+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-			suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wan'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
-			value: nvram['wan'+u+'_mac'] || defmac('wan'+u) }
-	);
-}
-
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	var u = wl_fface(uidx);
-	f.push(
-		{ title: 'Wireless Interface ' + ((wl_ifaces.length > 1) ? wl_ifaces[uidx][0] : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-			suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wl'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
-			value: nvram['wl'+u+'_hwaddr'] || defmac('wl' + u) }
-		);
-}
-
-createFieldTable('', f);
-
-</script>
-<br/>
-<table style="border:0;padding:1px">
-	<tr><td>Router's LAN MAC Address:</td><td><b><script type="text/javascript">W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
-	<tr><td>Computer's MAC Address:</td><td><b><script type="text/javascript">W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
-</table>
-</div>
-
-
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div class="section-title">MAC Address</div>
+<div class="section">
+	<script>
+		var f = [];
+		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+			var u = (uidx > 1) ? uidx : '';
+			f.push(
+				{ title: 'WAN'+u+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
+					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wan'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
+					value: nvram['wan'+u+'_mac'] || defmac('wan'+u) }
+			);
+		}
+
+		for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+			var u = wl_fface(uidx);
+			f.push(
+				{ title: 'Wireless Interface ' + ((wl_ifaces.length > 1) ? wl_ifaces[uidx][0] : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
+					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wl'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
+					value: nvram['wl'+u+'_hwaddr'] || defmac('wl' + u) }
+			);
+		}
+
+		createFieldTable('', f);
+	</script>
+
+	<table style="border:none;padding:1px;padding-top:10px">
+		<tr><td>Router's LAN MAC Address:</td><td><b><script>W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
+		<tr><td>Computer's MAC Address:</td><td><b><script>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
+	</table>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script>verifyFields(null, true);</script>
 </body>
 </html>

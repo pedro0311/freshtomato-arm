@@ -903,6 +903,9 @@ bridge-install:
 	install -D bridge/brctl/brctl $(INSTALLDIR)/bridge/usr/sbin/brctl
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
 
+DNSSEC_BACKEND :=
+DNSSEC_OPENSSL :=
+DNSSEC_NETTLE :=
 ifeq ($(TCONFIG_DNSSEC),y)
 ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
 DNSSEC_BACKEND := $(OPENSSLDIR)
@@ -911,10 +914,6 @@ else
 DNSSEC_BACKEND := nettle
 DNSSEC_NETTLE := y
 endif
-else
-DNSSEC_BACKEND :=
-DNSSEC_OPENSSL :=
-DNSSEC_NETTLE :=
 endif
 
 dnsmasq: $(DNSSEC_BACKEND)
@@ -940,7 +939,7 @@ dnsmasq-clean:
 	$(call unpatch_files,dnsmasq)
 
 nettle/stamp-h1: gmp
-	@cd nettle && \
+	cd nettle && \
 	CPPFLAGS="-I$(TOP)/gmp" \
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
@@ -958,15 +957,15 @@ nettle-clean:
 	@rm -rf nettle/include nettle/lib nettle/bin nettle/share
 
 gmp/stamp-h1:
-	@cd gmp && autoreconf -fvi && CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
+	$(call patch_files,gmp)
+	cd gmp && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	$(CONFIGURE)
-	@touch gmp/stamp-h1
+	@touch $@
 
 gmp: gmp/stamp-h1
 	@$(SEP)
-	$(call patch_files,gmp)
 	@$(MAKE) -C gmp $(PARALLEL_BUILD)
 
 gmp-clean:
@@ -1770,22 +1769,23 @@ ebtables-clean:
 	rm -f ebtables/stamp-h1
 	$(call unpatch_files,ebtables)
 
-#Roadkill
 spawn-fcgi/stamp-h1:
-	cd spawn-fcgi && autoreconf && CC=$(CC) \
+	$(call patch_files,spawn-fcgi)
+	cd spawn-fcgi && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	ac_cv_func_malloc_0_nonnull=yes \
 	$(CONFIGURE) --prefix=/usr
-	touch spawn-fcgi/stamp-h1
+	@touch $@
 
 spawn-fcgi: spawn-fcgi/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C spawn-fcgi $(PARALLEL_BUILD)
+	@$(MAKE) -C spawn-fcgi
 
 spawn-fcgi-clean:
 	-@$(MAKE) -C spawn-fcgi clean
 	rm -f spawn-fcgi/stamp-h1
+	$(call unpatch_files,spawn-fcgi)
 
 spawn-fcgi-install:
 	install -d $(INSTALLDIR)/spawn-fcgi/usr/bin

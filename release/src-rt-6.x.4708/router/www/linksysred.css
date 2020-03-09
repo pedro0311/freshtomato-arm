@@ -2,13 +2,6 @@ body {
 	background: url(bg.gif) #777;
 }
 
-#container {
-	width: 898px;
-	height: 100%;
-	border: none;
-	margin: 0 auto;
-}
-
 a {
 	color: #AF4141;
 	font-family: Tahoma, Arial, sans-serif;
@@ -20,28 +13,17 @@ a:hover {
 	background: #fff;
 }
 
-#tux {
-	display: none;
+#container {
+	width: 965px;
+	height: 100%;
+	border: none;
+	margin: 0 auto;
 }
 
 #header {
 	border-bottom: 2px #901d0a solid;
 	padding: 27px 15px;
 	background: url(linksysred_logo.png) no-repeat right bottom #901d0a;
-}
-
-#header .title {
-	font: 26px Tahoma, Arial, Sans-serif;
-	height: 30px;
-	width: 898px; 
-	background: no-repeat;
-}
-
-#header .version {
-	font: 10px Tahoma, Arial, Sans-serif;
-	color: #FFF;
-	margin: 0;
-	padding: 2px 0 0;
 }
 
 #navi {
@@ -85,28 +67,48 @@ a:hover {
 	padding: 4px 0 4px 25px;
 }
 
-#tabs a {
-	font-family: Tahoma, Arial, Sans-serif;
-	height: 22px;
+#content {
+	border: 15px solid #fff;
+	background: #fff;
 }
 
-#tab-area {
-	padding-bottom: 10px;
+#header .title {
+	font: 26px Tahoma, Arial, Sans-serif;
+	height: 30px;
+	width: 898px; 
+	background: no-repeat;
+}
+
+#header .version {
+	font: 10px Tahoma, Arial, Sans-serif;
+	color: #FFF;
+	margin: 0;
+	padding: 2px 0 0;
 }
 
 ul.tabs a,
 #tabs a {
 	width: 120px !important;
 	float: left;
-	font-size: 10px;
-	font-weight: 700;
+	font: 12px Tahoma, Arial, Sans-serif;
+	font-weight: 600;
 	text-align: center;
 	text-decoration: none;
 	color: #888;
-	height: 22px !important;
-	border: #CCC 1px solid;
+	height: 28px !important;
+	border: #ccc 1px solid;
 	margin: 2px;
 	background: #F3F3F3;
+}
+
+#tabs a.active,
+#tabs a:hover {
+	color: #fff;
+	background: #901d0a;
+}
+
+#tab-area {
+	padding-bottom: 10px;
 }
 
 .tomato-grid a:hover {
@@ -132,11 +134,6 @@ ul.tabs a,
 .tomato-grid .even,
 .bwmg .even {
 	background: #ededed;
-}
-
-#content {
-	border: 15px solid #fff;
-	background: #fff;
 }
 
 .fields {
@@ -184,19 +181,19 @@ select {
 	font-size: 12px;
 }
 
-input[type=text],
-input[type=password] {
+input[type="text"],
+input[type="password"] {
 	margin: 1px;
 	padding: 0;
 }
 
-input[type=checkbox] {
+input[type="checkbox"] {
 	border: none;
 	margin: 1px 0 2px;
 	padding: 0;
 }
 
-input[type=radio] {
+input[type="radio"] {
 	padding-left: 0;
 	margin-left: 0;
 }
@@ -205,7 +202,8 @@ select {
 	margin: 0;
 }
 
-input[type=button] {
+input[type="button"],
+input[type="submit"] {
 	font: bold 1em Arial, Sans-serif;
 	border: 1px solid #CCC;
 	color: #333;
@@ -228,7 +226,6 @@ input {
 }
 
 textarea {
-	width: 400px;
 	font: normal 1em Tahoma, Arial, verdana, sans-serif;
 	border: 1px solid #655E56;
 	height: 100px;
@@ -242,8 +239,8 @@ textarea {
 	padding: 4px 15px 20px 4px;
 }
 
-input[type=text],
-input[type=password],
+input[type="text"],
+input[type="password"],
 textarea,
 select {
 	border: 1px solid #c7c7c7;
@@ -253,19 +250,12 @@ select {
 	background: #fdfdfd;
 }
 
-input[type=text],
-input[type=password],
+input[type="text"],
+input[type="password"],
 textarea {
 	padding-left: 3px;
 	padding-right: 3px;
 	max-width: 99%;
-}
-
-#tabs a.active,
-#tabs a:hover {
-	height: 22px;
-	color: #fff;
-	background: #901d0a;
 }
 
 .tomato-grid .odd:hover,
@@ -276,7 +266,8 @@ textarea {
 
 .tomato-grid .header,
 .bwmg .header,
-input[type=button]:hover {
+input[type="button"]:hover,
+input[type="submit"]:hover {
 	color: #fff;
 	background: #9a280f;
 }

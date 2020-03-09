@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,23 +7,20 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Bandwidth: Monthly</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="bwm-hist.js"></script>
 
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="bwm-hist.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,lan_ifname,rstats_enable"); %>
+
 try {
 //	<% bandwidth("monthly"); %>
 }
@@ -63,7 +60,7 @@ function redraw() {
 	block = '';
 	gn = 0;
 
-	grid = '<table class="bwmg" style="border-spacing:1px">';
+	grid = '<table class="bwmg">';
 	grid += makeRow('header', 'Date', 'Download', 'Upload', 'Total');
 
 	for (i = 0; i < monthly_history.length; ++i) {
@@ -75,7 +72,7 @@ function redraw() {
 		++rows;
 	}
 
-	E('bwm-monthly-grid').innerHTML = grid + '<\/table>';
+	E('bwm-grid').innerHTML = grid + '<\/table>';
 }
 
 function init() {
@@ -97,49 +94,49 @@ function init() {
 	redraw();
 }
 </script>
-
 </head>
+
 <body onload="init()">
-<form action="">
-<table id="container" cellspacing="0">
+<form>
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title">WAN Bandwidth - Monthly</div>
-<div id="rstats">
+<div class="section">
 
-	<div id="bwm-monthly-grid" style="float:left"></div>
+	<div id="rstats">
+		<div id="bwm-grid"></div>
 
-	<div style="float:right;text-align:right">
-		<b>Date</b> <select onchange='changeDate(this, "ym")' id="dafm"><option value="0">yyyy-mm</option><option value="1">mm-yyyy</option><option value="2">mmm yyyy</option><option value="3">mm.yyyy</option></select><br/>
-		<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br/>
-		<br/>
-		&raquo; <a href="javascript:genData()">Data</a>
-		<br/>
-		&raquo; <a href="admin-bwm.asp">Configure</a>
-		<br/><br/><br/>
-	</div>
-
-	<br/>
+		<div id="bwm-ctrl">
+			<b>Date</b> <select onchange='changeDate(this, "ym")' id="dafm"><option value="0">yyyy-mm</option><option value="1">mm-yyyy</option><option value="2">mmm yyyy</option><option value="3">mm.yyyy</option></select><br>
+			<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br>
+			<br>
+			&raquo; <a href="javascript:genData()">Data</a>
+			<br>
+			&raquo; <a href="admin-bwm.asp">Configure</a>
+		</div>
+	</div style="clear:both">
 
 </div>
 
 <!-- / / / -->
 
-<script type="text/javascript">checkRstats();</script>
+<script>checkRstats();</script>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
+</div>
+
 </td></tr>
 </table>
 </form>

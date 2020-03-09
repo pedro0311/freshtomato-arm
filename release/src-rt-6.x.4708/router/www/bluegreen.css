@@ -1,12 +1,14 @@
 a {
 	color: #405080;
 }
+
 a:hover {
 	background: #86bf30;
 	color: #fff;
 }
 
-input[type='button']:hover {
+input[type="button"]:hover,
+input[type="submit"]:hover {
 	background: #86bf30;
 	color: #fff;
 }
@@ -18,6 +20,7 @@ input[type='button']:hover {
 #navi a {
 	color: #405080;
 }
+
 #navi a:hover {
 	background: #86bf30;
 	color: #fff;
@@ -28,6 +31,7 @@ ul.tabs a.active,
 	background: #86bf30;
 	color: #fff;
 }
+
 ul.tabs a:hover,
 #tabs a:hover {
 	background: #96bf70;
@@ -39,18 +43,21 @@ ul.tabs a:hover,
 	background: #86bf30;
 	color: #fff;
 }
+
 .tomato-grid tr:hover a {
 	background: #96bf70;
 	color: #ffc;
 }
+
 .tomato-grid tr:hover a:hover {
 	background: #5C73B8;
 	color: #fff;
 }
+
 .tomato-grid a {
 	color: #405080;
 }
 
 .about {
-margin:20px 20px;
+	margin: 20px 20px;
 }

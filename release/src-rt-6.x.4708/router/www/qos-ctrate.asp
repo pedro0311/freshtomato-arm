@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -6,37 +6,26 @@
 
 	Filtering/Extensions on this QoS/Transfer Rates page
 	Copyright (C) 2011 Augusto Bott
-	http://code.google.com/p/tomato-sdhc-vlan/
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] QoS: View Per-Connection Transfer Rates</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="protocols.js"></script>
+<script src="interfaces.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#grid .co6 {
-	text-align: right;
-}
-#grid .co7 {
-	text-align: right;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="protocols.js"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-
-<script type="text/javascript">
 //	<% nvram('lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,t_hidelr'); %>
+
+var cprefix = 'qos_ctrate';
 var filterip = [];
 var filteripe = [];
 
@@ -62,7 +51,9 @@ function resolve() {
 		if (queue.length == 0) {
 			if ((lock == 0) && (resolveCB) && (grid.sortColumn == 4)) grid.resort();
 		}
-		else setTimeout(resolve, 500);
+		else
+			setTimeout(resolve, 500);
+
 		xob = null;
 	}
 	xob.onError = function(ex) {
@@ -82,7 +73,7 @@ function resolveChanged() {
 	b = E('_f_autoresolve').checked ? 1 : 0;
 	if (b != resolveCB) {
 		resolveCB = b;
-		cookie.set('qos_ctr_resolve', b);
+		cookie.set(cprefix + '_resolve', b);
 	}
 	if (b) grid.resolveAll();
 }
@@ -95,10 +86,10 @@ function thresChanged() {
 	b = E('_f_excludebythreshold').checked ? fixInt('<% cgi_get("thres"); %>', 100, 10000000, 100) : 0;
 	if (b != thres) {
 		thres = b;
-		cookie.set('qos_ctr_thres', b);
+		cookie.set(cprefix + '_thres', b);
 		ref.postData = 'exec=ctrate&arg0=' + readDelay + '&arg1=' + thres;
 		if (!ref.running) ref.once = 1;
-		E('loading').style.visibility = '';
+		E('loading').style.display = 'block';
 		ref.start();
 	}
 }
@@ -119,6 +110,7 @@ grid.dataToView = function(data) {
 		}
 		v.push('' + s);
 	}
+
 	return v;
 }
 
@@ -148,6 +140,7 @@ grid.sortCompare = function(a, b) {
 		r = cmpText(da[col], db[col]);
 		break;
 	}
+
 	return obj.sortAscending ? r : -r;
 }
 
@@ -198,10 +191,11 @@ grid.setName = function(ip, name) {
 		data = row.getRowData();
 		for (j = cols.length-1; j >= 0; j--) {
 			if (data[cols[j]].indexOf(ip) != -1 ) {
-				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
+				data[cols[j]] = name + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')<\/small>';
 				row.setRowData(data);
 				if (E('_f_shortcuts').checked)
-					data[cols[j]] = data[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Exclude from List">[Hide]<\/a><\/small>';
+					data[cols[j]] = data[cols[j]] + ' <small class="pics"><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
+
 				row.cells[cols[j]].innerHTML = data[cols[j]];
 				row.style.cursor = 'default';
 			}
@@ -210,7 +204,7 @@ grid.setName = function(ip, name) {
 }
 
 grid.setup = function() {
-	this.init('grid', 'sort');
+	this.init('qosctrate-grid', 'sort');
 	this.headerSet(['Protocol', 'Source', 'S Port', 'Destination', 'D Port', 'UL Rate', 'DL Rate']);
 }
 
@@ -242,13 +236,11 @@ ref.refresh = function(text) {
 	var q = [];
 	var cursor;
 	var ip;
-
 	var fskip;
-
 	cols = [1, 2];
 
 	for (i = 0; i < ctrate.length; ++i) {
-		fskip=0;
+		fskip = 0;
 		numconntotal++;
 		b = ctrate[i];
 
@@ -273,15 +265,15 @@ ref.refresh = function(text) {
 		}
 
 		if (E('_f_excludemcast').checked) {
-			var mmin = 3758096384; // aton('224.0.0.0') == 3758096384
-			var mmax = 4026531839; // aton('239.255.255.255') == 4026531839
+			var mmin = 3758096384; /* aton('224.0.0.0') == 3758096384 */
+			var mmax = 4026531839; /* aton('239.255.255.255') == 4026531839 */
 			if (((aton(b[1]) >= mmin) && (aton(b[1]) <= mmax)) || 
 				((aton(b[2]) >= mmin) && (aton(b[2]) <= mmax))) {
 				continue;
 			}
 		}
 
-		if (filteripe.length>0) {
+		if (filteripe.length > 0) {
 			fskip = 0;
 			for (x = 0; x < filteripe.length; ++x) {
 				if ((b[1] == filteripe[x]) || (b[2] == filteripe[x])) {
@@ -292,7 +284,7 @@ ref.refresh = function(text) {
 			if (fskip == 1) continue;
 		}
 
-		if (filterip.length>0) {
+		if (filterip.length > 0) {
 			fskip = 1;
 			for (x = 0; x < filterip.length; ++x) {
 				if ((b[1] == filterip[x]) || (b[2] == filterip[x])) {
@@ -303,13 +295,14 @@ ref.refresh = function(text) {
 			if (fskip == 1) continue;
 		}
 
-		for (j = cols.length-1; j >= 0; j--) {
+		for (j = cols.length - 1; j >= 0; j--) {
 			ip = b[cols[j]];
 			if (cache[ip] != null) {
 				c[ip] = cache[ip];
-				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + ip + ')<\/small>';
+				b[cols[j]] = cache[ip] + ((ip.indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + ip + ')<\/small>';
 				cursor = 'default';
-			} else {
+			}
+			else {
 				if (resolveCB) {
 					if (!q[ip]) {
 						q[ip] = 1;
@@ -317,13 +310,15 @@ ref.refresh = function(text) {
 					}
 					cursor = 'wait';
 				}
-				else cursor = null;
+				else
+					cursor = null;
 			}
 			if (E('_f_shortcuts').checked) {
+				b[cols[j]] = b[cols[j]] + ' <small class="pics">';
 				if (cache[ip] == null) {
-					b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]<\/a><\/small>';
+					b[cols[j]] = b[cols[j]] + '<a href="javascript:addToResolveQueue(\'' + ip + '\')" title="Resolve the hostname of this address">[resolve]<\/a>';
 				}
-				b[cols[j]] = b[cols[j]] + ' <small><a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
+				b[cols[j]] = b[cols[j]] + ' <a href="javascript:addExcludeList(\'' + ip + '\')" title="Filter out this IP">[hide]<\/a><\/small>';
 			}
 		}
 
@@ -337,22 +332,23 @@ ref.refresh = function(text) {
 	q = null;
 
 	grid.resort();
-	setTimeout(function() { E('loading').style.visibility = 'hidden'; }, 100);
+	setTimeout(function() { E('loading').style.display = 'none'; }, 100);
 
 	--lock;
 
 	if (resolveCB) resolve();
 
 	if (numconnshown != numconntotal)
-		E('numtotalconn').innerHTML='<small><i>(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)<\/i><\/small>';
+		E('qos_numtotalconn').innerHTML='(showing ' + numconnshown + ' out of ' + numconntotal + ' connections)';
 	else
-		E('numtotalconn').innerHTML='<small><i>(' + numconntotal + ' connections)<\/i><\/small>';
+		E('qos_numtotalconn').innerHTML='(' + numconntotal + ' connections)';
 }
 
 function addExcludeList(address) {
 	if (E('_f_filter_ipe').value.length<6) {
 		E('_f_filter_ipe').value = address;
-	} else {
+	}
+	else {
 		if (E('_f_filter_ipe').value.indexOf(address) < 0) {
 			E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + address;
 		}
@@ -368,35 +364,35 @@ function addToResolveQueue(ip) {
 function init() {
 	var c;
 
-	if ((c = cookie.get('qos_filterip')) != null) {
-		cookie.set('qos_filterip', '', 0);
-		if (c.length>6) {
+	if ((c = cookie.get(cprefix + '_filterip')) != null) {
+		cookie.set(cprefix + '_filterip', '', 0);
+		if (c.length > 6) {
 			E('_f_filter_ip').value = c;
 			filterip = c.split(',');
 		}
 	}
 
-	if (((c = cookie.get('qos_ctr_resolve')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_resolve')) != null) && (c == '1')) {
 		E('_f_autoresolve').checked = resolveCB = 1;
 	}
 
-	if (((c = cookie.get('qos_ctr_bcast')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_bcast')) != null) && (c == '1')) {
 		E('_f_excludebcast').checked = bcastCB = 1;
 	}
 
-	if (((c = cookie.get('qos_ctr_mcast')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_mcast')) != null) && (c == '1')) {
 		E('_f_excludemcast').checked = mcastCB = 1;
 	}
 
-	if (((c = cookie.get('qos_ctr_filters_vis')) != null) && (c == '1')) {
-		toggleVisibility("filters");
+	if (((c = cookie.get(cprefix + '_filters_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "filters");
 	}
 
-	if ((thres = cookie.get('qos_ctr_thres')) == null || isNaN(thres *= 1)) {
+	if ((thres = cookie.get(cprefix + '_thres')) == null || isNaN(thres *= 1)) {
 		thres = 0;
 	}
 
-	E('_f_shortcuts').checked = (((c = cookie.get('qos_ctr_shortcuts')) != null) && (c == '1'));
+	E('_f_shortcuts').checked = (((c = cookie.get(cprefix + '_shortcuts')) != null) && (c == '1'));
 	
 	E('_f_excludebythreshold').checked = (thres != 0);
 	grid.setup();
@@ -410,30 +406,20 @@ function init() {
 function dofilter() {
 	if (E('_f_filter_ip').value.length>6) {
 		filterip = E('_f_filter_ip').value.split(',');
-	} else {
+	}
+	else {
 		filterip = [];
 	}
 
 	if (E('_f_filter_ipe').value.length>6) {
 		filteripe = E('_f_filter_ipe').value.split(',');
-	} else {
+	}
+	else {
 		filteripe = [];
 	}
 
 	if (!ref.running)
 		ref.start();
-}
-
-function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('qos_ctr_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('qos_ctr_' + whichone + '_vis', 1);
-	}
 }
 
 function verifyFields(focused, quiet) {
@@ -442,69 +428,71 @@ function verifyFields(focused, quiet) {
 	b = E('_f_excludebcast').checked ? 1 : 0;
 	if (b != bcastCB) {
 		bcastCB = b;
-		cookie.set('qos_ctr_bcast', b);
+		cookie.set(cprefix + '_bcast', b);
 	}
 
 	b = E('_f_excludemcast').checked ? 1 : 0;
 	if (b != mcastCB) {
 		mcastCB = b;
-		cookie.set('qos_ctr_mcast', b);
+		cookie.set(cprefix + '_mcast', b);
 	}
 
-	cookie.set('qos_ctr_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
 
 	thresChanged();
 	resolveChanged();
 	dofilter();
+
 	return 1;
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
-<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">Transfer Rates: <span id="numtotalconn"></span></div>
+<div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">Transfer Rates: <span id="qos_numtotalconn"></span></div>
 <div class="section">
-	<div id="grid" class="tomato-grid" style="float:left"></div>
+	<div class="tomato-grid" id="qosctrate-grid"></div>
 
-<div id="loading"><br/><b>Loading...</b></div>
+	<div id="loading">Loading...</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Filters: <small><i><a href='javascript:toggleVisibility("filters");'><span id="sesdivfiltersshowhide">(Toggle Visibility)</span></a></i></small></div>
-<div class="section" id="sesdivfilters" style="display:none">
-<script type="text/javascript">
-	var c;
-	c = [];
-	c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-	c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-	c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
-	c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
-	c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
-	c.push({ title: 'Ignore inactive connections', name: 'f_excludebythreshold', type: 'checkbox' });
-	c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
-	c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-	createFieldTable('',c);
-</script>
+<div class="section-title">Filters: <small><i><a href="javascript:toggleVisibility(cprefix,'filters');"><span id="sesdiv_filters_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_filters" style="display:none">
+	<script>
+		var c;
+		c = [];
+		c.push({ title: 'Show only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+		c.push({ title: 'Exclude gateway traffic', name: 'f_excludegw', type: 'checkbox', value: ((nvram.t_hidelr) == '1' ? 1 : 0) });
+		c.push({ title: 'Exclude IPv4 broadcast', name: 'f_excludebcast', type: 'checkbox' });
+		c.push({ title: 'Exclude IPv4 multicast', name: 'f_excludemcast', type: 'checkbox' });
+		c.push({ title: 'Ignore inactive connections', name: 'f_excludebythreshold', type: 'checkbox' });
+		c.push({ title: 'Auto resolve addresses', name: 'f_autoresolve', type: 'checkbox' });
+		c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+		createFieldTable('',c);
+	</script>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
-	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
+<div id="footer">
+	<script>genStdRefresh(1,1,'ref.toggle()');</script>
+</div>
+
 </td></tr>
 </table>
 </form>

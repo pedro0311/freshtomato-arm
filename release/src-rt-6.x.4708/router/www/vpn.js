@@ -12,16 +12,13 @@ helpURL['howto'] = 'https://openvpn.net/community-resources/1xhowto/';
 helpURL['staticKeys'] = 'https://openvpn.net/community-resources/static-key-mini-howto/';
 helpURL['TLSKeys'] = 'https://openvpn.net/community-resources/how-to/';
 
-// Handles parsing status files and displaying the information
-function StatusUpdater(clients, routes, stats, time, cDiv, ncDiv, eDiv)
-{
+/* Handles parsing status files and displaying the information */
+function StatusUpdater(clients, routes, stats, time, cDiv, ncDiv, eDiv) {
 	this.init(clients, routes, stats, time, cDiv, ncDiv, eDiv);
 	return this;
 }
-StatusUpdater.prototype =
-{
-	init: function(clients, routes, stats, time, cDiv, ncDiv, eDiv)
-	{
+StatusUpdater.prototype = {
+	init: function(clients, routes, stats, time, cDiv, ncDiv, eDiv) {
 		this.clientTable = clients? new TomatoGrid(clients,'sort',0,null): null;
 		this.routeTable = routes? new TomatoGrid(routes,'sort',0,null): null;
 		this.statTable = stats? new TomatoGrid(stats,'sort',0,null): null;
@@ -30,83 +27,77 @@ StatusUpdater.prototype =
 		this.noContent = ncDiv? E(ncDiv): null;
 		this.errors = eDiv? E(eDiv): null;
 	},
-	update: function(text)
-	{
-		if(this.errors) this.errors.innerHTML = '';
-		if(this.noContent) this.noContent.style.display = (text==''?'':'none');
-		if(this.content) this.content.style.display = (text==''?'none':'');
+	update: function(text) {
+		if (this.errors) this.errors.innerHTML = '';
+		if (this.noContent) this.noContent.style.display = (text == '' ? '' : 'none');
+		if (this.content) this.content.style.display = (text == '' ? 'none' : '');
 
-		if(this.clientTable) this.clientTable.tb.parentNode.style.display = 'none';
-		if(this.clientTable) this.clientTable.removeAllData();
-		if(this.routeTable) this.routeTable.tb.parentNode.style.display = 'none';
-		if(this.routeTable) this.routeTable.removeAllData();
-		if(this.statTable) this.statTable.tb.parentNode.style.display = 'none';
-		if(this.statTable) this.statTable.removeAllData();
+		if (this.clientTable) this.clientTable.tb.parentNode.style.display = 'none';
+		if (this.clientTable) this.clientTable.removeAllData();
+		if (this.routeTable) this.routeTable.tb.parentNode.style.display = 'none';
+		if (this.routeTable) this.routeTable.removeAllData();
+		if (this.statTable) this.statTable.tb.parentNode.style.display = 'none';
+		if (this.statTable) this.statTable.removeAllData();
 
-		if(this.statTable) this.statTable.headerSet(['Name','Value']);
+		if (this.statTable) this.statTable.headerSet(['Name','Value']);
 
 		var lines = text.split('\n');
 		var staticStats = false;
-		for (i = 0; text != '' && i < lines.length; ++i)
-		{
+		for (i = 0; text != '' && i < lines.length; ++i) {
 			var done = false;
 
 			var fields = lines[i].split(',');
-			if ( fields.length == 0 ) continue;
-			switch ( fields[0] )
-			{
-			case "TITLE":
+			if (fields.length == 0) continue;
+			switch (fields[0]) {
+				case "TITLE":
 				break;
-			case "TIME":
-				if(this.statusTime) this.statusTime.innerHTML = fields[1];
+				case "TIME":
+					if (this.statusTime) this.statusTime.innerHTML = fields[1];
 				break;
-			case "HEADER":
-				switch ( fields[1] )
-				{
+				case "HEADER":
+					switch (fields[1]) {
+						case "CLIENT_LIST":
+							if (this.clientTable) this.clientTable.headerSet(fields.slice(2,fields.length-1));
+						break;
+						case "ROUTING_TABLE":
+							if (this.routeTable) this.routeTable.headerSet(fields.slice(2,fields.length-1));
+						break;
+						default:
+							if (this.errors) this.errors.innerHTML += 'Unknown header: '+lines[i]+'<br>';
+						break;
+					}
+				break;
 				case "CLIENT_LIST":
-					if(this.clientTable) this.clientTable.headerSet(fields.slice(2,fields.length-1));
-					break;
+					if (this.clientTable) this.clientTable.tb.parentNode.style.display = '';
+					if (this.clientTable) this.clientTable.insertData(-1, fields.slice(1,fields.length-1));
+				break;
 				case "ROUTING_TABLE":
-					if(this.routeTable) this.routeTable.headerSet(fields.slice(2,fields.length-1));
-					break;
+					if (this.routeTable) this.routeTable.tb.parentNode.style.display = '';
+					if (this.routeTable) this.routeTable.insertData(-1, fields.slice(1,fields.length-1));
+				break;
+				case "GLOBAL_STATS":
+					if (this.statTable) this.statTable.tb.parentNode.style.display = '';
+					if (this.statTable) this.statTable.insertData(-1, fields.slice(1));
+				break;
+				case "OpenVPN STATISTICS":
+					staticStats = true;
+				break;
+				case "Updated":
+					if (staticStats)
+						if (this.statusTime) this.statusTime.innerHTML = fields[1];
+				break;
+				case "END":
+					done = true;
+				break;
 				default:
-					if(this.errors) this.errors.innerHTML += 'Unknown header: '+lines[i]+'<br />';
-					break;
-				}
-				break;
-			case "CLIENT_LIST":
-				if(this.clientTable) this.clientTable.tb.parentNode.style.display = '';
-				if(this.clientTable) this.clientTable.insertData(-1, fields.slice(1,fields.length-1));
-				break;
-			case "ROUTING_TABLE":
-				if(this.routeTable) this.routeTable.tb.parentNode.style.display = '';
-				if(this.routeTable) this.routeTable.insertData(-1, fields.slice(1,fields.length-1));
-				break;
-			case "GLOBAL_STATS":
-				if(this.statTable) this.statTable.tb.parentNode.style.display = '';
-				if(this.statTable) this.statTable.insertData(-1, fields.slice(1));
-				break;
-			case "OpenVPN STATISTICS":
-				staticStats = true;
-				break;
-			case "Updated":
-				if(staticStats)
-					if(this.statusTime) this.statusTime.innerHTML = fields[1];
-				break;
-			case "END":
-				done = true;
-				break;
-			default:
-				if(staticStats)
-				{
-					if(this.statTable) this.statTable.tb.parentNode.style.display = '';
-					if(this.statTable) this.statTable.insertData(-1, fields);
-				}
-				else if(this.errors) this.errors.innerHTML += 'Unknown: '+lines[i]+'<br />';
+					if (staticStats) {
+						if (this.statTable) this.statTable.tb.parentNode.style.display = '';
+						if (this.statTable) this.statTable.insertData(-1, fields);
+					}
+					else if (this.errors) this.errors.innerHTML += 'Unknown: '+lines[i]+'<br>';
 				break;
 			}
-			if ( done ) break;
+		if (done) break;
 		}
 	}
 }
-
