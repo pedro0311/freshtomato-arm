@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
+//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
 
 changed = 0;
 tdup = parseInt('<% psup("telnetd"); %>');
@@ -79,6 +79,11 @@ function verifyFields(focused, quiet) {
 	}
 	catch (ex) {
 	}
+
+	var s = (E('_web_css').value.match(/at-/g))
+	elem.display(PR('_f_web_adv_scripts'), s);
+	/* Warn if modern browser is required */
+	elem.display(E('web_css_warn'), s);
 
 	a = E('_f_http_local');
 	b = E('_f_http_remote').value;
@@ -207,6 +212,9 @@ function save() {
 
 	fom.web_wl_filter.value = E('_f_http_wireless').checked ? 0 : 1;
 
+	a = (E('_web_css').value.match(/at-/g));
+	fom.web_adv_scripts.value = (E('_f_web_adv_scripts').checked && a) ? 1 : 0;
+
 	fom.telnetd_eas.value = E('_f_telnetd_eas').checked ? 1 : 0;
 
 	fom.sshd_eas.value = E('_f_sshd_eas').checked ? 1 : 0;
@@ -258,7 +266,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-access.asp">
-<input type="hidden" name="_nextwait" value="20">
+<input type="hidden" name="_nextwait" value="15">
 <input type="hidden" name="_service" value="admin-restart">
 <input type="hidden" name="http_enable">
 <input type="hidden" name="https_enable">
@@ -267,6 +275,7 @@ function init() {
 <input type="hidden" name="remote_mgt_https">
 <input type="hidden" name="remote_management">
 <input type="hidden" name="web_wl_filter">
+<input type="hidden" name="web_adv_scripts">
 <input type="hidden" name="telnetd_eas">
 <input type="hidden" name="sshd_eas">
 <input type="hidden" name="sshd_pass">
@@ -300,8 +309,11 @@ function init() {
 			{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
 				options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: '<br>&nbsp;<small>Please be sure of your decision before change this settings!<\/small>' },
 			{ title: 'Color Scheme', name: 'web_css', type: 'select',
-				options: [['default','Default'],['usbred','USB Red'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],
-				['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], value: nvram.web_css },
+				options: [['default','Default'],['usbred','USB Red'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],
+					  ['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],
+					  ['at-dark','Advanced Dark'],['at-red','Advanced Red'],['at-blue','Advanced Blue'],['at-green','Advanced Green'],
+					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], value: nvram.web_css, suffix: '&nbsp;<small id="web_css_warn">(requires a modern browser)<\/small>' },
+				{ title: 'Dynamic BW/IPT charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', value: nvram.web_adv_scripts == 1, suffix: '&nbsp;<small>(JS based, supported only by some browsers)<\/small>' },
 				{ title: 'TTB theme name', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 35, value: nvram.ttb_css, suffix: '&nbsp;<small>TTB theme <a href="http://tomatothemebase.eu/wp-content/uploads/themes.txt" class="new_window"><u><i>list<\/i><\/u><\/a> and full <a href="http://www.tomatothemebase.eu" class="new_window"><u><i>gallery<\/i><\/u><\/a><\/small>' },
 				{ title: 'TTB save folder', indent: 2, name: 'ttb_loc', type: 'text', maxlen: 35, size: 35, value: nvram.ttb_loc, suffix: '&nbsp;/TomatoThemeBase <small>(optional)<\/small>' },
 				{ title: 'TTB URL', indent: 2, name: 'ttb_url', type: 'text', maxlen: 128, size: 70, value: nvram.ttb_url },

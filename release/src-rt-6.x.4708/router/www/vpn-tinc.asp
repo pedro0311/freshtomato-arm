@@ -635,7 +635,7 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<div class="section-title">Tutorial</div>
+<div class="section-title" id="tinc-tutorial">Tutorial</div>
 <div class="section">
 	<ul>
 		<li><a href="https://www.linksysinfo.org/index.php?threads/tinc-mesh-vpn.70257/" class="new_window">At this address</a> you can find a good one.</li>

@@ -287,7 +287,13 @@ function verifyFields(focused, quiet) {
 
 		<script>
 			if ((nvram.web_svg != '0') && (nvram.cstats_enable == '1')) {
-				W('<div id="graph"><embed src="bwm-graph.svg" type="image/svg+xml" style="width:760px;height:300px"><\/embed><\/div>');
+				var vWidth = 760;
+				var vHeight = 300;
+				if (nvram.web_css.match(/at-/g)) {
+					vWidth = 1200;
+					vHeight = 500;
+				}
+				W('<div id="graph"><embed src="bwm-graph.svg?vwidth='+vWidth+'&vheight='+vHeight+'" type="image/svg+xml" style="width:'+vWidth+'px;height:'+vHeight+'px"><\/embed><\/div>');
 			}
 		</script>
 
