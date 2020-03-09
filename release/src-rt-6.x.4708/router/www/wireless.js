@@ -1,18 +1,18 @@
-function selectedBand(uidx)
-{
+function selectedBand(uidx) {
 	if (bands[uidx].length > 1) {
 		var u = wl_fface(uidx);
 		var e = E('_f_wl'+u+'_nband');
 		return (e.value + '' == '' ? eval('nvram["wl'+u+'_nband"]') : e.value);
-	} else if (bands[uidx].length > 0) {
+	}
+	else if (bands[uidx].length > 0) {
 		return bands[uidx][0][0] || '0';
-	} else {
+	}
+	else {
 		return '0';
 	}
 }
 
-function refreshNetModes(uidx)
-{
+function refreshNetModes(uidx) {
 	var e, i, buf, val;
 
 	if (uidx >= wl_ifaces.length) return;
@@ -24,7 +24,8 @@ function refreshNetModes(uidx)
 		if (nphy) {
 			m.push(['n-only','N Only']);
 		}
-	} else {
+	}
+	else {
 		m.push(['b-only','B Only']);
 		m.push(['g-only','G Only']);
 		if (nphy) {
@@ -47,19 +48,18 @@ function refreshNetModes(uidx)
 	nm_loaded[uidx] = 1;
 }
 
-function refreshBandWidth(uidx)
-{
+function refreshBandWidth(uidx) {
 	var e, i, buf, val;
 
 	if (uidx >= wl_ifaces.length) return;
 	var u = wl_unit(uidx);
 	var m = [['0','20 MHz']];
 
-	if(nphy || acphy) {
+	if (nphy || acphy) {
 		m.push(['1','40 MHz']);
 	}
 
-	if(acphy && selectedBand(uidx) == '1') {
+	if (acphy && selectedBand(uidx) == '1') {
 		m.push(['3','80 MHz']);
 	}
 
@@ -76,8 +76,7 @@ function refreshBandWidth(uidx)
 	nm_loaded[uidx] = 1;
 }
 
-function refreshChannels(uidx)
-{
+function refreshChannels(uidx) {
 	if (refresher[uidx] != null) return;
 	if (u >= wl_ifaces.length) return;
 	var u = wl_unit(uidx);
@@ -126,24 +125,22 @@ function refreshChannels(uidx)
 	switch(e.value + '' == '' ? eval('nvram.wl'+u+'_nbw_cap') : e.value) {
 		case '0':
 			bw = '20';
-			break;
+		break;
 		case '1':
 			bw = '40';
-			break;
+		break;
 		case '3':
 			bw = '80';
-			break;
+		break;
 		default:
 			alert("Wrong nbw_cap.");
 	}
 
 	refresher[uidx].onError = function(ex) { alert(ex); refresher[uidx] = null; reloadPage(); }
-	refresher[uidx].post('update.cgi', 'exec=wlchannels&arg0=' + u + '&arg1=' + (nphy || acphy ? '1' : '0') +
-		'&arg2=' + bw + '&arg3=' + selectedBand(uidx) + '&arg4=' + sb);
+	refresher[uidx].post('update.cgi', 'exec=wlchannels&arg0=' + u + '&arg1=' + (nphy || acphy ? '1' : '0') + '&arg2=' + bw + '&arg3=' + selectedBand(uidx) + '&arg4=' + sb);
 }
 
-function scan()
-{
+function scan() {
 	if (xob) return;
 
 	var unit = wscan.unit;
@@ -212,20 +209,21 @@ function scan()
 	xob.post('update.cgi', 'exec=wlscan&arg0='+unit);
 }
 
-function spin(x, unit)
-{
+function spin(x, unit) {
 	for (var u = 0; u < wl_ifaces.length; ++u) {
 		E('_f_wl'+wl_unit(u)+'_scan').disabled = x;
 	}
 	var e = E('_f_wl'+unit+'_scan');
 
-	if (x) e.value = 'Scan ' + (wscan.tries + 1);
-		else e.value = 'Scan';
-	E('spin'+unit).style.visibility = x ? 'visible' : 'hidden';
+	if (x)
+		e.value = 'Scan ' + (wscan.tries + 1);
+	else
+		e.value = 'Scan';
+
+	E('spin'+unit).style.display = (x ? 'inline' : 'none');
 }
 
-function scanButton(u)
-{
+function scanButton(u) {
 	if (xob) return;
 
 	wscan = {
@@ -238,8 +236,7 @@ function scanButton(u)
 	scan();
 }
 
-function joinAddr(a)
-{
+function joinAddr(a) {
 	var r, i, s;
 
 	r = [];
@@ -247,37 +244,36 @@ function joinAddr(a)
 		s = a[i];
 		if ((s != '00:00:00:00:00:00') && (s != '0.0.0.0')) r.push(s);
 	}
+
 	return r.join(' ');
 }
 
-function random_x(max)
-{
+function random_x(max) {
 	var c = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 	var s = '';
 	while (max-- > 0) s += c.substr(Math.floor(c.length * Math.random()), 1);
+
 	return s;
 }
 
-function random_psk(id)
-{
+function random_psk(id) {
 	var e = E(id);
 	e.value = random_x(63);
 	verifyFields(null, 1);
 }
 
-function random_wep(u)
-{
+function random_wep(u) {
 	E('_wl'+u+'_passphrase').value = random_x(16);
 	generate_wep(u);
 }
 
-function v_wep(e, quiet)
-{
+function v_wep(e, quiet) {
 	var s = e.value;
 
 	if (((s.length == 5) || (s.length == 13)) && (s.length == (e.maxLength >> 1))) {
 		/* no checking */
-	} else {
+	}
+	else {
 		s = s.toUpperCase().replace(/[^0-9A-F]/g, '');
 		if (s.length != e.maxLength) {
 			ferror.set(e, 'Invalid WEP key. Expecting ' + e.maxLength + ' hex or ' + (e.maxLength >> 1) + ' ASCII characters.', quiet);
@@ -287,14 +283,13 @@ function v_wep(e, quiet)
 
 	e.value = s;
 	ferror.clear(e);
+
 	return 1;
 }
 
 /* compatible w/ Linksys' and Netgear's (key 1) method for 128-bits */
-function generate_wep(u)
-{
-	function _wepgen(pass, i)
-	{
+function generate_wep(u) {
+	function _wepgen(pass, i) {
 		while (pass.length < 64) pass += pass;
 		return hex_md5(pass.substr(0, 64)).substr(i, (E('_wl'+u+'_wep_bit').value == 128) ? 26 : 10);
 	}

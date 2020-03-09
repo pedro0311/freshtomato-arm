@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -11,37 +11,24 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] IP Traffic: Monthly History</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="bwm-hist.js"></script>
+<script src="bwm-common.js"></script>
+<script src="interfaces.js"></script>
 
-<!-- / / / -->
-
-<style type="text/css">
-#monthly-grid .co3,
-#monthly-grid .co4,
-#monthly-grid .co5 {
-	text-align: right;
-}
-</style>
-
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="bwm-hist.js"></script>
-<script type="text/javascript" src="bwm-common.js"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-
-<script type="text/javascript">
+<script>
 //	<% nvram("wan_ifname,wan_proto,wan_iface,wan2_ifname,wan2_proto,wan2_iface,wan3_ifname,wan3_proto,wan3_iface,wan4_ifname,wan4_proto,wan4_iface,lan_ifname,wl_ifname,web_svg,cstats_enable,cstats_colors,dhcpd_static,lan_ipaddr,lan_netmask,lan1_ipaddr,lan1_netmask,lan2_ipaddr,lan2_netmask,lan3_ipaddr,lan3_netmask"); %>
 
 //	<% devlist(); %>
 
+var cprefix = 'ipt_monthly';
 try {
 //	<% ipt_bandwidth("monthly"); %>
 }
@@ -85,7 +72,7 @@ function getYMD(n) {
 var dg = new TomatoGrid();
 
 dg.setup = function() {
-	this.init('monthly-grid', 'sort');
+	this.init('bwm-grid', 'sort');
 	this.headerSet(['Date', 'Host', 'Download', 'Upload', 'Total']);
 }
 
@@ -145,10 +132,12 @@ function redraw() {
 				(b[1] == getNetworkAddress(nvram.lan3_ipaddr,nvram.lan3_netmask))) {
 				if(E('_f_subnet').checked == 0) {
 					continue;
-				} else {
+				}
+				else {
 					subnetslisted.push(b[1]);
 				}
-			} else {
+			}
+			else {
 				hostslisted.push(b[1]);
 				rx += b[2];
 				tx += b[3];
@@ -175,11 +164,11 @@ function redraw() {
 			var h = b[1];
 			if (E('_f_hostnames').checked) {
 				if(hostnamecache[b[1]] != null) {
-					h = hostnamecache[b[1]] + ((b[1].indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + b[1] + ')<\/small>';
+					h = hostnamecache[b[1]] + ((b[1].indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + b[1] + ')<\/small>';
 				}
 			}
 			if (E('_f_shortcuts').checked) {
-				h = h + '<br /><small>';
+				h = h + '<br><small class="pics">';
 				h = h + '<a href="javascript:viewQosDetail(' + i + ')" title="View QoS Details">[qosdetails]<\/a>';
 				h = h + '<a href="javascript:viewQosCTrates(' + i + ')" title="View transfer rates per connection">[qosrates]<\/a>';
 				h = h + '<a href="javascript:viewIptDetail(' + i + ')" title="View real-time IP Traffic for this address">[iptraf]<\/a>';
@@ -230,7 +219,8 @@ function viewIptDetail(n) {
 function addExcludeList(n) {
 	if (E('_f_filter_ipe').value.length<6) {
 		E('_f_filter_ipe').value = monthly_history[n][1];
-	} else {
+	}
+	else {
 		if (E('_f_filter_ipe').value.indexOf(monthly_history[n][1]) < 0) {
 			E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + monthly_history[n][1];
 		}
@@ -248,20 +238,26 @@ dg.sortCompare = function(a, b) {
 	var db = b.getRowData();
 	var r = 0;
 	switch (col) {
-	case 0:	/* Date */
+	/* Date */
+	case 0:
 		r = cmpText(da[col], db[col]);
 	break;
-	case 1: /* Hostname */
+	/* Hostname */
+	case 1:
 		r = cmpIP(da[col], db[col]);
 		if (r == 0)
 			r = cmpText(da[col], db[col]);
 	break;
-	case 2:	/* Download */
-	case 3:	/* Upload */
-	case 4:	/* Total */
+	/* Download */
+	case 2:
+	/* Upload */
+	case 3:
+	/* Total */
+	case 4:
 		r = cmpFloat(da[col].replace(/,/g,""), db[col].replace(/,/g,""));
 	break;
 	}
+
 	return this.sortAscending ? r : -r;
 }
 
@@ -300,7 +296,6 @@ function update_filter_dates(b) {
 }
 
 function init() {
-
 	if (nvram.cstats_enable != '1') {
 		E('refresh-button').setAttribute("disabled", "disabled");
 		return;
@@ -340,39 +335,24 @@ function init() {
 
 	filteripe_before = filteripe;
 
-	dateFormat = fixInt(cookie.get('ipt_history_dafm'), 0, 3, 0);
+	dateFormat = fixInt(cookie.get(cprefix + '_dafm'), 0, 3, 0);
 	E('_f_dafm').value = dateFormat;
 
-	scale = fixInt(cookie.get('ipt_history_scale'), 0, 2, 0);
+	scale = fixInt(cookie.get(cprefix + '_scale'), 0, 2, 0);
 	E('_f_scale').value = scale;
 
-	E('_f_subnet').checked = (((c = cookie.get('ipt_history_subnet')) != null) && (c == '1'));
+	E('_f_subnet').checked = (((c = cookie.get(cprefix + '_subnet')) != null) && (c == '1'));
+	E('_f_hostnames').checked = (((c = cookie.get(cprefix + '_hostnames')) != null) && (c == '1'));
+	E('_f_shortcuts').checked = (((c = cookie.get(cprefix + '_shortcuts')) != null) && (c == '1'));
+	E('_f_ignorezeroes').checked = (((c = cookie.get(cprefix + '_ignorezeroes')) != null) && (c == '1'));
 
-	E('_f_hostnames').checked = (((c = cookie.get('ipt_history_hostnames')) != null) && (c == '1'));
-
-	E('_f_shortcuts').checked = (((c = cookie.get('ipt_history_shortcuts')) != null) && (c == '1'));
-
-	E('_f_ignorezeroes').checked = (((c = cookie.get('ipt_history_ignorezeroes')) != null) && (c == '1'));
-
-	if (((c = cookie.get('ipt_history_options_vis')) != null) && (c == '1')) {
-		toggleVisibility("options");
+	if (((c = cookie.get(cprefix + '_options_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "options");
 	}
 
 	dg.setup();
 
 	redraw();
-}
-
-function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('ipt_history_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('ipt_history_' + whichone + '_vis', 1);
-	}
 }
 
 function dofilter() {
@@ -386,7 +366,8 @@ function dofilter() {
 			}
 		}
 		E('_f_filter_ip').value = (filterip.length > 0) ? filterip.join(',') : '';
-	} else {
+	}
+	else {
 		filterip = [];
 	}
 
@@ -398,7 +379,8 @@ function dofilter() {
 			}
 		}
 		E('_f_filter_ipe').value = (filteripe.length > 0) ? filteripe.join(',') : '';
-	} else {
+	}
+	else {
 		filteripe = [];
 	}
 
@@ -412,18 +394,18 @@ function dofilter() {
 
 function verifyFields(focused, quiet) {
 	dateFormat = E('_f_dafm').value * 1;
-	cookie.set('ipt_history_dafm', E('_f_dafm').value, 31);
+	cookie.set(cprefix + '_dafm', E('_f_dafm').value, 31);
 
 	scale = E('_f_scale').value * 1;
-	cookie.set('ipt_history_scale', E('_f_scale').value, 2);
+	cookie.set(cprefix + '_scale', E('_f_scale').value, 2);
 
-	/* cookie.set('ipt_history_subnet', (E('_f_subnet').checked ? '1' : '0'), 1); */
+	/* cookie.set(cprefix + '_subnet', (E('_f_subnet').checked ? '1' : '0'), 1); */
 
-	cookie.set('ipt_history_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
 
-	cookie.set('ipt_history_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
 
-	cookie.set('ipt_history_ignorezeroes', (E('_f_ignorezeroes').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_ignorezeroes', (E('_f_ignorezeroes').checked ? '1' : '0'), 1);
 
 	update_filter_dates(E('_f_begin_date'));
 	update_filter_dates(E('_f_end_date'));
@@ -433,67 +415,68 @@ function verifyFields(focused, quiet) {
 		E('_f_begin_date').value = E('_f_end_date').value;
 		E('_f_end_date').value = tmp;
 	}
-
 	dofilter();
+
 	return 1;
 }
 </script>
 </head>
+
 <body onload="init()">
-<form action="">
-<table id="container" cellspacing="0">
+<form>
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title">IP Traffic - Monthly History</div>
+
 <div id="cstats">
 	<div class="section">
-		<div id="monthly-grid" class="tomato-grid" style="height:auto"></div>
+		<div class="tomato-grid" id="bwm-grid"></div>
 	</div>
 
-	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility("options");'><span id="sesdivoptionsshowhide">(Click here to show)</span></a></i></small></div>
-	<div class="section" id="sesdivoptions" style="display:none">
-		<script type="text/javascript">
-		var c;
-		c = [];
-		c.push({ title: 'List only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-		c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-		c.push({ title: 'Date Range', multi: [ { name: 'f_begin_date', type: 'select', options: [['0', 'Any']], suffix: ' - ' }, { name: 'f_end_date', type: 'select', options: [['0', 'Any']] } ] } );
-		c.push({ title: 'Date Format', name: 'f_dafm', type: 'select', options: [['0', 'yyyy-mm'], ['1', 'mm-yyyy'], ['2', 'mmm, yyyy'], ['3', 'mm.yyyy']] });
-		c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
-		c.push({ title: 'Show subnet totals', name: 'f_subnet', type: 'checkbox', suffix: ' <small>(Not considered when calculating total traffic on the last line)<\/small>' });
-		c.push({ title: 'Hide IPs without traffic', name: 'f_ignorezeroes', type: 'checkbox' });
-		c.push({ title: 'Show known hostnames', name: 'f_hostnames', type: 'checkbox' });
-		c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-		createFieldTable('',c);
+	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility(cprefix,"options");'><span id="sesdiv_options_showhide">(Click here to show)</span></a></i></small></div>
+	<div class="section" id="sesdiv_options" style="display:none">
+		<script>
+			var c;
+			c = [];
+			c.push({ title: 'List only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Date Range', multi: [ { name: 'f_begin_date', type: 'select', options: [['0', 'Any']], suffix: ' - ' }, { name: 'f_end_date', type: 'select', options: [['0', 'Any']] } ] } );
+			c.push({ title: 'Date Format', name: 'f_dafm', type: 'select', options: [['0', 'yyyy-mm'], ['1', 'mm-yyyy'], ['2', 'mmm, yyyy'], ['3', 'mm.yyyy']] });
+			c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
+			c.push({ title: 'Show subnet totals', name: 'f_subnet', type: 'checkbox', suffix: ' <small>(Not considered when calculating total traffic on the last line)<\/small>' });
+			c.push({ title: 'Hide IPs without traffic', name: 'f_ignorezeroes', type: 'checkbox' });
+			c.push({ title: 'Show known hostnames', name: 'f_hostnames', type: 'checkbox' });
+			c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+			createFieldTable('',c);
 		</script>
-		<div style="float:right;text-align:right">
+		<div id="bwm-ctrl">
 			&raquo; <a href="javascript:genData()">Data</a>
-			<br/>
+			<br>
 			&raquo; <a href="admin-iptraffic.asp">Configure</a>
 		</div>
 	</div>
-
-	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type="text/javascript">checkCstats();</script>
+<script>checkCstats();</script>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
-<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
+<div id="footer">
+	<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
+</div>
+
 </td></tr>
 </table>
 </form>

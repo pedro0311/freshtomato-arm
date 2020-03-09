@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,37 +7,18 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: IPerf</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
 <!-- / / / -->
 
-<style type="text/css">
-#tp-grid .co1 {
-	text-align: right;
-	width: 30px;
-}
-#tp-grid .co2 {
-	width: 440px;
-}
-#tp-grid .co3, #tp-grid .co4, #tp-grid .co5, #tp-grid .co6 {
-	text-align: right;
-	width: 70px;
-}
-#tp-grid .header .co1 {
-	text-align: left;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram('lan_ipaddr'); %>	// http_id
 
@@ -56,8 +37,8 @@ ref.refresh = function(text) {
 function verifyFields(focused, quiet) {
 	var s;
 	var e;
-	let transmitMode = E('iperf_transm').checked == true;
-	let sizeLimitMode = E('iperf_time_limited').checked == true;
+	var transmitMode = E('iperf_transm').checked == true;
+	var sizeLimitMode = E('iperf_time_limited').checked == true;
 
 	if (transmitMode) {
 		PR(E('iperf_addr')).style.display = '';
@@ -66,37 +47,40 @@ function verifyFields(focused, quiet) {
 		if (sizeLimitMode) {
 			PR('time_limit').style.display = '';
 			PR('byte_limit').style.display = 'none';
-		} else {
+		}
+		else {
 			PR('byte_limit').style.display = '';
 			PR('time_limit').style.display = 'none';
 		}
-		E('notice1').style.display = 'none';
-	} else {
+		E('notice').style.display = 'none';
+	}
+	else {
 		PR(E('iperf_addr')).style.display = 'none';
 		PR(E('iperf_time_limited')).style.display = 'none';
 		PR(E('iperf_proto_tcp')).style.display = 'none';
 		PR(E('time_limit')).style.display = 'none';
 		PR(E('byte_limit')).style.display = 'none';
-		E('notice1').style.display = '';
+		E('notice').style.display = '';
 	}
 	toggleAllFields(!iperf_up);
-	E('client_commandline_helper').innerHTML = generateClientHelperString();
+	E('iperf_client_helper').innerHTML = generateClientHelperString();
 }
 
 function generateClientHelperString() {
-	let helper = "iperf";
+	var helper = "iperf";
 	helper += " -p ";
 	helper += E('iperf_port').value;
 	helper += (E('iperf_proto_udp').checked == true) ? " -u " : "";
 	helper += " -c ";
 	helper += nvram.lan_ipaddr;
+
 	return helper;
 }
 
 function toggleAllFields(enable) {
 	var rows = document.getElementsByClassName("fields")[0].rows;
-	for (i=0; i < rows.length; i++) {
-		let inputs = rows[i].getElementsByClassName("content")[0].children;
+	for (i = 0; i < rows.length; i++) {
+		var inputs = rows[i].getElementsByClassName("content")[0].children;
 		for (j=0; j < inputs.length; j++) {
 			inputs[j].disabled = !enable;
 		}
@@ -116,6 +100,7 @@ function scaleSpeed(n) {
 		n /= 1000;
 		++s;
 	} while ((n > 999) && (s < 2));
+
 	return comma(n.toFixed(2)) + (' ') + (['Kbps', 'Mbps', 'Gbps'])[s];
 }
 
@@ -135,50 +120,60 @@ function execute() {
 	// 3. sum - if there is a sum field, then it means that we got interval file.
 	REMOVE-END */
 	cmd.onCompleted = function(text, xml) {
-		let respObj = JSON.parse(text);
-		if (respObj.mode != undefined && (respObj.mode == 'Stopped'
-				|| respObj.mode == 'Finished')) {
+		var txtseconds = ' <small>seconds<\/small>';
+		var txtuploaded = ' <small>uploaded<\/small>';
+		var respObj = JSON.parse(text);
+		if (respObj.mode != undefined && (respObj.mode == 'Stopped' || respObj.mode == 'Finished')) {
 			iperf_up = 0;
-		} else {
+		}
+		else {
 			iperf_up = 1;
 		}
-		let statusText = '';
-		let xferedText = '';
-		let timeText = '';
-		let speedText = '';
-		if (respObj.error){ /* Error Happen, must be checked first */
+		var statusText = '';
+		var xferedText = '';
+		var timeText = '';
+		var speedText = '';
+		/* Error happen, must be checked first */
+		if (respObj.error) {
 			iperf_up = 0;
 			statusText = respObj.error;
-		} else {
-			if (respObj.end) { /* Test finished */
+		}
+		else {
+			/* Test finished */
+			if (respObj.end) {
 				iperf_up = 0;
 				statusText = 'Finished';
 				if (respObj.start.accepted_connection) {
 					if (E('iperf_recv').checked && E('iperf_proto_udp').checked) {
 						xferedText = 'See client side';
 						speedText = 'See client side';
-					} else {
-						xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_received.bytes) + ' <small>uploaded<\/small>';
+					}
+					else {
+						xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_received.bytes) + txtuploaded;
 						speedText = scaleSpeed(respObj.end.sum ? respObj.end.sum.bits_per_second : respObj.end.sum_received.bits_per_second);
 					}
-					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_received.seconds.toFixed(2)) + ' <small>seconds<\/small>';
-				} else {
-					xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_sent.bytes) + ' <small>uploaded<\/small>';
-					speedText = scaleSpeed(respObj.end.sum ? respObj.end.sum.bits_per_second : respObj.end.sum_sent.bits_per_second);
-					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_sent.seconds.toFixed(2)) + ' <small>seconds<\/small>';
+					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_received.seconds.toFixed(2)) + txtseconds;
 				}
-			} else { /* Interval has been send */
+				else {
+					xferedText = scaleSize(respObj.end.sum ? respObj.end.sum.bytes : respObj.end.sum_sent.bytes) + txtuploaded;
+					speedText = scaleSpeed(respObj.end.sum ? respObj.end.sum.bits_per_second : respObj.end.sum_sent.bits_per_second);
+					timeText = (respObj.end.sum ? respObj.end.sum.seconds.toFixed(2) : respObj.end.sum_sent.seconds.toFixed(2)) + txtseconds;
+				}
+			}
+			/* Interval has been send */
+			else {
 				statusText = respObj.mode;
-				let sumSent = respObj.sum_sent;
+				var sumSent = respObj.sum_sent;
 				if (sumSent && sumSent.bytes != 0) {
-					xferedText = scaleSize(respObj.sum_sent.bytes) + ' <small>uploaded<\/small>';
-				} else {
+					xferedText = scaleSize(respObj.sum_sent.bytes) + txtuploaded;
+				}
+				else {
 					if(respObj.sum_received && respObj.sum_received.bytes) {
-						xferedText = scaleSize(respObj.sum_received.bytes) + ' <small>uploaded<\/small>';
+						xferedText = scaleSize(respObj.sum_received.bytes) + txtuploaded;
 					}
 				}
 				if (respObj.sum) {
-					timeText = respObj.sum.end.toFixed(2) + ' <small>seconds<\/small>';
+					timeText = respObj.sum.end.toFixed(2) + txtseconds;
 					speedText = scaleSpeed(respObj.sum.bits_per_second);
 				}
 			}
@@ -201,12 +196,12 @@ function execute() {
 }
 
 function setCookies() {
-	cookie.set('iperf_mode',  E('iperf_transm').checked == true);
-	cookie.set('iperf_transmit_address',  E('iperf_addr').value);
-	cookie.set('iperf_port',  E('iperf_port').value);
-	cookie.set('iperf_time_limit_value',  E('time_limit').value);
-	cookie.set('iperf_byte_limit_value',  E('byte_limit').value);
-	cookie.set('iperf_time_limited',  E('iperf_time_limited').checked == true);
+	cookie.set('iperf_mode', E('iperf_transm').checked == true);
+	cookie.set('iperf_transmit_address', E('iperf_addr').value);
+	cookie.set('iperf_port', E('iperf_port').value);
+	cookie.set('iperf_time_limit_value', E('time_limit').value);
+	cookie.set('iperf_byte_limit_value', E('byte_limit').value);
+	cookie.set('iperf_time_limited', E('iperf_time_limited').checked == true);
 }
 
 function init() {
@@ -218,7 +213,7 @@ function init() {
 }
 
 function loadCookies() {
-	let s;
+	var s;
 	if ((s = cookie.get('iperf_mode')) != null) {
 		 E('iperf_transm').checked = s == "true";
 		 E('iperf_recv').checked = s == "false";
@@ -231,7 +226,8 @@ function loadCookies() {
 		if (s == '0') {
 			E('time_limit').checked = false;
 			E('byte_limit').checked = true;
-		} else {
+		}
+		else {
 			E('time_limit').checked = true;
 			E('byte_limit').checked = false;
 		}
@@ -243,7 +239,7 @@ function changeTestButtonText() {
 }
 
 function runButtonClick() {
-	let requestCommand = new XmlHttp();
+	var requestCommand = new XmlHttp();
 	requestCommand.onCompleted = function(text, xml) {
 		execute();
 	}
@@ -253,13 +249,14 @@ function runButtonClick() {
 	}
 	if (iperf_up == 1) {
 		requestCommand.post('iperfkill.cgi','');
-	} else {
-		let transmitMode = E('iperf_transm').checked == true;
-		let limitMode = E('iperf_size_limited').checked == true;
-		let limit = E(limitMode ? 'byte_limit' : 'time_limit').value;
-		let udpProtocol = E('iperf_proto_udp').checked == true;
-		let ttcpPort = E('iperf_port').value;
-		let paramStr = '_mode=' + (transmitMode ? 'client' : 'server')
+	}
+	else {
+		var transmitMode = E('iperf_transm').checked == true;
+		var limitMode = E('iperf_size_limited').checked == true;
+		var limit = E(limitMode ? 'byte_limit' : 'time_limit').value;
+		var udpProtocol = E('iperf_proto_udp').checked == true;
+		var ttcpPort = E('iperf_port').value;
+		var paramStr = '_mode=' + (transmitMode ? 'client' : 'server')
 			+ '&_udpProto=' + (udpProtocol ? '1' : '0')
 			+ '&_port=' + ttcpPort
 			+ '&_limitMode=' + (limitMode ? '1' : '0')
@@ -275,16 +272,16 @@ function runButtonClick() {
 	E('test_speed').innerHTML = '';
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -292,51 +289,59 @@ function runButtonClick() {
 
 <div class="section-title">Bandwidth benchmark</div>
 <div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Mode', multi: [
-		{suffix: '&nbsp; Server&nbsp;&nbsp;&nbsp;', name: 'test_mode', id: 'iperf_recv', type: 'radio', value: true },
-		{suffix: '&nbsp; Client&nbsp;', name: 'test_mode', id: 'iperf_transm', type: 'radio'  } ]},
-	{ title: 'Host address', name: 'f_addr', id: 'iperf_addr', maxlen: 50, type: 'text' },
-	{ title: 'Protocol', multi: [
-		{ suffix: '&nbsp; TCP&nbsp;&nbsp;&nbsp;', name: 'test_proto', id: 'iperf_proto_tcp', type: 'radio',  value: true },
-		{ suffix: '&nbsp; UDP&nbsp;', name: 'test_proto', id: 'iperf_proto_udp', type: 'radio' } ]},
-	{ title: 'Port', name: 'f_port', type: 'text', id: 'iperf_port', maxlen: 5, size: 5, value: '5201' },
-	{ title: 'Type', id: 'type_selector', multi: [
-		{suffix: '&nbsp; Time-limited&nbsp;&nbsp;&nbsp;', name: 'test_type', id: 'iperf_time_limited', type: 'radio', value: true },
-		{suffix: '&nbsp; Buffer-limited&nbsp;', name: 'test_type', id: 'iperf_size_limited', type: 'radio'  } ]},
-	{ title: 'Time limit', name: 'f_time_limit', id: 'time_limit', maxlen: 20, type: 'text', suffix: ' <small>seconds<\/small>', value: '10' },
-	{ title: 'Bytes limit', name: 'f_bytes_limit', id: 'byte_limit', maxlen: 40, type: 'text', suffix: ' <small>bytes<\/small>', value: '1024' }
-]);
-W('<input type="button" value="Start test" onclick="runButtonClick()" id="runtestbutton">');
-</script>
+	<script>
+		createFieldTable('', [
+			{ title: 'Mode', multi: [
+				{suffix: '&nbsp; Server&nbsp;&nbsp;&nbsp;', name: 'test_mode', id: 'iperf_recv', type: 'radio', value: true },
+				{suffix: '&nbsp; Client&nbsp;', name: 'test_mode', id: 'iperf_transm', type: 'radio'  } ]},
+			{ title: 'Host address', name: 'f_addr', id: 'iperf_addr', maxlen: 50, type: 'text' },
+			{ title: 'Protocol', multi: [
+				{ suffix: '&nbsp; TCP&nbsp;&nbsp;&nbsp;', name: 'test_proto', id: 'iperf_proto_tcp', type: 'radio',  value: true },
+				{ suffix: '&nbsp; UDP&nbsp;', name: 'test_proto', id: 'iperf_proto_udp', type: 'radio' } ]},
+			{ title: 'Port', name: 'f_port', type: 'text', id: 'iperf_port', maxlen: 5, size: 5, value: '5201' },
+			{ title: 'Type', id: 'type_selector', multi: [
+				{suffix: '&nbsp; Time-limited&nbsp;&nbsp;&nbsp;', name: 'test_type', id: 'iperf_time_limited', type: 'radio', value: true },
+				{suffix: '&nbsp; Buffer-limited&nbsp;', name: 'test_type', id: 'iperf_size_limited', type: 'radio'  } ]},
+			{ title: 'Time limit', name: 'f_time_limit', id: 'time_limit', maxlen: 20, type: 'text', suffix: ' <small>seconds<\/small>', value: '10' },
+			{ title: 'Bytes limit', name: 'f_bytes_limit', id: 'byte_limit', maxlen: 40, type: 'text', suffix: ' <small>bytes<\/small>', value: '1024' }
+		]);
+		W('<input type="button" value="Start test" onclick="runButtonClick()" id="runtestbutton">');
+	</script>
 </div>
-
-<div id="notice1">Please use following command on another network node to start test:
-<br /><br />
-<div id="client_commandline_helper" style="text-align:center;"><i><b>iperf -J -c </b></i></div>
-<br />
-IPerf in version 3 is required.
-</div><br style="clear:both">
-
-<div id="status_table">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Status', text: '<div id="test_status"><\/div>' },
-	{ title: 'Test time', text: '<div id="test_time"><\/div>' },
-	{ title: 'Transferred bytes', text: '<div id="test_xfered"><\/div>' },
-	{ title: 'Speed', text: '<div id="test_speed"><\/div>' }
-]);
-</script>
-</div>
-
-<div style="height:10px;" onclick='E("debug").style.display=""'></div>
-<textarea id="debug" style="width:99%;height:300px;display:none" cols="50" rows="10"></textarea>
 
 <!-- / / / -->
 
+<div id="notice">
+	Please use following command on another network node to start test:
+	<br><br>
+	<div id="iperf_client_helper"><i><b>iperf -J -c </b></i></div>
+	<br>
+	IPerf in version 3 is required.
+</div>
+
+<!-- / / / -->
+
+<div class="iperf_status_table">
+	<script>
+		createFieldTable('', [
+			{ title: 'Status', text: '<div id="test_status"><\/div>' },
+			{ title: 'Test time', text: '<div id="test_time"><\/div>' },
+			{ title: 'Transferred bytes', text: '<div id="test_xfered"><\/div>' },
+			{ title: 'Speed', text: '<div id="test_speed"><\/div>' }
+		]);
+	</script>
+</div>
+
+<div style="height:10px;" onclick='E("debug").style.display=""'></div>
+<textarea id="debug" style="display:none"></textarea>
+
+<!-- / / / -->
+
+<div id="footer">
+	&nbsp;
+</div>
+
 </td></tr>
-<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
 </body>

@@ -156,6 +156,19 @@ void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 /* configure loopback interface */
 void config_loopback(void)
 {
+	struct ifreq ifr;
+	int sfd;
+
+	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
+	{
+		strcpy(ifr.ifr_name, "lo");
+		if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP)) { /* lo running? */
+			ifconfig(ifr.ifr_name, 0, NULL, NULL); /* Bring down loopback interface */
+		}
+
+		close(sfd);
+	}
+
 	/* Bring up loopback interface */
 	ifconfig("lo", IFUP, "127.0.0.1", "255.0.0.0");
 

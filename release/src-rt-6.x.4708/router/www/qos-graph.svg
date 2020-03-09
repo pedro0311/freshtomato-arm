@@ -1,4 +1,4 @@
-<?xml version="1.0" standalone="no"?>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <!--
 	Tomato GUI
@@ -34,13 +34,11 @@ path {
 </style>
 <script type='text/ecmascript'><![CDATA[
 
-//	<% nvram("qos_classnames,qos_enable,qos_orules"); %>
+//	<% nvram("qos_classnames"); %>
 
-//	var Unclassified = ['Unclassified'];			//	Todo - Toastman - assign Class Labels
-//	var classNames = nvram.qos_classnames.split(' ');	// 	How to fetch nvram variable in SVG ?
-//	var abc = Unclassified.concat(classNames);		//	var abc = Unclassified + the NVRAM variable
-
-var abc = ['Unclassified', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6','Class 7','Class 8','Class 9','Class 10', 'Unused'];
+var Unclassified = ['Unclassified'];
+var classNames = nvram.qos_classnames.split(' ');
+var abc = Unclassified.concat(classNames);
 
 var vWidth = 310;
 var vHeight = 310;
@@ -49,11 +47,10 @@ var tipTimer = null;
 var tipLastN = null;
 var ready = 0;
 
-function init(evt)
-{
+function init(evt) {
 	var e, i, l, s;
 
-    if (typeof(svgDocument) == 'undefined') svgDocument = evt.target.ownerDocument;
+	if (typeof(svgDocument) == 'undefined') svgDocument = evt.target.ownerDocument;
 
 	e = document.getElementsByTagName('path');
 	for (i = 0; i < 12; ++i) {
@@ -82,8 +79,7 @@ function init(evt)
 	ready = 1;
 }
 
-function updateSVG(data, abc)
-{
+function updateSVG(data, abc) {
 	var path, i, e, r, x, y, cx, cy, nx, ny, t, p, total;
 
 	mOut();
@@ -129,28 +125,28 @@ function updateSVG(data, abc)
 	}
 }
 
-function mClick(n)
-{
+function mClick(n) {
 	top.mClick(n);
 }
 
-function setText(e, text)
-{
+function setText(e, text) {
 	if (e.firstChild) e.removeChild(e.firstChild);
 	e.appendChild(document.createTextNode(text));
 }
 
-function showTip()
-{
+function showTip() {
 	setText(tipText, tipInfo[tipT]);
 	
 	tipMask.setAttribute('width', tipText.getComputedTextLength() + 10);
 	
-	if (tipY > (vHeight - 35)) tipY -= 20;
-		else tipY += 20;
+	if (tipY > (vHeight - 35))
+		tipY -= 20;
+	else
+		tipY += 20;
+
 	if (tipX > (vWidth - 165)) tipX = vWidth - 170;
 	tipGroup.setAttribute('transform', 'translate(' + tipX + ',' + tipY + ')');
-	tipGroup.setAttribute('visibility', 'visible');
+	tipGroup.setAttribute('display', 'block');
 
 	tipLastN = tipT;
 
@@ -158,8 +154,7 @@ function showTip()
 	tipTimer = null;
 }
 
-function mMove(evt, n)
-{
+function mMove(evt, n) {
 	if (n == tipLastN) return;
 	tipT = n;
 	tipX = evt.clientX;
@@ -167,14 +162,13 @@ function mMove(evt, n)
 	setText(tipText, tipT + ' ' + tipX + 'x' + tipY );
 
 	if (tipTimer) clearTimeout(tipTimer);
-	tipTimer = setTimeout(showTip, 250);	// doesn't work properly under Adobe/IE
+	tipTimer = setTimeout(showTip, 250);	/* doesn't work properly under Adobe/IE */
 }
 
-function mOut()
-{
+function mOut() {
 	if (tipLastN != -1) {
 		tipLastN = -1;
-		tipGroup.setAttribute('visibility', 'hidden');
+		tipGroup.setAttribute('display', 'none');
 	}
 	if (tipTimer) {
 		clearTimeout(tipTimer);
@@ -196,7 +190,7 @@ function mOut()
 	<linearGradient id="lg8"><stop/><stop/></linearGradient>
 	<linearGradient id="lg9"><stop/><stop/></linearGradient>
 	<linearGradient id="lg10"><stop/><stop/></linearGradient>
-	<linearGradient id="lg11"><stop/><stop/></linearGradient>	
+	<linearGradient id="lg11"><stop/><stop/></linearGradient>
 </defs>
 
 
@@ -215,7 +209,7 @@ function mOut()
 	<path />
 </g>
 
-<g id="tip-group" visibility="hidden">
+<g id="tip-group" display="none">
 	<rect id="tip-mask" x="0" y="0" width="160" height="18" />
 	<text id="tip-text" x="5" y="13">Unclassified 100.00% (9999)</text>
 </g>

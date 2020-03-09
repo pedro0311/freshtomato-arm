@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,38 +7,16 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Forwarding: Triggered</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#tg-grid .co1 {
-	width: 5%;
-	text-align: center;
-}
-#tg-grid .co2 {
-	width: 10%;
-}
-#tg-grid .co3 {
-	width: 20%;
-}
-#tg-grid .co4 {
-	width: 20%;
-}
-#tg-grid .co5 {
-	width: 45%;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("trigforward"); %>
 
@@ -51,13 +29,13 @@ tg.sortCompare = function(a, b) {
 	var r;
 
 	switch (col) {
-	case 2:	// t prt
-	case 3:	// f prt
+	case 2:
+	case 3:
 		r = cmpInt(da[col], db[col]);
-		break;
+	break;
 	default:
 		r = cmpText(da[col], db[col]);
-		break;
+	break;
 	}
 
 	return this.sortAscending ? r : -r;
@@ -69,6 +47,7 @@ tg.dataToView = function(data) {
 
 tg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
+
 	return [f[0].checked ? 1 : 0, f[1].value, f[2].value, f[3].value, f[4].value];
 }
 
@@ -79,6 +58,7 @@ tg.verifyFields = function(row, quiet) {
 	if (!v_portrange(f[3], quiet)) return 0;
 	f[4].value = f[4].value.replace(/>/g, '_');
 	if (!v_nodelim(f[4], quiet, 'Description')) return 0;
+
 	return 1;
 }
 
@@ -115,7 +95,6 @@ tg.setup = function() {
 	tg.showNewEditor();
 }
 
-
 function save() {
 	if (tg.isEditing()) return;
 
@@ -137,14 +116,15 @@ function init() {
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -152,34 +132,38 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="forward.asp">
 <input type="hidden" name="_service" value="firewall-restart">
-
 <input type="hidden" name="trigforward">
+
+<!-- / / / -->
 
 <div class="section-title">Triggered Port Forwarding</div>
 <div class="section">
 	<div class="tomato-grid" id="tg-grid"></div>
-	<script type="text/javascript">tg.setup();</script>
-</div>
-
-<div class="section-title">Notes</div>
-<div class="section">
-    <ul>
-		<li>Use "-" to specify a range of ports (200-300).</li>
-		<li>Trigger Ports are the initial LAN to WAN "trigger".</li>
-		<li>Forwarded Ports are the WAN to LAN ports that are opened if the "trigger" is activated.</li>
-		<li>These ports are automatically closed after a few minutes of inactivity.</li>
-    </ul>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div class="section-title">Notes</div>
+<div class="section">
+	<ul>
+		<li>Use "-" to specify a range of ports (200-300).</li>
+		<li>Trigger Ports are the initial LAN to WAN "trigger".</li>
+		<li>Forwarded Ports are the WAN to LAN ports that are opened if the "trigger" is activated.</li>
+		<li>These ports are automatically closed after a few minutes of inactivity.</li>
+	</ul>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
+<script>tg.setup();</script>
 </body>
 </html>

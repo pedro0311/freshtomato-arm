@@ -430,71 +430,72 @@ void restart_wl(void)
 		lan_ifname = nvram_safe_get(tmp);
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
+		
+			strcpy(tmp,"lan");
+			strcat(tmp,bridge);
+			strcat(tmp, "_ifnames");
 
-		strcpy(tmp,"lan");
-		strcat(tmp,bridge);
-		strcat(tmp, "_ifnames");
-		if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
-			p = lan_ifnames;
-			while ((ifname = strsep(&p, " ")) != NULL) {
-				while (*ifname == ' ') ++ifname;
-				if (*ifname == 0) continue;
+			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+				p = lan_ifnames;
+				while ((ifname = strsep(&p, " ")) != NULL) {
+					while (*ifname == ' ') ++ifname;
+					if (*ifname == 0) continue;
 
-				unit = -1; subunit = -1;
+					unit = -1; subunit = -1;
 
-				/* ignore disabled wl vifs */
-				if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
-					char nv[40];
-					snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-					if (!nvram_get_int(nv))
+					/* ignore disabled wl vifs */
+					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
+						char nv[40];
+						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
+						if (!nvram_get_int(nv))
+							continue;
+						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
+							continue;
+					}
+					/* get the instance number of the wl i/f */
+					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
 						continue;
-					if (get_ifname_unit(ifname, &unit, &subunit) < 0)
-						continue;
-				}
-				/* get the instance number of the wl i/f */
-				else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
-					continue;
 
-				is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
+					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
 
 #ifdef CONFIG_BCMWL5
-				memset(prefix, 0, sizeof(prefix));
-				snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-				if (nvram_match(strcat_r(prefix, "radio", tmp), "0")) {
-					eval("wlconf", ifname, "down");
-				}
-				else {
-					eval("wlconf", ifname, "start"); /* start wl iface */
-				}
+					memset(prefix, 0, sizeof(prefix));
+					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+					if (nvram_match(strcat_r(prefix, "radio", tmp), "0")) {
+						eval("wlconf", ifname, "down");
+					}
+					else {
+						eval("wlconf", ifname, "start"); /* start wl iface */
+					}
 
-				/* Enable WLAN LEDs if wireless interface is enabled */
-				if (nvram_get_int(wl_nvname("radio", unit, 0))) {
-					if ((wlan_cnt == 0) && (wlan_5g_cnt == 0) && (wlan_52g_cnt == 0)) {	/* kill all blink at first start up */
-					killall("blink", SIGKILL);
-					memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
-					memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
-					memset(blink_wlan_52g_ifname, 0, sizeof(blink_wlan_52g_ifname));
+					/* Enable WLAN LEDs if wireless interface is enabled */
+					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
+						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0) && (wlan_52g_cnt == 0) && (wlan_52g_cnt == 0)) {	/* kill all blink at first start up */
+							killall("blink", SIGKILL);
+							memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
+							memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
+							memset(blink_wlan_52g_ifname, 0, sizeof(blink_wlan_52g_ifname));
+						}
+						if (unit == 0) {
+							led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
+							wlan_cnt++; /* count all wlan units / subunits */
+							if (wlan_cnt < 2) strcpy(blink_wlan_ifname, ifname);
+						}
+						else if (unit == 1) {
+							led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
+							wlan_5g_cnt++; /* count all 5g units / subunits */
+							if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
+						}
+						else if (unit == 2) {
+							led(LED_52G, LED_ON);	/* enable WLAN LED for 2nd 5 GHz */
+							wlan_52g_cnt++; /* count all 5g units / subunits */
+							if (wlan_52g_cnt < 2) strcpy(blink_wlan_52g_ifname, ifname);
+						}
 					}
-					if (unit == 0) {
-						led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
-						wlan_cnt++; /* count all wlan units / subunits */
-						if (wlan_cnt < 2) strcpy(blink_wlan_ifname, ifname);
-					}
-					else if (unit == 1) {
-						led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
-						wlan_5g_cnt++; /* count all 5g units / subunits */
-						if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
-					}
-					else if (unit == 2) {
-						led(LED_52G, LED_ON);	/* enable WLAN LED for 2nd 5 GHz */
-						wlan_52g_cnt++;	/* count all 5g units / subunits */
-						if (wlan_52g_cnt < 2) strcpy(blink_wlan_52g_ifname, ifname);
-					}
-				}
 #endif	/* CONFIG_BCMWL5 */
+				}
+				free(lan_ifnames);
 			}
-			free(lan_ifnames);
-		}
 		}
 #ifdef CONFIG_BCMWL5
 		else if (strcmp(lan_ifname, "")) {
@@ -644,7 +645,7 @@ void start_lan_wl(void)
 			strcat(tmp, "_ifnames");
 
 			sta = 0;
-			
+
 			if ((wl_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
 				p = wl_ifnames;
 				while ((ifname = strsep(&p, " ")) != NULL) {
@@ -704,7 +705,7 @@ void start_lan_wl(void)
 	}
 }
 
-void stop_wireless() {
+void stop_wireless(void) {
 #ifdef CONFIG_BCMWL5
 	stop_nas();
 #endif
@@ -713,7 +714,7 @@ void stop_wireless() {
 	unload_wl();
 }
 
-void start_wireless() {
+void start_wireless(void) {
 	load_wl();
 
 	start_lan_wl();
@@ -724,7 +725,7 @@ void start_wireless() {
 	restart_wl();
 }
 
-void restart_wireless() {
+void restart_wireless(void) {
 
 	stop_wireless();
 
@@ -1031,6 +1032,8 @@ void stop_lan(void)
 
 	vlan0tag = nvram_get_int("vlan0tag");
 
+	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
+
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
@@ -1090,7 +1093,7 @@ void stop_lan(void)
 	}
 	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
 
-	unload_wl();
+	unload_wl(); /* stop! */
 }
 
 static int is_sta(int idx, int unit, int subunit, void *param)

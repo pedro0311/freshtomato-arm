@@ -219,7 +219,7 @@ int build_nginx_conf(void)
 		"keepalive_timeout\t%s;\n"
 		"tcp_nopush\t%s;\n"
 		"server_names_hash_bucket_size\t%s;\n"
-		"limit_req_zone  $binary_remote_addr  zone=one:10m   rate=1r/s;\n",
+		"limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;\n",
 		nginx_keepalive_timeout,
 		nginxtcp_nopush,
 		nginxserver_hash_bucket_size);
@@ -252,15 +252,10 @@ int build_nginx_conf(void)
 		/* Error pages section */
 		"error_page 404 /404.html;\n"
 		"error_page 500 502 503 504 /50x.html;\n"
-		"location /50x.html {\n",
-		buf);
-
-	if ((buf = nvram_safe_get("nginx_docroot")) == NULL)
-		buf = nginxdocrootdir;
-
-	fprintf(nginx_conf_file,
+		"location /50x.html {\n"
 		"root %s;\n"
 		"}\n",
+		buf,
 		buf);
 
 	/* PHP to FastCGI Server */
@@ -306,8 +301,8 @@ int build_nginx_conf(void)
 
 	/* shibby - create php.ini */
 	if (nvram_match("nginx_php", "1")) {
-		if (!(phpini_file = fopen("/tmp/etc/php.ini", "w"))) {
-			perror("/tmp/etc/php.ini");
+		if (!(phpini_file = fopen("/etc/php.ini", "w"))) {
+			perror("/etc/php.ini");
 			return 0;
 		}
 		fprintf(phpini_file,
@@ -367,7 +362,7 @@ void start_nginx(void)
 
 	if (nvram_match("nginx_php", "1")) {
 		/* shibby - run spawn-fcgi */
-		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "-f", "php-cgi");
+		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "/usr/sbin/php-cgi");
 	}
 	else {
 		killall_tk("php-cgi");

@@ -120,6 +120,8 @@ void start_nas(void)
 	_dprintf("%s\n", __FUNCTION__);
 #endif
 
+	stop_nas();
+
 #ifdef CONFIG_BCMWL5
 	setenv("UDP_BIND_IP", "127.0.0.1", 1);
 	eval("eapd");

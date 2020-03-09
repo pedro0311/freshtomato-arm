@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -11,34 +11,17 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Basic: Wireless Filter</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 
-<!-- / / / -->
-
-<style type="text/css">
-#sm-grid {
-	width: 80%;
-}
-#sm-grid .co1 {
-	width: 30%;
-}
-#sm-grid .co2 {
-	width: 70%;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript">
-var nvram;
+<script>
 
 //	<% nvram("wl_maclist,macnames"); %>
 
@@ -147,14 +130,15 @@ function init() {
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -167,40 +151,41 @@ function init() {
 <input type="hidden" name="wl_maclist">
 <input type="hidden" name="macnames">
 
-<script type="text/javascript">
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	var u = wl_fface(uidx);
-	W('<input type="hidden" id="t_wl'+u+'_maclist" name="wl'+u+'_maclist">');
-}
+<script>
+	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		var u = wl_fface(uidx);
+		W('<input type="hidden" id="t_wl'+u+'_maclist" name="wl'+u+'_maclist">');
+	}
 </script>
+
+<!-- / / / -->
 
 <div class="section-title">Wireless Client Filter</div>
 <div class="section">
-	<br/>
-	<div id="sm-grid" class="tomato-grid"></div>
+	<div class="tomato-grid" id="sm-grid"></div>
 </div>
-
 
 <!-- / / / -->
 
 <div class="section-title">Notes</div>
 <div class="section">
 	<ul>
-	<li>To specify how and on which interface this list should work, use the <a href="advanced-wlanvifs.asp" class="new_window">Virtual Wireless Interfaces</a> page.</li>
-	<li>Warning: the filter supports only a certain number of MAC addresses, depending on the WL driver. Above this number, added addresses are not filtered!</li>
+		<li>To specify how and on which interface this list should work, use the <a href="advanced-wlanvifs.asp" class="new_window">Virtual Wireless Interfaces</a> page.</li>
+		<li>Warning: the filter supports only a certain number of MAC addresses, depending on the WL driver. Above this number, added addresses are not filtered!</li>
 	</ul>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">earlyInit()</script>
+<script>earlyInit()</script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,65 +7,24 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Edit Access Restrictions</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
-<script type="text/javascript" src="protocols.js"></script>
+<script src="tomato.js"></script>
+<script src="protocols.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#res-comp-grid {
-	width: 60%;
-}
-#res-bp-grid .box1, #res-bp-grid .box2 {
-	width: 20%;
-	float: left;
-}
-#res-bp-grid .box3 {
-	width: 60%;
-	float: left;
-}
-#res-bp-grid .box4 {
-	width: 30%;
-	float: left;
-	clear: left;
-	padding-top: 2px;
-}
-#res-bp-grid .box5 {
-	width: 70%;
-	float: left;
-	padding-top: 2px;
-}
-#res-bp-grid .box6 {
-	width: 30%;
-	float: left;
-	padding-top: 2px;
-}
-#res-bp-grid .box7 {
-	width: 70%;
-	float: left;
-	padding-top: 2px;
-}
-
-textarea {
-	width: 99%;
-	height: 20em;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 // {enable}|{begin_mins}|{end_mins}|{dow}|{comp[<comp]}|{rules<rules[...]>}|{http[ ...]}|{http_file}|{desc}
+
 //	<% rrule(); %>
+
 if ((rule = rrule.match(/^(\d+)\|(-?\d+)\|(-?\d+)\|(\d+)\|(.*?)\|(.*?)\|([^|]*?)\|(\d+)\|(.*)$/m)) == null) {
 	rule = ['', 1, 1380, 240, 31, '', '', '', 0, 'New Rule ' + (rruleN + 1)];
 }
@@ -74,7 +33,8 @@ rule[3] *= 1;
 rule[4] *= 1;
 rule[8] *= 1;
 
-// <% layer7(); %>
+//	<% layer7(); %>
+
 layer7.sort();
 for (i = 0; i < layer7.length; ++i)
 	layer7[i] = [layer7[i],layer7[i]];
@@ -83,18 +43,12 @@ layer7.unshift(['', 'Layer 7 (disabled)']);
 var ipp2p = [
 	[0,'IPP2P (disabled)'],[0xFFFF,'All IPP2P Filters'],[1,'AppleJuice'],[2,'Ares'],[4,'BitTorrent'],[8,'Direct Connect'],
 	[16,'eDonkey'],[32,'Gnutella'],[64,'Kazaa'],[128,'Mute'],
-/* LINUX26-BEGIN */
 	[4096,'PPLive/UUSee'],
-/* LINUX26-END */
 	[256,'SoulSeek'],[512,'Waste'],[1024,'WinMX'],[2048,'XDCC']
-/* LINUX26-BEGIN */
 	,[8192,'Xunlei/QQCyclone']
-/* LINUX26-END */
 	];
 
 var dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-//
 
 var cg = new TomatoGrid();
 
@@ -104,6 +58,7 @@ cg.verifyFields = function(row, quiet) {
 	if (_v_iptaddr(f, true, false, true, true)) return true;
 
 	ferror.set(f, 'Invalid MAC address or IP address/range', quiet);
+
 	return false;
 }
 
@@ -115,7 +70,8 @@ cg.setup = function() {
 	this.showNewEditor();
 	this.resetNewEditor();
 
-	if (rule[5] == '~') return;	// wireless disable rule
+	/* wireless disable rule */
+	if (rule[5] == '~') return;
 
 	ex = 0;
 	count = 0;
@@ -139,7 +95,6 @@ cg.setup = function() {
 		a.value = 0;
 	}
 }
-
 
 var bpg = new TomatoGrid();
 
@@ -165,6 +120,7 @@ bpg.verifyFields = function(row, quiet) {
 	ferror.clear(f[4]);
 	ferror.clear(f[5]);
 	ferror.clear(f[6]);
+
 	return 1;
 }
 
@@ -183,6 +139,7 @@ bpg.dataToView = function(data) {
 		else if (data[1] == 's') s += ', src port ';
 		else if (data[1] == 'x') s += ', port ';
 		else s += ', all ports';
+
 		if (data[1] != 'a') s += data[2].replace(/:/g, '-');
 	}
 
@@ -203,8 +160,9 @@ bpg.dataToView = function(data) {
 
 bpg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
+
 	return [f[0].value, f[1].value, (f[1].selectedIndex == 0) ? '' : f[2].value, f[3].value, f[4].value, f[5].value, (f[5].selectedIndex == 0) ? '' : f[6].value];
-},
+}
 
 bpg.resetNewEditor = function() {
 	var f = fields.getAll(this.newEditor);
@@ -223,6 +181,7 @@ bpg._createEditor = bpg.createEditor;
 bpg.createEditor = function(which, rowIndex, source) {
 	var row = this._createEditor(which, rowIndex, source);
 	if (which == 'edit') this.enDiFields(row);
+
 	return row;
 }
 
@@ -264,13 +223,13 @@ bpg.setup = function() {
 	this.resetNewEditor();
 	count = 0;
 
-	// ---- proto<dir<port<ipp2p<layer7[<addr_type<addr]
+	/* proto<dir<port<ipp2p<layer7[<addr_type<addr] */
 
 	a = rule[6].split('>');
 	for (i = 0; i < a.length; ++i) {
 		r = a[i].split('<');
 		if (r.length == 5) {
-			// ---- fixup for backward compatibility
+			/* fixup for backward compatibility */
 			r.push('0');
 			r.push('');
 		}
@@ -280,10 +239,9 @@ bpg.setup = function() {
 			++count;
 		}
 	}
+
 	return count;
 }
-
-//
 
 function verifyFields(focused, quiet) {
 	var b, e;
@@ -335,8 +293,10 @@ function saveRule() {
 
 	data = [];
 	data.push(E('_f_enabled').checked ? '1' : '0');
-	if (E('_f_sched_allday').checked) data.push(-1, -1);
-		else data.push(E('_f_sched_begin').value, E('_f_sched_end').value);
+	if (E('_f_sched_allday').checked)
+		data.push(-1, -1);
+	else
+		data.push(E('_f_sched_begin').value, E('_f_sched_end').value);
 
 	if (E('_f_sched_everyday').checked) {
 		n = 0x7F;
@@ -432,14 +392,15 @@ function earlyInit() {
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -449,57 +410,63 @@ function earlyInit() {
 <input type="hidden" name="_service" value="restrict-restart">
 <input type="hidden" name="rruleNN" id="t_rrule" value="">
 
+<!-- / / / -->
+
 <div class="section-title">Access Restriction</div>
 <div class="section">
-<script type="text/javascript">
-W('<div style="float:right"><small>'+ 'ID: ' + rruleN.pad(2) + '<\/small>&nbsp;<\/div><br />');
-tm = [];
-for (i = 0; i < 1440; i += 15) tm.push([i, timeString(i)]);
+	<script>
+		W('<div><small>'+ 'ID: ' + rruleN.pad(2) + '<\/small>&nbsp;<\/div><br>');
+		tm = [];
+		for (i = 0; i < 1440; i += 15) tm.push([i, timeString(i)]);
 
-createFieldTable('', [
-	{ title: 'Enabled', name: 'f_enabled', type: 'checkbox', value: rule[1] == '1' },
-	{ title: 'Description', name: 'f_desc', type: 'text', maxlen: 32, size: 35, value: rule[9] },
-	{ title: 'Schedule', multi: [
-		{ name: 'f_sched_allday', type: 'checkbox', suffix: ' All Day &nbsp; ', value: (rule[2] < 0) || (rule[3] < 0) },
-		{ name: 'f_sched_everyday', type: 'checkbox', suffix: ' Everyday', value: (rule[4] & 0x7F) == 0x7F } ] },
-	{ title: 'Time', indent: 2, multi: [
-		{ name: 'f_sched_begin', type: 'select', options: tm, value: (rule[2] < 0) ? 0 : rule[2], suffix: ' - ' },
-		{ name: 'f_sched_end', type: 'select', options: tm, value: (rule[3] < 0) ? 0 : rule[3] } ] },
-	{ title: 'Days', indent: 2, multi: [
-		{ name: 'f_sched_sun', type: 'checkbox', suffix: ' Sun &nbsp; ', value: (rule[4] & 1) },
-		{ name: 'f_sched_mon', type: 'checkbox', suffix: ' Mon &nbsp; ', value: (rule[4] & (1 << 1)) },
-		{ name: 'f_sched_tue', type: 'checkbox', suffix: ' Tue &nbsp; ', value: (rule[4] & (1 << 2)) },
-		{ name: 'f_sched_wed', type: 'checkbox', suffix: ' Wed &nbsp; ', value: (rule[4] & (1 << 3)) },
-		{ name: 'f_sched_thu', type: 'checkbox', suffix: ' Thu &nbsp; ', value: (rule[4] & (1 << 4)) },
-		{ name: 'f_sched_fri', type: 'checkbox', suffix: ' Fri &nbsp; ', value: (rule[4] & (1 << 5)) },
-		{ name: 'f_sched_sat', type: 'checkbox', suffix: ' Sat', value: (rule[4] & (1 << 6)) } ] },
-	{ title: 'Type', name: 'f_type', id: 'rt_norm', type: 'radio', suffix: ' Normal Access Restriction', value: (rule[5] != '~') },
-	{ title: '', name: 'f_type', id: 'rt_wl', type: 'radio', suffix: ' Disable Wireless', value: (rule[5] == '~') },
-	{ title: 'Applies To', name: 'f_comp_all', type: 'select', options: [[0,'All Computers / Devices'],[1,'The Following...'],[2,'All Except...']], value: 0 },
-	{ title: '&nbsp;', text: '<div class="tomato-grid" id="res-comp-grid"><\/div>' },
-	{ title: 'Blocked Resources', name: 'f_block_all', type: 'checkbox', suffix: ' Block All Internet Access', value: 0 },
-	{ title: 'Port /<br />Application', indent: 2, text: '<div class="tomato-grid" id="res-bp-grid"><\/div>' },
-	{ title: 'HTTP Request', indent: 2, name: 'f_block_http', type: 'textarea', value: rule[7] },
-	{ title: 'HTTP Requested Files', indent: 2, multi: [
-		{ name: 'f_activex', type: 'checkbox', suffix: ' ActiveX (ocx, cab) &nbsp;&nbsp;', value: (rule[8] & 1) },
-		{ name: 'f_flash', type: 'checkbox', suffix: ' Flash (swf) &nbsp;&nbsp;', value: (rule[8] & 2) },
-		{ name: 'f_java', type: 'checkbox', suffix: ' Java (class, jar) &nbsp;&nbsp;', value: (rule[8] & 4) } ] }
-]);
-</script>
+		createFieldTable('', [
+			{ title: 'Enabled', name: 'f_enabled', type: 'checkbox', value: rule[1] == '1' },
+			{ title: 'Description', name: 'f_desc', type: 'text', maxlen: 32, size: 35, value: rule[9] },
+			{ title: 'Schedule', multi: [
+				{ name: 'f_sched_allday', type: 'checkbox', suffix: ' All Day &nbsp; ', value: (rule[2] < 0) || (rule[3] < 0) },
+				{ name: 'f_sched_everyday', type: 'checkbox', suffix: ' Everyday', value: (rule[4] & 0x7F) == 0x7F } ] },
+			{ title: 'Time', indent: 2, multi: [
+				{ name: 'f_sched_begin', type: 'select', options: tm, value: (rule[2] < 0) ? 0 : rule[2], suffix: ' - ' },
+				{ name: 'f_sched_end', type: 'select', options: tm, value: (rule[3] < 0) ? 0 : rule[3] } ] },
+			{ title: 'Days', indent: 2, multi: [
+				{ name: 'f_sched_sun', type: 'checkbox', suffix: ' Sun &nbsp; ', value: (rule[4] & 1) },
+				{ name: 'f_sched_mon', type: 'checkbox', suffix: ' Mon &nbsp; ', value: (rule[4] & (1 << 1)) },
+				{ name: 'f_sched_tue', type: 'checkbox', suffix: ' Tue &nbsp; ', value: (rule[4] & (1 << 2)) },
+				{ name: 'f_sched_wed', type: 'checkbox', suffix: ' Wed &nbsp; ', value: (rule[4] & (1 << 3)) },
+				{ name: 'f_sched_thu', type: 'checkbox', suffix: ' Thu &nbsp; ', value: (rule[4] & (1 << 4)) },
+				{ name: 'f_sched_fri', type: 'checkbox', suffix: ' Fri &nbsp; ', value: (rule[4] & (1 << 5)) },
+				{ name: 'f_sched_sat', type: 'checkbox', suffix: ' Sat', value: (rule[4] & (1 << 6)) } ] },
+			{ title: 'Type', name: 'f_type', id: 'rt_norm', type: 'radio', suffix: ' Normal Access Restriction', value: (rule[5] != '~') },
+			{ title: '', name: 'f_type', id: 'rt_wl', type: 'radio', suffix: ' Disable Wireless', value: (rule[5] == '~') },
+			{ title: 'Applies To', name: 'f_comp_all', type: 'select', options: [[0,'All Computers / Devices'],[1,'The Following...'],[2,'All Except...']], value: 0 },
+
+			{ title: '&nbsp;', text: '<div class="tomato-grid" id="res-comp-grid"><\/div>' },
+
+			{ title: 'Blocked Resources', name: 'f_block_all', type: 'checkbox', suffix: ' Block All Internet Access', value: 0 },
+
+			{ title: 'Port / Application', indent: 2, text: '<div class="tomato-grid" id="res-bp-grid"><\/div>' },
+
+			{ title: 'HTTP Request', indent: 2, name: 'f_block_http', type: 'textarea', value: rule[7] },
+			{ title: 'HTTP Requested Files', indent: 2, multi: [
+				{ name: 'f_activex', type: 'checkbox', suffix: ' ActiveX (ocx, cab) &nbsp;&nbsp;', value: (rule[8] & 1) },
+				{ name: 'f_flash', type: 'checkbox', suffix: ' Flash (swf) &nbsp;&nbsp;', value: (rule[8] & 2) },
+				{ name: 'f_java', type: 'checkbox', suffix: ' Java (class, jar) &nbsp;&nbsp;', value: (rule[8] & 4) } ] }
+		]);
+	</script>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
-	<input type="button" value="Delete..." id="delete-button" onclick="removeRule()">
-	&nbsp;
+	<input type="button" value="Delete" id="delete-button" onclick="removeRule()">
 	<input type="button" value="Save" id="save-button" onclick="saveRule()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="cancelRule()">
+</div>
+
 </td></tr>
 </table>
+<script>earlyInit();</script>
 </form>
-<script type="text/javascript">earlyInit();</script>
 </body>
 </html>

@@ -818,6 +818,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "https_crt",			""				, 0 },
 	{ "web_wl_filter",		"0"				, 0 },	// Allow/Deny Wireless Access Web
 	{ "web_css",			"default"			, 0 },
+	{ "web_adv_scripts",		"0"				, 0 },	// load JS resize chart script
 	{ "web_dir",			"default"			, 0 },	// jffs, opt, tmp or default (/www)
 	{ "ttb_css",			"example"			, 0 },	// Tomato Themes Base - default theme name
 	{ "ttb_loc",			""				, 0 },	// Tomato Themes Base - default files location
@@ -1032,6 +1033,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "smbd_user",			"nas"				, 0 },
 	{ "smbd_passwd",		""				, 0 },
 	{ "smbd_ifnames",		"br0"				, 0 },
+#ifdef TCONFIG_GROCTRL
+	{ "gro_disable",		"1"				, 0 }, /* GRO enalbe - 0 ; disable - 1 (default) */
+#endif
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER

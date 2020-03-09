@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2007-2011 Shibby
@@ -6,41 +6,20 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: Adblock</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#adblockg-grid {
-	width: 100%;
-}
-#adblockg-grid .co1 {
-	width: 5%;
-	text-align: center;
-}
-#adblockg-grid .co2 {
-	width: 70%;
-}
-#adblockg-grid .co3 {
-	width: 25%;
-}
-textarea {
- width: 98%;
- height: 15em;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript">
+<script>
 
 //	<% nvram("adblock_enable,adblock_blacklist,adblock_blacklist_custom,adblock_whitelist,dnsmasq_debug"); %>
 
+var cprefix = 'advanced_adblock';
 var adblockg = new TomatoGrid();
 
 adblockg.exist = function(f, v) {
@@ -48,6 +27,7 @@ adblockg.exist = function(f, v) {
 	for (var i = 0; i < data.length; ++i) {
 		if (data[i][f] == v) return true;
 	}
+
 	return false;
 }
 
@@ -57,15 +37,18 @@ adblockg.dataToView = function(data) {
 
 adblockg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
+
 	return [f[0].checked ? 1 : 0, f[1].value, f[2].value];
 }
 
 adblockg.verifyFields = function(row, quiet) {
 	var ok = 1;
+
 	return ok;
 }
 function verifyFields(focused, quiet) {
 	var ok = 1;
+
 	return ok;
 }
 
@@ -80,7 +63,7 @@ adblockg.resetNewEditor = function() {
 }
 
 adblockg.setup = function() {
-	this.init('adblockg-grid', '', 50, [
+	this.init('adblock-grid', '', 50, [
 		{ type: 'checkbox' },
 		{ type: 'text', maxlen: 130 },
 		{ type: 'text', maxlen: 40 }
@@ -110,18 +93,28 @@ function save() {
 }
 
 function init() {
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "notes");
+	}
+
 	adblockg.recolor();
+}
+
+function earlyInit() {
+	adblockg.setup();
+	verifyFields(null, true);
 }
 </script>
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -133,42 +126,51 @@ function init() {
 <input type="hidden" name="dnsmasq_debug">
 <input type="hidden" name="adblock_blacklist">
 
+<!-- / / / -->
+
 <div class="section-title">Adblock Settings</div>
 <div class="section">
-	<script type="text/javascript">
-	createFieldTable('', [
-		{ title: 'Enable', name: 'f_adblock_enable', type: 'checkbox', value: nvram.adblock_enable != '0' },
-		{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == '1' }
-	]);
+	<script>
+		createFieldTable('', [
+			{ title: 'Enable', name: 'f_adblock_enable', type: 'checkbox', value: nvram.adblock_enable != '0' },
+			{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == '1' }
+		]);
 	</script>
 </div>
+
+<!-- / / / -->
 
 <div class="section-title">Blacklist URL</div>
 <div class="section">
-	<div class="tomato-grid" id="adblockg-grid"></div>
-	<script type="text/javascript">adblockg.setup();</script>
+	<div class="tomato-grid" id="adblock-grid"></div>
 </div>
+
+<!-- / / / -->
 
 <div class="section-title">Blacklist Custom</div>
 <div class="section">
-	<script type="text/javascript">
-	createFieldTable('', [
-		{ title: 'Blacklisted domains', name: 'adblock_blacklist_custom', type: 'textarea', value: nvram.adblock_blacklist_custom }
-	]);
+	<script>
+		createFieldTable('', [
+			{ title: 'Blacklisted domains', name: 'adblock_blacklist_custom', type: 'textarea', value: nvram.adblock_blacklist_custom }
+		]);
 	</script>
 </div>
+
+<!-- / / / -->
 
 <div class="section-title">Whitelist</div>
 <div class="section">
-	<script type="text/javascript">
-	createFieldTable('', [
-		{ title: 'Whitelisted domains', name: 'adblock_whitelist', type: 'textarea', value: nvram.adblock_whitelist }
-	]);
+	<script>
+		createFieldTable('', [
+			{ title: 'Whitelisted domains', name: 'adblock_whitelist', type: 'textarea', value: nvram.adblock_whitelist }
+		]);
 	</script>
 </div>
 
-<div class="section-title">Notes</div>
-<div class="section">
+<!-- / / / -->
+
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Adblock</b> - Autoupdate will be randomly launch between 2:00-2.59 AM every day</li>
 		<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog</li>
@@ -181,14 +183,15 @@ function init() {
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script>earlyInit();</script>
 </body>
 </html>

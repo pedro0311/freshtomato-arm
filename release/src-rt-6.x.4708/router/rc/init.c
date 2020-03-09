@@ -160,14 +160,15 @@ static void
 restore_defaults(void)
 {
 	struct nvram_tuple *t;
-	int restore_defaults;
+	int restore_defaults = 0;
+	struct sysinfo info;
 
 	/* Restore defaults if told to or OS has changed */
 	if (!restore_defaults)
 		restore_defaults = !nvram_match("restore_defaults", "0");
 
 	if (restore_defaults)
-		fprintf(stderr, "\n###### Restoring Tomato default settings... ######\n");
+		fprintf(stderr, "\n## Restoring defaults... ##\n");
 
 	restore_defaults_fb = restore_defaults;
 
@@ -182,12 +183,29 @@ restore_defaults(void)
 	nvram_set("os_version", tomato_version);
 	nvram_set("os_date", tomato_buildtime);
 
+	/* Adjust et and wl thresh value after reset (for wifi-driver and et_linux.c) */
+	if (restore_defaults) {
+		memset(&info, 0, sizeof(struct sysinfo));
+		sysinfo(&info);
+		if (info.totalram <= (TOMATO_RAM_LOW_END * 1024)) { /* Router with less than 50 MB RAM */
+			/* Set to 512 as long as onboard memory <= 50 MB RAM */
+			nvram_set("wl_txq_thresh", "512");
+			nvram_set("et_txq_thresh", "512");	
+		}
+		else if (info.totalram <= (TOMATO_RAM_MID_END * 1024)) { /* Router with less than 100 MB RAM */
+			nvram_set("wl_txq_thresh", "1024");
+			nvram_set("et_txq_thresh", "1536");
+		}
+		else { /* Router with more than 100 MB RAM */
+			nvram_set("wl_txq_thresh", "1024");
+			nvram_set("et_txq_thresh", "3300");
+		}
+	}
+	
 #ifdef TCONFIG_BCMARM
-	if (!nvram_match("extendno_org", nvram_safe_get("extendno")))
-	{
+	if (restore_defaults) {
 		/* modify default options for TX Beamforming after reset */
 		dbg("Reset TxBF settings...\n");
-		nvram_set("extendno_org", nvram_safe_get("extendno"));
 		nvram_set("wl0_txbf", "1");	/* Explicit Beamforming ON for WiFi 0 (2,4 GHz) */
 		nvram_set("wl1_txbf", "1");	/* Explicit Beamforming ON for WiFi 1 (5 GHz - first) */
 		nvram_set("wl2_txbf", "1");	/* Explicit Beamforming ON for WiFi 2 (5 GHz - second) */
@@ -2620,6 +2638,7 @@ static int init_nvram(void)
 			/* misc settings */
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
+			nvram_set("blink_wl", "0");			/* disable blink by default for WS880 */
 
 			/* wifi settings/channels */
 			nvram_set("0:ccode", "#a");
@@ -4205,6 +4224,19 @@ static void load_files_from_nvram(void)
 }
 #endif
 
+static inline void set_kernel_panic(void)
+{
+	/* automatically reboot after a kernel panic */
+	f_write_string("/proc/sys/kernel/panic", "3", 0, 0);
+	f_write_string("/proc/sys/kernel/panic_on_oops", "3", 0, 0);
+}
+
+static inline void set_kernel_memory(void)
+{
+	f_write_string("/proc/sys/vm/overcommit_memory", "2", 0, 0); /* Linux kernel will not overcommit memory */
+	f_write_string("/proc/sys/vm/overcommit_ratio", "75", 0, 0); /* allow userspace to commit up to 75% of total memory */
+}
+
 #if defined(LINUX26) && defined(TCONFIG_USB)
 static inline void tune_min_free_kbytes(void)
 {
@@ -4454,6 +4486,9 @@ static void sysinit(void)
 	tune_smp_affinity();
 #endif
 
+	set_kernel_panic(); /* Reboot automatically when the kernel panics and set waiting time */
+	set_kernel_memory(); /* set overcommit_memory and overcommit_ratio */
+
 	setup_conntrack();
 	set_host_domain_name();
 
@@ -4527,7 +4562,6 @@ int init_main(int argc, char *argv[])
 			run_nvscript("script_shut", NULL, 10);
 
 			stop_services();
-			stop_nas();
 			stop_wan();
 			stop_arpbind();
 			stop_lan();
@@ -4581,7 +4615,6 @@ int init_main(int argc, char *argv[])
 			start_vlan();
 			start_lan();
 			start_arpbind();
-			start_nas();
 			mwan_state_files();
 			start_services();
 
