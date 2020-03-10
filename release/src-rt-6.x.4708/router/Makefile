@@ -1855,13 +1855,13 @@ pcre: pcre/stamp-h1
 	@$(MAKE) -C pcre
 
 pcre-install:
-	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.10
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.10
-	install -D pcre/.libs/libpcreposix.so.0.0.6 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.6
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.6
+	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
+	install -D pcre/.libs/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
 	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcre.so.1.2.10 libpcre.so.1 && \
-		ln -sf libpcreposix.so.0.0.6 libpcreposix.so.0
+		ln -sf libpcre.so.1.2.12 libpcre.so.1 && \
+		ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
 
 pcre-clean:
 	( if [ -f pcre/Makefile ]; then \
