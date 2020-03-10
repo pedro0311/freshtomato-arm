@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 4.7.
+This manual documents the GNU ‘nano’ editor, version 4.8.
 
 * Menu:
 
@@ -118,7 +118,10 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
 
 ‘-D’
 ‘--boldtext’
-     Use bold text instead of reverse video text.
+     For the interface, use bold instead of reverse video.  This will be
+     overridden by setting the options ‘titlecolor’, ‘statuscolor’,
+     ‘keycolor’, ‘functioncolor’, ‘numbercolor’, and/or ‘selectedcolor’
+     in your nanorc file.  *Note set functioncolor:: for details.
 
 ‘-E’
 ‘--tabstospaces’
@@ -268,6 +271,11 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
 ‘--emptyline’
      Do not use the line below the title bar, leaving it entirely blank.
 
+‘-f FILE’
+‘--rcfile=FILE’
+     Read only this FILE for setting nano’s options, instead of reading
+     both the system-wide and the user’s nanorc files.
+
 ‘-g’
 ‘--showcursor’
      Make the cursor visible in the file browser (putting it on the
@@ -333,8 +341,8 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
      wrap point to vary along with the width of the screen if the screen
      is resized.  The default value is -8.
 
-‘-s "PROGRAM [ARG ...]"’
-‘--speller="PROGRAM [ARG ...]"’
+‘-s "PROGRAM [ARGUMENT ...]"’
+‘--speller="PROGRAM [ARGUMENT ...]"’
      Use the given program to do spell checking and correcting.  By
      default, ‘nano’ uses the command specified in the ‘SPELL’
      environment variable.  If ‘SPELL’ is not set, and ‘--speller’ is
@@ -636,11 +644,13 @@ File: nano.info,  Node: Nanorc Files,  Next: The File Browser,  Prev: Feature To
 **************
 
 The nanorc files contain the default settings for ‘nano’.  They should
-be in Unix format, not in DOS or Mac format.  During startup, ‘nano’
-will first read the system-wide settings, from /etc/nanorc (the exact
-path might be different), and then the user-specific settings, either
+be in Unix format, not in DOS or Mac format.  During startup, if
+‘--rcfile’ is not given, ‘nano’ will read two files: first the
+system-wide settings, from ‘/etc/nanorc’ (the exact path might be
+different on your system), and then the user-specific settings, either
 from ‘~/.nanorc’ or from ‘$XDG_CONFIG_HOME/nano/nanorc’ or from
-‘.config/nano/nanorc’, whichever exists first.
+‘.config/nano/nanorc’, whichever exists first.  If ‘--rcfile’ is given,
+‘nano’ will read just the specified settings file.
 
    A nanorc file accepts a series of "set" and "unset" commands, which
 can be used to configure ‘nano’ on startup without using command-line
@@ -703,9 +713,8 @@ The supported settings in a nanorc file are:
 ‘set boldtext’
      Use bold instead of reverse video for the title bar, status bar,
      key combos, function tags, line numbers, and selected text.  This
-     can be overridden by setting the options ‘titlecolor’,
-     ‘statuscolor’, ‘keycolor’, ‘functioncolor’, ‘numbercolor’, and
-     ‘selectedcolor’.
+     is overridden by setting the options ‘titlecolor’, ‘statuscolor’,
+     ‘keycolor’, ‘functioncolor’, ‘numbercolor’, and/or ‘selectedcolor’.
 
 ‘set brackets "CHARACTERS"’
      Set the characters treated as closing brackets when justifying
@@ -886,7 +895,7 @@ The supported settings in a nanorc file are:
 ‘set softwrap’
      Enable soft line wrapping for easier viewing of very long lines.
 
-‘set speller "PROGRAM [ARG ...]"’
+‘set speller "PROGRAM [ARGUMENT ...]"’
      Use the given program to do spell checking and correcting.  *Note
      --speller:: for details.
 
@@ -1002,13 +1011,13 @@ following commands in a nanorc file:
      ‘libmagic’ is installed on the system and will be silently ignored
      otherwise.)
 
-‘formatter PROGRAM [ARG ...]’
+‘formatter PROGRAM [ARGUMENT ...]’
      Run the given PROGRAM on the full contents of the current buffer.
      (The current buffer is written out to a temporary file, the program
      is run on it, and then the temporary file is read back in,
      replacing the contents of the buffer.)
 
-‘linter PROGRAM [ARG ...]’
+‘linter PROGRAM [ARGUMENT ...]’
      Use the given PROGRAM to do a syntax check on the current buffer.
 
 ‘comment "STRING"’
@@ -1062,13 +1071,13 @@ following commands in a nanorc file:
      "syntaxfile" may contain only the above commands, from ‘syntax’ to
      ‘icolor’.
 
-‘extendsyntax NAME COMMAND [ARG ...]’
+‘extendsyntax NAME COMMAND ARGUMENT ...’
      Extend the syntax previously defined as "NAME" with another
      COMMAND.  This allows you to add a new ‘color’, ‘icolor’, ‘header’,
-     ‘magic’, ‘comment’, ‘linter’, or ‘formatter’ command to an already
-     defined syntax — useful when you want to slightly improve a syntax
-     defined in one of the system-installed files (which normally are
-     not writable).
+     ‘magic’, ‘formatter’, ‘linter’, ‘comment’, or ‘tabgives’ command to
+     an already defined syntax — useful when you want to slightly
+     improve a syntax defined in one of the system-installed files
+     (which normally are not writable).
 
 
 File: nano.info,  Node: Rebinding Keys,  Prev: Syntax Highlighting,  Up: Nanorc Files
@@ -1100,7 +1109,12 @@ file:
      characters (@, ], \, ^, _), or the word "Space".  Example: ‘^C’.
 
      ‘M-X’ —— where X is any ASCII character except [, or the word
-     "Space".  Example: ‘M-C’.
+     "Space".  Example: ‘M-8’.
+
+     ‘Sh-M-X’ —— where X is a Latin letter.  Example: ‘Sh-M-U’.  By
+     default, each Meta+letter keystroke does the same as the
+     corresponding Shift+Meta+letter.  But when any Shift+Meta bind is
+     made, that will no longer be the case, for all letters.
 
      ‘FN’ —— where N is a numeric value from 1 to 24.  Example: ‘F10’.
      (Often, ‘F13’ to ‘F24’ can be typed as ‘F1’ to ‘F12’ with Shift.)
@@ -1551,9 +1565,9 @@ between the two editors:
      By default, ‘nano’ will scroll just one line (instead of half a
      screen) when the cursor is moved to a line that is just out of
      view.  And when paging up or down, ‘nano’ keeps the cursor in the
-     same screen position as much as possible, instead always placing it
-     on the first line of the viewport.  The Pico-like behavior can be
-     obtained with the ‘--jumpyscrolling’ option.
+     same screen position as much as possible, instead of always placing
+     it on the first line of the viewport.  The Pico-like behavior can
+     be obtained with the ‘--jumpyscrolling’ option.
 
 ‘Edit Area’
      Pico never uses the line directly below the title bar, leaving it
@@ -1762,28 +1776,27 @@ Node: Top199
 Node: Introduction554
 Node: Invoking1698
 Node: Command-line Options3314
-Ref: --speller11684
-Ref: Expert Mode13155
-Node: Editor Basics14192
-Node: Entering Text14476
-Node: Commands15465
-Node: The Cutbuffer16262
-Node: The Mark16983
-Node: Screen Layout17982
-Node: Search and Replace19161
-Node: Using the Mouse19896
-Node: Limitations20513
-Node: Built-in Help20838
-Node: Feature Toggles21262
-Node: Nanorc Files23062
-Node: Settings24591
-Ref: set functioncolor27676
-Ref: Whitespace34888
-Node: Syntax Highlighting35618
-Node: Rebinding Keys41863
-Node: The File Browser54530
-Node: Pico Compatibility55423
-Node: Building and Configure Options59964
+Ref: --speller12103
+Node: Editor Basics14621
+Node: Entering Text14905
+Node: Commands15894
+Node: The Cutbuffer16691
+Node: The Mark17412
+Node: Screen Layout18411
+Node: Search and Replace19590
+Node: Using the Mouse20325
+Node: Limitations20942
+Node: Built-in Help21267
+Node: Feature Toggles21691
+Node: Nanorc Files23491
+Node: Settings25168
+Ref: set functioncolor28247
+Ref: Whitespace35464
+Node: Syntax Highlighting36194
+Node: Rebinding Keys42468
+Node: The File Browser55410
+Node: Pico Compatibility56303
+Node: Building and Configure Options60847
 
 End Tag Table
 

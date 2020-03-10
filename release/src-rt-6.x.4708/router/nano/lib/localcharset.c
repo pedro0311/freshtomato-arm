@@ -1,6 +1,6 @@
 /* Determine a canonical name for the current locale's character encoding.
 
-   Copyright (C) 2000-2006, 2008-2019 Free Software Foundation, Inc.
+   Copyright (C) 2000-2006, 2008-2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -58,6 +58,9 @@
 #elif defined WINDOWS_NATIVE
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
+  /* For the use of setlocale() below, the Gnulib override in setlocale.c is
+     not needed; see the platform lists in setlocale_null.m4.  */
+# undef setlocale
 #endif
 #if defined OS2
 # define INCL_DOS

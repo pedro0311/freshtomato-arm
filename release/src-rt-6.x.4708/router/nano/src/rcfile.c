@@ -1,7 +1,7 @@
 /**************************************************************************
  *   rcfile.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014 Mike Frysinger                                    *
  *   Copyright (C) 2019 Brand Huntsman                                    *
  *   Copyright (C) 2014-2019 Benno Schulenberg                            *
@@ -422,9 +422,9 @@ keystruct *strtosc(const char *input)
 #ifdef ENABLE_BROWSER
 	else if (!strcmp(input, "tofiles") ||
 			 !strcmp(input, "browser"))
-		s->func = to_files_void;
+		s->func = to_files;
 	else if (!strcmp(input, "gotodir"))
-		s->func = goto_dir_void;
+		s->func = goto_dir;
 	else if (!strcmp(input, "firstfile"))
 		s->func = to_first_file;
 	else if (!strcmp(input, "lastfile"))
@@ -705,9 +705,8 @@ bool is_universal(void (*func)(void))
 void parse_binding(char *ptr, bool dobind)
 {
 	char *keyptr = NULL, *keycopy = NULL, *funcptr = NULL, *menuptr = NULL;
-	keystruct *s, *newsc = NULL;
-	int menu, mask = 0;
-	funcstruct *f;
+	int keycode, menu, mask = 0;
+	keystruct *newsc = NULL;
 
 	check_for_nonempty_syntax();
 
@@ -720,30 +719,21 @@ void parse_binding(char *ptr, bool dobind)
 	ptr = parse_next_word(ptr);
 	keycopy = copy_of(keyptr);
 
-	if (keycopy[1] == '\0') {
-		jot_error(N_("Key name is too short"));
+	/* Uppercase either the second or the first character of the key name. */
+	if (keycopy[0] == '^')
+		keycopy[1] = toupper((unsigned char)keycopy[1]);
+	else
+		keycopy[0] = toupper((unsigned char)keycopy[0]);
+
+	/* Verify that the key name is not too short, to allow the next call. */
+	if (keycopy[1] == '\0' || (keycopy[0] == 'M' && keycopy[2] == '\0')) {
+		jot_error(N_("Key name %s is invalid"), keycopy);
 		goto free_things;
 	}
 
-	/* Uppercase only the first two or three characters of the key name. */
-	keycopy[0] = toupper((unsigned char)keycopy[0]);
-	keycopy[1] = toupper((unsigned char)keycopy[1]);
-	if (keycopy[0] == 'M' && keycopy[1] == '-') {
-		if (keycopy[2] == '\0') {
-			jot_error(N_("Key name is too short"));
-			goto free_things;
-		} else
-			keycopy[2] = toupper((unsigned char)keycopy[2]);
-	}
+	keycode = keycode_from_string(keycopy);
 
-	/* Allow the codes for Insert and Delete to be rebound, but apart
-	 * from those two only Control, Meta and Function sequences. */
-	if (!strcasecmp(keycopy, "Ins") || !strcasecmp(keycopy, "Del"))
-		keycopy[1] = tolower((unsigned char)keycopy[1]);
-	else if (keycopy[0] != '^' && keycopy[0] != 'M' && keycopy[0] != 'F') {
-		jot_error(N_("Key name must begin with \"^\", \"M\", or \"F\""));
-		goto free_things;
-	} else if (keycode_from_string(keycopy) < 0) {
+	if (keycode < 0) {
 		jot_error(N_("Key name %s is invalid"), keycopy);
 		goto free_things;
 	}
@@ -795,30 +785,32 @@ void parse_binding(char *ptr, bool dobind)
 	}
 
 	/* Wipe the given shortcut from the given menu. */
-	for (s = sclist; s != NULL; s = s->next)
-		if ((s->menus & menu) && strcmp(s->keystr, keycopy) == 0)
+	for (keystruct *s = sclist; s != NULL; s = s->next)
+		if ((s->menus & menu) && s->keycode == keycode)
 			s->menus &= ~menu;
 
 	/* When unbinding, we are done now. */
 	if (!dobind)
 		goto free_things;
 
-	/* Tally up the menus where the function exists. */
-	for (f = allfuncs; f != NULL; f = f->next)
-		if (f->func == newsc->func)
-			mask = mask | f->menus;
-
+	/* Limit the given menu to those where the function exists;
+	 * first handle three special cases, then the general case. */
+	if (is_universal(newsc->func))
+		menu &= MMOST|MBROWSER;
 #ifndef NANO_TINY
-	/* Handle the special case of the toggles. */
-	if (newsc->func == do_toggle_void)
-		mask = MMAIN;
+	else if (newsc->func == do_toggle_void)
+		menu &= MMAIN;
 #endif
-	/* Handle the special case of a key defined as a string. */
-	if (newsc->func == (functionptrtype)implant)
-		mask = MMOST|MBROWSER|MHELP;
+	else if (newsc->func == (functionptrtype)implant)
+		menu &= MMOST|MBROWSER|MHELP;
+	else {
+		/* Tally up the menus where the function exists. */
+		for (funcstruct *f = allfuncs; f != NULL; f = f->next)
+			if (f->func == newsc->func)
+				mask |= f->menus;
 
-	/* Now limit the given menu to those where the function exists. */
-	menu = menu & (is_universal(newsc->func) ? (MMOST|MBROWSER) : mask);
+		menu &= mask;
+	}
 
 	if (!menu) {
 		if (!ISSET(RESTRICTED) && !ISSET(VIEW_MODE))
@@ -828,11 +820,11 @@ void parse_binding(char *ptr, bool dobind)
 	}
 
 	newsc->menus = menu;
-	assign_keyinfo(newsc, keycopy, 0);
+	newsc->keystr = keycopy;
+	newsc->keycode = keycode;
 
 	/* Disallow rebinding ^[ and frequent escape-sequence starter "Esc [". */
-	if ((!newsc->meta && newsc->keycode == ESC_CODE) ||
-				(newsc->meta && newsc->keycode == '[')) {
+	if (newsc->keycode == ESC_CODE || newsc->keycode == '[') {
 		jot_error(N_("Keystroke %s may not be rebound"), keycopy);
   free_things:
 		free(keycopy);
@@ -843,7 +835,7 @@ void parse_binding(char *ptr, bool dobind)
 #ifndef NANO_TINY
 	/* If this is a toggle, find and copy its sequence number. */
 	if (newsc->func == do_toggle_void) {
-		for (s = sclist; s != NULL; s = s->next)
+		for (keystruct *s = sclist; s != NULL; s = s->next)
 			if (s->func == do_toggle_void && s->toggle == newsc->toggle)
 				newsc->ordinal = s->ordinal;
 	} else
@@ -970,7 +962,7 @@ void parse_includes(char *ptr)
  * and set bright to TRUE if that color is bright. */
 short color_to_short(const char *colorname, bool *bright)
 {
-	if (strncasecmp(colorname, "bright", 6) == 0) {
+	if (strncmp(colorname, "bright", 6) == 0) {
 		*bright = TRUE;
 		colorname += 6;
 	} else
@@ -1067,7 +1059,7 @@ void parse_colors(char *ptr, int rex_flags)
 		bool expectend = FALSE;
 			/* Whether to expect an end= line. */
 
-		if (strncasecmp(ptr, "start=", 6) == 0) {
+		if (strncmp(ptr, "start=", 6) == 0) {
 			ptr += 6;
 			expectend = TRUE;
 		}
@@ -1113,7 +1105,7 @@ void parse_colors(char *ptr, int rex_flags)
 		if (!expectend)
 			continue;
 
-		if (ptr == NULL || strncasecmp(ptr, "end=", 4) != 0) {
+		if (ptr == NULL || strncmp(ptr, "end=", 4) != 0) {
 			jot_error(N_("\"start=\" requires a corresponding \"end=\""));
 			return;
 		}
@@ -1642,27 +1634,34 @@ bool have_nanorc(const char *path, const char *name)
 	return is_good_file(nanorc);
 }
 
-/* First read the system-wide rcfile, then the user's rcfile. */
+/* Process the nanorc file that was specified on the command line (if any),
+ * and otherwise the system-wide rcfile followed by the user's rcfile. */
 void do_rcfiles(void)
 {
-	const char *xdgconfdir;
+	if (custom_nanorc) {
+		nanorc = get_full_path(custom_nanorc);
+		if (access(nanorc, F_OK) != 0)
+			die(_("Specified rcfile does not exist\n"));
+	} else
+		nanorc = mallocstrcpy(nanorc, SYSCONFDIR "/nanorc");
 
-	/* First process the system-wide nanorc, if it exists and is suitable. */
-	nanorc = mallocstrcpy(nanorc, SYSCONFDIR "/nanorc");
 	if (is_good_file(nanorc))
 		parse_one_nanorc();
 
-	get_homedir();
-	xdgconfdir = getenv("XDG_CONFIG_HOME");
+	if (custom_nanorc == NULL) {
+		const char *xdgconfdir = getenv("XDG_CONFIG_HOME");
 
-	/* Now try the to find a nanorc file in the user's home directory or in
-	 * the XDG configuration directories, and process the first one found. */
-	if (have_nanorc(homedir, "/" HOME_RC_NAME) ||
-				have_nanorc(xdgconfdir, "/nano/" RCFILE_NAME) ||
-				have_nanorc(homedir, "/.config/nano/" RCFILE_NAME))
-		parse_one_nanorc();
-	else if (homedir == NULL && xdgconfdir == NULL)
-		jot_error(N_("I can't find my home directory!  Wah!"));
+		get_homedir();
+
+		/* Now try to find a nanorc file in the user's home directory or in the
+		 * XDG configuration directories, and process the first one found. */
+		if (have_nanorc(homedir, "/" HOME_RC_NAME) ||
+					have_nanorc(xdgconfdir, "/nano/" RCFILE_NAME) ||
+					have_nanorc(homedir, "/.config/nano/" RCFILE_NAME))
+			parse_one_nanorc();
+		else if (homedir == NULL && xdgconfdir == NULL)
+			jot_error(N_("I can't find my home directory!  Wah!"));
+	}
 
 	check_vitals_mapped();
 

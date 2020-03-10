@@ -1,5 +1,5 @@
 # setlocale_null.m4 serial 2
-dnl Copyright (C) 2019 Free Software Foundation, Inc.
+dnl Copyright (C) 2019-2020 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -89,4 +89,10 @@ AC_DEFUN([gl_FUNC_SETLOCALE_NULL],
   dnl LIB_SETLOCALE_NULL is expected to be '-pthread' or '-lpthread' on AIX
   dnl with gcc or xlc, and empty otherwise.
   AC_SUBST([LIB_SETLOCALE_NULL])
+])
+
+# Prerequisites of lib/setlocale-lock.c.
+AC_DEFUN([gl_PREREQ_SETLOCALE_LOCK],
+[
+  gl_VISIBILITY
 ])

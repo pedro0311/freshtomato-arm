@@ -1,7 +1,7 @@
 /**************************************************************************
  *   proto.h  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -27,9 +27,19 @@ extern volatile sig_atomic_t the_window_resized;
 #endif
 
 extern bool on_a_vt;
+extern bool shifted_metas;
 
 extern bool meta_key;
 extern bool shift_held;
+extern bool mute_modifiers;
+extern bool bracketed_paste;
+
+extern bool started_curses;
+extern bool we_are_running;
+extern bool more_than_one;
+
+extern bool inhelp;
+extern char *title;
 
 extern bool focusing;
 
@@ -39,22 +49,20 @@ extern bool control_C_was_pressed;
 
 extern bool suppress_cursorpos;
 
-extern bool started_curses;
-
 extern message_type lastmessage;
 
 extern linestruct *pletion_line;
 
-extern bool inhelp;
-extern char *title;
-
-extern bool more_than_one;
-
 extern bool also_the_last;
 
-extern bool is_shorter;
+extern char *answer;
 
+extern char *last_search;
 extern int didfind;
+
+extern char *present_path;
+
+extern unsigned flags[4];
 
 extern int controlleft, controlright;
 extern int controlup, controldown;
@@ -77,12 +85,6 @@ extern int shiftaltup, shiftaltdown;
 extern ssize_t fill;
 extern size_t wrap_at;
 #endif
-
-extern char *last_search;
-
-extern char *present_path;
-
-extern unsigned flags[4];
 
 extern WINDOW *topwin;
 extern WINDOW *edit;
@@ -120,14 +122,10 @@ extern regex_t quotereg;
 
 extern char *word_chars;
 
-extern char *answer;
-
 extern ssize_t tabsize;
 
 #ifndef NANO_TINY
 extern char *backup_dir;
-extern const char *locking_prefix;
-extern const char *locking_suffix;
 #endif
 #ifdef ENABLE_OPERATINGDIR
 extern char *operating_dir;
@@ -175,6 +173,9 @@ extern char *homedir;
 extern char *statedir;
 #if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
 extern char *startup_problem;
+#endif
+#ifdef ENABLE_NANORC
+extern char *custom_nanorc;
 #endif
 
 extern bool spotlighted;
@@ -257,6 +258,12 @@ void do_backspace(void);
 #ifndef NANO_TINY
 void chop_previous_word(void);
 void chop_next_word(void);
+#endif
+void extract_segment(linestruct *top, size_t top_x,
+						linestruct *bot, size_t bot_x);
+void ingraft_buffer(linestruct *somebuffer);
+void copy_from_buffer(linestruct *somebuffer);
+#ifndef NANO_TINY
 void cut_marked(bool *right_side_up);
 #endif
 void do_snip(bool copying, bool marked, bool until_eof, bool append);
@@ -271,12 +278,15 @@ void paste_text(void);
 
 /* Most functions in files.c. */
 void make_new_buffer(void);
-void set_modified(void);
+#ifndef NANO_TINY
+int delete_lockfile(const char *lockfilename);
+#endif
 bool open_buffer(const char *filename, bool new_buffer);
 #ifdef ENABLE_SPELLER
 bool replace_buffer(const char *filename, undo_type action, bool marked,
 		const char *operation);
 #endif
+void set_modified(void);
 void prepare_for_display(void);
 #ifdef ENABLE_MULTIBUFFER
 void mention_name_and_linecount(void);
@@ -296,8 +306,6 @@ bool outside_of_confinement(const char *currpath, bool allow_tabcomp);
 #endif
 #ifndef NANO_TINY
 void init_backup_dir(void);
-int delete_lockfile(const char *lockfilename);
-int write_lockfile(const char *lockfilename, const char *origfilename, bool modified);
 #endif
 int copy_file(FILE *inn, FILE *out, bool close_out);
 bool write_file(const char *name, FILE *f_open, bool tmp,
@@ -324,8 +332,10 @@ int the_code_for(void (*func)(void), int defaultval);
 size_t shown_entries_for(int menu);
 const keystruct *get_shortcut(int *kbinput);
 functionptrtype func_from_key(int *kbinput);
+#if defined(ENABLE_BROWSER) || defined(ENABLE_HELP)
+functionptrtype interpret(int *keycode);
+#endif
 int keycode_from_string(const char *keystring);
-void assign_keyinfo(keystruct *s, const char *keystring, const int keycode);
 void shortcut_init(void);
 const char *flagtostr(int flag);
 
@@ -334,7 +344,6 @@ const char *flagtostr(int flag);
 void wrap_help_text_into_buffer(void);
 void help_init(void);
 functionptrtype parse_help_input(int *kbinput);
-size_t help_line_len(const char *ptr);
 #endif
 void do_help(void);
 
@@ -395,11 +404,8 @@ linestruct *copy_buffer(const linestruct *src);
 void free_lines(linestruct *src);
 void renumber_from(linestruct *line);
 void partition_buffer(linestruct *top, size_t top_x,
-		linestruct *bot, size_t bot_x);
+						linestruct *bot, size_t bot_x);
 void unpartition_buffer(void);
-void extract(linestruct *top, size_t top_x, linestruct *bot, size_t bot_x);
-void ingraft_buffer(linestruct *somebuffer);
-void copy_from_buffer(linestruct *somebuffer);
 void print_view_warning(void);
 bool in_restricted_mode(void);
 #ifndef ENABLE_HELP
@@ -438,10 +444,10 @@ void confirm_margin(void);
 #endif
 void unbound_key(int code);
 bool okay_for_view(const keystruct *shortcut);
-void do_output(char *output, size_t output_len, bool allow_cntrls);
+void inject(char *output, size_t output_len, bool filtering);
 
 /* Most functions in prompt.c. */
-void do_statusbar_output(int *the_input, size_t input_len, bool filtering);
+void inject_into_answer(int *the_input, size_t input_len, bool filtering);
 void do_statusbar_home(void);
 void do_statusbar_end(void);
 void do_statusbar_left(void);
@@ -603,15 +609,11 @@ linestruct *line_from_number(ssize_t lineno);
 void record_macro(void);
 void run_macro(void);
 size_t get_key_buffer_len(void);
-void put_back(int keycode);
-void unget_kbinput(int kbinput, bool metakey);
 #ifdef ENABLE_NANORC
 void implant(const char *string);
 #endif
-int get_kbinput(WINDOW *win, bool showcursor);
 int parse_kbinput(WINDOW *win);
-int arrow_from_abcd(int kbinput);
-int parse_escape_sequence(WINDOW *win, int kbinput);
+int get_kbinput(WINDOW *win, bool showcursor);
 int get_byte_kbinput(int kbinput);
 int get_control_kbinput(int kbinput);
 int *get_verbatim_kbinput(WINDOW *win, size_t *kbinput_len);
@@ -677,10 +679,11 @@ void backwards_void(void);
 void flip_replace(void);
 void flip_goto(void);
 #ifdef ENABLE_BROWSER
-void to_files_void(void);
-void goto_dir_void(void);
+void to_files(void);
+void goto_dir(void);
 #endif
 #ifndef NANO_TINY
+void do_nothing(void);
 void do_toggle_void(void);
 void dos_format_void(void);
 void mac_format_void(void);
