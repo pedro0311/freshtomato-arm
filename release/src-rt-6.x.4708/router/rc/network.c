@@ -135,9 +135,21 @@ static int wlconf(char *ifname, int unit, int subunit)
 {
 	int r = -1;
 	char wl[24];
+#ifdef TCONFIG_DHDAP
+	int restore_def = 0;
+	char tmp[32] = {0};
+#endif
 
 	/* Check interface - fail for non-wl interfaces */
 	if ((unit < 0) || wl_probe(ifname)) return r;
+
+#ifdef TCONFIG_DHDAP
+	/* validate/restore all per-interface related variables for sdk7 */
+	snprintf(wl, sizeof(wl), "wl%d_", unit);
+	restore_def = !strlen(nvram_safe_get(strcat_r(wl, "ifname", tmp))); /* check nvram value wlX_ifname */
+	nvram_validate_all(wl, restore_def);
+	memset(wl, 0, sizeof(wl)); /* reset */
+#endif
 
 #ifndef TCONFIG_BCMARM
 	/* Tomato MIPS needs a little help here: wlconf() will not validate/restore all per-interface related variables right now; */
