@@ -4472,7 +4472,9 @@ static void sysinit(void)
 	}
 
 	/* load after init_nvram */
-	//load_wl(); /* see function start_lan() */
+#ifdef TCONFIG_DHDAP
+	load_wl(); /* for sdk6 see function start_lan() */
+#endif
 
 	//config_loopback(); /* see function start_lan() */
 

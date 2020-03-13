@@ -832,7 +832,9 @@ void start_lan(void)
 	char *iftmp;
 	char nv[64];
 
+#ifndef TCONFIG_DHDAP /* load driver at init.c for sdk7 */
 	load_wl(); /* lets go! */
+#endif
 
 #ifdef CONFIG_BCMWL5
 	foreach_wif(0, NULL, set_wlmac);
@@ -1112,7 +1114,9 @@ void stop_lan(void)
 	}
 	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
 
+#ifndef TCONFIG_DHDAP /* do not unload driver for sdk7 */
 	unload_wl(); /* stop! */
+#endif
 }
 
 static int is_sta(int idx, int unit, int subunit, void *param)
