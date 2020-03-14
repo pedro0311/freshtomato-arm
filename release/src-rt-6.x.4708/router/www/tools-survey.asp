@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,50 +7,17 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: Wireless Survey</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#survey-grid .brate {
-	color: blue;
-}
-#survey-grid .grate {
-	color: green;
-}
-#survey-grid .co4 {
-	text-align: right;
-}
-#survey-grid .co5,
-#survey-grid .co6,
-#survey-grid .co7 {
-	text-align: center;
-}
-#survey-msg {
-	border: 1px dashed #f0f0f0;
-	background: #fefefe;
-	padding: 5px;
-	width: 300px;
-	position: absolute;
-}
-#survey-controls {
-	text-align: right;
-}
-#expire-time {
-	width: 120px;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
 //	<% nvram(''); %>	// http_id
 
 var wlscandata = [];
@@ -72,19 +39,20 @@ sg.sortCompare = function(a, b) {
 	switch (col) {
 	case 0:
 		r = -cmpDate(da.lastSeen, db.lastSeen);
-		break;
+	break;
 	case 3:
 		r = cmpInt(da.rssi, db.rssi);
-		break;
+	break;
 	case 4:
 		r = cmpInt(da.qual, db.qual);
-		break;
+	break;
 	case 5:
 		r = cmpInt(da.channel, db.channel);
-		break;
+	break;
 	default:
 		r = cmpText(a.cells[col].innerHTML, b.cells[col].innerHTML);
 	}
+
 	if (r == 0) r = cmpText(da.bssid, db.bssid);
 
 	return this.sortAscending ? r : -r;
@@ -93,6 +61,7 @@ sg.sortCompare = function(a, b) {
 sg.rateSorter = function(a, b) {
 	if (a < b) return -1;
 	if (a > b) return 1;
+
 	return 0;
 }
 
@@ -126,9 +95,9 @@ sg.populate = function() {
 		e.bssid = s[0];
 		e.ssid = s[1];
 		e.channel = s[3];
-		e.channel = e.channel + '<br /><small>' + s[9] + ' GHz<\/small>'+ '<br /><small>' + s[4] + ' MHz<\/small>';
+		e.channel = e.channel + '<br><small>' + s[9] + ' GHz<\/small>'+ '<br><small>' + s[4] + ' MHz<\/small>';
 		e.rssi = s[2];
-		e.cap = s[7]+ '<br />' +s[8];
+		e.cap = s[7]+ '<br>' +s[8];
 		e.rates = s[6];
 		e.qual = Math.round(s[5]);
 	}
@@ -141,7 +110,8 @@ sg.populate = function() {
 				entries.splice(i, 1);
 				++removed;
 			}
-			else ++i;
+			else
+				++i;
 		}
 	}
 
@@ -153,7 +123,7 @@ sg.populate = function() {
 		seen = e.lastSeen.toWHMS();
 		if (useAjax()) {
 			m = Math.floor(((new Date()).getTime() - e.firstSeen.getTime()) / 60000);
-			if (m <= 10) seen += '<br /> <b><small>NEW (' + -m + 'm)<\/small><\/b>';
+			if (m <= 10) seen += '<br> <b><small>NEW (' + m + 'm)<\/small><\/b>';
 		}
 
 		mac = e.bssid;
@@ -165,7 +135,7 @@ sg.populate = function() {
 			'' + e.ssid,
 			mac,
 			(e.rssi == -999) ? '' : (e.rssi + ' <small>dBm<\/small>'),
-			'<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif">',
+			'<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif" alt="">',
 			'' + e.channel,
 			'' + e.cap,
 			'' + e.rates], false);
@@ -175,7 +145,7 @@ sg.populate = function() {
 	if (useAjax()) s = added + ' added, ' + removed + ' removed, ';
 	s += entries.length + ' total.';
 
-	s += '<br /><br /><small>Last updated: ' + (new Date()).toWHMS() + '<\/small>';
+	s += '<br><br><small>Last updated: ' + (new Date()).toWHMS() + '<\/small>';
 	setMsg(s);
 
 	wlscandata = [];
@@ -188,11 +158,9 @@ sg.setup = function() {
 	this.sort(0);
 }
 
-
 function setMsg(msg) {
 	E('survey-msg').innerHTML = msg;
 }
-
 
 var ref = new TomatoRefresh('update.cgi', 'exec=wlscan', 0, 'tools_survey_refresh');
 
@@ -208,17 +176,6 @@ ref.refresh = function(text) {
 	sg.resort();
 }
 
-function earlyInit() {
-	if (!useAjax()) E('expire-time').style.visibility = 'hidden';
-	sg.setup();
-}
-
-function init() {
-	new observer(InNewWindow).observe(E("survey-grid"), { childList: true, subtree: true });
-	sg.recolor();
-	ref.initPage();
-}
-
 var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
 function InNewWindow () {
@@ -226,16 +183,29 @@ function InNewWindow () {
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
+
+function init() {
+	if (observer)
+		new observer(InNewWindow).observe(E("survey-grid"), { childList: true, subtree: true });
+	sg.recolor();
+	ref.initPage();
+}
+
+function earlyInit() {
+	if (!useAjax()) E('expire-time').style.display = 'none';
+	sg.setup();
+}
 </script>
 </head>
+
 <body onload="init()">
 <form action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -245,29 +215,32 @@ function InNewWindow () {
 <div class="section">
 	<div id="survey-grid" class="tomato-grid"></div>
 	<div id="survey-msg"></div>
-	<br/><br/><br/><br/>
-	<script type="text/javascript">
-	if ('<% wlclient(); %>' == '0') {
-		document.write('<small>Warning: Wireless connections to this router may be disrupted while using this tool.<\/small>');
-	}
-	</script>
+
+	<div id="survey-warn">
+		<script>
+			if ('<% wlclient(); %>' == '0') {
+				document.write('<b>Warning:<\/b> Wireless connections to this router may be disrupted while using this tool.');
+			}
+		</script>
+	</div>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<div id="survey-controls">
 		<img src="spin.gif" alt="" id="refresh-spinner">
-		<script type="text/javascript">
-		genStdTimeList('expire-time', 'Expire After', 0);
-		genStdTimeList('refresh-time', 'Refresh Every', 0);
+		<script>
+			genStdTimeList('expire-time', 'Expire After', 0);
+			genStdTimeList('refresh-time', 'Refresh Every', 0);
 		</script>
 		<input type="button" value="Refresh" onclick="ref.toggle()" id="refresh-button">
 	</div>
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">earlyInit();</script>
+<script>earlyInit();</script>
 </body>
 </html>

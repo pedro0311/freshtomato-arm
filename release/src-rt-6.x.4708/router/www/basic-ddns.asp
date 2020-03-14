@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,22 +7,19 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Basic: DDNS</title>
+<title>[<% ident(); %>] Basic: DDNS Client</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("ddnsx0,ddnsx1,ddnsx_ip,wan_dns,wan_get_dns,dns_addget,ddnsx_refresh,ddnsx_save"); %>
+
 //	<% ddnsx(); %>
 
 /* REMOVE-BEGIN
@@ -78,14 +75,15 @@ function msgLoc(s) {
 	if (r = s.match(/^(.*?): (.*)/)) {
 		r[2] = r[2].replace(/#RETRY (\d+) (\d+)/,
 			function(s, min, num) {
-				return '<br /><small>(' + ((num >= 1) ? (num + '/3: ') : '') + 'Automatically retrying in ' + min + ' minutes)<\/small>';
+				return '<br><small>(' + ((num >= 1) ? (num + '/3: ') : '') + 'Automatically retrying in ' + min + ' minutes)<\/small>';
 			}
 		);
-		return '<small>' + (new Date(r[1])).toLocaleString() + ':<\/small><br />' + r[2];
+		return '<small>' + (new Date(r[1])).toLocaleString() + ':<\/small><br>' + r[2];
 	}
 	else if (s.length == 0) {
 		return '-';
 	}
+
 	return s;
 }
 
@@ -120,7 +118,7 @@ function verifyFields(focused, quiet) {
 
 		op = mop(data[3]);
 
-		elem.display(PR('url' + i), (enabled) && (data[0] != 'custom'));
+		elem.display(PR('url' + i), (enabled && (data[0] != 'custom')));
 
 		elem.display(PR('_f_hosttop' + i), op.t);
 		elem.display(PR('_f_user' + i), op.u);
@@ -246,8 +244,10 @@ s = save state checkbox
 REMOVE-END */
 			op = mop(data[3]);
 
-			if ((op.u) || (op.p)) s.push(E('_f_user' + i).value + ':' + E('_f_pass' + i).value);
-			else s.push('');
+			if ((op.u) || (op.p))
+				s.push(E('_f_user' + i).value + ':' + E('_f_pass' + i).value);
+			else
+				s.push('');
 
 			if (op.t) {
 				s.push(E('_f_hosttop' + i).value);
@@ -326,16 +326,16 @@ function init() {
 	}
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -344,7 +344,6 @@ function init() {
 <input type="hidden" name="_nextpage" value="basic-ddns.asp">
 <input type="hidden" name="_service" value="ddns-restart">
 <input type="hidden" name="_nextwait" value="10">
-
 <input type="hidden" name="ddnsx0" value="">
 <input type="hidden" name="ddnsx1" value="">
 <input type="hidden" name="ddnsx0_cache" value="" disabled="disabled">
@@ -353,75 +352,78 @@ function init() {
 <input type="hidden" name="ddnsx_ip" value="">
 <input type="hidden" name="ddnsx_save" value="">
 
+<!-- / / / -->
 
-<div class="section-title">Dynamic DNS</div>
+<div class="section-title">Dynamic DNS Client</div>
 <div class="section">
-<script type="text/javascript">
-s = nvram.ddnsx_ip;
-a = (s != '') && (s != 'wan') && (s != 'wan2') && (s != 'wan3') && (s != 'wan4') && (s.indexOf('@') != 0) && (s != '0.0.0.0') && (s != '10.1.1.1');
-createFieldTable('', [
-	{ title: 'IP address', name: 'f_ddnsx_ip', type: 'select',
-		options: [
-			['wan', 'Use WAN IP Address ' + ddnsx_ip + ' (recommended)'],
-			['wan2', 'Use WAN2 IP Address ' + ddnsx2_ip ],
+	<script>
+		s = nvram.ddnsx_ip;
+		a = (s != '') && (s != 'wan') && (s != 'wan2') && (s != 'wan3') && (s != 'wan4') && (s.indexOf('@') != 0) && (s != '0.0.0.0') && (s != '10.1.1.1');
+		createFieldTable('', [
+			{ title: 'IP address', name: 'f_ddnsx_ip', type: 'select',
+				options: [
+					['wan', 'Use WAN IP Address ' + ddnsx_ip + ' (recommended)'],
+					['wan2', 'Use WAN2 IP Address ' + ddnsx2_ip ],
 /* MULTIWAN-BEGIN */
-			['wan3', 'Use WAN3 IP Address ' + ddnsx3_ip ],
-			['wan4', 'Use WAN4 IP Address ' + ddnsx4_ip ],
+					['wan3', 'Use WAN3 IP Address ' + ddnsx3_ip ],
+					['wan4', 'Use WAN4 IP Address ' + ddnsx4_ip ],
 /* MULTIWAN-END */
-			['@', 'Use External IP Address Checker (every 10 minutes)'],
-			['0.0.0.0', 'Offline (0.0.0.0)'],
-			['10.1.1.1', 'Offline (10.1.1.1)'],
-			['custom', 'Custom IP Address...']
-			],
-		value: a ? 'custom' : nvram.ddnsx_ip },
-	{ title: 'Custom IP address', indent: 2, name: 'f_custom_ip', type: 'text', maxlen: 15, size: 20,
-		value: a ? nvram.ddnsx_ip : '', hidden: !a },
-	{ title: 'Auto refresh every', name: 'ddnsx_refresh', type: 'text', maxlen: 8, size: 8, suffix: '<small> days (0 = disable)<\/small>', value: fixInt(nvram.ddnsx_refresh, 0, 90, 28) }
-]);
-</script>
+					['@', 'Use External IP Address Checker (every 10 minutes)'],
+					['0.0.0.0', 'Offline (0.0.0.0)'],
+					['10.1.1.1', 'Offline (10.1.1.1)'],
+					['custom', 'Custom IP Address...']
+				],
+				value: a ? 'custom' : nvram.ddnsx_ip },
+			{ title: 'Custom IP address', indent: 2, name: 'f_custom_ip', type: 'text', maxlen: 15, size: 20,
+				value: a ? nvram.ddnsx_ip : '', hidden: !a },
+			{ title: 'Auto refresh every', name: 'ddnsx_refresh', type: 'text', maxlen: 8, size: 8, suffix: '<small> days (0 = disable)<\/small>', value: fixInt(nvram.ddnsx_refresh, 0, 90, 28) }
+		]);
+	</script>
 </div>
 
-
-<script type="text/javascript">
-a = nvram.wan_dns.split(/\s+/);
-for (i = 0; i < a.length; ++i) {
-	for (j = 0; j < opendns.length; ++j) {
-		if (a[i] == opendns[j]) ++opendnsInUse;
-	}
-}
-
-if (nvram.dns_addget == 1) {
-	dns = nvram.wan_dns + ' ' + nvram.wan_get_dns;
-}
-else if (nvram.wan_dns != '') {
-	dns = nvram.wan_dns;
-}
-else {
-	dns = nvram.wan_get_dns;
-}
-dns = dns.split(/\s+/);
-for (i = 0; i < dns.length; ++i) {
-	for (j = 0; j < opendns.length; ++j) {
-		if (dns[i] == opendns[j]) {
-			dns[i] = '<i>' + dns[i] + '<\/i>';
-			break;
+<script>
+	a = nvram.wan_dns.split(/\s+/);
+	for (i = 0; i < a.length; ++i) {
+		for (j = 0; j < opendns.length; ++j) {
+			if (a[i] == opendns[j]) ++opendnsInUse;
 		}
 	}
-}
-dns = dns.join(', ');
 
-for (i = 0; i < 2; ++i) {
-	v = nvram['ddnsx' + i].split('<');
-	if (v.length != 7) v = ['', '', '', 0, '', 0, ''];
+	if (nvram.dns_addget == 1) {
+		dns = nvram.wan_dns + ' ' + nvram.wan_get_dns;
+	}
+	else if (nvram.wan_dns != '') {
+		dns = nvram.wan_dns;
+	}
+	else {
+		dns = nvram.wan_get_dns;
+	}
 
-	u = v[1].split(':');
-	if (u.length != 2) u = ['', ''];
-	h = (v[0] == '');
+	dns = dns.split(/\s+/);
+	for (i = 0; i < dns.length; ++i) {
+		for (j = 0; j < opendns.length; ++j) {
+			if (dns[i] == opendns[j]) {
+				dns[i] = '<i>' + dns[i] + '<\/i>';
+				break;
+			}
+		}
+	}
+	dns = dns.join(', ');
+
+	for (i = 0; i < 2; ++i) {
+		v = nvram['ddnsx' + i].split('<');
+		if (v.length != 7) v = ['', '', '', 0, '', 0, ''];
+
+		u = v[1].split(':');
+		if (u.length != 2) u = ['', ''];
+		h = (v[0] == '');
+
+/* / / / */
 
 	W('<div class="section-title">Dynamic DNS ' + (i + 1) + '<\/div><div class="section">');
 	createFieldTable('', [
 		{ title: 'Service', name: 'f_service' + i, type: 'select', options: services, value: v[0] },
-		{ title: 'URL', indent: 2, text: '<a href="" id="url' + i + '" target="tomato-ext-ddns"><\/a>', hidden: 1 },
+		{ title: 'URL', indent: 2, text: '<a href="#" id="url' + i + '" target="tomato-ext-ddns"><\/a>', hidden: 1 },
 		{ title: 'Hostname', name: 'f_hosttop' + i, type: 'text', maxlen: 96, size: 35, value: v[2], hidden: 1 },
 		{ title: 'Username', name: 'f_user' + i, type: 'text', maxlen: 64, size: 35, value: u[0], hidden: 1 },
 		{ title: 'Password', name: 'f_pass' + i, type: 'password', maxlen: 64, size: 35, peekaboo: 1, value: u[1], hidden: 1 },
@@ -432,7 +434,7 @@ for (i = 0; i < 2; ++i) {
 		{ title: 'MX', name: 'f_mx' + i, type: 'text', maxlen: 32, size: 35, value: v[4], hidden: 1 },
 		{ title: 'Backup MX', indent: 2, name: 'f_bmx' + i, type: 'checkbox', value: v[5] != '0', hidden: 1 },
 		{ title: 'Use as DNS', name: 'f_opendns' + i, type: 'checkbox', value: (opendnsInUse == opendns.length),
-			suffix: '<br /><small>(Current DNS: ' + dns  + ')<\/small>', hidden: 1 },
+			suffix: '<br><small>(Current DNS: ' + dns  + ')<\/small>', hidden: 1 },
 		{ title: 'Token', name: 'f_token' + i, type: 'text', maxlen: 255, size: 80, value: v[6], hidden: 1 },
 		{ title: 'Save state when IP changes (nvram commit)', name: 'f_ddnsx_save' + i, type: 'checkbox', value: nvram.ddnsx_save == '1', hidden: 1 },
 		{ title: 'Force next update', name: 'f_force' + i, type: 'checkbox', value: 0, hidden: 1 },
@@ -444,17 +446,17 @@ for (i = 0; i < 2; ++i) {
 }
 </script>
 
-
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
-<script type="text/javascript">verifyFields(null, 1);</script>
 </form>
+<script>verifyFields(null, true);</script>
 </body>
 </html>

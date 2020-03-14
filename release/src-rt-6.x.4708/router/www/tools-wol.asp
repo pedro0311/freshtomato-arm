@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,44 +7,19 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Tools: WOL</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-
-<style type="text/css">
-#wol-grid .co1 {
-	width: 15%;
-}
-#wol-grid .co2 {
-	width: 15%;
-}
-#wol-grid .co3 {
-	width: 25%;
-}
-#wol-grid .co4 {
-	width: 45%;
-}
-textarea {
-	width: 99%;
-	height: 8em;
-}
-#refreshb, #save-button {
-	width: 90px;
-}
-</style>
-
-<script type="text/javascript">
+<script>
 
 //	<% arplist(); %>
+
 //	<% nvram('dhcpd_static,lan_ifname'); %>
 
 var wg = new TomatoGrid();
@@ -53,17 +28,20 @@ wg.setup = function() {
 	this.headerSet(['MAC Address', 'IP Address', 'Status', 'Name']);
 	this.sort(3);
 }
+
 wg.sortCompare = function(a, b) {
-        var da = a.getRowData();
-        var db = b.getRowData();
-        var r = 0;
-        var c = this.sortColumn;
-        if (c == 1)
-                r = cmpIP(da[c], db[c]);
-        else
-                r = cmpText(da[c], db[c]);
-        return this.sortAscending ? r : -r;
+	var da = a.getRowData();
+	var db = b.getRowData();
+	var r = 0;
+	var c = this.sortColumn;
+	if (c == 1)
+		r = cmpIP(da[c], db[c]);
+	else
+		r = cmpText(da[c], db[c]);
+
+	return this.sortAscending ? r : -r;
 }
+
 wg.populate = function() {
 	var i, j, r, s;
 
@@ -81,7 +59,7 @@ wg.populate = function() {
 		}
 	}
 
-	// show entries in static dhcp list
+	/* show entries in static dhcp list */
 	for (i = 0; i < s.length; ++i) {
 		var t = s[i];
 		var active = '-';
@@ -99,7 +77,7 @@ wg.populate = function() {
 		}
 	}
 
-	// show anything else in ARP that is awake
+	/* show anything else in ARP that is awake */
 	for (i = 0; i < arplist.length; ++i) {
 		if ((arplist[i][2] != nvram.lan_ifname) || (arplist[i][1].length != 17)) continue;
 		r = this.insertData(-1, [arplist[i][1], arplist[i][0], 'Active (In ARP)', '']);
@@ -109,6 +87,7 @@ wg.populate = function() {
 
 	this.resort(2);
 }
+
 wg.onClick = function(cell) {
 	wake(PR(cell).getRowData()[0]);
 }
@@ -118,11 +97,12 @@ function verifyFields(focused, quiet) {
 
 	e = E('t_f_mac');
 	e.value = e.value.replace(/[\t ]+/g, ' ');
+
 	return (e.value ? 1 : 0);
 }
 
 function spin(x) {
-	E('refreshb').disabled = x;
+	E('refresh-button').disabled = x;
 	E('wakeb').disabled = x;
 }
 
@@ -137,8 +117,6 @@ function wake(mac) {
 	E('t_mac').value = mac;
 	form.submit('t_fom', 1);
 }
-
-
 
 var refresher = null;
 var timer = new TomatoTimer(refresh);
@@ -162,8 +140,8 @@ function refresh() {
 
 function refreshClick() {
 	running ^= 1;
-	E('refreshb').value = running ? 'Stop' : 'Refresh';
-	E('spin').style.visibility = running ? 'visible' : 'hidden';
+	E('refresh-button').value = running ? 'Stop' : 'Refresh';
+	E('refresh-spinner').style.display = (running ? 'inline-block' : 'none');
 	if (running) refresh();
 }
 
@@ -171,16 +149,16 @@ function init() {
 	wg.recolor();
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" action="wakeup.cgi" method="post">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -190,28 +168,36 @@ function init() {
 <input type="hidden" name="_nextwait" value="1">
 <input type="hidden" name="mac" value="" id="t_mac">
 
+<!-- / / / -->
+
 <div class="section-title">Wake On LAN</div>
 <div class="section">
-	<div id="wol-grid" class="tomato-grid"></div>
-	<div style="float:right"><img src="spin.gif" alt="" id="spin" style="vertical-align:middle;visibility:hidden"> &nbsp; <input type="button" value="Refresh" onclick="refreshClick()" id="refreshb"></div>
-</div>
-<div id="msg" style="visibility:hidden;background:#ffffa0;margin:auto;width:50%;text-align:center;padding:2px;border:1px solid #fee"></div>
-<div class="section-title"></div>
-<div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'MAC Address List', name: 'f_mac', id: 't_f_mac', type: 'textarea', value: cookie.get('wakemac') || '' },
-]);
-</script>
-<div style="float:right"><input type="button" value="Wake Up" onclick="wake(null)" id="save-button"></div>
+	<div class="tomato-grid" id="wol-grid"></div>
+
+	<div><input type="button" value="Refresh" onclick="refreshClick()" id="refresh-button"> &nbsp; <img src="spin.gif" alt="" id="refresh-spinner"></div>
 </div>
 
 <!-- / / / -->
 
+<div class="section-title"></div>
+<div class="section">
+	<script>
+		createFieldTable('', [
+			{ title: 'MAC Address List', name: 'f_mac', id: 't_f_mac', type: 'textarea', value: cookie.get('wakemac') || '' },
+		]);
+	</script>
+	<div><input id="save-button" type="button" value="Wake Up" onclick="wake(null)"></div>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
+	&nbsp;
+</div>
+
 </td></tr>
-<tr><td id="footer" colspan="2">&nbsp;</td></tr>
 </table>
 </form>
-<script type="text/javascript">wg.setup();wg.populate();</script>
+<script>wg.setup();wg.populate();</script></script>
 </body>
 </html>

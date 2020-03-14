@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato PPTPd GUI
 	Copyright (C) 2012 Augusto Bott
@@ -10,40 +10,19 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] PPTP: Online</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
-<style type="text/css">
-#dev-grid .co1 {
-	width: 10%;
-}
-#dev-grid .co2 {
-	width: 18%;
-}
-#dev-grid .co3 {
-	width: 12%;
-}
-#dev-grid .co4 {
-	width: 12%;
-}
-#dev-grid .co5 {
-	width: 18%;
-}
-#dev-grid .co6 {
-	width: 10%;
-	text-align: center;
-}
-#dev-grid .header {
-	text-align: left;
-}
-</style>
-<script type="text/javascript">
+<script src="tomato.js"></script>
+
+<script>
+
 //	<% nvram(''); %>	// http_id
+
 //	<% pptpd_userol(); %>
 
 list = [];
@@ -73,12 +52,13 @@ function get(pid) {
 		uptime: ''
 	};
 	list.push(e);
+
 	return e;
 }
 
 var xob = null;
 function _disconnect(pid) {
-	form.submitHidden('/pptpd.cgi', { disconnect: pid });
+	form.submitHidden('pptpd.cgi', { disconnect: pid });
 }
 
 function disconnect(a, pid) {
@@ -93,9 +73,9 @@ function disconnect(a, pid) {
 	xob.onCompleted = function(text, xml) {
 		a.innerHTML = '';
 		xob = null;
-/* REMOVE-BEGIN */
-//		ref.refresh(text);
-/* REMOVE-END */
+/* REMOVE-BEGIN
+		ref.refresh(text);
+REMOVE-END */
 		if (!ref.running) {
 			setTimeout(
 				function() {
@@ -112,10 +92,10 @@ function disconnect(a, pid) {
 		_disconnect(pid);
 	}
 
-	xob.post('/pptpd.cgi', 'disconnect=' + pid);
+	xob.post('pptpd.cgi', 'disconnect=' + pid);
 }
 
-var ref = new TomatoRefresh('/update.cgi', 'exec=pptpd_userol', 0, 'pptpd_userol_refresh');
+var ref = new TomatoRefresh('update.cgi', 'exec=pptpd_userol', 0, 'pptpd_userol_refresh');
 
 ref.refresh = function(text) {
 	eval(text);
@@ -172,16 +152,16 @@ dg.populate = function() {
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
 		hangup = '<div id="div_'+e.pid+'"><a href="javascript:disconnect(\'div_'+e.pid + '\',' + e.pid + ')" title="Disconnect" id="pid_' + e.pid + '">Disconnect<\/a><\/div>';
-/* REMOVE-BEGIN */
-//		this.insert(-1, e, [
-//			e.ifname, e.username, e.uptime, e.ip, e.sourceip, hangup], false);
-/* REMOVE-END */
+/* REMOVE-BEGIN
+		this.insert(-1, e, [
+			e.ifname, e.username, e.uptime, e.ip, e.sourceip, hangup], false);
+REMOVE-END */
 		dg.insertData(-1, [ e.ifname, e.username, e.uptime, e.ip, e.sourceip, hangup ]);
 	}
 }
 
 dg.setup = function() {
-	this.init('dev-grid', 'sort');
+	this.init('vpn-pptp-grid', 'sort');
 	this.headerSet(['Interface', 'Username', 'Online Since', 'VPN IP Address', 'Source IP Address', 'Action']);
 	this.populate();
 	this.sort(1);
@@ -200,11 +180,12 @@ dg.dataToView = function(data) {
 	var l;
 	if (data[2] < 946684800) {
 		l = 'Not Available';
-	} else {
-/* REMOVE-BEGIN */
-//		l = new Date(data[2] *1000);
-//		l = l.toDateString() + ' ' + l.toTimeString();
-/* REMOVE-END */
+	}
+	else {
+/* REMOVE-BEGIN
+		l = new Date(data[2] *1000);
+		l = l.toDateString() + ' ' + l.toTimeString();
+REMOVE-END */
 		l = dateTimeString(data[2]);
 	}
 	return [data[0],
@@ -225,25 +206,36 @@ function init() {
 }
 </script>
 </head>
+
 <body onload="init()">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
+
+<!-- / / / -->
+
 <div class="section-title">PPTP Users Online</div>
 <div class="section">
-	<div id="dev-grid" class="tomato-grid"></div>
+	<div class="tomato-grid" id="vpn-pptp-grid"></div>
+
+	<div id="pptp-ctrl">
+		&raquo; <a href="vpn-pptp-server.asp">Configure</a>
+	</div>
 </div>
-<div style="float:right;text-align:right">
-&raquo; <a href="vpn-pptp-server.asp">Configure</a>
+
+<!-- / / / -->
+
+<div id="footer">
+	<script>genStdRefresh(1,1,'ref.toggle()');</script>
 </div>
+
 </td></tr>
-<tr><td id="footer" colspan="2"><script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script></td></tr>
 </table>
-<script type="text/javascript">earlyInit();</script>
+<script>earlyInit();</script>
 </body>
 </html>

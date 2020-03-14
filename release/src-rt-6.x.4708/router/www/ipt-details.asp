@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -6,45 +6,30 @@
 
 	IP Traffic enhancements
 	Copyright (C) 2011 Augusto Bott
-	http://code.google.com/p/tomato-sdhc-vlan/
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] IP Traffic: Details</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="protocols.js"></script>
+<script src="bwm-hist.js"></script>
+<script src="bwm-common.js"></script>
+<script src="interfaces.js"></script>
 
-<!-- / / / -->
+<script>
 
-<style type="text/css">
-#grid .co2,
-#grid .co3,
-#grid .co4,
-#grid .co5,
-#grid .co6,
-#grid .co7,
-#grid .co8 {
-	text-align: right;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="protocols.js"></script>
-<script type="text/javascript" src="bwm-hist.js"></script>
-<script type="text/javascript" src="bwm-common.js"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-
-<script type="text/javascript">
 //	<% nvram('cstats_enable,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,dhcpd_static'); %>
 
 //	<% devlist(); %>
 
+var cprefix = 'ipt_details';
 var cstats_busy = 0;
 
 try {
@@ -123,7 +108,7 @@ ref.refresh = function(text) {
 		lastiptraffic[k][10] = b[10];
 	}
 
-	setTimeout(function() { E('loading').style.visibility = 'hidden'; }, 100);
+	setTimeout(function() { E('loading').style.display = 'none'; }, 100);
 
 	--lock;
 
@@ -197,12 +182,12 @@ grid.populate = function() {
 		var h = b[0];
 		if (E('_f_hostnames').checked) {
 			if(hostnamecache[b[0]] != null) {
-				h = hostnamecache[b[0]] + ((b[0].indexOf(':') != -1) ? '<br />' : ' ') + '<small>(' + b[0] + ')<\/small>';
+				h = hostnamecache[b[0]] + ((b[0].indexOf(':') != -1) ? '<br>' : ' ') + '<small>(' + b[0] + ')<\/small>';
 			}
 		}
 
 		if (E('_f_shortcuts').checked) {
-			h = h + '<br /><small>';
+			h = h + '<br><small class="pics">';
 			h = h + '<a href="javascript:viewQosDetail(' + i + ')" title="View QoS Details">[qosdetails]<\/a>';
 			h = h + '<a href="javascript:viewQosCTrates(' + i + ')" title="View transfer rates per connection">[qosrates]<\/a>';
 			h = h + '<a href="javascript:viewIptHistory(' + i + ')" title="View IP Traffic History">[history]<\/a>';
@@ -266,28 +251,30 @@ grid.sortCompare = function(a, b) {
 			r = cmpInt(da[10], db[10]);
 		break;
 	}
+
 	return this.sortAscending ? r : -r;
 }
 
 function viewQosDetail(n) {
 	cookie.set('qos_filterip', [avgiptraffic[n][0]], 1);
-	window.open("qos-detailed.asp","_blank");
+	window.open("qos-detailed.asp", "_blank");
 }
 
 function viewQosCTrates(n) {
 	cookie.set('qos_filterip', [avgiptraffic[n][0]], 1);
-	window.open("qos-ctrate.asp","_blank");
+	window.open("qos-ctrate.asp", "_blank");
 }
 
 function viewIptHistory(n) {
 	cookie.set('ipt_filterip', [avgiptraffic[n][0]], 1);
-	window.open("ipt-daily.asp","_blank");
+	window.open("ipt-daily.asp", "_blank");
 }
 
 function addExcludeList(n) {
 	if (E('_f_filter_ipe').value.length<6) {
 		E('_f_filter_ipe').value = avgiptraffic[n][0];
-	} else {
+	}
+	else {
 		if (E('_f_filter_ipe').value.indexOf(avgiptraffic[n][0]) < 0) {
 			E('_f_filter_ipe').value = E('_f_filter_ipe').value + ',' + avgiptraffic[n][0];
 		}
@@ -307,7 +294,7 @@ grid.dataToView = function(data) {
 }
 
 grid.setup = function() {
-	this.init('grid', 'sort');
+	this.init('bwm-grid2', 'sort');
 	this.headerSet(['Host', 'Download (bytes/s)', 'Upload (bytes/s)', 'TCP IN/OUT (pkt/s)', 'UDP IN/OUT (pkt/s)', 'ICMP IN/OUT (pkt/s)', 'TCP Connections', 'UDP Connections']);
 }
 
@@ -319,7 +306,7 @@ function init() {
 	}
 
 	if ((c = '<% cgi_get("ipt_filterip"); %>') != '') {
-		if (c.length>6) {
+		if (c.length > 6) {
 			E('_f_filter_ip').value = c;
 			filterip = c.split(',');
 		}
@@ -327,14 +314,14 @@ function init() {
 
 	if ((c = cookie.get('ipt_filterip')) != null) {
 		cookie.set('ipt_filterip', '', 0);
-		if (c.length>6) {
+		if (c.length > 6) {
 			E('_f_filter_ip').value = E('_f_filter_ip').value + ((E('_f_filter_ip').value.length > 0) ? ',' : '') + c;
 			filterip.push(c.split(','));
 		}
 	}
 
 	if ((c = cookie.get('ipt_addr_hidden')) != null) {
-		if (c.length>6) {
+		if (c.length > 6) {
 			E('_f_filter_ipe').value = c;
 			filteripe = c.split(',');
 		}
@@ -342,19 +329,16 @@ function init() {
 
 	filteripe_before = filteripe;
 
-	if (((c = cookie.get('ipt_details_options_vis')) != null) && (c == '1')) {
-		toggleVisibility("options");
+	if (((c = cookie.get(cprefix + '_options_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "options");
 	}
 
-	scale = fixInt(cookie.get('ipt_details_scale'), 0, 2, 0);
+	scale = fixInt(cookie.get(cprefix + '_scale'), 0, 2, 0);
 
 	E('_f_scale').value = scale;
-
-	E('_f_onlyactive').checked = (((c = cookie.get('ipt_details_onlyactive')) != null) && (c == '1'));
-
-	E('_f_hostnames').checked = (((c = cookie.get('ipt_details_hostnames')) != null) && (c == '1'));
-
-	E('_f_shortcuts').checked = (((c = cookie.get('ipt_details_shortcuts')) != null) && (c == '1'));
+	E('_f_onlyactive').checked = (((c = cookie.get(cprefix + '_onlyactive')) != null) && (c == '1'));
+	E('_f_hostnames').checked = (((c = cookie.get(cprefix + '_hostnames')) != null) && (c == '1'));
+	E('_f_shortcuts').checked = (((c = cookie.get(cprefix + '_shortcuts')) != null) && (c == '1'));
 
 	populateCache();
 	grid.setup();
@@ -370,6 +354,7 @@ function getArrayPosByElement(haystack, needle, index) {
 			return i;
 		}
 	}
+
 	return -1;
 }
 
@@ -384,7 +369,8 @@ function dofilter() {
 			}
 		}
 		E('_f_filter_ip').value = (filterip.length > 0) ? filterip.join(',') : '';
-	} else {
+	}
+	else {
 		filterip = [];
 	}
 
@@ -396,7 +382,8 @@ function dofilter() {
 			}
 		}
 		E('_f_filter_ipe').value = (filteripe.length > 0) ? filteripe.join(',') : '';
-	} else {
+	}
+	else {
 		filteripe = [];
 	}
 
@@ -410,87 +397,71 @@ function dofilter() {
 
 function verifyFields(focused, quiet) {
 	scale = E('_f_scale').value * 1;
-	cookie.set('ipt_details_scale', E('_f_scale').value, 2);
 
-	cookie.set('ipt_details_onlyactive', (E('_f_onlyactive').checked ? '1' : '0'), 1);
-
-	cookie.set('ipt_details_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
-
-	cookie.set('ipt_details_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_scale', E('_f_scale').value, 2);
+	cookie.set(cprefix + '_onlyactive', (E('_f_onlyactive').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_hostnames', (E('_f_hostnames').checked ? '1' : '0'), 1);
+	cookie.set(cprefix + '_shortcuts', (E('_f_shortcuts').checked ? '1' : '0'), 1);
 
 	dofilter();
+
 	return 1;
 }
-
-function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('ipt_details_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('ipt_details_' + whichone + '_vis', 1);
-	}
-}
-
 </script>
 
 </head>
 <body onload="init()">
 <form id="t_fom" action="javascript:{}">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title">IP Traffic - Transfer Rates</div>
+
 <div id="cstats">
 	<div class="section">
-		<div id="grid" class="tomato-grid" style="float:left"></div>
+		<div class="tomato-grid" id="bwm-grid2"></div>
 
-		<div id="loading"><br/><b>Loading...</b></div>
+		<div id="loading">Loading...</div>
 	</div>
 
-<!-- / / / -->
-
-	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility("options");'><span id="sesdivoptionsshowhide">(Click here to show)</span></a></i></small></div>
-	<div class="section" id="sesdivoptions" style="display:none">
-		<script type="text/javascript">
-		var c;
-		c = [];
-		c.push({ title: 'Only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-		c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
-		c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
-		c.push({ title: 'Ignore inactive hosts', name: 'f_onlyactive', type: 'checkbox' });
-		c.push({ title: 'Show hostnames', name: 'f_hostnames', type: 'checkbox' });
-		c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
-		createFieldTable('',c);
+	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility(cprefix,"options");'><span id="sesdiv_options_showhide">(Click here to show)</span></a></i></small></div>
+	<div class="section" id="sesdiv_options" style="display:none">
+		<script>
+			var c;
+			c = [];
+			c.push({ title: 'Only these IPs', name: 'f_filter_ip', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Exclude these IPs', name: 'f_filter_ipe', size: 50, maxlen: 255, type: 'text', suffix: ' <small>(Comma separated list)<\/small>' });
+			c.push({ title: 'Scale', name: 'f_scale', type: 'select', options: [['0', 'KB'], ['1', 'MB'], ['2', 'GB']] });
+			c.push({ title: 'Ignore inactive hosts', name: 'f_onlyactive', type: 'checkbox' });
+			c.push({ title: 'Show hostnames', name: 'f_hostnames', type: 'checkbox' });
+			c.push({ title: 'Show shortcuts', name: 'f_shortcuts', type: 'checkbox' });
+			createFieldTable('',c);
 		</script>
-		<div style="float:right;text-align:right">
+		<div id="bwm-ctrl">
 			&raquo; <a href="admin-iptraffic.asp">Configure</a>
 		</div>
 	</div>
-
-	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type="text/javascript">checkCstats();</script>
+<script>checkCstats();</script>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
-	<script type="text/javascript">genStdRefresh(1,1,'ref.toggle()');</script>
+<div id="footer">
+	<script>genStdRefresh(1,1,'ref.toggle()');</script>
+</div>
+
 </td></tr>
 </table>
 </form>

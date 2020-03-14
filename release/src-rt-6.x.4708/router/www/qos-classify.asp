@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,106 +7,23 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] QoS: Classification</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
-<script type="text/javascript" src="protocols.js"></script>
+<script src="tomato.js"></script>
+<script src="protocols.js"></script>
 
-<!-- / / / -->
-
-<style type="text/css">
-#qg div {
-	padding: 0 0 1px 0;
-	margin: 0;
-}
-#qg .co1 {
-	width: 370px;
-}
-#qg .co2 {
-	width: 80px;
-}
-#qg .co3 {
-	width: 300px;
-}
-#qg .co4 {
-	width: 40px;
-}
-#qg .x1a {
-	width: 34%;
-	float: left;
-}
-#qg .x1b {
-	width: 66%;
-	float: left;
-}
-#qg .x2a {
-	width: 35%;
-	float: left;
-	clear: left;
-}
-#qg .x2b {
-	width: 23%;
-	float: left;
-}
-#qg .x2c {
-	width: 41%;
-	float: left;
-}
-#qg .x3a {
-	width: 40%;
-	float: left;
-	clear: left;
-}
-#qg .x3b {
-	width: 60%;
-	float: left;
-}
-#qg .x4a {
-	width: 58%;
-	float: left;
-	clear: left;
-}
-#qg .x4b {
-	width: 41%;
-	float: left;
-}
-#qg .x5a {
-	float: left;
-	clear: left;
-	width: 70px;
-}
-#qg .x5b {
-	float: left;
-	padding: 2px 8px 0 8px;
-	width: 10px;
-	text-align: center;
-}
-#qg .x5c {
-	float: left;
-	width: 70px;
-}
-#qg .x5d {
-	float: left;
-	padding: 2px 0 0 8px;
-	width: 100px;
-}
-
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("qos_classnames,qos_enable,qos_orules"); %>
 
+//	<% layer7(); %>
 
 var abc = nvram.qos_classnames.split(' ');	/* Toastman - configurable class names */
-
 
 var ipp2p = [
 	[0,'IPP2P (disabled)'],[0xFFF,'All IPP2P filters'],[1,'AppleJuice'],[2,'Ares'],[4,'BitTorrent'],[8,'Direct Connect'],
@@ -121,7 +38,6 @@ var dscp = [
 for (i = 1; i < dscp.length - 1; ++i)
 	dscp[i][1] = 'DSCP Class ' + dscp[i][1];
 
-// <% layer7(); %>
 layer7.sort();
 for (i = 0; i < layer7.length; ++i)
 	layer7[i] = [layer7[i],layer7[i]];
@@ -139,12 +55,14 @@ function dscpClass(v) {
 
 	s = '';
 	if (v != '') {
-		for (i = 1; i < dscp.length - 1; ++i)	/* skip 1st and last elements */
+		/* skip 1st and last elements */
+		for (i = 1; i < dscp.length - 1; ++i)
 			if (dscp[i][0] * 1 == v * 1) {
 				s = dscp[i][1];
 				break;
 			}
 	}
+
 	return s;
 }
 
@@ -156,12 +74,19 @@ qosg.dataToView = function(data) {
 		b.push(((data[0] == 1) ? 'To ' : 'From ') + data[1]);
 	}
 	if (data[2] >= -1) {
-		if (data[2] == -1) b.push('TCP/UDP');
-			else if (data[2] >= 0) b.push(protocols[data[2]] || data[2]);
+		if (data[2] == -1)
+			b.push('TCP/UDP');
+		else if (data[2] >= 0)
+			b.push(protocols[data[2]] || data[2]);
+
 		if (data[3] != 'a') {
-			if (data[3] == 'd') s = 'Dst ';
-				else if (data[3] == 's') s = 'Src ';
-					else s = '';
+			if (data[3] == 'd')
+				s = 'Dst ';
+			else if (data[3] == 's')
+				s = 'Src ';
+			else
+				s = '';
+
 			b.push(s + 'Port: ' + data[4].replace(/:/g, '-'));
 		}
 	}
@@ -179,15 +104,17 @@ qosg.dataToView = function(data) {
 
 	if (data[9] != '') {
 		s = dscpClass(data[9]);
-		if (s != '') b.push(s);
-		else b.push('DSCP Value: ' + data[9]);
+		if (s != '')
+			b.push(s);
+		else
+			b.push('DSCP Value: ' + data[9]);
 	}
 
 	if (data[7] != '') {
 		b.push('Transferred: ' + data[7] + ((data[8] == '') ? '<small>KB+<\/small>' : (' - ' + data[8] + '<small>KB<\/small>')));
 	}
 
-	return [b.join('<br />'), class1[(data[10] * 1) + 1][1], escapeHTML(data[11]), (ruleCounter >= 0) ? ''+ ++ruleCounter : ''];
+	return [b.join('<br>'), class1[(data[10] * 1) + 1][1], escapeHTML(data[11]), (ruleCounter >= 0) ? ''+ ++ruleCounter : ''];
 }
 
 qosg.fieldValuesToData = function(row) {
@@ -196,6 +123,7 @@ qosg.fieldValuesToData = function(row) {
 	var dir = f[3].value;
 	var vdscp = (f[7].value == '*') ? f[8].value : f[7].value;
 	if ((proto != -1) && (proto != 6) && (proto != 17)) dir = 'a';
+
 	return [f[0].value, f[0].selectedIndex ? f[1].value : '',
 			proto, dir, (dir != 'a') ? f[4].value : '',
 			f[5].value, f[6].value, f[9].value, f[10].value, 
@@ -206,8 +134,10 @@ qosg.dataToFieldValues = function(data) {
 	var s = '';
 
 	if (data[9] != '') {
-		if (dscpClass(data[9]) == '') s = '*';
-		else s = data[9].toLowerCase();
+		if (dscpClass(data[9]) == '')
+			s = '*';
+		else
+			s = data[9].toLowerCase();
 	}
 
 	return [data[0], data[1], data[2], data[3], data[4], data[5], data[6], s, data[9], data[7], data[8], data[10], data[11]];
@@ -266,6 +196,7 @@ function v_dscp(e, quiet) {
 	}
 	e.value = '0x' + (v * 1).hex(2);
 	ferror.clear(e);
+
 	return 1;
 }
 
@@ -281,7 +212,8 @@ qosg.verifyFields = function(row, quiet) {
 		if (!v_length(f[1], quiet, 1)) return 0;
 		if (!_v_iptaddr(f[1], quiet, 0, 1, 1)) return 0;
 	}
-	else if ((a == 3) && (!v_mac(f[1], quiet))) return 0;
+	else if ((a == 3) && (!v_mac(f[1], quiet)))
+		return 0;
 
 	b = f[2].selectedIndex;
 	if ((b > 0) && (b <= 3) && (f[3].selectedIndex != 0) && (!v_iptport(f[4], quiet))) return 0;
@@ -299,8 +231,11 @@ qosg.verifyFields = function(row, quiet) {
 	b = e.value = e.value.trim();
 	if (b != '') {
 		b *= 1;
-		if (b >= BMAX) e.value = '';
-			else if (!v_range(e, quiet, 0, BMAX)) return 0;
+		if (b >= BMAX)
+			e.value = '';
+		else if (!v_range(e, quiet, 0, BMAX))
+			return 0;
+
 		if (a == '') f[9].value = a = 0;
 	}
 	else if (a != '') {
@@ -315,9 +250,11 @@ qosg.verifyFields = function(row, quiet) {
 	if (f[7].value == '*') {
 		if (!v_dscp(f[8], quiet)) return 0;
 	}
-	else f[8].value = f[7].value;
+	else
+		f[8].value = f[7].value;
 
 	if (!v_nodelim(f[12], quiet, 'Description', 1)) return 0;
+
 	return v_length(f[12], quiet);
 }
 
@@ -328,16 +265,13 @@ qosg.setup = function() {
 		if ((i != 6) && (i != 17)) a.push([i, protocols[i] || i]);
 	}
 
-	/* what a mess... */
-	this.init('qg', 'move', 80, [
+	this.init('qos-cl-grid', 'move', 80, [
 		{ multi: [
-			{ type: 'select', options: [[0,'Any Address'],[1,'Dst IP'],[2,'Src IP'],[3,'Src MAC']],
-				prefix: '<div class="x1a">', suffix: '<\/div>' },
+			{ type: 'select', options: [[0,'Any Address'],[1,'Dst IP'],[2,'Src IP'],[3,'Src MAC']], prefix: '<div class="x1a">', suffix: '<\/div>' },
 			{ type: 'text', maxlen: 32, prefix: '<div class="x1b">', suffix: '<\/div>' },
 
 			{ type: 'select', prefix: '<div class="x2a">', suffix: '<\/div>', options: a },
-			{ type: 'select', prefix: '<div class="x2b">', suffix: '<\/div>',
-				options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
+			{ type: 'select', prefix: '<div class="x2b">', suffix: '<\/div>', options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
 			{ type: 'text', maxlen: 130, prefix: '<div class="x2c">', suffix: '<\/div>' },
 
 			{ type: 'select', prefix: '<div class="x3a">', suffix: '<\/div>', options: ipp2p },
@@ -376,7 +310,9 @@ qosg.setup = function() {
 			b.splice(7, 1, c[0], (c.length == 1) ? '' : c[1]);
 			b[11] = unescape(b[11]);
 		}
-		else continue;
+		else
+			continue;
+
 		b[4] = b[4].replace(/:/g, '-');
 		qosg.insertData(-1, b);
 	}
@@ -414,16 +350,16 @@ function init() {
 	qosg.recolor();
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -433,30 +369,35 @@ function init() {
 <input type="hidden" name="_service" value="qos-restart">
 <input type="hidden" name="qos_orules">
 
-<div class="section-title">Outbound Direction</div>
+<!-- / / / -->
 
-<script type="text/javascript">
-if (nvram.qos_enable != '1') {
-	W('<div class="note-disabled"><b>QoS disabled.<\/b><br /><br /><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
-} else {
-	show_notice1('<% notice("iptables"); %>');
-}
+<div class="section-title">Outbound Direction</div>
+<script>
+	if (nvram.qos_enable != '1') {
+		W('<div class="note-disabled"><b>QoS disabled.<\/b><br><br><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+	}
+	else {
+		show_notice1('<% notice("iptables"); %>');
+	}
 </script>
 
+<!-- / / / -->
+
 <div class="section">
-	<div class="tomato-grid" id="qg"></div>
+	<div class="tomato-grid" id="qos-cl-grid"></div>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">qosg.setup();</script>
+<script>qosg.setup();</script>
 </body>
 </html>

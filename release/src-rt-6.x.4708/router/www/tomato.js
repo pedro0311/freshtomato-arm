@@ -39,8 +39,7 @@ Number.prototype.pad = function(min) {
 	return s;
 }
 
-Number.prototype.hex = function(min)
-{
+Number.prototype.hex = function(min) {
 	var h = '0123456789ABCDEF';
 	var n = this;
 	var s = '';
@@ -93,7 +92,7 @@ var elem = {
 		 if ((e = E(e)) != null) e.parentNode.removeChild(e);
 	},
 
-    parentElem: function(e, tagName) {
+	parentElem: function(e, tagName) {
 		e = E(e);
 		tagName = tagName.toUpperCase();
 		while (e.parentNode) {
@@ -106,14 +105,14 @@ var elem = {
 	display: function() {
 		var enable = arguments[arguments.length - 1];
 		for (var i = 0; i < arguments.length - 1; ++i) {
-			E(arguments[i]).style.display = enable ? '' : 'none';
+			E(arguments[i]).style.display = (enable ? '' : 'none');
 		}
 	},
 
 	isVisible: function(e) {
 		e = E(e);
 		while (e) {
-			if ((e.style.visibility != 'visible') || (e.style.display == 'none')) return false;
+			if (e.style.display == 'none') return false;;
 			e = e.parentNode;
 		}
 		return true;
@@ -156,16 +155,16 @@ var fields = {
 	getAll: function(e) {
 		var a = [];
 		switch (e.tagName) {
-		case 'INPUT':
-		case 'SELECT':
-			a.push(e);
+			case 'INPUT':
+			case 'SELECT':
+				a.push(e);
 			break;
-		default:
-			if (e.childNodes) {
-				for (var i = 0; i < e.childNodes.length; ++i) {
-					a = a.concat(fields.getAll(e.childNodes[i]));
+			default:
+				if (e.childNodes) {
+					for (var i = 0; i < e.childNodes.length; ++i) {
+						a = a.concat(fields.getAll(e.childNodes[i]));
+					}
 				}
-			}
 		}
 		return a;
 	},
@@ -176,7 +175,8 @@ var fields = {
 			for (i = e.length - 1; i >= 0; --i) {
 				e[i].disabled = d;
 			}
-		} else {
+		}
+		else {
 			var a = this.getAll(E(e));
 			for (var i = a.length - 1; i >= 0; --i) {
 				a[i].disabled = d;
@@ -251,28 +251,32 @@ var form = {
 			if ((f.tagName == 'INPUT') && ((f.type == 'CHECKBOX') || (f.type == 'RADIO')) && (!f.checked)) continue;
 			if (f.name == '_nextwait') {
 				wait = f.value * 1;
-				if (isNaN(wait)) wait = 5;
-					else wait = Math.abs(wait);
+				if (isNaN(wait))
+					wait = 5;
+				else
+					wait = Math.abs(wait);
 			}
 			v.push(escapeCGI(f.name) + '=' + escapeCGI(f.value));
 		}
 
 		if ((msg = E('footer-msg')) != null) {
 			msg.innerHTML = 'Saving...';
-			msg.style.visibility = 'visible';
+			msg.style.display = 'inline';
 		}
 
 		this.xhttp = new XmlHttp();
 		this.xhttp.onCompleted = function(text, xml) {
 			if (msg) {
-				if (text.match(/@msg:(.+)/)) msg.innerHTML = escapeHTML(RegExp.$1);
-					else msg.innerHTML = 'Saved';
+				if (text.match(/@msg:(.+)/))
+					msg.innerHTML = escapeHTML(RegExp.$1);
+				else
+					msg.innerHTML = 'Saved';
 			}
 			setTimeout(
 				function() {
 					if (sb) sb.disabled = 0;
 					if (cb) cb.disabled = 0;
-					if (msg) msg.style.visibility = 'hidden';
+					if (msg) msg.style.display = 'none';
 					if (typeof(submit_complete) != 'undefined') submit_complete();
 				}, wait * 1100);
 			form.xhttp = null;
@@ -294,14 +298,17 @@ var form = {
 			e.name = '_http_id';
 			e.value = nvram.http_id;
 			fom.appendChild(e);
-		} else {
+		}
+		else {
 			fom._http_id.value = nvram.http_id;
 		}
 	},
 
 	addIdAction: function(fom) {
-		if (fom.action.indexOf('?') != -1) fom.action += '&_http_id=' + nvram.http_id;
-			else fom.action += '?_http_id=' + nvram.http_id;
+		if (fom.action.indexOf('?') != -1)
+			fom.action += '&_http_id=' + nvram.http_id;
+		else
+			fom.action += '?_http_id=' + nvram.http_id;
 	},
 
 	dump: function(fom, async, url) {
@@ -344,22 +351,20 @@ var ferror = {
 
 	ok: function(e) {
 		if ((e = E(e)) == null) return 0;
-        return !e._error_msg;
+		return !e._error_msg;
 	}
 };
 
 // -----------------------------------------------------------------------------
 
-function fixFile(name)
-{
+function fixFile(name) {
 	var i;
 	if (((i = name.lastIndexOf('/')) > 0) || ((i = name.lastIndexOf('\\')) > 0))
 		name = name.substring(i + 1, name.length);
 	return name;
 }
 
-function _v_range(e, quiet, min, max, name)
-{
+function _v_range(e, quiet, min, max, name) {
 	if ((e = E(e)) == null) return 0;
 	var v = e.value;
 	if ((!v.match(/^ *[-\+]?\d+ *$/)) || (v < min) || (v > max)) {
@@ -371,30 +376,29 @@ function _v_range(e, quiet, min, max, name)
 	return 1;
 }
 
-function v_range(e, quiet, min, max)
-{
+function v_range(e, quiet, min, max) {
 	return _v_range(e, quiet, min, max, 'number');
 }
 
-function v_port(e, quiet)
-{
+function v_port(e, quiet) {
 	return _v_range(e, quiet, 1, 0xFFFF, 'port');
 }
 
-function v_octet(e, quiet)
-{
+function v_octet(e, quiet) {
 	return _v_range(e, quiet, 1, 254, 'address');
 }
 
-function v_mins(e, quiet, min, max)
-{
+function v_mins(e, quiet, min, max) {
 	var v, m;
 
 	if ((e = E(e)) == null) return 0;
 	if (e.value.match(/^\s*(.+?)([mhd])?\s*$/)) {
 		m = 1;
-		if (RegExp.$2 == 'h') m = 60;
-			else if (RegExp.$2 == 'd') m = 60 * 24;
+		if (RegExp.$2 == 'h')
+			m = 60;
+		else if (RegExp.$2 == 'd')
+			m = 60 * 24;
+
 		v = Math.round(RegExp.$1 * m);
 		if (!isNaN(v)) {
 			e.value = v;
@@ -405,8 +409,7 @@ function v_mins(e, quiet, min, max)
 	return 0;
 }
 
-function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask)
-{
+function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask) {
 	var s, a, b, c, d, i;
 	var ipp, temp;
 
@@ -420,18 +423,21 @@ function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask)
 		if (isMAC0(a)) {
 			if (bok) {
 				e.value = '';
-			} else {
+			}
+			else {
 				ferror.set(e, 'Invalid MAC or IP address');
 				return false;
 			}
 		}
-		else e.value = a;
+		else
+			e.value = a;
+
 		ferror.clear(e);
 		return true;
 	}
 
 	a = s.split('-');
-    
+
 	if (a.length > 2) {
 		ferror.set(e, 'Invalid IP address range', quiet);
 		return false;
@@ -442,7 +448,7 @@ function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask)
 		if ((a.length == 2) && (a[1].match(/^\d+$/)))
 			a[1]=ipp+a[1];
 	}
-	else{
+	else {
 		if ((a.length == 2) && (a[1].match(/^\d+$/))){
 			temp=a[0].split('.');
 			a[1]=temp[0]+'.'+temp[1]+'.'+temp[2]+'.'+a[1];
@@ -473,15 +479,14 @@ function v_macip(e, quiet, bok, lan_ipaddr, lan_netmask)
 	return true;
 }
 
-function fixIP(ip, x)
-{
+function fixIP(ip, x) {
 	var a, n, i;
-        a = ip;
-        i = a.indexOf("<br />");
-        if (i > 0)
-                a = a.slice(0,i);
+	a = ip;
+	i = a.indexOf("<br>");
+	if (i > 0)
+		a = a.slice(0,i);
 
-        a = a.split('.');
+	a = a.split('.');
 	if (a.length != 4) return null;
 	for (i = 0; i < 4; ++i) {
 		n = a[i] * 1;
@@ -492,8 +497,7 @@ function fixIP(ip, x)
 	return a.join('.');
 }
 
-function v_ip(e, quiet, x)
-{
+function v_ip(e, quiet, x) {
 	var ip;
 
 	if ((e = E(e)) == null) return 0;
@@ -507,19 +511,18 @@ function v_ip(e, quiet, x)
 	return true;
 }
 
-function v_ipz(e, quiet)
-{
+function v_ipz(e, quiet) {
 	if ((e = E(e)) == null) return 0;
 	if (e.value == '') e.value = '0.0.0.0';
 	return v_ip(e, quiet);
 }
 
-function v_dns(e, quiet)
-{
-	if ((e = E(e)) == null) return 0;	
+function v_dns(e, quiet) {
+	if ((e = E(e)) == null) return 0;
 	if (e.value == '') {
 		e.value = '0.0.0.0';
-	} else {
+	}
+	else {
 		var s = e.value.split(':');
 		if (s.length == 1) {
 			s.push(53);
@@ -541,7 +544,8 @@ function v_dns(e, quiet)
 	
 		if (s[1] == 53) {
 			e.value = s[0];
-		} else {
+		}
+		else {
 			e.value = s.join(':');
 		}
 	}
@@ -550,8 +554,7 @@ function v_dns(e, quiet)
 	return true;
 }
 
-function aton(ip)
-{
+function aton(ip) {
 	var o, x, i;
 
 	// ---- this is goofy because << mangles numbers as signed
@@ -561,15 +564,12 @@ function aton(ip)
 	return parseInt(x, 16);
 }
 
-function ntoa(ip)
-{
+function ntoa(ip) {
 	return ((ip >> 24) & 255) + '.' + ((ip >> 16) & 255) + '.' + ((ip >> 8) & 255) + '.' + (ip & 255);
 }
 
-
 // ---- 1.2.3.4, 1.2.3.4/24, 1.2.3.4/255.255.255.0, 1.2.3.4-1.2.3.5
-function _v_iptip(e, ip, quiet)
-{
+function _v_iptip(e, ip, quiet) {
 	var ma, x, y, z, oip;
 	var a, b;
 
@@ -604,7 +604,8 @@ function _v_iptip(e, ip, quiet)
 				ferror.set(e, oip + ' - invalid netmask', quiet);
 				return null;
 			}
-		} else {
+		}
+		else {
 			if ((ma < 0) || (ma > 32)) {
 				ferror.set(e, oip + ' - invalid netmask', quiet);
 				return null;
@@ -622,8 +623,7 @@ function _v_iptip(e, ip, quiet)
 	return ip + ((ma != '') ? ('/' + ma) : '');
 }
 
-function v_iptip(e, quiet, multi)
-{
+function v_iptip(e, quiet, multi) {
 	var v, i;
 
 	if ((e = E(e)) == null) return 0;
@@ -633,7 +633,8 @@ function v_iptip(e, quiet, multi)
 			ferror.set(e, 'Too many IP addresses', quiet);
 			return 0;
 		}
-	} else {
+	}
+	else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid IP address', quiet);
 			return 0;
@@ -646,8 +647,7 @@ function v_iptip(e, quiet, multi)
 	return 1;
 }
 
-function _v_subnet(e, ip, quiet)
-{
+function _v_subnet(e, ip, quiet) {
 	var ma, oip;
 	oip = ip;
 
@@ -660,7 +660,8 @@ function _v_subnet(e, ip, quiet)
 			ferror.set(e, oip + ' - invalid subnet', quiet);
 			return null;
 		}
-	} else {
+	}
+	else {
 		ferror.set(e, oip + ' - invalid subnet', quiet);
 		return null;
 	}
@@ -669,15 +670,13 @@ function _v_subnet(e, ip, quiet)
 	return ip + ((ma != '') ? ('/' + ma) : '');
 }
 
-function v_subnet(e, quiet)
-{
+function v_subnet(e, quiet) {
 	if ((_v_subnet(e, e.value, quiet)) == null) return 0;
 
 	return 1;
 }
 
-function _v_domain(e, dom, quiet)
-{
+function _v_domain(e, dom, quiet) {
 	var s;
 
 	s = dom.replace(/\s+/g, ' ').trim();
@@ -692,8 +691,7 @@ function _v_domain(e, dom, quiet)
 	return s;
 }
 
-function v_domain(e, quiet)
-{
+function v_domain(e, quiet) {
 	var v;
 
 	if ((e = E(e)) == null) return 0;
@@ -704,8 +702,7 @@ function v_domain(e, quiet)
 }
 
 /* IPV6-BEGIN */
-function ExpandIPv6Address(ip)
-{
+function ExpandIPv6Address(ip) {
 	var a, pre, n, i, fill, post;
 
 	ip = ip.toLowerCase();
@@ -713,27 +710,27 @@ function ExpandIPv6Address(ip)
 
 	a = ip.split('::');
 	switch (a.length) {
-	case 1:
-		if (a[0] == '') return null;
-		pre = a[0].split(':');
-		if (pre.length != 8) return null;
-		ip = pre.join(':');
+		case 1:
+			if (a[0] == '') return null;
+			pre = a[0].split(':');
+			if (pre.length != 8) return null;
+			ip = pre.join(':');
 		break;
-	case 2:
-		pre = a[0].split(':');
-		post = a[1].split(':');
-		n = 8 - pre.length - post.length;
-		for (i=0; i<2; i++) {
-			if (a[i]=='') n++;
-		}
-		if (n < 0) return null;
-		fill = '';
-		while (n-- > 0) fill += ':0';
-		ip = pre.join(':') + fill + ':' + post.join(':');
-		ip = ip.replace(/^:/, '').replace(/:$/, '');
+		case 2:
+			pre = a[0].split(':');
+			post = a[1].split(':');
+			n = 8 - pre.length - post.length;
+			for (i=0; i<2; i++) {
+				if (a[i]=='') n++;
+			}
+			if (n < 0) return null;
+			fill = '';
+			while (n-- > 0) fill += ':0';
+			ip = pre.join(':') + fill + ':' + post.join(':');
+			ip = ip.replace(/^:/, '').replace(/:$/, '');
 		break;
-	default:
-		return null;
+		default:
+			return null;
 	}
 
 	ip = ip.replace(/([a-f0-9]{1,4})/ig, '000$1');
@@ -741,14 +738,13 @@ function ExpandIPv6Address(ip)
 	return ip;
 }
 
-function CompressIPv6Address(ip)
-{
+function CompressIPv6Address(ip) {
 	var a, segments;
 
 	ip = ExpandIPv6Address(ip);
 	if (!ip) return null;
 
-	// if (ip.match(/(?:^00)|(?:^fe[8-9a-b])|(?:^ff)/)) return null; /* not valid routable unicast address */
+	/* if (ip.match(/(?:^00)|(?:^fe[8-9a-b])|(?:^ff)/)) return null; // not valid routable unicast address */
 
 	ip = ip.replace(/(^|:)0{1,3}/g, '$1');
 	ip = ip.replace(/(:0)+$/, '::');
@@ -756,8 +752,7 @@ function CompressIPv6Address(ip)
 	return ip;
 }
 
-function ZeroIPv6PrefixBits(ip, prefix_length)
-{
+function ZeroIPv6PrefixBits(ip, prefix_length) {
 	var b, c, m, n;
 	ip = ExpandIPv6Address(ip);
 	ip = ip.replace(/:/g,'');
@@ -775,8 +770,7 @@ function ZeroIPv6PrefixBits(ip, prefix_length)
 	return ip;
 }
 
-function ipv6ton(ip)
-{
+function ipv6ton(ip) {
 	var o, x, i;
 
 	ip = ExpandIPv6Address(ip);
@@ -788,8 +782,7 @@ function ipv6ton(ip)
 	return parseInt(x, 16);
 }
 
-function _v_ipv6_addr(e, ip, ipt, quiet)
-{
+function _v_ipv6_addr(e, ip, ipt, quiet) {
 	var oip;
 	var a, b;
 
@@ -854,8 +847,7 @@ function _v_ipv6_addr(e, ip, ipt, quiet)
 	return ip;
 }
 
-function v_ipv6_addr(e, quiet)
-{
+function v_ipv6_addr(e, quiet) {
 	if ((e = E(e)) == null) return 0;
 
 	ip = _v_ipv6_addr(e, e.value, false, quiet);
@@ -864,8 +856,7 @@ function v_ipv6_addr(e, quiet)
 }
 /* IPV6-END */
 
-function fixPort(p, def)
-{
+function fixPort(p, def) {
 	if (def == null) def = -1;
 	if (p == null) return def;
 	p *= 1;
@@ -873,8 +864,7 @@ function fixPort(p, def)
 	return p;
 }
 
-function _v_portrange(e, quiet, v)
-{
+function _v_portrange(e, quiet, v) {
 	if (v.match(/^(.*)[-:](.*)$/)) {
 		var x = RegExp.$1;
 		var y = RegExp.$2;
@@ -905,8 +895,7 @@ function _v_portrange(e, quiet, v)
 	return v;
 }
 
-function v_portrange(e, quiet)
-{
+function v_portrange(e, quiet) {
 	var v;
 
 	if ((e = E(e)) == null) return 0;
@@ -916,8 +905,7 @@ function v_portrange(e, quiet)
 	return 1;
 }
 
-function v_iptport(e, quiet)
-{
+function v_iptport(e, quiet) {
 	var a, i, v, q;
 
 	if ((e = E(e)) == null) return 0;
@@ -945,14 +933,12 @@ function v_iptport(e, quiet)
 	return 1;
 }
 
-function _v_netmask(mask)
-{
+function _v_netmask(mask) {
 	var v = aton(mask) ^ 0xFFFFFFFF;
 	return (((v + 1) & v) == 0);
 }
 
-function v_netmask(e, quiet)
-{
+function v_netmask(e, quiet) {
 	var n, b;
 
 	if ((e = E(e)) == null) return 0;
@@ -967,8 +953,11 @@ function v_netmask(e, quiet)
 	else if (e.value.match(/^\s*\/\s*(\d+)\s*$/)) {
 		b = RegExp.$1 * 1;
 		if ((b >= 1) && (b <= 32)) {
-			if (b == 32) n = 0xFFFFFFFF;	/* js quirk */
-			else n = (0xFFFFFFFF >>> b) ^ 0xFFFFFFFF;
+			if (b == 32)
+				n = 0xFFFFFFFF;	/* js quirk */
+			else
+				n = (0xFFFFFFFF >>> b) ^ 0xFFFFFFFF;
+
 			e.value = (n >>> 24) + '.' + ((n >>> 16) & 0xFF) + '.' + ((n >>> 8) & 0xFF) + '.' + (n & 0xFF);
 			ferror.clear(e);
 			return 1;
@@ -978,8 +967,7 @@ function v_netmask(e, quiet)
 	return 0;
 }
 
-function fixMAC(mac)
-{
+function fixMAC(mac) {
 	var t, i;
 
 	mac = mac.replace(/\s+/g, '').toUpperCase();
@@ -988,7 +976,8 @@ function fixMAC(mac)
 	}
 	else if (mac.length == 12) {
 		mac = mac.match(/../g);
-	} else {
+	}
+	else {
 		mac = mac.split(/[:\-]/);
 		if (mac.length != 6) return null;
 	}
@@ -1001,8 +990,7 @@ function fixMAC(mac)
 	return mac.join(':');
 }
 
-function v_mac(e, quiet)
-{
+function v_mac(e, quiet) {
 	var mac;
 
 	if ((e = E(e)) == null) return 0;
@@ -1016,8 +1004,7 @@ function v_mac(e, quiet)
 	return 1;
 }
 
-function v_macz(e, quiet)
-{
+function v_macz(e, quiet) {
 	var mac;
 
 	if ((e = E(e)) == null) return 0;
@@ -1031,8 +1018,7 @@ function v_macz(e, quiet)
 	return true;
 }
 
-function v_length(e, quiet, min, max)
-{
+function v_length(e, quiet, min, max) {
 	var s, n;
 
 	if ((e = E(e)) == null) return 0;
@@ -1053,8 +1039,7 @@ function v_length(e, quiet, min, max)
 	return 1;
 }
 
-function _v_iptaddr(e, quiet, multi, ipv4, ipv6)
-{
+function _v_iptaddr(e, quiet, multi, ipv4, ipv6) {
 	var v, t, i;
 
 	if ((e = E(e)) == null) return 0;
@@ -1064,7 +1049,8 @@ function _v_iptaddr(e, quiet, multi, ipv4, ipv6)
 			ferror.set(e, 'Too many addresses', quiet);
 			return 0;
 		}
-	} else {
+	}
+	else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid domain name or IP address', quiet);
 			return 0;
@@ -1100,13 +1086,11 @@ function _v_iptaddr(e, quiet, multi, ipv4, ipv6)
 	return 1;
 }
 
-function v_iptaddr(e, quiet, multi)
-{
+function v_iptaddr(e, quiet, multi) {
 	return _v_iptaddr(e, quiet, multi, 1, 0);
 }
 
-function _v_hostname(e, h, quiet, required, multi, delim, cidr)
-{
+function _v_hostname(e, h, quiet, required, multi, delim, cidr) {
 	var s;
 	var v, i;
 	var re;
@@ -1118,7 +1102,8 @@ function _v_hostname(e, h, quiet, required, multi, delim, cidr)
 			ferror.set(e, 'Too many hostnames.', quiet);
 			return null;
 		}
-	} else {
+	}
+	else {
 		if (v.length > 1) {
 			ferror.set(e, 'Invalid hostname.', quiet);
 			return null;
@@ -1147,8 +1132,7 @@ function _v_hostname(e, h, quiet, required, multi, delim, cidr)
 	return v.join((typeof(delim) == 'undefined') ? ' ' : delim);
 }
 
-function v_hostname(e, quiet, multi, delim)
-{
+function v_hostname(e, quiet, multi, delim) {
 	var v;
 
 	if ((e = E(e)) == null) return 0;
@@ -1161,8 +1145,7 @@ function v_hostname(e, quiet, multi, delim)
 	return 1;
 }
 
-function v_nodelim(e, quiet, name, checklist)
-{
+function v_nodelim(e, quiet, name, checklist) {
 	if ((e = E(e)) == null) return 0;
 
 	e.value = e.value.trim();
@@ -1175,8 +1158,7 @@ function v_nodelim(e, quiet, name, checklist)
 	return 1;
 }
 
-function v_path(e, quiet, required)
-{
+function v_path(e, quiet, required) {
 	if ((e = E(e)) == null) return 0;
 	if (required && !v_length(e, quiet, 1)) return 0;
 
@@ -1192,43 +1174,37 @@ function v_path(e, quiet, required)
 	return 1;
 }
 
-function isMAC0(mac)
-{
+function isMAC0(mac) {
 	return (mac == '00:00:00:00:00:00');
 }
 
 // -----------------------------------------------------------------------------
 
-function cmpIP(a, b)
-{
+function cmpIP(a, b) {
 	if ((a = fixIP(a)) == null) a = '255.255.255.255';
 	if ((b = fixIP(b)) == null) b = '255.255.255.255';
 	return aton(a) - aton(b);
 }
 
-function cmpText(a, b)
-{
+function cmpText(a, b) {
 	if (a == '') a = '\xff';
 	if (b == '') b = '\xff';
 	return (a < b) ? -1 : ((a > b) ? 1 : 0);
 }
 
-function cmpInt(a, b)
-{
+function cmpInt(a, b) {
 	a = parseInt(a, 10);
 	b = parseInt(b, 10);
 	return ((isNaN(a)) ? -0x7FFFFFFF : a) - ((isNaN(b)) ? -0x7FFFFFFF : b);
 }
 
-function cmpFloat(a, b)
-{
+function cmpFloat(a, b) {
 	a = parseFloat(a);
 	b = parseFloat(b);
 	return ((isNaN(a)) ? -Number.MAX_VALUE : a) - ((isNaN(b)) ? -Number.MAX_VALUE : b);
 }
 
-function cmpDate(a, b)
-{
+function cmpDate(a, b) {
 	return b.getTime() - a.getTime();
 }
 
@@ -1236,20 +1212,17 @@ function cmpDate(a, b)
 
 // ---- todo: cleanup this mess
 
-function TGO(e)
-{
+function TGO(e) {
 	return elem.parentElem(e, 'TABLE').gridObj;
 }
 
-function tgHideIcons()
-{
+function tgHideIcons() {
 	var e;
 	while ((e = document.getElementById('tg-row-panel')) != null) e.parentNode.removeChild(e);
 }
 
 // ---- options = sort, move, delete
-function TomatoGrid(tb, options, maxAdd, editorFields)
-{
+function TomatoGrid(tb, options, maxAdd, editorFields) {
 	this.init(tb, options, maxAdd, editorFields);
 	return this;
 }
@@ -1268,7 +1241,8 @@ TomatoGrid.prototype = {
 			this.tb.appendChild(table);
 			this.tb = E(table);
 			this.tb.gridObj = this;
-		} else {
+		}
+		else {
 			this.tb = null;
 		}
 		if (!options) options = '';
@@ -1297,7 +1271,8 @@ TomatoGrid.prototype = {
 				td.className = 'co' + (i + 1);
 				if (escCells) td.appendChild(document.createTextNode(c));
 					else td.innerHTML = c;
-			} else {
+			}
+			else {
 				tr.appendChild(c);
 			}
 		}
@@ -1445,8 +1420,11 @@ TomatoGrid.prototype = {
 				if (this.moving != q) {
 					var v = this.moving.rowIndex > q.rowIndex;
 					p.removeChild(this.moving);
-					if (v) p.insertBefore(this.moving, q);
-						else p.insertBefore(this.moving, q.nextSibling);
+					if (v)
+						p.insertBefore(this.moving, q);
+					else
+						p.insertBefore(this.moving, q.nextSibling);
+
 					this.recolor();
 				}
 				this.moving = null;
@@ -1576,57 +1554,60 @@ TomatoGrid.prototype = {
 				var id = null;
 				if (id) attrib += ' id="' + id + '"';
 				switch (f.type) {
-				case 'password':
-					if (f.peekaboo) {
-						switch (get_config('web_pb', '1')) {
-						case '0':
-							f.type = 'text';
-						case '2':
-							f.peekaboo = 0;
-							break;
+					case 'password':
+						if (f.peekaboo) {
+							switch (get_config('web_pb', '1')) {
+								case '0':
+									f.type = 'text';
+								case '2':
+									f.peekaboo = 0;
+								break;
+							}
 						}
-					}
-					attrib += ' autocomplete="off"';
-					if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
-					/* drop */
-				case 'text':
-					s += '<input type="' + f.type + '" maxlength=' + f.maxlen + common + attrib;
-					if (which == 'edit') s += ' value="' + escapeHTML('' + values[vi]) + '">';
-						else s += '>';
+						attrib += ' autocomplete="off"';
+						if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
+						/* drop */
+					case 'text':
+						s += '<input type="' + f.type + '" maxlength=' + f.maxlen + common + attrib;
+						if (which == 'edit')
+							s += ' value="' + escapeHTML('' + values[vi]) + '">';
+						else
+							s += '>';
 					break;
-				case 'clear':
-					s += '';
+					case 'clear':
+						s += '';
 					break;
-				case 'select':
-					s += '<select' + common + attrib + '>';
-					for (var k = 0; k < f.options.length; ++k) {
-						a = f.options[k];
+					case 'select':
+						s += '<select' + common + attrib + '>';
+						for (var k = 0; k < f.options.length; ++k) {
+							a = f.options[k];
+							if (which == 'edit') {
+								s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
+							}
+							else {
+								s += '<option value="' + a[0] + '">' + a[1] + '</option>';
+							}
+						}
+						s += '</select>';
+					break;
+					case 'checkbox':
+						s += '<input type="checkbox"' + common + attrib;
+						if ((which == 'edit') && (values[vi])) s += ' checked="checked"';
+						s += '>';
+					break;
+					case 'textarea':
 						if (which == 'edit') {
-							s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
-						} else {
-							s += '<option value="' + a[0] + '">' + a[1] + '</option>';
+							document.getElementById(f.proxy).value = values[vi];
 						}
-					}
-					s += '</select>';
 					break;
-				case 'checkbox':
-					s += '<input type="checkbox"' + common + attrib;
-					if ((which == 'edit') && (values[vi])) s += ' checked="checked"';
-					s += '>';
-					break;
-				case 'textarea':
-					if (which == 'edit'){
-						document.getElementById(f.proxy).value = values[vi];
-					}
-					break;
-				default:
-					s += f.custom.replace(/\$which\$/g, which);
+					default:
+						s += f.custom.replace(/\$which\$/g, which);
 				}
 				if (f.suffix) s += f.suffix;
 
 				++vi;
 			}
-			if(this.editorFields[i].type != 'textarea'){
+			if (this.editorFields[i].type != 'textarea'){
 				var c = row.insertCell(i);
 				c.innerHTML = s;
 				if (this.editorFields[i].vtop) c.style = 'vertical-align:top';
@@ -1649,7 +1630,8 @@ TomatoGrid.prototype = {
 				'<input type=button value="Delete" onclick="TGO(this).onDelete()"> &nbsp; ' +
 				'<input type=button value="OK" onclick="TGO(this).onOK()"> ' +
 				'<input type=button value="Cancel" onclick="TGO(this).onCancel()">';
-		} else {
+		}
+		else {
 			c.innerHTML =
 				'<input type=button value="Add" onclick="TGO(this).onAdd()">';
 		}
@@ -1681,15 +1663,17 @@ TomatoGrid.prototype = {
 
 	onKey: function(which, ev) {
 		switch (ev.keyCode) {
-		case 27:
-			if (which == 'edit') this.onCancel();
-			return false;
-		case 13:
-			if (((ev.srcElement) && (ev.srcElement.tagName == 'SELECT')) ||
-				((ev.target) && (ev.target.tagName == 'SELECT'))) return true;
-			if (which == 'edit') this.onOK();
-				else this.onAdd();
-			return false;
+			case 27:
+				if (which == 'edit') this.onCancel();
+				return false;
+			case 13:
+				if (((ev.srcElement) && (ev.srcElement.tagName == 'SELECT')) || ((ev.target) && (ev.target.tagName == 'SELECT'))) return true;
+				if (which == 'edit')
+					this.onOK();
+				else
+					this.onAdd();
+
+				return false;
 		}
 		return true;
 	},
@@ -1745,7 +1729,7 @@ TomatoGrid.prototype = {
 
 	clearTextarea: function() {
 		for (var i = 0; i < this.editorFields.length; ++i){
-			if(this.editorFields[i].type == 'textarea'){
+			if (this.editorFields[i].type == 'textarea'){
 				document.getElementById(this.editorFields[i].proxy).value = '';
 				ferror.clear(document.getElementById(this.editorFields[i].proxy));
 			}
@@ -1781,8 +1765,10 @@ TomatoGrid.prototype = {
 		ferror.clearAll(e);
 		for (i = 0; i < e.length; ++i) {
 			var f = e[i];
-			if (f.selectedIndex) f.selectedIndex = 0;
-				else f.value = '';
+			if (f.selectedIndex)
+				f.selectedIndex = 0;
+			else
+				f.value = '';
 		}
 		try { if (e.length) e[0].focus(); } catch (er) { }
 	},
@@ -1810,7 +1796,8 @@ TomatoGrid.prototype = {
 		}
 		if (column == this.sortColumn) {
 			this.sortAscending = !this.sortAscending;
-		} else {
+		}
+		else {
 			this.sortAscending = true;
 			this.sortColumn = column;
 		}
@@ -1882,8 +1869,7 @@ TomatoGrid.prototype = {
 // -----------------------------------------------------------------------------
 
 
-function xmlHttpObj()
-{
+function xmlHttpObj() {
 	var ob;
 	try {
 		ob = new XMLHttpRequest();
@@ -1901,22 +1887,23 @@ function xmlHttpObj()
 var _useAjax = -1;
 var _holdAjax = null;
 
-function useAjax()
-{
+function useAjax() {
 	if (_useAjax == -1) _useAjax = ((_holdAjax = xmlHttpObj()) != null);
 	return _useAjax;
 }
 
-function XmlHttp()
-{
+function XmlHttp() {
 	if ((!useAjax()) || ((this.xob = xmlHttpObj()) == null)) return null;
 	return this;
 }
 
 XmlHttp.prototype = {
 	addId: function(vars) {
-		if (vars) vars += '&';
-			else vars = '';
+		if (vars)
+			vars += '&';
+		else
+			vars = '';
+
 		vars += '_http_id=' + escapeCGI(nvram.http_id);
 		return vars;
 	},
@@ -1964,7 +1951,8 @@ XmlHttp.prototype = {
 			if (this.xob.readyState == 4) {
 				if (this.xob.status == 200) {
 					this.onCompleted(this.xob.responseText, this.xob.responseXML);
-				} else {
+				}
+				else {
 					this.onError('' + (this.xob.status || 'unknown'));
 				}
 			}
@@ -1982,8 +1970,7 @@ XmlHttp.prototype = {
 // -----------------------------------------------------------------------------
 
 
-function TomatoTimer(func, ms)
-{
+function TomatoTimer(func, ms) {
 	this.tid = null;
 	this.onTimer = func;
 	if (ms) this.start(ms);
@@ -2019,8 +2006,7 @@ TomatoTimer.prototype = {
 // -----------------------------------------------------------------------------
 
 
-function TomatoRefresh(actionURL, postData, refreshTime, cookieTag)
-{
+function TomatoRefresh(actionURL, postData, refreshTime, cookieTag) {
 	this.setup(actionURL, postData, refreshTime, cookieTag);
 	this.timer = new TomatoTimer(THIS(this, this.start));
 }
@@ -2070,7 +2056,8 @@ TomatoRefresh.prototype = {
 			if ((p.refreshTime > 0) && (!p.once)) {
 				p.updateUI('wait');
 				p.timer.start(Math.round(p.refreshTime));
-			} else {
+			}
+			else {
 				p.stop();
 			}
 
@@ -2091,8 +2078,11 @@ TomatoRefresh.prototype = {
 
 			if (p.cookieTag) {
 				var e = cookie.get(p.cookieTag + '-error') * 1;
-				if (isNaN(e)) e = 0;
-					else ++e;
+				if (isNaN(e))
+					e = 0;
+				else
+					++e;
+
 				cookie.unset(p.cookieTag);
 				cookie.set(p.cookieTag + '-error', e, 1);
 				if (e >= 3) {
@@ -2118,8 +2108,10 @@ TomatoRefresh.prototype = {
 	},
 
 	toggle: function(delay) {
-		if (this.running) this.stop();
-			else this.start(delay);
+		if (this.running)
+			this.stop();
+		else
+			this.start(delay);
 	},
 
 	updateUI: function(mode) {
@@ -2136,7 +2128,7 @@ TomatoRefresh.prototype = {
 
 		if ((e = E('refresh-time')) != null)
 			(b == 0 ? e.removeAttribute("disabled") : e.setAttribute("disabled", "disabled"));
-		if ((e = E('refresh-spinner')) != null) e.style.visibility = b ? 'visible' : 'hidden';
+		if ((e = E('refresh-spinner')) != null) e.style.display = (b ? 'inline-block' : 'none');
 	},
 
 	initPage: function(delay, def) {
@@ -2168,29 +2160,30 @@ TomatoRefresh.prototype = {
 	}
 }
 
-function genStdTimeList(id, zero, min)
-{
+function genStdTimeList(id, zero, min) {
 	var b = [];
 	var t = [0.5,1,2,3,4,5,10,15,30,60,120,180,240,300,10*60,15*60,20*60,30*60];
 	var i, v;
 
 	if (min >= 0) {
-		b.push('<select id="' + id + '"><option value=0>' + zero);
+		b.push('<select id="' + id + '"><option value="0">' + zero);
 		for (i = 0; i < t.length; ++i) {
 			v = t[i];
 			if (v < min) continue;
 			b.push('<option value=' + v + '>');
-			if (v == 60) b.push('1 minute');
-				else if (v > 60) b.push((v / 60) + ' minutes');
-				else b.push(v + ' seconds');
+			if (v == 60)
+				b.push('1 minute');
+			else if (v > 60)
+				b.push((v / 60) + ' minutes');
+			else
+				b.push(v + ' seconds');
 		}
 		b.push('</select> ');
 	}
 	document.write(b.join(''));
 }
 
-function genStdRefresh(spin, min, exec)
-{
+function genStdRefresh(spin, min, exec) {
 	W('<div style="text-align:right">');
 	if (spin) W('<img src="spin.gif" id="refresh-spinner" alt=""> ');
 	genStdTimeList('refresh-time', 'Refresh Every', min);
@@ -2201,8 +2194,7 @@ function genStdRefresh(spin, min, exec)
 // -----------------------------------------------------------------------------
 
 
-function _tabCreate(tabs)
-{
+function _tabCreate(tabs) {
 	var buf = [];
 	buf.push('<ul id="tabs">');
 	for (var i = 0; i < arguments.length; ++i)
@@ -2211,13 +2203,11 @@ function _tabCreate(tabs)
 	return buf.join('');
 }
 
-function tabCreate(tabs)
-{
+function tabCreate(tabs) {
 	document.write(_tabCreate.apply(this, arguments));
 }
 
-function tabHigh(id)
-{
+function tabHigh(id) {
 	var a = E('tabs').getElementsByTagName('A');
 	for (var i = 0; i < a.length; ++i) {
 		if (id != a[i].id) elem.removeClass(a[i], 'active');
@@ -2249,8 +2239,7 @@ var cookie = {
 
 // -----------------------------------------------------------------------------
 
-function checkEvent(evt)
-{
+function checkEvent(evt) {
 	if (typeof(evt) == 'undefined') {
 		// ---- IE
 		evt = event;
@@ -2260,46 +2249,38 @@ function checkEvent(evt)
 	return evt;
 }
 
-function W(s)
-{
+function W(s) {
 	document.write(s);
 }
 
-function E(e)
-{
+function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
 
-function PR(e)
-{
+function PR(e) {
 	return elem.parentElem(e, 'TR');
 }
 
-function THIS(obj, func)
-{
+function THIS(obj, func) {
 	return function() { return func.apply(obj, arguments); }
 }
 
-function UT(v)
-{
+function UT(v) {
 	return (typeof(v) == 'undefined') ? '' : '' + v;
 }
 
-function escapeHTML(s)
-{
+function escapeHTML(s) {
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
 	return s.replace(/[&"'<>\r\n]/g, esc);
 }
 
-function escapeCGI(s)
-{
+function escapeCGI(s) {
 	return escape(s).replace(/\+/g, '%2B');	/* escape() doesn't handle + */
 }
 
-function escapeD(s)
-{
+function escapeD(s) {
 	function esc(c) {
 		return '%' + c.charCodeAt(0).hex(2);
 	}
@@ -2310,18 +2291,15 @@ function ellipsis(s, max) {
 	return (s.length <= max) ? s : s.substr(0, max - 3) + '...';
 }
 
-function MIN(a, b)
-{
+function MIN(a, b) {
 	return (a < b) ? a : b;
 }
 
-function MAX(a, b)
-{
+function MAX(a, b) {
 	return (a > b) ? a : b;
 }
 
-function fixInt(n, min, max, def)
-{
+function fixInt(n, min, max, def) {
 	if (n === null) return def;
 	n *= 1;
 	if (isNaN(n)) return def;
@@ -2330,16 +2308,14 @@ function fixInt(n, min, max, def)
 	return n;
 }
 
-function comma(n)
-{
+function comma(n) {
 	n = '' + n;
 	var p = n;
 	while ((n = n.replace(/(\d+)(\d{3})/g, '$1,$2')) != p) p = n;
 	return n;
 }
 
-function doScaleSize(n, sm)
-{
+function doScaleSize(n, sm) {
 	if (isNaN(n *= 1)) return '-';
 	if (n <= 9999) return '' + n;
 	var s = -1;
@@ -2350,21 +2326,18 @@ function doScaleSize(n, sm)
 	return comma(n.toFixed(2)) + (sm ? '<small> ' : ' ') + (['KB', 'MB', 'GB'])[s] + (sm ? '</small>' : '');
 }
 
-function scaleSize(n)
-{
+function scaleSize(n) {
 	return doScaleSize(n, 1);
 }
 
-function timeString(mins)
-{
+function timeString(mins) {
 	var h = Math.floor(mins / 60);
 	if ((new Date(2000, 0, 1, 23, 0, 0, 0)).toLocaleString().indexOf('23') != -1)
 		return h + ':' + (mins % 60).pad(2);
 	return ((h == 0) ? 12 : ((h > 12) ? h - 12 : h)) + ':' + (mins % 60).pad(2) + ((h >= 12) ? ' PM' : ' AM');
 }
 
-function features(s)
-{
+function features(s) {
 	var features = ['ses','brau','aoss','wham','hpamp','!nve','11n','1000et','11ac'];
 	var i;
 
@@ -2374,27 +2347,23 @@ function features(s)
 	return 0;
 }
 
-function get_config(name, def)
-{
+function get_config(name, def) {
 	return ((typeof(nvram) != 'undefined') && (typeof(nvram[name]) != 'undefined')) ? nvram[name] : def;
 }
 
-function nothing()
-{
+function nothing() {
 }
 
 // -----------------------------------------------------------------------------
 
-function show_notice1(s)
-{
+function show_notice1(s) {
 // ---- !!TB - USB Support: multi-line notices
-	if (s.length) document.write('<div id="notice1">' + s.replace(/\n/g, '<br />') + '</div><br style="clear:both">');
+	if (s.length) document.write('<div id="notice">' + s.replace(/\n/g, '<br>') + '</div><br style="clear:both">');
 }
 
 // -----------------------------------------------------------------------------
 
-function myName()
-{
+function myName() {
 	var name, i;
 
 	name = document.location.pathname;
@@ -2404,8 +2373,7 @@ function myName()
 	return name;
 }
 
-function navi()
-{
+function navi() {
 	var menu = [
 		['Status', 			'status', 0, [
 			['Overview',			'overview.asp'],
@@ -2490,16 +2458,7 @@ function navi()
 			['MySQL Server',	'mysql.asp']
 			] ],
 /* NGINX-END */
-/* REMOVE-BEGIN
-		['Scripts',				'sc', 0, [
-			['Startup',		'startup.asp'],
-			['Shutdown',		'shutdown.asp'],
-			['Firewall',		'firewall.asp'],
-			['WAN Up',		'wanup.asp']
-			] ],
-REMOVE-END */
 /* USB-BEGIN */
-// ---- !!TB - USB, FTP, Samba, Media Server
 		['USB and NAS',			'nas', 0, [
 			['USB Support',			'usb.asp']
 /* FTP-BEGIN */
@@ -2585,15 +2544,17 @@ REMOVE-END */
 	for (i = 0; i < menu.length; ++i) {
 		var m = menu[i];
 		if (!m) {
-			buf.push("<br />");
+			buf.push("<br>");
 			continue;
 		}
 		if (m.length == 2) {
 			buf.push('<a href="' + m[1] + '" class="indent1' + (((base == '') && (name == m[1])) ? ' active' : '') + '">' + m[0] + '</a>');
-		} else {
+		}
+		else {
 			if (base == m[1]) {
 				b = name;
-			} else {
+			}
+			else {
 				a = cookie.get('menu_' + m[1]);
 				b = m[3][0][1];
 				for (j = 0; j < m[3].length; ++j) {
@@ -2625,8 +2586,7 @@ REMOVE-END */
 	}
 }
 
-function createFieldTable(flags, desc)
-{
+function createFieldTable(flags, desc) {
 	var common;
 	var i, n;
 	var name;
@@ -2658,7 +2618,8 @@ function createFieldTable(flags, desc)
 		if (v.text) {
 			if (v.title) {
 				buf.push('<td class="title indent' + (v.indent || 1) + '">' + v.title + '</td><td class="content">' + v.text + '</td></tr>');
-			} else {
+			}
+			else {
 				buf.push('<td colspan="2">' + v.text + '</td></tr>');
 			}
 			continue;
@@ -2668,15 +2629,19 @@ function createFieldTable(flags, desc)
 		buf2 = [];
 		buf2.push('<td class="content">');
 
-		if (v.multi) fields = v.multi;
-			else fields = [v];
+		if (v.multi)
+			fields = v.multi;
+		else
+			fields = [v];
 
 		for (n = 0; n < fields.length; ++n) {
 			f = fields[n];
 			if (f.prefix) buf2.push(f.prefix);
 
-			if ((f.type == 'radio') && (!f.id)) id = '_' + f.name + '_' + i;
-				else id = (f.id ? f.id : ('_' + f.name));
+			if ((f.type == 'radio') && (!f.id))
+				id = '_' + f.name + '_' + i;
+			else
+				id = (f.id ? f.id : ('_' + f.name));
 
 			if (id1 == '') id1 = id;
 
@@ -2685,47 +2650,47 @@ function createFieldTable(flags, desc)
 			name = f.name ? (' name="' + f.name + '"') : '';
 
 			switch (f.type) {
-			case 'checkbox':
-				buf2.push('<input type="checkbox"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+				case 'checkbox':
+					buf2.push('<input type="checkbox"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
 				break;
-			case 'radio':
-				buf2.push('<input type="radio"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+				case 'radio':
+					buf2.push('<input type="radio"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
 				break;
-			case 'password':
-				if (f.peekaboo) {
-					switch (get_config('web_pb', '1')) {
-					case '0':
-						f.type = 'text';
-					case '2':
-						f.peekaboo = 0;
-						break;
+				case 'password':
+					if (f.peekaboo) {
+						switch (get_config('web_pb', '1')) {
+							case '0':
+								f.type = 'text';
+							case '2':
+								f.peekaboo = 0;
+							break;
+						}
 					}
-				}
-				if (f.type == 'password') {
-					common += ' autocomplete="off"';
-					if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
-				}
-				/* drop */
-			case 'text':
-				buf2.push('<input type="' + f.type + '"' + name + ' value="' + escapeHTML(UT(f.value)) + '" maxlength=' + f.maxlen + (f.size ? (' size=' + f.size) : '') + common + '>');
+					if (f.type == 'password') {
+						common += ' autocomplete="off"';
+						if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
+					}
+					/* drop */
+				case 'text':
+					buf2.push('<input type="' + f.type + '"' + name + ' value="' + escapeHTML(UT(f.value)) + '" maxlength=' + f.maxlen + (f.size ? (' size=' + f.size) : '') + common + '>');
 				break;
-			case 'clear':
-				s += '';
+				case 'clear':
+					s += '';
 				break;
-			case 'select':
-				buf2.push('<select' + name + common + '>');
-				for (i = 0; i < f.options.length; ++i) {
-					a = f.options[i];
-					if (a.length == 1) a.push(a[0]);
-					buf2.push('<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected="selected"' : '') + '>' + a[1] + '</option>');
-				}
-				buf2.push('</select>');
+				case 'select':
+					buf2.push('<select' + name + common + '>');
+					for (i = 0; i < f.options.length; ++i) {
+						a = f.options[i];
+						if (a.length == 1) a.push(a[0]);
+						buf2.push('<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected="selected"' : '') + '>' + a[1] + '</option>');
+					}
+					buf2.push('</select>');
 				break;
-			case 'textarea':
-				buf2.push('<textarea' + name + common + (f.wrap ? (' style="white-space:' + f.wrap + ';overflow-wrap:normal;overflow-x:scroll"') : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>');
+				case 'textarea':
+					buf2.push('<textarea' + name + common + (f.wrap ? (' style="white-space:' + f.wrap + ';overflow-wrap:normal;overflow-x:scroll"') : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>');
 				break;
-			default:
-				if (f.custom) buf2.push(f.custom);
+				default:
+					if (f.custom) buf2.push(f.custom);
 				break;
 			}
 			if (f.suffix) buf2.push(f.suffix);
@@ -2745,8 +2710,7 @@ function createFieldTable(flags, desc)
 	document.write(buf.join(''));
 }
 
-function peekaboo(id, show)
-{
+function peekaboo(id, show) {
 	try {
 		var o = document.createElement('INPUT');
 		var e = E(id);
@@ -2767,7 +2731,8 @@ function peekaboo(id, show)
 		if (show) {
 			o.onblur = function(ev) { setTimeout('peekaboo("' + this.id + '", 0)', 0) };
 			setTimeout('try { E("' + id + '").focus() } catch (ex) { }', 0)
-		} else {
+		}
+		else {
 			o.onfocus = function(ev) { peekaboo(this.id, 1); };
 		}
 	}
@@ -2784,34 +2749,40 @@ REMOVE-END */
 
 // -----------------------------------------------------------------------------
 
-function reloadPage()
-{
+function reloadPage() {
 	document.location.reload(1);
 }
 
-function reboot()
-{
+function reboot() {
 	if (confirm("Reboot?")) form.submitHidden('tomato.cgi', { _reboot: 1, _commit: 0, _nvset: 0 });
 }
 
-function shutdown()
-{
+function shutdown() {
 	if (confirm("Shutdown?")) form.submitHidden('shutdown.cgi', { });
 }
 
-function logout()
-{
+function logout() {
 	form.submitHidden('logout.asp', { });
+}
+
+function toggleVisibility(where, whichone) {
+	if (E('sesdiv_' + whichone).style.display != 'none') {
+		E('sesdiv_' + whichone).style.display = 'none';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to show)';
+		cookie.set(where + '_' + whichone + '_vis', 0);
+	}
+	else {
+		E('sesdiv_' + whichone).style.display = 'block';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to hide)';
+		cookie.set(where + '_' + whichone + '_vis', 1);
+	}
 }
 
 // -----------------------------------------------------------------------------
 
-
-
 // ---- debug
 
-function isLocal()
-{
+function isLocal() {
 	return location.href.search('file://') == 0;
 }
 
@@ -2819,16 +2790,13 @@ function console(s)
 {
 }
 
-
 // -----------------------------------------------------------------------------
 
-/* REMOVE-BEGIN
-//  events handler
-REMOVE-END */
+// ---- events handler
 
-if (typeof document.getElementsByClassName!="function") {	/* IE */
+if (typeof document.getElementsByClassName != 'function') {	/* IE */
 	document.getElementsByClassName = function(cl) {
-		var retnode = new Array(), patt = new RegExp("(^|\\\\s)"+cl+"(\\\\s|$)"), els = this.getElementsByTagName("*");
+		var retnode = new Array(), patt = new RegExp("(^|\\\\s)" + cl + "(\\\\s|$)"), els = this.getElementsByTagName('*');
 		for (i = 0, j = 0; i < els.length; i++) {
 			if (patt.test(els[i].className)) {
 				retnode[j] = els[i];
@@ -2838,20 +2806,23 @@ if (typeof document.getElementsByClassName!="function") {	/* IE */
 		return retnode;
 	};
 }
+
 function addEvent(obj, type, fn) {
 	if (obj.addEventListener) {
 		obj.addEventListener(type, fn, false);
 		EventCache.add(obj, type, fn);
 	}
 	else if (obj.attachEvent) {
-		obj["e"+type+fn] = fn;
-		obj[type+fn] = function() { obj["e"+type+fn]( window.event ); }
-		obj.attachEvent("on"+type, obj[type+fn]);
+		obj['e' + type + fn] = fn;
+		obj[type + fn] = function() { obj['e' + type + fn](window.event); }
+		obj.attachEvent('on' + type, obj[type + fn]);
 		EventCache.add(obj, type, fn);
-	} else {
-		obj["on"+type] = obj["e"+type+fn];
+	}
+	else {
+		obj['on' + type] = obj['e' + type + fn];
 	}
 }
+
 var EventCache = function() {
 	var listEvents = [];
 	return {
@@ -2859,17 +2830,17 @@ var EventCache = function() {
 		add : function(node, sEventName, fHandler) {
 			listEvents.push(arguments);
 		},
-		flush : function(){
+		flush : function() {
 			var i, item;
-			for(i = listEvents.length - 1; i >= 0; i = i - 1) {
+			for (i = listEvents.length - 1; i >= 0; i = i - 1) {
 				item = listEvents[i];
-				if(item[0].removeEventListener){
+				if (item[0].removeEventListener) {
 					item[0].removeEventListener(item[1], item[2], false);
 				};
-				if(item[1].substring(0, 2) != "on") {
-					item[1] = "on" + item[1];
+				if (item[1].substring(0, 2) != 'on') {
+					item[1] = 'on' + item[1];
 				};
-				if(item[0].detachEvent) {
+				if (item[0].detachEvent) {
 					item[0].detachEvent(item[1], item[2]);
 				};
 				item[0][item[1]] = null;
@@ -2877,7 +2848,8 @@ var EventCache = function() {
 		}
 	};
 }();
-addEvent(window, "unload", EventCache.flush);
+
+addEvent(window, 'unload', EventCache.flush);
 function cancelDefaultAction(e) {
 	var evt = e ? e : window.event;
 	if (evt.preventDefault) evt.preventDefault();

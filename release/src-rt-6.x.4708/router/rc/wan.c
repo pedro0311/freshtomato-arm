@@ -1005,10 +1005,10 @@ void start_wan_if(int mode, char *prefix)
 		nvram_set(strcat_r(prefix, "_hwaddr", tmp), ether_etoa((const unsigned char *) ifr.ifr_hwaddr.sa_data, buf));
 	}
 
-	/* Set initial QoS mode again now that WAN port is ready. */
-	set_et_qos_mode(sd);
-
 	close(sd);
+
+	/* Set initial QoS mode again now that WAN port is ready. */
+	set_et_qos_mode();
 
 	mwanlog(LOG_DEBUG, "MWAN: OUT start_wan_if (%s)", prefix);
 

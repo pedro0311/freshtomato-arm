@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Samba Server - !!TB
@@ -6,48 +6,29 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] NAS: File Sharing</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-#ss-grid {
-	width: 99%;
-}
-#ss-grid .co1, #ss-grid .co2, #ss-grid .co3 {
-	width: 25%;
-}
-#ss-grid .co4 {
-	width: 16%;
-}
-#ss-grid .co5 {
-	width: 9%;
-}
-textarea {
-	width: 98%;
-	height: 6em;
-}
-</style>
+<script>
 
-<script type="text/javascript" src="debug.js"></script>
+//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins,gro_disable"); %>
 
-<script type="text/javascript">
-
-//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins"); %>
-
+var cprefix = 'nas_samba';
 var ssg = new TomatoGrid();
 
 ssg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
-		if (data[i][f] == v) return true;
+		if (data[i][f] == v)
+			return true;
 	}
+
 	return false;
 }
 
@@ -60,6 +41,7 @@ ssg.sortCompare = function(a, b) {
 	var da = a.getRowData();
 	var db = b.getRowData();
 	var r = cmpText(da[col], db[col]);
+
 	return this.sortAscending ? r : -r;
 }
 
@@ -69,6 +51,7 @@ ssg.dataToView = function(data) {
 
 ssg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
+
 	return [f[0].value, f[1].value, f[2].value, f[3].value, f[4].value];
 }
 
@@ -150,6 +133,8 @@ function verifyFields(focused, quiet) {
 	E('_smbd_autoshare').disabled = (a == 0);
 	E('_f_smbd_master').disabled = (a == 0);
 	E('_f_smbd_wins').disabled = (a == 0 || (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0'));
+	E('_f_gro_disable').disabled = (a == 0);
+	if (a == 0) E('_f_gro_disable').checked = true; /* disable gro (default) if smbd off */
 
 	if (a != 0 && !v_length('_smbd_ifnames', quiet, 0, 50)) return 0;
 	if (a != 0 && !v_length('_smbd_custom', quiet, 0, 2048)) return 0;
@@ -180,46 +165,42 @@ function save() {
 	for (var i = 0; i < data.length; ++i) r.push(data[i].join('<'));
 	fom.smbd_shares.value = r.join('>');
 	fom.smbd_master.value = E('_f_smbd_master').checked ? 1 : 0;
+
 	if (nvram.wan_wins == '' || nvram.wan_wins == '0.0.0.0')
 		fom.smbd_wins.value = E('_f_smbd_wins').checked ? 1 : 0;
 	else
 		fom.smbd_wins.value = nvram.smbd_wins;
 
+	fom.gro_disable.value = E('_f_gro_disable').checked ? 1 : 0;
 	form.submit(fom, 1);
 }
 
 function init() {
 	var c;
-	if (((c = cookie.get('nas_samba_notes_vis')) != null) && (c == '1')) {
-		toggleVisibility("notes");
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "notes");
 	}
+
 	var elements = document.getElementsByClassName("new_window");
 	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
-function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('nas_samba_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('nas_samba_' + whichone + '_vis', 1);
-	}
+function earlyInit() {
+	ssg.setup();
+	verifyFields(null, true);
 }
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -227,81 +208,85 @@ function toggleVisibility(whichone) {
 
 <input type="hidden" name="_nextpage" value="nas-samba.asp">
 <input type="hidden" name="_service" value="samba-restart">
-
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">
+<input type="hidden" name="gro_disable">
+
+<!-- / / / -->
 
 <div class="section-title">Samba File Sharing</div>
 <div class="section">
-<script type="text/javascript">
-createFieldTable('', [
-	{ title: 'Enable File Sharing', name: 'smbd_enable', type: 'select',
-		options: [['0', 'No'],['1', 'Yes, no Authentication'],['2', 'Yes, Authentication required']],
-		value: nvram.smbd_enable },
-	{ title: 'User Name', indent: 2, name: 'smbd_user', type: 'text', maxlen: 50, size: 32,
-		value: nvram.smbd_user },
-	{ title: 'Password', indent: 2, name: 'smbd_passwd', type: 'password', maxlen: 50, size: 32, peekaboo: 1,
-		value: nvram.smbd_passwd },
-	null,
-	{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 20, size: 32,
-		value: nvram.smbd_wgroup },
-	{ title: 'Client Codepage', name: 'smbd_cpage', type: 'select',
-		options: [['', 'Unspecified'],['437', '437 (United States, Canada)'],['850', '850 (Western Europe)'],['852', '852 (Central / Eastern Europe)'],['866', '866 (Cyrillic / Russian)']
-/* LINUX26-BEGIN */
-		,['932', '932 (Japanese)'],['936', '936 (Simplified Chinese)'],['949', '949 (Korean)'],['950', '950 (Traditional Chinese / Big5)']
-/* LINUX26-END */
-		],
-		suffix: ' <small> (start cmd.exe and type chcp to see the current code page)<\/small>',
-		value: nvram.smbd_cpage },
-	{ title: 'Network Interfaces', name: 'smbd_ifnames', type: 'text', maxlen: 50, size: 32,
-		suffix: ' <small> (space-delimited)<\/small>',
-		value: nvram.smbd_ifnames },
-	{ title: 'Samba<br />Custom Configuration', name: 'smbd_custom', type: 'textarea', value: nvram.smbd_custom },
-	{ title: 'Auto-share all USB Partitions', name: 'smbd_autoshare', type: 'select',
-		options: [['0', 'Disabled'],['1', 'Read Only'],['2', 'Read / Write'],['3', 'Hidden Read / Write']],
-		value: nvram.smbd_autoshare },
-	{ title: 'Options', multi: [
-		{ suffix: '&nbsp; Master Browser &nbsp;&nbsp;&nbsp;', name: 'f_smbd_master', type: 'checkbox', value: nvram.smbd_master == 1 },
-		{ suffix: '&nbsp; WINS Server &nbsp;',	name: 'f_smbd_wins', type: 'checkbox', value: (nvram.smbd_wins == 1) && (nvram.wan_wins == '' || nvram.wan_wins == '0.0.0.0') }
-	] }
-]);
-</script>
+	<script>
+		createFieldTable('', [
+			{ title: 'Enable File Sharing', name: 'smbd_enable', type: 'select',
+				options: [['0', 'No'],['1', 'Yes, no Authentication'],['2', 'Yes, Authentication required']],
+				value: nvram.smbd_enable },
+			{ title: 'User Name', indent: 2, name: 'smbd_user', type: 'text', maxlen: 50, size: 32,
+				value: nvram.smbd_user },
+			{ title: 'Password', indent: 2, name: 'smbd_passwd', type: 'password', maxlen: 50, size: 32, peekaboo: 1,
+				value: nvram.smbd_passwd },
+			null,
+			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == '1', suffix: ' <small>Default: GRO off (checked)<\/small>' },
+			{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 20, size: 32,
+				value: nvram.smbd_wgroup },
+			{ title: 'Client Codepage', name: 'smbd_cpage', type: 'select',
+				options: [['', 'Unspecified'],['437', '437 (United States, Canada)'],['850', '850 (Western Europe)'],['852', '852 (Central / Eastern Europe)'],['866', '866 (Cyrillic / Russian)']
+				,['932', '932 (Japanese)'],['936', '936 (Simplified Chinese)'],['949', '949 (Korean)'],['950', '950 (Traditional Chinese / Big5)']
+				],
+				suffix: ' <small> (start cmd.exe and type chcp to see the current code page)<\/small>',
+				value: nvram.smbd_cpage },
+			{ title: 'Network Interfaces', name: 'smbd_ifnames', type: 'text', maxlen: 50, size: 32,
+				suffix: ' <small> (space-delimited)<\/small>',
+				value: nvram.smbd_ifnames },
+			{ title: 'Samba<br>Custom Configuration', name: 'smbd_custom', type: 'textarea', value: nvram.smbd_custom },
+			{ title: 'Auto-share all USB Partitions', name: 'smbd_autoshare', type: 'select',
+				options: [['0', 'Disabled'],['1', 'Read Only'],['2', 'Read / Write'],['3', 'Hidden Read / Write']],
+				value: nvram.smbd_autoshare },
+			{ title: 'Options', multi: [
+				{ suffix: '&nbsp; Master Browser &nbsp;&nbsp;&nbsp;', name: 'f_smbd_master', type: 'checkbox', value: nvram.smbd_master == 1 },
+				{ suffix: '&nbsp; WINS Server &nbsp;',	name: 'f_smbd_wins', type: 'checkbox', value: (nvram.smbd_wins == 1) && (nvram.wan_wins == '' || nvram.wan_wins == '0.0.0.0') }
+			] }
+		]);
+	</script>
 </div>
-<br/>
+
+<!-- / / / -->
 
 <div class="section-title">Additional Shares List</div>
 <div class="section">
 	<div class="tomato-grid" id="ss-grid"></div>
-	<script type="text/javascript">ssg.setup();</script>
-<br/>
-<small>When no shares are specified and auto-sharing is disabled, <i>/mnt</i> directory is shared in Read Only mode.</small>
+
+	<small>When no shares are specified and auto-sharing is disabled, <i>/mnt</i> directory is shared in Read Only mode.</small>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
-<div class="section" id="sesdivnotes" style="display:none">
-<ul>
-<li><b>Network Interfaces</b> - Space-delimited list of router interface names Samba will bind to.
-<ul>
-<li>If empty, <i>interfaces = <% nv("lan_ifname"); %></i> will be used instead.</li>
-<li>The <i>bind interfaces only = yes</i> directive is always set.</li>
-<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
-</ul></li>
-</ul>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
+	<ul>
+		<li><b>Network Interfaces</b> - Space-delimited list of router interface names Samba will bind to.
+			<ul>
+				<li>If empty, <i>interfaces = <% nv("lan_ifname"); %></i> will be used instead.</li>
+				<li>The <i>bind interfaces only = yes</i> directive is always set.</li>
+				<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
+			</ul>
+		</li>
+		<li><b>Disable GRO</b> - Disable/Enable Generic Receive Offload</li>
+	</ul>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">verifyFields(null, 1);</script>
+<script>earlyInit();</script>
 </body>
 </html>

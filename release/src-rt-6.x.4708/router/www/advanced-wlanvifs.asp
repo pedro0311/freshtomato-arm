@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2007 Jonathan Zarate
@@ -14,47 +14,24 @@
 	No part of this file may be used without permission.
 	LAN Access admin module by Augusto Bott
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Advanced: Virtual Wireless Interfaces</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
-<style type="text/css">
-#wlif-grid .co2,
-#wlif-grid .co3,
-#wlif-grid .co4,
-#wlif-grid .co6 {
-	text-align: center;
-}
-#wlif-grid .centered {
-	text-align: center;
-}
-#spin {
-	visibility: hidden;
-	vertical-align: middle;
-}
-ul.tabs a,
-#tabs a {
-	width: 140px;
-}
-</style>
+<script src="tomato.js"></script>
+<script src="md5.js"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script src="interfaces.js"></script>
+<script src="wireless.js"></script>
 
-<script type="text/javascript" src="debug.js"></script>
+<script>
 
-<script type="text/javascript" src="md5.js"></script>
-<script type="text/javascript" src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script type="text/javascript" src="interfaces.js"></script>
-<script type="text/javascript" src="wireless.js"></script>
+//	<% nvram("nas_alternate,wl_auth,wl_auth_mode,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features,wl_macmode,wl_maclist");%>
 
-<script type="text/javascript">
-
-var nvram;
-
-// <% nvram("nas_alternate,wl_auth,wl_auth_mode,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features,wl_macmode,wl_maclist");%>
-
+var cprefix = 'advanced_wlanvifs';
 var vifs_possible = [];
 var vifs_defined = [];
 var vifs_deleted = [];
@@ -95,22 +72,6 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 	}
 }
 
-function spin(x, unit) {
-	for (var u = 0; u < wl_ifaces.length; ++u) {
-		E('_f_wl'+wl_unit(u)+'_scan').disabled = x;
-	}
-	var e = E('_f_wl'+unit+'_scan');
-
-	if (x)
-		e.value = 'Scan ' + (wscan.tries + 1);
-	else
-		e.value = 'Scan';
-
-	E('spin'+unit).style.visibility = x ? 'visible' : 'hidden';
-}
-</script>
-
-<script type="text/javascript">
 earlyInit();
 
 var wlg = new TomatoGrid();
@@ -171,16 +132,16 @@ wlg.resetNewEditor = function() {
 		f[0].options[i].disabled = (this.countVIF(f[0].options[i].value) > 0);
 	}
 
-/* REMOVE-BEGIN */
-//	f[3].options[1].disabled = 1; // AP + WDS
-//	f[3].options[2].disabled = 1; // Wireless Client
-//	f[3].options[4].disabled = 1; // WDS
-/* REMOVE-END */
+/* REMOVE-BEGIN
+	f[3].options[1].disabled = 1; // AP + WDS
+	f[3].options[2].disabled = 1; // Wireless Client
+	f[3].options[4].disabled = 1; // WDS
+REMOVE-END */
 	f[3].selectedIndex = 0;
 	for(var i = 0; i < f[3].options.length ; i++) {
-/* REMOVE-BEGIN */
-//		f[3].options[i].disabled = ((f[3].options[i].value != 'ap') && (f[3].options[i].value != 'wet'));
-/* REMOVE-END */
+/* REMOVE-BEGIN
+		f[3].options[i].disabled = ((f[3].options[i].value != 'ap') && (f[3].options[i].value != 'wet'));
+REMOVE-END */
 		f[3].options[i].disabled = (f[3].options[i].value != 'ap');
 	}
 
@@ -212,22 +173,23 @@ wlg.verifyFields = function(row, quiet) {
 		f[4].options[3].disabled=1;
 
 	if (f[0].value.indexOf('.') < 0) {
-/* REMOVE-BEGIN */
-//		fields.disableAll(row, 1);
-//		return 1;
-/* REMOVE-END */
-	} else {
+/* REMOVE-BEGIN
+		fields.disableAll(row, 1);
+		return 1;
+REMOVE-END */
+	}
+	else {
 		for(var i = 0; i < f[3].options.length ; i++) {
-/* REMOVE-BEGIN */
-//			f[3].options[i].disabled = ((f[3].options[i].value != 'ap') && (f[3].options[i].value != 'wet'));
-/* REMOVE-END */
+/* REMOVE-BEGIN
+			f[3].options[i].disabled = ((f[3].options[i].value != 'ap') && (f[3].options[i].value != 'wet'));
+REMOVE-END */
 			f[3].options[i].disabled = (f[3].options[i].value != 'ap');
 		}
 
 	}
-/* REMOVE-BEGIN */
-// AB: user can't change WLIF name on gridObj, only by deleting/adding WLIf (destroying/recreating)
-/* REMOVE-END */
+/* REMOVE-BEGIN
+//	AB: user can't change WLIF name on gridObj, only by deleting/adding WLIf (destroying/recreating)
+REMOVE-END */
 	if (this.isEditing())
 		f[0].disabled = 1;
 
@@ -245,7 +207,8 @@ wlg.dataToView = function(data) {
 	uidx = wl_ifidxx(data[0]);
 	if (uidx < 0) {
 		ifname = 'wl' + data[0];
-	} else {
+	}
+	else {
 		ifname = wl_ifaces[uidx][0] + ((wl_sunit(uidx) < 0) ? ' (wl' + wl_fface(uidx) + ')' : '');
 	}
 	return ([ifname,
@@ -258,24 +221,13 @@ wlg.dataToView = function(data) {
 }
 
 wlg.dataToFieldValues = function (data) {
-	return ([data[0],
-		(data[1] == '1') ? 'checked' : '',
-		data[2],
-		data[3],
-		data[4],
-		data[5]
-	]);
+	return ([data[0], (data[1] == '1') ? 'checked' : '', data[2], data[3], data[4], data[5]]);
 }
 
 wlg.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
-	return ([f[0].value,
-		f[1].checked ? '1' : '0',
-		f[2].value,
-		f[3].value,
-		f[4].value,
-		f[5].value
-	]);
+
+	return ([f[0].value, f[1].checked ? '1' : '0', f[2].value, f[3].value, f[4].value, f[5].value]);
 }
 
 wlg.onDelete = function() {
@@ -286,7 +238,8 @@ wlg.onDelete = function() {
 		vifs_deleted.push(this.source._data[0]);
 		elem.remove(this.source);
 		this.source = null;
-	} else {
+	}
+	else {
 		this.showSource();
 	}
 	this.disableNewEditor(false);
@@ -351,14 +304,14 @@ wlg.onAdd = function() {
 
 	var e = E('footer-msg');
 	e.innerHTML = 'After configuring this VIF, review and save your settings on the Overview tab.';
-	e.style.visibility = 'visible';
-/* REMOVE-BEGIN */
-//	setTimeout(
-//		function() {
-//		e.innerHTML = '';
-//		e.style.visibility = 'hidden';
-//		}, 5000);
-/* REMOVE-END */
+	e.style.display = 'inline-block';
+/* REMOVE-BEGIN
+	setTimeout(
+		function() {
+		e.innerHTML = '';
+		e.style.display = 'none';
+		}, 5000);
+REMOVE-END */
 }
 
 wlg.onOK = function() {
@@ -382,18 +335,18 @@ wlg.onOK = function() {
 	var vif = definedVIFidx(u);
 
 	vifs_defined[vif][4] = data[1]; /* radio */
-/* REMOVE-BEGIN */
-//	vifs_defined[vif][6] = data[2]; /* bss_enabled */
-//	vifs_defined[vif][8] = data[3]; /* SSID */
-//	vifs_defined[vif][7] = data[4]; /* WL mode */
-/* REMOVE-END */
+/* REMOVE-BEGIN
+	vifs_defined[vif][6] = data[2]; // bss_enabled
+	vifs_defined[vif][8] = data[3]; // SSID
+	vifs_defined[vif][7] = data[4]; // WL mode
+REMOVE-END */
 	vifs_defined[vif][8] = data[2]; /* SSID */
 	vifs_defined[vif][7] = data[3]; /* WL mode */
 	vifs_defined[vif][11] = data[4]; /* LAN bridge */
 	vifs_defined[vif][12] = data[5]; /* Wireless Filter */
-/* REMOVE-BEGIN */
-//alert(data.join('\n'));
-/* REMOVE-END */
+/* REMOVE-BEGIN
+	alert(data.join('\n'));
+REMOVE-END */
 
 	this.source.setRowData(data);
 	for (i = 0; i < this.source.cells.length; ++i) {
@@ -414,6 +367,7 @@ wlg.countElem = function(f, v) {
 	for (var i = 0; i < data.length; ++i) {
 		total += (data[i][f] == v) ? 1 : 0;
 	}
+
 	return total;
 }
 
@@ -426,18 +380,17 @@ function earlyInit() {
 	for (var mode in wmo) {
 		wl_modes_available.push([mode, wmo[mode]]);
 	}
-/* REMOVE-BEGIN */
-//	for (var mode in auth) {
-//		wl_sec_modes_available.push([mode, auth[mode]]);
-//	}
-//	for (var mode in enc) {
-//		wl_enc_modes_available.push([mode, enc[mode]]);
-//	}
+/* REMOVE-BEGIN
+	for (var mode in auth) {
+		wl_sec_modes_available.push([mode, auth[mode]]);
+	}
+	for (var mode in enc) {
+		wl_enc_modes_available.push([mode, enc[mode]]);
+	}
 
-// wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0], 
-//		['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
-// wl_bands = [ ['2'],['2'],['2'] ];
-/* REMOVE-END */
+	wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0],['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
+	wl_bands = [ ['2'],['2'],['2'] ];
+REMOVE-END */
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var u = wl_fface(uidx).toString();
@@ -478,7 +431,7 @@ function earlyInit() {
 		}
 	}
 
-	W('<style>');
+	W('<style>\n');
 	for (var uidx in vifs_defined) {
 		if (typeof(vifs_defined[uidx][0]) == 'undefined') continue;
 
@@ -486,7 +439,7 @@ function earlyInit() {
 		if (isNaN(total)) continue;
 		if (total >= 4) total = 4;
 
-		W('#spin'+vifs_defined[uidx][2]+', ');
+		W('#spin' + vifs_defined[uidx][2]+', \n');
 
 		for (var i = 0; i < total; ++i) {
 			var u = vifs_defined[uidx][2].toString();
@@ -499,37 +452,36 @@ function earlyInit() {
 		}
 	}
 
-	W('#spin {');
-	W('	visibility: hidden;');
-	W('	vertical-align: middle;');
-	W('}');
-	W('<\/style>');
+	W('#spin {\n');
+	W('display:none;\n');
+	W('vertical-align:middle;\n');
+	W('}\n');
+	W('<\/style>\n');
 }
 
 function init() {
-
 	var uninit = wl_ifaces.length - 1;
 	while (uninit > 0) {
 		if (((nvram['wl' + wl_unit(uninit) + '_corerev']) *1) >= 9) break;
 		uninit--;
 	}
 
-	E('sesdiv').style.display = '';
+	E('sesdiv_vifs').style.display = 'block';
 	if (uninit < 0) {
-		E('sesdiv').innerHTML = '<i>This feature is not supported on this router.<\/i>';
+		E('sesdiv_vifs').innerHTML = '<div id="notice">This feature is not supported on this router.<\/div>';
 		return;
 	}
 
-	tabSelect(cookie.get('advanced_wlanvifs_tab') || tabs[0][0]);
+	tabSelect(cookie.get(cprefix + '_tab') || tabs[0][0]);
 
 	var c;
 
-	if (((c = cookie.get('adv_wlvifs_notes_vis')) != null) && (c == '1')) {
-		toggleVisibility("notes");
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "notes");
 	}
 
-	if (((c = cookie.get('adv_wlvifs_details_vis')) != null) && (c == '1')) {
-		toggleVisibility("details");
+	if (((c = cookie.get(cprefix + '_details_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "details");
 	}
 
 	wlg.setup();
@@ -539,21 +491,10 @@ function init() {
 		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
 }
 
-function toggleVisibility(whichone) {
-	if(E('sesdiv' + whichone).style.display=='') {
-		E('sesdiv' + whichone).style.display='none';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to show)';
-		cookie.set('adv_wlvifs_' + whichone + '_vis', 0);
-	} else {
-		E('sesdiv' + whichone).style.display='';
-		E('sesdiv' + whichone + 'showhide').innerHTML='(Click here to hide)';
-		cookie.set('adv_wlvifs_' + whichone + '_vis', 1);
-	}
-}
-
 function definedVIFidx(vif) {
 	for (var i = 0; i < vifs_defined.length; ++i)
 		if (vifs_defined[i][0] == vif) return i;
+
 	return -1;
 }
 
@@ -564,7 +505,7 @@ function tabSelect(name) {
 
 	tabHigh(name);
 
-	if (!E('save-button').disabled) E('footer-msg').style.visibility = 'hidden';
+	if (!E('save-button').disabled) E('footer-msg').style.display = 'none';
 
 	if (name == 'overview') {
 		wlg.populate();
@@ -577,18 +518,20 @@ function tabSelect(name) {
 		if (name == tabs[i][0]) {
 			if (definedVIFidx(name) < 0) {
 				elem.display(tabs[i][0] + '-tab-disabled', 1);
-				elem.display(tabs[i][0] + '-tab', 0);
-			} else {
-				elem.display(tabs[i][0] + '-tab-disabled', 0);
-				elem.display(tabs[i][0] + '-tab', 1);
+				elem.display(tabs[i][0] + '-tab-enabled', 0);
 			}
-		} else {
-			elem.display(tabs[i][0] + '-tab', 0);
+			else {
+				elem.display(tabs[i][0] + '-tab-disabled', 0);
+				elem.display(tabs[i][0] + '-tab-enabled', 1);
+			}
+		}
+		else {
+			elem.display(tabs[i][0] + '-tab-enabled', 0);
 			elem.display(tabs[i][0] + '-tab-disabled', 0);
 		}
 	}
 
-	cookie.set('advanced_wlanvifs_tab', name);
+	cookie.set(cprefix + '_tab', name);
 }
 
 function verifyFields(focused, quiet) {
@@ -601,7 +544,8 @@ function verifyFields(focused, quiet) {
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		u = wl_fface(uidx);
 		if (u)
-			E('wl'+u+'_hwaddr_msg').style.visibility = ((wl_ifaces[uidx][8] == 'ap') && (wl_ifaces[uidx][5] != wl_ifaces[uidx][9])) ? 'visible' : 'hidden';
+			E('wl'+u+'_hwaddr_msg').style.display = (((wl_ifaces[uidx][8] == 'ap') && (wl_ifaces[uidx][5] != wl_ifaces[uidx][9])) ? 'inline' : 'none');
+
 		if (wl_sunit(uidx) < 0) {
 			if (focused == E('_f_wl'+u+'_nband')) {
 				refreshNetModes(uidx);
@@ -661,25 +605,26 @@ function verifyFields(focused, quiet) {
 			_f_wl_wds_0: 1,
 			_f_wl_macmode: 1
 			};
-		} else {
+		}
+		else {
 			a = {
 			_f_wl_radio: 1,
 			_f_wl_mode: 1,
-/* REMOVE-BEGIN */
+/* REMOVE-BEGIN
 // AB disabled for VIFs?!
-//			_f_wl_nband: (bands[uidx].length > 1) ? 1 : 0,
+			_f_wl_nband: (bands[uidx].length > 1) ? 1 : 0,
 // AB disabled for VIFs?!
-//			_wl_net_mode: 1,
-/* REMOVE-END */
+			_wl_net_mode: 1,
+REMOVE-END */
 			_wl_ssid: 1,
 			_f_wl_bcast: 1,
-/* REMOVE-BEGIN */
+/* REMOVE-BEGIN
 // AB disabled for VIFs?!
-//			_wl_channel: 1,
-//			_wl_nbw_cap: nphy ? 1 : 0,
-//			_f_wl_nctrlsb: nphy ? 1 : 0,
-//			_f_wl_scan: 1,
-/* REMOVE-END */
+			_wl_channel: 1,
+			_wl_nbw_cap: nphy ? 1 : 0,
+			_f_wl_nctrlsb: nphy ? 1 : 0,
+			_f_wl_scan: 1,
+REMOVE-END */
 
 			_wl_security_mode: 1,
 			_wl_crypto: 1,
@@ -725,12 +670,12 @@ function verifyFields(focused, quiet) {
 			}
 		}
 
-		E('wl'+u+'_mode_msg').style.visibility = ((wmode == 'sta') || (wmode == 'wet')) ? 'visible' : 'hidden';
+		E('wl'+u+'_mode_msg').style.display = (((wmode == 'sta') || (wmode == 'wet')) ? 'inline' : 'none');
 
 		switch (wmode) {
 		case 'apwds':
 		case 'wds':
-			break;
+		break;
 		case 'wet':
 		case 'sta':
 			wl_vis[vidx]._f_wl_bcast = 0;
@@ -741,7 +686,7 @@ function verifyFields(focused, quiet) {
 		default:
 			wl_vis[vidx]._f_wl_lazywds = 0;
 			wl_vis[vidx]._f_wl_wds_0 = 0;
-			break;
+		break;
 		}
 
 		sm2 = E('_wl'+u+'_security_mode').value;
@@ -753,27 +698,28 @@ function verifyFields(focused, quiet) {
 			wl_vis[vidx]._wl_radius_key = 0;
 			wl_vis[vidx]._wl_radius_ipaddr = 0;
 			wl_vis[vidx]._wl_wpa_gtk_rekey = 0;
-			break;
+		break;
 		case 'wep':
 			wl_vis[vidx]._wl_crypto = 0;
 			wl_vis[vidx]._wl_wpa_psk = 0;
 			wl_vis[vidx]._wl_radius_key = 0;
 			wl_vis[vidx]._wl_radius_ipaddr = 0;
 			wl_vis[vidx]._wl_wpa_gtk_rekey = 0;
-			break;
+		break;
 		case 'radius':
 			wl_vis[vidx]._wl_crypto = 0;
 			wl_vis[vidx]._wl_wpa_psk = 0;
-			break;
+		break;
 		default:	/* wpaX */
 			wl_vis[vidx]._wl_wep_bit = 0;
 			if (sm2.indexOf('personal') != -1) {
 				wl_vis[vidx]._wl_radius_key = 0;
 				wl_vis[vidx]._wl_radius_ipaddr = 0;
-			} else {
+			}
+			else {
 				wl_vis[vidx]._wl_wpa_psk = 0;
 			}
-			break;
+		break;
 		}
 
 		if ((E('_f_wl'+u+'_lazywds').value == 1) && (wl_vis[vidx]._f_wl_wds_0 == 1)) {
@@ -792,16 +738,16 @@ function verifyFields(focused, quiet) {
 						E('_wl'+u+'_nbw_cap').value = 0;
 						refreshChannels(wl_ifidxx(u));
 					}
-					break;
+				break;
 				}
 				/* avoid Enterprise-TKIP with 40MHz */
 				if ((sm2 == 'wpa_enterprise') && (E('_wl'+u+'_crypto').value == 'tkip')) {
 					wl_vis[vidx]._wl_nbw_cap = 2;
 					if (E('_wl'+u+'_nbw_cap').value != '0') {
 						E('_wl'+u+'_nbw_cap').value = 0;
-/* REMOVE-BEGIN */
-//						refreshChannels(uidx);
-/* REMOVE-END */
+/* REMOVE-BEGIN
+						refreshChannels(uidx);
+REMOVE-END */
 						refreshChannels(wl_ifidxx(u));
 					}
 				}
@@ -817,9 +763,9 @@ function verifyFields(focused, quiet) {
 	and includes all channels available with 20MHz channel width.
 REMOVE-END */
 
-/* REMOVE-BEGIN */
-//			b = selectedBand(uidx);
-/* REMOVE-END */
+/* REMOVE-BEGIN
+			b = selectedBand(uidx);
+REMOVE-END */
 			b = selectedBand(wl_ifidxx(u));
 
 			if (wl_vis[vidx]._wl_channel == 1 && wl_vis[vidx]._f_wl_nctrlsb != 0 &&
@@ -833,24 +779,25 @@ REMOVE-END */
 						E('_f_wl'+u+'_nctrlsb').value = 'lower';
 						wl_vis[vidx]._f_wl_nctrlsb = 2;
 					}
-/* REMOVE-BEGIN */
-//					else if (i > max_channel[uidx] - 4) {
-/* REMOVE-END */
+/* REMOVE-BEGIN
+					else if (i > max_channel[uidx] - 4) {
+REMOVE-END */
 					else if (i > max_channel[wl_ifidxx(u)] - 4) {
 						E('_f_wl'+u+'_nctrlsb').value = 'upper';
 						wl_vis[vidx]._f_wl_nctrlsb = 2;
 					}
-					break;
+				break;
 				}
 			}
 			wl_vis[vidx]._f_wl_scan = wl_vis[vidx]._wl_channel;
-		} else {
+		}
+		else {
 
 			e = E('_f_wl'+u+'_mode');
 			for(var i = 0; i < e.options.length ; i++) {
-/* REMOVE-BEGIN */
-//				e.options[i].disabled = ((e.options[i].value != 'ap') && (e.options[i].value != 'wet'));
-/* REMOVE-END */
+/* REMOVE-BEGIN
+				e.options[i].disabled = ((e.options[i].value != 'ap') && (e.options[i].value != 'wet'));
+REMOVE-END */
 				e.options[i].disabled = (e.options[i].value != 'ap');
 			}
 		}
@@ -875,7 +822,7 @@ REMOVE-END */
 			b = E(a.substr(0, i) + u + a.substr(i, a.length));
 			c = wl_vis[vidx][a];
 			b.disabled = (c != 1);
-			PR(b).style.display = c ? '' : 'none';
+			PR(b).style.display = (c ? 'table-row' : 'none');
 		}
 	}
 
@@ -898,10 +845,11 @@ REMOVE-END */
 				if (nphy && (a.value == 'tkip') && (sm2.indexOf('wpa') != -1)) {
 					ferror.set(a, 'TKIP encryption is not supported with WPA / WPA2 in N and AC mode.', quiet || !ok);
 					ok = 0;
-				} else {
+				}
+				else {
 					ferror.clear(a);
 				}
-				break;
+			break;
 			}
 
 			a = E('_wl'+u+'_net_mode');
@@ -916,7 +864,8 @@ REMOVE-END */
 			if (wlclnt > 1) {
 				ferror.set(b, 'Only one wireless interface can be configured in client mode.', quiet || !ok);
 				ok = 0;
-			} else if (a.value == 'n-only') {
+			}
+			else if (a.value == 'n-only') {
 				ferror.set(a, 'N-only is not supported in wireless client modes, use Auto.', quiet || !ok);
 				ok = 0;
 			}
@@ -936,20 +885,19 @@ REMOVE-END */
 			if (((wmode == 'wds') || (wmode == 'apwds')) && (wl_vis[vidx]._wl_channel == 1) && (E('_wl'+u+'_channel').value == '0')) {
 				ferror.set('_wl'+u+'_channel', 'Fixed wireless channel required in WDS mode.', quiet || !ok);
 				ok = 0;
-			} else {
+			}
+			else {
 				ferror.clear('_wl'+u+'_channel');
 			}
 		}
-/* REMOVE-BEGIN */
-/*
+/* REMOVE-BEGIN
 			if (E('_f_wl'+u+'_mode').value == 'sta') {
 				if ((wan == 'disabled') && (E('_f_wl'+u+'_radio').checked)) {
 					ferror.set('_wan_proto', 'Wireless Client mode requires a valid WAN setting (usually DHCP).', quiet || !ok);
 					ok = 0;
 				}
 			}
-*/
-/* REMOVE-END */
+REMOVE-END */
 	}
 
 	for (var vidx = 0; vidx < vifs_possible.length; ++vidx) {
@@ -984,7 +932,8 @@ REMOVE-END */
 				b.maxLength = a;
 				if ((b.value.length > 0) || (E('_f_wl'+u+'_wepidx_' + i).checked)) {
 					if (!v_wep(b, quiet || !ok)) ok = 0;
-				} else {
+				}
+				else {
 					ferror.clear(b);
 				}
 			}
@@ -1029,14 +978,13 @@ REMOVE-END */
 				vifs_defined[w][12] = focused.value;
 			}
 		}
-
 	}
 
 	return ok;
 }
 
 function cancel() {
-	cookie.set('advanced_wlanvifs_tab', 'overview');
+	cookie.set(cprefix + '_tab', 'overview');
 	javascript:reloadPage();
 }
 
@@ -1078,14 +1026,15 @@ function save() {
 		}
 		if (vif < 0) {
 			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_';		/* use fake input name to delete */
-		} else {
+		}
+		else {
 			E('_wl'+u+'_macmode').value = E('_f_wl'+u+'_macmode').value;
 			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString();	/* copy base maclist to 'u' interface */
 		}
-/* REMOVE-BEGIN */
+/* REMOVE-BEGIN
 // AB TODO: try to play this safer - save some vital info on primary BSS (just in case?)
 // AB TODO: with the UNSET part later on - is this really needed?
-/* REMOVE-END */
+REMOVE-END */
 		if (vif < 0) {
 			a = [ ['radio', '0'], ['bss_enabled', '0'], ['ifname', ('wl'+u)] ];
 			b = 'wl'+u+'_';
@@ -1103,9 +1052,9 @@ function save() {
 			fom['lan'+x+'_ifnames'].value = fom['lan'+x+'_ifnames'].value.trim();
 		}
 
-/* REMOVE-BEGIN */
+/* REMOVE-BEGIN
 // AB TODO: cleanup in advance or just bail out later?
-/* REMOVE-END */
+REMOVE-END */
 		if (u.indexOf('.') < 0) {
 			a = [];
 			for (i = 0; i < vifs_defined.length; ++i) {
@@ -1115,7 +1064,8 @@ function save() {
 			}
 			E('_wl'+u+'_vifs').value = a.join(' ');
 			E('_wl'+u+'_ifname').value = nvram['wl'+u+'_ifname'] || vifs_defined[vif][1];
-		} else {
+		}
+		else {
 			E('_wl'+u+'_ifname').value = nvram['wl'+u+'_ifname'] || 'wl'+u;
 		}
 
@@ -1128,9 +1078,7 @@ function save() {
 		else
 			E('_wl'+u+'_mode').value = wmode;
 
-/* REMOVE-BEGIN */
-// primary VIF
-/* REMOVE-END */
+/* primary VIF */
 		if (u.indexOf('.') < 0) {
 			E('_wl'+u+'_nband').value = selectedBand(wl_ifidxx(u));
 
@@ -1142,7 +1090,8 @@ function save() {
 				E('_wl'+u+'_wds_enable').value = 1;
 				E('_wl'+u+'_lazywds').value = E('_f_wl'+u+'_lazywds').value;
 				if (E('_wl'+u+'_lazywds').value == 1) E('_wl'+u+'_wds').value = '';
-			} else {
+			}
+			else {
 				E('_wl'+u+'_wds_enable').value = 0;
 				E('_wl'+u+'_wds').value = '';
 				E('_wl'+u+'_lazywds').value = 0;
@@ -1160,29 +1109,28 @@ function save() {
 		case 'radius':
 		case 'wep':
 			e.value = '';
-			break;
+		break;
 		default:
 			c = [];
 
 			if (sm2.indexOf('personal') != -1) {
 				if (sm2.indexOf('wpa2_') == -1) c.push('psk');
 				if (sm2.indexOf('wpa_') == -1) c.push('psk2');
-			} else {
+			}
+			else {
 				if (sm2.indexOf('wpa2_') == -1) c.push('wpa');
 				if (sm2.indexOf('wpa_') == -1) c.push('wpa2');
 			}
 			c = c.join(' ');
 			e.value = c;
-			break;
+		break;
 		}
 		E('_wl'+u+'_auth_mode').value = (sm2 == 'radius') ? 'radius' : 'none';
 		E('_wl'+u+'_wep').value = ((sm2 == 'radius') || (sm2 == 'wep')) ? 'enabled': 'disabled';
 
 		if (sm2.indexOf('wpa') != -1) E('_wl'+u+'_auth').value = '0';
 
-/* REMOVE-BEGIN */
-//  primary VIF
-/* REMOVE-END */
+/* primary VIF */
 		if (u.indexOf('.') < 0) {
 
 			E('_wl'+u+'_nreqd').value = 0;
@@ -1193,58 +1141,58 @@ function save() {
 			switch (E('_wl'+u+'_net_mode').value) {
 			case 'b-only':
 				E('_wl'+u+'_gmode').value = 0;
-				break;
+			break;
 			case 'g-only':
 				E('_wl'+u+'_gmode').value = 4;
-				break;
+			break;
 			case 'bg-mixed':
-				break;
+			break;
 			case 'a-only':
 				E('_wl'+u+'_nmcsidx').value = -1; /* Auto */
-				break;
+			break;
 			case 'n-only':
 				if (selectedBand(wl_ifidxx(u)) == '1') { /* 5 GHz */
 					E('_wl'+u+'_nmode').value = -1;
 					E('_wl'+u+'_nmcsidx').value = -1;
-				} else {
+				}
+				else {
 					E('_wl'+u+'_nmode').value = 1;
 					E('_wl'+u+'_nmcsidx').value = 32;
 				}
 				E('_wl'+u+'_nreqd').value = 1;
-				break;
+			break;
 			default: /* Auto */
 				E('_wl'+u+'_nmode').value = -1;
 				E('_wl'+u+'_nmcsidx').value = -1;
-				break;
+			break;
 			}
 
 			E('_wl'+u+'_nctrlsb').value = eval('nvram.wl'+u+'_nctrlsb');
 			if (E('_wl'+u+'_nmode').value != 0) {
 				E('_wl'+u+'_nctrlsb').value = E('_f_wl'+u+'_nctrlsb').value;
-				E('_wl'+u+'_nbw').value = (E('_wl'+u+'_nbw_cap').value == 0) ? 20 : ((E('_wl'+u+'_nbw_cap').value== 3) ? 80:40);
+				E('_wl'+u+'_nbw').value = (E('_wl'+u+'_nbw_cap').value == 0) ? 20 : ((E('_wl'+u+'_nbw_cap').value == 3) ? 80:40);
 			}
 		}
 
 		E('_wl'+u+'_closed').value = E('_f_wl'+u+'_bcast').checked ? 0 : 1;
 
 		a = fields.radio.selected(eval('fom["f_wl'+u+'_wepidx"]'));
-/* REMOVE-BEGIN */
-//		if (a) E('_wl'+u+'_key').value = a.value;
-/* REMOVE-END */
+/* REMOVE-BEGIN
+		if (a) E('_wl'+u+'_key').value = a.value;
+REMOVE-END */
 		E('_wl'+u+'_key').value = (a) ? a.value : '1';
 	}
 
 	do_pre_submit_form(fom);
 
-/* REMOVE-BEGIN */
-//	form.submit(fom,1);
-/* REMOVE-END */
+/* REMOVE-BEGIN
+	form.submit(fom,1);
+REMOVE-END */
 }
 
 function submit_complete() {
 	reloadPage();
 }
-
 
 var cmdresult = '';
 var cmd = null;
@@ -1253,7 +1201,7 @@ function do_pre_submit_form(fom) {
 
 	var footermsg = E('footer-msg');
 	footermsg.innerHTML = 'Saving...';
-	footermsg.style.visibility = 'visible';
+	footermsg.style.display = 'inline-block';
 
 	E('save-button').disabled = 1;
 	E('cancel-button').disabled = 1;
@@ -1266,24 +1214,23 @@ function do_pre_submit_form(fom) {
 		var u = vifs_possible[vidx][0].toString();  /* WL unit (primary) or unit.subunit (virtual) */
 		if (u.indexOf('.') > 0) { /* only if virtual VIF */
 			var vif = definedVIFidx(u);
-			if (vif >= 0)
-			{
+			if (vif >= 0) {
 				for (var i = 0; i < elem.length ; ++i) {
 					if (elem[i].name.indexOf('wl' + u) == 0) {
-						s += 'nvram set ' + elem[i].name + '=\'' + elem[i].value + '\'\n';
+						s += 'nvram set ' + elem[i].name + '="' + elem[i].value + '"\n';
 					}
 				}
 			}
-/* REMOVE-BEGIN */
+/* REMOVE-BEGIN
 			// unset HWADDR for any/all non-primary VIFs we have configured
-//			s += 'nvram unset wl' + u + '_hwaddr\n';
-// AB TODO: figure out what to do with pre-existing/set MAC addresses
-//			if (vif >= 0) {
-//				if ((vifs_defined[vif][9] == '00:00:00:00:00:00') || (vifs_defined[vif][9] == '')) {
-//					s += 'nvram unset wl' + u + '_hwaddr\n';
-//				}
-//			}
-/* REMOVE-END */
+			s += 'nvram unset wl' + u + '_hwaddr\n';
+			// AB TODO: figure out what to do with pre-existing/set MAC addresses
+			if (vif >= 0) {
+				if ((vifs_defined[vif][9] == '00:00:00:00:00:00') || (vifs_defined[vif][9] == '')) {
+					s += 'nvram unset wl' + u + '_hwaddr\n';
+				}
+			}
+REMOVE-END */
 		}
 	}
 
@@ -1317,16 +1264,15 @@ function do_pre_submit_form(fom) {
 		s += 'nvram unset wl' + u + '_macmode\n';
 		s += 'nvram unset wl' + u + '_maclist\n';
 	}
-	if (vifs_deleted.length > 0)
-	{
-		s += 'nvram set lan_ifnames=\'' + lan_ifnames + '\'\n';
-		s += 'nvram set lan1_ifnames=\'' + lan1_ifnames + '\'\n';
-		s += 'nvram set lan2_ifnames=\'' + lan2_ifnames + '\'\n';
-		s += 'nvram set lan3_ifnames=\'' + lan3_ifnames + '\'\n';
+	if (vifs_deleted.length > 0) {
+		s += 'nvram set lan_ifnames="' + lan_ifnames + '"\n';
+		s += 'nvram set lan1_ifnames="' + lan1_ifnames + '"\n';
+		s += 'nvram set lan2_ifnames="' + lan2_ifnames + '"\n';
+		s += 'nvram set lan3_ifnames="' + lan3_ifnames + '"\n';
 		if (typeof(wl0_vifs) != 'undefined')
-			s += 'nvram set wl0_vifs=\'' + wl0_vifs + '\'\n';
+			s += 'nvram set wl0_vifs="' + wl0_vifs + '"\n';
 		if (typeof(wl1_vifs) != 'undefined')
-			s += 'nvram set wl1_vifs=\'' + wl1_vifs + '\'\n';
+			s += 'nvram set wl1_vifs="' + wl1_vifs + '"\n';
 	}
 	post_pre_submit_form(s);
 }
@@ -1335,7 +1281,7 @@ function error_pre_submit_form() {
 	var footermsg = E('footer-msg');
 
 	footermsg.innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
-	footermsg.style.visibility = 'visible';
+	footermsg.style.display = 'inline-block';
 
 	cmdresult = '';
 }
@@ -1345,7 +1291,7 @@ function post_pre_submit_form(s) {
 
 	cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
-		form.submit(E('t_fom'),1);
+		form.submit(E('t_fom'), 1);
 	}
 	cmd.onError = function(x) {
 		cmdresult = 'ERROR: ' + x;
@@ -1359,20 +1305,20 @@ function escapeText(s) {
 	function esc(c) {
 		return '&#' + c.charCodeAt(0) + ';';
 	}
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br />').replace(/ /g, '&nbsp;');
+
+	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
 }
-
 </script>
-
 </head>
+
 <body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-  <div class="title">Tomato</div>
-  <div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -1390,266 +1336,253 @@ function escapeText(s) {
 
 <!-- / / / -->
 
-<div id="sesdiv" style="display:none">
-
-<!-- / / / -->
 <div class="section-title">Virtual Wireless Interfaces</div>
-<div class="section">
 
-<script type="text/javascript">
-tabCreate.apply(this, tabs);
-</script>
+<div id="sesdiv_vifs" style="display:none">
 
-<div id="overview-tab">
-<br/>
-<div class="tomato-grid" id="wlif-grid"></div>
-<br/>
+	<div class="section">
+		<script>tabCreate.apply(this, tabs);</script>
+	</div>
 
 <!-- / / / -->
 
-<div class="section-title">Wireless Interfaces Details <small><i><a href='javascript:toggleVisibility("details");'><span id="sesdivdetailsshowhide">(Click here to show)</span></a></i></small></div>
-<div class="section" id="sesdivdetails" style="display:none">
-
-<script type="text/javascript">
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	if (wl_sunit(uidx)<0) {
-		var c = [];
-		c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')<\/small>' });
-		c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl' + wl_fface(uidx) + '_vifs',
-			text: 'wl' + wl_fface(uidx) + ' ' + nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
-		createFieldTable('',c);
-	}
-}
-</script>
-</div>
+	<div id="overview-tab">
+		<div class="tomato-grid" id="wlif-grid"></div>
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility("notes");'><span id="sesdivnotesshowhide">(Click here to show)</span></a></i></small></div>
-<div class="section" id="sesdivnotes" style="display:none">
-
-<ul>
-	<li><b>Interface</b> - Wireless VIF name.</li>
-	<li><b>Enabled</b> - If this VIF should be active and brought online.</li>
-	<li><b>SSID</b> - Wireless Service Set Identifier.</li>
-	<li><b>Mode</b> - Interface mode: Access Point, WDS, Wireless Client, etc...</li>
-	<li><b>Bridge</b> - Which LAN bridge this VIF should be assigned.</li>
-	<li><b>WFilter</b> - <a href="basic-wfilter.asp" class="new_window">Wireless Filter</a>:
-		<ul>
-			<li><i>Disabled</i> - Disable filter on that interface.</li>
-			<li><i>Block</i> - Block clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
-			<li><i>Permit</i> - Permit only clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
-		</ul>
-	</li>
-</ul>
-<ul>
-	<li><small><b>Other relevant notes/hints:</b></small>
-		<ul>
-			<li><small>When creating/defining a new wireless VIF, its MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</small></li>
-			<li><small>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</small></li>
-			<li><small>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</small></li>
-			<li><small>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href="basic-network.asp">Basic/Network</a> page instead).</small></li>
-		</ul>
-	</li>
-</ul>
+		<div class="section-title">Wireless Interfaces Details <small><i><a href="javascript:toggleVisibility(cprefix,'details');"><span id="sesdiv_details_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section" id="sesdiv_details" style="display:none">
+			<script>
+				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+					if (wl_sunit(uidx) < 0) {
+						var c = [];
+						c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')<\/small>' });
+						c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl' + wl_fface(uidx) + '_vifs',
+							text: 'wl' + wl_fface(uidx) + ' ' + nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
+						createFieldTable('',c);
+					}
+				}
+			</script>
+		</div>
 
 <!-- / / / -->
 
-</div>
+		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section" id="sesdiv_notes" style="display:none">
+			<ul>
+				<li><b>Interface</b> - Wireless VIF name.</li>
+				<li><b>Enabled</b> - If this VIF should be active and brought online.</li>
+				<li><b>SSID</b> - Wireless Service Set Identifier.</li>
+				<li><b>Mode</b> - Interface mode: Access Point, WDS, Wireless Client, etc...</li>
+				<li><b>Bridge</b> - Which LAN bridge this VIF should be assigned.</li>
+				<li><b>WFilter</b> - <a href="basic-wfilter.asp" class="new_window">Wireless Filter</a>:
+					<ul>
+						<li><i>Disabled</i> - Disable filter on that interface.</li>
+						<li><i>Block</i> - Block clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
+						<li><i>Permit</i> - Permit only clients from the <a href="basic-wfilter.asp" class="new_window">list</a> on that interface.</li>
+					</ul>
+				</li>
+			</ul>
+			<ul>
+				<li><b>Other relevant notes/hints:</b></small>
+					<ul>
+						<li>When creating/defining a new wireless VIF, its MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</li>
+						<li>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</li>
+						<li>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</li>
+						<li>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href="basic-network.asp">Basic/Network</a> page instead).</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+
+<!-- overview-tab -->
+	</div>
 
 <!-- / / / -->
 
-</div>
+	<div class="section" id="wlif-section">
+		<script>
+			for (var i = 1; i < tabs.length; ++i) {
+				var t = tabs[i][0];
+				var uidx = wl_ifidxx(t);
+				var u = t;
 
-<!-- / / / -->
+				W('<div id="'+t+'-tab-disabled">VIF ' + tabs[i][1] + ' is not defined.<\/div>');
 
-<script type="text/javascript">
-for (var i = 1; i < tabs.length; ++i) {
-	var t = tabs[i][0];
-	var uidx = wl_ifidxx(t);
-	var u = t;
-
-	W('<div id=\''+t+'-tab-disabled\'>');
-	W('<br />');
-	W('VIF ' + tabs[i][1] + ' is not defined.');
-	W('<\/div>');
-
-	W('<div id=\''+t+'-tab\'>');
-	W('<br />');
+				W('<div id="'+t+'-tab-enabled">');
 
 /* common to all VIFs */
-	W('<input type=\'hidden\' id=\'_wl'+u+'_radio\'       name=\'wl'+u+'_radio\'       >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_mode\'        name=\'wl'+u+'_mode\'        >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_closed\'      name=\'wl'+u+'_closed\'      >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_key\'         name=\'wl'+u+'_key\'         >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_akm\'         name=\'wl'+u+'_akm\'         >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_auth_mode\'   name=\'wl'+u+'_auth_mode\'   >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_wep\'         name=\'wl'+u+'_wep\'         >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_auth\'        name=\'wl'+u+'_auth\'        >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_bss_enabled\' name=\'wl'+u+'_bss_enabled\' >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_ifname\'      name=\'wl'+u+'_ifname\'      >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_macmode\'     name=\'wl'+u+'_macmode\'     >');
-	W('<input type=\'hidden\' id=\'_wl'+u+'_maclist\'     name=\'wl'+u+'_maclist\'     >');
+				W('<input type="hidden" id="_wl'+u+'_radio" name="wl'+u+'_radio">');
+				W('<input type="hidden" id="_wl'+u+'_mode" name="wl'+u+'_mode">');
+				W('<input type="hidden" id="_wl'+u+'_closed" name="wl'+u+'_closed">');
+				W('<input type="hidden" id="_wl'+u+'_key" name="wl'+u+'_key">');
+				W('<input type="hidden" id="_wl'+u+'_akm" name="wl'+u+'_akm">');
+				W('<input type="hidden" id="_wl'+u+'_auth_mode" name="wl'+u+'_auth_mode">');
+				W('<input type="hidden" id="_wl'+u+'_wep" name="wl'+u+'_wep">');
+				W('<input type="hidden" id="_wl'+u+'_auth" name="wl'+u+'_auth">');
+				W('<input type="hidden" id="_wl'+u+'_bss_enabled" name="wl'+u+'_bss_enabled">');
+				W('<input type="hidden" id="_wl'+u+'_ifname" name="wl'+u+'_ifname">');
+				W('<input type="hidden" id="_wl'+u+'_macmode" name="wl'+u+'_macmode">');
+				W('<input type="hidden" id="_wl'+u+'_maclist" name="wl'+u+'_maclist">');
 
 /* only if primary VIF */
-	if (u.toString().indexOf('.') < 0) {
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nband\'      name=\'wl'+u+'_nband\'      >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_wds_enable\' name=\'wl'+u+'_wds_enable\' >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_wds\'        name=\'wl'+u+'_wds\'        >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_lazywds\'    name=\'wl'+u+'_lazywds\'    >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_gmode\'      name=\'wl'+u+'_gmode\'      >');
+				if (u.toString().indexOf('.') < 0) {
+					W('<input type="hidden" id="_wl'+u+'_nband" name="wl'+u+'_nband">');
+					W('<input type="hidden" id="_wl'+u+'_wds_enable" name="wl'+u+'_wds_enable">');
+					W('<input type="hidden" id="_wl'+u+'_wds" name="wl'+u+'_wds">');
+					W('<input type="hidden" id="_wl'+u+'_lazywds" name="wl'+u+'_lazywds">');
+					W('<input type="hidden" id="_wl'+u+'_gmode" name="wl'+u+'_gmode">');
 
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nmode\'      name=\'wl'+u+'_nmode\'      >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nmcsidx\'    name=\'wl'+u+'_nmcsidx\'    >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nreqd\'      name=\'wl'+u+'_nreqd\'      >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nctrlsb\'    name=\'wl'+u+'_nctrlsb\'    >');
-		W('<input type=\'hidden\' id=\'_wl'+u+'_nbw\'        name=\'wl'+u+'_nbw\'        >');
+					W('<input type="hidden" id="_wl'+u+'_nmode" name="wl'+u+'_nmode">');
+					W('<input type="hidden" id="_wl'+u+'_nmcsidx" name="wl'+u+'_nmcsidx">');
+					W('<input type="hidden" id="_wl'+u+'_nreqd" name="wl'+u+'_nreqd">');
+					W('<input type="hidden" id="_wl'+u+'_nctrlsb" name="wl'+u+'_nctrlsb">');
+					W('<input type="hidden" id="_wl'+u+'_nbw" name="wl'+u+'_nbw">');
 
-		W('<input type=\'hidden\' id=\'_wl'+u+'_vifs\'       name=\'wl'+u+'_vifs\'       >');
-	}
+					W('<input type="hidden" id="_wl'+u+'_vifs" name="wl'+u+'_vifs">');
+				}
 
-	var f = [];
-	f.push (
-		{ title: 'Enable Interface', name: 'f_wl'+u+'_radio', type: 'checkbox',
-			value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
-		{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '<\/a>' +
-			' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="visibility:hidden"><small>(warning: WL driver reports BSSID <a href=advanced-mac.asp>' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '<\/a>)<\/small><\/b>' },
-		{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
-			options: wl_modes_available,
-			value: ((eval('nvram["wl'+u+'_mode"]') == 'ap') && (eval('nvram["wl'+u+'_wds_enable"]') == '1')) ? 'apwds' : eval('nvram["wl'+u+'_mode"]'),
-			suffix: ' &nbsp; <b id="wl'+u+'_mode_msg" style="visibility:hidden"><small>(note: you might wish to cross-check settings later on <a href=basic-network.asp>Basic/Network<\/a>)<\/small><\/b>' }
-	);
-
-/* only if primary VIF */
-	if (u.toString().indexOf('.') < 0) {
-		f.push (
-			{ title: 'Radio Band', name: 'f_wl'+u+'_nband', type: 'select', options: bands[uidx],
-				value: eval('nvram["wl'+u+'_nband"]') || '0' == '0' ? bands[uidx][0][0] : eval('nvram["wl'+u+'_nband"]') },
-			{ title: 'Wireless Network Mode', name: 'wl'+u+'_net_mode', type: 'select',
-				value: (eval('nvram["wl'+u+'_net_mode"]') == 'disabled') ? 'mixed' : eval('nvram["wl'+u+'_net_mode"]'),
-				options: [], prefix: '<span id="__wl'+u+'_net_mode">', suffix: '<\/span>' }
-		);
-	}
-
-	if (typeof(eval('nvram["wl'+u+'_closed"]')) == 'undefined')
-		nvram['wl'+u+'_closed'] = '0';
-
-	f.push (
-		{ title: 'SSID', name: 'wl'+u+'_ssid', type: 'text', maxlen: 32, size: 34, value: eval('nvram["wl'+u+'_ssid"]') },
-		{ title: 'Broadcast', indent: 2, name: 'f_wl'+u+'_bcast', type: 'checkbox', value: (eval('nvram["wl'+u+'_closed"]') == '0') }
-	);
+				var f = [];
+				f.push (
+					{ title: 'Enable Interface', name: 'f_wl'+u+'_radio', type: 'checkbox',
+						value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
+					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '<\/a>' +
+						' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="display:none"><small>(warning: WL driver reports BSSID <a href="advanced-mac.asp">' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '<\/a>)<\/small><\/b>' },
+					{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
+						options: wl_modes_available,
+						value: ((eval('nvram["wl'+u+'_mode"]') == 'ap') && (eval('nvram["wl'+u+'_wds_enable"]') == '1')) ? 'apwds' : eval('nvram["wl'+u+'_mode"]'),
+						suffix: ' &nbsp; <b id="wl'+u+'_mode_msg" style="display:none"><small>(note: you might wish to cross-check settings later on <a href="basic-network.asp">Basic/Network<\/a>)<\/small><\/b>' }
+				);
 
 /* only if primary VIF */
-	if (u.toString().indexOf('.') < 0) {
-		f.push (
-			{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '<\/span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" alt="" id="spin'+u+'">',
-				value: eval('nvram["wl'+u+'_channel"]') },
-			{ title: 'Channel Width', name: 'wl'+u+'_nbw_cap', type: 'select', options: [],
-				value: eval('nvram["wl'+u+'_nbw_cap"]'), prefix: '<span id="__wl'+u+'_nbw_cap">', suffix: '<\/span>' },
-			{ title: 'Control Sideband', name: 'f_wl'+u+'_nctrlsb', type: 'select', options: [['lower','Lower'],['upper','Upper']],
-				value: eval('nvram["wl'+u+'_nctrlsb"]') == 'none' ? 'lower' : eval('nvram["wl'+u+'_nctrlsb"]') }
-		);
-	}
+				if (u.toString().indexOf('.') < 0) {
+					f.push (
+						{ title: 'Radio Band', name: 'f_wl'+u+'_nband', type: 'select', options: bands[uidx],
+							value: eval('nvram["wl'+u+'_nband"]') || '0' == '0' ? bands[uidx][0][0] : eval('nvram["wl'+u+'_nband"]') },
+						{ title: 'Wireless Network Mode', name: 'wl'+u+'_net_mode', type: 'select',
+							value: (eval('nvram["wl'+u+'_net_mode"]') == 'disabled') ? 'mixed' : eval('nvram["wl'+u+'_net_mode"]'),
+							options: [], prefix: '<span id="__wl'+u+'_net_mode">', suffix: '<\/span>' }
+					);
+				}
 
-	if (typeof(eval('nvram["wl'+u+'_crypto"]')) == 'undefined')
-		nvram['wl'+u+'_crypto'] = 'aes';
+				if (typeof(eval('nvram["wl'+u+'_closed"]')) == 'undefined')
+					nvram['wl'+u+'_closed'] = '0';
 
-	f.push (
-		null,
-		{ title: '<a href="basic-wfilter.asp" class="new_window">Wireless Filter<\/a>', name: 'f_wl'+u+'_macmode', type: 'select',
-			options: [['disabled','Disable filter on that interface'],['deny','Block clients from the list on that interface'],['allow','Permit only clients from the list on that interface']],
-			value: nvram['wl'+u+'_macmode'] },
-		null,
-		{ title: 'Security', name: 'wl'+u+'_security_mode', type: 'select',
-			options: [['disabled','Disabled'],['wep','WEP'],['wpa_personal','WPA Personal'],['wpa_enterprise','WPA Enterprise'],['wpa2_personal','WPA2 Personal'],['wpa2_enterprise','WPA2 Enterprise'],['wpaX_personal','WPA / WPA2 Personal'],['wpaX_enterprise','WPA / WPA2 Enterprise'],['radius','Radius']],
-			value: eval('nvram["wl'+u+'_security_mode"]') },
-		{ title: 'Encryption', indent: 2, name: 'wl'+u+'_crypto', type: 'select',
-			options: [['tkip','TKIP'],['aes','AES'],['tkip+aes','TKIP / AES']], value: eval('nvram["wl'+u+'_crypto"]') },
-		{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_wpa_psk', type: 'password', maxlen: 64, size: 66, peekaboo: 1,
-			suffix: ' <input type="button" id="_f_wl'+u+'_psk_random1" value="Random" onclick="random_psk(\'_wl'+u+'_wpa_psk\')">',
-			value: eval('nvram["wl'+u+'_wpa_psk"]') },
-		{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_radius_key', type: 'password', maxlen: 80, size: 32, peekaboo: 1,
-			suffix: ' <input type="button" id="_f_wl'+u+'_psk_random2" value="Random" onclick="random_psk(\'_wl'+u+'_radius_key\')">',
-			value: eval('nvram["wl'+u+'_radius_key"]') },
-		{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>seconds<\/small>',
-			value: eval('nvram["wl'+u+'_wpa_gtk_rekey"]') || '3600' },
-		{ title: 'Radius Server', indent: 2, multi: [
-			{ name: 'wl'+u+'_radius_ipaddr', type: 'text', maxlen: 15, size: 17, value: eval('nvram["wl'+u+'_radius_ipaddr"]') },
-			{ name: 'wl'+u+'_radius_port', type: 'text', maxlen: 5, size: 7, prefix: ' : ', value: eval('nvram["wl'+u+'_radius_port"]') || '1812' } ] },
-		{ title: 'Encryption', indent: 2, name: 'wl'+u+'_wep_bit', type: 'select', options: [['128','128-bits'],['64','64-bits']],
-			value: eval('nvram["wl'+u+'_wep_bit"]') },
-		{ title: 'Passphrase', indent: 2, name: 'wl'+u+'_passphrase', type: 'text', maxlen: 16, size: 20,
-			suffix: ' <input type="button" id="_f_wl'+u+'_wep_gen" value="Generate" onclick="generate_wep('+u+')"> <input type="button" id="_f_wl'+u+'_wep_random" value="Random" onclick="random_wep('+u+')">',
-			value: eval('nvram["wl'+u+'_passphrase"]') }
-	);
+				f.push (
+					{ title: 'SSID', name: 'wl'+u+'_ssid', type: 'text', maxlen: 32, size: 34, value: eval('nvram["wl'+u+'_ssid"]') },
+					{ title: 'Broadcast', indent: 2, name: 'f_wl'+u+'_bcast', type: 'checkbox', value: (eval('nvram["wl'+u+'_closed"]') == '0') }
+				);
 
-	if (typeof(eval('nvram["wl'+u+'_key"]')) == 'undefined')
-		nvram['wl'+u+'_key'] = '1';
-/* REMOVE-BEGIN */
-//		eval('nvram["wl'+u+'_key"] = 1');
-/* REMOVE-END */
+/* only if primary VIF */
+				if (u.toString().indexOf('.') < 0) {
+					f.push (
+						{ title: 'Channel', name: 'wl'+u+'_channel', type: 'select', options: ghz[uidx], prefix: '<span id="__wl'+u+'_channel">', suffix: '<\/span> <input type="button" id="_f_wl'+u+'_scan" value="Scan" onclick="scanButton('+u+')"> <img src="spin.gif" alt="" id="spin'+u+'">',
+							value: eval('nvram["wl'+u+'_channel"]') },
+						{ title: 'Channel Width', name: 'wl'+u+'_nbw_cap', type: 'select', options: [],
+							value: eval('nvram["wl'+u+'_nbw_cap"]'), prefix: '<span id="__wl'+u+'_nbw_cap">', suffix: '<\/span>' },
+						{ title: 'Control Sideband', name: 'f_wl'+u+'_nctrlsb', type: 'select', options: [['lower','Lower'],['upper','Upper']],
+							value: eval('nvram["wl'+u+'_nctrlsb"]') == 'none' ? 'lower' : eval('nvram["wl'+u+'_nctrlsb"]') }
+					);
+				}
 
-	for (var j = 1; j <= 4; ++j) {
-		f.push(
-			{ title: ('Key ' + j), indent: 2, name: ('wl'+u+'_key' + j), type: 'text', maxlen: 26, size: 34,
-				suffix: '<input type="radio" onchange="verifyFields(this,1)" onclick="verifyFields(this,1)" name="f_wl'+u+'_wepidx" id="_f_wl'+u+'_wepidx_' + j + '" value="' + j + '"' + ((eval('nvram["wl'+u+'_key"]') == j) ? ' checked>' : '>'),
-				value: nvram['wl'+u+'_key' + j] });
-	}
+				if (typeof(eval('nvram["wl'+u+'_crypto"]')) == 'undefined')
+					nvram['wl'+u+'_crypto'] = 'aes';
 
-	f.push(	null,
-		{ title: 'WDS', name: 'f_wl'+u+'_lazywds', type: 'select',
-			options: [['0','Link With...'],['1','Automatic']], value: nvram['wl'+u+'_lazywds'] } );
-/* REMOVE-BEGIN */
-//	alert('nvram["wl'+u+'_wds"]=' + eval('nvram["wl'+u+'_wds"]'));
-/* REMOVE-END */
-	var wds = eval('nvram["wl'+u+'_wds"]');
-	if (typeof(wds) == 'undefined') {
-		nvram['wl'+u+'_wds'] = '';
-	}
+				f.push (
+					null,
+					{ title: '<a href="basic-wfilter.asp" class="new_window">Wireless Filter<\/a>', name: 'f_wl'+u+'_macmode', type: 'select',
+						options: [['disabled','Disable filter on that interface'],['deny','Block clients from the list on that interface'],['allow','Permit only clients from the list on that interface']],
+						value: nvram['wl'+u+'_macmode'] },
+					null,
+					{ title: 'Security', name: 'wl'+u+'_security_mode', type: 'select',
+						options: [['disabled','Disabled'],['wep','WEP'],['wpa_personal','WPA Personal'],['wpa_enterprise','WPA Enterprise'],['wpa2_personal','WPA2 Personal'],['wpa2_enterprise','WPA2 Enterprise'],['wpaX_personal','WPA / WPA2 Personal'],['wpaX_enterprise','WPA / WPA2 Enterprise'],['radius','Radius']],
+						value: eval('nvram["wl'+u+'_security_mode"]') },
+					{ title: 'Encryption', indent: 2, name: 'wl'+u+'_crypto', type: 'select',
+						options: [['tkip','TKIP'],['aes','AES'],['tkip+aes','TKIP / AES']], value: eval('nvram["wl'+u+'_crypto"]') },
+					{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_wpa_psk', type: 'password', maxlen: 64, size: 66, peekaboo: 1,
+						suffix: ' <input type="button" id="_f_wl'+u+'_psk_random1" value="Random" onclick="random_psk(\'_wl'+u+'_wpa_psk\')">',
+						value: eval('nvram["wl'+u+'_wpa_psk"]') },
+					{ title: 'Shared Key', indent: 2, name: 'wl'+u+'_radius_key', type: 'password', maxlen: 80, size: 32, peekaboo: 1,
+						suffix: ' <input type="button" id="_f_wl'+u+'_psk_random2" value="Random" onclick="random_psk(\'_wl'+u+'_radius_key\')">',
+						value: eval('nvram["wl'+u+'_radius_key"]') },
+					{ title: 'Group Key Renewal', indent: 2, name: 'wl'+u+'_wpa_gtk_rekey', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>seconds<\/small>',
+						value: eval('nvram["wl'+u+'_wpa_gtk_rekey"]') || '3600' },
+					{ title: 'Radius Server', indent: 2, multi: [
+						{ name: 'wl'+u+'_radius_ipaddr', type: 'text', maxlen: 15, size: 17, value: eval('nvram["wl'+u+'_radius_ipaddr"]') },
+						{ name: 'wl'+u+'_radius_port', type: 'text', maxlen: 5, size: 7, prefix: ' : ', value: eval('nvram["wl'+u+'_radius_port"]') || '1812' } ] },
+					{ title: 'Encryption', indent: 2, name: 'wl'+u+'_wep_bit', type: 'select', options: [['128','128-bits'],['64','64-bits']],
+						value: eval('nvram["wl'+u+'_wep_bit"]') },
+					{ title: 'Passphrase', indent: 2, name: 'wl'+u+'_passphrase', type: 'text', maxlen: 16, size: 20,
+						suffix: ' <input type="button" id="_f_wl'+u+'_wep_gen" value="Generate" onclick="generate_wep('+u+')"> <input type="button" id="_f_wl'+u+'_wep_random" value="Random" onclick="random_wep('+u+')">',
+						value: eval('nvram["wl'+u+'_passphrase"]') }
+				);
 
-	wds = eval('nvram["wl'+u+'_wds"]').split(/\s+/);
-/* REMOVE-BEGIN */
-//	wds = (nvram['wl'+u+'_wds']).split(/\s+/);
-/* REMOVE-END */
-	for (var k = 0; k < 10; k += 2)	{
-		f.push({ title: (k ? '' : 'MAC Address'), indent: 2, multi: [
-			{ name: 'f_wl'+u+'_wds_' + k, type: 'text', maxlen: 17, size: 20, value: wds[k] || '00:00:00:00:00:00' },
-			{ name: 'f_wl'+u+'_wds_' + (k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || '00:00:00:00:00:00' } ] } );
-	}
+				if (typeof(eval('nvram["wl'+u+'_key"]')) == 'undefined')
+					nvram['wl'+u+'_key'] = '1';
+/* REMOVE-BEGIN
+					eval('nvram["wl'+u+'_key"] = 1');
+REMOVE-END */
 
-	createFieldTable('', f);
-	W('<\/div>');
+				for (var j = 1; j <= 4; ++j) {
+					f.push(
+						{ title: ('Key ' + j), indent: 2, name: ('wl'+u+'_key' + j), type: 'text', maxlen: 26, size: 34,
+							suffix: '<input type="radio" onchange="verifyFields(this,1)" onclick="verifyFields(this,1)" name="f_wl'+u+'_wepidx" id="_f_wl'+u+'_wepidx_' + j + '" value="' + j + '"' + ((eval('nvram["wl'+u+'_key"]') == j) ? ' checked>' : '>'),
+							value: nvram['wl'+u+'_key' + j] });
+				}
 
-}
+				f.push(	null,
+					{ title: 'WDS', name: 'f_wl'+u+'_lazywds', type: 'select',
+						options: [['0','Link With...'],['1','Automatic']], value: nvram['wl'+u+'_lazywds'] } );
+/* REMOVE-BEGIN
+				alert('nvram["wl'+u+'_wds"]=' + eval('nvram["wl'+u+'_wds"]'));
+REMOVE-END */
+				var wds = eval('nvram["wl'+u+'_wds"]');
+				if (typeof(wds) == 'undefined') {
+					nvram['wl'+u+'_wds'] = '';
+				}
 
-</script>
+				wds = eval('nvram["wl'+u+'_wds"]').split(/\s+/);
+/* REMOVE-BEGIN
+				wds = (nvram['wl'+u+'_wds']).split(/\s+/);
+REMOVE-END */
+				for (var k = 0; k < 10; k += 2)	{
+					f.push({ title: (k ? '' : 'MAC Address'), indent: 2, multi: [
+						{ name: 'f_wl'+u+'_wds_' + k, type: 'text', maxlen: 17, size: 20, value: wds[k] || '00:00:00:00:00:00' },
+						{ name: 'f_wl'+u+'_wds_' + (k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || '00:00:00:00:00:00' } ] } );
+				}
+
+				createFieldTable('', f);
+				W('<\/div>');
+			}
+		</script>
+
+<!-- section -->
+	</div>
+
+<!-- sesdiv_vifs -->
+</div>
 
 <!-- / / / -->
 
-
-<!-- / WLIFDIV / -->
-</div>
-
-<!-- / SESDIV / -->
-</div>
-
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="cancel()">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">
-for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-	if (wl_sunit(uidx) < 0) {
-		refreshNetModes(uidx);
-		refreshChannels(uidx);
-		refreshBandWidth(uidx);
+<script>
+	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		if (wl_sunit(uidx) < 0) {
+			refreshNetModes(uidx);
+			refreshChannels(uidx);
+			refreshBandWidth(uidx);
+		}
 	}
-}
-verifyFields(null, 1);
+	verifyFields(null, true);
 </script>
 </body>
 </html>

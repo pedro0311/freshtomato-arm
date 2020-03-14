@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,23 +7,20 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang ="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Bandwidth: Weekly</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
+<script src="bwm-hist.js"></script>
 
-<!-- / / / -->
-
-<script type="text/javascript" src="debug.js"></script>
-<script type="text/javascript" src="bwm-hist.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,lan_ifname,rstats_enable"); %>
+
 try {
 //	<% bandwidth("daily"); %>
 }
@@ -96,9 +93,10 @@ function redraw() {
 	if (swk < 0) swk = 6;
 
 	if (summary) {
-		grid = '<table class="bwmg" style="border-spacing:1px">';
+		grid = '<table class="bwmg">';
 		grid += makeRow('header', 'Date', 'Download', 'Upload', 'Total');
-	} else {
+	}
+	else {
 		grid = '';
 	}
 
@@ -108,7 +106,7 @@ function redraw() {
 				makeRow('header', 'Date', 'Download', 'Upload', 'Total') +
 				block.join('') +
 				makeRow('footer', 'Total', rescale(dl), rescale(ul), rescale(dl + ul)) +
-				'<\/table><br />';
+				'<\/table><br>';
 	}
 
 	for (i = 0; i < daily_history.length; ++i) {
@@ -156,7 +154,7 @@ function redraw() {
 			if (summary) {
 				if (i > 0) {
 					grid += makeRow(((rows & 1) ? 'odd' : 'even'),
-						dend + '<br />' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
+						dend + '<br>' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
 					++rows;
 					++gn;
 				}
@@ -187,7 +185,7 @@ function redraw() {
 	if (summary) {
 		if (gn < 9) {
 			grid += makeRow(((rows & 1) ? 'odd' : 'even'),
-				dend + '<br />' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
+				dend + '<br>' + dbeg, rescale(dl), rescale(ul), rescale(dl + ul));
 		}
 		grid += '<\/table>';
 	}
@@ -196,7 +194,7 @@ function redraw() {
 			flush_block();
 		}
 	}
-	E('bwm-weekly-grid').innerHTML = grid;
+	E('bwm-grid').innerHTML = grid;
 }
 
 function init() {
@@ -223,45 +221,46 @@ function init() {
 
 </head>
 <body onload="init()">
-<form action="">
-<table id="container" cellspacing="0">
+<form>
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
 <!-- / / / -->
 
 <div class="section-title">WAN Bandwidth - Weekly</div>
-<div id="rstats">
+<div class="section">
 
-	<div id="bwm-weekly-grid" style="float:left"></div>
-	<div style="float:right;text-align:right">
-		<b>Show</b> <select onchange="changeMode(this)" id="shmode"><option value="1" selected="selected">Summary</option><option value="0">Full</option></select><br/>
-		<b>Date</b> <select onchange='changeDate(this, "ymd")' id="dafm"><option value="0">yyyy-mm-dd</option><option value="1">mm-dd-yyyy</option><option value="2">mmm dd, yyyy</option><option value="3">dd.mm.yyyy</option></select><br/>
-		<b>Start</b> <select onchange="changeStart(this)" id="startwk"><option value="0" selected="selected">Sun</option><option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option></select><br/>
-		<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br/>
-		<br/>
-		&raquo; <a href="admin-bwm.asp">Configure</a>
-		<br/><br/><br/>
+	<div id="rstats">
+		<div id="bwm-grid"></div>
+
+		<div id="bwm-ctrl">
+			<b>Show</b> <select onchange="changeMode(this)" id="shmode"><option value="1" selected="selected">Summary</option><option value="0">Full</option></select><br>
+			<b>Date</b> <select onchange='changeDate(this, "ymd")' id="dafm"><option value="0">yyyy-mm-dd</option><option value="1">mm-dd-yyyy</option><option value="2">mmm dd, yyyy</option><option value="3">dd.mm.yyyy</option></select><br>
+			<b>Start</b> <select onchange="changeStart(this)" id="startwk"><option value="0" selected="selected">Sun</option><option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option></select><br>
+			<b>Scale</b> <select onchange="changeScale(this)" id="scale"><option value="0">KB</option><option value="1">MB</option><option value="2" selected="selected">GB</option></select><br>
+			<br>
+			&raquo; <a href="admin-bwm.asp">Configure</a>
+		</div>
 	</div>
-
-	<br/>
 
 </div>
 
 <!-- / / / -->
 
-<script type="text/javascript">checkRstats();</script>
+<script>checkRstats();</script>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div id="footer">
 	<input type="button" value="Refresh" id="refresh-button" onclick="reloadPage()">
+</div>
+
 </td></tr>
 </table>
 </form>

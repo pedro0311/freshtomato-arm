@@ -1,9 +1,9 @@
 /**************************************************************************
  *   help.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 2000-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2000-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2017 Rishabh Dave                                      *
- *   Copyright (C) 2014-2018 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2019 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -43,16 +43,31 @@ static size_t location;
 void wrap_help_text_into_buffer(void)
 {
 	size_t sum = 0;
+	/* Avoid overtight and overwide paragraphs in the introductory text. */
+	size_t wrapping_point = (COLS < 32) ? 32 : (COLS > 74) ? 74 : COLS;
 	const char *ptr = start_of_body;
 
 	make_new_buffer();
 
 	/* Copy the help text into the just-created new buffer. */
 	while (*ptr != '\0') {
-		int length = help_line_len(ptr);
-		char *oneline = nmalloc(length + 1);
+		int length, shim;
+		char *oneline;
 
-		snprintf(oneline, length + 1, "%s", ptr);
+		if (ptr == end_of_intro)
+			wrapping_point = (COLS < 32) ? 32 : COLS;
+
+		if (ptr > end_of_intro && *(ptr - 1) != '\n') {
+			length = break_line(ptr, (COLS < 32) ? 14 : COLS - 18, TRUE);
+			oneline = nmalloc(length + 5);
+			snprintf(oneline, length + 5, "\t\t  %s", ptr);
+		} else {
+			length = break_line(ptr, wrapping_point, TRUE);
+			oneline = nmalloc(length + 1);
+			shim = (*(ptr + length - 1) == ' ') ? 0 : 1;
+			snprintf(oneline, length + shim, "%s", ptr);
+		}
+
 		free(openfile->current->data);
 		openfile->current->data = oneline;
 
@@ -172,7 +187,13 @@ void show_help(void)
 		kbinput = get_kbinput(edit, didfind == 1 || ISSET(SHOW_CURSOR));
 		didfind = 0;
 
-		func = parse_help_input(&kbinput);
+#ifndef NANO_TINY
+		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
+			beep();
+			continue;
+		}
+#endif
+		func = interpret(&kbinput);
 
 		if (func == total_refresh) {
 			total_redraw();
@@ -541,65 +562,6 @@ void help_init(void)
 		}
 	}
 #endif /* !NANO_TINY */
-}
-
-/* Return the function that is bound to the given key, accepting certain
- * plain characters too, for consistency with the file browser. */
-functionptrtype parse_help_input(int *kbinput)
-{
-	if (!meta_key) {
-		switch (*kbinput) {
-			case '-':
-				return do_page_up;
-			case ' ':
-				return do_page_down;
-			case 'W':
-			case 'w':
-			case '/':
-				return do_search_forward;
-			case 'N':
-				return do_findprevious;
-			case 'n':
-				return do_findnext;
-			case 'E':
-			case 'e':
-			case 'Q':
-			case 'q':
-			case 'X':
-			case 'x':
-				return do_exit;
-		}
-	}
-	return func_from_key(kbinput);
-}
-
-/* Calculate the displayable length of the help-text line starting at ptr. */
-size_t help_line_len(const char *ptr)
-{
-	size_t wrapping_point = (COLS > 24) ? COLS - 1 : 24;
-		/* The target width for wrapping long lines. */
-	ssize_t wrap_location;
-		/* Actual position where the line can be wrapped. */
-	size_t length = 0;
-		/* Full length of the line, until the first newline. */
-
-	/* Avoid overwide paragraphs in the introductory text. */
-	if (ptr < end_of_intro && COLS > 74)
-		wrapping_point = 74;
-
-	wrap_location = break_line(ptr, wrapping_point, TRUE);
-
-	/* Get the length of the entire line up to a null or a newline. */
-	while (*(ptr + length) != '\0' && *(ptr + length) != '\n')
-		length = step_right(ptr, length);
-
-	/* If the entire line will just fit the screen, don't wrap it. */
-	if (wideness(ptr, length) <= wrapping_point + 1)
-		return length;
-	else if (wrap_location > 0)
-		return wrap_location;
-	else
-		return 1;
 }
 #endif /* ENABLE_HELP */
 

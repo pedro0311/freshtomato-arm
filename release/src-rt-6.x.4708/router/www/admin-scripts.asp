@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <!--
 	Tomato GUI
 	Copyright (C) 2006-2010 Jonathan Zarate
@@ -7,30 +7,16 @@
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
 -->
-<html>
+<html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Scripts</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script type="text/javascript" src="tomato.js"></script>
+<script src="tomato.js"></script>
 
-<!-- / / / -->
-<style type="text/css">
-.as-script {
-	font: 12px monospace;
-	width: 99%;
-	height: 400px;
-	overflow: scroll;
-	border: 1px solid #eee;
-	border-top: none;
-}
-</style>
-
-<script type="text/javascript" src="debug.js"></script>
-
-<script type="text/javascript">
+<script>
 
 //	<% nvram("script_init,script_shut,script_fire,script_wanup,script_mwanup"); %>
 
@@ -42,9 +28,8 @@ function tabSelect(name) {
 		var on = (name == tabs[i][0]);
 		elem.display(tabs[i][0] + '-text', on);
 	}
-	if (i >= tabs.length) return;
 	E(name + '-text').focus();
-	cookie.set('scripts_tab', name)
+	cookie.set('scripts_tab', name);
 }
 
 function wordWrap() {
@@ -53,11 +38,12 @@ function wordWrap() {
 		var v = e.value;
 		var s = e.style.display;
 		var c = e.cloneNode(false);
-		wrap = E('as-wordwrap').checked;
+		wrap = (E('as-wordwrap').checked ? 1 : 0);
 		s = s ? s : "block";
 		c.setAttribute('style', wrap ? 'display:' + s + ';white-space:pre-wrap' : 'display:' + s + ';white-space:pre;overflow-wrap:normal;overflow-x:scroll');
 		e.parentNode.replaceChild(c, e);
 		c.value = v;
+		cookie.set('scripts_wrap', wrap);
 	}
 }
 
@@ -85,16 +71,16 @@ function earlyInit() {
 	tabSelect(cookie.get('scripts_tab') || 'as-init');
 }
 </script>
-
 </head>
+
 <body>
 <form id="t_fom" method="post" action="tomato.cgi">
-<table id="container" cellspacing="0">
+<table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">Tomato</div>
-	<div class="version">Version <% version(); %></div>
+	<div class="title">FreshTomato</div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
-<tr id="body"><td id="navi"><script type="text/javascript">navi()</script></td>
+<tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
 
@@ -102,42 +88,43 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="admin-scripts.asp">
 
-<script type="text/javascript">
-tabCreate.apply(this, tabs);
-
-wrap = cookie.get('scripts_wrap') || 0;
-s = 'display:none;' + (wrap ? 'white-space:pre-wrap' : 'white-space:pre;overflow-wrap:normal;overflow-x:scroll');
-for (i = 0; i < tabs.length; ++i) {
-	t = tabs[i][0];
-	W('<textarea class="as-script" name="script_' + t.replace('as-', '') + '" id="' + t + '-text" style="' + s + '"><\/textarea>');
-}
-W('<br /><input type="checkbox" id="as-wordwrap" onclick="wordWrap()" onchange="wordWrap()" ' + (wrap ? 'checked' : '') + '> Word Wrap');
-</script>
-
 <!-- / / / -->
 
-<br />
-<br />
-<br />
-<div class="section-title">Notes</div>
+<div class="section-title">Scripts</div>
 <div class="section">
+	<script>
+		tabCreate.apply(this, tabs);
 
-<ul>
-	<li>For <b>MultiWAN Up</b>, the active WAN number is passed as <b>$1</b>.</li>
-</ul>
-
+		wrap = cookie.get('scripts_wrap') || 0;
+		s = 'display:none;' + (wrap == 1 ? 'white-space:pre-wrap' : 'white-space:pre;overflow-wrap:normal;overflow-x:scroll');
+		for (i = 0; i < tabs.length; ++i) {
+			t = tabs[i][0];
+			W('<textarea class="as-script" name="script_' + t.replace('as-', '') + '" id="' + t + '-text" style="' + s + '"><\/textarea>');
+		}
+		W('<div style="margin-top:20px"><input type="checkbox" id="as-wordwrap" onclick="wordWrap()" onchange="wordWrap()" ' + (wrap == 1 ? 'checked' : '') + '>&nbsp; Word Wrap<\/div>');
+	</script>
 </div>
 
 <!-- / / / -->
 
-</td></tr>
-<tr><td id="footer" colspan="2">
+<div class="section-title">Notes</div>
+<div class="section">
+	<ul>
+		<li>For <b>MultiWAN Up</b>, the active WAN number is passed as <b>$1</b>.</li>
+	</ul>
+</div>
+
+<!-- / / / -->
+
+<div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+</div>
+
 </td></tr>
 </table>
 </form>
-<script type="text/javascript">earlyInit();</script>
+<script>earlyInit();</script>
 </body>
 </html>

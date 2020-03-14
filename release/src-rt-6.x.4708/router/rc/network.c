@@ -133,19 +133,23 @@ void set_host_domain_name(void)
 
 static int wlconf(char *ifname, int unit, int subunit)
 {
-	int r;
+	int r = -1;
 	char wl[24];
 
-	if (/* !wl_probe(ifname) && */ unit >= 0) {
-		// validate nvram settings for wireless i/f
-		snprintf(wl, sizeof(wl), "--wl%d", unit);
-		eval("nvram", "validate", wl);
-	}
+	/* Check interface - fail for non-wl interfaces */
+	if ((unit < 0) || wl_probe(ifname)) return r;
+
+#ifndef TCONFIG_BCMARM
+	/* Tomato MIPS needs a little help here: wlconf() will not validate/restore all per-interface related variables right now; */
+	snprintf(wl, sizeof(wl), "--wl%d", unit);
+	eval("nvram", "validate", wl); /* sync wl_ and wlX ; (MIPS does not use nvram_tuple router_defaults; ARM branch does ... ) */
+	memset(wl, 0, sizeof(wl)); /* reset */
+#endif
 
 	r = eval("wlconf", ifname, "up");
 	if (r == 0) {
 		if (unit >= 0 && subunit <= 0) {
-			// setup primary wl interface
+			/* setup primary wl interface */
 			nvram_set("rrules_radio", "-1");
 
 			eval("wl", "-i", ifname, "antdiv", nvram_safe_get(wl_nvname("antdiv", unit, 0)));
@@ -156,7 +160,7 @@ static int wlconf(char *ifname, int unit, int subunit)
 
 		if (wl_client(unit, subunit)) {
 			if (nvram_match(wl_nvname("mode", unit, subunit), "wet")) {
-				ifconfig(ifname, IFUP|IFF_ALLMULTI, NULL, NULL);
+				ifconfig(ifname, IFUP | IFF_ALLMULTI, NULL, NULL);
 			}
 			if (nvram_get_int(wl_nvname("radio", unit, 0))) {
 				snprintf(wl, sizeof(wl), "%d", unit);
@@ -166,8 +170,6 @@ static int wlconf(char *ifname, int unit, int subunit)
 	}
 	return r;
 }
-
-// -----------------------------------------------------------------------------
 
 #ifdef TCONFIG_EMF
 static void emf_mfdb_update(char *lan_ifname, char *lan_port_ifname, bool add)
@@ -227,8 +229,15 @@ static void emf_rtport_update(char *lan_ifname, char *lan_port_ifname, bool add)
 
 static void start_emf(char *lan_ifname)
 {
+	int ret = 0;
+	char tmp[32] = {0};
+
+	if (lan_ifname == NULL ||
+	    !nvram_get_int("emf_enable") ||
+	    (strcmp(lan_ifname,"") == 0)) return;
+	
 	/* Start EMF */
-	eval("emf", "start", lan_ifname);
+	ret = eval("emf", "start", lan_ifname);
 
 	/* Add the static MFDB entries */
 	emf_mfdb_update(lan_ifname, NULL, 1);
@@ -238,96 +247,79 @@ static void start_emf(char *lan_ifname)
 
 	/* Add the RTPORT entries */
 	emf_rtport_update(lan_ifname, NULL, 1);
+
+	if (ret) {
+		syslog(LOG_INFO, "starting EMF for %s failed ...\n", lan_ifname);
+	}
+	else {
+		syslog(LOG_INFO, "EMF for %s is started\n", lan_ifname);
+		nvram_set(strcat_r(lan_ifname,"_emf_active", tmp), "1"); /* set active */
+	}
 }
 
 static void stop_emf(char *lan_ifname)
 {
-	eval("emf", "stop", lan_ifname);
+	int ret = 0;
+	char tmp[32] = {0};
+
+	/* check if emf is active for lan_ifname */
+	if (lan_ifname == NULL ||
+	    !nvram_get_int(strcat_r(lan_ifname,"_emf_active", tmp))) return;
+
+	/* Stop EMF for this LAN / brX */
+	ret = eval("emf", "stop", lan_ifname);
+
+	/* Remove bridge from igs */
 	eval("igs", "del", "bridge", lan_ifname);
 	eval("emf", "del", "bridge", lan_ifname);
+
+	if (ret) {
+		syslog(LOG_INFO, "stopping EMF for %s failed ...\n", lan_ifname);
+	}
+	else {
+		syslog(LOG_INFO, "EMF for %s is stopped\n", lan_ifname);
+		nvram_set(strcat_r(lan_ifname,"_emf_active", tmp), "0"); /* set NOT active */
+	}
 }
 #endif
 
-// -----------------------------------------------------------------------------
-
 /* Set initial QoS mode for all et interfaces that are up. */
-void set_et_qos_mode(int sfd)
+void set_et_qos_mode(void)
 {
-	int i, qos;
-	caddr_t ifrdata;
+	int i, s, qos;
 	struct ifreq ifr;
 	struct ethtool_drvinfo info;
 
+	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) return;
+
 	qos = (strcmp(nvram_safe_get("wl_wme"), "off") != 0);
+
 	for (i = 1; i <= DEV_NUMIFS; i++) {
 		ifr.ifr_ifindex = i;
-		if (ioctl(sfd, SIOCGIFNAME, &ifr)) continue;
-		if (ioctl(sfd, SIOCGIFHWADDR, &ifr)) continue;
-		if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) continue;
-		/* get flags */
-		if (ioctl(sfd, SIOCGIFFLAGS, &ifr)) continue;
-		/* if up (wan may not be up yet at this point) */
-		if (ifr.ifr_flags & IFF_UP) {
-			ifrdata = ifr.ifr_data;
-			memset(&info, 0, sizeof(info));
-			info.cmd = ETHTOOL_GDRVINFO;
-			ifr.ifr_data = (caddr_t)&info;
-			if (ioctl(sfd, SIOCETHTOOL, &ifr) >= 0) {
-				/* Set QoS for et & bcm57xx devices */
-#ifndef BCMARM
-				if (!strncmp(info.driver, "et", 2) ||
-				    !strncmp(info.driver, "bcm57", 5)) {
-					ifr.ifr_data = (caddr_t)&qos;
-					ioctl(sfd, SIOCSETCQOS, &ifr);
-				}
-#endif
-			}
-			ifr.ifr_data = ifrdata;
-		}
-	}
-}
-
-static void check_afterburner(void)
-{
-	char *p;
-
-	if (nvram_match("wl_afterburner", "off")) return;
-	if ((p = nvram_get("boardflags")) == NULL) return;
-
-	if (strcmp(p, "0x0118") == 0) {			// G 2.2, 3.0, 3.1
-		p = "0x0318";
-	}
-	else if (strcmp(p, "0x0188") == 0) {	// G 2.0
-		p = "0x0388";
-	}
-	else if (strcmp(p, "0x2558") == 0) {	// G 4.0, GL 1.0, 1.1
-		p = "0x2758";
-	}
-	else {
-		return;
+		if (ioctl(s, SIOCGIFNAME, &ifr))
+			continue;
+		if (ioctl(s, SIOCGIFHWADDR, &ifr))
+			continue;
+		if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER)
+			continue;
+		if (ioctl(s, SIOCGIFFLAGS, &ifr))
+			continue;
+		if (!(ifr.ifr_flags & IFF_UP))
+			continue;
+		/* Set QoS for et & bcm57xx devices */
+		memset(&info, 0, sizeof(info));
+		info.cmd = ETHTOOL_GDRVINFO;
+		ifr.ifr_data = (caddr_t)&info;
+		if (ioctl(s, SIOCETHTOOL, &ifr) < 0)
+			continue;
+		if ((strncmp(info.driver, "et", 2) != 0) &&
+		    (strncmp(info.driver, "bcm57", 5) != 0))
+			continue;
+		ifr.ifr_data = (caddr_t)&qos;
+		ioctl(s, SIOCSETCQOS, &ifr);
 	}
 
-	nvram_set("boardflags", p);
-
-	if (!nvram_match("debug_abrst", "0")) {
-		stop_wireless();
-		unload_wl();
-		load_wl();
-		start_wireless();
-	}
-
-
-/*	safe?
-
-	unsigned long bf;
-	char s[64];
-
-	bf = strtoul(p, &p, 0);
-	if ((*p == 0) && ((bf & BFL_AFTERBURNER) == 0)) {
-		sprintf(s, "0x%04lX", bf | BFL_AFTERBURNER);
-		nvram_set("boardflags", s);
-	}
-*/
+	close(s);
 }
 
 void unload_wl(void)
@@ -340,25 +332,172 @@ void load_wl(void)
 	modprobe("wl");
 }
 
+#ifdef CONFIG_BCMWL5
+int disabled_wl(int idx, int unit, int subunit, void *param)
+{
+	char *ifname;
+
+	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
+
+	/* skip disabled wl vifs */
+	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
+	    !nvram_get_int(wl_nvname("bss_enabled", unit, subunit)))
+		return 1;
+
+	return 0;
+}
+#endif
+
 static int set_wlmac(int idx, int unit, int subunit, void *param)
 {
 	char *ifname;
 
 	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
 
-	// skip disabled wl vifs
+	/* skip disabled wl vifs */
 	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
-		!nvram_get_int(wl_nvname("bss_enabled", unit, subunit)))
+	    !nvram_get_int(wl_nvname("bss_enabled", unit, subunit)))
 		return 0;
 
 	if (strcmp(nvram_safe_get(wl_nvname("hwaddr", unit, subunit)), "") == 0) {
 //		set_mac(ifname, wl_nvname("macaddr", unit, subunit),
-		set_mac(ifname, wl_nvname("hwaddr", unit, subunit),  // AB multiSSID
+		set_mac(ifname, wl_nvname("hwaddr", unit, subunit),  /* AB multiSSID */
 		2 + unit + ((subunit > 0) ? ((unit + 1) * 0x10 + subunit) : 0));
-	} else {
+	}
+	else {
 		set_mac(ifname, wl_nvname("hwaddr", unit, subunit), 0);
 	}
+	
 	return 1;
+}
+
+void start_wl(void)
+{
+	restart_wl();
+}
+
+void restart_wl(void)
+{
+	char *lan_ifname, *lan_ifnames, *ifname, *p;
+	int unit, subunit;
+	int is_client = 0;
+	int model;
+
+	char tmp[32];
+	char br;
+	char prefix[16] = {0};
+
+	int wlan_cnt = 0;
+	int wlan_5g_cnt = 0;
+	char blink_wlan_ifname[32];
+	char blink_wlan_5g_ifname[32];
+
+	/* get router model */
+	model = get_model();
+
+	for(br=0 ; br<4 ; br++) {
+		char bridge[2] = "0";
+		if (br!=0)
+			bridge[0]+=br;
+		else
+			strcpy(bridge, "");
+
+		strcpy(tmp,"lan");
+		strcat(tmp,bridge);
+		strcat(tmp, "_ifname");
+		lan_ifname = nvram_safe_get(tmp);
+
+		if (strncmp(lan_ifname, "br", 2) == 0) {
+
+			strcpy(tmp,"lan");
+			strcat(tmp,bridge);
+			strcat(tmp, "_ifnames");
+
+			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+				p = lan_ifnames;
+				while ((ifname = strsep(&p, " ")) != NULL) {
+					while (*ifname == ' ') ++ifname;
+					if (*ifname == 0) continue;
+
+					unit = -1; subunit = -1;
+
+					/* ignore disabled wl vifs */
+					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
+						char nv[40];
+						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
+						if (!nvram_get_int(nv))
+							continue;
+						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
+							continue;
+					}
+					/* get the instance number of the wl i/f */
+					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
+						continue;
+
+					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
+
+#ifdef CONFIG_BCMWL5
+					memset(prefix, 0, sizeof(prefix));
+					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+					if (nvram_match(strcat_r(prefix, "radio", tmp), "0")) {
+						eval("wlconf", ifname, "down");
+					}
+					else {
+						eval("wlconf", ifname, "start"); /* start wl iface */
+					}
+
+					/* Enable WLAN LEDs if wireless interface is enabled */
+					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
+						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)) {	/* kill all blink at first start up */
+							killall("blink", SIGKILL);
+							memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
+							memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
+						}
+						if (unit == 0) {
+							led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
+							wlan_cnt++; /* count all wlan units / subunits */
+							if (wlan_cnt < 2) strcpy(blink_wlan_ifname, ifname);
+						}
+						else if (unit == 1) {
+							led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
+							wlan_5g_cnt++; /* count all 5g units / subunits */
+							if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
+						}
+					}
+#endif	/* CONFIG_BCMWL5 */
+				}
+				free(lan_ifnames);
+			}
+		}
+#ifdef CONFIG_BCMWL5
+		else if (strcmp(lan_ifname, "")) {
+			/* specific non-bridged lan iface */
+			eval("wlconf", lan_ifname, "start");
+		}
+#endif	/* CONFIG_BCMWL5 */
+	}
+
+	killall("wldist", SIGTERM);
+	eval("wldist");
+
+	if (is_client)
+		xstart("radio", "join");
+
+	/* do some LED setup */
+	if ((model == MODEL_WS880) ||
+	    (model == MODEL_R6400) ||
+	    (model == MODEL_R7000)) {
+		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+			led(LED_AOSS, LED_ON);
+		else
+			led(LED_AOSS, LED_OFF);
+	}
+
+	/* Finally: start blink (traffic "control" of LED) if only one unit (for each wlan) is enabled AND stealth mode is off */
+	if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) {
+		if (wlan_cnt == 1) eval("blink", blink_wlan_ifname, "wlan", "10", "8192");
+		if (wlan_5g_cnt == 1) eval("blink", blink_wlan_5g_ifname, "5g", "10", "8192");
+	}
 }
 
 void stop_lan_wl(void)
@@ -400,17 +539,31 @@ void stop_lan_wl(void)
 					if (get_ifname_unit(ifname, &unit, &subunit) < 0)
 						continue;
 				}
-				else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
+				else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+#ifdef TCONFIG_EMF
+					if (nvram_get_int("emf_enable"))
+						eval("emf", "del", "iface", lan_ifname, ifname);
+#endif
 					continue;
+				}
 
 				eval("wlconf", ifname, "down");
 #endif
-				eval("brctl", "delif", lan_ifname, ifname);
 				ifconfig(ifname, 0, NULL, NULL);
+				eval("brctl", "delif", lan_ifname, ifname);
+#ifdef TCONFIG_EMF
+				if (nvram_get_int("emf_enable"))
+					eval("emf", "del", "iface", lan_ifname, ifname);
+#endif
+
 			}
 			free(wl_ifnames);
 		}
+#ifdef TCONFIG_EMF
+	stop_emf(lan_ifname);
+#endif	
 	}
+
 }
 
 void start_lan_wl(void)
@@ -445,6 +598,13 @@ void start_lan_wl(void)
 		lan_ifname = nvram_safe_get(tmp);
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
+
+#ifdef TCONFIG_EMF
+			if (nvram_get_int("emf_enable")) {
+				eval("emf", "add", "bridge", lan_ifname);
+				eval("igs", "add", "bridge", lan_ifname);
+			}
+#endif
 			strcpy(tmp,"lan");
 			strcat(tmp,bridge);
 			strcat(tmp, "_ipaddr");
@@ -464,7 +624,7 @@ void start_lan_wl(void)
 
 					unit = -1; subunit = -1;
 
-					// ignore disabled wl vifs
+					/* ignore disabled wl vifs */
 #ifdef CONFIG_BCMWL5
 					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
 #endif
@@ -481,15 +641,15 @@ void start_lan_wl(void)
 						wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit));
 #endif
 
-					// bring up interface
-					if (ifconfig(ifname, IFUP, NULL, NULL) != 0) continue;
+					/* bring up interface */
+					if (ifconfig(ifname, IFUP | IFF_ALLMULTI, NULL, NULL) != 0) continue;
 
 #ifdef CONFIG_BCMWL5
 					if (wlconf(ifname, unit, subunit) == 0) {
 						const char *mode = nvram_safe_get(wl_nvname("mode", unit, subunit));
 
 						if (strcmp(mode, "wet") == 0) {
-							// Enable host DHCP relay
+							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) {
 								wl_iovar_set(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
 								wl_iovar_setint(ifname, "wet_host_ipv4", ip);
@@ -501,23 +661,32 @@ void start_lan_wl(void)
 					}
 #endif
 					eval("brctl", "addif", lan_ifname, ifname);
+#ifdef TCONFIG_EMF
+					if (nvram_get_int("emf_enable"))
+						eval("emf", "add", "iface", lan_ifname, ifname);
+#endif
 				}
 				free(wl_ifnames);
 			}
 		}
+#ifdef TCONFIG_EMF
+		start_emf(lan_ifname);
+#endif
 	}
 }
 
-void stop_wireless()
-{
+void stop_wireless(void) {
 #ifdef CONFIG_BCMWL5
 	stop_nas();
 #endif
 	stop_lan_wl();
+
+	unload_wl();
 }
 
-void start_wireless()
-{
+void start_wireless(void) {
+	load_wl();
+
 	start_lan_wl();
 
 #ifdef CONFIG_BCMWL5
@@ -526,241 +695,12 @@ void start_wireless()
 	restart_wl();
 }
 
-void restart_wl(void)
-{
-	char *lan_ifnames, *ifname, *p;
-	int unit, subunit;
-	int is_client = 0;
-	int model;
+void restart_wireless(void) {
 
-	char tmp[32];
-	char br;
+	stop_wireless();
 
-	int wlan_cnt = 0;
-	int wlan_5g_cnt = 0;
-	char blink_wlan_ifname[32];
-	char blink_wlan_5g_ifname[32];
+	start_wireless();
 
-	/* get router model */
-	model = get_model();
-
-	for(br=0 ; br<4 ; br++) {
-		char bridge[2] = "0";
-		if (br!=0)
-			bridge[0]+=br;
-		else
-			strcpy(bridge, "");
-
-		strcpy(tmp,"lan");
-		strcat(tmp,bridge);
-		strcat(tmp, "_ifnames");
-		if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
-			p = lan_ifnames;
-			while ((ifname = strsep(&p, " ")) != NULL) {
-				while (*ifname == ' ') ++ifname;
-				if (*ifname == 0) continue;
-
-				unit = -1; subunit = -1;
-
-				// ignore disabled wl vifs
-				if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
-					char nv[40];
-					snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-					if (!nvram_get_int(nv))
-						continue;
-					if (get_ifname_unit(ifname, &unit, &subunit) < 0)
-						continue;
-				}
-				// get the instance number of the wl i/f
-				else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
-					continue;
-
-				is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
-
-#ifdef CONFIG_BCMWL5
-				eval("wlconf", ifname, "start"); /* start wl iface */
-
-				/* Enable WLAN LEDs if wireless interface is enabled */
-				if (nvram_get_int(wl_nvname("radio", unit, 0))) {
-					if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)) {	/* kill all blink at first start up */
-					killall("blink", SIGKILL);
-					memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
-					memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
-					}
-					if (unit == 0) {
-						led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
-						wlan_cnt++; /* count all wlan units / subunits */
-						if (wlan_cnt < 2) strcpy(blink_wlan_ifname, ifname);
-					}
-					else if (unit == 1) {
-						led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
-						wlan_5g_cnt++; /* count all 5g units / subunits */
-						if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
-					}
-				}
-#endif	// CONFIG_BCMWL5
-			}
-			free(lan_ifnames);
-		}
-	}
-
-	killall("wldist", SIGTERM);
-	eval("wldist");
-
-	if (is_client)
-		xstart("radio", "join");
-
-	/* do some LED setup */
-	if ((model == MODEL_R6400) ||
-	    (model == MODEL_R7000)) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
-			led(LED_AOSS, LED_ON);
-		else
-			led(LED_AOSS, LED_OFF);
-	}
-
-	/* Finally: start blink (traffic "control" of LED) if only one unit (for each wlan) is enabled AND stealth mode is off */
-	if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) {
-		if (wlan_cnt == 1) eval("blink", blink_wlan_ifname, "wlan", "10", "8192");
-		if (wlan_5g_cnt == 1) eval("blink", blink_wlan_5g_ifname, "5g", "10", "8192");
-	}
-}
-
-#ifdef CONFIG_BCMWL5
-static int disabled_wl(int idx, int unit, int subunit, void *param)
-{
-	char *ifname;
-
-	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
-
-	// skip disabled wl vifs
-	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
-		!nvram_get_int(wl_nvname("bss_enabled", unit, subunit)))
-		return 1;
-	return 0;
-}
-#endif
-
-void start_wl(void)
-{
-	char *lan_ifname, *lan_ifnames, *ifname, *p;
-	int unit, subunit;
-	int is_client = 0;
-	int model;
-
-	char tmp[32];
-	char br;
-
-	int wlan_cnt = 0;
-	int wlan_5g_cnt = 0;
-	char blink_wlan_ifname[32];
-	char blink_wlan_5g_ifname[32];
-
-	/* get router model */
-	model = get_model();
-
-#ifdef CONFIG_BCMWL5
-		// HACK: When a virtual SSID is disabled, it requires two initialisation
-	if (foreach_wif(1, NULL, disabled_wl))
-	{
-		stop_wireless();
-		start_wireless();
-		return;
-	}
-#endif
-
-	for(br=0 ; br<4 ; br++) {
-		char bridge[2] = "0";
-		if (br!=0)
-			bridge[0]+=br;
-		else
-			strcpy(bridge, "");
-
-		strcpy(tmp,"lan");
-		strcat(tmp,bridge);
-		strcat(tmp, "_ifname");
-		lan_ifname = nvram_safe_get(tmp);
-		if (strncmp(lan_ifname, "br", 2) == 0) {
-			strcpy(tmp,"lan");
-			strcat(tmp,bridge);
-			strcat(tmp, "_ifnames");
-			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
-				p = lan_ifnames;
-				while ((ifname = strsep(&p, " ")) != NULL) {
-					while (*ifname == ' ') ++ifname;
-					if (*ifname == 0) continue;
-
-					unit = -1; subunit = -1;
-
-					// ignore disabled wl vifs
-					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
-						char nv[40];
-						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-						if (!nvram_get_int(nv))
-							continue;
-						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
-							continue;
-					}
-					// get the instance number of the wl i/f
-					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
-						continue;
-
-					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
-
-#ifdef CONFIG_BCMWL5
-					eval("wlconf", ifname, "start"); /* start wl iface */
-
-					/* Enable WLAN LEDs if wireless interface is enabled */
-					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
-					if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)) {	/* kill all blink at first start up */
-						killall("blink", SIGKILL);
-						memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
-						memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
-					}
-						if (unit == 0) {
-							led(LED_WLAN, LED_ON); /* enable WLAN LED for 2.4 GHz */
-							wlan_cnt++;	/* count all wlan units / subunits */
-							if (wlan_cnt < 2) strcpy(blink_wlan_ifname, ifname);
-						}
-						else if (unit == 1) {
-							led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
-							wlan_5g_cnt++;	/* count all 5g units / subunits */
-							if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
-						}
-					}
-#endif	// CONFIG_BCMWL5
-				}
-				free(lan_ifnames);
-			}
-		}
-#ifdef CONFIG_BCMWL5
-		else if (strcmp(lan_ifname, "")) {
-			/* specific non-bridged lan iface */
-			eval("wlconf", lan_ifname, "start");
-		}
-#endif	// CONFIG_BCMWL5
-	}
-
-	killall("wldist", SIGTERM);
-	eval("wldist");
-
-	if (is_client)
-		xstart("radio", "join");
-
-	/* do some LED setup */
-	if ((model == MODEL_R6400) ||
-	    (model == MODEL_R7000)) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
-			led(LED_AOSS, LED_ON);
-		else
-			led(LED_AOSS, LED_OFF);
-	}
-
-	/* Finally: start blink (traffic "control" of LED) if only one unit (for each wlan) is enabled AND stealth mode is off */
-	if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) {
-		if (wlan_cnt == 1) eval("blink", blink_wlan_ifname, "wlan", "10", "8192");
-		if (wlan_5g_cnt == 1) eval("blink", blink_wlan_5g_ifname, "5g", "10", "8192");
-	}
 }
 
 #ifdef TCONFIG_IPV6
@@ -772,11 +712,12 @@ void enable_ipv6(int enable)
 
 	if ((dir = opendir("/proc/sys/net/ipv6/conf")) != NULL) {
 		while ((dirent = readdir(dir)) != NULL) {
-		  /*Do not enable IPv6 on 'all', 'eth0', 'eth1', 'eth2' (ethX) - IPv6 will live on the bridged instances --> This simplifies the routing table a little bit;
-		    'default' is enabled so that new interfaces (brX, vlanX, ...)  will get IPv6*/
+		  /* Do not enable IPv6 on 'all', 'eth0', 'eth1', 'eth2' (ethX);
+		     IPv6 will live on the bridged instances --> This simplifies the routing table a little bit;
+		    'default' is enabled so that new interfaces (brX, vlanX, ...) will get IPv6 */
 		  if ( (strncmp("eth", dirent->d_name, 3) == 0) ||
 		       (strncmp("all", dirent->d_name, 3) == 0) ) {
-		    /*do nothing*/
+		    /* do nothing */
 		  }
 		  else {
 		    snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
@@ -842,24 +783,27 @@ void start_lan(void)
 	char *iftmp;
 	char nv[64];
 
+	load_wl(); /* lets go! */
+
 #ifdef CONFIG_BCMWL5
 	foreach_wif(0, NULL, set_wlmac);
 #else
 	foreach_wif(1, NULL, set_wlmac);
 #endif
-	check_afterburner();
+
 #ifdef TCONFIG_IPV6
-	enable_ipv6(ipv6_enabled());  //tell Kernel to disable/enable IPv6 for most interfaces
+	enable_ipv6(ipv6_enabled());  /* tell Kernel to disable/enable IPv6 for most interfaces */
 #endif
 	vlan0tag = nvram_get_int("vlan0tag");
 
-	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) return;
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
 		else
 			strcpy(bridge, "");
+
+		if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) return;
 
 		strcpy(tmp,"lan");
 		strcat(tmp,bridge);
@@ -903,7 +847,7 @@ void start_lan(void)
 
 					unit = -1; subunit = -1;
 
-					// ignore disabled wl vifs
+					/* ignore disabled wl vifs */
 					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
 
 						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
@@ -918,7 +862,7 @@ void start_lan(void)
 					else
 						wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit));
 
-					// vlan ID mapping
+					/* vlan ID mapping */
 					if (strncmp(ifname, "vlan", 4) == 0) {
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
@@ -929,10 +873,10 @@ void start_lan(void)
 						}
 					}
 
-					// bring up interface
-					if (ifconfig(ifname, IFUP|IFF_ALLMULTI, NULL, NULL) != 0) continue;
+					/* bring up interface */
+					if (ifconfig(ifname, IFUP | IFF_ALLMULTI, NULL, NULL) != 0) continue;
 
-					// set the logical bridge address to that of the first interface
+					/* set the logical bridge address to that of the first interface */
 					strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 					if ((!hwaddrset) ||
 						(ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0 &&
@@ -952,7 +896,7 @@ void start_lan(void)
 						const char *mode = nvram_safe_get(wl_nvname("mode", unit, subunit));
 
 						if (strcmp(mode, "wet") == 0) {
-							// Enable host DHCP relay
+							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) {
 								wl_iovar_set(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
 								wl_iovar_setint(ifname, "wet_host_ipv4", ip);
@@ -979,7 +923,7 @@ void start_lan(void)
 				free(lan_ifnames);
 			}
 		}
-		// --- this shouldn't happen ---
+		/* --- this shouldn't happen --- */
 		else if (*lan_ifname) {
 			ifconfig(lan_ifname, IFUP, NULL, NULL);
 			wlconf(lan_ifname, -1, -1);
@@ -990,34 +934,38 @@ void start_lan(void)
 			return;
 		}
 
-		// Get current LAN hardware address
+		/* Get current LAN hardware address */
 		strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 		strcpy(tmp,"lan");
 		strcat(tmp,bridge);
 		strcat(tmp, "_hwaddr");
-		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) nvram_set(tmp, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
+		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
+				nvram_set(tmp, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
+		}
 
-		// Set initial QoS mode for LAN ports
-		set_et_qos_mode(sfd);
+		close(sfd); /* close file descriptor */
 
-		close(sfd);
+		/* Set initial QoS mode for LAN ports */
+#ifdef CONFIG_BCMWL5
+		set_et_qos_mode();
+#endif
 
-		// bring up and configure LAN interface
+		/* bring up and configure LAN interface */
 		strcpy(tmp,"lan");
 		strcat(tmp,bridge);
 		strcat(tmp, "_ipaddr");
 		strcpy(tmp2,"lan");
 		strcat(tmp2,bridge);
 		strcat(tmp2, "_netmask");
-		ifconfig(lan_ifname, IFUP, nvram_safe_get(tmp), nvram_safe_get(tmp2));
+		ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get(tmp), nvram_safe_get(tmp2));
 
 		config_loopback();
 		do_static_routes(1);
 
-		if(br==0)
+		if(br == 0)
 			set_lan_hostname(nvram_safe_get("wan_hostname"));
 
-		if ((get_wan_proto() == WP_DISABLED) && (br==0)) {
+		if ((get_wan_proto() == WP_DISABLED) && (br == 0)) {
 			char *gateway = nvram_safe_get("lan_gateway") ;
 			if ((*gateway) && (strcmp(gateway, "0.0.0.0") != 0)) {
 				int tries = 5;
@@ -1031,11 +979,13 @@ void start_lan(void)
 #endif
 
 #ifdef TCONFIG_EMF
-		if (nvram_get_int("emf_enable")) start_emf(lan_ifname);
+		start_emf(lan_ifname);
 #endif
 
 		free(lan_ifname);
-	}
+
+	} /* for-loop brX */
+
 	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
 }
 
@@ -1051,6 +1001,8 @@ void stop_lan(void)
 	char *iftmp;
 
 	vlan0tag = nvram_get_int("vlan0tag");
+
+	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
 
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
@@ -1070,9 +1022,7 @@ void stop_lan(void)
 #endif
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-#ifdef TCONFIG_EMF
-			stop_emf(lan_ifname);
-#endif
+
 		strcpy(tmp,"lan");
 		strcat(tmp,bridge);
 		strcat(tmp, "_ifnames");
@@ -1082,7 +1032,7 @@ void stop_lan(void)
 					while (*iftmp == ' ') ++iftmp;
 					if (*iftmp == 0) continue;
 					ifname = iftmp;
-					// vlan ID mapping
+					/* vlan ID mapping */
 					if (strncmp(ifname, "vlan", 4) == 0) {
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
@@ -1095,9 +1045,16 @@ void stop_lan(void)
 					eval("wlconf", ifname, "down");
 					ifconfig(ifname, 0, NULL, NULL);
 					eval("brctl", "delif", lan_ifname, ifname);
+#ifdef TCONFIG_EMF
+					if (nvram_get_int("emf_enable"))
+						eval("emf", "del", "iface", lan_ifname, ifname);
+#endif
 				}
 				free(lan_ifnames);
 			}
+#ifdef TCONFIG_EMF
+			stop_emf(lan_ifname);
+#endif
 			eval("brctl", "delbr", lan_ifname);
 		}
 		else if (*lan_ifname) {
@@ -1105,6 +1062,8 @@ void stop_lan(void)
 		}
 	}
 	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
+
+	unload_wl(); /* stop! */
 }
 
 static int is_sta(int idx, int unit, int subunit, void *param)
@@ -1315,7 +1274,7 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 
 	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
 
-	// skip disabled wl vifs
+	/* skip disabled wl vifs */
 	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
 		!nvram_get_int(wl_nvname("bss_enabled", unit, subunit)))
 		return 0;
