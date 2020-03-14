@@ -304,7 +304,7 @@ wlg.onAdd = function() {
 
 	var e = E('footer-msg');
 	e.innerHTML = 'After configuring this VIF, review and save your settings on the Overview tab.';
-	e.style.display = 'inline-block';
+	e.style.display = 'inline';
 /* REMOVE-BEGIN
 	setTimeout(
 		function() {
@@ -1201,7 +1201,7 @@ function do_pre_submit_form(fom) {
 
 	var footermsg = E('footer-msg');
 	footermsg.innerHTML = 'Saving...';
-	footermsg.style.display = 'inline-block';
+	footermsg.style.display = 'inline';
 
 	E('save-button').disabled = 1;
 	E('cancel-button').disabled = 1;
@@ -1281,7 +1281,7 @@ function error_pre_submit_form() {
 	var footermsg = E('footer-msg');
 
 	footermsg.innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
-	footermsg.style.display = 'inline-block';
+	footermsg.style.display = 'inline';
 
 	cmdresult = '';
 }
