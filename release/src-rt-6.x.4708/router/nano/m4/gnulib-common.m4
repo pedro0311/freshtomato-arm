@@ -1,5 +1,5 @@
-# gnulib-common.m4 serial 46
-dnl Copyright (C) 2007-2019 Free Software Foundation, Inc.
+# gnulib-common.m4 serial 47
+dnl Copyright (C) 2007-2020 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -12,6 +12,7 @@ AC_DEFUN([gl_COMMON], [
   dnl Use AC_REQUIRE here, so that the code is expanded once only.
   AC_REQUIRE([gl_00GNULIB])
   AC_REQUIRE([gl_COMMON_BODY])
+  AC_REQUIRE([gl_ZZGNULIB])
 ])
 AC_DEFUN([gl_COMMON_BODY], [
   AH_VERBATIM([_Noreturn],

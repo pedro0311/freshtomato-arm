@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.h  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -422,8 +422,6 @@ typedef struct rcoption {
 typedef struct keystruct {
 	const char *keystr;
 		/* The string that describes the keystroke, like "^C" or "M-R". */
-	bool meta;
-		/* Whether this is a Meta keystroke. */
 	int keycode;
 		/* The integer that, together with meta, identifies the keystroke. */
 	int menus;
@@ -569,6 +567,7 @@ enum
 /* Basic control codes. */
 #define BS_CODE   0x08
 #define TAB_CODE  0x09
+#define CR_CODE   0x0D
 #define ESC_CODE  0x1B
 #define DEL_CODE  0x7F
 
@@ -609,6 +608,9 @@ enum
 
 /* A special keycode for when <Tab> is pressed while the mark is on. */
 #define INDENT_KEY 0x4F1
+
+/* A special keycode to signal the beginning and end of a bracketed paste. */
+#define BRACKETED_PASTE_MARKER 0x4FB
 
 #ifdef USE_SLANG
 #ifdef ENABLE_UTF8

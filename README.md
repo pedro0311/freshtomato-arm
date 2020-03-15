@@ -52,7 +52,7 @@ Disclaimer: I am not responsible for any bricked routers, nor do I encourage oth
     sudo apt-get install autoconf m4 bison flex g++ libtool sqlite gcc binutils patch bzip2 make gettext unzip zlib1g-dev libc6 gperf automake groff  
     sudo apt-get install lib32stdc++6 libncurses5 libncurses5-dev gawk gitk zlib1g-dev autopoint shtool autogen mtd-utils gcc-multilib gconf-editor lib32z1-dev pkg-config libssl-dev automake1.11  
     sudo apt-get install libmnl-dev libxml2-dev intltool libglib2.0-dev libstdc++5 texinfo dos2unix xsltproc libnfnetlink0 libcurl4-openssl-dev libgtk2.0-dev libnotify-dev libevent-dev mc git  
-    sudo apt-get install re2c texlive libelf1 mc  
+    sudo apt-get install re2c texlive libelf1 mc cmake  
     sudo apt-get install linux-headers-$(uname -r)
 
 8. Remove libicu-dev if it's installed, it stopped PHP compilation:  

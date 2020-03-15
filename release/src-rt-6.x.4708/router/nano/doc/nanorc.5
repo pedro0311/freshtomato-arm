@@ -1,4 +1,4 @@
-.\" Copyright (C) 2003-2011, 2013-2019 Free Software Foundation, Inc.
+.\" Copyright (C) 2003-2011, 2013-2020 Free Software Foundation, Inc.
 .\"
 .\" This document is dual-licensed.  You may distribute and/or modify it
 .\" under the terms of either of the following licenses:
@@ -16,27 +16,36 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 4.7" "December 2019"
+.TH NANORC 5 "version 4.8" "February 2020"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
 
-.SH NOTICE
-Starting with version 4.0, \fBnano\fR no longer hard-wraps an overlong
-line by default.  It further uses smooth scrolling by default, and by
-default includes the line below the title bar into the editing area.
-.sp
-If you want the old, Pico behavior back, you can use \fBset breaklonglines\fR,
-\fBset jumpyscrolling\fR, and \fBset emptyline\fR.
-
 .SH DESCRIPTION
-The \fInanorc\fP file contains the default settings for \fBnano\fP, a
-small and friendly editor.  The file should be in Unix format, not in
-DOS or Mac format.  During startup, \fBnano\fP will first read the
+The \fInanorc\fP files contain the default settings for \fBnano\fP, a
+small and friendly editor.  They should be in Unix format, not in
+DOS or Mac format.  During startup, if \fB\-\-rcfile\fR is not given,
+\fBnano\fR will read two files: first the
 system-wide settings, from \fI/etc/nanorc\fP (the exact path might be
 different on your system), and then the user-specific settings, either
 from \fI~/.nanorc\fR or from \fI$XDG_CONFIG_HOME/nano/nanorc\fR
 or from \fI~/.config/nano/nanorc\fR, whichever is encountered first.
+If \fB\-\-rcfile\fR is given, \fBnano\fR will read just the specified
+settings file.
+
+.SH NOTICE
+Since version 4.0, \fBnano\fR by default:
+.sp
+.RS 4
+\(bu does not automatically hard-wrap lines that become overlong,
+.br
+\(bu includes the line below the title bar in the editing area,
+.br
+\(bu does linewise (smooth) scrolling.
+.RE
+.sp
+To get the old, Pico behavior back, you can use \fBset breaklonglines\fR,
+\fBset emptyline\fR, and \fBset jumpyscrolling\fR.
 
 .SH OPTIONS
 The configuration file accepts a series of \fBset\fP and \fBunset\fP
@@ -261,7 +270,7 @@ When needed, use \fBunset jumpyscrolling\fR instead.
 .B set softwrap
 Enable soft line wrapping for easier viewing of very long lines.
 .TP
-.B set speller """\fIprogram\fR [\fIarg\fR...]\fB"""
+.B set speller """\fIprogram\fR [\fIargument \fR...]\fB"""
 Use the given \fIprogram\fR to do spell checking and correcting, instead of
 using the built-in corrector that calls \fBhunspell\fR or GNU \fBspell\fR.
 .TP
@@ -382,13 +391,13 @@ file, to determine whether this syntax should be used for it.
 (This functionality only works when \fBlibmagic\fP is installed on the
 system and will be silently ignored otherwise.)
 .TP
-.BI formatter " program " \fR[ "arg " \fR...]
+.BI formatter " program " \fR[ "argument " \fR...]
 Run the given \fIprogram\fR on the full contents of the current buffer.
 (The current buffer is written out to a temporary file, the program is
 run on it, and then the temporary file is read back in, replacing the
 contents of the buffer.)
 .TP
-.BI linter " program " \fR[ "arg " \fR...]
+.BI linter " program " \fR[ "argument " \fR...]
 Use the given \fIprogram\fR to run a syntax check on the current buffer.
 .TP
 .BI "comment """ string """
@@ -441,10 +450,11 @@ Read in self-contained color syntaxes from \fIsyntaxfile\fP.  Note that
 \fIsyntaxfile\fP may contain only the above commands, from \fBsyntax\fP
 to \fBicolor\fP.
 .TP
-.BI extendsyntax " name command " \fR[ "arg " \fR...]
+.BI extendsyntax " name command argument " \fR...
 Extend the syntax previously defined as \fIname\fR with another
 \fIcommand\fR.  This allows adding a new \fBcolor\fP, \fBicolor\fP,
-\fBheader\fP, \fBmagic\fP, \fBcomment\fP, \fBlinter\fP, or \fBformatter\fR
+\fBheader\fR, \fBmagic\fR, \fBformatter\fR, \fBlinter\fR, \fBcomment\fR,
+or \fBtabgives\fR
 command to an already defined syntax -- useful when you want to
 slightly improve a syntax defined in one of the system-installed
 files (which normally are not writable).
@@ -472,7 +482,7 @@ menus where the key exists when \fBall\fP is used).
 .TP
 The format of \fIkey\fP should be one of:
 .RS 3
-.TP 5
+.TP 7
 .BI ^ X
 where \fIX\fR is a Latin letter, or one of several ASCII characters
 (@, ], \\, ^, _), or the word "Space".
@@ -480,7 +490,14 @@ Example: ^C.
 .TP
 .BI M\- X
 where \fIX\fR is any ASCII character except [, or the word "Space".
-Example: M\-C.
+Example: M\-8.
+.TP
+.BI Sh\-M\- X
+where \fIX\fR is a Latin letter.
+Example: Sh\-M\-U.
+By default, each Meta+letter keystroke does the same as the corresponding
+Shift+Meta+letter.  But when any Shift+Meta bind is made, that will
+no longer be the case, for all letters.
 .TP
 .BI F N
 where \fIN\fR is a numeric value from 1 to 24.

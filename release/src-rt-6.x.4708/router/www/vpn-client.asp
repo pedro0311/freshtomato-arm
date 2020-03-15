@@ -360,7 +360,7 @@ function init() {
 		routingTables[i].init('table_' + t + '_routing','sort', 0,[
 			{ type: 'checkbox' },
 			{ type: 'select', options: [[1, 'From Source IP'],[2, 'To Destination IP'],[3,'To Domain']] },
-			{ type: 'text', maxlen: 30 }]);
+			{ type: 'text', maxlen: 50 }]);
 		routingTables[i].headerSet(['Enable', 'Type', 'Value']);
 		var routingVal = eval('nvram.vpn_' + t + '_routing_val');
 		if (routingVal.length) {

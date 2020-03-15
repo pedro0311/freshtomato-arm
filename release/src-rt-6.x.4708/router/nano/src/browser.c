@@ -1,7 +1,7 @@
 /**************************************************************************
  *   browser.c  --  This file is part of GNU nano.                        *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2016 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -138,14 +138,20 @@ char *do_browser(char *path)
 				/* If we selected the same filename as last time, fake a
 				 * press of the Enter key so that the file is read in. */
 				if (old_selected == selected)
-					unget_kbinput(KEY_ENTER, FALSE);
+					kbinput = KEY_ENTER;
 			}
 
-			continue;
+			if (kbinput == KEY_MOUSE)
+				continue;
 		}
 #endif /* ENABLE_MOUSE */
-
-		func = parse_browser_input(&kbinput);
+#ifndef NANO_TINY
+		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
+			beep();
+			continue;
+		}
+#endif
+		func = interpret(&kbinput);
 
 		if (func == total_refresh) {
 			total_redraw();
@@ -219,7 +225,7 @@ char *do_browser(char *path)
 			selected = 0;
 		} else if (func == to_last_file) {
 			selected = filelist_len - 1;
-		} else if (func == goto_dir_void) {
+		} else if (func == goto_dir) {
 			/* Ask for the directory to go to. */
 			if (do_prompt(TRUE, FALSE, MGOTODIR, "", NULL,
 							/* TRANSLATORS: This is a prompt. */
@@ -447,49 +453,10 @@ void read_the_list(const char *path, DIR *dir)
 	width = (COLS + 2) / (longest + 2);
 }
 
-/* Return the function that is bound to the given key, accepting certain
- * plain characters too, for compatibility with Pico. */
-functionptrtype parse_browser_input(int *kbinput)
-{
-	if (!meta_key) {
-		switch (*kbinput) {
-			case '-':
-				return do_page_up;
-			case ' ':
-				return do_page_down;
-			case 'W':
-			case 'w':
-			case '/':
-				return do_search_forward;
-			case 'N':
-				return do_findprevious;
-			case 'n':
-				return do_findnext;
-			case 'G':
-			case 'g':
-				return goto_dir_void;
-			case '?':
-				return do_help;
-			case 'S':
-			case 's':
-				return do_enter;
-			case 'E':
-			case 'e':
-			case 'Q':
-			case 'q':
-			case 'X':
-			case 'x':
-				return do_exit;
-		}
-	}
-	return func_from_key(kbinput);
-}
-
 /* Set width to the number of files that we can display per screen row,
  * if necessary, and display the list of files. */
 void browser_refresh(void)
 {
-	size_t i;
 	int row = 0, col = 0;
 		/* The current row and column while the list is getting displayed. */
 	int the_row = 0, the_column = 0;
@@ -502,11 +469,10 @@ void browser_refresh(void)
 
 	wmove(edit, 0, 0);
 
-	i = selected - selected % (editwinrows * width);
-
-	for (; i < filelist_len && row < editwinrows; i++) {
+	for (size_t index = selected - selected % (editwinrows * width);
+					index < filelist_len && row < editwinrows; index++) {
 		struct stat st;
-		const char *thename = tail(filelist[i]);
+		const char *thename = tail(filelist[index]);
 				/* The filename we display, minus the path. */
 		size_t namelen = breadth(thename);
 				/* The length of the filename in columns. */
@@ -525,7 +491,7 @@ void browser_refresh(void)
 
 		/* If this is the selected item, draw its highlighted bar upfront, and
 		 * remember its location to be able to place the cursor on it. */
-		if (i == selected) {
+		if (index == selected) {
 			wattron(edit, interface_color_pair[SELECTED_TEXT]);
 			mvwprintw(edit, row, col, "%*s", longest, " ");
 			the_row = row;
@@ -544,8 +510,8 @@ void browser_refresh(void)
 		/* Show information about the file: "--" for symlinks (except when
 		 * they point to a directory) and for files that have disappeared,
 		 * "(dir)" for directories, and the file size for normal files. */
-		if (lstat(filelist[i], &st) == -1 || S_ISLNK(st.st_mode)) {
-			if (stat(filelist[i], &st) == -1 || !S_ISDIR(st.st_mode))
+		if (lstat(filelist[index], &st) == -1 || S_ISLNK(st.st_mode)) {
+			if (stat(filelist[index], &st) == -1 || !S_ISDIR(st.st_mode))
 				info = copy_of("--");
 			else
 				/* TRANSLATORS: Try to keep this at most 7 characters. */
@@ -596,7 +562,7 @@ void browser_refresh(void)
 		mvwaddstr(edit, row, col - infolen, info);
 
 		/* If this is the selected item, finish its highlighting. */
-		if (i == selected)
+		if (index == selected)
 			wattroff(edit, interface_color_pair[SELECTED_TEXT]);
 
 		free(info);
