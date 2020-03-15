@@ -1,7 +1,7 @@
 /**************************************************************************
  *   text.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2015 Mark Majeres                                 *
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
@@ -69,7 +69,7 @@ void do_tab(void)
 {
 #ifdef ENABLE_COLOR
 	if (openfile->syntax && openfile->syntax->tab)
-		do_output(openfile->syntax->tab, strlen(openfile->syntax->tab), TRUE);
+		inject(openfile->syntax->tab, strlen(openfile->syntax->tab), FALSE);
 	else
 #endif
 #ifndef NANO_TINY
@@ -80,12 +80,12 @@ void do_tab(void)
 		memset(spaces, ' ', length);
 		spaces[length] = '\0';
 
-		do_output(spaces, length, TRUE);
+		inject(spaces, length, FALSE);
 
 		free(spaces);
 	} else
 #endif
-		do_output((char *)"\t", 1, TRUE);
+		inject((char *)"\t", 1, FALSE);
 }
 
 #ifndef NANO_TINY
@@ -627,7 +627,6 @@ void do_undo(void)
 		openfile->mark_x = u->mark_begin_x;
 		goto_line_posx(u->lineno, u->begin);
 		cut_marked(NULL);
-		free_lines(u->cutbuffer);
 		u->cutbuffer = cutbuffer;
 		cutbuffer = oldcutbuffer;
 		break;
@@ -2050,7 +2049,7 @@ void do_justify(bool full_justify)
 
 	/* Do the equivalent of a marked cut into an empty cutbuffer. */
 	cutbuffer = NULL;
-	extract(first_par_line, top_x, last_par_line, bot_x);
+	extract_segment(first_par_line, top_x, last_par_line, bot_x);
 #ifndef NANO_TINY
 	update_undo(CUT);
 
@@ -2359,8 +2358,6 @@ const char *do_int_speller(const char *tempfile_name)
 	if (pipe(spell_fd) == -1 || pipe(sort_fd) == -1 || pipe(uniq_fd) == -1)
 		return _("Could not create pipe");
 
-	statusbar(_("Creating misspelled word list, please wait..."));
-
 	/* Fork a process to run spell in. */
 	if ((pid_spell = fork()) == 0) {
 		/* Child: open the temporary file that holds the text to be checked. */
@@ -2447,6 +2444,9 @@ const char *do_int_speller(const char *tempfile_name)
 		return _("Could not get size of pipe buffer");
 	}
 
+	/* Leave curses mode so that error messages go to the original screen. */
+	endwin();
+
 	/* Block SIGWINCHes while reading misspelled words from the third pipe. */
 	block_sigwinch(TRUE);
 
@@ -2466,6 +2466,10 @@ const char *do_int_speller(const char *tempfile_name)
 	close(uniq_fd[0]);
 
 	block_sigwinch(FALSE);
+
+	/* Re-enter curses mode. */
+	terminal_init();
+	doupdate();
 
 	/* Do any replacements case-sensitively, forward, and without regexes. */
 	SET(CASE_SENSITIVE);
@@ -3008,7 +3012,8 @@ void do_linter(void)
 				last_wait = time(NULL);
 				statusline(NOTICE, curlint->msg);
 			}
-		}
+		} else
+			beep();
 	}
 
 	for (curlint = lints; curlint != NULL;) {
@@ -3117,7 +3122,7 @@ void do_wordlinechar_count(void)
 	openfile->current = was_current;
 	openfile->current_x = was_x;
 
-	/* Display the total word, line, and character counts on the statusbar. */
+	/* Display the total word, line, and character counts on the status bar. */
 	statusline(HUSH, _("%sWords: %zu  Lines: %zd  Chars: %zu"), openfile->mark ?
 						_("In Selection:  ") : "", words, lines, chars);
 }
@@ -3127,8 +3132,8 @@ void do_wordlinechar_count(void)
 void do_verbatim_input(void)
 {
 	int *kbinput;
-	size_t kbinput_len, i;
-	char *output;
+	size_t count;
+	char *keycodes;
 
 	/* TRANSLATORS: This is displayed when the next keystroke will be
 	 * inserted verbatim. */
@@ -3136,27 +3141,25 @@ void do_verbatim_input(void)
 	place_the_cursor();
 
 	/* Read in all the verbatim characters. */
-	kbinput = get_verbatim_kbinput(edit, &kbinput_len);
+	kbinput = get_verbatim_kbinput(edit, &count);
 
-	/* Unsuppress cursor-position display or blank the statusbar. */
+	/* Unsuppress cursor-position display or blank the status bar. */
 	if (ISSET(CONSTANT_SHOW))
 		suppress_cursorpos = FALSE;
 	else
 		wipe_statusbar();
 
-	/* Display all the verbatim characters at once, not filtering out
-	 * control characters. */
-	output = charalloc(kbinput_len + 1);
+	keycodes = charalloc(count + 1);
 
-	for (i = 0; i < kbinput_len; i++)
-		output[i] = (char)kbinput[i];
-	output[i] = '\0';
+	for (size_t i = 0; i < count; i++)
+		keycodes[i] = (char)kbinput[i];
+	keycodes[count] = '\0';
 
+	/* Insert the keystroke verbatim, without filtering control characters. */
+	inject(keycodes, count, FALSE);
+
+	free(keycodes);
 	free(kbinput);
-
-	do_output(output, kbinput_len, TRUE);
-
-	free(output);
 }
 
 #ifdef ENABLE_WORDCOMPLETION
@@ -3300,8 +3303,8 @@ void complete_a_word(void)
 			UNSET(BREAK_LONG_LINES);
 #endif
 			/* Inject the completion into the buffer. */
-			do_output(&completion[shard_length],
-						strlen(completion) - shard_length, FALSE);
+			inject(&completion[shard_length],
+						strlen(completion) - shard_length, TRUE);
 #ifdef ENABLE_WRAPPING
 			/* If needed, reenable wrapping and wrap the current line. */
 			if (was_set_wrapping) {

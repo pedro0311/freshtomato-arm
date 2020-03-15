@@ -33,6 +33,30 @@ define unpatch_files
  done
 endef
 
+define CMAKE_CrossOptions
+ ( \
+  echo "SET(CMAKE_CROSSCOMPILING \"TRUE\")" >>$(1); \
+  echo "SET(TOP $(TOP))" >>$(1); \
+  echo "SET(CMAKE_SYSTEM_NAME Linux)" >>$(1); \
+  echo "SET(CMAKE_SYSTEM_VERSION $(LINUX_KERNEL))" >>$(1); \
+  echo "SET(CMAKE_SYSTEM $(PLATFORM))" >>$(1); \
+  echo "SET(CMAKE_SYSTEM_PROCESSOR $(ARCH))" >>$(1); \
+  echo "SET(CMAKE_C_COMPILER $(CC))" >>$(1); \
+  echo "SET(CMAKE_CXX_COMPILER $(CXX))" >>$(1); \
+  echo "SET(CMAKE_AR $(AR))" >>$(1); \
+  echo "SET(CMAKE_LINKER $(LD))" >>$(1); \
+  echo "SET(CMAKE_NM $(NM))" >>$(1); \
+  echo "SET(CMAKE_OBJCOPY $(OBJCOPY))" >>$(1); \
+  echo "SET(CMAKE_OBJDUMP $(OBJDUMP))" >>$(1); \
+  echo "SET(CMAKE_RANLIB $(RANLIB))" >>$(1); \
+  echo "SET(CMAKE_STRIP $(STRIP))" >>$(1); \
+  echo "SET(CMAKE_FIND_ROOT_PATH $(TOOLCHAIN))" >>$(1); \
+  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)" >>$(1); \
+  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)" >>$(1); \
+  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)" >>$(1); \
+ )
+endef
+
 
 #
 #
@@ -1972,7 +1996,7 @@ pcre/stamp-h1:
 	$(call patch_files,pcre)
 	cd pcre && \
 	autoreconf -fsi && \
-	CC=$(CC) CXX=$(HOST)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 	$(CONFIGURE) --prefix=/usr --disable-dependency-tracking --enable-utf8 --enable-unicode-properties --disable-cpp
 	[ -d pcre/m4 ] || mkdir pcre/m4
 	@touch pcre/stamp-h1
@@ -1982,13 +2006,13 @@ pcre: pcre/stamp-h1
 	@$(MAKE) -C pcre
 
 pcre-install:
-	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.10
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.10
-	install -D pcre/.libs/libpcreposix.so.0.0.6 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.6
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.6
+	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
+	install -D pcre/.libs/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
 	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcre.so.1.2.10 libpcre.so.1 && \
-		ln -sf libpcreposix.so.0.0.6 libpcreposix.so.0
+		ln -sf libpcre.so.1.2.12 libpcre.so.1 && \
+		ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
 
 pcre-clean:
 	( if [ -f pcre/Makefile ]; then \
@@ -2052,7 +2076,7 @@ libpng-clean:
 
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
-	cd php && CC=$(CC) CXX=$(ARCH)-g++ AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
+	cd php && CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) \
 	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
@@ -2774,32 +2798,44 @@ libyaml-clean:
 	-$(MAKE) -C libyaml clean
 	@rm -rf libyaml/stamp-h1 libyaml/src/.deps libyaml/src/tests/.deps
 
-getdns/stamp-h1: $(OPENSSLDIR) libyaml
+getdns/build/Makefile:
+	@rm -rf getdns/build && mkdir -p getdns/build
 	$(call patch_files,getdns)
-	cd getdns && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libyaml/include -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libyaml/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	LIBS="-lcrypto -lssl -lyaml" \
-	$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-		--enable-static --disable-shared --disable-gost \
-		--without-libidn --without-libidn2 \
-		--without-getdns_query --without-getdns_server_mon \
-		--without-libunbound --enable-stub-only --with-stubby \
-		--with-ssl=$(TOP)/$(OPENSSLDIR) --with-libyaml=$(TOP)/libyaml
-	@touch $@
+	cd getdns/build && \
+	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+	cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+		-DCMAKE_INSTALL_PREFIX:PATH=/usr \
+		-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
+		-DENABLE_STATIC=TRUE -DENABLE_SHARED=FALSE -DENABLE_GOST=FALSE \
+		-DBUILD_GETDNS_QUERY=FALSE \
+		-DBUILD_GETDNS_SERVER_MON=FALSE \
+		-DBUILD_STUBBY=TRUE -DENABLE_STUB_ONLY=TRUE \
+		-DBUILD_LIBEV=FALSE -DBUILD_LIBEVENT2=FALSE -DBUILD_LIBUV=FALSE \
+		-DBUILD_TESTING=FALSE \
+		-DOPENSSL_ROOT_DIR=$(TOP)/$(OPENSSLDIR) \
+		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/include \
+		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/libcrypto.so \
+		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/libssl.so \
+		-DLIBYAML_DIR=$(TOP)/libyaml \
+		-DLIBYAML_INCLUDE_DIR=$(TOP)/libyaml/include \
+		-DLIBYAML_LIBRARY=$(TOP)/libyaml/src/.libs/libyaml.a \
+		-DCMAKE_DISABLE_FIND_PACKAGE_Libsystemd=TRUE \
+		-DUSE_LIBIDN2=FALSE \
+		-DSTRPTIME_WORKS_EXITCODE=0 \
+		..
 
-getdns: getdns/stamp-h1
-	@$(SEP)
-	$(MAKE) -C getdns $(PARALLEL_BUILD)
+getdns: $(OPENSSLDIR) libyaml getdns/build/Makefile
+	$(MAKE) -C getdns/build
 
 getdns-install:
 	install -d $(INSTALLDIR)/getdns/usr/sbin
-	install -D getdns/src/stubby $(INSTALLDIR)/getdns/usr/sbin/stubby
+	install -D getdns/build/stubby/stubby $(INSTALLDIR)/getdns/usr/sbin/stubby
 	$(STRIP) -s $(INSTALLDIR)/getdns/usr/sbin/stubby
 
 getdns-clean:
-	-@$(MAKE) -C getdns clean
-	@rm -rf getdns/stamp-h1 getdns/src/.libs getdns/src/tools/.libs
+	@rm -rf getdns/build
 	$(call unpatch_files,getdns)
 
 tor/stamp-h1: $(OPENSSLDIR) zlib libevent

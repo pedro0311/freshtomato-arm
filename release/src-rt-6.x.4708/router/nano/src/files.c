@@ -1,7 +1,7 @@
 /**************************************************************************
  *   files.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2019 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2019 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -30,7 +30,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#define LOCKBUFSIZE 8192
+#ifndef NANO_TINY
+#define LOCKSIZE  1024
+const char *locking_prefix = ".";
+const char *locking_suffix = ".swp";
+		/* Prefix and suffix for the name of the vim-style lock file. */
+#endif
 
 /* Verify that the containing directory of the given filename exists. */
 bool has_valid_path(const char *filename)
@@ -49,8 +54,10 @@ bool has_valid_path(const char *filename)
 		statusline(ALERT, _("Path '%s' is not a directory"), parentdir);
 	else if (access(parentdir, X_OK) == -1)
 		statusline(ALERT, _("Path '%s' is not accessible"), parentdir);
-	else if (ISSET(LOCKING) && access(parentdir, W_OK) == -1)
+#ifndef NANO_TINY
+	else if (ISSET(LOCKING) && !ISSET(VIEW_MODE) && access(parentdir, W_OK) < 0)
 		statusline(MILD, _("Directory '%s' is not writable"), parentdir);
+#endif
 	else
 		validity = TRUE;
 
@@ -124,41 +131,21 @@ void make_new_buffer(void)
 #endif
 }
 
-/* Mark the current file as modified if it isn't already, and then
- * update the titlebar to display the file's new status. */
-void set_modified(void)
-{
-	if (openfile->modified)
-		return;
-
-	openfile->modified = TRUE;
-	titlebar(NULL);
-
 #ifndef NANO_TINY
-	if (!ISSET(LOCKING) || openfile->filename[0] == '\0')
-		return;
-
-	if (openfile->lock_filename != NULL) {
-		char *fullname = get_full_path(openfile->filename);
-
-		write_lockfile(openfile->lock_filename, fullname, TRUE);
-		free(fullname);
+/* Delete the lockfile.  Return -1 if unsuccessful, and 1 otherwise. */
+int delete_lockfile(const char *lockfilename)
+{
+	if (unlink(lockfilename) < 0 && errno != ENOENT) {
+		statusline(MILD, _("Error deleting lock file %s: %s"),
+							lockfilename, strerror(errno));
+		return -1;
 	}
-#endif
+	return 1;
 }
 
-#ifndef NANO_TINY
-/* Actually write the lockfile.  This function will ALWAYS annihilate
- * any previous version of the file.  We'll borrow INSECURE_BACKUP here
- * to decide about lockfile paranoia here as well...
- *
- * Args:
- *     lockfilename: file name for lock
- *     origfilename: name of the file the lock is for
- *     modified: whether to set the modified bit in the file
- *
- * Returns 1 on success, and 0 on failure (but continue anyway). */
-int write_lockfile(const char *lockfilename, const char *origfilename, bool modified)
+/* Write a lockfile, under the given lockfilename.  This ALWAYS annihilates
+ * an existing version of that file.  Return 1 on success, and 0 on failure. */
+int write_lockfile(const char *lockfilename, const char *filename, bool modified)
 {
 #ifdef HAVE_PWD_H
 	int cflags, fd;
@@ -167,9 +154,8 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 	uid_t myuid;
 	struct passwd *mypwuid;
 	struct stat fileinfo;
-	char *lockdata = charalloc(1024);
+	char *lockdata;
 	char myhostname[32];
-	size_t lockdatalen = 1024;
 	size_t wroteamt;
 
 	mypid = getpid();
@@ -179,7 +165,7 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 	if ((mypwuid = getpwuid(myuid)) == NULL) {
 		/* TRANSLATORS: Keep the next eight messages at most 76 characters. */
 		statusline(MILD, _("Couldn't determine my identity for lock file"));
-		goto free_the_data;
+		return 0;
 	}
 
 	if (gethostname(myhostname, 31) < 0) {
@@ -187,14 +173,14 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 			myhostname[31] = '\0';
 		else {
 			statusline(MILD, _("Couldn't determine hostname: %s"), strerror(errno));
-			goto free_the_data;
+			return 0;
 		}
 	}
 
 	/* If the lockfile exists, try to delete it. */
 	if (stat(lockfilename, &fileinfo) != -1)
 		if (delete_lockfile(lockfilename) < 0)
-			goto free_the_data;
+			return 0;
 
 	if (ISSET(INSECURE_BACKUP))
 		cflags = O_WRONLY | O_CREAT | O_APPEND;
@@ -206,136 +192,117 @@ int write_lockfile(const char *lockfilename, const char *origfilename, bool modi
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 	if (fd < 0) {
 		statusline(MILD, _("Error writing lock file %s: %s"),
-						lockfilename, strerror(errno));
-		goto free_the_data;
+							lockfilename, strerror(errno));
+		return 0;
 	}
 
 	/* Try to associate a stream with the now open lockfile. */
 	filestream = fdopen(fd, "wb");
 
 	if (filestream == NULL) {
-		statusline(MILD, _("Error writing lock file %s: %s"), lockfilename,
-						strerror(errno));
-		goto free_the_data;
+		statusline(MILD, _("Error writing lock file %s: %s"),
+							lockfilename, strerror(errno));
+		close(fd);
+		return 0;
 	}
 
-	/* This is the lock data we will store:
+	lockdata = charalloc(LOCKSIZE);
+	memset(lockdata, 0, LOCKSIZE);
+
+	/* This is the lock data we will store (other bytes are 0x00):
 	 *
-	 * byte 0        - 0x62
-	 * byte 1        - 0x30
-	 * bytes 2-12    - program name which created the lock
-	 * bytes 24-27   - PID (little endian) of creator process
-	 * bytes 28-44   - username of who created the lock
-	 * bytes 68-100  - hostname of where the lock was created
-	 * bytes 108-876 - filename the lock is for
-	 * byte 1007     - 0x55 if file is modified
+	 *   bytes 0-1     - 0x62 0x30
+	 *   bytes 2-11    - name of program that created the lock
+	 *   bytes 24-27   - PID (little endian) of creator process
+	 *   bytes 28-43   - username of who created the lock
+	 *   bytes 68-99   - hostname of where the lock was created
+	 *   bytes 108-876 - filename the lock is for
+	 *   byte 1007     - 0x55 if file is modified
 	 *
-	 * Looks like VIM also stores undo state in this file, so we're
-	 * gonna have to figure out how to slap a 'OMG don't use recover on
-	 * our lockfile' message in here...
-	 *
-	 * This is likely very wrong, so this is a WIP. */
-	memset(lockdata, 0, lockdatalen);
+	 * Nano does not write the page size (bytes 12-15), nor the modification
+	 * time (bytes 16-19), nor the inode of the relevant file (bytes 20-23).
+	 * Nano also does not use all available space for user name (40 bytes),
+	 * host name (40 bytes), and file name (890 bytes).  Nor does nano write
+	 * some byte-order-checking numbers (bytes 1008-1022). */
 	lockdata[0] = 0x62;
 	lockdata[1] = 0x30;
+	snprintf(&lockdata[2], 10, "nano %s", VERSION);
 	lockdata[24] = mypid % 256;
 	lockdata[25] = (mypid / 256) % 256;
 	lockdata[26] = (mypid / (256 * 256)) % 256;
 	lockdata[27] = mypid / (256 * 256 * 256);
-	snprintf(&lockdata[2], 11, "nano %s", VERSION);
 	strncpy(&lockdata[28], mypwuid->pw_name, 16);
 	strncpy(&lockdata[68], myhostname, 32);
-	if (origfilename != NULL)
-		strncpy(&lockdata[108], origfilename, 768);
-	if (modified == TRUE)
-		lockdata[1007] = 0x55;
+	strncpy(&lockdata[108], filename, 768);
+	lockdata[1007] = (modified) ? 0x55 : 0x00;
 
-	wroteamt = fwrite(lockdata, sizeof(char), lockdatalen, filestream);
-	if (wroteamt < lockdatalen) {
-		statusline(MILD, _("Error writing lock file %s: %s"),
-						lockfilename, ferror(filestream));
-		fclose(filestream);
-		goto free_the_data;
-	}
+	wroteamt = fwrite(lockdata, sizeof(char), LOCKSIZE, filestream);
 
-	if (fclose(filestream) == EOF) {
+	free(lockdata);
+
+	if (fclose(filestream) == EOF || wroteamt < LOCKSIZE) {
 		statusline(MILD, _("Error writing lock file %s: %s"),
-						lockfilename, strerror(errno));
-		goto free_the_data;
+							lockfilename, strerror(errno));
+		return 0;
 	}
 
 	openfile->lock_filename = (char *)lockfilename;
-
-	free(lockdata);
-	return 1;
-
-  free_the_data:
-	free(lockdata);
-	return 0;
-#else
-	return 1;
 #endif
-}
-
-/* Delete the lockfile.  Return -1 if unsuccessful, and 1 otherwise. */
-int delete_lockfile(const char *lockfilename)
-{
-	if (unlink(lockfilename) < 0 && errno != ENOENT) {
-		statusline(MILD, _("Error deleting lock file %s: %s"), lockfilename,
-						strerror(errno));
-		return -1;
-	}
 	return 1;
 }
 
 /* Deal with lockfiles.  Return -1 on refusing to override the lockfile,
  * and 1 on successfully creating it; 0 means we were not successful in
  * creating the lockfile but we should continue to load the file. */
-int do_lockfile(const char *filename)
+int do_lockfile(const char *filename, bool ask_the_user)
 {
 	char *namecopy = copy_of(filename);
 	char *secondcopy = copy_of(filename);
-	size_t locknamesize = strlen(filename) + strlen(locking_prefix)
-				+ strlen(locking_suffix) + 3;
+	size_t locknamesize = strlen(filename) + strlen(locking_prefix) +
+							strlen(locking_suffix) + 3;
 	char *lockfilename = charalloc(locknamesize);
-	static char lockprog[11], lockuser[17];
 	struct stat fileinfo;
-	int lockfd, lockpid, retval = -1;
+	int retval = 0;
 
 	snprintf(lockfilename, locknamesize, "%s/%s%s%s", dirname(namecopy),
 				locking_prefix, basename(secondcopy), locking_suffix);
+	free(secondcopy);
+	free(namecopy);
 
-	if (stat(lockfilename, &fileinfo) != -1) {
-		size_t readtot = 0;
-		size_t readamt = 0;
+	if (!ask_the_user && stat(lockfilename, &fileinfo) != -1)
+		warn_and_shortly_pause(_("Someone else is also editing this file"));
+	else if (stat(lockfilename, &fileinfo) != -1) {
 		char *lockbuf, *question, *pidstring, *postedname, *promptstr;
-		int room, choice;
+		static char lockprog[11], lockuser[17];
+		int lockfd, lockpid, room, choice;
+		ssize_t readamt;
 
 		if ((lockfd = open(lockfilename, O_RDONLY)) < 0) {
-			statusline(MILD, _("Error opening lock file %s: %s"),
-						lockfilename, strerror(errno));
+			statusline(ALERT, _("Error opening lock file %s: %s"),
+								lockfilename, strerror(errno));
 			goto free_the_name;
 		}
 
-		lockbuf = charalloc(LOCKBUFSIZE);
-		do {
-			readamt = read(lockfd, &lockbuf[readtot], LOCKBUFSIZE - readtot);
-			readtot += readamt;
-		} while (readamt > 0 && readtot < LOCKBUFSIZE);
+		lockbuf = charalloc(LOCKSIZE);
+
+		readamt = read(lockfd, lockbuf, LOCKSIZE);
 
 		close(lockfd);
 
-		if (readtot < 48) {
-			statusline(MILD, _("Error reading lock file %s: "
-						"Not enough data read"), lockfilename);
+		/* If not enough data has been read to show the needed things,
+		 * or the two magic bytes are not there, skip the lock file. */
+		if (readamt < 68 || lockbuf[0] != 0x62 || lockbuf[1] != 0x30) {
+			statusline(ALERT, _("Bad lock file is ignored: %s"), lockfilename);
 			free(lockbuf);
 			goto free_the_name;
 		}
 
 		strncpy(lockprog, &lockbuf[2], 10);
+		lockprog[10] = '\0';
 		lockpid = (((unsigned char)lockbuf[27] * 256 + (unsigned char)lockbuf[26]) * 256 +
 						(unsigned char)lockbuf[25]) * 256 + (unsigned char)lockbuf[24];
 		strncpy(lockuser, &lockbuf[28], 16);
+		lockuser[16] = '\0';
 		free(lockbuf);
 
 		pidstring = charalloc(11);
@@ -345,7 +312,7 @@ int do_lockfile(const char *filename)
 		as_an_at = FALSE;
 
 		/* TRANSLATORS: The second %s is the name of the user, the third that of the editor. */
-		question = _("File %s is being edited (by %s with %s, PID %s); continue?");
+		question = _("File %s is being edited by %s (with %s, PID %s); open anyway?");
 		room = COLS - breadth(question) + 7 - breadth(lockuser) -
 								breadth(lockprog) - breadth(pidstring);
 		if (room < 4)
@@ -370,7 +337,12 @@ int do_lockfile(const char *filename)
 		choice = do_yesno_prompt(FALSE, promptstr);
 		free(promptstr);
 
+		/* When the user cancelled while we're still starting up, quit. */
+		if (choice < 0 && !we_are_running)
+			finish();
+
 		if (choice < 1) {
+			retval = -1;
 			wipe_statusbar();
 			goto free_the_name;
 		}
@@ -379,8 +351,6 @@ int do_lockfile(const char *filename)
 	retval = write_lockfile(lockfilename, filename, FALSE);
 
   free_the_name:
-	free(namecopy);
-	free(secondcopy);
 	if (retval < 1)
 		free(lockfilename);
 
@@ -455,9 +425,9 @@ bool open_buffer(const char *filename, bool new_buffer)
 
 		if (has_valid_path(realname)) {
 #ifndef NANO_TINY
-			if (ISSET(LOCKING) && filename[0] != '\0') {
+			if (ISSET(LOCKING) && !ISSET(VIEW_MODE) && filename[0] != '\0') {
 				/* When not overriding an existing lock, discard the buffer. */
-				if (do_lockfile(realname) < 0) {
+				if (do_lockfile(realname, TRUE) < 0) {
 #ifdef ENABLE_MULTIBUFFER
 					if (openfile != openfile->next)
 						close_buffer();
@@ -556,10 +526,26 @@ bool replace_buffer(const char *filename, undo_type action, bool marked,
 }
 #endif /* ENABLE_SPELLER */
 
-/* Update the titlebar and the multiline cache to match the current buffer. */
+/* Mark the current file as modified if it isn't already, and
+ * then update the title bar to display the file's new status. */
+void set_modified(void)
+{
+	if (openfile->modified)
+		return;
+
+	openfile->modified = TRUE;
+	titlebar(NULL);
+
+#ifndef NANO_TINY
+	if (openfile->lock_filename != NULL)
+		write_lockfile(openfile->lock_filename, openfile->filename, TRUE);
+#endif
+}
+
+/* Update the title bar and the multiline cache to match the current buffer. */
 void prepare_for_display(void)
 {
-	/* Update the titlebar, since the filename may have changed. */
+	/* Update the title bar, since the filename may have changed. */
 	if (!inhelp)
 		titlebar(NULL);
 
@@ -614,7 +600,7 @@ void redecorate_after_switch(void)
 		openfile->firstcolumn = 0;
 #endif
 
-	/* Update titlebar and multiline info to match the current buffer. */
+	/* Update title bar and multiline info to match the current buffer. */
 	prepare_for_display();
 
 	/* Ensure that the main loop will redraw the help lines. */
@@ -1026,7 +1012,7 @@ void do_insertfile(void)
 	int response;
 	const char *msg;
 	char *given = copy_of("");
-		/* The last answer the user typed at the statusbar prompt. */
+		/* The last answer the user typed at the status-bar prompt. */
 #ifndef NANO_TINY
 	format_type was_fmt = openfile->fmt;
 	bool execute = FALSE;
@@ -1121,7 +1107,7 @@ void do_insertfile(void)
 			}
 #endif
 #ifdef ENABLE_BROWSER
-			if (func == to_files_void) {
+			if (func == to_files) {
 				char *chosen = do_browse_from(answer);
 
 				/* If no file was chosen, go back to the prompt. */
@@ -1867,8 +1853,17 @@ bool write_file(const char *name, FILE *thefile, bool tmp,
 
 	/* When having written an entire buffer, update some administrivia. */
 	if (fullbuffer && method == OVERWRITE && !tmp) {
-		/* If the filename was changed, check if this means a new syntax. */
+		/* If the filename was changed, write a new lockfile when needed,
+		 * and check whether it means a different syntax gets used. */
 		if (strcmp(openfile->filename, realname) != 0) {
+#ifndef NANO_TINY
+			if (openfile->lock_filename != NULL) {
+				delete_lockfile(openfile->lock_filename);
+				free(openfile->lock_filename);
+				openfile->lock_filename = NULL;
+				do_lockfile(realname, FALSE);
+			}
+#endif
 #ifdef ENABLE_COLOR
 			const char *oldname, *newname;
 
@@ -2046,7 +2041,7 @@ int do_writeout(bool exiting, bool withprompt)
 		given = mallocstrcpy(given, answer);
 
 #ifdef ENABLE_BROWSER
-		if (func == to_files_void) {
+		if (func == to_files) {
 			char *chosen = do_browse_from(answer);
 
 			if (chosen == NULL)
@@ -2453,7 +2448,7 @@ char **cwd_tab_completion(const char *buf, bool allow_files,
 	return matches;
 }
 
-/* Do tab completion.  place refers to how much the statusbar cursor
+/* Do tab completion.  place refers to how much the status-bar cursor
  * position should be advanced.  refresh_func is the function we will
  * call to refresh the edit window. */
 char *input_tab(char *buf, bool allow_files, size_t *place,

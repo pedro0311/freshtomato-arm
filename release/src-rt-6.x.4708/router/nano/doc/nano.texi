@@ -8,8 +8,8 @@
 
 @smallbook
 @set EDITION 0.5
-@set VERSION 4.7
-@set UPDATED December 2019
+@set VERSION 4.8
+@set UPDATED February 2020
 
 @dircategory Editors
 @direntry
@@ -23,7 +23,7 @@
 @titlepage
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 4.7
+@subtitle version 4.8
 
 @author Chris Allegretta
 @page
@@ -33,7 +33,7 @@ This manual documents the GNU @command{nano} editor.
 This manual is part of the GNU @command{nano} distribution.@*
 
 @sp 4
-Copyright @copyright{} 1999-2009, 2014-2019 Free Software Foundation, Inc.
+Copyright @copyright{} 1999-2009, 2014-2020 Free Software Foundation, Inc.
 
 @sp 1
 This document is dual-licensed.  You may distribute and/or modify it
@@ -63,7 +63,7 @@ e-mail: @email{chrisa@@asty.org}@*
 @node Top
 @top
 
-This manual documents the GNU @command{nano} editor, version 4.7.
+This manual documents the GNU @command{nano} editor, version 4.8.
 
 @menu
 * Introduction::
@@ -186,7 +186,10 @@ The uniquely numbered files are stored in the specified directory.
 
 @item -D
 @itemx --boldtext
-Use bold text instead of reverse video text.
+For the interface, use bold instead of reverse video.  This will be overridden
+by setting the options @code{titlecolor}, @code{statuscolor}, @code{keycolor},
+@code{functioncolor}, @code{numbercolor}, and/or @code{selectedcolor} in your
+nanorc file.  @xref{@code{set functioncolor}} for details.
 
 @item -E
 @itemx --tabstospaces
@@ -334,6 +337,11 @@ system either Backspace acts like Delete or Delete acts like Backspace.
 @itemx --emptyline
 Do not use the line below the title bar, leaving it entirely blank.
 
+@item -f @var{file}
+@itemx --rcfile=@var{file}
+Read only this @var{file} for setting nano's options, instead of reading
+both the system-wide and the user's nanorc files.
+
 @item -g
 @itemx --showcursor
 Make the cursor visible in the file browser (putting it on the
@@ -398,8 +406,8 @@ point to vary along with the width of the screen if the screen is resized.
 The default value is @t{-8}.
 
 @anchor{@option{--speller}}
-@item -s "@var{program} [@var{arg} @dots{}]"
-@itemx --speller="@var{program} [@var{arg} @dots{}]"
+@item -s "@var{program} [@var{argument} @dots{}]"
+@itemx --speller="@var{program} [@var{argument} @dots{}]"
 Use the given program to do spell checking and correcting.  By default,
 @command{nano} uses the command specified in the @env{SPELL} environment
 variable.  If @env{SPELL} is not set, and @option{--speller} is
@@ -434,7 +442,6 @@ This is the default.  (This option is the opposite of @option{-b}
 (@option{--breaklonglines}) --- the last one given takes effect.)
 
 
-@anchor{Expert Mode}
 @item -x
 @itemx --nohelp
 Expert Mode: don't show the Shortcut List at the bottom of the screen.
@@ -685,10 +692,13 @@ The following global toggles are available:
 
 The nanorc files contain the default settings for @command{nano}.  They
 should be in Unix format, not in DOS or Mac format.  During startup,
-@command{nano} will first read the system-wide settings, from /etc/nanorc
-(the exact path might be different), and then the user-specific settings,
+if @option{--rcfile} is not given, @command{nano} will read two files:
+first the system-wide settings, from @file{/etc/nanorc} (the exact path
+might be different on your system), and then the user-specific settings,
 either from @file{~/.nanorc} or from @file{$XDG_CONFIG_HOME/nano/nanorc}
 or from @file{.config/nano/nanorc}, whichever exists first.
+If @option{--rcfile} is given, @command{nano} will read just the
+specified settings file.
 
 A nanorc file accepts a series of "set" and "unset" commands, which can
 be used to configure @command{nano} on startup without using command-line
@@ -748,9 +758,9 @@ The uniquely numbered files are stored in the specified directory.
 
 @item set boldtext
 Use bold instead of reverse video for the title bar, status bar, key combos,
-function tags, line numbers, and selected text.  This can be overridden by
+function tags, line numbers, and selected text.  This is overridden by
 setting the options @code{titlecolor}, @code{statuscolor}, @code{keycolor},
-@code{functioncolor}, @code{numbercolor}, and @code{selectedcolor}.
+@code{functioncolor}, @code{numbercolor}, and/or @code{selectedcolor}.
 
 @item set brackets "@var{characters}"
 Set the characters treated as closing brackets when justifying
@@ -927,7 +937,7 @@ When needed, use @code{unset jumpyscrolling} instead.
 @item set softwrap
 Enable soft line wrapping for easier viewing of very long lines.
 
-@item set speller "@var{program} [@var{arg} @dots{}]"
+@item set speller "@var{program} [@var{argument} @dots{}]"
 Use the given program to do spell checking and correcting.
 @xref{@option{--speller}} for details.
 
@@ -1050,13 +1060,13 @@ file, to determine whether this syntax should be used for it.
 (This functionality only works when @code{libmagic} is installed
 on the system and will be silently ignored otherwise.)
 
-@item formatter @var{program} [@var{arg} @dots{}]
+@item formatter @var{program} [@var{argument} @dots{}]
 Run the given @var{program} on the full contents of the current buffer.
 (The current buffer is written out to a temporary file, the program is
 run on it, and then the temporary file is read back in, replacing the
 contents of the buffer.)
 
-@item linter @var{program} [@var{arg} @dots{}]
+@item linter @var{program} [@var{argument} @dots{}]
 Use the given @var{program} to do a syntax check on the current buffer.
 
 @item comment "@var{string}"
@@ -1109,10 +1119,11 @@ Read in self-contained color syntaxes from "syntaxfile".  Note that
 "syntaxfile" may contain only the above commands, from @code{syntax}
 to @code{icolor}.
 
-@item extendsyntax @var{name} @var{command} [@var{arg} @dots{}]
+@item extendsyntax @var{name} @var{command} @var{argument} @dots{}
 Extend the syntax previously defined as "@var{name}" with another @var{command}.
 This allows you to add a new @code{color}, @code{icolor}, @code{header},
-@code{magic}, @code{comment}, @code{linter}, or @code{formatter} command to an already
+@code{magic}, @code{formatter}, @code{linter}, @code{comment},
+or @code{tabgives} command to an already
 defined syntax --- useful when you want to slightly improve a syntax defined
 in one of the system-installed files (which normally are not writable).
 
@@ -1155,7 +1166,14 @@ Example: @code{^C}.
 @item
 @code{M-@var{X}} ------ where @var{X} is any ASCII character except [,
 or the word "Space".
-Example: @code{M-C}.
+Example: @code{M-8}.
+
+@item
+@code{Sh-M-@var{X}} ------ where @var{X} is a Latin letter.
+Example: @code{Sh-M-U}.
+By default, each Meta+letter keystroke does the same as the corresponding
+Shift+Meta+letter.  But when any Shift+Meta bind is made, that will
+no longer be the case, for all letters.
 
 @item
 @code{F@var{n}} ------ where @var{n} is a numeric value from 1 to 24.
@@ -1600,7 +1618,7 @@ whereas Pico does it at screen width minus six columns. You can make
 By default, @command{nano} will scroll just one line (instead of half
 a screen) when the cursor is moved to a line that is just out of view.
 And when paging up or down, @command{nano} keeps the cursor in the same
-screen position as much as possible, instead always placing it on the
+screen position as much as possible, instead of always placing it on the
 first line of the viewport.  The Pico-like behavior can be obtained
 with the @option{--jumpyscrolling} option.
 

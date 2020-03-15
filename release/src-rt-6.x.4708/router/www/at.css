@@ -296,6 +296,8 @@ td#content > small {
 }
 
 div[id$="-status-stats"] > div.section-title,
+div[id$="-status-routing"] > div.section-title,
+div[id$="-status-clients"] > div.section-title,
 div#status-anonwarn > div.section-title,
 div#status-wifiwarn > div.section-title,
 div#status-nversion > div.section-title,
