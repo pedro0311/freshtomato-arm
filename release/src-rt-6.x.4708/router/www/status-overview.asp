@@ -132,10 +132,12 @@ function foreach_wwan(functionToDo) {
 	for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
 		var wan_str = 'nvram.wan';
 		wan_str += uidx > 1 ? uidx : '';
-		wan_str += '_proto';
-		if (eval(wan_str) == "lte" || eval(wan_str) == "ppp3g") {
-				functionToDo(uidx);
-			}
+		var wan_proto_str = wan_str + '_proto';
+		var wan_proto = eval(wan_proto_str);
+		var wan_hilink_ip = eval(wan_str + "_hilink_ip");
+		if (wan_proto == "lte" || wan_proto == "ppp3g" || (wan_hilink_ip && wan_hilink_ip != "0.0.0.0")) {
+			functionToDo(uidx);
+		}
 	}
 }
 

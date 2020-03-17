@@ -1020,8 +1020,8 @@ openssl-1.1-install:
 		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1 ; \
 		install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
-		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl-1.1/usr/sbin/gencert.sh ; \
+		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 	fi
 	@true
 
