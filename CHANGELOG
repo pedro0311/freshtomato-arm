@@ -3,6 +3,78 @@ FreshTomato-ARM Changelog
 
 
 
+2020.2          2020.03.20
+--------------------------
+
+Note: Because of changes in GUI it is recommended to clear the browser cache, or use Ctrl+F5
+
+- Add Asus RT-AC68U B2 support (almost the same like AC1900P) 
+- kernel: tcp: avoid infinite loop in tcp_splice_read() Splicing from TCP socket is vulnerable when a packet with URG flag is received and stored into receive queue
+- kernel: net: don't call strlen() on the user buffer in packet_bind_spkt() KMSAN (KernelMemorySanitizer, a new error detection tool) reports use of uninitialized memory in packet_bind_spkt()
+- kernel: netfilter: nf_ct_ipv4: handle invalid IPv4 and IPv6 packets consistently IPv6 conntrack marked invalid packets as INVALID and let the user drop those by an explicit rule, while IPv4 conntrack dropped such packets itself
+- kernel: netfilter: nf_ct_ipv4: packets with wrong ihl are invalid
+- kernel: ipv6: do not increment mac header when it's unset Otherwise we'll overflow the integer. This occurs when layer 3 tunneled packets are handed off to the IPv6 layer
+- kernel: ipv6: Allow IPv4-mapped address as next-hop Made kernel accept IPv6 routes with IPv4-mapped address as next-hop
+- gmp: update to 6.2.0
+- nginx: update to 1.17.9
+- php: update to 7.2.28
+- spawn-fcgi: update to 3c1b01c (2019.08.25) snapshot; clean sources, add patch instead, cosmetic in router/Makefile
+- sqlite: update to 3.31.1
+- libcurl: update to 7.69.0
+- dnsmasq: update to 2.81rc3
+- libexif: update to 54b6f7f (2020.02.29) snapshot
+- nano: update to 4.8
+- pcre: update to 8.44
+- tor: update to 0.4.2.6
+- getdns/stubby: update to 1.6.0/0.3.0
+- pppd: fixes from upstream (pppd: Fix bounds check in EAP code; pppd: Ignore received EAP messages when not doing EAP)
+- libcurl: update CA certificate bundle as of 2020-01-01
+- GUI: TOR: add an option to resolve only .onion/.exit domains without having to configure anything else
+- GUI: Fix Issue #15 to allow configuring remote access in router mode
+- GUI: Admin Access: fix info about default web username
+- GUI: Admin Access: delete the unnecessary http_root variable (Allow web login as "root") - now the username is 'root' if it's not entered, no need to check/uncheck something
+- GUI: overview: fix the order of the enable/disable wifi buttons for routers with three radios
+- GUI: overview: fix issue when warning about unsecured wifi appears, even if this radio is temporarily disabled by “Disable” button on this page
+- GUI: Admin Access: do not restart sshd if there are no configuration changes
+- GUI: Basic Network: fix the order in which the wifi interfaces are selected when setting Wireless Client Mode bug similar to that on the Overview page fd06410
+- GUI: clean-up; the first step to sorting out this mess
+- GUI: add AdvancedTomato-like themes: red, blue, green and dark
+- GUI: nas-samba.asp - add option to enable/disable GRO (Default Off –> like before)
+- GUI: OpenVPN client: extend “To Domain” field to 50 chars
+- GUI: support showing status of hilink modem reachable from any WAN
+- router: Makefile: clean-up; remove unused scsi-idle package from the tree
+- router: Makefile: fix some configure/compiler warnings, clean-up
+- router: Makefile: there is no libyaml to install
+- router: Makefile: remove FULL_OPENSSL var
+- router: Makefile: always build and install zlib
+- router: Makefile: samba3: build with libiconv if available
+- router: Makefile: transmission: fix compiler warnings (partially); don’t build utils/cli; clean-up recipe
+- router: Makefile: add symlink to openssl
+- router: httpd: misc.c: change memory format specifiers to unsigned integer, fixes #9 (there was an overflow in displaying memory sizes above 2GB)
+- router: mdu: Makefile: build openssl11 with pthread
+- router: others: secure adblock with lock file; cosmetic in Makefile
+- router: others: mymotd: fix ‘bad number’ bug when wanX is disabled
+- router: rc: services.c: add warning to syslog when dnsmasq is skipped because of WEB mode enabled
+- router: rc: init.c - adjust et and wl thresh value after reset (for wifi-driver and et_linux.c)
+- router: rc: init.c - init variable restore_defaults to 0 and also use it to reset/adjust beamforming parameter
+- router: rc: network.c - rework start and stop of emf/lan/wl - fix/correct start and stop of EMF (stop failed almost every time and also router stuck/hung sometimes at reboot via GUI!) - make EMF multi-lan aware - give feedback about start and stop EMF - rework basic start and stop of start_lan / start_lan_wl / start_wl / start_wireless
+- router: rc: usb.c - improve/extend detection to activate the USB LED for Router with only one USB LED
+- router: rc: network.c - bring down loopback interface if we stop lan (and some cosmetic) 
+- router: rc: init.c - remove start_nas()/stop_nas() (already done at start_services()/stop_services()) 
+- router: rc: blink_br.c - exit / stop blink_br for router with more than one LAN LED (we do not need blink_br in that case –> save memory/cpu load)
+- router: rc: init.c - reboot automatically when the kernel panics and set waiting time (3 sec now)
+- router: rc: init.c - set overcommit_memory and overcommit_ratio
+- router: rc: network.c - unload/load wifi driver only with start_lan() and stop_lan()
+- router: rc: network.c - make sure to validate/restore all per wl-interface related variables for sdk7
+- router: rc: init.c - load wifi driver for sdk7 at sysinit Hint: sdk7 seems to be a special case
+- router: rc: services.c: simplify if statement
+- router: www: vpn-tinc.asp: fix some bugs, add link to the tutorial, clean-up
+- router: www: status-overview.asp: add missing 10Mb port icons, add set of half-duplex icons, code optimization/reduce size, clean-up
+- RT-AC3200: improve/change LED table if router is in WiFi bridge mode
+- Huawei WS880: disable wifi blink by default for WS880, causing problems (This is a workaround for now!)
+- Huawei WS880: change LED table
+
+
 2020.1          2020.01.20
 --------------------------
 
