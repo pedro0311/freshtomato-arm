@@ -2583,6 +2583,7 @@ snmp-install:
 	$(STRIP) $(INSTALLDIR)/snmp/usr/sbin/snmpd
 
 apcupsd/stamp-h1:
+	$(call patch_files,apcupsd)
 	cd apcupsd && touch autoconf/variables.mak && \
 	$(MAKE) configure && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
@@ -2600,6 +2601,7 @@ apcupsd-clean:
 	-@$(MAKE) -C apcupsd clean
 	@rm -f apcupsd/stamp-h1
 	@rm -f apcupsd/config*
+	$(call unpatch_files,apcupsd)
 
 apcupsd-install:
 	$(MAKE) -C apcupsd DESTDIR=$(INSTALLDIR)/apcupsd install
