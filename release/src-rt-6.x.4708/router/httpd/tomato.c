@@ -425,19 +425,19 @@ static void asp_css(int argc, char **argv)
 
 	if (argc == 0) {
 		if (nvram_match("web_css", "online")) {
-			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"ext/%s.css\">", ttb);
+			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/ext/%s.css\">", ttb);
 		} else {
 			if (c) {
-				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"%s.css\">", css);
+				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/%s.css\">", css);
 			}
 		}
 	}
 	else {
 		if ((strncmp(argv[0], "svg-css", 7) == 0) && c) {
-			web_printf("<?xml-stylesheet type=\"text/css\" href=\"%s.css\" ?>", css);	/* css for bwm-graph.svg */
+			web_printf("<?xml-stylesheet type=\"text/css\" href=\"/%s.css\" ?>", css);	/* css for bwm-graph.svg */
 		}
 		if ((strncmp(argv[0], "svg-js", 6) == 0) && (nvram_get_int("web_adv_scripts"))) {	/* special case, outer JS file for bwm-graph.svg */
-			web_printf("<script href=\"resize-charts.js\" />");
+			web_printf("<script href=\"/resize-charts.js\" />");
 		}
 	}
 }
