@@ -681,11 +681,11 @@ void stop_wireless(void) {
 #endif
 	stop_lan_wl();
 
-	unload_wl();
+	//unload_wl();
 }
 
 void start_wireless(void) {
-	load_wl();
+	//load_wl();
 
 	start_lan_wl();
 

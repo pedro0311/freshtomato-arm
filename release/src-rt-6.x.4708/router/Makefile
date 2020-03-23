@@ -808,11 +808,11 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 
 busybox: dummy
 	@$(SEP)
-	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS) $(if $(TCONFIG_OPENSSL11),-DOPENSSL11,)" $(PARALLEL_BUILD)
+	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" $(PARALLEL_BUILD)
 
 busybox-install:
 	rm -rf $(INSTALLDIR)/busybox
-	$(MAKE) -C busybox install EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS) $(if $(TCONFIG_OPENSSL11),-DOPENSSL11,)" CONFIG_PREFIX=$(INSTALLDIR)/busybox
+	$(MAKE) -C busybox install EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" CONFIG_PREFIX=$(INSTALLDIR)/busybox
 
 busybox-clean:
 	-@$(MAKE) -C busybox distclean
@@ -895,6 +895,7 @@ openssl-1.1-install:
 		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl-1.1/usr/sbin/gencert.sh ; \
+		cd $(INSTALLDIR)/openssl-1.1/usr/sbin && ln -sf openssl11 openssl ; \
 	fi
 	@true
 
@@ -2582,6 +2583,7 @@ snmp-install:
 	$(STRIP) $(INSTALLDIR)/snmp/usr/sbin/snmpd
 
 apcupsd/stamp-h1:
+	$(call patch_files,apcupsd)
 	cd apcupsd && touch autoconf/variables.mak && \
 	$(MAKE) configure && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
@@ -2599,6 +2601,7 @@ apcupsd-clean:
 	-@$(MAKE) -C apcupsd clean
 	@rm -f apcupsd/stamp-h1
 	@rm -f apcupsd/config*
+	$(call unpatch_files,apcupsd)
 
 apcupsd-install:
 	$(MAKE) -C apcupsd DESTDIR=$(INSTALLDIR)/apcupsd install

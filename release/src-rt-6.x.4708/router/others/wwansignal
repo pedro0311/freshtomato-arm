@@ -15,8 +15,15 @@ PID=$$
 MODE=$(nvram get "$PREFIX"_proto)
 DEVNR=$(nvram get "$PREFIX"_modem_dev)
 MTYPE=$(nvram get "$PREFIX"_modem_type)
+WANIP=$(nvram get "$PREFIX"_gateway)
 LOGS="logger -t wwansignal[$PID]"
 
+HILINK_IP=$(nvram get "$PREFIX"_hilink_ip)
+if ! [ -z "$HILINK_IP" ]  && [ "$HILINK_IP" != "0.0.0.0" ]; then
+    MODE=lte
+    MTYPE=hilink
+    WANIP=$HILINK_IP
+fi
 
 [ -z "$PREFIX" ] && {
 	echo "usage: wwansignal INTERFACE [-stdout]"
@@ -203,7 +210,7 @@ signal4g() {
 
 	elif [ "$MTYPE" == "hilink" ]; then	# use huawei hilink api (for moded ie. E3372)
 # TODO: Auth
-		local BTS NET PCI WANIP=$(nvram get "$PREFIX"_gateway)
+		local BTS NET PCI
 		local URLHOME="http://$WANIP/html/home.html" URLAPI1="http://$WANIP/api/device/signal"
 		local URLAPI2="http://$WANIP/api/net/signal-para" URLAPI3="http://$WANIP/api/net/net-mode" URLAPI4="http://$WANIP/api/net/current-plmn"
 		local FCURL="/usr/sbin/curl" COOKIEFILE="/tmp/4g_"$PREFIX".apicookie"

@@ -3155,17 +3155,7 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "wireless") == 0) {
-		if (act_stop) {
-			stop_wireless();
-		}
-		if (act_start) {
-			restart_wireless();
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "wl") == 0) {
+	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) {
 		if (act_stop) {
 			stop_wireless();
 		}
