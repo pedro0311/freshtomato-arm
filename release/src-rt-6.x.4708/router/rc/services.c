@@ -2380,7 +2380,7 @@ void start_wsdd()
 	snprintf(serial, sizeof(serial), "%02x%02x%02x%02x%02x%02x",
 		ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);
 
-	snprintf(bootparms, sizeof(bootparms), "sku:%s,serial:%s", nvram_safe_get("odmpid"), serial);
+	snprintf(bootparms, sizeof(bootparms), "sku:%s,serial:%s", (nvram_get("odmpid") ? : "FreshTomato"), serial);
 	wsdd_argv[6] = bootparms;
 
 	_eval(wsdd_argv, NULL, 0, &pid);
