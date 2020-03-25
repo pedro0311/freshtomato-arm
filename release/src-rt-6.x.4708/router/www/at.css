@@ -1280,7 +1280,6 @@ td#navi a.indent1:hover::before {
 
 #refresh-spinner,
 img[src^="spin"],
-#fmsg::before,
 div#loading::after,
 #footer #footer-msg::after {
 	object-position: -100px -100px;
@@ -1667,15 +1666,6 @@ input[id*="_f_nr"]:first-child {
 	background-color: transparent;
 	color: var(--tomato-accent-color);
 	vertical-align: middle;
-}
-
-.content > #fmsg::before {
-	content: "  ";
-	display: inline-block;
-	min-width: 20px;
-	min-height: 20px;
-	vertical-align: middle;
-	margin-right: 10px;
 }
 
 /* those are not supported by all browsers */
