@@ -591,7 +591,7 @@ function verifyFields(focused, quiet) {
 			E('_wan'+u+'_netmask').disabled = 1;
 			E('_wan'+u+'_gateway').disabled = 1;
 			E('_wan'+u+'_hilink_ip').disabled = 1;
-			E('_f_wan'+u+'_ckmtd').disabled = 1;
+			E('_f_wan'+u+'_status_script').disabled = 1;
 			E('_wan'+u+'_ckmtd').disabled = 1;
 			E('_wan'+u+'_pptp_server_ip').disabled = 1;
 			E('_f_wan'+u+'_pptp_dhcp').disabled = 1;
