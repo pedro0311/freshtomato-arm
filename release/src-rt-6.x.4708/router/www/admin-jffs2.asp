@@ -74,6 +74,7 @@ function save(format) {
 	form.submit(fom, 1);
 
 	if (format) {
+		E('footer-msg').style.display = 'none';
 		ftime = fmtwait;
 		formatClock();
 	}

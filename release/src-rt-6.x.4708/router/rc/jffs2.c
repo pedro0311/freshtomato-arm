@@ -47,7 +47,10 @@ void start_jffs2(void)
 
 	if (!wait_action_idle(10)) return;
 
-	if (!mtd_getinfo("jffs2", &part, &size)) return;
+	if (!mtd_getinfo("jffs2", &part, &size)) {
+		error("getting info from");
+		return;
+	}
 
 	if (nvram_match("jffs2_format", "1")) {
 		nvram_set("jffs2_format", "0");
