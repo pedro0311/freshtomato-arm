@@ -20,7 +20,12 @@
 
 //	<% nvram("jffs2_on,jffs2_exec,t_fix1"); %>
 
+/* JFFS2-BEGIN */
 //	<% statfs("/jffs", "jffs2"); %>
+/* JFFS2-END */
+/* JFFS2NAND-BEGIN */
+//	<% statfs("/jffs", "brcmnand"); %>
+/* JFFS2NAND-END */
 
 fmtwait = (nvram.t_fix1 == 'RT-N16' ? 120 : 60);
 
