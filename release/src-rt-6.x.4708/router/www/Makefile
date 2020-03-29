@@ -53,13 +53,19 @@ ifneq ($(TCONFIG_CIFS),y)
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 endif
 
-# Only include the JFFS pages if JFFS is configured in.
+# Only include the JFFS pages if JFFS is configured in. Distinguish JFFS2 and BRCMNAND.
 ifneq ($(TCONFIG_JFFS2),y)
 	rm -f $(INSTALLDIR)/www/admin-jffs2.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-upgrade.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
+else
+ifeq ($(TCONFIG_BRCM_NAND_JFFS2),y)
+	sed -i $(INSTALLDIR)/www/admin-jffs2.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
+else
+	sed -i $(INSTALLDIR)/www/admin-jffs2.asp -e "/JFFS2NAND-BEGIN/,/JFFS2NAND-END/d"
+endif
 endif
 
 # Only include EMF options if EMF is configured in.
@@ -293,6 +299,7 @@ endif
 		-e "/FTP-BEGIN/d"	-e "/FTP-END/d" \
 		-e "/MEDIA-SRV-BEGIN/d"	-e "/MEDIA-SRV-END/d" \
 		-e "/JFFS2-BEGIN/d"	-e "/JFFS2-END/d" \
+		-e "/JFFS2NAND-BEGIN/d"	-e "/JFFS2NAND-END/d" \
 		-e "/CIFS-BEGIN/d"	-e "/CIFS-END/d" \
 		-e "/EMF-BEGIN/d"	-e "/EMF-END/d" \
 		-e "/OPENVPN-BEGIN/d"	-e "/OPENVPN-END/d" \

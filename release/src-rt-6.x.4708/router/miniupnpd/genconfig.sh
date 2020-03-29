@@ -103,6 +103,12 @@ if [ -f ../shared/tomato_version ]; then
 	OS_VERSION="Tomato $TOMATO_VER"
 fi
 
+# OpenEmbedded special case
+if [ -f ./os.openembedded ]; then
+	OS_NAME=OpenEmbedded
+	OS_VERSION=$(cat ./os.openembedded)
+fi
+
 ${RM} ${CONFIGFILE}
 
 echo "/* MiniUPnP Project" >> ${CONFIGFILE}
@@ -346,6 +352,11 @@ case $OS_NAME in
 		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
 		FW=iptables
 		;;
+	OpenEmbedded)
+		OS_URL=http://www.openembedded.org/
+		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
+		FW=iptables
+		;;
 	AstLinux)
 		OS_URL=http://www.astlinux.org/
 		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
@@ -406,7 +417,7 @@ case $FW in
 		;;
 	*)
 		echo "Unknown Firewall/packet filtering software [$FW]"
-		echo "Please contact the author at http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/."
+		echo "Please contact the author at http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/."
 		exit 1
 		;;
 esac

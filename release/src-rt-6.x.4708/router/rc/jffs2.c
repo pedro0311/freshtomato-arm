@@ -23,6 +23,13 @@
 #define JFFS_NAME	"jffs2"
 #endif
 
+#ifdef TCONFIG_BRCM_NAND_JFFS2
+#define JFFS2_PARTITION	"brcmnand"
+#else
+#define JFFS2_PARTITION	"jffs2"
+#endif
+
+
 static void error(const char *message)
 {
 	char s[512];
@@ -44,19 +51,32 @@ void start_jffs2(void)
 	int part;
 	const char *p;
 	struct statfs sf;
+	int i = 0;
 
-	if (!wait_action_idle(10)) return;
+	while(1) {
+		if (wait_action_idle(10))
+			break;
+		else
+			i++;
 
-	if (!mtd_getinfo("jffs2", &part, &size)) return;
+		if (i >= 10) {
+			error("busy");
+			return;
+		}
+	}
+
+	if (!mtd_getinfo(JFFS2_PARTITION, &part, &size)) {
+		error("getting info from");
+		return;
+	}
 
 	if (nvram_match("jffs2_format", "1")) {
 		nvram_set("jffs2_format", "0");
 		nvram_commit_x();
-		if (!mtd_erase("jffs2")) {
+		if (mtd_erase(JFFS2_PARTITION)) {
 			error("formatting");
 			return;
 		}
-
 		format = 1;
 	}
 
@@ -68,18 +88,18 @@ void start_jffs2(void)
 			nvram_commit_x();
 		}
 		else if ((p != NULL) && (*p != 0)) {
-			error("verifying known size of");
+			error("verifying known size of (unformatted?)");
 			return;
 		}
 	}
 
-	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873 && sf.f_type != 0x73717368/* squashfs */)) {
+	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873) && (sf.f_type != 0x73717368)) {
 		// already mounted
 		notice_set("jffs", format ? "Formatted" : "Loaded");
 		return;
 	}
 
-	if (!mtd_unlock("jffs2")) {
+	if (!mtd_unlock(JFFS2_PARTITION)) {
 		error("unlocking");
 		return;
 	}
@@ -87,10 +107,19 @@ void start_jffs2(void)
 	modprobe(JFFS_NAME);
 
 	sprintf(s, MTD_BLKDEV(%d), part);
+
 	if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
-		modprobe_r(JFFS_NAME);
-		error("mounting");
-		return;
+		if (mtd_erase(JFFS2_PARTITION)) {
+			error("formatting");
+			return;
+		}
+		format = 1;
+
+		if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
+			modprobe_r(JFFS_NAME);
+			error("mounting 2nd time");
+			return;
+		}
 	}
 
 #ifdef TEST_INTEGRITY
@@ -127,7 +156,7 @@ void stop_jffs2(void)
 
 	if (!wait_action_idle(10)) return;
 
-	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873 && sf.f_type != 0x73717368)) {
+	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873) && (sf.f_type != 0x73717368)) {
 		// is mounted
 		run_userfile("/jffs", ".autostop", "/jffs", 5);
 		run_nvscript("script_autostop", "/jffs", 5);

@@ -71,6 +71,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_dns",			""				, 0 },	// x.x.x.x x.x.x.x ...
 	{ "wan_weight",			"1"				, 0 },
 	{ "wan_hilink_ip",		"0.0.0.0"			, 0 },
+	{ "wan_status_script",		"0"				, 0 },
 	{ "wan_ckmtd",			"2"				, 0 },
 
 	{ "wan2_proto",			"dhcp"				, 0 },	// [static|dhcp|pppoe|disabled]
@@ -83,6 +84,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_hwaddr",		""				, 0 },	// WAN interface MAC address
 	{ "wan2_ifnameX",		NULL				, 0 },	// real wan if; see wan.c:start_wan
 	{ "wan2_hilink_ip",		"0.0.0.0"			, 0 },
+	{ "wan2_status_script",		"0"				, 0 },
 	{ "wan2_ckmtd",			"2"				, 0 },
 
 #ifdef TCONFIG_MULTIWAN
@@ -96,6 +98,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_hwaddr",		""				, 0 },	// WAN interface MAC address
 	{ "wan3_ifnameX",		NULL				, 0 },	// real wan if; see wan.c:start_wan
 	{ "wan3_hilink_ip",		"0.0.0.0"			, 0 },
+	{ "wan3_status_script",		"0"				, 0 },
 	{ "wan3_ckmtd",			"2"				, 0 },
 
 	{ "wan4_proto",			"dhcp"				, 0 },	// [static|dhcp|pppoe|disabled]
@@ -108,6 +111,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_hwaddr",		""				, 0 },	// WAN interface MAC address
 	{ "wan4_ifnameX",		NULL				, 0 },	// real wan if; see wan.c:start_wan
 	{ "wan4_hilink_ip",		"0.0.0.0"			, 0 },
+	{ "wan4_status_script",		"0"				, 0 },
 	{ "wan4_ckmtd",			"2"				, 0 },
 #endif
 
@@ -578,7 +582,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_NVRAM_32K
 	{ "adblock_blacklist",		""				, 0 },
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://hosts-file.net/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/WindowsLies/BlockWindows/master/hosts<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://hosts-file.net/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
 #endif
 	{ "adblock_blacklist_custom",	""				, 0 },
 	{ "adblock_whitelist",		""				, 0 },

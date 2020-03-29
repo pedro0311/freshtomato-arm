@@ -14,8 +14,8 @@
 +	OS_VERSION="FreshTomato $TOMATO_VER"
  fi
  
- ${RM} ${CONFIGFILE}
-@@ -352,8 +352,8 @@ case $OS_NAME in
+ # OpenEmbedded special case
+@@ -363,8 +363,8 @@ case $OS_NAME in
  		FW=iptables
  		;;
  	Tomato)

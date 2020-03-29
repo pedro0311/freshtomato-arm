@@ -89,7 +89,7 @@ LDLIBS ?= -liptc
 
 ifdef IPTABLESPATH
 CPPFLAGS := $(CPPFLAGS) -I$(IPTABLESPATH)/include/
-LDFLAGS := $(LDFLAFGS) -L$(IPTABLESPATH)/libiptc/
+LDFLAGS := $(LDFLAGS) -L$(IPTABLESPATH)/libiptc/
 
 # get iptables version and set IPTABLES_143 macro if needed
 IPTABLESVERSION := $(shell grep "\#define VERSION" $(IPTABLESPATH)/config.h | tr -d \" |cut -d" " -f3 )

@@ -176,7 +176,6 @@ function init() {
 </head>
 
 <body onload="init()">
-<form id="t_fom" method="post" action="tomato.cgi">
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title">FreshTomato</div>
@@ -188,56 +187,55 @@ function init() {
 
 <!-- / / / -->
 
-<input type="hidden" name="_nextpage" value="admin-bwm.asp">
-<input type="hidden" name="_service" value="rstats-restart">
-<input type="hidden" name="rstats_enable">
-<input type="hidden" name="rstats_path">
-<input type="hidden" name="rstats_sshut">
-<input type="hidden" name="rstats_bak">
-
-<!-- / / / -->
-
 <div class="section-title">Bandwidth Monitoring</div>
-<div class="section" id="config-section">
-	<script>
-		switch (nvram.rstats_path) {
-			case '':
-			case '*nvram':
-			case '/jffs/':
-			case '/cifs1/':
-			case '/cifs2/':
-				loc = nvram.rstats_path;
-			break;
-			default:
-				loc = '*user';
-			break;
-		}
-		createFieldTable('', [
-			{ title: 'Enable', name: 'f_rstats_enable', type: 'checkbox', value: nvram.rstats_enable == '1' },
-			{ title: 'Save History Location', multi: [
-				{ name: 'f_loc', type: 'select', options: [['','RAM (Temporary)'],['*nvram','NVRAM'],
+<form id="t_fom" method="post" action="tomato.cgi">
+	<div class="section" id="config-section">
+		<input type="hidden" name="_nextpage" value="admin-bwm.asp">
+		<input type="hidden" name="_service" value="rstats-restart">
+		<input type="hidden" name="rstats_enable">
+		<input type="hidden" name="rstats_path">
+		<input type="hidden" name="rstats_sshut">
+		<input type="hidden" name="rstats_bak">
+		<script>
+			switch (nvram.rstats_path) {
+				case '':
+				case '*nvram':
+				case '/jffs/':
+				case '/cifs1/':
+				case '/cifs2/':
+					loc = nvram.rstats_path;
+				break;
+				default:
+					loc = '*user';
+				break;
+			}
+			createFieldTable('', [
+				{ title: 'Enable', name: 'f_rstats_enable', type: 'checkbox', value: nvram.rstats_enable == '1' },
+				{ title: 'Save History Location', multi: [
+					{ name: 'f_loc', type: 'select', options: [['','RAM (Temporary)'],['*nvram','NVRAM'],
 /* JFFS2-BEGIN */
-					['/jffs/','JFFS2'],
+						['/jffs/','JFFS2'],
 /* JFFS2-END */
 /* CIFS-BEGIN */
-					['/cifs1/','CIFS 1'],['/cifs2/','CIFS 2'],
+						['/cifs1/','CIFS 1'],['/cifs2/','CIFS 2'],
 /* CIFS-END */
-					['*user','Custom Path']], value: loc },
-				{ name: 'f_user', type: 'text', maxlen: 48, size: 50, value: nvram.rstats_path }
-			] },
-			{ title: 'Save Frequency', indent: 2, name: 'rstats_stime', type: 'select', value: nvram.rstats_stime, options: [
-				[1,'Every Hour'],[2,'Every 2 Hours'],[3,'Every 3 Hours'],[4,'Every 4 Hours'],[5,'Every 5 Hours'],[6,'Every 6 Hours'],
-				[9,'Every 9 Hours'],[12,'Every 12 Hours'],[24,'Every 24 Hours'],[48,'Every 2 Days'],[72,'Every 3 Days'],[96,'Every 4 Days'],
-				[120,'Every 5 Days'],[144,'Every 6 Days'],[168,'Every Week']] },
-			{ title: 'Save On Shutdown', indent: 2, name: 'f_sshut', type: 'checkbox', value: nvram.rstats_sshut == '1' },
-			{ title: 'Create New File<br><small>(Reset Data)<\/small>', indent: 2, name: 'f_new', type: 'checkbox', value: 0,
-				suffix: ' &nbsp; <b id="newmsg" style="display:none"><small>(note: enable if this is a new file)<\/small><\/b>' },
-			{ title: 'Create Backups', indent: 2, name: 'f_bak', type: 'checkbox', value: nvram.rstats_bak == '1' },
-			{ title: 'First Day Of The Month', name: 'rstats_offset', type: 'text', value: nvram.rstats_offset, maxlen: 2, size: 4 },
-			{ title: 'Excluded Interfaces', name: 'rstats_exclude', type: 'text', value: nvram.rstats_exclude, maxlen: 64, size: 50, suffix: '&nbsp;<small>(comma separated list)<\/small>' }
-		]);
-	</script>
-</div>
+						['*user','Custom Path']], value: loc },
+					{ name: 'f_user', type: 'text', maxlen: 48, size: 50, value: nvram.rstats_path }
+				] },
+				{ title: 'Save Frequency', indent: 2, name: 'rstats_stime', type: 'select', value: nvram.rstats_stime, options: [
+					[1,'Every Hour'],[2,'Every 2 Hours'],[3,'Every 3 Hours'],[4,'Every 4 Hours'],[5,'Every 5 Hours'],[6,'Every 6 Hours'],
+					[9,'Every 9 Hours'],[12,'Every 12 Hours'],[24,'Every 24 Hours'],[48,'Every 2 Days'],[72,'Every 3 Days'],[96,'Every 4 Days'],
+					[120,'Every 5 Days'],[144,'Every 6 Days'],[168,'Every Week']] },
+				{ title: 'Save On Shutdown', indent: 2, name: 'f_sshut', type: 'checkbox', value: nvram.rstats_sshut == '1' },
+				{ title: 'Create New File<br><small>(Reset Data)<\/small>', indent: 2, name: 'f_new', type: 'checkbox', value: 0,
+					suffix: ' &nbsp; <b id="newmsg" style="display:none"><small>(note: enable if this is a new file)<\/small><\/b>' },
+				{ title: 'Create Backups', indent: 2, name: 'f_bak', type: 'checkbox', value: nvram.rstats_bak == '1' },
+				{ title: 'First Day Of The Month', name: 'rstats_offset', type: 'text', value: nvram.rstats_offset, maxlen: 2, size: 4 },
+				{ title: 'Excluded Interfaces', name: 'rstats_exclude', type: 'text', value: nvram.rstats_exclude, maxlen: 64, size: 50, suffix: '&nbsp;<small>(comma separated list)<\/small>' }
+			]);
+		</script>
+	</div>
+</form>
 
 <!-- / / / -->
 
@@ -276,7 +274,6 @@ function init() {
 
 </td></tr>
 </table>
-</form>
 <script>verifyFields(null, true);</script>
 </body>
 </html>

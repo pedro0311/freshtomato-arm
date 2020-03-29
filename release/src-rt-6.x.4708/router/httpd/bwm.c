@@ -141,7 +141,7 @@ void wi_iptrestore(char *url, int len, char *boundary)
 		goto ERROR;
 	}
 
-	if ((len < 64) || (len > 10240)) {
+	if ((len < 64) || (len > 40240)) {
 		goto ERROR;
 	}
 

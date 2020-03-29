@@ -425,19 +425,19 @@ static void asp_css(int argc, char **argv)
 
 	if (argc == 0) {
 		if (nvram_match("web_css", "online")) {
-			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"ext/%s.css\">", ttb);
+			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/ext/%s.css\">", ttb);
 		} else {
 			if (c) {
-				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"%s.css\">", css);
+				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/%s.css\">", css);
 			}
 		}
 	}
 	else {
 		if ((strncmp(argv[0], "svg-css", 7) == 0) && c) {
-			web_printf("<?xml-stylesheet type=\"text/css\" href=\"%s.css\" ?>", css);	/* css for bwm-graph.svg */
+			web_printf("<?xml-stylesheet type=\"text/css\" href=\"/%s.css\" ?>", css);	/* css for bwm-graph.svg */
 		}
 		if ((strncmp(argv[0], "svg-js", 6) == 0) && (nvram_get_int("web_adv_scripts"))) {	/* special case, outer JS file for bwm-graph.svg */
-			web_printf("<script href=\"resize-charts.js\" />");
+			web_printf("<script href=\"/resize-charts.js\" />");
 		}
 	}
 }
@@ -579,6 +579,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan_sta",			V_LENGTH(0, 10)			},
 	{ "wan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan_hilink_ip",		V_IP				},
+	{ "wan_status_script",		V_01				},
 	{ "wan_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
@@ -621,6 +622,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan2_dns_auto",		V_01				},
 	{ "wan2_hilink_ip",		V_IP				},
+	{ "wan2_status_script",		V_01				},
 	{ "wan2_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
@@ -651,6 +653,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan3_dns_auto",		V_01				},
 	{ "wan3_hilink_ip",		V_IP				},
+	{ "wan3_status_script",		V_01				},
 	{ "wan3_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 	{ "wan4_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
@@ -680,6 +683,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan4_dns_auto",		V_01				},
 	{ "wan4_hilink_ip",		V_IP				},
+	{ "wan4_status_script",		V_01				},
 	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 #endif
 

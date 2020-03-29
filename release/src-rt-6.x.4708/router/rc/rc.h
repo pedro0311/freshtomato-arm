@@ -241,13 +241,13 @@ extern void stop_services(void);
 /* !!TB - USB and NAS */
 #ifdef TCONFIG_USB
 extern void restart_nas_services(int stop, int start);
+extern void start_wsdd(void);
+extern void stop_wsdd(void);
 #else
 #define restart_nas_services(args...) do { } while(0)
 #endif
-#ifdef LINUX26
 extern void start_hotplug2();
 extern void stop_hotplug2(void);
-#endif
 #ifdef TCONFIG_IPV6
 extern void start_ipv6_tunnel(void);
 extern void stop_ipv6_tunnel(void);
@@ -305,7 +305,7 @@ extern void enable_ndp_proxy(void);
 #endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
-#if defined(TCONFIG_IPV6) && defined(LINUX26)
+#if defined(TCONFIG_IPV6)
 #define ip46t_write(args...) do { ipt_write(args); ip6t_write(args); } while(0)
 // #define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); if (do_ip6t) ip6t_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); if (do_ip46t & IPT_V6) ip6t_write(args); } while(0)
@@ -331,10 +331,8 @@ extern int stop_firewall(void);
 #ifdef DEBUG_IPTFILE
 extern void create_test_iptfile(void);
 #endif
-#ifdef LINUX26
 extern void allow_fastnat(const char *service, int allow);
 extern void try_enabling_fastnat(void);
-#endif
 
 /* forward.c */
 extern void ipt_forward(ipt_table_t table);
