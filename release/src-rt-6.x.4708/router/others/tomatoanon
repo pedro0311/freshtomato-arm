@@ -47,7 +47,7 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 			VER_MNR=$(echo $VER | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g')
 
 			RESCHK="/tmp/anon.check"
-			wget -O $RESCHK "https://exotic.se/version.txt"
+			wget -O $RESCHK "http://freshtomato.org/version.txt"
 
 			CHKVER_MAJ=$(cat $RESCHK | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
 			ISMNR=$(cat $RESCHK | grep "\." | wc -l)

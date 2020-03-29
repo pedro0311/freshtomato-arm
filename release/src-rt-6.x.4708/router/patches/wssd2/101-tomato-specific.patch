@@ -1,0 +1,146 @@
+--- wsdd2/wsd.c
++++ wsdd2/wsd.c
+@@ -54,6 +54,7 @@
+ 
+ #define UUIDLEN	37
+ 
++static char hostname[HOST_NAME_MAX + 1];
+ static time_t wsd_instance;
+ static char wsd_sequence[UUIDLEN], wsd_endpoint[UUIDLEN];
+ 
+@@ -122,6 +123,7 @@ static void uuid_endpoint(char *uuid, si
+ 	}
+ }
+ 
++#ifndef TOMATO 
+ static char *get_smbparm(struct endpoint *ep,
+ 			const char *name, const char *_default)
+ {
+@@ -165,7 +167,48 @@ static char *get_smbparm(struct endpoint
+ 	return result;
+ #undef __FUNCTION__
+ }
++#else
++void get_smbinfo(struct endpoint *ep)
++{
++#define __FUNCTION__ "get_smbinfo"
++	char buf[256];
++	FILE *fp;
++
++	if (!netbiosname) {
++		netbiosname = malloc(HOST_NAME_MAX + 1);
++		netbiosname[0] = '\0';
++	}
++
++	if (!workgroup) {
++		workgroup = malloc(15);
++		workgroup[0] = '\0';
++	}
+ 
++	if (!(fp = fopen("/etc/smb.conf","r"))) {
++		ep->_errno = errno;
++		ep->errstr = __FUNCTION__ ": Can't access smb.conf";
++		goto exit;
++	}
++
++	while (fgets(buf, sizeof(buf), fp) && (!*netbiosname || !*workgroup)) {
++		if (!*workgroup)
++			sscanf(buf, "workgroup = %14[^\n]s", workgroup);
++		if (!*netbiosname)
++			sscanf(buf, "netbios name = %16[^\n]s", netbiosname);
++	}
++	fclose(fp);
++
++exit:
++	/* Set defaults if needed */
++	if (!*netbiosname)
++		strncpy(netbiosname, hostname, 16);
++	if (!*workgroup)
++		strcpy(workgroup, "WORKGROUP");
++#undef __FUNCTION__
++}
++#endif
++
++#ifndef TOMATO 
+ static struct {
+ 	const char *key, *_default;
+ 	char *value;
+@@ -179,6 +222,22 @@ static struct {
+ 	{ .key	= "presentationurl:",	._default = NULL},
+ 	{}
+ };
++#else
++static struct {
++	const char *key, *_default;
++	char *value;
++} bootinfo[] = {
++	{ .key	= "vendor:",	._default = "FRESHTOMATO"},
++	{ .key	= "model:",	._default = "FreshTomato"},
++	{ .key	= "serial:",	._default = "0"},
++	{ .key	= "sku:",	._default = "FreshTomato router"},
++	{ .key	= "vendorurl:",	._default = "http://freshtomato.org"},
++	{ .key	= "modelurl:",	._default = "http://freshtomato.org"},
++	{ .key	= "presentationurl:",	._default = "http://freshtomato.org"},
++	{}
++};
++
++#endif
+ 
+ void printBootInfoKeys(FILE *fp, int sp)
+ {
+@@ -989,8 +1048,6 @@ again:
+ #undef	__FUNCTION__
+ }
+ 
+-static char hostname[HOST_NAME_MAX + 1];
+-
+ int wsd_init(struct endpoint *ep)
+ {
+ 	if (!wsd_instance)
+@@ -1012,6 +1069,7 @@ int wsd_init(struct endpoint *ep)
+ 		return -1;
+ 	}
+ 
++#ifndef TOMATO 
+ 	if (!workgroup &&
+ 		!(workgroup = get_smbparm(ep, "workgroup", "WORKGROUP")))
+ 		return -1;
+@@ -1019,6 +1077,11 @@ int wsd_init(struct endpoint *ep)
+ 		!(netbiosname = get_smbparm(ep, "netbios name", hostname)))
+ 		return -1;
+ 
++#else
++	if (!workgroup || !netbiosname)
++		get_smbinfo(ep);
++#endif
++
+ 	if (!getresp_inited)
+ 		init_getresp();
+ 
+--- wsdd2/wsdd2.c
++++ wsdd2/wsdd2.c
+@@ -21,6 +21,7 @@
+  */
+ 
+ #include "wsdd.h"
++#include "ifaddrs.c"
+ 
+ int debug_L, debug_W, debug_N;
+ int ifindex = 0;
+@@ -643,12 +644,10 @@ int main(int argc, char **argv)
+ 			tcpudp	|= _UDP;
+ 			break;
+ 		case 'i':
+-			if (optarg != NULL && strlen(optarg) > 1) {
+-				ifindex = if_nametoindex(optarg);
+-				if (ifindex == 0)
+-					help(prog, EXIT_FAILURE, "bad interface '%s'\n", optarg);
+-				ifname = strdup(optarg);
+-			}
++			ifname = optarg;
++			ifindex = if_nametoindex(optarg);
++			if (ifindex == 0)
++				help(prog, EXIT_FAILURE, "bad interface '%s'\n", optarg);
+ 			break;
+ 		case 'N':
+ 			if (optarg != NULL && strlen(optarg) > 1) {

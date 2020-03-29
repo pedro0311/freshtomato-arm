@@ -225,7 +225,7 @@ function save() {
 
 	/* do not restart sshd if no changes in its configuration */
 	if ((fom.sshd_pass.value == nvram.sshd_pass) && (fom.sshd_remote.value == nvram.sshd_remote) && (fom.sshd_motd.value == nvram.sshd_motd) && (fom.sshd_forwarding.value == nvram.sshd_forwarding) && 
-	    (E('_sshd_rport').value == nvram.sshd_rport) && (E('_sshd_port').value == nvram.sshd_port) && (E('_sshd_authkeys').value == nvram.sshd_authkeys)) {
+	     (E('_set_password_1').value == "**********") && (E('_sshd_rport').value == nvram.sshd_rport) && (E('_sshd_port').value == nvram.sshd_port) && (E('_sshd_authkeys').value == nvram.sshd_authkeys)) {
 		fom._service.value = 'adminnosshd-restart';
 	}
 
