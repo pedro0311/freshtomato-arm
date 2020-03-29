@@ -138,7 +138,7 @@ function init() {
 				{ name: 'pptp_client_mru', type: 'text', maxlen: 4, size: 6, value: nvram.pptp_client_mru } ] },
 			{ title: 'Custom Configuration', name: 'pptp_client_custom', type: 'textarea', value: nvram.pptp_client_custom }
 		]);
-			W('<div class="vpn-start-stop"><input type="button" value="' + (pptpup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'pptpclient\', pptpup)" id="vpn-start-stop"><\/div>');
+			W('<div class="vpn-start-stop"><input type="button" value="' + (pptpup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'pptpclient\', pptpup)" id="_pptpclient_button"><\/div>');
 	</script>
 </div>
 
