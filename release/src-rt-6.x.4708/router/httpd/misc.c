@@ -835,7 +835,7 @@ void asp_statfs(int argc, char **argv)
 		memset(&sf, 0, sizeof(sf));
 #ifdef TCONFIG_JFFS2
 		// for jffs, try to get total size from mtd partition
-		if (strncmp(argv[1], "jffs", 4) == 0) {
+		if ((strncmp(argv[1], "jffs", 4) == 0) || (strncmp(argv[1], "brcmnand", 8) == 0)) {
 			int part;
 
 			if (mtd_getinfo(argv[1], &part, (int *)&sf.f_blocks)) {
