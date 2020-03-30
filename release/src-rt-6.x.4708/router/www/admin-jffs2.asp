@@ -116,12 +116,16 @@ function submit_complete() {
 <div class="section-title">JFFS</div>
 <div class="section">
 	<script>
-		jfon = (nvram.jffs2_on == 1);
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_jffs2_on', type: 'checkbox', value: jfon },
+			{ title: 'Enable', name: 'f_jffs2_on', type: 'checkbox', value: (nvram.jffs2_on == 1) },
 			{ title: 'Execute When Mounted', name: 'jffs2_exec', type: 'text', maxlen: 64, size: 34, value: nvram.jffs2_exec },
 			null,
+/* JFFS2-BEGIN */
 			{ title: 'Total / Free Size', text: (((jffs2.mnt) || (jffs2.size > 0)) ? scaleSize(jffs2.size) : '') + ((jffs2.mnt) ? ' / ' + scaleSize(jffs2.free) : ' (not mounted)') },
+/* JFFS2-END */
+/* JFFS2NAND-BEGIN */
+			{ title: 'Total / Free Size', text: (((brcmnand.mnt) || (brcmnand.size > 0)) ? scaleSize(brcmnand.size) : '') + ((brcmnand.mnt) ? ' / ' + scaleSize(brcmnand.free) : ' (not mounted)') },
+/* JFFS2NAND-END */
 			null,
 			{ title: '', custom: '<input type="button" value="Format / Erase..." onclick="formatClicked()" id="format">' +
 				'<img src="spin.gif" alt="" id="spin"> <span style="display:none" id="fmsg">Please wait for <span id="fclock">about 60 seconds<\/span>...<\/span>' }
