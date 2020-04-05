@@ -4224,6 +4224,27 @@ static void load_files_from_nvram(void)
 }
 #endif
 
+static inline void set_jumbo_frame(void)
+{
+	int enable = nvram_get_int("jumbo_frame_enable");
+
+	/*
+	 * 0x40 JUMBO frame page
+	 * JUMBO Control Register
+	 * 0x01 REG_JUMBO_CTRL (Port Mask (bit i == port i enabled), bit 24 == GigE always enabled)
+	 * 0x05 REG_JUMBO_SIZE
+	 */
+#ifdef TCONFIG_BCMARM
+	eval("et", "robowr", "0x40", "0x01", enable ? "0x010001ff" : "0x00", "4"); /* set enable flag for arm (32 bit) */
+#else
+	/* at mips branch we set the enable flag arleady at bcmrobo.c --> so nothing to do here right now */
+	//eval("et", "robowr", "0x40", "0x01", enable ? "0x1f" : "0x00"); /* set enable flag for mips */
+#endif
+	if (enable) {
+		eval("et", "robowr", "0x40", "0x05", nvram_safe_get("jumbo_frame_size")); /* set the packet size */
+	}
+}
+
 static inline void set_kernel_panic(void)
 {
 	/* automatically reboot after a kernel panic */
@@ -4464,12 +4485,7 @@ static void sysinit(void)
 	restore_defaults(); /* restore default if necessary */
 	init_nvram();
 
-	/* set the packet size */
-	if (nvram_get_int("jumbo_frame_enable")) {
-		// only set the size here - 'enable' flag is set by the driver
-		// eval("et", "robowr", "0x40", "0x01", "0x1F"); // (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4)
-		eval("et", "robowr", "0x40", "0x05", nvram_safe_get("jumbo_frame_size"));
-	}
+	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
 
 	/* load after init_nvram */
 #ifdef TCONFIG_DHDAP

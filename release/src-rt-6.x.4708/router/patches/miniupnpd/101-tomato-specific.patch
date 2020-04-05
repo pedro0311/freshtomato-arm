@@ -15,7 +15,7 @@
  fi
  
  # OpenEmbedded special case
-@@ -363,8 +363,8 @@ case $OS_NAME in
+@@ -366,8 +366,8 @@ case $OS_NAME in
  		FW=iptables
  		;;
  	Tomato)
