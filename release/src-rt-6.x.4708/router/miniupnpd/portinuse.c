@@ -1,4 +1,4 @@
-/* $Id: portinuse.c,v 1.9 2019/09/24 11:49:28 nanard Exp $ */
+/* $Id: portinuse.c,v 1.10 2019/12/23 23:40:23 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * (c) 2007-2019 Thomas Bernard

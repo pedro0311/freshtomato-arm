@@ -60,7 +60,7 @@
  		cd $(top) && cd $(BUILDDIR) && $(MAKE) top="$(top)" -f $(top)/Makefile $${f%.po}.mo; \
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -149,6 +149,8 @@ NO_INOTIFY
+@@ -150,6 +150,8 @@ NO_INOTIFY
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
@@ -69,7 +69,7 @@
  
  LEASEFILE
  CONFFILE
-@@ -189,6 +191,8 @@ RESOLVFILE
+@@ -190,6 +192,8 @@ RESOLVFILE
  /* #define HAVE_LIBIDN2 */
  /* #define HAVE_CONNTRACK */
  /* #define HAVE_DNSSEC */
@@ -885,7 +885,7 @@
  #define HASH_SIZE 20 /* SHA-1 digest size */
  #else
  #define HASH_SIZE sizeof(int)
-@@ -1246,13 +1243,17 @@ unsigned char* hash_questions(struct dns
+@@ -1247,13 +1244,17 @@ unsigned char* hash_questions(struct dns
  int setup_timestamp(void);
  
  /* crypto.c */

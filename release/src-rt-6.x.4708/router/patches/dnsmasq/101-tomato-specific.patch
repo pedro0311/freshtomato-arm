@@ -1,6 +1,6 @@
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -74,6 +74,10 @@ HAVE_BROKEN_RTC
+@@ -75,6 +75,10 @@ HAVE_BROKEN_RTC
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -341,6 +345,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -342,6 +346,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -413,6 +421,9 @@ static char *compile_opts =
+@@ -414,6 +422,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1442,6 +1442,12 @@ int make_icmp_sock(void);
+@@ -1443,6 +1443,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif

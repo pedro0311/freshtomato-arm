@@ -101,9 +101,9 @@ static void generateKey(const char *prefix)
 	put_to_file("/tmp/openssl/serial", "00");
 	sprintf(subj_buf, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
 #ifdef TCONFIG_OPENSSL11
-	sprintf(buffer, "openssl11 req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+	sprintf(buffer, "openssl11 req -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 #else
-	sprintf(buffer, "openssl req -days 3650 -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+	sprintf(buffer, "openssl req -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 #endif
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
