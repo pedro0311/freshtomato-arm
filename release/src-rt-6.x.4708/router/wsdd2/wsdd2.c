@@ -21,7 +21,6 @@
  */
 
 #include "wsdd.h"
-#include "ifaddrs.c"
 
 int debug_L, debug_W, debug_N;
 int ifindex = 0;
@@ -644,11 +643,12 @@ int main(int argc, char **argv)
 			tcpudp	|= _UDP;
 			break;
 		case 'i':
-			ifname = optarg;
-			ifindex = if_nametoindex(optarg);
-			if (ifindex == 0)
-				help(prog, EXIT_FAILURE,
-					"bad interface '%s'\n", optarg);
+			if (optarg != NULL && strlen(optarg) > 1) {
+				ifindex = if_nametoindex(optarg);
+				if (ifindex == 0)
+					help(prog, EXIT_FAILURE, "bad interface '%s'\n", optarg);
+				ifname = strdup(optarg);
+			}
 			break;
 		case 'N':
 			if (optarg != NULL && strlen(optarg) > 1) {
