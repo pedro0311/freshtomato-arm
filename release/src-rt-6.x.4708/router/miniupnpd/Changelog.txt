@@ -1,4 +1,10 @@
-$Id: Changelog.txt,v 1.456 2019/10/05 20:08:33 nanard Exp $
+$Id: Changelog.txt,v 1.458 2020/03/29 09:07:37 nanard Exp $
+
+2020/03/29:
+  Fix FreeBSD build
+
+2019/12/18:
+  Fix PCPSendUnsolicitedAnnounce() when IPv6 is not available
 
 2019/10/05:
   Use OpenSSL TLS_server_method() instead of TLSv1_server_method()

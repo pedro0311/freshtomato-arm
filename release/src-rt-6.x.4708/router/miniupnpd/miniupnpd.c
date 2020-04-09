@@ -1,4 +1,4 @@
-/* $Id: miniupnpd.c,v 1.239 2019/10/05 20:21:47 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.240 2019/12/23 23:42:03 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
@@ -2002,6 +2002,21 @@ main(int argc, char * * argv)
 			     " " MINIUPNPD_GIT_REF
 #endif
 			     " " __DATE__ );
+#ifdef USE_PF
+			puts("using pf backend");
+#endif
+#ifdef USE_IPF
+			puts("using ipf backend");
+#endif
+#ifdef USE_IPFW
+			puts("using ipfw backend");
+#endif
+#ifdef USE_IPTABLES
+			puts("using netfilter(iptables) backend");
+#endif
+#ifdef USE_NFTABLES
+			puts("using netfilter(nftables) backend");
+#endif
 #ifdef ENABLE_HTTPS
 #ifdef OPENSSL_VERSION
 			puts(OpenSSL_version(OPENSSL_VERSION));

@@ -9,7 +9,7 @@
  	} else {
  		syslog(LOG_INFO, "STUN: ... done");
  	}
-@@ -2086,9 +2086,9 @@ main(int argc, char * * argv)
+@@ -2101,9 +2101,9 @@ main(int argc, char * * argv)
  		if (getifaddr(ext_if_name, if_addr, INET_ADDRSTRLEN, &addr, NULL) < 0) {
  			syslog(LOG_WARNING, "Cannot get IP address for ext interface %s. Network is down", ext_if_name);
  		} else if (addr_is_reserved(&addr)) {
@@ -22,7 +22,7 @@
  		}
  	}
  
-@@ -2303,10 +2303,10 @@ main(int argc, char * * argv)
+@@ -2318,10 +2318,10 @@ main(int argc, char * * argv)
  					if (disable_port_forwarding && !reserved) {
  						syslog(LOG_INFO, "Public IP address %s on ext interface %s: Port forwarding is enabled", if_addr, ext_if_name);
  					} else if (!disable_port_forwarding && reserved) {

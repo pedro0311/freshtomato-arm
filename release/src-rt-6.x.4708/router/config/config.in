@@ -34,6 +34,10 @@ config TCONFIG_CIFS
 	bool "CIFS Client"
 	default y
 
+config TCONFIG_BRCM_NAND_JFFS2
+	bool "JFFS Support on BRCM Nand Flash Partition"
+	default n
+
 config TCONFIG_JFFS2
 	bool "JFFS Support"
 	default y
