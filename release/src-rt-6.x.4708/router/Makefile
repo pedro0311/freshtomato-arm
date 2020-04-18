@@ -137,6 +137,20 @@ OPENSSLDIR = openssl
 endif
 endif
 
+DNSSEC_BACKEND :=
+DNSSEC_OPENSSL :=
+DNSSEC_NETTLE :=
+ifeq ($(TCONFIG_DNSSEC),y)
+ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
+DNSSEC_BACKEND := $(OPENSSLDIR)
+DNSSEC_OPENSSL := y
+else
+obj-y += nettle
+DNSSEC_BACKEND := nettle
+DNSSEC_NETTLE := y
+endif
+endif
+
 ifneq ($(TCONFIG_TOR)$(TCONFIG_NFS)$(TCONFIG_BBT),)
 obj-y += libevent
 endif
@@ -928,19 +942,6 @@ bridge-clean:
 bridge-install:
 	install -D bridge/brctl/brctl $(INSTALLDIR)/bridge/usr/sbin/brctl
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
-
-DNSSEC_BACKEND :=
-DNSSEC_OPENSSL :=
-DNSSEC_NETTLE :=
-ifeq ($(TCONFIG_DNSSEC),y)
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
-DNSSEC_BACKEND := $(OPENSSLDIR)
-DNSSEC_OPENSSL := y
-else
-DNSSEC_BACKEND := nettle
-DNSSEC_NETTLE := y
-endif
-endif
 
 dnsmasq: $(DNSSEC_BACKEND)
 	@$(SEP)
