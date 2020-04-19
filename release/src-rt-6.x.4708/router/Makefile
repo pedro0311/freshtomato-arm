@@ -125,7 +125,6 @@ ifeq ($(TCONFIG_IPERF),y)
 obj-y += iperf
 endif
 obj-y += zlib
-obj-y += wsdd2
 
 obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission
@@ -231,18 +230,18 @@ endif
 
 obj-y += taskset
 obj-$(NEED_SAMBA3) += samba3
+obj-$(NEED_SAMBA3) += wsdd2
 
 ifeq ($(CONFIG_BCMWL6),y)
 ifeq ($(TCONFIG_TUXERA),y)
-    obj-y += tuxera
+ obj-y += tuxera
 else
-    ifeq ($(TCONFIG_UFSDA),y)
-        obj-$(TCONFIG_NTFS) += ufsd-asus
-    endif
+ ifeq ($(TCONFIG_UFSDA),y)
+  obj-$(TCONFIG_NTFS) += ufsd-asus
+ endif
 endif
 endif
 obj-$(TCONFIG_NTFS) += ntfs-3g
-
 obj-$(TCONFIG_EBTABLES) += ebtables
 obj-$(TCONFIG_IPV6) += dhcpv6
 
