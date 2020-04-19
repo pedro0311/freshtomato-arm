@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 4.9.
+This manual documents the GNU ‘nano’ editor, version 4.9.2.
 
 * Menu:
 
@@ -1778,30 +1778,30 @@ familiar with compiling programs with autoconf support:
 
 Tag Table:
 Node: Top199
-Node: Introduction554
-Node: Invoking1698
-Node: Command-line Options3314
-Ref: --speller12103
-Node: Editor Basics14633
-Node: Entering Text14917
-Node: Commands15906
-Node: The Cutbuffer16703
-Node: The Mark17424
-Node: Screen Layout18423
-Node: Search and Replace19602
-Node: Using the Mouse20337
-Node: Limitations20954
-Node: Built-in Help21279
-Node: Feature Toggles21703
-Node: Nanorc Files23507
-Node: Settings25126
-Ref: set functioncolor28205
-Ref: Whitespace35609
-Node: Syntax Highlighting36339
-Node: Rebinding Keys42613
-Node: The File Browser55777
-Node: Pico Compatibility56670
-Node: Building and Configure Options61214
+Node: Introduction556
+Node: Invoking1700
+Node: Command-line Options3316
+Ref: --speller12105
+Node: Editor Basics14635
+Node: Entering Text14919
+Node: Commands15908
+Node: The Cutbuffer16705
+Node: The Mark17426
+Node: Screen Layout18425
+Node: Search and Replace19604
+Node: Using the Mouse20339
+Node: Limitations20956
+Node: Built-in Help21281
+Node: Feature Toggles21705
+Node: Nanorc Files23509
+Node: Settings25128
+Ref: set functioncolor28207
+Ref: Whitespace35611
+Node: Syntax Highlighting36341
+Node: Rebinding Keys42615
+Node: The File Browser55779
+Node: Pico Compatibility56672
+Node: Building and Configure Options61216
 
 End Tag Table
 
