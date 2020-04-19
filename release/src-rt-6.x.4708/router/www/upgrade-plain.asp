@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
 <title>Firmware Upgrade</title>
-<link rel="stylesheet" type="text/css" href="tomato.css">
+<link rel="stylesheet" type="text/css" href="/tomato.css">
 <% css(); %>
 <style>
 div.tomato-grid.container-div {

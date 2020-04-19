@@ -159,6 +159,7 @@ function verifyFields(focused, quiet) {
 		ncp = E('_vpn_'+t+'_ncp_enable').value;
 
 		E('_vpn_'+t+'_rgw').options[2].disabled = (iface == "tap");
+		E('_vpn_'+t+'_rgw').options[3].disabled = (iface == "tap");
 		if (iface == "tap" && rgw >= 2) {
 			rgw = 1;
 			E('_vpn_'+t+'_rgw').value = 1;

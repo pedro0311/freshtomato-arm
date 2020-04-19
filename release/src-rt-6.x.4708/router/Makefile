@@ -125,7 +125,9 @@ ifeq ($(TCONFIG_IPERF),y)
 obj-y += iperf
 endif
 obj-y += zlib
-obj-y += wsdd2
+
+obj-$(TCONFIG_BBT) += libcurl
+obj-$(TCONFIG_BBT) += transmission
 
 ifneq ($(TCONFIG_HTTPS),)
 ifeq ($(TCONFIG_OPENSSL11),y)
@@ -134,6 +136,20 @@ OPENSSLDIR = openssl-1.1
 else
 obj-y += openssl
 OPENSSLDIR = openssl
+endif
+endif
+
+DNSSEC_BACKEND :=
+DNSSEC_OPENSSL :=
+DNSSEC_NETTLE :=
+ifeq ($(TCONFIG_DNSSEC),y)
+ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
+DNSSEC_BACKEND := $(OPENSSLDIR)
+DNSSEC_OPENSSL := y
+else
+obj-y += nettle
+DNSSEC_BACKEND := nettle
+DNSSEC_NETTLE := y
 endif
 endif
 
@@ -214,18 +230,18 @@ endif
 
 obj-y += taskset
 obj-$(NEED_SAMBA3) += samba3
+obj-$(NEED_SAMBA3) += wsdd2
 
 ifeq ($(CONFIG_BCMWL6),y)
 ifeq ($(TCONFIG_TUXERA),y)
-    obj-y += tuxera
+ obj-y += tuxera
 else
-    ifeq ($(TCONFIG_UFSDA),y)
-        obj-$(TCONFIG_NTFS) += ufsd-asus
-    endif
+ ifeq ($(TCONFIG_UFSDA),y)
+  obj-$(TCONFIG_NTFS) += ufsd-asus
+ endif
 endif
 endif
 obj-$(TCONFIG_NTFS) += ntfs-3g
-
 obj-$(TCONFIG_EBTABLES) += ebtables
 obj-$(TCONFIG_IPV6) += dhcpv6
 
@@ -280,9 +296,6 @@ obj-$(TCONFIG_NGINX) += php
 obj-$(TCONFIG_NGINX) += nginx
 
 obj-$(TCONFIG_NANO) += nano
-
-obj-$(TCONFIG_BBT) += libcurl
-obj-$(TCONFIG_BBT) += transmission
 
 obj-y += hotplug2
 obj-y += udevtrigger
@@ -903,7 +916,7 @@ openssl-1.1-install:
 mssl: $(OPENSSLDIR)
 
 ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
-mdu: shared libcurl
+mdu: shared
 else
 mdu: shared mssl
 endif
@@ -928,19 +941,6 @@ bridge-clean:
 bridge-install:
 	install -D bridge/brctl/brctl $(INSTALLDIR)/bridge/usr/sbin/brctl
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
-
-DNSSEC_BACKEND :=
-DNSSEC_OPENSSL :=
-DNSSEC_NETTLE :=
-ifeq ($(TCONFIG_DNSSEC),y)
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
-DNSSEC_BACKEND := $(OPENSSLDIR)
-DNSSEC_OPENSSL := y
-else
-DNSSEC_BACKEND := nettle
-DNSSEC_NETTLE := y
-endif
-endif
 
 dnsmasq: $(DNSSEC_BACKEND)
 	@$(SEP)

@@ -9,7 +9,6 @@ PID=$$
 PREFIX="/tmp/adblock"
 mkdir -p $PREFIX
 
-LOCK=$PREFIX.lock
 ENABLE=$(nvram get adblock_enable)
 WORK1="$PREFIX/hosts.work1"
 WORK2="$PREFIX/hosts.work2"
@@ -129,11 +128,6 @@ cronDel() {
 	}
 }
 
-[ -f $LOCK ] && {
-	$LOGS "WARNING - Another process in action - exiting"
-	exit 1
-}
-
 [ "$1" == "stop" ] && {
 	$LOGS "stopped"
 	cronDel
@@ -157,12 +151,9 @@ cronDel() {
 			} || {
 				download 0
 			}
-
-			cronAdd
 		}
+		cronAdd
 	}
 }
 
 service dnsmasq restart
-
-rm $LOCK >/dev/null 2>&1

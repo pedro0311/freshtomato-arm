@@ -204,7 +204,7 @@ function setCookies() {
 	cookie.set('iperf_time_limited', E('iperf_time_limited').checked == true);
 }
 
-function init() {
+function earlyInit() {
 	loadCookies();
 	changeTestButtonText();
 	verifyFields(1, 1);
@@ -274,7 +274,7 @@ function runButtonClick() {
 </script>
 </head>
 
-<body onload="init()">
+<body>
 <form action="javascript:{}">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -344,5 +344,6 @@ function runButtonClick() {
 </td></tr>
 </table>
 </form>
+<script>earlyInit();</script>
 </body>
 </html>
