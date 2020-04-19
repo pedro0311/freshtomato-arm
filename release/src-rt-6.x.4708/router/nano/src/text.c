@@ -475,7 +475,7 @@ void undo_cut(undostruct *u)
 						openfile->filebot->prev->data[0] == '\0')
 		remove_magicline();
 
-	if (u->xflags & WAS_MARKED_BACKWARDS)
+	if (u->xflags & CURSOR_WAS_AT_HEAD)
 		goto_line_posx(u->head_lineno, u->head_x);
 }
 
@@ -504,6 +504,7 @@ void do_undo(void)
 	linestruct *line = NULL, *intruder;
 	linestruct *oldcutbuffer;
 	char *data, *undidmsg = NULL;
+	size_t original_x, regain_from_x;
 
 	if (u == NULL) {
 		statusbar(_("Nothing to undo"));
@@ -526,12 +527,17 @@ void do_undo(void)
 		break;
 	case ENTER:
 		undidmsg = _("line break");
+		/* An <Enter> at the end of leading whitespace while autoindenting has
+		 * deleted the whitespace, and stored an x position of zero.  In that
+		 * case, adjust the positions to return to and to scoop data from. */
+		original_x = (u->head_x == 0) ? u->tail_x : u->head_x;
+		regain_from_x = (u->head_x == 0) ? 0 : u->tail_x;
 		line->data = charealloc(line->data, strlen(line->data) +
-								strlen(&u->strdata[u->tail_x]) + 1);
-		strcat(line->data, &u->strdata[u->tail_x]);
+								strlen(&u->strdata[regain_from_x]) + 1);
+		strcat(line->data, &u->strdata[regain_from_x]);
 		unlink_node(line->next);
 		renumber_from(line);
-		goto_line_posx(u->head_lineno, u->head_x);
+		goto_line_posx(u->head_lineno, original_x);
 		break;
 	case BACK:
 	case DEL:
@@ -1012,27 +1018,28 @@ void add_undo(undo_type action, const char *message)
 		break;
 #endif
 	case CUT_TO_EOF:
-		u->xflags |= (INCLUDED_LAST_LINE | WAS_MARKED_BACKWARDS);
+		u->xflags |= (INCLUDED_LAST_LINE | CURSOR_WAS_AT_HEAD);
 		break;
 	case ZAP:
 	case CUT:
 		if (openfile->mark) {
-			u->xflags |= MARK_WAS_SET;
 			if (mark_is_before_cursor()){
 				u->head_lineno = openfile->mark->lineno;
 				u->head_x = openfile->mark_x;
+				u->xflags |= MARK_WAS_SET;
 			} else {
-				u->xflags |= WAS_MARKED_BACKWARDS;
 				u->tail_lineno = openfile->mark->lineno;
 				u->tail_x = openfile->mark_x;
+				u->xflags |= (MARK_WAS_SET | CURSOR_WAS_AT_HEAD);
 			}
 			if (u->tail_lineno == openfile->filebot->lineno)
 				u->xflags |= INCLUDED_LAST_LINE;
 		} else if (!ISSET(CUT_FROM_CURSOR)) {
 			/* The entire line is being cut regardless of the cursor position. */
-			u->xflags |= WAS_WHOLE_LINE;
+			u->xflags |= (WAS_WHOLE_LINE | CURSOR_WAS_AT_HEAD);
 			u->tail_x = 0;
-		}
+		} else
+			u->xflags |= CURSOR_WAS_AT_HEAD;
 		break;
 	case PASTE:
 		u->cutbuffer = copy_buffer(cutbuffer);
