@@ -195,7 +195,7 @@ bool write_lockfile(const char *lockfilename, const char *filename, bool modifie
 	 * some byte-order-checking numbers (bytes 1008-1022). */
 	lockdata[0] = 0x62;
 	lockdata[1] = 0x30;
-	snprintf(&lockdata[2], 10, "nano %s", VERSION);
+	snprintf(&lockdata[2], 11, "nano %s", VERSION);
 	lockdata[24] = mypid % 256;
 	lockdata[25] = (mypid / 256) % 256;
 	lockdata[26] = (mypid / (256 * 256)) % 256;
@@ -1036,6 +1036,8 @@ bool execute_command(const char *command)
 	/* If the command starts with "|", pipe buffer or region to the command. */
 	if (should_pipe) {
 		linestruct *was_cutbuffer = cutbuffer;
+		bool whole_buffer = FALSE;
+
 		cutbuffer = NULL;
 
 #ifdef ENABLE_MULTIBUFFER
@@ -1043,6 +1045,8 @@ bool execute_command(const char *command)
 			openfile = openfile->prev;
 			if (openfile->mark)
 				do_snip(TRUE, TRUE, FALSE, FALSE);
+			else
+				whole_buffer = TRUE;
 		} else
 #endif
 		{
@@ -1059,7 +1063,7 @@ bool execute_command(const char *command)
 
 		/* Create a separate process for piping the data to the command. */
 		if (fork() == 0) {
-			send_data(cutbuffer, to_fd[1]);
+			send_data(whole_buffer ? openfile->filetop : cutbuffer, to_fd[1]);
 			exit(0);
 		}
 
@@ -2400,7 +2404,7 @@ bool is_dir(const char *path)
  * adapted from busybox 0.46 (cmdedit.c).  Here is the notice from that
  * file, with the copyright years updated:
  *
- * Termios command line History and Editting, originally
+ * Termios command line History and Editing, originally
  * intended for NetBSD sh (ash)
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
  *      Main code:            Adam Rogoyski <rogoyski@cs.utexas.edu>
