@@ -847,7 +847,7 @@ openssl/stamp-h1:
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB) \
+	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared enable-rc5 no-ssl2 no-ssl3 no-err
@@ -881,7 +881,7 @@ openssl-1.1/stamp-h1:
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB) \
+	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared no-ssl3 no-err no-async --api=1.0.0 \
