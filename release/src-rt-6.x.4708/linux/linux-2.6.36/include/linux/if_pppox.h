@@ -28,6 +28,10 @@
 #endif /* __KERNEL__ */
 #include <linux/if_pppol2tp.h>
 
+#if defined(CTF_PPTP) || defined(CTF_L2TP)
+#include <ctf/hndctf.h>
+#endif
+
 /* For user-space programs to pick up these definitions
  * which they wouldn't get otherwise without defining __KERNEL__
  */
@@ -158,34 +162,32 @@ static inline struct pppoe_hdr *pppoe_hdr(const struct sk_buff *skb)
 }
 
 struct pppoe_opt {
-	struct net_device      *dev;	  /* device associated with socket*/
+	struct net_device	*dev;	  /* device associated with socket*/
 	int			ifindex;  /* ifindex of device associated with socket */
 	struct pppoe_addr	pa;	  /* what this socket is bound to*/
 	struct sockaddr_pppox	relay;	  /* what socket data will be
 					     relayed to (PPPoE relaying) */
 };
 
-#include <net/sock.h>
-
 struct pptp_opt {
-       struct pptp_addr        src_addr;
-       struct pptp_addr        dst_addr;
-       int timeout;
-       int window;
-       __u32 ack_sent, ack_recv;
-       __u32 seq_sent, seq_recv;
-       int ppp_flags;
-       int flags;
-       int pause:1;
-       int proc:1;
-       spinlock_t skb_buf_lock;
-       struct sk_buff_head skb_buf;
-       struct delayed_work buf_work; //check bufferd packets work
-       struct gre_statistics *stat;
-	wait_queue_head_t	wait;
-	spinlock_t xmit_lock;
-	spinlock_t rcv_lock;
+	struct pptp_addr	src_addr;
+	struct pptp_addr	dst_addr;
+	__u32 ack_sent, ack_recv;
+	__u32 seq_sent, seq_recv;
+	int ppp_flags;
 };
+
+#define PPTP_FLAG_PAUSE 0
+#define PPTP_FLAG_PROC 1
+
+#ifdef CTF_L2TP
+struct l2tp_opt {
+	struct ctf_pppol2tp_session ts;//tunnel and session
+	struct ctf_pppol2tp_inet	inet;
+};
+#endif
+
+#include <net/sock.h>
 
 struct pppox_sock {
 	/* struct sock must be the first member of pppox_sock */
@@ -195,6 +197,9 @@ struct pppox_sock {
 	union {
 		struct pppoe_opt pppoe;
 		struct pptp_opt  pptp;
+#ifdef CTF_L2TP
+		struct l2tp_opt l2tp;
+#endif
 	} proto;
 	__be16			num;
 };
@@ -221,6 +226,10 @@ struct pppox_proto {
 				 unsigned long arg);
 	struct module	*owner;
 };
+
+#if defined(CTF_PPTP) || defined(CTF_L2TP)
+extern int ppp_get_conn_pkt_info(void *pppif, struct ctf_ppp *ctfppp);
+#endif
 
 extern int register_pppox_proto(int proto_num, const struct pppox_proto *pp);
 extern void unregister_pppox_proto(int proto_num);

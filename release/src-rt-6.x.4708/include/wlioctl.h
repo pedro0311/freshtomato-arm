@@ -59,36 +59,6 @@ typedef struct remote_ioctl {
 #endif
 } rem_ioctl_t;
 #define REMOTE_SIZE	sizeof(rem_ioctl_t)
-
-typedef struct {
-	uint32 num;
-	chanspec_t list[1];
-} chanspec_list_t;
-
-#define DFS_SCAN_S_IDLE				-1
-#define DFS_SCAN_S_RADAR_FREE			0
-#define DFS_SCAN_S_RADAR_FOUND			1
-#define DFS_SCAN_S_INPROGESS			2
-#define DFS_SCAN_S_SCAN_ABORTED			3
-#define DFS_SCAN_S_SCAN_MODESW_INPROGRESS	4
-
-/* DFS Forced param */
-typedef struct wl_dfs_forced_params {
-	chanspec_t chspec;
-	uint16 version;
-	chanspec_list_t chspec_list;
-} wl_dfs_forced_t;
-
-#define DFS_PREFCHANLIST_VER 0x01
-#define WL_CHSPEC_LIST_FIXED_SIZE	OFFSETOF(chanspec_list_t, list)
-/* size of dfs forced param size given n channels are in the list */
-#define WL_DFS_FORCED_PARAMS_SIZE(n) \
-	(sizeof(wl_dfs_forced_t) + (((n) < 1) ? (0) : (((n) - 1)* sizeof(chanspec_t))))
-#define WL_DFS_FORCED_PARAMS_FIXED_SIZE \
-	(WL_CHSPEC_LIST_FIXED_SIZE + OFFSETOF(wl_dfs_forced_t, chspec_list))
-#define WL_DFS_FORCED_PARAMS_MAX_SIZE \
-	WL_DFS_FORCED_PARAMS_FIXED_SIZE + (WL_NUMCHANSPECS * sizeof(chanspec_t))
-
 #ifdef EFI
 #define BCMWL_IOCTL_GUID \
 	{0xB4910A35, 0x88C5, 0x4328, { 0x90, 0x08, 0x9F, 0xB2, 0x00, 0x00, 0x0, 0x0 } }
@@ -1244,8 +1214,6 @@ typedef struct {
 
 #define WL_STA_AID(a)		((a) &~ 0xc000)
 
-#define STAMON_MODULE_VER	1
-
 /* Flags for sta_info_t indicating properties of STA */
 #define WL_STA_BRCM		0x00000001	/* Running a Broadcom driver */
 #define WL_STA_WME		0x00000002	/* WMM association */
@@ -1348,21 +1316,10 @@ typedef struct channel_info {
 } channel_info_t;
 
 /* For ioctls that take a list of MAC addresses */
-typedef struct maclist {
+struct maclist {
 	uint count;			/* number of MAC addresses */
 	struct ether_addr ea[1];	/* variable length array of MAC addresses */
-} maclist_t;
-
-typedef struct stamon_data {
-	struct ether_addr  ea;
-	int rssi;
-} stamon_data_t;
-
-typedef struct stamon_info {
-	int version;
-	uint count;
-	stamon_data_t sta_data[1];
-} stamon_info_t;
+};
 
 #ifndef LINUX_POSTMOGRIFY_REMOVAL
 /* get pkt count struct passed through ioctl */
@@ -6143,8 +6100,7 @@ typedef enum wl_stamon_cfg_cmd_type {
 	STAMON_CFG_CMD_DEL = 0,
 	STAMON_CFG_CMD_ADD = 1,
 	STAMON_CFG_CMD_ENB = 2,
-	STAMON_CFG_CMD_DSB = 3,
-	STAMON_CFG_CMD_GET_STATS =4
+	STAMON_CFG_CMD_DSB = 3
 } wl_stamon_cfg_cmd_type_t;
 
 typedef struct wlc_stamon_sta_config {
@@ -6176,46 +6132,6 @@ typedef struct wl_taf_sta {
 #define WL_WDSIFTYPE_WDS   0x1 /* The interface is WDS type. */
 #define WL_WDSIFTYPE_DWDS  0x2 /* The interface is DWDS type. */
 
-typedef struct wl_bssload_static {
-	bool is_static;
-	uint16 sta_count;
-	uint8 chan_util;
-	uint16 aac;
-} wl_bssload_static_t;
-
-/* Received Beacons lengths information */
-#define WL_LAST_BCNS_INFO_FIXED_LEN		OFFSETOF(wlc_bcn_len_hist_t, bcnlen_ring)
-typedef struct wlc_bcn_len_hist {
-	uint16	ver;				/* version field */
-	uint16	cur_index;			/* current pointed index in ring buffer */
-	uint32	max_bcnlen;		/* Max beacon length received */
-	uint32	min_bcnlen;		/* Min beacon length received */
-	uint32	ringbuff_len;		/* Length of the ring buffer 'bcnlen_ring' */
-	uint32	bcnlen_ring[1];	/* ring buffer storing received beacon lengths */
-} wlc_bcn_len_hist_t;
-
-#ifdef ATE_BUILD
-/* Buffer of size WLC_SAMPLECOLLECT_MAXLEN (=10240 for 4345a0 ACPHY)
- * gets copied to this, multiple times
- */
-typedef enum wl_gpaio_option {
-	GPAIO_PMU_AFELDO,
-	GPAIO_PMU_TXLDO,
-	GPAIO_PMU_VCOLDO,
-	GPAIO_PMU_LNALDO,
-	GPAIO_PMU_ADCLDO,
-	GPAIO_PMU_CLEAR
-} wl_gpaio_option_t;
-#endif /* ATE_BUILD */
-
-/* IO Var Operations - the Value of iov_op In wlc_ap_doiovar */
-typedef enum wlc_ap_iov_operation {
-	WLC_AP_IOV_OP_DELETE                   = -1,
-	WLC_AP_IOV_OP_DISABLE                  = 0,
-	WLC_AP_IOV_OP_ENABLE                   = 1,
-	WLC_AP_IOV_OP_MANUAL_AP_BSSCFG_CREATE  = 2,
-	WLC_AP_IOV_OP_MANUAL_STA_BSSCFG_CREATE = 3
-} wlc_ap_iov_oper_t;
 typedef struct {
 	uint32 config;	/* MODE: AUTO (-1), Disable (0), Enable (1) */
 	uint32 status;	/* Current state: Disabled (0), Enabled (1) */

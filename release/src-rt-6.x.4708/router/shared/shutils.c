@@ -111,15 +111,43 @@ enum flag {
  */
 void dbgprintf (const char * format, ...)
 {
-	FILE *dbg = fopen("/dev/console", "w");
-	if(dbg)
-	{
-		va_list args;
-		va_start (args, format);
-		vfprintf (dbg, format, args);
-		va_end (args);
-		fclose(dbg);
+	FILE *f;
+	int nfd;
+	va_list args;
+
+	if((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0){
+		if((f = fdopen(nfd, "w")) != NULL){
+			va_start(args, format);
+			vfprintf(f, format, args);
+			va_end(args);
+			fclose(f);
+		}
+		close(nfd);
 	}
+}
+
+void dbg(const char * format, ...)
+{
+	FILE *f;
+	int nfd;
+	va_list args;
+
+	if (((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0) &&
+	    (f = fdopen(nfd, "w")))
+	{
+		va_start(args, format);
+		vfprintf(f, format, args);
+		va_end(args);
+		fclose(f);
+	}
+	else
+	{
+		va_start(args, format);
+		vfprintf(stderr, format, args);
+		va_end(args);
+	}
+
+	if (nfd != -1) close(nfd);
 }
 
 /*
@@ -277,14 +305,14 @@ EXIT:
 		for (n = 0; argv[n]; ++n) cprintf("%s ", argv[n]);
 		cprintf("\n");
 		
-		if ((fd = open("/dev/console", O_RDWR)) >= 0) {
+		if ((fd = open("/dev/console", O_RDWR | O_NONBLOCK)) >= 0) {
 			dup2(fd, STDIN_FILENO);
 			dup2(fd, STDOUT_FILENO);
 			dup2(fd, STDERR_FILENO);
 		}
 		else {
 			sprintf(s, "/tmp/eval.%d", pid);
-			if ((fd = open(s, O_CREAT|O_RDWR, 0600)) >= 0) {
+			if ((fd = open(s, O_CREAT | O_RDWR | O_NONBLOCK, 0600)) >= 0) {
 				dup2(fd, STDOUT_FILENO);
 				dup2(fd, STDERR_FILENO);
 			}
@@ -294,7 +322,7 @@ EXIT:
 
 	// Redirect stdout & stderr to <path>
 	if (path) {
-		flags = O_WRONLY | O_CREAT;
+		flags = O_WRONLY | O_CREAT | O_NONBLOCK;
 		if (*path == '>') {
 			++path;
 			if (*path == '>') {
@@ -567,6 +595,7 @@ char *ether_etoa2(const unsigned char *e, char *a)
 void cprintf(const char *format, ...)
 {
 	FILE *f;
+	int nfd;
 	va_list args;
 
 #ifdef DEBUG_NOISY
@@ -574,11 +603,14 @@ void cprintf(const char *format, ...)
 #else
 	if (nvram_match("debug_cprintf", "1")) {
 #endif
-		if ((f = fopen("/dev/console", "w")) != NULL) {
-			va_start(args, format);
-			vfprintf(f, format, args);
-			va_end(args);
-			fclose(f);
+		if((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0){
+			if((f = fdopen(nfd, "w")) != NULL){
+				va_start(args, format);
+				vfprintf(f, format, args);
+				va_end(args);
+				fclose(f);
+			}
+			close(nfd);
 		}
 	}
 #if 1	
@@ -1671,3 +1703,20 @@ int _vstrsep(char *buf, const char *sep, ...)
 	va_end(ap);
 	return n;
 }
+
+#ifdef CONFIG_BCMWL5
+char *
+wl_ether_etoa(const struct ether_addr *n)
+{
+	static char etoa_buf[ETHER_ADDR_LEN * 3];
+	char *c = etoa_buf;
+	int i;
+
+	for (i = 0; i < ETHER_ADDR_LEN; i++) {
+		if (i)
+			*c++ = ':';
+		c += sprintf(c, "%02X", n->octet[i] & 0xff);
+	}
+	return etoa_buf;
+}
+#endif

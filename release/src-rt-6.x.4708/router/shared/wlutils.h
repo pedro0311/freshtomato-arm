@@ -15,7 +15,10 @@
 #ifndef _wlutils_h_
 #define _wlutils_h_
 
+#include <shared.h>
+
 #include <typedefs.h>
+#include <proto/ethernet.h>
 #include <wlioctl.h>
 
 /*
@@ -75,9 +78,6 @@ static inline int wl_phytype_n(int phytype)
 #ifdef WLC_PHY_TYPE_LCN
 		|| (phytype == WLC_PHY_TYPE_LCN)
 #endif
-#ifdef WLC_PHY_TYPE_HT
-		|| (phytype == WLC_PHY_TYPE_HT)
-#endif
 	;
 }
 
@@ -119,4 +119,5 @@ extern int wl_bssiovar_set(char *ifname, char *iovar, int bssidx, void *param, i
 extern int wl_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
 #endif
 
+extern char * wl_ether_etoa(const struct ether_addr *n);
 #endif /* _wlutils_h_ */
