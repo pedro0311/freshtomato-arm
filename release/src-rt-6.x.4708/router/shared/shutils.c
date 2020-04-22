@@ -512,6 +512,8 @@ get_pid_by_name(char *name)
 		}
 	}
 
+	closedir(dir);
+
 	return pid;
 }
 
