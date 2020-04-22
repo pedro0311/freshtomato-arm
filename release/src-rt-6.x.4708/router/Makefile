@@ -97,6 +97,7 @@ obj-y += emf$(BCMEX)
 obj-y += igs$(BCMEX)
 endif
 #obj-y += prebuilt
+obj-$(TCONFIG_DPSTA) += dpsta
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)

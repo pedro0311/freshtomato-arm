@@ -4,6 +4,9 @@ CFLAGS = -Wall -Os $(EXTRACFLAGS)
 CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
 CFLAGS += -ffunction-sections -fdata-sections
 
+ifeq ($(TCONFIG_DPSTA),y)
+CFLAGS += -I$(TOP)/dpsta
+endif
 
 ifeq ($(TCONFIG_BCMARM),y)
 LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto

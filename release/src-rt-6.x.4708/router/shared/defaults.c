@@ -479,6 +479,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_ack_ratio",		"0"				, 0 },
 	{ "wl_ampdu_mpdu",		"0"				, 0 },
 	{ "wl_ampdu_rts",		"1"				, 0 },
+	{ "dpsta_ifnames",		""				, 0 },
+	{ "dpsta_policy",		"1"				, 0 },
+	{ "dpsta_lan_uif",		"1"				, 0 },
 #ifdef TCONFIG_BCMARM
 	{ "wl_atf",			"0"				, 0 },	// Air Time Fairness support on = 1, off = 0 (default: off)
 	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
@@ -489,6 +492,29 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 #endif
 #endif
+
+#ifdef TCONFIG_PROXYSTA
+	{ "wlc_list",			""				, 0 },
+	{ "wlc_band",			""				, 0 },
+	{ "wlc_ssid", 			"FreshTomatoARM-Client"		, 0 },
+	{ "wlc_wep",			""				, 0 },
+	{ "wlc_key",			""				, 0 },
+	{ "wlc_wep_key",		""				, 0 },
+	{ "wlc_auth_mode", 		""				, 0 },
+	{ "wlc_crypto", 		""				, 0 },
+	{ "wlc_wpa_psk",		""				, 0 },
+	{ "wlc_nbw_cap", 		""				, 0 },
+	{ "wlc_ure_ssid",		""				, 0 },
+	{ "wlc_express",		"0"				, 0 },	/* 0: disabled, 1: 2.4GHz, 2: 5GHz */
+	{ "wlc_psta",			"0"				, 0 },	/* 0: disabled, 1: Proxy STA, 2: Proxy STA Repeater */
+	{ "wlc_band_ex",		""				, 0 },	/* another psta band */
+	{ "wlc_state", 			"0"				, 0 },	/* Wireless Client State */
+	{ "wlc_sbstate", 		"0"				, 0 },
+	{ "wlc_mode", 			"0"				, 0 },
+	{ "wlc_scan_state", 		"0"				, 0 },
+	{ "wlc_scan_mode", 		"0"				, 0 },	// 0=active 1=passive
+#endif
+
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
 
 	/* for firewall */

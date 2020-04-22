@@ -558,6 +558,14 @@ define RouterOptions
 		sed -i "/TCONFIG_BCMSMP/d" $(1); \
 		echo "TCONFIG_BCMSMP=y" >>$(1); \
 	fi; \
+	if [ "$(PROXYSTA)" = "y" ]; then \
+		sed -i "/TCONFIG_PROXYSTA/d" $(1); \
+		echo "TCONFIG_PROXYSTA=y" >>$(1); \
+	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		sed -i "/TCONFIG_DPSTA/d" $(1); \
+		echo "TCONFIG_DPSTA=y" >>$(1); \
+	fi; \
 	if [ "$(GRO)" = "y" ]; then \
 		sed -i "/TCONFIG_GROCTRL/d" $(1); \
 		echo "TCONFIG_GROCTRL=y" >>$(1); \
@@ -884,6 +892,10 @@ define KernelConfig
 		echo "CONFIG_BCM57XX=m" >>$(1); \
 	else \
 		echo "# CONFIG_BCM57XX is not set" >>$(1); \
+	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		sed -i "/CONFIG_DPSTA/d" $(1); \
+		echo "CONFIG_DPSTA=m" >>$(1); \
 	fi; \
 		sed -i "/CONFIG_LINUX_MTD/d" $(1); \
 	if [ "$(LINUX_MTD)" = "" ]; then \

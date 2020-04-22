@@ -234,6 +234,14 @@ config TCONFIG_BCMSMP
 	bool "BCM SMP"
 	default n
 
+config TCONFIG_PROXYSTA
+	bool "Proxy STA"
+	default n
+
+config TCONFIG_DPSTA
+	bool "Bcm7 dpsta"
+	default n
+
 config TCONFIG_GROCTRL
 	bool "GRO Control"
 	default n
