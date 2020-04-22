@@ -79,15 +79,10 @@ extern bool set_filter_url(int which, const netconf_urlfilter_t *start,
 extern bool del_filter_url(int which);
 #endif /* __CONFIG_URLFILTER__ */
 
-#ifdef  TRAFFIC_MGMT
 extern bool valid_trf_mgmt_port(const netconf_trmgmt_t *trmgmt);
 extern bool set_trf_mgmt_port(char *prefix, int which, const netconf_trmgmt_t *trmgmt);
 extern bool get_trf_mgmt_port(char *prefix, int which, netconf_trmgmt_t *trmgmt);
 extern bool del_trf_mgmt_port(char *prefix, int which);
-extern bool set_trf_mgmt_dwm(char *prefix, int which, const netconf_trmgmt_t *trmgmt);
-extern bool get_trf_mgmt_dwm(char *prefix, int which, netconf_trmgmt_t *trmgmt);
-extern bool del_trf_mgmt_dwm(char *prefix, int which);
-#endif /* TRAFFIC_MGMT */
 
 extern bool set_trf_mgmt_dwm(char *prefix, int which, const netconf_trmgmt_t *trmgmt);
 extern bool get_trf_mgmt_dwm(char *prefix, int which, netconf_trmgmt_t *trmgmt);

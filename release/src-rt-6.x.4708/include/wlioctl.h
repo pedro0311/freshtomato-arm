@@ -6132,46 +6132,6 @@ typedef struct wl_taf_sta {
 #define WL_WDSIFTYPE_WDS   0x1 /* The interface is WDS type. */
 #define WL_WDSIFTYPE_DWDS  0x2 /* The interface is DWDS type. */
 
-typedef struct wl_bssload_static {
-	bool is_static;
-	uint16 sta_count;
-	uint8 chan_util;
-	uint16 aac;
-} wl_bssload_static_t;
-
-/* Received Beacons lengths information */
-#define WL_LAST_BCNS_INFO_FIXED_LEN		OFFSETOF(wlc_bcn_len_hist_t, bcnlen_ring)
-typedef struct wlc_bcn_len_hist {
-	uint16	ver;				/* version field */
-	uint16	cur_index;			/* current pointed index in ring buffer */
-	uint32	max_bcnlen;		/* Max beacon length received */
-	uint32	min_bcnlen;		/* Min beacon length received */
-	uint32	ringbuff_len;		/* Length of the ring buffer 'bcnlen_ring' */
-	uint32	bcnlen_ring[1];	/* ring buffer storing received beacon lengths */
-} wlc_bcn_len_hist_t;
-
-#ifdef ATE_BUILD
-/* Buffer of size WLC_SAMPLECOLLECT_MAXLEN (=10240 for 4345a0 ACPHY)
- * gets copied to this, multiple times
- */
-typedef enum wl_gpaio_option {
-	GPAIO_PMU_AFELDO,
-	GPAIO_PMU_TXLDO,
-	GPAIO_PMU_VCOLDO,
-	GPAIO_PMU_LNALDO,
-	GPAIO_PMU_ADCLDO,
-	GPAIO_PMU_CLEAR
-} wl_gpaio_option_t;
-#endif /* ATE_BUILD */
-
-/* IO Var Operations - the Value of iov_op In wlc_ap_doiovar */
-typedef enum wlc_ap_iov_operation {
-	WLC_AP_IOV_OP_DELETE                   = -1,
-	WLC_AP_IOV_OP_DISABLE                  = 0,
-	WLC_AP_IOV_OP_ENABLE                   = 1,
-	WLC_AP_IOV_OP_MANUAL_AP_BSSCFG_CREATE  = 2,
-	WLC_AP_IOV_OP_MANUAL_STA_BSSCFG_CREATE = 3
-} wlc_ap_iov_oper_t;
 typedef struct {
 	uint32 config;	/* MODE: AUTO (-1), Disable (0), Enable (1) */
 	uint32 status;	/* Current state: Disabled (0), Enabled (1) */
