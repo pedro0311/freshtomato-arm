@@ -512,6 +512,8 @@ get_pid_by_name(char *name)
 		}
 	}
 
+	closedir(dir);
+
 	return pid;
 }
 
@@ -1125,12 +1127,12 @@ nvifname_to_osifname(const char *nvifname, char *osifname_buf,
 	char varname[NVRAM_MAX_PARAM_LEN];
 	char *ptr;
 
-	memset(osifname_buf, 0, osifname_buf_len);
-
 	/* Bail if we get a NULL or empty string */
 	if ((!nvifname) || (!*nvifname) || (!osifname_buf)) {
 		return -1;
 	}
+
+	memset(osifname_buf, 0, osifname_buf_len);
 
 	if (strstr(nvifname, "eth") || strstr(nvifname, ".")) {
 		strncpy(osifname_buf, nvifname, osifname_buf_len);

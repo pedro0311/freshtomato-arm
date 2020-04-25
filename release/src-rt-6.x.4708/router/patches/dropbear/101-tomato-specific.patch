@@ -11,7 +11,7 @@
 +#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
 --- dropbear/sysoptions.h
 +++ dropbear/sysoptions.h
-@@ -311,7 +311,7 @@ If you test it please contact the Dropbe
+@@ -315,7 +315,7 @@ If you test it please contact the Dropbe
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
