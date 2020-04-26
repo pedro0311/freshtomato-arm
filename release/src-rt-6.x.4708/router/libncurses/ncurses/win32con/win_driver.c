@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2008-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -40,7 +41,7 @@
 
 #include <curses.priv.h>
 
-#ifdef __MINGW32__
+#ifdef _WIN32
 #include <tchar.h>
 #else
 #include <windows.h>
@@ -54,7 +55,7 @@
 
 #define CUR TerminalType(my_term).
 
-MODULE_ID("$Id: win_driver.c,v 1.59 2017/07/22 21:10:28 tom Exp $")
+MODULE_ID("$Id: win_driver.c,v 1.63 2020/02/02 23:34:34 tom Exp $")
 
 #ifndef __GNUC__
 #  error We need GCC to compile for MinGW
@@ -1316,7 +1317,9 @@ wcon_initmouse(TERMINAL_CONTROL_BLOCK * TCB)
 }
 
 static int
-wcon_testmouse(TERMINAL_CONTROL_BLOCK * TCB, int delay)
+wcon_testmouse(TERMINAL_CONTROL_BLOCK * TCB,
+	       int delay
+	       EVENTLIST_2nd(_nc_eventlist * evl))
 {
     int rc = 0;
     SCREEN *sp;
@@ -1528,6 +1531,10 @@ console_twait(
     int diff;
     bool isImmed = (milliseconds == 0);
 
+#ifdef NCURSES_WGETCH_EVENTS
+    (void) evl;			/* TODO: implement wgetch-events */
+#endif
+
 #define CONSUME() ReadConsoleInput(fd,&inp_rec,1,&nRead)
 
     assert(sp);
@@ -1635,7 +1642,7 @@ wcon_twait(TERMINAL_CONTROL_BLOCK * TCB,
 			     CON.inp,
 			     mode,
 			     milliseconds,
-			     timeleft EVENTLIST_2nd(_nc_eventlist * evl));
+			     timeleft EVENTLIST_2nd(evl));
     }
     return code;
 }
@@ -1967,7 +1974,7 @@ _nc_mingw_isatty(int fd)
 
 /*   This is used when running in terminfo mode to discover,
      whether or not the "terminal" is actually a Windows
-     Console. It's the responsibilty of the console to deal
+     Console. It's the responsibility of the console to deal
      with the terminal escape sequences that are sent by
      terminfo.
  */
@@ -2069,7 +2076,8 @@ int
 _nc_mingw_testmouse(
 		       SCREEN *sp,
 		       HANDLE fd,
-		       int delay)
+		       int delay
+		       EVENTLIST_2nd(_nc_eventlist * evl))
 {
     int rc = 0;
 
@@ -2155,7 +2163,7 @@ _nc_mingw_console_read(
 static bool
 InitConsole(void)
 {
-    /* initalize once, or not at all */
+    /* initialize once, or not at all */
     if (!console_initialized) {
 	int i;
 	DWORD num_buttons;

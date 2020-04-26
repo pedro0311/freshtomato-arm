@@ -1,21 +1,11 @@
-/* $Id: tclock.c,v 1.38 2017/09/09 00:37:06 tom Exp $ */
+/* $Id: tclock.c,v 1.41 2020/01/18 16:46:35 tom Exp $ */
 
+#define NEED_TIME_H
 #include <test.priv.h>
 
 #if HAVE_MATH_H
 
 #include <math.h>
-
-#if TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  include <time.h>
-# endif
-#endif
 
 /*
   tclock - analog/digital clock for curses.
@@ -58,7 +48,7 @@ plot(int x, int y, int col)
     MvAddCh(y, x, (chtype) col);
 }
 
-/* Draw a diagonal(arbitrary) line using Bresenham's alogrithm. */
+/* Draw a diagonal(arbitrary) line using Bresenham's algorithm. */
 static void
 dline(int pair, int from_x, int from_y, int x2, int y2, int ch)
 {
@@ -292,7 +282,7 @@ main(int argc, char *argv[])
 
     }
 
-    exit_curses();
+    stop_curses();
     ExitProgram(EXIT_SUCCESS);
 }
 #else

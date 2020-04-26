@@ -1,5 +1,6 @@
 .\"***************************************************************************
-.\" Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+.\" Copyright 2018,2020 Thomas E. Dickey                                     *
+.\" Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
 .\" copy of this software and associated documentation files (the            *
@@ -26,7 +27,7 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: curs_outopts.3x,v 1.28 2017/01/07 19:25:15 tom Exp $
+.\" $Id: curs_outopts.3x,v 1.30 2020/02/02 23:34:34 tom Exp $
 .TH curs_outopts 3X ""
 .na
 .hy 0
@@ -156,7 +157,7 @@ The \fBnl\fR and \fBnonl\fR routines control whether the underlying display
 device translates the return key into newline on input, and whether it
 translates newline into return and line-feed on output (in either case, the
 call \fBaddch('\\n')\fR does the equivalent of return and line feed on the
-virtual screen).
+\fIvirtual screen\fP).
 Initially, these translations do occur.
 If you disable them
 using \fBnonl\fR, \fBcurses\fR will be able to make better use of the line-feed

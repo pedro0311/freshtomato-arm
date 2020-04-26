@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,7 +30,7 @@
 /*
  * Author: Thomas E. Dickey (1998-on)
  *
- * $Id: ditto.c,v 1.47 2017/10/18 23:04:42 tom Exp $
+ * $Id: ditto.c,v 1.49 2020/02/02 23:34:34 tom Exp $
  *
  * The program illustrates how to set up multiple screens from a single
  * program.
@@ -196,7 +197,7 @@ open_tty(char *path)
     return fp;
 }
 
-static void
+static int
 init_screen(
 #if HAVE_USE_WINDOW
 	       SCREEN *sp GCC_UNUSED,
@@ -236,6 +237,7 @@ init_screen(
 	target->windows[k] = inner;
     }
     doupdate();
+    return TRUE;
 }
 
 static void

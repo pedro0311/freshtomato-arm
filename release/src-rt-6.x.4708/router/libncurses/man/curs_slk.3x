@@ -1,5 +1,6 @@
 .\"***************************************************************************
-.\" Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+.\" Copyright 2018,2020 Thomas E. Dickey                                     *
+.\" Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
 .\" copy of this software and associated documentation files (the            *
@@ -26,7 +27,7 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: curs_slk.3x,v 1.33 2017/11/21 00:46:31 tom Exp $
+.\" $Id: curs_slk.3x,v 1.36 2020/02/02 23:34:34 tom Exp $
 .TH curs_slk 3X ""
 .de bP
 .ie n  .IP \(bu 4
@@ -176,8 +177,10 @@ The \fBslk_touch\fR routine forces all the soft labels to be output
 the next time a \fBslk_noutrefresh\fR is performed.
 .SS Video attributes
 .PP
-The \fBslk_attron\fR, \fBslk_attrset\fR, \fBslk_attroff\fR and \fBslk_attr\fR
-routines correspond to \fBattron\fR, \fBattrset\fR, \fBattroff\fR and \fBattr_get\fR.
+The
+\fBslk_attron\fR, \fBslk_attrset\fR, \fBslk_attroff\fR and \fBslk_attr\fR
+routines correspond to
+\fBattron\fR, \fBattrset\fR, \fBattroff\fR and \fBattr_get\fR, respectively.
 They have an effect only if soft labels are simulated on the bottom line of
 the screen.
 The default highlight for soft keys is A_STANDOUT (as in
@@ -193,8 +196,9 @@ this implementation provides
 \fBextended_slk_color\fR which accepts an integer value, e.g., 32-bits.
 .
 .SH RETURN VALUE
-These routines return \fBERR\fR upon failure and \fBOK\fP (SVr4 specifies only "an
-integer value other than \fBERR\fR") upon successful completion.
+These routines return \fBERR\fR upon failure
+and \fBOK\fP (SVr4 specifies only "an integer value other than \fBERR\fR")
+upon successful completion.
 .PP
 X/Open defines no error conditions.
 In this implementation
@@ -239,6 +243,29 @@ the \fIlabnum\fP parameter is outside the range of label counts, or
 if the format parameter is outside the range 0..2, or if
 memory for the labels cannot be allocated.
 .RE
+.SH HISTORY
+SVr3 introduced these functions:
+  slk_clear
+  slk_init
+  slk_label
+  slk_noutrefresh
+  slk_refresh
+  slk_restore
+  slk_set
+  slk_touch
+.PP
+SVr4 added these functions:
+  slk_attroff
+  slk_attron
+  slk_attrset
+  slk_start
+.PP
+X/Open Curses added these:
+  slk_attr_off
+  slk_attr_on
+  slk_attr_set
+  slk_color
+  slk_wset
 .SH EXTENSIONS
 .PP
 X/Open Curses documents the \fIopts\fP argument as reserved for future use,
