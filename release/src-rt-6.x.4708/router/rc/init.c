@@ -293,7 +293,7 @@ static pid_t run_shell(int timeout, int nowait)
 
 		/* Reopen console */
 		console_init();
-		printf("\n\nTomato %s\n\n", tomato_version);
+		printf("\n\nFreshTomato %s\n\n", tomato_version);
 
 		/* Now run it.  The new program will take over this PID,
 		 * so nothing further in init.c should be run. */
