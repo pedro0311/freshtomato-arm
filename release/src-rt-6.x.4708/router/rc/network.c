@@ -861,7 +861,9 @@ void start_lan(void)
 
 	load_wl(); /* lets go! */
 
+#ifdef TCONFIG_BCMWL6
 	wlconf_pre(); /* prepare a few wifi things */
+#endif
 
 #ifdef CONFIG_BCMWL5
 	foreach_wif(0, NULL, set_wlmac);
