@@ -99,60 +99,6 @@ bsd_defaults(void)
 		if (strstr(t->name, "bsd"))
 			nvram_set(t->name, t->value);
 }
-
-/* assign none-exist value */
-void
-wl_defaults(void)
-{
-	struct nvram_tuple *t;
-	char prefix[]="wlXXXXXX_", tmp[100], tmp2[100];
-	char word[256], *next;
-	int unit;
-	char wlx_vifnames[64], wl_vifnames[64], lan_ifnames[128];
-
-	memset(wlx_vifnames, 0, sizeof(wlx_vifnames));
-	memset(wl_vifnames, 0, sizeof(wl_vifnames));
-	memset(lan_ifnames, 0, sizeof(lan_ifnames));
-
-	dbg("Restoring wireless vars ...\n");
-
-	if (!nvram_get("wl_country_code"))
-		nvram_set("wl_country_code", "");
-
-	unit = 0;
-	foreach (word, nvram_safe_get("wl_ifnames"), next) {
-		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-
-	dbg("Restoring wireless vars - in progress ...\n");
-
-		for (t = router_defaults; t->name; t++) {
-#ifdef CONFIG_BCMWL5
-			if (!strncmp(t->name, "wl", 2) && strncmp(t->name, "wl_", 3) && strncmp(t->name, "wlc", 3) && !strcmp(&t->name[4], "nband"))
-				nvram_set(t->name, t->value);
-#endif
-			if (strncmp(t->name, "wl_", 3)!=0) continue;
-#ifdef CONFIG_BCMWL5
-			if (!strcmp(&t->name[3], "nband") && nvram_match(strcat_r(prefix, &t->name[3], tmp), "-1"))
-				nvram_set(strcat_r(prefix, &t->name[3], tmp), t->value);
-#endif
-			if (!nvram_get(strcat_r(prefix, &t->name[3], tmp))) {
-				/* Add special default value handle here */
-#ifdef TCONFIG_EMF
-				/* Wireless IGMP Snooping */
-				if (strncmp(&t->name[3], "igs", sizeof("igs")) == 0) {
-					char *value = nvram_get(strcat_r(prefix, "wmf_bss_enable", tmp2));
-					nvram_set(tmp, (value && *value) ? value : t->value);
-				} else
-#endif
-					nvram_set(tmp, t->value);
-			}
-		}
-
-		unit++;
-	}
-	dbg("Restoring wireless vars - done ...\n");
-}
-
 #endif
 
 
@@ -217,6 +163,58 @@ restore_defaults(void)
 #endif
 }
 
+/* assign none-exist value */
+void
+wl_defaults(void)
+{
+	struct nvram_tuple *t;
+	char prefix[]="wlXXXXXX_", tmp[100], tmp2[100];
+	char word[256], *next;
+	int unit;
+	char wlx_vifnames[64], wl_vifnames[64], lan_ifnames[128];
+
+	memset(wlx_vifnames, 0, sizeof(wlx_vifnames));
+	memset(wl_vifnames, 0, sizeof(wl_vifnames));
+	memset(lan_ifnames, 0, sizeof(lan_ifnames));
+
+	dbg("Restoring wireless vars ...\n");
+
+	if (!nvram_get("wl_country_code"))
+		nvram_set("wl_country_code", "");
+
+	unit = 0;
+	foreach (word, nvram_safe_get("wl_ifnames"), next) {
+		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+	dbg("Restoring wireless vars - in progress ...\n");
+
+		for (t = router_defaults; t->name; t++) {
+#ifdef CONFIG_BCMWL5
+			if (!strncmp(t->name, "wl", 2) && strncmp(t->name, "wl_", 3) && strncmp(t->name, "wlc", 3) && !strcmp(&t->name[4], "nband"))
+				nvram_set(t->name, t->value);
+#endif
+			if (strncmp(t->name, "wl_", 3)!=0) continue;
+#ifdef CONFIG_BCMWL5
+			if (!strcmp(&t->name[3], "nband") && nvram_match(strcat_r(prefix, &t->name[3], tmp), "-1"))
+				nvram_set(strcat_r(prefix, &t->name[3], tmp), t->value);
+#endif
+			if (!nvram_get(strcat_r(prefix, &t->name[3], tmp))) {
+				/* Add special default value handle here */
+#ifdef TCONFIG_EMF
+				/* Wireless IGMP Snooping */
+				if (strncmp(&t->name[3], "igs", sizeof("igs")) == 0) {
+					char *value = nvram_get(strcat_r(prefix, "wmf_bss_enable", tmp2));
+					nvram_set(tmp, (value && *value) ? value : t->value);
+				} else
+#endif
+					nvram_set(tmp, t->value);
+			}
+		}
+
+		unit++;
+	}
+	dbg("Restoring wireless vars - done ...\n");
+}
 
 static int fatalsigs[] = {
 	SIGILL,
