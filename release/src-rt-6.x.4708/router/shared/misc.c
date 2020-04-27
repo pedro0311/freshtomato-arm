@@ -861,6 +861,14 @@ int nvram_get_int(const char *key)
 	return atoi(nvram_safe_get(key));
 }
 
+int nvram_set_int(const char *key, int value)
+{
+	char nvramstr[16];
+
+	snprintf(nvramstr, sizeof(nvramstr), "%d", value);
+	return nvram_set(key, nvramstr);
+}
+
 /*
 long nvram_xget_long(const char *name, long min, long max, long def)
 {

@@ -603,6 +603,14 @@ define RouterOptions
 		sed -i "/TCONFIG_BCMSMP/d" $(1); \
 		echo "TCONFIG_BCMSMP=y" >>$(1); \
 	fi; \
+	if [ "$(PROXYSTA)" = "y" ]; then \
+		sed -i "/TCONFIG_PROXYSTA/d" $(1); \
+		echo "TCONFIG_PROXYSTA=y" >>$(1); \
+	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		sed -i "/TCONFIG_DPSTA/d" $(1); \
+		echo "TCONFIG_DPSTA=y" >>$(1); \
+	fi; \
 	if [ "$(GRO)" = "y" ]; then \
 		sed -i "/TCONFIG_GROCTRL/d" $(1); \
 		echo "TCONFIG_GROCTRL=y" >>$(1); \
@@ -1011,6 +1019,10 @@ define KernelConfig
 	else \
 		echo "# CONFIG_BCM57XX is not set" >>$(1); \
 	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		sed -i "/CONFIG_DPSTA/d" $(1); \
+		echo "CONFIG_DPSTA=m" >>$(1); \
+	fi; \
 		sed -i "/CONFIG_LINUX_MTD/d" $(1); \
 	if [ "$(LINUX_MTD)" = "" ]; then \
 		echo "CONFIG_LINUX_MTD=32" >>$(1); \
@@ -1269,7 +1281,7 @@ setprofile:
 	echo 'TOMATO_PROFILE_U = $(uppercase_N)' >> tomato_profile.mak
 	echo 'TOMATO_BUILD_USB = "$(USB)"' >> tomato_profile.mak
 
-	echo 'export EXTRACFLAGS := $(EXTRA_CFLAGS) -DBCMWPA2 -DBCMARM -marm $(if $(filter $(NVRAM_SIZE),0),,-DCONFIG_NVRAM_SIZE=$(NVRAM_SIZE)) $(EXTRA_64KCFLAG)' >> tomato_profile.mak
+	echo 'export EXTRACFLAGS := $(EXTRA_CFLAGS) -DBCMWPA2 -DBCMARM -fno-delete-null-pointer-checks -marm $(if $(filter $(NVRAM_SIZE),0),,-DCONFIG_NVRAM_SIZE=$(NVRAM_SIZE)) $(EXTRA_64KCFLAG)' >> tomato_profile.mak
 
 # Note that changes to variables in tomato_profile.mak don't
 # get propogated to this invocation of make!

@@ -75,6 +75,11 @@ export CFLAGS += -DPHYMON
 export CFLAGS += -DPROXYARP
 export CFLAGS += -DTRAFFIC_MGMT
 export CFLAGS += -DTRAFFIC_MGMT_RSSI_POLICY
+ifeq ($(TCONFIG_BCMARM),y)
+export CONFIG_MFP=y
+export CFLAGS += -DMFP
+export CFLAGS += -D__CONFIG_MFP__
+endif
 endif
 export CFLAGS += $(EXTRACFLAGS)
 
@@ -99,6 +104,7 @@ endif
 ifeq ($(TCONFIG_DHDAP),)
 obj-y += prebuilt
 endif
+obj-$(TCONFIG_DPSTA) += dpsta
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)
@@ -974,7 +980,7 @@ openssl/stamp-h1:
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB) \
+	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared enable-rc5 no-ssl2 no-ssl3 no-err
@@ -1008,7 +1014,7 @@ openssl-1.1/stamp-h1:
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB) \
+	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc \
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared no-ssl3 no-err no-async --api=1.0.0 \
@@ -1561,7 +1567,7 @@ dropbear-clean:
 
 dropbear/config.h:
 	$(call patch_files,dropbear)
-	cd dropbear && \
+	cd dropbear && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
@@ -2218,12 +2224,14 @@ nginx-install:
 	$(STRIP) $(INSTALLDIR)/nginx/usr/sbin/nginx
 
 libncurses/stamp-h1:
-	cd libncurses && CC=$(CC) \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	cd libncurses && \
+	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
+	CPPFLAGS="$(EXTRACFLAGS) -Os" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	LIBS="-lstdc++" \
-	$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs --without-tests
-	touch libncurses/stamp-h1
+	$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs \
+		--without-tests --without-cxx --without-cxx-bindings --with-build-cppflags=-D_GNU_SOURCE
+	@touch $@
 
 libncurses: libncurses/stamp-h1
 	@$(SEP)
@@ -2247,13 +2255,13 @@ libncurses-install:
 	install -D -m 0644 libncurses/staged/usr/share/terminfo/x/xterm $(INSTALLDIR)/libncurses/usr/share/terminfo/x
 	install -D -m 0644 libncurses/staged/usr/share/terminfo/x/xterm-256color $(INSTALLDIR)/libncurses/usr/share/terminfo/x
 	cd $(INSTALLDIR)/libncurses/usr/lib && ln -sf ../share/terminfo terminfo
-	install libncurses/lib/libncurses.so.6.1 $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
+	install libncurses/lib/libncurses.so.6.2 $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
-	install libncurses/lib/libpanel.so.6.1 $(INSTALLDIR)/libncurses/usr/lib/libpanel.so.6
+	install libncurses/lib/libpanel.so.6.2 $(INSTALLDIR)/libncurses/usr/lib/libpanel.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libpanel.so.6
-	install libncurses/lib/libform.so.6.1 $(INSTALLDIR)/libncurses/usr/lib/libform.so.6
+	install libncurses/lib/libform.so.6.2 $(INSTALLDIR)/libncurses/usr/lib/libform.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libform.so.6
-	install libncurses/lib/libmenu.so.6.1 $(INSTALLDIR)/libncurses/usr/lib/libmenu.so.6
+	install libncurses/lib/libmenu.so.6.2 $(INSTALLDIR)/libncurses/usr/lib/libmenu.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libmenu.so.6
 	cd $(INSTALLDIR)/libncurses/usr/lib/ && \
 		ln -sf libncurses.so.6 libncurses.so && \
@@ -2842,6 +2850,7 @@ getdns/build/Makefile:
 		-DCMAKE_DISABLE_FIND_PACKAGE_Libsystemd=TRUE \
 		-DUSE_LIBIDN2=FALSE \
 		-DSTRPTIME_WORKS_EXITCODE=0 \
+		-DSTRPTIME_WORKS_EXITCODE__TRYRUN_OUTPUT=1 \
 		..
 
 getdns: $(OPENSSLDIR) libyaml getdns/build/Makefile
@@ -2963,19 +2972,25 @@ ipset-clean:
 	-@rm -rf ipset/Makefile ipset/stamp-h1
 	$(call unpatch_files,ipset)
 
-libjson-c/stamp-h1:
-	cd libjson-c && \
-	./autogen.sh && \
-	$(CONFIGURE) --prefix=/usr
-	@touch $@
+libjson-c/build/Makefile:
+	@rm -rf libjson-c/build && mkdir -p libjson-c/build
+	cd libjson-c/build && \
+	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+	cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+		-DCMAKE_INSTALL_PREFIX:PATH=/usr \
+		-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+		-DBUILD_TESTING=FALSE \
+		..
 
-libjson-c: libjson-c/stamp-h1
+libjson-c: libjson-c/build/Makefile
 	@$(SEP)
-	$(MAKE) -C libjson-c $(PARALLEL_BUILD)
+	$(MAKE) -C libjson-c/build all
+	cd libjson-c && ln -sf build/json_config.h json_config.h
 
 libjson-c-clean:
-	-@$(MAKE) -C libjson-c clean
-	@rm -rf libjson-c/stamp-h1
+	@rm -rf libjson-c/build
 
 uqmi: libjson-c
 	@$(SEP)

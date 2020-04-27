@@ -484,7 +484,7 @@ retry:
 	skb->dev = dev;
 	skb->priority = sk->sk_priority;
 	skb->mark = sk->sk_mark;
-	err = sock_tx_timestamp(sk, &skb_shinfo(skb)->tx_flags);
+	err = sock_tx_timestamp(msg, sk, skb_tx(skb));
 	if (err < 0)
 		goto out_unlock;
 
@@ -499,8 +499,7 @@ out_free:
 	return err;
 }
 
-static inline unsigned int run_filter(const struct sk_buff *skb,
-				      const struct sock *sk,
+static inline unsigned int run_filter(struct sk_buff *skb, struct sock *sk,
 				      unsigned int res)
 {
 	struct sk_filter *filter;
@@ -1206,7 +1205,7 @@ static int packet_snd(struct socket *sock,
 	err = skb_copy_datagram_from_iovec(skb, offset, msg->msg_iov, 0, len);
 	if (err)
 		goto out_free;
-	err = sock_tx_timestamp(sk, &skb_shinfo(skb)->tx_flags);
+	err = sock_tx_timestamp(msg, sk, skb_tx(skb));
 	if (err < 0)
 		goto out_free;
 

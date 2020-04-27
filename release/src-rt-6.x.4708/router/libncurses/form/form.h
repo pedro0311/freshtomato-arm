@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,7 +31,7 @@
  *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
-/* $Id: form.h,v 0.27 2017/02/11 16:35:42 tom Exp $ */
+/* $Id: form.h,v 0.30 2020/02/02 23:34:34 tom Exp $ */
 
 #ifndef FORM_H
 #define FORM_H
@@ -222,6 +223,8 @@ typedef void (*Form_Hook)(FORM *);
 #define O_STATIC		(0x0200U)
 #define O_DYNAMIC_JUSTIFY	(0x0400U)	/* ncurses extension	*/
 #define O_NO_LEFT_STRIP		(0x0800U)	/* ncurses extension	*/
+#define O_EDGE_INSERT_STAY      (0x1000U)	/* ncurses extension	*/
+#define O_INPUT_LIMIT           (0x2000U)	/* ncurses extension	*/
 
 /* form options */
 #define O_NL_OVERLOAD		(0x0001U)

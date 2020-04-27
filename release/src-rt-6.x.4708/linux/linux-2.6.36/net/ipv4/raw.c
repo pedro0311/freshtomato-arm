@@ -505,7 +505,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 
 	ipc.addr = inet->inet_saddr;
 	ipc.opt = NULL;
-	ipc.tx_flags = 0;
+	ipc.shtx.flags = 0;
 	ipc.oif = sk->sk_bound_dev_if;
 
 	if (msg->msg_controllen) {
@@ -555,7 +555,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 						.tos = tos } },
 				    .proto = inet->hdrincl ? IPPROTO_RAW :
 							     sk->sk_protocol,
-		};
+				  };
 		if (!inet->hdrincl) {
 			err = raw_probe_proto_opt(&fl, msg);
 			if (err)

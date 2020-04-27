@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2013-2014,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2013-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,14 +30,14 @@
 /*
  * Author: Thomas E. Dickey
  *
- * $Id: dots_termcap.c,v 1.16 2017/10/22 15:21:34 tom Exp $
+ * $Id: dots_termcap.c,v 1.20 2020/02/02 23:34:34 tom Exp $
  *
  * A simple demo of the termcap interface.
  */
 #define USE_TINFO
 #include <test.priv.h>
 
-#if !defined(__MINGW32__)
+#if !defined(_WIN32)
 #include <sys/time.h>
 #endif
 
@@ -152,7 +153,7 @@ static void
 my_napms(int ms)
 {
     if (ms > 0) {
-#if defined(__MINGW32__) || !HAVE_GETTIMEOFDAY
+#if defined(_WIN32) || !HAVE_GETTIMEOFDAY
 	Sleep((DWORD) ms);
 #else
 	struct timeval data;
@@ -201,7 +202,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-    int x, y, z, p;
+    int ch;
     int num_colors;
     int num_lines;
     int num_columns;
@@ -213,11 +214,16 @@ main(int argc, char *argv[])
     char buffer[1024];
     char area[1024];
     char *name;
+    size_t need;
+    char *my_env;
 
-    while ((x = getopt(argc, argv, "T:em:s:")) != -1) {
-	switch (x) {
+    while ((ch = getopt(argc, argv, "T:em:s:")) != -1) {
+	switch (ch) {
 	case 'T':
-	    putenv(strcat(strcpy(malloc(6 + strlen(optarg)), "TERM="), optarg));
+	    need = 6 + strlen(optarg);
+	    my_env = malloc(need);
+	    _nc_SPRINTF(my_env, _nc_SLIMIT(need) "TERM=%s", optarg);
+	    putenv(my_env);
 	    break;
 	case 'e':
 	    e_option = 1;
@@ -241,8 +247,8 @@ main(int argc, char *argv[])
 
     srand((unsigned) time(0));
 
-    InitAndCatch(z = tgetent(buffer, name), onsig);
-    if (z < 0) {
+    InitAndCatch(ch = tgetent(buffer, name), onsig);
+    if (ch < 0) {
 	fprintf(stderr, "terminal description not found\n");
 	ExitProgram(EXIT_FAILURE);
     } else {
@@ -273,13 +279,13 @@ main(int argc, char *argv[])
     started = time((time_t *) 0);
 
     while (!interrupted) {
-	x = (int) (c * ranf()) + m_option;
-	y = (int) (r * ranf()) + m_option;
-	p = (ranf() > 0.9) ? '*' : ' ';
+	int x = (int) (c * ranf()) + m_option;
+	int y = (int) (r * ranf()) + m_option;
+	int p = (ranf() > 0.9) ? '*' : ' ';
 
 	tputs(tgoto(t_cm, x, y), 1, outc);
 	if (num_colors > 0) {
-	    z = (int) (ranf() * num_colors);
+	    int z = (int) (ranf() * num_colors);
 	    if (ranf() > 0.01) {
 		tputs(tgoto(t_AF, 0, z), 1, outc);
 	    } else {

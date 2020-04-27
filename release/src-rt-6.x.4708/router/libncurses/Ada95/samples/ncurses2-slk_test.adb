@@ -7,7 +7,8 @@
 --                                 B O D Y                                  --
 --                                                                          --
 ------------------------------------------------------------------------------
--- Copyright (c) 2000-2009,2011 Free Software Foundation, Inc.              --
+-- Copyright 2018,2020 Thomas E. Dickey                                     --
+-- Copyright 2000-2009,2011 Free Software Foundation, Inc.                  --
 --                                                                          --
 -- Permission is hereby granted, free of charge, to any person obtaining a  --
 -- copy of this software and associated documentation files (the            --
@@ -35,8 +36,8 @@
 ------------------------------------------------------------------------------
 --  Author: Eugene V. Melaragno <aldomel@ix.netcom.com> 2000
 --  Version Control
---  $Revision: 1.9 $
---  $Date: 2011/03/19 12:03:08 $
+--  $Revision: 1.11 $
+--  $Date: 2020/02/02 23:34:34 $
 --  Binding Version 01.00
 ------------------------------------------------------------------------------
 with ncurses2.util; use ncurses2.util;
@@ -75,8 +76,6 @@ procedure ncurses2.slk_test is
       end if;
       Str := To_Unbounded_String (To_Ada (Txt, True));
    end myGet;
-
-   use Int_IO;
 
    use Ada.Strings.Unbounded;
 

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2013,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2013,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,7 +31,7 @@
  *
  * Generate timing statistics for vertical-motion optimization.
  *
- * $Id: hashtest.c,v 1.34 2017/09/30 15:42:53 tom Exp $
+ * $Id: hashtest.c,v 1.36 2020/02/02 23:34:34 tom Exp $
  */
 
 #include <test.priv.h>
@@ -222,7 +223,7 @@ main(int argc, char *argv[])
 	test_optimize = TRUE;
     }
 #if USE_TRACE
-    trace(TRACE_TIMES);
+    curses_trace(TRACE_TIMES);
 #endif
 
     InitAndCatch(initscr(), finish);

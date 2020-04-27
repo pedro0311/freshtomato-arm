@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2008-2012,2014 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2009-2012,2014 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -33,7 +34,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_driver.c,v 1.6 2014/04/11 08:21:23 jpf Exp $")
+MODULE_ID("$Id: lib_driver.c,v 1.8 2020/02/02 23:34:34 tom Exp $")
 
 typedef struct DriverEntry {
     const char *name;
@@ -42,7 +43,7 @@ typedef struct DriverEntry {
 
 static DRIVER_ENTRY DriverTable[] =
 {
-#ifdef __MINGW32__
+#ifdef _WIN32
     {"win32console", &_nc_WIN_DRIVER},
 #endif
     {"tinfo", &_nc_TINFO_DRIVER}	/* must be last */

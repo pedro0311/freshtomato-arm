@@ -70,9 +70,65 @@ typedef u_int8_t u8;
 #include <etsockio.h>
 #endif
 
+#ifdef TCONFIG_BCMWL6
+#include <d11.h>
+#define WLCONF_PHYTYPE2STR(phy)	((phy) == PHY_TYPE_A ? "a" : \
+				 (phy) == PHY_TYPE_B ? "b" : \
+				 (phy) == PHY_TYPE_LP ? "l" : \
+				 (phy) == PHY_TYPE_G ? "g" : \
+				 (phy) == PHY_TYPE_SSN ? "s" : \
+				 (phy) == PHY_TYPE_HT ? "h" : \
+				 (phy) == PHY_TYPE_AC ? "v" : \
+				 (phy) == PHY_TYPE_LCN ? "c" : "n")
+#endif
+
+
 void restart_wl(void);
 void stop_lan_wl(void);
 void start_lan_wl(void);
+
+#ifdef TCONFIG_BCMWL6
+void wlconf_pre(void)
+{
+	int unit = 0;
+	char word[128], *next;
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+
+	foreach (word, nvram_safe_get("wl_ifnames"), next) {
+
+		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+		if (nvram_match(strcat_r(prefix, "nband", tmp), "1") && /* only for wlX_nband == 1 for 5 GHz */
+		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+		  
+			dbG("set vhtmode 1 for %s\n", word);
+			eval("wl", "-i", word, "vhtmode", "1");
+		}
+		else if (nvram_match(strcat_r(prefix, "nband", tmp), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
+			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+		  
+		  	if (nvram_match(strcat_r(prefix, "turbo_qam", tmp), "1")) { /* check turbo qam on or off ? */
+				dbG("set vht_features 3 for %s\n", word);
+				eval("wl", "-i", word, "vht_features", "3");
+		  	}
+			else {
+				dbG("set vht_features 0 for %s\n", word);
+				eval("wl", "-i", word, "vht_features", "0");
+			}
+
+			dbG("set vhtmode 1 for %s\n", word);
+			eval("wl", "-i", word, "vhtmode", "1");
+
+		}
+		else {
+			dbG("set vhtmode 0 for %s\n", word);
+			eval("wl", "-i", word, "vht_features", "0");
+			eval("wl", "-i", word, "vhtmode", "0");
+		}
+		unit++;
+	}
+}
+#endif /* TCONFIG_BCMWL6 */
 
 static void set_lan_hostname(const char *wan_hostname)
 {
@@ -140,8 +196,16 @@ static int wlconf(char *ifname, int unit, int subunit)
 	char tmp_dhd[32] = {0};
 #endif
 
+#ifdef TCONFIG_BCMWL6
+	int phytype;
+	char buf[8] = {0};
+	char tmp[32] = {0};
+#endif
+
 	/* Check interface - fail for non-wl interfaces */
 	if ((unit < 0) || wl_probe(ifname)) return r;
+
+	dbG("wlconf: ifname %s unit %d subunit %d\n", ifname, unit, subunit);
 
 #ifdef TCONFIG_DHDAP
 	/* validate/restore all per-interface related variables for sdk7 */
@@ -158,7 +222,19 @@ static int wlconf(char *ifname, int unit, int subunit)
 	memset(wl, 0, sizeof(wl)); /* reset */
 #endif
 
+#ifdef TCONFIG_BCMWL6
+	/* set phytype */
+	if ((subunit == -1) && !wl_ioctl(ifname, WLC_GET_PHYTYPE, &phytype, sizeof(phytype))) {
+		snprintf(wl, sizeof(wl), "wl%d_", unit);
+		snprintf(buf, sizeof(buf), "%s", WLCONF_PHYTYPE2STR(phytype));
+		nvram_set(strcat_r(wl, "phytype", tmp), buf);
+		dbG("wlconf: %s = %s\n", tmp, buf);
+		memset(wl, 0, sizeof(wl)); /* reset */
+	}
+#endif
+
 	r = eval("wlconf", ifname, "up");
+	dbG("wlconf %s = %d\n", ifname, r);
 	if (r == 0) {
 		if (unit >= 0 && subunit <= 0) {
 			/* setup primary wl interface */
@@ -834,6 +910,10 @@ void start_lan(void)
 
 #ifndef TCONFIG_DHDAP /* load driver at init.c for sdk7 */
 	load_wl(); /* lets go! */
+#endif
+
+#ifdef TCONFIG_BCMWL6
+	wlconf_pre(); /* prepare a few wifi things */
 #endif
 
 #ifdef CONFIG_BCMWL5

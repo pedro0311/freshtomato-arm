@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2015,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2015,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,7 +31,7 @@
  *  Author: Thomas E. Dickey                    1997-on                     *
  ****************************************************************************/
 /*
- * $Id: progs.priv.h,v 1.46 2017/10/09 00:30:38 tom Exp $
+ * $Id: progs.priv.h,v 1.48 2020/02/02 23:34:34 tom Exp $
  *
  *	progs.priv.h
  *
@@ -129,10 +130,11 @@ extern int optind;
 
 #include <nc_string.h>
 #include <nc_alloc.h>
+
 #if HAVE_NC_FREEALL
 #undef ExitProgram
 #ifdef USE_LIBTINFO
-#define ExitProgram(code) _nc_free_tinfo(code)
+#define ExitProgram(code) exit_terminfo(code)
 #else
 #define ExitProgram(code) _nc_free_tic(code)
 #endif

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2002-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2002-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -39,7 +40,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_ins_wch.c,v 1.22 2017/04/08 22:52:26 tom Exp $")
+MODULE_ID("$Id: lib_ins_wch.c,v 1.24 2020/02/02 23:34:34 tom Exp $")
 
 /*
  * Insert the given character, updating the current location to simplify
@@ -48,7 +49,7 @@ MODULE_ID("$Id: lib_ins_wch.c,v 1.22 2017/04/08 22:52:26 tom Exp $")
 NCURSES_EXPORT(int)
 _nc_insert_wch(WINDOW *win, const cchar_t *wch)
 {
-    int cells = wcwidth(CharOf(CHDEREF(wch)));
+    int cells = _nc_wacs_width(CharOf(CHDEREF(wch)));
     int code = OK;
 
     if (cells < 0) {
@@ -120,7 +121,7 @@ wins_nwstr(WINDOW *win, const wchar_t *wstr, int n)
 	    NCURSES_SIZE_T ox = win->_curx;
 
 	    for (cp = wstr; ((cp - wstr) < n) && *cp; cp++) {
-		int len = wcwidth(*cp);
+		int len = _nc_wacs_width(*cp);
 
 		if ((len >= 0 && len != 1) || !is7bits(*cp)) {
 		    cchar_t tmp_cchar;

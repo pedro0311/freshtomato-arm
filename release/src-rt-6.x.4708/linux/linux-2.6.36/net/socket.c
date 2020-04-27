@@ -538,13 +538,14 @@ void sock_release(struct socket *sock)
 }
 EXPORT_SYMBOL(sock_release);
 
-int sock_tx_timestamp(struct sock *sk, __u8 *tx_flags)
+int sock_tx_timestamp(struct msghdr *msg, struct sock *sk,
+		      union skb_shared_tx *shtx)
 {
-	*tx_flags = 0;
+	shtx->flags = 0;
 	if (sock_flag(sk, SOCK_TIMESTAMPING_TX_HARDWARE))
-		*tx_flags |= SKBTX_HW_TSTAMP;
+		shtx->hardware = 1;
 	if (sock_flag(sk, SOCK_TIMESTAMPING_TX_SOFTWARE))
-		*tx_flags |= SKBTX_SW_TSTAMP;
+		shtx->software = 1;
 	return 0;
 }
 EXPORT_SYMBOL(sock_tx_timestamp);
