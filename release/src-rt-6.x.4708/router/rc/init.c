@@ -2723,8 +2723,8 @@ static int init_nvram(void)
 			nvram_set("wl1_country", "SG");
 			nvram_set("wl1_country_code", "SG");
 			nvram_set("wl1_country_rev", "0");
-			nvram_set("wl0_ssid", "MiWiFi_5G");
-			nvram_set("wl1_ssid", "MiWiFi");
+			nvram_set("wl0_ssid", "FreshTomato50");
+			nvram_set("wl1_ssid", "FreshTomato24");
 
 			/* usb settings */
 			nvram_set("usb_ohci", "1");     /* USB 1.1 */
