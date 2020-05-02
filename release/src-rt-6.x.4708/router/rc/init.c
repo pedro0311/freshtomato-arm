@@ -2957,17 +2957,43 @@ static int init_nvram(void)
 			/* fix wifi channels */
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			
+			if (nvram_match("boardnum", "20140309")) { /* case EA6350v1 */
+				/* 2G settings */
+				nvram_set("wl0_bw_cap","3");
+				nvram_set("wl0_chanspec","6u");
+				nvram_set("wl0_channel","6");
+				nvram_set("wl0_nbw","40");
+				nvram_set("wl0_nctrlsb", "upper");
+
+				/* 5G settings */
+				nvram_set("wl1_bw_cap", "7");
+				nvram_set("wl1_chanspec", "36/80");
+				nvram_set("wl1_channel", "36");
+				nvram_set("wl1_nbw","80");
+				nvram_set("wl1_nbw_cap","3");
+				nvram_set("wl1_nctrlsb", "lower");
+			}
+			else { /* case EA6200 */
+				/* 5G settings */
+				nvram_set("wl0_bw_cap", "7");
+				nvram_set("wl0_chanspec", "36/80");
+				nvram_set("wl0_channel", "36");
+				nvram_set("wl0_nbw","80");
+				nvram_set("wl0_nbw_cap","3");
+				nvram_set("wl0_nctrlsb", "lower");
+
+				/* 2G settings */
+				nvram_set("wl1_bw_cap","3");
+				nvram_set("wl1_chanspec","6u");
+				nvram_set("wl1_channel","6");
+				nvram_set("wl1_nbw","40");
+				nvram_set("wl1_nctrlsb", "upper");
+
+				/* set ssid correct */
+				nvram_set("wl0_ssid", "FreshTomato50");
+				nvram_set("wl1_ssid", "FreshTomato24");
+			}
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
