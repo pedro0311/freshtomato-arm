@@ -400,7 +400,14 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
-	modprobe_r("wl");
+	int model = get_model();
+
+	/* workaround: do not unload wifi driver for Linksys EA6200/EA6350v1 and Netgear R6250,
+	 * it will cause problems (reboot after saving to nvram) */
+	if ((model != MODEL_EA6350v1) &&
+	    (model != MODEL_R6250)) {
+		modprobe_r("wl");
+	}
 }
 
 void load_wl(void)
