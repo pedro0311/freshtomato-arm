@@ -1413,6 +1413,12 @@ but this is unimplemented here.
 */
 static int cloudflare_errorcheck(int code, const char *req, char *body)
 {
+	int n = 0, i = 0;
+	for (i = 0; i < strlen(body); ++i) {
+		if (body[i] != ' ') body[n++] = body[i];
+	}
+	body[n] = '\0';
+
 	if (code == 200)
 	{
 		if (strstr(body, "\"success\":true") != NULL)
