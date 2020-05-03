@@ -7,7 +7,8 @@
 --                                 B O D Y                                  --
 --                                                                          --
 ------------------------------------------------------------------------------
--- Copyright (c) 1998-2009,2014 Free Software Foundation, Inc.              --
+-- Copyright 2018,2020 Thomas E. Dickey                                     --
+-- Copyright 1999-2009,2014 Free Software Foundation, Inc.                  --
 --                                                                          --
 -- Permission is hereby granted, free of charge, to any person obtaining a  --
 -- copy of this software and associated documentation files (the            --
@@ -35,7 +36,7 @@
 ------------------------------------------------------------------------------
 --  Author:  Juergen Pfeifer, 1996
 --  Version Control:
---  $Revision: 1.15 $
+--  $Revision: 1.17 $
 --  Binding Version 01.00
 ------------------------------------------------------------------------------
 with Terminal_Interface.Curses.Aux; use  Terminal_Interface.Curses.Aux;
@@ -49,8 +50,6 @@ package body Terminal_Interface.Curses.Forms.Field_User_Data is
    --  |
    --  |
    --  |
-   use type Interfaces.C.int;
-
    procedure Set_User_Data (Fld  : Field;
                             Data : User_Access)
    is

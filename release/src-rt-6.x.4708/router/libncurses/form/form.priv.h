@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,7 +31,7 @@
  *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
-/* $Id: form.priv.h,v 0.42 2017/02/11 16:12:19 tom Exp $ */
+/* $Id: form.priv.h,v 0.45 2020/02/02 23:34:34 tom Exp $ */
 
 #ifndef FORM_PRIV_H
 #define FORM_PRIV_H 1
@@ -166,7 +167,9 @@ TypeArgument;
 #define ALL_FIELD_OPTS (Field_Options)( \
 			STD_FIELD_OPTS |\
 			O_DYNAMIC_JUSTIFY |\
-			O_NO_LEFT_STRIP)
+			O_NO_LEFT_STRIP |\
+			O_EDGE_INSERT_STAY |\
+			O_INPUT_LIMIT)
 
 #define C_BLANK ' '
 #define is_blank(c) ((c)==C_BLANK)

@@ -7,7 +7,8 @@
 --                                 B O D Y                                  --
 --                                                                          --
 ------------------------------------------------------------------------------
--- Copyright (c) 1998-2006,2011 Free Software Foundation, Inc.              --
+-- Copyright 2018,2020 Thomas E. Dickey                                     --
+-- Copyright 1998-2006,2011 Free Software Foundation, Inc.                  --
 --                                                                          --
 -- Permission is hereby granted, free of charge, to any person obtaining a  --
 -- copy of this software and associated documentation files (the            --
@@ -35,8 +36,8 @@
 ------------------------------------------------------------------------------
 --  Author:  Juergen Pfeifer, 1996
 --  Version Control
---  $Revision: 1.17 $
---  $Date: 2011/03/23 00:44:12 $
+--  $Revision: 1.19 $
+--  $Date: 2020/02/02 23:34:34 $
 --  Binding Version 01.00
 ------------------------------------------------------------------------------
 with Ada.Numerics.Generic_Elementary_Functions;
@@ -57,7 +58,6 @@ with Terminal_Interface.Curses.Text_IO.Integer_IO;
 with Terminal_Interface.Curses.Text_IO.Float_IO;
 with Terminal_Interface.Curses.Text_IO.Enumeration_IO;
 with Terminal_Interface.Curses.Text_IO.Complex_IO;
-with Terminal_Interface.Curses.Text_IO.Fixed_IO;
 with Terminal_Interface.Curses.Text_IO.Decimal_IO;
 with Terminal_Interface.Curses.Text_IO.Modular_IO;
 
@@ -69,7 +69,6 @@ with Sample.Explanation; use Sample.Explanation;
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Complex_IO);
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Decimal_IO);
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Enumeration_IO);
-pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Fixed_IO);
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Float_IO);
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Integer_IO);
 pragma Elaborate_All (Terminal_Interface.Curses.Text_Io.Modular_IO);
@@ -84,7 +83,6 @@ package body Sample.Text_IO_Demo is
                     Friday,
                     Saturday);
 
-   type Fix is delta 0.1 range 0.0 .. 4.0;
    type Dec is delta 0.01 digits 5 range 0.0 .. 4.0;
    type Md is mod 5;
 
@@ -106,10 +104,6 @@ package body Sample.Text_IO_Demo is
    package C_IO is new
      Terminal_Interface.Curses.Text_IO.Complex_IO (Ada.Numerics.Complex_Types);
    use C_IO;
-
-   package F_IO is new
-     Terminal_Interface.Curses.Text_IO.Fixed_IO (Fix);
-   use F_IO;
 
    package D_IO is new
      Terminal_Interface.Curses.Text_IO.Decimal_IO (Dec);

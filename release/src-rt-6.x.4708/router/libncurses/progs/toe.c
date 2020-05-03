@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2013,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2013,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -44,7 +45,7 @@
 #include <hashed_db.h>
 #endif
 
-MODULE_ID("$Id: toe.c,v 1.77 2017/12/23 19:23:40 tom Exp $")
+MODULE_ID("$Id: toe.c,v 1.79 2020/02/02 23:34:34 tom Exp $")
 
 #define isDotname(name) (!strcmp(name, ".") || !strcmp(name, ".."))
 
@@ -497,8 +498,8 @@ typelist(int eargc, char *eargv[],
 		}
 	    }
 	}
-#endif
-#endif
+#endif /* USE_HASHED_DB */
+#endif /* NCURSES_USE_DATABASE */
 #if NCURSES_USE_TERMCAP
 #if HAVE_BSD_CGETENT
 	{
@@ -700,6 +701,8 @@ main(int argc, char *argv[])
 
 	    _nc_first_db(&state, &offset);
 	    while ((path = _nc_next_db(&state, &offset)) != 0) {
+		if (quick_prefix(path))
+		    continue;
 		if (pass) {
 		    eargv[count] = strmalloc(path);
 		}
@@ -725,7 +728,8 @@ main(int argc, char *argv[])
 	    failed("eargv");
 	_nc_first_db(&state, &offset);
 	if ((path = _nc_next_db(&state, &offset)) != 0) {
-	    eargv[count++] = strmalloc(path);
+	    if (!quick_prefix(path))
+		eargv[count++] = strmalloc(path);
 	}
 
 	code = typelist((int) count, eargv, header, hook);

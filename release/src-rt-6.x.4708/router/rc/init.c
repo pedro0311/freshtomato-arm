@@ -293,7 +293,7 @@ static pid_t run_shell(int timeout, int nowait)
 
 		/* Reopen console */
 		console_init();
-		printf("\n\nTomato %s\n\n", tomato_version);
+		printf("\n\nFreshTomato %s\n\n", tomato_version);
 
 		/* Now run it.  The new program will take over this PID,
 		 * so nothing further in init.c should be run. */
@@ -3074,8 +3074,8 @@ static int init_nvram(void)
 			nvram_set("wl1_country", "SG");
 			nvram_set("wl1_country_code", "SG");
 			nvram_set("wl1_country_rev", "0");
-			nvram_set("wl0_ssid", "MiWiFi_5G");
-			nvram_set("wl1_ssid", "MiWiFi");
+			nvram_set("wl0_ssid", "FreshTomato50");
+			nvram_set("wl1_ssid", "FreshTomato24");
 
 			/* usb settings */
 			nvram_set("usb_ohci", "1");     /* USB 1.1 */
