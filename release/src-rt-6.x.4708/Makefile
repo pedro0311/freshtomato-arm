@@ -155,7 +155,7 @@ ifeq ($(ASUS_TRX),ASUS)
 ifeq ($(BCMSMP),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC66U_B1,3.0.0.4,image/freshtomato-RT-AC66U_B1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
-	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC68U,3.0.0.4,image/freshtomato-RT-AC68U_B2_C1_E1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC68U,3.0.0.4,image/freshtomato-RT-AC68U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC1900P,3.0.0.4,image/freshtomato-RT-AC1900P-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-N18U,3.0.0.4,image/freshtomato-RT-N18U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
