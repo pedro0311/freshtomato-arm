@@ -75,11 +75,6 @@ export CFLAGS += -DPHYMON
 export CFLAGS += -DPROXYARP
 export CFLAGS += -DTRAFFIC_MGMT
 export CFLAGS += -DTRAFFIC_MGMT_RSSI_POLICY
-ifeq ($(TCONFIG_BCMARM),y)
-export CONFIG_MFP=y
-export CFLAGS += -DMFP
-export CFLAGS += -D__CONFIG_MFP__
-endif
 endif
 export CFLAGS += $(EXTRACFLAGS)
 
