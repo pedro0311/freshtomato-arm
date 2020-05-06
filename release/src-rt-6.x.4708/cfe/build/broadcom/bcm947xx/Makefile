@@ -18,9 +18,12 @@
 # $Id: Makefile 398971 2013-04-26 22:39:49Z $
 #
 
+include ../../../../.config
+
 ARCH ?= arm
 CPU ?= bcmcore
 BOARD := bcm947xx
+CFE_NAME := `echo $(BUILD_NAME)|tr A-Z a-z`
 
 # Standard options
 CFG_MLONG64 := 0
@@ -72,9 +75,14 @@ CFG_SDRAM_PARAM_FROM_EMBEDDED_NVRAM := 1
 # Additional options
 COMPRESSED_CFE := 1
 RESCUE_MODE := 1        # disable for tmp
+RGMII_P5 := 0
+DSLAC68U := 0
 RTAC68U := 0
+RT4GAC68U := 0
 PATYPE := 0
-MTDSIZE := 32
+BCM470XC0 := 0
+MTDSIZE ?= 64
+DUAL_TRX := 0
 
 # HND source base
 SRCBASE := $(shell cd ../../../.. && pwd)
@@ -125,20 +133,50 @@ endif
 ifeq ($(strip $(RESCUE_MODE)),1)
 CFLAGS += -DRESCUE_MODE
 endif
+
+ifeq ($(strip $(RGMII_P5)),1)
+CFLAGS += -DRGMII_P5
+endif
+
+ifeq ($(strip $(DUAL_TRX)),1)
+CFLAGS += -DDUAL_TRX
+endif
+
 ifeq ($(strip $(RTAC68U)),1)
 CFLAGS += -DRTAC68U
 endif
+
+ifeq ($(strip $(RT4GAC68U)),1)
+CFLAGS += -DRT4GAC68U
+endif
+
+ifeq ($(BUILD_NAME),$(filter $(BUILD_NAME),RT-AC88U RT-AC88B RT-AC5400))
+CFLAGS += -DRTAC68U
+CFLAGS += -DRTAC88U -DRTL8365MB
+CFLAGS += -L /opt/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/../lib/gcc/arm-brcm-linux-uclibcgnueabi/4.5.3 -lgcc
+endif
+
+ifeq ($(strip $(DSLAC68U)),1)
+CFLAGS += -DDSLAC68U
+endif
+
 ifeq ($(strip $(RTAC87U)),1)
+MTDSIZE := 128
 CFLAGS += -DRTAC87U
 endif
+
 ifeq ($(strip $(RTN18U)),1)
 CFLAGS += -DRTN18U
 endif
+
 ifeq ($(strip $(COMPRESSED_CFE)),1)
 CFLAGS += -DCOMPRESSED_CFE
 endif
 ifeq ($(MTDSIZE),32)
 CFLAGS += -D"CONFIG_LINUX_MTD=32"
+endif
+ifeq ($(MTDSIZE),48)
+CFLAGS += -D"CONFIG_LINUX_MTD=48"
 endif
 ifeq ($(MTDSIZE),64)
 CFLAGS += -D"CONFIG_LINUX_MTD=64"

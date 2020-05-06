@@ -2,7 +2,7 @@
  * Linux device driver for
  * Broadcom BCM47XX 10/100/1000 Mbps Ethernet Controller
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: et_linux.c 485161 2014-06-13 21:26:34Z $
+ * $Id: et_linux.c 485723 2014-06-17 05:07:54Z $
  */
 
 #include <et_cfg.h>
@@ -73,6 +73,8 @@
 #include <etc.h>
 #ifdef HNDCTF
 #include <ctf/hndctf.h>
+#include <proto/bcmtcp.h>
+#include <proto/bcmipv6.h>
 #endif /* HNDCTF */
 #if defined(PLC) || defined(ETFA)
 #include <siutils.h>
@@ -111,27 +113,29 @@
 #error "Packet chaining feature can't work w/o CTF"
 #endif
 #define PKTC_ENAB(et)	((et)->etc->pktc)
+#define PKT_BRC_CHECK(et, evh) \
+	((et)->brc_hot && CTF_HOTBRC_CMP((et)->brc_hot, (evh), (void *)(et)->dev))
 #define PKT_CHAINABLE(et, p, evh, prio, h_sa, h_da, h_prio) \
 	(!ETHER_ISNULLDEST(((struct ethervlan_header *)(evh))->ether_dhost) && \
 	 !eacmp((h_da), ((struct ethervlan_header *)(evh))->ether_dhost) && \
 	 !eacmp((h_sa), ((struct ethervlan_header *)(evh))->ether_shost) && \
-	 (et)->brc_hot && CTF_HOTBRC_CMP((et)->brc_hot, (evh), (void *)(et)->dev) && \
 	 ((h_prio) == (prio)) && !RXH_FLAGS((et)->etc, PKTDATA((et)->osh, (p))) && \
 	 (((struct ethervlan_header *)(evh))->vlan_type == HTON16(ETHER_TYPE_8021Q)) && \
 	 ((((struct ethervlan_header *)(evh))->ether_type == HTON16(ETHER_TYPE_IP)) || \
 	 (((struct ethervlan_header *)(evh))->ether_type == HTON16(ETHER_TYPE_IPV6))))
 #ifdef PLC
+#define PLC_PKT_BRC_CHECK(et, evh) \
+	(et->plc.brc_hot && CTF_HOTBRC_CMP(et->plc.brc_hot, (evh), (void *)et->plc.dev))
 #define PLC_PKT_CHAINABLE(et, p, evh, prio, h_sa, h_da, h_prio) \
 	(!ETHER_ISNULLDEST(((struct ethervlan_header *)(evh))->ether_dhost) && \
 	 !eacmp((h_da), ((struct ethervlan_header *)(evh))->ether_dhost) && \
 	 !eacmp((h_sa), ((struct ethervlan_header *)(evh))->ether_shost) && \
-	 et->plc.brc_hot && CTF_HOTBRC_CMP(et->plc.brc_hot, (evh), (void *)et->plc.dev) && \
 	 ((h_prio) == (prio)) && !RXH_FLAGS((et)->etc, PKTDATA((et)->osh, (p))) && \
 	 (((struct ethervlan_header *)(evh))->vlan_type == HTON16(ETHER_TYPE_8021Q)) && \
 	 ((((struct ethervlan_header *)(evh))->ether_type == HTON16(ETHER_TYPE_IP)) || \
 	 (((struct ethervlan_header *)(evh))->ether_type == HTON16(ETHER_TYPE_IPV6))))
 #endif /* PLC */
-#define PKTCMC  2
+#define PKTCMC  32
 struct pktc_data {
 	void	*chead;		/* chain head */
 	void	*ctail;		/* chain tail */
@@ -147,6 +151,24 @@ typedef struct pktc_data pktc_data_t;
 #define PLC_PKT_CHAINABLE(et, p, evh, prio, h_sa, h_da, h_prio)	0
 #endif /* PLC */
 #endif /* PKTC */
+
+#define ET_MULTI_VLAN_IN_LAN //cathy
+
+#ifdef ET_MULTI_VLAN_IN_LAN
+#define MAX_VLAN_DEV_IN_LAN 2
+
+typedef struct et_mvlan_in_lan {
+	bool en;
+	uint16 rxvid[MAX_VLAN_DEV_IN_LAN];
+	struct net_device *vdev[MAX_VLAN_DEV_IN_LAN];
+} et_mvlan_in_lan_t;
+
+#define MVLAN_IN_LAN_GET_ENAB(et) ((et) ? ((et)->mvlan.en) : 0)
+#define MVLAN_IN_LAN_SET_ENAB(et, val) do { if ((et)) (et)->mvlan.en = (val); } while(0);
+#else /* ! ET_MULTI_VLAN_IN_LAN */
+#define MVLAN_IN_LAN_GET_ENAB(et) 0
+#define MVLAN_IN_LAN_SET_ENAB(et, val)
+#endif /* ! ET_MULTI_VLAN_IN_LAN */
 
 static int et_get_settings(struct net_device *dev, struct ethtool_cmd *ecmd);
 static int et_set_settings(struct net_device *dev, struct ethtool_cmd *ecmd);
@@ -237,6 +259,10 @@ typedef struct et_info {
 #ifdef ETFA
 	spinlock_t	fa_lock;	/* lock for fa cache protection */
 #endif
+
+#ifdef ET_MULTI_VLAN_IN_LAN
+	et_mvlan_in_lan_t mvlan;
+#endif /* ET_MULTI_VLAN_IN_LAN */
 } et_info_t;
 
 static int et_found = 0;
@@ -404,9 +430,124 @@ module_param(passivemode, int, 0);
 static int txworkq = 0;
 module_param(txworkq, int, 0);
 
+static int psta = 0;
+module_param(psta, int, 0);
+
 #define ET_TXQ_THRESH	0
 static int et_txq_thresh = ET_TXQ_THRESH;
 module_param(et_txq_thresh, int, 0);
+
+#ifdef ET_MULTI_VLAN_IN_LAN
+static int
+et_mvlan_netdev_event(struct notifier_block *this, unsigned long event, void *ptr)
+{
+	struct net_device *real_dev, *vdev;
+	et_info_t *et;
+	uint16 vid;
+	int idx;
+
+	/* we are only interested in plc vifs */
+	vdev = (struct net_device *)ptr;
+	if ((vdev->priv_flags & IFF_802_1Q_VLAN) == 0)
+		return NOTIFY_DONE;
+
+	/* get the pointer to real device */
+	real_dev = vlan_dev_real_dev(vdev);
+	vid = vlan_dev_vlan_id(vdev);
+
+	for (et = et_list; et; et = et->next) {
+		if (et != ET_INFO(real_dev))
+			continue;
+		break;
+	}
+
+	if (!et)
+		return NOTIFY_DONE;
+
+	MVLAN_IN_LAN_SET_ENAB(et, getintvar(NULL, "mvlan"));
+
+	printk("et%d: %s: event %ld for %s mvlan_en %d\n", et->etc->unit, __FUNCTION__,
+	          event, vdev->name, MVLAN_IN_LAN_GET_ENAB(et));
+
+	switch (event) {
+	case NETDEV_REGISTER:
+	case NETDEV_UP:
+	case NETDEV_CHANGE:
+		for (idx = 0; idx < MAX_VLAN_DEV_IN_LAN; idx++) {
+			if (et->mvlan.rxvid[idx] != vid)
+				continue;
+			printk("%s: reg vid %d idx %d\n", __FUNCTION__, vid, idx);
+			et->mvlan.vdev[idx] = vdev;
+			break;
+		}
+		break;
+
+	case NETDEV_UNREGISTER:
+	case NETDEV_DOWN:
+		for (idx = 0; idx < MAX_VLAN_DEV_IN_LAN; idx++) {
+			if (et->mvlan.rxvid[idx] != vid)
+				continue;
+			printk("%s: unreg vid %d idx %d\n", __FUNCTION__, vid, idx);
+			et->mvlan.vdev[idx] = NULL;
+			break;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block et_mvlan_netdev_event_notifier = {
+	.notifier_call = et_mvlan_netdev_event
+};
+
+void
+et_mvlan_upd_rx_stats(struct net_device *vdev, int cnt, int bytes)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
+	struct net_device_stats *stats = NULL;
+
+	if (!vdev)
+		return;
+
+	stats = vlan_dev_get_stats((struct net_device *)vdev);
+	if (!stats)
+		return;
+	stats->rx_packets += cnt;
+	stats->rx_bytes += bytes;
+#else
+	if (!vdev)
+		return;
+
+	vlan_rxstats_upd(vdev, NULL, cnt, bytes); 
+#endif
+}
+
+struct net_device *
+et_find_vdev_by_vid(et_info_t *et, uint16 vid)
+{
+	struct net_device *vdev = NULL;
+	int idx;
+
+	//printk("et_find_vdev_by_vid vid %d\n", vid);
+
+	if (vid == 0)
+		return vdev;
+
+	for (idx = 0; idx < MAX_VLAN_DEV_IN_LAN; idx++) {
+		if (et->mvlan.rxvid[idx] != vid)
+			continue;
+		//printk("et_find_vdev_by_vid vid %d found idx %d\n", vid, idx);
+		vdev = et->mvlan.vdev[idx];
+		break;
+	}
+
+	return vdev;
+}
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 #ifdef HNDCTF
 static void
@@ -583,6 +724,10 @@ et_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	  * Map core unit to nvram unit for FA, otherwise, core unit is equal to nvram unit
 	  */
 	int unit = coreunit;
+#ifdef ET_MULTI_VLAN_IN_LAN
+	static bool mvlan_registered = FALSE;
+	int idx = 0;
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 	ET_TRACE(("et core%d: et_probe: bus %d slot %d func %d irq %d\n", coreunit,
 	          pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn), pdev->irq));
@@ -920,6 +1065,20 @@ et_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 #endif /* HNDCTF */
 #endif /* PLC */
 
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if (et->cih && !mvlan_registered) {
+		mvlan_registered = TRUE;
+		for (idx = 0; idx < MAX_VLAN_DEV_IN_LAN; idx++) {
+			sprintf(name, "mvlan_vid%d", idx);
+			et->mvlan.rxvid[idx] = getintvar(NULL, name);
+			printk("%s: mvlan vid[%d]: %u\n",
+				__FUNCTION__, idx, et->mvlan.rxvid[idx]);
+		}
+		MVLAN_IN_LAN_SET_ENAB(et, getintvar(NULL, "mvlan"));
+		printk("\n%s: mvlan en %d\n", __FUNCTION__, MVLAN_IN_LAN_GET_ENAB(et));
+		register_netdevice_notifier(&et_mvlan_netdev_event_notifier);
+	}
+#endif /* ET_MULTI_VLAN_IN_LAN */
 	return (0);
 
 fail:
@@ -1447,6 +1606,30 @@ et_sendnext(et_info_t *et)
 		skb = et_skb_dequeue(et, priq);
 
 		ET_TXQ_UNLOCK(et);
+
+#if defined(ETFA)
+		/*
+		 * When BHDR is enabled for TX, BHDR will be inserted in the packet header.
+		 * So we need to reallocate private buffers for shared packets and
+		 * convert non-linear small packets to linear for trimming later.
+		 */
+		if (FA_TX_BCM_HDR((fa_t *)et->etc->fa) && !PKTISCHAINED(skb) &&
+			(PKTSHARED(skb) || (skb_shinfo(skb)->nr_frags > 1))) {
+			struct sk_buff *nskb = NULL;
+
+			nskb = skb_copy_expand(skb, PKTHEADROOM(et->osh, skb) + 4,
+				PKTTAILROOM(et->osh, skb), GFP_ATOMIC);
+			PKTFRMNATIVE(et->osh, skb);
+			PKTFREE(et->osh, skb, TRUE);
+			if (!nskb) {
+				etc->txnobuf++;
+				continue;
+			}
+			skb = nskb;
+			PKTCCLRFLAGS(skb);
+		}
+#endif /* ETFA */
+
 		ET_PRHDR("tx", (struct ether_header *)skb->data, skb->len, etc->unit);
 		ET_PRPKT("txpkt", skb->data, skb->len, etc->unit);
 
@@ -2135,6 +2318,73 @@ done:
 	return IRQ_RETVAL(events & INTR_NEW);
 }
 
+#ifdef HNDCTF
+static bool
+et_ctf_filter(etc_info_t *etc, void *p, int32 offset)
+{
+	uint8 *data;
+	struct ethervlan_header *evh;
+	struct ipv4_hdr *ip = NULL;
+	struct ipv6_hdr *ip6 = NULL;
+	uint16 ether_type;
+	struct bcmtcp_hdr *h;
+
+	data = PKTDATA(etc->osh, p) + offset;
+	evh = (struct ethervlan_header *)(data);
+	ether_type = evh->vlan_type;
+
+	switch (ether_type) {
+		case HTON16(ETHER_TYPE_8021Q):
+			if (HTON16(ETHER_TYPE_IP) == evh->ether_type)
+				ip = (struct ipv4_hdr *)(data + ETHERVLAN_HDR_LEN);
+			else if (HTON16(ETHER_TYPE_IPV6) == evh->ether_type)
+				ip6 = (struct ipv6_hdr *)(data + ETHERVLAN_HDR_LEN);
+			else
+				return FALSE;
+			break;
+		case HTON16(ETHER_TYPE_IP):
+			ip = (struct ipv4_hdr *)(data + ETHER_HDR_LEN);
+			break;
+		case HTON16(ETHER_TYPE_IPV6):
+			ip6 = (struct ipv6_hdr *)(data + ETHER_HDR_LEN);
+			break;
+		default:
+			return FALSE;
+	}
+
+	if (ip6 && (IP_VER(ip6) == IP_VER_6)) {
+		if (ip6->nexthdr == IP_PROT_UDP) {
+			h = (struct bcmtcp_hdr *)(ip6 + 1);
+			if (HTON16(h->src_port) == 546 || HTON16(h->src_port) == 547) {
+				PKTSETSKIPCT(etc->osh, p);
+				ET_ERROR(("et: IPv6_PROT_UDP and Dport 0x%x (Sport 0x%x), skip ctf!\n",
+					HTON16(h->dst_port), HTON16(h->src_port)));
+				return TRUE;
+			}
+		}
+	} else if (ip) {
+		if (IP_VER(ip) != IP_VER_4)
+			return FALSE;
+
+		/* Connections with fragmented packets are not handled by ctf */
+		if ((ip->frag & HTON16(IPV4_FRAG_MORE|IPV4_FRAG_OFFSET_MASK)) != 0)
+			return FALSE;
+
+		data = ((uint8 *)ip) + IPV4_HLEN(ip);
+		h = (struct bcmtcp_hdr *)data;
+		if (ip->prot == IP_PROT_UDP &&
+			(HTON16(h->src_port) == 67 || HTON16(h->src_port) == 68)) {
+			PKTSETSKIPCT(etc->osh, p);
+			ET_ERROR(("et: IP_PROT_UDP and Dport 0x%x (Sport 0x%x), skip ctf!\n",
+				HTON16(h->dst_port), HTON16(h->src_port)));
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+#endif /* HNDCTF */
+
 #ifdef PKTC
 static void
 et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32 err)
@@ -2143,6 +2393,10 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 	struct sk_buff *nskb;
 	uint16 vlan_tag;
 	struct ethervlan_header *n_evh;
+#ifdef ET_MULTI_VLAN_IN_LAN
+	struct net_device *odev, *vdev;
+	int cnt = 0, bytes = 0;
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 	ASSERT(err != BCME_OK);
 
@@ -2154,6 +2408,13 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 #endif /* PLC */
 	/* get original vlan tag from the first packet */
 	vlan_tag = ((struct ethervlan_header *)PKTDATA(et->osh, skb))->vlan_tag;
+
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if (MVLAN_IN_LAN_GET_ENAB(et)) {
+		odev = skb->dev;
+		vdev = et_find_vdev_by_vid(et, (NTOH16(vlan_tag) & VLAN_VID_MASK));
+	}
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 	FOREACH_CHAINED_PKT(skb, nskb) {
 		PKTCLRCHAINED(et->osh, skb);
@@ -2182,9 +2443,31 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 		PKTCSETCNT(skb, 1);
 		PKTCSETLEN(skb, PKTLEN(et->etc->osh, skb));
 
-		if (et_ctf_forward(et, skb) == BCME_OK) {
-			ET_ERROR(("et%d: shall not happen\n", et->etc->unit));
+#ifdef ET_MULTI_VLAN_IN_LAN
+		if (MVLAN_IN_LAN_GET_ENAB(et) && vdev) {
+			skb->dev = vdev;
+			cnt = 1;
+			bytes = PKTLEN(et->etc->osh, skb);
 		}
+
+		if (et_ctf_forward(et, skb) == BCME_OK) {
+			if (MVLAN_IN_LAN_GET_ENAB(et))
+				et_mvlan_upd_rx_stats(vdev, cnt, bytes);
+
+			/* partial packets of this chain can be forwarded by CTF */
+			ET_ERROR(("et%d: unexpected forwarding\n", et->etc->unit));
+			continue;
+		}
+
+		if (MVLAN_IN_LAN_GET_ENAB(et) && vdev)
+			skb->dev = odev;
+#else /* ! ET_MULTI_VLAN_IN_LAN */
+		if (et_ctf_forward(et, skb) == BCME_OK) {
+			/* partial packets of this chain can be forwarded by CTF */
+			ET_ERROR(("et%d: unexpected forwarding\n", et->etc->unit));
+			continue;
+		}
+#endif /* ! ET_MULTI_VLAN_IN_LAN */
 
 		if (et->etc->qos)
 			pktsetprio(skb, TRUE);
@@ -2206,6 +2489,11 @@ et_sendup_chain(et_info_t *et, void *h)
 	struct sk_buff *skb;
 	uint sz = PKTCCNT(h);
 	int32 err;
+#ifdef ET_MULTI_VLAN_IN_LAN
+	struct net_device *odev = NULL, *vdev = NULL;
+	struct ethervlan_header *evh;
+	int cnt = 0, bytes = 0;
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 	ASSERT(h != NULL);
 
@@ -2227,10 +2515,36 @@ et_sendup_chain(et_info_t *et, void *h)
 	et->etc->currchainsz = sz;
 	et->etc->maxchainsz = MAX(et->etc->maxchainsz, sz);
 
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if (MVLAN_IN_LAN_GET_ENAB(et)) {
+		evh = (struct ethervlan_header *)PKTDATA(et->osh, skb);
+		if (evh->vlan_type == HTON16(ETHER_TYPE_8021Q)) {
+			odev = skb->dev;
+			vdev = et_find_vdev_by_vid(et, (NTOH16(evh->vlan_tag) & VLAN_VID_MASK));
+		}
+	}
+#endif /* ET_MULTI_VLAN_IN_LAN */
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if(MVLAN_IN_LAN_GET_ENAB(et) && vdev) {
+		skb->dev = vdev;
+		cnt = PKTCCNT(skb);
+		bytes = PKTCLEN(skb);
+	}
+
+	if ((err = ctf_forward(et->cih, h, skb->dev)) == BCME_OK) {
+		if (MVLAN_IN_LAN_GET_ENAB(et))
+			et_mvlan_upd_rx_stats(vdev, cnt, bytes);
+		return;
+	}
+
+	if(MVLAN_IN_LAN_GET_ENAB(et) && vdev)
+		skb->dev = odev;
+#else /* ! ET_MULTI_VLAN_IN_LAN */
 	/* send up the packet chain */
 	if ((err = ctf_forward(et->cih, h, skb->dev)) == BCME_OK)
 		return;
 
+#endif /* ! ET_MULTI_VLAN_IN_LAN */
 	et_sendup_chain_error_handler(et, skb, sz, err);
 }
 #endif /* PKTC */
@@ -2284,6 +2598,7 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 	bool skip_check = SKIP_TCP_CTRL_CHECK(et);
 #endif /* USBAP */
 #endif /* PKTC */
+	uint16 ether_type, vlan_type;
 
 	/* read the buffers first */
 	while ((p = (*chops->rx)(ch))) {
@@ -2311,16 +2626,27 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 #endif /* ETFA */
 
 		evh = PKTDATA(et->osh, p) + dataoff;
-		prio = IP_TOS46(evh + ETHERVLAN_HDR_LEN) >> IPV4_TOS_PREC_SHIFT;
-		if (cd[0].h_da == NULL) {
-			cd[0].h_da = evh; cd[0].h_sa = evh + ETHER_ADDR_LEN;
-			cd[0].h_prio = prio;
+
+		ether_type = ((struct ethervlan_header *) evh)->ether_type;
+		vlan_type = ((struct ethervlan_header *) evh)->vlan_type;
+		if (ether_type == HTON16(ETHER_TYPE_BRCM) ||
+			vlan_type == HTON16(ETHER_TYPE_BRCM)) {
+			PKTFREE(osh, p, FALSE);
+			continue;
 		}
+
+		prio = IP_TOS46(evh + ETHERVLAN_HDR_LEN) >> IPV4_TOS_PREC_SHIFT;
 
 #ifdef USBAP
 		/* Don't chain TCP control packet */
 		chaining = (chaining && (skip_check || !PKT_IS_TCP_CTRL(et->osh, p)));
 #endif /* USBAP */
+
+#ifdef HNDCTF
+		if (psta && et_ctf_filter(et->etc, p, dataoff)) {
+			chaining = FALSE;
+		}
+#endif
 
 #ifdef ET_INGRESS_QOS
 		if (et->etc->dma_rx_policy) {
@@ -2337,33 +2663,38 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 		 * set then stop chaining.
 		 */
 		if (chaining) {
-			for (i = 0; i <= cidx; i++) {
+			chaining = FALSE;
 #ifdef PLC
-				if (et_plc_pkt(et, evh)) {
-					if (PLC_PKT_CHAINABLE(et, p, evh, prio, cd[i].h_sa,
-					                  cd[i].h_da, cd[i].h_prio))
-						break;
-					else if ((i + 1 < PKTCMC) && (cd[i + 1].h_da == NULL)) {
-						cidx++;
-						cd[cidx].h_da = evh;
-						cd[cidx].h_sa = evh + ETHER_ADDR_LEN;
-						cd[cidx].h_prio = prio;
-					}
-				} else
+			if (PLC_PKT_BRC_CHECK(et, evh))
+#else
+			if (PKT_BRC_CHECK(et, evh))
 #endif /* PLC */
-				{
-					if (PKT_CHAINABLE(et, p, evh, prio, cd[i].h_sa,
-					                  cd[i].h_da, cd[i].h_prio))
-						break;
-					else if ((i + 1 < PKTCMC) && (cd[i + 1].h_da == NULL)) {
+			{
+				for (i = 0; i < PKTCMC; i++) {
+					if (cd[i].h_da == NULL) {
+						cd[i].h_da = evh;
+						cd[i].h_sa = evh + ETHER_ADDR_LEN;
+						cd[i].h_prio = prio;
 						cidx++;
-						cd[cidx].h_da = evh;
-						cd[cidx].h_sa = evh + ETHER_ADDR_LEN;
-						cd[cidx].h_prio = prio;
+					}
+#ifdef PLC
+					if (et_plc_pkt(et, evh)) {
+						if (PLC_PKT_CHAINABLE(et, p, evh, prio, cd[i].h_sa,
+										  cd[i].h_da, cd[i].h_prio)) {
+							chaining = TRUE;
+							break;
+						}
+					} else
+#endif /* PLC */
+					{
+						if (PKT_CHAINABLE(et, p, evh, prio, cd[i].h_sa,
+										  cd[i].h_da, cd[i].h_prio)) {
+							chaining = TRUE;
+							break;
+						}
 					}
 				}
 			}
-			chaining = (i < PKTCMC);
 		}
 
 		if (chaining && !stop_chain) {
@@ -2459,8 +2790,8 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 
 #ifdef PKTC
 	/* send up the chain(s) at one fell swoop */
-	ASSERT(cidx < PKTCMC);
-	for (i = 0; i <= cidx; i++) {
+	ASSERT(cidx <= PKTCMC);
+	for (i = 0; i < cidx; i++) {
 		if (cd[i].chead != NULL)
 			et_sendup_chain(et, cd[i].chead);
 	}
@@ -2685,11 +3016,17 @@ et_ctf_forward(et_info_t *et, struct sk_buff *skb)
 #ifdef HNDCTF
 	int ret;
 #ifdef CONFIG_IP_NF_DNSMQ
-	if (dnsmq_hit_hook&&dnsmq_hit_hook(skb))
-		return (BCME_ERROR);
+	bool dnsmq_hit = FALSE;
+
+	if (dnsmq_hit_hook && dnsmq_hit_hook(skb))
+		dnsmq_hit = TRUE;
 #endif
 	/* try cut thru first */
-	if (CTF_ENAB(et->cih) && (ret = ctf_forward(et->cih, skb, skb->dev)) != BCME_ERROR) {
+	if (CTF_ENAB(et->cih) &&
+#ifdef CONFIG_IP_NF_DNSMQ
+		!dnsmq_hit &&
+#endif
+		(ret = ctf_forward(et->cih, skb, skb->dev)) != BCME_ERROR) {
 		if (ret == BCME_EPERM) {
 			PKTFRMNATIVE(et->osh, skb);
 			PKTFREE(et->osh, skb, FALSE);
@@ -2732,6 +3069,11 @@ et_sendup(et_info_t *et, struct sk_buff *skb)
 	etc_info_t *etc;
 	void *rxh;
 	uint16 flags;
+#ifdef ET_MULTI_VLAN_IN_LAN
+	struct net_device *odev = NULL, *vdev = NULL;
+	struct ethervlan_header *evh;
+	int cnt = 0, bytes = 0;
+#endif /* ET_MULTI_VLAN_IN_LAN */
 
 	etc = et->etc;
 
@@ -2781,10 +3123,38 @@ et_sendup(et_info_t *et, struct sk_buff *skb)
 		return;
 #endif /* PLC */
 
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if (MVLAN_IN_LAN_GET_ENAB(et)) {
+		evh = (struct ethervlan_header *)PKTDATA(et->osh, skb);
+		if (evh->vlan_type == HTON16(ETHER_TYPE_8021Q)) {
+			odev = skb->dev;
+			vdev = et_find_vdev_by_vid(et, (NTOH16(evh->vlan_tag) & VLAN_VID_MASK));
+		}
+	}
+#endif /* ET_MULTI_VLAN_IN_LAN */
+
 #ifdef HNDCTF
+#ifdef ET_MULTI_VLAN_IN_LAN
+	if(MVLAN_IN_LAN_GET_ENAB(et) && vdev) {
+		skb->dev = vdev;
+		cnt = 1;
+		bytes = PKTLEN(etc->osh, skb);
+	}
+
+	/* try cut thru' before sending up */
+	if (et_ctf_forward(et, skb) != BCME_ERROR) {
+		if (MVLAN_IN_LAN_GET_ENAB(et))
+			et_mvlan_upd_rx_stats(vdev, cnt, bytes);
+		return;
+	}
+
+	if(MVLAN_IN_LAN_GET_ENAB(et) && vdev)
+		skb->dev = odev;
+#else /* ! ET_MULTI_VLAN_IN_LAN */
 	/* try cut thru' before sending up */
 	if (et_ctf_forward(et, skb) != BCME_ERROR)
 		return;
+#endif /* ! ET_MULTI_VLAN_IN_LAN */
 
 	PKTCLRTOBR(etc->osh, skb);
 	if (PKTISFAFREED(skb)) {

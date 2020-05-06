@@ -3,7 +3,7 @@
  *
  * Implementation of the memory pools component: manager and pools object.
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -22,7 +22,7 @@
 #include <bcm_mpool_pub.h>
 #include "bcm_mpool_pri.h"
 
-#if defined(BCMDBG) || defined(BCMDBG_ERR)
+#if defined(BCMDBG)
 #define MPOOL_ERROR(args)	printf args
 #else
 #define MPOOL_ERROR(args)

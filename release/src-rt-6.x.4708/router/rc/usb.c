@@ -99,7 +99,9 @@ void start_usb(void)
 		set_gpio(7, T_HIGH);
 	}
 	else if ((model == MODEL_R1D) ||
-		 (model == MODEL_R6400)) {
+		 (model == MODEL_R6400) ||
+		 (model == MODEL_R6400v2) ||
+		 (model == MODEL_R6700v3)) {
 		set_gpio(0, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
@@ -434,7 +436,9 @@ void stop_usb(void)
 		set_gpio(7, T_LOW);
 	}
 	else if ((model == MODEL_R1D) ||
-		 (model == MODEL_R6400)) {
+		 (model == MODEL_R6400) ||
+		 (model == MODEL_R6400v2) ||
+		 (model == MODEL_R6700v3)) {
 		set_gpio(0, T_LOW);
 	}
 	else if ((model == MODEL_EA6350v1) ||
@@ -996,7 +1000,10 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTN18U:
 		case MODEL_RTAC56U:
 		case MODEL_RTAC68U:
+		case MODEL_RTAC1900P:
 		case MODEL_R6400:
+		case MODEL_R6400v2:
+		case MODEL_R6700v3:
 		case MODEL_R7000:
 		case MODEL_R8000:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */

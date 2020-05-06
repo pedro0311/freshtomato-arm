@@ -74,11 +74,17 @@ switch (nvram['t_model_name']) {
 	case 'vlan-testid1':
 	case 'Tenda AC18':
 	case 'Asus RT-N18U':
+	case 'Asus RT-AC66U B1':
 	case 'Asus RT-AC68R/U':
 	case 'Asus RT-AC68P/U B1':
+	case 'Asus RT-AC68U C1':
+	case 'Asus RT-AC68U B2':
+	case 'Asus RT-AC1900P':
 	case 'Huawei WS880':
 	case 'Linksys EA6900':
 	case 'Netgear R6400':
+	case 'Netgear R6400v2':
+	case 'Netgear R6700v3':
 	case 'Netgear R7000':
 		COL_P0N = '1';
 		COL_P1N = '2';

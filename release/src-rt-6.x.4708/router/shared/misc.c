@@ -274,7 +274,11 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	if ((model == MODEL_RTN18U) ||
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_R6400) ||
+	    (model == MODEL_R6400v2) ||
+	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_RTAC68U) ||
+	    (model == MODEL_RTAC66U_B1) ||
+	    (model == MODEL_RTAC1900P) ||
 	    (model == MODEL_RTAC56U) ||
 	    (model == MODEL_DIR868L) ||
 	    (model == MODEL_WS880) ||
