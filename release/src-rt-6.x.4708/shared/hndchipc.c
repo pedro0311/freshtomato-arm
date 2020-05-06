@@ -1,7 +1,7 @@
 /*
  * BCM47XX support code for some chipcommon facilities (uart, jtagm)
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,11 +31,11 @@
 #include <hndcpu.h>
 
 /* debug/trace */
-#ifdef BCMDBG_ERR
+#ifdef BCMDBG
 #define	CC_ERROR(args)	printf args
 #else
 #define	CC_ERROR(args)
-#endif	/* BCMDBG_ERR */
+#endif	/* BCMDBG */
 
 #ifdef BCMDBG
 #define	CC_MSG(args)	printf args

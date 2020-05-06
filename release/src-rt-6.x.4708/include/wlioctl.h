@@ -4,7 +4,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: wlioctl.h 455621 2014-02-14 20:59:32Z $
+ * $Id: wlioctl.h 532344 2015-02-05 19:21:37Z $
  */
 
 #ifndef _wlioctl_h_
@@ -1824,8 +1824,8 @@ typedef struct wlc_iov_trx_s {
 #define WLC_SET_TXBF_RATESET			319
 #define WLC_SCAN_CQ				320
 #define WLC_GET_RSSI_QDB			321 /* qdB portion of the RSSI */
-
-#define WLC_LAST				322
+#define WLC_DUMP_RATESET                       322
+#define WLC_LAST				323
 
 #ifndef EPICTRL_COOKIE
 #define EPICTRL_COOKIE		0xABADCEDE
@@ -2950,7 +2950,7 @@ typedef struct {
 	uint32	cfgrestore;	/* configspace restore by driver */
 
 	uint32  rxdma_frame;	/* count for rx dma */
-	uint32  rxdma_inactivity;	/* cleared when rxdma handler is serviced or increased in watchdog */
+	uint32  rxdma_inactivity; /* cleared when rxdma handler is serviced or increased in watchdog */
 	uint32  rxdma_stuck;	/* count for rx stuck */
 	uint32  reset_countdown;
 } wl_cnt_t;
@@ -6136,5 +6136,14 @@ typedef struct {
 	uint32 config;	/* MODE: AUTO (-1), Disable (0), Enable (1) */
 	uint32 status;	/* Current state: Disabled (0), Enabled (1) */
 } wl_config_t;
+
+#ifdef BCM_SECURE_DMA
+/* cma mem details */
+typedef struct cma_meminfo {
+	dma_addr_t	mem_base; /* support both 32/64 bit platform */
+	uint32		mem_size; /* reserved cma memory size */
+}
+cma_meminfo_t;
+#endif /* BCM_SECURE_DMA */
 
 #endif /* _wlioctl_h_ */

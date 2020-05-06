@@ -311,7 +311,7 @@ static void start_emf(char *lan_ifname)
 	if (lan_ifname == NULL ||
 	    !nvram_get_int("emf_enable") ||
 	    (strcmp(lan_ifname,"") == 0)) return;
-	
+
 	/* Start EMF */
 	ret = eval("emf", "start", lan_ifname);
 
@@ -450,7 +450,7 @@ static int set_wlmac(int idx, int unit, int subunit, void *param)
 	else {
 		set_mac(ifname, wl_nvname("hwaddr", unit, subunit), 0);
 	}
-	
+
 	return 1;
 }
 
@@ -569,6 +569,8 @@ void restart_wl(void)
 	/* do some LED setup */
 	if ((model == MODEL_WS880) ||
 	    (model == MODEL_R6400) ||
+	    (model == MODEL_R6400v2) ||
+	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_R7000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
 			led(LED_AOSS, LED_ON);
@@ -644,7 +646,7 @@ void stop_lan_wl(void)
 		}
 #ifdef TCONFIG_EMF
 	stop_emf(lan_ifname);
-#endif	
+#endif
 	}
 
 }

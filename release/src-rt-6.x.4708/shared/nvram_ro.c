@@ -1,7 +1,7 @@
 /*
  * Read-only support for NVRAM on flash and otp.
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -26,11 +26,11 @@
 #include <sflash.h>
 #include <hndsoc.h>
 
-#ifdef BCMDBG_ERR
+#ifdef BCMDBG
 #define NVR_MSG(x) printf x
 #else
 #define NVR_MSG(x)
-#endif	/* BCMDBG_ERR */
+#endif	/* BCMDBG */
 
 typedef struct _vars {
 	struct _vars *next;
