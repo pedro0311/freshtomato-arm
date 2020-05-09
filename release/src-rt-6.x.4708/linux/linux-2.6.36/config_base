@@ -307,6 +307,8 @@ CONFIG_BCM47XX=y
 CONFIG_FAILSAFE_UPGRADE=y
 # CONFIG_BCM_RECVFILE is not set
 # CONFIG_CRASHLOG is not set
+# BCMDBG is not set
+# CONFIG_DEBUG_INFO is not set
 
 #
 # Bus support

@@ -327,7 +327,7 @@ what:
 # JFFSv1 | NO_JFFS
 # NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
 # SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG
 
 define RouterOptions
 	@( \
@@ -1023,6 +1023,21 @@ define KernelConfig
 		echo "# CONFIG_NF_CONNTRACK_EVENTS is not set" >>$(1); \
 		sed -i "/CONFIG_NF_CT_NETLINK/d" $(1); \
 		echo "# CONFIG_NF_CT_NETLINK is not set" >>$(1); \
+	fi; \
+	if [ "$(CRASH_LOG)" = "y" ]; then \
+		sed -i "/CONFIG_CRASHLOG/d" $(1); \
+		echo "CONFIG_CRASHLOG=y" >>$(1); \
+		sed -i "/BCMDBG/d" $(1); \
+		echo "BCMDBG=y" >>$(1); \
+		sed -i "/CONFIG_DEBUG_INFO/d" $(1); \
+		echo "CONFIG_DEBUG_INFO=y" >>$(1); \
+	else \
+		sed -i "/CONFIG_CRASHLOG/d" $(1); \
+		echo "# CONFIG_CRASHLOG is not set" >>$(1); \
+		sed -i "/BCMDBG/d" $(1); \
+		echo "# BCMDBG is not set" >>$(1); \
+		sed -i "/CONFIG_DEBUG_INFO/d" $(1); \
+		echo "# CONFIG_DEBUG_INFO is not set" >>$(1); \
 	fi; \
 	)
 endef
