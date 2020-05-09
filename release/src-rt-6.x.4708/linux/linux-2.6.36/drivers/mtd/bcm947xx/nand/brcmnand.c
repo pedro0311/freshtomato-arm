@@ -795,15 +795,27 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 	ASSERT(size > offset);
 
-	brcmnand_parts[0].offset = offset;
+	struct mtd_partition* nand_parts = brcmnand_parts;
+	nand_parts[0].offset = offset;
 #ifdef CONFIG_NVRAM_128K
-	brcmnand_parts[0].size = size - offset -
+	nand_parts[0].size = size - offset -
 				(0x500000+0x80000+0x100000+0x100000+0x2c0000+0x2c0000+0x80000+0x80000+0x80000+0x80000+0x80000+0x80000+0x80000+0x80000+0x100000+0x100000); //kathy modified
 #else
-	brcmnand_parts[0].size = size - offset;
+	nand_parts[0].size = size - offset;
 #endif
 
-	return brcmnand_parts;
+#ifdef CONFIG_CRASHLOG
+	nand_parts = kzalloc(sizeof(brcmnand_parts) + sizeof(brcmnand_parts[0]), GFP_KERNEL);
+	memcpy(nand_parts, brcmnand_parts, sizeof(brcmnand_parts));
+
+	uint32_t crash_size = ROUNDUP(0x4000, mtd->erasesize);
+	nand_parts[1].size -= crash_size;
+	nand_parts[2].name = "crash";
+	nand_parts[2].size = crash_size;
+	nand_parts[2].offset = nand_parts[1].offset + nand_parts[1].size;
+#endif
+
+	return nand_parts;
 }
 #endif /* CONFIG_MTD_PARTITIONS */
 
