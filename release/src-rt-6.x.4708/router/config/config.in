@@ -273,3 +273,7 @@ config TCONFIG_IPERF
 config TCONFIG_NVRAM_32K
 	bool "NVRAM_32K"
 	default n
+
+config TCONFIG_CONNTRACK_TOOL
+	bool "Conntrack Userspace Tool"
+	default n

@@ -266,6 +266,12 @@ obj-y += libnfnetlink
 obj-y += miniupnpd
 obj-y += libmnl
 obj-y += ipset
+ifeq ($(TCONFIG_CONNTRACK_TOOL),y)
+obj-y += libnetfilter_conntrack
+obj-y += libnetfilter_log
+obj-y += libnetfilter_queue
+obj-y += conntrack-tools
+endif
 
 
 #
@@ -2815,6 +2821,118 @@ libmnl-clean:
 	-@$(MAKE) -C libmnl clean
 	-@rm -rf libmnl/staged
 	-@rm -f libmnl/stamp-h1
+
+libnetfilter_conntrack/stamp-h1: libmnl libnfnetlink
+	cd libnetfilter_conntrack && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		$(CONFIGURE) --prefix=/usr
+	@touch $@
+
+libnetfilter_conntrack: libnetfilter_conntrack/stamp-h1
+	@$(SEP)
+	$(MAKE) -C libnetfilter_conntrack
+	$(MAKE) -C libnetfilter_conntrack DESTDIR=$(TOP)/libnetfilter_conntrack/staged install
+
+libnetfilter_conntrack-install:
+	install -d $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/
+	install libnetfilter_conntrack/src/.libs/libnetfilter_conntrack.so.3.7.0 \
+	$(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.7.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.7.0
+	cd $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/ && \
+		ln -sf libnetfilter_conntrack.so.3.7.0 libnetfilter_conntrack.so.3 && \
+		ln -sf libnetfilter_conntrack.so.3.7.0 libnetfilter_conntrack.so
+
+libnetfilter_conntrack-clean:
+	-@$(MAKE) -C libnetfilter_conntrack clean
+	-@rm -rf libnetfilter_conntrack/Makefile
+	-@rm -rf libnetfilter_conntrack/staged
+	-@rm -f libnetfilter_conntrack/stamp-h1
+
+libnetfilter_log/stamp-h1: libnfnetlink
+	cd libnetfilter_log && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		$(CONFIGURE) --prefix=/usr
+	@touch $@
+
+libnetfilter_log: libnetfilter_log/stamp-h1
+	@$(SEP)
+	$(MAKE) -C libnetfilter_log
+	$(MAKE) -C libnetfilter_log DESTDIR=$(TOP)/libnetfilter_log/staged install
+
+libnetfilter_log-install:
+	install -d $(INSTALLDIR)/libnetfilter_log/usr/lib/
+	install libnetfilter_log/src/.libs/libnetfilter_log.so.1.1.0 \
+	$(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.1.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.1.0
+	cd $(INSTALLDIR)/libnetfilter_log/usr/lib/ && \
+		ln -sf libnetfilter_log.so.1.1.0 libnetfilter_log.so.1 && \
+		ln -sf libnetfilter_log.so.1.1.0 libnetfilter_log.so
+
+libnetfilter_log-clean:
+	-@$(MAKE) -C libnetfilter_log clean
+	-@rm -rf libnetfilter_log/Makefile
+	-@rm -rf libnetfilter_log/staged
+	-@rm -f libnetfilter_log/stamp-h1
+
+libnetfilter_queue/stamp-h1: libnfnetlink
+	cd libnetfilter_queue && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		$(CONFIGURE) --prefix=/usr
+	@touch $@
+
+libnetfilter_queue: libnetfilter_queue/stamp-h1
+	@$(SEP)
+	$(MAKE) -C libnetfilter_queue
+	$(MAKE) -C libnetfilter_queue DESTDIR=$(TOP)/libnetfilter_queue/staged install
+
+libnetfilter_queue-install:
+	install -d $(INSTALLDIR)/libnetfilter_queue/usr/lib/
+	install libnetfilter_queue/src/.libs/libnetfilter_queue.so.1.4.0 \
+	$(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.4.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.4.0
+	cd $(INSTALLDIR)/libnetfilter_queue/usr/lib/ && \
+		ln -sf libnetfilter_queue.so.1.4.0 libnetfilter_queue.so.1 && \
+		ln -sf libnetfilter_queue.so.1.4.0 libnetfilter_queue.so
+
+libnetfilter_queue-clean:
+	-@$(MAKE) -C libnetfilter_queue clean
+	-@rm -rf libnetfilter_queue/Makefile
+	-@rm -rf libnetfilter_queue/staged
+	-@rm -f libnetfilter_queue/stamp-h1
+
+conntrack-tools/stamp-h1: libmnl libnfnetlink libnetfilter_conntrack libnetfilter_log libnetfilter_queue
+	$(call patch_files,conntrack-tools)
+	cd conntrack-tools && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include \
+			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections 	-L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
+			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
+		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
+	@touch $@
+
+conntrack-tools: conntrack-tools/stamp-h1
+	@$(SEP)
+	$(MAKE) -C conntrack-tools
+	$(MAKE) -C conntrack-tools DESTDIR=$(TOP)/conntrack-tools/staged install
+
+conntrack-tools-clean:
+	-@$(MAKE) -C conntrack-tools clean
+	-@rm -rf conntrack-tools/Makefile
+	-@rm -rf conntrack-tools/staged
+	-@rm -f conntrack-tools/stamp-h1
+
+conntrack-tools-install:
+	install -d $(INSTALLDIR)/conntrack-tools/usr/sbin
+	install conntrack-tools/src/.libs/conntrack $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
+	$(STRIP) -s $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
+	$(call unpatch_files,conntrack-tools)
 
 ipset/stamp-h1: libmnl
 	$(call patch_files,ipset)
