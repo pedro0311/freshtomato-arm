@@ -149,13 +149,15 @@ DNSSEC_BACKEND :=
 DNSSEC_OPENSSL :=
 DNSSEC_NETTLE :=
 ifeq ($(TCONFIG_DNSSEC),y)
-ifneq ($(TCONFIG_HTTPS)$(TCONFIG_OPENSSL11),)
+ifneq ($(TCONFIG_HTTPS),)
+ifneq ($(TCONFIG_OPENSSL11),)
 DNSSEC_BACKEND := $(OPENSSLDIR)
 DNSSEC_OPENSSL := y
 else
 obj-y += nettle
 DNSSEC_BACKEND := nettle
 DNSSEC_NETTLE := y
+endif
 endif
 endif
 
