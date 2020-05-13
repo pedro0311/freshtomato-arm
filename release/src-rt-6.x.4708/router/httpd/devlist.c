@@ -98,7 +98,7 @@ static int get_wds_ifname(const struct ether_addr *ea, char *ifname)
 static int get_wl_clients(int idx, int unit, int subunit, void *param)
 {
 	char *comma = param;
-	int i;
+	unsigned int i;
 	char *p;
 	char buf[32];
 	char *wlif;

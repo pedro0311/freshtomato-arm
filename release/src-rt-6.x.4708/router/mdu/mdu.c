@@ -114,7 +114,7 @@ static const char *get_option(const char *name)
 
 						if ((p = strdup(p)) == NULL) exit(99);
 						f_argv[f_argc++] = p;
-						if (f_argc >= (sizeof(f_argv) / sizeof(f_argv[0]))) break;
+						if ((unsigned int) f_argc >= (sizeof(f_argv) / sizeof(f_argv[0]))) break;
 					}
 				}
 				fclose(f);
@@ -371,7 +371,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 	struct sockaddr_in sa;
 	int sd;
 	FILE *f;
-	int i;
+	unsigned int i;
 	int trys;
 	char *p;
 	const char *c;
@@ -1413,7 +1413,7 @@ but this is unimplemented here.
 */
 static int cloudflare_errorcheck(int code, const char *req, char *body)
 {
-	int n = 0, i = 0;
+	unsigned int n = 0, i = 0;
 	for (i = 0; i < strlen(body); ++i) {
 		if (body[i] != ' ') body[n++] = body[i];
 	}

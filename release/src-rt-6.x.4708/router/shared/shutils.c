@@ -1282,7 +1282,7 @@ static void put_string(strbuf_t *buf, char *s, int len, int width,
 	int		i;
 
 	if (len < 0) { 
-		len = strnlen(s, prec >= 0 ? prec : ULONG_MAX); 
+		len = strnlen(s, (prec >= 0 ? (unsigned int) prec : ULONG_MAX));
 	} else if (prec >= 0 && prec < len) { 
 		len = prec; 
 	}

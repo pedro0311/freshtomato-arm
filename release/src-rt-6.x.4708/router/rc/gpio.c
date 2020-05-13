@@ -9,7 +9,7 @@
 int gpio_main(int argc, char *argv[])
 {
 	const char hex[] = "0123456789ABCDEF";
-	unsigned long v;
+	long v;
 	int bit;
 	int i;
 	char s[17];

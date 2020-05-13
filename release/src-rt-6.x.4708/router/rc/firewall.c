@@ -1472,7 +1472,7 @@ static void filter_forward(void)
 	char src[64];
 	char t[512];
 	char *p, *c;
-	int i;
+	unsigned int i;
 
 #ifdef TCONFIG_IPV6
 	ip6t_write("-A FORWARD -m rt --rt-type 0 -j DROP\n");
@@ -1609,7 +1609,7 @@ static void filter_forward(void)
 #endif
 
 	/* IPv4 */
-	for (i = 0; i < wanfaces.count; ++i) {
+	for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
 		if (*(wanfaces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1617,7 +1617,7 @@ static void filter_forward(void)
 		}
 	}
 
-	for (i = 0; i < wan2faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan2faces.count; ++i) {
 		if (*(wan2faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1626,14 +1626,14 @@ static void filter_forward(void)
 	}
 
 #ifdef TCONFIG_MULTIWAN
-	for (i = 0; i < wan3faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan3faces.count; ++i) {
 		if (*(wan3faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
 				  wan3faces.iface[i].name, wan3faces.iface[i].name);
 		}
 	}
-	for (i = 0; i < wan4faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan4faces.count; ++i) {
 		if (*(wan4faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1675,7 +1675,7 @@ static void filter_forward(void)
 	/* IPv4 only */
 	if (nvram_get_int("upnp_enable") & 3) {
 		ipt_write(":upnp - [0:0]\n");
-		for (i = 0; i < wanfaces.count; ++i) {
+		for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
 			if (*(wanfaces.iface[i].name)) {
 				ipt_write("-A FORWARD -i %s -j upnp\n", wanfaces.iface[i].name);
 			}
@@ -1764,7 +1764,7 @@ static void filter6_input(void)
 	char *en;
 	char *sec;
 	char *hit;
-	int n;
+	unsigned int n;
 	char *p, *c;
 
 	// RFC-4890, sec. 4.4.1

@@ -188,7 +188,7 @@ int skip_header(int *len)
 	char buf[2048];
 
 	while (*len > 0) {
-		if (!web_getline(buf, MIN(*len, sizeof(buf)))) {
+		if (!web_getline(buf, MIN((unsigned int) *len, sizeof(buf)))) {
 			break;
 		}
 		*len -= strlen(buf);
@@ -998,9 +998,9 @@ int main(int argc, char **argv)
 			// [addr:]port
 			if ((port = strrchr(optarg, ':')) != NULL) {
 				if ((optarg[0] == '[') && (port > optarg) && (port[-1] == ']'))
-					memcpy(bind, optarg + 1, MIN(sizeof(bind), (int)(port - optarg) - 2));
+					memcpy(bind, optarg + 1, MIN(sizeof(bind), (unsigned int) (port - optarg) - 2));
 				else
-					memcpy(bind, optarg, MIN(sizeof(bind), (int)(port - optarg)));
+					memcpy(bind, optarg, MIN(sizeof(bind), (unsigned int) (port - optarg)));
 				port++;
 			}
 			else {

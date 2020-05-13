@@ -236,7 +236,8 @@ int mtd_write_main(int argc, char *argv[])
 	FILE *f;
 	unsigned char *buf = NULL, *p, *bounce_buf = NULL;
 	const char *error;
-	long filelen = 0, n, wlen, unit_len;
+	long wlen, n;
+	unsigned long filelen = 0, unit_len;
 	struct sysinfo si;
 	uint32 ofs;
 	char c;
@@ -346,7 +347,7 @@ int mtd_write_main(int argc, char *argv[])
 	{
 		wlen = n = MIN(unit_len, filelen - ofs);
 		if (mi.type == MTD_UBIVOLUME) {
-			if (n >= mi.writesize) {
+			if ((unsigned long) n >= mi.writesize) {
 				n &= ~(mi.writesize - 1);
 				wlen = n;
 			} else {
@@ -358,7 +359,7 @@ int mtd_write_main(int argc, char *argv[])
 			}
 		}
 
-		if (alloc && safe_fread(p, 1, n, f) != n) {
+		if (alloc && (safe_fread(p, 1, n, f) != n)) {
 			error = "Error reading file";
 			break;
 		}
@@ -531,7 +532,8 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
         int fd;
         FILE *fp;
         struct sockaddr_in sin;
-        int chunked = 0, len = 0;
+        int chunked = 0;
+        unsigned len = 0;
 
         if (server == NULL || !strcmp(server, "")) {
                 _dprintf("wget: null server input\n");
@@ -673,7 +675,7 @@ mtd_write(const char *path, const char *mtd)
 #endif
         FILE *fp;
         char *buf = NULL;
-        long count, len, off;
+        unsigned long count, len, off;
         int ret = -1;
 
 
@@ -757,7 +759,7 @@ mtd_write(const char *path, const char *mtd)
                 /* Do it */
                 (void) ioctl(mtd_fd, MEMUNLOCK, &erase_info);
                 if (ioctl(mtd_fd, MEMERASE, &erase_info) != 0 ||
-                    write(mtd_fd, buf, count) != count) {
+                    (unsigned long) write(mtd_fd, buf, count) != count) {
                         perror(mtd);
                         goto fail;
                 }

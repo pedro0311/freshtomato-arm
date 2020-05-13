@@ -116,7 +116,7 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
 
 	mssl_cookie_t *kuki = cookie;
-	int total = 0;
+	unsigned int total = 0;
 	int n, err;
 
 	while (total < len) {

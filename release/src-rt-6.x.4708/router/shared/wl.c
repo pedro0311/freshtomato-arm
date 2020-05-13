@@ -62,7 +62,7 @@ wl_iovar_getbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufp
 {
 	int err;
 	uint namelen;
-	uint iolen;
+	int iolen;
 	uint wlc_cmd = WLC_GET_VAR;
 
 	namelen = strlen(iovar) + 1;	 /* length of iovar name plus null */
@@ -84,7 +84,7 @@ int
 wl_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, int buflen)
 {
 	uint namelen;
-	uint iolen;
+	int iolen;
 
 	namelen = strlen(iovar) + 1;	 /* length of iovar name plus null */
 	iolen = namelen + paramlen;
@@ -114,7 +114,7 @@ wl_iovar_get(char *ifname, char *iovar, void *bufptr, int buflen)
 	int ret;
 
 	/* use the return buffer if it is bigger than what we have on the stack */
-	if (buflen > sizeof(smbuf)) {
+	if ((unsigned int) buflen > sizeof(smbuf)) {
 		ret = wl_iovar_getbuf(ifname, iovar, NULL, 0, bufptr, buflen);
 	} else {
 		ret = wl_iovar_getbuf(ifname, iovar, NULL, 0, smbuf, sizeof(smbuf));

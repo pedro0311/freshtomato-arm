@@ -30,7 +30,9 @@
 #define SMIN	60
 #define	SHOUR	(60 * 60)
 #define	SDAY	(60 * 60 * 24)
-#define Y2K		946684800UL
+#ifndef Y2K
+#define Y2K		946684800L
+#endif
 
 #define INTERVAL		120
 

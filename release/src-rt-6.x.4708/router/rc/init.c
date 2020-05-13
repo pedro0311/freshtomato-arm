@@ -322,7 +322,7 @@ int console_main(int argc, char *argv[])
 
 static void shutdn(int rb)
 {
-	int i;
+	unsigned int i;
 	int act;
 	sigset_t ss;
 
@@ -4499,7 +4499,7 @@ static void sysinit(void)
 {
 	static int noconsole = 0;
 	static const time_t tm = 0;
-	int i;
+	unsigned int i;
 	DIR *d;
 	struct dirent *de;
 	char s[256];
@@ -4689,7 +4689,8 @@ static void sysinit(void)
 
 int init_main(int argc, char *argv[])
 {
-	int state, i;
+	unsigned int i;
+	int state;
 	sigset_t sigset;
 
 	/* AB - failsafe? */
