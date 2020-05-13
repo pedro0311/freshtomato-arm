@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC
+CFLAGS = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -Wsign-compare
 CFLAGS += -I$(TOP)/shared -I$(SRCBASE)/include
 CFLAGS += -I$(LINUXDIR)/include
 CFLAGS += -DTRAFFIC_MGMT
