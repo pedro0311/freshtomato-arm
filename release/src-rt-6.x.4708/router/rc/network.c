@@ -1352,7 +1352,8 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 	wl_bss_info_t *bi;
 	char buf[WLC_IOCTL_MAXLEN];
 	struct maclist *mlist;
-	int mlsize, i;
+	unsigned int i;
+	int mlsize;
 	int associated, authorized;
 
 	*(uint32 *)buf = WLC_IOCTL_MAXLEN;

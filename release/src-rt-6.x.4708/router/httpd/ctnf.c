@@ -55,7 +55,7 @@ void ctvbuf(FILE *f) {
 //	if (mem.maxfreeram < (n + (64 * 1024))) n = mem.maxfreeram - (64 * 1024);
 
 	sysinfo(&si);
-	if (si.freeram < (n + (64 * 1024))) n = si.freeram - (64 * 1024);
+	if (si.freeram < (unsigned int) (n + (64 * 1024))) n = si.freeram - (64 * 1024);
 
 //	cprintf("free: %dK, buffer: %dK\n", si.freeram / 1024, n / 1024);
 

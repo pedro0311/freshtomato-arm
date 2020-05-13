@@ -14,7 +14,7 @@
 #include <mntent.h>	/* !!TB */
 #endif
 
-#define Y2K			946684800UL		/* seconds since 1970 */
+#define Y2K		946684800L		/* seconds since 1970 */
 
 #define ASIZE(array)	(sizeof(array) / sizeof(array[0]))
 
