@@ -1,5 +1,7 @@
 tls_ca_file: "/rom/cacert.pem"
 
+appdata_dir: "/var/lib/misc"
+
 resolution_type: GETDNS_RESOLUTION_STUB
 
 dns_transport_list:
