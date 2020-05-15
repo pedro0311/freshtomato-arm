@@ -22,12 +22,16 @@ void start_snmp(void)
 			"agentaddress udp:%d\n"
 			"syslocation %s\n"
 			"syscontact %s <%s>\n"
-			"rocommunity %s\n",
+			"rocommunity %s\n"
+			"extend device /bin/echo \"%s\"\n"
+			"extend version /bin/echo \"FreshTomato %s\"\n",
 			nvram_get_int("snmp_port"),
 			nvram_safe_get("snmp_location"),
 			nvram_safe_get("snmp_contact"),
 			nvram_safe_get("snmp_contact"),
-			nvram_safe_get("snmp_ro"));
+			nvram_safe_get("snmp_ro"),
+			nvram_safe_get("t_model_name"),
+			nvram_safe_get("os_version"));
 		fclose(fp);
 
 		chmod("/etc/snmpd.conf", 0644);
