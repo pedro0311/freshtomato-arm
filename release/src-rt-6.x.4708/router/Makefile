@@ -2604,16 +2604,23 @@ sd-idle-install: sd-idle/stamp-h1
 
 snmp/stamp-h1:
 	cd snmp && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr --with-endianness=little --enable-mini-agent --disable-debugging \
-	--disable-privacy --without-opaque-special-types --with-persistent-directory=/tmp/snmp-persist \
-	--with-default-snmp-version=3 --with-sys-contact=root --with-sys-location=Unknown --with-logfile=/dev/null \
-	--with-out-transports=UDPIPv6,TCPIPv6,AAL5PVC,IPX,TCP,Unix --enable-shared=no --enable-static --with-gnu-ld \
-	--enable-internal-md5 --with-copy-persistent-files=no --without-openssl -sysconfdir=/tmp \
-	--with-mib-modules=mibII,host,mibII/ip,mibII/tcp,mibII/udp,mibII/icmp,mibII/var_route,mibII/kernel_linux,qos,ucd_snmp \
-	--with-out-mib-modules=snmpv3mibs,agent_mips,agentx,notification,utilities,target --disable-ipv6 --with-defaults \
-	--without-efence --without-rsaref --without-kmem-usage --without-rpm --without-dmalloc
-	touch snmp/stamp-h1
+		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+		$(CONFIGURE) --prefix=/usr --with-persistent-directory=/tmp/snmp-persist --with-logfile=/var/log/snmpd.log \
+		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy \
+		--disable-ipv6 --disable-mibs --disable-mib-loading --disable-embedded-perl --with-perl-modules=no --without-opaque-special-types \
+		--without-openssl --without-efence --without-rsaref --without-kmem-usage --without-rpm --without-dmalloc \
+		--with-out-transports=UDPIPv6,TCPIPv6,AAL5PVC,IPX,TCP,Unix \
+		--with-out-mib-modules=snmpv3mibs,agent_mibs,agentx,notification,utilities,target \
+		--with-mib-modules="\
+			agent/extend,\
+			host/hr_device,host/hr_disk,host/hr_filesys,host/hr_network,host/hr_partition,host/hr_print,host/hr_proc,host/hrSWRunTable,host/hr_storage,host/hr_system,\
+			mibII/at,mibII/icmp,mibII/ifTable,mibII/ip,mibII/ipAddr,mibII/kernel_linux,mibII/snmp_mib,mibII/sysORTable,mibII/system_mib,mibII/tcp,mibII/udp,mibII/vacm_context,mibII/vacm_vars,mibII/var_route,\
+			ucd-snmp/disk_hw,ucd-snmp/dlmod,ucd-snmp/extensible,ucd-snmp/loadave,ucd-snmp/logmatch,ucd-snmp/memory,ucd-snmp/pass,ucd-snmp/proc,ucd-snmp/proxy,ucd-snmp/vmstat,\
+			util_funcs"\
+		--with-default-snmp-version=3 --with-sys-contact=root --with-sys-location=Unknown \
+		--with-endianness=little --enable-mini-agent --enable-shared=no --enable-static --with-gnu-ld \
+		--enable-internal-md5 --with-defaults --with-copy-persistent-files=no
+	@touch $@
 
 snmp: snmp/stamp-h1
 	@$(SEP)
