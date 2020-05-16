@@ -138,10 +138,10 @@ obj-$(TCONFIG_BBT) += transmission
 ifneq ($(TCONFIG_HTTPS),)
 ifeq ($(TCONFIG_OPENSSL11),y)
 obj-y += openssl-1.1
-OPENSSLDIR = openssl-1.1
+export OPENSSLDIR = openssl-1.1
 else
 obj-y += openssl
-OPENSSLDIR = openssl
+export OPENSSLDIR = openssl
 endif
 endif
 
