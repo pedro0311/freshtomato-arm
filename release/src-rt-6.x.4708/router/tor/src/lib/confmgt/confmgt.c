@@ -1,11 +1,11 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
- * \file confparse.c
+ * \file confmgt.c
  *
  * \brief Back-end for parsing and generating key-value files, used to
  *   implement the torrc file format and the state file.
@@ -21,9 +21,9 @@
  * specified, and a linked list of key-value pairs.
  */
 
-#define CONFPARSE_PRIVATE
+#define CONFMGT_PRIVATE
 #include "orconfig.h"
-#include "lib/confmgt/confparse.h"
+#include "lib/confmgt/confmgt.h"
 
 #include "lib/confmgt/structvar.h"
 #include "lib/confmgt/unitparse.h"
@@ -169,9 +169,14 @@ config_mgr_register_fmt(config_mgr_t *mgr,
               "it had been frozen.");
 
   if (object_idx != IDX_TOPLEVEL) {
-    tor_assertf(fmt->config_suite_offset < 0,
+    tor_assertf(! fmt->has_config_suite,
           "Tried to register a toplevel format in a non-toplevel position");
   }
+  if (fmt->config_suite_offset) {
+    tor_assertf(fmt->has_config_suite,
+                "config_suite_offset was set, but has_config_suite was not.");
+  }
+
   tor_assertf(fmt != mgr->toplevel &&
               ! smartlist_contains(mgr->subconfigs, fmt),
               "Tried to register an already-registered format.");
@@ -223,7 +228,7 @@ config_mgr_add_format(config_mgr_t *mgr,
 static inline config_suite_t **
 config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
 {
-  if (mgr->toplevel->config_suite_offset < 0)
+  if (! mgr->toplevel->has_config_suite)
     return NULL;
   return STRUCT_VAR_P(toplevel, mgr->toplevel->config_suite_offset);
 }
@@ -237,7 +242,7 @@ config_mgr_get_suite_ptr(const config_mgr_t *mgr, void *toplevel)
  * to configuration objects for other modules.  This function gets
  * the sub-object for a particular module.
  */
-STATIC void *
+void *
 config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 {
   tor_assert(mgr);
@@ -256,7 +261,7 @@ config_mgr_get_obj_mutable(const config_mgr_t *mgr, void *toplevel, int idx)
 }
 
 /** As config_mgr_get_obj_mutable(), but return a const pointer. */
-STATIC const void *
+const void *
 config_mgr_get_obj(const config_mgr_t *mgr, const void *toplevel, int idx)
 {
   return config_mgr_get_obj_mutable(mgr, (void*)toplevel, idx);
@@ -332,6 +337,17 @@ config_mgr_list_deprecated_vars(const config_mgr_t *mgr)
   SMARTLIST_FOREACH(mgr->all_deprecations, config_deprecation_t *, d,
                     smartlist_add(result, (char*)d->name));
   return result;
+}
+
+/**
+ * Check the magic number on <b>object</b> to make sure it's a valid toplevel
+ * object, created with <b>mgr</b>.  Exit with an assertion if it isn't.
+ **/
+void
+config_check_toplevel_magic(const config_mgr_t *mgr,
+                            const void *object)
+{
+  struct_check_magic(object, &mgr->toplevel_magic);
 }
 
 /** Assert that the magic fields in <b>options</b> and its subsidiary
@@ -640,6 +656,14 @@ config_assign_value(const config_mgr_t *mgr, void *options,
   tor_assert(var);
   tor_assert(!strcmp(c->key, var->cvar->member.name));
   void *object = config_mgr_get_obj_mutable(mgr, options, var->object_idx);
+
+  if (config_var_has_flag(var->cvar, CFLG_WARN_OBSOLETE)) {
+    log_warn(LD_GENERAL, "Skipping obsolete configuration option \"%s\".",
+             var->cvar->member.name);
+  } else if (config_var_has_flag(var->cvar, CFLG_WARN_DISABLED)) {
+    log_warn(LD_GENERAL, "This copy of Tor was built without support for "
+             "the option \"%s\". Skipping.", var->cvar->member.name);
+  }
 
   return struct_var_kvassign(object, c, msg, &var->cvar->member);
 }
@@ -1142,6 +1166,146 @@ config_init(const config_mgr_t *mgr, void *options)
   } SMARTLIST_FOREACH_END(mv);
 }
 
+/**
+ * Helper for config_validate_single: see whether any immutable option
+ * has changed between old_options and new_options.
+ *
+ * On success return 0; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return -1.
+ */
+static int
+config_check_immutable_flags(const config_format_t *fmt,
+                             const void *old_options,
+                             const void *new_options,
+                             char **msg_out)
+{
+  tor_assert(fmt);
+  tor_assert(new_options);
+  if (BUG(! old_options))
+    return 0;
+
+  unsigned i;
+  for (i = 0; fmt->vars[i].member.name; ++i) {
+    const config_var_t *v = &fmt->vars[i];
+    if (! config_var_has_flag(v, CFLG_IMMUTABLE))
+      continue;
+
+    if (! struct_var_eq(old_options, new_options, &v->member)) {
+      tor_asprintf(msg_out,
+                   "While Tor is running, changing %s is not allowed",
+                   v->member.name);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Normalize and validate a single object `options` within a configuration
+ * suite, according to its format.  `options` may be modified as appropriate
+ * in order to set ancillary data.  If `old_options` is provided, make sure
+ * that the transition from `old_options` to `options` is permitted.
+ *
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
+ **/
+static validation_status_t
+config_validate_single(const config_format_t *fmt,
+                       const void *old_options, void *options,
+                       char **msg_out)
+{
+  tor_assert(fmt);
+  tor_assert(options);
+
+  if (fmt->pre_normalize_fn) {
+    if (fmt->pre_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_PRE_NORMALIZE_ERR;
+    }
+  }
+
+  if (fmt->legacy_validate_fn) {
+    if (fmt->legacy_validate_fn(old_options, options, msg_out) < 0) {
+      return VSTAT_LEGACY_ERR;
+    }
+  }
+
+  if (fmt->validate_fn) {
+    if (fmt->validate_fn(options, msg_out) < 0) {
+      return VSTAT_VALIDATE_ERR;
+    }
+  }
+
+  if (old_options) {
+    if (config_check_immutable_flags(fmt, old_options, options, msg_out) < 0) {
+      return VSTAT_TRANSITION_ERR;
+    }
+
+    if (fmt->check_transition_fn) {
+      if (fmt->check_transition_fn(old_options, options, msg_out) < 0) {
+        return VSTAT_TRANSITION_ERR;
+      }
+    }
+  }
+
+  if (fmt->post_normalize_fn) {
+    if (fmt->post_normalize_fn(options, msg_out) < 0) {
+      return VSTAT_POST_NORMALIZE_ERR;
+    }
+  }
+
+  return VSTAT_OK;
+}
+
+/**
+ * Normalize and validate all the options in configuration object `options`
+ * and its sub-objects. `options` may be modified as appropriate in order to
+ * set ancillary data.  If `old_options` is provided, make sure that the
+ * transition from `old_options` to `options` is permitted.
+ *
+ * On success return VSTAT_OK; on failure set *msg_out to a newly allocated
+ * string explaining what is wrong, and return a different validation_status_t
+ * to describe which step failed.
+ **/
+validation_status_t
+config_validate(const config_mgr_t *mgr,
+                const void *old_options, void *options,
+                char **msg_out)
+{
+  validation_status_t rv;
+  CONFIG_CHECK(mgr, options);
+  if (old_options) {
+    CONFIG_CHECK(mgr, old_options);
+  }
+
+  config_suite_t **suitep_new = config_mgr_get_suite_ptr(mgr, options);
+  config_suite_t **suitep_old = NULL;
+  if (old_options)
+    suitep_old = config_mgr_get_suite_ptr(mgr, (void*) old_options);
+
+  /* Validate the sub-objects */
+  if (suitep_new) {
+    SMARTLIST_FOREACH_BEGIN(mgr->subconfigs, const config_format_t *, fmt) {
+      void *obj = smartlist_get((*suitep_new)->configs, fmt_sl_idx);
+      const void *obj_old=NULL;
+      if (suitep_old)
+        obj_old = smartlist_get((*suitep_old)->configs, fmt_sl_idx);
+
+      rv = config_validate_single(fmt, obj_old, obj, msg_out);
+      if (rv < 0)
+        return rv;
+    } SMARTLIST_FOREACH_END(fmt);
+  }
+
+  /* Validate the top-level object. */
+  rv = config_validate_single(mgr->toplevel, old_options, options, msg_out);
+  if (rv < 0)
+    return rv;
+
+  return VSTAT_OK;
+}
+
 /** Allocate and return a new string holding the written-out values of the vars
  * in 'options'.  If 'minimal', do not write out any default-valued vars.
  * Else, if comment_defaults, write default values as comments.
@@ -1166,7 +1330,7 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, defaults_tmp, 1, &msg) < 0) {
+    if (config_validate(mgr, NULL, defaults_tmp, &msg) < 0) {
       // LCOV_EXCL_START
       log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
@@ -1197,9 +1361,10 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
          */
         continue;
       }
-      smartlist_add_asprintf(elements, "%s%s %s\n",
+      int value_exists = line->value && *(line->value);
+      smartlist_add_asprintf(elements, "%s%s%s%s\n",
                    comment_option ? "# " : "",
-                   line->key, line->value);
+                   line->key, value_exists ? " " : "", line->value);
     }
     config_free_lines(assigned);
   } SMARTLIST_FOREACH_END(mv);
@@ -1207,7 +1372,9 @@ config_dump(const config_mgr_t *mgr, const void *default_options,
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->offset);
     for (; line; line = line->next) {
-      smartlist_add_asprintf(elements, "%s %s\n", line->key, line->value);
+      int value_exists = line->value && *(line->value);
+      smartlist_add_asprintf(elements, "%s%s%s\n",
+                             line->key, value_exists ? " " : "", line->value);
     }
   }
 
