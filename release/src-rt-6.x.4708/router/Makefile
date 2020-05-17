@@ -2771,7 +2771,8 @@ tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
-			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis --disable-dependency-tracking
+			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
+			--disable-manpage --disable-html-manual --disable-dependency-tracking
 	@touch $@
 
 tor: tor/stamp-h1
