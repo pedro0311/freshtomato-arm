@@ -3330,6 +3330,7 @@ static int init_nvram(void)
 				nvram_set("wl0_bw_cap", "7");
 				nvram_set("wl0_chanspec", "36/80");
 				nvram_set("wl0_channel", "36");
+				nvram_set("wl0_nband", "1");
 				nvram_set("wl0_nbw","80");
 				nvram_set("wl0_nbw_cap","3");
 				nvram_set("wl0_nctrlsb", "lower");
@@ -3338,6 +3339,7 @@ static int init_nvram(void)
 				nvram_set("wl1_bw_cap","3");
 				nvram_set("wl1_chanspec","6u");
 				nvram_set("wl1_channel","6");
+				nvram_set("wl1_nband", "2");
 				nvram_set("wl1_nbw","40");
 				nvram_set("wl1_nctrlsb", "upper");
 
