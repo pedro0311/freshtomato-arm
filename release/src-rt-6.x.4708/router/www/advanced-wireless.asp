@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_wmf_bss_enable,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
@@ -189,7 +189,10 @@ function save() {
 					value: nvram['wl'+u+'_rate'] },
 				{ title: 'Interference Mitigation', name: 'wl'+u+'_mitigation', type: 'select',
 					options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto'],['4','WLAN Auto with Noise Reduction']],
-					value: nvram['wl'+u+'_mitigation'] },
+					value: nvram['wl'+u+'_mitigation'], hidden: (nvram['wl'+u+'_phytype'] == 'v') },
+				{ title: 'AC-PHY Interference Mitigation', name: 'wl'+u+'_mitigation_ac', type: 'select',
+					options: [['0','None *'],['1','desense based on glitch count (opt. 1)'],['2','limit pktgain based on hwaci (opt. 2)'],['4','limit pktgain based on w2/nb (opt. 3)'],['3','opt. 1 AND opt. 2'],['5','opt. 1 AND opt. 3'],['6','opt. 2 AND opt. 3'],['7','opt. 1 AND opt. 2 AND opt. 3']],
+					value: nvram['wl'+u+'_mitigation_ac'], hidden: (nvram['wl'+u+'_phytype'] != 'v') },
 				{ title: 'WMM', name: 'wl'+u+'_wme', type: 'select', options: [['auto','Auto *'],['off','Disable'],['on','Enable']], value: nvram['wl'+u+'_wme'] },
 				{ title: 'No ACK', name: 'wl'+u+'_wme_no_ack', indent: 2, type: 'select', options: [['off','Disable *'],['on','Enable']],
 					value: nvram['wl'+u+'_wme_no_ack'] },

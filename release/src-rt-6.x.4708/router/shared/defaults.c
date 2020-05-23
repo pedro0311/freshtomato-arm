@@ -372,8 +372,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_infra",			"1"				, 0 },	// Network Type (BSS/IBSS)
 	{ "wl_btc_mode",		"0"				, 0 },	// !!TB - BT Coexistence Mode
 	{ "wl_sta_retry_time",		"5"				, 0 },	// !!TB - Seconds between association attempts (0 to disable retries)
-	{ "wl_mitigation",		"0"				, 0 },	// Interference Mitigation Mode (0|1|2|3|4)
-
+	{ "wl_mitigation",		"0"				, 0 },	// Non-AC Interference Mitigation Mode (0|1|2|3|4)
+#ifdef TCONFIG_BCMWL6
+	{ "wl_mitigation_ac",		"0"				, 0 },	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7); 0 == disabled
+#endif
 	{ "wl_passphrase",		""				, 0 },	// Passphrase
 	{ "wl_wep_bit",			"128"				, 0 },	// WEP encryption [64 | 128]
 	{ "wl_wep_buf",			""				, 0 },	// save all settings for web
