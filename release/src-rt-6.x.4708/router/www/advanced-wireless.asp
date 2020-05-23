@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_wmf_bss_enable,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
@@ -71,6 +71,15 @@ function save() {
 
 			/* for Implicit TX Beamforming */
 			E('_wl'+u+'_txbf_imp').value = E('_wl'+u+'_itxbf').value; /* turn on (1)/off (0) with wl_itxbf */
+/* EMF-BEGIN */
+			/* for Wireless IGMP Snooping */
+			var wb_enable = E('_wl'+u+'_wmf_bss_enable').value;
+			E('_wl'+u+'_igs').value = wb_enable; /* turn on (1)/off (0) with wl_wmf_bss_enable */
+			E('_wl'+u+'_wmf_ucigmp_query').value = wb_enable;
+			E('_wl'+u+'_wmf_mdata_sendup').value = wb_enable;
+			E('_wl'+u+'_wmf_ucast_upnp').value = wb_enable;
+			E('_wl'+u+'_wmf_igmpq_filter').value = wb_enable;
+/* EMF-END */
 		}
 	}
 
@@ -123,6 +132,13 @@ function save() {
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfr_cap" name="wl'+u+'_txbf_bfr_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfe_cap" name="wl'+u+'_txbf_bfe_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_imp" name="wl'+u+'_txbf_imp">');
+/* EMF-BEGIN */
+			W('<input type="hidden" id="_wl'+u+'_igs" name="wl'+u+'_igs">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_ucigmp_query" name="wl'+u+'_wmf_ucigmp_query">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_mdata_sendup" name="wl'+u+'_wmf_mdata_sendup">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_ucast_upnp" name="wl'+u+'_wmf_ucast_upnp">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_igmpq_filter" name="wl'+u+'_wmf_igmpq_filter">');
+/* EMF-END */
 
 /* / / / */
 

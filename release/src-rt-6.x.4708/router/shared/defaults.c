@@ -338,7 +338,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl1_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
 	{ "wl_closed",			"0"				, 0 },	// Closed (hidden) network
 	{ "wl_ap_isolate",		"0"				, 0 },	// AP isolate mode
-	{ "wl_igs",			"0"				, 0 },	// BCM: wl_wmf_bss_enable
 	{ "wl_mode",			"ap"				, 0 },	// AP mode (ap|sta|wds)
 	{ "wl_lazywds",			"0"				, 0 },	// Enable "lazy" WDS mode (0|1)
 	{ "wl_wds",			""				, 0 },	// xx:xx:xx:xx:xx:xx ...
@@ -455,6 +454,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "emf_uffp_entry",		""				, 0 },	// Unreg frames forwarding ports
 	{ "emf_rtport_entry",		""				, 0 },	// IGMP frames forwarding ports
 	{ "emf_enable",			"0"				, 0 },	// Disable EMF by default
+	{ "wl_igs",			"0"				, 0 },	// BCM: wl_wmf_bss_enable
 	{ "wl_wmf_ucigmp_query", 	"0"				, 0 },	/* Disable Converting IGMP Query to ucast (default) */
 	{ "wl_wmf_mdata_sendup", 	"0"				, 0 },	/* Disable Sending Multicast Data to host (default) */
 	{ "wl_wmf_ucast_upnp", 		"0"				, 0 },	/* Disable Converting upnp to ucast (default) */
