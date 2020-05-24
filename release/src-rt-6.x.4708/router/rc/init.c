@@ -3068,10 +3068,8 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("pci/1/1/regrev", "0");
 			nvram_set("pci/2/1/regrev", "0");
-			nvram_set("wl0_country", "SG");
 			nvram_set("wl0_country_code", "SG");
 			nvram_set("wl0_country_rev", "0");
-			nvram_set("wl1_country", "SG");
 			nvram_set("wl1_country_code", "SG");
 			nvram_set("wl1_country_rev", "0");
 			nvram_set("wl0_ssid", "FreshTomato50");
@@ -4313,9 +4311,6 @@ static int init_nvram(void)
 		nvram_set("wan_ifnameX", (strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) ? "vlan1" : "eth1");
 	}
 
-	/* !!TB - do not force country code here to allow nvram override */
-	//nvram_set("wl_country", "JP");
-	//nvram_set("wl_country_code", "JP");
 	nvram_set("wan_get_dns", "");
 	nvram_set("wan_get_domain", "");
 	nvram_set("wan_ppp_get_ip", "0.0.0.0");

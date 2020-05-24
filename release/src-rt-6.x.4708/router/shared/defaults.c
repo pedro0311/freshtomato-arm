@@ -332,7 +332,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_ssid",			"FreshTomato24"			, 0 },	// Service set ID (network name)
 	{ "wl1_ssid",			"FreshTomato50"			, 0 },
 	{ "wl_country_code",		""				, 0 },	// Country (default obtained from driver)
-	{ "wl_country",			""				, 0 },	// Country (default obtained from driver)
 	{ "wl_country_rev", 		""				, 0 },	/* Regrev Code (default obtained from driver) */
 	{ "wl_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
 	{ "wl1_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
