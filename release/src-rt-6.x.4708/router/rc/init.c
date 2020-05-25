@@ -3321,6 +3321,9 @@ static int init_nvram(void)
 				nvram_set("wl0_nbw","40");
 				nvram_set("wl0_nctrlsb", "upper");
 
+				/* misc wifi settings */
+				nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
+
 				/* 5G settings */
 				nvram_set("wl1_bw_cap", "7");
 				nvram_set("wl1_chanspec", "36/80");
@@ -3346,6 +3349,9 @@ static int init_nvram(void)
 				nvram_set("wl1_nband", "2");
 				nvram_set("wl1_nbw","40");
 				nvram_set("wl1_nctrlsb", "upper");
+
+				/* misc wifi settings */
+				nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 				/* set ssid correct */
 				nvram_set("wl0_ssid", "FreshTomato50");
