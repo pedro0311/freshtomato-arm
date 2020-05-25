@@ -99,13 +99,15 @@ void wlconf_pre(void)
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 
 		if (nvram_match(strcat_r(prefix, "nband", tmp), "1") && /* only for wlX_nband == 1 for 5 GHz */
-		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+		    nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
 		  
 			dbG("set vhtmode 1 for %s\n", word);
 			eval("wl", "-i", word, "vhtmode", "1");
 		}
 		else if (nvram_match(strcat_r(prefix, "nband", tmp), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
-			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+			 nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
 		  
 		  	if (nvram_match(strcat_r(prefix, "turbo_qam", tmp), "1")) { /* check turbo qam on or off ? */
 				dbG("set vht_features 3 for %s\n", word);
