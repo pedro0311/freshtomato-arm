@@ -3439,6 +3439,9 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
 
+			/* misc wifi settings */
+			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
+
 			/* 2.4 GHz module defaults */
 			nvram_set("0:aa2g", "3");
 			nvram_set("0:ag0", "0");
@@ -3664,6 +3667,9 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* misc wifi settings */
+			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 			/* 2.4 GHz module defaults */
 			nvram_set("0:aa2g", "7");
