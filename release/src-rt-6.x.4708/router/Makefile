@@ -1414,7 +1414,10 @@ iproute2-install:
 
 iproute2-3.x: kernel_header iptables-1.6.x
 	@$(SEP)
-	@$(MAKE) -C $@ IPTABLES_DIR=$(TOP)/iptables-1.6.x KERNEL_INCLUDE=$(TOP)/kernel_header/include EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
+		EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables-1.6.x/iptables" \
+		$(PARALLEL_BUILD)
 
 iproute2-3.x-install:
 	install -D iproute2-3.x/tc/tc $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
