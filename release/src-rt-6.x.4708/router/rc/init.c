@@ -2338,7 +2338,7 @@ static int init_nvram(void)
 				nvram_set("0:boardflags", "0x80001200");
 				nvram_set("0:boardflags2", "0x00100000");
 				nvram_set("0:boardvendor", "0x14E4");
-				nvram_set("0:ccode", "#a");
+				nvram_set("0:ccode", "SG");
 				nvram_set("0:cckbw20ul2gpo", "0x2200");
 				nvram_set("0:cckbw202gpo", "0x2200");
 				nvram_set("0:devid", "0x4332");
@@ -2393,7 +2393,7 @@ static int init_nvram(void)
 				nvram_set("1:boardflags", "0x10000000");
 				nvram_set("1:boardflags2", "0x00000002");
 				nvram_set("1:boardflags3", "0x00000000");
-				nvram_set("1:ccode", "#a");
+				nvram_set("1:ccode", "SG");
 				nvram_set("1:devid", "0x43a2");
 				nvram_set("1:dot11agduphrpo", "0");
 				nvram_set("1:dot11agduplrpo", "0");
@@ -2520,7 +2520,7 @@ static int init_nvram(void)
 				nvram_set("pci/1/1/boardtype", "0x661");
 				nvram_set("pci/1/1/cckbw202gpo", "0");
 				nvram_set("pci/1/1/cckbw20ul2gpo", "0");
-				nvram_set("pci/1/1/ccode", "EU");
+				nvram_set("pci/1/1/ccode", "SG");
 				nvram_set("pci/1/1/devid", "0x43a1");
 				nvram_set("pci/1/1/dot11agduphrpo", "0");
 				nvram_set("pci/1/1/dot11agduplrpo", "0");
