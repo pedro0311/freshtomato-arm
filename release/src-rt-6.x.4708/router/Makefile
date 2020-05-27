@@ -1038,31 +1038,22 @@ endif
 iptables-clean:
 	-@$(MAKE) -C iptables KERNEL_DIR=$(LINUXDIR) clean
 
-iptables-1.6.x: iptables-1.6.x/Makefile libnfnetlink
-	@$(SEP)
-	$(call unpatch_files,iptables-1.6.x)
+iptables-1.6.x/stamp-h1: libnfnetlink
 	$(call patch_files,iptables-1.6.x)
-	$(MAKE) -C $@ KERNEL_DIR=$(LINUXDIR) COPT_FLAGS="-Os $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
-		CFLAGS="-Wall -Os -D_GNU_SOURCE $(EXTRACFLAGS) -I$(TOP)/libnfnetlink/include" \
-		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink"
+	cd iptables-1.6.x && ./autogen.sh && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
+		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include" \
+		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+			$(IPTABLES_IPV6_OPT) \
+			--with-kernel=$(LINUXDIR) --disable-nftables \
+			--with-xt-lock-name=/var/lock/xtables.lock
+	@touch $@
 
-iptables-1.6.x/Makefile: iptables-1.6.x/configure
-	$(MAKE) iptables-1.6.x-configure
-
-iptables-1.6.x/configure:
-	( cd iptables-1.6.x ; ./autogen.sh )
-
-iptables-1.6.x-configure:
-	( cd iptables-1.6.x ; \
-		$(CONFIGURE) \
-		--prefix=/usr \
-		--bindir=/usr/sbin \
-		--libdir=/usr/lib \
-		$(IPTABLES_IPV6_OPT) \
-		--with-kernel=$(LINUXDIR) \
-		--disable-nftables \
-		--with-xt-lock-name=/var/lock/xtables.lock \
-	)
+iptables-1.6.x: iptables-1.6.x/stamp-h1
+	@$(SEP)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 iptables-1.6.x-install:
 	install -D iptables-1.6.x/iptables/.libs/xtables-multi $(INSTALLDIR)/iptables-1.6.x/usr/sbin/xtables-multi
@@ -1084,14 +1075,12 @@ iptables-1.6.x-install:
 		ln -sf libxtables.so libxtables.so.12 && \
 		ln -sf libxtables.so libxtables.so.12.0.0
 	install -D iptables-1.6.x/extensions/*.so $(INSTALLDIR)/iptables-1.6.x/usr/lib/xtables
-
 ifeq ($(TCONFIG_IPV6),y)
 	cd $(INSTALLDIR)/iptables-1.6.x/usr/sbin && \
 		ln -sf xtables-multi ip6tables-restore && \
 		ln -sf xtables-multi ip6tables-save && \
 		ln -sf xtables-multi ip6tables
 endif
-
 	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/sbin/xtables-multi
 	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/lib/*.so*
 	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/lib/xtables/*.so*
