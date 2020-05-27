@@ -106,7 +106,7 @@ obj-$(TCONFIG_DPSTA) += dpsta
 obj-y += igmpproxy
 obj-y += rc
 ifeq ($(TCONFIG_BCMARM),y)
-obj-y += iptables-1.6.x
+obj-y += iptables-1.8.x
 obj-y += iproute2-3.x
 else
 obj-y += iptables
@@ -326,8 +326,8 @@ endif
 
 # Specify iptables path and target for miniupnpd
 ifeq ($(TCONFIG_BCMARM),y)
-IPTABLESPATH=$(TOP)/iptables-1.6.x
-IPTABLES_TARGET = iptables-1.6.x
+IPTABLESPATH=$(TOP)/iptables-1.8.x
+IPTABLES_TARGET = iptables-1.8.x
 IPROUTE_TARGET = iproute2-3.x
 else
 IPTABLESPATH=$(TOP)/iptables
@@ -1038,9 +1038,9 @@ endif
 iptables-clean:
 	-@$(MAKE) -C iptables KERNEL_DIR=$(LINUXDIR) clean
 
-iptables-1.6.x/stamp-h1: libnfnetlink
-	$(call patch_files,iptables-1.6.x)
-	cd iptables-1.6.x && ./autogen.sh && \
+iptables-1.8.x/stamp-h1: libnfnetlink
+	$(call patch_files,iptables-1.8.x)
+	cd iptables-1.8.x && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
 		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include" \
 		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink" \
@@ -1051,43 +1051,48 @@ iptables-1.6.x/stamp-h1: libnfnetlink
 			--with-xt-lock-name=/var/lock/xtables.lock
 	@touch $@
 
-iptables-1.6.x: iptables-1.6.x/stamp-h1
+iptables-1.8.x: iptables-1.8.x/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
-iptables-1.6.x-install:
-	install -D iptables-1.6.x/iptables/.libs/xtables-multi $(INSTALLDIR)/iptables-1.6.x/usr/sbin/xtables-multi
-	cd $(INSTALLDIR)/iptables-1.6.x/usr/sbin && \
-		ln -sf xtables-multi iptables-restore && \
-		ln -sf xtables-multi iptables-save && \
-		ln -sf xtables-multi iptables
-	install -d $(INSTALLDIR)/iptables-1.6.x/usr/lib/xtables
-	install -D iptables-1.6.x/libiptc/.libs/lib*.so $(INSTALLDIR)/iptables-1.6.x/usr/lib/
-	cd $(INSTALLDIR)/iptables-1.6.x/usr/lib && \
-		ln -sf libip4tc.so libip4tc.so.0 && \
-		ln -sf libip4tc.so libip4tc.so.0.0.0 && \
-		ln -sf libip6tc.so libip6tc.so.0 && \
-		ln -sf libip6tc.so libip6tc.so.0.0.0 && \
-		ln -sf libiptc.so  libiptc.so.0 && \
-		ln -sf libiptc.so  libiptc.so.0.0.0
-	install -D iptables-1.6.x/libxtables/.libs/lib*.so $(INSTALLDIR)/iptables-1.6.x/usr/lib/
-	cd $(INSTALLDIR)/iptables-1.6.x/usr/lib && \
+iptables-1.8.x-install:
+	install -D iptables-1.8.x/iptables/.libs/xtables-legacy-multi $(INSTALLDIR)/iptables-1.8.x/usr/sbin/xtables-legacy-multi
+	cd $(INSTALLDIR)/iptables-1.8.x/usr/sbin && \
+		ln -sf xtables-legacy-multi iptables-legacy-restore && \
+		ln -sf xtables-legacy-multi iptables-legacy-save && \
+		ln -sf xtables-legacy-multi iptables-legacy && \
+		ln -sf xtables-legacy-multi iptables-restore && \
+		ln -sf xtables-legacy-multi iptables-save && \
+		ln -sf xtables-legacy-multi iptables
+	install -d $(INSTALLDIR)/iptables-1.8.x/usr/lib/xtables
+	install -D iptables-1.8.x/libiptc/.libs/lib*.so $(INSTALLDIR)/iptables-1.8.x/usr/lib/
+	cd $(INSTALLDIR)/iptables-1.8.x/usr/lib && \
+		ln -sf libip4tc.so libip4tc.so.2 && \
+		ln -sf libip4tc.so libip4tc.so.2.0.0 && \
+		ln -sf libip6tc.so libip6tc.so.2 && \
+		ln -sf libip6tc.so libip6tc.so.2.0.0
+	install -D iptables-1.8.x/libxtables/.libs/lib*.so $(INSTALLDIR)/iptables-1.8.x/usr/lib/
+	cd $(INSTALLDIR)/iptables-1.8.x/usr/lib && \
 		ln -sf libxtables.so libxtables.so.12 && \
-		ln -sf libxtables.so libxtables.so.12.0.0
-	install -D iptables-1.6.x/extensions/*.so $(INSTALLDIR)/iptables-1.6.x/usr/lib/xtables
+		ln -sf libxtables.so libxtables.so.12.2.0
+	install -D iptables-1.8.x/extensions/*.so $(INSTALLDIR)/iptables-1.8.x/usr/lib/xtables
 ifeq ($(TCONFIG_IPV6),y)
-	cd $(INSTALLDIR)/iptables-1.6.x/usr/sbin && \
-		ln -sf xtables-multi ip6tables-restore && \
-		ln -sf xtables-multi ip6tables-save && \
-		ln -sf xtables-multi ip6tables
+	cd $(INSTALLDIR)/iptables-1.8.x/usr/sbin && \
+		ln -sf xtables-legacy-multi ip6tables-legacy-restore && \
+		ln -sf xtables-legacy-multi ip6tables-legacy-save && \
+		ln -sf xtables-legacy-multi ip6tables-legacy && \
+		ln -sf xtables-legacy-multi ip6tables-restore && \
+		ln -sf xtables-legacy-multi ip6tables-save && \
+		ln -sf xtables-legacy-multi ip6tables
 endif
-	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/sbin/xtables-multi
-	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/lib/*.so*
-	$(STRIP) $(INSTALLDIR)/iptables-1.6.x/usr/lib/xtables/*.so*
+	$(STRIP) $(INSTALLDIR)/iptables-1.8.x/usr/sbin/xtables-legacy-multi
+	$(STRIP) $(INSTALLDIR)/iptables-1.8.x/usr/lib/*.so*
+	$(STRIP) $(INSTALLDIR)/iptables-1.8.x/usr/lib/xtables/*.so*
 
-iptables-1.6.x-clean:
-	[ ! -f iptables-1.6.x/Makefile ] || $(MAKE) -C iptables-1.6.x KERNEL_DIR=$(LINUXDIR) distclean
-	$(call unpatch_files,iptables-1.6.x)
+iptables-1.8.x-clean:
+	[ ! -f iptables-1.8.x/Makefile ] || $(MAKE) -C iptables-1.8.x KERNEL_DIR=$(LINUXDIR) distclean
+	@rm -f iptables-1.8.x/stamp-h1
+	$(call unpatch_files,iptables-1.8.x)
 
 ppp:
 	@$(SEP)
@@ -1401,11 +1406,11 @@ iproute2-install:
 	install -D iproute2/ip/ip $(INSTALLDIR)/iproute2/usr/sbin/ip
 	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/ip
 
-iproute2-3.x: kernel_header iptables-1.6.x
+iproute2-3.x: kernel_header iptables-1.8.x
 	@$(SEP)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
 		EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables-1.6.x/iptables" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables-1.8.x/iptables" \
 		$(PARALLEL_BUILD)
 
 iproute2-3.x-install:
