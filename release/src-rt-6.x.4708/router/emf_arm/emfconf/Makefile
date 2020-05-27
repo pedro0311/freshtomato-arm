@@ -3,6 +3,7 @@
 #
 
 include ../../common.mak
+include $(SRCBASE)/router/.config
 
 CROSS =
 CC = $(CROSS)gcc
@@ -12,6 +13,11 @@ STRIP = $(CROSS)strip
 ALL_OBJS = emfu.o emfu_linux.o
 
 CCFLAGS = -Os -Wall -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/shared -I$(SRCBASE)/include/emf/emf -I$(SRCBASE)/router/shared
+CCFLAGS	+= $(WLAN_ComponentIncPath)
+
+ifeq ($(TCONFIG_BCMARM),y)
+CCFLAGS += -DTOMATO_ARM
+endif
 
 ifneq ($(wildcard ./prebuilt),)
 all:

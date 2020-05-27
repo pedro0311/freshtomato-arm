@@ -1,15 +1,15 @@
 /*
  * IGMP Snooping layer linux specific code
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: igs_linux.c 447222 2014-01-08 12:05:49Z $
+ * $Id: igs_linux.c 627745 2016-03-28 09:43:47Z $
  */
 #include <linux/module.h>
 #include <linux/netdevice.h>
@@ -104,6 +104,77 @@ igs_broadcast(igs_info_t *igs_info, uint8 *ip, uint32 length, uint32 mgrp_ip)
 /*
  * IGSL Packet Counters/Statistics Function
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+static int32
+igs_stats_get(struct seq_file *seq, void *v)
+{
+	igs_info_t *igs_info = seq->private;
+	igs_cfg_request_t cfg;
+	igs_stats_t *stats;
+
+
+	strcpy(cfg.inst_id, igs_info->inst_id);
+	cfg.command_id = IGSCFG_CMD_IGS_STATS;
+	cfg.oper_type = IGSCFG_OPER_TYPE_GET;
+	cfg.size = sizeof(cfg.arg);
+	stats = (igs_stats_t *)cfg.arg;
+
+	igsc_cfg_request_process(igs_info->igsc_info, &cfg);
+	if (cfg.status != IGSCFG_STATUS_SUCCESS)
+	{
+		IGS_ERROR("Unable to get the IGS stats\n");
+		return (FAILURE);
+	}
+
+	seq_printf(seq, "IgmpPkts        IgmpQueries     "
+	            "IgmpReports     IgmpV2Reports   IgmpLeaves\n");
+	seq_printf(seq, "%-15d %-15d %-15d %-15d %d\n",
+	            stats->igmp_packets, stats->igmp_queries,
+	            stats->igmp_reports, stats->igmp_v2reports,
+	            stats->igmp_leaves);
+	seq_printf(seq, "IgmpNotHandled  McastGroups     "
+	            "McastMembers    MemTimeouts\n");
+	seq_printf(seq, "%-15d %-15d %-15d %d\n",
+	            stats->igmp_not_handled, stats->igmp_mcast_groups,
+	            stats->igmp_mcast_members, stats->igmp_mem_timeouts);
+
+	return 0;
+}
+
+static int32
+igs_sdb_list(struct seq_file *seq, void *v)
+{
+	igs_info_t *igs_info = seq->private;
+	igs_cfg_request_t cfg;
+	igs_cfg_sdb_list_t *list;
+	int32 i;
+
+	strcpy(cfg.inst_id, igs_info->inst_id);
+	cfg.command_id = IGSCFG_CMD_IGSDB_LIST;
+	cfg.oper_type = IGSCFG_OPER_TYPE_GET;
+	cfg.size = sizeof(cfg.arg);
+	list = (igs_cfg_sdb_list_t *)cfg.arg;
+
+	igsc_cfg_request_process(igs_info->igsc_info, &cfg);
+	if (cfg.status != IGSCFG_STATUS_SUCCESS)
+	{
+		IGS_ERROR("Unable to get the IGSDB list\n");
+		return (FAILURE);
+	}
+
+	seq_printf(seq, "Group           Members         Interface\n");
+
+	for (i = 0; i < list->num_entries; i++)
+	{
+		seq_printf(seq, "%08x        ", list->sdb_entry[i].mgrp_ip);
+		seq_printf(seq, "%08x        ", list->sdb_entry[i].mh_ip);
+		seq_printf(seq, "%s\n", list->sdb_entry[i].if_name);
+	}
+
+
+	return 0;
+}
+#else /* #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 static int32
 igs_stats_get(char *buf, char **start, off_t offset, int32 size,
               int32 *eof, void *data)
@@ -193,7 +264,38 @@ igs_sdb_list(char *buf, char **start, off_t offset, int32 size,
 
 	return (b.buf - b.origbuf);
 }
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #endif /* CONFIG_PROC_FS */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+#include <linux/seq_file.h>
+
+static int igs_proc_stats_get_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, igs_stats_get, PDE_DATA(inode));
+}
+
+static const struct file_operations igs_proc_stats_get_fops = {
+	.owner          = THIS_MODULE,
+	.open           = igs_proc_stats_get_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+
+static int igs_proc_sdb_list_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, igs_sdb_list, PDE_DATA(inode));
+}
+
+static const struct file_operations igs_proc_sdb_list_fops = {
+	.owner          = THIS_MODULE,
+	.open           = igs_proc_sdb_list_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+#endif /* #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 
 /*
  * Description: This function is called when user application enables snooping
@@ -254,9 +356,17 @@ igs_instance_add(int8 *inst_id, struct net_device *br_ptr)
 
 #ifdef CONFIG_PROC_FS
 	sprintf(proc_name, "emf/igs_stats_%s", inst_id);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+	proc_create_data(proc_name, S_IRUGO, 0, &igs_proc_stats_get_fops, (void *)igs_info);
+#else
 	create_proc_read_entry(proc_name, 0, 0, igs_stats_get, igs_info);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 	sprintf(proc_name, "emf/igsdb_%s", inst_id);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+	proc_create_data(proc_name, S_IRUGO, 0, &igs_proc_sdb_list_fops, (void *)igs_info);
+#else
 	create_proc_read_entry(proc_name, 0, 0, igs_sdb_list, igs_info);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #endif /* CONFIG_PROC_FS */
 
 	IGS_INFO("Created IGSC instance for %s\n", inst_id);
@@ -535,20 +645,30 @@ igs_netlink_sock_cb(
 
 		/* Send the result to user process */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+		NETLINK_CB(skb).portid = nlh->nlmsg_pid;
+#else
 		NETLINK_CB(skb).pid = nlh->nlmsg_pid;
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 		NETLINK_CB(skb).dst_group = 0;
 #else
 		NETLINK_CB(skb).groups = 0;
 		NETLINK_CB(skb).pid = 0;
 		NETLINK_CB(skb).dst_groups = 0;
 		NETLINK_CB(skb).dst_pid = nlh->nlmsg_pid;
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0) */
 
 		netlink_unicast(igs.nl_sk, skb, nlh->nlmsg_pid, MSG_DONTWAIT);
 	}
 
 	return;
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+struct netlink_kernel_cfg igs_cfg = {
+	.input  = igs_netlink_sock_cb,
+};
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 
 /*
  * Description: This function is called during module load time. It
@@ -568,16 +688,23 @@ igs_module_init(void)
 
 #define NETLINK_IGSC 18
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+	igs.nl_sk = netlink_kernel_create(
+			&init_net,	/* struct net */
+			NETLINK_IGSC,	/* unit ? */
+			&igs_cfg);	/* callback */
+#else
 	igs.nl_sk = netlink_kernel_create(
 			&init_net,
 			NETLINK_IGSC, 0, igs_netlink_sock_cb,
 			NULL, THIS_MODULE);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 	igs.nl_sk = netlink_kernel_create(NETLINK_IGSC, 0, igs_netlink_sock_cb,
 	                                  NULL, THIS_MODULE);
 #else
 	igs.nl_sk = netlink_kernel_create(NETLINK_IGSC, igs_netlink_sock_cb);
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36) */
 
 	if (igs.nl_sk == NULL)
 	{

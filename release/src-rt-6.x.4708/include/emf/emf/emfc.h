@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2013, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: emfc.h 406828 2013-06-10 22:52:43Z $
+ * $Id: emfc.h 539096 2015-03-05 21:55:41Z $
  */
 
 #ifndef _EMFC_H_
