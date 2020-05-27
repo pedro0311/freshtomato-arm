@@ -1408,6 +1408,7 @@ iproute2-install:
 
 iproute2-3.x: kernel_header iptables-1.8.x
 	@$(SEP)
+	$(call patch_files,iproute2-3.x)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
 		EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables-1.8.x/iptables" \
@@ -1427,6 +1428,7 @@ iproute2-3.x-install:
 iproute2-3.x-clean:
 	-@$(MAKE) -C iproute2-3.x clean
 	-rm -f iproute2-3.x/Config
+	$(call unpatch_files,iproute2-3.x)
 
 dropbear: dropbear/config.h
 	@$(SEP)

@@ -26,6 +26,7 @@ ADDLIB+=dnet_ntop.o dnet_pton.o
 #options for ipx
 ADDLIB+=ipx_ntop.o ipx_pton.o
 
+CC = gcc
 HOSTCC = gcc
 DEFINES += -D_GNU_SOURCE
 CCOPTS = -O2
@@ -35,8 +36,7 @@ WFLAGS += -Wmissing-declarations -Wold-style-definition -Wformat=2
 CFLAGS = $(WFLAGS) $(CCOPTS) -I../include $(DEFINES)
 YACCFLAGS = -d -t -v
 
-#SUBDIRS=lib ip tc bridge misc netem genl man
-SUBDIRS=lib ip tc # misc netem genl
+SUBDIRS=lib ip tc bridge misc netem genl man
 
 LIBNETLINK=../lib/libnetlink.a ../lib/libutil.a
 LDLIBS += $(LIBNETLINK)
