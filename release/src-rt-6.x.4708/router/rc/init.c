@@ -2003,10 +2003,6 @@ static int init_nvram(void)
 			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 
-			/* enable Air Time Fairness by default */
-			nvram_set("wl0_atf", "1");
-			nvram_set("wl1_atf", "1");
-
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
