@@ -335,16 +335,22 @@ ct_filter_check(struct ct_filter *f, const struct nf_conntrack *ct)
 		switch(nfct_get_attr_u8(ct, ATTR_L3PROTO)) {
 		case AF_INET:
 			ret = vector_iterate(f->v, ct, __ct_filter_test_mask4);
-			if (ret ^ f->logic[CT_FILTER_ADDRESS])
+			if (ret) {
+				if (f->logic[CT_FILTER_ADDRESS])
+					break;
 				return 0;
+			}
 			ret = __ct_filter_test_ipv4(f, ct);
 			if (ret ^ f->logic[CT_FILTER_ADDRESS])
 				return 0;
 			break;
 		case AF_INET6:
 			ret = vector_iterate(f->v6, ct, __ct_filter_test_mask6);
-			if (ret ^ f->logic[CT_FILTER_ADDRESS])
+			if (ret) {
+				if (f->logic[CT_FILTER_ADDRESS])
+					break;
 				return 0;
+			}
 			ret = __ct_filter_test_ipv6(f, ct);
 			if (ret ^ f->logic[CT_FILTER_ADDRESS])
 				return 0;

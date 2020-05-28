@@ -22,7 +22,7 @@
 .\" <http://www.gnu.org/licenses/>.
 .\" %%%LICENSE_END
 .\"
-.TH CONNTRACKD.CONF 5 "Apr 16, 2018"
+.TH CONNTRACKD.CONF 5 "Jan 27, 2019"
 
 .SH NAME
 conntrackd.conf \- configuration file for conntrackd daemon
@@ -530,7 +530,7 @@ Default is \fB/var/lock/conntrack.lock\fP.
 .TP
 .BI "NetlinkBufferSize <value>"
 Netlink event socket buffer size. If you do not specify this clause, the
-default buffer size value in \fB/proc/net/core/rmem_default\fP is used. This
+default buffer size value in \fB/proc/sys/net/core/rmem_default\fP is used. This
 default value is usually around \fB100 Kbytes\fP which is fairly small for
 busy firewalls. This leads to event message dropping and high CPU consumption.
 
@@ -651,7 +651,7 @@ Example:
 			IPv6_address ::1
 		}
 		State Accept {
-			ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT
+			ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP
 		}
 	}
 .fi
@@ -705,7 +705,7 @@ Example:
 .fi
 
 .TP
-.BI "State <policy> { <states list> }"
+.BI "State <policy> { <states list> for TCP }"
 Filter by flow state.  This option introduces a trade-off in the replication:
 it reduces CPU consumption at the cost of having lazy backup firewall replicas.
 
@@ -720,7 +720,7 @@ Policy is one of \fBAccept\fP or \fBIgnore\fP.
 Example:
 .nf
 	State Accept {
-		ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT
+		ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP
 	}
 .fi
 
@@ -1051,7 +1051,7 @@ General {
 			IPv6_address ::1
 		}
 		State Accept {
-			ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT
+			ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP
 		}
 	}
 }

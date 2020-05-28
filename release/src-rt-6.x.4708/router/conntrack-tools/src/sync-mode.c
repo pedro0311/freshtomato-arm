@@ -708,6 +708,8 @@ static int local_handler_sync(int fd, int type, void *data)
 				      "commit still in progress");
 			break;
 		}
+		/* inmediate flush, remove pending flush scheduled if any */
+		del_alarm(&STATE_SYNC(reset_cache_alarm));
 		dlog(LOG_NOTICE, "flushing caches");
 		STATE(mode)->internal->ct.flush();
 		STATE_SYNC(external)->ct.flush();

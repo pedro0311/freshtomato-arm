@@ -24,6 +24,9 @@
 /* returns the netmask in host byte order */
 uint32_t ipv4_cidr2mask_host(uint8_t cidr)
 {
+	if (cidr == 0)
+		return 0;
+
 	return 0xFFFFFFFF << (32 - cidr);
 }
 
@@ -42,10 +45,13 @@ void ipv6_cidr2mask_host(uint8_t cidr, uint32_t *res)
 		res[i] = 0xFFFFFFFF;
 		cidr -= 32;
 	}
-	res[i] = 0xFFFFFFFF << (32 - cidr);
-	for (j = i+1; j < 4; j++) {
+	if (cidr == 0)
+		res[i] = 0;
+	else
+		res[i] = 0xFFFFFFFF << (32 - cidr);
+
+	for (j = i + 1; j < 4; j++)
 		res[j] = 0;
-	}
 }
 
 void ipv6_cidr2mask_net(uint8_t cidr, uint32_t *res)

@@ -72,7 +72,7 @@ dhcpv6_helper_cb(struct pkt_buff *pkt, uint32_t protoff,
 		return NF_ACCEPT;
 
 	dhcpv6_msg_type = pktb_network_header(pkt) + protoff + sizeof(struct udphdr);
-	if (*dhcpv6_msg_type > ARRAY_SIZE(dhcpv6_timeouts)) {
+	if (*dhcpv6_msg_type >= ARRAY_SIZE(dhcpv6_timeouts)) {
 		printf("Dropping DHCPv6 message with bad type %u\n",
 			*dhcpv6_msg_type);
 		return NF_DROP;

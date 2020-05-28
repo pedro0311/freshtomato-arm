@@ -72,6 +72,9 @@ static int kernel_resync_cb(enum nf_conntrack_msg_type type,
 {
 	struct nethdr *net;
 
+	if (ct_filter_conntrack(ct, 1))
+		return NFCT_CB_CONTINUE;
+
 	net = BUILD_NETMSG_FROM_CT(ct, NET_T_STATE_CT_NEW);
 	multichannel_send(STATE_SYNC(channel), net);
 

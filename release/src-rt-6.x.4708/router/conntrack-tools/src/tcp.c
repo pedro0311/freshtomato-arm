@@ -300,6 +300,7 @@ ssize_t tcp_send(struct tcp_sock *m, const void *data, int size)
 			/* we got connected :) */
 			m->state = TCP_CLIENT_CONNECTED;
 		}
+		/* fall through */
 	case TCP_CLIENT_CONNECTED:
 		ret = sendto(m->fd, data, size, 0,
 			     (struct sockaddr *) &m->addr, m->sockaddr_len);

@@ -367,6 +367,8 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSYSTEMD_CFLAGS = @LIBSYSTEMD_CFLAGS@
 LIBSYSTEMD_LIBS = @LIBSYSTEMD_LIBS@
+LIBTIRPC_CFLAGS = @LIBTIRPC_CFLAGS@
+LIBTIRPC_LIBS = @LIBTIRPC_LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
@@ -471,7 +473,7 @@ conntrack_LDADD = ../extensions/libct_proto_tcp.la ../extensions/libct_proto_udp
 nfct_SOURCES = nfct.c $(am__append_1) $(am__append_2)
 nfct_LDADD = ${LIBMNL_LIBS} ${libdl_LIBS} $(am__append_3) \
 	$(am__append_4)
-nfct_LDFLAGS = -export-dynamic @LAZY_LDFLAGS@
+nfct_LDFLAGS = -export-dynamic ${LAZY_LDFLAGS}
 conntrackd_SOURCES = alarm.c main.c run.c hash.c queue.c queue_tx.c \
 	rbtree.c local.c log.c mcast.c udp.c netlink.c vector.c \
 	filter.c fds.c event.c process.c origin.c date.c cache.c \
@@ -988,7 +990,7 @@ uninstall-am: uninstall-sbinPROGRAMS
 
 
 # yacc and lex generate dirty code
-read_config_yy.o read_config_lex.o: AM_CFLAGS += -Wno-missing-prototypes -Wno-missing-declarations -Wno-implicit-function-declaration -Wno-nested-externs -Wno-undef -Wno-redundant-decls
+read_config_yy.o read_config_lex.o: AM_CFLAGS += -Wno-missing-prototypes -Wno-missing-declarations -Wno-implicit-function-declaration -Wno-nested-externs -Wno-undef -Wno-redundant-decls -Wno-sign-compare
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -56,20 +56,6 @@ nfct_timeout_parse_params(struct mnl_socket *nl, int argc, char *argv[], int cmd
 
 	switch (cmd) {
 	case NFCT_CMD_LIST:
-	case NFCT_CMD_ADD:
-	case NFCT_CMD_DELETE:
-	case NFCT_CMD_GET:
-	case NFCT_CMD_FLUSH:
-	case NFCT_CMD_DEFAULT_SET:
-	case NFCT_CMD_DEFAULT_GET:
-		break;
-	default:
-		nfct_cmd_timeout_usage(argv);
-		return -1;
-	}
-
-	switch (cmd) {
-	case NFCT_CMD_LIST:
 		ret = nfct_cmd_timeout_list(nl, argc, argv);
 		break;
 	case NFCT_CMD_ADD:

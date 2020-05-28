@@ -7,7 +7,7 @@ EXTRA_DIST = $(man_MANS) Make_global.am doc m4 tests
 
 SUBDIRS   = extensions src
 DIST_SUBDIRS = include src extensions
-LIBS = @LIBNETFILTER_CONNTRACK_LIBS@
+LIBS = $(LIBNETFILTER_CONNTRACK_LIBS)
 
 dist-hook:
 	rm -rf `find $(distdir)/doc -name *.orig`

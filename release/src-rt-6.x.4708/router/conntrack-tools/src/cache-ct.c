@@ -266,6 +266,7 @@ static int cache_ct_commit(struct cache *c, struct nfct_handle *h, int clientfd)
 		STATE_SYNC(commit).stats.ok = c->stats.commit_ok;
 		STATE_SYNC(commit).stats.fail = c->stats.commit_fail;
 		STATE_SYNC(commit).clientfd = clientfd;
+		/* fall through */
 	case COMMIT_STATE_MASTER:
 		STATE_SYNC(commit).current =
 			hashtable_iterate_limit(c->h, &tmp,
@@ -280,6 +281,7 @@ static int cache_ct_commit(struct cache *c, struct nfct_handle *h, int clientfd)
 		}
 		STATE_SYNC(commit).current = 0;
 		STATE_SYNC(commit).state = COMMIT_STATE_RELATED;
+		/* fall through */
 	case COMMIT_STATE_RELATED:
 		STATE_SYNC(commit).current =
 			hashtable_iterate_limit(c->h, &tmp,
