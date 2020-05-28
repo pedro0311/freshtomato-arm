@@ -1038,13 +1038,13 @@ endif
 iptables-clean:
 	-@$(MAKE) -C iptables KERNEL_DIR=$(LINUXDIR) clean
 
-iptables-1.8.x/stamp-h1: libnfnetlink
+iptables-1.8.x/stamp-h1: libnfnetlink $(if $(TCONFIG_CONNTRACK_TOOL),libnetfilter_conntrack,)
 	$(call patch_files,iptables-1.8.x)
 	cd iptables-1.8.x && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
-		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include" \
-		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnetfilter_conntrack/include,)" \
+		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink $(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnetfilter_conntrack/src/.libs,)" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(IPTABLES_IPV6_OPT) \
 			--with-kernel=$(LINUXDIR) --disable-nftables \
@@ -2926,7 +2926,6 @@ libnetfilter_queue-clean:
 	-@rm -f libnetfilter_queue/stamp-h1
 
 conntrack-tools/stamp-h1: libmnl libnfnetlink libnetfilter_conntrack libnetfilter_log libnetfilter_queue
-	$(call patch_files,conntrack-tools)
 	cd conntrack-tools && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include \
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
@@ -2951,7 +2950,6 @@ conntrack-tools-install:
 	install -d $(INSTALLDIR)/conntrack-tools/usr/sbin
 	install conntrack-tools/src/.libs/conntrack $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
 	$(STRIP) -s $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
-	$(call unpatch_files,conntrack-tools)
 
 ipset/stamp-h1: libmnl
 	$(call patch_files,ipset)
