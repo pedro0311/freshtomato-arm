@@ -28,13 +28,13 @@ nfct_parse_ip_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_IP_V4_SRC:
 	case CTA_IP_V4_DST:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_IP_V6_SRC:
 	case CTA_IP_V6_DST:
 		if (mnl_attr_validate2(attr, MNL_TYPE_UNSPEC,
 				       sizeof(struct in6_addr)) < 0) {
-			return MNL_CB_ERROR;
+			abi_breakage();
 		}
 		break;
 	}
@@ -130,7 +130,7 @@ nfct_parse_proto_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_PROTO_ICMP_ID:
 	case CTA_PROTO_ICMPV6_ID:
 		if (mnl_attr_validate(attr, MNL_TYPE_U16) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_PROTO_NUM:
 	case CTA_PROTO_ICMP_TYPE:
@@ -138,7 +138,7 @@ nfct_parse_proto_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_PROTO_ICMPV6_TYPE:
 	case CTA_PROTO_ICMPV6_CODE:
 		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -252,11 +252,11 @@ static int nfct_parse_tuple_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_TUPLE_IP:
 	case CTA_TUPLE_PROTO:
 		if (mnl_attr_validate(attr, MNL_TYPE_NESTED) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_TUPLE_ZONE:
 		if (mnl_attr_validate(attr, MNL_TYPE_U16) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 
@@ -312,14 +312,13 @@ nfct_parse_pinfo_tcp_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_PROTOINFO_TCP_WSCALE_ORIGINAL:
 	case CTA_PROTOINFO_TCP_WSCALE_REPLY:
 		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_PROTOINFO_TCP_FLAGS_ORIGINAL:
 	case CTA_PROTOINFO_TCP_FLAGS_REPLY:
 		if (mnl_attr_validate2(attr, MNL_TYPE_UNSPEC,
-					sizeof(struct nf_ct_tcp_flags)) < 0) {
-			return MNL_CB_ERROR;
-		}
+					sizeof(struct nf_ct_tcp_flags)) < 0)
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -385,12 +384,12 @@ nfct_parse_pinfo_sctp_attr_cb(const struct nlattr *attr, void *data)
 	switch(type) {
 	case CTA_PROTOINFO_SCTP_STATE:
 		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_PROTOINFO_SCTP_VTAG_ORIGINAL:
 	case CTA_PROTOINFO_SCTP_VTAG_REPLY:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -439,11 +438,11 @@ nfct_parse_pinfo_dccp_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_PROTOINFO_DCCP_STATE:
 	case CTA_PROTOINFO_DCCP_ROLE:
 		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_PROTOINFO_DCCP_HANDSHAKE_SEQ:
 		if (mnl_attr_validate(attr, MNL_TYPE_U64) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -489,7 +488,7 @@ nfct_parse_protoinfo_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_PROTOINFO_SCTP:
 	case CTA_PROTOINFO_DCCP:
 		if (mnl_attr_validate(attr, MNL_TYPE_NESTED) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -528,12 +527,12 @@ static int nfct_parse_counters_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_COUNTERS_PACKETS:
 	case CTA_COUNTERS_BYTES:
 		if (mnl_attr_validate(attr, MNL_TYPE_U64) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_COUNTERS32_PACKETS:
 	case CTA_COUNTERS32_BYTES:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -604,7 +603,7 @@ nfct_parse_nat_seq_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_NAT_SEQ_OFFSET_BEFORE:
 	case CTA_NAT_SEQ_OFFSET_AFTER:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -673,7 +672,7 @@ nfct_parse_helper_attr_cb(const struct nlattr *attr, void *data)
 	switch(type) {
 	case CTA_HELP_NAME:
 		if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -723,7 +722,7 @@ nfct_parse_secctx_attr_cb(const struct nlattr *attr, void *data)
 	switch(type) {
 	case CTA_SECCTX_NAME:
 		if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -761,7 +760,7 @@ nfct_parse_timestamp_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_TIMESTAMP_START:
 	case CTA_TIMESTAMP_STOP:
 		if (mnl_attr_validate(attr, MNL_TYPE_U64) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -822,7 +821,7 @@ static int nfct_parse_synproxy_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_SYNPROXY_ITS:
 	case CTA_SYNPROXY_TSOFF:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	}
 	tb[type] = attr;
@@ -880,7 +879,7 @@ nfct_parse_conntrack_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_SECCTX:
 	case CTA_TIMESTAMP:
 		if (mnl_attr_validate(attr, MNL_TYPE_NESTED) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_STATUS:
 	case CTA_TIMEOUT:
@@ -889,11 +888,11 @@ nfct_parse_conntrack_attr_cb(const struct nlattr *attr, void *data)
 	case CTA_USE:
 	case CTA_ID:
 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_ZONE:
 		if (mnl_attr_validate(attr, MNL_TYPE_U16) < 0)
-			return MNL_CB_ERROR;
+			abi_breakage();
 		break;
 	case CTA_NAT_SRC:
 	case CTA_NAT_DST:

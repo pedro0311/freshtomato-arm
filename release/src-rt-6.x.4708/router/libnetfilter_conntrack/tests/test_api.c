@@ -215,6 +215,10 @@ static int test_nfct_cmp_api_single(struct nf_conntrack *ct1,
 	case ATTR_TCP_WSCALE_ORIG:
 	case ATTR_TCP_WSCALE_REPL:
 
+	case ATTR_SYNPROXY_ISN:
+	case ATTR_SYNPROXY_ITS:
+	case ATTR_SYNPROXY_TSOFF:
+
 	case ATTR_HELPER_INFO:
 		return 0; /* XXX */
 

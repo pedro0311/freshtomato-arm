@@ -8,6 +8,7 @@
  */
 
 #include "internal/internal.h"
+#include <libmnl/libmnl.h>
 
 static int __parse_message(const struct nlmsghdr *nlh)
 {
@@ -29,6 +30,9 @@ static int __parse_message(const struct nlmsghdr *nlh)
 	return ret;
 }
 
+/* This function uses libmnl helpers, the nfa[] array is intentionally not used
+ * since it has a different layout.
+ */
 int __callback(struct nlmsghdr *nlh, struct nfattr *nfa[], void *data)
 {
 	int ret = NFNL_CB_STOP;
@@ -52,7 +56,7 @@ int __callback(struct nlmsghdr *nlh, struct nfattr *nfa[], void *data)
 		if (ct == NULL)
 			return NFNL_CB_FAILURE;
 
-		__parse_conntrack(nlh, nfa, ct);
+		nfct_nlmsg_parse(nlh, ct);
 
 		if (container->h->cb) {
 			ret = container->h->cb(type, ct, container->data);
@@ -66,7 +70,7 @@ int __callback(struct nlmsghdr *nlh, struct nfattr *nfa[], void *data)
 		if (exp == NULL)
 			return NFNL_CB_FAILURE;
 
-		__parse_expect(nlh, nfa, exp);
+		nfexp_nlmsg_parse(nlh, exp);
 
 		if (container->h->expect_cb) {
 			ret = container->h->expect_cb(type, exp,

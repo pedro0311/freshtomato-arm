@@ -104,8 +104,8 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libnfexpect_la_LIBADD =
 am_libnfexpect_la_OBJECTS = api.lo compare.lo getter.lo setter.lo \
-	parse.lo build.lo snprintf.lo snprintf_default.lo \
-	snprintf_xml.lo build_mnl.lo parse_mnl.lo
+	build.lo snprintf.lo snprintf_default.lo snprintf_xml.lo \
+	build_mnl.lo parse_mnl.lo
 libnfexpect_la_OBJECTS = $(am_libnfexpect_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -309,7 +309,7 @@ noinst_LTLIBRARIES = libnfexpect.la
 libnfexpect_la_SOURCES = api.c \
 			 compare.c \
 			 getter.c setter.c \
-			 parse.c build.c \
+			 build.c \
 			 snprintf.c \
 			 snprintf_default.c \
 			 snprintf_xml.c \
@@ -376,7 +376,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/build_mnl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compare.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getter.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse_mnl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/setter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/snprintf.Plo@am__quote@

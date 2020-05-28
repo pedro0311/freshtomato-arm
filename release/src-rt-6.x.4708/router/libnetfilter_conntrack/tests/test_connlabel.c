@@ -59,7 +59,7 @@ int main(void)
 
 	l = nfct_labelmap_new("qa-connlabel.conf");
 	if (!l)
-		l = nfct_labelmap_new("qa/qa-connlabel.conf");
+		l = nfct_labelmap_new("tests/qa-connlabel.conf");
 	assert(l);
 	puts("qa-connlabel.conf:");
 	dump_map(l);
