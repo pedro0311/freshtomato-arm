@@ -2,6 +2,7 @@
 
 pppoe: a PPP-over-Ethernet redirector for pppd
 Copyright (C) 2001-2012 Roaring Penguin Software Inc.
+Copyright (C) 2018-2020 Dianne Skoll
 
 Some inspiration from an earlier client by Luke Stras.
 
@@ -84,5 +85,5 @@ Compile and install pppd if you don't already have it.  Then:
 5) Now read doc/HOW-TO-CONNECT
 
 --
-Dianne Skoll <dfs@roaringpenguin.com> | Roaring Penguin Software Inc.
-http://www.roaringpenguin.com
+Dianne Skoll <dianne@skoll.ca>
+https://dianne.skoll.ca/projects/rp-pppoe/

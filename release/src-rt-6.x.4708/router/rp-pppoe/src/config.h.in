@@ -50,6 +50,9 @@
 /* Define if you have the strtol function.  */
 #undef HAVE_STRTOL
 
+/* Define if you have the strlcpy function.  */
+#undef HAVE_STRLCPY
+
 /* Define if you have the <asm/types.h> header file.  */
 #undef HAVE_ASM_TYPES_H
 
@@ -101,9 +104,6 @@
 /* Define if you have the <netpacket/packet.h> header file.  */
 #undef HAVE_NETPACKET_PACKET_H
 
-/* Define if you have the <sys/cdefs.h> header file.  */
-#undef HAVE_SYS_CDEFS_H
-
 /* Define if you have the <sys/dlpi.h> header file.  */
 #undef HAVE_SYS_DLPI_H
 
@@ -130,9 +130,6 @@
 
 /* Define if you have the N_HDLC line discipline in pty.h */
 #undef HAVE_N_HDLC
-
-/* Define if bitfields are packed in reverse order */
-#undef PACK_BITFIELDS_REVERSED
 
 /* Define to include debugging code */
 #undef DEBUGGING_ENABLED

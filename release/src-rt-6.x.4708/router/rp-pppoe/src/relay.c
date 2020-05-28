@@ -4,7 +4,8 @@
 *
 * Implementation of PPPoE relay
 *
-* Copyright (C) 2001-2006 Roaring Penguin Software Inc.
+* Copyright (C) 2001-2018 Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -211,11 +212,12 @@ usage(char const *argv0)
     fprintf(stderr, "   -F             -- Do not fork into background\n");
     fprintf(stderr, "   -h             -- Print this help message\n");
 
-    fprintf(stderr, "\nPPPoE Version %s, Copyright (C) 2001-2006 Roaring Penguin Software Inc.\n", VERSION);
+    fprintf(stderr, "\nPPPoE Version %s, Copyright (C) 2001-2006 Roaring Penguin Software Inc.\n", RP_VERSION);
+    fprintf(stderr, "              %*s  Copyright (C) 2018-2020 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
     fprintf(stderr, "PPPoE comes with ABSOLUTELY NO WARRANTY.\n");
     fprintf(stderr, "This is free software, and you are welcome to redistribute it under the terms\n");
     fprintf(stderr, "of the GNU General Public License, version 2 or any later version.\n");
-    fprintf(stderr, "http://www.roaringpenguin.com\n");
+    fprintf(stderr, "https://dianne.skoll.ca/projects/rp-pppoe/\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -826,7 +828,7 @@ relayGotDiscoveryPacket(PPPoEInterface const *iface)
 	return;
     }
     /* Ignore unknown code/version */
-    if (packet.ver != 1 || packet.type != 1) {
+    if (PPPOE_VER(packet.vertype) != 1 || PPPOE_TYPE(packet.vertype) != 1) {
 	return;
     }
 
@@ -886,7 +888,7 @@ relayGotSessionPacket(PPPoEInterface const *iface)
     }
 
     /* Ignore unknown code/version */
-    if (packet.ver != 1 || packet.type != 1) {
+    if (PPPOE_VER(packet.vertype) != 1 || PPPOE_TYPE(packet.vertype) != 1) {
 	return;
     }
 
@@ -1109,7 +1111,7 @@ relayHandlePADO(PPPoEInterface const *iface,
 
     acIndex = iface - Interfaces;
 
-    /* Source address must be unicast */
+    /* Source address can't be broadcast */
     if (BROADCAST(packet->ethHdr.h_source)) {
 	syslog(LOG_ERR,
 	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s from a broadcast address",
@@ -1491,8 +1493,7 @@ relaySendError(unsigned char code,
     memcpy(packet.ethHdr.h_source, iface->mac, ETH_ALEN);
     memcpy(packet.ethHdr.h_dest, mac, ETH_ALEN);
     packet.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    packet.type = 1;
-    packet.ver = 1;
+    packet.vertype = PPPOE_VER_TYPE(1, 1);
     packet.code = code;
     packet.session = session;
     packet.length = htons(0);

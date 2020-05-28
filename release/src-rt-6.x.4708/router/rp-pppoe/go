@@ -7,6 +7,7 @@
 # Quick-start shell script to set up PPPoE
 #
 # Copyright (C) 2000 Roaring Penguin Software Inc.
+# Copyright (C) 2018 Dianne Skoll
 #
 # $Id$
 #***********************************************************************

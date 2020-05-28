@@ -101,6 +101,17 @@ Allows at most \fInum\fR concurrent PPPoE sessions.  If not specified,
 the default is 64.
 
 .TP
+.B \-M \fIstring\fR
+Sends \fIstring\fR in a MOTM tag in a PADM packet right after sending
+the PADS to a client.
+
+.TP
+.B \-H \fIurl\fR
+Sends \fIurl\fR in a HURL tag in a PADM packet right after sending the
+PADS to a client.  Note that \fIurl\fR must start with either
+\fBhttp://\fR or \fBhttps://\fR.
+
+.TP
 .B \-O \fIfname\fR
 This option causes \fBpppoe-server\fR to tell \fBpppd\fR to use the option
 file \fIfname\fR instead of the default \fI/etc/ppp/pppoe-server-options\fR.
@@ -198,9 +209,9 @@ Note that \fBpppoe-server\fR is meant mainly for testing PPPoE clients.
 It is \fInot\fR a high-performance server meant for production use.
 
 .SH AUTHORS
-\fBpppoe-server\fR was written by Dianne Skoll <dfs@roaringpenguin.com>.
+\fBpppoe-server\fR was written by Dianne Skoll <dianne@skoll.ca>.
 
-The \fBpppoe\fR home page is \fIhttp://www.roaringpenguin.com/pppoe/\fR.
+The \fBpppoe\fR home page is \fIhttps://dianne.skoll.ca/projects/rp-pppoe/\fR.
 
 .SH SEE ALSO
 pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5),

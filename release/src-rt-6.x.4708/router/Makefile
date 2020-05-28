@@ -1104,9 +1104,10 @@ ppp-%:
 
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
-	cd rp-pppoe/src && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd \
-	ac_cv_linux_kernel_pppoe=yes rpppoe_cv_pack_bitfields=rev
+	cd rp-pppoe/src && \
+		CFLAGS="-g -O2 $(EXTRACFLAGS)" \
+		$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd --disable-debugging \
+			ac_cv_linux_kernel_pppoe=yes rpppoe_cv_pack_bitfields=rev ac_cv_path_PPPD=$(TOP)/pppd
 	@touch $@
 
 rp-pppoe: pppd rp-pppoe/src/stamp-h1
