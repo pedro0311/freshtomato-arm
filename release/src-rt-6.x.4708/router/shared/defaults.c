@@ -472,7 +472,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			, 0 },	// Quiet time for power save
 	{ "wl_rxchain_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
 	{ "wl_rxchain_pwrsave_stas_assoc_check", "1"			, 0 },	/* STAs associated before powersave */
-	{ "wl_radio_pwrsave_enable",	"1"				, 0 },	// Radio powersave enable
+	{ "wl_radio_pwrsave_enable",	"0"				, 0 },	// Radio powersave enable
 	{ "wl_radio_pwrsave_quiet_time","1800"				, 0 },	// Quiet time for power save
 	{ "wl_radio_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
 	{ "wl_radio_pwrsave_level",	"0"				, 0 },	// Radio power save level
