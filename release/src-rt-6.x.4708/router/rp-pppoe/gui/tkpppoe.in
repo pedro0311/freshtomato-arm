@@ -13,8 +13,6 @@
 #
 #   The "Roaring Penguin" logo is a trademark of Roaring Penguin Software Inc.
 #
-#   http://www.roaringpenguin.com
-#
 #--------------------------------------------------------------
 
 # $Id$
@@ -2887,7 +2885,7 @@ proc doLogo {} {
 	after 25
     }
 
-    .c create text 4 28 -anchor nw -text "http://www.roaringpenguin.com" \
+    .c create text 4 28 -anchor nw -text "https://dianne.skoll.ca/projects/rp-pppoe/" \
 	    -fill red -font {-family courier -size -14 -weight bold}
     update idletasks
     after 2500

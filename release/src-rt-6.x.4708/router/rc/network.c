@@ -99,13 +99,15 @@ void wlconf_pre(void)
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 
 		if (nvram_match(strcat_r(prefix, "nband", tmp), "1") && /* only for wlX_nband == 1 for 5 GHz */
-		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+		    nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
 		  
 			dbG("set vhtmode 1 for %s\n", word);
 			eval("wl", "-i", word, "vhtmode", "1");
 		}
 		else if (nvram_match(strcat_r(prefix, "nband", tmp), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
-			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1")) {
+			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+			 nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
 		  
 		  	if (nvram_match(strcat_r(prefix, "turbo_qam", tmp), "1")) { /* check turbo qam on or off ? */
 				dbG("set vht_features 3 for %s\n", word);
@@ -243,7 +245,11 @@ static int wlconf(char *ifname, int unit, int subunit)
 			eval("wl", "-i", ifname, "antdiv", nvram_safe_get(wl_nvname("antdiv", unit, 0)));
 			eval("wl", "-i", ifname, "txant", nvram_safe_get(wl_nvname("txant", unit, 0)));
 			eval("wl", "-i", ifname, "txpwr1", "-o", "-m", nvram_get_int(wl_nvname("txpwr", unit, 0)) ? nvram_safe_get(wl_nvname("txpwr", unit, 0)) : "-1");
+#ifdef TCONFIG_BCMWL6
+			eval("wl", "-i", ifname, "interference", nvram_match(wl_nvname("phytype", unit, 0), "v") ? nvram_safe_get(wl_nvname("mitigation_ac", unit, 0)) : nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#else
 			eval("wl", "-i", ifname, "interference", nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#endif
 		}
 
 		if (wl_client(unit, subunit)) {

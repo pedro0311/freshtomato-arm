@@ -7,6 +7,7 @@
 * Common functions used by PPPoE client and server
 *
 * Copyright (C) 2000-2012 by Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -63,12 +64,12 @@ parsePacket(PPPoEPacket *packet, ParseFunc *func, void *extra)
     unsigned char *curTag;
     UINT16_t tagType, tagLen;
 
-    if (packet->ver != 1) {
-	syslog(LOG_ERR, "Invalid PPPoE version (%d)", (int) packet->ver);
+    if (PPPOE_VER(packet->vertype) != 1) {
+	syslog(LOG_ERR, "Invalid PPPoE version (%d)", PPPOE_VER(packet->vertype));
 	return -1;
     }
-    if (packet->type != 1) {
-	syslog(LOG_ERR, "Invalid PPPoE type (%d)", (int) packet->type);
+    if (PPPOE_TYPE(packet->vertype) != 1) {
+	syslog(LOG_ERR, "Invalid PPPoE type (%d)", PPPOE_TYPE(packet->vertype));
 	return -1;
     }
 
@@ -80,12 +81,10 @@ parsePacket(PPPoEPacket *packet, ParseFunc *func, void *extra)
 
     /* Step through the tags */
     curTag = packet->payload;
-    while(curTag - packet->payload < len) {
+    while (curTag - packet->payload + TAG_HDR_SIZE <= len) {
 	/* Alignment is not guaranteed, so do this by hand... */
-	tagType = (((UINT16_t) curTag[0]) << 8) +
-	    (UINT16_t) curTag[1];
-	tagLen = (((UINT16_t) curTag[2]) << 8) +
-	    (UINT16_t) curTag[3];
+	tagType = (curTag[0] << 8) + curTag[1];
+	tagLen = (curTag[2] << 8) + curTag[3];
 	if (tagType == TAG_END_OF_LIST) {
 	    return 0;
 	}
@@ -118,12 +117,12 @@ findTag(PPPoEPacket *packet, UINT16_t type, PPPoETag *tag)
     unsigned char *curTag;
     UINT16_t tagType, tagLen;
 
-    if (packet->ver != 1) {
-	syslog(LOG_ERR, "Invalid PPPoE version (%d)", (int) packet->ver);
+    if (PPPOE_VER(packet->vertype) != 1) {
+	syslog(LOG_ERR, "Invalid PPPoE version (%d)", PPPOE_VER(packet->vertype));
 	return NULL;
     }
-    if (packet->type != 1) {
-	syslog(LOG_ERR, "Invalid PPPoE type (%d)", (int) packet->type);
+    if (PPPOE_TYPE(packet->vertype) != 1) {
+	syslog(LOG_ERR, "Invalid PPPoE type (%d)", PPPOE_TYPE(packet->vertype));
 	return NULL;
     }
 
@@ -247,25 +246,6 @@ printErr(char const *str)
 {
     fprintf(stderr, "pppoe: %s\n", str);
     syslog(LOG_ERR, "%s", str);
-}
-
-
-/**********************************************************************
-*%FUNCTION: strDup
-*%ARGUMENTS:
-* str -- string to copy
-*%RETURNS:
-* A malloc'd copy of str.  Exits if malloc fails.
-***********************************************************************/
-char *
-strDup(char const *str)
-{
-    char *copy = malloc(strlen(str)+1);
-    if (!copy) {
-	rp_fatal("strdup failed");
-    }
-    strcpy(copy, str);
-    return copy;
 }
 
 /**********************************************************************
@@ -501,8 +481,7 @@ sendPADT(PPPoEConnection *conn, char const *msg)
     memcpy(packet.ethHdr.h_source, conn->myEth, ETH_ALEN);
 
     packet.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    packet.ver = 1;
-    packet.type = 1;
+    packet.vertype = PPPOE_VER_TYPE(1, 1);
     packet.code = CODE_PADT;
     packet.session = conn->session;
 
@@ -643,3 +622,39 @@ parseLogErrs(UINT16_t type, UINT16_t len, unsigned char *data,
 {
     pktLogErrs("PADT", type, len, data, extra);
 }
+
+#ifndef HAVE_STRLCPY
+/**********************************************************************
+*%FUNCTION: strlcpy
+*%ARGUMENTS:
+* dst -- destination buffer
+* src -- source string
+* size -- size of destination buffer
+*%RETURNS:
+* Number of characters copied, excluding NUL terminator
+*%DESCRIPTION:
+* Copy at most size-1 characters from src to dst,
+* always NUL-terminating dst if size!=0.
+***********************************************************************/
+size_t
+strlcpy(char *dst, const char *src, size_t size)
+{
+    const char *orig_src = src;
+
+    if (size == 0) {
+	return 0;
+    }
+
+    while (--size != 0) {
+	if ((*dst++ = *src++) == '\0') {
+	    break;
+	}
+    }
+
+    if (size == 0) {
+	*dst = '\0';
+    }
+
+    return src - orig_src - 1;
+}
+#endif

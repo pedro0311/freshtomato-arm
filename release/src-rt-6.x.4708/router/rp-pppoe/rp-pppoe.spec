@@ -1,6 +1,6 @@
 Summary: PPP Over Ethernet (xDSL support)
 Name: rp-pppoe
-Version: 3.13
+Version: 3.14
 %if %(%{expand:test %{_vendor} != mandrake ; echo $?})
 Release: 1mdk
 %else
@@ -8,17 +8,17 @@ Release: 1
 %endif
 License: GPL
 Group: System Environment/Daemons
-Source: http://www.roaringpenguin.com/pppoe/rp-pppoe-3.13.tar.gz
-Url: http://www.roaringpenguin.com/pppoe/
-Packager: Dianne Skoll <dfs@roaringpenguin.com>
+Source: https://dianne.skoll.ca/projects/rp-pppoe/download/rp-pppoe-3.14.tar.gz
+Url: https://dianne.skoll.ca/projects/rp-pppoe/
+Packager: Dianne Skoll <dianne@skoll.ca>
 BuildRoot: /tmp/pppoe-build
-Vendor: Roaring Penguin Software Inc.
+Vendor: Dianne Skoll
 Requires: ppp >= 2.3.7
 
 # LIC: GPL
 %description
 PPPoE (Point-to-Point Protocol over Ethernet) is a protocol used by
-many DSL Internet Service Providers. Roaring Penguin has a free
+many DSL Internet Service Providers. RP-PPPoE is a free
 client for Linux systems to connect to PPPoE service providers.
 
 The client is a user-mode program and does not require any kernel

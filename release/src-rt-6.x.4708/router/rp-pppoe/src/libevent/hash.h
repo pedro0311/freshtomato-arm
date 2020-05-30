@@ -5,6 +5,7 @@
 * Hash table utilities
 *
 * Copyright (C) 2002 Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * LIC: GPL
 *

@@ -85,4 +85,11 @@ struct nf_ct_tcp_flags {
 #define NFCT_BITMASK_AND	0
 #define NFCT_BITMASK_OR		1
 
+#define __noreturn	__attribute__((__noreturn__))
+
+void __noreturn __abi_breakage(const char *file, int line, const char *reason);
+
+#define abi_breakage()	\
+	__abi_breakage(__FILE__, __LINE__, strerror(errno));
+
 #endif

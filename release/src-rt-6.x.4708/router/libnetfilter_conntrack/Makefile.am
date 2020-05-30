@@ -2,7 +2,7 @@ include $(top_srcdir)/Make_global.am
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS	= include src utils examples qa
+SUBDIRS	= include src utils examples tests
 
 man_MANS = #nfnetlink_conntrack.3 nfnetlink_conntrack.7
 

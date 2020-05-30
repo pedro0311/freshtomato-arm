@@ -3,7 +3,6 @@
 
 #include "linux_list.h"
 #include <stdint.h>
-#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
 #define PROGNAME "conntrack"
 
@@ -12,6 +11,8 @@
 #define NUMBER_OF_CMD   19
 #define NUMBER_OF_OPT   29
 
+struct nf_conntrack;
+
 struct ctproto_handler {
 	struct list_head 	head;
 
@@ -19,8 +20,8 @@ struct ctproto_handler {
 	uint16_t 		protonum;
 	const char		*version;
 
-	enum ctattr_protoinfo	protoinfo_attr;
-	
+	uint32_t		protoinfo_attr;
+
 	int (*parse_opts)(char c,
 			  struct nf_conntrack *ct,
 			  struct nf_conntrack *exptuple,

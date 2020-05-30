@@ -25,6 +25,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <limits.h>
 #include "conntrackd.h"
 #include "bitops.h"
 #include "cidr.h"
@@ -115,7 +116,13 @@ logfile_bool : T_LOG T_OFF
 
 logfile_path : T_LOG T_PATH_VAL
 {
-	strncpy(conf.logfile, $2, FILENAME_MAXLEN);
+	if (strlen($2) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "LogFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.logfile, FILENAME_MAXLEN, "%s", $2);
+	free($2);
 };
 
 syslog_bool : T_SYSLOG T_ON
@@ -151,8 +158,10 @@ syslog_facility : T_SYSLOG T_STRING
 	else {
 		dlog(LOG_WARNING, "'%s' is not a known syslog facility, "
 		     "ignoring", $2);
+		free($2);
 		break;
 	}
+	free($2);
 
 	if (conf.stats.syslog_facility != -1 &&
 	    conf.syslog_facility != conf.stats.syslog_facility)
@@ -162,7 +171,13 @@ syslog_facility : T_SYSLOG T_STRING
 
 lock : T_LOCK T_PATH_VAL
 {
-	strncpy(conf.lockfile, $2, FILENAME_MAXLEN);
+	if (strlen($2) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "LockFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.lockfile, FILENAME_MAXLEN, "%s", $2);
+	free($2);
 };
 
 refreshtime : T_REFRESH T_NUMBER
@@ -224,6 +239,7 @@ multicast_option : T_IPV4_ADDR T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.mcast.in)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
 
@@ -234,6 +250,7 @@ multicast_option : T_IPV4_ADDR T_IP
 		break;
 	}
 
+	free($2);
 	conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET;
 };
 
@@ -246,6 +263,7 @@ multicast_option : T_IPV6_ADDR T_IP
 			&conf.channel[conf.channel_num].u.mcast.in);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", $2);
+		free($2);
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
@@ -256,6 +274,7 @@ multicast_option : T_IPV6_ADDR T_IP
 		dlog(LOG_WARNING, "your multicast address is IPv6 but "
 		     "is binded to an IPv4 interface? "
 		     "Surely this is not what you want");
+		free($2);
 		break;
 	}
 
@@ -268,12 +287,14 @@ multicast_option : T_IPV6_ADDR T_IP
 		idx = if_nametoindex($2);
 		if (!idx) {
 			dlog(LOG_WARNING, "%s is an invalid interface", $2);
+			free($2);
 			break;
 		}
 
 		conf.channel[conf.channel_num].u.mcast.ifa.interface_index6 = idx;
 		conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET6;
 	}
+	free($2);
 };
 
 multicast_option : T_IPV4_IFACE T_IP
@@ -282,8 +303,10 @@ multicast_option : T_IPV4_IFACE T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.mcast.ifa)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
+	free($2);
 
         if (conf.channel[conf.channel_num].u.mcast.ipproto == AF_INET6) {
 		dlog(LOG_WARNING, "your multicast interface is IPv4 but "
@@ -298,6 +321,7 @@ multicast_option : T_IPV4_IFACE T_IP
 multicast_option : T_IPV6_IFACE T_IP
 {
 	dlog(LOG_WARNING, "`IPv6_interface' not required, ignoring");
+	free($2);
 }
 
 multicast_option : T_IFACE T_STRING
@@ -311,6 +335,7 @@ multicast_option : T_IFACE T_STRING
 	idx = if_nametoindex($2);
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", $2);
+		free($2);
 		break;
 	}
 
@@ -318,6 +343,8 @@ multicast_option : T_IFACE T_STRING
 		conf.channel[conf.channel_num].u.mcast.ifa.interface_index6 = idx;
 		conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET6;
 	}
+
+	free($2);
 };
 
 multicast_option : T_GROUP T_NUMBER
@@ -389,8 +416,10 @@ udp_option : T_IPV4_ADDR T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.udp.server.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
+	free($2);
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET;
 };
 
@@ -403,12 +432,14 @@ udp_option : T_IPV6_ADDR T_IP
 			&conf.channel[conf.channel_num].u.udp.server.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", $2);
+		free($2);
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free($2);
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET6;
 };
 
@@ -418,8 +449,10 @@ udp_option : T_IPV4_DEST_ADDR T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.udp.client)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
+	free($2);
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET;
 };
 
@@ -432,12 +465,14 @@ udp_option : T_IPV6_DEST_ADDR T_IP
 			&conf.channel[conf.channel_num].u.udp.client);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", $2);
+		free($2);
 		break;
-	} else {
+	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free($2);
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET6;
 };
 
@@ -451,9 +486,12 @@ udp_option : T_IFACE T_STRING
 	idx = if_nametoindex($2);
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", $2);
+		free($2);
 		break;
 	}
 	conf.channel[conf.channel_num].u.udp.server.ipv6.scope_id = idx;
+
+	free($2);
 };
 
 udp_option : T_PORT T_NUMBER
@@ -529,8 +567,10 @@ tcp_option : T_IPV4_ADDR T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.tcp.server.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
+	free($2);
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET;
 };
 
@@ -543,12 +583,14 @@ tcp_option : T_IPV6_ADDR T_IP
 			&conf.channel[conf.channel_num].u.tcp.server.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", $2);
+		free($2);
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free($2);
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET6;
 };
 
@@ -558,8 +600,10 @@ tcp_option : T_IPV4_DEST_ADDR T_IP
 
 	if (!inet_aton($2, &conf.channel[conf.channel_num].u.tcp.client)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", $2);
+		free($2);
 		break;
 	}
+	free($2);
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET;
 };
 
@@ -572,12 +616,14 @@ tcp_option : T_IPV6_DEST_ADDR T_IP
 			&conf.channel[conf.channel_num].u.tcp.client);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", $2);
+		free($2);
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free($2);
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET6;
 };
 
@@ -591,9 +637,12 @@ tcp_option : T_IFACE T_STRING
 	idx = if_nametoindex($2);
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", $2);
+		free($2);
 		break;
 	}
 	conf.channel[conf.channel_num].u.tcp.server.ipv6.scope_id = idx;
+
+	free($2);
 };
 
 tcp_option : T_PORT T_NUMBER
@@ -650,7 +699,13 @@ unix_options:
 
 unix_option : T_PATH T_PATH_VAL
 {
-	strcpy(conf.local.path, $2);
+	if (strlen($2) > UNIX_PATH_MAX) {
+		dlog(LOG_ERR, "Path is longer than %u characters",
+		     UNIX_PATH_MAX);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.local.path, UNIX_PATH_MAX, "%s", $2);
+	free($2);
 };
 
 unix_option : T_BACKLOG T_NUMBER
@@ -738,6 +793,7 @@ expect_list:
 expect_item: T_STRING
 {
 	exp_filter_add(STATE(exp_filter), $1);
+	free($1);
 }
 
 sync_mode_alarm: T_SYNC_MODE T_ALARM '{' sync_mode_alarm_list '}'
@@ -985,8 +1041,11 @@ scheduler_line : T_TYPE T_STRING
 		conf.sched.type = SCHED_FIFO;
 	} else {
 		dlog(LOG_ERR, "unknown scheduler `%s'", $2);
+		free($2);
 		exit(EXIT_FAILURE);
 	}
+
+	free($2);
 };
 
 scheduler_line : T_PRIO T_NUMBER
@@ -1064,8 +1123,10 @@ filter_protocol_item : T_STRING
 	if (pent == NULL) {
 		dlog(LOG_WARNING, "getprotobyname() cannot find "
 		     "protocol `%s' in /etc/protocols", $1);
+		free($1);
 		break;
 	}
+	free($1);
 	ct_filter_add_proto(STATE(us_filter), pent->p_proto);
 
 	__kernel_filter_start();
@@ -1162,12 +1223,14 @@ filter_address_item : T_IPV4_ADDR T_IP
 		if (cidr > 32) {
 			dlog(LOG_WARNING, "%s/%d is not a valid network, "
 			     "ignoring", $2, cidr);
+			free($2);
 			break;
 		}
 	}
 
 	if (!inet_aton($2, &ip.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4, ignoring", $2);
+		free($2);
 		break;
 	}
 
@@ -1193,6 +1256,7 @@ filter_address_item : T_IPV4_ADDR T_IP
 				     "ignore pool!");
 		}
 	}
+	free($2);
 	__kernel_filter_start();
 
 	/* host byte order */
@@ -1222,6 +1286,7 @@ filter_address_item : T_IPV6_ADDR T_IP
 		if (cidr > 128) {
 			dlog(LOG_WARNING, "%s/%d is not a valid network, "
 			     "ignoring", $2, cidr);
+			free($2);
 			break;
 		}
 	}
@@ -1229,6 +1294,7 @@ filter_address_item : T_IPV6_ADDR T_IP
 	err = inet_pton(AF_INET6, $2, &ip.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6, ignoring", $2);
+		free($2);
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
@@ -1255,6 +1321,7 @@ filter_address_item : T_IPV6_ADDR T_IP
 				     "ignore pool!");
 		}
 	}
+	free($2);
 	__kernel_filter_start();
 
 	/* host byte order */
@@ -1324,7 +1391,13 @@ stat_logfile_bool : T_LOG T_OFF
 
 stat_logfile_path : T_LOG T_PATH_VAL
 {
-	strncpy(conf.stats.logfile, $2, FILENAME_MAXLEN);
+	if (strlen($2) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "stats LogFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.stats.logfile, FILENAME_MAXLEN, "%s", $2);
+	free($2);
 };
 
 stat_syslog_bool : T_SYSLOG T_ON
@@ -1360,8 +1433,10 @@ stat_syslog_facility : T_SYSLOG T_STRING
 	else {
 		dlog(LOG_WARNING, "'%s' is not a known syslog facility, "
 		     "ignoring.", $2);
+		free($2);
 		break;
 	}
+	free($2);
 
 	if (conf.syslog_facility != -1 &&
 	    conf.stats.syslog_facility != conf.syslog_facility)
@@ -1395,8 +1470,10 @@ helper_type: T_TYPE T_STRING T_STRING T_STRING '{' helper_type_list  '}'
 		l3proto = AF_INET6;
 	else {
 		dlog(LOG_ERR, "unknown layer 3 protocol");
+		free($3);
 		exit(EXIT_FAILURE);
 	}
+	free($3);
 
 	if (strcmp($4, "tcp") == 0)
 		l4proto = IPPROTO_TCP;
@@ -1404,19 +1481,23 @@ helper_type: T_TYPE T_STRING T_STRING T_STRING '{' helper_type_list  '}'
 		l4proto = IPPROTO_UDP;
 	else {
 		dlog(LOG_ERR, "unknown layer 4 protocol");
+		free($4);
 		exit(EXIT_FAILURE);
 	}
+	free($4);
 
 #ifdef BUILD_CTHELPER
 	helper = helper_find(CONNTRACKD_LIB_DIR, $2, l4proto, RTLD_NOW);
 	if (helper == NULL) {
 		dlog(LOG_ERR, "Unknown `%s' helper", $2);
+		free($2);
 		exit(EXIT_FAILURE);
 	}
 #else
 	dlog(LOG_ERR, "Helper support is disabled, recompile conntrackd");
 	exit(EXIT_FAILURE);
 #endif
+	free($2);
 
 	helper_inst = calloc(1, sizeof(struct ctd_helper_instance));
 	if (helper_inst == NULL)
@@ -1519,13 +1600,19 @@ helper_type: T_HELPER_POLICY T_STRING '{' helper_policy_list '}'
 	if (e == NULL) {
 		dlog(LOG_ERR, "Helper policy configuration empty, fix your "
 		     "configuration file, please");
+		free($2);
 		exit(EXIT_FAILURE);
 		break;
 	}
+	if (strlen($2) > CTD_HELPER_NAME_LEN) {
+		dlog(LOG_ERR, "Helper Policy is longer than %u characters",
+		     CTD_HELPER_NAME_LEN);
+		exit(EXIT_FAILURE);
+	}
 
 	policy = (struct ctd_helper_policy *) &e->data;
-	strncpy(policy->name, $2, CTD_HELPER_NAME_LEN);
-	policy->name[CTD_HELPER_NAME_LEN-1] = '\0';
+	snprintf(policy->name, CTD_HELPER_NAME_LEN, "%s", $2);
+	free($2);
 	/* Now object is complete. */
 	e->type = SYMBOL_HELPER_POLICY_EXPECT_ROOT;
 	stack_item_push(&symbol_stack, e);

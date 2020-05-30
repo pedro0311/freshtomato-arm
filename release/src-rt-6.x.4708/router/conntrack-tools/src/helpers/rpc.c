@@ -26,6 +26,7 @@
 
 #include <errno.h>
 
+#include <rpc/clnt.h>
 #include <rpc/rpc_msg.h>
 #include <rpc/pmap_prot.h>
 #define _GNU_SOURCE
@@ -114,8 +115,8 @@ nf_nat_rpc(struct pkt_buff *pkt, int dir, struct nf_expect *exp,
 #define ROUNDUP(n)	((((n) + 3)/4)*4)
 
 static int
-rpc_call(const uint32_t *data, uint32_t offset, uint32_t datalen,
-	 struct rpc_info *rpc_info)
+rpc_parse_call(const uint32_t *data, uint32_t offset, uint32_t datalen,
+	       struct rpc_info *rpc_info)
 {
 	uint32_t p, r;
 
@@ -393,7 +394,7 @@ rpc_helper_cb(struct pkt_buff *pkt, uint32_t protoff,
 	}
 
 	if (rm_dir == CALL) {
-		if (rpc_call(data, offset, datalen, rpc_info) < 0)
+		if (rpc_parse_call(data, offset, datalen, rpc_info) < 0)
 			goto out;
 
 		rpc_info->xid = xid;

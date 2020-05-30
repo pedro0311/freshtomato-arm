@@ -8,46 +8,7 @@
  */
 
 #include "internal/internal.h"
-
-static void __build_timeout(struct nfnlhdr *req,
-			    size_t size,
-			    const struct nf_expect *exp)
-{
-	nfnl_addattr32(&req->nlh, size, CTA_EXPECT_TIMEOUT,htonl(exp->timeout));
-}
-
-static void __build_zone(struct nfnlhdr *req, size_t size,
-			 const struct nf_expect *exp)
-{
-	nfnl_addattr16(&req->nlh, size, CTA_EXPECT_ZONE, htons(exp->zone));
-}
-
-static void __build_flags(struct nfnlhdr *req,
-			  size_t size, const struct nf_expect *exp)
-{
-	nfnl_addattr32(&req->nlh, size, CTA_EXPECT_FLAGS,htonl(exp->flags));
-}
-
-static void __build_class(struct nfnlhdr *req,
-			  size_t size,
-			  const struct nf_expect *exp)
-{
-	nfnl_addattr32(&req->nlh, size, CTA_EXPECT_CLASS, htonl(exp->class));
-}
-
-static void __build_helper_name(struct nfnlhdr *req, size_t size,
-			 const struct nf_expect *exp)
-{
-	nfnl_addattr_l(&req->nlh, size, CTA_EXPECT_HELP_NAME,
-			exp->helper_name, strlen(exp->helper_name)+1);
-}
-
-static void __build_expectfn(struct nfnlhdr *req,
-			     size_t size, const struct nf_expect *exp)
-{
-	nfnl_addattr_l(&req->nlh, size, CTA_EXPECT_FN,
-			exp->expectfn, strlen(exp->expectfn)+1);
-}
+#include <libmnl/libmnl.h>
 
 int __build_expect(struct nfnl_subsys_handle *ssh,
 		   struct nfnlhdr *req,
@@ -56,7 +17,10 @@ int __build_expect(struct nfnl_subsys_handle *ssh,
 		   uint16_t flags,
 		   const struct nf_expect *exp)
 {
+	struct nlmsghdr *nlh;
+	struct nfgenmsg *nfh;
 	uint8_t l3num;
+	char *buf;
 
 	if (test_bit(ATTR_ORIG_L3PROTO, exp->master.set))
 		l3num = exp->master.orig.l3protonum;
@@ -67,43 +31,16 @@ int __build_expect(struct nfnl_subsys_handle *ssh,
 
 	memset(req, 0, size);
 
-	nfnl_fill_hdr(ssh, &req->nlh, 0, l3num, 0, type, flags);
+	buf = (char *)&req->nlh;
+	nlh = mnl_nlmsg_put_header(buf);
+	nlh->nlmsg_type = (NFNL_SUBSYS_CTNETLINK_EXP << 8) | type;
+	nlh->nlmsg_flags = flags;
+	nlh->nlmsg_seq = 0;
 
-	if (test_bit(ATTR_EXP_EXPECTED, exp->set)) {
-		__build_tuple(req, size, &exp->expected.orig, CTA_EXPECT_TUPLE);
-	}
+	nfh = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
+	nfh->nfgen_family = l3num;
+	nfh->version = NFNETLINK_V0;
+	nfh->res_id = 0;
 
-	if (test_bit(ATTR_EXP_MASTER, exp->set)) {
-		__build_tuple(req, size, &exp->master.orig, CTA_EXPECT_MASTER);
-	}
-
-	if (test_bit(ATTR_EXP_MASK, exp->set)) {
-		__build_tuple(req, size, &exp->mask.orig, CTA_EXPECT_MASK);
-	}
-
-	if (test_bit(ATTR_EXP_NAT_TUPLE, exp->set) &&
-	    test_bit(ATTR_EXP_NAT_DIR, exp->set)) {
-		struct nfattr *nest;
-
-		nest = nfnl_nest(&req->nlh, size, CTA_EXPECT_NAT);
-		__build_tuple(req, size, &exp->nat.orig, CTA_EXPECT_NAT_TUPLE);
-		nfnl_addattr32(&req->nlh, size, CTA_EXPECT_NAT_DIR,
-				htonl(exp->nat_dir));
-		nfnl_nest_end(&req->nlh, nest);
-	}
-
-	if (test_bit(ATTR_EXP_TIMEOUT, exp->set))
-		__build_timeout(req, size, exp);
-	if (test_bit(ATTR_EXP_FLAGS, exp->set))
-		__build_flags(req, size, exp);
-	if (test_bit(ATTR_EXP_ZONE, exp->set))
-		__build_zone(req, size, exp);
-	if (test_bit(ATTR_EXP_CLASS, exp->set))
-		__build_class(req, size, exp);
-	if (test_bit(ATTR_EXP_HELPER_NAME, exp->set))
-		__build_helper_name(req, size, exp);
-	if (test_bit(ATTR_EXP_FN, exp->set))
-		__build_expectfn(req, size, exp);
-
-	return 0;
+	return nfexp_nlmsg_build(nlh, exp);
 }

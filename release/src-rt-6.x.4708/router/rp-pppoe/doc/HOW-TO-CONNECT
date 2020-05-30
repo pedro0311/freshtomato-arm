@@ -27,7 +27,7 @@ should display something like this:
 
 	eth0      Link encap:Ethernet  HWaddr 00:60:67:62:31:D4
 
-plust some more lines.  Your HWaddr will be different.  As long as you see
+plus some more lines.  Your HWaddr will be different.  As long as you see
 the HWaddr line, your card should be working.
 
 DO NOT assign an IP address to the Ethernet card.  DO NOT configure the
@@ -134,8 +134,8 @@ As root, bring down the link by typing: pppoe-stop
 That's it!
 
 --
-Dianne Skoll <dfs@roaringpenguin.com> | Roaring Penguin Software Inc.
-http://www.roaringpenguin.com           |
+Dianne Skoll <dianne@skoll.ca>
+https://dianne.skoll.ca/projects/rp-pppoe/           |
 
 PROBLEMS!  DIANNE, IT DOESN'T WORK!
 ---------------------------------

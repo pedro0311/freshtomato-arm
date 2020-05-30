@@ -154,3 +154,10 @@ const struct nfnl_handle *nfct_nfnlh(struct nfct_handle *cth)
 /**
  * @}
  */
+
+void __noreturn __abi_breakage(const char *file, int line, const char *reason)
+{
+	fprintf(stderr, "ctnetlink kernel ABI is broken, contact your vendor.\n"
+			"%s:%d reason: %s\n", file, line, reason);
+	exit(EXIT_FAILURE);
+}

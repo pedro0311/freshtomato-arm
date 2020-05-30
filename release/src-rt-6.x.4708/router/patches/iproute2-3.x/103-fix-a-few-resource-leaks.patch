@@ -1,0 +1,93 @@
+--- iproute2-3.x/ip/ip6tunnel.c
++++ iproute2-3.x/ip/ip6tunnel.c
+@@ -358,6 +358,7 @@ static int do_tunnels_list(struct ip6_tn
+ 	if (!fgets(buf, sizeof(buf), fp) ||
+ 	    !fgets(buf, sizeof(buf), fp)) {
+ 		fprintf(stderr, "/proc/net/dev read error\n");
++		fclose(fp);
+ 		return -1;
+ 	}
+ 
+--- iproute2-3.x/misc/ss.c
++++ iproute2-3.x/misc/ss.c
+@@ -2166,10 +2166,12 @@ static int tcp_show_netlink_file(struct
+ 		status = fread(buf, 1, sizeof(*h), fp);
+ 		if (status < 0) {
+ 			perror("Reading header from $TCPDIAG_FILE");
++			fclose(fp);
+ 			return -1;
+ 		}
+ 		if (status != sizeof(*h)) {
+ 			perror("Unexpected EOF reading $TCPDIAG_FILE");
++			fclose(fp);
+ 			return -1;
+ 		}
+ 
+@@ -2177,16 +2179,20 @@ static int tcp_show_netlink_file(struct
+ 
+ 		if (status < 0) {
+ 			perror("Reading $TCPDIAG_FILE");
++			fclose(fp);
+ 			return -1;
+ 		}
+ 		if (status + sizeof(*h) < h->nlmsg_len) {
+ 			perror("Unexpected EOF reading $TCPDIAG_FILE");
++			fclose(fp);
+ 			return -1;
+ 		}
+ 
+ 		/* The only legal exit point */
+-		if (h->nlmsg_type == NLMSG_DONE)
++		if (h->nlmsg_type == NLMSG_DONE) {
++			fclose(fp);
+ 			return 0;
++		}
+ 
+ 		if (h->nlmsg_type == NLMSG_ERROR) {
+ 			struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+@@ -2196,12 +2202,15 @@ static int tcp_show_netlink_file(struct
+ 				errno = -err->error;
+ 				perror("TCPDIAG answered");
+ 			}
++			fclose(fp);
+ 			return -1;
+ 		}
+ 
+ 		err = inet_show_sock(h, f, IPPROTO_TCP);
+-		if (err < 0)
++		if (err < 0) {
++			fclose(fp);
+ 			return err;
++		}
+ 	}
+ }
+ 
+@@ -3061,6 +3070,7 @@ static int netlink_show(struct filter *f
+ 		netlink_show_one(f, prot, pid, groups, 0, 0, 0, rq, wq, sk, cb);
+ 	}
+ 
++	fclose(fp);
+ 	return 0;
+ }
+ 
+--- iproute2-3.x/netem/maketable.c
++++ iproute2-3.x/netem/maketable.c
+@@ -228,5 +228,7 @@ main(int argc, char **argv)
+ 	inverse = inverttable(table, TABLESIZE, DISTTABLESIZE, total);
+ 	interpolatetable(inverse, TABLESIZE);
+ 	printtable(inverse, TABLESIZE);
++	free(inverse);
++	free(table);
+ 	return 0;
+ }
+--- iproute2-3.x/netem/stats.c
++++ iproute2-3.x/netem/stats.c
+@@ -55,6 +55,8 @@ stats(FILE *fp)
+ 	printf("rho =   %12.6f\n", rho);
+ 	/*printf("sigma2 = %10.4f\n", sqrt(sigma2/(double)(n-1)));*/
+ 	/*printf("correlation rho = %10.6f\n", top/((double)(n-1)*sigma*sigma));*/
++
++	free(x);
+ }
+ 
+ 

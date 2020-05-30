@@ -2703,17 +2703,17 @@ YY_RULE_SETUP
 case 86:
 YY_RULE_SETUP
 #line 145 "read_config_lex.l"
-{ yylval.string = yytext; return T_IP; }
+{ yylval.string = strdup(yytext); return T_IP; }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
 #line 146 "read_config_lex.l"
-{ yylval.string = yytext; return T_IP; }
+{ yylval.string = strdup(yytext); return T_IP; }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
 #line 147 "read_config_lex.l"
-{ yylval.string = yytext; return T_PATH_VAL; }
+{ yylval.string = strdup(yytext); return T_PATH_VAL; }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
@@ -2749,7 +2749,7 @@ YY_RULE_SETUP
 case 94:
 YY_RULE_SETUP
 #line 159 "read_config_lex.l"
-{ yylval.string = yytext; return T_STRING; }
+{ yylval.string = strdup(yytext); return T_STRING; }
 	YY_BREAK
 case 95:
 *yy_cp = (yy_hold_char); /* undo effects of setting up yytext */

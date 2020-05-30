@@ -4,7 +4,7 @@ include ../common.mak
 all:
 	@echo "" >rom/etc/motd
 	@echo "" >>rom/etc/motd
-	@echo "Tomato v"`cat ../shared/tomato_version`"" >>rom/etc/motd
+	@echo "FreshTomato v"`cat ../shared/tomato_version`"" >>rom/etc/motd
 
 clean:
 	rm -f rom/etc/motd
@@ -18,7 +18,8 @@ install:
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
 ifeq ($(TCONFIG_HTTPS),y)
-	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/openssl.cnf > $(INSTALLDIR)/rom/etc/openssl.cnf
+	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/ssl/openssl.cnf > $(INSTALLDIR)/rom/etc/ssl/openssl.cnf
+	ln -s /rom/cacert.pem $(INSTALLDIR)/rom/etc/ssl/cert.pem
 else
 	rm -f $(INSTALLDIR)/rom/etc/openssl.cnf
 endif

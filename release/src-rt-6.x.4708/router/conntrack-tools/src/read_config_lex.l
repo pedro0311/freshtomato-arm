@@ -142,9 +142,9 @@ notrack		[N|n][O|o][T|t][R|r][A|a][C|c][K|k]
 {is_off}		{ return T_OFF; }
 {integer}		{ yylval.val = atoi(yytext); return T_NUMBER; }
 {signed_integer}	{ yylval.val = atoi(yytext); return T_SIGNED_NUMBER; }
-{ip4}			{ yylval.string = yytext; return T_IP; }
-{ip6}			{ yylval.string = yytext; return T_IP; }
-{path}			{ yylval.string = yytext; return T_PATH_VAL; }
+{ip4}			{ yylval.string = strdup(yytext); return T_IP; }
+{ip6}			{ yylval.string = strdup(yytext); return T_IP; }
+{path}			{ yylval.string = strdup(yytext); return T_PATH_VAL; }
 {alarm}			{ return T_ALARM; }
 {persistent}		{ dlog(LOG_WARNING, "Now `persistent' mode "
 			       "is called `alarm'. Please, update "
@@ -156,7 +156,7 @@ notrack		[N|n][O|o][T|t][R|r][A|a][C|c][K|k]
 			       "your conntrackd.conf file.\n");
 			  return T_FTFW; }
 {notrack}		{ return T_NOTRACK; }
-{string}		{ yylval.string = yytext; return T_STRING; }
+{string}		{ yylval.string = strdup(yytext); return T_STRING; }
 
 {comment}	;
 {ws}		;

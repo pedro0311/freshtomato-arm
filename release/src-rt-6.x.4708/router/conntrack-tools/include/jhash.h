@@ -106,7 +106,7 @@ static inline u32 jhash2(const u32 *k, u32 length, u32 initval)
 	c += length * 4;
 
 	switch (len) {
-	case 2 : b += k[1];
+	case 2 : b += k[1]; /* fall through */
 	case 1 : a += k[0];
 	};
 

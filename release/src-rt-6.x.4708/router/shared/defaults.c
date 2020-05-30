@@ -338,7 +338,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl1_ssid",			"FreshTomato50"			, 0 },
 #endif
 	{ "wl_country_code",		""				, 0 },	// Country (default obtained from driver)
-	{ "wl_country",			""				, 0 },	// Country (default obtained from driver)
 	{ "wl_country_rev", 		""				, 0 },	/* Regrev Code (default obtained from driver) */
 	{ "wl_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
 	{ "wl1_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
@@ -347,7 +346,6 @@ struct nvram_tuple router_defaults[] = {
 #endif
 	{ "wl_closed",			"0"				, 0 },	// Closed (hidden) network
 	{ "wl_ap_isolate",		"0"				, 0 },	// AP isolate mode
-	{ "wl_igs",			"0"				, 0 },	// BCM: wl_wmf_bss_enable
 	{ "wl_mode",			"ap"				, 0 },	// AP mode (ap|sta|wds)
 	{ "wl_lazywds",			"0"				, 0 },	// Enable "lazy" WDS mode (0|1)
 	{ "wl_wds",			""				, 0 },	// xx:xx:xx:xx:xx:xx ...
@@ -360,7 +358,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_key3",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_key4",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_channel",			"6"				, 0 },	// Channel number
-	{ "wl_noisemitigation", 	"0"				, 0 },
 	{ "wl_assoc_retry_max", 	"3"				, 0 },	/* Non-zero limit for association retries */
 	{ "wl_rate",			"0"				, 0 },	// Rate (bps, 0 for auto)
 	{ "wl_mrate",			"0"				, 0 },	// Mcast Rate (bps, 0 for auto)
@@ -380,8 +377,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_infra",			"1"				, 0 },	// Network Type (BSS/IBSS)
 	{ "wl_btc_mode",		"0"				, 0 },	// !!TB - BT Coexistence Mode
 	{ "wl_sta_retry_time",		"5"				, 0 },	// !!TB - Seconds between association attempts (0 to disable retries)
-	{ "wl_mitigation",		"0"				, 0 },	// Interference Mitigation Mode (0|1|2|3|4)
-
+	{ "wl_mitigation",		"0"				, 0 },	// Non-AC Interference Mitigation Mode (0|1|2|3|4)
+#ifdef TCONFIG_BCMWL6
+	{ "wl_mitigation_ac",		"0"				, 0 },	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7); 0 == disabled
+#endif
 	{ "wl_passphrase",		""				, 0 },	// Passphrase
 	{ "wl_wep_bit",			"128"				, 0 },	// WEP encryption [64 | 128]
 	{ "wl_wep_buf",			""				, 0 },	// save all settings for web
@@ -464,6 +463,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "emf_uffp_entry",		""				, 0 },	// Unreg frames forwarding ports
 	{ "emf_rtport_entry",		""				, 0 },	// IGMP frames forwarding ports
 	{ "emf_enable",			"0"				, 0 },	// Disable EMF by default
+	{ "wl_igs",			"0"				, 0 },	// BCM: wl_wmf_bss_enable
 	{ "wl_wmf_ucigmp_query", 	"0"				, 0 },	/* Disable Converting IGMP Query to ucast (default) */
 	{ "wl_wmf_mdata_sendup", 	"0"				, 0 },	/* Disable Sending Multicast Data to host (default) */
 	{ "wl_wmf_ucast_upnp", 		"0"				, 0 },	/* Disable Converting upnp to ucast (default) */

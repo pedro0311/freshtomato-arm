@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to create configure.
 
-AC_INIT([libnetfilter_conntrack], [1.0.7])
+AC_INIT([libnetfilter_conntrack], [1.0.8])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_HOST
 AC_CONFIG_HEADER([config.h])
@@ -31,7 +31,7 @@ PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
 AC_CHECK_HEADERS(arpa/inet.h)
 dnl Check for inet_ntop
 AC_CHECK_FUNCS(inet_ntop)
-dnl Check for setns used in qa
+dnl Check for setns used in tests
 AC_CHECK_FUNCS(setns)
 dnl Again, some systems have it, but not IPv6
 if test "$ac_cv_func_inet_ntop" = "yes" ; then
@@ -66,7 +66,7 @@ fi
 
 dnl Output the makefile
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile utils/Makefile
-	examples/Makefile qa/Makefile include/libnetfilter_conntrack/Makefile
+	examples/Makefile tests/Makefile include/libnetfilter_conntrack/Makefile
 	include/internal/Makefile src/conntrack/Makefile src/expect/Makefile
 	libnetfilter_conntrack.pc doxygen.cfg])
 AC_OUTPUT

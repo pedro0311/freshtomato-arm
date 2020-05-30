@@ -175,6 +175,13 @@ ct_helper_sane_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(ct_helper_sane_la_CFLAGS) $(CFLAGS) \
 	$(ct_helper_sane_la_LDFLAGS) $(LDFLAGS) -o $@
+ct_helper_slp_la_LIBADD =
+am_ct_helper_slp_la_OBJECTS = ct_helper_slp_la-slp.lo
+ct_helper_slp_la_OBJECTS = $(am_ct_helper_slp_la_OBJECTS)
+ct_helper_slp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(ct_helper_slp_la_CFLAGS) $(CFLAGS) \
+	$(ct_helper_slp_la_LDFLAGS) $(LDFLAGS) -o $@
 ct_helper_ssdp_la_LIBADD =
 am_ct_helper_ssdp_la_OBJECTS = ct_helper_ssdp_la-ssdp.lo
 ct_helper_ssdp_la_OBJECTS = $(am_ct_helper_ssdp_la_OBJECTS)
@@ -233,13 +240,15 @@ am__v_CCLD_1 =
 SOURCES = $(ct_helper_amanda_la_SOURCES) \
 	$(ct_helper_dhcpv6_la_SOURCES) $(ct_helper_ftp_la_SOURCES) \
 	$(ct_helper_mdns_la_SOURCES) $(ct_helper_rpc_la_SOURCES) \
-	$(ct_helper_sane_la_SOURCES) $(ct_helper_ssdp_la_SOURCES) \
-	$(ct_helper_tftp_la_SOURCES) $(ct_helper_tns_la_SOURCES)
+	$(ct_helper_sane_la_SOURCES) $(ct_helper_slp_la_SOURCES) \
+	$(ct_helper_ssdp_la_SOURCES) $(ct_helper_tftp_la_SOURCES) \
+	$(ct_helper_tns_la_SOURCES)
 DIST_SOURCES = $(ct_helper_amanda_la_SOURCES) \
 	$(ct_helper_dhcpv6_la_SOURCES) $(ct_helper_ftp_la_SOURCES) \
 	$(ct_helper_mdns_la_SOURCES) $(ct_helper_rpc_la_SOURCES) \
-	$(ct_helper_sane_la_SOURCES) $(ct_helper_ssdp_la_SOURCES) \
-	$(ct_helper_tftp_la_SOURCES) $(ct_helper_tns_la_SOURCES)
+	$(ct_helper_sane_la_SOURCES) $(ct_helper_slp_la_SOURCES) \
+	$(ct_helper_ssdp_la_SOURCES) $(ct_helper_tftp_la_SOURCES) \
+	$(ct_helper_tns_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -320,6 +329,8 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSYSTEMD_CFLAGS = @LIBSYSTEMD_CFLAGS@
 LIBSYSTEMD_LIBS = @LIBSYSTEMD_LIBS@
+LIBTIRPC_CFLAGS = @LIBTIRPC_CFLAGS@
+LIBTIRPC_LIBS = @LIBTIRPC_LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
@@ -424,9 +435,10 @@ pkglib_LTLIBRARIES = ct_helper_amanda.la \
 		     ct_helper_tftp.la	\
 		     ct_helper_tns.la	\
 		     ct_helper_sane.la	\
+		     ct_helper_slp.la	\
 		     ct_helper_ssdp.la
 
-HELPER_LDFLAGS = -avoid-version -module $(LIBNETFILTER_CONNTRACK_LIBS) @LAZY_LDFLAGS@
+HELPER_LDFLAGS = -avoid-version -module $(LIBNETFILTER_CONNTRACK_LIBS) $(LAZY_LDFLAGS)
 HELPER_CFLAGS = $(AM_CFLAGS) $(LIBNETFILTER_CONNTRACK_CFLAGS)
 ct_helper_amanda_la_SOURCES = amanda.c
 ct_helper_amanda_la_LDFLAGS = $(HELPER_LDFLAGS)
@@ -442,7 +454,7 @@ ct_helper_mdns_la_LDFLAGS = $(HELPER_LDFLAGS)
 ct_helper_mdns_la_CFLAGS = $(HELPER_CFLAGS)
 ct_helper_rpc_la_SOURCES = rpc.c
 ct_helper_rpc_la_LDFLAGS = $(HELPER_LDFLAGS)
-ct_helper_rpc_la_CFLAGS = $(HELPER_CFLAGS)
+ct_helper_rpc_la_CFLAGS = $(HELPER_CFLAGS) $(LIBTIRPC_CFLAGS)
 ct_helper_tftp_la_SOURCES = tftp.c
 ct_helper_tftp_la_LDFLAGS = $(HELPER_LDFLAGS)
 ct_helper_tftp_la_CFLAGS = $(HELPER_CFLAGS)
@@ -452,6 +464,9 @@ ct_helper_tns_la_CFLAGS = $(HELPER_CFLAGS)
 ct_helper_sane_la_SOURCES = sane.c
 ct_helper_sane_la_LDFLAGS = $(HELPER_LDFLAGS)
 ct_helper_sane_la_CFLAGS = $(HELPER_CFLAGS)
+ct_helper_slp_la_SOURCES = slp.c
+ct_helper_slp_la_LDFLAGS = $(HELPER_LDFLAGS)
+ct_helper_slp_la_CFLAGS = $(HELPER_CFLAGS)
 ct_helper_ssdp_la_SOURCES = ssdp.c
 ct_helper_ssdp_la_LDFLAGS = $(HELPER_LDFLAGS)
 ct_helper_ssdp_la_CFLAGS = $(HELPER_CFLAGS)
@@ -543,6 +558,9 @@ ct_helper_rpc.la: $(ct_helper_rpc_la_OBJECTS) $(ct_helper_rpc_la_DEPENDENCIES) $
 ct_helper_sane.la: $(ct_helper_sane_la_OBJECTS) $(ct_helper_sane_la_DEPENDENCIES) $(EXTRA_ct_helper_sane_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(ct_helper_sane_la_LINK) -rpath $(pkglibdir) $(ct_helper_sane_la_OBJECTS) $(ct_helper_sane_la_LIBADD) $(LIBS)
 
+ct_helper_slp.la: $(ct_helper_slp_la_OBJECTS) $(ct_helper_slp_la_DEPENDENCIES) $(EXTRA_ct_helper_slp_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(ct_helper_slp_la_LINK) -rpath $(pkglibdir) $(ct_helper_slp_la_OBJECTS) $(ct_helper_slp_la_LIBADD) $(LIBS)
+
 ct_helper_ssdp.la: $(ct_helper_ssdp_la_OBJECTS) $(ct_helper_ssdp_la_DEPENDENCIES) $(EXTRA_ct_helper_ssdp_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(ct_helper_ssdp_la_LINK) -rpath $(pkglibdir) $(ct_helper_ssdp_la_OBJECTS) $(ct_helper_ssdp_la_LIBADD) $(LIBS)
 
@@ -564,6 +582,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_mdns_la-mdns.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_rpc_la-rpc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_sane_la-sane.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_slp_la-slp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_ssdp_la-ssdp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_tftp_la-tftp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ct_helper_tns_la-tns.Plo@am__quote@
@@ -633,6 +652,13 @@ ct_helper_sane_la-sane.lo: sane.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sane.c' object='ct_helper_sane_la-sane.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ct_helper_sane_la_CFLAGS) $(CFLAGS) -c -o ct_helper_sane_la-sane.lo `test -f 'sane.c' || echo '$(srcdir)/'`sane.c
+
+ct_helper_slp_la-slp.lo: slp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ct_helper_slp_la_CFLAGS) $(CFLAGS) -MT ct_helper_slp_la-slp.lo -MD -MP -MF $(DEPDIR)/ct_helper_slp_la-slp.Tpo -c -o ct_helper_slp_la-slp.lo `test -f 'slp.c' || echo '$(srcdir)/'`slp.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ct_helper_slp_la-slp.Tpo $(DEPDIR)/ct_helper_slp_la-slp.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='slp.c' object='ct_helper_slp_la-slp.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ct_helper_slp_la_CFLAGS) $(CFLAGS) -c -o ct_helper_slp_la-slp.lo `test -f 'slp.c' || echo '$(srcdir)/'`slp.c
 
 ct_helper_ssdp_la-ssdp.lo: ssdp.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ct_helper_ssdp_la_CFLAGS) $(CFLAGS) -MT ct_helper_ssdp_la-ssdp.lo -MD -MP -MF $(DEPDIR)/ct_helper_ssdp_la-ssdp.Tpo -c -o ct_helper_ssdp_la-ssdp.lo `test -f 'ssdp.c' || echo '$(srcdir)/'`ssdp.c

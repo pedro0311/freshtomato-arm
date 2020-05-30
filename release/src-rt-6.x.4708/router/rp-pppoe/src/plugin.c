@@ -5,6 +5,7 @@
 * pppd plugin for kernel-mode PPPoE on Linux
 *
 * Copyright (C) 2001-2012 by Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 * Portions copyright 2000 Michal Ostrowski and Jamal Hadi Salim.
 *
 * Much code and many ideas derived from pppoe plugin by Michal
@@ -55,8 +56,6 @@
 #include <net/if_arp.h>
 #include <linux/ppp_defs.h>
 #include <linux/if_pppox.h>
-#if 0
-#endif
 
 #ifndef _ROOT_PATH
 #define _ROOT_PATH ""
@@ -95,7 +94,7 @@ static option_t Options[] = {
       "Only connect to specified MAC address" },
     { NULL }
 };
-int (*OldDevnameHook)(char *cmd, char **argv, int doit) = NULL;
+
 static PPPoEConnection *conn = NULL;
 
 /**********************************************************************
@@ -165,7 +164,7 @@ PPPOEConnectDevice(void)
 	error("Can't get MTU for %s: %m", conn->ifName);
 	return -1;
     }
-    strncpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
     if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
 	error("Can't get MTU for %s: %m", conn->ifName);
 	close(s);
@@ -217,6 +216,8 @@ PPPOEConnectDevice(void)
         discovery(conn);
 	if (conn->discoveryState != STATE_SESSION) {
 	    error("Unable to complete PPPoE Discovery");
+	    close(conn->discoverySocket);
+	    conn->discoverySocket = -1;
 	    return -1;
 	}
     }
@@ -320,12 +321,15 @@ PPPOEDisconnectDevice(void)
     memcpy(sp.sa_addr.pppoe.dev, conn->ifName, strlen(conn->ifName));
     memcpy(sp.sa_addr.pppoe.remote, conn->peerEth, ETH_ALEN);
     if (connect(conn->sessionSocket, (struct sockaddr *) &sp,
-		sizeof(struct sockaddr_pppox)) < 0) {
+		sizeof(struct sockaddr_pppox)) < 0 && errno != EALREADY) {
 	fatal("Failed to disconnect PPPoE socket: %d %m", errno);
 	return;
     }
     close(conn->sessionSocket);
-    close(conn->discoverySocket);
+    if (conn->discoverySocket >= 0) {
+	sendPADT(conn, NULL);
+	close(conn->discoverySocket);
+    }
 
     /* Do NOT free conn; if pppd persist is on, we'll need it again */
 }
@@ -333,11 +337,12 @@ PPPOEDisconnectDevice(void)
 static void
 PPPOEDeviceOptions(void)
 {
-    char buf[256];
-    snprintf(buf, 256, _PATH_ETHOPT "%s",devnam);
+    char buf[MAXPATHLEN];
+    strlcpy(buf, _PATH_ETHOPT, MAXPATHLEN);
+    strlcat(buf, devnam, MAXPATHLEN);
+
     if(!options_from_file(buf, 0, 0, 1))
 	exit(EXIT_OPTION_ERROR);
-
 }
 
 struct channel pppoe_channel;
@@ -345,7 +350,7 @@ struct channel pppoe_channel;
 /**********************************************************************
  * %FUNCTION: PPPoEDevnameHook
  * %ARGUMENTS:
- * cmd -- the command (actually, the device name
+ * cmd -- the command (actually, the device name)
  * argv -- argument vector
  * doit -- if non-zero, set device name.  Otherwise, just check if possible
  * %RETURNS:
@@ -372,7 +377,6 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
        Patch based on suggestion from Mike Ireton.
     */
     if (seen_devnam[seen_idx]) {
-	if (OldDevnameHook) return OldDevnameHook(cmd, argv, doit);
 	return 0;
     }
 
@@ -384,7 +388,6 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
     } else {
 	if (strncmp(cmd, "eth", 3) &&
 	    strncmp(cmd, "br", 2)) {
-	    if (OldDevnameHook) return OldDevnameHook(cmd, argv, doit);
 	    return 0;
 	}
     }
@@ -396,7 +399,7 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 
     /* Try getting interface index */
     if (r) {
-	strncpy(ifr.ifr_name, cmd, IFNAMSIZ);
+	strlcpy(ifr.ifr_name, cmd, IFNAMSIZ);
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
 	    r = 0;
 	} else {
@@ -404,8 +407,9 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 		r = 0;
 	    } else {
 		if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-		    error("Interface %s not Ethernet", cmd);
-		    r=0;
+		    if (doit)
+			error("Interface %s not Ethernet", cmd);
+		    r = 0;
 		}
 	    }
 	}
@@ -416,7 +420,7 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
     if (r) {
 	seen_devnam[seen_idx] = 1;
 	if (doit) {
-	    strncpy(devnam, cmd, sizeof(devnam));
+	    strlcpy(devnam, cmd, sizeof(devnam));
 	    if (the_channel != &pppoe_channel) {
 
 		the_channel = &pppoe_channel;
@@ -447,7 +451,6 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 	return 1;
     }
 
-    if (OldDevnameHook) r = OldDevnameHook(cmd, argv, doit);
     return r;
 }
 

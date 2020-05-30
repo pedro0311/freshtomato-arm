@@ -183,8 +183,10 @@ static int __snprintf_status_assured(char *buf,
 				     const struct nf_conntrack *ct)
 {
 	int size = 0;
-	
-	if (ct->status & IPS_ASSURED)
+
+	if (ct->status & IPS_OFFLOAD)
+		size = snprintf(buf, len, "[OFFLOAD] ");
+	else if (ct->status & IPS_ASSURED)
 		size = snprintf(buf, len, "[ASSURED] ");
 
 	return size;

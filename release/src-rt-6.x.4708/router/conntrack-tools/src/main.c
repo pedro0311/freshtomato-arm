@@ -120,8 +120,8 @@ do_chdir(const char *d)
 
 int main(int argc, char *argv[])
 {
+	char config_file[PATH_MAX + 1] = {};
 	int ret, i, action = -1;
-	char config_file[PATH_MAX] = {};
 	int type = 0;
 	struct utsname u;
 	int version, major, minor;
@@ -165,13 +165,12 @@ int main(int argc, char *argv[])
 			break;
 		case 'C':
 			if (++i < argc) {
-				strncpy(config_file, argv[i], PATH_MAX);
-				if (strlen(argv[i]) >= PATH_MAX){
-					config_file[PATH_MAX-1]='\0';
+				if (strlen(argv[i]) > PATH_MAX) {
 					dlog(LOG_WARNING, "Path to config file"
 					     " to long. Cutting it down to %d"
 					     " characters", PATH_MAX);
 				}
+				snprintf(config_file, PATH_MAX, "%s", argv[i]);
 				break;
 			}
 			show_usage(argv[0]);

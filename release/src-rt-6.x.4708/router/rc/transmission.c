@@ -174,8 +174,9 @@ void start_bittorrent(void)
 	}
 
 	fprintf(fp,
-		"EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"		/* crash fix? */
-		"echo 8388608 > /proc/sys/net/core/rmem_max\n"		/* tune buffers */
+		"EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"			/* crash fix? */
+		"CURL_CA_BUNDLE=/etc/ssl/cert.pem; export CURL_CA_BUNDLE\n"	/* workaround for missing cacert (in new curl versions) */
+		"echo 8388608 > /proc/sys/net/core/rmem_max\n"			/* tune buffers */
 		"echo 2097152 > /proc/sys/net/core/wmem_max\n"
 		"%s/transmission-daemon -g %s/.settings",
 		pn,

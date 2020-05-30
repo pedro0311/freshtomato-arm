@@ -85,9 +85,9 @@ union inet_address {
 #define CONFIG(x) conf.x
 
 struct ct_conf {
-	char logfile[FILENAME_MAXLEN];
+	char logfile[FILENAME_MAXLEN + 1];
 	int syslog_facility;
-	char lockfile[FILENAME_MAXLEN];
+	char lockfile[FILENAME_MAXLEN + 1];
 	int hashsize;			/* hashtable size */
 	int channel_num;
 	int channel_default;
@@ -132,7 +132,7 @@ struct ct_conf {
 		int prio;
 	} sched;
 	struct {
-		char logfile[FILENAME_MAXLEN];
+		char logfile[FILENAME_MAXLEN + 1];
 		int syslog_facility;
 		size_t buffer_size;
 	} stats;

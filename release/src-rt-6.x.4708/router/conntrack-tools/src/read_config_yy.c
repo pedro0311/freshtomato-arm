@@ -1,8 +1,9 @@
-/* A Bison parser, made by GNU Bison 3.0.4.  */
+/* A Bison parser, made by GNU Bison 3.3.2.  */
 
 /* Bison implementation for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
+   Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,11 +41,14 @@
    define necessary library symbols; they are noted "INFRINGES ON
    USER NAME SPACE" below.  */
 
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
+
 /* Identify Bison output.  */
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "3.0.4"
+#define YYBISON_VERSION "3.3.2"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -61,8 +65,8 @@
 
 
 
-/* Copy the first part of user declarations.  */
-#line 1 "read_config_yy.y" /* yacc.c:339  */
+/* First part of user prologue.  */
+#line 1 "read_config_yy.y" /* yacc.c:337  */
 
 /*
  * (C) 2006-2009 by Pablo Neira Ayuso <pablo@netfilter.org>
@@ -90,6 +94,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <limits.h>
 #include "conntrackd.h"
 #include "bitops.h"
 #include "cidr.h"
@@ -119,13 +124,16 @@ enum {
 };
 
 
-#line 123 "read_config_yy.c" /* yacc.c:339  */
-
+#line 128 "read_config_yy.c" /* yacc.c:337  */
 # ifndef YY_NULLPTR
-#  if defined __cplusplus && 201103L <= __cplusplus
-#   define YY_NULLPTR nullptr
+#  if defined __cplusplus
+#   if 201103L <= __cplusplus
+#    define YY_NULLPTR nullptr
+#   else
+#    define YY_NULLPTR 0
+#   endif
 #  else
-#   define YY_NULLPTR 0
+#   define YY_NULLPTR ((void*)0)
 #  endif
 # endif
 
@@ -343,12 +351,12 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 58 "read_config_yy.y" /* yacc.c:355  */
+#line 59 "read_config_yy.y" /* yacc.c:352  */
 
 	int		val;
 	char		*string;
 
-#line 352 "read_config_yy.c" /* yacc.c:355  */
+#line 360 "read_config_yy.c" /* yacc.c:352  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -363,9 +371,7 @@ int yyparse (void);
 
 #endif /* !YY_YY_READ_CONFIG_YY_H_INCLUDED  */
 
-/* Copy the second part of user declarations.  */
 
-#line 369 "read_config_yy.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -386,13 +392,13 @@ typedef signed char yytype_int8;
 #ifdef YYTYPE_UINT16
 typedef YYTYPE_UINT16 yytype_uint16;
 #else
-typedef unsigned short int yytype_uint16;
+typedef unsigned short yytype_uint16;
 #endif
 
 #ifdef YYTYPE_INT16
 typedef YYTYPE_INT16 yytype_int16;
 #else
-typedef short int yytype_int16;
+typedef short yytype_int16;
 #endif
 
 #ifndef YYSIZE_T
@@ -404,7 +410,7 @@ typedef short int yytype_int16;
 #  include <stddef.h> /* INFRINGES ON USER NAME SPACE */
 #  define YYSIZE_T size_t
 # else
-#  define YYSIZE_T unsigned int
+#  define YYSIZE_T unsigned
 # endif
 #endif
 
@@ -440,15 +446,6 @@ typedef short int yytype_int16;
 # define YY_ATTRIBUTE_UNUSED YY_ATTRIBUTE ((__unused__))
 #endif
 
-#if !defined _Noreturn \
-     && (!defined __STDC_VERSION__ || __STDC_VERSION__ < 201112)
-# if defined _MSC_VER && 1200 <= _MSC_VER
-#  define _Noreturn __declspec (noreturn)
-# else
-#  define _Noreturn YY_ATTRIBUTE ((__noreturn__))
-# endif
-#endif
-
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
 # define YYUSE(E) ((void) (E))
@@ -456,7 +453,7 @@ typedef short int yytype_int16;
 # define YYUSE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
+#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
 # define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN \
     _Pragma ("GCC diagnostic push") \
@@ -618,16 +615,16 @@ union yyalloc
 /* YYNSTATES -- Number of states.  */
 #define YYNSTATES  367
 
-/* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
-   by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   347
 
+/* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
+   as returned by yylex, with out-of-bounds checking.  */
 #define YYTRANSLATE(YYX)                                                \
-  ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
+  ((unsigned) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
 /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex, without out-of-bounds checking.  */
+   as returned by yylex.  */
 static const yytype_uint8 yytranslate[] =
 {
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -671,29 +668,29 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    93,    93,    94,    97,    98,   101,   102,   103,   104,
-     107,   112,   116,   121,   126,   131,   163,   168,   173,   178,
-     183,   188,   202,   218,   219,   221,   240,   279,   298,   303,
-     323,   329,   335,   341,   347,   353,   367,   383,   384,   386,
-     397,   415,   426,   444,   459,   465,   471,   477,   483,   489,
-     505,   523,   524,   526,   537,   555,   566,   584,   599,   605,
-     611,   617,   623,   629,   635,   640,   645,   647,   648,   651,
-     656,   661,   671,   672,   674,   675,   676,   677,   678,   679,
-     680,   681,   682,   683,   684,   687,   689,   690,   693,   698,
-     703,   715,   723,   735,   736,   738,   743,   748,   753,   758,
-     759,   761,   762,   763,   764,   767,   768,   770,   771,   772,
-     773,   774,   775,   778,   779,   781,   782,   783,   784,   785,
-     788,   793,   798,   803,   808,   813,   818,   823,   828,   829,
-     831,   839,   847,   855,   863,   871,   879,   887,   895,   904,
-     906,   907,   910,   911,   912,   913,   914,   915,   916,   917,
-     918,   919,   920,   921,   922,   923,   924,   925,   926,   927,
-     930,   931,   933,   938,   943,   948,   953,   958,   963,   968,
-     974,   976,   977,   980,   992,  1001,  1006,  1016,  1021,  1026,
-    1031,  1032,  1034,  1043,  1056,  1057,  1059,  1078,  1097,  1116,
-    1125,  1147,  1148,  1150,  1208,  1268,  1277,  1291,  1292,  1294,
-    1296,  1306,  1307,  1310,  1311,  1312,  1313,  1316,  1321,  1325,
-    1330,  1335,  1340,  1372,  1377,  1378,  1381,  1384,  1484,  1485,
-    1488,  1491,  1502,  1513,  1534,  1535,  1538,  1539,  1542,  1557
+       0,    94,    94,    95,    98,    99,   102,   103,   104,   105,
+     108,   113,   117,   128,   133,   138,   172,   183,   188,   193,
+     198,   203,   217,   233,   234,   236,   257,   300,   321,   327,
+     350,   356,   362,   368,   374,   380,   394,   410,   411,   413,
+     426,   446,   459,   479,   497,   503,   509,   515,   521,   527,
+     543,   561,   562,   564,   577,   597,   610,   630,   648,   654,
+     660,   666,   672,   678,   684,   689,   694,   696,   697,   700,
+     711,   716,   726,   727,   729,   730,   731,   732,   733,   734,
+     735,   736,   737,   738,   739,   742,   744,   745,   748,   753,
+     758,   770,   778,   790,   791,   793,   799,   804,   809,   814,
+     815,   817,   818,   819,   820,   823,   824,   826,   827,   828,
+     829,   830,   831,   834,   835,   837,   838,   839,   840,   841,
+     844,   849,   854,   859,   864,   869,   874,   879,   884,   885,
+     887,   895,   903,   911,   919,   927,   935,   943,   951,   960,
+     962,   963,   966,   967,   968,   969,   970,   971,   972,   973,
+     974,   975,   976,   977,   978,   979,   980,   981,   982,   983,
+     986,   987,   989,   994,   999,  1004,  1009,  1014,  1019,  1024,
+    1030,  1032,  1033,  1036,  1051,  1060,  1065,  1075,  1080,  1085,
+    1090,  1091,  1093,  1102,  1115,  1116,  1118,  1139,  1158,  1177,
+    1186,  1208,  1209,  1211,  1272,  1335,  1344,  1358,  1359,  1361,
+    1363,  1373,  1374,  1377,  1378,  1379,  1380,  1383,  1388,  1392,
+    1403,  1408,  1413,  1447,  1452,  1453,  1456,  1459,  1565,  1566,
+    1569,  1572,  1583,  1594,  1621,  1622,  1625,  1626,  1629,  1644
 };
 #endif
 
@@ -1087,22 +1084,22 @@ static const yytype_uint8 yyr2[] =
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
-#define YYBACKUP(Token, Value)                                  \
-do                                                              \
-  if (yychar == YYEMPTY)                                        \
-    {                                                           \
-      yychar = (Token);                                         \
-      yylval = (Value);                                         \
-      YYPOPSTACK (yylen);                                       \
-      yystate = *yyssp;                                         \
-      goto yybackup;                                            \
-    }                                                           \
-  else                                                          \
-    {                                                           \
-      yyerror (YY_("syntax error: cannot back up")); \
-      YYERROR;                                                  \
-    }                                                           \
-while (0)
+#define YYBACKUP(Token, Value)                                    \
+  do                                                              \
+    if (yychar == YYEMPTY)                                        \
+      {                                                           \
+        yychar = (Token);                                         \
+        yylval = (Value);                                         \
+        YYPOPSTACK (yylen);                                       \
+        yystate = *yyssp;                                         \
+        goto yybackup;                                            \
+      }                                                           \
+    else                                                          \
+      {                                                           \
+        yyerror (YY_("syntax error: cannot back up")); \
+        YYERROR;                                                  \
+      }                                                           \
+  while (0)
 
 /* Error token number */
 #define YYTERROR        1
@@ -1142,37 +1139,37 @@ do {                                                                      \
 } while (0)
 
 
-/*----------------------------------------.
-| Print this symbol's value on YYOUTPUT.  |
-`----------------------------------------*/
+/*-----------------------------------.
+| Print this symbol's value on YYO.  |
+`-----------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep)
 {
-  FILE *yyo = yyoutput;
-  YYUSE (yyo);
+  FILE *yyoutput = yyo;
+  YYUSE (yyoutput);
   if (!yyvaluep)
     return;
 # ifdef YYPRINT
   if (yytype < YYNTOKENS)
-    YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
+    YYPRINT (yyo, yytoknum[yytype], *yyvaluep);
 # endif
   YYUSE (yytype);
 }
 
 
-/*--------------------------------.
-| Print this symbol on YYOUTPUT.  |
-`--------------------------------*/
+/*---------------------------.
+| Print this symbol on YYO.  |
+`---------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep)
 {
-  YYFPRINTF (yyoutput, "%s %s (",
+  YYFPRINTF (yyo, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep);
-  YYFPRINTF (yyoutput, ")");
+  yy_symbol_value_print (yyo, yytype, yyvaluep);
+  YYFPRINTF (yyo, ")");
 }
 
 /*------------------------------------------------------------------.
@@ -1206,7 +1203,7 @@ do {                                                            \
 static void
 yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, int yyrule)
 {
-  unsigned long int yylno = yyrline[yyrule];
+  unsigned long yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
   int yyi;
   YYFPRINTF (stderr, "Reducing stack by rule %d (line %lu):\n",
@@ -1217,7 +1214,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, int yyrule)
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
                        yystos[yyssp[yyi + 1 - yynrhs]],
-                       &(yyvsp[(yyi + 1) - (yynrhs)])
+                       &yyvsp[(yyi + 1) - (yynrhs)]
                                               );
       YYFPRINTF (stderr, "\n");
     }
@@ -1321,7 +1318,10 @@ yytnamerr (char *yyres, const char *yystr)
           case '\\':
             if (*++yyp != '\\')
               goto do_not_strip_quotes;
-            /* Fall through.  */
+            else
+              goto append;
+
+          append:
           default:
             if (yyres)
               yyres[yyn] = *yyp;
@@ -1339,7 +1339,7 @@ yytnamerr (char *yyres, const char *yystr)
   if (! yyres)
     return yystrlen (yystr);
 
-  return yystpcpy (yyres, yystr) - yyres;
+  return (YYSIZE_T) (yystpcpy (yyres, yystr) - yyres);
 }
 # endif
 
@@ -1417,10 +1417,10 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
                 yyarg[yycount++] = yytname[yyx];
                 {
                   YYSIZE_T yysize1 = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
-                  if (! (yysize <= yysize1
-                         && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
+                  if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+                    yysize = yysize1;
+                  else
                     return 2;
-                  yysize = yysize1;
                 }
               }
         }
@@ -1432,6 +1432,7 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
       case N:                               \
         yyformat = S;                       \
       break
+    default: /* Avoid compiler warnings. */
       YYCASE_(0, YY_("syntax error"));
       YYCASE_(1, YY_("syntax error, unexpected %s"));
       YYCASE_(2, YY_("syntax error, unexpected %s, expecting %s"));
@@ -1443,9 +1444,10 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 
   {
     YYSIZE_T yysize1 = yysize + yystrlen (yyformat);
-    if (! (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
+    if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+      yysize = yysize1;
+    else
       return 2;
-    yysize = yysize1;
   }
 
   if (*yymsg_alloc < yysize)
@@ -1571,23 +1573,31 @@ yyparse (void)
   yychar = YYEMPTY; /* Cause a token to be read.  */
   goto yysetstate;
 
+
 /*------------------------------------------------------------.
-| yynewstate -- Push a new state, which is found in yystate.  |
+| yynewstate -- push a new state, which is found in yystate.  |
 `------------------------------------------------------------*/
- yynewstate:
+yynewstate:
   /* In all cases, when you get here, the value and location stacks
      have just been pushed.  So pushing a state here evens the stacks.  */
   yyssp++;
 
- yysetstate:
-  *yyssp = yystate;
+
+/*--------------------------------------------------------------------.
+| yynewstate -- set current state (the top of the stack) to yystate.  |
+`--------------------------------------------------------------------*/
+yysetstate:
+  *yyssp = (yytype_int16) yystate;
 
   if (yyss + yystacksize - 1 <= yyssp)
+#if !defined yyoverflow && !defined YYSTACK_RELOCATE
+    goto yyexhaustedlab;
+#else
     {
       /* Get the current used size of the three stacks, in elements.  */
-      YYSIZE_T yysize = yyssp - yyss + 1;
+      YYSIZE_T yysize = (YYSIZE_T) (yyssp - yyss + 1);
 
-#ifdef yyoverflow
+# if defined yyoverflow
       {
         /* Give user a chance to reallocate the stack.  Use copies of
            these so that the &'s don't force the real ones into
@@ -1603,14 +1613,10 @@ yyparse (void)
                     &yyss1, yysize * sizeof (*yyssp),
                     &yyvs1, yysize * sizeof (*yyvsp),
                     &yystacksize);
-
         yyss = yyss1;
         yyvs = yyvs1;
       }
-#else /* no yyoverflow */
-# ifndef YYSTACK_RELOCATE
-      goto yyexhaustedlab;
-# else
+# else /* defined YYSTACK_RELOCATE */
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
         goto yyexhaustedlab;
@@ -1626,22 +1632,22 @@ yyparse (void)
           goto yyexhaustedlab;
         YYSTACK_RELOCATE (yyss_alloc, yyss);
         YYSTACK_RELOCATE (yyvs_alloc, yyvs);
-#  undef YYSTACK_RELOCATE
+# undef YYSTACK_RELOCATE
         if (yyss1 != yyssa)
           YYSTACK_FREE (yyss1);
       }
 # endif
-#endif /* no yyoverflow */
 
       yyssp = yyss + yysize - 1;
       yyvsp = yyvs + yysize - 1;
 
       YYDPRINTF ((stderr, "Stack size increased to %lu\n",
-                  (unsigned long int) yystacksize));
+                  (unsigned long) yystacksize));
 
       if (yyss + yystacksize - 1 <= yyssp)
         YYABORT;
     }
+#endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
 
   YYDPRINTF ((stderr, "Entering state %d\n", yystate));
 
@@ -1650,11 +1656,11 @@ yyparse (void)
 
   goto yybackup;
 
+
 /*-----------.
 | yybackup.  |
 `-----------*/
 yybackup:
-
   /* Do appropriate processing given the current state.  Read a
      lookahead token if we need one and don't already have one.  */
 
@@ -1727,7 +1733,7 @@ yydefault:
 
 
 /*-----------------------------.
-| yyreduce -- Do a reduction.  |
+| yyreduce -- do a reduction.  |
 `-----------------------------*/
 yyreduce:
   /* yyn is the number of a rule to reduce with.  */
@@ -1748,46 +1754,52 @@ yyreduce:
   switch (yyn)
     {
         case 10:
-#line 108 "read_config_yy.y" /* yacc.c:1646  */
+#line 109 "read_config_yy.y" /* yacc.c:1652  */
     {
 	strncpy(conf.logfile, DEFAULT_LOGFILE, FILENAME_MAXLEN);
 }
-#line 1756 "read_config_yy.c" /* yacc.c:1646  */
+#line 1762 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 11:
-#line 113 "read_config_yy.y" /* yacc.c:1646  */
+#line 114 "read_config_yy.y" /* yacc.c:1652  */
     {
 }
-#line 1763 "read_config_yy.c" /* yacc.c:1646  */
+#line 1769 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 12:
-#line 117 "read_config_yy.y" /* yacc.c:1646  */
+#line 118 "read_config_yy.y" /* yacc.c:1652  */
     {
-	strncpy(conf.logfile, (yyvsp[0].string), FILENAME_MAXLEN);
+	if (strlen((yyvsp[0].string)) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "LogFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.logfile, FILENAME_MAXLEN, "%s", (yyvsp[0].string));
+	free((yyvsp[0].string));
 }
-#line 1771 "read_config_yy.c" /* yacc.c:1646  */
+#line 1783 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 13:
-#line 122 "read_config_yy.y" /* yacc.c:1646  */
+#line 129 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.syslog_facility = DEFAULT_SYSLOG_FACILITY;
 }
-#line 1779 "read_config_yy.c" /* yacc.c:1646  */
+#line 1791 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 14:
-#line 127 "read_config_yy.y" /* yacc.c:1646  */
+#line 134 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.syslog_facility = -1;
 }
-#line 1787 "read_config_yy.c" /* yacc.c:1646  */
+#line 1799 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 15:
-#line 132 "read_config_yy.y" /* yacc.c:1646  */
+#line 139 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (!strcmp((yyvsp[0].string), "daemon"))
 		conf.syslog_facility = LOG_DAEMON;
@@ -1810,59 +1822,67 @@ yyreduce:
 	else {
 		dlog(LOG_WARNING, "'%s' is not a known syslog facility, "
 		     "ignoring", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 
 	if (conf.stats.syslog_facility != -1 &&
 	    conf.syslog_facility != conf.stats.syslog_facility)
 		dlog(LOG_WARNING, "conflicting Syslog facility "
 		     "values, defaulting to General");
 }
-#line 1822 "read_config_yy.c" /* yacc.c:1646  */
+#line 1836 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 16:
-#line 164 "read_config_yy.y" /* yacc.c:1646  */
+#line 173 "read_config_yy.y" /* yacc.c:1652  */
     {
-	strncpy(conf.lockfile, (yyvsp[0].string), FILENAME_MAXLEN);
+	if (strlen((yyvsp[0].string)) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "LockFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.lockfile, FILENAME_MAXLEN, "%s", (yyvsp[0].string));
+	free((yyvsp[0].string));
 }
-#line 1830 "read_config_yy.c" /* yacc.c:1646  */
+#line 1850 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 17:
-#line 169 "read_config_yy.y" /* yacc.c:1646  */
+#line 184 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.refresh = (yyvsp[0].val);
 }
-#line 1838 "read_config_yy.c" /* yacc.c:1646  */
+#line 1858 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 18:
-#line 174 "read_config_yy.y" /* yacc.c:1646  */
+#line 189 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.cache_timeout = (yyvsp[0].val);
 }
-#line 1846 "read_config_yy.c" /* yacc.c:1646  */
+#line 1866 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 19:
-#line 179 "read_config_yy.y" /* yacc.c:1646  */
+#line 194 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.commit_timeout = (yyvsp[0].val);
 }
-#line 1854 "read_config_yy.c" /* yacc.c:1646  */
+#line 1874 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 20:
-#line 184 "read_config_yy.y" /* yacc.c:1646  */
+#line 199 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.purge_timeout = (yyvsp[0].val);
 }
-#line 1862 "read_config_yy.c" /* yacc.c:1646  */
+#line 1882 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 21:
-#line 189 "read_config_yy.y" /* yacc.c:1646  */
+#line 204 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_MCAST) {
@@ -1875,11 +1895,11 @@ yyreduce:
 	conf.channel[conf.channel_num].channel_flags = CHANNEL_F_BUFFERED;
 	conf.channel_num++;
 }
-#line 1879 "read_config_yy.c" /* yacc.c:1646  */
+#line 1899 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 22:
-#line 203 "read_config_yy.y" /* yacc.c:1646  */
+#line 218 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_MCAST) {
@@ -1894,16 +1914,17 @@ yyreduce:
 	conf.channel_default = conf.channel_num;
 	conf.channel_num++;
 }
-#line 1898 "read_config_yy.c" /* yacc.c:1646  */
+#line 1918 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 25:
-#line 222 "read_config_yy.y" /* yacc.c:1646  */
+#line 237 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.mcast.in)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
 
@@ -1914,13 +1935,14 @@ yyreduce:
 		break;
 	}
 
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET;
 }
-#line 1920 "read_config_yy.c" /* yacc.c:1646  */
+#line 1942 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 26:
-#line 241 "read_config_yy.y" /* yacc.c:1646  */
+#line 258 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	int err;
@@ -1929,6 +1951,7 @@ yyreduce:
 			&conf.channel[conf.channel_num].u.mcast.in);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
@@ -1939,6 +1962,7 @@ yyreduce:
 		dlog(LOG_WARNING, "your multicast address is IPv6 but "
 		     "is binded to an IPv4 interface? "
 		     "Surely this is not what you want");
+		free((yyvsp[0].string));
 		break;
 	}
 
@@ -1951,25 +1975,29 @@ yyreduce:
 		idx = if_nametoindex((yyvsp[0].string));
 		if (!idx) {
 			dlog(LOG_WARNING, "%s is an invalid interface", (yyvsp[0].string));
+			free((yyvsp[0].string));
 			break;
 		}
 
 		conf.channel[conf.channel_num].u.mcast.ifa.interface_index6 = idx;
 		conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET6;
 	}
+	free((yyvsp[0].string));
 }
-#line 1962 "read_config_yy.c" /* yacc.c:1646  */
+#line 1988 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 27:
-#line 280 "read_config_yy.y" /* yacc.c:1646  */
+#line 301 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.mcast.ifa)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 
         if (conf.channel[conf.channel_num].u.mcast.ipproto == AF_INET6) {
 		dlog(LOG_WARNING, "your multicast interface is IPv4 but "
@@ -1980,19 +2008,20 @@ yyreduce:
 
 	conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET;
 }
-#line 1984 "read_config_yy.c" /* yacc.c:1646  */
+#line 2012 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 28:
-#line 299 "read_config_yy.y" /* yacc.c:1646  */
+#line 322 "read_config_yy.y" /* yacc.c:1652  */
     {
 	dlog(LOG_WARNING, "`IPv6_interface' not required, ignoring");
+	free((yyvsp[0].string));
 }
-#line 1992 "read_config_yy.c" /* yacc.c:1646  */
+#line 2021 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 29:
-#line 304 "read_config_yy.y" /* yacc.c:1646  */
+#line 328 "read_config_yy.y" /* yacc.c:1652  */
     {
 	unsigned int idx;
 
@@ -2003,6 +2032,7 @@ yyreduce:
 	idx = if_nametoindex((yyvsp[0].string));
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
 
@@ -2010,57 +2040,59 @@ yyreduce:
 		conf.channel[conf.channel_num].u.mcast.ifa.interface_index6 = idx;
 		conf.channel[conf.channel_num].u.mcast.ipproto = AF_INET6;
 	}
+
+	free((yyvsp[0].string));
 }
-#line 2015 "read_config_yy.c" /* yacc.c:1646  */
+#line 2047 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 30:
-#line 324 "read_config_yy.y" /* yacc.c:1646  */
+#line 351 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.mcast.port = (yyvsp[0].val);
 }
-#line 2024 "read_config_yy.c" /* yacc.c:1646  */
+#line 2056 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 31:
-#line 330 "read_config_yy.y" /* yacc.c:1646  */
+#line 357 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.mcast.sndbuf = (yyvsp[0].val);
 }
-#line 2033 "read_config_yy.c" /* yacc.c:1646  */
+#line 2065 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 32:
-#line 336 "read_config_yy.y" /* yacc.c:1646  */
+#line 363 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.mcast.rcvbuf = (yyvsp[0].val);
 }
-#line 2042 "read_config_yy.c" /* yacc.c:1646  */
+#line 2074 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 33:
-#line 342 "read_config_yy.y" /* yacc.c:1646  */
+#line 369 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.mcast.checksum = 0;
 }
-#line 2051 "read_config_yy.c" /* yacc.c:1646  */
+#line 2083 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 34:
-#line 348 "read_config_yy.y" /* yacc.c:1646  */
+#line 375 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.mcast.checksum = 1;
 }
-#line 2060 "read_config_yy.c" /* yacc.c:1646  */
+#line 2092 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 35:
-#line 354 "read_config_yy.y" /* yacc.c:1646  */
+#line 381 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_UDP) {
@@ -2073,11 +2105,11 @@ yyreduce:
 	conf.channel[conf.channel_num].channel_flags = CHANNEL_F_BUFFERED;
 	conf.channel_num++;
 }
-#line 2077 "read_config_yy.c" /* yacc.c:1646  */
+#line 2109 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 36:
-#line 368 "read_config_yy.y" /* yacc.c:1646  */
+#line 395 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_UDP) {
@@ -2092,25 +2124,27 @@ yyreduce:
 	conf.channel_default = conf.channel_num;
 	conf.channel_num++;
 }
-#line 2096 "read_config_yy.c" /* yacc.c:1646  */
+#line 2128 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 39:
-#line 387 "read_config_yy.y" /* yacc.c:1646  */
+#line 414 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.udp.server.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET;
 }
-#line 2110 "read_config_yy.c" /* yacc.c:1646  */
+#line 2144 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 40:
-#line 398 "read_config_yy.y" /* yacc.c:1646  */
+#line 427 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	int err;
@@ -2119,33 +2153,37 @@ yyreduce:
 			&conf.channel[conf.channel_num].u.udp.server.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET6;
 }
-#line 2131 "read_config_yy.c" /* yacc.c:1646  */
+#line 2167 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 41:
-#line 416 "read_config_yy.y" /* yacc.c:1646  */
+#line 447 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.udp.client)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET;
 }
-#line 2145 "read_config_yy.c" /* yacc.c:1646  */
+#line 2183 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 42:
-#line 427 "read_config_yy.y" /* yacc.c:1646  */
+#line 460 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	int err;
@@ -2154,19 +2192,21 @@ yyreduce:
 			&conf.channel[conf.channel_num].u.udp.client);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
-	} else {
+	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.udp.ipproto = AF_INET6;
 }
-#line 2166 "read_config_yy.c" /* yacc.c:1646  */
+#line 2206 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 43:
-#line 445 "read_config_yy.y" /* yacc.c:1646  */
+#line 480 "read_config_yy.y" /* yacc.c:1652  */
     {
 	int idx;
 
@@ -2176,60 +2216,63 @@ yyreduce:
 	idx = if_nametoindex((yyvsp[0].string));
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
 	conf.channel[conf.channel_num].u.udp.server.ipv6.scope_id = idx;
+
+	free((yyvsp[0].string));
 }
-#line 2184 "read_config_yy.c" /* yacc.c:1646  */
+#line 2227 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 44:
-#line 460 "read_config_yy.y" /* yacc.c:1646  */
+#line 498 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.udp.port = (yyvsp[0].val);
 }
-#line 2193 "read_config_yy.c" /* yacc.c:1646  */
+#line 2236 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 45:
-#line 466 "read_config_yy.y" /* yacc.c:1646  */
+#line 504 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.udp.sndbuf = (yyvsp[0].val);
 }
-#line 2202 "read_config_yy.c" /* yacc.c:1646  */
+#line 2245 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 46:
-#line 472 "read_config_yy.y" /* yacc.c:1646  */
+#line 510 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.udp.rcvbuf = (yyvsp[0].val);
 }
-#line 2211 "read_config_yy.c" /* yacc.c:1646  */
+#line 2254 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 47:
-#line 478 "read_config_yy.y" /* yacc.c:1646  */
+#line 516 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.udp.checksum = 0;
 }
-#line 2220 "read_config_yy.c" /* yacc.c:1646  */
+#line 2263 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 48:
-#line 484 "read_config_yy.y" /* yacc.c:1646  */
+#line 522 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.udp.checksum = 1;
 }
-#line 2229 "read_config_yy.c" /* yacc.c:1646  */
+#line 2272 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 49:
-#line 490 "read_config_yy.y" /* yacc.c:1646  */
+#line 528 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_TCP) {
@@ -2244,11 +2287,11 @@ yyreduce:
 						       CHANNEL_F_ERRORS;
 	conf.channel_num++;
 }
-#line 2248 "read_config_yy.c" /* yacc.c:1646  */
+#line 2291 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 50:
-#line 506 "read_config_yy.y" /* yacc.c:1646  */
+#line 544 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.channel_type_global != CHANNEL_NONE &&
 	    conf.channel_type_global != CHANNEL_TCP) {
@@ -2265,25 +2308,27 @@ yyreduce:
 	conf.channel_default = conf.channel_num;
 	conf.channel_num++;
 }
-#line 2269 "read_config_yy.c" /* yacc.c:1646  */
+#line 2312 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 53:
-#line 527 "read_config_yy.y" /* yacc.c:1646  */
+#line 565 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.tcp.server.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET;
 }
-#line 2283 "read_config_yy.c" /* yacc.c:1646  */
+#line 2328 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 54:
-#line 538 "read_config_yy.y" /* yacc.c:1646  */
+#line 578 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	int err;
@@ -2292,33 +2337,37 @@ yyreduce:
 			&conf.channel[conf.channel_num].u.tcp.server.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET6;
 }
-#line 2304 "read_config_yy.c" /* yacc.c:1646  */
+#line 2351 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 55:
-#line 556 "read_config_yy.y" /* yacc.c:1646  */
+#line 598 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 
 	if (!inet_aton((yyvsp[0].string), &conf.channel[conf.channel_num].u.tcp.client)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET;
 }
-#line 2318 "read_config_yy.c" /* yacc.c:1646  */
+#line 2367 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 56:
-#line 567 "read_config_yy.y" /* yacc.c:1646  */
+#line 611 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	int err;
@@ -2327,19 +2376,21 @@ yyreduce:
 			&conf.channel[conf.channel_num].u.tcp.client);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6 address", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
 		exit(EXIT_FAILURE);
 	}
 
+	free((yyvsp[0].string));
 	conf.channel[conf.channel_num].u.tcp.ipproto = AF_INET6;
 }
-#line 2339 "read_config_yy.c" /* yacc.c:1646  */
+#line 2390 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 57:
-#line 585 "read_config_yy.y" /* yacc.c:1646  */
+#line 631 "read_config_yy.y" /* yacc.c:1652  */
     {
 	int idx;
 
@@ -2349,101 +2400,110 @@ yyreduce:
 	idx = if_nametoindex((yyvsp[0].string));
 	if (!idx) {
 		dlog(LOG_WARNING, "%s is an invalid interface", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
 	conf.channel[conf.channel_num].u.tcp.server.ipv6.scope_id = idx;
+
+	free((yyvsp[0].string));
 }
-#line 2357 "read_config_yy.c" /* yacc.c:1646  */
+#line 2411 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 58:
-#line 600 "read_config_yy.y" /* yacc.c:1646  */
+#line 649 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.tcp.port = (yyvsp[0].val);
 }
-#line 2366 "read_config_yy.c" /* yacc.c:1646  */
+#line 2420 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 59:
-#line 606 "read_config_yy.y" /* yacc.c:1646  */
+#line 655 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.tcp.sndbuf = (yyvsp[0].val);
 }
-#line 2375 "read_config_yy.c" /* yacc.c:1646  */
+#line 2429 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 60:
-#line 612 "read_config_yy.y" /* yacc.c:1646  */
+#line 661 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.tcp.rcvbuf = (yyvsp[0].val);
 }
-#line 2384 "read_config_yy.c" /* yacc.c:1646  */
+#line 2438 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 61:
-#line 618 "read_config_yy.y" /* yacc.c:1646  */
+#line 667 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.tcp.checksum = 0;
 }
-#line 2393 "read_config_yy.c" /* yacc.c:1646  */
+#line 2447 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 62:
-#line 624 "read_config_yy.y" /* yacc.c:1646  */
+#line 673 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	conf.channel[conf.channel_num].u.tcp.checksum = 1;
 }
-#line 2402 "read_config_yy.c" /* yacc.c:1646  */
+#line 2456 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 63:
-#line 630 "read_config_yy.y" /* yacc.c:1646  */
+#line 679 "read_config_yy.y" /* yacc.c:1652  */
     {
 	__max_dedicated_links_reached();
 	CONFIG(channelc).error_queue_length = (yyvsp[0].val);
 }
-#line 2411 "read_config_yy.c" /* yacc.c:1646  */
+#line 2465 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 64:
-#line 636 "read_config_yy.y" /* yacc.c:1646  */
+#line 685 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.hashsize = (yyvsp[0].val);
 }
-#line 2419 "read_config_yy.c" /* yacc.c:1646  */
+#line 2473 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 65:
-#line 641 "read_config_yy.y" /* yacc.c:1646  */
+#line 690 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.limit = (yyvsp[0].val);
 }
-#line 2427 "read_config_yy.c" /* yacc.c:1646  */
+#line 2481 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 69:
-#line 652 "read_config_yy.y" /* yacc.c:1646  */
+#line 701 "read_config_yy.y" /* yacc.c:1652  */
     {
-	strcpy(conf.local.path, (yyvsp[0].string));
+	if (strlen((yyvsp[0].string)) > UNIX_PATH_MAX) {
+		dlog(LOG_ERR, "Path is longer than %u characters",
+		     UNIX_PATH_MAX);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.local.path, UNIX_PATH_MAX, "%s", (yyvsp[0].string));
+	free((yyvsp[0].string));
 }
-#line 2435 "read_config_yy.c" /* yacc.c:1646  */
+#line 2495 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 70:
-#line 657 "read_config_yy.y" /* yacc.c:1646  */
+#line 712 "read_config_yy.y" /* yacc.c:1652  */
     {
 	dlog(LOG_WARNING, "deprecated unix backlog configuration, ignoring.");
 }
-#line 2443 "read_config_yy.c" /* yacc.c:1646  */
+#line 2503 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 71:
-#line 662 "read_config_yy.y" /* yacc.c:1646  */
+#line 717 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.flags & CTD_STATS_MODE) {
 		dlog(LOG_ERR, "cannot use both `Stats' and `Sync' "
@@ -2452,27 +2512,27 @@ yyreduce:
 	}
 	conf.flags |= CTD_SYNC_MODE;
 }
-#line 2456 "read_config_yy.c" /* yacc.c:1646  */
+#line 2516 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 88:
-#line 694 "read_config_yy.y" /* yacc.c:1646  */
+#line 749 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(sync).tcp_window_tracking = 1;
 }
-#line 2464 "read_config_yy.c" /* yacc.c:1646  */
+#line 2524 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 89:
-#line 699 "read_config_yy.y" /* yacc.c:1646  */
+#line 754 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(sync).tcp_window_tracking = 0;
 }
-#line 2472 "read_config_yy.c" /* yacc.c:1646  */
+#line 2532 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 90:
-#line 704 "read_config_yy.y" /* yacc.c:1646  */
+#line 759 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(flags) |= CTD_EXPECT;
 	CONFIG(netlink).subsys_id = NFNL_SUBSYS_NONE;
@@ -2483,22 +2543,22 @@ yyreduce:
 				 NF_NETLINK_CONNTRACK_EXP_UPDATE |
 				 NF_NETLINK_CONNTRACK_EXP_DESTROY;
 }
-#line 2487 "read_config_yy.c" /* yacc.c:1646  */
+#line 2547 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 91:
-#line 716 "read_config_yy.y" /* yacc.c:1646  */
+#line 771 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(netlink).subsys_id = NFNL_SUBSYS_CTNETLINK;
 	CONFIG(netlink).groups = NF_NETLINK_CONNTRACK_NEW |
 				 NF_NETLINK_CONNTRACK_UPDATE |
 				 NF_NETLINK_CONNTRACK_DESTROY;
 }
-#line 2498 "read_config_yy.c" /* yacc.c:1646  */
+#line 2558 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 92:
-#line 724 "read_config_yy.y" /* yacc.c:1646  */
+#line 779 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(flags) |= CTD_EXPECT;
 	CONFIG(netlink).subsys_id = NFNL_SUBSYS_NONE;
@@ -2509,107 +2569,108 @@ yyreduce:
 				 NF_NETLINK_CONNTRACK_EXP_UPDATE |
 				 NF_NETLINK_CONNTRACK_EXP_DESTROY;
 }
-#line 2513 "read_config_yy.c" /* yacc.c:1646  */
+#line 2573 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 95:
-#line 739 "read_config_yy.y" /* yacc.c:1646  */
+#line 794 "read_config_yy.y" /* yacc.c:1652  */
     {
 	exp_filter_add(STATE(exp_filter), (yyvsp[0].string));
+	free((yyvsp[0].string));
 }
-#line 2521 "read_config_yy.c" /* yacc.c:1646  */
+#line 2582 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 96:
-#line 744 "read_config_yy.y" /* yacc.c:1646  */
+#line 800 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.flags |= CTD_SYNC_ALARM;
 }
-#line 2529 "read_config_yy.c" /* yacc.c:1646  */
+#line 2590 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 97:
-#line 749 "read_config_yy.y" /* yacc.c:1646  */
+#line 805 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.flags |= CTD_SYNC_FTFW;
 }
-#line 2537 "read_config_yy.c" /* yacc.c:1646  */
+#line 2598 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 98:
-#line 754 "read_config_yy.y" /* yacc.c:1646  */
+#line 810 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.flags |= CTD_SYNC_NOTRACK;
 }
-#line 2545 "read_config_yy.c" /* yacc.c:1646  */
+#line 2606 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 120:
-#line 789 "read_config_yy.y" /* yacc.c:1646  */
+#line 845 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.sync.internal_cache_disable = 1;
 }
-#line 2553 "read_config_yy.c" /* yacc.c:1646  */
+#line 2614 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 121:
-#line 794 "read_config_yy.y" /* yacc.c:1646  */
+#line 850 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.sync.internal_cache_disable = 0;
 }
-#line 2561 "read_config_yy.c" /* yacc.c:1646  */
+#line 2622 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 122:
-#line 799 "read_config_yy.y" /* yacc.c:1646  */
+#line 855 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.sync.external_cache_disable = 1;
 }
-#line 2569 "read_config_yy.c" /* yacc.c:1646  */
+#line 2630 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 123:
-#line 804 "read_config_yy.y" /* yacc.c:1646  */
+#line 860 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.sync.external_cache_disable = 0;
 }
-#line 2577 "read_config_yy.c" /* yacc.c:1646  */
+#line 2638 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 124:
-#line 809 "read_config_yy.y" /* yacc.c:1646  */
+#line 865 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.resend_queue_size = (yyvsp[0].val);
 }
-#line 2585 "read_config_yy.c" /* yacc.c:1646  */
+#line 2646 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 125:
-#line 814 "read_config_yy.y" /* yacc.c:1646  */
+#line 870 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.startup_resync = 1;
 }
-#line 2593 "read_config_yy.c" /* yacc.c:1646  */
+#line 2654 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 126:
-#line 819 "read_config_yy.y" /* yacc.c:1646  */
+#line 875 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.startup_resync = 0;
 }
-#line 2601 "read_config_yy.c" /* yacc.c:1646  */
+#line 2662 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 127:
-#line 824 "read_config_yy.y" /* yacc.c:1646  */
+#line 880 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.window_size = (yyvsp[0].val);
 }
-#line 2609 "read_config_yy.c" /* yacc.c:1646  */
+#line 2670 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 130:
-#line 832 "read_config_yy.y" /* yacc.c:1646  */
+#line 888 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2617,11 +2678,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_SYN_SENT);
 }
-#line 2621 "read_config_yy.c" /* yacc.c:1646  */
+#line 2682 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 131:
-#line 840 "read_config_yy.y" /* yacc.c:1646  */
+#line 896 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2629,11 +2690,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_SYN_RECV);
 }
-#line 2633 "read_config_yy.c" /* yacc.c:1646  */
+#line 2694 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 132:
-#line 848 "read_config_yy.y" /* yacc.c:1646  */
+#line 904 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2641,11 +2702,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_ESTABLISHED);
 }
-#line 2645 "read_config_yy.c" /* yacc.c:1646  */
+#line 2706 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 133:
-#line 856 "read_config_yy.y" /* yacc.c:1646  */
+#line 912 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2653,11 +2714,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_FIN_WAIT);
 }
-#line 2657 "read_config_yy.c" /* yacc.c:1646  */
+#line 2718 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 134:
-#line 864 "read_config_yy.y" /* yacc.c:1646  */
+#line 920 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2665,11 +2726,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_CLOSE_WAIT);
 }
-#line 2669 "read_config_yy.c" /* yacc.c:1646  */
+#line 2730 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 135:
-#line 872 "read_config_yy.y" /* yacc.c:1646  */
+#line 928 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2677,11 +2738,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_LAST_ACK);
 }
-#line 2681 "read_config_yy.c" /* yacc.c:1646  */
+#line 2742 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 136:
-#line 880 "read_config_yy.y" /* yacc.c:1646  */
+#line 936 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2689,11 +2750,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_TIME_WAIT);
 }
-#line 2693 "read_config_yy.c" /* yacc.c:1646  */
+#line 2754 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 137:
-#line 888 "read_config_yy.y" /* yacc.c:1646  */
+#line 944 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2701,11 +2762,11 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_CLOSE);
 }
-#line 2705 "read_config_yy.c" /* yacc.c:1646  */
+#line 2766 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 138:
-#line 896 "read_config_yy.y" /* yacc.c:1646  */
+#line 952 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_add_state(STATE(us_filter),
 			    IPPROTO_TCP,
@@ -2713,88 +2774,88 @@ yyreduce:
 
 	__kernel_filter_add_state(TCP_CONNTRACK_LISTEN);
 }
-#line 2717 "read_config_yy.c" /* yacc.c:1646  */
+#line 2778 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 160:
-#line 930 "read_config_yy.y" /* yacc.c:1646  */
+#line 986 "read_config_yy.y" /* yacc.c:1652  */
     { conf.systemd = 1; }
-#line 2723 "read_config_yy.c" /* yacc.c:1646  */
+#line 2784 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 161:
-#line 931 "read_config_yy.y" /* yacc.c:1646  */
+#line 987 "read_config_yy.y" /* yacc.c:1652  */
     { conf.systemd = 0; }
-#line 2729 "read_config_yy.c" /* yacc.c:1646  */
+#line 2790 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 162:
-#line 934 "read_config_yy.y" /* yacc.c:1646  */
+#line 990 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.netlink_buffer_size = (yyvsp[0].val);
 }
-#line 2737 "read_config_yy.c" /* yacc.c:1646  */
+#line 2798 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 163:
-#line 939 "read_config_yy.y" /* yacc.c:1646  */
+#line 995 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.netlink_buffer_size_max_grown = (yyvsp[0].val);
 }
-#line 2745 "read_config_yy.c" /* yacc.c:1646  */
+#line 2806 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 164:
-#line 944 "read_config_yy.y" /* yacc.c:1646  */
+#line 1000 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.nl_overrun_resync = 30;
 }
-#line 2753 "read_config_yy.c" /* yacc.c:1646  */
+#line 2814 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 165:
-#line 949 "read_config_yy.y" /* yacc.c:1646  */
+#line 1005 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.nl_overrun_resync = -1;
 }
-#line 2761 "read_config_yy.c" /* yacc.c:1646  */
+#line 2822 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 166:
-#line 954 "read_config_yy.y" /* yacc.c:1646  */
+#line 1010 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.nl_overrun_resync = (yyvsp[0].val);
 }
-#line 2769 "read_config_yy.c" /* yacc.c:1646  */
+#line 2830 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 167:
-#line 959 "read_config_yy.y" /* yacc.c:1646  */
+#line 1015 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.netlink.events_reliable = 1;
 }
-#line 2777 "read_config_yy.c" /* yacc.c:1646  */
+#line 2838 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 168:
-#line 964 "read_config_yy.y" /* yacc.c:1646  */
+#line 1020 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.netlink.events_reliable = 0;
 }
-#line 2785 "read_config_yy.c" /* yacc.c:1646  */
+#line 2846 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 169:
-#line 969 "read_config_yy.y" /* yacc.c:1646  */
+#line 1025 "read_config_yy.y" /* yacc.c:1652  */
     {
 	dlog(LOG_WARNING, "deprecated nice configuration, ignoring. The "
 	     "nice value can be set externally with nice(1) and renice(1).");
 }
-#line 2794 "read_config_yy.c" /* yacc.c:1646  */
+#line 2855 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 173:
-#line 981 "read_config_yy.y" /* yacc.c:1646  */
+#line 1037 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (strcasecmp((yyvsp[0].string), "rr") == 0) {
 		conf.sched.type = SCHED_RR;
@@ -2802,14 +2863,17 @@ yyreduce:
 		conf.sched.type = SCHED_FIFO;
 	} else {
 		dlog(LOG_ERR, "unknown scheduler `%s'", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		exit(EXIT_FAILURE);
 	}
+
+	free((yyvsp[0].string));
 }
-#line 2809 "read_config_yy.c" /* yacc.c:1646  */
+#line 2873 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 174:
-#line 993 "read_config_yy.y" /* yacc.c:1646  */
+#line 1052 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.sched.prio = (yyvsp[0].val);
 	if (conf.sched.prio < 0 || conf.sched.prio > 99) {
@@ -2817,19 +2881,19 @@ yyreduce:
 		exit(EXIT_FAILURE);
 	}
 }
-#line 2821 "read_config_yy.c" /* yacc.c:1646  */
+#line 2885 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 175:
-#line 1002 "read_config_yy.y" /* yacc.c:1646  */
+#line 1061 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(event_iterations_limit) = (yyvsp[0].val);
 }
-#line 2829 "read_config_yy.c" /* yacc.c:1646  */
+#line 2893 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 176:
-#line 1007 "read_config_yy.y" /* yacc.c:1646  */
+#line 1066 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.flags |= CTD_POLL;
 	conf.poll_kernel_secs = (yyvsp[0].val);
@@ -2838,35 +2902,35 @@ yyreduce:
 		exit(EXIT_FAILURE);
 	}
 }
-#line 2842 "read_config_yy.c" /* yacc.c:1646  */
+#line 2906 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 177:
-#line 1017 "read_config_yy.y" /* yacc.c:1646  */
+#line 1076 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(filter_from_kernelspace) = 0;
 }
-#line 2850 "read_config_yy.c" /* yacc.c:1646  */
+#line 2914 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 178:
-#line 1022 "read_config_yy.y" /* yacc.c:1646  */
+#line 1081 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(filter_from_kernelspace) = 0;
 }
-#line 2858 "read_config_yy.c" /* yacc.c:1646  */
+#line 2922 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 179:
-#line 1027 "read_config_yy.y" /* yacc.c:1646  */
+#line 1086 "read_config_yy.y" /* yacc.c:1652  */
     {
 	CONFIG(filter_from_kernelspace) = 1;
 }
-#line 2866 "read_config_yy.c" /* yacc.c:1646  */
+#line 2930 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 182:
-#line 1035 "read_config_yy.y" /* yacc.c:1646  */
+#line 1094 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_L4PROTO,
@@ -2874,11 +2938,11 @@ yyreduce:
 
 	__kernel_filter_start();
 }
-#line 2878 "read_config_yy.c" /* yacc.c:1646  */
+#line 2942 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 183:
-#line 1044 "read_config_yy.y" /* yacc.c:1646  */
+#line 1103 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_L4PROTO,
@@ -2890,11 +2954,11 @@ yyreduce:
 			      NFCT_FILTER_L4PROTO,
 			      NFCT_FILTER_LOGIC_NEGATIVE);
 }
-#line 2894 "read_config_yy.c" /* yacc.c:1646  */
+#line 2958 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 186:
-#line 1060 "read_config_yy.y" /* yacc.c:1646  */
+#line 1119 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct protoent *pent;
 
@@ -2902,8 +2966,10 @@ yyreduce:
 	if (pent == NULL) {
 		dlog(LOG_WARNING, "getprotobyname() cannot find "
 		     "protocol `%s' in /etc/protocols", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 	ct_filter_add_proto(STATE(us_filter), pent->p_proto);
 
 	__kernel_filter_start();
@@ -2912,11 +2978,11 @@ yyreduce:
 				 NFCT_FILTER_L4PROTO,
 				 pent->p_proto);
 }
-#line 2916 "read_config_yy.c" /* yacc.c:1646  */
+#line 2982 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 187:
-#line 1079 "read_config_yy.y" /* yacc.c:1646  */
+#line 1140 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct protoent *pent;
 
@@ -2934,11 +3000,11 @@ yyreduce:
 				 NFCT_FILTER_L4PROTO,
 				 pent->p_proto);
 }
-#line 2938 "read_config_yy.c" /* yacc.c:1646  */
+#line 3004 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 188:
-#line 1098 "read_config_yy.y" /* yacc.c:1646  */
+#line 1159 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct protoent *pent;
 
@@ -2956,11 +3022,11 @@ yyreduce:
 				 NFCT_FILTER_L4PROTO,
 				 pent->p_proto);
 }
-#line 2960 "read_config_yy.c" /* yacc.c:1646  */
+#line 3026 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 189:
-#line 1117 "read_config_yy.y" /* yacc.c:1646  */
+#line 1178 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_ADDRESS,
@@ -2968,11 +3034,11 @@ yyreduce:
 
 	__kernel_filter_start();
 }
-#line 2972 "read_config_yy.c" /* yacc.c:1646  */
+#line 3038 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 190:
-#line 1126 "read_config_yy.y" /* yacc.c:1646  */
+#line 1187 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_ADDRESS,
@@ -2993,11 +3059,11 @@ yyreduce:
 			      NFCT_FILTER_DST_IPV6,
 			      NFCT_FILTER_LOGIC_NEGATIVE);
 }
-#line 2997 "read_config_yy.c" /* yacc.c:1646  */
+#line 3063 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 193:
-#line 1151 "read_config_yy.y" /* yacc.c:1646  */
+#line 1212 "read_config_yy.y" /* yacc.c:1652  */
     {
 	union inet_address ip;
 	char *slash;
@@ -3012,12 +3078,14 @@ yyreduce:
 		if (cidr > 32) {
 			dlog(LOG_WARNING, "%s/%d is not a valid network, "
 			     "ignoring", (yyvsp[0].string), cidr);
+			free((yyvsp[0].string));
 			break;
 		}
 	}
 
 	if (!inet_aton((yyvsp[0].string), &ip.ipv4)) {
 		dlog(LOG_WARNING, "%s is not a valid IPv4, ignoring", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
 
@@ -3043,6 +3111,7 @@ yyreduce:
 				     "ignore pool!");
 		}
 	}
+	free((yyvsp[0].string));
 	__kernel_filter_start();
 
 	/* host byte order */
@@ -3054,11 +3123,11 @@ yyreduce:
 	nfct_filter_add_attr(STATE(filter), NFCT_FILTER_SRC_IPV4, &filter_ipv4);
 	nfct_filter_add_attr(STATE(filter), NFCT_FILTER_DST_IPV4, &filter_ipv4);
 }
-#line 3058 "read_config_yy.c" /* yacc.c:1646  */
+#line 3127 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 194:
-#line 1209 "read_config_yy.y" /* yacc.c:1646  */
+#line 1273 "read_config_yy.y" /* yacc.c:1652  */
     {
 	union inet_address ip;
 	char *slash;
@@ -3075,6 +3144,7 @@ yyreduce:
 		if (cidr > 128) {
 			dlog(LOG_WARNING, "%s/%d is not a valid network, "
 			     "ignoring", (yyvsp[0].string), cidr);
+			free((yyvsp[0].string));
 			break;
 		}
 	}
@@ -3082,6 +3152,7 @@ yyreduce:
 	err = inet_pton(AF_INET6, (yyvsp[0].string), &ip.ipv6);
 	if (err == 0) {
 		dlog(LOG_WARNING, "%s is not a valid IPv6, ignoring", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	} else if (err < 0) {
 		dlog(LOG_ERR, "inet_pton(): IPv6 unsupported!");
@@ -3108,6 +3179,7 @@ yyreduce:
 				     "ignore pool!");
 		}
 	}
+	free((yyvsp[0].string));
 	__kernel_filter_start();
 
 	/* host byte order */
@@ -3117,11 +3189,11 @@ yyreduce:
 	nfct_filter_add_attr(STATE(filter), NFCT_FILTER_SRC_IPV6, &filter_ipv6);
 	nfct_filter_add_attr(STATE(filter), NFCT_FILTER_DST_IPV6, &filter_ipv6);
 }
-#line 3121 "read_config_yy.c" /* yacc.c:1646  */
+#line 3193 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 195:
-#line 1269 "read_config_yy.y" /* yacc.c:1646  */
+#line 1336 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_STATE,
@@ -3129,11 +3201,11 @@ yyreduce:
 
 	__kernel_filter_start();
 }
-#line 3133 "read_config_yy.c" /* yacc.c:1646  */
+#line 3205 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 196:
-#line 1278 "read_config_yy.y" /* yacc.c:1646  */
+#line 1345 "read_config_yy.y" /* yacc.c:1652  */
     {
 	ct_filter_set_logic(STATE(us_filter),
 			    CT_FILTER_STATE,
@@ -3146,11 +3218,11 @@ yyreduce:
 			      NFCT_FILTER_L4PROTO_STATE,
 			      NFCT_FILTER_LOGIC_NEGATIVE);
 }
-#line 3150 "read_config_yy.c" /* yacc.c:1646  */
+#line 3222 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 200:
-#line 1297 "read_config_yy.y" /* yacc.c:1646  */
+#line 1364 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (conf.flags & CTD_SYNC_MODE) {
 		dlog(LOG_ERR, "cannot use both `Stats' and `Sync' "
@@ -3159,50 +3231,56 @@ yyreduce:
 	}
 	conf.flags |= CTD_STATS_MODE;
 }
-#line 3163 "read_config_yy.c" /* yacc.c:1646  */
+#line 3235 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 207:
-#line 1317 "read_config_yy.y" /* yacc.c:1646  */
+#line 1384 "read_config_yy.y" /* yacc.c:1652  */
     {
 	strncpy(conf.stats.logfile, DEFAULT_STATS_LOGFILE, FILENAME_MAXLEN);
 }
-#line 3171 "read_config_yy.c" /* yacc.c:1646  */
+#line 3243 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 208:
-#line 1322 "read_config_yy.y" /* yacc.c:1646  */
+#line 1389 "read_config_yy.y" /* yacc.c:1652  */
     {
 }
-#line 3178 "read_config_yy.c" /* yacc.c:1646  */
+#line 3250 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 209:
-#line 1326 "read_config_yy.y" /* yacc.c:1646  */
+#line 1393 "read_config_yy.y" /* yacc.c:1652  */
     {
-	strncpy(conf.stats.logfile, (yyvsp[0].string), FILENAME_MAXLEN);
+	if (strlen((yyvsp[0].string)) > FILENAME_MAXLEN) {
+		dlog(LOG_ERR, "stats LogFile path is longer than %u characters",
+		     FILENAME_MAXLEN);
+		exit(EXIT_FAILURE);
+	}
+	snprintf(conf.stats.logfile, FILENAME_MAXLEN, "%s", (yyvsp[0].string));
+	free((yyvsp[0].string));
 }
-#line 3186 "read_config_yy.c" /* yacc.c:1646  */
+#line 3264 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 210:
-#line 1331 "read_config_yy.y" /* yacc.c:1646  */
+#line 1404 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.stats.syslog_facility = DEFAULT_SYSLOG_FACILITY;
 }
-#line 3194 "read_config_yy.c" /* yacc.c:1646  */
+#line 3272 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 211:
-#line 1336 "read_config_yy.y" /* yacc.c:1646  */
+#line 1409 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.stats.syslog_facility = -1;
 }
-#line 3202 "read_config_yy.c" /* yacc.c:1646  */
+#line 3280 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 212:
-#line 1341 "read_config_yy.y" /* yacc.c:1646  */
+#line 1414 "read_config_yy.y" /* yacc.c:1652  */
     {
 	if (!strcmp((yyvsp[0].string), "daemon"))
 		conf.stats.syslog_facility = LOG_DAEMON;
@@ -3225,27 +3303,29 @@ yyreduce:
 	else {
 		dlog(LOG_WARNING, "'%s' is not a known syslog facility, "
 		     "ignoring.", (yyvsp[0].string));
+		free((yyvsp[0].string));
 		break;
 	}
+	free((yyvsp[0].string));
 
 	if (conf.syslog_facility != -1 &&
 	    conf.stats.syslog_facility != conf.syslog_facility)
 		dlog(LOG_WARNING, "conflicting Syslog facility "
 		     "values, defaulting to General");
 }
-#line 3237 "read_config_yy.c" /* yacc.c:1646  */
+#line 3317 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 213:
-#line 1373 "read_config_yy.y" /* yacc.c:1646  */
+#line 1448 "read_config_yy.y" /* yacc.c:1652  */
     {
 	conf.flags |= CTD_HELPER;
 }
-#line 3245 "read_config_yy.c" /* yacc.c:1646  */
+#line 3325 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 217:
-#line 1385 "read_config_yy.y" /* yacc.c:1646  */
+#line 1460 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct ctd_helper_instance *helper_inst;
 	struct ctd_helper *helper;
@@ -3259,8 +3339,10 @@ yyreduce:
 		l3proto = AF_INET6;
 	else {
 		dlog(LOG_ERR, "unknown layer 3 protocol");
+		free((yyvsp[-4].string));
 		exit(EXIT_FAILURE);
 	}
+	free((yyvsp[-4].string));
 
 	if (strcmp((yyvsp[-3].string), "tcp") == 0)
 		l4proto = IPPROTO_TCP;
@@ -3268,19 +3350,23 @@ yyreduce:
 		l4proto = IPPROTO_UDP;
 	else {
 		dlog(LOG_ERR, "unknown layer 4 protocol");
+		free((yyvsp[-3].string));
 		exit(EXIT_FAILURE);
 	}
+	free((yyvsp[-3].string));
 
 #ifdef BUILD_CTHELPER
 	helper = helper_find(CONNTRACKD_LIB_DIR, (yyvsp[-5].string), l4proto, RTLD_NOW);
 	if (helper == NULL) {
 		dlog(LOG_ERR, "Unknown `%s' helper", (yyvsp[-5].string));
+		free((yyvsp[-5].string));
 		exit(EXIT_FAILURE);
 	}
 #else
 	dlog(LOG_ERR, "Helper support is disabled, recompile conntrackd");
 	exit(EXIT_FAILURE);
 #endif
+	free((yyvsp[-5].string));
 
 	helper_inst = calloc(1, sizeof(struct ctd_helper_instance));
 	if (helper_inst == NULL)
@@ -3344,11 +3430,11 @@ yyreduce:
 	}
 	list_add(&helper_inst->head, &CONFIG(cthelper).list);
 }
-#line 3348 "read_config_yy.c" /* yacc.c:1646  */
+#line 3434 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 221:
-#line 1492 "read_config_yy.y" /* yacc.c:1646  */
+#line 1573 "read_config_yy.y" /* yacc.c:1652  */
     {
 	int *qnum;
 	struct stack_item *e;
@@ -3358,11 +3444,11 @@ yyreduce:
 	*qnum = (yyvsp[0].val);
 	stack_item_push(&symbol_stack, e);
 }
-#line 3362 "read_config_yy.c" /* yacc.c:1646  */
+#line 3448 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 222:
-#line 1503 "read_config_yy.y" /* yacc.c:1646  */
+#line 1584 "read_config_yy.y" /* yacc.c:1652  */
     {
 	int *qlen;
 	struct stack_item *e;
@@ -3372,11 +3458,11 @@ yyreduce:
 	*qlen = (yyvsp[0].val);
 	stack_item_push(&symbol_stack, e);
 }
-#line 3376 "read_config_yy.c" /* yacc.c:1646  */
+#line 3462 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 223:
-#line 1514 "read_config_yy.y" /* yacc.c:1646  */
+#line 1595 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct stack_item *e;
 	struct ctd_helper_policy *policy;
@@ -3385,22 +3471,28 @@ yyreduce:
 	if (e == NULL) {
 		dlog(LOG_ERR, "Helper policy configuration empty, fix your "
 		     "configuration file, please");
+		free((yyvsp[-3].string));
 		exit(EXIT_FAILURE);
 		break;
 	}
+	if (strlen((yyvsp[-3].string)) > CTD_HELPER_NAME_LEN) {
+		dlog(LOG_ERR, "Helper Policy is longer than %u characters",
+		     CTD_HELPER_NAME_LEN);
+		exit(EXIT_FAILURE);
+	}
 
 	policy = (struct ctd_helper_policy *) &e->data;
-	strncpy(policy->name, (yyvsp[-3].string), CTD_HELPER_NAME_LEN);
-	policy->name[CTD_HELPER_NAME_LEN-1] = '\0';
+	snprintf(policy->name, CTD_HELPER_NAME_LEN, "%s", (yyvsp[-3].string));
+	free((yyvsp[-3].string));
 	/* Now object is complete. */
 	e->type = SYMBOL_HELPER_POLICY_EXPECT_ROOT;
 	stack_item_push(&symbol_stack, e);
 }
-#line 3400 "read_config_yy.c" /* yacc.c:1646  */
+#line 3492 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 228:
-#line 1543 "read_config_yy.y" /* yacc.c:1646  */
+#line 1630 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct stack_item *e;
 	struct ctd_helper_policy *policy;
@@ -3414,11 +3506,11 @@ yyreduce:
 	policy->expect_max = (yyvsp[0].val);
 	stack_item_push(&symbol_stack, e);
 }
-#line 3418 "read_config_yy.c" /* yacc.c:1646  */
+#line 3510 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
   case 229:
-#line 1558 "read_config_yy.y" /* yacc.c:1646  */
+#line 1645 "read_config_yy.y" /* yacc.c:1652  */
     {
 	struct stack_item *e;
 	struct ctd_helper_policy *policy;
@@ -3432,11 +3524,11 @@ yyreduce:
 	policy->expect_timeout = (yyvsp[0].val);
 	stack_item_push(&symbol_stack, e);
 }
-#line 3436 "read_config_yy.c" /* yacc.c:1646  */
+#line 3528 "read_config_yy.c" /* yacc.c:1652  */
     break;
 
 
-#line 3440 "read_config_yy.c" /* yacc.c:1646  */
+#line 3532 "read_config_yy.c" /* yacc.c:1652  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3461,14 +3553,13 @@ yyreduce:
   /* Now 'shift' the result of the reduction.  Determine what state
      that goes to, based on the state we popped back to and the rule
      number reduced by.  */
-
-  yyn = yyr1[yyn];
-
-  yystate = yypgoto[yyn - YYNTOKENS] + *yyssp;
-  if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == *yyssp)
-    yystate = yytable[yystate];
-  else
-    yystate = yydefgoto[yyn - YYNTOKENS];
+  {
+    const int yylhs = yyr1[yyn] - YYNTOKENS;
+    const int yyi = yypgoto[yylhs] + *yyssp;
+    yystate = (0 <= yyi && yyi <= YYLAST && yycheck[yyi] == *yyssp
+               ? yytable[yyi]
+               : yydefgoto[yylhs]);
+  }
 
   goto yynewstate;
 
@@ -3551,12 +3642,10 @@ yyerrlab:
 | yyerrorlab -- error raised explicitly by YYERROR.  |
 `---------------------------------------------------*/
 yyerrorlab:
-
-  /* Pacify compilers like GCC when the user code never invokes
-     YYERROR and the label yyerrorlab therefore never appears in user
-     code.  */
-  if (/*CONSTCOND*/ 0)
-     goto yyerrorlab;
+  /* Pacify compilers when the user code never invokes YYERROR and the
+     label yyerrorlab therefore never appears in user code.  */
+  if (0)
+    YYERROR;
 
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYERROR.  */
@@ -3618,12 +3707,14 @@ yyacceptlab:
   yyresult = 0;
   goto yyreturn;
 
+
 /*-----------------------------------.
 | yyabortlab -- YYABORT comes here.  |
 `-----------------------------------*/
 yyabortlab:
   yyresult = 1;
   goto yyreturn;
+
 
 #if !defined yyoverflow || YYERROR_VERBOSE
 /*-------------------------------------------------.
@@ -3635,6 +3726,10 @@ yyexhaustedlab:
   /* Fall through.  */
 #endif
 
+
+/*-----------------------------------------------------.
+| yyreturn -- parsing is finished, return the result.  |
+`-----------------------------------------------------*/
 yyreturn:
   if (yychar != YYEMPTY)
     {
@@ -3664,7 +3759,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1572 "read_config_yy.y" /* yacc.c:1906  */
+#line 1659 "read_config_yy.y" /* yacc.c:1918  */
 
 
 int __attribute__((noreturn))

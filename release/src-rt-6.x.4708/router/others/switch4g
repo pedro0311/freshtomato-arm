@@ -16,6 +16,7 @@ PIDFILE="/var/run/switch4g_$PREFIX.pid"
 READYFILE="/tmp/switch4g_$PREFIX.ready"
 DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 STATEFILE="/tmp/state_$PREFIX"
+PATHDIAG="/sys/bus/usb/devices"
 MODE=$(nvram get "$PREFIX"_proto)
 LOGS="logger -t switch4g[$PID]"
 
@@ -401,8 +402,8 @@ switchMode() {
 	for SWITCH in $DEVICES; do
 		[ "$(ls /etc/usb_modeswitch.d/"$SWITCH" 2> /dev/null | wc -l)" -eq 1 ] && {
 			# search for devicename & other data
-			for DEVICENAME in $(ls /sys/bus/usb/devices/ | grep -v ":" | grep "-"); do
-				PATHDEV="/sys/bus/usb/devices/$DEVICENAME"
+			for DEVICENAME in $(ls "$PATHDIAG"/ | grep -v ":" | grep "-"); do
+				PATHDEV="$PATHDIAG/$DEVICENAME"
 				[ -f $PATHDEV/idVendor -a -f $PATHDEV/idProduct -a -f $PATHDEV/uevent ] || continue	# skip
 
 				DV=$(cat "$PATHDEV"/idVendor)					# vendor
@@ -511,7 +512,6 @@ searchWAN() {
 searchDiag() {
 	DEVNR=""
 	local IS_MLOADED=0 MODIN="" TTYS=""
-	local PATHDIAG="/sys/bus/usb/devices"
 
 	[ -z "$DEVICENAME" ] && DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
@@ -541,6 +541,7 @@ searchDiag() {
 			MODIN=$(NV "$PREFIX"_modem_modules)
 			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
+			nvram set "$PREFIX"_modem_devicename="$DEVICENAME"
 		}
 
 	elif [ "$MTYPE" == "qmi_wwan" ]; then
@@ -552,6 +553,7 @@ searchDiag() {
 			echo $TTYS > $DIAGSFILE
 			DEVNR="$TTYS"
 			nvram set "$PREFIX"_modem_dev="$TTYS"
+			nvram set "$PREFIX"_modem_devicename="$DEVICENAME"
 		}
 	fi
 
@@ -585,26 +587,15 @@ findType() {
 
 modemReset() {
 # TODO: reset should be made also when the X connection fails at a given time
-	DEVNR=$(NV "$PREFIX"_modem_dev)
-	MTYPE=$(NV "$PREFIX"_modem_type)
-	local DEVALL j
+	local DNAME=$(NV "$PREFIX"_modem_devicename)
 
-	$LOGS "4G MODEM - resetting the modem ..."
+	$LOGS "4G MODEM - resetting the modem $DNAME ..."
 
 	rm -f $READYFILE > /dev/null 2>&1
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "hw-ether" ]; then
-		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
-
-		for j in $DEVALL; do	# find working interface
-			MODE="AT^RESET" gcom -d "$j" -s /etc/gcom/setmode.gcom
-		done
-	elif [ "$MTYPE" == "qmi_wwan" ]; then
-		uqmiCall "--set-device-operating-mode offline"
-		uqmiCall "--set-device-operating-mode reset"
-	fi
-
-	$LOGS "4G MODEM - reset of the modem is done"
+	echo 0 > "$PATHDIAG"/"$DNAME"/authorized
+	sleep 1
+	echo 1 > "$PATHDIAG"/"$DNAME"/authorized
 }
 
 setPIN() {

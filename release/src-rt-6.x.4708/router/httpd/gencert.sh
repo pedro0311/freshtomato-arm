@@ -33,7 +33,7 @@ OPENSSLCNF="/etc/openssl.config.$PID"
 
 cd /etc
 
-cp -L openssl.cnf $OPENSSLCNF
+cp -L /etc/ssl/openssl.cnf $OPENSSLCNF
 
 [ "$LANCN" != "" ] && {
 	I=0

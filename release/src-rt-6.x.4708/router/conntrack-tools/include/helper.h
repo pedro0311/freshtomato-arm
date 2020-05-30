@@ -13,7 +13,7 @@ struct pkt_buff;
 #define CTD_HELPER_POLICY_MAX	4
 
 struct ctd_helper_policy {
-	char		name[CTD_HELPER_NAME_LEN];
+	char		name[CTD_HELPER_NAME_LEN + 1];
 	uint32_t	expect_timeout;
 	uint32_t	expect_max;
 };

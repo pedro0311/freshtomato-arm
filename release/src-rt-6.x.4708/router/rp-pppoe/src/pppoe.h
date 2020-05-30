@@ -5,6 +5,7 @@
 * Declaration of various PPPoE constants
 *
 * Copyright (C) 2000-2012 Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -41,10 +42,6 @@ extern int IsSetID;
 /* Sanity check */
 #if !defined(USE_BPF) && !defined(USE_LINUX_PACKET) && !defined(USE_DLPI)
 #error Unknown method for accessing raw Ethernet frames
-#endif
-
-#ifdef HAVE_SYS_CDEFS_H
-#include <sys/cdefs.h>
 #endif
 
 #ifdef HAVE_SYS_SOCKET_H
@@ -219,18 +216,16 @@ extern void dropPrivs(void);
 /* A PPPoE Packet, including Ethernet headers */
 typedef struct PPPoEPacketStruct {
     struct ethhdr ethHdr;	/* Ethernet header */
-#ifdef PACK_BITFIELDS_REVERSED
-    unsigned int type:4;	/* PPPoE Type (must be 1) */
-    unsigned int ver:4;		/* PPPoE Version (must be 1) */
-#else
-    unsigned int ver:4;		/* PPPoE Version (must be 1) */
-    unsigned int type:4;	/* PPPoE Type (must be 1) */
-#endif
+    unsigned int vertype:8;	/* PPPoE Version (high nibble) and Type (low nibble) (must both be 1) */
     unsigned int code:8;	/* PPPoE code */
     unsigned int session:16;	/* PPPoE session */
     unsigned int length:16;	/* Payload length */
     unsigned char payload[ETH_JUMBO_LEN]; /* A bit of room to spare */
 } PPPoEPacket;
+
+#define PPPOE_VER(vt)	((vt) >> 4)
+#define PPPOE_TYPE(vt)	((vt) & 0xf)
+#define PPPOE_VER_TYPE(v, t)	(((v) << 4) | (t))
 
 /* Header size of a PPPoE packet */
 #define PPPOE_OVERHEAD 6  /* type, code, session, length */
@@ -331,7 +326,6 @@ void syncReadFromPPP(PPPoEConnection *conn, PPPoEPacket *packet);
 void asyncReadFromPPP(PPPoEConnection *conn, PPPoEPacket *packet);
 void asyncReadFromEth(PPPoEConnection *conn, int sock, int clampMss);
 void syncReadFromEth(PPPoEConnection *conn, int sock, int clampMss);
-char *strDup(char const *str);
 void sendPADT(PPPoEConnection *conn, char const *msg);
 void sendPADTf(PPPoEConnection *conn, char const *fmt, ...);
 
@@ -345,7 +339,11 @@ void discovery(PPPoEConnection *conn);
 unsigned char *findTag(PPPoEPacket *packet, UINT16_t tagType,
 		       PPPoETag *tag);
 
-#define SET_STRING(var, val) do { if (var) free(var); var = strDup(val); } while(0);
+#ifndef HAVE_STRLCPY
+size_t strlcpy(char *dst, const char *src, size_t size);
+#endif
+
+#define SET_STRING(var, val) do { if (var) free(var); var = strdup(val); if (!var) rp_fatal("strdup failed"); } while(0);
 
 #define CHECK_ROOM(cursor, start, len) \
 do {\

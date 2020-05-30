@@ -7,6 +7,7 @@
 # Shell script to bring up a PPPoE connection
 #
 # Copyright (C) 2000 Roaring Penguin Software Inc.
+# Copyright (C) 2018 Dianne Skoll
 #
 # $Id$
 #
@@ -28,7 +29,6 @@ exec_prefix=@exec_prefix@
 
 # Paths to programs
 CONNECT=@sbindir@/pppoe-connect
-ECHO=@ECHO@
 IFCONFIG=/sbin/ifconfig
 
 # Set to "C" locale so we can parse messages from commands
@@ -42,63 +42,62 @@ ETH=""
 ME=`basename $0`
 # Must be root
 if [ "`@ID@ -u`" != 0 ] ; then
-    $ECHO "$ME: You must be root to run this script" >& 2
+    echo "$ME: You must be root to run this script" >& 2
     exit 1
 fi
 
 # Debugging
 if [ "$DEBUG" = "1" ] ; then
-    $ECHO "*** Running in debug mode... please be patient..."
-    DEBUG=/tmp/pppoe-debug-$$
-    export DEBUG
-    mkdir $DEBUG
+    echo "*** Running in debug mode... please be patient..."
+    DEBUG="/tmp/pppoe-debug-$$"
+    mkdir "$DEBUG"
     if [ "$?" != 0 ] ; then
-	$ECHO "Could not create directory $DEBUG... exiting"
+	echo "Could not create directory $DEBUG... exiting"
 	exit 1
     fi
-    DEBUG=$DEBUG/pppoe-debug.txt
+    DEBUG="$DEBUG/pppoe-debug.txt"
 
     # Initial debug output
-    $ECHO "---------------------------------------------" > $DEBUG
-    $ECHO "* The following section contains information about your system" >> $DEBUG
-    date >> $DEBUG
-    $ECHO "Output of uname -a" >> $DEBUG
-    uname -a >> $DEBUG
-    $ECHO "---------------------------------------------" >> $DEBUG
-    $ECHO "* The following section contains information about your network" >> $DEBUG
-    $ECHO "* interfaces.  The one you chose for PPPoE should contain the words:" >> $DEBUG
-    $ECHO "* 'UP' and 'RUNNING'.  If it does not, you probably have an Ethernet" >> $DEBUG
-    $ECHO "* driver problem." >> $DEBUG
-    $ECHO "Output of ifconfig -a" >> $DEBUG
-    $IFCONFIG -a >> $DEBUG
-    $ECHO "---------------------------------------------" >> $DEBUG
-    if [ "`uname -s`" = "Linux" ] ; then
-        $ECHO "* The following section contains information about kernel modules" >> $DEBUG
-	$ECHO "* If the module for your Ethernet card is 'tulip', you might" >> $DEBUG
-	$ECHO "* want to look for an updated version at http://www.scyld.com" >> $DEBUG
-	$ECHO "Output of lsmod" >> $DEBUG
-	lsmod >> $DEBUG
-	$ECHO "---------------------------------------------" >> $DEBUG
-    fi
-    $ECHO "* The following section lists your routing table." >> $DEBUG
-    $ECHO "* If you have an entry which starts with '0.0.0.0', you probably" >> $DEBUG
-    $ECHO "* have defined a default route and gateway, and pppd will" >> $DEBUG
-    $ECHO "* not create a default route using your ISP.  Try getting" >> $DEBUG
-    $ECHO "* rid of this route." >> $DEBUG
-    $ECHO "Output of netstat -n -r" >> $DEBUG
-    netstat -n -r >> $DEBUG
-    $ECHO "---------------------------------------------" >> $DEBUG
-    $ECHO "Contents of /etc/resolv.conf" >> $DEBUG
-    $ECHO "* The following section lists DNS setup." >> $DEBUG
-    $ECHO "* If you can browse by IP address, but not name, suspect" >> $DEBUG
-    $ECHO "* a DNS problem." >> $DEBUG
-    cat /etc/resolv.conf >> $DEBUG
-    $ECHO "---------------------------------------------" >> $DEBUG
-    $ECHO "* The following section lists /etc/ppp/options." >> $DEBUG
-    $ECHO "* You should have NOTHING in that file." >> $DEBUG
-    $ECHO "Contents of /etc/ppp/options" >> $DEBUG
-    cat /etc/ppp/options >> $DEBUG 2>/dev/null
-    $ECHO "---------------------------------------------" >> $DEBUG
+    {
+	echo "---------------------------------------------"
+	echo "* The following section contains information about your system"
+	date
+	echo "Output of uname -a"
+	uname -a
+	echo "---------------------------------------------"
+	echo "* The following section contains information about your network"
+	echo "* interfaces.  The one you chose for PPPoE should contain the words:"
+	echo "* 'UP' and 'RUNNING'.  If it does not, you probably have an Ethernet"
+	echo "* driver problem."
+	echo "Output of ifconfig -a"
+	$IFCONFIG -a
+	echo "---------------------------------------------"
+	if [ "`uname -s`" = "Linux" ] ; then
+	    echo "* The following section contains information about kernel modules."
+	    echo "Output of lsmod"
+	    lsmod
+	    echo "---------------------------------------------"
+	fi
+	echo "* The following section lists your routing table."
+	echo "* If you have an entry which starts with '0.0.0.0', you probably"
+	echo "* have defined a default route and gateway, and pppd will"
+	echo "* not create a default route using your ISP.  Try getting"
+	echo "* rid of this route."
+	echo "Output of netstat -n -r"
+	netstat -n -r
+	echo "---------------------------------------------"
+	echo "Contents of /etc/resolv.conf"
+	echo "* The following section lists DNS setup."
+	echo "* If you can browse by IP address, but not name, suspect"
+	echo "* a DNS problem."
+	cat /etc/resolv.conf
+	echo "---------------------------------------------"
+	echo "* The following section lists /etc/ppp/options."
+	echo "* You should have NOTHING in that file."
+	echo "Contents of /etc/ppp/options"
+	cat /etc/ppp/options 2>/dev/null
+	echo "---------------------------------------------"
+    } > "$DEBUG"
 else
     DEBUG=""
 fi
@@ -114,11 +113,11 @@ case "$#" in
 esac
 
 if [ ! -f "$CONFIG" -o ! -r "$CONFIG" ] ; then
-    $ECHO "$ME: Cannot read configuration file '$CONFIG'" >& 2
+    echo "$ME: Cannot read configuration file '$CONFIG'" >& 2
     exit 1
 fi
 export CONFIG
-. $CONFIG
+. "$CONFIG"
 
 # Check for command-line overriding of ETH and USER
 case "$#" in
@@ -134,7 +133,7 @@ if [ -r "$PIDFILE" ] ; then
     # Check if still running
     kill -0 $PID > /dev/null 2>&1
     if [ $? = 0 ] ; then
-	$ECHO "$ME: There already seems to be a PPPoE connection up (PID $PID)" >& 2
+	echo "$ME: There already seems to be a PPPoE connection up (PID $PID)" >& 2
 	exit 1
     fi
     # Delete bogus PIDFILE
@@ -164,12 +163,12 @@ fi
 # Monitor connection
 TIME=0
 while [ true ] ; do
-    @sbindir@/pppoe-status $CONFIG > /dev/null 2>&1
+    @sbindir@/pppoe-status "$CONFIG" > /dev/null 2>&1
 
     # Looks like the interface came up
     if [ $? = 0 ] ; then
 	# Print newline if standard input is a TTY
-	tty -s && $ECHO " Connected!"
+	tty -s && echo " Connected!"
 	exit 0
     fi
 
@@ -185,7 +184,7 @@ while [ true ] ; do
     fi
 done
 
-$ECHO "TIMED OUT" >& 2
+echo "TIMED OUT" >& 2
 # Timed out!  Kill the pppoe-connect process and quit
 kill $CONNECT_PID > /dev/null 2>&1
 

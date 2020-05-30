@@ -12,6 +12,7 @@
 #include <string.h> /* for memset */
 #include <errno.h>
 #include <assert.h>
+#include <libmnl/libmnl.h>
 
 #include "internal/internal.h"
 
@@ -781,6 +782,24 @@ int nfct_build_conntrack(struct nfnl_subsys_handle *ssh,
 	return __build_conntrack(ssh, req, size, type, flags, ct);
 }
 
+static void nfct_fill_hdr(struct nfnlhdr *req, uint16_t type, uint16_t flags,
+			  uint8_t l3num, uint8_t version)
+{
+	char *buf = (char *)&req->nlh;
+	struct nlmsghdr *nlh;
+	struct nfgenmsg *nfh;
+
+	nlh = mnl_nlmsg_put_header(buf);
+	nlh->nlmsg_type = (NFNL_SUBSYS_CTNETLINK << 8) | type;
+	nlh->nlmsg_flags = NLM_F_REQUEST | flags;
+	nlh->nlmsg_seq = 0;
+
+	nfh = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
+	nfh->nfgen_family = l3num;
+	nfh->version = version;
+	nfh->res_id = 0;
+}
+
 static int
 __build_query_ct(struct nfnl_subsys_handle *ssh,
 		 const enum nf_conntrack_query qt,
@@ -809,23 +828,28 @@ __build_query_ct(struct nfnl_subsys_handle *ssh,
 		__build_conntrack(ssh, req, size, IPCTNL_MSG_CT_GET, NLM_F_REQUEST|NLM_F_ACK, data);
 		break;
 	case NFCT_Q_FLUSH:
-		nfnl_fill_hdr(ssh, &req->nlh, 0, *family, 0, IPCTNL_MSG_CT_DELETE, NLM_F_REQUEST|NLM_F_ACK);
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_DELETE, NLM_F_ACK, *family,
+			      NFNETLINK_V0);
 		break;
 	case NFCT_Q_DUMP:
-		nfnl_fill_hdr(ssh, &req->nlh, 0, *family, 0, IPCTNL_MSG_CT_GET, NLM_F_REQUEST|NLM_F_DUMP);
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_GET, NLM_F_DUMP, *family,
+			      NFNETLINK_V0);
 		break;
 	case NFCT_Q_DUMP_RESET:
-		nfnl_fill_hdr(ssh, &req->nlh, 0, *family, 0, IPCTNL_MSG_CT_GET_CTRZERO, NLM_F_REQUEST|NLM_F_DUMP);
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_GET_CTRZERO, NLM_F_DUMP,
+			      *family, NFNETLINK_V0);
 		break;
 	case NFCT_Q_CREATE_UPDATE:
 		__build_conntrack(ssh, req, size, IPCTNL_MSG_CT_NEW, NLM_F_REQUEST|NLM_F_CREATE|NLM_F_ACK, data);
 		break;
 	case NFCT_Q_DUMP_FILTER:
-		nfnl_fill_hdr(ssh, &req->nlh, 0, AF_UNSPEC, 0, IPCTNL_MSG_CT_GET, NLM_F_REQUEST|NLM_F_DUMP);
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_GET, NLM_F_DUMP, AF_UNSPEC,
+			      NFNETLINK_V0);
 		__build_filter_dump(req, size, data);
 		break;
 	case NFCT_Q_DUMP_FILTER_RESET:
-		nfnl_fill_hdr(ssh, &req->nlh, 0, AF_UNSPEC, 0, IPCTNL_MSG_CT_GET_CTRZERO, NLM_F_REQUEST|NLM_F_DUMP);
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_GET_CTRZERO, NLM_F_DUMP,
+			      AF_UNSPEC, NFNETLINK_V0);
 		__build_filter_dump(req, size, data);
 		break;
 	default:
@@ -880,6 +904,23 @@ int nfct_build_query(struct nfnl_subsys_handle *ssh,
 	return __build_query_ct(ssh, qt, data, buffer, size);
 }
 
+static int __parse_message_type(const struct nlmsghdr *nlh)
+{
+	uint16_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
+	uint16_t flags = nlh->nlmsg_flags;
+	int ret = NFCT_T_UNKNOWN;
+
+	if (type == IPCTNL_MSG_CT_NEW) {
+		if (flags & (NLM_F_CREATE|NLM_F_EXCL))
+			ret = NFCT_T_NEW;
+		else
+			ret = NFCT_T_UPDATE;
+	} else if (type == IPCTNL_MSG_CT_DELETE)
+		ret = NFCT_T_DESTROY;
+
+	return ret;
+}
+
 /**
  * nfct_parse_conntrack - translate a netlink message to a conntrack object
  * \param type do the translation iif the message type is of a certain type
@@ -909,26 +950,15 @@ int nfct_parse_conntrack(enum nf_conntrack_msg_type type,
 			 struct nf_conntrack *ct)
 {
 	unsigned int flags;
-	int len = nlh->nlmsg_len;
-	struct nfgenmsg *nfhdr = NLMSG_DATA(nlh);
-	struct nfattr *cda[CTA_MAX];
 
 	assert(nlh != NULL);
 	assert(ct != NULL);
-
-	len -= NLMSG_LENGTH(sizeof(struct nfgenmsg));
-	if (len < 0) {
-		errno = EINVAL;
-		return NFCT_T_ERROR;
-	}
 
 	flags = __parse_message_type(nlh);
 	if (!(flags & type))
 		return 0;
 
-	nfnl_parse_attr(cda, CTA_MAX, NFA_DATA(nfhdr), len);
-
-	__parse_conntrack(nlh, cda, ct);
+	nfct_nlmsg_parse(nlh, ct);
 
 	return flags;
 }

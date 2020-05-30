@@ -1577,12 +1577,14 @@ static void update_wget(void)
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
 		s[base64_encode((const char *) host, s, c - host)] = 0;
-		sprintf(he, "Authorization: Basic %s\r\n", s);
+		sprintf(he, "User-Agent: " AGENT "\r\n"
+		            "Authorization: Basic %s\r\n", s);
 		header = he;
 		host = c + 1;
 	}
 	else {
-		header = NULL;
+		sprintf(he, "User-Agent: " AGENT "\r\n");
+		header = he;
 	}
 
 	r = wget(https, 1, host, path, header, 0, &body);

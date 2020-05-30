@@ -62,7 +62,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libmnl/libmnl.h>
+#include <linux/netfilter/nf_conntrack_common.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
+static struct nfct_mnl_socket {
+	struct mnl_socket	*mnl;
+	uint32_t		portid;
+} sock;
 
 struct u32_mask {
 	uint32_t value;
@@ -623,7 +629,7 @@ static struct ctproto_handler *findproto(char *name, int *pnum)
 	}
 	/* using a protocol number? */
 	protonum = atoi(name);
-	if (protonum > 0 && protonum <= IPPROTO_MAX) {
+	if (protonum >= 0 && protonum <= IPPROTO_MAX) {
 		/* try lookup by number, perhaps this protocol is supported */
 		list_for_each_entry(cur, &proto_list, head) {
 			if (cur->protonum == protonum) {
@@ -849,6 +855,7 @@ enum {
 	_O_ID	= (1 << 3),
 	_O_KTMS	= (1 << 4),
 	_O_CL	= (1 << 5),
+	_O_US	= (1 << 6),
 };
 
 enum {
@@ -859,16 +866,16 @@ enum {
 };
 
 static struct parse_parameter {
-	const char	*parameter[6];
+	const char	*parameter[7];
 	size_t  size;
-	unsigned int value[6];
+	unsigned int value[8];
 } parse_array[PARSE_MAX] = {
-	{ {"ASSURED", "SEEN_REPLY", "UNSET", "FIXED_TIMEOUT", "EXPECTED"}, 5,
-	  { IPS_ASSURED, IPS_SEEN_REPLY, 0, IPS_FIXED_TIMEOUT, IPS_EXPECTED} },
+	{ {"ASSURED", "SEEN_REPLY", "UNSET", "FIXED_TIMEOUT", "EXPECTED", "OFFLOAD"}, 6,
+	  { IPS_ASSURED, IPS_SEEN_REPLY, 0, IPS_FIXED_TIMEOUT, IPS_EXPECTED, IPS_OFFLOAD} },
 	{ {"ALL", "NEW", "UPDATES", "DESTROY"}, 4,
 	  { CT_EVENT_F_ALL, CT_EVENT_F_NEW, CT_EVENT_F_UPD, CT_EVENT_F_DEL } },
-	{ {"xml", "extended", "timestamp", "id", "ktimestamp", "labels", }, 6,
-	  { _O_XML, _O_EXT, _O_TMS, _O_ID, _O_KTMS, _O_CL },
+	{ {"xml", "extended", "timestamp", "id", "ktimestamp", "labels", "userspace" }, 7,
+	  { _O_XML, _O_EXT, _O_TMS, _O_ID, _O_KTMS, _O_CL, _O_US },
 	},
 };
 
@@ -1397,7 +1404,7 @@ event_sighandler(int s)
 
 	fprintf(stderr, "%s v%s (conntrack-tools): ", PROGNAME, VERSION);
 	fprintf(stderr, "%d flow events have been shown.\n", counter);
-	nfct_close(cth);
+	mnl_socket_close(sock.mnl);
 	exit(0);
 }
 
@@ -1415,17 +1422,41 @@ exp_event_sighandler(int s)
 	exit(0);
 }
 
-static int event_cb(enum nf_conntrack_msg_type type,
-		    struct nf_conntrack *ct,
-		    void *data)
+static int event_cb(const struct nlmsghdr *nlh, void *data)
 {
-	char buf[1024];
-	struct nf_conntrack *obj = data;
 	unsigned int op_type = NFCT_O_DEFAULT;
+	struct nf_conntrack *obj = data;
+	enum nf_conntrack_msg_type type;
 	unsigned int op_flags = 0;
+	struct nf_conntrack *ct;
+	bool userspace = false;
+	char buf[1024];
+
+	switch(nlh->nlmsg_type & 0xff) {
+	case IPCTNL_MSG_CT_NEW:
+		if (nlh->nlmsg_flags & NLM_F_CREATE)
+			type = NFCT_T_NEW;
+		else
+			type = NFCT_T_UPDATE;
+		break;
+	case IPCTNL_MSG_CT_DELETE:
+		type = NFCT_T_DESTROY;
+		break;
+	default:
+		/* Unknown event type. */
+		type = 0;
+		break;
+	}
+
+	ct = nfct_new();
+	if (!ct)
+		goto out;
+
+	if (nfct_nlmsg_parse(nlh, ct) < 0)
+		goto out;
 
 	if (nfct_filter(obj, ct))
-		return NFCT_CB_CONTINUE;
+		goto out;
 
 	if (output_mask & _O_XML) {
 		op_type = NFCT_O_XML;
@@ -1434,7 +1465,7 @@ static int event_cb(enum nf_conntrack_msg_type type,
 			printf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 			       "<conntrack>\n");
 		}
-	} 
+	}
 	if (output_mask & _O_EXT)
 		op_flags = NFCT_OF_SHOW_LAYER3;
 	if (output_mask & _O_TMS) {
@@ -1452,12 +1483,20 @@ static int event_cb(enum nf_conntrack_msg_type type,
 
 	nfct_snprintf_labels(buf, sizeof(buf), ct, type, op_type, op_flags, labelmap);
 
-	printf("%s\n", buf);
+	if (output_mask & _O_US) {
+		if (nlh->nlmsg_pid)
+			userspace = true;
+		else
+			userspace = false;
+	}
+
+	printf("%s%s\n", buf, userspace ? " [USERSPACE]" : "");
 	fflush(stdout);
 
 	counter++;
-
-	return NFCT_CB_CONTINUE;
+out:
+	nfct_destroy(ct);
+	return MNL_CB_OK;
 }
 
 static int dump_cb(enum nf_conntrack_msg_type type,
@@ -1843,19 +1882,14 @@ out_err:
 	return ret;
 }
 
-static struct nfct_mnl_socket {
-	struct mnl_socket	*mnl;
-	uint32_t		portid;
-} sock;
-
-static int nfct_mnl_socket_open(void)
+static int nfct_mnl_socket_open(unsigned int events)
 {
 	sock.mnl = mnl_socket_open(NETLINK_NETFILTER);
 	if (sock.mnl == NULL) {
 		perror("mnl_socket_open");
 		return -1;
 	}
-	if (mnl_socket_bind(sock.mnl, 0, MNL_SOCKET_AUTOPID) < 0) {
+	if (mnl_socket_bind(sock.mnl, events, MNL_SOCKET_AUTOPID) < 0) {
 		perror("mnl_socket_bind");
 		return -1;
 	}
@@ -2176,7 +2210,7 @@ nfct_build_netmask(uint32_t *dst, int b, int n)
 			dst[i] = 0xffffffff;
 			b -= 32;
 		} else if (b > 0) {
-			dst[i] = (1 << b) - 1;
+			dst[i] = htonl(~0u << (32 - b));
 			b = 0;
 		} else {
 			dst[i] = 0;
@@ -2566,7 +2600,7 @@ int main(int argc, char *argv[])
 
 	case CT_LIST:
 		if (type == CT_TABLE_DYING) {
-			if (nfct_mnl_socket_open() < 0)
+			if (nfct_mnl_socket_open(0) < 0)
 				exit_error(OTHER_PROBLEM, "Can't open handler");
 
 			res = nfct_mnl_dump(NFNL_SUBSYS_CTNETLINK,
@@ -2576,7 +2610,7 @@ int main(int argc, char *argv[])
 			nfct_mnl_socket_close();
 			break;
 		} else if (type == CT_TABLE_UNCONFIRMED) {
-			if (nfct_mnl_socket_open() < 0)
+			if (nfct_mnl_socket_open(0) < 0)
 				exit_error(OTHER_PROBLEM, "Can't open handler");
 
 			res = nfct_mnl_dump(NFNL_SUBSYS_CTNETLINK,
@@ -2608,10 +2642,10 @@ int main(int argc, char *argv[])
 			nfct_filter_dump_set_attr(filter_dump,
 						  NFCT_FILTER_DUMP_MARK,
 						  &tmpl.filter_mark_kernel);
-			nfct_filter_dump_set_attr_u8(filter_dump,
-						     NFCT_FILTER_DUMP_L3NUM,
-						     family);
 		}
+		nfct_filter_dump_set_attr_u8(filter_dump,
+					     NFCT_FILTER_DUMP_L3NUM,
+					     family);
 
 		if (options & CT_OPT_ZERO)
 			res = nfct_query(cth, NFCT_Q_DUMP_FILTER_RESET,
@@ -2714,10 +2748,10 @@ int main(int argc, char *argv[])
 			nfct_filter_dump_set_attr(filter_dump,
 						  NFCT_FILTER_DUMP_MARK,
 						  &tmpl.filter_mark_kernel);
-			nfct_filter_dump_set_attr_u8(filter_dump,
-						     NFCT_FILTER_DUMP_L3NUM,
-						     family);
 		}
+		nfct_filter_dump_set_attr_u8(filter_dump,
+					     NFCT_FILTER_DUMP_L3NUM,
+					     family);
 
 		res = nfct_query(cth, NFCT_Q_DUMP_FILTER, filter_dump);
 
@@ -2779,7 +2813,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s v%s (conntrack-tools): ",PROGNAME,VERSION);
 		fprintf(stderr,"expectation table has been emptied.\n");
 		break;
-		
+
 	case CT_EVENT:
 		if (options & CT_OPT_EVENT_MASK) {
 			unsigned int nl_events = 0;
@@ -2791,42 +2825,64 @@ int main(int argc, char *argv[])
 			if (event_mask & CT_EVENT_F_DEL)
 				nl_events |= NF_NETLINK_CONNTRACK_DESTROY;
 
-			cth = nfct_open(CONNTRACK, nl_events);
+			res = nfct_mnl_socket_open(nl_events);
 		} else {
-			cth = nfct_open(CONNTRACK,
-					NF_NETLINK_CONNTRACK_NEW |
-					NF_NETLINK_CONNTRACK_UPDATE |
-					NF_NETLINK_CONNTRACK_DESTROY);
+			res = nfct_mnl_socket_open(NF_NETLINK_CONNTRACK_NEW |
+						   NF_NETLINK_CONNTRACK_UPDATE |
+						   NF_NETLINK_CONNTRACK_DESTROY);
 		}
 
-		if (!cth)
-			exit_error(OTHER_PROBLEM, "Can't open handler");
+		if (res < 0)
+			exit_error(OTHER_PROBLEM, "Can't open netlink socket");
 
 		if (options & CT_OPT_BUFFERSIZE) {
-			size_t ret;
-			ret = nfnl_rcvbufsiz(nfct_nfnlh(cth), socketbuffersize);
+			socklen_t socklen = sizeof(socketbuffersize);
+
+			res = setsockopt(mnl_socket_get_fd(sock.mnl),
+					 SOL_SOCKET, SO_RCVBUFFORCE,
+					 &socketbuffersize,
+					 sizeof(socketbuffersize));
+			if (res < 0) {
+				setsockopt(mnl_socket_get_fd(sock.mnl),
+					   SOL_SOCKET, SO_RCVBUF,
+					   &socketbuffersize,
+					   socketbuffersize);
+			}
+			getsockopt(mnl_socket_get_fd(sock.mnl), SOL_SOCKET,
+				   SO_RCVBUF, &socketbuffersize, &socklen);
 			fprintf(stderr, "NOTICE: Netlink socket buffer size "
-					"has been set to %zu bytes.\n", ret);
+					"has been set to %zu bytes.\n",
+					socketbuffersize);
 		}
 
 		nfct_filter_init(family);
 
 		signal(SIGINT, event_sighandler);
 		signal(SIGTERM, event_sighandler);
-		nfct_callback_register(cth, NFCT_T_ALL, event_cb, tmpl.ct);
-		res = nfct_catch(cth);
-		if (res == -1) {
-			if (errno == ENOBUFS) {
-				fprintf(stderr, 
-					"WARNING: We have hit ENOBUFS! We "
-					"are losing events.\nThis message "
-					"means that the current netlink "
-					"socket buffer size is too small.\n"
-					"Please, check --buffer-size in "
-					"conntrack(8) manpage.\n");
+
+		while (1) {
+			char buf[MNL_SOCKET_BUFFER_SIZE];
+
+			res = mnl_socket_recvfrom(sock.mnl, buf, sizeof(buf));
+			if (res < 0) {
+				if (errno == ENOBUFS) {
+					fprintf(stderr,
+						"WARNING: We have hit ENOBUFS! We "
+						"are losing events.\nThis message "
+						"means that the current netlink "
+						"socket buffer size is too small.\n"
+						"Please, check --buffer-size in "
+						"conntrack(8) manpage.\n");
+					continue;
+				}
+				exit_error(OTHER_PROBLEM,
+					   "failed to received netlink event: %s",
+					   strerror(errno));
+				break;
 			}
+			res = mnl_cb_run(buf, res, 0, 0, event_cb, tmpl.ct);
 		}
-		nfct_close(cth);
+		mnl_socket_close(sock.mnl);
 		break;
 
 	case EXP_EVENT:
@@ -2860,7 +2916,7 @@ int main(int argc, char *argv[])
 		/* If we fail with netlink, fall back to /proc to ensure
 		 * backward compatibility.
 		 */
-		if (nfct_mnl_socket_open() < 0)
+		if (nfct_mnl_socket_open(0) < 0)
 			goto try_proc_count;
 
 		res = nfct_mnl_get(NFNL_SUBSYS_CTNETLINK,
@@ -2905,7 +2961,7 @@ try_proc_count:
 		/* If we fail with netlink, fall back to /proc to ensure
 		 * backward compatibility.
 		 */
-		if (nfct_mnl_socket_open() < 0)
+		if (nfct_mnl_socket_open(0) < 0)
 			goto try_proc;
 
 		res = nfct_mnl_dump(NFNL_SUBSYS_CTNETLINK,
@@ -2924,7 +2980,7 @@ try_proc_count:
 		/* If we fail with netlink, fall back to /proc to ensure
 		 * backward compatibility.
 		 */
-		if (nfct_mnl_socket_open() < 0)
+		if (nfct_mnl_socket_open(0) < 0)
 			goto try_proc;
 
 		res = nfct_mnl_dump(NFNL_SUBSYS_CTNETLINK_EXP,

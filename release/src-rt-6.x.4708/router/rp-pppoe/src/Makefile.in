@@ -6,6 +6,7 @@
 # Makefile for Roaring Penguin's Linux user-space PPPoE client.
 #
 # Copyright (C) 2000 Roaring Penguin Software Inc.
+# Copyright (C) 2018-2020 Dianne Skoll
 #
 # This program may be distributed according to the terms of the GNU
 # General Public License, version 2 or (at your option) any later version.
@@ -16,13 +17,13 @@
 #***********************************************************************
 
 # Version is set ONLY IN THE MAKEFILE!  Don't delete this!
-VERSION=3.13
+RP_VERSION=3.14
 
 DEFINES=
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 mandir=@mandir@
-docdir=@prefix@/share/doc/rp-pppoe-$(VERSION)
+docdir=@prefix@/share/doc/rp-pppoe-$(RP_VERSION)
 install=@INSTALL@
 install_dir=@INSTALL@ -d
 sbindir=@sbindir@
@@ -85,50 +86,50 @@ pppoe-relay: relay.o if.o debug.o common.o
 	@CC@ -o $@ $^ $(LDFLAGS)
 
 pppoe.o: pppoe.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 discovery.o: discovery.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 ppp.o: ppp.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 md5.o: md5.c md5.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 pppoe-server.o: pppoe-server.c pppoe.h @PPPOE_SERVER_DEPS@
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 # Experimental code from Savoir Faire Linux.  I do not consider it
 # production-ready, so not part of the official distribution.
 #pppoe-bridge.o: pppoe-bridge.c pppoe.h @PPPOE_SERVER_DEPS@
-#	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+#	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 pppoe-sniff.o: pppoe-sniff.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 if.o: if.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 libevent/libevent.a:
 	cd libevent && $(MAKE) DEFINES="$(DEFINES)"
 
 common.o: common.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 debug.o: debug.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 relay.o: relay.c relay.h pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 # Experimental code from Savoir Faire Linux.  I do not consider it
 # production-ready, so not part of the official distribution.
 #modem.o: modem.c modem.h
-#	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+#	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 #rs232.o: rs232.c rs232.h
-#	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+#	@CC@ $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -c -o $@ $<
 
 
 # Linux-specific plugin
@@ -136,22 +137,22 @@ rp-pppoe.so: plugin/plugin.o plugin/libplugin.a
 	@CC@ -o $@ -shared $^ $(LDFLAGS)
 
 plugin/plugin.o: plugin.c
-	@CC@ -DPLUGIN=1 '-DRP_VERSION="$(VERSION)"' $(CFLAGS) -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
+	@CC@ -DPLUGIN=1 '-DRP_VERSION="$(RP_VERSION)"' $(CFLAGS) -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
 
 plugin/libplugin.a: plugin/discovery.o plugin/if.o plugin/common.o plugin/debug.o
 	ar -rc $@ $^
 
 plugin/discovery.o: discovery.c
-	@CC@ -DPLUGIN=1 $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ -fPIC $<
+	@CC@ -DPLUGIN=1 $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
 
 plugin/if.o: if.c
-	@CC@ -DPLUGIN=1 $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ -fPIC $<
+	@CC@ -DPLUGIN=1 $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
 
 plugin/debug.o: debug.c
-	@CC@ -DPLUGIN=1 $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ -fPIC $<
+	@CC@ -DPLUGIN=1 $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
 
 plugin/common.o: common.c
-	@CC@ -DPLUGIN=1 $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ -fPIC $<
+	@CC@ -DPLUGIN=1 $(CFLAGS) '-DRP_VERSION="$(RP_VERSION)"' -I$(PPPD_INCDIR) -c -o $@ -fPIC $<
 
 install: all
 	-mkdir -p $(DESTDIR)$(sbindir)
@@ -189,13 +190,13 @@ install: all
 	-mkdir -p $(DESTDIR)/etc/ppp
 	-mkdir -p $(DESTDIR)$(PLUGIN_DIR)
 	-echo "# Directory created by rp-pppoe for kernel-mode plugin" > $(DESTDIR)$(PLUGIN_DIR)/README
-	@if test -r rp-pppoe.so; then $(install) -m 755 rp-pppoe.so $(DESTDIR)$(PLUGIN_DIR); fi
+	if test -r rp-pppoe.so; then $(install) -m 755 rp-pppoe.so $(DESTDIR)$(PLUGIN_DIR); fi
 	@for i in pppoe.conf firewall-standalone firewall-masq ; do \
 		if [ ! -f $(DESTDIR)/etc/ppp/$$i ] ; then \
 			$(install) -m 644 ../configs/$$i $(DESTDIR)/etc/ppp ; \
 		else \
 			echo "NOT overwriting existing $(DESTDIR)/etc/ppp/$$i" ;\
-			$(install) -m 644 ../configs/$$i $(DESTDIR)/etc/ppp/$$i-$(VERSION) ;\
+			$(install) -m 644 ../configs/$$i $(DESTDIR)/etc/ppp/$$i-$(RP_VERSION) ;\
 		fi ;\
 	done
 	@if [ ! -f $(DESTDIR)$(PPPOESERVER_PPPD_OPTIONS) ] ; then \
@@ -208,11 +209,6 @@ install: all
 		echo "Looks like a Red Hat system; installing $(DESTDIR)/etc/rc.d/init.d/pppoe" ; \
 		mkdir -p $(DESTDIR)/etc/rc.d/init.d ;\
 		$(install) -m 755 ../scripts/pppoe-init $(DESTDIR)/etc/rc.d/init.d/pppoe ; \
-	fi
-	@if [ -f /etc/turbolinux-release ] ; then \
-		echo "Looks like a TurboLinux system; installing $(DESTDIR)/etc/rc.d/init.d/pppoe" ; \
-		mkdir -p $(DESTDIR)/etc/rc.d/init.d ;\
-		$(install) -m 755 ../scripts/pppoe-init-turbolinux $(DESTDIR)/etc/rc.d/init.d/pppoe ; \
 	fi
 	@if [ -f /etc/SuSE-release ] ; then \
 		echo "Looks like a SuSE Linux system; installing $(DESTDIR)/etc/rc.d/init.d/pppoe" ; \
@@ -230,59 +226,59 @@ install: all
 	@echo "Type 'pppoe-setup' to configure the software."
 
 servpoet-tgz: distro-servpoet
-	cd .. && tar cvf servpoet-$(VERSION)$(BETA).tar servpoet-$(VERSION)$(BETA)
-	gzip -f -v -9 ../servpoet-$(VERSION)$(BETA).tar
-	rm -rf ../servpoet-$(VERSION)$(BETA)
+	cd .. && tar cvf servpoet-$(RP_VERSION)$(BETA).tar servpoet-$(RP_VERSION)$(BETA)
+	gzip -f -v -9 ../servpoet-$(RP_VERSION)$(BETA).tar
+	rm -rf ../servpoet-$(RP_VERSION)$(BETA)
 
 tgz: distro
-	cd .. && tar cvf rp-pppoe-$(VERSION)$(BETA).tar rp-pppoe-$(VERSION)$(BETA)
-	gzip -f -v -9 ../rp-pppoe-$(VERSION)$(BETA).tar
-	rm -rf ../rp-pppoe-$(VERSION)$(BETA)
+	cd .. && tar cvf rp-pppoe-$(RP_VERSION)$(BETA).tar rp-pppoe-$(RP_VERSION)$(BETA)
+	gzip -f -v -9 ../rp-pppoe-$(RP_VERSION)$(BETA).tar
+	rm -rf ../rp-pppoe-$(RP_VERSION)$(BETA)
 
 distro-servpoet: distro
-	cp ../servpoet.spec ../rp-pppoe-$(VERSION)$(BETA)
-	$(MAKE) -C licensed-only distro VERSION=$(VERSION) BETA=$(BETA)
-	mv ../rp-pppoe-$(VERSION)$(BETA) ../servpoet-$(VERSION)$(BETA)
+	cp ../servpoet.spec ../rp-pppoe-$(RP_VERSION)$(BETA)
+	$(MAKE) -C licensed-only distro RP_VERSION=$(RP_VERSION) BETA=$(BETA)
+	mv ../rp-pppoe-$(RP_VERSION)$(BETA) ../servpoet-$(RP_VERSION)$(BETA)
 
 distro:
-	rm -rf ../rp-pppoe-$(VERSION)$(BETA)
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)
+	rm -rf ../rp-pppoe-$(RP_VERSION)$(BETA)
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)
 	for i in README SERVPOET go go-gui rp-pppoe.spec ; do \
-		cp ../$$i ../rp-pppoe-$(VERSION)$(BETA) || exit 1; \
+		cp ../$$i ../rp-pppoe-$(RP_VERSION)$(BETA) || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/gui
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/gui
 	for i in en.msg ja.msg Makefile.in tkpppoe.in wrapper.c tkpppoe.1 pppoe-wrapper.1 ; do \
-		cp ../gui/$$i ../rp-pppoe-$(VERSION)$(BETA)/gui || exit 1; \
+		cp ../gui/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/gui || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/gui/html
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/gui/html
 	for i in mainwin-busy.png mainwin-nonroot.png mainwin.png props-advanced.png props-basic.png props-nic.png props-options.png tkpppoe.html ; do \
-		cp ../gui/html/$$i ../rp-pppoe-$(VERSION)$(BETA)/gui/html || exit 1; \
+		cp ../gui/html/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/gui/html || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/configs
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/configs
 	for i in firewall-masq firewall-standalone pap-secrets pppoe-server-options pppoe.conf ; do \
-		cp ../configs/$$i ../rp-pppoe-$(VERSION)$(BETA)/configs || exit 1; \
+		cp ../configs/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/configs || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/doc
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/doc
 	for i in CHANGES KERNEL-MODE-PPPOE HOW-TO-CONNECT LICENSE PROBLEMS ; do \
-		cp ../doc/$$i ../rp-pppoe-$(VERSION)$(BETA)/doc || exit 1; \
+		cp ../doc/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/doc || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/man
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/man
 	for i in pppoe-connect.8 pppoe-setup.8 pppoe-start.8 pppoe-status.8 pppoe-stop.8 pppoe-server.8 pppoe-sniff.8 pppoe.8 pppoe-relay.8 pppoe.conf.5 ; do \
-		cp ../man/$$i ../rp-pppoe-$(VERSION)$(BETA)/man || exit 1; \
+		cp ../man/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/man || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/scripts
-	for i in pppoe-connect.in pppoe-init-suse.in pppoe-init-turbolinux.in pppoe-init.in pppoe-setup.in pppoe-start.in pppoe-stop.in pppoe-status ; do \
-		cp ../scripts/$$i ../rp-pppoe-$(VERSION)$(BETA)/scripts || exit 1; \
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/scripts
+	for i in pppoe-connect.in pppoe-init-suse.in pppoe-init.in pppoe-setup.in pppoe-start.in pppoe-stop.in pppoe-status ; do \
+		cp ../scripts/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/scripts || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/src
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/src
 	for i in Makefile.in install-sh common.c config.h.in configure configure.in debug.c discovery.c if.c md5.c md5.h ppp.c pppoe-server.c pppoe-sniff.c pppoe.c pppoe.h pppoe-server.h plugin.c relay.c relay.h ; do \
-		cp ../src/$$i ../rp-pppoe-$(VERSION)$(BETA)/src || exit 1; \
+		cp ../src/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/src || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/src/libevent
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/src/libevent
 	for i in Makefile.in event.c event.h event_tcp.c event_tcp.h eventpriv.h hash.c hash.h event_sig.c ; do \
-		cp ../src/libevent/$$i ../rp-pppoe-$(VERSION)$(BETA)/src/libevent || exit 1; \
+		cp ../src/libevent/$$i ../rp-pppoe-$(RP_VERSION)$(BETA)/src/libevent || exit 1; \
 	done
-	mkdir ../rp-pppoe-$(VERSION)$(BETA)/src/plugin
+	mkdir ../rp-pppoe-$(RP_VERSION)$(BETA)/src/plugin
 
 distro-beta: beta-check
 	$(MAKE) distro BETA=-BETA-$(BETA)
@@ -297,16 +293,16 @@ beta-check:
 	fi
 
 rpms: tgz
-	cp ../rp-pppoe-$(VERSION).tar.gz /usr/src/redhat/SOURCES
-	gpg --detach-sign /usr/src/redhat/SOURCES/rp-pppoe-$(VERSION).tar.gz
+	cp ../rp-pppoe-$(RP_VERSION).tar.gz /usr/src/redhat/SOURCES
+	gpg --detach-sign /usr/src/redhat/SOURCES/rp-pppoe-$(RP_VERSION).tar.gz
 	cd ..; \
 	rpm -ba rp-pppoe.spec
-	rpm --addsign /usr/src/redhat/SRPMS/rp-pppoe-$(VERSION)-1.src.rpm \
-		/usr/src/redhat/RPMS/i386/rp-pppoe-$(VERSION)-1.i386.rpm \
-		/usr/src/redhat/RPMS/i386/rp-pppoe-gui-$(VERSION)-1.i386.rpm
+	rpm --addsign /usr/src/redhat/SRPMS/rp-pppoe-$(RP_VERSION)-1.src.rpm \
+		/usr/src/redhat/RPMS/i386/rp-pppoe-$(RP_VERSION)-1.i386.rpm \
+		/usr/src/redhat/RPMS/i386/rp-pppoe-gui-$(RP_VERSION)-1.i386.rpm
 
 servpoet-rpms: servpoet-tgz
-	cp ../servpoet-$(VERSION).tar.gz /usr/src/redhat/SOURCES
+	cp ../servpoet-$(RP_VERSION).tar.gz /usr/src/redhat/SOURCES
 	cd .. && rpm -ba servpoet.spec
 
 clean:
@@ -318,20 +314,20 @@ clean:
 distclean: clean
 	rm -f Makefile config.h config.cache config.log config.status
 	rm -f libevent/Makefile
-	rm -f ../scripts/pppoe-connect ../scripts/pppoe-start ../scripts/pppoe-stop ../scripts/pppoe-init ../scripts/pppoe-setup ../scripts/pppoe-init-suse ../scripts/pppoe-init-turbolinux
+	rm -f ../scripts/pppoe-connect ../scripts/pppoe-start ../scripts/pppoe-stop ../scripts/pppoe-init ../scripts/pppoe-setup ../scripts/pppoe-init-suse
 
 update-version:
-	sed -e 's/^Version: .*$$/Version: $(VERSION)/' ../rp-pppoe.spec > ../rp-pppoe.spec.new && mv ../rp-pppoe.spec.new ../rp-pppoe.spec
-	sed -e 's+^Source: .*$$+Source: http://www.roaringpenguin.com/pppoe/rp-pppoe-$(VERSION).tar.gz+' ../rp-pppoe.spec > ../rp-pppoe.spec.new && mv ../rp-pppoe.spec.new ../rp-pppoe.spec
-	test -f ../servpoet.spec && sed -e 's/^Version: .*$$/Version: $(VERSION)/' ../servpoet.spec > ../servpoet.spec.new && mv ../servpoet.spec.new ../servpoet.spec || true
-	test -f ../servpoet.spec && sed -e 's+^Source: .*$$+Source: http://www.roaringpenguin.com/pppoe/servpoet-$(VERSION).tar.gz+' ../servpoet.spec > ../servpoet.spec.new && mv ../servpoet.spec.new ../servpoet.spec || true
+	sed -e 's/^Version: .*$$/Version: $(RP_VERSION)/' ../rp-pppoe.spec > ../rp-pppoe.spec.new && mv ../rp-pppoe.spec.new ../rp-pppoe.spec
+	sed -e 's+^Source: .*$$+Source: https://dianne.skoll.ca/projects/rp-pppoe/download/rp-pppoe-$(RP_VERSION).tar.gz+' ../rp-pppoe.spec > ../rp-pppoe.spec.new && mv ../rp-pppoe.spec.new ../rp-pppoe.spec
+	test -f ../servpoet.spec && sed -e 's/^Version: .*$$/Version: $(RP_VERSION)/' ../servpoet.spec > ../servpoet.spec.new && mv ../servpoet.spec.new ../servpoet.spec || true
+	test -f ../servpoet.spec && sed -e 's+^Source: .*$$+Source: https://dianne.skoll.ca/projects/rp-pppoe/download/servpoet-$(RP_VERSION).tar.gz+' ../servpoet.spec > ../servpoet.spec.new && mv ../servpoet.spec.new ../servpoet.spec || true
 
 # Convenience target for Dianne!  Don't try to use this one.
 km:
 	./configure --enable-plugin=/home/dfs/Archive/PPP/ppp-2.4.0.pppoe4-patched-dfs
 
 licensed-only:
-	$(MAKE) -C licensed-only all VERSION=$(VERSION) SERVPOET_VERSION=$(SERVPOET_VERSION)
+	$(MAKE) -C licensed-only all RP_VERSION=$(RP_VERSION) SERVPOET_VERSION=$(SERVPOET_VERSION)
 
 l2tp: libevent/libevent.a
 	$(MAKE) -C l2tp all

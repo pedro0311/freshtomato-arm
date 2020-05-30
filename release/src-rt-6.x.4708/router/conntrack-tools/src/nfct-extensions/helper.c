@@ -284,7 +284,7 @@ nfct_cmd_helper_delete(struct mnl_socket *nl, int argc, char *argv[])
 			nfct_perror("unsupported layer 4 protocol");
 			return -1;
 		}
-		nfct_helper_attr_set_u32(t, NFCTH_ATTR_PROTO_L4NUM, l4proto);
+		nfct_helper_attr_set_u8(t, NFCTH_ATTR_PROTO_L4NUM, l4proto);
 	}
 
 	seq = time(NULL);

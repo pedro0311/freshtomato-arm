@@ -6,8 +6,7 @@
 * server.
 *
 * Copyright (C) 2001 Roaring Penguin Software Inc.
-*
-* $Id$
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.

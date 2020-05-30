@@ -104,7 +104,7 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libnfconntrack_la_LIBADD =
 am_libnfconntrack_la_OBJECTS = api.lo getter.lo setter.lo labels.lo \
-	parse.lo build.lo parse_mnl.lo build_mnl.lo snprintf.lo \
+	build.lo parse_mnl.lo build_mnl.lo snprintf.lo \
 	snprintf_default.lo snprintf_xml.lo objopt.lo compare.lo \
 	copy.lo filter.lo bsf.lo filter_dump.lo grp.lo grp_getter.lo \
 	grp_setter.lo stack.lo
@@ -311,7 +311,7 @@ noinst_LTLIBRARIES = libnfconntrack.la
 libnfconntrack_la_SOURCES = api.c \
 			    getter.c setter.c \
 			    labels.c \
-			    parse.c build.c \
+			    build.c \
 			    parse_mnl.c build_mnl.c \
 			    snprintf.c \
 			    snprintf_default.c snprintf_xml.c \
@@ -391,7 +391,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/grp_setter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/labels.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/objopt.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse_mnl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/setter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/snprintf.Plo@am__quote@
