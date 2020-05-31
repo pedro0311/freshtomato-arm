@@ -2321,6 +2321,7 @@ nano-install:
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
 libcurl/stamp-h1: zlib $(OPENSSLDIR)
+	$(call patch_files,libcurl)
 	cd libcurl && ./buildconf && \
 		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/include" \
@@ -2354,6 +2355,7 @@ libcurl-clean:
 	-@$(MAKE) -C libcurl clean
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
+	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && CC=$(CC) \
