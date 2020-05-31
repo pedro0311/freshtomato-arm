@@ -15,6 +15,7 @@ include common.mak
 #TOMATO_EXPERIMENTAL=0
 
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
+export HAVE_TOMATO := y
 
 
 define patch_files
