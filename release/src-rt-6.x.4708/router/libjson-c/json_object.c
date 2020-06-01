@@ -58,6 +58,8 @@ static json_object_to_json_string_fn _json_object_userdata_to_json_string;
 #ifndef JSON_NORETURN
 #if defined(_MSC_VER)
 #define JSON_NORETURN __declspec(noreturn)
+#elif defined(__OS400__)
+#define JSON_NORETURN
 #else
 /* 'cold' attribute is for optimization, telling the computer this code
  * path is unlikely.
@@ -967,7 +969,8 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 					p = q;
 			}
 			/* drop trailing zeroes */
-			*(++p) = 0;
+			if (*p != 0)
+				*(++p) = 0;
 			size = p - buf;
 		}
 	}

@@ -2985,6 +2985,7 @@ ipset-clean:
 	$(call unpatch_files,ipset)
 
 libjson-c/build/Makefile:
+	$(call patch_files,libjson-c)
 	@rm -rf libjson-c/build && mkdir -p libjson-c/build
 	cd libjson-c/build && \
 	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
@@ -2994,6 +2995,7 @@ libjson-c/build/Makefile:
 		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
 		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 		-DBUILD_TESTING=FALSE \
+		-DBUILD_STATIC_LIBS=FALSE \
 		..
 
 libjson-c: libjson-c/build/Makefile
@@ -3003,6 +3005,7 @@ libjson-c: libjson-c/build/Makefile
 
 libjson-c-clean:
 	@rm -rf libjson-c/build
+	$(call unpatch_files,libjson-c)
 
 uqmi: libjson-c
 	@$(SEP)
