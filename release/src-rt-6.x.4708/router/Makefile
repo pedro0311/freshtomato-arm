@@ -1430,6 +1430,17 @@ iproute2-3.x-clean:
 	-rm -f iproute2-3.x/Config
 	$(call unpatch_files,iproute2-3.x)
 
+dropbear/config.h:
+	$(call patch_files,dropbear)
+	cd dropbear && autoreconf -fsi && \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
+		$(CONFIGURE) --disable-zlib --enable-syslog --disable-lastlog --disable-utmp \
+			--disable-utmpx --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline \
+			--disable-loginfunc --disable-pam --enable-openpty --enable-bundled-libtom
+	@$(MAKE) -C dropbear clean
+
 dropbear: dropbear/config.h
 	@$(SEP)
 	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
@@ -1439,7 +1450,6 @@ dropbear-install:
 	$(STRIP) $(INSTALLDIR)/dropbear/usr/bin/dropbearmulti
 	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dropbear && \
-	ln -sf dropbearmulti dropbearconvert && \
 	ln -sf dropbearmulti dropbearkey && \
 	ln -sf dropbearmulti dbclient && \
 	ln -sf dropbearmulti ssh && \
@@ -1449,19 +1459,6 @@ dropbear-clean:
 	-@$(MAKE) -C dropbear clean
 	@rm -f dropbear/config.h
 	$(call unpatch_files,dropbear)
-
-dropbear/config.h:
-	$(call patch_files,dropbear)
-	cd dropbear && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
-		$(CONFIGURE) --disable-zlib --enable-syslog --disable-lastlog --disable-utmp \
-		--disable-utmpx --disable-wtmp --disable-wtmpx --disable-pututline \
-		--disable-pututxline --disable-loginfunc --disable-pam --enable-openpty --enable-bundled-libtom
-	@$(MAKE) -C dropbear clean
-
-# Media libraries
 
 sqlite/stamp-h1:
 	cd sqlite && \

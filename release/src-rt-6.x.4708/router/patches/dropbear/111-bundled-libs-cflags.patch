@@ -26,8 +26,8 @@
  LTC_CFLAGS += -Wno-typedef-redefinition -Wno-tautological-compare -Wno-builtin-requires-header -Wno-missing-field-initializers
 --- dropbear/libtommath/makefile_include.mk
 +++ dropbear/libtommath/makefile_include.mk
-@@ -56,6 +56,9 @@ CFLAGS += -Wsystem-headers -Wdeclaration
- CFLAGS += -Wstrict-prototypes -Wpointer-arith
+@@ -70,6 +70,9 @@ CFLAGS += -Wsystem-headers -Wdeclaration
+ LTM_CFLAGS += -Wsystem-headers
  endif
  
 +ifndef HAVE_TOMATO
@@ -35,14 +35,14 @@
 +
  ifdef COMPILE_DEBUG
  #debug
- CFLAGS += -g3
-@@ -77,6 +80,9 @@ endif
+ LTM_CFLAGS += -g3
+@@ -90,6 +93,9 @@ endif
+ 
  endif # COMPILE_SIZE
- endif # COMPILE_DEBUG
  
 +  ### ! HAVE_TOMATO
 +endif
 +
  ifneq ($(findstring clang,$(CC)),)
- CFLAGS += -Wno-typedef-redefinition -Wno-tautological-compare -Wno-builtin-requires-header
+ LTM_CFLAGS += -Wno-typedef-redefinition -Wno-tautological-compare -Wno-builtin-requires-header
  endif
