@@ -160,7 +160,7 @@ ldap_init_and_bind(LDAP **pld,
 	 */
 	if ((lerr = ldap_initialize(&ld, server_url)) != LDAP_SUCCESS) {
 		IDMAP_LOG(0, ("ldap_init_and_bind: ldap_initialize() failed "
-			  "to [%s]: %s (%d)\n", server_url,
+			  "to [%s]: %s (%d)", server_url,
 			  ldap_err2string(lerr), lerr));
 		goto out;
 	}
@@ -168,7 +168,7 @@ ldap_init_and_bind(LDAP **pld,
 	if ((ldap_set_option(ld, LDAP_OPT_DEBUG_LEVEL, &debug_level)
 							!= LDAP_SUCCESS)) {
 		IDMAP_LOG(0, ("ldap_init_and_bind: error setting ldap "
-			  "library debugging level\n"));
+			  "library debugging level"));
 		goto out;
 	}
 
@@ -179,7 +179,7 @@ ldap_init_and_bind(LDAP **pld,
 	ldap_get_option(ld, LDAP_OPT_API_INFO, &apiinfo);
 	if (apiinfo.ldapai_info_version != LDAP_API_INFO_VERSION) {
 		IDMAP_LOG(0, ("ldap_init_and_bind:  APIInfo version mismatch: "
-			  "library %d, header %d\n",
+			  "library %d, header %d",
 			  apiinfo.ldapai_info_version, LDAP_API_INFO_VERSION));
 		goto out;
 	}
@@ -189,7 +189,7 @@ ldap_init_and_bind(LDAP **pld,
 		new_version = LDAP_VERSION3;
 		IDMAP_LOG(4, ("ldap_init_and_bind: version mismatch between "
 			  "API information and protocol version. Setting "
-			  "protocol version to %d\n", new_version));
+			  "protocol version to %d", new_version));
 		ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &new_version);
 	}
 
@@ -212,7 +212,7 @@ ldap_init_and_bind(LDAP **pld,
 		lerr = ldap_set_option(ld, LDAP_OPT_X_TLS, &tls_type);
 		if (lerr != LDAP_SUCCESS) {
 			IDMAP_LOG(2, ("ldap_init_and_bind: setting SSL "
-				  "failed : %s (%d)\n",
+				  "failed : %s (%d)",
 				  ldap_err2string(lerr), lerr));
 			goto out;
 		}
@@ -220,7 +220,7 @@ ldap_init_and_bind(LDAP **pld,
 				       linfo->ca_cert);
 		if (lerr != LDAP_SUCCESS) {
 			IDMAP_LOG(2, ("ldap_init_and_bind: setting CA "
-				  "certificate file failed : %s (%d)\n",
+				  "certificate file failed : %s (%d)",
 				  ldap_err2string(lerr), lerr));
 			goto out;
 		}
@@ -242,24 +242,24 @@ retry_bind:
 				IDMAP_LOG(2, ("ldap_init_and_bind: "
 					  "got protocol error while attempting "
 					  "bind with protocol version %d, "
-					  "trying protocol version %d\n",
+					  "trying protocol version %d",
 					  current_version, new_version));
 				if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 					&& (errmsg != NULL) && (*errmsg != '\0')) {
 					IDMAP_LOG(2, ("ldap_init_and_bind: "
-						  "Additional info: %s\n", errmsg));
+						  "Additional info: %s", errmsg));
 					ldap_memfree(errmsg);
 				}
 				goto retry_bind;
 			}
 			IDMAP_LOG(2, ("ldap_init_and_bind: ldap_simple_bind_s "
-				  "to [%s] as user '%s': %s (%d)\n",
+				  "to [%s] as user '%s': %s (%d)",
 				  server_url, linfo->user_dn,
 				  ldap_err2string(lerr), lerr));
 			if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 					&& (errmsg != NULL)&& (*errmsg != '\0')) {
 				IDMAP_LOG(2, ("ldap_init_and_bind: "
-					  "Additional info: %s\n", errmsg));
+					  "Additional info: %s", errmsg));
 				ldap_memfree(errmsg);
 			}
 			goto out;
@@ -272,12 +272,12 @@ retry_bind:
 			char *errmsg;
 
 			IDMAP_LOG(2, ("ldap_init_and_bind: ldap_simple_bind_s "
-			  "to [%s] as anonymous: %s (%d)\n", server_url,
+			  "to [%s] as anonymous: %s (%d)", server_url,
 			  ldap_err2string(lerr), lerr));
 			if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 					&& (errmsg != NULL) && (*errmsg != '\0')) {
 				IDMAP_LOG(2, ("ldap_init_and_bind: "
-					  "Additional info: %s\n", errmsg));
+					  "Additional info: %s", errmsg));
 				ldap_memfree(errmsg);
 			}
 			goto out;
@@ -323,7 +323,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 				      attrtype, name))
 				== LDAP_FILT_MAXSIZ) {
 			IDMAP_LOG(0, ("ERROR: umich_name_to_ids: filter "
-				  "too long!\n"));
+				  "too long!"));
 			goto out;
 		}
 		base = linfo->people_tree;
@@ -335,13 +335,13 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 				      attrtype, name))
 				== LDAP_FILT_MAXSIZ) {
 			IDMAP_LOG(0, ("ERROR: umich_name_to_ids: filter "
-				  "too long!\n"));
+				  "too long!"));
 			goto out;
 		}
 		base = linfo->group_tree;
 	}
 	else {
-		IDMAP_LOG(0, ("ERROR: umich_name_to_ids: invalid idtype (%d)\n",
+		IDMAP_LOG(0, ("ERROR: umich_name_to_ids: invalid idtype (%d)",
 			idtype));
 		goto out;
 	}
@@ -360,12 +360,12 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 		char *errmsg;
 
 		IDMAP_LOG(2, ("umich_name_to_ids: ldap_search_st for "
-			  "base '%s', filter '%s': %s (%d)\n",
+			  "base '%s', filter '%s': %s (%d)",
 			  base, filter, ldap_err2string(err), err));
 		if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 				&& (errmsg != NULL) && (*errmsg != '\0')) {
 			IDMAP_LOG(2, ("umich_name_to_ids: "
-				  "Additional info: %s\n", errmsg));
+				  "Additional info: %s", errmsg));
 			ldap_memfree(errmsg);
 		}
 		err = -ENOENT;
@@ -381,7 +381,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 	if (!(entry = ldap_first_entry(ld, result))) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_name_to_ids: ldap_first_entry: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_unbind;
 	}
 
@@ -402,7 +402,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 		if ((idstr = ldap_get_values(ld, result, attr_res)) == NULL) {
 			lerr = ldap_result2error(ld, result, 0);
 			IDMAP_LOG(2, ("umich_name_to_ids: ldap_get_values: "
-				  "%s (%d)\n", ldap_err2string(lerr), lerr));
+				  "%s (%d)", ldap_err2string(lerr), lerr));
 			goto out_memfree;
 		}
 		if (strcasecmp(attr_res, ldap_map.NFSv4_uid_attr) == 0) {
@@ -411,7 +411,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 			if (tmp_uid != tmp_u ||
 				(errno == ERANGE && tmp_u == ULONG_MAX)) {
 				IDMAP_LOG(0, ("ERROR: umich_name_to_ids: "
-					  "uidNumber too long converting '%s'\n",
+					  "uidNumber too long converting '%s'",
 					  *idstr));
 				ldap_memfree(attr_res);
 				ldap_value_free(idstr);
@@ -424,7 +424,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 			if (tmp_gid != tmp_g ||
 				(errno == ERANGE && tmp_g == ULONG_MAX)) {
 				IDMAP_LOG(0, ("ERROR: umich_name_to_ids: "
-					  "gidNumber too long converting '%s'\n",
+					  "gidNumber too long converting '%s'",
 					  *idstr));
 				ldap_memfree(attr_res);
 				ldap_value_free(idstr);
@@ -433,7 +433,7 @@ umich_name_to_ids(char *name, int idtype, uid_t *uid, gid_t *gid,
 			*gid = tmp_gid;
 		} else {
 			IDMAP_LOG(0, ("umich_name_to_ids: received attr "
-				"'%s' ???\n", attr_res));
+				"'%s' ???", attr_res));
 			ldap_memfree(attr_res);
 			ldap_value_free(idstr);
 			goto out_memfree;
@@ -485,7 +485,7 @@ umich_id_to_name(uid_t id, int idtype, char **name, size_t len,
 				      ldap_map.NFSv4_uid_attr, idstr))
 				== LDAP_FILT_MAXSIZ) {
 			IDMAP_LOG(0, ("ERROR: umich_id_to_name: "
-				  "uid filter too long!\n"));
+				  "uid filter too long!"));
 			goto out;
 		}
 		base = linfo->people_tree;
@@ -496,12 +496,12 @@ umich_id_to_name(uid_t id, int idtype, char **name, size_t len,
 				      ldap_map.NFSv4_gid_attr,idstr))
 				== LDAP_FILT_MAXSIZ) {
 			IDMAP_LOG(0, ("ERROR: umich_id_to_name: "
-				  "gid filter too long!\n"));
+				  "gid filter too long!"));
 			goto out;
 		}
 		base = linfo->group_tree;
 	} else {
-		IDMAP_LOG(0, ("ERROR: umich_id_to_name: invalid idtype (%d)\n",
+		IDMAP_LOG(0, ("ERROR: umich_id_to_name: invalid idtype (%d)",
 			  idtype));
 		err = -EINVAL;
 		goto out;
@@ -523,12 +523,12 @@ umich_id_to_name(uid_t id, int idtype, char **name, size_t len,
 		char * errmsg;
 
 		IDMAP_LOG(2, ("umich_id_to_name: ldap_search_st for "
-			  "base '%s, filter '%s': %s (%d)\n", base, filter,
+			  "base '%s, filter '%s': %s (%d)", base, filter,
 			  ldap_err2string(err), err));
                 if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 				&& (errmsg != NULL) && (*errmsg != '\0')) {
 			IDMAP_LOG(2, ("umich_id_to_name: "
-				  "Additional info: %s\n", errmsg));
+				  "Additional info: %s", errmsg));
 			ldap_memfree(errmsg);
 		}
 
@@ -544,21 +544,21 @@ umich_id_to_name(uid_t id, int idtype, char **name, size_t len,
 	if (!(entry = ldap_first_entry(ld, result))) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_id_to_name: ldap_first_entry: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_unbind;
 	}
 
 	if (!(attr_res = ldap_first_attribute(ld, result, &ber))) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_id_to_name: ldap_first_attribute: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_unbind;
 	}
 
 	if ((names = ldap_get_values(ld, result, attr_res)) == NULL) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_id_to_name: ldap_get_values: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_memfree;
 	}
 
@@ -571,7 +571,7 @@ umich_id_to_name(uid_t id, int idtype, char **name, size_t len,
 	if (strlen(names[0]) >= len) {
 		/* not enough space to return the name */
 		IDMAP_LOG(1, ("umich_id_to_name: output buffer size (%d) "
-			  "too small to return string, '%s', of length %d\n",
+			  "too small to return string, '%s', of length %d",
 			  len, names[0], strlen(names[0])));
 		goto out_memfree;
 	}
@@ -625,7 +625,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 			     ldap_map.GSS_principal_attr, principal))
 			== LDAP_FILT_MAXSIZ) {
 		IDMAP_LOG(0, ("ERROR: umich_gss_princ_to_grouplist: "
-			  "filter too long!\n"));
+			  "filter too long!"));
 		goto out;
 	}
 
@@ -638,13 +638,13 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 		char *errmsg;
 
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_search_st "
-			  "for tree '%s, filter '%s': %s (%d)\n",
+			  "for tree '%s, filter '%s': %s (%d)",
 			  linfo->people_tree, filter,
 			  ldap_err2string(err), err));
 		if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
 				&& (errmsg != NULL) && (*errmsg != '\0')) {
 			IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-				   "Additional info: %s\n", errmsg));
+				   "Additional info: %s", errmsg));
 			ldap_memfree(errmsg);
 		}
 		err = -ENOENT;
@@ -655,7 +655,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 	count = ldap_count_entries(ld, result);
 	if (count != 1) {
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-                                "ldap account lookup of gssauthname %s returned %d accounts\n",
+                                "ldap account lookup of gssauthname %s returned %d accounts",
                                 principal,count));
 		goto out_unbind;
 	}
@@ -663,14 +663,14 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 	if (!(entry = ldap_first_entry(ld, result))) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_first_entry: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_unbind;
 	}
 
 	if ((names = ldap_get_values(ld, result, attrs[0])) == NULL) {
 		lerr = ldap_result2error(ld, result, 0);
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_get_values: "
-			  "%s (%d)\n", ldap_err2string(lerr), lerr));
+			  "%s (%d)", ldap_err2string(lerr), lerr));
 		goto out_unbind;
 	}
 
@@ -685,7 +685,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
                         ldap_map.NFSv4_acctname_attr,
                         names[0])) == LDAP_FILT_MAXSIZ ) {
                 IDMAP_LOG(2, ("ERROR: umich_gss_princ_to_grouplist: "
-                          "filter too long!\n"));
+                          "filter too long!"));
                 ldap_value_free(names);
                 goto out_unbind;
             }
@@ -702,13 +702,13 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
                 char *errmsg;
 
                 IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_search_st "
-                          "for tree '%s, filter '%s': %s (%d)\n",
+                          "for tree '%s, filter '%s': %s (%d)",
                           linfo->people_tree, filter,
                           ldap_err2string(err), err));
                 if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS)
                                 && (errmsg != NULL) && (*errmsg != '\0')) {
                         IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-                                   "Additional info: %s\n", errmsg));
+                                   "Additional info: %s", errmsg));
                         ldap_memfree(errmsg);
                 }
                 err = -ENOENT;
@@ -720,7 +720,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
             count = ldap_count_entries(ld, result);
             if (count != 1) {
                 IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-                    "ldap group member lookup of gssauthname %s returned %d multiple entries\n",
+                    "ldap group member lookup of gssauthname %s returned %d multiple entries",
                          principal,count));
                 goto out_unbind;
             }
@@ -728,14 +728,14 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
             if (!(entry = ldap_first_entry(ld, result))) {
                 lerr = ldap_result2error(ld, result, 0);
                 IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_first_entry: "
-                          "%s (%d)\n", ldap_err2string(lerr), lerr));
+                          "%s (%d)", ldap_err2string(lerr), lerr));
                 goto out_unbind;
             }
 
             if ((names = ldap_get_values(ld, result, attrs[0])) == NULL) {
                 lerr = ldap_result2error(ld, result, 0);
                 IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_get_values: "
-                          "%s (%d)\n", ldap_err2string(lerr), lerr));
+                          "%s (%d)", ldap_err2string(lerr), lerr));
                 goto out_unbind;
             }
 
@@ -747,7 +747,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 		ldap_value_free(names);
 		err = -EINVAL;
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: User %s, "
-			  "number of groups %d, exceeds requested number %d\n",
+			  "number of groups %d, exceeds requested number %d",
 			  principal, i, *ngroups));
 		*ngroups = i;
 		goto out_unbind;
@@ -780,7 +780,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 
 		if ( f_len == LDAP_FILT_MAXSIZ ) {
                 		IDMAP_LOG(2, ("ERROR: umich_gss_princ_to_grouplist: "
-                          		"filter too long!\n"));
+                          		"filter too long!"));
                 		ldap_value_free(names);
                 		goto out_unbind;
         	}
@@ -793,14 +793,14 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
                   char *errmsg;
 
                 	IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_search_st "
-                          "for tree '%s, filter '%s': %s (%d)\n",
+                          "for tree '%s, filter '%s': %s (%d)",
                           linfo->group_tree, filter,
                           ldap_err2string(err), err));
                 	if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg)==LDAP_SUCCESS)
 						&&
                                 (errmsg != NULL) && (*errmsg != '\0')) {
                         	IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-                                   "Additional info: %s\n", errmsg));
+                                   "Additional info: %s", errmsg));
                         	ldap_memfree(errmsg);
                 	}
                 	continue;
@@ -822,7 +822,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
                 /* There should be only one gidNumber attribute per group */
                 if ((valcount = ldap_count_values(vals)) != 1) {
                         IDMAP_LOG(2, ("DB problem getting gidNumber of "
-                                  "posixGroup! (count was %d)\n", valcount));
+                                  "posixGroup! (count was %d)", valcount));
 			ldap_value_free(vals);
                         continue;
                 }
@@ -832,7 +832,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
                 if (tmp_gid != tmp_g ||
                                 (errno == ERANGE && tmp_g == ULONG_MAX)) {
                         IDMAP_LOG(2, ("ERROR: umich_gss_princ_to_grouplist: "
-                                  "gidNumber too long converting '%s'\n",
+                                  "gidNumber too long converting '%s'",
                                   vals[0]));
                         ldap_value_free(vals);
                         continue;
@@ -867,7 +867,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 
             if ( f_len == LDAP_FILT_MAXSIZ ) {
 		IDMAP_LOG(0, ("ERROR: umich_gss_princ_to_grouplist: "
-			  "filter too long!\n"));
+			  "filter too long!"));
 		ldap_value_free(names);
 		goto out_unbind;
 	    }
@@ -884,13 +884,13 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 		char *errmsg;
 
 		IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: ldap_search_st "
-			  "for tree '%s, filter '%s': %s (%d)\n",
+			  "for tree '%s, filter '%s': %s (%d)",
 			  linfo->group_tree, filter,
 			  ldap_err2string(err), err));
 		if ((ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &errmsg) == LDAP_SUCCESS) &&
 				(errmsg != NULL) && (*errmsg != '\0')) {
 			IDMAP_LOG(2, ("umich_gss_princ_to_grouplist: "
-				   "Additional info: %s\n", errmsg));
+				   "Additional info: %s", errmsg));
 			ldap_memfree(errmsg);
 		}
 		err = -ENOENT;
@@ -938,7 +938,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 		/* There should be only one gidNumber attribute per group */
 		if ((valcount = ldap_count_values(vals)) != 1) {
 			IDMAP_LOG(0, ("DB problem getting gidNumber of "
-				  "posixGroup! (count was %d)\n", valcount));
+				  "posixGroup! (count was %d)", valcount));
 			goto out_unbind;
 		}
 		tmp_g = strtoul(vals[0], (char **)NULL, 10);
@@ -946,7 +946,7 @@ umich_gss_princ_to_grouplist(char *principal, gid_t *groups, int *ngroups,
 		if (tmp_gid != tmp_g ||
 				(errno == ERANGE && tmp_g == ULONG_MAX)) {
 			IDMAP_LOG(0, ("ERROR: umich_gss_princ_to_grouplist: "
-				  "gidNumber too long converting '%s'\n",
+				  "gidNumber too long converting '%s'",
 				  vals[0]));
 			ldap_value_free(vals);
 			goto out_unbind;
@@ -978,7 +978,7 @@ umichldap_gss_princ_to_ids(char *secname, char *principal,
 
 	if ((strcmp(secname, "krb5") != 0) && (strcmp(secname, "spkm3") != 0)) {
 		IDMAP_LOG(0, ("ERROR: umichldap_gss_princ_to_ids: "
-			  "invalid secname '%s'\n", secname));
+			  "invalid secname '%s'", secname));
 		return err;
 	}
 
@@ -1031,7 +1031,7 @@ umichldap_gss_princ_to_grouplist(char *secname, char *principal,
 
 	if ((strcmp(secname, "krb5") != 0) && (strcmp(secname, "spkm3") != 0)) {
 		IDMAP_LOG(0, ("ERROR: umichldap_gss_princ_to_grouplist: "
-			  "invalid secname '%s'\n", secname));
+			  "invalid secname '%s'", secname));
 		return err;
 	}
 
@@ -1068,11 +1068,11 @@ get_canonical_hostname(const char *inname)
 			msg = gai_strerror(aierr);
 			break;
 		}
-		IDMAP_LOG(1, ("%s: '%s': %s\n", __FUNCTION__, inname, msg));
+		IDMAP_LOG(1, ("%s: '%s': %s", __FUNCTION__, inname, msg));
 		goto out_err;
 	}
 	if (ap == 0) {
-		IDMAP_LOG(1, ("%s: no addresses for host '%s'?\n",
+		IDMAP_LOG(1, ("%s: no addresses for host '%s'?",
 			  __FUNCTION__, inname));
 		goto out_err;
 	}
@@ -1080,7 +1080,7 @@ get_canonical_hostname(const char *inname)
 	error = getnameinfo (ap->ai_addr, ap->ai_addrlen, tmphost,
 			     sizeof(tmphost), NULL, 0, 0);
 	if (error) {
-		IDMAP_LOG(1, ("%s: getnameinfo for host '%s' failed (%d)\n",
+		IDMAP_LOG(1, ("%s: getnameinfo for host '%s' failed (%d)",
 			  __FUNCTION__, inname));
 		goto out_free;
 	}
@@ -1125,7 +1125,7 @@ umichldap_init(void)
 		strncat(missing_msg, "LDAP_base ", sizeof(missing_msg));
 	if (strlen(missing_msg) != 0) {
 		IDMAP_LOG(0, ("umichldap_init: Missing required information: "
-			  "%s\n", missing_msg));
+			  "%s", missing_msg));
 		goto fail;
 	}
 
@@ -1137,7 +1137,7 @@ umichldap_init(void)
 		canon_name = get_canonical_hostname(server_in);
 		if (canon_name == NULL)
 			IDMAP_LOG(0, ("umichldap_init: Warning! Unable to "
-				  "canonicalize server name '%s' as requested.\n",
+				  "canonicalize server name '%s' as requested.",
 				  server_in));
 		else
 			ldap_info.server = canon_name;
@@ -1226,56 +1226,56 @@ umichldap_init(void)
 
 	if (ldap_info.use_ssl && ldap_info.ca_cert == NULL) {
 		IDMAP_LOG(0, ("umichldap_init: You must specify LDAP_ca_cert "
-			  "with LDAP_use_ssl=yes\n"));
+			  "with LDAP_use_ssl=yes"));
 		goto fail;
 	}
 
 
 	/* print out some good debugging info */
-	IDMAP_LOG(1, ("umichldap_init: canonicalize_name: %s\n",
+	IDMAP_LOG(1, ("umichldap_init: canonicalize_name: %s",
 		  canonicalize));
-	IDMAP_LOG(1, ("umichldap_init: server  : %s (from config value '%s')\n",
+	IDMAP_LOG(1, ("umichldap_init: server  : %s (from config value '%s')",
 		  ldap_info.server, server_in));
-	IDMAP_LOG(1, ("umichldap_init: port    : %d\n", ldap_info.port));
-	IDMAP_LOG(1, ("umichldap_init: people  : %s\n", ldap_info.people_tree));
-	IDMAP_LOG(1, ("umichldap_init: groups  : %s\n", ldap_info.group_tree));
+	IDMAP_LOG(1, ("umichldap_init: port    : %d", ldap_info.port));
+	IDMAP_LOG(1, ("umichldap_init: people  : %s", ldap_info.people_tree));
+	IDMAP_LOG(1, ("umichldap_init: groups  : %s", ldap_info.group_tree));
 
-	IDMAP_LOG(1, ("umichldap_init: user_dn : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: user_dn : %s",
 		  (ldap_info.user_dn && strlen(ldap_info.user_dn) != 0)
 		  ? ldap_info.user_dn : "<not-supplied>"));
 	/* Don't print actual password into the log. */
-	IDMAP_LOG(1, ("umichldap_init: passwd  : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: passwd  : %s",
 		  (ldap_info.passwd && strlen(ldap_info.passwd) != 0) ?
 		  "<supplied>" : "<not-supplied>"));
-	IDMAP_LOG(1, ("umichldap_init: use_ssl : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: use_ssl : %s",
 		  ldap_info.use_ssl ? "yes" : "no"));
-	IDMAP_LOG(1, ("umichldap_init: ca_cert : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: ca_cert : %s",
 		  ldap_info.ca_cert ? ldap_info.ca_cert : "<not-supplied>"));
-	IDMAP_LOG(1, ("umichldap_init: use_memberof_for_groups : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: use_memberof_for_groups : %s",
 		  ldap_info.memberof_for_groups ? "yes" : "no"));
 
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_person_objectclass : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_person_objectclass : %s",
 		  ldap_map.NFSv4_person_objcls));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_nfsname_attr       : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_nfsname_attr       : %s",
 		  ldap_map.NFSv4_nfsname_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_acctname_attr      : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_acctname_attr      : %s",
 		  ldap_map.NFSv4_acctname_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_uid_attr           : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_uid_attr           : %s",
 		  ldap_map.NFSv4_uid_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_group_objectclass  : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_group_objectclass  : %s",
 		  ldap_map.NFSv4_group_objcls));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_gid_attr           : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_gid_attr           : %s",
 		  ldap_map.NFSv4_gid_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_group_nfsname_attr : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_group_nfsname_attr : %s",
 		  ldap_map.NFSv4_group_nfsname_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_member_attr        : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_member_attr        : %s",
 		  ldap_map.NFSv4_member_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_member_of_attr     : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_member_of_attr     : %s",
 		  ldap_map.NFSv4_member_of_attr));
-	IDMAP_LOG(1, ("umichldap_init: NFSv4_grouplist_filter   : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: NFSv4_grouplist_filter   : %s",
 		  ldap_map.NFSv4_grouplist_filter ?
 		  ldap_map.NFSv4_grouplist_filter : "<not-specified>"));
-	IDMAP_LOG(1, ("umichldap_init: GSS_principal_attr       : %s\n",
+	IDMAP_LOG(1, ("umichldap_init: GSS_principal_attr       : %s",
 		  ldap_map.GSS_principal_attr));
 	return 0;
 fail:

@@ -1,0 +1,7 @@
+*.o
+*.a
+.depend
+portmap
+pmap_dump
+pmap_set
+portmap.man

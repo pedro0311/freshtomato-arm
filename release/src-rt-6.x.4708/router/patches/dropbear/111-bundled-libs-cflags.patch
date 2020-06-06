@@ -1,0 +1,48 @@
+--- dropbear/libtomcrypt/makefile_include.mk
++++ dropbear/libtomcrypt/makefile_include.mk
+@@ -75,6 +75,13 @@ endif
+ 
+ LTC_CFLAGS += -Wno-type-limits
+ 
++ifdef HAVE_TOMATO
++  ifeq (-Os,$(filter -Os,$(CFLAGS)))
++    LTC_CFLAGS += -DLTC_SMALL_CODE
++  endif
++else
++  ### ! HAVE_TOMATO
++
+ ifdef LTC_DEBUG
+ $(info Debug build)
+ # compile for DEBUGGING (required for ccmalloc checking!!!)
+@@ -102,6 +109,9 @@ endif
+ endif # COMPILE_SMALL
+ endif # COMPILE_DEBUG
+ 
++  ### ! HAVE_TOMATO
++endif
++
+ 
+ ifneq ($(findstring clang,$(CC)),)
+ LTC_CFLAGS += -Wno-typedef-redefinition -Wno-tautological-compare -Wno-builtin-requires-header -Wno-missing-field-initializers
+--- dropbear/libtommath/makefile_include.mk
++++ dropbear/libtommath/makefile_include.mk
+@@ -70,6 +70,9 @@ CFLAGS += -Wsystem-headers -Wdeclaration
+ LTM_CFLAGS += -Wsystem-headers
+ endif
+ 
++ifndef HAVE_TOMATO
++  ### ! HAVE_TOMATO
++
+ ifdef COMPILE_DEBUG
+ #debug
+ LTM_CFLAGS += -g3
+@@ -90,6 +93,9 @@ endif
+ 
+ endif # COMPILE_SIZE
+ 
++  ### ! HAVE_TOMATO
++endif
++
+ ifneq ($(findstring clang,$(CC)),)
+ LTM_CFLAGS += -Wno-typedef-redefinition -Wno-tautological-compare -Wno-builtin-requires-header
+ endif

@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2013, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: emfc_export.h 246051 2011-03-12 03:30:44Z $
+ * $Id: emfc_export.h 527353 2015-01-17 01:00:08Z $
  */
 
 #ifndef _EMFC_EXPORT_H_
@@ -26,13 +26,13 @@
 #define EMF_SENDUP                  11
 #define EMF_CONVERT_QUERY           12
 
-#ifdef EMFDBG
-
 #define        EMF_LOG_DEBUG        (1 << 0)
 #define        EMF_LOG_ERROR        (1 << 1)
 #define        EMF_LOG_WARN         (1 << 2)
 #define        EMF_LOG_INFO         (1 << 3)
 #define        EMF_LOG_MFDB         (1 << 4)
+#define        EMF_LOG_PKT          (1 << 5)
+#define        EMF_LOG_ALL          ((1 << 6) - 1)
 
 #define        EMF_LOG_LVL          (EMF_LOG_ERROR | \
 	                             EMF_LOG_WARN  | \
@@ -40,44 +40,19 @@
 	                             EMF_LOG_INFO  | \
 	                             EMF_LOG_MFDB)
 
-#if (EMF_LOG_LVL & EMF_LOG_DEBUG)
-#define EMF_DEBUG(fmt, args...)      printf("EMF_DEBUG: " fmt, ##args)
-#else /* EMF_LOG_LVL & EMF_LOG_DEBUG */
-#define EMF_DEBUG(fmt, args...)
-#endif /* EMF_LOG_LVL & EMF_LOG_DEBUG */
-
-#if (EMF_LOG_LVL & EMF_LOG_ERROR)
-#define EMF_ERROR(fmt, args...)      printf("EMF_ERROR: " fmt, ##args)
-#else /* EMF_LOG_LVL & EMF_LOG_ERROR */
-#define EMF_ERROR(fmt, args...)
-#endif /* EMF_LOG_LVL & EMF_LOG_ERROR */
-
-#if (EMF_LOG_LVL & EMF_LOG_WARN)
-#define EMF_WARN(fmt, args...)      printf("EMF_WARN.: " fmt, ##args)
-#else /* EMF_LOG_LVL & EMF_LOG_WARN */
-#define EMF_WARN(fmt, args...)
-#endif /* EMF_LOG_LVL & EMF_LOG_WARN */
-
-#if (EMF_LOG_LVL & EMF_LOG_INFO)
-#define EMF_INFO(fmt, args...)      printf("EMF_INFO.: " fmt, ##args)
-#else /* EMF_LOG_LVL & EMF_LOG_INFO */
-#define EMF_INFO(fmt, args...)
-#endif /* EMF_LOG_LVL & EMF_LOG_INFO */
-
-#if (EMF_LOG_LVL & EMF_LOG_MFDB)
-#define EMF_MFDB(fmt, args...)      printf("EMF_MFDB.: " fmt, ##args)
-#else /* EMF_LOG_LVL & EMF_LOG_MFDB */
-#define EMF_MFDB(fmt, args...)
-#endif /* EMF_LOG_LVL & EMF_LOG_MFDB */
-
+//#define  EMFDBG
+#ifdef EMFDBG
+#define EMF_DEBUG(fmt, args...)  if (EMF_LOG_LVL & EMF_LOG_DEBUG) printf("EMF_DEBUG: " fmt, ##args)
+#define EMF_ERROR(fmt, args...)  if (EMF_LOG_LVL & EMF_LOG_ERROR) printf("EMF_ERROR: " fmt, ##args)
+#define EMF_WARN(fmt, args...)   if (EMF_LOG_LVL & EMF_LOG_WARN)  printf("EMF_WARN.: " fmt, ##args)
+#define EMF_INFO(fmt, args...)   if (EMF_LOG_LVL & EMF_LOG_INFO)  printf("EMF_INFO.: " fmt, ##args)
+#define EMF_MFDB(fmt, args...)   if (EMF_LOG_LVL & EMF_LOG_MFDB)  printf("EMF_MFDB.: " fmt, ##args)
 #else /* EMFDBG */
-
 #define EMF_DEBUG(fmt, args...)
 #define EMF_ERROR(fmt, args...)     printf(fmt, ##args)
 #define EMF_WARN(fmt, args...)
 #define EMF_INFO(fmt, args...)
 #define EMF_MFDB(fmt, args...)
-
 #endif /* EMFDBG */
 
 /* Function pointer declarations */

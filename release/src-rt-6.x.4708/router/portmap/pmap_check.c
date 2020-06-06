@@ -44,7 +44,9 @@
 #include <netinet/in.h>
 #include <rpc/rpcent.h>
 #endif
+#ifdef HOSTS_ACCESS
 #include <tcpd.h>
+#endif
 #include <arpa/inet.h>
 #include <grp.h>
 
@@ -61,7 +63,7 @@
 #define NFS_PORT	2049
 
 static void logit(int severity, struct sockaddr_in *addr,
-		  u_long procnum, u_long prognum, char *text);
+		  u_long procnum, u_long prognum, const char *text);
 static void toggle_verboselog(int sig);
 int     verboselog __attribute ((visibility ("hidden"))) = 0;
 int     allow_severity __attribute ((visibility ("hidden"))) = LOG_INFO;
@@ -69,7 +71,7 @@ int     deny_severity __attribute ((visibility ("hidden"))) = LOG_WARNING;
 
 /* A handful of macros for "readability". */
 
-#define reserved_port(p) (IPPORT_RESERVED/2 < (p) && (p) < IPPORT_RESERVED)
+#define reserved_port(p) ((p) < IPPORT_RESERVED)
 
 #define unreserved_port(p) (IPPORT_RESERVED <= (p) && (p) != NFS_PORT)
 
@@ -114,7 +116,7 @@ void check_startup(void)
 static int
 good_client(struct sockaddr_in *addr)
 {
-	if (hosts_ctl("portmap", "", inet_ntoa(addr->sin_addr), ""))
+	if (hosts_ctl((char*)("portmap"), (char*)(""), inet_ntoa(addr->sin_addr), (char*)("")))
 		return 1;
 #ifdef ENABLE_DNS
 {
@@ -147,12 +149,12 @@ good_client(struct sockaddr_in *addr)
 		return 0;
 
 	/* Check the official name first. */
-	if (hosts_ctl("portmap", "", hp->h_name, ""))
+	if (hosts_ctl((char*)("portmap"), (char*)(""), hp->h_name, (char*)("")))
 		return 1;
 
 	/* Check aliases. */
 	for (sp = hp->h_aliases; *sp ; sp++) {
-		if (hosts_ctl("portmap", "", *sp, ""))
+		if (hosts_ctl((char*)("portmap"), (char*)(""), *sp, (char*)("")))
 			return 1;
 	}
 }
@@ -273,16 +275,16 @@ static void toggle_verboselog(int sig)
 /* logit - report events of interest via the syslog daemon */
 
 static void logit(int severity, struct sockaddr_in *addr,
-		  u_long procnum, u_long prognum, char *text)
+		  u_long procnum, u_long prognum, const char *text)
 {
-    char   *procname;
+    const char *procname;
     char    procbuf[4 * sizeof(u_long)];
-    char   *progname;
+    const char *progname;
     char    progbuf[4 * sizeof(u_long)];
     struct rpcent *rpc;
     struct proc_map {
 	u_long  code;
-	char   *proc;
+	const char *proc;
     };
     struct proc_map *procp;
     static struct proc_map procmap[] = {
@@ -300,8 +302,10 @@ static void logit(int severity, struct sockaddr_in *addr,
      * getrpcbynumber() or syslog() does its thing.
      */
 
-    if (fork() == 0) {
-
+#ifndef NO_FORK
+    if (fork() == 0)
+#endif
+    {
 	/* Try to map program number to name. */
 
 	if (prognum == 0) {
@@ -309,7 +313,8 @@ static void logit(int severity, struct sockaddr_in *addr,
 	} else if ((rpc = getrpcbynumber((int) prognum))) {
 	    progname = rpc->r_name;
 	} else {
-	    sprintf(progname = progbuf, "%lu", prognum);
+	    sprintf(progbuf, "%lu", prognum);
+	    progname = progbuf;
 	}
 
 	/* Try to map procedure number to name. */
@@ -317,7 +322,10 @@ static void logit(int severity, struct sockaddr_in *addr,
 	for (procp = procmap; procp->proc && procp->code != procnum; procp++)
 	     /* void */ ;
 	if ((procname = procp->proc) == 0)
-	    sprintf(procname = procbuf, "%lu", (u_long) procnum);
+	{
+	    sprintf(procbuf, "%lu", (u_long) procnum);
+	    procname = procbuf;
+	}
 
 	/* Write syslog record. */
 

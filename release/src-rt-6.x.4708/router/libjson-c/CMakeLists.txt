@@ -7,7 +7,15 @@ if(POLICY CMP0048)
 endif()
 
 # JSON-C library is C only project.
-project(json-c LANGUAGES C VERSION 0.14)
+if (CMAKE_VERSION VERSION_LESS 3.0)
+	project(json-c)
+	set(PROJECT_VERSION_MAJOR "0")
+	set(PROJECT_VERSION_MINOR "14")
+	set(PROJECT_VERSION_PATCH "99")
+	set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+else()
+	project(json-c LANGUAGES C VERSION 0.14.99)
+endif()
 
 # If we've got 3.0 then it's good, let's provide support. Otherwise, leave it be.
 if(POLICY CMP0038)
@@ -40,6 +48,10 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
 add_subdirectory(tests)
 endif()
 
+if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+add_subdirectory(apps)
+endif()
+
 # Set some packaging variables.
 set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION_MAJOR     "${PROJECT_VERSION_MAJOR}")
@@ -65,6 +77,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 option(BUILD_SHARED_LIBS  "Default to building shared libraries" ON)
+option(BUILD_STATIC_LIBS  "Default to building static libraries" ON)
 
 # Generate a release merge and test it to verify the correctness of republishing the package.
 ADD_CUSTOM_TARGET(distcheck
@@ -78,10 +91,11 @@ COMMAND make package_source
 )
 
 # Enable or disable features. By default, all features are turned off.
-option(ENABLE_RDRAND                "Enable RDRAND Hardware RNG Hash Seed"          OFF)
-option(ENABLE_THREADING             "Enable partial threading support."             OFF)
-option(DISABLE_WERROR               "Avoid treating compiler warnings as fatal errors"    OFF)
-option(DISABLE_BSYMBOLIC            "Avoid linking with -Bsymbolic-function"   OFF)
+option(DISABLE_BSYMBOLIC              "Avoid linking with -Bsymbolic-function."               OFF)
+option(DISABLE_THREAD_LOCAL_STORAGE   "Disable using Thread-Local Storage (HAVE___THREAD)."   OFF)
+option(DISABLE_WERROR                 "Avoid treating compiler warnings as fatal errors."     OFF)
+option(ENABLE_RDRAND                  "Enable RDRAND Hardware RNG Hash Seed."                 OFF)
+option(ENABLE_THREADING               "Enable partial threading support."                     OFF)
 
 if (UNIX OR MINGW OR CYGWIN)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
@@ -108,6 +122,7 @@ check_include_files("stdlib.h;stdarg.h;string.h;float.h" STDC_HEADERS)
 
 check_include_file(unistd.h         HAVE_UNISTD_H)
 check_include_file(sys/types.h      HAVE_SYS_TYPES_H)
+check_include_file(sys/resource.h   HAVE_SYS_RESOURCE_H) # for getrusage
 
 check_include_file("dlfcn.h"        HAVE_DLFCN_H)
 check_include_file("endian.h"       HAVE_ENDIAN_H)
@@ -165,6 +180,9 @@ endif()
 if (HAVE_SYSLOG_H)
     check_symbol_exists(vsyslog     "syslog.h" HAVE_VSYSLOG)
 endif()
+if (HAVE_SYS_RESOURCE_H)
+    check_symbol_exists(getrusage   "sys/resource.h" HAVE_GETRUSAGE)
+endif()
 
 check_symbol_exists(strtoll     "stdlib.h" HAVE_STRTOLL)
 check_symbol_exists(strtoull    "stdlib.h" HAVE_STRTOULL)
@@ -197,25 +215,27 @@ check_type_size("long long"         SIZEOF_LONG_LONG)
 check_type_size("size_t"            SIZEOF_SIZE_T)
 
 check_c_source_compiles(
-[=[
+"
 extern void json_object_get();
-__asm__(".section .gnu.json_object_get\\n\\t.ascii \\"Please link against libjson-c instead of libjson\\"\\n\\t.text");
+__asm__(\".section .gnu.json_object_get\\n\\t.ascii \\\"Please link against libjson-c instead of libjson\\\"\\n\\t.text\");
 int main(int c, char *v) { return 0;}
-]=]
+"
 HAS_GNU_WARNING_LONG)
 
 check_c_source_compiles(
   "int main() { int i, x = 0; i = __sync_add_and_fetch(&x,1); return x; }"
   HAVE_ATOMIC_BUILTINS)
 
-check_c_source_compiles(
-  "__thread int x = 0; int main() { return 0; }"
-  HAVE___THREAD)
+if (NOT DISABLE_THREAD_LOCAL_STORAGE)
+  check_c_source_compiles(
+    "__thread int x = 0; int main() { return 0; }"
+    HAVE___THREAD)
 
-if (HAVE___THREAD)
-    set(SPEC___THREAD __thread)
-elseif (MSVC)
-    set(SPEC___THREAD __declspec(thread))
+  if (HAVE___THREAD)
+      set(SPEC___THREAD __thread)
+  elseif (MSVC)
+      set(SPEC___THREAD __declspec(thread))
+  endif()
 endif()
 
 # Hardware random number is not available on Windows? Says, config.h.win32. Best to preserve compatibility.
@@ -225,9 +245,9 @@ endif()
 
 # Once we've done basic symbol/header searches let's add them in.
 configure_file(${PROJECT_SOURCE_DIR}/cmake/config.h.in        ${PROJECT_BINARY_DIR}/config.h)
-message(STATUS "Written ${PROJECT_BINARY_DIR}/config.h")
+message(STATUS "Wrote ${PROJECT_BINARY_DIR}/config.h")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/json_config.h.in   ${PROJECT_BINARY_DIR}/json_config.h)
-message(STATUS "Written ${PROJECT_BINARY_DIR}/json_config.h")
+message(STATUS "Wrote ${PROJECT_BINARY_DIR}/json_config.h")
 
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
@@ -258,7 +278,7 @@ endif()
 
 if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
 	check_c_source_compiles(
-	[=[
+	"
 	/* uClibc toolchains without threading barf when _REENTRANT is defined */
 	#define _REENTRANT 1
 	#include <sys/types.h>
@@ -266,7 +286,7 @@ if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
 	{
 	  return 0;
 	}
-	]=]
+	"
 	REENTRANT_WORKS
 	)
 	if (REENTRANT_WORKS)
@@ -277,12 +297,12 @@ if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
 	# Others may not support it, too.
 	list(APPEND CMAKE_REQUIRED_LIBRARIES "-Wl,-Bsymbolic-functions")
 	check_c_source_compiles(
-	[=[
+	"
 	int main (void)
 	{
 	  return 0;
 	}
-	]=]
+	"
 	BSYMBOLIC_WORKS
 	)
 	list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "-Wl,-Bsymbolic-functions")
@@ -299,7 +319,7 @@ if ($ENV{VALGRIND})
 endif()
 
 set(JSON_C_PUBLIC_HEADERS
-    ${PROJECT_BINARY_DIR}/config.h
+    # Note: config.h is _not_ included here
     ${PROJECT_BINARY_DIR}/json_config.h
 
     ${PROJECT_SOURCE_DIR}/json.h
@@ -349,23 +369,7 @@ set(JSON_C_SOURCES
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_BINARY_DIR})
 
-# generate doxygen documentation for json-c API
-
-find_package(Doxygen)
-option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
-
-if (DOXYGEN_FOUND)
-
-	add_custom_target(doc
-	COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Doxyfile
-		WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-
-	# request to configure the file
-	configure_file(Doxyfile Doxyfile)
-
-else (DOXYGEN_FOUND)
-	message("Warning: doxygen not found, the 'doc' target will not be included")
-endif(DOXYGEN_FOUND)
+add_subdirectory(doc)
 
 # uninstall
 add_custom_target(uninstall
@@ -383,7 +387,7 @@ add_library(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION 5.0.0
     SOVERSION 5)
-
+list(APPEND CMAKE_TARGETS ${PROJECT_NAME})
 # If json-c is used as subroject it set to target correct interface -I flags and allow
 # to build external target without extra include_directories(...)
 target_include_directories(${PROJECT_NAME}
@@ -392,7 +396,35 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 )
 
-install(TARGETS ${PROJECT_NAME}
+# Allow to build static and shared libraries at the same time
+if (BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
+    set(STATIC_LIB ${PROJECT_NAME}-static)
+    add_library(${STATIC_LIB} STATIC
+        ${JSON_C_SOURCES}
+        ${JSON_C_HEADERS}
+    )
+
+    # rename the static library
+    if (NOT MSVC)
+    set_target_properties(${STATIC_LIB} PROPERTIES
+        OUTPUT_NAME ${PROJECT_NAME}
+    )
+    endif()
+    list(APPEND CMAKE_TARGETS ${STATIC_LIB})
+endif ()
+
+# Always create new install dirs with 0755 permissions, regardless of umask
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+	OWNER_READ
+	OWNER_WRITE
+	OWNER_EXECUTE
+	GROUP_READ
+	GROUP_EXECUTE
+	WORLD_READ
+	WORLD_EXECUTE
+   )
+
+install(TARGETS ${CMAKE_TARGETS}
     EXPORT ${PROJECT_NAME}-targets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

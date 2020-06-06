@@ -33,7 +33,7 @@
 .\"     from: @(#)portmap.8	5.3 (Berkeley) 3/16/91
 .\"	$Id: portmap.8,v 1.2 2004/04/03 09:30:21 herbert Exp $
 .\"
-.Dd Apr 20, 2007
+.Dd May 12, 2008
 .Dt PORTMAP 8
 .Os BSD 4.3
 .Sh NAME
@@ -47,6 +47,7 @@ program number mapper
 .Nm portmap
 .Op Fl d
 .Op Fl f
+.Op Fl F
 .Op Fl t Ar dir
 .Op Fl v
 .Op Fl V
@@ -117,6 +118,8 @@ to be printed to the standard error output.
 from running as a daemon,
 and causes log messages
 to be printed to the standard error output.
+.It Fl F 
+(foreground) same as -f, but logging as usual
 .It Fl t Ar dir
 (chroot) tell
 .Nm portmap
@@ -127,6 +130,9 @@ into
 .Ar dir
 should be empty, not writeable by the daemon user, and preferably on a
 filesystem mounted read-only, noexec, nodev, and nosuid.
+.It Fl m Ar file
+(mapfile) specify an alternative mapping 
+.Ar file
 .It Fl u Ar uid
 .It Fl g Ar gid
 Set the user-id and group-id of the running process to those given,
@@ -138,6 +144,10 @@ will look up the user
 .Nm RPCUSER
 and use the uid and gid of that user.
 ..
+.It Fl U Ar username
+Lets 
+.Nm portmap
+run under this user (uid/gid) rather than compiled-in defaults of DEAMON_UID/DAEMON_GID.
 .It Fl v
 (verbose) run
 .Nm portmap
@@ -152,6 +162,10 @@ bind
 .Nm portmap
 to the loop-back address 127.0.0.1.  This is a shorthand for
 specifying 127.0.0.1 with -i.
+.It Fl p Ar port
+bind
+.Nm portmap
+to a non-standard port
 .El
 
 This
@@ -195,14 +209,13 @@ names. Using netgroup names will likely cause
 to deadlock.
 Note that localhost will always be allowed access to the portmapper.
 ..
-
+.Pp
 For further information please have a look at the
 .Xr tcpd 8 ,
 .Xr hosts_allow 5
 and
 .Xr hosts_access 5
 manual pages.
-
 .Sh SEE ALSO
 .Xr inetd.conf 5 ,
 .Xr rpcinfo 8 ,

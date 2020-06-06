@@ -63,6 +63,8 @@ typedef enum {
 	IDTYPE_GROUP = 2
 } idtypes;
 
+extern int no_strip;
+extern int reformat_group;
 extern int idmap_verbosity;
 extern nfs4_idmap_log_function_t idmap_log_func;
 /* Level zero always prints, others print depending on verbosity level */

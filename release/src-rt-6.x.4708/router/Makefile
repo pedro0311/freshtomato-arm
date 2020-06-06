@@ -15,6 +15,7 @@ include common.mak
 #TOMATO_EXPERIMENTAL=0
 
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
+export HAVE_TOMATO := y
 
 
 define patch_files
@@ -978,7 +979,6 @@ www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
 
 openssl/stamp-h1:
-	$(call patch_files,openssl)
 	cd openssl && \
 	CC=$(CC:$(CROSS_COMPILE)%=%) \
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
@@ -997,7 +997,6 @@ openssl: openssl/stamp-h1
 openssl-clean:
 	-@$(MAKE) -C openssl clean
 	@rm -f openssl/stamp-h1
-	$(call unpatch_files,openssl)
 
 openssl-install:
 	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
@@ -1553,6 +1552,17 @@ iproute2-3.x-clean:
 	-rm -f iproute2-3.x/Config
 	$(call unpatch_files,iproute2-3.x)
 
+dropbear/config.h:
+	$(call patch_files,dropbear)
+	cd dropbear && autoreconf -fsi && \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
+		$(CONFIGURE) --disable-zlib --enable-syslog --disable-lastlog --disable-utmp \
+			--disable-utmpx --disable-wtmp --disable-wtmpx --disable-pututline --disable-pututxline \
+			--disable-loginfunc --disable-pam --enable-openpty --enable-bundled-libtom
+	@$(MAKE) -C dropbear clean
+
 dropbear: dropbear/config.h
 	@$(SEP)
 	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
@@ -1562,7 +1572,6 @@ dropbear-install:
 	$(STRIP) $(INSTALLDIR)/dropbear/usr/bin/dropbearmulti
 	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dropbear && \
-	ln -sf dropbearmulti dropbearconvert && \
 	ln -sf dropbearmulti dropbearkey && \
 	ln -sf dropbearmulti dbclient && \
 	ln -sf dropbearmulti ssh && \
@@ -1572,19 +1581,6 @@ dropbear-clean:
 	-@$(MAKE) -C dropbear clean
 	@rm -f dropbear/config.h
 	$(call unpatch_files,dropbear)
-
-dropbear/config.h:
-	$(call patch_files,dropbear)
-	cd dropbear && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
-		$(CONFIGURE) --disable-zlib --enable-syslog --disable-lastlog --disable-utmp \
-		--disable-utmpx --disable-wtmp --disable-wtmpx --disable-pututline \
-		--disable-pututxline --disable-loginfunc --disable-pam --enable-openpty --enable-bundled-libtom
-	@$(MAKE) -C dropbear clean
-
-# Media libraries
 
 sqlite/stamp-h1:
 	cd sqlite && \
@@ -2442,6 +2438,7 @@ nano-install:
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
 libcurl/stamp-h1: zlib $(OPENSSLDIR)
+	$(call patch_files,libcurl)
 	cd libcurl && ./buildconf && \
 		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/include" \
@@ -2475,6 +2472,7 @@ libcurl-clean:
 	-@$(MAKE) -C libcurl clean
 	@rm -f libcurl/stamp-h1 libcurl/Makefile
 	@rm -rf libcurl/staged
+	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && CC=$(CC) \
@@ -2570,7 +2568,7 @@ else
 endif
 
 libnfsidmap/stamp-h1:
-	cd libnfsidmap && autoreconf -fsi && \
+	cd libnfsidmap && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 		ac_cv_func_malloc_0_nonnull=yes \
 		ac_cv_func_realloc_0_nonnull=yes \
@@ -2581,24 +2579,18 @@ libnfsidmap: libnfsidmap/stamp-h1
 	@$(SEP)
 	$(MAKE) -C libnfsidmap $(PARALLEL_BUILD)
 
+libnfsidmap-install:
+	install -d $(TOP)/libnfsidmap/staged
+	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
+
 libnfsidmap-clean:
 	-@$(MAKE) -C libnfsidmap clean
 	@rm -f libnfsidmap/stamp-h1
 	@rm -rf libnfsidmap/staged
 
-libnfsidmap-install:
-	install -d $(TOP)/libnfsidmap/staged
-	$(MAKE) -C libnfsidmap DESTDIR=$(TOP)/libnfsidmap/staged install
-
-portmap/stamp-h1:
-	$(call patch_files,portmap)
-	cd portmap \
-	$(MAKE) -C portmap
-	@touch $@
-
-portmap: portmap/stamp-h1
+portmap:
 	@$(SEP)
-	$(MAKE) -C portmap CFLAGS="-Os -Wall $(EXTRACFLAGS)" NO_TCP_WRAPPER=y RPCUSER=nobody $(PARALLEL_BUILD)
+	$(MAKE) -C portmap CFLAGS="-Os -Wall $(EXTRACFLAGS)" NO_TCP_WRAPPER=y NO_PIE=y RPCUSER=nobody $(PARALLEL_BUILD)
 
 portmap-install:
 	install -D portmap/portmap $(INSTALLDIR)/portmap/usr/sbin/portmap
@@ -2606,8 +2598,6 @@ portmap-install:
 
 portmap-clean:
 	-@$(MAKE) -C portmap clean
-	@rm -f portmap/stamp-h1
-	$(call unpatch_files,portmap)
 
 e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
@@ -2705,23 +2695,6 @@ tinc-install:
 	install -D tinc/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
-
-sd-idle/stamp-h1:
-	@$(SEP)
-	cd sd-idle \
-	CFLAGS="-Os -Wall --host=$(HOST) --target=$(HOST) $(EXTRACFLAGS)" \
-	$(MAKE) -C sd-idle
-	chmod 0755 sd-idle/sd-idle
-	@touch $@
-
-sd-idle-clean:
-	-@$(MAKE) -C sd-idle clean
-	@rm -f sd-idle/stamp-h1
-
-sd-idle-install: sd-idle/stamp-h1
-	install -d $(INSTALLDIR)/sd-idle/usr/bin
-	install -D sd-idle/sd-idle $(INSTALLDIR)/sd-idle/usr/bin/sd-idle
-	$(STRIP) -s $(INSTALLDIR)/sd-idle/usr/bin/sd-idle
 
 snmp/stamp-h1:
 	cd snmp && autoreconf -fsi && \
@@ -3104,6 +3077,7 @@ ipset-clean:
 	$(call unpatch_files,ipset)
 
 libjson-c/build/Makefile:
+	$(call patch_files,libjson-c)
 	@rm -rf libjson-c/build && mkdir -p libjson-c/build
 	cd libjson-c/build && \
 	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
@@ -3113,6 +3087,7 @@ libjson-c/build/Makefile:
 		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
 		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 		-DBUILD_TESTING=FALSE \
+		-DBUILD_STATIC_LIBS=FALSE \
 		..
 
 libjson-c: libjson-c/build/Makefile
@@ -3122,6 +3097,7 @@ libjson-c: libjson-c/build/Makefile
 
 libjson-c-clean:
 	@rm -rf libjson-c/build
+	$(call unpatch_files,libjson-c)
 
 uqmi: libjson-c
 	@$(SEP)
@@ -3154,6 +3130,18 @@ comgt-install:
 comgt-clean:
 	-@$(MAKE) -C comgt clean
 	$(call unpatch_files,comgt)
+
+sd-idle:
+	@$(SEP)
+	$(MAKE) -C sd-idle CFLAGS="-Os -Wall $(EXTRACFLAGS)"
+
+sd-idle-install:
+	install -d $(INSTALLDIR)/sd-idle/usr/bin
+	install -D -m 0755 sd-idle/sd-idle $(INSTALLDIR)/sd-idle/usr/bin/sd-idle
+	$(STRIP) -s $(INSTALLDIR)/sd-idle/usr/bin/sd-idle
+
+sd-idle-clean:
+	-@$(MAKE) -C sd-idle clean
 
 iperf/stamp-h1:
 	cd iperf && autoreconf -fsi && \

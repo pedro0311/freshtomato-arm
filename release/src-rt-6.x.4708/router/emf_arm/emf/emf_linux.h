@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -7,7 +7,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: emf_linux.h 344425 2012-07-12 18:33:25Z $
+ * $Id: emf_linux.h 527353 2015-01-17 01:00:08Z $
  */
 
 #ifndef _EMF_LINUX_H_
@@ -17,8 +17,9 @@
 
 #ifdef EMFDBG
 #define EMF_DUMP_PKT(data) \
-{ \
+if (EMF_LOG_LVL & EMF_LOG_PKT) { \
 	int32 i; \
+	printk("%s: ", __FUNCTION__); \
 	for (i = 0; i < 64; i++) \
 		printk("%02x ", (data)[i]); \
 	printk("\n"); \

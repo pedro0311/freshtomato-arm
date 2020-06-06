@@ -1,0 +1,15 @@
+--- libjson-c/CMakeLists.txt
++++ libjson-c/CMakeLists.txt
+@@ -48,9 +48,9 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_
+ add_subdirectory(tests)
+ endif()
+ 
+-if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+-add_subdirectory(apps)
+-endif()
++#if (NOT MSVC)  # cmd line apps don't built on Windows currently.
++#add_subdirectory(apps)
++#endif()
+ 
+ # Set some packaging variables.
+ set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")

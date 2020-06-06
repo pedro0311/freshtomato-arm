@@ -2,15 +2,15 @@
  * EMFL Linux Port: These functions handle the interface between EMFL
  * and the native OS.
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: emf_linux.c 447213 2014-01-08 11:01:33Z $
+ * $Id: emf_linux.c 627745 2016-03-28 09:43:47Z $
  */
 #include <linux/module.h>
 #include <linux/netdevice.h>
@@ -112,6 +112,9 @@ emf_br_pre_hook(
 	int32 (*okfn)(struct sk_buff *))
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+	int ret;
+	uint8_t *iph;
+	struct ether_header *eh;
 	struct sk_buff **pskb = &skb;
 #endif
 	emf_info_t *emfi;
@@ -136,10 +139,39 @@ emf_br_pre_hook(
 		return (NF_ACCEPT);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+	iph = PKTDATA(NULL, skb);
+
+	/* Unicast packet received from LAN port is returned back to
+	 * bridge.
+	 */ 
+	eh = (struct ether_header *)(iph - ETH_HLEN);
+	if (!ETHER_ISMULTI(eh->ether_dhost))
+	{
+		EMF_DEBUG("Ignoring Unicast packets from LAN ports\n");
+		return (NF_ACCEPT);
+	}
+
+	/* Push ethernet header fields for packets received
+	 * from LAN ports.
+	 */
+	skb_push(skb, ETH_HLEN);
+
+	EMF_DUMP_PKT(skb->data);
+
+	ret = emfc_input(emfi->emfci, skb, skb->dev, iph, FALSE);
+
+	/* Revert skb pointer if EMF has not taken it */
+	if (ret != EMF_TAKEN)
+		__skb_pull(skb, ETH_HLEN);
+
+	return (ret);
+#else
 	EMF_DUMP_PKT((*pskb)->data);
 
 	return (emfc_input(emfi->emfci, *pskb, (*pskb)->dev,
 	                   PKTDATA(NULL, *pskb), FALSE));
+#endif
 }
 
 /*
@@ -193,6 +225,76 @@ emf_ip_post_hook(
 /*
  * EMFL Packet Counters/Statistics
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+static int32
+emf_stats_get(struct seq_file *seq, void *v)
+{
+	emf_info_t *emfi = seq->private;
+	emf_cfg_request_t cfg;
+	emf_stats_t *emfs;
+
+	ASSERT(emfi);
+
+	cfg.command_id = EMFCFG_CMD_EMF_STATS;
+	cfg.oper_type = EMFCFG_OPER_TYPE_GET;
+	cfg.size = sizeof(emf_stats_t);
+	emfs = (emf_stats_t *)cfg.arg;
+
+	emfc_cfg_request_process(emfi->emfci, &cfg);
+	if (cfg.status != EMFCFG_STATUS_SUCCESS)
+	{
+		EMF_ERROR("Unable to get the EMF stats\n");
+		return (FAILURE);
+	}
+
+	seq_printf(seq, "McastDataPkts   McastDataFwd    McastFlooded    "
+		    "McastDataSentUp McastDataDropped\n");
+	seq_printf(seq, "%-15d %-15d %-15d %-15d %d\n",
+	            emfs->mcast_data_frames, emfs->mcast_data_fwd,
+	            emfs->mcast_data_flooded, emfs->mcast_data_sentup,
+	            emfs->mcast_data_dropped);
+	seq_printf(seq, "IgmpPkts        IgmpPktsFwd     "
+		    "IgmpPktsSentUp  MFDBCacheHits   MFDBCacheMisses\n");
+	seq_printf(seq, "%-15d %-15d %-15d %-15d %d\n",
+	            emfs->igmp_frames, emfs->igmp_frames_fwd,
+	            emfs->igmp_frames_sentup, emfs->mfdb_cache_hits,
+	            emfs->mfdb_cache_misses);
+
+	return 0;
+}
+
+static int32
+emf_mfdb_list(struct seq_file *seq, void *v)
+{
+	emf_info_t *emfi = seq->private;
+	emf_cfg_request_t cfg;
+	emf_cfg_mfdb_list_t *list;
+	int32 i;
+
+	cfg.command_id = EMFCFG_CMD_MFDB_LIST;
+	cfg.oper_type = EMFCFG_OPER_TYPE_GET;
+	cfg.size = sizeof(cfg.arg);
+	list = (emf_cfg_mfdb_list_t *)cfg.arg;
+
+	emfc_cfg_request_process(emfi->emfci, &cfg);
+	if (cfg.status != EMFCFG_STATUS_SUCCESS)
+	{
+		EMF_ERROR("Unable to get the MFDB list\n");
+		return (FAILURE);
+	}
+
+	seq_printf(seq, "Group           Interface      Pkts\n");
+
+	for (i = 0; i < list->num_entries; i++)
+	{
+		seq_printf(seq, "%08x        ", list->mfdb_entry[i].mgrp_ip);
+		seq_printf(seq, "%-15s", list->mfdb_entry[i].if_name);
+		seq_printf(seq, "%d\n", list->mfdb_entry[i].pkts_fwd);
+	}
+
+	return 0;
+}
+#else /* #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 static int32
 emf_stats_get(char *buf, char **start, off_t offset, int32 size,
               int32 *eof, void *data)
@@ -281,6 +383,7 @@ emf_mfdb_list(char *buf, char **start, off_t offset, int32 size,
 
 	return (b.buf - b.origbuf);
 }
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #endif /* CONFIG_PROC_FS */
 
 /*
@@ -302,11 +405,16 @@ emf_sendup(emf_info_t *emfi, struct sk_buff *skb)
 	/* Send the buffer as if the packet is being sent by bridge */
 	skb->dev = emfi->br_dev;
 	skb->pkt_type = PACKET_HOST;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
+	skb_push(skb, ETH_HLEN);
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22)
 	skb_reset_mac_header(skb);
 #else
 	skb->mac.raw = skb->data;
 #endif
+	__skb_pull(skb, ETH_HLEN);
 
 	netif_rx(skb);
 
@@ -345,18 +453,26 @@ emf_forward(emf_info_t *emfi, struct sk_buff *skb, uint32 mgrp_ip,
 	}
 	/* there is no access to the "bridge" struct from netif in 2.6.36 */
 #endif
-	eh = (struct ether_header *)skb_push(skb, ETH_HLEN);
 
-	/* No need to fill the ether header fields for packets received
+	/* No need to push and fill the ether header fields for packets received
 	 * from LAN ports.
 	 */
-	if (rt_port)
-	{
+	if (rt_port) {
+		eh = (struct ether_header *)skb_push(skb, ETH_HLEN);
 		eh->ether_type = __constant_htons(ETH_P_IP);
 
 		ETHER_FILL_MCAST_ADDR_FROM_IP(eh->ether_dhost, mgrp_ip);
 
 		memcpy(eh->ether_shost, skb->dev->dev_addr, skb->dev->addr_len);
+	} else {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+		eh = (struct ether_header *)skb->data;
+#else
+		/* Push ethernet header fields for packets received
+		 * from LAN ports.
+		 */
+		eh = (struct ether_header *)skb_push(skb, ETH_HLEN);
+#endif
 	}
 
 	EMF_INFO("Group Addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -576,6 +692,36 @@ emf_hooks_unregister(emf_info_t *emfi)
 	return;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+#include <linux/seq_file.h>
+
+static int emf_proc_stats_get_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, emf_stats_get, PDE_DATA(inode));
+}
+
+static const struct file_operations emf_proc_stats_get_fops = {
+	.owner          = THIS_MODULE,
+	.open           = emf_proc_stats_get_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+
+static int emf_proc_mfdb_list_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, emf_mfdb_list, PDE_DATA(inode));
+}
+
+static const struct file_operations emf_proc_mfdb_list_fops = {
+	.owner          = THIS_MODULE,
+	.open           = emf_proc_mfdb_list_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
+
 /*
  * Description: This function is called when the user application enables
  *              EMF on a bridge interface. It primarily allocates memory
@@ -649,9 +795,17 @@ emf_instance_add(emf_struct_t *emf, int8 *inst_id, struct net_device *br_ptr)
 
 #ifdef CONFIG_PROC_FS
 	sprintf(proc_name, "emf/emf_stats_%s", inst_id);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+	proc_create_data(proc_name, S_IRUGO, 0, &emf_proc_stats_get_fops, (void *)emfi);
+#else
 	create_proc_read_entry(proc_name, 0, 0, emf_stats_get, emfi);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 	sprintf(proc_name, "emf/emfdb_%s", inst_id);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+	proc_create_data(proc_name, S_IRUGO, 0, &emf_proc_mfdb_list_fops, (void *)emfi);
+#else
 	create_proc_read_entry(proc_name, 0, 0, emf_mfdb_list, emfi);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #endif /* CONFIG_PROC_FS */
 
 	/* Add to the global EMF instance list */
@@ -752,7 +906,7 @@ emf_iflist_list(emf_info_t *emfi, emf_cfg_if_list_t *list, uint32 size)
 		}
 		else
 			strncpy(list->if_entry[index++].if_name,
-				ptr->if_ptr->name,16);
+				ptr->if_ptr->name, 16);
 	}
 
 	/* Update the total number of entries */
@@ -770,7 +924,7 @@ emf_iflist_list(emf_info_t *emfi, emf_cfg_if_list_t *list, uint32 size)
 void
 emf_cfg_request_process(emf_cfg_request_t *cfg)
 {
-	emf_info_t *emfi;
+	emf_info_t *emfi = NULL;
 	emf_cfg_mfdb_t *mfdb;
 	emf_cfg_uffp_t *uffp;
 	emf_cfg_rtport_t *rtport;
@@ -780,24 +934,26 @@ emf_cfg_request_process(emf_cfg_request_t *cfg)
 
 	BUG_ON(cfg == NULL);
 
-	/* Validate the instance identifier */
-	br_ptr = emf_if_name_validate(cfg->inst_id);
-	if (br_ptr == NULL)
-	{
-		cfg->status = EMFCFG_STATUS_FAILURE;
-		cfg->size = sprintf(cfg->arg, "Unknown instance identifier %s\n",
-		                    cfg->inst_id);
-		return;
-	}
+	if (cfg->command_id != EMFCFG_CMD_LOG_LEVEL) {
+		/* Validate the instance identifier */
+		br_ptr = emf_if_name_validate(cfg->inst_id);
+		if (br_ptr == NULL)
+		{
+			cfg->status = EMFCFG_STATUS_FAILURE;
+			cfg->size = sprintf(cfg->arg, "Unknown instance identifier %s\n",
+			                    cfg->inst_id);
+			return;
+		}
 
-	/* Locate the EMF instance */
-	emfi = emf_instance_find_by_brptr(emf, br_ptr);
-	if ((emfi == NULL) && (cfg->command_id != EMFCFG_CMD_BR_ADD))
-	{
-		cfg->status = EMFCFG_STATUS_FAILURE;
-		cfg->size = sprintf(cfg->arg, "Invalid instance identifier %s\n",
-		                    cfg->inst_id);
-		return;
+		/* Locate the EMF instance */
+		emfi = emf_instance_find_by_brptr(emf, br_ptr);
+		if ((emfi == NULL) && (cfg->command_id != EMFCFG_CMD_BR_ADD))
+		{
+			cfg->status = EMFCFG_STATUS_FAILURE;
+			cfg->size = sprintf(cfg->arg, "Invalid instance identifier %s\n",
+			                    cfg->inst_id);
+			return;
+		}
 	}
 
 	/* Convert the interface name in arguments to interface pointer */
@@ -973,7 +1129,17 @@ emf_cfg_request_process(emf_cfg_request_t *cfg)
 			break;
 
 		default:
-			emfc_cfg_request_process(emfi->emfci, cfg);
+			if (emfi == NULL) {
+				if (cfg->command_id != EMFCFG_CMD_LOG_LEVEL) {
+					cfg->status = EMFCFG_STATUS_FAILURE;
+					cfg->size = sprintf(cfg->arg, "Invalid instance id %s\n",
+					                    cfg->inst_id);
+					return;
+				}
+				emfc_cfg_request_process(NULL, cfg);
+			} else {
+				emfc_cfg_request_process(emfi->emfci, cfg);
+			}
 			break;
 	}
 
@@ -1014,7 +1180,9 @@ emf_netlink_sock_cb(
 	while ((skb = skb_dequeue(&sk->receive_queue)) != NULL)
 #endif
 	{
-		EMF_DEBUG("Length of the command buffer %d\n", skb->len);
+		if (skb != NULL) {
+			EMF_DEBUG("Length of the command buffer %d\n", skb->len);
+		}
 
 		/* Check the buffer for min size */
 		if (skb == NULL || skb->len < sizeof(emf_cfg_request_t))
@@ -1035,14 +1203,18 @@ emf_netlink_sock_cb(
 
 		/* Send the result to user process */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+		NETLINK_CB(skb).portid = nlh->nlmsg_pid;
+#else
 		NETLINK_CB(skb).pid = nlh->nlmsg_pid;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0) */
 		NETLINK_CB(skb).dst_group = 0;
 #else
 		NETLINK_CB(skb).groups = 0;
 		NETLINK_CB(skb).pid = 0;
 		NETLINK_CB(skb).dst_groups = 0;
 		NETLINK_CB(skb).dst_pid = nlh->nlmsg_pid;
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0) */
 
 		netlink_unicast(emf->nl_sk, skb, nlh->nlmsg_pid, MSG_DONTWAIT);
 	}
@@ -1072,6 +1244,11 @@ emf_instances_clear(emf_struct_t *emf)
 
 	return;
 }
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+struct netlink_kernel_cfg emf_cfg = {
+	.input  = emf_netlink_sock_cb,
+};
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 
 /*
  * Description: This function is called during module load time. It
@@ -1107,19 +1284,26 @@ emf_module_init(void)
 	/* Create a Netlink socket in kernel-space */
 #define NETLINK_EMFC 17		/* Still vacant in 2.6.36 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 	emf->nl_sk = netlink_kernel_create(
 			&init_net,	/* struct net */
 			NETLINK_EMFC,	/* unit ? */
-			0, 		/* group ? */
+			&emf_cfg);	/* callback */
+#else
+	emf->nl_sk = netlink_kernel_create(
+			&init_net,	/* struct net */
+			NETLINK_EMFC,	/* unit ? */
+			0,		/* group ? */
 			emf_netlink_sock_cb,	/* callback */
 			NULL,		/* mutex */
 			THIS_MODULE);	/* module */
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) */
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 	emf->nl_sk = netlink_kernel_create(NETLINK_EMFC, 0, emf_netlink_sock_cb,
 	                                   NULL, THIS_MODULE);
 #else
 	emf->nl_sk = netlink_kernel_create(NETLINK_EMFC, emf_netlink_sock_cb);
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36) */
 
 	if (emf->nl_sk == NULL)
 	{
