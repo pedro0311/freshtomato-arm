@@ -39,6 +39,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
+#include <err.h>
 
 #include "queue.h"
 #include "cfg.h"
@@ -123,13 +124,13 @@ again:
 		if (err == 0)
 			err = ENOENT;
 
-		IDMAP_LOG(0, ("static_getpwnam: localname '%s' for '%s' not found\n",
+		IDMAP_LOG(0, ("static_getpwnam: localname '%s' for '%s' not found",
 		  localname, name));
 
 		goto err_free_buf;
 	}
 
-	IDMAP_LOG(4, ("static_getpwnam: name '%s' mapped to '%s'\n",
+	IDMAP_LOG(4, ("static_getpwnam: name '%s' mapped to '%s'",
 		  name, localname));
 
 	*err_p = 0;
@@ -173,13 +174,13 @@ again:
 		if (err == 0)
 			err = ENOENT;
 
-		IDMAP_LOG(0, ("static_getgrnam: local group '%s' for '%s' not found\n",
+		IDMAP_LOG(0, ("static_getgrnam: local group '%s' for '%s' not found",
 			  localgroup, name));
 
 		goto err_free_buf;
 	}
 
-	IDMAP_LOG(4, ("static_getgrnam: group '%s' mapped to '%s'\n",
+	IDMAP_LOG(4, ("static_getgrnam: group '%s' mapped to '%s'",
 		  name, localgroup));
 
 	*err_p = 0;
@@ -268,7 +269,6 @@ static int static_name_to_gid(char *name, gid_t *gid)
 
 static int static_uid_to_name(uid_t uid, char *domain, char *name, size_t len)
 {
-	struct passwd *pw;
 	struct uid_mapping * um;
 
 	for (um = LIST_FIRST (&uid_mappings[uid_hash (uid)]); um;
@@ -284,7 +284,6 @@ static int static_uid_to_name(uid_t uid, char *domain, char *name, size_t len)
 
 static int static_gid_to_name(gid_t gid, char *domain, char *name, size_t len)
 {
-	struct group *gr;
 	struct gid_mapping * gm;
 
 	for (gm = LIST_FIRST (&gid_mappings[gid_hash (gid)]); gm;
@@ -305,7 +304,6 @@ static int static_gid_to_name(gid_t gid, char *domain, char *name, size_t len)
 
 static int static_init() {	
 	int err;
-	uid_t uid;
 	struct conf_list * princ_list = NULL;
 	struct conf_list_node * cln, *next;
 	struct uid_mapping * unode;
@@ -367,7 +365,7 @@ static int static_init() {
 		next = TAILQ_NEXT (cln, link); 
 
 		gr = static_getgrnam(cln->field, NULL, &err);
-		if (!pw) {
+		if (!gr) {
 			continue;
 		}
 		
@@ -376,19 +374,19 @@ static int static_init() {
 		{
 			warnx("static_init: calloc (1, %lu) failed",
 				(unsigned long)sizeof *gnode);
-			free(pw);
+			free(gr);
 			return -ENOMEM;
 		}
-		gnode->gid = pw->pw_uid;
+		gnode->gid = gr->gr_gid;
 		gnode->principal = strdup(cln->field);
 
 		gnode->localgroup = conf_get_str("Static", cln->field);
 		if (!gnode->localgroup) {
-			free(pw);
+			free(gr);
 			return -ENOENT;
 		}
 
-		free(pw);
+		free(gr);
 
 		LIST_INSERT_HEAD (&gid_mappings[gid_hash(gnode->gid)], gnode, link);
 	}

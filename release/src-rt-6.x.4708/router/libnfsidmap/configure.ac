@@ -2,16 +2,19 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.66])
-AC_INIT([libnfsidmap],[0.25],[linux-nfs@vger.kernel.org])
+AC_INIT([libnfsidmap],[0.27],[linux-nfs@vger.kernel.org])
+AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([nfsidmap.h])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 
 # Checks for programs.
 AC_PROG_CC
 
 # Checks for libraries.
+
+AC_CHECK_LIB([resolv], [__res_querydomain], , AC_MSG_ERROR(res_querydomain needed))
 
 AC_ARG_ENABLE([ldap],
 	[AS_HELP_STRING([--disable-ldap],[Disable support for LDAP @<:@default=detect@:>@])])

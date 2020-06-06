@@ -210,6 +210,7 @@ static void
 conf_parse_line (int trans, char *line, size_t sz)
 {
   char *val;
+  char *tag;
   size_t i;
   int j;
   static char *section = 0;
@@ -262,8 +263,14 @@ conf_parse_line (int trans, char *line, size_t sz)
 	/* Skip trailing whitespace, if any */
 	for (j = sz - (val - line) - 1; j > 0 && isspace (val[j]); j--)
 	  val[j] = '\0';
+
+	/* Skip beginning white space */
+	tag = line;
+	while (isspace(*tag))
+		tag++;
+
 	/* XXX Perhaps should we not ignore errors?  */
-	conf_set (trans, section, line, val, 0, 0);
+	conf_set (trans, section, tag, val, 0, 0);
 	return;
       }
 

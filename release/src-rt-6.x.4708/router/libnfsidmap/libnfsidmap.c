@@ -53,6 +53,10 @@
 #include <stdarg.h>
 #include <dlfcn.h>
 #include <ctype.h>
+#include <resolv.h>
+#include <arpa/nameser.h>
+#include <arpa/nameser_compat.h>
+
 #include "nfsidmap.h"
 #include "nfsidmap_internal.h"
 #include "cfg.h"
@@ -60,6 +64,8 @@
 static char *default_domain;
 static struct conf_list *local_realms;
 int idmap_verbosity = 0;
+int no_strip = 0;
+int reformat_group = 0;
 static struct mapping_plugin **nfs4_plugins = NULL;
 static struct mapping_plugin **gss_plugins = NULL;
 uid_t nobody_uid = (uid_t)-1;
@@ -78,6 +84,15 @@ gid_t nobody_gid = (gid_t)-1;
 #ifndef IDMAPD_DEFAULT_DOMAIN
 #define IDMAPD_DEFAULT_DOMAIN "localdomain"
 #endif
+
+#ifndef NFS4DNSTXTREC
+#define NFS4DNSTXTREC "_nfsv4idmapdomain"
+#endif
+
+#ifndef NS_MAXMSG
+#define NS_MAXMSG       65535
+#endif
+
 
 /* Default logging fuction */
 static void default_logger(const char *fmt, ...)
@@ -98,10 +113,13 @@ static char * toupper_str(char *s)
 	return s;
 }
 
-static int id_as_chars(char *name, int *id)
+static int id_as_chars(char *name, uid_t *id)
 {
-	long int value = strtol(name, NULL, 10);
+	long int value;
 
+	if (name == NULL)
+		return 0;
+	value = strtol(name, NULL, 10);
 	if (value == 0) {
 		/* zero value ids are valid */
 		if (strcmp(name, "0") != 0)
@@ -109,6 +127,93 @@ static int id_as_chars(char *name, int *id)
 	}
 	*id = (int)value;
 	return 1;
+}
+
+static int dns_txt_query(char *domain, char **nfs4domain)
+{
+	char *txtname = NFS4DNSTXTREC;
+	char *msg, *answ, *eom, *mptr; 
+	int len, status = -1;
+	HEADER *hdr;
+	
+	msg = calloc(1, NS_MAXMSG);
+	if (msg == NULL)
+		return -1;
+
+	answ = calloc(1, NS_MAXMSG);
+	if (answ == NULL) {
+		free(msg);
+		return -1;
+	}
+
+	if (res_init() < 0) {
+		IDMAP_LOG(2, ("libnfsidmap: res_init() failed for %s.%s: %s\n",
+			txtname, domain, hstrerror(h_errno)));
+		goto freemem;
+	}
+	len = res_querydomain(txtname, domain, C_IN, T_TXT, msg, NS_MAXMSG);
+	if (len < 0) {
+		IDMAP_LOG(2, ("libnfsidmap: res_querydomain() failed for %s.%s: %s\n",
+			txtname, domain, hstrerror(h_errno)));
+		goto freemem;
+	}
+	hdr = (HEADER *)msg;
+
+	/* See if there is an answer */
+	if (ntohs(hdr->ancount) < 1) {
+		IDMAP_LOG(2, ("libnfsidmap: No TXT record for %s.%s\n",
+			txtname, domain));
+		goto freemem;
+	}
+	/* find the EndOfMessage */
+	eom = msg + len;
+
+	/* skip header */
+	mptr = &msg[HFIXEDSZ];
+
+	/* skip name field in question section */
+	mptr += dn_skipname(mptr, eom) + QFIXEDSZ;
+
+	/* read in the question */
+	len = dn_expand(msg, eom, mptr, answ, NS_MAXDNAME);
+	if (len < 0) { /* does this really matter?? */
+		IDMAP_LOG(2, ("libnfsidmap: No question section for %s.%s: %s\n",
+			txtname, domain, hstrerror(h_errno)));
+		goto freemem;
+	}
+
+	/*
+	 * Now, dissect the answer section, Note: if there
+	 * are more than one answer only the first
+	 * one will be used. 
+	 */
+
+	/* skip passed the name field  */
+	mptr += dn_skipname(mptr, eom);
+	/* skip pass the type class and ttl fields */
+	mptr += 2 + 2 + 4;
+
+	/* make sure there is some data */
+	GETSHORT(len, mptr);
+	if (len < 0) {
+		IDMAP_LOG(2, ("libnfsidmap: No data in answer for %s.%s\n",
+			txtname, domain));
+		goto freemem;
+	}
+	/* get the lenght field */
+	len = (int)*mptr++;
+	/* copy the data */
+	memcpy(answ, mptr, len);
+	answ[len] = '\0';
+	
+	*nfs4domain = strdup(answ);
+	status = 0;
+
+freemem:
+	free(msg);
+	free(answ);
+
+	return (status);
 }
 
 static int domain_from_dns(char **domain)
@@ -122,7 +227,13 @@ static int domain_from_dns(char **domain)
 		return -1;
 	if ((c = strchr(he->h_name, '.')) == NULL || *++c == '\0')
 		return -1;
-	*domain = strdup(c);
+	/* 
+	 * Query DNS to see if the _nfsv4idmapdomain TXT record exists
+	 * If so use it... 
+	 */
+	if (dns_txt_query(c, domain) < 0)
+		*domain = strdup(c);
+
 	return 0;
 }
 
@@ -138,20 +249,20 @@ static int load_translation_plugin(char *method, struct mapping_plugin *plgn)
 
 	dl = dlopen(plgname, RTLD_NOW | RTLD_LOCAL);
 	if (dl == NULL) {
-		IDMAP_LOG(1, ("libnfsidmap: Unable to load plugin: %s\n",
+		IDMAP_LOG(1, ("libnfsidmap: Unable to load plugin: %s",
 			  dlerror()));
 		return -1;
 	}
 	init_func = (libnfsidmap_plugin_init_t) dlsym(dl, PLUGIN_INIT_FUNC);
 	if (init_func == NULL) {
-		IDMAP_LOG(1, ("libnfsidmap: Unable to get init function: %s\n",
+		IDMAP_LOG(1, ("libnfsidmap: Unable to get init function: %s",
 			  dlerror()));
 		dlclose(dl);
 		return -1;
 	}
 	trans = init_func();
 	if (trans == NULL) {
-		IDMAP_LOG(1, ("libnfsidmap: Failed to initialize plugin %s\n",
+		IDMAP_LOG(1, ("libnfsidmap: Failed to initialize plugin %s",
 			  PLUGIN_INIT_FUNC, plgname));
 		dlclose(dl);
 		return -1;
@@ -160,14 +271,14 @@ static int load_translation_plugin(char *method, struct mapping_plugin *plgn)
 		ret = trans->init();
 		if (ret) {
 			IDMAP_LOG(1, ("libnfsidmap: Failed in %s's init(), "
-					"returned %d\n", plgname, ret));
+					"returned %d", plgname, ret));
 			dlclose(dl);
 			return -1;
 		}
 	}
 	plgn->dl_handle = dl;
 	plgn->trans = trans;
-	IDMAP_LOG(1, ("libnfsidmap: loaded plugin %s for method %s\n",
+	IDMAP_LOG(1, ("libnfsidmap: loaded plugin %s for method %s",
 		  plgname, method));
 
 	return 0;
@@ -179,7 +290,7 @@ static void unload_plugins(struct mapping_plugin **plgns)
 	for (i = 0; plgns[i] != NULL; i++) {
 		if (plgns[i]->dl_handle && dlclose(plgns[i]->dl_handle))
 			IDMAP_LOG(1, ("libnfsidmap: failed to "
-				  "unload plugin for method = %s\n",
+				  "unload plugin for method = %s",
 				  plgns[i]->trans->name));
 		free(plgns[i]);
 	}
@@ -204,7 +315,7 @@ static int load_plugins(struct conf_list *methods,
 			goto out;
 		if (load_translation_plugin(m->field, plgns[i]) == -1) {
 			IDMAP_LOG(0, ("libnfsidmap: requested translation "
-				  "method, '%s', is not available\n",
+				  "method, '%s', is not available",
 				  m->field));
 			goto out;
 		}
@@ -231,6 +342,8 @@ int nfs4_init_name_mapping(char *conffile)
 	int dflt = 0;
 	struct conf_list *nfs4_methods, *gss_methods;
 	char *nobody_user, *nobody_group;
+	char *nostrip;
+	char *reformatgroup;
 
 	/* XXX: need to be able to reload configurations... */
 	if (nfs4_plugins) /* already succesfully initialized */
@@ -248,7 +361,7 @@ int nfs4_init_name_mapping(char *conffile)
 			IDMAP_LOG(1, ("libnfsidmap: Unable to determine "
 				  "the NFSv4 domain; Using '%s' as the NFSv4 domain "
 				  "which means UIDs will be mapped to the 'Nobody-User' "
-				  "user defined in %s\n", 
+				  "user defined in %s", 
 				  IDMAPD_DEFAULT_DOMAIN, PATH_IDMAPDCONF));
 			default_domain = IDMAPD_DEFAULT_DOMAIN;
 		}
@@ -303,6 +416,26 @@ int nfs4_init_name_mapping(char *conffile)
 			IDMAP_LOG(1, ("libnfsidmap: Realms list: <NULL> "));
 	}
 
+	nostrip = conf_get_str_with_def("General", "No-Strip", "none");
+	if (strcasecmp(nostrip, "both") == 0)
+		no_strip = IDTYPE_USER|IDTYPE_GROUP;
+	else if (strcasecmp(nostrip, "group") == 0)
+		no_strip = IDTYPE_GROUP;
+	else if (strcasecmp(nostrip, "user") == 0)
+		no_strip = IDTYPE_USER;
+	else
+		no_strip = 0;
+
+	if (no_strip & IDTYPE_GROUP) {
+		reformatgroup = conf_get_str_with_def("General", "Reformat-Group", "false");
+		if ((strcasecmp(reformatgroup, "true") == 0) ||
+		    (strcasecmp(reformatgroup, "on") == 0) ||
+		    (strcasecmp(reformatgroup, "yes") == 0))
+			reformat_group = 1;
+		else
+			reformat_group = 0;
+	}
+
 	nfs4_methods = conf_get_list("Translation", "Method");
 	if (nfs4_methods) {
 		IDMAP_LOG(1, ("libnfsidmap: processing 'Method' list"));
@@ -341,11 +474,11 @@ int nfs4_init_name_mapping(char *conffile)
 			if (err == 0 && pw != NULL)
 				nobody_uid = pw->pw_uid;
 			else
-				IDMAP_LOG(1, ("libnfsidmap: Nobody-User (%s) not found: %s\n", 
+				IDMAP_LOG(1, ("libnfsidmap: Nobody-User (%s) not found: %s", 
 					nobody_user, strerror(errno)));
 			free(buf);
 		} else
-			IDMAP_LOG(0,("libnfsidmap: Nobody-User: no memory : %s\n", 
+			IDMAP_LOG(0,("libnfsidmap: Nobody-User: no memory : %s", 
 					nobody_user, strerror(errno)));
 	}
 
@@ -362,11 +495,11 @@ int nfs4_init_name_mapping(char *conffile)
 			if (err == 0 && gr != NULL)
 				nobody_gid = gr->gr_gid;
 			else
-				IDMAP_LOG(1, ("libnfsidmap: Nobody-Group (%s) not found: %s\n", 
+				IDMAP_LOG(1, ("libnfsidmap: Nobody-Group (%s) not found: %s", 
 					nobody_group, strerror(errno)));
 			free(buf);
 		} else
-			IDMAP_LOG(0,("libnfsidmap: Nobody-Group: no memory : %s\n", 
+			IDMAP_LOG(0,("libnfsidmap: Nobody-Group: no memory : %s", 
 					nobody_group, strerror(errno)));
 	}
 
@@ -392,7 +525,7 @@ char * get_default_domain(void)
 	ret = domain_from_dns(&default_domain);
 	if (ret) {
 		IDMAP_LOG(0, ("Unable to determine a default nfsv4 domain; "
-			" consider specifying one in idmapd.conf\n"));
+			" consider specifying one in idmapd.conf"));
 		default_domain = "";
 	}
 	return default_domain;
@@ -441,12 +574,12 @@ nfs4_get_default_domain(char *server, char *domain, size_t len)
 			if (plgns[i]->trans->funcname == NULL)		\
 				continue;				\
 									\
-			IDMAP_LOG(4, ("%s: calling %s->%s\n", __func__,	\
+			IDMAP_LOG(4, ("%s: calling %s->%s", __func__,	\
 				  plgns[i]->trans->name, #funcname));	\
 									\
 			ret = plgns[i]->trans->funcname(args);		\
 									\
-			IDMAP_LOG(4, ("%s: %s->%s returned %d\n",	\
+			IDMAP_LOG(4, ("%s: %s->%s returned %d",	\
 				  __func__, plgns[i]->trans->name,	\
 				  #funcname, ret));			\
 									\
@@ -455,7 +588,7 @@ nfs4_get_default_domain(char *server, char *domain, size_t len)
 									\
 			break;						\
 		}							\
-		IDMAP_LOG(4, ("%s: final return value is %d\n",		\
+		IDMAP_LOG(4, ("%s: final return value is %d",		\
 			  __func__, ret));				\
 		return ret;						\
 	} while (0)
@@ -494,7 +627,7 @@ int nfs4_name_to_gid(char *name, gid_t *gid)
 	RUN_TRANSLATIONS(name_to_gid, 0, name, gid);
 }
 
-static int set_id_to_nobody(int *id, int is_uid)
+static int set_id_to_nobody(uid_t *id, uid_t is_uid)
 {
 	int rc = 0;
 	const char name[] = "nobody@";
@@ -504,10 +637,10 @@ static int set_id_to_nobody(int *id, int is_uid)
          * configured, before we try to do a full lookup for the
          * NFS nobody user. */
 	if (is_uid && nobody_uid != (uid_t)-1) {
-		*id = (int)nobody_uid;
+		*id = (uid_t)nobody_uid;
 		return 0;
 	} else if (!is_uid && nobody_gid != (gid_t)-1) {
-		*id = (int)nobody_gid;
+		*id = (uid_t)nobody_gid;
 		return 0;
 	}
 
@@ -542,7 +675,7 @@ int nfs4_group_owner_to_gid(char *name, gid_t *gid)
 	if (rc && id_as_chars(name, gid))
 		rc = 0;
 	else if (rc)
-		rc = set_id_to_nobody(gid, 0);
+		rc = set_id_to_nobody((uid_t *)gid, 0);
 	return rc;
 }
 
