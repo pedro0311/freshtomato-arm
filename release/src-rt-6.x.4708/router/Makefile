@@ -1239,9 +1239,10 @@ libusb10-clean:
 
 usbmodeswitch: libusb10
 	@$(SEP)
-	$(MAKE) -C $@ CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -DLIBUSB10 \
-	    -Wl,-R/lib:/usr/lib:/opt/usr/lib:/usr/local/share -lpthread \
-	    -I$(TOP)/libusb10/libusb -L$(TOP)/libusb10/libusb/.libs -lusb-1.0"
+	$(MAKE) -C $@ \
+	CFLAGS="-Os $(EXTRACFLAGS) -DLIBUSB10 -Wl,-R/lib:/usr/lib:/opt/usr/lib -I$(TOP)/libusb10/libusb" \
+	LDFLAGS="-L$(TOP)/libusb10/libusb/.libs" \
+	LIBS="-lpthread -lusb-1.0"
 
 usbmodeswitchdb-install:
 	@mkdir -p $(TARGETDIR)/rom/etc/usb_modeswitch.d
