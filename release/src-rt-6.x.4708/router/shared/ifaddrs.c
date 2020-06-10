@@ -139,7 +139,7 @@ static struct sockaddr *
 ifa_make_sockaddr_mask (sa_family_t family,
 			struct sockaddr *sa, uint32_t prefixlen)
 {
-  int i;
+  unsigned int i;
   char *p = NULL, c;
   uint32_t max_prefixlen = 0;
 

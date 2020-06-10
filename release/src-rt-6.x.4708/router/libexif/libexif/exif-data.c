@@ -308,7 +308,9 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
 	/* Write the data. Fill unneeded bytes with 0. Do not crash with
 	 * e->data is NULL */
 	if (e->data) {
-		memcpy (*d + 6 + doff, e->data, s);
+		unsigned int len = s;
+		if (e->size < s) len = e->size;
+		memcpy (*d + 6 + doff, e->data, len);
 	} else {
 		memset (*d + 6 + doff, 0, s);
 	}
@@ -446,6 +448,11 @@ exif_data_load_data_content (ExifData *data, ExifIfd ifd,
 		case EXIF_TAG_JPEG_INTERCHANGE_FORMAT:
 			o = exif_get_long (d + offset + 12 * i + 8,
 					   data->priv->order);
+			if (o >= ds) {
+				exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData",
+					  "Tag data past end of buffer (%u > %u)", offset+2, ds);
+				return;
+			}
 			/* FIXME: IFD_POINTER tags aren't marked as being in a
 			 * specific IFD, so exif_tag_get_name_in_ifd won't work
 			 */

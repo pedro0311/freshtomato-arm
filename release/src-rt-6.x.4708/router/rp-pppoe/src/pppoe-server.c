@@ -5,6 +5,7 @@
 * Implementation of a user-space PPPoE server
 *
 * Copyright (C) 2000-2012 Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -143,6 +144,9 @@ static char *pppoptfile = NULL;
 
 static char *pppd_path = PPPD_PATH;
 static char *pppoe_path = PPPOE_PATH;
+
+static char *motd_string = NULL;
+static char *hurl_string = NULL;
 
 static int Debug = 0;
 static int CheckPoolSyntax = 0;
@@ -696,8 +700,7 @@ processPADI(Interface *ethif, PPPoEPacket *packet, int len)
     memcpy(pado.ethHdr.h_dest, packet->ethHdr.h_source, ETH_ALEN);
     memcpy(pado.ethHdr.h_source, myAddr, ETH_ALEN);
     pado.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    pado.ver = 1;
-    pado.type = 1;
+    pado.vertype = PPPOE_VER_TYPE(1, 1);
     pado.code = CODE_PADO;
     pado.session = 0;
     plen = TAG_HDR_SIZE + acname_len;
@@ -851,6 +854,10 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
     unsigned char *myAddr = ethif->mac;
     int slen = 0;
     char const *serviceName = NULL;
+
+    /* Temporary structure for sending PADM's. */
+    PPPoEConnection conn;
+
 
 #ifdef HAVE_LICENSE
     int freemem;
@@ -1029,8 +1036,7 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
     memcpy(pads.ethHdr.h_dest, packet->ethHdr.h_source, ETH_ALEN);
     memcpy(pads.ethHdr.h_source, myAddr, ETH_ALEN);
     pads.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    pads.ver = 1;
-    pads.type = 1;
+    pads.vertype = PPPOE_VER_TYPE(1, 1);
     pads.code = CODE_PADS;
 
     pads.session = cliSession->sess;
@@ -1084,6 +1090,19 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
     pads.length = htons(plen);
     sendPacket(NULL, sock, &pads, (int) (plen + HDR_SIZE));
 
+    if (hurl_string || motd_string) {
+	memset(&conn, 0, sizeof(conn));
+	conn.hostUniq = NULL;
+
+	memcpy(conn.myEth, cliSession->ethif->mac, ETH_ALEN);
+	conn.discoverySocket = sock;
+	conn.session = cliSession->sess;
+	memcpy(conn.peerEth, cliSession->eth, ETH_ALEN);
+	if (hurl_string != NULL)
+	    sendHURLorMOTM(&conn, hurl_string, TAG_HURL);
+	if (motd_string != NULL)
+	    sendHURLorMOTM(&conn, motd_string, TAG_MOTM);
+    }
     /* Close sock; don't need it any more */
     close(sock);
 
@@ -1161,8 +1180,11 @@ usage(char const *argv0)
 #endif
 
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
+    fprintf(stderr, "   -M msg         -- Send MSG in a MOTM tag in PADM packet after PADS.\n");
+    fprintf(stderr, "   -H url         -- Send URL in a HURL tag in PADM packet after PADS.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
-    fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", VERSION);
+    fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", RP_VERSION);
+    fprintf(stderr, "                     %*s  Copyright (C) 2018-2020 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
 
 #ifndef HAVE_LICENSE
     fprintf(stderr, "PPPoE-Server comes with ABSOLUTELY NO WARRANTY.\n");
@@ -1170,7 +1192,7 @@ usage(char const *argv0)
     fprintf(stderr, "under the terms of the GNU General Public License, version 2\n");
     fprintf(stderr, "or (at your option) any later version.\n");
 #endif
-    fprintf(stderr, "http://www.roaringpenguin.com\n");
+    fprintf(stderr, "https://dianne.skoll.ca/projects/rp-pppoe/\n");
 }
 
 /**********************************************************************
@@ -1202,9 +1224,9 @@ main(int argc, char **argv)
 #endif
 
 #ifndef HAVE_LINUX_KERNEL_PPPOE
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:H:M:";
 #else
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:H:M:";
 #endif
 
     if (getuid() != geteuid() ||
@@ -1272,6 +1294,29 @@ main(int argc, char **argv)
 	    }
 	    break;
 
+	case 'M':
+	    if (motd_string) {
+		free(motd_string);
+		motd_string = NULL;
+	    }
+	    motd_string = strdup(optarg);
+	    if (!motd_string) {
+		fprintf(stderr, "Out of memory");
+		exit(1);
+	    }
+	    break;
+
+	case 'H':
+	    if (hurl_string) {
+		free(hurl_string);
+		hurl_string = NULL;
+	    }
+	    hurl_string = strdup(optarg);
+	    if (!hurl_string) {
+		fprintf(stderr, "Out of memory");
+		exit(1);
+	    }
+	    break;
 	case 'c':
 #ifndef HAVE_LICENSE
 	    fprintf(stderr, "Clustering capability not available.\n");
@@ -1784,7 +1829,7 @@ serverProcessPacket(Interface *i)
     }
 
     /* Sanity check on packet */
-    if (packet.ver != 1 || packet.type != 1) {
+    if (PPPOE_VER(packet.vertype) != 1 || PPPOE_TYPE(packet.vertype) != 1) {
 	/* Syslog an error */
 	return;
     }
@@ -1849,8 +1894,7 @@ sendErrorPADS(int sock,
     memcpy(pads.ethHdr.h_dest, dest, ETH_ALEN);
     memcpy(pads.ethHdr.h_source, source, ETH_ALEN);
     pads.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    pads.ver = 1;
-    pads.type = 1;
+    pads.vertype = PPPOE_VER_TYPE(1, 1);
     pads.code = CODE_PADS;
 
     pads.session = htons(0);
@@ -1894,7 +1938,7 @@ startPPPDUserMode(ClientSession *session)
     /* Leave some room */
     char *argv[64];
 
-    char buffer[SMALLBUF];
+    char buffer[2 * SMALLBUF];
 
     int c = 0;
 
@@ -1902,7 +1946,7 @@ startPPPDUserMode(ClientSession *session)
     argv[c++] = "pty";
 
     /* Let's hope service-name does not have ' in it... */
-    snprintf(buffer, SMALLBUF, "%s -n -I %s -e %u:%02x:%02x:%02x:%02x:%02x:%02x%s -S '%s'",
+    snprintf(buffer, sizeof(buffer), "%s -n -I %s -e %u:%02x:%02x:%02x:%02x:%02x:%02x%s -S '%s'",
 	     pppoe_path, session->ethif->name,
 	     (unsigned int) ntohs(session->sess),
 	     session->eth[0], session->eth[1], session->eth[2],
@@ -1917,7 +1961,7 @@ startPPPDUserMode(ClientSession *session)
     argv[c++] = "file";
     argv[c++] = pppoptfile;
 
-    snprintf(buffer, SMALLBUF, "%d.%d.%d.%d:%d.%d.%d.%d",
+    snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d:%d.%d.%d.%d",
 	    (int) session->myip[0], (int) session->myip[1],
 	    (int) session->myip[2], (int) session->myip[3],
 	    (int) session->peerip[0], (int) session->peerip[1],
@@ -2311,8 +2355,8 @@ sendHURLorMOTM(PPPoEConnection *conn, char const *url, UINT16_t tag)
     if (conn->discoverySocket < 0) return;
 
     if (tag == TAG_HURL) {
-	if (strncmp(url, "http://", 7)) {
-	    syslog(LOG_WARNING, "sendHURL(%s): URL must begin with http://", url);
+	if (strncmp(url, "http://", 7) && strncmp(url, "https://", 8)) {
+	    syslog(LOG_WARNING, "sendHURL(%s): URL must begin with http:// or https://", url);
 	    return;
 	}
     } else {
@@ -2323,8 +2367,7 @@ sendHURLorMOTM(PPPoEConnection *conn, char const *url, UINT16_t tag)
     memcpy(packet.ethHdr.h_source, conn->myEth, ETH_ALEN);
 
     packet.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    packet.ver = 1;
-    packet.type = 1;
+    packet.vertype = PPPOE_VER_TYPE(1, 1);
     packet.code = CODE_PADM;
     packet.session = conn->session;
 

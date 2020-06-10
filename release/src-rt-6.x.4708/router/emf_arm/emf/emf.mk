@@ -10,10 +10,12 @@
 # $Id: emf.mk 307799 2012-01-12 18:48:34Z $
 #
 
+include ../../common.mak
+
 CROSS_COMPILE = mipsel-linux-
 KSRC := $(shell /bin/pwd)/../../..
 KINCLUDE = -I$(KSRC)/include -I$(LINUXDIR)/include/asm/gcc \
-	   -I$(KSRC)/router/emf/emf -I$(KSRC)/router/emf/igs
+	   -I$(KSRC)/router/emf$(BCMEX)/emf -I$(KSRC)/router/emf$(BCMEX)/igs
 
 CC := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)ld

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2008-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2008-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -26,7 +27,7 @@
  * authorization.                                                           *
  ****************************************************************************/
 /*
- * $Id: clip_printw.c,v 1.15 2017/09/28 23:07:23 tom Exp $
+ * $Id: clip_printw.c,v 1.17 2020/02/02 23:34:34 tom Exp $
  *
  * demonstrate how to use printw without wrapping.
  */
@@ -56,7 +57,7 @@ typedef struct {
 } STATUS;
 
 static int
-clip_wprintw(WINDOW *win, NCURSES_CONST char *fmt,...)
+clip_wprintw(WINDOW *win, NCURSES_CONST char *fmt, ...)
 {
     int y0, x0, y1, x1, width;
     WINDOW *sub;
@@ -103,10 +104,11 @@ color_params(unsigned state, int *pair)
     };
     /* *INDENT-ON* */
 
-    static bool first = TRUE;
     const char *result = 0;
 
     if (has_colors()) {
+	static bool first = TRUE;
+
 	if (first) {
 	    unsigned n;
 

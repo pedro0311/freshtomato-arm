@@ -7,9 +7,10 @@
 #
 # LIC: GPL
 #
-# Copyright (C) 2000 Roaring Penguin Software Inc.  This software may
-# be distributed under the terms of the GNU General Public License, version
-# 2 or any later version.
+# Copyright (C) 2000 Roaring Penguin Software Inc.
+# Copyright (C) 2018 Dianne Skoll
+# This software may be distributed under the terms of the GNU General
+# Public License, version 2 or any later version.
 
 # Source function library if it exists
 test -r /etc/rc.d/init.d/functions && . /etc/rc.d/init.d/functions

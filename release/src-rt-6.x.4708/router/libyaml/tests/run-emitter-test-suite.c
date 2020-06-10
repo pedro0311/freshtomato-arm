@@ -3,30 +3,72 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include "../src/yaml_private.h"
 
 int get_line(FILE * input, char *line);
 char *get_anchor(char sigil, char *line, char *anchor);
 char *get_tag(char *line, char *tag);
 void get_value(char *line, char *value, int *style);
+int usage(int ret);
 
 int main(int argc, char *argv[])
 {
     FILE *input;
     yaml_emitter_t emitter;
     yaml_event_t event;
+    yaml_version_directive_t *version_directive = NULL;
 
     int canonical = 0;
     int unicode = 0;
     char line[1024];
+    int foundfile = 0;
+    int i = 0;
+    int minor = 0;
+    int flow = -1; /** default no flow style collections */
 
-    if (argc == 1)
-        input = stdin;
-    else if (argc == 2)
-        input = fopen(argv[1], "rb");
-    else {
-        fprintf(stderr, "Usage: libyaml-emitter [<input-file>]\n");
-        return 1;
+    for (i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "--help", 6) == 0)
+            return usage(0);
+        if (strncmp(argv[i], "-h", 2) == 0)
+            return usage(0);
+        if (strncmp(argv[i], "--flow", 6) == 0) {
+            if (i+1 == argc)
+                return usage(1);
+            i++;
+            if (strncmp(argv[i], "keep", 4) == 0)
+                flow = 0;
+            else if (strncmp(argv[i], "on", 2) == 0)
+                flow = 1;
+            else if (strncmp(argv[i], "off", 3) == 0)
+                flow = -1;
+            else
+                return usage(1);
+        }
+        else if (strncmp(argv[i], "--directive", 11) == 0) {
+            if (i+1 == argc)
+                return usage(1);
+            i++;
+            if (strncmp(argv[i], "1.1", 3) == 0)
+                minor = 1;
+            else if (strncmp(argv[i], "1.2", 3) == 0)
+                minor = 2;
+            else
+                return usage(1);
+        }
+        else if (!foundfile) {
+            input = fopen(argv[i], "rb");
+            foundfile = 1;
+        }
+
     }
+    if (minor) {
+        version_directive = YAML_MALLOC_STATIC(yaml_version_directive_t);
+        version_directive->major = 1;
+        version_directive->minor = minor;
+    }
+    if (!foundfile)
+        input = stdin;
+
     assert(input);
 
     if (!yaml_emitter_initialize(&emitter)) {
@@ -37,11 +79,13 @@ int main(int argc, char *argv[])
     yaml_emitter_set_canonical(&emitter, canonical);
     yaml_emitter_set_unicode(&emitter, unicode);
 
+
     while (get_line(input, line)) {
         int ok;
         char anchor[256];
         char tag[256];
         int implicit;
+        int style;
 
         if (strncmp(line, "+STR", 4) == 0) {
             ok = yaml_stream_start_event_initialize(&event, YAML_UTF8_ENCODING);
@@ -50,25 +94,35 @@ int main(int argc, char *argv[])
             ok = yaml_stream_end_event_initialize(&event);
         }
         else if (strncmp(line, "+DOC", 4) == 0) {
-            implicit = strncmp(line, "+DOC ---", 8) != 0;
-            ok = yaml_document_start_event_initialize(&event, NULL, NULL, NULL, implicit);
+            implicit = strncmp(line+4, " ---", 4) != 0;
+            ok = yaml_document_start_event_initialize(&event, version_directive, NULL, NULL, implicit);
         }
         else if (strncmp(line, "-DOC", 4) == 0) {
-            implicit = strncmp(line, "-DOC ...", 8) != 0;
+            implicit = strncmp(line+4, " ...", 4) != 0;
             ok = yaml_document_end_event_initialize(&event, implicit);
         }
         else if (strncmp(line, "+MAP", 4) == 0) {
+            style = YAML_BLOCK_MAPPING_STYLE;
+            if (flow == 1)
+                style = YAML_FLOW_MAPPING_STYLE;
+            else if (flow == 0 && strncmp(line+5, "{}", 2) == 0)
+                style = YAML_FLOW_MAPPING_STYLE;
             ok = yaml_mapping_start_event_initialize(&event, (yaml_char_t *)
                                                      get_anchor('&', line, anchor), (yaml_char_t *)
-                                                     get_tag(line, tag), 0, YAML_BLOCK_MAPPING_STYLE);
+                                                     get_tag(line, tag), 0, style);
         }
         else if (strncmp(line, "-MAP", 4) == 0) {
             ok = yaml_mapping_end_event_initialize(&event);
         }
         else if (strncmp(line, "+SEQ", 4) == 0) {
+            style = YAML_BLOCK_SEQUENCE_STYLE;
+            if (flow == 1)
+                style = YAML_FLOW_MAPPING_STYLE;
+            else if (flow == 0 && strncmp(line+5, "[]", 2) == 0)
+                style = YAML_FLOW_SEQUENCE_STYLE;
             ok = yaml_sequence_start_event_initialize(&event, (yaml_char_t *)
                                                       get_anchor('&', line, anchor), (yaml_char_t *)
-                                                      get_tag(line, tag), 0, YAML_BLOCK_SEQUENCE_STYLE);
+                                                      get_tag(line, tag), 0, style);
         }
         else if (strncmp(line, "-SEQ", 4) == 0) {
             ok = yaml_sequence_end_event_initialize(&event);
@@ -228,4 +282,9 @@ void get_value(char *line, char *value, int *style)
             value[i++] = *c;
     }
     value[i] = '\0';
+}
+
+int usage(int ret) {
+    fprintf(stderr, "Usage: run-emitter-test-suite [--directive (1.1|1.2)] [--flow (on|off|keep)] [<input-file>]\n");
+    return ret;
 }

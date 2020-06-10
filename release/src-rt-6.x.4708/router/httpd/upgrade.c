@@ -43,6 +43,7 @@ void wi_upgrade(char *url, int len, char *boundary)
 	const char *error = "Error reading file";
 	int ok = 0;
 	int n;
+	unsigned int m;
 	int reset;
 
 	check_id(url);
@@ -105,11 +106,11 @@ void wi_upgrade(char *url, int len, char *boundary)
 	// uses trx length... -- zzz
 
 	while (len > 0) {
-		 if ((n = web_read(buf, MIN(len, sizeof(buf)))) <= 0) {
+		 if ((m = web_read(buf, MIN((unsigned int) len, sizeof(buf)))) <= 0) {
 			 goto ERROR2;
 		 }
-		 len -= n;
-		 if (safe_fwrite(buf, 1, n, f) != n) {
+		 len -= m;
+		 if (safe_fwrite(buf, 1, m, f) != (int) m) {
 			 error = "Error writing to pipe";
 			 goto ERROR2;
 		 }

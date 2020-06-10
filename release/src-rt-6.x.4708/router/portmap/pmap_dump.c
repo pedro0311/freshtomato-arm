@@ -17,7 +17,20 @@
 #include <rpc/pmap_clnt.h>
 #include <rpc/pmap_prot.h>
 
-static char *protoname(u_long proto);
+static const char *protoname(u_long proto)
+{
+    static char buf[BUFSIZ];
+
+    switch (proto) {
+    case IPPROTO_UDP:
+	return ("udp");
+    case IPPROTO_TCP:
+	return ("tcp");
+    default:
+	sprintf(buf, "%lu", proto);
+	return (buf);
+    }
+}
 
 int
 main(int argc, char **argv)
@@ -43,17 +56,3 @@ main(int argc, char **argv)
     return (fclose(stdout) ? (perror(argv[0]), 1) : 0);
 }
 
-static char *protoname(u_long proto)
-{
-    static char buf[BUFSIZ];
-
-    switch (proto) {
-    case IPPROTO_UDP:
-	return ("udp");
-    case IPPROTO_TCP:
-	return ("tcp");
-    default:
-	sprintf(buf, "%lu", proto);
-	return (buf);
-    }
-}

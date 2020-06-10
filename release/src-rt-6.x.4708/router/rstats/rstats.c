@@ -46,7 +46,9 @@
 #define SMIN	60
 #define	SHOUR	(60 * 60)
 #define	SDAY	(60 * 60 * 24)
-#define Y2K		946684800UL
+#ifndef Y2K
+#define Y2K		946684800L
+#endif
 
 #define INTERVAL		120
 
@@ -409,7 +411,7 @@ static void load(int new)
 			bi = nvram_safe_get("rstats_data");
 			if ((n = strlen(bi)) > 0) {
 				if ((bo = malloc(base64_decoded_len(n))) != NULL) {
-					n = base64_decode(bi, bo, n);
+					n = base64_decode(bi, (unsigned char *) bo, n);
 					_dprintf("%s: nvram n=%d\n", __FUNCTION__, n);
 					f_write(hgz, bo, n, 0, 0);
 					free(bo);

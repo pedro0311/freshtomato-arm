@@ -63,6 +63,30 @@ The local NFSv4 domain name.  An NFSv4 domain is a namespace with
 a unique username<->UID and groupname<->GID mapping.
 (Default: Host's fully-qualified DNS domain name)
 .TP
+.B No-Strip
+In multi-domain environments, some NFS servers will append the identity
+management domain to the owner and owner_group in lieu of a true NFSv4
+domain.  This option can facilitate lookups in such environments.  If
+set to a value other than "none", the nsswitch  plugin will first pass
+the name to the password/group lookup function without stripping the
+domain off.  If that mapping fails then the plugin will try again using
+the old method (comparing the domain in the string to the Domain value,
+stripping it if it matches, and passing the resulting short name to the
+lookup function).  Valid values are "user", "group", "both", and
+"none".
+(Default: "none")
+.TP
+.B Reformat-Group
+Winbind has a quirk whereby doing a group lookup in UPN format
+(e.g. staff@americas.example.com) will cause the group to be
+displayed prefixed with the full domain in uppercase
+(e.g. AMERICAS.EXAMPLE.COM\\staff) instead of in the familiar netbios
+name format (e.g. AMERICAS\\staff).  Setting this option to true
+causes the name to be reformatted before passing it to the group
+lookup function in order to work around this.  This setting is
+ignored unless No-Strip is set to either "both" or "group".
+(Default: "false")
+.TP
 .B Local-Realms
 A comma-separated list of Kerberos realm names that may be considered equivalent to the
 local realm name.  For example, users juser@ORDER.EDU and juser@MAIL.ORDER.EDU

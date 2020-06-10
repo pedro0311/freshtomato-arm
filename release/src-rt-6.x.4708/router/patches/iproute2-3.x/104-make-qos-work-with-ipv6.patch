@@ -1,0 +1,11 @@
+--- iproute2-3.x/include/linux/pkt_sched.h
++++ iproute2-3.x/include/linux/pkt_sched.h
+@@ -332,7 +332,7 @@ struct tc_choke_xstats {
+ };
+ 
+ /* HTB section */
+-#define TC_HTB_NUMPRIO		8
++#define TC_HTB_NUMPRIO		11 /* Tomato IPv6 QOS */
+ #define TC_HTB_MAXDEPTH		8
+ #define TC_HTB_PROTOVER		3 /* the same as HTB and TC's major */
+ 

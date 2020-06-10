@@ -328,9 +328,6 @@
 #undef __NR_sigprocmask
 #define __NR_sigprocmask (0 +126)
 #define SYS_sigprocmask __NR_sigprocmask
-#undef __NR_create_module
-#define __NR_create_module (0 +127)
-#define SYS_create_module __NR_create_module
 #undef __NR_init_module
 #define __NR_init_module (0 +128)
 #define SYS_init_module __NR_init_module
@@ -439,9 +436,6 @@
 #undef __NR_getresuid
 #define __NR_getresuid (0 +165)
 #define SYS_getresuid __NR_getresuid
-#undef __NR_query_module
-#define __NR_query_module (0 +167)
-#define SYS_query_module __NR_query_module
 #undef __NR_poll
 #define __NR_poll (0 +168)
 #define SYS_poll __NR_poll
@@ -1033,6 +1027,9 @@
 #undef __NR_prlimit64
 #define __NR_prlimit64 (0 +369)
 #define SYS_prlimit64 __NR_prlimit64
+#undef __NR_setns
+#define __NR_setns (0 +370)
+#define SYS_setns __NR_setns
 #undef __ARM_NR_BASE
 #define __ARM_NR_BASE (0 +0x0f0000)
 #define SYS_BASE __ARM_NR_BASE

@@ -7,6 +7,7 @@
 * C wrapper designed to run SUID root for controlling PPPoE connections.
 *
 * Copyright (C) 2005 by Roaring Penguin Software Inc.
+* Copyright (C) 2018 Dianne Skoll
 *
 * LIC: GPL
 *
@@ -17,6 +18,7 @@
 #define _SVID_SOURCE 1 /* For putenv */
 #define _POSIX_SOURCE 1 /* For fileno */
 #define _BSD_SOURCE 1 /* For setreuid */
+#define _DEFAULT_SOURCE 1
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

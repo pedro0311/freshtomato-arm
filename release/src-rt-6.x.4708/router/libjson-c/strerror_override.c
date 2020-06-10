@@ -5,10 +5,12 @@
  * Override strerror() to get consistent output across platforms.
  */
 
-static struct {
+static struct
+{
 	int errno_value;
 	const char *errno_str;
 } errno_list[] = {
+/* clang-format off */
 #define STRINGIFY(x) #x
 #define ENTRY(x) {x, &STRINGIFY(undef_ ## x)[6]}
 	ENTRY(EPERM),
@@ -18,7 +20,9 @@ static struct {
 	ENTRY(EIO),
 	ENTRY(ENXIO),
 	ENTRY(E2BIG),
+#ifdef ENOEXEC
 	ENTRY(ENOEXEC),
+#endif
 	ENTRY(EBADF),
 	ENTRY(ECHILD),
 	ENTRY(EDEADLK),
@@ -52,6 +56,7 @@ static struct {
 	ENTRY(EAGAIN),
 	{ 0, (char *)0 }
 };
+/* clang-format on */
 
 // Enabled during tests
 int _json_c_strerror_enable = 0;
@@ -76,7 +81,8 @@ char *_json_c_strerror(int errno_in)
 		if (errno_list[ii].errno_value != errno_in)
 			continue;
 
-		for (start_idx = sizeof(PREFIX) - 1, jj = 0; errno_str[jj] != '\0'; jj++, start_idx++)
+		for (start_idx = sizeof(PREFIX) - 1, jj = 0; errno_str[jj] != '\0';
+		     jj++, start_idx++)
 		{
 			errno_buf[start_idx] = errno_str[jj];
 		}
@@ -92,10 +98,9 @@ char *_json_c_strerror(int errno_in)
 	digbuf[ii] = "0123456789"[(errno_in % 10)];
 
 	// Reverse the digits
-	for (start_idx = sizeof(PREFIX) - 1 ; ii >= 0; ii--, start_idx++)
+	for (start_idx = sizeof(PREFIX) - 1; ii >= 0; ii--, start_idx++)
 	{
 		errno_buf[start_idx] = digbuf[ii];
 	}
 	return errno_buf;
 }
-

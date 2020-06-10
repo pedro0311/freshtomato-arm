@@ -1,5 +1,50 @@
 # LIC: GPL
 
+Changes from version 3.13 to 3.14:
+
+- Release 3.14 (2020-05-26)
+
+- Delete scripts/pppoe-init-turbolinux.in - TurboLinux is defunct.
+
+- pppoe-server: Add -H and -M options for sending HURL and MOTM packets
+  respectively.
+
+- Change VERSION macro to RP_VERSION to avoid conflict with pppd macro.
+
+- Apply all of the patches at
+  https://github.com/nabijaczleweli/rp-pppoe/tree/patches/0006-touchups-3.14-BETA-2-v1
+  which fix up various compile-time warnings.
+
+- Apply all of the patches at
+  https://github.com/nabijaczleweli/rp-pppoe/tree/patches/0004-mostly-cosmetic-3.14-BETA-1-v1
+  which implement the following 6 changes:
+
+- 1. Clarify a couple of comments
+- 2. Remove the '@' before the command that installs the plugin, in the Makefile
+- 3. Fix a typo in doc/HOW-TO-CONNECT
+- 4. Use echo instead of /bin/echo in scripts
+- 5. Fix potential snprintf(...) truncation
+- 6. Cosmetic fix to copyright printout
+
+- Apply all the patches at
+  https://github.com/nabijaczleweli/rp-pppoe/tree/patches/0002-pppd-bugfixes-3.13-v1
+  which implement the following 13 changes:
+
+- 1. Don't exit if we time out waiting for PADO/PADS packets if
+  persist option set
+- 2. Remove unused variable
+- 3. Don't error out if device is not Ethernet if doit is 0 in PPPoEDevnameHook
+- 4. Use one 8-bit bitfield and macros for both ver and type in PPPoEPacket
+- 5. Remove unnecessary casts from common.c
+- 6. Replace strDup() with POSIX strdup(3)
+- 7. Extract expiration check into time_left() function
+- 8. Suppress false error message on PPPoE disconnect
+- 9. Send PADT on PPPoE disconnect
+- 10. Various fixes for errors found by coverity static analysis
+- 11. Remove all references to cdefs.h
+- 12. Eliminate snprintf-related compiler warning in plugin.c
+- 13. Make tag parsing loop condition more accurate
+
 Changes from version 3.12 to 3.13:
 
 - Release 3.13 (2018-11-25)

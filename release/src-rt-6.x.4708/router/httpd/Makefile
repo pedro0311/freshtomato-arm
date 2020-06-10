@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS = -Os -Wall $(EXTRACFLAGS)
+CFLAGS = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
 
 ifeq ($(TCONFIG_BCMARM),y)

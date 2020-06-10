@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("wk_mode,lan_stp,routes_static,dhcp_routes,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,emf_enable,force_igmpv2,wan_proto,wan2_proto,wan3_proto,wan4_proto,mwan_num"); %>
+//	<% nvram("lan_stp,routes_static,dhcp_routes,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,emf_enable,force_igmpv2,wan_proto,wan2_proto,wan3_proto,wan4_proto,mwan_num"); %>
 
 //	<% activeroutes(); %>
 
@@ -199,7 +199,6 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Mode', name: 'wk_mode', type: 'select', options: [['gateway','Gateway'],['router','Router']], value: nvram.wk_mode },
 /* EMF-BEGIN */
 			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0' },
 /* EMF-END */

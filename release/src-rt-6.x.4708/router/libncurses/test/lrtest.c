@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2010,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2010,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -34,7 +35,7 @@
  * This can't be part of the ncurses test-program, because ncurses rips off the
  * bottom line to do labels.
  *
- * $Id: lrtest.c,v 1.24 2017/09/04 11:28:19 tom Exp $
+ * $Id: lrtest.c,v 1.27 2020/02/02 23:34:34 tom Exp $
  */
 
 #include <test.priv.h>
@@ -148,9 +149,9 @@ main(
 		nodelay(stdscr, TRUE);
 #ifdef TRACE
 	    else if (ch == 'T')
-		trace(0);
+		curses_trace(0);
 	    else if (ch == 't')
-		trace(TRACE_CALLS | TRACE_ICALLS | TRACE_UPDATE);
+		curses_trace(TRACE_CALLS | TRACE_ICALLS | TRACE_UPDATE);
 #endif
 #ifdef KEY_RESIZE
 	    else if (ch == KEY_RESIZE) {
@@ -174,7 +175,7 @@ main(
 	refresh();
     }
 
-    exit_curses();
+    stop_curses();
     ExitProgram(EXIT_SUCCESS);
 }
 

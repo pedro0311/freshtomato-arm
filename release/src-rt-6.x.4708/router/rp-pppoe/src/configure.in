@@ -18,7 +18,7 @@ dnl Checks for libraries.
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(fcntl.h sys/dlpi.h sys/ioctl.h sys/time.h syslog.h unistd.h net/if_arp.h netinet/if_ether.h getopt.h sys/uio.h sys/param.h fcntl.h net/bpf.h netpacket/packet.h net/ethernet.h asm/types.h linux/if_packet.h linux/if_ether.h sys/socket.h sys/cdefs.h net/if.h net/if_dl.h net/if_ether.h net/if_types.h netinet/if_ether.h net/if_types.h net/if_dl.h)
+AC_CHECK_HEADERS(fcntl.h sys/dlpi.h sys/ioctl.h sys/time.h syslog.h unistd.h net/if_arp.h netinet/if_ether.h getopt.h sys/uio.h sys/param.h fcntl.h net/bpf.h netpacket/packet.h net/ethernet.h asm/types.h linux/if_packet.h linux/if_ether.h sys/socket.h net/if.h net/if_dl.h net/if_ether.h net/if_types.h netinet/if_ether.h net/if_types.h net/if_dl.h)
 AC_CHECK_HEADERS(linux/if.h, [], [], [#include<sys/socket.h>])
 AC_CHECK_HEADERS(linux/if_pppox.h, [], [],
 [
@@ -134,7 +134,7 @@ dnl Checks for library functions.
 AC_FUNC_MEMCMP
 AC_FUNC_SETVBUF_REVERSED
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS(select socket strerror strtol)
+AC_CHECK_FUNCS(select socket strerror strtol strlcpy)
 AC_PROG_INSTALL
 
 dnl Integer sizes
@@ -144,7 +144,6 @@ AC_CHECK_SIZEOF(unsigned long)
 
 dnl Check for location of pppd
 AC_PATH_PROG(PPPD, pppd, NOTFOUND, $PATH:/sbin:/usr/sbin:/usr/local/sbin)
-AC_PATH_PROG(ECHO, echo, echo)
 
 dnl Check for setsid (probably Linux-specific)
 AC_PATH_PROG(SETSID, setsid, "", $PATH:/sbin:/usr/sbin:/usr/local/sbin)
@@ -173,7 +172,7 @@ int main()
 	if (socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OE) >= 0) return 0; else return 1;
 }
 ],
-ac_cv_linux_kernel_pppoe=yes, ac_cv_linux_kernel_pppoe=no, [ac_cv_linux_kernel_pppoe=no; $ECHO "cross-compiling, default: "])
+ac_cv_linux_kernel_pppoe=yes, ac_cv_linux_kernel_pppoe=no, [ac_cv_linux_kernel_pppoe=no; echo "cross-compiling, default: "])
 else
 	ac_cv_linux_kernel_pppoe=no
 fi
@@ -228,42 +227,6 @@ case "$PPPD_VERSION" in
 	AC_MSG_WARN([*** I will keep going, but it may not work.])
 	;;
 esac
-
-dnl Figure out packing order of structures
-AC_MSG_CHECKING([packing order of bit fields])
-if test "${rpppoe_cv_pack_bitfields+set}" != set ; then
-AC_TRY_RUN([
-union foo {
-    struct bar {
-	unsigned int ver:4;
-	unsigned int type:4;
-    } bb;
-    unsigned char baz;
-};
-
-int
-main(void)
-{
-    union foo x;
-    x.bb.ver = 1;
-    x.bb.type = 2;
-    if (x.baz == 0x21) {
-	return 1;
-    } else if (x.baz == 0x12) {
-	return 0;
-    } else {
-	return 2;
-    }
-}], rpppoe_cv_pack_bitfields=normal, rpppoe_cv_pack_bitfields=rev,
-$ECHO "no defaults for cross-compiling"; exit 0)
-fi
-
-if test "$rpppoe_cv_pack_bitfields" = "rev" ; then
-	AC_MSG_RESULT(reversed)
-	AC_DEFINE(PACK_BITFIELDS_REVERSED)
-else
-	AC_MSG_RESULT(normal)
-fi
 
 # Sigh... got to fix this up for tcl
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
@@ -323,13 +286,12 @@ AC_SUBST(LIC_DEFINE)
 AC_SUBST(PPPOE_SERVER_DEPS)
 AC_SUBST(RDYNAMIC)
 AC_SUBST(LIBEVENT)
-AC_SUBST(ECHO)
 AC_SUBST(LDFLAGS)
 
 datadir_evaluated=`eval echo $datadir`
 AC_SUBST(datadir_evaluated)
 
-AC_OUTPUT(Makefile libevent/Makefile ../scripts/pppoe-connect ../scripts/pppoe-start ../scripts/pppoe-stop ../scripts/pppoe-init ../scripts/pppoe-init-suse ../scripts/pppoe-init-turbolinux ../scripts/pppoe-setup ../gui/Makefile ../gui/tkpppoe $EXTRACONFIGS)
+AC_OUTPUT(Makefile libevent/Makefile ../scripts/pppoe-connect ../scripts/pppoe-start ../scripts/pppoe-stop ../scripts/pppoe-init ../scripts/pppoe-init-suse ../scripts/pppoe-setup ../gui/Makefile ../gui/tkpppoe $EXTRACONFIGS)
 
 AC_MSG_RESULT([On this platform, the following targets will be built:])
 AC_MSG_RESULT([$TARGETS])

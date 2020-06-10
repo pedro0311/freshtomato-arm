@@ -1,6 +1,7 @@
 // * This makes emacs happy -*-Mode: C++;-*-
 /****************************************************************************
- * Copyright (c) 1998-2008,2012 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2008,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -31,7 +32,7 @@
  *   Author: Juergen Pfeifer, 1997                                          *
  ****************************************************************************/
 
-// $Id: internal.h,v 1.18 2012/02/23 10:41:56 tom Exp $
+// $Id: internal.h,v 1.20 2020/02/02 23:34:34 tom Exp $
 
 #ifndef NCURSES_CPLUS_INTERNAL_H
 #define NCURSES_CPLUS_INTERNAL_H 1
@@ -41,10 +42,10 @@
 #if USE_RCS_IDS
 #define MODULE_ID(id) static const char Ident[] = id;
 #else
-#define MODULE_ID(id) /*nothing*/
+#define MODULE_ID(id)		/*nothing */
 #endif
 
-#ifdef __MINGW32__
+#ifdef _WIN32
 #include <nc_mingw.h>
 #undef KEY_EVENT
 #endif

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2014,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -38,7 +39,7 @@
  */
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_slkcolor.c,v 1.18 2017/03/17 09:26:46 tom Exp $")
+MODULE_ID("$Id: lib_slkcolor.c,v 1.20 2020/02/02 23:34:34 tom Exp $")
 
 static int
 _nc_slk_color(SCREEN *sp, int pair_arg)
@@ -73,7 +74,7 @@ slk_color(NCURSES_PAIRS_T pair_arg)
 }
 #endif
 
-#if USE_EXTENDED_COLORS
+#if NCURSES_EXT_COLORS
 NCURSES_EXPORT(int)
 NCURSES_SP_NAME(extended_slk_color) (NCURSES_SP_DCLx int pair_arg)
 {

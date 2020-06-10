@@ -10,6 +10,10 @@ menu "Broadcom HND network devices"
 	depends on PCI
 config HND
 	bool "Broadcom HND network device support"
+# config RTAC87U
+# 	bool "RT-AC87U support"
+# config RTAC88U
+# 	bool "RT-AC88U support"
 config ET
 	tristate "10/100 Ethernet support"
 	depends on HND

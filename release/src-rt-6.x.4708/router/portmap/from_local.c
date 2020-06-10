@@ -162,6 +162,16 @@ int from_local(struct sockaddr_in *addr)
 		   sizeof(struct in_addr)) == 0)
 	    return (TRUE);
     }
+    /* maybe a new interface was added */
+    free(addrs);
+    addrs = NULL;
+    find_local();
+    for (i = 0; i < num_local; i++) {
+	if (memcmp((char *) &(addr->sin_addr), (char *) &(addrs[i]),
+		   sizeof(struct in_addr)) == 0)
+	    return (TRUE);
+    }
+
     return (FALSE);
 }
 

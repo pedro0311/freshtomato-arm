@@ -196,7 +196,7 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 			if (readall_ok == READALL_OK) {
 				char *end = data + filesize;
 				char *lineStart;
-				int lines_processed = 0;
+				unsigned int lines_processed = 0;
 				for (lineStart = end; lineStart >= data; lineStart--) {
 					if ((*lineStart == '\n') || (*lineStart == '\r') || (lineStart == data)) {
 						const int length = end - lineStart;

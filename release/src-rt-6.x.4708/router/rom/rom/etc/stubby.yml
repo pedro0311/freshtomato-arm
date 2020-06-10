@@ -1,4 +1,4 @@
-tls_ca_file: "/rom/cacert.pem"
+appdata_dir: "/var/lib/misc"
 
 resolution_type: GETDNS_RESOLUTION_STUB
 
@@ -9,7 +9,7 @@ tls_authentication: GETDNS_AUTHENTICATION_REQUIRED
 
 tls_query_padding_blocksize: 256
 
-edns_client_subnet_private : 1
+edns_client_subnet_private: 1
 
 idle_timeout: 10000
 

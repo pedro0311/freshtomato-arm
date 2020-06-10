@@ -1,7 +1,7 @@
 /*
  * pcicfg.h: PCI configuration constants and structures.
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -275,6 +275,7 @@ typedef enum {
 	PCI_BASE_TIMER,
 	PCI_BASE_RTC,
 	PCI_BASE_PCI_HOTPLUG,
+	PCI_BASE_SDHCI,
 	PCI_BASE_OTHER = 0x80
 } pci_base_subclasses;
 

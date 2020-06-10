@@ -99,13 +99,7 @@ static char sccsid[] = "@(#)portmap.c 1.32 87/08/06 Copyr 1984 Sun Micro";
 #include <stdlib.h>
 #include <pwd.h>
 
-#ifndef LOG_PERROR
-#define LOG_PERROR 0
-#endif
-
-#ifndef LOG_DAEMON
-#define LOG_DAEMON 0
-#endif
+#include "config.h"
 
 /* Older SYSV. */
 #if !defined(SIGCHLD) && defined(SIGCLD)
@@ -149,13 +143,10 @@ static int on = 1;
 #endif
 #endif
 
-#ifdef DAEMON_UID
+int daemon_port = PMAPPORT;
 int daemon_uid = DAEMON_UID;
 int daemon_gid = DAEMON_GID;
-#else
-int daemon_uid = 1;
-int daemon_gid = 1;
-#endif
+const char* mapping_file = PORTMAP_MAPPING_FILE;
 
 /*
  * We record with each registration a flag telling whether it was
@@ -168,6 +159,38 @@ struct flagged_pml {
 	struct pmaplist pml;
 	int priv;
 };
+
+static inline int __getuid(const char* username)
+{
+	struct passwd* pw = getpwnam(username);
+
+	if (!pw)
+		return 0;
+
+	daemon_uid = pw->pw_uid;
+	daemon_gid = pw->pw_gid;
+	return 1;
+}
+
+static void usage(char *progname)
+{
+	fprintf(stderr,	"usage: %s [-dfFlv] [-t dir] [-i address] "
+			"[-u uid] [-g gid] [-U username] \n",
+		progname);
+	fprintf(stderr, "-v             verbose logging\n");
+	fprintf(stderr, "-d             debugging mode\n");
+	fprintf(stderr,	"-f             don't daemonize, log to standard error\n");
+	fprintf(stderr, "-F             don't daemonize, log as usual\n");
+	fprintf(stderr, "-t <dir>       chroot into dir\n");
+	fprintf(stderr, "-i <address>   bind to address\n");
+	fprintf(stderr, "-l             same as -i 127.0.0.1\n");
+	fprintf(stderr, "-u <uid>       run as this uid (default: %d)\n", DAEMON_UID);
+	fprintf(stderr, "-g <uid>       run as this gid (default: %d)\n", DAEMON_GID);
+	fprintf(stderr, "-p <port>      run on nonstandard port (default: %d)\n", daemon_port);
+	fprintf(stderr, "-U <username>  suid/sgid to this user\n");
+	fprintf(stderr, "-m <mapfile>   specify the mapping file name "
+					"(default: "PORTMAP_MAPPING_FILE")\n");
+}
 
 int
 main(int argc, char **argv)
@@ -184,13 +207,28 @@ main(int argc, char **argv)
 	int foreground = 0;
 	int have_uid = 0;
 
-	while ((c = getopt(argc, argv, "Vdflt:vi:u:g:")) != EOF) {
+	while ((c = getopt(argc, argv, "hVdfFlt:vi:u:U:g:m:p:")) != EOF) {
 		switch (c) {
 
 		case 'V':
-			printf("portmap version 6.0 - 2007-May-11\n");
+			printf("portmap version 6.0.0.1 - 2008-05-10\n");
 			exit(1);
 
+		case 'm':
+			mapping_file = optarg;
+			break;
+
+		case 'U':
+			/* try to fetch user-given uid/gid by name */
+			if (!__getuid(optarg))
+			{
+				fprintf(stderr,
+					"portmap: illegal username: \"%s\"\n",
+					optarg);
+				exit(1);
+			}
+			have_uid = 1;
+			break;
 		case 'u':
 			daemon_uid = atoi(optarg);
 			if (daemon_uid <= 0) {
@@ -214,6 +252,10 @@ main(int argc, char **argv)
 		case 'f':
 			foreground = 1;
 			break;
+		case 'F':
+			/* run in foreground, but still log as usual */
+			foreground = 2;
+			break;
 
 		case 't':
 			chroot_path = optarg;
@@ -224,25 +266,17 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			optarg = "127.0.0.1";
+			optarg = (char*)"127.0.0.1";
 			/* FALL THROUGH */
 		case 'i':
 			have_bindaddr = inet_aton(optarg, &bindaddr);
 			break;
+		case 'p':
+			daemon_port = atoi(optarg);
+			break;
+		case 'h':
 		default:
-			fprintf(stderr,
-				"usage: %s [-dflv] [-t dir] [-i address] "
-				"[-u uid] [-g gid]\n",
-				argv[0]);
-			fprintf(stderr, "-d: debugging mode\n");
-			fprintf(stderr,
-				"-f: don't daemonize, log to standard error\n");
-			fprintf(stderr, "-t dir: chroot into dir\n");
-			fprintf(stderr, "-v: verbose logging\n");
-			fprintf(stderr, "-i address: bind to address\n");
-			fprintf(stderr, "-l: same as -i 127.0.0.1\n");
-			fprintf(stderr, "-u uid : setuid to this uid\n");
-			fprintf(stderr, "-g uid : setgid to this gid\n");
+			usage(argv[0]);
 			exit(1);
 		}
 	}
@@ -253,20 +287,17 @@ main(int argc, char **argv)
 	}
 
 #ifdef LOG_DAEMON
-	openlog("portmap", LOG_PID|LOG_NDELAY | ( foreground ? LOG_PERROR : 0),
-	    FACILITY);
+	openlog("portmap",
+		LOG_PID|LOG_NDELAY | ( (foreground==1) ? LOG_PERROR : 0),
+		FACILITY);
 #else
-	openlog("portmap", LOG_PID|LOG_NDELAY | ( foreground ? LOG_PERROR : 0));
+	openlog("portmap",
+		LOG_PID|LOG_NDELAY | ( (foreground==1) ? LOG_PERROR : 0));
 #endif
 
 #ifdef RPCUSER
 	if (!have_uid) {
-		struct passwd *pwent;
-		pwent = getpwnam(RPCUSER);
-		if (pwent) {
-			daemon_uid = pwent->pw_uid;
-			daemon_gid = pwent->pw_gid;
-		} else
+		if (!__getuid(RPCUSER))
 			syslog(LOG_WARNING, "user '" RPCUSER
 			       "' not found, reverting to default uid");
 	}
@@ -283,7 +314,7 @@ main(int argc, char **argv)
 	memset((char *) &addr, 0, sizeof(addr));
 	addr.sin_addr.s_addr = 0;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PMAPPORT);
+	addr.sin_port = htons(daemon_port);
 	if (have_bindaddr)
 		memcpy(&addr.sin_addr, &bindaddr, sizeof(bindaddr));
 
@@ -304,7 +335,7 @@ main(int argc, char **argv)
 	pml->pml_map.pm_prog = PMAPPROG;
 	pml->pml_map.pm_vers = PMAPVERS;
 	pml->pml_map.pm_prot = IPPROTO_UDP;
-	pml->pml_map.pm_port = PMAPPORT;
+	pml->pml_map.pm_port = daemon_port;
 	pmaplist = pml;
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -330,7 +361,7 @@ main(int argc, char **argv)
 	pml->pml_map.pm_prog = PMAPPROG;
 	pml->pml_map.pm_vers = PMAPVERS;
 	pml->pml_map.pm_prot = IPPROTO_TCP;
-	pml->pml_map.pm_port = PMAPPORT;
+	pml->pml_map.pm_port = daemon_port;
 	pml->pml_next = pmaplist;
 	pmaplist = pml;
 
@@ -369,7 +400,7 @@ main(int argc, char **argv)
 
 	(void)svc_register(xprt, PMAPPROG, PMAPVERS, reg_service, FALSE);
 
-	store_fd = open("/var/run/portmap_mapping", O_RDWR|O_CREAT, 0600);
+	store_fd = open(mapping_file, O_RDWR|O_CREAT, PORTMAP_MAPPING_FMODE);
 	load_table();
 
 	/* additional initializations */
@@ -391,12 +422,14 @@ main(int argc, char **argv)
 	abort();
 }
 
+#ifndef NO_PERROR
 /* need to override perror calls in rpc library */
 void perror(const char *what)
 {
 
 	syslog(LOG_ERR, "%s: %m", what);
 }
+#endif
 
 static struct pmaplist *
 find_service(u_long prog, u_long vers, u_long prot)
@@ -535,17 +568,14 @@ static void reg_service(struct svc_req *rqstp, SVCXPRT *xprt)
 				if (!check_privileged_port(svc_getcaller(xprt), 
 				    rqstp->rq_proc, 
 				    reg.pm_prog, 
-				    pml->pml_map.pm_port)) {
-					ans = 0;
-					break;
-				}
+				    pml->pml_map.pm_port))
+					continue;
+
 				fpml = (struct flagged_pml*)pml;
 				if (fpml->priv &&
 				    (ntohs(svc_getcaller(xprt)->sin_port)
-				     >= IPPORT_RESERVED)) {
-					ans = 0;
-					break;
-				}
+				     >= IPPORT_RESERVED))
+					continue;
 
 				ans = 1;
 				t = (caddr_t)pml;
@@ -753,6 +783,7 @@ static void callit(struct svc_req *rqstp, SVCXPRT *xprt)
 	if ((pml = find_service(a.rmt_prog, a.rmt_vers,
 	    (u_long)IPPROTO_UDP)) == NULL)
 		return;
+#ifndef NO_FORK
 	/*
 	 * fork a child to do the work.  Parent immediately returns.
 	 * Child exits upon completion.
@@ -763,6 +794,7 @@ static void callit(struct svc_req *rqstp, SVCXPRT *xprt)
 			    a.rmt_prog);
 		return;
 	}
+#endif
 	port = pml->pml_map.pm_port;
 	get_myaddress(&me);
 	me.sin_port = htons(port);
@@ -783,7 +815,9 @@ static void callit(struct svc_req *rqstp, SVCXPRT *xprt)
 		clnt_destroy(client);
 	}
 	(void)close(so);
+#ifndef NO_FORK
 	exit(0);
+#endif
 }
 
 #ifndef IGNORE_SIGCHLD			/* Lionel Cons <cons@dxcern.cern.ch> */
@@ -834,7 +868,7 @@ static void load_table(void)
 	struct flagged_pml fpml, *fpmlp;
 
 	ep = &pmaplist;
-	while ((*ep)->pml_next)
+	while (*ep)
 		ep = & (*ep)->pml_next;
 
 	if (store_fd < 0)
@@ -850,7 +884,7 @@ static void load_table(void)
 		      &fpml.pml.pml_map.pm_prot,
 		      &fpml.pml.pml_map.pm_port,
 		      &fpml.priv) == 5) {
-		if (fpml.pml.pml_map.pm_port == PMAPPORT)
+		if (fpml.pml.pml_map.pm_port == daemon_port)
 			continue;
 		fpmlp = malloc(sizeof(struct flagged_pml));
 		if (!fpmlp)

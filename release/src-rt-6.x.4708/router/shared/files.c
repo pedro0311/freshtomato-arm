@@ -83,7 +83,7 @@ static int _f_read_alloc(const char *path, char **buffer, int max, int z)
 	*buffer = NULL;
 	if (max >= 0) {
 		if ((n = f_size(path)) != (unsigned long)-1) {
-			if (n < max) max = n;
+			if (n < (unsigned int) max) max = n;
 			if ((!z) && (max == 0)) return 0;
 			if ((*buffer = malloc(max + z)) != NULL) {
 				if ((max = f_read(path, *buffer, max)) >= 0) {

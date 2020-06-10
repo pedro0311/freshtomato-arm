@@ -83,7 +83,8 @@ int
 get_spoof_mac(const char *osifname, char *mac, int maclen)
 {
 	char nvifname[16];
-	int i, unit, subunit;
+	unsigned int i;
+	int unit, subunit;
 	wlif_name_desc_t *wlif_name;
 
 	if (osifname == NULL ||
@@ -142,7 +143,7 @@ get_spoof_ifname(char *mac, char *osifname, int osifnamelen)
 	idx --; /* map to wlif_name_array index */
 	unit = mac[4];
 	subunit = mac[5];
-	if (idx < 0 || idx >= ARRAYSIZE(wlif_name_array))
+	if (idx < 0 || (unsigned int) idx >= ARRAYSIZE(wlif_name_array))
 		return -1;
 
 	/* get nvname format */
@@ -179,7 +180,7 @@ get_real_mac(char *mac, int maclen)
 	idx --; /* map to wlif_name_array index */
 	unit = mac[4];
 	subunit = mac[5];
-	if (idx < 0 || idx >= ARRAYSIZE(wlif_name_array))
+	if (idx < 0 || (unsigned int) idx >= ARRAYSIZE(wlif_name_array))
 		return -1;
 
 	/* get wlx.y mac addr */
@@ -597,7 +598,8 @@ get_wsec(wsec_info_t *info, unsigned char *mac, char *osifname)
 	value = nvram_safe_get(strcat_r(wl_prefix, "nas_dbg", comb));
 	info->debug = (int)strtoul(value, NULL, 0);
 
-
+	/* get mfp setting */
+	info->mfp = atoi(nvram_safe_get(strcat_r(wl_prefix, "mfp", comb)));
 
 	return WLIFU_WSEC_SUCCESS;
 }

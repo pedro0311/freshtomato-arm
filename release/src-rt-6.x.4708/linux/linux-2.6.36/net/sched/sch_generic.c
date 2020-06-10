@@ -584,6 +584,9 @@ struct Qdisc * qdisc_create_dflt(struct net_device *dev,
 {
 	struct Qdisc *sch;
 
+	if (!try_module_get(ops->owner))
+		goto errout;
+
 	sch = qdisc_alloc(dev_queue, ops);
 	if (IS_ERR(sch))
 		goto errout;
@@ -686,7 +689,7 @@ static void attach_one_default_qdisc(struct net_device *dev,
 
 	if (dev->tx_queue_len) {
 		qdisc = qdisc_create_dflt(dev, dev_queue,
-					  &pfifo_fast_ops, TC_H_ROOT);
+					  default_qdisc_ops, TC_H_ROOT);
 		if (!qdisc) {
 			printk(KERN_INFO "%s: activation failed\n", dev->name);
 			return;
@@ -742,9 +745,8 @@ void dev_activate(struct net_device *dev)
 	int need_watchdog;
 
 	/* No queueing discipline is attached to device;
-	   create default one i.e. pfifo_fast for devices,
-	   which need queueing and noqueue_qdisc for
-	   virtual interfaces
+	 * create default one for devices, which need queueing
+	 * and noqueue_qdisc for virtual interfaces
 	 */
 
 	if (dev->qdisc == &noop_qdisc)

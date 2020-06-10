@@ -59,6 +59,14 @@
 #include <cfe_devfuncs.h>
 #include <cfe_ioctl.h>
 
+#ifdef RTL8365MB
+#include <rtk_switch.h>
+#include <smi.h>
+#include <vlan.h>
+#include <port.h>
+#include <rtk_types.h>
+#include <rtl8367c_asicdrv_port.h>
+#endif
 #define MAX_WAIT_TIME 20	/* seconds to wait for boot image */
 #define MIN_WAIT_TIME 1 	/* seconds to wait for boot image */
 
@@ -156,7 +164,7 @@ reset_release_wait(void)
 int
 BCMINITFN(nvram_wsgpio_init)(void *si)
 {
-#ifdef RTAC68U
+#if defined(RTAC68U) || defined(DSLAC68U)
 	int gpio = 5;
 #else
 	int gpio = 7;
@@ -186,7 +194,7 @@ detect_turbo_button(void)
 
 	/* active low */
 	gpiomask = (uint32)1 << gpio;
-#ifdef RTAC68U	// active high
+#if defined(RTAC68U) || defined(DSLAC68U)	// active high
 	if ((si_gpioin(sih) & gpiomask))
 #else
 	if (!(si_gpioin(sih) & gpiomask))
@@ -418,6 +426,7 @@ flash_nflash_init(void)
 	int need_commit = 0;
 #endif
 
+printf("*** flash_nflash_init ***\n");
 	memset(&fprobe, 0, sizeof(fprobe));
 
 	nfl_info = hndnand_init(sih);
@@ -507,7 +516,7 @@ flash_init(void)
 
 	bootdev = soc_boot_dev((void *)sih);
 
-        if(nvram_match("nospare", "1"))
+        if(!nvram_match("nospare", "0"))
                 nospare = 1;
         else
                 nospare = 0;
@@ -571,7 +580,6 @@ flash_init(void)
 			bootsz = 128 * 1024;
 	}
 	printf("Boot partition size = %d(0x%x)\n", bootsz, bootsz);
-
 #if CFG_NFLASH
 	if (nfl_info) {
 		fl_size_t flash_size = 0;
@@ -634,6 +642,12 @@ flash_init(void)
 		}
 #endif
 		flash_size = get_flash_size("nflash0") - nfl_boot_os_size(nfl_info);
+#ifdef DUAL_TRX
+                fprobe.flash_parts[j].fp_size = NFL_BOOT_OS_SIZE;
+                fprobe.flash_parts[j++].fp_name = "trx2";
+		flash_size -= NFL_BOOT_OS_SIZE;
+#endif
+
 		if (flash_size > 0) {
 			fprobe.flash_parts[j].fp_size = flash_size;
 			fprobe.flash_parts[j++].fp_name = "brcmnand";
@@ -791,11 +805,14 @@ board_device_init(void)
 	for (unit = 0; unit < SI_MAXCORES; unit++) {
 #if CFG_ET
 		if ((regs = si_setcore(sih, ENET_CORE_ID, unit)))
+		{
 			cfe_add_device(&bcmet, BCM47XX_ENET_ID, unit, regs);
-
+		}
 #if CFG_GMAC
 		if ((regs = si_setcore(sih, GMAC_CORE_ID, unit)))
+		{
 			cfe_add_device(&bcmet, BCM47XX_GMAC_ID, unit, regs);
+		}
 #endif
 #endif /* CFG_ET */
 #if CFG_WL
@@ -828,6 +845,8 @@ void
 board_device_reset(void)
 {
 }
+
+extern void GPIO_INIT(void);
 
 /*
  *  board_final_init()
@@ -888,6 +907,58 @@ board_final_init(void)
 		nvram_set("nvram_space", buf);
 		commit = 1;
 	}
+
+#ifdef RTL8365MB
+	int ret = -1, retry = 0;
+	rtk_port_mac_ability_t pa;
+
+	GPIO_INIT();
+	for(retry = 0; ret && retry < 10; ++retry)
+	{
+		ret = rtk_switch_init();
+		if(ret) cfe_usleep(10000);
+		else break;
+	}
+	printf("rtl8354mb initialized(%d)(retry %d) %s\n", ret, retry, ret?"failed":"");
+
+        ret = rtk_port_phyEnableAll_set(1);
+        if(ret)	printf("rtk port_phyEnableAll Failed!(%d)\n", ret);
+	else printf("rtk port_phyEnableAll ok\n");
+
+        /* configure & set GMAC ports */
+        pa.forcemode       = MAC_FORCE;
+        pa.speed           = SPD_1000M;
+        pa.duplex          = FULL_DUPLEX;
+        pa.link            = 1;
+        pa.nway            = 0;
+        pa.rxpause         = 0;
+        pa.txpause         = 0;
+
+        ret = rtk_port_macForceLinkExt_set(EXT_PORT0, MODE_EXT_RGMII, &pa);
+        if(ret)	printf("rtk port_macForceLink_set ext_Port0 Failed!(%d)\n", ret);
+	else printf("rtk port_macForceLink_set ext_Port0 ok\n");	
+
+        /* asic chk */
+        rtk_uint32 retVal, retVal2;
+        rtk_uint32 data, data2;
+        if((retVal = rtl8367c_getAsicReg(0x1311, &data)) != RT_ERR_OK || (retVal2 = rtl8367c_getAsicReg(0x1305, &data2)) != RT_ERR_OK) {
+                printf("get failed(%d)(%d). (%x)(supposed to be 0x1016)\n", retVal, retVal2, data);
+        }
+        else {      /* get ok, then chk reg*/
+                printf("get ok, chk 0x1311:%x(0x1016), 0x1305:%x(b4~b7:0x1)\n", data, data2);
+                if(data != 0x1016){
+                        printf("\n!! rtl reg 0x1311 error: (%d)(get %x)\n", retVal, data);
+                }
+                if((data2 & 0xf0) != 0x10) {
+                        printf("\n!! rtl reg 0x1305 error: (%d)(get %x)\n", retVal, data2);
+                }
+        }
+
+        /* reset tx/rx delay */
+        retVal = rtk_port_rgmiiDelayExt_set(EXT_PORT0, 1, 4);
+        if (retVal != RT_ERR_OK)
+                printf("\n!! rtl set delay failed (%d)\n", retVal);
+#endif
 
 #if CFG_FLASH || CFG_SFLASH || CFG_NFLASH
 #if !CFG_SIM

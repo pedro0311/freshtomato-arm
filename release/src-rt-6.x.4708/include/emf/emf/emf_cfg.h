@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2013, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: emf_cfg.h 390729 2013-03-13 11:22:14Z $
+ * $Id: emf_cfg.h 527353 2015-01-17 01:00:08Z $
  */
 
 #ifndef _EMF_CFG_H_
@@ -37,6 +37,7 @@
 #define EMFCFG_CMD_RTPORT_LIST      17
 #define EMFCFG_CMD_EMF_STATS        18
 #define EMFCFG_CMD_MC_DATA_IND      19
+#define EMFCFG_CMD_LOG_LEVEL        20
 
 #define EMFCFG_OPER_TYPE_GET        1
 #define EMFCFG_OPER_TYPE_SET        2

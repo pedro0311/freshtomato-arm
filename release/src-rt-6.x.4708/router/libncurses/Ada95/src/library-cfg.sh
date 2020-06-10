@@ -1,6 +1,7 @@
 #!/bin/sh
 ##############################################################################
-# Copyright (c) 2016,2018 Free Software Foundation, Inc.                     #
+# Copyright 2018-2019,2020 Thomas E. Dickey                                  #
+# Copyright 2016,2018 Free Software Foundation, Inc.                         #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -27,7 +28,7 @@
 # authorization.                                                             #
 ##############################################################################
 #
-# $Id: library-cfg.sh,v 1.3 2018/01/15 14:32:47 tom Exp $
+# $Id: library-cfg.sh,v 1.7 2020/02/02 23:34:34 tom Exp $
 #
 # Work around incompatible behavior introduced with gnat6, which causes
 # gnatmake to attempt to compile all of the C objects which might be part of
@@ -40,17 +41,33 @@ shift 1
 param=
 while test $# != 0
 do
-	test -n "$param" && param="$param,"
-	param="$param\"$1\""
+	case "x$1" in
+	*-[OgDIWf]*)
+		test -n "$param" && param="$param,"
+		param="$param\"$1\""
+		;;
+	*)
+		echo "${0##*/}: ignored option $1" >&2
+		;;
+	esac
 	shift 1
 done
 
 SHARE="-- "
 test "x$model" = "xdynamic" && SHARE=
 
-sed \
-	-e '/for Library_Options use /s,-- ,'"$SHARE"',' \
-	-e '/for Default_Switches ("C") use/s,-- ,,' \
-	-e '/for Default_Switches ("C") use/s% use .*'%" use($param);"% \
-	$input
-exit 0
+SCRIPT=library-cfg.tmp
+cat >$SCRIPT <<EOF
+/for Library_Options use /{
+	s,-- ,$SHARE,
+}
+/for Default_Switches ("C") use/{
+	s,-- ,,
+	s% use .*% use($param);%
+}
+EOF
+
+sed -f $SCRIPT $input
+rc=$?
+rm -f $SCRIPT
+exit $?

@@ -2,7 +2,7 @@
  * Misc utility routines for accessing chip-specific features
  * of the SiliconBackplane-based Broadcom chips.
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -741,7 +741,7 @@ sb_addrspacesize(si_t *sih, uint asidx)
 	return (sb_size(R_SBREG(sii, sb_admatch(sii, asidx))));
 }
 
-#if defined(BCMDBG_ERR) || defined(BCMASSERT_SUPPORT)
+#if defined(BCMDBG) || defined(BCMASSERT_SUPPORT)
 /* traverse all cores to find and clear source of serror */
 static void
 sb_serr_clear(si_info_t *sii)

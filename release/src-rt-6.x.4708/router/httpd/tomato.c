@@ -822,9 +822,6 @@ static const nvset_t nvset_list[] = {
 	{ "wl_channel",			V_RANGE(0, 216)			},
 
 	{ "wl_vifs",			V_LENGTH(0, 64)			},	// multiple/virtual BSSIDs
-#ifndef LINUX26
-	{ "nas_alternate",		V_01				},	// only meaningful for ND/K24 builds
-#endif
 
 	{ "wl_security_mode",		V_LENGTH(1, 32)			},	// disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise
 	{ "wl_radius_ipaddr",		V_IP				},
@@ -1052,7 +1049,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
-	{ "wl_country",			V_LENGTH(0, 64)			},	// !!TB - Country code
 	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
@@ -1079,12 +1075,21 @@ static const nvset_t nvset_list[] = {
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
 	{ "wl_reg_mode",		V_LENGTH(1, 3)			},	// !!TB - Regulatory: off, h, d
-	{ "wl_mitigation",		V_RANGE(0, 4)			},	// Interference Mitigation Mode (0|1|2|3|4)
-
+	{ "wl_mitigation",		V_RANGE(0, 4)			},	// NON-AC Interference Mitigation Mode (0|1|2|3|4)
+#ifdef CONFIG_BCMWL6
+	{ "wl_mitigation_ac",		V_RANGE(0, 7)			},	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7)
+#endif
 	{ "wl_nmode_protection",	V_WORD,				},	// off, auto
 	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
 	{ "wl_obss_coex",		V_01				},
-	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
+#ifdef TCONFIG_EMF
+	{ "wl_igs",			V_01				},	/* BCM: sync with wl_wmf_bss_enable */
+	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
+	{ "wl_wmf_ucigmp_query",	V_01				},	/* Disable Converting IGMP Query to ucast (default) */
+	{ "wl_wmf_mdata_sendup",	V_01				},	/* Disable Sending Multicast Data to host (default) */
+	{ "wl_wmf_ucast_upnp",		V_01				},	/* Disable Converting upnp to ucast (default) */
+	{ "wl_wmf_igmpq_filter",	V_01				},	/* Disable igmp query filter */
+#endif
 	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
 	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
 	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)

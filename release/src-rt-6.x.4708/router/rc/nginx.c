@@ -154,7 +154,7 @@ int build_mime_types(void)
 int build_nginx_conf(void)
 {
 	char *buf;	/* default param buffer */
-	unsigned int i;	/* integer cast */
+	int i;		/* integer cast */
 
 	/* Starting the nginx configuration file */
 	mkdir_if_none(nginxdir);

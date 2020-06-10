@@ -1,7 +1,7 @@
 /*
  * Linux Broadcom BCM47xx GPIO char driver
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,5 +35,7 @@ struct gpio_ioctl {
 #define  GPIO_IOC_OUT		_IOWR(GPIO_IOC_MAGIC, 3, struct gpio_ioctl)
 #define  GPIO_IOC_IN		_IOWR(GPIO_IOC_MAGIC, 4, struct gpio_ioctl)
 #define  GPIO_IOC_OUTEN		_IOWR(GPIO_IOC_MAGIC, 5, struct gpio_ioctl)
+
+uint32 _gpio_ctrl(unsigned int cmd, uint32 mask, uint32 val);
 
 #endif	/* _linux_gpio_h_ */

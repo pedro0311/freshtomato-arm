@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) #-mips32
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare #-mips32
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared
 LDFLAGS	=
 

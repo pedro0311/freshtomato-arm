@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2016,2017 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -33,13 +34,18 @@
  ****************************************************************************/
 
 /*
- * $Id: dump_entry.h,v 1.40 2017/04/05 22:33:07 tom Exp $
+ * $Id: dump_entry.h,v 1.42 2020/02/02 23:34:34 tom Exp $
  *
  * Dump control definitions and variables
  */
 
 #ifndef DUMP_ENTRY_H
 #define DUMP_ENTRY_H 1
+
+#define NCURSES_OPAQUE    0
+#define NCURSES_INTERNALS 1
+#include <curses.h>
+#include <term.h>
 
 /* capability output formats */
 #define F_TERMINFO	0	/* use terminfo names */

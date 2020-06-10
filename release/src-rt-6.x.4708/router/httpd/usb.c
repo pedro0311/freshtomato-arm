@@ -129,7 +129,7 @@ void asp_usbdevices(int argc, char **argv)
 {
 	DIR *usb_dir;
 	struct dirent *dp;
-	uint host_no;
+	int host_no;
 	int last_hn = -1;
 	char *p, *p1;
 	int i = 0, mounted;

@@ -184,6 +184,28 @@ enum {
 	SKBTX_DRV_NEEDS_SK_REF = 1 << 3,
 };
 
+/**
+ * struct skb_shared_tx - instructions for time stamping of outgoing packets
+ * @hardware:		generate hardware time stamp
+ * @software:		generate software time stamp
+ * @in_progress:	device driver is going to provide
+ *			hardware time stamp
+ * @prevent_sk_orphan:	make sk reference available on driver level
+ * @flags:		all shared_tx flags
+ *
+ * These flags are attached to packets as part of the
+ * &skb_shared_info. Use skb_tx() to get a pointer.
+ */
+union skb_shared_tx {
+	struct {
+		__u8	hardware:1,
+			software:1,
+			in_progress:1,
+			prevent_sk_orphan:1;
+	};
+	__u8 flags;
+};
+
 /* This data is invariant across clones and lives at
  * the end of the header data, ie. at skb->end.
  */
@@ -194,7 +216,7 @@ struct skb_shared_info {
 	unsigned short	gso_segs;
 	unsigned short  gso_type;
 	__be32          ip6_frag_id;
-	__u8		tx_flags;
+	union skb_shared_tx tx_flags;
 	struct sk_buff	*frag_list;
 	struct skb_shared_hwtstamps hwtstamps;
 
@@ -352,6 +374,9 @@ struct sk_buff {
 #endif /* BCMDBG_CTRACE */
 #if defined(HNDCTF) || defined(CTFPOOL)
 	__u32			pktc_flags;
+#endif
+#ifdef HNDCTF
+	void			*ctf_ipc_txif;
 #endif
 #ifdef BCMFA
 #define BCM_FA_INVALID_IDX_VAL	0xFFF00000
@@ -614,6 +639,11 @@ static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 static inline struct skb_shared_hwtstamps *skb_hwtstamps(struct sk_buff *skb)
 {
 	return &skb_shinfo(skb)->hwtstamps;
+}
+
+static inline union skb_shared_tx *skb_tx(struct sk_buff *skb)
+{
+	return &skb_shinfo(skb)->tx_flags;
 }
 
 /**
@@ -1206,6 +1236,15 @@ static inline unsigned char *__skb_put(struct sk_buff *skb, unsigned int len)
 	return tmp;
 }
 
+static inline void *skb_put_zero(struct sk_buff *skb, unsigned int len)
+{
+	void *tmp = skb_put(skb, len);
+
+	memset(tmp, 0, len);
+
+	return tmp;
+}
+
 extern unsigned char *skb_push(struct sk_buff *skb, unsigned int len);
 static inline unsigned char *__skb_push(struct sk_buff *skb, unsigned int len)
 {
@@ -1467,7 +1506,12 @@ static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
  * NET_IP_ALIGN(2) + ethernet_header(14) + IP_header(20/40) + ports(8)
  */
 #ifndef NET_SKB_PAD
+#if defined(CONFIG_PPTP) || defined(CONFIG_PPTP_MODULE) || \
+    defined(CONFIG_L2TP) || defined(CONFIG_L2TP_MODULE)
+#define NET_SKB_PAD	max(64, L1_CACHE_BYTES)
+#else
 #define NET_SKB_PAD	max(32, L1_CACHE_BYTES)
+#endif
 #endif
 
 extern int ___pskb_trim(struct sk_buff *skb, unsigned int len);
@@ -2053,8 +2097,8 @@ extern void skb_tstamp_tx(struct sk_buff *orig_skb,
 
 static inline void sw_tx_timestamp(struct sk_buff *skb)
 {
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP &&
-	    !(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS))
+	union skb_shared_tx *shtx = skb_tx(skb);
+	if (shtx->software && !shtx->in_progress)
 		skb_tstamp_tx(skb, NULL);
 }
 

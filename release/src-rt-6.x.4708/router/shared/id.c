@@ -34,12 +34,17 @@ TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 RT-N18U				BCM47081A0            0x0646       00        0x1100    0x00000110
 RT-AC56U			BCM4708               0x0646	   00	     0x1100    0x00000110
 RT-AC68U			BCM4708               0x0646       <MAC>     0x1100    0x00001000
+RT-AC68U C1			BCM4709C0             0x0646       <MAC>     0x1103    0x00001000
 RT-AC68P			BCM4709               0x0665       <MAC>     0x1103    0x00001000
-
+RT-AC66U_B1			BCM4708C0   	      0x0646       00        0x1103    0x00000110
+RT-AC1900P			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC1900P
+RT-AC68U B2			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC68U
 R7000				BCM4709               0x0665       32        0x1301    0x1000
 R6250				BCM4708               0x0646       679       0x1110 // same as R6300v2 well we use the same MODEL definition
 R6300v2				BCM4708               0x0646       679       0x1110 // CH/Charter version has the same signature
 R6400				BCM4708               0x0646       32        0x1601
+R6400v2				BCM4708C0             0x0646       32        0x1601
+R6700v3				BCM4708C0             0x0646       32        0x1601 // same as R6400v2
 
 DIR-868L			BCM4708               0x0646       24        0x1110
 DIR-868LC1			BCM4708               0x0646       24        0x1101 //same as rev a/b but different boardrev
@@ -58,11 +63,12 @@ int check_hw_type(void)
 
 	switch (strtoul(s, NULL, 0)) {
 #ifdef CONFIG_BCMWL6A
-	case 0x0646:	/* EA6400, R6400 */
+	case 0x0646:	/* EA6400, R6400, R6400v2, R6700v3 */
 	case 0x0665:	/* R7000, R1D */
 	case 0xf646:	/* EA6700, WZR-1750 */
 	case 0xd646:	/* EA6900 */
 	case 0xe646:	/* EA6200, EA6350v1 */
+	case 0x072f:	/* RT-AC1900P, RT-AC68U B2 */
 		return HW_BCM4708; /* and also for 4709 right now!  */
 #endif /* CONFIG_BCMWL6A */
 	}
@@ -83,13 +89,19 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("model", "R1D"))) return MODEL_R1D;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-N18U"))) return MODEL_RTN18U;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC56U"))) return MODEL_RTAC56U;
+	    	if (nvram_match("odmpid", "RT-AC1900P")) return MODEL_RTAC1900P;
+		if ((nvram_match("boardrev", "0x1500")) && (nvram_match("odmpid", "RT-AC68U"))) return MODEL_RTAC1900P; /* RT-AC68U B2 --> (almost) the same like RT-AC1900P */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68R/U */
-		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68P/U B1 */
+		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC66U_B1"))) return MODEL_RTAC66U_B1; /* RT-AC66U_B1 */
+		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68P/U B1 OR RT-AC68U C1 */
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H245T00_NETGEAR"))) return MODEL_R6250;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H240T00_NETGEAR"))) return MODEL_R6300v2;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "679")) && (nvram_match("board_id", "U12H240T70_NETGEAR"))) return MODEL_R6300v2;
-		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32"))) return MODEL_R6400;
-		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("boardnum", "32"))) return MODEL_R7000;
+		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T00_NETGEAR"))) return MODEL_R6400;
+		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T20_NETGEAR"))) return MODEL_R6400v2;
+		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T30_NETGEAR"))) return MODEL_R6400v2;
+		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T77_NETGEAR"))) return MODEL_R6700v3;
+		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H270T00_NETGEAR"))) return MODEL_R7000;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;  /* rev c --> almost the same like rev a/b but different boardrev */
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "1234"))) return MODEL_WS880;

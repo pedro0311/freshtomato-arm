@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS)
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared
 LDFLAGS	=
 LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared

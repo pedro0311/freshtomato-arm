@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2003-2014,2017 Free Software Foundation, Inc.              *
+ * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2003-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -26,7 +27,7 @@
  * authorization.                                                           *
  ****************************************************************************/
 /*
- * $Id: edit_field.c,v 1.28 2017/06/24 23:10:08 tom Exp $
+ * $Id: edit_field.c,v 1.31 2020/02/02 23:34:34 tom Exp $
  *
  * A wrapper for form_driver() which keeps track of the user's editing changes
  * for each field, and makes the resulting length available as a
@@ -192,7 +193,7 @@ help_edit_field(void)
 	    name = commands[n].help;
 	need = 5 + strlen(code) + strlen(name);
 	msg = typeMalloc(char, need);
-	sprintf(msg, "%s -- %s", code, name);
+	_nc_SPRINTF(msg, _nc_SLIMIT(need) "%s -- %s", code, name);
 	msgs[used++] = msg;
     }
     msgs[used++] =
@@ -212,7 +213,7 @@ offset_in_field(FORM *form)
     int currow, curcol;
 
     form_getyx(form, currow, curcol);
-    return curcol + currow * field->dcols;
+    return curcol + currow * (int) field->dcols;
 }
 
 static void
@@ -325,12 +326,12 @@ edit_field(FORM *form, int *result)
 		if (before_col > 0) {
 		    --length;
 		} else if (before_row > 0) {
-		    length -= before->cols + before_col;
+		    length -= (int) before->cols + before_col;
 		}
 	    }
 	    break;
 	case REQ_NEW_LINE:
-	    length += before->cols;
+	    length += (int) before->cols;
 	    break;
 #if 0
 	    /* FIXME: finish these */

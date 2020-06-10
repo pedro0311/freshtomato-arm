@@ -159,7 +159,7 @@ char *filter_space(char *str)
 
 char* format_port(char *str)
 {
-	int i;
+	unsigned int i;
 
 	filter_space(str);
 	for (i = 0; i < strlen(str); i ++)

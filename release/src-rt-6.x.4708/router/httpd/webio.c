@@ -160,7 +160,7 @@ int web_eat(int max)
 	char buf[512];
 	int n;
 	while (max > 0) {
-		 if ((n = web_read(buf, (max < sizeof(buf)) ? max : sizeof(buf))) <= 0) return 0;
+		 if ((n = web_read(buf, (max < sizeof(buf)) ? (unsigned int) max : sizeof(buf))) <= 0) return 0;
 		 max -= n;
 	}
 	return 1;

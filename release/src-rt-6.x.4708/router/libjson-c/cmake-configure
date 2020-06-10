@@ -52,6 +52,9 @@ while [ $# -gt 0 ] ; do
 		FLAGS+=(-DCMAKE_INSTALL_PREFIX="$2")
 		shift
 		;;
+	--prefix=*)
+		FLAGS+=(-DCMAKE_INSTALL_PREFIX="${1##--prefix=}")
+		;;
 	--enable-threading)
 		FLAGS+=(-DENABLE_THREADING=ON)
 		;;
@@ -62,7 +65,7 @@ while [ $# -gt 0 ] ; do
 		FLAGS+=(-DBUILD_SHARED_LIBS=ON)
 		;;
 	--enable-static)
-		FLAGS+=(-DBUILD_SHARED_LIBS=OFF)
+		FLAGS+=(-DBUILD_STATIC_LIBS=ON)
 		;;
 	--disable-Bsymbolic)
 		FLAGS+=(-DDISABLE_BSYMBOLIC=ON)

@@ -14,7 +14,9 @@
 
 #include "tomato.h"
 
+#ifndef __USE_GNU
 #define __USE_GNU
+#endif
 #include <search.h>
 
 

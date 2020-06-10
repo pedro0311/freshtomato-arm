@@ -7,6 +7,7 @@
 * Functions for opening a raw socket and reading/writing raw Ethernet frames.
 *
 * Copyright (C) 2000-2012 by Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -325,7 +326,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     }
 
     /* Check that the interface is up */
-    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
 	fatalSys("ioctl(SIOCGIFFLAGS)");
     }
@@ -344,7 +345,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
 
     /* Sanity check on MTU -- apparently does not work on OpenBSD */
 #if !defined(__OpenBSD__)
-    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
 	fatalSys("ioctl(SIOCGIFMTU)");
     }
@@ -389,7 +390,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     }
 
     /* Bind the interface to the filter */
-    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(fd, BIOCSETIF, &ifr) < 0) {
 	char buffer[256];
 	sprintf(buffer, "ioctl(BIOCSETIF) can't select interface %.16s",
@@ -458,7 +459,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr, UINT16_t
 
     /* Fill in hardware address */
     if (hwaddr) {
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 	if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
 	    fatalSys("ioctl(SIOCGIFHWADDR)");
 	}
@@ -480,7 +481,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr, UINT16_t
     }
 
     /* Sanity check on MTU */
-    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(fd, SIOCGIFMTU, &ifr) < 0) {
 	fatalSys("ioctl(SIOCGIFMTU)");
     }
@@ -497,7 +498,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr, UINT16_t
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(type);
 
-    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
 	fatalSys("ioctl(SIOCFIGINDEX): Could not get interface index");
     }
@@ -716,7 +717,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     int fd;
     long buf[MAXDLBUF];
 
-	union   DL_primitives   *dlp;
+    union   DL_primitives   *dlp;
 
     char base_dev[PATH_MAX];
     int ppa;
@@ -730,8 +731,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     }
 
     ppa = atoi(&ifname[strlen(ifname)-1]);
-    strncpy(base_dev, ifname, PATH_MAX);
-    base_dev[strlen(base_dev)-1] = '\0';
+    strlcpy(base_dev, ifname, PATH_MAX);
 
 /* rearranged order of DLPI code - delphys 20010803 */
     dlp = (union DL_primitives*) buf;

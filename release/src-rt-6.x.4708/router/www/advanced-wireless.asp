@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_country,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
@@ -62,7 +62,6 @@ function save() {
 			n = E('_f_wl'+u+'_distance').value * 1;
 			E('_wl'+u+'_distance').value = n ? n : '';
 
-			E('_wl'+u+'_country').value = E('_wl'+u+'_country_code').value;
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 
 			/* for Explicit TX Beamforming */
@@ -71,6 +70,15 @@ function save() {
 
 			/* for Implicit TX Beamforming */
 			E('_wl'+u+'_txbf_imp').value = E('_wl'+u+'_itxbf').value; /* turn on (1)/off (0) with wl_itxbf */
+/* EMF-BEGIN */
+			/* for Wireless IGMP Snooping */
+			var wb_enable = E('_wl'+u+'_wmf_bss_enable').value;
+			E('_wl'+u+'_igs').value = wb_enable; /* turn on (1)/off (0) with wl_wmf_bss_enable */
+			E('_wl'+u+'_wmf_ucigmp_query').value = wb_enable;
+			E('_wl'+u+'_wmf_mdata_sendup').value = wb_enable;
+			E('_wl'+u+'_wmf_ucast_upnp').value = wb_enable;
+			E('_wl'+u+'_wmf_igmpq_filter').value = wb_enable;
+/* EMF-END */
 		}
 	}
 
@@ -118,11 +126,17 @@ function save() {
 			var u = wl_unit(uidx);
 
 			W('<input type="hidden" id="_wl'+u+'_distance" name="wl'+u+'_distance">');
-			W('<input type="hidden" id="_wl'+u+'_country" name="wl'+u+'_country">');
 			W('<input type="hidden" id="_wl'+u+'_nmode_protection" name="wl'+u+'_nmode_protection">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfr_cap" name="wl'+u+'_txbf_bfr_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfe_cap" name="wl'+u+'_txbf_bfe_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_imp" name="wl'+u+'_txbf_imp">');
+/* EMF-BEGIN */
+			W('<input type="hidden" id="_wl'+u+'_igs" name="wl'+u+'_igs">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_ucigmp_query" name="wl'+u+'_wmf_ucigmp_query">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_mdata_sendup" name="wl'+u+'_wmf_mdata_sendup">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_ucast_upnp" name="wl'+u+'_wmf_ucast_upnp">');
+			W('<input type="hidden" id="_wl'+u+'_wmf_igmpq_filter" name="wl'+u+'_wmf_igmpq_filter">');
+/* EMF-END */
 
 /* / / / */
 
@@ -182,14 +196,17 @@ function save() {
 				{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 3, size: 5,
 					suffix: hp ?
 						' <small>mW (before amplification)<\/small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)<\/small>' :
-						' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 400, actual max depends on Country selected; use 0 for hardware default)<\/small>',
+						' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 400, override regulatory and other limitations; use 0 for country default)<\/small>',
 						value: nvram['wl'+u+'_txpwr'] },
 				{ title: 'Transmission Rate', name: 'wl'+u+'_rate', type: 'select',
 					options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
 					value: nvram['wl'+u+'_rate'] },
 				{ title: 'Interference Mitigation', name: 'wl'+u+'_mitigation', type: 'select',
 					options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto'],['4','WLAN Auto with Noise Reduction']],
-					value: nvram['wl'+u+'_mitigation'] },
+					value: nvram['wl'+u+'_mitigation'], hidden: (nvram['wl'+u+'_phytype'] == 'v') },
+				{ title: 'AC-PHY Interference Mitigation', name: 'wl'+u+'_mitigation_ac', type: 'select',
+					options: [['0','None *'],['1','desense based on glitch count (opt. 1)'],['2','limit pktgain based on hwaci (opt. 2)'],['4','limit pktgain based on w2/nb (opt. 3)'],['3','opt. 1 AND opt. 2'],['5','opt. 1 AND opt. 3'],['6','opt. 2 AND opt. 3'],['7','opt. 1 AND opt. 2 AND opt. 3']],
+					value: nvram['wl'+u+'_mitigation_ac'], hidden: (nvram['wl'+u+'_phytype'] != 'v') },
 				{ title: 'WMM', name: 'wl'+u+'_wme', type: 'select', options: [['auto','Auto *'],['off','Disable'],['on','Enable']], value: nvram['wl'+u+'_wme'] },
 				{ title: 'No ACK', name: 'wl'+u+'_wme_no_ack', indent: 2, type: 'select', options: [['off','Disable *'],['on','Enable']],
 					value: nvram['wl'+u+'_wme_no_ack'] },
@@ -198,7 +215,7 @@ function save() {
 				{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
 					value: nvram['wl'+u+'_wmf_bss_enable'] },
 				{ title: 'Turbo QAM (WiFi Mode must be set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']],
-					value: nvram['wl'+u+'_turbo_qam'] },
+					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') },
 				{ title: 'Explicit beamforming', name: 'wl'+u+'_txbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 					value: nvram['wl'+u+'_txbf'] },
 				{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable *'],['1','Enable']],

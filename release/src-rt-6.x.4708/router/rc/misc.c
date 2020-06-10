@@ -669,7 +669,7 @@ long fappend(FILE *out, const char *fname)
 {
 	FILE *in;
 	char buf[1024];
-	int n;
+	unsigned int n;
 	long r;
 
 	if ((in = fopen(fname, "r")) == NULL) return -1;

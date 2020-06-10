@@ -325,19 +325,20 @@ struct nvram_tuple router_defaults[] = {
 	/* Wireless parameters */
 	{ "wl_ifname",			""				, 0 },	// Interface name
 	{ "wl_hwaddr",			""				, 0 },	// MAC address
-	{ "wl_phytype",			"b"				, 0 },	// Current wireless band ("a" (5 GHz), "b" (2.4 GHz), or "g" (2.4 GHz))
+	{ "wl_phytype",			"n"				, 0 },	// Current wireless band ("a" (5 GHz), "b" (2.4 GHz), or "g" (2.4 GHz))
 	{ "wl_corerev",			""				, 0 },	// Current core revision
 	{ "wl_phytypes",		""				, 0 },	// List of supported wireless bands (e.g. "ga")
 	{ "wl_radioids",		""				, 0 },	// List of radio IDs
 	{ "wl_ssid",			"FreshTomato24"			, 0 },	// Service set ID (network name)
 	{ "wl1_ssid",			"FreshTomato50"			, 0 },
 	{ "wl_country_code",		""				, 0 },	// Country (default obtained from driver)
+	{ "wl_country_rev", 		""				, 0 },	/* Regrev Code (default obtained from driver) */
 	{ "wl_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
 	{ "wl1_radio",			"1"				, 0 },	// Enable (1) or disable (0) radio
 	{ "wl_closed",			"0"				, 0 },	// Closed (hidden) network
 	{ "wl_ap_isolate",		"0"				, 0 },	// AP isolate mode
 	{ "wl_mode",			"ap"				, 0 },	// AP mode (ap|sta|wds)
-	{ "wl_lazywds",			"1"				, 0 },	// Enable "lazy" WDS mode (0|1)
+	{ "wl_lazywds",			"0"				, 0 },	// Enable "lazy" WDS mode (0|1)
 	{ "wl_wds",			""				, 0 },	// xx:xx:xx:xx:xx:xx ...
 	{ "wl_wds_timeout",		"1"				, 0 },	// WDS link detection interval defualt 1 sec
 	{ "wl_wep",			"disabled"			, 0 },	// WEP data encryption (enabled|disabled)
@@ -349,7 +350,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_key4",			""				, 0 },	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_channel",			"6"				, 0 },	// Channel number
 	{ "wl_assoc_retry_max", 	"3"				, 0 },	/* Non-zero limit for association retries */
-	{ "wl1_channel",		"0"				, 0 },
 	{ "wl_rate",			"0"				, 0 },	// Rate (bps, 0 for auto)
 	{ "wl_mrate",			"0"				, 0 },	// Mcast Rate (bps, 0 for auto)
 	{ "wl_rateset",			"default"			, 0 },	// "default" or "all" or "12"
@@ -369,8 +369,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_infra",			"1"				, 0 },	// Network Type (BSS/IBSS)
 	{ "wl_btc_mode",		"0"				, 0 },	// !!TB - BT Coexistence Mode
 	{ "wl_sta_retry_time",		"5"				, 0 },	// !!TB - Seconds between association attempts (0 to disable retries)
-	{ "wl_mitigation",		"0"				, 0 },	// Interference Mitigation Mode (0|1|2|3|4)
-
+	{ "wl_mitigation",		"0"				, 0 },	// Non-AC Interference Mitigation Mode (0|1|2|3|4)
+#ifdef TCONFIG_BCMWL6
+	{ "wl_mitigation_ac",		"0"				, 0 },	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7); 0 == disabled
+#endif
 	{ "wl_passphrase",		""				, 0 },	// Passphrase
 	{ "wl_wep_bit",			"128"				, 0 },	// WEP encryption [64 | 128]
 	{ "wl_wep_buf",			""				, 0 },	// save all settings for web
@@ -390,6 +392,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_crypto",			"aes"				, 0 },	// WPA data encryption
 	{ "wl_net_reauth",		"36000"				, 0 },	// Network Re-auth/PMK caching duration
 	{ "wl_akm",			""				, 0 },	// WPA akm list
+
+	{ "wl_mfp",			"0"				, 0 },	/* Protected Management Frame */
 
 	/* WME parameters (cwmin cwmax aifsn txop_b txop_ag adm_control oldest_first) */
 	/* EDCA parameters for STA */
@@ -415,17 +419,20 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_wme_txp_vo",		"7 3 4 2 0"			, 0 },	/* WME AC_VO Tx parameters */
 
 	{ "wl_unit",			"0"				, 0 },	// Last configured interface
+	{ "wl_subunit",			"-1"				, 0 },
+	{ "wl_vifnames", 		""				, 0 },	/* Virtual Interface Names */
 	{ "wl_mac_deny",		""				, 0 },	// filter MAC
 
 	{ "wl_leddc",			"0x640000"			, 0 },	// !!TB - 100% duty cycle for LED on router (WLAN LED fix for some routers)
-	{ "wl_bss_enabled",		"1"				, 0 },	// !!TB - If not present the new versions of wlconf may not bring up wlan
-	{ "wl_reg_mode",		"off"				, 0 },	// !!TB - Regulatory: 802.11H(h)/802.11D(d)/off(off)
+	{ "wl_bss_enabled",		"1"				, 0 },	/* Service set Enable (1) or disable (0) radio */
+	{ "wl_reg_mode",		"off"				, 0 },	/* Regulatory: 802.11H(h)/802.11D(d)/off(off) */
 
 	{ "wl_nmode",			"-1"				, 0 },	// N-mode
 	{ "wl_nband",			"2"				, 0 },	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
 	{ "wl1_nband",			"1"				, 0 },
 	{ "wl_nmcsidx",			"-1"				, 0 },	// MCS Index for N - rate
 	{ "wl_nreqd",			"0"				, 0 },	// Require 802.11n support
+	{ "wl_vreqd",			"1"				, 0 },	// Require 802.11ac support	
 	{ "wl_nbw",			"40"				, 0 },	// BW: 20 / 40 MHz
 	{ "wl_nbw_cap",			"1"				, 0 },	// BW: def 20inB and 40inA
 	{ "wl_mimo_preamble",		"mm"				, 0 },	// 802.11n Preamble: mm/gf/auto/gfbcm
@@ -445,6 +452,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "emf_uffp_entry",		""				, 0 },	// Unreg frames forwarding ports
 	{ "emf_rtport_entry",		""				, 0 },	// IGMP frames forwarding ports
 	{ "emf_enable",			"0"				, 0 },	// Disable EMF by default
+	{ "wl_igs",			"0"				, 0 },	// BCM: wl_wmf_bss_enable
+	{ "wl_wmf_ucigmp_query", 	"0"				, 0 },	/* Disable Converting IGMP Query to ucast (default) */
+	{ "wl_wmf_mdata_sendup", 	"0"				, 0 },	/* Disable Sending Multicast Data to host (default) */
+	{ "wl_wmf_ucast_upnp", 		"0"				, 0 },	/* Disable Converting upnp to ucast (default) */
+	{ "wl_wmf_igmpq_filter", 	"0"				, 0 },	/* Disable igmp query filter */
 #endif
 #ifdef CONFIG_BCMWL5
 	/* AMPDU */
@@ -454,18 +466,17 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_amsdu",			"auto"				, 0 },	// Default AMSDU setting
 	/* power save */
 #ifdef TCONFIG_BCMWL6
-	{ "wl_bss_opmode_cap_reqd",	"0"				, 0 },
+	{ "wl_bss_opmode_cap_reqd",	"0"				, 0 },  // 0 == no requirements on joining devices
 #endif
-#ifndef TCONFIG_BCMARM
-	{ "wl_rxchain_pwrsave_enable",	"1"				, 0 },	// Rxchain powersave enable
+	{ "wl_rxchain_pwrsave_enable",	"0"				, 0 },	// Rxchain powersave enable
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			, 0 },	// Quiet time for power save
 	{ "wl_rxchain_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
-	{ "wl_rxchain_pwrsave_stas_assoc_check", "0"			, 0 },	/* STAs associated before powersave */
-#endif
+	{ "wl_rxchain_pwrsave_stas_assoc_check", "1"			, 0 },	/* STAs associated before powersave */
 	{ "wl_radio_pwrsave_enable",	"0"				, 0 },	// Radio powersave enable
 	{ "wl_radio_pwrsave_quiet_time","1800"				, 0 },	// Quiet time for power save
 	{ "wl_radio_pwrsave_pps",	"10"				, 0 },	// Packets per second threshold for power save
-	{ "wl_radio_pwrsave_on_time",	"50"				, 0 },	// Radio on time for power save
+	{ "wl_radio_pwrsave_level",	"0"				, 0 },	// Radio power save level
+	{ "wl_radio_pwrsave_stas_assoc_check", "1"			, 0 },	// STAs associated before powersave	
 	{ "acs_mode", 			"legacy"			, 0 },	/* Legacy mode if ACS is enabled */
 	{ "acs_2g_ch_no_restrict", 	"1"				, 0 },	/* 0: only pick from channel 1, 6, 11 */
 	{ "acs_no_restrict_align", 	"1"				, 0 },	/* 0: only aligned chanspec(few) can be picked (non-20Hz) */
@@ -479,6 +490,12 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_ack_ratio",		"0"				, 0 },
 	{ "wl_ampdu_mpdu",		"0"				, 0 },
 	{ "wl_ampdu_rts",		"1"				, 0 },
+	{ "dpsta_ifnames",		""				, 0 },
+	{ "dpsta_policy",		"1"				, 0 },
+	{ "dpsta_lan_uif",		"1"				, 0 },
+#ifdef TRAFFIC_MGMT_RSSI_POLICY
+	{ "wl_trf_mgmt_rssi_policy", 	"0"				, 0 },	/* Disable RSSI (default) */
+#endif /* TRAFFIC_MGMT */	
 #ifdef TCONFIG_BCMARM
 	{ "wl_atf",			"0"				, 0 },	// Air Time Fairness support on = 1, off = 0 (default: off)
 	{ "wl_turbo_qam",		"1"				, 0 },	// turbo qam on = 1 , off = 0
@@ -489,6 +506,29 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 #endif
 #endif
+
+#ifdef TCONFIG_PROXYSTA
+	{ "wlc_list",			""				, 0 },
+	{ "wlc_band",			""				, 0 },
+	{ "wlc_ssid", 			"FreshTomatoARM-Client"		, 0 },
+	{ "wlc_wep",			""				, 0 },
+	{ "wlc_key",			""				, 0 },
+	{ "wlc_wep_key",		""				, 0 },
+	{ "wlc_auth_mode", 		""				, 0 },
+	{ "wlc_crypto", 		""				, 0 },
+	{ "wlc_wpa_psk",		""				, 0 },
+	{ "wlc_nbw_cap", 		""				, 0 },
+	{ "wlc_ure_ssid",		""				, 0 },
+	{ "wlc_express",		"0"				, 0 },	/* 0: disabled, 1: 2.4GHz, 2: 5GHz */
+	{ "wlc_psta",			"0"				, 0 },	/* 0: disabled, 1: Proxy STA, 2: Proxy STA Repeater */
+	{ "wlc_band_ex",		""				, 0 },	/* another psta band */
+	{ "wlc_state", 			"0"				, 0 },	/* Wireless Client State */
+	{ "wlc_sbstate", 		"0"				, 0 },
+	{ "wlc_mode", 			"0"				, 0 },
+	{ "wlc_scan_state", 		"0"				, 0 },
+	{ "wlc_scan_mode", 		"0"				, 0 },	// 0=active 1=passive
+#endif
+
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
 
 	/* for firewall */
@@ -554,7 +594,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "dhcpd_static_only",		"0"				, 0 },
 /* basic-wfilter */
 	{ "wl_maclist",			""				, 0 },	// xx:xx:xx:xx:xx:xx ...
-	{ "wl_macmode",			"disabled"			, 0 },
+	{ "wl_macmode",			"disabled"			, 0 },  // "allow" only, "deny" only, or "disabled" (allow all)
 	{ "macnames",			""				, 0 },
 
 /* advanced-ctnf */
@@ -582,7 +622,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_NVRAM_32K
 	{ "adblock_blacklist",		""				, 0 },
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://hosts-file.net/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
 #endif
 	{ "adblock_blacklist_custom",	""				, 0 },
 	{ "adblock_whitelist",		""				, 0 },

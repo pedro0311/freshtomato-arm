@@ -1,7 +1,7 @@
 /*
  * Include file private to the SOC Interconnect support files.
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,11 +21,11 @@
 #ifndef	_siutils_priv_h_
 #define	_siutils_priv_h_
 
-#ifdef BCMDBG_ERR
+#ifdef BCMDBG
 #define	SI_ERROR(args)	printf args
 #else
 #define	SI_ERROR(args)
-#endif	/* BCMDBG_ERR */
+#endif	/* BCMDBG */
 
 #ifdef BCMDBG
 #define	SI_MSG(args)	printf args

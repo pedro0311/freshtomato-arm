@@ -2,7 +2,7 @@ diff --git iperf/src/iperf.h iperf/src/iperf.h
 index 26e4f4f..eb6f586 100755
 --- iperf/src/iperf.h
 +++ iperf/src/iperf.h
-@@ -264,6 +264,8 @@ struct iperf_test
+@@ -272,6 +272,8 @@ struct iperf_test
      char     *logfile;				/* --logfile option */
      FILE     *outfile;
  
@@ -15,7 +15,7 @@ diff --git iperf/src/iperf_api.c iperf/src/iperf_api.c
 index d6c4717..b88350a 100755
 --- iperf/src/iperf_api.c
 +++ iperf/src/iperf_api.c
-@@ -773,6 +773,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
+@@ -824,6 +824,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
  #endif
  	{"pidfile", required_argument, NULL, 'I'},
  	{"logfile", required_argument, NULL, OPT_LOGFILE},
@@ -23,7 +23,7 @@ index d6c4717..b88350a 100755
  	{"forceflush", no_argument, NULL, OPT_FORCEFLUSH},
  	{"get-server-output", no_argument, NULL, OPT_GET_SERVER_OUTPUT},
  	{"udp-counters-64bit", no_argument, NULL, OPT_UDP_COUNTERS_64BIT},
-@@ -807,7 +808,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
+@@ -859,7 +860,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
      char *client_username = NULL, *client_rsa_public_key = NULL, *server_rsa_private_key = NULL;
  #endif /* HAVE_SSL */
  
@@ -31,8 +31,8 @@ index d6c4717..b88350a 100755
 +    while ((flag = getopt_long(argc, argv, "p:f:i:D1VJvsc:ub:t:n:k:l:P:Rw:B:M:N46S:L:ZO:F:A:T:C:dI:hX:j:", longopts, NULL)) != -1) {
          switch (flag) {
              case 'p':
-                 test->server_port = atoi(optarg);
-@@ -1100,6 +1101,9 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
+ 		portno = atoi(optarg);
+@@ -1174,6 +1175,9 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
  	    case OPT_LOGFILE:
  		test->logfile = strdup(optarg);
  		break;
@@ -42,7 +42,7 @@ index d6c4717..b88350a 100755
  	    case OPT_FORCEFLUSH:
  		test->forceflush = 1;
  		break;
-@@ -2602,6 +2606,44 @@ iperf_stats_callback(struct iperf_test *test)
+@@ -2741,6 +2745,44 @@ iperf_stats_callback(struct iperf_test *test)
      }
  }
  
@@ -87,7 +87,7 @@ index d6c4717..b88350a 100755
  /**
   * Print intermediate results during a test (interval report).
   * Uses print_interval_results to print the results for each stream,
-@@ -3191,13 +3233,14 @@ iperf_reporter_callback(struct iperf_test *test)
+@@ -3450,13 +3492,14 @@ iperf_reporter_callback(struct iperf_test *test)
          case STREAM_RUNNING:
              /* print interval results for each stream */
              iperf_print_intermediate(test);
@@ -103,7 +103,7 @@ index d6c4717..b88350a 100755
  
  }
  
-@@ -3670,6 +3713,18 @@ iperf_delete_pidfile(struct iperf_test *test)
+@@ -3951,6 +3994,18 @@ iperf_delete_pidfile(struct iperf_test *test)
      return 0;
  }
  
@@ -126,15 +126,15 @@ diff --git iperf/src/iperf_api.h iperf/src/iperf_api.h
 index 54936ab..8ddd3d6 100755
 --- iperf/src/iperf_api.h
 +++ iperf/src/iperf_api.h
-@@ -71,6 +71,7 @@ struct iperf_time;
- #define OPT_CONNECT_TIMEOUT 17
+@@ -73,6 +73,7 @@ struct iperf_time;
  #define OPT_REPEATING_PAYLOAD 18
  #define OPT_EXTRA_DATA 19
-+#define OPT_INTERVAL_LOG 20
+ #define OPT_BIDIRECTIONAL 20
++#define OPT_INTERVAL_LOG 21
  
  /* states */
  #define TEST_START 1
-@@ -287,6 +288,7 @@ int iperf_accept(struct iperf_test *);
+@@ -296,6 +297,7 @@ int iperf_accept(struct iperf_test *);
  int iperf_handle_message_server(struct iperf_test *);
  int iperf_create_pidfile(struct iperf_test *);
  int iperf_delete_pidfile(struct iperf_test *);
@@ -146,7 +146,7 @@ diff --git iperf/src/iperf_error.c iperf/src/iperf_error.c
 index 945984e..9df3510 100644
 --- iperf/src/iperf_error.c
 +++ iperf/src/iperf_error.c
-@@ -76,6 +76,8 @@ iperf_errexit(struct iperf_test *test, const char *format, ...)
+@@ -78,6 +78,8 @@ iperf_errexit(struct iperf_test *test, const char *format, ...)
      va_end(argp);
      if (test)
          iperf_delete_pidfile(test);
@@ -171,7 +171,7 @@ diff --git iperf/src/main.c iperf/src/main.c
 index 9d72d77..47eebc2 100644
 --- iperf/src/main.c
 +++ iperf/src/main.c
-@@ -171,6 +171,7 @@ run(struct iperf_test *test)
+@@ -176,6 +176,7 @@ run(struct iperf_test *test)
              break;
      }
  

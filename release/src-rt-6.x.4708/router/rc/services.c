@@ -664,7 +664,8 @@ void stop_phy_tempsense()
 void start_adblock(int update)
 {
 	if (nvram_match("adblock_enable", "1")) {
-		killall("adblock", SIGHUP);
+		killall("adblock", SIGTERM);
+		sleep(1);
 		if (update) {
 			xstart("/usr/sbin/adblock", "update");
 		} else {

@@ -5,6 +5,7 @@
 * Implementation of user-space PPPoE redirector for Linux.
 *
 * Copyright (C) 2000-2015 by Roaring Penguin Software Inc.
+* Copyright (C) 2018-2020 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -13,6 +14,7 @@
 *
 ***********************************************************************/
 
+#define _GNU_SOURCE 1
 #include "pppoe.h"
 
 #ifdef HAVE_SYSLOG_H
@@ -176,24 +178,29 @@ sessionDiscoveryPacket(PPPoEConnection *conn)
 	return;
     }
 
-    if (packet.code != CODE_PADT) {
-	/* Not PADT; ignore it */
-	return;
-    }
-
-    /* It's a PADT, all right.  Is it for us? */
+    /* Is it for our session? */
     if (packet.session != conn->session) {
 	/* Nope, ignore it */
 	return;
     }
 
+    /* Is it for our Ethernet interface? */
     if (memcmp(packet.ethHdr.h_dest, conn->myEth, ETH_ALEN)) {
+	/* Nope, ignore it */
 	return;
     }
 
+    /* Is it from our peer's Ethernet interface? */
     if (memcmp(packet.ethHdr.h_source, conn->peerEth, ETH_ALEN)) {
+	/* Nope, ignore it */
 	return;
     }
+
+    if (packet.code != CODE_PADT) {
+	/* Not PADT; ignore it */
+	return;
+    }
+
 #ifdef DEBUGGING_ENABLED
     if (conn->debugFile) {
 	dumpPacket(conn->debugFile, &packet, "RCVD");
@@ -241,8 +248,7 @@ session(PPPoEConnection *conn)
     memcpy(packet.ethHdr.h_dest, conn->peerEth, ETH_ALEN);
     memcpy(packet.ethHdr.h_source, conn->myEth, ETH_ALEN);
     packet.ethHdr.h_proto = htons(Eth_PPPOE_Session);
-    packet.ver = 1;
-    packet.type = 1;
+    packet.vertype = PPPOE_VER_TYPE(1, 1);
     packet.code = CODE_SESS;
     packet.session = conn->session;
 
@@ -378,11 +384,12 @@ usage(char const *argv0)
 	    "   -d             -- Perform discovery, print session info and exit.\n"
 	    "   -f disc:sess   -- Set Ethernet frame types (hex).\n"
 	    "   -h             -- Print usage information.\n\n"
-	    "PPPoE Version %s, Copyright (C) 2001-2015 Roaring Penguin Software Inc.\n"
-	    "PPPoE comes with ABSOLUTELY NO WARRANTY.\n"
+	    "RP-PPPoE Version %s, Copyright (C) 2001-2018 Roaring Penguin Software Inc.\n"
+	    "                 %*s  Copyright (C) 2018-2020 Dianne Skoll\n"
+	    "RP-PPPoE comes with ABSOLUTELY NO WARRANTY.\n"
 	    "This is free software, and you are welcome to redistribute it under the terms\n"
 	    "of the GNU General Public License, version 2 or any later version.\n"
-	    "http://www.roaringpenguin.com\n", VERSION);
+	    "https://dianne.skoll.ca/projects/rp-pppoe/\n", RP_VERSION, (int) strlen(RP_VERSION), "");
     exit(EXIT_SUCCESS);
 }
 
@@ -550,7 +557,7 @@ main(int argc, char *argv[])
 			optarg, strerror(errno));
 		exit(EXIT_FAILURE);
 	    }
-	    fprintf(conn.debugFile, "rp-pppoe-%s\n", VERSION);
+	    fprintf(conn.debugFile, "rp-pppoe-%s\n", RP_VERSION);
 	    fflush(conn.debugFile);
 	    break;
 #endif
@@ -575,7 +582,7 @@ main(int argc, char *argv[])
 	    SET_STRING(conn.ifName, optarg);
 	    break;
 	case 'V':
-	    printf("Roaring Penguin PPPoE Version %s\n", VERSION);
+	    printf("RP-PPPoE Version %s\n", RP_VERSION);
 	    exit(EXIT_SUCCESS);
 	case 'A':
 	    conn.printACNames = 1;
@@ -792,12 +799,12 @@ asyncReadFromEth(PPPoEConnection *conn, int sock, int clampMss)
 	syslog(LOG_ERR, "Unexpected packet code %d", (int) packet.code);
 	return;
     }
-    if (packet.ver != 1) {
-	syslog(LOG_ERR, "Unexpected packet version %d", (int) packet.ver);
+    if (PPPOE_VER(packet.vertype) != 1) {
+	syslog(LOG_ERR, "Unexpected packet version %d", PPPOE_VER(packet.vertype));
 	return;
     }
-    if (packet.type != 1) {
-	syslog(LOG_ERR, "Unexpected packet type %d", (int) packet.type);
+    if (PPPOE_TYPE(packet.vertype) != 1) {
+	syslog(LOG_ERR, "Unexpected packet type %d", PPPOE_TYPE(packet.vertype));
 	return;
     }
     if (memcmp(packet.ethHdr.h_dest, conn->myEth, ETH_ALEN)) {
@@ -921,12 +928,12 @@ syncReadFromEth(PPPoEConnection *conn, int sock, int clampMss)
 	syslog(LOG_ERR, "Unexpected packet code %d", (int) packet.code);
 	return;
     }
-    if (packet.ver != 1) {
-	syslog(LOG_ERR, "Unexpected packet version %d", (int) packet.ver);
+    if (PPPOE_VER(packet.vertype) != 1) {
+	syslog(LOG_ERR, "Unexpected packet version %d", PPPOE_VER(packet.vertype));
 	return;
     }
-    if (packet.type != 1) {
-	syslog(LOG_ERR, "Unexpected packet type %d", (int) packet.type);
+    if (PPPOE_TYPE(packet.vertype) != 1) {
+	syslog(LOG_ERR, "Unexpected packet type %d", PPPOE_TYPE(packet.vertype));
 	return;
     }
     if (memcmp(packet.ethHdr.h_dest, conn->myEth, ETH_ALEN)) {

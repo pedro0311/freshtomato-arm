@@ -3,6 +3,76 @@ FreshTomato-ARM Changelog
 
 
 
+2020.3          2020.05.09
+--------------------------
+
+!!!IMPORTANT (applies to all routers)!!!
+- Due to the new WL driver and the required changes in NVRAM, for the update process select a new image AND CHECK "Delete all data from NVRAM after flashing". DO NOT use backups!
+
+- kernel: cdc_ncm: Implement the 32-bit version of NCM Transfer Block; Fix the build warning; Add skb_put_zero() to include/linux/skbuff.h
+- SDK6: add/update missing dpsta/proxy things; Hint: We (will) need it… (also for possible future updates) 
+- SDK6: update wifi driver (for single and dual-core) to 6.37.14.126 (r561982)
+- SDK7: repair merge with arm-master branch after SDK6 driver update, to solve client connection problems with sdk7 routers
+- add wsdd2. wsdd2 is a small daemon that can service WSD/LLMNR queries. It allows the router to be visible in Windows's Network list without requiring SMB1 support
+- openssl-1.1: update to 1.1.1g
+- miniupnpd: update to 2.1.20200329
+- adminer: update to 4.7.6
+- dnsmasq: update to 2.81
+- tor: update to 0.4.2.7
+- nano: update to 4.9
+- libcurl: update to 7.69.1
+- nginx: update to 1.17.10
+- nano: update to 4.9.2
+- libyaml: update to 0.2.3
+- iperf: update to 3.7
+- openvpn: update to 2.4.9
+- libncurses: update to 6.2
+- libjson-c: update to 0.14 (2020.04.19); due to autoconf support removed for CMake, Makefile recipes have been updated
+- dropbear: update to 90cfbe1 (2020.03.27) snapshot
+- dnsmasq: remove 19036 trust anchor, now expired
+- miniupnpd: revert previous upstream changes that prevented the use of a private IP on the WAN interface
+- libcurl: smtp: set auth correctly
+- adblock: switch URL for Windows 10 blacklist
+- adblock: a few changes so that it doesn’t start simultaneously; correction in the blacklist address
+- Revert "busybox: wget: openssl11: fix ssl when built with OpenSSL-1.1.x" No more needed - we have symlink to openssl11 now
+- Allow a custom autorefresh status script for each wan and output its HTML in the overview page for USB targets
+- Add xterm-256color terminal This solves a problem with message “Error opening terminal: xterm-256color” when user tries to run nano on some platforms
+- dropbear: disable 3DES and CBC
+- dropbear: Fix CBC_MODE can't be fully disabled
+- MDU: update for Cloudflare DDNS, fixes #30
+- Use strip instead of gcc to determine toolchain path to allow using ccache
+- GUI: Administration: BWM/IPT: fix html (inability to backup stats)
+- GUI: Admin Access: restart sshd if password is changed (otherwise, the old will be used until reboot)
+- GUI: Admin: JFFS: add more info about possible errors, fix minor html problems
+- GUI: Tools: IPerf: two modifications move initialization to earlyInit() to avoid flickering when loading the page enable background images for 'Start/Stop test' button 
+- GUI: OpenVPN Client: also 'Policy Routing (strict)' should be impossible to select if interface is TAP
+- build: apcupsd: omit check for shutdown file; needed if compiled with ccache
+- build: add JFFS support on BRCM Nand Flash Partition
+- build: enable JFFS Support on BRCM Nand Flash Partition for target n18e, n18z, ac68e, ac68z (RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC66U_B1, RT-AC1900P)
+- build: enable JFFS Support on BRCM Nand Flash Partition for target ac3200e, ac3200z, ac3200-128e, ac3200-128z (RT-AC3200 VPN/AIO 64K/128K)
+- build: enable JFFS support on BRCM Nand Flash Partition for target r8000e and r8000z (Netgear R8000 VPN/AIO)
+- Makefile: one file/image for all RT-AC68U versions (A1,A2,B1,B2,C1,E1)/R/P
+- Makefile: add option -fno-delete-null-pointer-checks
+- router: Makefile: openssl/openssl-1.1: fix typo in recipe
+- router: Makefile: avoid building libcurl more than once
+- router: Makefile: avoid building nettle (and gmp) if not needed
+- router: Makefile: tune to work on Debian 10.x as a host
+- router: Makefile: add -fPIC where needed also as CFLAGS
+- router: httpd: bwm.c: extend allowed IPT backup size
+- router: httpd: openvpn.c: generating a CSR request does not require the -days parameter
+- router: others: tomatoanon: change URL for version checker to freshtomato.org; cosmetics
+- router: rc: init.c - enable or disable jumbo_frame and set jumbo frame size for ARM branch
+- router: rc: init.c - remove start_nas()/stop_nas() (already done at start_services()/stop_services())
+- router: rc: jffs2.c: fix the error appearing after proper jffs formatting
+- router: rc: network.c: do not unload (reload) wifi driver for some older routers (Linksys EA6200 / EA6350v1 and Netgear R6250)
+- router: shared: misc.c: add function nvram_set_int()
+- router: shared: shutils.c: fix for function get_pid_by_name (add missing closedir)
+- router: shared: shutils.c: fix for function nvifname_to_osifname (check pointer first…)
+- router: www: vpn-pptp.asp: fix typo (in commit 5452cea) causing JS error; fixes #24
+- WL: update wireless driver for SDK7 to GPL 382.51939
+- EA6200: small addendum/correction for new wl driver
+
+
 2020.2          2020.03.20
 --------------------------
 

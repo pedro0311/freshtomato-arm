@@ -70,9 +70,67 @@ typedef u_int8_t u8;
 #include <etsockio.h>
 #endif
 
+#ifdef TCONFIG_BCMWL6
+#include <d11.h>
+#define WLCONF_PHYTYPE2STR(phy)	((phy) == PHY_TYPE_A ? "a" : \
+				 (phy) == PHY_TYPE_B ? "b" : \
+				 (phy) == PHY_TYPE_LP ? "l" : \
+				 (phy) == PHY_TYPE_G ? "g" : \
+				 (phy) == PHY_TYPE_SSN ? "s" : \
+				 (phy) == PHY_TYPE_HT ? "h" : \
+				 (phy) == PHY_TYPE_AC ? "v" : \
+				 (phy) == PHY_TYPE_LCN ? "c" : "n")
+#endif
+
+
 void restart_wl(void);
 void stop_lan_wl(void);
 void start_lan_wl(void);
+
+#ifdef TCONFIG_BCMWL6
+void wlconf_pre(void)
+{
+	int unit = 0;
+	char word[128], *next;
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+
+	foreach (word, nvram_safe_get("wl_ifnames"), next) {
+
+		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+		if (nvram_match(strcat_r(prefix, "nband", tmp), "1") && /* only for wlX_nband == 1 for 5 GHz */
+		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+		    nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
+		  
+			dbG("set vhtmode 1 for %s\n", word);
+			eval("wl", "-i", word, "vhtmode", "1");
+		}
+		else if (nvram_match(strcat_r(prefix, "nband", tmp), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
+			 nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
+			 nvram_match(strcat_r(prefix, "nmode", tmp), "-1")) { /* only for mode AUTO == -1 */
+		  
+		  	if (nvram_match(strcat_r(prefix, "turbo_qam", tmp), "1")) { /* check turbo qam on or off ? */
+				dbG("set vht_features 3 for %s\n", word);
+				eval("wl", "-i", word, "vht_features", "3");
+		  	}
+			else {
+				dbG("set vht_features 0 for %s\n", word);
+				eval("wl", "-i", word, "vht_features", "0");
+			}
+
+			dbG("set vhtmode 1 for %s\n", word);
+			eval("wl", "-i", word, "vhtmode", "1");
+
+		}
+		else {
+			dbG("set vhtmode 0 for %s\n", word);
+			eval("wl", "-i", word, "vht_features", "0");
+			eval("wl", "-i", word, "vhtmode", "0");
+		}
+		unit++;
+	}
+}
+#endif /* TCONFIG_BCMWL6 */
 
 static void set_lan_hostname(const char *wan_hostname)
 {
@@ -136,8 +194,16 @@ static int wlconf(char *ifname, int unit, int subunit)
 	int r = -1;
 	char wl[24];
 
+#ifdef TCONFIG_BCMWL6
+	int phytype;
+	char buf[8] = {0};
+	char tmp[32] = {0};
+#endif
+
 	/* Check interface - fail for non-wl interfaces */
 	if ((unit < 0) || wl_probe(ifname)) return r;
+
+	dbG("wlconf: ifname %s unit %d subunit %d\n", ifname, unit, subunit);
 
 #ifndef TCONFIG_BCMARM
 	/* Tomato MIPS needs a little help here: wlconf() will not validate/restore all per-interface related variables right now; */
@@ -146,7 +212,19 @@ static int wlconf(char *ifname, int unit, int subunit)
 	memset(wl, 0, sizeof(wl)); /* reset */
 #endif
 
+#ifdef TCONFIG_BCMWL6
+	/* set phytype */
+	if ((subunit == -1) && !wl_ioctl(ifname, WLC_GET_PHYTYPE, &phytype, sizeof(phytype))) {
+		snprintf(wl, sizeof(wl), "wl%d_", unit);
+		snprintf(buf, sizeof(buf), "%s", WLCONF_PHYTYPE2STR(phytype));
+		nvram_set(strcat_r(wl, "phytype", tmp), buf);
+		dbG("wlconf: %s = %s\n", tmp, buf);
+		memset(wl, 0, sizeof(wl)); /* reset */
+	}
+#endif
+
 	r = eval("wlconf", ifname, "up");
+	dbG("wlconf %s = %d\n", ifname, r);
 	if (r == 0) {
 		if (unit >= 0 && subunit <= 0) {
 			/* setup primary wl interface */
@@ -155,7 +233,11 @@ static int wlconf(char *ifname, int unit, int subunit)
 			eval("wl", "-i", ifname, "antdiv", nvram_safe_get(wl_nvname("antdiv", unit, 0)));
 			eval("wl", "-i", ifname, "txant", nvram_safe_get(wl_nvname("txant", unit, 0)));
 			eval("wl", "-i", ifname, "txpwr1", "-o", "-m", nvram_get_int(wl_nvname("txpwr", unit, 0)) ? nvram_safe_get(wl_nvname("txpwr", unit, 0)) : "-1");
+#ifdef TCONFIG_BCMWL6
+			eval("wl", "-i", ifname, "interference", nvram_match(wl_nvname("phytype", unit, 0), "v") ? nvram_safe_get(wl_nvname("mitigation_ac", unit, 0)) : nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#else
 			eval("wl", "-i", ifname, "interference", nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#endif
 		}
 
 		if (wl_client(unit, subunit)) {
@@ -235,7 +317,7 @@ static void start_emf(char *lan_ifname)
 	if (lan_ifname == NULL ||
 	    !nvram_get_int("emf_enable") ||
 	    (strcmp(lan_ifname,"") == 0)) return;
-	
+
 	/* Start EMF */
 	ret = eval("emf", "start", lan_ifname);
 
@@ -324,7 +406,14 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
-	modprobe_r("wl");
+	int model = get_model();
+
+	/* workaround: do not unload wifi driver for Linksys EA6200/EA6350v1 and Netgear R6250,
+	 * it will cause problems (reboot after saving to nvram) */
+	if ((model != MODEL_EA6350v1) &&
+	    (model != MODEL_R6250)) {
+		modprobe_r("wl");
+	}
 }
 
 void load_wl(void)
@@ -367,7 +456,7 @@ static int set_wlmac(int idx, int unit, int subunit, void *param)
 	else {
 		set_mac(ifname, wl_nvname("hwaddr", unit, subunit), 0);
 	}
-	
+
 	return 1;
 }
 
@@ -486,6 +575,8 @@ void restart_wl(void)
 	/* do some LED setup */
 	if ((model == MODEL_WS880) ||
 	    (model == MODEL_R6400) ||
+	    (model == MODEL_R6400v2) ||
+	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_R7000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
 			led(LED_AOSS, LED_ON);
@@ -561,7 +652,7 @@ void stop_lan_wl(void)
 		}
 #ifdef TCONFIG_EMF
 	stop_emf(lan_ifname);
-#endif	
+#endif
 	}
 
 }
@@ -784,6 +875,10 @@ void start_lan(void)
 	char nv[64];
 
 	load_wl(); /* lets go! */
+
+#ifdef TCONFIG_BCMWL6
+	wlconf_pre(); /* prepare a few wifi things */
+#endif
 
 #ifdef CONFIG_BCMWL5
 	foreach_wif(0, NULL, set_wlmac);
@@ -1210,7 +1305,8 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 	wl_bss_info_t *bi;
 	char buf[WLC_IOCTL_MAXLEN];
 	struct maclist *mlist;
-	int mlsize, i;
+	unsigned int i;
+	int mlsize;
 	int associated, authorized;
 
 	*(uint32 *)buf = WLC_IOCTL_MAXLEN;

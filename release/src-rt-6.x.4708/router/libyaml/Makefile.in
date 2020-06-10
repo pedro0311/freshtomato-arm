@@ -190,7 +190,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/yaml-0.1.pc.in \
 	$(top_srcdir)/config/compile $(top_srcdir)/config/config.guess \
 	$(top_srcdir)/config/config.sub \
 	$(top_srcdir)/config/install-sh $(top_srcdir)/config/ltmain.sh \
-	$(top_srcdir)/config/missing README config/compile \
+	$(top_srcdir)/config/missing config/compile \
 	config/config.guess config/config.sub config/install-sh \
 	config/ltmain.sh config/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -357,7 +357,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = include src . tests
-EXTRA_DIST = README LICENSE CMakeLists.txt doc/doxygen.cfg
+EXTRA_DIST = Changes ReadMe.md License CMakeLists.txt doc/doxygen.cfg
+LIBYAML_TEST_SUITE_RUN_REPO_DEFAULT := https://github.com/yaml/libyaml
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = yaml-0.1.pc
 all: all-recursive
@@ -854,13 +855,15 @@ uninstall-am: uninstall-pkgconfigDATA
 
 .PRECIOUS: Makefile
 
+LIBYAML_TEST_SUITE_RUN_REPO ?= $(LIBYAML_TEST_SUITE_RUN_REPO_DEFAULT)
+LIBYAML_TEST_SUITE_RUN_BRANCH ?= run-test-suite
 
 maintainer-clean-local:
 	rm -f aclocal.m4 config.h.in configure config/*
 	-find ${builddir} -name Makefile.in -exec rm -f '{}' ';'
 
 distclean-local:
-	rm -fr tests/run-test-suite
+	rm -fr tests/run-test-suite packaging
 	-git worktree prune
 
 .PHONY: bootstrap
@@ -872,15 +875,29 @@ bootstrap: maintainer-clean
 test: all
 	make -C tests check-TESTS
 
-test-suite: tests/run-test-suite
+test-suite: tests/run-test-suite all
 	make -C $< test
 
 test-all: test test-suite
 
 tests/run-test-suite:
-	-git branch --track run-test-suite origin/run-test-suite
-	-git worktree prune
-	git worktree add $@ run-test-suite
+ifeq ($(LIBYAML_TEST_SUITE_RUN_REPO),$(LIBYAML_TEST_SUITE_RUN_REPO_DEFAULT))
+	  -git branch --track $(LIBYAML_TEST_SUITE_RUN_BRANCH) origin/$(LIBYAML_TEST_SUITE_RUN_BRANCH)
+	  -git worktree prune
+	  git worktree add $@ $(LIBYAML_TEST_SUITE_RUN_BRANCH)
+    else
+	  git clone --branch $(LIBYAML_TEST_SUITE_RUN_BRANCH) $(LIBYAML_TEST_SUITE_RUN_REPO) $@
+    endif
+
+packaging:
+	-git branch --track $@ origin/$@
+	git worktree add --force $@ $@
+
+docker-dist: packaging
+	make -C $</docker libyaml-dist
+
+docker-test-pyyaml: packaging
+	make -C $</docker test-pyyaml
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

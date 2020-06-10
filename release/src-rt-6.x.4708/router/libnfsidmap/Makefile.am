@@ -59,3 +59,4 @@ dist-hook:
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA = libnfsidmap.pc
 
+$(pkgconfig_DATA): $(top_builddir)/config.status

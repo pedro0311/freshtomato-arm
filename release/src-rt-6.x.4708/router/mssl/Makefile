@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC -Wsign-compare
 LIBS =
 LDFLAGS	=
 

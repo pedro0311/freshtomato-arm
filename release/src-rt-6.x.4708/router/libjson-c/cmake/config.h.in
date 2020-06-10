@@ -1,4 +1,3 @@
-/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Enable RDRAND Hardware RNG Hash Seed */
 #cmakedefine ENABLE_RDRAND "@ENABLE_RDRAND@"
@@ -53,6 +52,9 @@
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #cmakedefine HAVE_SYS_PARAM_H @HAVE_SYS_PARAM_H@
+
+/* Define to 1 if you have the <sys/resource.h> header file. */
+#cmakedefine HAVE_SYS_RESOURCE_H
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #cmakedefine HAVE_SYS_STAT_H
@@ -135,8 +137,20 @@
 /* Define to 1 if you have the `vsyslog' function. */
 #cmakedefine HAVE_VSYSLOG @HAVE_VSYSLOG@
 
+/* Define if you have the `getrusage' function. */
+#cmakedefine HAVE_GETRUSAGE
+
 #cmakedefine HAVE_STRTOLL
-#cmakedefine strtoll @json_c_strtoll@
+#if !defined(HAVE_STRTOLL)
+#define strtoll @json_c_strtoll@
+/* #cmakedefine json_c_strtoll @json_c_strtoll@*/
+#endif
+
+#cmakedefine HAVE_STRTOULL
+#if !defined(HAVE_STRTOULL)
+#define strtoull @json_c_strtoull@
+/* #cmakedefine json_c_strtoull @json_c_strtoull@ */
+#endif
 
 /* Have __thread */
 #cmakedefine HAVE___THREAD

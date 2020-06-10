@@ -7,7 +7,15 @@ if(POLICY CMP0048)
 endif()
 
 # JSON-C library is C only project.
-project(json-c LANGUAGES C VERSION 0.13.99)
+if (CMAKE_VERSION VERSION_LESS 3.0)
+	project(json-c)
+	set(PROJECT_VERSION_MAJOR "0")
+	set(PROJECT_VERSION_MINOR "14")
+	set(PROJECT_VERSION_PATCH "99")
+	set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+else()
+	project(json-c LANGUAGES C VERSION 0.14.99)
+endif()
 
 # If we've got 3.0 then it's good, let's provide support. Otherwise, leave it be.
 if(POLICY CMP0038)
@@ -18,6 +26,13 @@ endif()
 if(POLICY CMP0054)
     cmake_policy(SET CMP0054 NEW)
 endif()
+
+# set default build type if not specified by user
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE debug)
+endif()
+
+set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
 
 # Include file check macros honor CMAKE_REQUIRED_LIBRARIES
 # i.e. the check_include_file() calls will include -lm when checking.
@@ -33,12 +48,24 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
 add_subdirectory(tests)
 endif()
 
+if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+add_subdirectory(apps)
+endif()
+
 # Set some packaging variables.
 set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION_MAJOR     "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR     "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH     "${PROJECT_VERSION_PATCH}")
 set(JSON_C_BUGREPORT                "json-c@googlegroups.com")
+set(CPACK_SOURCE_IGNORE_FILES
+        ${PROJECT_SOURCE_DIR}/build
+        ${PROJECT_SOURCE_DIR}/cmake-build-debug
+        ${PROJECT_SOURCE_DIR}/pack
+        ${PROJECT_SOURCE_DIR}/.idea
+        ${PROJECT_SOURCE_DIR}/.DS_Store
+        ${PROJECT_SOURCE_DIR}/.git
+        ${PROJECT_SOURCE_DIR}/.vscode)
 
 include(CheckSymbolExists)
 include(CheckIncludeFile)
@@ -50,12 +77,25 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 option(BUILD_SHARED_LIBS  "Default to building shared libraries" ON)
+option(BUILD_STATIC_LIBS  "Default to building static libraries" ON)
+
+# Generate a release merge and test it to verify the correctness of republishing the package.
+ADD_CUSTOM_TARGET(distcheck
+COMMAND make package_source
+    COMMAND tar -xvf "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source.tar.gz"
+    COMMAND mkdir "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source/build"
+    COMMAND cmake "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source/" -B"./${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source/build/"
+    COMMAND make -C "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source/build"
+    COMMAND make test -C "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source/build"
+    COMMAND rm -rf "${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-Source"
+)
 
 # Enable or disable features. By default, all features are turned off.
-option(ENABLE_RDRAND                "Enable RDRAND Hardware RNG Hash Seed"          OFF)
-option(ENABLE_THREADING             "Enable partial threading support."             OFF)
-option(DISABLE_WERROR               "Avoid treating compiler warnings as fatal errors"    OFF)
-option(DISABLE_BSYMBOLIC            "Avoid linking with -Bsymbolic-function"   OFF)
+option(DISABLE_BSYMBOLIC              "Avoid linking with -Bsymbolic-function."               OFF)
+option(DISABLE_THREAD_LOCAL_STORAGE   "Disable using Thread-Local Storage (HAVE___THREAD)."   OFF)
+option(DISABLE_WERROR                 "Avoid treating compiler warnings as fatal errors."     OFF)
+option(ENABLE_RDRAND                  "Enable RDRAND Hardware RNG Hash Seed."                 OFF)
+option(ENABLE_THREADING               "Enable partial threading support."                     OFF)
 
 if (UNIX OR MINGW OR CYGWIN)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
@@ -82,6 +122,7 @@ check_include_files("stdlib.h;stdarg.h;string.h;float.h" STDC_HEADERS)
 
 check_include_file(unistd.h         HAVE_UNISTD_H)
 check_include_file(sys/types.h      HAVE_SYS_TYPES_H)
+check_include_file(sys/resource.h   HAVE_SYS_RESOURCE_H) # for getrusage
 
 check_include_file("dlfcn.h"        HAVE_DLFCN_H)
 check_include_file("endian.h"       HAVE_ENDIAN_H)
@@ -139,20 +180,31 @@ endif()
 if (HAVE_SYSLOG_H)
     check_symbol_exists(vsyslog     "syslog.h" HAVE_VSYSLOG)
 endif()
+if (HAVE_SYS_RESOURCE_H)
+    check_symbol_exists(getrusage   "sys/resource.h" HAVE_GETRUSAGE)
+endif()
 
-if (MSVC)
-    check_symbol_exists(strtoll     "stdlib.h" HAVE_STRTOLL)
+check_symbol_exists(strtoll     "stdlib.h" HAVE_STRTOLL)
+check_symbol_exists(strtoull    "stdlib.h" HAVE_STRTOULL)
 
-    set(json_c_strtoll "strtoll")
-    if (NOT HAVE_STRTOLL)
-        # Use _strtoi64 if strtoll is not available.
-        check_symbol_exists(_strtoi64 "stdlib.h" __have_strtoi64)
-        if (__have_strtoi64)
-            set(HAVE_STRTOLL 1)
-            set(json_c_strtoll "_strtoi64")
-            # could do the same for strtoull, if needed
-        endif()
-    endif()
+set(json_c_strtoll "strtoll")
+if (NOT HAVE_STRTOLL)
+# Use _strtoi64 if strtoll is not available.
+check_symbol_exists(_strtoi64 "stdlib.h" __have_strtoi64)
+if (__have_strtoi64)
+    #set(HAVE_STRTOLL 1)
+    set(json_c_strtoll "_strtoi64")
+endif()
+endif()
+
+set(json_c_strtoull "strtoull")
+if (NOT HAVE_STRTOULL)
+# Use _strtoui64 if strtoull is not available.
+check_symbol_exists(_strtoui64 "stdlib.h" __have_strtoui64)
+if (__have_strtoui64)
+    #set(HAVE_STRTOULL 1)
+    set(json_c_strtoull "_strtoui64")
+endif()
 endif()
 
 
@@ -163,25 +215,27 @@ check_type_size("long long"         SIZEOF_LONG_LONG)
 check_type_size("size_t"            SIZEOF_SIZE_T)
 
 check_c_source_compiles(
-[=[
+"
 extern void json_object_get();
-__asm__(".section .gnu.json_object_get\\n\\t.ascii \\"Please link against libjson-c instead of libjson\\"\\n\\t.text");
+__asm__(\".section .gnu.json_object_get\\n\\t.ascii \\\"Please link against libjson-c instead of libjson\\\"\\n\\t.text\");
 int main(int c, char *v) { return 0;}
-]=]
+"
 HAS_GNU_WARNING_LONG)
 
 check_c_source_compiles(
   "int main() { int i, x = 0; i = __sync_add_and_fetch(&x,1); return x; }"
   HAVE_ATOMIC_BUILTINS)
 
-check_c_source_compiles(
-  "__thread int x = 0; int main() { return 0; }"
-  HAVE___THREAD)
+if (NOT DISABLE_THREAD_LOCAL_STORAGE)
+  check_c_source_compiles(
+    "__thread int x = 0; int main() { return 0; }"
+    HAVE___THREAD)
 
-if (HAVE___THREAD)
-    set(SPEC___THREAD __thread)
-elseif (MSVC)
-    set(SPEC___THREAD __declspec(thread))
+  if (HAVE___THREAD)
+      set(SPEC___THREAD __thread)
+  elseif (MSVC)
+      set(SPEC___THREAD __declspec(thread))
+  endif()
 endif()
 
 # Hardware random number is not available on Windows? Says, config.h.win32. Best to preserve compatibility.
@@ -191,9 +245,9 @@ endif()
 
 # Once we've done basic symbol/header searches let's add them in.
 configure_file(${PROJECT_SOURCE_DIR}/cmake/config.h.in        ${PROJECT_BINARY_DIR}/config.h)
-message(STATUS "Written ${PROJECT_BINARY_DIR}/config.h")
+message(STATUS "Wrote ${PROJECT_BINARY_DIR}/config.h")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/json_config.h.in   ${PROJECT_BINARY_DIR}/json_config.h)
-message(STATUS "Written ${PROJECT_BINARY_DIR}/json_config.h")
+message(STATUS "Wrote ${PROJECT_BINARY_DIR}/json_config.h")
 
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
@@ -206,6 +260,9 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wextra")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wwrite-strings")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-unused-parameter")
+    if (NOT WIN32)
+        set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wstrict-prototypes")
+    endif()
 
     add_definitions(-D_GNU_SOURCE)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
@@ -221,23 +278,36 @@ endif()
 
 if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
 	check_c_source_compiles(
-	[=[
+	"
 	/* uClibc toolchains without threading barf when _REENTRANT is defined */
 	#define _REENTRANT 1
 	#include <sys/types.h>
-	int main ()
+	int main (void)
 	{
 	  return 0;
 	}
-	]=]
+	"
 	REENTRANT_WORKS
 	)
 	if (REENTRANT_WORKS)
 		add_compile_options("-D_REENTRANT")
 	endif()
 
-	if (DISABLE_BSYMBOLIC STREQUAL "OFF")
-		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKED_FLAGS} -Wl,-Bsymbolic-functions")
+	# OSX Mach-O doesn't support linking with '-Bsymbolic-functions'.
+	# Others may not support it, too.
+	list(APPEND CMAKE_REQUIRED_LIBRARIES "-Wl,-Bsymbolic-functions")
+	check_c_source_compiles(
+	"
+	int main (void)
+	{
+	  return 0;
+	}
+	"
+	BSYMBOLIC_WORKS
+	)
+	list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "-Wl,-Bsymbolic-functions")
+	if (DISABLE_BSYMBOLIC STREQUAL "OFF" AND BSYMBOLIC_WORKS)
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic-functions")
 		# XXX need cmake>=3.13 for this:
 		#add_link_options("-Wl,-Bsymbolic-functions")
 	endif()
@@ -249,7 +319,7 @@ if ($ENV{VALGRIND})
 endif()
 
 set(JSON_C_PUBLIC_HEADERS
-    ${PROJECT_BINARY_DIR}/config.h
+    # Note: config.h is _not_ included here
     ${PROJECT_BINARY_DIR}/json_config.h
 
     ${PROJECT_SOURCE_DIR}/json.h
@@ -261,6 +331,7 @@ set(JSON_C_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/json_object_iterator.h
     ${PROJECT_SOURCE_DIR}/json_pointer.h
     ${PROJECT_SOURCE_DIR}/json_tokener.h
+    ${PROJECT_SOURCE_DIR}/json_types.h
     ${PROJECT_SOURCE_DIR}/json_util.h
     ${PROJECT_SOURCE_DIR}/json_visit.h
     ${PROJECT_SOURCE_DIR}/linkhash.h
@@ -298,6 +369,14 @@ set(JSON_C_SOURCES
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_BINARY_DIR})
 
+add_subdirectory(doc)
+
+# uninstall
+add_custom_target(uninstall
+  COMMAND cat ${PROJECT_BINARY_DIR}/install_manifest.txt | xargs rm
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # XXX for a normal full distribution we'll need to figure out
 # XXX how to build both shared and static libraries.
 # Probably leverage that to build a local VALGRIND=1 library for testing too.
@@ -306,9 +385,9 @@ add_library(${PROJECT_NAME}
     ${JSON_C_HEADERS}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION 4.0.0
-    SOVERSION 4)
-
+    VERSION 5.0.0
+    SOVERSION 5)
+list(APPEND CMAKE_TARGETS ${PROJECT_NAME})
 # If json-c is used as subroject it set to target correct interface -I flags and allow
 # to build external target without extra include_directories(...)
 target_include_directories(${PROJECT_NAME}
@@ -317,7 +396,35 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 )
 
-install(TARGETS ${PROJECT_NAME}
+# Allow to build static and shared libraries at the same time
+if (BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
+    set(STATIC_LIB ${PROJECT_NAME}-static)
+    add_library(${STATIC_LIB} STATIC
+        ${JSON_C_SOURCES}
+        ${JSON_C_HEADERS}
+    )
+
+    # rename the static library
+    if (NOT MSVC)
+    set_target_properties(${STATIC_LIB} PROPERTIES
+        OUTPUT_NAME ${PROJECT_NAME}
+    )
+    endif()
+    list(APPEND CMAKE_TARGETS ${STATIC_LIB})
+endif ()
+
+# Always create new install dirs with 0755 permissions, regardless of umask
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+	OWNER_READ
+	OWNER_WRITE
+	OWNER_EXECUTE
+	GROUP_READ
+	GROUP_EXECUTE
+	WORLD_READ
+	WORLD_EXECUTE
+   )
+
+install(TARGETS ${CMAKE_TARGETS}
     EXPORT ${PROJECT_NAME}-targets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -351,7 +458,7 @@ if (UNIX OR MINGW OR CYGWIN)
     SET(includedir ${CMAKE_INSTALL_FULL_INCLUDEDIR})
     SET(VERSION ${PROJECT_VERSION})
     configure_file(json-c.pc.in json-c.pc @ONLY)
-    set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
+    set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
     install(FILES ${PROJECT_BINARY_DIR}/json-c.pc DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 endif ()
 
