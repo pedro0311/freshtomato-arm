@@ -24,41 +24,24 @@
  * Do this here, because Tomato doesn't have the sysctl command.
  * With these values, a disk block should be written to disk within 2 seconds.
  */
-#ifdef LINUX26
+
 void tune_bdflush(void)
 {
 	f_write_string("/proc/sys/vm/dirty_expire_centisecs", "200", 0, 0);
 	f_write_string("/proc/sys/vm/dirty_writeback_centisecs", "200", 0, 0);
 }
-#else
-#include <sys/kdaemon.h>
-#define SET_PARM(n) (n * 2 | 1)
-void tune_bdflush(void)
-{
-	bdflush(SET_PARM(5), 100);
-	bdflush(SET_PARM(6), 100);
-	bdflush(SET_PARM(8), 0);
-}
-#endif // LINUX26
 
 #define USBCORE_MOD	"usbcore"
 #define USB20_MOD	"ehci-hcd"
 #define USBSTORAGE_MOD	"usb-storage"
 #define SCSI_MOD	"scsi_mod"
 #define SD_MOD		"sd_mod"
-#ifdef LINUX26
 #define USBOHCI_MOD	"ohci-hcd"
 #define USBUHCI_MOD	"uhci-hcd"
 #define USBXHCI_MOD	"xhci-hcd"
 #define USBPRINTER_MOD	"usblp"
 #define SCSI_WAIT_MOD	"scsi_wait_scan"
 #define USBFS		"usbfs"
-#else
-#define USBOHCI_MOD	"usb-ohci"
-#define USBUHCI_MOD	"usb-uhci"
-#define USBPRINTER_MOD	"printer"
-#define USBFS		"usbdevfs"
-#endif
 
 static int p9100d_sig(int sig)
 {
@@ -123,9 +106,8 @@ void start_usb(void)
 		modprobe(USBCORE_MOD);
 
 		/* mount usb device filesystem */
-        	mount(USBFS, "/proc/bus/usb", USBFS, MS_MGC_VAL, NULL);
+		mount(USBFS, "/proc/bus/usb", USBFS, MS_MGC_VAL, NULL);
 
-#ifdef LINUX26
 		/* check USB LED */
 		i = do_led(LED_USB, LED_PROBE);
 		if (i != 255) {
@@ -137,7 +119,6 @@ void start_usb(void)
 		if (i != 255) {
 			do_led(LED_USB3, LED_OFF);	/* turn off USB3 LED */
 		}
-#endif
 
 #ifdef TCONFIG_USBAP
 			char instance[20];
@@ -167,16 +148,12 @@ void start_usb(void)
 		if (nvram_get_int("usb_storage")) {
 			/* insert scsi and storage modules before usb drivers */
 			modprobe(SCSI_MOD);
-#ifdef LINUX26
 			modprobe(SCSI_WAIT_MOD);
-#endif
 			modprobe(SD_MOD);
 			modprobe(USBSTORAGE_MOD);
 
 			if (nvram_get_int("usb_fs_ext4")) {
-#ifdef LINUX26
 				modprobe("mbcache");	// used by ext2/3/4
-#endif
 				modprobe("jbd2");
 				modprobe("crc16");
 				modprobe("ext4");
@@ -261,11 +238,9 @@ void start_usb(void)
 				);
 			}
 		}
-#ifdef LINUX26
 		if (nvram_get_int("idle_enable") == 1) {
 			xstart( "sd-idle" );
 		}
-#endif
 
 #ifdef TCONFIG_UPS
 		if (nvram_get_int("usb_apcupsd") == 1) {
@@ -325,9 +300,7 @@ void stop_usb(void)
 		modprobe_r("ext4");
 		modprobe_r("jbd2");
 		modprobe_r("crc16");
-#ifdef LINUX26
 		modprobe_r("mbcache");
-#endif
 		modprobe_r("vfat");
 		modprobe_r("fat");
 		modprobe_r("exfat"); //!oneleft
@@ -349,18 +322,14 @@ void stop_usb(void)
 		modprobe_r("nls_cp850");
 		modprobe_r("nls_cp852");
 		modprobe_r("nls_cp866");
-#ifdef LINUX26
 		modprobe_r("nls_cp932");
 		modprobe_r("nls_cp936");
 		modprobe_r("nls_cp949");
 		modprobe_r("nls_cp950");
 #endif
-#endif
 		modprobe_r(USBSTORAGE_MOD);
 		modprobe_r(SD_MOD);
-#ifdef LINUX26
 		modprobe_r(SCSI_WAIT_MOD);
-#endif
 		modprobe_r(SCSI_MOD);
 	}
 
@@ -369,7 +338,6 @@ void stop_usb(void)
 	if (disabled || nvram_get_int("usb_xhci") != 1) modprobe_r(USBXHCI_MOD);
 	if (disabled || nvram_get_int("usb_usb2") != 1) modprobe_r(USB20_MOD);
 
-#ifdef LINUX26
 	/* check USB LED */
 	i = do_led(LED_USB, LED_PROBE);
 	if (i != 255) {
@@ -381,7 +349,6 @@ void stop_usb(void)
 	if (i != 255) {
 		do_led(LED_USB3, LED_OFF);	/* turn off USB3 LED */
 	}
-#endif
 
 	// only unload core modules if usb is disabled
 	if (disabled) {
@@ -393,7 +360,6 @@ void stop_usb(void)
 		modprobe_r(USBCORE_MOD);
 	}
 
-#ifdef LINUX26
 	if (nvram_get_int("idle_enable") == 0) {
 		killall("sd-idle", SIGTERM);
 	}
@@ -452,10 +418,7 @@ void stop_usb(void)
 				set_gpio(10, T_HIGH); /* usb3.0 */
 			}
 	}
-#endif
-
 }
-
 
 #define MOUNT_VAL_FAIL 	0
 #define MOUNT_VAL_RONLY	1
@@ -507,9 +470,8 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				nvram_set("smbd_nlsmod", flagfn);
 			}
 			sprintf(options + strlen(options), ",shortname=winnt" + (options[0] ? 0 : 1));
-#ifdef LINUX26
 			sprintf(options + strlen(options), ",flush" + (options[0] ? 0 : 1));
-#endif
+
 			if (nvram_invmatch("usb_fat_opt", ""))
 				sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_fat_opt"));
 		}
@@ -532,26 +494,25 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
 
 #ifdef TCONFIG_NTFS
-			/* try ntfs-3g in case it's installed */
 			if (ret != 0 && strncmp(type, "ntfs", 4) == 0) {
 				sprintf(options + strlen(options), ",noatime,nodev" + (options[0] ? 0 : 1));
 				if (nvram_get_int("usb_fs_ntfs")) {
-					if( nvram_match( "usb_ntfs_driver", "ntfs3g" )) {
+					if (nvram_match("usb_ntfs_driver", "ntfs3g")) {
 						ret = eval("ntfs-3g", "-o", options, mnt_dev, mnt_dir);
 					}
 #if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
-					else if( nvram_match( "usb_ntfs_driver", "paragon" )) {
+					else if(nvram_match("usb_ntfs_driver", "paragon")) {
 						ret = eval("mount", "-t", "ufsd", "-o", options, "-o", "force", mnt_dev, mnt_dir);
 					}
 #endif
 #ifdef TCONFIG_TUXERA
-					else if( nvram_match( "usb_ntfs_driver", "tuxera" )) {
+					else if(nvram_match("usb_ntfs_driver", "tuxera")) {
 						ret = eval("mount", "-t", "tntfs", "-o", options, mnt_dev, mnt_dir);
 					}
 #endif
 				}
 			}
-#endif
+#endif /* TCONFIG_NTFS */
 
 #ifdef TCONFIG_HFS
 			if (ret != 0 && strncmp(type, "hfs", 3) == 0) {
@@ -561,7 +522,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			if (ret != 0 && strncmp(type, "hfsplus", 7) == 0) {
 				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
 			}
-#endif
+#endif /* TCONFIG_HFS */
 
 			if (ret != 0) /* give it another try - guess fs */
 				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
@@ -570,6 +531,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				syslog(LOG_INFO, "USB %s%s fs at %s mounted on %s",
 					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 				return (flags & MS_RDONLY) ? MOUNT_VAL_RONLY : MOUNT_VAL_RW;
+			} else {
+				syslog(LOG_INFO, "USB %s%s fs at %s failed to mount on %s",
+					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 			}
 
 			if (dir_made) {
@@ -581,14 +545,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 	return MOUNT_VAL_FAIL;
 }
 
-
 struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 {
 	struct mntent *mnt = NULL;
-#if 0
-	if (eval("mount", "-a") == 0)
-		mnt = findmntents(dev_name, 0, NULL, 0);
-#else
 	char spec[PATH_MAX+1];
 
 	if (label && *label) {
@@ -615,13 +574,11 @@ struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 				mnt = findmntents(dev_name, 0, NULL, 0);
 		}
 	}
-#endif
 
 	if (mnt)
 		syslog(LOG_INFO, "USB %s fs at %s mounted on %s", type, dev_name, mnt->mnt_dir);
 	return (mnt);
 }
-
 
 /* Check if the UFD is still connected because the links created in /dev/discs
  * are not removed when the UFD is  unplugged.
@@ -631,9 +588,6 @@ struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 static int usb_ufd_connected(int host_no)
 {
 	char proc_file[128];
-#ifndef LINUX26
-	char line[256];
-#endif
 	FILE *fp;
 
 	sprintf(proc_file, "%s/%s-%d/%d", PROC_SCSI_ROOT, USB_STORAGE, host_no, host_no);
@@ -646,23 +600,12 @@ static int usb_ufd_connected(int host_no)
 	}
 
 	if (fp) {
-#ifdef LINUX26
 		fclose(fp);
 		return 1;
-#else
-		while (fgets(line, sizeof(line), fp) != NULL) {
-			if (strstr(line, "Attached: Yes")) {
-				fclose(fp);
-				return 1;
-			}
-		}
-		fclose(fp);
-#endif
 	}
 
 	return 0;
 }
-
 
 #ifndef MNT_DETACH
 #define MNT_DETACH	0x00000002      /* from linux/fs.h - just detach from the tree */
@@ -763,7 +706,6 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 	return (ret == 0);
 }
 
-
 /* Mount this partition on this disc.
  * If the device is already mounted on any mountpoint, don't mount it again.
  * If this is a swap partition, try swapon -a.
@@ -831,54 +773,6 @@ done:
 	return (ret == MOUNT_VAL_RONLY || ret == MOUNT_VAL_RW);
 }
 
-
-#if 0 /* LINUX26 */
-
-/* 
- * Finds SCSI Host number. Returns the host number >=0 if found, or (-1) otherwise.
- * The name and host number of scsi block device in kernel 2.6 (for attached devices) can be found as
- * 	/sys($DEVPATH)/host<host_no>/target<*>/<id>/block:[sda|sdb|...]
- * where $DEVPATH is passed to hotplug events, and looks like
- * 	/devices/pci0000:00/0000:00:04.1/usb1/1-1/1-1:1.2
- *
- * For printers this function finds a minor assigned to a printer
- *	/sys($DEVPATH)/usb:lp[0|1|2|...]
- */
-int find_dev_host(const char *devpath)
-{
-	DIR *usb_devpath;
-	struct dirent *dp;
-	char buf[256];
-	int host = -1;	/* Scsi Host */
-
-	sprintf(buf, "/sys%s", devpath);
-	if ((usb_devpath = opendir(buf))) {
-		while ((dp = readdir(usb_devpath))) {
-			errno = 0;
-			if (strncmp(dp->d_name, "host", 4) == 0) {
-				host = strtol(dp->d_name + 4, (char **)NULL, 10);
-				if (errno)
-					host = -1;
-				else
-					break;
-			}
-			else if (strncmp(dp->d_name, "usb:lp", 6) == 0) {
-				host = strtol(dp->d_name + 6, (char **)NULL, 10);
-				if (errno)
-					host = -1;
-				else
-					break;
-			}
-			else
-				continue;
-		}
-		closedir(usb_devpath);
-	}
-	return (host);
-}
-
-#endif	/* LINUX26 */
-
 int dir_is_mountpoint(const char *root, const char *dir)
 {
 	char path[256];
@@ -943,8 +837,7 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 	}
 }
 
-
-/* This gets called at reboot or upgrade.  The system is stopping. */
+/* This gets called at reboot or upgrade. The system is stopping. */
 void remove_storage_main(int shutdn)
 {
 	if (shutdn)
@@ -952,7 +845,6 @@ void remove_storage_main(int shutdn)
 	/* Unmount all partitions */
 	exec_for_host(-1, 0x02, shutdn ? EFH_SHUTDN : 0, umount_partition);
 }
-
 
 /*******
  * All the complex locking & checking code was removed when the kernel USB-storage
@@ -968,8 +860,6 @@ void remove_storage_main(int shutdn)
  * needs to wait until the disk is unmounted.  We have 20 seconds to do
  * the unmounts.
  *******/
-
-#ifdef LINUX26
 static inline void usbled_proc(char *device, int add)
 {
 	char *p;
@@ -1099,9 +989,7 @@ static inline void usbled_proc(char *device, int add)
 			}
 		}
 	} /* else if (only one LED for USB) */
-
 }
-#endif
 
 /* Plugging or removing usb device
  *
@@ -1172,23 +1060,15 @@ void hotplug_usb(void)
 	char *interface = getenv("INTERFACE");
 	char *action = getenv("ACTION");
 	char *product = getenv("PRODUCT");
-#ifdef LINUX26
 	char *device = getenv("DEVICENAME");
 	int is_block = strcmp(getenv("SUBSYSTEM") ? : "", "block") == 0;
-#else
-	char *device = getenv("DEVICE");
-#endif
 	char *scsi_host = getenv("SCSI_HOST");
 
 	_dprintf("%s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n",
 		getenv("SUBSYSTEM") ? : "USB", interface, action, product, scsi_host, device);
 
 	if (!nvram_get_int("usb_enable")) return;
-#ifdef LINUX26
 	if (!action || ((!interface || !product) && !is_block))
-#else
-	if (!interface || !action || !product)	/* Hubs bail out here. */
-#endif
 		return;
 
 	if (scsi_host)
@@ -1198,18 +1078,9 @@ void hotplug_usb(void)
 
 	add = (strcmp(action, "add") == 0);
 	if (add && (strncmp(interface ? : "", "TOMATO/", 7) != 0)) {
-#ifdef LINUX26
 		if (!is_block && device)
-#endif
-		syslog(LOG_DEBUG, "Attached USB device %s [INTERFACE=%s PRODUCT=%s]",
-			device, interface, product);
-#ifndef LINUX26
-		/* To allow automount to be blocked on startup.
-		 * In kernel 2.6 we still need to serialize mount/umount calls -
-		 * so the lock is down below in the "block" hotplug processing.
-		 */
-		file_unlock(file_lock("usb"));
-#endif
+			syslog(LOG_DEBUG, "Attached USB device %s [INTERFACE=%s PRODUCT=%s]",
+				device, interface, product);
 	}
 
 	if (strncmp(interface ? : "", "TOMATO/", 7) == 0) {	/* web admin */
@@ -1232,7 +1103,6 @@ void hotplug_usb(void)
 			usbled_proc(device, add);
 		}
 	}
-#ifdef LINUX26
 	else if (is_block && strcmp(getenv("MAJOR") ? : "", "8") == 0 && strcmp(getenv("PHYSDEVBUS") ? : "", "scsi") == 0) {
 		/* scsi partition */
 		char devname[64];
@@ -1264,26 +1134,15 @@ void hotplug_usb(void)
 		}
 		file_unlock(lock);
 	}
-#endif
 	else if (strncmp(interface ? : "", "8/", 2) == 0) {	/* usb storage */
-#ifdef LINUX26
 		usbled_proc(device, add);
-#endif
 		run_nvscript("script_usbhotplug", NULL, 2);
-#ifndef LINUX26
-		hotplug_usb_storage_device(host, add, (add ? EFH_HP_ADD : EFH_HP_REMOVE) | (host < 0 ? EFH_HUNKNOWN : 0));
-#endif
 	}
 	else {	/* It's some other type of USB device, not storage. */
-#ifdef LINUX26
 		if (is_block) return;
-#endif
-#ifdef LINUX26
 		if (strncmp(interface ? : "", "7/", 2) == 0)	/* printer */
 			usbled_proc(device, add);
-#endif
-		/* Do nothing.  The user's hotplug script must do it all. */
+		/* Do nothing. The user's hotplug script must do it all. */
 		run_nvscript("script_usbhotplug", NULL, 2);
 	}
 }
-
