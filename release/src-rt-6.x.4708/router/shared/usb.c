@@ -29,9 +29,7 @@
 #include "shared.h"
 
 
-/* Serialize using fcntl() calls 
- */
-
+/* Serialize using fcntl() calls */
 int file_lock(char *tag)
 {
 	char fn[64];
@@ -45,9 +43,9 @@ int file_lock(char *tag)
 
 	pid_t pid = getpid();
 	if (read(lockfd, &lockpid, sizeof(pid_t))) {
-		// check if we already hold a lock
+		/* check if we already hold a lock */
 		if (pid == lockpid) {
-			// don't close the file here as that will release all locks
+			/* don't close the file here as that will release all locks */
 			return -1;
 		}
 	}
@@ -65,7 +63,7 @@ int file_lock(char *tag)
 	write(lockfd, &pid, sizeof(pid_t));
 	return lockfd;
 lock_error:
-	// No proper error processing
+	/* No proper error processing */
 	syslog(LOG_DEBUG, "Error %d locking %s, proceeding anyway", errno, fn);
 	return -1;
 }
@@ -77,7 +75,6 @@ void file_unlock(int lockfd)
 		close(lockfd);
 	}
 }
-
 
 /* Execute a function for each disc partition on the specified controller.
  *
@@ -151,25 +148,23 @@ int is_no_partition(const char *discname)
 int exec_for_host(int host, int obsolete, uint flags, host_exec func)
 {
 	DIR *usb_dev_disc;
-	char bfr[256];	/* Will be: /dev/discs/disc#					*/
-	char ptname[32];/* Will be: discDN_PN	 					*/
-	char dsname[16];/* Will be: discDN	 					*/
-	int host_no;	/* SCSI controller/host # */
+	DIR *dir_host;
+	char bfr[256];		/* Will be: /dev/discs/disc# */
+	char ptname[32];	/* Will be: discDN_PN */
+	char dsname[16];	/* Will be: discDN */
+	int host_no;		/* SCSI controller/host */
 	struct dirent *dp;
 	FILE *prt_fp;
 	int siz;
 	char line[256];
+	char hostbuf[16];
 	int result = 0;
 
 	flags |= EFH_1ST_HOST;
 
-#ifdef LINUX26
-	char hostbuf[16];
-	DIR *dir_host;
-
 	/*
 	 * Scsi block devices in kernel 2.6 (for attached devices) can be found as
-	 * 	/sys/bus/scsi/devices/<host_no>:x:x:x/block:[sda|sdb|...]
+	 * /sys/bus/scsi/devices/<host_no>:x:x:x/block:[sda|sdb|...]
 	 */
 	if ((usb_dev_disc = opendir("/sys/bus/scsi/devices"))) {
 		sprintf(hostbuf, "%d:", host);
@@ -209,80 +204,6 @@ int exec_for_host(int host, int obsolete, uint flags, host_exec func)
 		closedir(usb_dev_disc);
 	}
 
-#else	/* !LINUX26 */
-	char link[256];	/* Will be: ../scsi/host#/bus0/target0/lun#  that bfr links to. */
-			/* When calling the func, will be: /dev/discs/disc#/part#	*/
-	char bfr2[128];	/* Will be: /dev/discs/disc#/disc     for the BLKRRPART.	*/
-	char *cp;
-	int len;
-	int disc_num;	/* Disc # */
-	int part_num;	/* Parition # */
-	char *mp;	/* Ptr to after any leading ../ path */
-
-	if ((usb_dev_disc = opendir(DEV_DISCS_ROOT))) {
-		while ((dp = readdir(usb_dev_disc))) {
-			sprintf(bfr, "%s/%s", DEV_DISCS_ROOT, dp->d_name);
-			if (strncmp(dp->d_name, "disc", 4) != 0)
-				continue;
-
-			disc_num = atoi(dp->d_name + 4);
-			len = readlink(bfr, link, sizeof(link) - 1);
-			if (len < 0)
-				continue;
-
-			link[len] = 0;
-			cp = strstr(link, "/scsi/host");
-			if (!cp)
-				continue;
-
-			host_no = atoi(cp + 10);
-			if (host >= 0 && host_no != host)
-				continue;
-
-			/* We have found a disc that is on this controller.
-			 * Loop thru all the partitions on this disc.
-			 * The new way, reading thru /proc/partitions.
-			 */
-			mp = link;
-			if ((cp = strstr(link, "../")) != NULL)
-				mp = cp + 3;
-			siz = strlen(mp);
-
-			flags |= EFH_1ST_DISC;
-			if (func && (prt_fp = fopen("/proc/partitions", "r"))) {
-				while (fgets(line, sizeof(line) - 2, prt_fp)) {
-					if (sscanf(line, " %*s %*s %*s %s", bfr2) == 1 &&
-					    strncmp(bfr2, mp, siz) == 0)
-					{
-						if ((cp = strstr(bfr2, "/part"))) {
-							part_num = atoi(cp + 5);
-							sprintf(line, "%s/part%d", bfr, part_num);
-							sprintf(dsname, "disc%d", disc_num);
-							sprintf(ptname, "disc%d_%d", disc_num, part_num);
-						}
-						else if ((cp = strstr(bfr2, "/disc"))) {
-							*(++cp) = 0;
-							if (!is_no_partition(bfr2))
-								continue;
-							sprintf(line, "%s/disc", bfr);
-							sprintf(dsname, "disc%d", disc_num);
-							strcpy(ptname, dsname);
-						}
-						else {
-							continue;
-						}
-						result = (*func)(line, host_no, dsname, ptname, flags) || result;
-						flags &= ~(EFH_1ST_HOST | EFH_1ST_DISC);
-					}
-				}
-				fclose(prt_fp);
-			}
-		}
-		closedir(usb_dev_disc);
-	}
-
-#endif	/* LINUX26 */
-
 	return result;
 }
 
@@ -297,7 +218,6 @@ int exec_for_host(int host, int obsolete, uint flags, host_exec func)
  * Find the matching devname(s) in mounts or swaps.
  * If func is supplied, call it for each match.  If not, return mnt on the first match.
  */
-
 static inline int is_same_device(char *fsname, dev_t file_rdev, dev_t file_dev, ino_t file_ino)
 {
 	struct stat st_buf;
@@ -318,7 +238,6 @@ static inline int is_same_device(char *fsname, dev_t file_rdev, dev_t file_dev, 
 	}
 	return 0;
 }
-
 
 struct mntent *findmntents(char *file, int swp, int (*func)(struct mntent *mnt, uint flags), uint flags)
 {
@@ -358,12 +277,8 @@ struct mntent *findmntents(char *file, int swp, int (*func)(struct mntent *mnt, 
 	return mnt;
 }
 
-
-//#define SAME_AS_KERNEL
 /* Simulate a hotplug event, as if a USB storage device
  * got plugged or unplugged.
- * Either use a hardcoded program name, or the same
- * hotplug program that the kernel uses for a real event.
  */
 void add_remove_usbhost(char *host, int add)
 {
@@ -371,30 +286,17 @@ void add_remove_usbhost(char *host, int add)
 	setenv("SCSI_HOST", host, 1);
 	setenv("PRODUCT", host, 1);
 	setenv("INTERFACE", "TOMATO/0", 1);
-#ifdef SAME_AS_KERNEL
-	char pgm[256] = "/sbin/hotplug usb";
-	char *p;
-	int fd = open("/proc/sys/kernel/hotplug", O_RDONLY);
-	if (fd) {
-		if (read(fd, pgm, sizeof(pgm) - 5) >= 0) {
-			if ((p = strchr(pgm, '\n')) != NULL)
-				*p = 0;
-			strcat(pgm, " usb");
-		}
-		close(fd);
-	}
-	system(pgm);
-#else
-	// don't use value from /proc/sys/kernel/hotplug 
-	// since it may be overriden by a user.
+
+	/* don't use value from /proc/sys/kernel/hotplug 
+	 * since it may be overriden by a user
+	 */
 	system("/sbin/hotplug usb");
-#endif
+
 	unsetenv("INTERFACE");
 	unsetenv("PRODUCT");
 	unsetenv("SCSI_HOST");
 	unsetenv("ACTION");
 }
-
 
 /****************************************************/
 /* Use busybox routines to get labels for fat & ext */
@@ -405,7 +307,8 @@ void add_remove_usbhost(char *host, int add)
 #define VOLUME_ID_UUID_SIZE		36
 #define SB_BUFFER_SIZE			0x11000
 
-struct volume_id {
+struct volume_id
+{
 	int		fd;
 	int		error;
 	size_t		sbbuf_len;
@@ -417,35 +320,38 @@ struct volume_id {
 	char		uuid[VOLUME_ID_UUID_SIZE+1];
 };
 
-extern void volume_id_set_uuid();
 extern void *volume_id_get_buffer();
 extern void volume_id_free_buffer();
 extern int volume_id_probe_ext();
 extern int volume_id_probe_vfat();
 extern int volume_id_probe_ntfs();
+#ifdef HFS
+extern int volume_id_probe_hfs_hfsplus();
+#endif
 extern int volume_id_probe_exfat();
 extern int volume_id_probe_linux_swap();
 
 /* magic for ext2/3/4 detection */
-int check_magic(char *buf, char *magic){
-	if(!strncmp(magic, "ext3_chk", 8)){
-		if(!((*buf)&4))
+int check_magic(char *buf, char *magic)
+{
+	if (!strncmp(magic, "ext3_chk", 8)) {
+		if (!((*buf)&4))
 			return 0;
-		if(*(buf+4) >= 0x40)
+		if (*(buf+4) >= 0x40)
 			return 0;
-		if(*(buf+8) >= 8)
+		if (*(buf+8) >= 8)
 			return 0;
 		return 1;
 	}
 
-	if(!strncmp(magic, "ext4_chk", 8)){
-		if(!((*buf)&4))
+	if (!strncmp(magic, "ext4_chk", 8)) {
+		if (!((*buf)&4))
 			return 0;
-		if(*(buf+4) > 0x3F)
+		if (*(buf+4) > 0x3F)
 			return 1;
-		if(*(buf+4) >= 0x40)
+		if (*(buf+4) >= 0x40)
 			return 0;
-		if(*(buf+8) <= 7)
+		if (*(buf+8) <= 7)
 			return 0;
 		return 1;
 	}
@@ -469,8 +375,10 @@ char *find_label_or_uuid(char *dev_name, char *label, char *uuid)
 
 	volume_id_get_buffer(&id, 0, SB_BUFFER_SIZE);
 
+	/* detect swap */
 	if (!id.error && volume_id_probe_linux_swap(&id) == 0)
 		fstype = "swap";
+	/* detect vfat */
 	else if (!id.error && volume_id_probe_vfat(&id) == 0)
 		fstype = "vfat";
 	/* detect ext2/3/4 */
@@ -490,30 +398,33 @@ char *find_label_or_uuid(char *dev_name, char *label, char *uuid)
 #ifdef HFS
 	/* detect hfs */
 	else if (!id.error && volume_id_probe_hfs_hfsplus(&id) == 0) {
-		if (id.sbbuf[1024] == 0x48) {
-			if (!memcmp(id.sbbuf+1032, "HFSJ", 4)) {
-				if(id.sbbuf[1025] == 0x58) // with case-sensitive
-					fstype = "hfsplus";
-				else
-					fstype = "hfsplus";
-			}
+		if ((!memcmp(id.sbbuf+1032, "HFSJ", 4)) || (!memcmp(id.sbbuf+1032, "H+", 2)) || (!memcmp(id.sbbuf+1024, "H+", 2)) || (!memcmp(id.sbbuf+1024, "HX", 2))) {
+			if (id.sbbuf[1025] == 0x58)
+				fstype = "hfsplus";	/* hfs+jx */
 			else
-				fstype = "hfs";
+				fstype = "hfsplus";	/* hfs+j */
 		}
+		else
+			fstype = "hfs";
 	}
 #endif
-	//!oneleft
+	/* detect exfat */
 	else if (!id.error && volume_id_probe_exfat(&id) == 0)
 		fstype = "exfat";
+	/* -> unknown FS */
 	else if (!id.error)
 		fstype = "unknown";
 
 	volume_id_free_buffer(&id);
+
 	if (label && (*id.label != 0))
 		strcpy(label, id.label);
+
 	if (uuid && (*id.uuid != 0))
 		strcpy(uuid, id.uuid);
+
 	close(id.fd);
+
 	return (fstype);
 }
 

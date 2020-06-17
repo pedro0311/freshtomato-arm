@@ -75,9 +75,6 @@ endif
 # system info
 	install -m 0700 sysinfo $(INSTALLDIR)/usr/sbin
 
-# nas starter # AB multiSSID
-	install -m 0700 nas.sh $(INSTALLDIR)/usr/sbin
-
 # BTGUI
 ifeq ($(TCONFIG_BT),y)
 	install -m 0755 btcheck $(INSTALLDIR)/usr/bin

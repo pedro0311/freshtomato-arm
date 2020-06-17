@@ -135,7 +135,7 @@ function verifyFields(focused, quiet) {
 	if ((a.value.length) && (!_v_iptaddr(a, quiet || !ok, 15, 1, 1))) return 0;
 	ferror.clear(a);
 
-	if (!v_range('_f_limit_hit', quiet || !ok, 1, 100)) return 0;
+	if (!v_range('_f_limit_hit', quiet || !ok, 1, 19)) return 0;
 	if (!v_range('_f_limit_sec', quiet || !ok, 3, 3600)) return 0;
 
 	a = E('_set_password_1');

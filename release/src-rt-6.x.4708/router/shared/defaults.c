@@ -1018,7 +1018,12 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_NTFS */
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			"0"				, 0 },	// !Victek
+#ifdef TCONFIG_TUXERA_HFS
+	{ "usb_hfs_driver",		"tuxera"			, 0 },
+#else
+	{ "usb_hfs_driver",		"kernel"			, 0 },
 #endif
+#endif /* TCONFIG_HFS */
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		"0"				, 0 },
 #endif
