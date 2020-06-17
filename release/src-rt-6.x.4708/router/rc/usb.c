@@ -182,11 +182,18 @@ void start_usb(void)
 #endif
 
 #ifdef TCONFIG_HFS
-			if (nvram_get_int("usb_fs_hfs")) {
+			if (nvram_get_int("usb_fs_hfs") && nvram_match("usb_hfs_driver", "kernel")) {
 				modprobe("hfs");
 				modprobe("hfsplus");
 			}
 #endif
+
+#ifdef TCONFIG_TUXERA_HFS
+			if (nvram_get_int("usb_fs_hfs") && nvram_match("usb_hfs_driver", "tuxera")) {
+				modprobe("thfsplus");
+			}
+#endif
+
 		}
 
 		if (nvram_get_int("usb_usb3") == 1) {
@@ -314,6 +321,9 @@ void stop_usb(void)
 #ifdef TCONFIG_HFS
 		modprobe_r("hfs");
 		modprobe_r("hfsplus");
+#endif
+#ifdef TCONFIG_TUXERA_HFS
+		modprobe_r("thfsplus");
 #endif
 		sleep(1);
 
@@ -483,6 +493,28 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			if (nvram_invmatch("usb_ntfs_opt", ""))
 				sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_ntfs_opt"));
 		}
+#ifdef TCONFIG_HFS
+		else if (strncmp(type, "hfs", 3) == 0) {
+			if (nvram_get_int("usb_fs_hfs")) {
+				if (nvram_match("usb_hfs_driver", "kernel")) {
+					sprintf(options, "rw,noatime,nodev");
+
+					if (strncmp(type, "hfsplus", 7) == 0)
+						sprintf(options + strlen(options), ",force" + (options[0] ? 0 : 1));
+				}
+#ifdef TCONFIG_TUXERA_HFS
+				else if (nvram_match("usb_hfs_driver", "tuxera")) {
+					/* override fs fype */
+					type = "thfsplus";
+				}
+#endif
+				if (nvram_invmatch("usb_hfs_opt", ""))
+					sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_hfs_opt"));
+			}
+			else /* HFS support disabled by user, don't try to mount */
+				flags = 0;
+		}
+#endif /* TCONFIG_HFS */
 
 		if (flags) {
 			if ((dir_made = mkdir_if_none(mnt_dir))) {
@@ -491,7 +523,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				f_write(flagfn, NULL, 0, 0, 0);
 			}
 
+			/* mount at last */
 			ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
+			syslog(LOG_DEBUG, "# mount # type: %s, options: %s, mnt_dev: %s, mnt_dir: %s; return code: %d", type, strlen(options) ? options : "none", mnt_dev, mnt_dir, ret);
 
 #ifdef TCONFIG_NTFS
 			if (ret != 0 && strncmp(type, "ntfs", 4) == 0) {
@@ -515,12 +549,15 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 #endif /* TCONFIG_NTFS */
 
 #ifdef TCONFIG_HFS
-			if (ret != 0 && strncmp(type, "hfs", 3) == 0) {
-				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
-			}
+			/* try rw mount for kernel HFS/HFS+ driver (guess fs) */
+			if (ret != 0 && (strncmp(type, "hfs", 3) == 0)) {
+				eval("fsck.hfsplus", "-f", mnt_dev);
 
-			if (ret != 0 && strncmp(type, "hfsplus", 7) == 0) {
-				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
+				ret = eval("mount", "-o", options, mnt_dev, mnt_dir);
+				if (ret == 0)
+					syslog(LOG_INFO, "USB: %s: attempt to mount rw after unclean unmounting succeeded!", type);
+
+				syslog(LOG_DEBUG, "mount cmd: mount -o %s %s %s, return: %d", options, mnt_dev, mnt_dir, ret);
 			}
 #endif /* TCONFIG_HFS */
 

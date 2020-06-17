@@ -384,6 +384,14 @@ define RouterOptions
 			sed -i "/TCONFIG_TUXERA/d" $(1); \
 			echo "TCONFIG_TUXERA=y" >>$(1); \
 		fi; \
+		if [ "$(HFS)" = "y" ]; then \
+			sed -i "/TCONFIG_HFS/d" $(1); \
+			echo "TCONFIG_HFS=y" >>$(1); \
+		fi; \
+		if [ "$(TUXERA_HFS)" = "y" ]; then \
+			sed -i "/TCONFIG_TUXERA_HFS/d" $(1); \
+			echo "TCONFIG_TUXERA_HFS=y" >>$(1); \
+		fi; \
 		if [ "$(MEDIASRV)" = "y" ]; then \
 			sed -i "/TCONFIG_MEDIA_SERVER/d" $(1); \
 			echo "TCONFIG_MEDIA_SERVER=y" >>$(1); \
@@ -489,10 +497,6 @@ define RouterOptions
 	if [ "$(DNSSEC)" = "y" ]; then \
 		sed -i "/TCONFIG_DNSSEC/d" $(1); \
 		echo "TCONFIG_DNSSEC=y" >>$(1); \
-	fi; \
-	if [ "$(HFS)" = "y" ]; then \
-		sed -i "/TCONFIG_HFS/d" $(1); \
-		echo "TCONFIG_HFS=y" >>$(1); \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
 		sed -i "/TCONFIG_UPS/d" $(1); \
@@ -670,6 +674,9 @@ define BusyboxOptions
 			echo "CONFIG_TUNE2FS=y" >>$(1); \
 			sed -i "/CONFIG_E2LABEL/d" $(1); \
 			echo "CONFIG_E2LABEL=y" >>$(1); \
+			if [ "$(HFS)" = "y" ]; then \
+				echo "CONFIG_FEATURE_VOLUMEID_HFS=y" >>$(1); \
+			fi; \
 			sed -i "/CONFIG_FEATURE_VOLUMEID_EXFAT/d" $(1); \
 			echo "CONFIG_FEATURE_VOLUMEID_EXFAT=y" >>$(1); \
 		fi; \
@@ -814,6 +821,11 @@ define KernelConfig
 	if [ "$(USB)" = "" ]; then \
 		sed -i "/CONFIG_EFI_PARTITION/d" $(1); \
 		echo "# CONFIG_EFI_PARTITION is not set" >>$(1); \
+	else \
+		if [ "$(HFS)" = "y" ]; then \
+			sed -i "s/# CONFIG_HFS_FS is not set/CONFIG_HFS_FS=m/g" $(1); \
+			sed -i "s/# CONFIG_HFSPLUS_FS is not set/CONFIG_HFSPLUS_FS=m/g" $(1); \
+		fi; \
 	fi; \
 	if [ "$(IPV6SUPP)" = "y" ]; then \
 		sed -i "/CONFIG_IPV6 is not set/d" $(1); \
@@ -992,7 +1004,6 @@ define KernelConfig
 		sed -i "/CONFIG_ATA_VERBOSE_ERROR/d" $(1); \
 		echo "# CONFIG_ATA_VERBOSE_ERROR is not set" >>$(1); \
 	fi; \
-	sed -i "/CONFIG_FAILSAFE_UPGRADE/d" $(1); \
 	sed -i "/CONFIG_EXT2_/d" $(1); \
 	sed -i "/CONFIG_EXT3_/d" $(1); \
 	sed -i "/CONFIG_EXT4_/d" $(1); \
@@ -1004,6 +1015,7 @@ define KernelConfig
 	echo "# CONFIG_EXT4_FS_POSIX_ACL is not set" >>$(1); \
 	echo "# CONFIG_EXT4_FS_SECURITY is not set" >>$(1); \
 	echo "# CONFIG_EXT4_DEBUG is not set" >>$(1); \
+	sed -i "/CONFIG_FAILSAFE_UPGRADE/d" $(1); \
 	if [ "$(FAILSAFE_UPGRADE)" = "y" ]; then \
 		echo "CONFIG_FAILSAFE_UPGRADE=y" >>$(1); \
 	else \

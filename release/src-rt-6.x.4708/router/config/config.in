@@ -217,6 +217,10 @@ config TCONFIG_TUXERA
 	bool "Tuxera NTFS driver for Asus routers"
 	default n
 
+config TCONFIG_TUXERA_HFS
+	bool "Tuxera HFS/HFS+ driver for Asus routers"
+	default n
+
 config TCONFIG_BCMARM
 	bool "Bcm Arm"
 	default n

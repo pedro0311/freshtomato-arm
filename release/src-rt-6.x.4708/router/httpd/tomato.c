@@ -1304,6 +1304,7 @@ static const nvset_t nvset_list[] = {
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
+	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
 	{ "usb_automount",		V_01				},
 	{ "script_usbhotplug", 		V_TEXT(0, 2048)			},

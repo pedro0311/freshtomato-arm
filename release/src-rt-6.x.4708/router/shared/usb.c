@@ -325,6 +325,9 @@ extern void volume_id_free_buffer();
 extern int volume_id_probe_ext();
 extern int volume_id_probe_vfat();
 extern int volume_id_probe_ntfs();
+#ifdef HFS
+extern int volume_id_probe_hfs_hfsplus();
+#endif
 extern int volume_id_probe_exfat();
 extern int volume_id_probe_linux_swap();
 
@@ -395,16 +398,14 @@ char *find_label_or_uuid(char *dev_name, char *label, char *uuid)
 #ifdef HFS
 	/* detect hfs */
 	else if (!id.error && volume_id_probe_hfs_hfsplus(&id) == 0) {
-		if (id.sbbuf[1024] == 0x48) {
-			if (!memcmp(id.sbbuf+1032, "HFSJ", 4)) {
-				if (id.sbbuf[1025] == 0x58) /* with case-sensitive */
-					fstype = "hfsplus";
-				else
-					fstype = "hfsplus";
-			}
+		if ((!memcmp(id.sbbuf+1032, "HFSJ", 4)) || (!memcmp(id.sbbuf+1032, "H+", 2)) || (!memcmp(id.sbbuf+1024, "H+", 2)) || (!memcmp(id.sbbuf+1024, "HX", 2))) {
+			if (id.sbbuf[1025] == 0x58)
+				fstype = "hfsplus";	/* hfs+jx */
 			else
-				fstype = "hfs";
+				fstype = "hfsplus";	/* hfs+j */
 		}
+		else
+			fstype = "hfs";
 	}
 #endif
 	/* detect exfat */
