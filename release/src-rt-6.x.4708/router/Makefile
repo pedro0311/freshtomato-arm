@@ -190,6 +190,8 @@ obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
 obj-$(TCONFIG_NFS) += nfs-utils
 
+obj-$(TCONFIG_HFS) += diskdev_cmds-332.25
+
 #Roadkill
 obj-$(TCONFIG_NOCAT) += nocat
 
@@ -3049,6 +3051,30 @@ iperf-clean:
 	-@$(MAKE) -C iperf clean
 	-@rm -rf iperf/Makefile iperf/stamp-h1
 	$(call unpatch_files,iperf)
+
+diskdev_cmds-332.25:
+	@$(SEP)
+	$(call patch_files,diskdev_cmds-332.25)
+	cd diskdev_cmds-332.25 && \
+		make -f Makefile.lnx
+
+diskdev_cmds-332.25-install: diskdev_cmds-332.25
+	install -D diskdev_cmds-332.25/newfs_hfs.tproj/newfs_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
+	install -D diskdev_cmds-332.25/fsck_hfs.tproj/fsck_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfsplus
+	cd $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin && \
+		rm -f mkfs.hfs && \
+		rm -f fsck.hfs && \
+		ln -s mkfs.hfsplus mkfs.hfs && \
+		ln -s fsck.hfsplus fsck.hfs
+
+diskdev_cmds-332.25-clean:
+	cd diskdev_cmds-332.25 && \
+		make -f Makefile.lnx clean
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfs
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfs
+	$(call unpatch_files,diskdev_cmds-332.25)
 
 #
 # Generic rules
