@@ -125,9 +125,12 @@ function verifyFields(focused, quiet) {
 		ok = 0;
 	}
 	else if (a.value != '') {
-		if (a.value.search(/^\s*ssh-(dss|rsa)/) == -1) {
-			ferror.set(a, 'Invalid SSH key.', quiet || !ok);
-			ok = 0;
+		var aa = a.value.split(/\r?\n/);
+		for (i = 0; i < aa.length; i++) {
+			if (aa[i].search(/^(ssh-(dss|rsa|ed25519)|ecdsa-sha2)/) == -1) {
+				ferror.set(a, 'Invalid SSH key(s). Also check for empty lines.', quiet || !ok);
+				ok = 0;
+			}
 		}
 	}
 
