@@ -513,8 +513,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txbf",			"1"				, 0 },	// Explicit Beamforming on = 1 , off = 0 (default: on)
 	{ "wl_txbf_bfr_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
 	{ "wl_txbf_bfe_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
-	{ "wl_itxbf",			"0"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
-	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
+	{ "wl_itxbf",			"1"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_imp",		"1"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: on - sync with wl_itxbf)
 #endif
 #endif
 

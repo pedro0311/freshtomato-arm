@@ -147,20 +147,6 @@ restore_defaults(void)
 			nvram_set("et_txq_thresh", "3300");
 		}
 	}
-	
-#ifdef TCONFIG_BCMARM
-	if (restore_defaults) {
-		/* modify default options for TX Beamforming after reset */
-		dbg("Reset TxBF settings...\n");
-		nvram_set("wl0_txbf", "1");	/* Explicit Beamforming ON for WiFi 0 (2,4 GHz) */
-		nvram_set("wl1_txbf", "1");	/* Explicit Beamforming ON for WiFi 1 (5 GHz - first) */
-		nvram_set("wl2_txbf", "1");	/* Explicit Beamforming ON for WiFi 2 (5 GHz - second) */
-		nvram_set("wl0_itxbf", "0");	/* Universal/Implicit Beamforming OFF for WiFi 0 (2,4 GHz) */
-		nvram_set("wl1_itxbf", "1");	/* Universal/Implicit Beamforming ON for WiFi 1 (5 GHz - first) */
-		nvram_set("wl2_itxbf", "1");	/* Universal/Implicit Beamforming ON for WiFi 1 (5 GHz - second) */
-		nvram_commit();
-	}
-#endif
 }
 
 /* assign none-exist value */
