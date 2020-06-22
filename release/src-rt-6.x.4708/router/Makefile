@@ -1310,21 +1310,26 @@ vlan-install:
 	$(MAKE) -C vlan CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install	# STRIPTOOL=$(STRIP)
 	$(STRIP) $(INSTALLDIR)/vlan/usr/sbin/vconfig
 
+accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
+	$(call patch_files,accel-pptp)
+	cd accel-pptp && \
+		CFLAGS="-g -O2 $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-O2 -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
+
 accel-pptp: pppd accel-pptp/Makefile
 	@$(SEP)
 	@$(MAKE) -C accel-pptp
 
-accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
-	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
+accel-pptp-install:
+	install -D accel-pptp/src/.libs/pptp.so $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
+	$(STRIP) $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
 
 accel-pptp-clean:
 	-@$(MAKE) -C accel-pptp clean
 	@rm -f accel-pptp/Makefile
-
-accel-pptp-install:
-	install -D accel-pptp/src/.libs/pptp.so $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
-	$(STRIP) $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
+	$(call unpatch_files,accel-pptp)
 
 pptpd/stamp-h1:
 	$(call patch_files,pptpd)
