@@ -1360,6 +1360,7 @@ static const nvset_t nvset_list[] = {
 	{ "smbd_user",			V_LENGTH(0, 50)			},
 	{ "smbd_passwd",		V_LENGTH(0, 50)			},
 	{ "smbd_ifnames",		V_LENGTH(0, 50)			},
+	{ "smbd_protocol",		V_RANGE(0, 2)			},
 #ifdef TCONFIG_GROCTRL
 	{ "gro_disable",		V_01				},
 #endif
