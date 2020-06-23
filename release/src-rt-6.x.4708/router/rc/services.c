@@ -2141,7 +2141,6 @@ static void start_samba(void)
 	fprintf(fp, "[global]\n"
 		" interfaces = %s\n"
 		" bind interfaces only = yes\n"
-		" max protocol = SMB2\n"
 		" enable core files = no\n"
 		" deadtime = 30\n"
 		" smb encrypt = disabled\n"
@@ -2180,6 +2179,14 @@ static void start_samba(void)
 			fprintf(fp, " wins support = yes\n");
 		}
 	}
+
+	/* 0 - smb1, 1 - smb2, 2 - smb1 + smb2 */
+	if (nvram_get_int("smbd_protocol") == 0)
+		fprintf(fp, " max protocol = NT1\n");
+	else
+		fprintf(fp, " max protocol = SMB2\n");
+	if (nvram_get_int("smbd_protocol") == 1)
+		fprintf(fp, " min protocol = SMB2\n");
 
 	if (nvram_get_int("smbd_master")) {
 		fprintf(fp,

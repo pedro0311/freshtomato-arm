@@ -77,7 +77,8 @@ void wi_upgrade(char *url, int len, char *boundary)
 	signal(SIGQUIT, SIG_IGN);
 
 	prepare_upgrade();
-	system("cp reboot.asp /tmp");	// copy to memory
+	system("cp reboot.asp /tmp");	/* copy to memory */
+	system("cp *.css /tmp");
 
 	led(LED_DIAG, 1);
 

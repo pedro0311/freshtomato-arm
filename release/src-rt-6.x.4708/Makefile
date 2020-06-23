@@ -340,7 +340,7 @@ what:
 # JFFSv1 | NO_JFFS
 # NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
 # SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES
 
 define RouterOptions
 	@( \
@@ -1176,6 +1176,17 @@ define KernelConfig
 		echo "# BCMDBG is not set" >>$(1); \
 		sed -i "/CONFIG_DEBUG_INFO/d" $(1); \
 		echo "# CONFIG_DEBUG_INFO is not set" >>$(1); \
+	fi; \
+	if [ "$(NAMESPACES)" = "y" ]; then \
+		sed -i "s/# CONFIG_NAMESPACES is not set/CONFIG_NAMESPACES=y/g" $(1); \
+		sed -i "s/# CONFIG_NET_NS is not set/CONFIG_NET_NS=y/g" $(1); \
+		sed -i "s/# CONFIG_IP_ROUTE_VERBOSE is not set/CONFIG_IP_ROUTE_VERBOSE=y/g" $(1); \
+		sed -i "s/# CONFIG_VETH is not set/CONFIG_VETH=y/g" $(1); \
+	else \
+		sed -i "s/# CONFIG_NAMESPACES=y/CONFIG_NAMESPACES is not set/g" $(1); \
+		sed -i "s/# CONFIG_NET_NS=y/CONFIG_NET_NS is not set/g" $(1); \
+		sed -i "s/# CONFIG_IP_ROUTE_VERBOSE=y/CONFIG_IP_ROUTE_VERBOSE is not set/g" $(1); \
+		sed -i "s/# CONFIG_VETH=y/CONFIG_VETH is not set/g" $(1); \
 	fi; \
 	)
 endef

@@ -58,4 +58,4 @@
 #undef STDC_HEADERS
 
 /* Version number of package */
-#undef PLUGINVERSION
+#undef VERSION
