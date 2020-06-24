@@ -509,10 +509,16 @@ static void check_bootnv(void)
 
 	switch (model) {
 #ifdef CONFIG_BCMWL6A
-	case MODEL_R7000:
-	case MODEL_R6700v3:
-	case MODEL_R6400:
 	case MODEL_R6400v2:
+	case MODEL_R6700v3:
+		nvram_unset("et1macaddr");
+		nvram_unset("et2macaddr");
+		nvram_unset("et3macaddr");
+		dirty |= check_nv("wl0_ifname", "eth1");
+		dirty |= check_nv("wl1_ifname", "eth2");
+		break;
+	case MODEL_R7000:
+	case MODEL_R6400:
 	case MODEL_R6250:
 	case MODEL_R6300v2:
 		nvram_unset("et1macaddr");
@@ -1765,8 +1771,10 @@ static int init_nvram(void)
 			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 
-			/* disable second *fake* LAN interface */
+			/* disable *fake* LAN interfaces */
 			nvram_unset("et1macaddr");
+			nvram_unset("et2macaddr");
+			nvram_unset("et3macaddr");
 
 			/* fix MAC addresses */
 			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
