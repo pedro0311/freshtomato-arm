@@ -355,7 +355,7 @@ function submit_complete() {
 			null,
 			{ title: 'USB Storage Support', name: 'f_storage', type: 'checkbox', value: nvram.usb_storage == 1 },
 			{ title: 'File Systems Support', indent: 2, multi: [
-				{ suffix: '&nbsp; Ext2 / Ext3 / Ext4 &nbsp;&nbsp;&nbsp;', name: 'f_ext4', type: 'checkbox', value: nvram.usb_fs_ext4 == 1 },
+				{ suffix: '&nbsp; Ext2 / Ext3 / Ext4 * &nbsp;&nbsp;&nbsp;', name: 'f_ext4', type: 'checkbox', value: nvram.usb_fs_ext4 == 1 },
 /* NTFS-BEGIN */
 				{ suffix: '&nbsp; NTFS &nbsp;&nbsp;&nbsp;', name: 'f_ntfs', type: 'checkbox', value: nvram.usb_fs_ntfs == 1 },
 /* NTFS-END */
@@ -399,6 +399,7 @@ function submit_complete() {
 /* UPS-END */
 			{ title: 'Hotplug script<br><small>(called when any USB device is attached or removed)<\/small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
 			null,
+			{ text: '<small>* incomplete because of old kernel version: add \'-O^metadata_csum\' when you create ext4 filesystem.<\/small>' },
 			{ text: '<small>Some of the changes will take effect only after a restart.<\/small>' }
 		]);
 	</script>
