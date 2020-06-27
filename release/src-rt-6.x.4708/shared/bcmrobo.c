@@ -2458,24 +2458,24 @@ bcm_robo_enable_switch(robo_info_t *robo)
 
 	if (boardnum != NULL && boardtype != NULL && boardrev != NULL){
 		if (!strcmp(boardnum, "32") && (!strcmp(boardtype, "0x0665") || !strcmp(boardtype, "0x072F"))){
-			/* WAN port LED fix*/
-			val16 = 0x3000 ;
+			/* WAN port LED fix */
+			val16 = 0x3000;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x10, &val16, sizeof(val16));
-			val8 = 0x78 ;
+			val8 = 0x78;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x12, &val8, sizeof(val8)); 
 			if(!strcmp(boardrev, "0x1301") || (!strcmp(boardrev, "0x1101") && !strcmp(boardtype, "0x072F")))
-			val8 = 0x01 ;
+			val8 = 0x01;
 			if(!strcmp(boardrev, "0x1101") && strcmp(boardtype, "0x072F"))
-			val8 = 0x10 ;
+			val8 = 0x10;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x14, &val8, sizeof(val8)); 
 		}
 		
 		if (et2phyaddr != NULL)
 		if (!strcmp(boardnum, "32") && !strcmp(boardtype, "0x0646") && !strcmp(boardrev, "0x1601") && !strcmp(et2phyaddr, "30")){
-			printk(KERN_EMERG "R7000P LED fix.\n");
-			val16 = 0x3000 ;
+			printk(KERN_EMERG "Netgear LED fix\n"); /* (only) for R6400v2 / R6700v3 (and R7000P) */
+			val16 = 0x3000;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x10, &val16, sizeof(val16));
-			val8 = 0x78 ;
+			val8 = 0x78;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x12, &val8, sizeof(val8)); 
 			val8 = 0x01;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x14, &val8, sizeof(val8));
