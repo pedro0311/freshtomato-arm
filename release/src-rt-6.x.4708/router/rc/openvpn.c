@@ -366,7 +366,7 @@ void start_ovpn_client(int clientNum)
 	fprintf(fp,
 		"verb 3\n"
 		"status-version 2\n"
-		"status status 10\n\n"
+		"status status 10\n\n" /* Update status file every 10 sec */
 		"# Custom Configuration\n"
 		"%s",
 		nvram_safe_get(buffer));
@@ -1060,7 +1060,7 @@ void start_ovpn_server(int serverNum)
 	sprintf(buffer, "vpn_server%d_custom", serverNum);
 	fprintf(fp,
 		"status-version 2\n"
-		"status status 10\n\n"
+		"status status 10\n\n" /* Update status file every 10 sec */
 		"# Custom Configuration\n"
 		"%s",
 		nvram_safe_get(buffer));
