@@ -1374,7 +1374,7 @@ void stop_ovpn_eas()
 {
 	char buffer[16], *cur;
 	int nums[OVPN_CLIENT_MAX], i;
-	
+
 	/* Parse and stop servers */
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));
 
@@ -1412,6 +1412,33 @@ void stop_ovpn_eas()
 			stop_ovpn_client(nums[i]);
 		}
 	}
+}
+
+void stop_ovpn_all()
+{
+	char buffer[16];
+	int i;
+
+	/* Stop servers */
+	for (i = 1; i <= OVPN_SERVER_MAX; i++) {
+		sprintf(buffer, "vpnserver%d", i);
+		if (pidof(buffer) >= 0) {
+			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d", i);
+			stop_ovpn_server(i);
+		}
+	}
+
+	/* Stop clients */
+	for (i = 1; i <= OVPN_CLIENT_MAX; i++) {
+		sprintf(buffer, "vpnclient%d", i);
+		if (pidof(buffer) >= 0) {
+			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d", i);
+			stop_ovpn_client(i);
+		}
+	}
+
+	/* Remove tunnel interface module */
+	modprobe_r("tun");
 }
 
 void run_ovpn_firewall_scripts()
