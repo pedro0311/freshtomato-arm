@@ -912,6 +912,8 @@ void start_ovpn_server(int serverNum)
 			sprintf(buffer, "vpn_server%d_ccd_excl", serverNum);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
+			else
+				fprintf(fp, "duplicate-cn\n");
 
 			sprintf(buffer, "/etc/openvpn/server%d/ccd", serverNum);
 			mkdir(buffer, 0700);
@@ -972,6 +974,8 @@ void start_ovpn_server(int serverNum)
 			}
 			vpnlog(VPN_LOG_EXTRA, "CCD processing complete");
 		}
+		else
+			fprintf(fp, "duplicate-cn\n");
 
 		sprintf(buffer, "vpn_server%d_userpass", serverNum);
 		if (nvram_get_int(buffer)) {
