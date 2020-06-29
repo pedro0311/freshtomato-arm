@@ -49,11 +49,11 @@ enum {
 };
 
 
-static int waitfor(const char *name)
+static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
 
-	killall_tk(name);
+	killall_tk_period_wait(name, 10); /* wait time in seconds */
 	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
@@ -597,7 +597,7 @@ void stop_ovpn_client(int clientNum)
 	/* Stop the VPN client */
 	vpnlog(VPN_LOG_EXTRA, "Stopping OpenVPN client.");
 	sprintf(buffer, "vpnclient%d", clientNum);
-	if (!waitfor(buffer))
+	if (!ovpn_waitfor(buffer))
 		vpnlog(VPN_LOG_EXTRA, "OpenVPN client stopped.");
 
 	/* NVRAM setting for device type could have changed, just try to remove both */
@@ -626,8 +626,8 @@ void stop_ovpn_client(int clientNum)
 	}
 	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
 
-	// TODO:
-	modprobe_r("tun");
+	/* Don't remove tunnel interface in case of multiple servers/clients */
+	//modprobe_r("tun");
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 		vpnlog(VPN_LOG_EXTRA, "Removing generated files.");
@@ -1275,7 +1275,7 @@ void stop_ovpn_server(int serverNum)
 	/* Stop the VPN server */
 	vpnlog(VPN_LOG_EXTRA, "Stopping OpenVPN server.");
 	sprintf(buffer, "vpnserver%d", serverNum);
-	if (!waitfor(buffer))
+	if (!ovpn_waitfor(buffer))
 		vpnlog(VPN_LOG_EXTRA, "OpenVPN server stopped.");
 
 	/* NVRAM setting for device type could have changed, just try to remove both */
@@ -1289,7 +1289,8 @@ void stop_ovpn_server(int serverNum)
 	_eval(argv, NULL, 0, NULL);
 	vpnlog(VPN_LOG_EXTRA, "VPN device removed.");
 
-	modprobe_r("tun");
+	/* Don't remove tunnel interface in case of multiple servers/clients */
+	//modprobe_r("tun");
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 		vpnlog(VPN_LOG_EXTRA, "Removing generated files.");
