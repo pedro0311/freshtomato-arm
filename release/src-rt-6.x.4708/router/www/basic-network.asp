@@ -396,7 +396,7 @@ function verifyFields(focused, quiet) {
 	var i;
 	var ok = 1;
 	var a, b, c, d, e;
-	var u, uidx;
+	var u, uidx, wan_uidx;
 	var wmode, sm2;
 	var curr_mwan_num = E('_mwan_num').value;
 
@@ -661,7 +661,6 @@ function verifyFields(focused, quiet) {
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx) < 0) {
 			wmode = E('_f_wl'+wl_unit(uidx)+'_mode').value;
 
@@ -669,24 +668,25 @@ function verifyFields(focused, quiet) {
 				E('_mwan_num').value = 1;
 				E('_mwan_cktime').value = 0;
 				elem.display('mwan-title', 'mwan-section', false);
-				for (uidx = 1; uidx <= maxwan_num; ++uidx) {
-					u = (uidx > 1) ? uidx : '';
+				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
+					u = (wan_uidx > 1) ? wan_uidx : '';
 					vis['_wan'+u+'_proto'] = 0;
 					E('_wan'+u+'_proto').value = 'disabled';
-					wanproto[uidx-1] = 'disabled';
+					wanproto[wan_uidx-1] = 'disabled';
 					elem.display('wan'+u+'-title', 'sesdiv_wan'+u, false);
 				}
+				break; /* break the loop! one wlan module is using wireless bridge mode --> hide wan options! */
 			}
-			else {
+			else { /* not in wireless bridge mode - show wan options */
 				elem.display('mwan-title', 'mwan-section', true);
-				for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
-					u = (uidx > 1) ? uidx : '';
+				for (wan_uidx = 1; wan_uidx <= curr_mwan_num; ++wan_uidx) {
+					u = (wan_uidx > 1) ? wan_uidx : '';
 					vis['_wan'+u+'_proto'] = 1;
 					elem.display('wan'+u+'-title', 'sesdiv_wan'+u, true);
 				}
 			}
 
-			if ((wanproto[0] == 'disabled') || (wmode == 'wet')) {
+			if (wanproto[0] == 'disabled') { /* make it possible to add wan port to lan IF wan is disabled! or better - use vlan setup (advanced-vlan.asp) */
 				vis._f_wan_islan = 1;
 			}
 		}
@@ -1335,7 +1335,7 @@ function save() {
 
 	var a, b, c;
 	var i;
-	var u, uidx, wmode, sm2, wradio;
+	var u, uidx, wan_uidx, wmode, sm2, wradio;
 	var curr_mwan_num = E('_mwan_num').value;
 
 	if (!verifyFields(null, false)) return;
@@ -1343,7 +1343,6 @@ function save() {
 	var fom = E('t_fom');
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx) < 0) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
@@ -1363,7 +1362,6 @@ function save() {
 					E('_wan'+v+'_proto').disabled = 0;
 					E('_wan'+v+'_proto').value = 'disabled';
 				}
-/* TODO - what's required ? integrate with tomatogrid? */
 			}
 
 			a = [];
