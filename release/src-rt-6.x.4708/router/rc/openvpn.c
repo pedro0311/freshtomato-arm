@@ -611,6 +611,9 @@ void stop_ovpn_client(int clientNum)
 	_eval(argv, NULL, 0, NULL);
 	vpnlog(VPN_LOG_EXTRA, "VPN device removed.");
 
+	/* Don't remove tunnel interface in case of multiple servers/clients */
+	//modprobe_r("tun");
+
 	/* Remove firewall rules after VPN exit */
 	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
 	sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
@@ -625,9 +628,6 @@ void stop_ovpn_client(int clientNum)
 		_eval(argv, NULL, 0, NULL);
 	}
 	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
-
-	/* Don't remove tunnel interface in case of multiple servers/clients */
-	//modprobe_r("tun");
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 		vpnlog(VPN_LOG_EXTRA, "Removing generated files.");
@@ -1120,31 +1120,6 @@ void start_ovpn_server(int serverNum)
 	}
 	vpnlog(VPN_LOG_EXTRA, "Done writing certs/keys");
 
-	/* Start the VPN server */
-	sprintf(buffer, "/etc/openvpn/vpnserver%d", serverNum);
-	sprintf(buffer2, "/etc/openvpn/server%d", serverNum);
-
-	vpnlog(VPN_LOG_INFO, "Starting OpenVPN: %d", serverNum);
-
-#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
-	/* Spread servers on cpu 1,0 or 1,2 (in that order) */
-	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
-	if (cpu_num < 0) cpu_num = 0;
-	snprintf(cpulist, sizeof(cpulist), "%d", (serverNum & cpu_num));
-
-	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
-
-	if (taskset_ret)
-#endif
-		taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
-
-	if (taskset_ret) {
-		vpnlog(VPN_LOG_ERROR, "Starting VPN instance failed...");
-		stop_ovpn_server(serverNum);
-		return;
-	}
-	vpnlog(VPN_LOG_EXTRA, "Done starting openvpn");
-
 	/* Handle firewall rules if appropriate */
 	sprintf(buffer, "vpn_server%d_firewall", serverNum);
 	if (!nvram_contains_word(buffer, "custom")) {
@@ -1205,6 +1180,31 @@ void start_ovpn_server(int serverNum)
 		vpnlog(VPN_LOG_EXTRA, "Done running firewall rules");
 	}
 
+	/* Start the VPN server */
+	sprintf(buffer, "/etc/openvpn/vpnserver%d", serverNum);
+	sprintf(buffer2, "/etc/openvpn/server%d", serverNum);
+
+	vpnlog(VPN_LOG_INFO, "Starting OpenVPN: %d", serverNum);
+
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
+	/* Spread servers on cpu 1,0 or 1,2 (in that order) */
+	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (cpu_num < 0) cpu_num = 0;
+	snprintf(cpulist, sizeof(cpulist), "%d", (serverNum & cpu_num));
+
+	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
+
+	if (taskset_ret)
+#endif
+		taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
+
+	if (taskset_ret) {
+		vpnlog(VPN_LOG_ERROR, "Starting VPN instance failed...");
+		stop_ovpn_server(serverNum);
+		return;
+	}
+	vpnlog(VPN_LOG_EXTRA, "Done starting openvpn");
+
 	/* Set up cron job */
 	sprintf(buffer, "vpn_server%d_poll", serverNum);
 	if ((nvi = nvram_get_int(buffer)) > 0) {
@@ -1256,22 +1256,6 @@ void stop_ovpn_server(int serverNum)
 	_eval(argv, NULL, 0, NULL);
 	vpnlog(VPN_LOG_EXTRA, "Done removing cron job");
 
-	/* Remove firewall rules */
-	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
-	sprintf(buffer, "/etc/openvpn/fw/server%d-fw.sh", serverNum);
-	argv[0] = "sed";
-	argv[1] = "-i";
-	argv[2] = "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\g";
-	argv[3] = buffer;
-	argv[4] = NULL;
-	if (!_eval(argv, NULL, 0, NULL))
-	{
-		argv[0] = buffer;
-		argv[1] = NULL;
-		_eval(argv, NULL, 0, NULL);
-	}
-	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
-
 	/* Stop the VPN server */
 	vpnlog(VPN_LOG_EXTRA, "Stopping OpenVPN server.");
 	sprintf(buffer, "vpnserver%d", serverNum);
@@ -1291,6 +1275,21 @@ void stop_ovpn_server(int serverNum)
 
 	/* Don't remove tunnel interface in case of multiple servers/clients */
 	//modprobe_r("tun");
+
+	/* Remove firewall rules */
+	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
+	sprintf(buffer, "/etc/openvpn/fw/server%d-fw.sh", serverNum);
+	argv[0] = "sed";
+	argv[1] = "-i";
+	argv[2] = "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\g";
+	argv[3] = buffer;
+	argv[4] = NULL;
+	if (!_eval(argv, NULL, 0, NULL)) {
+		argv[0] = buffer;
+		argv[1] = NULL;
+		_eval(argv, NULL, 0, NULL);
+	}
+	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 		vpnlog(VPN_LOG_EXTRA, "Removing generated files.");
