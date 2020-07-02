@@ -2170,39 +2170,45 @@ int start_firewall(void)
 		}
 	}
 
+	/* Quite a few functions will blindly attempt to manipulate iptables, colliding with us.
+	 * Retry a few times with increasing wait time to resolve collision.
+	 */
 	notice_set("iptables", "");
-	if (_eval(iptrestore_argv, ">/var/notice/iptables", 0, NULL) == 0) {
-		led(LED_DIAG, LED_OFF);
-		notice_set("iptables", "");
+	for (n = 1; n < 4; n++) {
+		if (_eval(iptrestore_argv, ">/var/notice/iptables", 0, NULL) == 0) {
+			led(LED_DIAG, LED_OFF);
+			notice_set("iptables", "");
+			n = 4;
+		}
+		else {
+			syslog(LOG_INFO, "iptables-restore failed - retrying in %d secs...", n*n);
+			sleep(n*n);
+		}
 	}
-	else {
+	if (n < 5) {
 		sprintf(s, "%s.error", ipt_fname);
 		rename(ipt_fname, s);
 		syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
 		led(LED_DIAG, LED_ON);
-
-		/*
-
-		-P INPUT DROP
-		-F INPUT
-		-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-		-A INPUT -i br0 -j ACCEPT
-
-		-P FORWARD DROP
-		-F FORWARD
-		-A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-		-A FORWARD -i br0 -j ACCEPT
-
-		*/
 	}
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+		/* Quite a few functions will blindly attempt to manipulate iptables, colliding with us.
+		 * Retry a few times with increasing wait time to resolve collision.
+		 */
 		notice_set("ip6tables", "");
-		if (_eval(ip6trestore_argv, ">/var/notice/ip6tables", 0, NULL) == 0) {
-			notice_set("ip6tables", "");
+		for (n = 1; n < 4; n++) {
+			if (_eval(ip6trestore_argv, ">/var/notice/ip6tables", 0, NULL) == 0) {
+				notice_set("ip6tables", "");
+				n = 4;
+			}
+			else {
+				syslog(LOG_INFO, "ip6tables-restore failed - retrying in %d secs...", n*n);
+				sleep(n*n);
+			}
 		}
-		else {
+		if (n < 5) {
 			sprintf(s, "%s.error", ip6t_fname);
 			rename(ip6t_fname, s);
 			syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
