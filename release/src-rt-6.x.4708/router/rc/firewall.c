@@ -1293,6 +1293,17 @@ static void filter_input(void)
 		if (n & 2) ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("telnetd_port"));
 	}
 
+/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	if (remotemanage) {
+		modprobe("xt_recent");
+
+		ipt_write("-N WWWBFP\n"
+		          "-A WWWBFP -m recent --set --name WWWBFP\n"
+		          "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
+		          atoi(hit) + 1, sec, chain_in_drop);
+		ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
+	}
+
 #ifdef TCONFIG_FTP
 	strlcpy(s, nvram_safe_get("ftp_limit"), sizeof(s));
 	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && (atoi(en)) && (nvram_get_int("ftp_enable") == 1)) {
@@ -1797,6 +1808,15 @@ static void filter6_input(void)
 			}
 		}
 		if (n & 2) ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface, nvram_safe_get("telnetd_port"));
+	}
+
+/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	if (remotemanage) {
+		ip6t_write("-N WWWBFP\n"
+		           "-A WWWBFP -m recent --set --name WWWBFP\n"
+		           "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
+		           atoi(hit) + 1, sec, chain_in_drop);
+		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
 	}
 
 #ifdef TCONFIG_FTP
