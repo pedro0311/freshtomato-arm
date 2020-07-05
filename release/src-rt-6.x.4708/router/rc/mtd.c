@@ -423,6 +423,26 @@ ERROR:
 #ifdef TCONFIG_BCMARM
 
 /*
+ * Check for bad block on MTD device
+ * @param	fd	file descriptor for MTD device
+ * @param	offset	offset of block to check
+ * @return		>0 if bad block, 0 if block is ok or not supported, <0 check failed
+ */
+
+int mtd_block_is_bad(int fd, int offset)
+{
+	int r;
+	loff_t o = offset;
+	r = ioctl(fd, MEMGETBADBLOCK, &o);
+	if (r < 0) {
+		if (errno == EOPNOTSUPP) {
+			return 0;
+		}
+	}
+	return r;
+}
+
+/*
  * Open an MTD device
  * @param       mtd     path to or partition name of MTD device
  * @param       flags   open() flags
@@ -461,7 +481,7 @@ mtd_open(const char *mtd, int flags)
 int
 mtd_erase(const char *mtd)
 {
-        int mtd_fd;
+        int mtd_fd, ret;
         mtd_info_t mtd_info;
         erase_info_t erase_info;
 
@@ -480,18 +500,34 @@ mtd_erase(const char *mtd)
 
         erase_info.length = mtd_info.erasesize;
 
+        printf("Erase MTD %s\n", mtd);
         for (erase_info.start = 0;
              erase_info.start < mtd_info.size;
              erase_info.start += mtd_info.erasesize) {
-                (void) ioctl(mtd_fd, MEMUNLOCK, &erase_info);
-                if (ioctl(mtd_fd, MEMERASE, &erase_info) != 0) {
-                        perror(mtd);
-                        close(mtd_fd);
-                        return errno;
-                }
+		if ((ret = mtd_block_is_bad(mtd_fd, erase_info.start)) != 0) {
+			if (ret > 0) {
+				printf("Skipping bad block at 0x%08x\n", erase_info.start);
+				continue;
+			}
+			else {
+				printf("Cannot get bad block status at 0x%08x (errno %d (%s))\n", erase_info.start, errno, strerror(errno));
+			}
+		}
+		else {
+			(void) ioctl(mtd_fd, MEMUNLOCK, &erase_info);
+			if (ioctl(mtd_fd, MEMERASE, &erase_info) != 0) {
+				perror(mtd);
+				close(mtd_fd);
+				return errno;
+			}
+			else {
+				_dprintf("Erased block at 0x%08x\n", erase_info.start);
+			}
+		}
         }
 
         close(mtd_fd);
+        printf("Erase MTD %s OK!\n", mtd);
         return 0;
 }
 
