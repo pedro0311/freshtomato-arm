@@ -839,7 +839,8 @@ osl_pktfastfree(osl_t *osh, struct sk_buff *skb)
 	ASSERT(ctfpool != NULL);
 #else
 	if (ctfpool == NULL) {
-		__kfree_skb(skb);
+		printk("%s: free skb for NULL ctfpool\n", __FUNCTION__);
+		dev_kfree_skb(skb);
 		return;
 	}
 #endif

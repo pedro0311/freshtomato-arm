@@ -229,9 +229,9 @@ struct netdev_hw_addr {
 #define NETDEV_HW_ADDR_T_SLAVE		3
 #define NETDEV_HW_ADDR_T_UNICAST	4
 #define NETDEV_HW_ADDR_T_MULTICAST	5
+	int			refcount;
 	bool			synced;
 	bool			global_use;
-	int			refcount;
 	struct rcu_head		rcu_head;
 };
 
@@ -943,7 +943,7 @@ struct net_device {
 	void			*dsa_ptr;	/* dsa specific data */
 #endif
 	void 			*atalk_ptr;	/* AppleTalk link 	*/
-	struct in_device __rcu	*ip_ptr;	/* IPv4 specific data	*/
+	void			*ip_ptr;	/* IPv4 specific data	*/
 	void                    *dn_ptr;        /* DECnet specific data */
 	void                    *ip6_ptr;       /* IPv6 specific data */
 	void			*ec_ptr;	/* Econet specific data	*/
@@ -998,7 +998,9 @@ struct net_device {
 
 	unsigned long		tx_queue_len;	/* Max frames per queue allowed */
 	spinlock_t		tx_global_lock;
-
+/*
+ * One part is mostly used on xmit path (device)
+ */
 	/* These may be needed for future network-power-down code. */
 
 	/*
@@ -1688,7 +1690,7 @@ static inline void netif_wake_subqueue(struct net_device *dev, u16 queue_index)
  */
 static inline int netif_is_multiqueue(const struct net_device *dev)
 {
-	return dev->num_tx_queues > 1;
+	return (dev->num_tx_queues > 1);
 }
 
 extern void netif_set_real_num_tx_queues(struct net_device *dev,
