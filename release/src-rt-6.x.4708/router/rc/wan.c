@@ -1377,7 +1377,7 @@ void stop_wan(void)
 #endif
 
 #ifdef TCONFIG_OPENVPN
-	stop_ovpn_eas();
+	stop_ovpn_all();
 #endif
 
 	stop_pptp_client_eas();

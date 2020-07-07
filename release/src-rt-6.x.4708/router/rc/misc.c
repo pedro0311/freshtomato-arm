@@ -636,6 +636,26 @@ void killall_tk(const char *name)
 	}
 }
 
+void killall_tk_period_wait(const char *name, int wait)
+{
+	int n;
+
+	if (killall(name, SIGTERM) == 0) {
+		n = wait;
+		while ((killall(name, 0) == 0) && (n-- > 0)) {
+			_dprintf("%s: waiting name=%s n=%d\n", __FUNCTION__, name, n);
+			sleep(1);
+		}
+		if (n < 0) {
+			n = wait;
+			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
+				_dprintf("%s: SIGKILL name=%s n=%d\n", __FUNCTION__, name, n);
+				sleep(1);
+			}
+		}
+	}
+}
+
 int kill_pidfile_s(char *pidfile, int sig)
 {
 	char tmp[100];
