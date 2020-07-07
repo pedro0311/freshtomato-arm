@@ -3063,7 +3063,7 @@ diskdev_cmds-332.25:
 	cd diskdev_cmds-332.25 && \
 		make -f Makefile.lnx
 
-diskdev_cmds-332.25-install: diskdev_cmds-332.25
+diskdev_cmds-332.25-install:
 	install -D diskdev_cmds-332.25/newfs_hfs.tproj/newfs_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
 	install -D diskdev_cmds-332.25/fsck_hfs.tproj/fsck_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfsplus
 	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
