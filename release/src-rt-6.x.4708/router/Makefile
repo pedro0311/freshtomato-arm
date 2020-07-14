@@ -2361,10 +2361,11 @@ libcurl-clean:
 	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
-	cd libevent && ./autogen.sh && CC=$(CC) \
+	cd libevent && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE)
+		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
+			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
 
 libevent: libevent/stamp-h1
@@ -2379,7 +2380,7 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.1.so.7.0.0 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+	install libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 
 libiconv/stamp-h1:
