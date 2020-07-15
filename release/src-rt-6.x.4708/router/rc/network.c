@@ -430,10 +430,11 @@ void unload_wl(void)
 {
 	int model = get_model();
 
-	/* workaround: do not unload wifi driver for Linksys EA6200/EA6350v1 and Netgear R6250,
+	/* workaround: do not unload wifi driver for Linksys EA6200/EA6350v1, Netgear R6250 and Asus RT-AC56U/R
 	 * it will cause problems (reboot after saving to nvram) */
 	if ((model != MODEL_EA6350v1) &&
-	    (model != MODEL_R6250)) {
+	    (model != MODEL_R6250) &&
+	    (model != MODEL_RTAC56U)) {
 		modprobe_r("wl");
 	}
 }
