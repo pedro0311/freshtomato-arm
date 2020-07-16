@@ -38,7 +38,7 @@
 	for (i = 0; i < c.length; ++i) {
 		if (c[i].match(/^\s*tomato_(.+?)=/)) {
 			b.push('<li>' + c[i]);
-			//cookie.unset(RegExp.$1);
+			cookie.unset(RegExp.$1);
 		}
 	}
 	if (b.length == 0) b.push('<li>no cookie found<\/li>');

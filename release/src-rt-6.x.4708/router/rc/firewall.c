@@ -1293,15 +1293,15 @@ static void filter_input(void)
 		if (n & 2) ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("telnetd_port"));
 	}
 
-/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	/* Protect against brute force on port defined for remote GUI access */
 	if (remotemanage) {
 		modprobe("xt_recent");
 
-		ipt_write("-N WWWBFP\n"
-		          "-A WWWBFP -m recent --set --name WWWBFP\n"
-		          "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
-		          atoi(hit) + 1, sec, chain_in_drop);
-		ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
+		ipt_write("-N wwwlimit\n"
+		          "-A wwwlimit -m recent --set --name www\n"
+		          "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
+		          chain_in_drop);
+		ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j wwwlimit\n", nvram_safe_get("http_wanport"));
 	}
 
 #ifdef TCONFIG_FTP
@@ -1810,13 +1810,13 @@ static void filter6_input(void)
 		if (n & 2) ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface, nvram_safe_get("telnetd_port"));
 	}
 
-/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	/* Protect against brute force on port defined for remote GUI access */
 	if (remotemanage) {
-		ip6t_write("-N WWWBFP\n"
-		           "-A WWWBFP -m recent --set --name WWWBFP\n"
-		           "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
-		           atoi(hit) + 1, sec, chain_in_drop);
-		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
+		ip6t_write("-N wwwlimit\n"
+		           "-A wwwlimit -m recent --set --name www\n"
+		           "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
+		           chain_in_drop);
+		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j wwwlimit\n", nvram_safe_get("http_wanport"));
 	}
 
 #ifdef TCONFIG_FTP

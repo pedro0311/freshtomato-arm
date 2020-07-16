@@ -5267,8 +5267,8 @@ on the public Tor network.</p></div>
 </dt>
 <dd>
 <p>
-    Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 25 hours)
+    Minimum uptime of a relay to be accepted as a hidden service directory
+    by directory authorities. (Default: 96 hours)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -6866,7 +6866,7 @@ report them at <a href="https://trac.torproject.org/">https://trac.torproject.or
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2020-04-09 12:18:55 UTC
+ 2020-06-01 13:47:45 UTC
 </div>
 </div>
 </body>

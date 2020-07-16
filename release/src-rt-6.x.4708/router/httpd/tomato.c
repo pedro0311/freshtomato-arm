@@ -1049,7 +1049,12 @@ static const nvset_t nvset_list[] = {
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
-	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
+	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
+	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+#ifdef TCONFIG_AC3200
+	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+#endif
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},

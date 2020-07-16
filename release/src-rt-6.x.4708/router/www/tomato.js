@@ -2225,7 +2225,7 @@ var cookie = {
 */
 	set: function(key, value, days) {
 		document.cookie = 'tomato_' + encodeURIComponent(key) + '=' + encodeURIComponent(value) + '; expires=' +
-		new Date(2147483647000).toUTCString() + '; path=/';
+		new Date(2147483647000).toUTCString() + '; path=/; SameSite=Lax';
 	},
 	get: function(key) {
 		var r = ('; ' + document.cookie + ';').match('; tomato_' + encodeURIComponent(key) + '=(.*?);');

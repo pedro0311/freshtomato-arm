@@ -274,6 +274,7 @@ static void auth_fail(int clen)
 	if (post) web_eat(clen);
 	eat_garbage();
 	send_authenticate();
+	syslog(LOG_WARNING, "Bad password attempt (GUI)");
 }
 
 static int check_wif(int idx, int unit, int subunit, void *param)

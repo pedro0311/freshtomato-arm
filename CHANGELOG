@@ -5,6 +5,26 @@ FreshTomato-ARM Changelog
 
 
 
+2020.5          2020.07.17
+--------------------------
+
+Note: mainly bugfixes (see *)
+
+- kernel: r2q change message from priority WARNING to priority DEBUG
+- WL: update wireless driver for SDK7 to GPL 382.52287 (Kr00k)
+- (*) firewall: fix commit 31a8eb0 (brute force mitigation rule on port defined for GUI remote access) - increase hitcount / lower period of time (hardcoded)
+- libevent: update to 2.1.12-stable
+- tor: update to 0.4.3.6
+- libcurl: update to 7.71.1
+- (*) GUI: advanced-wireless.asp: when changing country for WL driver, also change its short version - 'ccode'
+- httpd: add to log failed GUI login attempts
+- www: tomato.js: add SameSite=Lax when creating cookies
+- (*) www: clearcookies.asp: remove the comment left when debugging
+- (*) Netgear Router (all supported): Raise revision level (again)
+- (*) Asus RT-AC56R: improve/fix support with new wifi driver (*.126)
+- (*) Asus RT-AC56U/R: do not unload wifi driver
+
+
 2020.4          2020.07.10
 --------------------------
 

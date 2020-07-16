@@ -2,12 +2,12 @@
 .\"     Title: tor
 .\"    Author: [see the "AUTHORS" section]
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 04/13/2020
+.\"      Date: 07/09/2020
 .\"    Manual: Tor Manual
 .\"    Source: Tor
 .\"  Language: English
 .\"
-.TH "TOR" "1" "04/13/2020" "Tor" "Tor Manual"
+.TH "TOR" "1" "07/09/2020" "Tor" "Tor Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -2751,7 +2751,7 @@ When this option is set in addition to
 .PP
 \fBMinUptimeHidServDirectoryV2\fR \fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fR
 .RS 4
-Minimum uptime of a v2 hidden service directory to be accepted as such by authoritative directories\&. (Default: 25 hours)
+Minimum uptime of a relay to be accepted as a hidden service directory by directory authorities\&. (Default: 96 hours)
 .RE
 .PP
 \fBRecommendedServerVersions\fR \fISTRING\fR
