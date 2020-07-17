@@ -1,17 +1,3 @@
---- iptables-1.8.x/extensions/libip6t_REJECT.c
-+++ iptables-1.8.x/extensions/libip6t_REJECT.c
-@@ -48,6 +48,11 @@
- 		"ICMPv6 port unreachable",
- 		"port-unreachable",
- 	},
-+	[IP6T_ICMP6_SRC_ADDR_FAIL_POLICY] = {
-+		"icmp6-src-addr-policy", "src-addr-policy",
-+		"ICMPv6 src addr fails ingress/egress policy",
-+		"src-addr-policy",
-+	},
- #if 0
- 	[IP6T_ICMP6_ECHOREPLY] = {},
- #endif
 --- iptables-1.8.x/extensions/libip6t_ROUTE.c
 +++ iptables-1.8.x/extensions/libip6t_ROUTE.c
 @@ -0,0 +1,239 @@
@@ -5355,7 +5341,7 @@
  };
  
 +
-+/*TOMATO*/
++/* TOMATO */
 +#ifndef _NF_CONNTRACK_TUPLE_H
  /* The protocol-specific manipulable parts of the tuple: always in
   * network order
@@ -5365,7 +5351,7 @@
  	} gre;
  };
 +#endif
-+/*END TOMATO*/
++/* END TOMATO */
  
  #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
  
@@ -5423,18 +5409,6 @@
  
  /* This structure defines each of the firewall rules.  Consists of 3
     parts which are 1) general IP header stuff 2) match specific
-
---- iptables-1.8.x/include/linux/netfilter_ipv6/ip6t_REJECT.h
-+++ iptables-1.8.x/include/linux/netfilter_ipv6/ip6t_REJECT.h
-@@ -9,6 +9,7 @@
- 	IP6T_ICMP6_NOT_NEIGHBOUR,
- 	IP6T_ICMP6_ADDR_UNREACH,
- 	IP6T_ICMP6_PORT_UNREACH,
-+	IP6T_ICMP6_SRC_ADDR_FAIL_POLICY,
- 	IP6T_ICMP6_ECHOREPLY,
- 	IP6T_TCP_RESET,
- 	IP6T_ICMP6_POLICY_FAIL,
-
 --- iptables-1.8.x/iptables/xtoptions.c
 +++ iptables-1.8.x/iptables/xtoptions.c
 @@ -0,0 +1,1211 @@
