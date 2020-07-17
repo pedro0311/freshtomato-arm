@@ -1,17 +1,3 @@
---- iptables-1.8.x/extensions/libip6t_REJECT.c
-+++ iptables-1.8.x/extensions/libip6t_REJECT.c
-@@ -48,6 +48,11 @@
- 		"ICMPv6 port unreachable",
- 		"port-unreachable",
- 	},
-+	[IP6T_ICMP6_SRC_ADDR_FAIL_POLICY] = {
-+		"icmp6-src-addr-policy", "src-addr-policy",
-+		"ICMPv6 src addr fails ingress/egress policy",
-+		"src-addr-policy",
-+	},
- #if 0
- 	[IP6T_ICMP6_ECHOREPLY] = {},
- #endif
 --- iptables-1.8.x/extensions/libip6t_ROUTE.c
 +++ iptables-1.8.x/extensions/libip6t_ROUTE.c
 @@ -0,0 +1,239 @@
@@ -188,24 +174,24 @@
 +	const struct ip6t_route_target_info *route_info
 +		= (const struct ip6t_route_target_info *)target->data;
 +
-+	printf("ROUTE ");
++	printf(" ROUTE");
 +
 +	if (route_info->oif[0])
-+		printf("oif:%s ", route_info->oif);
++		printf(" oif:%s", route_info->oif);
 +
 +	if (route_info->gw[0] 
 +	    || route_info->gw[1] 
 +	    || route_info->gw[2] 
 +	    || route_info->gw[3]) {
 +		char address[INET6_ADDRSTRLEN];
-+		printf("gw:%s ", inet_ntop(AF_INET6, route_info->gw, address, INET6_ADDRSTRLEN));
++		printf(" gw:%s", inet_ntop(AF_INET6, route_info->gw, address, INET6_ADDRSTRLEN));
 +	}
 +
 +	if (route_info->flags & IP6T_ROUTE_CONTINUE)
-+		printf("continue");
++		printf(" continue");
 +
 +	if (route_info->flags & IP6T_ROUTE_TEE)
-+		printf("tee");
++		printf(" tee");
 +
 +}
 +
@@ -225,14 +211,14 @@
 +	    || route_info->gw[2] 
 +	    || route_info->gw[3]) {
 +		char address[INET6_ADDRSTRLEN];
-+		printf("--gw %s ", inet_ntop(AF_INET6, route_info->gw, address, INET6_ADDRSTRLEN));
++		printf(" --gw %s", inet_ntop(AF_INET6, route_info->gw, address, INET6_ADDRSTRLEN));
 +	}
 +
 +	if (route_info->flags & IP6T_ROUTE_CONTINUE)
-+		printf("--continue ");
++		printf(" --continue");
 +
 +	if (route_info->flags & IP6T_ROUTE_TEE)
-+		printf("--tee ");
++		printf(" --tee");
 +}
 +
 +
@@ -1481,13 +1467,13 @@
 +
 +  struct t_ipt_account_info *info = (struct t_ipt_account_info *)match->data;
 +  
-+  printf("--aaddr ");
++  printf(" --aaddr ");
 +  printf("%u.%u.%u.%u/%u.%u.%u.%u ",
 +       HIPQUAD(info->network),
 +       HIPQUAD(info->netmask)
 +         );
 +  
-+  printf("--aname %s ", info->name);
++  printf("--aname %s", info->name);
 +  if (info->shortlisting)
 +    printf("--ashort ");
 +}
@@ -3067,24 +3053,24 @@
 +	const struct ipt_route_target_info *route_info
 +		= (const struct ipt_route_target_info *)target->data;
 +
-+	printf("ROUTE ");
++	printf(" ROUTE");
 +
 +	if (route_info->oif[0])
-+		printf("oif:%s ", route_info->oif);
++		printf(" oif:%s", route_info->oif);
 +
 +	if (route_info->iif[0])
-+		printf("iif:%s ", route_info->iif);
++		printf(" iif:%s", route_info->iif);
 +
 +	if (route_info->gw) {
 +		struct in_addr ip_1 = { route_info->gw };
-+		printf("gw:%s ", inet_ntoa(ip_1));
++		printf(" gw:%s", inet_ntoa(ip_1));
 +	}
 +
 +	if (route_info->flags & IPT_ROUTE_CONTINUE)
-+		printf("continue");
++		printf(" continue");
 +
 +	if (route_info->flags & IPT_ROUTE_TEE)
-+		printf("tee");
++		printf(" tee");
 +
 +}
 +
@@ -3102,14 +3088,14 @@
 +
 +	if (route_info->gw) {
 +		struct in_addr ip_1 = { route_info->gw };
-+		printf("--gw %s ", inet_ntoa(ip_1));
++		printf(" --gw %s", inet_ntoa(ip_1));
 +	}
 +
 +	if (route_info->flags & IPT_ROUTE_CONTINUE)
-+		printf("--continue ");
++		printf(" --continue");
 +
 +	if (route_info->flags & IPT_ROUTE_TEE)
-+		printf("--tee ");
++		printf(" --tee");
 +}
 +
 +
@@ -3536,7 +3522,7 @@
 
 --- iptables-1.8.x/extensions/libipt_TRIGGER.c
 +++ iptables-1.8.x/extensions/libipt_TRIGGER.c
-@@ -0,0 +1,201 @@
+@@ -0,0 +1,208 @@
 +/* Port-triggering target. 
 + *
 + * Copyright (C) 2003, CyberTAN Corporation
@@ -3710,13 +3696,20 @@
 +{
 +	struct ipt_trigger_info *info = (struct ipt_trigger_info *)target->data;
 +
-+	printf("--trigger-proto ");
++	printf(" --trigger-type");
++	if (info->type == IPT_TRIGGER_DNAT)
++		printf(" dnat");
++	else if (info->type == IPT_TRIGGER_IN)
++		printf(" in");
++	else if (info->type == IPT_TRIGGER_OUT)
++		printf(" out");
++	printf(" --trigger-proto");
 +	if (info->proto == IPPROTO_TCP)
-+		printf("tcp ");
++		printf(" tcp");
 +	else if (info->proto == IPPROTO_UDP)
-+		printf("udp ");
-+	printf("--trigger-match %hu-%hu ", info->ports.mport[0], info->ports.mport[1]);
-+	printf("--trigger-relate %hu-%hu ", info->ports.rport[0], info->ports.rport[1]);
++		printf(" udp");
++	printf(" --trigger-match %hu-%hu", info->ports.mport[0], info->ports.mport[1]);
++	printf(" --trigger-relate %hu-%hu", info->ports.rport[0], info->ports.rport[1]);
 +}
 +
 +static struct xtables_target trigger = {
@@ -4686,7 +4679,7 @@
 
 --- iptables-1.8.x/extensions/libipt_webstr.c
 +++ iptables-1.8.x/extensions/libipt_webstr.c
-@@ -0,0 +1,223 @@
+@@ -0,0 +1,241 @@
 +/* Shared library add-on to iptables to add string matching support. 
 + * 
 + * Copyright (C) 2000 Emmanuel Roger  <winfield@freegates.be>
@@ -4885,7 +4878,25 @@
 +static void
 +webstr_save(const void *ip, const struct ipt_entry_match *match)
 +{
-+	printf("--webstr ");
++	struct ipt_webstr_info *stringinfo = (struct ipt_webstr_info *)match->data;
++
++	switch (stringinfo->type) {
++	case IPT_WEBSTR_HOST:
++		printf(" --host ");
++		break;
++
++	case IPT_WEBSTR_URL:
++		printf(" --url ");
++		break;
++
++	case IPT_WEBSTR_CONTENT:
++		printf(" --content ");
++		break;
++
++	default:
++		printf(" ERROR ");
++		break;
++	}
 +	print_string(((struct ipt_webstr_info *)match->data)->string,
 +		  ((struct ipt_webstr_info *)match->data)->invert, 0);
 +}
@@ -5330,7 +5341,7 @@
  };
  
 +
-+/*TOMATO*/
++/* TOMATO */
 +#ifndef _NF_CONNTRACK_TUPLE_H
  /* The protocol-specific manipulable parts of the tuple: always in
   * network order
@@ -5340,7 +5351,7 @@
  	} gre;
  };
 +#endif
-+/*END TOMATO*/
++/* END TOMATO */
  
  #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
  
@@ -5398,18 +5409,6 @@
  
  /* This structure defines each of the firewall rules.  Consists of 3
     parts which are 1) general IP header stuff 2) match specific
-
---- iptables-1.8.x/include/linux/netfilter_ipv6/ip6t_REJECT.h
-+++ iptables-1.8.x/include/linux/netfilter_ipv6/ip6t_REJECT.h
-@@ -9,6 +9,7 @@
- 	IP6T_ICMP6_NOT_NEIGHBOUR,
- 	IP6T_ICMP6_ADDR_UNREACH,
- 	IP6T_ICMP6_PORT_UNREACH,
-+	IP6T_ICMP6_SRC_ADDR_FAIL_POLICY,
- 	IP6T_ICMP6_ECHOREPLY,
- 	IP6T_TCP_RESET,
- 	IP6T_ICMP6_POLICY_FAIL,
-
 --- iptables-1.8.x/iptables/xtoptions.c
 +++ iptables-1.8.x/iptables/xtoptions.c
 @@ -0,0 +1,1211 @@
