@@ -88,7 +88,7 @@
  
  void printBootInfoKeys(FILE *fp, int sp)
  {
-@@ -989,8 +1048,6 @@ again:
+@@ -997,8 +1056,6 @@ again:
  #undef	__FUNCTION__
  }
  
@@ -97,7 +97,7 @@
  int wsd_init(struct endpoint *ep)
  {
  	if (!wsd_instance)
-@@ -1012,6 +1069,7 @@ int wsd_init(struct endpoint *ep)
+@@ -1020,6 +1077,7 @@ int wsd_init(struct endpoint *ep)
  		return -1;
  	}
  
@@ -105,7 +105,7 @@
  	if (!workgroup &&
  		!(workgroup = get_smbparm(ep, "workgroup", "WORKGROUP")))
  		return -1;
-@@ -1019,6 +1077,11 @@ int wsd_init(struct endpoint *ep)
+@@ -1027,6 +1085,11 @@ int wsd_init(struct endpoint *ep)
  		!(netbiosname = get_smbparm(ep, "netbios name", hostname)))
  		return -1;
  

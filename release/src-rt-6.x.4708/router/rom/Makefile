@@ -52,7 +52,7 @@ else
 	count=0; \
 	while [ $${count} -lt 6 ]; do \
 	    printf "\nRetrieving the list of public DNSCrypt resolvers...\n"; \
-	    /usr/bin/wget -T 10 -t 1 "$${resolvers_url}" -O "$${resolvers_md}"; \
+	    /usr/bin/wget --secure-protocol=TLSv1_2 -T 10 -t 1 "$${resolvers_url}" -O "$${resolvers_md}"; \
 	    if [ $${?} -ne 0 ]; then \
 		count=`expr $${count} + 1`; \
 		if [ $${count} -gt 5 ]; then \
