@@ -1082,9 +1082,6 @@ static int init_nvram(void)
 			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
-			nvram_set("wl0_atf", "1");	/* enable Air Time Fairness by default on all interfaces */
-			nvram_set("wl1_atf", "1");
-			nvram_set("wl2_atf", "1");
 
 			/* GMAC3 variables */
 			nvram_set("fwd_cpumap", "d:x:2:169:1 d:l:5:169:1 d:u:5:163:0");
