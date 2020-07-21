@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("ct_tcp_timeout,ct_udp_timeout,ct_timeout,ct_max,ct_hashsize,nf_l7in,nf_ttl,nf_sip,nf_rtsp,nf_pptp,nf_h323,nf_ftp"); %>
+//	<% nvram("ct_tcp_timeout,ct_udp_timeout,ct_timeout,ct_max,ct_hashsize,nf_l7in,nf_ttl,nf_sip,nf_rtsp,nf_pptp,nf_h323,nf_ftp,fw_nat_tuning"); %>
 
 var checker = null;
 var timer = new TomatoTimer(check);
@@ -147,6 +147,8 @@ function save() {
 	else
 		fom.nf_ttl.value = i;
 
+	fom.fw_nat_tuning.value = (E('_fw_nat_tun_1').checked ? 0 : (E('_fw_nat_tun_2').checked ? 1 : 2));
+
 	form.submit(fom, 1);
 }
 </script>
@@ -177,6 +179,7 @@ function save() {
 <input type="hidden" name="nf_h323">
 <input type="hidden" name="nf_ftp">
 <input type="hidden" name="nf_sip">
+<input type="hidden" name="fw_nat_tuning">
 
 <!-- / / / -->
 
@@ -272,6 +275,10 @@ function save() {
 		v.push(['', 'Custom']);
 
 		createFieldTable('', [
+			{ title: 'TCP/UDP Buffers', multi: [
+				{suffix: '&nbsp; Small <small>(default)<\/small>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_fw_nat_tuning', id: '_fw_nat_tun_1', type: 'radio', value: nvram.fw_nat_tuning == '0' },
+				{suffix: '&nbsp; Medium&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_fw_nat_tuning', id: '_fw_nat_tun_2', type: 'radio', value: nvram.fw_nat_tuning == '1' },
+				{suffix: '&nbsp; Large', name: '_fw_nat_tuning', id: '_fw_nat_tun_3', type: 'radio', value: nvram.fw_nat_tuning == '2' } ]},
 			{ title: 'TTL Adjust', multi: [
 				{ name: 'f_nf_ttl', type: 'select', options: v, value: nvram.nf_ttl.substr(0, 2) == 'c:' ? '' : nvram.nf_ttl },
 				{ name: 'f_ttl_val', type: 'text', maxlen: 3, size: 6, value: nvram.nf_ttl.substr(0, 2) == 'c:' ?  nvram.nf_ttl.substr(2, 5) : '' } ] },
