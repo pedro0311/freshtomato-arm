@@ -60,7 +60,7 @@
  		cd $(top) && cd $(BUILDDIR) && $(MAKE) top="$(top)" -f $(top)/Makefile $${f%.po}.mo; \
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -150,6 +150,8 @@ NO_INOTIFY
+@@ -152,6 +152,8 @@ NO_INOTIFY
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
@@ -69,7 +69,7 @@
  
  LEASEFILE
  CONFFILE
-@@ -190,6 +192,8 @@ RESOLVFILE
+@@ -192,6 +194,8 @@ RESOLVFILE
  /* #define HAVE_LIBIDN2 */
  /* #define HAVE_CONNTRACK */
  /* #define HAVE_DNSSEC */
@@ -855,7 +855,7 @@
 +#endif
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -169,6 +169,8 @@ int main (int argc, char **argv)
+@@ -170,6 +170,8 @@ int main (int argc, char **argv)
        /* one char flag per possible RR in answer section (may get extended). */
        daemon->rr_status_sz = 64;
        daemon->rr_status = safe_malloc(sizeof(*daemon->rr_status) * daemon->rr_status_sz);
@@ -877,7 +877,7 @@
  /* daemon is function in the C library.... */
  #define daemon dnsmasq_daemon
  
-@@ -655,6 +651,7 @@ struct hostsfile {
+@@ -656,6 +652,7 @@ struct hostsfile {
  #define FREC_HAS_EXTRADATA    512        
  
  #ifdef HAVE_DNSSEC
@@ -885,7 +885,7 @@
  #define HASH_SIZE 20 /* SHA-1 digest size */
  #else
  #define HASH_SIZE sizeof(int)
-@@ -1247,13 +1244,17 @@ unsigned char* hash_questions(struct dns
+@@ -1249,13 +1246,17 @@ unsigned char* hash_questions(struct dns
  int setup_timestamp(void);
  
  /* crypto.c */
