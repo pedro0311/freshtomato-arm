@@ -369,7 +369,7 @@ int dhcpc_event_main(int argc, char **argv)
 int dhcpc_release_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
-	if (argc > 0) {
+	if (argc > 1) {
 		strcpy(prefix, argv[1]);
 	} else {
 		strcpy(prefix, "wan");
@@ -414,7 +414,7 @@ int dhcpc_release_main(int argc, char **argv)
 int dhcpc_renew_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
-	if (argc > 0) {
+	if (argc > 1) {
 		strcpy(prefix, argv[1]);
 	} else {
 		strcpy(prefix, "wan");
