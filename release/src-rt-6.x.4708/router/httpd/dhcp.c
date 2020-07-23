@@ -62,18 +62,25 @@ void wo_dhcpc(char *url)
 	common_redirect();
 }
 
-
-// -----------------------------------------------------------------------------
-
-
 void wo_dhcpd(char *url)
 {
-	char *p;
+	char *p, *w, *m;
+	char *argv[5];
+	int pid;
 
 	if ((p = webcgi_get("remove")) != NULL) {
 		f_write_string("/var/tmp/dhcp/delete", p, FW_CREATE|FW_NEWLINE, 0666);
 		killall("dnsmasq", SIGUSR2);
 		f_wait_notexists("/var/tmp/dhcp/delete", 5);
+	}
+
+	if (((w = webcgi_get("wl")) != NULL) && ((m = webcgi_get("mac")) != NULL)) {
+		argv[0] = "wl";
+		argv[1] = "-i";
+		argv[2] = w;
+		argv[3] = "deauthenticate";
+		argv[4] = m;
+		_eval(argv, NULL, 0, &pid);
 	}
 	web_puts("{}");
 }
