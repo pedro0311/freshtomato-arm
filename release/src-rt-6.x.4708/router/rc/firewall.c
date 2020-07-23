@@ -1958,18 +1958,49 @@ int start_firewall(void)
 	wan4up = check_wanup("wan4");
 #endif
 
-	f_write_string("/proc/sys/net/ipv4/tcp_syncookies", nvram_get_int("ne_syncookies") ? "1" : "0", 0, 0);
-
 	/* NAT performance tweaks
 	 * These values can be overriden later if needed via firewall script
 	 */
-	f_write_string("/proc/sys/net/core/netdev_max_backlog", "3072", 0, 0);
-	f_write_string("/proc/sys/net/core/somaxconn", "3072", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "8192", 0, 0);
+	f_write_string("/proc/sys/net/core/netdev_max_backlog", "2048", 0, 0);
+	f_write_string("/proc/sys/net/core/somaxconn", "1024", 0, 0);
+	f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "1024", 0, 0);
+
+	if (nvram_get_int("fw_nat_tuning") > 0) {
+		f_write_string("/proc/sys/net/core/netdev_max_backlog", "3072", 0, 0);
+		f_write_string("/proc/sys/net/core/somaxconn", "3072", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh1", "1024", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh2", "2048", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh3", "4096", 0, 0);
+	}
+
+	/* Medium buffers */
+	if (nvram_get_int("fw_nat_tuning") == 1) {
+		f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "4096", 0, 0);
+		f_write_string("/proc/sys/net/core/rmem_default", "262144", 0, 0);
+		f_write_string("/proc/sys/net/core/rmem_max", "262144", 0, 0);
+		f_write_string("/proc/sys/net/core/wmem_default", "262144", 0, 0);
+		f_write_string("/proc/sys/net/core/wmem_max", "262144", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/tcp_rmem", "4096 131072 262144", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/tcp_wmem", "4096 131072 262144", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/udp_mem", "32768 131072 262144", 0, 0);
+	}
+
+	/* Large buffers */
+	if (nvram_get_int("fw_nat_tuning") == 2) {
+		f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "8192", 0, 0);
+		f_write_string("/proc/sys/net/core/rmem_default", "1040384", 0, 0);
+		f_write_string("/proc/sys/net/core/rmem_max", "1040384", 0, 0);
+		f_write_string("/proc/sys/net/core/wmem_default", "1040384", 0, 0);
+		f_write_string("/proc/sys/net/core/wmem_max", "1040384", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/tcp_rmem", "8192 131072 992000", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/tcp_wmem", "8192 131072 992000", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/udp_mem", "122880 520192 992000", 0, 0);
+	}
+
 	f_write_string("/proc/sys/net/ipv4/tcp_fin_timeout", "30", 0, 0);
+	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_time", "1800", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_intvl", "24", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_probes", "3", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_time", "1800", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_retries2", "5", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_syn_retries", "3", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_synack_retries", "3", 0, 0);
@@ -1982,22 +2013,13 @@ int start_firewall(void)
 
 	/* DoS-related tweaks */
 	f_write_string("/proc/sys/net/ipv4/icmp_ignore_bogus_error_responses", "1", 0, 0);
+	f_write_string("/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts", "1", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/tcp_rfc1337", "1", 0, 0);
 	f_write_string("/proc/sys/net/ipv4/ip_local_port_range", "1024 65535", 0, 0);
+	f_write_string("/proc/sys/net/ipv4/tcp_syncookies", (nvram_get_int("ne_syncookies") ? "1" : "0"), 0, 0);
 
 	wanproto = get_wan_proto();
 	f_write_string("/proc/sys/net/ipv4/ip_dynaddr", (wanproto == WP_DISABLED || wanproto == WP_STATIC) ? "0" : "1", 0, 0);
-
-#ifdef TCONFIG_EMF
-	/* No limitations now, allow IGMPv3 for LAN at least */
-	/* Force IGMPv2 due EMF limitations */
-	/*
-	if (nvram_get_int("emf_enable")) {
-		f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "2", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "2", 0, 0);
-	}
-	*/
-#endif
 
 	/* Force IGMPv2 if enabled via GUI (advanced-routing.asp) */
 	if (nvram_match("force_igmpv2", "1")) {

@@ -229,20 +229,21 @@ struct nvram_tuple router_defaults[] = {
 
 	/* PPPoE parameters */
 	{ "wan_pppoe_ifname",		""				, 0 },	// PPPoE enslaved interface
+	{ "wan_ppp_mru",		"1500"				, 0 },	// Negotiate MRU to this value
+	{ "wan_ppp_mtu",		"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
+	{ "wan_ppp_ac",			""				, 0 },	// PPPoE access concentrator name
+	{ "wan_ppp_static",		"0"				, 0 },	// Enable / Disable Static IP
+	{ "wan_ppp_static_ip",		""				, 0 },	// PPPoE Static IP
+	{ "wan_ppp_get_ac",		""				, 0 },	// PPPoE Server ac name
+	{ "wan_ppp_get_srv",		""				, 0 },	// PPPoE Server service name
+
 	{ "wan_ppp_username",		""				, 0 },	// PPP username
 	{ "wan_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
-	{ "wan_ppp_mru",		"1500"				, 0 },	// Negotiate MRU to this value
-	{ "wan_ppp_mtu",		"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
 	{ "wan_ppp_service",		""				, 0 },	// PPPoE service name
-	{ "wan_ppp_ac",			""				, 0 },	// PPPoE access concentrator name
-	{ "wan_ppp_static",		"0"				, 0 },	// Enable / Disable Static IP
-	{ "wan_ppp_static_ip",		""				, 0 },	// PPPoE Static IP
-	{ "wan_ppp_get_ac",		""				, 0 },	// PPPoE Server ac name
-	{ "wan_ppp_get_srv",		""				, 0 },	// PPPoE Server service name
 	{ "wan_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
 	{ "wan_pppoe_lei",		"10"				, 0 },
@@ -663,20 +664,15 @@ struct nvram_tuple router_defaults[] = {
 	{ "ct_udp_timeout",		""				, 0 },
 	{ "ct_timeout",			""				, 0 },
 	{ "ct_max",			""				, 0 },
+	{ "ct_hashsize",		"2048"				, 0 },
 	{ "nf_ttl",			"0"				, 0 },
 	{ "nf_l7in",			"1"				, 0 },
-#ifdef LINUX26
 	{ "nf_sip",			"0"				, 0 },
-	{ "ct_hashsize",		"2048"				, 0 },
-#endif
-#ifdef LINUX26
 	{ "nf_rtsp",			"0"				, 0 },
-#else
-	{ "nf_rtsp",			"1"				, 0 },
-#endif
 	{ "nf_pptp",			"1"				, 0 },
 	{ "nf_h323",			"1"				, 0 },
 	{ "nf_ftp",			"1"				, 0 },
+	{ "fw_nat_tuning",		"0"				, 0 },	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
 	{ "adblock_enable",		"0"				, 0 },

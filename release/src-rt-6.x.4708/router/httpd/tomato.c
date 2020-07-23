@@ -898,14 +898,13 @@ static const nvset_t nvset_list[] = {
 	{ "ct_timeout",			V_LENGTH(5, 15)			},
 	{ "nf_ttl",			V_LENGTH(1, 6)			},
 	{ "nf_l7in",			V_01				},
-#ifdef LINUX26
 	{ "nf_sip",			V_01				},
 	{ "ct_hashsize",		V_NUM				},
-#endif
 	{ "nf_rtsp",			V_01				},
 	{ "nf_pptp",			V_01				},
 	{ "nf_h323",			V_01				},
 	{ "nf_ftp",			V_01				},
+	{ "fw_nat_tuning",		V_RANGE(0, 2)			},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 // advanced-dhcpdns
 	{ "dhcpd_slt",			V_RANGE(-1, 43200)		},	// -1=infinite, 0=follow normal lease time, >=1 custom

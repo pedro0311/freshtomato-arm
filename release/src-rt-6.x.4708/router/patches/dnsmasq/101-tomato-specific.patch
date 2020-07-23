@@ -1,6 +1,6 @@
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -75,6 +75,10 @@ HAVE_BROKEN_RTC
+@@ -77,6 +77,10 @@ HAVE_BROKEN_RTC
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -342,6 +346,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -344,6 +348,10 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -414,6 +422,9 @@ static char *compile_opts =
+@@ -416,6 +424,9 @@ static char *compile_opts =
  "no-"
  #endif
  "ipset "
@@ -79,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1496,8 +1534,22 @@ static void async_event(int pipe, time_t
+@@ -1500,8 +1538,22 @@ static void async_event(int pipe, time_t
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -102,7 +102,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1540,6 +1592,12 @@ static void async_event(int pipe, time_t
+@@ -1544,6 +1596,12 @@ static void async_event(int pipe, time_t
  	    close(daemon->helperfd);
  	  }
  #endif
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1443,6 +1443,12 @@ int make_icmp_sock(void);
+@@ -1445,6 +1445,12 @@ int make_icmp_sock(void);
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif

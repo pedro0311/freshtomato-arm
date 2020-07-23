@@ -10,7 +10,7 @@ clean:
 	rm -f rom/etc/motd
 
 certs: dummy
-	others/mk-ca-bundle.pl -fu rom/etc/ssl/certs/ca-certificates.crt
+	others/mk-ca-bundle.pl -fu rom/etc/ssl/certs/ca-certificates.crt || true
 
 certs-install: certs
 	install -d $(INSTALLDIR)/rom/etc/ssl/certs
