@@ -2233,7 +2233,7 @@ var cookie = {
 	},
 	unset: function(key) {
 		document.cookie = 'tomato_' + encodeURIComponent(key) + '=; expires=' +
-		(new Date(1)).toUTCString() + '; path=/';
+		(new Date(1)).toUTCString() + '; path=/; SameSite=Lax';
 	}
 };
 
