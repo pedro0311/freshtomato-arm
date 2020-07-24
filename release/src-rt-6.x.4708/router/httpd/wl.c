@@ -19,6 +19,147 @@
 #error WL_BSS_INFO_VERSION < 108
 #endif
 
+#if !defined(CONFIG_BCM7) && !defined(TCONFIG_BCM7)
+/*
+ * Country names and abbreviations from ISO 3166
+ */
+typedef struct {
+	const char *name;	/* Name for Tomato ARM */
+	const char *abbrev;	/* Abbreviation */
+} cntry_name_t;
+cntry_name_t cntry_names[];
+
+cntry_name_t cntry_names[] = {
+{"#a (wildcard)",	"#a"},
+{"AFGHANISTAN",		"AF"},
+{"ALBANIA",		"AL"},
+{"ALGERIA",		"DZ"},
+{"ARGENTINA",		"AR"},
+{"AUSTRALIA",		"AU"},
+{"AUSTRIA",		"AT"},
+{"BAHRAIN",		"BH"},
+{"BELGIUM",		"BE"},
+{"BRAZIL",		"BR"},
+{"BULGARIA",		"BG"},
+{"CANADA",		"CA"},
+{"CHILE",		"CL"},
+{"CHINA",		"CN"},
+{"COLOMBIA",		"CO"},
+{"CONGO",		"CG"},
+{"CROATIA",		"HR"},
+{"CUBA",		"CU"},
+{"CZECH REPUBLIC",	"CZ"},
+{"DENMARK",		"DK"},
+{"DOMINICAN REP.",	"DO"},
+{"EUROPE",		"EU"},
+{"ECUADOR",		"EC"},
+{"EGYPT",		"EG"},
+{"ESTONIA",		"EE"},
+{"ETHIOPIA",		"ET"},
+{"FINLAND",		"FI"},
+{"FRANCE",		"FR"},
+{"GERMANY",		"DE"},
+{"GREECE",		"GR"},
+{"GREENLAND",		"GL"},
+{"GUAM",		"GU"},
+{"GUATEMALA",		"GT"},
+{"HAITI",		"HT"},
+{"VATICAN CITY",	"VA"},
+{"HONDURAS",		"HN"},
+{"HONG KONG",		"HK"},
+{"HUNGARY",		"HU"},
+{"ICELAND",		"IS"},
+{"INDIA",		"IN"},
+{"INDONESIA",		"ID"},
+{"IRAN",		"IR"},
+{"IRAQ",		"IQ"},
+{"IRELAND",		"IE"},
+{"ISRAEL",		"IL"},
+{"ITALY",		"IT"},
+{"JAMAICA",		"JM"},
+{"JAPAN",		"JP"},
+{"KOREA1",		"KP"},
+{"KOREA2",		"KR"},
+{"KUWAIT",		"KW"},
+{"LIECHTENSTEIN",	"LI"},
+{"LITHUANIA",		"LT"},
+{"LUXEMBOURG",		"LU"},
+{"MACAO",		"MO"},
+{"MACEDONIA",		"MK"},
+{"MADAGASCAR",		"MG"},
+{"MALAWI",		"MW"},
+{"MALAYSIA",		"MY"},
+{"MEXICO",		"MX"},
+{"MICRONESIA",		"FM"},
+{"MOLDOVA",		"MD"},
+{"MONGOLIA",		"MN"},
+{"MONTENEGRO",		"ME"},
+{"MOROCCO",		"MA"},
+{"NAMIBIA",		"NA"},
+{"NAURU",		"NR"},
+{"NEPAL",		"NP"},
+{"NETHERLANDS",		"NL"},
+{"NEW ZEALAND",		"NZ"},
+{"NIGERIA",		"NG"},
+{"NORWAY",		"NO"},
+{"OMAN",		"OM"},
+{"PAKISTAN",		"PK"},
+{"PALAU",		"PW"},
+{"PALESTINIAN",		"PS"},
+{"PANAMA",		"PA"},
+{"PARAGUAY",		"PY"},
+{"PERU",		"PE"},
+{"PHILIPPINES",		"PH"},
+{"PITCAIRN",		"PN"},
+{"POLAND",		"PL"},
+{"PORTUGAL",		"PT"},
+{"PUERTO RICO",		"PR"},
+{"QATAR",		"QA"},
+{"ROMANIA",		"RO"},
+{"RUSSIA",		"RU"},
+{"RWANDA",		"RW"},
+{"SAN MARINO",		"SM"},
+{"SAUDI ARABIA",	"SA"},
+{"SENEGAL",		"SN"},
+{"SERBIA",		"RS"},
+{"SEYCHELLES",		"SC"},
+{"SIERRA LEONE",	"SL"},
+{"SINGAPORE",		"SG"},
+{"SLOVAKIA",		"SK"},
+{"SLOVENIA",		"SI"},
+{"SOMALIA",		"SO"},
+{"SOUTH AFRICA",	"ZA"},
+{"SPAIN",		"ES"},
+{"SRI LANKA",		"LK"},
+{"SUDAN",		"SD"},
+{"SWEDEN",		"SE"},
+{"SWITZERLAND",		"CH"},
+{"SYRIAN",		"SY"},
+{"TAIWAN",		"TW"},
+{"THAILAND",		"TH"},
+{"TUNISIA",		"TN"},
+{"TURKEY",		"TR"},
+{"TURKMENISTAN",	"TM"},
+{"TURKS",		"TC"},
+{"TUVALU",		"TV"},
+{"UGANDA",		"UG"},
+{"UKRAINE",		"UA"},
+{"U.AR. EMIRATES",	"AE"},
+{"U. KINGDOM",		"GB"},
+{"USA",			"US"},
+{"URUGUAY",		"UY"},
+{"UZBEKISTAN",		"UZ"},
+{"VENEZUELA",		"VE"},
+{"YEMEN",		"YE"},
+{"YUGOSLAVIA",		"YU"},
+{"ZAMBIA",		"ZM"},
+{"ZIMBABWE",		"ZW"},
+{NULL,			NULL}
+};
+
+#define WLC_IOCTL_MAXLEN_ADDON 2048
+#endif /* !defined(CONFIG_BCM7) && !defined(TCONFIG_BCM7) */
+
 
 static int unit = 0;
 static int subunit = 0;
@@ -1143,6 +1284,7 @@ void asp_wlifaces(int argc, char **argv)
 	web_puts("];\n");
 }
 
+#if defined(CONFIG_BCM7) || defined(TCONFIG_BCM7) /* keep the old way for SDK7 for now, it is working */
 void asp_wlcountries(int argc, char **argv)
 {
 	char s[128], *p, *code, *country;
@@ -1151,16 +1293,16 @@ void asp_wlcountries(int argc, char **argv)
 
 	web_puts("\nwl_countries = [");
 	if ((f = popen("wl country list", "r")) != NULL) {
-		// skip the header line
+		/* skip the header line */
 		fgets(s, sizeof(s), f);
 		while (fgets(s, sizeof(s), f)) {
 			p = s;
 			if ((code = strsep(&p, " \t\n")) && p) {
 				country = strsep(&p, "\n");
 				if ((country && *country && strcmp(code, country) != 0) ||
-				    // special case EU code since the driver may not have a name for it
+				    /* special case EU code since the driver may not have a name for it */
 				    (strcmp(code, "EU") == 0) ||
-				    // special case for #a - used as default in Tenda AC15
+				    /* special case for #a - used as default in Tenda AC15 */
 				    (strcmp(code, "#a") == 0)) {
 					if (!country || *country == 0) country = code;
 					p = js_string(country);
@@ -1173,6 +1315,51 @@ void asp_wlcountries(int argc, char **argv)
 	}
 	web_puts("];\n");
 }
+#else /* for SDK6 with new driver *.126 (build year 2020 with very long/big country list) */
+static cntry_name_t *
+wlc_cntry_abbrev_to_country(const char *abbrev)
+{
+	cntry_name_t *cntry;
+	if (!*abbrev || strlen(abbrev) > 3 || strlen(abbrev) < 2)
+		return (NULL);
+	for (cntry = cntry_names; cntry->name &&
+		strncmp(abbrev, cntry->abbrev, strlen(abbrev)); cntry++);
+	return (!cntry->name ? NULL : cntry);
+}
+
+void asp_wlcountries(int argc, char **argv)
+{
+	int i = 0;
+	wl_country_list_t *cl = (wl_country_list_t *)malloc(WLC_IOCTL_MAXLEN + WLC_IOCTL_MAXLEN_ADDON);
+	cntry_name_t *cntry = NULL;
+	char *abbrev = NULL;
+	char *ifname = (strcmp(nvram_safe_get("wl_ifname"),"") != 0) ? nvram_safe_get("wl_ifname") : "eth1"; /* keep it easy - take the first interface */
+	int band = WLC_BAND_ALL; /* all bands == 3 */
+
+	web_puts("\nwl_countries = [");
+
+	if (cl) {
+		cl->buflen = WLC_IOCTL_MAXLEN + WLC_IOCTL_MAXLEN_ADDON;
+		cl->band_set = FALSE;
+		cl->band = band;
+
+		if (wl_ioctl(ifname, WLC_GET_COUNTRY_LIST, cl, cl->buflen) == 0) {
+			for(i = 0; i < cl->count; i++) {
+				abbrev = &cl->country_abbrev[i*WLC_CNTRY_BUF_SZ];
+				cntry = wlc_cntry_abbrev_to_country(abbrev);
+				web_printf("%c['%s', '%s']", i ? ',' : ' ', abbrev, cntry ? cntry->name : abbrev );
+			}
+
+		}
+		free((void *)cl);
+	}
+	else { /* something went wrong ... provide a basic list at least */
+		web_puts(" ['#a', '#a (wildcard)'],['EU', 'EUROPE'],['CZ', 'CZECH REPUBLIC'],['DE', 'GERMANY'],['US', 'UNITED STATES'],['SE', 'SWEDEN'],['SG', 'SINGAPORE'],['LU', 'LUXEMBOURG']");
+	}
+
+	web_puts("];\n");
+}
+#endif 
 
 int mround(float val)
 {
