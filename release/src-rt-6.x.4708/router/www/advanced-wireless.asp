@@ -36,7 +36,7 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_dtim', quiet, 1, 255)) return 0;
 			if (!v_range('_wl'+u+'_frag', quiet, 256, 2346)) return 0;
 			if (!v_range('_wl'+u+'_rts', quiet, 0, 2347)) return 0;
-			if (!v_range(E('_wl'+u+'_txpwr'), quiet, hp ? 1 : 0, hp ? 251 : 400)) return 0;
+			if (!v_range(E('_wl'+u+'_txpwr'), quiet, hp ? 1 : 0, hp ? 251 : 1000)) return 0;
 
 			var b = E('_wl'+u+'_wme').value == 'off';
 			E('_wl'+u+'_wme_no_ack').disabled = b;
@@ -201,7 +201,7 @@ function save() {
 				{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 3, size: 5,
 					suffix: hp ?
 						' <small>mW (before amplification)<\/small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)<\/small>' :
-						' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 400, override regulatory and other limitations; use 0 for country default)<\/small>',
+						' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 1000, override regulatory and other limitations; use 0 for country default)<\/small>',
 						value: nvram['wl'+u+'_txpwr'] },
 				{ title: 'Transmission Rate', name: 'wl'+u+'_rate', type: 'select',
 					options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
