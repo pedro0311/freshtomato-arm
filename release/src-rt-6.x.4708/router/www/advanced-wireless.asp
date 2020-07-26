@@ -198,7 +198,7 @@ function save() {
 					value: nvram['wl'+u+'_obss_coex'], hidden: !nphy },
 				{ title: 'RTS Threshold', name: 'wl'+u+'_rts', type: 'text', maxlen: 4, size: 6,
 					suffix: ' <small>(range: 0 - 2347; default: 2347)<\/small>', value: nvram['wl'+u+'_rts'] },
-				{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 3, size: 5,
+				{ title: 'Transmit Power', name: 'wl'+u+'_txpwr', type: 'text', maxlen: 4, size: 5,
 					suffix: hp ?
 						' <small>mW (before amplification)<\/small>&nbsp;&nbsp;<small>(range: 1 - 251; default: 10)<\/small>' :
 						' <small>mW<\/small>&nbsp;&nbsp;<small>(range: 0 - 1000, override regulatory and other limitations; use 0 for country default)<\/small>',
