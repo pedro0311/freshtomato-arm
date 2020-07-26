@@ -519,10 +519,8 @@ void start_ovpn_client(int clientNum)
 		vpnlog(VPN_LOG_EXTRA, "Done running firewall rules");
 	}
 
-#if defined(TCONFIG_BCMARM)
 	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
 	eval("/usr/sbin/ip", "addr", "flush", "dev", iface);
-#endif
 
 	/* Start the VPN client */
 	sprintf(buffer, "/etc/openvpn/vpnclient%d", clientNum);
