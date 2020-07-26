@@ -808,10 +808,6 @@ define KernelConfig
 		echo "# CONFIG_LEDS_DAC124S085 is not set" >>$(1); \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
-		sed -i "/CONFIG_INPUT=m/d" $(1); \
-		echo "CONFIG_INPUT=y" >>$(1); \
-		sed -i "/CONFIG_HID=m/d" $(1); \
-		echo "CONFIG_HID=y" >>$(1); \
 		sed -i "s/# CONFIG_HIDRAW is not set/CONFIG_HIDRAW=y/g" $(1); \
 		sed -i "/CONFIG_USB_STORAGE_ONETOUCH/d" $(1); \
 		echo "# CONFIG_USB_STORAGE_ONETOUCH is not set" >>$(1); \
