@@ -1277,8 +1277,6 @@ static void filter_input(void)
 		if (nvram_get_int("telnetd_eas"))
 		if (nvram_get_int("sshd_eas"))
 */
-		modprobe("xt_recent");
-
 		ipt_write("-N shlimit\n"
 			  "-A shlimit -m recent --set --name shlimit\n"
 			  "-A shlimit -m recent --update --hitcount %d --seconds %s --name shlimit -j %s\n",
@@ -1295,8 +1293,6 @@ static void filter_input(void)
 
 	/* Protect against brute force on port defined for remote GUI access */
 	if (remotemanage) {
-		modprobe("xt_recent");
-
 		ipt_write("-N wwwlimit\n"
 		          "-A wwwlimit -m recent --set --name www\n"
 		          "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
@@ -1307,8 +1303,6 @@ static void filter_input(void)
 #ifdef TCONFIG_FTP
 	strlcpy(s, nvram_safe_get("ftp_limit"), sizeof(s));
 	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && (atoi(en)) && (nvram_get_int("ftp_enable") == 1)) {
-		modprobe("xt_recent");
-
 		ipt_write("-N ftplimit\n"
 			  "-A ftplimit -m recent --set --name ftp\n"
 			  "-A ftplimit -m recent --update --hitcount %d --seconds %s --name ftp -j %s\n",
@@ -1794,8 +1788,6 @@ static void filter6_input(void)
 
 	strlcpy(s, nvram_safe_get("ne_shlimit"), sizeof(s));
 	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && ((n = atoi(en) & 3) != 0)) {
-		modprobe("xt_recent");
-
 		ip6t_write("-N shlimit\n"
 			   "-A shlimit -m recent --set --name shlimit\n"
 			   "-A shlimit -m recent --update --hitcount %d --seconds %s --name shlimit -j %s\n",
@@ -1822,8 +1814,6 @@ static void filter6_input(void)
 #ifdef TCONFIG_FTP
 	strlcpy(s, nvram_safe_get("ftp_limit"), sizeof(s));
 	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && (atoi(en)) && (nvram_get_int("ftp_enable") == 1)) {
-		modprobe("xt_recent");
-
 		ip6t_write("-N ftplimit\n"
 			   "-A ftplimit -m recent --set --name ftp\n"
 			   "-A ftplimit -m recent --update --hitcount %d --seconds %s --name ftp -j %s\n",
@@ -2287,7 +2277,6 @@ int start_firewall(void)
 #endif
 
 	modprobe_r("xt_layer7");
-	modprobe_r("xt_recent");
 	modprobe_r("xt_HL");
 	modprobe_r("xt_length");
 	modprobe_r("xt_web");
