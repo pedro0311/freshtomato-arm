@@ -19,6 +19,8 @@
 #define lease_file	"/var/tmp/dhcp/leases"
 #define lease_file_tmp	lease_file".!"
 
+#define MAX_CLIENTS_COUNT 128
+
 char *strupr(char *str)
 {
 	size_t i;
@@ -103,30 +105,45 @@ static int get_wl_clients(int idx, int unit, int subunit, void *param)
 	char buf[32];
 	char *wlif;
 	scb_val_t rssi;
+	scb_val_t rate_backup;
 	sta_info_t sti;
 	int cmd;
-	struct maclist *mlist;
-	int mlsize;
+	struct maclist *mlist = NULL;
+	int mac_list_size;
 	char ifname[16];
 
-	mlsize = sizeof(struct maclist) + (255 * sizeof(struct ether_addr));
-	if ((mlist = malloc(mlsize)) != NULL) {
-		//wlif = nvram_safe_get(wl_nvname("ifname", unit, 0));
+	mac_list_size = sizeof(mlist->count) + (MAX_CLIENTS_COUNT * sizeof(struct ether_addr)); /* buffer and length */
+	if ((mlist = malloc(mac_list_size)) != NULL) {
 		wlif = nvram_safe_get(wl_nvname("ifname", unit, subunit)); /* AB multiSSID */
 		cmd = WLC_GET_ASSOCLIST;
 		while (1) {
-			mlist->count = 255;
-			if (wl_ioctl(wlif, cmd, mlist, mlsize) == 0) {
+			mlist->count = MAX_CLIENTS_COUNT;
+			if (wl_ioctl(wlif, cmd, mlist, mac_list_size) == 0) {
 				for (i = 0; i < mlist->count; ++i) {
-					rssi.ea = mlist->ea[i];
+					memcpy(&rssi.ea, &(mlist->ea[i]), sizeof(struct ether_addr));
 					rssi.val = 0;
 					if (wl_ioctl(wlif, WLC_GET_RSSI, &rssi, sizeof(rssi)) != 0) continue;
 
-					/* sta_info0<mac> */
-					memset(&sti, 0, sizeof(sti));
-					strcpy((char *)&sti, "sta_info");
-					memcpy((char *)&sti + 9, rssi.ea.octet, 6);
-					if (wl_ioctl(wlif, WLC_GET_VAR, &sti, sizeof(sti)) != 0) continue;
+					memset(&sti, 0, sizeof(sti)); /* reset */
+					strcpy((char *)&sti, "sta_info"); /* sta_info */
+					memcpy((char *)&sti + 9, &(mlist->ea[i]), sizeof(struct ether_addr)); /* sta_info0<mac> */
+					if (wl_ioctl(wlif, WLC_GET_VAR, &sti, sizeof(sti)) != 0) {
+						continue;
+					}
+
+					/* check rate values of the driver */
+					if ((sti.tx_rate == 0) && (sti.rx_rate == 0)) { /* if both values are empty */
+						memcpy(&rate_backup.ea, &(mlist->ea[i]), sizeof(struct ether_addr));
+						rate_backup.val = 0; /* reset */
+
+						/* get backup values to show RX / TX values at the GUI */
+						if (wl_ioctl(wlif, WLC_GET_RATE, &rate_backup, sizeof(rate_backup)) != 0) {
+							continue;
+						}
+						/* rate_backup value contains link speed up+down */
+						sti.tx_rate = rate_backup.val * 1000 / 2; /* assume symmetric up/down link and convert */
+						sti.rx_rate = sti.tx_rate;
+					}
 
 					p = wlif;
 					if (sti.flags & WL_STA_WDS) {
