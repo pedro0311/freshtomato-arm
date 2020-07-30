@@ -916,6 +916,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpc_minpkt",		V_01				},
 	{ "dhcpc_custom",		V_TEXT(0, 256)			},
 	{ "dns_norebind",		V_01				},
+	{ "dns_priv_override",		V_01				},	/* override DoH */
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
 	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra

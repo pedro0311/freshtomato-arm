@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dhcpd_static_only,dnsmasq_debug"); %>
+//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug"); %>
 
 var cprefix = 'advanced_dhcpdns';
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1)) nvram.dhcpd_lmax = 255;
@@ -51,6 +51,7 @@ function save() {
 	fom.dns_norebind.value = E('_f_dns_norebind').checked ? 1 : 0;
 	fom.dhcpd_gwmode.value = E('_f_dhcpd_gwmode').checked ? 1 : 0;
 	fom.dns_intcpt.value = E('_f_dns_intcpt').checked ? 1 : 0;
+	fom.dns_priv_override.value = E('_f_dns_priv_override').checked ? 1 : 0;
 	fom.dhcpc_minpkt.value = E('_f_dhcpc_minpkt').checked ? 1 : 0;
 	fom.dhcpd_static_only.value = E('_f_dhcpd_static_only').checked ? '1' : '0';
 	fom.dnsmasq_debug.value = E('_f_dnsmasq_debug').checked ? '1' : '0';
@@ -126,6 +127,7 @@ function init() {
 <input type="hidden" name="dns_norebind">
 <input type="hidden" name="dhcpd_gwmode">
 <input type="hidden" name="dns_intcpt">
+<input type="hidden" name="dns_priv_override">
 <input type="hidden" name="dhcpc_minpkt">
 <input type="hidden" name="dhcpd_static_only">
 <input type="hidden" name="dnsmasq_debug">
@@ -148,6 +150,7 @@ function init() {
 			{ title: 'Use received DNS with user-entered DNS', name: 'f_dns_addget', type: 'checkbox', value: nvram.dns_addget == '1' },
 			{ title: 'Prevent DNS-rebind attacks', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == '1' },
 			{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == '1' },
+			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == '1' },
 			{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == '1' },
 			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == '1' },
 /* TOR-BEGIN */
@@ -192,6 +195,7 @@ function init() {
 		<li><b>Use received DNS with user-entered DNS</b> - Add DNS servers received from your WAN connection to the static DNS server list (see <a href="basic-network.asp">Network</a> configuration).</li>
 		<li><b>Prevent DNS-rebind attacks</b> - Enable DNS rebinding protection on Dnsmasq.</li>
 		<li><b>Intercept DNS port</b> - Any DNS requests/packets sent out to UDP/TCP port 53 are redirected to the internal DNS server. Currently only IPv4 DNS is intercepted.</li>
+		<li><b>Prevent client auto DoH</b> - Some clients like Firefox will automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
 		<li><b>Use user-entered gateway if WAN is disabled</b> - DHCP will use the IP address of the router as the default gateway on each LAN.</li>
 		<li><b>Ignore DHCP requests (...)</b> - Dnsmasq will ignore DHCP requests  to Only MAC addresses listed on the <a href="basic-static.asp">Static DHCP/ARP</a> page won't be able to obtain an IP address through DHCP.</li>
 		<li><b>Maximum active DHCP leases</b> - Self-explanatory.</li>

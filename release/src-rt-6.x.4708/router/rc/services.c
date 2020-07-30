@@ -155,6 +155,11 @@ void start_dnsmasq()
 			"rebind-localhost-ok\n");
 	}
 
+	/* Instruct clients like Firefox to not auto-enable DoH */
+	if (nvram_get_int("dns_priv_override")) {
+		fprintf(f, "address=/use-application-dns.net/\n");
+	}
+
 	/* Protect against VU#598349 */
 	fprintf(f,"dhcp-name-match=set:wpad-ignore,wpad\n"
 		   "dhcp-ignore-names=tag:wpad-ignore\n");
