@@ -155,6 +155,15 @@ void start_dnsmasq()
 			"rebind-localhost-ok\n");
 	}
 
+	/* Instruct clients like Firefox to not auto-enable DoH */
+	if (nvram_get_int("dns_priv_override")) {
+		fprintf(f, "address=/use-application-dns.net/\n");
+	}
+
+	/* Protect against VU#598349 */
+	fprintf(f,"dhcp-name-match=set:wpad-ignore,wpad\n"
+		   "dhcp-ignore-names=tag:wpad-ignore\n");
+
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_match("dnscrypt_proxy", "1")) {
 		fprintf(f, "server=127.0.0.1#%s\n", nvram_safe_get("dnscrypt_port") );

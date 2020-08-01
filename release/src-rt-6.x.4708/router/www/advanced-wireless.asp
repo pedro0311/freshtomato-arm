@@ -50,6 +50,7 @@ function verifyFields(focused, quiet) {
 function save() {
 	var fom;
 	var n;
+	var router_reboot = 0;
 
 	if (!verifyFields(null, false)) return;
 
@@ -58,12 +59,17 @@ function save() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var c_code = E('_wl'+u+'_country_code').value;
 
 			n = E('_f_wl'+u+'_distance').value * 1;
 			E('_wl'+u+'_distance').value = n ? n : '';
 
+			/* check if wireless country will be changed */
+			if (nvram['wl'+u+'_country_code'] != c_code)
+				router_reboot = 1;
+
 			if (nvram[+u+':ccode'])
-				E('_'+u+':ccode').value = E('_wl'+u+'_country_code').value;
+				E('_'+u+':ccode').value = c_code;
 
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 
@@ -98,7 +104,15 @@ function save() {
 		E('_wlx_hperx').disabled = 1;
 	}
 
-	form.submit(fom, 1);
+	/* check wireless country changed ? */
+	if (router_reboot && confirm("Router must be rebooted to apply changed country. Reboot now? (and commit changes to NVRAM)")) {
+		fom._service.disabled = 1;
+		fom._reboot.value = 1;
+		form.submit(fom, 0);
+	}
+ 	else { /* countinue without reboot (if no country change or the user wants it that way) */
+		form.submit(fom, 1);
+	}
 }
 </script>
 </head>
