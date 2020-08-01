@@ -311,7 +311,9 @@ const struct mime_handler mime_handlers[] = {
 	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
 	{ "upnp.cgi",			NULL,					0,	wi_generic,		wo_upnp,		1 },
 	{ "wakeup.cgi",			NULL,					0,	wi_generic,		wo_wakeup,		1 },
+#ifdef TCONFIG_BCM7
 	{ "wlmnoise.cgi",		mime_html,				0,	wi_generic,		wo_wlmnoise,		1 },
+#endif
 	{ "wlradio.cgi",		NULL,					0,	wi_generic,		wo_wlradio,		1 },
 	{ "resolve.cgi",		mime_javascript,			0,	wi_generic,		wo_resolve,		1 },
 	{ "expct.cgi",			mime_html,				0,	wi_generic,		wo_expct,		1 },

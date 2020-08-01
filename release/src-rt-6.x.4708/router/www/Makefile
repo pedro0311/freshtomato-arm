@@ -123,6 +123,12 @@ ifneq ($(TCONFIG_NOCAT),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NOCAT-BEGIN/,/NOCAT-END/d"
 endif
 
+# Only include Measure button and mnoise page in SDK6
+ifneq ($(TCONFIG_BCM7),y)
+	rm -f $(INSTALLDIR)/www/mnoise.asp
+	sed -i $(INSTALLDIR)/www/status-device -e "/BCM7-BEGIN/,/BCM7-END/d"
+endif
+
 # Clean up NGinX files if not needed
 ifneq ($(TCONFIG_NGINX),y)
 	rm -f $(INSTALLDIR)/www/web-nginx.asp
@@ -332,6 +338,7 @@ endif
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
+		-e "/BCM7-BEGIN/d"	-e "/BCM7-END/d" \
 		|| true; \
 	done
 

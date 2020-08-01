@@ -126,7 +126,9 @@ extern void wo_expct(char *url);
 extern void asp_wlscan(int argc, char **argv);
 extern void wo_wlradio(char *url);
 extern void asp_wlnoise(int argc, char **argv);
+#ifdef TCONFIG_BCM7
 extern void wo_wlmnoise(char *url);
+#endif
 extern void asp_wlstats(int argc, char **argv);
 extern void asp_wlclient(int argc, char **argv);
 extern void asp_wlchannels(int argc, char **argv);
