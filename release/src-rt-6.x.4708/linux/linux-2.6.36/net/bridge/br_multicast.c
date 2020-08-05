@@ -1583,6 +1583,11 @@ void br_multicast_init(struct net_bridge *br)
 	br->hash_max = 512;
 
 	br->multicast_router = 1;
+#if 0 /* Tomato ARM - see function start_emf() */
+#if defined(CONFIG_EMF) || defined(CONFIG_EMF_MODULE)
+	br->multicast_disabled = 1;
+#endif
+#endif
 	br->multicast_last_member_count = 2;
 	br->multicast_startup_query_count = 2;
 
