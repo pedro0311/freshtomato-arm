@@ -347,10 +347,22 @@ static void start_emf(char *lan_ifname)
 {
 	int ret = 0;
 	char tmp[32] = {0};
+	char tmp_path[64] = {0};
 
-	if (lan_ifname == NULL ||
-	    !nvram_get_int("emf_enable") ||
+	if ((lan_ifname == NULL) ||
 	    (strcmp(lan_ifname,"") == 0)) return;
+
+	snprintf(tmp_path, sizeof(tmp_path), "/sys/class/net/%s/bridge/multicast_snooping", lan_ifname);
+
+	/* make it possible to enable bridge multicast_snooping */
+	if (nvram_get_int("br_mcast_snooping")) {
+		f_write_string(tmp_path, "1", 0, 0);
+	}
+	else { /* DEFAULT: OFF - it can interfere with EMF */
+		f_write_string(tmp_path, "0", 0, 0);
+	}
+
+	if (!nvram_get_int("emf_enable")) return;
 
 	/* Start EMF */
 	ret = eval("emf", "start", lan_ifname);

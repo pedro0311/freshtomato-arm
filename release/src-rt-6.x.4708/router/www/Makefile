@@ -126,7 +126,7 @@ endif
 # Only include Measure button and mnoise page in SDK6
 ifneq ($(TCONFIG_BCM7),y)
 	rm -f $(INSTALLDIR)/www/mnoise.asp
-	sed -i $(INSTALLDIR)/www/status-device -e "/BCM7-BEGIN/,/BCM7-END/d"
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/BCM7-BEGIN/,/BCM7-END/d"
 endif
 
 # Clean up NGinX files if not needed

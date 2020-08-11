@@ -550,10 +550,11 @@ const dns_list_t *get_dns(char *prefix)
 
 	dns.count = 0;
 
-	strlcpy(s, nvram_safe_get(strcat_r(prefix, "_dns", tmp)), sizeof(s));
-	if ((nvram_get_int(strcat_r(prefix, "_dns_auto", tmp))) || (s[0] == 0)) {
-		n = strlen(s);
-		snprintf(s + n, sizeof(s) - n, " %s", nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
+	if (nvram_get_int(strcat_r(prefix, "_dns_auto", tmp))) {
+		snprintf(s, sizeof(s), " %s", nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
+	}
+	else {
+		strlcpy(s, nvram_safe_get(strcat_r(prefix, "_dns", tmp)), sizeof(s));
 	}
 
 	n = sscanf(s, "%21s %21s %21s %21s %21s %21s %21s", d[0], d[1], d[2], d[3], d[4], d[5], d[6]);
@@ -562,18 +563,22 @@ const dns_list_t *get_dns(char *prefix)
 
 		if ((c = strchr(d[i], ':')) != NULL) {
 			*c++ = 0;
-			if (((j = atoi(c)) < 1) || (j > 0xFFFF)) continue;
+			if (((j = atoi(c)) < 1) || (j > 0xFFFF))
+				continue;
+
 			port = j;
 		}
 
 		if (inet_pton(AF_INET, d[i], &ia) > 0) {
 			for (j = dns.count - 1; j >= 0; --j) {
-				if ((dns.dns[j].addr.s_addr == ia.s_addr) && (dns.dns[j].port == port)) break;
+				if ((dns.dns[j].addr.s_addr == ia.s_addr) && (dns.dns[j].port == port))
+					break;
 			}
 			if (j < 0) {
 				dns.dns[dns.count].port = port;
 				dns.dns[dns.count++].addr.s_addr = ia.s_addr;
-				if (dns.count == 6) break;
+				if (dns.count == 6)
+					break;
 			}
 		}
 	}
