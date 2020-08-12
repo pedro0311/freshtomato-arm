@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
@@ -61,6 +61,7 @@ function save() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var u_pci = (u+1);
 			var c_code = E('_wl'+u+'_country_code').value;
 			var c_rev = E('_wl'+u+'_country_rev').value;
 
@@ -71,11 +72,17 @@ function save() {
 			if (nvram['wl'+u+'_country_code'] != c_code || nvram['wl'+u+'_country_rev'] != c_rev)
 				router_reboot = 1;
 
-			if (nvram[+u+':ccode'])
-				E('_'+u+':ccode').value = c_code;
+			if (nvram[+u+':ccode']) /* check short version */
+ 				E('_'+u+':ccode').value = c_code;
+
+			if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
+				E('_pci/'+u_pci+'/1/ccode').value = c_code;
 
 			if (nvram[+u+':regrev'])
-				E('_'+u+':regrev').value = c_rev;
+ 				E('_'+u+':regrev').value = c_rev;
+
+			if (nvram['pci/'+u_pci+'/1/regrev'])
+				E('_pci/'+u_pci+'/1/regrev').value = c_rev;
 
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 
@@ -157,12 +164,17 @@ function init() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var u_pci = (u+1);
 
 			W('<input type="hidden" id="_wl'+u+'_distance" name="wl'+u+'_distance">');
 			if (nvram[+u+':ccode'])
 				W('<input type="hidden" id="_'+u+':ccode" name="'+u+':ccode">');
+			if (nvram['pci/'+u_pci+'/1/ccode'])
+				W('<input type="hidden" id="_pci/'+u_pci+'/1/ccode" name="pci/'+u_pci+'/1/ccode">');
 			if (nvram[+u+':regrev'])
 				W('<input type="hidden" id="_'+u+':regrev" name="'+u+':regrev">');
+			if (nvram['pci/'+u_pci+'/1/regrev'])
+				W('<input type="hidden" id="_pci/'+u_pci+'/1/regrev" name="pci/'+u_pci+'/1/regrev">');
 			W('<input type="hidden" id="_wl'+u+'_nmode_protection" name="wl'+u+'_nmode_protection">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfr_cap" name="wl'+u+'_txbf_bfr_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfe_cap" name="wl'+u+'_txbf_bfe_cap">');

@@ -1055,8 +1055,12 @@ static const nvset_t nvset_list[] = {
 	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
 	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "pci/1/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/2/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
 	{ "0:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
 	{ "1:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/1/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+	{ "pci/2/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
 #ifdef TCONFIG_AC3200
 	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
