@@ -674,12 +674,15 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
 			nvram_set("wl0_nbw","40");
 			nvram_set("wl0_nctrlsb", "upper");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("0:ccode", "SG");
 
 			/* modify/adjust 2,4 GHz WiFi TX parameter (taken from Asus 384 - Aug 2019) */
 			nvram_set("0:pa2ga0", "0xFF4A,0x1B7E,0xFCB9");
@@ -737,21 +740,29 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			/* wifi settings/channels */
+			/* wifi country settings */
 #ifdef TCONFIG_BCMSMP	/* dual core */
 			if (nvram_match("odmpid", "RT-AC56R")) { /* check for RT-AC56R first (almost the same like AC56U; adjust a few things) */
 				nvram_set("0:ccode", "US");
 				nvram_set("1:ccode", "US");
+				nvram_set("0:regrev", "0"); /* get 80 MHz channels for RT-AC56R */
+				nvram_set("1:regrev", "0");
 				nvram_set("ctf_fa_cap", "0"); /* disable fa cap for freshtomato */
 			}
 			else { /* RT-AC56U */
 				nvram_set("0:ccode", "SG");
 				nvram_set("1:ccode", "SG");
+				nvram_set("0:regrev", "12");
+				nvram_set("1:regrev", "12");
 			}
 #else			/* single core */
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
 #endif
+
+			/* wifi settings/channels */
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -847,8 +858,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -860,6 +869,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 		}
 		break;
 	case MODEL_RTAC1900P: /* also for RT-AC68U B2; both are dual-core 1400 MHz / 800 RAM Router */
@@ -905,8 +920,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -918,6 +931,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 		}
 		break;
 	case MODEL_RTAC66U_B1:
@@ -963,8 +982,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -976,6 +993,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 		}
 		break;
 	case MODEL_RTAC3200:
@@ -1034,7 +1057,7 @@ static int init_nvram(void)
 			nvram_set("wl0_nbw","40");
 			nvram_set("wl0_nctrlsb", "upper");
 			nvram_set("1:ccode", "SG");
-			nvram_set("1:regrev", "0");
+			nvram_set("1:regrev", "12");
 			/* wl1 (0:) - 5GHz low */
 			nvram_set("wl1_bw_cap", "7");
 			nvram_set("wl1_chanspec", "36/80");
@@ -1043,7 +1066,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
 			nvram_set("0:ccode", "SG");
-			nvram_set("0:regrev", "0");
+			nvram_set("0:regrev", "12");
 			/* wl2 (2:) - 5GHz high */
 			nvram_set("wl2_bw_cap", "7");
 			nvram_set("wl2_chanspec", "104/80");
@@ -1052,7 +1075,7 @@ static int init_nvram(void)
 			nvram_set("wl2_nbw_cap","3");
 			nvram_set("wl2_nctrlsb", "upper");
 			nvram_set("2:ccode", "SG");
-			nvram_set("2:regrev", "0");
+			nvram_set("2:regrev", "12");
 
 			bsd_defaults();
 			set_bcm4360ac_vars();
@@ -1119,7 +1142,7 @@ static int init_nvram(void)
 			nvram_set("wl0_nbw","40");
 			nvram_set("wl0_nctrlsb", "upper");
 			nvram_set("1:ccode", "SG");
-			nvram_set("1:regrev", "0");
+			nvram_set("1:regrev", "12");
 			/* wl1 (0:) - 5GHz high */
 			nvram_set("wl1_bw_cap", "7");
 			nvram_set("wl1_chanspec", "100/80");
@@ -1128,7 +1151,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
 			nvram_set("0:ccode", "SG");
-			nvram_set("0:regrev", "0");
+			nvram_set("0:regrev", "12");
 			/* wl2 (2:) - 5GHz low */
 			nvram_set("wl2_bw_cap", "7");
 			nvram_set("wl2_chanspec", "40/80");
@@ -1137,7 +1160,7 @@ static int init_nvram(void)
 			nvram_set("wl2_nbw_cap","3");
 			nvram_set("wl2_nctrlsb", "upper");
 			nvram_set("2:ccode", "SG");
-			nvram_set("2:regrev", "0");
+			nvram_set("2:regrev", "12");
 
 			/* fix devpath */
 			nvram_set("devpath0", "pcie/1/1");
@@ -1191,8 +1214,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1204,6 +1225,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
@@ -1252,8 +1279,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1265,6 +1290,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
@@ -1316,8 +1347,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1329,6 +1358,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -1379,7 +1414,7 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/ledbh2", "255");
 			nvram_set("pci/1/1/ledbh3", "131");
 			nvram_set("pci/1/1/leddc", "65535");
-			nvram_set("pci/1/1/regrev", "22");
+//			nvram_set("pci/1/1/regrev", "22");
 			nvram_set("pci/1/1/rxchain", "3");
 			nvram_set("pci/1/1/sromrev", "8");
 			nvram_set("pci/1/1/stbc2gpo", "0");
@@ -1447,7 +1482,7 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/pdoffset80ma2", "256");
 			nvram_set("pci/2/1/phycal_tempdelta", "255");
 			nvram_set("pci/2/1/rawtempsense", "0x1ff");
-			nvram_set("pci/2/1/regrev", "27");
+//			nvram_set("pci/2/1/regrev", "27");
 			nvram_set("pci/2/1/rxchain", "7");
 			nvram_set("pci/2/1/rxgainerr5ga0", "63,63,63,63");
 			nvram_set("pci/2/1/rxgainerr5ga1", "31,31,31,31");
@@ -1557,8 +1592,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1570,6 +1603,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -1607,7 +1646,7 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/pa2gw1a1", "0x1A0B");
 			nvram_set("pci/1/1/pa2gw1a2", "0x19F2");
 			nvram_set("pci/1/1/pdetrange2g", "3");
-			nvram_set("pci/1/1/regrev", "12");
+//			nvram_set("pci/1/1/regrev", "12");
 			nvram_set("pci/1/1/rxchain", "7");
 			nvram_set("pci/1/1/ledbh12", "11");
 			nvram_set("pci/1/1/ledbh0", "11");
@@ -1687,7 +1726,7 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/pdoffset80ma2", "0");
 			nvram_set("pci/2/1/phycal_tempdelta", "255");
 			nvram_set("pci/2/1/rawtempsense", "0x1ff");
-			nvram_set("pci/2/1/regrev", "12");
+//			nvram_set("pci/2/1/regrev", "12");
 			nvram_set("pci/2/1/rxchain", "7");
 			nvram_set("pci/2/1/rxgainerr5ga0", "63,63,63,63");
 			nvram_set("pci/2/1/rxgainerr5ga1", "31,31,31,31");
@@ -1796,8 +1835,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -1809,6 +1846,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -1857,7 +1900,7 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/legofdmbw20ul2gpo", "0x64200000");
 			nvram_set("pci/1/1/legofdm40duppo", "0x0");
 			nvram_set("pci/1/1/rpcal2g", "0x0");
-			nvram_set("pci/1/1/regrev", "996");
+//			nvram_set("pci/1/1/regrev", "996");
 			nvram_set("pci/1/1/rxchain", "7");
 			nvram_set("pci/1/1/rxgainerr2ga0", "12");
 			nvram_set("pci/1/1/rxgainerr2ga1", "-1");
@@ -1929,7 +1972,7 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/phycal_tempdelta", "255");
 			nvram_set("pci/2/1/pwr_scale_1db", "1");
 			nvram_set("pci/2/1/rawtempsense", "0x1ff");
-			nvram_set("pci/2/1/regrev", "996");
+//			nvram_set("pci/2/1/regrev", "996");
 			nvram_set("pci/2/1/rpcal5gb0", "0x65c8");
 			nvram_set("pci/2/1/rpcal5gb1", "0");
 			nvram_set("pci/2/1/rpcal5gb2", "0");
@@ -2046,8 +2089,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -2059,6 +2100,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -2105,7 +2152,7 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/pa2gw2a2", "0xf8dc");
 			nvram_set("pci/1/1/pdetrange2g", "13");
 			nvram_set("pci/1/1/phycal_tempdelta", "40");
-			nvram_set("pci/1/1/regrev", "827");
+//			nvram_set("pci/1/1/regrev", "827");
 			nvram_set("pci/1/1/rpcal2g", "0x0");
 			nvram_set("pci/1/1/rxchain", "7");
 			nvram_set("pci/1/1/rxgainerr2ga0", "0x4811");
@@ -2175,7 +2222,7 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/pdoffset80ma2", "0");
 			nvram_set("pci/2/1/phycal_tempdelta", "40");
 			nvram_set("pci/2/1/pwr_scale_1db", "1");
-			nvram_set("pci/2/1/regrev", "827");
+//			nvram_set("pci/2/1/regrev", "827");
 			nvram_set("pci/2/1/rpcal5gb0", "0x4e17");
 			nvram_set("pci/2/1/rpcal5gb1", "0x5113");
 			nvram_set("pci/2/1/rpcal5gb2", "0x3c0b");
@@ -2272,8 +2319,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -2285,6 +2330,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
 
 			/* 2.4 GHz defaults */
 			nvram_set("pci/1/1/aa2g", "7");
@@ -2335,7 +2386,7 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/pdoffset80ma0", "0");
 			nvram_set("pci/1/1/pdoffset80ma1", "0");
 			nvram_set("pci/1/1/pdoffset80ma2", "0");
-			nvram_set("pci/1/1/regrev", "53");
+//			nvram_set("pci/1/1/regrev", "53");
 			nvram_set("pci/1/1/rpcal2g", "0x3ef");
 			nvram_set("pci/1/1/rxchain", "7");
 			nvram_set("pci/1/1/rxgainerr2ga0", "63");
@@ -2422,7 +2473,7 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/pdoffset80ma2", "0");
 			nvram_set("pci/2/1/phycal_tempdelta", "255");
 			nvram_set("pci/2/1/rawtempsense", "0x1ff");
-			nvram_set("pci/2/1/regrev", "53");
+//			nvram_set("pci/2/1/regrev", "53");
 			nvram_set("pci/2/1/rpcal5gb0", "0x7005");
 			nvram_set("pci/2/1/rpcal5gb1", "0x8403");
 			nvram_set("pci/2/1/rpcal5gb2", "0x6ff9");
@@ -2524,6 +2575,10 @@ static int init_nvram(void)
 				inc_mac(s, +4);					/* do not overlap with VIFs */
 				nvram_set("1:macaddr", s);			/* fix WL mac for 5G */
 				nvram_set("wl1_hwaddr", s);
+
+				/* wifi country settings */
+				nvram_set("0:regrev", "12");
+				nvram_set("1:regrev", "12");
 				nvram_set("0:ccode", "SG");
 				nvram_set("1:ccode", "SG");
 			}
@@ -2537,6 +2592,10 @@ static int init_nvram(void)
 				inc_mac(s, +4);					/* do not overlap with VIFs */
 				nvram_set("pci/2/1/macaddr", s);		/* fix WL mac for 5G */
 				nvram_set("wl1_hwaddr", s);
+
+				/* wifi country settings */
+				nvram_set("pci/1/1/regrev", "12");
+				nvram_set("pci/2/1/regrev", "12");
 				nvram_set("pci/1/1/ccode", "SG");
 				nvram_set("pci/2/1/ccode", "SG");
 
@@ -2584,7 +2643,7 @@ static int init_nvram(void)
 				nvram_set("0:boardflags", "0x80001200");
 				nvram_set("0:boardflags2", "0x00100000");
 				nvram_set("0:boardvendor", "0x14E4");
-				nvram_set("0:ccode", "SG");
+//				nvram_set("0:ccode", "SG");
 				nvram_set("0:cckbw20ul2gpo", "0x2200");
 				nvram_set("0:cckbw202gpo", "0x2200");
 				nvram_set("0:devid", "0x4332");
@@ -2617,7 +2676,7 @@ static int init_nvram(void)
 				nvram_set("0:legofdmbw202gpo", "0x88765433");
 				nvram_set("0:legofdmbw20ul2gpo", "0x88765433");
 				nvram_set("0:legofdm40duppo", "0x0000");
-				nvram_set("0:regrev", "0");
+//				nvram_set("0:regrev", "0");
 				nvram_set("0:rxchain", "7");
 				nvram_set("0:sromrev", "9");
 				nvram_set("0:tssipos2g", "1");
@@ -2639,7 +2698,7 @@ static int init_nvram(void)
 				nvram_set("1:boardflags", "0x10000000");
 				nvram_set("1:boardflags2", "0x00000002");
 				nvram_set("1:boardflags3", "0x00000000");
-				nvram_set("1:ccode", "SG");
+//				nvram_set("1:ccode", "SG");
 				nvram_set("1:devid", "0x43a2");
 				nvram_set("1:dot11agduphrpo", "0");
 				nvram_set("1:dot11agduplrpo", "0");
@@ -2688,7 +2747,7 @@ static int init_nvram(void)
 				nvram_set("1:pdoffset80ma2", "0x2111");
 				nvram_set("1:phycal_tempdelta", "0");
 				nvram_set("1:rawtempsense", "0x1ff");
-				nvram_set("1:regrev", "0");
+//				nvram_set("1:regrev", "0");
 				nvram_set("1:rxchain", "7");
 				nvram_set("1:rxgainerr5ga0", "63,63,63,63");
 				nvram_set("1:rxgainerr5ga1", "31,31,31,31");
@@ -2766,7 +2825,7 @@ static int init_nvram(void)
 				nvram_set("pci/1/1/boardtype", "0x661");
 				nvram_set("pci/1/1/cckbw202gpo", "0");
 				nvram_set("pci/1/1/cckbw20ul2gpo", "0");
-				nvram_set("pci/1/1/ccode", "SG");
+//				nvram_set("pci/1/1/ccode", "SG");
 				nvram_set("pci/1/1/devid", "0x43a1");
 				nvram_set("pci/1/1/dot11agduphrpo", "0");
 				nvram_set("pci/1/1/dot11agduplrpo", "0");
@@ -2802,7 +2861,7 @@ static int init_nvram(void)
 				nvram_set("pci/1/1/pdoffset80ma0", "0");
 				nvram_set("pci/1/1/pdoffset80ma1", "0");
 				nvram_set("pci/1/1/pdoffset80ma2", "0");
-				nvram_set("pci/1/1/regrev", "66");
+//				nvram_set("pci/1/1/regrev", "66");
 				nvram_set("pci/1/1/rpcal2g", "0x5f7");
 				nvram_set("pci/1/1/rxgainerr2ga0", "63");
 				nvram_set("pci/1/1/rxgainerr2ga1", "31");
@@ -2841,7 +2900,7 @@ static int init_nvram(void)
 				nvram_set("pci/2/1/boardtype", "0x621");
 				nvram_set("pci/2/1/cckbw202gpo", "0");
 				nvram_set("pci/2/1/cckbw20ul2gpo", "0");
-				nvram_set("pci/2/1/ccode", "SG");
+//				nvram_set("pci/2/1/ccode", "SG");
 				nvram_set("pci/2/1/devid", "0x43a2");
 				nvram_set("pci/2/1/dot11agduphrpo", "0");
 				nvram_set("pci/2/1/dot11agduplrpo", "0");
@@ -2907,7 +2966,7 @@ static int init_nvram(void)
 				nvram_set("pci/2/1/pdoffset80ma2", "0");
 				nvram_set("pci/2/1/phycal_tempdelta", "255");
 				nvram_set("pci/2/1/rawtempsense", "0x1ff");
-				nvram_set("pci/2/1/regrev", "66");
+//				nvram_set("pci/2/1/regrev", "66");
 				nvram_set("pci/2/1/rpcal2g", "0");
 				nvram_set("pci/2/1/rpcal5gb0", "0x610c");
 				nvram_set("pci/2/1/rpcal5gb1", "0x6a09");
@@ -3037,8 +3096,6 @@ static int init_nvram(void)
 			nvram_set("blink_wl", "0");			/* disable blink by default for WS880 */
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -3050,6 +3107,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* 2.4 GHz module defaults */
 			nvram_set("devpath0", "pci/1/1");
@@ -3070,7 +3133,7 @@ static int init_nvram(void)
 			nvram_set("0:elna2g", "2");
 			nvram_set("0:extpagain2g", "3");
 			nvram_set("0:ledbh0", "11");
-			// nvram_set("0:ledbh1", "11");
+//			nvram_set("0:ledbh1", "11");
 			nvram_set("0:ledbh2", "14");
 			nvram_set("0:ledbh3", "1");
 			nvram_set("0:ledbh12", "11");
@@ -3097,7 +3160,7 @@ static int init_nvram(void)
 			nvram_set("0:parefldovoltage", "35");
 			nvram_set("0:pdetrange2g", "3");
 			nvram_set("0:phycal_tempdelta", "0");
-			nvram_set("0:regrev", "0");
+//			nvram_set("0:regrev", "0");
 			nvram_set("0:rxchain", "7");
 			nvram_set("0:sromrev", "9");
 			nvram_set("0:tempoffset", "0");
@@ -3187,7 +3250,7 @@ static int init_nvram(void)
 			nvram_set("1:pdoffset80ma2", "0xfecc");
 			nvram_set("1:phycal_tempdelta", "255");
 			nvram_set("1:rawtempsense", "0x1ff");
-			nvram_set("1:regrev", "0");
+//			nvram_set("1:regrev", "0");
 			nvram_set("1:rxchain", "7");
 			nvram_set("1:rxgainerr2ga0", "63");
 			nvram_set("1:rxgainerr2ga1", "31");
@@ -3323,20 +3386,17 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw", "40");
 			nvram_set("wl1_nbw_cap", "1");
 
-			/* misc wifi settings */
-			nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
-
-			/* country set */
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
 			nvram_set("pci/1/1/ccode", "SG");
 			nvram_set("pci/2/1/ccode", "SG");
-			nvram_set("pci/1/1/regrev", "0");
-			nvram_set("pci/2/1/regrev", "0");
-			nvram_set("wl0_country_code", "SG");
-			nvram_set("wl0_country_rev", "0");
-			nvram_set("wl1_country_code", "SG");
-			nvram_set("wl1_country_rev", "0");
+
 			nvram_set("wl0_ssid", "FreshTomato50");
 			nvram_set("wl1_ssid", "FreshTomato24");
+
+			/* misc wifi settings */
+			nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 			/* usb settings */
 			nvram_set("usb_ohci", "1");     /* USB 1.1 */
@@ -3566,7 +3626,9 @@ static int init_nvram(void)
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
 
-			/* fix wifi channels */
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
 			
@@ -3667,8 +3729,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -3680,6 +3740,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -3896,8 +3962,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -3909,6 +3973,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -4122,8 +4192,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -4135,6 +4203,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* 2.4 GHz module defaults */
 			nvram_set("0:aa2g", "7");
@@ -4357,8 +4431,6 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
@@ -4370,6 +4442,12 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw","80");
 			nvram_set("wl1_nbw_cap","3");
 			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
 
 			/* 2.4 GHz module defaults */
 			nvram_set("devpath0", "pci/2/1");
