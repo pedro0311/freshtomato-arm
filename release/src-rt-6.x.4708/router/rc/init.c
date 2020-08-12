@@ -674,6 +674,8 @@ static int init_nvram(void)
 			if (nvram_match("odmpid", "RT-AC56R")) { /* check for RT-AC56R first (almost the same like AC56U; adjust a few things) */
 				nvram_set("0:ccode", "US");
 				nvram_set("1:ccode", "US");
+				nvram_set("0:regrev", "0"); /* get 80 MHz channels for RT-AC56R */
+				nvram_set("1:regrev", "0");
 				nvram_set("ctf_fa_cap", "0"); /* disable fa cap for freshtomato */
 			}
 			else { /* RT-AC56U */
@@ -684,6 +686,7 @@ static int init_nvram(void)
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
 #endif
+
 			nvram_set("wl0_bw_cap","3");
 			nvram_set("wl0_chanspec","6u");
 			nvram_set("wl0_channel","6");
