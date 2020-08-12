@@ -305,7 +305,6 @@ extern char **layer7_in;
 extern void enable_ip_forward(void);
 #ifdef TCONFIG_IPV6
 extern void enable_ip6_forward(void);
-extern void enable_ndp_proxy(void);
 #endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
@@ -329,7 +328,6 @@ extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int 
 extern int ipt_dscp(const char *v, char *opt);
 extern int ipt_ipp2p(const char *v, char *opt);
 extern int ipt_layer7(const char *v, char *opt);
-extern void ipt_layer7_inbound(void);
 extern int start_firewall(void);
 extern int stop_firewall(void);
 #ifdef DEBUG_IPTFILE
