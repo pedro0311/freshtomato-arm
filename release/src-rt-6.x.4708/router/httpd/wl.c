@@ -27,10 +27,10 @@ typedef struct {
 	const char *name;	/* Name for Tomato ARM */
 	const char *abbrev;	/* Abbreviation */
 } cntry_name_t;
-cntry_name_t cntry_names[];
 
 cntry_name_t cntry_names[] = {
-{"#a (wildcard)",	"#a"},
+{"#a (debug)",		"#a"},
+{"#r (debug)",		"#r"},
 {"AFGHANISTAN",		"AF"},
 {"ALBANIA",		"AL"},
 {"ALGERIA",		"DZ"},

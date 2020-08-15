@@ -18,12 +18,13 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
 hp = features('hpamp');
 nphy = features('11n');
+var cprefix = 'advanced_wireless';
 
 function verifyFields(focused, quiet) {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
@@ -36,6 +37,7 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_dtim', quiet, 1, 255)) return 0;
 			if (!v_range('_wl'+u+'_frag', quiet, 256, 2346)) return 0;
 			if (!v_range('_wl'+u+'_rts', quiet, 0, 2347)) return 0;
+			if (!v_range('_wl'+u+'_country_rev', quiet, 0, 999)) return 0;
 			if (!v_range(E('_wl'+u+'_txpwr'), quiet, hp ? 1 : 0, hp ? 251 : 1000)) return 0;
 
 			var b = E('_wl'+u+'_wme').value == 'off';
@@ -59,17 +61,28 @@ function save() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var u_pci = (u+1);
 			var c_code = E('_wl'+u+'_country_code').value;
+			var c_rev = E('_wl'+u+'_country_rev').value;
 
 			n = E('_f_wl'+u+'_distance').value * 1;
 			E('_wl'+u+'_distance').value = n ? n : '';
 
-			/* check if wireless country will be changed */
-			if (nvram['wl'+u+'_country_code'] != c_code)
+			/* check if wireless country settings will be changed */
+			if (nvram['wl'+u+'_country_code'] != c_code || nvram['wl'+u+'_country_rev'] != c_rev)
 				router_reboot = 1;
 
-			if (nvram[+u+':ccode'])
-				E('_'+u+':ccode').value = c_code;
+			if (nvram[+u+':ccode']) /* check short version */
+ 				E('_'+u+':ccode').value = c_code;
+
+			if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
+				E('_pci/'+u_pci+'/1/ccode').value = c_code;
+
+			if (nvram[+u+':regrev'])
+ 				E('_'+u+':regrev').value = c_rev;
+
+			if (nvram['pci/'+u_pci+'/1/regrev'])
+				E('_pci/'+u_pci+'/1/regrev').value = c_rev;
 
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 
@@ -105,7 +118,7 @@ function save() {
 	}
 
 	/* check wireless country changed ? */
-	if (router_reboot && confirm("Router must be rebooted to apply changed country. Reboot now? (and commit changes to NVRAM)")) {
+	if (router_reboot && confirm("Router must be rebooted to apply changed country settings. Reboot now? (and commit changes to NVRAM)")) {
 		fom._service.disabled = 1;
 		fom._reboot.value = 1;
 		form.submit(fom, 0);
@@ -114,10 +127,20 @@ function save() {
 		form.submit(fom, 1);
 	}
 }
+
+function init() {
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+		toggleVisibility(cprefix, "notes");
+	}
+
+	var elements = document.getElementsByClassName("new_window");
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
+		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+}
 </script>
 </head>
 
-<body>
+<body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -141,10 +164,17 @@ function save() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var u_pci = (u+1);
 
 			W('<input type="hidden" id="_wl'+u+'_distance" name="wl'+u+'_distance">');
 			if (nvram[+u+':ccode'])
 				W('<input type="hidden" id="_'+u+':ccode" name="'+u+':ccode">');
+			if (nvram['pci/'+u_pci+'/1/ccode'])
+				W('<input type="hidden" id="_pci/'+u_pci+'/1/ccode" name="pci/'+u_pci+'/1/ccode">');
+			if (nvram[+u+':regrev'])
+				W('<input type="hidden" id="_'+u+':regrev" name="'+u+':regrev">');
+			if (nvram['pci/'+u_pci+'/1/regrev'])
+				W('<input type="hidden" id="_pci/'+u_pci+'/1/regrev" name="pci/'+u_pci+'/1/regrev">');
 			W('<input type="hidden" id="_wl'+u+'_nmode_protection" name="wl'+u+'_nmode_protection">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfr_cap" name="wl'+u+'_txbf_bfr_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfe_cap" name="wl'+u+'_txbf_bfe_cap">');
@@ -182,6 +212,8 @@ function save() {
 					value: nvram['wl'+u+'_reg_mode'] },
 				{ title: 'Country / Region', name: 'wl'+u+'_country_code', type: 'select',
 					options: wl_countries, value: nvram['wl'+u+'_country_code'] },
+				{ title: 'Country Rev', name: 'wl'+u+'_country_rev', type: 'text', maxlen: 3, size: 7,
+					suffix: ' <small>(range: 0 - 999)<\/small>', value: nvram['wl'+u+'_country_rev'] },
 				{ title: 'Bluetooth Coexistence', name: 'wl'+u+'_btc_mode', type: 'select',
 					options: [['0', 'Disable *'],['1', 'Enable'],['2', 'Preemption']],
 					value: nvram['wl'+u+'_btc_mode'] },
@@ -250,6 +282,47 @@ function save() {
 <!-- / / / -->
 
 <div class="section"><small>The default settings are indicated with an asterisk <b style="font-size: 1.5em">*</b> symbol.</small></div>
+
+<!-- / / / -->
+
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
+	<i>Country / Region and Country Rev EXAMPLES:</i><br>
+	<ul>
+		<li><b>CY / 4</b> - Country: CY (Cyprus) AND Country Rev: 4</li>
+		<li><b>CZ / 4</b> - Country: CZ (Czech Republic) AND Country Rev: 4</li>
+		<li><b>EU / 13</b> - Country: EU (Europe) AND Country Rev: 13</li>
+		<li><b>EU / 33</b> - Country: EU (Europe) AND Country Rev: 33</li>
+		<li><b>EU / 53</b> - Country: EU (Europe) AND Country Rev: 53</li>
+		<li><b>EU / 78</b> - Country: EU (Europe) AND Country Rev: 78</li>
+		<li><b>DE / 7</b> - Country: DE (Germany) AND Country Rev: 7</li>
+		<li><b>PL / 4</b> - Country: PL (Poland) AND Country Rev: 4</li>
+		<li><b>FR / 5</b> - Country: FR (France) AND Country Rev: 5</li>
+		<li><b>GB / 6</b> - Country: GB (Un. Kingdom) AND Country Rev: 6</li>
+		<li><b>FI / 4</b> - Country: FI (Finland) AND Country Rev: 4</li>
+		<li><b>HU / 4</b> - Country: HU (Hungary) AND Country Rev: 4</li>
+		<li><b>ES / 4</b> - Country: ES (Spain) AND Country Rev: 4</li>
+		<li><b>IT / 4</b> - Country: IT (Italy) AND Country Rev: 4</li>
+		<li><b>US / 0</b> - Country: US (USA) AND Country Rev: 0</li>
+		<li><b>CA / 223</b> - Country: CA (Canada) AND Country Rev: 223</li>
+		<li><b>BR / 17</b> - Country: BR (Brazil) AND Country Rev: 17</li>
+		<li><b>BR / 20</b> - Country: BR (Brazil) AND Country Rev: 20</li>
+		<li><b>RU / 50</b> - Country: RU (Russia) AND Country Rev: 50</li>
+		<li><b>CN / 38</b> - Country: CN (China) AND Country Rev: 38</li>
+		<li><b>CN / 224</b> - Country: CN (China) AND Country Rev: 224</li>
+		<li><b>AU / 43</b> - Country: AU (Australia) AND Country Rev: 43</li>
+		<li><b>AU / 44</b> - Country: AU (Australia) AND Country Rev: 44</li>
+		<li><b>SG / 12</b> - Country: SG (Singapore) AND Country Rev: 12 (default *)</li>
+	</ul>
+
+	<i>Further Notes:</i><br>
+	<ul>
+		<li>Please select the same country code and rev for all wireless interfaces</li>
+	  	<li>Country code AND rev define the possible channel list, power and other regulations</li>
+		<li>Leave default values if you are not sure what you are doing!</li>
+		<li>Info: wireless driver supports ~2000 combinations</li>
+	</ul>
+</div>
 
 <!-- / / / -->
 

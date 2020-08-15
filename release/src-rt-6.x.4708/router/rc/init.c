@@ -3396,7 +3396,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ssid", "FreshTomato24");
 
 			/* misc wifi settings */
-			nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
+			nvram_set("wl1_vreqd", "0");	/* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 			/* usb settings */
 			nvram_set("usb_ohci", "1");     /* USB 1.1 */

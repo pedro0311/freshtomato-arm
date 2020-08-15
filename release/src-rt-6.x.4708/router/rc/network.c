@@ -347,6 +347,7 @@ static void start_emf(char *lan_ifname)
 {
 	int ret = 0;
 	char tmp[32] = {0};
+#ifdef TCONFIG_BCMARM
 	char tmp_path[64] = {0};
 
 	if ((lan_ifname == NULL) ||
@@ -363,6 +364,10 @@ static void start_emf(char *lan_ifname)
 	}
 
 	if (!nvram_get_int("emf_enable")) return;
+#else /* for Tomato MIPS */
+	if (lan_ifname == NULL || !nvram_get_int("emf_enable") || (strcmp(lan_ifname,"") == 0))
+		return;
+#endif /* TCONFIG_BCMARM */
 
 	/* Start EMF */
 	ret = eval("emf", "start", lan_ifname);
