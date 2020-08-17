@@ -36,9 +36,9 @@
 #include <wlutils.h>
 
 
-//	ref: http://wiki.openwrt.org/OpenWrtDocs/nas
+/* ref: http://wiki.openwrt.org/OpenWrtDocs/nas */
+//#define DEBUG_TIMING
 
-//	#define DEBUG_TIMING
 
 void notify_nas(const char *ifname);
 
@@ -63,17 +63,21 @@ int wl_security_on(void) {
 
 void start_nas(void)
 {
-	if (!foreach_wif(1, NULL, security_on)) {
+	FILE *fd;
+	char *ifname, buf[256];
+
+	if (!foreach_wif(1, NULL, security_on))
 		return;
-	}
 
 #ifdef DEBUG_TIMING
 	struct sysinfo si;
 	sysinfo(&si);
 	_dprintf("%s: uptime=%ld\n", __FUNCTION__, si.uptime);
 #else
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	_dprintf("%s\n", __FUNCTION__);
 #endif
+#endif	/* DEBUG_TIMING */
 
 	stop_nas();
 
@@ -82,22 +86,22 @@ void start_nas(void)
 	unsetenv("UDP_BIND_IP");
 	eval("nas");
 
-	if (wds_enable()) {
-		// notify NAS of all wds up ifaces upon startup
-		FILE *fd;
-		char *ifname, buf[256];
-
+	if (wds_enable()) {	/* notify NAS of all wds up ifaces upon startup */
 		if ((fd = fopen("/proc/net/dev", "r")) != NULL) {
-			fgets(buf, sizeof(buf) - 1, fd);	// header lines
+			fgets(buf, sizeof(buf) - 1, fd);	/* header lines */
 			fgets(buf, sizeof(buf) - 1, fd);
 			while (fgets(buf, sizeof(buf) - 1, fd)) {
-				if ((ifname = strchr(buf, ':')) == NULL) continue;
+				if ((ifname = strchr(buf, ':')) == NULL)
+					continue;
+
 				*ifname = 0;
-				if ((ifname = strrchr(buf, ' ')) == NULL) ifname = buf;
-				else ++ifname;
-				if (strstr(ifname, "wds")) {
+				if ((ifname = strrchr(buf, ' ')) == NULL)
+					ifname = buf;
+				else
+					++ifname;
+
+				if (strstr(ifname, "wds"))
 					notify_nas(ifname);
-				}
 			}
 			fclose(fd);
 		}
@@ -111,8 +115,10 @@ void stop_nas(void)
 	sysinfo(&si);
 	_dprintf("%s: uptime=%ld\n", __FUNCTION__, si.uptime);
 #else
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	_dprintf("%s\n", __FUNCTION__);
 #endif
+#endif	/* DEBUG_TIMING */
 
 	killall_tk("nas");
 	killall_tk("eapd");
@@ -125,11 +131,16 @@ void notify_nas(const char *ifname)
 	sysinfo(&si);
 	_dprintf("%s: ifname=%s uptime=%ld\n", __FUNCTION__, ifname, si.uptime);
 #else
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	_dprintf("%s: ifname=%s\n", __FUNCTION__, ifname);
 #endif
+#endif	/* DEBUG_TIMING */
 
 	/* Inform driver to send up new WDS link event */
-	if (wl_iovar_setint((char *)ifname, "wds_enable", 1)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
+	if (wl_iovar_setint((char *)ifname, "wds_enable", 1))
 		_dprintf("%s: set wds_enable failed\n", ifname);
-	}
+#else
+	wl_iovar_setint((char *)ifname, "wds_enable", 1);
+#endif
 }
