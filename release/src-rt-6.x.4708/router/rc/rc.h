@@ -86,12 +86,12 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
 #define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
 
-#define IPT_V4	0x01
-#define IPT_V6	0x02
-#define IPT_ANY_AF	(IPT_V4 | IPT_V6)
+#define IPT_V4			0x01
+#define IPT_V6			0x02
+#define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
 
-#define BRIDGE_COUNT	4
+#define BRIDGE_COUNT		4
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -129,8 +129,8 @@ extern int ip6down_main(int argc, char **argv);
 //extern void restore_defaults(void);
 
 /* redial.c */
-extern int start_redial(char *prefix);
-extern int stop_redial(char *prefix);
+extern void start_redial(char *prefix);
+extern void stop_redial(char *prefix);
 extern int redial_main(int argc, char **argv);
 
 /* wan.c */

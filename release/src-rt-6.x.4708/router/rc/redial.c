@@ -27,18 +27,15 @@
 
 
 /* used in keepalive mode (ppp_demand=0) */
-
-
-int start_redial(char *prefix)
+void start_redial(char *prefix)
 {
 	stop_redial(prefix);
 	xstart("/sbin/redial", prefix);
-	return 0;
 }
 
-int stop_redial(char *prefix)
+void stop_redial(char *prefix)
 {
-	char tmp[100];
+	char tmp[32];
 	int pid;
 	pid = nvram_get_int(strcat_r(prefix, "_ppp_redialpid", tmp));
 	if (pid > 1) {
@@ -46,7 +43,6 @@ int stop_redial(char *prefix)
 			sleep(1);
 		}
 	}
-	return 0;
 }
 
 int redial_main(int argc, char **argv)
@@ -55,29 +51,27 @@ int redial_main(int argc, char **argv)
 	int proto;
 	int mwan_num;
 	char c_pid[10];
-	char tmp[100], tmp2[15];
+	char tmp[32], tmp2[16];
 	memset(c_pid, 0, 10);
 	sprintf(c_pid, "%d", getpid());
 	char prefix[] = "wanXX";
 	char prefix_mwan[] = "wanXX";
 
-	if (argc > 1) {
+	if (argc > 1)
 		strcpy(prefix, argv[1]);
-	} else {
+	else
 		strcpy(prefix, "wan");
-	}
+
 	strcpy(prefix_mwan, prefix);
 
 	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
-	}
 
 	proto = get_wanx_proto(prefix);
-	if (proto == WP_PPPOE || proto == WP_PPP3G || proto == WP_PPTP || proto == WP_L2TP) {
+	if (proto == WP_PPPOE || proto == WP_PPP3G || proto == WP_PPTP || proto == WP_L2TP)
 		if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)) != 0)
 			return 0;
-	}
 
 	nvram_set(strcat_r(prefix, "_ppp_redialpid", tmp), c_pid);
 
@@ -104,12 +98,14 @@ int redial_main(int argc, char **argv)
 			strcpy(prefix_mwan, "wan1");
 		}
 
+		memset(tmp, 0, 32);
 		sprintf(tmp, "%s-restart", prefix_mwan);
+		memset(tmp2, 0, 16);
 		sprintf(tmp2, "%s-restart-c", prefix_mwan);
 
-		if (nvram_match("action_service", "wan-restart") || nvram_match("action_service", tmp) || nvram_match("action_service", "wan-restart-c") || nvram_match("action_service", tmp2)) {
+		if (nvram_match("action_service", "wan-restart") || nvram_match("action_service", tmp) || nvram_match("action_service", "wan-restart-c") || nvram_match("action_service", tmp2))
 			syslog(LOG_INFO, "Redial: %s DOWN. Reconnect is already in progress ...", prefix);
-		} else {
+		else {
 			syslog(LOG_INFO, "Redial: %s DOWN. Reconnecting ...", prefix);
 			xstart("service", (char *)prefix_mwan, "restart");
 			break;
