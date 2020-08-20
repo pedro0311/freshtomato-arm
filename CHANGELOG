@@ -1,6 +1,122 @@
+===========================
 FreshTomato-ARM Changelog
 ===========================
+(for full changelog, see: https://bitbucket.org/pedro311/freshtomato-arm/src/arm-master/CHANGELOG)
 
+
+
+2020.5          2020.07.17
+--------------------------
+
+Note: mainly bugfixes (see *)
+
+- kernel: r2q change message from priority WARNING to priority DEBUG
+- WL: update wireless driver for SDK7 to GPL 382.52287 (Kr00k)
+- (*) firewall: fix commit 31a8eb0 (brute force mitigation rule on port defined for GUI remote access) - increase hitcount / lower period of time (hardcoded)
+- libevent: update to 2.1.12-stable
+- tor: update to 0.4.3.6
+- libcurl: update to 7.71.1
+- (*) GUI: advanced-wireless.asp: when changing country for WL driver, also change its short version - 'ccode'
+- httpd: add to log failed GUI login attempts
+- www: tomato.js: add SameSite=Lax when creating cookies
+- (*) www: clearcookies.asp: remove the comment left when debugging
+- (*) Netgear Router (all supported): Raise revision level (again)
+- (*) Asus RT-AC56R: improve/fix support with new wifi driver (*.126)
+- (*) Asus RT-AC56U/R: do not unload wifi driver
+
+
+2020.4          2020.07.10
+--------------------------
+
+Note: Users with WIFI problems after upgrading to 2020.3, should use clean install here again (clean NVRAM, no backups, see "important" in 2020.3 log); this also applies to all upgrading from earlier versions.
+
+- kernel: backport support for setting a default qdisc
+- kernel/kernel sdk7: enable kernel network namespaces and veth for AIO targets
+- kernel/kernel sdk7: netns: Deduplicate and fix copy_net_ns when !CONFIG_NET_NS 
+- kernel/kernel sdk7: net: huawei_cdc_ncm: remove redundant assignment to variable ret 
+- kernel/kernel sdk7: net: usb: qmi_wwan: remove redundant assignment to variable status
+- toolchain: brcm-arm-toolchains update; newer uClibc 0.9.33.2 with NPTL enabled
+- build: kernel: enable HIDRAW for UPS support in apcupsd
+- SDK6: update EMF / IGS and utilities finally - use src files / compile from src
+- add and enable Conntrack Userspace Tool for VPN/AIO targets (Thanks to @Not Sure)
+- add diskdev_cmds-332.25 (hfsprogs) to the tree with patches
+- add HFS/HFS+ support (also with tuxera driver)
+- enable Open HFS/HFS+ driver on all targets
+- enable Tuxera HFS/HFS+ driver on targets: ac68e/ac68z (RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC66U_B1, RT-AC1900P VPN/AIO); ac15e (Tenda AC15 VPN); ac18e/ac18z (Tenda AC18 VPN/AIO)
+- enable crash log by taking space from the end of the jffs2 partition (as an option)
+- fix panic due to incorrect check of error pointer when proc_ns_fget fails
+- enable Tuxera HFS/HFS+ driver on all ac3200_ (RT-AC3200) targets
+- adminer: update to 4.7.7
+- libyaml: update to 0.2.5
+- php: update to 7.2.31
+- tor: update to 0.4.3.5
+- libcurl: update to 7.71.0
+- e2fsprogs: update to 1.45.6
+- nettle: update to 3.6
+- iptables: update to 1.8.5; add conditional compilation with libnetfilter_conntrack to enable ‘connlabel match’ support
+- libnetfilter_conntrack: update to 1.0.8
+- conntrack-tools: update to 1.4.6
+- libexif: update to 0.6.22
+- nano: update to 4.9.3
+- nginx: update to 1.19.0
+- sqlite: update to 3.32.3
+- rp-pppoe: update to 3.14
+- libnfsidmap: update to 0.27
+- libjson-c: update to 1c6086a (2020.05.31) snapshot
+- dropbear: update to 2020.80; remove patch 102-fix-cbc_mode-cant-be-fully-disabled - already in upstream
+- portmap: update to 4836a4a (2014-06-23) snapshot; remove unneeded patch - already in upstream
+- iproute2: clean sources of 3.19.0, add patches instead
+- accel-pptp: clean sources of 0.8.5 add patches instead
+- switch4g: fix modem reset, it works at last
+- SNMP: add device name and FW version to nsExtendOutput table
+- MDU: send User-Agent also in case of Custom url
+- samba: add protocol selection options (SMBv1, SMBv2, SMBv1 + SMBv2); make SMBv2 + SMBv1 the default (no change)
+- samba: configuration tune up
+- dropbear: strip version from ident
+- firewall: openvpn: fix duplicate openvpn rules on wan/openvpn restart
+- firewall: retry failed iptables-restore in a few secs
+- firewall: add a brute force mitigation rule on port defined for GUI remote access
+- openvpn: fix multiple issues in stopping vpn services
+- openvpn: set up firewall in correct order - before starting openvpn but after stopping it
+- openvpn: shutdown all running servers/clients on wan stop and remove tunnel modules
+- openvpn: ensure duplicate-cn is set as default if not specified
+- openvpn: no longer dump stats to system log
+- openvpn: in case of openvpn unexpectedly dies - flush tun IF, otherwise openvpn will not re-start (required by iproute2)
+- GUI: advanced-wireless.asp: set interference mitigation mode correctly for ARM
+- GUI: advanced-wireless.asp: adjust note/comment for transmit power option
+- GUI: advanced-wireless.asp: hide wifi option Turbo QAM for NON-AC hardware modules
+- GUI: extend advanced-wireless.asp / Wireless Multicast Forwarding (no new GUI options)
+- GUI: Admin Restrictions: change permitted value for Limit Connections Attempts (fixes #44)
+- GUI: Advanced: Wireless: changes for new default settings; Thanks to @rs232
+- GUI: Advanced: Wireless: check TxBF support (v2); note: Turn off and hide TxBF options if needed!
+- GUI: Admin Access: SSH Daemon: add ed25519/ecdsa to the allowed authentication keys; also fix the regexp/code to check the entire field, not just the first line
+- GUI: Administration: Upgrade: fix missing css when loading reboot.asp
+- GUI: NAS: USB support: add info on how to create an ext4 file system that will be compatible with FreshTomato ARM
+- GUI: basic-network.asp - hide and disable wan options/settings if the user selects/enables wireless bridge mode
+- router: Makefile: snmp: tune recipe; add only needed mibs; enable logging (/var/log/snmpd.log)
+- router: Makefile: OpenVPN: use the iproute2 ip tool instead of ifconfig
+- router: httpd: limit SSL certificate to 13 months if clock has been set; new Apple initiative to force removal of possibly compromised certs 
+- router: rc: network.c: change/adjust requirements for vhtmode and vht_features
+- router: rc: mtd.c: skip bad blocks during erase
+- router: shared: defaults: change wifi radio powersave mode; turn it off by default now (align to ASUS)
+- router: shared: defaults: change wifi rxchain powersave mode; turn it off by default now
+- router: shared: update ifaddrs.c
+- router: www: advanced-routing.asp: remove Mode option - it has “undocumented” secondary effects
+- rom: simplify ca-bundle update (also fixes #43)
+- EA6200: set nvram value "band" correct for this router (5 GHz module first)
+- DIR868L: Workaround to show 32 KB threshold at the GUI that should not be crossed right now!
+- R7000: do not enable air time fairness by default
+- DIR868L rev a/b/c: adjust default wifi country to SG (note: avoid using wildcard #a)
+- R6400v2 / R6700v3: improve/fix support for SDK6 (no change for other routers) 
+- DIR868L: do not enable vhtmode and vht_features for 2G wifi module (Note: prevent/avoid problems on older/cost optimized/partly NON-AC hardware)
+- R6400v1: do not enable vhtmode and vht_features for 2G wifi module
+- EA6350v1 / EA6200: do not enable vhtmode and vht_features for 2G wifi module
+- Netgear R6250: do not enable vhtmode and vht_features for 2G wifi module
+- Netgear R6300v2: do not enable vhtmode and vht_features for 2G wifi module
+- Netgear R6400v2 / R6700v3: do not enable vhtmode and vht_features for 2G wifi module
+- Xiaomi R1D: do not enable vhtmode and vht_features for 2G wifi module
+- Asus RT-AC56U: do not enable vhtmode and vht_features for 2G wifi module
+- EA6400 / EA6500v2 / EA6700: do not enable vhtmode and vht_features for 2G wifi module
 
 
 2020.3          2020.05.09

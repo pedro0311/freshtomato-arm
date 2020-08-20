@@ -101,7 +101,7 @@ function toggle(service, isup) {
 	E('_' + service + '_button').disabled = true;
 	form.submitHidden('service.cgi', {
 		_redirect: 'vpn-server.asp',
-		_sleep: '3',
+		_sleep: '5',
 		_service: service + (isup ? '-stop' : '-start')
 	});
 }

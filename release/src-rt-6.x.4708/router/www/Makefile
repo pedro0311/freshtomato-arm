@@ -91,6 +91,11 @@ ifneq ($(TCONFIG_TUXERA),y)
 	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/TUXERA-BEGIN/,/TUXERA-END/d"
 endif
 
+# Only include Tuxera HFS settings if Tuxera HFS is configured in.
+ifneq ($(TCONFIG_TUXERA_HFS),y)
+	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/TUXERAHFS-BEGIN/,/TUXERAHFS-END/d"
+endif
+
 # Only include the FTP pages if FTP Server is configured in.
 ifneq ($(TCONFIG_FTP),y)
 	rm -f $(INSTALLDIR)/www/nas-ftp.asp
@@ -116,6 +121,12 @@ ifneq ($(TCONFIG_NOCAT),y)
 	rm -f $(INSTALLDIR)/www/style.css
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/NOCAT-BEGIN/,/NOCAT-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NOCAT-BEGIN/,/NOCAT-END/d"
+endif
+
+# Only include Measure button and mnoise page in SDK6
+ifneq ($(TCONFIG_BCM7),y)
+	rm -f $(INSTALLDIR)/www/mnoise.asp
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/BCM7-BEGIN/,/BCM7-END/d"
 endif
 
 # Clean up NGinX files if not needed
@@ -323,9 +334,11 @@ endif
 		-e "/TINC-BEGIN/d"	-e "/TINC-END/d"\
 		-e "/PARAGON-BEGIN/d"	-e "/PARAGON-END/d"\
 		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d"\
+		-e "/TUXERAHFS-BEGIN/d"	-e "/TUXERAHFS-END/d"\
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
+		-e "/BCM7-BEGIN/d"	-e "/BCM7-END/d" \
 		|| true; \
 	done
 

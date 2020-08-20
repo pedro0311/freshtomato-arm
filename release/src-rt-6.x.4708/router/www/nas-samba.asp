@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,wan_wins,gro_disable"); %>
+//	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,smbd_protocol,wan_wins,gro_disable"); %>
 
 var cprefix = 'nas_samba';
 var ssg = new TomatoGrid();
@@ -133,6 +133,9 @@ function verifyFields(focused, quiet) {
 	E('_smbd_autoshare').disabled = (a == 0);
 	E('_f_smbd_master').disabled = (a == 0);
 	E('_f_smbd_wins').disabled = (a == 0 || (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0'));
+	E('_smbd_proto_1').disabled = (a == 0);
+	E('_smbd_proto_2').disabled = (a == 0);
+	E('_smbd_proto_3').disabled = (a == 0);
 	E('_f_gro_disable').disabled = (a == 0);
 	if (a == 0) E('_f_gro_disable').checked = true; /* disable gro (default) if smbd off */
 
@@ -172,6 +175,8 @@ function save() {
 		fom.smbd_wins.value = nvram.smbd_wins;
 
 	fom.gro_disable.value = E('_f_gro_disable').checked ? 1 : 0;
+	fom.smbd_protocol.value = (E('_smbd_proto_1').checked ? 0 : (E('_smbd_proto_2').checked ? 1 : 2));
+
 	form.submit(fom, 1);
 }
 
@@ -211,6 +216,7 @@ function earlyInit() {
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">
+<input type="hidden" name="smbd_protocol">
 <input type="hidden" name="gro_disable">
 
 <!-- / / / -->
@@ -227,6 +233,10 @@ function earlyInit() {
 			{ title: 'Password', indent: 2, name: 'smbd_passwd', type: 'password', maxlen: 50, size: 32, peekaboo: 1,
 				value: nvram.smbd_passwd },
 			null,
+			{ title: 'Samba protocol version', multi: [
+				{suffix: '&nbsp; SMBv1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_smbd_protocol', id: '_smbd_proto_1', type: 'radio', value: nvram.smbd_protocol == '0' },
+				{suffix: '&nbsp; SMBv2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_smbd_protocol', id: '_smbd_proto_2', type: 'radio', value: nvram.smbd_protocol == '1' },
+				{suffix: '&nbsp; SMBv1 + SMBv2', name: '_smbd_protocol', id: '_smbd_proto_3', type: 'radio', value: nvram.smbd_protocol == '2' } ]},
 			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == '1', suffix: ' <small>Default: GRO off (checked)<\/small>' },
 			{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 20, size: 32,
 				value: nvram.smbd_wgroup },

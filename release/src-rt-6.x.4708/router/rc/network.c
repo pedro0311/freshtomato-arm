@@ -93,10 +93,32 @@ void wlconf_pre(void)
 	int unit = 0;
 	char word[128], *next;
 	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+	char buf[16] = {0};
+	wlc_rev_info_t rev;
 
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
 
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+		/* for TxBeamforming: get corerev for TxBF check */
+		wl_ioctl(word, WLC_GET_REVINFO, &rev, sizeof(rev));
+		snprintf(buf, sizeof(buf), "%d", rev.corerev);
+		nvram_set(strcat_r(prefix, "corerev", tmp), buf);
+
+		if (rev.corerev < 40) { /* TxBF unsupported - turn off and hide options (at the GUI) */
+			dbg("TxBeamforming not supported for %s\n", word);
+			nvram_set(strcat_r(prefix, "txbf_bfr_cap", tmp), "0"); /* off = 0 */
+			nvram_set(strcat_r(prefix, "txbf_bfe_cap", tmp), "0");
+			nvram_set(strcat_r(prefix, "txbf", tmp), "0");
+			nvram_set(strcat_r(prefix, "itxbf", tmp), "0");
+			nvram_set(strcat_r(prefix, "txbf_imp", tmp), "0");
+		}
+		else {
+			/* nothing to do right now! - use default nvram config or desired user wlan setup */
+			dbg("TxBeamforming supported for %s - corerev: %s\n", word, buf);
+			dbG("txbf_bfr_cap for %s = %s\n", word, nvram_safe_get(strcat_r(prefix, "txbf_bfr_cap", tmp)));
+			dbG("txbf_bfe_cap for %s = %s\n", word, nvram_safe_get(strcat_r(prefix, "txbf_bfe_cap", tmp)));
+		}
 
 		if (nvram_match(strcat_r(prefix, "nband", tmp), "1") && /* only for wlX_nband == 1 for 5 GHz */
 		    nvram_match(strcat_r(prefix, "vreqd", tmp), "1") &&
@@ -313,10 +335,27 @@ static void start_emf(char *lan_ifname)
 {
 	int ret = 0;
 	char tmp[32] = {0};
+#ifdef TCONFIG_BCMARM
+	char tmp_path[64] = {0};
 
-	if (lan_ifname == NULL ||
-	    !nvram_get_int("emf_enable") ||
+	if ((lan_ifname == NULL) ||
 	    (strcmp(lan_ifname,"") == 0)) return;
+
+	snprintf(tmp_path, sizeof(tmp_path), "/sys/class/net/%s/bridge/multicast_snooping", lan_ifname);
+
+	/* make it possible to enable bridge multicast_snooping */
+	if (nvram_get_int("br_mcast_snooping")) {
+		f_write_string(tmp_path, "1", 0, 0);
+	}
+	else { /* DEFAULT: OFF - it can interfere with EMF */
+		f_write_string(tmp_path, "0", 0, 0);
+	}
+
+	if (!nvram_get_int("emf_enable")) return;
+#else /* for Tomato MIPS */
+	if (lan_ifname == NULL || !nvram_get_int("emf_enable") || (strcmp(lan_ifname,"") == 0))
+		return;
+#endif /* TCONFIG_BCMARM */
 
 	/* Start EMF */
 	ret = eval("emf", "start", lan_ifname);
@@ -406,12 +445,8 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
-	int model = get_model();
-
-	/* workaround: do not unload wifi driver for Linksys EA6200/EA6350v1 and Netgear R6250,
-	 * it will cause problems (reboot after saving to nvram) */
-	if ((model != MODEL_EA6350v1) &&
-	    (model != MODEL_R6250)) {
+	/* do not unload the wifi driver by default, it can cause problems for some router */
+	if (nvram_match("wl_unload_enable", "1")) {
 		modprobe_r("wl");
 	}
 }

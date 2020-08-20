@@ -327,7 +327,7 @@ what:
 # JFFSv1 | NO_JFFS
 # NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
 # SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES
 
 define RouterOptions
 	@( \
@@ -383,6 +383,14 @@ define RouterOptions
 		if [ "$(TUXERA)" = "y" ]; then \
 			sed -i "/TCONFIG_TUXERA/d" $(1); \
 			echo "TCONFIG_TUXERA=y" >>$(1); \
+		fi; \
+		if [ "$(HFS)" = "y" ]; then \
+			sed -i "/TCONFIG_HFS/d" $(1); \
+			echo "TCONFIG_HFS=y" >>$(1); \
+		fi; \
+		if [ "$(TUXERA_HFS)" = "y" ]; then \
+			sed -i "/TCONFIG_TUXERA_HFS/d" $(1); \
+			echo "TCONFIG_TUXERA_HFS=y" >>$(1); \
 		fi; \
 		if [ "$(MEDIASRV)" = "y" ]; then \
 			sed -i "/TCONFIG_MEDIA_SERVER/d" $(1); \
@@ -489,10 +497,6 @@ define RouterOptions
 	if [ "$(DNSSEC)" = "y" ]; then \
 		sed -i "/TCONFIG_DNSSEC/d" $(1); \
 		echo "TCONFIG_DNSSEC=y" >>$(1); \
-	fi; \
-	if [ "$(HFS)" = "y" ]; then \
-		sed -i "/TCONFIG_HFS/d" $(1); \
-		echo "TCONFIG_HFS=y" >>$(1); \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
 		sed -i "/TCONFIG_UPS/d" $(1); \
@@ -670,6 +674,9 @@ define BusyboxOptions
 			echo "CONFIG_TUNE2FS=y" >>$(1); \
 			sed -i "/CONFIG_E2LABEL/d" $(1); \
 			echo "CONFIG_E2LABEL=y" >>$(1); \
+			if [ "$(HFS)" = "y" ]; then \
+				echo "CONFIG_FEATURE_VOLUMEID_HFS=y" >>$(1); \
+			fi; \
 			sed -i "/CONFIG_FEATURE_VOLUMEID_EXFAT/d" $(1); \
 			echo "CONFIG_FEATURE_VOLUMEID_EXFAT=y" >>$(1); \
 		fi; \
@@ -801,10 +808,7 @@ define KernelConfig
 		echo "# CONFIG_LEDS_DAC124S085 is not set" >>$(1); \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
-		sed -i "/CONFIG_INPUT=m/d" $(1); \
-		echo "CONFIG_INPUT=y" >>$(1); \
-		sed -i "/CONFIG_HID=m/d" $(1); \
-		echo "CONFIG_HID=y" >>$(1); \
+		sed -i "s/# CONFIG_HIDRAW is not set/CONFIG_HIDRAW=y/g" $(1); \
 		sed -i "/CONFIG_USB_STORAGE_ONETOUCH/d" $(1); \
 		echo "# CONFIG_USB_STORAGE_ONETOUCH is not set" >>$(1); \
 	else \
@@ -814,6 +818,11 @@ define KernelConfig
 	if [ "$(USB)" = "" ]; then \
 		sed -i "/CONFIG_EFI_PARTITION/d" $(1); \
 		echo "# CONFIG_EFI_PARTITION is not set" >>$(1); \
+	else \
+		if [ "$(HFS)" = "y" ]; then \
+			sed -i "s/# CONFIG_HFS_FS is not set/CONFIG_HFS_FS=m/g" $(1); \
+			sed -i "s/# CONFIG_HFSPLUS_FS is not set/CONFIG_HFSPLUS_FS=m/g" $(1); \
+		fi; \
 	fi; \
 	if [ "$(IPV6SUPP)" = "y" ]; then \
 		sed -i "/CONFIG_IPV6 is not set/d" $(1); \
@@ -916,7 +925,7 @@ define KernelConfig
 		echo "CONFIG_HAVE_LATENCYTOP_SUPPORT=y" >>$(1); \
 		sed -i "/CONFIG_GENERIC_LOCKBREAK/d" $(1); \
 		echo "CONFIG_BROKEN_ON_SMP=y" >>$(1); \
-		sed -i "/CONFIG_TREE_RCU=y/# CONFIG_TREE_RCU is not set/g" >>$(1); \
+		sed -i "s/CONFIG_TREE_RCU=y/# CONFIG_TREE_RCU is not set/g" $(1); \
 		echo "CONFIG_TREE_PREEMPT_RCU=y" >>$(1); \
 		echo "# CONFIG_TINY_RCU is not set" >>$(1); \
 		sed -i "/CONFIG_USE_GENERIC_SMP_HELPERS/d" $(1); \
@@ -992,7 +1001,6 @@ define KernelConfig
 		sed -i "/CONFIG_ATA_VERBOSE_ERROR/d" $(1); \
 		echo "# CONFIG_ATA_VERBOSE_ERROR is not set" >>$(1); \
 	fi; \
-	sed -i "/CONFIG_FAILSAFE_UPGRADE/d" $(1); \
 	sed -i "/CONFIG_EXT2_/d" $(1); \
 	sed -i "/CONFIG_EXT3_/d" $(1); \
 	sed -i "/CONFIG_EXT4_/d" $(1); \
@@ -1004,6 +1012,7 @@ define KernelConfig
 	echo "# CONFIG_EXT4_FS_POSIX_ACL is not set" >>$(1); \
 	echo "# CONFIG_EXT4_FS_SECURITY is not set" >>$(1); \
 	echo "# CONFIG_EXT4_DEBUG is not set" >>$(1); \
+	sed -i "/CONFIG_FAILSAFE_UPGRADE/d" $(1); \
 	if [ "$(FAILSAFE_UPGRADE)" = "y" ]; then \
 		echo "CONFIG_FAILSAFE_UPGRADE=y" >>$(1); \
 	else \
@@ -1039,6 +1048,17 @@ define KernelConfig
 		sed -i "/CONFIG_DEBUG_INFO/d" $(1); \
 		echo "# CONFIG_DEBUG_INFO is not set" >>$(1); \
 	fi; \
+	if [ "$(NAMESPACES)" = "y" ]; then \
+		sed -i "s/# CONFIG_NAMESPACES is not set/CONFIG_NAMESPACES=y/g" $(1); \
+		sed -i "s/# CONFIG_NET_NS is not set/CONFIG_NET_NS=y/g" $(1); \
+		sed -i "s/# CONFIG_IP_ROUTE_VERBOSE is not set/CONFIG_IP_ROUTE_VERBOSE=y/g" $(1); \
+		sed -i "s/# CONFIG_VETH is not set/CONFIG_VETH=y/g" $(1); \
+	else \
+		sed -i "s/# CONFIG_NAMESPACES=y/CONFIG_NAMESPACES is not set/g" $(1); \
+		sed -i "s/# CONFIG_NET_NS=y/CONFIG_NET_NS is not set/g" $(1); \
+		sed -i "s/# CONFIG_IP_ROUTE_VERBOSE=y/CONFIG_IP_ROUTE_VERBOSE is not set/g" $(1); \
+		sed -i "s/# CONFIG_VETH=y/CONFIG_VETH is not set/g" $(1); \
+	fi; \
 	)
 endef
 
@@ -1061,98 +1081,101 @@ endif
 
 ## targets
 e:
-	@$(MAKE) bin NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y MULTIWAN=y B=E BUILD_DESC="$(VPN)" CTF=y GRO=y USB="USB" PPTPD=y OPENVPN=y DNSSEC=y SNMP=y \
+	@$(MAKE) bin NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y MULTIWAN=y B=E BUILD_DESC="$(VPN)" CTF=y GRO=y USB="USB" PPTPD=y OPENVPN=y DNSSEC=y SNMP=y \
 	    OPENSSL11=y CONNTRACK_TOOL=y
 
 o:
-	@$(MAKE) bin OPENVPN=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
+	@$(MAKE) bin OPENVPN=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
 	    DNSCRYPT=y STUBBY=y PPTPD=y DNSSEC=y SNMP=y TINC=y TOR=y OPENSSL11=y
 
 z:
-	@$(MAKE) bin OPENVPN=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
-	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y
+	@$(MAKE) bin OPENVPN=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
+	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y NAMESPACES=y
 
 ac68e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y BRCM_NAND_JFFS2=y
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y BRCM_NAND_JFFS2=y DPSTA=y
 
 ac68z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y BRCM_NAND_JFFS2=y
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y BRCM_NAND_JFFS2=y DPSTA=y
 
 n18e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS" BRCM_NAND_JFFS2=y
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS" BRCM_NAND_JFFS2=y DPSTA=n
 
 n18z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS" BRCM_NAND_JFFS2=y
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="ASUS" UFSD="ASUS" BRCM_NAND_JFFS2=y DPSTA=n
 
 ac15e:
-	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="AC15" TUXERA=y
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y BCMSMP=y ASUS_TRX="AC15" TUXERA=y TUXERA_HFS=y DPSTA=y
 
 ac18e:
-	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y TUXERA_HFS=y DPSTA=y
 
 ac18z:
-	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y 
+	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y TUXERA_HFS=y DPSTA=y
 
 dir868l:
-	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="Custom" USB="USB" \
-	    DNSSEC=y DNSCRYPT=y STUBBY=y UPS=y NO_SSH=y NANO=y OPENSSL11=y
+	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="Custom" USB="USB" \
+	    DNSSEC=y DNSCRYPT=y STUBBY=y UPS=y NO_SSH=y NANO=y OPENSSL11=y DPSTA=y
 
 r7000e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS"
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y
 
 r7000z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS"
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y
 
 r6400e:
-	@$(MAKE) e ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS"
+	@$(MAKE) e ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y
 
 r6400z:
-	@$(MAKE) z ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS"
+	@$(MAKE) z ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y
 
 r7000init:
-	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R7000" BOARDID_FILE="compatible_r7000.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R7000" BOARDID_FILE="compatible_r7000.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r6250init:
-	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R6250" BOARDID_FILE="compatible_r6250.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6250" BOARDID_FILE="compatible_r6250.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r6300v2init:
-	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R6300v2" BOARDID_FILE="compatible_r6300v2.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6300v2" BOARDID_FILE="compatible_r6300v2.txt" FW_CFG_FILE="tomato_cfg.h"
+
+r6300v2init_ch:
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6300v2_ch" BOARDID_FILE="compatible_r6300v2_ch.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r6400init:
-	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R6400" BOARDID_FILE="compatible_r6400.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6400" BOARDID_FILE="compatible_r6400.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r6400v2init:
-	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R6400v2" BOARDID_FILE="compatible_r6400v2.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6400v2" BOARDID_FILE="compatible_r6400v2.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r6700v3init:
-	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R6700v3" BOARDID_FILE="compatible_r6700v3.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BUILD_DESC="initial" NETGEAR_CHK="R6700v3" BOARDID_FILE="compatible_r6700v3.txt" FW_CFG_FILE="tomato_cfg.h"
 
 ws880e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI"
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI" DPSTA=y
 
 ws880z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI"
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI" DPSTA=y
 
 wzr1750e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="BUFFALO"
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="BUFFALO" DPSTA=y
 
 wzr1750z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="BUFFALO"
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="BUFFALO" DPSTA=y
 
 ea6700e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n DPSTA=y
 
 ea6700z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS" FAILSAFE_UPGRADE=n DPSTA=y
 
 ea6350v1e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n DPSTA=n
 
 ea6350v1z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n DPSTA=n
 
 r1do:
-	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y
+	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y
 
 
 setprofile:
@@ -1208,40 +1231,41 @@ setprofile:
 
 help:
 	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC66U_B1, RT-AC1900P"
-	@echo "ac68e         RT-N18U/AC56U/AC68U(R/P)/AC66U B1/RT-AC1900P build VPN"
-	@echo "ac68z         RT-N18U/AC56U/AC68U(R/P)/AC66U B1/RT-AC1900P build AIO"
-	@echo "n18e          RT-N18U/AC56S without SMP build VPN"
-	@echo "n18z          RT-N18U/AC56S without SMP build AIO"
+	@echo "ac68e           RT-N18U/AC56U/AC68U(R/P)/AC66U B1/RT-AC1900P build VPN"
+	@echo "ac68z           RT-N18U/AC56U/AC68U(R/P)/AC66U B1/RT-AC1900P build AIO"
+	@echo "n18e            RT-N18U/AC56S without SMP build VPN"
+	@echo "n18z            RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"
-	@echo "ac15e         Tenda AC15 VPN"
-	@echo "ac18e         Tenda AC18 VPN"
-	@echo "ac18z         Tenda AC18 AIO"
+	@echo "ac15e           Tenda AC15 VPN"
+	@echo "ac18e           Tenda AC18 VPN"
+	@echo "ac18z           Tenda AC18 AIO"
 	@echo "DLINK ARM Builds"
-	@echo "dir868l       DLINK DIR868L"
+	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
-	@echo "r7000e        R7000/R6300v2/R6250 build VPN"
-	@echo "r7000z        R7000/R6300v2/R6250 build AIO"
-	@echo "r6400e        R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
-	@echo "r6400z        R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
-	@echo "r7000init     R7000 init build"
-	@echo "r6250init     R6250 init build"
-	@echo "r6300v2init   R6300v2 init build"
-	@echo "r6400init     R6400 init build"
-	@echo "r6400v2init   R6400v2 init build"
-	@echo "r6700v3init   R6700v3 init build"
+	@echo "r7000e          R7000/R6300v2/R6250 build VPN"
+	@echo "r7000z          R7000/R6300v2/R6250 build AIO"
+	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
+	@echo "r6400z          R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
+	@echo "r7000init       R7000 init build"
+	@echo "r6250init       R6250 init build"
+	@echo "r6300v2init     R6300v2 init build"
+	@echo "r6300v2init_ch  R6300v2_ch init build for Charter routers"
+	@echo "r6400init       R6400 init build"
+	@echo "r6400v2init     R6400v2 init build"
+	@echo "r6700v3init     R6700v3 init build"
 	@echo "Xiaomi ARM Builds"
-	@echo "r1do          R1D custom build"
+	@echo "r1do            R1D custom build"
 	@echo "HUAWEI ARM Builds"
-	@echo "ws880e        WS880 build VPN"
-	@echo "ws880z        WS880 build AIO"
+	@echo "ws880e          WS880 build VPN"
+	@echo "ws880z          WS880 build AIO"
 	@echo "BUFFALO ARM Builds"
-	@echo "wzr1750e      WZR-1750DHP build VPN"
-	@echo "wzr1750z      WZR-1750DHP build AIO"
+	@echo "wzr1750e        WZR-1750DHP build VPN"
+	@echo "wzr1750z        WZR-1750DHP build AIO"
 	@echo "LINKSYS ARM Builds"
-	@echo "ea6700e       EA6700/EA6400/EA6500v2/EA6900 build VPN"
-	@echo "ea6700z       EA6700/EA6400/EA6500v2/EA6900 build AIO"
-	@echo "ea6350v1e     EA6200/EA6350v1 build VPN"
-	@echo "ea6350v1z     EA6200/EA6350v1 build AIO"
+	@echo "ea6700e         EA6700/EA6400/EA6500v2/EA6900 build VPN"
+	@echo "ea6700z         EA6700/EA6400/EA6500v2/EA6900 build AIO"
+	@echo "ea6350v1e       EA6200/EA6350v1 build VPN"
+	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
 	@echo ""
 	@echo "..etc..      other build configs"
 	@echo "clean        -C router clean"

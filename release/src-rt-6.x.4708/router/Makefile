@@ -14,13 +14,13 @@ include common.mak
 
 #TOMATO_EXPERIMENTAL=0
 
-export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
+export PARALLEL_BUILD := -j$(shell grep -c '^processor' /proc/cpuinfo)
 export HAVE_TOMATO := y
 
 
 define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
-  ( if ! patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
+  ( if patch -p0 -s --dry-run < $$FILE 2>/dev/null; then \
    patch -p0 -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
@@ -29,7 +29,7 @@ endef
 define unpatch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n -r | while read FILE; do \
   ( if patch -p0 -Rf --dry-run --silent < $$FILE 2>/dev/null; then \
-   patch -p0 -R -N -r - --no-backup-if-mismatch < $$FILE; \
+   patch -p0 -R -N -E -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
 endef
@@ -189,6 +189,8 @@ obj-$(TCONFIG_RAID) += mdadm
 obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
 obj-$(TCONFIG_NFS) += nfs-utils
+
+obj-$(TCONFIG_HFS) += diskdev_cmds-332.25
 
 #Roadkill
 obj-$(TCONFIG_NOCAT) += nocat
@@ -640,9 +642,9 @@ endif
 
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ch341.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbip*.*o $(PLATFORMDIR)/extras/ || true
-	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbkbd.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(TCONFIG_UPS),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbkbd.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(TCONFIG_UPS),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/hid*.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbmouse.*o $(PLATFORMDIR)/extras/ || true
-	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/hid*.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ipw.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/audio.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ov51*.*o $(PLATFORMDIR)/extras/ || true
@@ -657,10 +659,8 @@ endif
 	@rm -rf $(TARGETDIR)/lib/modules/*/kernel/drivers/sound || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/sound/* $(PLATFORMDIR)/extras/ || true
 	@rm -rf $(TARGETDIR)/lib/modules/*/kernel/sound || true
-	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/input/* $(PLATFORMDIR)/extras/ || true
-	@rm -rf $(TARGETDIR)/lib/modules/*/kernel/drivers/input || true
+	$(if $(TCONFIG_UPS),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/input/* $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_UPS),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/hid/* $(PLATFORMDIR)/extras/ || true
-	$(if $(TCONFIG_UPS),@ls,@rm -rf) $(TARGETDIR)/lib/modules/*/kernel/drivers/hid || true
 	@cp -f $(TARGETDIR)/lib/modules/*/kernel/drivers/net/bcm57*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_CTF),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/ctf*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_PPTP),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/pptp.*o $(PLATFORMDIR)/extras/ || true
@@ -1308,21 +1308,26 @@ vlan-install:
 	$(MAKE) -C vlan CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install	# STRIPTOOL=$(STRIP)
 	$(STRIP) $(INSTALLDIR)/vlan/usr/sbin/vconfig
 
+accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
+	$(call patch_files,accel-pptp)
+	cd accel-pptp && \
+		CFLAGS="-g -O2 $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-O2 -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
+
 accel-pptp: pppd accel-pptp/Makefile
 	@$(SEP)
 	@$(MAKE) -C accel-pptp
 
-accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
-	cd accel-pptp && CFLAGS="-g -O2 $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=/usr KDIR=$(LINUXDIR) PPPDIR=$(TOP)/pppd
+accel-pptp-install:
+	install -D accel-pptp/src/.libs/pptp.so $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
+	$(STRIP) $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
 
 accel-pptp-clean:
 	-@$(MAKE) -C accel-pptp clean
 	@rm -f accel-pptp/Makefile
-
-accel-pptp-install:
-	install -D accel-pptp/src/.libs/pptp.so $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
-	$(STRIP) $(INSTALLDIR)/accel-pptp/usr/lib/pppd/pptp.so
+	$(call unpatch_files,accel-pptp)
 
 pptpd/stamp-h1:
 	$(call patch_files,pptpd)
@@ -2354,10 +2359,11 @@ libcurl-clean:
 	$(call unpatch_files,libcurl)
 
 libevent/stamp-h1:
-	cd libevent && ./autogen.sh && CC=$(CC) \
+	cd libevent && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE)
+		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
+			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
 
 libevent: libevent/stamp-h1
@@ -2372,7 +2378,7 @@ libevent-clean:
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.1.so.7.0.0 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+	install libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 
 libiconv/stamp-h1:
@@ -3049,6 +3055,30 @@ iperf-clean:
 	-@$(MAKE) -C iperf clean
 	-@rm -rf iperf/Makefile iperf/stamp-h1
 	$(call unpatch_files,iperf)
+
+diskdev_cmds-332.25:
+	@$(SEP)
+	$(call patch_files,diskdev_cmds-332.25)
+	cd diskdev_cmds-332.25 && \
+		make -f Makefile.lnx
+
+diskdev_cmds-332.25-install:
+	install -D diskdev_cmds-332.25/newfs_hfs.tproj/newfs_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
+	install -D diskdev_cmds-332.25/fsck_hfs.tproj/fsck_hfs $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfsplus
+	cd $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin && \
+		rm -f mkfs.hfs && \
+		rm -f fsck.hfs && \
+		ln -s mkfs.hfsplus mkfs.hfs && \
+		ln -s fsck.hfsplus fsck.hfs
+
+diskdev_cmds-332.25-clean:
+	cd diskdev_cmds-332.25 && \
+		make -f Makefile.lnx clean
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfs
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfs
+	$(call unpatch_files,diskdev_cmds-332.25)
 
 #
 # Generic rules

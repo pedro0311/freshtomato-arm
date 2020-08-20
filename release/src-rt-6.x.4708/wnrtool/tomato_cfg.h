@@ -17,6 +17,6 @@
 #define FW_REGION     WW_VERSION
 
 /* Set Firmware Version */
-#define AMBIT_SOFTWARE_VERSION     "V1.0.6.99"
+#define AMBIT_SOFTWARE_VERSION     "V1.0.12.99"
 #define AMBIT_UI_VERSION           "1.0.42"
 

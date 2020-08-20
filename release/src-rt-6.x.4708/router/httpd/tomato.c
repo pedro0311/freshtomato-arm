@@ -311,7 +311,9 @@ const struct mime_handler mime_handlers[] = {
 	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
 	{ "upnp.cgi",			NULL,					0,	wi_generic,		wo_upnp,		1 },
 	{ "wakeup.cgi",			NULL,					0,	wi_generic,		wo_wakeup,		1 },
+#ifdef TCONFIG_BCM7
 	{ "wlmnoise.cgi",		mime_html,				0,	wi_generic,		wo_wlmnoise,		1 },
+#endif
 	{ "wlradio.cgi",		NULL,					0,	wi_generic,		wo_wlradio,		1 },
 	{ "resolve.cgi",		mime_javascript,			0,	wi_generic,		wo_resolve,		1 },
 	{ "expct.cgi",			mime_html,				0,	wi_generic,		wo_expct,		1 },
@@ -898,14 +900,13 @@ static const nvset_t nvset_list[] = {
 	{ "ct_timeout",			V_LENGTH(5, 15)			},
 	{ "nf_ttl",			V_LENGTH(1, 6)			},
 	{ "nf_l7in",			V_01				},
-#ifdef LINUX26
 	{ "nf_sip",			V_01				},
 	{ "ct_hashsize",		V_NUM				},
-#endif
 	{ "nf_rtsp",			V_01				},
 	{ "nf_pptp",			V_01				},
 	{ "nf_h323",			V_01				},
 	{ "nf_ftp",			V_01				},
+	{ "fw_nat_tuning",		V_RANGE(0, 2)			},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 // advanced-dhcpdns
 	{ "dhcpd_slt",			V_RANGE(-1, 43200)		},	// -1=infinite, 0=follow normal lease time, >=1 custom
@@ -917,6 +918,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpc_minpkt",		V_01				},
 	{ "dhcpc_custom",		V_TEXT(0, 256)			},
 	{ "dns_norebind",		V_01				},
+	{ "dns_priv_override",		V_01				},	/* override DoH */
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 2048)			},
 	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
@@ -1049,7 +1051,20 @@ static const nvset_t nvset_list[] = {
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
-	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
+	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
+	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
+	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "pci/1/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/2/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "0:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "1:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/1/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+	{ "pci/2/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+#ifdef TCONFIG_AC3200
+	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+#endif
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},
@@ -1066,7 +1081,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	// long, short
 	{ "wl_antdiv",			V_RANGE(0, 3)			},
 	{ "wl_txant",			V_RANGE(0, 3)			},
-	{ "wl_txpwr",			V_RANGE(0, 400)			},
+	{ "wl_txpwr",			V_RANGE(0, 1000)		},
 	{ "wl_wme",			V_WORD				},	// auto, off, on
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
@@ -1304,6 +1319,7 @@ static const nvset_t nvset_list[] = {
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
+	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
 	{ "usb_automount",		V_01				},
 	{ "script_usbhotplug", 		V_TEXT(0, 2048)			},
@@ -1359,6 +1375,7 @@ static const nvset_t nvset_list[] = {
 	{ "smbd_user",			V_LENGTH(0, 50)			},
 	{ "smbd_passwd",		V_LENGTH(0, 50)			},
 	{ "smbd_ifnames",		V_LENGTH(0, 50)			},
+	{ "smbd_protocol",		V_RANGE(0, 2)			},
 #ifdef TCONFIG_GROCTRL
 	{ "gro_disable",		V_01				},
 #endif

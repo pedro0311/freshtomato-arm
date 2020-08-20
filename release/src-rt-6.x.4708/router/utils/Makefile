@@ -72,11 +72,20 @@ UTILS += et
 vpath %.c $(SRCBASE)/et/linux
 endif
 
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
 ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc),)
 CFLAGS += -I$(SRCBASE)/wl/arm-uclibc
 UTILS += wl
 vpath %.c $(SRCBASE)/wl/arm-uclibc $(SRCBASE)/shared
 endif
+else #for single-core
+ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc/up),)
+CFLAGS += -I$(SRCBASE)/wl/arm-uclibc/up
+UTILS += wl
+vpath %.c $(SRCBASE)/wl/arm-uclibc/up $(SRCBASE)/shared
+endif
+endif #($(TCONFIG_BCMSMP),y)
+
 
 ifeq ($(RWL),1)
 ifeq ($(BUILD_WFA_APUT),1)
@@ -98,12 +107,21 @@ vpath %.c $(SRCBASE)/wl/exe $(SRCBASE)/shared
 endif
 endif
 
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core util
 ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc),)
 all: robocfg et epi_ttcp
 	-cp $(SRCBASE)/wl/arm-uclibc/wl wl
 else
 all: $(UTILS)
 endif
+else #for single-core util
+ifneq ($(wildcard $(SRCBASE)/wl/arm-uclibc/up),)
+all: robocfg et epi_ttcp
+	-cp $(SRCBASE)/wl/arm-uclibc/up/wl wl
+else
+all: $(UTILS)
+endif
+endif #($(TCONFIG_BCMSMP),y)
 
 wl: $(WLU_OBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)

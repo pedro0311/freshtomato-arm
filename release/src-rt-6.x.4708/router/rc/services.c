@@ -42,10 +42,10 @@
 #include <string.h>
 #include <wlutils.h>
 
-// !!TB
 #include <sys/mount.h>
 #include <mntent.h>
 #include <dirent.h>
+#include <linux/version.h>
 
 
 #define dnslog(level,x...) if (nvram_get_int("dns_debug")>=level) syslog(level, x)
@@ -154,6 +154,15 @@ void start_dnsmasq()
 			"stop-dns-rebind\n"
 			"rebind-localhost-ok\n");
 	}
+
+	/* Instruct clients like Firefox to not auto-enable DoH */
+	if (nvram_get_int("dns_priv_override")) {
+		fprintf(f, "address=/use-application-dns.net/\n");
+	}
+
+	/* Protect against VU#598349 */
+	fprintf(f,"dhcp-name-match=set:wpad-ignore,wpad\n"
+		   "dhcp-ignore-names=tag:wpad-ignore\n");
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_match("dnscrypt_proxy", "1")) {
@@ -2141,12 +2150,10 @@ static void start_samba(void)
 	fprintf(fp, "[global]\n"
 		" interfaces = %s\n"
 		" bind interfaces only = yes\n"
-		" max protocol = SMB2\n"
 		" enable core files = no\n"
 		" deadtime = 30\n"
 		" smb encrypt = disabled\n"
 		" min receivefile size = 16384\n"
-		" use sendfile = yes\n"
 		" workgroup = %s\n"
 		" netbios name = %s\n"
 		" server string = %s\n"
@@ -2174,12 +2181,39 @@ static void start_samba(void)
 		mode == 2 ? "no" : "yes"	// guest ok
 	);
 
+	fprintf(fp, " load printers = no\n"	/* add for Samba printcap issue */
+		" printing = bsd\n"
+		" printcap name = /dev/null\n"
+		" map archive = no\n"
+		" map hidden = no\n"
+		" map read only = no\n"
+		" map system = no\n"
+		" store dos attributes = no\n"
+		" dos filemode = yes\n"
+		" strict locking = no\n"
+		" oplocks = yes\n"
+		" level2 oplocks = yes\n"
+		" kernel oplocks = no\n"
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
+		" use sendfile = no\n");
+#else
+		" use sendfile = yes\n");
+#endif
+
 	if (nvram_get_int("smbd_wins")) {
 		nv = nvram_safe_get("wan_wins");
 		if ((*nv == 0) || (strcmp(nv, "0.0.0.0") == 0)) {
 			fprintf(fp, " wins support = yes\n");
 		}
 	}
+
+	/* 0 - smb1, 1 - smb2, 2 - smb1 + smb2 */
+	if (nvram_get_int("smbd_protocol") == 0)
+		fprintf(fp, " max protocol = NT1\n");
+	else
+		fprintf(fp, " max protocol = SMB2\n");
+	if (nvram_get_int("smbd_protocol") == 1)
+		fprintf(fp, " min protocol = SMB2\n");
 
 	if (nvram_get_int("smbd_master")) {
 		fprintf(fp,

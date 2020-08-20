@@ -269,11 +269,13 @@ static auth_t auth_check(const char *authorization)
 	return AUTH_NONE;
 }
 
-static void auth_fail(int clen)
+static void auth_fail(int clen, int show)
 {
 	if (post) web_eat(clen);
 	eat_garbage();
 	send_authenticate();
+	if (show == 1)
+		syslog(LOG_WARNING, "Bad password attempt (GUI)");
 }
 
 static int check_wif(int idx, int unit, int subunit, void *param)
@@ -542,14 +544,14 @@ static void handle_request(void)
 	}
 
 	if (auth == AUTH_BAD) {
-		auth_fail(cl);
+		auth_fail(cl, 1);
 		return;
 	}
 
 	for (handler = &mime_handlers[0]; handler->pattern; handler++) {
 		if (match(handler->pattern, file)) {
 			if ((handler->auth) && (auth != AUTH_OK)) {
-				auth_fail(cl);
+				auth_fail(cl, 0);
 				return;
 			}
 
@@ -562,7 +564,7 @@ static void handle_request(void)
 	}
 
 	if (auth != AUTH_OK) {
-		auth_fail(cl);
+		auth_fail(cl, 1);
 		return;
 	}
 

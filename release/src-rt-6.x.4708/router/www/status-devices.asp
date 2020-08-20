@@ -71,14 +71,17 @@ function get(mac, ip) {
 
 var xob = null;
 
-function _deleteLease(ip) {
-	form.submitHidden('dhcpd.cgi', { remove: ip });
+function _deleteLease(ip, mac, wl) {
+	form.submitHidden('dhcpd.cgi', {
+		remove: ip,
+		mac: mac,
+		wl: wl });
 }
 
-function deleteLease(a, ip) {
+function deleteLease(a, ip, mac, wl) {
 	if (xob) return;
 	if ((xob = new XmlHttp()) == null) {
-		_deleteLease(ip);
+		_deleteLease(ip, mac, wl);
 		return;
 	}
 
@@ -90,10 +93,10 @@ function deleteLease(a, ip) {
 		xob = null;
 	}
 	xob.onError = function() {
-		_deleteLease(ip);
+		_deleteLease(ip, mac, wl);
 	}
 
-	xob.post('dhcpd.cgi', 'remove=' + ip);
+	xob.post('dhcpd.cgi', 'remove=' + ip + '&mac=' + mac + '&wl=' + wl);
 }
 
 function addStatic(n) {
@@ -174,14 +177,6 @@ dg.populate = function() {
 		list[i].lease = '';
 	}
 
-	for (i = dhcpd_lease.length - 1; i >= 0; --i) {
-		a = dhcpd_lease[i];
-		e = get(a[2], a[1]);
-		e.lease = '<small><a href="javascript:deleteLease(\'L' + i + '\',\'' + a[1] + '\')" title="Delete Lease" id="L' + i + '">' + a[3] + '<\/a><\/small>';
-		e.name = a[0];
-		e.ifname = '';
-	}
-
 	for (i = wldev.length - 1; i >= 0; --i) {
 		a = wldev[i];
 		if (a[0].indexOf('wds') == 0) {
@@ -195,8 +190,14 @@ dg.populate = function() {
 		e.rssi = a[2];
 
 		if ((a[3] >= 1000) || (a[4] >= 1000))
-		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-'); //+ '<br><small>Mbps<\/small>';
+		e.txrx = ((a[3] >= 1000) ? Math.round(a[3] / 1000) : '-') + ' / ' + ((a[4] >= 1000) ? Math.round(a[4] / 1000) : '-');
+	}
 
+	for (i = dhcpd_lease.length - 1; i >= 0; --i) {
+		a = dhcpd_lease[i];
+		e = get(a[2], a[1]);
+		e.lease = '<small><a href="javascript:deleteLease(\'L' + i + '\',\'' + a[1] + '\',\'' + a[2] + '\',\'' + e.ifname + '\')" title="Delete Lease' + (e.ifname ? " and Deauth" : "") + '" id="L' + i + '">' + a[3] + '<\/a><\/small>';
+		e.name = a[0];
 	}
 
 	for (i = arplist.length - 1; i >= 0; --i) {
@@ -277,8 +278,8 @@ dg.populate = function() {
 		this.insert(-1, e, [
 			e.ifname, b, (e.ip == '-') ? '' : e.ip, e.name,
 			(e.rssi != 0) ? e.rssi + ' <small>dBm<\/small>' : '',
-			(e.qual < 0) ? '' : '<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 10), 1), 6) + '.gif" alt="">',
-			e.txrx,	e.lease], false);
+			(e.qual < 0) ? '' : '<small>' + e.qual + '<\/small> <img src="bar' + MIN(MAX(Math.floor(e.qual / 12), 1), 6) + '.gif" alt="">',
+			e.txrx, e.lease], false);
 	}
 }
 
@@ -332,14 +333,19 @@ function init() {
 			var u = wl_unit(uidx);
 			if (nvram['wl'+u+'_radio'] == '1') {
 				if (wl_sunit(uidx) < 0) {
+/* BCM7-BEGIN */
 					var a = '';
 					if ((nvram['wl'+u+'_mode'] == 'ap') || (nvram['wl'+u+'_mode'] == 'wds'))
 						a = '&nbsp;&nbsp;&nbsp; <input type="button" value="Measure" onclick="javascript:window.location=\'wlmnoise.cgi?_http_id=' + nvram.http_id + '&_wl_unit=' + u +'\'">';
-
+/* BCM7-END */
 					f.push( { title: '<b>Noise Floor (' + wl_ifaces[uidx][0] + ')&nbsp;:<\/b>',
 						prefix: '<span id="noise'+uidx+'">',
 						custom: wlnoise[uidx],
-						suffix: '<\/span>&nbsp;<small>dBm<\/small>' + a } );
+						suffix: '<\/span>&nbsp;<small>dBm<\/small>'
+/* BCM7-BEGIN */
+						+ a
+/* BCM7-END */
+					 } );
 				}
 			}
 		}

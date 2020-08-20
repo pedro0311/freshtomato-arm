@@ -1,6 +1,9 @@
 --- dropbear/localoptions.h
 +++ dropbear/localoptions.h
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,15 @@
++/* Override SSH 2.0 ident */
++#define LOCAL_IDENT "SSH-2.0-dropbear"
++
 +#define DROPBEAR_X11FWD 0
 +#define INETD_MODE 0
 +
@@ -15,7 +18,17 @@
 +#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
 --- dropbear/sysoptions.h
 +++ dropbear/sysoptions.h
-@@ -333,7 +333,7 @@
+@@ -7,7 +7,9 @@
+ #define DROPBEAR_VERSION "2020.80"
+ #endif
+ 
++#ifndef LOCAL_IDENT
+ #define LOCAL_IDENT "SSH-2.0-dropbear_" DROPBEAR_VERSION
++#endif
+ #define PROGNAME "dropbear"
+ 
+ /* Spec recommends after one hour or 1 gigabyte of data. One hour
+@@ -333,7 +335,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__

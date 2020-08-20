@@ -86,10 +86,12 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
 #define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
 
-#define IPT_V4	0x01
-#define IPT_V6	0x02
-#define IPT_ANY_AF	(IPT_V4 | IPT_V6)
+#define IPT_V4			0x01
+#define IPT_V6			0x02
+#define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
+
+#define BRIDGE_COUNT		4
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -127,8 +129,8 @@ extern int ip6down_main(int argc, char **argv);
 //extern void restore_defaults(void);
 
 /* redial.c */
-extern int start_redial(char *prefix);
-extern int stop_redial(char *prefix);
+extern void start_redial(char *prefix);
+extern void stop_redial(char *prefix);
 extern int redial_main(int argc, char **argv);
 
 /* wan.c */
@@ -287,7 +289,9 @@ extern wanface_list_t wan2faces;
 extern wanface_list_t wan3faces;
 extern wanface_list_t wan4faces;
 #endif
-extern char lanface[];
+extern char lanaddr[BRIDGE_COUNT][32];
+extern char lanmask[BRIDGE_COUNT][32];
+extern char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
 #ifdef TCONFIG_IPV6
 extern char wan6face[];
 #endif
@@ -301,7 +305,6 @@ extern char **layer7_in;
 extern void enable_ip_forward(void);
 #ifdef TCONFIG_IPV6
 extern void enable_ip6_forward(void);
-extern void enable_ndp_proxy(void);
 #endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
@@ -325,7 +328,6 @@ extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int 
 extern int ipt_dscp(const char *v, char *opt);
 extern int ipt_ipp2p(const char *v, char *opt);
 extern int ipt_layer7(const char *v, char *opt);
-extern void ipt_layer7_inbound(void);
 extern int start_firewall(void);
 extern int stop_firewall(void);
 #ifdef DEBUG_IPTFILE
@@ -403,6 +405,7 @@ extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
 extern void simple_lock(const char *name);
 extern void killall_tk(const char *name);
+extern void killall_tk_period_wait(const char *name, int wait);
 extern int kill_pidfile_s(char *pidfile, int sig);
 extern int mkdir_if_none(const char *path);
 extern long fappend(FILE *out, const char *fname);
@@ -544,6 +547,7 @@ extern void start_ovpn_server(int serverNum);
 extern void stop_ovpn_server(int serverNum);
 extern void start_ovpn_eas();
 extern void stop_ovpn_eas();
+extern void stop_ovpn_all();
 extern void run_ovpn_firewall_scripts();
 extern void write_ovpn_dnsmasq_config(FILE*);
 extern int write_ovpn_resolv(FILE*);

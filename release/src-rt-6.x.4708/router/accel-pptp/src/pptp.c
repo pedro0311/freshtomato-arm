@@ -48,17 +48,12 @@
 #include "pptp_callmgr.h"
 #include <net/if.h>
 #include <net/ethernet.h>
-#include <linux/if_pppox.h>
-#include "inststr.h"
+#include "if_pppox.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <net/route.h>
-#include <features.h>
-#include <resolv.h>
 
-#define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
 
 extern char** environ;
 
@@ -71,9 +66,7 @@ char *pptp_client = NULL;
 char *pptp_phone = NULL;
 int pptp_sock=-1;
 int pptp_timeout=100000;
-int log_level = 0;
 struct in_addr localbind = { INADDR_NONE };
-struct rtentry rt;
 
 static int callmgr_sock;
 static int pptp_fd;
@@ -81,11 +74,8 @@ int call_ID;
 
 //static struct in_addr get_ip_address(char *name);
 static int open_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int window);
-static void launch_callmgr(int call_id, struct in_addr inetaddr, char *phonenr, int window);
+static void launch_callmgr(int call_is,struct in_addr inetaddr, char *phonenr,int window);
 static int get_call_id(int sock, pid_t gre, pid_t pppd, u_int16_t *peer_call_id);
-
-static int route_add(const struct in_addr inetaddr, struct rtentry *rt);
-//static int route_del(struct rtentry *rt);
 
 //static int pptp_devname_hook(char *cmd, char **argv, int doit);
 static option_t Options[] =
@@ -98,8 +88,6 @@ static option_t Options[] =
       "PPTP socket" },
     { "pptp_phone", o_string, &pptp_phone,
       "PPTP Phone number" },
-    { "loglevel", o_int, &log_level,
-      "debugging level (0=low, 1=default, 2=high)"},
     { NULL }
 };
 
@@ -135,12 +123,6 @@ static int pptp_start_client(void)
 	struct sockaddr_pppox src_addr,dst_addr;
 	struct hostent *hostinfo;
 
-#if !defined(__UCLIBC__) \
- || (__UCLIBC_MAJOR__ == 0 \
- && (__UCLIBC_MINOR__ < 9 || (__UCLIBC_MINOR__ == 9 && __UCLIBC_SUBLEVEL__ < 31)))
-	/* force ns refresh from resolv.conf with uClibc pre-0.9.31 */
-	res_init();
-#endif
 	hostinfo=gethostbyname(pptp_server);
   if (!hostinfo)
 	{
@@ -148,10 +130,6 @@ static int pptp_start_client(void)
 		return -1;
 	}
 	dst_addr.sa_addr.pptp.sin_addr=*(struct in_addr*)hostinfo->h_addr;
-
- 	memset(&rt, 0, sizeof(rt));
- 	route_add(dst_addr.sa_addr.pptp.sin_addr, &rt);
-
 	{
 		int sock;
 		struct sockaddr_in addr;
@@ -199,21 +177,18 @@ static int pptp_start_client(void)
 	getsockname(pptp_fd,(struct sockaddr*)&src_addr,&len);
 	call_ID=src_addr.sa_addr.pptp.call_id;
 
+  do {
         /*
          * Open connection to call manager (Launch call manager if necessary.)
          */
-	callmgr_sock = -1;
-	do {
-		if (callmgr_sock >= 0)
-    			close(callmgr_sock);
-		callmgr_sock = open_callmgr(src_addr.sa_addr.pptp.call_id, dst_addr.sa_addr.pptp.sin_addr, pptp_phone, 50);
-		if (callmgr_sock < 0)
-		{
-			close(pptp_fd);
-			return -1;
-		}
-	/* Exchange PIDs, get call ID */
-	} while (get_call_id(callmgr_sock, getpid(), getpid(), &dst_addr.sa_addr.pptp.call_id) < 0);
+        callmgr_sock = open_callmgr(src_addr.sa_addr.pptp.call_id,dst_addr.sa_addr.pptp.sin_addr, pptp_phone,50);
+	if (callmgr_sock<0)
+	{
+		close(pptp_fd);
+		return -1;
+        }
+        /* Exchange PIDs, get call ID */
+    } while (get_call_id(callmgr_sock, getpid(), getpid(), &dst_addr.sa_addr.pptp.call_id) < 0);
 
 	if (connect(pptp_fd,(struct sockaddr*)&dst_addr,sizeof(dst_addr)))
 	{
@@ -243,7 +218,6 @@ static void pptp_disconnect(void)
 {
 	if (pptp_server) close(callmgr_sock);
 	close(pptp_fd);
-	//route_del(&rt); // don't delete, as otherwise it would try to use pppX in demand mode
 }
 
 static int open_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int window)
@@ -285,8 +259,6 @@ static int open_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int w
                 }
                 default: /* parent */
                     waitpid(pid, &status, 0);
-                    if (WIFEXITED(status))
-                        status = WEXITSTATUS(status);
                     if (status!= 0)
 		    {
 			close(fd);
@@ -305,30 +277,17 @@ static int open_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int w
 }
 
 /*** call the call manager main ***********************************************/
-static void launch_callmgr(int call_id, struct in_addr inetaddr, char *phonenr, int window)
+static void launch_callmgr(int call_id,struct in_addr inetaddr, char *phonenr,int window)
 {
-	char win[10];
-	char call[10];
-	char *my_argv[9] = { "pptp", inet_ntoa(inetaddr), "--call_id", call, "--phone", phonenr, "--window", win, NULL };
-	char buf[128];
-	int argc = 0;
-	char **argv = environ;
-
-	sprintf(win, "%u", window);
-	sprintf(call, "%u", call_id);
-	snprintf(buf, sizeof(buf), "pptp: call manager for %s", my_argv[1]);
-
-	if (argv && *argv)
-		argv--;
-	if (argv && *argv == NULL && progname)
-	do {
-		argv--;
-		argc++;
-	} while (argv && *argv && *argv > progname);
-	if (argv && *argv == progname)
-		inststr(argc, argv, environ, buf);
-
-	exit(callmgr_main(8, my_argv, environ));
+			char win[10];
+			char call[10];
+      char *my_argv[9] = { "pptp", inet_ntoa(inetaddr), "--call_id",call,"--phone",phonenr,"--window",win,NULL };
+      char buf[128];
+      sprintf(win,"%u",window);
+      sprintf(call,"%u",call_id);
+      snprintf(buf, sizeof(buf), "pptp: call manager for %s", my_argv[1]);
+      //inststr(argc, argv, envp, buf);
+      exit(callmgr_main(8, my_argv, environ));
 }
 
 /*** exchange data with the call manager  *************************************/
@@ -341,7 +300,7 @@ static int get_call_id(int sock, pid_t gre, pid_t pppd,
     /* don't bother with network byte order, because pid's are meaningless
      * outside the local host.
      */
-    ssize_t rc;
+    int rc;
     rc = write(sock, &gre, sizeof(gre));
     if (rc != sizeof(gre))
         return -1;
@@ -369,111 +328,17 @@ static int get_call_id(int sock, pid_t gre, pid_t pppd,
 
 void plugin_init(void)
 {
-#if 0
-    if (!ppp_available() && !new_style_driver)
-	fatal("Kernel doesn't support ppp_generic - needed for PPTP");
-#endif
+    /*if (!ppp_available() && !new_style_driver)
+    {
+				fatal("Linux kernel does not support PPP -- are you running 2.4.x?");
+    }*/
 
     add_options(Options);
 
     info("PPTP plugin version %s compiled for pppd-%s, linux-%s",
-	 PLUGINVERSION, PPPD_VERSION, KERNELVERSION);
+	 VERSION, PPPD_VERSION,KERNELVERSION);
 
     the_channel = &pptp_channel;
     modem = 0;
 }
 
-static int
-route_ctrl(int ctrl, struct rtentry *rt)
-{
-	int s;
-
-	/* Open a raw socket to the kernel */
-	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ||	ioctl(s, ctrl, rt) < 0)
-	        warn("route_ctrl: %s", strerror(errno));
-	else errno = 0;
-
-	close(s);
-	return errno;
-}
-/*
-static int
-route_del(struct rtentry *rt)
-{
-	if (rt->rt_dev) {
-		route_ctrl(SIOCDELRT, rt);
-		free(rt->rt_dev), rt->rt_dev = NULL;
-	}
-
-	return 0;
-}
-*/
-static int
-route_add(const struct in_addr inetaddr, struct rtentry *rt)
-{
-	char buf[256], dev[64];
-	int metric, flags;
-	u_int32_t dest, mask;
-
-	FILE *f = fopen("/proc/net/route", "r");
-	if (f == NULL) {
-	        warn("/proc/net/route: %s", strerror(errno));
-		return -1;
-	}
-
-	while (fgets(buf, sizeof(buf), f)) 
-	{
-		if (sscanf(buf, "%63s %x %x %X %*s %*s %d %x", dev, &dest,
-		    	&sin_addr(&rt->rt_gateway).s_addr, &flags, &metric, &mask) != 6)
-			continue;
-		if ((flags & RTF_UP) == RTF_UP && (inetaddr.s_addr & mask) == dest &&
-			(dest || strncmp(dev, "ppp", 3)) /* avoid default via pppX to avoid on-demand loops*/)
-		{
-			rt->rt_metric = metric;
-			rt->rt_gateway.sa_family = AF_INET;
-			break;
-		}
-	}
-
-	fclose(f);
-
-	/* check for no route */
-	if (rt->rt_gateway.sa_family != AF_INET) 
-	{
-		/* warn("route_add: no route to host"); */
-		return -1;
-	}
-
-	/* check for existing route to this host, 
-	add if missing based on the existing routes */
-	if (flags & RTF_HOST) {
-		/* warn("route_add: not adding existing route"); */
-		return -1;
-	}
-
-	sin_addr(&rt->rt_dst) = inetaddr;
-	rt->rt_dst.sa_family = AF_INET;
-
-	sin_addr(&rt->rt_genmask).s_addr = INADDR_BROADCAST;
-	rt->rt_genmask.sa_family = AF_INET;
-
-	rt->rt_flags = RTF_UP | RTF_HOST;
-	if (flags & RTF_GATEWAY)
-		rt->rt_flags |= RTF_GATEWAY;
-
-	rt->rt_metric++;
-	rt->rt_dev = strdup(dev);
-
-	if (!rt->rt_dev)
-	{
-	        warn("route_add: no memory");
-		return -1;
-	}
-
-	if (!route_ctrl(SIOCADDRT, rt))
-		return 0;
-
-	free(rt->rt_dev), rt->rt_dev = NULL;
-
-	return -1;
-}

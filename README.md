@@ -124,6 +124,5 @@ For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, AC66U B1, 
 1. Change dir to git repository ie: ```$ cd freshtomato-arm```
 2. Before every compilation, use ```$ git clean -fdxq && git reset --hard```, and possibly ```$ git pull``` to pull recent changes from remote
 3. To compile SDK6 image, use: ```$ git checkout arm-master``` then: ```$ cd release/src-rt-6.x.4708```, check for possible targets: ```$ make help```, use one (RT-N18U/AC56S without SMP build AIO): ```$ make n18z```
-4. To compile SDK6-NG image, use: ```$ git checkout arm-ng``` then: ```$ cd release/src-rt-6.x.4708```, check for possible targets: ```$ make help```, use one (RT-N18U/AC56U/AC68U(R/P)/AC66U B1/RT-AC1900P build AIO): ```$ make ac68z```
-5. To compile SDK7 image, use: ```$ git checkout arm-sdk7``` then: ```$ cd release/src-rt-7.x.main/src```, check for possible targets: ```$ make help```, use one (RT-AC3200 build AIO): ```$ make ac3200z```
+4. To compile SDK7 image, use: ```$ git checkout arm-sdk7``` then: ```$ cd release/src-rt-7.x.main/src```, check for possible targets: ```$ make help```, use one (RT-AC3200 build AIO): ```$ make ac3200z```
   

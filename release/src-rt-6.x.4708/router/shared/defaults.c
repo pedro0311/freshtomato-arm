@@ -229,20 +229,21 @@ struct nvram_tuple router_defaults[] = {
 
 	/* PPPoE parameters */
 	{ "wan_pppoe_ifname",		""				, 0 },	// PPPoE enslaved interface
+	{ "wan_ppp_mru",		"1500"				, 0 },	// Negotiate MRU to this value
+	{ "wan_ppp_mtu",		"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
+	{ "wan_ppp_ac",			""				, 0 },	// PPPoE access concentrator name
+	{ "wan_ppp_static",		"0"				, 0 },	// Enable / Disable Static IP
+	{ "wan_ppp_static_ip",		""				, 0 },	// PPPoE Static IP
+	{ "wan_ppp_get_ac",		""				, 0 },	// PPPoE Server ac name
+	{ "wan_ppp_get_srv",		""				, 0 },	// PPPoE Server service name
+
 	{ "wan_ppp_username",		""				, 0 },	// PPP username
 	{ "wan_ppp_passwd",		""				, 0 },	// PPP password
 	{ "wan_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
-	{ "wan_ppp_mru",		"1500"				, 0 },	// Negotiate MRU to this value
-	{ "wan_ppp_mtu",		"1500"				, 0 },	// Negotiate MTU to the smaller of this value or the peer MRU
 	{ "wan_ppp_service",		""				, 0 },	// PPPoE service name
-	{ "wan_ppp_ac",			""				, 0 },	// PPPoE access concentrator name
-	{ "wan_ppp_static",		"0"				, 0 },	// Enable / Disable Static IP
-	{ "wan_ppp_static_ip",		""				, 0 },	// PPPoE Static IP
-	{ "wan_ppp_get_ac",		""				, 0 },	// PPPoE Server ac name
-	{ "wan_ppp_get_srv",		""				, 0 },	// PPPoE Server service name
 	{ "wan_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
 	{ "wan_pppoe_lei",		"10"				, 0 },
@@ -442,7 +443,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txstreams",		"0"				, 0 },	// 802.11n Tx Streams 0, 0 is invalid, WLCONF will change it to a radio appropriate default
 	{ "wl_dfs_preism",		"60"				, 0 },	// 802.11H pre network CAC time
 	{ "wl_dfs_postism",		"60"				, 0 },	// 802.11H In Service Monitoring CAC time
+#ifndef TCONFIG_BCMARM /* following radar thrs params are not valid and not complete for SDK6.37 (and up) */
 	{ "wl_radarthrs",		"1 0x6c0 0x6e0 0x6bc 0x6e0 0x6ac 0x6cc 0x6bc 0x6e0" , 0 },	// Radar thrs params format: version thresh0_20 thresh1_20 thresh0_40 thresh1_40
+#endif
 	{ "wl_bcn_rotate",		"1"				, 0 },	// Beacon rotation
 	{ "wl_vlan_prio_mode",		"off"				, 0 },	// VLAN Priority support
 	{ "wl_obss_coex",		"0"				, 0 },	// OBSS Coexistence (0|1): when enabled, channel width is forced to 20MHz
@@ -502,8 +505,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txbf",			"1"				, 0 },	// Explicit Beamforming on = 1 , off = 0 (default: on)
 	{ "wl_txbf_bfr_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
 	{ "wl_txbf_bfe_cap",		"1"				, 0 },	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
-	{ "wl_itxbf",			"0"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
-	{ "wl_txbf_imp",		"0"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
+	{ "wl_itxbf",			"1"				, 0 },	// Universal/Implicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_imp",		"1"				, 0 },	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: on - sync with wl_itxbf)
 #endif
 #endif
 
@@ -602,20 +605,15 @@ struct nvram_tuple router_defaults[] = {
 	{ "ct_udp_timeout",		""				, 0 },
 	{ "ct_timeout",			""				, 0 },
 	{ "ct_max",			""				, 0 },
+	{ "ct_hashsize",		"2048"				, 0 },
 	{ "nf_ttl",			"0"				, 0 },
 	{ "nf_l7in",			"1"				, 0 },
-#ifdef LINUX26
 	{ "nf_sip",			"0"				, 0 },
-	{ "ct_hashsize",		"2048"				, 0 },
-#endif
-#ifdef LINUX26
 	{ "nf_rtsp",			"0"				, 0 },
-#else
-	{ "nf_rtsp",			"1"				, 0 },
-#endif
 	{ "nf_pptp",			"1"				, 0 },
 	{ "nf_h323",			"1"				, 0 },
 	{ "nf_ftp",			"1"				, 0 },
+	{ "fw_nat_tuning",		"0"				, 0 },	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
 	{ "adblock_enable",		"0"				, 0 },
@@ -654,6 +652,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "dhcpc_minpkt",		"1"				, 0 },
 	{ "dhcpc_custom",		""				, 0 },
 	{ "dns_norebind",		"1"				, 0 },
+	{ "dns_priv_override",		"0"				, 0 },
 	{ "dnsmasq_debug",		"0"				, 0 },
 	{ "dnsmasq_custom",		""				, 0 },
 	{ "dnsmasq_static_only",	"0"				, 0 },
@@ -959,7 +958,12 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_NTFS */
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			"0"				, 0 },	// !Victek
+#ifdef TCONFIG_TUXERA_HFS
+	{ "usb_hfs_driver",		"tuxera"			, 0 },
+#else
+	{ "usb_hfs_driver",		"kernel"			, 0 },
 #endif
+#endif /* TCONFIG_HFS */
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		"0"				, 0 },
 #endif
@@ -1020,6 +1024,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "smbd_user",			"nas"				, 0 },
 	{ "smbd_passwd",		""				, 0 },
 	{ "smbd_ifnames",		"br0"				, 0 },
+	{ "smbd_protocol",		"2"				, 0 }, /* 0 - SMB1, 1 - SMB2, 2 - SMB1+SMB2 (default) */
 #ifdef TCONFIG_GROCTRL
 	{ "gro_disable",		"1"				, 0 }, /* GRO enalbe - 0 ; disable - 1 (default) */
 #endif
