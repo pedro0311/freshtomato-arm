@@ -200,13 +200,13 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 		            nvram_get_int("debug_ppp") ? "-v" : "-V",
 		            ppp3g_chatfile);
 
-		if (strlen(p = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp))) > 0)
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp))) && (*p))
 			fprintf(fp, "user \"%s\"\n", p);
-		if (strlen(p = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp))) > 0)
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp))) && (*p))
 			fprintf(fp, "password \"%s\"\n", p);
 
 		/* Clear old gateway */
-		if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) > 0)
+		if ((p = nvram_get(strcat_r(prefix, "_gateway", tmp))) && (*p))
 			nvram_set(strcat_r(prefix, "_gateway", tmp), "");
 
 		/* Detect 3G Modem */
@@ -868,7 +868,7 @@ void start_wan_if(int mode, char *prefix)
 			ifconfig(wan_ifname, IFUP, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), nvram_safe_get(strcat_r(prefix, "_netmask", tmp)));
 
 			p = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
-			if ((*p != 0) && (strcmp(p, "0.0.0.0") != 0))
+			if ((strcmp(p, "0.0.0.0") != 0) && (*p))
 				preset_wan(wan_ifname, p, nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), prefix);
 
 			switch (wan_proto) {
