@@ -20,9 +20,9 @@
 
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
-
-// for PF_PACKET
+/* for PF_PACKET */
 #include <features.h>
+
 #if __GLIBC__ >=2 && __GLIBC_MINOR >= 1
 #include <netpacket/packet.h>
 #include <net/ethernet.h>
@@ -32,9 +32,11 @@
 #include <linux/if_ether.h>
 #endif
 
-#define LOG _dprintf
+//#define llog(args...) syslog(LOG_DEBUG, args)
+#define llog(fmt, args...) _dprintf(fmt"\n", args)
 
-enum {L_FAIL, L_ERROR, L_UPGRADE, L_ESTABLISHED, L_SUCCESS};
+
+enum { L_FAIL, L_ERROR, L_UPGRADE, L_ESTABLISHED, L_SUCCESS };
 
 struct iphdr {
 	u_int8_t version;
@@ -53,7 +55,6 @@ struct EthPacket {
 	u_int8_t dst_mac[6];
 	u_int8_t src_mac[6];
 	u_int8_t type[2];
-	//struct iphdr ip;	// size = 20
 	u_int8_t version;
 	u_int8_t tos;
 	u_int16_t tot_len;
@@ -76,7 +77,7 @@ static int read_interface(const char *interface, int *ifindex, unsigned char *ma
 
 	memset(&ifr, 0, sizeof(struct ifreq));
 	if ((fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		LOG("socket failed!: \n");
+		llog("%s: socket failed!", __FUNCTION__);
 		return -1;
 	}
 
@@ -86,21 +87,21 @@ static int read_interface(const char *interface, int *ifindex, unsigned char *ma
 
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) == 0) {
 		*ifindex = ifr.ifr_ifindex;
-		LOG("adapter index %d \n", ifr.ifr_ifindex);
+		llog("%s: adapter index %d", __FUNCTION__, ifr.ifr_ifindex);
 
 		if (ioctl(fd, SIOCGIFHWADDR, &ifr) == 0) {
 			memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
-			LOG("adapter hardware address %02x:%02x:%02x:%02x:%02x:%02x \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+			llog("%s: adapter hardware address %02x:%02x:%02x:%02x:%02x:%02x", __FUNCTION__, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 			r = 0;
 		}
-		else {
-			LOG("SIOCGIFHWADDR failed!\n");
-		}
+		else
+			llog("%s: SIOCGIFHWADDR failed!", __FUNCTION__);
 	}
-	else {
-		LOG("SIOCGIFINDEX failed!\n");
-	}
+	else
+		llog("%s: SIOCGIFINDEX failed!", __FUNCTION__);
+
 	close(fd);
+
 	return r;
 }
 
@@ -109,9 +110,10 @@ static int raw_socket(int ifindex)
 	int fd;
 	struct sockaddr_ll sock;
 
-	LOG("Opening raw socket on ifindex %d\n", ifindex);
+	llog("%s: opening raw socket on ifindex %d", __FUNCTION__, ifindex);
+
 	if ((fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_IP))) < 0) {
-		LOG("socket call failed: \n");
+		llog("%s: socket call failed!", __FUNCTION__);
 		return -1;
 	}
 
@@ -119,7 +121,7 @@ static int raw_socket(int ifindex)
 	sock.sll_protocol = htons(ETH_P_IP);
 	sock.sll_ifindex = ifindex;
 	if (bind(fd, (struct sockaddr *) &sock, sizeof(sock)) < 0) {
-		LOG("bind call failed: \n");
+		llog("%s: bind call failed!", __FUNCTION__);
 		close(fd);
 		return -1;
 	}
@@ -129,12 +131,12 @@ static int raw_socket(int ifindex)
 
 static u_int16_t checksum(void *addr, int count)
 {
-	// Compute Internet Checksum for "count" bytes beginning at location "addr".
+	/* Compute Internet Checksum for "count" bytes beginning at location "addr" */
 	register int32_t sum = 0;
 	u_int16_t *source = (u_int16_t *) addr;
 
 	while (count > 1)  {
-		/*  This is the inner loop */
+		/* This is the inner loop */
 		sum += *source++;
 		count -= 2;
 	}
@@ -150,6 +152,7 @@ static u_int16_t checksum(void *addr, int count)
 	/*  Fold 32-bit sum to 16 bits */
 	while (sum >> 16)
 		sum = (sum & 0xffff) + (sum >> 16);
+
 	return ~sum;
 }
 
@@ -169,18 +172,17 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 	char tmp[100];
 
 
-	if (read_interface(interface, &ifindex, mac) < 0) {
+	if (read_interface(interface, &ifindex, mac) < 0)
 		return L_ERROR;
-	}
 
 	fd = raw_socket(ifindex);
 	if (fd < 0) {
-		LOG("FATAL: couldn't listen on socket\n");
+		llog("%s: FATAL: couldn't listen on socket", __FUNCTION__);
 		return L_ERROR;
 	}
 
 	while (1) {
-		if (!wait_action_idle(5)) {	// Don't execute during upgrading
+		if (!wait_action_idle(5)) {	/* Don't execute during upgrading */
 			ret = L_UPGRADE;
 			break;
 		}
@@ -193,11 +195,11 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 		tv.tv_usec = 0;
 		FD_ZERO(&rfds);
 		FD_SET(fd, &rfds);
-		LOG("Waitting for select... \n");
+		llog("%s: waiting for select...", __FUNCTION__);
 		retval = select(fd + 1, &rfds, NULL, NULL, &tv);
 
 		if (retval == 0) {
-			printf("no packet recieved! \n\n");
+			llog("%s: no packet recieved!", __FUNCTION__);
 			continue;
 		}
 
@@ -205,58 +207,46 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 		bytes = read(fd, &packet, sizeof(struct EthPacket));
 		if (bytes < 0) {
 			close(fd);
-			LOG("couldn't read on raw listening socket -- ignoring\n");
-			usleep(500000); // possible down interface, looping condition
+			llog("%s: couldn't read on raw listening socket -- ignoring", __FUNCTION__);
+			usleep(500000);		/* possible down interface, looping condition */
 			return L_FAIL;
 		}
 
 		if (bytes < (int) (sizeof(struct iphdr))) {
-			LOG("message too short, ignoring\n");
+			llog("%s: message too short, ignoring", __FUNCTION__);
 			ret = L_FAIL;
 			goto EXIT;
 		}
 
 		if (memcmp(mac, packet.dst_mac, 6) != 0) {
-			LOG("dest %02x:%02x:%02x:%02x:%02x:%02x mac not the router\n",
-				packet.dst_mac[0], packet.dst_mac[1], packet.dst_mac[2],
-				packet.dst_mac[3], packet.dst_mac[4], packet.dst_mac[5]);
+			llog("%s: dest %02x:%02x:%02x:%02x:%02x:%02x mac not the router", __FUNCTION__, packet.dst_mac[0], packet.dst_mac[1], packet.dst_mac[2], packet.dst_mac[3], packet.dst_mac[4], packet.dst_mac[5]);
 			ret = L_FAIL;
 			goto EXIT;
 		}
 
 		if (inet_addr(nvram_safe_get("lan_ipaddr")) == *(u_int32_t *)packet.daddr) {
-			LOG("dest ip equal to lan ipaddr\n");
+			llog("%s: dest ip equal to lan ipaddr", __FUNCTION__);
 			ret = L_FAIL;
 			goto EXIT;
 		}
 
-		LOG("inet_addr=%x, packet.daddr=%x",inet_addr(nvram_safe_get("lan_ipaddr")),*(u_int32_t *)packet.daddr);
-
-		//for (i=0; i<34;i++) {
-		//	if (i%16==0) printf("\n");
-		//	printf("%02x ",*(((u_int8_t *)packet)+i));
-		//}
-		//printf ("\n");
-
-		LOG("%02X%02X%02X%02X%02X%02X,%02X%02X%02X%02X%02X%02X,%02X%02X\n",
-			packet.dst_mac[0], packet.dst_mac[1], packet.dst_mac[2],
-			packet.dst_mac[3], packet.dst_mac[4], packet.dst_mac[5],
-			packet.src_mac[0], packet.src_mac[1], packet.src_mac[2],
-			packet.src_mac[3], packet.src_mac[4], packet.src_mac[5],
-			packet.type[0],packet.type[1]);
-
-		LOG("ip.version = %x", packet.version);
-		LOG("ip.tos = %x", packet.tos);
-		LOG("ip.tot_len = %x", packet.tot_len);
-		LOG("ip.id = %x", packet.id);
-		LOG("ip.ttl= %x", packet.ttl);
-		LOG("ip.protocol= %x", packet.protocol);
-		LOG("ip.check=%04x", packet.check);
-		LOG("ip.saddr=%08x", *(u_int32_t *)&(packet.saddr));
-		LOG("ip.daddr=%08x", *(u_int32_t *)&(packet.daddr));
+		llog("%s: inet_addr=%x, packet.daddr=%x", __FUNCTION__, inet_addr(nvram_safe_get("lan_ipaddr")), *(u_int32_t *)packet.daddr);
+		llog("%s: %02X%02X%02X%02X%02X%02X,%02X%02X%02X%02X%02X%02X,%02X%02X", __FUNCTION__,
+		     packet.dst_mac[0], packet.dst_mac[1], packet.dst_mac[2], packet.dst_mac[3], packet.dst_mac[4], packet.dst_mac[5],
+		     packet.src_mac[0], packet.src_mac[1], packet.src_mac[2], packet.src_mac[3], packet.src_mac[4], packet.src_mac[5],
+		     packet.type[0],packet.type[1]);
+		llog("%s: ip.version = %x", __FUNCTION__, packet.version);
+		llog("%s: ip.tos = %x", __FUNCTION__, packet.tos);
+		llog("%s: ip.tot_len = %x", __FUNCTION__, packet.tot_len);
+		llog("%s: ip.id = %x", __FUNCTION__, packet.id);
+		llog("%s: ip.ttl= %x", __FUNCTION__, packet.ttl);
+		llog("%s: ip.protocol= %x", __FUNCTION__, packet.protocol);
+		llog("%s: ip.check=%04x", __FUNCTION__, packet.check);
+		llog("%s: ip.saddr=%08x", __FUNCTION__, *(u_int32_t *)&(packet.saddr));
+		llog("%s: ip.daddr=%08x", __FUNCTION__, *(u_int32_t *)&(packet.daddr));
 
 		if (*(u_int16_t *)packet.type == 0x0800) {
-			LOG("not ip protocol");
+			llog("%s: not ip protocol", __FUNCTION__);
 			ret = L_FAIL;
 			goto EXIT;
 		}
@@ -269,140 +259,148 @@ static int listen_interface(char *interface, int wan_proto, char *prefix)
 		packet.check = 0;
 
 		if (check != checksum(&(packet.version), sizeof(struct iphdr))) {
-			LOG("bad IP header checksum, ignoring\n");
-			LOG("check received = %X, should be %X",check, checksum(&(packet.version), sizeof(struct iphdr)));
+			llog("%s: bad IP header checksum, ignoring", __FUNCTION__);
+			llog("%s: check received = %X, should be %X", __FUNCTION__, check, checksum(&(packet.version), sizeof(struct iphdr)));
 			ret = L_FAIL;
 			goto EXIT;
 		}
 
-		LOG("oooooh!!! got some!\n");
-
 		/* setup wan gateway ip / mask to check (wan ip or pptp/l2tp server ip)
-		   NB! pptp_server_ip / l2tp_server_ip can be defined as hostname also
-		   so ping to it will fail listen check in case it's defined that way */
+		 * NB! pptp_server_ip / l2tp_server_ip can be defined as hostname also
+		 * so ping to it will fail listen check in case it's defined that way
+		 */
 		switch (wan_proto) {
-		case WP_PPTP:
-			inet_aton(nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &ipaddr);
-			break;
-		case WP_L2TP:
+			case WP_PPTP:
+				inet_aton(nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &ipaddr);
+				break;
+			case WP_L2TP:
 #ifdef TCONFIG_L2TP
-			inet_aton(nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &ipaddr);
+				inet_aton(nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &ipaddr);
 #endif
-			break;
-		default:
-			inet_aton(nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), &ipaddr);
-			break;
+				break;
+			default:
+				inet_aton(nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), &ipaddr);
+				break;
 		}
 		inet_aton(nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), &netmask);
 
-		LOG(strcat_r(prefix, "_gateway=%08x", tmp), ipaddr.s_addr);
-		LOG(strcat_r(prefix, "_netmask=%08x", tmp), netmask.s_addr);
-
-		// saddr: inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN)
-		// daddr: inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN)
-		// caddr: inet_ntop(AF_INET, &ipaddr.s_addr, tmp, INET_ADDRSTRLEN)
-		// nmask: inet_ntop(AF_INET, &netmask.s_addr, tmp, INET_ADDRSTRLEN)
+		llog(strcat_r(prefix, "_gateway=%08x", tmp), ipaddr.s_addr);
+		llog(strcat_r(prefix, "_netmask=%08x", tmp), netmask.s_addr);
 
 		if ((ipaddr.s_addr & netmask.s_addr) != (*(u_int32_t *)&(packet.daddr) & netmask.s_addr)) {
 			ret = L_FAIL;
 			goto EXIT;
-		} else { /* dest IP is PPTP/L2TP server IP or WAN IP */
+		}
+		else {	/* dest IP is PPTP/L2TP server IP or WAN IP */
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			syslog(LOG_DEBUG, "*** got packet: saddr=%s", inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN));
 			syslog(LOG_DEBUG, "*** got packet: daddr=%s", inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN));
 			syslog(LOG_DEBUG, "*** match saddr: %s", inet_ntop(AF_INET, &ipaddr.s_addr, tmp, INET_ADDRSTRLEN));
- 			syslog(LOG_DEBUG, "*** match nmask: %s", inet_ntop(AF_INET, &netmask.s_addr, tmp, INET_ADDRSTRLEN));
- 			syslog(LOG_DEBUG, "*** match SUCCESS");
+			syslog(LOG_DEBUG, "*** match nmask: %s", inet_ntop(AF_INET, &netmask.s_addr, tmp, INET_ADDRSTRLEN));
+			syslog(LOG_DEBUG, "*** match SUCCESS");
+#endif
 			ret = L_SUCCESS;
 			goto EXIT;
 		}
 		/* all other packets to outside world, can potentially trigger WAN on any Internet activity in LAN, with real On Demand mode */
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		syslog(LOG_DEBUG, "*** listen: got saddr=%s", inet_ntop(AF_INET, &packet.saddr, tmp, INET_ADDRSTRLEN));
 		syslog(LOG_DEBUG, "*** listen: got daddr=%s", inet_ntop(AF_INET, &packet.daddr, tmp, INET_ADDRSTRLEN));
-		//ret = L_SUCCESS;
-		//goto EXIT;
+#endif
 	}
 
 EXIT:
-	if (fd) close(fd);
+	if (fd)
+		close(fd);
+
 	return ret;
 }
 
 int listen_main(int argc, char *argv[])
 {
 	char *interface;
-	char pid_file[256];
-	char prefix[] = "wanXXX";
+	char pid_file[64];
+	char prefix[] = "wanXX";
 	FILE *fp;
 	pid_t  pid;
 	pid_t rpid;
 
-	if (argc < 2) {
+	if (argc < 2)
 		usage_exit(argv[0], "<interface> <wanN>");
-	}
 
 	interface = argv[1];
 	strcpy(prefix, argv[2]);
 
-	printf("Starting listen on %s ...\n", interface);
+	printf("Starting listen on %s ...", interface);
 
 	pid = fork();
 
-	if (pid != 0) // foreground process
+	if (pid != 0)	/* foreground process */
 		return 0;
 
-	if (pid == 0) { // forked process
-		memset(pid_file, 0, 256);
+	if (pid == 0) {	/* forked process */
+		memset(pid_file, 0, 64);
 		sprintf(pid_file, "/var/run/listen-%s.pid", prefix);
+
 		/* read / write pid */
-		if (access(pid_file, F_OK) != -1) { // pid file exists
+		if (access(pid_file, F_OK) != -1) {	/* pid file exists */
 			fp = fopen(pid_file, "r");
 			fscanf(fp, "%d", &rpid);
 			fclose(fp);
-			if (kill(rpid, 0) == 0) { // process running
-				//syslog(LOG_DEBUG, "*** Another listen running for %s ... Quit", prefix);
+			if (kill(rpid, 0) == 0)		/* process running */
 				return EXIT_FAILURE;
-			} else { // no process
+			else {	/* no process */
 				if ((fp = fopen(pid_file, "w")) != NULL) {
-					fprintf(fp, "%d", getpid()); // write new one
+					fprintf(fp, "%d", getpid());	/* write new one */
 					fclose(fp);
 				}
 			}
-		} else if ((fp = fopen(pid_file, "w")) != NULL) {  // file doesn't exist
+		}
+		else if ((fp = fopen(pid_file, "w")) != NULL) {	/* file doesn't exist */
 			fprintf(fp, "%d", getpid());
 			fclose(fp);
-		} else {
-			return EXIT_FAILURE;
 		}
+		else
+			return EXIT_FAILURE;
 	}
 
 	while (1) {
 		switch (listen_interface(interface, get_wanx_proto(prefix), prefix)) {
-		case L_SUCCESS:
-			LOG("\nLAN to %s packet received\n\n", prefix);
-			syslog(LOG_DEBUG, "*** lan to %s packet received, dialing %s ...", prefix, prefix);
-			force_to_dial(prefix);
-			if (check_wanup(prefix)) return 0;
-			// Connect fail, we want to re-connect session
-			sleep(3);
-			break;
-		case L_UPGRADE:
-			LOG("Upgrade: nothing to do ...\n");
-			syslog(LOG_DEBUG, "*** nothing to do, quit");
-			unlink(pid_file);
-			return 0;
-		case L_ESTABLISHED:
-			LOG("The link had been established\n");
-			syslog(LOG_DEBUG, "*** the link had been established, quit");
-			unlink(pid_file);
-			return 0;
-		case L_ERROR:
-			LOG("ERROR\n");
-			syslog(LOG_DEBUG, "*** got ERROR, quit");
-			unlink(pid_file);
-			return 0;
-//		case L_FAIL:
-//			LOG("FAIL\n");
-//			break;
+			case L_SUCCESS:
+				llog("%s: LAN to %s packet received", __FUNCTION__, prefix);
+#ifndef TCONFIG_OPTIMIZE_SIZE
+				syslog(LOG_DEBUG, "*** lan to %s packet received, dialing %s ...", prefix, prefix);
+#endif
+				force_to_dial(prefix);
+				if (check_wanup(prefix))
+					return 0;
+				/* Connect fail, we want to re-connect session */
+				sleep(3);
+				break;
+			case L_UPGRADE:
+				llog("%s: upgrade: nothing to do ...", __FUNCTION__);
+#ifndef TCONFIG_OPTIMIZE_SIZE
+				syslog(LOG_DEBUG, "*** nothing to do, quit");
+#endif
+				unlink(pid_file);
+				return 0;
+			case L_ESTABLISHED:
+				llog("%s: the link had been established", __FUNCTION__);
+#ifndef TCONFIG_OPTIMIZE_SIZE
+				syslog(LOG_DEBUG, "*** the link had been established, quit");
+#endif
+				unlink(pid_file);
+				return 0;
+			case L_ERROR:
+				llog("%s: ERROR", __FUNCTION__);
+#ifndef TCONFIG_OPTIMIZE_SIZE
+				syslog(LOG_DEBUG, "*** got ERROR, quit");
+#endif
+				unlink(pid_file);
+				return 0;
+//			case L_FAIL:
+//				llog("%s: FAIL", __FUNCTION__);
+//				break;
 		}
 	}
 }
