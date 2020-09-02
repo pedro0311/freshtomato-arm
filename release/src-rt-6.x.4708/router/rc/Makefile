@@ -23,27 +23,28 @@ ifeq ($(STATIC),1)
 LDFLAGS += -static
 endif
 
+ifeq ($(TCONFIG_BCMARM),y)
 LDFLAGS += $(EXTRA_LDFLAGS)
+endif
 
 ifeq ($(TCONFIG_BCMSMP),y)
 CFLAGS += -DSMP
 endif
 
-OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o
-OBJS += firewall.o ppp.o telssh.o wnas.o
-OBJS += listen.o redial.o led.o qos.o forward.o misc.o mtd.o
-OBJS += buttons.o restrict.o gpio.o sched.o
-OBJS += new_qoslimit.o arpbind.o
-OBJS += tomatoanon.o
-OBJS += blink.o
-OBJS += blink_br.o
+OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
+        firewall.o ppp.o telssh.o wnas.o \
+        listen.o redial.o led.o qos.o forward.o misc.o mtd.o \
+        buttons.o restrict.o gpio.o sched.o \
+        new_qoslimit.o arpbind.o \
+        tomatoanon.o
 
 ifeq ($(TCONFIG_BCMARM),y)
+OBJS += blink.o
+OBJS += blink_br.o
 OBJS += bcmutils.o
-endif
-
 ifeq ($(TCONFIG_FANCTRL),y)
 OBJS += phy_tempsense.o
+endif
 endif
 
 # dualwan / multiwan
@@ -79,11 +80,6 @@ endif
 ifeq ($(TCONFIG_NGINX),y)
 OBJS += nginx.o
 OBJS += mysql.o
-endif
-
-ifeq ($(TOMATO_SL),1)
-#OBJS += usb.o
-OBJS += samba.o
 endif
 
 ifeq ($(TCONFIG_BT),y)
@@ -138,10 +134,12 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc hotplug
 	@cd $(INSTALLDIR)/sbin && ln -sf rc service
 	@cd $(INSTALLDIR)/sbin && ln -sf rc buttons
+ifeq ($(TCONFIG_BCMARM),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink_br
 ifeq ($(TCONFIG_FANCTRL),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc phy_tempsense
+endif
 endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rcheck
 	@cd $(INSTALLDIR)/sbin && ln -sf rc radio
@@ -187,15 +185,6 @@ ifeq ($(TCONFIG_CIFS),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mount-cifs
 endif
 
-ifeq ($(TOMATO_SL),1)
-	@cd $(INSTALLDIR)/sbin && ln -sf rc usbevent
-	@cd $(INSTALLDIR)/sbin && ln -sf rc usbrescan
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskadd
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskremove
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskerror
-	@cd $(INSTALLDIR)/sbin && ln -sf rc umountx
-endif
-
 clean:
 	rm -f rc *.o .*.depend
 
@@ -210,8 +199,6 @@ size: rc
 	@$(CC) $(CFLAGS) -M $< > $@
 
 -include $(OBJS:%.o=.%.depend)
-
-
 
 pswatch: pswatch.c
 	$(CC) -o $@ $^
