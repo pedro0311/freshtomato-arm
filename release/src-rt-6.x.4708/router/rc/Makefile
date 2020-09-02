@@ -38,13 +38,17 @@ OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
         new_qoslimit.o arpbind.o \
         tomatoanon.o
 
-ifeq ($(TCONFIG_BCMARM),y)
+ifeq ($(or $(TCONFIG_BCMARM),$(CONFIG_BLINK)),y)
 OBJS += blink.o
 OBJS += blink_br.o
+endif
+
+ifeq ($(TCONFIG_BCMARM),y)
 OBJS += bcmutils.o
+endif
+
 ifeq ($(TCONFIG_FANCTRL),y)
 OBJS += phy_tempsense.o
-endif
 endif
 
 # dualwan / multiwan
@@ -53,21 +57,27 @@ OBJS += mwan.o pbr.o
 ifeq ($(TCONFIG_USB),y)
 OBJS += usb.o
 endif
+
 ifeq ($(TCONFIG_DDNS),y)
 OBJS += ddns.o
 endif
+
 ifeq ($(TCONFIG_CIFS),y)
 OBJS += cifs.o
 endif
+
 ifeq ($(TCONFIG_JFFS2),y)
 OBJS += jffs2.o
 endif
+
 ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif
+
 ifeq ($(TCONFIG_TINC),y)
 OBJS += tinc.o
 endif
+
 ifeq ($(TCONFIG_PPTPD),y)
 OBJS += pptpd.o
 OBJS += pptp_client.o
@@ -134,12 +144,12 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc hotplug
 	@cd $(INSTALLDIR)/sbin && ln -sf rc service
 	@cd $(INSTALLDIR)/sbin && ln -sf rc buttons
-ifeq ($(TCONFIG_BCMARM),y)
+ifeq ($(or $(TCONFIG_BCMARM),$(CONFIG_BLINK)),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink_br
+endif
 ifeq ($(TCONFIG_FANCTRL),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc phy_tempsense
-endif
 endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rcheck
 	@cd $(INSTALLDIR)/sbin && ln -sf rc radio
