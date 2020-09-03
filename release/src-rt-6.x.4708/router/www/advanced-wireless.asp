@@ -266,7 +266,7 @@ function init() {
 				{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
 					value: nvram['wl'+u+'_wmf_bss_enable'] },
 				{ title: 'Turbo QAM (Requires Wireless Network Mode set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']],
-					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') },
+					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') || (nvram['wl'+u+'_nband'] == 1) },
 				{ title: 'Explicit beamforming', name: 'wl'+u+'_txbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 					value: nvram['wl'+u+'_txbf'], hidden: (nvram['wl'+u+'_corerev'] < 40) },
 				{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
