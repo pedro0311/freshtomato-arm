@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_nband,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
 
 //	<% wlcountries(); %>
 
@@ -216,7 +216,7 @@ function init() {
 					suffix: ' <small>(range: 0 - 999)<\/small>', value: nvram['wl'+u+'_country_rev'] },
 				{ title: 'Bluetooth Coexistence', name: 'wl'+u+'_btc_mode', type: 'select',
 					options: [['0', 'Disable *'],['1', 'Enable'],['2', 'Preemption']],
-					value: nvram['wl'+u+'_btc_mode'] },
+					value: nvram['wl'+u+'_btc_mode'], hidden: (nvram['wl'+u+'_nband'] == 1) },
 				{ title: 'Distance / ACK Timing', name: 'f_wl'+u+'_distance', type: 'text', maxlen: 5, size: 7,
 					suffix: ' <small>meters<\/small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)<\/small>',
 						value: (nvram['wl'+u+'_distance'] == '') ? '0' : nvram['wl'+u+'_distance'] },
@@ -266,7 +266,7 @@ function init() {
 				{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
 					value: nvram['wl'+u+'_wmf_bss_enable'] },
 				{ title: 'Turbo QAM (Requires Wireless Network Mode set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']],
-					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') },
+					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') || (nvram['wl'+u+'_nband'] == 1) },
 				{ title: 'Explicit beamforming', name: 'wl'+u+'_txbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 					value: nvram['wl'+u+'_txbf'], hidden: (nvram['wl'+u+'_corerev'] < 40) },
 				{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable'],['1','Enable *']],

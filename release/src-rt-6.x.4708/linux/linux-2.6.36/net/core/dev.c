@@ -1327,16 +1327,6 @@ void dev_disable_lro(struct net_device *dev)
 }
 EXPORT_SYMBOL(dev_disable_lro);
 
-static int call_netdevice_notifier(struct notifier_block *nb, unsigned long val,
-				   struct net_device *dev)
-{
-	struct netdev_notifier_info info = {
-		.dev = dev,
-	};
-
-	return nb->notifier_call(nb, val, &info);
-}
-
 static int dev_boot_phase = 1;
 
 /*
@@ -1394,7 +1384,7 @@ rollback:
 	for_each_net(net) {
 		for_each_netdev(net, dev) {
 			if (dev == last)
-				break;
+				goto outroll;
 
 			if (dev->flags & IFF_UP) {
 				nb->notifier_call(nb, NETDEV_GOING_DOWN, dev);
@@ -1405,6 +1395,7 @@ rollback:
 		}
 	}
 
+outroll:
 	raw_notifier_chain_unregister(&netdev_chain, nb);
 	goto unlock;
 }
@@ -1418,14 +1409,34 @@ EXPORT_SYMBOL(register_netdevice_notifier);
  *	register_netdevice_notifier(). The notifier is unlinked into the
  *	kernel structures and may then be reused. A negative errno code
  *	is returned on a failure.
+ *
+ *	After unregistering unregister and down device events are synthesized
+ *	for all devices on the device list to the removed notifier to remove
+ *	the need for special case cleanup code.
  */
 
 int unregister_netdevice_notifier(struct notifier_block *nb)
 {
+	struct net_device *dev;
+	struct net *net;
 	int err;
 
 	rtnl_lock();
 	err = raw_notifier_chain_unregister(&netdev_chain, nb);
+	if (err)
+		goto unlock;
+
+	for_each_net(net) {
+		for_each_netdev(net, dev) {
+			if (dev->flags & IFF_UP) {
+				nb->notifier_call(nb, NETDEV_GOING_DOWN, dev);
+				nb->notifier_call(nb, NETDEV_DOWN, dev);
+			}
+			nb->notifier_call(nb, NETDEV_UNREGISTER, dev);
+			nb->notifier_call(nb, NETDEV_UNREGISTER_BATCH, dev);
+		}
+	}
+unlock:
 	rtnl_unlock();
 	return err;
 }
@@ -3404,7 +3415,7 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
 }
 
 #ifdef CONFIG_INET_GRO
-struct napi_struct gro_napi = {0};
+struct napi_struct gro_napi = {{0}};
 atomic_t gro_timer_init = {0};
 extern spinlock_t gro_lock;
 #endif /* CONFIG_INET_GRO */
