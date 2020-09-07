@@ -378,9 +378,8 @@ int dhcpc_release_main(int argc, char **argv)
 	mwanlog(LOG_DEBUG, "dhcpc_release_main, argc=%d wan_prefix=%s", argc, prefix);
 
 	TRACE_PT("begin\n");
-#ifdef TCONFIG_MULTIWAN
-	mwan_table_del(prefix);
-#endif
+
+	mwan_table_del(prefix); /* for dual WAN and multi WAN */
 
 	if (!using_dhcpc(prefix)) return 1;
 
