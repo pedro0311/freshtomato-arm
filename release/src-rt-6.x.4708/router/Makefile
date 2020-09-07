@@ -2392,7 +2392,7 @@ lzo-install:
 
 openvpn/Makefile:
 	$(call patch_files,openvpn)
-	cd openvpn && autoreconf && \
+	cd openvpn && autoreconf -fsi && \
 	OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 	OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \

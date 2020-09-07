@@ -10,11 +10,11 @@ endif()
 if (CMAKE_VERSION VERSION_LESS 3.0)
 	project(json-c)
 	set(PROJECT_VERSION_MAJOR "0")
-	set(PROJECT_VERSION_MINOR "14")
-	set(PROJECT_VERSION_PATCH "99")
+	set(PROJECT_VERSION_MINOR "15")
+	set(PROJECT_VERSION_PATCH "0")
 	set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 else()
-	project(json-c LANGUAGES C VERSION 0.14.99)
+	project(json-c LANGUAGES C VERSION 0.15)
 endif()
 
 # If we've got 3.0 then it's good, let's provide support. Otherwise, leave it be.
@@ -96,6 +96,8 @@ option(DISABLE_THREAD_LOCAL_STORAGE   "Disable using Thread-Local Storage (HAVE_
 option(DISABLE_WERROR                 "Avoid treating compiler warnings as fatal errors."     OFF)
 option(ENABLE_RDRAND                  "Enable RDRAND Hardware RNG Hash Seed."                 OFF)
 option(ENABLE_THREADING               "Enable partial threading support."                     OFF)
+option(OVERRIDE_GET_RANDOM_SEED       "Override json_c_get_random_seed() with custom code."   OFF)
+
 
 if (UNIX OR MINGW OR CYGWIN)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
@@ -108,6 +110,14 @@ endif()
 if (MSVC)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS /D_CRT_SECURE_NO_DEPRECATE)
     list(APPEND CMAKE_REQUIRED_FLAGS /wd4996)
+endif()
+
+if (NOT DISABLE_STATIC_FPIC)
+    # Use '-fPIC'/'-fPIE' option.
+    # This will allow other libraries to statically link in libjson-c.a
+    # which in turn prevents crashes in downstream apps that may use
+    # a different JSON library with identical symbol names.
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 check_include_file("fcntl.h"        HAVE_FCNTL_H)
@@ -213,6 +223,12 @@ check_type_size(int64_t             SIZEOF_INT64_T)
 check_type_size(long                SIZEOF_LONG)
 check_type_size("long long"         SIZEOF_LONG_LONG)
 check_type_size("size_t"            SIZEOF_SIZE_T)
+if (MSVC)
+list(APPEND CMAKE_EXTRA_INCLUDE_FILES BaseTsd.h)
+check_type_size("SSIZE_T"           SIZEOF_SSIZE_T)
+else()
+check_type_size("ssize_t"           SIZEOF_SSIZE_T)
+endif()
 
 check_c_source_compiles(
 "
@@ -311,6 +327,22 @@ if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
 		# XXX need cmake>=3.13 for this:
 		#add_link_options("-Wl,-Bsymbolic-functions")
 	endif()
+
+	file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check-version-script.sym" "TEST { global: *; };")
+	list(APPEND CMAKE_REQUIRED_LIBRARIES "-Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/check-version-script.sym")
+	check_c_source_compiles(
+	"
+	int main (void)
+	{
+	  return 0;
+	}
+	"
+	VERSION_SCRIPT_WORKS
+	)
+	list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "-Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/check-version-script.sym")
+	if (VERSION_SCRIPT_WORKS)
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/json-c.sym")
+	endif()
 endif()
 
 if ($ENV{VALGRIND})
@@ -385,7 +417,7 @@ add_library(${PROJECT_NAME}
     ${JSON_C_HEADERS}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION 5.0.0
+    VERSION 5.1.0
     SOVERSION 5)
 list(APPEND CMAKE_TARGETS ${PROJECT_NAME})
 # If json-c is used as subroject it set to target correct interface -I flags and allow

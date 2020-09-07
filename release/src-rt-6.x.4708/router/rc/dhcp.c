@@ -378,9 +378,8 @@ int dhcpc_release_main(int argc, char **argv)
 	mwanlog(LOG_DEBUG, "dhcpc_release_main, argc=%d wan_prefix=%s", argc, prefix);
 
 	TRACE_PT("begin\n");
-#ifdef TCONFIG_MULTIWAN
-	mwan_table_del(prefix);
-#endif
+
+	mwan_table_del(prefix); /* for dual WAN and multi WAN */
 
 	if (!using_dhcpc(prefix)) return 1;
 
@@ -400,9 +399,8 @@ int dhcpc_release_main(int argc, char **argv)
 	memset(wanconn_file, 0, 256);
 	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
 	unlink(wanconn_file);
-#ifdef TCONFIG_MULTIWAN
-	mwan_load_balance();
-#endif
+
+	mwan_load_balance(); /* for dual WAN and multi WAN */
 
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */

@@ -142,27 +142,24 @@ void mwan_table_del(char *sPrefix)
 	char cmd[256];
 
 	wan_unit = table = get_wan_unit(sPrefix);
-	get_wan_info(sPrefix);
+	get_wan_info(sPrefix); /* get the current wan infos to work with */
 
-	// ip rule del table WAN1 pref 101 (gateway)
+	/* ip rule del table WAN1 pref 101 (gateway); table: 1 to 4; pref: 101 to 104 */
 	memset(cmd, 0, 256);
 	sprintf(cmd, "ip rule del table %d pref 10%d", table, wan_unit);
 	mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
 	system(cmd);
 	
-	// ip rule del table WAN1 pref 111 (dns)
-#ifdef TCONFIG_MULTIWAN
-	for (i = 0 ; i < 3; ++i) {
-#else
-	for (i = 0 ; i < 1; ++i) {
-#endif
+	/* ip rule del table WAN1 pref 111 (dns); table: 1 to 4; pref: 111 to 114 */
+	/* delete only active & valid DNS; two options right now: only AUTO DNS server (1x DNS) or Manual DNS server (2x DNS) (see GUI network-basic.asp) */
+	for (i = 0 ; i < wan_info.dns->count; ++i) {
 		memset(cmd, 0, 256);
 		sprintf(cmd, "ip rule del table %d pref 11%d", table, wan_unit);
 		mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);
 		system(cmd);
 	}
 
-	// ip rule del fwmark 0x100/0xf00 table 1 pref 121 (mark)
+	/* ip rule del fwmark 0x100/0xf00 table 1 pref 121 (mark); table: 1 to 4; pref: 121 to 124 */
 	memset(cmd, 0, 256);
 	sprintf(cmd, "ip rule del table %d pref 12%d", table, wan_unit);
 	mwanlog(LOG_DEBUG, "%s, cmd=%s", sPrefix, cmd);

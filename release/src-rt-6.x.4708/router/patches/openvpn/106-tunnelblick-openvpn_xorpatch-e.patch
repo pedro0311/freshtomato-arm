@@ -1,6 +1,6 @@
 --- openvpn/src/openvpn/socket.h
 +++ openvpn/src/openvpn/socket.h
-@@ -248,6 +248,10 @@
+@@ -249,6 +249,10 @@
  #endif
  };
  
@@ -11,7 +11,7 @@
  /*
   * Some Posix/Win32 differences.
   */
-@@ -1065,30 +1069,61 @@
+@@ -1049,30 +1053,61 @@
  static inline int
  link_socket_read(struct link_socket *sock,
                   struct buffer *buf,
@@ -77,7 +77,7 @@
  }
  
  /*
-@@ -1178,8 +1213,39 @@
+@@ -1163,8 +1198,39 @@
  static inline int
  link_socket_write(struct link_socket *sock,
                    struct buffer *buf,

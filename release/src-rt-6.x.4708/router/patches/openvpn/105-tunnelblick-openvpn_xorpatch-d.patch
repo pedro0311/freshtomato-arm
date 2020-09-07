@@ -1,6 +1,6 @@
 --- openvpn/src/openvpn/socket.c
 +++ openvpn/src/openvpn/socket.c
-@@ -54,6 +54,53 @@
+@@ -55,6 +55,53 @@
      IPv6_TCP_HEADER_SIZE,
  };
  
