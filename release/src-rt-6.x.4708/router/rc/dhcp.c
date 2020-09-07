@@ -399,9 +399,8 @@ int dhcpc_release_main(int argc, char **argv)
 	memset(wanconn_file, 0, 256);
 	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
 	unlink(wanconn_file);
-#ifdef TCONFIG_MULTIWAN
-	mwan_load_balance();
-#endif
+
+	mwan_load_balance(); /* for dual WAN and multi WAN */
 
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */
