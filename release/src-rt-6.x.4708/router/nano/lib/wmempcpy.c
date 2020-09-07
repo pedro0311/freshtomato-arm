@@ -1,6 +1,5 @@
-/* Provide access to the last buffer returned by localtime() or gmtime().
-
-   Copyright (C) 2001-2003, 2005-2007, 2009-2020 Free Software Foundation, Inc.
+/* Copy wide character array, return pointer after last written wide character.
+   Copyright (C) 2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,13 +14,15 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
-/* written by Jim Meyering */
+#include <config.h>
 
-#include <time.h>
+/* Specification.  */
+#include <wchar.h>
 
-#if GETTIMEOFDAY_CLOBBERS_LOCALTIME || TZSET_CLOBBERS_LOCALTIME
-
-/* The address of the last buffer returned by localtime() or gmtime().  */
-extern struct tm *localtime_buffer_addr;
-
-#endif
+/* Copy N wide characters of SRC to DEST.
+   Return pointer to wide characters after the last written wide character.  */
+wchar_t *
+wmempcpy (wchar_t *dest, const wchar_t *src, size_t n)
+{
+  return wmemcpy (dest, src, n) + n;
+}
