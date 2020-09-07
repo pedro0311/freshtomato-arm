@@ -2967,8 +2967,8 @@ static void *unit_find(struct idr *p, int n)
 void
 ppp_rxstats_upd(void *pppif, struct sk_buff *skb)
 {
-	if (pppif == NULL || skb == NULL) return;
 	struct ppp *ppp = netdev_priv((const struct net_device *)pppif);
+	if (pppif == NULL || skb == NULL) return;
 	if (ppp == NULL || ppp->dev == NULL) return;
 	++ppp->dev->stats.rx_packets;
 	ppp->dev->stats.rx_bytes += skb->len;
@@ -2978,8 +2978,8 @@ ppp_rxstats_upd(void *pppif, struct sk_buff *skb)
 void
 ppp_txstats_upd(void *pppif, struct sk_buff *skb)
 {
-	if (pppif == NULL || skb == NULL) return;
 	struct ppp *ppp = netdev_priv((const struct net_device *)pppif);
+	if (pppif == NULL || skb == NULL) return;
 	if (ppp == NULL || ppp->dev == NULL) return;
 	++ppp->dev->stats.tx_packets;
 	ppp->dev->stats.tx_bytes += skb->len;
@@ -2993,8 +2993,6 @@ ppp_get_conn_pkt_info(void *pppif, struct ctf_ppp *ctfppp){
 	struct sock *sk = NULL;
 	struct ppp *ppp = NULL;
 	struct channel *pch = NULL;
-	struct ppp_net *pn;
-	const char *vars;
 
 	ppp = (struct ppp *)netdev_priv((const struct net_device *)pppif);
 	if(ppp) pch = ppp->ctfpch;

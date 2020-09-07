@@ -31,11 +31,12 @@ void create_passwd(void)
 		++p;
 	}
 
-	if (((p = nvram_safe_get("http_passwd")) == NULL) || (*p == 0))
+	if ((p = nvram_safe_get("http_passwd")) && (*p == 0))
 		p = "admin";
 
 #ifdef TCONFIG_SAMBASRV
-	if (((smbd_user = nvram_safe_get("smbd_user")) == NULL) || (*smbd_user == 0) || !strcmp(smbd_user, "root"))
+	smbd_user = nvram_safe_get("smbd_user");
+	if ((*smbd_user == 0) || (!strcmp(smbd_user, "root")))
 		smbd_user = "nas";
 #endif
 
@@ -141,7 +142,7 @@ void start_sshd(void)
 		argv[argc++] = "-a";
 #endif
 
-	if ((p = nvram_safe_get("sshd_rwb")) && (*p)) {
+	if ((p = nvram_safe_get("sshd_rwb")) && (*p)) {	/* only if sshd_rwb != "" */
 		argv[argc++] = "-W";
 		argv[argc++] = p;
 	}

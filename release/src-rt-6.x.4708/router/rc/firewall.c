@@ -455,7 +455,6 @@ static void ipt_account(void) {
 		sprintf(lanN_ifname, "lan%s_ifname", bridge);
 
 		if (strcmp(nvram_safe_get(lanN_ifname), "") != 0) {
-
 			sprintf(lanN_ipaddr, "lan%s_ipaddr", bridge);
 			sprintf(lanN_netmask, "lan%s_netmask", bridge);
 			sprintf(lanN, "lan%s", bridge);
@@ -1051,20 +1050,20 @@ static void nat_table(void)
 		pptp_client_firewall("POSTROUTING", p, ipt_write);
 #endif
 		if ((nvram_match("wan_proto", "pppoe") || nvram_match("wan_proto", "dhcp") || nvram_match("wan_proto", "static"))
-		    && (b = nvram_safe_get("wan_modem_ipaddr")) && *b && !nvram_match("wan_modem_ipaddr","0.0.0.0") && (!foreach_wif(1, NULL, is_sta)))
+		    && (b = nvram_safe_get("wan_modem_ipaddr")) && (*b) && (!nvram_match("wan_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
 			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan_ifname"), b);
 
 		if ((nvram_match("wan2_proto", "pppoe") || nvram_match("wan2_proto", "dhcp") || nvram_match("wan2_proto", "static"))
-		    && (b = nvram_safe_get("wan2_modem_ipaddr")) && *b && !nvram_match("wan2_modem_ipaddr","0.0.0.0") && (!foreach_wif(1, NULL, is_sta)))
+		    && (b = nvram_safe_get("wan2_modem_ipaddr")) && (*b) && (!nvram_match("wan2_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
 			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan2_ifname"), b);
 
 #ifdef TCONFIG_MULTIWAN
 		if ((nvram_match("wan3_proto", "pppoe") || nvram_match("wan3_proto", "dhcp") || nvram_match("wan3_proto", "static"))
-		    && (b = nvram_safe_get("wan3_modem_ipaddr")) && *b && !nvram_match("wan3_modem_ipaddr","0.0.0.0") && (!foreach_wif(1, NULL, is_sta)))
+		    && (b = nvram_safe_get("wan3_modem_ipaddr")) && (*b) && (!nvram_match("wan3_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
 			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan3_ifname"), b);
 
 		if ((nvram_match("wan4_proto", "pppoe") || nvram_match("wan4_proto", "dhcp") || nvram_match("wan4_proto", "static"))
-		    && (b = nvram_safe_get("wan4_modem_ipaddr")) && *b && !nvram_match("wan4_modem_ipaddr","0.0.0.0") && (!foreach_wif(1, NULL, is_sta)))
+		    && (b = nvram_safe_get("wan4_modem_ipaddr")) && (*b) && (!nvram_match("wan4_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
 			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan4_ifname"), b);
 #endif
 
@@ -1233,7 +1232,7 @@ static void filter_input(void)
 #ifdef TCONFIG_NGINX
 	/* Web Server */
 	if (nvram_match("nginx_enable", "1") && nvram_match("nginx_remote", "1"))
-		ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get( "nginx_port" ));
+		ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get("nginx_port"));
 #endif
 
 #ifdef TCONFIG_FTP

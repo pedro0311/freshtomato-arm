@@ -249,7 +249,7 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				xhci_writel(xhci, 0x0, addr);
 
 				if(usb2mode == 1){ // 0bc2:a0a1
-					xhci_writel(xhci, 0x0 & ~PORT_PE | PORT_POWER | PORT_LINK_STROBE & ~PORT_PLS_MASK, addr);
+					xhci_writel(xhci, 0x0 & (~PORT_PE | PORT_POWER | PORT_LINK_STROBE) & ~PORT_PLS_MASK, addr);
 				}
 			}
 			else{
