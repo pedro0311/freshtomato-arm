@@ -124,12 +124,12 @@ LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libnetfilter_conntrack)
 endif # ($(TEST),1)
 
 
-TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
-ifeq ($(TEST),1)
-LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l uuid)
-else
-$(info please install uuid-dev package / libuuid)
-endif # ($(TEST),1)
+#TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
+#ifeq ($(TEST),1)
+#LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l uuid)
+#else
+#$(info please install uuid-dev package / libuuid)
+#endif # ($(TEST),1)
 
 GLIBC_VERSION := $(shell ldd --version | head -n 1 | sed 's/^.* //')
 GLIBC_VERSION_MAJOR = $(shell echo $(GLIBC_VERSION) | cut -f 1 -d . )
