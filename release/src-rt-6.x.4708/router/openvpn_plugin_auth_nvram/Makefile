@@ -1,13 +1,19 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS)
-CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/openvpn/include
-LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram
-OBJS = openvpn_plugin_auth_nvram.o
+CFLAGS = -Os -Wall $(EXTRACFLAGS)
+CFLAGS += -I$(SRCBASE)/include -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/openvpn/include
+
+ifeq ($(TCONFIG_BCMARM),y)
+LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/openvpn
+else
+LDFLAGS = -L$(TOP)/nvram -lnvram -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/openvpn
+endif
 
 ifeq ($(TCONFIG_BCMARM),y)
 LIBS += -lgcc_s
 endif
+
+OBJS = openvpn_plugin_auth_nvram.o
 
 all: openvpn_plugin_auth_nvram.so
 

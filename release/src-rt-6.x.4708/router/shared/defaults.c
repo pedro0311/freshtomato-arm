@@ -1142,7 +1142,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_comp",		"adaptive"			, 0 },
 	{ "vpn_server1_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server1_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_server1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_server1_digest",		"default"			, 0 },
 	{ "vpn_server1_dhcp",		"1"				, 0 },
 	{ "vpn_server1_r1",		"192.168.1.50"			, 0 },
@@ -1182,7 +1186,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_comp",		"adaptive"			, 0 },
 	{ "vpn_server2_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server2_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_server2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_server2_digest",		"default"			, 0 },
 	{ "vpn_server2_dhcp",		"1"				, 0 },
 	{ "vpn_server2_r1",		"192.168.1.50"			, 0 },

@@ -906,10 +906,6 @@ char* hex2bin(char *dst, const char *src, int count) FAST_FUNC;
 
 /* Generate a UUID */
 void generate_uuid(uint8_t *buf) FAST_FUNC;
-/* expand UUID to human readable format */
-char *unparse_uuid(const uint8_t *uu, char *out) FAST_FUNC;
-/* parse UUID */
-int parse_uuid(const char *in, uint8_t *uuid) FAST_FUNC;
 
 /* Last element is marked by mult == 0 */
 struct suffix_mult {
@@ -1834,7 +1830,7 @@ extern const char bb_busybox_exec_path[] ALIGN1;
  * but I want to save a few bytes here */
 extern const char bb_PATH_root_path[] ALIGN1; /* "PATH=/sbin:/usr/sbin:/bin:/usr/bin" */
 #define bb_default_root_path (bb_PATH_root_path + sizeof("PATH"))
-#define bb_default_path      (bb_PATH_root_path + sizeof("PATH=/sbin:/usr/sbin:/opt/sbin"))
+#define bb_default_path      (bb_PATH_root_path + sizeof("PATH=/sbin:/usr/sbin"))
 
 extern const int const_int_0;
 //extern const int const_int_1;

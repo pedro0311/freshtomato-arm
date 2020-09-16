@@ -1,0 +1,10 @@
+--- busybox/networking/udhcp/dhcpc.c
++++ busybox/networking/udhcp/dhcpc.c
+@@ -1108,7 +1108,6 @@
+ 		//state = RENEW_REQUESTED;
+ 		//break;
+ 	case RENEW_REQUESTED: /* impatient are we? fine, square 1 */
+-		udhcp_run_script(NULL, "deconfig");
+ 	case REQUESTING:
+ 	case RELEASED:
+ 		change_listen_mode(LISTEN_RAW);

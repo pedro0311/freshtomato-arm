@@ -1,0 +1,73 @@
+--- busybox/networking/udhcp/common.h
++++ busybox/networking/udhcp/common.h
+@@ -74,6 +74,8 @@
+ 	char c[IP_UDP_DHCP_SIZE == 576 ? 1 : -1];
+ };
+ 
++extern int minpkt;
++
+ 
+ /*** Options ***/
+ 
+--- busybox/networking/udhcp/dhcpc.c
++++ busybox/networking/udhcp/dhcpc.c
+@@ -96,8 +96,9 @@
+ 	OPT_x = 1 << 18,
+ 	OPT_f = 1 << 19,
+ 	OPT_B = 1 << 20,
++	OPT_m = 1 << 21,
+ /* The rest has variable bit positions, need to be clever */
+-	OPTBIT_B = 20,
++	OPTBIT_LAST = 21,
+ 	USE_FOR_MMU(             OPTBIT_b,)
+ 	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
+ 	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
+@@ -1287,6 +1288,7 @@
+ 	opt_complementary = "O::x::T+:t+:A+" IF_UDHCP_VERBOSE(":vv") ;
+ 	IF_LONG_OPTS(applet_long_options = udhcpc_longopts;)
+ 	opt = getopt32(argv, "CV:H:h:F:i:np:qRr:s:T:t:SA:O:ox:fB"
++		"m"
+ 		USE_FOR_MMU("b")
+ 		IF_FEATURE_UDHCPC_ARPING("a::")
+ 		IF_FEATURE_UDHCP_PORT("P:")
+@@ -1357,6 +1359,9 @@
+ 		udhcp_str2optset(optstr, &client_config.options);
+ 	}
+ 
++	if (opt & OPT_m)
++		minpkt = 1;
++
+ 	if (udhcp_read_interface(client_config.interface,
+ 			&client_config.ifindex,
+ 			NULL,
+--- busybox/networking/udhcp/packet.c
++++ busybox/networking/udhcp/packet.c
+@@ -12,6 +12,8 @@
+ #include <netinet/if_ether.h>
+ #include <netpacket/packet.h>
+ 
++int minpkt = 0;
++
+ void FAST_FUNC udhcp_init_header(struct dhcp_packet *packet, char type)
+ {
+ 	memset(packet, 0, sizeof(*packet));
+@@ -149,7 +151,9 @@
+ 	 * Thus, we retain enough padding to not go below 300 BOOTP bytes.
+ 	 * Some devices have filters which drop DHCP packets shorter than that.
+ 	 */
+-	padding = DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(packet.data.options);
++
++	padding = (minpkt ? DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(packet.data.options) : 0);
++
+ 	if (padding > DHCP_SIZE - 300)
+ 		padding = DHCP_SIZE - 300;
+ 
+@@ -221,7 +225,7 @@
+ 	}
+ 
+ 	udhcp_dump_packet(dhcp_pkt);
+-	padding = DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(dhcp_pkt->options);
++	padding = (minpkt ? DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(dhcp_pkt->options) : 0);
+ 	if (padding > DHCP_SIZE - 300)
+ 		padding = DHCP_SIZE - 300;
+ 	result = safe_write(fd, dhcp_pkt, DHCP_SIZE - padding);

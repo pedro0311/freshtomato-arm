@@ -10,11 +10,7 @@ while [ -f "$PIDFILE" -a $WAITTIMER -lt 14 ]; do
 done
 touch $PIDFILE
 
-[ -f /usr/sbin/openssl11 ] && {
-	OPENSSL=/usr/sbin/openssl11
-} || {
-	OPENSSL=/usr/sbin/openssl
-}
+OPENSSL=/usr/sbin/openssl
 
 LANCN=$(nvram get https_crt_cn)
 LANIP=$(nvram get lan_ipaddr)
