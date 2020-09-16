@@ -1872,7 +1872,6 @@ static int nfsmount(struct mntent *mp, unsigned long vfsflags, char *filteropts)
 	return ret;
 }
 
-
 #endif // !ENABLE_FEATURE_MOUNT_NFS
 
 // Mount one directory.  Handles CIFS, NFS, loopback, autobind, and filesystem

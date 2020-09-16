@@ -205,7 +205,7 @@ foreach my $module ( keys %$mod ) {
     if($kseries eq '2.4') {
 	    print "$module:\t";
 	    my @sorted = sort bydep keys %{$mod->{$module}};
-	    print join(" ",@sorted);
+	    print join(" \\\n\t",@sorted);
 	    print "\n\n";
     } else {
 	    my $shortmod = $module;

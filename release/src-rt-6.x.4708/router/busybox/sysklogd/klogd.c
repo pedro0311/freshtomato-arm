@@ -146,7 +146,7 @@ static void klogd_close(void)
 
 #endif
 
-char log_buffer[6 * 1024 + 1];	/* Big enough to not lose msgs at bootup */
+#define log_buffer bb_common_bufsiz1
 enum {
 	KLOGD_LOGBUF_SIZE = COMMON_BUFSIZE,
 	OPT_LEVEL      = (1 << 0),
@@ -173,7 +173,6 @@ int klogd_main(int argc UNUSED_PARAM, char **argv)
 	char *opt_c;
 	int opt;
 	int used;
-	unsigned int cnt;
 
 	setup_common_bufsiz();
 
@@ -234,12 +233,10 @@ int klogd_main(int argc UNUSED_PARAM, char **argv)
 	write_pidfile(CONFIG_PID_FILE_PATH "/klogd.pid");
 
 	used = 0;
-	cnt = 0;
 	while (!bb_got_signal) {
 		int n;
 		int priority;
 		char *start;
-		char *eor;
 
 		/* "2 -- Read from the log." */
 		start = log_buffer + used;
@@ -251,7 +248,6 @@ int klogd_main(int argc UNUSED_PARAM, char **argv)
 			break;
 		}
 		start[n] = '\0';
-		eor = &start[n];
 
 		/* Process each newline-terminated line in the buffer */
 		start = log_buffer;
@@ -285,13 +281,8 @@ int klogd_main(int argc UNUSED_PARAM, char **argv)
 					start++;
 			}
 			/* Log (only non-empty lines) */
-			if (*start) {
+			if (*start)
 				syslog(priority, "%s", start);
-				/* give syslog time to catch up */
-				++cnt;
-				if ((cnt & 0x07) == 0 && (cnt < 300 || (eor - start) > 200))
-					usleep(50 * 1000);
-			}
 
 			if (!newline)
 				break;

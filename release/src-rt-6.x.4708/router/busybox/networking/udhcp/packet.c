@@ -12,8 +12,6 @@
 #include <netinet/if_ether.h>
 #include <netpacket/packet.h>
 
-int minpkt = 0;	// zzz
-
 void FAST_FUNC udhcp_init_header(struct dhcp_packet *packet, char type)
 {
 	memset(packet, 0, sizeof(*packet));
@@ -151,9 +149,7 @@ int FAST_FUNC udhcp_send_raw_packet(struct dhcp_packet *dhcp_pkt,
 	 * Thus, we retain enough padding to not go below 300 BOOTP bytes.
 	 * Some devices have filters which drop DHCP packets shorter than that.
 	 */
-
-	padding = minpkt ? DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(packet.data.options) : 0;
-
+	padding = DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(packet.data.options);
 	if (padding > DHCP_SIZE - 300)
 		padding = DHCP_SIZE - 300;
 
@@ -225,7 +221,7 @@ int FAST_FUNC udhcp_send_kernel_packet(struct dhcp_packet *dhcp_pkt,
 	}
 
 	udhcp_dump_packet(dhcp_pkt);
-	padding = minpkt ? DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(dhcp_pkt->options) : 0;
+	padding = DHCP_OPTIONS_BUFSIZE - 1 - udhcp_end_option(dhcp_pkt->options);
 	if (padding > DHCP_SIZE - 300)
 		padding = DHCP_SIZE - 300;
 	result = safe_write(fd, dhcp_pkt, DHCP_SIZE - padding);
