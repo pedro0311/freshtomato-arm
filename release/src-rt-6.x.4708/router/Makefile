@@ -2488,9 +2488,12 @@ portmap-clean:
 	-@$(MAKE) -C portmap clean
 
 e2fsprogs/stamp-h1:
+	$(call patch_files,e2fsprogs)
 	cd e2fsprogs && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=$(TOP)/e2fsprogs/staged --enable-libblkid --enable-symlink-build --disable-defrag --disable-nls --without-libiconv-prefix --without-libintl-prefix
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --disable-tls --disable-defrag ac_cv_lib_pthread_sem_init=no \
+			--disable-nls --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-rpath
 	@touch $@
 
 e2fsprogs: e2fsprogs/stamp-h1
@@ -2498,33 +2501,45 @@ e2fsprogs: e2fsprogs/stamp-h1
 	$(MAKE) -C e2fsprogs $(PARALLEL_BUILD)
 
 e2fsprogs-install:
-	cp e2fsprogs/misc/mke2fs.conf $(INSTALLDIR)/rom/rom/etc/mke2fs.conf
-	install -d $(INSTALLDIR)/e2fsprogs/sbin
-	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/sbin/e2fsck
-	install -D e2fsprogs/misc/mke2fs $(INSTALLDIR)/e2fsprogs/sbin/mke2fs
-	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/sbin/e2fsck
-	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/sbin/mke2fs
-	cd $(INSTALLDIR)/e2fsprogs/sbin/ && \
+	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/e2fsck
+	install -D e2fsprogs/misc/mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mke2fs
+	install -D e2fsprogs/misc/tune2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/tune2fs
+	install -D e2fsprogs/misc/badblocks $(INSTALLDIR)/e2fsprogs/usr/sbin/badblocks
+	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/sbin/*
+	install -D e2fsprogs/lib/libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1.0
+	install -D e2fsprogs/lib/libcom_err.so.2.1 $(INSTALLDIR)/e2fsprogs/usr/lib/libcom_err.so.2.1
+	install -D e2fsprogs/lib/libe2p.so.2.3 $(INSTALLDIR)/e2fsprogs/usr/lib/libe2p.so.2.3
+	install -D e2fsprogs/lib/libext2fs.so.2.4 $(INSTALLDIR)/e2fsprogs/usr/lib/libext2fs.so.2.4
+	install -D e2fsprogs/lib/libuuid.so.1.2 $(INSTALLDIR)/e2fsprogs/usr/lib/libuuid.so.1.2
+	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/lib/*.so.*
+	cd $(INSTALLDIR)/e2fsprogs/usr/sbin/ && \
+		ln -sf libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1 && \
+		ln -sf libcom_err.so.2.1 $(INSTALLDIR)/e2fsprogs/usr/lib/libcom_err.so.2 && \
+		ln -sf libe2p.so.2.3 $(INSTALLDIR)/e2fsprogs/usr/lib/libe2p.so.2 && \
+		ln -sf libext2fs.so.2.4 $(INSTALLDIR)/e2fsprogs/usr/lib/libext2fs.so.2 && \
+		ln -sf libuuid.so.1.2 $(INSTALLDIR)/e2fsprogs/usr/lib/libuuid.so.1 && \
 		ln -sf e2fsck fsck.ext2 && \
 		ln -sf e2fsck fsck.ext3 && \
 		ln -sf e2fsck fsck.ext4 && \
 		ln -sf mke2fs mkfs.ext2 && \
 		ln -sf mke2fs mkfs.ext3 && \
 		ln -sf mke2fs mkfs.ext4
+	install -D -m 0644 e2fsprogs/misc/mke2fs.conf $(INSTALLDIR)/rom/rom/etc/mke2fs.conf
+	install -D -m 0644 e2fsprogs/e2fsck/e2fsck.conf $(INSTALLDIR)/rom/rom/etc/e2fsck.conf
 
 e2fsprogs-clean:
 	-@$(MAKE) -C e2fsprogs clean
 	@rm -f e2fsprogs/stamp-h1
 	@rm -f e2fsprogs/Makefile
-	@rm -rf e2fsprogs/staged
+	$(call unpatch_files,e2fsprogs)
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
 	cd nfs-utils && ./autogen.sh && \
 	CPPFLAGS="-Os $(EXTRACFLAGS)" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-		-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+		-I$(TOP)/libevent/staged/usr/local/include \
 		-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
+	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
 		-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		knfsd_cv_bsd_signals=no \
 	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
