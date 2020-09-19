@@ -171,9 +171,6 @@ endif
 ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
 obj-y += libncurses
 endif
-ifneq ($(TCONFIG_USB)$(TCONFIG_NFS),)
-obj-y += e2fsprogs
-endif
 
 obj-$(TCONFIG_TOR) += tor
 obj-$(TCONFIG_DNSCRYPT) += libsodium
@@ -186,6 +183,9 @@ obj-y += mssl
 obj-y += mdu
 obj-$(TCONFIG_RAID) += mdadm
 
+ifneq ($(TCONFIG_USB)$(TCONFIG_NFS),)
+obj-y += e2fsprogs
+endif
 obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
 obj-$(TCONFIG_NFS) += nfs-utils
