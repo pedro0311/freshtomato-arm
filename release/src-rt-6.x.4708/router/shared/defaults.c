@@ -1177,7 +1177,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_comp",		"adaptive"			, 0 },
 	{ "vpn_client1_cipher",		"default"			, 0 },
 	{ "vpn_client1_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client1_digest",		"default"			, 0 },
 	{ "vpn_client1_local",		"10.8.0.2"			, 0 },
 	{ "vpn_client1_remote",		"10.8.0.1"			, 0 },
@@ -1210,7 +1214,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_comp",		"adaptive"			, 0 },
 	{ "vpn_client2_cipher",		"default"			, 0 },
 	{ "vpn_client2_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client2_digest",		"default"			, 0 },
 	{ "vpn_client2_local",		"10.9.0.2"			, 0 },
 	{ "vpn_client2_remote",		"10.9.0.1"			, 0 },
@@ -1243,6 +1251,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_comp",		"adaptive"			, 0 },
 	{ "vpn_client3_cipher",		"default"			, 0 },
 	{ "vpn_client3_ncp_enable",	"1"				, 0 },
+#if 0
+	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client3_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 	{ "vpn_client3_digest",		"default"			, 0 },
 	{ "vpn_client3_local",		"10.10.0.2"			, 0 },
