@@ -1086,7 +1086,7 @@ struct nvram_tuple router_defaults[] = {
 #if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_server1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_server1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_server1_digest",		"default"			, 0 },
 	{ "vpn_server1_dhcp",		"1"				, 0 },
@@ -1130,7 +1130,7 @@ struct nvram_tuple router_defaults[] = {
 #if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_server2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_server2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_server2_digest",		"default"			, 0 },
 	{ "vpn_server2_dhcp",		"1"				, 0 },
@@ -1180,7 +1180,7 @@ struct nvram_tuple router_defaults[] = {
 #if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_client1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_client1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_client1_digest",		"default"			, 0 },
 	{ "vpn_client1_local",		"10.8.0.2"			, 0 },
@@ -1217,7 +1217,7 @@ struct nvram_tuple router_defaults[] = {
 #if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_client2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_client2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_client2_digest",		"default"			, 0 },
 	{ "vpn_client2_local",		"10.9.0.2"			, 0 },
@@ -1254,9 +1254,8 @@ struct nvram_tuple router_defaults[] = {
 #if 0
 	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_client3_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_client3_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
-	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 	{ "vpn_client3_digest",		"default"			, 0 },
 	{ "vpn_client3_local",		"10.10.0.2"			, 0 },
 	{ "vpn_client3_remote",		"10.10.0.1"			, 0 },
