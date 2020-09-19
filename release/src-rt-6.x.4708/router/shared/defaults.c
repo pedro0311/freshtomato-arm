@@ -1080,7 +1080,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_port",		"1194"				, 0 },
 	{ "vpn_server1_firewall",	"auto"				, 0 },
 	{ "vpn_server1_crypt",		"tls"				, 0 },
-	{ "vpn_server1_comp",		"adaptive"			, 0 },
+	{ "vpn_server1_comp",		"-1"				, 0 },
 	{ "vpn_server1_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server1_ncp_enable",	"1"				, 0 },
 #if 0
@@ -1124,7 +1124,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_port",		"1195"				, 0 },
 	{ "vpn_server2_firewall",	"auto"				, 0 },
 	{ "vpn_server2_crypt",		"tls"				, 0 },
-	{ "vpn_server2_comp",		"adaptive"			, 0 },
+	{ "vpn_server2_comp",		"-1"				, 0 },
 	{ "vpn_server2_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server2_ncp_enable",	"1"				, 0 },
 #if 0
@@ -1174,7 +1174,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_rg",		"0"				, 0 },
 	{ "vpn_client1_firewall",	"auto"				, 0 },
 	{ "vpn_client1_crypt",		"tls"				, 0 },
-	{ "vpn_client1_comp",		"adaptive"			, 0 },
+	{ "vpn_client1_comp",		"-1"				, 0 },
 	{ "vpn_client1_cipher",		"default"			, 0 },
 	{ "vpn_client1_ncp_enable",	"1"				, 0 },
 #if 0
@@ -1211,7 +1211,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_rg",		"0"				, 0 },
 	{ "vpn_client2_firewall",	"auto"				, 0 },
 	{ "vpn_client2_crypt",		"tls"				, 0 },
-	{ "vpn_client2_comp",		"adaptive"			, 0 },
+	{ "vpn_client2_comp",		"-1"				, 0 },
 	{ "vpn_client2_cipher",		"default"			, 0 },
 	{ "vpn_client2_ncp_enable",	"1"				, 0 },
 #if 0
@@ -1248,7 +1248,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_rg",		"0"				, 0 },
 	{ "vpn_client3_firewall",	"auto"				, 0 },
 	{ "vpn_client3_crypt",		"tls"				, 0 },
-	{ "vpn_client3_comp",		"adaptive"			, 0 },
+	{ "vpn_client3_comp",		"-1"				, 0 },
 	{ "vpn_client3_cipher",		"default"			, 0 },
 	{ "vpn_client3_ncp_enable",	"1"				, 0 },
 #if 0
