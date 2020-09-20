@@ -2493,6 +2493,7 @@ e2fsprogs/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --disable-tls --disable-defrag ac_cv_lib_pthread_sem_init=no \
+			--disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-e2initrd-helper \
 			--disable-nls --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-rpath
 	@touch $@
 
