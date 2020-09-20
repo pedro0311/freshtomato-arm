@@ -146,7 +146,8 @@ extern void start_wan_done(char *ifname,char *prefix);
 extern void start_wanall_done(void);
 extern char *wan_gateway(char *prefix);
 #ifdef TCONFIG_IPV6
-extern void start_wan6_done(const char *wan_ifname);
+extern void start_wan6(const char *wan_ifname);
+extern void stop_wan6(void);
 #endif
 extern void stop_wan_if(char *prefix);
 extern void stop_wan();

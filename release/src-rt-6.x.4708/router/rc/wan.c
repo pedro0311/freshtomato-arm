@@ -936,7 +936,7 @@ void start_wan(int mode)
 }
 
 #ifdef TCONFIG_IPV6
-void start_wan6_done(const char *wan_ifname)
+void start_wan6(const char *wan_ifname)
 {
 	struct in_addr addr4;
 	struct in6_addr addr;
@@ -948,8 +948,7 @@ void start_wan6_done(const char *wan_ifname)
 		/* Check if "ipv6_accept_ra" (bit 0) for wan is enabled (via GUI, basic-ipv6.asp) */
 		if ((nvram_get_int("ipv6_accept_ra") & 0x01) != 0)
 			accept_ra(wan_ifname);
-		else
-			/* set default value */
+		else /* set default value */
 			accept_ra_reset(wan_ifname);
 	}
 
@@ -998,7 +997,14 @@ void start_wan6_done(const char *wan_ifname)
 		break;
 	}
 }
-#endif
+void stop_wan6(void)
+{
+	stop_ipv6_tunnel();
+	stop_dhcp6c();
+
+	nvram_set("ipv6_get_dns", ""); /* clear dns */
+}
+#endif /* #ifdef TCONFIG_IPV6 */
 
 /* ppp_demand: 0=keep alive, 1=connect on demand (run 'listen')
  * wan_ifname: vlan1
@@ -1069,6 +1075,13 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	/* And routes supplied via DHCP */
 	do_wan_routes((using_dhcpc(prefix) ? nvram_safe_get(strcat_r(prefix, "_ifname",tmp)) : wan_ifname), 0, 1, prefix);
 
+	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
+#ifdef TCONFIG_IPV6
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		start_wan6(get_wan6face());
+	}
+#endif
+
 	/*
 	 * FIX boot with only secondary etc wan active (assume current wan is primary if previous is not up)
 	 */
@@ -1102,10 +1115,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			start_igmp_proxy();
 			start_udpxy();
 		}
-
-#ifdef TCONFIG_IPV6
-		start_wan6_done(get_wan6face());
-#endif
 
 		start_httpd();
 	}
@@ -1188,6 +1197,14 @@ void stop_wan_if(char *prefix)
 	mwan_table_del(prefix);
 
 	stop_qos(prefix);
+
+	/* stop IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
+#ifdef TCONFIG_IPV6
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		stop_wan6();
+	}
+#endif
+
 	/* Kill any WAN client daemons or callbacks */
 	stop_redial(prefix);
 	stop_l2tp(prefix);			/* Special case for xl2tpd */
