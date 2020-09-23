@@ -5,6 +5,94 @@ FreshTomato-ARM Changelog
 
 
 
+2020.6          2020.09.25
+--------------------------
+
+Note: due to the WL (re)tuning and new WL drivers, users with WIFI problems after upgrading to 2020.6, should use clean install (clean NVRAM, no backups, see "important" in 2020.3 section)
+
+- SDK7: update part 1 Note: sync SDK7 with ASUS SRC and also stay closer to SDK6
+- SDK6: update wireless driver to fix Kr00k (single core)
+- SDK6: update wireless driver to fix Kr00k (dual core)
+- SDK6/SDK7: merge (missing) CTF fixes/changes (part 1)
+- kernel SDK7: update drivers to SDK6 versions
+- kernel: netfilter: xt_recent: add address masking option (ported from upstream)
+- kernel: netfilter: xt_recent: fix namespace destroy path
+- kernel: netfilter: xt_recent: avoid high order page allocations
+- kernel: make xt_recent built-in instead of module
+- kernel: update ipt_webmon module, so it works also for https connections
+- kernel: drivers: net: usb: qmi_wwan: fixes/updates from upstream
+- kernel: drivers: net: usbnet: Fix -Wcast-function-type
+- kernel: drivers: net: usb: updates from upstream 
+- kernel sdk7: hso: fix memory leak in hso_create_rfkill()
+- kernel sdk6: drivers: net: pppoe.c: apply patch from SDK7 branch
+- kernel: usb: remove unused bitmap #define from hcd.h
+- kernel sdk6: net: bridge: br_multicast.c - Disable bridge multicast_snooping by default because it can interfere with EMF and other multicast things
+- kernel: include: dst.c: disable WARN_ON_ONCE()
+- kernel: net: core: dev.c: updates from upstream; fix compiler warnings
+- busybox: clean sources of 1.25.1, add patches instead
+- dnsmasq: update to 2.82
+- libcurl: update to 7.72.0
+- libjson: udpdate to 0.15 (20200726)
+- nano: update to 5.2
+- nginx: update to 1.19.2
+- php: update to 7.2.33
+- sqlite: update to 3.33.0
+- openvpn: update to 2.5_rc1
+- tor: update to 0.4.4.5
+- transmission: update to 3.00
+- libcurl: update CA certificate bundle as of 2020-07-22
+- system: add option to adjust tcp/udp buffers and thresholds
+- build: update logic how to apply patches
+- build: rom: use a local copy of ca-certificates file when unable to download
+- build: disable JFFS support for target 'r6400e/z' (R6400/R6400v2/R6700v3) because of problems
+- build: e2fsprogs: tune recipe; add more tools (tune2fs, badblocks); add config file for e2fsck; move them to /usr/sbin, where they should be
+- make: build the modules needed by apcupsd standalone - the way it is done so far only (unnecessarily) increases the kernel size, and we don't need amazing performance here and I bet 95% of users don't use it
+- WL: add clm data for documentation (definition of channels, regions, ...)
+- for routers with amplifiers, increase possible range to 1000 mW (30 dBm)
+- implement option to prevent Firefox's automatic usage of DoH
+- DNS: fix the bug even when WAN DNS server is set to Auto, still using what was previously entered in the Manual DNS field
+- router: fix build of libFLAC in some cases
+- remove libuuid checking in miniupnpd build
+- fix building router/conf on GCC 10 compiler on host 
+- MULTIWAN: rc: dhcp.c: call function mwan_table_del(prefix) for dual WAN and multi WAN setups
+- MULTIWAN: rc: dhcp.c: call function mwan_load_balance() for dual WAN and multi WAN setups
+- IPv6: adjust start and stop logic
+- GUI: Status: Device List: also deauthenticate device when deleting DHCP lease
+- GUI: advanced-wireless.as - reboot the router if the user wants to change the wireless country
+- GUI: status-devices.asp - show RX / TX values (again)
+- GUI: SDK6: keep the current wireless noise floor value(s) on device list page
+- GUI: Device List: better match the pictures to the signal level
+- GUI: advanced-wireless.asp - make it possible to select country rev
+- GUI: advanced-wireless.asp: when changing country settings for the wireless driver, also change bootloader default values (long version; short version already in place)
+- GUI: advanced-wireless.asp - hide option Bluetooth Coexistence for 5 GHz wireless interfaces
+- GUI: advanced-wireless.asp - hide option Turbo QAM for 5 GHz wireless interfaces
+- GUI: include AdvancedTomato font into the css stylesheet
+- iptables: fix save formatting for libipt_webst, libipt_account, ROUTE target, TRIGGER target
+- iptables: fix list formatting for ROUTE target
+- iptables: fix match for ipt_account
+- iptables: fix handling ICMPv6 reject --with-tcp-reset
+- httpd: update the way how failed GUI login attempts are added to log
+- rc: firewall.c: raise a little allowed hit count in BF protection for remote GUI access
+- rc: network.c: do not unload the wifi driver by default Note: avoid reboot problems
+- rc: fix segfault in dhcpc-release and dhcpc-renew when run without arguments
+- rc: dnsmasq: reject wpad hostname (protect against VU#598349)
+- rc: mwan.c: adjust function mwan_table_del() and remove only active and valid DNS
+- rc: wan.c: do not restart wireless at function start_wan()
+- rom: Makefile: fix downloading dnscrypt-proxy resolvers file
+- shared: defaults.c: adjust redial period to 20 seconds; note: this (minimum) waiting time helps with dual-stack to get a fresh IPv6 setup
+- shared: defaults.c: don't prioritize AES-256 over AES-128 (no AES acceleration)
+- openvpn: try to use CHACHA20-POLY1305 (if supported by the remote end) on routers without AES acceleration
+- openvpn: disable compression by default
+- openvpn: update config file generation for OpenVPN 2.5 (also fixes #57)
+- www: tomato.js: add SameSite=Lax also when deleting cookies
+- Remove Board ID for Charter specific routers, only have OEM board ID
+- Add Charter specific board ID for initial file, update make file to generate init file
+- update version (in cfg file) to "V1.0.12.99" due to NETGEAR mandating no downgrades and having a limit on how high the new version can be
+- R8000: do not enable air time fairness by default (note: user can enable/disable it at the GUI)
+- Asus RT-AC56R: provide 80 MHz channels for USA default country
+- All Router (SDK6/SDK7): change country default setup
+
+
 2020.5          2020.07.17
 --------------------------
 
