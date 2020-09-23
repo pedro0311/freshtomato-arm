@@ -1,14 +1,3 @@
---- busybox/Makefile
-+++ busybox/Makefile
-@@ -471,6 +471,8 @@
- 		coreutils/libcoreutils/ \
- 		debianutils/ \
- 		e2fsprogs/ \
-+		e2fsprogs/e2p/ \
-+		e2fsprogs/ext2fs/ \
- 		editors/ \
- 		findutils/ \
- 		init/ \
 --- busybox/modutils/modprobe.c
 +++ busybox/modutils/modprobe.c
 @@ -417,7 +417,7 @@

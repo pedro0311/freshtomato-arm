@@ -242,7 +242,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
+	{ "wan_ppp_redialperiod",	"20"				, 0 },	// Redial Period  (seconds)
 	{ "wan_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
@@ -254,7 +254,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan2_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan2_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan2_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
+	{ "wan2_ppp_redialperiod",	"20"				, 0 },	// Redial Period  (seconds)
 	{ "wan2_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan2_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan2_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
@@ -267,7 +267,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan3_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan3_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan3_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
+	{ "wan3_ppp_redialperiod",	"20"				, 0 },	// Redial Period  (seconds)
 	{ "wan3_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan3_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan3_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
@@ -279,7 +279,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_ppp_idletime",		"5"				, 0 },	// Dial on demand max idle time (mins)
 	{ "wan4_ppp_demand",		"0"				, 0 },	// Dial on demand
 	{ "wan4_ppp_demand_dnsip",	"198.51.100.1"			, 0 },	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan4_ppp_redialperiod",	"10"				, 0 },	// Redial Period  (seconds)
+	{ "wan4_ppp_redialperiod",	"20"				, 0 },	// Redial Period  (seconds)
 	{ "wan4_ppp_service",		""				, 0 },	// PPPoE service name
 	{ "wan4_ppp_custom",		""				, 0 },	// PPPD additional options
 	{ "wan4_ppp_mlppp",		"0"				, 0 },	// PPPoE single line MLPPP
@@ -1139,13 +1139,13 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_port",		"1194"				, 0 },
 	{ "vpn_server1_firewall",	"auto"				, 0 },
 	{ "vpn_server1_crypt",		"tls"				, 0 },
-	{ "vpn_server1_comp",		"adaptive"			, 0 },
+	{ "vpn_server1_comp",		"-1"				, 0 },
 	{ "vpn_server1_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server1_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_server1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_server1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_server1_digest",		"default"			, 0 },
 	{ "vpn_server1_dhcp",		"1"				, 0 },
@@ -1183,13 +1183,13 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_port",		"1195"				, 0 },
 	{ "vpn_server2_firewall",	"auto"				, 0 },
 	{ "vpn_server2_crypt",		"tls"				, 0 },
-	{ "vpn_server2_comp",		"adaptive"			, 0 },
+	{ "vpn_server2_comp",		"-1"				, 0 },
 	{ "vpn_server2_cipher",		"AES-128-CBC"			, 0 },
 	{ "vpn_server2_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
-	{ "vpn_server2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+	{ "vpn_server2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
 #endif
 	{ "vpn_server2_digest",		"default"			, 0 },
 	{ "vpn_server2_dhcp",		"1"				, 0 },
@@ -1233,10 +1233,14 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_rg",		"0"				, 0 },
 	{ "vpn_client1_firewall",	"auto"				, 0 },
 	{ "vpn_client1_crypt",		"tls"				, 0 },
-	{ "vpn_client1_comp",		"adaptive"			, 0 },
+	{ "vpn_client1_comp",		"-1"				, 0 },
 	{ "vpn_client1_cipher",		"default"			, 0 },
 	{ "vpn_client1_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client1_digest",		"default"			, 0 },
 	{ "vpn_client1_local",		"10.8.0.2"			, 0 },
 	{ "vpn_client1_remote",		"10.8.0.1"			, 0 },
@@ -1266,10 +1270,14 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_rg",		"0"				, 0 },
 	{ "vpn_client2_firewall",	"auto"				, 0 },
 	{ "vpn_client2_crypt",		"tls"				, 0 },
-	{ "vpn_client2_comp",		"adaptive"			, 0 },
+	{ "vpn_client2_comp",		"-1"				, 0 },
 	{ "vpn_client2_cipher",		"default"			, 0 },
 	{ "vpn_client2_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client2_digest",		"default"			, 0 },
 	{ "vpn_client2_local",		"10.9.0.2"			, 0 },
 	{ "vpn_client2_remote",		"10.9.0.1"			, 0 },
@@ -1299,10 +1307,14 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_rg",		"0"				, 0 },
 	{ "vpn_client3_firewall",	"auto"				, 0 },
 	{ "vpn_client3_crypt",		"tls"				, 0 },
-	{ "vpn_client3_comp",		"adaptive"			, 0 },
+	{ "vpn_client3_comp",		"-1"				, 0 },
 	{ "vpn_client3_cipher",		"default"			, 0 },
 	{ "vpn_client3_ncp_enable",	"1"				, 0 },
+#if 0
 	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
+#else
+	{ "vpn_client3_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC", 0 },
+#endif
 	{ "vpn_client3_digest",		"default"			, 0 },
 	{ "vpn_client3_local",		"10.10.0.2"			, 0 },
 	{ "vpn_client3_remote",		"10.10.0.1"			, 0 },
