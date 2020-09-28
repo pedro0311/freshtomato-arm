@@ -262,23 +262,14 @@ void start_ovpn_client(int clientNum)
 	}
 
 	/* Cipher */
+	sprintf(buffer, "vpn_client%d_ncp_ciphers", clientNum);
+	strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
 	if (cryptMode == TLS) {
-		sprintf(buffer, "vpn_client%d_ncp_enable", clientNum);
-		nvi = nvram_get_int(buffer);
-		sprintf(buffer, "vpn_client%d_ncp_ciphers", clientNum);
-		strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
-		if ((nvi > 0) && (buffer2[0] != '\0')) {
+		if (buffer2[0] != '\0')
 			fprintf(fp, "data-ciphers %s\n", buffer2);
-		}
-		else {
-			nvi = 0;
-		}
-	}
-	else {
-		nvi = 0;
 	}
 
-	if (nvi != 2) {
+	if (buffer2[0] == '\0') {
 		sprintf(buffer, "vpn_client%d_cipher", clientNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
@@ -836,22 +827,14 @@ void start_ovpn_server(int serverNum)
 	fprintf(fp, "proto %s\n", nvram_safe_get(buffer)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
 
 	/* Cipher */
+	sprintf(buffer, "vpn_server%d_ncp_ciphers", serverNum);
+	strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
 	if (cryptMode == TLS) {
-		sprintf(buffer, "vpn_server%d_ncp_enable", serverNum);
-		nvi = nvram_get_int(buffer);
-		sprintf(buffer, "vpn_server%d_ncp_ciphers", serverNum);
-		strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
-		if ((nvi > 0) && (buffer2[0] != '\0')) {
+		if (buffer2[0] != '\0')
 			fprintf(fp, "data-ciphers %s\n", buffer2);
-		}
-		else {
-			nvi = 0;
-		}
 	}
-	else {
-		nvi = 0;
-	}
-	if (nvi != 2) {
+
+	if (buffer2[0] == '\0') {
 		sprintf(buffer, "vpn_server%d_cipher", serverNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
