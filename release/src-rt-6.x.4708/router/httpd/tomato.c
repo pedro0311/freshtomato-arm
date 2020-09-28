@@ -1596,7 +1596,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_server1_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_server1_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server1_digest",		V_TEXT(0, 15)			},
 	{ "vpn_server1_dhcp",		V_01				},
 	{ "vpn_server1_r1",		V_IP				},
@@ -1637,7 +1637,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_server2_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_server2_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server2_digest",		V_TEXT(0, 15)			},
 	{ "vpn_server2_dhcp",		V_01				},
 	{ "vpn_server2_r1",		V_IP				},
@@ -1683,7 +1683,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client1_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client1_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client1_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client1_local",		V_IP				},
 	{ "vpn_client1_remote",		V_IP				},
@@ -1720,7 +1720,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client2_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client2_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client2_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client2_local",		V_IP				},
 	{ "vpn_client2_remote",		V_IP				},
@@ -1757,7 +1757,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client3_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client3_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client3_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client3_local",		V_IP				},
 	{ "vpn_client3_remote",		V_IP				},
