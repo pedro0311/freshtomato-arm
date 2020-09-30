@@ -247,18 +247,16 @@ void start_ovpn_client(int clientNum)
 	sprintf(buffer, "vpn_client%d_comp", clientNum);
 	strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
 	if (strcmp(buffer2, "-1")) {
-		if (!strcmp(buffer2, "lz4") || !strcmp(buffer2, "lz4-v2")) {
+		if ((!strcmp(buffer2, "lz4")) || (!strcmp(buffer2, "lz4-v2")))
 			fprintf(fp, "compress %s\n", buffer2);
-		}
-		else if (!strcmp(buffer2, "yes")) {
+		else if (!strcmp(buffer2, "yes"))
 			fprintf(fp, "compress lzo\n");
-		}
-		else if (!strcmp(buffer2, "adaptive")) {
+		else if (!strcmp(buffer2, "adaptive"))
 			fprintf(fp, "comp-lzo adaptive\n");
-		}
-		else if (!strcmp(buffer2, "no")) {
+		else if ((!strcmp(buffer2, "stub")) || (!strcmp(buffer2, "stub-v2")))
+			fprintf(fp, "compress %s\n", buffer2);
+		else if (!strcmp(buffer2, "no"))
 			fprintf(fp, "compress\n");	/* Disable, but can be overriden */
-		}
 	}
 
 	/* Cipher */
