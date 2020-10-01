@@ -268,8 +268,7 @@ void start_ovpn_client(int clientNum)
 		if (buffer2[0] != '\0')
 			fprintf(fp, "data-ciphers %s\n", buffer2);
 	}
-
-	if (buffer2[0] == '\0') {
+	else {	/* SECRET/CUSTOM */
 		sprintf(buffer, "vpn_client%d_cipher", clientNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
@@ -833,8 +832,7 @@ void start_ovpn_server(int serverNum)
 		if (buffer2[0] != '\0')
 			fprintf(fp, "data-ciphers %s\n", buffer2);
 	}
-
-	if (buffer2[0] == '\0') {
+	else {	/* SECRET/CUSTOM */
 		sprintf(buffer, "vpn_server%d_cipher", serverNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));

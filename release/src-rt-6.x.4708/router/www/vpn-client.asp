@@ -39,6 +39,7 @@ for (i = 0; i < tabs.length; ++i) {
 
 ciphers = [['default','Use Default'],['none','None']];
 for (i = 0; i < vpnciphers.length; ++i) ciphers.push([vpnciphers[i],vpnciphers[i]]);
+vpndigests = vpndigests.concat(['DSA','DSA-SHA','DSA-SHA1','DSA-SHA1-old','ecdsa-with-SHA1','MD4','MDC2','RSA-MD5','RSA-MDC2','RSA-RIPEMD160','RSA-SHA','RSA-SHA1','RSA-SHA1-2','RSA-SHA224','RSA-SHA256','RSA-SHA384','RSA-SHA512','SHA','whirlpool']);
 digests = [['default','Use Default'],['none','None']];
 for (i = 0; i < vpndigests.length; ++i) digests.push([vpndigests[i],vpndigests[i]]);
 
@@ -188,6 +189,7 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_vpn_'+t+'_adns'), PR('_vpn_'+t+'_reneg'), auth == "tls");
 		elem.display(E(t+'_gateway'), iface == "tap" && rgw > 0);
 		elem.display(PR('_vpn_'+t+'_ncp_ciphers'), auth == "tls");
+		elem.display(PR('_vpn_'+t+'_cipher'), auth == "secret");
 
 		/* Page Routing Policy */
 		elem.display(E('table_'+t+'_routing'), rtable);
