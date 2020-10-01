@@ -385,6 +385,15 @@ function save() {
 
 		t = tabs[i][0];
 
+		var crypt = E('_vpn_'+t+'_crypt').value;
+		var hmac = E('_vpn_'+t+'_hmac').value;
+		var key = E('_vpn_'+t+'_static').value;
+		if (((crypt == 'secret' || (crypt == 'tls' && hmac >= 0 && hmac < 4)) && key.indexOf('OpenVPN Static key V1') === -1) ||
+		    (crypt == 'tls' && hmac == 4 && key.indexOf('OpenVPN tls-crypt-v2') === -1)) {
+			alert('Keys->Static Key is in the wrong format for the selected Auth Method - Re-Generate it!');
+			return;
+		}
+
 		if (E('_f_vpn_'+t+'_eas').checked)
 			E('vpn_server_eas').value += ''+(i+1)+',';
 
@@ -483,7 +492,9 @@ function updateStaticKey(serverNumber) {
 		disableKeyButtons(serverNumber, false);
 	}
 	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
-	keyGenRequest.post('vpngenkey.cgi', '_mode=static');
+	var crypt = E('_vpn_server'+serverNumber+'_crypt').value;
+	var hmac = E('_vpn_server'+serverNumber+'_hmac').value;
+	keyGenRequest.post('vpngenkey.cgi', '_mode=' + ((crypt == 'tls' && hmac == 4) ? 'static2' : 'static1') + '&_server=' + serverNumber);
 }
 
 function generateDHParams(serverNumber) {
@@ -652,7 +663,7 @@ function downloadClientConfig(serverNumber) {
 				{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [ ['auto', 'Automatic'], ['external', 'External Only'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_firewall' ) },
 				{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [ ['tls', 'TLS'], ['secret', 'Static Key'], ['custom', 'Custom'] ], value: eval( 'nvram.vpn_'+t+'_crypt' ),
 					suffix: '<span id="'+t+'_custom_crypto_text">&nbsp;<small>(must configure manually...)<\/small><\/span>' },
-				{ title: 'TLS control channel security <small>(tls-auth/tls-crypt)<\/small>', name: 'vpn_'+t+'_hmac', type: 'select', options: [[-1, 'Disabled'], [2, 'Bi-directional Auth'], [0, 'Incoming Auth (0)'], [1, 'Outgoing Auth (1)'], [3, 'Encrypt channel']], value: eval('nvram.vpn_'+t+'_hmac') },
+				{ title: 'TLS control channel security <small>(tls-auth/tls-crypt)<\/small>', name: 'vpn_'+t+'_hmac', type: 'select', options: [[-1, 'Disabled'], [2, 'Bi-directional Auth'], [0, 'Incoming Auth (0)'], [1, 'Outgoing Auth (1)'], [3, 'Encrypt Channel'], [4, 'Encrypt Channel V2']], value: eval('nvram.vpn_'+t+'_hmac') },
 				{ title: 'Auth digest', name: 'vpn_'+t+'_digest', type: 'select', options: digests, value: eval( 'nvram.vpn_'+t+'_digest' ) },
 				{ title: 'VPN subnet/netmask', multi: [
 					{ name: 'vpn_'+t+'_sn', type: 'text', maxlen: 15, size: 17, value: eval( 'nvram.vpn_'+t+'_sn' ) },

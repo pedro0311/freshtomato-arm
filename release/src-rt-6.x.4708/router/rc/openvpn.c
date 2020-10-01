@@ -313,6 +313,8 @@ void start_ovpn_client(int clientNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
+			else if (nvi == 4)
+				fprintf(fp, "tls-crypt-v2 static.key");
 			else
 				fprintf(fp, "tls-auth static.key");
 
@@ -1014,6 +1016,8 @@ void start_ovpn_server(int serverNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
+			else if (nvi == 4)
+				fprintf(fp, "tls-crypt-v2 static.key");
 			else
 				fprintf(fp, "tls-auth static.key");
 
