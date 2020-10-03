@@ -1035,6 +1035,9 @@ void start_ovpn_server(int serverNum)
 		sprintf(buffer, "vpn_server%d_crt", serverNum);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "cert server.crt\n");
+		sprintf(buffer, "vpn_server%d_crl", serverNum);
+		if (!nvram_is_empty(buffer))
+			fprintf(fp, "crl crl.pem\n");
 		sprintf(buffer, "vpn_server%d_key", serverNum);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "key server.key\n");
@@ -1083,6 +1086,16 @@ void start_ovpn_server(int serverNum)
 			fp = fopen(buffer, "w");
 			chmod(buffer, S_IRUSR|S_IWUSR);
 			sprintf(buffer, "vpn_server%d_crt", serverNum);
+			fprintf(fp, "%s", nvram_safe_get(buffer));
+			fclose(fp);
+		}
+
+		sprintf(buffer, "vpn_server%d_crl", serverNum);
+		if (!nvram_is_empty(buffer)) {
+			sprintf(buffer, "/etc/openvpn/server%d/crl.pem", serverNum);
+			fp = fopen(buffer, "w");
+			chmod(buffer, S_IRUSR|S_IWUSR);
+			sprintf(buffer, "vpn_server%d_crl", serverNum);
 			fprintf(fp, "%s", nvram_safe_get(buffer));
 			fclose(fp);
 		}
