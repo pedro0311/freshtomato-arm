@@ -1703,7 +1703,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_username",	V_TEXT(0,50)			},
 	{ "vpn_client1_password",	V_TEXT(0,70)			},
 	{ "vpn_client1_useronly",	V_01				},
-	{ "vpn_client1_tlsremote",	V_01				},
+	{ "vpn_client1_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client1_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
 	{ "vpn_client1_cn",		V_NONE				},
 	{ "vpn_client1_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client1_routing_val",	V_NONE				},
@@ -1739,7 +1740,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_username",	V_TEXT(0,50)			},
 	{ "vpn_client2_password",	V_TEXT(0,70)			},
 	{ "vpn_client2_useronly",	V_01				},
-	{ "vpn_client2_tlsremote",	V_01				},
+	{ "vpn_client2_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client2_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
 	{ "vpn_client2_cn",		V_NONE				},
 	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client2_routing_val",	V_NONE				},
