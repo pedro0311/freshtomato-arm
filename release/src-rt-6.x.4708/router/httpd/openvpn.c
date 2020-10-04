@@ -34,6 +34,7 @@
 #ifdef TCONFIG_OPENVPN
 
 #define OVPN_CLIENT_DIR		"/tmp/ovpnclientconfig"
+#define OPENSSL_TMP_DIR		"/tmp/openssl"
 
 
 static void put_to_file(const char *filePath, const char *content)
@@ -55,32 +56,33 @@ static void prepareCAGeneration(int serverNum)
 {
 	char buffer[512];
 	char buffer2[512];
-	eval("rm", "-Rf", "/tmp/openssl");
-	eval("mkdir", "-p", "/tmp/openssl");
-	put_to_file("/tmp/openssl/index.txt", "");
-	put_to_file("/tmp/openssl/openssl.log", "");
+	eval("rm", "-Rf", OPENSSL_TMP_DIR);
+	eval("mkdir", "-p", OPENSSL_TMP_DIR);
+	put_to_file(OPENSSL_TMP_DIR"/index.txt", "");
+	put_to_file(OPENSSL_TMP_DIR"/openssl.log", "");
 
 	sprintf(buffer, "vpn_server%d_ca_key", serverNum);
 
 	if (nvram_match(buffer, "")) {
 		syslog(LOG_WARNING, "No CA KEY was saved for server %d, regenerating", serverNum);
 		sprintf(buffer2, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=server.%s\"", nvram_safe_get("wan_domain"));
-		sprintf(buffer, "openssl req -days 3650 -nodes -new -x509 -keyout /tmp/openssl/cakey.pem -out /tmp/openssl/cacert.pem -subj %s >>/tmp/openssl/openssl.log 2>&1", buffer2);
+		sprintf(buffer, "openssl req -days 3650 -nodes -new -x509 -keyout "OPENSSL_TMP_DIR"/cakey.pem -out "OPENSSL_TMP_DIR"/cacert.pem -subj %s >>"OPENSSL_TMP_DIR"/openssl.log 2>&1", buffer2);
 		syslog(LOG_WARNING, buffer);
 		system(buffer);
-	} else {
+	}
+	else {
 		syslog(LOG_WARNING, "Found CA KEY for server %d, creating from NVRAM", serverNum);
-		put_to_file("/tmp/openssl/cakey.pem", getNVRAMVar("vpn_server%d_ca_key", serverNum));
-		put_to_file("/tmp/openssl/cacert.pem", getNVRAMVar("vpn_server%d_ca", serverNum));
+		put_to_file(OPENSSL_TMP_DIR"/cakey.pem", getNVRAMVar("vpn_server%d_ca_key", serverNum));
+		put_to_file(OPENSSL_TMP_DIR"/cacert.pem", getNVRAMVar("vpn_server%d_ca", serverNum));
 	}
 }
 
 static void print_generated_ca_to_user()
 {
 	web_puts("cakey = '");
-	web_putfile("/tmp/openssl/cakey.pem", WOF_JAVASCRIPT);
+	web_putfile(OPENSSL_TMP_DIR"/cakey.pem", WOF_JAVASCRIPT);
 	web_puts("';\ncacert = '");
-	web_putfile("/tmp/openssl/cacert.pem", WOF_JAVASCRIPT);
+	web_putfile(OPENSSL_TMP_DIR"/cacert.pem", WOF_JAVASCRIPT);
 	web_puts("';");
 }
 
@@ -93,22 +95,23 @@ static void generateKey(const char *prefix)
 	if (strncmp(prefix, "server", 6) == 0) {
 		str = "-extensions server_cert";
 		syslog(LOG_WARNING, "Building Certs for Server");
-	} else {
+	}
+	else {
 		str = "-extensions usr_cert";
 		syslog(LOG_WARNING, "Building Certs for Client");
 	}
 
-	put_to_file("/tmp/openssl/serial", "00");
+	put_to_file(OPENSSL_TMP_DIR"/serial", "00");
 	sprintf(subj_buf, "\"/C=GB/ST=Yorks/L=York/O=FreshTomato/OU=IT/CN=%s.%s\"", prefix, nvram_safe_get("wan_domain"));
-	sprintf(buffer, "openssl req -nodes -new -keyout /tmp/openssl/%s.key -out /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+	sprintf(buffer, "openssl req -nodes -new -keyout "OPENSSL_TMP_DIR"/%s.key -out "OPENSSL_TMP_DIR"/%s.csr %s -subj %s >>"OPENSSL_TMP_DIR"/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
-	sprintf(buffer, "openssl ca -batch -policy policy_anything -days 3650 -out /tmp/openssl/%s.crt -in /tmp/openssl/%s.csr %s -subj %s >>/tmp/openssl/openssl.log 2>&1", prefix, prefix, str, subj_buf);
+	sprintf(buffer, "openssl ca -batch -policy policy_anything -days 3650 -out "OPENSSL_TMP_DIR"/%s.crt -in "OPENSSL_TMP_DIR"/%s.csr %s -subj %s >>"OPENSSL_TMP_DIR"/openssl.log 2>&1", prefix, prefix, str, subj_buf);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 
-	sprintf(buffer, "openssl x509 -in /tmp/openssl/%s.crt -inform PEM -out /tmp/openssl/%s.crt -outform PEM >>/tmp/openssl/openssl.log 2>&1", prefix, prefix);
+	sprintf(buffer, "openssl x509 -in "OPENSSL_TMP_DIR"/%s.crt -inform PEM -out "OPENSSL_TMP_DIR"/%s.crt -outform PEM >>"OPENSSL_TMP_DIR"/openssl.log 2>&1", prefix, prefix);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
 }
@@ -117,10 +120,10 @@ static void print_generated_keys_to_user(const char *prefix)
 {
 	char buffer[72];
 	web_puts("\ngenerated_crt = '");
-	sprintf(buffer,"/tmp/openssl/%s.crt", prefix);
+	sprintf(buffer, OPENSSL_TMP_DIR"/%s.crt", prefix);
 	web_putfile(buffer, WOF_JAVASCRIPT);
 	web_puts("';\ngenerated_key = '");
-	sprintf(buffer,"/tmp/openssl/%s.key", prefix);
+	sprintf(buffer, OPENSSL_TMP_DIR"/%s.key", prefix);
 	web_putfile(buffer, WOF_JAVASCRIPT);
 	web_puts("';");
 }
@@ -214,7 +217,6 @@ void wo_ovpn_genclientconfig(char *url)
 	int tls = 0;
 	char *u;
 	FILE *fp;
-	DIR *dp;
 
 	strlcpy(s, webcgi_safeget("_server", ""), sizeof(s));
 	serverStr = js_string(s);	/* quicky scrub */
@@ -226,13 +228,10 @@ void wo_ovpn_genclientconfig(char *url)
 		syslog(LOG_WARNING, "No server '%s' for /%s", serverStr, u);
 		return;
 	}
-
 	server = atoi(serverStr);
 
-	if (!(dp = opendir(OVPN_CLIENT_DIR))) {
-		eval("mkdir", "-m", "0777", "-p", "/tmp/ovpnclientconfig");
-	}
-	closedir(dp);
+	eval("rm", "-Rf", OVPN_CLIENT_DIR);
+	eval("mkdir", "-m", "0777", "-p", OVPN_CLIENT_DIR);
 
 	fp = fopen(OVPN_CLIENT_DIR"/connection.ovpn", "w");
 
@@ -255,11 +254,14 @@ void wo_ovpn_genclientconfig(char *url)
 	if (strcmp(s2, "-1")) {
 		if (!strcmp(s2, "lz4") || !strcmp(s2, "lz4-v2")) {
 			fprintf(fp, "compress %s\n", s2);
-		} else if (!strcmp(s2, "yes")) {
+		}
+		else if (!strcmp(s2, "yes")) {
 			fprintf(fp, "compress lzo\n");
-		} else if (!strcmp(s2, "adaptive")) {
+		}
+		else if (!strcmp(s2, "adaptive")) {
 			fprintf(fp, "comp-lzo adaptive\n");
-		} else if (!strcmp(s2, "no")) {
+		}
+		else if (!strcmp(s2, "no")) {
 			fprintf(fp, "compress\n");	/* Disable, but can be overriden */
 		}
 	}
@@ -320,14 +322,16 @@ void wo_ovpn_genclientconfig(char *url)
 		put_to_file(OVPN_CLIENT_DIR"/ca.pem", getNVRAMVar("vpn_server%d_ca", server));
 		prepareCAGeneration(server);
 		generateKey("client");
-		eval("cp", "/tmp/openssl/client.crt", OVPN_CLIENT_DIR);
-		eval("cp", "/tmp/openssl/client.key", OVPN_CLIENT_DIR);
-	} else {
+		eval("cp", OPENSSL_TMP_DIR"/client.crt", OVPN_CLIENT_DIR);
+		eval("cp", OPENSSL_TMP_DIR"/client.key", OVPN_CLIENT_DIR);
+	}
+	else {
 		sprintf(s, "vpn_server%d_if", server);
 		if (nvram_contains_word(s, "tap")) {
 			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_local", server));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_nm", server));
-		} else {
+		}
+		else {
 			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_remote", server));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_local", server));
 		}
