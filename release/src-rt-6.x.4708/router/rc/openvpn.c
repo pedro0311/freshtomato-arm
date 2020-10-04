@@ -352,6 +352,7 @@ void start_ovpn_client(int clientNum)
 	}
 	sprintf(buffer, "vpn_client%d_custom", clientNum);
 	fprintf(fp,
+		"keepalive 15 60\n"
 		"verb 3\n"
 		"status-version 2\n"
 		"status status 10\n\n" /* Update status file every 10 sec */
