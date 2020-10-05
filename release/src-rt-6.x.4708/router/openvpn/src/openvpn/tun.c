@@ -68,7 +68,7 @@ const static GUID GUID_DEVINTERFACE_NET = { 0xcac88484, 0x7515, 0x4c03, { 0x82, 
 #define NI_OPTIONS     (1<<2)
 
 static void netsh_ifconfig(const struct tuntap_options *to,
-                           const char *flex_name,
+                           DWORD adapter_index,
                            const in_addr_t ip,
                            const in_addr_t netmask,
                            const unsigned int flags);
@@ -79,7 +79,7 @@ static void windows_set_mtu(const int iface_index,
 
 static void netsh_set_dns6_servers(const struct in6_addr *addr_list,
                                    const int addr_len,
-                                   const char *flex_name);
+                                   DWORD adapter_index);
 
 static void netsh_command(const struct argv *a, int n, int msglevel);
 
@@ -149,6 +149,61 @@ out:
 }
 
 static bool
+do_dns_domain_service(bool add, const struct tuntap *tt)
+{
+    bool ret = false;
+    ack_message_t ack;
+    struct gc_arena gc = gc_new();
+    HANDLE pipe = tt->options.msg_channel;
+
+    if (!tt->options.domain) /* no  domain to add or delete */
+    {
+        return true;
+    }
+
+    /* Use dns_cfg_msg with addr_len = 0 for setting only the DOMAIN */
+    dns_cfg_message_t dns = {
+        .header = {
+            (add ? msg_add_dns_cfg : msg_del_dns_cfg),
+            sizeof(dns_cfg_message_t),
+            0
+        },
+        .iface = { .index = tt->adapter_index, .name = "" },
+        .domains = "",      /* set below */
+        .family = AF_INET,  /* unused */
+        .addr_len = 0       /* add/delete only the domain, not DNS servers */
+    };
+
+    strncpynt(dns.iface.name, tt->actual_name, sizeof(dns.iface.name));
+    strncpynt(dns.domains, tt->options.domain, sizeof(dns.domains));
+    /* truncation of domain name is not checked as it can't happen
+     * with 512 bytes room in dns.domains.
+     */
+
+    msg(D_LOW, "%s dns domain on '%s' (if_index = %d) using service",
+            (add ? "Setting" : "Deleting"), dns.iface.name, dns.iface.index);
+    if (!send_msg_iservice(pipe, &dns, sizeof(dns), &ack, "TUN"))
+    {
+        goto out;
+    }
+
+    if (ack.error_number != NO_ERROR)
+    {
+        msg(M_WARN, "TUN: %s dns domain failed using service: %s [status=%u if_name=%s]",
+            (add ? "adding" : "deleting"), strerror_win32(ack.error_number, &gc),
+            ack.error_number, dns.iface.name);
+        goto out;
+    }
+
+    msg(M_INFO, "DNS domain %s using service", (add ? "set" : "deleted"));
+    ret = true;
+
+out:
+    gc_free(&gc);
+    return ret;
+}
+
+static bool
 do_dns_service(bool add, const short family, const struct tuntap *tt)
 {
     bool ret = false;
@@ -164,6 +219,7 @@ do_dns_service(bool add, const short family, const struct tuntap *tt)
         return true;
     }
 
+    /* Use dns_cfg_msg with domain = "" for setting only the DNS servers */
     dns_cfg_message_t dns = {
         .header = {
             (add ? msg_add_dns_cfg : msg_del_dns_cfg),
@@ -1100,13 +1156,17 @@ do_ifconfig_ipv6(struct tuntap *tt, const char *ifname, int tun_mtu,
         }
         do_dns_service(true, AF_INET6, tt);
         do_set_mtu_service(tt, AF_INET6, tun_mtu);
+        /* If IPv4 is not enabled, set DNS domain here */
+        if (!tt->did_ifconfig_setup)
+        {
+           do_dns_domain_service(true, tt);
+        }
     }
     else
     {
-        /* example: netsh interface ipv6 set address interface=42
+        /* example: netsh interface ipv6 set address 42
          *                  2001:608:8003::d/bits store=active
          */
-        char iface[64];
 
         /* in TUN mode, we only simulate a subnet, so the interface
          * is configured with /128 + a route to fe80::8.  In TAP mode,
@@ -1114,10 +1174,8 @@ do_ifconfig_ipv6(struct tuntap *tt, const char *ifname, int tun_mtu,
          */
         int netbits = (tt->type == DEV_TYPE_TUN) ? 128 : tt->netbits_ipv6;
 
-        openvpn_snprintf(iface, sizeof(iface), "interface=%lu",
-                         tt->adapter_index);
-        argv_printf(&argv, "%s%s interface ipv6 set address %s %s/%d store=active",
-                    get_win_sys_path(), NETSH_PATH_SUFFIX, iface,
+        argv_printf(&argv, "%s%s interface ipv6 set address %lu %s/%d store=active",
+                    get_win_sys_path(), NETSH_PATH_SUFFIX, tt->adapter_index,
                     ifconfig_ipv6_local, netbits);
         netsh_command(&argv, 4, M_FATAL);
         if (tt->type == DEV_TYPE_TUN)
@@ -1125,7 +1183,7 @@ do_ifconfig_ipv6(struct tuntap *tt, const char *ifname, int tun_mtu,
             add_route_connected_v6_net(tt, es);
         }
         /* set ipv6 dns servers if any are specified */
-        netsh_set_dns6_servers(tt->options.dns6, tt->options.dns6_len, ifname);
+        netsh_set_dns6_servers(tt->options.dns6, tt->options.dns6_len, tt->adapter_index);
         windows_set_mtu(tt->adapter_index, AF_INET6, tun_mtu);
     }
 #else /* platforms we have no IPv6 code for */
@@ -1473,8 +1531,6 @@ do_ifconfig_ipv4(struct tuntap *tt, const char *ifname, int tun_mtu,
         env_set_destroy(aix_es);
     }
 #elif defined (_WIN32)
-    ASSERT(ifname != NULL);
-
     if (tt->options.ip_win32_type == IPW32_SET_MANUAL)
     {
         msg(M_INFO,
@@ -1490,10 +1546,11 @@ do_ifconfig_ipv4(struct tuntap *tt, const char *ifname, int tun_mtu,
     {
         do_address_service(true, AF_INET, tt);
         do_dns_service(true, AF_INET, tt);
+        do_dns_domain_service(true, tt);
     }
     else if (tt->options.ip_win32_type == IPW32_SET_NETSH)
     {
-        netsh_ifconfig(&tt->options, ifname, tt->local,
+        netsh_ifconfig(&tt->options, tt->adapter_index, tt->local,
                        tt->adapter_netmask, NI_IP_NETMASK|NI_OPTIONS);
     }
     if (tt->options.msg_channel)
@@ -5286,23 +5343,29 @@ ip_addr_member_of(const in_addr_t addr, const IP_ADDR_STRING *ias)
  * Set the ipv6 dns servers on the specified interface.
  * The list of dns servers currently set on the interface
  * are cleared first.
- * No action is taken if number of addresses (addr_len) < 1.
  */
 static void
 netsh_set_dns6_servers(const struct in6_addr *addr_list,
                        const int addr_len,
-                       const char *flex_name)
+                       DWORD adapter_index)
 {
     struct gc_arena gc = gc_new();
     struct argv argv = argv_new();
 
+    /* delete existing DNS settings from TAP interface */
+    argv_printf(&argv, "%s%s interface ipv6 delete dns %lu all",
+                get_win_sys_path(),
+                NETSH_PATH_SUFFIX,
+                adapter_index);
+    netsh_command(&argv, 2, M_FATAL);
+
     for (int i = 0; i < addr_len; ++i)
     {
         const char *fmt = (i == 0) ?
-                          "%s%s interface ipv6 set dns %s static %s"
-                          : "%s%s interface ipv6 add dns %s %s";
+                          "%s%s interface ipv6 set dns %lu static %s"
+                          : "%s%s interface ipv6 add dns %lu %s";
         argv_printf(&argv, fmt, get_win_sys_path(),
-                    NETSH_PATH_SUFFIX, flex_name,
+                    NETSH_PATH_SUFFIX, adapter_index,
                     print_in6_addr(addr_list[i], 0, &gc));
 
         /* disable slow address validation on Windows 7 and higher */
@@ -5324,7 +5387,7 @@ netsh_ifconfig_options(const char *type,
                        const in_addr_t *addr_list,
                        const int addr_len,
                        const IP_ADDR_STRING *current,
-                       const char *flex_name,
+                       DWORD adapter_index,
                        const bool test_first)
 {
     struct gc_arena gc = gc_new();
@@ -5348,11 +5411,11 @@ netsh_ifconfig_options(const char *type,
     /* delete existing DNS/WINS settings from TAP interface */
     if (delete_first)
     {
-        argv_printf(&argv, "%s%s interface ip delete %s %s all",
+        argv_printf(&argv, "%s%s interface ip delete %s %lu all",
                     get_win_sys_path(),
                     NETSH_PATH_SUFFIX,
                     type,
-                    flex_name);
+                    adapter_index);
         netsh_command(&argv, 2, M_FATAL);
     }
 
@@ -5365,14 +5428,14 @@ netsh_ifconfig_options(const char *type,
             if (delete_first || !test_first || !ip_addr_member_of(addr_list[i], current))
             {
                 const char *fmt = count ?
-                                  "%s%s interface ip add %s %s %s"
-                                  : "%s%s interface ip set %s %s static %s";
+                                  "%s%s interface ip add %s %lu %s"
+                                  : "%s%s interface ip set %s %lu static %s";
 
                 argv_printf(&argv, fmt,
                             get_win_sys_path(),
                             NETSH_PATH_SUFFIX,
                             type,
-                            flex_name,
+                            adapter_index,
                             print_in_addr_t(addr_list[i], 0, &gc));
 
                 /* disable slow address validation on Windows 7 and higher */
@@ -5388,8 +5451,8 @@ netsh_ifconfig_options(const char *type,
             }
             else
             {
-                msg(M_INFO, "NETSH: \"%s\" %s %s [already set]",
-                    flex_name,
+                msg(M_INFO, "NETSH: %lu %s %s [already set]",
+                    adapter_index,
                     type,
                     print_in_addr_t(addr_list[i], 0, &gc));
             }
@@ -5420,7 +5483,7 @@ init_ip_addr_string2(IP_ADDR_STRING *dest, const IP_ADDR_STRING *src1, const IP_
 
 static void
 netsh_ifconfig(const struct tuntap_options *to,
-               const char *flex_name,
+               DWORD adapter_index,
                const in_addr_t ip,
                const in_addr_t netmask,
                const unsigned int flags)
@@ -5433,27 +5496,26 @@ netsh_ifconfig(const struct tuntap_options *to,
     if (flags & NI_TEST_FIRST)
     {
         const IP_ADAPTER_INFO *list = get_adapter_info_list(&gc);
-        const int index = get_adapter_index_flexible(flex_name);
-        ai = get_adapter(list, index);
-        pai = get_per_adapter_info(index, &gc);
+        ai = get_adapter(list, adapter_index);
+        pai = get_per_adapter_info(adapter_index, &gc);
     }
 
     if (flags & NI_IP_NETMASK)
     {
         if (test_adapter_ip_netmask(ai, ip, netmask))
         {
-            msg(M_INFO, "NETSH: \"%s\" %s/%s [already set]",
-                flex_name,
+            msg(M_INFO, "NETSH: %lu %s/%s [already set]",
+                adapter_index,
                 print_in_addr_t(ip, 0, &gc),
                 print_in_addr_t(netmask, 0, &gc));
         }
         else
         {
-            /* example: netsh interface ip set address my-tap static 10.3.0.1 255.255.255.0 */
-            argv_printf(&argv, "%s%s interface ip set address %s static %s %s",
+            /* example: netsh interface ip set address 42 static 10.3.0.1 255.255.255.0 */
+            argv_printf(&argv, "%s%s interface ip set address %lu static %s %s",
                         get_win_sys_path(),
                         NETSH_PATH_SUFFIX,
-                        flex_name,
+                        adapter_index,
                         print_in_addr_t(ip, 0, &gc),
                         print_in_addr_t(netmask, 0, &gc));
 
@@ -5472,7 +5534,7 @@ netsh_ifconfig(const struct tuntap_options *to,
                                to->dns,
                                to->dns_len,
                                pai ? &pai->DnsServerList : NULL,
-                               flex_name,
+                               adapter_index,
                                BOOL_CAST(flags & NI_TEST_FIRST));
         if (ai && ai->HaveWins)
         {
@@ -5483,7 +5545,7 @@ netsh_ifconfig(const struct tuntap_options *to,
                                to->wins,
                                to->wins_len,
                                ai ? wins : NULL,
-                               flex_name,
+                               adapter_index,
                                BOOL_CAST(flags & NI_TEST_FIRST));
     }
 
@@ -5492,16 +5554,16 @@ netsh_ifconfig(const struct tuntap_options *to,
 }
 
 static void
-netsh_enable_dhcp(const char *actual_name)
+netsh_enable_dhcp(DWORD adapter_index)
 {
     struct argv argv = argv_new();
 
-    /* example: netsh interface ip set address my-tap dhcp */
+    /* example: netsh interface ip set address 42 dhcp */
     argv_printf(&argv,
-                "%s%s interface ip set address %s dhcp",
+                "%s%s interface ip set address %lu dhcp",
                 get_win_sys_path(),
                 NETSH_PATH_SUFFIX,
-                actual_name);
+                adapter_index);
 
     netsh_command(&argv, 4, M_FATAL);
 
@@ -5647,7 +5709,7 @@ tun_standby(struct tuntap *tt)
         {
             msg(M_INFO, "NOTE: now trying netsh (this may take some time)");
             netsh_ifconfig(&tt->options,
-                           tt->actual_name,
+                           tt->adapter_index,
                            tt->local,
                            tt->adapter_netmask,
                            NI_TEST_FIRST|NI_IP_NETMASK|NI_OPTIONS);
@@ -6552,7 +6614,7 @@ tuntap_set_ip_props(const struct tuntap *tt, bool *dhcp_masq, bool *dhcp_masq_po
             }
             else
             {
-                netsh_enable_dhcp(tt->actual_name);
+                netsh_enable_dhcp(tt->adapter_index);
             }
         }
         *dhcp_masq = true;
@@ -6566,7 +6628,7 @@ tuntap_set_ip_props(const struct tuntap *tt, bool *dhcp_masq, bool *dhcp_masq_po
         if (dhcp_status(tt->adapter_index) != DHCP_STATUS_ENABLED)
         {
             netsh_ifconfig(&tt->options,
-                           tt->actual_name,
+                           tt->adapter_index,
                            tt->local,
                            tt->adapter_netmask,
                            NI_TEST_FIRST | NI_IP_NETMASK | NI_OPTIONS);
@@ -6698,11 +6760,21 @@ netsh_delete_address_dns(const struct tuntap *tt, bool ipv6, struct gc_arena *gc
     if (len > 0)
     {
         argv_printf(&argv,
-                    "%s%s interface %s delete dns %s all",
+                    "%s%s interface %s delete dns %lu all",
                     get_win_sys_path(),
                     NETSH_PATH_SUFFIX,
                     ipv6 ? "ipv6" : "ipv4",
-                    tt->actual_name);
+                    tt->adapter_index);
+        netsh_command(&argv, 1, M_WARN);
+    }
+
+    if (!ipv6 && tt->options.wins_len > 0)
+    {
+        argv_printf(&argv,
+                    "%s%s interface ipv4 delete winsservers %lu all",
+                    get_win_sys_path(),
+                    NETSH_PATH_SUFFIX,
+                    tt->adapter_index);
         netsh_command(&argv, 1, M_WARN);
     }
 
@@ -6715,7 +6787,7 @@ netsh_delete_address_dns(const struct tuntap *tt, bool ipv6, struct gc_arena *gc
      * address we added (pointed out by Cedric Tabary).
      */
 
-    /* netsh interface ipvX delete address \"%s\" %s */
+    /* netsh interface ipvX delete address %lu %s */
     if (ipv6)
     {
         ifconfig_ip_local = print_in6_addr(tt->local_ipv6, 0, gc);
@@ -6725,11 +6797,11 @@ netsh_delete_address_dns(const struct tuntap *tt, bool ipv6, struct gc_arena *gc
         ifconfig_ip_local = print_in_addr_t(tt->local, 0, gc);
     }
     argv_printf(&argv,
-                "%s%s interface %s delete address %s %s store=active",
+                "%s%s interface %s delete address %lu %s store=active",
                 get_win_sys_path(),
                 NETSH_PATH_SUFFIX,
                 ipv6 ? "ipv6" : "ipv4",
-                tt->actual_name,
+                tt->adapter_index,
                 ifconfig_ip_local);
     netsh_command(&argv, 1, M_WARN);
 
@@ -6751,6 +6823,11 @@ close_tun(struct tuntap *tt, openvpn_net_ctx_t *ctx)
         }
         else if (tt->options.msg_channel)
         {
+            /* If IPv4 is not enabled, delete DNS domain here */
+            if (!tt->did_ifconfig_setup)
+            {
+                do_dns_domain_service(false, tt);
+            }
             if (tt->options.dns6_len > 0)
             {
                 do_dns_service(false, AF_INET6, tt);
@@ -6776,6 +6853,7 @@ close_tun(struct tuntap *tt, openvpn_net_ctx_t *ctx)
         }
         else if (tt->options.msg_channel)
         {
+            do_dns_domain_service(false, tt);
             do_dns_service(false, AF_INET, tt);
             do_address_service(false, AF_INET, tt);
         }

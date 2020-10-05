@@ -100,6 +100,8 @@ nsCertType = client
 # This is typical in keyUsage for a client certificate.
 keyUsage = digitalSignature, keyEncipherment
 
+extendedKeyUsage = clientAuth
+
 # This will be displayed in Netscape's comment listbox.
 nsComment = "FreshTomato Generated Client Certificate"
 

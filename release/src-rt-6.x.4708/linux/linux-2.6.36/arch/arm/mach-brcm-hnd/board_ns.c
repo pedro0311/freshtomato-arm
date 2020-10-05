@@ -999,8 +999,8 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].name = "board_data";
-			bcm947xx_nflash_parts[nparts].size = 0x40000;
-			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
+			bcm947xx_nflash_parts[nparts].size = 0x80000;
+			bcm947xx_nflash_parts[nparts].offset = 0x7200000;
 			nparts++;
 		}
 		/* again, to fix R6300V2 and R6250 */

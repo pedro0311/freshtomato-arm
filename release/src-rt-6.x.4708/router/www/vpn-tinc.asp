@@ -101,9 +101,9 @@ th.verifyFields = function(row, quiet) {
 	else {
 		ferror.clear(f[2]);
 	}
-	if (!f[3].value == "" ) {
-		if (!v_port(f[3], quiet));
-		return 0;
+	if (!f[3].value == "") {
+		if (!v_port(f[3], quiet))
+			return 0;
 	}
 	
 	if (E('_tinc_devicetype').value == 'tun') {

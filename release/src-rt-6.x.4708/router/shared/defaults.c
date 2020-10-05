@@ -1141,7 +1141,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_crypt",		"tls"				, 0 },
 	{ "vpn_server1_comp",		"-1"				, 0 },
 	{ "vpn_server1_cipher",		"AES-128-CBC"			, 0 },
-	{ "vpn_server1_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
@@ -1174,9 +1173,12 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_ca",		""				, 0 },
 	{ "vpn_server1_ca_key",		""				, 0 },
 	{ "vpn_server1_crt",		""				, 0 },
+	{ "vpn_server1_crl",		""				, 0 },
 	{ "vpn_server1_key",		""				, 0 },
 	{ "vpn_server1_dh",		""				, 0 },
 	{ "vpn_server1_br",		"br0"				, 0 },
+	{ "vpn_client1_tlsvername",	"0"				, 0 },
+	{ "vpn_server1_serial",		"00"				, 0 },
 	{ "vpn_server2_poll",		"0"				, 0 },
 	{ "vpn_server2_if",		"tun"				, 0 },
 	{ "vpn_server2_proto",		"udp"				, 0 },
@@ -1185,7 +1187,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_crypt",		"tls"				, 0 },
 	{ "vpn_server2_comp",		"-1"				, 0 },
 	{ "vpn_server2_cipher",		"AES-128-CBC"			, 0 },
-	{ "vpn_server2_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
@@ -1218,9 +1219,12 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_ca",		""				, 0 },
 	{ "vpn_server2_ca_key",		""				, 0 },
 	{ "vpn_server2_crt",		""				, 0 },
+	{ "vpn_server2_crl",		""				, 0 },
 	{ "vpn_server2_key",		""				, 0 },
 	{ "vpn_server2_dh",		""				, 0 },
 	{ "vpn_server2_br",		"br0"				, 0 },
+	{ "vpn_client2_tlsvername",	"0"				, 0 },
+	{ "vpn_server2_serial",		"00"				, 0 },
 	{ "vpn_client_eas",		""				, 0 },
 	{ "vpn_client1_poll",		"0"				, 0 },
 	{ "vpn_client1_if",		"tun"				, 0 },
@@ -1235,7 +1239,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client1_crypt",		"tls"				, 0 },
 	{ "vpn_client1_comp",		"-1"				, 0 },
 	{ "vpn_client1_cipher",		"default"			, 0 },
-	{ "vpn_client1_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
@@ -1272,7 +1275,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client2_crypt",		"tls"				, 0 },
 	{ "vpn_client2_comp",		"-1"				, 0 },
 	{ "vpn_client2_cipher",		"default"			, 0 },
-	{ "vpn_client2_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else
@@ -1309,7 +1311,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_client3_crypt",		"tls"				, 0 },
 	{ "vpn_client3_comp",		"-1"				, 0 },
 	{ "vpn_client3_cipher",		"default"			, 0 },
-	{ "vpn_client3_ncp_enable",	"1"				, 0 },
 #if 0
 	{ "vpn_client3_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC", 0 },
 #else

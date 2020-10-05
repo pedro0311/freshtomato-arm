@@ -1595,8 +1595,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
 	{ "vpn_server1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_server1_cipher",		V_TEXT(0, 16)			},
-	{ "vpn_server1_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server1_digest",		V_TEXT(0, 15)			},
 	{ "vpn_server1_dhcp",		V_01				},
 	{ "vpn_server1_r1",		V_IP				},
@@ -1606,7 +1605,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_local",		V_IP				},
 	{ "vpn_server1_remote",		V_IP				},
 	{ "vpn_server1_reneg",		V_RANGE(-1,2147483647)		},
-	{ "vpn_server1_hmac",		V_RANGE(-1, 3)			},
+	{ "vpn_server1_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_server1_plan",		V_01				},
 	{ "vpn_server1_plan1",		V_01				},
 	{ "vpn_server1_plan2",		V_01				},
@@ -1625,9 +1624,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_ca",		V_NONE				},
 	{ "vpn_server1_ca_key",		V_NONE				},
 	{ "vpn_server1_crt",		V_NONE				},
+	{ "vpn_server1_crl",		V_NONE				},	/* certificate revocation list */
 	{ "vpn_server1_key",		V_NONE				},
 	{ "vpn_server1_dh",		V_NONE				},
 	{ "vpn_server1_br",		V_LENGTH(0, 50)			},
+	{ "vpn_server1_serial",		V_TEXT(0, 2)			},	/* cert serial number */
 	{ "vpn_server2_poll",		V_RANGE(0, 30)			},
 	{ "vpn_server2_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_server2_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
@@ -1636,8 +1637,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
 	{ "vpn_server2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_server2_cipher",		V_TEXT(0, 16)			},
-	{ "vpn_server2_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server2_digest",		V_TEXT(0, 15)			},
 	{ "vpn_server2_dhcp",		V_01				},
 	{ "vpn_server2_r1",		V_IP				},
@@ -1647,7 +1647,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_local",		V_IP				},
 	{ "vpn_server2_remote",		V_IP				},
 	{ "vpn_server2_reneg",		V_RANGE(-1,2147483647)		},
-	{ "vpn_server2_hmac",		V_RANGE(-1, 3)			},
+	{ "vpn_server2_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_server2_plan",		V_01				},
 	{ "vpn_server2_plan1",		V_01				},
 	{ "vpn_server2_plan2",		V_01				},
@@ -1666,9 +1666,11 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_ca",		V_NONE				},
 	{ "vpn_server2_ca_key",		V_NONE				},
 	{ "vpn_server2_crt",		V_NONE				},
+	{ "vpn_server2_crl",		V_NONE				},	/* certificate revocation list */
 	{ "vpn_server2_key",		V_NONE				},
 	{ "vpn_server2_dh",		V_NONE				},
 	{ "vpn_server2_br",		V_LENGTH(0, 50)			},
+	{ "vpn_server2_serial",		V_TEXT(0, 2)			},	/* cert serial number */
 	{ "vpn_client_eas",		V_NONE				},
 	{ "vpn_client1_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client1_if",		V_TEXT(3, 3)			},	// tap, tun
@@ -1682,14 +1684,13 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
 	{ "vpn_client1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client1_cipher",		V_TEXT(0, 16)			},
-	{ "vpn_client1_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client1_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client1_local",		V_IP				},
 	{ "vpn_client1_remote",		V_IP				},
 	{ "vpn_client1_nm",		V_IP				},
 	{ "vpn_client1_reneg",		V_RANGE(-1,2147483647)		},
-	{ "vpn_client1_hmac",		V_RANGE(-1, 3)			},
+	{ "vpn_client1_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client1_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client1_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client1_gw",		V_TEXT(0, 15)			},
@@ -1702,7 +1703,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_username",	V_TEXT(0,50)			},
 	{ "vpn_client1_password",	V_TEXT(0,70)			},
 	{ "vpn_client1_useronly",	V_01				},
-	{ "vpn_client1_tlsremote",	V_01				},
+	{ "vpn_client1_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client1_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
 	{ "vpn_client1_cn",		V_NONE				},
 	{ "vpn_client1_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client1_routing_val",	V_NONE				},
@@ -1719,14 +1721,13 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
 	{ "vpn_client2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client2_cipher",		V_TEXT(0, 16)			},
-	{ "vpn_client2_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client2_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client2_local",		V_IP				},
 	{ "vpn_client2_remote",		V_IP				},
 	{ "vpn_client2_nm",		V_IP				},
 	{ "vpn_client2_reneg",		V_RANGE(-1,2147483647)		},
-	{ "vpn_client2_hmac",		V_RANGE(-1, 3)			},
+	{ "vpn_client2_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client2_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client2_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client2_gw",		V_TEXT(0, 15)			},
@@ -1739,7 +1740,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_username",	V_TEXT(0,50)			},
 	{ "vpn_client2_password",	V_TEXT(0,70)			},
 	{ "vpn_client2_useronly",	V_01				},
-	{ "vpn_client2_tlsremote",	V_01				},
+	{ "vpn_client2_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client2_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
 	{ "vpn_client2_cn",		V_NONE				},
 	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client2_routing_val",	V_NONE				},
@@ -1756,14 +1758,13 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
 	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
 	{ "vpn_client3_cipher",		V_TEXT(0, 16)			},
-	{ "vpn_client3_ncp_enable",	V_RANGE(0,3)			},
-	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 47)			},
+	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client3_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client3_local",		V_IP				},
 	{ "vpn_client3_remote",		V_IP				},
 	{ "vpn_client3_nm",		V_IP				},
 	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
-	{ "vpn_client3_hmac",		V_RANGE(-1, 3)			},
+	{ "vpn_client3_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client3_rgw",		V_RANGE(0, 3)			},
 	{ "vpn_client3_gw",		V_TEXT(0, 15)			},
