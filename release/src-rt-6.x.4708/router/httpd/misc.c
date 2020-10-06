@@ -259,10 +259,14 @@ static int get_memory(meminfo_t *m)
 }
 
 #ifdef TCONFIG_IPV6
-static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
+static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
 	char buffer[INET6_ADDRSTRLEN];
 	const char *p_tmp;
+	char *dns = NULL;
+	char *next = NULL;
+	struct in6_addr addr;
+	int cnt = 0;
 
 	if (!ipv6_enabled()) {
 		return;
@@ -365,8 +369,40 @@ static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, lan, lan-ll, lan
 			}
 
 		}
+		/* IPv6 DNS */
+		dns = nvram_safe_get("ipv6_dns"); /* check static dns first */
+
+		memset(buffer, 0, sizeof(buffer));
+		foreach(buffer, dns, next) {
+			/* verify that this is a valid IPv6 address */
+			if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+				web_printf("\tip6_wan_dns1: '%s',\n", buffer);
+				cnt++; /* found and UP */
+			}
+			else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+				web_printf("\tip6_wan_dns2: '%s',\n", buffer);
+				cnt++;  /* found and UP */
+			}
+		}
+		if (cnt == 0) { /* check auto dns if no valid static dns found */
+			dns = nvram_safe_get("ipv6_get_dns");
+
+			memset(buffer, 0, sizeof(buffer));
+			foreach(buffer, dns, next) {
+				/* verify that this is a valid IPv6 address */
+				if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+					web_printf("\tip6_wan_dns1: '%s',\n", buffer);
+					cnt++; /* found and UP */
+				}
+				else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+					web_printf("\tip6_wan_dns2: '%s',\n", buffer);
+					cnt++;  /* found and UP */
+				}
+			}
+		}
 		memset(buffer, 0, sizeof(buffer)); /* reset */
 		p_tmp = NULL;
+		next = NULL;
 }
 
 void asp_calc6rdlocalprefix(int argc, char **argv)
