@@ -191,8 +191,8 @@ void start_ovpn_client(int clientNum)
 		}
 	}
 
-	userauth = atoi(getNVRAMVar("vpn_server%d_userpass", clientNum));
-	useronly = userauth && atoi(getNVRAMVar("vpn_server%d_nocert", clientNum));
+	userauth = atoi(getNVRAMVar("vpn_client%d_userauth", clientNum));
+	useronly = userauth && atoi(getNVRAMVar("vpn_client%d_useronly", clientNum));
 
 	/* Build and write config file */
 	memset(buffer, 0, BUF_SIZE);
