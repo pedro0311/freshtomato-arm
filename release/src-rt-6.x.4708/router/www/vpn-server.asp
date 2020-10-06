@@ -700,7 +700,7 @@ function downloadClientConfig(serverNumber) {
 				{ title: 'Direct clients to<br>redirect Internet traffic', name: 'f_vpn_'+t+'_rgw', type: 'checkbox', value: eval('nvram.vpn_'+t+'_rgw') != 0 },
 				{ title: 'Respond to DNS', name: 'f_vpn_'+t+'_dns', type: 'checkbox', value: nvram.vpn_server_dns.indexOf(''+(i+1)) >= 0 },
 				{ title: 'Advertise DNS to clients', name: 'f_vpn_'+t+'_pdns', type: 'checkbox', value: eval('nvram.vpn_'+t+'_pdns') != 0 },
-				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', maxlen: 127, size: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
+				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 70, maxlen: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
 				{ title: 'Cipher', name: 'vpn_'+t+'_cipher', type: 'select', options: ciphers, value: eval('nvram.vpn_'+t+'_cipher') },
 				{ title: 'Compression', name: 'vpn_'+t+'_comp', type: 'select', options: [['-1', 'Disabled'], ['no', 'None'], ['yes', 'LZO'], ['adaptive', 'LZO Adaptive'], ['lz4', 'LZ4'], ['lz4-v2', 'LZ4-V2']], value: eval('nvram.vpn_'+t+'_comp') },
 				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'),
