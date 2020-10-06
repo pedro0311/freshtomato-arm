@@ -191,8 +191,8 @@ void start_ovpn_client(int clientNum)
 		}
 	}
 
-	userauth = atoi(getNVRAMVar("vpn_server%d_userpass", clientNum));
-	useronly = userauth && atoi(getNVRAMVar("vpn_server%d_nocert", clientNum));
+	userauth = atoi(getNVRAMVar("vpn_client%d_userauth", clientNum));
+	useronly = userauth && atoi(getNVRAMVar("vpn_client%d_useronly", clientNum));
 
 	/* Build and write config file */
 	memset(buffer, 0, BUF_SIZE);
@@ -246,7 +246,7 @@ void start_ovpn_client(int clientNum)
 	memset(buffer, 0, BUF_SIZE);
 	strlcpy(buffer, getNVRAMVar("vpn_client%d_comp", clientNum), sizeof(buffer));
 	if (strcmp(buffer, "-1")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		if ((!strcmp(buffer, "lz4")) || (!strcmp(buffer, "lz4-v2")))
 			fprintf(fp, "compress %s\n", buffer);
 		else
@@ -255,7 +255,7 @@ void start_ovpn_client(int clientNum)
 			fprintf(fp, "compress lzo\n");
 		else if (!strcmp(buffer, "adaptive"))
 			fprintf(fp, "comp-lzo adaptive\n");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		else if ((!strcmp(buffer, "stub")) || (!strcmp(buffer, "stub-v2")))
 			fprintf(fp, "compress %s\n", buffer);
 #endif
@@ -268,20 +268,20 @@ void start_ovpn_client(int clientNum)
 	strlcpy(buffer, getNVRAMVar("vpn_client%d_ncp_ciphers", clientNum), sizeof(buffer));
 	if (cryptMode == TLS) {
 		if (buffer[0] != '\0')
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			fprintf(fp, "data-ciphers %s\n", buffer);
 #else
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
 #endif
 	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	else {	/* SECRET/CUSTOM */
 #endif
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_client%d_cipher", clientNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	}
 #endif
 
@@ -329,7 +329,7 @@ void start_ovpn_client(int clientNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (nvi == 4)
 				fprintf(fp, "tls-crypt-v2 static.key");
 #endif
@@ -363,10 +363,8 @@ void start_ovpn_client(int clientNum)
 		if (nvram_get_int(buffer))
 			fprintf(fp, "remote-cert-tls server\n");
 
-		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_tlsvername", clientNum);
-		if ((nvi = nvram_get_int(buffer)) > 0) {
-			fprintf(fp, "verify-x509-name \"%s\" ", buffer);
+		if ((nvi = atoi(getNVRAMVar("vpn_server%d_tlsvername", clientNum))) > 0) {
+			fprintf(fp, "verify-x509-name \"%s\" ", getNVRAMVar("vpn_client%d_cn", clientNum));
 			if (nvi == 2)
 				fprintf(fp, "name-prefix\n");
 			else if (nvi == 3)
@@ -852,20 +850,20 @@ void start_ovpn_server(int serverNum)
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_ncp_ciphers", serverNum), sizeof(buffer));
 	if (cryptMode == TLS) {
 		if (buffer[0] != '\0')
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			fprintf(fp, "data-ciphers %s\n", buffer);
 #else
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
 #endif
 	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	else {	/* SECRET/CUSTOM */
 #endif
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_cipher", serverNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	}
 #endif
 
@@ -879,7 +877,7 @@ void start_ovpn_server(int serverNum)
 	memset(buffer, 0, BUF_SIZE);
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_comp", serverNum), sizeof(buffer));
 	if (strcmp(buffer, "-1")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		if (!strcmp(buffer, "lz4") || !strcmp(buffer, "lz4-v2"))
 			fprintf(fp, "compress %s\n", buffer);
 		else
@@ -1047,7 +1045,7 @@ void start_ovpn_server(int serverNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (nvi == 4)
 				fprintf(fp, "tls-crypt-v2 static.key");
 #endif

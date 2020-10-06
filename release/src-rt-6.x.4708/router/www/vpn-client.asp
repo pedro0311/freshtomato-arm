@@ -472,7 +472,7 @@ function init() {
 					{ name: 'vpn_'+t+'_rgw', type: 'select', options: [[0, 'No'], [1, 'All'], [2, 'Routing Policy'], [3, 'Routing Policy (strict)']], value: eval('nvram.vpn_'+t+'_rgw') },
 					{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval('nvram.vpn_'+t+'_gw'), prefix: '<span id="'+t+'_gateway"> &nbsp;Gateway:&nbsp', suffix: '<\/span>'} ] },
 				{ title: 'Accept DNS configuration', name: 'vpn_'+t+'_adns', type: 'select', options: [[0, 'Disabled'],[1, 'Relaxed'],[2, 'Strict'],[3, 'Exclusive']], value: eval('nvram.vpn_'+t+'_adns') },
-				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 127, maxlen: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
+				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 70, maxlen: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
 				{ title: 'Cipher', name: 'vpn_'+t+'_cipher', type: 'select', options: ciphers, value: eval('nvram.vpn_'+t+'_cipher') },
 				{ title: 'Compression', name: 'vpn_'+t+'_comp', type: 'select', options: [['-1', 'Disabled'], ['no', 'None'], ['yes', 'LZO'], ['adaptive', 'LZO Adaptive'], ['lz4', 'LZ4'], ['lz4-v2', 'LZ4-V2'], ['stub', 'Stub'], ['stub-v2', 'Stub-V2']], value: eval('nvram.vpn_'+t+'_comp') },
 				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'),
