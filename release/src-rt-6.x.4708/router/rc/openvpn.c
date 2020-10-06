@@ -246,7 +246,7 @@ void start_ovpn_client(int clientNum)
 	memset(buffer, 0, BUF_SIZE);
 	strlcpy(buffer, getNVRAMVar("vpn_client%d_comp", clientNum), sizeof(buffer));
 	if (strcmp(buffer, "-1")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		if ((!strcmp(buffer, "lz4")) || (!strcmp(buffer, "lz4-v2")))
 			fprintf(fp, "compress %s\n", buffer);
 		else
@@ -255,7 +255,7 @@ void start_ovpn_client(int clientNum)
 			fprintf(fp, "compress lzo\n");
 		else if (!strcmp(buffer, "adaptive"))
 			fprintf(fp, "comp-lzo adaptive\n");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		else if ((!strcmp(buffer, "stub")) || (!strcmp(buffer, "stub-v2")))
 			fprintf(fp, "compress %s\n", buffer);
 #endif
@@ -274,14 +274,14 @@ void start_ovpn_client(int clientNum)
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
 #endif
 	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	else {	/* SECRET/CUSTOM */
 #endif
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_client%d_cipher", clientNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	}
 #endif
 
@@ -329,7 +329,7 @@ void start_ovpn_client(int clientNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (nvi == 4)
 				fprintf(fp, "tls-crypt-v2 static.key");
 #endif
@@ -856,14 +856,14 @@ void start_ovpn_server(int serverNum)
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
 #endif
 	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	else {	/* SECRET/CUSTOM */
 #endif
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_cipher", serverNum);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	}
 #endif
 
@@ -877,7 +877,7 @@ void start_ovpn_server(int serverNum)
 	memset(buffer, 0, BUF_SIZE);
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_comp", serverNum), sizeof(buffer));
 	if (strcmp(buffer, "-1")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		if (!strcmp(buffer, "lz4") || !strcmp(buffer, "lz4-v2"))
 			fprintf(fp, "compress %s\n", buffer);
 		else
@@ -1045,7 +1045,7 @@ void start_ovpn_server(int serverNum)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (nvi == 4)
 				fprintf(fp, "tls-crypt-v2 static.key");
 #endif
