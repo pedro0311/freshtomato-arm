@@ -268,7 +268,7 @@ void start_ovpn_client(int clientNum)
 	strlcpy(buffer, getNVRAMVar("vpn_client%d_ncp_ciphers", clientNum), sizeof(buffer));
 	if (cryptMode == TLS) {
 		if (buffer[0] != '\0')
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			fprintf(fp, "data-ciphers %s\n", buffer);
 #else
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
@@ -850,7 +850,7 @@ void start_ovpn_server(int serverNum)
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_ncp_ciphers", serverNum), sizeof(buffer));
 	if (cryptMode == TLS) {
 		if (buffer[0] != '\0')
-#ifndef TCONFIG_OPTIMIZE_SIZE
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			fprintf(fp, "data-ciphers %s\n", buffer);
 #else
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
