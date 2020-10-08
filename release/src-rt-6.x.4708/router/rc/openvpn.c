@@ -363,7 +363,7 @@ void start_ovpn_client(int clientNum)
 		if (nvram_get_int(buffer))
 			fprintf(fp, "remote-cert-tls server\n");
 
-		if ((nvi = atoi(getNVRAMVar("vpn_server%d_tlsvername", clientNum))) > 0) {
+		if ((nvi = atoi(getNVRAMVar("vpn_client%d_tlsvername", clientNum))) > 0) {
 			fprintf(fp, "verify-x509-name \"%s\" ", getNVRAMVar("vpn_client%d_cn", clientNum));
 			if (nvi == 2)
 				fprintf(fp, "name-prefix\n");
@@ -383,7 +383,6 @@ void start_ovpn_client(int clientNum)
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "secret static.key\n");
 	}
-	memset(buffer, 0, BUF_SIZE);
 	fprintf(fp, "keepalive 15 60\n"
 	            "verb 3\n"
 	            "status-version 2\n"

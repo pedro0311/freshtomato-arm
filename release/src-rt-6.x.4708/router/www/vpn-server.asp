@@ -731,12 +731,12 @@ function downloadClientConfig(serverNumber) {
 					prefix: '<div id="'+t+'_cert_progress_div" style="display: none"><p class="keyhelp">Please wait while we\'re generating certificate...<img src="spin.gif" alt=""><\/p><\/div>' },
 				{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval('nvram.vpn_'+t+'_key'),
 					prefix: '<div id="'+t+'_key_progress_div" style="display: none"><p class="keyhelp">Please wait while we\'re generating key...<img src="spin.gif" alt=""><\/p><\/div>' },
+				{ title: 'CRL file', name: 'vpn_'+t+'_crl', type: 'textarea', value: eval('nvram.vpn_'+t+'_crl') },
 				{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
 				{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval('nvram.vpn_'+t+'_dh'),
 					prefix: '<div id="'+t+'_dh_progress_div" style="display:none"><p class="keyhelp">Please wait while we\'re generating DH parameters...<img src="spin.gif" alt=""><\/p><\/div>' },
 				{ title: '', custom: '<input type="button" value="Generate DH Params" onclick="generateDHParams('+(i+1)+')" id="_vpn_dhgen_'+t+'_button">' },
 				null,
-				{ title: 'CRL file', name: 'vpn_'+t+'_crl', type: 'textarea', value: eval('nvram.vpn_'+t+'_crl') },
 				{ title: 'Serial number', name: 'vpn_'+t+'_serial', type: 'text', maxlen: 2, size: 2, value: eval('nvram.vpn_'+t+'_serial') },
 				{ title: '', custom: '<input type="button" value="Generate client config" onclick="downloadClientConfig('+(i+1)+')" id="_vpn_client_gen_'+t+'_button">',
 					suffix: '<div id="'+t+'_gen_progress_div" style="display:none"><p class="keyhelp">Please wait while your configuration is being generated...<img src="spin.gif" alt=""><\/p><\/div>' }
