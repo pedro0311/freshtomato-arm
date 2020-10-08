@@ -56,10 +56,6 @@
 #define ISSET(flag)  ((FLAGS(flag) & FLAGMASK(flag)) != 0)
 #define TOGGLE(flag)  FLAGS(flag) ^= FLAGMASK(flag)
 
-/* Macros for allocation of character strings. */
-#define charalloc(howmuch)  (char *)nmalloc(howmuch)
-#define charealloc(ptr, howmuch)  (char *)nrealloc(ptr, howmuch)
-
 /* In UTF-8 a character is at most six bytes long. */
 #ifdef ENABLE_UTF8
 #define MAXCHARLEN  6
@@ -345,11 +341,11 @@ typedef struct undostruct {
 #ifdef ENABLE_HISTORIES
 typedef struct poshiststruct {
 	char *filename;
-		/* The file. */
-	ssize_t lineno;
-		/* Line number we left off on. */
-	ssize_t xno;
-		/* The x position in the file we left off on. */
+		/* The full path plus name of the file. */
+	ssize_t linenumber;
+		/* The line where the cursor was when we closed the file. */
+	ssize_t columnnumber;
+		/* The column where the cursor was. */
 	struct poshiststruct *next;
 		/* The next item of position history. */
 } poshiststruct;
@@ -453,8 +449,6 @@ typedef struct keystruct {
 typedef struct funcstruct {
 	void (*func)(void);
 		/* The actual function to call. */
-	int menus;
-		/* In what menus this function applies. */
 	const char *desc;
 		/* The function's short description, for example "Where Is". */
 #ifdef ENABLE_HELP
@@ -466,8 +460,8 @@ typedef struct funcstruct {
 #endif
 	bool viewok;
 		/* Is this function allowed when in view mode? */
-	long toggle;
-		/* If this is a toggle, which toggle to affect. */
+	int menus;
+		/* In what menus this function applies. */
 	struct funcstruct *next;
 		/* Next item in the list. */
 } funcstruct;
@@ -485,6 +479,7 @@ enum
 	TITLE_BAR = 0,
 	LINE_NUMBER,
 	GUIDE_STRIPE,
+	SCROLL_BAR,
 	SELECTED_TEXT,
 	STATUS_BAR,
 	ERROR_MESSAGE,
@@ -544,7 +539,9 @@ enum
 	JUMPY_SCROLLING,
 	EMPTY_LINE,
 	INDICATOR,
-	BOOKSTYLE
+	BOOKSTYLE,
+	STATEFLAGS,
+	USE_MAGIC
 };
 
 /* Flags for the menus in which a given function should be present. */
@@ -625,10 +622,7 @@ enum
 #define FOREIGN_SEQUENCE  0x4FC
 
 #ifdef USE_SLANG
-#ifdef ENABLE_UTF8
-#define KEY_BAD  0xFF  /* Clipped error code. */
-#endif
-#define KEY_FLUSH  0x91  /* User-definable control code. */
+#define KEY_FLUSH  0xFF  /* Clipped error code. */
 #else
 #define KEY_FLUSH  KEY_F0  /* Nonexistent function key. */
 #endif

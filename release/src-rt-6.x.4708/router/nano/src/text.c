@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -70,7 +71,7 @@ void do_tab(void)
 #endif
 #ifndef NANO_TINY
 	if (ISSET(TABS_TO_SPACES)) {
-		char *spaces = charalloc(tabsize + 1);
+		char *spaces = nmalloc(tabsize + 1);
 		size_t length = tabsize - (xplustabs() % tabsize);
 
 		memset(spaces, ' ', length);
@@ -96,7 +97,7 @@ void indent_a_line(linestruct *line, char *indentation)
 		return;
 
 	/* Add the fabricated indentation to the beginning of the line. */
-	line->data = charealloc(line->data, length + indent_len + 1);
+	line->data = nrealloc(line->data, length + indent_len + 1);
 	memmove(line->data + indent_len, line->data, length + 1);
 	memcpy(line->data, indentation, indent_len);
 
@@ -133,7 +134,7 @@ void do_indent(void)
 	if (top == bot->next)
 		return;
 
-	indentation = charalloc(tabsize + 1);
+	indentation = nmalloc(tabsize + 1);
 
 	/* Set the indentation to either a bunch of spaces or a single tab. */
 #ifdef ENABLE_COLOR
@@ -331,7 +332,7 @@ bool comment_line(undo_type action, linestruct *line, const char *comment_seq)
 	if (action == COMMENT) {
 		/* Make room for the comment sequence(s), move the text right and
 		 * copy them in. */
-		line->data = charealloc(line->data, line_len + pre_len + post_len + 1);
+		line->data = nrealloc(line->data, line_len + pre_len + post_len + 1);
 		memmove(line->data + pre_len, line->data, line_len + 1);
 		memmove(line->data, comment_seq, pre_len);
 		if (post_len > 0)
@@ -543,7 +544,7 @@ void do_undo(void)
 		 * case, adjust the positions to return to and to scoop data from. */
 		original_x = (u->head_x == 0) ? u->tail_x : u->head_x;
 		regain_from_x = (u->head_x == 0) ? 0 : u->tail_x;
-		line->data = charealloc(line->data, strlen(line->data) +
+		line->data = nrealloc(line->data, strlen(line->data) +
 								strlen(&u->strdata[regain_from_x]) + 1);
 		strcat(line->data, &u->strdata[regain_from_x]);
 		line->has_anchor |= line->next->has_anchor;
@@ -554,7 +555,7 @@ void do_undo(void)
 	case BACK:
 	case DEL:
 		undidmsg = _("deletion");
-		data = charalloc(strlen(line->data) + strlen(u->strdata) + 1);
+		data = nmalloc(strlen(line->data) + strlen(u->strdata) + 1);
 		strncpy(data, line->data, u->head_x);
 		strcpy(&data[u->head_x], u->strdata);
 		strcpy(&data[u->head_x + strlen(u->strdata)], &line->data[u->head_x]);
@@ -711,7 +712,7 @@ void do_redo(void)
 		redidmsg = _("addition");
 		if ((u->xflags & INCLUDED_LAST_LINE) && !ISSET(NO_NEWLINES))
 			new_magicline();
-		data = charalloc(strlen(line->data) + strlen(u->strdata) + 1);
+		data = nmalloc(strlen(line->data) + strlen(u->strdata) + 1);
 		strncpy(data, line->data, u->head_x);
 		strcpy(&data[u->head_x], u->strdata);
 		strcpy(&data[u->head_x + strlen(u->strdata)], &line->data[u->head_x]);
@@ -746,7 +747,7 @@ void do_redo(void)
 			goto_line_posx(u->tail_lineno, u->tail_x);
 			break;
 		}
-		line->data = charealloc(line->data, strlen(line->data) + strlen(u->strdata) + 1);
+		line->data = nrealloc(line->data, strlen(line->data) + strlen(u->strdata) + 1);
 		strcat(line->data, u->strdata);
 		unlink_node(line->next);
 		renumber_from(line);
@@ -876,7 +877,7 @@ void do_enter(void)
 			allblanks = TRUE;
 	}
 #endif /* NANO_TINY */
-	newnode->data = charalloc(strlen(openfile->current->data +
+	newnode->data = nmalloc(strlen(openfile->current->data +
 										openfile->current_x) + extra + 1);
 	strcpy(&newnode->data[extra], openfile->current->data +
 										openfile->current_x);
@@ -1112,7 +1113,7 @@ void update_multiline_undo(ssize_t lineno, char *indentation)
 		u->grouping->bottom_line++;
 
 		number_of_lines = u->grouping->bottom_line - u->grouping->top_line + 1;
-		u->grouping->indentations = (char **)nrealloc(u->grouping->indentations,
+		u->grouping->indentations = nrealloc(u->grouping->indentations,
 										number_of_lines * sizeof(char *));
 		u->grouping->indentations[number_of_lines - 1] = copy_of(indentation);
 	} else {
@@ -1123,7 +1124,7 @@ void update_multiline_undo(ssize_t lineno, char *indentation)
 		born->top_line = lineno;
 		born->bottom_line = lineno;
 
-		u->grouping->indentations = (char **)nmalloc(sizeof(char *));
+		u->grouping->indentations = nmalloc(sizeof(char *));
 		u->grouping->indentations[0] = copy_of(indentation);
 	}
 
@@ -1148,7 +1149,7 @@ void update_undo(undo_type action)
 	switch (u->type) {
 	case ADD:
 		newlen = openfile->current_x - u->head_x;
-		u->strdata = charealloc(u->strdata, newlen + 1);
+		u->strdata = nrealloc(u->strdata, newlen + 1);
 		strncpy(u->strdata, openfile->current->data + u->head_x, newlen);
 		u->strdata[newlen] = '\0';
 		u->tail_x = openfile->current_x;
@@ -1164,13 +1165,13 @@ void update_undo(undo_type action)
 		datalen = strlen(u->strdata);
 		if (openfile->current_x == u->head_x) {
 			/* They deleted more: add removed character after earlier stuff. */
-			u->strdata = charealloc(u->strdata, datalen + charlen + 1);
+			u->strdata = nrealloc(u->strdata, datalen + charlen + 1);
 			strncpy(u->strdata + datalen, textposition, charlen);
 			u->strdata[datalen + charlen] = '\0';
 			u->tail_x = openfile->current_x;
 		} else if (openfile->current_x == u->head_x - charlen) {
 			/* They backspaced further: add removed character before earlier. */
-			u->strdata = charealloc(u->strdata, datalen + charlen + 1);
+			u->strdata = nrealloc(u->strdata, datalen + charlen + 1);
 			memmove(u->strdata + charlen, u->strdata, datalen + 1);
 			strncpy(u->strdata, textposition, charlen);
 			u->head_x = openfile->current_x;
@@ -1302,7 +1303,7 @@ bool do_wrap(void)
 #ifndef NANO_TINY
 			add_undo(ADD, NULL);
 #endif
-			line->data = charealloc(line->data, line_len + 2);
+			line->data = nrealloc(line->data, line_len + 2);
 			line->data[line_len] = ' ';
 			line->data[line_len + 1] = '\0';
 			rest_length++;
@@ -1352,7 +1353,7 @@ bool do_wrap(void)
 	if (quot_len > 0) {
 		line = line->next;
 		line_len = strlen(line->data);
-		line->data = charealloc(line->data, lead_len + line_len + 1);
+		line->data = nrealloc(line->data, lead_len + line_len + 1);
 
 		memmove(line->data + lead_len, line->data, line_len + 1);
 		strncpy(line->data, line->prev->data, lead_len);
@@ -1586,12 +1587,12 @@ void concat_paragraph(linestruct *line, size_t count)
 		/* We're just about to tack the next line onto this one.  If
 		 * this line isn't empty, make sure it ends in a space. */
 		if (line_len > 0 && line->data[line_len - 1] != ' ') {
-			line->data = charealloc(line->data, line_len + 2);
+			line->data = nrealloc(line->data, line_len + 2);
 			line->data[line_len++] = ' ';
 			line->data[line_len] = '\0';
 		}
 
-		line->data = charealloc(line->data,
+		line->data = nrealloc(line->data,
 								line_len + next_line_len - next_lead_len + 1);
 		strcat(line->data, next_line->data + next_lead_len);
 #ifndef NANO_TINY
@@ -1688,7 +1689,7 @@ void rewrap_paragraph(linestruct **line, char *lead_string, size_t lead_len)
 		/* Insert a new line after the current one, and copy the leading part
 		 * plus the text after the breaking point into it. */
 		splice_node(*line, make_new_node(*line));
-		(*line)->next->data = charalloc(lead_len + line_len - break_pos + 1);
+		(*line)->next->data = nmalloc(lead_len + line_len - break_pos + 1);
 		strncpy((*line)->next->data, lead_string, lead_len);
 		strcpy((*line)->next->data + lead_len, (*line)->data + break_pos);
 
@@ -1838,7 +1839,7 @@ void do_justify(bool full_justify)
 		other_white_len = indent_length(sampleline->data + other_quot_len);
 
 		secondary_len = quot_len + other_white_len;
-		secondary_lead = charalloc(secondary_len + 1);
+		secondary_lead = nmalloc(secondary_len + 1);
 
 		strncpy(secondary_lead, startline->data, quot_len);
 		strncpy(secondary_lead + quot_len, sampleline->data + other_quot_len,
@@ -1919,7 +1920,7 @@ void do_justify(bool full_justify)
 
 		/* Then copy back in the leading part that it should have. */
 		if (primary_len > 0) {
-			line->data = charealloc(line->data, primary_len + text_len + 1);
+			line->data = nrealloc(line->data, primary_len + text_len + 1);
 			memmove(line->data + primary_len, line->data, text_len + 1);
 			strncpy(line->data, primary_lead, primary_len);
 		}
@@ -2036,7 +2037,7 @@ void construct_argument_list(char ***arguments, char *command, char *filename)
 	int count = 2;
 
 	while (element != NULL) {
-		*arguments = (char **)nrealloc(*arguments, ++count * sizeof(char *));
+		*arguments = nrealloc(*arguments, ++count * sizeof(char *));
 		(*arguments)[count - 3] = element;
 		element = strtok(NULL, " ");
 	}
@@ -2212,27 +2213,17 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 /* Let the user edit the misspelled word.  Return FALSE if the user cancels. */
 bool fix_spello(const char *word)
 {
-	char *save_search;
-	size_t firstcolumn_save = openfile->firstcolumn;
-	size_t current_x_save = openfile->current_x;
-	linestruct *edittop_save = openfile->edittop;
-	linestruct *current_save = openfile->current;
-		/* Save where we are. */
+	linestruct *was_edittop = openfile->edittop;
+	linestruct *was_current = openfile->current;
+	size_t was_firstcolumn = openfile->firstcolumn;
+	size_t was_x = openfile->current_x;
 	bool proceed = FALSE;
-		/* The return value of this function. */
-	bool result;
-		/* The return value of searching for a misspelled word. */
+	int result;
 #ifndef NANO_TINY
+	bool right_side_up = (openfile->mark && mark_is_before_cursor());
 	linestruct *top, *bot;
 	size_t top_x, bot_x;
-	bool right_side_up = (openfile->mark && mark_is_before_cursor());
-#endif
 
-	/* Save the current search string, then set it to the misspelled word. */
-	save_search = last_search;
-	last_search = copy_of(word);
-
-#ifndef NANO_TINY
 	/* If the mark is on, start at the beginning of the marked region. */
 	if (openfile->mark) {
 		get_region(&top, &top_x, &bot, &bot_x);
@@ -2286,7 +2277,7 @@ bool fix_spello(const char *word)
 
 		/* If a replacement was given, go through all occurrences. */
 		if (proceed && strcmp(word, answer) != 0) {
-			do_replace_loop(word, TRUE, current_save, &current_x_save);
+			do_replace_loop(word, TRUE, was_current, &was_x);
 
 			/* TRANSLATORS: Shown after fixing misspellings in one word. */
 			statusbar(_("Next word..."));
@@ -2310,17 +2301,13 @@ bool fix_spello(const char *word)
 #endif
 	{
 		/* Restore the (compensated) cursor position. */
-		openfile->current = current_save;
-		openfile->current_x = current_x_save;
+		openfile->current = was_current;
+		openfile->current_x = was_x;
 	}
 
-	/* Restore the string that was last searched for. */
-	free(last_search);
-	last_search = save_search;
-
 	/* Restore the viewport to where it was. */
-	openfile->edittop = edittop_save;
-	openfile->firstcolumn = firstcolumn_save;
+	openfile->edittop = was_edittop;
+	openfile->firstcolumn = was_firstcolumn;
 
 	return proceed;
 }
@@ -2442,13 +2429,13 @@ void do_int_speller(const char *tempfile_name)
 
 	totalread = 0;
 	buffersize = pipesize + 1;
-	misspellings = charalloc(buffersize);
+	misspellings = nmalloc(buffersize);
 	pointer = misspellings;
 
 	while ((bytesread = read(uniq_fd[0], pointer, pipesize)) > 0) {
 		totalread += bytesread;
 		buffersize += pipesize;
-		misspellings = charealloc(misspellings, buffersize);
+		misspellings = nrealloc(misspellings, buffersize);
 		pointer = misspellings + totalread;
 	}
 
@@ -2657,13 +2644,13 @@ void do_linter(void)
 	/* Read in the returned syntax errors. */
 	totalread = 0;
 	buffersize = pipesize + 1;
-	lintings = charalloc(buffersize);
+	lintings = nmalloc(buffersize);
 	pointer = lintings;
 
 	while ((bytesread = read(lint_fd[0], pointer, pipesize)) > 0) {
 		totalread += bytesread;
 		buffersize += pipesize;
-		lintings = charealloc(lintings, buffersize);
+		lintings = nrealloc(lintings, buffersize);
 		pointer = lintings + totalread;
 	}
 
@@ -2781,7 +2768,7 @@ void do_linter(void)
 
 			if (openfile->statinfo == NULL ||
 						openfile->statinfo->st_ino != lintfileinfo.st_ino) {
-				char *msg = charalloc(1024 + strlen(curlint->filename));
+				char *msg = nmalloc(1024 + strlen(curlint->filename));
 				int choice;
 
 				sprintf(msg, _("This message is for unopened file %s,"
@@ -3045,7 +3032,7 @@ char *copy_completion(char *text)
 		length = step_right(text, length);
 
 	/* Now copy this candidate to a new string. */
-	word = charalloc(length + 1);
+	word = nmalloc(length + 1);
 	while (index < length)
 		word[index++] = *(text++);
 	word[index] = '\0';
@@ -3109,7 +3096,7 @@ void complete_a_word(void)
 		return;
 	}
 
-	shard = charalloc(openfile->current_x - start_of_shard + 1);
+	shard = nmalloc(openfile->current_x - start_of_shard + 1);
 
 	/* Copy the fragment that has to be searched for. */
 	while (start_of_shard < openfile->current_x)
@@ -3164,7 +3151,7 @@ void complete_a_word(void)
 			}
 
 			/* Add the found word to the list of completions. */
-			some_word = (completion_word *)nmalloc(sizeof(completion_word));
+			some_word = nmalloc(sizeof(completion_word));
 			some_word->word = completion;
 			some_word->next = list_of_completions;
 			list_of_completions = some_word;

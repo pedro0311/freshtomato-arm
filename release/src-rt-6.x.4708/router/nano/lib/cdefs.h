@@ -75,11 +75,11 @@
 
 /* GCC can always grok prototypes.  For C++ programs we add throw()
    to help it optimize the function calls.  But this works only with
-   gcc 2.8.x and egcs.  For gcc 3.2 and up we even mark C functions
+   gcc 2.8.x and egcs.  For gcc 3.4 and up we even mark C functions
    as non-throwing using a function attribute since programs can use
    the -fexceptions options for C code as well.  */
 # if !defined __cplusplus \
-     && (__GNUC_PREREQ (3, 3) || __glibc_clang_has_attribute (__nothrow__))
+     && (__GNUC_PREREQ (3, 4) || __glibc_clang_has_attribute (__nothrow__))
 #  define __THROW	__attribute__ ((__nothrow__ __LEAF))
 #  define __THROWNL	__attribute__ ((__nothrow__))
 #  define __NTH(fct)	__attribute__ ((__nothrow__ __LEAF)) fct
@@ -148,7 +148,11 @@
 # define __warnattr(msg) __attribute__((__warning__ (msg)))
 # define __errordecl(name, msg) \
   extern void name (void) __attribute__((__error__ (msg)))
-#elif __glibc_clang_has_attribute (__diagnose_if__) && 0 /* fails on Fedora 31 with Clang 9.  */
+#elif __glibc_clang_has_attribute (__diagnose_if__) && 0
+/* These definitions are not enabled, because they produce bogus warnings
+   in the glibc Fortify functions.  These functions are written in a style
+   that works with GCC.  In order to work with clang, these functions would
+   need to be modified.  */
 # define __warndecl(name, msg) \
   extern void name (void) __attribute__((__diagnose_if__ (1, msg, "warning")))
 # define __warnattr(msg) __attribute__((__diagnose_if__ (1, msg, "warning")))

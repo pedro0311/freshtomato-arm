@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-AC_INIT([GNU nano], [5.2], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [5.3], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.14])
@@ -36,12 +36,12 @@ gl_cv_glob_lists_symlinks=yes
 
 dnl Checks for programs.
 
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 gl_EARLY
 gl_INIT
 AC_PROG_LN_S
-AC_ISC_POSIX
+AC_SEARCH_LIBS([strerror], [cposix])
 AC_SYS_LARGEFILE
 PKG_PROG_PKG_CONFIG
 
@@ -73,14 +73,14 @@ dnl Checks for pkg-config and gettext when building from git.
 if test x$from_git = xyes; then
 	if test ! -f $(aclocal --print-ac-dir)/pkg.m4; then
 		AC_MSG_ERROR([
-  *** The pkg.m4 macros are missing. ***
-  *** The pkg-config package needs to be installed when building from git. ***
-  *** After fixing this problem, rerun ./autogen.sh. ***])
+  *** The pkg.m4 macros are missing.
+  *** The pkg-config package needs to be installed when building from git.
+  *** After fixing this problem, rerun ./autogen.sh.])
 	fi
 	if test "$ac_cv_path_MSGFMT" = ":"; then
 		AC_MSG_ERROR([
-  *** The msgfmt program is missing. ***
-  *** The gettext package needs to be installed when building from git. ***])
+  *** The msgfmt program is missing.
+  *** The gettext package needs to be installed when building from git.])
 	fi
 fi
 
@@ -92,7 +92,8 @@ dnl Checks for options.
 
 if test "x$with_slang" = xyes; then
 	if test "x$enable_tiny" != xyes; then
-		AC_MSG_ERROR([--with-slang is supported only together with --enable-tiny])
+		AC_MSG_ERROR([
+  ***  --with-slang is supported only together with --enable-tiny])
 	fi
 fi
 
@@ -112,7 +113,8 @@ AS_HELP_STRING([--disable-color], [Disable color and syntax highlighting]))
 if test "x$enable_tiny" = xyes; then
 	if test "x$enable_color" = xyes; then
 		if test "x$enable_nanorc" != xyes; then
-			AC_MSG_ERROR([--enable-color needs --enable-nanorc to work])
+			AC_MSG_ERROR([
+  ***  --enable-color needs --enable-nanorc to work])
 		fi
 	else
 		enable_color=no
@@ -120,7 +122,8 @@ if test "x$enable_tiny" = xyes; then
 fi
 if test "x$enable_nanorc" = xno; then
 	if test "x$enable_color" = xyes; then
-		AC_MSG_ERROR([--enable-color cannot work with --disable-nanorc])
+		AC_MSG_ERROR([
+  ***  --enable-color cannot work with --disable-nanorc])
 	else
 		# Disabling nanorc silently disables color support.
 		enable_color=no
@@ -135,7 +138,8 @@ AC_ARG_ENABLE(comment,
 AS_HELP_STRING([--disable-comment], [Disable the comment/uncomment function]))
 if test "x$enable_tiny" = xyes; then
 	if test "x$enable_comment" = xyes; then
-		AC_MSG_ERROR([--enable-comment cannot work with --enable-tiny])
+		AC_MSG_ERROR([
+  ***  --enable-comment cannot work with --enable-tiny])
 	else
 		enable_comment=no
 	fi
@@ -160,7 +164,8 @@ AS_HELP_STRING([--disable-help], [Disable the built-in help texts]))
 if test "x$enable_tiny" = xyes; then
 	if test "x$enable_help" = xyes; then
 		if test "x$enable_multibuffer" != xyes; then
-			AC_MSG_ERROR([--enable-help needs --enable-multibuffer to work])
+			AC_MSG_ERROR([
+  ***  --enable-help needs --enable-multibuffer to work])
 		fi
 	else
 		enable_help=no
@@ -168,7 +173,8 @@ if test "x$enable_tiny" = xyes; then
 fi
 if test "x$enable_multibuffer" = xno; then
 	if test "x$enable_help" = xyes; then
-		AC_MSG_ERROR([--enable-help cannot work with --disable-multibuffer])
+		AC_MSG_ERROR([
+  ***  --enable-help cannot work with --disable-multibuffer])
 	else
 		# Disabling multibuffer silently disables the help texts.
 		enable_help=no
@@ -202,6 +208,18 @@ fi
 
 AC_ARG_ENABLE(libmagic,
 AS_HELP_STRING([--disable-libmagic], [Disable detection of file types via libmagic]))
+if test "x$enable_libmagic" = xyes; then
+	if test "x$enable_tiny" = xyes; then
+		if test "x$enable_color" != xyes; then
+			AC_MSG_ERROR([
+  ***  --enable-libmagic needs --enable-color and --enable-nanorc to work])
+		fi
+	fi
+	if test "x$enable_color" = xno; then
+		AC_MSG_ERROR([
+  ***  --enable-libmagic cannot work with --disable-color nor --disable-nanorc])
+	fi
+fi
 
 AC_ARG_ENABLE(linenumbers,
 AS_HELP_STRING([--disable-linenumbers], [Disable line numbering]))
@@ -285,7 +303,8 @@ AC_ARG_ENABLE(wordcomp,
 AS_HELP_STRING([--disable-wordcomp], [Disable the word-completion function]))
 if test "x$enable_tiny" = xyes; then
 	if test "x$enable_wordcomp" = xyes; then
-		AC_MSG_ERROR([--enable-wordcomp cannot work with --enable-tiny])
+		AC_MSG_ERROR([
+  ***  --enable-wordcomp cannot work with --enable-tiny])
 	else
 		enable_wordcomp=no
 	fi
@@ -528,15 +547,10 @@ dnl Checks for functions.
 if test "x$enable_utf8" != xno; then
 	AC_CHECK_FUNCS(iswalnum iswpunct mblen mbstowcs mbtowc wctomb)
 fi
-dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for available flags.
 
 AX_CHECK_COMPILE_FLAG([-Wall], [CFLAGS="$CFLAGS -Wall"], [], [])
-
-dnl Checks for library functions.
-
-AC_TYPE_SIGNAL
 
 dnl Checks for libraries.
 
@@ -567,9 +581,9 @@ if eval "test x$CURSES_LIB_NAME = x"; then
 			CURSES_LIB=`$NCURSESW_CONFIG --libs`
 			LIBS="$CURSES_LIB $LIBS"
 			CPPFLAGS="`$NCURSESW_CONFIG --cflags` $CPPFLAGS"
-			AC_CHECK_LIB(ncursesw, get_wch, [CURSES_LIB_NAME=ncursesw CURSES_LIB_WIDE=yes])
+			AC_CHECK_LIB(ncursesw, wget_wch, [CURSES_LIB_NAME=ncursesw CURSES_LIB_WIDE=yes])
 		else
-			AC_CHECK_LIB(ncursesw, get_wch, [CURSES_LIB="-lncursesw" CURSES_LIB_NAME=ncursesw CURSES_LIB_WIDE=yes])
+			AC_CHECK_LIB(ncursesw, wget_wch, [CURSES_LIB="-lncursesw" CURSES_LIB_NAME=ncursesw CURSES_LIB_WIDE=yes])
 		fi
 		LIBS="$OLDLIBS"
 	fi
@@ -583,7 +597,7 @@ if eval "test x$CURSES_LIB_NAME = x"; then
 	AC_CHECK_HEADERS(curses.h)
 
 	if test "x$enable_utf8" != xno; then
-		AC_CHECK_LIB(curses, get_wch, [CURSES_LIB="-lcurses" CURSES_LIB_NAME=curses CURSES_LIB_WIDE=yes])
+		AC_CHECK_LIB(curses, wget_wch, [CURSES_LIB="-lcurses" CURSES_LIB_NAME=curses CURSES_LIB_WIDE=yes])
 	fi
 
 	if eval "test x$CURSES_LIB_NAME = x"; then
@@ -609,8 +623,6 @@ AC_CHECK_LIB([$CURSES_LIB_NAME], [set_escdelay],
 AC_CHECK_LIB([$CURSES_LIB_NAME], [key_defined],
 			 [AC_DEFINE(HAVE_KEY_DEFINED, 1, [Define this if your curses library has the key_defined() function.])],
 			 [], [$CURSES_LIB])
-
-dnl Parse any configure options.
 
 LIBS="$LIBS $CURSES_LIB"
 
@@ -664,16 +676,16 @@ AC_DEFINE_UNQUOTED(NANO_REG_EXTENDED, $nano_reg_extended,
 				   [Flag(s) to use to get the full range of extended regular expressions])
 
 if test x$color_support = xyes; then
-#    if test x$CURSES_LIB_NAME = xcurses; then
-		AC_MSG_CHECKING([whether _XOPEN_SOURCE_EXTENDED is needed])
-		AC_TRY_RUN([
+	AC_MSG_CHECKING([whether _XOPEN_SOURCE_EXTENDED is needed])
+	AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <curses.h>
 int main(void)
 {
 	int testcolor = COLOR_WHITE;
 	return 0;
-}], AC_MSG_RESULT(no),
-	    AC_TRY_RUN([
+}]])],
+	AC_MSG_RESULT(no),
+	AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifndef _XOPEN_SOURCE_EXTENDED
 #define _XOPEN_SOURCE_EXTENDED 1
 #endif
@@ -682,35 +694,38 @@ int main(void)
 {
 	int testcolor = COLOR_WHITE;
 	return 0;
-}],
-		AC_DEFINE(NEED_XOPEN_SOURCE_EXTENDED, 1, [Define this if you need the _XOPEN_SOURCE_EXTENDED macro for color support.])
-		AC_MSG_RESULT(yes),
-		AC_MSG_RESULT(not sure)
-		AC_MSG_WARN([*** Couldn't successfully compile basic color test with or without _XOPEN_SOURCE_EXTENDED])
-		AC_MSG_WARN([*** This build may not compile. Consider configuring with --disable-color or installing ncurses])),
-		AC_MSG_WARN([*** Can't check need for _XOPEN_SOURCE_EXTENDED when cross-compiling]))
-#    fi
+}]])],
+	AC_DEFINE(NEED_XOPEN_SOURCE_EXTENDED, 1, [Define this if you need the _XOPEN_SOURCE_EXTENDED macro for color support.])
+	AC_MSG_RESULT(yes),
+	AC_MSG_RESULT(not sure)
+	AC_MSG_WARN([
+  *** Couldn't successfully compile basic color test with or without
+  *** _XOPEN_SOURCE_EXTENDED.  This build may not compile.  Consider
+  *** configuring with --disable-color or installing ncurses.])),
+	AC_MSG_WARN([
+  *** Can't check need for _XOPEN_SOURCE_EXTENDED when cross-compiling.]))
 fi
 
 AC_MSG_CHECKING([whether LINES and COLS can be redefined])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <curses.h>
 int main(void)
 {
 	LINES = 80;
 	COLS = 25;
 	return 0;
-}],
+}]])],
 AC_DEFINE(REDEFINING_MACROS_OK, 1, [Define this if you know your curses library allows LINES and COLS to be redefined to deal with a resizing bug.])
 AC_MSG_RESULT(yes),
 AC_MSG_RESULT(no),
-AC_MSG_WARN([*** Can't check for macro redefinability when cross-compiling]))
+AC_MSG_WARN([
+  *** Can't check for macro redefinability when cross-compiling.]))
 
 AS_IF([test "x$enable_libmagic" != "xno"], [
-  AC_CHECK_HEADERS([magic.h])
-  AC_CHECK_LIB(magic, magic_open)
-  AC_CHECK_HEADERS([zlib.h])
-  AC_CHECK_LIB(z, inflate)
+	AC_CHECK_HEADERS([magic.h])
+	AC_CHECK_LIB(magic, magic_open)
+	AC_CHECK_HEADERS([zlib.h])
+	AC_CHECK_LIB(z, inflate)
 ])
 
 # Check for groff html support.
@@ -719,8 +734,8 @@ groff -t -mandoc -Thtml </dev/null >/dev/null
 if test $? -ne 0 ; then
 	AC_MSG_RESULT([no])
 	AC_MSG_WARN([
-  *** Will not generate HTML version of man pages. ***
-  *** Consider installing a newer version of groff with HTML support. ***])
+  *** Will not generate HTML version of man pages.  Consider
+  *** installing a newer version of groff with HTML support.])
 	groff_html_support=no
 else
 	AC_MSG_RESULT([yes])

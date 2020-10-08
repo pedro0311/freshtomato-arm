@@ -8,8 +8,8 @@
 
 @smallbook
 @set EDITION 0.5
-@set VERSION 5.2
-@set UPDATED August 2020
+@set VERSION 5.3
+@set UPDATED October 2020
 
 @dircategory Editors
 @direntry
@@ -23,7 +23,7 @@
 @titlepage
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 5.2
+@subtitle version 5.3
 
 @author Chris Allegretta
 @page
@@ -63,7 +63,7 @@ e-mail: @email{chrisa@@asty.org}@*
 @node Top
 @top
 
-This manual documents the GNU @command{nano} editor, version 5.2.
+This manual documents the GNU @command{nano} editor, version 5.3.
 
 @menu
 * Introduction::
@@ -99,14 +99,14 @@ Pico differ.
 Starting with version 4.0, @command{nano} no longer hard-wraps an overlong
 line by default.  It further uses linewise scrolling by default, and by
 default includes the line below the title bar into the editing area.
-
 If you want the old, Pico behavior back, you can use the
 following options: @option{--breaklonglines},
 @option{--jumpyscrolling}, and @option{--emptyline}
-(or @option{-bje} for short).
+(or @option{-bje}).
 
 Please report bugs via @url{https://savannah.gnu.org/bugs/?group=nano}.
 
+For background information see @url{https://nano-editor.org/}.
 
 @node Invoking
 @chapter Invoking
@@ -252,7 +252,7 @@ and place it at that position again upon reopening such a file.
 @item -Q "@var{regex}"
 @itemx --quotestr="@var{regex}"
 Set the regular expression for matching the quoting part of a line.
-The default value is @t{"^([@w{ }\t]*([!#%:;>|@}]|//))+"}.
+The default value is "@t{^([@w{ }\t]*([!#%:;>|@}]|//))+}".
 (Note that @code{\t} stands for a literal Tab character.)
 This makes it possible to rejustify blocks of quoted text when composing
 email, and to rewrap blocks of line comments when writing source code.
@@ -468,6 +468,20 @@ Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.
 Enable the ability to suspend @command{nano} using the system's suspend
 keystroke (usually @kbd{^Z}).
 
+@item -%
+@itemx --stateflags
+Use the top-right corner of the screen for showing some state flags:
+@code{I} when auto-indenting, @code{M} when the mark is on, @code{L} when
+hard-wrapping (breaking long lines), @code{R} when recording a macro,
+and @code{S} when soft-wrapping.
+When the buffer is modified, a star (@code{*}) is shown after the
+filename in the center of the title bar.
+
+@item -!
+@itemx --magic
+When neither the file's name nor its first line give a clue,
+try using libmagic to determine the applicable syntax.
+
 @end table
 
 
@@ -537,23 +551,22 @@ and then pressing the desired key.
 @node The Cutbuffer
 @section The Cutbuffer
 
-Text can be cut from a file, a whole line at a time, by using the 'Cut Text'
-command (default key binding: @kbd{^K}).  The cut line is stored in
-the cutbuffer.  Consecutive strokes of @kbd{^K} will add each cut line
-to this buffer, but a @kbd{^K}
+Text can be cut from a file a whole line at a time with @kbd{^K}.
+The cut line is stored in the cutbuffer.  Consecutive strokes of @kbd{^K}
+will add each cut line to this buffer, but a @kbd{^K}
 after any other keystroke will overwrite the entire cutbuffer.
 
-The contents of the cutbuffer can be pasted back into the file with the
-'Uncut Text' command (default key binding: @kbd{^U}).
+The contents of the cutbuffer can be pasted at the current cursor position
+with @kbd{^U}.
 
-A line of text can be copied into the cutbuffer (without cutting it) with
-the 'Copy Text' command (default key binding: @kbd{M-6}).
+A line of text can be copied into the cutbuffer (without cutting it)
+with @kbd{M-6}.
 
 @node The Mark
 @section The Mark
 
-Text can be selected by first 'setting the Mark' (default key bindings:
-@kbd{^6} and @kbd{M-A}) and then moving the cursor to the other end of the portion
+Text can be selected by first 'setting the Mark' with @kbd{^6}
+or @kbd{M-A} and then moving the cursor to the other end of the portion
 to be selected.  The selected portion of text will be highlighted.
 This selection can now be cut or copied in its entirety with a single
 @kbd{^K} or @kbd{M-6}.  Or the selection can be used to limit the scope of
@@ -564,8 +577,8 @@ while using the cursor keys.  Holding down the @kbd{Ctrl} or @kbd{Alt}
 key too will increase the stride.  Such a selection is cancelled
 upon any cursor movement where @kbd{Shift} isn't held.
 
-Cutting or copying selected text will toggle the mark off automatically.
-If necessary, it can be toggled off manually with another @kbd{^6} or @kbd{M-A}.
+Cutting or copying selected text toggles off the mark automatically.
+If needed, it can be toggled off manually with another @kbd{^6} or @kbd{M-A}.
 
 @node Screen Layout
 @section Screen Layout
@@ -805,7 +818,7 @@ Set the characters treated as closing brackets when justifying
 paragraphs.  This may not include blank characters.  Only closing
 punctuation (see @code{set punct}), optionally followed by the specified
 closing brackets, can end sentences.  The default value is
-@t{""')>]@}"}.
+"@t{"')>]@}}".
 
 @item set breaklonglines
 Automatically hard-wrap the current line when it becomes overlong.
@@ -880,12 +893,18 @@ Display line numbers to the left of the text area.
 @item set locking
 Enable vim-style lock-files for when editing files.
 
+@item set magic
+When neither the file's name nor its first line give a clue,
+try using libmagic to determine the applicable syntax.
+(Calling libmagic can be relatively time consuming.
+It is therefore not done by default.)
+
 @anchor{@code{set matchbrackets}}
 @item set matchbrackets "@var{characters}"
 Specify the opening and closing brackets that can be found by bracket
 searches.  This may not include blank characters.  The opening set must
 come before the closing set, and the two sets must be in the same order.
-The default value is @t{"(<[@{)>]@}"}.
+The default value is "@t{(<[@{)>]@}}".
 
 @item set morespace
 Deprecated option since it has become the default setting.
@@ -942,7 +961,7 @@ Set the characters treated as closing punctuation when justifying
 paragraphs.  This may not include blank characters.  Only the
 specified closing punctuation, optionally followed by closing brackets
 (see @code{set brackets}), can end sentences.
-The default value is @t{"!.?"}.
+The default value is "@t{!.?}".
 
 @item set quickblank
 Do quick status-bar blanking: status-bar messages will disappear after 1
@@ -950,7 +969,7 @@ keystroke instead of 25.  Note that @option{constantshow} overrides this.
 
 @item set quotestr "@var{regex}"
 Set the regular expression for matching the quoting part of a line.
-The default value is @t{"^([@w{ }\t]*([!#%:;>|@}]|//))+"}.
+The default value is "@t{^([@w{ }\t]*([!#%:;>|@}]|//))+}".
 (Note that @code{\t} stands for a literal Tab character.)
 This makes it possible to rejustify blocks of quoted text when composing
 email, and to rewrap blocks of line comments when writing source code.
@@ -973,6 +992,12 @@ Regular expressions in @command{nano} are of the extended type (ERE).
 @item set saveonexit
 Save a changed buffer automatically on exit (@kbd{^X}); don't prompt.
 (The old form of this option, @code{set tempfile}, is deprecated.)
+
+@item set scrollercolor @var{fgcolor},@var{bgcolor}
+Use this color combination for the indicator alias "scrollbar".
+(On terminal emulators that link to a libvte older than version 0.55,
+using a background color here does not work correctly.)
+@xref{@code{set functioncolor}} for valid color names.
 
 @item set selectedcolor [bold,][italic,]@var{fgcolor},@var{bgcolor}
 Use this color combination for selected text.
@@ -1002,6 +1027,14 @@ the screen's edge, by using also @code{set atblanks}.)
 @item set speller "@var{program} [@var{argument} @dots{}]"
 Use the given program to do spell checking and correcting.
 @xref{@option{--speller}} for details.
+
+@item set stateflags
+Use the top-right corner of the screen for showing some state flags:
+@code{I} when auto-indenting, @code{M} when the mark is on, @code{L} when
+hard-wrapping (breaking long lines), @code{R} when recording a macro,
+and @code{S} when soft-wrapping.
+When the buffer is modified, a star (@code{*}) is shown after the
+filename in the center of the title bar.
 
 @item set statuscolor [bold,][italic,]@var{fgcolor},@var{bgcolor}
 Use this color combination for the status bar.
@@ -1070,6 +1103,9 @@ powerful enough to fully parse a file.  Nevertheless, regular
 expressions can do a lot and are easy to make, so they are a
 good fit for a small editor like @command{nano}.
 
+See @file{/usr/share/nano/} and @file{/usr/share/nano/extra/}
+for the syntax-coloring definitions that are available out of the box.
+
 All regular expressions in @command{nano} are POSIX extended regular expressions
 (ERE).  This means that @code{.}, @code{?}, @code{*}, @code{+}, @code{^},
 @code{$}, and several other characters are special.
@@ -1137,7 +1173,7 @@ characters after the pipe are appended at the end of the line.  If no pipe
 character is present, the full string is prepended; for example, @t{"#"} for
 Python files.  If empty double quotes are specified, the comment/uncomment
 functions are disabled; for example, @t{""} for JSON.
-The default value is @t{"#"}.
+The default value is "@t{#}".
 
 @item tabgives "@var{string}"
 Make the <Tab> key produce the given @var{string}.  Useful for languages like
