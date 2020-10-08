@@ -240,7 +240,7 @@ void help_init(void)
 #endif
 
 	/* Allocate memory for the help text. */
-	help_text = charalloc(allocsize + 1);
+	help_text = nmalloc(allocsize + 1);
 
 	/* Now add the text we want. */
 	strcpy(help_text, htx[0]);
@@ -475,14 +475,13 @@ void show_help(void)
 		} else if (func == do_up || func == do_scroll_up) {
 			do_scroll_up();
 		} else if (func == do_down || func == do_scroll_down) {
-			if (openfile->edittop->lineno + editwinrows - 1 <
-								openfile->filebot->lineno)
+			if (openfile->edittop->lineno + editwinrows - 1 < openfile->filebot->lineno)
 				do_scroll_down();
 		} else if (func == do_page_up || func == do_page_down ||
-					func == to_first_line || func == to_last_line ||
-					func == do_findprevious || func == do_findnext) {
+					func == to_first_line || func == to_last_line) {
 			func();
-		} else if (func == do_search_forward || func == do_search_backward) {
+		} else if (func == do_search_backward || func == do_search_forward ||
+					func == do_findprevious || func == do_findnext) {
 			func();
 			bottombars(MHELP);
 #ifdef ENABLE_NANORC
@@ -503,7 +502,6 @@ void show_help(void)
 		} else
 			unbound_key(kbinput);
 
-		currmenu = MHELP;
 		edit_refresh();
 
 		location = 0;
@@ -568,8 +566,8 @@ void do_help(void)
 #ifdef ENABLE_HELP
 	show_help();
 #else
-	if (currmenu == MMAIN)
-		say_there_is_no_help();
+	if (currmenu == MMAIN || currmenu == MBROWSER)
+		statusbar(_("^W = Ctrl+W    M-W = Alt+W"));
 	else
 		beep();
 #endif

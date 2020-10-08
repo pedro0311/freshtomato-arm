@@ -307,10 +307,10 @@ template <int w>
    diagnostics, performance can suffer if R uses hard-to-optimize
    features such as function calls not inlined by the compiler.
 
-   Avoid Clang’s __builtin_assume, as clang 9.0.1 -Wassume can
-   generate a bogus diagnostic "the argument to '__builtin_assume' has
-   side effects that will be discarded" even when the argument has no
-   side effects.  */
+   Avoid Clang's __builtin_assume, as it breaks GNU Emacs master
+   as of 2020-08-23T21:09:49Z!eggert@cs.ucla.edu; see
+   <https://bugs.gnu.org/43152#71>.  It's not known whether this breakage
+   is a Clang bug or an Emacs bug; play it safe for now.  */
 
 #if _GL_HAS_BUILTIN_UNREACHABLE
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())

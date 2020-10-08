@@ -62,6 +62,10 @@ static struct termios original_state;
 
 static struct sigaction oldaction, newaction;
 		/* Containers for the original and the temporary handler for SIGINT. */
+#ifdef USE_SLANG
+static bool selfinduced = FALSE;
+		/* Whether a suspension was caused from inside nano or from outside. */
+#endif
 
 /* Create a new linestruct node.  Note that we do not set prevnode->next. */
 linestruct *make_new_node(linestruct *prevnode)
@@ -210,14 +214,6 @@ bool in_restricted_mode(void)
 	} else
 		return FALSE;
 }
-
-#ifndef ENABLE_HELP
-/* Indicate that help texts are unavailable. */
-void say_there_is_no_help(void)
-{
-	statusbar(_("Help is not available"));
-}
-#endif
 
 /* Make sure the cursor is visible, then exit from curses mode, disable
  * bracketed-paste mode, and restore the original terminal settings. */
@@ -426,11 +422,13 @@ void window_init(void)
 	/* In case the terminal shrunk, make sure the status line is clear. */
 	wipe_statusbar();
 
+#ifndef USE_SLANG
 	/* When not disabled, turn escape-sequence translation on. */
 	if (!ISSET(RAW_SEQUENCES)) {
 		keypad(edit, TRUE);
 		keypad(bottomwin, TRUE);
 	}
+#endif
 
 #ifdef ENABLED_WRAPORJUSTIFY
 	/* Set up the wrapping point, accounting for screen width when negative. */
@@ -487,6 +485,7 @@ void print_opt(const char *shortflag, const char *longflag, const char *desc)
 void usage(void)
 {
 	printf(_("Usage: nano [OPTIONS] [[+LINE[,COLUMN]] FILE]...\n\n"));
+#ifndef NANO_TINY
 	/* TRANSLATORS: The next two strings are part of the --help output.
 	 * It's best to keep its lines within 80 characters. */
 	printf(_("To place the cursor on a specific line of a file, put the line number with\n"
@@ -494,7 +493,6 @@ void usage(void)
 	printf(_("When a filename is '-', nano reads data from standard input.\n\n"));
 	/* TRANSLATORS: The next three are column headers of the --help output. */
 	print_opt(_("Option"), _("Long option"), N_("Meaning"));
-#ifndef NANO_TINY
 	/* TRANSLATORS: The next forty or so strings are option descriptions
 	 * for the --help output.  Try to keep them at most 40 characters. */
 	print_opt("-A", "--smarthome", N_("Enable smart home key"));
@@ -528,8 +526,10 @@ void usage(void)
 	print_opt(_("-J <number>"), _("--guidestripe=<number>"),
 					N_("Show a guiding bar at this column"));
 #endif
+#ifndef USE_SLANG
 	print_opt("-K", "--rawsequences",
 					N_("Fix numeric keypad key confusion problem"));
+#endif
 #ifndef NANO_TINY
 	print_opt("-L", "--nonewlines",
 					N_("Don't add an automatic newline"));
@@ -559,9 +559,9 @@ void usage(void)
 		print_opt("-R", "--restricted", N_("Restrict access to the filesystem"));
 #ifndef NANO_TINY
 	print_opt("-S", "--softwrap", N_("Display overlong lines on multiple rows"));
-#endif
 	print_opt(_("-T <number>"), _("--tabsize=<number>"),
 					N_("Make a tab this number of columns wide"));
+#endif
 	print_opt("-U", "--quickblank", N_("Wipe status bar upon next keystroke"));
 	print_opt("-V", "--version", N_("Print version information and exit"));
 #ifndef NANO_TINY
@@ -585,7 +585,9 @@ void usage(void)
 	print_opt("-c", "--constantshow", N_("Constantly show cursor position"));
 	print_opt("-d", "--rebinddelete",
 					N_("Fix Backspace/Delete confusion problem"));
+#ifndef NANO_TINY
 	print_opt("-e", "--emptyline", N_("Keep the line below the title bar empty"));
+#endif
 #ifdef ENABLE_NANORC
 	print_opt(_("-f <file>"), _("--rcfile=<file>"),
 					N_("Use only this file for configuring nano"));
@@ -596,9 +598,7 @@ void usage(void)
 	print_opt("-h", "--help", N_("Show this help text and exit"));
 #ifndef NANO_TINY
 	print_opt("-i", "--autoindent", N_("Automatically indent new lines"));
-#endif
 	print_opt("-j", "--jumpyscrolling", N_("Scroll per half-screen, not per line"));
-#ifndef NANO_TINY
 	print_opt("-k", "--cutfromcursor", N_("Cut from cursor to end of line"));
 #endif
 #ifdef ENABLE_LINENUMBERS
@@ -607,7 +607,9 @@ void usage(void)
 #ifdef ENABLE_MOUSE
 	print_opt("-m", "--mouse", N_("Enable the use of the mouse"));
 #endif
+#ifndef NANO_TINY
 	print_opt("-n", "--noread", N_("Do not read the file (only write it)"));
+#endif
 #ifdef ENABLE_OPERATINGDIR
 	print_opt(_("-o <dir>"), _("--operatingdir=<dir>"),
 					N_("Set operating directory"));
@@ -639,11 +641,16 @@ void usage(void)
 #endif
 	if (!ISSET(RESTRICTED))
 		print_opt("-z", "--suspendable", N_("Enable suspension"));
+#ifndef NANO_TINY
+	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
+#endif
+#ifdef HAVE_LIBMAGIC
+	print_opt("-!", "--magic", N_("Also try magic to determine syntax"));
+#endif
 }
 
-/* Display the current version of nano, the date and time it was
- * compiled, contact information for it, and the configuration options
- * it was compiled with. */
+/* Display the version number of this nano, a copyright notice, some contact
+ * information, and the configuration options this nano was compiled with. */
 void version(void)
 {
 #ifdef REVISION
@@ -651,10 +658,11 @@ void version(void)
 #else
 	printf(_(" GNU nano, version %s\n"), VERSION);
 #endif
+#ifndef NANO_TINY
 	printf(" (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.\n");
 	printf(_(" (C) 2014-%s the contributors to nano\n"), "2020");
-	printf(_(" Email: nano@nano-editor.org	Web: https://nano-editor.org/"));
-	printf(_("\n Compiled options:"));
+#endif
+	printf(_(" Compiled options:"));
 
 #ifdef NANO_TINY
 	printf(" --enable-tiny");
@@ -775,7 +783,7 @@ void version(void)
 }
 
 /* Register that Ctrl+C was pressed during some system call. */
-RETSIGTYPE make_a_note(int signal)
+void make_a_note(int signal)
 {
 	control_C_was_pressed = TRUE;
 }
@@ -799,6 +807,7 @@ void restore_handler_for_Ctrl_C(void)
 	disable_kb_interrupt();
 }
 
+#ifndef NANO_TINY
 /* Reconnect standard input to the tty, and store its state. */
 void reconnect_and_store_state(void)
 {
@@ -856,6 +865,7 @@ bool scoop_stdin(void)
 
 	return TRUE;
 }
+#endif
 
 /* Register half a dozen signal handlers. */
 void signal_init(void)
@@ -882,25 +892,17 @@ void signal_init(void)
 	sigaction(SIGWINCH, &deed, NULL);
 #endif
 
-	if (ISSET(SUSPENDABLE)) {
-		/* Block all other signals in the suspend and continue handlers.
-		 * If we don't do this, other stuff interrupts them! */
-		sigfillset(&deed.sa_mask);
+	/* In the suspend and continue handlers, block all other signals.
+	 * If we don't do this, other stuff interrupts them! */
+	sigfillset(&deed.sa_mask);
 #ifdef SIGTSTP
-		/* Trap a normal suspend (^Z) so we can handle it ourselves. */
-		deed.sa_handler = do_suspend;
-		sigaction(SIGTSTP, &deed, NULL);
+	deed.sa_handler = do_suspend;
+	sigaction(SIGTSTP, &deed, NULL);
 #endif
 #ifdef SIGCONT
-		deed.sa_handler = do_continue;
-		sigaction(SIGCONT, &deed, NULL);
+	deed.sa_handler = do_continue;
+	sigaction(SIGCONT, &deed, NULL);
 #endif
-	} else {
-#ifdef SIGTSTP
-		deed.sa_handler = SIG_IGN;
-		sigaction(SIGTSTP, &deed, NULL);
-#endif
-	}
 
 #if !defined(NANO_TINY) && !defined(DEBUG)
 	if (getenv("NANO_NOCATCH") == NULL) {
@@ -916,21 +918,21 @@ void signal_init(void)
 }
 
 /* Handler for SIGHUP (hangup) and SIGTERM (terminate). */
-RETSIGTYPE handle_hupterm(int signal)
+void handle_hupterm(int signal)
 {
 	die(_("Received SIGHUP or SIGTERM\n"));
 }
 
 #if !defined(NANO_TINY) && !defined(DEBUG)
 /* Handler for SIGSEGV (segfault) and SIGABRT (abort). */
-RETSIGTYPE handle_crash(int signal)
+void handle_crash(int signal)
 {
 	die(_("Sorry! Nano crashed!  Code: %d.  Please report a bug.\n"), signal);
 }
 #endif
 
 /* Handler for SIGTSTP (suspend). */
-RETSIGTYPE do_suspend(int signal)
+void do_suspend(int signal)
 {
 #ifdef ENABLE_MOUSE
 	disable_mouse_support();
@@ -955,9 +957,15 @@ RETSIGTYPE do_suspend(int signal)
 /* Put nano to sleep (if suspension is enabled). */
 void do_suspend_void(void)
 {
-	if (ISSET(SUSPENDABLE))
+	if (ISSET(SUSPENDABLE)) {
+#ifdef USE_SLANG
+		selfinduced = TRUE;
 		do_suspend(0);
-	else {
+		selfinduced = FALSE;
+#else
+		do_suspend(0);
+#endif
+	} else {
 		statusbar(_("Suspension is not enabled"));
 		beep();
 	}
@@ -966,7 +974,7 @@ void do_suspend_void(void)
 }
 
 /* Handler for SIGCONT (continue after suspend). */
-RETSIGTYPE do_continue(int signal)
+void do_continue(int signal)
 {
 #ifdef ENABLE_MOUSE
 	if (ISSET(USE_MOUSE))
@@ -980,8 +988,13 @@ RETSIGTYPE do_continue(int signal)
 	/* Put the terminal in the desired state again. */
 	terminal_init();
 #endif
-	/* Tickle the input routine so it will update the screen. */
+#ifdef USE_SLANG
+	if (!selfinduced)
+		full_refresh();
+#else
+	/* Insert a fake keystroke, to neutralize a key-eating issue. */
 	ungetch(KEY_FLUSH);
+#endif
 }
 
 #if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)
@@ -1003,7 +1016,7 @@ void block_sigwinch(bool blockit)
 
 #ifndef NANO_TINY
 /* Handler for SIGWINCH (window size change). */
-RETSIGTYPE handle_sigwinch(int signal)
+void handle_sigwinch(int signal)
 {
 	/* Let the input routine know that a SIGWINCH has occurred. */
 	the_window_resized = TRUE;
@@ -1086,9 +1099,6 @@ void do_toggle(int flag)
 			mouse_init();
 			break;
 #endif
-		case SUSPENDABLE:
-			signal_init();
-			break;
 		case SOFTWRAP:
 			if (ISSET(SOFTWRAP))
 				compute_the_extra_rows_per_line_from(openfile->filetop);
@@ -1107,6 +1117,10 @@ void do_toggle(int flag)
 			break;
 #endif
 	}
+
+	if (ISSET(STATEFLAGS) && (flag == AUTOINDENT ||
+						flag == BREAK_LONG_LINES || flag == SOFTWRAP))
+		titlebar(NULL);
 
 	enabled = ISSET(flag);
 
@@ -1205,19 +1219,19 @@ void terminal_init(void)
 		nonl();
 		noecho();
 		disable_extended_io();
-
-		if (ISSET(PRESERVE))
-			enable_flow_control();
 #ifdef USE_SLANG
-		else
-			disable_flow_control();
-
 		tcgetattr(0, &desired_state);
 		have_new_state = TRUE;
 	} else
 		tcsetattr(0, TCSANOW, &desired_state);
 
 	SLang_init_tty(-1, 0, 0);
+#endif
+	if (ISSET(PRESERVE))
+		enable_flow_control();
+#ifdef USE_SLANG
+	else
+		disable_flow_control();
 #endif
 	disable_kb_interrupt();
 
@@ -1299,6 +1313,7 @@ void unbound_key(int code)
 	else
 		statusline(ALERT, _("Unbound key: %c"), code);
 #endif
+	set_blankdelay_to_one();
 }
 
 #ifdef ENABLE_MOUSE
@@ -1403,7 +1418,7 @@ void suck_up_input_and_paste_it(void)
 			index = 0;
 		} else if ((0x20 <= input && input <= 0xFF && input != DEL_CODE) ||
 														input == '\t') {
-			line->data = charealloc(line->data, index + 2);
+			line->data = nrealloc(line->data, index + 2);
 			line->data[index++] = (char)input;
 			line->data[index] = '\0';
 		} else if (input != BRACKETED_PASTE_MARKER)
@@ -1447,7 +1462,7 @@ void inject(char *burst, size_t count)
 #endif
 
 	/* Make room for the new bytes and copy them into the line. */
-	thisline->data = charealloc(thisline->data, datalen + count + 1);
+	thisline->data = nrealloc(thisline->data, datalen + count + 1);
 	memmove(thisline->data + openfile->current_x + count,
 						thisline->data + openfile->current_x,
 						datalen - openfile->current_x + 1);
@@ -1522,6 +1537,10 @@ void process_a_keystroke(void)
 		/* The input buffer for actual characters. */
 	static size_t depth = 0;
 		/* The length of the input buffer. */
+#ifndef NANO_TINY
+	linestruct *was_mark = openfile->mark;
+#endif
+	static bool give_a_hint = TRUE;
 	const keystruct *shortcut;
 
 	/* Read in a keystroke, and show the cursor while waiting. */
@@ -1559,7 +1578,7 @@ void process_a_keystroke(void)
 			}
 #endif
 			/* Store the byte, and leave room for a terminating zero. */
-			puddle = charealloc(puddle, depth + 2);
+			puddle = nrealloc(puddle, depth + 2);
 			puddle[depth++] = (char)input;
 		}
 	}
@@ -1586,6 +1605,13 @@ void process_a_keystroke(void)
 		print_view_warning();
 		return;
 	}
+
+	if (input == '\b' && give_a_hint && openfile->current_x == 0 &&
+				openfile->current == openfile->filetop && !ISSET(NO_HELP)) {
+		statusbar(_("^W = Ctrl+W    M-W = Alt+W"));
+		give_a_hint = FALSE;
+	} else if (meta_key)
+		give_a_hint = FALSE;
 
 	/* When not cutting or copying text, drop the cutbuffer the next time. */
 	if (shortcut->func != cut_text) {
@@ -1653,6 +1679,9 @@ void process_a_keystroke(void)
 #ifndef NANO_TINY
 	if (bracketed_paste)
 		suck_up_input_and_paste_it();
+
+	if (ISSET(STATEFLAGS) && openfile->mark != was_mark)
+		titlebar(NULL);
 #endif
 }
 
@@ -1683,7 +1712,9 @@ int main(int argc, char **argv)
 #ifdef ENABLE_NANORC
 		{"ignorercfiles", 0, NULL, 'I'},
 #endif
+#ifndef USE_SLANG
 		{"rawsequences", 0, NULL, 'K'},
+#endif
 #ifdef ENABLED_WRAPORJUSTIFY
 		{"trimblanks", 0, NULL, 'M'},
 #endif
@@ -1691,7 +1722,6 @@ int main(int argc, char **argv)
 		{"quotestr", 1, NULL, 'Q'},
 #endif
 		{"restricted", 0, NULL, 'R'},
-		{"tabsize", 1, NULL, 'T'},
 		{"quickblank", 0, NULL, 'U'},
 		{"version", 0, NULL, 'V'},
 #ifdef ENABLE_COLOR
@@ -1702,7 +1732,6 @@ int main(int argc, char **argv)
 #endif
 		{"constantshow", 0, NULL, 'c'},
 		{"rebinddelete", 0, NULL, 'd'},
-		{"emptyline", 0, NULL, 'e'},
 #ifdef ENABLE_NANORC
 		{"rcfile", 1, NULL, 'f'},
 #endif
@@ -1710,14 +1739,12 @@ int main(int argc, char **argv)
 		{"showcursor", 0, NULL, 'g'},
 #endif
 		{"help", 0, NULL, 'h'},
-		{"jumpyscrolling", 0, NULL, 'j'},
 #ifdef ENABLE_LINENUMBERS
 		{"linenumbers", 0, NULL, 'l'},
 #endif
 #ifdef ENABLE_MOUSE
 		{"mouse", 0, NULL, 'm'},
 #endif
-		{"noread", 0, NULL, 'n'},
 #ifdef ENABLE_OPERATINGDIR
 		{"operatingdir", 1, NULL, 'o'},
 #endif
@@ -1749,15 +1776,23 @@ int main(int argc, char **argv)
 		{"bookstyle", 0, NULL, 'O'},
 		{"positionlog", 0, NULL, 'P'},
 		{"softwrap", 0, NULL, 'S'},
+		{"tabsize", 1, NULL, 'T'},
 		{"wordbounds", 0, NULL, 'W'},
 		{"wordchars", 1, NULL, 'X'},
 		{"zap", 0, NULL, 'Z'},
 		{"atblanks", 0, NULL, 'a'},
+		{"emptyline", 0, NULL, 'e'},
 		{"autoindent", 0, NULL, 'i'},
+		{"jumpyscrolling", 0, NULL, 'j'},
 		{"cutfromcursor", 0, NULL, 'k'},
+		{"noread", 0, NULL, 'n'},
 		{"indicator", 0, NULL, 'q'},
 		{"unix", 0, NULL, 'u'},
 		{"afterends", 0, NULL, 'y'},
+		{"stateflags", 0, NULL, '%'},
+#endif
+#ifdef HAVE_LIBMAGIC
+		{"magic", 0, NULL, '!'},
 #endif
 		{NULL, 0, NULL, 0}
 	};
@@ -1814,7 +1849,7 @@ int main(int argc, char **argv)
 		SET(RESTRICTED);
 
 	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxyz$", long_options, NULL)) != -1) {
+				"abcdef:ghijklmno:pqr:s:tuvwxyz$?%!", long_options, NULL)) != -1) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -1864,9 +1899,11 @@ int main(int argc, char **argv)
 				}
 				break;
 #endif
+#ifndef USE_SLANG
 			case 'K':
 				SET(RAW_SEQUENCES);
 				break;
+#endif
 #ifndef NANO_TINY
 			case 'L':
 				SET(NO_NEWLINES);
@@ -1903,7 +1940,6 @@ int main(int argc, char **argv)
 			case '$':  /* Deprecated; remove in 2024. */
 				SET(SOFTWRAP);
 				break;
-#endif
 			case 'T':
 				if (!parse_num(optarg, &tabsize) || tabsize <= 0) {
 					fprintf(stderr, _("Requested tab size \"%s\" is invalid"), optarg);
@@ -1911,6 +1947,7 @@ int main(int argc, char **argv)
 					exit(1);
 				}
 				break;
+#endif
 			case 'U':
 				SET(QUICK_BLANK);
 				break;
@@ -1949,9 +1986,11 @@ int main(int argc, char **argv)
 			case 'd':
 				SET(REBIND_DELETE);
 				break;
+#ifndef NANO_TINY
 			case 'e':
 				SET(EMPTY_LINE);
 				break;
+#endif
 #ifdef ENABLE_NANORC
 			case 'f':
 				custom_nanorc = mallocstrcpy(custom_nanorc, optarg);
@@ -1963,17 +2002,16 @@ int main(int argc, char **argv)
 				break;
 #endif
 			case 'h':
+			case '?':
 				usage();
 				exit(0);
 #ifndef NANO_TINY
 			case 'i':
 				SET(AUTOINDENT);
 				break;
-#endif
 			case 'j':
 				SET(JUMPY_SCROLLING);
 				break;
-#ifndef NANO_TINY
 			case 'k':
 				SET(CUT_FROM_CURSOR);
 				break;
@@ -1988,9 +2026,11 @@ int main(int argc, char **argv)
 				SET(USE_MOUSE);
 				break;
 #endif
+#ifndef NANO_TINY
 			case 'n':
 				SET(NOREAD_MODE);
 				break;
+#endif
 #ifdef ENABLE_OPERATINGDIR
 			case 'o':
 				operating_dir = mallocstrcpy(operating_dir, optarg);
@@ -2048,6 +2088,16 @@ int main(int argc, char **argv)
 			case 'z':
 				SET(SUSPENDABLE);
 				break;
+#ifndef NANO_TINY
+			case '%':
+				SET(STATEFLAGS);
+				break;
+#endif
+#ifdef HAVE_LIBMAGIC
+			case '!':
+				SET(USE_MAGIC);
+				break;
+#endif
 			default:
 				printf(_("Type '%s -h' for a list of available options.\n"), argv[0]);
 				exit(1);
@@ -2075,9 +2125,10 @@ int main(int argc, char **argv)
 		ssize_t fill_cmdline = fill;
 #endif
 #ifndef NANO_TINY
-		size_t stripeclm_cmdline = stripe_column;
 		char *backup_dir_cmdline = backup_dir;
 		char *word_chars_cmdline = word_chars;
+		size_t stripeclm_cmdline = stripe_column;
+		ssize_t tabsize_cmdline = tabsize;
 #endif
 #ifdef ENABLE_OPERATINGDIR
 		char *operating_dir_cmdline = operating_dir;
@@ -2088,7 +2139,6 @@ int main(int argc, char **argv)
 #ifdef ENABLE_SPELLER
 		char *alt_speller_cmdline = alt_speller;
 #endif
-		ssize_t tabsize_cmdline = tabsize;
 
 		/* Back up the command-line flags. */
 		unsigned flags_cmdline[sizeof(flags) / sizeof(flags[0])];
@@ -2117,8 +2167,6 @@ int main(int argc, char **argv)
 			fill = fill_cmdline;
 #endif
 #ifndef NANO_TINY
-		if (stripeclm_cmdline > 0)
-			stripe_column = stripeclm_cmdline;
 		if (backup_dir_cmdline != NULL) {
 			free(backup_dir);
 			backup_dir = backup_dir_cmdline;
@@ -2127,6 +2175,10 @@ int main(int argc, char **argv)
 			free(word_chars);
 			word_chars = word_chars_cmdline;
 		}
+		if (stripeclm_cmdline > 0)
+			stripe_column = stripeclm_cmdline;
+		if (tabsize_cmdline != -1)
+			tabsize = tabsize_cmdline;
 #endif
 #ifdef ENABLE_OPERATINGDIR
 		if (operating_dir_cmdline != NULL || ISSET(RESTRICTED)) {
@@ -2146,8 +2198,6 @@ int main(int argc, char **argv)
 			alt_speller = alt_speller_cmdline;
 		}
 #endif
-		if (tabsize_cmdline != -1)
-			tabsize = tabsize_cmdline;
 
 		/* If an rcfile undid the default settings, copy it to the new flags. */
 		if (!ISSET(NO_WRAP))
@@ -2185,9 +2235,15 @@ int main(int argc, char **argv)
 #endif
 	}
 
+#ifdef USE_SLANG
+	/* When using Slang, do not let Slang translate escape sequences to
+	 * key codes, because it does it wrong for the longer sequences. */
+	SET(RAW_SEQUENCES);
+#else
 	/* When getting untranslated escape sequences, the mouse cannot be used. */
 	if (ISSET(RAW_SEQUENCES))
 		UNSET(USE_MOUSE);
+#endif
 
 #ifdef ENABLE_HISTORIES
 	/* Initialize the pointers for the Search/Replace/Execute histories. */
@@ -2233,7 +2289,7 @@ int main(int argc, char **argv)
 	quoterc = regcomp(&quotereg, quotestr, NANO_REG_EXTENDED);
 	if (quoterc != 0) {
 		size_t size = regerror(quoterc, &quotereg, NULL, 0);
-		char *message = charalloc(size);
+		char *message = nmalloc(size);
 
 		regerror(quoterc, &quotereg, message, size);
 		die(_("Bad quoting regex \"%s\": %s\n"), quotestr, message);
@@ -2297,6 +2353,7 @@ int main(int argc, char **argv)
 		interface_color_pair[TITLE_BAR] = hilite_attribute;
 		interface_color_pair[LINE_NUMBER] = hilite_attribute;
 		interface_color_pair[GUIDE_STRIPE] = A_REVERSE;
+		interface_color_pair[SCROLL_BAR] = A_NORMAL;
 		interface_color_pair[SELECTED_TEXT] = hilite_attribute;
 		interface_color_pair[STATUS_BAR] = hilite_attribute;
 		interface_color_pair[ERROR_MESSAGE] = hilite_attribute;
@@ -2406,13 +2463,16 @@ int main(int argc, char **argv)
 				statusline(ALERT, _("Invalid line or column number"));
 		}
 
+#ifndef NANO_TINY
 		/* If the filename is a dash, read from standard input; otherwise,
 		 * open the file; skip positioning the cursor if either failed. */
 		if (strcmp(argv[optind], "-") == 0) {
 			optind++;
 			if (!scoop_stdin())
 				continue;
-		} else if (!open_buffer(argv[optind++], TRUE))
+		} else
+#endif
+		 if (!open_buffer(argv[optind++], TRUE))
 			continue;
 
 		/* If a position was given on the command line, go there. */

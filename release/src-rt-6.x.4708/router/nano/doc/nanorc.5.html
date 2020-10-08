@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Mon Aug 24 10:52:29 2020 -->
+<!-- CreationDate: Wed Oct  7 10:58:53 2020 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -272,6 +272,14 @@ gets a mark in the margin.)</p>
 <p style="margin-left:15%;">Enable vim-style lock-files for
 when editing files.</p>
 
+<p style="margin-left:11%;"><b>set magic</b></p>
+
+<p style="margin-left:15%;">When neither the file&rsquo;s
+name nor its first line give a clue, try using libmagic to
+determine the applicable syntax. (Calling libmagic can be
+relatively time consuming. It is therefore not done by
+default.)</p>
+
 <p style="margin-left:11%;"><b>set matchbrackets
 &quot;</b><i>characters</i><b>&quot;</b></p>
 
@@ -411,6 +419,15 @@ automatically on exit (<b>^X</b>); don&rsquo;t prompt. (The
 old form of this option, <b>set tempfile</b>, is
 deprecated.)</p>
 
+<p style="margin-left:11%;"><b>set scrollercolor</b>
+<i>fgcolor</i><b>,</b><i>bgcolor</i></p>
+
+<p style="margin-left:15%;">Specify the color combination
+to use for the indicator alias &quot;scrollbar&quot;. (On
+terminal emulators that link to a libvte older than version
+0.55, using a background color here does not work
+correctly.) See <b>set titlecolor</b> for more details.</p>
+
 <p style="margin-left:11%;"><b>set selectedcolor</b>
 [<b>bold,</b>][<b>italic,</b>]<i>fgcolor</i><b>,</b><i>bgcolor</i></p>
 
@@ -453,8 +470,18 @@ atblanks</b>.)</p>
 
 <p style="margin-left:15%;">Use the given <i>program</i> to
 do spell checking and correcting, instead of using the
-built-in corrector that calls <b>hunspell</b> or GNU
-<b>spell</b>.</p>
+built-in corrector that calls <b>hunspell</b>(1) or
+<b>spell</b>(1).</p>
+
+<p style="margin-left:11%;"><b>set stateflags</b></p>
+
+<p style="margin-left:15%;">Use the top-right corner of the
+screen for showing some state flags: <b>I</b> when
+auto-indenting, <b>M</b> when the mark is on, <b>L</b> when
+hard-wrapping (breaking long lines), <b>R</b> when recording
+a macro, and <b>S</b> when soft-wrapping. When the buffer is
+modified, a star (<b>*</b>) is shown after the filename in
+the center of the title bar.</p>
 
 <p style="margin-left:11%;"><b>set statuscolor</b>
 [<b>bold,</b>][<b>italic,</b>]<i>fgcolor</i><b>,</b><i>bgcolor</i></p>
@@ -981,8 +1008,8 @@ toggled).</p>
 <p style="margin-left:15%;"><b>speller</b></p>
 
 <p style="margin-left:18%;">Invokes a spell-checking
-program, either the default <b>hunspell</b> or GNU
-<b>spell</b>, or the one defined by
+program, either the default <b>hunspell</b>(1) or GNU
+<b>spell</b>(1), or the one defined by
 <b>&minus;&minus;speller</b> or <b>set speller</b>.</p>
 
 <p style="margin-left:15%;"><b>formatter</b></p>
@@ -1515,13 +1542,23 @@ file.</p>
 <p style="margin-left:22%;">Per-user configuration
 file.</p>
 
+<p style="margin-left:11%;"><i>/usr/share/nano/*</i></p>
+
+<p style="margin-left:22%;">Syntax definitions for the
+syntax coloring of common file types (and for less common
+file types in the <i>extra/</i> subdirectory).</p>
+
 <h2>SEE ALSO
 <a name="SEE ALSO"></a>
 </h2>
 
 
+<p style="margin-left:11%; margin-top: 1em"><b>nano</b>(1)
+<i><br>
+https://nano-editor.org/cheatsheet.html</i></p>
 
-<p style="margin-left:11%; margin-top: 1em"><b>nano</b>(1)</p>
+<p style="margin-left:22%;">An overview of the default key
+bindings.</p>
 <hr>
 </body>
 </html>

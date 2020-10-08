@@ -198,7 +198,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/nl_langinfo.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/nocrash.m4 $(top_srcdir)/m4/off_t.m4 \
 	$(top_srcdir)/m4/opendir.m4 $(top_srcdir)/m4/pathmax.m4 \
-	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/printf-frexp.m4 \
+	$(top_srcdir)/m4/pid_t.m4 $(top_srcdir)/m4/po.m4 \
+	$(top_srcdir)/m4/printf-frexp.m4 \
 	$(top_srcdir)/m4/printf-frexpl.m4 $(top_srcdir)/m4/printf.m4 \
 	$(top_srcdir)/m4/progtest.m4 \
 	$(top_srcdir)/m4/pthread_rwlock_rdlock.m4 \
@@ -309,30 +310,31 @@ am__depfiles_remade = ./$(DEPDIR)/alloca.Po ./$(DEPDIR)/asnprintf.Po \
 	./$(DEPDIR)/mbsrtowcs.Po ./$(DEPDIR)/mbtowc-lock.Po \
 	./$(DEPDIR)/mbtowc.Po ./$(DEPDIR)/memchr.Po \
 	./$(DEPDIR)/mempcpy.Po ./$(DEPDIR)/msvc-inval.Po \
-	./$(DEPDIR)/msvc-nothrow.Po ./$(DEPDIR)/nl_langinfo.Po \
-	./$(DEPDIR)/opendir.Po ./$(DEPDIR)/printf-args.Po \
-	./$(DEPDIR)/printf-frexp.Po ./$(DEPDIR)/printf-frexpl.Po \
-	./$(DEPDIR)/printf-parse.Po ./$(DEPDIR)/raise.Po \
-	./$(DEPDIR)/readdir.Po ./$(DEPDIR)/regcomp.Po \
-	./$(DEPDIR)/regex.Po ./$(DEPDIR)/regex_internal.Po \
-	./$(DEPDIR)/regexec.Po ./$(DEPDIR)/setlocale-lock.Po \
-	./$(DEPDIR)/setlocale_null.Po ./$(DEPDIR)/sig-handler.Po \
-	./$(DEPDIR)/sigaction.Po ./$(DEPDIR)/signbitd.Po \
-	./$(DEPDIR)/signbitf.Po ./$(DEPDIR)/signbitl.Po \
-	./$(DEPDIR)/sigprocmask.Po ./$(DEPDIR)/snprintf.Po \
-	./$(DEPDIR)/stat-time.Po ./$(DEPDIR)/stat-w32.Po \
-	./$(DEPDIR)/stat.Po ./$(DEPDIR)/strcasecmp.Po \
-	./$(DEPDIR)/strcasestr.Po ./$(DEPDIR)/strncasecmp.Po \
-	./$(DEPDIR)/strnlen.Po ./$(DEPDIR)/strnlen1.Po \
-	./$(DEPDIR)/timespec.Po ./$(DEPDIR)/unistd.Po \
-	./$(DEPDIR)/utime.Po ./$(DEPDIR)/utimens.Po \
-	./$(DEPDIR)/vasnprintf.Po ./$(DEPDIR)/vsnprintf.Po \
-	./$(DEPDIR)/wcrtomb.Po ./$(DEPDIR)/wctype-h.Po \
-	./$(DEPDIR)/wcwidth.Po ./$(DEPDIR)/windows-mutex.Po \
-	./$(DEPDIR)/windows-once.Po ./$(DEPDIR)/windows-recmutex.Po \
-	./$(DEPDIR)/windows-rwlock.Po ./$(DEPDIR)/wmemchr.Po \
-	./$(DEPDIR)/wmempcpy.Po ./$(DEPDIR)/xsize.Po \
-	glthread/$(DEPDIR)/lock.Po glthread/$(DEPDIR)/threadlib.Po \
+	./$(DEPDIR)/msvc-nothrow.Po ./$(DEPDIR)/nl_langinfo-lock.Po \
+	./$(DEPDIR)/nl_langinfo.Po ./$(DEPDIR)/opendir.Po \
+	./$(DEPDIR)/printf-args.Po ./$(DEPDIR)/printf-frexp.Po \
+	./$(DEPDIR)/printf-frexpl.Po ./$(DEPDIR)/printf-parse.Po \
+	./$(DEPDIR)/raise.Po ./$(DEPDIR)/readdir.Po \
+	./$(DEPDIR)/regcomp.Po ./$(DEPDIR)/regex.Po \
+	./$(DEPDIR)/regex_internal.Po ./$(DEPDIR)/regexec.Po \
+	./$(DEPDIR)/setlocale-lock.Po ./$(DEPDIR)/setlocale_null.Po \
+	./$(DEPDIR)/sig-handler.Po ./$(DEPDIR)/sigaction.Po \
+	./$(DEPDIR)/signbitd.Po ./$(DEPDIR)/signbitf.Po \
+	./$(DEPDIR)/signbitl.Po ./$(DEPDIR)/sigprocmask.Po \
+	./$(DEPDIR)/snprintf.Po ./$(DEPDIR)/stat-time.Po \
+	./$(DEPDIR)/stat-w32.Po ./$(DEPDIR)/stat.Po \
+	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strcasestr.Po \
+	./$(DEPDIR)/strncasecmp.Po ./$(DEPDIR)/strnlen.Po \
+	./$(DEPDIR)/strnlen1.Po ./$(DEPDIR)/timespec.Po \
+	./$(DEPDIR)/unistd.Po ./$(DEPDIR)/utime.Po \
+	./$(DEPDIR)/utimens.Po ./$(DEPDIR)/vasnprintf.Po \
+	./$(DEPDIR)/vsnprintf.Po ./$(DEPDIR)/wcrtomb.Po \
+	./$(DEPDIR)/wctype-h.Po ./$(DEPDIR)/wcwidth.Po \
+	./$(DEPDIR)/windows-mutex.Po ./$(DEPDIR)/windows-once.Po \
+	./$(DEPDIR)/windows-recmutex.Po ./$(DEPDIR)/windows-rwlock.Po \
+	./$(DEPDIR)/wmemchr.Po ./$(DEPDIR)/wmempcpy.Po \
+	./$(DEPDIR)/xsize.Po glthread/$(DEPDIR)/lock.Po \
+	glthread/$(DEPDIR)/threadlib.Po \
 	malloc/$(DEPDIR)/scratch_buffer_grow.Po \
 	malloc/$(DEPDIR)/scratch_buffer_grow_preserve.Po \
 	malloc/$(DEPDIR)/scratch_buffer_set_array_size.Po \
@@ -761,6 +763,7 @@ GNULIB_STRCASESTR = @GNULIB_STRCASESTR@
 GNULIB_STRCHRNUL = @GNULIB_STRCHRNUL@
 GNULIB_STRDUP = @GNULIB_STRDUP@
 GNULIB_STRERROR = @GNULIB_STRERROR@
+GNULIB_STRERRORNAME_NP = @GNULIB_STRERRORNAME_NP@
 GNULIB_STRERROR_R = @GNULIB_STRERROR_R@
 GNULIB_STRFTIME = @GNULIB_STRFTIME@
 GNULIB_STRNCAT = @GNULIB_STRNCAT@
@@ -1134,6 +1137,7 @@ HAVE_STPNCPY = @HAVE_STPNCPY@
 HAVE_STRCASECMP = @HAVE_STRCASECMP@
 HAVE_STRCASESTR = @HAVE_STRCASESTR@
 HAVE_STRCHRNUL = @HAVE_STRCHRNUL@
+HAVE_STRERRORNAME_NP = @HAVE_STRERRORNAME_NP@
 HAVE_STRINGS_H = @HAVE_STRINGS_H@
 HAVE_STRPBRK = @HAVE_STRPBRK@
 HAVE_STRPTIME = @HAVE_STRPTIME@
@@ -1545,6 +1549,7 @@ REPLACE_STRCASESTR = @REPLACE_STRCASESTR@
 REPLACE_STRCHRNUL = @REPLACE_STRCHRNUL@
 REPLACE_STRDUP = @REPLACE_STRDUP@
 REPLACE_STRERROR = @REPLACE_STRERROR@
+REPLACE_STRERRORNAME_NP = @REPLACE_STRERRORNAME_NP@
 REPLACE_STRERROR_R = @REPLACE_STRERROR_R@
 REPLACE_STRFTIME = @REPLACE_STRFTIME@
 REPLACE_STRNCAT = @REPLACE_STRNCAT@
@@ -1704,29 +1709,29 @@ EXTRA_DIST = alloca.c alloca.in.h attribute.h btowc.c closedir.c \
 	mbsinit.c mbsrtowcs-impl.h mbsrtowcs-state.c mbsrtowcs.c \
 	mbtowc-impl.h mbtowc.c memchr.c memchr.valgrind mempcpy.c \
 	msvc-inval.c msvc-inval.h msvc-nothrow.c msvc-nothrow.h \
-	nl_langinfo.c dirent-private.h opendir.c pathmax.h \
-	printf-frexp.h printf-frexp.c printf-frexpl.h raise.c \
-	dirent-private.h readdir.c regcomp.c regex.c regex.h \
-	regex_internal.c regex_internal.h regexec.c \
-	malloc/scratch_buffer.h scratch_buffer.h setlocale-lock.c \
-	setlocale_null.h windows-initguard.h sig-handler.h sigaction.c \
-	signal.in.h float+.h signbitd.c signbitf.c signbitl.c \
-	sigprocmask.c _Noreturn.h arg-nonnull.h c++defs.h \
-	warn-on-use.h snprintf.c stat-w32.c stat-w32.h stat.c \
-	stat-time.h stdarg.in.h stdbool.in.h stddef.in.h stdint.in.h \
-	stdio.in.h stdlib.in.h strcasecmp.c strncasecmp.c \
-	str-two-way.h strcasestr.c streq.h string.in.h strings.in.h \
-	strnlen.c sys_stat.in.h sys_time.in.h sys_types.in.h \
-	sys_wait.in.h time.in.h timespec.h unistd.in.h unitypes.in.h \
-	localcharset.h uniwidth.in.h uniwidth/cjk.h utime.c utime.in.h \
-	utimens.h asnprintf.c float+.h printf-args.c printf-args.h \
-	printf-parse.c printf-parse.h vasnprintf.c vasnprintf.h \
-	verify.h vsnprintf.c wchar.in.h wcrtomb.c wctype.in.h \
-	wcwidth.c windows-initguard.h windows-mutex.c windows-mutex.h \
-	windows-once.c windows-once.h windows-initguard.h \
-	windows-recmutex.c windows-recmutex.h windows-initguard.h \
-	windows-rwlock.c windows-rwlock.h wmemchr-impl.h wmemchr.c \
-	wmempcpy.c xalloc-oversized.h
+	nl_langinfo-lock.c nl_langinfo.c windows-initguard.h \
+	dirent-private.h opendir.c pathmax.h printf-frexp.h \
+	printf-frexp.c printf-frexpl.h raise.c dirent-private.h \
+	readdir.c regcomp.c regex.c regex.h regex_internal.c \
+	regex_internal.h regexec.c malloc/scratch_buffer.h \
+	scratch_buffer.h setlocale-lock.c setlocale_null.h \
+	windows-initguard.h sig-handler.h sigaction.c signal.in.h \
+	float+.h signbitd.c signbitf.c signbitl.c sigprocmask.c \
+	_Noreturn.h arg-nonnull.h c++defs.h warn-on-use.h snprintf.c \
+	stat-w32.c stat-w32.h stat.c stat-time.h stdarg.in.h \
+	stdbool.in.h stddef.in.h stdint.in.h stdio.in.h stdlib.in.h \
+	strcasecmp.c strncasecmp.c str-two-way.h strcasestr.c streq.h \
+	string.in.h strings.in.h strnlen.c sys_stat.in.h sys_time.in.h \
+	sys_types.in.h sys_wait.in.h time.in.h timespec.h unistd.in.h \
+	unitypes.in.h localcharset.h uniwidth.in.h uniwidth/cjk.h \
+	utime.c utime.in.h utimens.h asnprintf.c float+.h \
+	printf-args.c printf-args.h printf-parse.c printf-parse.h \
+	vasnprintf.c vasnprintf.h verify.h vsnprintf.c wchar.in.h \
+	wcrtomb.c wctype.in.h wcwidth.c windows-initguard.h \
+	windows-mutex.c windows-mutex.h windows-once.c windows-once.h \
+	windows-initguard.h windows-recmutex.c windows-recmutex.h \
+	windows-initguard.h windows-rwlock.c windows-rwlock.h \
+	wmemchr-impl.h wmemchr.c wmempcpy.c xalloc-oversized.h
 BUILT_SOURCES = $(ALLOCA_H) ctype.h dirent.h $(ERRNO_H) fcntl.h \
 	$(FLOAT_H) $(FNMATCH_H) $(GETOPT_H) $(GETOPT_CDEFS_H) \
 	$(GLOB_H) inttypes.h langinfo.h $(LIMITS_H) locale.h math.h \
@@ -1774,15 +1779,15 @@ EXTRA_libgnu_a_SOURCES = alloca.c btowc.c closedir.c dirfd.c float.c \
 	isnanf.c isnan.c isnanl.c iswblank.c localeconv.c lstat.c \
 	malloc.c lc-charset-dispatch.c mbrtowc.c mbtowc-lock.c \
 	mbsinit.c mbsrtowcs-state.c mbsrtowcs.c mbtowc.c memchr.c \
-	mempcpy.c msvc-inval.c msvc-nothrow.c nl_langinfo.c opendir.c \
-	printf-frexp.c raise.c readdir.c regcomp.c regex.c \
-	regex_internal.c regexec.c setlocale-lock.c sigaction.c \
-	signbitd.c signbitf.c signbitl.c sigprocmask.c snprintf.c \
-	stat-w32.c stat.c strcasecmp.c strncasecmp.c strcasestr.c \
-	strnlen.c utime.c asnprintf.c printf-args.c printf-parse.c \
-	vasnprintf.c vsnprintf.c wcrtomb.c wcwidth.c windows-mutex.c \
-	windows-once.c windows-recmutex.c windows-rwlock.c wmemchr.c \
-	wmempcpy.c
+	mempcpy.c msvc-inval.c msvc-nothrow.c nl_langinfo-lock.c \
+	nl_langinfo.c opendir.c printf-frexp.c raise.c readdir.c \
+	regcomp.c regex.c regex_internal.c regexec.c setlocale-lock.c \
+	sigaction.c signbitd.c signbitf.c signbitl.c sigprocmask.c \
+	snprintf.c stat-w32.c stat.c strcasecmp.c strncasecmp.c \
+	strcasestr.c strnlen.c utime.c asnprintf.c printf-args.c \
+	printf-parse.c vasnprintf.c vsnprintf.c wcrtomb.c wcwidth.c \
+	windows-mutex.c windows-once.c windows-recmutex.c \
+	windows-rwlock.c wmemchr.c wmempcpy.c
 
 # Use this preprocessor expression to decide whether #include_next works.
 # Do not rely on a 'configure'-time test for this, since the expression
@@ -1948,6 +1953,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mempcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msvc-inval.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msvc-nothrow.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nl_langinfo-lock.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nl_langinfo.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opendir.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/printf-args.Po@am__quote@ # am--include-marker
@@ -2280,6 +2286,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/mempcpy.Po
 	-rm -f ./$(DEPDIR)/msvc-inval.Po
 	-rm -f ./$(DEPDIR)/msvc-nothrow.Po
+	-rm -f ./$(DEPDIR)/nl_langinfo-lock.Po
 	-rm -f ./$(DEPDIR)/nl_langinfo.Po
 	-rm -f ./$(DEPDIR)/opendir.Po
 	-rm -f ./$(DEPDIR)/printf-args.Po
@@ -2423,6 +2430,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/mempcpy.Po
 	-rm -f ./$(DEPDIR)/msvc-inval.Po
 	-rm -f ./$(DEPDIR)/msvc-nothrow.Po
+	-rm -f ./$(DEPDIR)/nl_langinfo-lock.Po
 	-rm -f ./$(DEPDIR)/nl_langinfo.Po
 	-rm -f ./$(DEPDIR)/opendir.Po
 	-rm -f ./$(DEPDIR)/printf-args.Po
@@ -3507,6 +3515,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_STRTOK_R''@/$(GNULIB_STRTOK_R)/g' \
 	      -e 's/@''GNULIB_STRERROR''@/$(GNULIB_STRERROR)/g' \
 	      -e 's/@''GNULIB_STRERROR_R''@/$(GNULIB_STRERROR_R)/g' \
+	      -e 's/@''GNULIB_STRERRORNAME_NP''@/$(GNULIB_STRERRORNAME_NP)/g' \
 	      -e 's/@''GNULIB_SIGABBREV_NP''@/$(GNULIB_SIGABBREV_NP)/g' \
 	      -e 's/@''GNULIB_SIGDESCR_NP''@/$(GNULIB_SIGDESCR_NP)/g' \
 	      -e 's/@''GNULIB_STRSIGNAL''@/$(GNULIB_STRSIGNAL)/g' \
@@ -3531,6 +3540,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''HAVE_STRCASESTR''@|$(HAVE_STRCASESTR)|g' \
 	      -e 's|@''HAVE_DECL_STRTOK_R''@|$(HAVE_DECL_STRTOK_R)|g' \
 	      -e 's|@''HAVE_DECL_STRERROR_R''@|$(HAVE_DECL_STRERROR_R)|g' \
+	      -e 's|@''HAVE_STRERRORNAME_NP''@|$(HAVE_STRERRORNAME_NP)|g' \
 	      -e 's|@''HAVE_SIGABBREV_NP''@|$(HAVE_SIGABBREV_NP)|g' \
 	      -e 's|@''HAVE_SIGDESCR_NP''@|$(HAVE_SIGDESCR_NP)|g' \
 	      -e 's|@''HAVE_DECL_STRSIGNAL''@|$(HAVE_DECL_STRSIGNAL)|g' \
@@ -3548,6 +3558,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''REPLACE_STRTOK_R''@|$(REPLACE_STRTOK_R)|g' \
 	      -e 's|@''REPLACE_STRERROR''@|$(REPLACE_STRERROR)|g' \
 	      -e 's|@''REPLACE_STRERROR_R''@|$(REPLACE_STRERROR_R)|g' \
+	      -e 's|@''REPLACE_STRERRORNAME_NP''@|$(REPLACE_STRERRORNAME_NP)|g' \
 	      -e 's|@''REPLACE_STRSIGNAL''@|$(REPLACE_STRSIGNAL)|g' \
 	      -e 's|@''UNDEFINE_STRTOK_R''@|$(UNDEFINE_STRTOK_R)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \

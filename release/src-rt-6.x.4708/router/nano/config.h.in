@@ -661,6 +661,9 @@
 /* Define to 1 if 'long double' and 'double' have the same representation. */
 #undef HAVE_SAME_LONG_DOUBLE_AS_DOUBLE
 
+/* Define to 1 if you have the <sdkddkver.h> header file. */
+#undef HAVE_SDKDDKVER_H
+
 /* Define this if your curses library has the set_escdelay() function. */
 #undef HAVE_SET_ESCDELAY
 
@@ -1015,6 +1018,9 @@
    */
 #undef NEED_XOPEN_SOURCE_EXTENDED
 
+/* Define to 1 if nl_langinfo is multithread-safe. */
+#undef NL_LANGINFO_MTSAFE
+
 /* Name of package */
 #undef PACKAGE
 
@@ -1065,9 +1071,6 @@
 
 /* Define if vasnprintf exists but is overridden by gnulib. */
 #undef REPLACE_VASNPRINTF
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#undef RETSIGTYPE
 
 /* Define to 1 if setlocale (LC_ALL, NULL) is multithread-safe. */
 #undef SETLOCALE_NULL_ALL_MTSAFE
@@ -1658,7 +1661,7 @@
 /* Define to the type of st_nlink in struct stat, or a supertype. */
 #undef nlink_t
 
-/* Define to `int' if <sys/types.h> does not define. */
+/* Define as a signed integer type capable of holding a process identifier. */
 #undef pid_t
 
 /* Define as the type of the result of subtracting two pointers, if the system

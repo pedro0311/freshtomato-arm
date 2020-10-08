@@ -186,15 +186,10 @@ extern size_t light_to_col;
 
 typedef void (*functionptrtype)(void);
 
-/* Most functions in browser.c. */
+/* The two needed functions from browser.c. */
 #ifdef ENABLE_BROWSER
-char *browse_in(const char *inpath);
-void read_the_list(const char *path, DIR *dir);
 void browser_refresh(void);
-void browser_select_dirname(const char *needle);
-void do_filesearch(bool forwards);
-void do_fileresearch(bool forwards);
-char *strip_last_component(const char *path);
+char *browse_in(const char *inpath);
 #endif
 
 /* Most functions in chars.c. */
@@ -395,9 +390,6 @@ void free_lines(linestruct *src);
 void renumber_from(linestruct *line);
 void print_view_warning(void);
 bool in_restricted_mode(void);
-#ifndef ENABLE_HELP
-void say_there_is_no_help(void);
-#endif
 void finish(void);
 void close_and_go(void);
 void do_exit(void);
@@ -405,18 +397,20 @@ void die(const char *msg, ...);
 void window_init(void);
 void install_handler_for_Ctrl_C(void);
 void restore_handler_for_Ctrl_C(void);
+#ifndef NANO_TINY
 void reconnect_and_store_state(void);
-RETSIGTYPE handle_hupterm(int signal);
-#ifndef DEBUG
-RETSIGTYPE handle_crash(int signal);
 #endif
-RETSIGTYPE do_suspend(int signal);
-RETSIGTYPE do_continue(int signal);
+void handle_hupterm(int signal);
+#ifndef DEBUG
+void handle_crash(int signal);
+#endif
+void do_suspend(int signal);
+void do_continue(int signal);
 #if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)
 void block_sigwinch(bool blockit);
 #endif
 #ifndef NANO_TINY
-RETSIGTYPE handle_sigwinch(int signal);
+void handle_sigwinch(int signal);
 void compute_the_extra_rows_per_line_from(linestruct *fromline);
 void regenerate_screen(void);
 void do_toggle(int flag);
@@ -595,6 +589,7 @@ void blank_statusbar(void);
 void wipe_statusbar(void);
 void blank_bottombars(void);
 void check_statusblank(void);
+void set_blankdelay_to_one(void);
 char *display_string(const char *buf, size_t column, size_t span,
 						bool isdata, bool isprompt);
 void titlebar(const char *path);

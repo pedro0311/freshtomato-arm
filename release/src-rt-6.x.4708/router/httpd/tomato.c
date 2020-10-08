@@ -1777,7 +1777,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_username",	V_TEXT(0,50)			},
 	{ "vpn_client3_password",	V_TEXT(0,70)			},
 	{ "vpn_client3_useronly",	V_01				},
-	{ "vpn_client3_tlsremote",	V_01				},
+	{ "vpn_client3_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client3_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
 	{ "vpn_client3_cn",		V_NONE				},
 	{ "vpn_client3_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client3_routing_val",	V_NONE				},

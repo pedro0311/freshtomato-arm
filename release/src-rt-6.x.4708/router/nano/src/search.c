@@ -22,6 +22,7 @@
 #include "prototypes.h"
 
 #include <string.h>
+#include <time.h>
 
 static bool came_full_circle = FALSE;
 		/* Have we reached the starting line again while searching? */
@@ -38,7 +39,7 @@ bool regexp_init(const char *regexp)
 	/* If regex compilation failed, show the error message. */
 	if (value != 0) {
 		size_t len = regerror(value, &search_regexp, NULL, 0);
-		char *str = charalloc(len);
+		char *str = nmalloc(len);
 
 		regerror(value, &search_regexp, str, len);
 		statusline(ALERT, _("Bad regex \"%s\": %s"), regexp, str);
@@ -78,7 +79,7 @@ void search_init(bool replacing, bool retain_answer)
 	if (*last_search != '\0') {
 		char *disp = display_string(last_search, 0, COLS / 3, FALSE, FALSE);
 
-		thedefault = charalloc(strlen(disp) + 7);
+		thedefault = nmalloc(strlen(disp) + 7);
 		/* We use (COLS / 3) here because we need to see more on the line. */
 		sprintf(thedefault, " [%s%s]", disp,
 				(breadth(last_search) > COLS / 3) ? "..." : "");
@@ -365,7 +366,8 @@ void do_research(void)
 	/* Use the search-menu key bindings, to allow cancelling. */
 	currmenu = MWHEREIS;
 
-	wipe_statusbar();
+	if (LINES > 1)
+		wipe_statusbar();
 
 	go_looking();
 
@@ -420,6 +422,8 @@ void go_looking(void)
 	if (didfind == 1 && openfile->current == was_current &&
 				openfile->current_x == was_current_x)
 		statusbar(_("This is the only occurrence"));
+	else if (didfind == 1 && LINES == 1)
+		refresh_needed = TRUE;
 	else if (didfind == 0)
 		not_found_msg(last_search);
 
@@ -489,7 +493,7 @@ char *replace_line(const char *needle)
 		new_size += strlen(answer) - match_len;
 	}
 
-	copy = charalloc(new_size);
+	copy = nmalloc(new_size);
 
 	/* Copy the head of the original line. */
 	strncpy(copy, openfile->current->data, openfile->current_x);

@@ -445,6 +445,10 @@ AC_DEFUN([gl_INIT],
   if test $HAVE_NL_LANGINFO = 0 || test $REPLACE_NL_LANGINFO = 1; then
     AC_LIBOBJ([nl_langinfo])
   fi
+  if test $REPLACE_NL_LANGINFO = 1 && test $NL_LANGINFO_MTSAFE = 0; then
+    AC_LIBOBJ([nl_langinfo-lock])
+    gl_PREREQ_NL_LANGINFO_LOCK
+  fi
   gl_LANGINFO_MODULE_INDICATOR([nl_langinfo])
   gl_FUNC_OPENDIR
   if test $HAVE_OPENDIR = 0 || test $REPLACE_OPENDIR = 1; then
@@ -866,6 +870,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/msvc-inval.h
   lib/msvc-nothrow.c
   lib/msvc-nothrow.h
+  lib/nl_langinfo-lock.c
   lib/nl_langinfo.c
   lib/opendir.c
   lib/pathmax.h
@@ -1045,6 +1050,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/off_t.m4
   m4/opendir.m4
   m4/pathmax.m4
+  m4/pid_t.m4
   m4/printf-frexp.m4
   m4/printf-frexpl.m4
   m4/printf.m4
