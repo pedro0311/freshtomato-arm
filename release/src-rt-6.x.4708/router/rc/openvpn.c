@@ -536,8 +536,10 @@ void start_ovpn_client(int clientNum)
 		_eval(argv, NULL, 0, NULL);
 	}
 
-	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2 with OpenVPN 2.4 only) */
 	eval("/usr/sbin/ip", "addr", "flush", "dev", iface);
+#endif
 
 	/* Start the VPN client */
 	memset(buffer, 0, BUF_SIZE);
