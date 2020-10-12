@@ -15,7 +15,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Basic: Static DHCP/ARP/IPT</title>
+<title>[<% ident(); %>] Basic: DHCP Reservation</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script src="tomato.js"></script>
@@ -25,6 +25,7 @@
 //	<% nvram("lan_ipaddr,lan_netmask,dhcpd_static,dhcpd_startip,dhcpd_static_only,cstats_include"); %>
 
 var cprefix = 'basic_static';
+var mac_null = '00:00:00:00:00:00';
 
 if (nvram.lan_ipaddr.match(/^(\d+\.\d+\.\d+)\.(\d+)$/))
 	ipp = RegExp.$1 + '.';
@@ -59,7 +60,7 @@ sg.inStatic = function(n) {
 
 sg.dataToView = function(data) {
 	var v = [];
-	var s = (data[0] == '00:00:00:00:00:00') ? '' : data[0];
+	var s = (data[0] == mac_null) ? '' : data[0];
 	if (!isMAC0(data[1])) s += '<br>' + data[1];
 	v.push((s == '') ? '<center><small><i>(unset)<\/i><\/small><\/center>' : s);
 
@@ -123,10 +124,10 @@ sg.verifyFields = function(row, quiet) {
 	if (!v_macz(f[1], quiet)) return 0;
 	if (isMAC0(f[0].value)) {
 		f[0].value = f[1].value;
-		f[1].value = '00:00:00:00:00:00';
+		f[1].value = mac_null;
 	}
 	else if (f[0].value == f[1].value) {
-		f[1].value = '00:00:00:00:00:00';
+		f[1].value = mac_null;
 	}
 	else if ((!isMAC0(f[1].value)) && (f[0].value > f[1].value)) {
 		s = f[1].value;
@@ -188,7 +189,7 @@ REMOVE-END */
 		}
 	}
 
-	if (((f[0].value == '00:00:00:00:00:00') || (f[1].value == '00:00:00:00:00:00')) && (f[0].value == f[1].value)) {
+	if (((f[0].value == mac_null) || (f[1].value == mac_null)) && (f[0].value == f[1].value)) {
 		f[2].disabled=1;
 		f[2].checked=0;
 	}
@@ -210,15 +211,15 @@ sg.resetNewEditor = function() {
 		c = c.split(',');
 		if (c.length == 3) {
 			f[0].value = c[0];
-			f[1].value = '00:00:00:00:00:00';
+			f[1].value = mac_null;
 			f[3].value = c[1];
 			f[5].value = c[2];
 			return;
 		}
 	}
 
-	f[0].value = '00:00:00:00:00:00';
-	f[1].value = '00:00:00:00:00:00';
+	f[0].value = mac_null;
+	f[1].value = mac_null;
 	f[2].disabled = 1;
 	f[2].checked = 0;
 	f[4].checked = 0;
@@ -263,7 +264,7 @@ sg.setup = function() {
 			if (t.length == 3) {
 				t[3] = '0';
 			}
-			this.insertData(-1, [d[0], (d.length >= 2) ? d[1] : '00:00:00:00:00:00', t[3],
+			this.insertData(-1, [d[0], (d.length >= 2) ? d[1] : mac_null, t[3],
 				(t[1].indexOf('.') == -1) ? (ipp + t[1]) : t[1], h, t[2]]);
 		}
 	}
@@ -331,7 +332,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<div class="section-title">Static DHCP/ARP/IPT</div>
+<div class="section-title">DHCP Reservation</div>
 <div class="section">
 	<div class="tomato-grid" id="bs-grid"></div>
 </div>

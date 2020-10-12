@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,block_wan_limit_tr,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,block_wan_limit_tr,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat,emf_enable,force_igmpv2"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -149,6 +149,14 @@ function save() {
 	fom.udpxy_stats.value = E('_f_udpxy_stats').checked ? 1 : 0;
 	fom.udpxy_clients.value = E('_f_udpxy_clients').value;
 	fom.udpxy_port.value = E('_f_udpxy_port').value;
+
+/* EMF-BEGIN */
+	fom.emf_enable.value = E('_f_emf').checked ? 1 : 0;
+	if (fom.emf_enable.value != nvram.emf_enable)
+		fom._service.value = '*';
+/* EMF-END */
+	fom.force_igmpv2.value = E('_f_force_igmpv2').checked ? 1 : 0;
+
 	form.submit(fom, 1);
 }
 
@@ -200,6 +208,8 @@ function init() {
 <input type="hidden" name="udpxy_stats">
 <input type="hidden" name="udpxy_clients">
 <input type="hidden" name="udpxy_port">
+<input type="hidden" name="emf_enable">
+<input type="hidden" name="force_igmpv2">
 
 <!-- / / / -->
 
@@ -252,7 +262,12 @@ function init() {
 			{ title: 'LAN3', indent: 2, name: 'f_udpxy_lan3', type: 'checkbox', value: (nvram.udpxy_lan3 == '1') },
 			{ title: 'Enable client statistics', indent: 2, name: 'f_udpxy_stats', type: 'checkbox', value: (nvram.udpxy_stats == '1') },
 			{ title: 'Max clients', indent: 2, name: 'f_udpxy_clients', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.udpxy_clients || 3, 1, 5000, 3) },
-			{ title: 'Udpxy port', indent: 2, name: 'f_udpxy_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.udpxy_port, 4022) }
+			{ title: 'Udpxy port', indent: 2, name: 'f_udpxy_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.udpxy_port, 4022) },
+			null,
+/* EMF-BEGIN */
+			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' <small><a href="https://en.wikipedia.org/wiki/Universal_Plug_and_Play#IGMP_snooping_and_reliability" class="new_window">Read first!<\/a><\/small>' },
+/* EMF-END */
+			{ title: 'Force IGMPv2', name: 'f_force_igmpv2', type: 'checkbox', value: nvram.force_igmpv2 != '0' }
 		]);
 	</script>
 </div>

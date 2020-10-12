@@ -215,33 +215,33 @@ function ethstates() {
 		}
 		else if (port == "1000FD") {
 			fn = 'eth_1000_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "1000HD") {
 			fn = 'eth_1000_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "100FD") {
 			fn = 'eth_100_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "100HD") {
 			fn = 'eth_100_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "10FD") {
 			fn = 'eth_10_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "10HD") {
 			fn = 'eth_10_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else {
 			fn = 'eth_1000_fd';

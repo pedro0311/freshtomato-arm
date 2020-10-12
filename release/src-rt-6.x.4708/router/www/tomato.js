@@ -2413,7 +2413,7 @@ function navi() {
 			['Identification',		'ident.asp'],
 			['Time',			'time.asp'],
 			['DDNS',			'ddns.asp'],
-			['Static DHCP/ARP/IPT',		'static.asp'],
+			['DHCP Reservation',		'static.asp'],
 			['Wireless Filter',		'wfilter.asp'] ] ],
 		['Advanced', 			'advanced', 0, [
 			['Conntrack/Netfilter',		'ctnf.asp'],
