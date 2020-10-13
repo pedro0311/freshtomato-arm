@@ -25,6 +25,11 @@ function nvramCommit() {
 	form.submitHidden('nvcommit.cgi', { '_nextpage': myName() });
 }
 
+function clearCache() {
+	localStorage.clear();
+	alert('Done!');
+}
+
 function verifyFields(focused, quiet) {
 	return 1;
 }
@@ -99,6 +104,7 @@ function save() {
 	<br><br>
 
 	&raquo; <a href="clearcookies.asp?_http_id=<% nv(http_id); %>">Clear Cookies</a><br>
+	&raquo; <a href="javascript:clearCache()">Clear Cache</a><br>
 	&raquo; <a href="javascript:nvramCommit()">NVRAM Commit</a><br>
 	&raquo; <a href="javascript:reboot()">Reboot</a><br>
 	&raquo; <a href="javascript:shutdown()">Shutdown</a><br>
