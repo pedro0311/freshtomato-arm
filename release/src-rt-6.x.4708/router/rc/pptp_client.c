@@ -1,21 +1,19 @@
 /*
-  PPTP CLIENT start/stop and configuration for Tomato
-  by Jean-Yves Avenard (c) 2008-2011
-*/
+ * PPTP CLIENT start/stop and configuration for Tomato
+ * by Jean-Yves Avenard (c) 2008-2011
+ * updated: 2020 by pedro
+ */
 
 #include "rc.h"
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
-//#define PPTPC_DEBUG
 #define BUF_SIZE 128
-
-/* Line number as text string */
-#define __LINE_T__ __LINE_T_(__LINE__)
-#define __LINE_T_(x) __LINE_T(x)
-#define __LINE_T(x) # x
-#define vpnlog(level, x...) if (nvram_get_int("pptp_debug") >= level) syslog(level, __LINE_T__ ": " x)
+#define PPTPC_OPTIONS		"/etc/vpn/pptpc_options"
+#define PPTPC_CLIENT		"/etc/vpn/pptpclient"
+#define PPTPC_UP_SCRIPT		"/etc/vpn/pptpc_ip-up"
+#define PPTPC_DOWN_SCRIPT	"/etc/vpn/pptpc_ip-down"
 
 
 void start_pptp_client(void)
@@ -27,24 +25,20 @@ void start_pptp_client(void)
 	char *argv[5];
 	int argc = 0;
 
-	vpnlog(LOG_DEBUG, "IN start_pptp_client...");
-
 	struct hostent *he;
 	struct in_addr **addr_list;
 
 	char *srv_addr = nvram_safe_get("pptp_client_srvip");
 
-	if (pidof("pptpclient") >= 0) {
-		/* PPTP already running */
-		vpnlog(LOG_DEBUG, "PPTP already running... stop");
+	/* PPTP already running */
+	if (pidof("pptpclient") >= 0)
 		stop_pptp_client();
-	}
 
-	unlink("/etc/vpn/pptpc_ip-up");
-	unlink("/etc/vpn/pptpc_ip-down");
-	unlink("/etc/vpn/pptpc_options");
+	unlink(PPTPC_UP_SCRIPT);
+	unlink(PPTPC_DOWN_SCRIPT);
+	unlink(PPTPC_OPTIONS);
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "/etc/vpn/pptpclient");
+	sprintf(buffer, PPTPC_CLIENT);
 	unlink(buffer);
 
 	/* Make sure vpn/ppp directory exists */
@@ -53,10 +47,12 @@ void start_pptp_client(void)
 
 	/* Make sure symbolic link exists */
 	ok |= symlink("/usr/sbin/pppd", buffer);
-	ok |= symlink("/sbin/rc", "/etc/vpn/pptpc_ip-up");
-	ok |= symlink("/sbin/rc", "/etc/vpn/pptpc_ip-down");
+	ok |= symlink("/sbin/rc", PPTPC_UP_SCRIPT);
+	ok |= symlink("/sbin/rc", PPTPC_DOWN_SCRIPT);
 	if (ok) {
-		vpnlog(LOG_ERR, "Creating symlink failed...");
+#ifndef TCONFIG_OPTIMIZE_SIZE
+		syslog(LOG_WARNING, "Creating symlink failed...");
+#endif
 		stop_pptp_client();
 		return;
 	}
@@ -74,77 +70,72 @@ void start_pptp_client(void)
 	}
 
 	/* Generate ppp options */
-	if ((fd = fopen("/etc/vpn/pptpc_options", "w")) != NULL) {
+	if ((fd = fopen(PPTPC_OPTIONS, "w")) != NULL) {
 		ok = 1;
-		fprintf(fd,
-			"lock\n"
-			"noauth\n"
-			"refuse-eap\n"
-			"lcp-echo-interval 10\n"
-			"lcp-echo-failure 5\n"
-			"maxfail 0\n"
-			"persist\n"
-			"plugin pptp.so\n"
-			"pptp_server '%s'\n"
-			"idle 0\n"
-			"ipparam kelokepptpd\n"
-			"ktune\n"
-			"default-asyncmap nopcomp noaccomp\n"
-			"novj nobsdcomp nodeflate\n"
-			"holdoff 10\n"
-			"lcp-echo-adaptive\n"
-			"ipcp-accept-remote ipcp-accept-local noipdefault\n",
-			srv_addr);
+		fprintf(fd, "lock\n"
+		            "noauth\n"
+		            "refuse-eap\n"
+		            "lcp-echo-interval 10\n"
+		            "lcp-echo-failure 5\n"
+		            "maxfail 0\n"
+		            "persist\n"
+		            "plugin pptp.so\n"
+		            "pptp_server '%s'\n"
+		            "idle 0\n"
+		            "ipparam kelokepptpd\n"
+		            "ktune\n"
+		            "default-asyncmap nopcomp noaccomp\n"
+		            "novj nobsdcomp nodeflate\n"
+		            "holdoff 10\n"
+		            "lcp-echo-adaptive\n"
+		            "ipcp-accept-remote ipcp-accept-local noipdefault\n",
+		            srv_addr);
 
 		if (nvram_get_int("pptp_client_peerdns"))	/* 0: disable, 1 enable */
 			fprintf(fd, "usepeerdns\n");
 
 		/* MTU */
 		/* see KB Q189595 -- historyless & mtu */
-		if ((p = nvram_get("pptp_client_mtu")) == NULL)
+		if (!(p = nvram_safe_get("pptp_client_mtu")))
 			p = "1400";
 		if (!nvram_get_int("pptp_client_mtuenable"))
 			p = "1400";
 		fprintf(fd, "mtu %s\n", p);
 
 		/* MRU */
-		if ((p = nvram_get("pptp_client_mru")) == NULL)
+		if (!(p = nvram_safe_get("pptp_client_mru")))
 			p = "1400";
 		if (!nvram_get_int("pptp_client_mruenable"))
 			p = "1400";
 		fprintf(fd, "mru %s\n", p);
 
 		/* Login */
-		if ((p = nvram_get("pptp_client_username")) == NULL)
+		if (!(p = nvram_safe_get("pptp_client_username")))
 			ok = 0;
 		else
 			fprintf(fd, "user \"%s\"\n", p);
 
 		/* Password */
-		if ((p = nvram_get("pptp_client_passwd")) == NULL)
+		if (!(p = nvram_safe_get("pptp_client_passwd")))
 			ok = 0;
 		else
 			fprintf(fd, "password \"%s\"\n", p);
 
 		/* Encryption */
-		strcpy(buffer, "");
-		switch (nvram_get_int("pptp_client_crypt"))
-		{
+		switch (nvram_get_int("pptp_client_crypt")) {
 			case 1:
 				fprintf(fd, "nomppe nomppc\n");
 				break;
 			case 2:
-				fprintf(fd,
-					"nomppe-40\n"
-					"require-mppe\n"
-					"require-mppe-128\n");
+				fprintf(fd, "nomppe-40\n"
+				            "require-mppe\n"
+				            "require-mppe-128\n");
 				break;
 			case 3:
-				fprintf(fd,
-					"require-mppe\n"
-					"require-mppe-40\n"
-					"require-mppe-56\n"
-					"require-mppe-128\n");
+				fprintf(fd, "require-mppe\n"
+				            "require-mppe-40\n"
+				            "require-mppe-56\n"
+				            "require-mppe-128\n");
 				break;
 			default:
 				break;
@@ -155,13 +146,12 @@ void start_pptp_client(void)
 		else
 			fprintf(fd, "nomppe-stateful\n");
 
-		fprintf(fd,
-			"unit 4\n"		/* UNIT (ppp4) */
-			"linkname pptpc\n"	/* link name for ID */
-			"ip-up-script /etc/vpn/pptpc_ip-up\n"
-			"ip-down-script /etc/vpn/pptpc_ip-down\n"
-			"%s\n",
-			nvram_safe_get("pptp_client_custom"));
+		fprintf(fd, "unit 4\n"		/* UNIT (ppp4) */
+		            "linkname pptpc\n"	/* link name for ID */
+		            "ip-up-script "PPTPC_UP_SCRIPT"\n"
+		            "ip-down-script "PPTPC_DOWN_SCRIPT"\n"
+		            "%s\n",
+		            nvram_safe_get("pptp_client_custom"));
 
 		fclose(fd);
 	}
@@ -171,33 +161,31 @@ void start_pptp_client(void)
 		if ((*prefix) && strcmp(prefix, "none")) {
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "ip rule del lookup %d pref 120", get_wan_unit(prefix));
-			vpnlog(LOG_DEBUG, "cmd=%s (clean route to PPTP server via selected WAN)", buffer);
 			system(buffer);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "ip rule add to %s lookup %d pref 120", srv_addr, get_wan_unit(prefix));
-			vpnlog(LOG_DEBUG, "cmd=%s (force route to PPTP server via selected WAN)", buffer);
 			system(buffer);
 		}
 
-#ifdef PPTPC_DEBUG
-		sprintf(buffer, "/etc/vpn/pptpclient file /etc/vpn/pptpc_options debug");
-#else
-		sprintf(buffer, "/etc/vpn/pptpclient file /etc/vpn/pptpc_options");
-#endif
+		memset(buffer, 0, BUF_SIZE);
+		sprintf(buffer, PPTPC_CLIENT" file "PPTPC_OPTIONS);
+
 		for (argv[argc = 0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 		if (_eval(argv, NULL, 0, NULL)) {
-			vpnlog(LOG_ERR, "Creating pptp tunnel failed...");
+#ifndef TCONFIG_OPTIMIZE_SIZE
+			syslog(LOG_WARNING, "Creating pptp tunnel failed...");
+#endif
 			stop_pptp_client();
 			return;
 		}
-		f_write("/etc/vpn/pptpclient_connecting", NULL, 0, 0, 0);
+		f_write(PPTPC_CLIENT"_connecting", NULL, 0, 0, 0);
 	}
 	else {
-		vpnlog(LOG_ERR, "Found error in configuration - aborting...");
+#ifndef TCONFIG_OPTIMIZE_SIZE
+		syslog(LOG_WARNING, "Found error in configuration - aborting...");
+#endif
 		stop_pptp_client();
 	}
-
-	vpnlog(LOG_DEBUG, "OUT start_pptp_client");
 }
 
 void stop_pptp_client(void)
@@ -215,24 +203,19 @@ void stop_pptp_client(void)
 	if ((*prefix) && strcmp(prefix, "none")) {
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip rule del lookup %d pref 120", get_wan_unit(prefix));
-		vpnlog(LOG_DEBUG,"stop_pptp_client, cmd=%s (clean route to PPTP server via selected WAN)", buffer);
 		system(buffer);
 	}
 
-	vpnlog(LOG_DEBUG, "Removing generated files.");
-
 	/* Delete all files for this client */
-	unlink("/etc/vpn/pptpclient_connecting");
+	unlink(PPTPC_CLIENT"_connecting");
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "rm -rf /etc/vpn/pptpclient /etc/vpn/pptpc_ip-down /etc/vpn/pptpc_ip-up /etc/vpn/pptpc_options /tmp/ppp/resolv.conf");
+	sprintf(buffer, "rm -rf "PPTPC_CLIENT" "PPTPC_DOWN_SCRIPT" "PPTPC_UP_SCRIPT" "PPTPC_OPTIONS" /tmp/ppp/resolv.conf");
 	for (argv[argc = 0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	_eval(argv, NULL, 0, NULL);
 
 	/* Attempt to remove directories. Will fail if not empty */
 	rmdir("/etc/vpn");
 	rmdir("/tmp/ppp");
-
-	vpnlog(LOG_DEBUG, "Done removing generated files.");
 }
 
 void start_pptp_client_eas(void)
@@ -284,7 +267,6 @@ void append_pptp_route(void)
 		char buffer[BUF_SIZE];
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route replace default scope global via %s dev %s", nvram_safe_get("pptp_client_ipaddr"), nvram_safe_get("pptp_client_iface"));
-		vpnlog(LOG_DEBUG, "append_pptp_route, cmd=%s", buffer);
 		system(buffer);
 	}
 }
@@ -295,21 +277,16 @@ void clear_pptp_route(void)
 	char pmw[] = "wanXX";
 	char *prefix = nvram_safe_get("pptp_client_usewan");
 
-	vpnlog(LOG_DEBUG, "IN clear_pptp_route");
-
 	/* remove default route */
 	if (nvram_get_int("pptp_client_dfltroute") == 1) {
 
 		/* delete default route via PPTP */
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route del default via %s dev %s", nvram_safe_get("pptp_client_ipaddr"), nvram_safe_get("pptp_client_iface"));
-		vpnlog(LOG_DEBUG, "cmd=%s", buffer);
 		system(buffer);
 
 		char *wan_ipaddr, *wan_gw, *wan_iface;
 		wanface_list_t wanfaces;
-
-		vpnlog(LOG_DEBUG, "*** prefix: %s", prefix);
 
 		/* restore default route via binded WAN */
 		if (check_wanup(prefix)) {
@@ -329,18 +306,13 @@ void clear_pptp_route(void)
 			prefix = pmw;
 		}
 
-		vpnlog(LOG_DEBUG, "*** [%s] ip: %s gw: %s iface: %s", prefix, wan_ipaddr, wan_iface, wan_gw);
-
 		if (check_wanup(prefix)) {
 			int proto = get_wanx_proto(prefix);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "ip route add default via %s dev %s", (proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC) ? wan_gw : wan_ipaddr, wan_iface);
-			vpnlog(LOG_DEBUG, "cmd=%s", buffer);
 			system(buffer);
 		}
 	}
-
-	vpnlog(LOG_DEBUG, "OUT clear_pptp_route");
 }
 
 int write_pptp_client_resolv(FILE* f)
@@ -349,16 +321,13 @@ int write_pptp_client_resolv(FILE* f)
 	int usepeer;
 	int ch;
 
-	if ((usepeer = nvram_get_int("pptp_client_peerdns")) <= 0) {
-		vpnlog(LOG_DEBUG, "write_pptp_client_resolv: pptp peerdns disabled");
+	if ((usepeer = nvram_get_int("pptp_client_peerdns")) <= 0)
 		return 0;
-	}
 
 	if (pidof("pptpclient") >= 0) {	/* write DNS only for active client */
-		if (!(dnsf = fopen( "/tmp/ppp/resolv.conf", "r" ))) {
-			vpnlog(LOG_DEBUG, "pptpclient: /tmp/ppp/resolv.conf can't be opened");
+		if (!(dnsf = fopen( "/tmp/ppp/resolv.conf", "r" )))
 			return 0;
-		}
+
 		fputs("# pptp client dns:\n", f);
 		while (!feof(dnsf)) {
 			ch = fgetc(dnsf);
@@ -377,35 +346,28 @@ void pptp_client_table_del(void)
 	/* ip route flush table PPTP (remove all PPTP routes) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route flush table %s", PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client_table_del, cmd=%s", buffer);
 	system(buffer);
 
 	/* ip rule del table PPTP pref 105 (from PPTP_IP) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip rule del table %s pref 10%d", PPTP_CLIENT_TABLE_NAME, PPTP_CLIENT_TABLE_ID);
-	vpnlog(LOG_DEBUG, "pptp_client_table_del, cmd=%s", buffer);
 	system(buffer);
 
 	/* ip rule del table PPTP pref 110 (to PPTP_DNS) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip rule del table %s pref 110", PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client_table_del, cmd=%s", buffer);
 	system(buffer);	/* del PPTP DNS1 */
 	system(buffer);	/* del PPTP DNS2 */
 
 	/* ip rule del fwmark 0x500/0xf00 table PPTP pref 125 (FWMARK) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip rule del table %s pref 12%d", PPTP_CLIENT_TABLE_NAME, PPTP_CLIENT_TABLE_ID);
-	vpnlog(LOG_DEBUG, "pptp_client_table_del, cmd=%s", buffer);
 	system(buffer);
-
 }
 
 /* set pptp_client ip route table & ip rule table */
 void pptp_client_table_add(void)
 {
-	vpnlog(LOG_DEBUG, "IN pptp_client_table_add");
-
 	int mwan_num, i, wanid, proto;
 	char buffer[BUF_SIZE];
 	char ip_cidr[32];
@@ -429,21 +391,18 @@ void pptp_client_table_add(void)
 	/* ip rule add from PPTP_IP table PPTP pref 105 */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip rule add from %s table %s pref 10%d", pptp_client_ipaddr, PPTP_CLIENT_TABLE_NAME, PPTP_CLIENT_TABLE_ID);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (from PPTP_IP)", buffer);
 	system(buffer);
 
 	for (i = 0 ; i < pptp_dns->count; ++i) {
 		/* ip rule add to PPTP_DNS table PPTP pref 110 */
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip rule add to %s table %s pref 110", inet_ntoa(pptp_dns->dns[i].addr), PPTP_CLIENT_TABLE_NAME);
-		vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (to PPTP_DNS)", buffer);
 		system(buffer);
 	}
 
 	/* ip rule add fwmark 0x500/0xf00 table PPTP pref 125 */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip rule add fwmark 0x%d00/0xf00 table %s pref 12%d", PPTP_CLIENT_TABLE_ID, PPTP_CLIENT_TABLE_NAME, PPTP_CLIENT_TABLE_ID);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (fwmark)", buffer);
 	system(buffer);
 
 	/*
@@ -472,7 +431,6 @@ void pptp_client_table_add(void)
 					nvram_safe_get(strcat_r(sPrefix, "_ifname", tmp)),
 					nvram_safe_get(strcat_r(sPrefix, "_ipaddr", tmp)),
 					PPTP_CLIENT_TABLE_NAME);
-				vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (active MANX)", buffer);
 				system(buffer);
 				/* WAN: wan_gateway_get, wan_iface, wan_ppp_get_ip */
 				sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s",
@@ -489,7 +447,6 @@ void pptp_client_table_add(void)
 					nvram_safe_get(strcat_r(sPrefix, "_ipaddr", tmp)),
 					PPTP_CLIENT_TABLE_NAME);
 			}
-			vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (active WANX)", buffer);
 			system(buffer);
 		}
 	}
@@ -497,7 +454,6 @@ void pptp_client_table_add(void)
 	/* ip route add 172.16.36.1 dev ppp4 proto kernel scope link src 172.16.36.13 */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s", pptp_client_gateway, pptp_client_iface, pptp_client_ipaddr);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (pptp gw)", buffer);
 	system(buffer);
 
 	for (wanid = 1; wanid <= mwan_num; ++wanid) {
@@ -505,7 +461,6 @@ void pptp_client_table_add(void)
 		if (check_wanup(sPrefix)) {
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %d", pptp_client_gateway, pptp_client_iface, pptp_client_ipaddr, wanid);
-			vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (pptp gw for %s)", buffer, sPrefix);
 			system(buffer);
 		}
 	}
@@ -513,23 +468,19 @@ void pptp_client_table_add(void)
 	/* ip route add 172.16.36.1 dev ppp4 proto kernel scope link src 172.16.36.13 table PPTP (pptp gw) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s", pptp_client_gateway, pptp_client_iface, pptp_client_ipaddr, PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (pptp gw)", buffer);
 	system(buffer);
 	/* ip route add 192.168.1.0/24 dev br0 proto kernel scope link src 192.168.1.1 table PPTP (LAN) */
 	get_cidr(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), ip_cidr);
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s", ip_cidr, nvram_safe_get("lan_ifname"), nvram_safe_get("lan_ipaddr"), PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (LAN)", buffer);
 	system(buffer);
 	/* ip route add 127.0.0.0/8 dev lo scope link table PPTP (lo setup) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append 127.0.0.0/8 dev lo scope link table %s", PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (lo setup)", buffer);
 	system(buffer);
 	/* ip route add default via 10.0.10.1 dev ppp3 table PPTP (default route) */
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append default via %s dev %s table %s", pptp_client_ipaddr, pptp_client_iface, PPTP_CLIENT_TABLE_NAME);
-	vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (default route)", buffer);
 	system(buffer);
 
 	/* PPTP network */
@@ -538,7 +489,6 @@ void pptp_client_table_add(void)
 		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route append %s via %s dev %s scope link table %s", remote_cidr, pptp_client_ipaddr, pptp_client_iface, "main");
-		vpnlog(LOG_DEBUG, "pptp_client, cmd=%s", buffer);
 		system(buffer);
 		/* add PPTP network to all WANX tables */
 		for (wanid = 1; wanid <= mwan_num; ++wanid) {
@@ -546,7 +496,6 @@ void pptp_client_table_add(void)
 			if (check_wanup(sPrefix)) {
 				memset(buffer, 0, BUF_SIZE);
 				sprintf(buffer, "ip route append %s via %s dev %s scope link table %d", remote_cidr, pptp_client_ipaddr, pptp_client_iface, wanid);
-				vpnlog(LOG_DEBUG, "pptp_client, cmd=%s (%s)", buffer, sPrefix);
 				system(buffer);
 			}
 		}
@@ -554,11 +503,8 @@ void pptp_client_table_add(void)
 		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route append %s via %s dev %s scope link table %s", remote_cidr, pptp_client_ipaddr, pptp_client_iface, PPTP_CLIENT_TABLE_NAME);
-		vpnlog(LOG_DEBUG, "pptp_client, cmd=%s", buffer);
 		system(buffer);
 	}
-
-	vpnlog(LOG_DEBUG, "OUT pptp_client_table_add");
 }
 
 int pptpc_ipup_main(int argc, char **argv)
@@ -572,11 +518,9 @@ int pptpc_ipup_main(int argc, char **argv)
 	 * ppp1 vlan1 0 71.135.98.32 151.164.184.87 0
 	 */
 
-	vpnlog(LOG_DEBUG, "IN pptpc_ipup_main IFNAME=%s DEVICE=%s LINKNAME=%s IPREMOTE=%s IPLOCAL=%s DNS1=%s DNS2=%s", getenv("IFNAME"), getenv("DEVICE"), getenv("LINKNAME"), getenv("IPREMOTE"), getenv("IPLOCAL"), getenv("DNS1"), getenv("DNS2"));
-
 	sysinfo(&si);
-	f_write("/etc/vpn/pptpclient_time", &si.uptime, sizeof(si.uptime), 0, 0);
-	unlink("/etc/vpn/pptpclient_connecting");
+	f_write(PPTPC_CLIENT"_time", &si.uptime, sizeof(si.uptime), 0, 0);
+	unlink(PPTPC_CLIENT"_connecting");
 
 	pptp_client_ifname = safe_getenv("IFNAME");
 	if ((!pptp_client_ifname) || (!*pptp_client_ifname) || (!wait_action_idle(10)))
@@ -584,7 +528,7 @@ int pptpc_ipup_main(int argc, char **argv)
 
 	nvram_set("pptp_client_iface", pptp_client_ifname);	/* ppp# */
 
-	f_write_string("/etc/vpn/pptpclient_link", argv[1], 0, 0);
+	f_write_string(PPTPC_CLIENT"_link", argv[1], 0, 0);
 
 	if ((p = getenv("IPLOCAL"))) {
 		nvram_set("pptp_client_ipaddr", p);
@@ -605,24 +549,20 @@ int pptpc_ipup_main(int argc, char **argv)
 	dns_to_resolv();
 	start_dnsmasq();
 
-	vpnlog(LOG_DEBUG, "OUT pptpc_ipup_main");
-
 	return 0;
 }
 
 int pptpc_ipdown_main(int argc, char **argv)
 {
-	vpnlog(LOG_DEBUG, "IN pptpc_ipdown_main IFNAME=%s DEVICE=%s LINKNAME=%s IPREMOTE=%s IPLOCAL=%s DNS1=%s DNS2=%s", getenv("IFNAME"), getenv("DEVICE"), getenv("LINKNAME"), getenv("IPREMOTE"), getenv("IPLOCAL"), getenv("DNS1"), getenv("DNS2"));
-
 	if (!wait_action_idle(10))
 		return -1;
 
 	pptp_client_table_del();
 	clear_pptp_route();
 
-	unlink("/etc/vpn/pptpclient_link");
-	unlink("/etc/vpn/pptpclient_time");
-	unlink("/etc/vpn/pptpclient_connecting");
+	unlink(PPTPC_CLIENT"_link");
+	unlink(PPTPC_CLIENT"_time");
+	unlink(PPTPC_CLIENT"_connecting");
 
 	nvram_set("pptp_client_iface", "");
 	nvram_set("pptp_client_ipaddr", "0.0.0.0");
@@ -635,8 +575,6 @@ int pptpc_ipdown_main(int argc, char **argv)
 	stop_dnsmasq();
 	dns_to_resolv();
 	start_dnsmasq();
-
-	vpnlog(LOG_DEBUG, "OUT pptpc_ipdown_main");
 
 	return 1;
 }
