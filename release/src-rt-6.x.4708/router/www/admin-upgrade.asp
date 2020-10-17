@@ -53,6 +53,8 @@ function upgrade() {
 
 	fom.action += '?_reset=' + (E('f_reset').checked ? "1" : "0");
 	form.addIdAction(fom);
+
+	localStorage.clear();
 	fom.submit();
 }
 
