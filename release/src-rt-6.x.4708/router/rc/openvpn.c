@@ -33,7 +33,8 @@
 enum {
 	OVPN_RGW_NONE = 0,
 	OVPN_RGW_ALL,
-	OVPN_RGW_POLICY
+	OVPN_RGW_POLICY,
+	OVPN_RGW_POLICY_STRICT
 };
 
 
@@ -302,7 +303,8 @@ void start_ovpn_client(int clientNum)
 		fprintf(fp, "redirect-gateway def1\n");
 	}
 	else if (nvi >= OVPN_RGW_POLICY)
-		fprintf(fp, "route-noexec\n");
+		fprintf(fp, "pull-filter ignore \"redirect-gateway\"\n"
+		            "redirect-private def1\n");
 
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "/etc/openvpn/client%d/updown-client.sh", clientNum);
