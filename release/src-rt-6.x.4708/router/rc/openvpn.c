@@ -804,8 +804,10 @@ void start_ovpn_server(int serverNum)
 
 	if (cryptMode == TLS) {
 		if (ifType == TUN) {
-			fprintf(fp, "server %s ", getNVRAMVar("vpn_server%d_sn", serverNum));
-			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_nm", serverNum));
+			fprintf(fp, "topology subnet\n"
+			            "server %s %s\n",
+			            getNVRAMVar("vpn_server%d_sn", serverNum),
+			            getNVRAMVar("vpn_server%d_nm", serverNum));
 		}
 		else if (ifType == TAP) {
 			fprintf(fp, "server-bridge");
@@ -831,12 +833,10 @@ void start_ovpn_server(int serverNum)
 					br_netmask = nvram_get("lan_netmask");
 				}
 
-				fprintf(fp, " %s "
-				            "%s ",
-				            br_ipaddr,
-				            br_netmask);
-				fprintf(fp, "%s ", getNVRAMVar("vpn_server%d_r1", serverNum));
-				fprintf(fp, "%s", getNVRAMVar("vpn_server%d_r2", serverNum));
+				fprintf(fp, " %s %s %s %s",
+				            br_ipaddr, br_netmask,
+				            getNVRAMVar("vpn_server%d_r1", serverNum),
+				            getNVRAMVar("vpn_server%d_r2", serverNum));
 			}
 			fprintf(fp, "\n");
 		}
@@ -847,6 +847,8 @@ void start_ovpn_server(int serverNum)
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_remote", serverNum));
 		}
 	}
+
+	/* Proto */
 	fprintf(fp, "proto %s\n", getNVRAMVar("vpn_server%d_proto", serverNum)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
 
 	/* Cipher */
