@@ -838,6 +838,9 @@ void start_ovpn_server(int serverNum)
 				            getNVRAMVar("vpn_server%d_r1", serverNum),
 				            getNVRAMVar("vpn_server%d_r2", serverNum));
 			}
+			else {
+				fprintf(fp, "\npush \"route 0.0.0.0 255.255.255.255 net_gateway\"");
+			}
 			fprintf(fp, "\n");
 		}
 	}
