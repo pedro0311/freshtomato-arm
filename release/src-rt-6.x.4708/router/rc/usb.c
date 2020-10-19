@@ -934,6 +934,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTAC1900P:
 		case MODEL_R6400:
 		case MODEL_R6400v2:
+		case MODEL_R6700v1:
 		case MODEL_R6700v3:
 		case MODEL_R7000:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */

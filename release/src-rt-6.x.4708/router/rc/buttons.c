@@ -149,6 +149,7 @@ int buttons_main(int argc, char *argv[])
 		wlan_mask = 1 << 4; /* wifi button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
+	case MODEL_R6700v1:
 	case MODEL_R7000:
 		reset_mask = 1 << 6; /* reset button (active LOW) */
 		ses_mask = 1 << 4; /* wps button (active LOW) */

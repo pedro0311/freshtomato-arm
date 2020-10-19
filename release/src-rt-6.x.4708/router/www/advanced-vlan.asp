@@ -84,6 +84,7 @@ switch (nvram['t_model_name']) {
 	case 'Linksys EA6900':
 	case 'Netgear R6400':
 	case 'Netgear R6400v2':
+	case 'Netgear R6700v1':
 	case 'Netgear R6700v3':
 	case 'Netgear R7000':
 		COL_P0N = '1';
