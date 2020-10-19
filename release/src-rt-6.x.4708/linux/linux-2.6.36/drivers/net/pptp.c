@@ -548,7 +548,7 @@ static int pptp_xmit(struct ppp_channel *chan, struct sk_buff *skb)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 	iph->ttl = sk->protinfo.af_inet.ttl;
 #else
-	iph->ttl = dst_metric(&rt->dst, RTAX_HOPLIMIT);
+	iph->ttl = ip4_dst_hoplimit(&rt->dst);
 #endif
 	iph->tot_len = htons(skb->len);
 

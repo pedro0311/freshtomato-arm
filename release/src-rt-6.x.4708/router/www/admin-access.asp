@@ -243,6 +243,7 @@ function save() {
 	}
 	fom.web_mx.value = a.join(',');
 
+	localStorage.clear();
 	form.submit(fom, 0);
 }
 

@@ -128,6 +128,7 @@ extern const char *get_wanip(char *prefix);
 extern const char *get_wan6face(void);
 #endif
 extern const char *getifaddr(char *ifname, int family, int linklocal);
+extern int is_intf_up(const char* ifname);
 extern long get_uptime(void);
 extern char *wl_nvname(const char *nv, int unit, int subunit);
 extern int get_radio(int unit);

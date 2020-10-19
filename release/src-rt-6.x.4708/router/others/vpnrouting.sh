@@ -60,34 +60,35 @@ cleanupRouting() {
 }
 
 initTable() {
-	local LANIFNAME=$(nvram get lan_ifname)
+	local ROUTE
 	$LOGS "Creating VPN routing table (mode $VPN_REDIR)"
 
-	# copy LAN routes and only those related to the intended tunnel
 	[ "$VPN_REDIR" -eq 3 ] && {
-		ip route show table main dev $LANIFNAME | while read ROUTE; do
-			ip route add table $ID $ROUTE dev $LANIFNAME
+		ip route show table main dev $IFACE | while read ROUTE; do
+			ip route add table $ID $ROUTE dev $IFACE
 		done
-		ip route show table main dev $dev | while read ROUTE; do
-			ip route add table $ID $ROUTE dev $dev
-		done
+	}
 	# copy routes from main routing table (exclude vpns and default gateway)
-	} || {
-		ip route | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
+	[ "$VPN_REDIR" -eq 2 ] && {
+		ip route show table main | grep -Ev 'tun11|tun12|tun13|^default ' | while read ROUTE; do
 			ip route add table $ID $ROUTE
 		done
 	}
 }
 
 startRouting() {
-	local DNSMASQ=0 VAL1 VAL2 VAL3 ROUTE
+	local DNSMASQ=0 VAL1 VAL2 VAL3
 
 	cleanupRouting
 	nvram set vpn_client"${ID#??}"_rdnsmasq=0
 
-	$LOGS "Starting routing policy for VPN $SERVICE - Interface $IFACE - Table $ID"
+	$LOGS "Starting routing policy for openvpn-$SERVICE - Interface $IFACE - Table $ID"
 
-	ip route add table $ID default dev $IFACE
+	[ -n "$route_vpn_gateway" ] && {
+		ip route add table $ID default via $route_vpn_gateway dev $IFACE
+	} || {
+		ip route add table $ID default dev $IFACE
+	}
 	ip rule add fwmark $ID table $ID priority 90
 
 	initTable
@@ -135,7 +136,7 @@ startRouting() {
 		RESTART_DNSMASQ=1
 	}
 
-	$LOGS "Completed routing policy configuration for $SERVICE"
+	$LOGS "Completed routing policy configuration for openvpn-$SERVICE"
 }
 
 checkRestart() {

@@ -29,7 +29,7 @@
 
 <script>
 
-//	<% nvram("wl_auth,wl_auth_mode,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features,wl_macmode,wl_maclist");%>
+//	<% nvram("wl_auth,wl_auth_mode,wl_ap_isolate,wl_bss_enabled,wl_channel,wl_closed,wl_corerev,wl_crypto,wl_hwaddr,wl_ifname,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_nband,wl_nbw_cap,wl_nctrlsb,wl_net_mode,wl_passphrase,wl_phytype,wl_radio,wl_radius_ipaddr,wl_radius_key,wl_radius_port,wl_security_mode,wl_ssid,wl_vifs,wl_wds,wl_wds_enable,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_bss_maxassoc,wl_wme,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,t_features,wl_macmode,wl_maclist");%>
 
 var cprefix = 'advanced_wlanvifs';
 var vifs_possible = [];
@@ -567,6 +567,7 @@ function verifyFields(focused, quiet) {
 			var uidx = wl_ifidxx(u);
 			a = {
 			_f_wl_radio: 1,
+			_f_wl_ap_isolate: 1,
 			_f_wl_mode: 1,
 /* AB disabled for VIFs?! */
 			_f_wl_nband: (bands[uidx].length > 1) ? 1 : 0,
@@ -609,6 +610,7 @@ function verifyFields(focused, quiet) {
 		else {
 			a = {
 			_f_wl_radio: 1,
+			_f_wl_ap_isolate: 1,
 			_f_wl_mode: 1,
 /* REMOVE-BEGIN
 // AB disabled for VIFs?!
@@ -1100,6 +1102,7 @@ REMOVE-END */
 
 		E('_wl'+u+'_radio').value = wradio ? 1 : 0;
 		E('_wl'+u+'_bss_enabled').value = wradio ? 1 : 0;
+		E('_wl'+u+'_ap_isolate').value = E('_f_wl'+u+'_ap_isolate').checked ? 1 : 0;
 
 		E('_wl'+u+'_auth').value = eval('nvram["wl'+u+'_auth"]') || '0';
 
@@ -1391,6 +1394,7 @@ function escapeText(s) {
 						<li>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</li>
 						<li>This web interface allows configuring a maximum of 4 VIFs for each physical wireless interface available - up to 3 extra VIFs can be defined in addition to the primary VIF (<i>on devices with multiple VIF capabilities</i>).</li>
 						<li>By definition, configuration settings for the <i>primary VIF</i> of any physical wireless interfaces shouldn't be touched here (use the <a href="basic-network.asp">Basic/Network</a> page instead).</li>
+						<li>Wireless clients will not be able to communicate with each other if setting <b>AP Isolation</b> is enabled.</li>
 					</ul>
 				</li>
 			</ul>
@@ -1414,6 +1418,7 @@ function escapeText(s) {
 
 /* common to all VIFs */
 				W('<input type="hidden" id="_wl'+u+'_radio" name="wl'+u+'_radio">');
+				W('<input type="hidden" id="_wl'+u+'_ap_isolate" name="wl'+u+'_ap_isolate">');
 				W('<input type="hidden" id="_wl'+u+'_mode" name="wl'+u+'_mode">');
 				W('<input type="hidden" id="_wl'+u+'_closed" name="wl'+u+'_closed">');
 				W('<input type="hidden" id="_wl'+u+'_key" name="wl'+u+'_key">');
@@ -1442,11 +1447,13 @@ function escapeText(s) {
 
 					W('<input type="hidden" id="_wl'+u+'_vifs" name="wl'+u+'_vifs">');
 				}
-
+/* common to all VIFs */
 				var f = [];
 				f.push (
 					{ title: 'Enable Interface', name: 'f_wl'+u+'_radio', type: 'checkbox',
 						value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
+					{ title: 'AP Isolation', name: 'f_wl'+u+'_ap_isolate', type: 'checkbox',
+						value: (eval('nvram["wl'+u+'_ap_isolate"]') == '1') },
 					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '<\/a>' +
 						' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="display:none"><small>(warning: WL driver reports BSSID <a href="advanced-mac.asp">' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '<\/a>)<\/small><\/b>' },
 					{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',

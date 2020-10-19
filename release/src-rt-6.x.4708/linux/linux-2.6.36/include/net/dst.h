@@ -111,7 +111,7 @@ dst_metric_raw(const struct dst_entry *dst, const int metric)
 static inline u32
 dst_metric(const struct dst_entry *dst, const int metric)
 {
-	//WARN_ON_ONCE(metric == RTAX_HOPLIMIT);
+	WARN_ON_ONCE(metric == RTAX_HOPLIMIT);
 	return dst_metric_raw(dst, metric);
 }
 

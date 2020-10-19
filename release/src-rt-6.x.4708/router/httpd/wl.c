@@ -549,7 +549,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit)) return 0;
 
-	// get results
+	/* get results */
 
 	char *wif;
 	wl_scan_results_t *results;
@@ -557,20 +557,24 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	struct bss_ie_hdr *ie;
 	int r;
 	int retry;
+#ifdef CONFIG_BCMWL6
+	int chanspec = 0, ctr_channel = 0;
+#endif
 
 	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
 
 	results = malloc(WLC_IOCTL_MAXLEN + sizeof(*results));
 	if (!results) {
-		// Not enough memory
+		/* Not enough memory */
 		wl_restore(wif, unit, rp->wif[idx].ap, rp->wif[idx].radio, rp->wif[idx].scan_time);
 		return 0;
 	}
 	results->buflen = WLC_IOCTL_MAXLEN;
 	results->version = WL_BSS_INFO_VERSION;
 
-	// Keep trying to obtain scan results for up to 4 secs
-	// Passive scan may require more time, although 1 extra sec is almost always enough.
+	/* Keep trying to obtain scan results for up to 4 secs
+	 * Passive scan may require more time, although 1 extra sec is almost always enough.
+	 */
 	retry = 4 * 10;
 	r = -1;
 	while (retry--) {
@@ -583,11 +587,11 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 	if (r < 0) {
 		free(results);
-		// Unable to obtain scan results
+		/* Unable to obtain scan results */
 		return 0;
 	}
 
-	// format for javascript
+	/* format for javascript */
 
 	unsigned int i, k;
 	int left;
@@ -613,26 +617,36 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		memcpy(apinfos[0].SSID, bssi->SSID, bssi->SSID_len);
 		apinfos[0].channel = (uint8)(bssi->chanspec & WL_CHANSPEC_CHAN_MASK);
 
-		if (bssi->ctl_ch == 0)
+		if (bssi->ctl_ch == 0) /* check control channel number; if 0 calc/replace it --> backup! */
 		{
 			apinfos[0].ctl_ch = apinfos[0].channel;
-		} else
-		{
-			apinfos[0].ctl_ch = bssi->ctl_ch;
+#ifdef CONFIG_BCMWL6
+			chanspec = bssi->chanspec;
+			ctr_channel = CHSPEC_CHANNEL(chanspec);
+			if (CHSPEC_IS40(chanspec))
+				ctr_channel = ctr_channel + (CHSPEC_SB_LOWER(chanspec) ? -2 : 2);
+			else if (CHSPEC_IS80(chanspec))
+				ctr_channel += (((chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LLU) ? -2 : -6 ); /* upper is actually LLU */
+
+			apinfos[0].ctl_ch = ctr_channel; /* use calculated value */
+#endif
+		}
+		else { /* default */
+			apinfos[0].ctl_ch = bssi->ctl_ch; /* get control channel number */
 		}
 
 		if (bssi->RSSI >= -50)
-		apinfos[0].RSSI_Quality = 100;
-			else if (bssi->RSSI >= -80)	// between -50 ~ -80dbm
-		apinfos[0].RSSI_Quality = (int)(24 + ((bssi->RSSI + 80) * 26)/10);
-			else if (bssi->RSSI >= -90)	// between -80 ~ -90dbm
-		apinfos[0].RSSI_Quality = (int)(((bssi->RSSI + 90) * 26)/10);
-			else					// < -84 dbm
-		apinfos[0].RSSI_Quality = 0;
+			apinfos[0].RSSI_Quality = 100;
+		else if (bssi->RSSI >= -80)	/* between -50 ~ -80dbm */
+			apinfos[0].RSSI_Quality = (int)(24 + ((bssi->RSSI + 80) * 26)/10);
+		else if (bssi->RSSI >= -90)	/* between -80 ~ -90dbm */
+			apinfos[0].RSSI_Quality = (int)(((bssi->RSSI + 90) * 26)/10);
+		else				/* < -84 dbm */
+			apinfos[0].RSSI_Quality = 0;
 
 		if ((bssi->capability & 0x10) == 0x10)
 			apinfos[0].wep = 1;
-			else
+		else
 			apinfos[0].wep = 0;
 
 		apinfos[0].wpa = 0;
@@ -642,7 +656,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		{
 			for (k = 0; k < bssi->rateset.count; k++)
 			{
-				rate = bssi->rateset.rates[k] & 0x7f;	// Mask out basic rate set bit
+				rate = bssi->rateset.rates[k] & 0x7f;	/* Mask out basic rate set bit */
 				if ((rate == 2) || (rate == 4) || (rate == 11) || (rate == 22))
 					continue;
 				else
@@ -672,7 +686,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 		apinfos[0].NetworkType = NetWorkType;
 
-		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + sizeof(*bssi));
+		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + bssi->ie_offset);
 			for (left = bssi->ie_length; left > 0; // look for RSN IE first
 				left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
 				{
@@ -686,7 +700,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 					}
 		}
 
-		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + sizeof(*bssi));
+		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + bssi->ie_offset);
 			for (left = bssi->ie_length; left > 0; // then look for WPA IE
 				left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
 				{
@@ -701,13 +715,14 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		}
 next_info:
 #ifdef CONFIG_BCMWL6
+		/* note: provide/use control channel and not the actual channel because we use it for wireless survey and scan button at basic-network.asp */
 		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
-			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].channel,
+			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].ctl_ch,
 			 (CHSPEC_IS80(bssi->chanspec) ? 80 : (CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10))),apinfos[0].RSSI_Quality);
 		rp->comma = ',';
 #else
 		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
-			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].channel,
+			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].ctl_ch,
 			CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10),apinfos[0].RSSI_Quality);
 		rp->comma = ',';
 #endif

@@ -153,7 +153,7 @@ sg.populate = function() {
 
 sg.setup = function() {
 	this.init('survey-grid', 'sort');
-	this.headerSet(['Last Seen', 'SSID', 'BSSID', 'RSSI &nbsp; &nbsp; ', 'Quality', 'Ch', 'Security', 'Rates']);
+	this.headerSet(['Last Seen', 'SSID', 'BSSID', 'RSSI &nbsp; &nbsp; ', 'Quality', 'Control Channel', 'Security', 'Rates']);
 	this.populate();
 	this.sort(0);
 }
