@@ -769,6 +769,24 @@ const char *getifaddr(char *ifname, int family, int linklocal)
 	return NULL;
 }
 
+int is_intf_up(const char* ifname)
+{
+	struct ifreq ifr;
+	int sfd;
+	int ret = 0;
+
+	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
+	{
+		strcpy(ifr.ifr_name, ifname);
+		if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP))
+			ret = 1;
+
+		close(sfd);
+	}
+
+	return ret;
+}
+
 // -----------------------------------------------------------------------------
 
 long get_uptime(void)
