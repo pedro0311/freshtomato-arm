@@ -12,6 +12,7 @@
  * $Id: rc.h,v 1.39 2005/03/29 02:00:06 honor Exp $
  */
 
+
 #ifndef __RC_H__
 #define __RC_H__
 
@@ -71,12 +72,15 @@
 #define TOMATO_RAM_HIGH_END	(200 * 1024)
 #define TOMATO_RAM_MID_END	(100 * 1024)
 #define TOMATO_RAM_LOW_END	(50 * 1024)
+#ifndef TCONFIG_BCMARM
+#define TOMATO_RAM_VLOW_END	(25 * 1024)
+#endif
 
 /* see init.c - used for tune_smp_affinity */
 #if defined(TCONFIG_BCMSMP) && defined(TCONFIG_USB)
-#define TOMATO_CPU0 "1"	/* assign CPU 0 */
-#define TOMATO_CPU1 "2"	/* assign CPU 1 */
-#define TOMATO_CPUX "3"	/* assign CPU 1 and 2 */
+#define TOMATO_CPU0	"1" /* assign CPU 0 */
+#define TOMATO_CPU1	"2" /* assign CPU 1 */
+#define TOMATO_CPUX	"3" /* assign CPU 1 and 2 */
 #endif
 
 typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
@@ -97,7 +101,9 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 extern int init_main(int argc, char *argv[]);
 extern int reboothalt_main(int argc, char *argv[]);
 extern int console_main(int argc, char *argv[]);
+#ifdef TCONFIG_BCMARM
 extern void restore_defaults_module(char *prefix);
+#endif
 
 /* interface.c */
 extern int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr);
@@ -124,9 +130,6 @@ extern int pppevent_main(int argc, char **argv);
 extern int ip6up_main(int argc, char **argv);
 extern int ip6down_main(int argc, char **argv);
 #endif
-
-/* rc.c */
-//extern void restore_defaults(void);
 
 /* redial.c */
 extern void start_redial(char *prefix);
@@ -193,7 +196,7 @@ extern void accept_ra_reset(const char *ifname);
 #define enable_ipv6(enable) do {} while (0)
 #define accept_ra(ifname) do {} while (0)
 #define accept_ra_reset(ifname) do {} while (0)
-#endif
+#endif /* TCONFIG_IPV6 */
 
 /* dhcpc.c */
 extern int dhcpc_event_main(int argc, char **argv);
@@ -216,6 +219,10 @@ extern void stop_phy_tempsense(void);
 #endif
 extern void start_adblock(int update);
 extern void stop_adblock(void);
+#ifdef TCONFIG_ZEBRA
+extern void start_zebra(void);
+extern void stop_zebra(void);
+#endif
 extern void start_upnp(void);
 extern void stop_upnp(void);
 extern void start_syslog(void);
@@ -241,14 +248,13 @@ extern void stop_service(const char *name);
 extern void restart_service(const char *name);
 extern void start_services(void);
 extern void stop_services(void);
-/* !!TB - USB and NAS */
 #ifdef TCONFIG_USB
 extern void restart_nas_services(int stop, int start);
 extern void start_wsdd(void);
 extern void stop_wsdd(void);
 #else
 #define restart_nas_services(args...) do { } while(0)
-#endif
+#endif /* TCONFIG_USB */
 extern void start_hotplug2();
 extern void stop_hotplug2(void);
 #ifdef TCONFIG_IPV6
@@ -258,7 +264,7 @@ extern void start_6rd_tunnel(void);
 extern void stop_6rd_tunnel(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
-#endif
+#endif /* TCONFIG_IPV6 */
 
 /* usb.c */
 #ifdef TCONFIG_USB
@@ -273,7 +279,7 @@ extern void remove_storage_main(int shutdn);
 #define dir_is_mountpoint(args...) (0)
 #define hotplug_usb(args...) do { } while(0)
 #define remove_storage_main(args...) do { } while(0)
-#endif
+#endif /* TCONFIG_USB */
 
 /* wnas.c */
 extern int wds_enable(void);
@@ -302,28 +308,29 @@ extern const char *chain_out_drop;
 extern const char *chain_out_accept;
 extern const char *chain_out_reject;
 extern char **layer7_in;
-
 extern void enable_ip_forward(void);
 #ifdef TCONFIG_IPV6
 extern void enable_ip6_forward(void);
 #endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
-#if defined(TCONFIG_IPV6)
+#ifdef TCONFIG_IPV6
 #define ip46t_write(args...) do { ipt_write(args); ip6t_write(args); } while(0)
-// #define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); if (do_ip6t) ip6t_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); if (do_ip46t & IPT_V6) ip6t_write(args); } while(0)
 #define ip46t_cond_write(do_ip6t, args...) do { if (do_ip6t) ip6t_write(args); else ipt_write(args); } while(0)
+#ifdef TCONFIG_BCMARM
 #define ipt_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); if (do_ip46t & IPT_V6) ip6t_write(args); } while(0)
 #define ipt_cond_write(do_ip6t, args...) do { if (do_ip6t) ip6t_write(args); else ipt_write(args); } while(0)
-#else
+#endif /* TCONFIG_BCMARM */
+#else /* !TCONFIG_IPV6 */
 #define ip46t_write ipt_write
-// #define ip46t_flagged_write(do_ip4t, do_ip6t, args...) do { if (do_ip4t) ipt_write(args); } while(0)
 #define ip46t_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
 #define ip46t_cond_write(do_ip6t, args...) ipt_write(args)
+#ifdef TCONFIG_BCMARM
 #define ipt_flagged_write(do_ip46t, args...) do { if (do_ip46t & IPT_V4) ipt_write(args); } while(0)
 #define ipt_cond_write(do_ip6t, args...) ipt_write(args)
-#endif
+#endif /* TCONFIG_BCMARM */
+#endif /* TCONFIG_IPV6 */
 extern void ipt_log_unresolved(const char *addr, const char *addrtype, const char *categ, const char *name);
 extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int af, int strict, const char *categ, const char *name);
 extern int ipt_dscp(const char *v, char *opt);
@@ -400,7 +407,6 @@ extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);
 extern void set_mac(const char *ifname, const char *nvname, int plus);
 extern const char *default_wanif(void);
-// extern const char *default_wlif(void);
 #define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
@@ -434,11 +440,13 @@ extern int mtd_unlock_erase_main(int argc, char *argv[]);
 /* buttons.c */
 extern int buttons_main(int argc, char *argv[]);
 
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BLINK)
 /* blink.c */
 extern int blink_main(int argc, char *argv[]);
 
 /* blink_br.c */
 extern int blink_br_main(int argc, char *argv[]);
+#endif
 
 /* phy_tempsense.c */
 #ifdef TCONFIG_FANCTRL
@@ -479,28 +487,6 @@ static inline void stop_pptp_client_eas(void) {};
 /* nvram */
 extern int nvram_file2nvram(const char *name, const char *filename);
 extern int nvram_nvram2file(const char *name, const char *filename);
-
-
-#ifdef TOMATO_SL
-/* usb.c */
-extern void hotplug_usb(void);
-extern int usbevent_main(int argc, char *argv[]);
-extern void start_usbevent(void);
-extern void stop_usbevent(void);
-extern int usbrescan_main(int argc, char *argv[]);
-extern int hotdiskadd_main(int argc, char *argv[]);
-extern int hotdiskremove_main(int argc, char *argv[]);
-extern int hotdiskerror_main(int argc, char *argv[]);
-extern int umountx_main(int argc, char *argv[]);
-
-void start_test_1(void);
-void stop_test_1(void);
-
-/* samba.c */
-extern void start_smbd(void);
-extern void stop_smbd(void);
-#endif
-
 
 /* transmission.c */
 #ifdef TCONFIG_BT
@@ -570,6 +556,12 @@ extern void new_qoslimit_stop(void);
 extern void start_arpbind(void);
 extern void stop_arpbind(void);
 
+/* mmc.c */
+#ifdef TCONFIG_SDHC
+extern void start_mmc(void);
+extern void stop_mmc(void);
+#endif
+
 /* nocat.c */
 #ifdef TCONFIG_NOCAT
 extern void start_nocat();
@@ -592,4 +584,4 @@ extern void stop_mysql();
 extern void start_tomatoanon();
 extern void stop_tomatoanon();
 
-#endif
+#endif /* __RC_H__ */
