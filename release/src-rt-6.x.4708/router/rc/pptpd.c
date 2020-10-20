@@ -282,8 +282,8 @@ void stop_pptpd(void)
 		fclose(fp);
 	}
 
-	killall_tk("pptpd");
-	killall_tk("bcrelay");
+	killall_tk_period_wait("pptpd", 50);
+	killall_tk_period_wait("bcrelay", 50);
 
 	/* Delete all files for this server */
 	unlink("/etc/vpn/pptpd_shutdown");

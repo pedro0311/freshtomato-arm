@@ -634,13 +634,13 @@ void stop_dnsmasq(void)
 	unlink("/etc/resolv.conf");
 	symlink(dmresolv, "/etc/resolv.conf");
 
-	killall_tk("dnsmasq");
+	killall_tk_period_wait("dnsmasq", 50);
 #ifdef TCONFIG_DNSCRYPT
-	killall_tk("dnscrypt-proxy");
+	killall_tk_period_wait("dnscrypt-proxy", 50);
 #endif
 
 #ifdef TCONFIG_STUBBY
-	killall_tk("stubby");
+	killall_tk_period_wait("stubby", 50);
 #endif
 
 	TRACE_PT("end\n");
@@ -666,7 +666,7 @@ void start_phy_tempsense()
 void stop_phy_tempsense()
 {
 	pid_phy_tempsense = -1;
-	killall_tk("phy_tempsense");
+	killall_tk_period_wait("phy_tempsense", 50);
 }
 #endif
 
@@ -830,7 +830,7 @@ void stop_httpd(void)
 		return;
 	}
 
-	killall_tk("httpd");
+	killall_tk_period_wait("httpd", 50);
 }
 
 #ifdef TCONFIG_IPV6
@@ -1272,7 +1272,7 @@ void stop_upnp(void)
 		return;
 	}
 
-	killall_tk("miniupnpd");
+	killall_tk_period_wait("miniupnpd", 50);
 }
 
 static pid_t pid_crond = -1;
@@ -1290,7 +1290,7 @@ void start_cron(void)
 void stop_cron(void)
 {
 	pid_crond = -1;
-	killall_tk("crond");
+	killall_tk_period_wait("crond", 50);
 }
 
 static pid_t pid_hotplug2 = -1;
@@ -1312,7 +1312,7 @@ void start_hotplug2()
 void stop_hotplug2(void)
 {
 	pid_hotplug2 = -1;
-	killall_tk("hotplug2");
+	killall_tk_period_wait("hotplug2", 50);
 }
 
 void start_syslog(void)
@@ -1579,7 +1579,7 @@ void start_igmp_proxy(void)
 void stop_igmp_proxy(void)
 {
 	pid_igmp = -1;
-	killall_tk("igmpproxy");
+	killall_tk_period_wait("igmpproxy", 50);
 
 	syslog(LOG_INFO, "igmpproxy is stopped\n");
 }
@@ -1625,7 +1625,7 @@ void start_udpxy(void)
 
 void stop_udpxy(void)
 {
-	killall_tk("udpxy");
+	killall_tk_period_wait("udpxy", 50);
 }
 
 #ifdef TCONFIG_NOCAT
@@ -1749,7 +1749,7 @@ void stop_ntpd(void)
 		return;
 	}
 
-	killall_tk("ntpd");
+	killall_tk_period_wait("ntpd", 50);
 }
 
 static void stop_rstats(void)
@@ -2059,7 +2059,7 @@ static void stop_ftpd(void)
 		return;
 	}
 
-	killall_tk("vsftpd");
+	killall_tk_period_wait("vsftpd", 50);
 	unlink(vsftpd_passwd);
 	unlink(vsftpd_conf);
 	eval("rm", "-rf", vsftpd_users);
@@ -2073,8 +2073,8 @@ static void stop_ftpd(void)
 static void kill_samba(int sig)
 {
 	if (sig == SIGTERM) {
-		killall_tk("smbd");
-		killall_tk("nmbd");
+		killall_tk_period_wait("smbd", 50);
+		killall_tk_period_wait("nmbd", 50);
 	}
 	else {
 		killall("smbd", sig);
@@ -2423,7 +2423,7 @@ void start_wsdd()
 
 void stop_wsdd() {
 	if (pidof("wsdd2") > 0)
-		killall_tk("wsdd2");
+		killall_tk_period_wait("wsdd2", 50);
 }
 #endif	/* #ifdef TCONFIG_SAMBASRV */
 
@@ -2555,7 +2555,7 @@ static void stop_media_server(void)
 		return;
 	}
 
-	killall_tk(MEDIA_SERVER_APP);
+	killall_tk_period_wait(MEDIA_SERVER_APP, 50);
 
 	syslog(LOG_INFO, MEDIA_SERVER_APP" is stopped\n");
 }

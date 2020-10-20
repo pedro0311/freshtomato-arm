@@ -590,26 +590,6 @@ void simple_lock(const char *name)
 	}
 }
 
-void killall_tk(const char *name)
-{
-	int n;
-
-	if (killall(name, SIGTERM) == 0) {
-		n = 50;
-		while ((killall(name, 0) == 0) && (n-- > 0)) {
-			mlog("%s: waiting name=%s n=%d", __FUNCTION__, name, n);
-			usleep(100 * 1000);
-		}
-		if (n < 0) {
-			n = 100;
-			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
-				mlog("%s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
-				usleep(100 * 1000);
-			}
-		}
-	}
-}
-
 void killall_tk_period_wait(const char *name, int wait)
 {
 	int n;
@@ -617,13 +597,13 @@ void killall_tk_period_wait(const char *name, int wait)
 	if (killall(name, SIGTERM) == 0) {
 		n = wait;
 		while ((killall(name, 0) == 0) && (n-- > 0)) {
-			mlog("%s: waiting name=%s n=%d", __FUNCTION__, name, n);
+			//mlog("%s: waiting name=%s n=%d", __FUNCTION__, name, n);
 			sleep(1);
 		}
 		if (n < 0) {
 			n = wait;
 			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
-				mlog("%s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
+				//mlog("%s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
 				sleep(1);
 			}
 		}

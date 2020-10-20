@@ -365,7 +365,7 @@ void start_nginx(void)
 		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "/usr/sbin/php-cgi");
 	}
 	else {
-		killall_tk("php-cgi");
+		killall_tk_period_wait("php-cgi", 50);
 	}
 
 	mkdir_if_none(client_body_temp_path);
@@ -397,8 +397,8 @@ void stop_nginx(void)
 	syslog(LOG_INFO, "nginx - killing daemon\n");
 
 	if (pidof(nginxbin) > 0) {
-		killall_tk(nginxbin);
-		killall_tk("php-cgi");
+		killall_tk_period_wait(nginxbin, 50);
+		killall_tk_period_wait("php-cgi", 50);
 
 		if (f_exists(nginxpid)) {
 			unlink(nginxpid);

@@ -195,9 +195,9 @@ void stop_pptp_client(void)
 	char buffer[BUF_SIZE];
 	char *prefix = nvram_safe_get("pptp_client_usewan");
 
-	killall_tk("pptpc_ip-up");
-	killall_tk("pptpc_ip-down");
-	killall_tk("pptpclient");
+	killall_tk_period_wait("pptpc_ip-up", 50);
+	killall_tk_period_wait("pptpc_ip-down", 50);
+	killall_tk_period_wait("pptpclient", 50);
 
 	/* remove forced route to PPTP server via selected wan */
 	if ((*prefix) && strcmp(prefix, "none")) {

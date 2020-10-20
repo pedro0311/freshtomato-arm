@@ -201,7 +201,7 @@ void stop_nocat(void)
 {
 	if (pidof("splashd") > 0) {
 		syslog(LOG_INFO, "splashd : Captive Portal Splash daemon successfully stopped\n");
-		killall_tk("splashd");
+		killall_tk_period_wait("splashd", 50);
 		eval("/usr/libexec/nocat/uninitialize.fw");
 		system("rm /tmp/nocat.leases\n");
 		system("rm /tmp/start_splashd.sh\n");

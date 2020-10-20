@@ -664,7 +664,7 @@ void stop_dhcp6c(void)
 	TRACE_PT("begin\n");
 
 	killall("dhcp6c-event", SIGTERM);
-	killall_tk("dhcp6c");
+	killall_tk_period_wait("dhcp6c", 50);
 
 	TRACE_PT("end\n");
 }
