@@ -996,6 +996,15 @@ void nvram_commit_x(void)
 	if (!nvram_get_int("debug_nocommit")) nvram_commit();
 }
 
+char *getNVRAMVar(const char *text, const int unit)
+{
+	char buffer[32];
+	memset(buffer, 0, 32);
+	sprintf(buffer, text, unit);
+
+	return nvram_safe_get(buffer);
+}
+
 int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int timeout)
 {
 	fd_set fds;
