@@ -781,13 +781,6 @@ struct nvram_tuple router_defaults[] = {
 #endif
 	{ "rrulewp",			"80,8080"			, 0 },
 
-#if TOMATO_SL
-/* samba */
-	{ "smbd_on",			"0"				, 0 },
-	{ "nmbd_on",			"0"				, 0 },
-	{ "smbd_wgroup",		"WORKGROUP"			, 0 },
-#endif
-
 /* admin-access */
 	{ "http_username",		""				, 0 },	// Username
 	{ "http_passwd",		"admin"				, 0 },	// Password

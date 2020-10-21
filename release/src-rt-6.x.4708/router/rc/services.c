@@ -3038,10 +3038,6 @@ TOP:
 
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
-#if TOMATO_SL
-			stop_usbevent();
-			stop_smbd();
-#endif
 			restart_nas_services(1, 0);	/* stop Samba, FTP and Media Server */
 			stop_jffs2();
 			// stop_cifs();

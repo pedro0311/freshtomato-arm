@@ -203,13 +203,6 @@ extern void wi_uploadsplash(char *url, int len, char *boundary);
 extern void wo_uploadsplash(char *url);
 #endif
 
-#if TOMATO_SL
-// share.c
-extern void asp_sharelist(int argc, char **argv);
-extern void wo_umount(char *url);
-extern void wo_usb(char *url);
-#endif
-
 // utf8.c
 extern char *utf8_to_js_string(const char *ins);
 extern char *utf8_to_html_string(const char *ins);
