@@ -96,27 +96,27 @@ void start_pptp_client(void)
 
 		/* MTU */
 		/* see KB Q189595 -- historyless & mtu */
-		if (!(p = nvram_safe_get("pptp_client_mtu")))
+		if ((p = nvram_get("pptp_client_mtu")) == NULL)
 			p = "1400";
 		if (!nvram_get_int("pptp_client_mtuenable"))
 			p = "1400";
 		fprintf(fd, "mtu %s\n", p);
 
 		/* MRU */
-		if (!(p = nvram_safe_get("pptp_client_mru")))
+		if ((p = nvram_get("pptp_client_mru")) == NULL)
 			p = "1400";
 		if (!nvram_get_int("pptp_client_mruenable"))
 			p = "1400";
 		fprintf(fd, "mru %s\n", p);
 
 		/* Login */
-		if (!(p = nvram_safe_get("pptp_client_username")))
+		if ((p = nvram_get("pptp_client_username")) == NULL)
 			ok = 0;
 		else
 			fprintf(fd, "user \"%s\"\n", p);
 
 		/* Password */
-		if (!(p = nvram_safe_get("pptp_client_passwd")))
+		if ((p = nvram_get("pptp_client_passwd")) == NULL)
 			ok = 0;
 		else
 			fprintf(fd, "password \"%s\"\n", p);
