@@ -5,17 +5,17 @@
 
 */
 
+
 #include "rc.h"
 
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <errno.h>
+
 #ifndef MNT_DETACH
 #define MNT_DETACH	0x00000002
 #endif
-
-//	#define TEST_INTEGRITY
 
 #ifdef TCONFIG_JFFSV1
 #define JFFS_NAME	"jffs"
@@ -29,6 +29,8 @@
 #define JFFS2_PARTITION	"jffs2"
 #endif
 
+//#define TEST_INTEGRITY
+
 
 static void error(const char *message)
 {
@@ -40,18 +42,18 @@ static void error(const char *message)
 
 void start_jffs2(void)
 {
+	int format = 0;
+	int i = 0;
+	int size;
+	int part;
+	char s[256];
+	const char *p;
+	struct statfs sf;
+
 	if (!nvram_match("jffs2_on", "1")) {
 		notice_set("jffs", "");
 		return;
 	}
-
-	int format = 0;
-	char s[256];
-	int size;
-	int part;
-	const char *p;
-	struct statfs sf;
-	int i = 0;
 
 	while(1) {
 		if (wait_action_idle(10))
@@ -80,9 +82,10 @@ void start_jffs2(void)
 		format = 1;
 	}
 
+	memset(s, 0, 256);
 	sprintf(s, "%d", size);
-	p = nvram_get("jffs2_size");
-	if ((p == NULL) || (strcmp(p, s) != 0)) {
+	p = nvram_safe_get("jffs2_size");
+	if ((!*p) || (strcmp(p, s) != 0)) {
 		if (format) {
 			nvram_set("jffs2_size", s);
 			nvram_commit_x();
@@ -93,8 +96,12 @@ void start_jffs2(void)
 		}
 	}
 
-	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873) && (sf.f_type != 0x73717368)) {
-		// already mounted
+	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x73717368)
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BLINK)
+	    && (sf.f_type != 0x71736873)
+#endif
+	) {
+		/* already mounted */
 		notice_set("jffs", format ? "Formatted" : "Loaded");
 		return;
 	}
@@ -106,6 +113,7 @@ void start_jffs2(void)
 
 	modprobe(JFFS_NAME);
 
+	memset(s, 0, 256);
 	sprintf(s, MTD_BLKDEV(%d), part);
 
 	if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
@@ -142,7 +150,7 @@ void start_jffs2(void)
 
 	notice_set("jffs", format ? "Formatted" : "Loaded");
 
-	if (((p = nvram_get("jffs2_exec")) != NULL) && (*p != 0)) {
+	if ((p = nvram_safe_get("jffs2_exec")) && (*p)) {
 		chdir("/jffs");
 		system(p);
 		chdir("/");
@@ -154,10 +162,15 @@ void stop_jffs2(void)
 {
 	struct statfs sf;
 
-	if (!wait_action_idle(10)) return;
+	if (!wait_action_idle(10))
+		return;
 
-	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x71736873) && (sf.f_type != 0x73717368)) {
-		// is mounted
+	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x73717368)
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BLINK)
+	    && (sf.f_type != 0x71736873)
+#endif
+	) {
+		/* is mounted */
 		run_userfile("/jffs", ".autostop", "/jffs", 5);
 		run_nvscript("script_autostop", "/jffs", 5);
 	}
