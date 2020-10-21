@@ -111,8 +111,8 @@ extern int _ifconfig(const char *name, int flags, const char *addr, const char *
 extern int route_add(char *name, int metric, char *dst, char *gateway, char *genmask);
 extern void route_del(char *name, int metric, char *dst, char *gateway, char *genmask);
 extern void config_loopback(void);
-extern int start_vlan(void);
-extern int stop_vlan(void);
+extern void start_vlan(void);
+extern void stop_vlan(void);
 extern int config_vlan(void);
 extern void config_loopback(void);
 #ifdef TCONFIG_IPV6

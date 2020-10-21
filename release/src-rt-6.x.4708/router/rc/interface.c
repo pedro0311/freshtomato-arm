@@ -12,6 +12,7 @@
  * $Id: interface.c,v 1.13 2005/03/07 08:35:32 kanki Exp $
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -37,64 +38,67 @@
 
 #include "rc.h"
 
+
 int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr)
 {
 	int s;
 	struct ifreq ifr;
 	struct in_addr in_addr, in_netmask, in_broadaddr;
 
-	_dprintf("%s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, flags == IFUP ? "IFUP" : "0", addr, netmask);
-	
-	/* Open a raw socket to the kernel */
-	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) return errno;
+	_dprintf("%s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
 
-	/* Set interface name */
+	/* open a raw socket to the kernel */
+	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+		return errno;
+
+	/* set interface name */
 	strlcpy(ifr.ifr_name, name, IFNAMSIZ);
 	
-	/* Set interface flags */
+	/* set interface flags */
 	ifr.ifr_flags = flags;
 	if (ioctl(s, SIOCSIFFLAGS, &ifr) < 0)
-		goto ERROR;
+		goto error;
 	
-	/* Set IP address */
+	/* set IP address */
 	if (addr) {
 		inet_aton(addr, &in_addr);
 		sin_addr(&ifr.ifr_addr).s_addr = in_addr.s_addr;
 		ifr.ifr_addr.sa_family = AF_INET;
 		if (ioctl(s, SIOCSIFADDR, &ifr) < 0)
-			goto ERROR;
+			goto error;
 	}
 
-	/* Set IP netmask and broadcast */
+	/* set IP netmask and broadcast */
 	if (addr && netmask) {
 		inet_aton(netmask, &in_netmask);
 		sin_addr(&ifr.ifr_netmask).s_addr = in_netmask.s_addr;
 		ifr.ifr_netmask.sa_family = AF_INET;
 		if (ioctl(s, SIOCSIFNETMASK, &ifr) < 0)
-			goto ERROR;
+			goto error;
 
 		in_broadaddr.s_addr = (in_addr.s_addr & in_netmask.s_addr) | ~in_netmask.s_addr;
 		sin_addr(&ifr.ifr_broadaddr).s_addr = in_broadaddr.s_addr;
 		ifr.ifr_broadaddr.sa_family = AF_INET;
 		if (ioctl(s, SIOCSIFBRDADDR, &ifr) < 0)
-			goto ERROR;
+			goto error;
 	}
 
-	/* Set dst or P-t-P IP address */
+	/* set dst or P-t-P IP address */
 	if (dstaddr) {
 		inet_aton(dstaddr, &in_addr);
 		sin_addr(&ifr.ifr_dstaddr).s_addr = in_addr.s_addr;
 		ifr.ifr_dstaddr.sa_family = AF_INET;
 		if (ioctl(s, SIOCSIFDSTADDR, &ifr) < 0)
-			goto ERROR;
+			goto error;
 	}
 
 	close(s);
 	return 0;
 
- ERROR:
+error:
 	close(s);
 	perror(name);
+
 	return errno;
 }
 
@@ -102,14 +106,14 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 {
 	int s;
 	struct rtentry rt;
-	
-	_dprintf("%s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n",
-		__FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
 
-	/* Open a raw socket to the kernel */
-	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) return errno;
+	_dprintf("%s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
 
-	/* Fill in rtentry */
+	/* open a raw socket to the kernel */
+	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+		return errno;
+
+	/* fill in rtentry */
 	memset(&rt, 0, sizeof(rt));
 	if (dst)
 		inet_aton(dst, &sin_addr(&rt.rt_dst));
@@ -117,19 +121,21 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 		inet_aton(gateway, &sin_addr(&rt.rt_gateway));
 	if (genmask)
 		inet_aton(genmask, &sin_addr(&rt.rt_genmask));
+
 	rt.rt_metric = metric;
 	rt.rt_flags = RTF_UP;
 	if (sin_addr(&rt.rt_gateway).s_addr)
 		rt.rt_flags |= RTF_GATEWAY;
 	if (sin_addr(&rt.rt_genmask).s_addr == INADDR_BROADCAST)
 		rt.rt_flags |= RTF_HOST;
+
 	rt.rt_dev = name;
 
-	/* Force address family to AF_INET */
+	/* force address family to AF_INET */
 	rt.rt_dst.sa_family = AF_INET;
 	rt.rt_gateway.sa_family = AF_INET;
 	rt.rt_genmask.sa_family = AF_INET;
-		
+
 	if (ioctl(s, cmd, &rt) < 0) {
 		perror(name);
 		close(s);
@@ -138,17 +144,16 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 
 	close(s);
 	return 0;
-
 }
 
 int route_add(char *name, int metric, char *dst, char *gateway, char *genmask)
 {
-	return route_manip(SIOCADDRT, name, metric + 1, dst, gateway, genmask);
+	return route_manip(SIOCADDRT, name, (metric + 1), dst, gateway, genmask);
 }
 
 void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 {
-	while (route_manip(SIOCDELRT, name, metric + 1, dst, gateway, genmask) == 0) {
+	while (route_manip(SIOCDELRT, name, (metric + 1), dst, gateway, genmask) == 0) {
 		//
 	}
 }
@@ -157,22 +162,15 @@ void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 void config_loopback(void)
 {
 	struct ifreq ifr;
-	int sfd;
 
-	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
-	{
-		strcpy(ifr.ifr_name, "lo");
-		if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP)) { /* lo running? */
-			ifconfig(ifr.ifr_name, 0, NULL, NULL); /* Bring down loopback interface */
-		}
+	/* bring down loopback interface */
+	if (is_intf_up("lo") > 0)
+		ifconfig(ifr.ifr_name, 0, NULL, NULL);
 
-		close(sfd);
-	}
-
-	/* Bring up loopback interface */
+	/* bring up loopback interface */
 	ifconfig("lo", IFUP, "127.0.0.1", "255.0.0.0");
 
-	/* Add to routing table */
+	/* add to routing table */
 	route_add("lo", 0, "127.0.0.0", "0.0.0.0", "255.0.0.0");
 }
 
@@ -206,21 +204,22 @@ int ipv6_mapaddr4(struct in6_addr *addr6, int ip6len, struct in_addr *addr4, int
 #endif
 
 /* configure/start vlan interface(s) based on nvram settings */
-int start_vlan(void)
+void start_vlan(void)
 {
 	int s;
 	struct ifreq ifr;
 	int i, j, vlan0tag;
 	unsigned char ea[ETHER_ADDR_LEN];
 
-	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0) return 0;
+	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0)
+		return;
 	
 	/* set vlan i/f name to style "vlan<ID>" */
 	eval("vconfig", "set_name_type", "VLAN_PLUS_VID_NO_PAD");
 
 	/* create vlan interfaces */
 	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
-		return errno;
+		return;
 
 	vlan0tag = nvram_get_int("vlan0tag");
 
@@ -238,6 +237,7 @@ int start_vlan(void)
 		snprintf(nvvar_name, sizeof(nvvar_name), "%smacaddr", hwname);
 		if (!(hwaddr = nvram_get(nvvar_name)))
 			continue;
+
 		ether_atoe(hwaddr, ea);
 		/* find the interface name to which the address is assigned */
 		for (j = 1; j <= DEV_NUMIFS; j ++) {
@@ -261,26 +261,28 @@ int start_vlan(void)
 		/* vlan ID mapping */
 		snprintf(nvvar_name, sizeof(nvvar_name), "vlan%dvid", i);
 		vid_map = nvram_get_int(nvvar_name);
-		if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | i;
+		if ((vid_map < 1) || (vid_map > 4094))
+			vid_map = vlan0tag | i;
 
 		/* create the VLAN interface */
 		snprintf(vlan_id, sizeof(vlan_id), "%d", vid_map);
+
 		eval("vconfig", "add", ifr.ifr_name, vlan_id);
+
 		/* setup ingress map (vlan->priority => skb->priority) */
 		snprintf(vlan_id, sizeof(vlan_id), "vlan%d", vid_map);
 		for (j = 0; j < VLAN_NUMPRIS; j ++) {
 			snprintf(prio, sizeof(prio), "%d", j);
+
 			eval("vconfig", "set_ingress_map", vlan_id, prio, prio);
 		}
 	}
 
 	close(s);
-
-	return 0;
 }
 
 /* stop/rem vlan interface(s) based on nvram settings */
-int stop_vlan(void)
+void stop_vlan(void)
 {
 	int i;
 	int vlan0tag, vid_map;
@@ -288,7 +290,8 @@ int stop_vlan(void)
 	char vlan_id[16];
 	char *hwname;
 
-	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0) return 0;
+	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0)
+		return;
 
 	vlan0tag = nvram_get_int("vlan0tag");
 
@@ -301,13 +304,12 @@ int stop_vlan(void)
 		/* vlan ID mapping */
 		snprintf(nvvar_name, sizeof(nvvar_name), "vlan%dvid", i);
 		vid_map = nvram_get_int(nvvar_name);
-		if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | i;
+		if ((vid_map < 1) || (vid_map > 4094))
+			vid_map = vlan0tag | i;
 
 		/* remove the VLAN interface */
 		snprintf(vlan_id, sizeof(vlan_id), "vlan%d", vid_map);
+
 		eval("vconfig", "rem", vlan_id);
 	}
-
-	return 0;
 }
-
