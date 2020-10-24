@@ -189,7 +189,7 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'DHCP Routes', name: 'f_dhcp_routes', type: 'checkbox', value: nvram.dhcp_routes != '0' }
+			{ title: 'Accept DHCP Routes<br>on WAN interface', name: 'f_dhcp_routes', type: 'checkbox', value: nvram.dhcp_routes != '0' }
 		]);
 	</script>
 </div>
