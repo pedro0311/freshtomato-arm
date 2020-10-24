@@ -237,6 +237,11 @@ extern void clear_resolv(void);
 extern void dns_to_resolv(void);
 extern void start_dnsmasq(void);
 extern void stop_dnsmasq(void);
+extern void reload_dnsmasq(void);
+#ifdef TCONFIG_STUBBY
+extern void start_stubby(void);
+extern void stop_stubby(void);
+#endif
 extern void set_tz(void);
 extern void start_ntpd(void);
 extern void stop_ntpd(void);
