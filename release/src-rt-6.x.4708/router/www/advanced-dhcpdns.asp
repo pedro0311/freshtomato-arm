@@ -27,7 +27,7 @@ function verifyFields(focused, quiet) {
 	var b = (E('_f_dhcpd_sltsel').value == 1);
 	elem.display('_dhcpd_sltman', b);
 	if ((b) && (!v_range('_f_dhcpd_slt', quiet, 1, 43200))) return 0;
-	if (!v_length('_dnsmasq_custom', quiet, 0, 2048)) return 0;
+	if (!v_length('_dnsmasq_custom', quiet, 0, 4096)) return 0;
 	if (!v_range('_dhcpd_lmax', quiet, 1, 0xFFFF)) return 0;
 	if (!v_range('_f_ipv6_lease_time', quiet, 1, 720)) return 0;
 	if (!v_length('_dhcpc_custom', quiet, 0, 256)) return 0;

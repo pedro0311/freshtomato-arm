@@ -53,105 +53,100 @@ FILE * phpini_file;
 unsigned int fastpath = 0;
 
 
-int build_fastcgi_conf(void)
+static void build_fastcgi_conf(void)
 {
 	/* Starting a fastcgi configuration file */
 	mkdir_if_none(nginxdir);
 	if ((fastcgi_conf_file = fopen(fastcgiconf, "w")) == NULL) {
-		//notice_set("FastCGI", "config file %s has been created\n", fastcgiconf);
 		simple_unlock(fastcgiconf);
-		return 0;
+		return;
 	}
 
-	fprintf(fastcgi_conf_file,
-		"fastcgi_param SCRIPT_FILENAME\t\t$document_root$fastcgi_script_name;\n"
-		"fastcgi_param QUERY_STRING\t\t$query_string;\n"
-		"fastcgi_param REQUEST_METHOD\t\t$request_method;\n"
-		"fastcgi_param CONTENT_TYPE\t\t$content_type;\n"
-		"fastcgi_param CONTENT_LENGTH\t\t$content_length;\n"
-		"fastcgi_param SCRIPT_NAME\t\t$fastcgi_script_name;\n"
-		"fastcgi_param REQUEST_URI\t\t$request_uri;\n"
-		"fastcgi_param DOCUMENT_URI\t\t$document_uri;\n"
-		"fastcgi_param DOCUMENT_ROOT\t\t$document_root;\n"
-		"fastcgi_param SERVER_PROTOCOL\t\t$server_protocol;\n"
-		"fastcgi_param GATEWAY_INTERFACE\t\tCGI/1.1;\n"
-		"fastcgi_param SERVER_SOFTWARE\t\tnginx/$nginx_version;\n"
-		"fastcgi_param REMOTE_ADDR\t\t$remote_addr;\n"
-		"fastcgi_param REMOTE_PORT\t\t$remote_port;\n"
-		"fastcgi_param SERVER_ADDR\t\t$server_addr;\n"
-		"fastcgi_param SERVER_PORT\t\t$server_port;\n"
-		"fastcgi_param SERVER_NAME\t\t$server_name;\n"
-		"fastcgi_index index.php;\n"
-		"fastcgi_param REDIRECT_STATUS		200;\n");
-	fclose(fastcgi_conf_file);
+	fprintf(fastcgi_conf_file, "fastcgi_param SCRIPT_FILENAME\t\t$document_root$fastcgi_script_name;\n"
+	                           "fastcgi_param QUERY_STRING\t\t$query_string;\n"
+	                           "fastcgi_param REQUEST_METHOD\t\t$request_method;\n"
+	                           "fastcgi_param CONTENT_TYPE\t\t$content_type;\n"
+	                           "fastcgi_param CONTENT_LENGTH\t\t$content_length;\n"
+	                           "fastcgi_param SCRIPT_NAME\t\t$fastcgi_script_name;\n"
+	                           "fastcgi_param REQUEST_URI\t\t$request_uri;\n"
+	                           "fastcgi_param DOCUMENT_URI\t\t$document_uri;\n"
+	                           "fastcgi_param DOCUMENT_ROOT\t\t$document_root;\n"
+	                           "fastcgi_param SERVER_PROTOCOL\t\t$server_protocol;\n"
+	                           "fastcgi_param GATEWAY_INTERFACE\t\tCGI/1.1;\n"
+	                           "fastcgi_param SERVER_SOFTWARE\t\tnginx/$nginx_version;\n"
+	                           "fastcgi_param REMOTE_ADDR\t\t$remote_addr;\n"
+	                           "fastcgi_param REMOTE_PORT\t\t$remote_port;\n"
+	                           "fastcgi_param SERVER_ADDR\t\t$server_addr;\n"
+	                           "fastcgi_param SERVER_PORT\t\t$server_port;\n"
+	                           "fastcgi_param SERVER_NAME\t\t$server_name;\n"
+	                           "fastcgi_index index.php;\n"
+	                           "fastcgi_param REDIRECT_STATUS\t\t200;\n");
 
-	return 0;
+	fclose(fastcgi_conf_file);
 }
 
-int build_mime_types(void)
+static void build_mime_types(void)
 {
 	/* Starting the mime.types configuration file */
 	mkdir_if_none(nginxdir);
 	if ((mimetypes_file = fopen(mimetypes, "w")) == NULL) {
 		simple_unlock(mimetypes);
-		return 0;
+		return;
 	}
 
-	fprintf(mimetypes_file,
-		"types {\n"
-		"text/html\t\t\t\thtml htm shtml;\n"
-		"text/css\t\t\t\tcss;\n"
-		"text/xml\t\t\t\txml rss;\n"
-		"image/gif\t\t\t\tgif;\n"
-		"image/jpeg\t\t\t\tjpeg jpg;\n"
-		"application/x-javascript\t\tjs;\n"
-		"text/plain\t\t\t\ttxt;\n"
-		"text/x-component\t\t\thtc;\n"
-		"text/mathml\t\t\t\tmml;\n"
-		"image/png\t\t\t\tpng;\n"
-		"image/x-icon\t\t\t\tico;\n"
-		"image/x-jng\t\t\t\tjng;\n"
-		"image/vnd.wap.wbmp\t\t\twbmp;\n"
-		"application/java-archive\t\tjar war ear;\n"
-		"application/mac-binhex40\t\thqx;\n"
-		"application/pdf\t\t\t\tpdf;\n"
-		"application/x-cocoa\t\t\tcco;\n"
-		"application/x-java-archive-diff\t\tjardiff;\n"
-		"application/x-java-jnlp-file\t\tjnlp;\n"
-		"application/x-makeself\t\t\trun;\n"
-		"application/x-perl\t\t\tpl pm;\n"
-		"application/x-pilot\t\t\tprc pdb;\n"
-		"application/x-rar-compressed\t\trar;\n"
-		"application/x-redhat-package-manager\trpm;\n"
-		"application/x-sea\t\t\tsea;\n"
-		"application/x-shockwave-flash\t\tswf;\n"
-		"application/x-stuffit\t\t\tsit;\n"
-		"application/x-tcl\t\t\ttcl tk;\n"
-		"application/x-x509-ca-cert\t\tder pem crt;\n"
-		"application/x-xpinstall\t\t\txpi;\n"
-		"application/zip\t\t\t\tzip;\n"
-		"application/octet-stream\t\tdeb;\n"
-		"application/octet-stream\t\tbin exe dll;\n"
-		"application/octet-stream\t\tdmg;\n"
-		"application/octet-stream\t\teot;\n"
-		"application/octet-stream\t\tiso img;\n"
-		"application/octet-stream\t\tmsi msp msm;\n"
-		"audio/mpeg\t\t\t\tmp3;\n"
-		"audio/x-realaudio\t\t\tra;\n"
-		"video/mpeg\t\t\t\tmpeg mpg;\n"
-		"video/quicktime\t\t\t\tmov;\n"
-		"video/x-flv\t\t\t\tflv;\n"
-		"video/x-msvideo\t\t\t\tavi;\n"
-		"video/x-ms-wmv\t\t\t\twmv;\n"
-		"video/x-ms-asf\t\t\t\tasx asf;\n"
-		"video/x-mng\t\t\t\tmng;\n"
-		"}\n");
-	fclose(mimetypes_file);
+	fprintf(mimetypes_file, "types {\n"
+	                        "text/html\t\t\t\thtml htm shtml;\n"
+	                        "text/css\t\t\t\tcss;\n"
+	                        "text/xml\t\t\t\txml rss;\n"
+	                        "image/gif\t\t\t\tgif;\n"
+	                        "image/jpeg\t\t\t\tjpeg jpg;\n"
+	                        "application/x-javascript\t\tjs;\n"
+	                        "text/plain\t\t\t\ttxt;\n"
+	                        "text/x-component\t\t\thtc;\n"
+	                        "text/mathml\t\t\t\tmml;\n"
+	                        "image/png\t\t\t\tpng;\n"
+	                        "image/x-icon\t\t\t\tico;\n"
+	                        "image/x-jng\t\t\t\tjng;\n"
+	                        "image/vnd.wap.wbmp\t\t\twbmp;\n"
+	                        "application/java-archive\t\tjar war ear;\n"
+	                        "application/mac-binhex40\t\thqx;\n"
+	                        "application/pdf\t\t\t\tpdf;\n"
+	                        "application/x-cocoa\t\t\tcco;\n"
+	                        "application/x-java-archive-diff\t\tjardiff;\n"
+	                        "application/x-java-jnlp-file\t\tjnlp;\n"
+	                        "application/x-makeself\t\t\trun;\n"
+	                        "application/x-perl\t\t\tpl pm;\n"
+	                        "application/x-pilot\t\t\tprc pdb;\n"
+	                        "application/x-rar-compressed\t\trar;\n"
+	                        "application/x-redhat-package-manager\trpm;\n"
+	                        "application/x-sea\t\t\tsea;\n"
+	                        "application/x-shockwave-flash\t\tswf;\n"
+	                        "application/x-stuffit\t\t\tsit;\n"
+	                        "application/x-tcl\t\t\ttcl tk;\n"
+	                        "application/x-x509-ca-cert\t\tder pem crt;\n"
+	                        "application/x-xpinstall\t\t\txpi;\n"
+	                        "application/zip\t\t\t\tzip;\n"
+	                        "application/octet-stream\t\tdeb;\n"
+	                        "application/octet-stream\t\tbin exe dll;\n"
+	                        "application/octet-stream\t\tdmg;\n"
+	                        "application/octet-stream\t\teot;\n"
+	                        "application/octet-stream\t\tiso img;\n"
+	                        "application/octet-stream\t\tmsi msp msm;\n"
+	                        "audio/mpeg\t\t\t\tmp3;\n"
+	                        "audio/x-realaudio\t\t\tra;\n"
+	                        "video/mpeg\t\t\t\tmpeg mpg;\n"
+	                        "video/quicktime\t\t\t\tmov;\n"
+	                        "video/x-flv\t\t\t\tflv;\n"
+	                        "video/x-msvideo\t\t\t\tavi;\n"
+	                        "video/x-ms-wmv\t\t\t\twmv;\n"
+	                        "video/x-ms-asf\t\t\t\tasx asf;\n"
+	                        "video/x-mng\t\t\t\tmng;\n"
+	                        "}\n");
 
-	return 0;
+	fclose(mimetypes_file);
 }
 
-int build_nginx_conf(void)
+static void build_nginx_conf(void)
 {
 	char *buf;	/* default param buffer */
 	int i;		/* integer cast */
@@ -160,10 +155,10 @@ int build_nginx_conf(void)
 	mkdir_if_none(nginxdir);
 	if ((nginx_conf_file = fopen(nginxconf, "w")) == NULL) {
 		simple_unlock(nginxconf);
-		return 0;
+		return;
 	}
 
-	//syslog(LOG_INFO, "nginx - started writing config file %s\n", nginxconf);
+	//syslog(LOG_INFO, "nginx - started writing config file %s", nginxconf);
 
 	i = nvram_get_int("nginx_priority");
 	if ((i <= -20) || (i >= 19))
@@ -172,57 +167,55 @@ int build_nginx_conf(void)
 	if ((buf = nvram_safe_get("nginx_httpcustom")) == NULL)
 		buf = nginxcustom; /* shibby - add custom config to http section */
 
-	fprintf(nginx_conf_file,
-		/* Global process */
-		"user %s;\n"
-		"worker_processes %s;\n"
-		"worker_cpu_affinity %s;\n"
-		"master_process %s;\n"
-		"worker_priority %d;\n"
-		"error_log %s;\n"
-		"pid %s;\n"
-		"worker_rlimit_nofile %s;\n"
-		/* Events */
-		"events {\n"
-		"worker_connections %s;\n"
-		//"multi_accept %s;\n"
-		"}\n"
-		/* http */
-		"http {\n"
-		"include %s;\n"
-		"include %s;\n"
-		"default_type application/octet-stream;\n"
-		"log_format   main '$remote_addr - $remote_user [$time_local]  $status '\n"
-		"'\"$request\" $body_bytes_sent \"$http_referer\" '\n"
-		"'\"$http_user_agent\" \"$http_x_forwarded_for\"';\n"
-		"sendfile %s;\n"
-		"client_max_body_size %sM;\n"
-		"%s\n",
-		nvram_safe_get("nginx_user"),
-		nginx_worker_proc,
-		nginx_cpu_affinity,
-		nginx_master_process,
-		i,
-		nginxerrorlog,
-		nginxpid,
-		nginx_worker_rlimit_profile,
-		nginx_worker_connections,
-		//nginx_multi_accept,
-		mimetypes,
-		fastcgiconf,
-		nginssendfile,
-		nvram_safe_get("nginx_upload"),
-		buf);
+	fprintf(nginx_conf_file, /* global process */
+	                         "user %s;\n"
+	                         "worker_processes %s;\n"
+	                         "worker_cpu_affinity %s;\n"
+	                         "master_process %s;\n"
+	                         "worker_priority %d;\n"
+	                         "error_log %s;\n"
+	                         "pid %s;\n"
+	                         "worker_rlimit_nofile %s;\n"
+	                         /* events */
+	                         "events {\n"
+	                         "worker_connections %s;\n"
+	                         //"multi_accept %s;\n"
+	                         "}\n"
+	                         /* http */
+	                         "http {\n"
+	                         "include %s;\n"
+	                         "include %s;\n"
+	                         "default_type application/octet-stream;\n"
+	                         "log_format   main '$remote_addr - $remote_user [$time_local]  $status '\n"
+	                         "'\"$request\" $body_bytes_sent \"$http_referer\" '\n"
+	                         "'\"$http_user_agent\" \"$http_x_forwarded_for\"';\n"
+	                         "sendfile %s;\n"
+	                         "client_max_body_size %sM;\n"
+	                         "%s\n",
+	                         nvram_safe_get("nginx_user"),
+	                         nginx_worker_proc,
+	                         nginx_cpu_affinity,
+	                         nginx_master_process,
+	                         i,
+	                         nginxerrorlog,
+	                         nginxpid,
+	                         nginx_worker_rlimit_profile,
+	                         nginx_worker_connections,
+	                         //nginx_multi_accept,
+	                         mimetypes,
+	                         fastcgiconf,
+	                         nginssendfile,
+	                         nvram_safe_get("nginx_upload"),
+	                         buf);
 
 /*
-	fprintf(nginx_conf_file,
-		"keepalive_timeout\t%s;\n"
-		"tcp_nopush\t%s;\n"
-		"server_names_hash_bucket_size\t%s;\n"
-		"limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;\n",
-		nginx_keepalive_timeout,
-		nginxtcp_nopush,
-		nginxserver_hash_bucket_size);
+	fprintf(nginx_conf_file, "keepalive_timeout\t%s;\n"
+	                         "tcp_nopush\t%s;\n"
+	                         "server_names_hash_bucket_size\t%s;\n"
+	                         "limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;\n",
+	                         nginx_keepalive_timeout,
+	                         nginxtcp_nopush,
+	                         nginxserver_hash_bucket_size);
 */
 
 	/* Basic Server Parameters */
@@ -233,63 +226,57 @@ int build_nginx_conf(void)
 	if ((buf = nvram_safe_get("nginx_fqdn")) == NULL)
 		buf = nginxname;
 
-	fprintf(nginx_conf_file,
-		"server {\n"
-		"listen %d;\n"
-		"server_name %s;\n"
-		"access_log %s main;\n"
-		"location / {\n",
-		i,
-		buf,
-		nginxaccesslog);
+	fprintf(nginx_conf_file, "server {\n"
+	                         "listen %d;\n"
+	                         "server_name %s;\n"
+	                         "access_log %s main;\n"
+	                         "location / {\n",
+	                         i,
+	                         buf,
+	                         nginxaccesslog);
 
 	if ((buf = nvram_safe_get("nginx_docroot")) == NULL)
 		buf = nginxdocrootdir;
 
-	fprintf(nginx_conf_file,
-		"root %s;\n"
-		"index index.html index.htm index.php;\n"
-		/* Error pages section */
-		"error_page 404 /404.html;\n"
-		"error_page 500 502 503 504 /50x.html;\n"
-		"location /50x.html {\n"
-		"root %s;\n"
-		"}\n",
-		buf,
-		buf);
+	fprintf(nginx_conf_file, "root %s;\n"
+	                         "index index.html index.htm index.php;\n"
+	                         /* error pages section */
+	                         "error_page 404 /404.html;\n"
+	                         "error_page 500 502 503 504 /50x.html;\n"
+	                         "location /50x.html {\n"
+	                         "root %s;\n"
+	                         "}\n",
+	                         buf,
+	                         buf);
 
 	/* PHP to FastCGI Server */
-	if (nvram_match("nginx_php", "1")) {
-		fprintf(nginx_conf_file,
-			"location ~ ^(?<script_name>.+?\\.php)(?<path_info>/.*)?$ {\n"
-			"try_files $script_name = 404;\n"
-			"include %s;\n"
-			"fastcgi_param PATH_INFO $path_info;\n"
-			"fastcgi_pass 127.0.0.1:9000;\n"
-			"}\n",
-			fastcgiconf);
-	}
+	if (nvram_match("nginx_php", "1"))
+		fprintf(nginx_conf_file, "location ~ ^(?<script_name>.+?\\.php)(?<path_info>/.*)?$ {\n"
+		                         "try_files $script_name = 404;\n"
+		                         "include %s;\n"
+		                         "fastcgi_param PATH_INFO $path_info;\n"
+		                         "fastcgi_pass 127.0.0.1:9000;\n"
+		                         "}\n",
+		                         fastcgiconf);
 
-	/* Server for static files */
-	fprintf(nginx_conf_file,
-		"location ~ ^/(images|javascript|js|css|flash|media|static)/ {\n"
-		"root %s;\n"
-		"expires 10d;\n"
-		"}\n"
-		"}\n",
-		buf);
+	/* server for static files */
+	fprintf(nginx_conf_file, "location ~ ^/(images|javascript|js|css|flash|media|static)/ {\n"
+	                         "root %s;\n"
+	                         "expires 10d;\n"
+	                         "}\n"
+	                         "}\n",
+	                         buf);
 
-	/* shibby - add custom config to server section */
+	/* add custom config to server section */
 	if ((buf = nvram_safe_get("nginx_servercustom")) == NULL)
 		buf = nginxcustom;
 
-	fprintf(nginx_conf_file,
-		"%s"
-		"\n"
-		"}\n"
-		"}\n"
-		"\n",
-		buf);
+	fprintf(nginx_conf_file, "%s"
+	                         "\n"
+	                         "}\n"
+	                         "}\n"
+	                         "\n",
+	                         buf);
 
 	if ((buf = nvram_safe_get("nginx_custom")) == NULL)
 		buf = nginxcustom;
@@ -297,51 +284,45 @@ int build_nginx_conf(void)
 	fprintf(nginx_conf_file, "%s", buf);
 	fclose(nginx_conf_file);
 
-	syslog(LOG_INFO, "nginx - config file built succesfully\n");
+	syslog(LOG_INFO, "nginx - config file built succesfully");
 
-	/* shibby - create php.ini */
 	if (nvram_match("nginx_php", "1")) {
 		if (!(phpini_file = fopen("/etc/php.ini", "w"))) {
 			perror("/etc/php.ini");
-			return 0;
+			return;
 		}
-		fprintf(phpini_file,
-			"post_max_size = %sM\n"
-			"upload_max_filesize = %sM\n"
-			"mysql.default_port = 3309\n"
-			"mysql.default_socket = %s/mysqld.sock\n"
-			"%s\n",
-			nvram_safe_get("nginx_upload"),
-			nvram_safe_get("nginx_upload"),
-			nginxrundir,
-			nvram_safe_get("nginx_phpconf"));
+		fprintf(phpini_file, "post_max_size = %sM\n"
+		                     "upload_max_filesize = %sM\n"
+		                     "mysql.default_port = 3309\n"
+		                     "mysql.default_socket = %s/mysqld.sock\n"
+		                     "%s\n",
+		                     nvram_safe_get("nginx_upload"),
+		                     nvram_safe_get("nginx_upload"),
+		                     nginxrundir,
+		                     nvram_safe_get("nginx_phpconf"));
+
 		fclose(phpini_file);
 
-		syslog(LOG_INFO, "nginx - php.ini file built succesfully\n");
+		syslog(LOG_INFO, "nginx - php.ini file built succesfully");
 	}
-
-	return 0;
 }
 
-/* Start the nginx module according environment directives */
+/* start the nginx module according environment directives */
 void start_nginx(void)
 {
 	if (fastpath != 1) {
 		if (!nvram_match("nginx_enable", "1")) {
-			syslog(LOG_INFO, "nginx - daemon not enabled cancelled generation of config file\n");
+			syslog(LOG_INFO, "nginx - daemon not enabled cancelled generation of config file");
 			return;
 		}
 	}
-	else {
-		syslog(LOG_INFO, "nginx - fastpath forced generation of config file\n");
-	}
+	else
+		syslog(LOG_INFO, "nginx - fastpath forced generation of config file");
 
-	if (fastpath != 1) {
+	if (fastpath != 1)
 		stop_nginx();
-	}
-	else {
+	else
 		stop_nginxfp();
-	}
 
 	if (!f_exists(fastcgiconf))
 		build_fastcgi_conf();
@@ -349,41 +330,36 @@ void start_nginx(void)
 	if (!f_exists(mimetypes))
 		build_mime_types();
 
-	if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1"))) {
+	if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
 		build_nginx_conf();
-	}
 	else {
 		if (!f_exists(nginxconf))
 			build_nginx_conf();
 	}
 
-	/* shibby - create log directory before start daemon (if does not exist) */
+	/* create log directory before start daemon (if does not exist) */
 	xstart("mkdir", "-p", nginxlogdir);
 
-	if (nvram_match("nginx_php", "1")) {
-		/* shibby - run spawn-fcgi */
+	if (nvram_match("nginx_php", "1"))
+		/* run spawn-fcgi */
 		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "/usr/sbin/php-cgi");
-	}
-	else {
-		killall_tk("php-cgi");
-	}
+	else
+		killall_tk_period_wait("php-cgi", 50);
 
 	mkdir_if_none(client_body_temp_path);
 	mkdir_if_none(fastcgi_temp_path);
 	mkdir_if_none(uwsgi_temp_path);
 	mkdir_if_none(scgi_temp_path);
 
-	if (nvram_match("nginx_override", "1")) {
+	if (nvram_match("nginx_override", "1"))
 		xstart(nginxbin, "-c", nvram_safe_get("nginx_overridefile"));
-	}
-	else {
+	else
 		xstart(nginxbin, "-c", nginxconf);
-	}
 
-	syslog(LOG_INFO,"nginx - running daemon\n");
+	syslog(LOG_INFO, "nginx - running daemon");
 }
 
-/* Start nginx using fastpath method no checks */
+/* start nginx using fastpath method no checks */
 void start_nginxfp(void)
 {
 	fastpath = 1;
@@ -391,40 +367,34 @@ void start_nginxfp(void)
 	fastpath = 0;
 }
 
-/* Stopping nginx and remove traces of the process */
+/* stop nginx and remove traces of the process */
 void stop_nginx(void)
 {
-	syslog(LOG_INFO, "nginx - killing daemon\n");
+	syslog(LOG_INFO, "nginx - killing daemon");
 
 	if (pidof(nginxbin) > 0) {
-		killall_tk(nginxbin);
-		killall_tk("php-cgi");
+		killall_tk_period_wait(nginxbin, 50);
+		killall_tk_period_wait("php-cgi", 50);
 
-		if (f_exists(nginxpid)) {
+		if (f_exists(nginxpid))
 			unlink(nginxpid);
-		}
+
 		if (f_exists(fastcgiconf)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1"))) {
+			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
 				unlink(fastcgiconf);
-			}
-			//syslog(LOG_INFO, "nginx - skip removal of fastcgi config file %s due to fastpath method\n", fastcgiconf);
 		}
 		if (f_exists(mimetypes)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1"))) {
+			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
 				unlink(mimetypes);
-			}
-			//syslog(LOG_INFO, "nginx - skip removal of mime types config file %s due to fastpath method\n", mimetypes);
 		}
 		if (f_exists(nginxconf)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1"))) {
+			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
 				unlink(nginxconf);
-			}
-			//syslog(LOG_INFO, "nginx - skip removal of nginx config file %s due to fastpath method\n", nginxconf);
 		}
 	}
 }
 
-/* Stop nginx using fastpath method no checks */
+/* stop nginx using fastpath method no checks */
 void stop_nginxfp(void)
 {
 	fastpath = 1;

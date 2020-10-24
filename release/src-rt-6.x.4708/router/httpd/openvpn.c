@@ -45,14 +45,6 @@ static void put_to_file(const char *filePath, const char *content)
 	fclose(fkey);
 }
 
-static char *getNVRAMVar(const char *text, const int serverNum)
-{
-	char buffer[32];
-	memset(buffer, 0, 32);
-	sprintf(buffer, text, serverNum);
-	return nvram_safe_get(buffer);
-}
-
 static void prepareCAGeneration(int serverNum)
 {
 	char buffer[512];

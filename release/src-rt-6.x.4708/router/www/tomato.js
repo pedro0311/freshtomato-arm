@@ -2758,7 +2758,11 @@ function reboot() {
 }
 
 function shutdown() {
-	if (confirm("Shutdown?")) form.submitHidden('shutdown.cgi', { });
+	if (confirm("Shutdown?")) shutdown2();
+}
+
+function shutdown2() {
+	if (confirm("Are you really sure you want to Shutdown??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
 }
 
 function logout() {

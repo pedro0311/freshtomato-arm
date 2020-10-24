@@ -102,9 +102,9 @@ void stop_nfs(void)
 	syslog(LOG_INFO, "Stopping NFS Server...");
 
 	eval("/usr/sbin/exportfs", "-ua");
-	killall_tk("mountd");
+	killall_tk_period_wait("mountd", 50);
 	killall("nfsd", SIGKILL);
-	killall_tk("statd");
+	killall_tk_period_wait("statd", 50);
 
 	syslog(LOG_INFO, "NFS Server stopped");
 }

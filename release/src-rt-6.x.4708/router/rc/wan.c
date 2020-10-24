@@ -264,11 +264,11 @@ static void stop_ppp(char *prefix)
 	sprintf(buffer, "pppd%s", prefix);
 
 	/* Race condition on start_pppoe in ip-up on boot, primary pp(poe/tp) wan will not reach start_wan_done on secondary ppp(oe/3g) start */
-	//killall_tk("ip-up");
-	//killall_tk("ip-down");
+	//killall_tk_period_wait("ip-up", 50);
+	//killall_tk_period_wait("ip-down", 50);
 #ifdef TCONFIG_IPV6
-	//killall_tk("ipv6-up");
-	//killall_tk("ipv6-down");
+	//killall_tk_period_wait("ipv6-up", 50);
+	//killall_tk_period_wait("ipv6-down", 50);
 #endif
 	/* FIXME: find a proper way to stop daemon */
 	if (get_wanx_proto("wan") != WP_L2TP
@@ -278,15 +278,15 @@ static void stop_ppp(char *prefix)
 	    && get_wanx_proto("wan4") != WP_L2TP
 #endif
 	)
-		killall_tk("xl2tpd");
+		killall_tk_period_wait("xl2tpd", 50);
 
 	//kill(nvram_get_int(strcat_r(prefix, "_pppd_pid", tmp)),1);
-	killall_tk((char *)buffer);
+	killall_tk_period_wait((char *)buffer, 50);
 
 	/* Don't kill other wans listeners, only this wan one
 	 * its PID can be found in /var/run/listen-wan%d.pid
 	 */
-	//killall_tk("listen");
+	//killall_tk_period_wait("listen", 50);
 
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */
@@ -925,7 +925,7 @@ void start_wan(int mode)
 
 	enable_ip_forward();
 
-	killall_tk("mwanroute");
+	killall_tk_period_wait("mwanroute", 50);
 	xstart("mwanroute");
 
 	if (nvram_get_int("mwan_cktime") > 0)
@@ -1214,7 +1214,7 @@ void stop_wan_if(char *prefix)
 	wan_proto = get_wanx_proto(prefix);
 
 	if (wan_proto == WP_LTE) {
-		killall_tk("switch4g");		/* Kill switch4g script if running */
+		killall_tk_period_wait("switch4g", 50);		/* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
 		sleep(3);			/* Wait a litle for disconnect */
 	}

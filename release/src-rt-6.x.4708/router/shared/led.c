@@ -144,8 +144,9 @@ int do_led(int which, int mode)
 	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255,  255 };
 	static int r6250[]	= {  11,    3,    15,  255,  255,    1,  255,    8,  255,  255,  255 };
 	static int r6300v2[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255,  255 };
-	static int r6400v2[]    = {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
-	static int r6700v3[]    = {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
+	static int r6400v2[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
+	static int r6700v1[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
+	static int r6700v3[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
 	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
 	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
@@ -309,6 +310,23 @@ int do_led(int which, int mode)
 		}
 		else {
 			b = r6400v2[which];
+		}
+		break;
+	case MODEL_R6700v1:
+		if (which == LED_DIAG) {
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color white gpio 2 (active LOW) */
+		}
+		else if (which == LED_WHITE) {
+			b = 9; /* color white gpio 9 (active LOW) */
+			c = 8; /* color amber gpio 8 (active LOW) */
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+			b = r6700v1[which];
+		}
+		else {
+			b = r6700v1[which];
 		}
 		break;
 	case MODEL_R6700v3:
@@ -576,6 +594,7 @@ void led_setup(void) {
 			set_gpio(2, T_HIGH);		/* disable power led color amber */
 			disable_led_wanlan();
 			break;
+		case MODEL_R6700v1:
 		case MODEL_R7000:
 			set_gpio(3, T_HIGH);		/* disable power led color amber */
 			disable_led_wanlan();
@@ -650,9 +669,10 @@ void led_setup(void) {
 			/* activate WAN port led */
 			set_gpio(6, T_LOW);		/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
 			break;
+		case MODEL_R6700v1:
 		case MODEL_R7000:
 			/* activate WAN port led */
-			set_gpio(8, T_LOW);		/* R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			set_gpio(8, T_LOW);		/* R6700v1 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7

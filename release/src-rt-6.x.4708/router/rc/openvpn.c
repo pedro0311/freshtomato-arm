@@ -67,15 +67,6 @@ typedef enum ovpn_type
 } ovpn_type_t;
 
 
-static char *getNVRAMVar(const char *text, const int num)
-{
-	char buffer[32];
-	memset(buffer, 0, 32);
-	sprintf(buffer, text, num);
-
-	return nvram_safe_get(buffer);
-}
-
 static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;

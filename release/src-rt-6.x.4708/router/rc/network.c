@@ -658,6 +658,7 @@ void restart_wl(void)
 	if ((model == MODEL_WS880) ||
 	    (model == MODEL_R6400) ||
 	    (model == MODEL_R6400v2) ||
+	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_R8000)) {

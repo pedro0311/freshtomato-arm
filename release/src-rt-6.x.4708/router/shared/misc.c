@@ -275,6 +275,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_R6400) ||
 	    (model == MODEL_R6400v2) ||
+	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_RTAC68U) ||
 	    (model == MODEL_RTAC66U_B1) ||
@@ -998,6 +999,15 @@ int nvram_is_empty(const char *key)
 void nvram_commit_x(void)
 {
 	if (!nvram_get_int("debug_nocommit")) nvram_commit();
+}
+
+char *getNVRAMVar(const char *text, const int unit)
+{
+	char buffer[32];
+	memset(buffer, 0, 32);
+	sprintf(buffer, text, unit);
+
+	return nvram_safe_get(buffer);
 }
 
 int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int timeout)

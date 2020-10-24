@@ -521,6 +521,7 @@ static int init_vlan_ports(void)
 		break;
 	case MODEL_R6400:
 	case MODEL_R6400v2:
+	case MODEL_R6700v1:
 	case MODEL_R6700v3:
 	case MODEL_R7000:
 	case MODEL_RTN18U:
@@ -578,6 +579,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
 	case MODEL_R7000:
+	case MODEL_R6700v1:
 	case MODEL_R6400:
 	case MODEL_R6250:
 	case MODEL_R6300v2:
@@ -2273,9 +2275,10 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/xtalfreq", "65535");
 		}
 		break;
+	case MODEL_R6700v1:
 	case MODEL_R7000:
 		mfr = "Netgear";
-		name = "R7000";
+		name = nvram_match("board_id", "U12H270T00_NETGEAR") ? "R7000" : "R6700v1";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");

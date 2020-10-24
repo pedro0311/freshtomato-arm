@@ -120,8 +120,8 @@ void stop_nas(void)
 #endif
 #endif	/* DEBUG_TIMING */
 
-	killall_tk("nas");
-	killall_tk("eapd");
+	killall_tk_period_wait("nas", 50);
+	killall_tk_period_wait("eapd", 50);
 }
 
 void notify_nas(const char *ifname)

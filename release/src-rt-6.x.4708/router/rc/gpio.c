@@ -4,7 +4,10 @@
 	Copyright (C) 2006-2009 Jonathan Zarate
 
 */
+
+
 #include "rc.h"
+
 
 int gpio_main(int argc, char *argv[])
 {
@@ -21,6 +24,7 @@ int gpio_main(int argc, char *argv[])
 			bit = 1 << bit;
 			{
 				gpio_write(bit, argv[1][0] == 'e');
+
 				return 0;
 			}
 		}
@@ -31,10 +35,12 @@ int gpio_main(int argc, char *argv[])
 				bit = atoi(argv[2]);
 			else
 				bit = 0;
+
 			printf("Enable gpio mask: 0x%04X\n", bit);
 
 			if ((f = gpio_open(bit)) < 0) {
 				printf("Failed to open gpio\n");
+
 				return 0;
 			}
 			while ((v = _gpio_read(f)) != ~0) {
@@ -46,6 +52,7 @@ int gpio_main(int argc, char *argv[])
 				sleep(1);
 			}
 			close(f);
+
 			return 0;
 		}
 	}

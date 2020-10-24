@@ -141,6 +141,7 @@ extern int nvram_set_file(const char *key, const char *fname, int max);
 extern int nvram_contains_word(const char *key, const char *word);
 extern int nvram_is_empty(const char *key);
 extern void nvram_commit_x(void);
+extern char *getNVRAMVar(const char *text, const int unit);
 extern int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int timeout);
 extern int mtd_getinfo(const char *mtdname, int *part, int *size);
 extern int foreach_wif(int include_vifs, void *param,
@@ -188,6 +189,7 @@ enum {
 	MODEL_R6300v2,
 	MODEL_R6400,
 	MODEL_R6400v2,
+	MODEL_R6700v1,
 	MODEL_R6700v3,
 	MODEL_R7000,
 	MODEL_R8000,
