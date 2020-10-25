@@ -234,11 +234,14 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	}
 
 #ifdef TCONFIG_IPV6
-	switch (get_ipv6_service()) {
-	case IPV6_NATIVE:
-	case IPV6_NATIVE_DHCP:
-		fprintf(fp, "+ipv6\n");
-		break;
+	/* start/add IPv6 BUT only for "wan" (no multiwan support) */
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		switch (get_ipv6_service()) {
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			fprintf(fp, "+ipv6\n");
+			break;
+		}
 	}
 #endif
 	/* User specific options */
