@@ -75,6 +75,7 @@ switch (nvram['t_model_name']) {
 	case 'Tenda AC18':
 	case 'Asus RT-N18U':
 	case 'Asus RT-AC66U B1':
+	case 'Asus RT-AC67U':
 	case 'Asus RT-AC68R/U':
 	case 'Asus RT-AC68P/U B1':
 	case 'Asus RT-AC68U C1':
