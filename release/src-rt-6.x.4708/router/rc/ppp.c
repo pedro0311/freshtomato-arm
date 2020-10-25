@@ -38,7 +38,9 @@
 
 #define mwanlog(level, x...) if (nvram_get_int("mwan_debug") >= level) syslog(level, x)
 
-
+/*
+ * Called when ipv4 link comes up
+ */
 int ipup_main(int argc, char **argv)
 {
 	char *wan_ifname;
@@ -140,6 +142,9 @@ int ipup_main(int argc, char **argv)
 	return 0;
 }
 
+/*
+ * Called when ipv4 link goes down
+ */
 int ipdown_main(int argc, char **argv)
 {
 	int proto;
@@ -224,10 +229,21 @@ int ipdown_main(int argc, char **argv)
 	return 1;
 }
 
+/*
+ * Called when interface comes up
+ */
+int ippreup_main(int argc, char **argv)
+{
+	/* nothing to do righ now! */
+	return 0;
+}
+
+/*
+ * Called when ipv6 link comes up
+ */
 #ifdef TCONFIG_IPV6
 int ip6up_main(int argc, char **argv)
 {
-/*
 	char *wan_ifname;
 	char *value;
 
@@ -238,25 +254,33 @@ int ip6up_main(int argc, char **argv)
 	if ((!wan_ifname) || (!*wan_ifname))
 		return -1;
 
-	value = getenv("LLREMOTE");
+	if ((value = getenv("LLREMOTE")))
+		nvram_set("ipv6_llremote", value); /* set ipv6 llremote address */
 
-	// ???
+	start_wan6(wan_ifname);
 
-	start_wan6_done(wan_ifname);
-*/
 	return 0;
 }
 
+/*
+ * Called when ipv6 link goes down
+ */
 int ip6down_main(int argc, char **argv)
 {
-/*
+	char *wan_ifname;
+
 	if (!wait_action_idle(10))
 		return -1;
 
-	// ???
+	wan_ifname = safe_getenv("IFNAME");
+	if ((!wan_ifname) || (!*wan_ifname))
+		return -1;
 
-*/
-	return 1;
+	nvram_set("ipv6_llremote", ""); /* clear ipv6 llremote address */
+
+	stop_wan6();
+
+	return 0;
 }
 #endif /* TCONFIG_IPV6 */
 
