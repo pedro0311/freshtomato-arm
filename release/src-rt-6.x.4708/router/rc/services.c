@@ -2124,7 +2124,9 @@ static void start_ftpd(void)
 	            "listen%s=no\n"
 	            "listen_port=%s\n"
 	            "background=yes\n"
+#ifndef TCONFIG_BCMARM
 	            "isolate=no\n"
+#endif
 	            "max_clients=%d\n"
 	            "max_per_ip=%d\n"
 	            "max_login_fails=1\n"
