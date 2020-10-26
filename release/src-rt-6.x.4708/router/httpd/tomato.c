@@ -1350,6 +1350,7 @@ static const nvset_t nvset_list[] = {
 	{ "ftp_custom",			V_TEXT(0, 2048)			},
 	{ "ftp_sip",			V_LENGTH(0, 512)		},
 	{ "ftp_limit",			V_TEXT(1, 50)			},
+	{ "ftp_tls",			V_01				},	/* support for basic ftp_tls */
 	{ "log_ftp",			V_01				},
 #endif
 

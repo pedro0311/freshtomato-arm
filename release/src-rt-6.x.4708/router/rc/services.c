@@ -2044,6 +2044,10 @@ static void start_ftpd(void)
 	char *p, *q;
 	char *user, *pass, *rights, *root_dir;
 	int i;
+#ifdef TCONFIG_HTTPS
+	unsigned long long sn;
+	char t[32];
+#endif
 
 	if (!nvram_get_int("ftp_enable"))
 		return;
@@ -2133,8 +2137,7 @@ static void start_ftpd(void)
 	            "idle_session_timeout=%s\n"
 	            "use_sendfile=no\n"
 	            "anon_max_rate=%d\n"
-	            "local_max_rate=%d\n"
-	            "%s\n",
+	            "local_max_rate=%d\n",
 	            nvram_get_int("log_ftp") ? "yes" : "no",
 	            vsftpd_users, vsftpd_passwd,
 #ifdef TCONFIG_IPV6
@@ -2149,7 +2152,36 @@ static void start_ftpd(void)
 	            nvram_get_int("ftp_ipmax"),
 	            nvram_get("ftp_staytimeout") ? : "300",
 	            nvram_get_int("ftp_anonrate") * 1024,
-	            nvram_get_int("ftp_rate") * 1024,
+	            nvram_get_int("ftp_rate") * 1024);
+
+#ifdef TCONFIG_HTTPS
+	if (nvram_get_int("ftp_tls")) {
+		fprintf(fp, "ssl_enable=YES\n"
+		            "rsa_cert_file=/etc/cert.pem\n"
+		            "rsa_private_key_file=/etc/key.pem\n"
+		            "allow_anon_ssl=NO\n"
+		            "force_local_data_ssl=YES\n"
+		            "force_local_logins_ssl=YES\n"
+		            "ssl_tlsv1=YES\n"
+		            "ssl_sslv2=NO\n"
+		            "ssl_sslv3=NO\n"
+		            "require_ssl_reuse=NO\n"
+		            "ssl_ciphers=HIGH\n");
+
+		/* does a valid HTTPD cert exist? if not, generate one */
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem"))) {
+			f_read("/dev/urandom", &sn, sizeof(sn));
+			sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
+			nvram_set("https_crt_gen", "1");
+			nvram_set("https_crt_save", "1");
+			eval("gencert.sh", t);
+		}
+	}
+#endif /* TCONFIG_HTTPS */
+
+	fprintf(fp, "ftpd_banner=Welcome to FreshTomato %s FTP service.\n"
+	            "%s\n",
+	            nvram_safe_get("os_version"),
 	            nvram_safe_get("ftp_custom"));
 
 	fclose(fp);

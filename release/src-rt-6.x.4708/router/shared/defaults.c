@@ -992,6 +992,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ftp_custom",			""				, 0 },
 	{ "ftp_sip",			""				, 0 },	// wan ftp access: source ip address(es)
 	{ "ftp_limit",			"0,3,60"			, 0 },
+	{ "ftp_tls",			"0"				, 0 },
 	{ "log_ftp",			"0"				, 0 },
 #endif
 
