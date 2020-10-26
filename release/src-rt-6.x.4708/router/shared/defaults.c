@@ -591,6 +591,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "ntp_updates",		"1"				, 0 },
 	{ "ntp_tdod",			"0"				, 0 },
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" , 0 },
+	{ "ntpd_enable",		"0"				, 0 },
+	{ "ntpd_server_redir",		"0"				, 0 },
 
 /* basic-static */
 	{ "dhcpd_static",		""				, 0 },

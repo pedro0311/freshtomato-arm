@@ -311,7 +311,7 @@ void start_dnsmasq()
 							if (dns->dns[n].port == 53) /* check: option 6 doesn't seem to support other ports */
 								sprintf(buf + strlen(buf), ",%s", inet_ntoa(dns->dns[n].addr));
 						}
-						fprintf(f, "dhcp-option=tag:%s,6%s\n", nvram_safe_get(lanN_ifname), buf);
+						fprintf(f, "dhcp-option=tag:%s,6%s\n", nvram_safe_get(lanN_ifname), buf); /* dns-server */
 					}
 				}
 			}
@@ -342,12 +342,12 @@ void start_dnsmasq()
 
 			nv = nvram_safe_get("wan_wins");
 			if ((*nv) && (strcmp(nv, "0.0.0.0") != 0))
-				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv);
+				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv); /* netbios-ns */
 #ifdef TCONFIG_SAMBASRV
 			else if (nvram_get_int("smbd_enable") && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
 				if ((!*nv) || (strcmp(nv, "0.0.0.0") == 0))
 					/* Samba will serve as a WINS server */
-					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr));
+					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr)); /* netbios-ns */
 			}
 #endif
 		}
@@ -475,6 +475,10 @@ void start_dnsmasq()
 		fprintf(f, "dhcp-option=252,\"\\n\"\n"
 		           "dhcp-authoritative\n");
 
+	/* NTP server */
+	if (nvram_get_int("ntpd_enable"))
+		fprintf(f, "dhcp-option=42,%s\n", "0.0.0.0");
+
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
 
@@ -537,6 +541,12 @@ void start_dnsmasq()
 		/* SLAAC and DHCPv6 (2 IPv6 IPs) */
 		if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
 			fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+
+		/* SNTP & NTP server */
+		if (nvram_get_int("ntpd_enable")) {
+			fprintf(f, "dhcp-option=option6:31,%s\n", "[::]");
+			fprintf(f, "dhcp-option=option6:56,%s\n", "[::]");
+		}
 	}
 #endif
 
@@ -1835,7 +1845,7 @@ void start_ntpd(void)
 {
 	FILE *f;
 	char *servers, *ptr;
-	int servers_len = 0, ntp_updates_int = 0;
+	int servers_len = 0, ntp_updates_int = 0, ret;
 
 	if (getpid() != 1) {
 		start_service("ntpd");
@@ -1886,10 +1896,17 @@ void start_ntpd(void)
 
 		free(servers);
 
-		if (ntp_updates_int == 0)	/* only at startup */
+		if (ntp_updates_int == 0) /* only at startup, then quit */
 			xstart("ntpd", "-q");
-		else if (ntp_updates_int >= 1)	/* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
-			xstart("ntpd", "-l");
+		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
+			if (nvram_get_int("ntpd_enable"))
+				ret = xstart("ntpd", "-l");
+			else
+				ret = xstart("ntpd");
+
+			if (!ret)
+				dnslog(LOG_INFO, "ntpd is started");
+		}
 	}
 }
 
