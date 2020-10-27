@@ -650,6 +650,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "ntp_updates",		"1"				, 0 },
 	{ "ntp_tdod",			"0"				, 0 },
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" , 0 },
+	{ "ntpd_enable",		"0"				, 0 },
+	{ "ntpd_server_redir",		"0"				, 0 },
 
 /* basic-static */
 	{ "dhcpd_static",		""				, 0 },
@@ -1049,6 +1051,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ftp_custom",			""				, 0 },
 	{ "ftp_sip",			""				, 0 },	// wan ftp access: source ip address(es)
 	{ "ftp_limit",			"0,3,60"			, 0 },
+	{ "ftp_tls",			"0"				, 0 },
 	{ "log_ftp",			"0"				, 0 },
 #endif
 

@@ -345,10 +345,6 @@ what:
 
 define RouterOptions
 	@( \
-	if [ "$(CONFIG_LINUX26)" = "y" ] || [ "$(SAMBA3)" = "y" ]; then \
-		sed -i "/TCONFIG_SAMBA3/d" $(1); \
-		echo "TCONFIG_SAMBA3=y" >>$(1); \
-	fi; \
 	sed -i "/TCONFIG_EMF/d" $(1); \
 	if [ "$(CONFIG_LINUX26)" = "y" ]; then \
 		if [ "$(SLIM)" = "y" ]; then \
@@ -555,7 +551,6 @@ define RouterOptions
 			echo "# TCONFIG_FTP_SSL is not set" >>$(1); \
 			sed -i "/TCONFIG_SAMBA/d" $(1); \
 			echo "# TCONFIG_SAMBASRV is not set" >>$(1); \
-			echo "# TCONFIG_SAMBA3 is not set" >>$(1); \
 		fi; \
 	fi; \
 	if [ "$(ASUS_TRX)" = "RT-AC66U" ]; then \

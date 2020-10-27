@@ -73,9 +73,6 @@
 #define TCONFIG_SAMBASRV 1
   #define IF_TCONFIG_SAMBASRV(...) __VA_ARGS__
   #define IF_NOT_TCONFIG_SAMBASRV(...)
-#define TCONFIG_SAMBA3 1
-  #define IF_TCONFIG_SAMBA3(...) __VA_ARGS__
-  #define IF_NOT_TCONFIG_SAMBA3(...)
 #define TCONFIG_USB_EXTRAS 1
   #define IF_TCONFIG_USB_EXTRAS(...) __VA_ARGS__
   #define IF_NOT_TCONFIG_USB_EXTRAS(...)

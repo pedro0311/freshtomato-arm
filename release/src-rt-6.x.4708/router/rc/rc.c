@@ -89,12 +89,11 @@ static const applets_t applets[] = {
 	{ "rc",				rc_main				},
 	{ "ip-up",			ipup_main			},
 	{ "ip-down",			ipdown_main			},
-/* these functions do nothing
+	{ "ip-pre-up",			ippreup_main			},
 #ifdef TCONFIG_IPV6
 	{ "ipv6-up",			ip6up_main			},
 	{ "ipv6-down",			ip6down_main			},
 #endif
-*/
 #ifdef TCONFIG_PPTPD
 	{ "pptpc_ip-up",		pptpc_ipup_main			},
 	{ "pptpc_ip-down",		pptpc_ipdown_main		},

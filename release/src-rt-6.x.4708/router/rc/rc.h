@@ -125,6 +125,7 @@ extern int listen_main(int argc, char **argv);
 /* ppp.c */
 extern int ipup_main(int argc, char **argv);
 extern int ipdown_main(int argc, char **argv);
+extern int ippreup_main(int argc, char **argv);
 extern int pppevent_main(int argc, char **argv);
 #ifdef TCONFIG_IPV6
 extern int ip6up_main(int argc, char **argv);

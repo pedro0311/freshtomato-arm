@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,log_ftp"); %>
+//	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,ftp_tls,log_ftp"); %>
 
 ftplimit = nvram.ftp_limit.split(',');
 if (ftplimit.length != 3) ftplimit = [0,3,60];
@@ -127,17 +127,17 @@ function verifyFields(focused, quiet) {
 	var ok = 1;
 
 	a = E('_ftp_enable').value;
-	b = E('_ftp_port');
-	elem.display(PR(b), (a != 0));
-	b = E('_f_ftp_sip');
-	elem.display(PR(b), (a == 1));
+	b = E('_f_limit').checked;
+
+	elem.display(PR('_f_ftp_sip'), (a == 1));
+	elem.display(PR('_f_limit_hit'), PR('_f_limit_sec'), (a == 1 && b));
 
 	E('_f_limit').disabled = (a != 1);
-	b = E('_f_limit').checked;
-	elem.display(PR('_f_limit_hit'), PR('_f_limit_sec'), (a == 1 && b));
 	E('_ftp_anonymous').disabled = (a == 0);
 	E('_f_ftp_super').disabled = (a == 0);
+	E('_f_ftp_tls').disabled = (a == 0);
 	E('_f_log_ftp').disabled = (a == 0);
+	E('_ftp_port').disabled = (a == 0);
 	E('_ftp_pubroot').disabled = (a == 0);
 	E('_ftp_pvtroot').disabled = (a == 0);
 	E('_ftp_anonroot').disabled = (a == 0);
@@ -168,8 +168,10 @@ function verifyFields(focused, quiet) {
 
 	if (a == 1) {
 		b = E('_f_ftp_sip');
-		if ((b.value.length) && (!_v_iptaddr(b, quiet || !ok, 15, 1, 1))) ok = 0;
-		else ferror.clear(b);
+		if ((b.value.length) && (!_v_iptaddr(b, quiet || !ok, 15, 1, 1)))
+			ok = 0;
+		else
+			ferror.clear(b);
 	}
 
 	return ok;
@@ -188,6 +190,7 @@ function save() {
 
 	fom.ftp_sip.value = fom.f_ftp_sip.value.split(/\s*,\s*/).join(',');
 	fom.ftp_super.value = E('_f_ftp_super').checked ? 1 : 0;
+	fom.ftp_tls.value = E('_f_ftp_tls').checked ? 1 : 0;
 	fom.log_ftp.value = E('_f_log_ftp').checked ? 1 : 0;
 
 	fom.ftp_limit.value = (E('_f_limit').checked ? 1 : 0) + ',' + E('_f_limit_hit').value + ',' + E('_f_limit_sec').value;
@@ -224,6 +227,7 @@ function earlyInit() {
 <input type="hidden" name="_nextpage" value="nas-ftp.asp">
 <input type="hidden" name="_service" value="ftpd-restart">
 <input type="hidden" name="ftp_super">
+<input type="hidden" name="ftp_tls">
 <input type="hidden" name="log_ftp">
 <input type="hidden" name="ftp_users">
 <input type="hidden" name="ftp_sip">
@@ -235,20 +239,15 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable FTP Server', name: 'ftp_enable', type: 'select',
-				options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']],
-				value: nvram.ftp_enable },
+			{ title: 'Enable FTP Server', name: 'ftp_enable', type: 'select', options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']], value: nvram.ftp_enable },
+/* HTTPS-BEGIN */
+			{ title: 'TLS support', indent: 2, name: 'f_ftp_tls', type: 'checkbox', suffix: ' <small>uses router httpd cert/key<\/small>', value: nvram.ftp_tls == 1 },
+/* HTTPS-END */
 			{ title: 'FTP Port', indent: 2, name: 'ftp_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.ftp_port, 21) },
-			{ title: 'Allowed Remote<br>Address(es)', indent: 2, name: 'f_ftp_sip', type: 'text', maxlen: 512, size: 64, value: nvram.ftp_sip,
-				suffix: '<br><small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>' },
-			{ title: 'Anonymous Users Access', name: 'ftp_anonymous', type: 'select',
-				options: [['0', 'Disabled'],['1', 'Read/Write'],['2', 'Read Only'],['3', 'Write Only']],
-				value: nvram.ftp_anonymous },
-			{ title: 'Allow Admin Login*', name: 'f_ftp_super', type: 'checkbox',
-				suffix: ' <small>Allows users to connect with admin account.<\/small>',
-				value: nvram.ftp_super == 1 },
-			{ title: 'Log FTP requests and responses', name: 'f_log_ftp', type: 'checkbox',
-				value: nvram.log_ftp == 1 }
+			{ title: 'Allowed Remote<br>Address(es)', indent: 2, name: 'f_ftp_sip', type: 'text', maxlen: 512, size: 64, value: nvram.ftp_sip, suffix: '<br><small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>' },
+			{ title: 'Anonymous Users Access', name: 'ftp_anonymous', type: 'select', options: [['0', 'Disabled'],['1', 'Read/Write'],['2', 'Read Only'],['3', 'Write Only']], value: nvram.ftp_anonymous },
+			{ title: 'Allow Admin Login*', name: 'f_ftp_super', type: 'checkbox', suffix: ' <small>allows users to connect with admin account<\/small>', value: nvram.ftp_super == 1 },
+			{ title: 'Log FTP requests and responses', name: 'f_log_ftp', type: 'checkbox', value: nvram.log_ftp == 1 }
 		]);
 	</script>
 	<div><small>*&nbsp;Avoid using this option when FTP server is enabled for WAN. IT PROVIDES FULL ACCESS TO THE ROUTER FILE SYSTEM!</small></div>
@@ -260,19 +259,10 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Anonymous Root Directory*', name: 'ftp_anonroot', type: 'text', maxlen: 256, size: 32, 
-				suffix: ' <small>(for anonymous connections)<\/small>',
-				value: nvram.ftp_anonroot },
-			{ title: 'Public Root Directory*', name: 'ftp_pubroot', type: 'text', maxlen: 256, size: 32,
-				suffix: ' <small>(for authenticated users access, if not specified for the user)<\/small>',
-				value: nvram.ftp_pubroot },
-			{ title: 'Private Root Directory**', name: 'ftp_pvtroot', type: 'text', maxlen: 256, size: 32,
-				suffix: ' <small>(for authenticated users access in private mode)<\/small>',
-				value: nvram.ftp_pvtroot },
-			{ title: 'Directory Listings', name: 'ftp_dirlist', type: 'select',
-				options: [['0', 'Enabled'],['1', 'Disabled'],['2', 'Disabled for Anonymous']],
-				suffix: ' <small>(always enabled for Admin)<\/small>',
-				value: nvram.ftp_dirlist }
+			{ title: 'Anonymous Root Directory*', name: 'ftp_anonroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for anonymous connections)<\/small>', value: nvram.ftp_anonroot },
+			{ title: 'Public Root Directory*', name: 'ftp_pubroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for authenticated users access, if not specified for the user)<\/small>', value: nvram.ftp_pubroot },
+			{ title: 'Private Root Directory**', name: 'ftp_pvtroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for authenticated users access in private mode)<\/small>', value: nvram.ftp_pvtroot },
+			{ title: 'Directory Listings', name: 'ftp_dirlist', type: 'select', options: [['0', 'Enabled'],['1', 'Disabled'],['2', 'Disabled for Anonymous']], suffix: ' <small>(always enabled for Admin)<\/small>', value: nvram.ftp_dirlist }
 		]);
 	</script>
 	<div><small>*&nbsp;&nbsp;When no directory is specified, /mnt is used as a root directory.</small></div>
@@ -285,23 +275,12 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Maximum Users Allowed to Log in', name: 'ftp_max', type: 'text', maxlen: 5, size: 7,
-				suffix: ' <small>(0 - unlimited)<\/small>',
-				value: nvram.ftp_max },
-			{ title: 'Maximum Connections from the same IP', name: 'ftp_ipmax', type: 'text', maxlen: 5, size: 7,
-				suffix: ' <small>(0 - unlimited)<\/small>',
-				value: nvram.ftp_ipmax },
-			{ title: 'Maximum Bandwidth for Anonymous Users', name: 'ftp_anonrate', type: 'text', maxlen: 5, size: 7,
-				suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>',
-				value: nvram.ftp_anonrate },
-			{ title: 'Maximum Bandwidth for Authenticated Users', name: 'ftp_rate', type: 'text', maxlen: 5, size: 7,
-				suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>',
-				value: nvram.ftp_rate },
-			{ title: 'Idle Timeout', name: 'ftp_staytimeout', type: 'text', maxlen: 5, size: 7,
-				suffix: ' <small>seconds (0 - no timeout)<\/small>',
-				value: nvram.ftp_staytimeout },
-			{ title: 'Limit Connection Attempts', name: 'f_limit', type: 'checkbox',
-				value: ftplimit[0] != 0 },
+			{ title: 'Maximum Users Allowed to Log in', name: 'ftp_max', type: 'text', maxlen: 5, size: 7, suffix: ' <small>(0 - unlimited)<\/small>', value: nvram.ftp_max },
+			{ title: 'Maximum Connections from the same IP', name: 'ftp_ipmax', type: 'text', maxlen: 5, size: 7, suffix: ' <small>(0 - unlimited)<\/small>', value: nvram.ftp_ipmax },
+			{ title: 'Maximum Bandwidth for Anonymous Users', name: 'ftp_anonrate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>', value: nvram.ftp_anonrate },
+			{ title: 'Maximum Bandwidth for Authenticated Users', name: 'ftp_rate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>', value: nvram.ftp_rate },
+			{ title: 'Idle Timeout', name: 'ftp_staytimeout', type: 'text', maxlen: 5, size: 7, suffix: ' <small>seconds (0 - no timeout)<\/small>', value: nvram.ftp_staytimeout },
+			{ title: 'Limit Connection Attempts', name: 'f_limit', type: 'checkbox', value: ftplimit[0] != 0 },
 			{ title: '', indent: 2, multi: [
 				{ name: 'f_limit_hit', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>every<\/small> &nbsp;', value: ftplimit[1] },
 				{ name: 'f_limit_sec', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>seconds<\/small>', value: ftplimit[2] }
@@ -334,7 +313,6 @@ function earlyInit() {
 <div class="section-title">Notes</div>
 <div class="section">
 	<ul>
-		<li>FTP Server is SSL/TLS ready. See <a href="https://www.digitalocean.com/community/tutorials/how-to-configure-vsftpd-to-use-ssl-tls-on-an-ubuntu-vps" class="new_window"><b>here</b></a> for details (section 'Add the SSL Details to the vsftpd').</li>
 		<li>Don't use the same username as when logging into the web panel - it will be rejected until you select <br>'Allow Admin Login' (with all the consequences).</li>
 	</ul>
 </div>

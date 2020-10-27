@@ -2795,7 +2795,7 @@ static void addrconf_rs_timer(unsigned long data)
 	if (idev->dead || !(idev->if_flags & IF_READY))
 		goto out;
 
-	if (idev->cnf.forwarding)
+	if (!ipv6_accept_ra(idev))
 		goto out;
 
 	/* Announcement received after solicitation was sent */
@@ -2954,12 +2954,11 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 
 	ipv6_ifa_notify(RTM_NEWADDR, ifp);
 
-	/* If added prefix is link local and forwarding is off,
-	   start sending router solicitations.
+	/* If added prefix is link local and we are prepared to process
+	   router advertisements, start sending router solicitations.
 	 */
 
-	if ((ifp->idev->cnf.forwarding == 0 ||
-	     ifp->idev->cnf.forwarding == 2) &&
+	if (ipv6_accept_ra(ifp->idev) &&
 	    ifp->idev->cnf.rtr_solicits > 0 &&
 	    (dev->flags&IFF_LOOPBACK) == 0 &&
 	    (ipv6_addr_type(&ifp->addr) & IPV6_ADDR_LINKLOCAL)) {
