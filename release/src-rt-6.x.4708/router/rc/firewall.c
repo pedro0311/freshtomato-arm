@@ -854,6 +854,7 @@ static void nat_table(void)
 		) {
 			if (nvram_match("dns_intcpt", "1")) {
 				/* Need to intercept both TCP and UDP DNS requests for all lan interfaces */
+				modprobe("ipt_REDIRECT");
 				for (i = 0; i < BRIDGE_COUNT; i++) {
 					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
 						ipt_write("-A PREROUTING -p tcp -m tcp -i %s --dport 53 -j REDIRECT --to-port 53\n", lanface[i]);
@@ -864,6 +865,7 @@ static void nat_table(void)
 
 			/* NTP server redir */
 			if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
+				modprobe("ipt_REDIRECT");
 				for (i = 0; i < BRIDGE_COUNT; i++) {
 					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
 						ipt_write("-A PREROUTING -p tcp -m tcp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
