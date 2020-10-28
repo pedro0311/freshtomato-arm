@@ -2599,6 +2599,7 @@ static void stop_samba(void)
 	/* clean up */
 	unlink("/var/log/smb");
 	unlink("/var/log/nmb");
+	eval("rm", "-rf", "/var/log/cores");
 	eval("rm", "-rf", "/var/run/samba");
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
