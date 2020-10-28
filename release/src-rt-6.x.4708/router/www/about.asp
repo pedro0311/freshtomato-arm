@@ -77,14 +77,12 @@ function init() {
 	- NFS utils integration and GUI<br>
 <!-- NFS-END -->
 	- Custom log file path<br>
-<!-- LINUX26-BEGIN -->
 	- SD-idle tool integration for kernel 2.6<br>
 <!-- USB-BEGIN -->
 	- 3G Modem support (big thanks for @LDevil)<br>
 	- 4G/LTE Modem support<br>
 <!-- USB-END -->
 	- MutliWAN feature (written by @Arctic, modified by @Shibby)<br>
-<!-- LINUX26-END -->
 <!-- SNMP-BEGIN -->
 	- SNMP integration and GUI<br>
 <!-- SNMP-END -->

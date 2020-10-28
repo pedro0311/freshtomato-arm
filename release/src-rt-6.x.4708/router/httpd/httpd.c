@@ -614,6 +614,7 @@ static void erase_cert(void)
 {
 	unlink("/etc/cert.pem");
 	unlink("/etc/key.pem");
+	unlink("/etc/server.pem");
 	nvram_unset("https_crt_file");
 	nvram_unset("https_crt_gen");
 }
@@ -635,6 +636,7 @@ static void start_ssl(void)
 			if (save && nvram_match("crt_ver", HTTPS_CRT_VER)) {
 				if (nvram_get_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
 					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0) {
+						system("cat /etc/key.pem /etc/cert.pem > /etc/server.pem");
 						ok = 1;
 					}
 					unlink("/tmp/cert.tgz");

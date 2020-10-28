@@ -539,6 +539,8 @@ static const nvset_t nvset_list[] = {
 	{ "tm_dst",			V_01				},
 	{ "ntp_updates",		V_RANGE(-1, 24)			},
 	{ "ntp_server",			V_LENGTH(1, 150)		},	// x y z
+	{ "ntpd_enable",		V_01				},	/* enable ntpd server */
+	{ "ntpd_server_redir",		V_01				},	/* intercept ntp requests */
 
 // basic-static
 	{ "dhcpd_static",		V_LENGTH(0, 108*251)		},	// 108 (max chars per entry) x 250 entries
@@ -1348,6 +1350,7 @@ static const nvset_t nvset_list[] = {
 	{ "ftp_custom",			V_TEXT(0, 2048)			},
 	{ "ftp_sip",			V_LENGTH(0, 512)		},
 	{ "ftp_limit",			V_TEXT(1, 50)			},
+	{ "ftp_tls",			V_01				},	/* support for basic ftp_tls */
 	{ "log_ftp",			V_01				},
 #endif
 

@@ -57,6 +57,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	symlink("/dev/null", "/tmp/ppp/connect-errors");
 	symlink("/sbin/rc", "/tmp/ppp/ip-up");
 	symlink("/sbin/rc", "/tmp/ppp/ip-down");
+	symlink("/sbin/rc", "/tmp/ppp/ip-pre-up");
 #ifdef TCONFIG_IPV6
 	symlink("/sbin/rc", "/tmp/ppp/ipv6-up");
 	symlink("/sbin/rc", "/tmp/ppp/ipv6-down");
@@ -234,11 +235,14 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	}
 
 #ifdef TCONFIG_IPV6
-	switch (get_ipv6_service()) {
-	case IPV6_NATIVE:
-	case IPV6_NATIVE_DHCP:
-		fprintf(fp, "+ipv6\n");
-		break;
+	/* start/add IPv6 BUT only for "wan" (no multiwan support) */
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		switch (get_ipv6_service()) {
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			fprintf(fp, "+ipv6\n");
+			break;
+		}
 	}
 #endif
 	/* User specific options */
@@ -265,6 +269,7 @@ static void stop_ppp(char *prefix)
 
 	/* Race condition on start_pppoe in ip-up on boot, primary pp(poe/tp) wan will not reach start_wan_done on secondary ppp(oe/3g) start */
 	//killall_tk_period_wait("ip-up", 50);
+	//killall_tk_period_wait("ip-pre-up", 50);
 	//killall_tk_period_wait("ip-down", 50);
 #ifdef TCONFIG_IPV6
 	//killall_tk_period_wait("ipv6-up", 50);
@@ -1003,6 +1008,8 @@ void stop_wan6(void)
 	stop_dhcp6c();
 
 	nvram_set("ipv6_get_dns", ""); /* clear dns */
+
+	dns_to_resolv();
 }
 #endif /* #ifdef TCONFIG_IPV6 */
 
@@ -1075,10 +1082,20 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	/* And routes supplied via DHCP */
 	do_wan_routes((using_dhcpc(prefix) ? nvram_safe_get(strcat_r(prefix, "_ifname",tmp)) : wan_ifname), 0, 1, prefix);
 
-	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
 #ifdef TCONFIG_IPV6
+	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
 	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
-		start_wan6(get_wan6face());
+		switch (get_ipv6_service()) {
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			if (strncmp(wan_ifname, "ppp", 3) == 0) { /* check for pppx */
+				break;
+			}
+			/* fall through */
+		default:
+			start_wan6(get_wan6face());
+			break;
+		}
 	}
 #endif
 
