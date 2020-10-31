@@ -62,7 +62,11 @@
 #define MEDIA_SERVER_APP	"minidlna"
 #endif
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-#define dnslog(level, x...) if (nvram_get_int("dns_debug") >= level) syslog(level, x)
+#define dnslog(level, x...) \
+	{ \
+	if (nvram_get_int("dns_debug") >= level) syslog(level, x); \
+	else if (level == LOG_INFO) syslog(level, x); \
+	}
 #else
 #define dnslog(level, x...) do { } while(0)
 #endif
@@ -788,7 +792,7 @@ void dns_to_resolv(void)
 #endif
 				);
 
-			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
+			dnslog(LOG_DEBUG, "*** exclusive: %d", exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
 				if ((write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0) || (nvram_get_int("dns_addget")))
@@ -1872,7 +1876,7 @@ void start_ntpd(void)
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
 		if ((servers = malloc(servers_len + 1)) == NULL) {
-			dnslog(LOG_DEBUG, "ntpd: failed allocating memory, exiting");
+			dnslog(LOG_INFO, "ntpd: failed allocating memory, exiting");
 			return; /* just get out if we couldn't allocate memory */
 		}
 		memset(servers, 0, sizeof(servers));
@@ -1938,7 +1942,7 @@ static void stop_rstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "rstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			dnslog(LOG_DEBUG, "*** rstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1947,7 +1951,7 @@ static void stop_rstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_DEBUG, "rstats stopped");
+		dnslog(LOG_INFO, "rstats stopped");
 }
 
 static void start_rstats(int new)
@@ -1955,11 +1959,11 @@ static void start_rstats(int new)
 	if (nvram_get_int("rstats_enable")) {
 		stop_rstats();
 		if (new) {
-			dnslog(LOG_DEBUG, "starting rstats (new datafile)");
+			dnslog(LOG_INFO, "starting rstats (new datafile)");
 			xstart("rstats", "--new");
 		}
 		else {
-			dnslog(LOG_DEBUG, "starting rstats");
+			dnslog(LOG_INFO, "starting rstats");
 			xstart("rstats");
 		}
 	}
@@ -1983,7 +1987,7 @@ static void stop_cstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "cstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			dnslog(LOG_DEBUG, "*** cstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1992,7 +1996,7 @@ static void stop_cstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_DEBUG, "cstats stopped");
+		dnslog(LOG_INFO, "cstats stopped");
 }
 
 static void start_cstats(int new)
@@ -2000,11 +2004,11 @@ static void start_cstats(int new)
 	if (nvram_get_int("cstats_enable")) {
 		stop_cstats();
 		if (new) {
-			dnslog(LOG_DEBUG, "starting cstats (new datafile)");
+			dnslog(LOG_INFO, "starting cstats (new datafile)");
 			xstart("cstats", "--new");
 		}
 		else {
-			dnslog(LOG_DEBUG, "starting cstats");
+			dnslog(LOG_INFO, "starting cstats");
 			xstart("cstats");
 		}
 	}
@@ -2592,9 +2596,12 @@ static void stop_samba(void)
 
 	stop_wsdd();
 	kill_samba(SIGTERM);
+
 	/* clean up */
-	unlink("/var/log/smb");
-	unlink("/var/log/nmb");
+	unlink("/var/log/log.smb");
+	unlink("/var/log/log.nmb");
+	eval("rm", "-rf", "/var/nmbd");
+	eval("rm", "-rf", "/var/log/cores");
 	eval("rm", "-rf", "/var/run/samba");
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
@@ -2836,7 +2843,7 @@ static void _check(pid_t pid, const char *name, void (*func)(void))
 	if (pidof(name) > 0)
 		return;
 
-	dnslog(LOG_DEBUG, "%s terminated unexpectedly, restarting", name);
+	dnslog(LOG_DEBUG, "*** %s terminated unexpectedly, restarting", name);
 	func();
 
 	/* force recheck in 500 msec */

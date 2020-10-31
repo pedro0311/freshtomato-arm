@@ -5071,8 +5071,6 @@ int init_main(int argc, char *argv[])
 	state = SIGUSR2;	/* START */
 
 	for (;;) {
-		TRACE_PT("main loop signal/state=%d\n", state);
-
 		switch (state) {
 		case SIGUSR1:		/* USER1: service handler */
 			exec_service();
