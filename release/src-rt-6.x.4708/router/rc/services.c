@@ -2598,8 +2598,8 @@ static void stop_samba(void)
 	kill_samba(SIGTERM);
 
 	/* clean up */
-	unlink("/var/log/log.smb");
-	unlink("/var/log/log.nmb");
+	unlink("/var/log/log.smbd");
+	unlink("/var/log/log.nmbd");
 	eval("rm", "-rf", "/var/nmbd");
 	eval("rm", "-rf", "/var/log/cores");
 	eval("rm", "-rf", "/var/run/samba");
