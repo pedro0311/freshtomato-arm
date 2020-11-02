@@ -2596,9 +2596,11 @@ static void stop_samba(void)
 
 	stop_wsdd();
 	kill_samba(SIGTERM);
+
 	/* clean up */
-	unlink("/var/log/smb");
-	unlink("/var/log/nmb");
+	unlink("/var/log/log.smb");
+	unlink("/var/log/log.nmb");
+	eval("rm", "-rf", "/var/nmbd");
 	eval("rm", "-rf", "/var/log/cores");
 	eval("rm", "-rf", "/var/run/samba");
 

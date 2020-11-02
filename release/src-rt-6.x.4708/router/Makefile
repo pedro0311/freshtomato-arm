@@ -3097,7 +3097,7 @@ diskdev_cmds-332.25-clean:
 %-distclean:
 	@-[ ! -d $* ] || $(MAKE) -C $* distclean
 
-%-install: %
+%-install:
 	@[ ! -d $* ] || $(MAKE) -C $* install INSTALLDIR=$(INSTALLDIR)/$*
 
 %-build:
