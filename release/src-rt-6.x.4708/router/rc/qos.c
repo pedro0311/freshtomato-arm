@@ -21,9 +21,11 @@ QOS rules on incoming data.
 
 */
 
+
 #include "rc.h"
 
 #include <sys/stat.h>
+
 
 // in mangle table
 void ipt_qos(void)

@@ -28,6 +28,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <sys/sysinfo.h>
@@ -37,7 +38,10 @@
 
 
 /* ref: http://wiki.openwrt.org/OpenWrtDocs/nas */
-//#define DEBUG_TIMING
+// #define DEBUG_TIMING
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"wnas_debug"
 
 
 void notify_nas(const char *ifname);
@@ -57,7 +61,8 @@ int wds_enable(void)
 	return foreach_wif(1, NULL, is_wds);
 }
 
-int wl_security_on(void) {
+int wl_security_on(void)
+{
 	return foreach_wif(1, NULL, security_on);
 }
 
@@ -72,11 +77,9 @@ void start_nas(void)
 #ifdef DEBUG_TIMING
 	struct sysinfo si;
 	sysinfo(&si);
-	_dprintf("%s: uptime=%ld\n", __FUNCTION__, si.uptime);
+	logmsg(LOG_DEBUG, "*** %s: uptime=%ld", __FUNCTION__, si.uptime);
 #else
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-	_dprintf("%s\n", __FUNCTION__);
-#endif
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 #endif	/* DEBUG_TIMING */
 
 	stop_nas();
@@ -113,11 +116,9 @@ void stop_nas(void)
 #ifdef DEBUG_TIMING
 	struct sysinfo si;
 	sysinfo(&si);
-	_dprintf("%s: uptime=%ld\n", __FUNCTION__, si.uptime);
+	logmsg(LOG_DEBUG, "*** %s: uptime=%ld", __FUNCTION__, si.uptime);
 #else
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-	_dprintf("%s\n", __FUNCTION__);
-#endif
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 #endif	/* DEBUG_TIMING */
 
 	killall_tk_period_wait("nas", 50);
@@ -129,18 +130,12 @@ void notify_nas(const char *ifname)
 #ifdef DEBUG_TIMING
 	struct sysinfo si;
 	sysinfo(&si);
-	_dprintf("%s: ifname=%s uptime=%ld\n", __FUNCTION__, ifname, si.uptime);
+	logmsg(LOG_DEBUG, "*** %s: ifname=%s uptime=%ld", __FUNCTION__, ifname, si.uptime);
 #else
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-	_dprintf("%s: ifname=%s\n", __FUNCTION__, ifname);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: ifname=%s", __FUNCTION__, ifname);
 #endif	/* DEBUG_TIMING */
 
 	/* Inform driver to send up new WDS link event */
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (wl_iovar_setint((char *)ifname, "wds_enable", 1))
-		_dprintf("%s: set wds_enable failed\n", ifname);
-#else
-	wl_iovar_setint((char *)ifname, "wds_enable", 1);
-#endif
+		logmsg(LOG_DEBUG, "*** %s: %s - set wds_enable failed", __FUNCTION__, ifname);
 }

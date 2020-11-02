@@ -5,6 +5,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <stdarg.h>
@@ -17,9 +18,10 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
-//#define llog(args...) syslog(LOG_DEBUG, args)
-#define mlog(fmt, args...) _dprintf(fmt"\n", args)
 #define MAX_XSTART_ARGC 16
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"misc_debug"
 
 
 void usage_exit(const char *cmd, const char *help)
@@ -75,7 +77,7 @@ int _xstart(const char *cmd, ...)
 	va_start(ap, cmd);
 	while ((argv[argc++] = va_arg(ap, char *)) != NULL) {
 		if (argc >= MAX_XSTART_ARGC) {
-			mlog("%s: too many parameters", __FUNCTION__);
+			logmsg(LOG_DEBUG, "*** %s: too many parameters", __FUNCTION__);
 			break;
 		}
 	}
@@ -115,7 +117,7 @@ static void execute_with_maxwait(char *const argv[], int wtime)
 
 			sleep(1);
 		}
-		mlog("%s killdon:   errno: %d    pid %d", argv[0], errno, pid);
+		logmsg(LOG_DEBUG, "*** %s: %s killdon: errno: %d pid: %d", __FUNCTION__, argv[0], errno, pid);
 	}
 }
 
@@ -218,7 +220,7 @@ void run_nvscript(const char *nv, const char *arg1, int wtime)
 				chmod(s, 0700);
 				chdir("/tmp");
 
-				mlog("Running: '%s %s'", argv[0], (argv[1] ? argv[1]: ""));
+				logmsg(LOG_DEBUG, "*** %s: running: '%s %s'", __FUNCTION__, argv[0], (argv[1] ? argv[1]: ""));
 				execute_with_maxwait(argv, wtime);
 				chdir("/");
 			}
@@ -239,7 +241,7 @@ void run_nvscript(const char *nv, const char *arg1, int wtime)
 		check_dirs = 0;
 
 	if ((check_dirs) && strcmp(s, ".") != 0) {
-		mlog("checking for user scripts: '%s'", s);
+		logmsg(LOG_DEBUG, "*** %s: checking for user scripts: '%s'", __FUNCTION__, s);
 		run_userfile("/etc/config", s, arg1, wtime);
 		run_userfile("/jffs/etc/config", s, arg1, wtime);
 		run_userfile("/opt/etc/config", s, arg1, wtime);
@@ -490,7 +492,7 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 	int j;
 
 	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		mlog("%s: %s %d", ifname, __FUNCTION__, __LINE__);
+		logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 		return;
 	}
 
@@ -501,11 +503,11 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 		if ((up = ifr.ifr_flags & IFF_UP) != 0) {
 			ifr.ifr_flags &= ~IFF_UP;
 			if (ioctl(sfd, SIOCSIFFLAGS, &ifr) != 0)
-				mlog("%s: %s %d", ifname, __FUNCTION__, __LINE__);
+				logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 		}
 	}
 	else
-		mlog("%s: %s %d", ifname, __FUNCTION__, __LINE__);
+		logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 
 	if (!ether_atoe(nvram_safe_get(nvname), (unsigned char *)&ifr.ifr_hwaddr.sa_data)) {
 		if (!ether_atoe(nvram_safe_get("et0macaddr"), (unsigned char *)&ifr.ifr_hwaddr.sa_data)) {
@@ -530,16 +532,16 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	if (ioctl(sfd, SIOCSIFHWADDR, &ifr) == -1)
-		mlog("Error setting %s address", ifname);
+		logmsg(LOG_DEBUG, "*** %s: error setting %s address", __FUNCTION__, ifname);
 
 	if (up) {
 		if (ioctl(sfd, SIOCGIFFLAGS, &ifr) == 0) {
 			ifr.ifr_flags |= IFF_UP|IFF_RUNNING;
 			if (ioctl(sfd, SIOCSIFFLAGS, &ifr) == -1)
-				mlog("%s: %s %d", ifname, __FUNCTION__, __LINE__);
+				logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 		}
 		else
-			mlog("%s: %s %d", ifname, __FUNCTION__, __LINE__);
+			logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 	}
 
 	close(sfd);
@@ -581,9 +583,7 @@ void simple_lock(const char *name)
 	snprintf(fn, sizeof(fn), "/var/lock/%s.lock", name);
 	while (unlink(fn) != 0) {
 		if (--n == 0) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			syslog(LOG_DEBUG, "Breaking %s", fn);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: breaking %s", __FUNCTION__, fn);
 			break;
 		}
 		sleep(1);
@@ -597,13 +597,13 @@ void killall_tk_period_wait(const char *name, int wait)
 	if (killall(name, SIGTERM) == 0) {
 		n = wait;
 		while ((killall(name, 0) == 0) && (n-- > 0)) {
-			//mlog("%s: waiting name=%s n=%d", __FUNCTION__, name, n);
+			logmsg(LOG_DEBUG, "*** %s: waiting name=%s n=%d", __FUNCTION__, name, n);
 			sleep(1);
 		}
 		if (n < 0) {
 			n = wait;
 			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
-				//mlog("%s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
+				logmsg(LOG_DEBUG, "*** %s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
 				sleep(1);
 			}
 		}

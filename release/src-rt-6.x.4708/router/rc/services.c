@@ -61,16 +61,10 @@
 #ifdef TCONFIG_MEDIA_SERVER
 #define MEDIA_SERVER_APP	"minidlna"
 #endif
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-#define dnslog(level, x...) \
-	{ \
-	if (nvram_get_int("dns_debug") >= level) syslog(level, x); \
-	else if (level == LOG_INFO) syslog(level, x); \
-	}
-#else
-#define dnslog(level, x...) do { } while(0)
-#endif
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"services_debug"
 
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
@@ -79,9 +73,9 @@ static const struct itimerval zombie_tv = { {0, 0}, {307, 0} };
 static const char dmdir[] = "/etc/dnsmasq";
 static const char dmresolv[] = "/etc/resolv.dnsmasq";
 #ifdef TCONFIG_FTP
-char vsftpd_conf[] =  "/etc/vsftpd.conf";
-char vsftpd_users[] = "/etc/vsftpd.users";
-char vsftpd_passwd[] = "/etc/vsftpd.passwd";
+static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
+static const char vsftpd_passwd[] = "/etc/vsftpd.passwd";
+static char vsftpd_users[] = "/etc/vsftpd.users";
 #endif
 static pid_t pid_dnsmasq = -1;
 static pid_t pid_crond = -1;
@@ -133,7 +127,7 @@ void start_dnsmasq()
 	char dhcpN_lease[] = "dhcpXX_lease";
 
 	if (foreach_wif(1, NULL, is_wet)) {
-		dnslog(LOG_INFO, "Starting dnsmasq is skipped due to the WEB mode enabled");
+		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
 		return;
 	}
 
@@ -663,7 +657,7 @@ void reload_dnsmasq(void)
 
 void clear_resolv(void)
 {
-	dnslog(LOG_DEBUG, "*** clear_resolv, clear all DNS entries");
+	logmsg(LOG_DEBUG, "*** %s: clear all DNS entries", __FUNCTION__);
 	f_write(dmresolv, NULL, 0, 0, 0); /* blank */
 }
 
@@ -775,11 +769,11 @@ void dns_to_resolv(void)
 		    get_wanx_proto(wan_prefix) != WP_L2TP &&
 		    !nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))
 		{
-			dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD", wan_prefix, get_wanx_proto(wan_prefix));
+			logmsg(LOG_DEBUG, "*** %s: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD", __FUNCTION__, wan_prefix, get_wanx_proto(wan_prefix));
 			continue;
 		}
 		else {
-			dnslog(LOG_DEBUG, "*** dns_to_resolv: %s (proto:%d) is OK to ADD", wan_prefix, get_wanx_proto(wan_prefix));
+			logmsg(LOG_DEBUG, "*** %s: %s (proto:%d) is OK to ADD", __FUNCTION__, wan_prefix, get_wanx_proto(wan_prefix));
 			append++;
 		}
 		m = umask(022); /* 077 from pppoecd */
@@ -792,7 +786,7 @@ void dns_to_resolv(void)
 #endif
 				);
 
-			dnslog(LOG_DEBUG, "*** exclusive: %d", exclusive);
+			logmsg(LOG_DEBUG, "*** %s: exclusive: %d", __FUNCTION__, exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
 				if ((write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0) || (nvram_get_int("dns_addget")))
@@ -816,7 +810,7 @@ void dns_to_resolv(void)
 								 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
 								 */
 								trig_ip = nvram_safe_get(strcat_r(wan_prefix, "_ppp_demand_dnsip", tmp));
-								dnslog(LOG_DEBUG, "*** dns_to_resolv: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", wan_prefix, trig_ip);
+								logmsg(LOG_DEBUG, "*** %s: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", __FUNCTION__, wan_prefix, trig_ip);
 								fprintf(f, "nameserver %s\n", trig_ip);
 								break;
 						}
@@ -827,7 +821,7 @@ void dns_to_resolv(void)
 					for (i = 0; i < dns->count; i++) {
 						if (dns->dns[i].port == 53) { /* resolv.conf doesn't allow for an alternate port */
 							fprintf(f, "nameserver %s\n", inet_ntoa(dns->dns[i].addr));
-							dnslog(LOG_DEBUG, "*** dns_to_resolv, %s DNS %s to %s [%s]", ((append == 1) ? "write" : "append"), inet_ntoa(dns->dns[i].addr), dmresolv, wan_prefix);
+							logmsg(LOG_DEBUG, "*** %s: %s DNS %s to %s [%s]", ((append == 1) ? "write" : "append"), __FUNCTION__, inet_ntoa(dns->dns[i].addr), dmresolv, wan_prefix);
 						}
 					}
 				}
@@ -1003,46 +997,46 @@ void start_6rd_tunnel(void)
 
 	/* maybe we can merge the ipv6_6rd_* variables into a single ipv_6rd_string (ala wan_6rd) to save nvram space? */
 	if (service == IPV6_6RD) {
-		_dprintf("starting 6rd tunnel using manual settings\n");
+		logmsg(LOG_DEBUG, "*** %s: starting 6rd tunnel using manual settings", __FUNCTION__);
 		mask_len = nvram_get_int("ipv6_6rd_ipv4masklen");
 		prefix_len = nvram_get_int("ipv6_6rd_prefix_length");
 		strcpy(prefix, nvram_safe_get("ipv6_6rd_prefix"));
 		strcpy(relay, nvram_safe_get("ipv6_6rd_borderrelay"));
 	}
 	else {
-		_dprintf("starting 6rd tunnel using automatic settings\n");
+		logmsg(LOG_DEBUG, "*** %s: starting 6rd tunnel using automatic settings", __FUNCTION__);
 		char *wan_6rd = nvram_safe_get("wan_6rd");
 		if (sscanf(wan_6rd, "%d %d %s %s", &mask_len,  &prefix_len, prefix, relay) < 4) {
-			_dprintf("wan_6rd string is missing or invalid (%s)\n", wan_6rd);
+			logmsg(LOG_DEBUG, "*** %s: wan_6rd string is missing or invalid (%s)", __FUNCTION__, wan_6rd);
 			return;
 		}
 	}
 
 	/* validate values that were passed */
 	if ((mask_len < 0) || (mask_len > 32)) {
-		_dprintf("invalid mask_len value (%d)\n", mask_len);
+		logmsg(LOG_DEBUG, "*** %s: invalid mask_len value (%d)", __FUNCTION__, mask_len);
 		return;
 	}
 	if ((prefix_len < 0) || (prefix_len > 128)) {
-		_dprintf("invalid prefix_len value (%d)\n", prefix_len);
+		logmsg(LOG_DEBUG, "*** %s: invalid prefix_len value (%d)", __FUNCTION__, prefix_len);
 		return;
 	}
 	if (((32 - mask_len) + prefix_len) > 128) {
-		_dprintf("invalid combination of mask_len and prefix_len!\n");
+		logmsg(LOG_DEBUG, "*** %s: invalid combination of mask_len and prefix_len!", __FUNCTION__);
 		return;
 	}
 
 	memset(tmp, 0, 256);
 	sprintf(tmp, "ping -q -c 2 %s | grep packet", relay);
 	if ((f = popen(tmp, "r")) == NULL) {
-		_dprintf("error obtaining data\n");
+		logmsg(LOG_DEBUG, "*** %s: error obtaining data", __FUNCTION__);
 		return;
 	}
 	fgets(tmp, sizeof(tmp), f);
 	pclose(f);
 
 	if (strstr(tmp, " 0% packet loss") == NULL) {
-		_dprintf("failed to ping border relay\n");
+		logmsg(LOG_DEBUG, "*** %s: failed to ping border relay", __FUNCTION__);
 		return;
 	}
 
@@ -1055,7 +1049,7 @@ void start_6rd_tunnel(void)
 	inet_pton(AF_INET6, prefix, &prefix_addr);
 	inet_pton(AF_INET, wanip, &wanip_addr);
 	if (calc_6rd_local_prefix(&prefix_addr, prefix_len, mask_len, &wanip_addr, &local_prefix_addr, &local_prefix_len) == 0) {
-		_dprintf("error calculating local prefix\n");
+		logmsg(LOG_DEBUG, "*** %s: error calculating local prefix", __FUNCTION__);
 		return;
 	}
 	inet_ntop(AF_INET6, &local_prefix_addr, local_prefix, sizeof(local_prefix));
@@ -1673,21 +1667,21 @@ void start_igmp_proxy(void)
 								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
 								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
 								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								dnslog(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s", igmp_buffer);
+								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s", igmp_buffer);
 							}
 
 							if (((nv = nvram_get("multicast_altnet_2")) != NULL) && (*nv)) {
 								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
 								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
 								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								dnslog(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s", igmp_buffer);
+								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s", igmp_buffer);
 							}
 
 							if (((nv = nvram_get("multicast_altnet_3")) != NULL) && (*nv)) {
 								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
 								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
 								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								dnslog(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s", igmp_buffer);
+								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s", igmp_buffer);
 							}
 						}
 						else
@@ -1735,12 +1729,10 @@ void start_igmp_proxy(void)
 		if (!nvram_contains_word("debug_norestart", "igmprt"))
 			pid_igmp = -2;
 
-		if (ret) {
-			dnslog(LOG_INFO, "starting igmpproxy failed ...");
-		}
-		else {
-			dnslog(LOG_INFO, "igmpproxy is started");
-		}
+		if (ret)
+			logmsg(LOG_ERR, "starting igmpproxy failed ...");
+		else
+			logmsg(LOG_INFO, "igmpproxy is started");
 	}
 }
 
@@ -1749,7 +1741,7 @@ void stop_igmp_proxy(void)
 	pid_igmp = -1;
 	killall_tk_period_wait("igmpproxy", 50);
 
-	dnslog(LOG_INFO, "igmpproxy is stopped");
+	logmsg(LOG_INFO, "igmpproxy is stopped");
 }
 
 void start_udpxy(void)
@@ -1876,7 +1868,7 @@ void start_ntpd(void)
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
 		if ((servers = malloc(servers_len + 1)) == NULL) {
-			dnslog(LOG_INFO, "ntpd: failed allocating memory, exiting");
+			logmsg(LOG_ERR, "ntpd: failed allocating memory, exiting");
 			return; /* just get out if we couldn't allocate memory */
 		}
 		memset(servers, 0, sizeof(servers));
@@ -1909,7 +1901,7 @@ void start_ntpd(void)
 				ret = xstart("ntpd");
 
 			if (!ret)
-				dnslog(LOG_INFO, "ntpd is started");
+				logmsg(LOG_INFO, "ntpd is started");
 		}
 	}
 }
@@ -1942,7 +1934,7 @@ static void stop_rstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "*** rstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1951,7 +1943,7 @@ static void stop_rstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_INFO, "rstats stopped");
+		logmsg(LOG_INFO, "rstats stopped");
 }
 
 static void start_rstats(int new)
@@ -1959,11 +1951,11 @@ static void start_rstats(int new)
 	if (nvram_get_int("rstats_enable")) {
 		stop_rstats();
 		if (new) {
-			dnslog(LOG_INFO, "starting rstats (new datafile)");
+			logmsg(LOG_INFO, "starting rstats (new datafile)");
 			xstart("rstats", "--new");
 		}
 		else {
-			dnslog(LOG_INFO, "starting rstats");
+			logmsg(LOG_INFO, "starting rstats");
 			xstart("rstats");
 		}
 	}
@@ -1987,7 +1979,7 @@ static void stop_cstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "*** cstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1996,7 +1988,7 @@ static void stop_cstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_INFO, "cstats stopped");
+		logmsg(LOG_INFO, "cstats stopped");
 }
 
 static void start_cstats(int new)
@@ -2004,11 +1996,11 @@ static void start_cstats(int new)
 	if (nvram_get_int("cstats_enable")) {
 		stop_cstats();
 		if (new) {
-			dnslog(LOG_INFO, "starting cstats (new datafile)");
+			logmsg(LOG_INFO, "starting cstats (new datafile)");
 			xstart("cstats", "--new");
 		}
 		else {
-			dnslog(LOG_INFO, "starting cstats");
+			logmsg(LOG_INFO, "starting cstats");
 			xstart("cstats");
 		}
 	}
@@ -2271,12 +2263,10 @@ static void start_ftpd(void)
 		int ret = 0;
 
 		ret = xstart("vsftpd");
-		if (ret) {
-			dnslog(LOG_INFO, "starting vsftpd failed ...");
-		}
-		else {
-			dnslog(LOG_INFO, "vsftpd is started");
-		}
+		if (ret)
+			logmsg(LOG_ERR, "starting vsftpd failed ...");
+		else
+			logmsg(LOG_INFO, "vsftpd is started");
 	}
 }
 
@@ -2292,7 +2282,7 @@ static void stop_ftpd(void)
 	unlink(vsftpd_conf);
 	eval("rm", "-rf", vsftpd_users);
 
-	dnslog(LOG_INFO, "vsftpd is stopped");
+	logmsg(LOG_INFO, "vsftpd is stopped");
 }
 #endif /* TCONFIG_FTP */
 
@@ -2579,11 +2569,11 @@ static void start_samba(void)
 
 	if (ret1 || ret2) {
 		kill_samba(SIGTERM);
-		dnslog(LOG_INFO, "starting Samba daemon failed ...");
+		logmsg(LOG_ERR, "starting Samba daemon failed ...");
 	}
 	else {
 		start_wsdd();
-		dnslog(LOG_INFO, "Samba daemon is started");
+		logmsg(LOG_INFO, "Samba daemon is started");
 	}
 }
 
@@ -2608,7 +2598,7 @@ static void stop_samba(void)
 	enable_gro(0);
 #endif
 
-	dnslog(LOG_INFO, "Samba daemon is stopped");
+	logmsg(LOG_INFO, "Samba daemon is stopped");
 }
 
 void start_wsdd()
@@ -2757,12 +2747,12 @@ static void start_media_server(void)
 			if (pidof(MEDIA_SERVER_APP) > 0)
 				once = 0;
 			else {
-				dnslog(LOG_INFO, "starting "MEDIA_SERVER_APP" failed ...");
+				logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
 				return;
 			}
 		}
 	}
-	dnslog(LOG_INFO, MEDIA_SERVER_APP" is started");
+	logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
 }
 
 static void stop_media_server(void)
@@ -2774,7 +2764,7 @@ static void stop_media_server(void)
 
 	killall_tk_period_wait(MEDIA_SERVER_APP, 50);
 
-	dnslog(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+	logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
 }
 #endif /* TCONFIG_MEDIA_SERVER */
 
@@ -2843,7 +2833,7 @@ static void _check(pid_t pid, const char *name, void (*func)(void))
 	if (pidof(name) > 0)
 		return;
 
-	dnslog(LOG_DEBUG, "*** %s terminated unexpectedly, restarting", name);
+	logmsg(LOG_ERR, "%s terminated unexpectedly, restarting", name);
 	func();
 
 	/* force recheck in 500 msec */

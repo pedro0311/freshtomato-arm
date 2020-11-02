@@ -4,7 +4,9 @@
  * updated: 2020 by pedro
  */
 
+
 #include "rc.h"
+
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -50,9 +52,7 @@ void start_pptp_client(void)
 	ok |= symlink("/sbin/rc", PPTPC_UP_SCRIPT);
 	ok |= symlink("/sbin/rc", PPTPC_DOWN_SCRIPT);
 	if (ok) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
 		syslog(LOG_WARNING, "Creating symlink failed...");
-#endif
 		stop_pptp_client();
 		return;
 	}
@@ -172,18 +172,14 @@ void start_pptp_client(void)
 
 		for (argv[argc = 0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 		if (_eval(argv, NULL, 0, NULL)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
 			syslog(LOG_WARNING, "Creating pptp tunnel failed...");
-#endif
 			stop_pptp_client();
 			return;
 		}
 		f_write(PPTPC_CLIENT"_connecting", NULL, 0, 0, 0);
 	}
 	else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
 		syslog(LOG_WARNING, "Found error in configuration - aborting...");
-#endif
 		stop_pptp_client();
 	}
 }
