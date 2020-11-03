@@ -843,7 +843,7 @@ void start_qos(char *prefix)
 			"\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst 0.0.0.0/0");
 #ifdef TCONFIG_IPV6
 			fprintf(f,
-			"\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ipv6 %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
+			"\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $IFB_DEV\n", (nvram_get_int("qos_udp") == 1) ? "protocol 6 0xff" : "dst ::/0");
 #endif
 		}
 		
