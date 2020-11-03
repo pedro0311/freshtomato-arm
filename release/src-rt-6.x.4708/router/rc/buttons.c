@@ -4,6 +4,8 @@
 	Copyright (C) 2006-2009 Jonathan Zarate
 
 */
+
+
 #include "rc.h"
 
 #include <sys/reboot.h>
@@ -13,6 +15,7 @@
 //	#define DEBUG_TEST
 
 static int gf;
+
 
 static int get_btn(const char *name, uint32_t *bit, uint32_t *pushed)
 {

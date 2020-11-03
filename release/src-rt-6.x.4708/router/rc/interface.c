@@ -13,6 +13,8 @@
  */
 
 
+#include "rc.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -36,7 +38,9 @@
 #include <bcmdevs.h>
 #include <shared.h>
 
-#include "rc.h"
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"interface_debug"
 
 
 int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr)
@@ -45,7 +49,7 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 	struct ifreq ifr;
 	struct in_addr in_addr, in_netmask, in_broadaddr;
 
-	_dprintf("%s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
+	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
 
 	/* open a raw socket to the kernel */
 	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
@@ -107,7 +111,7 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 	int s;
 	struct rtentry rt;
 
-	_dprintf("%s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
+	logmsg(LOG_DEBUG, "*** %s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
 
 	/* open a raw socket to the kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0)

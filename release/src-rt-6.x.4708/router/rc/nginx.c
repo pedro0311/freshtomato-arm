@@ -9,8 +9,10 @@
 	 * This code generates the configurations files for NGINX. You can see these files in /etc/nginx/
 */
 
+
+#include "rc.h"
+
 #include <stdlib.h>
-#include <rc.h>
 #include <shutils.h>
 #include <utils.h>
 #include <syslog.h>

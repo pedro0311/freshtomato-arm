@@ -6,8 +6,8 @@
 */
 
 #include "rc.h"
-#include <time.h>
 
+#include <time.h>
 
 #define MAX_NRULES	50
 
@@ -182,7 +182,6 @@ int rcheck_main(int argc, char *argv[])
 		nvram_set("rrules_radio", radio ? "0" : "1");
 
 		/* dual radio support */
-		_dprintf("%s: radio = %d\n", __FUNCTION__, radio);
 		eval("radio", radio ? "on" : "off");
 	}
 

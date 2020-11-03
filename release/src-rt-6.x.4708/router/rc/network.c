@@ -40,7 +40,8 @@
 
 */
 
-#include <rc.h>
+
+#include "rc.h"
 
 #ifndef UU_INT
 typedef u_int64_t u64;
@@ -81,6 +82,10 @@ typedef u_int8_t u8;
 				 (phy) == PHY_TYPE_AC ? "v" : \
 				 (phy) == PHY_TYPE_LCN ? "c" : "n")
 #endif
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"network_debug"
 
 
 void restart_wl(void);
@@ -382,10 +387,10 @@ static void start_emf(char *lan_ifname)
 	emf_rtport_update(lan_ifname, NULL, 1);
 
 	if (ret) {
-		syslog(LOG_INFO, "starting EMF for %s failed ...\n", lan_ifname);
+		logmsg(LOG_INFO, "starting EMF for %s failed ...\n", lan_ifname);
 	}
 	else {
-		syslog(LOG_INFO, "EMF for %s is started\n", lan_ifname);
+		logmsg(LOG_INFO, "EMF for %s is started\n", lan_ifname);
 		nvram_set(strcat_r(lan_ifname,"_emf_active", tmp), "1"); /* set active */
 	}
 }
@@ -407,10 +412,10 @@ static void stop_emf(char *lan_ifname)
 	eval("emf", "del", "bridge", lan_ifname);
 
 	if (ret) {
-		syslog(LOG_INFO, "stopping EMF for %s failed ...\n", lan_ifname);
+		logmsg(LOG_INFO, "stopping EMF for %s failed ...\n", lan_ifname);
 	}
 	else {
-		syslog(LOG_INFO, "EMF for %s is stopped\n", lan_ifname);
+		logmsg(LOG_INFO, "EMF for %s is stopped\n", lan_ifname);
 		nvram_set(strcat_r(lan_ifname,"_emf_active", tmp), "0"); /* set NOT active */
 	}
 }
@@ -940,7 +945,7 @@ void accept_ra_reset(const char *ifname)
 
 void start_lan(void)
 {
-	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
+	logmsg(LOG_DEBUG, "*** %s: %d", __FUNCTION__, __LINE__);
 
 	char *lan_ifname;
 	struct ifreq ifr;
@@ -993,7 +998,7 @@ void start_lan(void)
 		lan_ifname = strdup(nvram_safe_get(tmp));
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-			_dprintf("%s: setting up the bridge %s\n", __FUNCTION__, lan_ifname);
+			logmsg(LOG_DEBUG, "*** %s: setting up the bridge %s", __FUNCTION__, lan_ifname);
 
 			eval("brctl", "addbr", lan_ifname);
 			eval("brctl", "setfd", lan_ifname, "0");
@@ -1067,8 +1072,7 @@ void start_lan(void)
 						if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
 							strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 							ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-							_dprintf("%s: setting MAC of %s bridge to %s\n", __FUNCTION__,
-								ifr.ifr_name, ether_etoa(ifr.ifr_hwaddr.sa_data, eabuf));
+							logmsg(LOG_DEBUG, "*** %s: setting MAC of %s bridge to %s", __FUNCTION__, ifr.ifr_name, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
 							ioctl(sfd, SIOCSIFHWADDR, &ifr);
 							hwaddrset = 1;
 						}
@@ -1152,7 +1156,7 @@ void start_lan(void)
 			if ((*gateway) && (strcmp(gateway, "0.0.0.0") != 0)) {
 				int tries = 5;
 				while ((route_add(lan_ifname, 0, "0.0.0.0", gateway, "0.0.0.0") != 0) && (tries-- > 0)) sleep(1);
-				_dprintf("%s: add gateway=%s tries=%d\n", __FUNCTION__, gateway, tries);
+				logmsg(LOG_DEBUG, "*** %s: add gateway=%s tries=%d", __FUNCTION__, gateway, tries);
 			}
 		}
 
@@ -1168,12 +1172,12 @@ void start_lan(void)
 
 	} /* for-loop brX */
 
-	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
+	logmsg(LOG_DEBUG, "*** %s: %d", __FUNCTION__, __LINE__);
 }
 
 void stop_lan(void)
 {
-	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
+	logmsg(LOG_DEBUG, "*** %s: %d", __FUNCTION__, __LINE__);
 
 	char *lan_ifname;
 	char *lan_ifnames, *p, *ifname;
@@ -1243,7 +1247,7 @@ void stop_lan(void)
 			eval("wlconf", lan_ifname, "down");
 		}
 	}
-	_dprintf("%s %d\n", __FUNCTION__, __LINE__);
+	logmsg(LOG_DEBUG, "*** %s: %d", __FUNCTION__, __LINE__);
 
 #ifndef TCONFIG_DHDAP /* do not unload driver for sdk7 */
 	unload_wl(); /* stop! */
@@ -1279,7 +1283,7 @@ void do_static_routes(int add)
 					((strcmp(ifname,"MAN3")==0) ? "wan3_ifname" :
 					((strcmp(ifname,"MAN4")==0) ? "wan4_ifname" :
 					((strcmp(ifname,"WAN")==0) ? "wan_iface" : "wan_ifname"))))))))))));
-		syslog(LOG_WARNING, "Static route, ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+		logmsg(LOG_WARNING, "Static route, ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
 
 		if (add) {
 			for (r = 3; r >= 0; --r) {
@@ -1355,7 +1359,7 @@ void hotplug_net(void)
 
 	if (((interface = getenv("INTERFACE")) == NULL) || ((action = getenv("ACTION")) == NULL)) return;
 
-	_dprintf("hotplug net INTERFACE=%s ACTION=%s\n", interface, action);
+	logmsg(LOG_DEBUG, "*** %s: hotplug net INTERFACE=%s ACTION=%s", __FUNCTION__, interface, action);
 
 	if ((strncmp(interface, "wds", 3) == 0) &&
 	    (strcmp(action, "register") == 0 || strcmp(action, "add") == 0)) {

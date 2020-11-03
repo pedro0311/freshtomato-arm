@@ -13,8 +13,9 @@
 #include <time.h>
 #include <arpa/inet.h>
 
-//#define ddnslog(args...) syslog(LOG_DEBUG, args)
-#define ddnslog(fmt, args...) _dprintf(fmt"\n", args)
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"ddns_debug"
 
 
 static void update(int num, int *dirty, int force)
@@ -47,17 +48,17 @@ static void update(int num, int *dirty, int force)
 	else
 		strcpy(prefix, "wan");
 
-	ddnslog("%s", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 
 	memset(s, 0, 128);
 	sprintf(s, "ddns%d", num);
 	eval("cru", "d", s);
-	ddnslog("%s: cru d %s", __FUNCTION__, s);
+	logmsg(LOG_DEBUG, "*** %s: cru d %s", __FUNCTION__, s);
 
 	memset(s, 0, 128);
 	sprintf(s, "ddnsf%d", num);
 	eval("cru", "d", s);
-	ddnslog("%s: cru d %s", __FUNCTION__, s);
+	logmsg(LOG_DEBUG, "*** %s: cru d %s", __FUNCTION__, s);
 
 	memset(ddnsx, 0, 16);
 	sprintf(ddnsx, "ddnsx%d", num);
@@ -70,7 +71,7 @@ static void update(int num, int *dirty, int force)
 	sprintf(msg_fn, "%s.msg", ddnsx_path);
 
 	if ((vstrsep(config, "<", &serv, &user, &host, &wild, &mx, &bmx, &cust) != 7) || (*serv == 0)) {
-		ddnslog("%s: msg=''", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: msg=''", __FUNCTION__);
 		f_write(msg_fn, NULL, 0, 0, 0);
 		return;
 	}
@@ -84,17 +85,17 @@ static void update(int num, int *dirty, int force)
 		sleep(1);
 	}
 	if (n <= 0)
-		syslog(LOG_INFO, "Time not yet set");
+		logmsg(LOG_INFO, "time not yet set");
 
 	if (!wait_action_idle(10)) {
-		ddnslog("%s: !wait_action_idle", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: !wait_action_idle", __FUNCTION__);
 		return;
 	}
 
 	memset(cache_nv, 0, 32);
 	sprintf(cache_nv, "%s_cache", ddnsx);
 	if (force) {
-		ddnslog("%s: force=1", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: force=1", __FUNCTION__);
 		nvram_set(cache_nv, "");
 	}
 
@@ -104,7 +105,7 @@ static void update(int num, int *dirty, int force)
 
 	if (!check_wanup(prefix)) {
 		if ((get_wan_proto() != WP_DISABLED) || (ip[0] == 0)) {
-			ddnslog("%s: !check_wanup", __FUNCTION__);
+			logmsg(LOG_DEBUG, "*** %s: !check_wanup", __FUNCTION__);
 			goto CLEANUP;
 		}
 	}
@@ -123,7 +124,7 @@ static void update(int num, int *dirty, int force)
 	f_write_string(cache_fn, nvram_safe_get(cache_nv), 0, 0);
 
 	if (!f_exists(msg_fn)) {
-		ddnslog("%s: !f_exist(%s)", __FUNCTION__, msg_fn);
+		logmsg(LOG_DEBUG, "*** %s: !f_exist(%s)", __FUNCTION__, msg_fn);
 		f_write(msg_fn, NULL, 0, 0, 0);
 	}
 
@@ -164,7 +165,7 @@ static void update(int num, int *dirty, int force)
 	fclose(f);
 
 	exitcode = eval("mdu", "--service", serv, "--conf", conf_fn);
-	ddnslog("%s: mdu exitcode=%d", __FUNCTION__, exitcode);
+	logmsg(LOG_DEBUG, "*** %s: mdu exitcode=%d", __FUNCTION__, exitcode);
 
 	memset(s, 0, 128);
 	sprintf(s, "%s_errors", ddnsx);
@@ -228,14 +229,14 @@ static void update(int num, int *dirty, int force)
 		sprintf(s, "ddnsf%d", num);
 		memset(v, 0, 128);
 		sprintf(v, "%d %d %d %d * ddns-update %d force", tm->tm_min, tm->tm_hour, tm->tm_mday, tm->tm_mon + 1, num);
-		ddnslog("%s: cru a %s %s", __FUNCTION__, s, v);
+		logmsg(LOG_DEBUG, "*** %s: cru a %s %s", __FUNCTION__, s, v);
 
 		eval("cru", "a", s, v);
 	}
 
 	if (ip[0] == '@') {
 SCHED:
-		ddnslog("%s: SCHED", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: SCHED", __FUNCTION__);
 
 		/* need at least 10m spacing for checkip
 		 * +1m to not trip over mdu's ip caching
@@ -249,24 +250,24 @@ SCHED:
 			memset(s, 0, 128);
 			sprintf(s, "\n#RETRY %d %d\n", n, errors);	/* should be localized in basic-ddns.asp */
 			f_write_string(msg_fn, s, FW_APPEND, 0);
-			ddnslog("%s: msg='retry n=%d errors=%d'", __FUNCTION__, n, errors);
+			logmsg(LOG_DEBUG, "*** %s: msg='retry n=%d errors=%d'", __FUNCTION__, n, errors);
 		}
 
 		t = time(0) + (n * 60);
 		tm = localtime(&t);
-		ddnslog("%s: sch: %d:%d", __FUNCTION__, tm->tm_hour, tm->tm_min);
+		logmsg(LOG_DEBUG, "*** %s: sch: %d:%d", __FUNCTION__, tm->tm_hour, tm->tm_min);
 
 		memset(s, 0, 128);
 		sprintf(s, "ddns%d", num);
 		memset(v, 0, 128);
 		sprintf(v, "%d * * * * ddns-update %d", tm->tm_min, num);
-		ddnslog("%s: cru a %s %s", __FUNCTION__, s, v);
+		logmsg(LOG_DEBUG, "*** %s: cru a %s %s", __FUNCTION__, s, v);
 
 		eval("cru", "a", s, v);
 	}
 
 CLEANUP:
-	ddnslog("%s: CLEANUP", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s: CLEANUP", __FUNCTION__);
 	simple_unlock("ddns");
 }
 
@@ -275,7 +276,7 @@ int ddns_update_main(int argc, char **argv)
 	int num;
 	int dirty;
 
-	ddnslog("%s: %s %s", __FUNCTION__, (argc >= 2) ? argv[1] : "", (argc >= 3) ? argv[2] : "");
+	logmsg(LOG_DEBUG, "*** %s: %s %s", __FUNCTION__, (argc >= 2) ? argv[1] : "", (argc >= 3) ? argv[2] : "");
 
 	dirty = 0;
 	umask(077);
@@ -297,7 +298,7 @@ int ddns_update_main(int argc, char **argv)
 
 void start_ddns(void)
 {
-	ddnslog("%s", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 
 	stop_ddns();
 
@@ -311,7 +312,7 @@ void start_ddns(void)
 
 void stop_ddns(void)
 {
-	ddnslog("%s", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 
 	eval("cru", "d", "ddns0");
 	eval("cru", "d", "ddns1");

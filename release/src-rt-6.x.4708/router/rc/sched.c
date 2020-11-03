@@ -6,8 +6,9 @@
 */
 
 
-#include <time.h>
 #include "rc.h"
+
+#include <time.h>
 
 
 static inline void unsched(const char *key)

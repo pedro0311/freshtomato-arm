@@ -5,7 +5,9 @@
  *
  */
 
-#include <rc.h>
+
+#include "rc.h"
+
 #include <sys/stat.h>
 
 #define APCUPSD_DATA	"/www/ext/cgi-bin/tomatodata.cgi"

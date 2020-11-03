@@ -24,7 +24,7 @@
 
 qrates_out = [0,0,0,0,0,0,0,0,0,0,0];
 qrates_in = [0,0,0,0,0,0,0,0,0,0,0];
-for (var i = 0; i < 10; i++) {
+for (var i = 1; i < 11; i++) {
 /* DUALWAN-BEGIN */
 	qrates_in[i] = qrates1_in[i]+qrates2_in[i];
 	qrates_out[i] = qrates1_out[i]+qrates2_out[i];
@@ -145,7 +145,7 @@ ref.refresh = function(text) {
 	qrates_in = [];
 	qrates_out = [];
 
-	for (var i = 0; i < 10; i++) {
+	for (var i = 1; i < 11; i++) {
 /* DUALWAN-BEGIN */
 		qrates_in[i] = qrates1_in[i]+qrates2_in[i];
 		qrates_out[i] = qrates1_out[i]+qrates2_out[i];

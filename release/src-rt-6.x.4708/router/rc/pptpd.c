@@ -20,7 +20,9 @@
  * $Id:
  */
 
-#include <rc.h>
+
+#include "rc.h"
+
 #include <stdlib.h>
 #include <bcmnvram.h>
 #include <shutils.h>
@@ -254,8 +256,6 @@ void start_pptpd(void)
 
 	/* Execute pptpd daemon */
 	ret = eval("pptpd", "-c", PPTPD_CONFFILE, "-o", PPTPD_OPTIONS, "-C", "50");
-
-	_dprintf("start_pptpd: ret= %d\n", ret);
 }
 
 void stop_pptpd(void)

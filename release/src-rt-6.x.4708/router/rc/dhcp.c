@@ -41,7 +41,9 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 
-#define mwanlog(level,x...) if (nvram_get_int("mwan_debug") >= level) syslog(level, x)
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"dhcp_debug"
 
 
 static void expires(unsigned int seconds, char *prefix)
@@ -163,7 +165,7 @@ static int bound(char *ifname, int renew, char *prefix)
 
 	do_renew_file(0, prefix);
 
-	mwanlog(LOG_INFO, "IN bound: interface=%s, wan_prefix=%s, renew=%d, proto=%d", ifname, prefix, renew, wan_proto);
+	logmsg(LOG_DEBUG, "*** IN %s: interface=%s, wan_prefix=%s, renew=%d, proto=%d", __FUNCTION__, ifname, prefix, renew, wan_proto);
 
 	nvram_set(strcat_r(prefix, "_routes1", tmp), "");
 	nvram_set(strcat_r(prefix, "_routes2", tmp), "");
@@ -199,14 +201,12 @@ static int bound(char *ifname, int renew, char *prefix)
 	env2nv("ip6rd", "wan_6rd");
 #endif
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "*** bound, %s_ipaddr=%s", prefix, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
-	mwanlog(LOG_DEBUG, "*** bound, %s_netmask=%s", prefix, netmask);
-	mwanlog(LOG_DEBUG, "*** bound, %s_gateway=%s", prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
-	mwanlog(LOG_DEBUG, "*** bound, %s_get_dns=%s", prefix, nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
-	mwanlog(LOG_DEBUG, "*** bound, %s_routes1=%s", prefix, nvram_safe_get(strcat_r(prefix, "_routes1", tmp)));
-	mwanlog(LOG_DEBUG, "*** bound, %s_routes2=%s", prefix, nvram_safe_get(strcat_r(prefix, "_routes2", tmp)));
-#endif
+	logmsg(LOG_DEBUG, "*** %s: %s_ipaddr=%s", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)));
+	logmsg(LOG_DEBUG, "*** %s: %s_netmask=%s", __FUNCTION__, prefix, netmask);
+	logmsg(LOG_DEBUG, "*** %s: %s_gateway=%s", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+	logmsg(LOG_DEBUG, "*** %s: %s_get_dns=%s", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
+	logmsg(LOG_DEBUG, "*** %s: %s_routes1=%s", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_routes1", tmp)));
+	logmsg(LOG_DEBUG, "*** %s: %s_routes2=%s", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_routes2", tmp)));
 
 	ifconfig(ifname, IFUP, "0.0.0.0", NULL);
 	ifconfig(ifname, IFUP, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), netmask);
@@ -216,43 +216,32 @@ static int bound(char *ifname, int renew, char *prefix)
 		/* setup dnsmasq and routes to dns / access servers */
 		gw = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
 		if ((*gw) && (strcmp(gw, "0.0.0.0") != 0)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, do preset_wan ... ifname=%s gateway=%s netmask=%s prefix=%s", ifname, gw, netmask, prefix);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: do preset_wan ... ifname=%s gateway=%s netmask=%s prefix=%s", __FUNCTION__, ifname, gw, netmask, prefix);
 			preset_wan(ifname, gw, netmask, prefix);
 		}
 		else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, NO gateway! Just do DHCP DNS stuff ...");
-#endif
+			logmsg(LOG_DEBUG, "*** %s: NO gateway! Just do DHCP DNS stuff ...", __FUNCTION__);
 			dns_to_resolv();
 		}
 		/* don't clear dns servers for PPTP/L2TP wans, required for pptp/l2tp server name resolution */
 		dns = nvram_safe_get(strcat_r(prefix, "_get_dns", tmp));
 		if (wan_proto != WP_PPTP && wan_proto != WP_L2TP) {
 			nvram_set(strcat_r(prefix, "_get_dns", tmp), renew ? dns : "");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, clear / set dns to resolv.conf");
-#endif
+			logmsg(LOG_DEBUG, "*** %s: clear / set dns to resolv.conf", __FUNCTION__);
 		}
 		switch (wan_proto) {
 		case WP_PPTP:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, start_pptp(%s) ...", prefix);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: start_pptp(%s) ...", __FUNCTION__, prefix);
 			start_pptp(prefix);
 			break;
 		case WP_L2TP:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, start_l2tp(%s) ...", prefix);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: start_l2tp(%s) ...", __FUNCTION__, prefix);
 			start_l2tp(prefix);
 			break;
 
 		case WP_PPPOE:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** bound, start_pppoe(%s) ...", prefix);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: start_pppoe(%s) ...", __FUNCTION__, prefix);
+
 			if (!strcmp(prefix, "wan"))
 				start_pppoe(PPPOEWAN, prefix);
 			else if (!strcmp(prefix, "wan2"))
@@ -267,9 +256,7 @@ static int bound(char *ifname, int renew, char *prefix)
 		}
 	}
 	else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "OUT bound: to start_wan_done, ifname=%s prefix=%s ...", ifname, prefix);
-#endif
+		logmsg(LOG_DEBUG, "*** OUT %s: to start_wan_done, ifname=%s prefix=%s ...", __FUNCTION__, ifname, prefix);
 		start_wan_done(ifname,prefix);
 	}
 
@@ -283,9 +270,7 @@ static int renew(char *ifname, char *prefix)
 	int wan_proto = get_wanx_proto(prefix);
 	char tmp[32];
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "*** renew, interface=%s, wan_prefix=%s", ifname, prefix);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: interface=%s, wan_prefix=%s", __FUNCTION__, ifname, prefix);
 
 	do_renew_file(0, prefix);
 
@@ -294,9 +279,8 @@ static int renew(char *ifname, char *prefix)
 	    (wan_proto == WP_LTE && env2nv("subnet", strcat_r(prefix, "_netmask", tmp))) ||
 	    (wan_proto == WP_DHCP && env2nv("subnet", strcat_r(prefix, "_netmask", tmp)))) {
 		/* WAN IP or gateway changed, restart/reconfigure everything */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** renew, WAN IP or gateway changed, restart/reconfigure everything");
-#endif
+		logmsg(LOG_DEBUG, "*** %s: WAN IP or gateway changed, restart/reconfigure everything", __FUNCTION__);
+
 		return bound(ifname, 1, prefix);
 	}
 
@@ -367,9 +351,7 @@ int dhcpc_event_main(int argc, char **argv)
 	if (!wait_action_idle(10))
 		return 1;
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "dhcpc_event_main, interface=%s wan_prefix=%s event=%s", ifname, prefix, argv[1]);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: interface=%s wan_prefix=%s event=%s", __FUNCTION__, ifname, prefix, argv[1]);
 
 	if ((argc == 2) && (ifname = getenv("interface")) != NULL) {
 		if (strcmp(argv[1], "deconfig") == 0)
@@ -394,9 +376,7 @@ int dhcpc_release_main(int argc, char **argv)
 	else
 		strcpy(prefix, "wan");
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "dhcpc_release_main, argc=%d wan_prefix=%s", argc, prefix);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: argc=%d wan_prefix=%s", __FUNCTION__, argc, prefix);
 
 	mwan_table_del(prefix); /* for dual WAN and multi WAN */
 
@@ -432,9 +412,7 @@ int dhcpc_renew_main(int argc, char **argv)
 	else
 		strcpy(prefix, "wan");
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "dhcpc_renew_main, argc=%d wan_prefix=%s", argc, prefix);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: argc=%d wan_prefix=%s", __FUNCTION__, argc, prefix);
 
 	if (!using_dhcpc(prefix))
 		return 1;
@@ -492,9 +470,7 @@ void start_dhcpc(char *prefix)
 	                           dhcpcpid_file
 	);
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "start_dhcpc, prefix=%s cmd = /bin/sh -c %s", prefix, cmd);
-#endif
+	logmsg(LOG_DEBUG, "*** %s: prefix=%s cmd = /bin/sh -c %s", __FUNCTION__, prefix, cmd);
 
 	xstart("/bin/sh", "-c", cmd);
 }

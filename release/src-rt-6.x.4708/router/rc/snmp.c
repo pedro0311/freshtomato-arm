@@ -5,7 +5,9 @@
  *
  */
 
-#include <rc.h>
+
+#include "rc.h"
+
 #include <sys/stat.h>
 
 #define SNMP_CONF	"/etc/snmpd.conf"

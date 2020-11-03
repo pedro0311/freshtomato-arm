@@ -7,7 +7,9 @@
  *
  */
 
-#include <rc.h>
+
+#include "rc.h"
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <syslog.h>

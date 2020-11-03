@@ -16,6 +16,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <limits.h>
@@ -44,7 +45,10 @@
 #include <bcmnvram.h>
 #include <shutils.h>
 #endif
-//	#define DEBUG_SIMULATE
+// #define DEBUG_SIMULATE
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"mtd_debug"
 
 
 struct code_header {
@@ -284,7 +288,7 @@ int mtd_write_main(int argc, char *argv[])
 	fseek( f, 0, SEEK_END);
 	filelen = ftell(f);
 	fseek( f, 0, SEEK_SET);
-	_dprintf("file len=0x%x\n", filelen);
+	logmsg(LOG_DEBUG, "*** %s: file len=0x%lu", __FUNCTION__, filelen);
 
 #ifdef TCONFIG_BCMARM
 	if ((mf = mtd_open_old(dev, &mi)) < 0) {
@@ -301,7 +305,7 @@ int mtd_write_main(int argc, char *argv[])
 		goto ERROR;
 	}
 
-	_dprintf("mtd size=%x, erasesize=%x, writesize=%x, type=%x\n", mi.size, mi.erasesize, mi.writesize, mi.type);
+	logmsg(LOG_DEBUG, "*** %s: mtd size=%x, erasesize=%x, writesize=%x, type=%x", __FUNCTION__, mi.size, mi.erasesize, mi.writesize, mi.type);
 
 	unit_len = ROUNDUP(filelen, mi.erasesize);
 	if (unit_len > mi.size) {
@@ -310,7 +314,7 @@ int mtd_write_main(int argc, char *argv[])
 	}
 
 	if ((buf = mmap(0, filelen, PROT_READ, MAP_SHARED, fd, 0)) == (unsigned char*)MAP_FAILED) {
-		_dprintf("mmap %x bytes fail!. errno %d (%s).\n", filelen, errno, strerror(errno));
+		logmsg(LOG_DEBUG, "*** %s: mmap %lu bytes fail!. errno %d (%s)", __FUNCTION__, filelen, errno, strerror(errno));
 		alloc = 1;
 	}
 
@@ -326,8 +330,7 @@ int mtd_write_main(int argc, char *argv[])
 			goto ERROR;
 		}
 	}
-	_dprintf("freeram=%lx unit_len=%lx filelen=%lx mi.erasesize=%x mi.writesize=%x\n",
-		si.freeram, unit_len, filelen, mi.erasesize, mi.writesize);
+	logmsg(LOG_DEBUG, "*** %s: freeram=%lx unit_len=%lx filelen=%lx mi.erasesize=%x mi.writesize=%x", __FUNCTION__, si.freeram, unit_len, filelen, mi.erasesize, mi.writesize);
 
 	if (alloc && !(buf = malloc(unit_len))) {
 		error = "Not enough memory";
@@ -364,7 +367,7 @@ int mtd_write_main(int argc, char *argv[])
 			break;
 		}
 
-		_dprintf("ofs=%x n=%lx/%lx ei.start=%x ei.length=%x\n", ofs, n, wlen, ei.start, ei.length);
+		logmsg(LOG_DEBUG, "*** %s: ofs=%x n=%lx/%lx ei.start=%x ei.length=%x", __FUNCTION__, ofs, n, wlen, ei.start, ei.length);
 
 #ifdef DEBUG_SIMULATE
 		if (fwrite(p, 1, wlen, of) != wlen) {
@@ -416,7 +419,7 @@ ERROR:
 
 	set_action(ACT_IDLE);
 
-	_dprintf("%s\n",  error ? error : "Image successfully flashed");
+	logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, error ? error : "image successfully flashed");
 	return (error ? 1 : 0);
 }
 
@@ -521,7 +524,7 @@ mtd_erase(const char *mtd)
 				return errno;
 			}
 			else {
-				_dprintf("Erased block at 0x%08x\n", erase_info.start);
+				logmsg(LOG_DEBUG, "*** %s: erased block at 0x%08x", __FUNCTION__, erase_info.start);
 			}
 		}
         }
@@ -572,7 +575,7 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
         unsigned len = 0;
 
         if (server == NULL || !strcmp(server, "")) {
-                _dprintf("wget: null server input\n");
+                logmsg(LOG_DEBUG, "*** %s: wget: null server input", __FUNCTION__);
                 return (0);
         }
 
@@ -602,7 +605,7 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
                 return 0;
         sin.sin_family = AF_INET;
         sin.sin_port = htons(port);
-        _dprintf("Connecting to %s:%u...\n", host, port);
+        logmsg(LOG_DEBUG, "*** %s: Connecting to %s:%u...", __FUNCTION__, host, port);
         if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ||
             connect(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0 ||
             !(fp = fdopen(fd, "r+"))) {
@@ -611,7 +614,7 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
                         close(fd);
                 return 0;
         }
-        _dprintf("connected!\n");
+        logmsg(LOG_DEBUG, "*** %s: connected!", __FUNCTION__);
 
         /* Send HTTP request */
         fprintf(fp, "%s /%s HTTP/1.1\r\n", method == METHOD_POST ? "POST" : "GET", path);
@@ -629,9 +632,9 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
                 fprintf(fp, "Connection: close\r\n\r\n");
 
         /* Check HTTP response */
-        _dprintf("HTTP request sent, awaiting response...\n");
+        logmsg(LOG_DEBUG, "*** %s: HTTP request sent, awaiting response...", __FUNCTION__);
         if (fgets(line, sizeof(line), fp)) {
-                _dprintf("%s", line);
+                logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, line);
                 for (s = line; *s && !isspace((int)*s); s++);
                 for (; isspace((int)*s); s++);
                 switch (atoi(s)) {
@@ -642,7 +645,7 @@ wget(int method, const char *server, char *buf, size_t count, off_t offset)
         }
         /* Parse headers */
         while (fgets(line, sizeof(line), fp)) {
-                _dprintf("%s", line);
+                logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, line);
                 for (s = line; *s == '\r'; s++);
                 if (*s == '\n')
                         break;
