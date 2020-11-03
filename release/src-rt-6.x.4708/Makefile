@@ -1224,7 +1224,7 @@ setprofile:
 	@$(MAKE) -C router oldconfig
 
 help:
-	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC66U_B1, RT-AC1900P"
+	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC67U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC66U_B1, RT-AC1900P"
 	@echo "ac68e           RT-N18U/AC56U/AC67U/AC68U(R/P)/AC66U B1/RT-AC1900P build VPN"
 	@echo "ac68z           RT-N18U/AC56U/AC67U/AC68U(R/P)/AC66U B1/RT-AC1900P build AIO"
 	@echo "n18e            RT-N18U/AC56S without SMP build VPN"
