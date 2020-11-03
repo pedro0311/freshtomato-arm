@@ -44,12 +44,6 @@
 // #define DEBUG_RCTEST
 // #define DEBUG_NOISY
 
-#ifdef DEBUG_NOISY
-#define TRACE_PT(args...) do { _dprintf("[%d:%s +%ld] ", getpid(), __FUNCTION__, get_uptime()); _dprintf(args); } while(0)
-#else
-#define TRACE_PT(args...) do { } while(0)
-#endif
-
 #define MOUNT_ROOT	"/tmp/mnt"
 #define PROC_SCSI_ROOT	"/proc/scsi"
 #define USB_STORAGE	"usb-storage"
@@ -125,6 +119,7 @@ extern int listen_main(int argc, char **argv);
 /* ppp.c */
 extern int ipup_main(int argc, char **argv);
 extern int ipdown_main(int argc, char **argv);
+extern int ippreup_main(int argc, char **argv);
 extern int pppevent_main(int argc, char **argv);
 #ifdef TCONFIG_IPV6
 extern int ip6up_main(int argc, char **argv);

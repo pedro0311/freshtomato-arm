@@ -62,7 +62,11 @@
 #define MEDIA_SERVER_APP	"minidlna"
 #endif
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-#define dnslog(level, x...) if (nvram_get_int("dns_debug") >= level) syslog(level, x)
+#define dnslog(level, x...) \
+	{ \
+	if (nvram_get_int("dns_debug") >= level) syslog(level, x); \
+	else if (level == LOG_INFO) syslog(level, x); \
+	}
 #else
 #define dnslog(level, x...) do { } while(0)
 #endif
@@ -311,7 +315,7 @@ void start_dnsmasq()
 							if (dns->dns[n].port == 53) /* check: option 6 doesn't seem to support other ports */
 								sprintf(buf + strlen(buf), ",%s", inet_ntoa(dns->dns[n].addr));
 						}
-						fprintf(f, "dhcp-option=tag:%s,6%s\n", nvram_safe_get(lanN_ifname), buf);
+						fprintf(f, "dhcp-option=tag:%s,6%s\n", nvram_safe_get(lanN_ifname), buf); /* dns-server */
 					}
 				}
 			}
@@ -342,12 +346,12 @@ void start_dnsmasq()
 
 			nv = nvram_safe_get("wan_wins");
 			if ((*nv) && (strcmp(nv, "0.0.0.0") != 0))
-				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv);
+				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv); /* netbios-ns */
 #ifdef TCONFIG_SAMBASRV
 			else if (nvram_get_int("smbd_enable") && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
 				if ((!*nv) || (strcmp(nv, "0.0.0.0") == 0))
 					/* Samba will serve as a WINS server */
-					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr));
+					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr)); /* netbios-ns */
 			}
 #endif
 		}
@@ -475,6 +479,10 @@ void start_dnsmasq()
 		fprintf(f, "dhcp-option=252,\"\\n\"\n"
 		           "dhcp-authoritative\n");
 
+	/* NTP server */
+	if (nvram_get_int("ntpd_enable"))
+		fprintf(f, "dhcp-option=42,%s\n", "0.0.0.0");
+
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
 
@@ -537,6 +545,12 @@ void start_dnsmasq()
 		/* SLAAC and DHCPv6 (2 IPv6 IPs) */
 		if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
 			fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+
+		/* SNTP & NTP server */
+		if (nvram_get_int("ntpd_enable")) {
+			fprintf(f, "dhcp-option=option6:31,%s\n", "[::]");
+			fprintf(f, "dhcp-option=option6:56,%s\n", "[::]");
+		}
 	}
 #endif
 
@@ -778,7 +792,7 @@ void dns_to_resolv(void)
 #endif
 				);
 
-			dnslog(LOG_DEBUG, "exclusive: %d", exclusive);
+			dnslog(LOG_DEBUG, "*** exclusive: %d", exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
 				if ((write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0) || (nvram_get_int("dns_addget")))
@@ -1835,7 +1849,7 @@ void start_ntpd(void)
 {
 	FILE *f;
 	char *servers, *ptr;
-	int servers_len = 0, ntp_updates_int = 0;
+	int servers_len = 0, ntp_updates_int = 0, ret;
 
 	if (getpid() != 1) {
 		start_service("ntpd");
@@ -1862,7 +1876,7 @@ void start_ntpd(void)
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
 		if ((servers = malloc(servers_len + 1)) == NULL) {
-			dnslog(LOG_DEBUG, "ntpd: failed allocating memory, exiting");
+			dnslog(LOG_INFO, "ntpd: failed allocating memory, exiting");
 			return; /* just get out if we couldn't allocate memory */
 		}
 		memset(servers, 0, sizeof(servers));
@@ -1886,10 +1900,17 @@ void start_ntpd(void)
 
 		free(servers);
 
-		if (ntp_updates_int == 0)	/* only at startup */
+		if (ntp_updates_int == 0) /* only at startup, then quit */
 			xstart("ntpd", "-q");
-		else if (ntp_updates_int >= 1)	/* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
-			xstart("ntpd", "-l");
+		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
+			if (nvram_get_int("ntpd_enable"))
+				ret = xstart("ntpd", "-l");
+			else
+				ret = xstart("ntpd");
+
+			if (!ret)
+				dnslog(LOG_INFO, "ntpd is started");
+		}
 	}
 }
 
@@ -1921,7 +1942,7 @@ static void stop_rstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "rstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			dnslog(LOG_DEBUG, "*** rstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1930,7 +1951,7 @@ static void stop_rstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_DEBUG, "rstats stopped");
+		dnslog(LOG_INFO, "rstats stopped");
 }
 
 static void start_rstats(int new)
@@ -1938,11 +1959,11 @@ static void start_rstats(int new)
 	if (nvram_get_int("rstats_enable")) {
 		stop_rstats();
 		if (new) {
-			dnslog(LOG_DEBUG, "starting rstats (new datafile)");
+			dnslog(LOG_INFO, "starting rstats (new datafile)");
 			xstart("rstats", "--new");
 		}
 		else {
-			dnslog(LOG_DEBUG, "starting rstats");
+			dnslog(LOG_INFO, "starting rstats");
 			xstart("rstats");
 		}
 	}
@@ -1966,7 +1987,7 @@ static void stop_cstats(void)
 
 		ppidz = ppid(ppid(pidz));
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			dnslog(LOG_DEBUG, "cstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
+			dnslog(LOG_DEBUG, "*** cstats(PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -1975,7 +1996,7 @@ static void stop_cstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		dnslog(LOG_DEBUG, "cstats stopped");
+		dnslog(LOG_INFO, "cstats stopped");
 }
 
 static void start_cstats(int new)
@@ -1983,11 +2004,11 @@ static void start_cstats(int new)
 	if (nvram_get_int("cstats_enable")) {
 		stop_cstats();
 		if (new) {
-			dnslog(LOG_DEBUG, "starting cstats (new datafile)");
+			dnslog(LOG_INFO, "starting cstats (new datafile)");
 			xstart("cstats", "--new");
 		}
 		else {
-			dnslog(LOG_DEBUG, "starting cstats");
+			dnslog(LOG_INFO, "starting cstats");
 			xstart("cstats");
 		}
 	}
@@ -2027,6 +2048,10 @@ static void start_ftpd(void)
 	char *p, *q;
 	char *user, *pass, *rights, *root_dir;
 	int i;
+#ifdef TCONFIG_HTTPS
+	unsigned long long sn;
+	char t[32];
+#endif
 
 	if (!nvram_get_int("ftp_enable"))
 		return;
@@ -2107,15 +2132,16 @@ static void start_ftpd(void)
 	            "listen%s=no\n"
 	            "listen_port=%s\n"
 	            "background=yes\n"
+#ifndef TCONFIG_BCMARM
 	            "isolate=no\n"
+#endif
 	            "max_clients=%d\n"
 	            "max_per_ip=%d\n"
 	            "max_login_fails=1\n"
 	            "idle_session_timeout=%s\n"
 	            "use_sendfile=no\n"
 	            "anon_max_rate=%d\n"
-	            "local_max_rate=%d\n"
-	            "%s\n",
+	            "local_max_rate=%d\n",
 	            nvram_get_int("log_ftp") ? "yes" : "no",
 	            vsftpd_users, vsftpd_passwd,
 #ifdef TCONFIG_IPV6
@@ -2130,7 +2156,36 @@ static void start_ftpd(void)
 	            nvram_get_int("ftp_ipmax"),
 	            nvram_get("ftp_staytimeout") ? : "300",
 	            nvram_get_int("ftp_anonrate") * 1024,
-	            nvram_get_int("ftp_rate") * 1024,
+	            nvram_get_int("ftp_rate") * 1024);
+
+#ifdef TCONFIG_HTTPS
+	if (nvram_get_int("ftp_tls")) {
+		fprintf(fp, "ssl_enable=YES\n"
+		            "rsa_cert_file=/etc/cert.pem\n"
+		            "rsa_private_key_file=/etc/key.pem\n"
+		            "allow_anon_ssl=NO\n"
+		            "force_local_data_ssl=YES\n"
+		            "force_local_logins_ssl=YES\n"
+		            "ssl_tlsv1=YES\n"
+		            "ssl_sslv2=NO\n"
+		            "ssl_sslv3=NO\n"
+		            "require_ssl_reuse=NO\n"
+		            "ssl_ciphers=HIGH\n");
+
+		/* does a valid HTTPD cert exist? if not, generate one */
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem"))) {
+			f_read("/dev/urandom", &sn, sizeof(sn));
+			sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
+			nvram_set("https_crt_gen", "1");
+			nvram_set("https_crt_save", "1");
+			eval("gencert.sh", t);
+		}
+	}
+#endif /* TCONFIG_HTTPS */
+
+	fprintf(fp, "ftpd_banner=Welcome to FreshTomato %s FTP service.\n"
+	            "%s\n",
+	            nvram_safe_get("os_version"),
 	            nvram_safe_get("ftp_custom"));
 
 	fclose(fp);
@@ -2541,9 +2596,12 @@ static void stop_samba(void)
 
 	stop_wsdd();
 	kill_samba(SIGTERM);
+
 	/* clean up */
-	unlink("/var/log/smb");
-	unlink("/var/log/nmb");
+	unlink("/var/log/log.smb");
+	unlink("/var/log/log.nmb");
+	eval("rm", "-rf", "/var/nmbd");
+	eval("rm", "-rf", "/var/log/cores");
 	eval("rm", "-rf", "/var/run/samba");
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
@@ -2785,7 +2843,7 @@ static void _check(pid_t pid, const char *name, void (*func)(void))
 	if (pidof(name) > 0)
 		return;
 
-	dnslog(LOG_DEBUG, "%s terminated unexpectedly, restarting", name);
+	dnslog(LOG_DEBUG, "*** %s terminated unexpectedly, restarting", name);
 	func();
 
 	/* force recheck in 500 msec */

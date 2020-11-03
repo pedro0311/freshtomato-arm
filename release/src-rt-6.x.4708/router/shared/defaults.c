@@ -591,6 +591,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "ntp_updates",		"1"				, 0 },
 	{ "ntp_tdod",			"0"				, 0 },
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" , 0 },
+	{ "ntpd_enable",		"0"				, 0 },
+	{ "ntpd_server_redir",		"0"				, 0 },
 
 /* basic-static */
 	{ "dhcpd_static",		""				, 0 },
@@ -620,7 +622,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_NVRAM_32K
 	{ "adblock_blacklist",		""				, 0 },
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>" , 0 },
 #endif
 	{ "adblock_blacklist_custom",	""				, 0 },
 	{ "adblock_whitelist",		""				, 0 },
@@ -990,6 +992,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ftp_custom",			""				, 0 },
 	{ "ftp_sip",			""				, 0 },	// wan ftp access: source ip address(es)
 	{ "ftp_limit",			"0,3,60"			, 0 },
+	{ "ftp_tls",			"0"				, 0 },
 	{ "log_ftp",			"0"				, 0 },
 #endif
 

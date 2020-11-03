@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server"); %>
+//	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server,ntpd_enable,ntpd_server_redir"); %>
 
 var ntpList = [
 	['custom', 'Custom...'],
@@ -33,8 +33,11 @@ var ntpList = [
 ];
 
 function ntpString(name) {
-	if (name == '') name = 'pool.ntp.org';
-		else name = name + '.pool.ntp.org';
+	if (name == '')
+		name = 'pool.ntp.org';
+	else
+		name = name + '.pool.ntp.org';
+
 	return '0.' + name + ' 1.' + name + ' 2.' + name;
 }
 
@@ -55,7 +58,9 @@ function verifyFields(focused, quiet) {
 		PR(f_tz).style.display = 'none';
 		PR(f_dst).style.display = '';
 		if (s.match(/^([A-Z]+[\d:-]+)[A-Z]+/)) {
-			if (!f_dst.checked) s = RegExp.$1;
+			if (!f_dst.checked)
+				s = RegExp.$1;
+
 			f_dst.disabled = false;
 		}
 		else {
@@ -63,6 +68,7 @@ function verifyFields(focused, quiet) {
 		}
 		f_tz.value = s;
 	}
+	E('_f_ntpd_server_redir').disabled = !E('_f_ntpd_enable').checked;
 
 	var a = 1;
 	var b = 1;
@@ -74,6 +80,7 @@ function verifyFields(focused, quiet) {
 		break;
 	}
 	elem.display(PR('_f_ntp_server'), b);
+	elem.display(PR('_f_ntpd_enable'), PR('_f_ntpd_server_redir'), a && b);
 	a = (E('_f_ntp_server').value == 'custom');
 	elem.display(PR('_f_ntp_1'), PR('_f_ntp_2'), PR('_f_ntp_3'), a && b);
 
@@ -90,6 +97,7 @@ function verifyFields(focused, quiet) {
 	}
 
 	ferror.clear('_f_ntp_1');
+
 	return 1;
 }
 
@@ -100,6 +108,8 @@ function save() {
 
 	fom = E('t_fom');
 	fom.tm_dst.value = fom.f_tm_dst.checked ? 1 : 0;
+	fom.ntpd_enable.value = fom.f_ntpd_enable.checked ? 1 : 0;
+	fom.ntpd_server_redir.value = fom.f_ntpd_server_redir.checked ? 1 : 0;
 	fom.tm_tz.value = fom.f_tm_tz.value;
 
 	if (E('_f_ntp_server').value != 'custom') {
@@ -113,6 +123,12 @@ function save() {
 		}
 		fom.ntp_server.value = a.join(' ');
 	}
+
+	/* we must restart dnsmasq for it to take effect (and firewall if redir was changed) */
+	if (fom.ntpd_enable.value != nvram.ntpd_enable)
+		fom._service.value = 'dnsmasq-restart';
+			if (fom.ntpd_server_redir.value != nvram.ntpd_server_redir)
+				fom._service.value += ',firewall-restart';
 
 	form.submit(fom);
 }
@@ -138,11 +154,13 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="basic-time.asp">
 <input type="hidden" name="_nextwait" value="5">
-<input type="hidden" name="_service" value="ntpc-restart">
+<input type="hidden" name="_service" value="ntpd-restart">
 <input type="hidden" name="_sleep" value="3">
 <input type="hidden" name="tm_dst">
 <input type="hidden" name="tm_tz">
 <input type="hidden" name="ntp_server">
+<input type="hidden" name="ntpd_enable">
+<input type="hidden" name="ntpd_server_redir">
 
 <!-- / / / -->
 
@@ -223,7 +241,10 @@ function earlyInit() {
 			{ title: '&nbsp;', text: '<small><span id="ntp-preset">xx<\/span><\/small>', hidden: 1 },
 			{ title: '', name: 'f_ntp_1', type: 'text', maxlen: 48, size: 50, value: ntp[0] || 'pool.ntp.org', hidden: 1 },
 			{ title: '', name: 'f_ntp_2', type: 'text', maxlen: 48, size: 50, value: ntp[1] || '', hidden: 1 },
-			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 }
+			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 },
+			null,
+			{ title: 'Enable local NTP server', name: 'f_ntpd_enable', type: 'checkbox', value: nvram.ntpd_enable != '0' },
+			{ title: 'Intercept NTP client requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != '0' }
 		]);
 	</script>
 </div>

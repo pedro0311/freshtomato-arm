@@ -297,12 +297,15 @@ ifneq ($(TCONFIG_IPERF),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
 endif
 
+# Only include the https option if it is compiled in
+ifneq ($(TCONFIG_HTTPS),y)
+	sed -i $(INSTALLDIR)/www/nas-ftp.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && sed -i $$F \
-		-e "/LINUX26-BEGIN/d"	-e "/LINUX26-END/d" \
-		-e "/LINUX24-BEGIN/d"	-e "/LINUX24-END/d" \
 		-e "/USB-BEGIN/d"	-e "/USB-END/d" \
 		-e "/UPS-BEGIN/d"	-e "/UPS-END/d" \
 		-e "/EXTRAS-BEGIN/d"	-e "/EXTRAS-END/d" \
@@ -337,6 +340,7 @@ endif
 		-e "/TUXERAHFS-BEGIN/d"	-e "/TUXERAHFS-END/d"\
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
+		-e "/HTTPS-BEGIN/d"	-e "/HTTPS-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		-e "/BCM7-BEGIN/d"	-e "/BCM7-END/d" \
 		|| true; \
