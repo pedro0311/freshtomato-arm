@@ -1612,7 +1612,8 @@ div#status-tab > br {
 .tomato-grid br,
 .about > br,
 #bwm-h-ctrl > br,
-#afu-progress > br {
+#afu-progress > br,
+#result br {
 	display: inline;
 }
 
