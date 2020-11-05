@@ -3114,16 +3114,16 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "qoslimit") == 0) {
+	if (strcmp(service, "bwlimit") == 0) {
 		if (act_stop)
-			new_qoslimit_stop();
+			bwlimit_stop();
 #ifdef TCONFIG_NOCAT
 		stop_splashd();
 #endif
 		stop_firewall();
 		start_firewall(); /* always restarted */
 		if (act_start)
-			new_qoslimit_start();
+			bwlimit_start();
 #ifdef TCONFIG_NOCAT
 		start_splashd();
 #endif

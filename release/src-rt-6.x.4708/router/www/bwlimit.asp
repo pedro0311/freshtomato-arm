@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("new_qoslimit_enable,wan_qos_ibw,wan_qos_obw,new_qoslimit_rules,lan_ipaddr,lan_netmask,qosl_enable,qosl_dlr,qosl_dlc,qosl_ulr,qosl_ulc,qosl_udp,qosl_tcp,limit_br0_prio,limit_br1_enable,limit_br1_dlc,limit_br1_dlr,limit_br1_ulc,limit_br1_ulr,limit_br1_prio,limit_br2_enable,limit_br2_dlc,limit_br2_dlr,limit_br2_ulc,limit_br2_ulr,limit_br2_prio,limit_br3_enable,limit_br3_dlc,limit_br3_dlr,limit_br3_ulc,limit_br3_ulr,limit_br3_prio"); %>
+//	<% nvram("bwl_enable,wan_qos_ibw,wan_qos_obw,bwl_rules,lan_ipaddr,lan_netmask,bwl_br0_enable,bwl_br0_dlr,bwl_br0_dlc,bwl_br0_ulr,bwl_br0_ulc,bwl_br0_udp,bwl_br0_tcp,bwl_br0_prio,bwl_br1_enable,bwl_br1_dlc,bwl_br1_dlr,bwl_br1_ulc,bwl_br1_ulr,bwl_br1_prio,bwl_br2_enable,bwl_br2_dlc,bwl_br2_dlr,bwl_br2_ulc,bwl_br2_ulr,bwl_br2_prio,bwl_br3_enable,bwl_br3_dlc,bwl_br3_dlr,bwl_br3_ulc,bwl_br3_ulr,bwl_br3_prio"); %>
 
 var class_prio = [['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']];
 var class_tcp = [['0','nolimit']];
@@ -32,10 +32,10 @@ for (var i = 1; i <= 100; ++i) {
 	class_udp.push([i, i + '/s']);
 }
 
-var qosg = new TomatoGrid();
+var bwlg = new TomatoGrid();
 
-qosg.setup = function() {
-	this.init('qosg-grid', '', 80, [
+bwlg.setup = function() {
+	this.init('bwlg-grid', '', 80, [
 		{ type: 'text', maxlen: 31 },
 		{ type: 'text', maxlen: 8 },
 		{ type: 'text', maxlen: 8 },
@@ -45,20 +45,20 @@ qosg.setup = function() {
 		{ type: 'select', options: class_tcp },
 		{ type: 'select', options: class_udp }]);
 	this.headerSet(['IP | IP Range | MAC Address', 'DLRate', 'DLCeil', 'ULRate', 'ULCeil', 'Priority', 'TCP Limit', 'UDP Limit']);
-	var qoslimitrules = nvram.new_qoslimit_rules.split('>');
-	for (var i = 0; i < qoslimitrules.length; ++i) {
-		var t = qoslimitrules[i].split('<');
+	var bwllimitrules = nvram.bwl_rules.split('>');
+	for (var i = 0; i < bwllimitrules.length; ++i) {
+		var t = bwllimitrules[i].split('<');
 		if (t.length == 8) this.insertData(-1, t);
 	}
 	this.showNewEditor();
 	this.resetNewEditor();
 }
 
-qosg.dataToView = function(data) {
+bwlg.dataToView = function(data) {
 	return [data[0],data[1]+'kbps',data[2]+'kbps',data[3]+'kbps',data[4]+'kbps',class_prio[data[5]*1][1],class_tcp[data[6]*1/10][1],class_udp[data[7]*1][1]];
 }
 
-qosg.resetNewEditor = function() {
+bwlg.resetNewEditor = function() {
 	var f, c, n;
 
 	var f = fields.getAll(this.newEditor);
@@ -89,7 +89,7 @@ qosg.resetNewEditor = function() {
 	f[7].selectedIndex = '0';
 	}
 
-qosg.exist = function(f, v) {
+bwlg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
 		if (data[i][f] == v) return true;
@@ -98,24 +98,24 @@ qosg.exist = function(f, v) {
 	return false;
 }
 
-qosg.existID = function(id) {
+bwlg.existID = function(id) {
 	return this.exist(0, id);
 }
 
-qosg.existIP = function(ip) {
+bwlg.existIP = function(ip) {
 	if (ip == "0.0.0.0") return true;
 
 	return this.exist(1, ip);
 }
 
-qosg.checkRate = function(rate) {
+bwlg.checkRate = function(rate) {
 	var s = parseInt(rate, 10);
 	if (isNaN(s) || s <= 0 || s >= 100000000) return true;
 
 	return false;
 }
 
-qosg.checkRateCeil = function(rate, ceil) {
+bwlg.checkRateCeil = function(rate, ceil) {
 	var r = parseInt(rate, 10);
 	var c = parseInt(ceil, 10);
 	if (r > c) return true;
@@ -123,7 +123,7 @@ qosg.checkRateCeil = function(rate, ceil) {
 	return false;
 }
 
-qosg.verifyFields = function(row, quiet) {
+bwlg.verifyFields = function(row, quiet) {
 	var ok = 1;
 	var f = fields.getAll(row);
 	var s;
@@ -177,82 +177,82 @@ qosg.verifyFields = function(row, quiet) {
 }
 
 function verifyFields(focused, quiet) {
-	var a = !E('_f_new_qoslimit_enable').checked;
-	var b = !E('_f_qosl_enable').checked;
-	var b1 = !E('_f_limit_br1_enable').checked;
-	var b2 = !E('_f_limit_br2_enable').checked;
-	var b3 = !E('_f_limit_br3_enable').checked;
+	var a = !E('_f_bwl_enable').checked;
+	var b = !E('_f_bwl_br0_enable').checked;
+	var b1 = !E('_f_bwl_br1_enable').checked;
+	var b2 = !E('_f_bwl_br2_enable').checked;
+	var b3 = !E('_f_bwl_br3_enable').checked;
 
 	E('_wan_qos_ibw').disabled = a;
 	E('_wan_qos_obw').disabled = a;
-	E('_f_qosl_enable').disabled = a;
-	E('_f_limit_br1_enable').disabled = a;
-	E('_f_limit_br2_enable').disabled = a;
-	E('_f_limit_br3_enable').disabled = a;
+	E('_f_bwl_br0_enable').disabled = a;
+	E('_f_bwl_br1_enable').disabled = a;
+	E('_f_bwl_br2_enable').disabled = a;
+	E('_f_bwl_br3_enable').disabled = a;
 
-	E('_qosl_dlr').disabled = b || a;
-	E('_qosl_dlc').disabled = b || a;
-	E('_qosl_ulr').disabled = b || a;
-	E('_qosl_ulc').disabled = b || a;
-	E('_qosl_tcp').disabled = b || a;
-	E('_qosl_udp').disabled = b || a;
-	E('_limit_br0_prio').disabled = b || a;
+	E('_bwl_br0_dlr').disabled = b || a;
+	E('_bwl_br0_dlc').disabled = b || a;
+	E('_bwl_br0_ulr').disabled = b || a;
+	E('_bwl_br0_ulc').disabled = b || a;
+	E('_bwl_br0_tcp').disabled = b || a;
+	E('_bwl_br0_udp').disabled = b || a;
+	E('_bwl_br0_prio').disabled = b || a;
 
 	elem.display(PR('_wan_qos_ibw'), PR('_wan_qos_obw'), !a);
-	elem.display(PR('_qosl_dlr'), PR('_qosl_dlc'), PR('_qosl_ulr'), PR('_qosl_ulc'), PR('_qosl_tcp'), PR('_qosl_udp'), PR('_limit_br0_prio'), !a && !b);
+	elem.display(PR('_bwl_br0_dlr'), PR('_bwl_br0_dlc'), PR('_bwl_br0_ulr'), PR('_bwl_br0_ulc'), PR('_bwl_br0_tcp'), PR('_bwl_br0_udp'), PR('_bwl_br0_prio'), !a && !b);
 
-	E('_limit_br1_dlr').disabled = b1 || a;
-	E('_limit_br1_dlc').disabled = b1 || a;
-	E('_limit_br1_ulr').disabled = b1 || a;
-	E('_limit_br1_ulc').disabled = b1 || a;
-	E('_limit_br1_prio').disabled = b1 || a;
-	elem.display(PR('_limit_br1_dlr'), PR('_limit_br1_dlc'), PR('_limit_br1_ulr'), PR('_limit_br1_ulc'), PR('_limit_br1_prio'), !a && !b1);
+	E('_bwl_br1_dlr').disabled = b1 || a;
+	E('_bwl_br1_dlc').disabled = b1 || a;
+	E('_bwl_br1_ulr').disabled = b1 || a;
+	E('_bwl_br1_ulc').disabled = b1 || a;
+	E('_bwl_br1_prio').disabled = b1 || a;
+	elem.display(PR('_bwl_br1_dlr'), PR('_bwl_br1_dlc'), PR('_bwl_br1_ulr'), PR('_bwl_br1_ulc'), PR('_bwl_br1_prio'), !a && !b1);
 
-	E('_limit_br2_dlr').disabled = b2 || a;
-	E('_limit_br2_dlc').disabled = b2 || a;
-	E('_limit_br2_ulr').disabled = b2 || a;
-	E('_limit_br2_ulc').disabled = b2 || a;
-	E('_limit_br2_prio').disabled = b2 || a;
-	elem.display(PR('_limit_br2_dlr'), PR('_limit_br2_dlc'), PR('_limit_br2_ulr'), PR('_limit_br2_ulc'), PR('_limit_br2_prio'), !a && !b2);
+	E('_bwl_br2_dlr').disabled = b2 || a;
+	E('_bwl_br2_dlc').disabled = b2 || a;
+	E('_bwl_br2_ulr').disabled = b2 || a;
+	E('_bwl_br2_ulc').disabled = b2 || a;
+	E('_bwl_br2_prio').disabled = b2 || a;
+	elem.display(PR('_bwl_br2_dlr'), PR('_bwl_br2_dlc'), PR('_bwl_br2_ulr'), PR('_bwl_br2_ulc'), PR('_bwl_br2_prio'), !a && !b2);
 
-	E('_limit_br3_dlr').disabled = b3 || a;
-	E('_limit_br3_dlc').disabled = b3 || a;
-	E('_limit_br3_ulr').disabled = b3 || a;
-	E('_limit_br3_ulc').disabled = b3 || a;
-	E('_limit_br3_prio').disabled = b3 || a;
-	elem.display(PR('_limit_br3_dlr'), PR('_limit_br3_dlc'), PR('_limit_br3_ulr'), PR('_limit_br3_ulc'), PR('_limit_br3_prio'), !a && !b3);
+	E('_bwl_br3_dlr').disabled = b3 || a;
+	E('_bwl_br3_dlc').disabled = b3 || a;
+	E('_bwl_br3_ulr').disabled = b3 || a;
+	E('_bwl_br3_ulc').disabled = b3 || a;
+	E('_bwl_br3_prio').disabled = b3 || a;
+	elem.display(PR('_bwl_br3_dlr'), PR('_bwl_br3_dlc'), PR('_bwl_br3_ulr'), PR('_bwl_br3_ulc'), PR('_bwl_br3_prio'), !a && !b3);
 
 	return 1;
 }
 
 function save() {
-	if (qosg.isEditing()) return;
+	if (bwlg.isEditing()) return;
 
-	var data = qosg.getAllData();
-	var qoslimitrules = '';
+	var data = bwlg.getAllData();
+	var bwllimitrules = '';
 	var i;
 
-	if (data.length != 0) qoslimitrules += data[0].join('<'); 
+	if (data.length != 0) bwllimitrules += data[0].join('<'); 
 	for (i = 1; i < data.length; ++i) {
-		qoslimitrules += '>' + data[i].join('<');
+		bwllimitrules += '>' + data[i].join('<');
 	}
 
 	var fom = E('t_fom');
-	fom.new_qoslimit_enable.value = E('_f_new_qoslimit_enable').checked ? 1 : 0;
-	fom.qosl_enable.value = E('_f_qosl_enable').checked ? 1 : 0;
-	fom.limit_br1_enable.value = E('_f_limit_br1_enable').checked ? 1 : 0;
-	fom.limit_br2_enable.value = E('_f_limit_br2_enable').checked ? 1 : 0;
-	fom.limit_br3_enable.value = E('_f_limit_br3_enable').checked ? 1 : 0;
-	fom.new_qoslimit_rules.value = qoslimitrules;
+	fom.bwl_enable.value = E('_f_bwl_enable').checked ? 1 : 0;
+	fom.bwl_br0_enable.value = E('_f_bwl_br0_enable').checked ? 1 : 0;
+	fom.bwl_br1_enable.value = E('_f_bwl_br1_enable').checked ? 1 : 0;
+	fom.bwl_br2_enable.value = E('_f_bwl_br2_enable').checked ? 1 : 0;
+	fom.bwl_br3_enable.value = E('_f_bwl_br3_enable').checked ? 1 : 0;
+	fom.bwl_rules.value = bwllimitrules;
 	form.submit(fom, 1);
 }
 
 function init() {
-	qosg.recolor();
+	bwlg.recolor();
 }
 
 function earlyInit() {
-	qosg.setup();
+	bwlg.setup();
 	verifyFields(null, true);
 }
 </script>
@@ -273,13 +273,13 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="bwlimit.asp">
 <input type="hidden" name="_nextwait" value="10">
-<input type="hidden" name="_service" value="qoslimit-restart">
-<input type="hidden" name="new_qoslimit_enable">
-<input type="hidden" name="new_qoslimit_rules">
-<input type="hidden" name="qosl_enable">
-<input type="hidden" name="limit_br1_enable">
-<input type="hidden" name="limit_br2_enable">
-<input type="hidden" name="limit_br3_enable">
+<input type="hidden" name="_service" value="bwlimit-restart">
+<input type="hidden" name="bwl_enable">
+<input type="hidden" name="bwl_rules">
+<input type="hidden" name="bwl_br0_enable">
+<input type="hidden" name="bwl_br1_enable">
+<input type="hidden" name="bwl_br2_enable">
+<input type="hidden" name="bwl_br3_enable">
 
 <!-- / / / -->
 
@@ -287,13 +287,13 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-		{ title: 'Enable Limiter', name: 'f_new_qoslimit_enable', type: 'checkbox', value: nvram.new_qoslimit_enable != '0' },
+		{ title: 'Enable Limiter', name: 'f_bwl_enable', type: 'checkbox', value: nvram.bwl_enable != '0' },
 		{ title: 'Max Available Download <br><small>(same as used in QoS)<\/small>', indent: 2, name: 'wan_qos_ibw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.wan_qos_ibw },
 		{ title: 'Max Available Upload <br><small>(same as used in QoS)<\/small>', indent: 2, name: 'wan_qos_obw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.wan_qos_obw }
 		]);
 	</script>
 
-	<div class="tomato-grid" id="qosg-grid"></div>
+	<div class="tomato-grid" id="bwlg-grid"></div>
 	<div>
 		<ul>
 			<li><b>IP Address / IP Range:</b>
@@ -312,17 +312,17 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_qosl_enable', type: 'checkbox', value: nvram.qosl_enable == '1'},
-			{ title: 'Download rate', indent: 2, name: 'qosl_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_dlr },
-			{ title: 'Download ceil', indent: 2, name: 'qosl_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_dlc },
-				{ title: 'Upload rate', indent: 2, name: 'qosl_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_ulr },
-			{ title: 'Upload ceil', indent: 2, name: 'qosl_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.qosl_ulc },
-			{ title: 'Priority', indent: 2, name: 'limit_br0_prio', type: 'select', options:
-				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br0_prio },
-			{ title: 'TCP Limit', indent: 2, name: 'qosl_tcp', type: 'select', options:
-				[['0', 'no limit'],['1', '1'],['2', '2'],['5', '5'],['10', '10'],['20', '20'],['50', '50'],['100', '100'],['200', '200'],['500', '500'],['1000', '1000']], value: nvram.qosl_tcp },
-			{ title: 'UDP limit', indent: 2, name: 'qosl_udp', type: 'select', options:
-				[['0', 'no limit'],['1', '1/s'],['2', '2/s'],['5', '5/s'],['10', '10/s'],['20', '20/s'],['50', '50/s'],['100', '100/s']], value: nvram.qosl_udp }
+			{ title: 'Enable', name: 'f_bwl_br0_enable', type: 'checkbox', value: nvram.bwl_br0_enable == '1'},
+			{ title: 'Download rate', indent: 2, name: 'bwl_br0_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br0_dlr },
+			{ title: 'Download ceil', indent: 2, name: 'bwl_br0_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br0_dlc },
+				{ title: 'Upload rate', indent: 2, name: 'bwl_br0_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br0_ulr },
+			{ title: 'Upload ceil', indent: 2, name: 'bwl_br0_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br0_ulc },
+			{ title: 'Priority', indent: 2, name: 'bwl_br0_prio', type: 'select', options:
+				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.bwl_br0_prio },
+			{ title: 'TCP Limit', indent: 2, name: 'bwl_br0_tcp', type: 'select', options:
+				[['0', 'no limit'],['1', '1'],['2', '2'],['5', '5'],['10', '10'],['20', '20'],['50', '50'],['100', '100'],['200', '200'],['500', '500'],['1000', '1000']], value: nvram.bwl_br0_tcp },
+			{ title: 'UDP limit', indent: 2, name: 'bwl_br0_udp', type: 'select', options:
+				[['0', 'no limit'],['1', '1/s'],['2', '2/s'],['5', '5/s'],['10', '10/s'],['20', '20/s'],['50', '50/s'],['100', '100/s']], value: nvram.bwl_br0_udp }
 		]);
 	</script>
 	<div>
@@ -339,13 +339,13 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_limit_br1_enable', type: 'checkbox', value: nvram.limit_br1_enable == '1'},
-			{ title: 'Download rate', indent: 2, name: 'limit_br1_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_dlr },
-			{ title: 'Download ceil', indent: 2, name: 'limit_br1_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_dlc },
-			{ title: 'Upload rate', indent: 2, name: 'limit_br1_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_ulr },
-			{ title: 'Upload ceil', indent: 2, name: 'limit_br1_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br1_ulc },
-			{ title: 'Priority', indent: 2, name: 'limit_br1_prio', type: 'select', options:
-				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br1_prio }
+			{ title: 'Enable', name: 'f_bwl_br1_enable', type: 'checkbox', value: nvram.bwl_br1_enable == '1'},
+			{ title: 'Download rate', indent: 2, name: 'bwl_br1_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br1_dlr },
+			{ title: 'Download ceil', indent: 2, name: 'bwl_br1_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br1_dlc },
+			{ title: 'Upload rate', indent: 2, name: 'bwl_br1_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br1_ulr },
+			{ title: 'Upload ceil', indent: 2, name: 'bwl_br1_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br1_ulc },
+			{ title: 'Priority', indent: 2, name: 'bwl_br1_prio', type: 'select', options:
+				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.bwl_br1_prio }
 		]);
 	</script>
 	<div>
@@ -361,13 +361,13 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_limit_br2_enable', type: 'checkbox', value: nvram.limit_br2_enable == '1'},
-			{ title: 'Download rate', indent: 2, name: 'limit_br2_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_dlr },
-			{ title: 'Download ceil', indent: 2, name: 'limit_br2_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_dlc },
-			{ title: 'Upload rate', indent: 2, name: 'limit_br2_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_ulr },
-			{ title: 'Upload ceil', indent: 2, name: 'limit_br2_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br2_ulc },
-			{ title: 'Priority', indent: 2, name: 'limit_br2_prio', type: 'select', options:
-				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br2_prio }
+			{ title: 'Enable', name: 'f_bwl_br2_enable', type: 'checkbox', value: nvram.bwl_br2_enable == '1'},
+			{ title: 'Download rate', indent: 2, name: 'bwl_br2_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br2_dlr },
+			{ title: 'Download ceil', indent: 2, name: 'bwl_br2_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br2_dlc },
+			{ title: 'Upload rate', indent: 2, name: 'bwl_br2_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br2_ulr },
+			{ title: 'Upload ceil', indent: 2, name: 'bwl_br2_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br2_ulc },
+			{ title: 'Priority', indent: 2, name: 'bwl_br2_prio', type: 'select', options:
+				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.bwl_br2_prio }
 		]);
 	</script>
 	<div>
@@ -383,13 +383,13 @@ function earlyInit() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_limit_br3_enable', type: 'checkbox', value: nvram.limit_br3_enable == '1'},
-			{ title: 'Download rate', indent: 2, name: 'limit_br3_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_dlr },
-			{ title: 'Download ceil', indent: 2, name: 'limit_br3_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_dlc },
-			{ title: 'Upload rate', indent: 2, name: 'limit_br3_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_ulr },
-			{ title: 'Upload ceil', indent: 2, name: 'limit_br3_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.limit_br3_ulc },
-			{ title: 'Priority', indent: 2, name: 'limit_br3_prio', type: 'select', options:
-				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.limit_br3_prio }
+			{ title: 'Enable', name: 'f_bwl_br3_enable', type: 'checkbox', value: nvram.bwl_br3_enable == '1'},
+			{ title: 'Download rate', indent: 2, name: 'bwl_br3_dlr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br3_dlr },
+			{ title: 'Download ceil', indent: 2, name: 'bwl_br3_dlc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br3_dlc },
+			{ title: 'Upload rate', indent: 2, name: 'bwl_br3_ulr', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br3_ulr },
+			{ title: 'Upload ceil', indent: 2, name: 'bwl_br3_ulc', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram.bwl_br3_ulc },
+			{ title: 'Priority', indent: 2, name: 'bwl_br3_prio', type: 'select', options:
+				[['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']], value: nvram.bwl_br3_prio }
 		]);
 	</script>
 	<div>

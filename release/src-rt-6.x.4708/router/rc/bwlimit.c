@@ -1,23 +1,23 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2008 Jonathan Zarate
-	rate limit & connection limit by conanxu
-	2011 modified by Victek & Shibby for 2.6 kernel
-	last changed: 20110210
-*/
+ * Tomato Firmware
+ * Copyright (C) 2006-2008 Jonathan Zarate
+ * rate limit & connection limit by conanxu
+ * 2011 modified by Victek & Shibby for 2.6 kernel
+ * last changed: 20110210
+ */
 
 
 #include "rc.h"
 
 #include <sys/stat.h>
 
-/*int  chain
-1 = MANGLE
-2 = NAT
-*/
+/* int chain
+ * 1  = MANGLE
+ * 2  = NAT
+ * 3  = Filter
+ */
 
-static const char *qoslimitfn = "/etc/qoslimit";
+static const char *bwlimitfn = "/etc/bwlimit";
 
 #define IP_ADDRESS	0
 #define MAC_ADDRESS	1
@@ -59,7 +59,7 @@ void address_checker (int *address_type, char *ipaddr_old, char *ipaddr)
 	}
 }
 
-void ipt_qoslimit(int chain)
+void ipt_bwlimit(int chain)
 {
 	char *buf;
 	char *g;
@@ -78,34 +78,34 @@ void ipt_qoslimit(int chain)
 	char *lanX_mask;		/* (br1 - br3) */
 	char *tcplimit, *udplimit;	/* tcp connection limit & udp packets per second */
 	int priority_num;
-	char *qosl_tcp, *qosl_udp;
+	char *bwl_br0_tcp, *bwl_br0_udp;
 	int i, address_type;
 
-	if (!nvram_get_int("new_qoslimit_enable"))
+	if (!nvram_get_int("bwl_enable"))
 		return;
 
-	/* read qosrules from nvram */
-	g = buf = strdup(nvram_safe_get("new_qoslimit_rules"));
+	/* read bwl rules from nvram */
+	g = buf = strdup(nvram_safe_get("bwl_rules"));
 
-	ibw = nvram_safe_get("wan_qos_ibw");	/* Read from QOS setting */
-	obw = nvram_safe_get("wan_qos_obw");	/* Read from QOS setting */
+	ibw = nvram_safe_get("wan_qos_ibw");	/* read from QOS setting */
+	obw = nvram_safe_get("wan_qos_obw");	/* read from QOS setting */
 
 	lanipaddr = nvram_safe_get("lan_ipaddr");
 	lanmask = nvram_safe_get("lan_netmask");
 
-	qosl_tcp = nvram_safe_get("qosl_tcp");
-	qosl_udp = nvram_safe_get("qosl_udp");
+	bwl_br0_tcp = nvram_safe_get("bwl_br0_tcp");
+	bwl_br0_udp = nvram_safe_get("bwl_br0_udp");
 
 	/* MANGLE */
 	if (chain == 1) {
-		if (nvram_get_int("qosl_enable") == 1)
+		if (nvram_get_int("bwl_br0_enable") == 1)
 			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 100\n"
 			          "-A PREROUTING  -s %s/%s ! -d %s/%s -j MARK --set-mark 100\n",
 			          lanipaddr, lanmask, lanipaddr, lanmask,
 			          lanipaddr, lanmask, lanipaddr, lanmask);
 
 		/* br1 */
-		if (nvram_get_int("limit_br1_enable") == 1) {
+		if (nvram_get_int("bwl_br1_enable") == 1) {
 			lanX_ipaddr = nvram_safe_get("lan1_ipaddr");
 			lanX_mask = nvram_safe_get("lan1_netmask");
 
@@ -116,7 +116,7 @@ void ipt_qoslimit(int chain)
 		}
 
 		/* br2 */
-		if (nvram_get_int("limit_br2_enable") == 1) {
+		if (nvram_get_int("bwl_br2_enable") == 1) {
 			lanX_ipaddr = nvram_safe_get("lan2_ipaddr");
 			lanX_mask = nvram_safe_get("lan2_netmask");
 
@@ -127,7 +127,7 @@ void ipt_qoslimit(int chain)
 		}
 
 		/* br3 */
-		if (nvram_get_int("limit_br3_enable") == 1) {
+		if (nvram_get_int("bwl_br3_enable") == 1) {
 			lanX_ipaddr = nvram_safe_get("lan3_ipaddr");
 			lanX_mask = nvram_safe_get("lan3_netmask");
 
@@ -140,23 +140,23 @@ void ipt_qoslimit(int chain)
 
 	/* NAT */
 	if (chain == 2) {
-		if (nvram_get_int("qosl_enable") == 1) {
+		if (nvram_get_int("bwl_br0_enable") == 1) {
 #ifndef TCONFIG_BCMARM
-			if (nvram_get_int("qosl_tcp") > 0) {
-				ipt_write("-A PREROUTING -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, qosl_tcp);
+			if (nvram_get_int("bwl_br0_tcp") > 0) {
+				ipt_write("-A PREROUTING -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, bwl_br0_tcp);
 			}
 #endif
-			if (nvram_get_int("qosl_udp") > 0)
-				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n" , lanipaddr, lanmask, qosl_udp);
+			if (nvram_get_int("bwl_br0_udp") > 0)
+				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n" , lanipaddr, lanmask, bwl_br0_udp);
 		}
 	}
 
 #ifdef TCONFIG_BCMARM
 	/* Filter */
 	if (chain == 3) {
-		if (nvram_get_int("qosl_enable") == 1) {
-			if (nvram_get_int("qosl_tcp") > 0)
-				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n" , lanipaddr, lanmask, qosl_tcp);
+		if (nvram_get_int("bwl_br0_enable") == 1) {
+			if (nvram_get_int("bwl_br0_tcp") > 0)
+				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n" , lanipaddr, lanmask, bwl_br0_tcp);
 		}
 	}
 #endif
@@ -251,7 +251,7 @@ void ipt_qoslimit(int chain)
 			}
 		}
 
-		if (atoi(udplimit) > 0){
+		if (atoi(udplimit) > 0) {
 			if (chain == 2) {
 				switch (address_type) {
 					case IP_ADDRESS:
@@ -270,8 +270,7 @@ void ipt_qoslimit(int chain)
 	free(buf);
 }
 
-/* read nvram into files */
-void new_qoslimit_start(void)
+void bwlimit_start(void)
 {
 	FILE *tc;
 	char *buf;
@@ -294,27 +293,27 @@ void new_qoslimit_start(void)
 	int s[6];
 	char *waniface;
 
-	if (!nvram_get_int("new_qoslimit_enable"))
+	if (!nvram_get_int("bwl_enable"))
 		return;
 
-	/* read qosrules from nvram */
-	g = buf = strdup(nvram_safe_get("new_qoslimit_rules"));
+	/* read bwl rules from nvram */
+	g = buf = strdup(nvram_safe_get("bwl_rules"));
 
-	ibw = nvram_safe_get("wan_qos_ibw");
-	obw = nvram_safe_get("wan_qos_obw");
+	ibw = nvram_safe_get("wan_qos_ibw"); /* read from QOS setting */
+	obw = nvram_safe_get("wan_qos_obw"); /* read from QOS setting */
 
 	lanipaddr = nvram_safe_get("lan_ipaddr");
 	lanmask = nvram_safe_get("lan_netmask");
 	waniface = nvram_safe_get("wan_iface");
 
-	dlr = nvram_safe_get("qosl_dlr");		/* download rate */
-	dlc = nvram_safe_get("qosl_dlc");		/* download ceiling */
-	ulr = nvram_safe_get("qosl_ulr");		/* upload rate */
-	ulc = nvram_safe_get("qosl_ulc");		/* upload ceiling */
-	prio = nvram_safe_get("limit_br0_prio");	/* priority */
+	dlr = nvram_safe_get("bwl_br0_dlr");		/* download rate */
+	dlc = nvram_safe_get("bwl_br0_dlc");		/* download ceiling */
+	ulr = nvram_safe_get("bwl_br0_ulr");		/* upload rate */
+	ulc = nvram_safe_get("bwl_br0_ulc");		/* upload ceiling */
+	prio = nvram_safe_get("bwl_br0_prio");		/* priority */
 
-	if ((tc = fopen(qoslimitfn, "w")) == NULL) {
-		perror(qoslimitfn);
+	if ((tc = fopen(bwlimitfn, "w")) == NULL) {
+		perror(bwlimitfn);
 		return;
 	}
 
@@ -323,24 +322,22 @@ void new_qoslimit_start(void)
 	            "TCA=\"tc class add dev br0\"\n"
 	            "TFA=\"tc filter add dev br0\"\n"
 	            "TQA=\"tc qdisc add dev br0\"\n"
-	            "\n"
-	            "SFQ=\"sfq perturb 10\"\n"
-	            "\n"
 	            "TCAU=\"tc class add dev %s\"\n"
 	            "TFAU=\"tc filter add dev %s\"\n"
 	            "TQAU=\"tc qdisc add dev %s\"\n"
+	            "Q=\"sfq perturb 10\"\n"
 	            "\n"
 	            "tc qdisc del dev br0 root 2>/dev/null\n"
 	            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 	            "\ttc qdisc del dev %s root 2>/dev/null\n"
 	            "}\n"
 	            "\n"
-	            "tc qdisc add dev br0 root handle 1: htb\n"
-	            "tc class add dev br0 parent 1: classid 1:1 htb rate %skbit\n"
+	            "$TQA root handle 1: htb\n"
+	            "$TCA parent 1: classid 1:1 htb rate %skbit\n"
 	            "\n"
 	            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-	            "\ttc qdisc add dev %s root handle 2: htb\n"
-	            "\ttc class add dev %s parent 2: classid 2:1 htb rate %skbit\n"
+	            "\t$TQAU root handle 2: htb\n"
+	            "\t$TCAU parent 2: classid 2:1 htb rate %skbit\n"
 	            "}\n"
 	            "\n",
 	            waniface,
@@ -348,22 +345,21 @@ void new_qoslimit_start(void)
 	            waniface,
 	            waniface,
 	            ibw,
-	            waniface,
-	            waniface, obw);
+	            obw);
 
-	if ((nvram_get_int("qosl_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
+	if ((nvram_get_int("bwl_br0_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
 		if (!strcmp(dlc, ""))
 			strcpy(dlc, dlr);
 		if (!strcmp(ulc, ""))
 			strcpy(ulc, ulr);
 
 		fprintf(tc, "$TCA parent 1:1 classid 1:100 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA parent 1:100 handle 100: $SFQ\n"
+		            "$TQA parent 1:100 handle 100: $Q\n"
 		            "$TFA parent 1:0 prio 3 protocol all handle 100 fw flowid 1:100\n"
 		            "\n"
 		            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t$TCAU parent 2:1 classid 2:100 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:100 handle 100: $SFQ\n"
+		            "\t$TQAU parent 2:100 handle 100: $Q\n"
 		            "\t$TFAU parent 2:0 prio 3 protocol all handle 100 fw flowid 2:100\n"
 		            "}\n"
 		            "\n",
@@ -396,7 +392,7 @@ void new_qoslimit_start(void)
 
 		if (strcmp(dlrate, "") && strcmp(dlceil, "")) {
 			fprintf(tc, "$TCA parent 1:1 classid 1:%s htb rate %skbit ceil %skbit prio %s\n"
-			            "$TQA parent 1:%s handle %s: $SFQ\n",
+			            "$TQA parent 1:%s handle %s: $Q\n",
 			            seq, dlrate, dlceil, priority,
 			            seq, seq);
 
@@ -416,23 +412,23 @@ void new_qoslimit_start(void)
 		if (strcmp(ulrate, "") && strcmp(ulceil, ""))
 			fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 			            "\t$TCAU parent 2:1 classid 2:%s htb rate %skbit ceil %skbit prio %s\n"
-			            "\t$TQAU parent 2:%s handle %s: $SFQ\n"
+			            "\t$TQAU parent 2:%s handle %s: $Q\n"
 			            "\t$TFAU parent 2:0 prio %s protocol all handle %s fw flowid 2:%s\n"
 			            "}\n"
 			            "\n",
 			            seq, ulrate, ulceil, priority,
 			            seq, seq,
 			            priority, seq, seq);
-	}
+	} /* while */
 	free(buf);
 
 	/* limit br1 */
-	if (nvram_get_int("limit_br1_enable") == 1) {
-		dlr = nvram_safe_get("limit_br1_dlr");		/* download rate */
-		dlc = nvram_safe_get("limit_br1_dlc");		/* download ceiling */
-		ulr = nvram_safe_get("limit_br1_ulr");		/* upload rate */
-		ulc = nvram_safe_get("limit_br1_ulc");		/* upload ceiling */
-		prio = nvram_safe_get("limit_br1_prio");	/* priority */
+	if (nvram_get_int("bwl_br1_enable") == 1) {
+		dlr = nvram_safe_get("bwl_br1_dlr");		/* download rate */
+		dlc = nvram_safe_get("bwl_br1_dlc");		/* download ceiling */
+		ulr = nvram_safe_get("bwl_br1_ulr");		/* upload rate */
+		ulc = nvram_safe_get("bwl_br1_ulc");		/* upload ceiling */
+		prio = nvram_safe_get("bwl_br1_prio");		/* priority */
 
 		if (!strcmp(dlc, ""))
 			strcpy(dlc, dlr);
@@ -447,7 +443,7 @@ void new_qoslimit_start(void)
 		            "tc qdisc add dev br1 root handle 4: htb\n"
 		            "tc class add dev br1 parent 4: classid 4:1 htb rate %skbit\n"
 		            "$TCA1 parent 4:1 classid 4:401 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA1 parent 4:401 handle 401: $SFQ\n"
+		            "$TQA1 parent 4:401 handle 401: $Q\n"
 		            "$TFA1 parent 4:0 prio %s protocol all handle 401 fw flowid 4:401\n",
 		            ibw,
 		            dlr, dlc, prio,
@@ -456,7 +452,7 @@ void new_qoslimit_start(void)
 		/* upload for br1 */
 		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t$TCAU parent 2:1 classid 2:501 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:501 handle 501: $SFQ\n"
+		            "\t$TQAU parent 2:501 handle 501: $Q\n"
 		            "\t$TFAU parent 2:0 prio %s protocol all handle 501 fw flowid 2:501\n"
 		            "}\n",
 		            ulr, ulc, prio,
@@ -464,12 +460,12 @@ void new_qoslimit_start(void)
 	}
 
 	/* limit br2 */
-	if (nvram_get_int("limit_br2_enable") == 1) {
-		dlr = nvram_safe_get("limit_br2_dlr");		/* download rate */
-		dlc = nvram_safe_get("limit_br2_dlc");		/* download ceiling */
-		ulr = nvram_safe_get("limit_br2_ulr");		/* upload rate */
-		ulc = nvram_safe_get("limit_br2_ulc");		/* upload ceiling */
-		prio = nvram_safe_get("limit_br2_prio");	/* priority */
+	if (nvram_get_int("bwl_br2_enable") == 1) {
+		dlr = nvram_safe_get("bwl_br2_dlr");		/* download rate */
+		dlc = nvram_safe_get("bwl_br2_dlc");		/* download ceiling */
+		ulr = nvram_safe_get("bwl_br2_ulr");		/* upload rate */
+		ulc = nvram_safe_get("bwl_br2_ulc");		/* upload ceiling */
+		prio = nvram_safe_get("bwl_br2_prio");		/* priority */
 
 		if (!strcmp(dlc, ""))
 			strcpy(dlc, dlr);
@@ -484,7 +480,7 @@ void new_qoslimit_start(void)
 		            "tc qdisc add dev br2 root handle 6: htb\n"
 		            "tc class add dev br2 parent 6: classid 6:1 htb rate %skbit\n"
 		            "$TCA2 parent 6:1 classid 6:601 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA2 parent 6:601 handle 601: $SFQ\n"
+		            "$TQA2 parent 6:601 handle 601: $Q\n"
 		            "$TFA2 parent 6:0 prio %s protocol all handle 601 fw flowid 6:601\n",
 		            ibw,
 		            dlr, dlc, prio,
@@ -493,7 +489,7 @@ void new_qoslimit_start(void)
 		/* upload for br2 */
 		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t$TCAU parent 2:1 classid 2:701 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:701 handle 701: $SFQ\n"
+		            "\t$TQAU parent 2:701 handle 701: $Q\n"
 		            "\t$TFAU parent 2:0 prio %s protocol all handle 701 fw flowid 2:701\n"
 		            "}\n",
 		            ulr, ulc, prio,
@@ -501,12 +497,12 @@ void new_qoslimit_start(void)
 	}
 
 	/* limit br3 */
-	if (nvram_get_int("limit_br3_enable") == 1) {
-		dlr = nvram_safe_get("limit_br3_dlr");		/* download rate */
-		dlc = nvram_safe_get("limit_br3_dlc");		/* download ceiling */
-		ulr = nvram_safe_get("limit_br3_ulr");		/* upload rate */
-		ulc = nvram_safe_get("limit_br3_ulc");		/* upload ceiling */
-		prio = nvram_safe_get("limit_br3_prio");	/* priority */
+	if (nvram_get_int("bwl_br3_enable") == 1) {
+		dlr = nvram_safe_get("bwl_br3_dlr");		/* download rate */
+		dlc = nvram_safe_get("bwl_br3_dlc");		/* download ceiling */
+		ulr = nvram_safe_get("bwl_br3_ulr");		/* upload rate */
+		ulc = nvram_safe_get("bwl_br3_ulc");		/* upload ceiling */
+		prio = nvram_safe_get("bwl_br3_prio");		/* priority */
 
 		if (!strcmp(dlc, ""))
 			strcpy(dlc, dlr);
@@ -521,7 +517,7 @@ void new_qoslimit_start(void)
 		            "tc qdisc add dev br3 root handle 8: htb\n"
 		            "tc class add dev br3 parent 8: classid 8:1 htb rate %skbit\n"
 		            "$TCA3 parent 8:1 classid 8:801 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA3 parent 8:801 handle 801: $SFQ\n"
+		            "$TQA3 parent 8:801 handle 801: $Q\n"
 		            "$TFA3 parent 8:0 prio %s protocol all handle 801 fw flowid 8:801\n",
 		            ibw,
 		            dlr, dlc, prio,
@@ -530,7 +526,7 @@ void new_qoslimit_start(void)
 		/* upload for br3 */
 		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t$TCAU parent 2:1 classid 2:901 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:901 handle 901: $SFQ\n"
+		            "\t$TQAU parent 2:901 handle 901: $Q\n"
 		            "\t$TFAU parent 2:0 prio %s protocol all handle 901 fw flowid 2:901\n"
 		            "}\n",
 		            ulr, ulc, prio,
@@ -539,16 +535,15 @@ void new_qoslimit_start(void)
 
 	fclose(tc);
 
-	chmod(qoslimitfn, 0700);
+	chmod(bwlimitfn, 0700);
 
-	/* fake start */
-	eval((char *)qoslimitfn, "start");
+	eval((char *)bwlimitfn, "start");
 }
 
-void new_qoslimit_stop(void)
+void bwlimit_stop(void)
 {
 	FILE *f;
-	char *s = "/tmp/qoslimittc_stop.sh";
+	char *s = "/tmp/bwlimit_stop.sh";
 
 	if ((f = fopen(s, "w")) == NULL) {
 		perror(s);
@@ -567,13 +562,12 @@ void new_qoslimit_stop(void)
 
 	chmod(s, 0700);
 
-	/* fake stop */
 	eval(s, "stop");
 }
 /*
-PREROUTING (mn) ----> x ----> FORWARD (f) ----> + ----> POSTROUTING (n)
-           QD         |                         ^
-                      |                         |
-                      v                         |
-                    INPUT (f)                 OUTPUT (mnf)
-*/
+ * PREROUTING (mn) ----> x ----> FORWARD (f) ----> + ----> POSTROUTING (n)
+ *            QD         |                         ^
+ *                       |                         |
+ *                       v                         |
+ *                    INPUT (f)                 OUTPUT (mnf)
+ */

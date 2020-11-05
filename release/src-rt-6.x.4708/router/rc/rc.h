@@ -574,10 +574,10 @@ extern void stop_tinc();
 extern void run_tinc_firewall_script();
 #endif
 
-/* new_qoslimit.c */
-extern void ipt_qoslimit(int chain);
-extern void new_qoslimit_start(void);
-extern void new_qoslimit_stop(void);
+/* bwlimit.c */
+extern void ipt_bwlimit(int chain);
+extern void bwlimit_start(void);
+extern void bwlimit_stop(void);
 
 /* arpbind.c */
 extern void start_arpbind(void);

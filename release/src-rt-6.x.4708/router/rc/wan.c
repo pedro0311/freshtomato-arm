@@ -1191,7 +1191,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		stop_upnp();
 		start_upnp();
-		new_qoslimit_start();
+		bwlimit_start();
 	}
 
 	mwan_table_add(prefix);
@@ -1277,7 +1277,7 @@ void stop_wan(void)
 	stop_tinc();
 #endif
 
-	new_qoslimit_stop();
+	bwlimit_stop();
 	stop_upnp();
 	stop_firewall();
 	stop_igmp_proxy();

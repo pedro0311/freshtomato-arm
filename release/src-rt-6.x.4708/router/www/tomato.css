@@ -930,7 +930,7 @@ table.tomato-grid.vpn-status-table {
 }
 
 #res-bp-grid .box6,
-#qosg-grid .co1,
+#bwlg-grid .co1,
 #sm-grid .co1 {
 	width: 30%;
 }
@@ -1119,13 +1119,13 @@ table.tomato-grid.vpn-status-table {
 	width: 110px;
 }
 
-#qosg-grid .co2,
-#qosg-grid .co3,
-#qosg-grid .co4,
-#qosg-grid .co5,
-#qosg-grid .co6,
-#qosg-grid .co7,
-#qosg-grid .co8 {
+#bwlg-grid .co2,
+#bwlg-grid .co3,
+#bwlg-grid .co4,
+#bwlg-grid .co5,
+#bwlg-grid .co6,
+#bwlg-grid .co7,
+#bwlg-grid .co8 {
 	width: 10%;
 }
 
