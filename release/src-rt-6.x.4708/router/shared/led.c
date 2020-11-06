@@ -138,6 +138,7 @@ int do_led(int which, int mode)
 //				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDGE USB2 USB3    5G
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
+	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac66u_b1[]   = { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
@@ -192,6 +193,7 @@ int do_led(int which, int mode)
 			case MODEL_RTN18U:
 			case MODEL_RTAC56U:
 			case MODEL_RTAC66U_B1:
+			case MODEL_RTAC67U:
 			case MODEL_RTAC68U:
            		case MODEL_RTAC1900P:
 #endif /* CONFIG_BCMWL6A */
@@ -214,6 +216,16 @@ int do_led(int which, int mode)
 
 	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
 #ifdef CONFIG_BCMWL6A
+	case MODEL_RTAC67U:
+		b = ac67u[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		break;
 	case MODEL_RTAC68U:
 		b = ac68u[which];
 		if ((which == LED_WLAN) ||
@@ -566,6 +578,7 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC66U_B1:
+		case MODEL_RTAC67U:
 			set_gpio(0, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
 			break;
@@ -630,7 +643,7 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC68U RT-AC1900P */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U and RT-AC1900P */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch (model) {
@@ -652,6 +665,18 @@ void do_led_nongpio(int model, int which, int mode) {
 		}
 		break;
 	case MODEL_RTAC66U_B1:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+	case MODEL_RTAC67U:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
 			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
