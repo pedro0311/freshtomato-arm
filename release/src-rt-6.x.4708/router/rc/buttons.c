@@ -73,7 +73,6 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_RTAC67U:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 7; /* wps button (active LOW) */
-		wlan_mask = 1 << 15;  /* wifi button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_RTAC68U:
@@ -321,7 +320,6 @@ int buttons_main(int argc, char *argv[])
 			     (model == MODEL_AC18) ||
 			     (model == MODEL_RTAC56U) ||
 			     (model == MODEL_RTAC1900P) ||
-			     (model == MODEL_RTAC67U) ||
 			     (model == MODEL_RTAC68U))) led(ses_led, LED_ON);
 
 			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);

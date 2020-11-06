@@ -930,7 +930,6 @@ static inline void usbled_proc(char *device, int add)
 		switch(model) {
 		case MODEL_RTN18U:
 		case MODEL_RTAC56U:
-		case MODEL_RTAC67U:
 		case MODEL_RTAC68U:
 		case MODEL_RTAC1900P:
 		case MODEL_R6400:

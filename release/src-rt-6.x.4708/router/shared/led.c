@@ -138,7 +138,7 @@ int do_led(int which, int mode)
 //				    WLAN  DIAG  WHITE AMBER  DMZ  AOSS  BRIDGE USB2 USB3    5G
 //				    ----- ----- ----- -----  ---  ----  ------ ---- ----    --
 #ifdef CONFIG_BCMWL6A
-	static int ac67u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac66u_b1[]   = { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
@@ -578,10 +578,10 @@ void led_setup(void) {
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC66U_B1:
+		case MODEL_RTAC67U:
 			set_gpio(0, T_HIGH);		/* disable power led */
 			disable_led_wanlan();
 			break;
-		case MODEL_RTAC67U:
 		case MODEL_RTAC68U:
         	case MODEL_RTAC1900P:
 			set_gpio(3, T_HIGH);		/* disable power led */
