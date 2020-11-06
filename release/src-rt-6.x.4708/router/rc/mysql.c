@@ -5,8 +5,10 @@
  *
  */
 
+
+#include "rc.h"
+
 #include <stdlib.h>
-#include <rc.h>
 #include <shutils.h>
 #include <utils.h>
 #include <syslog.h>

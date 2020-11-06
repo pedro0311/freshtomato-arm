@@ -31,11 +31,15 @@ ifeq ($(TCONFIG_BCMSMP),y)
 CFLAGS += -DSMP
 endif
 
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+CFLAGS += -DDEBUG_SYSLOG
+endif
+
 OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
         firewall.o ppp.o telssh.o wnas.o \
         listen.o redial.o led.o qos.o forward.o misc.o mtd.o \
         buttons.o restrict.o gpio.o sched.o \
-        new_qoslimit.o arpbind.o \
+        bwlimit.o arpbind.o \
         tomatoanon.o
 
 ifeq ($(or $(TCONFIG_BCMARM),$(CONFIG_BLINK)),y)

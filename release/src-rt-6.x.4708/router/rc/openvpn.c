@@ -32,6 +32,10 @@
 #define OVPN_CLIENT_MAX		2
 #endif
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"openvpn_debug"
+
 /* OpenVPN routing policy modes (rgw) */
 enum {
 	OVPN_RGW_NONE = 0,
@@ -93,26 +97,20 @@ int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode,
 
 	/* Create tap/tun interface */
 	if (eval("openvpn", "--mktun", "--dev", iface)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		syslog(LOG_WARNING, "Unable to create tunnel interface %s!", iface);
-#endif
+		logmsg(LOG_WARNING, "Unable to create tunnel interface %s!", iface);
 	}
 
 	/* Bring interface up (TAP only) */
 	if (iface_type == OVPN_IF_TAP) {
 		if (route_mode == BRIDGE) {
 			if (eval("brctl", "addif", nvram_safe_get(buffer), iface)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				syslog(LOG_WARNING, "Unable to add interface %s to bridge!", iface);
-#endif
+				logmsg(LOG_WARNING, "Unable to add interface %s to bridge!", iface);
 				return -1;
 			}
 		}
 
 		if (eval("ifconfig", iface, "promisc", "up")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			syslog(LOG_WARNING, "Unable to bring tunnel interface %s up!", iface);
-#endif
+			logmsg(LOG_WARNING, "Unable to bring tunnel interface %s up!", iface);
 			return -1;
 		}
 	}
@@ -224,8 +222,10 @@ void start_ovpn_client(int unit)
 		if_type = OVPN_IF_TAP;
 	else if (nvram_contains_word(buffer, "tun"))
 		if_type = OVPN_IF_TUN;
-	else
+	else {
+		logmsg(LOG_WARNING, "Invalid interface type, %.3s", nvram_safe_get(buffer));
 		return;
+	}
 
 	/* Build interface name */
 	snprintf(iface, IF_SIZE, "%s%d", nvram_safe_get(buffer), (unit + OVPN_CLIENT_BASEIF));
@@ -239,8 +239,10 @@ void start_ovpn_client(int unit)
 		auth_mode = OVPN_AUTH_STATIC;
 	else if (nvram_contains_word(buffer, "custom"))
 		auth_mode = OVPN_AUTH_CUSTOM;
-	else
+	else {
+		logmsg(LOG_WARNING, "Invalid encryption mode, %.6s", nvram_safe_get(buffer));
 		return;
+	}
 
 	/* Determine if we should bridge the tunnel */
 	memset(buffer, 0, BUF_SIZE);
@@ -626,9 +628,7 @@ void start_ovpn_client(int unit)
 	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		syslog(LOG_WARNING, "Starting OpenVPN failed...");
-#endif
+		logmsg(LOG_WARNING, "Starting OpenVPN failed...");
 		stop_ovpn_client(unit);
 		return;
 	}
@@ -733,8 +733,10 @@ void start_ovpn_server(int unit)
 		if_type = OVPN_IF_TAP;
 	else if (nvram_contains_word(buffer, "tun"))
 		if_type = OVPN_IF_TUN;
-	else
+	else {
+		logmsg(LOG_WARNING, "Invalid interface type, %.3s", nvram_safe_get(buffer));
 		return;
+	}
 
 	/* Build interface name */
 	snprintf(iface, IF_SIZE, "%s%d", nvram_safe_get(buffer), (unit + OVPN_SERVER_BASEIF));
@@ -748,8 +750,10 @@ void start_ovpn_server(int unit)
 		auth_mode = OVPN_AUTH_STATIC;
 	else if (nvram_contains_word(buffer, "custom"))
 		auth_mode = OVPN_AUTH_CUSTOM;
-	else
+	else {
+		logmsg(LOG_WARNING, "Invalid encryption mode, %.6s", nvram_safe_get(buffer));
 		return;
+	}
 
 	if (is_intf_up(iface) > 0 && if_type == OVPN_IF_TAP)
 		eval("brctl", "delif", getNVRAMVar("vpn_server%d_br", unit), iface);
@@ -930,6 +934,7 @@ void start_ovpn_server(int unit)
 				nvi = strlen(chp);
 
 				chp[strcspn(chp, "<")] = '\0';
+				logmsg(LOG_DEBUG, "*** %s: CCD: enabled: %d", __FUNCTION__, atoi(chp));
 				if (atoi(chp) == 1) {
 					nvi -= strlen(chp)+1;
 					chp += strlen(chp)+1;
@@ -938,6 +943,7 @@ void start_ovpn_server(int unit)
 					route = NULL;
 					if (nvi > 0) {
 						chp[strcspn(chp, "<")] = '\0';
+						logmsg(LOG_DEBUG, "*** %s: CCD: Common name: %s", __FUNCTION__, chp);
 						ccd = fopen(chp, "a");
 						chmod(chp, (S_IRUSR | S_IWUSR));
 
@@ -948,6 +954,7 @@ void start_ovpn_server(int unit)
 						chp[strcspn(chp, "<")] = ' ';
 						chp[strcspn(chp, "<")] = '\0';
 						route = chp;
+						logmsg(LOG_DEBUG, "*** %s: CCD: Route: %s", __FUNCTION__, chp);
 						if (strlen(route) > 1) {
 							fprintf(ccd, "iroute %s\n", route);
 							fprintf(fp, "route %s\n", route);
@@ -960,16 +967,19 @@ void start_ovpn_server(int unit)
 						fclose(ccd);
 					if ((nvi > 0) && (route != NULL)) {
 						chp[strcspn(chp, "<")] = '\0';
+						logmsg(LOG_DEBUG, "*** %s: CCD: Push: %d", __FUNCTION__, atoi(chp));
 						if (c2c && atoi(chp) == 1 && strlen(route) > 1)
 							fprintf(fp, "push \"route %s\"\n", route);
 
 						nvi -= strlen(chp)+1;
 						chp += strlen(chp)+1;
 					}
+					logmsg(LOG_DEBUG, "*** %s: CCD leftover: %d", __FUNCTION__, nvi + 1);
 				}
 				/* Advance to next entry */
 				chp = strtok(NULL, ">");
 			}
+			logmsg(LOG_DEBUG, "*** %s: CCD processing complete", __FUNCTION__);
 		}
 		else
 			fprintf(fp, "duplicate-cn\n");
@@ -1229,9 +1239,7 @@ void start_ovpn_server(int unit)
 	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		syslog(LOG_WARNING, "Starting VPN instance failed...");
-#endif
+		logmsg(LOG_WARNING, "Starting VPN instance failed...");
 		stop_ovpn_client(unit);
 		return;
 	}
@@ -1454,6 +1462,7 @@ void write_ovpn_dnsmasq_config(FILE* f)
 	for (pos = strtok(buf, ","); pos != NULL; pos = strtok(NULL, ",")) {
 		cur = atoi(pos);
 		if (cur) {
+			logmsg(LOG_DEBUG, "*** %s: adding server %d interface to dns config", __FUNCTION__, cur);
 			snprintf(nv, sizeof(nv), "vpn_server%d_if", cur);
 			fprintf(f, "interface=%s%d\n", nvram_safe_get(nv), (OVPN_SERVER_BASEIF + cur));
 		}
@@ -1467,15 +1476,19 @@ void write_ovpn_dnsmasq_config(FILE* f)
 				continue;
 
 			if (sscanf(fn, "client%d.resol%c", &cur, &ch) == 2) {
+				logmsg(LOG_DEBUG, "*** %s: checking ADNS settings for client %d", __FUNCTION__, cur);
 				snprintf(buf, sizeof(buf), "vpn_client%d_adns", cur);
 				if (nvram_get_int(buf) == 2) {
+					logmsg(LOG_INFO, "Adding strict-order to dnsmasq config for client %d", cur);
 					fprintf(f, "strict-order\n");
 					break;
 				}
 			}
 
-			if (sscanf(fn, "client%d.con%c", &cur, &ch) == 2)
+			if (sscanf(fn, "client%d.con%c", &cur, &ch) == 2) {
+				logmsg(LOG_INFO, "Adding Dnsmasq config from %s", fn);
 				fappend(f, fn);
+			}
 		}
 		closedir(dir);
 	}
@@ -1507,6 +1520,7 @@ int write_ovpn_resolv(FILE* f)
 			if ((dnsf = fopen(fn, "r")) == NULL)
 				continue;
 
+			logmsg(LOG_INFO, "Adding DNS entries from %s", fn);
 			fappend(f, fn);
 
 			if (adns == 3)
