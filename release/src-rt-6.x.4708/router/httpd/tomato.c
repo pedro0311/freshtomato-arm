@@ -1228,6 +1228,7 @@ static const nvset_t nvset_list[] = {
 	{ "debug_nocommit",		V_01				},
 	{ "debug_cprintf",		V_01				},
 	{ "debug_cprintf_file",		V_01				},
+	{ "debug_logsegfault",		V_01				},
 //	{ "debug_keepfiles",		V_01				},
 	{ "debug_ddns",			V_01				},
 	{ "debug_norestart",		V_TEXT(0, 128)			},
