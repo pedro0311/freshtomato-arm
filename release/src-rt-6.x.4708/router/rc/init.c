@@ -698,7 +698,7 @@ static int init_nvram(void)
 			/* modify/adjust 2,4 GHz WiFi TX beamforming parameter (taken from Asus 384 - Aug 2019) */
 			nvram_set("0:rpcal2g", "0xe3ce");
 		}
-		set_gpio(13, T_HIGH);		/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
+		set_gpio(GPIO_13, T_HIGH);		/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
 		break;
 	case MODEL_RTAC56U:
 		mfr = "Asus";

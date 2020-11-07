@@ -586,77 +586,77 @@ void led_setup(void) {
 		switch (model) {
 #ifdef CONFIG_BCMWL6A
 		case MODEL_DIR868L:
-			set_gpio(0, T_HIGH);		/* disable power led color amber */
+			set_gpio(GPIO_00, T_HIGH); /* disable power led color amber */
 			break;
 		case MODEL_AC15:
-			set_gpio(0, T_LOW);		/* disable sys led */
+			set_gpio(GPIO_00, T_LOW); /* disable sys led */
 			disable_led_wanlan();
 			break;
 		case MODEL_AC18:
-			set_gpio(0, T_LOW);		/* disable sys led */
+			set_gpio(GPIO_00, T_LOW); /* disable sys led */
 			disable_led_wanlan();
 			break;
 		case MODEL_R6250:
 		case MODEL_R6300v2:
-			set_gpio(3, T_HIGH);		/* disable power led color amber */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
 			break;
 		case MODEL_R6400:
 		case MODEL_R6400v2:
 		case MODEL_R6700v3:
-			set_gpio(2, T_HIGH);		/* disable power led color amber */
+			set_gpio(GPIO_02, T_HIGH); /* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_R6700v1:
 		case MODEL_R7000:
-			set_gpio(3, T_HIGH);		/* disable power led color amber */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTN18U:
-			set_gpio(0, T_HIGH);		/* disable power led color blue */
+			set_gpio(GPIO_00, T_HIGH); /* disable power led color blue */
 			break;
 		case MODEL_RTAC56U:
-			set_gpio(3, T_HIGH);		/* disable power led color blue */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led color blue */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC66U_B1:
 		case MODEL_RTAC67U:
-			set_gpio(0, T_HIGH);		/* disable power led */
+			set_gpio(GPIO_00, T_HIGH); /* disable power led */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC68U:
         	case MODEL_RTAC1900P:
-			set_gpio(3, T_HIGH);		/* disable power led */
-			set_gpio(4, T_HIGH);		/* disable asus logo led */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led */
+			set_gpio(GPIO_04, T_HIGH); /* disable asus logo led */
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6400:
 		case MODEL_EA6900:
-			set_gpio(8, T_LOW);		/* disable LOGO led */
+			set_gpio(GPIO_08, T_LOW); /* disable LOGO led */
 			disable_led_wanlan();
 			break;
 		case MODEL_EA6700:
 			if (strstr(nvram_safe_get("modelNumber"), "EA6500") != NULL) { /* check for ea6500v2 --> same boardtype/num/rev like EA6700! */
-				set_gpio(6, T_HIGH);		/* disable LOGO led for EA6500 */
+				set_gpio(GPIO_06, T_HIGH); /* disable LOGO led for EA6500 */
 			}
 			else {
-				set_gpio(8, T_LOW);		/* disable LOGO led for EA6700 */
+				set_gpio(GPIO_08, T_LOW); /* disable LOGO led for EA6700 */
 			}
 			disable_led_wanlan();
 			break;
 		case MODEL_WZR1750:
 #if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
-			set_gpio(1, T_LOW);		/* disable power led color red */
+			set_gpio(GPIO_01, T_LOW); /* disable power led color red */
 #endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
 		case MODEL_R8000:
-			set_gpio(3, T_HIGH);		/* disable power led color amber */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
 			disable_led_wanlan();
 			break;
 		case MODEL_RTAC3200:
-			set_gpio(3, T_HIGH);		/* disable power led */
-			set_gpio(15, T_LOW);		/* disable button led */
+			set_gpio(GPIO_03, T_HIGH); /* disable power led */
+			set_gpio(GPIO_15, T_LOW); /* disable button led */
 			disable_led_wanlan();
 			break;
 #endif /* CONFIG_BCM7 */
@@ -671,28 +671,28 @@ void led_setup(void) {
 #ifdef CONFIG_BCMWL6A
 		case MODEL_DIR868L:
 			/* activate WAN port led */
-			set_gpio(1, T_LOW);		/* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
+			set_gpio(GPIO_01, T_LOW); /* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
 			break;
 		case MODEL_RTAC56U:
-			set_gpio(4, T_LOW);		/* enable power supply for all LEDs, except for PowerLED */
+			set_gpio(GPIO_04, T_LOW); /* enable power supply for all LEDs, except for PowerLED */
 			break;
 		case MODEL_R6400:
 		case MODEL_R6400v2:
 		case MODEL_R6700v3:
 			/* activate WAN port led */
-			set_gpio(6, T_LOW);		/* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
+			set_gpio(GPIO_06, T_LOW); /* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
 			break;
 		case MODEL_R6700v1:
 		case MODEL_R7000:
 			/* activate WAN port led */
-			set_gpio(8, T_LOW);		/* R6700v1 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			set_gpio(GPIO_08, T_LOW); /* R6700v1 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			break;
 #endif /* CONFIG_BCMWL6A */
 #ifdef CONFIG_BCM7
 		case MODEL_R8000:
 			/* activate WAN port led */
-			set_gpio(8, T_HIGH);
-			set_gpio(9, T_LOW);	/* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active LOW) if ethernet cable is connected; switch to color white (GPIO 8, active HIGH) with WAN up */
+			set_gpio(GPIO_08, T_HIGH);
+			set_gpio(GPIO_09, T_LOW); /* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active LOW) if ethernet cable is connected; switch to color white (GPIO 8, active HIGH) with WAN up */
 			break;
 #endif /* CONFIG_BCM7 */
 		default:
