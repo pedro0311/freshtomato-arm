@@ -82,16 +82,16 @@ void start_usb(void)
 	model = get_model();
 
 	if ((model == MODEL_DIR868L)) {
-		set_gpio(10, T_HIGH);
+		set_gpio(GPIO_10, T_HIGH);
 	}
 	else if ((model == MODEL_WS880)) {
-		set_gpio(7, T_HIGH);
+		set_gpio(GPIO_07, T_HIGH);
 	}
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400) ||
 		 (model == MODEL_R6400v2) ||
 		 (model == MODEL_R6700v3)) {
-		set_gpio(0, T_HIGH);
+		set_gpio(GPIO_00, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
 		 (model == MODEL_EA6400) ||
@@ -99,9 +99,9 @@ void start_usb(void)
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
-		set_gpio(9, T_HIGH);
+		set_gpio(GPIO_09, T_HIGH);
 		if ((model == MODEL_WZR1750)) {
-			 set_gpio(10, T_LOW); /* usb3.0 */
+			 set_gpio(GPIO_10, T_LOW); /* usb3.0 */
 		}
 	}
 
@@ -412,16 +412,16 @@ void stop_usb(void)
 	}
 
 	if ((model == MODEL_DIR868L)) {
-		set_gpio(10, T_LOW);
+		set_gpio(GPIO_10, T_LOW);
 	}
 	else if ((model == MODEL_WS880)) {
-		set_gpio(7, T_LOW);
+		set_gpio(GPIO_07, T_LOW);
 	}
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400) ||
 		 (model == MODEL_R6400v2) ||
 		 (model == MODEL_R6700v3)) {
-		set_gpio(0, T_LOW);
+		set_gpio(GPIO_00, T_LOW);
 	}
 	else if ((model == MODEL_EA6350v1) ||
 		 (model == MODEL_EA6400) ||
@@ -429,9 +429,9 @@ void stop_usb(void)
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
 		 (model == MODEL_WZR1750)) {
-		set_gpio(9, T_LOW);
+		set_gpio(GPIO_09, T_LOW);
 			if ((model == MODEL_WZR1750)) {
-				set_gpio(10, T_HIGH); /* usb3.0 */
+				set_gpio(GPIO_10, T_HIGH); /* usb3.0 */
 			}
 	}
 }
