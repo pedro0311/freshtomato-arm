@@ -903,6 +903,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "debug_nocommit",		"0"				, 0 },
 	{ "debug_cprintf",		"0"				, 0 },
 	{ "debug_cprintf_file",		"0"				, 0 },
+	{ "debug_logsegfault",		"0"				, 0 },
 	{ "console_loglevel",		"1"				, 0 },
 	{ "t_cafree",			"1"				, 0 },
 	{ "t_hidelr",			"0"				, 0 },

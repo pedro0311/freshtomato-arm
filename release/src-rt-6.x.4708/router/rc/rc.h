@@ -370,6 +370,7 @@ extern void create_test_iptfile(void);
 #endif
 extern void allow_fastnat(const char *service, int allow);
 extern void try_enabling_fastnat(void);
+extern void log_segfault(void);
 
 /* forward.c */
 extern void ipt_forward(ipt_table_t table);

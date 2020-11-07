@@ -4958,6 +4958,7 @@ int init_main(int argc, char *argv[])
 				add_remove_usbhost("-1", 1);
 #endif
 
+			log_segfault();
 			create_passwd();
 			start_vlan();
 			start_lan();

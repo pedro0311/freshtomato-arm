@@ -133,6 +133,11 @@ void enable_ip_forward(void)
 	f_write_string("/proc/sys/net/ipv4/ip_forward", "1", 0, 0);
 }
 
+void log_segfault(void)
+{
+	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
+}
+
 #ifdef TCONFIG_IPV6
 void enable_ip6_forward(void)
 {
@@ -1782,6 +1787,8 @@ int start_firewall(void)
 	wan3up = check_wanup("wan3");
 	wan4up = check_wanup("wan4");
 #endif
+
+	log_segfault();
 
 	/* NAT performance tweaks
 	 * These values can be overriden later if needed via firewall script

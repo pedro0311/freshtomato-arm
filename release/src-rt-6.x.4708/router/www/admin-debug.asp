@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("debug_nocommit,debug_cprintf,debug_cprintf_file,console_loglevel,t_cafree,t_hidelr,debug_ddns,debug_norestart"); %>
+//	<% nvram("debug_nocommit,debug_cprintf,debug_cprintf_file,console_loglevel,t_cafree,t_hidelr,debug_ddns,debug_norestart,debug_logsegfault"); %>
 
 function nvramCommit() {
 	fields.disableAll('t_fom', 1);
@@ -41,6 +41,7 @@ function save() {
 	fom.debug_cprintf_file.value = fom.f_debug_cprintf_file.checked ? 1 : 0;
 	fom.t_cafree.value = fom.f_cafree.checked ? 1 : 0;
 	fom.t_hidelr.value = fom.f_hidelr.checked ? 1 : 0;
+	fom.debug_logsegfault.value = fom.f_debug_logsegfault.checked ? 1 : 0;
 	fom.debug_ddns.value = fom.f_debug_ddns.checked ? 1 : 0;
 
 	var a = [];
@@ -49,6 +50,9 @@ function save() {
 	if (fom.f_nr_hotplug2.checked) a.push('hotplug2');
 	if (fom.f_nr_igmprt.checked) a.push('igmprt');
 	fom.debug_norestart.value = a.join(',');
+
+	if (fom.debug_logsegfault.value != nvram.debug_logsegfault)
+		fom._service.value = 'firewall-restart';
 
 	form.submit(fom, 1);
 }
@@ -69,11 +73,13 @@ function save() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-misc.asp">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="debug_nocommit">
 <input type="hidden" name="debug_cprintf">
 <input type="hidden" name="debug_cprintf_file">
 <input type="hidden" name="debug_ddns">
 <input type="hidden" name="debug_norestart">
+<input type="hidden" name="debug_logsegfault">
 <input type="hidden" name="t_cafree">
 <input type="hidden" name="t_hidelr">
 
@@ -89,6 +95,7 @@ function save() {
 			{ title: 'Enable cprintf output to console', name: 'f_debug_cprintf', type: 'checkbox', value: nvram.debug_cprintf != '0' },
 			{ title: 'Enable cprintf output to /tmp/cprintf', name: 'f_debug_cprintf_file', type: 'checkbox', value: nvram.debug_cprintf_file != '0' },
 			{ title: 'Enable DDNS output to /tmp/mdu-*', name: 'f_debug_ddns', type: 'checkbox', value: nvram.debug_ddns != '0' },
+			{ title: 'Enable segfault logging', name: 'f_debug_logsegfault', type: 'checkbox', value: nvram.debug_logsegfault != '0' },
 			{ title: 'Count cache memory and buffers as free memory', name: 'f_cafree', type: 'checkbox', value: nvram.t_cafree == '1' },
 			{ title: 'Avoid displaying LAN to router connections', name: 'f_hidelr', type: 'checkbox', value: nvram.t_hidelr == '1' },
 			{ title: 'Console log level', name: 'console_loglevel', type: 'select', options: a, value: fixInt(nvram.console_loglevel, 1, 8, 1) },
