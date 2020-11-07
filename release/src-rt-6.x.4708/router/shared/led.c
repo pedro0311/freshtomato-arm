@@ -186,7 +186,7 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC68U, RT-AC1900P, RT-AC3200 */
+		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U, RT-AC1900P, RT-AC3200 */
 		switch (model) {
 #ifdef CONFIG_BCMWL6A
 			case MODEL_AC15:
@@ -702,7 +702,7 @@ void led_setup(void) {
 	}
 }
 
-/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U and RT-AC1900P, RT-AC3200 */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U, RT-AC1900P, RT-AC3200 */
 void do_led_nongpio(int model, int which, int mode) {
 
 	switch (model) {
@@ -724,41 +724,8 @@ void do_led_nongpio(int model, int which, int mode) {
 		}
 		break;
 	case MODEL_RTAC66U_B1:
-		if (which == LED_WLAN) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		else if (which == LED_5G) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		break;
 	case MODEL_RTAC67U:
-		if (which == LED_WLAN) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		else if (which == LED_5G) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		break;
 	case MODEL_RTAC68U:
-		if (which == LED_WLAN) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		else if (which == LED_5G) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1");
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		break;
 	case MODEL_RTAC1900P:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1");
