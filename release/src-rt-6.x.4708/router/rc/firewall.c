@@ -1646,7 +1646,7 @@ static void filter6_input(void)
 	if (remotemanage) {
 		ip6t_write("-N wwwlimit\n"
 		           "-A wwwlimit -m recent --set --name www\n"
-		           "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
+		           "-A wwwlimit -m recent --update --hitcount 15 --seconds 5 --name www -j %s\n",
 		           chain_in_drop);
 		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j wwwlimit\n", nvram_safe_get("http_wanport"));
 	}
