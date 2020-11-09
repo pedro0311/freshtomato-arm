@@ -1211,7 +1211,7 @@ static void filter_input(void)
 			/* allow ICMP packets to be received, but restrict the flow to avoid ping flood attacks */
 			ipt_write("-A INPUT -p icmp -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 			/* allow udp traceroute packets, but restrict the flow to avoid ping flood attacks */
-			ipt_write("-A INPUT -p udp --dport 33434:33534 -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_tr"), chain_in_accept);
+			ipt_write("-A INPUT -p udp --dport 33434:33534 -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 		}
 	}
 
