@@ -473,7 +473,7 @@ static int init_vlan_ports(void)
 	case MODEL_R6700v3:
 	case MODEL_R7000:
 	case MODEL_RTN18U:
-	case MODEL_RTAC66U_B1:
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
 	case MODEL_RTAC67U:
 	case MODEL_RTAC68U:
     	case MODEL_RTAC1900P:
@@ -939,9 +939,9 @@ static int init_nvram(void)
 			nvram_set("1:ccode", "SG");
 		}
 		break;
-	case MODEL_RTAC66U_B1:
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
 		mfr = "Asus";
-		name = "RT-AC66U B1";
+		name = nvram_match("odmpid", "RT-AC66U_B1") ? "RT-AC66U B1" : "RT-N66U C1";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
