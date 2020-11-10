@@ -266,7 +266,7 @@
 +}
 --- xl2tpd/xl2tpd-control.c
 +++ xl2tpd/xl2tpd-control.c
-@@ -28,7 +28,7 @@
+@@ -39,7 +39,7 @@
   * xl2tpd-control capture the output, instead of creating tmp files?
   */
  /* result filename format including absolute path and formatting %i for pid */

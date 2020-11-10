@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,block_wan_limit_tr,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat,emf_enable,force_igmpv2"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat,emf_enable,force_igmpv2"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -30,7 +30,6 @@ function verifyFields(focused, quiet) {
 /* ICMP */
 	E('_f_icmp_limit').disabled = !E('_f_icmp').checked;
 	E('_f_icmp_limit_icmp').disabled = (!E('_f_icmp').checked || !E('_f_icmp_limit').checked);
-	E('_f_icmp_limit_traceroute').disabled = (!E('_f_icmp').checked || !E('_f_icmp_limit').checked);
 
 /* IGMP proxy */
 	var enable_mcast = E('_f_multicast').checked;
@@ -130,7 +129,6 @@ function save() {
 	fom.block_wan.value = E('_f_icmp').checked ? 0 : 1;
 	fom.block_wan_limit.value = E('_f_icmp_limit').checked? 1 : 0;
 	fom.block_wan_limit_icmp.value = E('_f_icmp_limit_icmp').value;
-	fom.block_wan_limit_tr.value = E('_f_icmp_limit_traceroute').value;
 
 	fom.ne_syncookies.value = E('_f_syncookies').checked ? 1 : 0;
 	fom.DSCP_fix_enable.value = E('_f_DSCP_fix_enable').checked ? 1 : 0;
@@ -190,7 +188,6 @@ function init() {
 <input type="hidden" name="block_wan">
 <input type="hidden" name="block_wan_limit">
 <input type="hidden" name="block_wan_limit_icmp">
-<input type="hidden" name="block_wan_limit_tr">
 <input type="hidden" name="ne_syncookies">
 <input type="hidden" name="DSCP_fix_enable">
 <input type="hidden" name="ipv6_ipsec">
@@ -217,13 +214,13 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Respond to ICMP ping', name: 'f_icmp', type: 'checkbox', value: nvram.block_wan == '0' },
-			{ title: 'Limits per second', name: 'f_icmp_limit', type: 'checkbox', value: nvram.block_wan_limit != '0' },
-			{ title: 'ICMP', indent: 2, name: 'f_icmp_limit_icmp', type: 'text', maxlen: 3, size: 3, suffix: ' <small> request per second<\/small>', value: fixInt(nvram.block_wan_limit_icmp || 1, 1, 300, 5) },
-			{ title: 'Traceroute', indent: 2, name: 'f_icmp_limit_traceroute', type: 'text', maxlen: 3, size: 3, suffix: ' <small> request per second<\/small>', value: fixInt(nvram.block_wan_limit_tr || 5, 1, 300, 5) },
+			{ title: 'WAN interfaces respond to Ping and Traceroute', name: 'f_icmp', type: 'checkbox', value: nvram.block_wan == '0' },
+			{ title: 'Limit communication to', multi: [
+				{ name: 'f_icmp_limit', type: 'checkbox', value: nvram.block_wan_limit != '0' },
+				{ name: 'f_icmp_limit_icmp', type: 'text', maxlen: 3, size: 3, prefix: ' &nbsp;', suffix: ' <small>request per second<\/small>', value: fixInt(nvram.block_wan_limit_icmp || 1, 1, 300, 5) } ] },
 			null,
 			{ title: 'Enable TCP SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
-			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' <small>Fixes Comcast incorrect DSCP<\/small>' },
+			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' <small>fixes Comcast incorrect DSCP<\/small>' },
 			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' }
 		]);
 	</script>
