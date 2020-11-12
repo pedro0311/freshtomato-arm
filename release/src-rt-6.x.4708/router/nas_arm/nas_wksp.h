@@ -1,7 +1,7 @@
 /*
  * NAS WorkSpace - NAS application common code
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: nas_wksp.h 375254 2012-12-18 05:07:38Z $
+ * $Id: nas_wksp.h 375255 2012-12-18 05:07:41Z $
  */
 
 #ifndef __NAS_WKSP_H__

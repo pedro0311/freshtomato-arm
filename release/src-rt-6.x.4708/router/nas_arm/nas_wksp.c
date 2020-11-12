@@ -1,7 +1,7 @@
 /*
  * NAS WorKSPace - NAS application common code
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: nas_wksp.c 387271 2013-02-25 07:45:50Z $
+ * $Id: nas_wksp.c 606855 2015-12-17 02:02:21Z $
  */
 
 #include <bcmcrypto/passhash.h>
@@ -46,6 +46,7 @@
 #include <nvparse.h>
 #include <eapd.h>
 #include <security_ipc.h>
+#include <netdb.h>
 
 /* debug stuff */
 #ifdef BCMDBG
@@ -191,7 +192,11 @@ nas_wksp_parse_cmd(int argc, char *argv[], nas_wksp_t *nwksp)
 			nwcb->nas.flags |= NAS_FLAG_AUTHENTICATOR;
 #endif	/* #if defined(NAS_WKSP_BUILD_NAS_AUTH) && !defined(NAS_WKSP_BUILD_NAS_SUPPL) */
 			nwcb->nas.wan = NAS_WKSP_UNK_FILE_DESC;
+#ifdef NAS_IPV6
+			((struct sockaddr_in *)&(nwcb->nas.server))->sin_port = htons(RADIUS_PORT);
+#else
 			nwcb->nas.server.sin_port = htons(RADIUS_PORT);
+#endif
 			nwcb->nas.wsec = TKIP_ENABLED|AES_ENABLED;
 			nwcb->nas.wpa = &nwcb->wpa;
 			nwcb->nas.appl = nwcb;
@@ -260,14 +265,23 @@ nas_wksp_parse_cmd(int argc, char *argv[], nas_wksp_t *nwksp)
 		case 'h':
 #ifdef NAS_RADIUS
 			/* update radius server address */
+#ifdef NAS_IPV6
+			((struct sockaddr_in *)&(nwcb->nas.server))->sin_family = AF_INET;
+			((struct sockaddr_in *)&(nwcb->nas.server))->sin_addr.s_addr = inet_addr(optarg);
+#else
 			nwcb->nas.server.sin_family = AF_INET;
 			nwcb->nas.server.sin_addr.s_addr = inet_addr(optarg);
+#endif
 			NASDBG("nas[%d].server.address %s\n", i, optarg);
 #endif /* #ifdef NAS_RADIUS */
 			break;
 		case 'p':
 			/* update radius server port number */
+#ifdef NAS_IPV6
+			((struct sockaddr_in *)&(nwcb->nas.server))->sin_port = htons((int)strtoul(optarg, NULL, 0));
+#else
 			nwcb->nas.server.sin_port = htons((int)strtoul(optarg, NULL, 0));
+#endif
 			NASDBG("nas[%d].server.port %s\n", i, optarg);
 			break;
 #endif	/* #ifdef NAS_WKSP_BUILD_NAS_AUTH */
@@ -645,14 +659,14 @@ nas_wksp_eapd_send_packet(nas_t *nas, struct iovec *frags, int nfrags)
 {
 	nas_wpa_cb_t *nwcb = (nas_wpa_cb_t *)nas->appl;
 	nas_wksp_t *nwksp = nwcb->nwksp;
-	struct ether_header *eth;
 	struct msghdr mh;
 	struct sockaddr_in to;
 	struct iovec *iov;
 	int i, rc = 0;
 
-	if (!nfrags || !nfrags)
+	if (!nfrags)
 		return -1;
+	assert(frags != NULL);
 
 	if (frags->iov_len < sizeof(struct ether_header))
 		return -1;
@@ -662,7 +676,6 @@ nas_wksp_eapd_send_packet(nas_t *nas, struct iovec *frags, int nfrags)
 	if (iov == NULL)
 		return -1;
 
-	eth = (struct ether_header*) frags->iov_base;
 
 	to.sin_addr.s_addr = inet_addr(EAPD_WKSP_UDP_ADDR);
 	to.sin_family = AF_INET;
@@ -1092,7 +1105,11 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
 	nwcb->nas.flags |= NAS_FLAG_AUTHENTICATOR;
 #endif	/* #if defined(NAS_WKSP_BUILD_NAS_AUTH) && !defined(NAS_WKSP_BUILD_NAS_SUPPL) */
 	nwcb->nas.wan = NAS_WKSP_UNK_FILE_DESC;
+#ifdef NAS_IPV6
+	((struct sockaddr_in *)&(nwcb->nas.server))->sin_port = htons(RADIUS_PORT);
+#else
 	nwcb->nas.server.sin_port = htons(RADIUS_PORT);
+#endif
 	nwcb->nas.wsec = TKIP_ENABLED|AES_ENABLED;
 	nwcb->nas.wpa = &nwcb->wpa;
 	nwcb->nas.appl = nwcb;
@@ -1135,6 +1152,9 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
 		return NULL;
 	}
 
+	/* mfp setting */
+	nwcb->nas.mfp = info.mfp;
+
 	/* nas role setting */
 #if defined(NAS_WKSP_BUILD_NAS_AUTH) && defined(NAS_WKSP_BUILD_NAS_SUPPL)
 	nwcb->flags = info.flags;
@@ -1153,7 +1173,7 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
 		NASDBG("updating new nwcb's nas auth mode %d\n", nwcb->nas.mode);
 		nas_get_wpawsec(&nwcb->nas, &info.wsec);
 		/* SWWLAN-28198, filter out SES_OW_ENABLED, it is not a real crypto mode */
-		nwcb->nas.wsec = (info.wsec & ~SES_OW_ENABLED);
+		nwcb->nas.wsec = (info.wsec & ~(SES_OW_ENABLED | MFP_CAPABLE));
 		NASDBG("updating new nwcb's nas wsec %x\n", nwcb->nas.wsec);
 	}
 #endif /* NAS_WKSP_BUILD_NAS_SUPPL */
@@ -1165,11 +1185,10 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
 		nwcb->nas.remote[2], nwcb->nas.remote[3],
 		nwcb->nas.remote[4], nwcb->nas.remote[5]);
 	/* user-supplied psk passphrase */
-	if (info.psk) {
-		strncpy((char *)nwcb->psk, info.psk, NAS_WKSP_MAX_USER_KEY_LEN);
-		nwcb->psk[NAS_WKSP_MAX_USER_KEY_LEN] = 0;
-		NASDBG("new nwcb's psk %s\n", nwcb->psk);
-	}
+	strncpy((char *)nwcb->psk, info.psk, NAS_WKSP_MAX_USER_KEY_LEN);
+	nwcb->psk[NAS_WKSP_MAX_USER_KEY_LEN] = 0;
+	NASDBG("new nwcb's psk %s\n", nwcb->psk);
+
 	/* user-supplied radius server secret */
 	if (info.secret) {
 		strncpy((char *)nwcb->secret, info.secret, NAS_WKSP_MAX_USER_KEY_LEN);
@@ -1192,12 +1211,53 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
 #ifdef NAS_RADIUS
 	/* update radius server address */
 	if (info.radius_addr) {
+#ifdef NAS_IPV6
+{
+    struct addrinfo *res, *itr;
+    int ret_ga;
+    int addr_ok = 0;
+
+    ret_ga = getaddrinfo(info.radius_addr, NULL, NULL, &res);
+    if ( ret_ga ) {
+        fprintf(stderr, "error: %s\n", gai_strerror(ret_ga));
+        exit(1);
+    }
+    if ( !res->ai_addr ) {
+        fprintf(stderr, "getaddrinfo failed to get an address... target was '%s'\n", info.radius_addr);
+        exit(1);
+    }
+
+    // Check address type before filling in the address
+    // ai_family = PF_xxx; ai_protocol = IPPROTO_xxx, see netdb.h
+    // ...but AF_INET6 == PF_INET6
+    itr = res;
+    // First check all results for a IPv6 Address
+    while ( itr != NULL ) {
+        if ( itr->ai_family == AF_INET6 || itr->ai_family == AF_INET) {
+            memcpy(&(nwcb->nas.server), (itr->ai_addr),
+                   (itr->ai_addrlen));
+            ((struct sockaddr_in *)&(nwcb->nas.server))->sin_family = itr->ai_family;
+            freeaddrinfo(res);
+            addr_ok = 1;
+            break;
+        }
+        else {
+            itr = itr->ai_next;
+        }
+    }
+    if (addr_ok != 1)
+        printf ("\n func=%s, line=%d, get radius addr error:%s", __FUNCTION__, __LINE__, info.radius_addr);
+
+	((struct sockaddr_in *)&(nwcb->nas.server))->sin_port = info.radius_port;
+}
+#else
 		nwcb->nas.server.sin_family = AF_INET;
 		nwcb->nas.server.sin_addr.s_addr = inet_addr(info.radius_addr);
 		/* update radius server port number */
 		nwcb->nas.server.sin_port = info.radius_port;
 		NASDBG("new nwcb's nas radius server address %s, port %d\n",
 			info.radius_addr, nwcb->nas.server.sin_port);
+#endif
 	}
 #endif /* NAS_RADIUS */
 	/* 802.1x session timeout/pmk cache duration */

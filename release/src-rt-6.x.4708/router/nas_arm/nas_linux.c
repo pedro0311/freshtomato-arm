@@ -1,15 +1,15 @@
 /*
  * Network Authentication Service deamon (Linux)
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: nas_linux.c 375254 2012-12-18 05:07:38Z $
+ * $Id: nas_linux.c 650070 2016-07-20 10:22:56Z $
  */
 
 #include <stdio.h>
@@ -53,6 +53,9 @@ nas_sleep_ms(uint ms)
 	usleep(1000*ms);
 }
 
+/* random number size in bytes */
+#define RANDOM_NUMBER_BYTES	16
+
 void
 nas_rand128(uint8 *rand128)
 {
@@ -60,15 +63,17 @@ nas_rand128(uint8 *rand128)
 	struct timeval tv;
 	struct timezone tz;
 	MD5_CTX md5;
-	if (dev_random_fd == -1)
+
+	if (dev_random_fd == -1) {
 		/* Use /dev/urandom because /dev/random, when it works at all,
 		 * won't return anything when its entropy pool runs short and
 		 * we can't control that.  /dev/urandom look good enough.
 		 */
 		dev_random_fd = open("/dev/urandom", O_RDONLY|O_NONBLOCK);
-	if (dev_random_fd != -1)
-		read(dev_random_fd, rand128, 16);
-	else {
+	}
+
+	if (dev_random_fd == -1 ||
+	    read(dev_random_fd, rand128, RANDOM_NUMBER_BYTES) != RANDOM_NUMBER_BYTES) {
 		gettimeofday(&tv, &tz);
 		tv.tv_sec ^= rand();
 		MD5Init(&md5);

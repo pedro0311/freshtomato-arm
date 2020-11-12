@@ -1,7 +1,7 @@
 /*
  * NAS definitions
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: nas.h 409124 2013-06-22 04:35:15Z $
+ * $Id: nas.h 531477 2015-02-03 06:47:05Z $
  */
 
 #ifndef _nas_h_
@@ -84,6 +84,29 @@
 /* Maximum number of supplicants */
 #define MAX_SUPPLICANTS 128
 
+typedef struct deauth_params
+{
+	uint8 	reason_code;
+	uint16 	reauth_delay;
+	char* 	reason_url;
+	uint8	deauth_req;
+} deauth_params_t;
+
+typedef struct subrem_params
+{
+	char* 	subrem_url;
+	uint8	subrem_req;
+	uint8 serverMethod;
+} subrem_params_t;
+
+typedef struct bsstran_params
+{
+	uint8 	bsstran_reqmode;
+	uint16	bsstran_swt;
+	uint16	bsstran_dur;
+	char* 	bsstran_url;
+	uint8	bsstran_req;
+} bsstran_params_t;
 
 typedef struct binstring {
 	unsigned int length;
@@ -138,11 +161,17 @@ typedef struct nas {
 	char ssid[DOT11_MAX_SSID_LEN+1];	/* SSID */
 	nas_mode_t mode;			/* 0:Radius, 1:WPA, 2:WPA-PSK */
 	uint32 wsec;				/* crypto algorithm config, same as wl driver */
+	uint32 mfp;				/* mfp */
 	struct ether_addr ea;			/* LAN Ethernet address */
 	wpa_t *wpa;				/* WPA struct (NULL if wpa not in use) */
 	int wan;				/* RADIUS interface handle */
+#ifdef NAS_IPV6
+	struct sockaddr_storage client;      /* RADIUS interface IP address */
+	struct sockaddr_storage server;      /* RADIUS server IP address */
+#else
 	struct sockaddr_in client;		/* RADIUS interface IP address */
 	struct sockaddr_in server;		/* RADIUS server IP address */
+#endif
 	binstring_t key;			/* PSK shared secret */
 	unsigned int type;			/* RADIUS NAS Port Type */
 	nas_sta_t sta[MAX_SUPPLICANTS];		/* STAs */
@@ -171,6 +200,11 @@ typedef struct nas {
 	uint32  disable_preauth;	/* Internal Flags to disable the WPA2 preauth */
 	uint32 auth_blockout_time;	/* seconds to block out client after auth. fail */
 	char nas_id[MAX_NAS_ID_LEN+1];	/* nas mac address */
+
+	deauth_params_t  m_deauth_params;
+	subrem_params_t  m_subrem_params;
+	bsstran_params_t m_bsstran_params;
+
 } nas_t;
 
 #define NAS_FLAG_SUPPLICANT	WLIFU_WSEC_SUPPL	/* nas is supplicant, exclusive */
@@ -190,13 +224,13 @@ typedef struct nas {
 #define TIMER_DELETE(td)	{(void) bcm_timer_delete(td); td = 0;}
 
 /* Driver specific */
-extern int nas_send_wnm_on_radius_access_accept(nas_t *nas, char* url, struct ether_addr *ea);
+extern int nas_send_wnm_notifications(nas_t *nas, struct ether_addr *ea);
 extern int nas_authorize(nas_t *nas, struct ether_addr *ea);
 extern int nas_deauthorize(nas_t *nas, struct ether_addr *ea);
 extern int nas_deauthenticate(nas_t *nas, struct ether_addr *ea, int reason);
 extern int nas_disassoc(nas_t *nas);
 extern int nas_set_key(nas_t *nas, struct ether_addr *ea, unsigned char *key, int len, int index,
-                       int tx_flag, uint32 hi, uint16 lo);
+                       int tx_flag, uint32 hi, uint16 lo, int force);
 extern int nas_set_mode(nas_t *nas, int mode);
 extern int nas_get_group_rsc(nas_t *nas, uint8 *buf, int index);
 extern void nas_wl_init(nas_t *nas);
@@ -255,7 +289,7 @@ extern void hmac_md5(unsigned char* text, int text_len, unsigned char *key,
 extern void hmac_sha1(unsigned char *text, int text_len, unsigned char *key,
                       int key_len, unsigned char *digest);
 extern int nas_send_brcm_event(nas_t *nas, uint8* mac, int reason);
-
+extern int nas_get_assoc_req_ies(nas_t *nas, char *cap, uint32 size);
 #define MIC_RATE_LIMIT	60		/* seconds */
 
 #define STA_DEAUTH_DELAY_MS 50	/* delay before call wl ioctl deauth */

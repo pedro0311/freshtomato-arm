@@ -1,7 +1,7 @@
 /*
  * Broadcom 802.11 device interface
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: nas_wl.c 394138 2013-04-01 05:24:26Z $
+ * $Id: nas_wl.c 531477 2015-02-03 06:47:05Z $
  */
 
 #include <typedefs.h>
@@ -27,7 +27,8 @@
 #define BUFFER_SIZE		256
 #define HSPOT_WNM_TYPE		1
 #define ACTION_FRAME_SIZE 1800
-#define HSPOT_WNM_OUI_TYPE		0x00
+#define HSPOT_WNM_SUBSCRIPTION_REMEDIATION		0x00
+#define HSPOT_WNM_DEAUTHENTICATION_IMMINENT		0x01
 #define WL_WIFI_AF_PARAMS_SIZE sizeof(struct wl_af_params)
 
 static bool g_swap = FALSE;
@@ -87,6 +88,18 @@ int bcm_encode_bytes(wnm_encode_t *pkt, int length, uint8 *bytes)
 	return length;
 }
 
+int bcm_encode_le16(wnm_encode_t *pkt, uint16 value)
+{
+	/* assert(pkt != 0); */
+
+	if (!isLengthValid(pkt, 2))
+		return 0;
+
+	pkt->buf[pkt->length++] = value;
+	pkt->buf[pkt->length++] = value >> 8;
+	return 2;
+}
+
 int bcm_encode_init(wnm_encode_t *pkt, int maxLength, uint8 *buf)
 {
 	/* assert(pkt != 0); */
@@ -100,8 +113,9 @@ int bcm_encode_init(wnm_encode_t *pkt, int maxLength, uint8 *buf)
 	return TRUE;
 }
 
+/* encode WNM-notification request for subscription remediation */
 int bcm_encode_wnm_subscription_remediation(wnm_encode_t *pkt,
-	uint8 dialogToken, uint16 urlLen, char *url)
+	uint8 dialogToken, uint8 urlLen, char *url, uint8 serverMethod)
 {
 	int initLen = bcm_encode_length(pkt);
 
@@ -110,9 +124,38 @@ int bcm_encode_wnm_subscription_remediation(wnm_encode_t *pkt,
 	bcm_encode_byte(pkt, dialogToken);
 	bcm_encode_byte(pkt, HSPOT_WNM_TYPE);
 	bcm_encode_byte(pkt, DOT11_MNG_VS_ID);
-	bcm_encode_byte(pkt, 5 + urlLen);
+	if (urlLen > 0) {
+		bcm_encode_byte(pkt, 6 + urlLen);
+	}
+	else
+		bcm_encode_byte(pkt, 5);
 	bcm_encode_bytes(pkt, WFA_OUI_LEN, (uint8 *)WFA_OUI);
-	bcm_encode_byte(pkt, HSPOT_WNM_OUI_TYPE);
+	bcm_encode_byte(pkt, HSPOT_WNM_SUBSCRIPTION_REMEDIATION);
+	bcm_encode_byte(pkt, urlLen);
+	if (urlLen > 0) {
+		bcm_encode_bytes(pkt, urlLen, (uint8 *)url);
+		bcm_encode_byte(pkt, serverMethod);
+	}
+
+	return bcm_encode_length(pkt) - initLen;
+}
+
+/* encode WNM-notification request for deauthentication imminent */
+int bcm_encode_wnm_deauthentication_imminent(wnm_encode_t *pkt,
+	uint8 dialogToken, uint8 reason, uint16 reauthDelay, uint8 urlLen, char *url)
+{
+	int initLen = bcm_encode_length(pkt);
+
+	bcm_encode_byte(pkt, DOT11_ACTION_CAT_WNM);
+	bcm_encode_byte(pkt, DOT11_WNM_ACTION_NOTFCTN_REQ);
+	bcm_encode_byte(pkt, dialogToken);
+	bcm_encode_byte(pkt, HSPOT_WNM_TYPE);
+	bcm_encode_byte(pkt, DOT11_MNG_VS_ID);
+	bcm_encode_byte(pkt, 8 + urlLen);
+	bcm_encode_bytes(pkt, WFA_OUI_LEN, (uint8 *)WFA_OUI);
+	bcm_encode_byte(pkt, HSPOT_WNM_DEAUTHENTICATION_IMMINENT);
+	bcm_encode_byte(pkt, reason);
+	bcm_encode_le16(pkt, reauthDelay);
 	bcm_encode_byte(pkt, urlLen);
 	if (urlLen > 0) {
 		bcm_encode_bytes(pkt, urlLen, (uint8 *)url);
@@ -170,15 +213,59 @@ int wl_actframe(nas_t *nas, int bsscfg_idx, uint32 packet_id,
 }
 
 int
-nas_send_wnm_on_radius_access_accept(nas_t *nas, char* url, struct ether_addr *ea)
+wl_wnm_url(char *ifname, uchar datalen, uchar *url_data)
+{
+	wnm_url_t *url;
+	int err;
+	uchar *data;
+	uchar count;
+	count = sizeof(wnm_url_t) + datalen - 1;
+	data = malloc(count);
+	if (data == NULL) {
+		fprintf(stderr, "memory alloc failure\n");
+		return -1;
+	}
+
+	url = (wnm_url_t *) data;
+	url->len = datalen;
+	if (datalen > 0) {
+		memcpy(url->data, url_data, datalen);
+	}
+
+	err = wl_iovar_set(ifname, "wnm_url", data, count);
+	free(data);
+
+	return (err);
+}
+
+int
+wl_wnm_bsstrans_req(char *ifname, uint8 reqmode, uint16 tbtt, uint16 dur, uint8 unicast)
+{
+	char *cmd = "wnm_bsstrans_req";
+
+	wl_bsstrans_req_t bsstrans_req;
+
+	memset(&bsstrans_req, 0, sizeof(bsstrans_req));
+
+	bsstrans_req.tbtt = tbtt;
+	bsstrans_req.dur = dur;
+	bsstrans_req.reqmode = reqmode;
+	bsstrans_req.unicast = unicast;
+
+	return wl_iovar_set(ifname, cmd, &bsstrans_req, sizeof(bsstrans_req));
+}
+
+static int
+nas_send_wnm_subscription_remediation(nas_t *nas, char* url,
+	struct ether_addr *ea, uint8 serverMethod)
 {
 	/* struct ether_addr bssid; */
-	int urlLength;
 	wnm_encode_t enc;
 	uint8 buffer[WLC_IOCTL_SMLEN];
 	uint8 dialogtoken = 1;
-	urlLength = strlen(url);
-	if (urlLength > WLC_IOCTL_SMLEN) {
+	int urlLength = url ? strlen(url) : 0;
+
+	if (urlLength > 255) {
 		printf("<url> too long");
 		return 0;
 	}
@@ -186,7 +273,7 @@ nas_send_wnm_on_radius_access_accept(nas_t *nas, char* url, struct ether_addr *e
 	bcm_encode_init(&enc, sizeof(buffer), buffer);
 
 	bcm_encode_wnm_subscription_remediation(&enc,
-		dialogtoken, urlLength, url);
+		dialogtoken, urlLength, url, serverMethod);
 
 	/* send action frame */
 	wl_actframe(nas, -1,
@@ -196,10 +283,134 @@ nas_send_wnm_on_radius_access_accept(nas_t *nas, char* url, struct ether_addr *e
 	return 1;
 }
 
+static int
+nas_send_wnm_deauthentication_imminent(nas_t *nas, uint8 reason,
+	int16 reauthDelay, char* url, struct ether_addr *ea)
+{
+	/* struct ether_addr bssid; */
+	wnm_encode_t enc;
+	uint8 buffer[WLC_IOCTL_SMLEN];
+	uint8 dialogtoken = 1;
+	int urlLength = url ? strlen(url) : 0;
+
+	if (urlLength > 255) {
+		printf("<url> too long");
+		return 0;
+	}
+
+	bcm_encode_init(&enc, sizeof(buffer), buffer);
+
+	bcm_encode_wnm_deauthentication_imminent(&enc,
+		dialogtoken, reason, reauthDelay, urlLength, url);
+
+	/* send action frame */
+	wl_actframe(nas, -1,
+		(uint32)bcm_encode_buf(&enc), 0, 250, &nas->ea, ea,
+		bcm_encode_length(&enc), bcm_encode_buf(&enc));
+
+	return 1;
+}
+
+static int
+nas_send_bss_transition_mgmt_req(nas_t *nas, char* url,
+	uint8 reqmode, uint16 tbtt, uint16 dur, uint8 unicast)
+{
+	int urlLength = url ? strlen(url) : 0;
+
+	if (urlLength > 255) {
+		printf("<url> too long");
+		return 0;
+	}
+
+	if (wl_wnm_url(nas->interface, urlLength, (uchar *)url) < 0) {
+		printf("wl_wnm_url failed\n");
+		return 0;
+	}
+
+	/* Sending BSS Transition Request Frame */
+	if (wl_wnm_bsstrans_req(nas->interface,
+		reqmode, tbtt, dur, unicast) < 0)
+	{
+		printf("wl_wnm_bsstrans_req failed\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+nas_send_wnm_notifications(nas_t *nas, struct ether_addr *ea)
+{
+	/* send WNM Notification for Deauthentication Imminent Action Frame to STA */
+	if (nas->m_deauth_params.deauth_req) {
+		nas->m_deauth_params.deauth_req = 0;
+
+		dbg(nas, "Deauthentication Request URL Code = %d",
+			nas->m_deauth_params.reason_code);
+		dbg(nas, "Deauthentication Reauth Delay = %d",
+			nas->m_deauth_params.reauth_delay);
+		dbg(nas, "Deauthentication Request URL = %s",
+			nas->m_deauth_params.reason_url);
+
+		nas_send_wnm_deauthentication_imminent(nas, nas->m_deauth_params.reason_code,
+			nas->m_deauth_params.reauth_delay, nas->m_deauth_params.reason_url, ea);
+
+		if (nas->m_deauth_params.reason_url) {
+			free(nas->m_deauth_params.reason_url);
+			nas->m_deauth_params.reason_url = NULL;
+		}
+		memset(&nas->m_deauth_params, 0, sizeof(deauth_params_t));
+	}
+
+	/* send WNM Notification for Subscription Remediation Action Frame to STA */
+	if (nas->m_subrem_params.subrem_req) {
+		nas->m_subrem_params.subrem_req = 0;
+
+		dbg(nas, "Subscription Remediation URL = %s",
+			nas->m_subrem_params.subrem_url);
+
+		nas_send_wnm_subscription_remediation(nas, nas->m_subrem_params.subrem_url, ea,
+			nas->m_subrem_params.serverMethod);
+
+		if (nas->m_subrem_params.subrem_url) {
+			free(nas->m_subrem_params.subrem_url);
+			nas->m_subrem_params.subrem_url = NULL;
+		}
+		memset(&nas->m_subrem_params, 0, sizeof(subrem_params_t));
+	}
+
+	/* send BSS Transition Request Frame to STA */
+	if (nas->m_bsstran_params.bsstran_req) {
+		nas->m_bsstran_params.bsstran_req = 0;
+
+		dbg(nas, "BSS Transition Session Warning Timer = %d",
+			nas->m_bsstran_params.bsstran_swt);
+		dbg(nas, "BSS Transition Request Mode = %d",
+			nas->m_bsstran_params.bsstran_reqmode);
+		dbg(nas, "BSS Transition Session Info URL = %s",
+			nas->m_bsstran_params.bsstran_url);
+
+		nas_send_bss_transition_mgmt_req(nas, nas->m_bsstran_params.bsstran_url,
+		nas->m_bsstran_params.bsstran_reqmode, nas->m_bsstran_params.bsstran_swt * 600,
+		nas->m_bsstran_params.bsstran_dur, TRUE);
+
+		if (nas->m_bsstran_params.bsstran_url) {
+			free(nas->m_bsstran_params.bsstran_url);
+			nas->m_bsstran_params.bsstran_url = NULL;
+		}
+		memset(&nas->m_bsstran_params, 0, sizeof(bsstran_params_t));
+	}
+
+	return 1;
+}
 int
 nas_authorize(nas_t *nas, struct ether_addr *ea)
 {
-	return wl_ioctl(nas->interface, WLC_SCB_AUTHORIZE, ea, ETHER_ADDR_LEN);
+	int ret = 0;
+
+	ret = wl_ioctl(nas->interface, WLC_SCB_AUTHORIZE, ea, ETHER_ADDR_LEN);
+
+	return ret;
 }
 
 int
@@ -214,7 +425,7 @@ nas_deauthenticate(nas_t *nas, struct ether_addr *ea, int reason)
 	scb_val_t scb_val;
 
 	/* remove the key if one is installed */
-	nas_set_key(nas, ea, NULL, 0, 0, 0, 0, 0);
+	nas_set_key(nas, ea, NULL, 0, 0, 0, 0, 0, 0);
 	scb_val.val = (uint32) reason;
 	memcpy(&scb_val.ea, ea, ETHER_ADDR_LEN);
 	return wl_ioctl(nas->interface, WLC_SCB_DEAUTHENTICATE_FOR_REASON,
@@ -240,7 +451,7 @@ nas_get_group_rsc(nas_t *nas, uint8 *buf, int index)
 
 int
 nas_set_key(nas_t *nas, struct ether_addr *ea, uint8 *key, int len, int index,
-            int tx, uint32 hi, uint16 lo)
+            int tx, uint32 hi, uint16 lo, int force)
 {
 	wl_wsec_key_t wep;
 #ifdef BCMDBG
@@ -257,9 +468,10 @@ nas_set_key(nas_t *nas, struct ether_addr *ea, uint8 *key, int len, int index,
 		snprintf(ki, sizeof(ki), "index %d", index);
 	}
 
-	wep.len = len;
-	if (len)
-		memcpy(wep.data, key, MIN(len, DOT11_MAX_KEY_SIZE));
+	wep.len = MIN(len, sizeof(wep.data));
+	if (len) {
+		memcpy(wep.data, key, wep.len);
+	}
 	dbg(nas, "%s, flags %x, len %d",
 		ea ? (char *)ether_etoa((uchar *)ea, eabuf) : ki,
 		wep.flags, wep.len);
@@ -268,6 +480,10 @@ nas_set_key(nas_t *nas, struct ether_addr *ea, uint8 *key, int len, int index,
 		wep.rxiv.lo = lo;
 		wep.iv_initialized = 1;
 	}
+
+	if (force)
+		wep.iv_initialized = 1;
+
 	return wl_ioctl(nas->interface, WLC_SET_KEY, &wep, sizeof(wep));
 }
 
@@ -281,9 +497,9 @@ int
 nas_set_ssid(nas_t *nas, char *ssid)
 {
 	wlc_ssid_t wl_ssid;
-
+	int  len = strlen(ssid);
 	strncpy((char *)wl_ssid.SSID, ssid, sizeof(wl_ssid.SSID));
-	wl_ssid.SSID_len = strlen(ssid);
+	wl_ssid.SSID_len = (len >= sizeof(wl_ssid.SSID))? sizeof(wl_ssid.SSID): len;
 	return wl_ioctl(nas->interface, WLC_SET_SSID, &wl_ssid, sizeof(wl_ssid));
 }
 
@@ -349,6 +565,16 @@ nas_get_stainfo(nas_t *nas, char *macaddr, int len, char *ret_buf, int ret_buf_l
 
 	return wl_ioctl(nas->interface, WLC_GET_VAR, ret_buf, ret_buf_len);
 }
+
+int nas_get_assoc_req_ies(nas_t *nas, char *buf, uint32 size)
+{
+	if (nas == NULL || buf == NULL)
+	{
+		return -1;
+	}
+	return  wl_iovar_getbuf(nas->interface, "assoc_req_ies", &nas->ea, 6, buf, size);
+}
+
 
 int
 nas_get_wpa_ie(nas_t *nas, char *ret_buf, int ret_buf_len, uint32 sta_mode)

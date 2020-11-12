@@ -15,7 +15,7 @@
  * Making IEEE 802.11 Networks Enterprise-Ready
  * Recommendations for IEEE 802.11 Access Points
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -23,7 +23,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: nas.c 386296 2013-02-20 05:48:14Z $
+ * $Id: nas.c 510335 2014-10-24 06:18:12Z $
  */
 
 #include <typedefs.h>
@@ -262,8 +262,11 @@ lookup_sta(nas_t *nas, struct ether_addr *ea, sta_lookup_mode_t mode)
 		if (nas->flags & NAS_FLAG_AUTHENTICATOR)
 			sta->suppl.state = sta->suppl.retry_state = WPA_AUTHENTICATION2;
 #ifdef BCMSUPPL
-		if (nas->flags & NAS_FLAG_SUPPLICANT)
+		if (nas->flags & NAS_FLAG_SUPPLICANT) {
 			sta->suppl.state = sta->suppl.retry_state = WPA_SUP_AUTHENTICATION;
+			nas->flags &= ~NAS_FLAG_GTK_PLUMBED;
+			nas->flags &= ~NAS_FLAG_IGTK_PLUMBED;
+		}
 		sta->suppl.pk_state = EAPOL_SUP_PK_UNKNOWN;
 #endif
 		sta->pae.state = INITIALIZE;
@@ -890,8 +893,17 @@ driver_message_dispatch(nas_t *nas, bcm_event_t *dpkt)
 		if (nas->flags & NAS_FLAG_WDS)
 			return;
 		/* authenticator is not interested in LINK event */
-		if (nas->flags & NAS_FLAG_AUTHENTICATOR)
+		if (nas->flags & NAS_FLAG_AUTHENTICATOR) {
+			nas_get_wpacap(nas, nas->wpa->cap);
+			/* Disable gtk plumb flag only when WEP is disabled
+			 * and link down event is received
+			 */
+			if ((!WSEC_WEP_ENABLED(nas->wsec)) &&
+			    (!(ntohs(event->flags) & WLC_EVENT_MSG_LINK))) {
+				nas->flags &= ~NAS_FLAG_GTK_PLUMBED;
+			}
 			return;
+		}
 		/* and the supplicant is only interested in link up */
 		if (!(ntohs(event->flags) & WLC_EVENT_MSG_LINK)) {
 			return;
@@ -967,7 +979,7 @@ driver_message_dispatch(nas_t *nas, bcm_event_t *dpkt)
 
 		/* ignore errors from STAs we don't know about. */
 		if (sta)
-			wpa_mic_error(nas->wpa, sta, TRUE);
+			wpa_mic_error(nas->wpa, sta, TRUE, FALSE);
 		break;
 
 #ifdef WLWNM

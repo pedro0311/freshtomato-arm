@@ -1,14 +1,14 @@
 /*
  * Radius code which used to be in nas.c
  * Radius support for Network Access Server
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
- * $Id: nas_radius.c 384607 2013-02-12 17:46:24Z $
+ * $Id: nas_radius.c 508669 2014-10-16 13:46:21Z $
  */
 
 #include <typedefs.h>
@@ -41,7 +41,6 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 
 	int left, type, length = 0, index, authenticated = 0;
 	int nRadiusFlag = 0;
-	char* url = NULL;
 	unsigned char buf[16], *cur;
 	eapol_header_t eapol;
 	eap_header_t *eap = NULL;
@@ -53,6 +52,10 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 	char eabuf[ETHER_ADDR_STR_LEN];
 #endif
 
+	memset(&nas->m_deauth_params, 0, sizeof(deauth_params_t));
+	memset(&nas->m_subrem_params, 0, sizeof(subrem_params_t));
+	memset(&nas->m_bsstran_params, 0, sizeof(bsstran_params_t));
+
 	/* The STA could have been toss during the wait. */
 	if (!sta->used)
 		return;
@@ -60,7 +63,7 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 	request =  sta->pae.radius.request;
 	if (!request || request->id != response->id) {
 		dbg(nas, "bogus RADIUS packet response->id=%d request->id=%d", response->id,
-		    request->id);
+			request ? request->id : 0);
 		return;
 	}
 
@@ -211,132 +214,193 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 
 			case RD_VENDOR_WFA:
 				switch (type) {
-				/*  0 - Hotspot 2.0 subscription remediation needed */
+				/*  1 - Passpoint 2.0 subscription remediation needed */
 				/* url="https:// remediation-server.R2-testbed.wi-fi.org" */
 				case  RD_VENDOR_WFA_SR_VALUE:
 					if (response->code == RADIUS_ACCESS_ACCEPT) {
-						/* Check for EAP-Success before allowing */
-						/* complete access */
-						if (!(sta->pae.flags &
-							PAE_FLAG_EAP_SUCCESS)) {
-							dbg(nas,
-							"Radius success without EAP success?!");
-							pae_state(nas, sta, HELD);
-							dbg(nas, "deauthenticating %s",
-							ether_etoa((uint8 *)&sta->ea, eabuf));
-							nas_deauthorize(nas, &sta->ea);
-							goto done;
-						}
 
-						nRadiusFlag++;
-						dbg(nas, "Access Accept");
-						pae_state(nas, sta, AUTHENTICATED);
-						/* Parse the URL from the STA */
-						if (!(url = malloc(length + 1))) {
-							printf("URL allocation failed***\n");
-							perror("malloc");
-							break;
-						}
-						memcpy(url, &cur[0], length);
-						*(url + length) = '\0';
-						nas_send_wnm_on_radius_access_accept(nas, url,
-							&sta->ea);
-						free(url);
-						url = NULL;
+						dbg(nas, "Access Accept and "
+						    "Subscription Remediation");
 
-						/* overwrite session timeout */
-						/* with global setting */
-						if (!sta->pae.ssnto ||
-							sta->pae.ssnto > nas->ssn_to)
-							sta->pae.ssnto = nas->ssn_to;
+						nas->m_subrem_params.serverMethod = *cur++;
+						dbg(nas, "serverMethod attribute for "
+							"Subscription Remediation = %d",
+							nas->m_subrem_params.serverMethod);
 
-						/* WPA-mode needs to do 4-way handshake */
-						/* here instead. */
-						if (CHECK_WPA(sta->mode) && mppe_recv) {
-							fix_wpa(nas, sta, (char *)&mppe_recv[1],
-								(int)mppe_recv[0]);
+						/* already we reduced 2 octect earlier */
+						length -= 1;
+						dbg(nas, "length = %d", length);
+						/* already we reduced 6 octect earlier */
+						left -= 1;
+						dbg(nas, "left = %d", left);
+
+						/* Bad attribute length */
+						if (length > left) {
+							dbg(nas, "bad vendor attribute"
+								" length %d", length);
+							attribute_error = 1;
 							break;
 						}
 
-						/* Plump the keys to driver and */
-						/* send them to peer as well */
-						if (mppe_recv) {
-						/* Cobble a multicast key if there isn't one yet. */
-							if (!(nas->flags & NAS_FLAG_GTK_PLUMBED)) {
-								nas->wpa->gtk_index = GTK_INDEX_1;
-								if (nas->wpa->gtk_len == 0)
-								nas->wpa->gtk_len = WEP128_KEY_SIZE;
-								nas_rand128(nas->wpa->gtk);
-								if (nas_set_key(nas, NULL,
-									nas->wpa->gtk,
-									nas->wpa->gtk_len,
-									nas->wpa->gtk_index,
-									1, 0, 0) < 0) {
-									err(nas,
-									"invalid multicast key");
-									nas_handle_error(nas, 1);
-								}
-								nas->flags |= NAS_FLAG_GTK_PLUMBED;
+						if (length > 0) {
+							/* Parse the URL from the STA */
+							if (!(nas->m_subrem_params.subrem_url
+									= malloc(length + 1))) {
+								printf("URL "
+									"allocation failed***\n");
+								perror("malloc");
+								break;
 							}
-							sta->rc4keysec = -1;
-							sta->rc4keyusec = -1;
-							/* Send multicast key */
-							index = nas->wpa->gtk_index;
-							length = nas->wpa->gtk_len;
-							if (mppe_send)
-								eapol_key(nas, sta, &mppe_send[1],
-								mppe_send[0], &mppe_recv[1],
-								mppe_recv[0], nas->wpa->gtk,
-								length, index, 0);
-							else
-								eapol_key(nas, sta, NULL, 0,
-									&mppe_recv[1], mppe_recv[0],
-									nas->wpa->gtk, length,
-									index, 0);
+							memcpy(nas->m_subrem_params.subrem_url,
+								&cur[0], length);
+							*(nas->m_subrem_params.subrem_url
+								+ length) = '\0';
 
-							/* MS-MPPE-Recv-Key is MS-MPPE-Send-Key */
-							/* on the Suppl */
-							index = DOT11_MAX_DEFAULT_KEYS - 1;
-							length = WEP128_KEY_SIZE;
-							if (nas_set_key(nas, &sta->ea,
-								&mppe_recv[1], length,
-								index, 1, 0, 0) < 0) {
-								dbg(nas, "unicast key rejected"
-									"by driver, assuming too"
-									"many associated STAs");
-								cleanup_sta(nas, sta,
-									DOT11_RC_BUSY, 0);
-							}
-							/* Set unicast key index */
-							if (mppe_send)
-								eapol_key(nas, sta, &mppe_send[1],
-								mppe_send[0], NULL, 0,
-								NULL, length, index, 1);
-							else
-								eapol_key(nas, sta, NULL, 0,
-									NULL, 0,
-									NULL, length, index, 1);
-							dbg(nas, "authorize %s (802.1x)",
-								ether_etoa((uint8 *)&sta->ea,
-								eabuf));
-							nas_authorize(nas, &sta->ea);
+							dbg(nas, "Sub Rem URL = %s",
+								nas->m_subrem_params.subrem_url);
 						}
+						else {
+							nas->m_subrem_params.subrem_url = NULL;
+						}
+
+						nas->m_subrem_params.subrem_req = 1;
+
+
 						break;
 					}
 					break;
 
-				case  RD_VENDOR_WFA_AP_VALUE: /*  1 - Hotspot 2.0 AP version */
+				/*	2 - Passpoint 2.0 AP version */
+				case  RD_VENDOR_WFA_AP_VALUE:
 					if (response->code == RADIUS_ACCESS_REQUEST) {
 						/* Fill the attributes with the AP version */
 						break;
 					}
 					break;
 
-				case  RD_VENDOR_WFA_STA_VALUE: /*  2 - Hotspot 2.0 STA version */
+				/*	3 - Passpoint 2.0 STA version */
+				case  RD_VENDOR_WFA_STA_VALUE:
 					if (response->code == RADIUS_ACCESS_REQUEST) {
 						/* Fill the attributes with the STA version */
 						break;
 
+					}
+					break;
+
+				/*  4 - Passpoint 2.0 Deauthentication Request  */
+				case  RD_VENDOR_WFA_DAR_VALUE:
+					if (response->code == RADIUS_ACCESS_ACCEPT) {
+						dbg(nas, "Access Accept and "
+							"Deauthentication Request");
+
+						nas->m_deauth_params.reason_code = *cur++;
+						dbg(nas, "code attribute for "
+							"Deauthentication Request = %d",
+							nas->m_deauth_params.reason_code);
+
+						nas->m_deauth_params.reauth_delay =
+							cur[0] | cur[1] << 8;
+						dbg(nas, "reauth_delay attribute for "
+							"Deauthentication Request = %d",
+							nas->m_deauth_params.reauth_delay);
+						cur += 2;
+
+						/* already we reduced 2 octect earlier */
+						length -= 3;
+						dbg(nas, "length = %d", length);
+						/* already we reduced 2 octect earlier */
+						left -= 3;
+						dbg(nas, "left = %d", left);
+
+						/* Bad attribute length */
+						if (length > left) {
+							dbg(nas, "bad vendor attribute"
+								" length %d", length);
+							attribute_error = 1;
+							break;
+						}
+
+						if (length > 0) {
+							/* Parse the URL from RADIUS */
+							if (!(nas->m_deauth_params.reason_url
+									= malloc(length + 1))) {
+								printf("URL "
+									"allocation failed***\n");
+								perror("malloc");
+								break;
+							}
+							memcpy(nas->m_deauth_params.reason_url,
+								&cur[0], length);
+							*(nas->m_deauth_params.reason_url
+								+ length) = '\0';
+
+							dbg(nas, "Deauth Request URL = %s",
+								nas->m_deauth_params.reason_url);
+						}
+						else {
+							nas->m_deauth_params.reason_url = NULL;
+						}
+
+						nas->m_deauth_params.deauth_req = 1;
+
+						break;
+					}
+					break;
+
+				/* 5 - Session Information URL - Send BSS Trans */
+				case  RD_VENDOR_WFA_SIU_VALUE:
+					if (response->code == RADIUS_ACCESS_ACCEPT) {
+
+						dbg(nas, "Access Accept and "
+								"BSS Transition Request");
+
+						nas->m_bsstran_params.bsstran_swt = *cur++;
+						dbg(nas, "Session Warning Time attribute"
+							"for Session Information URL = %d",
+							nas->m_bsstran_params.bsstran_swt);
+
+						/* already we reduced 2 octect earlier */
+						length -= 1;
+						dbg(nas, "length = %d", length);
+						/* already we reduced 2 octect earlier */
+						left -= 1;
+						dbg(nas, "left = %d", left);
+
+						/* Bad attribute length */
+						if (length > left) {
+							dbg(nas, "bad vendor attribute"
+								" length %d", length);
+							attribute_error = 1;
+							break;
+						}
+
+						if (length > 0) {
+							/* Parse the URL from RADIUS */
+							if (!(nas->m_bsstran_params.bsstran_url
+									= malloc(length + 1))) {
+								printf("URL "
+									"allocation failed***\n");
+								perror("malloc");
+								break;
+							}
+							memcpy(nas->m_bsstran_params.bsstran_url,
+								&cur[0], length);
+							*(nas->m_bsstran_params.bsstran_url
+								+ length) = '\0';
+						}
+						else {
+							nas->m_bsstran_params.bsstran_url = NULL;
+						}
+
+						nas->m_bsstran_params.bsstran_reqmode =
+					/* DOT11_BSSTRANS_REQMODE_PREF_LIST_INCL | */
+							DOT11_BSSTRANS_REQMODE_DISASSOC_IMMINENT |
+							DOT11_BSSTRANS_REQMODE_ESS_DISASSOC_IMNT;
+
+						nas->m_bsstran_params.bsstran_dur = 0;
+						nas->m_bsstran_params.bsstran_req = 1;
+
+						break;
 					}
 					break;
 				}
@@ -432,7 +496,7 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 				nas_rand128(nas->wpa->gtk);
 				if (nas_set_key(nas, NULL, nas->wpa->gtk,
 				                nas->wpa->gtk_len, nas->wpa->gtk_index,
-				                1, 0, 0) < 0) {
+				                1, 0, 0, 0) < 0) {
 					err(nas, "invalid multicast key");
 					nas_handle_error(nas, 1);
 				}
@@ -455,7 +519,7 @@ radius_dispatch(nas_t *nas, radius_header_t *response)
 			/* MS-MPPE-Recv-Key is MS-MPPE-Send-Key on the Suppl */
 			index = DOT11_MAX_DEFAULT_KEYS - 1;
 			length = WEP128_KEY_SIZE;
-			if (nas_set_key(nas, &sta->ea, &mppe_recv[1], length, index, 1, 0, 0) < 0) {
+			if (nas_set_key(nas, &sta->ea, &mppe_recv[1], length, index, 1, 0, 0, 0) < 0) {
 				dbg(nas, "unicast key rejected by driver, assuming too many"
 				    " associated STAs");
 				cleanup_sta(nas, sta, DOT11_RC_BUSY, 0);
@@ -546,8 +610,13 @@ radius_forward(nas_t *nas, nas_sta_t *sta, eap_header_t *eap)
 		radius_add(request, RD_TP_USER_NAME, sta->pae.radius.username.data,
 		           sta->pae.radius.username.length);
 	/* NAS IP Address */
+#ifdef NAS_IPV6
+	radius_add(request, ((struct sockaddr_in *)&(nas->client))->sin_family == AF_INET6 ? RD_TP_NAS_IPV6_ADDRESS : RD_TP_NAS_IP_ADDRESS, (unsigned char *) &(((struct sockaddr_in *)&(nas->client))->sin_addr),
+	           (((struct sockaddr_in *)&(nas->client))->sin_family == AF_INET6 ? 16 : 4));
+#else
 	radius_add(request, RD_TP_NAS_IP_ADDRESS, (unsigned char *) &nas->client.sin_addr,
 	           sizeof(nas->client.sin_addr));
+#endif
 	/* Called Station Id */
 
 	snprintf((char *)buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x",
@@ -611,7 +680,11 @@ radius_forward(nas_t *nas, nas_sta_t *sta, eap_header_t *eap)
 
 	/* Send packet */
 	if (NAS_RADIUS_SEND_PACKET(nas, request, ntohs(request->length)) < 0) {
+#ifdef NAS_IPV6
+		perror(inet_ntoa(((struct sockaddr_in *)&(nas->server))->sin_addr));
+#else
 		perror(inet_ntoa(nas->server.sin_addr));
+#endif
 		free(request);
 		request = NULL;
 	}
