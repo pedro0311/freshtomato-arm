@@ -60,7 +60,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //config:	  Sets soft resource limits as specified by options
 
 //applet:IF_CHPST(APPLET(chpst, BB_DIR_USR_BIN, BB_SUID_DROP))
-//applet:IF_ENVDIR(APPLET_ODDNAME(envdir, chpst, BB_DIR_USR_BIN, BB_SUID_DROP, envdir))
+//                    APPLET_ODDNAME:name       main   location        suid_type     help
+//applet:IF_ENVDIR(   APPLET_ODDNAME(envdir,    chpst, BB_DIR_USR_BIN, BB_SUID_DROP, envdir))
 //applet:IF_ENVUIDGID(APPLET_ODDNAME(envuidgid, chpst, BB_DIR_USR_BIN, BB_SUID_DROP, envuidgid))
 //applet:IF_SETUIDGID(APPLET_ODDNAME(setuidgid, chpst, BB_DIR_USR_BIN, BB_SUID_DROP, setuidgid))
 //applet:IF_SOFTLIMIT(APPLET_ODDNAME(softlimit, chpst, BB_DIR_USR_BIN, BB_SUID_DROP, softlimit))
@@ -300,8 +301,8 @@ int chpst_main(int argc UNUSED_PARAM, char **argv)
 		// FIXME: can we live with int-sized limits?
 		// can we live with 40000 days?
 		// if yes -> getopt converts strings to numbers for us
-		opt_complementary = "-1:a+:c+:d+:f+:l+:m+:o+:p+:r+:s+:t+";
-		opt = getopt32(argv, "+a:c:d:f:l:m:o:p:r:s:t:u:U:e:"
+		opt_complementary = "-1";
+		opt = getopt32(argv, "+a:+c:+d:+f:+l:+m:+o:+p:+r:+s:+t:+u:U:e:"
 			IF_CHPST("/:n:vP012"),
 			&limita, &limitc, &limitd, &limitf, &limitl,
 			&limitm, &limito, &limitp, &limitr, &limits, &limitt,
@@ -462,17 +463,18 @@ int chpst_main(int argc UNUSED_PARAM, char **argv)
 		xchroot(root);
 	}
 
+	/* nice should be done before xsetuid */
+	if (opt & OPT_n) {
+		errno = 0;
+		if (nice(xatoi(nicestr)) == -1)
+			bb_perror_msg_and_die("nice");
+	}
+
 	if (opt & OPT_u) {
 		if (setgroups(1, &ugid.gid) == -1)
 			bb_perror_msg_and_die("setgroups");
 		xsetgid(ugid.gid);
 		xsetuid(ugid.uid);
-	}
-
-	if (opt & OPT_n) {
-		errno = 0;
-		if (nice(xatoi(nicestr)) == -1)
-			bb_perror_msg_and_die("nice");
 	}
 
 	if (opt & OPT_0)

@@ -43,8 +43,7 @@ int sulogin_main(int argc UNUSED_PARAM, char **argv)
 	logmode = LOGMODE_BOTH;
 	openlog(applet_name, 0, LOG_AUTH);
 
-	opt_complementary = "t+"; /* -t N */
-	getopt32(argv, "t:", &timeout);
+	getopt32(argv, "t:+", &timeout);
 	argv += optind;
 
 	if (argv[0]) {
@@ -90,5 +89,5 @@ int sulogin_main(int argc UNUSED_PARAM, char **argv)
 		shell = pwd->pw_shell;
 
 	/* Exec login shell with no additional parameters. Never returns. */
-	run_shell(shell, 1, NULL, NULL);
+	run_shell(shell, 1, NULL);
 }

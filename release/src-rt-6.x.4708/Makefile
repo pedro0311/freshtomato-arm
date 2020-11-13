@@ -451,7 +451,7 @@ define RouterOptions
 	if [ "$(OPENVPN)" = "y" ]; then \
 		sed -i "/TCONFIG_LZO/d" $(1); \
 		echo "TCONFIG_LZO=y" >>$(1); \
-		sed -i "/TCONFIG_OPENVPN/d" $(1); \
+		sed -i "/# TCONFIG_OPENVPN is not set/d" $(1); \
 		echo "TCONFIG_OPENVPN=y" >>$(1); \
 		sed -i "/TCONFIG_FTP_SSL/d" $(1); \
 		echo "TCONFIG_FTP_SSL=y" >>$(1); \
@@ -666,8 +666,10 @@ define BusyboxOptions
 		echo "# CONFIG_VOLUMEID is not set" >>$(1); \
 		sed -i "/CONFIG_BLKID/d" $(1); \
 		echo "# CONFIG_BLKID is not set" >>$(1); \
-		sed -i "/CONFIG_SWAPONOFF/d" $(1); \
-		echo "# CONFIG_SWAPONOFF is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPON/d" $(1); \
+		echo "# CONFIG_SWAPON is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPOFF/d" $(1); \
+		echo "# CONFIG_SWAPOFF is not set" >>$(1); \
 		sed -i "/CONFIG_CHROOT/d" $(1); \
 		echo "# CONFIG_CHROOT is not set" >>$(1); \
 		sed -i "/CONFIG_PIVOT_ROOT/d" $(1); \

@@ -6,16 +6,16 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
 //config:config UNSHARE
 //config:	bool "unshare"
 //config:	default y
-//config:	depends on LONG_OPTS && !NOMMU
+//config:	depends on !NOMMU
 //config:	select PLATFORM_LINUX
+//config:	select LONG_OPTS
 //config:	help
 //config:	  Run program with some namespaces unshared from parent.
 
-// depends on LONG_OPTS: it is awkward to exclude code which handles --propagation
+// needs LONG_OPTS: it is awkward to exclude code which handles --propagation
 // and --setgroups based on LONG_OPTS, so instead applet requires LONG_OPTS.
 // depends on !NOMMU: we need fork()
 
@@ -26,14 +26,14 @@
 //usage:#define unshare_trivial_usage
 //usage:       "[OPTIONS] [PROG [ARGS]]"
 //usage:#define unshare_full_usage "\n"
-//usage:     "\n	-m, --mount[=FILE]	Unshare mount namespace"
-//usage:     "\n	-u, --uts[=FILE]	Unshare UTS namespace (hostname etc.)"
-//usage:     "\n	-i, --ipc[=FILE]	Unshare System V IPC namespace"
-//usage:     "\n	-n, --net[=FILE]	Unshare network namespace"
-//usage:     "\n	-p, --pid[=FILE]	Unshare PID namespace"
-//usage:     "\n	-U, --user[=FILE}	Unshare user namespace"
-//usage:     "\n	-f, --fork		Fork before execing PROG"
-//usage:     "\n	-r, --map-root-user	Map current user to root (implies -u)"
+//usage:     "\n	-m,--mount[=FILE]	Unshare mount namespace"
+//usage:     "\n	-u,--uts[=FILE]		Unshare UTS namespace (hostname etc.)"
+//usage:     "\n	-i,--ipc[=FILE]		Unshare System V IPC namespace"
+//usage:     "\n	-n,--net[=FILE]		Unshare network namespace"
+//usage:     "\n	-p,--pid[=FILE]		Unshare PID namespace"
+//usage:     "\n	-U,--user[=FILE]	Unshare user namespace"
+//usage:     "\n	-f,--fork		Fork before execing PROG"
+//usage:     "\n	-r,--map-root-user	Map current user to root (implies -U)"
 //usage:     "\n	--mount-proc[=DIR]	Mount /proc filesystem first (implies -m)"
 //usage:     "\n	--propagation slave|shared|private|unchanged"
 //usage:     "\n				Modify mount propagation in mount namespace"
@@ -103,7 +103,7 @@ enum {
 	OPT_mount	= 1 << 0,
 	OPT_uts		= 1 << 1,
 	OPT_ipc		= 1 << 2,
-	OPT_network	= 1 << 3,
+	OPT_net		= 1 << 3,
 	OPT_pid		= 1 << 4,
 	OPT_user	= 1 << 5, /* OPT_user, NS_USR_POS, and ns_list[] index must match! */
 	OPT_fork	= 1 << 6,
@@ -142,7 +142,7 @@ static const char unshare_longopts[] ALIGN1 =
 	"mount\0"		Optional_argument	"\xf0"
 	"uts\0"			Optional_argument	"\xf1"
 	"ipc\0"			Optional_argument	"\xf2"
-	"network\0"		Optional_argument	"\xf3"
+	"net\0"			Optional_argument	"\xf3"
 	"pid\0"			Optional_argument	"\xf4"
 	"user\0"		Optional_argument	"\xf5"
 	"fork\0"		No_argument		"f"

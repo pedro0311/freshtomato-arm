@@ -1,6 +1,6 @@
 --- busybox/include/libbb.h
 +++ busybox/include/libbb.h
-@@ -1830,7 +1830,7 @@
+@@ -1954,7 +1954,7 @@
   * but I want to save a few bytes here */
  extern const char bb_PATH_root_path[] ALIGN1; /* "PATH=/sbin:/usr/sbin:/bin:/usr/bin" */
  #define bb_default_root_path (bb_PATH_root_path + sizeof("PATH"))

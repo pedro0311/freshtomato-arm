@@ -55,7 +55,7 @@
  *
  *    - 2003/03/18 - Tsippy Mendelson <tsippy.mendelson at intel dot com> and
  *                   Shmulik Hen <shmulik.hen at intel dot com>
- *       - Moved setting the slave's mac address and openning it, from
+ *       - Moved setting the slave's mac address and opening it, from
  *         the application to the driver. This enables support of modes
  *         that need to use the unique mac address of each slave.
  *         The driver also takes care of closing the slave and restoring its
@@ -97,6 +97,17 @@
  *       - Code cleanup and style changes
  *         set version to 1.1.0
  */
+//config:config IFENSLAVE
+//config:	bool "ifenslave"
+//config:	default y
+//config:	select PLATFORM_LINUX
+//config:	help
+//config:	  Userspace application to bind several interfaces
+//config:	  to a logical interface (use with kernel bonding driver).
+
+//applet:IF_IFENSLAVE(APPLET(ifenslave, BB_DIR_SBIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_IFENSLAVE) += ifenslave.o interface.o
 
 //usage:#define ifenslave_trivial_usage
 //usage:       "[-cdf] MASTER_IFACE SLAVE_IFACE..."

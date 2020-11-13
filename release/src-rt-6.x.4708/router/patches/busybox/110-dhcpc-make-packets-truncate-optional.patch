@@ -11,7 +11,7 @@
  
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -96,8 +96,9 @@
+@@ -105,8 +105,9 @@
  	OPT_x = 1 << 18,
  	OPT_f = 1 << 19,
  	OPT_B = 1 << 20,
@@ -22,16 +22,16 @@
  	USE_FOR_MMU(             OPTBIT_b,)
  	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
  	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
-@@ -1287,6 +1288,7 @@
- 	opt_complementary = "O::x::T+:t+:A+" IF_UDHCP_VERBOSE(":vv") ;
+@@ -1304,6 +1305,7 @@
+ 	IF_UDHCP_VERBOSE(opt_complementary = "vv";)
  	IF_LONG_OPTS(applet_long_options = udhcpc_longopts;)
- 	opt = getopt32(argv, "CV:H:h:F:i:np:qRr:s:T:t:SA:O:ox:fB"
+ 	opt = getopt32(argv, "CV:H:h:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
 +		"m"
  		USE_FOR_MMU("b")
  		IF_FEATURE_UDHCPC_ARPING("a::")
  		IF_FEATURE_UDHCP_PORT("P:")
-@@ -1357,6 +1359,9 @@
- 		udhcp_str2optset(optstr, &client_config.options);
+@@ -1376,6 +1378,9 @@
+ 			*colon = ':'; /* restore it for NOMMU reexec */
  	}
  
 +	if (opt & OPT_m)
@@ -48,10 +48,10 @@
  
 +int minpkt = 0;
 +
+ #if ENABLE_UDHCPC || ENABLE_UDHCPD
  void FAST_FUNC udhcp_init_header(struct dhcp_packet *packet, char type)
  {
- 	memset(packet, 0, sizeof(*packet));
-@@ -149,7 +151,9 @@
+@@ -151,7 +153,9 @@
  	 * Thus, we retain enough padding to not go below 300 BOOTP bytes.
  	 * Some devices have filters which drop DHCP packets shorter than that.
  	 */
@@ -62,7 +62,7 @@
  	if (padding > DHCP_SIZE - 300)
  		padding = DHCP_SIZE - 300;
  
-@@ -221,7 +225,7 @@
+@@ -223,7 +227,7 @@
  	}
  
  	udhcp_dump_packet(dhcp_pkt);

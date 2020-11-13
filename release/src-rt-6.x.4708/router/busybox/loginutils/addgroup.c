@@ -19,15 +19,13 @@
 //config:	bool "Enable long options"
 //config:	default y
 //config:	depends on ADDGROUP && LONG_OPTS
-//config:	help
-//config:	  Support long options for the addgroup applet.
 //config:
 //config:config FEATURE_ADDUSER_TO_GROUP
-//config:	bool "Support for adding users to groups"
+//config:	bool "Support adding users to groups"
 //config:	default y
 //config:	depends on ADDGROUP
 //config:	help
-//config:	  If  called  with two non-option arguments,
+//config:	  If called with two non-option arguments,
 //config:	  addgroup will add an existing user to an
 //config:	  existing group.
 
@@ -186,7 +184,7 @@ int addgroup_main(int argc UNUSED_PARAM, char **argv)
 		gr = xgetgrnam(argv[1]); /* unknown group: exit */
 		/* check if user is already in this group */
 		for (; *(gr->gr_mem) != NULL; (gr->gr_mem)++) {
-			if (!strcmp(argv[0], *(gr->gr_mem))) {
+			if (strcmp(argv[0], *(gr->gr_mem)) == 0) {
 				/* user is already in group: do nothing */
 				return EXIT_SUCCESS;
 			}

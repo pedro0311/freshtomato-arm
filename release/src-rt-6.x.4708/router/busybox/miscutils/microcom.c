@@ -7,6 +7,15 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
+//config:config MICROCOM
+//config:	bool "microcom"
+//config:	default y
+//config:	help
+//config:	  The poor man's minicom utility for chatting with serial port devices.
+
+//applet:IF_MICROCOM(APPLET(microcom, BB_DIR_USR_BIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_MICROCOM) += microcom.o
 
 //usage:#define microcom_trivial_usage
 //usage:       "[-d DELAY] [-t TIMEOUT] [-s SPEED] [-X] TTY"
@@ -24,6 +33,7 @@
 // set raw tty mode
 static void xget1(int fd, struct termios *t, struct termios *oldt)
 {
+//TODO: use set_termios_to_raw()
 	tcgetattr(fd, oldt);
 	*t = *oldt;
 	cfmakeraw(t);
@@ -64,8 +74,7 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
 	unsigned opts;
 
 	// fetch options
-	opt_complementary = "=1:s+:d+:t+"; // exactly one arg, numeric options
-	opts = getopt32(argv, "Xs:d:t:", &speed, &delay, &timeout);
+	opts = getopt32(argv, "Xs:+d:+t:+", &speed, &delay, &timeout);
 //	argc -= optind;
 	argv += optind;
 

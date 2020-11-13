@@ -8,6 +8,51 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
+//config:config PS
+//config:	bool "ps"
+//config:	default y
+//config:	help
+//config:	  ps gives a snapshot of the current processes.
+//config:
+//config:config FEATURE_PS_WIDE
+//config:	bool "Enable wide output option (-w)"
+//config:	default y
+//config:	depends on PS && !DESKTOP
+//config:	help
+//config:	  Support argument 'w' for wide output.
+//config:	  If given once, 132 chars are printed, and if given more
+//config:	  than once, the length is unlimited.
+//config:
+//config:config FEATURE_PS_LONG
+//config:	bool "Enable long output option (-l)"
+//config:	default y
+//config:	depends on PS && !DESKTOP
+//config:	help
+//config:	  Support argument 'l' for long output.
+//config:	  Adds fields PPID, RSS, START, TIME & TTY
+//config:
+//config:config FEATURE_PS_TIME
+//config:	bool "Support -o time and -o etime output specifiers"
+//config:	default y
+//config:	depends on PS && DESKTOP
+//config:	select PLATFORM_LINUX
+//config:
+//config:config FEATURE_PS_UNUSUAL_SYSTEMS
+//config:	bool "Support Linux prior to 2.4.0 and non-ELF systems"
+//config:	default n
+//config:	depends on FEATURE_PS_TIME
+//config:	help
+//config:	  Include support for measuring HZ on old kernels and non-ELF systems
+//config:	  (if you are on Linux 2.4.0+ and use ELF, you don't need this)
+//config:
+//config:config FEATURE_PS_ADDITIONAL_COLUMNS
+//config:	bool "Support -o rgroup, -o ruser, -o nice specifiers"
+//config:	default y
+//config:	depends on PS && DESKTOP
+
+//applet:IF_PS(APPLET(ps, BB_DIR_BIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_PS) += ps.o
 
 //usage:#if ENABLE_DESKTOP
 //usage:
@@ -563,7 +608,9 @@ int ps_main(int argc UNUSED_PARAM, char **argv)
 	procps_status_t *p;
 	llist_t* opt_o = NULL;
 	char default_o[sizeof(DEFAULT_O_STR)];
+#if ENABLE_SELINUX || ENABLE_FEATURE_SHOW_THREADS
 	int opt;
+#endif
 	enum {
 		OPT_Z = (1 << 0),
 		OPT_o = (1 << 1),
@@ -593,8 +640,11 @@ int ps_main(int argc UNUSED_PARAM, char **argv)
 	 * procps v3.2.7 supports -T and shows tids as SPID column,
 	 * it also supports -L where it shows tids as LWP column.
 	 */
-	opt_complementary = "o::";
-	opt = getopt32(argv, "Zo:aAdefl"IF_FEATURE_SHOW_THREADS("T"), &opt_o);
+#if ENABLE_SELINUX || ENABLE_FEATURE_SHOW_THREADS
+	opt =
+#endif
+		getopt32(argv, "Zo:*aAdefl"IF_FEATURE_SHOW_THREADS("T"), &opt_o);
+
 	if (opt_o) {
 		do {
 			parse_o(llist_pop(&opt_o));
