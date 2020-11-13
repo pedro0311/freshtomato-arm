@@ -894,7 +894,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "rstats_bak",			"0"				, 0 },
 
 /* admin-ipt */
-	{ "cstats_enable",		"1"				, 0 },
+	{ "cstats_enable",		"0"				, 0 },
 	{ "cstats_path",		""				, 0 },
 	{ "cstats_stime",		"48"				, 0 },
 	{ "cstats_offset",		"1"				, 0 },

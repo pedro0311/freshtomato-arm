@@ -5,6 +5,17 @@
  * Author: Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
  * Busybox port: Nick Fedchik <nick@fedchik.org.ua>
  */
+//config:config ARPING
+//config:	bool "arping"
+//config:	default y
+//config:	select PLATFORM_LINUX
+//config:	help
+//config:	  Ping hosts by ARP packets.
+//config:
+
+//applet:IF_ARPING(APPLET(arping, BB_DIR_USR_SBIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_ARPING) += arping.o
 
 //usage:#define arping_trivial_usage
 //usage:       "[-fqbDUA] [-c CNT] [-w TIMEOUT] [-I IFACE] [-s SRC_IP] DST_IP"
@@ -295,8 +306,8 @@ int arping_main(int argc UNUSED_PARAM, char **argv)
 		/* Dad also sets quit_on_reply.
 		 * Advert also sets unsolicited.
 		 */
-		opt_complementary = "=1:Df:AU:c+";
-		opt = getopt32(argv, "DUAqfbc:w:I:s:",
+		opt_complementary = "=1:Df:AU";
+		opt = getopt32(argv, "DUAqfbc:+w:I:s:",
 				&count, &str_timeout, &device, &source);
 		if (opt & 0x80) /* -w: timeout */
 			timeout_us = xatou_range(str_timeout, 0, INT_MAX/2000000) * 1000000 + 500000;

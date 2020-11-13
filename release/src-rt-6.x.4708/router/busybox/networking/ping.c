@@ -57,14 +57,14 @@
 //config:config PING6
 //config:	bool "ping6"
 //config:	default y
-//config:	depends on FEATURE_IPV6 && PING
+//config:	depends on FEATURE_IPV6
 //config:	help
 //config:	  This will give you a ping that can talk IPv6.
 //config:
 //config:config FEATURE_FANCY_PING
 //config:	bool "Enable fancy ping output"
 //config:	default y
-//config:	depends on PING
+//config:	depends on PING || PING6
 //config:	help
 //config:	  Make the output from the ping applet include statistics, and at the
 //config:	  same time provide full support for ICMP packets.
@@ -94,10 +94,10 @@
 //usage:     "\n	-4,-6		Force IP or IPv6 name resolution"
 //usage:	)
 //usage:     "\n	-c CNT		Send only CNT pings"
-//usage:     "\n	-s SIZE		Send SIZE data bytes in packets (default:56)"
+//usage:     "\n	-s SIZE		Send SIZE data bytes in packets (default 56)"
 //usage:     "\n	-t TTL		Set TTL"
-//usage:     "\n	-I IFACE/IP	Use interface or IP address as source"
-//usage:     "\n	-W SEC		Seconds to wait for the first response (default:10)"
+//usage:     "\n	-I IFACE/IP	Source interface or IP address"
+//usage:     "\n	-W SEC		Seconds to wait for the first response (default 10)"
 //usage:     "\n			(after all -c CNT packets are sent)"
 //usage:     "\n	-w SEC		Seconds until ping exits (default:infinite)"
 //usage:     "\n			(can exit earlier with -c CNT)"
@@ -110,8 +110,8 @@
 //usage:# define ping6_full_usage "\n\n"
 //usage:       "Send ICMP ECHO_REQUEST packets to network hosts\n"
 //usage:     "\n	-c CNT		Send only CNT pings"
-//usage:     "\n	-s SIZE		Send SIZE data bytes in packets (default:56)"
-//usage:     "\n	-I IFACE/IP	Use interface or IP address as source"
+//usage:     "\n	-s SIZE		Send SIZE data bytes in packets (default 56)"
+//usage:     "\n	-I IFACE/IP	Source interface or IP address"
 //usage:     "\n	-q		Quiet, only display output at start"
 //usage:     "\n			and when finished"
 //usage:     "\n	-p		Pattern to use for payload"
@@ -186,6 +186,7 @@ create_icmp_socket(void)
 struct globals {
 	char *hostname;
 	char packet[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
+	uint16_t myid;
 } FIX_ALIASING;
 #define G (*(struct globals*)bb_common_bufsiz1)
 #define INIT_G() do { setup_common_bufsiz(); } while (0)
@@ -204,6 +205,7 @@ static void ping4(len_and_sockaddr *lsa)
 	pkt = (struct icmp *) G.packet;
 	/*memset(pkt, 0, sizeof(G.packet)); already is */
 	pkt->icmp_type = ICMP_ECHO;
+	pkt->icmp_id = G.myid;
 	pkt->icmp_cksum = inet_cksum((uint16_t *) pkt, sizeof(G.packet));
 
 	xsendto(pingsock, G.packet, DEFDATALEN + ICMP_MINLEN, &lsa->u.sa, lsa->len);
@@ -228,6 +230,8 @@ static void ping4(len_and_sockaddr *lsa)
 			struct iphdr *iphdr = (struct iphdr *) G.packet;
 
 			pkt = (struct icmp *) (G.packet + (iphdr->ihl << 2));	/* skip ip hdr */
+			if (pkt->icmp_id != G.myid)
+				continue; /* not our ping */
 			if (pkt->icmp_type == ICMP_ECHOREPLY)
 				break;
 		}
@@ -246,6 +250,7 @@ static void ping6(len_and_sockaddr *lsa)
 	pkt = (struct icmp6_hdr *) G.packet;
 	/*memset(pkt, 0, sizeof(G.packet)); already is */
 	pkt->icmp6_type = ICMP6_ECHO_REQUEST;
+	pkt->icmp6_id = G.myid;
 
 	sockopt = offsetof(struct icmp6_hdr, icmp6_cksum);
 	setsockopt_int(pingsock, SOL_RAW, IPV6_CHECKSUM, sockopt);
@@ -269,6 +274,8 @@ static void ping6(len_and_sockaddr *lsa)
 			continue;
 		}
 		if (c >= ICMP_MINLEN) {	/* icmp6_hdr */
+			if (pkt->icmp6_id != G.myid)
+				continue; /* not our ping */
 			if (pkt->icmp6_type == ICMP6_ECHO_REPLY)
 				break;
 		}
@@ -317,6 +324,7 @@ static int common_ping_main(sa_family_t af, char **argv)
 	alarm(5); /* give the host 5000ms to respond */
 
 	create_icmp_socket(lsa);
+	G.myid = (uint16_t) getpid();
 #if ENABLE_PING6
 	if (lsa->u.sa.sa_family == AF_INET6)
 		ping6(lsa);
@@ -333,7 +341,7 @@ static int common_ping_main(sa_family_t af, char **argv)
 
 /* Full(er) version */
 
-#define OPT_STRING ("qvc:s:t:w:W:I:np:4" IF_PING6("6"))
+#define OPT_STRING ("qvc:+s:t:+w:+W:+I:np:4" IF_PING6("6"))
 enum {
 	OPT_QUIET = 1 << 0,
 	OPT_VERBOSE = 1 << 1,
@@ -470,7 +478,7 @@ static void sendping_tail(void (*sp)(int), int size_pkt)
 	} else { /* -c NN, and all NN are sent (and no deadline) */
 		/* Wait for the last ping to come back.
 		 * -W timeout: wait for a response in seconds.
-		 * Affects only timeout in absense of any responses,
+		 * Affects only timeout in absence of any responses,
 		 * otherwise ping waits for two RTTs. */
 		unsigned expire = timeout;
 
@@ -704,7 +712,7 @@ static void ping4(len_and_sockaddr *lsa)
 
 	if (opt_ttl != 0) {
 		setsockopt_int(pingsock, IPPROTO_IP, IP_TTL, opt_ttl);
-		/* above doesnt affect packets sent to bcast IP, so... */
+		/* above doesn't affect packets sent to bcast IP, so... */
 		setsockopt_int(pingsock, IPPROTO_IP, IP_MULTICAST_TTL, opt_ttl);
 	}
 
@@ -857,7 +865,7 @@ static int common_ping_main(int opt, char **argv)
 	INIT_G();
 
 	/* exactly one argument needed; -v and -q don't mix; -c NUM, -t NUM, -w NUM, -W NUM */
-	opt_complementary = "=1:q--v:v--q:c+:t+:w+:W+";
+	opt_complementary = "=1:q--v:v--q";
 	opt |= getopt32(argv, OPT_STRING, &pingcount, &str_s, &opt_ttl, &deadline, &timeout, &str_I, &str_p);
 	if (opt & OPT_s)
 		datalen = xatou16(str_s); // -s
@@ -899,15 +907,17 @@ static int common_ping_main(int opt, char **argv)
 #endif /* FEATURE_FANCY_PING */
 
 
+#if ENABLE_PING
 int ping_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int ping_main(int argc UNUSED_PARAM, char **argv)
 {
-#if !ENABLE_FEATURE_FANCY_PING
+# if !ENABLE_FEATURE_FANCY_PING
 	return common_ping_main(AF_UNSPEC, argv);
-#else
+# else
 	return common_ping_main(0, argv);
-#endif
+# endif
 }
+#endif
 
 #if ENABLE_PING6
 int ping6_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;

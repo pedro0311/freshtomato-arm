@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2002 Broadcom Corporation
  *
- * $Id: wpa.h 404448 2013-05-27 07:55:43Z $
+ * $Id: wpa.h 450927 2014-01-23 14:13:36Z $
  */
 
 #ifndef _wpa_h_
@@ -145,7 +145,8 @@ typedef struct wpa_suppl {
 #ifdef BCMSUPPL
 	/* need to differentiate message 1 and 3 in 4 way handshake */
 	eapol_sup_pk_state_t pk_state;
-#endif
+	uint8 eapol_temp_ptk[TKIP_TK_LEN];	/* Temp PTK */
+#endif /* BCMSUPPL */
 } wpa_suppl_t;
 
 /* This coalesces the WPA supplicant and RADIUS PAE structs.
@@ -203,6 +204,7 @@ typedef struct nas_sta {
 /* nas_sta_t flags */
 
 #define STA_FLAG_PRE_AUTH	0x0001	/* STA is doing pre-auth */
+#define STA_FLAG_OSEN_AUTH	0x0002	/* STA is doing OSEN-auth */
 
 /* WPA - Authenticator struct */
 typedef struct wpa {
@@ -247,7 +249,7 @@ extern void initialize_global_key_counter(wpa_t *wpa);
 extern void initialize_gmk(wpa_t *wpa);
 extern int wpa_driver_assoc_msg(wpa_t *wpa, bcm_event_t *dpkt, nas_sta_t *sta);
 extern int wpa_driver_disassoc_msg(wpa_t *wpa, bcm_event_t  *dpkt, nas_sta_t *sta);
-extern void wpa_mic_error(wpa_t *wpa, nas_sta_t *sta, bool from_driver);
+extern void wpa_mic_error(wpa_t *wpa, nas_sta_t *sta, bool from_driver, bool pairwise);
 extern int wpa_set_suppl(wpa_t *wpa, nas_sta_t *sta, uint32 mode, uint32 wsec, uint32 algo);
 #ifdef BCMSUPPL
 extern void wpa_request(wpa_t *wpa, nas_sta_t *sta);

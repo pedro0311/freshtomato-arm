@@ -3,7 +3,7 @@
  *
  * See RFCs 2865 and 2869
  *
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -11,7 +11,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: radius.h 388302 2013-02-28 22:49:09Z $
+ * $Id: radius.h 450927 2014-01-23 14:13:36Z $
  */
 
 #ifndef _radius_h_
@@ -126,6 +126,7 @@ typedef struct {
 #define RD_TP_NAS_PORT_ID 87
 #define RD_TP_TUNNEL_CLIENT_AUTH_ID 90
 #define RD_TP_TUNNEL_SERVER_AUTH_ID 91
+#define RD_TP_NAS_IPV6_ADDRESS 95
 #define RD_TP_ASCEND_MODEM_PORTNO 120
 #define RD_TP_ASCEND_MODEM_SLOTNO 121
 #define RD_TP_ASCEND_MULTILINK_ID 187
@@ -169,6 +170,8 @@ typedef struct {
 #define RD_VENDOR_WFA_SR_VALUE	1
 #define RD_VENDOR_WFA_AP_VALUE	2
 #define RD_VENDOR_WFA_STA_VALUE	3
+#define RD_VENDOR_WFA_DAR_VALUE	4
+#define RD_VENDOR_WFA_SIU_VALUE	5
 
 /* Microsoft vendor-specific RADIUS attributes */
 #define RD_MS_MPPE_POLICY		7

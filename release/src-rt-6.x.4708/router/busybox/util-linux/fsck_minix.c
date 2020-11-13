@@ -85,6 +85,20 @@
  * The device may be a block device or a image of one, but this isn't
  * enforced (but it's not much fun on a character device :-).
  */
+//config:config FSCK_MINIX
+//config:	bool "fsck_minix"
+//config:	default y
+//config:	help
+//config:	  The minix filesystem is a nice, small, compact, read-write filesystem
+//config:	  with little overhead. It is not a journaling filesystem however and
+//config:	  can experience corruption if it is not properly unmounted or if the
+//config:	  power goes off in the middle of a write. This utility allows you to
+//config:	  check for and attempt to repair any corruption that occurs to a minix
+//config:	  filesystem.
+
+//applet:IF_FSCK_MINIX(APPLET_ODDNAME(fsck.minix, fsck_minix, BB_DIR_SBIN, BB_SUID_DROP, fsck_minix))
+
+//kbuild:lib-$(CONFIG_FSCK_MINIX) += fsck_minix.o
 
 //usage:#define fsck_minix_trivial_usage
 //usage:       "[-larvsmf] BLOCKDEV"
@@ -1212,7 +1226,6 @@ void check2(void);
 int fsck_minix_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int fsck_minix_main(int argc UNUSED_PARAM, char **argv)
 {
-	struct termios tmp;
 	int retcode = 0;
 
 	xfunc_error_retval = 8;
@@ -1257,10 +1270,7 @@ int fsck_minix_main(int argc UNUSED_PARAM, char **argv)
 	read_tables();
 
 	if (OPT_manual) {
-		tcgetattr(0, &sv_termios);
-		tmp = sv_termios;
-		tmp.c_lflag &= ~(ICANON | ECHO);
-		tcsetattr_stdin_TCSANOW(&tmp);
+		set_termios_to_raw(STDIN_FILENO, &sv_termios, 0);
 		termios_set = 1;
 	}
 

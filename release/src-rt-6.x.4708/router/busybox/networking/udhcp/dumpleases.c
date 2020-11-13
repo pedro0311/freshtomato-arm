@@ -2,13 +2,16 @@
 /*
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
+//applet:IF_DUMPLEASES(APPLET(dumpleases, BB_DIR_USR_BIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_DUMPLEASES) += dumpleases.o
 
 //usage:#define dumpleases_trivial_usage
 //usage:       "[-r|-a] [-d] [-f LEASEFILE]"
 //usage:#define dumpleases_full_usage "\n\n"
 //usage:       "Display DHCP leases granted by udhcpd\n"
 //usage:	IF_LONG_OPTS(
-//usage:     "\n	-f,--file=FILE	Lease file"
+//usage:     "\n	-f,--file FILE	Lease file"
 //usage:     "\n	-r,--remaining	Show remaining time"
 //usage:     "\n	-a,--absolute	Show expiration time"
 //usage:     "\n	-d,--decimal	Show time in seconds"

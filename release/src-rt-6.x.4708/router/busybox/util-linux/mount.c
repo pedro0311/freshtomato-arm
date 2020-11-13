@@ -90,7 +90,7 @@
 //config:
 //config:config FEATURE_MOUNT_FLAGS
 //config:	depends on MOUNT
-//config:	bool "Support lots of -o flags in mount"
+//config:	bool "Support lots of -o flags"
 //config:	default y
 //config:	help
 //config:	  Without this, mount only supports ro/rw/remount. With this, it
@@ -111,6 +111,14 @@
 //config:	default y
 //config:	help
 //config:	  Support mount -T (specifying an alternate fstab)
+
+/* On full-blown systems, requires suid for user mounts.
+ * But it's not unthinkable to have it available in non-suid flavor on some systems,
+ * for viewing mount table.
+ * Therefore we use BB_SUID_MAYBE instead of BB_SUID_REQUIRE: */
+//applet:IF_MOUNT(APPLET(mount, BB_DIR_BIN, IF_DESKTOP(BB_SUID_MAYBE) IF_NOT_DESKTOP(BB_SUID_DROP)))
+
+//kbuild:lib-$(CONFIG_MOUNT) += mount.o
 
 //usage:#define mount_trivial_usage
 //usage:       "[OPTIONS] [-o OPT] DEVICE NODE"
@@ -238,7 +246,8 @@
 /* This is just a warning of a common mistake.  Possibly this should be a
  * uclibc faq entry rather than in busybox... */
 # if defined(__UCLIBC__) && ! defined(__UCLIBC_HAS_RPC__)
-#  error "You need to build uClibc with UCLIBC_HAS_RPC for NFS support"
+#  warning "You probably need to build uClibc with UCLIBC_HAS_RPC for NFS support"
+   /* not #error, since user may be using e.g. libtirpc instead */
 # endif
 # include <rpc/rpc.h>
 # include <rpc/pmap_prot.h>
@@ -268,7 +277,7 @@ enum {
 };
 
 
-#define OPTION_STR "o:t:rwanfvsiO:" IF_FEATURE_MOUNT_OTHERTAB("T:")
+#define OPTION_STR "o:*t:rwanfvsiO:" IF_FEATURE_MOUNT_OTHERTAB("T:")
 enum {
 	OPT_o = (1 << 0),
 	OPT_t = (1 << 1),
@@ -1879,6 +1888,7 @@ static int nfsmount(struct mntent *mp, unsigned long vfsflags, char *filteropts)
 // NB: mp->xxx fields may be trashed on exit
 static int singlemount(struct mntent *mp, int ignore_busy)
 {
+	int loopfd = -1;
 	int rc = -1;
 	unsigned long vfsflags;
 	char *loopFile = NULL, *filteropts = NULL;
@@ -1931,7 +1941,6 @@ static int singlemount(struct mntent *mp, int ignore_busy)
 		int len;
 		char c;
 		char *hostname, *share;
-		char *dotted, *ip;
 		len_and_sockaddr *lsa;
 
 		// Parse mp->mnt_fsname of the form "//hostname/share[/dir1/dir2]"
@@ -1971,13 +1980,26 @@ static int singlemount(struct mntent *mp, int ignore_busy)
 		if (!lsa)
 			goto report_error;
 
-		// Insert "ip=..." option into options
-		dotted = xmalloc_sockaddr2dotted_noport(&lsa->u.sa);
-		if (ENABLE_FEATURE_CLEAN_UP) free(lsa);
-		ip = xasprintf("ip=%s", dotted);
-		if (ENABLE_FEATURE_CLEAN_UP) free(dotted);
-		parse_mount_options(ip, &filteropts);
-		if (ENABLE_FEATURE_CLEAN_UP) free(ip);
+		// If there is no "ip=..." option yet
+		if (!is_prefixed_with(filteropts, ",ip="+1)
+		 && !strstr(filteropts, ",ip=")
+		) {
+			char *dotted, *ip;
+			// Insert "ip=..." option into options
+			dotted = xmalloc_sockaddr2dotted_noport(&lsa->u.sa);
+			if (ENABLE_FEATURE_CLEAN_UP) free(lsa);
+			ip = xasprintf("ip=%s", dotted);
+			if (ENABLE_FEATURE_CLEAN_UP) free(dotted);
+// Note: IPv6 scoped addresses ("host%iface", see RFC 4007) should be
+// handled by libc in getnameinfo() (inside xmalloc_sockaddr2dotted_noport()).
+// Currently, glibc does not support that (has no NI_NUMERICSCOPE),
+// musl apparently does. This results in "ip=numericIPv6%iface_name"
+// (instead of _numeric_ iface_id) with glibc.
+// This probably should be fixed in glibc, not here.
+// The workaround is to manually specify correct "ip=ADDR%n" option.
+			parse_mount_options(ip, &filteropts);
+			if (ENABLE_FEATURE_CLEAN_UP) free(ip);
+		}
 
 		mp->mnt_type = (char*)"cifs";
 		rc = mount_it_now(mp, vfsflags, filteropts);
@@ -2006,7 +2028,20 @@ static int singlemount(struct mntent *mp, int ignore_busy)
 		if (ENABLE_FEATURE_MOUNT_LOOP && S_ISREG(st.st_mode)) {
 			loopFile = bb_simplify_path(mp->mnt_fsname);
 			mp->mnt_fsname = NULL; // will receive malloced loop dev name
-			if (set_loop(&mp->mnt_fsname, loopFile, 0, /*ro:*/ (vfsflags & MS_RDONLY)) < 0) {
+
+			// mount always creates AUTOCLEARed loopdevs, so that umounting
+			// drops them without any code in the userspace.
+			// This happens since circa linux-2.6.25:
+			// commit 96c5865559cee0f9cbc5173f3c949f6ce3525581
+			// Date:    Wed Feb 6 01:36:27 2008 -0800
+			// Subject: Allow auto-destruction of loop devices
+			loopfd = set_loop(&mp->mnt_fsname,
+					loopFile,
+					0,
+					((vfsflags & MS_RDONLY) ? BB_LO_FLAGS_READ_ONLY : 0)
+						| BB_LO_FLAGS_AUTOCLEAR
+			);
+			if (loopfd < 0) {
 				if (errno == EPERM || errno == EACCES)
 					bb_error_msg(bb_msg_perm_denied_are_you_root);
 				else
@@ -2054,6 +2089,8 @@ static int singlemount(struct mntent *mp, int ignore_busy)
 	}
 
 	// If mount failed, clean up loop file (if any).
+	// (Newer kernels which support LO_FLAGS_AUTOCLEAR should not need this,
+	// merely "close(loopfd)" should do it?)
 	if (ENABLE_FEATURE_MOUNT_LOOP && rc && loopFile) {
 		del_loop(mp->mnt_fsname);
 		if (ENABLE_FEATURE_CLEAN_UP) {
@@ -2065,6 +2102,9 @@ static int singlemount(struct mntent *mp, int ignore_busy)
  report_error:
 	if (ENABLE_FEATURE_CLEAN_UP)
 		free(filteropts);
+
+	if (loopfd >= 0)
+		close(loopfd);
 
 	if (errno == EBUSY && ignore_busy)
 		return 0;
@@ -2167,7 +2207,7 @@ int mount_main(int argc UNUSED_PARAM, char **argv)
 
 	// Parse remaining options
 	// Max 2 params; -o is a list, -v is a counter
-	opt_complementary = "?2o::" IF_FEATURE_MOUNT_VERBOSE("vv");
+	opt_complementary = "?2" IF_FEATURE_MOUNT_VERBOSE("vv");
 	opt = getopt32(argv, OPTION_STR, &lst_o, &fstype, &O_optmatch
 			IF_FEATURE_MOUNT_OTHERTAB(, &fstabname)
 			IF_FEATURE_MOUNT_VERBOSE(, &verbose));
@@ -2292,7 +2332,7 @@ int mount_main(int argc UNUSED_PARAM, char **argv)
 				bb_error_msg_and_die(bb_msg_you_must_be_root);
 
 			// Does type match? (NULL matches always)
-			if (!match_fstype(mtcur, fstype))
+			if (!fstype_matches(mtcur->mnt_type, fstype))
 				continue;
 
 			// Skip noauto and swap anyway

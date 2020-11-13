@@ -11,7 +11,8 @@
 //config:config LOGREAD
 //config:	bool "logread"
 //config:	default y
-//config:	depends on FEATURE_IPC_SYSLOG
+//WRONG: it should be compilable without SYSLOG=y:
+//WRONG:	depends on FEATURE_IPC_SYSLOG
 //config:	help
 //config:	  If you enabled Circular Buffer support, you almost
 //config:	  certainly want to enable this feature as well. This
@@ -23,7 +24,7 @@
 //config:	default y
 //config:	depends on LOGREAD
 //config:	help
-//config:	  'logread' ouput to slow serial terminals can have
+//config:	  'logread' output to slow serial terminals can have
 //config:	  side effects on syslog because of the semaphore.
 //config:	  This option make logread to double buffer copy
 //config:	  from circular buffer, minimizing semaphore
@@ -158,7 +159,7 @@ int logread_main(int argc UNUSED_PARAM, char **argv)
 					cur, shbuf_tail, shbuf_size);
 
 		if (!(follow & 1)) { /* not -f */
-			/* if -F, "convert" it to -f, so that we dont
+			/* if -F, "convert" it to -f, so that we don't
 			 * dump the entire buffer on each iteration
 			 */
 			follow >>= 1;

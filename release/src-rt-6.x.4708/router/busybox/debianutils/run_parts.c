@@ -41,8 +41,6 @@
 //config:	bool "Enable long options"
 //config:	default y
 //config:	depends on RUN_PARTS && LONG_OPTS
-//config:	help
-//config:	  Support long options for the run-parts applet.
 //config:
 //config:config FEATURE_RUN_PARTS_FANCY
 //config:	bool "Support additional arguments"
@@ -181,8 +179,8 @@ int run_parts_main(int argc UNUSED_PARAM, char **argv)
 	applet_long_options = runparts_longopts;
 #endif
 	/* We require exactly one argument: the directory name */
-	opt_complementary = "=1:a::";
-	getopt32(argv, "a:u:", &arg_list, &umask_p);
+	opt_complementary = "=1";
+	getopt32(argv, "a:*u:", &arg_list, &umask_p);
 
 	umask(xstrtou_range(umask_p, 8, 0, 07777));
 

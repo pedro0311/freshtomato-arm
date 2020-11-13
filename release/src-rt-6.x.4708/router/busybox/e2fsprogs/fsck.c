@@ -658,7 +658,7 @@ static int device_already_active(char *device)
 		return (G.instance_list != NULL);
 
 	for (inst = G.instance_list; inst; inst = inst->next) {
-		if (!inst->base_device || !strcmp(base, inst->base_device)) {
+		if (!inst->base_device || strcmp(base, inst->base_device) == 0) {
 			free(base);
 			return 1;
 		}
@@ -1071,7 +1071,7 @@ int fsck_main(int argc UNUSED_PARAM, char **argv)
 	new_args(); /* G.args[G.num_args - 1] is the last, NULL element */
 
 	if (!notitle)
-		puts("fsck (busybox "BB_VER", "BB_BT")");
+		puts("fsck (busybox "BB_VER")");
 
 	/* Even plain "fsck /dev/hda1" needs fstab to get fs type,
 	 * so we are scanning it anyway */

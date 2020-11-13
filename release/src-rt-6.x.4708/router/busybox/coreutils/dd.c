@@ -2,12 +2,10 @@
 /*
  * Mini dd implementation for busybox
  *
- *
  * Copyright (C) 2000,2001  Matt Kraai
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
 //config:config DD
 //config:	bool "dd"
 //config:	default y
@@ -43,7 +41,7 @@
 //config:	default y
 //config:	depends on DD
 //config:	help
-//config:	  Enables support for writing a certain number of bytes in and out,
+//config:	  Enable support for writing a certain number of bytes in and out,
 //config:	  at a time, and performing conversions on the data stream.
 //config:
 //config:config FEATURE_DD_STATUS
@@ -51,7 +49,11 @@
 //config:	default y
 //config:	depends on DD
 //config:	help
-//config:	  Enables support for status=noxfer/none option.
+//config:	  Enable support for status=noxfer/none option.
+
+//applet:IF_DD(APPLET_NOEXEC(dd, dd, BB_DIR_BIN, BB_SUID_DROP, dd))
+
+//kbuild:lib-$(CONFIG_DD) += dd.o
 
 //usage:#define dd_trivial_usage
 //usage:       "[if=FILE] [of=FILE] " IF_FEATURE_DD_IBS_OBS("[ibs=N] [obs=N] ") "[bs=N] [count=N] [skip=N]\n"
@@ -131,9 +133,8 @@ enum {
 	/* end of input flags */
 	FLAG_TWOBUFS = (1 << 6) * ENABLE_FEATURE_DD_IBS_OBS,
 	FLAG_COUNT   = 1 << 7,
-	FLAG_STATUS  = 1 << 8,
-	FLAG_STATUS_NONE = 1 << 9,
-	FLAG_STATUS_NOXFER = 1 << 10,
+	FLAG_STATUS_NONE = 1 << 8,
+	FLAG_STATUS_NOXFER = 1 << 9,
 };
 
 static void dd_output_status(int UNUSED_PARAM cur_signal)
@@ -394,7 +395,7 @@ int dd_main(int argc UNUSED_PARAM, char **argv)
 			n = index_in_strings(status_words, val);
 			if (n < 0)
 				bb_error_msg_and_die(bb_msg_invalid_arg_to, val, "status");
-			G.flags |= FLAG_STATUS << n;
+			G.flags |= FLAG_STATUS_NONE << n;
 			/*continue;*/
 		}
 #endif
@@ -530,11 +531,11 @@ int dd_main(int argc UNUSED_PARAM, char **argv)
 			if (write_and_stats(ibuf, n, obs, outfile))
 				goto out_status;
 		}
+	}
 
-		if (G.flags & FLAG_FSYNC) {
-			if (fsync(ofd) < 0)
-				goto die_outfile;
-		}
+	if (G.flags & FLAG_FSYNC) {
+		if (fsync(ofd) < 0)
+			goto die_outfile;
 	}
 
 	if (ENABLE_FEATURE_DD_IBS_OBS && oc) {

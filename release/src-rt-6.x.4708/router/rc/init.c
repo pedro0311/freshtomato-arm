@@ -528,7 +528,7 @@ static int init_vlan_ports(void)
 	case MODEL_R6700v3:
 	case MODEL_R7000:
 	case MODEL_RTN18U:
-	case MODEL_RTAC66U_B1:
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
 	case MODEL_RTAC67U:
 	case MODEL_RTAC68U:
 	case MODEL_RTAC1900P:
@@ -698,7 +698,7 @@ static int init_nvram(void)
 			/* modify/adjust 2,4 GHz WiFi TX beamforming parameter (taken from Asus 384 - Aug 2019) */
 			nvram_set("0:rpcal2g", "0xe3ce");
 		}
-		set_gpio(GPIO_13, T_HIGH);		/* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
+		set_gpio(GPIO_13, T_HIGH); /* enable gpio 13; make sure it is always on, connected to WiFi IC; otherwise signal will be very weak! */
 		break;
 	case MODEL_RTAC56U:
 		mfr = "Asus";
@@ -1007,9 +1007,9 @@ static int init_nvram(void)
 			nvram_set("1:ccode", "SG");
 		}
 		break;
-	case MODEL_RTAC66U_B1:
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
 		mfr = "Asus";
-		name = "RT-AC66U B1";
+		name = nvram_match("odmpid", "RT-AC66U_B1") ? "RT-AC66U B1" : "RT-N66U C1";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");

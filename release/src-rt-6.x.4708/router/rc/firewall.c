@@ -1646,7 +1646,7 @@ static void filter6_input(void)
 	if (remotemanage) {
 		ip6t_write("-N wwwlimit\n"
 		           "-A wwwlimit -m recent --set --name www\n"
-		           "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
+		           "-A wwwlimit -m recent --update --hitcount 15 --seconds 5 --name www -j %s\n",
 		           chain_in_drop);
 		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j wwwlimit\n", nvram_safe_get("http_wanport"));
 	}
@@ -1662,9 +1662,15 @@ static void filter6_input(void)
 	}
 #endif	/* TCONFIG_FTP */
 
-	ip6t_write("-A INPUT -i %s -j ACCEPT\n"	/* anything coming from LAN */
-	           "-A INPUT -i lo -j ACCEPT\n",
+	ip6t_write("-A INPUT -i lo -j ACCEPT\n"
+	           "-A INPUT -i %s -j ACCEPT\n", /* anything coming from LAN */
 	           lanface[0]);
+	if (strcmp(lanface[1], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[1]);
+	if (strcmp(lanface[2], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[2]);
+	if (strcmp(lanface[3], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[3]);
 
 	switch (get_ipv6_service()) {
 	case IPV6_ANYCAST_6TO4:

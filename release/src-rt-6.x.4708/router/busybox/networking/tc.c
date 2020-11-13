@@ -7,26 +7,42 @@
  * Bernhard Reutner-Fischer adjusted for busybox
  */
 
+/* Was disabled in 2008 by Bernhard, not known why.
+--//config:#config TC
+--//config:#	bool "tc"
+--//config:#	default y
+--//config:#	help
+--//config:#	  Show / manipulate traffic control settings
+--//config:#
+--//config:#config FEATURE_TC_INGRESS
+--//config:#	default y
+--//config:#	depends on TC
+--
+--//applet:IF_TC(APPLET(tc, BB_DIR_SBIN, BB_SUID_DROP))
+--
+--//kbuild:lib-$(CONFIG_TC) += tc.o
+*/
+
 //usage:#define tc_trivial_usage
 /* //usage: "[OPTIONS] OBJECT CMD [dev STRING]" */
 //usage:	"OBJECT CMD [dev STRING]"
 //usage:#define tc_full_usage "\n\n"
-//usage:	"OBJECT: {qdisc|class|filter}\n"
-//usage:	"CMD: {add|del|change|replace|show}\n"
+//usage:	"OBJECT: qdisc|class|filter\n"
+//usage:	"CMD: add|del|change|replace|show\n"
 //usage:	"\n"
-//usage:	"qdisc [ handle QHANDLE ] [ root |"IF_FEATURE_TC_INGRESS(" ingress |")" parent CLASSID ]\n"
-/* //usage: "[ estimator INTERVAL TIME_CONSTANT ]\n" */
-//usage:	"	[ [ QDISC_KIND ] [ help | OPTIONS ] ]\n"
-//usage:	"	QDISC_KIND := { [p|b]fifo | tbf | prio | cbq | red | etc. }\n"
-//usage:	"qdisc show [ dev STRING ]"IF_FEATURE_TC_INGRESS(" [ingress]")"\n"
-//usage:	"class [ classid CLASSID ] [ root | parent CLASSID ]\n"
-//usage:	"	[ [ QDISC_KIND ] [ help | OPTIONS ] ]\n"
-//usage:	"class show [ dev STRING ] [ root | parent CLASSID ]\n"
-//usage:	"filter [ pref PRIO ] [ protocol PROTO ]\n"
-/* //usage: "\t[ estimator INTERVAL TIME_CONSTANT ]\n" */
-//usage:	"	[ root | classid CLASSID ] [ handle FILTERID ]\n"
-//usage:	"	[ [ FILTER_TYPE ] [ help | OPTIONS ] ]\n"
-//usage:	"filter show [ dev STRING ] [ root | parent CLASSID ]"
+//usage:	"qdisc [handle QHANDLE] [root|"IF_FEATURE_TC_INGRESS("ingress|")"parent CLASSID]\n"
+/* //usage: "[estimator INTERVAL TIME_CONSTANT]\n" */
+//usage:	"	[[QDISC_KIND] [help|OPTIONS]]\n"
+//usage:	"	QDISC_KIND := [p|b]fifo|tbf|prio|cbq|red|etc.\n"
+//usage:	"qdisc show [dev STRING]"IF_FEATURE_TC_INGRESS(" [ingress]")"\n"
+//usage:	"class [classid CLASSID] [root|parent CLASSID]\n"
+//usage:	"	[[QDISC_KIND] [help|OPTIONS] ]\n"
+//usage:	"class show [ dev STRING ] [root|parent CLASSID]\n"
+//usage:	"filter [pref PRIO] [protocol PROTO]\n"
+/* //usage: "\t[estimator INTERVAL TIME_CONSTANT]\n" */
+//usage:	"	[root|classid CLASSID] [handle FILTERID]\n"
+//usage:	"	[[FILTER_TYPE] [help|OPTIONS]]\n"
+//usage:	"filter show [dev STRING] [root|parent CLASSID]"
 
 #include "libbb.h"
 #include "common_bufsiz.h"
@@ -100,7 +116,7 @@ static int get_qdisc_handle(uint32_t *h, const char *str) {
 	char *p;
 
 	maj = TC_H_UNSPEC;
-	if (!strcmp(str, "none"))
+	if (strcmp(str, "none") == 0)
 		goto ok;
 	maj = strtoul(str, &p, 16);
 	if (p == str)
@@ -119,10 +135,10 @@ static int get_tc_classid(uint32_t *h, const char *str) {
 	char *p;
 
 	maj = TC_H_ROOT;
-	if (!strcmp(str, "root"))
+	if (strcmp(str, "root") == 0)
 		goto ok;
 	maj = TC_H_UNSPEC;
-	if (!strcmp(str, "none"))
+	if (strcmp(str, "none") == 0)
 		goto ok;
 	maj = strtoul(str, &p, 16);
 	if (p == str) {

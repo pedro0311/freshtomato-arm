@@ -3,6 +3,38 @@
   policycoreutils was released under GPL 2.
   Port to BusyBox (c) 2007 by Yuichi Nakamura <ynakam@hitachisoft.jp>
 */
+//config:config SETFILES
+//config:	bool "setfiles"
+//config:	default n
+//config:	depends on SELINUX
+//config:	help
+//config:	  Enable support to modify to relabel files.
+//config:	  Notice: If you built libselinux with -D_FILE_OFFSET_BITS=64,
+//config:	  (It is default in libselinux's Makefile), you _must_ enable
+//config:	  CONFIG_LFS.
+//config:
+//config:config FEATURE_SETFILES_CHECK_OPTION
+//config:	bool "Enable check option"
+//config:	default n
+//config:	depends on SETFILES
+//config:	help
+//config:	  Support "-c" option (check the validity of the contexts against
+//config:	  the specified binary policy) for setfiles. Requires libsepol.
+//config:
+//config:config RESTORECON
+//config:	bool "restorecon"
+//config:	default n
+//config:	depends on SELINUX
+//config:	help
+//config:	  Enable support to relabel files. The feature is almost
+//config:	  the same as setfiles, but usage is a little different.
+
+//applet:IF_SETFILES(APPLET(setfiles, BB_DIR_SBIN, BB_SUID_DROP))
+//                     APPLET_ODDNAME:name        main      location     suid_type     help
+//applet:IF_RESTORECON(APPLET_ODDNAME(restorecon, setfiles, BB_DIR_SBIN, BB_SUID_DROP, restorecon))
+
+//kbuild:lib-$(CONFIG_SETFILES) += setfiles.o
+//kbuild:lib-$(CONFIG_RESTORECON) += setfiles.o
 
 //usage:#define setfiles_trivial_usage
 //usage:       "[-dnpqsvW] [-e DIR]... [-o FILE] [-r alt_root_path]"
@@ -46,6 +78,7 @@
 //usage:     "\n		if it has changed"
 
 #include "libbb.h"
+#include "common_bufsiz.h"
 #if ENABLE_FEATURE_SETFILES_CHECK_OPTION
 #include <sepol/sepol.h>
 #endif
@@ -577,13 +610,13 @@ int setfiles_main(int argc UNUSED_PARAM, char **argv)
 
 	set_matchpathcon_flags(matchpathcon_flags);
 
-	opt_complementary = "e::vv:v--p:p--v:v--q:q--v";
+	opt_complementary = "vv:v--p:p--v:v--q:q--v";
 	/* Option order must match OPT_x definitions! */
 	if (applet_name[0] == 'r') { /* restorecon */
-		flags = getopt32(argv, "de:f:ilnpqrsvo:FWR",
+		flags = getopt32(argv, "de:*f:ilnpqrsvo:FWR",
 			&exclude_dir, &input_filename, &out_filename, &verbose);
 	} else { /* setfiles */
-		flags = getopt32(argv, "de:f:ilnpqr:svo:FW"
+		flags = getopt32(argv, "de:*f:ilnpqr:svo:FW"
 				IF_FEATURE_SETFILES_CHECK_OPTION("c:"),
 			&exclude_dir, &input_filename, &rootpath, &out_filename,
 				IF_FEATURE_SETFILES_CHECK_OPTION(&policyfile,)

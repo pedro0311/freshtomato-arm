@@ -10,6 +10,15 @@
  * Bugs: the spec doesn't mention anything about "`\n`\n" prior to the
  * "end" line
  */
+//config:config UUDECODE
+//config:	bool "uudecode"
+//config:	default y
+//config:	help
+//config:	  uudecode is used to decode a uuencoded file.
+
+//applet:IF_UUDECODE(APPLET(uudecode, BB_DIR_USR_BIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_UUDECODE) += uudecode.o
 
 //usage:#define uudecode_trivial_usage
 //usage:       "[-o OUTFILE] [INFILE]"
@@ -38,10 +47,16 @@ static void FAST_FUNC read_stduu(FILE *src_stream, FILE *dst_stream, int flags U
 		line = xmalloc_fgets_str_len(src_stream, "\n", &line_len);
 		if (!line)
 			break;
-		/* Handle both Unix and MSDOS text, and stray trailing spaces */
+		/* Handle both Unix and MSDOS text.
+		 * Note: space should not be trimmed, some encoders use it instead of "`"
+		 * for padding of last incomplete 4-char block.
+		 */
 		str_len = line_len;
-		while (--str_len >= 0 && isspace(line[str_len]))
+		while (--str_len >= 0
+		 && (line[str_len] == '\n' || line[str_len] == '\r')
+		) {
 			line[str_len] = '\0';
+		}
 
 		if (strcmp(line, "end") == 0) {
 			return; /* the only non-error exit */
@@ -56,7 +71,7 @@ static void FAST_FUNC read_stduu(FILE *src_stream, FILE *dst_stream, int flags U
 
 		encoded_len = line[0] * 4 / 3;
 		/* Check that line is not too short. (we tolerate
-		 * overly _long_ line to accommodate possible extra '`').
+		 * overly _long_ line to accommodate possible extra "`").
 		 * Empty line case is also caught here. */
 		if (str_len <= encoded_len) {
 			break; /* go to bb_error_msg_and_die("short file"); */

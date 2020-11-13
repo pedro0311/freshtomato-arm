@@ -45,11 +45,12 @@
 //config:	help
 //config:	  Update a UBI volume.
 
-//applet:IF_UBIATTACH(APPLET_ODDNAME(ubiattach, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubiattach))
-//applet:IF_UBIDETACH(APPLET_ODDNAME(ubidetach, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubidetach))
-//applet:IF_UBIMKVOL(APPLET_ODDNAME(ubimkvol, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubimkvol))
-//applet:IF_UBIRMVOL(APPLET_ODDNAME(ubirmvol, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubirmvol))
-//applet:IF_UBIRSVOL(APPLET_ODDNAME(ubirsvol, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubirsvol))
+//                       APPLET_ODDNAME:name       main       location         suid_type     help
+//applet:IF_UBIATTACH(   APPLET_ODDNAME(ubiattach, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubiattach))
+//applet:IF_UBIDETACH(   APPLET_ODDNAME(ubidetach, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubidetach))
+//applet:IF_UBIMKVOL(    APPLET_ODDNAME(ubimkvol,  ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubimkvol))
+//applet:IF_UBIRMVOL(    APPLET_ODDNAME(ubirmvol,  ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubirmvol))
+//applet:IF_UBIRSVOL(    APPLET_ODDNAME(ubirsvol,  ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubirsvol))
 //applet:IF_UBIUPDATEVOL(APPLET_ODDNAME(ubiupdatevol, ubi_tools, BB_DIR_USR_SBIN, BB_SUID_DROP, ubiupdatevol))
 
 //kbuild:lib-$(CONFIG_UBIATTACH) += ubi_tools.o
@@ -134,8 +135,8 @@ int ubi_tools_main(int argc UNUSED_PARAM, char **argv)
 #define OPTION_a  (1 << 5)
 #define OPTION_t  (1 << 6)
 	if (do_mkvol) {
-		opt_complementary = "-1:d+:n+:a+:O+";
-		opts = getopt32(argv, "md:n:N:s:a:t:O:",
+		opt_complementary = "-1";
+		opts = getopt32(argv, "md:+n:+N:s:a:+t:O:+",
 				&dev_num, &vol_id,
 				&vol_name, &size_bytes_str, &alignment, &type,
 				&vid_hdr_offset
@@ -146,8 +147,8 @@ int ubi_tools_main(int argc UNUSED_PARAM, char **argv)
 		opts = getopt32(argv, "s:at", &size_bytes_str);
 		opts *= OPTION_s;
 	} else {
-		opt_complementary = "-1:m+:d+:n+:a+";
-		opts = getopt32(argv, "m:d:n:N:s:a:t:",
+		opt_complementary = "-1";
+		opts = getopt32(argv, "m:+d:+n:+N:s:a:+t:",
 				&mtd_num, &dev_num, &vol_id,
 				&vol_name, &size_bytes_str, &alignment, &type
 		);
