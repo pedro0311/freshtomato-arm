@@ -1,6 +1,6 @@
 --- busybox/networking/interface.c
 +++ busybox/networking/interface.c
-@@ -885,7 +885,7 @@
+@@ -870,7 +870,7 @@
  			inet_pton(AF_INET6, addr6,
  					  (struct sockaddr *) &sap.sin6_addr);
  			sap.sin6_family = AF_INET6;
@@ -9,7 +9,7 @@
  				INET6_sprint((struct sockaddr *) &sap, 1),
  				plen);
  			printf(" Scope:");
-@@ -936,7 +936,7 @@
+@@ -921,7 +921,7 @@
  	if (hw == NULL)
  		hw = get_hwntype(-1);
  
@@ -18,7 +18,7 @@
  	/* For some hardware types (eg Ash, ATM) we don't print the
  	   hardware address if it's null.  */
  	if (hw->print != NULL
-@@ -954,7 +954,7 @@
+@@ -939,7 +939,7 @@
  	bb_putchar('\n');
  
  	if (ptr->has_ip) {
@@ -27,7 +27,7 @@
  			ap->sprint(&ptr->addr, 1));
  		if (ptr->flags & IFF_POINTOPOINT) {
  			printf(" P-t-P:%s ", ap->sprint(&ptr->dstaddr, 1));
-@@ -967,7 +967,7 @@
+@@ -952,7 +952,7 @@
  
  	ife_print6(ptr);
  
@@ -36,7 +36,7 @@
  	/* DONT FORGET TO ADD THE FLAGS IN ife_print_short, too */
  
  	if (ptr->flags == 0) {
-@@ -1035,26 +1035,26 @@
+@@ -1022,26 +1022,26 @@
  		 *      not for the aliases, although strictly speaking they're shared
  		 *      by all addresses.
  		 */
@@ -68,7 +68,7 @@
  		print_bytes_scaled(ptr->stats.rx_bytes, "  T");
  		print_bytes_scaled(ptr->stats.tx_bytes, "\n");
  	}
-@@ -1062,7 +1062,7 @@
+@@ -1049,7 +1049,7 @@
  	if (ptr->map.irq || ptr->map.mem_start
  	 || ptr->map.dma || ptr->map.base_addr
  	) {

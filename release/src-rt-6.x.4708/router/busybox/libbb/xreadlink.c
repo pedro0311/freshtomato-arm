@@ -5,7 +5,6 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 #include "libbb.h"
 
 /* Some systems (eg Hurd) do not have MAXSYMLINKS definition,
@@ -122,4 +121,34 @@ char* FAST_FUNC xmalloc_realpath(const char *path)
 	/* on error returns NULL (xstrdup(NULL) == NULL) */
 	return xstrdup(realpath(path, buf));
 #endif
+}
+
+char* FAST_FUNC xmalloc_realpath_coreutils(const char *path)
+{
+	char *buf;
+
+	errno = 0;
+	buf = xmalloc_realpath(path);
+	/*
+	 * There is one case when "readlink -f" and
+	 * "realpath" from coreutils succeed,
+	 * even though file does not exist, such as:
+	 *     /tmp/file_does_not_exist
+	 * (the directory must exist).
+	 */
+	if (!buf && errno == ENOENT) {
+		char *last_slash = strrchr(path, '/');
+		if (last_slash) {
+			*last_slash++ = '\0';
+			buf = xmalloc_realpath(path);
+			if (buf) {
+				unsigned len = strlen(buf);
+				buf = xrealloc(buf, len + strlen(last_slash) + 2);
+				buf[len++] = '/';
+				strcpy(buf + len, last_slash);
+			}
+		}
+	}
+
+	return buf;
 }

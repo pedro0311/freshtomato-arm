@@ -8,23 +8,36 @@
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 //config:config UMOUNT
-//config:	bool "umount"
+//config:	bool "umount (4.5 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  When you want to remove a mounted filesystem from its current mount
-//config:	  point, for example when you are shutting down the system, the
-//config:	  'umount' utility is the tool to use. If you enabled the 'mount'
-//config:	  utility, you almost certainly also want to enable 'umount'.
+//config:	When you want to remove a mounted filesystem from its current mount
+//config:	point, for example when you are shutting down the system, the
+//config:	'umount' utility is the tool to use. If you enabled the 'mount'
+//config:	utility, you almost certainly also want to enable 'umount'.
 //config:
 //config:config FEATURE_UMOUNT_ALL
-//config:	bool "Support option -a"
+//config:	bool "Support -a (unmount all)"
 //config:	default y
 //config:	depends on UMOUNT
 //config:	help
-//config:	  Support -a option to unmount all currently mounted filesystems.
+//config:	Support -a option to unmount all currently mounted filesystems.
 
-//applet:IF_UMOUNT(APPLET(umount, BB_DIR_BIN, BB_SUID_DROP))
+//applet:IF_UMOUNT(APPLET_NOEXEC(umount, umount, BB_DIR_BIN, BB_SUID_DROP, umount))
+/*
+ * On one hand, in some weird situations you'd want umount
+ * to not do anything surprising, to behave as a usual fork+execed executable.
+ *
+ * OTOH, there can be situations where execing would not succeed, or even hang
+ * (say, if executable is on a filesystem which is in trouble and accesses to it
+ * block in kernel).
+ * In this case, you might be actually happy if your standalone bbox shell
+ * does not fork+exec, but only forks and calls umount_main() which it already has!
+ * Let's go with NOEXEC.
+ *
+ * bb_common_bufsiz1 usage here is safe wrt NOEXEC: not expecting it to be zeroed.
+ */
 
 //kbuild:lib-$(CONFIG_UMOUNT) += umount.o
 
@@ -44,6 +57,7 @@
 //usage:	IF_FEATURE_MOUNT_LOOP(
 //usage:     "\n	-d	Free loop device if it has been used"
 //usage:	)
+//usage:     "\n	-t FSTYPE[,...]	Unmount only these filesystem type(s)"
 //usage:
 //usage:#define umount_example_usage
 //usage:       "$ umount /dev/hdc1\n"
@@ -68,8 +82,8 @@ static struct mntent *getmntent_r(FILE* stream, struct mntent* result,
 }
 #endif
 
-/* ignored: -v -t -i */
-#define OPTION_STRING           "fldnra" "vt:i"
+/* ignored: -c -v -i */
+#define OPTION_STRING           "fldnrat:" "cvi"
 #define OPT_FORCE               (1 << 0) // Same as MNT_FORCE
 #define OPT_LAZY                (1 << 1) // Same as MNT_DETACH
 #define OPT_FREELOOP            (1 << 2)
@@ -130,7 +144,8 @@ int umount_main(int argc UNUSED_PARAM, char **argv)
 	}
 
 	// If we're not umounting all, we need at least one argument.
-	if (!(opt & OPT_ALL) && !fstype) {
+	// Note: "-t FSTYPE" does not imply -a.
+	if (!(opt & OPT_ALL)) {
 		if (!argv[0])
 			bb_show_usage();
 		m = NULL;

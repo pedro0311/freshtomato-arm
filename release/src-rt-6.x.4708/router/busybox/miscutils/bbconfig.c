@@ -1,26 +1,27 @@
 /* vi: set sw=4 ts=4: */
-/* This file was released into the public domain by Paul Fox.
+/*
+ * This file was released into the public domain by Paul Fox.
  */
 //config:config BBCONFIG
-//config:	bool "bbconfig"
+//config:	bool "bbconfig (9.7 kb)"
 //config:	default n
 //config:	help
-//config:	  The bbconfig applet will print the config file with which
-//config:	  busybox was built.
+//config:	The bbconfig applet will print the config file with which
+//config:	busybox was built.
 //config:
 //config:config FEATURE_COMPRESS_BBCONFIG
 //config:	bool "Compress bbconfig data"
 //config:	default y
 //config:	depends on BBCONFIG
 //config:	help
-//config:	  Store bbconfig data in compressed form, uncompress them on-the-fly
-//config:	  before output.
+//config:	Store bbconfig data in compressed form, uncompress them on-the-fly
+//config:	before output.
 //config:
-//config:	  If you have a really tiny busybox with few applets enabled (and
-//config:	  bunzip2 isn't one of them), the overhead of the decompressor might
-//config:	  be noticeable. Also, if you run executables directly from ROM
-//config:	  and have very little memory, this might not be a win. Otherwise,
-//config:	  you probably want this.
+//config:	If you have a really tiny busybox with few applets enabled (and
+//config:	bunzip2 isn't one of them), the overhead of the decompressor might
+//config:	be noticeable. Also, if you run executables directly from ROM
+//config:	and have very little memory, this might not be a win. Otherwise,
+//config:	you probably want this.
 
 //applet:IF_BBCONFIG(APPLET(bbconfig, BB_DIR_BIN, BB_SUID_DROP))
 
@@ -43,13 +44,22 @@ int bbconfig_main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM)
 {
 #if ENABLE_FEATURE_COMPRESS_BBCONFIG
 	bunzip_data *bd;
-	int i = start_bunzip(&bd,
+	int i;
+	jmp_buf jmpbuf;
+
+	/* Setup for I/O error handling via longjmp */
+	i = setjmp(jmpbuf);
+	if (i == 0) {
+		i = start_bunzip(&jmpbuf,
+			&bd,
 			/* src_fd: */ -1,
 			/* inbuf:  */ bbconfig_config_bz2,
-			/* len:    */ sizeof(bbconfig_config_bz2));
-	/* read_bunzip can longjmp to start_bunzip, and ultimately
-	 * end up here with i != 0 on read data errors! Not trivial */
-	if (!i) {
+			/* len:    */ sizeof(bbconfig_config_bz2)
+		);
+	}
+	/* read_bunzip can longjmp and end up here with i != 0
+	 * on read data errors! Not trivial */
+	if (i == 0) {
 		/* Cannot use xmalloc: will leak bd in NOFORK case! */
 		char *outbuf = malloc_or_warn(sizeof(bbconfig_config));
 		if (outbuf) {

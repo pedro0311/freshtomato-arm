@@ -15,7 +15,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY JULIE HAUGH AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY JULIE HAUGH AND CONTRIBUTORS ''AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL JULIE HAUGH OR CONTRIBUTORS BE LIABLE
@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 #include "libbb.h"
 
 #define SHADOW_BUFSIZE 256
@@ -107,7 +106,7 @@ int FAST_FUNC ask_and_check_password_extended(const struct passwd *pw,
 	if (!pw_pass[0]) /* empty password field? */
 		return CHECKPASS_PW_HAS_EMPTY_PASSWORD;
 
-	plaintext = bb_ask(STDIN_FILENO, timeout, prompt);
+	plaintext = bb_ask_noecho(STDIN_FILENO, timeout, prompt);
 	if (!plaintext) {
 		/* EOF (such as ^D) or error (such as ^C) or timeout */
 		return -1;

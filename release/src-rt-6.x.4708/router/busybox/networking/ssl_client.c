@@ -4,18 +4,18 @@
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 //config:config SSL_CLIENT
-//config:	bool "ssl_client"
+//config:	bool "ssl_client (23 kb)"
 //config:	default y
 //config:	select TLS
 //config:	help
-//config:	  This tool pipes data to/from a socket, TLS-encrypting it.
+//config:	This tool pipes data to/from a socket, TLS-encrypting it.
 
 //applet:IF_SSL_CLIENT(APPLET(ssl_client, BB_DIR_USR_BIN, BB_SUID_DROP))
 
 //kbuild:lib-$(CONFIG_SSL_CLIENT) += ssl_client.o
 
 //usage:#define ssl_client_trivial_usage
-//usage:       "-s FD [-r FD] [-n SNI]"
+//usage:       "[-e] -s FD [-r FD] [-n SNI]"
 //usage:#define ssl_client_full_usage ""
 
 #include "libbb.h"
@@ -30,26 +30,28 @@ int ssl_client_main(int argc UNUSED_PARAM, char **argv)
 	// INIT_G();
 
 	tls = new_tls_state();
-	opt = getopt32(argv, "s:#r:#n:", &tls->ofd, &tls->ifd, &sni);
-	if (!(opt & 2)) {
+	opt = getopt32(argv, "es:+r:+n:", &tls->ofd, &tls->ifd, &sni);
+	if (!(opt & (1<<2))) {
 		/* -r N defaults to -s N */
 		tls->ifd = tls->ofd;
 	}
 
-	if (!(opt & 3)) {
+	if (!(opt & (3<<1))) {
 		if (!argv[1])
 			bb_show_usage();
 		/* Undocumented debug feature: without -s and -r, takes HOST arg and connects to it */
 		//
 		// Talk to kernel.org:
-		// printf "GET / HTTP/1.1\r\nHost: kernel.org\r\n\r\n" | ./busybox ssl_client kernel.org
+		// printf "GET / HTTP/1.1\r\nHost: kernel.org\r\n\r\n" | busybox ssl_client kernel.org
 		if (!sni)
 			sni = argv[1];
 		tls->ifd = tls->ofd = create_and_connect_stream_or_die(argv[1], 443);
 	}
 
 	tls_handshake(tls, sni);
-	tls_run_copy_loop(tls);
+
+	BUILD_BUG_ON(TLSLOOP_EXIT_ON_LOCAL_EOF != 1);
+	tls_run_copy_loop(tls, /*flags*/ opt & 1);
 
 	return EXIT_SUCCESS;
 }

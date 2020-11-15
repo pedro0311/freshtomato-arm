@@ -10,7 +10,6 @@
  *
  * Original copyright notice is retained at the end of this file.
  */
-
 #include "libbb.h"
 #include "dump.h"
 
@@ -58,7 +57,7 @@ static NOINLINE int bb_dump_size(FS *fs)
 	const char *p;
 	int prec;
 
-	/* figure out the data block bb_dump_size needed for each format unit */
+	/* figure out the data block size needed for each format unit */
 	for (cur_size = 0, fu = fs->nextfu; fu; fu = fu->nextfu) {
 		if (fu->bcnt) {
 			cur_size += fu->bcnt * fu->reps;
@@ -311,20 +310,18 @@ static NOINLINE void rewrite(priv_dumper_t *dumper, FS *fs)
 	}
 }
 
-static void do_skip(priv_dumper_t *dumper, const char *fname, int statok)
+static void do_skip(priv_dumper_t *dumper, const char *fname)
 {
 	struct stat sbuf;
 
-	if (statok) {
-		xfstat(STDIN_FILENO, &sbuf, fname);
-		if (!(S_ISCHR(sbuf.st_mode) || S_ISBLK(sbuf.st_mode) || S_ISFIFO(sbuf.st_mode))
-		 && dumper->pub.dump_skip >= sbuf.st_size
-		) {
-			/* If bb_dump_size valid and pub.dump_skip >= size */
-			dumper->pub.dump_skip -= sbuf.st_size;
-			dumper->address += sbuf.st_size;
-			return;
-		}
+	xfstat(STDIN_FILENO, &sbuf, fname);
+	if (S_ISREG(sbuf.st_mode)
+	 && dumper->pub.dump_skip >= sbuf.st_size
+	) {
+		/* If st_size is valid and pub.dump_skip >= st_size */
+		dumper->pub.dump_skip -= sbuf.st_size;
+		dumper->address += sbuf.st_size;
+		return;
 	}
 	if (fseeko(stdin, dumper->pub.dump_skip, SEEK_SET)) {
 		bb_simple_perror_msg_and_die(fname);
@@ -336,29 +333,26 @@ static void do_skip(priv_dumper_t *dumper, const char *fname, int statok)
 
 static NOINLINE int next(priv_dumper_t *dumper)
 {
-	int statok;
-
 	for (;;) {
-		if (*dumper->argv) {
-			dumper->next__done = statok = 1;
-			if (!(freopen(*dumper->argv, "r", stdin))) {
-				bb_simple_perror_msg(*dumper->argv);
-				dumper->exitval = 1;
-				++dumper->argv;
-				continue;
+		const char *fname = *dumper->argv;
+
+		if (fname) {
+			dumper->argv++;
+			if (NOT_LONE_DASH(fname)) {
+				if (!freopen(fname, "r", stdin)) {
+					bb_simple_perror_msg(fname);
+					dumper->exitval = 1;
+					continue;
+				}
 			}
 		} else {
 			if (dumper->next__done)
 				return 0; /* no next file */
-			dumper->next__done = 1;
-//why stat of stdin is specially prohibited?
-			statok = 0;
 		}
+		dumper->next__done = 1;
 		if (dumper->pub.dump_skip)
-			do_skip(dumper, statok ? *dumper->argv : "stdin", statok);
-		if (*dumper->argv)
-			++dumper->argv;
-		if (!dumper->pub.dump_skip)
+			do_skip(dumper, fname ? fname : "stdin");
+		if (dumper->pub.dump_skip == 0)
 			return 1;
 	}
 	/* NOTREACHED */
@@ -470,11 +464,9 @@ static const char conv_str[] ALIGN1 =
 	"\v"  "\\""v""\0"
 	;
 
-
 static void conv_c(PR *pr, unsigned char *p)
 {
 	const char *str = conv_str;
-	char buf[10];
 
 	do {
 		if (*p == *str) {
@@ -488,7 +480,9 @@ static void conv_c(PR *pr, unsigned char *p)
 		*pr->cchar = 'c';
 		printf(pr->fmt, *p);
 	} else {
-		sprintf(buf, "%03o", (int) *p);
+		char buf[4];
+		/* gcc-8.0.1 needs lots of casts to shut up */
+		sprintf(buf, "%03o", (unsigned)(uint8_t)*p);
 		str = buf;
  strpr:
 		*pr->cchar = 's';
@@ -670,7 +664,7 @@ int FAST_FUNC bb_dump_dump(dumper_t *pub_dumper, char **argv)
 	FS *tfs;
 	int blocksize;
 
-	/* figure out the data block bb_dump_size */
+	/* figure out the data block size */
 	blocksize = 0;
 	tfs = dumper->pub.fshead;
 	while (tfs) {
@@ -833,7 +827,7 @@ void FAST_FUNC bb_dump_add(dumper_t* pub_dumper, const char *fmt)
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ''AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE

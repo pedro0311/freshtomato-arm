@@ -41,27 +41,27 @@
  ***********************************************************************
  */
 //config:config NTPD
-//config:	bool "ntpd"
+//config:	bool "ntpd (17 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  The NTP client/server daemon.
+//config:	The NTP client/server daemon.
 //config:
 //config:config FEATURE_NTPD_SERVER
 //config:	bool "Make ntpd usable as a NTP server"
 //config:	default y
 //config:	depends on NTPD
 //config:	help
-//config:	  Make ntpd usable as a NTP server. If you disable this option
-//config:	  ntpd will be usable only as a NTP client.
+//config:	Make ntpd usable as a NTP server. If you disable this option
+//config:	ntpd will be usable only as a NTP client.
 //config:
 //config:config FEATURE_NTPD_CONF
 //config:	bool "Make ntpd understand /etc/ntp.conf"
 //config:	default y
 //config:	depends on NTPD
 //config:	help
-//config:	  Make ntpd look in /etc/ntp.conf for peers. Only "server address"
-//config:	  is supported.
+//config:	Make ntpd look in /etc/ntp.conf for peers. Only "server address"
+//config:	is supported.
 
 //applet:IF_NTPD(APPLET(ntpd, BB_DIR_USR_SBIN, BB_SUID_DROP))
 
@@ -71,7 +71,7 @@
 //usage:	"[-dnqNw"IF_FEATURE_NTPD_SERVER("l -I IFACE")"] [-S PROG] [-p PEER]..."
 //usage:#define ntpd_full_usage "\n\n"
 //usage:       "NTP client/server\n"
-//usage:     "\n	-d	Verbose"
+//usage:     "\n	-d	Verbose (may be repeated)"
 //usage:     "\n	-n	Do not daemonize"
 //usage:     "\n	-q	Quit after clock is set"
 //usage:     "\n	-N	Run at high priority"
@@ -93,11 +93,10 @@
 
 #include "libbb.h"
 #include <math.h>
-#include <netinet/ip.h> /* For IPTOS_LOWDELAY definition */
-#include <sys/resource.h> /* setpriority */
+#include <netinet/ip.h> /* For IPTOS_DSCP_AF21 definition */
 #include <sys/timex.h>
-#ifndef IPTOS_LOWDELAY
-# define IPTOS_LOWDELAY 0x10
+#ifndef IPTOS_DSCP_AF21
+# define IPTOS_DSCP_AF21 0x48
 #endif
 
 
@@ -155,7 +154,8 @@
 #define RETRY_INTERVAL    32    /* on send/recv error, retry in N secs (need to be power of 2) */
 #define NOREPLY_INTERVAL 512    /* sent, but got no reply: cap next query by this many seconds */
 #define RESPONSE_INTERVAL 16    /* wait for reply up to N secs */
-#define HOSTNAME_INTERVAL  5    /* hostname lookup failed. Wait N secs for next try */
+#define HOSTNAME_INTERVAL  4    /* hostname lookup failed. Wait N * peer->dns_errors secs for next try */
+#define DNS_ERRORS_CAP  0x3f    /* peer->dns_errors is in [0..63] */
 
 /* Step threshold (sec). std ntpd uses 0.128.
  */
@@ -164,8 +164,12 @@
  * Using exact power of 2 (1/8) results in smaller code
  */
 #define SLEW_THRESHOLD 0.125
+//^^^^^^^^^^^^^^^^^^^^^^^^^^ TODO: man adjtimex about tmx.offset:
+// "Since Linux 2.6.26, the supplied value is clamped to the range (-0.5s, +0.5s)"
+// - can use this larger value instead?
+
 /* Stepout threshold (sec). std ntpd uses 900 (11 mins (!)) */
-#define WATCH_THRESHOLD  128
+//UNUSED: #define WATCH_THRESHOLD  128
 /* NB: set WATCH_THRESHOLD to ~60 when debugging to save time) */
 //UNUSED: #define PANIC_THRESHOLD 1000    /* panic threshold (sec) */
 
@@ -301,6 +305,7 @@ typedef struct {
 	uint8_t          lastpkt_status;
 	uint8_t          lastpkt_stratum;
 	uint8_t          reachable_bits;
+	uint8_t          dns_errors;
 	/* when to send new query (if p_fd == -1)
 	 * or when receive times out (if p_fd >= 0): */
 	double           next_action_time;
@@ -417,6 +422,7 @@ struct globals {
 	uint8_t  discipline_state;      // doc calls it c.state
 	uint8_t  poll_exp;              // s.poll
 	int      polladj_count;         // c.count
+	int      FREQHOLD_cnt;
 	long     kernel_freq_drift;
 	peer_t   *last_update_peer;
 	double   last_update_offset;    // c.last
@@ -802,10 +808,10 @@ resolve_peer_hostname(peer_t *p)
 		p->p_dotted = xmalloc_sockaddr2dotted_noport(&lsa->u.sa);
 		VERB1 if (strcmp(p->p_hostname, p->p_dotted) != 0)
 			bb_error_msg("'%s' is %s", p->p_hostname, p->p_dotted);
-	} else {
-		/* error message is emitted by host2sockaddr() */
-		set_next(p, HOSTNAME_INTERVAL);
+		p->dns_errors = 0;
+		return lsa;
 	}
+	p->dns_errors = ((p->dns_errors << 1) | 1) & DNS_ERRORS_CAP;
 	return lsa;
 }
 
@@ -866,10 +872,8 @@ do_sendto(int fd,
 static void
 send_query_to_peer(peer_t *p)
 {
-	if (!p->p_lsa) {
-		if (!resolve_peer_hostname(p))
-			return;
-	}
+	if (!p->p_lsa)
+		return;
 
 	/* Why do we need to bind()?
 	 * See what happens when we don't bind:
@@ -906,7 +910,7 @@ send_query_to_peer(peer_t *p)
 #if ENABLE_FEATURE_IPV6
 		if (family == AF_INET)
 #endif
-			setsockopt_int(fd, IPPROTO_IP, IP_TOS, IPTOS_LOWDELAY);
+			setsockopt_int(fd, IPPROTO_IP, IP_TOS, IPTOS_DSCP_AF21);
 		free(local_lsa);
 	}
 
@@ -1034,6 +1038,7 @@ step_time(double offset)
 	tval = tvn.tv_sec;
 	strftime_YYYYMMDDHHMMSS(buf, sizeof(buf), &tval);
 	bb_error_msg("setting time to %s.%06u (offset %+fs)", buf, (unsigned)tvn.tv_usec, offset);
+	//maybe? G.FREQHOLD_cnt = 0;
 
 	/* Correct various fields which contain time-relative values: */
 
@@ -1709,6 +1714,80 @@ update_local_clock(peer_t *p)
 	tmx.freq = G.discipline_freq_drift * 65536e6;
 #endif
 	tmx.modes = ADJ_OFFSET | ADJ_STATUS | ADJ_TIMECONST;// | ADJ_MAXERROR | ADJ_ESTERROR;
+
+	tmx.offset = (long)(offset * 1000000); /* usec */
+	if (SLEW_THRESHOLD < STEP_THRESHOLD) {
+		if (tmx.offset > (long)(SLEW_THRESHOLD * 1000000)) {
+			tmx.offset = (long)(SLEW_THRESHOLD * 1000000);
+		}
+		if (tmx.offset < -(long)(SLEW_THRESHOLD * 1000000)) {
+			tmx.offset = -(long)(SLEW_THRESHOLD * 1000000);
+		}
+	}
+
+	tmx.status = STA_PLL;
+	if (G.FREQHOLD_cnt != 0) {
+		/* man adjtimex on STA_FREQHOLD:
+		 * "Normally adjustments made via ADJ_OFFSET result in dampened
+		 * frequency adjustments also being made.
+		 * This flag prevents the small frequency adjustment from being
+		 * made when correcting for an ADJ_OFFSET value."
+		 *
+		 * Use this flag for a few first adjustments at the beginning
+		 * of ntpd execution, otherwise even relatively small initial
+		 * offset tend to cause largish changes to in-kernel tmx.freq.
+		 * If ntpd was restarted due to e.g. switch to another network,
+		 * this destroys already well-established tmx.freq value.
+		 */
+		if (G.FREQHOLD_cnt < 0) {
+			/* Initialize it */
+// Example: a laptop whose clock runs slower when hibernated,
+// after wake up it still has good tmx.freq, but accumulated ~0.5 sec offset:
+// Run with code where initial G.FREQHOLD_cnt was always 8:
+//15:17:52.947 no valid datapoints, no peer selected
+//15:17:56.515 update from:<IP> offset:+0.485133 delay:0.157762 jitter:0.209310 clock drift:-1.393ppm tc:4
+//15:17:57.719 update from:<IP> offset:+0.483825 delay:0.158070 jitter:0.181159 clock drift:-1.393ppm tc:4
+//15:17:59.925 update from:<IP> offset:+0.479504 delay:0.158147 jitter:0.156657 clock drift:-1.393ppm tc:4
+//15:18:33.322 update from:<IP> offset:+0.428119 delay:0.158317 jitter:0.138071 clock drift:-1.393ppm tc:4
+//15:19:06.718 update from:<IP> offset:+0.376932 delay:0.158276 jitter:0.122075 clock drift:-1.393ppm tc:4
+//15:19:39.114 update from:<IP> offset:+0.327022 delay:0.158384 jitter:0.108538 clock drift:-1.393ppm tc:4
+//15:20:12.715 update from:<IP> offset:+0.275596 delay:0.158297 jitter:0.097292 clock drift:-1.393ppm tc:4
+//15:20:45.111 update from:<IP> offset:+0.225715 delay:0.158271 jitter:0.087841 clock drift:-1.393ppm tc:4
+// If allwed to continue, it would start increasing tmx.freq now.
+// Instead, it was ^Ced, and started anew:
+//15:21:15.043 no valid datapoints, no peer selected
+//15:21:17.408 update from:<IP> offset:+0.175910 delay:0.158314 jitter:0.076683 clock drift:-1.393ppm tc:4
+//15:21:19.774 update from:<IP> offset:+0.171784 delay:0.158401 jitter:0.066436 clock drift:-1.393ppm tc:4
+//15:21:22.140 update from:<IP> offset:+0.171660 delay:0.158592 jitter:0.057536 clock drift:-1.393ppm tc:4
+//15:21:22.140 update from:<IP> offset:+0.167126 delay:0.158507 jitter:0.049792 clock drift:-1.393ppm tc:4
+//15:21:55.696 update from:<IP> offset:+0.115223 delay:0.158277 jitter:0.050240 clock drift:-1.393ppm tc:4
+//15:22:29.093 update from:<IP> offset:+0.068051 delay:0.158243 jitter:0.049405 clock drift:-1.393ppm tc:5
+//15:23:02.490 update from:<IP> offset:+0.051632 delay:0.158215 jitter:0.043545 clock drift:-1.393ppm tc:5
+//15:23:34.726 update from:<IP> offset:+0.039984 delay:0.158157 jitter:0.038106 clock drift:-1.393ppm tc:5
+// STA_FREQHOLD no longer set, started increasing tmx.freq now:
+//15:24:06.961 update from:<IP> offset:+0.030968 delay:0.158190 jitter:0.033306 clock drift:+2.387ppm tc:5
+//15:24:40.357 update from:<IP> offset:+0.023648 delay:0.158211 jitter:0.029072 clock drift:+5.454ppm tc:5
+//15:25:13.774 update from:<IP> offset:+0.018068 delay:0.157660 jitter:0.025288 clock drift:+7.728ppm tc:5
+//15:26:19.173 update from:<IP> offset:+0.010057 delay:0.157969 jitter:0.022255 clock drift:+8.361ppm tc:6
+//15:27:26.602 update from:<IP> offset:+0.006737 delay:0.158103 jitter:0.019316 clock drift:+8.792ppm tc:6
+//15:28:33.030 update from:<IP> offset:+0.004513 delay:0.158294 jitter:0.016765 clock drift:+9.080ppm tc:6
+//15:29:40.617 update from:<IP> offset:+0.002787 delay:0.157745 jitter:0.014543 clock drift:+9.258ppm tc:6
+//15:30:47.045 update from:<IP> offset:+0.001324 delay:0.157709 jitter:0.012594 clock drift:+9.342ppm tc:6
+//15:31:53.473 update from:<IP> offset:+0.000007 delay:0.158142 jitter:0.010922 clock drift:+9.343ppm tc:6
+//15:32:58.902 update from:<IP> offset:-0.000728 delay:0.158222 jitter:0.009454 clock drift:+9.298ppm tc:6
+			/*
+			 * This expression would choose 15 in the above example.
+			 */
+			G.FREQHOLD_cnt = 8 + ((unsigned)(abs(tmx.offset)) >> 16);
+		}
+		G.FREQHOLD_cnt--;
+		tmx.status |= STA_FREQHOLD;
+	}
+	if (G.ntp_status & LI_PLUSSEC)
+		tmx.status |= STA_INS;
+	if (G.ntp_status & LI_MINUSSEC)
+		tmx.status |= STA_DEL;
+
 	tmx.constant = (int)G.poll_exp - 4;
 	/* EXPERIMENTAL.
 	 * The below if statement should be unnecessary, but...
@@ -1722,25 +1801,8 @@ update_local_clock(peer_t *p)
 	 */
 	if (G.offset_to_jitter_ratio >= TIMECONST_HACK_GATE)
 		tmx.constant--;
-	tmx.offset = (long)(offset * 1000000); /* usec */
-	if (SLEW_THRESHOLD < STEP_THRESHOLD) {
-		if (tmx.offset > (long)(SLEW_THRESHOLD * 1000000)) {
-			tmx.offset = (long)(SLEW_THRESHOLD * 1000000);
-			tmx.constant--;
-		}
-		if (tmx.offset < -(long)(SLEW_THRESHOLD * 1000000)) {
-			tmx.offset = -(long)(SLEW_THRESHOLD * 1000000);
-			tmx.constant--;
-		}
-	}
 	if (tmx.constant < 0)
 		tmx.constant = 0;
-
-	tmx.status = STA_PLL;
-	if (G.ntp_status & LI_PLUSSEC)
-		tmx.status |= STA_INS;
-	if (G.ntp_status & LI_MINUSSEC)
-		tmx.status |= STA_DEL;
 
 	//tmx.esterror = (uint32_t)(clock_jitter * 1e6);
 	//tmx.maxerror = (uint32_t)((sys_rootdelay / 2 + sys_rootdisp) * 1e6);
@@ -2227,18 +2289,20 @@ static NOINLINE void ntp_init(char **argv)
 	if (BURSTPOLL != 0)
 		G.poll_exp = BURSTPOLL; /* speeds up initial sync */
 	G.last_script_run = G.reftime = G.last_update_recv_time = gettime1900d(); /* sets G.cur_time too */
+	G.FREQHOLD_cnt = -1;
 
 	/* Parse options */
 	peers = NULL;
-	opt_complementary = "dd:wn"  /* -d: counter; -p: list; -w implies -n */
-		IF_FEATURE_NTPD_SERVER(":Il"); /* -I implies -l */
-	opts = getopt32(argv,
+	opts = getopt32(argv, "^"
 			"nqNx" /* compat */
 			"wp:*S:"IF_FEATURE_NTPD_SERVER("l") /* NOT compat */
 			IF_FEATURE_NTPD_SERVER("I:") /* compat */
 			"d" /* compat */
-			"46aAbgL", /* compat, ignored */
-			&peers, &G.script_name,
+			"46aAbgL" /* compat, ignored */
+				"\0"
+				"dd:wn"  /* -d: counter; -p: list; -w implies -n */
+				IF_FEATURE_NTPD_SERVER(":Il") /* -I implies -l */
+			, &peers, &G.script_name,
 #if ENABLE_FEATURE_NTPD_SERVER
 			&G.if_name,
 #endif
@@ -2256,7 +2320,7 @@ static NOINLINE void ntp_init(char **argv)
 				xfunc_die();
 		}
 		socket_want_pktinfo(G_listen_fd);
-		setsockopt_int(G_listen_fd, IPPROTO_IP, IP_TOS, IPTOS_LOWDELAY);
+		setsockopt_int(G_listen_fd, IPPROTO_IP, IP_TOS, IPTOS_DSCP_AF21);
 	}
 #endif
 	/* I hesitate to set -20 prio. -15 should be high enough for timekeeping */
@@ -2361,7 +2425,9 @@ int ntpd_main(int argc UNUSED_PARAM, char **argv)
 
 		/* Nothing between here and poll() blocks for any significant time */
 
-		nextaction = G.cur_time + 3600;
+		nextaction = G.last_script_run + (11*60);
+		if (nextaction < G.cur_time + 1)
+			nextaction = G.cur_time + 1;
 
 		i = 0;
 #if ENABLE_FEATURE_NTPD_SERVER
@@ -2440,12 +2506,41 @@ int ntpd_main(int argc UNUSED_PARAM, char **argv)
  did_poll:
 		gettime1900d(); /* sets G.cur_time */
 		if (nfds <= 0) {
-			if (!bb_got_signal /* poll wasn't interrupted by a signal */
-			 && G.cur_time - G.last_script_run > 11*60
-			) {
+			double ct;
+			int dns_error;
+
+			if (bb_got_signal)
+				break; /* poll was interrupted by a signal */
+
+			if (G.cur_time - G.last_script_run > 11*60) {
 				/* Useful for updating battery-backed RTC and such */
 				run_script("periodic", G.last_update_offset);
 				gettime1900d(); /* sets G.cur_time */
+			}
+
+			/* Resolve peer names to IPs, if not resolved yet.
+			 * We do it only when poll timed out:
+			 * this way, we almost never overlap DNS resolution with
+			 * "request-reply" packet round trip.
+			 */
+			dns_error = 0;
+			ct = G.cur_time;
+			for (item = G.ntp_peers; item != NULL; item = item->link) {
+				peer_t *p = (peer_t *) item->data;
+				if (p->next_action_time <= ct && !p->p_lsa) {
+					/* This can take up to ~10 sec per each DNS query */
+					dns_error |= (!resolve_peer_hostname(p));
+				}
+			}
+			if (!dns_error)
+				goto check_unsync;
+			/* Set next time for those which are still not resolved */
+			gettime1900d(); /* sets G.cur_time (needed for set_next()) */
+			for (item = G.ntp_peers; item != NULL; item = item->link) {
+				peer_t *p = (peer_t *) item->data;
+				if (p->next_action_time <= ct && !p->p_lsa) {
+					set_next(p, HOSTNAME_INTERVAL * p->dns_errors);
+				}
 			}
 			goto check_unsync;
 		}

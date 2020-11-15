@@ -15,7 +15,7 @@
 
 testing "grep (exit with error)" "grep nonexistent 2> /dev/null ; echo \$?" \
 	"1\n" "" ""
-testing "grep (exit success)" "grep grep $0 > /dev/null 2>&1 ; echo \$?" "0\n" \
+testing "grep (exit success)" "grep grep '$0' > /dev/null 2>&1 ; echo \$?" "0\n" \
 	"" ""
 # Test various data sources and destinations
 
@@ -163,6 +163,12 @@ testing "grep -w word doesn't match wordword" \
 	"grep -w word input" \
 	"" \
 	"wordword\n" \
+	""
+
+testing "grep -F -w w doesn't match ww" \
+	"grep -F -w w input" \
+	"" \
+	"ww\n" \
 	""
 
 testing "grep -w word match second word" \

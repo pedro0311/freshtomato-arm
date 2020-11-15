@@ -13,7 +13,7 @@ modification, are permitted provided that the following conditions are met:
    3. The name of the author may not be used to endorse or promote products
       derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY EXPRESS OR IMPLIED
 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
 EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
@@ -154,32 +154,41 @@ Exit Codes
 /* Busyboxed by Denys Vlasenko <vda.linux@googlemail.com> */
 
 //config:config SV
-//config:	bool "sv"
+//config:	bool "sv (7.8 kb)"
 //config:	default y
 //config:	help
-//config:	  sv reports the current status and controls the state of services
-//config:	  monitored by the runsv supervisor.
+//config:	sv reports the current status and controls the state of services
+//config:	monitored by the runsv supervisor.
 //config:
 //config:config SV_DEFAULT_SERVICE_DIR
 //config:	string "Default directory for services"
 //config:	default "/var/service"
-//config:	depends on SV
+//config:	depends on SV || SVC || SVOK
 //config:	help
-//config:	  Default directory for services.
-//config:	  Defaults to "/var/service"
+//config:	Default directory for services.
+//config:	Defaults to "/var/service"
 //config:
 //config:config SVC
-//config:	bool "svc"
+//config:	bool "svc (7.8 kb)"
 //config:	default y
 //config:	help
-//config:	  svc controls the state of services monitored by the runsv supervisor.
-//config:	  It is comaptible with daemontools command with the same name.
+//config:	svc controls the state of services monitored by the runsv supervisor.
+//config:	It is compatible with daemontools command with the same name.
+//config:
+//config:config SVOK
+//config:	bool "svok"
+//config:	default y
+//config:	help
+//config:	svok checks whether runsv supervisor is running.
+//config:	It is compatible with daemontools command with the same name.
 
-//applet:IF_SV(APPLET(sv, BB_DIR_USR_BIN, BB_SUID_DROP))
-//applet:IF_SVC(APPLET(svc, BB_DIR_USR_BIN, BB_SUID_DROP))
+//applet:IF_SV(  APPLET_NOEXEC(sv,   sv,   BB_DIR_USR_BIN, BB_SUID_DROP, sv  ))
+//applet:IF_SVC( APPLET_NOEXEC(svc,  svc,  BB_DIR_USR_BIN, BB_SUID_DROP, svc ))
+//applet:IF_SVOK(APPLET_NOEXEC(svok, svok, BB_DIR_USR_BIN, BB_SUID_DROP, svok))
 
 //kbuild:lib-$(CONFIG_SV) += sv.o
 //kbuild:lib-$(CONFIG_SVC) += sv.o
+//kbuild:lib-$(CONFIG_SVOK) += sv.o
 
 #include <sys/file.h>
 #include "libbb.h"
@@ -193,7 +202,7 @@ struct globals {
 /* "Bernstein" time format: unix + 0x400000000000000aULL */
 	uint64_t tstart, tnow;
 	svstatus_t svstatus;
-	unsigned islog;
+	smallint islog;
 } FIX_ALIASING;
 #define G (*(struct globals*)bb_common_bufsiz1)
 #define acts         (G.acts        )
@@ -203,12 +212,17 @@ struct globals {
 #define tnow         (G.tnow        )
 #define svstatus     (G.svstatus    )
 #define islog        (G.islog       )
-#define INIT_G() do { setup_common_bufsiz(); } while (0)
+#define INIT_G() do { \
+	setup_common_bufsiz(); \
+	/* need to zero out, svc calls sv() repeatedly */ \
+	memset(&G, 0, sizeof(G)); \
+} while (0)
 
 
 #define str_equal(s,t) (strcmp((s), (t)) == 0)
 
 
+#if ENABLE_SV || ENABLE_SVC
 static void fatal_cannot(const char *m1) NORETURN;
 static void fatal_cannot(const char *m1)
 {
@@ -220,7 +234,7 @@ static void out(const char *p, const char *m1)
 {
 	printf("%s%s%s: %s", p, *service, islog ? "/log" : "", m1);
 	if (errno) {
-		printf(": %s", strerror(errno));
+		printf(": "STRERROR_FMT STRERROR_ERRNO);
 	}
 	bb_putchar('\n'); /* will also flush the output */
 }
@@ -502,8 +516,9 @@ static int sv(char **argv)
 	x = getenv("SVWAIT");
 	if (x) waitsec = xatou(x);
 
-	opt_complementary = "vv"; /* -w N, -v is a counter */
-	getopt32(argv, "w:+v", &waitsec, &verbose);
+	getopt32(argv, "^" "w:+v" "\0" "vv" /* -w N, -v is a counter */,
+			&waitsec, &verbose
+	);
 	argv += optind;
 	action = *argv++;
 	if (!action || !*argv) bb_show_usage();
@@ -610,7 +625,7 @@ static int sv(char **argv)
 	service = argv;
 	while ((x = *service) != NULL) {
 		if (x[0] != '/' && x[0] != '.'
-		 && x[0] != '\0' && x[strlen(x) - 1] != '/'
+		 && !last_char_is(x, '/')
 		) {
 			if (chdir(varservice) == -1)
 				goto chdir_failed_0;
@@ -674,6 +689,7 @@ static int sv(char **argv)
 	}
 	return rc > 99 ? 99 : rc;
 }
+#endif
 
 #if ENABLE_SV
 int sv_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
@@ -700,8 +716,6 @@ int svc_main(int argc UNUSED_PARAM, char **argv)
 	char command[2];
 	const char *optstring;
 	unsigned opts;
-
-	INIT_G();
 
 	optstring = "udopchaitkx";
 	opts = getopt32(argv, optstring);
@@ -735,6 +749,44 @@ int svc_main(int argc UNUSED_PARAM, char **argv)
 		optstring++;
 		opts >>= 1;
 	} while (opts);
+
+	return 0;
+}
+#endif
+
+//usage:#define svok_trivial_usage
+//usage:       "SERVICE_DIR"
+//usage:#define svok_full_usage "\n\n"
+//usage:       "Check whether runsv supervisor is running.\n"
+//usage:       "Exit code is 0 if it does, 100 if it does not,\n"
+//usage:       "111 (with error message) if SERVICE_DIR does not exist."
+#if ENABLE_SVOK
+int svok_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+int svok_main(int argc UNUSED_PARAM, char **argv)
+{
+	const char *dir = argv[1];
+
+	if (!dir)
+		bb_show_usage();
+
+	xfunc_error_retval = 111;
+
+	/*
+	 * daemontools has no concept of "default service dir", runit does.
+	 * Let's act as runit.
+	 */
+	if (dir[0] != '/' && dir[0] != '.'
+	 && !last_char_is(dir, '/')
+	) {
+		xchdir(CONFIG_SV_DEFAULT_SERVICE_DIR);
+	}
+
+	xchdir(dir);
+	if (open("supervise/ok", O_WRONLY) < 0) {
+		if (errno == ENOENT || errno == ENXIO)
+			return 100;
+		bb_perror_msg_and_die("can't open '%s'", "supervise/ok");
+	}
 
 	return 0;
 }

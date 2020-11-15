@@ -14,27 +14,27 @@
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
 //config:config NETSTAT
-//config:	bool "netstat"
+//config:	bool "netstat (10 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  netstat prints information about the Linux networking subsystem.
+//config:	netstat prints information about the Linux networking subsystem.
 //config:
 //config:config FEATURE_NETSTAT_WIDE
 //config:	bool "Enable wide output"
 //config:	default y
 //config:	depends on NETSTAT
 //config:	help
-//config:	  Add support for wide columns. Useful when displaying IPv6 addresses
-//config:	  (-W option).
+//config:	Add support for wide columns. Useful when displaying IPv6 addresses
+//config:	(-W option).
 //config:
 //config:config FEATURE_NETSTAT_PRG
 //config:	bool "Enable PID/Program name output"
 //config:	default y
 //config:	depends on NETSTAT
 //config:	help
-//config:	  Add support for -p flag to print out PID and program name.
-//config:	  +700 bytes of code.
+//config:	Add support for -p flag to print out PID and program name.
+//config:	+700 bytes of code.
 
 //applet:IF_NETSTAT(APPLET(netstat, BB_DIR_BIN, BB_SUID_DROP))
 
@@ -397,8 +397,11 @@ static char *ip_port_str(struct sockaddr *addr, int port, const char *proto, int
 	/* Code which used "*" for INADDR_ANY is removed: it's ambiguous
 	 * in IPv6, while "0.0.0.0" is not. */
 
-	host = numeric ? xmalloc_sockaddr2dotted_noport(addr)
-	               : xmalloc_sockaddr2host_noport(addr);
+	host = NULL;
+	if (!numeric)
+		host = xmalloc_sockaddr2host_noport(addr);
+	if (!host)
+		host = xmalloc_sockaddr2dotted_noport(addr);
 
 	host_port = xasprintf("%s:%s", host, get_sname(htons(port), proto, numeric));
 	free(host);

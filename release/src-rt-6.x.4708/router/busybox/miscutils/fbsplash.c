@@ -21,24 +21,24 @@
  *   "exit" (or just close fifo) - well you guessed it.
  */
 //config:config FBSPLASH
-//config:	bool "fbsplash"
+//config:	bool "fbsplash (27 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Shows splash image and progress bar on framebuffer device.
-//config:	  Can be used during boot phase of an embedded device. ~2kb.
-//config:	  Usage:
-//config:	  - use kernel option 'vga=xxx' or otherwise enable fb device.
-//config:	  - put somewhere fbsplash.cfg file and an image in .ppm format.
-//config:	  - $ setsid fbsplash [params] &
+//config:	Shows splash image and progress bar on framebuffer device.
+//config:	Can be used during boot phase of an embedded device.
+//config:	Usage:
+//config:	- use kernel option 'vga=xxx' or otherwise enable fb device.
+//config:	- put somewhere fbsplash.cfg file and an image in .ppm format.
+//config:	- $ setsid fbsplash [params] &
 //config:	    -c: hide cursor
 //config:	    -d /dev/fbN: framebuffer device (if not /dev/fb0)
 //config:	    -s path_to_image_file (can be "-" for stdin)
 //config:	    -i path_to_cfg_file (can be "-" for stdin)
 //config:	    -f path_to_fifo (can be "-" for stdin)
-//config:	  - if you want to run it only in presence of kernel parameter:
+//config:	- if you want to run it only in presence of kernel parameter:
 //config:	    grep -q "fbsplash=on" </proc/cmdline && setsid fbsplash [params] &
-//config:	  - commands for fifo:
+//config:	- commands for fifo:
 //config:	    "NN" (ASCII decimal number) - percentage to show on progress bar
 //config:	    "exit" - well you guessed it
 
@@ -54,7 +54,7 @@
 //usage:     "\n	-d	Framebuffer device (default /dev/fb0)"
 //usage:     "\n	-i	Config file (var=value):"
 //usage:     "\n			BAR_LEFT,BAR_TOP,BAR_WIDTH,BAR_HEIGHT"
-//usage:     "\n			BAR_R,BAR_G,BAR_B"
+//usage:     "\n			BAR_R,BAR_G,BAR_B,IMG_LEFT,IMG_TOP"
 //usage:     "\n	-f	Control pipe (else exit after drawing image)"
 //usage:     "\n			commands: 'NN' (% for progress bar) or 'exit'"
 
@@ -65,13 +65,15 @@
 /* If you want logging messages on /tmp/fbsplash.log... */
 #define DEBUG 0
 
+#define ESC "\033"
+
 struct globals {
 #if DEBUG
 	bool bdebug_messages;	// enable/disable logging
 	FILE *logfile_fd;	// log file
 #endif
 	unsigned char *addr;	// pointer to framebuffer memory
-	unsigned ns[7];		// n-parameters
+	unsigned ns[9];		// n-parameters
 	const char *image_filename;
 	struct fb_var_screeninfo scr_var;
 	struct fb_fix_screeninfo scr_fix;
@@ -93,6 +95,8 @@ struct globals {
 #define nbar_colr	ns[4]	// progress bar color red component
 #define nbar_colg	ns[5]	// progress bar color green component
 #define nbar_colb	ns[6]	// progress bar color blue component
+#define img_posx	ns[7]	// image horizontal position
+#define img_posy	ns[8]	// image vertical position
 
 #if DEBUG
 #define DEBUG_MESSAGE(strMessage, args...) \
@@ -424,10 +428,10 @@ static void fb_drawimage(void)
 	line_size = width*3;
 	pixline = xmalloc(line_size);
 
-	if (width > G.scr_var.xres)
-		width = G.scr_var.xres;
-	if (height > G.scr_var.yres)
-		height = G.scr_var.yres;
+	if ((width + G.img_posx) > G.scr_var.xres)
+		width = G.scr_var.xres - G.img_posx;
+	if ((height + G.img_posy) > G.scr_var.yres)
+		height = G.scr_var.yres - G.img_posy;
 	for (j = 0; j < height; j++) {
 		unsigned char *pixel;
 		unsigned char *src;
@@ -435,7 +439,7 @@ static void fb_drawimage(void)
 		if (fread(pixline, 1, line_size, theme_file) != line_size)
 			bb_error_msg_and_die("bad PPM file '%s'", G.image_filename);
 		pixel = pixline;
-		src = G.addr + j * G.scr_fix.line_length;
+		src = G.addr + (G.img_posy + j) * G.scr_fix.line_length + G.img_posx * G.bytes_per_pixel;
 		for (i = 0; i < width; i++) {
 			unsigned thispix = fb_pixel_value(pixel[0], pixel[1], pixel[2]);
 			fb_write_pixel(src, thispix);
@@ -458,6 +462,7 @@ static void init(const char *cfg_filename)
 		"BAR_WIDTH\0" "BAR_HEIGHT\0"
 		"BAR_LEFT\0" "BAR_TOP\0"
 		"BAR_R\0" "BAR_G\0" "BAR_B\0"
+		"IMG_LEFT\0" "IMG_TOP\0"
 #if DEBUG
 		"DEBUG\0"
 #endif
@@ -470,10 +475,10 @@ static void init(const char *cfg_filename)
 		int i = index_in_strings(param_names, token[0]);
 		if (i < 0)
 			bb_error_msg_and_die("syntax error: %s", token[0]);
-		if (i >= 0 && i < 7)
+		if (i >= 0 && i < 9)
 			G.ns[i] = val;
 #if DEBUG
-		if (i == 7) {
+		if (i == 9) {
 			G.bdebug_messages = val;
 			if (G.bdebug_messages)
 				G.logfile_fd = xfopen_for_write("/tmp/fbsplash.log");
@@ -514,7 +519,7 @@ int fbsplash_main(int argc UNUSED_PARAM, char **argv)
 
 	if (fifo_filename && bCursorOff) {
 		// hide cursor (BEFORE any fb ops)
-		full_write(STDOUT_FILENO, "\033[?25l", 6);
+		full_write(STDOUT_FILENO, ESC"[?25l", 6);
 	}
 
 	fb_drawimage();
@@ -559,7 +564,7 @@ int fbsplash_main(int argc UNUSED_PARAM, char **argv)
 	}
 
 	if (bCursorOff) // restore cursor
-		full_write(STDOUT_FILENO, "\033[?25h", 6);
+		full_write(STDOUT_FILENO, ESC"[?25h", 6);
 
 	return EXIT_SUCCESS;
 }

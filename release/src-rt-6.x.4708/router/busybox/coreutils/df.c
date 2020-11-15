@@ -18,22 +18,22 @@
  * Implement -P and -B; better coreutils compat; cleanup
  */
 //config:config DF
-//config:	bool "df"
+//config:	bool "df (7.5 kb)"
 //config:	default y
 //config:	help
-//config:	  df reports the amount of disk space used and available
-//config:	  on filesystems.
+//config:	df reports the amount of disk space used and available
+//config:	on filesystems.
 //config:
 //config:config FEATURE_DF_FANCY
 //config:	bool "Enable -a, -i, -B"
 //config:	default y
 //config:	depends on DF
 //config:	help
-//config:	  -a Show all filesystems
-//config:	  -i Inodes
-//config:	  -B <SIZE> Blocksize
+//config:	-a Show all filesystems
+//config:	-i Inodes
+//config:	-B <SIZE> Blocksize
 
-//applet:IF_DF(APPLET(df, BB_DIR_BIN, BB_SUID_DROP))
+//applet:IF_DF(APPLET_NOEXEC(df, df, BB_DIR_BIN, BB_SUID_DROP, df))
 
 //kbuild:lib-$(CONFIG_DF) += df.o
 
@@ -77,7 +77,7 @@
 //usage:       "/dev/sda3             17381728  17107080    274648      98% /\n"
 
 #include <mntent.h>
-#include <sys/vfs.h>
+#include <sys/statvfs.h>
 #include "libbb.h"
 #include "unicode.h"
 
@@ -91,14 +91,12 @@ static unsigned long kscale(unsigned long b, unsigned long bs)
 int df_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int df_main(int argc UNUSED_PARAM, char **argv)
 {
-	unsigned long blocks_used;
-	unsigned blocks_percent_used;
 	unsigned long df_disp_hr = 1024;
 	int status = EXIT_SUCCESS;
 	unsigned opt;
 	FILE *mount_table;
 	struct mntent *mount_entry;
-	struct statfs s;
+	struct statvfs s;
 
 	enum {
 		OPT_KILO  = (1 << 0),
@@ -115,15 +113,18 @@ int df_main(int argc UNUSED_PARAM, char **argv)
 
 	init_unicode();
 
-#if ENABLE_FEATURE_HUMAN_READABLE && ENABLE_FEATURE_DF_FANCY
-	opt_complementary = "k-mB:m-Bk:B-km";
-#elif ENABLE_FEATURE_HUMAN_READABLE
-	opt_complementary = "k-m:m-k";
-#endif
-	opt = getopt32(argv, "kPT"
+	opt = getopt32(argv, "^"
+			"kPT"
 			IF_FEATURE_DF_FANCY("aiB:")
 			IF_FEATURE_HUMAN_READABLE("hm")
-			IF_FEATURE_DF_FANCY(, &chp));
+			"\0"
+#if ENABLE_FEATURE_HUMAN_READABLE && ENABLE_FEATURE_DF_FANCY
+			"k-mB:m-Bk:B-km"
+#elif ENABLE_FEATURE_HUMAN_READABLE
+			"k-m:m-k"
+#endif
+			IF_FEATURE_DF_FANCY(, &chp)
+	);
 	if (opt & OPT_MEGA)
 		df_disp_hr = 1024*1024;
 
@@ -205,10 +206,15 @@ int df_main(int argc UNUSED_PARAM, char **argv)
 		}
 
 		device = mount_entry->mnt_fsname;
+
+		/* GNU coreutils 6.10 skips certain mounts, try to be compatible */
+		if (ENABLE_FEATURE_SKIP_ROOTFS && strcmp(device, "rootfs") == 0)
+			continue;
+
 		mount_point = mount_entry->mnt_dir;
 		fs_type = mount_entry->mnt_type;
 
-		if (statfs(mount_point, &s) != 0) {
+		if (statvfs(mount_point, &s) != 0) {
 			bb_simple_perror_msg(mount_point);
 			goto set_error;
 		}
@@ -219,25 +225,30 @@ int df_main(int argc UNUSED_PARAM, char **argv)
 			s.f_frsize = s.f_bsize;
 
 		if ((s.f_blocks > 0) || !mount_table || (opt & OPT_ALL)) {
+			unsigned long long blocks_used;
+			unsigned long long blocks_total;
+			unsigned blocks_percent_used;
+
 			if (opt & OPT_INODE) {
 				s.f_blocks = s.f_files;
 				s.f_bavail = s.f_bfree = s.f_ffree;
 				s.f_frsize = 1;
-
 				if (df_disp_hr)
 					df_disp_hr = 1;
 			}
 			blocks_used = s.f_blocks - s.f_bfree;
-			blocks_percent_used = 0;
-			if (blocks_used + s.f_bavail) {
-				blocks_percent_used = (blocks_used * 100ULL
-						+ (blocks_used + s.f_bavail)/2
-						) / (blocks_used + s.f_bavail);
+			blocks_total = blocks_used + s.f_bavail;
+			blocks_percent_used = blocks_total; /* 0% if blocks_total == 0, else... */
+			if (blocks_total != 0) {
+				/* Downscale sizes for narrower division */
+				unsigned u;
+				while (blocks_total >= INT_MAX / 101) {
+					blocks_total >>= 1;
+					blocks_used >>= 1;
+				}
+				u = (unsigned)blocks_used * 100u + (unsigned)blocks_total / 2;
+				blocks_percent_used = u / (unsigned)blocks_total;
 			}
-
-			/* GNU coreutils 6.10 skips certain mounts, try to be compatible.  */
-			if (ENABLE_FEATURE_SKIP_ROOTFS && strcmp(device, "rootfs") == 0)
-				continue;
 
 #ifdef WHY_WE_DO_IT_FOR_DEV_ROOT_ONLY
 			if (strcmp(device, "/dev/root") == 0) {

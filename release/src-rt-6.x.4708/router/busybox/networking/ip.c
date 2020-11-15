@@ -9,128 +9,130 @@
  * Bernhard Reutner-Fischer rewrote to use index_in_substr_array
  */
 //config:config IP
-//config:	bool "ip"
+//config:	bool "ip (34 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  The "ip" applet is a TCP/IP interface configuration and routing
-//config:	  utility. You generally don't need "ip" to use busybox with
-//config:	  TCP/IP.
+//config:	The "ip" applet is a TCP/IP interface configuration and routing
+//config:	utility.
+//config:	Short forms (enabled below) are busybox-specific extensions.
+//config:	The standard "ip" utility does not provide them. If you are
+//config:	trying to be portable, it's better to use "ip CMD" forms.
 //config:
 //config:config IPADDR
-//config:	bool "ipaddr"
+//config:	bool "ipaddr (14 kb)"
 //config:	default y
 //config:	select FEATURE_IP_ADDRESS
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip addr: ipaddr
+//config:	Short form of "ip addr"
 //config:
 //config:config IPLINK
-//config:	bool "iplink"
+//config:	bool "iplink (16 kb)"
 //config:	default y
 //config:	select FEATURE_IP_LINK
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip link: iplink
+//config:	Short form of "ip link"
 //config:
 //config:config IPROUTE
-//config:	bool "iproute"
+//config:	bool "iproute (15 kb)"
 //config:	default y
 //config:	select FEATURE_IP_ROUTE
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip route: iproute
+//config:	Short form of "ip route"
 //config:
 //config:config IPTUNNEL
-//config:	bool "iptunnel"
+//config:	bool "iptunnel (9.6 kb)"
 //config:	default y
 //config:	select FEATURE_IP_TUNNEL
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip tunnel: iptunnel
+//config:	Short form of "ip tunnel"
 //config:
 //config:config IPRULE
-//config:	bool "iprule"
+//config:	bool "iprule (10 kb)"
 //config:	default y
 //config:	select FEATURE_IP_RULE
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip rule: iprule
+//config:	Short form of "ip rule"
 //config:
 //config:config IPNEIGH
-//config:	bool "ipneigh"
+//config:	bool "ipneigh (8.3 kb)"
 //config:	default y
 //config:	select FEATURE_IP_NEIGH
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Support short form of ip neigh: ipneigh
+//config:	Short form of "ip neigh"
 //config:
 //config:config FEATURE_IP_ADDRESS
 //config:	bool "ip address"
 //config:	default y
 //config:	depends on IP || IPADDR
 //config:	help
-//config:	  Address manipulation support for the "ip" applet.
+//config:	Address manipulation support for the "ip" applet.
 //config:
 //config:config FEATURE_IP_LINK
 //config:	bool "ip link"
 //config:	default y
 //config:	depends on IP || IPLINK
 //config:	help
-//config:	  Configure network devices with "ip".
+//config:	Configure network devices with "ip".
 //config:
 //config:config FEATURE_IP_ROUTE
 //config:	bool "ip route"
 //config:	default y
 //config:	depends on IP || IPROUTE
 //config:	help
-//config:	  Add support for routing table management to "ip".
+//config:	Add support for routing table management to "ip".
 //config:
 //config:config FEATURE_IP_ROUTE_DIR
 //config:	string "ip route configuration directory"
 //config:	default "/etc/iproute2"
 //config:	depends on FEATURE_IP_ROUTE
 //config:	help
-//config:	  Location of the "ip" applet routing configuration.
+//config:	Location of the "ip" applet routing configuration.
 //config:
 //config:config FEATURE_IP_TUNNEL
 //config:	bool "ip tunnel"
 //config:	default y
 //config:	depends on IP || IPTUNNEL
 //config:	help
-//config:	  Add support for tunneling commands to "ip".
+//config:	Add support for tunneling commands to "ip".
 //config:
 //config:config FEATURE_IP_RULE
 //config:	bool "ip rule"
 //config:	default y
 //config:	depends on IP || IPRULE
 //config:	help
-//config:	  Add support for rule commands to "ip".
+//config:	Add support for rule commands to "ip".
 //config:
 //config:config FEATURE_IP_NEIGH
 //config:	bool "ip neighbor"
 //config:	default y
 //config:	depends on IP || IPNEIGH
 //config:	help
-//config:	  Add support for neighbor commands to "ip".
+//config:	Add support for neighbor commands to "ip".
 //config:
 //config:config FEATURE_IP_RARE_PROTOCOLS
 //config:	bool "Support displaying rarely used link types"
 //config:	default n
 //config:	depends on IP || IPADDR || IPLINK || IPROUTE || IPTUNNEL || IPRULE || IPNEIGH
 //config:	help
-//config:	  If you are not going to use links of type "frad", "econet",
-//config:	  "bif" etc, you probably don't need to enable this.
-//config:	  Ethernet, wireless, infrared, ppp/slip, ip tunnelling
-//config:	  link types are supported without this option selected.
+//config:	If you are not going to use links of type "frad", "econet",
+//config:	"bif" etc, you probably don't need to enable this.
+//config:	Ethernet, wireless, infrared, ppp/slip, ip tunnelling
+//config:	link types are supported without this option selected.
 
-//applet:IF_IP(APPLET(ip, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPADDR(APPLET(ipaddr, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPLINK(APPLET(iplink, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPROUTE(APPLET(iproute, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPRULE(APPLET(iprule, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPTUNNEL(APPLET(iptunnel, BB_DIR_SBIN, BB_SUID_DROP))
-//applet:IF_IPNEIGH(APPLET(ipneigh, BB_DIR_SBIN, BB_SUID_DROP))
+//applet:IF_IP(      APPLET_NOEXEC(ip      , ip      , BB_DIR_SBIN, BB_SUID_DROP, ip      ))
+//applet:IF_IPADDR(  APPLET_NOEXEC(ipaddr  , ipaddr  , BB_DIR_SBIN, BB_SUID_DROP, ipaddr  ))
+//applet:IF_IPLINK(  APPLET_NOEXEC(iplink  , iplink  , BB_DIR_SBIN, BB_SUID_DROP, iplink  ))
+//applet:IF_IPROUTE( APPLET_NOEXEC(iproute , iproute , BB_DIR_SBIN, BB_SUID_DROP, iproute ))
+//applet:IF_IPRULE(  APPLET_NOEXEC(iprule  , iprule  , BB_DIR_SBIN, BB_SUID_DROP, iprule  ))
+//applet:IF_IPTUNNEL(APPLET_NOEXEC(iptunnel, iptunnel, BB_DIR_SBIN, BB_SUID_DROP, iptunnel))
+//applet:IF_IPNEIGH( APPLET_NOEXEC(ipneigh , ipneigh , BB_DIR_SBIN, BB_SUID_DROP, ipneigh ))
 
 //kbuild:lib-$(CONFIG_IP) += ip.o
 //kbuild:lib-$(CONFIG_IPADDR) += ip.o
@@ -153,11 +155,61 @@
 //usage:
 //--------------123456789.123456789.123456789.123456789.123456789.123456789.123456789.123....79
 //usage:#define iplink_trivial_usage
-//usage:       "set IFACE [up|down] [arp on|off] | show [IFACE]"
-//usage:#define iplink_full_usage "\n\n"
-//usage:       "iplink set IFACE [up|down] [arp on|off] [multicast on|off] [promisc on|off]\n"
-//usage:       "	[mtu NUM] [name NAME] [qlen NUM] [address MAC]\n"
+//usage:       /*Usage:iplink*/"set IFACE [up|down] [arp on|off] [multicast on|off]\n"
+//usage:       "	[promisc on|off] [mtu NUM] [name NAME] [qlen NUM] [address MAC]\n"
+//usage:       "	[master IFACE | nomaster]"
+// * short help shows only "set" command, long help continues (with just one "\n")
+// * and shows all other commands:
+//usage:#define iplink_full_usage "\n"
+//usage:       "iplink add [link IFACE] IFACE [address MAC] type TYPE [ARGS]\n"
+//usage:       "iplink delete IFACE type TYPE [ARGS]\n"
+//usage:       "	TYPE ARGS := vlan VLANARGS | vrf table NUM\n"
+//usage:       "	VLANARGS := id VLANID [protocol 802.1q|802.1ad] [reorder_hdr on|off]\n"
+//usage:       "		[gvrp on|off] [mvrp on|off] [loose_binding on|off]\n"
 //usage:       "iplink show [IFACE]"
+//upstream man ip-link:
+//=====================
+//ip link add [link DEV] [ name ] NAME
+//                   [ txqueuelen PACKETS ]
+//                   [ address LLADDR ]
+//                   [ broadcast LLADDR ]
+//                   [ mtu MTU ] [index IDX ]
+//                   [ numtxqueues QUEUE_COUNT ]
+//                   [ numrxqueues QUEUE_COUNT ]
+//                   type TYPE [ ARGS ]
+//       ip link delete { DEVICE | dev DEVICE | group DEVGROUP } type TYPE [ ARGS ]
+//       ip link set { DEVICE | dev DEVICE | group DEVGROUP } [ { up | down } ]
+//                      [ arp { on | off } ]
+//                      [ dynamic { on | off } ]
+//                      [ multicast { on | off } ]
+//                      [ allmulticast { on | off } ]
+//                      [ promisc { on | off } ]
+//                      [ trailers { on | off } ]
+//                      [ txqueuelen PACKETS ]
+//                      [ name NEWNAME ]
+//                      [ address LLADDR ]
+//                      [ broadcast LLADDR ]
+//                      [ mtu MTU ]
+//                      [ netns { PID | NAME } ]
+//                      [ link-netnsid ID ]
+//	      [ alias NAME ]
+//                      [ vf NUM [ mac LLADDR ]
+//		   [ vlan VLANID [ qos VLAN-QOS ] ]
+//		   [ rate TXRATE ]
+//		   [ spoofchk { on | off} ]
+//		   [ query_rss { on | off} ]
+//		   [ state { auto | enable | disable} ] ]
+//		   [ trust { on | off} ] ]
+//	      [ master DEVICE ]
+//	      [ nomaster ]
+//	      [ addrgenmode { eui64 | none | stable_secret | random } ]
+//                      [ protodown { on | off } ]
+//       ip link show [ DEVICE | group GROUP ] [up] [master DEV] [type TYPE]
+//       ip link help [ TYPE ]
+//TYPE := { vlan | veth | vcan | dummy | ifb | macvlan | macvtap |
+//          bridge | bond | ipoib | ip6tnl | ipip | sit | vxlan |
+//          gre | gretap | ip6gre | ip6gretap | vti | nlmon |
+//          bond_slave | ipvlan | geneve | bridge_slave | vrf }
 //usage:
 //--------------123456789.123456789.123456789.123456789.123456789.123456789.123456789.123....79
 //usage:#define iproute_trivial_usage

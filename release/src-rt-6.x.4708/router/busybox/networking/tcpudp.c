@@ -29,18 +29,18 @@
  * - don't know how to retrieve ORIGDST for udp.
  */
 //config:config TCPSVD
-//config:	bool "tcpsvd"
+//config:	bool "tcpsvd (13 kb)"
 //config:	default y
 //config:	help
-//config:	  tcpsvd listens on a TCP port and runs a program for each new
-//config:	  connection.
+//config:	tcpsvd listens on a TCP port and runs a program for each new
+//config:	connection.
 //config:
 //config:config UDPSVD
-//config:	bool "udpsvd"
+//config:	bool "udpsvd (13 kb)"
 //config:	default y
 //config:	help
-//config:	  udpsvd listens on an UDP port and runs a program for each new
-//config:	  connection.
+//config:	udpsvd listens on an UDP port and runs a program for each new
+//config:	connection.
 
 //applet:IF_TCPSVD(APPLET_ODDNAME(tcpsvd, tcpudpsvd, BB_DIR_USR_BIN, BB_SUID_DROP, tcpsvd))
 //applet:IF_UDPSVD(APPLET_ODDNAME(udpsvd, tcpudpsvd, BB_DIR_USR_BIN, BB_SUID_DROP, udpsvd))
@@ -127,6 +127,7 @@ struct globals {
 	unsigned cur_per_host;
 	unsigned cnum;
 	unsigned cmax;
+	struct hcc *cc;
 	char **env_cur;
 	char *env_var[1]; /* actually bigger */
 } FIX_ALIASING;
@@ -229,7 +230,7 @@ static void sig_child_handler(int sig UNUSED_PARAM)
 
 	while ((pid = wait_any_nohang(&wstat)) > 0) {
 		if (max_per_host)
-			ipsvd_perhost_remove(pid);
+			ipsvd_perhost_remove(G.cc, pid);
 		if (cnum)
 			cnum--;
 		if (verbose)
@@ -269,16 +270,22 @@ int tcpudpsvd_main(int argc UNUSED_PARAM, char **argv)
 
 	tcp = (applet_name[0] == 't');
 
-	/* 3+ args, -i at most once, -p implies -h, -v is counter, -b N, -c N */
-	opt_complementary = "-3:i--i:ph:vv";
+	/* "+": stop on first non-option */
 #ifdef SSLSVD
-	opts = getopt32(argv, "+c:+C:i:x:u:l:Eb:+hpt:vU:/:Z:K:",
+	opts = getopt32(argv, "^+"
+		"c:+C:i:x:u:l:Eb:+hpt:vU:/:Z:K:" /* -c NUM, -b NUM */
+		"\0"
+		/* 3+ args, -i at most once, -p implies -h, -v is a counter */
+		"-3:i--i:ph:vv",
 		&cmax, &str_C, &instructs, &instructs, &user, &preset_local_hostname,
 		&backlog, &str_t, &ssluser, &root, &cert, &key, &verbose
 	);
 #else
-	/* "+": stop on first non-option */
-	opts = getopt32(argv, "+c:+C:i:x:u:l:Eb:hpt:v",
+	opts = getopt32(argv, "^+"
+		"c:+C:i:x:u:l:Eb:+hpt:v" /* -c NUM, -b NUM */
+		"\0"
+		/* 3+ args, -i at most once, -p implies -h, -v is a counter */
+		"-3:i--i:ph:vv",
 		&cmax, &str_C, &instructs, &instructs, &user, &preset_local_hostname,
 		&backlog, &str_t, &verbose
 	);
@@ -317,7 +324,7 @@ int tcpudpsvd_main(int argc UNUSED_PARAM, char **argv)
 	sslser = user;
 	client = 0;
 	if ((getuid() == 0) && !(opts & OPT_u)) {
-		xfunc_exitcode = 100;
+		xfunc_error_retval = 100;
 		bb_error_msg_and_die(bb_msg_you_must_be_root);
 	}
 	if (opts & OPT_u)
@@ -346,7 +353,7 @@ int tcpudpsvd_main(int argc UNUSED_PARAM, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 
 	if (max_per_host)
-		ipsvd_perhost_init(cmax);
+		G.cc = ipsvd_perhost_init(cmax);
 
 	local_port = bb_lookup_port(argv[1], tcp ? "tcp" : "udp", 0);
 	lsa = xhost2sockaddr(argv[0], local_port);
@@ -421,7 +428,7 @@ int tcpudpsvd_main(int argc UNUSED_PARAM, char **argv)
 		/* Drop connection immediately if cur_per_host > max_per_host
 		 * (minimizing load under SYN flood) */
 		remote_addr = xmalloc_sockaddr2dotted_noport(&remote.u.sa);
-		cur_per_host = ipsvd_perhost_add(remote_addr, max_per_host, &hccp);
+		cur_per_host = ipsvd_perhost_add(G.cc, remote_addr, max_per_host, &hccp);
 		if (cur_per_host > max_per_host) {
 			/* ipsvd_perhost_add detected that max is exceeded
 			 * (and did not store ip in connection table) */
