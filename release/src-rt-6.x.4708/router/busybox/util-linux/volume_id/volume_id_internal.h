@@ -187,13 +187,15 @@ int FAST_FUNC volume_id_probe_iso9660(struct volume_id *id /*,uint64_t off*/);
 
 int FAST_FUNC volume_id_probe_jfs(struct volume_id *id /*,uint64_t off*/);
 
+int FAST_FUNC volume_id_probe_lfs(struct volume_id *id /*,uint64_t off*/);
+
 int FAST_FUNC volume_id_probe_linux_swap(struct volume_id *id /*,uint64_t off*/);
 
 int FAST_FUNC volume_id_probe_luks(struct volume_id *id /*,uint64_t off*/);
 
 //int FAST_FUNC volume_id_probe_mac_partition_map(struct volume_id *id /*,uint64_t off*/);
 
-//int FAST_FUNC volume_id_probe_minix(struct volume_id *id /*,uint64_t off*/);
+int FAST_FUNC volume_id_probe_minix(struct volume_id *id /*, uint64_t off*/);
 
 //int FAST_FUNC volume_id_probe_msdos_part_table(struct volume_id *id /*,uint64_t off*/);
 

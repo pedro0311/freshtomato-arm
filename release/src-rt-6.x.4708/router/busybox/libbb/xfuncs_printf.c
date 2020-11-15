@@ -8,7 +8,6 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 /* We need to have separate xfuncs.c and xfuncs_printf.c because
  * with current linkers, even with section garbage collection,
  * if *.o module references any of XXXprintf functions, you pull in
@@ -19,13 +18,17 @@
  * which do not pull in printf, directly or indirectly.
  * xfunc_printf.c contains those which do.
  */
-
 #include "libbb.h"
 
 
 /* All the functions starting with "x" call bb_error_msg_and_die() if they
  * fail, so callers never need to check for errors.  If it returned, it
  * succeeded. */
+
+void FAST_FUNC bb_die_memory_exhausted(void)
+{
+	bb_error_msg_and_die(bb_msg_memory_exhausted);
+}
 
 #ifndef DMALLOC
 /* dmalloc provides variants of these that do abort() on failure.
@@ -46,7 +49,7 @@ void* FAST_FUNC xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
 	if (ptr == NULL && size != 0)
-		bb_error_msg_and_die(bb_msg_memory_exhausted);
+		bb_die_memory_exhausted();
 	return ptr;
 }
 
@@ -57,7 +60,7 @@ void* FAST_FUNC xrealloc(void *ptr, size_t size)
 {
 	ptr = realloc(ptr, size);
 	if (ptr == NULL && size != 0)
-		bb_error_msg_and_die(bb_msg_memory_exhausted);
+		bb_die_memory_exhausted();
 	return ptr;
 }
 #endif /* DMALLOC */
@@ -81,7 +84,7 @@ char* FAST_FUNC xstrdup(const char *s)
 	t = strdup(s);
 
 	if (t == NULL)
-		bb_error_msg_and_die(bb_msg_memory_exhausted);
+		bb_die_memory_exhausted();
 
 	return t;
 }
@@ -329,14 +332,14 @@ char* FAST_FUNC xasprintf(const char *format, ...)
 	va_end(p);
 
 	if (r < 0)
-		bb_error_msg_and_die(bb_msg_memory_exhausted);
+		bb_die_memory_exhausted();
 	return string_ptr;
 }
 
 void FAST_FUNC xsetenv(const char *key, const char *value)
 {
 	if (setenv(key, value, 1))
-		bb_error_msg_and_die(bb_msg_memory_exhausted);
+		bb_die_memory_exhausted();
 }
 
 /* Handles "VAR=VAL" strings, even those which are part of environ
@@ -344,20 +347,28 @@ void FAST_FUNC xsetenv(const char *key, const char *value)
  */
 void FAST_FUNC bb_unsetenv(const char *var)
 {
-	char *tp = strchr(var, '=');
+	char onstack[128 - 16]; /* smaller stack setup code on x86 */
+	char *tp;
 
-	if (!tp) {
-		unsetenv(var);
-		return;
+	tp = strchr(var, '=');
+	if (tp) {
+		/* In case var was putenv'ed, we can't replace '='
+		 * with NUL and unsetenv(var) - it won't work,
+		 * env is modified by the replacement, unsetenv
+		 * sees "VAR" instead of "VAR=VAL" and does not remove it!
+		 * Horror :(
+		 */
+		unsigned sz = tp - var;
+		if (sz < sizeof(onstack)) {
+			((char*)mempcpy(onstack, var, sz))[0] = '\0';
+			tp = NULL;
+			var = onstack;
+		} else {
+			/* unlikely: very long var name */
+			var = tp = xstrndup(var, sz);
+		}
 	}
-
-	/* In case var was putenv'ed, we can't replace '='
-	 * with NUL and unsetenv(var) - it won't work,
-	 * env is modified by the replacement, unsetenv
-	 * sees "VAR" instead of "VAR=VAL" and does not remove it!
-	 * horror :( */
-	tp = xstrndup(var, tp - var);
-	unsetenv(tp);
+	unsetenv(var);
 	free(tp);
 }
 

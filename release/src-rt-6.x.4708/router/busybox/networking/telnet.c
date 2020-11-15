@@ -18,33 +18,32 @@
  * <jam@ltsp.org>
  * Modified 2004/02/11 to add ability to pass the USER variable to remote host
  * by Fernando Silveira <swrh@gmx.net>
- *
  */
 //config:config TELNET
-//config:	bool "telnet"
+//config:	bool "telnet (8.7 kb)"
 //config:	default y
 //config:	help
-//config:	  Telnet is an interface to the TELNET protocol, but is also commonly
-//config:	  used to test other simple protocols.
+//config:	Telnet is an interface to the TELNET protocol, but is also commonly
+//config:	used to test other simple protocols.
 //config:
 //config:config FEATURE_TELNET_TTYPE
 //config:	bool "Pass TERM type to remote host"
 //config:	default y
 //config:	depends on TELNET
 //config:	help
-//config:	  Setting this option will forward the TERM environment variable to the
-//config:	  remote host you are connecting to. This is useful to make sure that
-//config:	  things like ANSI colors and other control sequences behave.
+//config:	Setting this option will forward the TERM environment variable to the
+//config:	remote host you are connecting to. This is useful to make sure that
+//config:	things like ANSI colors and other control sequences behave.
 //config:
 //config:config FEATURE_TELNET_AUTOLOGIN
 //config:	bool "Pass USER type to remote host"
 //config:	default y
 //config:	depends on TELNET
 //config:	help
-//config:	  Setting this option will forward the USER environment variable to the
-//config:	  remote host you are connecting to. This is useful when you need to
-//config:	  log into a machine without telling the username (autologin). This
-//config:	  option enables `-a' and `-l USER' arguments.
+//config:	Setting this option will forward the USER environment variable to the
+//config:	remote host you are connecting to. This is useful when you need to
+//config:	log into a machine without telling the username (autologin). This
+//config:	option enables '-a' and '-l USER' options.
 //config:
 //config:config FEATURE_TELNET_WIDTH
 //config:	bool "Enable window size autodetection"
@@ -88,12 +87,6 @@
 # define TELOPT_SGA    3  /* suppress go ahead */
 # define TELOPT_TTYPE 24  /* terminal type */
 # define TELOPT_NAWS  31  /* window size */
-#endif
-
-#ifdef DOTRACE
-# define TRACE(x, y) do { if (x) printf y; } while (0)
-#else
-# define TRACE(x, y)
 #endif
 
 enum {
@@ -628,10 +621,6 @@ int telnet_main(int argc UNUSED_PARAM, char **argv)
 
 	INIT_G();
 
-#if ENABLE_FEATURE_TELNET_WIDTH
-	get_terminal_width_height(0, &G.win_width, &G.win_height);
-#endif
-
 #if ENABLE_FEATURE_TELNET_TTYPE
 	G.ttype = getenv("TERM");
 #endif
@@ -643,8 +632,10 @@ int telnet_main(int argc UNUSED_PARAM, char **argv)
 	}
 
 #if ENABLE_FEATURE_TELNET_AUTOLOGIN
-	if (1 & getopt32(argv, "al:", &G.autologin))
+	if (1 == getopt32(argv, "al:", &G.autologin)) {
+		/* Only -a without -l USER picks $USER from envvar */
 		G.autologin = getenv("USER");
+	}
 	argv += optind;
 #else
 	argv++;
@@ -652,13 +643,19 @@ int telnet_main(int argc UNUSED_PARAM, char **argv)
 	if (!*argv)
 		bb_show_usage();
 	host = *argv++;
-	port = bb_lookup_port(*argv ? *argv++ : "telnet", "tcp", 23);
+	port = *argv ? bb_lookup_port(*argv++, "tcp", 23)
+		: bb_lookup_std_port("telnet", "tcp", 23);
 	if (*argv) /* extra params?? */
 		bb_show_usage();
 
 	xmove_fd(create_and_connect_stream_or_die(host, port), netfd);
 
 	setsockopt_keepalive(netfd);
+
+#if ENABLE_FEATURE_TELNET_WIDTH
+	get_terminal_width_height(0, &G.win_width, &G.win_height);
+//TODO: support dynamic resize?
+#endif
 
 	signal(SIGINT, record_signo);
 
@@ -683,7 +680,6 @@ int telnet_main(int argc UNUSED_PARAM, char **argv)
 			len = safe_read(STDIN_FILENO, G.buf, DATABUFSIZE);
 			if (len <= 0)
 				doexit(EXIT_SUCCESS);
-			TRACE(0, ("Read con: %d\n", len));
 			handle_net_output(len);
 		}
 
@@ -693,7 +689,6 @@ int telnet_main(int argc UNUSED_PARAM, char **argv)
 				full_write1_str("Connection closed by foreign host\r\n");
 				doexit(EXIT_FAILURE);
 			}
-			TRACE(0, ("Read netfd (%d): %d\n", netfd, len));
 			handle_net_input(len);
 		}
 	} /* while (1) */

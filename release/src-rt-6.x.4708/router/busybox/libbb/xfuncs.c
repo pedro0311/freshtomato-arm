@@ -8,7 +8,6 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 /* We need to have separate xfuncs.c and xfuncs_printf.c because
  * with current linkers, even with section garbage collection,
  * if *.o module references any of XXXprintf functions, you pull in
@@ -21,7 +20,6 @@
  *
  * TODO: move xmalloc() and xatonum() here.
  */
-
 #include "libbb.h"
 
 /* Turn on nonblocking I/O on a fd */
@@ -61,24 +59,23 @@ char* FAST_FUNC strncpy_IFNAMSIZ(char *dst, const char *src)
  * A truncated result contains the first few digits of the result ala strncpy.
  * Returns a pointer past last generated digit, does _not_ store NUL.
  */
-void BUG_sizeof(void);
 char* FAST_FUNC utoa_to_buf(unsigned n, char *buf, unsigned buflen)
 {
 	unsigned i, out, res;
 
 	if (buflen) {
 		out = 0;
+
+		BUILD_BUG_ON(sizeof(n) != 4 && sizeof(n) != 8);
 		if (sizeof(n) == 4)
 		// 2^32-1 = 4294967295
 			i = 1000000000;
-#if UINT_MAX > 4294967295 /* prevents warning about "const too large" */
+#if UINT_MAX > 0xffffffff /* prevents warning about "const too large" */
 		else
 		if (sizeof(n) == 8)
 		// 2^64-1 = 18446744073709551615
 			i = 10000000000000000000;
 #endif
-		else
-			BUG_sizeof();
 		for (; i; i /= 10) {
 			res = n / i;
 			n = n % i;
@@ -311,40 +308,79 @@ int FAST_FUNC tcsetattr_stdin_TCSANOW(const struct termios *tp)
 	return tcsetattr(STDIN_FILENO, TCSANOW, tp);
 }
 
-int FAST_FUNC set_termios_to_raw(int fd, struct termios *oldterm, int flags)
+int FAST_FUNC get_termios_and_make_raw(int fd, struct termios *newterm, struct termios *oldterm, int flags)
 {
-//TODO: lineedit, microcom and less might be adapted to use this too:
-// grep for "tcsetattr"
+//TODO: slattach, shell read might be adapted to use this too: grep for "tcsetattr", "[VTIME] = 0"
+	int r;
 
-	struct termios newterm;
-
-	tcgetattr(fd, oldterm);
-	newterm = *oldterm;
+	memset(oldterm, 0, sizeof(*oldterm)); /* paranoia */
+	r = tcgetattr(fd, oldterm);
+	*newterm = *oldterm;
 
 	/* Turn off buffered input (ICANON)
 	 * Turn off echoing (ECHO)
 	 * and separate echoing of newline (ECHONL, normally off anyway)
 	 */
-	newterm.c_lflag &= ~(ICANON | ECHO | ECHONL);
+	newterm->c_lflag &= ~(ICANON | ECHO | ECHONL);
 	if (flags & TERMIOS_CLEAR_ISIG) {
 		/* dont recognize INT/QUIT/SUSP chars */
-		newterm.c_lflag &= ~ISIG;
+		newterm->c_lflag &= ~ISIG;
 	}
 	/* reads will block only if < 1 char is available */
-	newterm.c_cc[VMIN] = 1;
+	newterm->c_cc[VMIN] = 1;
 	/* no timeout (reads block forever) */
-	newterm.c_cc[VTIME] = 0;
-	if (flags & TERMIOS_RAW_CRNL) {
+	newterm->c_cc[VTIME] = 0;
+/* IXON, IXOFF, and IXANY:
+ * IXOFF=1: sw flow control is enabled on input queue:
+ * tty transmits a STOP char when input queue is close to full
+ * and transmits a START char when input queue is nearly empty.
+ * IXON=1: sw flow control is enabled on output queue:
+ * tty will stop sending if STOP char is received,
+ * and resume sending if START is received, or if any char
+ * is received and IXANY=1.
+ */
+	if (flags & TERMIOS_RAW_CRNL_INPUT) {
+		/* IXON=0: XON/XOFF chars are treated as normal chars (why we do this?) */
 		/* dont convert CR to NL on input */
-		newterm.c_iflag &= ~(IXON | ICRNL);
-		/* dont convert NL to CR on output */
-		newterm.c_oflag &= ~(ONLCR);
+		newterm->c_iflag &= ~(IXON | ICRNL);
+	}
+	if (flags & TERMIOS_RAW_CRNL_OUTPUT) {
+		/* dont convert NL to CR+NL on output */
+		newterm->c_oflag &= ~(ONLCR);
+		/* Maybe clear more c_oflag bits? Usually, only OPOST and ONLCR are set.
+		 * OPOST  Enable output processing (reqd for OLCUC and *NL* bits to work)
+		 * OLCUC  Map lowercase characters to uppercase on output.
+		 * OCRNL  Map CR to NL on output.
+		 * ONOCR  Don't output CR at column 0.
+		 * ONLRET Don't output CR.
+		 */
 	}
 	if (flags & TERMIOS_RAW_INPUT) {
-		/* dont convert anything on input */
-		newterm.c_iflag &= ~(BRKINT|INLCR|ICRNL|IXON|IXOFF|IUCLC|IXANY|IMAXBEL);
+#ifndef IMAXBEL
+# define IMAXBEL 0
+#endif
+#ifndef IUCLC
+# define IUCLC 0
+#endif
+#ifndef IXANY
+# define IXANY 0
+#endif
+		/* IXOFF=0: disable sending XON/XOFF if input buf is full
+		 * IXON=0: input XON/XOFF chars are not special
+		 * BRKINT=0: dont send SIGINT on break
+		 * IMAXBEL=0: dont echo BEL on input line too long
+		 * INLCR,ICRNL,IUCLC: dont convert anything on input
+		 */
+		newterm->c_iflag &= ~(IXOFF|IXON|IXANY|BRKINT|INLCR|ICRNL|IUCLC|IMAXBEL);
 	}
+	return r;
+}
 
+int FAST_FUNC set_termios_to_raw(int fd, struct termios *oldterm, int flags)
+{
+	struct termios newterm;
+
+	get_termios_and_make_raw(fd, &newterm, oldterm, flags);
 	return tcsetattr(fd, TCSANOW, &newterm);
 }
 

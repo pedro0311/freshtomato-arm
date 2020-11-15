@@ -6,32 +6,30 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
 //config:config AWK
-//config:	bool "awk"
+//config:	bool "awk (22 kb)"
 //config:	default y
 //config:	help
-//config:	  Awk is used as a pattern scanning and processing language. This is
-//config:	  the BusyBox implementation of that programming language.
+//config:	Awk is used as a pattern scanning and processing language.
 //config:
 //config:config FEATURE_AWK_LIBM
 //config:	bool "Enable math functions (requires libm)"
 //config:	default y
 //config:	depends on AWK
 //config:	help
-//config:	  Enable math functions of the Awk programming language.
-//config:	  NOTE: This will require libm to be present for linking.
+//config:	Enable math functions of the Awk programming language.
+//config:	NOTE: This requires libm to be present for linking.
 //config:
 //config:config FEATURE_AWK_GNU_EXTENSIONS
 //config:	bool "Enable a few GNU extensions"
 //config:	default y
 //config:	depends on AWK
 //config:	help
-//config:	  Enable a few features from gawk:
-//config:	  * command line option -e AWK_PROGRAM
-//config:	  * simultaneous use of -f and -e on the command line.
-//config:	    This enables the use of awk library files.
-//config:	    Ex: awk -f mylib.awk -e '{print myfunction($1);}' ...
+//config:	Enable a few features from gawk:
+//config:	* command line option -e AWK_PROGRAM
+//config:	* simultaneous use of -f and -e on the command line.
+//config:	This enables the use of awk library files.
+//config:	Example: awk -f mylib.awk -e '{print myfunction($1);}' ...
 
 //applet:IF_AWK(APPLET_NOEXEC(awk, awk, BB_DIR_USR_BIN, BB_SUID_DROP, awk))
 
@@ -71,7 +69,11 @@
 #endif
 
 
-#define OPTSTR_AWK \
+/* "+": stop on first non-option:
+ * $ awk 'BEGIN { for(i=1; i<ARGC; ++i) { print i ": " ARGV[i] }}' -argz
+ * 1: -argz
+ */
+#define OPTSTR_AWK "+" \
 	"F:v:*f:*" \
 	IF_FEATURE_AWK_GNU_EXTENSIONS("e:*") \
 	"W:"
@@ -231,7 +233,7 @@ typedef struct tsplitter_s {
  */
 #define	TC_LENGTH	(1 << 20)
 #define	TC_GETLINE	(1 << 21)
-#define	TC_FUNCDECL	(1 << 22)		/* `function' `func' */
+#define	TC_FUNCDECL	(1 << 22)		/* 'function' 'func' */
 #define	TC_BEGIN	(1 << 23)
 #define	TC_END		(1 << 24)
 #define	TC_EOF		(1 << 25)
@@ -596,6 +598,7 @@ static const char EMSG_NOT_ARRAY[] ALIGN1 = "Not an array";
 static const char EMSG_POSSIBLE_ERROR[] ALIGN1 = "Possible syntax error";
 static const char EMSG_UNDEF_FUNC[] ALIGN1 = "Call to undefined function";
 static const char EMSG_NO_MATH[] ALIGN1 = "Math support is not compiled in";
+static const char EMSG_NEGATIVE_FIELD[] ALIGN1 = "Access to negative field";
 
 static void zero_out_var(var *vp)
 {
@@ -2512,6 +2515,32 @@ static var *evaluate(node *op, var *res)
 		op1 = op->l.n;
 		debug_printf_eval("opinfo:%08x opn:%08x\n", opinfo, opn);
 
+		/* "delete" is special:
+		 * "delete array[var--]" must evaluate index expr only once,
+		 * must not evaluate it in "execute inevitable things" part.
+		 */
+		if (XC(opinfo & OPCLSMASK) == XC(OC_DELETE)) {
+			uint32_t info = op1->info & OPCLSMASK;
+			var *v;
+
+			debug_printf_eval("DELETE\n");
+			if (info == OC_VAR) {
+				v = op1->l.v;
+			} else if (info == OC_FNARG) {
+				v = &fnargs[op1->l.aidx];
+			} else {
+				syntax_error(EMSG_NOT_ARRAY);
+			}
+			if (op1->r.n) { /* array ref? */
+				const char *s;
+				s = getvar_s(evaluate(op1->r.n, v1));
+				hash_remove(iamarray(v), s);
+			} else {
+				clear_array(iamarray(v));
+			}
+			goto next;
+		}
+
 		/* execute inevitable things */
 		if (opinfo & OF_RES1)
 			L.v = evaluate(op1, v1);
@@ -2619,28 +2648,7 @@ static var *evaluate(node *op, var *res)
 			break;
 		}
 
-		case XC( OC_DELETE ): {
-			uint32_t info = op1->info & OPCLSMASK;
-			var *v;
-
-			if (info == OC_VAR) {
-				v = op1->l.v;
-			} else if (info == OC_FNARG) {
-				v = &fnargs[op1->l.aidx];
-			} else {
-				syntax_error(EMSG_NOT_ARRAY);
-			}
-
-			if (op1->r.n) {
-				const char *s;
-				clrvar(L.v);
-				s = getvar_s(evaluate(op1->r.n, v1));
-				hash_remove(iamarray(v), s);
-			} else {
-				clear_array(iamarray(v));
-			}
-			break;
-		}
+		/* case XC( OC_DELETE ): - moved to happen before arg evaluation */
 
 		case XC( OC_NEWSOURCE ):
 			g_progname = op->l.new_progname;
@@ -2664,12 +2672,14 @@ static var *evaluate(node *op, var *res)
 		/* -- recursive node type -- */
 
 		case XC( OC_VAR ):
+			debug_printf_eval("VAR\n");
 			L.v = op->l.v;
 			if (L.v == intvar[NF])
 				split_f0();
 			goto v_cont;
 
 		case XC( OC_FNARG ):
+			debug_printf_eval("FNARG[%d]\n", op->l.aidx);
 			L.v = &fnargs[op->l.aidx];
  v_cont:
 			res = op->r.n ? findvar(iamarray(L.v), R.s) : L.v;
@@ -2940,6 +2950,8 @@ static var *evaluate(node *op, var *res)
 
 		case XC( OC_FIELD ): {
 			int i = (int)getvar_i(R.v);
+			if (i < 0)
+				syntax_error(EMSG_NEGATIVE_FIELD);
 			if (i == 0) {
 				res = intvar[F0];
 			} else {
@@ -3033,7 +3045,8 @@ static var *evaluate(node *op, var *res)
 
 		default:
 			syntax_error(EMSG_POSSIBLE_ERROR);
-		}
+		} /* switch */
+ next:
 		if ((opinfo & OPCLSMASK) <= SHIFT_TIL_THIS)
 			op = op->a.n;
 		if ((opinfo & OPCLSMASK) >= RECUR_FROM_THIS)
@@ -3139,7 +3152,7 @@ static rstream *next_input_file(void)
 }
 
 int awk_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
-int awk_main(int argc, char **argv)
+int awk_main(int argc UNUSED_PARAM, char **argv)
 {
 	unsigned opt;
 	char *opt_F;
@@ -3208,7 +3221,7 @@ int awk_main(int argc, char **argv)
 	}
 	opt = getopt32(argv, OPTSTR_AWK, &opt_F, &list_v, &list_f, IF_FEATURE_AWK_GNU_EXTENSIONS(&list_e,) NULL);
 	argv += optind;
-	argc -= optind;
+	//argc -= optind;
 	if (opt & OPT_W)
 		bb_error_msg("warning: option -W is ignored");
 	if (opt & OPT_F) {
@@ -3245,15 +3258,14 @@ int awk_main(int argc, char **argv)
 		if (!*argv)
 			bb_show_usage();
 		parse_program(*argv++);
-		argc--;
 	}
 
 	/* fill in ARGV array */
-	setvar_i(intvar[ARGC], argc + 1);
 	setari_u(intvar[ARGV], 0, "awk");
 	i = 0;
 	while (*argv)
 		setari_u(intvar[ARGV], ++i, *argv++);
+	setvar_i(intvar[ARGC], i + 1);
 
 	evaluate(beginseq.first, &tv);
 	if (!mainseq.first && !endseq.first)

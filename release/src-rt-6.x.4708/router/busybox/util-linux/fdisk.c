@@ -1,5 +1,6 @@
 /* vi: set sw=4 ts=4: */
-/* fdisk.c -- Partition table manipulator for Linux.
+/*
+ * fdisk.c -- Partition table manipulator for Linux.
  *
  * Copyright (C) 1992  A. V. Le Blanc (LeBlanc@mcc.ac.uk)
  * Copyright (C) 2001,2002 Vladimir Oleynik <dzo@simtreas.ru> (initial bb port)
@@ -7,14 +8,14 @@
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
 //config:config FDISK
-//config:	bool "fdisk"
+//config:	bool "fdisk (41 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  The fdisk utility is used to divide hard disks into one or more
-//config:	  logical disks, which are generally called partitions. This utility
-//config:	  can be used to list and edit the set of partitions or BSD style
-//config:	  'disk slices' that are defined on a hard drive.
+//config:	The fdisk utility is used to divide hard disks into one or more
+//config:	logical disks, which are generally called partitions. This utility
+//config:	can be used to list and edit the set of partitions or BSD style
+//config:	'disk slices' that are defined on a hard drive.
 //config:
 //config:config FDISK_SUPPORT_LARGE_DISKS
 //config:	bool "Support over 4GB disks"
@@ -27,59 +28,59 @@
 //config:	default y
 //config:	depends on FDISK
 //config:	help
-//config:	  Enabling this option allows you to create or change a partition table
-//config:	  and write those changes out to disk. If you leave this option
-//config:	  disabled, you will only be able to view the partition table.
+//config:	Enabling this option allows you to create or change a partition table
+//config:	and write those changes out to disk. If you leave this option
+//config:	disabled, you will only be able to view the partition table.
 //config:
 //config:config FEATURE_AIX_LABEL
 //config:	bool "Support AIX disklabels"
 //config:	default n
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to create or change AIX disklabels.
-//config:	  Most people can safely leave this option disabled.
+//config:	Enabling this option allows you to create or change AIX disklabels.
+//config:	Most people can safely leave this option disabled.
 //config:
 //config:config FEATURE_SGI_LABEL
 //config:	bool "Support SGI disklabels"
 //config:	default n
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to create or change SGI disklabels.
-//config:	  Most people can safely leave this option disabled.
+//config:	Enabling this option allows you to create or change SGI disklabels.
+//config:	Most people can safely leave this option disabled.
 //config:
 //config:config FEATURE_SUN_LABEL
 //config:	bool "Support SUN disklabels"
 //config:	default n
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to create or change SUN disklabels.
-//config:	  Most people can safely leave this option disabled.
+//config:	Enabling this option allows you to create or change SUN disklabels.
+//config:	Most people can safely leave this option disabled.
 //config:
 //config:config FEATURE_OSF_LABEL
 //config:	bool "Support BSD disklabels"
 //config:	default n
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to create or change BSD disklabels
-//config:	  and define and edit BSD disk slices.
+//config:	Enabling this option allows you to create or change BSD disklabels
+//config:	and define and edit BSD disk slices.
 //config:
 //config:config FEATURE_GPT_LABEL
 //config:	bool "Support GPT disklabels"
 //config:	default n
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to view GUID Partition Table
-//config:	  disklabels.
+//config:	Enabling this option allows you to view GUID Partition Table
+//config:	disklabels.
 //config:
 //config:config FEATURE_FDISK_ADVANCED
 //config:	bool "Support expert mode"
 //config:	default y
 //config:	depends on FDISK && FEATURE_FDISK_WRITABLE
 //config:	help
-//config:	  Enabling this option allows you to do terribly unsafe things like
-//config:	  define arbitrary drive geometry, move the beginning of data in a
-//config:	  partition, and similarly evil things. Unless you have a very good
-//config:	  reason you would be wise to leave this disabled.
+//config:	Enabling this option allows you to do terribly unsafe things like
+//config:	define arbitrary drive geometry, move the beginning of data in a
+//config:	partition, and similarly evil things. Unless you have a very good
+//config:	reason you would be wise to leave this disabled.
 
 //applet:IF_FDISK(APPLET(fdisk, BB_DIR_SBIN, BB_SUID_DROP))
 
@@ -168,9 +169,9 @@ typedef unsigned long long ullong;
  * do not support more than 2^32 sectors
  */
 typedef uint32_t sector_t;
-#if UINT_MAX == 4294967295
+#if UINT_MAX == 0xffffffff
 # define SECT_FMT ""
-#elif ULONG_MAX == 4294967295
+#elif ULONG_MAX == 0xffffffff
 # define SECT_FMT "l"
 #else
 # error Cant detect sizeof(uint32_t)
@@ -425,7 +426,7 @@ struct globals {
 	unsigned sector_offset; // = 1;
 	unsigned g_heads, g_sectors, g_cylinders;
 	smallint /* enum label_type */ current_label_type;
-	smallint display_in_cyl_units; // = 1;
+	smallint display_in_cyl_units;
 #if ENABLE_FEATURE_OSF_LABEL
 	smallint possibly_osf_label;
 #endif
@@ -487,7 +488,6 @@ struct globals {
 	sector_size = DEFAULT_SECTOR_SIZE; \
 	sector_offset = 1; \
 	g_partitions = 4; \
-	display_in_cyl_units = 1; \
 	units_per_sector = 1; \
 	dos_compatible_flag = 1; \
 } while (0)
@@ -638,25 +638,6 @@ seek_sector(sector_t secno)
 }
 
 #if ENABLE_FEATURE_FDISK_WRITABLE
-/* Read line; return 0 or first printable char */
-static int
-read_line(const char *prompt)
-{
-	int sz;
-
-	sz = read_line_input(NULL, prompt, line_buffer, sizeof(line_buffer), /*timeout*/ -1);
-	if (sz <= 0)
-		exit(EXIT_SUCCESS); /* Ctrl-D or Ctrl-C */
-
-	if (line_buffer[sz-1] == '\n')
-		line_buffer[--sz] = '\0';
-
-	line_ptr = line_buffer;
-	while (*line_ptr != '\0' && (unsigned char)*line_ptr <= ' ')
-		line_ptr++;
-	return *line_ptr;
-}
-
 static void
 set_all_unchanged(void)
 {
@@ -677,6 +658,25 @@ write_part_table_flag(char *b)
 {
 	b[510] = 0x55;
 	b[511] = 0xaa;
+}
+
+/* Read line; return 0 or first printable non-space char */
+static int
+read_line(const char *prompt)
+{
+	int sz;
+
+	sz = read_line_input(NULL, prompt, line_buffer, sizeof(line_buffer));
+	if (sz <= 0)
+		exit(EXIT_SUCCESS); /* Ctrl-D or Ctrl-C */
+
+	if (line_buffer[sz-1] == '\n')
+		line_buffer[--sz] = '\0';
+
+	line_ptr = line_buffer;
+	while (*line_ptr != '\0' && (unsigned char)*line_ptr <= ' ')
+		line_ptr++;
+	return *line_ptr;
 }
 
 static char
@@ -1613,53 +1613,54 @@ read_int(sector_t low, sector_t dflt, sector_t high, sector_t base, const char *
 
 		if (*line_ptr == '+' || *line_ptr == '-') {
 			int minus = (*line_ptr == '-');
-			int absolute = 0;
+			unsigned scale_shift;
 
-			value = atoi(line_ptr + 1);
+			if (sizeof(value) <= sizeof(long))
+				value = strtoul(line_ptr + 1, NULL, 10);
+			else
+				value = strtoull(line_ptr + 1, NULL, 10);
 
 			/* (1) if 2nd char is digit, use_default = 0.
-			 * (2) move line_ptr to first non-digit. */
+			 * (2) move line_ptr to first non-digit.
+			 */
 			while (isdigit(*++line_ptr))
 				use_default = 0;
 
-			switch (*line_ptr) {
-			case 'c':
-			case 'C':
-				if (!display_in_cyl_units)
-					value *= g_heads * g_sectors;
-				break;
-			case 'K':
-				absolute = 1024;
-				break;
+			scale_shift = 0;
+			switch (*line_ptr | 0x20) {
 			case 'k':
-				absolute = 1000;
+				scale_shift = 10; /* 1024 */
 				break;
 			case 'm':
-			case 'M':
-				absolute = 1000000;
+				scale_shift = 20; /* 1024*1024 */
 				break;
 			case 'g':
-			case 'G':
-				absolute = 1000000000;
+				scale_shift = 30; /* 1024*1024*1024 */
+				break;
+			case 't':
+				scale_shift = 40; /* 1024*1024*1024*1024 */
 				break;
 			default:
 				break;
 			}
-			if (absolute) {
+			if (scale_shift) {
 				ullong bytes;
 				unsigned long unit;
 
-				bytes = (ullong) value * absolute;
+				bytes = (ullong) value << scale_shift;
 				unit = sector_size * units_per_sector;
 				bytes += unit/2; /* round */
 				bytes /= unit;
-				value = bytes;
+				value = (bytes != 0 ? bytes - 1 : 0);
 			}
 			if (minus)
 				value = -value;
 			value += base;
 		} else {
-			value = atoi(line_ptr);
+			if (sizeof(value) <= sizeof(long))
+				value = strtoul(line_ptr, NULL, 10);
+			else
+				value = strtoull(line_ptr, NULL, 10);
 			while (isdigit(*line_ptr)) {
 				line_ptr++;
 				use_default = 0;
@@ -2002,12 +2003,6 @@ check_consistency(const struct partition *p, int partition)
 			"end:\n", partition + 1);
 		printf("     phys=(%u,%u,%u) ", pec, peh, pes);
 		printf("logical=(%u,%u,%u)\n", lec, leh, les);
-	}
-
-/* Ending on cylinder boundary? */
-	if (peh != (g_heads - 1) || pes != g_sectors) {
-		printf("Partition %u does not end on cylinder boundary\n",
-			partition + 1);
 	}
 }
 
@@ -2531,8 +2526,9 @@ add_partition(int n, int sys)
 		stop = limit;
 	} else {
 		snprintf(mesg, sizeof(mesg),
-			 "Last %s or +size or +sizeM or +sizeK",
-			 str_units(SINGULAR));
+			 "Last %s or +size{,K,M,G,T}",
+			 str_units(SINGULAR)
+		);
 		stop = read_int(cround(start), cround(limit), cround(limit), cround(start), mesg);
 		if (display_in_cyl_units) {
 			stop = stop * units_per_sector - 1;
@@ -2616,9 +2612,9 @@ new_partition(void)
 	} else {
 		char c, line[80];
 		snprintf(line, sizeof(line),
-			"Command action\n"
-			"   %s\n"
-			"   p   primary partition (1-4)\n",
+			"Partition type\n"
+			"   p   primary partition (1-4)\n"
+			"   %s\n",
 			(extended_offset ?
 			"l   logical (5 or over)" : "e   extended"));
 		while (1) {
@@ -2848,7 +2844,7 @@ xselect(void)
 			if (dos_compatible_flag) {
 				sector_offset = g_sectors;
 				puts("Warning: setting sector offset for DOS "
-					"compatiblity");
+					"compatibility");
 			}
 			update_units();
 			break;

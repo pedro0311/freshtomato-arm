@@ -154,54 +154,71 @@
  *                      setuid()
  */
 //config:config INETD
-//config:	bool "inetd"
+//config:	bool "inetd (18 kb)"
 //config:	default y
 //config:	select FEATURE_SYSLOG
 //config:	help
-//config:	  Internet superserver daemon
+//config:	Internet superserver daemon
 //config:
 //config:config FEATURE_INETD_SUPPORT_BUILTIN_ECHO
-//config:	bool "Support echo service"
+//config:	bool "Support echo service on port 7"
 //config:	default y
 //config:	depends on INETD
 //config:	help
-//config:	  Echo received data internal inetd service
+//config:	Internal service which echoes data back.
+//config:	Activated by configuration lines like these:
+//config:		echo stream tcp nowait root internal
+//config:		echo dgram  udp wait   root internal
 //config:
 //config:config FEATURE_INETD_SUPPORT_BUILTIN_DISCARD
-//config:	bool "Support discard service"
+//config:	bool "Support discard service on port 8"
 //config:	default y
 //config:	depends on INETD
 //config:	help
-//config:	  Internet /dev/null internal inetd service
+//config:	Internal service which discards all input.
+//config:	Activated by configuration lines like these:
+//config:		discard stream tcp nowait root internal
+//config:		discard dgram  udp wait   root internal
 //config:
 //config:config FEATURE_INETD_SUPPORT_BUILTIN_TIME
-//config:	bool "Support time service"
+//config:	bool "Support time service on port 37"
 //config:	default y
 //config:	depends on INETD
 //config:	help
-//config:	  Return 32 bit time since 1900 internal inetd service
+//config:	Internal service which returns big-endian 32-bit number
+//config:	of seconds passed since 1900-01-01. The number wraps around
+//config:	on overflow.
+//config:	Activated by configuration lines like these:
+//config:		time stream tcp nowait root internal
+//config:		time dgram  udp wait   root internal
 //config:
 //config:config FEATURE_INETD_SUPPORT_BUILTIN_DAYTIME
-//config:	bool "Support daytime service"
+//config:	bool "Support daytime service on port 13"
 //config:	default y
 //config:	depends on INETD
 //config:	help
-//config:	  Return human-readable time internal inetd service
+//config:	Internal service which returns human-readable time.
+//config:	Activated by configuration lines like these:
+//config:		daytime stream tcp nowait root internal
+//config:		daytime dgram  udp wait   root internal
 //config:
 //config:config FEATURE_INETD_SUPPORT_BUILTIN_CHARGEN
-//config:	bool "Support chargen service"
+//config:	bool "Support chargen service on port 19"
 //config:	default y
 //config:	depends on INETD
 //config:	help
-//config:	  Familiar character generator internal inetd service
+//config:	Internal service which generates endless stream
+//config:	of all ASCII chars beetween space and char 126.
+//config:	Activated by configuration lines like these:
+//config:		chargen stream tcp nowait root internal
+//config:		chargen dgram  udp wait   root internal
 //config:
 //config:config FEATURE_INETD_RPC
 //config:	bool "Support RPC services"
 //config:	default n  # very rarely used, and needs Sun RPC support in libc
 //config:	depends on INETD
-//config:	select FEATURE_HAVE_RPC
 //config:	help
-//config:	  Support Sun-RPC based services
+//config:	Support Sun-RPC based services
 
 //applet:IF_INETD(APPLET(inetd, BB_DIR_USR_SBIN, BB_SUID_DROP))
 
@@ -216,6 +233,7 @@
 //usage:     "\n	-q N	Socket listen queue (default 128)"
 //usage:     "\n	-R N	Pause services after N connects/min"
 //usage:     "\n		(default 0 - disabled)"
+//usage:     "\n	Default CONFFILE is /etc/inetd.conf"
 
 #include <syslog.h>
 #include <sys/resource.h> /* setrlimit */
@@ -228,7 +246,11 @@
 #if ENABLE_FEATURE_INETD_RPC
 # if defined(__UCLIBC__) && ! defined(__UCLIBC_HAS_RPC__)
 #  warning "You probably need to build uClibc with UCLIBC_HAS_RPC for NFS support"
-   /* not #error, since user may be using e.g. libtirpc instead */
+   /* not #error, since user may be using e.g. libtirpc instead.
+    * This might work:
+    * CONFIG_EXTRA_CFLAGS="-I/usr/include/tirpc"
+    * CONFIG_EXTRA_LDLIBS="tirpc"
+    */
 # endif
 # include <rpc/rpc.h>
 # include <rpc/pmap_clnt.h>
@@ -479,10 +501,9 @@ static void register_rpc(servtab_t *sep)
 {
 	int n;
 	struct sockaddr_in ir_sin;
-	socklen_t size;
 
-	size = sizeof(ir_sin);
-	if (getsockname(sep->se_fd, (struct sockaddr *) &ir_sin, &size) < 0) {
+	if (bb_getsockname(sep->se_fd, (struct sockaddr *) &ir_sin, sizeof(ir_sin)) < 0) {
+//TODO: verify that such failure is even possible in Linux kernel
 		bb_perror_msg("getsockname");
 		return;
 	}
@@ -1470,7 +1491,7 @@ int inetd_main(int argc UNUSED_PARAM, char **argv)
 				bb_error_msg("non-root must run services as himself");
 				goto do_exit1;
 			}
-			if (pwd->pw_uid != 0) {
+			if (pwd->pw_uid != real_uid) {
 				if (sep->se_group)
 					pwd->pw_gid = grp->gr_gid;
 				/* initgroups, setgid, setuid: */

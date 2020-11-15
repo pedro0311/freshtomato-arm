@@ -48,7 +48,7 @@ static int ask_and_unlink(const char *dest, int flags)
 		// (No "opening without O_EXCL", no "unlink only if -f")
 		// Or else we will end up having 3 open()s!
 		fprintf(stderr, "%s: overwrite '%s'? ", applet_name, dest);
-		if (!bb_ask_confirmation())
+		if (!bb_ask_y_confirmation())
 			return 0; /* not allowed to overwrite */
 	}
 	if (unlink(dest) < 0) {
@@ -371,7 +371,10 @@ int FAST_FUNC copy_file(const char *source, const char *dest, int flags)
 			int r = symlink(lpath, dest);
 			free(lpath);
 			if (r < 0) {
-				bb_perror_msg("can't create symlink '%s'", dest);
+				/* shared message */
+				bb_perror_msg("can't create %slink '%s' to '%s'",
+					"sym", dest, lpath
+				);
 				return -1;
 			}
 			if (flags & FILEUTILS_PRESERVE_STATUS)

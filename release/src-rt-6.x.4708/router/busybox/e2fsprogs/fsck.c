@@ -34,12 +34,12 @@
  * It doesn't guess filesystem types from on-disk format.
  */
 //config:config FSCK
-//config:	bool "fsck"
+//config:	bool "fsck (6.7 kb)"
 //config:	default y
 //config:	help
-//config:	  fsck is used to check and optionally repair one or more filesystems.
-//config:	  In actuality, fsck is simply a front-end for the various file system
-//config:	  checkers (fsck.fstype) available under Linux.
+//config:	fsck is used to check and optionally repair one or more filesystems.
+//config:	In actuality, fsck is simply a front-end for the various file system
+//config:	checkers (fsck.fstype) available under Linux.
 
 //applet:IF_FSCK(APPLET(fsck, BB_DIR_SBIN, BB_SUID_DROP))
 
@@ -414,7 +414,7 @@ static void kill_all_if_got_signal(void)
 static int wait_one(int flags)
 {
 	int status;
-	int sig;
+	int exitcode;
 	struct fsck_instance *inst, *prev;
 	pid_t pid;
 
@@ -448,15 +448,16 @@ static int wait_one(int flags)
 	}
  child_died:
 
-	status = WEXITSTATUS(status);
+	exitcode = WEXITSTATUS(status);
 	if (WIFSIGNALED(status)) {
+		unsigned sig;
 		sig = WTERMSIG(status);
-		status = EXIT_UNCORRECTED;
+		exitcode = EXIT_UNCORRECTED;
 		if (sig != SIGINT) {
 			printf("Warning: %s %s terminated "
-				"by signal %d\n",
+				"by signal %u\n",
 				inst->prog, inst->device, sig);
-			status = EXIT_ERROR;
+			exitcode = EXIT_ERROR;
 		}
 	}
 
@@ -492,12 +493,12 @@ static int wait_one(int flags)
 	else
 		G.instance_list = inst->next;
 	if (G.verbose > 1)
-		printf("Finished with %s (exit status %d)\n",
-			inst->device, status);
+		printf("Finished with %s (exit status %u)\n",
+			inst->device, exitcode);
 	G.num_running--;
 	free_instance(inst);
 
-	return status;
+	return exitcode;
 }
 
 /*

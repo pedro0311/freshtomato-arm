@@ -8,18 +8,18 @@
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 //config:config MKDOSFS
-//config:	bool "mkdosfs"
+//config:	bool "mkdosfs (6.8 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Utility to create FAT32 filesystems.
+//config:	Utility to create FAT32 filesystems.
 //config:
 //config:config MKFS_VFAT
-//config:	bool "mkfs.vfat"
+//config:	bool "mkfs.vfat (6.8 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Alias to "mkdosfs".
+//config:	Alias to "mkdosfs".
 
 //                    APPLET_ODDNAME:name       main       location     suid_type     help
 //applet:IF_MKDOSFS(  APPLET_ODDNAME(mkdosfs,   mkfs_vfat, BB_DIR_SBIN, BB_SUID_DROP, mkfs_vfat))
@@ -210,11 +210,11 @@ void BUG_unsupported_field_size(void);
 #define STORE_LE(field, value) \
 do { \
 	if (sizeof(field) == 4) \
-		field = SWAP_LE32(value); \
+		field = SWAP_LE32((uint32_t)(value)); \
 	else if (sizeof(field) == 2) \
-		field = SWAP_LE16(value); \
+		field = SWAP_LE16((uint16_t)(value)); \
 	else if (sizeof(field) == 1) \
-		field = (value); \
+		field = (uint8_t)(value); \
 	else \
 		BUG_unsupported_field_size(); \
 } while (0)
@@ -269,8 +269,9 @@ int mkfs_vfat_main(int argc UNUSED_PARAM, char **argv)
 		OPT_v = 1 << 16, // verbose
 	};
 
-	opt_complementary = "-1";//:b+:f+:F+:h+:r+:R+:s+:S+:vv:c--l:l--c";
-	opts = getopt32(argv, "Ab:cCf:F:h:Ii:l:m:n:r:R:s:S:v",
+	opts = getopt32(argv, "^"
+		"Ab:cCf:F:h:Ii:l:m:n:r:R:s:S:v"
+		"\0" "-1", //:b+:f+:F+:h+:r+:R+:s+:S+:vv:c--l:l--c
 		NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, &volume_label, NULL, NULL, NULL, NULL);
 	argv += optind;
@@ -521,7 +522,7 @@ int mkfs_vfat_main(int argc UNUSED_PARAM, char **argv)
 		//STORE_LE(boot_blk->reserved2[3], 0,0,0);
 		STORE_LE(boot_blk->vi.ext_boot_sign, 0x29);
 		STORE_LE(boot_blk->vi.volume_id32, volume_id);
-		strncpy(boot_blk->vi.fs_type, "FAT32   ", sizeof(boot_blk->vi.fs_type));
+		memcpy(boot_blk->vi.fs_type, "FAT32   ", sizeof(boot_blk->vi.fs_type));
 		strncpy(boot_blk->vi.volume_label, volume_label, sizeof(boot_blk->vi.volume_label));
 		memcpy(boot_blk->boot_code, boot_code, sizeof(boot_code));
 		STORE_LE(boot_blk->boot_sign, BOOT_SIGN);

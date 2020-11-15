@@ -10,21 +10,21 @@
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
 //config:config POPMAILDIR
-//config:	bool "popmaildir"
+//config:	bool "popmaildir (10 kb)"
 //config:	default y
 //config:	help
-//config:	  Simple yet powerful POP3 mail popper. Delivers content
-//config:	  of remote mailboxes to local Maildir.
+//config:	Simple yet powerful POP3 mail popper. Delivers content
+//config:	of remote mailboxes to local Maildir.
 //config:
 //config:config FEATURE_POPMAILDIR_DELIVERY
 //config:	bool "Allow message filters and custom delivery program"
 //config:	default y
 //config:	depends on POPMAILDIR
 //config:	help
-//config:	  Allow to use a custom program to filter the content
-//config:	  of the message before actual delivery (-F "prog [args...]").
-//config:	  Allow to use a custom program for message actual delivery
-//config:	  (-M "prog [args...]").
+//config:	Allow to use a custom program to filter the content
+//config:	of the message before actual delivery (-F "prog [args...]").
+//config:	Allow to use a custom program for message actual delivery
+//config:	(-M "prog [args...]").
 
 //applet:IF_POPMAILDIR(APPLET(popmaildir, BB_DIR_USR_SBIN, BB_SUID_DROP))
 
@@ -45,8 +45,8 @@
 //usage:     "\n	-k		Keep retrieved messages on the server"
 //usage:     "\n	-t SEC		Network timeout"
 //usage:	IF_FEATURE_POPMAILDIR_DELIVERY(
-//usage:     "\n	-F \"PROG ARGS\"	Filter program (may be repeated)"
-//usage:     "\n	-M \"PROG ARGS\"	Delivery program"
+//usage:     "\n	-F 'PROG ARGS'	Filter program (may be repeated)"
+//usage:     "\n	-M 'PROG ARGS'	Delivery program"
 //usage:	)
 //usage:     "\n"
 //usage:     "\nFetch from plain POP3 server:"
@@ -125,9 +125,9 @@ int popmaildir_main(int argc UNUSED_PARAM, char **argv)
 	INIT_G();
 
 	// parse options
-	opt_complementary = "-1:dd";
-	opts = getopt32(argv,
-		"bdmVcasTkt:+" "R:+Z:L:+H:+" IF_FEATURE_POPMAILDIR_DELIVERY("M:F:"),
+	opts = getopt32(argv, "^"
+		"bdmVcasTkt:+" "R:+Z:L:+H:+" IF_FEATURE_POPMAILDIR_DELIVERY("M:F:")
+		"\0" "-1:dd",
 		&timeout, NULL, NULL, NULL, &opt_nlines
 		IF_FEATURE_POPMAILDIR_DELIVERY(, &delivery, &delivery) // we treat -M and -F the same
 	);
@@ -265,7 +265,7 @@ int popmaildir_main(int argc UNUSED_PARAM, char **argv)
 
 		// atomically move message to ./new/
 		target = xstrdup(filename);
-		strncpy(target, "new", 3);
+		memcpy(target, "new", 3);
 		// ... or just stop receiving on failure
 		if (rename_or_warn(filename, target))
 			break;

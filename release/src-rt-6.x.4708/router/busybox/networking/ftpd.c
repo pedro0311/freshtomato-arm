@@ -12,35 +12,42 @@
  * You have to run this daemon via inetd.
  */
 //config:config FTPD
-//config:	bool "ftpd"
+//config:	bool "ftpd (30 kb)"
 //config:	default y
 //config:	help
-//config:	  Simple FTP daemon. You have to run it via inetd.
+//config:	Simple FTP daemon. You have to run it via inetd.
 //config:
 //config:config FEATURE_FTPD_WRITE
-//config:	bool "Enable upload commands"
+//config:	bool "Enable -w (upload commands)"
 //config:	default y
 //config:	depends on FTPD
 //config:	help
-//config:	  Enable all kinds of FTP upload commands (-w option)
+//config:	Enable -w option. "ftpd -w" will accept upload commands
+//config:	such as STOR, STOU, APPE, DELE, MKD, RMD, rename commands.
 //config:
 //config:config FEATURE_FTPD_ACCEPT_BROKEN_LIST
 //config:	bool "Enable workaround for RFC-violating clients"
 //config:	default y
 //config:	depends on FTPD
 //config:	help
-//config:	  Some ftp clients (among them KDE's Konqueror) issue illegal
-//config:	  "LIST -l" requests. This option works around such problems.
-//config:	  It might prevent you from listing files starting with "-" and
-//config:	  it increases the code size by ~40 bytes.
-//config:	  Most other ftp servers seem to behave similar to this.
+//config:	Some ftp clients (among them KDE's Konqueror) issue illegal
+//config:	"LIST -l" requests. This option works around such problems.
+//config:	It might prevent you from listing files starting with "-" and
+//config:	it increases the code size by ~40 bytes.
+//config:	Most other ftp servers seem to behave similar to this.
 //config:
 //config:config FEATURE_FTPD_AUTHENTICATION
 //config:	bool "Enable authentication"
 //config:	default y
 //config:	depends on FTPD
 //config:	help
-//config:	  Enable basic system login as seen in telnet etc.
+//config:	Require login, and change to logged in user's UID:GID before
+//config:	accessing any files. Option "-a USER" allows "anonymous"
+//config:	logins (treats them as if USER logged in).
+//config:
+//config:	If this option is not selected, ftpd runs with the rights
+//config:	of the user it was started under, and does not require login.
+//config:	Take care to not launch it under root.
 
 //applet:IF_FTPD(APPLET(ftpd, BB_DIR_USR_SBIN, BB_SUID_DROP))
 
@@ -50,7 +57,7 @@
 //usage:       "[-wvS]"IF_FEATURE_FTPD_AUTHENTICATION(" [-a USER]")" [-t N] [-T N] [DIR]"
 //usage:#define ftpd_full_usage "\n\n"
 //usage:	IF_NOT_FEATURE_FTPD_AUTHENTICATION(
-//usage:       "Anonymous FTP server. Accesses by clients occur under ftpd's UID.\n"
+//usage:       "Anonymous FTP server. Client access occurs under ftpd's UID.\n"
 //usage:	)
 //usage:	IF_FEATURE_FTPD_AUTHENTICATION(
 //usage:       "FTP server. "
@@ -59,9 +66,15 @@
 //usage:       "Should be used as inetd service, inetd.conf line:\n"
 //usage:       "	21 stream tcp nowait root ftpd ftpd /files/to/serve\n"
 //usage:       "Can be run from tcpsvd:\n"
-//usage:       "	tcpsvd -vE 0.0.0.0 21 ftpd /files/to/serve\n"
+//usage:       "	tcpsvd -vE 0.0.0.0 21 ftpd /files/to/serve"
+//usage:     "\n"
 //usage:     "\n	-w	Allow upload"
 //usage:	IF_FEATURE_FTPD_AUTHENTICATION(
+//usage:     "\n	-A	No login required, client access occurs under ftpd's UID"
+//
+// if !FTPD_AUTHENTICATION, -A is accepted too, but not shown in --help
+// since it's the only supported mode in that configuration
+//
 //usage:     "\n	-a USER	Enable 'anonymous' login and map it to USER"
 //usage:	)
 //usage:     "\n	-v	Log errors to stderr. -vv: verbose log"
@@ -164,9 +177,13 @@ struct globals {
 	char msg_ok [(sizeof("NNN " MSG_OK ) + 3) & 0xfffc];
 	char msg_err[(sizeof("NNN " MSG_ERR) + 3) & 0xfffc];
 } FIX_ALIASING;
-#define G (*(struct globals*)bb_common_bufsiz1)
+#define G (*ptr_to_globals)
+/* ^^^ about 75 bytes smaller code than this: */
+//#define G (*(struct globals*)bb_common_bufsiz1)
 #define INIT_G() do { \
-	setup_common_bufsiz(); \
+	SET_PTR_TO_GLOBALS(xzalloc(sizeof(G))); \
+	/*setup_common_bufsiz();*/ \
+	\
 	/* Moved to main */ \
 	/*strcpy(G.msg_ok  + 4, MSG_OK );*/ \
 	/*strcpy(G.msg_err + 4, MSG_ERR);*/ \
@@ -251,7 +268,7 @@ cmdio_write(uint32_t status_str, const char *str)
 static void
 cmdio_write_ok(unsigned status)
 {
-	*(uint32_t *) G.msg_ok = status;
+	*(bb__aliased_uint32_t *) G.msg_ok = status;
 	xwrite(STDOUT_FILENO, G.msg_ok, sizeof("NNN " MSG_OK) - 1);
 	if (G.verbose > 1)
 		verbose_log(G.msg_ok);
@@ -262,7 +279,7 @@ cmdio_write_ok(unsigned status)
 static void
 cmdio_write_error(unsigned status)
 {
-	*(uint32_t *) G.msg_err = status;
+	*(bb__aliased_uint32_t *) G.msg_err = status;
 	xwrite(STDOUT_FILENO, G.msg_err, sizeof("NNN " MSG_ERR) - 1);
 	if (G.verbose > 0)
 		verbose_log(G.msg_err);
@@ -592,7 +609,7 @@ static void
 handle_rest(void)
 {
 	/* When ftp_arg == NULL simply restart from beginning */
-	G.restart_pos = G.ftp_arg ? xatoi_positive(G.ftp_arg) : 0;
+	G.restart_pos = G.ftp_arg ? XATOOFF(G.ftp_arg) : 0;
 	WRITE_OK(FTP_RESTOK);
 }
 
@@ -1144,11 +1161,12 @@ enum {
 #if !BB_MMU
 	OPT_l = (1 << 0),
 	OPT_1 = (1 << 1),
-	OPT_A = (1 << 2),
 #endif
-	OPT_v = (1 << ((!BB_MMU) * 3 + 0)),
-	OPT_S = (1 << ((!BB_MMU) * 3 + 1)),
-	OPT_w = (1 << ((!BB_MMU) * 3 + 2)) * ENABLE_FEATURE_FTPD_WRITE,
+	BIT_A =        (!BB_MMU) * 2,
+	OPT_A = (1 << (BIT_A + 0)),
+	OPT_v = (1 << (BIT_A + 1)),
+	OPT_S = (1 << (BIT_A + 2)),
+	OPT_w = (1 << (BIT_A + 3)) * ENABLE_FEATURE_FTPD_WRITE,
 };
 
 int ftpd_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
@@ -1167,22 +1185,26 @@ int ftpd_main(int argc UNUSED_PARAM, char **argv)
 	abs_timeout = 1 * 60 * 60;
 	verbose_S = 0;
 	G.timeout = 2 * 60;
-	opt_complementary = "vv:SS";
 #if BB_MMU
-	opts = getopt32(argv,    "vS"
-		IF_FEATURE_FTPD_WRITE("w") "t:+T:+" IF_FEATURE_FTPD_AUTHENTICATION("a:"),
+	opts = getopt32(argv, "^"   "AvS" IF_FEATURE_FTPD_WRITE("w")
+		"t:+T:+" IF_FEATURE_FTPD_AUTHENTICATION("a:")
+		"\0" "vv:SS",
 		&G.timeout, &abs_timeout, IF_FEATURE_FTPD_AUTHENTICATION(&anon_opt,)
-		&G.verbose, &verbose_S);
+		&G.verbose, &verbose_S
+	);
 #else
-	opts = getopt32(argv, "l1AvS"
-		IF_FEATURE_FTPD_WRITE("w") "t:+T:+" IF_FEATURE_FTPD_AUTHENTICATION("a:"),
+	opts = getopt32(argv, "^" "l1AvS" IF_FEATURE_FTPD_WRITE("w")
+		"t:+T:+" IF_FEATURE_FTPD_AUTHENTICATION("a:")
+		"\0" "vv:SS",
 		&G.timeout, &abs_timeout, IF_FEATURE_FTPD_AUTHENTICATION(&anon_opt,)
-		&G.verbose, &verbose_S);
+		&G.verbose, &verbose_S
+	);
 	if (opts & (OPT_l|OPT_1)) {
-		/* Our secret backdoor to ls */
+		/* Our secret backdoor to ls: see popen_ls() */
 		if (fchdir(3) != 0)
 			_exit(127);
 		/* memset(&G, 0, sizeof(G)); - ls_main does it */
+		/* NB: in this case -A has a different meaning: like "ls -A" */
 		return ls_main(/*argc_unused*/ 0, argv);
 	}
 #endif
@@ -1240,30 +1262,32 @@ int ftpd_main(int argc UNUSED_PARAM, char **argv)
 	signal(SIGALRM, timeout_handler);
 
 #if ENABLE_FEATURE_FTPD_AUTHENTICATION
-	while (1) {
-		uint32_t cmdval = cmdio_get_cmd_and_arg();
-		if (cmdval == const_USER) {
-			if (anon_opt && strcmp(G.ftp_arg, "anonymous") == 0) {
-				pw = getpwnam(anon_opt);
-				if (pw)
-					break; /* does not even ask for password */
+	if (!(opts & OPT_A)) {
+		while (1) {
+			uint32_t cmdval = cmdio_get_cmd_and_arg();
+			if (cmdval == const_USER) {
+				if (anon_opt && strcmp(G.ftp_arg, "anonymous") == 0) {
+					pw = getpwnam(anon_opt);
+					if (pw)
+						break; /* does not even ask for password */
+				}
+				pw = getpwnam(G.ftp_arg);
+				cmdio_write_raw(STR(FTP_GIVEPWORD)" Specify password\r\n");
+			} else if (cmdval == const_PASS) {
+				if (check_password(pw, G.ftp_arg) > 0) {
+					break;	/* login success */
+				}
+				cmdio_write_raw(STR(FTP_LOGINERR)" Login failed\r\n");
+				pw = NULL;
+			} else if (cmdval == const_QUIT) {
+				WRITE_OK(FTP_GOODBYE);
+				return 0;
+			} else {
+				cmdio_write_raw(STR(FTP_LOGINERR)" Login with USER+PASS\r\n");
 			}
-			pw = getpwnam(G.ftp_arg);
-			cmdio_write_raw(STR(FTP_GIVEPWORD)" Please specify password\r\n");
-		} else if (cmdval == const_PASS) {
-			if (check_password(pw, G.ftp_arg) > 0) {
-				break;	/* login success */
-			}
-			cmdio_write_raw(STR(FTP_LOGINERR)" Login failed\r\n");
-			pw = NULL;
-		} else if (cmdval == const_QUIT) {
-			WRITE_OK(FTP_GOODBYE);
-			return 0;
-		} else {
-			cmdio_write_raw(STR(FTP_LOGINERR)" Login with USER and PASS\r\n");
 		}
+		WRITE_OK(FTP_LOGINOK);
 	}
-	WRITE_OK(FTP_LOGINOK);
 #endif
 
 	/* Do this after auth, else /etc/passwd is not accessible */
@@ -1295,7 +1319,9 @@ int ftpd_main(int argc UNUSED_PARAM, char **argv)
 	}
 
 #if ENABLE_FEATURE_FTPD_AUTHENTICATION
-	change_identity(pw);
+	if (pw)
+		change_identity(pw);
+	/* else: -A is in effect */
 #endif
 
 	/* RFC-959 Section 5.1

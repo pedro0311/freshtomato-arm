@@ -1,6 +1,6 @@
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -1117,7 +1117,6 @@
+@@ -1122,7 +1122,6 @@
  		//state = RENEW_REQUESTED;
  		//break;
  	case RENEW_REQUESTED: /* impatient are we? fine, square 1 */
