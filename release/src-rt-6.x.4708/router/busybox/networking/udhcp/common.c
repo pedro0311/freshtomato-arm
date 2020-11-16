@@ -54,6 +54,8 @@ const struct dhcp_optflag dhcp_optflags[] = {
 	{ OPTION_STRING                           , 0x43 }, /* DHCP_BOOT_FILE     */
 //TODO: not a string, but a set of LASCII strings:
 //	{ OPTION_STRING                           , 0x4D }, /* DHCP_USER_CLASS    */
+	{ OPTION_STRING                           , 0x64 }, /* DHCP_PCODE         */
+	{ OPTION_STRING                           , 0x65 }, /* DHCP_TCODE         */
 #if ENABLE_FEATURE_UDHCP_RFC3397
 	{ OPTION_DNS_STRING | OPTION_LIST         , 0x77 }, /* DHCP_DOMAIN_SEARCH */
 	{ OPTION_SIP_SERVERS                      , 0x78 }, /* DHCP_SIP_SERVERS   */
@@ -65,6 +67,7 @@ const struct dhcp_optflag dhcp_optflags[] = {
 #endif
 	{ OPTION_STRING                           , 0xd1 }, /* DHCP_PXE_CONF_FILE */
 	{ OPTION_STRING                           , 0xd2 }, /* DHCP_PXE_PATH_PREFIX */
+	{ OPTION_U32                              , 0xd3 }, /* DHCP_REBOOT_TIME   */
 	{ OPTION_6RD                              , 0xd4 }, /* DHCP_6RD           */
 	{ OPTION_STATIC_ROUTES | OPTION_LIST      , 0xf9 }, /* DHCP_MS_STATIC_ROUTES */
 	{ OPTION_STRING                           , 0xfc }, /* DHCP_WPAD          */
@@ -92,50 +95,53 @@ const struct dhcp_optflag dhcp_optflags[] = {
  */
 /* Must match dhcp_optflags[] order */
 const char dhcp_option_strings[] ALIGN1 =
-	"subnet" "\0"      /* DHCP_SUBNET         */
-	"timezone" "\0"    /* DHCP_TIME_OFFSET    */
-	"router" "\0"      /* DHCP_ROUTER         */
-//	"timesrv" "\0"     /* DHCP_TIME_SERVER    */
-//	"namesrv" "\0"     /* DHCP_NAME_SERVER    */
-	"dns" "\0"         /* DHCP_DNS_SERVER     */
-//	"logsrv" "\0"      /* DHCP_LOG_SERVER     */
-//	"cookiesrv" "\0"   /* DHCP_COOKIE_SERVER  */
-	"lprsrv" "\0"      /* DHCP_LPR_SERVER     */
-	"hostname" "\0"    /* DHCP_HOST_NAME      */
-	"bootsize" "\0"    /* DHCP_BOOT_SIZE      */
-	"domain" "\0"      /* DHCP_DOMAIN_NAME    */
-	"swapsrv" "\0"     /* DHCP_SWAP_SERVER    */
-	"rootpath" "\0"    /* DHCP_ROOT_PATH      */
-	"ipttl" "\0"       /* DHCP_IP_TTL         */
-	"mtu" "\0"         /* DHCP_MTU            */
-	"broadcast" "\0"   /* DHCP_BROADCAST      */
-	"routes" "\0"      /* DHCP_ROUTES         */
-	"nisdomain" "\0"   /* DHCP_NIS_DOMAIN     */
-	"nissrv" "\0"      /* DHCP_NIS_SERVER     */
-	"ntpsrv" "\0"      /* DHCP_NTP_SERVER     */
-	"wins" "\0"        /* DHCP_WINS_SERVER    */
-	"lease" "\0"       /* DHCP_LEASE_TIME     */
-	"serverid" "\0"    /* DHCP_SERVER_ID      */
-	"message" "\0"     /* DHCP_ERR_MESSAGE    */
-	"tftp" "\0"        /* DHCP_TFTP_SERVER_NAME */
-	"bootfile" "\0"    /* DHCP_BOOT_FILE      */
-//	"userclass" "\0"   /* DHCP_USER_CLASS     */
+	"subnet" "\0"           /* DHCP_SUBNET          */
+	"timezone" "\0"         /* DHCP_TIME_OFFSET     */
+	"router" "\0"           /* DHCP_ROUTER          */
+//	"timesrv" "\0"          /* DHCP_TIME_SERVER     */
+//	"namesrv" "\0"          /* DHCP_NAME_SERVER     */
+	"dns" "\0"              /* DHCP_DNS_SERVER      */
+//	"logsrv" "\0"           /* DHCP_LOG_SERVER      */
+//	"cookiesrv" "\0"        /* DHCP_COOKIE_SERVER   */
+	"lprsrv" "\0"           /* DHCP_LPR_SERVER      */
+	"hostname" "\0"         /* DHCP_HOST_NAME       */
+	"bootsize" "\0"         /* DHCP_BOOT_SIZE       */
+	"domain" "\0"           /* DHCP_DOMAIN_NAME     */
+	"swapsrv" "\0"          /* DHCP_SWAP_SERVER     */
+	"rootpath" "\0"         /* DHCP_ROOT_PATH       */
+	"ipttl" "\0"            /* DHCP_IP_TTL          */
+	"mtu" "\0"              /* DHCP_MTU             */
+	"broadcast" "\0"        /* DHCP_BROADCAST       */
+	"routes" "\0"           /* DHCP_ROUTES          */
+	"nisdomain" "\0"        /* DHCP_NIS_DOMAIN      */
+	"nissrv" "\0"           /* DHCP_NIS_SERVER      */
+	"ntpsrv" "\0"           /* DHCP_NTP_SERVER      */
+	"wins" "\0"             /* DHCP_WINS_SERVER     */
+	"lease" "\0"            /* DHCP_LEASE_TIME      */
+	"serverid" "\0"         /* DHCP_SERVER_ID       */
+	"message" "\0"          /* DHCP_ERR_MESSAGE     */
+	"tftp" "\0"             /* DHCP_TFTP_SERVER_NAME*/
+	"bootfile" "\0"         /* DHCP_BOOT_FILE       */
+//	"userclass" "\0"        /* DHCP_USER_CLASS      */
+	"tzstr" "\0"            /* DHCP_PCODE           */
+	"tzdbstr" "\0"          /* DHCP_TCODE           */
 #if ENABLE_FEATURE_UDHCP_RFC3397
-	"search" "\0"      /* DHCP_DOMAIN_SEARCH  */
+	"search" "\0"           /* DHCP_DOMAIN_SEARCH   */
 // doesn't work in udhcpd.conf since OPTION_SIP_SERVERS
 // is not handled yet by "string->option" conversion code:
-	"sipsrv" "\0"      /* DHCP_SIP_SERVERS    */
+	"sipsrv" "\0"           /* DHCP_SIP_SERVERS     */
 #endif
-	"staticroutes" "\0"/* DHCP_STATIC_ROUTES  */
+	"staticroutes" "\0"     /* DHCP_STATIC_ROUTES   */
 #if ENABLE_FEATURE_UDHCP_8021Q
-	"vlanid" "\0"      /* DHCP_VLAN_ID        */
-	"vlanpriority" "\0"/* DHCP_VLAN_PRIORITY  */
+	"vlanid" "\0"           /* DHCP_VLAN_ID         */
+	"vlanpriority" "\0"     /* DHCP_VLAN_PRIORITY   */
 #endif
-	"pxeconffile" "\0" /* DHCP_PXE_CONF_FILE  */
-	"pxepathprefix" "\0" /* DHCP_PXE_PATH_PREFIX  */
-	"ip6rd" "\0"       /* DHCP_6RD            */
-	"msstaticroutes""\0"/* DHCP_MS_STATIC_ROUTES */
-	"wpad" "\0"        /* DHCP_WPAD           */
+	"pxeconffile" "\0"      /* DHCP_PXE_CONF_FILE   */
+	"pxepathprefix" "\0"    /* DHCP_PXE_PATH_PREFIX */
+	"reboottime" "\0"       /* DHCP_REBOOT_TIME     */
+	"ip6rd" "\0"            /* DHCP_6RD             */
+	"msstaticroutes" "\0"   /* DHCP_MS_STATIC_ROUTES*/
+	"wpad" "\0"             /* DHCP_WPAD            */
 	;
 #endif
 
@@ -185,7 +191,7 @@ static void log_option(const char *pfx, const uint8_t *opt)
 	if (dhcp_verbose >= 2) {
 		char buf[256 * 2 + 2];
 		*bin2hex(buf, (void*) (opt + OPT_DATA), opt[OPT_LEN]) = '\0';
-		bb_error_msg("%s: 0x%02x %s", pfx, opt[OPT_CODE], buf);
+		bb_info_msg("%s: 0x%02x %s", pfx, opt[OPT_CODE], buf);
 	}
 }
 #else
@@ -270,6 +276,15 @@ uint8_t* FAST_FUNC udhcp_get_option(struct dhcp_packet *packet, int code)
 			goto complain; /* complain and return NULL */
 
 		if (optionptr[OPT_CODE] == code) {
+			if (optionptr[OPT_LEN] == 0) {
+				/* So far no valid option with length 0 known.
+				 * Having this check means that searching
+				 * for DHCP_MESSAGE_TYPE need not worry
+				 * that returned pointer might be unsafe
+				 * to dereference.
+				 */
+				goto complain; /* complain and return NULL */
+			}
 			log_option("option found", optionptr);
 			return optionptr + OPT_DATA;
 		}
@@ -285,6 +300,16 @@ uint8_t* FAST_FUNC udhcp_get_option(struct dhcp_packet *packet, int code)
 	/* log3 because udhcpc uses it a lot - very noisy */
 	log3("option 0x%02x not found", code);
 	return NULL;
+}
+
+uint8_t* FAST_FUNC udhcp_get_option32(struct dhcp_packet *packet, int code)
+{
+	uint8_t *r = udhcp_get_option(packet, code);
+	if (r) {
+		if (r[-OPT_DATA + OPT_LEN] != 4)
+			r = NULL;
+	}
+	return r;
 }
 
 /* Return the position of the 'end' option (no bounds checking) */
@@ -401,6 +426,7 @@ static NOINLINE void attach_option(
 		if (errno)
 			bb_error_msg_and_die("malformed hex string '%s'", buffer);
 		length = end - allocated;
+		buffer = allocated;
 	}
 #if ENABLE_FEATURE_UDHCP_RFC3397
 	if ((optflag->flags & OPTION_TYPE_MASK) == OPTION_DNS_STRING) {
@@ -420,15 +446,14 @@ static NOINLINE void attach_option(
 			new->data = xmalloc(length + OPT_DATA);
 			new->data[OPT_CODE] = optflag->code;
 			new->data[OPT_LEN] = length;
-			memcpy(new->data + OPT_DATA, (allocated ? allocated : buffer),
-					length);
+			memcpy(new->data + OPT_DATA, buffer, length);
 		} else {
 			new->data = xmalloc(length + D6_OPT_DATA);
 			new->data[D6_OPT_CODE] = optflag->code >> 8;
 			new->data[D6_OPT_CODE + 1] = optflag->code & 0xff;
 			new->data[D6_OPT_LEN] = length >> 8;
 			new->data[D6_OPT_LEN + 1] = length & 0xff;
-			memcpy(new->data + D6_OPT_DATA, (allocated ? allocated : buffer),
+			memcpy(new->data + D6_OPT_DATA, buffer,
 					length);
 		}
 
@@ -451,6 +476,8 @@ static NOINLINE void attach_option(
 			/* actually 255 is ok too, but adding a space can overlow it */
 
 			existing->data = xrealloc(existing->data, OPT_DATA + 1 + old_len + length);
+// So far dhcp_optflags[] has no OPTION_STRING[_HOST] | OPTION_LIST items
+#if 0
 			if ((optflag->flags & OPTION_TYPE_MASK) == OPTION_STRING
 			 || (optflag->flags & OPTION_TYPE_MASK) == OPTION_STRING_HOST
 			) {
@@ -458,7 +485,9 @@ static NOINLINE void attach_option(
 				existing->data[OPT_DATA + old_len] = ' ';
 				old_len++;
 			}
-			memcpy(existing->data + OPT_DATA + old_len, (allocated ? allocated : buffer), length);
+#endif
+
+			memcpy(existing->data + OPT_DATA + old_len, buffer, length);
 			existing->data[OPT_LEN] = old_len + length;
 		} /* else, ignore the data, we could put this in a second option in the future */
 	} /* else, ignore the new data */
@@ -532,7 +561,7 @@ int FAST_FUNC udhcp_str2optset(const char *const_str, void *arg,
 			if (retval)
 				retval = udhcp_str2nip(val, buffer + 4);
 			break;
-case_OPTION_STRING:
+ case_OPTION_STRING:
 		case OPTION_STRING:
 		case OPTION_STRING_HOST:
 #if ENABLE_FEATURE_UDHCP_RFC3397

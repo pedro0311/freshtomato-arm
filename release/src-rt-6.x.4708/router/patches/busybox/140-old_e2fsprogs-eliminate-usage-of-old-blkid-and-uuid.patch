@@ -1,6 +1,6 @@
 --- busybox/include/libbb.h
 +++ busybox/include/libbb.h
-@@ -988,6 +988,10 @@
+@@ -1012,6 +1012,10 @@
  
  /* Generate a UUID */
  void generate_uuid(uint8_t *buf) FAST_FUNC;

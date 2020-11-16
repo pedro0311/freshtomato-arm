@@ -9,7 +9,7 @@
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
 //config:config WATCHDOG
-//config:	bool "watchdog (5.1 kb)"
+//config:	bool "watchdog (5.3 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
@@ -64,7 +64,7 @@ static void shutdown_watchdog(void)
 
 static void shutdown_on_signal(int sig UNUSED_PARAM)
 {
-	remove_pidfile(CONFIG_PID_FILE_PATH "/watchdog.pid");
+	remove_pidfile_std_path_and_ext("watchdog");
 	shutdown_watchdog();
 	_exit(EXIT_SUCCESS);
 }
@@ -136,7 +136,7 @@ int watchdog_main(int argc UNUSED_PARAM, char **argv)
 		stimer_duration, htimer_duration * 1000);
 #endif
 
-	write_pidfile(CONFIG_PID_FILE_PATH "/watchdog.pid");
+	write_pidfile_std_path_and_ext("watchdog");
 
 	while (1) {
 		/*

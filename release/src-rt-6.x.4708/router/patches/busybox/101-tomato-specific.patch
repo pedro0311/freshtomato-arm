@@ -1,6 +1,6 @@
 --- busybox/modutils/modprobe.c
 +++ busybox/modutils/modprobe.c
-@@ -453,7 +453,7 @@
+@@ -452,7 +452,7 @@
  		if (option_mask32 & OPT_REMOVE) {
  			/* modprobe -r */
  			if (m2->flags & MODULE_FLAG_LOADED) {
@@ -28,22 +28,22 @@
  	[OPTION_STRING          ] = 1,
  	[OPTION_STRING_HOST     ] = 1,
  #if ENABLE_FEATURE_UDHCP_RFC3397
-@@ -1110,11 +1111,11 @@
- 	bb_error_msg("performing DHCP renew");
- 	switch (state) {
+@@ -1118,11 +1119,11 @@
+ 	bb_info_msg("performing DHCP renew");
+ 	switch (client_data.state) {
  	case BOUND:
 -		change_listen_mode(LISTEN_KERNEL);
 +		change_listen_mode(LISTEN_RAW);
  	case RENEWING:
  	case REBINDING:
--		state = RENEW_REQUESTED;
+-		client_data.state = RENEW_REQUESTED;
 -		break;
-+		//state = RENEW_REQUESTED;
++		//client_data.state = RENEW_REQUESTED;
 +		//break;
  	case RENEW_REQUESTED: /* impatient are we? fine, square 1 */
  		udhcp_run_script(NULL, "deconfig");
  	case REQUESTING:
-@@ -1220,6 +1221,7 @@
+@@ -1228,6 +1229,7 @@
  //usage:     "\n			-x 0x3d:0100BEEFC0FFEE - option 61 (client id)"
  //usage:     "\n			-x 14:'\"dumpfile\"' - option 14 (shell-quoted)"
  //usage:     "\n	-F NAME		Ask server to update DNS mapping for NAME"
@@ -51,32 +51,32 @@
  //usage:     "\n	-V VENDOR	Vendor identifier (default 'udhcp VERSION')"
  //usage:     "\n	-C		Don't send MAC as client identifier"
  //usage:	IF_UDHCP_VERBOSE(
-@@ -1505,7 +1507,7 @@
+@@ -1520,7 +1522,7 @@
  				/* 1/2 lease passed, enter renewing state */
- 				state = RENEWING;
- 				client_config.first_secs = 0; /* make secs field count from 0 */
+ 				client_data.state = RENEWING;
+ 				client_data.first_secs = 0; /* make secs field count from 0 */
 -				change_listen_mode(LISTEN_KERNEL);
 +				change_listen_mode(LISTEN_RAW);
  				log1("entering renew state");
  				/* fall right through */
  			case RENEW_REQUESTED: /* manual (SIGUSR1) renew */
-@@ -1574,7 +1576,7 @@
+@@ -1589,7 +1591,7 @@
  		switch (udhcp_sp_read()) {
  		case SIGUSR1:
- 			client_config.first_secs = 0; /* make secs field count from 0 */
+ 			client_data.first_secs = 0; /* make secs field count from 0 */
 -			already_waited_sec = 0;
 +			//already_waited_sec = 0;	/* breaks tomato renew button */
  			perform_renew();
- 			if (state == RENEW_REQUESTED) {
+ 			if (client_data.state == RENEW_REQUESTED) {
  				/* We might be either on the same network
-@@ -1587,8 +1589,8 @@
- 				 * (Ab)use -A TIMEOUT value (usually 20 sec)
- 				 * as a cap on the timeout.
+@@ -1600,8 +1602,8 @@
+ 				 * is not too big, or else we can send
+ 				 * futile renew requests for hours.
  				 */
--				if (timeout > tryagain_timeout)
--					timeout = tryagain_timeout;
-+				//if (timeout > tryagain_timeout)	/* breaks tomato renew button */
-+					//timeout = tryagain_timeout;	/* breaks tomato renew button */
+-				if (timeout > 60)
+-					timeout = 60;
++				//if (timeout > 60)	/* breaks tomato renew button */
++					//timeout = 60;	/* breaks tomato renew button */
  				goto case_RENEW_REQUESTED;
  			}
  			/* Start things over */

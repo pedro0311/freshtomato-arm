@@ -1,6 +1,6 @@
 --- busybox/networking/udhcp/common.h
 +++ busybox/networking/udhcp/common.h
-@@ -323,7 +323,7 @@
+@@ -322,7 +322,7 @@
  void udhcp_sp_fd_set(struct pollfd *pfds, int extra_fd) FAST_FUNC;
  int udhcp_sp_read(void) FAST_FUNC;
  
@@ -11,35 +11,35 @@
  
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -616,7 +616,10 @@
+@@ -624,7 +624,10 @@
  {
  	int i, end, len;
  
 -	udhcp_add_simple_option(packet, DHCP_MAX_SIZE, htons(IP_UDP_DHCP_SIZE));
 +	len = sizeof(struct ip_udp_dhcp_packet);
-+	if (client_config.client_mtu == 0 ||
-+	    client_config.client_mtu > len)
++	if (client_data.client_mtu == 0 ||
++	    client_data.client_mtu > len)
 +		udhcp_add_simple_option(packet, DHCP_MAX_SIZE, htons(len));
  
  	/* Add a "param req" option with the list of options we'd like to have
  	 * from stubborn DHCP servers. Pull the data from the struct in common.c.
-@@ -1343,7 +1346,8 @@
- 	if (udhcp_read_interface(client_config.interface,
- 			&client_config.ifindex,
+@@ -1356,7 +1359,8 @@
+ 	if (udhcp_read_interface(client_data.interface,
+ 			&client_data.ifindex,
  			NULL,
--			client_config.client_mac)
-+			client_config.client_mac,
-+			&client_config.client_mtu)
+-			client_data.client_mac)
++			client_data.client_mac,
++			&client_data.client_mtu)
  	) {
  		return 1;
  	}
-@@ -1448,7 +1452,8 @@
- 			if (udhcp_read_interface(client_config.interface,
- 					&client_config.ifindex,
+@@ -1457,7 +1461,8 @@
+ 			if (udhcp_read_interface(client_data.interface,
+ 					&client_data.ifindex,
  					NULL,
--					client_config.client_mac)
-+					client_config.client_mac,
-+					&client_config.client_mtu)
+-					client_data.client_mac)
++					client_data.client_mac,
++					&client_data.client_mtu)
  			) {
  				goto ret0; /* iface is gone? */
  			}
@@ -47,7 +47,7 @@
 +++ busybox/networking/udhcp/dhcpc.h
 @@ -9,6 +9,7 @@
  
- struct client_config_t {
+ struct client_data_t {
  	uint8_t client_mac[6];          /* Our mac address */
 +	uint16_t client_mtu;		/* Our mtu */
  	IF_FEATURE_UDHCP_PORT(uint16_t port;)
@@ -55,12 +55,12 @@
  	uint8_t opt_mask[256 / 8];      /* Bitmask of options to send (-O option) */
 --- busybox/networking/udhcp/dhcpd.c
 +++ busybox/networking/udhcp/dhcpd.c
-@@ -890,7 +890,8 @@
- 	if (udhcp_read_interface(server_config.interface,
- 			&server_config.ifindex,
- 			(server_config.server_nip == 0 ? &server_config.server_nip : NULL),
--			server_config.server_mac)
-+			server_config.server_mac,
+@@ -939,7 +939,8 @@
+ 	if (udhcp_read_interface(server_data.interface,
+ 			&server_data.ifindex,
+ 			(server_data.server_nip == 0 ? &server_data.server_nip : NULL),
+-			server_data.server_mac)
++			server_data.server_mac,
 +			NULL)
  	) {
  		retval = 1;
