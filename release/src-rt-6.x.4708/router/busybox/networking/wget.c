@@ -9,7 +9,7 @@
  * Kuhn's copyrights are licensed GPLv2-or-later.  File as a whole remains GPLv2.
  */
 //config:config WGET
-//config:	bool "wget (35 kb)"
+//config:	bool "wget (38 kb)"
 //config:	default y
 //config:	help
 //config:	wget is a utility for non-interactive download of files from HTTP
@@ -123,14 +123,14 @@
 //usage:#define wget_trivial_usage
 //usage:	IF_FEATURE_WGET_LONG_OPTIONS(
 //usage:       "[-c|--continue] [--spider] [-q|--quiet] [-O|--output-document FILE]\n"
-//usage:       "	[--header 'header: value'] [-Y|--proxy on/off] [-P DIR]\n"
+//usage:       "	[-o|--output-file FILE] [--header 'header: value'] [-Y|--proxy on/off]\n"
 /* Since we ignore these opts, we don't show them in --help */
 /* //usage:    "	[--no-check-certificate] [--no-cache] [--passive-ftp] [-t TRIES]" */
 /* //usage:    "	[-nv] [-nc] [-nH] [-np]" */
-//usage:       "	[-S|--server-response] [-U|--user-agent AGENT]" IF_FEATURE_WGET_TIMEOUT(" [-T SEC]") " URL..."
+//usage:       "	[-P DIR] [-S|--server-response] [-U|--user-agent AGENT]" IF_FEATURE_WGET_TIMEOUT(" [-T SEC]") " URL..."
 //usage:	)
 //usage:	IF_NOT_FEATURE_WGET_LONG_OPTIONS(
-//usage:       "[-cq] [-O FILE] [-Y on/off] [-P DIR] [-S] [-U AGENT]"
+//usage:       "[-cq] [-O FILE] [-o FILE] [-Y on/off] [-P DIR] [-S] [-U AGENT]"
 //usage:			IF_FEATURE_WGET_TIMEOUT(" [-T SEC]") " URL..."
 //usage:	)
 //usage:#define wget_full_usage "\n\n"
@@ -147,6 +147,7 @@
 //usage:     "\n	-T SEC		Network read timeout is SEC seconds"
 //usage:	)
 //usage:     "\n	-O FILE		Save to FILE ('-' for stdout)"
+//usage:     "\n	-o FILE		Log messages to FILE"
 //usage:     "\n	-U STR		Use STR for User-Agent header"
 //usage:     "\n	-Y on/off	Use proxy"
 
@@ -231,22 +232,23 @@ struct globals {
 	unsigned char user_headers; /* Headers mentioned by the user */
 #endif
 	char *fname_out;        /* where to direct output (-O) */
+	char *fname_log;        /* where to direct log (-o) */
 	const char *proxy_flag; /* Use proxies if env vars are set */
 	const char *user_agent; /* "User-Agent" header field */
+	int output_fd;
+	int log_fd;
+	int o_flags;
 #if ENABLE_FEATURE_WGET_TIMEOUT
 	unsigned timeout_seconds;
-	bool die_if_timed_out;
+	smallint die_if_timed_out;
 #endif
-	int output_fd;
-	int o_flags;
 	smallint chunked;         /* chunked transfer encoding */
 	smallint got_clen;        /* got content-length: from server  */
 	/* Local downloads do benefit from big buffer.
 	 * With 512 byte buffer, it was measured to be
 	 * an order of magnitude slower than with big one.
 	 */
-	uint64_t just_to_align_next_member;
-	char wget_buf[CONFIG_FEATURE_COPYBUF_KB*1024];
+	char wget_buf[CONFIG_FEATURE_COPYBUF_KB*1024] ALIGNED(16);
 } FIX_ALIASING;
 #define G (*ptr_to_globals)
 #define INIT_G() do { \
@@ -263,16 +265,17 @@ enum {
 	WGET_OPT_QUIET      = (1 << 1),
 	WGET_OPT_SERVER_RESPONSE = (1 << 2),
 	WGET_OPT_OUTNAME    = (1 << 3),
-	WGET_OPT_PREFIX     = (1 << 4),
-	WGET_OPT_PROXY      = (1 << 5),
-	WGET_OPT_USER_AGENT = (1 << 6),
-	WGET_OPT_NETWORK_READ_TIMEOUT = (1 << 7),
-	WGET_OPT_RETRIES    = (1 << 8),
-	WGET_OPT_nsomething = (1 << 9),
-	WGET_OPT_HEADER     = (1 << 10) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
-	WGET_OPT_POST_DATA  = (1 << 11) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
-	WGET_OPT_SPIDER     = (1 << 12) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
-	WGET_OPT_NO_CHECK_CERT = (1 << 13) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
+	WGET_OPT_LOGNAME    = (1 << 4),
+	WGET_OPT_PREFIX     = (1 << 5),
+	WGET_OPT_PROXY      = (1 << 6),
+	WGET_OPT_USER_AGENT = (1 << 7),
+	WGET_OPT_NETWORK_READ_TIMEOUT = (1 << 8),
+	WGET_OPT_RETRIES    = (1 << 9),
+	WGET_OPT_nsomething = (1 << 10),
+	WGET_OPT_HEADER     = (1 << 11) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
+	WGET_OPT_POST_DATA  = (1 << 12) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
+	WGET_OPT_SPIDER     = (1 << 13) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
+	WGET_OPT_NO_CHECK_CERT = (1 << 14) * ENABLE_FEATURE_WGET_LONG_OPTIONS,
 };
 
 enum {
@@ -283,13 +286,19 @@ enum {
 #if ENABLE_FEATURE_WGET_STATUSBAR
 static void progress_meter(int flag)
 {
+	int notty;
+
 	if (option_mask32 & WGET_OPT_QUIET)
+		return;
+
+	/* Don't save progress to log file */
+	if (G.log_fd >= 0)
 		return;
 
 	if (flag == PROGRESS_START)
 		bb_progress_init(&G.pmt, G.curfile);
 
-	bb_progress_update(&G.pmt,
+	notty = bb_progress_update(&G.pmt,
 			G.beg_range,
 			G.transferred,
 			(G.chunked || !G.got_clen) ? 0 : G.beg_range + G.transferred + G.content_len
@@ -297,12 +306,13 @@ static void progress_meter(int flag)
 
 	if (flag == PROGRESS_END) {
 		bb_progress_free(&G.pmt);
-		bb_putchar_stderr('\n');
+		if (notty == 0)
+			bb_putchar_stderr('\n'); /* it's tty */
 		G.transferred = 0;
 	}
 }
 #else
-static ALWAYS_INLINE void progress_meter(int flag UNUSED_PARAM) { }
+static ALWAYS_INLINE void progress_meter(int flag UNUSED_PARAM) {}
 #endif
 
 
@@ -346,9 +356,8 @@ static void strip_ipv6_scope_id(char *host)
 /* Base64-encode character string. */
 static char *base64enc(const char *str)
 {
-	unsigned len = strlen(str);
-	if (len > sizeof(G.wget_buf)/4*3 - 10) /* paranoia */
-		len = sizeof(G.wget_buf)/4*3 - 10;
+	/* paranoia */
+	unsigned len = strnlen(str, sizeof(G.wget_buf)/4*3 - 10);
 	bb_uuencode(G.wget_buf, str, len, bb_uuenc_tbl_base64);
 	return G.wget_buf;
 }
@@ -379,9 +388,6 @@ static void set_alarm(void)
  * is_ip_address() attempts to verify whether or not a string
  * contains an IPv4 or IPv6 address (vs. an FQDN).  The result
  * of inet_pton() can be used to determine this.
- *
- * TODO add proper error checking when inet_pton() returns -1
- * (some form of system error has occurred, and errno is set)
  */
 static int is_ip_address(const char *string)
 {
@@ -716,8 +722,10 @@ static void spawn_ssl_client(const char *host, int network_fd, int flags)
 	int pid;
 	char *servername, *p;
 
-	if (!(option_mask32 & WGET_OPT_NO_CHECK_CERT))
+	if (!(option_mask32 & WGET_OPT_NO_CHECK_CERT)) {
+		option_mask32 |= WGET_OPT_NO_CHECK_CERT;
 		bb_error_msg("note: TLS certificate validation not implemented");
+	}
 
 	servername = xstrdup(host);
 	p = strrchr(servername, ':');
@@ -865,6 +873,12 @@ static void NOINLINE retrieve_file_data(FILE *dfp)
 	polldata.fd = fileno(dfp);
 	polldata.events = POLLIN | POLLPRI;
 #endif
+	if (!(option_mask32 & WGET_OPT_QUIET)) {
+		if (G.output_fd == 1)
+			fprintf(stderr, "writing to stdout\n");
+		else
+			fprintf(stderr, "saving to '%s'\n", G.fname_out);
+	}
 	progress_meter(PROGRESS_START);
 
 	if (G.chunked)
@@ -995,6 +1009,15 @@ static void NOINLINE retrieve_file_data(FILE *dfp)
 		 */
 	}
 
+	/* Draw full bar and free its resources */
+	G.chunked = 0;  /* makes it show 100% even for chunked download */
+	G.got_clen = 1; /* makes it show 100% even for download of (formerly) unknown size */
+	progress_meter(PROGRESS_END);
+	if (G.content_len != 0) {
+		bb_perror_msg_and_die("connection closed prematurely");
+		/* GNU wget says "DATE TIME (NN MB/s) - Connection closed at byte NNN. Retrying." */
+	}
+
 	/* If -c failed, we restart from the beginning,
 	 * but we do not truncate file then, we do it only now, at the end.
 	 * This lets user to ^C if his 99% complete 10 GB file download
@@ -1006,10 +1029,12 @@ static void NOINLINE retrieve_file_data(FILE *dfp)
 			ftruncate(G.output_fd, pos);
 	}
 
-	/* Draw full bar and free its resources */
-	G.chunked = 0;  /* makes it show 100% even for chunked download */
-	G.got_clen = 1; /* makes it show 100% even for download of (formerly) unknown size */
-	progress_meter(PROGRESS_END);
+	if (!(option_mask32 & WGET_OPT_QUIET)) {
+		if (G.output_fd == 1)
+			fprintf(stderr, "written to stdout\n");
+		else
+			fprintf(stderr, "'%s' saved\n", G.fname_out);
+	}
 }
 
 static void download_one_url(const char *url)
@@ -1084,7 +1109,7 @@ static void download_one_url(const char *url)
 		 * We are not sure it exists on remote side */
 	}
 
-	redir_limit = 5;
+	redir_limit = 16;
  resolve_lsa:
 	lsa = xhost2sockaddr(server.host, server.port);
 	if (!(option_mask32 & WGET_OPT_QUIET)) {
@@ -1369,6 +1394,9 @@ However, in real world it was observed that some web servers
 			xclose(G.output_fd);
 			G.output_fd = -1;
 		}
+	} else {
+		if (!(option_mask32 & WGET_OPT_QUIET))
+			fprintf(stderr, "remote file exists\n");
 	}
 
 	if (dfp != sfp) {
@@ -1398,6 +1426,7 @@ int wget_main(int argc UNUSED_PARAM, char **argv)
 		"quiet\0"            No_argument       "q"
 		"server-response\0"  No_argument       "S"
 		"output-document\0"  Required_argument "O"
+		"output-file\0"      Required_argument "o"
 		"directory-prefix\0" Required_argument "P"
 		"proxy\0"            Required_argument "Y"
 		"user-agent\0"       Required_argument "U"
@@ -1438,10 +1467,8 @@ IF_DESKTOP(	"no-parent\0"        No_argument       "\xf0")
 	G.proxy_flag = "on";   /* use proxies if env vars are set */
 	G.user_agent = "Wget"; /* "User-Agent" header field */
 
-#if ENABLE_FEATURE_WGET_LONG_OPTIONS
-#endif
 	GETOPT32(argv, "^"
-		"cqSO:P:Y:U:T:+"
+		"cqSO:o:P:Y:U:T:+"
 		/*ignored:*/ "t:"
 		/*ignored:*/ "n::"
 		/* wget has exactly four -n<letter> opts, all of which we can ignore:
@@ -1456,7 +1483,7 @@ IF_DESKTOP(	"no-parent\0"        No_argument       "\xf0")
 		"-1" /* at least one URL */
 		IF_FEATURE_WGET_LONG_OPTIONS(":\xff::") /* --header is a list */
 		LONGOPTS
-		, &G.fname_out, &G.dir_prefix,
+		, &G.fname_out, &G.fname_log, &G.dir_prefix,
 		&G.proxy_flag, &G.user_agent,
 		IF_FEATURE_WGET_TIMEOUT(&G.timeout_seconds) IF_NOT_FEATURE_WGET_TIMEOUT(NULL),
 		NULL, /* -t RETRIES */
@@ -1518,11 +1545,24 @@ IF_DESKTOP(	"no-parent\0"        No_argument       "\xf0")
 		G.o_flags = O_WRONLY | O_CREAT | O_TRUNC;
 	}
 
+	G.log_fd = -1;
+	if (G.fname_log) { /* -o FILE ? */
+		if (!LONE_DASH(G.fname_log)) { /* not -o - ? */
+			/* compat with wget: -o FILE can overwrite */
+			G.log_fd = xopen(G.fname_log, O_WRONLY | O_CREAT | O_TRUNC);
+			/* Redirect only stderr to log file, so -O - will work */
+			xdup2(G.log_fd, STDERR_FILENO);
+		}
+	}
+
 	while (*argv)
 		download_one_url(*argv++);
 
 	if (G.output_fd >= 0)
 		xclose(G.output_fd);
+
+	if (G.log_fd >= 0)
+		xclose(G.log_fd);
 
 #if ENABLE_FEATURE_CLEAN_UP && ENABLE_FEATURE_WGET_LONG_OPTIONS
 	free(G.extra_headers);

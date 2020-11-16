@@ -8,7 +8,7 @@
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
 //config:config LSMOD
-//config:	bool "lsmod (4.3 kb)"
+//config:	bool "lsmod (1.9 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
@@ -66,7 +66,10 @@ static void check_tainted(void)
 	}
 }
 #else
-static void check_tainted(void) { putchar('\n'); }
+static ALWAYS_INLINE void check_tainted(void)
+{
+	putchar('\n');
+}
 #endif
 
 int lsmod_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;

@@ -15,7 +15,7 @@
  * http://www.opengroup.org/onlinepubs/007904975/utilities/xargs.html
  */
 //config:config XARGS
-//config:	bool "xargs (6.7 kb)"
+//config:	bool "xargs (7.2 kb)"
 //config:	default y
 //config:	help
 //config:	xargs is used to execute a specified command for
@@ -204,14 +204,15 @@ static int xargs_exec(void)
 		status = (errno == ENOENT) ? 127 : 126;
 	}
 	else if (status >= 0x180) {
-		bb_error_msg("'%s' terminated by signal %d",
+		bb_error_msg("'%s' terminated by signal %u",
 			G.args[0], status - 0x180);
 		status = 125;
 	}
 	else if (status != 0) {
 		if (status == 255) {
 			bb_error_msg("%s: exited with status 255; aborting", G.args[0]);
-			return 124;
+			status = 124;
+			goto ret;
 		}
 		/* "123 if any invocation of the command exited with status 1-125"
 		 * This implies that nonzero exit code is remembered,
@@ -220,7 +221,7 @@ static int xargs_exec(void)
 		G.xargs_exitcode = 123;
 		status = 0;
 	}
-
+ ret:
 	if (status != 0)
 		G.xargs_exitcode = status;
 	return status;
@@ -515,23 +516,23 @@ static int xargs_ask_confirmation(void)
 //usage:       "[OPTIONS] [PROG ARGS]"
 //usage:#define xargs_full_usage "\n\n"
 //usage:       "Run PROG on every item given by stdin\n"
-//usage:	IF_FEATURE_XARGS_SUPPORT_CONFIRMATION(
-//usage:     "\n	-p	Ask user whether to run each command"
-//usage:	)
-//usage:     "\n	-r	Don't run command if input is empty"
 //usage:	IF_FEATURE_XARGS_SUPPORT_ZERO_TERM(
-//usage:     "\n	-0	Input is separated by NUL characters"
+//usage:     "\n	-0	Input is separated by NULs"
 //usage:	)
 //usage:	IF_FEATURE_XARGS_SUPPORT_ARGS_FILE(
 //usage:     "\n	-a FILE	Read from FILE instead of stdin"
 //usage:	)
+//usage:     "\n	-r	Don't run command if input is empty"
 //usage:     "\n	-t	Print the command on stderr before execution"
-//usage:     "\n	-e[STR]	STR stops input processing"
-//usage:     "\n	-n N	Pass no more than N args to PROG"
-//usage:     "\n	-s N	Pass command line of no more than N bytes"
+//usage:	IF_FEATURE_XARGS_SUPPORT_CONFIRMATION(
+//usage:     "\n	-p	Ask user whether to run each command"
+//usage:	)
+//usage:     "\n	-E STR,-e[STR]	STR stops input processing"
 //usage:	IF_FEATURE_XARGS_SUPPORT_REPL_STR(
 //usage:     "\n	-I STR	Replace STR within PROG ARGS with input line"
 //usage:	)
+//usage:     "\n	-n N	Pass no more than N args to PROG"
+//usage:     "\n	-s N	Pass command line of no more than N bytes"
 //usage:	IF_FEATURE_XARGS_SUPPORT_PARALLEL(
 //usage:     "\n	-P N	Run up to N PROGs in parallel"
 //usage:	)

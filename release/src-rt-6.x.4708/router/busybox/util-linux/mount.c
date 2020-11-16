@@ -18,7 +18,7 @@
 //
 
 //config:config MOUNT
-//config:	bool "mount (30 kb)"
+//config:	bool "mount (23 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
@@ -1194,7 +1194,10 @@ static int daemonize(void)
 	return 1;
 }
 #else
-static inline int daemonize(void) { return -ENOSYS; }
+static inline int daemonize(void)
+{
+	return -ENOSYS;
+}
 #endif
 
 /* TODO */
