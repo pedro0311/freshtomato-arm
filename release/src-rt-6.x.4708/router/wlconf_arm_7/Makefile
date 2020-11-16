@@ -18,6 +18,11 @@ CFLAGS	+= -I. -I$(TOP)/shared -I$(SRCBASE)/include ${WLAN_StdIncPathA} -I$(SRCBA
 CFLAGS	+= $(WLAN_ComponentIncPath)
 #CFLAGS	+= -g -DDEBUG
 CFLAGS	+= -s
+#for Tomato ARM SDK7
+ifeq ($(TCONFIG_BCMARM),y)
+CFLAGS += -D__CONFIG_TOAD__
+CFLAGS += -DMFP
+endif
 ifeq ($(CONFIG_RTR_OPTIMIZE_SIZE),y)
 CFLAGS  += -Os
 else
@@ -25,10 +30,6 @@ CFLAGS  += -O2
 endif
 LDFLAGS	+= -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 LDFLAGS += -lgcc_s
-
-ifeq ($(TCONFIG_QTN),y)
-LDFLAGS += -L$(TOP)/libqcsapi_client -lqcsapi_client
-endif
 
 vpath %.c $(SRCBASE)/shared $(WLAN_ComponentSrcDirs)
 
