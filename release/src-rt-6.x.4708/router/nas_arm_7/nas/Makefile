@@ -1,7 +1,7 @@
 #
 # 802.1x Authenticator (Network Access Server) Embedded Linux Build Makefile
 #
-# Copyright (C) 2014, Broadcom Corporation
+# Copyright (C) 2015, Broadcom Corporation
 # All Rights Reserved.
 # 
 # This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -11,6 +11,9 @@
 #
 # $Id: Makefile 403251 2013-05-20 05:15:55Z $
 #
+
+include ../../common.mak
+include $(SRCBASE)/router/.config
 
 CFLAGS	+= -I.. -I$(SRCBASE)/include ${WLAN_StdIncPathA} -I$(SRCBASE)/common/include -I$(SRCBASE)/router/shared -Wall -Werror
 CFLAGS	+= $(WLAN_ComponentIncPath)
@@ -22,7 +25,9 @@ CFLAGS  += -DNAS_WKSP_BUILD_NAS_SUPPL
 #CFLAGS  += -DNAS_GTK_PER_STA
 CFLAGS  += -DNAS_RADIUS
 CFLAGS  += -DNAS_WKSP_ON_DEMAND
-
+ifeq ($(TCONFIG_IPV6),y)
+CFLAGS += -DNAS_IPV6
+endif
 
 CFLAGS	+= -DBCMSUPPL
 
@@ -34,10 +39,6 @@ LDFLAGS += -L$(TOP)/shared -L$(INSTALLDIR)/shared/usr/lib -lshared
 LDFLAGS += -L$(TOP)/libbcmcrypto -L$(INSTALLDIR)/libbcmcrypto/usr/lib -lbcmcrypto
 LDFLAGS += -lgcc_s
 
-include ../../.config
-ifeq ($(TCONFIG_QTN),y)
-LDFLAGS += -L$(TOP)/libqcsapi_client -lqcsapi_client
-endif
 
 vpath %.c $(SRCBASE)/router/nas${BCMEX}$(EX7) $(SRCBASE)/shared $(SRCBASE)/router/shared
 
