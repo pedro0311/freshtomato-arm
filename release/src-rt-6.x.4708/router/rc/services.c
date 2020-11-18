@@ -2908,13 +2908,13 @@ void start_services(void)
 	start_nfs();
 #endif
 
-#ifdef TCONFIG_FANCTRL
-	start_phy_tempsense();
-#endif
-
 #ifdef TCONFIG_BCMARM
 	/* do LED setup for Router */
 	led_setup();
+#endif
+
+#ifdef TCONFIG_FANCTRL
+	start_phy_tempsense();
 #endif
 
 #ifdef CONFIG_BCM7
