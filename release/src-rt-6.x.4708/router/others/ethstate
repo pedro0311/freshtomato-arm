@@ -1,5 +1,6 @@
 #!/bin/sh
 
+[ -f /tmp/ethernet.state.tmp ] && rm /tmp/ethernet.state.tmp
 [ -f /tmp/ethernet.state1 ] && rm /tmp/ethernet.state1
 [ -f /tmp/ethernet.state2 ] && rm /tmp/ethernet.state2
 [ -f /tmp/ethernet.state3 ] && rm /tmp/ethernet.state3
@@ -52,6 +53,7 @@ REVERT=$(nvram get lan_invert)
 
 cat /tmp/ethernet.state3 >> /tmp/ethernet.state
 
+[ -f /tmp/ethernet.state.tmp ] && rm /tmp/ethernet.state.tmp
 [ -f /tmp/ethernet.state1 ] && rm /tmp/ethernet.state1
 [ -f /tmp/ethernet.state2 ] && rm /tmp/ethernet.state2
 [ -f /tmp/ethernet.state3 ] && rm /tmp/ethernet.state3

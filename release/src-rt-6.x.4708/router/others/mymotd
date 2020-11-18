@@ -44,7 +44,7 @@
 		[ "$WAN2PDHCP" -eq 1 ] && [ "$WAN2PROTO" == "pppoe" ] || [ "$WAN2PROTO" == "pptp" ] || [ "$WAN2PROTO" == "l2tp" ] && WAN2IP="ppp_get_ip" || WAN2IP="ipaddr"
 
 		[ ! "$WANPROTO" == "disabled" ] && WAN1=$(NV wan_$WANIP | /bin/grep -v "0.0.0.0" | /usr/bin/wc -w)
-		[ ! "$WAN2PROTO" == "disabled" ] && WAN2=$(NV wan2_$WANIP | /bin/grep -v "0.0.0.0" | /usr/bin/wc -w)
+		[ ! "$WAN2PROTO" == "disabled" ] && WAN2=$(NV wan2_$WAN2IP | /bin/grep -v "0.0.0.0" | /usr/bin/wc -w)
 
 		[ "$(/bin/nvram dump | /bin/grep 'wan3_' | /usr/bin/wc -l)" -gt 0 ] && {
 			MULTIWAN=1
