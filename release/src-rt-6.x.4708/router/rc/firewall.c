@@ -874,7 +874,6 @@ static void nat_table(void)
 				modprobe("ipt_REDIRECT");
 				for (i = 0; i < BRIDGE_COUNT; i++) {
 					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
-						ipt_write("-A PREROUTING -p tcp -m tcp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
 						ipt_write("-A PREROUTING -p udp -m udp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
 					}
 				}

@@ -62,8 +62,8 @@ diff -daurpN pppd/pppd/chap-new.c pppd/pppd/chap-new.c
  	int secret_len;
 -
 +#ifdef CHAPMS
-+    char nametmp[MAXNAMELEN];
-+    	if (ms_ignore_domain && strrchr(name, '\\')) {
++	char nametmp[MAXNAMELEN];
++	if (ms_ignore_domain && strrchr(name, '\\')) {
 +		strcpy(nametmp, strrchr(name, '\\') + 1);
 +		strcpy(name, nametmp);
 +	}

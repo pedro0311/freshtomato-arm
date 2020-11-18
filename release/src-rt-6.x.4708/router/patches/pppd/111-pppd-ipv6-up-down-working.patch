@@ -4,9 +4,9 @@
  static bool ask_for_local;		/* request our address from peer */
  static char vj_value[8];		/* string form of vj option value */
  static char netmask_str[20];		/* string form of netmask value */
-+static char path_ipup[MAXPATHLEN] = _PATH_IPUP;/* pathname of ip-up script */
-+static char path_ipdown[MAXPATHLEN] = _PATH_IPDOWN;/* pathname of ip-down script */
-+static char path_ippreup[MAXPATHLEN] = _PATH_IPPREUP;/* pathname of ip-pre-up script */
++static char path_ipup[MAXPATHLEN] = _PATH_IPUP; /* pathname of ip-up script */
++static char path_ipdown[MAXPATHLEN] = _PATH_IPDOWN; /* pathname of ip-down script */
++static char path_ippreup[MAXPATHLEN] = _PATH_IPPREUP; /* pathname of ip-pre-up script */
  
  /*
   * Callbacks for fsm code.  (CI = Configuration Information)
@@ -56,8 +56,8 @@
  
  /* local vars */
  static int ipv6cp_is_up;
-+static char path_ipv6up[MAXPATHLEN] = _PATH_IPV6UP;	/* pathname of ipv6-up script */
-+static char path_ipv6down[MAXPATHLEN] = _PATH_IPV6DOWN;	/* pathname of ipv6-down script */
++static char path_ipv6up[MAXPATHLEN] = _PATH_IPV6UP; /* pathname of ipv6-up script */
++static char path_ipv6down[MAXPATHLEN] = _PATH_IPV6DOWN; /* pathname of ipv6-down script */
  
  /* Hook for a plugin to know when IPv6 protocol has come up */
  void (*ipv6_up_hook) __P((void)) = NULL;
