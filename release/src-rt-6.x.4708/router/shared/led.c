@@ -160,7 +160,7 @@ int do_led(int which, int mode)
 	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ws880[]	= { 255,    6,   -12,  255,  255,    0,    1,   14,  255,  255};
-	static int r1d[]	= { 255,  255,   255,  255,  255,    1,   -8,  255,  255,  255};
+	static int r1d[]	= { 255,    1,   255,    2,  255,    3,   -8,  255,  255,  255};
 #if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* 8 bit shift register (SPI GPIO 0 to 7), active HIGH */
 #endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
@@ -405,10 +405,9 @@ int do_led(int which, int mode)
 	case MODEL_WS880:
 		b = ws880[which];
 		break;
-	case MODEL_R1D:
-		if (which == LED_DIAG) {
-			/* power led gpio: -2 - orange, -3 - blue */
-			b = (mode) ? 3 : 2;
+	case MODEL_R1D: /* power led gpio: 1L - red, 2L - orange, 3L - blue */
+		if (which == LED_WHITE) {
+			b = (mode) ? 3 : -2;
 			c = (mode) ? 2 : 3;
 		}
 		else {
@@ -634,6 +633,12 @@ void led_setup(void) {
 		case MODEL_R7000:
 			/* activate WAN port led */
 			set_gpio(GPIO_08, T_LOW); /* R6700v1 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			break;
+		case MODEL_R1D:
+			/* activate WAN port led */
+			set_gpio(GPIO_01, T_HIGH); /* disable red; switch to color blue (3L) with WAN up */
+			set_gpio(GPIO_02, T_HIGH); /* disable orange */
+			set_gpio(GPIO_03, T_HIGH); /* disable blue */
 			break;
 #endif /* CONFIG_BCMWL6A */
 		default:
