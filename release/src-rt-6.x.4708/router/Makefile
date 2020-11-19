@@ -1519,7 +1519,7 @@ libbcm-install:
 iproute2:
 	@$(SEP)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)"
+		EXTRACFLAGS="$(EXTRACFLAGS)"
 
 iproute2-install:
 	install -D iproute2/tc/tc $(INSTALLDIR)/iproute2/usr/sbin/tc
@@ -1531,7 +1531,7 @@ iproute2-3.x: kernel_header iptables-1.8.x
 	@$(SEP)
 	$(call patch_files,iproute2-3.x)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS) $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
+		EXTRACFLAGS="$(EXTRACFLAGS)" \
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables-1.8.x/iptables" \
 		$(PARALLEL_BUILD)
 
