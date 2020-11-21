@@ -11,28 +11,45 @@
 #include <string.h>
 
 #ifdef TCONFIG_USB
-#include <mntent.h>	/* !!TB */
+#include <mntent.h>
 #endif
 
-#define Y2K		946684800L		/* seconds since 1970 */
 
-#define ASIZE(array)	(sizeof(array) / sizeof(array[0]))
+#define Y2K			946684800L /* seconds since 1970 */
 
-#ifdef LINUX26
-#define	MTD_DEV(arg)	"/dev/mtd"#arg
-#define	MTD_BLKDEV(arg)	"/dev/mtdblock"#arg
-#define	DEV_GPIO(arg)	"/dev/gpio"#arg
+#define ASIZE(array)		(sizeof(array) / sizeof(array[0]))
+
+#define	MTD_DEV(arg)		"/dev/mtd"#arg
+#define	MTD_BLKDEV(arg)		"/dev/mtdblock"#arg
+#define	DEV_GPIO(arg)		"/dev/gpio"#arg
+
+#ifdef TCONFIG_BCMARM
+#define DISABLE_SYSLOG_OSM	0
+#define DISABLE_SYSLOG_OS	0
 #else
-#define	MTD_DEV(arg)	"/dev/mtd/"#arg
-#define	MTD_BLKDEV(arg)	"/dev/mtdblock/"#arg
-#define	DEV_GPIO(arg)	"/dev/gpio/"#arg
+#define DISABLE_SYSLOG_OSM	IF_TCONFIG_OPTIMIZE_SIZE_MORE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE_MORE(0)
+#define DISABLE_SYSLOG_OS	(DISABLE_SYSLOG_OSM | (IF_TCONFIG_OPTIMIZE_SIZE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE(0)))
 #endif
 
-/* version.c */
-extern const char *tomato_version;
-extern const char *tomato_buildtime;
-extern const char *tomato_shortver;
+#ifndef DEBUG_SYSLOG
+#define IF_NOT_DEBUG_SYSLOG(...) __VA_ARGS__
+#define IF_DEBUG_SYSLOG(...)
+#else
+#define IF_NOT_DEBUG_SYSLOG(...)
+#define IF_DEBUG_SYSLOG(...) __VA_ARGS__
+#endif
 
+#define logmsg(level, args...) \
+	do { \
+		IF_NOT_DEBUG_SYSLOG( \
+			if ((LOGMSG_DISABLE == 0) && (level < LOG_DEBUG)) \
+				syslog(level, args); \
+		) \
+		IF_DEBUG_SYSLOG( \
+			if ((LOGMSG_DISABLE == 0) && ((nvram_get_int(LOGMSG_NVDEBUG)) || (level < LOG_DEBUG))) \
+				syslog(level, args); \
+		) \
+	} while (0)
 
 #ifdef DEBUG_NOISY
 #define _dprintf		cprintf
@@ -40,48 +57,13 @@ extern const char *tomato_shortver;
 #define _dprintf(args...)	do { } while(0)
 #endif
 
-/* support up to 32 GPIO pins for buttons, leds and some other IC functions */
-#define TOMATO_GPIO_MAX 	31
-#define TOMATO_GPIO_MIN 	0
-#define T_HIGH 			1
-#define T_LOW 			0
-
-#define GPIO_00			0
-#define GPIO_01			1
-#define GPIO_02			2
-#define GPIO_03			3
-#define GPIO_04			4
-#define GPIO_05			5
-#define GPIO_06			6
-#define GPIO_07			7
-#define GPIO_08			8
-#define GPIO_09			9
-#define GPIO_10			10
-#define GPIO_11			11
-#define GPIO_12			12
-#define GPIO_13			13
-#define GPIO_14			14
-#define GPIO_15			15
-#define GPIO_16			16
-#define GPIO_17			17
-#define GPIO_18			18
-#define GPIO_19			19
-#define GPIO_20			20
-#define GPIO_21			21
-#define GPIO_22			22
-#define GPIO_23			23
-#define GPIO_24			24
-#define GPIO_25			25
-#define GPIO_26			26
-#define GPIO_27			27
-#define GPIO_28			28
-#define GPIO_29			29
-#define GPIO_30			30
-#define GPIO_31			31
-
+/* version.c */
+extern const char *tomato_version;
+extern const char *tomato_buildtime;
+extern const char *tomato_shortver;
 
 /* misc.c */
-#define	WP_DISABLED		0		/* order must be synced with def in misc.c */
+#define	WP_DISABLED		0 /* order must be synced with def in misc.c */
 #define	WP_STATIC		1
 #define	WP_DHCP			2
 #define	WP_L2TP			3
@@ -137,12 +119,9 @@ extern int get_wanx_proto(char *prefix);
 extern int get_ipv6_service(void);
 #define ipv6_enabled()	(get_ipv6_service() != IPV6_DISABLED)
 extern const char *ipv6_router_address(struct in6_addr *in6addr);
-extern int calc_6rd_local_prefix(const struct in6_addr *prefix,
-	int prefix_len, int relay_prefix_len,
-	const struct in_addr *local_ip,
-	struct in6_addr *local_prefix, int *local_prefix_len);
+extern int calc_6rd_local_prefix(const struct in6_addr *prefix, int prefix_len, int relay_prefix_len, const struct in_addr *local_ip, struct in6_addr *local_prefix, int *local_prefix_len);
 #else
-#define ipv6_enabled()	(0)
+#define ipv6_enabled()		(0)
 #endif
 extern int using_dhcpc(char *prefix);
 extern void notice_set(const char *path, const char *format, ...);
@@ -169,7 +148,6 @@ extern int get_radio(int unit);
 extern void set_radio(int on, int unit);
 extern int nvram_get_int(const char *key);
 extern int nvram_set_int(const char *key, int value);
-// extern long nvram_xget_long(const char *name, long min, long max, long def);
 extern int nvram_get_file(const char *key, const char *fname, int max);
 extern int nvram_set_file(const char *key, const char *fname, int max);
 extern int nvram_contains_word(const char *key, const char *word);
@@ -178,28 +156,25 @@ extern void nvram_commit_x(void);
 extern char *getNVRAMVar(const char *text, const int unit);
 extern int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int timeout);
 extern int mtd_getinfo(const char *mtdname, int *part, int *size);
-extern int foreach_wif(int include_vifs, void *param,
-	int (*func)(int idx, int unit, int subunit, void *param));
+extern int foreach_wif(int include_vifs, void *param, int (*func)(int idx, int unit, int subunit, void *param));
 
 /* usb.c */
 #ifdef TCONFIG_USB
-extern struct mntent *findmntents(char *file, int swp,
-	int (*func)(struct mntent *mnt, uint flags), uint flags);
-extern char *find_label_or_uuid(char *dev_name, char *label, char *uuid);
-extern void add_remove_usbhost(char *host, int add);
-
-#define DEV_DISCS_ROOT	"/dev/discs"
+#define DEV_DISCS_ROOT		"/dev/discs"
 
 /* Flags used in exec_for_host calls */
-#define EFH_1ST_HOST	0x00000001	/* func is called for the 1st time for this host */
-#define EFH_1ST_DISC	0x00000002	/* func is called for the 1st time for this disc */
-#define EFH_HUNKNOWN	0x00000004	/* host is unknown */
-#define EFH_USER	0x00000008	/* process is user-initiated - either via Web GUI or a script */
-#define EFH_SHUTDN	0x00000010	/* exec_for_host is called at shutdown - system is stopping */
-#define EFH_HP_ADD	0x00000020	/* exec_for_host is called from "add" hotplug event */
-#define EFH_HP_REMOVE	0x00000040	/* exec_for_host is called from "remove" hotplug event */
-#define EFH_PRINT	0x00000080	/* output partition list to the web response */
+#define EFH_1ST_HOST		0x00000001 /* func is called for the 1st time for this host */
+#define EFH_1ST_DISC		0x00000002 /* func is called for the 1st time for this disc */
+#define EFH_HUNKNOWN		0x00000004 /* host is unknown */
+#define EFH_USER		0x00000008 /* process is user-initiated - either via Web GUI or a script */
+#define EFH_SHUTDN		0x00000010 /* exec_for_host is called at shutdown - system is stopping */
+#define EFH_HP_ADD		0x00000020 /* exec_for_host is called from "add" hotplug event */
+#define EFH_HP_REMOVE		0x00000040 /* exec_for_host is called from "remove" hotplug event */
+#define EFH_PRINT		0x00000080 /* output partition list to the web response */
 
+extern struct mntent *findmntents(char *file, int swp, int (*func)(struct mntent *mnt, uint flags), uint flags);
+extern char *find_label_or_uuid(char *dev_name, char *label, char *uuid);
+extern void add_remove_usbhost(char *host, int add);
 typedef int (*host_exec)(char *dev_name, int host_num, char *dsc_name, char *pt_name, uint flags);
 extern int exec_for_host(int host, int obsolete, uint flags, host_exec func);
 extern int is_no_partition(const char *discname);
@@ -208,7 +183,7 @@ extern void file_unlock(int lockfd);
 #else
 #define file_lock(args...) (-1)
 #define file_unlock(args...) do { } while(0)
-#endif	/* TCONFIG_USB */
+#endif /* TCONFIG_USB */
 
 /* id.c */
 enum {
@@ -257,12 +232,9 @@ enum {
 #define SUP_80211N		(1 << 6)
 #define SUP_1000ET		(1 << 7)
 #define SUP_80211AC		(1 << 8)
-
 extern int check_hw_type(void);
-// extern int get_hardware(void) __attribute__ ((weak, alias ("check_hw_type")));
 extern int get_model(void);
 extern int supports(unsigned long attr);
-
 
 /* process.c */
 extern char *psname(int pid, char *buffer, int maxlen);
@@ -270,50 +242,82 @@ extern int pidof(const char *name);
 extern int killall(const char *name, int sig);
 extern int ppid(int pid);
 
-
 /* files.c */
-#define FW_CREATE	0
-#define FW_APPEND	1
-#define FW_NEWLINE	2
-
+#define FW_CREATE		0
+#define FW_APPEND		1
+#define FW_NEWLINE		2
 extern unsigned long f_size(const char *path);
 extern int f_exists(const char *file);
-/* bwq518 */
 extern int d_exists(const char *file);
-extern int f_read(const char *file, void *buffer, int max);						/* returns bytes read */
+extern int f_read(const char *file, void *buffer, int max); /* returns bytes read */
 extern int f_write(const char *file, const void *buffer, int len, unsigned flags, unsigned cmode);
-extern int f_read_string(const char *file, char *buffer, int max);					/* returns bytes read, not including term; max includes term */
+extern int f_read_string(const char *file, char *buffer, int max); /* returns bytes read, not including term; max includes term */
 extern int f_write_string(const char *file, const char *buffer, unsigned flags, unsigned cmode);
 extern int f_read_alloc(const char *path, char **buffer, int max);
 extern int f_read_alloc_string(const char *path, char **buffer, int max);
 extern int f_wait_exists(const char *name, int max);
 extern int f_wait_notexists(const char *name, int max);
 
-
 /* led.c */
-#define LED_WLAN			0
-#define LED_DIAG			1
-#define LED_WHITE			2
-#define LED_AMBER			3
-#define LED_DMZ				4
-#define LED_AOSS			5
-#define LED_BRIDGE			6
-#define LED_USB				7
-#define LED_MYSTERY			LED_USB	/* (unmarked LED between wireless and bridge on WHR-G54S) */
-#define LED_USB3			8
-#define LED_5G				9
-#define LED_COUNT			10
+#define LED_WLAN		0
+#define LED_DIAG		1
+#define LED_WHITE		2
+#define LED_AMBER		3
+#define LED_DMZ			4
+#define LED_AOSS		5
+#define LED_BRIDGE		6
+#define LED_USB			7
+#define LED_MYSTERY		LED_USB /* (unmarked LED between wireless and bridge on WHR-G54S) */
+#define LED_USB3		8
+#define LED_5G			9
+#define LED_COUNT		10
+#define	LED_OFF			0
+#define	LED_ON			1
+#define LED_PROBE		2
+/* support up to 32 GPIO pins for buttons, leds and some other IC functions */
+#define TOMATO_GPIO_MAX 	31
+#define TOMATO_GPIO_MIN 	0
+#define T_HIGH 			1
+#define T_LOW 			0
 
-#define	LED_OFF				0
-#define	LED_ON				1
-#define LED_PROBE			2
+#define GPIO_00			0
+#define GPIO_01			1
+#define GPIO_02			2
+#define GPIO_03			3
+#define GPIO_04			4
+#define GPIO_05			5
+#define GPIO_06			6
+#define GPIO_07			7
+#define GPIO_08			8
+#define GPIO_09			9
+#define GPIO_10			10
+#define GPIO_11			11
+#define GPIO_12			12
+#define GPIO_13			13
+#define GPIO_14			14
+#define GPIO_15			15
+#define GPIO_16			16
+#define GPIO_17			17
+#define GPIO_18			18
+#define GPIO_19			19
+#define GPIO_20			20
+#define GPIO_21			21
+#define GPIO_22			22
+#define GPIO_23			23
+#define GPIO_24			24
+#define GPIO_25			25
+#define GPIO_26			26
+#define GPIO_27			27
+#define GPIO_28			28
+#define GPIO_29			29
+#define GPIO_30			30
+#define GPIO_31			31
 
 extern const char *led_names[];
-
 extern int gpio_open(uint32_t mask);
 extern void gpio_write(uint32_t bit, int en);
-extern uint32_t _gpio_read(int f);
 extern uint32_t gpio_read(void);
+extern uint32_t _gpio_read(int f);
 extern uint32_t set_gpio(uint32_t gpio, uint32_t value);
 extern int nvget_gpio(const char *name, int *gpio, int *inv);
 extern int do_led(int which, int mode);
@@ -327,24 +331,18 @@ extern void enable_led_wanlan(void);
 extern void do_led_bridge(int mode);
 extern void led_setup(void);
 
-
 /* base64.c */
-extern int base64_encode(const char *in, char *out, int inlen);			/* returns amount of out buffer used */
-extern int base64_decode(const char *in, unsigned char *out, int inlen);	/* returns amount of out buffer used */
+extern int base64_encode(const char *in, char *out, int inlen); /* returns amount of out buffer used */
+extern int base64_decode(const char *in, unsigned char *out, int inlen); /* returns amount of out buffer used */
 extern int base64_encoded_len(int len);
-extern int base64_decoded_len(int len);						/* maximum possible, not actual */
-
+extern int base64_decoded_len(int len); /* maximum possible, not actual */
 
 /* strings.c */
+#define MAX_PORTS		64
+#define PORT_SIZE		16
 extern const char *find_word(const char *buffer, const char *word);
 extern int remove_word(char *buffer, const char *word);
-
-/* arctic */
 extern int del_str_line(char *str);
-
-/* bwq518 */
-#define MAX_PORTS 64
-#define PORT_SIZE 16
 extern int is_port(char *str);
 extern char *filter_space(char *str);
 extern char* format_port(char *str);
@@ -354,4 +352,5 @@ extern int splitport(char *in_ports, char out_port[MAX_PORTS][PORT_SIZE]);
 extern int is_number(char *a);
 extern int isspacex(char c);
 extern char *shrink_space(char *dest, const char *src, int n);
-#endif
+
+#endif /* __SHARED_H__ */

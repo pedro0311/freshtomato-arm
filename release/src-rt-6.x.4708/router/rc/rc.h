@@ -43,33 +43,6 @@
 // #define DEBUG_IPTFILE
 // #define DEBUG_RCTEST
 // #define DEBUG_NOISY
-#ifdef TCONFIG_BCMARM
-#define DISABLE_SYSLOG_OSM	0
-#define DISABLE_SYSLOG_OS	0
-#else
-#define DISABLE_SYSLOG_OSM	IF_TCONFIG_OPTIMIZE_SIZE_MORE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE_MORE(0)
-#define DISABLE_SYSLOG_OS	(DISABLE_SYSLOG_OSM | (IF_TCONFIG_OPTIMIZE_SIZE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE(0)))
-#endif
-
-#ifndef DEBUG_SYSLOG
-#define IF_NOT_DEBUG_SYSLOG(...) __VA_ARGS__
-#define IF_DEBUG_SYSLOG(...)
-#else
-#define IF_NOT_DEBUG_SYSLOG(...)
-#define IF_DEBUG_SYSLOG(...) __VA_ARGS__
-#endif
-
-#define logmsg(level, args...) \
-	do { \
-		IF_NOT_DEBUG_SYSLOG( \
-			if ((LOGMSG_DISABLE == 0) && (level < LOG_DEBUG)) \
-				syslog(level, args); \
-		) \
-		IF_DEBUG_SYSLOG( \
-			if ((LOGMSG_DISABLE == 0) && ((nvram_get_int(LOGMSG_NVDEBUG)) || (level < LOG_DEBUG))) \
-				syslog(level, args); \
-		) \
-	} while (0)
 
 #define MOUNT_ROOT	"/tmp/mnt"
 #define PROC_SCSI_ROOT	"/proc/scsi"
