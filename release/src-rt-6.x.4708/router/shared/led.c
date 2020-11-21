@@ -1,9 +1,11 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
 
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +14,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <bcmnvram.h>
+#include <syslog.h>
 #include <sys/ioctl.h>
 #include <linux_gpio.h>
 
@@ -19,10 +22,12 @@
 #include "shutils.h"
 #include "shared.h"
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"led_debug"
+
 
 const char *led_names[] = {"wlan", "diag", "white", "amber", "dmz", "aoss", "bridge", "usb", "usb3", "5g"};
-
-
 
 static int _gpio_ioctl(int f, int gpioreg, unsigned int mask, unsigned int val)
 {
@@ -32,7 +37,7 @@ static int _gpio_ioctl(int f, int gpioreg, unsigned int mask, unsigned int val)
 	gpio.mask = mask;
 
 	if (ioctl(f, gpioreg, &gpio) < 0) {
-		_dprintf("Invalid gpioreg %d\n", gpioreg);
+		logmsg(LOG_DEBUG, "*** %s: invalid gpioreg %d", __FUNCTION__, gpioreg);
 		return -1;
 	}
 	return (gpio.val);
@@ -42,7 +47,7 @@ static int _gpio_open()
 {
 	int f = open("/dev/gpio", O_RDWR);
 	if (f < 0)
-		_dprintf ("Failed to open /dev/gpio\n");
+		logmsg(LOG_DEBUG, "*** %s: failed to open /dev/gpio", __FUNCTION__);
 	return f;
 }
 
@@ -103,7 +108,7 @@ uint32_t set_gpio(uint32_t gpio, uint32_t value)
 
 	if ( gpio <= TOMATO_GPIO_MAX && gpio >= TOMATO_GPIO_MIN ) {
 		bit = 1 << gpio;
-//		_dprintf("set_gpio: %d %d\n", bit, value);
+		logmsg(LOG_DEBUG, "*** %s: set_gpio: %d %d\n", __FUNCTION__, bit, value);
 		gpio_write(bit, value);
 		return 0;
 	}
