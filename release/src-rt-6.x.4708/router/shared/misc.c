@@ -1,9 +1,11 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
 
-*/
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +30,10 @@
 
 #include "shutils.h"
 #include "shared.h"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"misc_debug"
 
 
 int get_wan_proto(void)
@@ -252,20 +258,11 @@ void notice_set(const char *path, const char *format, ...)
 	if (buf[0]) syslog(LOG_INFO, "notice[%s]: %s", path, buf);
 }
 
-// #define mwanlog(level,x...) if(nvram_get_int("mwan_debug")>=level) syslog(level, x)
-// #define _x_dprintf(args...)	mwanlog(LOG_DEBUG, args);
-#define _x_dprintf(args...)	do { } while (0);
-#define mwanlog(level,x...)	do { } while (0);
-
 int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 {
 	int model;
 
-	if (mode) {
-		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,ON)");
-	} else {
-		mwanlog(LOG_DEBUG, "wan_led: led(LED_WHITE,OFF)");
-	}
+	logmsg(LOG_DEBUG, "*** %s: wan_led: led(LED_WHITE,%s)", __FUNCTION__, (mode ? "ON" : "OFF"));
 
 	/* get router model */
 	model = get_model();
@@ -330,7 +327,7 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 	for (i = 0; (names[i] != NULL) && (i <= mwan_num-1); ++i) {
 		up = 0;	/* default is 0 (LED_OFF) */
 		if (!strcmp(prefix, names[i])) continue;	/* only check others */
-		mwanlog(LOG_DEBUG, "### wan_led_off: check %s aliveness...", names[i]);
+		logmsg(LOG_DEBUG, "*** %s: check %s aliveness...", __FUNCTION__, names[i]);
 		switch (proto = get_wanx_proto(names[i])) {
 		case WP_DISABLED:
 			break;	/* WAN is disabled - skip */
@@ -360,7 +357,7 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 							while (fgets(tmp, sizeof(tmp), f)) {
 								if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
 									if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
-										_x_dprintf("%s: state = DOWN for vlan%d\n", __FUNCTION__,vlannum);
+										logmsg(LOG_DEBUG, "*** %s: state = DOWN for vlan%d", __FUNCTION__, vlannum);
 										up = 0;
 									}
 								}
@@ -391,11 +388,11 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 	}
 
 	if (count > 0) {
-		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, active WANs count:%d, stay on", prefix, count);
+		logmsg(LOG_DEBUG, "*** %s: OUT - %s, active WANs count:%d, stay on", __FUNCTION__, prefix, count);
 		return count;	/* do not LED OFF */
 	}
 	else {
-		mwanlog(LOG_DEBUG, "OUT wan_led_off: %s, no other active WANs, turn off led", prefix);
+		logmsg(LOG_DEBUG, "*** %s: OUT - %s, no other active WANs, turn off led", __FUNCTION__, prefix);
 		return wan_led(LED_OFF);	/* LED OFF */
 	}
 }
@@ -452,32 +449,32 @@ int check_wanup(char *prefix)
 				name = psname(atoi(buf1), buf2, sizeof(buf2));
 				memset(pppd_name, 0, 256);
 				sprintf(pppd_name, "pppd%s", prefix);
-				// mwanlog(LOG_INFO, "### check_wanup: pppd name=%s, psname=%s", pppd_name, name);
+				logmsg(LOG_DEBUG, "*** %s: pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
 				if (strcmp(name, pppd_name) == 0) up = 1;
 				if (proto == WP_L2TP) {
 					sprintf(pppd_name, "pppd");
-					// mwanlog(LOG_INFO, "### check_wanup: L2TP pppd name=%s, psname=%s", pppd_name, name);
+					logmsg(LOG_DEBUG, "*** %s: L2TP pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
 					if (strcmp(name, pppd_name) == 0) up = 1;
 				}
 			}
 			else {
-				_x_dprintf("%s: error reading %s\n", __FUNCTION__, buf2);
+				logmsg(LOG_DEBUG, "*** %s: error reading %s", __FUNCTION__, buf2);
 			}
 			if (!up) {
 				unlink(ppplink_file);	/* stale PPP connection fix, also used in wan_led_off */
-				_x_dprintf("required daemon not found, assuming link is dead\n");
+				logmsg(LOG_DEBUG, "*** %s: required daemon not found, assuming link is dead", __FUNCTION__);
 			}
 		}
 		else {
-			_x_dprintf("%s: error reading %s\n", __FUNCTION__, ppplink_file);
+			logmsg(LOG_DEBUG, "*** %s: error reading %s", __FUNCTION__, ppplink_file);
 		}
 	}
 	else if (!nvram_match(strcat_r(prefix, "_ipaddr", tmp), "0.0.0.0")) {
-		mwanlog(LOG_DEBUG, "check_wanup: %s have IP, assume ON", prefix);
+		logmsg(LOG_DEBUG, "*** %s: %s have IP, assume ON", __FUNCTION__, prefix);
 		up = 1;
 	}
 	else {
-		_x_dprintf("%s: default !up\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: default !up", __FUNCTION__);
 		return up;	/* don't turn off WAN LED */
 	}
 
@@ -485,12 +482,12 @@ int check_wanup(char *prefix)
 		strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(prefix, "_iface", tmp)), sizeof(ifr.ifr_name));
 		if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
 			up = 0;
-			_x_dprintf("%s: SIOCGIFFLAGS\n", __FUNCTION__);
+			logmsg(LOG_DEBUG, "*** %s: SIOCGIFFLAGS", __FUNCTION__);
 		}
 		close(s);
 		if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0) {
 			up = 0;
-			_x_dprintf("%s: !IFF_UP || !IFF_RUNNING\n", __FUNCTION__);
+			logmsg(LOG_DEBUG, "*** %s: !IFF_UP || !IFF_RUNNING", __FUNCTION__);
 		}
 		if (proto == WP_STATIC) {
 			/* Ethernet WAN port state checker (static IF is always UP and RUNNING)
@@ -517,13 +514,13 @@ int check_wanup(char *prefix)
 
 			strcpy(d,&ifr.ifr_name[4]);	// trim vlan
 			int vlannum = atoi(d);
-			_x_dprintf("%s: %s vlan num: %d\n", __FUNCTION__, prefix, vlannum);
+			logmsg(LOG_DEBUG, "*** %s: %s vlan num: %d", __FUNCTION__, prefix, vlannum);
 
 			if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
 				while (fgets(tmp, sizeof(tmp), f)) {
 					if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
 						if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
-							_x_dprintf("%s: port state = DOWN for vlan%d\n", __FUNCTION__,vlannum);
+							logmsg(LOG_DEBUG, "*** %s: port state = DOWN for vlan%d", __FUNCTION__, vlannum);
 							up = 0;
 						}
 					}
@@ -737,7 +734,7 @@ const char *getifaddr(char *ifname, int family, int linklocal)
 	struct ifaddrs *ifap, *ifa;
 
 	if (getifaddrs(&ifap) != 0) {
-		_dprintf("getifaddrs failed: %s\n", strerror(errno));
+		logmsg(LOG_DEBUG, "*** %s: getifaddrs failed: %s", __FUNCTION__, strerror(errno));
 		return NULL;
 	}
 
@@ -1017,15 +1014,15 @@ int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int time
 
 	if (((flags = fcntl(fd, F_GETFL, 0)) < 0) ||
 		(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)) {
-		_dprintf("%s: error in F_*ETFL %d\n", __FUNCTION__, fd);
+		logmsg(LOG_DEBUG, "*** %s: error in F_*ETFL %d", __FUNCTION__, fd);
 		return -1;
 	}
 
 	if (connect(fd, addr, len) < 0) {
-		// _dprintf("%s: connect %d = <0\n", __FUNCTION__, fd);
+		logmsg(LOG_DEBUG, "*** %s: connect %d = <0", __FUNCTION__, fd);
 
 		if (errno != EINPROGRESS) {
-			_dprintf("%s: error in connect %d errno=%d\n", __FUNCTION__, fd, errno);
+			logmsg(LOG_DEBUG, "*** %s: error in connect %d errno=%d", __FUNCTION__, fd, errno);
 			return -1;
 		}
 
@@ -1036,12 +1033,12 @@ int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int time
 			FD_SET(fd, &fds);
 			r = select(fd + 1, NULL, &fds, NULL, &tv);
 			if (r == 0) {
-				_dprintf("%s: timeout in select %d\n", __FUNCTION__, fd);
+				logmsg(LOG_DEBUG, "*** %s: timeout in select %d", __FUNCTION__, fd);
 				return -1;
 			}
 			else if (r < 0) {
 				if (errno != EINTR) {
-					_dprintf("%s: error in select %d\n", __FUNCTION__, fd);
+					logmsg(LOG_DEBUG, "*** %s: error in select %d", __FUNCTION__, fd);
 					return -1;
 				}
 				/* loop */
@@ -1050,7 +1047,7 @@ int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int time
 				r = 0;
 				n = sizeof(r);
 				if ((getsockopt(fd, SOL_SOCKET, SO_ERROR, &r, &n) < 0) || (r != 0)) {
-					_dprintf("%s: error in SO_ERROR %d\n", __FUNCTION__, fd);
+					logmsg(LOG_DEBUG, "*** %s: error in SO_ERROR %d", __FUNCTION__, fd);
 					return -1;
 				}
 				break;
@@ -1059,11 +1056,11 @@ int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int time
 	}
 
 	if (fcntl(fd, F_SETFL, flags) < 0) {
-		_dprintf("%s: error in F_*ETFL %d\n", __FUNCTION__, fd);
+		logmsg(LOG_DEBUG, "*** %s: error in F_*ETFL %d", __FUNCTION__, fd);
 		return -1;
 	}
 
-	// _dprintf("%s: OK %d\n", __FUNCTION__, fd);
+	logmsg(LOG_DEBUG, "*** %s: OK %d", __FUNCTION__, fd);
 	return 0;
 }
 
