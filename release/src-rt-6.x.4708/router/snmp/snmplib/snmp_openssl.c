@@ -83,12 +83,12 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 /** TLS/DTLS certificatte support */
 #if defined(NETSNMP_USE_OPENSSL) && defined(HAVE_LIBSSL) && !defined(NETSNMP_FEATURE_REMOVE_CERT_UTIL)
 
-netsnmp_feature_require(container_free_all)
+netsnmp_feature_require(container_free_all);
 
-netsnmp_feature_child_of(openssl_cert_get_subjectAltNames, netsnmp_unused)
-netsnmp_feature_child_of(openssl_ht2nid, netsnmp_unused)
-netsnmp_feature_child_of(openssl_err_log, netsnmp_unused)
-netsnmp_feature_child_of(cert_dump_names, netsnmp_unused)
+netsnmp_feature_child_of(openssl_cert_get_subjectAltNames, netsnmp_unused);
+netsnmp_feature_child_of(openssl_ht2nid, netsnmp_unused);
+netsnmp_feature_child_of(openssl_err_log, netsnmp_unused);
+netsnmp_feature_child_of(cert_dump_names, netsnmp_unused);
 
 #include <ctype.h>
 
@@ -697,8 +697,7 @@ netsnmp_openssl_get_cert_chain(SSL *ssl)
         DEBUGMSGT(("ssl:cert:chain", "examining cert chain\n"));
         for(i = 0; i < sk_num((const void *)ochain); ++i) {
             ocert_tmp = (X509*)sk_value((const void *)ochain,i);
-            fingerprint = netsnmp_openssl_cert_get_fingerprint(ocert_tmp,
-                                                               NS_HASH_SHA1);
+            fingerprint = netsnmp_openssl_cert_get_fingerprint(ocert_tmp, -1);
             if (NULL == fingerprint)
                 break;
             cert_map = netsnmp_cert_map_alloc(NULL, ocert);

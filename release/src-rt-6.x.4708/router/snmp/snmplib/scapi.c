@@ -22,6 +22,9 @@
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-features.h>
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
 #include <sys/types.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -48,16 +51,14 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_DMALLOC_H
-#include <dmalloc.h>
-#endif
+#include "memcheck.h"
 
 #include <net-snmp/types.h>
 #include <net-snmp/output_api.h>
 #include <net-snmp/utilities.h>
 
-netsnmp_feature_child_of(usm_support, libnetsnmp)
-netsnmp_feature_child_of(usm_scapi, usm_support)
+netsnmp_feature_child_of(usm_support, libnetsnmp);
+netsnmp_feature_child_of(usm_scapi, usm_support);
 
 #ifndef NETSNMP_FEATURE_REMOVE_USM_SCAPI
 
@@ -112,11 +113,12 @@ netsnmp_feature_child_of(usm_scapi, usm_support)
 
 #ifdef QUITFUN
 #undef QUITFUN
-#define QUITFUN(e, l)					\
+#define QUITFUN(e, l) do {                              \
 	if (e != SNMPERR_SUCCESS) {			\
 		rval = SNMPERR_SC_GENERAL_FAILURE;	\
 		goto l ;				\
-	}
+        }                                               \
+    } while (0)
 #endif
 
 #ifdef NETSNMP_USE_INTERNAL_CRYPTO
@@ -483,7 +485,7 @@ sc_get_properlength(const oid * hashtype, u_int hashtype_len)
         sc_get_authtype(hashtype, hashtype_len));
 }
 
-netsnmp_feature_child_of(scapi_get_proper_priv_length, netsnmp_unused)
+netsnmp_feature_child_of(scapi_get_proper_priv_length, netsnmp_unused);
 #ifndef NETSNMP_FEATURE_REMOVE_SCAPI_GET_PROPER_PRIV_LENGTH
 int
 sc_get_proper_priv_length(const oid * privtype, u_int privtype_len)
@@ -592,6 +594,7 @@ sc_random(u_char * buf, size_t * buflen)
 
 #ifdef NETSNMP_USE_OPENSSL
     RAND_bytes(buf, *buflen);   /* will never fail */
+    MAKE_MEM_DEFINED(buf, *buflen);
 #elif NETSNMP_USE_PKCS11			/* NETSNMP_USE_PKCS11 */
     pkcs_random(buf, *buflen);
 #else                           /* NETSNMP_USE_INTERNAL_MD5 */
@@ -967,7 +970,8 @@ sc_hash_type(int auth_type, const u_char * buf, size_t buf_len, u_char * MAC,
 #endif
     if (!EVP_DigestInit(cptr, hashfn)) {
         /* requested hash function is not available */
-        return SNMPERR_SC_NOT_CONFIGURED;
+        rval = SNMPERR_SC_NOT_CONFIGURED;
+        goto sc_hash_type_quit;
     }
 
 /** pass the data */
@@ -976,6 +980,8 @@ sc_hash_type(int auth_type, const u_char * buf, size_t buf_len, u_char * MAC,
 /** do the final pass */
     EVP_DigestFinal(cptr, MAC, &tmp_len);
     *MAC_len = tmp_len;
+
+sc_hash_type_quit:
 #if defined(HAVE_EVP_MD_CTX_FREE)
     EVP_MD_CTX_free(cptr);
 #elif defined(HAVE_EVP_MD_CTX_DESTROY)
@@ -1251,7 +1257,6 @@ sc_encrypt(const oid * privtype, size_t privtypelen,
 
         QUITFUN(SNMPERR_GENERR, sc_encrypt_quit);
     }
-    pad_size = pai->pad_size;
 
     memset(my_iv, 0, sizeof(my_iv));
 
@@ -1261,6 +1266,8 @@ sc_encrypt(const oid * privtype, size_t privtypelen,
         /*
          * now calculate the padding needed 
          */
+
+        pad_size = pai->pad_size;
         pad = pad_size - (ptlen % pad_size);
         plast = (int) ptlen - (pad_size - pad);
         if (pad == pad_size)
