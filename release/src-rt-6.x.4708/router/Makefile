@@ -20,7 +20,7 @@ export HAVE_TOMATO := y
 
 define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
-  ( if patch -p0 -s --dry-run < $$FILE 2>/dev/null; then \
+  ( if patch -p0 -N -s --dry-run < $$FILE 2>/dev/null; then \
    patch -p0 -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
