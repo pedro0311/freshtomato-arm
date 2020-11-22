@@ -1776,11 +1776,11 @@ REMOVE-END -->
 			{ title: 'Route Modem IP', name: 'wan'+u+'_modem_ipaddr', type: 'text', maxlen: 15, size: 17, suffix: '&nbsp; <small>must be in different subnet to router, 0.0.0.0 to disable<\/small>', value: nvram['wan'+u+'_modem_ipaddr'] },
 			{ title: 'Query HiLink Modem IP', name: 'wan'+u+'_hilink_ip', type: 'text', maxlen: 15, size: 17, suffix: '&nbsp; <small>show status of reachable hilink modem, 0.0.0.0 to disable<\/small>', value: nvram['wan'+u+'_hilink_ip'] },
 			{ title: 'Call Custom Status Script', name: 'f_wan'+u+'_status_script', type: 'checkbox', suffix: '&nbsp; <small>Call /www/user/cgi-bin/wan' + u + '_status.sh in the home page. Must output HTML.<\/small>', value: (nvram['wan'+u+'_status_script'] == 1) },
-			{ title: 'Watchdog Mode', name: 'wan'+u+'_ckmtd', type: 'select', options: [['1','Ping'],['2','Traceroute*']
+			{ title: 'Watchdog Mode', name: 'wan'+u+'_ckmtd', type: 'select', options: [['1','Ping'],['2','Traceroute']
 /* BBT-BEGIN */
-				,['3','Curl']
+				,['3','Curl*']
 /* BBT-END */
-				], value: nvram['wan'+u+'_ckmtd'], suffix: '&nbsp; <small>*default; use the other method only when Traceroute is not working correctly.<\/small>' },
+				], value: nvram['wan'+u+'_ckmtd'], suffix: '&nbsp; <small>*default; use the other method only when Curl is not working correctly<\/small>' },
 
 			{ title: 'Bridge WAN port to primary LAN (br0)', name: 'f_wan'+u+'_islan', type: 'checkbox', value: (nvram['wan'+u+'_islan'] == 1) }
 		]);
