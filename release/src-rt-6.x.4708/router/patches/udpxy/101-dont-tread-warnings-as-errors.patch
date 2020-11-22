@@ -1,11 +1,11 @@
---- udpxy/Makefile	2018-01-04 10:26:46.000000000 +0100
-+++ udpxy/Makefile	2018-12-17 01:34:37.445604607 +0100
+--- udpxy/Makefile
++++ udpxy/Makefile
 @@ -29,7 +29,7 @@ GZIP  := /bin/gzip
  MKDEPOPT := -MM
  DEBUG_ON := -g
  
 -ALL_CFLAGS = -W -Wall -Werror --pedantic $(CFLAGS)
-+ALL_FLAGS = $(CFLAGS)
++ALL_FLAGS = -W -Wall -Werror $(CFLAGS)
  
  SYSTEM=$(shell uname 2>/dev/null)
  ifneq (,$(filter $(SYSTEM),FreeBSD))

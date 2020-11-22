@@ -2786,18 +2786,20 @@ udpxy/stamp-h1:
 
 udpxy: udpxy/stamp-h1
 	@$(SEP)
-	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	NO_UDPXREC=yes \
+	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
-
-udpxy-clean:
-	-@$(MAKE) -C udpxy clean
-	@rm -f udpxy/stamp-h1
-	$(call unpatch_files,udpxy)
 
 udpxy-install:
 	install -d $(INSTALLDIR)/udpxy/usr/bin
 	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/bin/udpxy
 	$(STRIP) -s $(INSTALLDIR)/udpxy/bin/udpxy
+
+udpxy-clean:
+	-@$(MAKE) -C udpxy clean
+	@rm -f udpxy/stamp-h1
+	$(call unpatch_files,udpxy)
 
 mdadm:
 	@$(SEP)
