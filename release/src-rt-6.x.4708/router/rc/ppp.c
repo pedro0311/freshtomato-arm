@@ -147,6 +147,11 @@ int ipdown_main(int argc, char **argv)
 	char tmp[100];
 	char ppplink_file[32];
 	struct in_addr ipaddr;
+	int mwan_num;
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
 
 	if (!wait_action_idle(10))
 		return -1;
@@ -184,10 +189,12 @@ int ipdown_main(int argc, char **argv)
 			nvram_set(strcat_r(prefix, "_gateway_get", tmp), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 			logmsg(LOG_DEBUG, "*** %s: restore default gateway: nvram_set(%s_gateway_get, %s)", __FUNCTION__, prefix, nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
 
-			/* set default route to gateway if specified */
-			route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
-			route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
-			logmsg(LOG_DEBUG, "*** %s: route_add(%s, 0, 0.0.0.0, %s, 0.0.0.0)", __FUNCTION__, nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			if (mwan_num == 1) {
+				/* set default route to gateway if specified */
+				route_del(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
+				route_add(nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), 0, "0.0.0.0", nvram_safe_get(strcat_r(prefix, "_gateway", tmp)), "0.0.0.0");
+				logmsg(LOG_DEBUG, "*** %s: route_add(%s, 0, 0.0.0.0, %s, 0.0.0.0)", __FUNCTION__, nvram_safe_get(strcat_r(prefix, "_ifname", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway", tmp)));
+			}
 		}
 
 		/* unset received DNS entries (BAD for PPTP/L2TP here, it needs DNS on reconnect!) */
