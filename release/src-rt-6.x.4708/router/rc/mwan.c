@@ -111,6 +111,8 @@ int checkConnect(char *sPrefix)
 
 	get_wan_info(sPrefix); // here for mwan_load_balance IP / dev info in case wan is down
 
+	sprintf(tmp, "/tmp/state_%s", sPrefix);
+
 	if(check_wanup(sPrefix)){
 		logmsg(LOG_DEBUG, "*** %s: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", __FUNCTION__, sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 		if(nvram_get_int("mwan_cktime") == 0){
@@ -118,9 +120,8 @@ int checkConnect(char *sPrefix)
 			return 1;
 		}
 
-		sprintf(tmp, "/tmp/state_%s", sPrefix);
 		f = fopen(tmp, "r");
-		fscanf (f, "%d", &result);
+		fscanf(f, "%d", &result);
 		fclose(f);
 
 		if (result == 1) {
@@ -134,6 +135,12 @@ int checkConnect(char *sPrefix)
 	} else {
 		logmsg(LOG_DEBUG, "*** %s: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", __FUNCTION__, sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 		logmsg(LOG_DEBUG, "*** %s: [0], %s is disconnected [result from check_wanup(%s)]", __FUNCTION__, sPrefix, sPrefix);
+
+		/* don't leave old outdated state */
+		f = fopen(tmp, "w");
+		fprintf(f, "0\n");
+		fclose(f);
+
 		return 0;
 	}
 }
@@ -299,9 +306,12 @@ void mwan_state_files(void)
 
 		sprintf(tmp, "/tmp/state_%s", prefix);
 		if ( !(f = fopen(tmp, "r"))) {
-			// if file does not exist then we create him with value "1"
+			/* if file does not exist then we create him with value "0".
+			 * later on watchdog will set it to 1 when it proves that
+			 * the wan is actually working (wan can connect but still be not working)
+			 */
 			f = fopen(tmp, "w+");
-			fprintf(f, "1\n");
+			fprintf(f, "0\n");
 			fclose(f);
 		}
 	}
