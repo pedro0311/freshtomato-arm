@@ -46,8 +46,7 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 			VER_MAJ=$(echo $VER | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
 			VER_MNR=$(echo $VER | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g')
 
-			RESCHK="/tmp/anon.check"
-			wget -O $RESCHK "http://freshtomato.org/version.txt"
+			RESCHK=$(wget -O- "http://freshtomato.org/version.txt")
 
 			CHKVER_MAJ=$(cat $RESCHK | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
 			ISMNR=$(cat $RESCHK | grep "\." | wc -l)
@@ -107,10 +106,7 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 			}
 
 			#Change all spaces to %20.
-			echo "http://anon.groov.pl/index.php?wanmac_md5=$WANMAC_MD5&model=$MODEL&version=$VER&buildtype=$BUILDTYPE&driver=$DRIVER&uptime=$UPTIME&mod=$MOD&anon=1" > /tmp/AnonLink
-			sed -i "s/ /%20/g" /tmp/AnonLink
-			ANONSEND=$(cat /tmp/AnonLink)
-			rm /tmp/AnonLink
+			ANONSEND=$(echo "http://anon.groov.pl/index.php?wanmac_md5=$WANMAC_MD5&model=$MODEL&version=$VER&buildtype=$BUILDTYPE&driver=$DRIVER&uptime=$UPTIME&mod=$MOD&anon=1" | sed "s/ /%20/g")
 
 			#We have all we need well we can send datas to Anon database
 			RESULT="/tmp/anon.result"
