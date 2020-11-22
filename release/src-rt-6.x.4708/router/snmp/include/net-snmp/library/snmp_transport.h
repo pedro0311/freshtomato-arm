@@ -114,8 +114,6 @@ typedef struct netsnmp_tmStateReference_s {
 } netsnmp_tmStateReference;
 
 #define NETSNMP_TSPEC_LOCAL                     0x01 /* 1=server, 0=client */
-#define NETSNMP_TSPEC_SHARED                    0x02
-#define NETSNMP_TSPEC_NO_DFTL_CLIENT_ADDR       0x04
 
 struct netsnmp_container_s; /* forward decl */
 typedef struct netsnmp_tdomain_spec_s {
@@ -364,8 +362,8 @@ NETSNMP_IMPORT
 int netsnmp_transport_config_compare(netsnmp_transport_config *left,
                                      netsnmp_transport_config *right);
 NETSNMP_IMPORT
-netsnmp_transport_config *netsnmp_transport_create_config(char *key,
-                                                          char *value);
+netsnmp_transport_config *netsnmp_transport_create_config(const char *key,
+                                                          const char *value);
 
 #ifndef NETSNMP_FEATURE_REMOVE_FILTER_SOURCE
 NETSNMP_IMPORT

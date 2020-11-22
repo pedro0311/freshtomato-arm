@@ -45,7 +45,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#ifdef WIN32
+#if HAVE_LM_H
 #include <lm.h>
 #endif
 
@@ -79,7 +79,7 @@
 #include <sys/sysctl.h>
 #endif
 
-netsnmp_feature_require(date_n_time)
+netsnmp_feature_require(date_n_time);
 
 #if !defined(UTMP_FILE) && defined(_PATH_UTMP)
 #define UTMP_FILE _PATH_UTMP
@@ -303,7 +303,7 @@ var_hrsys(struct variable * vp,
     case HRSYS_LOAD_PARAM:
 #ifdef linux
         if((fp = fopen("/proc/cmdline", "r")) != NULL) {
-            fgets(string, sizeof(string), fp);
+            NETSNMP_IGNORE_RESULT(fgets(string, sizeof(string), fp));
             fclose(fp);
         } else {
             return NULL;
@@ -607,7 +607,8 @@ ns_set_time(int action,
             newtimetm.tm_mday=(int)var_val[3];
 
             /* determine if day light savings time in effect DST */
-            if ( ( hours_from_utc*60*60+minutes_from_utc*60 ) == abs(timezone) ) {
+            if (hours_from_utc*60*60+minutes_from_utc*60 ==
+                (timezone >= 0 ? timezone : -timezone)) {
                 newtimetm.tm_isdst=0;
             } else {
                 newtimetm.tm_isdst=1;

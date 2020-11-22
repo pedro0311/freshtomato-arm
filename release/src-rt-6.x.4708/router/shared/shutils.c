@@ -18,9 +18,11 @@
  * $Id: shutils.c 337155 2012-06-06 12:17:08Z $
  */
 
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
 #include <typedefs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +61,10 @@
 #endif /* linux */
 
 #include "shared.h"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"shutils_debug"
 
 #define T(x)		__TXT(x)
 #define __TXT(s)	L ## s
@@ -613,11 +619,8 @@ void cprintf(const char *format, ...)
 			close(nfd);
 		}
 	}
-#if 1	
+
 	if (nvram_match("debug_cprintf_file", "1")) {
-//		char s[32];
-//		sprintf(s, "/tmp/cprintf.%d", getpid());
-//		if ((f = fopen(s, "a")) != NULL) {
 		if ((f = fopen("/tmp/cprintf", "a")) != NULL) {
 			va_start(args, format);
 			vfprintf(f, format, args);
@@ -625,19 +628,6 @@ void cprintf(const char *format, ...)
 			fclose(f);
 		}
 	}
-#endif
-#if 0
-	if (nvram_match("debug_cprintf_log", "1")) {
-		char s[512];
-		
-		va_start(args, format);
-		vsnprintf(s, sizeof(s), format, args);
-		s[sizeof(s) - 1] = 0;
-		va_end(args);
-		
-		if ((s[0] != '\n') || (s[1] != 0)) syslog(LOG_DEBUG, "%s", s);
-	}
-#endif
 }
 
 #ifndef WL_BSS_INFO_VERSION
@@ -1603,7 +1593,7 @@ int doSystem(char *fmt, ...)
 
 	if(cmd) {
 		if (!strncmp(cmd, "iwpriv", 6))
-			_dprintf("[doSystem] %s\n", cmd);
+			logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, cmd);
 		rc = system(cmd);
 		bfree(B_L, cmd);
 	}	

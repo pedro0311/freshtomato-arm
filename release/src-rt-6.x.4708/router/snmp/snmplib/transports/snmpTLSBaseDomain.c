@@ -2,11 +2,8 @@
 #include <net-snmp/net-snmp-features.h>
 #include <net-snmp/types.h>
 
-netsnmp_feature_require(cert_util)
+netsnmp_feature_require(cert_util);
 
-#if HAVE_DMALLOC_H
-#include <dmalloc.h>
-#endif
 #if HAVE_STRING_H
 #include <string.h>
 #else
@@ -26,6 +23,7 @@ netsnmp_feature_require(cert_util)
 #endif
 #include <errno.h>
 #include <ctype.h>
+#include "../memcheck.h"
 
 /* OpenSSL Includes */
 #include <openssl/bio.h>
@@ -55,6 +53,17 @@ netsnmp_feature_require(cert_util)
 #define LOGANDDIE(msg) do { snmp_log(LOG_ERR, "%s\n", msg); return 0; } while(0)
 
 int openssl_local_index;
+
+#ifndef HAVE_ERR_GET_ERROR_ALL
+/* A backport of the OpenSSL 1.1.1e ERR_get_error_all() function. */
+static unsigned long ERR_get_error_all(const char **file, int *line,
+                                       const char **func,
+                                       const char **data, int *flags)
+{
+    *func = NULL;
+    return ERR_get_error_line_data(file, line, data, flags);
+}
+#endif
 
 /* this is called during negotiation */
 int verify_callback(int ok, X509_STORE_CTX *ctx) {
@@ -517,6 +526,7 @@ sslctx_client_setup(const SSL_METHOD *method, _netsnmpTLSBaseData *tlsbase) {
         snmp_log(LOG_ERR, "ack: %p\n", the_ctx);
         LOGANDDIE("can't create a new context");
     }
+    MAKE_MEM_DEFINED(the_ctx, 256/*sizeof(*the_ctx)*/);
     SSL_CTX_set_read_ahead (the_ctx, 1); /* Required for DTLS */
         
     SSL_CTX_set_verify(the_ctx,
@@ -591,6 +601,7 @@ sslctx_server_setup(const SSL_METHOD *method) {
     if (!the_ctx) {
         LOGANDDIE("can't create a new context");
     }
+    MAKE_MEM_DEFINED(the_ctx, 256/*sizeof(*the_ctx)*/);
 
     id_cert = netsnmp_cert_find(NS_CERT_IDENTITY, NS_CERTKEY_DEFAULT, NULL);
     if (!id_cert)
@@ -941,7 +952,7 @@ int netsnmp_tlsbase_wrapup_recv(netsnmp_tmStateReference *tmStateRef,
     return SNMPERR_SUCCESS;
 }
 
-netsnmp_feature_child_of(_x509_get_error, netsnmp_unused)
+netsnmp_feature_child_of(_x509_get_error, netsnmp_unused);
 #ifndef NETSNMP_FEATURE_REMOVE__X509_GET_ERROR
 const char * _x509_get_error(int x509failvalue, const char *location) {
     static const char *reason = NULL;
@@ -1101,7 +1112,7 @@ const char * _x509_get_error(int x509failvalue, const char *location) {
 #endif /* NETSNMP_FEATURE_REMOVE__X509_GET_ERROR */
 
 void _openssl_log_error(int rc, SSL *con, const char *location) {
-    const char     *reason, *file, *data;
+    const char     *reason, *file, *func, *data;
     unsigned long   numerical_reason;
     int             flags, line;
 
@@ -1167,9 +1178,9 @@ void _openssl_log_error(int rc, SSL *con, const char *location) {
 
     /* other errors */
     while ((numerical_reason =
-            ERR_get_error_line_data(&file, &line, &data, &flags)) != 0) {
-        snmp_log(LOG_ERR, " error: #%lu (file %s, line %d)\n",
-                 numerical_reason, file, line);
+            ERR_get_error_all(&file, &line, &func, &data, &flags)) != 0) {
+        snmp_log(LOG_ERR, "%s (file %s, func %s, line %d)\n",
+                 ERR_error_string(numerical_reason, NULL), file, func, line);
 
         /* if we have a text translation: */
         if (data && (flags & ERR_TXT_STRING)) {
