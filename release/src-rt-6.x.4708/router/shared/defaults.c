@@ -601,10 +601,8 @@ struct nvram_tuple router_defaults[] = {
 #endif
 #endif
 #ifdef TCONFIG_BCM7
-	{ "wl_dfs_pref", "", 0 },		/* DFS Preferred channel value */
 	{ "wl_probresp_mf", "0", 0 },		/* MAC filter based probe response */
 	{ "wl_probresp_sw", "1", 0 },		/* SW probe response */
-	{ "wl_vht_features", "-1", 0 },		/* VHT features */
 #endif
 
 	{ "wan_ppp_get_ip",		""				, 0 },	// IP Address assigned by PPTP/L2TP server
