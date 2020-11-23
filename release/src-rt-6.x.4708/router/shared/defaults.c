@@ -466,6 +466,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_vlan_prio_mode",		"off"				, 0 },	// VLAN Priority support
 	{ "wl_obss_coex",		"0"				, 0 },	// OBSS Coexistence (0|1): when enabled, channel width is forced to 20MHz
 
+#ifdef TCONFIG_WLCONF_VHT /* prepare for future change; right now we use wl util to apply it */
+	{ "wl_vht_features",		"-1"				, 0 },	/* VHT features */
+	{ "wl_vhtmode",			"-1"				, 0 },	/* VHT mode */
+#endif /* TCONFIG_WLCONF_VHT */
+
 #ifdef TCONFIG_EMF
 	{ "emf_entry",			""				, 0 },	// Static MFDB entry (mgrp:if)
 	{ "emf_uffp_entry",		""				, 0 },	// Unreg frames forwarding ports
