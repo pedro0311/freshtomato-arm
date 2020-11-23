@@ -341,8 +341,10 @@ wlconf_dfs_pref_chan_options(char *name)
 		if (atoi(val)) {
 			chanspec = wf_chspec_aton(val);
 			/* Maximum 6 entries supported in UI */
-			if (dfs_frcd->chspec_list.num > 6)
+			if (dfs_frcd->chspec_list.num > 6) {
+				free(dfs_frcd);
 				return;
+			}
 			dfs_frcd->chspec_list.list[dfs_frcd->chspec_list.num++] = chanspec;
 		}
 	}
@@ -1947,7 +1949,7 @@ wlconf(char *name)
 	if (restore_defaults) {
 		wlconf_set_current_txparam_into_nvram(name, prefix);
 	}
-#ifdef BCMDBG
+
 	/* Apply message level */
 	if (nvram_invmatch("wl_msglevel", "")) {
 		val = (int)strtoul(nvram_get("wl_msglevel"), NULL, 0);
@@ -1962,7 +1964,6 @@ wlconf(char *name)
 		else
 			WL_IOCTL(name, WLC_SET_MSGLEVEL, &val, sizeof(val));
 	}
-#endif
 
 	/* Bring the interface down */
 	WL_IOCTL(name, WLC_DOWN, NULL, 0);
@@ -2064,7 +2065,6 @@ wlconf(char *name)
 			if (!strcmp(addr, "")) {
 				vif_addr[5] = (vif_addr[5] & ~(max_no_vifs-1))
 				        | ((max_no_vifs-1) & (vif_addr[5]+1));
-
 				nvram_set(tmp, ether_etoa((uchar *)vif_addr, eaddr));
 			}
 		}
@@ -2963,13 +2963,20 @@ wlconf(char *name)
 	val = atoi(nvram_safe_get(strcat_r(prefix, "probresp_sw", tmp)));
 	wl_iovar_setint(name, "probresp_sw", val);
 
+#ifdef TCONFIG_WLCONF_VHT /* prepare for future change; right now we use wl util to apply it */
 	/* Update vht_features only if explicitly updated by NVRAM */
 	if (phytype == PHY_TYPE_AC) {
+		val = atoi(nvram_safe_get(strcat_r(prefix, "vhtmode", tmp)));
+		if (val != -1) {
+			WL_IOVAR_SETINT(name, "vhtmode", val);
+		}
+
 		val = atoi(nvram_safe_get(strcat_r(prefix, "vht_features", tmp)));
 		if (val != -1) {
-			wl_iovar_setint(name, "vht_features", val);
+			WL_IOVAR_SETINT(name, "vht_features", val);
 		}
 	}
+#endif /* TCONFIG_WLCONF_VHT */
 
 	/* Set beacon rotation */
 	str = nvram_get(strcat_r(prefix, "bcn_rotate", tmp));
@@ -3032,30 +3039,28 @@ wlconf(char *name)
 		wl_iovar_set(name, "avg_dma_xfer_rate", &val, sizeof(val));
 	}
 
-	{ /*
-	   * If no nvram variable exists to force non-aggregated mpdu regulation on/off,
-	   * limit to 2G interfaces.
-	   */
-	    str = nvram_get(strcat_r(prefix, "nar", tmp));
-	    if (str) {
+	/*
+	 * If no nvram variable exists to force non-aggregated mpdu regulation on/off,
+	 * limit to 2G interfaces.
+	 */
+	str = nvram_get(strcat_r(prefix, "nar", tmp));
+	if (str) {
 		val = atoi(str);
-	    } else {
+	} else {
 		val = (bandtype == WLC_BAND_2G) ? 1 : 0;
-	    }
-	    WLCONF_DBG("%sabling non-aggregated regulation on band %d\n", (val) ?
-	        "En":"Dis", bandtype);
-	    WL_IOVAR_SETINT(name, "nar", val);
-	    if (val) {
+	}
+	WLCONF_DBG("%sabling non-aggregated regulation on band %d\n", (val) ? "En":"Dis", bandtype);
+	WL_IOVAR_SETINT(name, "nar", val);
+	if (val) {
 		/* nar is enabled on this interface, add tuneable parameters */
 		str = nvram_get(strcat_r(prefix, "nar_handle_ampdu", tmp));
 		if (str) {
-		    WL_IOVAR_SETINT(name, "nar_handle_ampdu", atoi(str));
+			WL_IOVAR_SETINT(name, "nar_handle_ampdu", atoi(str));
 		}
 		str = nvram_get(strcat_r(prefix, "nar_transit_limit", tmp));
 		if (str) {
-		    WL_IOVAR_SETINT(name, "nar_transit_limit", atoi(str));
+			WL_IOVAR_SETINT(name, "nar_transit_limit", atoi(str));
 		}
-	    }
 	}
 
 	/* Set up TxBF */
@@ -3098,9 +3103,22 @@ wlconf(char *name)
 	/* Set phy periodic cal if nvram present. Otherwise, use driver defaults. */
 	str = nvram_get(strcat_r(prefix, "cal_period", tmp));
 	if (str) {
-		/* user specified phy cal period. */
+		/*
+		 *  If cal_period is "-1 / Auto"
+		 *     - For corerev >= 40, set cal_period to 0
+		 *     - For corerev < 40, use driver defaults.
+		 *  Else
+		 *     - Use the value specified in the nvram.
+		 */
 		val = atoi(str);
-		WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+		if (val == -1) {
+			if (rev.corerev >= 40) {
+				val = 0;
+				WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+			}
+		} else {
+			WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+		}
 	}
 
 	/* Set antenna */
@@ -3516,7 +3534,6 @@ wlconf_start(char *name)
 	/* Get instance */
 	WL_IOCTL(name, WLC_GET_INSTANCE, &unit, sizeof(unit));
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-
 
 	/* Get the list of BSS Configs */
 	if (!(bclist = wlconf_get_bsscfgs(name, prefix)))
