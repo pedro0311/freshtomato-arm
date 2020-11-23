@@ -667,7 +667,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "nf_loopback",		"0"				, 0 },
 	{ "block_wan",			"1"				, 0 },	// block inbound icmp
 	{ "block_wan_limit",		"1"				, 0 },
-	{ "block_wan_limit_icmp",	"1"				, 0 },
+	{ "block_wan_limit_icmp",	"3"				, 0 },
 	{ "multicast_pass",		"0"				, 0 },	// enable multicast proxy
 	{ "multicast_lan",		"0"				, 0 },	// on LAN (br0)
 	{ "multicast_lan1",		"0"				, 0 },	// on LAN1 (br1)
