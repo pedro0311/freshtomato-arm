@@ -11,7 +11,7 @@ install:
 
 	cp *.gif *.png *.ico *.html *.php robots.txt $(INSTALLDIR)/www
 
-# squish some of the files by trimming whitespace...
+# Squish some of the files by trimming whitespace...
 	for F in $(wildcard *.js *.jsx); do \
 		sed '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^\/\/ --\+\s*/d; /^$$/d }' < $$F > $(INSTALLDIR)/www/$$F; \
 	done
@@ -31,13 +31,13 @@ install:
 			-e "/^<!--$$/,/^-->$$/! { s,^\s\+, , }" $$F > $(INSTALLDIR)/www/$$F; \
 	done
 
-#only include MultiWAN options if MULTIWAN is configured in.
+# Only include MultiWAN options if MULTIWAN is configured in.
 ifneq ($(TCONFIG_MULTIWAN),y)
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx); do \
 		sed -i $$F -e "/MULTIWAN-BEGIN/,/MULTIWAN-END/d"; \
 	done
-# or remove dualwan options
+# Or remove dualwan options
 else
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx); do \
@@ -123,12 +123,6 @@ ifneq ($(TCONFIG_NOCAT),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NOCAT-BEGIN/,/NOCAT-END/d"
 endif
 
-# Only include Measure button and mnoise page in SDK6
-ifneq ($(TCONFIG_BCM7),y)
-	rm -f $(INSTALLDIR)/www/mnoise.asp
-	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/BCM7-BEGIN/,/BCM7-END/d"
-endif
-
 # Clean up NGinX files if not needed
 ifneq ($(TCONFIG_NGINX),y)
 	rm -f $(INSTALLDIR)/www/web-nginx.asp
@@ -139,7 +133,6 @@ ifneq ($(TCONFIG_NGINX),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/NGINX-BEGIN/,/NGINX-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NGINX-BEGIN/,/NGINX-END/d"
 endif
-
 
 # Only include HFS/HFS+ option and pages when configured.
 ifneq ($(TCONFIG_HFS),y)
@@ -164,6 +157,8 @@ ifneq ($(TCONFIG_BBT),y)
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/BBT-BEGIN/,/BBT-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/BBT-BEGIN/,/BBT-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BBT-BEGIN/,/BBT-END/d"
+else
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BBT0-BEGIN/,/BBT0-END/d"
 endif
 
 # Only include the Transmission pages if Transmission is configured in.
@@ -193,11 +188,13 @@ endif
 ifneq ($(TCONFIG_USB),y)
 	rm -f $(INSTALLDIR)/www/nas-*.*
 	rm -f $(INSTALLDIR)/www/wwan_parser.js
+	rm -f $(INSTALLDIR)/www/wwan-sms.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/USB-BEGIN/,/USB-END/d"
 endif
 
 # Only include the USB and NAS pages if REMOVE_USBAPP is NOT configured in.
@@ -299,6 +296,7 @@ endif
 
 # Only include the https option if it is compiled in
 ifneq ($(TCONFIG_HTTPS),y)
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
 # depends on USB and NAS pages - only if USB Support is configured in
 ifeq ($(TCONFIG_USB),y)
 	sed -i $(INSTALLDIR)/www/nas-ftp.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
@@ -327,6 +325,7 @@ endif
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
+		-e "/BBT0-BEGIN/d"	-e "/BBT0-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \
 		-e "/NOCAT-BEGIN/d"	-e "/NOCAT-END/d"\
@@ -345,7 +344,6 @@ endif
 		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
 		-e "/HTTPS-BEGIN/d"	-e "/HTTPS-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
-		-e "/BCM7-BEGIN/d"	-e "/BCM7-END/d" \
 		|| true; \
 	done
 

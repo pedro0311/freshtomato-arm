@@ -863,11 +863,9 @@ static int get_wlnoise(int client, int unit)
 		v = read_noise(unit);
 	}
 	else {
-#ifndef TCONFIG_BCM7
 		// RMo - added read_noise here, does not take AP down (just reads from register inside Broadcom ASIC).
 		//		 Read keeps value current.
 		v = read_noise(unit);
-#endif
 		v = nvram_get_int(wl_nvname("tnoise", unit, 0));
 		if ((v >= 0) || (v < -100)) v = -99;
 	}
@@ -886,36 +884,6 @@ void asp_wlnoise(int argc, char **argv)
 	foreach_wif(0, NULL, print_wlnoise);
 	web_puts(" ];\n");
 }
-
-#ifdef TCONFIG_BCM7
-void wo_wlmnoise(char *url)
-{
-	int ap;
-	int i;
-	char *wif;
-
-	check_wl_unit(NULL);
-
-	parse_asp("mnoise.asp");
-	web_close();
-	sleep(3);
-
-	int radio = get_radio(unit);
-
-	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
-	if (wl_ioctl(wif, WLC_GET_AP, &ap, sizeof(ap)) < 0) return;
-
-	i = 0;
-	wl_ioctl(wif, WLC_SET_AP, &i, sizeof(i));
-
-	for (i = 10; i > 0; --i) {
-		sleep(1);
-		read_noise(unit);
-	}
-
-	wl_restore(wif, unit, ap, radio, 0);
-}
-#endif
 
 static int wl_chanfreq(uint ch, int band)
 {

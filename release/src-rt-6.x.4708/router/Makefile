@@ -20,7 +20,7 @@ export HAVE_TOMATO := y
 
 define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
-  ( if patch -p0 -s --dry-run < $$FILE 2>/dev/null; then \
+  ( if patch -p0 -N -s --dry-run < $$FILE 2>/dev/null; then \
    patch -p0 -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
@@ -2908,18 +2908,20 @@ udpxy/stamp-h1:
 
 udpxy: udpxy/stamp-h1
 	@$(SEP)
-	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	NO_UDPXREC=yes \
+	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
-
-udpxy-clean:
-	-@$(MAKE) -C udpxy clean
-	@rm -f udpxy/stamp-h1
-	$(call unpatch_files,udpxy)
 
 udpxy-install:
 	install -d $(INSTALLDIR)/udpxy/usr/bin
 	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/bin/udpxy
 	$(STRIP) -s $(INSTALLDIR)/udpxy/bin/udpxy
+
+udpxy-clean:
+	-@$(MAKE) -C udpxy clean
+	@rm -f udpxy/stamp-h1
+	$(call unpatch_files,udpxy)
 
 mdadm:
 	@$(SEP)

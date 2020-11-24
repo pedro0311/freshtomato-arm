@@ -68,7 +68,6 @@
 #define MAX_IP_HEADER_LEN	60
 #define IP_HEADER_RAOPT_LEN	24
 
-#define MAX_MC_VIFS    32     // !!! check this const in the specific includes
 #define MAX_UPS_VIFS    8
 
 // Useful macros..
@@ -171,6 +170,8 @@ struct Config {
     unsigned int        lastMemberQueryCount;
     // Set if upstream leave messages should be sent instantly..
     unsigned short      fastUpstreamLeave;
+    // Size in bytes of hash table of downstream hosts used for fast leave
+    unsigned int        downstreamHostsHashTableSize;
     //~ aimwang added
     // Set if nneed to detect new interface.
     unsigned short	rescanVif;
@@ -197,7 +198,7 @@ int isAdressValidForIf(struct IfDesc* intrface, uint32_t ipaddr);
 struct MRouteDesc {
     struct in_addr  OriginAdr, McAdr;
     short           InVif;
-    uint8_t           TtlVc[ MAX_MC_VIFS ];
+    uint8_t         TtlVc[MAXVIFS];
 };
 
 // IGMP socket as interface for the mrouted API
@@ -241,32 +242,19 @@ void k_hdr_include(int hdrincl);
 void k_set_ttl(int t);
 void k_set_loop(int l);
 void k_set_if(uint32_t ifa);
-/*
-void k_join(uint32_t grp, uint32_t ifa);
-void k_leave(uint32_t grp, uint32_t ifa);
-*/
-
-/* udpsock.c
- */
-int openUdpSocket( uint32_t PeerInAdr, uint16_t PeerPort );
-
-/* mcgroup.c
- */
-int joinMcGroup( int UdpSock, struct IfDesc *IfDp, uint32_t mcastaddr );
-int leaveMcGroup( int UdpSock, struct IfDesc *IfDp, uint32_t mcastaddr );
-
+void k_join(struct IfDesc *ifd, uint32_t grp);
+void k_leave(struct IfDesc *ifd, uint32_t grp);
 
 /* rttable.c
  */
 void initRouteTable(void);
 void clearAllRoutes(void);
-int insertRoute(uint32_t group, int ifx);
+int insertRoute(uint32_t group, int ifx, uint32_t src);
 int activateRoute(uint32_t group, uint32_t originAddr, int upstrVif);
 void ageActiveRoutes(void);
-void setRouteLastMemberMode(uint32_t group);
+void setRouteLastMemberMode(uint32_t group, uint32_t src);
 int lastMemberGroupAge(uint32_t group);
 int interfaceInRoute(int32_t group, int Ix);
-int getMcGroupSock(void);
 
 /* request.c
  */

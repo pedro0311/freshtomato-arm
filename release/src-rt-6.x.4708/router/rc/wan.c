@@ -364,18 +364,25 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 	char word[100], *next;
 	int i, ret;
 	int proto;
+	int mwan_num;
 
-	/* Delete default route */
-	route_del(ifname, 0, NULL, NULL, NULL);
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	if (mwan_num == 1) {
+		/* Delete default route */
+		route_del(ifname, 0, NULL, NULL, NULL);
+
+		/* Set default route to gateway if specified */
+		i = 5;
+		while ((ret = route_add(ifname, 1, "0.0.0.0", gw, "0.0.0.0") != 0) && (i--)) {
+			sleep(1);
+		}
+	}
 
 	/* Try adding a host route to gateway first */
 	route_add(ifname, 0, gw, NULL, "255.255.255.255");
-
-	/* Set default route to gateway if specified */
-	i = 5;
-	while ((ret = route_add(ifname, 1, "0.0.0.0", gw, "0.0.0.0") != 0) && (i--)) {
-		sleep(1);
-	}
 
 	/* Add routes to dns servers as well for demand ppp to work */
 	in_addr_t mask = inet_addr(netmask);
@@ -1025,6 +1032,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	char *gw;
 	struct sysinfo si;
 	int wanup;
+	int mwan_num;
 
 	char wantime_file[256];
 	char wanconn_file[256];
@@ -1035,17 +1043,23 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 	sysinfo(&si);
 
+	mwan_num = nvram_get_int("mwan_num");
+	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+		mwan_num = 1;
+
 	memset(wantime_file, 0, 256);
 	sprintf(wantime_file, "/var/lib/misc/%s_time", prefix);
 	f_write(wantime_file, &si.uptime, sizeof(si.uptime), 0, 0);
 
 	proto = get_wanx_proto(prefix);
 
-	/* Delete default interface route */
-	if (proto == WP_PPTP || proto == WP_L2TP || (proto == WP_PPPOE && using_dhcpc(prefix)))	/* Delete MAN default route */
-		route_del(NULL, 0, NULL, NULL, NULL);
-	else
-		route_del(wan_ifname, 0, NULL, NULL, NULL);
+	if (mwan_num == 1) {
+		/* Delete default interface route */
+		if (proto == WP_PPTP || proto == WP_L2TP || (proto == WP_PPPOE && using_dhcpc(prefix)))	/* Delete MAN default route */
+			route_del(NULL, 0, NULL, NULL, NULL);
+		else
+			route_del(wan_ifname, 0, NULL, NULL, NULL);
+	}
 
 	if (proto != WP_DISABLED) {
 		/* Set default route to gateway if specified */
@@ -1056,9 +1070,11 @@ void start_wan_done(char *wan_ifname, char *prefix)
 				/* Possibly gateway is over the bridge, try adding a route to gateway first */
 				route_add(wan_ifname, 0, gw, NULL, "255.255.255.255");
 
-			n = 5;
-			while ((route_add(wan_ifname, 0, "0.0.0.0", gw, "0.0.0.0") == 1) && (n--)) {
-				sleep(1);
+			if (mwan_num == 1) {
+				n = 5;
+				while ((route_add(wan_ifname, 0, "0.0.0.0", gw, "0.0.0.0") == 1) && (n--)) {
+					sleep(1);
+				}
 			}
 
 			/* hack: avoid routing cycles, when both peer and server have the same IP */
