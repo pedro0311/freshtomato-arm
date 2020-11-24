@@ -97,9 +97,6 @@ ifeq ($(TCONFIG_EMF),y)
 obj-y += emf$(BCMEX)
 obj-y += igs$(BCMEX)
 endif
-ifeq ($(TCONFIG_DHDAP),)
-obj-y += prebuilt
-endif
 obj-$(TCONFIG_DPSTA) += dpsta
 obj-y += igmpproxy
 obj-y += rc
