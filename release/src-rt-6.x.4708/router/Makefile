@@ -318,17 +318,14 @@ IPTABLES_IPV6_OPT := --disable-ipv6
 endif
 
 
-# Specify iptables path and target for miniupnpd
+# Specify iptables/iproute2 target
 ifeq ($(TCONFIG_BCMARM),y)
-IPTABLESPATH=$(TOP)/iptables-1.8.x
 IPTABLES_TARGET = iptables-1.8.x
 IPROUTE_TARGET = iproute2-3.x
 else
-IPTABLESPATH=$(TOP)/iptables
 IPTABLES_TARGET = iptables
 IPROUTE_TARGET = iproute2
 endif
-export IPTABLESPATH
 export IPTABLES_TARGET
 export IPROUTE_TARGET
 
@@ -1118,10 +1115,6 @@ rp-pppoe-install:
 #	install -D rp-pppoe/src/pppoe-relay $(INSTALLDIR)/rp-pppoe/usr/sbin/pppoe-relay
 #	$(STRIP) $(INSTALLDIR)/rp-pppoe/usr/sbin/pppoe-relay
 
-
-upnp: nvram$(BCMEX) shared iptables
-	@$(SEP)
-
 libnfnetlink/stamp-h1:
 	cd libnfnetlink && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -1144,24 +1137,26 @@ libnfnetlink-clean:
 	-@$(MAKE) -C libnfnetlink distclean
 	@rm -f libnfnetlink/stamp-h1
 
-miniupnpd-config:
+miniupnpd/stamp-h1:
 	$(call patch_files,miniupnpd)
-	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,)
+	cd miniupnpd && \
+		./configure --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,) --iptablespath=$(if $(TCONFIG_BCMARM),$(TOP)/iptables-1.8.x,$(TOP)/iptables)
+	@touch $@
 
-miniupnpd: $(IPTABLES_TARGET) miniupnpd-config
+miniupnpd: $(IPTABLES_TARGET) miniupnpd/stamp-h1
 	@$(SEP)
-	$(MAKE) -C miniupnpd -f Makefile.freshtomato $(PARALLEL_BUILD) \
+	$(MAKE) -C miniupnpd $(PARALLEL_BUILD) \
 		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
-
-miniupnpd-clean:
-	-@$(MAKE) -C miniupnpd -f Makefile.freshtomato clean
-	@rm -f miniupnpd/config.h
-	$(call unpatch_files,miniupnpd)
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed -L$(TOP)/shared"
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
+
+miniupnpd-clean:
+	-@$(MAKE) -C miniupnpd clean
+	@rm -f miniupnpd/config.h
+	$(call unpatch_files,miniupnpd)
 
 shared: busybox
 

@@ -1,6 +1,6 @@
-# $Id: Makefile.sunos,v 1.1 2018/07/06 12:12:23 nanard Exp $
+# $Id: Makefile.sunos,v 1.2 2020/05/10 16:51:52 nanard Exp $
 # MiniUPnP project
-# http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+# http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
 # Author: Thomas Bernard
 #
 # Makefile for miniupnpd (MiniUPnP daemon)
@@ -10,7 +10,7 @@
 # Linux users, please use Makefile.linux :
 #  make -f Makefile.linux
 #
-# options can be passed to genconfig.sh through CONFIG_OPTIONS :
+# options can be passed to configure through CONFIG_OPTIONS :
 # $ CONFIG_OPTIONS="--ipv6 --igd2" make
 #
 
@@ -191,8 +191,8 @@ testportinuse:	config.h $(TESTPORTINUSEOBJS)
 # BSDmake :
 #	$(CC) $(CFLAGS) -o $@ $>
 
-config.h:	genconfig.sh VERSION
-	./genconfig.sh $(CONFIG_OPTIONS)
+config.h:	configure VERSION
+	./configure $(CONFIG_OPTIONS)
 
 .SUFFIXES:	.o .c
 .c.o:

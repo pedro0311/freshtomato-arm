@@ -1,8 +1,8 @@
-/* $Id: minissdp.c,v 1.98 2019/10/06 20:51:23 nanard Exp $ */
+/* $Id: minissdp.c,v 1.101 2020/06/06 17:56:17 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2019 Thomas Bernard
+ * (c) 2006-2020 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -798,7 +798,8 @@ SendSSDPNotifies(int s, const char * host, unsigned short http_port,
 			               known_service_types[i].s, /* ver_str,	USN: */
 			               lifetime);
 			/* for devices, also send NOTIFY on the uuid */
-			if(0==memcmp(known_service_types[i].s,
+			if(i > 0 &&	/* only known_service_types[0].s is shorter than "urn:schemas-upnp-org:device" */
+			   0==memcmp(known_service_types[i].s,
 			             "urn:schemas-upnp-org:device", sizeof("urn:schemas-upnp-org:device")-1)) {
 				SendSSDPNotify(s, (struct sockaddr *)&sockname, sockname_len, dest_str,
 				               host, http_port,
@@ -991,11 +992,16 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	/* get the string representation of the sender address */
 	sockaddr_to_string(sender, sender_str, sizeof(sender_str));
 	lan_addr = get_lan_for_peer(sender);
-	if(source_if >= 0)
+	if(source_if > 0)
 	{
 		if(lan_addr != NULL)
 		{
+#ifndef MULTIPLE_EXTERNAL_IP
+			if(lan_addr->index != (unsigned)source_if && lan_addr->index != 0
+			   && !(lan_addr->add_indexes & (1UL << (source_if - 1))))
+#else
 			if(lan_addr->index != (unsigned)source_if && lan_addr->index != 0)
+#endif
 			{
 				syslog(LOG_WARNING, "interface index not matching %u != %d", lan_addr->index, source_if);
 			}
@@ -1120,7 +1126,13 @@ ProcessSSDPData(int s, const char *bufr, int n,
 			syslog(LOG_INFO, "SSDP M-SEARCH from %s ST: %.*s",
 			       sender_str, st_len, st);
 			/* find in which sub network the client is */
+#ifdef ENABLE_IPV6
+			if((sender->sa_family == AF_INET) ||
+			   (sender->sa_family == AF_INET6 &&
+			    IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)sender)->sin6_addr)))
+#else
 			if(sender->sa_family == AF_INET)
+#endif
 			{
 				if (lan_addr == NULL)
 				{
@@ -1132,7 +1144,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 				announced_host = lan_addr->str;
 			}
 #ifdef ENABLE_IPV6
-			else
+			else if(sender->sa_family == AF_INET6)
 			{
 				/* IPv6 address with brackets */
 #ifdef UPNP_STRICT
@@ -1172,6 +1184,13 @@ ProcessSSDPData(int s, const char *bufr, int n,
 #endif
 			}
 #endif
+			else
+			{
+				syslog(LOG_ERR,
+				       "Unknown address family %d for client %s",
+				       sender->sa_family, sender_str);
+				return;
+			}
 			/* Responds to request with a device as ST header */
 			for(i = 0; known_service_types[i].s; i++)
 			{
@@ -1443,7 +1462,8 @@ SendSSDPGoodbye(int * sockets, int n_sockets)
 			                      known_service_types[i].s, ver_str,	/* NT: */
 			                      known_service_types[i].uuid, "::",
 			                      known_service_types[i].s); /* ver_str, USN: */
-			if(0==memcmp(known_service_types[i].s,
+			if(i > 0 &&	/* only known_service_types[0].s is shorter than "urn:schemas-upnp-org:device" */
+			   0==memcmp(known_service_types[i].s,
 			             "urn:schemas-upnp-org:device", sizeof("urn:schemas-upnp-org:device")-1))
 			{
 				ret += SendSSDPbyebye(sockets[j],

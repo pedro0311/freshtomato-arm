@@ -1,8 +1,8 @@
-/* $Id: miniupnpd.c,v 1.240 2019/12/23 23:42:03 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.248 2020/10/30 21:31:08 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2019 Thomas Bernard
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+ * (c) 2006-2020 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -43,6 +43,12 @@
 #elif !defined(__linux__)
 /* for BSD's sysctl */
 #include <sys/sysctl.h>
+#endif
+#ifdef HAS_LIBCAP
+#include <sys/capability.h>
+#endif
+#ifdef HAS_LIBCAP_NG
+#include <cap-ng.h>
 #endif
 
 /* unix sockets */
@@ -912,7 +918,7 @@ static int
 parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 {
 	const char * p;
-	int n;
+	unsigned int n;
 	char tmp[16];
 
 	memset(lan_addr, 0, sizeof(struct lan_addr_s));
@@ -958,7 +964,7 @@ parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 			while(*p && (*p=='.' || isdigit(*p)))
 				p++;
 			n = p - q;
-			if(n>15)
+			if(n >= sizeof(tmp))
 				goto parselan_error;
 			memcpy(tmp, q, n);
 			tmp[n] = '\0';
@@ -1003,12 +1009,39 @@ parselanaddr(struct lan_addr_s * lan_addr, const char * str)
 			}
 		}
 	}
+#else
+	while(*p) {
+		/* skip spaces */
+		while(*p && isspace(*p))
+			p++;
+		if(*p) {
+			unsigned int index;
+			n = 0;
+			while(p[n] && !isspace(p[n]) && n < sizeof(tmp)) {
+				tmp[n] = p[n];
+				n++;
+			}
+			if(n >= sizeof(tmp)) {
+				fprintf(stderr, "Cannot parse '%s'\n", p);
+				break;
+			}
+			tmp[n] = '\0';
+			index = if_nametoindex(tmp);
+			if(index == 0) {
+				fprintf(stderr, "Cannot get index for network interface %s\n",
+				        tmp);
+			} else {
+				lan_addr->add_indexes |= (1UL << (index - 1));
+			}
+			p += n;
+		}
+	}
 #endif
 	if(lan_addr->ifname[0] != '\0')
 	{
 		lan_addr->index = if_nametoindex(lan_addr->ifname);
 		if(lan_addr->index == 0)
-			fprintf(stderr, "Cannot get index for network interface %s",
+			fprintf(stderr, "Cannot get index for network interface %s\n",
 			        lan_addr->ifname);
 	}
 #ifdef ENABLE_IPV6
@@ -1116,8 +1149,11 @@ static int
 init(int argc, char * * argv, struct runtime_vars * v)
 {
 	int i;
+#ifndef NO_BACKGROUND_NO_PIDFILE
 	int pid;
+#endif
 	int debug_flag = 0;
+	int verbosity_level = 0;	/* for determining setlogmask() */
 	int openlog_option;
 	struct in_addr addr;
 	struct sigaction sa;
@@ -1133,7 +1169,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 	/* only print usage if -h is used */
 	for(i=1; i<argc; i++)
 	{
-		if(0 == strcmp(argv[i], "-h"))
+		if(0 == strcmp(argv[i], "-h") || 0 == strcmp(argv[i], "--help"))
 			goto print_usage;
 	}
 #ifndef DISABLE_CONFIG_FILE
@@ -1225,6 +1261,10 @@ init(int argc, char * * argv, struct runtime_vars * v)
 					fprintf(stderr, "can't parse \"%s\" as valid IPv6 listening address", ary_options[i].value);
 				}
 				break;
+			case UPNPIPV6_DISABLE:
+				if(strcmp(ary_options[i].value, "yes") == 0)
+					SETFLAG(IPV6DISABLEDMASK);
+				break;
 #endif /* ENABLE_IPV6 */
 			case UPNPPORT:
 				v->port = atoi(ary_options[i].value);
@@ -1270,7 +1310,6 @@ init(int argc, char * * argv, struct runtime_vars * v)
 				break;
 #endif	/* ENABLE_MANUFACTURER_INFO_CONFIGURATION */
 #ifdef USE_NETFILTER
-#ifdef USE_NFTABLES
 			case UPNPFORWARDCHAIN:
 				set_rdr_name(RDR_FORWARD_CHAIN_NAME, ary_options[i].value);
 				break;
@@ -1280,17 +1319,6 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			case UPNPNATPOSTCHAIN:
 				set_rdr_name(RDR_NAT_POSTROUTING_CHAIN_NAME, ary_options[i].value);
 				break;
-#else
-			case UPNPFORWARDCHAIN:
-				miniupnpd_forward_chain = ary_options[i].value;
-				break;
-			case UPNPNATCHAIN:
-				miniupnpd_nat_chain = ary_options[i].value;
-				break;
-			case UPNPNATPOSTCHAIN:
-				miniupnpd_nat_postrouting_chain = ary_options[i].value;
-				break;
-#endif    /* else USE_NFTABLES */
 #endif    /* USE_NETFILTER */
 			case UPNPNOTIFY_INTERVAL:
 				v->notify_interval = atoi(ary_options[i].value);
@@ -1423,6 +1451,18 @@ init(int argc, char * * argv, struct runtime_vars * v)
 		}
 		else switch(argv[i][1])
 		{
+		case 'v':
+			{
+				int j;
+				for (j = 1; argv[i][j] != '\0'; j++)
+					verbosity_level++;
+			}
+			break;
+#ifdef ENABLE_IPV6
+		case '4':
+			SETFLAG(IPV6DISABLEDMASK);
+			break;
+#endif
 #ifdef IGD_V2
 		case '1':
 			SETFLAG(FORCEIGDDESCV1MASK);
@@ -1579,12 +1619,14 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			}
 			break;
 #endif	/* ENABLE_NFQUEUE */
+#ifndef NO_BACKGROUND_NO_PIDFILE
 		case 'P':
 			if(i+1 < argc)
 				pidfilename = argv[++i];
 			else
 				fprintf(stderr, "Option -%c takes one argument.\n", argv[i][1]);
 			break;
+#endif
 		case 'd':
 			debug_flag = 1;
 			break;
@@ -1727,6 +1769,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 		}
 	}
 
+#ifndef NO_BACKGROUND_NO_PIDFILE
 	if(debug_flag)
 	{
 		pid = getpid();
@@ -1742,6 +1785,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 		pid = daemonize();
 #endif
 	}
+#endif
 
 	openlog_option = LOG_PID|LOG_CONS;
 	if(debug_flag)
@@ -1753,15 +1797,28 @@ init(int argc, char * * argv, struct runtime_vars * v)
 
 	if(!debug_flag)
 	{
-		/* speed things up and ignore LOG_INFO and LOG_DEBUG */
-		setlogmask(LOG_UPTO(LOG_NOTICE));
+		switch (verbosity_level)
+		{
+		case 0:
+			/* speed things up and ignore LOG_INFO and LOG_DEBUG */
+			setlogmask(LOG_UPTO(LOG_NOTICE));
+			break;
+		case 1:
+			/* ignore LOG_DEBUG */
+			setlogmask(LOG_UPTO(LOG_INFO));
+			break;
+		case 2:
+			setlogmask(LOG_UPTO(LOG_DEBUG));
+		}
 	}
 
+#ifndef NO_BACKGROUND_NO_PIDFILE
 	if(checkforrunning(pidfilename) < 0)
 	{
 		syslog(LOG_ERR, "MiniUPnPd is already running. EXITING");
 		return 1;
 	}
+#endif
 
 #ifdef TOMATO
 	syslog(LOG_NOTICE, "version " MINIUPNPD_VERSION " started");
@@ -1838,8 +1895,10 @@ init(int argc, char * * argv, struct runtime_vars * v)
 #endif
 #endif
 
+#ifndef NO_BACKGROUND_NO_PIDFILE
 	if(writepidfile(pidfilename, pid) < 0)
 		pidfilename = NULL;
+#endif
 
 #ifdef ENABLE_LEASEFILE
 	/*remove(lease_file);*/
@@ -1855,13 +1914,14 @@ init(int argc, char * * argv, struct runtime_vars * v)
 print_usage:
 	fprintf(stderr, "Usage:\n\t"
 	        "%s --version\n\t"
+	        "%s --help\n\t"
 	        "%s "
 #ifndef DISABLE_CONFIG_FILE
 			"[-f config_file] "
 #endif
 			"[-i ext_ifname] "
 #ifdef ENABLE_IPV6
-			"[-I ext_ifname6] "
+			"[-I ext_ifname6] [-4] "
 #endif
 			"[-o ext_ip]\n"
 #ifndef MULTIPLE_EXTERNAL_IP
@@ -1872,7 +1932,7 @@ print_usage:
 #ifdef ENABLE_HTTPS
 			" [-H https_port]"
 #endif
-			" [-p port] [-d]"
+			" [-p port] [-d] [-v]"
 #if defined(USE_PF) || defined(USE_IPF)
 			" [-L]"
 #endif
@@ -1883,7 +1943,10 @@ print_usage:
 			"\n"
 			/*"[-l logfile] " not functionnal */
 			"\t\t[-u uuid] [-s serial] [-m model_number] \n"
-			"\t\t[-t notify_interval] [-P pid_filename] "
+			"\t\t[-t notify_interval] "
+#ifndef NO_BACKGROUND_NO_PIDFILE
+			"[-P pid_filename] "
+#endif
 #ifdef ENABLE_MANUFACTURER_INFO_CONFIGURATION
 			"[-z fiendly_name]"
 #endif
@@ -1901,10 +1964,15 @@ print_usage:
 			"\n"
 	        "\nNotes:\n\tThere can be one or several listening_ips.\n"
 	        "\tNotify interval is in seconds. Default is 30 seconds.\n"
+#ifndef NO_BACKGROUND_NO_PIDFILE
 			"\tDefault pid file is '%s'.\n"
+#endif
 			"\tDefault config file is '%s'.\n"
 			"\tWith -d miniupnpd will run as a standard program.\n"
 			"\t-o argument is either an IPv4 address or \"STUN:host[:port]\".\n"
+#ifdef ENABLE_IPV6
+			"\t-4 disable IPv6\n"
+#endif
 #if defined(USE_PF) || defined(USE_IPF)
 			"\t-L sets packet log in pf and ipf on.\n"
 #endif
@@ -1933,8 +2001,13 @@ print_usage:
 #ifdef IGD_V2
 			"\t-1 force reporting IGDv1 in rootDesc *use with care*\n"
 #endif
-			"\t-h prints this help and quits.\n"
-	        "", argv[0], argv[0], pidfilename, DEFAULT_CONFIG);
+			"\t-v enables LOG_INFO messages, -vv LOG_DEBUG as well (default with -d)\n"
+			"\t-h / --help prints this help and quits.\n"
+	        "", argv[0], argv[0], argv[0],
+#ifndef NO_BACKGROUND_NO_PIDFILE
+			pidfilename,
+#endif
+			DEFAULT_CONFIG);
 	return 1;
 }
 
@@ -2027,6 +2100,7 @@ main(int argc, char * * argv)
 			return 0;
 		}
 	}
+	memset(&v, 0, sizeof(v));
 	if(init(argc, argv, &v) != 0)
 		return 1;
 #ifdef ENABLE_HTTPS
@@ -2103,6 +2177,7 @@ main(int argc, char * * argv)
 		} else if (addr_is_reserved(&addr)) {
 			syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding is impossible", if_addr, ext_if_name);
 			syslog(LOG_INFO, "You are probably behind NAT, enable option ext_perform_stun=yes to detect public IP address");
+			syslog(LOG_INFO, "Or use ext_ip= / -o option to declare public IP address");
 			disable_port_forwarding = 1;
 		}
 	}
@@ -2113,7 +2188,7 @@ main(int argc, char * * argv)
 		listen_port = (v.port > 0) ? v.port : 0;
 		/* open socket for HTTP connections. Listen on the 1st LAN address */
 #ifdef ENABLE_IPV6
-		shttpl = OpenAndConfHTTPSocket(&listen_port, 1);
+		shttpl = OpenAndConfHTTPSocket(&listen_port, !GETFLAG(IPV6DISABLEDMASK));
 #else /* ENABLE_IPV6 */
 		shttpl = OpenAndConfHTTPSocket(&listen_port);
 #endif /* ENABLE_IPV6 */
@@ -2139,7 +2214,7 @@ main(int argc, char * * argv)
 		/* https */
 		listen_port = (v.https_port > 0) ? v.https_port : 0;
 #ifdef ENABLE_IPV6
-		shttpsl = OpenAndConfHTTPSocket(&listen_port, 1);
+		shttpsl = OpenAndConfHTTPSocket(&listen_port, !GETFLAG(IPV6DISABLEDMASK));
 #else /* ENABLE_IPV6 */
 		shttpsl = OpenAndConfHTTPSocket(&listen_port);
 #endif /* ENABLE_IPV6 */
@@ -2285,6 +2360,60 @@ main(int argc, char * * argv)
 		return 1;
 	}
 #endif /* HAS_PLEDGE */
+#ifdef HAS_LIBCAP
+	{
+		cap_t caps = cap_get_proc();
+		if (caps == NULL) {
+			syslog(LOG_ERR, "cap_get_proc(): %m");
+		} else {
+			static const cap_value_t cap_list[3] = { CAP_NET_BROADCAST, CAP_NET_ADMIN, CAP_NET_RAW };
+			char * txt_caps = cap_to_text(caps, NULL);
+			if (txt_caps == NULL) {
+				syslog(LOG_ERR, "cap_to_text(): %m");
+			} else {
+				syslog(LOG_DEBUG, "capabilities %s", txt_caps);
+				if (cap_free(txt_caps) < 0) {
+					syslog(LOG_ERR, "cap_free(): %m");
+				}
+			}
+			if (cap_clear(caps) < 0) {
+				syslog(LOG_ERR, "cap_clear(): %m");
+			}
+			if (cap_set_flag(caps, CAP_PERMITTED, sizeof(cap_list)/sizeof(cap_list[0]), cap_list, CAP_SET) < 0) {
+				syslog(LOG_ERR, "cap_set_flag(): %m");
+			}
+			if (cap_set_flag(caps, CAP_EFFECTIVE, sizeof(cap_list)/sizeof(cap_list[0]), cap_list, CAP_SET) < 0) {
+				syslog(LOG_ERR, "cap_set_flag(): %m");
+			}
+			txt_caps = cap_to_text(caps, NULL);
+			if (txt_caps == NULL) {
+				syslog(LOG_ERR, "cap_to_text(): %m");
+			} else {
+				syslog(LOG_DEBUG, "capabilities %s", txt_caps);
+				if (cap_free(txt_caps) < 0) {
+					syslog(LOG_ERR, "cap_free(): %m");
+				}
+			}
+			if (cap_set_proc(caps) < 0) {
+				syslog(LOG_ERR, "cap_set_proc(): %m");
+			}
+			if (cap_free(caps) < 0) {
+				syslog(LOG_ERR, "cap_free(): %m");
+			}
+		}
+	}
+#endif /* HAS_LIBCAP */
+#ifdef HAS_LIBCAP_NG
+	capng_setpid(getpid());
+	capng_clear(CAPNG_SELECT_BOTH);
+	if (capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED, CAP_NET_BROADCAST, CAP_NET_ADMIN, CAP_NET_RAW, -1) < 0) {
+		syslog(LOG_ERR, "capng_updatev() failed");
+	} else {
+		if (capng_apply(CAPNG_SELECT_BOTH) < 0) {
+			syslog(LOG_ERR, "capng_apply() failed");
+		}
+	}
+#endif /* HAS_LIBCAP_NG */
 
 	/* main loop */
 	while(!quitting)
@@ -2933,10 +3062,12 @@ shutdown:
 	}
 
 	/* remove pidfile */
+#ifndef NO_BACKGROUND_NO_PIDFILE
 	if(pidfilename && (unlink(pidfilename) < 0))
 	{
 		syslog(LOG_ERR, "Failed to remove pidfile %s: %m", pidfilename);
 	}
+#endif
 
 	/* delete lists */
 	while(lan_addrs.lh_first != NULL)
@@ -2953,13 +3084,14 @@ shutdown:
 	free(snatpmp);
 #endif
 	free(snotify);
-	closelog();
-#ifndef DISABLE_CONFIG_FILE
-	freeoptions();
-#endif
 
 	shutdown_redirect();
 
+#ifndef DISABLE_CONFIG_FILE
+	/* in some case shutdown_redirect() may need the option values */
+	freeoptions();
+#endif
+	closelog();
 	return 0;
 }
 

@@ -1,11 +1,11 @@
---- miniupnpd/genconfig.sh
-+++ miniupnpd/genconfig.sh
-@@ -96,11 +96,11 @@ if [ -f ./os.astlinux ]; then
+--- miniupnpd/configure
++++ miniupnpd/configure
+@@ -114,11 +114,11 @@
  	OS_VERSION=$(cat ./os.astlinux)
  fi
  
 -# Tomato USB special case
-+# Tomato special case
++# FreshTomato special case
  if [ -f ../shared/tomato_version ]; then
  	OS_NAME=Tomato
 -	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f2,3`
@@ -15,7 +15,7 @@
  fi
  
  # OpenEmbedded special case
-@@ -366,8 +366,8 @@ case $OS_NAME in
+@@ -396,8 +396,8 @@
  		FW=iptables
  		;;
  	Tomato)
@@ -26,13 +26,82 @@
  		echo "" >> ${CONFIGFILE}
  		echo "#ifndef TOMATO" >> ${CONFIGFILE}
  		echo "#define TOMATO" >> ${CONFIGFILE}
+@@ -490,8 +490,14 @@
+ 				fi
+ 				if [ "$IPTABLES_143" -eq 1 ] ; then
+ 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
++					if [ "$TCONFIG_IPV6" = "y" ]; then
++						echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip6tc.o" >> config.mk
++					fi
+ 				else
+ 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/libiptc.a" >> config.mk
++					if [ "$TCONFIG_IPV6" = "y" ]; then
++						echo "LDLIBS += ${IPTABLESPATH}/libiptc/libip6tc.a" >> config.mk
++					fi
+ 				fi
+ 			else
+ 				# OpenWRT
+--- miniupnpd/Makefile.linux
++++ miniupnpd/Makefile.linux
+@@ -29,11 +29,13 @@
+ CFLAGS += -fno-common
+ CFLAGS += -fstack-protector -fPIE
+ CFLAGS += -D_FORTIFY_SOURCE=2
+-CPPFLAGS += -D_GNU_SOURCE
++CFLAGS += -D_GNU_SOURCE
+ CFLAGS += -Wall
+ CFLAGS += -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
+ #CFLAGS += -Wno-missing-field-initializers
+ #CFLAGS += -ansi	# iptables headers does use typeof which is a gcc extension
++CFLAGS += $(EXTRACFLAGS)
++CPPFLAGS += -I$(TOP)/shared
+ LDFLAGS += -Wl,-z,now -Wl,-z,relro -pie
+ CC ?= gcc
+ RM = rm -f
+@@ -41,7 +43,7 @@
+ STRIP ?= strip
+ PKG_CONFIG ?= pkg-config
+ CP = cp
+-DOXYGEN ?= doxygen
++#DOXYGEN ?= doxygen
+ 
+ DEPFLAGS = -MM -MG -MT $(patsubst %.d,%.o,$@) -MT $@
+ # -M : with system headers, -MM : without
+@@ -52,7 +54,7 @@
+ MANINSTALLDIR = $(INSTALLPREFIX)/share/man/man8
+ 
+ include config.mk
+-include $(SRCDIR)/gitrev.mk
++#include $(SRCDIR)/gitrev.mk
+ include $(SRCDIR)/objects.mk
+ 
+ # sources in netfilter/ directory
+@@ -87,12 +89,12 @@
+ ifeq ($(TARGET_OPENWRT),)
+ LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libssl)
+ 
+-TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
+-ifeq ($(TEST),1)
+-LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l uuid)
+-else
+-$(info please install uuid-dev package / libuuid)
+-endif # ($(TEST),1)
++#TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
++#ifeq ($(TEST),1)
++#LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l uuid)
++#else
++#$(info please install uuid-dev package / libuuid)
++#endif # ($(TEST),1)
+ endif # ($(TARGET_OPENWRT,)
+ 
+ GLIBC_VERSION := $(shell ldd --version | head -n 1 | sed 's/^.* //')
 --- miniupnpd/getifaddr.c
 +++ miniupnpd/getifaddr.c
 @@ -24,6 +24,8 @@
  #include "getifaddr.h"
  #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
  #include <ifaddrs.h>
-+/* for Tomato ARM - Add getifaddr support to Tomato ARM builds (missing) */
++/* FreshTomato ARM - add getifaddr support (missing) */
 +#include "ifaddrs.c"
  #endif
  
