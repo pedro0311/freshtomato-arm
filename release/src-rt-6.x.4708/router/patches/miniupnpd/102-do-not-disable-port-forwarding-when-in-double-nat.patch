@@ -1,6 +1,6 @@
 --- miniupnpd/miniupnpd.c
 +++ miniupnpd/miniupnpd.c
-@@ -1061,7 +1061,7 @@ int update_ext_ip_addr_from_stun(int ini
+@@ -1094,7 +1094,7 @@ 
  		else
  			syslog(LOG_INFO, "STUN: ext interface %s has now public IP address %s: Port forwarding is now enabled", ext_if_name, if_addr_str);
  	} else if ((init || !disable_port_forwarding) && restrictive_nat) {
@@ -9,20 +9,22 @@
  	} else {
  		syslog(LOG_INFO, "STUN: ... done");
  	}
-@@ -2101,9 +2101,9 @@ main(int argc, char * * argv)
+@@ -2175,10 +2175,10 @@ 
  		if (getifaddr(ext_if_name, if_addr, INET_ADDRSTRLEN, &addr, NULL) < 0) {
  			syslog(LOG_WARNING, "Cannot get IP address for ext interface %s. Network is down", ext_if_name);
  		} else if (addr_is_reserved(&addr)) {
 -			syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding is impossible", if_addr, ext_if_name);
 -			syslog(LOG_INFO, "You are probably behind NAT, enable option ext_perform_stun=yes to detect public IP address");
+-			syslog(LOG_INFO, "Or use ext_ip= / -o option to declare public IP address");
 -			disable_port_forwarding = 1;
-+			syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding might not work properly", if_addr, ext_if_name);
++//			syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding is impossible", if_addr, ext_if_name);
 +//			syslog(LOG_INFO, "You are probably behind NAT, enable option ext_perform_stun=yes to detect public IP address");
++//			syslog(LOG_INFO, "Or use ext_ip= / -o option to declare public IP address");
 +//			disable_port_forwarding = 1;
  		}
  	}
  
-@@ -2318,10 +2318,10 @@ main(int argc, char * * argv)
+@@ -2447,10 +2447,10 @@ 
  					if (disable_port_forwarding && !reserved) {
  						syslog(LOG_INFO, "Public IP address %s on ext interface %s: Port forwarding is enabled", if_addr, ext_if_name);
  					} else if (!disable_port_forwarding && reserved) {

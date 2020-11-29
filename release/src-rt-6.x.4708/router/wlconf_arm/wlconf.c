@@ -1,7 +1,7 @@
 /*
  * Wireless Network Adapter Configuration Utility
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: wlconf.c 454872 2014-02-12 02:49:54Z $
+ * $Id: wlconf.c 515105 2014-11-13 06:54:30Z $
  */
 
 #include <typedefs.h>
@@ -279,6 +279,55 @@ wlconf_set_preauth(char *name, int bsscfg_idx, int preauth)
 	WL_BSSIOVAR_SETINT(name, "wpa_cap", bsscfg_idx, cap);
 
 	return ret;
+}
+
+static void
+wlconf_dfs_pref_chan_options(char *name)
+{
+	char val[32], *next;
+	wl_dfs_forced_t *dfs_frcd = NULL;
+	uint ioctl_size;
+	chanspec_t chanspec;
+	int ret;
+	wl_dfs_forced_t inp;
+
+	dfs_frcd = (wl_dfs_forced_t *) malloc(WL_DFS_FORCED_PARAMS_MAX_SIZE);
+	if (!dfs_frcd) {
+		return;
+	}
+
+	memset(dfs_frcd, 0, WL_DFS_FORCED_PARAMS_MAX_SIZE);
+	memset(&inp, 0, sizeof(wl_dfs_forced_t));
+
+	inp.version = DFS_PREFCHANLIST_VER;
+	wl_iovar_getbuf(name, "dfs_channel_forced", &inp, sizeof(wl_dfs_forced_t),
+		dfs_frcd, WL_DFS_FORCED_PARAMS_MAX_SIZE);
+
+	if (dfs_frcd->version != DFS_PREFCHANLIST_VER) {
+		free(dfs_frcd);
+		return;
+	}
+
+	dfs_frcd->chspec_list.num = 0;
+	foreach(val, nvram_safe_get("wl_dfs_pref"), next) {
+		if (atoi(val)) {
+			chanspec = wf_chspec_aton(val);
+			/* Maximum 6 entries supported in UI */
+			if (dfs_frcd->chspec_list.num > 6) {
+				free(dfs_frcd);
+				return;
+			}
+			dfs_frcd->chspec_list.list[dfs_frcd->chspec_list.num++] = chanspec;
+		}
+	}
+
+	ioctl_size = WL_DFS_FORCED_PARAMS_FIXED_SIZE +
+		(dfs_frcd->chspec_list.num * sizeof(chanspec_t));
+	dfs_frcd->version = DFS_PREFCHANLIST_VER;
+	WL_IOVAR_SET(name, "dfs_channel_forced", dfs_frcd, ioctl_size);
+
+	free(dfs_frcd);
+	return;
 }
 
 static void
@@ -951,14 +1000,14 @@ wlconf_security_options(char *name, char *prefix, int bsscfg_idx, bool id_supp,
 	val = atoi(nvram_safe_get(strcat_r(prefix, "auth", tmp)));
 	WL_BSSIOVAR_SETINT(name, "auth", bsscfg_idx, val);
 #ifdef MFP
-		/* Set MFP */
+	/* Set MFP */
 	val = WPA_AUTH_DISABLED;
 	WL_BSSIOVAR_GET(name, "wpa_auth", bsscfg_idx, &val, sizeof(val));
 	if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED)) {
 		val = atoi(nvram_safe_get(strcat_r(prefix, "mfp", tmp)));
 		WL_BSSIOVAR_SETINT(name, "mfp", bsscfg_idx, val);
 	}
-#endif
+#endif /* ifdef MFP */
 }
 
 static void
@@ -1674,6 +1723,10 @@ wlconf(char *name)
 	/* clean up tmp */
 	memset(tmp, 0, sizeof(tmp));
 
+	/* Check interface (fail silently for non-wl interfaces) */
+	if ((ret = wl_probe(name)))
+		return ret;
+
 	/* because of ifdefs in wl driver,  when we don't have AP capabilities we
 	 * can't use the same iovars to configure the wl.
 	 * so we use "wl_ap_build" to help us know how to configure the driver
@@ -1700,10 +1753,6 @@ wlconf(char *name)
 			wet_tunnel_cap = 1;
 	}
 
-	/* Check interface (fail silently for non-wl interfaces) */
-	if ((ret = wl_probe(name)))
-		return ret;
-
 	/* Get MAC address */
 	(void) wl_hwaddr(name, (uchar *)buf);
 	memcpy(vif_addr, buf, ETHER_ADDR_LEN);
@@ -1724,7 +1773,7 @@ wlconf(char *name)
 	if (restore_defaults) {
 		wlconf_set_current_txparam_into_nvram(name, prefix);
 	}
-#ifdef BCMDBG
+
 	/* Apply message level */
 	if (nvram_invmatch("wl_msglevel", "")) {
 		val = (int)strtoul(nvram_get("wl_msglevel"), NULL, 0);
@@ -1739,7 +1788,6 @@ wlconf(char *name)
 		else
 			WL_IOCTL(name, WLC_SET_MSGLEVEL, &val, sizeof(val));
 	}
-#endif
 
 	/* Bring the interface down */
 	WL_IOCTL(name, WLC_DOWN, NULL, sizeof(val));
@@ -1807,7 +1855,7 @@ wlconf(char *name)
 			WL_IOVAR_SETINT(name, "mbss", (bclist->count >= 1));
 #else
 			WL_IOVAR_SETINT(name, "mbss", (bclist->count >= 2));
-#endif
+#endif /* __CONFIG_USBAP__ */
 		} else
 			WL_IOVAR_SETINT(name, "mbss", 0);
 
@@ -1841,7 +1889,6 @@ wlconf(char *name)
 			if (!strcmp(addr, "")) {
 				vif_addr[5] = (vif_addr[5] & ~(max_no_vifs-1))
 				        | ((max_no_vifs-1) & (vif_addr[5]+1));
-
 				nvram_set(tmp, ether_etoa((uchar *)vif_addr, eaddr));
 			}
 		}
@@ -1952,6 +1999,12 @@ wlconf(char *name)
 	/* Set the Proxy STA or Repeater mode */
 	if (psta) {
 		WL_IOVAR_SETINT(name, "psta", PSTA_MODE_PROXY);
+		/* Set inactivity timer */
+		str = nvram_get(strcat_r(prefix, "psta_inact", tmp));
+		if (str) {
+			val = atoi(str);
+			WL_IOVAR_SETINT(name, "psta_inact", val);
+		}
 	} else if (psr) {
 		WL_IOVAR_SETINT(name, "psta", PSTA_MODE_REPEATER);
 		val = atoi(nvram_safe_get(strcat_r(prefix, "psr_mrpt", tmp)));
@@ -2262,7 +2315,7 @@ wlconf(char *name)
 		}
 		val = atoi(nvram_safe_get(strcat_r(prefix, "tpc_db", tmp)));
 		WL_IOCTL(name, WLC_SEND_PWR_CONSTRAINT, &val, sizeof(val));
-
+		wlconf_dfs_pref_chan_options(name);
 	} else if (nvram_match(tmp, "d")) {
 		val = 0;
 		WL_IOCTL(name, WLC_SET_RADAR, &val, sizeof(val));
@@ -2651,6 +2704,21 @@ wlconf(char *name)
 	val = atoi(nvram_safe_get(strcat_r(prefix, "bcn", tmp)));
 	WL_IOCTL(name, WLC_SET_BCNPRD, &val, sizeof(val));
 
+#ifdef TCONFIG_WLCONF_VHT /* prepare for future change; right now we use wl util to apply it */
+	/* Update vht_features only if explicitly updated by NVRAM */
+	if (phytype == PHY_TYPE_AC) {
+		val = atoi(nvram_safe_get(strcat_r(prefix, "vhtmode", tmp)));
+		if (val != -1) {
+			WL_IOVAR_SETINT(name, "vhtmode", val);
+		}
+
+		val = atoi(nvram_safe_get(strcat_r(prefix, "vht_features", tmp)));
+		if (val != -1) {
+			WL_IOVAR_SETINT(name, "vht_features", val);
+		}
+	}
+#endif /* TCONFIG_WLCONF_VHT */
+
 	/* Set beacon rotation */
 	str = nvram_get(strcat_r(prefix, "bcn_rotate", tmp));
 	if (!str) {
@@ -2833,9 +2901,22 @@ wlconf(char *name)
 	/* Set phy periodic cal if nvram present. Otherwise, use driver defaults. */
 	str = nvram_get(strcat_r(prefix, "cal_period", tmp));
 	if (str) {
-		/* user specified phy cal period. */
+		/*
+		 *  If cal_period is "-1 / Auto"
+		 *     - For corerev >= 40, set cal_period to 0
+		 *     - For corerev < 40, use driver defaults.
+		 *  Else
+		 *     - Use the value specified in the nvram.
+		 */
 		val = atoi(str);
-		WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+		if (val == -1) {
+			if (rev.corerev >= 40) {
+				val = 0;
+				WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+			}
+		} else {
+			WL_IOVAR_SET(name, "cal_period", &val, sizeof(val));
+		}
 	}
 
 	/* Set antenna */
@@ -2966,11 +3047,16 @@ wlconf(char *name)
 
 		snprintf(tmp, sizeof(tmp), "acs_ifnames");
 		ptr = nvram_get(tmp);
-		if (ptr)
-			snprintf(buf, sizeof(buf), "%s %s", ptr, name);
-		else
+		if (ptr) {
+			if (!find_in_list(ptr, name)) {
+				snprintf(buf, sizeof(buf), "%s %s", ptr, name);
+				nvram_set(tmp, buf);
+			}
+		} else {
 			strncpy(buf, name, sizeof(buf));
-		nvram_set(tmp, buf);
+			nvram_set(tmp, buf);
+		}
+
 		WL_IOVAR_SETINT(name, "chanim_mode", CHANIM_EXT);
 		goto legacy_end;
 
@@ -3252,7 +3338,6 @@ wlconf_start(char *name)
 	/* Get instance */
 	WL_IOCTL(name, WLC_GET_INSTANCE, &unit, sizeof(unit));
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-
 
 	/* Get the list of BSS Configs */
 	if (!(bclist = wlconf_get_bsscfgs(name, prefix)))

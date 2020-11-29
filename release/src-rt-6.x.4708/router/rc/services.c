@@ -126,17 +126,18 @@ void start_dnsmasq()
 	char dhcpN_num[] = "dhcpXX_num";
 	char dhcpN_lease[] = "dhcpXX_lease";
 
-	if (foreach_wif(1, NULL, is_wet)) {
-		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
-		return;
-	}
-
 	if (getpid() != 1) {
 		start_service("dnsmasq");
 		return;
 	}
 
 	stop_dnsmasq();
+
+	/* check wireless bridge after stop_dnsmasq() */
+	if (foreach_wif(1, NULL, is_wet)) {
+		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
+		return;
+	}
 
 	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
 		perror(DNSMASQ_CONF);
