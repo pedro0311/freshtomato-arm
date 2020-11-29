@@ -57,16 +57,19 @@ watchdogRun() {
 			$DEBUG "prefix=$PREFIX, iface=$IFACE, uptime=$ISUP, ISGW=$ISGW, WEIGHT=$WEIGHT"
 
 			[ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
-				TEMP_ROUTE_TABLE_ADDED=0
-				[ "$METHOD" -eq 1 -o "$METHOD" -eq 2 ] && {
-					for IP in $IPLIST; do
-						$DEBUG "ip rule add to $IP table $TMP_ROUTE_TABLE_ID prio 1"
-						ip rule add to $IP table $TMP_ROUTE_TABLE_ID prio 1
-					done
-					$DEBUG "ip route add default dev $IFACE table $TMP_ROUTE_TABLE_ID"
-					ip route add default dev $IFACE table $TMP_ROUTE_TABLE_ID
-					TEMP_ROUTE_TABLE_ADDED=1
-				}
+				DEFAULT_ROUTE_FRAGMENT=$(ip route | grep default | cut -d' ' -f2-)
+				GATEWAY_FRAGMENT="via $(nvram get "$PREFIX"_gateway)"
+				[ "$ISPPPD" -eq 0 ] && GATEWAY_FRAGMENT=""
+				for IP in $IPLIST; do
+					[ ! -z "$DEFAULT_ROUTE_FRAGMENT" ] && {
+						ROUTE_EXEC="ip route add $IP $DEFAULT_ROUTE_FRAGMENT"
+						$DEBUG $ROUTE_EXEC
+						$ROUTE_EXEC
+					}
+					ROUTE_EXEC="ip route add $IP dev $IFACE $GATEWAY_FRAGMENT metric 50000"
+					$DEBUG $ROUTE_EXEC
+					$ROUTE_EXEC
+				done
 
 				if [ "$METHOD" -eq 1 ]; then
 					$DEBUG "run ping-test"
@@ -79,14 +82,16 @@ watchdogRun() {
 					ckcurl
 				fi
 
-				[ "$TEMP_ROUTE_TABLE_ADDED" -eq 1 ] && {
-					for IP in $IPLIST; do
-						$DEBUG "ip rule del to $IP table $TMP_ROUTE_TABLE_ID prio 1"
-						ip rule del to $IP table $TMP_ROUTE_TABLE_ID prio 1
-					done
-					$DEBUG "ip route del default dev $IFACE table $TMP_ROUTE_TABLE_ID"
-					ip route del default dev $IFACE table $TMP_ROUTE_TABLE_ID
-				}
+				for IP in $IPLIST; do
+					[ ! -z "$DEFAULT_ROUTE_FRAGMENT" ] && {
+						ROUTE_EXEC="ip route del $IP $DEFAULT_ROUTE_FRAGMENT"
+						$DEBUG $ROUTE_EXEC
+						$ROUTE_EXEC
+					}
+					ROUTE_EXEC="ip route del $IP dev $IFACE $GATEWAY_FRAGMENT metric 50000"
+					$DEBUG $ROUTE_EXEC
+					$ROUTE_EXEC
+				done
 			}
 
 			[ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ] && {
@@ -139,10 +144,7 @@ cktracert() {
 
 	for IP in $IPLIST; do
 		# we need only send/receive few packages to be sure is connection works.
-		# not using -i $IFACE because it doesn't work on VLANs (broadcom proprietary tagging),
-		# the router incorrectly sends ARP packets for the destination. Instead, we rely on
-		# the temporary route table to send the packets from the correct interface.
-		traceroute -w 3 -m 4 $IP > /dev/null 2>&1
+		traceroute -i $IFACE -w 3 -m 4 $IP > /dev/null 2>&1
 	done
 
 	RXBYTES2=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
@@ -155,10 +157,7 @@ ckping() {
 	local CHECK
 
 	for IP in $IPLIST; do
-		# not using -I $IFACE because it doesn't work on VLANs (broadcom proprietary tagging),
-		# the router incorrectly sends ARP packets for the destination. Instead, we rely on
-		# the temporary route table to send the packets from the correct interface.
-		CHECK=$(ping -c 4 $IP | grep "received" | cut -d "," -f2 | cut -d " " -f2)
+		CHECK=$(ping -c 4 -I $IFACE $IP | grep "received" | cut -d "," -f2 | cut -d " " -f2)
 
 		# "0" means 100% loss - not receive any package
 		[ "$CHECK" -gt 0 ] && RESULT=$((RESULT+1))
@@ -171,12 +170,11 @@ ckping() {
 ckcurl() {
 	local CHECK
 
-	for HOST in $HOSTLIST; do
-		# curl --interface works correctly, no need to connect by IP.
-		CHECK=$(curl $HOST --interface $IFACE --connect-timeout 5 -ksfI -o /dev/null && echo 1 || echo 0)
+	for IP in $IPLIST; do
+		CHECK=$(curl $IP --interface $IFACE --connect-timeout 5 -ksfI -o /dev/null && echo 1 || echo 0)
 
 		[ "$CHECK" -gt 0 ] && RESULT=$((RESULT+1))
-		$DEBUG "$IFACE - $HOST: $CHECK; curl connect OK=$RESULT"
+		$DEBUG "$IFACE - $IP: $CHECK; curl connect OK=$RESULT"
 	done
 
 	[ "$RESULT" -gt 0 ] && $DEBUG "curl connect for $IFACE: OK=1"

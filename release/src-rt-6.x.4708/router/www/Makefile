@@ -157,8 +157,6 @@ ifneq ($(TCONFIG_BBT),y)
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/BBT-BEGIN/,/BBT-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/BBT-BEGIN/,/BBT-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BBT-BEGIN/,/BBT-END/d"
-else
-	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BBT0-BEGIN/,/BBT0-END/d"
 endif
 
 # Only include the Transmission pages if Transmission is configured in.
@@ -325,7 +323,6 @@ endif
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
-		-e "/BBT0-BEGIN/d"	-e "/BBT0-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \
 		-e "/NOCAT-BEGIN/d"	-e "/NOCAT-END/d"\
