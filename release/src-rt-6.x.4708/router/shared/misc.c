@@ -255,7 +255,8 @@ void notice_set(const char *path, const char *format, ...)
 	mkdir("/var/notice", 0755);
 	snprintf(p, sizeof(p), "/var/notice/%s", path);
 	f_write_string(p, buf, 0, 0);
-	if (buf[0]) syslog(LOG_INFO, "notice[%s]: %s", path, buf);
+	if (buf[0])
+		logmsg(LOG_INFO, "notice[%s]: %s", path, buf);
 }
 
 int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
