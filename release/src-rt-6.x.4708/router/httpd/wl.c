@@ -1319,7 +1319,7 @@ wlc_cntry_abbrev_to_country(const char *abbrev)
 
 void asp_wlcountries(int argc, char **argv)
 {
-	int i = 0;
+	unsigned int i;
 	wl_country_list_t *cl = (wl_country_list_t *)malloc(WLC_IOCTL_MAXLEN + WLC_IOCTL_MAXLEN_ADDON);
 	cntry_name_t *cntry = NULL;
 	char *abbrev = NULL;
