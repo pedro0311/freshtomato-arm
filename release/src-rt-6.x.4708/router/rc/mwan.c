@@ -125,6 +125,9 @@ int checkConnect(char *sPrefix)
 
 	get_wan_info(sPrefix); /* here for mwan_load_balance IP / dev info in case wan is down */
 
+	memset(tmp, 0, 100);
+	sprintf(tmp, "/tmp/state_%s", sPrefix);
+
 	if (check_wanup(sPrefix)) {
 		logmsg(LOG_DEBUG, "*** %s: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", __FUNCTION__, sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 		if (nvram_get_int("mwan_cktime") == 0) {
@@ -132,8 +135,6 @@ int checkConnect(char *sPrefix)
 			return 1;
 		}
 
-		memset(tmp, 0, 100);
-		sprintf(tmp, "/tmp/state_%s", sPrefix);
 		f = fopen(tmp, "r");
 		fscanf(f, "%d", &result);
 		fclose(f);

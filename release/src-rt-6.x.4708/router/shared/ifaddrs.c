@@ -241,7 +241,8 @@ nl_getmsg (int sd, int request, int seq, pid_t pid, struct nlmsghdr **nlhp, int 
   struct nlmsghdr *nh;
   size_t bufsize = 65536, lastbufsize = 0;
   void *buff = NULL;
-  int result = 0, read_size;
+  int result = 0;
+  unsigned int read_size;
   int msg_flags;
   for (;;)
     {
@@ -267,7 +268,7 @@ nl_getmsg (int sd, int request, int seq, pid_t pid, struct nlmsghdr **nlhp, int 
 	   NLMSG_OK (nh, read_size);
 	   nh = (struct nlmsghdr *) NLMSG_NEXT (nh, read_size))
 	{
-	  if (nh->nlmsg_pid != pid || nh->nlmsg_seq != seq)
+	  if ((int) nh->nlmsg_pid != pid || (int) nh->nlmsg_seq != seq)
 	    continue;
 	  if (nh->nlmsg_type == NLMSG_DONE)
 	    {
@@ -511,7 +512,7 @@ getifaddrs (struct ifaddrs **ifap)
 
       for (nlm = nlmsg_list; nlm; nlm = nlm->nlm_next)
 	{
-	  int nlmlen = nlm->size;
+	  unsigned int nlmlen = nlm->size;
 	  if (!(nlh0 = nlm->nlh))
 	    continue;
 	  for (nlh = nlh0;
@@ -533,7 +534,7 @@ getifaddrs (struct ifaddrs **ifap)
 	      memset (&ifamap, 0, sizeof (ifamap));
 
 	      /* check if the message is what we want */
-	      if (nlh->nlmsg_pid != pid || nlh->nlmsg_seq != nlm->seq)
+	      if ((int) nlh->nlmsg_pid != pid || (int) nlh->nlmsg_seq != nlm->seq)
 		continue;
 	      if (nlh->nlmsg_type == NLMSG_DONE)
 		{

@@ -96,12 +96,12 @@ int base64_decode(const char *in, unsigned char *out, int inlen)
 	return out - o;
 }
 
-int base64_encoded_len(int len)
+unsigned int base64_encoded_len(int len)
 {
 	return ((len + 2) / 3) * 4;
 }
 
-int base64_decoded_len(int len)
+unsigned int base64_decoded_len(int len)
 {
 	return ((len + 3) / 4) * 3;
 }

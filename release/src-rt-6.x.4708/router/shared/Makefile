@@ -29,7 +29,7 @@ export CFLAGS += -DBCM_BSD
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
-CFLAGS += -DDEBUG_SYSLOG
+export CFLAGS += -DDEBUG_LOGMSG
 endif
 
 LDFLAGS = --gc-sections -fPIC

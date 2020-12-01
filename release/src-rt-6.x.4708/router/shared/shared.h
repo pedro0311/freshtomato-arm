@@ -31,22 +31,22 @@
 #define DISABLE_SYSLOG_OS	(DISABLE_SYSLOG_OSM | (IF_TCONFIG_OPTIMIZE_SIZE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE(0)))
 #endif
 
-#ifndef DEBUG_SYSLOG
-#define IF_NOT_DEBUG_SYSLOG(...) __VA_ARGS__
-#define IF_DEBUG_SYSLOG(...)
+#ifdef DEBUG_LOGMSG
+#define IF_DEBUG_LOGMSG(...) __VA_ARGS__
+#define IF_NOT_DEBUG_LOGMSG(...)
 #else
-#define IF_NOT_DEBUG_SYSLOG(...)
-#define IF_DEBUG_SYSLOG(...) __VA_ARGS__
+#define IF_DEBUG_LOGMSG(...)
+#define IF_NOT_DEBUG_LOGMSG(...) __VA_ARGS__
 #endif
 
 #define logmsg(level, args...) \
 	do { \
-		IF_NOT_DEBUG_SYSLOG( \
-			if ((LOGMSG_DISABLE == 0) && (level < LOG_DEBUG)) \
+		IF_DEBUG_LOGMSG( \
+			if ((LOGMSG_DISABLE == 0) && ((nvram_get_int(LOGMSG_NVDEBUG)) || (level < LOG_DEBUG))) \
 				syslog(level, args); \
 		) \
-		IF_DEBUG_SYSLOG( \
-			if ((LOGMSG_DISABLE == 0) && ((nvram_get_int(LOGMSG_NVDEBUG)) || (level < LOG_DEBUG))) \
+		IF_NOT_DEBUG_LOGMSG( \
+			if ((LOGMSG_DISABLE == 0) && (level < LOG_DEBUG)) \
 				syslog(level, args); \
 		) \
 	} while (0)
@@ -337,8 +337,8 @@ extern void led_setup(void);
 /* base64.c */
 extern int base64_encode(const char *in, char *out, int inlen); /* returns amount of out buffer used */
 extern int base64_decode(const char *in, unsigned char *out, int inlen); /* returns amount of out buffer used */
-extern int base64_encoded_len(int len);
-extern int base64_decoded_len(int len); /* maximum possible, not actual */
+extern unsigned int base64_encoded_len(int len);
+extern unsigned int base64_decoded_len(int len); /* maximum possible, not actual */
 
 /* strings.c */
 #define MAX_PORTS		64

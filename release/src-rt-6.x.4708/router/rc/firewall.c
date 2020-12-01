@@ -1635,12 +1635,12 @@ static void filter6_input(void)
 		           atoi(hit) + 1, sec, chain_in_drop);
 
 		if (n & 1) {
-			ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface[0], nvram_safe_get("sshd_port"));
+			ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("sshd_port"));
 			if (nvram_get_int("sshd_remote") && nvram_invmatch("sshd_rport", nvram_safe_get("sshd_port")))
 				ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("sshd_rport"));
 		}
 		if (n & 2)
-			ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface[0], nvram_safe_get("telnetd_port"));
+			ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("telnetd_port"));
 	}
 
 	/* Protect against brute force on port defined for remote GUI access */

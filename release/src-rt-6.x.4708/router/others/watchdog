@@ -39,7 +39,7 @@ watchdogRun() {
 	for PREFIX in $MWANTABLE; do
 		ISUP=$(wanuptime "$PREFIX")
 		IFACE=$(nvram get "$PREFIX"_iface)
-		ISPPPD=$(ps | grep pppd$PREFIX | grep -v "grep" | wc -l)
+		ISPPPD=$([ -f /tmp/ppp/pppd$PREFIX ] && echo 1 || echo 0)
 		WEIGHT=$(nvram get "$PREFIX"_weight)
 		METHOD=$(nvram get "$PREFIX"_ckmtd)
 		PROTO=$(nvram get "$PREFIX"_proto)
@@ -59,7 +59,7 @@ watchdogRun() {
 			[ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
 				DEFAULT_ROUTE_FRAGMENT=$(ip route | grep default | cut -d' ' -f2-)
 				GATEWAY_FRAGMENT="via $(nvram get "$PREFIX"_gateway)"
-				[ "$ISPPPD" -eq 0 ] && GATEWAY_FRAGMENT=""
+				[ "$ISPPPD" -eq 1 ] && GATEWAY_FRAGMENT=""
 				for IP in $IPLIST; do
 					[ ! -z "$DEFAULT_ROUTE_FRAGMENT" ] && {
 						ROUTE_EXEC="ip route add $IP $DEFAULT_ROUTE_FRAGMENT"
@@ -144,7 +144,7 @@ cktracert() {
 
 	for IP in $IPLIST; do
 		# we need only send/receive few packages to be sure is connection works.
-		traceroute -i $IFACE -w 3 -m 4 $IP > /dev/null 2>&1
+		traceroute -i $IFACE -w 1 -m 4 -q 2 $IP > /dev/null 2>&1
 	done
 
 	RXBYTES2=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
@@ -302,6 +302,8 @@ else
 	checkPid
 
 	checkPidSwitch
+
+	mwanJob
 
 	watchdogRun
 fi

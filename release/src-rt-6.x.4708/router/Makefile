@@ -1275,6 +1275,7 @@ miniupnpd-install:
 miniupnpd-clean:
 	-@$(MAKE) -C miniupnpd clean
 	@rm -f miniupnpd/config.h
+	@rm -f miniupnpd/stamp-h1
 	$(call unpatch_files,miniupnpd)
 
 shared: busybox
