@@ -360,7 +360,7 @@ extern char *shrink_space(char *dest, const char *src, int n);
 #ifdef __CONFIG_DHDAP__
 extern int dhd_probe(char *name);
 extern int dhd_ioctl(char *name, int cmd, void *buf, int len);
-extern int dhd_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, int buflen);
+extern int dhd_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, unsigned int buflen);
 extern int dhd_iovar_setint(char *ifname, char *iovar, int val);
 extern int dhd_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
 #endif
