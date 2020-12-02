@@ -239,14 +239,23 @@ int ippreup_main(int argc, char **argv)
 int ip6up_main(int argc, char **argv)
 {
 	char *wan_ifname;
+	char prefix[] = "wanXX";
+	char tmp[32];
 	char *value;
 
 	if (!wait_action_idle(10))
 		return -1;
 
 	wan_ifname = safe_getenv("IFNAME");
+	strcpy(prefix, safe_getenv("LINKNAME"));
+	logmsg(LOG_DEBUG, "*** %s: wan_ifname = %s, prefix = %s.", __FUNCTION__, wan_ifname, prefix);
+
 	if ((!wan_ifname) || (!*wan_ifname))
 		return -1;
+
+	/* check nvram wan_iface for case "none" (re-connect) or NUL */
+	if (nvram_match(strcat_r(prefix, "_iface", tmp), "none") || nvram_match(strcat_r(prefix, "_iface", tmp), ""))
+		nvram_set(strcat_r(prefix, "_iface", tmp), wan_ifname); /* set interface pppX in case ipup_main() not yet (or later) called */
 
 	if ((value = getenv("LLREMOTE")))
 		nvram_set("ipv6_llremote", value); /* set ipv6 llremote address */
