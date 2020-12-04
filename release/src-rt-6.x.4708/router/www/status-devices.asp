@@ -292,15 +292,9 @@ dg.setup = function() {
 
 var observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
-function InNewWindow () {
-	var elements = document.getElementsByClassName("new_window");
-	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
-}
-
 function earlyInit() {
 	if (observer)
-		new observer(InNewWindow).observe(E("dev-grid"), { childList: true, subtree: true });
+		new observer(eventHandler).observe(E("dev-grid"), { childList: true, subtree: true });
 	dg.setup();
 }
 

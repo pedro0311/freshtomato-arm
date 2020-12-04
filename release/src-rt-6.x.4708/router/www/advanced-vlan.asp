@@ -837,13 +837,10 @@ function init() {
 			toggleVisibility(cprefix, "notes");
 		}
 	}
-	else {
+	else
 		E('notice-msg').innerHTML = '<div id="notice">This feature is not supported on this router.<\/div>';
-	}
 
-	var elements = document.getElementsByClassName("new_window");
-	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	eventHandler();
 }
 
 function earlyInit() {

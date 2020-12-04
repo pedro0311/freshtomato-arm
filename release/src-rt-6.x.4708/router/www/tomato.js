@@ -2860,3 +2860,9 @@ function cancelDefaultAction(e) {
 	evt.returnValue = false;
 	return false;
 }
+
+function eventHandler() {
+	var elements = document.getElementsByClassName('new_window');
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==='a')
+		addEvent(elements[i], 'click', function(e) { cancelDefaultAction(e); window.open(this,'_blank'); } );
+}

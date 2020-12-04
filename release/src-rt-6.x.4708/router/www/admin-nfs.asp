@@ -100,10 +100,7 @@ function save() {
 
 function init() {
 	nfsg.recolor();
-
-	var elements = document.getElementsByClassName("new_window");
-	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==="a")
-		addEvent(elements[i], "click", function(e) { cancelDefaultAction(e); window.open(this,"_blank"); } );
+	eventHandler();
 }
 
 function earlyInit() {
