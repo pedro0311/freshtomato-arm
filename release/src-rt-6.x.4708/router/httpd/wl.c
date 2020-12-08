@@ -1251,7 +1251,8 @@ static int print_wif(int idx, int unit, int subunit, void *param)
 	wl_ioctl(ifname, WLC_GET_BSSID, &bssid, ETHER_ADDR_LEN);
 
 	// [ifname, unitstr, unit, subunit, ssid, hwaddr, up, wmode, bssid]
-	ssidj = js_string(nvram_safe_get(wl_nvname("ssid", unit, subunit)));
+	ssidj = utf8_to_js_string(nvram_safe_get(wl_nvname("ssid", unit, subunit)));
+
 	web_printf("%c['%s','%s',%d,%d,'%s','%s',%d,%d,'%s','%02X:%02X:%02X:%02X:%02X:%02X']", (idx == 0) ? ' ' : ',',
 		nvram_safe_get(wl_nvname("ifname", unit, subunit)),
 		unit_str, unit, subunit, ssidj,
