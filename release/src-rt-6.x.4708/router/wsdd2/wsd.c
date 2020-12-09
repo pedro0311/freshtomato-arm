@@ -195,11 +195,11 @@ int set_getresp(const char *str, const char **next)
 	size_t keylen, vallen;
 
 	if (str == NULL) {
-		return -1;
+	    return -1;
 	}
 
 	if (*str == '\0') {
-		return -1;
+	    return -1;
 	}
 
 	/* Trim leading space. */
