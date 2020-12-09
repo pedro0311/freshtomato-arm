@@ -95,7 +95,6 @@ static const rcoption rcopts[] = {
 	{"suspend", SUSPENDABLE},  /* Deprecated; remove in 2022. */
 	{"suspendable", SUSPENDABLE},
 	{"tempfile", SAVE_ON_EXIT},  /* Deprecated; remove in 2022. */
-	{"view", VIEW_MODE},
 #ifndef NANO_TINY
 	{"afterends", AFTER_ENDS},
 	{"allow_insecure_backup", INSECURE_BACKUP},
@@ -1201,14 +1200,11 @@ colortype *parse_interface_color(char *combostr)
 {
 	colortype *trio = nmalloc(sizeof(colortype));
 
-	if (parse_combination(combostr, &trio->fg, &trio->bg, &trio->attributes)) {
-		free(combostr);
-		return trio;
-	} else {
-		free(combostr);
+	if (!parse_combination(combostr, &trio->fg, &trio->bg, &trio->attributes)) {
 		free(trio);
 		return NULL;
-	}
+	} else
+		return trio;
 }
 
 /* Read regex strings enclosed in double quotes from the line pointed at
@@ -1547,8 +1543,6 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			continue;
 		}
 #endif
-		argument = copy_of(argument);
-
 #ifdef ENABLE_COLOR
 		if (strcmp(option, "titlecolor") == 0)
 			color_combo[TITLE_BAR] = parse_interface_color(argument);
@@ -1572,7 +1566,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 #endif
 #ifdef ENABLE_OPERATINGDIR
 		if (strcmp(option, "operatingdir") == 0)
-			operating_dir = argument;
+			operating_dir = copy_of(argument);
 		else
 #endif
 #ifdef ENABLED_WRAPORJUSTIFY
@@ -1581,25 +1575,21 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 				jot_error(N_("Requested fill size \"%s\" is invalid"), argument);
 				fill = -COLUMNS_FROM_EOL;
 			}
-			free(argument);
 		} else
 #endif
 #ifndef NANO_TINY
 		if (strcmp(option, "matchbrackets") == 0) {
-			if (has_blank_char(argument)) {
+			if (has_blank_char(argument))
 				jot_error(N_("Non-blank characters required"));
-				free(argument);
-			} else if (mbstrlen(argument) % 2 != 0) {
+			else if (mbstrlen(argument) % 2 != 0)
 				jot_error(N_("Even number of characters required"));
-				free(argument);
-			} else
-				matchbrackets = argument;
+			else
+				matchbrackets = copy_of(argument);
 		} else if (strcmp(option, "whitespace") == 0) {
-			if (mbstrlen(argument) != 2 || breadth(argument) != 2) {
+			if (mbstrlen(argument) != 2 || breadth(argument) != 2)
 				jot_error(N_("Two single-column characters required"));
-				free(argument);
-			} else {
-				whitespace = argument;
+			else {
+				whitespace = copy_of(argument);
 				whitelen[0] = char_length(whitespace);
 				whitelen[1] = char_length(whitespace + whitelen[0]);
 			}
@@ -1607,43 +1597,39 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 #endif
 #ifdef ENABLE_JUSTIFY
 		if (strcmp(option, "punct") == 0) {
-			if (has_blank_char(argument)) {
+			if (has_blank_char(argument))
 				jot_error(N_("Non-blank characters required"));
-				free(argument);
-			} else
-				punct = argument;
+			else
+				punct = copy_of(argument);
 		} else if (strcmp(option, "brackets") == 0) {
-			if (has_blank_char(argument)) {
+			if (has_blank_char(argument))
 				jot_error(N_("Non-blank characters required"));
-				free(argument);
-			} else
-				brackets = argument;
+			else
+				brackets = copy_of(argument);
 		} else if (strcmp(option, "quotestr") == 0)
-			quotestr = argument;
+			quotestr = copy_of(argument);
 		else
 #endif
 #ifdef ENABLE_SPELLER
 		if (strcmp(option, "speller") == 0)
-			alt_speller = argument;
+			alt_speller = copy_of(argument);
 		else
 #endif
 #ifndef NANO_TINY
 		if (strcmp(option, "backupdir") == 0)
-			backup_dir = argument;
+			backup_dir = copy_of(argument);
 		else if (strcmp(option, "wordchars") == 0)
-			word_chars = argument;
+			word_chars = copy_of(argument);
 		else if (strcmp(option, "guidestripe") == 0) {
 			if (!parse_num(argument, &stripe_column) || stripe_column <= 0) {
 				jot_error(N_("Guide column \"%s\" is invalid"), argument);
 				stripe_column = 0;
 			}
-			free(argument);
 		} else if (strcmp(option, "tabsize") == 0) {
 			if (!parse_num(argument, &tabsize) || tabsize <= 0) {
 				jot_error(N_("Requested tab size \"%s\" is invalid"), argument);
 				tabsize = -1;
 			}
-			free(argument);
 		}
 #else
 		;  /* Properly terminate any earlier 'else'. */

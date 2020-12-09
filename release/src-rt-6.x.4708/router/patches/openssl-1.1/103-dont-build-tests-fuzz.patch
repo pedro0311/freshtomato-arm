@@ -1,6 +1,6 @@
 --- openssl-1.1/Configure
 +++ openssl-1.1/Configure
-@@ -308,7 +308,7 @@ my $auto_threads=1;    # enable threads automatically? true by default
+@@ -318,7 +318,7 @@ 
  my $default_ranlib;
  
  # Top level directories to build
@@ -9,7 +9,7 @@
  # crypto/ subdirectories to build
  $config{sdirs} = [
      "objects",
-@@ -320,7 +320,7 @@ $config{sdirs} = [
+@@ -330,7 +330,7 @@ 
      "cms", "ts", "srp", "cmac", "ct", "async", "kdf", "store"
      ];
  # test/ subdirectories to build

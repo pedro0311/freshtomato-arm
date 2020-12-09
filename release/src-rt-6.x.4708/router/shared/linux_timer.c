@@ -145,7 +145,7 @@ void unblock_timer();
 
 static struct event *event_queue = NULL;
 static struct event *event_freelist;
-static uint g_granularity;
+static int g_granularity;
 static int g_maxevents = 0;
 
 uclock_t uclock()

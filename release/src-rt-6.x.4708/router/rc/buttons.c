@@ -32,9 +32,9 @@ static int get_btn(const char *name, uint32_t *bit, uint32_t *pushed)
 
 int buttons_main(int argc, char *argv[])
 {
-	uint32_t gpio;
+	int gpio;
+	int last;
 	uint32_t mask;
-	uint32_t last;
 	uint32_t ses_mask;
 	uint32_t ses_pushed;
 	uint32_t reset_mask;

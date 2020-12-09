@@ -699,6 +699,10 @@
    buffer had been large enough. */
 #undef HAVE_SNPRINTF_RETVAL_C99
 
+/* Define if the string produced by the snprintf function is always NUL
+   terminated. */
+#undef HAVE_SNPRINTF_TRUNCATION_C99
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 

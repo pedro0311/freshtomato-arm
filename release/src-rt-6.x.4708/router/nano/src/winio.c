@@ -2,7 +2,7 @@
  *   winio.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2019 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -37,6 +37,11 @@
 #define BRANDING  PACKAGE_STRING
 #endif
 
+/* When having an older ncurses, then most likely libvte is older too. */
+#if defined(NCURSES_VERSION_PATCH) && (NCURSES_VERSION_PATCH < 20200212)
+#define USING_OLDER_LIBVTE  yes
+#endif
+
 static int *key_buffer = NULL;
 		/* A buffer for the keystrokes that haven't been handled yet. */
 static size_t key_buffer_len = 0;
@@ -51,10 +56,6 @@ static bool linger_after_escape = FALSE;
 		/* Whether to give ncurses some time to get the next code. */
 static int statusblank = 0;
 		/* The number of keystrokes left before we blank the status bar. */
-#ifdef USING_OLD_NCURSES
-static bool seen_wide = FALSE;
-		/* Whether we've seen a multicolumn character in the current line. */
-#endif
 static bool has_more = FALSE;
 		/* Whether the current line has more text after the displayed part. */
 static bool is_shorter = TRUE;
@@ -840,7 +841,7 @@ int assemble_byte_code(int keycode)
 	}
 
 	/* The second digit may be at most 5 if the first was 2. */
- 	if (digit_count == 2) {
+	if (digit_count == 2) {
 		if (byte < 200 || keycode <= '5') {
 			byte += (keycode - '0') * 10;
 			return PROCEED;
@@ -1720,9 +1721,6 @@ char *display_string(const char *buf, size_t column, size_t span,
 	size_t beyond = column + span;
 		/* The column number just beyond the last shown character. */
 
-#ifdef USING_OLD_NCURSES
-	seen_wide = FALSE;
-#endif
 	buf += start_index;
 
 	/* Allocate enough space for converting the relevant part of the line. */
@@ -1855,11 +1853,6 @@ char *display_string(const char *buf, size_t column, size_t span,
 
 		/* If the codepoint is unassigned, assume a width of one. */
 		column += (charwidth < 0 ? 1 : charwidth);
-
-#ifdef USING_OLD_NCURSES
-		if (charwidth > 1)
-			seen_wide = TRUE;
-#endif
 #endif /* ENABLE_UTF8 */
 	}
 
@@ -2138,9 +2131,11 @@ void statusline(message_type importance, const char *msg, ...)
 		waddstr(bottomwin, " ]");
 	wattroff(bottomwin, colorpair);
 
+#ifdef USING_OLDER_LIBVTE
 	/* Defeat a VTE/Konsole bug, where the cursor can go off-limits. */
 	if (ISSET(CONSTANT_SHOW) && ISSET(NO_HELP))
 		wmove(bottomwin, 0, 0);
+#endif
 
 	/* Push the message to the screen straightaway. */
 	wrefresh(bottomwin);
@@ -2228,6 +2223,8 @@ void bottombars(int menu)
 	/* Display the first number of shortcuts in the given menu that
 	 * have a key combination assigned to them. */
 	for (f = allfuncs, index = 0; f != NULL && index < number; f = f->next) {
+		size_t thiswidth = itemwidth;
+
 		if ((f->menus & menu) == 0)
 			continue;
 
@@ -2238,13 +2235,19 @@ void bottombars(int menu)
 
 		wmove(bottomwin, 1 + index % 2, (index / 2) * itemwidth);
 
-		post_one_key(s->keystr, _(f->desc), itemwidth +
-								((index < number - 2) ? 0 : COLS % itemwidth));
+		/* When the number is uneven, the penultimate item can be double wide. */
+		if ((number % 2) == 1 && (index + 2 == number))
+			thiswidth += itemwidth;
+
+		/* For the last two items, use also the remaining slack. */
+		if (index + 2 >= number)
+			thiswidth += COLS % itemwidth;
+
+		post_one_key(s->keystr, _(f->desc), thiswidth);
+
 		index++;
 	}
 
-	/* Defeat a VTE bug by homing the cursor and forcing a screen update. */
-	wmove(bottomwin, 0, 0);
 	wrefresh(bottomwin);
 }
 
@@ -2341,13 +2344,6 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 #ifndef NANO_TINY
 	if (thebar)
 		mvwaddch(edit, row, COLS - 1, bardata[row]);
-#endif
-#ifdef USING_OLD_NCURSES
-	/* Tell ncurses to really redraw the line without trying to optimize
-	 * for what it thinks is already there, because it gets it wrong in
-	 * the case of a wide character in column zero.  See bug #31743. */
-	if (seen_wide)
-		wredrawln(edit, row, 1);
 #endif
 
 #ifdef ENABLE_COLOR
@@ -2610,6 +2606,7 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		if (*(converted + target_x) != '\0') {
 			charlen = collect_char(converted + target_x, striped_char);
 			target_column = wideness(converted, target_x);
+#ifdef USING_OLDER_LIBVTE
 		} else if (target_column + 1 == editwincols) {
 			/* Defeat a VTE bug -- see https://sv.gnu.org/bugs/?55896. */
 #ifdef ENABLE_UTF8
@@ -2620,6 +2617,7 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 			} else
 #endif
 				striped_char[0] = '.';
+#endif
 		} else
 			striped_char[0] = ' ';
 

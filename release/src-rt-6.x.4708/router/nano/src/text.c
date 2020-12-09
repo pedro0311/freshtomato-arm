@@ -2340,11 +2340,11 @@ void do_int_speller(const char *tempfile_name)
 			exit(6);
 
 		/* Connect standard input to the temporary file. */
-		if (dup2(tempfile_fd, STDIN_FILENO) != STDIN_FILENO)
+		if (dup2(tempfile_fd, STDIN_FILENO) < 0)
 			exit(7);
 
 		/* Connect standard output to the write end of the first pipe. */
-		if (dup2(spell_fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+		if (dup2(spell_fd[1], STDOUT_FILENO) < 0)
 			exit(8);
 
 		close(tempfile_fd);
@@ -2365,11 +2365,11 @@ void do_int_speller(const char *tempfile_name)
 	/* Fork a process to run sort in. */
 	if ((pid_sort = fork()) == 0) {
 		/* Connect standard input to the read end of the first pipe. */
-		if (dup2(spell_fd[0], STDIN_FILENO) != STDIN_FILENO)
+		if (dup2(spell_fd[0], STDIN_FILENO) < 0)
 			exit(7);
 
 		/* Connect standard output to the write end of the second pipe. */
-		if (dup2(sort_fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+		if (dup2(sort_fd[1], STDOUT_FILENO) < 0)
 			exit(8);
 
 		close(spell_fd[0]);
@@ -2387,10 +2387,10 @@ void do_int_speller(const char *tempfile_name)
 
 	/* Fork a process to run uniq in. */
 	if ((pid_uniq = fork()) == 0) {
-		if (dup2(sort_fd[0], STDIN_FILENO) != STDIN_FILENO)
+		if (dup2(sort_fd[0], STDIN_FILENO) < 0)
 			exit(7);
 
-		if (dup2(uniq_fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+		if (dup2(uniq_fd[1], STDOUT_FILENO) < 0)
 			exit(8);
 
 		close(sort_fd[0]);
@@ -2607,9 +2607,9 @@ void do_linter(void)
 	/* Fork a process to run the linter in. */
 	if ((pid_lint = fork()) == 0) {
 		/* Redirect standard output and standard error into the pipe. */
-		if (dup2(lint_fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+		if (dup2(lint_fd[1], STDOUT_FILENO) < 0)
 			exit(7);
-		if (dup2(lint_fd[1], STDERR_FILENO) != STDERR_FILENO)
+		if (dup2(lint_fd[1], STDERR_FILENO) < 0)
 			exit(8);
 
 		close(lint_fd[0]);
@@ -2823,7 +2823,10 @@ void do_linter(void)
 		}
 
 		if (tmplint != curlint) {
+			/* Put the cursor at the reported position, but don't go beyond EOL
+			 * when the second number is a column number instead of an index. */
 			goto_line_posx(curlint->lineno, curlint->colno - 1);
+			openfile->current_x = actual_x(openfile->current->data, openfile->placewewant);
 			titlebar(NULL);
 			adjust_viewport(CENTERING);
 #ifdef ENABLE_LINENUMBERS
@@ -2984,9 +2987,12 @@ void do_wordlinechar_count(void)
 	openfile->current = was_current;
 	openfile->current_x = was_x;
 
-	/* Display the total word, line, and character counts on the status bar. */
-	statusline(HUSH, _("%sWords: %zu  Lines: %zd  Chars: %zu"), openfile->mark ?
-						_("In Selection:  ") : "", words, lines, chars);
+	/* Report on the status bar the number of lines, words, and characters. */
+	statusline(HUSH, _("%s%zd %s,  %zu %s,  %zu %s"),
+						openfile->mark ? _("In Selection:  ") : "",
+						lines, P_("line", "lines", lines),
+						words, P_("word", "words", words),
+						chars, P_("character", "characters", chars));
 }
 #endif /* !NANO_TINY */
 
