@@ -1,6 +1,6 @@
---- gmp/Makefile.am	2017-09-08 15:35:43.000000000 +0200
-+++ gmp/Makefile.am	2018-05-28 23:39:34.000000000 +0200
-@@ -111,7 +111,7 @@ LIBGMPXX_LT_REVISION = 2
+--- gmp/Makefile.am
++++ gmp/Makefile.am
+@@ -112,7 +112,7 @@ 
  LIBGMPXX_LT_AGE      = 6
  
  
