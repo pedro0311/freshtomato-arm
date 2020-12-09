@@ -3,7 +3,7 @@
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014 Mark Majeres                                      *
- *   Copyright (C) 2016, 2018, 2019 Benno Schulenberg                     *
+ *   Copyright (C) 2016, 2018-2020 Benno Schulenberg                      *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -121,7 +121,14 @@ void do_delete(void)
 		zap_text();
 	else
 #endif
+	{
 		do_deletion(DEL);
+#ifdef ENABLE_UTF8
+		while (openfile->current->data[openfile->current_x] != '\0' &&
+				is_zerowidth(openfile->current->data + openfile->current_x))
+			do_deletion(DEL);
+#endif
+	}
 }
 
 /* Backspace over one character.  That is, move the cursor left one
@@ -133,7 +140,10 @@ void do_backspace(void)
 		zap_text();
 	else
 #endif
-	if (openfile->current_x > 0 || openfile->current != openfile->filetop) {
+	if (openfile->current_x > 0) {
+		openfile->current_x = step_left(openfile->current->data, openfile->current_x);
+		do_deletion(BACK);
+	} else if (openfile->current != openfile->filetop) {
 		do_left();
 		do_deletion(BACK);
 	}

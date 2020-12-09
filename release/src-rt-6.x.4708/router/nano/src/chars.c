@@ -2,7 +2,7 @@
  *   chars.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 2001-2011, 2013-2020 Free Software Foundation, Inc.    *
- *   Copyright (C) 2016-2019 Benno Schulenberg                            *
+ *   Copyright (C) 2016-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -195,6 +195,12 @@ int mbwidth(const char *c)
 		return width;
 	} else
 		return 1;
+}
+
+/* Return TRUE when the given character occupies zero cells. */
+bool is_zerowidth(const char *ch)
+{
+	return (use_utf8 && mbwidth(ch) == 0);
 }
 
 /* Convert the given Unicode value to a multibyte character, if possible.

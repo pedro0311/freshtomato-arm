@@ -722,7 +722,7 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 
 	/* When reading from stdin, restore the terminal and reenter curses mode. */
 	if (isendwin()) {
-		if (!isatty(STANDARD_INPUT))
+		if (!isatty(STDIN_FILENO))
 			reconnect_and_store_state();
 		terminal_init();
 		doupdate();
@@ -966,13 +966,16 @@ bool execute_command(const char *command)
 		close(from_fd[0]);
 
 		/* Connect the write end of the output pipe to the process' output streams. */
-		dup2(from_fd[1], fileno(stdout));
-		dup2(from_fd[1], fileno(stderr));
+		if (dup2(from_fd[1], STDOUT_FILENO) < 0)
+			exit(3);
+		if (dup2(from_fd[1], STDERR_FILENO) < 0)
+			exit(4);
 
 		/* If the parent sends text, connect the read end of the
 		 * feeding pipe to the child's input stream. */
 		if (should_pipe) {
-			dup2(to_fd[0], fileno(stdin));
+			if (dup2(to_fd[0], STDIN_FILENO) < 0)
+				exit(5);
 			close(to_fd[1]);
 		}
 
@@ -980,7 +983,7 @@ bool execute_command(const char *command)
 		execl(theshell, tail(theshell), "-c", should_pipe ? &command[1] : command, NULL);
 
 		/* If the exec call returns, there was an error. */
-		exit(1);
+		exit(6);
 	}
 
 	/* Parent: close the unused write end of the pipe. */
@@ -2043,12 +2046,11 @@ bool write_marked_file(const char *name, FILE *stream, bool tmp,
  * the buffer is to be discarded. */
 int do_writeout(bool exiting, bool withprompt)
 {
-	bool result = FALSE;
-	kind_of_writing_type method = OVERWRITE;
 	char *given;
 		/* The filename we offer, or what the user typed so far. */
 	bool maychange = (openfile->filename[0] == '\0');
 		/* Whether it's okay to save the file under a different name. */
+	kind_of_writing_type method = OVERWRITE;
 #ifdef ENABLE_EXTRA
 	static bool did_credits = FALSE;
 #endif
@@ -2105,7 +2107,8 @@ int do_writeout(bool exiting, bool withprompt)
 
 		if (response < 0) {
 			statusbar(_("Cancelled"));
-			break;
+			free(given);
+			return 0;
 		}
 
 		func = func_from_key(&response);
@@ -2147,9 +2150,8 @@ int do_writeout(bool exiting, bool withprompt)
 			continue;
 		}
 #endif
-		if (func == do_help) {
+		if (func == do_help)
 			continue;
-		}
 
 #ifdef ENABLE_EXTRA
 		/* If the user pressed Ctrl-X in the edit window, and answered "Y" at
@@ -2163,7 +2165,9 @@ int do_writeout(bool exiting, bool withprompt)
 			} else
 				/* TRANSLATORS: Concisely say the screen is too small. */
 				statusbar(_("Too tiny"));
-			break;
+
+			free(given);
+			return 0;
 		}
 #endif
 
@@ -2176,6 +2180,7 @@ int do_writeout(bool exiting, bool withprompt)
 			full_filename = get_full_path(openfile->filename);
 			name_exists = (stat((full_answer == NULL) ?
 								answer : full_answer, &st) != -1);
+
 			if (openfile->filename[0] == '\0')
 				do_warning = name_exists;
 			else
@@ -2262,23 +2267,19 @@ int do_writeout(bool exiting, bool withprompt)
 #endif
 		}
 
-		/* Here's where we allow the selected text to be written to
-		 * a separate file.  If we're using restricted mode, this
-		 * function is disabled, since it allows reading from or
-		 * writing to files not specified on the command line. */
-#ifndef NANO_TINY
-		if (openfile->mark && !exiting && withprompt && !ISSET(RESTRICTED))
-			result = write_marked_file(answer, NULL, FALSE, method);
-		else
-#endif
-			result = write_file(answer, NULL, FALSE, method, TRUE);
-
+		free(given);
 		break;
 	}
 
-	free(given);
-
-	return result ? 1 : 0;
+	/* When the mark is on (and we've prompted for a name and we're
+	 * not exiting and we're not in restricted mode), then write out
+	 * the marked region; otherwise, write out the whole buffer. */
+#ifndef NANO_TINY
+	if (openfile->mark && withprompt && !exiting && !ISSET(RESTRICTED))
+		return write_marked_file(answer, NULL, FALSE, method);
+	else
+#endif
+		return write_file(answer, NULL, FALSE, method, TRUE);
 }
 
 /* Write the current buffer to disk, or discard it. */

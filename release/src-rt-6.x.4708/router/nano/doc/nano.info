@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 5.3.
+This manual documents the GNU ‘nano’ editor, version 5.4.
 
 * Menu:
 
@@ -1024,11 +1024,6 @@ The supported settings in a nanorc file are:
      default behavior of saving a file in the format that it had.  (This
      option has no effect when you also use ‘set noconvert’.)
 
-‘set view’
-     Disallow file modification: read-only mode.  This mode allows the
-     user to open also other files for viewing, unless ‘--restricted’ is
-     given on the command line.
-
 ‘set whitespace "CHARACTERS"’
      Set the two characters used to indicate the presence of tabs and
      spaces.  They must be single-column characters.  The default pair
@@ -1902,11 +1897,11 @@ Node: Nanorc Files25589
 Node: Settings27210
 Ref: set functioncolor30480
 Ref: set matchbrackets32657
-Ref: Whitespace39775
-Node: Syntax Highlighting40530
-Node: Rebinding Keys47295
-Node: Pico Compatibility61672
-Node: Building and Configure Options66212
+Ref: Whitespace39579
+Node: Syntax Highlighting40334
+Node: Rebinding Keys47099
+Node: Pico Compatibility61476
+Node: Building and Configure Options66016
 
 End Tag Table
 
