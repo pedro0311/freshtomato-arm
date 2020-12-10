@@ -1110,7 +1110,9 @@ static const nvset_t nvset_list[] = {
 	{ "wl_txbf_bfe_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
 	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
 	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
-
+#ifdef TCONFIG_BCMBSD
+	{ "smart_connect_x",		V_01				},	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
+#endif
 // forward-dmz
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},

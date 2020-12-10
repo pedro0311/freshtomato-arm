@@ -353,4 +353,7 @@ extern int is_number(char *a);
 extern int isspacex(char c);
 extern char *shrink_space(char *dest, const char *src, int n);
 
+/* shutils.c */
+extern pid_t get_pid_by_name(char *name); /* Returns the process ID */
+
 #endif /* __SHARED_H__ */

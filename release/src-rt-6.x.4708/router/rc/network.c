@@ -224,7 +224,16 @@ static int wlconf(char *ifname, int unit, int subunit)
 #ifdef TCONFIG_BCMWL6
 	int phytype;
 	char buf[8] = {0};
-	char tmp[32] = {0};
+	char tmp[128] = {0};
+#endif
+	
+#ifdef TCONFIG_BCMBSD
+	char word[128], *next;
+	char prefix[] = "wlXXXXXXX_";
+	char prefix2[] = "wlXXXXXXX_";
+	char tmp2[128];
+	int wlif_count = 0;
+	int i = 0;
 #endif
 
 	/* Check interface - fail for non-wl interfaces */
@@ -249,6 +258,34 @@ static int wlconf(char *ifname, int unit, int subunit)
 		memset(wl, 0, sizeof(wl)); /* reset */
 	}
 #endif
+	
+#ifdef TCONFIG_BCMBSD
+	if (subunit == -1) {
+		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+		if ((unit == 0) && nvram_get_int("smart_connect_x") == 1) { /* band steering enabled --> sync wireless settings to first module */
+
+			foreach(word, nvram_safe_get("wl_ifnames"), next)
+				wlif_count++;
+
+			for (i = unit + 1; i < wlif_count; i++) {
+				snprintf(prefix2, sizeof(prefix2), "wl%d_", i);
+				nvram_set(strcat_r(prefix2, "ssid", tmp2), nvram_safe_get(strcat_r(prefix, "ssid", tmp)));
+				nvram_set(strcat_r(prefix2, "wep_x", tmp2), nvram_safe_get(strcat_r(prefix, "wep_x", tmp)));
+				nvram_set(strcat_r(prefix2, "key", tmp2), nvram_safe_get(strcat_r(prefix, "key", tmp)));
+				nvram_set(strcat_r(prefix2, "key1", tmp2), nvram_safe_get(strcat_r(prefix, "key1", tmp)));
+				nvram_set(strcat_r(prefix2, "key2", tmp2), nvram_safe_get(strcat_r(prefix, "key2", tmp)));
+				nvram_set(strcat_r(prefix2, "key3", tmp2), nvram_safe_get(strcat_r(prefix, "key3", tmp)));
+				nvram_set(strcat_r(prefix2, "key4", tmp2), nvram_safe_get(strcat_r(prefix, "key4", tmp)));
+				nvram_set(strcat_r(prefix2, "crypto", tmp2), nvram_safe_get(strcat_r(prefix, "crypto", tmp)));
+				nvram_set(strcat_r(prefix2, "wpa_psk", tmp2), nvram_safe_get(strcat_r(prefix, "wpa_psk", tmp)));
+				nvram_set(strcat_r(prefix2, "radius_ipaddr", tmp2), nvram_safe_get(strcat_r(prefix, "radius_ipaddr", tmp)));
+				nvram_set(strcat_r(prefix2, "radius_key", tmp2), nvram_safe_get(strcat_r(prefix, "radius_key", tmp)));
+				nvram_set(strcat_r(prefix2, "radius_port", tmp2), nvram_safe_get(strcat_r(prefix, "radius_port", tmp)));
+				nvram_set(strcat_r(prefix2, "closed", tmp2), nvram_safe_get(strcat_r(prefix, "closed", tmp)));
+			}
+		}
+	}
+#endif /* TCONFIG_BCMBSD */
 
 	r = eval("wlconf", ifname, "up");
 	dbG("wlconf %s = %d\n", ifname, r);

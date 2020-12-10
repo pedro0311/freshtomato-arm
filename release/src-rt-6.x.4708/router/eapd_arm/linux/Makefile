@@ -42,7 +42,7 @@ endif
 #endif
 
 #ifdef BCM_BSD
-ifeq ($(CONFIG_BCMBSD),y)
+ifeq ($(TCONFIG_BCMBSD),y)
 OBJS += bsd_eap.o
 CFLAGS += -DBCM_BSD
 endif

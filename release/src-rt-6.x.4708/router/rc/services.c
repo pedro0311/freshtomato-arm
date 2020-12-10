@@ -2925,6 +2925,10 @@ void start_services(void)
 		system("/usr/sbin/dhd -i eth3 msglevel 0x00");
 	}
 #endif
+
+#ifdef TCONFIG_BCMBSD
+	start_bsd();
+#endif /* TCONFIG_BCMBSD */
 }
 
 void stop_services(void)
@@ -2978,6 +2982,10 @@ void stop_services(void)
 	stop_zebra();
 #endif
 	stop_nas();
+
+#ifdef TCONFIG_BCMBSD
+	stop_bsd();
+#endif /* TCONFIG_BCMBSD */
 }
 
 /* nvram "action_service" is: "service-action[-modifier]"
@@ -3473,6 +3481,14 @@ TOP:
 		goto CLEAR;
 	}
 
+#ifdef TCONFIG_BCMBSD
+	if (strcmp(service, "bsd") == 0) {
+		if (act_stop) stop_bsd();
+		if (act_start) start_bsd();
+		goto CLEAR;
+	}
+#endif /* TCONFIG_BCMBSD */
+
 	if (strncmp(service, "rstats", 6) == 0) {
 		if (act_stop) stop_rstats();
 		if (act_start) {
@@ -3752,3 +3768,36 @@ void stop_service(const char *name)
 {
 	do_service(name, "stop", 0);
 }
+
+#ifdef TCONFIG_BCMBSD
+int start_bsd(void)
+{
+	int ret = 0;
+
+	stop_bsd();
+
+	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
+	if (!nvram_get_int("smart_connect_x")) {
+		ret = -1;
+		logmsg(LOG_INFO, "wireless band steering disabled");
+		return ret;
+	}
+	else {
+		ret = eval("/usr/sbin/bsd");
+	}
+
+	if (ret)
+		logmsg(LOG_ERR, "starting wireless band steering failed ...");
+	else
+		logmsg(LOG_INFO, "wireless band steering is started");
+
+	return ret;
+}
+
+void stop_bsd(void)
+{
+	killall_tk_period_wait("bsd", 50);
+
+	logmsg(LOG_INFO, "wireless band steering is stopped");
+}
+#endif /* TCONFIG_BCMBSD */

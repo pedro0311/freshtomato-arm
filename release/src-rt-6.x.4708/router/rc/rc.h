@@ -265,6 +265,10 @@ extern void stop_6rd_tunnel(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif /* TCONFIG_IPV6 */
+#ifdef TCONFIG_BCMBSD
+int start_bsd(void);
+void stop_bsd(void);
+#endif /* TCONFIG_BCMBSD */
 
 /* usb.c */
 #ifdef TCONFIG_USB
