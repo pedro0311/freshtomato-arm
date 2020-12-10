@@ -3467,6 +3467,18 @@ static int init_nvram(void)
 			/* misc wifi settings */
 			nvram_set("wl1_vreqd", "0");	/* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
+#ifdef TCONFIG_BCMBSD
+			/* band steering settings correction, because 5 GHz module is the first one */
+			nvram_set("wl1_bsd_steering_policy", "0 5 3 -52 0 110 0x22");
+			nvram_set("wl0_bsd_steering_policy", "80 5 3 -82 0 0 0x20");
+			nvram_set("wl1_bsd_sta_select_policy", "10 -52 0 110 0 1 1 0 0 0 0x122");
+			nvram_set("wl0_bsd_sta_select_policy", "10 -82 0 0 0 1 1 0 0 0 0x20");
+			nvram_set("wl1_bsd_if_select_policy", "eth1");
+			nvram_set("wl0_bsd_if_select_policy", "eth2");
+			nvram_set("wl1_bsd_if_qualify_policy", "0 0x0");
+			nvram_set("wl0_bsd_if_qualify_policy", "60 0x0");
+#endif /* TCONFIG_BCMBSD */
+
 			/* usb settings */
 			nvram_set("usb_ohci", "1");     /* USB 1.1 */
 			nvram_set("usb_usb3", "-1");
@@ -3744,6 +3756,18 @@ static int init_nvram(void)
 				/* set ssid correct */
 				nvram_set("wl0_ssid", "FreshTomato50");
 				nvram_set("wl1_ssid", "FreshTomato24");
+
+#ifdef TCONFIG_BCMBSD
+				/* band steering settings correction, because 5 GHz module is the first one */
+				nvram_set("wl1_bsd_steering_policy", "0 5 3 -52 0 110 0x22");
+				nvram_set("wl0_bsd_steering_policy", "80 5 3 -82 0 0 0x20");
+				nvram_set("wl1_bsd_sta_select_policy", "10 -52 0 110 0 1 1 0 0 0 0x122");
+				nvram_set("wl0_bsd_sta_select_policy", "10 -82 0 0 0 1 1 0 0 0 0x20");
+				nvram_set("wl1_bsd_if_select_policy", "eth1");
+				nvram_set("wl0_bsd_if_select_policy", "eth2");
+				nvram_set("wl1_bsd_if_qualify_policy", "0 0x0");
+				nvram_set("wl0_bsd_if_qualify_policy", "60 0x0");
+#endif /* TCONFIG_BCMBSD */
 			}
 
 			/* 2.4 GHz and 5 GHz defaults */

@@ -72,6 +72,7 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_DPSTA is not set
 # TCONFIG_GROCTRL is not set
 # TCONFIG_BCMFA is not set
+# TCONFIG_BCMBSD is not set
 # TCONFIG_FANCTRL is not set
 # TCONFIG_IPERF is not set
 TCONFIG_KEYGEN=y

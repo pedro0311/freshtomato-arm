@@ -78,6 +78,9 @@ export CFLAGS += -DTRAFFIC_MGMT
 export CFLAGS += -DTRAFFIC_MGMT_RSSI_POLICY
 endif
 export CFLAGS += $(EXTRACFLAGS)
+ifeq ($(TCONFIG_BCMBSD),y)
+export CFLAGS += -DBCM_BSD
+endif
 
 #
 # standard packages
@@ -127,6 +130,9 @@ ifeq ($(TCONFIG_IPERF),y)
 obj-y += iperf
 endif
 obj-y += zlib
+ifeq ($(TCONFIG_BCMBSD),y)
+obj-y += bsd
+endif
 
 obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission

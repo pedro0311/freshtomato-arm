@@ -208,6 +208,11 @@ ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
 endif
 
+# Only include the wireless band steering option if is compiled in
+ifneq ($(TCONFIG_BCMBSD),y)
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BSD-BEGIN/,/BSD-END/d"
+endif
+
 # Add "beta" tag if needed
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
@@ -322,6 +327,7 @@ endif
 		-e "/VPN-BEGIN/,/VPN-END/d" \
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
+		-e "/BSD-BEGIN/d"	-e "/BSD-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \

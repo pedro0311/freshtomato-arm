@@ -365,4 +365,7 @@ extern int dhd_iovar_setint(char *ifname, char *iovar, int val);
 extern int dhd_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
 #endif
 
+/* shutils.c */
+extern pid_t get_pid_by_name(char *name); /* Returns the process ID */
+
 #endif /* __SHARED_H__ */
