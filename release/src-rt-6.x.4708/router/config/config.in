@@ -270,10 +270,6 @@ config TCONFIG_BCMFA
 	bool "BCM FA"
 	default n
 
-config TCONFIG_BCMBSD
-	bool "Brcm Band Steer Selection"
-	default n
-
 config TCONFIG_5301X
 	bool "Bcm 5301x"
 	default y

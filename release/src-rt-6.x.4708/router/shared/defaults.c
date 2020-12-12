@@ -564,31 +564,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_frameburst", "on", 0 },		/* BRCM Frambursting mode (off|on) */
 	{ "wl_amsdu", "off", 0 },		/* Default IPTV AMSDU setting */
 	{ "wl_rx_amsdu_in_ampdu", "off", 0 },	/* Media RX AMSDU In AMPDU setting */
-#ifdef BCM_BSD
-	{ "bsd_role", "0", 0 },			/* Band Steer Daemon */
-						/* 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
-	{ "bsd_hport", "9877", 0 },		/* BSD helper port */
-	{ "bsd_pport", "9878", 0 },		/* BSD Primary port */
-	{ "bsd_helper", "192.168.1.2", 0 },	/* BSD primary ipaddr */
-	{ "bsd_primary", "192.168.1.1", 0 },	/* BSD Helper ipaddr */
-	{ "smart_connect_x", "0", 0 },		/* 0:Disable, 1:Tri-band, 2:5GHz */
-#ifdef TCONFIG_AC3200
-	{"bsd_ifnames", "eth2 eth1 eth3", 0 },
-	{"wl0_bsd_steering_policy", "0 5 3 -52 0 110 0x22", 0 },
-	{"wl1_bsd_steering_policy", "80 5 3 -82 0 0 0x0", 0 },
-	{"wl2_bsd_steering_policy", "0 5 3 -82 0 0 0x8", 0 },
-	{"wl0_bsd_sta_select_policy", "2 -52 0 110 0 0 -1 0 0 0 0x122", 0 },
-	{"wl1_bsd_sta_select_policy", "2 -82 0 0 0 0 1 0 0 0 0x4", 0 },
-	{"wl2_bsd_sta_select_policy", "2 -82 0 0 0 0 1 0 0 0 0x8", 0 },
-	{"wl0_bsd_if_select_policy", "eth3 eth1", 0 },
-	{"wl1_bsd_if_select_policy", "eth2 eth3", 0 },
-	{"wl2_bsd_if_select_policy", "eth2 eth1", 0 },
-	{"wl0_bsd_if_qualify_policy", "0 0x0", 0 },
-	{"wl1_bsd_if_qualify_policy", "60 0x0", 0 },
-	{"wl2_bsd_if_qualify_policy", "0 0x4", 0 },
-	{"bsd_bounce_detect", "180 1 3600", 0 },
-#endif
-#endif
 #ifdef TCONFIG_BCM7
 	{ "wl_probresp_mf", "0", 0 },		/* MAC filter based probe response */
 	{ "wl_probresp_sw", "1", 0 },		/* SW probe response */

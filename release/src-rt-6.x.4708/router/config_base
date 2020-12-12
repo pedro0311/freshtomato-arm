@@ -63,7 +63,6 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_DHDAP is not set
 # TCONFIG_GMAC3 is not set
 # TCONFIG_5301X is not set
-# TCONFIG_BCMBSD is not set
 # TCONFIG_BCMDCS is not set
 # TCONFIG_TRAFFIC_MGMT_RSSI_POLICY is not set
 # TCONFIG_TOAD is not set

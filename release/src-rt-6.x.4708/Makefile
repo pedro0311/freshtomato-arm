@@ -571,8 +571,6 @@ define RouterOptions
 			echo "TCONFIG_BCM7=y" >>$(1); \
 			sed -i "/TCONFIG_TOAD/d" $(1); \
 			echo "TCONFIG_TOAD=y" >>$(1); \
-			sed -i "/TCONFIG_BCMBSD/d" $(1); \
-			echo "TCONFIG_BCMBSD=y" >>$(1); \
 			sed -i "/TCONFIG_BCMDCS/d" $(1); \
 			echo "TCONFIG_BCMDCS=y" >>$(1); \
 			sed -i "/TCONFIG_TRAFFIC_MGMT_RSSI_POLICY/d" $(1); \
