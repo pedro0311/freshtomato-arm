@@ -1,0 +1,23 @@
+--- dropbear/dbrandom.c
++++ dropbear/dbrandom.c
+@@ -343,6 +343,11 @@
+ 	m_burn(hash, sizeof(hash));
+ }
+ 
++mp_err genrandom_ltm(void *out, size_t size) {
++	genrandom(out, size);
++	return MP_OKAY;
++}
++
+ /* Generates a random mp_int. 
+  * max is a *mp_int specifying an upper bound.
+  * rand must be an initialised *mp_int for the result.
+--- dropbear/libtommath/tommath_class.h
++++ dropbear/libtommath/tommath_class.h
+@@ -1324,3 +1324,6 @@
+ #define MP_FREE      m_free_ltm
+ #define MP_REALLOC   m_realloc_ltm
+ #define MP_CALLOC    m_calloc
++
++#undef BN_S_MP_RAND_PLATFORM_C
++#define s_mp_rand_platform genrandom_ltm

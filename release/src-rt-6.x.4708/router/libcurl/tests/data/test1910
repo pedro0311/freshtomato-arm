@@ -26,7 +26,7 @@ Content-Type: text/html
 Content-Length: 4
 
 hej
-</data2>
+</data>
 </reply>
 
 # Client-side
@@ -49,6 +49,9 @@ lib1910
 
 # Verify data after the test has been "shot"
 <verify>
+<strip>
+^User-Agent:.*
+</strip>
 <protocol>
 GET /1910 HTTP/1.1
 Host: %HOSTIP:%HTTPPORT

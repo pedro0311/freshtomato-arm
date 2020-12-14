@@ -27,4 +27,5 @@ Verify that symbols-in-versions and headers are in sync
 OK
 </stdout>
 </verify>
+
 </testcase>

@@ -19,7 +19,7 @@ static int print_wlnv(int idx, int unit, int subunit, void *param)
 
 	nv = wl_nvname(k + 3, unit, subunit);
 	web_printf("\t'%s': '", nv); // AB multiSSID
-	web_putj(nvram_safe_get(nv));
+	web_putj_utf8(nvram_safe_get(nv));
 	web_puts("',\n");
 
 	return 1;
@@ -40,7 +40,7 @@ void asp_nvram(int argc, char **argv)
 			continue;
 
 		web_printf("\t'%s': '", k); // AB multiSSID
-		web_putj(nvram_safe_get(k));
+		web_putj_utf8(nvram_safe_get(k));
 		web_puts("',\n");
 
 		if (strncmp(k, "wl_", 3) == 0) {
@@ -79,7 +79,7 @@ void asp_nvramseq(int argc, char **argv)
 	for (i = atoi(argv[2]); i <= e; ++i) {
 		snprintf(s, sizeof(s), argv[1], i);
 		web_puts("'");
-		web_putj(nvram_safe_get(s));
+		web_putj_utf8(nvram_safe_get(s));
 		web_puts((i == e) ? "'" : "',");
 	}
 	web_puts("];\n");

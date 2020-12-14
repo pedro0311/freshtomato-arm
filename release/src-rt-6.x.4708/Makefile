@@ -597,6 +597,10 @@ define RouterOptions
 		sed -i "/TCONFIG_BCMBSD/d" $(1); \
 		echo "TCONFIG_BCMBSD=y" >>$(1); \
 	fi; \
+	if [ "$(BSD)" = "y" ]; then \
+		sed -i "/TCONFIG_BCMBSD/d" $(1); \
+		echo "TCONFIG_BCMBSD=y" >>$(1); \
+	fi; \
 	if [ "$(BCMSMP)" = "y" ]; then \
 		sed -i "/TCONFIG_BCMSMP/d" $(1); \
 		echo "TCONFIG_BCMSMP=y" >>$(1); \

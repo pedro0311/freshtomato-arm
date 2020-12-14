@@ -46,7 +46,6 @@ FTP through HTTPS-proxy
 -p -x https://%HOSTIP:%HTTPSPROXYPORT ftp://ftp.site.thru.https.proxy:%FTPPORT/1631 --proxy-insecure
 </command>
 <features>
-http
 proxy
 </features>
 </client>
@@ -75,6 +74,8 @@ Proxy-Connection: Keep-Alive
 <protocol>
 USER anonymous
 PASS ftp@example.com
+PBSZ 0
+PROT P
 PWD
 EPSV
 TYPE I

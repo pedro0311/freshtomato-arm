@@ -1,7 +1,6 @@
 Long: url
 Arg: <url>
 Help: URL to work with
-Category: curl
 ---
 Specify a URL to fetch. This option is mostly handy when you want to specify
 URL(s) in a config file.

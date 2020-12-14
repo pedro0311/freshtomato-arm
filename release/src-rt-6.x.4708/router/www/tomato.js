@@ -2277,7 +2277,7 @@ function escapeHTML(s) {
 }
 
 function escapeCGI(s) {
-	return escape(s).replace(/\+/g, '%2B');	/* escape() doesn't handle + */
+	return encodeURIComponent(s)
 }
 
 function escapeD(s) {

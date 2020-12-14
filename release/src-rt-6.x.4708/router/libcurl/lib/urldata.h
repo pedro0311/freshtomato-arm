@@ -11,7 +11,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -76,7 +76,9 @@
 /* length of longest IPv6 address string including the trailing null */
 #define MAX_IPADR_LEN sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")
 
-/* Default FTP/IMAP etc response timeout in milliseconds */
+/* Default FTP/IMAP etc response timeout in milliseconds.
+   Symbian OS panics when given a timeout much greater than 1/2 hour.
+*/
 #define RESP_TIMEOUT (120*1000)
 
 /* Max string input length is a precaution against abuse and to detect junk
@@ -205,14 +207,14 @@ struct ssl_backend_data;
 
 /* struct for data related to each SSL connection */
 struct ssl_connect_data {
+  /* Use ssl encrypted communications TRUE/FALSE, not necessarily using it atm
+     but at least asked to or meaning to use it. See 'state' for the exact
+     current state of the connection. */
   ssl_connection_state state;
   ssl_connect_state connecting_state;
 #if defined(USE_SSL)
   struct ssl_backend_data *backend;
 #endif
-  /* Use ssl encrypted communications TRUE/FALSE. The library is not
-     necessarily using ssl at the moment but at least asked to or means to use
-     it. See 'state' for the exact current state of the connection. */
   BIT(use);
 };
 
@@ -228,7 +230,6 @@ struct ssl_primary_config {
   char *cipher_list13;   /* list of TLS 1.3 cipher suites to use */
   char *pinned_key;
   struct curl_blob *cert_blob;
-  char *curves;          /* list of curves to use */
   BIT(verifypeer);       /* set TRUE if this is desired */
   BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
@@ -243,6 +244,8 @@ struct ssl_config_data {
   struct curl_blob *issuercert_blob;
   curl_ssl_ctx_callback fsslctx; /* function to initialize ssl ctx */
   void *fsslctxp;        /* parameter for call back */
+  char *cert; /* client certificate file name */
+  struct curl_blob *cert_blob;
   char *cert_type; /* format for certificate (default: PEM)*/
   char *key; /* private key file name */
   struct curl_blob *key_blob;
@@ -268,7 +271,7 @@ struct ssl_general_config {
 };
 
 /* information stored about one single SSL session */
-struct Curl_ssl_session {
+struct curl_ssl_session {
   char *name;       /* host name for which this ID was used */
   char *conn_to_host; /* host name for the connection (may be NULL) */
   const char *scheme; /* protocol scheme used */
@@ -469,7 +472,6 @@ struct ConnectBits {
                          EPRT doesn't work we disable it for the forthcoming
                          requests */
   BIT(ftp_use_data_ssl); /* Enabled SSL for the data connection */
-  BIT(ftp_use_control_ssl); /* Enabled SSL for the control connection */
 #endif
   BIT(netrc);         /* name+password provided by netrc */
   BIT(bound); /* set true if bind() has already been done on this socket/
@@ -519,7 +521,7 @@ struct Curl_async {
   int port;
   struct Curl_dns_entry *dns;
   int status; /* if done is TRUE, this is the status from the callback */
-  struct thread_data *tdata;
+  void *os_specific;  /* 'struct thread_data' for Windows */
   BIT(done);  /* set TRUE when the lookup is complete */
 };
 
@@ -643,23 +645,8 @@ struct SingleRequest {
      and the 'upload_present' contains the number of bytes available at this
      position */
   char *upload_fromhere;
-
-  /* Allocated protocol-specific data. Each protocol handler makes sure this
-     points to data it needs. */
-  union {
-    struct FILEPROTO *file;
-    struct FTP *ftp;
-    struct HTTP *http;
-    struct IMAP *imap;
-    struct ldapreqinfo *ldap;
-    struct MQTT *mqtt;
-    struct POP3 *pop3;
-    struct RTSP *rtsp;
-    struct smb_request *smb;
-    struct SMTP *smtp;
-    struct SSHPROTO *ssh;
-    struct TELNET *telnet;
-  } p;
+  void *protop;       /* Allocated protocol-specific data. Each protocol
+                         handler makes sure this points to data it needs. */
 #ifndef CURL_DISABLE_DOH
   struct dohdata doh; /* DoH specific data for this request */
 #endif
@@ -753,8 +740,6 @@ struct Curl_handler {
   long defport;           /* Default port. */
   unsigned int protocol;  /* See CURLPROTO_* - this needs to be the single
                              specific protocol bit */
-  unsigned int family;    /* single bit for protocol family; basically the
-                             non-TLS name of the protocol this is */
   unsigned int flags;     /* Extra particular characteristics, see PROTOPT_* */
 };
 
@@ -817,11 +802,7 @@ struct proxy_info {
 /* struct for HTTP CONNECT state data */
 struct http_connect_state {
   struct dynbuf rcvbuf;
-  enum keeponval {
-    KEEPON_DONE,
-    KEEPON_CONNECT,
-    KEEPON_IGNORE
-  } keepon;
+  int keepon;
   curl_off_t cl; /* size of content to read and ignore */
   enum {
     TUNNEL_INIT,    /* init/default/no tunnel state */
@@ -879,7 +860,7 @@ struct connectdata {
      connection is used! */
   struct Curl_easy *data;
   struct connstate cnnct;
-  struct Curl_llist_element bundle_node; /* conncache */
+  struct curl_llist_element bundle_node; /* conncache */
 
   /* chunk is for HTTP chunked encoding, but is in the general connectdata
      struct only because we can do just about any protocol through a HTTP proxy
@@ -1043,7 +1024,7 @@ struct connectdata {
   struct kerberos5data krb5;  /* variables into the structure definition, */
 #endif                        /* however, some of them are ftp specific. */
 
-  struct Curl_llist easyq;    /* List of easy handles using this connection */
+  struct curl_llist easyq;    /* List of easy handles using this connection */
   curl_seek_callback seek_func; /* function that seeks the input */
   void *seek_client;            /* pointer to pass to the seek() above */
 
@@ -1153,7 +1134,6 @@ struct PureInfo {
                                  OpenSSL, GnuTLS, Schannel, NSS and GSKit
                                  builds. Asked for with CURLOPT_CERTINFO
                                  / CURLINFO_CERTINFO */
-  CURLproxycode pxcode;
   BIT(timecond);  /* set to TRUE if the time condition didn't match, which
                      thus made the document NOT get fetched */
 };
@@ -1294,7 +1274,7 @@ typedef enum {
  * One instance for each timeout an easy handle can set.
  */
 struct time_node {
-  struct Curl_llist_element list;
+  struct curl_llist_element list;
   struct curltime time;
   expire_id eid;
 };
@@ -1334,7 +1314,7 @@ struct UrlState {
                        strdup() data.
                     */
   int first_remote_port; /* remote port of the first (not followed) request */
-  struct Curl_ssl_session *session; /* array of 'max_ssl_sessions' size */
+  struct curl_ssl_session *session; /* array of 'max_ssl_sessions' size */
   long sessionage;                  /* number of the most recent session */
   unsigned int tempcount; /* number of entries in use in tempwrite, 0 - 3 */
   struct tempbuf tempwrite[3]; /* BOTH, HEADER, BODY */
@@ -1358,7 +1338,7 @@ struct UrlState {
 #endif /* USE_OPENSSL */
   struct curltime expiretime; /* set this with Curl_expire() only */
   struct Curl_tree timenode; /* for the splay stuff */
-  struct Curl_llist timeoutlist; /* list of pending timeouts */
+  struct curl_llist timeoutlist; /* list of pending timeouts */
   struct time_node expires[EXPIRE_LAST]; /* nodes for each expire type */
 
   /* a place to store the most recently set FTP entrypath */
@@ -1367,7 +1347,8 @@ struct UrlState {
   int httpversion;       /* the lowest HTTP version*10 reported by any server
                             involved in this request */
 
-#if !defined(WIN32) && !defined(MSDOS) && !defined(__EMX__)
+#if !defined(WIN32) && !defined(MSDOS) && !defined(__EMX__) && \
+    !defined(__SYMBIAN32__)
 /* do FTP line-end conversions on most platforms */
 #define CURL_DO_LINEEND_CONV
   /* for FTP downloads: track CRLF sequences that span blocks */
@@ -1550,31 +1531,39 @@ enum dupstring {
   STRING_RTSP_SESSION_ID, /* Session ID to use */
   STRING_RTSP_STREAM_URI, /* Stream URI for this request */
   STRING_RTSP_TRANSPORT,  /* Transport for this session */
+
   STRING_SSH_PRIVATE_KEY, /* path to the private key file for auth */
   STRING_SSH_PUBLIC_KEY,  /* path to the public key file for auth */
   STRING_SSH_HOST_PUBLIC_KEY_MD5, /* md5 of host public key in ascii hex */
   STRING_SSH_KNOWNHOSTS,  /* file name of knownhosts file */
+
   STRING_PROXY_SERVICE_NAME, /* Proxy service name */
   STRING_SERVICE_NAME,    /* Service name */
   STRING_MAIL_FROM,
   STRING_MAIL_AUTH,
+
   STRING_TLSAUTH_USERNAME_ORIG,  /* TLS auth <username> */
   STRING_TLSAUTH_USERNAME_PROXY, /* TLS auth <username> */
   STRING_TLSAUTH_PASSWORD_ORIG,  /* TLS auth <password> */
   STRING_TLSAUTH_PASSWORD_PROXY, /* TLS auth <password> */
+
   STRING_BEARER,                /* <bearer>, if used */
+
   STRING_UNIX_SOCKET_PATH,      /* path to Unix socket, if used */
+
   STRING_TARGET,                /* CURLOPT_REQUEST_TARGET */
   STRING_DOH,                   /* CURLOPT_DOH_URL */
+
   STRING_ALTSVC,                /* CURLOPT_ALTSVC */
-  STRING_HSTS,                  /* CURLOPT_HSTS */
+
   STRING_SASL_AUTHZID,          /* CURLOPT_SASL_AUTHZID */
+
   STRING_TEMP_URL,              /* temp URL storage for proxy use */
+
   STRING_DNS_SERVERS,
   STRING_DNS_INTERFACE,
   STRING_DNS_LOCAL_IP4,
   STRING_DNS_LOCAL_IP6,
-  STRING_SSL_EC_CURVES,
 
   /* -- end of null-terminated strings -- */
 
@@ -1658,12 +1647,7 @@ struct UserDefined {
   curl_conv_callback convtonetwork;
   /* function to convert from UTF-8 encoding: */
   curl_conv_callback convfromutf8;
-#ifdef USE_HSTS
-  curl_hstsread_callback hsts_read;
-  void *hsts_read_userp;
-  curl_hstswrite_callback hsts_write;
-  void *hsts_write_userp;
-#endif
+
   void *progress_client; /* pointer to pass to the progress callback */
   void *ioctl_client;   /* pointer to pass to the ioctl callback */
   long timeout;         /* in milliseconds, 0 means no timeout */
@@ -1855,7 +1839,7 @@ struct UserDefined {
 };
 
 struct Names {
-  struct Curl_hash *hostcache;
+  struct curl_hash *hostcache;
   enum {
     HCACHE_NONE,    /* not pointing to anything */
     HCACHE_MULTI,   /* points to a shared one in the multi handle */
@@ -1879,8 +1863,8 @@ struct Curl_easy {
   struct Curl_easy *prev;
 
   struct connectdata *conn;
-  struct Curl_llist_element connect_queue;
-  struct Curl_llist_element conn_queue; /* list per connectdata */
+  struct curl_llist_element connect_queue;
+  struct curl_llist_element conn_queue; /* list per connectdata */
 
   CURLMstate mstate;  /* the handle's state */
   CURLcode result;   /* previous result */
@@ -1914,10 +1898,7 @@ struct Curl_easy {
                                   NOTE that the 'cookie' field in the
                                   UserDefined struct defines if the "engine"
                                   is to be used or not. */
-#ifdef USE_HSTS
-  struct hsts *hsts;
-#endif
-#ifndef CURL_DISABLE_ALTSVC
+#ifdef USE_ALTSVC
   struct altsvcinfo *asi;      /* the alt-svc cache */
 #endif
   struct Progress progress;    /* for all the progress meter data */
