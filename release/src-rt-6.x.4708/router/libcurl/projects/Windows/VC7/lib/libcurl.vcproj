@@ -1206,12 +1206,6 @@
 				RelativePath="..\..\..\..\lib\easy.c">
 			</File>
 			<File
-				RelativePath="..\..\..\..\lib\easygetopt.c">
-			</File>
-			<File
-				RelativePath="..\..\..\..\lib\easyoptions.c">
-			</File>
-			<File
 				RelativePath="..\..\..\..\lib\escape.c">
 			</File>
 			<File
@@ -1261,9 +1255,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\hostsyn.c">
-			</File>
-			<File
-				RelativePath="..\..\..\..\lib\hsts.c">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\http2.c">
@@ -1366,6 +1357,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\rtsp.c">
+			</File>
+			<File
+				RelativePath="..\..\..\..\lib\security.c">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\select.c">
@@ -1522,9 +1516,6 @@
 				RelativePath="..\..\..\..\lib\curl_hmac.h">
 			</File>
 			<File
-				RelativePath="..\..\..\..\lib\curl_krb5.h">
-			</File>
-			<File
 				RelativePath="..\..\..\..\lib\curl_ldap.h">
 			</File>
 			<File
@@ -1564,6 +1555,9 @@
 				RelativePath="..\..\..\..\lib\curl_sasl.h">
 			</File>
 			<File
+				RelativePath="..\..\..\..\lib\curl_sec.h">
+			</File>
+			<File
 				RelativePath="..\..\..\..\lib\curl_setup.h">
 			</File>
 			<File
@@ -1597,9 +1591,6 @@
 				RelativePath="..\..\..\..\lib\easyif.h">
 			</File>
 			<File
-				RelativePath="..\..\..\..\lib\easyoptions.h">
-			</File>
-			<File
 				RelativePath="..\..\..\..\lib\escape.h">
 			</File>
 			<File
@@ -1631,9 +1622,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\hostip.h">
-			</File>
-			<File
-				RelativePath="..\..\..\..\lib\hsts.h">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\http2.h">

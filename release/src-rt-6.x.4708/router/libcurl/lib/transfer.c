@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -78,7 +78,6 @@
 #include "mime.h"
 #include "strcase.h"
 #include "urlapi-int.h"
-#include "hsts.h"
 
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -168,7 +167,7 @@ CURLcode Curl_fillreadbuffer(struct connectdata *conn, size_t bytes,
   bool sending_http_headers = FALSE;
 
   if(conn->handler->protocol&(PROTO_FAMILY_HTTP|CURLPROTO_RTSP)) {
-    const struct HTTP *http = data->req.p.http;
+    const struct HTTP *http = data->req.protop;
 
     if(http->sending == HTTPSEND_REQUEST)
       /* We're sending the HTTP request headers, not the data.
@@ -427,7 +426,7 @@ CURLcode Curl_readrewind(struct connectdata *conn)
      CURLOPT_HTTPPOST, call app to rewind
   */
   if(conn->handler->protocol & PROTO_FAMILY_HTTP) {
-    struct HTTP *http = data->req.p.http;
+    struct HTTP *http = data->req.protop;
 
     if(http->sendit)
       mimepart = http->sendit;
@@ -1029,7 +1028,7 @@ static CURLcode readwrite_upload(struct Curl_easy *data,
         /* HTTP pollution, this should be written nicer to become more
            protocol agnostic. */
         size_t fillcount;
-        struct HTTP *http = k->p.http;
+        struct HTTP *http = k->protop;
 
         if((k->exp100 == EXP100_SENDING_REQUEST) &&
            (http->sending == HTTPSEND_BODY)) {
@@ -1153,9 +1152,10 @@ static CURLcode readwrite_upload(struct Curl_easy *data,
 
     win_update_buffer_size(conn->writesockfd);
 
-    /* show the data before we change the pointer upload_fromhere */
-    Curl_debug(data, CURLINFO_DATA_OUT, k->upload_fromhere,
-               (size_t)bytes_written);
+    if(data->set.verbose)
+      /* show the data before we change the pointer upload_fromhere */
+      Curl_debug(data, CURLINFO_DATA_OUT, k->upload_fromhere,
+                 (size_t)bytes_written);
 
     k->writebytecount += bytes_written;
     Curl_pgrsSetUploadCounter(data, k->writebytecount);
@@ -1529,7 +1529,6 @@ CURLcode Curl_pretransfer(struct Curl_easy *data)
     }
 #endif
     Curl_http2_init_state(&data->state);
-    Curl_hsts_loadcb(data, data->hsts);
   }
 
   return result;
@@ -1854,7 +1853,7 @@ Curl_setup_transfer(
 {
   struct SingleRequest *k = &data->req;
   struct connectdata *conn = data->conn;
-  struct HTTP *http = data->req.p.http;
+  struct HTTP *http = data->req.protop;
   bool httpsending = ((conn->handler->protocol&PROTO_FAMILY_HTTP) &&
                       (http->sending == HTTPSEND_REQUEST));
   DEBUGASSERT(conn != NULL);

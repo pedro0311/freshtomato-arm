@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -77,7 +77,6 @@
 #include "connect.h"
 #include "strdup.h"
 #include "altsvc.h"
-#include "hsts.h"
 
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -126,7 +125,6 @@ const struct Curl_handler Curl_handler_http = {
   ZERO_NULL,                            /* connection_check */
   PORT_HTTP,                            /* defport */
   CURLPROTO_HTTP,                       /* protocol */
-  CURLPROTO_HTTP,                       /* family */
   PROTOPT_CREDSPERREQUEST |             /* flags */
   PROTOPT_USERPWDCTRL
 };
@@ -153,7 +151,6 @@ const struct Curl_handler Curl_handler_https = {
   ZERO_NULL,                            /* connection_check */
   PORT_HTTPS,                           /* defport */
   CURLPROTO_HTTPS,                      /* protocol */
-  CURLPROTO_HTTP,                       /* family */
   PROTOPT_SSL | PROTOPT_CREDSPERREQUEST | PROTOPT_ALPN_NPN | /* flags */
   PROTOPT_USERPWDCTRL
 };
@@ -165,14 +162,14 @@ static CURLcode http_setup_conn(struct connectdata *conn)
      during this request */
   struct HTTP *http;
   struct Curl_easy *data = conn->data;
-  DEBUGASSERT(data->req.p.http == NULL);
+  DEBUGASSERT(data->req.protop == NULL);
 
   http = calloc(1, sizeof(struct HTTP));
   if(!http)
     return CURLE_OUT_OF_MEMORY;
 
   Curl_mime_initpart(&http->form, conn->data);
-  data->req.p.http = http;
+  data->req.protop = http;
 
   if(data->set.httpversion == CURL_HTTP_VERSION_3) {
     if(conn->handler->flags & PROTOPT_SSL)
@@ -428,7 +425,7 @@ static bool pickoneauth(struct auth *pick, unsigned long mask)
 static CURLcode http_perhapsrewind(struct connectdata *conn)
 {
   struct Curl_easy *data = conn->data;
-  struct HTTP *http = data->req.p.http;
+  struct HTTP *http = data->req.protop;
   curl_off_t bytessent;
   curl_off_t expectsend = -1; /* default is unknown */
 
@@ -1112,7 +1109,7 @@ static size_t readmoredata(char *buffer,
                            void *userp)
 {
   struct connectdata *conn = (struct connectdata *)userp;
-  struct HTTP *http = conn->data->req.p.http;
+  struct HTTP *http = conn->data->req.protop;
   size_t fullsize = size * nitems;
 
   if(!http->postsize)
@@ -1170,7 +1167,7 @@ CURLcode Curl_buffer_send(struct dynbuf *in,
   char *ptr;
   size_t size;
   struct Curl_easy *data = conn->data;
-  struct HTTP *http = data->req.p.http;
+  struct HTTP *http = data->req.protop;
   size_t sendsize;
   curl_socket_t sockfd;
   size_t headersize;
@@ -1255,12 +1252,16 @@ CURLcode Curl_buffer_send(struct dynbuf *in,
     size_t headlen = (size_t)amount>headersize ? headersize : (size_t)amount;
     size_t bodylen = amount - headlen;
 
-    /* this data _may_ contain binary stuff */
-    Curl_debug(data, CURLINFO_HEADER_OUT, ptr, headlen);
-    if(bodylen)
-      /* there was body data sent beyond the initial header part, pass that on
-         to the debug callback too */
-      Curl_debug(data, CURLINFO_DATA_OUT, ptr + headlen, bodylen);
+    if(data->set.verbose) {
+      /* this data _may_ contain binary stuff */
+      Curl_debug(data, CURLINFO_HEADER_OUT, ptr, headlen);
+      if(bodylen) {
+        /* there was body data sent beyond the initial header part, pass that
+           on to the debug callback too */
+        Curl_debug(data, CURLINFO_DATA_OUT,
+                   ptr + headlen, bodylen);
+      }
+    }
 
     /* 'amount' can never be a very large value here so typecasting it so a
        signed 31 bit value should not cause problems even if ssize_t is
@@ -1352,7 +1353,7 @@ Curl_compareheader(const char *headerline, /* line to check */
   /* pass the header */
   start = &headerline[hlen];
 
-  /* pass all whitespace */
+  /* pass all white spaces */
   while(*start && ISSPACE(*start))
     start++;
 
@@ -1516,7 +1517,7 @@ CURLcode Curl_http_done(struct connectdata *conn,
                         CURLcode status, bool premature)
 {
   struct Curl_easy *data = conn->data;
-  struct HTTP *http = data->req.p.http;
+  struct HTTP *http = data->req.protop;
 
   /* Clear multipass flag. If authentication isn't done yet, then it will get
    * a chance to be set back to true when we output the next auth header */
@@ -1977,7 +1978,7 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
         return result;
     }
   }
-  http = data->req.p.http;
+  http = data->req.protop;
   DEBUGASSERT(http);
 
   if(!data->state.this_is_a_follow) {
@@ -2515,7 +2516,7 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
   if(result)
     return result;
 
-#ifndef CURL_DISABLE_ALTSVC
+#ifdef USE_ALTSVC
   if(conn->bits.altused && !Curl_checkheaders(conn, "Alt-Used")) {
     altused = aprintf("Alt-Used: %s:%d\r\n",
                       conn->conn_to_host.name, conn->conn_to_port);
@@ -2870,24 +2871,20 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
         }
         else {
           if(postsize) {
-            char chunk[16];
             /* Append the POST data chunky-style */
-            msnprintf(chunk, sizeof(chunk), "%x\r\n", (int)postsize);
-            result = Curl_dyn_add(&req, chunk);
+            result = Curl_dyn_addf(&req, "%x\r\n", (int)postsize);
             if(!result) {
-              included_body = postsize + strlen(chunk);
               result = Curl_dyn_addn(&req, data->set.postfields,
                                      (size_t)postsize);
               if(!result)
                 result = Curl_dyn_add(&req, "\r\n");
-              included_body += 2;
+              included_body = postsize + 2;
             }
           }
-          if(!result) {
+          if(!result)
             result = Curl_dyn_add(&req, "\x30\x0d\x0a\x0d\x0a");
-            /* 0  CR  LF  CR  LF */
-            included_body += 5;
-          }
+          /* 0  CR  LF  CR  LF */
+          included_body += 5;
         }
         if(result)
           return result;
@@ -3534,8 +3531,10 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
           k->keepon &= ~KEEP_RECV;
         }
 
-        Curl_debug(data, CURLINFO_HEADER_IN, str_start, headerlen);
-        break; /* exit header line loop */
+        if(data->set.verbose)
+          Curl_debug(data, CURLINFO_HEADER_IN,
+                     str_start, headerlen);
+        break;          /* exit header line loop */
       }
 
       /* We continue reading headers, reset the line-based header */
@@ -3991,24 +3990,7 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
         }
       }
     }
-
-#ifdef USE_HSTS
-    /* If enabled, the header is incoming and this is over HTTPS */
-    else if(data->hsts && checkprefix("Strict-Transport-Security:", headp) &&
-            (conn->handler->flags & PROTOPT_SSL)) {
-      CURLcode check =
-        Curl_hsts_parse(data->hsts, data->state.up.hostname,
-                        &headp[ sizeof("Strict-Transport-Security:") -1 ]);
-      if(check)
-        infof(data, "Illegal STS header skipped\n");
-#ifdef DEBUGBUILD
-      else
-        infof(data, "Parsed STS header fine (%zu entries)\n",
-              data->hsts->list.size);
-#endif
-    }
-#endif
-#ifndef CURL_DISABLE_ALTSVC
+#ifdef USE_ALTSVC
     /* If enabled, the header is incoming and this is over HTTPS */
     else if(data->asi && checkprefix("Alt-Svc:", headp) &&
             ((conn->handler->flags & PROTOPT_SSL) ||
@@ -4043,8 +4025,9 @@ CURLcode Curl_http_readwrite_headers(struct Curl_easy *data,
     if(data->set.include_header)
       writetype |= CLIENTWRITE_BODY;
 
-    Curl_debug(data, CURLINFO_HEADER_IN, headp,
-               Curl_dyn_len(&data->state.headerb));
+    if(data->set.verbose)
+      Curl_debug(data, CURLINFO_HEADER_IN, headp,
+                 Curl_dyn_len(&data->state.headerb));
 
     result = Curl_client_write(conn, writetype, headp,
                                Curl_dyn_len(&data->state.headerb));

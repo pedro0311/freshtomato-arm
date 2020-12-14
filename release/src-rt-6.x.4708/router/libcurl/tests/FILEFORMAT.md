@@ -40,34 +40,6 @@ server's port number (in ASCII) followed by a space and the hexadecimal byte
 
     %b64[%HTTPPORT %9a]b64%
 
-## Hexadecimal decoding
-
-In the preprocess stage, a special instruction can be used to have runtests.pl
-generate a sequence of binary bytes.
-
-To insert a sequence of bytes from a hex encoded string, use this syntax:
-
-    %hex[ %XX-encoded data to decode ]hex%
-
-For example, to insert the binary octets 0, 1 and 255 into the test file:
-
-    %hex[ %00%01%FF ]hex%
-
-## Repeat content
-
-In the preprocess stage, a special instruction can be used to have runtests.pl
-generate a repetetive sequence of bytes.
-
-To insert a sequence of repeat bytes, use this syntax to make the `<string>`
-get repeated `<number>` of times. The number has to be 1 or large and the
-string may contain `%HH` hexadecimal codes:
-
-    %repeat[<number> x <string>]%
-
-For example, to insert the word hello a 100 times:
-
-    %repeat[100 x hello]%
-
 # Variables
 
 When the test is preprocessed, a range of "variables" in the test file will be
@@ -121,7 +93,6 @@ Available substitute variables include:
 - `%TFTP6PORT` - IPv6 port number of the TFTP server
 - `%TFTPPORT` - Port number of the TFTP server
 - `%USER` - Login ID of the user running the test
-- `%VERSION` - the full version number of the tested curl
 
 # `<testcase>`
 
@@ -266,7 +237,6 @@ about to issue.
    POP3 `CAPA` and SMTP `EHLO` commands
 - `AUTH [mechanisms]` - Enables support for SASL authentication and specifies
    a list of space separated mechanisms for IMAP, POP3 and SMTP
-- `STOR [msg]` respond with this instead of default after `STOR`
 
 #### For HTTP/HTTPS
 
@@ -333,7 +303,6 @@ SKIPPED.
 Features testable here are:
 
 - `alt-svc`
-- `c-ares`
 - `cookies`
 - `crypto`
 - `debug`
@@ -341,7 +310,6 @@ Features testable here are:
 - `getrlimit`
 - `GnuTLS`
 - `GSS-API`
-- `HSTS`
 - `HTTP-auth`
 - `http/2`
 - `idn`
@@ -412,7 +380,7 @@ Brief test case description, shown when the test runs.
 Set the given environment variables to the specified value before the actual
 command is run. They are cleared again after the command has been run.
 
-### `<command [option="no-output/no-include/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
+### `<command [option="no-output/no-include/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl"]>`
 Command line to run.
 
 Note that the URL that gets passed to the server actually controls what data
@@ -428,9 +396,6 @@ hexadecimal group in the address will be used as the test number! For example
 the address "[1234::ff]" would be treated as test case 255.
 
 Set `type="perl"` to write the test case as a perl script. It implies that
-there's no memory debugging and valgrind gets shut off for this test.
-
-Set `type="shell"` to write the test case as a shell script. It implies that
 there's no memory debugging and valgrind gets shut off for this test.
 
 Set `option="no-output"` to prevent the test script to slap on the `--output`
@@ -460,12 +425,9 @@ parameter is the not negative integer number of seconds for the delay. This
 'delay' attribute is intended for very specific test cases, and normally not
 needed.
 
-### `<file name="log/filename" [nonewline="yes"]>`
+### `<file name="log/filename">`
 This creates the named file with this content before the test case is run,
 which is useful if the test case needs a file to act on.
-
-If 'nonewline="yes"` is used, the created file will have the final newline
-stripped off.
 
 ### `<stdin [nonewline="yes"]>`
 Pass this given data on stdin to the tool.

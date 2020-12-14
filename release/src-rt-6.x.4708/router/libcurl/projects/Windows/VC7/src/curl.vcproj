@@ -1222,9 +1222,6 @@
 				RelativePath="..\..\..\..\lib\curl_multibyte.c">
 			</File>
 			<File
-				RelativePath="..\..\..\..\lib\dynbuf.c">
-			</File>
-			<File
 				RelativePath="..\..\..\..\lib\nonblock.c">
 			</File>
 			<File
@@ -1374,9 +1371,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\curl_setup.h">
-			</File>
-			<File
-				RelativePath="..\..\..\..\lib\dynbuf.h">
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\nonblock.h">

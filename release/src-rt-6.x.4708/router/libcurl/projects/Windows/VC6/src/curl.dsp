@@ -687,10 +687,6 @@ SOURCE=..\..\..\..\lib\curl_multibyte.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\..\..\lib\dynbuf.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\..\..\lib\nonblock.c
 # End Source File
 # Begin Source File
@@ -888,10 +884,6 @@ SOURCE=..\..\..\..\lib\curl_multibyte.h
 # Begin Source File
 
 SOURCE=..\..\..\..\lib\curl_setup.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\lib\dynbuf.h
 # End Source File
 # Begin Source File
 

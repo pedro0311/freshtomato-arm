@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -133,7 +133,6 @@ const struct Curl_handler Curl_handler_smtp = {
   ZERO_NULL,                        /* connection_check */
   PORT_SMTP,                        /* defport */
   CURLPROTO_SMTP,                   /* protocol */
-  CURLPROTO_SMTP,                   /* family */
   PROTOPT_CLOSEACTION | PROTOPT_NOURLQUERY | /* flags */
   PROTOPT_URLOPTIONS
 };
@@ -161,7 +160,6 @@ const struct Curl_handler Curl_handler_smtps = {
   ZERO_NULL,                        /* connection_check */
   PORT_SMTPS,                       /* defport */
   CURLPROTO_SMTPS,                  /* protocol */
-  CURLPROTO_SMTP,                   /* family */
   PROTOPT_CLOSEACTION | PROTOPT_SSL
   | PROTOPT_NOURLQUERY | PROTOPT_URLOPTIONS /* flags */
 };
@@ -486,7 +484,7 @@ static CURLcode smtp_perform_command(struct connectdata *conn)
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
 
   if(smtp->rcpt) {
     /* We notify the server we are sending UTF-8 data if a) it supports the
@@ -699,7 +697,7 @@ static CURLcode smtp_perform_mail(struct connectdata *conn)
      any there do, as we need to correctly identify our support for SMTPUTF8
      in the envelope, as per RFC-6531 sect. 3.4 */
   if(conn->proto.smtpc.utf8_supported && !utf8) {
-    struct SMTP *smtp = data->req.p.smtp;
+    struct SMTP *smtp = data->req.protop;
     struct curl_slist *rcpt = smtp->rcpt;
 
     while(rcpt && !utf8) {
@@ -743,7 +741,7 @@ static CURLcode smtp_perform_rcpt_to(struct connectdata *conn)
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   char *address = NULL;
   struct hostname host = { NULL, NULL, NULL, NULL };
 
@@ -991,7 +989,7 @@ static CURLcode smtp_state_command_resp(struct connectdata *conn, int smtpcode,
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   char *line = data->state.buffer;
   size_t len = strlen(line);
 
@@ -1057,7 +1055,7 @@ static CURLcode smtp_state_rcpt_resp(struct connectdata *conn, int smtpcode,
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   bool is_smtp_err = FALSE;
   bool is_smtp_blocking_err = FALSE;
 
@@ -1280,7 +1278,7 @@ static CURLcode smtp_init(struct connectdata *conn)
   struct Curl_easy *data = conn->data;
   struct SMTP *smtp;
 
-  smtp = data->req.p.smtp = calloc(sizeof(struct SMTP), 1);
+  smtp = data->req.protop = calloc(sizeof(struct SMTP), 1);
   if(!smtp)
     result = CURLE_OUT_OF_MEMORY;
 
@@ -1324,7 +1322,6 @@ static CURLcode smtp_connect(struct connectdata *conn, bool *done)
   Curl_sasl_init(&smtpc->sasl, &saslsmtp);
 
   /* Initialise the pingpong layer */
-  Curl_pp_setup(pp);
   Curl_pp_init(pp);
 
   /* Parse the URL options */
@@ -1359,7 +1356,7 @@ static CURLcode smtp_done(struct connectdata *conn, CURLcode status,
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   struct pingpong *pp = &conn->proto.smtpc.pp;
   char *eob;
   ssize_t len;
@@ -1445,7 +1442,7 @@ static CURLcode smtp_perform(struct connectdata *conn, bool *connected,
   /* This is SMTP and no proxy */
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
 
   DEBUGF(infof(conn->data, "DO phase starts\n"));
 
@@ -1553,7 +1550,7 @@ static CURLcode smtp_disconnect(struct connectdata *conn, bool dead_connection)
 /* Call this when the DO phase has completed */
 static CURLcode smtp_dophase_done(struct connectdata *conn, bool connected)
 {
-  struct SMTP *smtp = conn->data->req.p.smtp;
+  struct SMTP *smtp = conn->data->req.protop;
 
   (void)connected;
 
@@ -1706,7 +1703,7 @@ static CURLcode smtp_parse_custom_request(struct connectdata *conn)
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   const char *custom = data->set.str[STRING_CUSTOMREQUEST];
 
   /* URL decode the custom request */
@@ -1799,7 +1796,7 @@ CURLcode Curl_smtp_escape_eob(struct connectdata *conn, const ssize_t nread)
   ssize_t i;
   ssize_t si;
   struct Curl_easy *data = conn->data;
-  struct SMTP *smtp = data->req.p.smtp;
+  struct SMTP *smtp = data->req.protop;
   char *scratch = data->state.scratch;
   char *newscratch = NULL;
   char *oldscratch = NULL;
