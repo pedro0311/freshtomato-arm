@@ -369,7 +369,7 @@ export BCMSRC=src-rt-6.x.4708
 endif #bcm7
 
 WLAN_ComponentsInUse := bcmwifi clm ppr olpc
-include ../makefiles/WLAN_Common.mk
+include $(SRCBASE)/makefiles/WLAN_Common.mk
 export BASEDIR := $(WLAN_TreeBaseA)
 export EXTRALDFLAGS = -lgcc_s
 export EXTRALDFLAGS2 = -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared
