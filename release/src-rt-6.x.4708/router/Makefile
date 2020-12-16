@@ -343,7 +343,7 @@ LINUX_KERNEL=2.6.36
 export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
 WLAN_ComponentsInUse := bcmwifi clm ppr olpc
-include ../../src-rt-6.x.4708/makefiles/WLAN_Common.mk
+include $(SRCBASE)/makefiles/WLAN_Common.mk
 export BASEDIR := $(WLAN_TreeBaseA)
 export EXTRALDFLAGS = -lgcc_s
 export EXTRALDFLAGS2 = -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared
