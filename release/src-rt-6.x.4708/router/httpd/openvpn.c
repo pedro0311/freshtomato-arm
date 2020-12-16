@@ -364,6 +364,7 @@ void wo_ovpn_genclientconfig(char *url)
 			fprintf(fp, "auth-user-pass\n");
 	}
 	else {
+		fprintf(fp, "mode p2p\n");
 		memset(buffer, 0, 256);
 		sprintf(buffer, "vpn_server%d_if", server);
 		if (nvram_contains_word(buffer, "tap")) {
