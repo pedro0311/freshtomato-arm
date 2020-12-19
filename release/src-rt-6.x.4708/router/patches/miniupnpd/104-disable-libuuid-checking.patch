@@ -1,7 +1,7 @@
 --- miniupnpd/configure
 +++ miniupnpd/configure
-@@ -426,19 +426,19 @@
- esac
+@@ -579,19 +579,19 @@
+ fi
  
  # UUID API
 -case $OS_NAME in
