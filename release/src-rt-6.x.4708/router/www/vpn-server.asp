@@ -385,10 +385,12 @@ function save() {
 		var crypt = E('_vpn_'+t+'_crypt').value;
 		var hmac = E('_vpn_'+t+'_hmac').value;
 		var key = E('_vpn_'+t+'_static').value;
-		if (((crypt == 'secret' || (crypt == 'tls' && hmac >= 0 && hmac < 4)) && key.indexOf('OpenVPN Static key V1') === -1) ||
-		    (crypt == 'tls' && hmac == 4 && key.indexOf('OpenVPN tls-crypt-v2') === -1)) {
-			alert('Keys->Static Key is in the wrong format for the selected Auth Method - Re-Generate it!');
-			return;
+		if (key != '') {
+			if (((crypt == 'secret' || (crypt == 'tls' && hmac >= 0 && hmac < 4)) && key.indexOf('OpenVPN Static key V1') === -1) ||
+			    (crypt == 'tls' && hmac == 4 && key.indexOf('OpenVPN tls-crypt-v2') === -1)) {
+				alert('Keys->Static Key is in the wrong format for the selected Auth Method - Re-Generate it!');
+				return;
+			}
 		}
 
 		if (E('_f_vpn_'+t+'_eas').checked)
