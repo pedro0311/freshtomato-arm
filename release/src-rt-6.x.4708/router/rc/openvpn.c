@@ -1058,7 +1058,7 @@ void start_ovpn_server(int unit)
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_crl", unit);
 		if (!nvram_is_empty(buffer))
-			fprintf(fp, "crl crl.pem\n");
+			fprintf(fp, "crl-verify crl.pem\n");
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_key", unit);
 		if (!nvram_is_empty(buffer))
