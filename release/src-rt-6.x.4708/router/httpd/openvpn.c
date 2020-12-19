@@ -203,11 +203,13 @@ void wo_ovpn_genkey(char *url)
 	server = atoi(serverStr);
 
 	if (!strcmp(modeStr, "static1"))	/* tls-auth / tls-crypt */
-		web_pipecmd("openvpn --genkey secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
+		web_pipecmd("openvpn --genkey secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
 	else if (!strcmp(modeStr, "static2"))	/* tls-crypt-v2 */
 		web_pipecmd("openvpn --genkey tls-crypt-v2-server /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey && rm /tmp/genvpnkey", WOF_NONE);
-#endif
+#else
+		web_pipecmd("openvpn --genkey --secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
+#endif /* !TCONFIG_OPTIMIZE_SIZE_MORE */
 #ifdef TCONFIG_KEYGEN
 	else if (!strcmp(modeStr, "dh"))
 		web_pipecmd("openssl dhparam -out /tmp/dh1024.pem 1024 >/dev/null 2>&1 && cat /tmp/dh1024.pem && rm /tmp/dh1024.pem", WOF_NONE);
@@ -364,6 +366,7 @@ void wo_ovpn_genclientconfig(char *url)
 			fprintf(fp, "auth-user-pass\n");
 	}
 	else {
+		fprintf(fp, "mode p2p\n");
 		memset(buffer, 0, 256);
 		sprintf(buffer, "vpn_server%d_if", server);
 		if (nvram_contains_word(buffer, "tap")) {
