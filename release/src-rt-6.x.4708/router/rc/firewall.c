@@ -250,16 +250,16 @@ void ip6t_write(const char *format, ...)
 #endif
 }
 
-static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
+static void foreach_wan_input(int wanXup, wanface_list_t wanXfaces)
 {
 	int i, br;
 
-	if ((nvram_get_int("nf_loopback") != 0) && (wanup)) {
-		for (i = 0; i < wanfaces.count; ++i) {
-			if (*(wanfaces.iface[i].name)) {
+	if ((nvram_get_int("nf_loopback") != 0) && (wanXup)) {
+		for (i = 0; i < wanXfaces.count; ++i) {
+			if (*(wanXfaces.iface[i].name)) {
 				for (br = 0; br < BRIDGE_COUNT; br++) {
 					if ((strcmp(lanface[br], "") != 0) || (br == 0)) {
-						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanfaces.iface[i].ip);
+						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanXfaces.iface[i].ip);
 					}
 				}
 			}
@@ -267,16 +267,16 @@ static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
 	}
 }
 
-static void foreach_wan_nat(int wanup, wanface_list_t wanfaces, char *p)
+static void foreach_wan_nat(int wanXup, wanface_list_t wanXfaces, char *p)
 {
 	int i;
 
-	for (i = 0; i < wanfaces.count; ++i) {
-		if (*(wanfaces.iface[i].name)) {
-			if ((!wanup) || (nvram_get_int("ne_snat") != 1))
-				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanfaces.iface[i].name);
+	for (i = 0; i < wanXfaces.count; ++i) {
+		if (*(wanXfaces.iface[i].name)) {
+			if ((!wanXup) || (nvram_get_int("ne_snat") != 1))
+				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanXfaces.iface[i].name);
 			else
-				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanfaces.iface[i].name, wanfaces.iface[i].ip);
+				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanXfaces.iface[i].name, wanXfaces.iface[i].ip);
 		}
 	}
 }
