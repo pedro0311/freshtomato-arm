@@ -591,6 +591,7 @@ static const nvset_t nvset_list[] = {
 	{ "mwan_init",			V_01				},
 	{ "mwan_cktime",		V_RANGE(0, 3600)		},
 	{ "mwan_ckdst",			V_LENGTH(0, 64)			},
+	{ "mwan_tune_gc",		V_01				},
 	{ "pbr_rules",			V_LENGTH(0, 2048)		},
 
 	{ "wan_weight",			V_RANGE(0, 256)			},

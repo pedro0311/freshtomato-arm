@@ -1865,6 +1865,35 @@ int start_firewall(void)
 	f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
 	f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
 
+	/* Reduce and flush the route cache to ensure a more synchronous load balancing across multiwan */
+	if (nvram_get_int("mwan_tune_gc")) {
+		f_write_string("/proc/sys/net/ipv4/route/flush", "1", 0, 0); /* flush routing cache */
+		f_write_string("/proc/sys/net/ipv4/route/gc_elasticity", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_interval", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_min_interval_ms", "20", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_timeout", "1", 0, 0);
+#ifndef TCONFIG_BCMARM
+		f_write_string("/proc/sys/net/ipv4/route/max_delay", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/min_delay", "0", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/secret_interval", "1", 0, 0);
+#endif
+	}
+	else { /* back to std values */
+		f_write_string("/proc/sys/net/ipv4/route/gc_elasticity", "8", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_interval", "60", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_min_interval_ms", "500", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_timeout", "300", 0, 0);
+#ifdef TCONFIG_BCMARM
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "2048", 0, 0);
+#else
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "1024", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/max_delay", "10", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/min_delay", "2", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/secret_interval", "600", 0, 0);
+#endif
+	}
+
 	n = nvram_get_int("log_in");
 	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
 	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
