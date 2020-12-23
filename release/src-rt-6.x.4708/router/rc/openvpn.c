@@ -547,18 +547,9 @@ void start_ovpn_client(int unit)
 		            (nvi ? "DROP" : "ACCEPT"),
 		            iface);
 
-		if (route_mode == NAT) {
-			/* Add the nat for all active bridges */
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				int ret1, ret2;
-
-				ret1 = sscanf(getNVRAMVar((i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-				ret2 = sscanf(getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
-				if (ret1 == 4 && ret2 == 4) {
-					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n", ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i), iface);
-				}
-			}
-		}
+		if (route_mode == NAT)
+			/* masquerade all client outbound traffic regardless of source subnet */
+			fprintf(fp, "iptables -t nat -I POSTROUTING -o %s -j MASQUERADE\n", iface);
 
 		/* Create firewall rules for IPv6 */
 #ifdef TCONFIG_IPV6
@@ -1067,7 +1058,7 @@ void start_ovpn_server(int unit)
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_crl", unit);
 		if (!nvram_is_empty(buffer))
-			fprintf(fp, "crl crl.pem\n");
+			fprintf(fp, "crl-verify crl.pem\n");
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_key", unit);
 		if (!nvram_is_empty(buffer))

@@ -250,16 +250,16 @@ void ip6t_write(const char *format, ...)
 #endif
 }
 
-static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
+static void foreach_wan_input(int wanXup, wanface_list_t wanXfaces)
 {
 	int i, br;
 
-	if ((nvram_get_int("nf_loopback") != 0) && (wanup)) {
-		for (i = 0; i < wanfaces.count; ++i) {
-			if (*(wanfaces.iface[i].name)) {
+	if ((nvram_get_int("nf_loopback") != 0) && (wanXup)) {
+		for (i = 0; i < wanXfaces.count; ++i) {
+			if (*(wanXfaces.iface[i].name)) {
 				for (br = 0; br < BRIDGE_COUNT; br++) {
 					if ((strcmp(lanface[br], "") != 0) || (br == 0)) {
-						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanfaces.iface[i].ip);
+						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanXfaces.iface[i].ip);
 					}
 				}
 			}
@@ -267,16 +267,16 @@ static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
 	}
 }
 
-static void foreach_wan_nat(int wanup, wanface_list_t wanfaces, char *p)
+static void foreach_wan_nat(int wanXup, wanface_list_t wanXfaces, char *p)
 {
 	int i;
 
-	for (i = 0; i < wanfaces.count; ++i) {
-		if (*(wanfaces.iface[i].name)) {
-			if ((!wanup) || (nvram_get_int("ne_snat") != 1))
-				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanfaces.iface[i].name);
+	for (i = 0; i < wanXfaces.count; ++i) {
+		if (*(wanXfaces.iface[i].name)) {
+			if ((!wanXup) || (nvram_get_int("ne_snat") != 1))
+				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanXfaces.iface[i].name);
 			else
-				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanfaces.iface[i].name, wanfaces.iface[i].ip);
+				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanXfaces.iface[i].name, wanXfaces.iface[i].ip);
 		}
 	}
 }
@@ -1864,6 +1864,35 @@ int start_firewall(void)
 	/* 0 - (default) No enforcement of a IGMP version, IGMPv1/v2 fallback allowed. Will back to IGMPv3 mode again if all IGMPv1/v2 Querier Present timer expires. */
 	f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
 	f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
+
+	/* Reduce and flush the route cache to ensure a more synchronous load balancing across multiwan */
+	if (nvram_get_int("mwan_tune_gc")) {
+		f_write_string("/proc/sys/net/ipv4/route/flush", "1", 0, 0); /* flush routing cache */
+		f_write_string("/proc/sys/net/ipv4/route/gc_elasticity", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_interval", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_min_interval_ms", "20", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_timeout", "1", 0, 0);
+#ifndef TCONFIG_BCMARM
+		f_write_string("/proc/sys/net/ipv4/route/max_delay", "1", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/min_delay", "0", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/secret_interval", "1", 0, 0);
+#endif
+	}
+	else { /* back to std values */
+		f_write_string("/proc/sys/net/ipv4/route/gc_elasticity", "8", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_interval", "60", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_min_interval_ms", "500", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/gc_timeout", "300", 0, 0);
+#ifdef TCONFIG_BCMARM
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "2048", 0, 0);
+#else
+		f_write_string("/proc/sys/net/ipv4/route/gc_thresh", "1024", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/max_delay", "10", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/min_delay", "2", 0, 0);
+		f_write_string("/proc/sys/net/ipv4/route/secret_interval", "600", 0, 0);
+#endif
+	}
 
 	n = nvram_get_int("log_in");
 	chain_in_drop = (n & 1) ? "logdrop" : "DROP";

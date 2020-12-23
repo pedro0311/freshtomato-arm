@@ -51,6 +51,9 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 
 	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
 
+	if (!name)
+		return -1;
+
 	/* open a raw socket to the kernel */
 	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
 		return errno;
@@ -88,7 +91,7 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 	}
 
 	/* set dst or P-t-P IP address */
-	if (dstaddr) {
+	if (dstaddr && *dstaddr) {
 		inet_aton(dstaddr, &in_addr);
 		sin_addr(&ifr.ifr_dstaddr).s_addr = in_addr.s_addr;
 		ifr.ifr_dstaddr.sa_family = AF_INET;
@@ -108,7 +111,7 @@ error:
 
 static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway, char *genmask)
 {
-	int s;
+	int s, err = 0;
 	struct rtentry rt;
 
 	logmsg(LOG_DEBUG, "*** %s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
@@ -119,11 +122,11 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 
 	/* fill in rtentry */
 	memset(&rt, 0, sizeof(rt));
-	if (dst)
+	if (dst && *dst)
 		inet_aton(dst, &sin_addr(&rt.rt_dst));
-	if (gateway)
+	if (gateway && *gateway)
 		inet_aton(gateway, &sin_addr(&rt.rt_gateway));
-	if (genmask)
+	if (genmask && *genmask)
 		inet_aton(genmask, &sin_addr(&rt.rt_genmask));
 
 	rt.rt_metric = metric;
@@ -141,13 +144,12 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 	rt.rt_genmask.sa_family = AF_INET;
 
 	if (ioctl(s, cmd, &rt) < 0) {
+		err = errno;
 		perror(name);
-		close(s);
-		return errno;
 	}
 
 	close(s);
-	return 0;
+	return err;
 }
 
 int route_add(char *name, int metric, char *dst, char *gateway, char *genmask)
