@@ -108,7 +108,6 @@ extern void config_loopback(void);
 extern void start_vlan(void);
 extern void stop_vlan(void);
 extern int config_vlan(void);
-extern void config_loopback(void);
 #ifdef TCONFIG_IPV6
 extern int ipv6_mapaddr4(struct in6_addr *addr6, int ip6len, struct in_addr *addr4, int ip4mask);
 #endif
