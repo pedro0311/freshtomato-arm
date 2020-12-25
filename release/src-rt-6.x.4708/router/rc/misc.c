@@ -256,11 +256,11 @@ static void write_ct_timeout(const char *type, const char *name, unsigned int va
 	char v[16];
 
 	memset(buf, 0, 128);
-	sprintf(buf, "/proc/sys/net/ipv4/netfilter/ip_conntrack_%s_timeout%s%s", type, ((name && name[0]) ? "_" : ""), (name ? name : ""));
+	sprintf(buf, "ipv4/netfilter/ip_conntrack_%s_timeout%s%s", type, ((name && name[0]) ? "_" : ""), (name ? name : ""));
 	memset(v, 0, 16);
 	sprintf(v, "%u", val);
 
-	f_write_string(buf, v, 0, 0);
+	f_write_procsysnet(buf, v);
 }
 
 #ifndef write_tcp_timeout
@@ -361,7 +361,7 @@ void setup_conntrack(void)
 	p = nvram_safe_get("ct_max");
 	i = atoi(p);
 	if (i >= 128)
-		f_write_string("/proc/sys/net/ipv4/netfilter/ip_conntrack_max", p, 0, 0);
+		f_write_procsysnet("ipv4/netfilter/ip_conntrack_max", p);
 	else if (f_read_string("/proc/sys/net/ipv4/netfilter/ip_conntrack_max", buf, sizeof(buf)) > 0) {
 		if (atoi(buf) > 0)
 			nvram_set("ct_max", buf);

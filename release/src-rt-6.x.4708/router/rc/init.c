@@ -4805,7 +4805,7 @@ static void sysinit(void)
 
 #ifdef TCONFIG_IPV6
 	/* disable IPv6 by default on all interfaces */
-	f_write_string("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1", 0, 0);
+	f_write_procsysnet("ipv6/conf/default/disable_ipv6", "1");
 #endif
 
 	for (i = 0; i < sizeof(fatalsigs) / sizeof(fatalsigs[0]); i++) {
