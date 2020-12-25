@@ -174,11 +174,9 @@ void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 /* configure loopback interface */
 void config_loopback(void)
 {
-	struct ifreq ifr;
-
 	/* bring down loopback interface */
 	if (is_intf_up("lo") > 0)
-		ifconfig(ifr.ifr_name, 0, NULL, NULL);
+		ifconfig("lo", 0, NULL, NULL);
 
 	/* bring up loopback interface */
 	ifconfig("lo", IFUP, "127.0.0.1", "255.0.0.0");
