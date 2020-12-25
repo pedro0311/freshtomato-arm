@@ -100,8 +100,11 @@ extern void restore_defaults_module(char *prefix);
 #endif
 
 /* interface.c */
-extern int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr);
-#define ifconfig(name, flags, addr, netmask) _ifconfig(name, flags, addr, netmask, NULL)
+extern int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr, int mtu);
+static inline int ifconfig(const char *name, int flags, const char *addr, const char *netmask)
+{
+	return _ifconfig(name, flags, addr, netmask, NULL, 0);
+}
 extern int route_add(char *name, int metric, char *dst, char *gateway, char *genmask);
 extern void route_del(char *name, int metric, char *dst, char *gateway, char *genmask);
 extern void config_loopback(void);

@@ -43,13 +43,13 @@
 #define LOGMSG_NVDEBUG	"interface_debug"
 
 
-int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr)
+int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr, int mtu)
 {
 	int s;
 	struct ifreq ifr;
 	struct in_addr in_addr, in_netmask, in_broadaddr;
 
-	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
+	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%04x %s addr=%s netmask=%s mtu=%d\n", __FUNCTION__, name ? : "", flags, (flags & IFUP) ? "IFUP" : "", addr ? : "", netmask ? : "", mtu ? : 0);
 
 	if (!name)
 		return -1;
@@ -99,12 +99,19 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 			goto error;
 	}
 
+	/* set MTU */
+	if (mtu > 0) {
+		ifr.ifr_mtu = mtu;
+		if (ioctl(s, SIOCSIFMTU, &ifr) < 0)
+			goto error;
+	}
+
 	close(s);
 	return 0;
 
 error:
-	close(s);
 	perror(name);
+	close(s);
 
 	return errno;
 }
@@ -122,11 +129,11 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 
 	/* fill in rtentry */
 	memset(&rt, 0, sizeof(rt));
-	if (dst && *dst)
+	if (dst)
 		inet_aton(dst, &sin_addr(&rt.rt_dst));
-	if (gateway && *gateway)
+	if (gateway)
 		inet_aton(gateway, &sin_addr(&rt.rt_gateway));
-	if (genmask && *genmask)
+	if (genmask)
 		inet_aton(genmask, &sin_addr(&rt.rt_genmask));
 
 	rt.rt_metric = metric;
