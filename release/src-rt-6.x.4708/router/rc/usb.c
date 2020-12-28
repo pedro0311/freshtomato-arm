@@ -90,7 +90,8 @@ void start_usb(void)
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400) ||
 		 (model == MODEL_R6400v2) ||
-		 (model == MODEL_R6700v3)) {
+		 (model == MODEL_R6700v3) ||
+		 (model == MODEL_XR300) ) {
 		set_gpio(GPIO_00, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
@@ -420,7 +421,8 @@ void stop_usb(void)
 	else if ((model == MODEL_R1D) ||
 		 (model == MODEL_R6400) ||
 		 (model == MODEL_R6400v2) ||
-		 (model == MODEL_R6700v3)) {
+		 (model == MODEL_R6700v3) ||
+		 (model == MODEL_XR300) ) {
 		set_gpio(GPIO_00, T_LOW);
 	}
 	else if ((model == MODEL_EA6350v1) ||
@@ -936,6 +938,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_R6700v1:
 		case MODEL_R6700v3:
 		case MODEL_R7000:
+		case MODEL_XR300:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example RT-N18U: port 1 gpio 14 for USB3 */
 			usb1 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example RT-N18U: port 2 gpio 3 */
