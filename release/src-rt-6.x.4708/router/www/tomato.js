@@ -2277,7 +2277,7 @@ function escapeHTML(s) {
 }
 
 function escapeCGI(s) {
-	return encodeURIComponent(s)
+	return encodeURIComponent(s);
 }
 
 function escapeD(s) {
