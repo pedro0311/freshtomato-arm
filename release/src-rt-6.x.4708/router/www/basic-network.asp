@@ -20,7 +20,7 @@
 <script src="interfaces.js"></script>
 <script src="wireless.js"></script>
 <script>
-//	<% nvram("dhcp_lease,dhcp_num,dhcp_start,dhcpd_startip,dhcpd_endip,lan_gateway,lan_ipaddr,lan_netmask,lan_proto,lan_state,lan_desc,lan_invert,wl_security_mode,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,wan_wins,wl_wds_enable,wl_channel,wl_closed,wl_crypto,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_net_mode,wl_passphrase,wl_radio,wl_radius_ipaddr,wl_radius_port,wl_ssid,wl_wds,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_radius_key,wl_auth,wl_hwaddr,t_features,wl_nbw_cap,wl_nctrlsb,wl_nband,wl_phytype,lan_ifname,lan_stp,lan1_ifname,lan1_ipaddr,lan1_netmask,lan1_proto,lan1_stp,dhcp1_start,dhcp1_num,dhcp1_lease,dhcpd1_startip,dhcpd1_endip,lan2_ifname,lan2_ipaddr,lan2_netmask,lan2_proto,lan2_stp,dhcp2_start,dhcp2_num,dhcp2_lease,dhcpd2_startip,dhcpd2_endip,lan3_ifname,lan3_ipaddr,lan3_netmask,lan3_proto,lan3_stp,dhcp3_start,dhcp3_num,dhcp3_lease,dhcpd3_startip,dhcpd3_endip,cstats_enable,wan_proto,wan_weight,wan_modem_type,wan_modem_pin,wan_modem_dev,wan_modem_init,wan_modem_apn,wan_modem_speed,wan_modem_band,wan_modem_roam,wan_ppp_username,wan_ppp_passwd,wan_ppp_service,wan_l2tp_server_ip,wan_pptp_dhcp,wan_ipaddr,wan_netmask,wan_gateway,wan_pptp_server_ip,wan_ppp_custom,wan_ppp_demand,wan_ppp_idletime,wan_ppp_demand_dnsip,wan_ppp_redialperiod,wan_pppoe_lei,wan_pppoe_lef,wan_mtu_enable,wan_mtu,wan_ppp_mlppp,wan_modem_ipaddr,wan_islan,wan_sta,wan_dns,wan_dns_auto,wan_ifnameX,wan_ckmtd,wan2_proto,wan2_weight,wan2_modem_type,wan2_modem_pin,wan2_modem_dev,wan2_modem_init,wan2_modem_apn,wan2_modem_speed,wan2_modem_band,wan2_modem_roam,wan2_ppp_username,wan2_ppp_passwd,wan2_ppp_service,wan2_l2tp_server_ip,wan2_pptp_dhcp,wan2_ipaddr,wan2_netmask,wan2_gateway,wan2_pptp_server_ip,wan2_ppp_custom,wan2_ppp_demand,wan2_ppp_idletime,wan2_ppp_demand_dnsip,wan2_ppp_redialperiod,wan2_pppoe_lei,wan2_pppoe_lef,wan2_mtu_enable,wan2_mtu,wan2_ppp_mlppp,wan2_modem_ipaddr,wan2_islan,wan2_sta,wan2_dns,wan2_dns_auto,wan2_ifnameX,wan2_ckmtd,wan3_proto,wan3_weight,wan3_modem_type,wan3_modem_pin,wan3_modem_dev,wan3_modem_init,wan3_modem_apn,wan3_modem_speed,wan3_modem_band,wan3_modem_roam,wan3_ppp_username,wan3_ppp_passwd,wan3_ppp_service,wan3_l2tp_server_ip,wan3_pptp_dhcp,wan3_ipaddr,wan3_netmask,wan3_gateway,wan3_pptp_server_ip,wan3_ppp_custom,wan3_ppp_demand,wan3_ppp_idletime,wan3_ppp_demand_dnsip,wan3_ppp_redialperiod,wan3_pppoe_lei,wan3_pppoe_lef,wan3_mtu_enable,wan3_mtu,wan3_ppp_mlppp,wan3_modem_ipaddr,wan3_islan,wan3_sta,wan3_dns,wan3_dns_auto,wan3_ifnameX,wan3_ckmtd,wan4_proto,wan4_weight,wan4_modem_type,wan4_modem_pin,wan4_modem_dev,wan4_modem_init,wan4_modem_apn,wan4_modem_speed,wan4_modem_band,wan4_modem_roam,wan4_ppp_username,wan4_ppp_passwd,wan4_ppp_service,wan4_l2tp_server_ip,wan4_pptp_dhcp,wan4_ipaddr,wan4_netmask,wan4_gateway,wan4_pptp_server_ip,wan4_ppp_custom,wan4_ppp_demand,wan4_ppp_idletime,wan4_ppp_demand_dnsip,wan4_ppp_redialperiod,wan4_pppoe_lei,wan4_pppoe_lef,wan4_mtu_enable,wan4_mtu,wan4_ppp_mlppp,wan4_modem_ipaddr,wan4_islan,wan4_sta,wan4_dns,wan4_dns_auto,wan4_ifnameX,wan4_ckmtd,mwan_num,mwan_cktime,mwan_ckdst,mwan_tune_gc,dnssec_enable,wan_hilink_ip,wan2_hilink_ip,wan3_hilink_ip,wan4_hilink_ip,wan_status_script,wan2_status_script,wan3_status_script,wan4_status_script,smart_connect_x"); %>
+//	<% nvram("dhcp_lease,dhcp_num,dhcp_start,dhcpd_startip,dhcpd_endip,lan_gateway,lan_ipaddr,lan_netmask,lan_proto,lan_state,lan_desc,lan_invert,wl_security_mode,wl_wds_enable,wl_channel,wl_closed,wl_crypto,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_lazywds,wl_mode,wl_net_mode,wl_passphrase,wl_radio,wl_radius_ipaddr,wl_radius_port,wl_ssid,wl_wds,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_radius_key,wl_auth,wl_hwaddr,t_features,wl_nbw_cap,wl_nctrlsb,wl_nband,wl_phytype,lan_ifname,lan_stp,lan1_ifname,lan1_ipaddr,lan1_netmask,lan1_proto,lan1_stp,dhcp1_start,dhcp1_num,dhcp1_lease,dhcpd1_startip,dhcpd1_endip,lan2_ifname,lan2_ipaddr,lan2_netmask,lan2_proto,lan2_stp,dhcp2_start,dhcp2_num,dhcp2_lease,dhcpd2_startip,dhcpd2_endip,lan3_ifname,lan3_ipaddr,lan3_netmask,lan3_proto,lan3_stp,dhcp3_start,dhcp3_num,dhcp3_lease,dhcpd3_startip,dhcpd3_endip,cstats_enable,wan_proto,wan_weight,wan_modem_type,wan_modem_pin,wan_modem_dev,wan_modem_init,wan_modem_apn,wan_modem_speed,wan_modem_band,wan_modem_roam,wan_ppp_username,wan_ppp_passwd,wan_ppp_service,wan_l2tp_server_ip,wan_pptp_dhcp,wan_ipaddr,wan_netmask,wan_gateway,wan_pptp_server_ip,wan_ppp_custom,wan_ppp_demand,wan_ppp_idletime,wan_ppp_demand_dnsip,wan_ppp_redialperiod,wan_pppoe_lei,wan_pppoe_lef,wan_mtu_enable,wan_mtu,wan_ppp_mlppp,wan_modem_ipaddr,wan_islan,wan_sta,wan_dns,wan_dns_auto,wan_ifnameX,wan_ckmtd,wan2_proto,wan2_weight,wan2_modem_type,wan2_modem_pin,wan2_modem_dev,wan2_modem_init,wan2_modem_apn,wan2_modem_speed,wan2_modem_band,wan2_modem_roam,wan2_ppp_username,wan2_ppp_passwd,wan2_ppp_service,wan2_l2tp_server_ip,wan2_pptp_dhcp,wan2_ipaddr,wan2_netmask,wan2_gateway,wan2_pptp_server_ip,wan2_ppp_custom,wan2_ppp_demand,wan2_ppp_idletime,wan2_ppp_demand_dnsip,wan2_ppp_redialperiod,wan2_pppoe_lei,wan2_pppoe_lef,wan2_mtu_enable,wan2_mtu,wan2_ppp_mlppp,wan2_modem_ipaddr,wan2_islan,wan2_sta,wan2_dns,wan2_dns_auto,wan2_ifnameX,wan2_ckmtd,wan3_proto,wan3_weight,wan3_modem_type,wan3_modem_pin,wan3_modem_dev,wan3_modem_init,wan3_modem_apn,wan3_modem_speed,wan3_modem_band,wan3_modem_roam,wan3_ppp_username,wan3_ppp_passwd,wan3_ppp_service,wan3_l2tp_server_ip,wan3_pptp_dhcp,wan3_ipaddr,wan3_netmask,wan3_gateway,wan3_pptp_server_ip,wan3_ppp_custom,wan3_ppp_demand,wan3_ppp_idletime,wan3_ppp_demand_dnsip,wan3_ppp_redialperiod,wan3_pppoe_lei,wan3_pppoe_lef,wan3_mtu_enable,wan3_mtu,wan3_ppp_mlppp,wan3_modem_ipaddr,wan3_islan,wan3_sta,wan3_dns,wan3_dns_auto,wan3_ifnameX,wan3_ckmtd,wan4_proto,wan4_weight,wan4_modem_type,wan4_modem_pin,wan4_modem_dev,wan4_modem_init,wan4_modem_apn,wan4_modem_speed,wan4_modem_band,wan4_modem_roam,wan4_ppp_username,wan4_ppp_passwd,wan4_ppp_service,wan4_l2tp_server_ip,wan4_pptp_dhcp,wan4_ipaddr,wan4_netmask,wan4_gateway,wan4_pptp_server_ip,wan4_ppp_custom,wan4_ppp_demand,wan4_ppp_idletime,wan4_ppp_demand_dnsip,wan4_ppp_redialperiod,wan4_pppoe_lei,wan4_pppoe_lef,wan4_mtu_enable,wan4_mtu,wan4_ppp_mlppp,wan4_modem_ipaddr,wan4_islan,wan4_sta,wan4_dns,wan4_dns_auto,wan4_ifnameX,wan4_ckmtd,mwan_num,mwan_cktime,mwan_ckdst,mwan_tune_gc,wan_hilink_ip,wan2_hilink_ip,wan3_hilink_ip,wan4_hilink_ip,wan_status_script,wan2_status_script,wan3_status_script,wan4_status_script,smart_connect_x"); %>
 
 /* DUALWAN-BEGIN */
 maxwan_num = 2;
@@ -404,15 +404,6 @@ function verifyFields(focused, quiet) {
 	var n = E('_f_lan_state').checked;
 	E('_f_lan_desc').disabled = !n;
 	E('_f_lan_invert').disabled = !n;
-/* STUBBY-BEGIN */
-/* DNSCRYPT-BEGIN */
-	var ds = E('_f_dnscrypt_proxy').checked;
-	E('_f_stubby_proxy').disabled = ds;
-
-	var sd = E('_f_stubby_proxy').checked;
-	E('_f_dnscrypt_proxy').disabled = sd;
-/* DNSCRYPT-END */
-/* STUBBY-END */
 
 	var mwan = E('_mwan_num');
 	if (mwan.options[(mwan.selectedIndex)].disabled)
@@ -452,11 +443,7 @@ function verifyFields(focused, quiet) {
 	var vis = {
 		_f_dns_1: 1,
 		_f_dns_2: 1,
-/* DNSSEC-BEGIN */
-		_f_dnssec_enable: 1,
-/* DNSSEC-END */
-		_lan_gateway: 1,
-		_wan_wins: 1
+		_lan_gateway: 1
 	};
 
 	var wanproto = new Array();
@@ -922,25 +909,6 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-/* DNSCRYPT-BEGIN */
-	var p = E('_f_dnscrypt_proxy').checked;
-	vis._dnscrypt_priority = p;
-	vis._dnscrypt_port = p;
-	vis._dnscrypt_log = p;
-	vis._f_dnscrypt_manual = p;
-	vis._f_dnscrypt_ephemeral_keys = p;
-	var q = E('_f_dnscrypt_proxy').checked && E('_f_dnscrypt_manual').checked;
-	vis._dnscrypt_provider_name = q;
-	vis._dnscrypt_provider_key = q;
-	vis._dnscrypt_resolver_address = q;
-	var r = E('_f_dnscrypt_proxy').checked && !E('_f_dnscrypt_manual').checked;
-	vis._dnscrypt_resolver = r;
-/* DNSCRYPT-END */
-/* STUBBY-BEGIN */
-	var stub = E('_f_stubby_proxy').checked;
-	vis._stubby_priority = stub;
-	vis._stubby_log = stub;
-/* STUBBY-END */
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 /*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx) < 0) {
@@ -1192,7 +1160,7 @@ REMOVE-END */
 	}
 
 	/* IP address, blank -> 0.0.0.0 */
-	a = ['_f_dns_1', '_f_dns_2', '_f_dns_3','_wan_wins','_lan_gateway'];
+	a = ['_f_dns_1', '_f_dns_2', '_f_dns_3', '_lan_gateway'];
 	for (i = a.length - 1; i >= 0; --i) {
 		if ((vis[a[i]]) && (!v_dns(a[i], quiet || !ok))) ok = 0;
 	}
@@ -1464,20 +1432,6 @@ function save() {
 		}
 	}
 
-/* DNSSEC-BEGIN */
-	fom.dnssec_enable.value = fom.f_dnssec_enable.checked ? 1 : 0;
-/* DNSSEC-END */
-
-/* DNSCRYPT-BEGIN */
-	fom.dnscrypt_proxy.value = fom.f_dnscrypt_proxy.checked ? 1 : 0;
-	fom.dnscrypt_manual.value = fom.f_dnscrypt_manual.checked ? 1 : 0;
-	fom.dnscrypt_ephemeral_keys.value = fom.f_dnscrypt_ephemeral_keys.checked ? 1 : 0;
-/* DNSCRYPT-END */
-
-/* STUBBY-BEGIN */
-	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
-/* STUBBY-END */
-
 	fom.lan_state.value = fom.f_lan_state.checked ? 1 : 0;
 	fom.lan_desc.value = fom.f_lan_desc.checked ? 1 : 0;
 	fom.lan_invert.value = fom.f_lan_invert.checked ? 1 : 0;
@@ -1630,17 +1584,6 @@ function init() {
 <input type="hidden" name="_reboot" value="0">
 <input type="hidden" name="_service" value="*">
 <input type="hidden" name="_moveip" value="0">
-<!-- DNSSEC-BEGIN -->
-<input type="hidden" name="dnssec_enable">
-<!-- DNSSEC-END -->
-<!-- DNSCRYPT-BEGIN -->
-<input type="hidden" name="dnscrypt_proxy">
-<input type="hidden" name="dnscrypt_manual">
-<input type="hidden" name="dnscrypt_ephemeral_keys">
-<!-- DNSCRYPT-END -->
-<!-- STUBBY-BEGIN -->
-<input type="hidden" name="stubby_proxy">
-<!-- STUBBY-END -->
 <input type="hidden" name="lan_state">
 <input type="hidden" name="lan_desc">
 <input type="hidden" name="lan_invert">
@@ -1801,29 +1744,7 @@ REMOVE-END -->
 	createFieldTable('', [
 		{ title: 'Default Gateway', name: 'lan_gateway', type: 'text', maxlen: 15, size: 17, value: nvram.lan_gateway },
 		{ title: 'Static DNS', suffix: '&nbsp; <small>IP:port<\/small>', name: 'f_dns_1', type: 'text', maxlen: 21, size: 25, value: dns[0] || '0.0.0.0' },
-		{ title: '', name: 'f_dns_2', type: 'text', maxlen: 21, size: 25, value: dns[1] || '0.0.0.0' },
-/* DNSSEC-BEGIN */
-		{ title: 'Enable DNSSEC', name: 'f_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>must be supported by the upstream nameservers<\/small>', value: (nvram.dnssec_enable == 1) },
-/* DNSSEC-END */
-/* DNSCRYPT-BEGIN */
-		{ title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: (nvram.dnscrypt_proxy == 1) },
-		{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: (nvram.dnscrypt_ephemeral_keys == 1) },
-		{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: (nvram.dnscrypt_manual == 1) },
-		{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: _dnscrypt_resolvers_, value: nvram.dnscrypt_resolver },
-		{ title: 'Resolver Address', indent: 2, name: 'dnscrypt_resolver_address', type: 'text', maxlen: 50, size: 25, value: nvram.dnscrypt_resolver_address },
-		{ title: 'Provider Name', indent: 2, name: 'dnscrypt_provider_name', type: 'text', maxlen: 60, size: 25, value: nvram.dnscrypt_provider_name },
-		{ title: 'Provider Public Key', indent: 2, name: 'dnscrypt_provider_key', type: 'text', maxlen: 80, size: 25, value: nvram.dnscrypt_provider_key },
-		{ title: 'Priority', indent: 2, name: 'dnscrypt_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.dnscrypt_priority },
-		{ title: 'Local Port', indent: 2, name: 'dnscrypt_port', type: 'text', maxlen: 5, size: 7, value: nvram.dnscrypt_port },
-		{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log },
-/* DNSCRYPT-END */
-/* STUBBY-BEGIN */
-		{ title: 'Use Stubby <small>(DNS-over-TLS)<\/small>', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) },
-		{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.stubby_priority },
-		{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
-			value: nvram.stubby_log, suffix: '&nbsp; <small>*default<\/small>' },
-/* STUBBY-END */
-		{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins }
+		{ title: '', name: 'f_dns_2', type: 'text', maxlen: 21, size: 25, value: dns[1] || '0.0.0.0' }
 	]);
 </script>
 </div>
