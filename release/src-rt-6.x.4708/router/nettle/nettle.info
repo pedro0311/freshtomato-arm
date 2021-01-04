@@ -64,6 +64,7 @@ Reference
 Hash functions
 
 * Recommended hash functions::
+* Miscellaneous hash functions::
 * Legacy hash functions::
 * nettle_hash abstraction::
 
@@ -72,15 +73,23 @@ Cipher modes
 * CBC::
 * CTR::
 * CFB and CFB8::
+* XTS::
+
+Authenticated encryption with associated data
+
+* EAX::
 * GCM::
 * CCM::
+* ChaCha-Poly1305::
 * SIV-CMAC::
+* nettle_aead abstraction::
 
 Keyed Hash Functions
 
 * HMAC::
 * UMAC::
 * CMAC::
+* Poly1305::
 
 Public-key algorithms
 
@@ -510,11 +519,12 @@ candidates may also be reasonable alternatives.
 * Menu:
 
 * Recommended hash functions::
+* Miscellaneous hash functions::
 * Legacy hash functions::
 * nettle_hash abstraction::
 
 
-File: nettle.info,  Node: Recommended hash functions,  Next: Legacy hash functions,  Up: Hash functions
+File: nettle.info,  Node: Recommended hash functions,  Next: Miscellaneous hash functions,  Up: Hash functions
 
 7.1.1 Recommended hash functions
 --------------------------------
@@ -851,9 +861,81 @@ as a built in pseudorandomness generator.
      This function also resets the context.
 
 
-File: nettle.info,  Node: Legacy hash functions,  Next: nettle_hash abstraction,  Prev: Recommended hash functions,  Up: Hash functions
+File: nettle.info,  Node: Miscellaneous hash functions,  Next: Legacy hash functions,  Prev: Recommended hash functions,  Up: Hash functions
 
-7.1.2 Legacy hash functions
+7.1.2 Miscellaneous hash functions
+----------------------------------
+
+7.1.2.1 STREEBOG512
+...................
+
+STREEBOG512 is a member of the Streebog (GOST R 34.11-2012) family.  It
+outputs hash values of 512 bits, or 64 octets.  Nettle defines
+STREEBOG512 in ‘<nettle/streebog.h>’.
+
+ -- Context struct: struct streebog512_ctx
+
+ -- Constant: STREEBOG512_DIGEST_SIZE
+     The size of a STREEBOG512 digest, i.e.  64.
+
+ -- Constant: STREEBOG512_BLOCK_SIZE
+     The internal block size of STREEBOG512.  Useful for some special
+     constructions, in particular HMAC-STREEBOG512.
+
+ -- Function: void streebog512_init (struct streebog512_ctx *CTX)
+     Initialize the STREEBOG512 state.
+
+ -- Function: void streebog512_update (struct streebog512_ctx *CTX,
+          size_t LENGTH, const uint8_t *DATA)
+     Hash some more data.
+
+ -- Function: void streebog512_digest (struct streebog512_ctx *CTX,
+          size_t LENGTH, uint8_t *DIGEST)
+     Performs final processing and extracts the message digest, writing
+     it to DIGEST.  LENGTH may be smaller than
+     ‘STREEBOG512_DIGEST_SIZE’, in which case only the first LENGTH
+     octets of the digest are written.
+
+     This function also resets the context in the same way as
+     ‘streebog512_init’.
+
+7.1.2.2 STREEBOG256
+...................
+
+STREEBOG256 is a variant of STREEBOG512, with a different initial state,
+and with the output truncated to 256 bits, or 32 octets.  Nettle defines
+STREEBOG256 in ‘<nettle/streebog.h>’.
+
+ -- Context struct: struct streebog256_ctx
+
+ -- Constant: STREEBOG256_DIGEST_SIZE
+     The size of a STREEBOG256 digest, i.e.  32.
+
+ -- Constant: STREEBOG256_BLOCK_SIZE
+     The internal block size of STREEBOG256.  Useful for some special
+     constructions, in particular HMAC-STREEBOG256.
+
+ -- Function: void streebog256_init (struct streebog256_ctx *CTX)
+     Initialize the STREEBOG256 state.
+
+ -- Function: void streebog256_update (struct streebog256_ctx *CTX,
+          size_t LENGTH, const uint8_t *DATA)
+     Hash some more data.
+
+ -- Function: void streebog256_digest (struct streebog256_ctx *CTX,
+          size_t LENGTH, uint8_t *DIGEST)
+     Performs final processing and extracts the message digest, writing
+     it to DIGEST.  LENGTH may be smaller than
+     ‘STREEBOG256_DIGEST_SIZE’, in which case only the first LENGTH
+     octets of the digest are written.
+
+     This function also resets the context in the same way as
+     ‘streebog256_init’.
+
+
+File: nettle.info,  Node: Legacy hash functions,  Next: nettle_hash abstraction,  Prev: Miscellaneous hash functions,  Up: Hash functions
+
+7.1.3 Legacy hash functions
 ---------------------------
 
 The hash functions in this section all have some known weaknesses, and
@@ -866,7 +948,7 @@ not in itself make the application insecure; if a known weakness is
 relevant depends on how the hash function is used, and on the threat
 model.
 
-7.1.2.1 MD5
+7.1.3.1 MD5
 ...........
 
 MD5 is a message digest function constructed by Ronald Rivest, and
@@ -905,7 +987,7 @@ state, so you can start over calling ‘md5_update’ to hash new data.
 
    To start over, you can call ‘md5_init’ at any time.
 
-7.1.2.2 MD2
+7.1.3.2 MD2
 ...........
 
 MD2 is another hash function of Ronald Rivest’s, described in ‘RFC
@@ -936,7 +1018,7 @@ defines MD2 in ‘<nettle/md2.h>’.
      This function also resets the context in the same way as
      ‘md2_init’.
 
-7.1.2.3 MD4
+7.1.3.3 MD4
 ...........
 
 MD4 is a predecessor of MD5, described in ‘RFC 1320’.  Like MD5, it is
@@ -969,7 +1051,7 @@ existing applications and protocols.
      This function also resets the context in the same way as
      ‘md4_init’.
 
-7.1.2.4 RIPEMD160
+7.1.3.4 RIPEMD160
 .................
 
 RIPEMD160 is a hash function designed by Hans Dobbertin, Antoon
@@ -1003,7 +1085,7 @@ RIPEMD160 in ‘nettle/ripemd160.h’.
      This function also resets the context in the same way as
      ‘ripemd160_init’.
 
-7.1.2.5 SHA1
+7.1.3.5 SHA1
 ............
 
 SHA1 is a hash function specified by “NIST” (The U.S. National Institute
@@ -1036,7 +1118,7 @@ for Standards and Technology).  It outputs hash values of 160 bits, or
      This function also resets the context in the same way as
      ‘sha1_init’.
 
-7.1.2.6 GOSTHASH94 and GOSTHASH94CP
+7.1.3.6 GOSTHASH94 and GOSTHASH94CP
 ...................................
 
 The GOST94 or GOST R 34.11-94 hash algorithm is a Soviet-era algorithm
@@ -1102,7 +1184,7 @@ GOSTHASH94 and GOSTHASH94CP in ‘<nettle/gosthash94.h>’.
 
 File: nettle.info,  Node: nettle_hash abstraction,  Prev: Legacy hash functions,  Up: Hash functions
 
-7.1.3 The ‘struct nettle_hash’ abstraction
+7.1.4 The ‘struct nettle_hash’ abstraction
 ------------------------------------------
 
 Nettle includes a struct including information about the supported hash
@@ -1470,6 +1552,71 @@ has some weak keys.  Nettle defines BLOWFISH in ‘<nettle/blowfish.h>’.
  -- Function: void blowfish_decrypt (struct blowfish_ctx *CTX, size_t
           LENGTH, uint8_t *DST, const uint8_t *SRC)
      Analogous to ‘blowfish_encrypt’
+
+ -- Function: int blowfish_bcrypt_hash (char *DST, size_t LENKEY, const
+          char *KEY, size_t LENSCHEME, const char *SCHEME, int
+          LOG2ROUNDS, const uint8_t *SALT)
+     Compute the bcrypt password hash.  The function will return ‘0’ if
+     the hash cannot be computed due to invalid input.  The function
+     will return ‘1’ and store the computed hash in the array pointed to
+     by DST.  The hash is computed based on the chosen SCHEME, number of
+     rounds LOG2ROUNDS and specified SALT.
+
+     DST must point to a character array of at least
+     ‘BLOWFISH_BCRYPT_HASH_SIZE’ bytes.
+
+     KEY contains the plaintext password string of size LENKEY.
+
+     SCHEME is of size LENSCHEME and contains either just the chosen
+     scheme (valid schemes are: ‘2a’, ‘2b’, ‘2x’ or ‘2y’), or (the
+     prefix of) an existing hashed password (typically ‘$2b$10$...’).
+
+     LOG2ROUNDS contains the log2 of the number of encryption rounds
+     that must be used to compute the hash.  If it is ‘-1’ the value
+     will be extracted from SCHEME.
+
+     SALT should point to an array of ‘BLOWFISH_BCRYPT_BINSALT_SIZE’
+     random bytes to be used to perturb the hash computation.  If it is
+     ‘NULL’ the salt will be extracted from SCHEME.
+
+     Sample code to generate a bcrypt hash:
+          char cleartxtpassword[] = "ExamplePassword";
+          char scheme[] = "2b";
+          uint8_t salt[BLOWFISH_BCRYPT_BINSALT_SIZE];
+          ...
+          /* Make sure that salt is filled with random bytes */
+          ...
+          char hashedresult[BLOWFISH_BCRYPT_HASH_SIZE];
+          int result = blowfish_bcrypt(hashedresult,
+                                       sizeof(cleartxtpassword) - 1, cleartxtpassword,
+                                       sizeof(scheme) - 1, scheme, 10, salt);
+          if (result)
+            printf("%s\n", hashedresult);
+
+ -- Function: int blowfish_bcrypt_verify (size_t LENKEY, const char
+          *KEY, size_t LENHASHED, const char *HASHED)
+     Verifies the bcrypt password hash against the supplied plaintext
+     password.  The function will return ‘0’ if the password does not
+     match.  The function will return ‘1’ if the password matches.
+
+     KEY contains the plaintext password string of size LENKEY.
+
+     HASHED contains the hashed string of size LENHASHED to compare
+     with.
+
+     Sample code to verify a bcrypt hash:
+          char cleartxtpassword[] = "ExamplePassword";
+          char existinghashed[] =
+                     "$2y$"  /* Hash algorithm version */
+                     "10"   /* 2^10 hash rounds (strength) */
+                     "$"   /* separator */
+                     "1b2lPgo4XumibnJGN3r3sO" /* base64 encoded 16-byte salt */
+                     "u7wE7xNfYDKlAxZffJDCJdVfFTAyevu"; /* Hashedpart */
+          if (blowfish_bcrypt_verify(sizeof(cleartxtpassword) - 1, cleartxtpassword,
+                                     sizeof(existinghashed) - 1, existinghashed))
+            printf("Password is correct.");
+          else
+            printf("Password is incorrect.");
 
 7.2.5 Camellia
 --------------
@@ -5873,7 +6020,7 @@ Function and Concept Index
  [index ]
 * Menu:
 
-* 3DES:                                  Cipher functions.    (line 600)
+* 3DES:                                  Cipher functions.    (line 665)
 * ABI compatibility:                     Compatibility.       (line   6)
 * AEAD:                                  Authenticated encryption.
                                                               (line   6)
@@ -5933,31 +6080,33 @@ Function and Concept Index
 * Binary compatibility:                  Compatibility.       (line   6)
 * Block Cipher:                          Cipher functions.    (line  12)
 * Blowfish:                              Cipher functions.    (line 286)
+* blowfish_bcrypt_hash:                  Cipher functions.    (line 325)
+* blowfish_bcrypt_verify:                Cipher functions.    (line 365)
 * blowfish_decrypt:                      Cipher functions.    (line 321)
 * blowfish_encrypt:                      Cipher functions.    (line 314)
 * blowfish_set_key:                      Cipher functions.    (line 304)
-* Camellia:                              Cipher functions.    (line 328)
-* camellia128_crypt:                     Cipher functions.    (line 402)
-* camellia128_invert_key:                Cipher functions.    (line 388)
-* camellia128_set_decrypt_key:           Cipher functions.    (line 372)
-* camellia128_set_encrypt_key:           Cipher functions.    (line 370)
-* camellia192_crypt:                     Cipher functions.    (line 404)
-* camellia192_invert_key:                Cipher functions.    (line 390)
-* camellia192_set_decrypt_key:           Cipher functions.    (line 376)
-* camellia192_set_encrypt_key:           Cipher functions.    (line 374)
-* camellia256_crypt:                     Cipher functions.    (line 406)
-* camellia256_invert_key:                Cipher functions.    (line 392)
-* camellia256_set_decrypt_key:           Cipher functions.    (line 380)
-* camellia256_set_encrypt_key:           Cipher functions.    (line 378)
-* camellia_crypt:                        Cipher functions.    (line 408)
-* camellia_invert_key:                   Cipher functions.    (line 394)
-* camellia_set_decrypt_key:              Cipher functions.    (line 384)
-* camellia_set_encrypt_key:              Cipher functions.    (line 382)
-* CAST:                                  Cipher functions.    (line 418)
-* cast128_decrypt:                       Cipher functions.    (line 453)
-* cast128_encrypt:                       Cipher functions.    (line 446)
-* cast128_set_key:                       Cipher functions.    (line 441)
-* cast5_set_key:                         Cipher functions.    (line 457)
+* Camellia:                              Cipher functions.    (line 393)
+* camellia128_crypt:                     Cipher functions.    (line 467)
+* camellia128_invert_key:                Cipher functions.    (line 453)
+* camellia128_set_decrypt_key:           Cipher functions.    (line 437)
+* camellia128_set_encrypt_key:           Cipher functions.    (line 435)
+* camellia192_crypt:                     Cipher functions.    (line 469)
+* camellia192_invert_key:                Cipher functions.    (line 455)
+* camellia192_set_decrypt_key:           Cipher functions.    (line 441)
+* camellia192_set_encrypt_key:           Cipher functions.    (line 439)
+* camellia256_crypt:                     Cipher functions.    (line 471)
+* camellia256_invert_key:                Cipher functions.    (line 457)
+* camellia256_set_decrypt_key:           Cipher functions.    (line 445)
+* camellia256_set_encrypt_key:           Cipher functions.    (line 443)
+* camellia_crypt:                        Cipher functions.    (line 473)
+* camellia_invert_key:                   Cipher functions.    (line 459)
+* camellia_set_decrypt_key:              Cipher functions.    (line 449)
+* camellia_set_encrypt_key:              Cipher functions.    (line 447)
+* CAST:                                  Cipher functions.    (line 483)
+* cast128_decrypt:                       Cipher functions.    (line 518)
+* cast128_encrypt:                       Cipher functions.    (line 511)
+* cast128_set_key:                       Cipher functions.    (line 506)
+* cast5_set_key:                         Cipher functions.    (line 522)
 * CBC Mode:                              CBC.                 (line   6)
 * CBC_CTX:                               CBC.                 (line  51)
 * cbc_decrypt:                           CBC.                 (line  34)
@@ -6012,20 +6161,20 @@ Function and Concept Index
 * cfb_encrypt:                           CFB and CFB8.        (line  52)
 * CFB_ENCRYPT:                           CFB and CFB8.        (line  98)
 * CFB_SET_IV(CTX,:                       CFB and CFB8.        (line  93)
-* ChaCha:                                Cipher functions.    (line 466)
-* chacha_crypt:                          Cipher functions.    (line 504)
-* chacha_crypt32:                        Cipher functions.    (line 536)
+* ChaCha:                                Cipher functions.    (line 531)
+* chacha_crypt:                          Cipher functions.    (line 569)
+* chacha_crypt32:                        Cipher functions.    (line 601)
 * chacha_poly1305_decrypt:               ChaCha-Poly1305.     (line  63)
 * chacha_poly1305_digest:                ChaCha-Poly1305.     (line  69)
 * chacha_poly1305_encrypt:               ChaCha-Poly1305.     (line  61)
 * chacha_poly1305_set_key:               ChaCha-Poly1305.     (line  48)
 * chacha_poly1305_set_nonce:             ChaCha-Poly1305.     (line  53)
 * chacha_poly1305_update:                ChaCha-Poly1305.     (line  57)
-* chacha_set_counter:                    Cipher functions.    (line 496)
-* chacha_set_counter32:                  Cipher functions.    (line 530)
-* chacha_set_key:                        Cipher functions.    (line 484)
-* chacha_set_nonce:                      Cipher functions.    (line 490)
-* chacha_set_nonce96:                    Cipher functions.    (line 525)
+* chacha_set_counter:                    Cipher functions.    (line 561)
+* chacha_set_counter32:                  Cipher functions.    (line 595)
+* chacha_set_key:                        Cipher functions.    (line 549)
+* chacha_set_nonce:                      Cipher functions.    (line 555)
+* chacha_set_nonce96:                    Cipher functions.    (line 590)
 * Cipher:                                Cipher functions.    (line   6)
 * Cipher Block Chaining:                 CBC.                 (line   6)
 * Cipher Feedback 8-bit Mode:            CFB and CFB8.        (line   6)
@@ -6063,16 +6212,16 @@ Function and Concept Index
                                                               (line  91)
 * curve448_mul_g:                        Curve 25519 and Curve 448.
                                                               (line  82)
-* DES:                                   Cipher functions.    (line 545)
-* DES3:                                  Cipher functions.    (line 600)
-* des3_decrypt:                          Cipher functions.    (line 659)
-* des3_encrypt:                          Cipher functions.    (line 652)
-* des3_set_key:                          Cipher functions.    (line 641)
-* des_check_parity:                      Cipher functions.    (line 586)
-* des_decrypt:                           Cipher functions.    (line 582)
-* des_encrypt:                           Cipher functions.    (line 575)
-* des_fix_parity:                        Cipher functions.    (line 590)
-* des_set_key:                           Cipher functions.    (line 568)
+* DES:                                   Cipher functions.    (line 610)
+* DES3:                                  Cipher functions.    (line 665)
+* des3_decrypt:                          Cipher functions.    (line 724)
+* des3_encrypt:                          Cipher functions.    (line 717)
+* des3_set_key:                          Cipher functions.    (line 706)
+* des_check_parity:                      Cipher functions.    (line 651)
+* des_decrypt:                           Cipher functions.    (line 647)
+* des_encrypt:                           Cipher functions.    (line 640)
+* des_fix_parity:                        Cipher functions.    (line 655)
+* des_set_key:                           Cipher functions.    (line 633)
 * dsa_compat_generate_keypair:           DSA.                 (line 300)
 * dsa_generate_keypair:                  DSA.                 (line 198)
 * dsa_generate_params:                   DSA.                 (line 131)
@@ -6277,11 +6426,11 @@ Function and Concept Index
                                                               (line   6)
 * nettle_aeads:                          nettle_aead abstraction.
                                                               (line  33)
-* nettle_cipher:                         Cipher functions.    (line 827)
-* nettle_ciphers:                        Cipher functions.    (line 874)
+* nettle_cipher:                         Cipher functions.    (line 892)
+* nettle_ciphers:                        Cipher functions.    (line 939)
 * nettle_get_aeads:                      nettle_aead abstraction.
                                                               (line  28)
-* nettle_get_ciphers:                    Cipher functions.    (line 869)
+* nettle_get_ciphers:                    Cipher functions.    (line 934)
 * nettle_get_gost_gc256b(void):          GOSTDSA.             (line  51)
 * nettle_get_gost_gc512a(void):          GOSTDSA.             (line  57)
 * nettle_get_hashes:                     nettle_hash abstraction.
@@ -6367,17 +6516,17 @@ Function and Concept Index
 * rsa_sha512_sign_tr(const:              RSA.                 (line 158)
 * rsa_sha512_verify:                     RSA.                 (line 250)
 * rsa_sha512_verify_digest:              RSA.                 (line 262)
-* Salsa20:                               Cipher functions.    (line 666)
-* salsa20r12_crypt:                      Cipher functions.    (line 744)
-* salsa20_128_set_key:                   Cipher functions.    (line 709)
-* salsa20_256_set_key:                   Cipher functions.    (line 711)
-* salsa20_crypt:                         Cipher functions.    (line 729)
-* salsa20_set_key:                       Cipher functions.    (line 713)
-* salsa20_set_nonce:                     Cipher functions.    (line 723)
-* Serpent:                               Cipher functions.    (line 752)
-* serpent_decrypt:                       Cipher functions.    (line 784)
-* serpent_encrypt:                       Cipher functions.    (line 777)
-* serpent_set_key:                       Cipher functions.    (line 772)
+* Salsa20:                               Cipher functions.    (line 731)
+* salsa20r12_crypt:                      Cipher functions.    (line 809)
+* salsa20_128_set_key:                   Cipher functions.    (line 774)
+* salsa20_256_set_key:                   Cipher functions.    (line 776)
+* salsa20_crypt:                         Cipher functions.    (line 794)
+* salsa20_set_key:                       Cipher functions.    (line 778)
+* salsa20_set_nonce:                     Cipher functions.    (line 788)
+* Serpent:                               Cipher functions.    (line 817)
+* serpent_decrypt:                       Cipher functions.    (line 849)
+* serpent_encrypt:                       Cipher functions.    (line 842)
+* serpent_set_key:                       Cipher functions.    (line 837)
 * sha1_digest:                           Legacy hash functions.
                                                               (line 177)
 * sha1_init:                             Legacy hash functions.
@@ -6461,11 +6610,23 @@ Function and Concept Index
 * siv_cmac_aes256_encrypt_message:       SIV-CMAC.            (line  74)
 * siv_cmac_aes256_set_key:               SIV-CMAC.            (line  64)
 * Stream Cipher:                         Cipher functions.    (line  12)
-* Triple-DES:                            Cipher functions.    (line 600)
-* Twofish:                               Cipher functions.    (line 791)
-* twofish_decrypt:                       Cipher functions.    (line 820)
-* twofish_encrypt:                       Cipher functions.    (line 813)
-* twofish_set_key:                       Cipher functions.    (line 808)
+* streebog256_digest:                    Miscellaneous hash functions.
+                                                              (line  62)
+* streebog256_init:                      Miscellaneous hash functions.
+                                                              (line  55)
+* streebog256_update:                    Miscellaneous hash functions.
+                                                              (line  58)
+* streebog512_digest:                    Miscellaneous hash functions.
+                                                              (line  29)
+* streebog512_init:                      Miscellaneous hash functions.
+                                                              (line  22)
+* streebog512_update:                    Miscellaneous hash functions.
+                                                              (line  25)
+* Triple-DES:                            Cipher functions.    (line 665)
+* Twofish:                               Cipher functions.    (line 856)
+* twofish_decrypt:                       Cipher functions.    (line 885)
+* twofish_encrypt:                       Cipher functions.    (line 878)
+* twofish_set_key:                       Cipher functions.    (line 873)
 * UMAC:                                  UMAC.                (line   6)
 * umac128_digest:                        UMAC.                (line 113)
 * umac128_set_key:                       UMAC.                (line  76)
@@ -6511,54 +6672,55 @@ Function and Concept Index
 
 Tag Table:
 Node: Top543
-Node: Introduction2610
-Node: Copyright4189
-Node: Conventions9160
-Node: Example11314
-Node: Linking12613
-Node: Compatibility13478
-Node: Reference17104
-Node: Hash functions17555
-Node: Recommended hash functions19089
-Node: Legacy hash functions31605
-Ref: GOSTHASH94CP38357
-Node: nettle_hash abstraction40787
-Node: Cipher functions43011
-Node: Cipher modes81272
-Node: CBC82455
-Node: CTR85847
-Node: CFB and CFB888469
-Node: XTS94251
-Node: Authenticated encryption100622
-Node: EAX103913
-Node: GCM110088
-Node: CCM122925
-Node: ChaCha-Poly1305135713
-Node: SIV-CMAC139217
-Node: nettle_aead abstraction143966
-Node: Keyed hash functions145655
-Node: HMAC147306
-Node: UMAC155326
-Node: CMAC161201
-Node: Poly1305164508
-Node: Key derivation functions167165
-Node: Public-key algorithms173291
-Node: RSA177362
-Node: RSA-Footnotes197959
-Ref: RSA-Footnote-1198012
-Node: DSA198190
-Node: Elliptic curves213670
-Node: Side-channel silence215055
-Node: ECDSA216502
-Node: GOSTDSA221246
-Node: Curve 25519 and Curve 448225242
-Node: Randomness233155
-Node: ASCII encoding248510
-Node: Miscellaneous functions255237
-Node: Compatibility functions256397
-Node: Nettle soup257086
-Node: Installation258083
-Node: Index259459
+Node: Introduction2768
+Node: Copyright4347
+Node: Conventions9318
+Node: Example11472
+Node: Linking12771
+Node: Compatibility13636
+Node: Reference17262
+Node: Hash functions17713
+Node: Recommended hash functions19280
+Node: Miscellaneous hash functions31803
+Node: Legacy hash functions34411
+Ref: GOSTHASH94CP41165
+Node: nettle_hash abstraction43595
+Node: Cipher functions45819
+Node: Cipher modes87187
+Node: CBC88370
+Node: CTR91762
+Node: CFB and CFB894384
+Node: XTS100166
+Node: Authenticated encryption106537
+Node: EAX109828
+Node: GCM116003
+Node: CCM128840
+Node: ChaCha-Poly1305141628
+Node: SIV-CMAC145132
+Node: nettle_aead abstraction149881
+Node: Keyed hash functions151570
+Node: HMAC153221
+Node: UMAC161241
+Node: CMAC167116
+Node: Poly1305170423
+Node: Key derivation functions173080
+Node: Public-key algorithms179206
+Node: RSA183277
+Node: RSA-Footnotes203874
+Ref: RSA-Footnote-1203927
+Node: DSA204105
+Node: Elliptic curves219585
+Node: Side-channel silence220970
+Node: ECDSA222417
+Node: GOSTDSA227161
+Node: Curve 25519 and Curve 448231157
+Node: Randomness239070
+Node: ASCII encoding254425
+Node: Miscellaneous functions261152
+Node: Compatibility functions262312
+Node: Nettle soup263001
+Node: Installation263998
+Node: Index265374
 
 End Tag Table
 

@@ -89,16 +89,21 @@ ul.no-bullet {list-style: none}
         <li><a name="toc-SHA3_002d512" href="#SHA3_002d512">7.1.1.8 <acronym>SHA3-512</acronym></a></li>
         <li><a name="toc-SHAKE_002d256" href="#SHAKE_002d256">7.1.1.9 <acronym>SHAKE-256</acronym></a></li>
       </ul></li>
-      <li><a name="toc-Legacy-hash-functions-1" href="#Legacy-hash-functions">7.1.2 Legacy hash functions</a>
+      <li><a name="toc-Miscellaneous-hash-functions-1" href="#Miscellaneous-hash-functions">7.1.2 Miscellaneous hash functions</a>
       <ul class="no-bullet">
-        <li><a name="toc-MD5" href="#MD5">7.1.2.1 <acronym>MD5</acronym></a></li>
-        <li><a name="toc-MD2" href="#MD2">7.1.2.2 <acronym>MD2</acronym></a></li>
-        <li><a name="toc-MD4" href="#MD4">7.1.2.3 <acronym>MD4</acronym></a></li>
-        <li><a name="toc-RIPEMD160" href="#RIPEMD160">7.1.2.4 <acronym>RIPEMD160</acronym></a></li>
-        <li><a name="toc-SHA1" href="#SHA1">7.1.2.5 <acronym>SHA1</acronym></a></li>
-        <li><a name="toc-GOSTHASH94-and-GOSTHASH94CP" href="#GOSTHASH94-and-GOSTHASH94CP">7.1.2.6 <acronym>GOSTHASH94 and GOSTHASH94CP</acronym></a></li>
+        <li><a name="toc-STREEBOG512" href="#STREEBOG512">7.1.2.1 <acronym>STREEBOG512</acronym></a></li>
+        <li><a name="toc-STREEBOG256" href="#STREEBOG256">7.1.2.2 <acronym>STREEBOG256</acronym></a></li>
       </ul></li>
-      <li><a name="toc-The-struct-nettle_005fhash-abstraction" href="#nettle_005fhash-abstraction">7.1.3 The <code>struct nettle_hash</code> abstraction</a></li>
+      <li><a name="toc-Legacy-hash-functions-1" href="#Legacy-hash-functions">7.1.3 Legacy hash functions</a>
+      <ul class="no-bullet">
+        <li><a name="toc-MD5" href="#MD5">7.1.3.1 <acronym>MD5</acronym></a></li>
+        <li><a name="toc-MD2" href="#MD2">7.1.3.2 <acronym>MD2</acronym></a></li>
+        <li><a name="toc-MD4" href="#MD4">7.1.3.3 <acronym>MD4</acronym></a></li>
+        <li><a name="toc-RIPEMD160" href="#RIPEMD160">7.1.3.4 <acronym>RIPEMD160</acronym></a></li>
+        <li><a name="toc-SHA1" href="#SHA1">7.1.3.5 <acronym>SHA1</acronym></a></li>
+        <li><a name="toc-GOSTHASH94-and-GOSTHASH94CP" href="#GOSTHASH94-and-GOSTHASH94CP">7.1.3.6 <acronym>GOSTHASH94 and GOSTHASH94CP</acronym></a></li>
+      </ul></li>
+      <li><a name="toc-The-struct-nettle_005fhash-abstraction" href="#nettle_005fhash-abstraction">7.1.4 The <code>struct nettle_hash</code> abstraction</a></li>
     </ul></li>
     <li><a name="toc-Cipher-functions-1" href="#Cipher-functions">7.2 Cipher functions</a>
     <ul class="no-bullet">
@@ -296,6 +301,8 @@ Hash functions
 
 </pre></th></tr><tr><td align="left" valign="top">&bull; <a href="#Recommended-hash-functions">Recommended hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#Legacy-hash-functions">Legacy hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#nettle_005fhash-abstraction">nettle_hash abstraction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
@@ -310,11 +317,23 @@ Cipher modes
 </td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#CFB-and-CFB8">CFB and CFB8</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#XTS">XTS</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><th colspan="3" align="left" valign="top"><pre class="menu-comment">
+
+Authenticated encryption with associated data
+
+</pre></th></tr><tr><td align="left" valign="top">&bull; <a href="#EAX">EAX</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#GCM">GCM</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#CCM">CCM</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#ChaCha_002dPoly1305">ChaCha-Poly1305</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#SIV_002dCMAC">SIV-CMAC</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#nettle_005faead-abstraction">nettle_aead abstraction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 <tr><th colspan="3" align="left" valign="top"><pre class="menu-comment">
 
@@ -325,6 +344,8 @@ Keyed Hash Functions
 <tr><td align="left" valign="top">&bull; <a href="#UMAC">UMAC</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 <tr><td align="left" valign="top">&bull; <a href="#CMAC">CMAC</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Poly1305">Poly1305</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 <tr><th colspan="3" align="left" valign="top"><pre class="menu-comment">
 
@@ -842,9 +863,11 @@ reasonable alternatives.
 <table class="menu" border="0" cellspacing="0">
 <tr><td align="left" valign="top">&bull; <a href="#Recommended-hash-functions" accesskey="1">Recommended hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
-<tr><td align="left" valign="top">&bull; <a href="#Legacy-hash-functions" accesskey="2">Legacy hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+<tr><td align="left" valign="top">&bull; <a href="#Miscellaneous-hash-functions" accesskey="2">Miscellaneous hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
-<tr><td align="left" valign="top">&bull; <a href="#nettle_005fhash-abstraction" accesskey="3">nettle_hash abstraction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+<tr><td align="left" valign="top">&bull; <a href="#Legacy-hash-functions" accesskey="3">Legacy hash functions</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#nettle_005fhash-abstraction" accesskey="4">nettle_hash abstraction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
 </td></tr>
 </table>
 
@@ -852,7 +875,7 @@ reasonable alternatives.
 <a name="Recommended-hash-functions"></a>
 <div class="header">
 <p>
-Next: <a href="#Legacy-hash-functions" accesskey="n" rel="next">Legacy hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+Next: <a href="#Miscellaneous-hash-functions" accesskey="n" rel="next">Miscellaneous hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
 </div>
 <a name="Recommended-hash-functions-1"></a>
 <h4 class="subsection">7.1.1 Recommended hash functions</h4>
@@ -1272,13 +1295,109 @@ to <var>digest</var>. <var>length</var> can be of arbitrary size.
 </p></dd></dl>
 
 <hr>
+<a name="Miscellaneous-hash-functions"></a>
+<div class="header">
+<p>
+Next: <a href="#Legacy-hash-functions" accesskey="n" rel="next">Legacy hash functions</a>, Previous: <a href="#Recommended-hash-functions" accesskey="p" rel="prev">Recommended hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Miscellaneous-hash-functions-1"></a>
+<h4 class="subsection">7.1.2 Miscellaneous hash functions</h4>
+
+<a name="STREEBOG512"></a>
+<h4 class="subsubsection">7.1.2.1 <acronym>STREEBOG512</acronym></h4>
+
+<p>STREEBOG512 is a member of the Streebog (GOST R 34.11-2012) family.  It outputs
+hash values of 512 bits, or 64 octets. Nettle defines STREEBOG512 in
+<samp>&lt;nettle/streebog.h&gt;</samp>.
+</p>
+<dl>
+<dt><a name="index-struct-streebog512_005fctx"></a>Context struct: <strong>struct streebog512_ctx</strong></dt>
+</dl>
+
+<dl>
+<dt><a name="index-STREEBOG512_005fDIGEST_005fSIZE"></a>Constant: <strong>STREEBOG512_DIGEST_SIZE</strong></dt>
+<dd><p>The size of a STREEBOG512 digest, i.e. 64.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-STREEBOG512_005fBLOCK_005fSIZE"></a>Constant: <strong>STREEBOG512_BLOCK_SIZE</strong></dt>
+<dd><p>The internal block size of STREEBOG512. Useful for some special constructions,
+in particular HMAC-STREEBOG512.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog512_005finit"></a>Function: <em>void</em> <strong>streebog512_init</strong> <em>(struct streebog512_ctx *<var>ctx</var>)</em></dt>
+<dd><p>Initialize the STREEBOG512 state.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog512_005fupdate"></a>Function: <em>void</em> <strong>streebog512_update</strong> <em>(struct streebog512_ctx *<var>ctx</var>, size_t <var>length</var>, const uint8_t *<var>data</var>)</em></dt>
+<dd><p>Hash some more data.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog512_005fdigest"></a>Function: <em>void</em> <strong>streebog512_digest</strong> <em>(struct streebog512_ctx *<var>ctx</var>, size_t <var>length</var>, uint8_t *<var>digest</var>)</em></dt>
+<dd><p>Performs final processing and extracts the message digest, writing it
+to <var>digest</var>. <var>length</var> may be smaller than
+<code>STREEBOG512_DIGEST_SIZE</code>, in which case only the first <var>length</var>
+octets of the digest are written.
+</p>
+<p>This function also resets the context in the same way as
+<code>streebog512_init</code>.
+</p></dd></dl>
+
+<a name="STREEBOG256"></a>
+<h4 class="subsubsection">7.1.2.2 <acronym>STREEBOG256</acronym></h4>
+
+<p>STREEBOG256 is a variant of STREEBOG512, with a different initial state, and with
+the output truncated to 256 bits, or 32 octets. Nettle defines STREEBOG256 in
+<samp>&lt;nettle/streebog.h&gt;</samp>.
+</p>
+<dl>
+<dt><a name="index-struct-streebog256_005fctx"></a>Context struct: <strong>struct streebog256_ctx</strong></dt>
+</dl>
+
+<dl>
+<dt><a name="index-STREEBOG256_005fDIGEST_005fSIZE"></a>Constant: <strong>STREEBOG256_DIGEST_SIZE</strong></dt>
+<dd><p>The size of a STREEBOG256 digest, i.e. 32.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-STREEBOG256_005fBLOCK_005fSIZE"></a>Constant: <strong>STREEBOG256_BLOCK_SIZE</strong></dt>
+<dd><p>The internal block size of STREEBOG256. Useful for some special constructions,
+in particular HMAC-STREEBOG256.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog256_005finit"></a>Function: <em>void</em> <strong>streebog256_init</strong> <em>(struct streebog256_ctx *<var>ctx</var>)</em></dt>
+<dd><p>Initialize the STREEBOG256 state.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog256_005fupdate"></a>Function: <em>void</em> <strong>streebog256_update</strong> <em>(struct streebog256_ctx *<var>ctx</var>, size_t <var>length</var>, const uint8_t *<var>data</var>)</em></dt>
+<dd><p>Hash some more data.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-streebog256_005fdigest"></a>Function: <em>void</em> <strong>streebog256_digest</strong> <em>(struct streebog256_ctx *<var>ctx</var>, size_t <var>length</var>, uint8_t *<var>digest</var>)</em></dt>
+<dd><p>Performs final processing and extracts the message digest, writing it
+to <var>digest</var>. <var>length</var> may be smaller than
+<code>STREEBOG256_DIGEST_SIZE</code>, in which case only the first <var>length</var>
+octets of the digest are written.
+</p>
+<p>This function also resets the context in the same way as
+<code>streebog256_init</code>.
+</p></dd></dl>
+
+
+<hr>
 <a name="Legacy-hash-functions"></a>
 <div class="header">
 <p>
-Next: <a href="#nettle_005fhash-abstraction" accesskey="n" rel="next">nettle_hash abstraction</a>, Previous: <a href="#Recommended-hash-functions" accesskey="p" rel="prev">Recommended hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+Next: <a href="#nettle_005fhash-abstraction" accesskey="n" rel="next">nettle_hash abstraction</a>, Previous: <a href="#Miscellaneous-hash-functions" accesskey="p" rel="prev">Miscellaneous hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
 </div>
 <a name="Legacy-hash-functions-1"></a>
-<h4 class="subsection">7.1.2 Legacy hash functions</h4>
+<h4 class="subsection">7.1.3 Legacy hash functions</h4>
 
 <p>The hash functions in this section all have some known weaknesses, and
 should be avoided for new applications. These hash functions are mainly
@@ -1291,7 +1410,7 @@ relevant depends on how the hash function is used, and on the threat
 model.
 </p>
 <a name="MD5"></a>
-<h4 class="subsubsection">7.1.2.1 <acronym>MD5</acronym></h4>
+<h4 class="subsubsection">7.1.3.1 <acronym>MD5</acronym></h4>
 
 <p>MD5 is a message digest function constructed by Ronald Rivest, and
 described in <cite>RFC 1321</cite>. It outputs message digests of 128 bits, or
@@ -1342,7 +1461,7 @@ hash new data.
 <p>To start over, you can call <code>md5_init</code> at any time.
 </p>
 <a name="MD2"></a>
-<h4 class="subsubsection">7.1.2.2 <acronym>MD2</acronym></h4>
+<h4 class="subsubsection">7.1.3.2 <acronym>MD2</acronym></h4>
 
 <p>MD2 is another hash function of Ronald Rivest&rsquo;s, described in
 <cite>RFC 1319</cite>. It outputs message digests of 128 bits, or 16 octets.
@@ -1384,7 +1503,7 @@ octets of the digest are written.
 </p></dd></dl>
 
 <a name="MD4"></a>
-<h4 class="subsubsection">7.1.2.3 <acronym>MD4</acronym></h4>
+<h4 class="subsubsection">7.1.3.3 <acronym>MD4</acronym></h4>
 
 <p>MD4 is a predecessor of MD5, described in <cite>RFC 1320</cite>. Like MD5, it
 is constructed by Ronald Rivest. It outputs message digests of 128 bits,
@@ -1428,7 +1547,7 @@ octets of the digest are written.
 </p></dd></dl>
 
 <a name="RIPEMD160"></a>
-<h4 class="subsubsection">7.1.2.4 <acronym>RIPEMD160</acronym></h4>
+<h4 class="subsubsection">7.1.3.4 <acronym>RIPEMD160</acronym></h4>
 
 <p>RIPEMD160 is a hash function designed by Hans Dobbertin, Antoon
 Bosselaers, and Bart Preneel, as a strengthened version of RIPEMD
@@ -1472,7 +1591,7 @@ octets of the digest are written.
 </p></dd></dl>
 
 <a name="SHA1"></a>
-<h4 class="subsubsection">7.1.2.5 <acronym>SHA1</acronym></h4>
+<h4 class="subsubsection">7.1.3.5 <acronym>SHA1</acronym></h4>
 
 <p>SHA1 is a hash function specified by <em>NIST</em> (The U.S. National
 Institute for Standards and Technology). It outputs hash values of 160
@@ -1517,7 +1636,7 @@ octets of the digest are written.
 
 
 <a name="GOSTHASH94-and-GOSTHASH94CP"></a>
-<h4 class="subsubsection">7.1.2.6 <acronym>GOSTHASH94 and GOSTHASH94CP</acronym></h4>
+<h4 class="subsubsection">7.1.3.6 <acronym>GOSTHASH94 and GOSTHASH94CP</acronym></h4>
 <a name="index-GOST-hash"></a>
 
 <a name="GOSTHASH94CP"></a><p>The GOST94 or GOST R 34.11-94 hash algorithm is a Soviet-era algorithm 
@@ -1607,7 +1726,7 @@ octets of the digest are written.
 Previous: <a href="#Legacy-hash-functions" accesskey="p" rel="prev">Legacy hash functions</a>, Up: <a href="#Hash-functions" accesskey="u" rel="up">Hash functions</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
 </div>
 <a name="The-struct-nettle_005fhash-abstraction"></a>
-<h4 class="subsection">7.1.3 The <code>struct nettle_hash</code> abstraction</h4>
+<h4 class="subsection">7.1.4 The <code>struct nettle_hash</code> abstraction</h4>
 <a name="index-nettle_005fhash"></a>
 
 <p>Nettle includes a struct including information about the supported hash
@@ -2025,6 +2144,78 @@ in any other way.
 <dt><a name="index-blowfish_005fdecrypt"></a>Function: <em>void</em> <strong>blowfish_decrypt</strong> <em>(struct blowfish_ctx *<var>ctx</var>, size_t <var>length</var>, uint8_t *<var>dst</var>, const uint8_t *<var>src</var>)</em></dt>
 <dd><p>Analogous to <code>blowfish_encrypt</code>
 </p></dd></dl>
+
+<dl>
+<dt><a name="index-blowfish_005fbcrypt_005fhash"></a>Function: <em>int</em> <strong>blowfish_bcrypt_hash</strong> <em>(char *<var>dst</var>, size_t <var>lenkey</var>, const char *<var>key</var>, size_t <var>lenscheme</var>, const char *<var>scheme</var>, int <var>log2rounds</var>, const uint8_t *<var>salt</var>)</em></dt>
+<dd><p>Compute the bcrypt password hash.
+The function will return <code>0</code> if the hash cannot be computed
+due to invalid input.
+The function will return <code>1</code> and store the computed hash
+in the array pointed to by <var>dst</var>.  The hash is computed based
+on the chosen <var>scheme</var>, number of rounds <var>log2rounds</var> and
+specified <var>salt</var>.
+</p>
+<p><var>dst</var> must point to a character array of at least
+ <code>BLOWFISH_BCRYPT_HASH_SIZE</code> bytes.
+</p>
+<p><var>key</var> contains the plaintext password string of size <var>lenkey</var>.
+</p>
+<p><var>scheme</var> is of size <var>lenscheme</var> and contains either just the
+chosen scheme (valid schemes
+are: <code>2a</code>, <code>2b</code>, <code>2x</code> or <code>2y</code>), or
+(the prefix of) an existing hashed password (typically <code>$2b$10$...</code>).
+</p>
+<p><var>log2rounds</var> contains the log2 of the number of encryption rounds
+that must be used to compute the hash.  If it is <code>-1</code> the value
+will be extracted from <var>scheme</var>.
+</p>
+<p><var>salt</var> should point to an array of <code>BLOWFISH_BCRYPT_BINSALT_SIZE</code>
+random bytes to be used to perturb the hash computation.  If it is <code>NULL</code>
+the salt will be extracted from <var>scheme</var>.
+</p>
+<p>Sample code to generate a bcrypt hash:
+</p><div class="example">
+<pre class="example">char cleartxtpassword[] = &quot;ExamplePassword&quot;;
+char scheme[] = &quot;2b&quot;;
+uint8_t salt[BLOWFISH_BCRYPT_BINSALT_SIZE];
+&hellip;
+/* Make sure that salt is filled with random bytes */
+&hellip;
+char hashedresult[BLOWFISH_BCRYPT_HASH_SIZE];
+int result = blowfish_bcrypt(hashedresult,
+                             sizeof(cleartxtpassword) - 1, cleartxtpassword,
+                             sizeof(scheme) - 1, scheme, 10, salt);
+if (result)
+  printf(&quot;%s\n&quot;, hashedresult);
+</pre></div>
+</dd></dl>
+
+<dl>
+<dt><a name="index-blowfish_005fbcrypt_005fverify"></a>Function: <em>int</em> <strong>blowfish_bcrypt_verify</strong> <em>(size_t <var>lenkey</var>, const char *<var>key</var>, size_t <var>lenhashed</var>, const char *<var>hashed</var>)</em></dt>
+<dd><p>Verifies the bcrypt password hash against the supplied plaintext password.
+The function will return <code>0</code> if the password does not match.
+The function will return <code>1</code> if the password matches.
+</p>
+<p><var>key</var> contains the plaintext password string of size <var>lenkey</var>.
+</p>
+<p><var>hashed</var> contains the hashed string of size <var>lenhashed</var> to compare with.
+</p>
+<p>Sample code to verify a bcrypt hash:
+</p><div class="example">
+<pre class="example">char cleartxtpassword[] = &quot;ExamplePassword&quot;;
+char existinghashed[] =
+           &quot;$2y$&quot;  /* Hash algorithm version */
+           &quot;10&quot;   /* 2^10 hash rounds (strength) */
+           &quot;$&quot;   /* separator */
+           &quot;1b2lPgo4XumibnJGN3r3sO&quot; /* base64 encoded 16-byte salt */
+           &quot;u7wE7xNfYDKlAxZffJDCJdVfFTAyevu&quot;; /* Hashedpart */
+if (blowfish_bcrypt_verify(sizeof(cleartxtpassword) - 1, cleartxtpassword,
+                           sizeof(existinghashed) - 1, existinghashed))
+  printf(&quot;Password is correct.&quot;);
+else
+  printf(&quot;Password is incorrect.&quot;);
+</pre></div>
+</dd></dl>
 
 <a name="Camellia"></a>
 <h4 class="subsection">7.2.5 Camellia</h4>
@@ -7149,6 +7340,8 @@ Previous: <a href="#Installation" accesskey="p" rel="prev">Installation</a>, Up:
 <tr><td></td><td valign="top"><a href="#index-Binary-compatibility">Binary compatibility</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Compatibility">Compatibility</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-Block-Cipher">Block Cipher</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-Blowfish">Blowfish</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-blowfish_005fbcrypt_005fhash"><code>blowfish_bcrypt_hash</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-blowfish_005fbcrypt_005fverify"><code>blowfish_bcrypt_verify</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-blowfish_005fdecrypt"><code>blowfish_decrypt</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-blowfish_005fencrypt"><code>blowfish_encrypt</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-blowfish_005fset_005fkey"><code>blowfish_set_key</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
@@ -7606,6 +7799,12 @@ Previous: <a href="#Installation" accesskey="p" rel="prev">Installation</a>, Up:
 <tr><td></td><td valign="top"><a href="#index-siv_005fcmac_005faes256_005fencrypt_005fmessage"><code>siv_cmac_aes256_encrypt_message</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#SIV_002dCMAC">SIV-CMAC</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-siv_005fcmac_005faes256_005fset_005fkey"><code>siv_cmac_aes256_set_key</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#SIV_002dCMAC">SIV-CMAC</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-Stream-Cipher">Stream Cipher</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog256_005fdigest"><code>streebog256_digest</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog256_005finit"><code>streebog256_init</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog256_005fupdate"><code>streebog256_update</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog512_005fdigest"><code>streebog512_digest</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog512_005finit"><code>streebog512_init</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-streebog512_005fupdate"><code>streebog512_update</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-hash-functions">Miscellaneous hash functions</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Index_cp_letter-T">T</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-Triple_002dDES">Triple-DES</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Cipher-functions">Cipher functions</a></td></tr>
