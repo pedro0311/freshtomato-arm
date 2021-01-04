@@ -133,8 +133,10 @@ struct nvram_tuple router_defaults[] = {
 #endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_proxy",		"0"				, 0 },
-	{ "stubby_priority",		"2"				, 0 },	// 0=none, 1=strict-order, 2=no-resolv
-	{ "stubby_log",			"4"				, 0 },	// log level
+	{ "stubby_priority",		"2"				, 0 },	/* 0=none, 1=strict-order, 2=no-resolv */
+	{ "stubby_port",		"5453"				, 0 },	/* local port */
+	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>", 0 },	/* default DoT resolvers */
+	{ "stubby_log",			"4"				, 0 },	/* log level */
 #endif
 	{ "wan_wins",			""				, 0 },	// x.x.x.x x.x.x.x ...
 	{ "wan_lease",			"86400"				, 0 },	// WAN lease time in seconds

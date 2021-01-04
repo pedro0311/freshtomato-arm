@@ -152,6 +152,7 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_R6400:
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
+	case MODEL_XR300:
 		reset_mask = 1 << 5; /* reset button (active LOW) */
 		ses_mask = 1 << 3; /* wps button (active LOW) */
 		wlan_mask = 1 << 4; /* wifi button (active LOW) */

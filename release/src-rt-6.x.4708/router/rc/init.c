@@ -527,6 +527,7 @@ static int init_vlan_ports(void)
 	case MODEL_R6700v1:
 	case MODEL_R6700v3:
 	case MODEL_R7000:
+	case MODEL_XR300:
 	case MODEL_RTN18U:
 	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
 	case MODEL_RTAC67U:
@@ -576,6 +577,7 @@ static void check_bootnv(void)
 #ifdef CONFIG_BCMWL6A
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
+	case MODEL_XR300:
 		nvram_unset("et1macaddr");
 		nvram_unset("et2macaddr");
 		nvram_unset("et3macaddr");
@@ -2110,8 +2112,9 @@ static int init_nvram(void)
 		break;
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
+	case MODEL_XR300:
 		mfr = "Netgear";
-		name = nvram_match("board_id", "U12H332T77_NETGEAR") ? "R6700v3" : "R6400v2";
+		name = nvram_match("board_id", "U12H332T78_NETGEAR") ? "XR300" : nvram_match("board_id", "U12H332T77_NETGEAR") ? "R6700v3" : "R6400v2";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
@@ -2223,9 +2226,16 @@ static int init_nvram(void)
 //			nvram_set("pci/1/1/regrev", "827");
 			nvram_set("pci/1/1/rpcal2g", "0x0");
 			nvram_set("pci/1/1/rxchain", "7");
-			nvram_set("pci/1/1/rxgainerr2ga0", "0x4811");
-			nvram_set("pci/1/1/rxgainerr2ga1", "0x4811");
-			nvram_set("pci/1/1/rxgainerr2ga2", "0x4811");
+			if (nvram_match("board_id", "U12H332T78_NETGEAR")) { /* If XR300 */
+				nvram_set("pci/1/1/rxgainerr2ga0", "0x380c");
+				nvram_set("pci/1/1/rxgainerr2ga1", "0x380c");
+				nvram_set("pci/1/1/rxgainerr2ga2", "0x380c");
+			}
+			else {
+				nvram_set("pci/1/1/rxgainerr2ga0", "0x4811");
+				nvram_set("pci/1/1/rxgainerr2ga1", "0x4811");
+				nvram_set("pci/1/1/rxgainerr2ga2", "0x4811");
+			}
 			nvram_set("pci/1/1/sromrev", "9");
 			nvram_set("pci/1/1/tempoffset", "255");
 			nvram_set("pci/1/1/temps_hysteresis", "5");
@@ -2291,13 +2301,23 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/phycal_tempdelta", "40");
 			nvram_set("pci/2/1/pwr_scale_1db", "1");
 //			nvram_set("pci/2/1/regrev", "827");
-			nvram_set("pci/2/1/rpcal5gb0", "0x4e17");
-			nvram_set("pci/2/1/rpcal5gb1", "0x5113");
-			nvram_set("pci/2/1/rpcal5gb2", "0x3c0b");
-			nvram_set("pci/2/1/rpcal5gb3", "0x4811");
 			nvram_set("pci/2/1/rxchain", "7");
-			nvram_set("pci/2/1/rxgainerr5ga0", "4,0,0,5");
-			nvram_set("pci/2/1/rxgainerr5ga1", "-5,0,0,-4");
+			if (nvram_match("board_id", "U12H332T78_NETGEAR")) { /* If XR300 */
+				nvram_set("pci/2/1/rpcal5gb0", "0x2706");
+				nvram_set("pci/2/1/rpcal5gb1", "0x3201");
+				nvram_set("pci/2/1/rpcal5gb2", "0x2a01");
+				nvram_set("pci/2/1/rpcal5gb3", "0x380c");
+				nvram_set("pci/2/1/rxgainerr5ga0", "2,0,0,1");
+				nvram_set("pci/2/1/rxgainerr5ga1", "-1,0,0,-8");
+			}
+			else {
+				nvram_set("pci/2/1/rpcal5gb0", "0x4e17");
+				nvram_set("pci/2/1/rpcal5gb1", "0x5113");
+				nvram_set("pci/2/1/rpcal5gb2", "0x3c0b");
+				nvram_set("pci/2/1/rpcal5gb3", "0x4811");
+				nvram_set("pci/2/1/rxgainerr5ga0", "4,0,0,5");
+				nvram_set("pci/2/1/rxgainerr5ga1", "-5,0,0,-4");
+			}
 			nvram_set("pci/2/1/rxgainerr5ga2", "1,0,0,-2");
 			nvram_set("pci/2/1/rxgains5gelnagaina0", "3");
 			nvram_set("pci/2/1/rxgains5gelnagaina1", "4");
@@ -5043,7 +5063,7 @@ static void sysinit(void)
 
 #ifdef TCONFIG_IPV6
 	/* disable IPv6 by default on all interfaces */
-	f_write_string("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1", 0, 0);
+	f_write_procsysnet("ipv6/conf/default/disable_ipv6", "1");
 #endif
 
 	for (i = 0; i < sizeof(fatalsigs) / sizeof(fatalsigs[0]); i++) {

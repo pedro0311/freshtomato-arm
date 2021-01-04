@@ -202,6 +202,7 @@ enum {
 	MODEL_R6700v1,
 	MODEL_R6700v3,
 	MODEL_R7000,
+	MODEL_XR300,
 	MODEL_R8000,
 	MODEL_DIR868L,
 	MODEL_WS880,
@@ -255,6 +256,7 @@ extern int f_read(const char *file, void *buffer, int max); /* returns bytes rea
 extern int f_write(const char *file, const void *buffer, int len, unsigned flags, unsigned cmode);
 extern int f_read_string(const char *file, char *buffer, int max); /* returns bytes read, not including term; max includes term */
 extern int f_write_string(const char *file, const char *buffer, unsigned flags, unsigned cmode);
+extern int f_write_procsysnet(const char *path, const char *value);
 extern int f_read_alloc(const char *path, char **buffer, int max);
 extern int f_read_alloc_string(const char *path, char **buffer, int max);
 extern int f_wait_exists(const char *name, int max);

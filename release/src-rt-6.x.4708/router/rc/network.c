@@ -691,6 +691,7 @@ void restart_wl(void)
 	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
 	    (model == MODEL_R7000) ||
+	    (model == MODEL_XR300) ||
 	    (model == MODEL_R8000)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1") || nvram_match("wl2_radio", "1"))
 			led(LED_AOSS, LED_ON);
@@ -918,17 +919,17 @@ void enable_ipv6(int enable)
 
 	if ((dir = opendir("/proc/sys/net/ipv6/conf")) != NULL) {
 		while ((dirent = readdir(dir)) != NULL) {
-		  /* Do not enable IPv6 on 'all', 'eth0', 'eth1', 'eth2' (ethX);
-		     IPv6 will live on the bridged instances --> This simplifies the routing table a little bit;
-		    'default' is enabled so that new interfaces (brX, vlanX, ...) will get IPv6 */
-		  if ( (strncmp("eth", dirent->d_name, 3) == 0) ||
-		       (strncmp("all", dirent->d_name, 3) == 0) ) {
-		    /* do nothing */
-		  }
-		  else {
-		    snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/disable_ipv6", dirent->d_name);
-		    f_write_string(s, enable ? "0" : "1", 0, 0);
-		  }
+			/* Do not enable IPv6 on 'all', 'eth0', 'eth1', 'eth2' (ethX);
+			 * IPv6 will live on the bridged instances --> This simplifies the routing table a little bit;
+			 * 'default' is enabled so that new interfaces (brX, vlanX, ...) will get IPv6
+			 */
+			if ((strncmp("eth", dirent->d_name, 3) == 0) || (strncmp("all", dirent->d_name, 3) == 0)) {
+				/* do nothing */
+			}
+			else {
+				snprintf(s, sizeof(s), "ipv6/conf/%s/disable_ipv6", dirent->d_name);
+				f_write_procsysnet(s, enable ? "0" : "1");
+			}
 		}
 		closedir(dir);
 	}
@@ -943,15 +944,15 @@ void accept_ra(const char *ifname)
 	   1 Accept Router Advertisements if forwarding is disabled
 	   2 Overrule forwarding behaviour. Accept Router Advertisements even if forwarding is enabled
 	*/
-	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/accept_ra", ifname);
-	f_write_string(s, "2", 0, 0);
+	snprintf(s, sizeof(s), "ipv6/conf/%s/accept_ra", ifname);
+	f_write_procsysnet(s, "2");
 
 	/* possible values for forwarding:
 	   0 Forwarding disabled
 	   1 Forwarding enabled
 	*/
-	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
-	f_write_string(s, "1", 0, 0);
+	snprintf(s, sizeof(s), "ipv6/conf/%s/forwarding", ifname);
+	f_write_procsysnet(s, "1");
 }
 
 void accept_ra_reset(const char *ifname)
@@ -959,12 +960,12 @@ void accept_ra_reset(const char *ifname)
 	char s[128];
 
 	/* set accept_ra (back) to 1 (default) */
-	snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/accept_ra", ifname);
-	f_write_string(s, "1", 0, 0);
+	snprintf(s, sizeof(s), "ipv6/conf/%s/accept_ra", ifname);
+	f_write_procsysnet(s, "1");
 
 	/* leave forwarding like it is right now and let function enable_ip6_forward(void) decide */
-	//snprintf(s, sizeof(s), "/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
-	//f_write_string(s, "1", 0, 0);
+	//snprintf(s, sizeof(s), "ipv6/conf/%s/forwarding", ifname);
+	//f_write_procsysnet(s, "1");
 }
 #endif
 

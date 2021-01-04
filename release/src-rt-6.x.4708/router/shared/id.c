@@ -51,6 +51,7 @@ R6400				BCM4708               0x0646       32        0x1601
 R6400v2				BCM4708C0             0x0646       32        0x1601
 R6700v1				BCM4709               0x0665       32        0x1301    0x1000
 R6700v3				BCM4708C0             0x0646       32        0x1601 // same as R6400v2
+XR300				BCM4708C0             0x0646       32        0x1601 // same as R6400v2
 
 DIR-868L			BCM4708               0x0646       24        0x1110
 DIR-868LC1			BCM4708               0x0646       24        0x1101 //same as rev a/b but different boardrev
@@ -114,6 +115,7 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T30_NETGEAR"))) return MODEL_R6400v2;
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H270T10_NETGEAR"))) return MODEL_R6700v1;
 		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T77_NETGEAR"))) return MODEL_R6700v3;
+		if ((nvram_match("boardrev", "0x1601")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H332T78_NETGEAR"))) return MODEL_XR300;
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("boardnum", "32")) && (nvram_match("board_id", "U12H270T00_NETGEAR"))) return MODEL_R7000;
 		if ((nvram_match("boardrev", "0x1110")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "24"))) return MODEL_DIR868L;  /* rev c --> almost the same like rev a/b but different boardrev */

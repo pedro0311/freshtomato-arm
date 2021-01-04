@@ -2141,7 +2141,7 @@ TomatoRefresh.prototype = {
 			if (v > 0) v = (v * 1000) + (delay || 0);
 		}
 		else if (def) {
-			v = def;
+			v = def * 1000;
 			if (e) e.value = def;
 		}
 		else v = 0;
@@ -2277,7 +2277,7 @@ function escapeHTML(s) {
 }
 
 function escapeCGI(s) {
-	return encodeURIComponent(s)
+	return encodeURIComponent(s);
 }
 
 function escapeD(s) {

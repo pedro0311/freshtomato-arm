@@ -111,7 +111,7 @@ int ipup_main(int argc, char **argv)
 			nvram_set(strcat_r(prefix, "_ppp_get_ip", tmp), value);
 		}
 
-		_ifconfig(wan_ifname, IFUP, value, "255.255.255.255", (p && (*p)) ? p : NULL);
+		_ifconfig(wan_ifname, IFUP, value, "255.255.255.255", (p && (*p)) ? p : NULL, 0);
 	}
 
 	buf[0] = 0;

@@ -541,17 +541,17 @@ void start_qos(char *prefix)
 		memset(gamma, 0, 10);
 		sprintf(gamma, "gamma=%d", nvram_get_int("ne_vgamma"));
 		modprobe("tcp_vegas", alpha, beta, gamma);
-		f_write_string("/proc/sys/net/ipv4/tcp_congestion_control", "vegas", 0, 0);
+		f_write_procsysnet("ipv4/tcp_congestion_control", "vegas");
 	}
 	else {
 		modprobe_r("tcp_vegas");
-		f_write_string("/proc/sys/net/ipv4/tcp_congestion_control",
+		f_write_procsysnet("ipv4/tcp_congestion_control",
 #ifdef TCONFIG_BCMARM
 		               "cubic"
 #else
 		               "reno"
 #endif
-		               ,0, 0);
+		               );
 	}
 
 	if (!nvram_get_int("qos_enable"))

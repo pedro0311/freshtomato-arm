@@ -840,15 +840,12 @@ void start_wan_if(int mode, char *prefix)
 	nvram_set(strcat_r(prefix, "_mtu", tmp), buf);
 	nvram_set(strcat_r(prefix, "_run_mtu", tmp), buf);
 
-	if (wan_proto != WP_PPTP && wan_proto != WP_L2TP && wan_proto != WP_PPPOE && wan_proto != WP_PPP3G) {
-		/* Don't set the MTU on the port for PPP connections, it will be set on the link instead */
-		ifr.ifr_mtu = mtu;
-		strcpy(ifr.ifr_name, wan_ifname);
-		ioctl(sd, SIOCSIFMTU, &ifr);
-	}
+	/* Don't set the MTU on the port for PPP connections, it will be set on the link instead */
+	if ((wan_proto == WP_PPTP) || (wan_proto == WP_L2TP) || (wan_proto == WP_PPPOE) || (wan_proto == WP_PPP3G))
+		mtu = 0;
 
 	/* Bring wan interface UP */
-	ifconfig(wan_ifname, IFUP, NULL, NULL);
+	_ifconfig(wan_ifname, IFUP, NULL, NULL, NULL, mtu);
 
 	switch (wan_proto) {
 	case WP_PPPOE:

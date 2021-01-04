@@ -76,6 +76,13 @@ int f_write_string(const char *path, const char *buffer, unsigned flags, unsigne
 	return f_write(path, buffer, strlen(buffer), flags, cmode);
 }
 
+int f_write_procsysnet(const char *path, const char *value)
+{
+	char syspath[64];
+	snprintf(syspath, sizeof(syspath), "/proc/sys/net/%s", path);
+	return f_write_string(syspath, value, 0, 0);
+}
+
 static int _f_read_alloc(const char *path, char **buffer, int max, int z)
 {
 	unsigned long n;

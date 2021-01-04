@@ -179,7 +179,7 @@ void start_dnsmasq()
 #endif
 #ifdef TCONFIG_STUBBY
 	if (nvram_get_int("stubby_proxy"))
-		fprintf(f, "server=127.0.0.1#5453\n");
+		fprintf(f, "server=127.0.0.1#%s\n", nvram_safe_get("stubby_port"));
 #endif
 #ifdef TCONFIG_TOR
 	if ((nvram_get_int("tor_enable")) && (nvram_get_int("dnsmasq_onion_support"))) {
@@ -665,6 +665,18 @@ void clear_resolv(void)
 #ifdef TCONFIG_STUBBY
 void start_stubby(void)
 {
+	const static char *stubby_config = "/etc/stubby/stubby.yml";
+	FILE *fp;
+	char *nv, *nvp, *b;
+	char *server, *tlsport, *hostname, *spkipin, *digest;
+	int port;
+	union {
+		struct in_addr addr4;
+#ifdef TCONFIG_IPV6
+		struct in6_addr addr6;
+#endif
+	} addr;
+
 	if (!nvram_get_int("stubby_proxy"))
 		return;
 
@@ -675,8 +687,79 @@ void start_stubby(void)
 
 	stop_stubby();
 
+	mkdir_if_none("/etc/stubby");
+
+	if ((fp = fopen(stubby_config, "w")) == NULL) {
+		perror(stubby_config);
+		return;
+	}
+
+	/* basic & privacy settings */
+	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"
+	            "resolution_type: GETDNS_RESOLUTION_STUB\n"
+	            "dns_transport_list:\n"
+	            "  - GETDNS_TRANSPORT_TLS\n"
+	            "tls_authentication: GETDNS_AUTHENTICATION_REQUIRED\n"
+	            "tls_query_padding_blocksize: 128\n"
+	            "edns_client_subnet_private: 1\n"
+	/* connection settings */
+	            "idle_timeout: 5000\n"
+	            "tls_connection_retries: 5\n"
+	            "tls_backoff_time: 900\n"
+	            "timeout: 2000\n"
+	            "round_robin_upstreams: 1\n"
+	            "tls_min_version: GETDNS_TLS1_2\n"
+	/* listen address */
+	            "listen_addresses:\n"
+	            "  - 127.0.0.1@%s\n",
+	            nvram_safe_get("stubby_port"));
+
+	/* upstreams */
+	fprintf(fp, "upstream_recursive_servers:\n");
+
+	nv = nvp = strdup(nvram_safe_get("stubby_resolvers"));
+	while (nvp && (b = strsep(&nvp, "<")) != NULL) {
+		server = tlsport = hostname = spkipin = NULL;
+
+		/* <server>port>hostname>[digest:]spkipin */
+		if ((vstrsep(b, ">", &server, &tlsport, &hostname, &spkipin)) < 4)
+			continue;
+
+		/* check server, can be IPv4/IPv6 address */
+		if (*server == '\0')
+			continue;
+		else if (inet_pton(AF_INET, server, &addr) <= 0
+#ifdef TCONFIG_IPV6
+		         && ((inet_pton(AF_INET6, server, &addr) <= 0) || (!ipv6_enabled()))
+#endif
+		)
+			continue;
+
+		/* check port, if specified */
+		port = (*tlsport ? atoi(tlsport) : 0);
+		if ((port < 0) || (port > 65535))
+			continue;
+
+		/* add server */
+		fprintf(fp, "  - address_data: %s\n", server);
+		if (port)
+			fprintf(fp, "    tls_port: %d\n", port);
+		if (*hostname)
+			fprintf(fp, "    tls_auth_name: \"%s\"\n", hostname);
+		if (*spkipin) {
+			digest = strchr(spkipin, ':') ? strsep(&spkipin, ":") : "sha256";
+			fprintf(fp, "    tls_pubkey_pinset:\n"
+			            "      - digest: \"%s\"\n"
+			            "        value: %s\n", digest, spkipin);
+		}
+	}
+	if (nv)
+		free(nv);
+
+	fclose(fp);
+
 	eval("ntp2ip");
-	eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby.yml");
+	eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *) stubby_config);
 }
 
 void stop_stubby(void)

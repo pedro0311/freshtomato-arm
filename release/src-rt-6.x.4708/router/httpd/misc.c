@@ -1021,3 +1021,39 @@ char* get_cfeversion(char *buf)
 
 	return buf;
 }
+
+#ifdef TCONFIG_STUBBY
+void asp_stubby_presets(int argc, char **argv)
+{
+	FILE *fp;
+	char buf[256], *datafile, *ptr, *item, *lsep, *fsep;
+
+	if (argc != 1)
+		return;
+
+	if (!strcmp(argv[0], "dot"))
+		datafile = "/rom/dot-servers.dat";
+	else
+		return;
+
+	if (!(fp = fopen(datafile, "r")))
+		return;
+
+	for (lsep = ""; (ptr = fgets(buf, sizeof(buf), fp)) != NULL;) {
+		buf[sizeof(buf) - 1] = '\0';
+		ptr = strsep(&ptr, "#\n");
+		if (*ptr == '\0')
+			continue;
+
+		web_printf("%s[", lsep);
+		for (fsep = ""; (item = strsep(&ptr, ",")) != NULL;) {
+			web_printf("%s\"%s\"", fsep, item);
+			fsep = ",";
+		}
+		web_puts("]");
+		lsep = ",";
+	}
+
+	fclose(fp);
+}
+#endif

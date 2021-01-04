@@ -194,11 +194,10 @@ void start_ovpn_client(int unit)
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	int nvi, ip[4], nm[4];
+	int nvi;
 	long int nvl;
 	int pid;
 	int userauth, useronly;
-	int i;
 	int taskset_ret = 0;
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];

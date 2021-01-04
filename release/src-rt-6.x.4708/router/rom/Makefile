@@ -26,9 +26,10 @@ install:
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/services > $(INSTALLDIR)/rom/etc/services
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
-ifneq ($(TCONFIG_STUBBY),y)
-	rm -f $(INSTALLDIR)/rom/etc/stubby.yml
+ifeq ($(TCONFIG_STUBBY),y)
+	install -m 0644 others/dot-servers.dat $(INSTALLDIR)/rom/dot-servers.dat
 endif
+
 	$(MAKE) certs-install
 
 ifeq ($(TCONFIG_HTTPS),y)
