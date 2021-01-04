@@ -1,8 +1,8 @@
-/* $Id: upnphttp.h,v 1.42 2015/12/16 10:21:49 nanard Exp $ */
-/* vim: tabstop=4 shiftwidth=4 noexpandtab */
-/* MiniUPnP project
+/* $Id: upnphttp.h,v 1.43 2020/12/20 17:44:59 nanard Exp $ */
+/* vim: tabstop=4 shiftwidth=4 noexpandtab
+ * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2015 Thomas Bernard
+ * (c) 2006-2020 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
