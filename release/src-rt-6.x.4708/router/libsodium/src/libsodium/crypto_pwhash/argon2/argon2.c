@@ -27,8 +27,9 @@ int
 argon2_ctx(argon2_context *context, argon2_type type)
 {
     /* 1. Validate all inputs */
-    int               result = validate_inputs(context);
+    int               result = argon2_validate_inputs(context);
     uint32_t          memory_blocks, segment_length;
+    uint32_t          pass;
     argon2_instance_t instance;
 
     if (ARGON2_OK != result) {
@@ -53,6 +54,7 @@ argon2_ctx(argon2_context *context, argon2_type type)
 
     instance.region         = NULL;
     instance.passes         = context->t_cost;
+    instance.current_pass   = ~ 0U;
     instance.memory_blocks  = memory_blocks;
     instance.segment_length = segment_length;
     instance.lane_length    = segment_length * ARGON2_SYNC_POINTS;
@@ -63,17 +65,19 @@ argon2_ctx(argon2_context *context, argon2_type type)
     /* 3. Initialization: Hashing inputs, allocating memory, filling first
      * blocks
      */
-    result = initialize(&instance, context);
+    result = argon2_initialize(&instance, context);
 
     if (ARGON2_OK != result) {
         return result;
     }
 
     /* 4. Filling memory */
-    fill_memory_blocks(&instance);
+    for (pass = 0; pass < instance.passes; pass++) {
+        argon2_fill_memory_blocks(&instance, pass);
+    }
 
     /* 5. Finalization */
-    finalize(context, &instance);
+    argon2_finalize(context, &instance);
 
     return ARGON2_OK;
 }
@@ -130,19 +134,20 @@ argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
         return result;
     }
 
-    /* if raw hash requested, write it */
-    if (hash) {
-        memcpy(hash, out, hashlen);
-    }
-
     /* if encoding requested, write it */
     if (encoded && encodedlen) {
-        if (encode_string(encoded, encodedlen, &context, type) != ARGON2_OK) {
+        if (argon2_encode_string(encoded, encodedlen,
+                                 &context, type) != ARGON2_OK) {
             sodium_memzero(out, hashlen);
             sodium_memzero(encoded, encodedlen);
             free(out);
             return ARGON2_ENCODING_FAIL;
         }
+    }
+
+    /* if raw hash requested, write it */
+    if (hash) {
+        memcpy(hash, out, hashlen);
     }
 
     sodium_memzero(out, hashlen);
@@ -210,7 +215,7 @@ argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
     ctx.secret    = NULL;
     ctx.secretlen = 0;
 
-    /* max values, to be updated in decode_string */
+    /* max values, to be updated in argon2_decode_string */
     encoded_len = strlen(encoded);
     if (encoded_len > UINT32_MAX) {
         return ARGON2_DECODING_LENGTH_FAIL;
@@ -236,7 +241,7 @@ argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
         return ARGON2_MEMORY_ALLOCATION_ERROR;
     }
 
-    decode_result = decode_string(&ctx, encoded, type);
+    decode_result = argon2_decode_string(&ctx, encoded, type);
     if (decode_result != ARGON2_OK) {
         free(ctx.ad);
         free(ctx.salt);

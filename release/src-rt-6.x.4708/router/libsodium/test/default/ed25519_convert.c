@@ -20,7 +20,9 @@ main(void)
     char          curve25519_sk_hex[crypto_scalarmult_curve25519_BYTES * 2 + 1];
     unsigned int  i;
 
+    assert(crypto_sign_ed25519_SEEDBYTES <= crypto_hash_sha512_BYTES);
     crypto_sign_ed25519_seed_keypair(ed25519_pk, ed25519_skpk, keypair_seed);
+
     if (crypto_sign_ed25519_pk_to_curve25519(curve25519_pk, ed25519_pk) != 0) {
         printf("conversion failed\n");
     }
