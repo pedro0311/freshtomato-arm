@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -58,6 +58,10 @@ function verifyFields(focused, quiet) {
 /* IPV6-END */
 	if (!v_length('_dhcpc_custom', quiet, 0, 256))
 		return 0;
+/* STUBBY-BEGIN */
+	if (!v_port('_stubby_port', quiet))
+		return 0;
+/* STUBBY-END */
 
 	/* IP address, blank -> 0.0.0.0 */
 	if (!v_dns('_wan_wins', quiet))
@@ -87,6 +91,7 @@ function verifyFields(focused, quiet) {
 	vis._f_dns_priv_override = v;
 	vis._stubby_priority = v;
 	vis._stubby_log = v;
+	vis._stubby_port = v;
 /* STUBBY-END */
 
 	for (var a in vis) {
@@ -154,12 +159,16 @@ function save() {
 		fom._service.value += ',firewall-restart'; /* special case: restart FW */
 
 	if ((fom.wan_wins.value != nvram.wan_wins) && fom._service.value != '*') { /* special case: restart vpnservers/pptpd if up */
+/* OPENVPN-BEGIN */
 		if (isup.vpnserver1)
 			fom._service.value += ',vpnserver1-restart';
 		if (isup.vpnserver2)
 			fom._service.value += ',vpnserver2-restart';
+/* OPENVPN-END */
+/* PPTPD-BEGIN */
 		if (isup.pptpd)
 			fom._service.value += ',pptpd-restart';
+/* PPTPD-END */
 	}
 
 	form.submit(fom, 1);
@@ -249,6 +258,7 @@ function init() {
 			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) },
 				{ title: 'Prevent client auto DoH', indent: 2, name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == '1' },
 				{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.stubby_priority },
+				{ title: 'Local Port', indent: 2, name: 'stubby_port', type: 'text', maxlen: 5, size: 7, value: nvram.stubby_port },
 				{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
 					value: nvram.stubby_log, suffix: '&nbsp; <small>*default<\/small>' },
 			null,

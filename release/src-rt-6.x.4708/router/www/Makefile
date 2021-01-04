@@ -235,6 +235,8 @@ else
 	rm -f $(INSTALLDIR)/www/vpn.js
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/ OPENVPN-BEGIN/,/ OPENVPN-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/ OPENVPN-BEGIN/,/ OPENVPN-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/ OPENVPN-BEGIN/,/ OPENVPN-END/d"
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/ OPENVPN-BEGIN/,/ OPENVPN-END/d"
 endif
 
 # Only include the PPTPD pages if PPTPD is compiled in
@@ -248,6 +250,8 @@ else
 	rm -f $(INSTALLDIR)/www/vpn-pptp.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/ PPTPD-BEGIN/,/ PPTPD-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/ PPTPD-BEGIN/,/ PPTPD-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/ PPTPD-BEGIN/,/ PPTPD-END/d"
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/ PPTPD-BEGIN/,/ PPTPD-END/d"
 endif
 
 # Only include the nfs pages if NFS is compiled in
