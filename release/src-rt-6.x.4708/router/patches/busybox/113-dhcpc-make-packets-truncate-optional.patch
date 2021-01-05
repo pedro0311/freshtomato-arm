@@ -22,7 +22,7 @@
  	USE_FOR_MMU(             OPTBIT_b,)
  	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
  	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
-@@ -1285,6 +1286,7 @@
+@@ -1245,6 +1246,7 @@
  	opt = getopt32long(argv, "^"
  		/* O,x: list; -T,-t,-A take numeric param */
  		"CV:H:h:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
@@ -30,7 +30,7 @@
  		USE_FOR_MMU("b")
  		IF_FEATURE_UDHCPC_ARPING("a::")
  		IF_FEATURE_UDHCP_PORT("P:")
-@@ -1357,6 +1359,9 @@
+@@ -1317,6 +1319,9 @@
  		free(optstr);
  	}
  
