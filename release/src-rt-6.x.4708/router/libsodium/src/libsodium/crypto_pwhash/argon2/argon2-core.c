@@ -24,6 +24,7 @@
 
 #include "crypto_generichash_blake2b.h"
 #include "private/common.h"
+#include "private/implementations.h"
 #include "runtime.h"
 #include "utils.h"
 
@@ -33,8 +34,18 @@
 #if !defined(MAP_ANON) && defined(MAP_ANONYMOUS)
 # define MAP_ANON MAP_ANONYMOUS
 #endif
+#ifndef MAP_NOCORE
+# ifdef MAP_CONCEAL
+#  define MAP_NOCORE MAP_CONCEAL
+# else
+#  define MAP_NOCORE 0
+# endif
+#endif
+#ifndef MAP_POPULATE
+# define MAP_POPULATE 0
+#endif
 
-static fill_segment_fn fill_segment = fill_segment_ref;
+static fill_segment_fn fill_segment = argon2_fill_segment_ref;
 
 static void
 load_block(block *dst, const void *input)
@@ -60,7 +71,7 @@ store_block(void *output, const block *src)
  * @param m_cost number of blocks to allocate in the memory
  * @return ARGON2_OK if @memory is a valid pointer and memory is allocated
  */
-static int allocate_memory(block_region **memory, uint32_t m_cost);
+static int allocate_memory(block_region **region, uint32_t m_cost);
 
 static int
 allocate_memory(block_region **region, uint32_t m_cost)
@@ -73,25 +84,18 @@ allocate_memory(block_region **region, uint32_t m_cost)
         return ARGON2_MEMORY_ALLOCATION_ERROR; /* LCOV_EXCL_LINE */
     }
     memory_size = sizeof(block) * m_cost;
-    if (m_cost == 0 ||
-        memory_size / m_cost !=
-            sizeof(block)) { /*1. Check for multiplication overflow*/
+    if (m_cost == 0 || memory_size / m_cost != sizeof(block)) {
         return ARGON2_MEMORY_ALLOCATION_ERROR; /* LCOV_EXCL_LINE */
     }
-    *region = (block_region *) malloc(
-        sizeof(block_region)); /*2. Try to allocate region*/
-    if (!*region) {
+    *region = (block_region *) malloc(sizeof(block_region));
+    if (*region == NULL) {
         return ARGON2_MEMORY_ALLOCATION_ERROR; /* LCOV_EXCL_LINE */
     }
     (*region)->base = (*region)->memory = NULL;
 
 #if defined(MAP_ANON) && defined(HAVE_MMAP)
     if ((base = mmap(NULL, memory_size, PROT_READ | PROT_WRITE,
-#ifdef MAP_NOCORE
-                     MAP_ANON | MAP_PRIVATE | MAP_NOCORE,
-#else
-                     MAP_ANON | MAP_PRIVATE,
-#endif
+                     MAP_ANON | MAP_PRIVATE | MAP_NOCORE | MAP_POPULATE,
                      -1, 0)) == MAP_FAILED) {
         base = NULL; /* LCOV_EXCL_LINE */
     }                /* LCOV_EXCL_LINE */
@@ -113,7 +117,11 @@ allocate_memory(block_region **region, uint32_t m_cost)
     }
 #endif
     if (base == NULL) {
-        return ARGON2_MEMORY_ALLOCATION_ERROR; /* LCOV_EXCL_LINE */
+        /* LCOV_EXCL_START */
+        free(*region);
+        *region = NULL;
+        return ARGON2_MEMORY_ALLOCATION_ERROR;
+        /* LCOV_EXCL_STOP */
     }
     (*region)->base   = base;
     (*region)->memory = memory;
@@ -150,7 +158,7 @@ clear_memory(argon2_instance_t *instance, int clear)
 /* Deallocates memory
  * @param memory pointer to the blocks
  */
-static void free_memory(block_region *memory);
+static void free_memory(block_region *region);
 
 static void
 free_memory(block_region *region)
@@ -167,8 +175,8 @@ free_memory(block_region *region)
     free(region);
 }
 
-void
-free_instance(argon2_instance_t *instance, int flags)
+static void
+argon2_free_instance(argon2_instance_t *instance, int flags)
 {
     /* Clear memory */
     clear_memory(instance, flags & ARGON2_FLAG_CLEAR_MEMORY);
@@ -181,7 +189,7 @@ free_instance(argon2_instance_t *instance, int flags)
 }
 
 void
-finalize(const argon2_context *context, argon2_instance_t *instance)
+argon2_finalize(const argon2_context *context, argon2_instance_t *instance)
 {
     if (context != NULL && instance != NULL) {
         block    blockhash;
@@ -210,110 +218,34 @@ finalize(const argon2_context *context, argon2_instance_t *instance)
                            ARGON2_BLOCK_SIZE); /* clear blockhash_bytes */
         }
 
-        free_instance(instance, context->flags);
+        argon2_free_instance(instance, context->flags);
     }
-}
-
-uint32_t
-index_alpha(const argon2_instance_t *instance,
-            const argon2_position_t *position, uint32_t pseudo_rand,
-            int same_lane)
-{
-    /*
-     * Pass 0:
-     *      This lane : all already finished segments plus already constructed
-     * blocks in this segment
-     *      Other lanes : all already finished segments
-     * Pass 1+:
-     *      This lane : (SYNC_POINTS - 1) last segments plus already constructed
-     * blocks in this segment
-     *      Other lanes : (SYNC_POINTS - 1) last segments
-     */
-    uint32_t reference_area_size;
-    uint64_t relative_position;
-    uint32_t start_position, absolute_position;
-
-    if (position->pass == 0) {
-        /* First pass */
-        if (position->slice == 0) {
-            /* First slice */
-            reference_area_size =
-                position->index - 1; /* all but the previous */
-        } else {
-            if (same_lane) {
-                /* The same lane => add current segment */
-                reference_area_size =
-                    position->slice * instance->segment_length +
-                    position->index - 1;
-            } else {
-                reference_area_size =
-                    position->slice * instance->segment_length +
-                    ((position->index == 0) ? (-1) : 0);
-            }
-        }
-    } else {
-        /* Second pass */
-        if (same_lane) {
-            reference_area_size = instance->lane_length -
-                                  instance->segment_length + position->index -
-                                  1;
-        } else {
-            reference_area_size = instance->lane_length -
-                                  instance->segment_length +
-                                  ((position->index == 0) ? (-1) : 0);
-        }
-    }
-
-    /* 1.2.4. Mapping pseudo_rand to 0..<reference_area_size-1> and produce
-     * relative position */
-    relative_position = pseudo_rand;
-    relative_position = relative_position * relative_position >> 32;
-    relative_position = reference_area_size - 1 -
-                        (reference_area_size * relative_position >> 32);
-
-    /* 1.2.5 Computing starting position */
-    start_position = 0;
-
-    if (position->pass != 0) {
-        start_position = (position->slice == ARGON2_SYNC_POINTS - 1)
-                             ? 0
-                             : (position->slice + 1) * instance->segment_length;
-    }
-
-    /* 1.2.6. Computing absolute position */
-    absolute_position = (start_position + relative_position) %
-                        instance->lane_length; /* absolute position */
-    return absolute_position;
 }
 
 void
-fill_memory_blocks(argon2_instance_t *instance)
+argon2_fill_memory_blocks(argon2_instance_t *instance, uint32_t pass)
 {
-    uint32_t r, s;
+    argon2_position_t position;
+    uint32_t l;
+    uint32_t s;
 
     if (instance == NULL || instance->lanes == 0) {
         return; /* LCOV_EXCL_LINE */
     }
 
-    for (r = 0; r < instance->passes; ++r) {
-        for (s = 0; s < ARGON2_SYNC_POINTS; ++s) {
-            uint32_t l;
-
-            for (l = 0; l < instance->lanes; ++l) {
-                argon2_position_t position;
-
-                position.pass  = r;
-                position.lane  = l;
-                position.slice = (uint8_t) s;
-                position.index = 0;
-                fill_segment(instance, position);
-            }
+    position.pass = pass;
+    for (s = 0; s < ARGON2_SYNC_POINTS; ++s) {
+        position.slice = (uint8_t) s;
+        for (l = 0; l < instance->lanes; ++l) {
+            position.lane  = l;
+            position.index = 0;
+            fill_segment(instance, position);
         }
     }
 }
 
 int
-validate_inputs(const argon2_context *context)
+argon2_validate_inputs(const argon2_context *context)
 {
     /* LCOV_EXCL_START */
     if (NULL == context) {
@@ -393,6 +325,15 @@ validate_inputs(const argon2_context *context)
         }
     }
 
+    /* Validate lanes */
+    if (ARGON2_MIN_LANES > context->lanes) {
+        return ARGON2_LANES_TOO_FEW;
+    }
+
+    if (ARGON2_MAX_LANES < context->lanes) {
+        return ARGON2_LANES_TOO_MANY;
+    }
+
     /* Validate memory cost */
     if (ARGON2_MIN_MEMORY > context->m_cost) {
         return ARGON2_MEMORY_TOO_LITTLE;
@@ -415,15 +356,6 @@ validate_inputs(const argon2_context *context)
         return ARGON2_TIME_TOO_LARGE;
     }
 
-    /* Validate lanes */
-    if (ARGON2_MIN_LANES > context->lanes) {
-        return ARGON2_LANES_TOO_FEW;
-    }
-
-    if (ARGON2_MAX_LANES < context->lanes) {
-        return ARGON2_LANES_TOO_MANY;
-    }
-
     /* Validate threads */
     if (ARGON2_MIN_THREADS > context->threads) {
         return ARGON2_THREADS_TOO_FEW;
@@ -437,8 +369,8 @@ validate_inputs(const argon2_context *context)
     return ARGON2_OK;
 }
 
-void
-fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance)
+static void
+argon2_fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance)
 {
     uint32_t l;
     /* Make the first and second block in each lane as G(H0||i||0) or
@@ -461,8 +393,9 @@ fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance)
     sodium_memzero(blockhash_bytes, ARGON2_BLOCK_SIZE);
 }
 
-void
-initial_hash(uint8_t *blockhash, argon2_context *context, argon2_type type)
+static void
+argon2_initial_hash(uint8_t *blockhash, argon2_context *context,
+                    argon2_type type)
 {
     crypto_generichash_blake2b_state BlakeHash;
     uint8_t                          value[4U /* sizeof(uint32_t) */];
@@ -545,7 +478,7 @@ initial_hash(uint8_t *blockhash, argon2_context *context, argon2_type type)
 }
 
 int
-initialize(argon2_instance_t *instance, argon2_context *context)
+argon2_initialize(argon2_instance_t *instance, argon2_context *context)
 {
     uint8_t blockhash[ARGON2_PREHASH_SEED_LENGTH];
     int     result = ARGON2_OK;
@@ -563,7 +496,7 @@ initialize(argon2_instance_t *instance, argon2_context *context)
 
     result = allocate_memory(&(instance->region), instance->memory_blocks);
     if (ARGON2_OK != result) {
-        free_instance(instance, context->flags);
+        argon2_free_instance(instance, context->flags);
         return result;
     }
 
@@ -571,45 +504,46 @@ initialize(argon2_instance_t *instance, argon2_context *context)
     /* H_0 + 8 extra bytes to produce the first blocks */
     /* uint8_t blockhash[ARGON2_PREHASH_SEED_LENGTH]; */
     /* Hashing all inputs */
-    initial_hash(blockhash, context, instance->type);
+    argon2_initial_hash(blockhash, context, instance->type);
     /* Zeroing 8 extra bytes */
     sodium_memzero(blockhash + ARGON2_PREHASH_DIGEST_LENGTH,
                    ARGON2_PREHASH_SEED_LENGTH - ARGON2_PREHASH_DIGEST_LENGTH);
 
     /* 3. Creating first blocks, we always have at least two blocks in a slice
      */
-    fill_first_blocks(blockhash, instance);
+    argon2_fill_first_blocks(blockhash, instance);
     /* Clearing the hash */
     sodium_memzero(blockhash, ARGON2_PREHASH_SEED_LENGTH);
 
     return ARGON2_OK;
 }
 
-int
+static int
 argon2_pick_best_implementation(void)
 {
 /* LCOV_EXCL_START */
 #if defined(HAVE_AVX512FINTRIN_H) && defined(HAVE_AVX2INTRIN_H) && \
-    defined(HAVE_TMMINTRIN_H) && defined(HAVE_SMMINTRIN_H)
+    defined(HAVE_TMMINTRIN_H) && defined(HAVE_SMMINTRIN_H) && \
+    !defined(__APPLE__)
     if (sodium_runtime_has_avx512f()) {
-        fill_segment = fill_segment_avx512f;
+        fill_segment = argon2_fill_segment_avx512f;
         return 0;
     }
 #endif
 #if defined(HAVE_AVX2INTRIN_H) && defined(HAVE_TMMINTRIN_H) && \
     defined(HAVE_SMMINTRIN_H)
     if (sodium_runtime_has_avx2()) {
-        fill_segment = fill_segment_avx2;
+        fill_segment = argon2_fill_segment_avx2;
         return 0;
     }
 #endif
 #if defined(HAVE_EMMINTRIN_H) && defined(HAVE_TMMINTRIN_H)
     if (sodium_runtime_has_ssse3()) {
-        fill_segment = fill_segment_ssse3;
+        fill_segment = argon2_fill_segment_ssse3;
         return 0;
     }
 #endif
-    fill_segment = fill_segment_ref;
+    fill_segment = argon2_fill_segment_ref;
 
     return 0;
     /* LCOV_EXCL_STOP */

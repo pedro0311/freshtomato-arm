@@ -28,22 +28,29 @@
 #include "runtime.h"
 
 #if !defined(MAP_ANON) && defined(MAP_ANONYMOUS)
-#define MAP_ANON MAP_ANONYMOUS
+# define MAP_ANON MAP_ANONYMOUS
+#endif
+#ifndef MAP_NOCORE
+# ifdef MAP_CONCEAL
+#  define MAP_NOCORE MAP_CONCEAL
+# else
+#  define MAP_NOCORE 0
+# endif
+#endif
+#ifndef MAP_POPULATE
+# define MAP_POPULATE 0
 #endif
 
 void *
-alloc_region(escrypt_region_t *region, size_t size)
+escrypt_alloc_region(escrypt_region_t *region, size_t size)
 {
     uint8_t *base, *aligned;
 #if defined(MAP_ANON) && defined(HAVE_MMAP)
     if ((base = (uint8_t *) mmap(NULL, size, PROT_READ | PROT_WRITE,
-#ifdef MAP_NOCORE
-                                 MAP_ANON | MAP_PRIVATE | MAP_NOCORE,
-#else
-                                 MAP_ANON | MAP_PRIVATE,
-#endif
-                                 -1, 0)) == MAP_FAILED)
+                                 MAP_ANON | MAP_PRIVATE | MAP_NOCORE | MAP_POPULATE,
+                                 -1, 0)) == MAP_FAILED) {
         base = NULL; /* LCOV_EXCL_LINE */
+    }                /* LCOV_EXCL_LINE */
     aligned  = base;
 #elif defined(HAVE_POSIX_MEMALIGN)
     if ((errno = posix_memalign((void **) &base, 64, size)) != 0) {
@@ -52,9 +59,9 @@ alloc_region(escrypt_region_t *region, size_t size)
     aligned = base;
 #else
     base = aligned = NULL;
-    if (size + 63 < size)
+    if (size + 63 < size) {
         errno = ENOMEM;
-    else if ((base = (uint8_t *) malloc(size + 63)) != NULL) {
+    } else if ((base = (uint8_t *) malloc(size + 63)) != NULL) {
         aligned = base + 63;
         aligned -= (uintptr_t) aligned & 63;
     }
@@ -74,7 +81,7 @@ init_region(escrypt_region_t *region)
 }
 
 int
-free_region(escrypt_region_t *region)
+escrypt_free_region(escrypt_region_t *region)
 {
     if (region->base) {
 #if defined(MAP_ANON) && defined(HAVE_MMAP)
@@ -101,5 +108,5 @@ escrypt_init_local(escrypt_local_t *local)
 int
 escrypt_free_local(escrypt_local_t *local)
 {
-    return free_region(local);
+    return escrypt_free_region(local);
 }

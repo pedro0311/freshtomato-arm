@@ -1,4 +1,4 @@
-/* $Id: commonrdr.h,v 1.13 2020/09/28 21:31:14 nanard Exp $ */
+/* $Id: commonrdr.h,v 1.14 2020/12/20 17:41:46 nanard Exp $ */
 /* MiniUPnP project
  * (c) 2006-2020 Thomas Bernard
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -57,13 +57,13 @@ unsigned short *
 get_portmappings_in_range(unsigned short startport, unsigned short endport,
                           int proto, unsigned int * number);
 
-/* update the port mapping internal port, decription and timestamp */
+/* update the port mapping internal port, description and timestamp */
 int
 update_portmapping(const char * ifname, unsigned short eport, int proto,
                    unsigned short iport, const char * desc,
                    unsigned int timestamp);
 
-/* update the port mapping decription and timestamp */
+/* update the port mapping description and timestamp */
 int
 update_portmapping_desc_timestamp(const char * ifname,
                    unsigned short eport, int proto,

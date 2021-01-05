@@ -1,6 +1,6 @@
 --- busybox/include/libbb.h
 +++ busybox/include/libbb.h
-@@ -1012,6 +1012,10 @@
+@@ -1013,6 +1013,10 @@
  
  /* Generate a UUID */
  void generate_uuid(uint8_t *buf) FAST_FUNC;
@@ -35,7 +35,7 @@
 --- busybox/libbb/xfuncs.c
 +++ busybox/libbb/xfuncs.c
 @@ -429,3 +429,49 @@
- 		bb_perror_msg_and_die("waitpid");
+ 		bb_simple_perror_msg_and_die("waitpid");
  	return exit_status;
  }
 +

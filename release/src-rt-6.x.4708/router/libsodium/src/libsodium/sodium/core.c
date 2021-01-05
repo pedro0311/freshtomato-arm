@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -20,22 +21,8 @@
 #include "private/implementations.h"
 #include "private/mutex.h"
 
-#if !defined(_MSC_VER) && 0
-# warning *** This is unstable, untested, development code.
-# warning It might not compile. It might not work as expected.
-# warning It might be totally insecure.
-# warning Do not use this in production.
-# warning Use releases available at https://download.libsodium.org/libsodium/releases/ instead.
-# warning Alternatively, use the "stable" branch in the git repository.
-#endif
-
-#if !defined(_MSC_VER) && (!defined(CONFIGURED) || CONFIGURED != 1)
-# warning *** The library is being compiled using an undocumented method.
-# warning This is not supported. It has not been tested, it might not
-# warning work as expected, and performance is likely to be suboptimal.
-#endif
-
 static volatile int initialized;
+static volatile int locked;
 
 int
 sodium_init(void)
@@ -98,6 +85,8 @@ sodium_crit_enter(void)
         return -1; /* LCOV_EXCL_LINE */
     }
     EnterCriticalSection(&_sodium_lock);
+    assert(locked == 0);
+    locked = 1;
 
     return 0;
 }
@@ -105,6 +94,13 @@ sodium_crit_enter(void)
 int
 sodium_crit_leave(void)
 {
+    if (locked == 0) {
+# ifdef EPERM
+        errno = EPERM;
+# endif
+        return -1;
+    }
+    locked = 0;
     LeaveCriticalSection(&_sodium_lock);
 
     return 0;
@@ -117,16 +113,30 @@ static pthread_mutex_t _sodium_lock = PTHREAD_MUTEX_INITIALIZER;
 int
 sodium_crit_enter(void)
 {
-    return pthread_mutex_lock(&_sodium_lock);
+    int ret;
+
+    if ((ret = pthread_mutex_lock(&_sodium_lock)) == 0) {
+        assert(locked == 0);
+        locked = 1;
+    }
+    return ret;
 }
 
 int
 sodium_crit_leave(void)
 {
+    if (locked == 0) {
+# ifdef EPERM
+        errno = EPERM;
+# endif
+        return -1;
+    }
+    locked = 0;
+
     return pthread_mutex_unlock(&_sodium_lock);
 }
 
-#elif defined(HAVE_ATOMIC_OPS) && !defined(__EMSCRIPTEN__) && !defined(__native_client__)
+#elif defined(HAVE_ATOMIC_OPS) && !defined(__EMSCRIPTEN__)
 
 static volatile int _sodium_lock;
 
@@ -178,9 +188,10 @@ sodium_misuse(void)
 {
     void (*handler)(void);
 
+    (void) sodium_crit_leave();
     if (sodium_crit_enter() == 0) {
         handler = _misuse_handler;
-        if (sodium_crit_leave() == 0 && handler != NULL) {
+        if (handler != NULL) {
             handler();
         }
     }

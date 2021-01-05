@@ -1,7 +1,7 @@
 # $Id: Makefile,v 1.7 2020/05/21 00:10:56 nanard Exp $
 # made for GNU Make (and BSD make)
 CFLAGS = -Wall -g -DTEST
-#CFLAGS += -Wextra
+CFLAGS += -Wextra
 CFLAGS += -I..
 EXECUTABLES = testobsdrdr testpfpinhole
 
