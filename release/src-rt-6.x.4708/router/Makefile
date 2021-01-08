@@ -285,6 +285,7 @@ obj-$(TCONFIG_SSH) += dropbear
 obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
+obj-$(TCONFIG_WIREGUARD) += wireguard-tools
 obj-$(TCONFIG_TINC) += tinc
 
 # Tomato RAF
@@ -2293,6 +2294,18 @@ openvpn-install:
 
 openvpn_plugin_auth_nvram: nvram$(BCMEX)
 
+wireguard-tools:
+	WITH_BASHCOMPLETION=no WITH_WGQUICK=no WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
+
+wireguard-tools-install: wireguard-tools
+	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	$(STRIP) -s $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+
+wireguard-tools-clean:
+	$(MAKE) -C wireguard-tools/src clean
+	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
+
 nano/stamp-h1: libncurses
 	cd nano && autoreconf && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
@@ -3120,4 +3133,4 @@ $(obj-y) $(obj-n) $(obj-clean) $(obj-install): dummy
 
 .PHONY: all clean distclean mrproper install package image
 .PHONY: conf mconf oldconf kconf kmconf config menuconfig oldconfig
-.PHONY: dummy libnet libpcap
+.PHONY: dummy libnet libpcap wireguard-tools

@@ -69,6 +69,10 @@ config TCONFIG_OPENVPN
 	depends on TCONFIG_LZO
 	default n
 
+config TCONFIG_WIREGUARD
+	bool "WireGuard"
+	default n
+
 # !!TB
 config TCONFIG_IPV6
 	bool "IPv6 Support"

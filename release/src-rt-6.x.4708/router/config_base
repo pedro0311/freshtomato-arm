@@ -28,6 +28,7 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_NTFS is not set
 # TCONFIG_LZO is not set
 # TCONFIG_OPENVPN is not set
+# TCONFIG_WIREGUARD is not set
 # TCONFIG_BT is not set
 # TCONFIG_BBT is not set
 # TCONFIG_TR_EXTRAS is not set
