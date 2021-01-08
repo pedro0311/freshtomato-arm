@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan2_qos_obw,wan2_qos_ibw,wan3_qos_obw,wan3_qos_ibw,wan4_qos_obw,wan4_qos_ibw,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,atm_overhead,mwan_num,bwl_enable"); %>
+//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num,bwl_enable"); %>
 
 var cprefix = 'qos_settings';
 var classNames = nvram.qos_classnames.split(' ');
@@ -78,6 +78,18 @@ function verifyFields(focused, quiet) {
 			f[i].disabled = b;
 	}
 
+	var classifyField = E('_f_qos_classify');
+	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		var classify = !classifyField.disabled && classifyField.checked;
+		var pattern = new RegExp('wan' + u + '_f_[io](rate|ceil)_');
+		for (i = 0; i < f.length; i++) {
+			if (pattern.test(f[i].name)) {
+				f[i].disabled = !classify;
+			}
+		}
+	}
+
 	var abg = ['alpha', 'beta', 'gamma'];
 	b = E('_f_ne_vegas').checked;
 	for (i = 0; i < 3; ++i) {
@@ -103,6 +115,7 @@ function save() {
 	fom.qos_icmp.value = E('_f_qos_icmp').checked ? 1 : 0;
 	fom.qos_udp.value = E('_f_qos_udp').checked ? 1 : 0;
 	fom.qos_reset.value = E('_f_qos_reset').checked ? 1 : 0;
+	fom.qos_classify.value = E('_f_qos_classify').checked ? 1 : 0;
 
 	qos = [];
 	for (i = 1; i < 11; ++i) {
@@ -175,6 +188,7 @@ function init() {
 <input type="hidden" name="qos_orates">
 <input type="hidden" name="qos_irates">
 <input type="hidden" name="qos_reset">
+<input type="hidden" name="qos_classify">
 <input type="hidden" name="ne_vegas">
 
 <!-- / / / -->
@@ -204,6 +218,7 @@ function init() {
 			] },
 			{ title: 'Prioritize ICMP', name: 'f_qos_icmp', type: 'checkbox', value: nvram.qos_icmp == '1' },
 			{ title: 'No Ingress QoS for UDP', name: 'f_qos_udp', type: 'checkbox', value: nvram.qos_udp == '1' },
+			{ title: 'Classify traffic', name: 'f_qos_classify', type: 'checkbox', value: nvram.qos_classify == '1', suffix: '<small>disable and choose fq_codel scheduler for SQM<\/small>' },
 			{ title: 'Reset class when changing settings', name: 'f_qos_reset', type: 'checkbox', value: nvram.qos_reset == '1' },
 			{ title: 'Default class', name: 'qos_default', type: 'select', options: classList, value: nvram.qos_default },
 			{ title: 'Qdisc Scheduler', name: 'qos_pfifo', type: 'select', options: [['0','sfq'],['1','pfifo'],['2','codel'],['3','fq_codel']], value: nvram.qos_pfifo }
@@ -213,18 +228,26 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Settings for DSL only</div>
+<div class="section-title">Encapsulation Settings</div>
 <div class="section">
 	<script>
-		createFieldTable('', [
-			{ title: 'DSL Overhead Value - ATM Encapsulation Type', multi:[
-				{name: 'atm_overhead', type: 'select', options: [['0','None'],['32','32-PPPoE VC-Mux'],['40','40-PPPoE LLC/Snap'],
+		const overhead_options = [['0','None'],['32','32-PPPoE VC-Mux'],['40','40-PPPoE LLC/Snap'],['48','48-PPPoE LLC/Snap + VLAN'],
 										['10','10-PPPoA VC-Mux'],['14','14-PPPoA LLC/Snap'],
 										['8','8-RFC2684/RFC1483 Routed VC-Mux'],['16','16-RFC2684/RFC1483 Routed LLC/Snap'],
 										['24','24-RFC2684/RFC1483 Bridged VC-Mux'],
-										['32','32-RFC2684/RFC1483 Bridged LLC/Snap']], value:nvram.atm_overhead }
-				] }
-		]);
+										['32','32-RFC2684/RFC1483 Bridged LLC/Snap']];
+
+		const encap_fields = [];
+		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+			var u = (uidx > 1) ? uidx : '';
+			encap_fields.push({
+				title: 'Overhead Value - WAN'+u, name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options,
+				value: nvram["wan"+u+"_qos_overhead"]
+			});
+			encap_fields.push(null);
+		}
+		encap_fields.pop();
+		createFieldTable('', encap_fields);
 	</script>
 </div>
 
@@ -238,18 +261,16 @@ function init() {
 
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx > 1) ? uidx : '';
-			f.push({ title: 'WAN '+uidx+'<br>Max Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_ibw'] });
-		}
-		f.push(null);
+			f.push({ title: 'WAN '+uidx+'<br>Inbound Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_ibw'] });
 
-		f.push({
-			title: '', multi: [
-				{ title: 'Rate' },
-				{ title: 'Limit' } ]
-		});
+			f.push(null);
+			f.push({
+				title: '', multi: [
+					{ name: 'wan' + u + '_irate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']] },
+					{ name: 'wan' + u + '_ilimit_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Limit %']] }
+				]
+			});
 
-		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-			var u = (uidx > 1) ? uidx : '';
 			for (i = 0; i < 10; ++i) {
 				splitRate = allRates[i].split('-');
 				incoming_rate = splitRate[0] || 1;
@@ -261,7 +282,13 @@ function init() {
 						{ type: 'custom', custom: ' &nbsp; <span id="_wan' + u + '_ikbps_' + i + '"><\/span>' } ]
 				});
 			}
+
+			if (uidx < nvram.mwan_num) {
+				f.push(null);
+				f.push(null);
+			}
 		}
+
 		createFieldTable('', f);
 	</script>
 </div>
@@ -273,17 +300,20 @@ function init() {
 	<script>
 		cc = nvram.qos_orates.split(/[,-]/);
 		f = [];
-
-		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-			var u = (uidx >1) ? uidx : '';
-			f.push({ title: 'WAN '+uidx+'<br>Max Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_obw'] });
-		}
-
-		f.push(null);
 		j = 0;
 
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-			var u = (uidx > 1) ? uidx : '';
+			var u = (uidx >1) ? uidx : '';
+			f.push({ title: 'WAN '+uidx+'<br>Outbound Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_obw'] });
+
+			f.push(null);
+			f.push({
+				title: '', multi: [
+					{ name: 'wan' + u + '_orate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']] },
+					{ name: 'wan' + u + '_olimit_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Limit %']] }
+				]
+			});
+
 			for (i = 0; i < 10; ++i) {
 				x = cc[j++] || 1;
 				y = cc[j++] || 1;
@@ -294,7 +324,13 @@ function init() {
 						{ type: 'custom', custom: ' &nbsp; <span id="_wan' + u + '_okbps_' + i + '"><\/span>' } ]
 				});
 			}
+
+			if (uidx < nvram.mwan_num) {
+				f.push(null);
+				f.push(null);
+			}
 		}
+
 		createFieldTable('', f);
 	</script>
 </div>

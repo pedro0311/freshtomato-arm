@@ -23,12 +23,14 @@ NV() {
 }
 
 find_iface() {
+	# These IDs were intentionally picked to avoid overwriting
+	# marks set by QoS. See qos.c
 	if [ "$SERVICE" == "client1" ]; then
-		ID="311"
+		ID="2304" # 0x900
 	elif [ "$SERVICE" == "client2" ]; then
-		ID="312"
+		ID="2560" # 0xA00
 	elif [ "$SERVICE" == "client3" ]; then
-		ID="313"
+		ID="2816" # 0xB00
 	else
 		$LOGS "Interface not found!"
 		exit 0
@@ -49,7 +51,7 @@ cleanupRouting() {
 	ip route flush cache
 
 	[ "$(ip rule | grep "lookup $ID" | wc -l)" -gt 0 ] && {
-		ip rule del fwmark $ID table $ID
+		ip rule del fwmark $ID/0xf00 table $ID
 	}
 
 	deleteRules $FIREWALL_ROUTING
@@ -89,14 +91,14 @@ startRouting() {
 	} || {
 		ip route add table $ID default dev $IFACE
 	}
-	ip rule add fwmark $ID table $ID priority 90
+	ip rule add fwmark $ID/0xf00 table $ID priority 90
 
 	initTable
 
 	ipset create vpnrouting$ID hash:ip
 
 	echo "#!/bin/sh" > $FIREWALL_ROUTING
-	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 
 	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
 	for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do
@@ -109,11 +111,11 @@ startRouting() {
 			case "$VAL2" in
 				1)	# from source
 					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 				;;
 				2)	# to destination
 					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 				;;
 				3)	# to domain
 					$LOGS "Type: $VAL2 - add $VAL3"

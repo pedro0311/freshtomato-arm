@@ -1404,23 +1404,27 @@ static const nvset_t nvset_list[] = {
 	{ "qos_icmp",			V_01				},
 	{ "qos_udp",			V_01				},
 	{ "qos_reset",			V_01				},
+	{ "qos_classify",		V_01				},
 	{ "qos_pfifo",			V_NUM				},	// !!TB
 	{ "wan_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan2_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan2_qos_overhead",		V_RANGE(-127, 128)		},
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan3_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan4_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
 #endif
 	{ "qos_orules",			V_LENGTH(0, 4096)		},
 	{ "qos_default",		V_RANGE(0, 9)			},
 	{ "qos_irates",			V_LENGTH(0, 128)		},
 	{ "qos_orates",			V_LENGTH(0, 128)		},
 	{ "qos_classnames",		V_LENGTH(10, 128)		},	// !!TOASTMAN
-	{ "atm_overhead",		V_RANGE(-127, 128)		},
 	{ "ne_vegas",			V_01				},
 	{ "ne_valpha",			V_NUM				},
 	{ "ne_vbeta",			V_NUM				},

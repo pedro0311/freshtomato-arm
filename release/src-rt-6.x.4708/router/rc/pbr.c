@@ -25,6 +25,8 @@ void ipt_routerpolicy(void)
 	char prefix[] = "wanXX";
 
 	/*
+	Firewall marks and mask were intentionally picked to avoid overwriting marks set by QoS. See qos.c
+
 	*mangle
 	:PREROUTING ACCEPT [78857:34564987]
 	:OUTPUT ACCEPT [8853:1406808]
@@ -42,9 +44,9 @@ void ipt_routerpolicy(void)
 	-A POSTROUTING -o ppp0 -j WAN_1 
 	-A POSTROUTING -o ppp1 -j WAN_2 
 	-A POSTROUTING -o ppp4 -j PPTP 
-	-A PPTP -m conntrack --ctstate NEW -j CONNMARK --set-return 0x500/0xf00 
-	-A WAN_1 -m conntrack --ctstate NEW -j CONNMARK --set-return 0x100/0xf00 
-	-A WAN_2 -m conntrack --ctstate NEW -j CONNMARK --set-return 0x200/0xf00 
+	-A PPTP -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x500/0xf00
+	-A WAN_1 -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x100/0xf00
+	-A WAN_2 -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x200/0xf00
 	-A WAN_PBR -m state --state RELATED,ESTABLISHED -j RETURN 
 	-A WAN_PBR -d 107.182.170.243 -j WAN_2 
 	-A WAN_PBR -d 38.83.103.226 -j WAN_1 
@@ -64,11 +66,14 @@ void ipt_routerpolicy(void)
 		get_wan_prefix(wan_unit, prefix);
 		if (check_wanup(prefix))
 			ipt_write(":WAN_%d - [0:0]\n"
-			          "-A WAN_%d -m conntrack --ctstate NEW -j CONNMARK --set-return 0x%d00/0xf00\n"
+			          "-A WAN_%d -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x%d00/0xf00\n"
+			          /* Copy connection mark to packet to allow ip rule fwmark to work */
+			          "-A WAN_%d -m conntrack --ctstate NEW -j CONNMARK --restore-mark --mask 0xf00\n"
 			          "-A PREROUTING -i %s -j WAN_%d\n"
 			          "-A POSTROUTING -o %s -j WAN_%d\n",
 			          wan_unit,
 			          wan_unit, wan_unit,
+			          wan_unit,
 			          get_wanface(prefix), wan_unit,
 			          get_wanface(prefix), wan_unit);
 	}
@@ -76,8 +81,8 @@ void ipt_routerpolicy(void)
 	ipt_write(":WAN_PBR - [0:0]\n"
 	          "-A WAN_PBR -m state --state RELATED,ESTABLISHED -j RETURN\n"
 	          "-A PREROUTING -i br+ -j WAN_PBR\n"
-	          "-A PREROUTING -i br+ -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark\n"
-	          "-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark\n");
+	          "-A PREROUTING -i br+ -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark --mask 0xf00\n"
+	          "-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark --mask 0xf00\n");
 
 	nv = nvp = strdup(nvram_safe_get("pbr_rules"));
 

@@ -410,7 +410,8 @@ static const struct nla_policy flow_policy[TCA_FLOW_MAX + 1] = {
 	[TCA_FLOW_PERTURB]	= { .type = NLA_U32 },
 };
 
-static int flow_change(struct tcf_proto *tp, unsigned long base,
+static int flow_change(struct net *net, struct sk_buff *in_skb,
+		       struct tcf_proto *tp, unsigned long base,
 		       u32 handle, struct nlattr **tca,
 		       unsigned long *arg)
 {
@@ -451,7 +452,7 @@ static int flow_change(struct tcf_proto *tp, unsigned long base,
 			return -EOPNOTSUPP;
 	}
 
-	err = tcf_exts_validate(tp, tb, tca[TCA_RATE], &e, &flow_ext_map);
+	err = tcf_exts_validate(net, tp, tb, tca[TCA_RATE], &e, &flow_ext_map);
 	if (err < 0)
 		return err;
 

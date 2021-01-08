@@ -454,7 +454,9 @@ void start_ovpn_client(int unit)
 	fprintf(fp, "keepalive 15 60\n"
 	            "verb 3\n"
 	            "status-version 2\n"
-	            "status status 10\n\n" /* Update status file every 10 sec */
+	            "status status 10\n" /* Update status file every 10 sec */
+	            "pull-filter ignore \"ifconfig-ipv6\"\n" /* IPv6 currently not supported */
+	            "pull-filter ignore \"route-ipv6\"\n\n"
 	            "# Custom Configuration\n"
 	            "%s",
 	            getNVRAMVar("vpn_client%d_custom", unit));
@@ -690,7 +692,7 @@ void start_ovpn_server(int unit)
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	int nvi, pid, taskset_ret = 0;
+	int nvi, pid, mwan_num, taskset_ret = 0;
 	long int nvl;
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	FILE *ccd;
@@ -829,7 +831,16 @@ void start_ovpn_server(int unit)
 	}
 
 	/* Proto */
-	fprintf(fp, "proto %s\n", getNVRAMVar("vpn_server%d_proto", unit)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
+	mwan_num = nvram_get_int("mwan_num"); /* check active WANs num */
+	if (mwan_num < 1)
+		mwan_num = 1;
+
+	memset(buffer, 0, BUF_SIZE);
+	sprintf(buffer, "vpn_server%d_proto", unit);
+	fprintf(fp, "proto %s\n", nvram_safe_get(buffer)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
+
+	if (nvram_contains_word(buffer, "udp") && mwan_num > 1) /* udp/udp4/udp6 - only if multiwan */
+		fprintf(fp, "multihome\n");
 
 	/* Cipher */
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_ncp_ciphers", unit), sizeof(buffer));
