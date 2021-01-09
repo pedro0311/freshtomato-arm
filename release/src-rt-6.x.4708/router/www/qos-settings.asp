@@ -218,7 +218,7 @@ function init() {
 			] },
 			{ title: 'Prioritize ICMP', name: 'f_qos_icmp', type: 'checkbox', value: nvram.qos_icmp == '1' },
 			{ title: 'No Ingress QoS for UDP', name: 'f_qos_udp', type: 'checkbox', value: nvram.qos_udp == '1' },
-			{ title: 'Classify traffic', name: 'f_qos_classify', type: 'checkbox', value: nvram.qos_classify == '1', suffix: '<small>disable and choose fq_codel scheduler for SQM<\/small>' },
+			{ title: 'Classify traffic', name: 'f_qos_classify', type: 'checkbox', value: nvram.qos_classify == '1', suffix: '&nbsp; <small>disable and choose fq_codel scheduler for SQM<\/small>' },
 			{ title: 'Reset class when changing settings', name: 'f_qos_reset', type: 'checkbox', value: nvram.qos_reset == '1' },
 			{ title: 'Default class', name: 'qos_default', type: 'select', options: classList, value: nvram.qos_default },
 			{ title: 'Qdisc Scheduler', name: 'qos_pfifo', type: 'select', options: [['0','sfq'],['1','pfifo'],['2','codel'],['3','fq_codel']], value: nvram.qos_pfifo }
