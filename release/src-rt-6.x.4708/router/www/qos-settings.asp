@@ -101,11 +101,25 @@ function verifyFields(focused, quiet) {
 			return 0;
 	}
 
+	if (typeof(qos_def) == 'undefined')
+		qos_def = E('_qos_default').value;
+	if (typeof(qos_pfi) == 'undefined')
+		qos_pfi = E('_qos_pfifo').value;
+
 	a = !classifyField.checked;
 	if (a) {
+		E('_qos_default').value = 0;
 		E('_qos_default').disabled = a;
 		E('_qos_pfifo').value = 3; /* set to fq_codel needed for SQM */
 		E('_qos_pfifo').disabled = a;
+	}
+	else if (focused && focused.id == '_f_qos_classify') {
+		E('_qos_default').value = qos_def;
+		E('_qos_pfifo').value = qos_pfi;
+	}
+	else if (focused && focused.id != '_f_qos_classify') {
+		qos_def = E('_qos_default').value;
+		qos_pfi = E('_qos_pfifo').value;
 	}
 
 	return 1;
