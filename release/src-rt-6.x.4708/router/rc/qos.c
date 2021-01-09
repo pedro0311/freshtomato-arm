@@ -149,11 +149,11 @@ void ipt_qos(void)
 	            "-A QOSO -m connmark --mark 0/0xff000 -m connmark ! --mark 0/0xf -j RETURN\n");
 
 #ifdef TCONFIG_BCMARM
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_orules"));
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rules);
 	else
 #endif
-		g = buf = strdup(disabled_classification_rules);
+		g = buf = strdup(nvram_safe_get("qos_orules"));
 
 	while (g) {
 
@@ -425,11 +425,11 @@ void ipt_qos(void)
 	nvram_set("qos_inuse", s);
 
 #ifdef TCONFIG_BCMARM
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_irates"));
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
 	else
 #endif
-		g = buf = strdup(disabled_classification_rates);
+		g = buf = strdup(nvram_safe_get("qos_irates"));
 
 	for (i = 0; i < (CLASSES_NUM * mwan_num) ; ++i) {
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
@@ -673,11 +673,11 @@ void start_qos(char *prefix)
 
 	inuse = nvram_get_int("qos_inuse");
 #ifdef TCONFIG_BCMARM
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_orates"));
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
 	else
 #endif
-		g = buf = strdup(disabled_classification_rates);
+		g = buf = strdup(nvram_safe_get("qos_orates"));
 
 	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
@@ -697,8 +697,7 @@ void start_qos(char *prefix)
 
 		x = (i + 1) * 10;
 
-		fprintf(f, "# egress %d: %u-%u%%\n"
-		           "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
+		fprintf(f, "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
 		           i, rate, ceil,
 		           x, calc(bw, rate), s, burst_leaf, (i + 1), mtu);
 
@@ -767,11 +766,11 @@ void start_qos(char *prefix)
 	 * INCOMING TRAFFIC SHAPING
 	 */
 #ifdef TCONFIG_BCMARM
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_irates"));
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
 	else
 #endif
-		g = buf = strdup(disabled_classification_rates);
+		g = buf = strdup(nvram_safe_get("qos_irates"));
 
 	first = 1;
 	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
