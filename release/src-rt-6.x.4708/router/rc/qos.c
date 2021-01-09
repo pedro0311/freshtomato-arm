@@ -148,9 +148,11 @@ void ipt_qos(void)
 	ip46t_write(":QOSO - [0:0]\n"
 	            "-A QOSO -m connmark --mark 0/0xff000 -m connmark ! --mark 0/0xf -j RETURN\n");
 
+#ifdef TCONFIG_BCMARM
 	if (nvram_get_int("qos_classify"))
 		g = buf = strdup(nvram_safe_get("qos_orules"));
 	else
+#endif
 		g = buf = strdup(disabled_classification_rules);
 
 	while (g) {
@@ -422,9 +424,11 @@ void ipt_qos(void)
 	sprintf(s, "%d", inuse);
 	nvram_set("qos_inuse", s);
 
+#ifdef TCONFIG_BCMARM
 	if (nvram_get_int("qos_classify"))
 		g = buf = strdup(nvram_safe_get("qos_irates"));
 	else
+#endif
 		g = buf = strdup(disabled_classification_rates);
 
 	for (i = 0; i < (CLASSES_NUM * mwan_num) ; ++i) {
@@ -668,9 +672,11 @@ void start_qos(char *prefix)
 	fprintf(f, "\n");
 
 	inuse = nvram_get_int("qos_inuse");
+#ifdef TCONFIG_BCMARM
 	if (nvram_get_int("qos_classify"))
 		g = buf = strdup(nvram_safe_get("qos_orates"));
 	else
+#endif
 		g = buf = strdup(disabled_classification_rates);
 
 	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
@@ -760,9 +766,11 @@ void start_qos(char *prefix)
 	/*
 	 * INCOMING TRAFFIC SHAPING
 	 */
+#ifdef TCONFIG_BCMARM
 	if (nvram_get_int("qos_classify"))
 		g = buf = strdup(nvram_safe_get("qos_irates"));
 	else
+#endif
 		g = buf = strdup(disabled_classification_rates);
 
 	first = 1;
