@@ -698,7 +698,6 @@ void start_qos(char *prefix)
 		x = (i + 1) * 10;
 
 		fprintf(f, "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
-		           i, rate, ceil,
 		           x, calc(bw, rate), s, burst_leaf, (i + 1), mtu);
 
 		if (overhead > 0)
