@@ -279,7 +279,7 @@ void ipt_bwlimit(int chain)
 	free(buf);
 }
 
-void bwlimit_start(void)
+void start_bwlimit(void)
 {
 	FILE *tc;
 	char *buf;
@@ -556,7 +556,7 @@ void bwlimit_start(void)
 	eval((char *)bwlimitfn, "start");
 }
 
-void bwlimit_stop(void)
+void stop_bwlimit(void)
 {
 	FILE *f;
 	char *s = "/tmp/bwlimit_stop.sh";
