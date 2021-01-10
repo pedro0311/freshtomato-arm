@@ -859,6 +859,7 @@ void start_qos(char *prefix)
 	/* write commands which adds rule to forward traffic to IFB device */
 	fprintf(f, "\n\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"
 	           "\tip link set $QOS_DEV up\n"
+	           "\tlogger -t qos QoS is started\n"
 	           "\t;;\n"
 	           "stop)\n"
 	           "\tip link set $QOS_DEV down\n"
@@ -872,9 +873,9 @@ void start_qos(char *prefix)
 #endif
 #endif /* TCONFIG_BCMARM */
 
-	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n");
-
-	fprintf(f, "\t;;\n"
+	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
+	           "\tlogger -t qos QoS is stopped\n"
+	           "\t;;\n"
 	           "*)\n"
 	           "\techo \"...\"\n"
 	           "\techo \"... OUTGOING QDISCS AND CLASSES FOR $WAN_DEV\"\n"

@@ -547,6 +547,8 @@ void bwlimit_start(void)
 		            prio);
 	}
 
+	fprintf(tc, "\tlogger -t bwlimit BW Limiter is started\n");
+
 	fclose(tc);
 
 	chmod(bwlimitfn, 0700);
@@ -572,7 +574,7 @@ void bwlimit_stop(void)
 	           "tc qdisc del dev br1 root 2>/dev/null\n"
 	           "tc qdisc del dev br2 root 2>/dev/null\n"
 	           "tc qdisc del dev br3 root 2>/dev/null\n"
-	           "\n",
+	           "\tlogger -t bwlimit BW Limiter is stopped\n",
 	           nvram_safe_get("wan_iface"));
 
 	fclose(f);
