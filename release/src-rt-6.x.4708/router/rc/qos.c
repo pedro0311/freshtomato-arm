@@ -858,13 +858,14 @@ void start_qos(char *prefix)
 
 	/* write commands which adds rule to forward traffic to IFB device */
 	fprintf(f, "\n\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"
-	           "\tip link set $QOS_DEV up\n"
-	           "\tlogger -t qos QoS is started\n"
+	           "\tip link set $QOS_DEV up\n\n"
+	           "\tlogger -t qos \"QoS (%s) is started\"\n"
 	           "\t;;\n"
 	           "stop)\n"
 	           "\tip link set $QOS_DEV down\n"
 	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n");
+	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n",
+	           prefix);
 
 #ifdef TCONFIG_BCMARM
 	fprintf(f, "\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV 2>/dev/null\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
@@ -873,8 +874,8 @@ void start_qos(char *prefix)
 #endif
 #endif /* TCONFIG_BCMARM */
 
-	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
-	           "\tlogger -t qos QoS is stopped\n"
+	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n\n"
+	           "\tlogger -t qos \"QoS (%s) is stopped\"\n"
 	           "\t;;\n"
 	           "*)\n"
 	           "\techo \"...\"\n"
@@ -891,7 +892,8 @@ void start_qos(char *prefix)
 	           "\techo\n"
 	           "\ttc -s -d class ls dev $QOS_DEV\n"
 	           "\techo\n"
-	           "esac\n");
+	           "esac\n",
+	           prefix);
 
 	fclose(f);
 
@@ -902,7 +904,14 @@ void start_qos(char *prefix)
 
 void stop_qos(char *prefix)
 {
+	FILE *f;
+
 	prep_qosstr(prefix);
+
+	if ((f = fopen(qosfn, "r")) == NULL)
+		return;
+
+	fclose(f);
 
 	eval(qosfn, "stop");
 }
