@@ -7,3 +7,7 @@ isup.vpnserver2 = parseInt('<% psup("vpnserver2"); %>');
 /* PPTPD-BEGIN */
 isup.pptpd = parseInt('<% psup("pptpd"); %>');
 /* PPTPD-END */
+
+/* it should be done in a different way, but for now it's ok */
+isup.qos = <% nv("qos_enable"); %>;
+isup.bwl = <% nv("bwl_enable"); %>;

@@ -18,9 +18,28 @@
 
 <script>
 
-//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num,bwl_enable"); %>
+//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num"); %>
+
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
 
 var cprefix = 'qos_settings';
+
+var up = new TomatoRefresh('isup.jsx', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show_qosnotice();
+}
+
 var classNames = nvram.qos_classnames.split(' ');
 
 pctListin = [[0, 'No Limit']];
@@ -30,6 +49,13 @@ for (i = 1; i <= 100; ++i)
 pctListout = [[0, 'No Limit']];
 for (i = 1; i <= 100; ++i)
 	pctListout.push([i, i+'%']);
+
+function show_qosnotice() {
+	if (E('_f_qos_enable').checked && isup.bwl == 1)
+		E('qosnotice').style.display = 'block';
+	else
+		E('qosnotice').style.display = 'none';
+}
 
 function scale(bandwidth, rate, ceil) {
 	if (bandwidth <= 0)
@@ -165,6 +191,9 @@ function save() {
 
 	fom.ne_vegas.value = E('_f_ne_vegas').checked ? 1 : 0;
 
+	if (isup.qos == 1 && fom.qos_enable.value != 1 && isup.bwl == 1) /* also restart BWL */
+		fom._service.value += ',bwlimit-restart';
+
 	form.submit(fom, 1);
 }
 
@@ -173,6 +202,8 @@ function init() {
 
 	if (((c = cookie.get(cprefix+'_classnames_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "classnames");
+
+	up.initPage(250, 5);
 }
 </script>
 </head>
@@ -211,12 +242,8 @@ function init() {
 
 <div class="section-title">Basic Settings</div>
 <div class="section">
+	<div class="fields" id="qosnotice" style="display:none"><div class="about"><b>Upload Limit rules for host IP addresses will not be applied, and Outbound QoS rules will govern upload rates.</b></div></div>
 	<script>
-		if ((nvram.qos_enable != '1') && (nvram.bwl_enable == '1'))
-			W('<div class="fields"><div class="about"><b>QoS is disabled. If QoS was recently disabled, Bandwidth Limiter needs to be restarted by clicking on "Save" button to apply Upload Limit rules.<\/b><\/div><\/div>');
-		if (nvram.qos_enable == '1')
-			W('<div class="fields"><div class="about"><b>QoS is enabled. Upload Limit rules for host IP addresses will not be applied, and Outbound QoS rules will govern upload rates.<\/b><\/div><\/div>');
-
 		classList = [];
 		for (i = 0; i < 10; ++i)
 			classList.push([i, classNames[i]]);
@@ -279,7 +306,7 @@ function init() {
 			f.push(null);
 			f.push({
 				title: '', multi: [
-					{ name: 'wan'+u+'_f_iheaderrate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']] },
+					{ name: 'wan'+u+'_f_iheaderrate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']], suffix: ' ' },
 					{ name: 'wan'+u+'_f_iheaderlimit_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Limit %']] }
 				]
 			});
@@ -322,7 +349,7 @@ function init() {
 			f.push(null);
 			f.push({
 				title: '', multi: [
-					{ name: 'wan'+u+'_f_oheaderrate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']] },
+					{ name: 'wan'+u+'_f_oheaderrate_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Rate %']], suffix: ' ' },
 					{ name: 'wan'+u+'_f_oheaderlimit_hi', type: 'select', attrib: 'disabled="disabled"', options: [["", 'Limit %']] }
 				]
 			});
@@ -391,6 +418,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>verifyFields(null, 1);</script>
 </body>
 </html>
