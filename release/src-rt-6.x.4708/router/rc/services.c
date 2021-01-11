@@ -3208,18 +3208,20 @@ TOP:
 	}
 
 	if (strcmp(service, "bwlimit") == 0) {
-		if (act_stop)
-			bwlimit_stop();
+		if (act_stop) {
+			stop_bwlimit();
 #ifdef TCONFIG_NOCAT
-		stop_splashd();
+			stop_splashd();
 #endif
+		}
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start)
-			bwlimit_start();
+		if (act_start) {
+			start_bwlimit();
 #ifdef TCONFIG_NOCAT
-		start_splashd();
+			start_splashd();
 #endif
+		}
 		goto CLEAR;
 	}
 

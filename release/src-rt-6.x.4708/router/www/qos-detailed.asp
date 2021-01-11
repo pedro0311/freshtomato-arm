@@ -367,15 +367,6 @@ function addToResolveQueue(ip) {
 }
 
 function init() {
-	if (nvram.qos_enable != '1') {
-		E('stitle').style.display = 'none';
-		E('filters-head').style.display = 'none';
-		E('grid-head').style.display = 'none';
-		E('stitleoff').style.display = 'block';
-		E('note-disabled').style.display = 'block';
-		return;
-	}
-
 	var c;
 
 	if ((c = cookie.get(cprefix + '_filterip')) != null) {
@@ -470,7 +461,6 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<div class="section-title" id="stitleoff" style="display:none">View Details</div>
 <div class="section-title" id="stitle" onclick='document.location="qos-graphs.asp"' style="cursor:pointer">View Details: <span id="qos_numtotalconn"></span></div>
 <div class="section" id="grid-head">
 	<div class="tomato-grid" id="qos-det-grid"></div>
@@ -495,10 +485,6 @@ function verifyFields(focused, quiet) {
 		createFieldTable('',c);
 	</script>
 </div>
-
-<!-- / / / -->
-
-<div class="note-disabled" id="note-disabled" style="display:none"><b>QoS disabled.</b><br><br><a href="qos-settings.asp">Enable &raquo;</a></div>
 
 <!-- / / / -->
 

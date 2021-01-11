@@ -148,10 +148,12 @@ void ipt_qos(void)
 	ip46t_write(":QOSO - [0:0]\n"
 	            "-A QOSO -m connmark --mark 0/0xff000 -m connmark ! --mark 0/0xf -j RETURN\n");
 
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_orules"));
-	else
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
 		g = buf = strdup(disabled_classification_rules);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_orules"));
 
 	while (g) {
 
@@ -422,10 +424,12 @@ void ipt_qos(void)
 	sprintf(s, "%d", inuse);
 	nvram_set("qos_inuse", s);
 
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_irates"));
-	else
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
 		g = buf = strdup(disabled_classification_rates);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_irates"));
 
 	for (i = 0; i < (CLASSES_NUM * mwan_num) ; ++i) {
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
@@ -668,10 +672,12 @@ void start_qos(char *prefix)
 	fprintf(f, "\n");
 
 	inuse = nvram_get_int("qos_inuse");
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_orates"));
-	else
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
 		g = buf = strdup(disabled_classification_rates);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_orates"));
 
 	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
@@ -691,9 +697,7 @@ void start_qos(char *prefix)
 
 		x = (i + 1) * 10;
 
-		fprintf(f, "# egress %d: %u-%u%%\n"
-		           "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
-		           i, rate, ceil,
+		fprintf(f, "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
 		           x, calc(bw, rate), s, burst_leaf, (i + 1), mtu);
 
 		if (overhead > 0)
@@ -760,10 +764,12 @@ void start_qos(char *prefix)
 	/*
 	 * INCOMING TRAFFIC SHAPING
 	 */
-	if (nvram_get_int("qos_classify"))
-		g = buf = strdup(nvram_safe_get("qos_irates"));
-	else
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
 		g = buf = strdup(disabled_classification_rates);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_irates"));
 
 	first = 1;
 	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
@@ -852,12 +858,14 @@ void start_qos(char *prefix)
 
 	/* write commands which adds rule to forward traffic to IFB device */
 	fprintf(f, "\n\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"
-	           "\tip link set $QOS_DEV up\n"
+	           "\tip link set $QOS_DEV up\n\n"
+	           "\tlogger -t qos \"QoS (%s) is started\"\n"
 	           "\t;;\n"
 	           "stop)\n"
 	           "\tip link set $QOS_DEV down\n"
 	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n");
+	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n",
+	           prefix);
 
 #ifdef TCONFIG_BCMARM
 	fprintf(f, "\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV 2>/dev/null\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
@@ -866,9 +874,9 @@ void start_qos(char *prefix)
 #endif
 #endif /* TCONFIG_BCMARM */
 
-	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n");
-
-	fprintf(f, "\t;;\n"
+	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n\n"
+	           "\tlogger -t qos \"QoS (%s) is stopped\"\n"
+	           "\t;;\n"
 	           "*)\n"
 	           "\techo \"...\"\n"
 	           "\techo \"... OUTGOING QDISCS AND CLASSES FOR $WAN_DEV\"\n"
@@ -884,7 +892,8 @@ void start_qos(char *prefix)
 	           "\techo\n"
 	           "\ttc -s -d class ls dev $QOS_DEV\n"
 	           "\techo\n"
-	           "esac\n");
+	           "esac\n",
+	           prefix);
 
 	fclose(f);
 
@@ -895,7 +904,14 @@ void start_qos(char *prefix)
 
 void stop_qos(char *prefix)
 {
+	FILE *f;
+
 	prep_qosstr(prefix);
+
+	if ((f = fopen(qosfn, "r")) == NULL)
+		return;
+
+	fclose(f);
 
 	eval(qosfn, "stop");
 }
