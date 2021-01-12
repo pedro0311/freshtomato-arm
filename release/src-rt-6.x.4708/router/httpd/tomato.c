@@ -1397,6 +1397,7 @@ static const nvset_t nvset_list[] = {
 
 //	qos
 	{ "qos_enable",			V_01				},
+	{ "qos_mode",			V_NUM				},
 	{ "qos_ack",			V_01				},
 	{ "qos_syn",			V_01				},
 	{ "qos_fin",			V_01				},
@@ -1406,18 +1407,24 @@ static const nvset_t nvset_list[] = {
 	{ "qos_reset",			V_01				},
 	{ "qos_classify",		V_01				},
 	{ "qos_pfifo",			V_NUM				},	// !!TB
+	{ "qos_cake_prio_mode",		V_NUM				},
+	{ "qos_cake_wash",		V_01				},
 	{ "wan_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan_qos_encap",		V_NUM				},
 	{ "wan_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan2_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan2_qos_encap",		V_NUM				},
 	{ "wan2_qos_overhead",		V_RANGE(-127, 128)		},
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan3_qos_encap",		V_NUM				},
 	{ "wan3_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan4_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)		},
+	{ "wan4_qos_encap",		V_NUM				},
 	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
 #endif
 	{ "qos_orules",			V_LENGTH(0, 4096)		},

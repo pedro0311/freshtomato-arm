@@ -787,6 +787,7 @@ struct nvram_tuple router_defaults[] = {
 
 /* qos */
 	{ "qos_enable",			"0"				, 0 },
+	{ "qos_mode",			"1"				, 0 }, /* 1 = HTB + Leaf Qdisc, 2 = CAKE SQM */
 	{ "qos_ack",			"0"				, 0 },
 	{ "qos_syn",			"1"				, 0 },
 	{ "qos_fin",			"1"				, 0 },
@@ -795,19 +796,25 @@ struct nvram_tuple router_defaults[] = {
 	{ "qos_icmp",			"1"				, 0 },
 	{ "qos_classify",		"1"				, 0 },
 	{ "qos_pfifo",			"3"				, 0 },	// Set FQ_Codel Default Qdisc Scheduler
+	{ "qos_cake_prio_mode",		"0"				, 0 },
+	{ "qos_cake_wash",		"0"				, 0 },
 	{ "qos_reset",			"1"				, 0 },
 	{ "wan_qos_obw",		"700"				, 0 },
 	{ "wan_qos_ibw",		"16000"				, 0 },
+	{ "wan_qos_encap",		"0"				, 0 },
 	{ "wan_qos_overhead",		"0"				, 0 },
 	{ "wan2_qos_obw",		"700"				, 0 },
 	{ "wan2_qos_ibw",		"16000"				, 0 },
+	{ "wan2_qos_encap",		"0"				, 0 },
 	{ "wan2_qos_overhead",		"0"				, 0 },
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		"700"				, 0 },
 	{ "wan3_qos_ibw",		"16000"				, 0 },
+	{ "wan3_qos_encap",		"0"				, 0 },
 	{ "wan3_qos_overhead",		"0"				, 0 },
 	{ "wan4_qos_obw",		"700"				, 0 },
 	{ "wan4_qos_ibw",		"16000"				, 0 },
+	{ "wan4_qos_encap",		"0"				, 0 },
 	{ "wan4_qos_overhead",		"0"				, 0 },
 #endif
 #ifdef TCONFIG_NVRAM_32K
