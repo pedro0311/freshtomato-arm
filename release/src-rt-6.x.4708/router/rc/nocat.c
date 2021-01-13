@@ -217,8 +217,6 @@ void start_nocat(void)
 void stop_nocat(void)
 {
 	if (pidof("splashd") > 0) {
-		syslog(LOG_INFO, "splashd: Captive Portal Splash daemon successfully stopped");
-
 		killall_tk_period_wait("splashd", 50);
 
 		eval("/usr/libexec/nocat/uninitialize.fw");
@@ -226,14 +224,8 @@ void stop_nocat(void)
 		system("rm "NOCAT_LEASES);
 		system("rm "NOCAT_START_SCRIPT);
 		system("rm "NOCAT_LOGFILE);
-	}
-}
+		start_wan(BOOT);
 
-void reset_nocat(void)
-{
-	if (pidof("splashd") > 0) {
-		syslog(LOG_INFO, "splashd: Reseting splashd firewall rules");
-
-		killall("splashd", SIGUSR1);
+		syslog(LOG_INFO, "splashd: Captive Portal Splash daemon successfully stopped");
 	}
 }

@@ -573,7 +573,6 @@ extern void stop_mmc(void);
 #ifdef TCONFIG_NOCAT
 extern void start_nocat();
 extern void stop_nocat();
-extern void reset_nocat();
 #endif
 
 /* nginx.c */

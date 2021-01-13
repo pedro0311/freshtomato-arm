@@ -81,9 +81,6 @@ static pid_t pid_dnsmasq = -1;
 static pid_t pid_crond = -1;
 static pid_t pid_hotplug2 = -1;
 static pid_t pid_igmp = -1;
-#ifdef TCONFIG_NOCAT
-static pid_t pid_splashd = -1;
-#endif
 #ifdef TCONFIG_NGINX
 static pid_t pid_nginx = -1;
 #endif
@@ -1870,23 +1867,6 @@ void stop_udpxy(void)
 	killall_tk_period_wait("udpxy", 50);
 }
 
-#ifdef TCONFIG_NOCAT
-void start_splashd(void)
-{
-	pid_splashd = -1;
-	start_nocat();
-	if (!nvram_contains_word("debug_norestart", "splashd"))
-		pid_splashd = -2;
-}
-
-void stop_splashd(void)
-{
-	pid_splashd = -1;
-	stop_nocat();
-	start_wan(BOOT);
-}
-#endif /* TCONFIG_NOCAT */
-
 #ifdef TCONFIG_NGINX
 void start_enginex(void)
 {
@@ -2985,7 +2965,7 @@ void start_services(void)
 #endif
 
 #ifdef TCONFIG_NOCAT
-	start_splashd();
+	start_nocat();
 #endif
 
 #ifdef TCONFIG_NFS
@@ -3027,7 +3007,7 @@ void stop_services(void)
 #endif
 
 #ifdef TCONFIG_NOCAT
-	stop_splashd();
+	stop_nocat();
 #endif
 
 #ifdef TCONFIG_SNMP
@@ -3211,7 +3191,7 @@ TOP:
 		if (act_stop) {
 			stop_bwlimit();
 #ifdef TCONFIG_NOCAT
-			stop_splashd();
+			stop_nocat();
 #endif
 		}
 		stop_firewall();
@@ -3219,7 +3199,7 @@ TOP:
 		if (act_start) {
 			start_bwlimit();
 #ifdef TCONFIG_NOCAT
-			start_splashd();
+			start_nocat();
 #endif
 		}
 		goto CLEAR;
@@ -3737,8 +3717,8 @@ TOP:
 
 #ifdef TCONFIG_NOCAT
 	if (strcmp(service, "splashd") == 0) {
-		if (act_stop) stop_splashd();
-		if (act_start) start_splashd();
+		if (act_stop) stop_nocat();
+		if (act_start) start_nocat();
 		goto CLEAR;
 	}
 #endif
