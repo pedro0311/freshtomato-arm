@@ -1,0 +1,3 @@
+
+backport-y := main.o compat/compat-2.6.37.o compat/compat-3.3.o compat/backport-3.10.o compat/backport-3.13.o
+wireguard-y += $(addprefix backport/,$(backport-y))

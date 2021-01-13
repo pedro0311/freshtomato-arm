@@ -1008,6 +1008,9 @@ define KernelConfig
 		sed -i "s/# CONFIG_IP_ROUTE_VERBOSE=y/CONFIG_IP_ROUTE_VERBOSE is not set/g" $(1); \
 		sed -i "s/# CONFIG_VETH=y/CONFIG_VETH is not set/g" $(1); \
 	fi; \
+	if [ "$(WIREGUARD)" = "y" ]; then \
+		sed -i "s/# CONFIG_WIREGUARD is not set/CONFIG_WIREGUARD=m/g" $(1); \
+	fi; \
 	)
 endef
 
