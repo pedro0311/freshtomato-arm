@@ -119,7 +119,6 @@ function save() {
 	fom.dns_addget.value = E('_f_dns_addget').checked ? 1 : 0;
 	fom.dns_norebind.value = E('_f_dns_norebind').checked ? 1 : 0;
 	fom.dns_intcpt.value = E('_f_dns_intcpt').checked ? 1 : 0;
-	fom.dns_priv_override.value = E('_f_dns_priv_override').checked ? 1 : 0;
 	fom.dnsmasq_debug.value = E('_f_dnsmasq_debug').checked ? 1 : 0;
 /* TOR-BEGIN */
 	fom.dnsmasq_onion_support.value = E('_f_dnsmasq_onion_support').checked ? 1 : 0;
@@ -148,6 +147,7 @@ function save() {
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
 	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
+	fom.dns_priv_override.value = E('_f_dns_priv_override').checked ? 1 : 0;
 /* STUBBY-END */
 
 	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom))
@@ -208,7 +208,6 @@ function init() {
 <input type="hidden" name="dns_addget">
 <input type="hidden" name="dns_norebind">
 <input type="hidden" name="dns_intcpt">
-<input type="hidden" name="dns_priv_override">
 <!-- IPV6-BEGIN -->
 <input type="hidden" name="ipv6_radvd">
 <input type="hidden" name="ipv6_dhcpd">
@@ -229,6 +228,7 @@ function init() {
 <!-- DNSCRYPT-END -->
 <!-- STUBBY-BEGIN -->
 <input type="hidden" name="stubby_proxy">
+<input type="hidden" name="dns_priv_override">
 <!-- STUBBY-END -->
 
 <!-- / / / -->
