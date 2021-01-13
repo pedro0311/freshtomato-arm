@@ -29,4 +29,19 @@ struct ipv6_tlv_tnl_enc_lim {
 	__u8 encap_limit;	/* tunnel encapsulation limit   */
 } __packed;
 
+static inline void ip6tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	struct net_device_stats *stats = &dev->stats;
+	int pkt_len, err;
+
+	nf_reset(skb);
+	pkt_len = skb->len;
+	err = ip6_local_out(skb);
+
+	if (net_xmit_eval(err) == 0) {
+	} else {
+		stats->tx_errors++;
+		stats->tx_aborted_errors++;
+	}
+}
 #endif
