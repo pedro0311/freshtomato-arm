@@ -278,7 +278,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section"><small>The default settings are indicated with an asterisk <b style="font-size: 1.5em">*</b> symbol.</small></div>
+<div class="section"><small>The default settings are indicated with an asterisk <b style="font-size:1.5em">*</b> symbol.</small></div>
 
 <!-- / / / -->
 

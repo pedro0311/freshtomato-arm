@@ -229,7 +229,7 @@ function verifyFields(focused, quiet) {
 </head>
 
 <body onload="init()">
-<form >
+<form>
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title">FreshTomato</div>

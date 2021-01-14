@@ -201,7 +201,7 @@ function init() {
 
 <!-- / / / -->
 
-<div style="height:10px;" onclick='E("debug").style.display=""'></div>
+<div style="height:10px" onclick='E("debug").style.display=""'></div>
 <textarea id="debug" style="display:none"></textarea>
 
 <!-- / / / -->

@@ -198,6 +198,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>wg.setup();wg.populate();</script></script>
+<script>wg.setup();wg.populate();</script>
 </body>
 </html>

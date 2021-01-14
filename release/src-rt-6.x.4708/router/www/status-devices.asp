@@ -344,6 +344,5 @@ function init() {
 </td></tr>
 </table>
 <script>earlyInit();</script>
-</form>
 </body>
 </html>
