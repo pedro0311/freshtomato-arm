@@ -182,6 +182,10 @@ ifeq ($(ASUS_TRX),AC18)
 #	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
 #	cat ctools/tendahead.bin image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
 endif
+#for Belkin F9K1113v2
+ifeq ($(ASUS_TRX),BELKIN)
+	ctools/trx_asus -i image/linux-lzma.trx -r F9K1113v2,3.0.0.4,image/freshtomato-F9K1113v2-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 # for dlink
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,image/freshtomato-DIR868L-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1069,6 +1073,9 @@ ac18e:
 ac18z:
 	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y TUXERA_HFS=y DPSTA=y BSD=y
 
+f9ke:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y ASUS_TRX="BELKIN" ARMCPUSMP="up" TUXERA=y TUXERA_HFS=y DPSTA=n BSD=y
+
 dir868l:
 	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="Custom" USB="USB" \
 	    DNSSEC=y DNSCRYPT=y STUBBY=y UPS=y NO_SSH=y NANO=y OPENSSL11=y DPSTA=y BSD=n
@@ -1201,6 +1208,8 @@ help:
 	@echo "ac15e           Tenda AC15 VPN"
 	@echo "ac18e           Tenda AC18 VPN"
 	@echo "ac18z           Tenda AC18 AIO"
+	@echo "BELKIN ARM Builds"
+	@echo "f9ke            Belkin F9K1113v2 VPN"
 	@echo "DLINK ARM Builds"
 	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"

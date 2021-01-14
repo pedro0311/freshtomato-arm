@@ -480,6 +480,7 @@ static int init_vlan_ports(void)
     	case MODEL_RTAC1900P:
 	case MODEL_AC15:
 	case MODEL_AC18:
+	case MODEL_F9K1113v2:
 	case MODEL_WS880:
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
@@ -1131,6 +1132,252 @@ static int init_nvram(void)
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
+		}
+		break;
+	case MODEL_F9K1113v2:
+		mfr = "Belkin";
+		name = "F9K1113v2";
+		features = SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("devpath0", "pci/1/1/");
+			nvram_set("devpath1", "pci/2/1/");
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);			/* fix WL mac for wl0 (0:) 5G - eth1 for F9K1113v2 and/or wl0 (0:) 5G - eth1 for F9K1113v2 */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);			/* fix WL mac for wl1 (1:) 2.4G - eth2 for F9K1113v2 and/or wl1 (1:) 2,4G - eth2 for F9K1113v2 */
+			nvram_set("wl1_hwaddr", s);
+
+			/* 5G settings */
+			nvram_set("wl0_bw_cap", "7");
+			nvram_set("wl0_chanspec", "36/80");
+			nvram_set("wl0_channel", "36");
+			nvram_set("wl0_nband", "1");
+			nvram_set("wl0_nbw","80");
+			nvram_set("wl0_nbw_cap","3");
+			nvram_set("wl0_nctrlsb", "lower");
+
+			/* 2G settings */
+			nvram_set("wl1_bw_cap","3");
+			nvram_set("wl1_chanspec","6u");
+			nvram_set("wl1_channel","6");
+			nvram_set("wl1_nband", "2");
+			nvram_set("wl1_nbw","40");
+			nvram_set("wl1_nctrlsb", "upper");
+
+			/* misc wifi settings */
+			nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
+
+			/* wifi country settings */
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+
+			nvram_set("wl0_ssid", "FreshTomato50");
+			nvram_set("wl1_ssid", "FreshTomato24");
+			
+#ifdef TCONFIG_BCMBSD
+			/* band steering settings correction, because 5 GHz module is the first one */
+			nvram_set("wl1_bsd_steering_policy", "0 5 3 -52 0 110 0x22");
+			nvram_set("wl0_bsd_steering_policy", "80 5 3 -82 0 0 0x20");
+			nvram_set("wl1_bsd_sta_select_policy", "10 -52 0 110 0 1 1 0 0 0 0x122");
+			nvram_set("wl0_bsd_sta_select_policy", "10 -82 0 0 0 1 1 0 0 0 0x20");
+			nvram_set("wl1_bsd_if_select_policy", "eth1");
+			nvram_set("wl0_bsd_if_select_policy", "eth2");
+			nvram_set("wl1_bsd_if_qualify_policy", "0 0x0");
+			nvram_set("wl0_bsd_if_qualify_policy", "60 0x0");
+#endif /* TCONFIG_BCMBSD */
+
+			/* usb settings */
+			nvram_set("usb_ohci", "1");     /* USB 1.1 */
+			nvram_set("usb_usb3", "1");     /* USB 3.0 */
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* 2.4GHz module defaults */
+			nvram_set("1:devid", "0x43A9");
+			nvram_set("1:venid", "0x14E4");
+			nvram_set("1:boardflags", "0x80001200");
+			nvram_set("1:boardflags2", "0x00001800");
+			nvram_set("1:ag0", "0");
+			nvram_set("1:ag1", "0");
+			nvram_set("1:aa2g", "3");
+			nvram_set("1:antswctl2g", "0");
+			nvram_set("1:antswitch", "0");
+			nvram_set("1:bwdup2gpo", "0x0");
+			nvram_set("1:bw402gpo", "0x0");
+			nvram_set("1:cdd2gpo", "0x0");
+			nvram_set("1:cck2gpo", "0x5555");
+			nvram_set("1:elna2g", "2");
+			nvram_set("1:extpagain2g", "3");
+			nvram_set("1:ledbh0", "11");
+			nvram_set("1:ledbh1", "11");
+			nvram_set("1:ledbh2", "11");
+			nvram_set("1:ledbh3", "11");
+			nvram_set("1:leddc", "0xFFFF");
+			nvram_set("1:itt2ga0", "0x20");
+			nvram_set("1:itt2ga1", "0x20");
+			nvram_set("1:maxp2ga0", "0x68");
+			nvram_set("1:maxp2ga1", "0x68");
+			nvram_set("1:maxp2ga2", "0x68");
+			nvram_set("1:mcs2gpo0", "0x4444");
+			nvram_set("1:mcs2gpo1", "0x4444");
+			nvram_set("1:mcs2gpo2", "0x4444");
+			nvram_set("1:mcs2gpo3", "0x4444");
+			nvram_set("1:mcs2gpo4", "0x6666");
+			nvram_set("1:mcs2gpo5", "0x6666");
+			nvram_set("1:mcs2gpo6", "0x6666");
+			nvram_set("1:mcs2gpo7", "0x6666");
+			nvram_set("1:ofdm2gpo", "0x44444444");
+			nvram_set("1:pa2gw0a0", "0xfea8");
+			nvram_set("1:pa2gw1a0", "0x1aae");
+			nvram_set("1:pa2gw2a0", "0xfa3d");
+			nvram_set("1:pa2gw0a1", "0xfeb4");
+			nvram_set("1:pa2gw1a1", "0x1c0a");
+			nvram_set("1:pa2gw2a1", "0xfa18");
+			nvram_set("1:pdetrange2g", "3");
+			nvram_set("1:phycal_tempdelta", "0");
+			nvram_set("1:rxchain", "3");
+			nvram_set("1:sromrev", "8");
+			nvram_set("1:stbc2gpo", "0x0");
+			nvram_set("1:tempoffset", "0");
+			nvram_set("1:tempthresh", "120");
+			nvram_set("1:temps_period", "5");
+			nvram_set("1:temps_hysteresis", "5");
+			nvram_set("1:triso2g", "3");
+			nvram_set("1:tssipos2g", "1");
+			nvram_set("1:txchain", "3");
+			nvram_set("1:xtalfreq", "20000");
+
+			/* 5GHz module defaults */
+			nvram_set("0:devid", "0x43A2");
+			nvram_set("0:venid", "0x14E4");
+			nvram_set("0:boardflags", "0x30000000");
+			nvram_set("0:boardflags2", "0x00200002");
+			nvram_set("0:boardflags3", "00");
+			nvram_set("0:aga0", "0");
+			nvram_set("0:aga1", "0");
+			nvram_set("0:aga2", "0");
+			nvram_set("0:aa2g", "7");
+			nvram_set("0:aa5g", "7");
+			nvram_set("0:antswitch", "0");
+			nvram_set("0:dot11agduplrpo", "0");
+			nvram_set("0:dot11agduphrpo", "0");
+			nvram_set("0:epagain5g", "0");
+			nvram_set("0:femctrl", "3");
+			nvram_set("0:gainctrlsph", "0");
+			nvram_set("0:ledbh0", "11");
+			nvram_set("0:ledbh1", "11");
+			nvram_set("0:ledbh2", "11");
+			nvram_set("0:ledbh3", "11");
+			nvram_set("0:ledbh10", "2");
+			nvram_set("0:leddc", "0xFFFF");
+			nvram_set("0:maxp5ga0", "64,96,96,96");
+			nvram_set("0:maxp5ga1", "64,96,96,96");
+			nvram_set("0:maxp5ga2", "64,96,96,96");
+			nvram_set("0:mcsbw805ghpo", "0xCC644320");
+			nvram_set("0:mcsbw405ghpo", "0xCC644320");
+			nvram_set("0:mcsbw805gmpo", "0xEE865420");
+			nvram_set("0:mcsbw205gmpo", "0xEE865420");
+			nvram_set("0:mcsbw205ghpo", "0xCC644320");
+			nvram_set("0:mcsbw405gmpo", "0xEE865420");
+			nvram_set("0:mcsbw805glpo", "0");
+			nvram_set("0:mcsbw405glpo", "0");
+			nvram_set("0:mcslr5gmpo", "0");
+			nvram_set("0:mcsbw1605gmpo", "0");
+			nvram_set("0:mcsbw1605glpo", "0");
+			nvram_set("0:mcsbw1605ghpo", "0");
+			nvram_set("0:mcslr5glpo", "0");
+			nvram_set("0:mcslr5ghpo", "0");
+			nvram_set("0:mcsbw205glpo", "0");
+			nvram_set("0:pa5ga0", "0xff3f,0x19ee,0xfcdc,0xff25,0x17e0,0xfcff,0xff3a,0x1928,0xfcf0,0xff2d,0x1905,0xfce7");
+			nvram_set("0:pa5ga1", "0xff30,0x18ff,0xfce7,0xff34,0x191a,0xfce9,0xff24,0x17a3,0xfd0a,0xff30,0x1913,0xfcea");
+			nvram_set("0:pa5ga2", "0xff32,0x18c1,0xfcf4,0xff36,0x18ed,0xfcf3,0xff38,0x198f,0xfce0,0xff3a,0x19b9,0xfce4");
+			nvram_set("0:papdcap5g", "0");
+			nvram_set("0:pdoffset80ma0", "0x0100");
+			nvram_set("0:pdoffset80ma1", "0x0100");
+			nvram_set("0:pdoffset80ma2", "0x0100");
+			nvram_set("0:pdoffset40ma0", "0x3222");
+			nvram_set("0:pdoffset40ma1", "0x3222");
+			nvram_set("0:pdoffset40ma2", "0x3222");
+			nvram_set("0:pdgain5g", "4");
+			nvram_set("0:phycal_tempdelta", "0");
+			nvram_set("0:rxchain", "7");
+			nvram_set("0:rxgains5ghelnagaina0", "2");
+			nvram_set("0:rxgains5ghelnagaina1", "2");
+			nvram_set("0:rxgains5ghelnagaina2", "3");
+			nvram_set("0:rxgains5gelnagaina0", "1");
+			nvram_set("0:rxgains5gelnagaina1", "1");
+			nvram_set("0:rxgains5gelnagaina2", "1");
+			nvram_set("0:rxgains5ghtrelnabypa0", "1");
+			nvram_set("0:rxgains5ghtrelnabypa1", "1");
+			nvram_set("0:rxgains5ghtrelnabypa2", "1");
+			nvram_set("0:rxgains5ghtrisoa0", "5");
+			nvram_set("0:rxgains5ghtrisoa1", "4");
+			nvram_set("0:rxgains5ghtrisoa2", "4");
+			nvram_set("0:rxgains5gmelnagaina0", "2");
+			nvram_set("0:rxgains5gmelnagaina1", "2");
+			nvram_set("0:rxgains5gmelnagaina2", "3");
+			nvram_set("0:rxgains5gmtrelnabypa0", "1");
+			nvram_set("0:rxgains5gmtrelnabypa1", "1");
+			nvram_set("0:rxgains5gmtrelnabypa2", "1");
+			nvram_set("0:rxgains5gmtrisoa0", "5");
+			nvram_set("0:rxgains5gmtrisoa1", "4");
+			nvram_set("0:rxgains5gmtrisoa2", "4");
+			nvram_set("0:rxgains5gtrisoa0", "7");
+			nvram_set("0:rxgains5gtrisoa1", "6");
+			nvram_set("0:rxgains5gtrisoa2", "5");
+			nvram_set("0:sar2g", "18");
+			nvram_set("0:sar5g", "15");
+			nvram_set("0:sb20in80and160lr5gmpo", "0");
+			nvram_set("0:sb20in80and160hr5gmpo", "0");
+			nvram_set("0:sb20in40lrpo", "0");
+			nvram_set("0:sb40and80lr5gmpo", "0");
+			nvram_set("0:sb40and80hr5gmpo", "0");
+			nvram_set("0:sb20in80and160lr5glpo", "0");
+			nvram_set("0:sb20in80and160lr5ghpo", "0");
+			nvram_set("0:sb40and80lr5glpo", "0");
+			nvram_set("0:subband5gver", "4");
+			nvram_set("0:sb40and80lr5ghpo", "0");
+			nvram_set("0:sb20in80and160hr5glpo", "0");
+			nvram_set("0:sb20in80and160hr5ghpo", "0");
+			nvram_set("0:sb20in40hrpo", "0");
+			nvram_set("0:sb40and80hr5glpo", "0");
+			nvram_set("0:sromrev", "11");
+			nvram_set("0:tssiposslope5g", "1");
+			nvram_set("0:tworangetssi5g", "0");
+			nvram_set("0:tempoffset", "0");
+			nvram_set("0:sb40and80hr5ghpo", "0");
+			nvram_set("0:rxgains5gtrelnabypa0", "1");
+			nvram_set("0:rxgains5gtrelnabypa1", "1");
+			nvram_set("0:rxgains5gtrelnabypa2", "1");
+			nvram_set("0:temps_hysteresis", "55");
+			nvram_set("0:temps_period", "5");
+			nvram_set("0:tempthresh", "120");
+			nvram_set("0:txchain", "7");
+			nvram_set("0:xtalfreq", "40000");
 		}
 		break;
 	case MODEL_R6250:

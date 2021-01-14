@@ -73,6 +73,7 @@ switch (nvram['t_model_name']) {
 	break;
 	case 'vlan-testid1':
 	case 'Tenda AC18':
+	case 'Belkin F9K1113v2':
 	case 'Asus RT-N18U':
 	case 'Asus RT-N66U C1':
 	case 'Asus RT-AC66U B1':

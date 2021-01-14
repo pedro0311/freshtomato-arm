@@ -99,10 +99,14 @@ void start_usb(void)
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
-		 (model == MODEL_WZR1750)) {
+		 (model == MODEL_WZR1750) ||
+		 (model == MODEL_F9K1113v2)) {
 		set_gpio(GPIO_09, T_HIGH);
 		if ((model == MODEL_WZR1750)) {
 			 set_gpio(GPIO_10, T_LOW); /* usb3.0 */
+		}
+		if ((model == MODEL_F9K1113v2)) {
+			set_gpio(GPIO_10, T_HIGH); /* usb3.0 */
 		}
 	}
 
@@ -430,10 +434,14 @@ void stop_usb(void)
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
 		 (model == MODEL_AC18) ||
-		 (model == MODEL_WZR1750)) {
+		 (model == MODEL_WZR1750) ||
+		 (model == MODEL_F9K1113v2)) {
 		set_gpio(GPIO_09, T_LOW);
 			if ((model == MODEL_WZR1750)) {
 				set_gpio(GPIO_10, T_HIGH); /* usb3.0 */
+			}
+			if ((model == MODEL_F9K1113v2)) {
+				set_gpio(GPIO_10, T_LOW); /* usb3.0 */
 			}
 	}
 }
@@ -939,6 +947,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_R6700v3:
 		case MODEL_R7000:
 		case MODEL_XR300:
+		case MODEL_F9K1113v2:
 			/* switch usb2 --> usb1 and usb4 --> usb3 */
 			usb2 = opendir ("/sys/bus/usb/devices/2-1:1.0");	/* Example RT-N18U: port 1 gpio 14 for USB3 */
 			usb1 = opendir ("/sys/bus/usb/devices/2-2:1.0");	/* Example RT-N18U: port 2 gpio 3 */
