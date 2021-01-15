@@ -822,6 +822,17 @@ void start_lan_wl(void)
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) { /* only set "wet_host_ipv4" (again), "wet_host_mac" already set at start_lan() */
+#if !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+								if (subunit > 0) { /* only for enabled subunits */
+									wet_host_t wh;
+
+									memset(&wh, 0, sizeof(wet_host_t));
+									wh.bssidx = subunit;
+									memcpy(&wh.buf, &ip, sizeof(ip)); /* struct for ip or mac */
+
+									wl_iovar_set(ifname, "wet_host_ipv4", &wh, sizeof(wet_host_t));
+								}
+#else
 #ifdef TCONFIG_DHDAP
 								is_dhd = !dhd_probe(ifname);
 								if(is_dhd) {
@@ -830,6 +841,7 @@ void start_lan_wl(void)
 								else
 #endif /* TCONFIG_DHDAP */
 									wl_iovar_setint(ifname, "wet_host_ipv4", ip);
+#endif /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
 							}
 						}
 
@@ -1082,6 +1094,23 @@ void start_lan(void)
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) { /* set mac and ip */
+#if !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+								if (subunit > 0) { /* only for enabled subunits */
+									wet_host_t wh;
+
+									memset(&wh, 0, sizeof(wet_host_t));
+									wh.bssidx = subunit;
+									memcpy(&wh.buf, ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN); /* struct for ip or mac */
+
+									wl_iovar_set(ifname, "wet_host_mac", &wh, ETHER_ADDR_LEN); /* set mac */
+
+									memset(&wh, 0, sizeof(wet_host_t));
+									wh.bssidx = subunit;
+									memcpy(&wh.buf, &ip, sizeof(ip)); /* struct for ip or mac */
+
+									wl_iovar_set(ifname, "wet_host_ipv4", &wh, sizeof(wet_host_t)); /* set ip */
+								}
+#else
 #ifdef TCONFIG_DHDAP
 								is_dhd = !dhd_probe(ifname);
 								if(is_dhd) {
@@ -1099,6 +1128,7 @@ void start_lan(void)
 								else
 #endif /* TCONFIG_DHDAP */
 									wl_iovar_setint(ifname, "wet_host_ipv4", ip); /* set ip */
+#endif /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
 							}
 						}
 
