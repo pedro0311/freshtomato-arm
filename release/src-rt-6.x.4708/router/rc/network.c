@@ -738,15 +738,17 @@ void stop_lan_wl(void)
 void start_lan_wl(void)
 {
 	char *lan_ifname;
-#ifdef CONFIG_BCMWL5
-	struct ifreq ifr;
-#endif
+
 	char *wl_ifnames, *ifname, *p;
 	uint32 ip;
 	int unit, subunit, sta;
 
 	char tmp[32];
 	char br;
+
+#ifdef TCONFIG_DHDAP
+	int is_dhd;
+#endif /* TCONFIG_DHDAP */
 
 #ifdef CONFIG_BCMWL5
 	foreach_wif(0, NULL, set_wlmac);
@@ -819,9 +821,15 @@ void start_lan_wl(void)
 
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
-							if (nvram_get_int("dhcp_relay")) {
-								wl_iovar_set(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
-								wl_iovar_setint(ifname, "wet_host_ipv4", ip);
+							if (nvram_get_int("dhcp_relay")) { /* only set "wet_host_ipv4" (again), "wet_host_mac" already set at start_lan() */
+#ifdef TCONFIG_DHDAP
+								is_dhd = !dhd_probe(ifname);
+								if(is_dhd) {
+									dhd_iovar_setint(ifname, "wet_host_ipv4", ip);
+								}
+								else
+#endif /* TCONFIG_DHDAP */
+									wl_iovar_setint(ifname, "wet_host_ipv4", ip);
 							}
 						}
 
@@ -952,6 +960,10 @@ void start_lan(void)
 	char *iftmp;
 	char nv[64];
 
+#ifdef TCONFIG_DHDAP
+	int is_dhd;
+#endif /* TCONFIG_DHDAP */
+
 	load_wl(); /* lets go! */
 
 #ifdef TCONFIG_BCMWL6
@@ -1069,9 +1081,24 @@ void start_lan(void)
 
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
-							if (nvram_get_int("dhcp_relay")) {
-								wl_iovar_set(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
-								wl_iovar_setint(ifname, "wet_host_ipv4", ip);
+							if (nvram_get_int("dhcp_relay")) { /* set mac and ip */
+#ifdef TCONFIG_DHDAP
+								is_dhd = !dhd_probe(ifname);
+								if(is_dhd) {
+									char macbuf[sizeof("wet_host_mac") + 1 + ETHER_ADDR_LEN];
+									dhd_iovar_setbuf(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN , macbuf, sizeof(macbuf)); /* set mac */
+								}
+								else
+#endif /* TCONFIG_DHDAP */
+									wl_iovar_set(ifname, "wet_host_mac", ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN); /* set mac */
+#ifdef TCONFIG_DHDAP
+								is_dhd = !dhd_probe(ifname);
+								if(is_dhd) {
+									dhd_iovar_setint(ifname, "wet_host_ipv4", ip); /* set ip */
+								}
+								else
+#endif /* TCONFIG_DHDAP */
+									wl_iovar_setint(ifname, "wet_host_ipv4", ip); /* set ip */
 							}
 						}
 
