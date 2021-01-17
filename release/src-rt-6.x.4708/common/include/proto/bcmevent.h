@@ -223,8 +223,13 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_TX_STAT_ERROR		126	/* tx error indication */
 #define WLC_E_BCMC_CREDIT_SUPPORT	127	/* credit check for BCMC supported */
 #define WLC_E_PSTA_PRIMARY_INTF_IND	128	/* psta primary interface indication */
-#define WLC_E_LAST			129	/* highest val + 1 for range checking */
-
+#define WLC_E_RADAR_DETECTED		129	/* Radar Detected event */
+#if defined(CONFIG_SMP) || defined(TCONFIG_BCMSMP) /* different for dual-core and single-core */
+#define WLC_E_RRM			130	/* RRM event */
+#define WLC_E_LAST			131	/* highest val + 1 for range checking */
+#else /* single core */
+#define WLC_E_LAST			130	/* highest val + 1 for range checking */
+#endif /* different for dual-core and single-core */
 
 /* Table of event name strings for UIs and debugging dumps */
 typedef struct {
@@ -432,6 +437,18 @@ typedef struct wl_intfer_event {
 	uint8 txfail_histo[WLINTFER_STATS_NSMPLS]; /* txfail histo */
 } wl_intfer_event_t;
 
+/* only for dual-core SDK6 */
+#if defined(CONFIG_SMP) || defined(TCONFIG_BCMSMP) /* different for dual-core and single-core */
+#define RRM_EVENT_VERSION		0
+typedef struct wl_rrm_event {
+	int16 version;
+	int16 len;
+	int16 cat;		/* Category */
+	int16 subevent;
+	char payload[1]; /* Measurement payload */
+} wl_rrm_event_t;
+#endif /* different for dual-core and single-core */
+
 /* WLC_E_PSTA_PRIMARY_INTF_IND event data */
 typedef struct wl_psta_primary_intf_event {
 	struct ether_addr prim_ea;	/* primary intf ether addr */
@@ -439,5 +456,21 @@ typedef struct wl_psta_primary_intf_event {
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>
+
+typedef struct {
+        uint8 radar_type;       /* one of RADAR_TYPE_XXX */
+        uint16 min_pw;          /* minimum pulse-width (usec * 20) */
+        uint16 max_pw;          /* maximum pulse-width (usec * 20) */
+        uint16 min_pri;         /* minimum pulse repetition interval (usec) */
+        uint16 max_pri;         /* maximum pulse repetition interval (usec) */
+        uint16 subband;         /* subband/frequency */
+} radar_detected_event_info_t;
+
+typedef struct wl_event_radar_detect_data {
+        uint32 version;
+        uint16 current_chanspec; /* chanspec on which the radar is recieved */
+        uint16 target_chanspec; /*  Target chanspec after detection of radar on current_chanspec */
+        radar_detected_event_info_t radar_info[2];
+} wl_event_radar_detect_data_t;
 
 #endif /* _BCMEVENT_H_ */
