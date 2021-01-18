@@ -28,7 +28,6 @@ function tick() {
 </head>
 
 <body onload="tick()">
-<body>
 <div class="tomato-grid container-div">
 	<div class="wrapper1">
 		<div class="wrapper2">

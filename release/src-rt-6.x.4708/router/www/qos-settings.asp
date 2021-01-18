@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("qos_classnames,qos_enable,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,wan_qos_obw,wan_qos_ibw,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num"); %>
+//	<% nvram("qos_classnames,qos_enable,qos_mode,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,qos_cake_prio_mode,qos_cake_wash,wan_qos_obw,wan_qos_ibw,wan_qos_encap,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_encap,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_encap,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_encap,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -107,8 +107,20 @@ function verifyFields(focused, quiet) {
 			f[i].disabled = b;
 	}
 
+	const mode = E('_qos_mode').value;
+	let modeHtbEnabled = false;
+	if (mode == 1)
+		modeHtbEnabled = true;
+
+	for (i = 0; i < f.length; ++i) {
+		if (/qos_(ack|syn|fin|rst|icmp|default|pfifo)$/.test(f[i].name))
+			f[i].disabled = !modeHtbEnabled || b;
+		else if (/qos_cake_/.test(f[i].name))
+			f[i].disabled = modeHtbEnabled || b;
+	}
+
 	var classifyField = E('_f_qos_classify');
-	var classify = !classifyField.disabled && classifyField.checked;
+	var classify = !classifyField.disabled && classifyField.checked && modeHtbEnabled;
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		var u = (uidx > 1) ? uidx : '';
 		var pattern = new RegExp('wan'+u+'_f_[io](rate|ceil)_');
@@ -164,6 +176,7 @@ function save() {
 	fom.qos_udp.value = E('_f_qos_udp').checked ? 1 : 0;
 	fom.qos_reset.value = E('_f_qos_reset').checked ? 1 : 0;
 	fom.qos_classify.value = E('_f_qos_classify').checked ? 1 : 0;
+	fom.qos_cake_wash.value = E('_f_qos_cake_wash').checked ? 1 : 0;
 
 	qos = [];
 	for (i = 1; i < 11; ++i)
@@ -236,6 +249,7 @@ function init() {
 <input type="hidden" name="qos_irates">
 <input type="hidden" name="qos_reset">
 <input type="hidden" name="qos_classify">
+<input type="hidden" name="qos_cake_wash">
 <input type="hidden" name="ne_vegas">
 
 <!-- / / / -->
@@ -250,6 +264,7 @@ function init() {
 
 		createFieldTable('', [
 			{ title: 'Enable QoS', name: 'f_qos_enable', type: 'checkbox', value: nvram.qos_enable == '1' },
+			{ title: 'QoS mode', name: 'qos_mode', type: 'select', options: [['1','HTB limiter + leaf qdisc scheduler (classic/SQM)'],['2','CAKE AQM']], value: nvram.qos_mode },
 			{ title: 'Prioritize small packets with these control flags', multi: [
 				{ suffix: ' ACK &nbsp;', name: 'f_qos_ack', type: 'checkbox', value: nvram.qos_ack == '1' },
 				{ suffix: ' SYN &nbsp;', name: 'f_qos_syn', type: 'checkbox', value: nvram.qos_syn == '1' },
@@ -261,7 +276,12 @@ function init() {
 			{ title: 'Classify traffic', name: 'f_qos_classify', type: 'checkbox', value: nvram.qos_classify == '1' },
 			{ title: 'Reset class when changing settings', name: 'f_qos_reset', type: 'checkbox', value: nvram.qos_reset == '1' },
 			{ title: 'Default class', name: 'qos_default', type: 'select', options: classList, value: nvram.qos_default },
-			{ title: 'Qdisc Scheduler', name: 'qos_pfifo', type: 'select', options: [['0','sfq'],['1','pfifo'],['2','codel'],['3','fq_codel']], value: nvram.qos_pfifo }
+			{ title: 'Qdisc Scheduler', name: 'qos_pfifo', type: 'select', options: [['0','sfq'],['1','pfifo'],['2','codel'],['3','fq_codel']], value: nvram.qos_pfifo },
+			null,
+			{ title: 'CAKE priority queue mode', name: 'qos_cake_prio_mode', type: 'select', options: [
+				['0','besteffort (single class) (recommended for typical case)'],['1','diffserv8 (8 priority classes)'],['2','diffserv4 (4 priority classes)'],['3','diffserv3 (3 priority classes)'],['4','precedence (8 priority classes)']
+				], suffix: '&nbsp; <small>Classification rules can be used to set class (# of classes depends on choice).<\/small>'},
+			{ title: 'CAKE clear diffserv field after queuing (wash)', name: 'f_qos_cake_wash', type: 'checkbox', value: nvram.qos_cake_wash == '1', suffix: '&nbsp; <small>maybe needed for some ISPs, eg: Comcast<\/small>' }
 		]);
 	</script>
 </div>
@@ -271,6 +291,8 @@ function init() {
 <div class="section-title">Encapsulation Settings</div>
 <div class="section">
 	<script>
+		const encap_options = [['0','None'],['1','ATM (ADSL)'],['2','PTM (most VDSL2)']];
+
 		const overhead_options = [['0','None'],['32','32-PPPoE VC-Mux'],['40','40-PPPoE LLC/Snap'],['48','48-PPPoE LLC/Snap + VLAN'],
 										['10','10-PPPoA VC-Mux'],['14','14-PPPoA LLC/Snap'],
 										['8','8-RFC2684/RFC1483 Routed VC-Mux'],['16','16-RFC2684/RFC1483 Routed LLC/Snap'],
@@ -281,12 +303,12 @@ function init() {
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx > 1) ? uidx : '';
 			encap_fields.push({
-				title: 'Overhead Value - WAN'+u, name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options,
-				value: nvram["wan"+u+"_qos_overhead"]
+				title: 'WAN'+u, multi: [
+					{ name: 'wan'+u+'_qos_encap', type: 'select', options: encap_options, value: nvram["wan"+u+"_qos_encap"] },
+					{ name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options, value: nvram["wan"+u+"_qos_overhead"]},
+				]
 			});
-			encap_fields.push(null);
 		}
-		encap_fields.pop();
 		createFieldTable('', encap_fields);
 	</script>
 </div>

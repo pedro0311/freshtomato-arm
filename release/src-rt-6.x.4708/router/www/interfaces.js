@@ -1,18 +1,18 @@
-MAX_BRIDGE_ID = 3;
-MAX_PORT_ID = 4;
-MAX_VLAN_ID = 15;
+var MAX_BRIDGE_ID = 3;
+var MAX_PORT_ID = 4;
+var MAX_VLAN_ID = 15;
 
 function h_countbitsfromleft(num) {
-	if (num == 255 ){
+	if (num == 255)
 		return(8);
-	}
+
 	var i = 0;
-	var bitpat=0xff00; 
-	while (i < 8){
-		if (num == (bitpat & 0xff)){
+	var bitpat = 0xff00; 
+	while (i < 8) {
+		if (num == (bitpat & 0xff))
 			return(i);
-		}
-		bitpat=bitpat >> 1;
+
+		bitpat = bitpat >> 1;
 		i++;
 	}
 	return(Number.NaN);
@@ -21,9 +21,9 @@ function h_countbitsfromleft(num) {
 function numberOfBitsOnNetMask(netmask) {
 	var total = 0;
 	var t = netmask.split('.');
-	for (var i = 0; i<= 3 ; i++) {
+	for (var i = 0; i <= 3 ; i++)
 		total += h_countbitsfromleft(t[i]);
-	}
+
 	return total;
 }
 
@@ -36,6 +36,5 @@ function getBroadcastAddress(network, netmask) {
 }
 
 function getAddress(ipaddress, network) {
-	return fixIP(ntoa( (aton(network)) + (aton(ipaddress)) ));
+	return fixIP(ntoa((aton(network)) + (aton(ipaddress))));
 }
-

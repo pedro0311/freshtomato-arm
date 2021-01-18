@@ -1384,8 +1384,9 @@ function escapeText(s) {
 					</ul>
 				</li>
 			</ul>
+			<br>
 			<ul>
-				<li><b>Other relevant notes/hints:</b></small>
+				<li><b>Other relevant notes/hints:</b>
 					<ul>
 						<li>When creating/defining a new wireless VIF, its MAC address will be shown (incorrectly) as '00:00:00:00:00:00', as it's unknown at that moment (until network is restarted and this page is reloaded).</li>
 						<li>When saving changes, the MAC addresses of all defined non-primary wireless VIFs could sometimes be (already) <i>set</i> but might be <i>recreated</i> by the WL driver (so that previously defined/saved settings might need to be updated/changed accordingly on <a href="advanced-mac.asp">Advanced/MAC Address</a> after saving settings and rebooting your router).</li>

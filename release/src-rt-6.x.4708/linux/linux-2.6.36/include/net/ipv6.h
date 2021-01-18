@@ -279,6 +279,18 @@ static inline int ipv6_addr_src_scope(const struct in6_addr *addr)
 	return __ipv6_addr_src_scope(__ipv6_addr_type(addr));
 }
 
+static inline bool __ipv6_addr_needs_scope_id(int type)
+{
+	return type & IPV6_ADDR_LINKLOCAL ||
+	       (type & IPV6_ADDR_MULTICAST &&
+		(type & (IPV6_ADDR_LOOPBACK|IPV6_ADDR_LINKLOCAL)));
+}
+
+static inline __u32 ipv6_iface_scope_id(const struct in6_addr *addr, int iface)
+{
+	return __ipv6_addr_needs_scope_id(__ipv6_addr_type(addr)) ? iface : 0;
+}
+
 static inline int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr *a2)
 {
 	return memcmp(a1, a2, sizeof(struct in6_addr));
@@ -458,7 +470,29 @@ static inline int ipv6_addr_diff(const struct in6_addr *a1, const struct in6_add
 	return __ipv6_addr_diff(a1, a2, sizeof(struct in6_addr));
 }
 
+static inline u32 ipv6_addr_hash(const struct in6_addr *a)
+{
+#if defined(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS) && BITS_PER_LONG == 64
+	const unsigned long *ul = (const unsigned long *)a;
+	unsigned long x = ul[0] ^ ul[1];
+
+	return (u32)(x ^ (x >> 32));
+#else
+	return (__force u32)(a->s6_addr32[0] ^ a->s6_addr32[1] ^
+	        a->s6_addr32[2] ^ a->s6_addr32[3]);
+#endif
+}
+
 extern void ipv6_select_ident(struct frag_hdr *fhdr, struct rt6_info *rt);
+
+/*
+ *	Header manipulation
+ */
+static inline void ip6_flow_hdr(struct ipv6hdr *hdr, unsigned int tclass,
+				__be32 flowlabel)
+{
+	*(__be32 *)hdr = ntohl(0x60000000 | (tclass << 20)) | flowlabel;
+}
 
 /*
  *	Prototypes exported by ipv6

@@ -567,6 +567,11 @@ void start_qos(char *prefix)
 	char burst_root[32];
 	char burst_leaf[32];
 	char tmp[100];
+	int cake;
+#ifdef TCONFIG_BCMARM
+	char *cake_encap_root = "";
+	char *cake_prio_mode_root = "";
+#endif
 
 	/* Network Congestion Control */
 	x = nvram_get_int("ne_vegas");
@@ -640,6 +645,14 @@ void start_qos(char *prefix)
 	else
 		qos = "sfq perturb 10";
 
+	x = nvram_get_int("qos_mode");
+	if (x == 2) {
+		qos = "cake";
+		cake = 1;
+	}
+	else
+		cake = 0;
+
 	fprintf(f, "#!/bin/sh\n"
 	           "WAN_DEV=%s\n"
 	           "QOS_DEV=%s\n"
@@ -653,21 +666,76 @@ void start_qos(char *prefix)
 	           "\n"
 	           "case \"$1\" in\n"
 	           "start)\n"
-	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-	           "\t$TQA root handle 1: htb default %u r2q %u\n"
-	           "\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s",
+	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n",
 	           get_wanface(prefix),
 	           qosdev,
-	           qos,
-	           qosDefaultClassId, r2q,
-	           bw, bw, burst_root);
+	           qos);
 
-	if (overhead > 0)
 #ifdef TCONFIG_BCMARM
-		fprintf(f, " overhead %u linklayer atm", overhead);
+	if (cake) {
+		fprintf(f, "\t$TQA root handle 1: cake bandwidth %ukbit nat egress fwmark 0xf", bw);
+
+		if (overhead > 0)
+			fprintf(f, " overhead %u", overhead);
+
+		switch (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp))) {
+			case 1:
+				cake_encap_root = " atm";
+				break;
+			case 2:
+				cake_encap_root = " ptm";
+				break;
+			default:
+				cake_encap_root = " noatm";
+		}
+		fprintf(f, cake_encap_root);
+
+		switch (nvram_get_int("qos_cake_prio_mode")) {
+			case 1:
+				/* 8 priority classes - see cake_config_diffserv8 in sch_cake.c */
+				cake_prio_mode_root = " diffserv8";
+				break;
+			case 2:
+				/* 4 priority classes - see cake_config_diffserv4 in sch_cake.c */
+				cake_prio_mode_root = " diffserv4";
+				break;
+			case 3:
+				/* 3 priority classes - see cake_config_diffserv4 in sch_cake.c */
+				cake_prio_mode_root = " diffserv3";
+				break;
+			case 4:
+				cake_prio_mode_root = " precedence";
+				break;
+			default:
+				/* All fwmarks ignored */
+				cake_prio_mode_root = " besteffort";
+				break;
+		}
+		fprintf(f, cake_prio_mode_root);
+
+		if (nvram_get_int("qos_cake_wash"))
+			fprintf(f, " wash");
+	}
+	else
+#endif /* TCONFIG_BCMARM */
+	{
+		fprintf(f, "\t$TQA root handle 1: htb default %u r2q %u\n"
+		           "\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s",
+		           qosDefaultClassId, r2q,
+		           bw, bw, burst_root);
+
+		if (overhead > 0) {
+			fprintf(f, " overhead %u", overhead);
+
+			/* HTB only supports ATM value */
+			if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+				fprintf(f, " linklayer atm");
 #else
-		fprintf(f, " overhead %u atm", overhead);
+				fprintf(f, " atm");
 #endif
+		}
+	}
 
 	fprintf(f, "\n");
 
@@ -679,43 +747,53 @@ void start_qos(char *prefix)
 #endif
 		g = buf = strdup(nvram_safe_get("qos_orates"));
 
-	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
-		if ((!g) || ((p = strsep(&g, ",")) == NULL))
-			break;
+	/* Cake doesn't support setting rate/ceil for each class and it can read
+	 * the "tin" number directly from the fwmark
+	 */
+	if (!cake) {
+		for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
+			if ((!g) || ((p = strsep(&g, ",")) == NULL))
+				break;
 
-		if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
-			continue;
+			if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
+				continue;
 
-		/* check if we've got a percentage definition in the form of "rate-ceiling" */
-		if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
-			continue; /* 0=off */
+			/* check if we've got a percentage definition in the form of "rate-ceiling" */
+			if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
+				continue; /* 0=off */
 
-		if (ceil > 0)
-			sprintf(s, "ceil %ukbit", calc(bw, ceil));
-		else
-			s[0] = 0;
+			if (ceil > 0)
+				sprintf(s, "ceil %ukbit", calc(bw, ceil));
+			else
+				s[0] = 0;
 
-		x = (i + 1) * 10;
+			x = (i + 1) * 10;
 
 		fprintf(f, "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
 		           x, calc(bw, rate), s, burst_leaf, (i + 1), mtu);
 
-		if (overhead > 0)
-#ifdef TCONFIG_BCMARM
-			fprintf(f, " overhead %u linklayer atm", overhead);
-#else
-			fprintf(f, " overhead %u atm", overhead);
-#endif
+			if (overhead > 0) {
+				fprintf(f, " overhead %u", overhead);
 
-		fprintf(f, "\n\t$TQA parent 1:%d handle %d: $Q\n"
-		           "\t$TFA parent 1: prio %d protocol ip handle %d/0xf fw flowid 1:%d\n",
-		           x, x,
-		           x, (i + 1), x);
+				/* HTB only supports ATM value */
+				if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+					fprintf(f, " linklayer atm");
+#else
+					fprintf(f, " atm");
+#endif
+			}
+
+			fprintf(f, "\n\t$TQA parent 1:%d handle %d: $Q\n"
+			           "\t$TFA parent 1: prio %d protocol ip handle %d/0xf fw flowid 1:%d\n",
+			           x, x,
+			           x, (i + 1), x);
 
 #ifdef TCONFIG_IPV6
-		fprintf(f, "\t$TFA parent 1: prio %d protocol ipv6 handle %d/0xf fw flowid 1:%d\n",
-		           x + 100, (i + 1), x);
+			fprintf(f, "\t$TFA parent 1: prio %d protocol ipv6 handle %d/0xf fw flowid 1:%d\n",
+			           x + 100, (i + 1), x);
 #endif
+		}
 	}
 	free(buf);
 
@@ -726,7 +804,7 @@ void start_qos(char *prefix)
 	 * 00001 = FIN
 	*/
 
-	if (nvram_get_int("qos_ack"))
+	if (nvram_get_int("qos_ack") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 14 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -734,7 +812,7 @@ void start_qos(char *prefix)
 		           "match u8 0x10 0xff at 33 "		/* ACK only */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_syn"))
+	if (nvram_get_int("qos_syn") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 15 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -742,7 +820,7 @@ void start_qos(char *prefix)
 		           "match u8 0x02 0x02 at 33 "		/* SYN,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_fin"))
+	if (nvram_get_int("qos_fin") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 17 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -750,7 +828,7 @@ void start_qos(char *prefix)
 		           "match u8 0x01 0x01 at 33 "		/* FIN,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_rst"))
+	if (nvram_get_int("qos_rst") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 19 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -758,7 +836,7 @@ void start_qos(char *prefix)
 		           "match u8 0x04 0x04 at 33 "		/* RST,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_icmp"))
+	if (nvram_get_int("qos_icmp") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 13 protocol ip u32 match ip protocol 1 0xff flowid 1:10\n");
 
 	/*
@@ -771,52 +849,76 @@ void start_qos(char *prefix)
 #endif
 		g = buf = strdup(nvram_safe_get("qos_irates"));
 
-	first = 1;
-	for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
-		if ((!g) || ((p = strsep(&g, ",")) == NULL))
-			break;
-
-		if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
-			continue;
-
-		/* check if we've got a percentage definition in the form of "rate-ceiling" */
-		if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
-			continue; /* 0=off */
-
-		/* class ID */
-		unsigned int classid = ((unsigned int)i + 1) * 10;
-
-		/* priority */
-		unsigned int priority = (unsigned int)i + 1; /* prios 1-10 */
-
-		/* rate in kb/s */
-		unsigned int rateInkbps = calc(incomingBWkbps, rate);
-
-		/* ceiling in kb/s */
-		unsigned int ceilingInkbps = calc(incomingBWkbps, ceil);
-
-		r2q = 10;
-		if ((incomingBWkbps * 1000) / (8 * r2q) < mtu) {
-			r2q = (incomingBWkbps * 1000) / (8 * mtu);
-			if (r2q < 1)
-				r2q = 1;
-		} 
-		else if ((incomingBWkbps * 1000) / (8 * r2q) > 60000) 
-			r2q = (incomingBWkbps * 1000) / (8 * 60000) + 1;
-
-		if (first) {
-			first = 0;
 #ifdef TCONFIG_BCMARM
-			fprintf(f, "\n\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
-			           "\t$TQA handle ffff: ingress\n");
+	fprintf(f, "\n\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
+	           "\t$TQA handle ffff: ingress\n");
 #endif
-			fprintf(f, "\n\tip link set $QOS_DEV up\n"
-			           "\ttc qdisc del dev $QOS_DEV 2>/dev/null\n"
-			           "\t$TQA_QOS handle 1: root htb default %u r2q %u\n"
-			           "\t$TCA_QOS parent 1: classid 1:1 htb rate %ukbit ceil %ukbit",
-			           qosDefaultClassId, r2q,
-			           incomingBWkbps,
-			           incomingBWkbps);
+
+	fprintf(f, "\n\ttc qdisc del dev $QOS_DEV 2>/dev/null\n");
+
+	/* Cake doesn't support setting rate/ceil for each class and it can read
+	 * the "tin" number directly from the fwmark
+	 */
+	if (!cake) {
+		first = 1;
+		for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
+			if ((!g) || ((p = strsep(&g, ",")) == NULL))
+				break;
+
+			if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
+				continue;
+
+			/* check if we've got a percentage definition in the form of "rate-ceiling" */
+			if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
+				continue; /* 0=off */
+
+			/* class ID */
+			unsigned int classid = ((unsigned int)i + 1) * 10;
+
+			/* priority */
+			unsigned int priority = (unsigned int)i + 1; /* prios 1-10 */
+
+			/* rate in kb/s */
+			unsigned int rateInkbps = calc(incomingBWkbps, rate);
+
+			/* ceiling in kb/s */
+			unsigned int ceilingInkbps = calc(incomingBWkbps, ceil);
+
+			r2q = 10;
+			if ((incomingBWkbps * 1000) / (8 * r2q) < mtu) {
+				r2q = (incomingBWkbps * 1000) / (8 * mtu);
+				if (r2q < 1)
+					r2q = 1;
+			}
+			else if ((incomingBWkbps * 1000) / (8 * r2q) > 60000)
+				r2q = (incomingBWkbps * 1000) / (8 * 60000) + 1;
+
+			if (first) {
+				first = 0;
+
+				fprintf(f, "\t$TQA_QOS handle 1: root htb default %u r2q %u\n"
+				           "\t$TCA_QOS parent 1: classid 1:1 htb rate %ukbit ceil %ukbit",
+				           qosDefaultClassId, r2q,
+				           incomingBWkbps,
+				           incomingBWkbps);
+
+				if (overhead > 0) {
+					fprintf(f, " overhead %u", overhead);
+
+					/* HTB only supports ATM value */
+					if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+						fprintf(f, " linklayer atm");
+#else
+						fprintf(f, " atm");
+#endif
+				}
+			}
+
+			fprintf(f, "\n\t# class id %u: rate %ukbit ceil %ukbit\n"
+			           "\t$TCA_QOS parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u",
+			           classid, rateInkbps, ceilingInkbps,
+			           classid, rateInkbps, ceilingInkbps, priority, mtu);
 
 			if (overhead > 0)
 #ifdef TCONFIG_BCMARM
@@ -825,36 +927,39 @@ void start_qos(char *prefix)
 				fprintf(f, " overhead %u atm", overhead);
 #endif
 
-#ifdef TCONFIG_BCMARM
-			fprintf(f, "\n\n\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
+			fprintf(f, "\n\t$TQA_QOS parent 1:%u handle %u: $Q\n"
+			           "\t$TFA_QOS parent 1: prio %u protocol ip handle %u/0xf fw flowid 1:%u\n",
+			           classid, classid,
+			           classid, priority, classid);
 #ifdef TCONFIG_IPV6
-			fprintf(f, "\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst ::/0"));
+			fprintf(f, "\t$TFA_QOS parent 1: prio %u protocol ipv6 handle %u/0xf fw flowid 1:%u\n", (classid + 100), priority, classid);
 #endif
-#endif /* TCONFIG_BCMARM */
-
-		}
-
-		fprintf(f, "\n\t# class id %u: rate %ukbit ceil %ukbit\n"
-		           "\t$TCA_QOS parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u",
-		           classid, rateInkbps, ceilingInkbps,
-		           classid, rateInkbps, ceilingInkbps, priority, mtu);
+		} /* for */
+	}
+#ifdef TCONFIG_BCMARM
+	else {
+		fprintf(f, "\t$TQA_QOS root handle 1: cake bandwidth %ukbit nat ingress fwmark 0xf", incomingBWkbps);
 
 		if (overhead > 0)
-#ifdef TCONFIG_BCMARM
-			fprintf(f, " overhead %u linklayer atm", overhead);
-#else
-			fprintf(f, " overhead %u atm", overhead);
-#endif
+			fprintf(f, " overhead %u", overhead);
 
-		fprintf(f, "\n\t$TQA_QOS parent 1:%u handle %u: $Q\n"
-		           "\t$TFA_QOS parent 1: prio %u protocol ip handle %u/0xf fw flowid 1:%u\n",
-		           classid, classid,
-		           classid, priority, classid);
-#ifdef TCONFIG_IPV6
-		fprintf(f, "\t$TFA_QOS parent 1: prio %u protocol ipv6 handle %u/0xf fw flowid 1:%u\n", (classid + 100), priority, classid);
-#endif
-	} /* for */
+		fprintf(f, cake_encap_root);
+		fprintf(f, cake_prio_mode_root);
+
+		if (nvram_get_int("qos_cake_wash"))
+			fprintf(f, " wash");
+
+		fprintf(f, "\n");
+	} /* if (!cake) */
+#endif /* TCONFIG_BCMARM */
 	free(buf);
+
+#ifdef TCONFIG_BCMARM
+	fprintf(f, "\n\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
+#ifdef TCONFIG_IPV6
+	fprintf(f, "\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst ::/0"));
+#endif
+#endif /* TCONFIG_BCMARM */
 
 	/* write commands which adds rule to forward traffic to IFB device */
 	fprintf(f, "\n\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"

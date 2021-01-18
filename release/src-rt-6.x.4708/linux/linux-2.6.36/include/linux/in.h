@@ -20,6 +20,7 @@
 
 #include <linux/types.h>
 #include <linux/socket.h>
+#include <linux/errno.h>
 
 /* Standard well-defined IP protocols.  */
 enum {
@@ -244,6 +245,22 @@ struct sockaddr_in {
 #define INADDR_ALLRTRS_GROUP    0xe0000002U	/* 224.0.0.2 */
 #define INADDR_MAX_LOCAL_GROUP  0xe00000ffU	/* 224.0.0.255 */
 
+static inline int proto_ports_offset(int proto)
+{
+        switch (proto) {
+        case IPPROTO_TCP:
+        case IPPROTO_UDP:
+        case IPPROTO_DCCP:
+        case IPPROTO_ESP:       /* SPI */
+        case IPPROTO_SCTP:
+        case IPPROTO_UDPLITE:
+                return 0;
+        case IPPROTO_AH:        /* SPI */
+                return 4;
+        default:
+                return -EINVAL;
+        }
+}
 
 /* <asm/byteorder.h> contains the htonl type stuff.. */
 #include <asm/byteorder.h> 

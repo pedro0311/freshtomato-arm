@@ -355,6 +355,11 @@ static inline int sk_mc_loop(struct sock *sk)
 
 extern int	ip_call_ra_chain(struct sk_buff *skb);
 
+static inline bool ip_is_fragment(const struct iphdr *iph)
+{
+	return (iph->frag_off & htons(IP_MF | IP_OFFSET)) != 0;
+}
+
 /*
  *	Functions provided by ip_fragment.c
  */

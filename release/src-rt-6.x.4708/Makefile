@@ -191,6 +191,10 @@ ifeq ($(ASUS_TRX),AC18)
 #	echo "CRC32 (@0x18) and filesize (@0x0d trx, @0x29 full) to be updated manually in bin file!"
 #	cat ctools/tendahead.bin image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).trx > image/freshtomato-TendaAC18-$(current_TOMATO_VER)$(V2)-$(current_BUILD_DESC).bin
 endif
+#for Belkin F9K1113v2
+ifeq ($(ASUS_TRX),BELKIN)
+	ctools/trx_asus -i image/linux-lzma.trx -r F9K1113v2,3.0.0.4,image/freshtomato-F9K1113v2-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 # for dlink
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,image/freshtomato-DIR868L-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -344,7 +348,7 @@ what:
 # USB ("USB"|"")
 # JFFSv1 | NO_JFFS
 # NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
-# SAMBA3, OPENVPN, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
+# SAMBA3, OPENVPN, WIREGUARD, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
 # NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES
 
 define RouterOptions
@@ -475,6 +479,10 @@ define RouterOptions
 		echo "TCONFIG_OPENVPN=y" >>$(1); \
 		sed -i "/TCONFIG_FTP_SSL/d" $(1); \
 		echo "TCONFIG_FTP_SSL=y" >>$(1); \
+	fi; \
+	if [ "$(WIREGUARD)" = "y" ]; then \
+		sed -i "/#TCONFIG_WIREGUARD is not set/d" $(1); \
+		echo "TCONFIG_WIREGUARD=y" >>$(1); \
 	fi; \
 	if [ "$(PPTPD)" = "y" ]; then \
 		sed -i "/TCONFIG_PPTPD/d" $(1); \
@@ -1157,15 +1165,15 @@ endif
 
 ## targets
 e:
-	@$(MAKE) bin NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y MULTIWAN=y B=E BUILD_DESC="$(VPN)" CTF=y GRO=y USB="USB" PPTPD=y OPENVPN=y DNSSEC=y SNMP=y \
+	@$(MAKE) bin NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y MULTIWAN=y B=E BUILD_DESC="$(VPN)" CTF=y GRO=y USB="USB" PPTPD=y OPENVPN=y WIREGUARD=y DNSSEC=y SNMP=y \
 	    OPENSSL11=y CONNTRACK_TOOL=y
 
 o:
-	@$(MAKE) bin OPENVPN=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" NOCAT=n BTCLIENT=y TR_EXTRAS=y \
+	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" NOCAT=n BTCLIENT=y TR_EXTRAS=y \
 	    DNSCRYPT=y STUBBY=y PPTPD=y DNSSEC=y SNMP=n TINC=n TOR=y OPENSSL11=y NFS=y
 
 z:
-	@$(MAKE) bin OPENVPN=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
+	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
 	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y NAMESPACES=y
 
 ac68e:
@@ -1188,6 +1196,9 @@ ac18e:
 
 ac18z:
 	@$(MAKE) z ARM=y NVRAM_64K=y SPI=y NAND=y BCMSMP=y ASUS_TRX="AC18" TUXERA=y TUXERA_HFS=y DPSTA=y BSD=y
+
+f9ke:
+	@$(MAKE) e ARM=y NVRAM_64K=y SPI=y ASUS_TRX="BELKIN" ARMCPUSMP="up" TUXERA=y TUXERA_HFS=y DPSTA=n BSD=y
 
 dir868l:
 	@$(MAKE) bin ARM=y NVRAM_SIZE=32 NAND=y BCMSMP=y ASUS_TRX="DLINK" CTF=y GRO=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y MEDIASRV=y B=E BUILD_DESC="Custom" USB="USB" \
@@ -1343,6 +1354,8 @@ help:
 	@echo "ac15e           Tenda AC15 VPN"
 	@echo "ac18e           Tenda AC18 VPN"
 	@echo "ac18z           Tenda AC18 AIO"
+	@echo "BELKIN ARM Builds"
+	@echo "f9ke            Belkin F9K1113v2 VPN"
 	@echo "DLINK ARM Builds"
 	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
