@@ -1580,7 +1580,7 @@ TomatoGrid.prototype = {
 					case 'select':
 						s += '<select' + common + attrib + '>';
 						for (var k = 0; k < f.options.length; ++k) {
-							a = f.options[k];
+							var a = f.options[k];
 							if (which == 'edit') {
 								s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
 							}
@@ -2600,7 +2600,7 @@ function createFieldTable(flags, desc) {
 	var tr;
 
 	if ((flags.indexOf('noopen') == -1)) buf.push('<table class="fields">');
-	for (desci = 0; desci < desc.length; ++desci) {
+	for (var desci = 0; desci < desc.length; ++desci) {
 		var v = desc[desci];
 
 		if (!v) {
