@@ -320,7 +320,7 @@ void mwan_state_files(void)
 			 * the wan is actually working (wan can connect but still be not working)
 			 */
 			f = fopen(tmp, "w+");
-			fprintf(f, "0\n");
+			fprintf(f, (nvram_get_int("mwan_state_init") ? "1\n" : "0\n")); /* also allow to init state file with value "1" instead of "0" */
 			fclose(f);
 		}
 	}
