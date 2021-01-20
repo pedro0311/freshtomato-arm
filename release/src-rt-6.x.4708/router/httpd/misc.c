@@ -5,6 +5,7 @@
 
 */
 
+
 #include "tomato.h"
 
 #include <ctype.h>
@@ -30,7 +31,18 @@
 #include <wlioctl.h>
 #include <wlutils.h>
 
-// to javascript-safe string
+typedef struct {
+	unsigned long total;
+	unsigned long free;
+	unsigned long buffers;
+	unsigned long cached;
+	unsigned long swaptotal;
+	unsigned long swapfree;
+	unsigned long maxfreeram;
+} meminfo_t;
+
+
+/* to javascript-safe string */
 char *js_string(const char *s)
 {
 	unsigned char c;
@@ -40,19 +52,18 @@ char *js_string(const char *s)
 	if ((buffer = malloc((strlen(s) * 4) + 1)) != NULL) {
 		b = buffer;
 		while ((c = *s++) != 0) {
-			if ((c == '"') || (c == '\'') || (c == '\\') || (!isprint(c))) {
+			if ((c == '"') || (c == '\'') || (c == '\\') || (!isprint(c)))
 				b += sprintf(b, "\\x%02x", c);
-			}
-			else {
+			else
 				*b++ = c;
-			}
 		}
 		*b = 0;
 	}
+
 	return buffer;
 }
 
-// to html-safe string
+/* to html-safe string */
 char *html_string(const char *s)
 {
 	unsigned char c;
@@ -62,19 +73,18 @@ char *html_string(const char *s)
 	if ((buffer = malloc((strlen(s) * 6) + 1)) != NULL) {
 		b = buffer;
 		while ((c = *s++) != 0) {
-			if ((c == '&') || (c == '<') || (c == '>') || (c == '"') || (c == '\'') || (!isprint(c))) {
+			if ((c == '&') || (c == '<') || (c == '>') || (c == '"') || (c == '\'') || (!isprint(c)))
 				b += sprintf(b, "&#%d;", c);
-			}
-			else {
+			else
 				*b++ = c;
-			}
 		}
 		*b = 0;
 	}
+
 	return buffer;
 }
 
-// removes \r
+/* removes \r */
 char *unix_string(const char *s)
 {
 	char *buffer;
@@ -83,14 +93,17 @@ char *unix_string(const char *s)
 
 	if ((buffer = malloc(strlen(s) + 1)) != NULL) {
 		b = buffer;
-		while ((c = *s++) != 0)
-			if (c != '\r') *b++ = c;
+		while ((c = *s++) != 0) {
+			if (c != '\r')
+				*b++ = c;
+		}
 		*b = 0;
 	}
+
 	return buffer;
 }
 
-// # days, ##:##:##
+/* # days, ##:##:## */
 char *reltime(char *buf, time_t t)
 {
 	int days;
@@ -100,6 +113,7 @@ char *reltime(char *buf, time_t t)
 	days = t / 86400;
 	m = t / 60;
 	sprintf(buf, "%d day%s, %02d:%02d:%02d", days, ((days==1) ? "" : "s"), ((m / 60) % 24), (m % 60), (int)(t % 60));
+
 	return buf;
 }
 
@@ -124,8 +138,8 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 #ifdef TCONFIG_IPV6
 	else if (clientsai.ss_family == AF_INET6) {
 		inet_ntop(clientsai.ss_family, &(((struct sockaddr_in6*)&clientsai)->sin6_addr), ip, sizeof(ip));
-		if (IN6_IS_ADDR_V4MAPPED( &(((struct sockaddr_in6*)&clientsai)->sin6_addr) ))
-			sprintf(s, "ip neigh show %s", ip + 7); // chop off the ::ffff: to get the ipv4 bit
+		if (IN6_IS_ADDR_V4MAPPED(&(((struct sockaddr_in6*)&clientsai)->sin6_addr)))
+			sprintf(s, "ip neigh show %s", ip + 7); /* chop off the ::ffff: to get the ipv4 bit */
 		else
 			sprintf(s, "ip neigh show %s", ip);
 	}
@@ -140,16 +154,16 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 		}
 		pclose(f);
 	}
+
 	return 0;
 }
 
-
-//	<% lanip(mode); %>
-//	<mode>
-//		1		return first 3 octets (192.168.1)
-//		2		return last octet (1)
-//		else	return full (192.168.1.1)
-
+/*	<% lanip(mode); %>
+ *	<mode>
+ *		1	return first 3 octets (192.168.1)
+ *		2	return last octet (1)
+ *		else	return full (192.168.1.1)
+ */
 void asp_lanip(int argc, char **argv)
 {
 	char *nv, *p;
@@ -173,46 +187,14 @@ void asp_lipp(int argc, char **argv)
 	asp_lanip(1, &one);
 }
 
-//	<% psup(process); %>
-//	returns 1 if process is running
-
+/*	<% psup(process); %>
+ *	returns 1 if process is running
+ */
 void asp_psup(int argc, char **argv)
 {
-	if (argc == 1) web_printf("%d", pidof(argv[0]) > 0);
+	if (argc == 1)
+		web_printf("%d", pidof(argv[0]) > 0);
 }
-
-
-/*
-# cat /proc/meminfo
-        total:    used:    free:  shared: buffers:  cached:
-Mem:  14872576 12877824  1994752        0  1236992  4837376
-Swap:        0        0        0
-MemTotal:        14524 kB
-MemFree:          1948 kB
-MemShared:           0 kB
-Buffers:          1208 kB
-Cached:           4724 kB
-SwapCached:          0 kB
-Active:           4364 kB
-Inactive:         2952 kB
-HighTotal:           0 kB
-HighFree:            0 kB
-LowTotal:        14524 kB
-LowFree:          1948 kB
-SwapTotal:           0 kB
-SwapFree:            0 kB
-
-*/
-
-typedef struct {
-	unsigned long total;
-	unsigned long free;
-	unsigned long buffers;
-	unsigned long cached;
-	unsigned long swaptotal;
-	unsigned long swapfree;
-	unsigned long maxfreeram;
-} meminfo_t;
 
 static int get_memory(meminfo_t *m)
 {
@@ -250,12 +232,65 @@ static int get_memory(meminfo_t *m)
 		}
 		fclose(f);
 	}
-	if (ok == 0) {
+	if (ok == 0)
 		return 0;
-	}
+
 	m->maxfreeram = m->free;
-	if (nvram_match("t_cafree", "1")) m->maxfreeram += (m->cached + m->buffers);
+	if (nvram_match("t_cafree", "1"))
+		m->maxfreeram += (m->cached + m->buffers);
+
 	return 1;
+}
+
+static char* get_cfeversion(char *buf)
+{
+	FILE *f;
+	char s[16] = "";
+	int len = 0;
+
+	strcpy(buf, "");
+
+	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL) {
+		if (fgets(s, 15, f) != NULL)
+			len = strlen(s);
+
+		pclose(f);
+	}
+
+	if (len == 0)
+		strcpy(buf, "--");
+	else {
+		strcpy(buf, s);
+		buf[strcspn(buf, "\n")] = 0;
+	}
+
+	return buf;
+}
+
+static int check_connect(char *prefix)
+{
+	char tmp[64];
+	FILE *f;
+	int result;
+
+	memset(tmp, 0, 64);
+	sprintf(tmp, "/var/lib/misc/%s_state", prefix);
+
+	if (check_wanup(prefix)) {
+		if (nvram_get_int("mwan_cktime") == 0)
+			return 1;
+
+		f = fopen(tmp, "r");
+		fscanf(f, "%d", &result);
+		fclose(f);
+
+		if (result == 1)
+			return 1;
+		else
+			return 0;
+	}
+	else
+		return 0;
 }
 
 #ifdef TCONFIG_IPV6
@@ -268,109 +303,118 @@ static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll
 	struct in6_addr addr;
 	int cnt = 0;
 
-	if (!ipv6_enabled()) {
+	if (!ipv6_enabled())
 		return;
+
+	/* check LAN */
+	if (strcmp(nvram_safe_get("lan_ipaddr"),"") != 0) {
+		/* check LAN IPv6 address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0); /* global address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan: '%s',\n", buffer);
+		}
+		/* check LAN IPv6 link local address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 1); /* link local address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan_ll: '%s',\n", buffer);
+		}
 	}
 
-		/* check LAN */
-		if (strcmp(nvram_safe_get("lan_ipaddr"),"")!=0) {
-
-			/* check LAN IPv6 address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0); /* global address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan: '%s',\n", buffer);
-			}
-			/* check LAN IPv6 link local address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 1); /* link local address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan_ll: '%s',\n", buffer);
-			}
-
+	/* check LAN1 */
+	if (strcmp(nvram_safe_get("lan1_ipaddr"),"") != 0) {
+		/* check LAN1 IPv6 address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 0); /* global address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan1: '%s',\n", buffer);
 		}
-		/* check LAN1 */
-		if (strcmp(nvram_safe_get("lan1_ipaddr"),"")!=0) {
-
-			/* check LAN1 IPv6 address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 0); /* global address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan1: '%s',\n", buffer);
-			}
-			/* check LAN1 IPv6 link local address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 1); /* link local address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan1_ll: '%s',\n", buffer);
-			}
-
+		/* check LAN1 IPv6 link local address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 1); /* link local address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan1_ll: '%s',\n", buffer);
 		}
-		/* check LAN2 */
-		if (strcmp(nvram_safe_get("lan2_ipaddr"),"")!=0) {
+	}
 
-			/* check LAN2 IPv6 address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 0); /* global address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan2: '%s',\n", buffer);
-			}
-			/* check LAN2 IPv6 link local address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 1); /* link local address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan2_ll: '%s',\n", buffer);
-			}
-
+	/* check LAN2 */
+	if (strcmp(nvram_safe_get("lan2_ipaddr"),"") != 0) {
+		/* check LAN2 IPv6 address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 0); /* global address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan2: '%s',\n", buffer);
 		}
-		/* check LAN3 */
-		if (strcmp(nvram_safe_get("lan3_ipaddr"),"")!=0) {
-
-			/* check LAN3 IPv6 address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 0); /* global address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan3: '%s',\n", buffer);
-			}
-			/* check LAN3 IPv6 link local address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 1); /* link local address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_lan3_ll: '%s',\n", buffer);
-			}
-
+		/* check LAN2 IPv6 link local address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 1); /* link local address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan2_ll: '%s',\n", buffer);
 		}
-		/* check WAN */
-		if (strcmp(get_wan6face(),"")!=0) {
+	}
 
-			/* check WAN IPv6 address and copy to buffer */
-			p_tmp = NULL;
-			p_tmp = getifaddr((char *) get_wan6face(), AF_INET6, 0); /* global address */
-			if (p_tmp != NULL) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer),"%s", p_tmp);
-				web_printf("\tip6_wan: '%s',\n", buffer);
-			}
-
+	/* check LAN3 */
+	if (strcmp(nvram_safe_get("lan3_ipaddr"),"") != 0) {
+		/* check LAN3 IPv6 address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 0); /* global address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan3: '%s',\n", buffer);
 		}
-		/* IPv6 DNS */
-		dns = nvram_safe_get("ipv6_dns"); /* check static dns first */
+		/* check LAN3 IPv6 link local address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 1); /* link local address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_lan3_ll: '%s',\n", buffer);
+		}
+	}
+
+	/* check WAN */
+	if (strcmp(get_wan6face(),"") != 0) {
+		/* check WAN IPv6 address and copy to buffer */
+		p_tmp = NULL;
+		p_tmp = getifaddr((char *) get_wan6face(), AF_INET6, 0); /* global address */
+		if (p_tmp != NULL) {
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+			web_printf("\tip6_wan: '%s',\n", buffer);
+		}
+	}
+
+	/* IPv6 DNS */
+	dns = nvram_safe_get("ipv6_dns"); /* check static dns first */
+
+	memset(buffer, 0, sizeof(buffer));
+	foreach(buffer, dns, next) {
+		/* verify that this is a valid IPv6 address */
+		if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+			web_printf("\tip6_wan_dns1: '%s',\n", buffer);
+			cnt++; /* found and UP */
+		}
+		else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
+			web_printf("\tip6_wan_dns2: '%s',\n", buffer);
+			cnt++;  /* found and UP */
+		}
+	}
+	if (cnt == 0) { /* check auto dns if no valid static dns found */
+		dns = nvram_safe_get("ipv6_get_dns");
 
 		memset(buffer, 0, sizeof(buffer));
 		foreach(buffer, dns, next) {
@@ -384,25 +428,10 @@ static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll
 				cnt++;  /* found and UP */
 			}
 		}
-		if (cnt == 0) { /* check auto dns if no valid static dns found */
-			dns = nvram_safe_get("ipv6_get_dns");
-
-			memset(buffer, 0, sizeof(buffer));
-			foreach(buffer, dns, next) {
-				/* verify that this is a valid IPv6 address */
-				if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-					web_printf("\tip6_wan_dns1: '%s',\n", buffer);
-					cnt++; /* found and UP */
-				}
-				else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-					web_printf("\tip6_wan_dns2: '%s',\n", buffer);
-					cnt++;  /* found and UP */
-				}
-			}
-		}
-		memset(buffer, 0, sizeof(buffer)); /* reset */
-		p_tmp = NULL;
-		next = NULL;
+	}
+	memset(buffer, 0, sizeof(buffer)); /* reset */
+	p_tmp = NULL;
+	next = NULL;
 }
 
 void asp_calc6rdlocalprefix(int argc, char **argv)
@@ -414,23 +443,23 @@ void asp_calc6rdlocalprefix(int argc, char **argv)
 	char s[128];
 	char prefix[] = "wan";
 
-	if (argc != 3) return;
+	if (argc != 3)
+		return;
 
 	inet_pton(AF_INET6, argv[0], &prefix_addr);
 	prefix_len = atoi(argv[1]);
 	relay_prefix_len = atoi(argv[2]);
 	inet_pton(AF_INET, get_wanip(prefix), &wanip_addr);
 
-	if (calc_6rd_local_prefix(&prefix_addr, prefix_len, relay_prefix_len,
-	    &wanip_addr, &local_prefix_addr, &local_prefix_len) &&
-	    inet_ntop(AF_INET6, &local_prefix_addr, local_prefix, sizeof(local_prefix)) != NULL) {
+	if (calc_6rd_local_prefix(&prefix_addr, prefix_len, relay_prefix_len, &wanip_addr, &local_prefix_addr, &local_prefix_len)
+	    && inet_ntop(AF_INET6, &local_prefix_addr, local_prefix, sizeof(local_prefix)) != NULL) {
 		sprintf(s, "\nlocal_prefix = '%s/%d';\n", local_prefix, local_prefix_len);
 		web_puts(s);
 	}
 }
 #endif
 
-int get_flashsize()
+static int get_flashsize()
 {
 /*
 # cat /proc/mtd
@@ -445,8 +474,10 @@ mtd1: 007d0000 00010000 "linux"
 	int found = 0;
 
 	if ((f = fopen("/proc/mtd", "r")) != NULL) {
-	while (fgets(s, sizeof(s), f)) {
-		if (sscanf(s, "%*s %X %*s %16s", &size, partname) != 2) continue;
+		while (fgets(s, sizeof(s), f)) {
+			if (sscanf(s, "%*s %X %*s %16s", &size, partname) != 2)
+				continue;
+
 			if (strcmp(partname, "\"linux\"") == 0) {
 				found = 1;
 				break;
@@ -456,23 +487,30 @@ mtd1: 007d0000 00010000 "linux"
 	}
 
 #ifdef TCONFIG_NAND
-	return 128; //little trick for now. FIXIT.
+	return 128; /* little trick for now - FIXIT */
 #else
 	if (found) {
-		if ((size > 0x2000000) && (size < 0x4000000)) return 64;
-		else if ((size > 0x1000000) && (size < 0x2000000)) return 32;
-		else if ((size > 0x800000) && (size < 0x1000000)) return 16;
-		else if ((size > 0x400000) && (size < 0x800000)) return 8;
-		else if ((size > 0x200000) && (size < 0x400000)) return 4;
-		else if ((size > 0x100000) && (size < 0x200000)) return 2;
-		else return 1;
+		if ((size > 0x2000000) && (size < 0x4000000))
+			return 64;
+		else if ((size > 0x1000000) && (size < 0x2000000))
+			return 32;
+		else if ((size > 0x800000) && (size < 0x1000000))
+			return 16;
+		else if ((size > 0x400000) && (size < 0x800000))
+			return 8;
+		else if ((size > 0x200000) && (size < 0x400000))
+			return 4;
+		else if ((size > 0x100000) && (size < 0x200000))
+			return 2;
+		else
+			return 1;
 	}
-	else {
+	else
 		return 0;
-	}
 #endif
 }
 
+#ifdef TCONFIG_BCMARM
 void asp_jiffies(int argc, char **argv)
 {
 	char sa[64];
@@ -486,16 +524,18 @@ void asp_jiffies(int argc, char **argv)
 
 		e = sa;
 
-		if ((e = strchr(sa, ' ')) != NULL) e = e + 2;
-
-		if ((f = strchr(sa, 10)) != NULL) *f = 0;
+		if ((e = strchr(sa, ' ')) != NULL)
+			e = e + 2;
+		if ((f = strchr(sa, 10)) != NULL)
+			*f = 0;
 
 		web_printf("\njiffies = [ '");
 		web_printf("%s", e);
 		web_puts("' ];\n");
 		fclose(a);
-    }
+	}
 }
+#endif
 
 void asp_etherstates(int argc, char **argv)
 {
@@ -504,19 +544,24 @@ void asp_etherstates(int argc, char **argv)
 	unsigned n;
 
 	if (nvram_match("lan_state", "1")) {
-
 		web_puts("\netherstates = {");
 
 		system("/usr/sbin/ethstate");
 		n = 0;
 		if ((f = fopen("/tmp/ethernet.state", "r")) != NULL) {
 			while (fgets(s, sizeof(s), f)) {
-				if (sscanf(s, "Port 0: %s", b) == 1) a="port0";
-				else if (sscanf(s, "Port 1: %s", b) == 1) a="port1";
-				else if (sscanf(s, "Port 2: %s", b) == 1) a="port2";
-				else if (sscanf(s, "Port 3: %s", b) == 1) a="port3";
-				else if (sscanf(s, "Port 4: %s", b) == 1) a="port4";
-				else continue;
+				if (sscanf(s, "Port 0: %s", b) == 1)
+					a = "port0";
+				else if (sscanf(s, "Port 1: %s", b) == 1)
+					a = "port1";
+				else if (sscanf(s, "Port 2: %s", b) == 1)
+					a = "port2";
+				else if (sscanf(s, "Port 3: %s", b) == 1)
+					a = "port3";
+				else if (sscanf(s, "Port 4: %s", b) == 1)
+					a = "port4";
+				else
+					continue;
 
 				web_printf("%s\t%s: '%s'", n ? ",\n" : "", a, b);
 				n++;
@@ -524,9 +569,9 @@ void asp_etherstates(int argc, char **argv)
 			fclose(f);
 		}
 		web_puts("\n};\n");
-	} else {
-		web_puts("\netherstates = {\tport0: 'disabled'\n};\n");
 	}
+	else
+		web_puts("\netherstates = {\tport0: 'disabled'\n};\n");
 }
 
 void asp_anonupdate(int argc, char **argv)
@@ -535,15 +580,16 @@ void asp_anonupdate(int argc, char **argv)
 	char s[32], *a, b[16];
 	unsigned n;
 
-	if ( nvram_match("tomatoanon_answer", "1") && nvram_match("tomatoanon_enable", "1") && nvram_match("tomatoanon_notify", "1") ) {
-
+	if (nvram_match("tomatoanon_answer", "1") && nvram_match("tomatoanon_enable", "1") && nvram_match("tomatoanon_notify", "1")) {
 		web_puts("\nanonupdate = {");
 
 		n = 0;
 		if ((f = fopen("/tmp/anon.version", "r")) != NULL) {
 			while (fgets(s, sizeof(s), f)) {
-				if (sscanf(s, "have_update=%s", b) == 1) a="update";
-				else continue;
+				if (sscanf(s, "have_update=%s", b) == 1)
+					a = "update";
+				else
+					continue;
 
 				web_printf("%s\t%s: '%s'", n ? ",\n" : "", a, b);
 				n++;
@@ -551,9 +597,9 @@ void asp_anonupdate(int argc, char **argv)
 			fclose(f);
 		}
 		web_puts("\n};\n");
-	} else {
-		web_puts("\nanonupdate = {\tupdate: 'no'\n};\n");
 	}
+	else
+		web_puts("\nanonupdate = {\tupdate: 'no'\n};\n");
 }
 
 void asp_sysinfo(int argc, char **argv)
@@ -562,22 +608,25 @@ void asp_sysinfo(int argc, char **argv)
 	char s[64];
 	meminfo_t mem;
 
+	char system_type[64];
+	char cpu_model[64];
+	char bogomips[8];
+	char cpuclk[8];
+	char cfe_version[16];
+#ifdef TCONFIG_BCMARM
 	char sa[64];
 	FILE *a;
 	char *e = NULL;
 	char *f= NULL;
 	const char procstat[] = "/proc/stat";
-
-	char system_type[64];
-	char cpu_model[64];
-	char bogomips[8];
-	char cpuclk[8];
 	char cputemp[8];
 	char wl_tempsense[128];
-	char cfe_version[16];
 
 	get_wl_tempsense(wl_tempsense);
 	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk, cputemp);
+#else
+	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk);
+#endif
 	get_cfeversion(cfe_version);
 
 	web_puts("\nsysinfo = {\n");
@@ -587,55 +636,62 @@ void asp_sysinfo(int argc, char **argv)
 #endif
 	sysinfo(&si);
 	get_memory(&mem);
-	web_printf(
-		"\tuptime: %ld,\n"
-		"\tuptime_s: '%s',\n"
-		"\tloads: [%ld, %ld, %ld],\n"
-		"\ttotalram: %lu,\n"
-		"\tfreeram: %lu,\n"
-		"\tbufferram: %lu,\n"
-		"\tcached: %lu,\n"
-		"\ttotalswap: %lu,\n"
-		"\tfreeswap: %lu,\n"
-		"\ttotalfreeram: %lu,\n"
-		"\tprocs: %d,\n"
-		"\tflashsize: %d,\n"
-		"\tsystemtype: '%s',\n"
-		"\tcpumodel: '%s',\n"
-		"\tbogomips: '%s',\n"
-		"\tcpuclk: '%s',\n"
-		"\tcputemp: '%s',\n"
-		"\twlsense: '%s',\n"
-		"\tcfeversion: '%s'",
-			si.uptime,
-			reltime(s, si.uptime),
-			si.loads[0], si.loads[1], si.loads[2],
-			mem.total, mem.free,
-			mem.buffers, mem.cached,
-			mem.swaptotal, mem.swapfree,
-			mem.maxfreeram,
-			si.procs,
-			get_flashsize(),
-			system_type,
-			cpu_model,
-			bogomips,
-			cpuclk,
-			cputemp,
-			wl_tempsense,
-			cfe_version);
+	web_printf("\tuptime: %ld,\n"
+	           "\tuptime_s: '%s',\n"
+	           "\tloads: [%ld, %ld, %ld],\n"
+	           "\ttotalram: %lu,\n"
+	           "\tfreeram: %lu,\n"
+	           "\tbufferram: %lu,\n"
+	           "\tcached: %lu,\n"
+	           "\ttotalswap: %lu,\n"
+	           "\tfreeswap: %lu,\n"
+	           "\ttotalfreeram: %lu,\n"
+	           "\tprocs: %d,\n"
+	           "\tflashsize: %d,\n"
+	           "\tsystemtype: '%s',\n"
+	           "\tcpumodel: '%s',\n"
+	           "\tbogomips: '%s',\n"
+	           "\tcpuclk: '%s',\n"
+#ifdef TCONFIG_BCMARM
+	           "\tcputemp: '%s',\n"
+	           "\twlsense: '%s',\n"
+#endif
+	           "\tcfeversion: '%s'",
+	           si.uptime,
+	           reltime(s, si.uptime),
+	           si.loads[0], si.loads[1], si.loads[2],
+	           mem.total, mem.free,
+	           mem.buffers, mem.cached,
+	           mem.swaptotal, mem.swapfree,
+	           mem.maxfreeram,
+	           si.procs,
+	           get_flashsize(),
+	           system_type,
+	           cpu_model,
+	           bogomips,
+	           cpuclk,
+#ifdef TCONFIG_BCMARM
+	           cputemp,
+	           wl_tempsense,
+#endif
+	           cfe_version);
 
+#ifdef TCONFIG_BCMARM
 	if ((a = fopen(procstat, "r")) != NULL) {
 		fgets(sa, sizeof(sa), a);
 		e = sa;
-		if ((e = strchr(sa, ' ')) != NULL) e = e + 2;
-		if ((f = strchr(sa, 10)) != NULL) *f = 0;
+		if ((e = strchr(sa, ' ')) != NULL)
+			e = e + 2;
+		if ((f = strchr(sa, 10)) != NULL)
+			*f = 0;
 		web_printf(",\n\tjiffies: '");
 		web_printf("%s", e);
 		web_puts("'\n");
 		fclose(a);
-	} else {
-		web_puts("\n");
 	}
+	else
+		web_puts("\n");
+#endif
 
 	web_puts("};\n");
 }
@@ -645,10 +701,7 @@ void asp_activeroutes(int argc, char **argv)
 	FILE *f;
 	char s[512];
 	char dev[17];
-	unsigned long dest;
-	unsigned long gateway;
-	unsigned long flags;
-	unsigned long mask;
+	unsigned long dest, gateway, flags, mask;
 	unsigned metric;
 	struct in_addr ia;
 	char s_dest[16];
@@ -660,22 +713,25 @@ void asp_activeroutes(int argc, char **argv)
 	n = 0;
 	if ((f = fopen("/proc/net/route", "r")) != NULL) {
 		while (fgets(s, sizeof(s), f)) {
-			if (sscanf(s, "%16s%lx%lx%lx%*s%*s%u%lx", dev, &dest, &gateway, &flags, &metric, &mask) != 6) continue;
-			if ((flags & RTF_UP) == 0) continue;
+			if (sscanf(s, "%16s%lx%lx%lx%*s%*s%u%lx", dev, &dest, &gateway, &flags, &metric, &mask) != 6)
+				continue;
+			if ((flags & RTF_UP) == 0)
+				continue;
+
 			if (dest != 0) {
 				ia.s_addr = dest;
 				strcpy(s_dest, inet_ntoa(ia));
 			}
-			else {
+			else
 				strcpy(s_dest, "default");
-			}
+
 			if (gateway != 0) {
 				ia.s_addr = gateway;
 				strcpy(s_gateway, inet_ntoa(ia));
 			}
-			else {
+			else
 				strcpy(s_gateway, "*");
-			}
+
 			ia.s_addr = mask;
 			strcpy(s_mask, inet_ntoa(ia));
 			web_printf("%s['%s','%s','%s','%s',%u]", n ? "," : "", dev, s_dest, s_gateway, s_mask, metric);
@@ -690,30 +746,29 @@ void asp_activeroutes(int argc, char **argv)
 	struct sockaddr_in6 snaddr6;
 	char addr6[40], nhop6[40];
 
-	if ((ipv6_enabled()) &&
-	    (f = fopen("/proc/net/ipv6_route", "r")) != NULL) {
+	if ((ipv6_enabled()) && (f = fopen("/proc/net/ipv6_route", "r")) != NULL) {
 		while (fgets(s, sizeof(s), f)) {
-			if (sscanf(s, "%32s%x%*s%*s%32s%x%*s%*s%lx%s\n",
-				addr6x+14, &pxlen, addr6x+40+7, &metric, &flags, dev) != 6) continue;
+			if (sscanf(s, "%32s%x%*s%*s%32s%x%*s%*s%lx%s\n", addr6x + 14, &pxlen, addr6x + 40 + 7, &metric, &flags, dev) != 6)
+				continue;
 
-			if ((flags & RTF_UP) == 0) continue;
+			if ((flags & RTF_UP) == 0)
+				continue;
 
 			int i = 0;
 			char *p = addr6x+14;
 			do {
 				if (!*p) {
-					if (i == 40) { // nul terminator for 1st address?
-						addr6x[39] = 0;	// Fixup... need 0 instead of ':'.
-						++p;	// Skip and continue.
+					if (i == 40) { /* nul terminator for 1st address? */
+						addr6x[39] = 0; /* Fixup... need 0 instead of ':' */
+						++p; /* skip and continue */
 						continue;
 					}
 					goto OUT;
 				}
 				addr6x[i++] = *p++;
-				if (!((i+1) % 5)) {
+				if (!((i+1) % 5))
 					addr6x[i++] = ':';
-				}
-			} while (i < 40+28+7);
+			} while (i < 40 + 28 + 7);
 
 			inet_pton(AF_INET6, addr6x, (struct sockaddr *) &snaddr6.sin6_addr);
 			if (IN6_IS_ADDR_UNSPECIFIED(&snaddr6.sin6_addr))
@@ -745,7 +800,8 @@ void asp_cgi_get(int argc, char **argv)
 
 	for (i = 0; i < argc; ++i) {
 		v = webcgi_get(argv[i]);
-		if (v) web_puts(v);
+		if (v)
+			web_puts(v);
 	}
 }
 
@@ -755,23 +811,69 @@ void asp_time(int argc, char **argv)
 	char s[64];
 
 	t = time(NULL);
-	if (t < Y2K) {
+	if (t < Y2K)
 		web_puts("Not Available");
-	}
 	else {
 		strftime(s, sizeof(s), "%a, %d %b %Y %H:%M:%S %z", localtime(&t));
 		web_puts(s);
 	}
 }
 
+#ifdef TCONFIG_SDHC
+void asp_mmcid(int argc, char **argv) {
+	FILE *f;
+	char s[32], *a, b[16];
+	unsigned n, size;
+
+	web_puts("\nmmcid = {");
+	n = 0;
+	if ((f = fopen("/proc/mmc/status", "r")) != NULL) {
+		while (fgets(s, sizeof(s), f)) {
+			size = 1;
+			if (sscanf(s, "Card Type      : %16s", b) == 1)
+				a = "type";
+			else if (sscanf(s, "Spec Version   : %16s", b) == 1)
+				a = "spec";
+			else if (sscanf(s, "Num. of Blocks : %d", &size) == 1) {
+				a = "size";
+				snprintf(b, sizeof(b), "%lld", ((unsigned long long)size) * 512);
+			}
+			else if (sscanf(s, "Voltage Range  : %16s", b) == 1)
+				a = "volt";
+			else if (sscanf(s, "Manufacture ID : %16s", b) == 1)
+				a = "manuf";
+			else if (sscanf(s, "Application ID : %16s", b) == 1)
+				a = "appl";
+			else if (sscanf(s, "Product Name   : %16s", b) == 1)
+				a = "prod";
+			else if (sscanf(s, "Revision       : %16s", b) == 1)
+				a = "rev";
+			else if (sscanf(s, "Serial Number  : %16s", b) == 1)
+				a = "serial";
+			else if (sscanf(s, "Manu. Date     : %8c", b) == 1) {
+				a = "date";
+				b[9] = 0;
+			}
+			else
+				continue;
+
+			web_printf(size == 1 ? "%s\t%s: '%s'" : "%s\t%s: %s", n ? ",\n" : "", a, b);
+			n++;
+		}
+		fclose(f);
+	}
+	web_puts("\n};\n");
+}
+#endif
+
 void asp_wanup(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
 
-	if(argc > 0){
-		strcpy(prefix, argv[0]); }
-	else{
-		strcpy(prefix, "wan"); }
+	if (argc > 0)
+		strcpy(prefix, argv[0]);
+	else
+		strcpy(prefix, "wan");
 
 	web_puts(check_wanup(prefix) ? "1" : "0");
 }
@@ -779,34 +881,29 @@ void asp_wanup(int argc, char **argv)
 void asp_wanstatus(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
+	const char *p;
+	char renew_file[64];
+	char wanconn_file[64];
 
-	if(argc > 0){
-		strcpy(prefix, argv[0]); }
-	else{
-		strcpy(prefix, "wan"); }
+	if (argc > 0)
+		strcpy(prefix, argv[0]);
+	else
+		strcpy(prefix, "wan");
 
-	char renew_file[256];
-	memset(renew_file, 0, 256);
+	memset(renew_file, 0, 64);
 	sprintf(renew_file, "/var/lib/misc/%s_dhcpc.renewing", prefix);
-
-	char wanconn_file[256];
-	memset(wanconn_file, 0, 256);
+	memset(wanconn_file, 0, 64);
 	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
 
-	const char *p;
-
-	if ((using_dhcpc(prefix)) && (f_exists(renew_file))) {
+	if ((using_dhcpc(prefix)) && (f_exists(renew_file)))
 		p = "Renewing...";
-	}
-	else if (check_wanup(prefix)) {
+	else if (check_connect(prefix))
 		p = "Connected";
-	}
-	else if (f_exists(wanconn_file)) {
+	else if (f_exists(wanconn_file))
 		p = "Connecting...";
-	}
-	else {
+	else
 		p = "Disconnected";
-	}
+
 	web_puts(p);
 }
 
@@ -816,12 +913,11 @@ void asp_link_uptime(int argc, char **argv)
 	long uptime;
 	char prefix[] = "wanXX";
 
-	if (argc > 0) {
+	if (argc > 0)
 		strcpy(prefix, argv[0]);
-	}
-	else {
+	else
 		strcpy(prefix, "wan");
-	}
+
 	buf[0] = '-';
 	buf[1] = 0;
 	if (check_wanup(prefix)) {
@@ -848,9 +944,8 @@ void asp_compmac(int argc, char **argv)
 	char mac[32];
 	char ifname[32];
 
-	if (get_client_info(mac, ifname)) {
+	if (get_client_info(mac, ifname))
 		web_puts(mac);
-	}
 }
 
 void asp_ident(int argc, char **argv)
@@ -863,46 +958,52 @@ void asp_statfs(int argc, char **argv)
 	struct statfs sf;
 	int mnt;
 
-	if (argc != 2) return;
+	if (argc != 2)
+		return;
 
-	// used for /cifs/, /jffs/... if it returns squashfs type, assume it's not mounted
-	if ((statfs(argv[0], &sf) != 0) || (sf.f_type == 0x71736873 || sf.f_type == 0x73717368)) {
+	/* used for /cifs/, /jffs/... if it returns squashfs type, assume it's not mounted */
+	if ((statfs(argv[0], &sf) != 0) || (sf.f_type == 0x73717368)
+#ifdef TCONFIG_BCMARM
+	    || (sf.f_type == 0x71736873)
+#endif
+	) {
 		mnt = 0;
 		memset(&sf, 0, sizeof(sf));
 #ifdef TCONFIG_JFFS2
-		// for jffs, try to get total size from mtd partition
+		/* for jffs, try to get total size from mtd partition */
 		if ((strncmp(argv[1], "jffs", 4) == 0) || (strncmp(argv[1], "brcmnand", 8) == 0)) {
 			int part;
 
-			if (mtd_getinfo(argv[1], &part, (int *)&sf.f_blocks)) {
+			if (mtd_getinfo(argv[1], &part, (int *)&sf.f_blocks))
 				sf.f_bsize = 1;
-			}
 		}
 #endif
 	}
-	else {
+	else
 		mnt = 1;
-	}
 
-	web_printf(
-			"\n%s = {\n"
-			"\tmnt: %d,\n"
-			"\tsize: %llu,\n"
-			"\tfree: %llu\n"
-			"};\n",
-			argv[1], mnt,
-			((uint64_t)sf.f_bsize * sf.f_blocks),
-			((uint64_t)sf.f_bsize * sf.f_bfree));
+	web_printf("\n%s = {\n"
+	           "\tmnt: %d,\n"
+	           "\tsize: %llu,\n"
+	           "\tfree: %llu\n"
+	           "};\n",
+	           argv[1], mnt,
+	           ((uint64_t)sf.f_bsize * sf.f_blocks),
+	           ((uint64_t)sf.f_bsize * sf.f_bfree));
 }
 
 void asp_notice(int argc, char **argv)
 {
-	char s[256];
+	char s[64];
 	char buf[2048];
 
-	if (argc != 1) return;
+	if (argc != 1)
+		return;
+
 	snprintf(s, sizeof(s), "/var/notice/%s", argv[0]);
-	if (f_read_string(s, buf, sizeof(buf)) <= 0) return;
+	if (f_read_string(s, buf, sizeof(buf)) <= 0)
+		return;
+
 	web_putj(buf);
 }
 
@@ -916,10 +1017,13 @@ void wo_wakeup(char *url)
 		end = mac + strlen(mac);
 		while (mac < end) {
 			while ((*mac == ' ') || (*mac == '\t') || (*mac == '\r') || (*mac == '\n')) ++mac;
-			if (*mac == 0) break;
+			if (*mac == 0)
+				break;
 
 			p = mac;
-			while ((*p != 0) && (*p != ' ') && (*p != '\r') && (*p != '\n')) ++p;
+			while ((*p != 0) && (*p != ' ') && (*p != '\r') && (*p != '\n'))
+				++p;
+
 			*p = 0;
 
 			eval("ether-wake", "-b", "-i", nvram_safe_get("lan_ifname"), mac);
@@ -942,16 +1046,16 @@ void asp_dns(int argc, char **argv)
 	const dns_list_t *dns;
 	char prefix[] = "wanXX";
 
-	if(argc > 0){
-		strcpy(prefix, argv[0]); }
-	else{
-		strcpy(prefix, "wan"); }
+	if (argc > 0)
+		strcpy(prefix, argv[0]);
+	else
+		strcpy(prefix, "wan");
 
-	dns = get_dns(prefix);	// static buffer
+	dns = get_dns(prefix); /* static buffer */
 	strcpy(s, "[");
-	for (i = 0 ; i < dns->count; ++i) {
+	for (i = 0 ; i < dns->count; ++i)
 		sprintf(s + strlen(s), "%s'%s:%u'", i ? "," : "", inet_ntoa(dns->dns[i].addr), dns->dns[i].port);
-	}
+
 	strcat(s, "]");
 	web_puts(s);
 }
@@ -971,6 +1075,7 @@ int resolve_addr(const char *ip, char *host)
 		ret = getnameinfo(res->ai_addr, res->ai_addrlen, host, NI_MAXHOST, NULL, 0, 0);
 		freeaddrinfo(res);
 	}
+
 	return ret;
 }
 
@@ -986,7 +1091,9 @@ void wo_resolve(char *url)
 	web_puts("\nresolve_data = [\n");
 	if ((p = webcgi_get("ip")) != NULL) {
 		while ((ip = strsep(&p, ",")) != NULL) {
-			if (resolve_addr(ip, host) != 0) continue;
+			if (resolve_addr(ip, host) != 0)
+				continue;
+
 			js = js_string(host);
 			web_printf("%c['%s','%s']", comma, ip, js);
 			free(js);
@@ -994,32 +1101,6 @@ void wo_resolve(char *url)
 		}
 	}
 	web_puts("];\n");
-}
-
-char* get_cfeversion(char *buf)
-{
-	FILE *f;
-	char s[16] = "";
-	int len = 0;
-
-	strcpy(buf, "");
-
-	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL) {
-		if (fgets(s, 15, f) != NULL) {
-			len = strlen(s);
-		}
-		pclose(f);
-	}
-
-	if (len == 0) {
-		strcpy(buf, "--");
-	}
-	else {
-		strcpy(buf, s);
-		buf[strcspn(buf, "\n")] = 0;
-	}
-
-	return buf;
 }
 
 #ifdef TCONFIG_STUBBY

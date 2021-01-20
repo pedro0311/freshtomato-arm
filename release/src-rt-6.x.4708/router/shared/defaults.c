@@ -56,6 +56,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "mwan_ckdst",			"google.com,microsoft.com"	, 0 },	// target1,target2
 	{ "mwan_debug",			"0"				, 0 },
 	{ "mwan_tune_gc",		"0"				, 0 },	/* tune route cache for multiwan in load balancing */
+	{ "mwan_state_init",		"1"				, 0 },	/* init wan state files with this value */
 	{ "pbr_rules",			""				, 0 },
 
 	/* WAN H/W parameters */

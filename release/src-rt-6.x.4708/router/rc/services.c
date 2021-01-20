@@ -3373,7 +3373,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_JFFS2
-	if (strcmp(service, "jffs") == 0) {
+	if (strncmp(service, "jffs", 4) == 0) { /* could be jffs/jffs2 */
 		if (act_stop) stop_jffs2();
 		if (act_start) start_jffs2();
 		goto CLEAR;

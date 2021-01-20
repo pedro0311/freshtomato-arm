@@ -6246,4 +6246,12 @@ typedef struct cma_meminfo {
 cma_meminfo_t;
 #endif /* BCM_SECURE_DMA */
 
+#if defined(CONFIG_SMP) || defined(TCONFIG_BCMSMP) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+/* WET host ip and mac parameter configuration */
+typedef struct wet_host {
+	uint8 buf[6]; /* ip or mac*/
+	uint8 bssidx;
+} wet_host_t;
+#endif /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+
 #endif /* _wlioctl_h_ */
