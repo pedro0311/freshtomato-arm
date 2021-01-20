@@ -104,7 +104,7 @@ watchdogRun() {
 			[ "$RESULT" -eq 0 ] && {
 				[ "$PROTO" == "lte" ] && {
 					$LOGS "Connection $PREFIX DOWN - Reconnecting ..."
-					echo "0" > /tmp/state_$PREFIX
+					echo "0" > "/var/lib/misc/"$PREFIX"_state"
 					switch4g $PREFIX
 				} || {
 					[ "$PREFIX" == "wan" -a "$MWAN" -gt 1 ] && PREFIX_MWAN="wan1"
@@ -112,7 +112,7 @@ watchdogRun() {
 					[ "$(nvram get action_service)" == "wan-restart" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart" -o "$(nvram get action_service)" == "wan-restart-c" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart-c" ] && {
 						$LOGS "Connection $PREFIX DOWN - Reconnect is already in progress ..."
 					} || {
-						echo "0" > /tmp/state_$PREFIX
+						echo "0" > "/var/lib/misc/"$PREFIX"_state"
 
 						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
 							$LOGS "Killing orphaned connect-on-demand listen process ..."
@@ -133,7 +133,7 @@ watchdogRun() {
 				}
 			} || {
 				$DEBUG "Connection $PREFIX is functioning"
-				echo "1" > /tmp/state_$PREFIX
+				echo "1" > "/var/lib/misc/"$PREFIX"_state"
 			}
 		}
 	done

@@ -119,14 +119,14 @@ void get_cidr(char *ipaddr, char *netmask, char *cidr)
 
 int checkConnect(char *sPrefix)
 {
-	char tmp[100];
+	char tmp[64];
 	FILE *f;
 	int result;
 
 	get_wan_info(sPrefix); /* here for mwan_load_balance IP / dev info in case wan is down */
 
-	memset(tmp, 0, 100);
-	sprintf(tmp, "/tmp/state_%s", sPrefix);
+	memset(tmp, 0, 64);
+	sprintf(tmp, "/var/lib/misc/%s_state", sPrefix);
 
 	if (check_wanup(sPrefix)) {
 		logmsg(LOG_DEBUG, "*** %s: prefix=%s iface=%s ip/mask=%s/%s gateway=%s weight=%d", __FUNCTION__, sPrefix, wan_info.wan_iface, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
@@ -140,11 +140,11 @@ int checkConnect(char *sPrefix)
 		fclose(f);
 
 		if (result == 1) {
-			logmsg(LOG_DEBUG, "*** %s: [1], %s is connected [result from /tmp/state_%s]", __FUNCTION__, sPrefix, sPrefix);
+			logmsg(LOG_DEBUG, "*** %s: [1], %s is connected [result from /var/lib/misc/%s_state]", __FUNCTION__, sPrefix, sPrefix);
 			return 1;
 		}
 		else {
-			logmsg(LOG_DEBUG, "*** %s: [%d], %s is disconnected  [result from /tmp/state_%s]", __FUNCTION__, result, sPrefix, sPrefix);
+			logmsg(LOG_DEBUG, "*** %s: [%d], %s is disconnected  [result from /var/lib/misc/%s_state]", __FUNCTION__, result, sPrefix, sPrefix);
 			return 0;
 		}
 	}
@@ -301,7 +301,7 @@ void mwan_state_files(void)
 {
 	int mwan_num, wan_unit;
 	char prefix[] = "wanXX";
-	char tmp[100];
+	char tmp[64];
 	FILE *f;
 
 	mwan_num = nvram_get_int("mwan_num");
@@ -312,8 +312,8 @@ void mwan_state_files(void)
 		get_wan_prefix(wan_unit, prefix);
 		get_wan_info(prefix);
 
-		memset(tmp, 0, 100);
-		sprintf(tmp, "/tmp/state_%s", prefix);
+		memset(tmp, 0, 64);
+		sprintf(tmp, "/var/lib/misc/%s_state", prefix);
 		if (!(f = fopen(tmp, "r"))) {
 			/* if file does not exist then we create it with value "0".
 			 * later on watchdog will set it to 1 when it proves that
