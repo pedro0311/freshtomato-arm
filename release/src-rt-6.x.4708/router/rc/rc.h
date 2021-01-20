@@ -201,6 +201,7 @@ extern int dhcpc_release_main(int argc, char **argv);
 extern int dhcpc_renew_main(int argc, char **argv);
 extern void start_dhcpc(char *prefix);
 extern void stop_dhcpc(char *prefix);
+extern void do_connect_file(unsigned int renew, char *prefix);
 #ifdef TCONFIG_IPV6
 extern int dhcp6c_state_main(int argc, char **argv);
 extern void start_dhcp6c(void);

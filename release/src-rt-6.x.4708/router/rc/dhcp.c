@@ -63,15 +63,28 @@ static void expires(unsigned int seconds, char *prefix)
 
 static void do_renew_file(unsigned int renew, char *prefix)
 {
-	char renew_file[64];
+	char buf[64];
 
-	memset(renew_file, 0, 64);
-	sprintf(renew_file, "/var/lib/misc/%s_dhcpc.renewing", prefix);
+	memset(buf, 0, 64);
+	sprintf(buf, "/var/lib/misc/%s_dhcpc.renewing", prefix);
 
 	if (renew)
-		f_write(renew_file, NULL, 0, 0, 0);
+		f_write(buf, NULL, 0, 0, 0);
 	else
-		unlink(renew_file);
+		unlink(buf);
+}
+
+void do_connect_file(unsigned int connect, char *prefix)
+{
+	char buf[64];
+
+	memset(buf, 0, 64);
+	sprintf(buf, "/var/lib/misc/%s.connecting", prefix);
+
+	if (connect)
+		f_write(buf, NULL, 0, 0, 0);
+	else
+		unlink(buf);
 }
 
 /* copy env to nvram
@@ -368,8 +381,7 @@ int dhcpc_event_main(int argc, char **argv)
 int dhcpc_release_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
-	char dhcpcpid_file[64];
-	char wanconn_file[64];
+	char dhcpc_file[64];
 
 	if (argc > 1)
 		strcpy(prefix, argv[1]);
@@ -383,16 +395,14 @@ int dhcpc_release_main(int argc, char **argv)
 	if (!using_dhcpc(prefix))
 		return 1;
 
-	memset(dhcpcpid_file, 0, 64);
-	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
-	if (kill_pidfile_s(dhcpcpid_file, SIGUSR2) == 0)
+	memset(dhcpc_file, 0, 64);
+	sprintf(dhcpc_file, "/var/run/udhcpc-%s.pid", prefix);
+	if (kill_pidfile_s(dhcpc_file, SIGUSR2) == 0)
 		sleep(2);
 
 	do_renew_file(0, prefix);
 
-	memset(wanconn_file, 0, 64);
-	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
-	unlink(wanconn_file);
+	do_connect_file(0, prefix);
 
 	mwan_load_balance(); /* for dual WAN and multi WAN */
 

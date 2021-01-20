@@ -89,7 +89,6 @@ extern void asp_anonupdate(int argc, char **argv);
 extern void wo_wakeup(char *url);
 extern void asp_dns(int argc, char **argv);
 extern void wo_resolve(char *url);
-extern char* get_cfeversion(char *);
 #ifdef TCONFIG_STUBBY
 extern void asp_stubby_presets(int argc, char **argv);
 #endif
