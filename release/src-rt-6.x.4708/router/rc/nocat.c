@@ -224,7 +224,7 @@ void stop_nocat(void)
 		system("rm "NOCAT_LEASES);
 		system("rm "NOCAT_START_SCRIPT);
 		system("rm "NOCAT_LOGFILE);
-		start_wan(BOOT);
+		start_wan();
 
 		syslog(LOG_INFO, "splashd: Captive Portal Splash daemon successfully stopped");
 	}

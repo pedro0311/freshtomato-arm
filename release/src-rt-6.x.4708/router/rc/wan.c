@@ -727,7 +727,7 @@ void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 	}
 }
 
-void start_wan_if(int mode, char *prefix)
+void start_wan_if(char *prefix)
 {
 	int wan_proto;
 	char *wan_ifname;
@@ -909,7 +909,7 @@ void start_wan_if(int mode, char *prefix)
 	set_et_qos_mode();
 }
 
-void start_wan(int mode)
+void start_wan(void)
 {
 	int mwan_num;
 	int wan_unit;
@@ -923,7 +923,7 @@ void start_wan(int mode)
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
-		start_wan_if (mode, prefix);
+		start_wan_if(prefix);
 	}
 
 	start_firewall();
