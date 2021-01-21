@@ -25,9 +25,9 @@
 //	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,wl_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_enable,rstats_colors"); %>
 
 var cprefix = 'bw_24';
-var updateInt = 120;
+var updateInt = 60;
 var updateDiv = updateInt;
-var updateMaxL = 720;
+var updateMaxL = 1440;
 var updateReTotal = 1;
 var hours = 24;
 var lastHours = 0;
@@ -44,7 +44,7 @@ function switchHours(h) {
 	if ((!svgReady) || (updating)) return;
 
 	hours = h;
-	updateMaxL = (720 / 24) * hours;
+	updateMaxL = (1440 / 24) * hours;
 	showHours();
 	loadData();
 	cookie.set(cprefix + 'hrs', hours);
@@ -62,7 +62,7 @@ ref.refresh = function(text) {
 			if (rstats_busy) {
 				rstats_busy = 0;
 			}
-			this.refreshTime = (fixInt(speed_history._next, 1, 120, 60) + 2) * 1000;
+			this.refreshTime = (fixInt(speed_history._next, 1, 60, 30) + 2) * 1000;
 		}
 		catch (ex) {
 			speed_history = {};
@@ -115,7 +115,7 @@ function init() {
 	}
 
 	hours = fixInt(cookie.get(cprefix + 'hrs'), 1, 24, 24);
-	updateMaxL = (720 / 24) * hours;
+	updateMaxL = (1440 / 24) * hours;
 	showHours();
 
 	initCommon(1, 0, 0, 1);
@@ -156,7 +156,7 @@ function init() {
 		</script>
 
 		<div id="bwm-controls">
-			<small>(2 minute interval)</small><br>
+			<small>(1 minute interval)</small><br>
 
 			<br>
 
