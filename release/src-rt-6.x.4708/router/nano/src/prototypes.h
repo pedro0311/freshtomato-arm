@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prototypes.h  --  This file is part of GNU nano.                     *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -36,7 +36,7 @@ extern bool bracketed_paste;
 
 extern bool we_are_running;
 extern bool more_than_one;
-
+extern bool report_size;
 extern bool ran_a_tool;
 
 extern bool inhelp;
@@ -53,6 +53,7 @@ extern message_type lastmessage;
 extern linestruct *pletion_line;
 
 extern bool also_the_last;
+extern bool hide_cursor;
 
 extern char *answer;
 
@@ -594,6 +595,7 @@ void set_blankdelay_to_one(void);
 char *display_string(const char *buf, size_t column, size_t span,
 						bool isdata, bool isprompt);
 void titlebar(const char *path);
+void minibar(void);
 void statusline(message_type importance, const char *msg, ...);
 void statusbar(const char *msg);
 void warn_and_briefly_pause(const char *msg);

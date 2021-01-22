@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Wed Dec  2 11:30:13 2020 -->
+<!-- CreationDate: Thu Jan 14 11:12:27 2021 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -577,6 +577,14 @@ stop at word ends instead of beginnings.</p>
 <p style="margin-left:22%;">Allow the user to suspend the
 editor (with <b>^Z</b> by default).</p>
 
+<p style="margin-left:11%;"><b>&minus;^</b>,
+<b>&minus;&minus;markmatch</b></p>
+
+<p style="margin-left:22%;">After a search, set the mark at
+the end of the found match (if there is any) so that it gets
+highlighted. This makes the match more visible, but also
+allows deleting the match with a single keystroke.</p>
+
 <p style="margin-left:11%;"><b>&minus;%</b>,
 <b>&minus;&minus;stateflags</b></p>
 
@@ -587,6 +595,25 @@ hard-wrapping (breaking long lines), <b>R</b> when recording
 a macro, and <b>S</b> when soft-wrapping. When the buffer is
 modified, a star (<b>*</b>) is shown after the filename in
 the center of the title bar.</p>
+
+<p style="margin-left:11%;"><b>&minus;_</b>,
+<b>&minus;&minus;minibar</b></p>
+
+<p style="margin-left:22%;">Suppress the title bar and
+instead show information about the current buffer at the
+bottom of the screen, in the space for the status bar. In
+this &quot;minibar&quot; the file name is shown on the left,
+followed by an asterisk if the buffer has been modified. On
+the right are displayed the current line and column number,
+the code of the character under the cursor (in Unicode
+format: U+xxxx), the same flags as are shown by
+<b>&minus;&minus;stateflags</b>, and a percentage that
+expresses how far the cursor is into the file (linewise).
+When a file is loaded or saved, and also when switching
+between buffers, the number of lines in the buffer is
+displayed after the file name. This number is cleared upon
+the next keystroke, or replaced with an [i/n] counter when
+multiple buffers are open.</p>
 
 <p style="margin-left:11%;"><b>&minus;!</b>,
 <b>&minus;&minus;magic</b></p>

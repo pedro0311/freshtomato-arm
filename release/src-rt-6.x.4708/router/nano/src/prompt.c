@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prompt.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2016, 2018, 2020 Benno Schulenberg                     *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -380,18 +380,19 @@ void put_cursor_at_end_of_answer(void)
 	typing_x = HIGHEST_POSITIVE;
 }
 
-/* Redraw the promptbar and place the cursor at the right spot. */
+/* Redraw the prompt bar and place the cursor at the right spot. */
 void draw_the_promptbar(void)
 {
 	size_t base = breadth(prompt) + 2;
-	size_t the_page, end_page, column;
+	size_t column = base + wideness(answer, typing_x);
+	size_t the_page, end_page;
 	char *expanded;
 
-	the_page = get_statusbar_page_start(base, base + wideness(answer, typing_x));
+	the_page = get_statusbar_page_start(base, column);
 	end_page = get_statusbar_page_start(base, base + breadth(answer) - 1);
 
-	/* Color the promptbar over its full width. */
-	wattron(bottomwin, interface_color_pair[TITLE_BAR]);
+	/* Color the prompt bar over its full width. */
+	wattron(bottomwin, interface_color_pair[PROMPT_BAR]);
 	mvwprintw(bottomwin, 0, 0, "%*s", COLS, " ");
 
 	mvwaddstr(bottomwin, 0, 0, prompt);
@@ -402,14 +403,19 @@ void draw_the_promptbar(void)
 	waddstr(bottomwin, expanded);
 	free(expanded);
 
-	if (base + breadth(answer) != COLS && the_page < end_page)
+	if (the_page < end_page && base + breadth(answer) - the_page > COLS)
 		mvwaddch(bottomwin, 0, COLS - 1, '>');
 
-	wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
+	wattroff(bottomwin, interface_color_pair[PROMPT_BAR]);
+
+	/* Work around a cursor-misplacement bug -- https://sv.gnu.org/bugs/?59808. */
+	if (ISSET(NO_HELP)) {
+		wmove(bottomwin, 0, 0);
+		wrefresh(bottomwin);
+	}
 
 	/* Place the cursor at the right spot. */
-	column = base + wideness(answer, typing_x);
-	wmove(bottomwin, 0, column - get_statusbar_page_start(base, column));
+	wmove(bottomwin, 0, column - the_page);
 	wnoutrefresh(bottomwin);
 }
 
@@ -490,8 +496,7 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 			} else
 #endif
 			/* Allow tab completion of filenames, but not in restricted mode. */
-			if ((currmenu == MINSERTFILE || currmenu == MWRITEFILE ||
-								currmenu == MGOTODIR) && !ISSET(RESTRICTED))
+			if ((currmenu & (MINSERTFILE|MWRITEFILE|MGOTODIR)) && !ISSET(RESTRICTED))
 				answer = input_tab(answer, &typing_x, refresh_func, listed);
 		} else
 #endif /* ENABLE_TABCOMP */
@@ -684,11 +689,11 @@ int do_yesno_prompt(bool all, const char *msg)
 			post_one_key(cancelshortcut->keystr, _("Cancel"), width);
 		}
 
-		/* Color the promptbar over its full width and display the question. */
-		wattron(bottomwin, interface_color_pair[TITLE_BAR]);
+		/* Color the prompt bar over its full width and display the question. */
+		wattron(bottomwin, interface_color_pair[PROMPT_BAR]);
 		mvwprintw(bottomwin, 0, 0, "%*s", COLS, " ");
 		mvwaddnstr(bottomwin, 0, 0, msg, actual_x(msg, COLS - 1));
-		wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
+		wattroff(bottomwin, interface_color_pair[PROMPT_BAR]);
 		wnoutrefresh(bottomwin);
 
 		currmenu = MYESNO;

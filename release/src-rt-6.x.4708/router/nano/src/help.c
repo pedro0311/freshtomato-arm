@@ -1,7 +1,7 @@
 /**************************************************************************
  *   help.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 2000-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2000-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2017 Rishabh Dave                                      *
  *   Copyright (C) 2014-2019 Benno Schulenberg                            *
  *                                                                        *
@@ -50,7 +50,7 @@ void help_init(void)
 	char *ptr;
 
 	/* First, set up the initial help text for the current function. */
-	if (currmenu == MWHEREIS || currmenu == MREPLACE || currmenu == MREPLACEWITH) {
+	if (currmenu & (MWHEREIS|MREPLACE|MREPLACEWITH)) {
 		htx[0] = N_("Search Command Help Text\n\n "
 				"Enter the words or characters you would like to "
 				"search for, and then press Enter.  If there is a "
@@ -457,9 +457,13 @@ void show_help(void)
 
 		/* Show the cursor when we searched and found something. */
 		kbinput = get_kbinput(edit, didfind == 1 || ISSET(SHOW_CURSOR));
+
 		didfind = 0;
 
 #ifndef NANO_TINY
+		openfile->mark = NULL;
+		hide_cursor = FALSE;
+
 		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
 			beep();
 			continue;
@@ -548,7 +552,7 @@ void show_help(void)
 	}
 
 #ifdef ENABLE_BROWSER
-	if (oldmenu == MBROWSER || oldmenu == MWHEREISFILE || oldmenu == MGOTODIR)
+	if (oldmenu & (MBROWSER|MWHEREISFILE|MGOTODIR))
 		browser_refresh();
 	else
 #endif
@@ -566,7 +570,7 @@ void do_help(void)
 #ifdef ENABLE_HELP
 	show_help();
 #else
-	if (currmenu == MMAIN || currmenu == MBROWSER)
+	if (currmenu & (MMAIN|MBROWSER))
 		statusbar(_("^W = Ctrl+W    M-W = Alt+W"));
 	else
 		beep();

@@ -1,7 +1,7 @@
 /**************************************************************************
  *   files.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -81,6 +81,7 @@ void make_new_buffer(void)
 #endif
 #ifndef NANO_TINY
 	openfile->mark = NULL;
+	openfile->softmark = FALSE;
 
 	openfile->fmt = NIX_FILE;
 
@@ -95,6 +96,26 @@ void make_new_buffer(void)
 #ifdef ENABLE_COLOR
 	openfile->syntax = NULL;
 #endif
+}
+
+/* Return the given file name in a way that fits within the given space. */
+char *crop_to_fit(const char *name, int room)
+{
+	char *clipped;
+
+	if (breadth(name) <= room)
+		return display_string(name, 0, room, FALSE, FALSE);
+
+	if (room < 4)
+		return copy_of("_");
+
+	clipped = display_string(name, breadth(name) - room + 3, room, FALSE, FALSE);
+
+	clipped = nrealloc(clipped, strlen(clipped) + 4);
+	memmove(clipped + 3, clipped, strlen(clipped) + 1);
+	clipped[0] = '.'; clipped[1] = '.'; clipped[2] = '.';
+
+	return clipped;
 }
 
 #ifndef NANO_TINY
@@ -225,7 +246,7 @@ char *do_lockfile(const char *filename, bool ask_the_user)
 	else if (stat(lockfilename, &fileinfo) != -1) {
 		char *lockbuf, *question, *pidstring, *postedname, *promptstr;
 		static char lockprog[11], lockuser[17];
-		int lockfd, lockpid, room, choice;
+		int lockfd, lockpid, choice;
 		ssize_t readamt;
 
 		if ((lockfd = open(lockfilename, O_RDONLY)) < 0) {
@@ -266,19 +287,8 @@ char *do_lockfile(const char *filename, bool ask_the_user)
 
 		/* TRANSLATORS: The second %s is the name of the user, the third that of the editor. */
 		question = _("File %s is being edited by %s (with %s, PID %s); open anyway?");
-		room = COLS - breadth(question) + 7 - breadth(lockuser) -
-								breadth(lockprog) - breadth(pidstring);
-		if (room < 4)
-			postedname = copy_of("_");
-		else if (room < breadth(filename)) {
-			char *fragment = display_string(filename,
-								breadth(filename) - room + 3, room, FALSE, FALSE);
-			postedname = nmalloc(strlen(fragment) + 4);
-			strcpy(postedname, "...");
-			strcat(postedname, fragment);
-			free(fragment);
-		} else
-			postedname = display_string(filename, 0, room, FALSE, FALSE);
+		postedname = crop_to_fit(filename, COLS - breadth(question) - breadth(lockuser) -
+											breadth(lockprog) - breadth(pidstring) + 7);
 
 		/* Allow extra space for username (14), program name (8), PID (8),
 		 * and terminating \0 (1), minus the %s (2) for the file name. */
@@ -500,7 +510,13 @@ void mention_name_and_linecount(void)
 {
 	size_t count = openfile->filebot->lineno -
 						(openfile->filebot->data[0] == '\0' ? 1 : 0);
+
 #ifndef NANO_TINY
+	if (ISSET(MINIBAR)) {
+		report_size = TRUE;
+		return;
+	}
+
 	if (openfile->fmt != NIX_FILE)
 		/* TRANSLATORS: First %s is file name, second %s is file format. */
 		statusline(HUSH, P_("%s -- %zu line (%s)", "%s -- %zu lines (%s)", count),
@@ -519,7 +535,7 @@ void redecorate_after_switch(void)
 {
 	/* If only one file buffer is open, there is nothing to update. */
 	if (openfile == openfile->next) {
-		statusbar(_("No more open file buffers"));
+		statusline(AHEM, _("No more open file buffers"));
 		return;
 	}
 
@@ -831,7 +847,7 @@ int open_file(const char *filename, bool new_one, FILE **f)
 		free(full_filename);
 
 		if (new_one) {
-			statusbar(_("New File"));
+			statusline(REMARK, _("New File"));
 			return 0;
 		} else {
 			statusline(ALERT, _("File \"%s\" not found"), filename);
@@ -1981,8 +1997,13 @@ bool write_file(const char *name, FILE *thefile, bool tmp,
 		titlebar(NULL);
 	}
 
+#ifndef NANO_TINY
+	if (ISSET(MINIBAR) && fullbuffer && !tmp)
+		report_size = TRUE;
+	else
+#endif
 	if (!tmp)
-		statusline(HUSH, P_("Wrote %zu line", "Wrote %zu lines",
+		statusline(REMARK, P_("Wrote %zu line", "Wrote %zu lines",
 								lineswritten), lineswritten);
 	retval = TRUE;
 
@@ -2164,7 +2185,7 @@ int do_writeout(bool exiting, bool withprompt)
 				did_credits = TRUE;
 			} else
 				/* TRANSLATORS: Concisely say the screen is too small. */
-				statusbar(_("Too tiny"));
+				statusline(AHEM, _("Too tiny"));
 
 			free(given);
 			return 0;
@@ -2216,10 +2237,8 @@ int do_writeout(bool exiting, bool withprompt)
 
 				if (name_exists) {
 					char *question = _("File \"%s\" exists; OVERWRITE? ");
-					char *name = display_string(answer, 0,
-										COLS - breadth(question) + 1, FALSE, FALSE);
-					char *message = nmalloc(strlen(question) +
-												strlen(name) + 1);
+					char *name = crop_to_fit(answer, COLS - breadth(question) + 1);
+					char *message = nmalloc(strlen(question) + strlen(name) + 1);
 
 					sprintf(message, question, name);
 

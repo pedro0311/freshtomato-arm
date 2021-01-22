@@ -1,7 +1,7 @@
 /**************************************************************************
  *   rcfile.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014 Mike Frysinger                                    *
  *   Copyright (C) 2019 Brand Huntsman                                    *
  *   Copyright (C) 2014-2020 Benno Schulenberg                            *
@@ -71,7 +71,7 @@ static const rcoption rcopts[] = {
 	{"nonewlines", NO_NEWLINES},
 	{"nopauses", NO_PAUSES},  /* Obsolete; remove in 2021. */
 #ifdef ENABLE_WRAPPING
-	{"nowrap", NO_WRAP},  /* Deprecated; remove in 2021. */
+	{"nowrap", NO_WRAP},  /* Deprecated; remove in 2024. */
 #endif
 #ifdef ENABLE_OPERATINGDIR
 	{"operatingdir", 0},
@@ -109,7 +109,9 @@ static const rcoption rcopts[] = {
 	{"indicator", INDICATOR},
 	{"jumpyscrolling", JUMPY_SCROLLING},
 	{"locking", LOCKING},
+	{"markmatch", MARK_MATCH},
 	{"matchbrackets", 0},
+	{"minibar", MINIBAR},
 	{"noconvert", NO_CONVERT},
 	{"showcursor", SHOW_CURSOR},
 	{"smarthome", SMART_HOME},
@@ -131,6 +133,7 @@ static const rcoption rcopts[] = {
 	{"stripecolor", 0},
 	{"scrollercolor", 0},
 	{"selectedcolor", 0},
+	{"promptcolor", 0},
 	{"statuscolor", 0},
 	{"errorcolor", 0},
 	{"keycolor", 0},
@@ -473,7 +476,8 @@ keystruct *strtosc(const char *input)
 		else if (!strcmp(input, "cutfromcursor"))
 			s->toggle = CUT_FROM_CURSOR;
 #ifdef ENABLE_WRAPPING
-		else if (!strcmp(input, "nowrap"))
+		else if (!strcmp(input, "breaklonglines") ||
+		         !strcmp(input, "nowrap"))  /* Deprecated; remove in 2024. */
 			s->toggle = BREAK_LONG_LINES;
 #endif
 		else if (!strcmp(input, "tabstospaces"))
@@ -1554,6 +1558,8 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			color_combo[SCROLL_BAR] = parse_interface_color(argument);
 		else if (strcmp(option, "selectedcolor") == 0)
 			color_combo[SELECTED_TEXT] = parse_interface_color(argument);
+		else if (strcmp(option, "promptcolor") == 0)
+			color_combo[PROMPT_BAR] = parse_interface_color(argument);
 		else if (strcmp(option, "statuscolor") == 0)
 			color_combo[STATUS_BAR] = parse_interface_color(argument);
 		else if (strcmp(option, "errorcolor") == 0)
