@@ -159,7 +159,7 @@ int do_led(int which, int mode)
 	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12};
 	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2};
 	static int ac18[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2};
-	static int f9k1113v2[]	= { 255,    3,   255,  255,  255,   12,  254,   0,     1,  255};
+	static int f9k1113v2[]	= { 255,   14,    12,  255,  255,   15,  255,   0,     1,  255};
 	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255};
 	static int ea6350v1[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
 	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
@@ -413,10 +413,14 @@ int do_led(int which, int mode)
 			do_led_bridge(mode);
 		}
 		break;
+	case MODEL_F9K1113v2_20X0:
 	case MODEL_F9K1113v2:
-		b = f9k1113v2[which];
-		if (which == LED_BRIDGE) { /* non GPIO LED */
-			do_led_bridge(mode);
+		if (which == LED_WHITE) {
+			b = 12; /* color blue gpio 12 (active LOW) */
+			c = 13; /* color orange gpio 13 (active LOW) */
+		}
+		else {
+			b = f9k1113v2[which];
 		}
 		break;
 	case MODEL_DIR868L:
@@ -584,8 +588,10 @@ void led_setup(void) {
 			set_gpio(GPIO_00, T_LOW); /* disable sys led */
 			disable_led_wanlan();
 			break;
+		case MODEL_F9K1113v2_20X0:
 		case MODEL_F9K1113v2:
-			set_gpio(GPIO_03, T_LOW); /* disable sys led */
+			set_gpio(GPIO_12, T_HIGH); /* disable sys led */
+			set_gpio(GPIO_15, T_HIGH); /* disable wps led */
 			break;
 		case MODEL_R6250:
 		case MODEL_R6300v2:
