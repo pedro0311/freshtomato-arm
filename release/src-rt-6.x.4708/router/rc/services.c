@@ -3442,7 +3442,7 @@ TOP:
 		if (act_stop) stop_wan();
 		if (act_start) {
 			rename("/tmp/ppp/wan_log", "/tmp/ppp/wan_log.~");
-			start_wan(BOOT);
+			start_wan();
 			sleep(5);
 			force_to_dial("wan");
 			sleep(5);
@@ -3460,7 +3460,7 @@ TOP:
 	if (strcmp(service, "wan1") == 0) {
 		if (act_stop) stop_wan_if("wan");
 		if (act_start) {
-			start_wan_if(BOOT, "wan");
+			start_wan_if("wan");
 			sleep(5);
 			force_to_dial("wan");
 		}
@@ -3470,7 +3470,7 @@ TOP:
 	if (strcmp(service, "wan2") == 0) {
 		if (act_stop) stop_wan_if("wan2");
 		if (act_start) {
-			start_wan_if(BOOT, "wan2");
+			start_wan_if("wan2");
 			sleep(5);
 			force_to_dial("wan2");
 		}
@@ -3481,7 +3481,7 @@ TOP:
 	if (strcmp(service, "wan3") == 0) {
 		if (act_stop) stop_wan_if("wan3");
 		if (act_start) {
-			start_wan_if(BOOT, "wan3");
+			start_wan_if("wan3");
 			sleep(5);
 			force_to_dial("wan3");
 		}
@@ -3491,7 +3491,7 @@ TOP:
 	if (strcmp(service, "wan4") == 0) {
 		if (act_stop) stop_wan_if("wan4");
 		if (act_start) {
-			start_wan_if(BOOT, "wan4");
+			start_wan_if("wan4");
 			sleep(5);
 			force_to_dial("wan4");
 		}
@@ -3527,7 +3527,7 @@ TOP:
 			start_nas_services();
 #endif
 			/* last one as ssh telnet httpd samba etc can fail to load until start_wan_done */
-			start_wan(BOOT);
+			start_wan();
 		}
 		goto CLEAR;
 	}

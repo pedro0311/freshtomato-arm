@@ -99,6 +99,12 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
+ifeq ($(ASUS_TRX),BELKIN)
+ifneq ($(BCMSMP),y)
+	NOSMP_DESC = '-NOSMP'
+endif
+endif
+
 
 -include tomato_profile.mak
 

@@ -38,7 +38,7 @@
 
 <script>
 
-//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,vlan0tag,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,model,mwan_num");%>
+//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,model,mwan_num");%>
 
 var cprefix = 'advanced_vlan';
 var port_vlan_supported = 0;
@@ -154,8 +154,6 @@ var COL_P4T = 11;
 var COL_VID_DEF = 12;
 var COL_BRI = 13;
 
-var vlt = nvram.vlan0tag | '0';
-
 /* set to either 5 or 8 when nvram settings are read (FastE or GigE routers) */
 var SWITCH_INTERNAL_PORT = 0;
 
@@ -174,17 +172,6 @@ function verifyFields(focused, quiet) {
 
 		if (nvram.lan3_ifname.length < 1)
 			wlan.options[3].disabled = 1;
-	}
-
-	if (!v_range('_vlan0tag', quiet, 0, 4080))
-		return 0;
-
-	var e = E('_vlan0tag');
-	var v = parseInt(e.value);
-	e.value = v - (v % 16);
-	if ((e.value != vlt) && (typeof(vlg) != 'undefined')) {
-		vlg.populate();
-		vlt = e.value;
 	}
 
 	return 1;
@@ -656,7 +643,7 @@ REMOVE-END */
 
 	vlg.dataToView = function(data) {
 		return [data[COL_VID],
-			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (parseInt(E('_vlan0tag').value) * 1 + data[COL_VID] *1 ).toString() : data[COL_MAP].toString(),
+			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (data[COL_VID] * 1).toString() : data[COL_MAP].toString(),
 			(data[COL_P0].toString() != '0') ? 'Yes' : '',
 			(data[COL_P0T].toString() != '0') ? 'On' : '',
 			(data[COL_P1].toString() != '0') ? 'Yes' : '',

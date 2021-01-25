@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -62,10 +62,6 @@ static struct termios original_state;
 
 static struct sigaction oldaction, newaction;
 		/* Containers for the original and the temporary handler for SIGINT. */
-#ifdef USE_SLANG
-static bool selfinduced = FALSE;
-		/* Whether a suspension was caused from inside nano or from outside. */
-#endif
 
 /* Create a new linestruct node.  Note that we do not set prevnode->next. */
 linestruct *make_new_node(linestruct *prevnode)
@@ -201,14 +197,14 @@ void renumber_from(linestruct *line)
 /* Display a warning about a key disabled in view mode. */
 void print_view_warning(void)
 {
-	statusbar(_("Key is invalid in view mode"));
+	statusline(AHEM, _("Key is invalid in view mode"));
 }
 
 /* When in restricted mode, show a warning and return TRUE. */
 bool in_restricted_mode(void)
 {
 	if (ISSET(RESTRICTED)) {
-		statusbar(_("This function is disabled in restricted mode"));
+		statusline(AHEM, _("This function is disabled in restricted mode"));
 		beep();
 		return TRUE;
 	} else
@@ -399,22 +395,28 @@ void window_init(void)
 		delwin(bottomwin);
 	}
 
+	topwin = NULL;
+
 	/* If the terminal is very flat, don't set up a title bar. */
 	if (LINES < 3) {
-		topwin = NULL;
 		editwinrows = 1;
 		/* Set up two subwindows.  If the terminal is just one line,
 		 * edit window and status-bar window will cover each other. */
 		edit = newwin(1, COLS, 0, 0);
 		bottomwin = newwin(1, COLS, LINES - 1, 0);
 	} else {
-		int toprows = (!ISSET(EMPTY_LINE) ? 1 : (LINES < 6) ? 1 : 2);
-		int bottomrows = (ISSET(NO_HELP) ? 1 : (LINES < 5) ? 1 : 3);
+		int toprows = ((ISSET(EMPTY_LINE) && LINES > 5) ? 2 : 1);
+		int bottomrows = ((ISSET(NO_HELP) || LINES < 5) ? 1 : 3);
 
+#ifndef NANO_TINY
+		if (ISSET(MINIBAR))
+			toprows = 0;
+#endif
 		editwinrows = LINES - toprows - bottomrows;
 
 		/* Set up the normal three subwindows. */
-		topwin = newwin(toprows, COLS, 0, 0);
+		if (toprows > 0)
+			topwin = newwin(toprows, COLS, 0, 0);
 		edit = newwin(editwinrows, COLS, toprows, 0);
 		bottomwin = newwin(bottomrows, COLS, toprows + editwinrows, 0);
 	}
@@ -422,13 +424,11 @@ void window_init(void)
 	/* In case the terminal shrunk, make sure the status line is clear. */
 	wipe_statusbar();
 
-#ifndef USE_SLANG
 	/* When not disabled, turn escape-sequence translation on. */
 	if (!ISSET(RAW_SEQUENCES)) {
 		keypad(edit, TRUE);
 		keypad(bottomwin, TRUE);
 	}
-#endif
 
 #ifdef ENABLED_WRAPORJUSTIFY
 	/* Set up the wrapping point, accounting for screen width when negative. */
@@ -526,10 +526,8 @@ void usage(void)
 	print_opt(_("-J <number>"), _("--guidestripe=<number>"),
 					N_("Show a guiding bar at this column"));
 #endif
-#ifndef USE_SLANG
 	print_opt("-K", "--rawsequences",
 					N_("Fix numeric keypad key confusion problem"));
-#endif
 #ifndef NANO_TINY
 	print_opt("-L", "--nonewlines",
 					N_("Don't add an automatic newline"));
@@ -642,7 +640,9 @@ void usage(void)
 	if (!ISSET(RESTRICTED))
 		print_opt("-z", "--suspendable", N_("Enable suspension"));
 #ifndef NANO_TINY
+	print_opt("-^", "--markmatch", N_("Select the match of a search"));
 	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
+	print_opt("-_", "--minibar", N_("Show a feedback bar at the bottom"));
 #endif
 #ifdef HAVE_LIBMAGIC
 	print_opt("-!", "--magic", N_("Also try magic to determine syntax"));
@@ -659,8 +659,8 @@ void version(void)
 	printf(_(" GNU nano, version %s\n"), VERSION);
 #endif
 #ifndef NANO_TINY
-	printf(" (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.\n");
-	printf(_(" (C) 2014-%s the contributors to nano\n"), "2020");
+	printf(" (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.\n");
+	printf(_(" (C) 2014-%s the contributors to nano\n"), "2021");
 #endif
 	printf(_(" Compiled options:"));
 
@@ -775,9 +775,6 @@ void version(void)
 	printf(" --enable-utf8");
 #else
 	printf(" --disable-utf8");
-#endif
-#ifdef USE_SLANG
-	printf(" --with-slang");
 #endif
 	printf("\n");
 }
@@ -956,18 +953,11 @@ void do_suspend(int signal)
 /* Put nano to sleep (if suspension is enabled). */
 void do_suspend_void(void)
 {
-	if (ISSET(SUSPENDABLE)) {
-#ifdef USE_SLANG
-		selfinduced = TRUE;
-		do_suspend(0);
-		selfinduced = FALSE;
-#else
-		do_suspend(0);
-#endif
-	} else {
-		statusbar(_("Suspension is not enabled"));
+	if (!ISSET(SUSPENDABLE)) {
+		statusline(AHEM, _("Suspension is not enabled"));
 		beep();
-	}
+	} else
+		do_suspend(0);
 
 	ran_a_tool = TRUE;
 }
@@ -987,13 +977,9 @@ void do_continue(int signal)
 	/* Put the terminal in the desired state again. */
 	terminal_init();
 #endif
-#ifdef USE_SLANG
-	if (!selfinduced)
-		full_refresh();
-#else
+
 	/* Insert a fake keystroke, to neutralize a key-eating issue. */
 	ungetch(KEY_FLUSH);
-#endif
 }
 
 #if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)
@@ -1126,7 +1112,9 @@ void do_toggle(int flag)
 	if (flag == NO_HELP || flag == NO_SYNTAX)
 		enabled = !enabled;
 
-	statusline(HUSH, "%s %s", _(flagtostr(flag)),
+	if (!ISSET(MINIBAR) || flag == SMART_HOME || flag == CUT_FROM_CURSOR ||
+				flag == TABS_TO_SPACES || flag == USE_MOUSE || flag == SUSPENDABLE)
+		statusline(REMARK, "%s %s", _(flagtostr(flag)),
 						enabled ? _("enabled") : _("disabled"));
 }
 #endif /* !NANO_TINY */
@@ -1202,36 +1190,15 @@ void enable_flow_control(void)
  * control characters. */
 void terminal_init(void)
 {
-#ifdef USE_SLANG
-	/* Slang curses emulation brain damage, part 2: Slang doesn't
-	 * implement raw(), nonl(), or noecho() properly, so there's no way
-	 * to properly reinitialize the terminal using them.  We have to
-	 * disable the special control keys and interpretation of the flow
-	 * control characters using termios, save the terminal state after
-	 * the first call, and restore it on subsequent calls. */
-	static struct termios desired_state;
-	static bool have_new_state = FALSE;
+	raw();
+	nonl();
+	noecho();
 
-	if (!have_new_state) {
-#endif
-		raw();
-		nonl();
-		noecho();
-		disable_extended_io();
-#ifdef USE_SLANG
-		tcgetattr(0, &desired_state);
-		have_new_state = TRUE;
-	} else
-		tcsetattr(0, TCSANOW, &desired_state);
+	disable_extended_io();
 
-	SLang_init_tty(-1, 0, 0);
-#endif
 	if (ISSET(PRESERVE))
 		enable_flow_control();
-#ifdef USE_SLANG
-	else
-		disable_flow_control();
-#endif
+
 	disable_kb_interrupt();
 
 #ifndef NANO_TINY
@@ -1289,28 +1256,28 @@ void unbound_key(int code)
 	if (code == FOREIGN_SEQUENCE)
 		/* TRANSLATORS: This refers to a sequence of escape codes
 		 * (from the keyboard) that nano does not recognize. */
-		statusline(ALERT, _("Unknown sequence"));
+		statusline(AHEM, _("Unknown sequence"));
 	else if (code > 0x7F)
-		statusline(ALERT, _("Unbound key"));
+		statusline(AHEM, _("Unbound key"));
 	else if (meta_key) {
 #ifndef NANO_TINY
 		if (code < 0x20)
-			statusline(ALERT, _("Unbindable key: M-^%c"), code + 0x40);
+			statusline(AHEM, _("Unbindable key: M-^%c"), code + 0x40);
 		else
 #endif
 #ifdef ENABLE_NANORC
 		if (shifted_metas && 'A' <= code && code <= 'Z')
-			statusline(ALERT, _("Unbound key: Sh-M-%c"), code);
+			statusline(AHEM, _("Unbound key: Sh-M-%c"), code);
 		else
 #endif
-			statusline(ALERT, _("Unbound key: M-%c"), toupper(code));
+			statusline(AHEM, _("Unbound key: M-%c"), toupper(code));
 	} else if (code == ESC_CODE)
-		statusline(ALERT, _("Unbindable key: ^["));
+		statusline(AHEM, _("Unbindable key: ^["));
 	else if (code < 0x20)
-		statusline(ALERT, _("Unbound key: ^%c"), code + 0x40);
+		statusline(AHEM, _("Unbound key: ^%c"), code + 0x40);
 #if defined(ENABLE_BROWSER) || defined (ENABLE_HELP)
 	else
-		statusline(ALERT, _("Unbound key: %c"), code);
+		statusline(AHEM, _("Unbound key: %c"), code);
 #endif
 	set_blankdelay_to_one();
 }
@@ -1354,9 +1321,11 @@ int do_mouse(void)
 #ifndef NANO_TINY
 		/* Clicking where the cursor is toggles the mark, as does clicking
 		 * beyond the line length with the cursor at the end of the line. */
-		if (sameline && openfile->current_x == current_x_save)
+		if (sameline && openfile->current_x == current_x_save) {
 			do_mark();
-		else
+			if (ISSET(STATEFLAGS))
+				titlebar(NULL);
+		} else
 #endif
 			/* The cursor moved; clean the cutbuffer on the next cut. */
 			keep_cutbuffer = FALSE;
@@ -1545,6 +1514,9 @@ void process_a_keystroke(void)
 	/* Read in a keystroke, and show the cursor while waiting. */
 	input = get_kbinput(edit, VISIBLE);
 
+	lastmessage = VACUUM;
+	hide_cursor = FALSE;
+
 #ifndef NANO_TINY
 	if (input == KEY_WINCH)
 		return;
@@ -1571,7 +1543,7 @@ void process_a_keystroke(void)
 			print_view_warning();
 		else {
 #ifndef NANO_TINY
-			if (openfile->mark && openfile->kind_of_mark == SOFTMARK) {
+			if (openfile->mark && openfile->softmark) {
 				openfile->mark = NULL;
 				refresh_needed = TRUE;
 			}
@@ -1645,7 +1617,7 @@ void process_a_keystroke(void)
 	if (shift_held && !openfile->mark) {
 		openfile->mark = openfile->current;
 		openfile->mark_x = openfile->current_x;
-		openfile->kind_of_mark = SOFTMARK;
+		openfile->softmark = TRUE;
 	}
 #endif
 
@@ -1657,7 +1629,7 @@ void process_a_keystroke(void)
 	 * discard a soft mark.  And when the marked region covers a
 	 * different set of lines, reset  the "last line too" flag. */
 	if (openfile->mark) {
-		if (!shift_held && openfile->kind_of_mark == SOFTMARK &&
+		if (!shift_held && openfile->softmark &&
 							(openfile->current != was_current ||
 							openfile->current_x != was_x ||
 							wanted_to_move(shortcut->func))) {
@@ -1711,9 +1683,7 @@ int main(int argc, char **argv)
 #ifdef ENABLE_NANORC
 		{"ignorercfiles", 0, NULL, 'I'},
 #endif
-#ifndef USE_SLANG
 		{"rawsequences", 0, NULL, 'K'},
-#endif
 #ifdef ENABLED_WRAPORJUSTIFY
 		{"trimblanks", 0, NULL, 'M'},
 #endif
@@ -1788,7 +1758,9 @@ int main(int argc, char **argv)
 		{"indicator", 0, NULL, 'q'},
 		{"unix", 0, NULL, 'u'},
 		{"afterends", 0, NULL, 'y'},
+		{"markmatch", 0, NULL, '^'},
 		{"stateflags", 0, NULL, '%'},
+		{"minibar", 0, NULL, '_'},
 #endif
 #ifdef HAVE_LIBMAGIC
 		{"magic", 0, NULL, '!'},
@@ -1812,15 +1784,10 @@ int main(int argc, char **argv)
 		fcntl(STDIN_FILENO, F_SETFL, stdin_flags & ~O_NONBLOCK);
 
 #ifdef ENABLE_UTF8
-	/* If setting the locale is successful and it uses UTF-8, we need
-	 * to use the multibyte functions for text processing. */
-	if (setlocale(LC_ALL, "") != NULL &&
-				strcmp(nl_langinfo(CODESET), "UTF-8") == 0) {
-#ifdef USE_SLANG
-		SLutf8_enable(1);
-#endif
+	/* If setting the locale is successful and it uses UTF-8, we will
+	 * need to use the multibyte functions for text processing. */
+	if (setlocale(LC_ALL, "") && strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
 		utf8_init();
-	}
 #else
 	setlocale(LC_ALL, "");
 #endif
@@ -1848,7 +1815,7 @@ int main(int argc, char **argv)
 		SET(RESTRICTED);
 
 	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxyz$%!", long_options, NULL)) != -1) {
+				"abcdef:ghijklmno:pqr:s:tuvwxyz$^%_!", long_options, NULL)) != -1) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -1898,11 +1865,9 @@ int main(int argc, char **argv)
 				}
 				break;
 #endif
-#ifndef USE_SLANG
 			case 'K':
 				SET(RAW_SEQUENCES);
 				break;
-#endif
 #ifndef NANO_TINY
 			case 'L':
 				SET(NO_NEWLINES);
@@ -2087,8 +2052,14 @@ int main(int argc, char **argv)
 				SET(SUSPENDABLE);
 				break;
 #ifndef NANO_TINY
+			case '^':
+				SET(MARK_MATCH);
+				break;
 			case '%':
 				SET(STATEFLAGS);
+				break;
+			case '_':
+				SET(MINIBAR);
 				break;
 #endif
 #ifdef HAVE_LIBMAGIC
@@ -2195,6 +2166,9 @@ int main(int argc, char **argv)
 			free(alt_speller);
 			alt_speller = alt_speller_cmdline;
 		}
+		/* Strip leading whitespace from the speller command, if any. */
+		while (alt_speller && *alt_speller && isblank(*alt_speller))
+			memmove(alt_speller, alt_speller + 1, strlen(alt_speller));
 #endif
 
 		/* If an rcfile undid the default settings, copy it to the new flags. */
@@ -2233,15 +2207,9 @@ int main(int argc, char **argv)
 #endif
 	}
 
-#ifdef USE_SLANG
-	/* When using Slang, do not let Slang translate escape sequences to
-	 * key codes, because it does it wrong for the longer sequences. */
-	SET(RAW_SEQUENCES);
-#else
 	/* When getting untranslated escape sequences, the mouse cannot be used. */
 	if (ISSET(RAW_SEQUENCES))
 		UNSET(USE_MOUSE);
-#endif
 
 #ifdef ENABLE_HISTORIES
 	/* Initialize the pointers for the Search/Replace/Execute histories. */
@@ -2353,6 +2321,7 @@ int main(int argc, char **argv)
 		interface_color_pair[GUIDE_STRIPE] = A_REVERSE;
 		interface_color_pair[SCROLL_BAR] = A_NORMAL;
 		interface_color_pair[SELECTED_TEXT] = hilite_attribute;
+		interface_color_pair[PROMPT_BAR] = hilite_attribute;
 		interface_color_pair[STATUS_BAR] = hilite_attribute;
 		interface_color_pair[ERROR_MESSAGE] = hilite_attribute;
 		interface_color_pair[KEY_COMBO] = hilite_attribute;
@@ -2549,12 +2518,16 @@ int main(int argc, char **argv)
 		if (currmenu != MMAIN)
 			bottombars(MMAIN);
 
+#ifndef NANO_TINY
+		if (ISSET(MINIBAR) && lastmessage < REMARK)
+			minibar();
+		else
+#endif
 		/* Update the displayed current cursor position only when there
 		 * is no message and no keys are waiting in the input buffer. */
 		if (ISSET(CONSTANT_SHOW) && lastmessage == VACUUM && get_key_buffer_len() == 0)
 			report_cursor_position();
 
-		lastmessage = VACUUM;
 		as_an_at = TRUE;
 
 		/* Refresh just the cursor position or the entire edit window. */

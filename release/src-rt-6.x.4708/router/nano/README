@@ -62,18 +62,15 @@ Mailing Lists
     To subscribe, send email to <name>-request@gnu.org with a subject
     of "subscribe", where <name> is the list you want to subscribe to.
 
+    The archives of the development and help mailing lists are here:
+
+        https://lists.gnu.org/archive/html/nano-devel/
+        https://lists.gnu.org/archive/html/help-nano/
+
 Bug Reports
 
-    To report a bug, please file a description of the problem on nano's
-    bug tracker (https://savannah.gnu.org/bugs/?group=nano -- hover on
-    "Bugs", then click "Submit new").  The issue may have already been
-    reported, so please look first.
-
-Current Status
-
-    Since version 2.5.0, GNU nano has abandoned the distinction between
-    a stable and a development branch: it is now on a "rolling" release
-    -- fixing bugs and adding new features go hand in hand.
+    If you find a bug, please file a detailed description of the problem
+    on nano's bug tracker: https://savannah.gnu.org/bugs/?group=nano.
 
 Copyright Years
 

@@ -5516,7 +5516,7 @@ int init_main(int argc, char *argv[])
 			/*
 			 * last one as ssh telnet httpd samba etc can fail to load until start_wan_done
 			 */
-			start_wan(BOOT);
+			start_wan();
 
 #ifdef CONFIG_BCMWL5
 			if (wds_enable()) {

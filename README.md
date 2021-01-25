@@ -98,21 +98,15 @@ For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, N66U C1, A
     $ git clone https://bitbucket.org/pedro311/freshtomato-arm.git
     ```
   
-13. Edit .profile (or .bashrc) file, add:
-    ```text
-    PATH="$PATH:/home/[username]/freshtomato-arm/release/src-rt-6.x.4708/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin"
-    PATH="$PATH:/sbin"
-    ```
+13. Reboot system
   
-14. Reboot system
-  
-15. Add your email address to git config:
+14. Add your email address to git config:
     ```sh
     $ cd freshtomato-arm
     $ git config --global user.email "[email-address]"
     ```
   
-16. Add your username to git config:
+15. Add your username to git config:
     ```sh
     $ cd freshtomato-arm
     $ git config --global user.name [name]

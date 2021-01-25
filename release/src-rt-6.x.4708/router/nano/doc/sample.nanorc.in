@@ -79,10 +79,16 @@
 ## Fall back to slow libmagic to try and determine an applicable syntax.
 # set magic
 
+# After a search, set the mark at the end of the found match (if any).
+# set markmatch
+
 ## The opening and closing brackets that can be found by bracket
 ## searches.  They cannot contain blank characters.  The former set must
 ## come before the latter set, and both must be in the same order.
 # set matchbrackets "(<[{)>]}"
+
+## Suppress title bar and show file name and editor state at the bottom.
+# set minibar
 
 ## Enable mouse support, if available for your system.  When enabled,
 ## mouse clicks can be used to place the cursor, set the mark (with a
@@ -203,6 +209,7 @@
 ## Paint the interface elements of nano.  These are examples;
 ## by default there are no colors, except for errorcolor.
 # set titlecolor bold,lightwhite,blue
+# set promptcolor lightwhite,lightblack
 # set statuscolor bold,lightwhite,green
 # set errorcolor bold,lightwhite,red
 # set selectedcolor lightwhite,magenta
@@ -214,6 +221,7 @@
 
 ## In root's .nanorc you might want to use:
 # set titlecolor bold,lightwhite,magenta
+# set promptcolor black,yellow
 # set statuscolor bold,lightwhite,magenta
 # set errorcolor bold,lightwhite,red
 # set selectedcolor lightwhite,cyan

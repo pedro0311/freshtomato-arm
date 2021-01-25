@@ -1,6 +1,6 @@
 --- dnsmasq/src/dhcp.c
 +++ dnsmasq/src/dhcp.c
-@@ -152,8 +152,10 @@ void dhcp_packet(time_t now, int pxe_fd)
+@@ -152,8 +152,10 @@
    time_t recvtime = now;
  #ifdef HAVE_LINUX_NETWORK
    struct arpreq arp_req;
@@ -11,7 +11,7 @@
    
    union {
      struct cmsghdr align; /* this ensures alignment */
-@@ -179,8 +181,10 @@ void dhcp_packet(time_t now, int pxe_fd)
+@@ -179,8 +181,10 @@
      return;
      
    #if defined (HAVE_LINUX_NETWORK)

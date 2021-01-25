@@ -1,7 +1,7 @@
 /**************************************************************************
  *   color.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017, 2020 Benno Schulenberg                      *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -58,6 +58,8 @@ void set_interface_colorpairs(void)
 				interface_color_pair[index] = A_NORMAL;
 			else if (index == GUIDE_STRIPE)
 				interface_color_pair[index] = A_REVERSE;
+			else if (index == PROMPT_BAR)
+				interface_color_pair[index] = interface_color_pair[TITLE_BAR];
 			else if (index == ERROR_MESSAGE) {
 				init_pair(index + 1, COLOR_WHITE, COLOR_RED);
 				interface_color_pair[index] = COLOR_PAIR(index + 1) | A_BOLD;

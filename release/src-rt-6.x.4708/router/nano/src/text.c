@@ -1,7 +1,7 @@
 /**************************************************************************
  *   text.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2015 Mark Majeres                                 *
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
@@ -50,8 +50,8 @@ void do_mark(void)
 	if (!openfile->mark) {
 		openfile->mark = openfile->current;
 		openfile->mark_x = openfile->current_x;
+		openfile->softmark = FALSE;
 		statusbar(_("Mark Set"));
-		openfile->kind_of_mark = HARDMARK;
 	} else {
 		openfile->mark = NULL;
 		statusbar(_("Mark Unset"));
@@ -387,7 +387,7 @@ void do_comment(void)
 		comment_seq = openfile->syntax->comment;
 
 	if (*comment_seq == '\0') {
-		statusbar(_("Commenting is not supported for this file type"));
+		statusline(AHEM, _("Commenting is not supported for this file type"));
 		return;
 	}
 #endif
@@ -397,7 +397,7 @@ void do_comment(void)
 
 	/* If only the magic line is selected, don't do anything. */
 	if (top == bot && bot == openfile->filebot && !ISSET(NO_NEWLINES)) {
-		statusbar(_("Cannot comment past end of file"));
+		statusline(AHEM, _("Cannot comment past end of file"));
 		return;
 	}
 
@@ -519,7 +519,7 @@ void do_undo(void)
 	size_t original_x, regain_from_x;
 
 	if (u == NULL) {
-		statusbar(_("Nothing to undo"));
+		statusline(AHEM, _("Nothing to undo"));
 		return;
 	}
 
@@ -583,6 +583,8 @@ void do_undo(void)
 		break;
 	case REPLACE:
 		undidmsg = _("replacement");
+		if ((u->xflags & INCLUDED_LAST_LINE) && !ISSET(NO_NEWLINES))
+			remove_magicline();
 		data = u->strdata;
 		u->strdata = line->data;
 		line->data = data;
@@ -696,7 +698,7 @@ void do_redo(void)
 	undostruct *u = openfile->undotop;
 
 	if (u == NULL || u == openfile->current_undo) {
-		statusbar(_("Nothing to redo"));
+		statusline(AHEM, _("Nothing to redo"));
 		return;
 	}
 
@@ -755,6 +757,8 @@ void do_redo(void)
 		break;
 	case REPLACE:
 		redidmsg = _("replacement");
+		if ((u->xflags & INCLUDED_LAST_LINE) && !ISSET(NO_NEWLINES))
+			new_magicline();
 		data = u->strdata;
 		u->strdata = line->data;
 		line->data = data;
@@ -1039,6 +1043,8 @@ void add_undo(undo_type action, const char *message)
 		break;
 	case REPLACE:
 		u->strdata = copy_of(thisline->data);
+		if (thisline == openfile->filebot && answer[0] != '\0')
+			u->xflags |= INCLUDED_LAST_LINE;
 		break;
 #ifdef ENABLE_WRAPPING
 	case SPLIT_BEGIN:
@@ -1071,9 +1077,7 @@ void add_undo(undo_type action, const char *message)
 		break;
 	case PASTE:
 		u->cutbuffer = copy_buffer(cutbuffer);
-		if (thisline == openfile->filebot)
-			u->xflags |= INCLUDED_LAST_LINE;
-		break;
+		/* Fall-through. */
 	case INSERT:
 		if (thisline == openfile->filebot)
 			u->xflags |= INCLUDED_LAST_LINE;
@@ -1213,17 +1217,11 @@ void update_undo(undo_type action)
 				u->tail_x = strlen(bottomline->data);
 		}
 		break;
-	case PASTE:
-		u->tail_lineno = openfile->current->lineno;
-		u->tail_x = openfile->current_x;
-		break;
-	case INSERT:
-		u->tail_lineno = openfile->current->lineno;
-		u->tail_x = openfile->current_x;
-		break;
 	case COUPLE_BEGIN:
 		break;
 	case COUPLE_END:
+	case PASTE:
+	case INSERT:
 		u->tail_lineno = openfile->current->lineno;
 		u->tail_x = openfile->current_x;
 		break;
@@ -1786,7 +1784,7 @@ void do_justify(bool full_justify)
 
 		/* When the marked region is empty, do nothing. */
 		if (startline == endline && start_x == end_x) {
-			statusline(ALERT, _("Selection is empty"));
+			statusline(AHEM, _("Selection is empty"));
 			discard_until(openfile->undotop->next);
 			return;
 		}
@@ -1998,7 +1996,7 @@ void do_justify(bool full_justify)
 	/* Show what we justified on the status bar. */
 #ifndef NANO_TINY
 	if (openfile->mark)
-		statusbar(_("Justified selection"));
+		statusline(REMARK, _("Justified selection"));
 	else
 #endif
 	if (full_justify)
@@ -2106,10 +2104,10 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		if (fileinfo.st_size == 0) {
 #ifndef NANO_TINY
 			if (spelling && openfile->mark)
-				statusline(ALERT, _("Selection is empty"));
+				statusline(AHEM, _("Selection is empty"));
 			else
 #endif
-				statusbar(_("Buffer is empty"));
+				statusline(AHEM, _("Buffer is empty"));
 			return;
 		}
 
@@ -2144,18 +2142,22 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 
 	if (thepid < 0) {
 		statusline(ALERT, _("Could not fork: %s"), strerror(errornumber));
+		free(arguments[0]);
 		return;
 	} else if (!WIFEXITED(program_status) || WEXITSTATUS(program_status) > 2) {
 		statusline(ALERT, _("Error invoking '%s'"), arguments[0]);
+		free(arguments[0]);
 		return;
 	} else if (WEXITSTATUS(program_status) != 0)
 		statusline(ALERT, _("Program '%s' complained"), arguments[0]);
+
+	free(arguments[0]);
 
 	/* When the temporary file wasn't touched, say so and leave. */
 	if (timestamp_sec > 0 && stat(tempfile_name, &fileinfo) == 0 &&
 					(long)fileinfo.st_mtim.tv_sec == timestamp_sec &&
 					(long)fileinfo.st_mtim.tv_nsec == timestamp_nsec) {
-		statusbar(_("Nothing changed"));
+		statusline(REMARK, _("Nothing changed"));
 		return;
 	}
 
@@ -2203,9 +2205,9 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 	adjust_viewport(STATIONARY);
 
 	if (spelling)
-		statusbar(_("Finished checking spelling"));
+		statusline(REMARK, _("Finished checking spelling"));
 	else
-		statusbar(_("Buffer has been processed"));
+		statusline(REMARK, _("Buffer has been processed"));
 }
 #endif /* ENABLE_SPELLER || ENABLE_COLOR */
 
@@ -2490,7 +2492,7 @@ void do_int_speller(const char *tempfile_name)
 	else if (WIFEXITED(spell_status) == 0 || WEXITSTATUS(spell_status))
 		statusline(ALERT, _("Error invoking \"spell\""));
 	else
-		statusbar(_("Finished checking spelling"));
+		statusline(REMARK, _("Finished checking spelling"));
 }
 
 /* Spell check the current file.  If an alternate spell checker is
@@ -2535,7 +2537,7 @@ void do_spell(void)
 
 	blank_bottombars();
 
-	if (alt_speller)
+	if (alt_speller && *alt_speller)
 		treat(temp_name, alt_speller, TRUE);
 	else
 		do_int_speller(temp_name);
@@ -2563,7 +2565,6 @@ void do_linter(void)
 	int lint_status, lint_fd[2];
 	pid_t pid_lint;
 	bool helpless = ISSET(NO_HELP);
-	static char **lintargs = NULL;
 	lintstruct *lints = NULL, *tmplint = NULL, *curlint = NULL;
 	time_t last_wait = 0;
 
@@ -2573,7 +2574,7 @@ void do_linter(void)
 		return;
 
 	if (!openfile->syntax || !openfile->syntax->linter) {
-		statusbar(_("No linter is defined for this type of file"));
+		statusline(AHEM, _("No linter is defined for this type of file"));
 		return;
 	}
 
@@ -2602,10 +2603,10 @@ void do_linter(void)
 	currmenu = MLINTER;
 	statusbar(_("Invoking linter..."));
 
-	construct_argument_list(&lintargs, openfile->syntax->linter, openfile->filename);
-
 	/* Fork a process to run the linter in. */
 	if ((pid_lint = fork()) == 0) {
+		char **lintargs = NULL;
+
 		/* Redirect standard output and standard error into the pipe. */
 		if (dup2(lint_fd[1], STDOUT_FILENO) < 0)
 			exit(7);
@@ -2614,6 +2615,8 @@ void do_linter(void)
 
 		close(lint_fd[0]);
 		close(lint_fd[1]);
+
+		construct_argument_list(&lintargs, openfile->syntax->linter, openfile->filename);
 
 		/* Start the linter program; we are using $PATH. */
 		execvp(lintargs[0], lintargs);
@@ -2733,7 +2736,7 @@ void do_linter(void)
 	}
 
 	if (!parsesuccess) {
-		statusline(HUSH, _("Got 0 parsable lines from command: %s"),
+		statusline(REMARK, _("Got 0 parsable lines from command: %s"),
 						openfile->syntax->linter);
 		return;
 	}
@@ -2810,7 +2813,7 @@ void do_linter(void)
 					free(dontwantfile);
 
 					if (restlint == NULL) {
-						statusbar(_("No messages for this file"));
+						statusline(REMARK, _("No messages for this file"));
 						break;
 					} else {
 						curlint = restlint;
@@ -2894,6 +2897,7 @@ void do_linter(void)
 		refresh_needed = TRUE;
 	}
 
+	lastmessage = VACUUM;
 	currmenu = MMOST;
 	titlebar(NULL);
 }
@@ -2911,7 +2915,7 @@ void do_formatter(void)
 		return;
 
 	if (!openfile->syntax || !openfile->syntax->formatter) {
-		statusbar(_("No formatter is defined for this type of file"));
+		statusline(AHEM, _("No formatter is defined for this type of file"));
 		return;
 	}
 
@@ -2988,7 +2992,7 @@ void do_wordlinechar_count(void)
 	openfile->current_x = was_x;
 
 	/* Report on the status bar the number of lines, words, and characters. */
-	statusline(HUSH, _("%s%zd %s,  %zu %s,  %zu %s"),
+	statusline(INFO, _("%s%zd %s,  %zu %s,  %zu %s"),
 						openfile->mark ? _("In Selection:  ") : "",
 						lines, P_("line", "lines", lines),
 						words, P_("word", "words", words),
@@ -3003,7 +3007,7 @@ void do_verbatim_input(void)
 	char *bytes;
 
 	/* TRANSLATORS: Shown when the next keystroke will be inserted verbatim. */
-	statusbar(_("Verbatim Input"));
+	statusline(INFO, _("Verbatim Input"));
 	place_the_cursor();
 
 	/* Read in the first one or two bytes of the next keystroke. */
@@ -3012,7 +3016,7 @@ void do_verbatim_input(void)
 	/* When something valid was obtained, unsuppress cursor-position display,
 	 * insert the bytes into the edit buffer, and blank the status bar. */
 	if (count > 0) {
-		if (ISSET(CONSTANT_SHOW))
+		if (ISSET(CONSTANT_SHOW) || ISSET(MINIBAR))
 			lastmessage = VACUUM;
 
 		if (count < 999)
@@ -3021,7 +3025,7 @@ void do_verbatim_input(void)
 		wipe_statusbar();
 	} else
 		/* TRANSLATORS: An invalid verbatim Unicode code was typed. */
-		statusline(ALERT, _("Invalid code"));
+		statusline(AHEM, _("Invalid code"));
 
 	free(bytes);
 }
@@ -3097,7 +3101,7 @@ void complete_a_word(void)
 	/* If there is no word fragment before the cursor, do nothing. */
 	if (start_of_shard == openfile->current_x) {
 		/* TRANSLATORS: Shown when no text is directly left of the cursor. */
-		statusbar(_("No word fragment"));
+		statusline(AHEM, _("No word fragment"));
 		pletion_line = NULL;
 		return;
 	}
@@ -3189,11 +3193,11 @@ void complete_a_word(void)
 
 	/* The search has reached the end of the file. */
 	if (list_of_completions != NULL) {
-		statusline(ALERT, _("No further matches"));
+		statusline(AHEM, _("No further matches"));
 		refresh_needed = TRUE;
 	} else
 		/* TRANSLATORS: Shown when there are zero possible completions. */
-		statusline(ALERT, _("No matches"));
+		statusline(AHEM, _("No matches"));
 
 	free(shard);
 }

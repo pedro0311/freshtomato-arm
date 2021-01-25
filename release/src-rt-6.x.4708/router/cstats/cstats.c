@@ -652,7 +652,7 @@ static void calc(void) {
 								 wanup = check_wanup(prefix); /* router/shared/misc.c */
 								 wanuptime = check_wanup_time(prefix); /* router/shared/misc.c */
 								 diff = ((0xFFFFFFFFFFFFFFFFULL) - sc + 1ULL) + c; /* rollover calculation */
-								 if(diff > ((uint64_t)MAX_ROLLOVER)) diff = 0ULL; /* 3750 MByte / 120 sec => 250 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
+								 if(diff > ((uint64_t)MAX_ROLLOVER)) diff = 0ULL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
 								 if(wanup && (wanuptime < (long)(INTERVAL + 10))) diff = 0ULL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
 								 /* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
 							}

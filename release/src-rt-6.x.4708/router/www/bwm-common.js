@@ -396,7 +396,7 @@ function populateCache() {
 		s = nvram.dhcpd_static.split('>');
 		for (var i = 0; i < s.length; ++i) {
 			var t = s[i].split('<');
-			if (t.length == 3) || (t.length == 4)) && t[2] != '')
+			if (((t.length == 3) || (t.length == 4)) && t[2] != '')
 				hostnamecache[t[1]] = t[2].split(' ').splice(0,1);
 		}
 	}
@@ -410,7 +410,7 @@ function populateCache() {
 
 	for (var i = 0 ; i <= MAX_BRIDGE_ID; i++) {
 		var j = (i == 0) ? '' : i.toString();
-		if ((nvram['lan'+j+'_ipaddr'] != null) && (vram['lan'+j+'_netmask'] != null) && (nvram['lan'+j+'_ipaddr'] != '') && (nvram['lan'+j+'_netmask'] != ''))
+		if ((nvram['lan'+j+'_ipaddr'] != null) && (nvram['lan'+j+'_netmask'] != null) && (nvram['lan'+j+'_ipaddr'] != '') && (nvram['lan'+j+'_netmask'] != ''))
 			hostnamecache[getNetworkAddress(nvram['lan'+j+'_ipaddr'], nvram['lan'+j+'_netmask'])] = 'LAN'+j;
 	}
 }

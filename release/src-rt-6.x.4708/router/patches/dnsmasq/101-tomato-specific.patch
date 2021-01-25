@@ -1,6 +1,16 @@
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -77,6 +77,10 @@ HAVE_BROKEN_RTC
+@@ -19,7 +19,9 @@
+ #define CHILD_LIFETIME 150 /* secs 'till terminated (RFC1035 suggests > 120s) */
+ #define TCP_MAX_QUERIES 100 /* Maximum number of queries per incoming TCP connection */
+ #define TCP_BACKLOG 32  /* kernel backlog limit for TCP connections */
++#ifndef EDNS_PKTSZ
+ #define EDNS_PKTSZ 4096 /* default max EDNS.0 UDP packet from RFC5625 */
++#endif
+ #define SAFE_PKTSZ 1280 /* "go anywhere" UDP packet size */
+ #define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
+ #define DNSSEC_WORK 50 /* Max number of queries to validate one question */
+@@ -77,6 +79,10 @@
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -11,7 +21,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -344,6 +348,10 @@ HAVE_SOCKADDR_SA_LEN
+@@ -348,6 +354,10 @@
  #undef HAVE_LOOP
  #endif
  
@@ -22,7 +32,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -416,6 +424,9 @@ static char *compile_opts =
+@@ -420,6 +430,9 @@
  "no-"
  #endif
  "ipset "
@@ -79,7 +89,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1500,8 +1538,22 @@ static void async_event(int pipe, time_t
+@@ -1500,8 +1538,22 @@
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -89,7 +99,7 @@
 +
 +#ifdef HAVE_TOMATO
 +	tomato_helper(now);	/* possibly delete & write out leases for Tomato */
-+#endif //TOMATO
++#endif /* HAVE_TOMATO */
 +/* following is Asus tweak.  Interestingly Asus read the dnsmasq leases db
 +   directly.  They signal dnsmasq to update via SIGUSR2 and wait 1 second
 +   assuming the file will be complete by the time they come to parse it.
@@ -102,7 +112,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1544,6 +1596,12 @@ static void async_event(int pipe, time_t
+@@ -1544,6 +1596,12 @@
  	    close(daemon->helperfd);
  	  }
  #endif
@@ -117,7 +127,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1445,6 +1445,12 @@ int make_icmp_sock(void);
+@@ -1465,6 +1465,12 @@
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
@@ -132,7 +142,7 @@
  void send_event(int fd, int event, int data, char *msg);
 --- dnsmasq/src/lease.c
 +++ dnsmasq/src/lease.c
-@@ -118,12 +118,15 @@ static int read_leases(time_t now, FILE
+@@ -118,12 +118,15 @@
  
  	ei = atol(daemon->dhcp_buff3);
  
@@ -149,7 +159,7 @@
  #else
  	/* strictly time_t is opaque, but this hack should work on all sane systems,
  	   even when sizeof(time_t) == 8 */
-@@ -269,10 +272,19 @@ void lease_update_file(time_t now)
+@@ -269,10 +272,19 @@
  	    continue;
  #endif
  
@@ -171,7 +181,7 @@
  #endif
  
  	  if (lease->hwaddr_type != ARPHRD_ETHER || lease->hwaddr_len == 0) 
-@@ -313,12 +325,21 @@ void lease_update_file(time_t now)
+@@ -313,12 +325,21 @@
  	      if (!(lease->flags & (LEASE_TA | LEASE_NA)))
  		continue;
  
@@ -196,7 +206,7 @@
  	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
  	 
  	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
-@@ -1201,8 +1222,67 @@ void lease_add_extradata(struct dhcp_lea
+@@ -1201,8 +1222,67 @@
  }
  #endif
  

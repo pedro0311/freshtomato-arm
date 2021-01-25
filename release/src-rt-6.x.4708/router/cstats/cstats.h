@@ -34,7 +34,7 @@
 #define Y2K		946684800L
 #endif
 
-#define INTERVAL		120
+#define INTERVAL		60
 
 #define MAX_NSPEED		((24 * SHOUR) / INTERVAL)
 #define MAX_NDAILY		62

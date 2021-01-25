@@ -304,7 +304,7 @@ function init() {
 			var u = (uidx > 1) ? uidx : '';
 			encap_fields.push({
 				title: 'WAN'+u, multi: [
-					{ name: 'wan'+u+'_qos_encap', type: 'select', options: encap_options, value: nvram["wan"+u+"_qos_encap"] },
+					{ name: 'wan'+u+'_qos_encap', type: 'select', options: encap_options, value: nvram["wan"+u+"_qos_encap"], suffix: ' ' },
 					{ name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options, value: nvram["wan"+u+"_qos_overhead"]},
 				]
 			});

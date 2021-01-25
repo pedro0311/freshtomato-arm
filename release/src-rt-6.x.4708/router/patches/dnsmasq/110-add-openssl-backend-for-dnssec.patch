@@ -1,42 +1,57 @@
 --- dnsmasq/Makefile
 +++ dnsmasq/Makefile
-@@ -51,6 +51,14 @@ top!=pwd
+@@ -51,6 +51,18 @@
  # GNU make way.
  top?=$(CURDIR)
  
 +ifeq ($(CRYPTO),openssl)
-+crypto_pkg = libcrypto
-+crypto_opt = -DHAVE_OPENSSL
++crypto_pkgs = libcrypto
++crypto_pkg  = libcrypto
++crypto_opt  = -DHAVE_OPENSSL
++crypto_lgmp =
 +else
-+crypto_pkg = nettle hogweed
-+crypto_opt = -DHAVE_NETTLE
++crypto_pkgs = nettle hogweed
++crypto_pkg  = nettle
++crypto_opt  = -DHAVE_NETTLE
++crypto_lgmp = -lgmp
 +endif
 +
  dbus_cflags =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --cflags dbus-1` 
  dbus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --libs dbus-1` 
- ubus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_UBUS "" --copy -lubox -lubus`
-@@ -62,8 +70,9 @@ ct_cflags =     `echo $(COPTS) | $(top)/
+ ubus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_UBUS "" --copy '-lubox -lubus'`
+@@ -62,13 +74,15 @@
  ct_libs =       `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_CONNTRACK $(PKG_CONFIG) --libs libnetfilter_conntrack`
  lua_cflags =    `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --cflags lua5.2` 
  lua_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --libs lua5.2` 
--nettle_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --cflags nettle hogweed`
--nettle_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --libs nettle hogweed`
-+crypto_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --cflags $(crypto_pkg)` \
-+		`echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC "" --copy $(crypto_opt)`
-+crypto_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC $(PKG_CONFIG) --libs $(crypto_pkg)`
- gmp_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC NO_GMP --copy -lgmp`
+-nettle_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC     $(PKG_CONFIG) --cflags 'nettle hogweed' \
+-                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --cflags nettle \
+-                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --cflags nettle`
+-nettle_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC     $(PKG_CONFIG) --libs 'nettle hogweed' \
+-                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --libs nettle \
+-                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --libs nettle`
+-gmp_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC NO_GMP --copy -lgmp`
++crypto_cflags = `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC     $(PKG_CONFIG) --cflags '$(crypto_pkgs)' \
++                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --cflags $(crypto_pkg) \
++                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --cflags $(crypto_pkg)` \
++                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC "" --copy $(crypto_opt)` \
++                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_NETTLEHASH "" --copy $(crypto_opt)`
++crypto_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC     $(PKG_CONFIG) --libs '$(crypto_pkgs)' \
++                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --libs $(crypto_pkg) \
++                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --libs $(crypto_pkg)`
++gmp_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC NO_GMP --copy '$(crypto_lgmp)'`
  sunos_libs =    `if uname | grep SunOS >/dev/null 2>&1; then echo -lsocket -lnsl -lposix4; fi`
  version =     -DVERSION='\"`$(top)/bld/get-version $(top)`\"'
-@@ -77,7 +86,7 @@ objs = cache.o rfc1035.o util.o option.o
+ 
+@@ -81,7 +95,7 @@
         helper.o tftp.o log.o conntrack.o dhcp6.o rfc3315.o \
         dhcp-common.o outpacket.o radv.o slaac.o auth.o ipset.o \
         domain.o dnssec.o blockdata.o tables.o loop.o inotify.o \
--       poll.o rrfilter.o edns0.o arp.o crypto.o dump.o ubus.o metrics.o
-+       poll.o rrfilter.o edns0.o arp.o crypto.o crypto-openssl.o dump.o ubus.o metrics.o
+-       poll.o rrfilter.o edns0.o arp.o crypto.o dump.o ubus.o \
++       poll.o rrfilter.o edns0.o arp.o crypto.o crypto-openssl.o dump.o ubus.o \
+        metrics.o hash_questions.o
  
  hdrs = dnsmasq.h config.h dhcp-protocol.h dhcp6-protocol.h \
-        dns-protocol.h radv-protocol.h ip6addr.h metrics.h
-@@ -85,8 +94,8 @@ hdrs = dnsmasq.h config.h dhcp-protocol.
+@@ -90,8 +104,8 @@
  all : $(BUILDDIR)
  	@cd $(BUILDDIR) && $(MAKE) \
   top="$(top)" \
@@ -47,7 +62,7 @@
   -f $(top)/Makefile dnsmasq 
  
  mostly_clean :
-@@ -110,8 +119,8 @@ all-i18n : $(BUILDDIR)
+@@ -115,8 +129,8 @@
  	@cd $(BUILDDIR) && $(MAKE) \
   top="$(top)" \
   i18n=-DLOCALEDIR=\'\"$(LOCALEDIR)\"\' \
@@ -60,7 +75,7 @@
  		cd $(top) && cd $(BUILDDIR) && $(MAKE) top="$(top)" -f $(top)/Makefile $${f%.po}.mo; \
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -152,6 +152,8 @@ NO_INOTIFY
+@@ -157,6 +157,8 @@
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
@@ -69,9 +84,9 @@
  
  LEASEFILE
  CONFFILE
-@@ -192,6 +194,8 @@ RESOLVFILE
- /* #define HAVE_LIBIDN2 */
+@@ -198,6 +200,8 @@
  /* #define HAVE_CONNTRACK */
+ /* #define HAVE_CRYPTOHASH */
  /* #define HAVE_DNSSEC */
 +/* #define HAVE_NETTLE */
 +/* #define HAVE_OPENSSL */
@@ -80,12 +95,12 @@
  /* Default locations for important system files. */
 --- dnsmasq/src/crypto.c
 +++ dnsmasq/src/crypto.c
-@@ -16,14 +16,15 @@
+@@ -16,14 +16,16 @@
  
  #include "dnsmasq.h"
  
--#ifdef HAVE_DNSSEC
-+#if defined(HAVE_DNSSEC) && defined(HAVE_NETTLE)
++#ifdef HAVE_NETTLE
+ #ifdef HAVE_DNSSEC
  
  #include <nettle/rsa.h>
  #include <nettle/ecdsa.h>
@@ -96,9 +111,9 @@
  #  include <nettle/gostdsa.h>
 +#  define HAVE_GOST
  #endif
- #include <nettle/nettle-meta.h>
- #include <nettle/bignum.h>
-@@ -101,7 +102,7 @@ static struct nettle_hash null_hash = {
+ #endif
+ 
+@@ -104,7 +106,7 @@
  };
  
  /* Find pointer to correct hash function in nettle library */
@@ -107,7 +122,7 @@
  {
    if (!name)
      return NULL;
-@@ -131,8 +132,9 @@ const struct nettle_hash *hash_find(char
+@@ -134,8 +136,9 @@
  }
  
  /* expand ctx and digest memory allocations if necessary and init hash function */
@@ -118,10 +133,10 @@
    static void *ctx = NULL;
    static unsigned char *digest = NULL;
    static unsigned int ctx_sz = 0;
-@@ -168,6 +170,21 @@ int hash_init(const struct nettle_hash *
+@@ -171,6 +174,20 @@
    return 1;
  }
-   
+ 
 +void hash_update(const void *hash, void *ctx, size_t length, const unsigned char *src)
 +{
 +  return ((struct nettle_hash *)hash)->update(ctx, length, src);
@@ -136,11 +151,10 @@
 +{
 +  return ((struct nettle_hash *)hash)->digest_size;
 +}
-+
- static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
- 			      unsigned char *digest, size_t digest_len, int algo)
- {
-@@ -294,7 +311,7 @@ static int dnsmasq_ecdsa_verify(struct b
+ #endif
+ 
+ #ifdef HAVE_DNSSEC
+@@ -301,7 +318,7 @@
    return nettle_ecdsa_verify(key, digest_len, digest, sig_struct);
  }
  
@@ -149,7 +163,7 @@
  static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_len, 
  				  unsigned char *sig, size_t sig_len,
  				  unsigned char *digest, size_t digest_len, int algo)
-@@ -392,7 +409,7 @@ static int (*verify_func(int algo))(stru
+@@ -399,7 +416,7 @@
      case 5: case 7: case 8: case 10:
        return dnsmasq_rsa_verify;
  
@@ -158,7 +172,7 @@
      case 12:
        return dnsmasq_gostdsa_verify;
  #endif
-@@ -434,7 +451,9 @@ char *ds_digest_name(int digest)
+@@ -441,7 +458,9 @@
      {
      case 1: return "sha1";
      case 2: return "sha256";
@@ -168,7 +182,7 @@
      case 4: return "sha384";
      default: return NULL;
      }
-@@ -453,7 +472,9 @@ char *algo_digest_name(int algo)
+@@ -460,7 +479,9 @@
      case 7: return "sha1";        /* RSASHA1-NSEC3-SHA1 */
      case 8: return "sha256";      /* RSA/SHA-256 */
      case 10: return "sha512";     /* RSA/SHA-512 */
@@ -178,19 +192,21 @@
      case 13: return "sha256";     /* ECDSAP256SHA256 */
      case 14: return "sha384";     /* ECDSAP384SHA384 */ 	
      case 15: return "null_hash";  /* ED25519 */
-@@ -472,4 +493,9 @@ char *nsec3_digest_name(int digest)
-     }
+@@ -480,3 +501,11 @@
  }
  
+ #endif
++
++#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 +void crypto_init(void)
 +{
 +  /* dummy */
 +}
-+
- #endif
++#endif
++#endif /* HAVE_NETTLE */
 --- dnsmasq/src/crypto-openssl.c
 +++ dnsmasq/src/crypto-openssl.c
-@@ -0,0 +1,662 @@
+@@ -0,0 +1,669 @@
 +/* crypto-openssl.c is Copyright (c) 2019-2020 Vladislav Grishenko
 +                   and Copyright (c) 2012-2018 Simon Kelley
 +
@@ -210,15 +226,18 @@
 +
 +#include "dnsmasq.h"
 +
-+#if defined(HAVE_DNSSEC) && defined(HAVE_OPENSSL)
++#ifdef HAVE_OPENSSL
++#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 +
 +#include <openssl/opensslv.h>
 +#include <openssl/crypto.h>
 +#include <openssl/evp.h>
++#include <openssl/err.h>
++
++#ifdef HAVE_DNSSEC
 +#include <openssl/rsa.h>
 +#include <openssl/ecdsa.h>
 +#include <openssl/x509.h>
-+#include <openssl/err.h>
 +
 +#if !defined(OPENSSL_NO_ENGINE) && !defined(NO_GOST)
 +#  include <openssl/engine.h>
@@ -229,6 +248,7 @@
 +
 +#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 +#  define HAVE_EDDSA
++#endif
 +#endif
 +
 +#if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -260,7 +280,7 @@
 +#endif
 +
 +#ifdef HAVE_EDDSA
-+/* Implement a "hash-function" to the nettle API, which simply returns
++/* Implement a "hash-function" to the openssl API, which simply returns
 +   the input data, concatenated into a single, statically maintained, buffer.
 +
 +   Used for the EdDSA sigs, which operate on the whole message, rather
@@ -439,6 +459,7 @@
 +  return EVP_MD_size(md);
 +}
 +
++#ifdef HAVE_DNSSEC
 +static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
 +			      unsigned char *digest, size_t digest_len, int algo)
 +{
@@ -787,6 +808,7 @@
 +    default: return NULL;
 +    }
 +}
++#endif
 +
 +#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 +static void *dnsmasq_malloc(size_t size, const char *file, int line)
@@ -845,7 +867,7 @@
 +  CRYPTO_set_mem_functions(dnsmasq_malloc,
 +			   dnsmasq_realloc,
 +			   dnsmasq_free);
-+  OPENSSL_add_all_algorithms_conf();
++  OpenSSL_add_all_algorithms();
 +
 +#ifdef HAVE_GOST
 +  dnsmasq_gost_init();
@@ -853,40 +875,57 @@
 +}
 +
 +#endif
++#endif /* HAVE_OPENSSL */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -170,6 +170,8 @@ int main (int argc, char **argv)
-       /* one char flag per possible RR in answer section (may get extended). */
-       daemon->rr_status_sz = 64;
-       daemon->rr_status = safe_malloc(sizeof(*daemon->rr_status) * daemon->rr_status_sz);
-+
+@@ -429,6 +429,9 @@
+     {
+       cache_init();
+       blockdata_init();
++#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 +      crypto_init();
++#endif
+       hash_questions_init();
      }
- #endif
+ 
+@@ -953,7 +956,7 @@
+       if (daemon->resolv_files && !daemon->resolv_files->is_default)
+ 	my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
+       daemon->resolv_files = NULL;
+-      if (!daemon->servers)
++      if (!daemon->servers && !daemon->servers_file)
+ 	my_syslog(LOG_WARNING, _("warning: no upstream servers configured"));
+     } 
  
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -157,10 +157,6 @@ extern int capget(cap_user_header_t head
- #include <priv.h>
+@@ -95,10 +95,10 @@
+ #if defined(HAVE_SOLARIS_NETWORK)
+ #  include <sys/sockio.h>
  #endif
- 
--#ifdef HAVE_DNSSEC
+-#if defined(HAVE_POLL_H)
+-#  include <poll.h>
++#if defined(__GLIBC__) || defined(__UCLIBC__) /* not musl */
++#  include <sys/poll.h>
+ #else
+-#  include <sys/poll.h>
++#  include <poll.h>
+ #endif
+ #include <sys/wait.h>
+ #include <sys/time.h>
+@@ -161,10 +161,6 @@
+ #if defined(HAVE_NETTLEHASH)
+ #  define HAVE_CRYPTOHASH
+ #endif
+-#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 -#  include <nettle/nettle-meta.h>
 -#endif
 -
  /* daemon is function in the C library.... */
  #define daemon dnsmasq_daemon
  
-@@ -656,6 +652,7 @@ struct hostsfile {
- #define FREC_HAS_EXTRADATA    512        
- 
- #ifdef HAVE_DNSSEC
-+#define HASH_NAME "sha1"
- #define HASH_SIZE 20 /* SHA-1 digest size */
- #else
- #define HASH_SIZE sizeof(int)
-@@ -1249,13 +1246,17 @@ unsigned char* hash_questions(struct dns
- int setup_timestamp(void);
+@@ -1269,13 +1265,17 @@
+ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name);
  
  /* crypto.c */
 -const struct nettle_hash *hash_find(char *name);
@@ -907,7 +946,7 @@
  void rand_init(void);
 --- dnsmasq/src/dnssec.c
 +++ dnsmasq/src/dnssec.c
-@@ -517,7 +517,7 @@ static int validate_rrset(time_t now, st
+@@ -553,7 +553,7 @@
      {
        unsigned char *psav, *sig, *digest;
        int i, wire_len, sig_len;
@@ -916,7 +955,7 @@
        void *ctx;
        char *name_start;
        u32 nsigttl, ttl, orig_ttl;
-@@ -565,9 +565,9 @@ static int validate_rrset(time_t now, st
+@@ -601,9 +601,9 @@
                
        nsigttl = htonl(orig_ttl);
        
@@ -926,9 +965,9 @@
 -      hash->update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
 +      hash_update(hash, ctx, (unsigned int)wire_len, (unsigned char*)keyname);
        from_wire(keyname);
-       
-       for (i = 0; i < rrsetidx; ++i)
-@@ -603,9 +603,9 @@ static int validate_rrset(time_t now, st
+ 
+ #define RRBUFLEN 128 /* Most RRs are smaller than this. */
+@@ -641,9 +641,9 @@
  	    }
  	  
  	  wire_len = to_wire(name_start);
@@ -938,25 +977,44 @@
 +	  hash_update(hash, ctx, (unsigned int)wire_len, (unsigned char *)name_start);
 +	  hash_update(hash, ctx, 4, p); /* class and type */
 +	  hash_update(hash, ctx, 4, (unsigned char *)&nsigttl);
- 	  
- 	  p += 8; /* skip class, type, ttl */
+ 
+ 	  p += 8; /* skip type, class, ttl */
  	  GETSHORT(rdlen, p);
-@@ -621,18 +621,18 @@ static int validate_rrset(time_t now, st
- 	  for (len = 0; (seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)) != 0; len += seg);
- 	  len += end - cp;
- 	  len = htons(len);
--	  hash->update(ctx, 2, (unsigned char *)&len); 
-+	  hash_update(hash, ctx, 2, (unsigned char *)&len); 
- 	  
- 	  /* Now canonicalise again and digest. */
- 	  cp = p;
- 	  dp = rr_desc;
- 	  while ((seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)))
--	    hash->update(ctx, seg, (unsigned char *)name);
-+	    hash_update(hash, ctx, seg, (unsigned char *)name);
- 	  if (cp != end)
--	    hash->update(ctx, end - cp, cp);
-+	    hash_update(hash, ctx, end - cp, cp);
+@@ -660,8 +660,8 @@
+ 	  if (*rr_desc == (u16)-1)
+ 	    {
+ 	      len = htons(rdlen);
+-	      hash->update(ctx, 2, (unsigned char *)&len);
+-	      hash->update(ctx, rdlen, p);
++	      hash_update(hash, ctx, 2, (unsigned char *)&len);
++	      hash_update(hash, ctx, rdlen, p);
+ 	    }
+ 	  else
+ 	    {
+@@ -678,7 +678,7 @@
+ 		  rrbuf[j] = *state.op;
+ 	      
+ 	      len = htons((u16)j);
+-	      hash->update(ctx, 2, (unsigned char *)&len); 
++	      hash_update(hash, ctx, 2, (unsigned char *)&len); 
+ 	      
+ 	      /* If the RR is shorter than RRBUFLEN (most of them, in practice)
+ 		 then we can just digest it now. If it exceeds RRBUFLEN we have to
+@@ -695,18 +695,18 @@
+ 		      
+ 		      if (j == RRBUFLEN - 1)
+ 			{
+-			  hash->update(ctx, RRBUFLEN, rrbuf);
++			  hash_update(hash, ctx, RRBUFLEN, rrbuf);
+ 			  j = -1;
+ 			}
+ 		    }
+ 		}
+ 	      
+ 	      if (j != 0)
+-		hash->update(ctx, j, rrbuf);
++		hash_update(hash, ctx, j, rrbuf);
+ 	    }
  	}
       
 -      hash->digest(ctx, hash->digest_size, digest);
@@ -964,7 +1022,7 @@
        
        /* namebuff used for workspace above, restore to leave unchanged on exit */
        p = (unsigned char*)(rrset[0]);
-@@ -641,7 +641,7 @@ static int validate_rrset(time_t now, st
+@@ -715,7 +715,7 @@
        if (key)
  	{
  	  if (algo_in == algo && keytag_in == key_tag &&
@@ -973,7 +1031,7 @@
  	    return STAT_SECURE;
  	}
        else
-@@ -651,7 +651,7 @@ static int validate_rrset(time_t now, st
+@@ -725,7 +725,7 @@
  	    if (crecp->addr.key.algo == algo && 
  		crecp->addr.key.keytag == key_tag &&
  		crecp->uid == (unsigned int)class &&
@@ -982,7 +1040,7 @@
  	      return (labels < name_labels) ? STAT_SECURE_WILDCARD : STAT_SECURE;
  	}
      }
-@@ -747,7 +747,7 @@ int dnssec_validate_by_ds(time_t now, st
+@@ -821,7 +821,7 @@
  	{
  	  void *ctx;
  	  unsigned char *digest, *ds_digest;
@@ -991,13 +1049,7 @@
  	  int sigcnt, rrcnt;
  
  	  if (recp1->addr.ds.algo == algo && 
-@@ -755,20 +755,19 @@ int dnssec_validate_by_ds(time_t now, st
- 	      recp1->uid == (unsigned int)class &&
- 	      (hash = hash_find(ds_digest_name(recp1->addr.ds.digest))) &&
- 	      hash_init(hash, &ctx, &digest))
--	    
- 	    {
- 	      int wire_len = to_wire(name);
+@@ -835,14 +835,14 @@
  	      
  	      /* Note that digest may be different between DSs, so 
  		 we can't move this outside the loop. */
@@ -1016,7 +1068,7 @@
  		  (ds_digest = blockdata_retrieve(recp1->addr.ds.keydata, recp1->addr.ds.keylen, NULL)) &&
  		  memcmp(ds_digest, digest, recp1->addr.ds.keylen) == 0 &&
  		  explore_rrset(header, plen, class, T_DNSKEY, name, keyname, &sigcnt, &rrcnt) &&
-@@ -1190,7 +1189,7 @@ static int prove_non_existence_nsec(stru
+@@ -1264,7 +1264,7 @@
  }
  
  /* return digest length, or zero on error */
@@ -1025,7 +1077,7 @@
  		     unsigned char *salt, int salt_len, int iterations)
  {
    void *ctx;
-@@ -1200,21 +1199,21 @@ static int hash_name(char *in, unsigned
+@@ -1274,21 +1274,21 @@
    if (!hash_init(hash, &ctx, &digest))
      return 0;
   
@@ -1054,7 +1106,7 @@
  }
  
  /* Decode base32 to first "." or end of string */
-@@ -1364,7 +1363,7 @@ static int prove_non_existence_nsec3(str
+@@ -1438,7 +1438,7 @@
  {
    unsigned char *salt, *p, *digest;
    int digest_len, i, iterations, salt_len, base32_len, algo = 0;
@@ -1063,26 +1115,43 @@
    char *closest_encloser, *next_closest, *wildcard;
    
    if (nons)
-@@ -2061,11 +2060,11 @@ unsigned char* hash_questions(struct dns
+--- dnsmasq/src/hash_questions.c
++++ dnsmasq/src/hash_questions.c
+@@ -30,7 +30,7 @@
+ 
+ #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
+ 
+-static const struct nettle_hash *hash;
++static const void *hash;
+ static void *ctx;
+ static unsigned char *digest;
+ 
+@@ -39,8 +39,8 @@
+   if (!(hash = hash_find("sha256")))
+     die(_("Failed to create SHA-256 hash object"), NULL, EC_MISC);
+ 
+-  ctx = safe_malloc(hash->context_size);
+-  digest = safe_malloc(hash->digest_size);
++  if (!hash_init(hash, &ctx, &digest))
++    die(_("Failed to create SHA-256 hash object"), NULL, EC_MISC);
+ }
+ 
+ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name)
+@@ -48,7 +48,7 @@
    int q;
-   unsigned int len;
    unsigned char *p = (unsigned char *)(header+1);
--  const struct nettle_hash *hash;
-+  const void *hash;
-   void *ctx;
-   unsigned char *digest;
-   
--  if (!(hash = hash_find("sha1")) || !hash_init(hash, &ctx, &digest))
-+  if (!(hash = hash_find(HASH_NAME)) || !hash_init(hash, &ctx, &digest))
-     return NULL;
-   
+ 
+-  hash->init(ctx);
++  hash_init(hash, &ctx, &digest);
+ 
    for (q = ntohs(header->qdcount); q != 0; q--) 
-@@ -2074,16 +2073,16 @@ unsigned char* hash_questions(struct dns
- 	break; /* bad packet */
-       
-       len = to_wire(name);
--      hash->update(ctx, len, (unsigned char *)name);
-+      hash_update(hash, ctx, len, (unsigned char *)name);
+     {
+@@ -61,16 +61,16 @@
+ 	 if (c >= 'A' && c <= 'Z')
+ 	   *cp += 'a' - 'A';
+ 
+-      hash->update(ctx, cp - name, (unsigned char *)name);
++      hash_update(hash, ctx, cp - name, (unsigned char *)name);
        /* CRC the class and type as well */
 -      hash->update(ctx, 4, p);
 +      hash_update(hash, ctx, 4, p);

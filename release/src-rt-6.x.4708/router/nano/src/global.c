@@ -1,7 +1,7 @@
 /**************************************************************************
  *   global.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2020 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -49,7 +49,8 @@ bool we_are_running = FALSE;
 		/* Becomes TRUE as soon as all options and files have been read. */
 bool more_than_one = FALSE;
 		/* Whether more than one buffer is or has been open. */
-
+bool report_size = TRUE;
+		/* Whether to show the number of lines when the minibar is used. */
 bool ran_a_tool = FALSE;
 		/* Whether a tool has been run at the Execute-Command prompt. */
 
@@ -79,6 +80,8 @@ linestruct *pletion_line = NULL;
 bool also_the_last = FALSE;
 		/* Whether indenting/commenting should include the last line of
 		 * the marked region. */
+bool hide_cursor = FALSE;
+		/* Whether to suppress the cursor when highlighting a search match. */
 
 char *answer = NULL;
 		/* The answer string used by the status-bar prompt. */
@@ -946,7 +949,7 @@ void shortcut_init(void)
 		N_("Next Block"), WITHORSANS(nextblock_gist), TOGETHER, VIEW);
 #ifdef ENABLE_JUSTIFY
 	add_to_funcs(to_para_begin, MMAIN|MGOTOLINE,
-		/* TRANSLATORS: Try to keep these two strings at most 15 characters. */
+		/* TRANSLATORS: Try to keep these two strings at most 16 characters. */
 		N_("Begin of Paragr."), WITHORSANS(parabegin_gist), TOGETHER, VIEW);
 	add_to_funcs(to_para_end, MMAIN|MGOTOLINE,
 		N_("End of Paragraph"), WITHORSANS(paraend_gist), BLANKAFTER, VIEW);
