@@ -1177,11 +1177,18 @@ void start_ovpn_server(int unit)
 		fprintf(fp, "#!/bin/sh\n");
 		memset(buffer, 0, BUF_SIZE);
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-		fprintf(fp, "iptables -t nat -I PREROUTING -p %s ", strtok(buffer, "-"));
+
+		memset(buffer2, 0, 32);
+		if ((!strcmp(buffer, "udp")) || (!strcmp(buffer, "udp4")) || (!strcmp(buffer, "udp6")))
+			sprintf(buffer2, "udp");
+		else
+			sprintf(buffer2, "tcp");
+
+		fprintf(fp, "iptables -t nat -I PREROUTING -p %s ", buffer2);
 		fprintf(fp, "--dport %d -j ACCEPT\n", atoi(getNVRAMVar("vpn_server%d_port", unit)));
 		memset(buffer, 0, BUF_SIZE);
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-		fprintf(fp, "iptables -I INPUT -p %s ", strtok(buffer, "-"));
+		fprintf(fp, "iptables -I INPUT -p %s ", buffer2);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_port", unit);
 		fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
@@ -1198,7 +1205,7 @@ void start_ovpn_server(int unit)
 #ifdef TCONFIG_IPV6
 		if (ipv6_enabled()) {
 			strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-			fprintf(fp, "ip6tables -I INPUT -p %s ", strtok(buffer, "-"));
+			fprintf(fp, "ip6tables -I INPUT -p %s ", buffer2);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_port", unit);
 			fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
