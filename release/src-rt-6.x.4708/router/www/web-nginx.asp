@@ -25,23 +25,50 @@
 
 //	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile"); %>
 
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
 var cprefix = 'web_nginx';
-changed = 0;
-nginxup = parseInt ('<% psup("nginx"); %>');
+
+var up = new TomatoRefresh('isup.jsx', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+}
+
+var changed = 0;
+
+function show() {
+	E('_nginx_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
+	E('_nginx_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
+	E('_nginx_button').setAttribute('onclick', 'javascript:toggle(\'nginxfp\', '+isup.nginx+');');
+	E('_nginx_button').disabled = 0;
+}
 
 function toggle(service, isup) {
-	if (changed) {
-		if (!confirm("Unsaved changes will be lost. Continue anyway?")) return;
-	}
-	E('_' + service + '_button').disabled = true;
-	form.submitHidden('service.cgi', {
-		_redirect: 'web-nginx.asp',
-		_sleep: !isup ? '8' : '5',
-		_service: service + (isup ? '-stop' : '-start')
-	});
+	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
+		return;
+
+	E('_'+service+'_button').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._nextwait.value = !isup ? '8' : '5';
+	fom._service.value = service+(isup ? '-stop' : '-start');
+	form.submit(fom, 1, 'service.cgi');
 }
 
 function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
+
 	var ok = 1;
 
 	var a = E('_f_nginx_enable').checked;
@@ -67,10 +94,11 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (verifyFields(null, 0) == 0) return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var fom = E('t_fom');
-	fom.nginx_enable.value = E('_f_nginx_enable').checked ? 1 : 0;
+	fom.nginx_enable.value = fom._f_nginx_enable.checked ? 1 : 0;
 
 	if (fom.nginx_enable.value) {
 		fom.nginx_php.value = fom.f_nginx_php.checked ? 1 : 0;
@@ -79,19 +107,25 @@ function save() {
 		fom.nginx_override.value = fom.f_nginx_override.checked ? 1 : 0;
 		fom._service.value = 'nginxfp-restart';
 	}
-	else {
+	else
 		fom._service.value = 'nginxfp-stop';
-	}
+
 	form.submit(fom, 1);
+
+	changed = 0;
+}
+
+function earlyInit() {
+	show();
+	verifyFields(null, 1);
 }
 
 function init() {
 	var c;
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "notes");
-	}
 
-	verifyFields(null, 1);
+	up.initPage(250, 5);
 	eventHandler();
 }
 </script>
@@ -125,10 +159,8 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<script>
-			W('NGINX is currently '+(!nginxup ? 'stopped' : 'running')+' ');
-			W('<input type="button" value="' + (nginxup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'nginxfp\', nginxup)" id="_nginxfp_button">');
-		</script>
+		<span id="_nginx_notice"></span>
+		<input type="button" id="_nginx_button">
 	</div>
 </div>
 
@@ -140,8 +172,7 @@ function init() {
 		createFieldTable('', [
 			{ title: 'Enable Server on Start', name: 'f_nginx_enable', type: 'checkbox', value: nvram.nginx_enable == '1'},
 			{ title: 'Enable PHP support', name: 'f_nginx_php', type: 'checkbox', value: nvram.nginx_php == '1' },
-			{ title: 'Run As', name: 'nginx_user', type: 'select',
-				options: [['root','Root'],['nobody','Nobody']], value: nvram.nginx_user },
+			{ title: 'Run As', name: 'nginx_user', type: 'select', options: [['root','Root'],['nobody','Nobody']], value: nvram.nginx_user },
 			{ title: 'Keep Config Files', name: 'f_nginx_keepconf', type: 'checkbox', value: nvram.nginx_keepconf == '1' },
 			{ title: 'Web Server Port', name: 'nginx_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.nginx_port, 85), suffix: '<small> default: 85<\/small>' },
 			{ title: 'Upload file size limit', name: 'nginx_upload', type: 'text', maxlen: 5, size: 7, value: nvram.nginx_upload, suffix: '<small> MB<\/small>'},
@@ -206,6 +237,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>earlyInit();</script>
 </body>
 </html>

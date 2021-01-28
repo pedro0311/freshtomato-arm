@@ -132,6 +132,7 @@ ifneq ($(TCONFIG_NGINX),y)
 	rm -f $(INSTALLDIR)/www/adminer.php
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/NGINX-BEGIN/,/NGINX-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NGINX-BEGIN/,/NGINX-END/d"
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/ NGINX-BEGIN/,/ NGINX-END/d"
 endif
 
 # Only include HFS/HFS+ option and pages when configured.
