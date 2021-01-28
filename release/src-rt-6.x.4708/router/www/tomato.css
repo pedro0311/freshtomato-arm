@@ -722,7 +722,8 @@ table.tomato-grid.vpn-status-table {
 	text-align: center;
 }
 
-#th-grid .co1 {
+#th-grid .co1,
+#stubby-grid .co1 {
 	width: 10%;
 	text-align: center;
 }
@@ -925,7 +926,8 @@ table.tomato-grid.vpn-status-table {
 
 #res-bp-grid .box5,
 #res-bp-grid .box7,
-#sm-grid .co2 {
+#sm-grid .co2,
+#stubby-grid .co2 {
 	width: 70%;
 }
 
