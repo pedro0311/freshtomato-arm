@@ -523,8 +523,11 @@ void start_dnsmasq()
 			ipv6_lease = 12;
 
 		/* enable-ra should be enabled in both cases */
-		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd")))
+		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd"))) {
 			fprintf(f, "enable-ra\n");
+			if (nvram_get_int("ipv6_fast_ra"))
+				fprintf(f, "ra-param=br*, 15, 600\n"); /* interface = br*, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+		}
 
 		/* only SLAAC and NO DHCPv6 */
 		if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))

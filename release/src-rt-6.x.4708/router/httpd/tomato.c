@@ -866,6 +866,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_dhcpd",			V_01				},
 	{ "ipv6_lease_time",		V_RANGE(1, 720)			},	// 1 ... up to 720 hours (30 days) IPv6 lease time
 	{ "ipv6_accept_ra",		V_NUM				},
+	{ "ipv6_fast_ra",		V_01				},	// fast RA option --> send frequent RAs
 	{ "ipv6_tun_addr",		V_IPV6(1)			},
 	{ "ipv6_tun_addrlen",		V_RANGE(3, 127)			},
 	{ "ipv6_ifname",		V_LENGTH(0, 8)			},
