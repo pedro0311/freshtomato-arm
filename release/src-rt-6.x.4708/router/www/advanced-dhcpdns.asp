@@ -38,34 +38,31 @@ up.refresh = function(text) {
 	}
 }
 
+/* STUBBY-BEGIN */
+var up_servers_arr = [<% stubby_presets("dot"); %>];
+var st_resolvers_arr = '<% nv("stubby_resolvers"); %>';
+var MAX_UPSTREAM_SERVERS = 8;
+
+function active_resolvers(ip, port, domain, pinset) {
+	if (st_resolvers_arr.length) {
+		var s = st_resolvers_arr.split('<');
+		for (var j = 0; j < s.length; ++j) {
+			if (!s[j].length)
+				continue;
+			var row = s[j].split('>');
+			if (row.length == 4 && ip == row[0] && port == row[1] && domain == row[2] && pinset == row[3])
+					return 1;
+		}
+	}
+	return 0;
+}
+/* STUBBY-END */
+
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1))
 	nvram.dhcpd_lmax = 255;
 
 function verifyFields(focused, quiet) {
-	var vis = { };
-	var v = (E('_f_dhcpd_sltsel').value == 1);
-	elem.display('_dhcpd_sltman', v);
-
-	if ((v) && (!v_range('_f_dhcpd_slt', quiet, 1, 43200)))
-		return 0;
-	if (!v_length('_dnsmasq_custom', quiet, 0, 4096))
-		return 0;
-	if (!v_range('_dhcpd_lmax', quiet, 1, 0xFFFF))
-		return 0;
-/* IPV6-BEGIN */
-	if (!v_range('_f_ipv6_lease_time', quiet, 1, 720))
-		return 0;
-/* IPV6-END */
-	if (!v_length('_dhcpc_custom', quiet, 0, 256))
-		return 0;
-/* STUBBY-BEGIN */
-	if (!v_port('_stubby_port', quiet))
-		return 0;
-/* STUBBY-END */
-
-	/* IP address, blank -> 0.0.0.0 */
-	if (!v_dns('_wan_wins', quiet))
-		return 0;
+	var vis = { }, v;
 
 /* STUBBY-BEGIN */
 /* DNSCRYPT-BEGIN */
@@ -92,6 +89,7 @@ function verifyFields(focused, quiet) {
 	vis._stubby_priority = v;
 	vis._stubby_log = v;
 	vis._stubby_port = v;
+	vis._stubby_servers = v;
 /* STUBBY-END */
 
 	for (var a in vis) {
@@ -101,6 +99,76 @@ function verifyFields(focused, quiet) {
 		PR(b).style.display = (c ? 'table-row' : 'none');
 	}
 
+	v = (E('_f_dhcpd_sltsel').value == 1);
+	elem.display('_dhcpd_sltman', v);
+
+	if ((v) && (!v_range('_f_dhcpd_slt', quiet, 1, 43200)))
+		return 0;
+	if (!v_length('_dnsmasq_custom', quiet, 0, 4096))
+		return 0;
+	if (!v_range('_dhcpd_lmax', quiet, 1, 0xFFFF))
+		return 0;
+/* IPV6-BEGIN */
+	if (!v_range('_f_ipv6_lease_time', quiet, 1, 720))
+		return 0;
+/* IPV6-END */
+	if (!v_length('_dhcpc_custom', quiet, 0, 256))
+		return 0;
+/* STUBBY-BEGIN */
+	if (!v_port('_stubby_port', quiet))
+		return 0;
+
+	var count = 0, e, s;
+	var reg = /^_upstream_active_/;
+	var els = document.getElementsByTagName('input');
+	var suff = ' in imported upstream servers file';
+	for (var i = els.length; i--;) {
+		if (reg.test(els[i].id) && !els[i].disabled) {
+			var id = els[i].id.replace(reg, '');
+
+			if (els[i].checked) /* count checked */
+				count++;
+
+			s = E('_upstream_server_'+id).value;
+			e = '_upstream_ip_'+id;
+			if (!v_ip(e, 1) && !v_ipv6_addr(e, 1)) {
+				if (!quiet)
+					alert('Invalid IP ('+E(e).value+') for '+s+suff);
+				return 0;
+			}
+
+			e = '_upstream_port_'+id;
+			if (E(e).value && !v_port(e, 1)) {
+				if (!quiet)
+					alert('Invalid port ('+E(e).value+') for '+s+suff);
+				return 0;
+			}
+
+			e = '_upstream_domain_'+id;
+			if (!v_domain(e, 1)) {
+				if (!quiet)
+					alert('Invalid domain ('+E(e).value+') for '+s+suff);
+				return 0;
+			}
+		}
+
+	}
+	if (count > MAX_UPSTREAM_SERVERS) {
+		if (focused) {
+			if (!quiet)
+				alert('Maximum of '+MAX_UPSTREAM_SERVERS+' upstream servers can be used at the same time');
+
+			focused.checked = false;
+		}
+
+		return 0;
+	}
+/* STUBBY-END */
+
+	/* IP address, blank -> 0.0.0.0 */
+	if (!v_dns('_wan_wins', quiet))
+		return 0;
+
 	return 1;
 }
 
@@ -109,24 +177,24 @@ function save() {
 		return;
 
 	var fom = E('t_fom');
-	var a = E('_f_dhcpd_sltsel').value;
+	var a = fom._f_dhcpd_sltsel.value;
 
-	fom.dhcpd_dmdns.value = E('_f_dhcpd_dmdns').checked ? 1 : 0;
-	fom.dhcpd_slt.value = (a != 1) ? a : E('_f_dhcpd_slt').value;
-	fom.dhcpd_gwmode.value = E('_f_dhcpd_gwmode').checked ? 1 : 0;
-	fom.dhcpc_minpkt.value = E('_f_dhcpc_minpkt').checked ? 1 : 0;
-	fom.dhcpd_static_only.value = E('_f_dhcpd_static_only').checked ? 1 : 0;
-	fom.dns_addget.value = E('_f_dns_addget').checked ? 1 : 0;
-	fom.dns_norebind.value = E('_f_dns_norebind').checked ? 1 : 0;
-	fom.dns_intcpt.value = E('_f_dns_intcpt').checked ? 1 : 0;
-	fom.dnsmasq_debug.value = E('_f_dnsmasq_debug').checked ? 1 : 0;
+	fom.dhcpd_dmdns.value = fom._f_dhcpd_dmdns.checked ? 1 : 0;
+	fom.dhcpd_slt.value = (a != 1) ? a : fom._f_dhcpd_slt.value;
+	fom.dhcpd_gwmode.value = fom._f_dhcpd_gwmode.checked ? 1 : 0;
+	fom.dhcpc_minpkt.value = fom._f_dhcpc_minpkt.checked ? 1 : 0;
+	fom.dhcpd_static_only.value = fom._f_dhcpd_static_only.checked ? 1 : 0;
+	fom.dns_addget.value = fom._f_dns_addget.checked ? 1 : 0;
+	fom.dns_norebind.value = fom._f_dns_norebind.checked ? 1 : 0;
+	fom.dns_intcpt.value = fom._f_dns_intcpt.checked ? 1 : 0;
+	fom.dnsmasq_debug.value = fom._f_dnsmasq_debug.checked ? 1 : 0;
 /* TOR-BEGIN */
-	fom.dnsmasq_onion_support.value = E('_f_dnsmasq_onion_support').checked ? 1 : 0;
+	fom.dnsmasq_onion_support.value = fom._f_dnsmasq_onion_support.checked ? 1 : 0;
 /* TOR-END */
 /* IPV6-BEGIN */
-	fom.ipv6_radvd.value = E('_f_ipv6_radvd').checked ? 1 : 0;
-	fom.ipv6_dhcpd.value = E('_f_ipv6_dhcpd').checked ? 1 : 0;
-	fom.ipv6_lease_time.value = E('_f_ipv6_lease_time').value;
+	fom.ipv6_radvd.value = fom._f_ipv6_radvd.checked ? 1 : 0;
+	fom.ipv6_dhcpd.value = fom._f_ipv6_dhcpd.checked ? 1 : 0;
+	fom.ipv6_lease_time.value = fom._f_ipv6_lease_time.value;
 /* IPV6-END */
 	fom.dnsmasq_q.value = 0;
 	if (fom.f_dnsmasq_q4.checked)
@@ -147,7 +215,33 @@ function save() {
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
 	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
-	fom.dns_priv_override.value = E('_f_dns_priv_override').checked ? 1 : 0;
+	fom.dns_priv_override.value = fom._f_dns_priv_override.checked ? 1 : 0;
+
+	var count = 0, stubby_list = '', e;
+	var reg = /^_upstream_active_/;
+	var els = document.getElementsByTagName('input');
+
+	for (var i = els.length; i--;) {
+		if (reg.test(els[i].id) && !els[i].disabled) {
+			var id = els[i].id.replace(reg, '');
+
+			if (els[i].checked) {
+				if (count > 8) /* max 8 allowed */
+					break;
+
+				stubby_list +='<'+E('_upstream_ip_'+id).value+'>';
+				e = E('_upstream_port_'+id).value;
+				if (e != '853')
+					stubby_list += e;
+
+				stubby_list +='>'+E('_upstream_domain_'+id).value+'>'+E('_upstream_pinset_'+id).value;
+
+				count++;
+			}
+		}
+	}
+	if (stubby_list.length)
+		fom.stubby_resolvers.value = stubby_list;
 /* STUBBY-END */
 
 	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom))
@@ -228,6 +322,7 @@ function init() {
 <!-- DNSCRYPT-END -->
 <!-- STUBBY-BEGIN -->
 <input type="hidden" name="stubby_proxy">
+<input type="hidden" name="stubby_resolvers">
 <input type="hidden" name="dns_priv_override">
 <!-- STUBBY-END -->
 
@@ -236,7 +331,7 @@ function init() {
 <div class="section-title">DHCP / DNS Client (WAN)</div>
 <div class="section">
 	<script>
-		createFieldTable('', [
+		createFieldTable('noclose', [
 /* DNSSEC-BEGIN */
 			{ title: 'Enable DNSSEC', name: 'f_dnssec_enable', type: 'checkbox', value: (nvram.dnssec_enable == 1) },
 			null,
@@ -252,17 +347,53 @@ function init() {
 				{ title: 'Priority', indent: 2, name: 'dnscrypt_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.dnscrypt_priority },
 				{ title: 'Local Port', indent: 2, name: 'dnscrypt_port', type: 'text', maxlen: 5, size: 7, value: nvram.dnscrypt_port },
 				{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log },
-			null,
+			null
+		]);
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
-			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) },
+		createFieldTable('noopen,noclose', [
+			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) }
+		]);
+
+		W('<tr><td class="title indent2">Upstream resolvers<br> (max. 8)<\/td><td class="content" id="_stubby_servers"><table class="tomato-grid" id="stubby-grid">');
+		W('<tr class="header"><td class="co1">On<\/td><td class="co2">Server<\/td><\/tr><\/tr>');
+
+		var ip, port, server, domain, pinset, active, t;
+		for (var i = 0; i < up_servers_arr.length; ++i) {
+			server = up_servers_arr[i][0];
+			ip = up_servers_arr[i][1];
+			port = up_servers_arr[i][2];
+			domain = up_servers_arr[i][3];
+			pinset = up_servers_arr[i][4];
+			active = active_resolvers(ip, port, domain, pinset);
+			tclass = (i & 1) ? 'even' : 'odd';
+			t = server+'\n'+(ip ? 'Auth Domain: '+domain+'\nIP Addr: '+ip+'\n' : '')+'Port: '+(port ? port : '853');
+
+			W('<tr class="'+tclass+'">\n'+
+			   '<td class="co1">'+
+			    '<input type="checkbox" name="upstream_active_'+i+'" id="_upstream_active_'+i+'" '+(ip ? '' : 'disabled="disabled"')+(active ? ' checked="checked"' : '')+' onclick="verifyFields(this, 0)">'+
+			    '<input type="hidden" name="upstream_server_'+i+'" id="_upstream_server_'+i+'" value="'+server+'">'+
+			    '<input type="hidden" name="upstream_ip_'+i+'" id="_upstream_ip_'+i+'" value="'+ip+'">'+
+			    '<input type="hidden" name="upstream_port_'+i+'" id="_upstream_port_'+i+'" value="'+port+'">'+
+			    '<input type="hidden" name="upstream_domain_'+i+'" id="_upstream_domain_'+i+'" value="'+domain+'">'+
+			    '<input type="hidden" name="upstream_pinsetv_'+i+'" id="_upstream_pinset_'+i+'" value="'+pinset+'">'+
+			   '<\/td>\n'+
+			   '<td class="co2"'+(ip ? ' title="'+t+'" style="cursor:help"' : '')+'>'+(ip ? server : '<b>'+server+'<\/b>')+'<\/td>\n'+
+			  '<\/tr>\n');
+		}
+
+		W('<\/table><\/td><\/tr>');
+
+		createFieldTable('noopen,noclose', [
 				{ title: 'Prevent client auto DoH', indent: 2, name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == '1' },
 				{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], value: nvram.stubby_priority },
 				{ title: 'Local Port', indent: 2, name: 'stubby_port', type: 'text', maxlen: 5, size: 7, value: nvram.stubby_port },
 				{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
 					value: nvram.stubby_log, suffix: '&nbsp; <small>*default<\/small>' },
-			null,
+			null
+		]);
 /* STUBBY-END */
+		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
 			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == '1' },
 			null,
@@ -357,6 +488,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>verifyFields(null, 1);</script>
 </body>
 </html>

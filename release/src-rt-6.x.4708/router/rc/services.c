@@ -710,7 +710,10 @@ void start_stubby(void)
 	            "listen_addresses:\n"
 	            "  - 127.0.0.1@%s\n",
 	            nvram_safe_get("stubby_port"));
-
+#ifdef TCONFIG_IPV6
+	if (get_ipv6_service() != *("NULL")) /* when ipv6 enabled */
+		fprintf(fp, "  - 0::1@%s\n", nvram_safe_get("stubby_port"));
+#endif
 	/* upstreams */
 	fprintf(fp, "upstream_recursive_servers:\n");
 
