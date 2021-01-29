@@ -538,6 +538,9 @@ void start_dnsmasq()
 		if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
 			fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
 
+		/* DNS server */
+		fprintf(f, "dhcp-option=option6:dns-server,%s\n", "[::]"); /* use global address */
+
 		/* SNTP & NTP server */
 		if (nvram_get_int("ntpd_enable")) {
 			fprintf(f, "dhcp-option=option6:31,%s\n", "[::]");
