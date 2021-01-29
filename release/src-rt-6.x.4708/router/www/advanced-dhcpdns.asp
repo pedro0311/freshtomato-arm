@@ -350,8 +350,8 @@ function init() {
 				{ title: 'Local Port', indent: 2, name: 'dnscrypt_port', type: 'text', maxlen: 5, size: 7, value: nvram.dnscrypt_port },
 				{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log },
 			null
-		]);
 /* DNSCRYPT-END */
+		]);
 /* STUBBY-BEGIN */
 		createFieldTable('noopen,noclose', [
 			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) }
