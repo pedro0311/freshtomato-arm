@@ -1593,11 +1593,14 @@ select + input {
 	margin-left: 20px;
 }
 
-span[id$="_dhcpc"] {
+span[id$="_dhcpc"],
+span[id$="_codi"] {
 	font-size: 0px;
+	margin-right: 20px;
 }
 
-span[id$="_dhcpc"] input {
+span[id$="_dhcpc"] input,
+span[id$="_codi"] input {
 	font-size: 1rem;
 }
 

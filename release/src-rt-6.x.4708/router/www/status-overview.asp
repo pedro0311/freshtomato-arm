@@ -69,7 +69,7 @@ function visibility() {
 		                        || (((proto == 'l2tp') || (proto == 'pptp')) && (nvram.pptp_dhcp == '1')));
 		show_codi[uidx - 1] = ((proto == 'pppoe') || (proto == 'l2tp') || (proto == 'pptp')
 /* USB-BEGIN */
-		                       || (proto == 'ppp3g')
+		                        || (proto == 'lte') || (proto == 'ppp3g')
 /* USB-END */
 		                      );
 	}
@@ -83,23 +83,43 @@ function visibility() {
 visibility();
 
 function wlenable(uidx, n) {
-	form.submitHidden('wlradio.cgi', { enable: ''+n, _nextpage: 'status-overview.asp', _nextwait: n ? 6 : 3, _wl_unit: wl_unit(uidx) });
+	E('b_wl'+uidx+'_enable').disabled = 1;
+	E('b_wl'+uidx+'_disable').disabled = 1;
+
+	var fom = E('t_fom');
+	fom.enable.value = ''+n;
+	fom._wl_unit.value = wl_unit(uidx);
+	form.submit(fom, 1, 'wlradio.cgi');
 }
 
-function dhcpc(what, wan_prefix) {
-	form.submitHidden('dhcpc.cgi', { exec: what, prefix: wan_prefix, _redirect: 'status-overview.asp' });
+function dhcpc(what, unit) {
+	E('b'+unit+'_renew').disabled = 1;
+	E('b'+unit+'_release').disabled = 1;
+
+	var fom = E('t_fom');
+	fom.exec.value = what;
+	fom.prefix.value = 'wan'+unit;
+	form.submit(fom, 1, 'dhcpc.cgi');
 }
 
-function serv(service, sleep) {
-	form.submitHidden('service.cgi', { _service: service, _redirect: 'status-overview.asp', _sleep: sleep });
+function serv(service, uidx, sleep) {
+	var u = (uidx > 1) ? uidx : '';
+
+	E('b'+u+'_connect').disabled = 1;
+	E('b'+u+'_disconnect').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._service.value = service;
+	fom._sleep.value = sleep;
+	form.submit(fom, 1, 'service.cgi');
 }
 
 function wan_connect(uidx) {
-	serv('wan'+uidx+'-restart', 5);
+	serv('wan'+uidx+'-restart', uidx, 5);
 }
 
 function wan_disconnect(uidx) {
-	serv('wan'+uidx+'-stop', 2);
+	serv('wan'+uidx+'-stop', uidx, 2);
 }
 
 function onRefToggle() {
@@ -314,10 +334,12 @@ function show() {
 		c('wan'+u+'uptime', stats.wanuptime[uidx - 1]);
 
 		elem.display('b'+u+'_dhcpc', show_dhcpc[uidx - 1]);
+		E('b'+u+'_renew').disabled = 0;
+		E('b'+u+'_release').disabled = 0;
 		if (show_dhcpc[uidx - 1])
 			c('wan'+u+'lease', stats.wanlease[uidx - 1]);
 
-		elem.display('b'+u+'_connect', 'b'+u+'_disconnect', show_codi[uidx - 1]);
+		elem.display('b'+u+'_codi', show_codi[uidx - 1]);
 		if (show_codi[uidx - 1]) {
 			E('b'+u+'_connect').disabled = stats.wanup[uidx - 1];
 			E('b'+u+'_disconnect').disabled = !stats.wanup[uidx - 1];
@@ -408,7 +430,7 @@ function init() {
 </head>
 
 <body onload="init()">
-<form>
+<form id="t_fom" method="post" action="tomato.cgi">
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title">FreshTomato</div>
@@ -417,6 +439,17 @@ function init() {
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
 <div id="ident"><% ident(); %></div>
+
+<!-- / / / -->
+
+<input type="hidden" name="_nextpage" value="status-overview.asp">
+<input type="hidden" name="_service" value="">
+<input type="hidden" name="_nextwait" value="5">
+<input type="hidden" name="_sleep" value="5">
+<input type="hidden" name="exec" value="">
+<input type="hidden" name="prefix" value="">
+<input type="hidden" name="enable" value="">
+<input type="hidden" name="_wl_unit" value="">
 
 <!-- / / / -->
 
@@ -508,11 +541,13 @@ function init() {
 /* USB-END */
 		]);
 		W('<span id="b'+u+'_dhcpc" style="display:none">');
-		W('<input type="button" class="status-controls" onclick="dhcpc(\'renew\',\'wan'+u+'\')" value="Renew"> &nbsp;');
-		W('<input type="button" class="status-controls" onclick="dhcpc(\'release\',\'wan'+u+'\')" value="Release"> &nbsp;');
+		W('<input type="button" class="status-controls" onclick="dhcpc(\'renew\',\''+u+'\')" value="Renew" id="b'+u+'_renew"> &nbsp;');
+		W('<input type="button" class="status-controls" onclick="dhcpc(\'release\',\''+u+'\')" value="Release" id="b'+u+'_release"> &nbsp;');
 		W('<\/span>');
-		W('<input type="button" class="status-controls" onclick="wan_connect('+uidx+')" value="Connect" id="b'+u+'_connect" style="display:none">');
-		W('<input type="button" class="status-controls" onclick="wan_disconnect('+uidx+')" value="Disconnect" id="b'+u+'_disconnect" style="display:none">');
+		W('<span id="b'+u+'_codi" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="wan_connect('+uidx+')" value="Connect" id="b'+u+'_connect"> &nbsp;');
+		W('<input type="button" class="status-controls" onclick="wan_disconnect('+uidx+')" value="Disconnect" id="b'+u+'_disconnect">');
+		W('<\/span>');
 		W('<\/div>');
 	}
 </script>
