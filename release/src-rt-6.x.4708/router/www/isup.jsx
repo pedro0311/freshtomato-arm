@@ -19,3 +19,8 @@ isup.telnetd = parseInt('<% psup("telnetd"); %>');
 /* SSH-BEGIN */
 isup.dropbear = parseInt('<% psup("dropbear"); %>');
 /* SSH-END */
+
+/* MEDIA-SRV-BEGIN */
+isup.minidlna = parseInt('<% psup("minidlna"); %>');
+isup.minidlna_enabled = <% nv(ms_enable); %>;
+/* MEDIA-SRV-END */
