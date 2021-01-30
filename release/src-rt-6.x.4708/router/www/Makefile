@@ -214,6 +214,11 @@ ifneq ($(TCONFIG_BCMBSD),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BSD-BEGIN/,/BSD-END/d"
 endif
 
+# Only include SSH stuff when needed
+ifneq ($(TCONFIG_SSH),y)
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/SSH-BEGIN/,/SSH-END/d"
+endif
+
 # Add "beta" tag if needed
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
@@ -336,22 +341,23 @@ endif
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \
-		-e "/NOCAT-BEGIN/d"	-e "/NOCAT-END/d"\
-		-e "/NGINX-BEGIN/d"	-e "/NGINX-END/d"\
-		-e "/SNMP-BEGIN/d"	-e "/SNMP-END/d"\
-		-e "/HFS-BEGIN/d"	-e "/HFS-END/d"\
-		-e "/DNSCRYPT-BEGIN/d"	-e "/DNSCRYPT-END/d"\
-		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d"\
-		-e "/DNSSEC-BEGIN/d"	-e "/DNSSEC-END/d"\
-		-e "/TOR-BEGIN/d"	-e "/TOR-END/d"\
-		-e "/TINC-BEGIN/d"	-e "/TINC-END/d"\
-		-e "/PARAGON-BEGIN/d"	-e "/PARAGON-END/d"\
-		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d"\
-		-e "/TUXERAHFS-BEGIN/d"	-e "/TUXERAHFS-END/d"\
-		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d"\
-		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d"\
+		-e "/NOCAT-BEGIN/d"	-e "/NOCAT-END/d" \
+		-e "/NGINX-BEGIN/d"	-e "/NGINX-END/d" \
+		-e "/SNMP-BEGIN/d"	-e "/SNMP-END/d" \
+		-e "/HFS-BEGIN/d"	-e "/HFS-END/d" \
+		-e "/DNSCRYPT-BEGIN/d"	-e "/DNSCRYPT-END/d" \
+		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
+		-e "/DNSSEC-BEGIN/d"	-e "/DNSSEC-END/d" \
+		-e "/TOR-BEGIN/d"	-e "/TOR-END/d" \
+		-e "/TINC-BEGIN/d"	-e "/TINC-END/d" \
+		-e "/PARAGON-BEGIN/d"	-e "/PARAGON-END/d" \
+		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d" \
+		-e "/TUXERAHFS-BEGIN/d"	-e "/TUXERAHFS-END/d" \
+		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d" \
+		-e "/DUALWAN-BEGIN/d"	-e "/DUALWAN-END/d" \
 		-e "/HTTPS-BEGIN/d"	-e "/HTTPS-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
+		-e "/SSH-BEGIN/d"	-e "/SSH-END/d" \
 		|| true; \
 	done
 

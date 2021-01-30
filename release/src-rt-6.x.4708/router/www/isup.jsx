@@ -14,3 +14,8 @@ isup.nginx = parseInt('<% psup("nginx"); %>');
 /* it should be done in a different way, but for now it's ok */
 isup.qos = <% nv("qos_enable"); %>;
 isup.bwl = <% nv("bwl_enable"); %>;
+
+isup.telnetd = parseInt('<% psup("telnetd"); %>');
+/* SSH-BEGIN */
+isup.dropbear = parseInt('<% psup("dropbear"); %>');
+/* SSH-END */
