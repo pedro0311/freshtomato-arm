@@ -47,10 +47,10 @@ up.refresh = function(text) {
 var changed = 0;
 
 function show() {
-	E('_nginx_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
-	E('_nginx_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
-	E('_nginx_button').setAttribute('onclick', 'javascript:toggle(\'nginxfp\', '+isup.nginx+');');
-	E('_nginx_button').disabled = 0;
+	E('_nginxfp_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
+	E('_nginxfp_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
+	E('_nginxfp_button').setAttribute('onclick', 'javascript:toggle(\'nginxfp\', '+isup.nginx+');');
+	E('_nginxfp_button').disabled = 0;
 }
 
 function toggle(service, isup) {
@@ -159,8 +159,8 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_nginx_notice"></span>
-		<input type="button" id="_nginx_button">
+		<span id="_nginxfp_notice"></span>
+		<input type="button" id="_nginxfp_button">
 	</div>
 </div>
 
