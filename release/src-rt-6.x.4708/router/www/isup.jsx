@@ -22,7 +22,6 @@ isup.dropbear = parseInt('<% psup("dropbear"); %>');
 
 /* MEDIA-SRV-BEGIN */
 isup.minidlna = parseInt('<% psup("minidlna"); %>');
-isup.minidlna_enabled = <% nv(ms_enable); %>;
 /* MEDIA-SRV-END */
 
 /* TINC-BEGIN */

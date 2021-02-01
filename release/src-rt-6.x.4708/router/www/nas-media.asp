@@ -44,9 +44,9 @@ function show() {
 	var e = E('_media_button');
 	e.value = (isup.minidlna ? 'Res' : 'S')+'tart Now';
 	e.setAttribute('onclick', 'javascript:toggle(\'media\', '+isup.minidlna+');');
-	e.disabled = !(isup.minidlna_enabled == '1' && E('_f_ms_enable').checked);
+	e.disabled = !(nvram.ms_enable == '1' && E('_f_ms_enable').checked);
 
-	elem.display('_media_button', isup.minidlna_enabled == '1');
+	elem.display('_media_button', nvram.ms_enable == '1');
 }
 
 function toggle(service, isup) {
@@ -209,6 +209,7 @@ function save() {
 	var fom = E('t_fom');
 
 	fom.ms_enable.value = fom._f_ms_enable.checked ? 1 : 0;
+	nvram.ms_enable = fom._f_ms_enable.checked ? 1 : 0;
 	fom.ms_tivo.value = fom._f_ms_tivo.checked ? 1 : 0;
 	fom.ms_stdlna.value = fom._f_ms_stdlna.checked ? 1 : 0;
 	fom.ms_rescan.value = fom._f_ms_rescan.checked ? 1 : 0;
