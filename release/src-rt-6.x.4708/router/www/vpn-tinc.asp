@@ -24,16 +24,78 @@
 
 //	<% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
 
-tincup = parseInt ('<% psup("tincd"); %>');
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
 
-tabs = [['config', 'Config'],['hosts', 'Hosts'],['scripts', 'Scripts'],['keys', 'Generate Keys'],['status', 'Status']];
-
-var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
+<script>
 var cprefix = 'vpn_tinc';
-var th = new TomatoGrid();
+
+var up = new TomatoRefresh('isup.jsx', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+	updateNodes();
+}
+
+var tabs = [['config','Config'],['hosts','Hosts'],['scripts','Scripts'],['keys','Generate Keys'],['status','Status']];
+var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
 var cmd = null;
 var cmdresult = '';
 var changed = 0;
+
+function show() {
+	var d = isup.tincd;
+
+	for (var i = 1; i <= 4; i++) {
+		var e = E('_tinc_button'+i);
+		e.value = (d ? 'Stop' : 'Start')+' Now';
+		e.setAttribute('onclick', 'javascript:toggle(\'tinc\', '+d+');');
+		e.disabled = 0;
+	}
+
+	elem.setInnerHTML(E('_tinc_running'), 'Tinc is currently '+(d ? 'running' : 'stopped'));
+	E('edges').disabled = !d;
+	E('connections').disabled = !d;
+	E('subnets').disabled = !d;
+	E('nodes').disabled = !d;
+	E('info').disabled = !d;
+	E('hostselect').disabled = !d;
+	E('t_fom')._service.value = (d ? 'tinc-restart' : '');
+}
+
+function toggle(service, isup) {
+	var data = th.getAllData();
+	var s = '';
+	for (var i = 0; i < data.length; ++i)
+		s += data[i].join('<')+'>';
+
+	if (nvram.tinc_hosts != s)
+		changed = 1;
+
+	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
+		return;
+
+	E('_'+service+'_button1').disabled = 1;
+	E('_'+service+'_button2').disabled = 1;
+	E('_'+service+'_button3').disabled = 1;
+	E('_'+service+'_button4').disabled = 1;
+	elem.display(E('result'), !isup);
+	if (!isup)
+		elem.setInnerHTML(E('result'), '');
+
+	var fom = E('t_fom');
+	fom._service.value = service+(isup ? '-stop' : '-start');
+	form.submit(fom, 1, 'service.cgi');
+}
+
+var th = new TomatoGrid();
 
 th.setup = function() {
 	this.init('th-grid', '', 50, [
@@ -43,9 +105,9 @@ th.setup = function() {
 		{ type: 'text', maxlen: 5 },
 		{ type: 'select', options: tinc_compression },
 		{ type: 'text', maxlen: 20 },
-		{ type: 'textarea', proxy: "_host_rsa_key" },
-		{ type: 'textarea', proxy: "_host_ed25519_key" },
-		{ type: 'textarea', proxy: "_host_custom" }
+		{ type: 'textarea', proxy: '_host_rsa_key' },
+		{ type: 'textarea', proxy: '_host_ed25519_key' },
+		{ type: 'textarea', proxy: '_host_custom' }
 	]);
 	this.headerSet(['ConnectTo', 'Name', 'Address', 'Port', 'Compression', 'Subnet']);
 	var nv = nvram.tinc_hosts.split('>');
@@ -87,57 +149,226 @@ th.resetNewEditor = function() {
 th.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 
-	if (f[1].value == "") {
-		ferror.set(f[1], "Host Name is required.", quiet);
+	if (f[1].value == '') {
+		ferror.set(f[1], 'Host Name is required', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(f[1]);
-	}
-	if (f[0].checked && f[2].value == "") {
-		ferror.set(f[2], "Address must be supplied when ConnectTo is checked.", quiet);
+
+	if (f[0].checked && f[2].value == '') {
+		ferror.set(f[2], 'Address must be supplied when ConnectTo is checked', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(f[2]);
-	}
-	if (!f[3].value == "") {
+
+	if (!f[3].value == '') {
 		if (!v_port(f[3], quiet))
 			return 0;
 	}
 	
 	if (E('_tinc_devicetype').value == 'tun') {
 		if ((!v_subnet(f[5], 1)) && (!v_ip(f[5], 1))) {
-			ferror.set(f[5], "Invalid Subnet or IP address.", quiet);
+			ferror.set(f[5], 'Invalid Subnet or IP address', quiet);
 			return 0;
-		} else {
-			ferror.clear(f[5]);
 		}
+		else
+			ferror.clear(f[5]);
 	}
 	else if (E('_tinc_devicetype').value == 'tap') {
 		if (f[5].value != '') {
-			ferror.set(f[5], "Subnet is left blank when using the TAP Interface Type.", quiet);
+			ferror.set(f[5], 'Subnet is left blank when using the TAP Interface Type', quiet);
 			return 0;
-		} else {
-			ferror.clear(f[5]);
 		}
+		else
+			ferror.clear(f[5]);
 	}
 
-	if (E('_host_ed25519_key').value == "") {
-		ferror.set(E('_host_ed25519_key'), "Ed25519 Public Key is required.", quiet);
+	if (E('_host_ed25519_key').value == '') {
+		ferror.set(E('_host_ed25519_key'), 'Ed25519 Public Key is required', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(E('_host_ed25519_key'));
-	}
 
 	return 1;
 }
 
-function verifyFields(focused, quiet) {
-	if (focused) {
-		changed = 1;
+function escapeText(s) {
+	function esc(c) {
+		return '&#'+c.charCodeAt(0)+';';
 	}
+
+	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
+}
+
+function spin(x, which) {
+	E(which).style.display = (x ? 'inline-block' : 'none');
+	if (!x)
+		cmd = null;
+}
+
+/* Borrowed from http://snipplr.com/view/14074/ */
+String.prototype.between = function(prefix, suffix) {
+	s = this;
+	var i = s.indexOf(prefix);
+	if (i >= 0)
+		s = s.substring(i+prefix.length);
+	else
+		return '';
+
+	if (suffix) {
+		i = s.indexOf(suffix);
+		if (i >= 0)
+			s = s.substring(0, i);
+		else
+			return '';
+	}
+
+	return s;
+}
+
+function displayKeys() {
+	E('_rsa_private_key').value = '-----BEGIN RSA PRIVATE KEY-----\n'+cmdresult.between('-----BEGIN RSA PRIVATE KEY-----\n','\n-----END RSA PRIVATE KEY-----')+'\n-----END RSA PRIVATE KEY-----';
+	E('_rsa_public_key').value = '-----BEGIN RSA PUBLIC KEY-----\n'+cmdresult.between('-----BEGIN RSA PUBLIC KEY-----\n','\n-----END RSA PUBLIC KEY-----')+'\n-----END RSA PUBLIC KEY-----';
+	E('_ed25519_private_key').value = '-----BEGIN ED25519 PRIVATE KEY-----\n'+cmdresult.between('-----BEGIN ED25519 PRIVATE KEY-----\n','\n-----END ED25519 PRIVATE KEY-----')+'\n-----END ED25519 PRIVATE KEY-----';
+	E('_ed25519_public_key').value = cmdresult.between('-----END ED25519 PRIVATE KEY-----\n','\n');
+
+	cmdresult = '';
+	spin(0, 'generateWait');
+	E('execb').disabled = 0;
+}
+
+function generateKeys() {
+	E('execb').disabled = 1;
+	spin(1, 'generateWait');
+
+	E('_rsa_private_key').value = '';
+	E('_rsa_public_key').value = '';
+	E('_ed25519_private_key').value = '';
+	E('_ed25519_public_key').value = '';
+
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		displayKeys();
+	}
+	cmd.onError = function(x) {
+		cmdresult = 'ERROR: '+x;
+		displayKeys();
+	}
+
+	var commands = '/bin/rm -rf /etc/keys \n\
+		/bin/mkdir /etc/keys \n\
+		/bin/echo -e \'\n\n\n\n\' | /usr/sbin/tinc -c /etc/keys generate-keys \n\
+		/bin/cat /etc/keys/rsa_key.priv \n\
+		/bin/cat /etc/keys/rsa_key.pub \n\
+		/bin/cat /etc/keys/ed25519_key.priv \n\
+		/bin/cat /etc/keys/ed25519_key.pub';
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+
+}
+
+function displayStatus() {
+	elem.setInnerHTML(E('result'), '<tt>'+escapeText(cmdresult)+'<\/tt>');
+	cmdresult = '';
+	spin(0, 'statusWait');
+}
+
+function updateStatus(type) {
+	elem.setInnerHTML(E('result'), '');
+	spin(1, 'statusWait');
+
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		displayStatus();
+	}
+	cmd.onError = function(x) {
+		cmdresult = 'ERROR: '+x;
+		displayStatus();
+	}
+
+	if (type != 'info')
+		var commands = '/usr/sbin/tinc dump '+type+'\n';
+	else {
+		var selects = document.getElementById('hostselect');
+		var commands = '/usr/sbin/tinc '+type+' '+selects.options[selects.selectedIndex].text+'\n';
+	}
+
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+	updateNodes();
+}
+
+function displayNodes() {
+	var hostselect = document.getElementById('hostselect');
+	var selected = hostselect.value;
+
+	while (hostselect.firstChild)
+		hostselect.removeChild(hostselect.firstChild);
+
+	var hosts = cmdresult.split('\n');
+
+	for (var i = 0; i < hosts.length; ++i) {
+		if (hosts[i] != '') {
+			hostselect.options[hostselect.options.length] = new Option(hosts[i],hosts[i]);
+			if (hosts[i] == selected)
+				hostselect.value = selected;
+		}
+	}
+	cmdresult = '';
+}
+
+function updateNodes() {
+	if (isup.tincd) {
+		cmd = new XmlHttp();
+		cmd.onCompleted = function(text, xml) {
+			eval(text);
+			displayNodes();
+		}
+		cmd.onError = function(x) {
+			cmdresult = 'ERROR: '+x;
+			displayNodes();
+		}
+
+		var commands = '/usr/sbin/tinc dump nodes | /bin/busybox awk \'{print $1}\'';
+		cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+	}
+}
+
+function displayVersion() {
+	elem.setInnerHTML(E('version'), '<small>'+escapeText(cmdresult)+'<\/small>');
+	cmdresult = '';
+}
+
+function getVersion() {
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		displayVersion();
+	}
+	cmd.onError = function(x) {
+		cmdresult = 'ERROR: '+x;
+		displayVersion();
+	}
+
+	var commands = '/usr/sbin/tinc --version | /bin/busybox awk \'NR==1 {print $1 " " $3}\'';
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+}
+
+function tabSelect(name) {
+	tgHideIcons();
+	cookie.set(cprefix+'_tab', name);
+	tabHigh(name);
+
+	for (var i = 0; i < tabs.length; ++i)
+		elem.display(tabs[i][0]+'-tab', (name == tabs[i][0]));
+}
+
+function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
 
 	/* Visibility Changes */
 	var vis = {
@@ -181,301 +412,87 @@ function verifyFields(focused, quiet) {
 		PR(b).style.display = c ? '' : 'none';
 	}
 
-	E('edges').disabled = !tincup;
-	E('connections').disabled = !tincup;
-	E('subnets').disabled = !tincup;
-	E('nodes').disabled = !tincup;
-	E('info').disabled = !tincup;
-	E('hostselect').disabled = !tincup;
-
 	/* Element Verification */
-	if (E('_tinc_name').value == "" && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_name'), "Host Name is required when 'Start With WAN' is checked.", quiet);
+	if (E('_tinc_name').value == '' && E('_f_tinc_wanup').checked) {
+		ferror.set(E('_tinc_name'), 'Host Name is required when \'Start With WAN\' is checked', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(E('_tinc_name'));
-	}
 
-	if (E('_tinc_private_ed25519').value == "" && E('_tinc_custom').value == "" && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_private_ed25519'), "Ed25519 Private Key is required when 'Start With WAN' is checked.", quiet);
+	if (E('_tinc_private_ed25519').value == '' && E('_tinc_custom').value == '' && E('_f_tinc_wanup').checked) {
+		ferror.set(E('_tinc_private_ed25519'), 'Ed25519 Private Key is required when \'Start With WAN\' is checked', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(E('_tinc_private_ed25519'));
-	}
 
-	if (!v_netmask('_tinc_vpn_netmask', quiet)) return 0;
+	if (!v_netmask('_tinc_vpn_netmask', quiet))
+		return 0;
 
-	if (!v_range('_tinc_poll', quiet, 0, 1440)) return 0;
+	if (!v_range('_tinc_poll', quiet, 0, 1440))
+		return 0;
 
-	if (!E('_host_ed25519_key').value == "") {
+	if (!E('_host_ed25519_key').value == '')
 		ferror.clear(E('_host_ed25519_key'));
-	}
 
-	var hostdefined = false;
+	var hostdefined = 0;
 	var hosts = th.getAllData();
 	for (var i = 0; i < hosts.length; ++i) {
 		if (hosts[i][1] == E('_tinc_name').value) {
-			hostdefined = true;
+			hostdefined = 1;
 			break;
 		}
 	}
 
 	if (!hostdefined && E('_f_tinc_wanup').checked) {
-		ferror.set(E('_tinc_name'), "Host Name \"" + E('_tinc_name').value + "\" must be defined in the hosts area when 'Start With WAN' is checked.", quiet);
+		ferror.set(E('_tinc_name'), 'Host Name \''+E('_tinc_name').value+'\' must be defined in the hosts area when \'Start With WAN\' is checked', quiet);
 		return 0;
 	}
-	else {
+	else
 		ferror.clear(E('_tinc_name'));
-	}
 
 	return 1;
 }
 
-function escapeText(s) {
-	function esc(c) {
-		return '&#' + c.charCodeAt(0) + ';';
-	}
-
-	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
-}
-
-function spin(x, which) {
-	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x) cmd = null;
-}
-
-/* Borrowed from http://snipplr.com/view/14074/ */
-String.prototype.between = function(prefix, suffix) {
-	s = this;
-	var i = s.indexOf(prefix);
-	if (i >= 0) {
-		s = s.substring(i + prefix.length);
-	}
-	else {
-		return '';
-	}
-	if (suffix) {
-		i = s.indexOf(suffix);
-		if (i >= 0) {
-			s = s.substring(0, i);
-		}
-		else {
-			return '';
-		}
-	}
-	return s;
-}
-
-function displayKeys() {
-	E('_rsa_private_key').value = "-----BEGIN RSA PRIVATE KEY-----\n" + cmdresult. between('-----BEGIN RSA PRIVATE KEY-----\n','\n-----END RSA PRIVATE KEY-----') + "\n-----END RSA PRIVATE KEY-----";
-	E('_rsa_public_key').value = "-----BEGIN RSA PUBLIC KEY-----\n" + cmdresult. between('-----BEGIN RSA PUBLIC KEY-----\n','\n-----END RSA PUBLIC KEY-----') + "\n-----END RSA PUBLIC KEY-----";
-	E('_ed25519_private_key').value = "-----BEGIN ED25519 PRIVATE KEY-----\n" + cmdresult. between('-----BEGIN ED25519 PRIVATE KEY-----\n','\n-----END ED25519 PRIVATE KEY-----') + "\n-----END ED25519 PRIVATE KEY-----";
-	E('_ed25519_public_key').value = cmdresult. between('-----END ED25519 PRIVATE KEY-----\n','\n');
-
-	cmdresult = '';
-	spin(0,'generateWait');
-	E('execb').disabled = 0;
-}
-
-function generateKeys() {
-	E('execb').disabled = 1;
-	spin(1, 'generateWait');
-
-	E('_rsa_private_key').value = "";
-	E('_rsa_public_key').value = "";
-	E('_ed25519_private_key').value = "";
-	E('_ed25519_public_key').value = "";
-
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		displayKeys();
-	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: ' + x;
-		displayKeys();
-	}
-
-	var commands = "/bin/rm -rf /etc/keys \n\
-		/bin/mkdir /etc/keys \n\
-		/bin/echo -e '\n\n\n\n' | /usr/sbin/tinc -c /etc/keys generate-keys \n\
-		/bin/cat /etc/keys/rsa_key.priv \n\
-		/bin/cat /etc/keys/rsa_key.pub \n\
-		/bin/cat /etc/keys/ed25519_key.priv \n\
-		/bin/cat /etc/keys/ed25519_key.pub";
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
-
-}
-
-function displayStatus() {
-	E('result').innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
-	cmdresult = '';
-	spin(0, 'statusWait');
-}
-
-function updateStatus(type) {
-	E('result').innerHTML = '';
-	spin(1, 'statusWait');
-
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		displayStatus();
-	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: ' + x;
-		displayStatus();
-	}
-
-	if (type != "info") {
-		var commands = "/usr/sbin/tinc dump " + type + "\n";
-	}
-	else {
-		var selects = document.getElementById("hostselect");
-		var commands = "/usr/sbin/tinc " + type + " " + selects.options[selects.selectedIndex].text + "\n";
-	}
-
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
-	updateNodes();
-}
-
-function displayNodes() {
-	var hostselect = document.getElementById("hostselect");
-	var selected = hostselect.value;
-
-	while (hostselect.firstChild) {
-		hostselect.removeChild(hostselect.firstChild);
-	}
-
-	var hosts = cmdresult.split("\n");
-
-	for (var i = 0; i < hosts.length; ++i) {
-		if (hosts[i] != '') {
-			hostselect.options[hostselect.options.length] = new Option(hosts[i],hosts[i]);
-			if (hosts[i] == selected) {
-				hostselect.value = selected;
-			}
-		}
-	}
-
-	cmdresult = '';
-}
-
-function updateNodes() {
-	if (tincup) {
-		cmd = new XmlHttp();
-		cmd.onCompleted = function(text, xml) {
-			eval(text);
-			displayNodes();
-		}
-		cmd.onError = function(x) {
-			cmdresult = 'ERROR: ' + x;
-			displayNodes();
-		}
-
-		var commands = "/usr/sbin/tinc dump nodes | /bin/busybox awk '{print $1}'";
-		cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
-	}
-}
-
-function displayVersion() {
-	E('version').innerHTML = "<small>" + escapeText(cmdresult) + "<\/small>";
-	cmdresult = '';
-}
-
-function getVersion() {
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		displayVersion();
-	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: ' + x;
-		displayVersion();
-	}
-
-	var commands = "/usr/sbin/tinc --version | /bin/busybox awk 'NR==1 {print $1 \" \" $3}'";
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(commands.replace(/\r/g, '')));
-}
-
-function tabSelect(name) {
-	tgHideIcons();
-	cookie.set('vpn_tinc_tab', name);
-	tabHigh(name);
-
-	for (var i = 0; i < tabs.length; ++i) {
-		var on = (name == tabs[i][0]);
-		elem.display(tabs[i][0] + '-tab', on);
-	}
-}
-
-function toggle(service, isup) {
-	var data = th.getAllData();
-	var s = '';
-	for (var i = 0; i < data.length; ++i) {
-		s += data[i].join('<') + '>';
-	}
-
-	if (nvram.tinc_hosts != s) {
-		changed = 1;
-	}
-
-	if (changed && !confirm("Unsaved changes will be lost. Continue anyway?")) return;
-
-	E('_' + service + '_button1').disabled = true;
-	E('_' + service + '_button2').disabled = true;
-	E('_' + service + '_button3').disabled = true;
-	E('_' + service + '_button4').disabled = true;
-
-	form.submitHidden('service.cgi', {
-		_redirect: 'vpn-tinc.asp',
-		_sleep: '3',
-		_service: service + (isup ? '-stop' : '-start')
-	});
-}
-
 function save() {
-	if (!verifyFields(null, false)) return;
-	if (th.isEditing()) return;
+	if (th.isEditing())
+		return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var data = th.getAllData();
 	var s = '';
-	for (var i = 0; i < data.length; ++i) {
-		s += data[i].join('<') + '>';
-	}
+	for (var i = 0; i < data.length; ++i)
+		s += data[i].join('<')+'>';
+
 	var fom = E('t_fom');
 	fom.tinc_hosts.value = s;
 	nvram.tinc_hosts = s;
 	fom.tinc_wanup.value = fom.f_tinc_wanup.checked ? 1 : 0;
-
-	if (tincup) {
-		fom._service.value = 'tinc-restart';
-	}
 
 	form.submit(fom, 1);
 
 	changed = 0;
 }
 
+function earlyInit() {
+	show();
+	tabSelect(cookie.get(cprefix+'_tab') || 'config');
+	verifyFields(null, 1);
+}
+
 function init() {
-	verifyFields(null, true);
 	th.recolor();
 	th.resetNewEditor();
 	var c;
-	if (((c = cookie.get(cprefix + '_hosts_vis')) != null) && (c == '1')) {
-		toggleVisibility(cprefix, "hosts");
-	}
+	if (((c = cookie.get(cprefix+'_hosts_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'hosts');
 
 	getVersion();
 	updateNodes();
+	up.initPage(250, 5);
 	eventHandler();
-}
-
-function earlyInit() {
-	tabSelect(cookie.get('vpn_tinc_tab') || 'config');
-	verifyFields(null, true);
 }
 </script>
 </head>
@@ -506,8 +523,7 @@ function earlyInit() {
 	W('<div id="tab-area"><\/div>');
 
 	// -------- BEGIN CONFIG TAB -----------
-	t = "config";
-	W('<div id="'+t+'-tab">');
+	W('<div id="config-tab">');
 	W('<input type="hidden" name="tinc_wanup">');
 	W('<div class="section">');
 	createFieldTable('', [
@@ -523,14 +539,13 @@ function earlyInit() {
 	]);
 
 	W('<small><b style="font-size: 1.5em">*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
-	W('<div class="vpn-start-stop"><input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button1"><\/div>');
+	W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_tinc_button1"><\/div>');
 	W('<\/div><\/div>');
 	// -------- END CONFIG TAB -----------
 
 
 	// -------- BEGIN HOSTS TAB -----------
-	t = "hosts";
-	W('<div id="'+t+'-tab">');
+	W('<div id="hosts-tab">');
 	W('<div class="section">');
 	W('<input type="hidden" name="tinc_hosts">');
 	W('<div class="tomato-grid" id="th-grid"><\/div>');
@@ -544,7 +559,7 @@ function earlyInit() {
 	]);
 
 	W('<small><b style="font-size: 1.5em">*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
-	W('<div class="vpn-start-stop"><input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button2"><\/div>');
+	W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_tinc_button2"><\/div>');
 	W('<\/div>');
 
 	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,\'hosts\');"><span id="sesdiv_hosts_showhide">(Click here to show)<\/span><\/a><\/i><\/small><\/div>');
@@ -563,8 +578,7 @@ function earlyInit() {
 
 
 	// -------- BEGIN SCRIPTS TAB -----------
-	t = "scripts";
-	W('<div id="'+t+'-tab">');
+	W('<div id="scripts-tab">');
 	W('<div class="section">');
 
 	createFieldTable('', [
@@ -579,14 +593,13 @@ function earlyInit() {
 		{ title: 'subnet-down', name: 'tinc_subnet_down', type: 'textarea', value: nvram.tinc_subnet_down }
 	]);
 
-	W('<div class="vpn-start-stop"><input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button3"><\/div>');
+	W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_tinc_button3"><\/div>');
 	W('<\/div><\/div>');
 	// -------- END SCRIPTS TAB -----------
 
 
 	// -------- BEGIN KEYS TAB -----------
-	t = "keys";
-	W('<div id="'+t+'-tab">');
+	W('<div id="keys-tab">');
 	W('<div class="section">');
 
 	createFieldTable('', [
@@ -603,12 +616,11 @@ function earlyInit() {
 
 
 	// -------- BEGIN STATUS TAB -----------
-	t = "status";
-	W('<div id="'+t+'-tab">');
+	W('<div id="status-tab">');
 	W('<div class="fields">');
 
 	W('<div class="section">');
-	W('<div class="vpn-start-stop">Tinc is currently '+(!tincup ? 'stopped.' : 'running.')+' <input type="button" value="' + (tincup ? 'Stop' : 'Start') + ' Now" onclick="toggle(\'tinc\', tincup)" id="_tinc_button4"><\/div>');
+	W('<div class="vpn-start-stop"><span id="_tinc_running"></span> <input type="button" value="" onclick="" id="_tinc_button4"><\/div>');
 	W('<\/div>');
 
 	W('<div class="section">');
@@ -620,8 +632,7 @@ function earlyInit() {
 	W('<\/div>');
 
 	W('<div class="section">');
-	W('<div><input type="button" value="Info" onclick="updateStatus(\'info\')" id="info" style="min-width:85px">');
-	W('<select id="hostselect" style="width:170px"><\/select><\/div>');
+	W('<div><input type="button" value="Info" onclick="updateStatus(\'info\')" id="info" style="min-width:85px"> <select id="hostselect" style="min-width:85px"><\/select><\/div>');
 	W('<\/div>');
 
 	W('<pre id="result"><\/pre>');
