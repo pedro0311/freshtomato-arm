@@ -113,13 +113,9 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
 	case MODEL_F9K1113v2_20X0:
-		reset_mask = 1 << 8; /* reset button (active LOW) */
-		ses_mask = 1 << 7; /* wps button (active LOW) */
-		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
-		break;
 	case MODEL_F9K1113v2:
 		reset_mask = 1 << 8; /* reset button (active LOW) */
-		ses_mask = 1 << 2; /* wps button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
 		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
 	case MODEL_WS880:
