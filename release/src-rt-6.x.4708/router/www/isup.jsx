@@ -2,6 +2,8 @@ isup = {};
 
 isup.telnetd = parseInt('<% psup("telnetd"); %>');
 
+isup.miniupnpd = parseInt('<% psup("miniupnpd"); %>');
+
 /* it should be done in a different way, but for now it's ok */
 isup.qos = <% nv("qos_enable"); %>;
 isup.bwl = <% nv("bwl_enable"); %>;
