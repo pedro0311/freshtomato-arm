@@ -80,6 +80,8 @@ function submitDelete(proto, eport) {
 
 	fom.remove_proto.value = proto;
 	fom.remove_eport.value = eport;
+	fom._nofootermsg.value = 1;
+
 	form.submit(fom, 1, 'upnp.cgi');
 
 	upnp.start();
@@ -226,6 +228,8 @@ function save() {
 	fom.upnp_lan2.value = fom._f_upnp_lan2.checked ? 1 : 0;
 	fom.upnp_lan3.value = fom._f_upnp_lan3.checked ? 1 : 0;
 
+	fom._nofootermsg.value = 0;
+
 	form.submit(fom, 1);
 }
 
@@ -258,6 +262,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="forward-upnp.asp">
 <input type="hidden" name="_service" value="upnp-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="upnp_enable">
 <input type="hidden" name="upnp_mnp">
 <input type="hidden" name="upnp_clean">

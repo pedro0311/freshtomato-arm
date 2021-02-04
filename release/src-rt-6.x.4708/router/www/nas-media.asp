@@ -57,7 +57,7 @@ function toggle(service, isup) {
 
 	var fom = E('t_fom');
 	fom._service.value = service+'-'+(isup ? 're' : '')+'start';
-	save();
+	save(1);
 }
 
 var msg = new TomatoGrid();
@@ -200,7 +200,7 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save(nomsg) {
 	if (msg.isEditing())
 		return;
 	if (!verifyFields(null, 0))
@@ -224,6 +224,7 @@ function save() {
 		r.push(data[i].join('<'));
 
 	fom.ms_dirs.value = r.join('>');
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -260,6 +261,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-media.asp">
 <input type="hidden" name="_service" value="media-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="ms_enable">
 <input type="hidden" name="ms_dirs">
 <input type="hidden" name="ms_dbdir">
@@ -322,7 +324,7 @@ function init() {
 
 <div id="footer">
 	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
+	<input type="button" value="Save" id="save-button" onclick="save(0)">
 	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
 </div>
 

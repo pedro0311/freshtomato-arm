@@ -91,6 +91,7 @@ function toggle(service, isup) {
 		elem.setInnerHTML(E('result'), '');
 
 	var fom = E('t_fom');
+	fom._nofootermsg.value = 1;
 	fom._service.value = service+(isup ? '-stop' : '-start');
 	form.submit(fom, 1, 'service.cgi');
 }
@@ -470,6 +471,7 @@ function save() {
 	fom.tinc_hosts.value = s;
 	nvram.tinc_hosts = s;
 	fom.tinc_wanup.value = fom.f_tinc_wanup.checked ? 1 : 0;
+	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -512,6 +514,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-tinc.asp">
 <input type="hidden" name="_service" value="">
+<input type="hidden" name="_nofootermsg" value="">
 
 <!-- / / / -->
 

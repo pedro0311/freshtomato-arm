@@ -58,6 +58,8 @@ function toggle(service, isup) {
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
+
 	form.submit(fom, 1, 'service.cgi');
 }
 
@@ -110,6 +112,7 @@ function save() {
 	fom.pptp_client_nat.value = fom._f_pptp_client_nat.checked ? 1 : 0;
 	fom.pptp_client_dfltroute.value = fom._f_pptp_client_dfltroute.checked ? 1 : 0;
 	fom.pptp_client_stateless.value = fom._f_pptp_client_stateless.checked ? 1 : 0;
+	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -143,7 +146,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-pptp.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nextwait" value="5">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="pptp_client_eas">
 <input type="hidden" name="pptp_client_nat">
 <input type="hidden" name="pptp_client_dfltroute">

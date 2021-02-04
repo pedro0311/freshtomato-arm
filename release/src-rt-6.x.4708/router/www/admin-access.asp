@@ -71,6 +71,8 @@ function toggle(service, isup) {
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
+
 	form.submit(fom, 1, 'service.cgi');
 }
 
@@ -294,6 +296,7 @@ function save() {
 			a.push(b);
 	}
 	fom.web_mx.value = a.join(',');
+	fom._nofootermsg.value = 0;
 
 	localStorage.clear();
 
@@ -329,6 +332,7 @@ function init() {
 <input type="hidden" name="_nextpage" value="admin-access.asp">
 <input type="hidden" name="_nextwait" value="15">
 <input type="hidden" name="_service" value="admin-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="http_enable">
 <!-- HTTPS-BEGIN -->
 <input type="hidden" name="https_enable">

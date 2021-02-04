@@ -63,6 +63,7 @@ function toggle(service, isup) {
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
 
 	form.submit(fom, 1, 'service.cgi');
 }
@@ -372,6 +373,7 @@ function save() {
 		E('vpn_'+t+'_tlsremote').value = E('_f_vpn_'+t+'_tlsremote').checked ? 1 : 0;
 		E('vpn_'+t+'_routing_val').value = routing;
 	}
+	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -431,6 +433,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-client.asp">
 <input type="hidden" name="_service" value="">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="vpn_client_eas" value="">
 
 <!-- / / / -->

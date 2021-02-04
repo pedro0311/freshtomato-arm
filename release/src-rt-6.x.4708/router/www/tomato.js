@@ -222,7 +222,7 @@ var form = {
 	},
 
 	submit: function(fom, async, url) {
-		var e, v, f, i, wait, msg, sb, cb;
+		var e, v, f, i, wait, msg, sb, cb, nomsg = 0;
 
 		fom = E(fom);
 
@@ -256,17 +256,22 @@ var form = {
 				else
 					wait = Math.abs(wait);
 			}
+			if (f.name == '_nofootermsg') {
+				nomsg = f.value * 1;
+				if (isNaN(nomsg))
+					nomsg = 0;
+			}
 			v.push(escapeCGI(f.name) + '=' + escapeCGI(f.value));
 		}
 
-		if ((msg = E('footer-msg')) != null) {
+		if ((msg = E('footer-msg')) != null && !nomsg) {
 			msg.innerHTML = 'Saving...';
 			msg.style.display = 'inline';
 		}
 
 		this.xhttp = new XmlHttp();
 		this.xhttp.onCompleted = function(text, xml) {
-			if (msg) {
+			if (msg && !nomsg) {
 				if (text.match(/@msg:(.+)/))
 					msg.innerHTML = escapeHTML(RegExp.$1);
 				else

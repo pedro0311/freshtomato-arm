@@ -60,8 +60,9 @@ function toggle(service, isup) {
 	E('_'+service+'_button').disabled = 1;
 
 	var fom = E('t_fom');
-	fom._nextwait.value = !isup ? '8' : '5';
 	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
+
 	form.submit(fom, 1, 'service.cgi');
 }
 
@@ -110,6 +111,8 @@ function save() {
 	else
 		fom._service.value = 'nginxfp-stop';
 
+	fom._nofootermsg.value = 0;
+
 	form.submit(fom, 1);
 
 	changed = 0;
@@ -146,8 +149,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="web-nginx.asp">
 <input type="hidden" name="_service" value="nginxfp-restart">
-<input type="hidden" name="_nextwait" value="8">
-<input type="hidden" name="_reboot" value="0">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="nginx_enable">
 <input type="hidden" name="nginx_php">
 <input type="hidden" name="nginx_keepconf">
