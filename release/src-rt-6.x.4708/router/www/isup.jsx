@@ -13,6 +13,7 @@ var OVPN_CLIENT_COUNT = 3;
 isup.vpnclient1 = parseInt('<% psup("vpnclient1"); %>');
 isup.vpnclient2 = parseInt('<% psup("vpnclient2"); %>');
 isup.vpnclient3 = parseInt('<% psup("vpnclient3"); %>');
+var OVPN_SERVER_COUNT = 2;
 isup.vpnserver1 = parseInt('<% psup("vpnserver1"); %>');
 isup.vpnserver2 = parseInt('<% psup("vpnserver2"); %>');
 /* OPENVPN-END */
