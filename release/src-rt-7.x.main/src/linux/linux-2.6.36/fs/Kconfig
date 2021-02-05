@@ -5,6 +5,7 @@
 menu "File systems"
 
 if BLOCK
+source "fs/zfs/Kconfig"
 
 source "fs/ext2/Kconfig"
 source "fs/ext3/Kconfig"
