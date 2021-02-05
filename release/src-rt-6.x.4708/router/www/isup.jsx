@@ -9,6 +9,10 @@ isup.qos = <% nv("qos_enable"); %>;
 isup.bwl = <% nv("bwl_enable"); %>;
 
 /* OPENVPN-BEGIN */
+var OVPN_CLIENT_COUNT = 3;
+isup.vpnclient1 = parseInt('<% psup("vpnclient1"); %>');
+isup.vpnclient2 = parseInt('<% psup("vpnclient2"); %>');
+isup.vpnclient3 = parseInt('<% psup("vpnclient3"); %>');
 isup.vpnserver1 = parseInt('<% psup("vpnserver1"); %>');
 isup.vpnserver2 = parseInt('<% psup("vpnserver2"); %>');
 /* OPENVPN-END */
