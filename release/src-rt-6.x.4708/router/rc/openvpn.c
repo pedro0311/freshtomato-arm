@@ -75,7 +75,7 @@ static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
 
-	killall_tk_period_wait(name, 10); /* wait time in seconds */
+	killall_tk_period_wait(name, 50); /* wait time in deciseconds (1/10 sec) */
 	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);

@@ -58,6 +58,7 @@ DIR-868LC1			BCM4708               0x0646       24        0x1101 //same as rev a
 WS880				BCM4708               0x0646       1234      0x1101
 R1D				BCM4709               0x0665       32        0x1301 //same as R7000
 F9K1113v2			BCM40781A0            0x0646       02        0x1100    0x00000110  1:devid=0x43A9
+F9K1113v2			BCM40781A0            0x0646       AC1200v2  0x1100    0x00000110  pci/2/1/devid=0x43A9 // v2 version 2000 and 2010
 
 BFL_ENETADM	0x0080
 BFL_ENETVLAN	0x0100
@@ -129,6 +130,7 @@ int get_model(void)
 		if ((nvram_match("boardtype","0xD646")) && (nvram_match("boardrev", "0x1100"))) return MODEL_EA6900;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("1:boardnum", "AC155g"))) return MODEL_AC15; /* Tenda AC15 */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("1:boardnum", "AC18_5G"))) return MODEL_AC18; /* Tenda AC18 */
+		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardrev", "0x1100")) && (nvram_match("boardnum", "AC1200v2"))) return MODEL_F9K1113v2_20X0; /* version 2000 and 2010 */
 		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardrev", "0x1100")) && (nvram_match("boardnum", "02"))) return MODEL_F9K1113v2;
 	}
 #endif /* CONFIG_BCMWL6A */

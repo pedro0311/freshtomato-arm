@@ -419,7 +419,7 @@ extern const char *default_wanif(void);
 extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
 extern void simple_lock(const char *name);
-extern void killall_tk_period_wait(const char *name, int wait);
+extern void killall_tk_period_wait(const char *name, int wait_ds);
 extern int kill_pidfile_s(char *pidfile, int sig);
 extern int mkdir_if_none(const char *path);
 extern long fappend(FILE *out, const char *fname);

@@ -590,21 +590,21 @@ void simple_lock(const char *name)
 	}
 }
 
-void killall_tk_period_wait(const char *name, int wait)
+void killall_tk_period_wait(const char *name, int wait_ds) /* time in deciseconds (1/10 sec) */
 {
 	int n;
 
 	if (killall(name, SIGTERM) == 0) {
-		n = wait;
+		n = wait_ds;
 		while ((killall(name, 0) == 0) && (n-- > 0)) {
 			logmsg(LOG_DEBUG, "*** %s: waiting name=%s n=%d", __FUNCTION__, name, n);
-			sleep(1);
+			usleep(100 * 1000); /* 100 ms */
 		}
 		if (n < 0) {
-			n = wait;
+			n = wait_ds * 2;
 			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
 				logmsg(LOG_DEBUG, "*** %s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
-				sleep(1);
+				usleep(100 * 1000); /* 100 ms */
 			}
 		}
 	}

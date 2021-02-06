@@ -245,25 +245,34 @@ function save() {
 		fom.stubby_resolvers.value = stubby_list;
 /* STUBBY-END */
 
-	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom))
+	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom)) {
+		nvram.dhcpc_minpkt = fom.dhcpc_minpkt.value;
+		nvram.dhcpc_custom = fom.dhcpc_custom.value;
 		fom._service.value = '*'; /* special case: restart all */
+	}
 	else
 		fom._service.value = 'dnsmasq-restart'; /* always restart dnsmasq */
 
-	if ((fom.dns_intcpt.value != nvram.dns_intcpt) && fom._service.value != '*')
-		fom._service.value += ',firewall-restart'; /* special case: restart FW */
+	if ((fom.dns_intcpt.value != nvram.dns_intcpt)) {
+		nvram.dns_intcpt = fom.dns_intcpt.value;
+		if (fom._service.value != '*')
+			fom._service.value += ',firewall-restart'; /* special case: restart FW */
+	}
 
-	if ((fom.wan_wins.value != nvram.wan_wins) && fom._service.value != '*') { /* special case: restart vpnservers/pptpd if up */
+	if ((fom.wan_wins.value != nvram.wan_wins)) { /* special case: restart vpnservers/pptpd if up */
+		nvram.wan_wins = fom.wan_wins.value;
 /* OPENVPN-BEGIN */
-		if (isup.vpnserver1)
-			fom._service.value += ',vpnserver1-restart';
-		if (isup.vpnserver2)
-			fom._service.value += ',vpnserver2-restart';
+		if (fom._service.value != '*') {
+			if (isup.vpnserver1)
+				fom._service.value += ',vpnserver1-restart';
+			if (isup.vpnserver2)
+				fom._service.value += ',vpnserver2-restart';
 /* OPENVPN-END */
 /* PPTPD-BEGIN */
-		if (isup.pptpd)
-			fom._service.value += ',pptpd-restart';
+			if (isup.pptpd)
+				fom._service.value += ',pptpd-restart';
 /* PPTPD-END */
+		}
 	}
 
 	form.submit(fom, 1);
@@ -350,8 +359,8 @@ function init() {
 				{ title: 'Local Port', indent: 2, name: 'dnscrypt_port', type: 'text', maxlen: 5, size: 7, value: nvram.dnscrypt_port },
 				{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log },
 			null
-		]);
 /* DNSCRYPT-END */
+		]);
 /* STUBBY-BEGIN */
 		createFieldTable('noopen,noclose', [
 			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) }

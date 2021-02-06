@@ -1180,14 +1180,6 @@ void start_lan(void)
 						eval("emf", "add", "iface", lan_ifname, ifname);
 #endif
 				}
-			
-				if ((nvram_get_int("wan_islan")) && (br==0) &&
-					((get_wan_proto() == WP_DISABLED) || (sta))) {
-					ifname = nvram_get("wan_ifnameX");
-					if (ifconfig(ifname, IFUP, NULL, NULL) == 0)
-						eval("brctl", "addif", lan_ifname, ifname);
-				}
-			
 				free(lan_ifnames);
 			}
 		}
