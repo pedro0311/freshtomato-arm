@@ -18,7 +18,7 @@ OBJS = openvpn_plugin_auth_nvram.o
 all: openvpn_plugin_auth_nvram.so
 
 openvpn_plugin_auth_nvram.so: $(OBJS)
-	@echo " [] CC -o $@"
+	@echo " [openvpn_plugin_auth_nvram] CC -o $@"
 	@$(CC) -shared $(LDFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 	$(SIZECHECK)
@@ -33,7 +33,7 @@ clean:
 	rm -f openvpn_plugin_auth_nvram.so .*.depend *.o
 	
 %.o: %.c .%.depend
-	@echo " [ntpc] CC $@"
+	@echo " [openvpn_plugin_auth_nvram] CC $@"
 	@$(CC) $(CFLAGS) -c $<
 	
 .depend: $(OBJS:%.o=%.c)
