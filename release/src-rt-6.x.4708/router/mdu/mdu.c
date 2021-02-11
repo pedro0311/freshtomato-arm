@@ -1509,6 +1509,31 @@ static void update_cloudflare(int ssl)
 	success();
 }
 
+/* duckdns.org
+ * https://www.duckdns.org/install.jsp
+ */
+static void update_duckdns(int ssl)
+{
+	int r;
+	char *body;
+	char query[2048];
+
+	memset(query, 0, 2048);
+	sprintf(query, "/update?domains=%s&token=%s", get_option_required("host"), get_option_required("ahash"));
+
+	append_addr_option(query, "&ip=%s");
+
+	r = wget(ssl, 0, "www.duckdns.org", query, NULL, 0, &body);
+	if (r == 200) {
+		if (strstr(body, "OK"))
+			success();
+
+		error(M_UNKNOWN_RESPONSE__D, -1);
+	}
+
+	error(M_UNKNOWN_ERROR__D, r);
+}
+
 /* wget/custom */
 static void update_wget(void)
 {
@@ -1699,6 +1724,8 @@ int main(int argc, char *argv[])
 		update_dua("statdns", 0, "members.3322.org", "/dyndns/update", 1); /* bad cert */
 	else if (strcmp(p, "zoneedit") == 0)
 		update_zoneedit(1);
+	else if (strcmp(p,  "duckdns") ==0)
+		update_duckdns(1);
 	else if ((strcmp(p, "wget") == 0) || (strcmp(p, "custom") == 0))
 		update_wget();
 	else

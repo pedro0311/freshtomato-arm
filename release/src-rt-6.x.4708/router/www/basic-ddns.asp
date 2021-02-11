@@ -46,6 +46,7 @@ var services = [
 	['dnsexit', 'DNS Exit (https)', 'https://www.dnsexit.com/', 'uh'],
 	['dnshenet', 'dns.he.net (https)', 'https://dns.he.net/', 'u', 'Host name', 'DDNS key'],
 	['dnsomatic', 'DNS-O-Matic (https)', 'https://www.dnsomatic.com/', 'uj', null, null, 'Domain <small>(optional)<\/small>'],
+	['duckdns', 'Duck DNS (https)', 'https://www.duckdns.org/', 'tn', 'Domain'],
 	['dyndns', 'DynDNS (https) - Dynamic', 'https://www.dyndns.com/', 'uhwmbs'],
 	['dyndns-static', 'DynDNS (https) - Static', 'https://www.dyndns.com/', 'uhwmbs'],
 	['dyndns-custom', 'DynDNS (https) - Custom', 'https://www.dyndns.com/', 'uhwmbs'],
