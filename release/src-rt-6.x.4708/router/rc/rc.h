@@ -272,6 +272,11 @@ extern void stop_ipv6(void);
 int start_bsd(void);
 void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
+#ifdef TCONFIG_SAMBASRV
+extern void start_samba(void);
+extern void stop_samba(void);
+#endif /* TCONFIG_SAMBASRV */
+
 
 /* usb.c */
 #ifdef TCONFIG_USB

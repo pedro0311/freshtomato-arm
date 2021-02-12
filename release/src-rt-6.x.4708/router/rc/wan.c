@@ -1199,6 +1199,12 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		stop_upnp();
 		start_upnp();
+#ifdef TCONFIG_SAMBASRV
+		if (nvram_get_int("smbd_enable")) {
+			stop_samba();
+			start_samba();
+		}
+#endif
 		start_bwlimit();
 	}
 
