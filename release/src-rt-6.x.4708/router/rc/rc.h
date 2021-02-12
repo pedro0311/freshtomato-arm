@@ -415,8 +415,6 @@ extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);
 extern void set_mac(const char *ifname, const char *nvname, int plus);
 extern const char *default_wanif(void);
-#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
-extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
 extern void simple_lock(const char *name);
 extern void killall_tk_period_wait(const char *name, int wait_ds);

@@ -547,25 +547,6 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 	close(sfd);
 }
 
-int _vstrsep(char *buf, const char *sep, ...)
-{
-	va_list ap;
-	char **p;
-	int n;
-
-	n = 0;
-	va_start(ap, sep);
-	while ((p = va_arg(ap, char **)) != NULL) {
-		if ((*p = strsep(&buf, sep)) == NULL)
-			break;
-
-		++n;
-	}
-	va_end(ap);
-
-	return n;
-}
-
 void simple_unlock(const char *name)
 {
 	char fn[256];

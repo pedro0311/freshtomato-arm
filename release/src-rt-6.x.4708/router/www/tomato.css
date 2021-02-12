@@ -717,12 +717,16 @@ table.tomato-grid.vpn-status-table {
 #survey-grid .co7,
 #lan-grid,
 #lan-grid .centered,
-#bs-grid .centered {
+#bs-grid .centered,
+div[id$="_ccd"] .centered,
+div[id$="_users"] .centered {
 	text-align: center;
 }
 
 #th-grid .co1,
-#stubby-grid .co1 {
+#stubby-grid .co1,
+div[id$="_ccd"] .co2,
+div[id$="_users"] .co2 {
 	width: 10%;
 	text-align: center;
 }
@@ -1059,7 +1063,8 @@ table.tomato-grid.vpn-status-table {
 	width: 65%;
 }
 
-#usb-grid .co4 {
+#usb-grid .co4,
+div[id$="_ccd"] .co6 {
 	width: 16%;
 	text-align: center;
 }
@@ -1081,7 +1086,9 @@ table.tomato-grid.vpn-status-table {
 	width: 53%;
 }
 
-#tg-grid .co1 {
+#tg-grid .co1,
+div[id$="_ccd"] .co1,
+div[id$="_users"] .co1 {
 	width: 5%;
 	text-align: center;
 }

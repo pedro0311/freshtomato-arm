@@ -317,7 +317,7 @@ int ure_any_enabled(void);
 
 #define is_hwnat_loaded() module_loaded("hw_nat")
 
-#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);
+#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 
 #endif /* _shutils_h_ */
