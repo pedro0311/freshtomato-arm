@@ -8,7 +8,7 @@
  static time_t wsd_instance;
  static char wsd_sequence[UUIDLEN], wsd_endpoint[UUIDLEN];
  
-@@ -122,6 +123,7 @@ static void uuid_endpoint(char *uuid, si
+@@ -122,6 +123,7 @@
  	}
  }
  
@@ -16,7 +16,7 @@
  static char *get_smbparm(struct endpoint *ep,
  			const char *name, const char *_default)
  {
-@@ -165,7 +167,48 @@ static char *get_smbparm(struct endpoint
+@@ -165,7 +167,48 @@
  	return result;
  #undef __FUNCTION__
  }
@@ -65,7 +65,7 @@
  static struct {
  	const char *key, *_default;
  	char *value;
-@@ -179,6 +222,22 @@ static struct {
+@@ -179,6 +222,22 @@
  	{ .key	= "presentationurl:",	._default = NULL},
  	{}
  };
@@ -78,8 +78,8 @@
 +	{ .key	= "model:",	._default = "FreshTomato"},
 +	{ .key	= "serial:",	._default = "0"},
 +	{ .key	= "sku:",	._default = "FreshTomato router"},
-+	{ .key	= "vendorurl:",	._default = "http://freshtomato.org"},
-+	{ .key	= "modelurl:",	._default = "http://freshtomato.org"},
++	{ .key	= "vendorurl:",	._default = "https://freshtomato.org"},
++	{ .key	= "modelurl:",	._default = "https://freshtomato.org"},
 +	{ .key	= "presentationurl:",	._default = "http://freshtomato.org"},
 +	{}
 +};
@@ -88,7 +88,19 @@
  
  void printBootInfoKeys(FILE *fp, int sp)
  {
-@@ -997,8 +1056,6 @@ again:
+@@ -762,7 +821,11 @@
+ {
+ 	const char resp_hdr_fmt[] =
+ 		"HTTP/1.1 %s\r\n"
++#ifdef TOMATO
++		"Server: FreshTomato WSD Server\r\n"
++#else
+ 		"Server: NETGEAR WSD Server\r\n"
++#endif
+ 		"Date: %s\r\n"
+ 		"Connection: close\r\n"
+ 		"Content-Type: application/soap+xml\r\n"
+@@ -997,8 +1060,6 @@
  #undef	__FUNCTION__
  }
  
@@ -97,7 +109,7 @@
  int wsd_init(struct endpoint *ep)
  {
  	if (!wsd_instance)
-@@ -1020,6 +1077,7 @@ int wsd_init(struct endpoint *ep)
+@@ -1020,6 +1081,7 @@
  		return -1;
  	}
  
@@ -105,7 +117,7 @@
  	if (!workgroup &&
  		!(workgroup = get_smbparm(ep, "workgroup", "WORKGROUP")))
  		return -1;
-@@ -1027,6 +1085,11 @@ int wsd_init(struct endpoint *ep)
+@@ -1027,6 +1089,11 @@
  		!(netbiosname = get_smbparm(ep, "netbios name", hostname)))
  		return -1;
  
@@ -127,7 +139,7 @@
  
  int debug_L, debug_W, debug_N;
  int ifindex = 0;
-@@ -643,12 +644,10 @@ int main(int argc, char **argv)
+@@ -643,12 +644,10 @@
  			tcpudp	|= _UDP;
  			break;
  		case 'i':
