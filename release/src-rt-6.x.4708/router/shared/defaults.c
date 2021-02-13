@@ -731,6 +731,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "udpxy_stats",		"0"				, 0 },
 	{ "udpxy_clients",		"3"				, 0 },
 	{ "udpxy_port",			"4022"				, 0 },
+	{ "udpxy_wanface",		""				, 0 },	/* alternative wanface */
 	{ "ne_syncookies",		"0"				, 0 },	// tcp_syncookies
 	{ "DSCP_fix_enable",		"1"				, 0 },	// Comacst DSCP fix
 	{ "ne_snat",			"0"				, 0 },	// use SNAT instead of MASQUERADE

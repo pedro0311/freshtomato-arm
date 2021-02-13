@@ -942,6 +942,7 @@ static const nvset_t nvset_list[] = {
 	{ "udpxy_stats",		V_01				},
 	{ "udpxy_clients",		V_RANGE(1, 5000)		},
 	{ "udpxy_port",			V_RANGE(0, 65535)		},
+	{ "udpxy_wanface",		V_TEXT(0, 8)			},	/* alternative wanface */
 	{ "nf_loopback",		V_NUM				},
 	{ "ne_syncookies",		V_01				},
 	{ "DSCP_fix_enable",		V_01				},
