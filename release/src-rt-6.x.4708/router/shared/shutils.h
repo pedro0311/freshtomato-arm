@@ -18,6 +18,7 @@
 
 #define MAX_NVPARSE 255
 #define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
+#define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
 
 extern int doSystem(char *fmt, ...);
 #if 0
@@ -81,9 +82,8 @@ extern int _cpu_eval(int *ppid, char *cmds[]);
  * @param	pidfile	PID file
  * @return	0 on success and errno on failure
  */
-extern int kill_pidfile(char *pidfile);
+extern void killall_tk_period_wait(const char *name, int wait_ds);
 extern int kill_pidfile_s(char *pidfile, int sig);
-extern int kill_pidfile_s_rm(char *pidfile, int sig);
 
 /*
  * fread() with automatic retry on syscall interrupt

@@ -571,39 +571,6 @@ void simple_lock(const char *name)
 	}
 }
 
-void killall_tk_period_wait(const char *name, int wait_ds) /* time in deciseconds (1/10 sec) */
-{
-	int n;
-
-	if (killall(name, SIGTERM) == 0) {
-		n = wait_ds;
-		while ((killall(name, 0) == 0) && (n-- > 0)) {
-			logmsg(LOG_DEBUG, "*** %s: waiting name=%s n=%d", __FUNCTION__, name, n);
-			usleep(100 * 1000); /* 100 ms */
-		}
-		if (n < 0) {
-			n = wait_ds * 2;
-			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
-				logmsg(LOG_DEBUG, "*** %s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
-				usleep(100 * 1000); /* 100 ms */
-			}
-		}
-	}
-}
-
-int kill_pidfile_s(char *pidfile, int sig)
-{
-	char tmp[100];
-	int pid;
-	
-	if (f_read_string(pidfile, tmp, sizeof(tmp)) > 0) {
-		if ((pid = atoi(tmp)) > 1)
-			return kill(pid, sig);
-	}
-
-	return -1;
-}
-
 /*
  * Return non-zero if we created the directory,
  * and zero if it already existed.

@@ -1612,47 +1612,40 @@ swap_check()
 	else	return 0;
 }
 
-// -----------------------------------------------------------------------------
-
-/*
- * Kills process whose PID is stored in plaintext in pidfile
- * @param	pidfile	PID file
- * @return	0 on success and errno on failure
- */
-
-int kill_pidfile(char *pidfile)
+void killall_tk_period_wait(const char *name, int wait_ds) /* time in deciseconds (1/10 sec) */
 {
-	FILE *fp;
-	char buf[256];
+	int n;
 
-	if ((fp = fopen(pidfile, "r")) != NULL) {
-		if (fgets(buf, sizeof(buf), fp)) {
-			pid_t pid = strtoul(buf, NULL, 0);
-			fclose(fp);
-			return kill(pid, SIGTERM);
+	if (killall(name, SIGTERM) == 0) {
+		n = wait_ds;
+		while ((killall(name, 0) == 0) && (n-- > 0)) {
+			logmsg(LOG_DEBUG, "*** %s: waiting name=%s n=%d", __FUNCTION__, name, n);
+			usleep(100 * 1000); /* 100 ms */
 		}
-		fclose(fp);
-  	}
-	return errno;
+		if (n < 0) {
+			n = wait_ds * 2;
+			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
+				logmsg(LOG_DEBUG, "*** %s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
+				usleep(100 * 1000); /* 100 ms */
+			}
+		}
+	}
 }
-
 
 int kill_pidfile_s(char *pidfile, int sig)
 {
-	FILE *fp;
-	char buf[256];
+	char tmp[100];
+	int pid;
 
-	if ((fp = fopen(pidfile, "r")) != NULL) {
-		if (fgets(buf, sizeof(buf), fp)) {
-			pid_t pid = strtoul(buf, NULL, 0);
-			fclose(fp);
+	if (f_read_string(pidfile, tmp, sizeof(tmp)) > 0) {
+		if ((pid = atoi(tmp)) > 1)
 			return kill(pid, sig);
-		}
-		fclose(fp);
-  	}
-	return errno;
+	}
+
+	return -1;
 }
 
+#if 0
 int kill_pidfile_s_rm(char *pidfile, int sig)
 {
 	FILE *fp;
@@ -1669,6 +1662,7 @@ int kill_pidfile_s_rm(char *pidfile, int sig)
 	}
 	return errno;
 }
+#endif /* 0 */
 
 long uptime(void)
 {
