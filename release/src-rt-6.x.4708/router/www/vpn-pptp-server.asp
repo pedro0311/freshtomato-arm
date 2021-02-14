@@ -25,23 +25,28 @@
 //	<% nvram("lan_ipaddr,lan_netmask,pptpd_enable,pptpd_remoteip,pptpd_chap,pptpd_forcemppe,pptpd_broadcast,pptpd_users,pptpd_dns1,pptpd_dns2,pptpd_wins1,pptpd_wins2,pptpd_mtu,pptpd_mru,pptpd_custom");%>
 
 var cprefix = 'vpn_pptpd';
-if (nvram.pptpd_remoteip == '') nvram.pptpd_remoteip = '172.19.0.1-6';
-if (nvram.pptpd_forcemppe == '') nvram.pptpd_forcemppe = '1';
+
+if (nvram.pptpd_remoteip == '')
+	nvram.pptpd_remoteip = '172.19.0.1-6';
+if (nvram.pptpd_forcemppe == '')
+	nvram.pptpd_forcemppe = '1';
 
 function v_pptpd_secret(e, quiet) {
 	var s;
-	if ((e = E(e)) == null) return 0;
+	if ((e = E(e)) == null)
+		return 0;
+
 	s = e.value.trim().replace(/\s+/g, '');
 	if (s.length < 1) {
-		ferror.set(e, "Username and password can not be empty.", quiet);
+		ferror.set(e, 'Username and password can not be empty', quiet);
 		return 0;
 	}
 	if (s.length > 32) {
-		ferror.set(e, "Invalid entry: max 32 characters are allowed.", quiet);
+		ferror.set(e, 'Invalid entry: max 32 characters are allowed', quiet);
 		return 0;
 	}
 	if (s.search(/^[.a-zA-Z0-9_\- ]+$/) == -1) {
-		ferror.set(e, "Invalid entry. Only characters \"A-Z 0-9 . - _\" are allowed.", quiet);
+		ferror.set(e, 'Invalid entry. Only characters "A-Z 0-9 . - _" are allowed', quiet);
 		return 0;
 	}
 	e.value = s;
@@ -50,13 +55,14 @@ function v_pptpd_secret(e, quiet) {
 	return 1;
 }
 
+function submit_complete() {
+	verifyFields(null, 1);
+}
+
 var ul = new TomatoGrid();
 ul.setup = function() {
-	this.init('ul-grid', 'sort', 6, [
-		{ type: 'text', maxlen: 32, size: 32 },
-		{ type: 'text', maxlen: 32, size: 32 } ]);
-
-	this.headerSet(['Username', 'Password']);
+	this.init('ul-grid', 'sort', 6, [ { type: 'text', maxlen: 32, size: 32 },{ type: 'text', maxlen: 32, size: 32 } ]);
+	this.headerSet(['Username','Password']);
 
 	var r = nvram.pptpd_users.split('>');
 	for (var i = 0; i < r.length; ++i) {
@@ -71,10 +77,15 @@ ul.setup = function() {
 	ul.sort(0);
 }
 
+ul.dataToView = function(data) {
+	return [data[0], '<small><i>Secret<\/i><\/small>'];
+}
+
 ul.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
-		if (data[i][f] == v) return true;
+		if (data[i][f] == v)
+			return true;
 	}
 
 	return false;
@@ -88,72 +99,18 @@ ul.verifyFields = function(row, quiet) {
 	var f, s;
 	f = fields.getAll(row);
 
-	if (!v_pptpd_secret(f[0], quiet)) return 0;
+	if (!v_pptpd_secret(f[0], quiet))
+		return 0;
 
 	if (this.existUser(f[0].value)) {
 		ferror.set(f[0], 'Duplicate User', quiet);
 		return 0;
 	}
 
-	if (!v_pptpd_secret(f[1], quiet)) return 0;
+	if (!v_pptpd_secret(f[1], quiet))
+		return 0;
 
 	return 1;
-}
-
-ul.dataToView = function(data) {
-	return [data[0], '<center><small><i>Secret<\/i><\/small><\/center>'];
-}
-
-function save() {
-	if (ul.isEditing()) return;
-
-	if ((E('_f_pptpd_enable').checked) && (!verifyFields(null, 0))) return;
-
-	if ((E('_f_pptpd_enable').checked) && (ul.getDataCount() < 1)) {
-		var e = E('footer-msg');
-		e.innerHTML = 'Cannot proceed: at least one user must be defined.';
-		e.style.display = 'inline-block';
-		setTimeout(
-			function() {
-				e.innerHTML = '';
-				e.style.display = 'none';
-			}, 5000);
-		return;
-	}
-
-	ul.resetNewEditor();
-
-	var fom = E('t_fom');
-	var uldata = ul.getAllData();
-
-	var s = '';
-	for (var i = 0; i < uldata.length; ++i) {
-		s += uldata[i].join('<') + '>';
-	}
-	fom.pptpd_users.value = s;
-
-	fom.pptpd_enable.value = (E('_f_pptpd_enable').checked ? 1 : 0);
-
-	var a = E('_f_pptpd_startip').value;
-	var b = E('_f_pptpd_endip').value;
-	if ((fixIP(a) != null) && (fixIP(b) != null)) {
-		var c = b.split('.').splice(3, 1);
-		fom.pptpd_remoteip.value = a + '-' + c;
-	}
-
-	if (fom.pptpd_dns1.value == '0.0.0.0') fom.pptpd_dns1.value = '';
-	if (fom.pptpd_dns2.value == '0.0.0.0') fom.pptpd_dns2.value = '';
-	if (fom.pptpd_wins1.value == '0.0.0.0') fom.pptpd_wins1.value = '';
-	if (fom.pptpd_wins2.value == '0.0.0.0') fom.pptpd_wins2.value = '';
-
-	form.submit(fom, 1);
-}
-
-function submit_complete() {
-/* REMOVE-BEGIN
-	reloadPage();
-REMOVE-END */
-	verifyFields(null, 1);
 }
 
 function verifyFields(focused, quiet) {
@@ -241,34 +198,91 @@ REMOVE-END */
 		b.value = d;
 	}
 
-	elem.setInnerHTML('pptpd_count', '(' + ((aton(b.value) - aton(a.value)) + 1) + ')');
+	elem.setInnerHTML('pptpd_count', '('+((aton(b.value) - aton(a.value)) + 1)+')');
 /* REMOVE-BEGIN
 // AB TODO - move to ul.onOk, onAdd,onDelete?
-	elem.setInnerHTML('user_count', '(total ' + (ul.getDataCount()) + ')');
+	elem.setInnerHTML('user_count', '(total '+(ul.getDataCount())+')');
 REMOVE-END */
-	if (!v_ipz('_pptpd_dns1', quiet)) return 0;
-	if (!v_ipz('_pptpd_dns2', quiet)) return 0;
-	if (!v_ipz('_pptpd_wins1', quiet)) return 0;
-	if (!v_ipz('_pptpd_wins2', quiet)) return 0;
-	if (!v_range('_pptpd_mtu', quiet, 576, 1500)) return 0;
-	if (!v_range('_pptpd_mru', quiet, 576, 1500)) return 0;
-
-	if (!v_ip('_f_pptpd_startip', quiet)) return 0;
-	if (!v_ip('_f_pptpd_endip', quiet)) return 0;
+	if (!v_ipz('_pptpd_dns1', quiet))
+		return 0;
+	if (!v_ipz('_pptpd_dns2', quiet))
+		return 0;
+	if (!v_ipz('_pptpd_wins1', quiet))
+		return 0;
+	if (!v_ipz('_pptpd_wins2', quiet))
+		return 0;
+	if (!v_range('_pptpd_mtu', quiet, 576, 1500))
+		return 0;
+	if (!v_range('_pptpd_mru', quiet, 576, 1500))
+		return 0;
+	if (!v_ip('_f_pptpd_startip', quiet))
+		return 0;
+	if (!v_ip('_f_pptpd_endip', quiet))
+		return 0;
 
 	return 1;
 }
 
+function save() {
+	if (ul.isEditing())
+		return;
+
+	if ((E('_f_pptpd_enable').checked) && (!verifyFields(null, 0)))
+		return;
+
+	if ((E('_f_pptpd_enable').checked) && (ul.getDataCount() < 1)) {
+		var e = E('footer-msg');
+		e.innerHTML = 'Cannot proceed: at least one user must be defined.';
+		e.style.display = 'inline-block';
+		setTimeout(
+			function() {
+				e.innerHTML = '';
+				e.style.display = 'none';
+			}, 5000);
+		return;
+	}
+
+	ul.resetNewEditor();
+
+	var fom = E('t_fom');
+	var uldata = ul.getAllData();
+
+	var s = '';
+	for (var i = 0; i < uldata.length; ++i)
+		s += uldata[i].join('<')+'>';
+
+	fom.pptpd_users.value = s;
+
+	fom.pptpd_enable.value = (fom._f_pptpd_enable.checked ? 1 : 0);
+
+	var a = fom._f_pptpd_startip.value;
+	var b = fom._f_pptpd_endip.value;
+	if ((fixIP(a) != null) && (fixIP(b) != null)) {
+		var c = b.split('.').splice(3, 1);
+		fom.pptpd_remoteip.value = a+'-'+c;
+	}
+
+	if (fom.pptpd_dns1.value == '0.0.0.0')
+		fom.pptpd_dns1.value = '';
+	if (fom.pptpd_dns2.value == '0.0.0.0')
+		fom.pptpd_dns2.value = '';
+	if (fom.pptpd_wins1.value == '0.0.0.0')
+		fom.pptpd_wins1.value = '';
+	if (fom.pptpd_wins2.value == '0.0.0.0')
+		fom.pptpd_wins2.value = '';
+
+	form.submit(fom, 1);
+}
+
 function init() {
 	var c;
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
-		toggleVisibility(cprefix, "notes");
-	}
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'notes');
 
 	if (nvram.pptpd_remoteip.indexOf('-') != -1) {
 		var tmp = nvram.pptpd_remoteip.split('-');
 		E('_f_pptpd_startip').value = tmp[0];
-		E('_f_pptpd_endip').value = tmp[0].split('.').splice(0,3).join('.') + '.' + tmp[1];
+		E('_f_pptpd_endip').value = tmp[0].split('.').splice(0,3).join('.')+'.'+tmp[1];
 	}
 
 	ul.setup();
@@ -292,7 +306,6 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="vpn-pptpd.asp">
-<input type="hidden" name="_nextwait" value="5">
 <input type="hidden" name="_service" value="firewall-restart,pptpd-restart,dnsmasq-restart">
 <input type="hidden" name="pptpd_users">
 <input type="hidden" name="pptpd_enable">
@@ -305,20 +318,20 @@ function init() {
 	<script>
 		createFieldTable('', [
 			{ title: 'Enable', name: 'f_pptpd_enable', type: 'checkbox', value: nvram.pptpd_enable == '1' },
-			{ title: 'Local IP Address/Netmask', text: (nvram.lan_ipaddr + ' / ' + nvram.lan_netmask) },
+			{ title: 'Local IP Address/Netmask', text: (nvram.lan_ipaddr+' / '+nvram.lan_netmask) },
 			{ title: 'Remote IP Address Range', multi: [
 				{ name: 'f_pptpd_startip', type: 'text', maxlen: 15, size: 17, value: nvram.dhcpd_startip, suffix: '&nbsp;-&nbsp;' },
 				{ name: 'f_pptpd_endip', type: 'text', maxlen: 15, size: 17, value: nvram.dhcpd_endip, suffix: ' <i id="pptpd_count"><\/i>' }
 			] },
-			{ title: 'Broadcast Relay Mode', name: 'pptpd_broadcast', type: 'select', options: [['disable','Disabled'], ['br0','LAN to VPN Clients'], ['ppp','VPN Clients to LAN'], ['br0ppp','Both']], value: nvram.pptpd_broadcast },
-			{ title: 'Authentication', name: 'pptpd_chap', type: 'select', options: [[0, 'Auto'], [1, 'MS-CHAPv1'], [2, 'MS-CHAPv2']], value: nvram.pptpd_chap },
-			{ title: 'Encryption', name: 'pptpd_forcemppe', type: 'select', options: [[0, 'None'], [1, 'MPPE-128']], value: nvram.pptpd_forcemppe },
+			{ title: 'Broadcast Relay Mode', name: 'pptpd_broadcast', type: 'select', options: [['disable','Disabled'],['br0','LAN to VPN Clients'],['ppp','VPN Clients to LAN'],['br0ppp','Both']], value: nvram.pptpd_broadcast },
+			{ title: 'Authentication', name: 'pptpd_chap', type: 'select', options: [[0,'Auto'],[1,'MS-CHAPv1'],[2,'MS-CHAPv2']], value: nvram.pptpd_chap },
+			{ title: 'Encryption', name: 'pptpd_forcemppe', type: 'select', options: [[0,'None'],[1,'MPPE-128']], value: nvram.pptpd_forcemppe },
 			{ title: 'DNS Servers', name: 'pptpd_dns1', type: 'text', maxlen: 15, size: 17, value: nvram.pptpd_dns1 },
 			{ title: '', name: 'pptpd_dns2', type: 'text', maxlen: 15, size: 17, value: nvram.pptpd_dns2 },
 			{ title: 'WINS Servers', name: 'pptpd_wins1', type: 'text', maxlen: 15, size: 17, value: nvram.pptpd_wins1 },
 			{ title: '', name: 'pptpd_wins2', type: 'text', maxlen: 15, size: 17, value: nvram.pptpd_wins2 },
-			{ title: 'MTU', name: 'pptpd_mtu', type: 'text', maxlen: 4, size: 6, value: (nvram.pptpd_mtu ? nvram.pptpd_mtu : 1400)},
-			{ title: 'MRU', name: 'pptpd_mru', type: 'text', maxlen: 4, size: 6, value: (nvram.pptpd_mru ? nvram.pptpd_mru : 1400)},
+			{ title: 'MTU', name: 'pptpd_mtu', type: 'text', maxlen: 4, size: 6, value: (nvram.pptpd_mtu ? nvram.pptpd_mtu : 1400) },
+			{ title: 'MRU', name: 'pptpd_mru', type: 'text', maxlen: 4, size: 6, value: (nvram.pptpd_mru ? nvram.pptpd_mru : 1400) },
 			{ title: '<a href="http://poptop.sourceforge.net/" class="new_window">Poptop<\/a><br>Custom configuration', name: 'pptpd_custom', type: 'textarea', value: nvram.pptpd_custom }
 		]);
 	</script>
@@ -345,15 +358,17 @@ function init() {
 		<li><b>Broadcast Relay Mode</b> - Turns on broadcast relay between VPN clients and LAN interface.</li>
 		<li><b>Enable Encryption</b> - Enabling this option will turn on VPN channel encryption, but it might lead to reduced channel bandwidth.</li>
 		<li><b>DNS Servers</b> - Allows defining DNS servers manually (if none are set, the router/local IP address should be used by VPN clients).</li>
-		<li><b>WINS Servers</b> - Allows configuring extra WINS servers for VPN clients, in addition to the WINS server defined on <a href="basic-network.asp">Basic/Network</a>.</li>
+		<li><b>WINS Servers</b> - Allows configuring extra WINS servers for VPN clients, in addition to the WINS server defined on <a href="advanced-dhcpdns.asp">Advanced: DHCP / DNS</a>.</li>
 		<li><b>MTU</b> - Maximum Transmission Unit. Max packet size the PPTP interface will be able to send without packet fragmentation.</li>
 		<li><b>MRU</b> - Maximum Receive Unit. Max packet size the PPTP interface will be able to receive without packet fragmentation.</li>
 	</ul>
+	<br>
 	<ul>
 		<li><b>Other relevant notes/hints:</b></li>
 		<li style="list-style:none">
 			<ul>
 				<li>Try to avoid any conflicts and/or overlaps between the address ranges configured/available for DHCP and VPN clients on your local networks.</li>
+				<li>You can add your own ip-up/ip-down scripts which are executed after those built by GUI - relevant NVRAM variables are "pptpd_ipup_script" / "pptpd_ipdown_script".</li>
 			</ul>
 		</li>
 	</ul>
