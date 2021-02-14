@@ -1569,7 +1569,7 @@ TomatoGrid.prototype = {
 								break;
 							}
 						}
-						attrib += ' autocomplete="off"';
+						attrib += ' autocomplete="off" autocorrect="off" autocapitalize="off"';
 						if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
 						/* drop */
 					case 'text':
@@ -2672,7 +2672,7 @@ function createFieldTable(flags, desc) {
 						}
 					}
 					if (f.type == 'password') {
-						common += ' autocomplete="off"';
+						common += ' autocomplete="off" autocorrect="off" autocapitalize="off"';
 						if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
 					}
 					/* drop */
