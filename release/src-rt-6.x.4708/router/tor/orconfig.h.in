@@ -6,7 +6,7 @@
 /* All assert failures are fatal */
 #undef ALL_BUGS_ARE_FATAL
 
-/* # for 0.4.4.6 Approximate date when this software was released. (Updated
+/* # for 0.4.4.7 Approximate date when this software was released. (Updated
    when the version changes.) */
 #undef APPROX_RELEASE_DATE
 
@@ -662,6 +662,9 @@
 
 /* Define to 1 iff memset(0) sets pointers to NULL */
 #undef NULL_REP_IS_ZERO_BYTES
+
+/* disable openssl deprecated-function warnings */
+#undef OPENSSL_SUPPRESS_DEPRECATED
 
 /* Name of package */
 #undef PACKAGE
