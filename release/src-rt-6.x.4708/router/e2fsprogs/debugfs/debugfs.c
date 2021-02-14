@@ -231,7 +231,8 @@ void do_open_filesys(int argc, char **argv, int sci_idx EXT2FS_ATTR((unused)),
 	int	catastrophic = 0;
 	blk64_t	superblock = 0;
 	blk64_t	blocksize = 0;
-	int	open_flags = EXT2_FLAG_SOFTSUPP_FEATURES | EXT2_FLAG_64BITS; 
+	int	open_flags = EXT2_FLAG_SOFTSUPP_FEATURES | EXT2_FLAG_64BITS |
+		EXT2_FLAG_THREADS;
 	char	*data_filename = 0;
 	char	*undo_file = NULL;
 
@@ -276,7 +277,11 @@ void do_open_filesys(int argc, char **argv, int sci_idx EXT2FS_ATTR((unused)),
 				return;
 			break;
 		case 'z':
+#ifdef READ_ONLY
+			goto print_usage;
+#else
 			undo_file = optarg;
+#endif
 			break;
 		default:
 			goto print_usage;
@@ -294,9 +299,10 @@ void do_open_filesys(int argc, char **argv, int sci_idx EXT2FS_ATTR((unused)),
 
 print_usage:
 	fprintf(stderr, "%s: Usage: open [-s superblock] [-b blocksize] "
+#ifdef READ_ONLY
 		"[-d image_filename] [-z undo_file] [-c] [-i] [-f] [-e] [-D] "
-#ifndef READ_ONLY
-		"[-w] "
+#else
+		"[-d image_filename] [-c] [-i] [-f] [-e] [-D] [-w] "
 #endif
 		"<device>\n", argv[0]);
 }
@@ -2285,9 +2291,9 @@ void do_supported_features(int argc, char *argv[],
 	__u32	supp[3] = { EXT2_LIB_FEATURE_COMPAT_SUPP,
 			    EXT2_LIB_FEATURE_INCOMPAT_SUPP,
 			    EXT2_LIB_FEATURE_RO_COMPAT_SUPP };
-	__u32	jrnl_supp[3] = { JFS_KNOWN_COMPAT_FEATURES,
-				 JFS_KNOWN_INCOMPAT_FEATURES,
-				 JFS_KNOWN_ROCOMPAT_FEATURES };
+	__u32	jrnl_supp[3] = { JBD2_KNOWN_COMPAT_FEATURES,
+				 JBD2_KNOWN_INCOMPAT_FEATURES,
+				 JBD2_KNOWN_ROCOMPAT_FEATURES };
 
 	if (argc > 1) {
 		ret = find_supp_feature(supp, E2P_FS_FEATURE, argv[1]);
@@ -2379,7 +2385,6 @@ void do_fallocate(int argc, char *argv[], int sci_idx EXT2FS_ATTR((unused)),
 		return;
 	}
 }
-#endif /* READ_ONLY */
 
 void do_symlink(int argc, char *argv[], int sci_idx EXT2FS_ATTR((unused)),
 		void *infop EXT2FS_ATTR((unused)))
@@ -2395,6 +2400,7 @@ void do_symlink(int argc, char *argv[], int sci_idx EXT2FS_ATTR((unused)),
 		com_err(argv[0], retval, 0);
 
 }
+#endif /* READ_ONLY */
 
 #if CONFIG_MMP
 void do_dump_mmp(int argc EXT2FS_ATTR((unused)), char *argv[],
@@ -2527,7 +2533,8 @@ int main(int argc, char **argv)
 #endif
 		"[-c]] [device]";
 	int		c;
-	int		open_flags = EXT2_FLAG_SOFTSUPP_FEATURES | EXT2_FLAG_64BITS;
+	int		open_flags = EXT2_FLAG_SOFTSUPP_FEATURES |
+				EXT2_FLAG_64BITS | EXT2_FLAG_THREADS;
 	char		*request = 0;
 	int		exit_status = 0;
 	char		*cmd_file = 0;
@@ -2539,8 +2546,8 @@ int main(int argc, char **argv)
 	const char	*opt_string = "nicR:f:b:s:Vd:D";
 #else
 	const char	*opt_string = "niwcR:f:b:s:Vd:Dz:";
-	char		*undo_file = NULL;
 #endif
+	char		*undo_file = NULL;
 #ifdef CONFIG_JBD_DEBUG
 	char		*jbd_debug;
 #endif
@@ -2612,9 +2619,11 @@ int main(int argc, char **argv)
 			fprintf(stderr, "\tUsing %s\n",
 				error_message(EXT2_ET_BASE));
 			exit(0);
+#ifndef READ_ONLY
 		case 'z':
 			undo_file = optarg;
 			break;
+#endif
 		default:
 			com_err(argv[0], 0, usage, debug_prog_name);
 			return 1;

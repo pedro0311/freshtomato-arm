@@ -67,7 +67,7 @@ errcode_t ext2fs_image_inode_write(ext2_filsys fs, int fd, int flags)
 	blk64_t		blk;
 	ssize_t		actual;
 	errcode_t	retval;
-	loff_t		r;
+	ext2_loff_t	r;
 
 	buf = malloc(fs->blocksize * BUF_BLOCKS);
 	if (!buf)
@@ -249,10 +249,10 @@ errcode_t ext2fs_image_super_write(ext2_filsys fs, int fd,
 	 * if needed
 	 */
 	groups_per_block = EXT2_DESC_PER_BLOCK(fs->super);
-	gdp = (struct ext2_group_desc *) cp;
 	for (j=0; j < groups_per_block*fs->desc_blocks; j++) {
 		gdp = ext2fs_group_desc(fs, fs->group_desc, j);
-		ext2fs_swap_group_desc2(fs, gdp);
+		if (gdp)
+			ext2fs_swap_group_desc2(fs, gdp);
 	}
 #endif
 
@@ -261,10 +261,10 @@ errcode_t ext2fs_image_super_write(ext2_filsys fs, int fd,
 
 #ifdef WORDS_BIGENDIAN
 	groups_per_block = EXT2_DESC_PER_BLOCK(fs->super);
-	gdp = (struct ext2_group_desc *) cp;
 	for (j=0; j < groups_per_block*fs->desc_blocks; j++) {
 		gdp = ext2fs_group_desc(fs, fs->group_desc, j);
-		ext2fs_swap_group_desc2(fs, gdp);
+		if (gdp)
+			ext2fs_swap_group_desc2(fs, gdp);
 	}
 #endif
 

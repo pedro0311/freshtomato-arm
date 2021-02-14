@@ -37,10 +37,6 @@
 #include <errno.h>
 #endif
 
-#ifdef HAVE_SYS_SYSCTL_H
-#include <sys/sysctl.h>
-#endif
-
 #include "e2fsck.h"
 
 extern e2fsck_t e2fsck_global_ctx;   /* Try your very best not to use this! */
@@ -123,10 +119,10 @@ void *e2fsck_allocate_memory(e2fsck_t ctx, unsigned long size,
 	char buf[256];
 
 #ifdef DEBUG_ALLOCATE_MEMORY
-	printf("Allocating %u bytes for %s...\n", size, description);
+	printf("Allocating %lu bytes for %s...\n", size, description);
 #endif
 	if (ext2fs_get_memzero(size, &ret)) {
-		sprintf(buf, "Can't allocate %u bytes for %s\n",
+		sprintf(buf, "Can't allocate %lu bytes for %s\n",
 			size, description);
 		fatal_error(ctx, buf);
 	}
@@ -135,7 +131,7 @@ void *e2fsck_allocate_memory(e2fsck_t ctx, unsigned long size,
 }
 
 char *string_copy(e2fsck_t ctx EXT2FS_ATTR((unused)),
-		  const char *str, int len)
+		  const char *str, size_t len)
 {
 	char	*ret;
 
@@ -436,7 +432,7 @@ void print_resource_track(e2fsck_t ctx, const char *desc,
 #define kbytes(x)	(((unsigned long long)(x) + 1023) / 1024)
 #ifdef HAVE_MALLINFO
 	/* don't use mallinfo() if over 2GB used, since it returns "int" */
-	if ((char *)sbrk(0) - (char *)track->brk_start < 2ULL << 30) {
+	if ((char *)sbrk(0) - (char *)track->brk_start < 2LL << 30) {
 		struct mallinfo	malloc_info = mallinfo();
 
 		log_out(ctx, _("Memory used: %lluk/%lluk (%lluk/%lluk), "),
@@ -885,12 +881,6 @@ unsigned long long get_memory_size(void)
 	unsigned long long size = 0;
 # elif defined(CTL_HW_UINT)
 	unsigned int size = 0;
-# endif
-# if defined(CTL_HW_INT64) || defined(CTL_HW_UINT)
-	size_t len = sizeof(size);
-
-	if (sysctl(mib, 2, &size, &len, NULL, 0) == 0)
-		return (unsigned long long)size;
 # endif
 	return 0;
 #else
