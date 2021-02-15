@@ -202,13 +202,13 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 		            nvram_get_int("debug_ppp") ? "-v" : "-V",
 		            ppp3g_chatfile);
 
-		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp))) && (*p))
-			fprintf(fp, "user \"%s\"\n", p);
-		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp))) && (*p))
-			fprintf(fp, "password \"%s\"\n", p);
+		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) > 0)
+			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp)));
+		if (strlen(nvram_get(strcat_r(prefix, "_ppp_passwd", tmp))) > 0)
+			fprintf(fp, "password \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_passwd", tmp)));
 
 		/* Clear old gateway */
-		if ((p = nvram_get(strcat_r(prefix, "_gateway", tmp))) && (*p))
+		if (strlen(nvram_safe_get(strcat_r(prefix, "_gateway", tmp))) > 0)
 			nvram_set(strcat_r(prefix, "_gateway", tmp), "");
 
 		/* Detect 3G Modem */
