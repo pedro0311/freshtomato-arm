@@ -185,6 +185,44 @@ void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
 	rmdir(OVPN_DIR);
 }
 
+void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
+{
+	FILE *fp;
+	char buffer[64], buffer2[64];
+	char taskname[20];
+	char *instanceType;
+	int nvi;
+
+	if (type == OVPN_TYPE_SERVER)
+		instanceType = "server";
+	else
+		instanceType = "client";
+
+	memset(buffer, 0, 64);
+	sprintf(buffer, "vpn_%s%d_poll", instanceType, unit);
+	if ((nvi = nvram_get_int(buffer)) > 0) {
+		memset(buffer, 0, 64);
+		sprintf(buffer, "/etc/openvpn/%s%d/watchdog.sh", instanceType, unit);
+
+		if ((fp = fopen(buffer, "w"))) {
+			fprintf(fp, "#!/bin/sh\n"
+			            "[ -z $(pidof vpn%s%d) ] && {\n"
+			            " service vpn%s%d restart\n"
+			            "}\n",
+			            instanceType, unit,
+			            instanceType, unit);
+			fclose(fp);
+			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+			memset(taskname, 0, 20);
+			sprintf(taskname, "CheckVPN%s%d", instanceType, unit);
+			memset(buffer2, 0, 64);
+			sprintf(buffer2, "*/%d * * * * %s", nvi, buffer);
+			eval("cru", "a", taskname, buffer2);
+		}
+	}
+}
+
 void start_ovpn_client(int unit)
 {
 	FILE *fp;
@@ -624,21 +662,8 @@ void start_ovpn_client(int unit)
 	}
 
 	/* Set up cron job */
-	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_poll", unit);
-	if ((nvi = nvram_get_int(buffer)) > 0) {
-		/* check step value for cru minutes; values > 30 are not usefull;
-		 * Example: vpn_client1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45
-		 */
-		if (nvi > 30)
-			nvi = 30;
+	ovpn_setup_watchdog(OVPN_TYPE_CLIENT, unit);
 
-		memset(buffer2, 0, 32);
-		sprintf(buffer2, "CheckVPNClient%d", unit);
-		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "*/%d * * * * service vpnclient%d start", nvi, unit);
-		eval("cru", "a", buffer2, buffer);
-	}
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_client%d", unit);
 	allow_fastnat(buffer, 0);
@@ -658,7 +683,7 @@ void stop_ovpn_client(int unit)
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNClient%d", unit);
+	sprintf(buffer, "CheckVPNclient%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN client */
@@ -1248,27 +1273,13 @@ void start_ovpn_server(int unit)
 	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-		logmsg(LOG_WARNING, "Starting VPN instance failed...");
+		logmsg(LOG_WARNING, "Starting OpenVPN server failed...");
 		stop_ovpn_client(unit);
 		return;
 	}
 
 	/* Set up cron job */
-	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_poll", unit);
-	if ((nvi = nvram_get_int(buffer)) > 0) {
-		/* check step value for cru minutes; values > 30 are not usefull;
-		 * Example: vpn_server1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45
-		 */
-		if (nvi > 30)
-			nvi = 30;
-
-		memset(buffer2, 0, 32);
-		sprintf(buffer2, "CheckVPNServer%d", unit);
-		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "*/%d * * * * service vpnserver%d start", nvi, unit);
-		eval("cru", "a", buffer2, buffer);
-	}
+	ovpn_setup_watchdog(OVPN_TYPE_SERVER, unit);
 
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_server%d", unit);
@@ -1289,7 +1300,7 @@ void stop_ovpn_server(int unit)
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNServer%d", unit);
+	sprintf(buffer, "CheckVPNserver%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN server */
