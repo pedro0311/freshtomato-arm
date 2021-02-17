@@ -26,7 +26,15 @@
  		echo "" >> ${CONFIGFILE}
  		echo "#ifndef TOMATO" >> ${CONFIGFILE}
  		echo "#define TOMATO" >> ${CONFIGFILE}
-@@ -490,8 +490,14 @@
+@@ -409,6 +409,7 @@
+ 		echo "#ifdef TCONFIG_IPV6" >> ${CONFIGFILE}
+ 		echo "#define ENABLE_IPV6" >> ${CONFIGFILE}
+ 		echo "#endif" >> ${CONFIGFILE}
++		HAVE_IP_MREQN=1
+ 		FW=iptables
+ 		;;
+ 	Darwin)
+@@ -490,8 +491,14 @@
  				fi
  				if [ "$IPTABLES_143" -eq 1 ] ; then
  					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
@@ -95,6 +103,22 @@
  endif # ($(TARGET_OPENWRT,)
  
  GLIBC_VERSION := $(shell ldd --version | head -n 1 | sed 's/^.* //')
+@@ -105,10 +107,11 @@
+ 
+ TESTUPNPDESCGENOBJS = testupnpdescgen.o upnpdescgen.o
+ 
+-EXECUTABLES = miniupnpd testupnpdescgen testgetifstats \
+-              testupnppermissions miniupnpdctl testgetifaddr \
+-              testgetroute testasyncsendto testportinuse \
+-              testssdppktgen testminissdp
++EXECUTABLES = miniupnpd
++#EXECUTABLES = miniupnpd testupnpdescgen testgetifstats \
++#              testupnppermissions miniupnpdctl testgetifaddr \
++#              testgetroute testasyncsendto testportinuse \
++#              testssdppktgen testminissdp
+ 
+ .PHONY:	all clean install depend dox
+ 
 --- miniupnpd/getifaddr.c
 +++ miniupnpd/getifaddr.c
 @@ -24,6 +24,8 @@
