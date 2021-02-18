@@ -5,6 +5,96 @@ FreshTomato-ARM Changelog
 
 
 
+2021.1          2021.02.20
+--------------------------
+
+- kernel/kernel sdk7: net sched: Pass the skb into change so it can access NETLINK_CB
+- kernel/kernel sdk7: pkt_sched: namespace aware act_mirred
+- kernel/kernel sdk7: ifb: dont hard code inet_net use
+- kernel/kernel sdk7: backport CAKE SQM scheduler and needed kernel functions
+- kernel/kernel sdk7: add wireguard support
+- kernel/kernel sdk7: add Wireguard v1.0.20201221
+- busybox: update to 1.32.1
+- iptables: update to 1.8.7
+- nano: update to 5.5
+- igmpproxy: update to 0.3
+- nettle: update to 3.7
+- nginx: update to 1.19.6
+- miniupnpd: update to 2.2.1
+- dnsmasq: update to 2.84
+- tor: update to 0.4.4.7
+- adminer: update to 4.8.0
+- e2fsprogs: update to 1.46.1
+- libsodium: update to 1.0.18-stable
+- build: add support for Netgear XR300
+- build: add support for Belkin F9K1113v2 router
+- build: docker: add docker image for building
+- build: add Wireguard tools
+- build: SDK6: small update/addendum for new wireless drivers (single- and dual-core) *.126 Year 2020
+- build: SDK6: update wireless driver (dual core)
+- build: Makefile: e2fsprogs: include badblocks applet in image
+- GUI: move stubby, dnscrypt-proxy and some other options to Advanced -> DHCP/DNS
+- GUI: use Advanced/VLAN instead of Basic/Network for WAN bridging; - the old method only caused bugs in the GUI and confusion
+- GUI: Status: Overview: corrections and fixes; - display more info in real-time; - in case of Wireless Client mode, stick to Signal Quality (like on Device List page), not SNR (signal value to the noise value)
+- GUI: change default colours of speed graphs to Blue & Orange
+- GUI: Bandwidth & IP Traffic - make it possible to show (save) values up to 500 Mbit/s (for last 24 hours, Daily, ...)
+- GUI: advanced-dhcpdns.asp - add Fast RA mode option
+- GUI: Web Server: Nginx & PHP: use ajax to Start/Stop button
+- GUI: Status: Overview: use ajax for all buttons
+- GUI: Admin Access: use ajax for Start/Stop sshd and telnetd buttons
+- GUI: Advanced: Firewall: add the ability to configure udpxy upstream interface
+- GUI: USB and NAS: Media Server: use ajax for all buttons
+- GUI: VPN Tunneling: Tinc: use ajax for all buttons
+- GUI: VPN Tunneling: PPTP Client: use ajax for Start/Stop button
+- GUI: Port Forwarding: UPnP/NAT-PMP: use ajax for all buttons
+- GUI: VPN Tunneling: OpenVPN Client: use ajax for all buttons; also refresh status tile automatically
+- GUI: VPN Tunneling: OpenVPN Server: use ajax for all buttons; also refresh status tile automatically
+- GUI: Tunneling: OpenVPN Server: allow empty string as a static key in case it's located elsewhere
+- GUI: Tunneling: OpenVPN Server: add auth file (if needed) for generated client configuration; fix client number in generated certificate; some code improvements
+- GUI: remove unneeded footer messages when using Start/Stop/etc. buttons
+- GUI: implement GUI and nvram variables for CAKE AQM QoS
+- DDNS: add Duck DNS support
+- iproute2: tc: cross-port cake support to tc from tc-adv project
+- Major QoS improvements. Harmonize all uses of firewall marks between VPN, wan PBR, BWLimit and QoS
+- miniupnpd: only build miniupnpd exe; also build with HAVE_IP_MREQN
+- multiwan: reduce and flush the route cache to ensure a more synchronous load-balancing across multiwan
+- multiwan: also allow to init state file with value "1" instead of "0" - it could speed up connection process in some cases
+- multiwan: improvements for GUI and connection time; - show real WAN status on Status->Overview page; - time needed to connect WANs (traffic) has been reduced twice
+- busybox: enable CONFIG_FEATURE_SWAPONOFF_LABEL
+- openvpn: masquerade all client outbound traffic regardless of source subnet
+- openvpn: ignore unsupported ipv6 push configurations for ovpn client
+- QoS: re-enable View Details without having to enable QoS itself; - it works actually only on MIPS routers; - in ARM: TBD (now need to enable/disable QoS for it to work)
+- SNMP: tune recipe: add 2 more modules, set default snmp level to 2, set enable-mfd-rewrites
+- stubby: add full GUI support; based on @RMerlin work (thanks!)
+- stubby: tweak config: tls_query_padding_blocksize and idle_timeout
+- rc: log when calling a nonexistent service
+- rc: add logger to QoS and BW Limiter
+- rc: restart nas services/wsdd2 on WAN up; - temp workaround for issue with wsdd2
+- rc: bwlimit.c: add start/stop options and in only one exe file (like in QoS)
+- rc: firewall.c: tune some params in NAT performance tweaks
+- rc: interface.c: add possibility to set mtu in _ifconfig()
+- rc: misc.c - adjust killall_tk_period_wait() (100 ms instead of 1 sec)
+- rc: network.c: adjust and update host DHCP relay code
+- rc: openvpn.c: enable multihome for UDP servers when in multiwan mode (required as the router has multiple interfaces and we don't bind to a specific one)
+- rc: openvpn.c: fix firewall rules for ovpn server when [udp/tcp]4/6 is selected
+- rc: openvpn.c: another attempt to obtain an automatic restart after the client/server dies
+- rc: services.c: name of the service could be "jffs" or "jffs2"
+- rc: wan.c: do not send user/password when empty in PPP3G proto
+- IPv6: rc: services.c - use global address and not link-local address for DNS 
+- rc: do not restart WAN for changes on BW Limiter page when nocat is disabled
+- rc: remove redundant parameter from start_wan() and start_wan_if() functions
+- shared: shared.h - adjust preprocessor conditons for SDK7
+- rc/shared: do not redefine functions in different folders! It already cost me a lot of time... Also move killall_tk_period_wait() to libshared
+- www: advanced-dhcpdns.asp: fix javascript error in VPN builds
+- www: advanced-dhcpdns.asp: fix javascript error if image built without dnscrypt-proxy
+- www: restrict-edit.asp: change wait time to 3 secs; cosmetic
+- www: tomato.js: fix wrongly treated input delay value in TomatoRefresh.initPage
+- www: qos-settings.asp: restart BW Limiter automatically when disabling QoS, also show/hide notice when needed
+- www: qos-settings.asp: automate fq_codel enabling when using only SQM
+- www: qos-settings.asp: improved 'Classify traffic' checkbox
+- R1D Xiaomi: change/fix LED table
+
+
 2020.8          2020.12.19
 --------------------------
 
