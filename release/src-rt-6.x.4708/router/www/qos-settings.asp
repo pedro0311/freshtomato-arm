@@ -280,7 +280,7 @@ function init() {
 			null,
 			{ title: 'CAKE priority queue mode', name: 'qos_cake_prio_mode', type: 'select', options: [
 				['0','besteffort (single class) (recommended for typical case)'],['1','diffserv8 (8 priority classes)'],['2','diffserv4 (4 priority classes)'],['3','diffserv3 (3 priority classes)'],['4','precedence (8 priority classes)']
-				], suffix: '&nbsp; <small>Classification rules can be used to set class (# of classes depends on choice).<\/small>'},
+				], value: nvram.qos_cake_prio_mode, suffix: '&nbsp; <small>Classification rules can be used to set class (# of classes depends on choice).<\/small>'},
 			{ title: 'CAKE clear diffserv field after queuing (wash)', name: 'f_qos_cake_wash', type: 'checkbox', value: nvram.qos_cake_wash == '1', suffix: '&nbsp; <small>maybe needed for some ISPs, eg: Comcast<\/small>' }
 		]);
 	</script>

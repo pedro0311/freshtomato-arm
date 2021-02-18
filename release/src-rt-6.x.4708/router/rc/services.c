@@ -1840,8 +1840,11 @@ void start_udpxy(void)
 	/* check if udpxy is enabled via GUI, advanced-firewall.asp */
 	if (nvram_get_int("udpxy_enable")) {
 		if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
-			memset(buffer, 0, sizeof(buffer));					/* reset */
-			snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix));	/* copy wanface to buffer */
+			memset(buffer, 0, 32); /* reset */
+			if (strlen(nvram_safe_get("udpxy_wanface")) > 0)
+				snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("udpxy_wanface")); /* user entered upstream interface */
+			else
+				snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix)); /* copy wanface to buffer */
 
 			/* check interface to listen on */
 			/* check udpxy enabled/selected for br0 - br3 */
@@ -2366,7 +2369,7 @@ void enable_gro(int interval)
 }
 #endif
 
-static void start_samba(void)
+void start_samba(void)
 {
 	FILE *fp;
 	DIR *dir = NULL;
@@ -2618,7 +2621,7 @@ static void start_samba(void)
 	}
 }
 
-static void stop_samba(void)
+void stop_samba(void)
 {
 	if (getpid() != 1) {
 		stop_service("smbd");

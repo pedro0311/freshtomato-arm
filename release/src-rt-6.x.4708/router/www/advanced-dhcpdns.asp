@@ -345,10 +345,10 @@ function init() {
 		createFieldTable('noclose', [
 /* DNSSEC-BEGIN */
 			{ title: 'Enable DNSSEC', name: 'f_dnssec_enable', type: 'checkbox', value: (nvram.dnssec_enable == 1) },
-			null,
+			null
 /* DNSSEC-END */
 /* DNSCRYPT-BEGIN */
-			{ title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: (nvram.dnscrypt_proxy == 1) },
+			, { title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: (nvram.dnscrypt_proxy == 1) },
 				{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: (nvram.dnscrypt_ephemeral_keys == 1) },
 				{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: (nvram.dnscrypt_manual == 1) },
 				{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: _dnscrypt_resolvers_, value: nvram.dnscrypt_resolver },

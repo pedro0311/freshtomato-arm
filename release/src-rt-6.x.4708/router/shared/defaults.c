@@ -763,6 +763,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "udpxy_stats",		"0"				, 0 },
 	{ "udpxy_clients",		"3"				, 0 },
 	{ "udpxy_port",			"4022"				, 0 },
+	{ "udpxy_wanface",		""				, 0 },	/* alternative wanface */
 	{ "ne_syncookies",		"0"				, 0 },	// tcp_syncookies
 	{ "DSCP_fix_enable",		"1"				, 0 },	// Comacst DSCP fix
 	{ "ne_snat",			"0"				, 0 },	// use SNAT instead of MASQUERADE
@@ -1205,7 +1206,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_key",		""				, 0 },
 	{ "vpn_server1_dh",		""				, 0 },
 	{ "vpn_server1_br",		"br0"				, 0 },
-	{ "vpn_server1_serial",		"00"				, 0 },
 	{ "vpn_server2_poll",		"0"				, 0 },
 	{ "vpn_server2_if",		"tun"				, 0 },
 	{ "vpn_server2_proto",		"udp"				, 0 },
@@ -1250,7 +1250,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_key",		""				, 0 },
 	{ "vpn_server2_dh",		""				, 0 },
 	{ "vpn_server2_br",		"br0"				, 0 },
-	{ "vpn_server2_serial",		"00"				, 0 },
 	{ "vpn_client_eas",		""				, 0 },
 	{ "vpn_client1_poll",		"0"				, 0 },
 	{ "vpn_client1_if",		"tun"				, 0 },

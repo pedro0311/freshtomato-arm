@@ -81,9 +81,6 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 
 #define IFUP (IFF_UP | IFF_RUNNING | IFF_BROADCAST | IFF_MULTICAST)
 
-#define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
-#define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
-
 #define IPT_V4			0x01
 #define IPT_V6			0x02
 #define IPT_ANY_AF		(IPT_V4 | IPT_V6)
@@ -272,6 +269,11 @@ extern void stop_ipv6(void);
 int start_bsd(void);
 void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
+#ifdef TCONFIG_SAMBASRV
+extern void start_samba(void);
+extern void stop_samba(void);
+#endif /* TCONFIG_SAMBASRV */
+
 
 /* usb.c */
 #ifdef TCONFIG_USB
@@ -415,12 +417,8 @@ extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);
 extern void set_mac(const char *ifname, const char *nvname, int plus);
 extern const char *default_wanif(void);
-#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
-extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
 extern void simple_lock(const char *name);
-extern void killall_tk_period_wait(const char *name, int wait_ds);
-extern int kill_pidfile_s(char *pidfile, int sig);
 extern int mkdir_if_none(const char *path);
 extern long fappend(FILE *out, const char *fname);
 extern long fappend_file(const char *path, const char *fname);

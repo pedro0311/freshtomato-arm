@@ -114,7 +114,7 @@ ug.setup = function() {
 ug.populate = function() {
 	var i, j, r, row, data;
 
-	if (nvram.upnp_enable != 0) {
+	if (isup.miniupnpd && typeof(window.mupnp_data) != 'undefined') {
 		var data = mupnp_data.split('\n');
 		for (i = 0; i < data.length; ++i) {
 			r = data[i].match(/^(UDP|TCP)\s+(\d+)\s+(.+?)\s+(\d+)\s+\[(.*)\](.*)$/);
@@ -129,7 +129,7 @@ ug.populate = function() {
 				}
 			}
 			for (j = 0; j < 5; ++j)
-				row.cells[j].title = 'Click to delete';
+				row.cells[j].title = 'Delete';
 		}
 	}
 	E('upnp-delete-all').disabled = (ug.getDataCount() == 0);

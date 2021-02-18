@@ -21,7 +21,7 @@
 
 <script>
 
-//	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_ca_key,vpn_server1_crt,vpn_server1_crl,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server1_serial,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_ca_key,vpn_server2_crt,vpn_server2_crl,vpn_server2_key,vpn_server2_dh,vpn_server2_br,vpn_server2_serial,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_ca_key,vpn_server1_crt,vpn_server1_crl,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_ca_key,vpn_server2_crt,vpn_server2_crl,vpn_server2_key,vpn_server2_dh,vpn_server2_br,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -85,6 +85,7 @@ var usersTables = [];
 var statusUpdaters = [];
 for (var i = 0; i < tabs.length; ++i) {
 	ccdTables.push(new CCDGrid());
+	ccdTables[i].servername = tabs[i][0];
 	usersTables.push(new UsersGrid());
 	usersTables[i].servername = tabs[i][0];
 	statusUpdaters.push(new StatusUpdater());
@@ -117,10 +118,8 @@ function tabSelect(name) {
 
 	tabHigh(name);
 
-	for (var i = 0; i < tabs.length; ++i) {
-		var on = (name == tabs[i][0]);
-		elem.display(tabs[i][0]+'-tab', on);
-	}
+	for (var i = 0; i < tabs.length; ++i)
+		elem.display(tabs[i][0]+'-tab', (name == tabs[i][0]));
 
 	cookie.set('vpn_server_tab', name);
 }
@@ -153,30 +152,71 @@ function updateForm(num) {
 	}
 }
 
+function rewriteUsers(row, k) {
+	for (var i = 0; i < tabs.length; ++i) {
+		var users_option = '';
+		var userdata = usersTables[i].getAllData();
+		var t = usersTables[i].servername;
+
+		if (row && i == k) {
+			userdata.push(row);
+			userdata.sort(cmpInt);
+		}
+
+		if (userdata.length) {
+			for (var j = 0; j < userdata.length; ++j) {
+				if (userdata[j].length == 4)
+					users_option += '<option value="'+userdata[j][0]+'">#'+userdata[j][0]+' - '+userdata[j][2]+(userdata[j][1] == 1 ? '' : ' (disabled)')+'<\/option>';
+			}
+		}
+		elem.setInnerHTML('_vpn_'+t+'_usergen', (users_option ? users_option : '<option value="0">none<\/option>'));
+	}
+}
+
+function v_serial(e, quiet) {
+	if ((e = E(e)) == null)
+		return 0;
+
+	var v = e.value;
+
+	if (!v.match(/[0-9A-Fa-f]{2}/)) {
+		ferror.set(e, 'Invalid key serial number. Valid range: "00" - "FF"', quiet);
+		return 0;
+	}
+	e.value = v.toUpperCase();
+	ferror.clear(e);
+
+	return 1;
+}
+
 CCDGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 
-	return [f[0].checked?1:0, f[1].value, f[2].value, f[3].value, f[4].checked ? 1 : 0];
+	for (var i = 0; i < tabs.length; ++i) {
+		if (ccdTables[i] == this)
+			break;
+	}
+
+	return [(f[0].value ? ''+f[0].value+'' : ''+(ccdTables[i].getDataCount() + 1)+''), (f[1].checked ? '1' : '0'), f[2].value, f[3].value, f[4].value, (f[5].checked ? '1' : '0')];
 }
 
 CCDGrid.prototype.dataToView = function(data) {
-	var c2c = false;
+	var c2c = 0, v = [];
 	for (var i = 0; i < tabs.length; ++i) {
 		if (ccdTables[i] == this && E('_f_vpn_server'+(i+1)+'_c2c').checked)
-			c2c = true;
+			c2c = 1;
 	}
 
-	var temp = ['<input type="checkbox" disabled'+(data[0] != 0 ? ' checked' : '')+'>', data[1], data[2], data[3], c2c ? '<input type="checkbox" disabled'+(data[4] != 0 ? ' checked' : '')+'>' : 'N/A'];
+	var temp = [data[0], '<input type="checkbox" disabled'+(data[1] != 0 ? ' checked' : '')+'>', data[2], data[3], data[4], c2c ? '<input type="checkbox" disabled'+(data[5] != 0 ? ' checked' : '')+'>' : 'N/A'];
 
-	var v = [];
 	for (var i = 0; i < temp.length; ++i)
-		v.push((i==0 || i==4) ? temp[i] : escapeHTML(''+temp[i]));
+		v.push((i == 1 || i == 5) ? temp[i] : escapeHTML(''+temp[i]));
 
 	return v;
 }
 
 CCDGrid.prototype.dataToFieldValues = function(data) {
-	return [data[0] == 1, data[1], data[2], data[3], data[4] == 1];
+	return [data[0], data[1] == 1, data[2], data[3], data[4], data[5] == 1];
 }
 
 CCDGrid.prototype.reDraw = function() {
@@ -184,19 +224,45 @@ CCDGrid.prototype.reDraw = function() {
 	data = this.getAllData();
 	header = this.header ? this.header.rowIndex + 1 : 0;
 	for (i = 0; i < data.length; ++i) {
+		data[i][0] = ''+(i + 1)+'';
 		view = this.dataToView(data[i]);
 		for (j = 0; j < view.length; ++j)
-			this.tb.rows[i+header].cells[j].innerHTML = view[j];
+			elem.setInnerHTML(this.tb.rows[i + header].cells[j], view[j]);
 	}
 }
 
+CCDGrid.prototype.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.reDraw();
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
+CCDGrid.prototype.onDelete = function() {
+	changed = 1;
+	this.removeEditor();
+	elem.remove(this.source);
+	this.source = null;
+	this.disableNewEditor(false);
+	this.clearTextarea();
+	this.reDraw();
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
 CCDGrid.prototype.verifyFields = function(row, quiet) {
+	changed = 1;
 	var ret = 1;
 
 	/* When settings change, make sure we restart the right server */
 	var fom = E('t_fom');
 
-	for (i = 0; i < tabs.length; ++i) {
+	for (var i = 0; i < tabs.length; ++i) {
 		if (ccdTables[i] == this)
 			updateForm(i + 1);
 	}
@@ -204,55 +270,100 @@ CCDGrid.prototype.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 
 	/* Verify fields in this row of the table */
-	if (f[1].value == '') {
-		ferror.set(f[1], 'Common name is mandatory', quiet);
+	if (f[2].value == '') {
+		ferror.set(f[2], 'Common name is mandatory', quiet);
 		ret = 0;
 	}
-	if (f[1].value.indexOf('>') >= 0 || f[1].value.indexOf('<') >= 0) {
-		ferror.set(f[1], 'Common name cannot contain "<" or ">" characters', quiet);
+	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
+		ferror.set(f[2], 'Common name cannot contain "<" or ">" characters', quiet);
 		ret = 0;
 	}
-	if (f[2].value != '' && !v_ip(f[2],quiet,0))
+	if (f[3].value != '' && !v_ip(f[3],quiet,0))
 		ret = 0;
-	if (f[3].value != '' && !v_netmask(f[3],quiet))
+	if (f[4].value != '' && !v_netmask(f[4],quiet))
 		ret = 0;
-	if (f[2].value == '' && f[3].value != '') {
-		ferror.set(f[2], 'Either both or neither subnet and netmask must be provided', quiet);
-		ret = 0;
-	}
-	if (f[3].value == '' && f[2].value != '') {
+	if (f[3].value == '' && f[4].value != '') {
 		ferror.set(f[3], 'Either both or neither subnet and netmask must be provided', quiet);
 		ret = 0;
 	}
-	if (f[4].checked && (f[2].value == '' || f[3].value == '')) {
-		ferror.set(f[4], 'Cannot push routes if they\'re not given. Please provide subnet/netmask', quiet);
+	if (f[4].value == '' && f[3].value != '') {
+		ferror.set(f[4], 'Either both or neither subnet and netmask must be provided', quiet);
+		ret = 0;
+	}
+	if (f[5].checked && (f[3].value == '' || f[4].value == '')) {
+		ferror.set(f[5], 'Cannot push routes if they\'re not given. Please provide subnet/netmask', quiet);
 		ret = 0;
 	}
 
 	return ret;
 }
 
+UsersGrid.prototype.reDraw = function() {
+	var i, j, header, data, view;
+	data = this.getAllData();
+	header = this.header ? this.header.rowIndex + 1 : 0;
+	for (i = 0; i < data.length; ++i) {
+		data[i][0] = ''+(i + 1)+'';
+		view = this.dataToView(data[i]);
+
+		for (j = 0; j < view.length; ++j)
+			elem.setInnerHTML(this.tb.rows[i + header].cells[j], view[j]);
+	}
+	rewriteUsers();
+}
+
 UsersGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 
-	return [f[0].checked?1:0, f[1].value, f[2].value];
+	for (var i = 0; i < tabs.length; ++i) {
+		if (usersTables[i] == this)
+			break;
+	}
+	var r = [(f[0].value ? ''+f[0].value+'' : ''+(usersTables[i].getDataCount() + 1)+''), (f[1].checked ? '1' : '0'), f[2].value, f[3].value];
+	rewriteUsers(r, i);
+
+	return r;
 }
 
 UsersGrid.prototype.dataToView = function(data) {
-	var temp = ['<input type="checkbox" disabled'+(data[0] !=0 ? ' checked':'')+'>', data[1], 'Secret'];
-
+	var temp = [data[0], '<input type="checkbox" disabled'+(data[1] != 0 ? ' checked' : '')+'>', data[2], 'Secret'];
 	var v = [];
 	for (var i = 0; i < temp.length; ++i)
-		v.push(i==0 ? temp[i] : escapeHTML(''+temp[i]));
+		v.push(i == 1 ? temp[i] : escapeHTML(''+temp[i]));
 
 	return v;
 }
 
 UsersGrid.prototype.dataToFieldValues = function(data) {
-	return [data[0] == 1, data[1], data[2]];
+	return [data[0], data[1] == 1, data[2], data[3]];
+}
+
+UsersGrid.prototype.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.reDraw();
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
+UsersGrid.prototype.onDelete = function() {
+	changed = 1;
+	this.removeEditor();
+	elem.remove(this.source);
+	this.source = null;
+	this.disableNewEditor(false);
+	this.clearTextarea();
+	this.reDraw();
+	this.recolor();
+	this.resort();
+	this.rpHide();
 }
 
 UsersGrid.prototype.verifyFields = function(row, quiet) {
+	changed = 1;
 	var ret = 1;
 	var fom = E('t_fom');
 
@@ -263,20 +374,20 @@ UsersGrid.prototype.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 
 	/* Verify fields in this row of the table */
-	if (f[1].value == '') {
-		ferror.set(f[1], 'username is mandatory', quiet);
+	if (f[2].value == '') {
+		ferror.set(f[2], 'username is mandatory', quiet);
 		ret = 0;
 	}
-	if (f[1].value.indexOf('>') >= 0 || f[1].value.indexOf('<') >= 0) {
-		ferror.set(f[1], 'username cannot contain "<" or ">" characters', quiet);
+	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
+		ferror.set(f[2], 'username cannot contain "<" or ">" characters', quiet);
 		ret = 0;
 	}
-	if (f[2].value == '' ) {
-		ferror.set(f[2], 'password is mandatory', quiet);
+	if (f[3].value == '' ) {
+		ferror.set(f[3], 'password is mandatory', quiet);
 		ret = 0;
 	}
-	if (f[2].value.indexOf('>') >= 0 || f[1].value.indexOf('<') >= 0) {
-		ferror.set(f[2], 'password cannot contain "<" or ">" characters', quiet);
+	if (f[3].value.indexOf('>') >= 0 || f[3].value.indexOf('<') >= 0) {
+		ferror.set(f[3], 'password cannot contain "<" or ">" characters', quiet);
 		ret = 0;
 	}
 
@@ -374,8 +485,10 @@ function showTLSProgressDivs(num, state) {
 }
 
 function downloadClientConfig(num) {
-	if (keyGenRequest) return;
-	var warn = 0;
+	if (keyGenRequest)
+		return;
+
+	var warn = 0, userid = 0;
 	var caKey = E('_vpn_server'+num+'_ca_key').value;
 	var ca = E('_vpn_server'+num+'_ca').value;
 	var serverCrt = E('_vpn_server'+num+'_crt').value;
@@ -383,6 +496,8 @@ function downloadClientConfig(num) {
 	var staticKey = E('_vpn_server'+num+'_static').value;
 	var crypt = E('_vpn_server'+num+'_crypt').value;
 	var hmac = E('_vpn_server'+num+'_hmac').value;
+	var userpass = E('_f_vpn_server'+num+'_userpass').checked;
+	var isUser = E('_vpn_server'+num+'_usergen').value;
 
 	if (crypt == 'secret') {
 		if (staticKey == '')
@@ -402,35 +517,50 @@ function downloadClientConfig(num) {
 		return;
 	}
 	if (changed) {
-		alert('Changes has been made. You need to save before continue!');
+		alert('Changes have been made. You need to save before continue!');
 		return;
 	}
+
+	if (crypt == 'tls') {
+		if (userpass && isUser) {
+			var userdata = usersTables[(num - 1)].getAllData();
+			if (userdata.length)
+				userid = userdata[isUser - 1][0];
+		}
+		else {
+			if (!v_serial('_vpn_server'+num+'_serial', 0))
+				return;
+
+			userid = parseInt(E('_vpn_server'+num+'_serial').value, 16);
+		}
+	}
+
 	elem.display(E('server'+num+'_gen_progress_div'), true);
 	keyGenRequest = new XmlHttp();
 	keyGenRequest.onCompleted = function(text, xml) {
 		elem.display(E('server'+num+'_gen_progress_div'), false);
 		keyGenRequest = null;
 
-		var downloadedFileFakeLink = document.createElement('a');
-		downloadedFileFakeLink.setAttribute('href', 'data:application/tomato-binary-file,'+encodeURIComponent(text));
-		downloadedFileFakeLink.setAttribute('download', 'ClientConfig.tgz');
+		var dlFileFakeLink = document.createElement('a');
+		dlFileFakeLink.setAttribute('href', 'data:application/tomato-binary-file,'+escapeCGI(text));
+		dlFileFakeLink.setAttribute('download', 'ClientConfig.tgz');
 
-		downloadedFileFakeLink.style.display = 'none';
-		document.body.appendChild(downloadedFileFakeLink);
+		dlFileFakeLink.style.display = 'none';
+		document.body.appendChild(dlFileFakeLink);
 
-		downloadedFileFakeLink.click();
+		dlFileFakeLink.click();
 
-		document.body.removeChild(downloadedFileFakeLink);
+		document.body.removeChild(dlFileFakeLink);
 	}
 	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
 	keyGenRequest.responseType = 'blob';
-	keyGenRequest.get('vpn/ClientConfig.tgz','_server='+num);
+	keyGenRequest.get('vpn/ClientConfig.tgz','_server='+num+((userid) ? '&_userid='+userid : ''));
 }
 
 function verifyFields(focused, quiet) {
 	tgHideIcons();
 
-	var ret = 1;
+	var i, j, t, ret = 1;
 
 	/* When settings change, make sure we restart the right services */
 	if (focused) {
@@ -477,20 +607,22 @@ function verifyFields(focused, quiet) {
 			ret = 0;
 		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647))
 			ret = 0;
+		if (E('_vpn_'+t+'_crypt').value == 'tls' && !E('_f_vpn_'+t+'_userpass').checked && !v_serial('_vpn_'+t+'_serial', quiet))
+			ret = 0;
 	}
 
 	/* Visibility changes */
 	for (i = 0; i < tabs.length; ++i) {
 		t = tabs[i][0];
 
-		auth = E('_vpn_'+t+'_crypt').value;
-		iface = E('_vpn_'+t+'_if').value;
-		hmac = E('_vpn_'+t+'_hmac').value;
-		dhcp = E('_f_vpn_'+t+'_dhcp');
-		ccd = E('_f_vpn_'+t+'_ccd');
-		userpass = E('_f_vpn_'+t+'_userpass');
-		dns = E('_f_vpn_'+t+'_dns');
-		comp = E('_vpn_'+t+'_comp').value;
+		var auth = E('_vpn_'+t+'_crypt').value;
+		var iface = E('_vpn_'+t+'_if').value;
+		var hmac = E('_vpn_'+t+'_hmac').value;
+		var dhcp = E('_f_vpn_'+t+'_dhcp').checked;
+		var ccd = E('_f_vpn_'+t+'_ccd').checked;
+		var userpass = E('_f_vpn_'+t+'_userpass').checked;
+		var dns = E('_f_vpn_'+t+'_dns').checked;
+		var comp = E('_vpn_'+t+'_comp').value;
 
 		elem.display(PR('_vpn_'+t+'_ca'), PR('_vpn_'+t+'_ca_key'), PR('_vpn_'+t+'_ca_key_div_help'),
 			     PR('_vpn_dhgen_'+t+'_button'), PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_crl'), PR('_vpn_'+t+'_dh'),
@@ -504,19 +636,20 @@ function verifyFields(focused, quiet) {
 		             PR('_f_vpn_'+t+'_plan2'), PR('_f_vpn_'+t+'_plan3'), auth == 'tls' && iface == 'tun');
 		elem.display(PR('_f_vpn_'+t+'_dhcp'), auth == 'tls' && iface == 'tap');
 		elem.display(PR('_vpn_'+t+'_br'), iface == 'tap');
-		elem.display(E(t+'_range'), !dhcp.checked);
+		elem.display(E(t+'_range'), !dhcp);
 		elem.display(PR('_vpn_'+t+'_local'), auth == 'secret' && iface == 'tun');
 		elem.display(PR('_f_vpn_'+t+'_ccd'), auth == 'tls');
 		elem.display(PR('_f_vpn_'+t+'_userpass'), auth == 'tls');
-		elem.display(PR('_f_vpn_'+t+'_nocert'),PR('table_'+t+'_users'), auth == 'tls' && userpass.checked);
-		elem.display(PR('_f_vpn_'+t+'_c2c'),PR('_f_vpn_'+t+'_ccd_excl'),PR('table_'+t+'_ccd'), auth == 'tls' && ccd.checked);
-		elem.display(PR('_f_vpn_'+t+'_pdns'), auth == 'tls' && dns.checked );
+		elem.display(PR('_f_vpn_'+t+'_nocert'), PR('table_'+t+'_users'), auth == 'tls' && userpass);
+		elem.display(PR('_f_vpn_'+t+'_c2c'), PR('_f_vpn_'+t+'_ccd_excl'), PR('table_'+t+'_ccd'), auth == 'tls' && ccd);
+		elem.display(PR('_f_vpn_'+t+'_pdns'), auth == 'tls' && dns );
 		elem.display(PR('_vpn_'+t+'_ncp_ciphers'), auth == 'tls');
 		elem.display(PR('_vpn_'+t+'_cipher'), auth == 'secret');
 		elem.display(PR('_vpn_client_gen_'+t+'_button'), auth != 'custom');
-		elem.display(PR('_vpn_'+t+'_serial'), auth == 'tls');
+		elem.display(PR('_vpn_'+t+'_serial'), auth == 'tls' && !userpass);
+		elem.display(PR('_vpn_'+t+'_usergen'), auth == 'tls' && userpass);
 
-		keyHelp = E(t+'-keyhelp');
+		var keyHelp = E(t+'-keyhelp');
 		switch (auth) {
 		case 'tls':
 			keyHelp.href = helpURL['TLSKeys'];
@@ -531,8 +664,8 @@ function verifyFields(focused, quiet) {
 	}
 
 	for (i = 0; i < tabs.length; ++i) {
-		for (var j = 0; j <= 3; ++j) {
-			var t = (j == 0 ? '' : j);
+		for (j = 0; j <= 3; ++j) {
+			t = (j == 0 ? '' : j);
 
 			if (eval('nvram.lan'+t+'_ifname.length') < 1) {
 				E('_vpn_server'+(i + 1)+'_br').options[j].disabled = 1;
@@ -550,6 +683,7 @@ function save() {
 	if (!verifyFields(null, 0))
 		return;
 
+	var i, j, t, n;
 	var fom = E('t_fom');
 
 	E('vpn_server_eas').value = '';
@@ -582,13 +716,19 @@ function save() {
 
 		var data = ccdTables[i].getAllData();
 		var ccd = '';
+		for (j = 0; j < data.length; ++j) {
+			var c = data[j].join('<')+'>';
+			n = c.indexOf("<");
+			ccd += c.substring(n + 1);
+		}
 
-		for (j = 0; j < data.length; ++j)
-			ccd += data[j].join('<')+'>';
 		var userdata = usersTables[i].getAllData();
 		var users = '';
-		for (j = 0; j < userdata.length; ++j)
-			users += userdata[j].join('<')+'>';
+		for (j = 0; j < userdata.length; ++j) {
+			var u = userdata[j].join('<')+'>';
+			n = u.indexOf("<");
+			users += u.substring(n + 1);
+		}
 
 		E('vpn_'+t+'_dhcp').value = E('_f_vpn_'+t+'_dhcp').checked ? 1 : 0;
 		E('vpn_'+t+'_plan').value = E('_f_vpn_'+t+'_plan').checked ? 1 : 0;
@@ -615,13 +755,12 @@ function save() {
 function earlyInit() {
 	tabSelect(cookie.get('vpn_server_tab') || tabs[0][0]);
 
-	for (i = 0; i < tabs.length; ++i) {
+	for (var i = 0; i < tabs.length; ++i) {
 		sectSelect(i, cookie.get('vpn_server'+i+'_section') || sections[0][0]);
+		var t = tabs[i][0];
 
-		t = tabs[i][0];
-
-		ccdTables[i].init('table_'+t+'_ccd', 'sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'checkbox' }]);
-		ccdTables[i].headerSet(['Enable', 'Common Name', 'Subnet', 'Netmask', 'Push']);
+		ccdTables[i].init('table_'+t+'_ccd','sort',0,[{ type: 'text', maxlen: 2, attrib: 'hidden' },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },{ type: 'text', maxlen: 15 },{ type: 'text', maxlen: 15 },{ type: 'text', maxlen: 15 },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' }]);
+		ccdTables[i].headerSet(['#','Enable','Common Name','Subnet','Netmask','Push']);
 		var ccdVal = eval('nvram.vpn_'+t+'_ccd_val');
 		if (ccdVal.length) {
 			var s = ccdVal.split('>');
@@ -629,16 +768,17 @@ function earlyInit() {
 				if (!s[j].length)
 					continue;
 
-				var row = s[j].split('<');
-				if (row.length == 5)
+				var row = [''+(j + 1)+''];
+				row = row.concat(s[j].split('<'));
+				if (row.length == 6)
 					ccdTables[i].insertData(-1, row);
 			}
 		}
 		ccdTables[i].showNewEditor();
 		ccdTables[i].resetNewEditor();
 
-		usersTables[i].init('table_'+t+'_users','sort', 0, [{ type: 'checkbox' }, { type: 'text', maxlen: 25 }, { type: 'text', maxlen: 15 }]);
-		usersTables[i].headerSet(['Enable', 'Username', 'Password']);
+		usersTables[i].init('table_'+t+'_users','sort',0,[{ type: 'text', maxlen: 2, attrib: 'hidden' },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },{ type: 'text', maxlen: 25 },{ type: 'text', maxlen: 15 }]);
+		usersTables[i].headerSet(['#','Enable','Username','Password']);
 		var usersVal = eval('nvram.vpn_'+t+'_users_val');
 		if (usersVal.length) {
 			var s = usersVal.split('>');
@@ -646,8 +786,9 @@ function earlyInit() {
 				if (!s[j].length)
 					continue;
 
-				var row = s[j].split('<');
-				if (row.length == 3)
+				var row = [''+(j + 1)+''];
+				row = row.concat(s[j].split('<'));
+				if (row.length == 4)
 					usersTables[i].insertData(-1, row);
 			}
 		}
@@ -662,6 +803,7 @@ function earlyInit() {
 
 function init() {
 	show();
+	rewriteUsers();
 	up.initPage(250, 5);
 }
 </script>
@@ -745,6 +887,7 @@ function init() {
 
 			W('<div id="'+t+'-advanced">');
 			createFieldTable('', [
+				null,
 				{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval('nvram.vpn_'+t+'_poll'), suffix: '&nbsp; <small>in minutes, 0 to disable<\/small>' },
 				{ title: 'Push LAN (br0) to clients', name: 'f_vpn_'+t+'_plan', type: 'checkbox', value: eval('nvram.vpn_'+t+'_plan') != 0 },
 				{ title: 'Push LAN1 (br1) to clients', name: 'f_vpn_'+t+'_plan1', type: 'checkbox', value: eval('nvram.vpn_'+t+'_plan1') != 0 },
@@ -771,9 +914,13 @@ function init() {
 			W('<div id="'+t+'-keys">');
 			W('<p class="vpn-keyhelp">For help generating keys, refer to the OpenVPN <a id="'+t+'-keyhelp">HOWTO<\/a>. All 6 keys take about 14kB of NVRAM, so check first if there is enough free space!<\/p>');
 			createFieldTable('', [
+				null,
 				{ title: 'Static Key', name: 'vpn_'+t+'_static', type: 'textarea', value: eval('nvram.vpn_'+t+'_static'),
 					prefix: '<div id="'+t+'_static_progress_div" style="display:none"><p class="keyhelp">Please wait - generating static key...<img src="spin.gif" alt=""><\/p><\/div>' },
-				{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_static_'+t+'_button">' },
+				{ title: '', custom: '<input type="button" value="Generate static key" onclick="updateStaticKey('+(i+1)+')" id="_vpn_keygen_static_'+t+'_button">' }
+			]);
+			createFieldTable('', [
+				null,
 				{ title: 'Certificate Authority Key', name: 'vpn_'+t+'_ca_key', type: 'textarea', value: eval('nvram.vpn_'+t+'_ca_key'),
 					prefix: '<div id="'+t+'_ca_key_progress_div" style="display:none"><p class="keyhelp">Please wait - generating CA key...<img src="spin.gif" alt=""><\/p><\/div>' },
 				{ title: '', custom: '<div id="_vpn_'+t+'_ca_key_div_help"><p class="keyhelp">Optional, only used for client certificate generation.<br>Uncrypted (-nodes) private keys are supported.<\/p><\/div>' },
@@ -784,12 +931,18 @@ function init() {
 				{ title: 'Server Key', name: 'vpn_'+t+'_key', type: 'textarea', value: eval('nvram.vpn_'+t+'_key'),
 					prefix: '<div id="'+t+'_key_progress_div" style="display: none"><p class="keyhelp">Please wait - generating key...<img src="spin.gif" alt=""><\/p><\/div>' },
 				{ title: 'CRL file', name: 'vpn_'+t+'_crl', type: 'textarea', value: eval('nvram.vpn_'+t+'_crl') },
-				{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
+				{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' }
+			]);
+			createFieldTable('', [
+				null,
 				{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval('nvram.vpn_'+t+'_dh'),
 					prefix: '<div id="'+t+'_dh_progress_div" style="display:none"><p class="keyhelp">Please wait - generating DH parameters...<img src="spin.gif" alt=""><\/p><\/div>' },
-				{ title: '', custom: '<input type="button" value="Generate DH Params" onclick="generateDHParams('+(i+1)+')" id="_vpn_dhgen_'+t+'_button">' },
+				{ title: '', custom: '<input type="button" value="Generate DH Params" onclick="generateDHParams('+(i+1)+')" id="_vpn_dhgen_'+t+'_button">' }
+			]);
+			createFieldTable('', [
 				null,
-				{ title: 'Serial number', name: 'vpn_'+t+'_serial', type: 'text', maxlen: 2, size: 2, value: eval('nvram.vpn_'+t+'_serial') },
+				{ title: 'Serial number', custom: '<input type="text" name="vpn_'+t+'_serial" value="00" maxlength="2" size="2" id="_vpn_'+t+'_serial">' },
+				{ title: 'User', custom: '<select name="vpn_'+t+'_usergen" id="_vpn_'+t+'_usergen"><\/select>' },
 				{ title: '', custom: '<input type="button" value="Generate client config" onclick="downloadClientConfig('+(i+1)+')" id="_vpn_client_gen_'+t+'_button">',
 					suffix: '<div id="'+t+'_gen_progress_div" style="display:none"><p class="keyhelp">Please wait while the configuration is being generated...<img src="spin.gif" alt=""><\/p><\/div>' }
 			]);

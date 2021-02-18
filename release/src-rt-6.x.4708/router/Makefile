@@ -2623,11 +2623,7 @@ e2fsprogs-install:
 	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/e2fsck
 	install -D e2fsprogs/misc/mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mke2fs
 	install -D e2fsprogs/misc/tune2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/tune2fs
-ifneq ($(TCONFIG_BCMARM),y)
-ifeq ($(TCONFIG_AIO),y)
 	install -D e2fsprogs/misc/badblocks $(INSTALLDIR)/e2fsprogs/usr/sbin/badblocks
-endif
-endif
 	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/sbin/*
 	install -D e2fsprogs/lib/libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1.0
 	install -D e2fsprogs/lib/libcom_err.so.2.1 $(INSTALLDIR)/e2fsprogs/usr/lib/libcom_err.so.2.1
@@ -2741,10 +2737,10 @@ snmp/stamp-h1:
 			host/hr_device,host/hr_disk,host/hr_filesys,host/hr_network,host/hr_partition,host/hr_print,host/hr_proc,host/hrSWRunTable,host/hr_storage,host/hr_system,\
 			mibII/at,mibII/icmp,mibII/ifTable,mibII/ip,mibII/ipAddr,mibII/kernel_linux,mibII/snmp_mib,mibII/sysORTable,mibII/system_mib,mibII/tcp,mibII/udp,mibII/vacm_context,mibII/vacm_vars,mibII/var_route,\
 			ucd-snmp/disk_hw,ucd-snmp/dlmod,ucd-snmp/extensible,ucd-snmp/loadave,ucd-snmp/logmatch,ucd-snmp/memory,ucd-snmp/pass,ucd-snmp/proc,ucd-snmp/proxy,ucd-snmp/vmstat,\
-			util_funcs"\
-		--with-default-snmp-version=3 --with-sys-contact=root --with-sys-location=Unknown \
+			util_funcs,if-mib/ifXTable,ip-mib/inetNetToMediaTable"\
+		--with-default-snmp-version=2 --with-sys-contact=root --with-sys-location=Unknown \
 		--with-endianness=little --enable-mini-agent --enable-shared=no --enable-static --with-gnu-ld \
-		--enable-internal-md5 --with-defaults --with-copy-persistent-files=no
+		--enable-internal-md5 --enable-mfd-rewrites --with-defaults --with-copy-persistent-files=no
 	@touch $@
 
 snmp: snmp/stamp-h1

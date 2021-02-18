@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,ne_snat,emf_enable,force_igmpv2"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -38,17 +38,15 @@ function verifyFields(focused, quiet) {
 	E('_f_multicast_lan2').disabled = ((!enable_mcast) || (nvram.lan2_ifname.length < 1));
 	E('_f_multicast_lan3').disabled = ((!enable_mcast) || (nvram.lan3_ifname.length < 1));
 	E('_f_multicast_quickleave').disabled = (!enable_mcast);
-	if(nvram.lan_ifname.length < 1)
-		E('_f_multicast_lan').checked = false;
 
-	if(nvram.lan1_ifname.length < 1)
-		E('_f_multicast_lan1').checked = false;
-
-	if(nvram.lan2_ifname.length < 1)
-		E('_f_multicast_lan2').checked = false;
-
-	if(nvram.lan3_ifname.length < 1)
-		E('_f_multicast_lan3').checked = false;
+	if (nvram.lan_ifname.length < 1)
+		E('_f_multicast_lan').checked = 0;
+	if (nvram.lan1_ifname.length < 1)
+		E('_f_multicast_lan1').checked = 0;
+	if (nvram.lan2_ifname.length < 1)
+		E('_f_multicast_lan2').checked = 0;
+	if (nvram.lan3_ifname.length < 1)
+		E('_f_multicast_lan3').checked = 0;
 
 	var mcast_lan = E('_f_multicast_lan').checked;
 	var mcast_lan1 = E('_f_multicast_lan1').checked;
@@ -58,25 +56,22 @@ function verifyFields(focused, quiet) {
 /* disable multicast_custom textarea if lanX is checked / selected */
 	E('_multicast_custom').disabled = ((!enable_mcast) ||  (mcast_lan) || (mcast_lan1) || (mcast_lan2) || (mcast_lan3));
 /* check if more than 50 charactars are in the textarea (no plausibility test) */
-	if (!E('_multicast_custom').disabled && v_length('_multicast_custom', 1, 50, 2048)) {
+	if (!E('_multicast_custom').disabled && v_length('_multicast_custom', 1, 50, 2048))
 		mcast_custom_enable = 1;
-	}
-	else {
+	else
 		mcast_custom_enable = 0;
-	}
+
 /* IGMP proxy enable checked but no lanX checked and no custom config */
 	if ((enable_mcast) && (!mcast_lan) && (!mcast_lan1) && (!mcast_lan2) && (!mcast_lan3) && (!mcast_custom_enable)) {
 		ferror.set('_f_multicast', 'IGMP proxy must be enabled in least one LAN bridge OR you have to use custom configuration', quiet);
 		return 0;
-/* IGMP proxy enable checked but custom config / textarea length not OK */
 	}
-	else if ((enable_mcast) && (mcast_custom_enable) && !v_length('_multicast_custom', quiet, 0, 2048)) {
+/* IGMP proxy enable checked but custom config / textarea length not OK */
+	else if ((enable_mcast) && (mcast_custom_enable) && !v_length('_multicast_custom', quiet, 0, 2048))
 		return 0;
 /* IGMP proxy clear */
-	}
-	else {
+	else
 		ferror.clear('_f_multicast');
-	}
 
 /* udpxy */
 	var enable_udpxy = E('_f_udpxy_enable').checked;
@@ -87,19 +82,16 @@ function verifyFields(focused, quiet) {
 	E('_f_udpxy_stats').disabled = !enable_udpxy;
 	E('_f_udpxy_clients').disabled = !enable_udpxy;
 	E('_f_udpxy_port').disabled = !enable_udpxy;
+	E('_f_udpxy_wanface').disabled = !enable_udpxy;
 
-	if(nvram.lan_ifname.length < 1) {
-		E('_f_udpxy_lan').checked = false;
-	}
-	if(nvram.lan1_ifname.length < 1) {
-		E('_f_udpxy_lan1').checked = false;
-	}
-	if(nvram.lan2_ifname.length < 1) {
-		E('_f_udpxy_lan2').checked = false;
-	}
-	if(nvram.lan3_ifname.length < 1) {
-		E('_f_udpxy_lan3').checked = false;
-	}
+	if (nvram.lan_ifname.length < 1)
+		E('_f_udpxy_lan').checked = 0;
+	if (nvram.lan1_ifname.length < 1)
+		E('_f_udpxy_lan1').checked = 0;
+	if (nvram.lan2_ifname.length < 1)
+		E('_f_udpxy_lan2').checked = 0;
+	if (nvram.lan3_ifname.length < 1)
+		E('_f_udpxy_lan3').checked = 0;
 
 	var udpxy_lan = E('_f_udpxy_lan').checked ? 1 : 0;
 	var udpxy_lan1 = E('_f_udpxy_lan1').checked ? 1 : 0;
@@ -113,9 +105,8 @@ function verifyFields(focused, quiet) {
 		return 0;
 /* udpxy clear */
 	}
-	else {
+	else
 		ferror.clear('_f_udpxy_enable');
-	}
 
 	return 1;
 }
@@ -126,42 +117,43 @@ function save() {
 	if (!verifyFields(null, 0)) return;
 
 	fom = E('t_fom');
-	fom.block_wan.value = E('_f_icmp').checked ? 0 : 1;
-	fom.block_wan_limit.value = E('_f_icmp_limit').checked? 1 : 0;
-	fom.block_wan_limit_icmp.value = E('_f_icmp_limit_icmp').value;
+	fom.block_wan.value = fom._f_icmp.checked ? 0 : 1;
+	fom.block_wan_limit.value = fom._f_icmp_limit.checked? 1 : 0;
+	fom.block_wan_limit_icmp.value = fom._f_icmp_limit_icmp.value;
 
-	fom.ne_syncookies.value = E('_f_syncookies').checked ? 1 : 0;
-	fom.DSCP_fix_enable.value = E('_f_DSCP_fix_enable').checked ? 1 : 0;
-	fom.ipv6_ipsec.value = E('_f_ipv6_ipsec').checked ? 1 : 0;
-	fom.multicast_pass.value = E('_f_multicast').checked ? 1 : 0;
-	fom.multicast_lan.value = E('_f_multicast_lan').checked ? 1 : 0;
-	fom.multicast_lan1.value = E('_f_multicast_lan1').checked ? 1 : 0;
-	fom.multicast_lan2.value = E('_f_multicast_lan2').checked ? 1 : 0;
-	fom.multicast_lan3.value = E('_f_multicast_lan3').checked ? 1 : 0;
-	fom.multicast_quickleave.value = E('_f_multicast_quickleave').checked ? 1 : 0;
-	fom.udpxy_enable.value = E('_f_udpxy_enable').checked ? 1 : 0;
-	fom.udpxy_lan.value = E('_f_udpxy_lan').checked ? 1 : 0;
-	fom.udpxy_lan1.value = E('_f_udpxy_lan1').checked ? 1 : 0;
-	fom.udpxy_lan2.value = E('_f_udpxy_lan2').checked ? 1 : 0;
-	fom.udpxy_lan3.value = E('_f_udpxy_lan3').checked ? 1 : 0;
-	fom.udpxy_stats.value = E('_f_udpxy_stats').checked ? 1 : 0;
-	fom.udpxy_clients.value = E('_f_udpxy_clients').value;
-	fom.udpxy_port.value = E('_f_udpxy_port').value;
+	fom.ne_syncookies.value = fom._f_syncookies.checked ? 1 : 0;
+	fom.DSCP_fix_enable.value = fom._f_DSCP_fix_enable.checked ? 1 : 0;
+	fom.ipv6_ipsec.value = fom._f_ipv6_ipsec.checked ? 1 : 0;
+	fom.multicast_pass.value = fom._f_multicast.checked ? 1 : 0;
+	fom.multicast_lan.value = fom._f_multicast_lan.checked ? 1 : 0;
+	fom.multicast_lan1.value = fom._f_multicast_lan1.checked ? 1 : 0;
+	fom.multicast_lan2.value = fom._f_multicast_lan2.checked ? 1 : 0;
+	fom.multicast_lan3.value = fom._f_multicast_lan3.checked ? 1 : 0;
+	fom.multicast_quickleave.value = fom._f_multicast_quickleave.checked ? 1 : 0;
+	fom.udpxy_enable.value = fom._f_udpxy_enable.checked ? 1 : 0;
+	fom.udpxy_lan.value = fom._f_udpxy_lan.checked ? 1 : 0;
+	fom.udpxy_lan1.value = fom._f_udpxy_lan1.checked ? 1 : 0;
+	fom.udpxy_lan2.value = fom._f_udpxy_lan2.checked ? 1 : 0;
+	fom.udpxy_lan3.value = fom._f_udpxy_lan3.checked ? 1 : 0;
+	fom.udpxy_stats.value = fom._f_udpxy_stats.checked ? 1 : 0;
+	fom.udpxy_clients.value = fom._f_udpxy_clients.value;
+	fom.udpxy_port.value = fom._f_udpxy_port.value;
+	fom.udpxy_wanface.value = fom._f_udpxy_wanface.value;
 
 /* EMF-BEGIN */
-	fom.emf_enable.value = E('_f_emf').checked ? 1 : 0;
+	fom.emf_enable.value = fom._f_emf.checked ? 1 : 0;
 	if (fom.emf_enable.value != nvram.emf_enable)
 		fom._service.value = '*';
 /* EMF-END */
-	fom.force_igmpv2.value = E('_f_force_igmpv2').checked ? 1 : 0;
+	fom.force_igmpv2.value = fom._f_force_igmpv2.checked ? 1 : 0;
 
 	form.submit(fom, 1);
 }
 
 function init() {
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "notes");
-	}
+
 	eventHandler();
 }
 </script>
@@ -202,6 +194,7 @@ function init() {
 <input type="hidden" name="udpxy_stats">
 <input type="hidden" name="udpxy_clients">
 <input type="hidden" name="udpxy_port">
+<input type="hidden" name="udpxy_wanface">
 <input type="hidden" name="emf_enable">
 <input type="hidden" name="force_igmpv2">
 
@@ -214,10 +207,10 @@ function init() {
 			{ title: 'WAN interfaces respond to Ping and Traceroute', name: 'f_icmp', type: 'checkbox', value: nvram.block_wan == '0' },
 			{ title: 'Limit communication to', multi: [
 				{ name: 'f_icmp_limit', type: 'checkbox', value: nvram.block_wan_limit != '0' },
-				{ name: 'f_icmp_limit_icmp', type: 'text', maxlen: 3, size: 3, prefix: ' &nbsp;', suffix: ' <small>request per second<\/small>', value: fixInt(nvram.block_wan_limit_icmp || 1, 1, 300, 5) } ] },
+				{ name: 'f_icmp_limit_icmp', type: 'text', maxlen: 3, size: 3, prefix: ' &nbsp;', suffix: ' &nbsp;<small>request per second<\/small>', value: fixInt(nvram.block_wan_limit_icmp || 1, 1, 300, 5) } ] },
 			null,
 			{ title: 'Enable TCP SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
-			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' <small>fixes Comcast incorrect DSCP<\/small>' },
+			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' &nbsp;<small>fixes Comcast incorrect DSCP<\/small>' },
 			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' }
 		]);
 	</script>
@@ -250,6 +243,7 @@ function init() {
 			{ title: '<a href="https://github.com/pali/igmpproxy" class="new_window">IGMP proxy<\/a><br>Custom configuration', name: 'multicast_custom', type: 'textarea', value: nvram.multicast_custom },
 			null,
 			{ title: 'Enable Udpxy', name: 'f_udpxy_enable', type: 'checkbox', value: (nvram.udpxy_enable == '1') },
+			{ title: 'Upstream interface', indent: 2, name: 'f_udpxy_wanface', type: 'text', maxlen: 8, size: 8, value: nvram.udpxy_wanface, suffix: ' &nbsp;<small>leave empty for default</small>' },
 			{ title: 'LAN', indent: 2, name: 'f_udpxy_lan', type: 'checkbox', value: (nvram.udpxy_lan == '1') },
 			{ title: 'LAN1', indent: 2, name: 'f_udpxy_lan1', type: 'checkbox', value: (nvram.udpxy_lan1 == '1') },
 			{ title: 'LAN2', indent: 2, name: 'f_udpxy_lan2', type: 'checkbox', value: (nvram.udpxy_lan2 == '1') },
@@ -259,7 +253,7 @@ function init() {
 			{ title: 'Udpxy port', indent: 2, name: 'f_udpxy_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.udpxy_port, 4022) },
 			null,
 /* EMF-BEGIN */
-			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' <small><a href="https://en.wikipedia.org/wiki/Universal_Plug_and_Play#IGMP_snooping_and_reliability" class="new_window">Read first!<\/a><\/small>' },
+			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' &nbsp;<small><a href="https://en.wikipedia.org/wiki/Universal_Plug_and_Play#IGMP_snooping_and_reliability" class="new_window">Read first!<\/a><\/small>' },
 /* EMF-END */
 			{ title: 'Force IGMPv2', name: 'f_force_igmpv2', type: 'checkbox', value: nvram.force_igmpv2 != '0' }
 		]);
@@ -281,6 +275,7 @@ function init() {
 
 	<i>Udpxy:</i><br>
 	<ul>
+		<li><b>Upstream interface</b> - As one use case for it is to access IPTV which is often delivered via multicast by the ISP but outside of the (PPPoE,etc) session.</li>
 		<li><b>LAN / LAN1 / LAN2 / LAN3</b> - Select one interface br0 / br1 / br2 / br3 to listen on.</li>
 		<li><b>Status</b> - To display udpxy status, please go to http://lanaddress:port/status/.</li>
 		<li><b>Other hints</b> - If Udpxy is enabled and no interface is selected default address (0.0.0.0) will be used.</li>
