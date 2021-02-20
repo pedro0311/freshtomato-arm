@@ -53,6 +53,8 @@ function save() {
 
 	if (fom.debug_logsegfault.value != nvram.debug_logsegfault)
 		fom._service.value = 'firewall-restart';
+	else
+		fom._service.value = '';
 
 	form.submit(fom, 1);
 }

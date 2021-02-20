@@ -72,6 +72,7 @@ function toggle(service, isup) {
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
 	fom._nofootermsg.value = 1;
+	fom._nextwait.value = 2;
 
 	form.submit(fom, 1, 'service.cgi');
 }
@@ -284,6 +285,8 @@ function save() {
 	    (fom._set_password_1.value == "**********") && (fom._sshd_rport.value == nvram.sshd_rport) && (fom._sshd_port.value == nvram.sshd_port) && (fom._sshd_authkeys.value == nvram.sshd_authkeys)) {
 		fom._service.value = 'adminnosshd-restart';
 	}
+	else
+		fom._service.value = 'admin-restart';
 
 	fom.rmgt_sip.value = fom.f_rmgt_sip.value.split(/\s*,\s*/).join(',');
 
@@ -297,6 +300,7 @@ function save() {
 	}
 	fom.web_mx.value = a.join(',');
 	fom._nofootermsg.value = 0;
+	fom._nextwait.value = 15;
 
 	localStorage.clear();
 
@@ -330,8 +334,8 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="admin-access.asp">
-<input type="hidden" name="_nextwait" value="15">
-<input type="hidden" name="_service" value="admin-restart">
+<input type="hidden" name="_nextwait" value="">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="http_enable">
 <!-- HTTPS-BEGIN -->

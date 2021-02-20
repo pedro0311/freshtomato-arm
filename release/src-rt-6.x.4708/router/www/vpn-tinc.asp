@@ -93,6 +93,7 @@ function toggle(service, isup) {
 	var fom = E('t_fom');
 	fom._nofootermsg.value = 1;
 	fom._service.value = service+(isup ? '-stop' : '-start');
+
 	form.submit(fom, 1, 'service.cgi');
 }
 
