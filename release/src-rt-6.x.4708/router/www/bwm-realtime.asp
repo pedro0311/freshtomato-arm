@@ -110,7 +110,7 @@ function init() {
 	if (nvram.rstats_enable != '1') return;
 	speed_history = [];
 
-	initCommon(2, 1, 1, 1);
+	initCommon(2, 1, 0, 1);
 
 	wdogWarn = E('warnwd');
 	watchdogReset();
