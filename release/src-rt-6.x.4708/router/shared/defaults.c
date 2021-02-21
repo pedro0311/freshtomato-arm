@@ -889,7 +889,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "rstats_stime",		"48"				, 0 },
 	{ "rstats_offset",		"1"				, 0 },
 	{ "rstats_data",		""				, 0 },
-	{ "rstats_colors",		""				, 0 },
 	{ "rstats_exclude",		""				, 0 },
 	{ "rstats_sshut",		"1"				, 0 },
 	{ "rstats_bak",			"0"				, 0 },
