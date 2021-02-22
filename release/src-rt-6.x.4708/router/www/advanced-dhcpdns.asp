@@ -261,8 +261,9 @@ function save() {
 
 	if ((fom.wan_wins.value != nvram.wan_wins)) { /* special case: restart vpnservers/pptpd if up */
 		nvram.wan_wins = fom.wan_wins.value;
-/* OPENVPN-BEGIN */
+
 		if (fom._service.value != '*') {
+/* OPENVPN-BEGIN */
 			if (isup.vpnserver1)
 				fom._service.value += ',vpnserver1-restart';
 			if (isup.vpnserver2)
