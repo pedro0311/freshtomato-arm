@@ -49,31 +49,34 @@ function E(id) {
 
 function pad(n) {
 	n = n.toString();
-	while (n.length < 2) n = '0' + n;
+	while (n.length < 2) n = '0'+n;
 	return n;
 }
 
 function xps(n) {
 	if (unit == 0) {
 		n /= 1024;
-		return (n * 8).toFixed(2) + ' kbit/s (' + n.toFixed(2) + ' KB/s)';
+		return (n * 8).toFixed(2)+' kbit/s ('+n.toFixed(2)+' KB/s)';
 	}
 	else {
 		n /= (1024 * 1024);
-		return (n * 8).toFixed(2) + ' Mbit/s (' + n.toFixed(2) + ' MB/s)';
+		return (n * 8).toFixed(2)+' Mbit/s ('+n.toFixed(2)+' MB/s)';
 	}
 }
 
 function setText(e, text) {
 	/* Adobe/IE doesn't do textContent= */
-	if (e.firstChild) e.removeChild(e.firstChild);
+	if (e.firstChild)
+		e.removeChild(e.firstChild);
+
 	e.appendChild(document.createTextNode(text));
 }
 
 function init(evt) {
 	var n;
 
-	if (typeof(svgDocument) == 'undefined') svgDocument = evt.target.ownerDocument;
+	if (typeof(svgDocument) == 'undefined')
+		svgDocument = evt.target.ownerDocument;
 
 	crossX = E('svg-crossX');
 	crossY = E('svg-crossY');
@@ -88,17 +91,16 @@ function init(evt) {
 	maxText = E('svg-maxText');
 
 	tickLines = [];
-	for (n = 0; n < 24; ++n) {
-		tickLines[n] = E('tick' + n);
-	}
+	for (n = 0; n < 24; ++n)
+		tickLines[n] = E('tick'+n);
+
 	tickHours = [];
-	for (n = 0; n < 12; ++n) {
-		tickHours[n] = E('h' + n);
-	}
+	for (n = 0; n < 12; ++n)
+		tickHours[n] = E('h'+n);
 
 	xpst = [];
 	for (n = 0; n < 3; ++n)
-		xpst[n] = E('xpst' + n);
+		xpst[n] = E('xpst'+n);
 
 	time24 = ((new Date(2000, 0, 1, 23, 0, 0, 0)).toLocaleString().indexOf('23') != -1);
 
@@ -107,7 +109,8 @@ function init(evt) {
 	top.initData();
 
 	if (nvram.web_adv_scripts == 1) {
-		if (typeof resize_graph !== 'undefined') resize_graph();
+		if (typeof resize_graph !== 'undefined')
+			resize_graph();
 	}
 }
 
@@ -117,12 +120,13 @@ function drawData(poly, data, mode, color) {
 	var x, y;
 	var d, j;
 
-	if (data.length == 0) return;
+	if (data.length == 0)
+		return;
 
 	x = 0;
 	if (mode == 0) {
 		poly.setAttribute('fill-opacity', '0.5');
-		pt = '0,' + vHeight;
+		pt = '0,'+vHeight;
 	}
 	else {
 		poly.setAttribute('fill-opacity', '0');
@@ -132,24 +136,23 @@ function drawData(poly, data, mode, color) {
 	poly.setAttribute('fill', color);
 
 	for (i = data.length - maxL; i < data.length; ++i) {
-		if (i < 0) {
+		if (i < 0)
 			d = 0;
-		}
 		else if (i >= samp) {
 			d = 0;
-			for (j = samp - 1; j >= 0; --j) {
+			for (j = samp - 1; j >= 0; --j)
 				d += data[i - j];
-			}
+
 			d /= (dataDiv * samp);
 		}
-		else {
+		else
 			d = data[i] / dataDiv;
-		}
-		y = (vHeight - Math.floor((d * vHeight) / maxV))
-		pt += ' ' + Math.floor(x) + ',' + y;
+
+		y = (vHeight - Math.floor((d * vHeight) / maxV));
+		pt += ' '+Math.floor(x)+','+y;
 		x += advX;
 	}
-	pt += ' ' + (vWidth + 5) + ',' + y + ' ' + (vWidth + 10) + ',' + vHeight;
+	pt += ' '+(vWidth+5)+','+y+' '+(vWidth + 10)+','+vHeight;
 	poly.setAttribute('points', pt);
 }
 
@@ -166,7 +169,6 @@ function updateSVG(rxData, txData, maxValue, mode, rxColor, txColor, intv, maxLe
 	unit = unitSamp;
 
 	tockD = clock;
-//	tockD = new Date();
 	tock = tockD.getTime();
 
 	if (intv < 60) {
@@ -218,23 +220,26 @@ function updateSVG(rxData, txData, maxValue, mode, rxColor, txColor, intv, maxLe
 		return;
 	}
 
-	if (crossV > 0) drawCross(crossH, vHeight - Math.floor((crossV / maxV) * vHeight));
+	if (crossV > 0)
+		drawCross(crossH, vHeight - Math.floor((crossV / maxV) * vHeight));
+
 	drawData(polyRx, rxData, mode, rxColor);
 	drawData(polyTx, txData, mode, txColor);
 
-	setText(maxText, xps(maxV) + ' >');
+	setText(maxText, xps(maxV)+' >');
 
 	setText(xpst[0], xps(maxV * 0.75));
 	setText(xpst[1], xps(maxV * 0.5));
 	setText(xpst[2], xps(maxV * 0.25));
 
 	if (eraseL > 0) {
-		if (--eraseL == 0) pointG.setAttribute('display', 'none');
+		if (--eraseL == 0)
+			pointG.setAttribute('display', 'none');
 	}
 }
 
 function vY(y) {
-	return maxV - (maxV * (y / vHeight))
+	return maxV - (maxV * (y / vHeight));
 }
 
 function pointTime(x) {
@@ -242,13 +247,12 @@ function pointTime(x) {
 
 	t = new Date(tock - (Math.round((vWidth - x - 1) / advX) * interval * 1000));
 	h = t.getHours();
-	s = week[t.getDay()] + ' ';
-	if (time24) {
-		s += pad(h) + ':' + pad(t.getMinutes());
-	}
+	s = week[t.getDay()]+' ';
+	if (time24)
+		s += pad(h)+':'+pad(t.getMinutes());
 	else {
 		hh = h % 12;
-		s += pad((hh == 0) ? 12 : hh) + ':' + pad(t.getMinutes()) + ((h < 12) ? ' am' : ' pm');
+		s += pad((hh == 0) ? 12 : hh)+':'+pad(t.getMinutes())+((h < 12) ? ' am' : ' pm');
 	}
 
 	return s;
@@ -257,7 +261,9 @@ function pointTime(x) {
 function mMove(evt) {
 	var x;
 
-	if (maxV <= 0) return;
+	if (maxV <= 0)
+		return;
+
 	if (evt.clientX > (vWidth - 210)) {
 		if (pointLoc == 0) {
 			if (evt.clientY < 30) {
@@ -273,13 +279,16 @@ function mMove(evt) {
 		}
 	}
 
-	setText(pointText, pointTime(evt.clientX) + ' / ' + xps(vY(evt.clientY)));
+	setText(pointText, pointTime(evt.clientX)+' / '+xps(vY(evt.clientY)));
+
+	if (eraseL == 0)
+		pointG.setAttribute('display', 'block');
 
 	x = pointText.getComputedTextLength();
 	pointG.setAttribute('x', (vWidth - x) - 20);
 	pointG.setAttribute('width', x + 14);
 	pointTextBack.setAttribute('width', x + 14);
-	if (eraseL == 0) pointG.setAttribute('display', 'block');
+
 	eraseL = 5;
 }
 
@@ -327,22 +336,22 @@ function mClick(evt) {
 		ignoreNext = 0;
 		return;
 	}
-	if (maxV <= 0) return;
+	if (maxV <= 0)
+		return;
 
 	crossH = evt.clientX;
 	crossV = vY(evt.clientY);
 	setText(crossText, xps(crossV));
 	setText(crossTime, pointTime(crossH));
-	drawCross(evt.clientX, evt.clientY);
 
 	E('cross').setAttribute('display', (evt.clientY > (vHeight - 20)) ? 'none' : 'block');
+	drawCross(evt.clientX, evt.clientY);
 }
 
 function toggleXpst() {
 	E('svg-xpst').setAttribute('display', (xpstVis ^= 1) ? 'block' : 'none');
 	ignoreNext = 1;
 }
-
 ]]></script>
 <rect x="0" y="0" width="100%" height="100%" class="svg-rect" />
 
