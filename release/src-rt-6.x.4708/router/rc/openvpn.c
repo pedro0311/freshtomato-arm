@@ -943,8 +943,6 @@ void start_ovpn_server(int unit)
 			sprintf(buffer, "vpn_server%d_ccd_excl", unit);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
-			else
-				fprintf(fp, "duplicate-cn\n");
 
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, OVPN_DIR"/server%d/ccd", unit);
