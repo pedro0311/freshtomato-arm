@@ -1011,7 +1011,7 @@ void start_ovpn_server(int unit)
 		sprintf(buffer, "vpn_server%d_userpass", unit);
 		if (nvram_get_int(buffer)) {
 			fprintf(fp, "plugin /lib/openvpn_plugin_auth_nvram.so vpn_server%d_users_val\n"
-			            "script-security 2\n"
+			            "script-security 2\n",
 			            unit);
 
 			memset(buffer, 0, BUF_SIZE);
