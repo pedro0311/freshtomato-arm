@@ -341,8 +341,8 @@ function show() {
 
 		elem.display('b'+u+'_codi', show_codi[uidx - 1]);
 		if (show_codi[uidx - 1]) {
-			E('b'+u+'_connect').disabled = stats.wanup[uidx - 1];
-			E('b'+u+'_disconnect').disabled = !stats.wanup[uidx - 1];
+			E('b'+u+'_connect').disabled = (stats.wanup[uidx - 1] || (!stats.wanup[uidx - 1] && stats.wanstatus[uidx - 1].substring(3, 13) == 'Connecting'));
+			E('b'+u+'_disconnect').disabled = (!stats.wanup[uidx - 1] && stats.wanstatus[uidx - 1].substring(3, 13) != 'Connecting');
 		}
 	}
 
