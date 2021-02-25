@@ -1573,7 +1573,7 @@ void stop_zebra(void)
 
 void start_syslog(void)
 {
-	char *argv[16];
+	char *argv[18];
 	int argc;
 	char *nv;
 	char *b_opt = "";
@@ -1588,6 +1588,9 @@ void start_syslog(void)
 
 	argv[0] = "syslogd";
 	argc = 1;
+
+	if (nvram_get_int("log_dropdups"))
+		argv[argc++] = "-D";
 
 	if (nvram_get_int("log_remote")) {
 		nv = nvram_safe_get("log_remoteip");

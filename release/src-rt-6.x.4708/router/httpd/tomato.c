@@ -1267,6 +1267,7 @@ static const nvset_t nvset_list[] = {
 	{ "log_out",			V_RANGE(0, 3)			},
 	{ "log_mark",			V_RANGE(0, 99999)		},
 	{ "log_events",			V_TEXT(0, 32)			},	// "acre,crond,ntp"
+	{ "log_dropdups",		V_01				},	/* drop duplicates? */
 
 // admin-log-webmonitor
 	{ "log_wm",			V_01				},

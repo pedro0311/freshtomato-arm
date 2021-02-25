@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("log_remote,log_remoteip,log_remoteport,log_file,log_file_custom,log_file_path,log_limit,log_in,log_out,log_mark,log_events,log_wm,log_wmtype,log_wmip,log_wmdmax,log_wmsmax,log_file_size,log_file_keep,webmon_bkp,webmon_dir,webmon_shrink"); %>
+//	<% nvram("log_remote,log_remoteip,log_remoteport,log_file,log_file_custom,log_file_path,log_limit,log_in,log_out,log_mark,log_events,log_wm,log_wmtype,log_wmip,log_wmdmax,log_wmsmax,log_file_size,log_file_keep,log_dropdups,webmon_bkp,webmon_dir,webmon_shrink"); %>
 
 function verifyFields(focused, quiet) {
 	var a, b, c;
@@ -37,6 +37,7 @@ function verifyFields(focused, quiet) {
 	E('_f_log_dhcpc').disabled = a;
 	E('_f_log_ntp').disabled = a;
 	E('_f_log_sched').disabled = a;
+	E('_f_log_dropdups').disabled = a;
 
 	elem.display(PR('_log_remoteip'), b);
 	E('_log_remoteip').disabled = !b;
@@ -46,28 +47,33 @@ function verifyFields(focused, quiet) {
 	E('_log_file_path').disabled = !c || !E('_f_log_file').checked;
 
 	if (!a) {
-		if (!v_range('_log_limit', quiet, 0, 2400)) return 0;
-		if (!v_range('_log_mark', quiet, 0, 99999)) return 0;
+		if (!v_range('_log_limit', quiet, 0, 2400))
+			return 0;
+		if (!v_range('_log_mark', quiet, 0, 99999))
+			return 0;
 		if (b) {
 			c = E('_log_remoteip');
 			if (!v_ip(c, 1) && !v_domain(c, 1)) {
-				if (!quiet) ferror.show(c);
+				if (!quiet)
+					ferror.show(c);
 				return 0;
 			}
-			if (!v_port('_log_remoteport', quiet)) return 0;
+			if (!v_port('_log_remoteport', quiet))
+				return 0;
 		}
 	}
 
 	if (E('_f_log_file').checked) {
 		E('_log_file_size').disabled = 0;
-		if (!v_range('_log_file_size', quiet, 0, 99999)) return 0;
+		if (!v_range('_log_file_size', quiet, 0, 99999))
+			return 0;
 		if (parseInt(E('_log_file_size').value) > 0) {
 			E('_log_file_keep').disabled = 0;
-			if (!v_range('_log_file_keep', quiet, 0, 99)) return 0;
+			if (!v_range('_log_file_keep', quiet, 0, 99))
+				return 0;
 		}
-		else {
+		else
 			E('_log_file_keep').disabled = 1;
-		}
 	}
 	else {
 		E('_log_file_size').disabled = 1;
@@ -88,10 +94,13 @@ function verifyFields(focused, quiet) {
 
 	if (a) {
 		if (b) {
-			if (!_v_iptaddr('_f_log_wmip', quiet, 15, 1, 1)) return 0;
+			if (!_v_iptaddr('_f_log_wmip', quiet, 15, 1, 1))
+				return 0;
 		}
-		if (!v_range('_log_wmdmax', quiet, 0, 9999)) return 0;
-		if (!v_range('_log_wmsmax', quiet, 0, 9999)) return 0;
+		if (!v_range('_log_wmdmax', quiet, 0, 9999))
+			return 0;
+		if (!v_range('_log_wmsmax', quiet, 0, 9999))
+			return 0;
 	}
 
 	return 1;
@@ -100,19 +109,26 @@ function verifyFields(focused, quiet) {
 function save() {
 	var a, fom;
 
-	if (!verifyFields(null, false)) return;
+	if (!verifyFields(null, 0))
+		return;
 
 	fom = E('t_fom');
+	fom.log_dropdups.value = E('_f_log_dropdups').checked ? 1 : 0;
 	fom.log_remote.value = E('_f_log_remote').checked ? 1 : 0;
 	fom.log_file.value = E('_f_log_file').checked ? 1 : 0;
 	fom.log_file_custom.value = E('_f_log_file_custom').checked ? 1 : 0;
 
 	a = [];
-	if (E('_f_log_acre').checked) a.push('acre');
-	if (E('_f_log_crond').checked) a.push('crond');
-	if (E('_f_log_dhcpc').checked) a.push('dhcpc');
-	if (E('_f_log_ntp').checked) a.push('ntp');
-	if (E('_f_log_sched').checked) a.push('sched');
+	if (E('_f_log_acre').checked)
+		a.push('acre');
+	if (E('_f_log_crond').checked)
+		a.push('crond');
+	if (E('_f_log_dhcpc').checked)
+		a.push('dhcpc');
+	if (E('_f_log_ntp').checked)
+		a.push('ntp');
+	if (E('_f_log_sched').checked)
+		a.push('sched');
 	fom.log_events.value = a.join(',');
 
 	fom.log_wm.value = E('_f_log_wm').checked ? 1 : 0;
@@ -141,6 +157,7 @@ function save() {
 <input type="hidden" name="_nextpage" value="admin-log.asp">
 <input type="hidden" name="_service" value="logging-restart">
 <input type="hidden" name="log_remote">
+<input type="hidden" name="log_dropdups">
 <input type="hidden" name="log_file">
 <input type="hidden" name="log_file_custom">
 <input type="hidden" name="log_events">
@@ -169,6 +186,7 @@ REMOVE-END */
 			{ title: 'Custom Log File Path', multi: [
 				{ name: 'f_log_file_custom', type: 'checkbox', value: nvram.log_file_custom == 1, suffix: '  ' },
 				{ name: 'log_file_path', type: 'text', maxlen: 50, size: 30, value: nvram.log_file_path, suffix: ' <small>(make sure the directory exists and is writable)<\/small>' } ] },
+			{ title: 'Drop dups', name: 'f_log_dropdups', type: 'checkbox', value: nvram.log_dropdups == 1 },
 			{ title: 'Log To Remote System', name: 'f_log_remote', type: 'checkbox', value: nvram.log_remote == 1 },
 			{ title: 'Host or IP Address / Port', indent: 2, multi: [
 				{ name: 'log_remoteip', type: 'text', maxlen: 32, size: 35, value: nvram.log_remoteip, suffix: ':' },
@@ -219,6 +237,6 @@ REMOVE-END */
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>verifyFields(null, 1);</script>
 </body>
 </html>
