@@ -446,7 +446,6 @@ function verifyFields(focused, quiet) {
 		_lan_gateway: 1
 	};
 
-	var proxy = (nvram.dnscrypt_proxy == '1' && nvram.dnscrypt_priority == '2') || (nvram.stubby_proxy == '1' && nvram.stubby_priority == '2');
 	var wanproto = new Array();
 	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
@@ -1039,7 +1038,7 @@ REMOVE-END */
 		else {
 			E('_wan'+u+'_dns_auto').options[0].disabled = 0;
 			/* disable DNS and set to Auto if dnscrypt/Stubby with No-Resolv is enabled (except for static proto) */
-			if (proxy) {
+			if ((nvram.dnscrypt_proxy == '1' && nvram.dnscrypt_priority == '2') || (nvram.stubby_proxy == '1' && nvram.stubby_priority == '2')) {
 				E('_wan'+u+'_dns_auto').value = '1';
 				E('_wan'+u+'_dns_auto').disabled = 1;
 				elem.display(E('dns'+u+'_faq'), 1);
