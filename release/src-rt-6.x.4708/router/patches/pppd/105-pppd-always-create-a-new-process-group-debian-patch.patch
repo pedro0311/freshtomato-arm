@@ -5,11 +5,9 @@ Subject: [PATCH] pppd: always create a new process group (Debian patch)
 
 ---
 
-diff --git pppd/pppd/main.c pppd/pppd/main.c
-index aa575d3..d60d625 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -433,6 +433,13 @@ main(argc, argv)
+@@ -431,6 +431,13 @@ main(argc, argv)
      }
  
      /*
@@ -23,7 +21,7 @@ index aa575d3..d60d625 100644
       * Initialize system-dependent stuff.
       */
      sys_init();
-@@ -786,8 +793,6 @@ detach()
+@@ -783,8 +790,6 @@ detach()
  	    create_linkpidfile(pid);
  	exit(0);		/* parent dies */
      }

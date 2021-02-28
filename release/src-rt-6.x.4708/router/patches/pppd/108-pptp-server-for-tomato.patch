@@ -5,7 +5,6 @@ Subject: [PATCH] PPTP Server for Tomato
 
 ---
 
-diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
 @@ -226,6 +226,7 @@ bool refuse_eap = 0;		/* Don't wanna aut
@@ -53,7 +52,6 @@ diff -daurpN pppd/pppd/auth.c pppd/pppd/auth.c
  	addrs = NULL;
  	secbuf[0] = 0;
  
-diff -daurpN pppd/pppd/chap-new.c pppd/pppd/chap-new.c
 --- pppd/pppd/chap-new.c
 +++ pppd/pppd/chap-new.c
 @@ -414,7 +414,13 @@ chap_verify_response(char *name, char *o
@@ -71,7 +69,6 @@ diff -daurpN pppd/pppd/chap-new.c pppd/pppd/chap-new.c
  	/* Get the secret that the peer is supposed to know */
  	if (!get_secret(0, name, ourname, (char *)secret, &secret_len, 1)) {
  		error("No CHAP secret found for authenticating %q", name);
-diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
 @@ -175,6 +175,8 @@ ipv6cp_options ipv6cp_gotoptions[NUM_PPP
@@ -131,7 +128,6 @@ diff -daurpN pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
  	}
  	break;
      }
-diff -daurpN pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
 --- pppd/pppd/ipv6cp.h
 +++ pppd/pppd/ipv6cp.h
 @@ -168,3 +168,6 @@ extern ipv6cp_options ipv6cp_allowoption
@@ -141,10 +137,9 @@ diff -daurpN pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
 +
 +extern char path_ipv6up[MAXPATHLEN];	/* pathname of ipv6-up script */
 +extern char path_ipv6down[MAXPATHLEN];	/* pathname of ipv6-down script */
-diff -daurpN pppd/pppd/main.c pppd/pppd/main.c
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -317,6 +317,10 @@ main(argc, argv)
+@@ -315,6 +315,10 @@ main(argc, argv)
  
      strlcpy(path_ipup, _PATH_IPUP, sizeof(path_ipup));
      strlcpy(path_ipdown, _PATH_IPDOWN, sizeof(path_ipdown));
@@ -155,28 +150,9 @@ diff -daurpN pppd/pppd/main.c pppd/pppd/main.c
  
      link_stats_valid = 0;
      new_phase(PHASE_INITIALIZE);
-@@ -1320,6 +1324,9 @@ static void check_time(void)
- 	struct sysinfo i;
-     struct callout *p;
- 	
-+	if(nochecktime)
-+		return;
-+
- 	gettimeofday(&t, NULL);
- 	sysinfo(&i);
- 	new_diff = t.tv_sec - i.uptime;
-diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
 --- pppd/pppd/options.c
 +++ pppd/pppd/options.c
-@@ -90,6 +90,7 @@ struct option_value {
- /*
-  * Option variables and default values.
-  */
-+bool	nochecktime = 0;	/* Don't check time */
- int	debug = 0;		/* Debug flag */
- int	kdebugflag = 0;		/* Tell kernel to print debug messages */
- int	default_device = 1;	/* Using /dev/tty or equivalent */
-@@ -104,6 +105,8 @@ bool	persist = 0;		/* Reopen link after
+@@ -104,6 +104,8 @@ bool	persist = 0;		/* Reopen link after
  char	our_name[MAXNAMELEN];	/* Our name for authentication purposes */
  bool	demand = 0;		/* do dial-on-demand */
  char	*ipparam = NULL;	/* Extra parameter for ip up/down scripts */
@@ -185,27 +161,9 @@ diff -daurpN pppd/pppd/options.c pppd/pppd/options.c
  int	idle_time_limit = 0;	/* Disconnect if idle for this many seconds */
  int	holdoff = 30;		/* # seconds to pause before reconnecting */
  bool	holdoff_specified;	/* true if a holdoff value has been given */
-@@ -197,6 +200,8 @@ static struct option_list *extra_options
-  * Valid arguments.
-  */
- option_t general_options[] = {
-+    { "nochecktime", o_bool, &nochecktime,
-+      "Don't check time", OPT_PRIO | 1 },
-     { "debug", o_int, &debug,
-       "Increase debugging level", OPT_INC | OPT_NOARG | 1 },
-     { "-d", o_int, &debug,
-diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -278,6 +278,7 @@ extern struct notifier *fork_notifier;	/
-  * Variables set by command-line options.
-  */
- 
-+extern bool	nochecktime;	/* Don't check time */
- extern int	debug;		/* Debug flag */
- extern int	kdebugflag;	/* Tell kernel to print debug messages */
- extern int	default_device;	/* Using /dev/tty or equivalent */
-@@ -308,6 +309,7 @@ extern char	remote_name[MAXNAMELEN]; /*
+@@ -308,6 +308,7 @@ extern char	remote_name[MAXNAMELEN]; /*
  extern bool	explicit_remote;/* remote_name specified with remotename opt */
  extern bool	demand;		/* Do dial-on-demand */
  extern char	*ipparam;	/* Extra parameter for ip up/down scripts */
@@ -213,7 +171,7 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  extern bool	cryptpap;	/* Others' PAP passwords are encrypted */
  extern int	idle_time_limit;/* Shut down link if idle for this long */
  extern int	holdoff;	/* Dead time before restarting */
-@@ -330,6 +332,9 @@ extern char	*bundle_name;	/* bundle name
+@@ -330,6 +331,9 @@ extern char	*bundle_name;	/* bundle name
  extern bool	dump_options;	/* print out option values */
  extern bool	dryrun;		/* check everything, print options, exit */
  extern int	child_wait;	/* # seconds to wait for children at end */
@@ -223,7 +181,6 @@ diff -daurpN pppd/pppd/pppd.h pppd/pppd/pppd.h
  
  #ifdef MAXOCTETS
  extern unsigned int maxoctets;	     /* Maximum octetes per session (in bytes) */
-diff -daurpN pppd/pppd/utils.c pppd/pppd/utils.c
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
 @@ -1048,6 +1048,11 @@ unlock()
