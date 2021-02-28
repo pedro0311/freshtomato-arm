@@ -921,7 +921,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "rstats_stime",		"48"				, 0 },
 	{ "rstats_offset",		"1"				, 0 },
 	{ "rstats_data",		""				, 0 },
-	{ "rstats_colors",		""				, 0 },
 	{ "rstats_exclude",		""				, 0 },
 	{ "rstats_sshut",		"1"				, 0 },
 	{ "rstats_bak",			"0"				, 0 },
@@ -979,6 +978,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "log_out",			"0"				, 0 },
 	{ "log_mark",			"60"				, 0 },
 	{ "log_events",			""				, 0 },
+	{ "log_dropdups",		"0"				, 0 },
 
 /* admin-log-webmonitor */
 	{ "log_wm",			"0"				, 0 },

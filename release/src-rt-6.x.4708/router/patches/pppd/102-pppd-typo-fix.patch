@@ -5,8 +5,6 @@ Subject: [PATCH] pppd: typo fix
 
 ---
 
-diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
-index 99eaa47..52617f7 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
 @@ -169,7 +169,7 @@ static option_t ccp_option_list[] = {

@@ -351,17 +351,7 @@ function initCommon(defAvg, defDrawMode, defDrawColor, defUnit) {
 	drawMode = fixInt(cookie.get(cprefix+'draw'), 0, 1, defDrawMode);
 	showDraw();
 
-	if (nvram['rstats_colors'] != null)
-		var c = nvram.rstats_colors.split(',');
-	else if (nvram['cstats_colors'] != null)
-		var c = nvram.cstats_colors.split(',');
-
-	while (c.length >= 3) {
-		c[0] = escapeHTML(c[0]);
-		colors.push(c.splice(0, 3));
-	}
-
-	c = (cookie.get(cprefix+'color') || '').split(',');
+	var c = (cookie.get(cprefix+'color') || '').split(',');
 	if (c.length == 2) {
 		drawColor = fixInt(c[0], 0, colors.length - 1, defDrawColor);
 		colorX = fixInt(c[1], 0, 1, 0);

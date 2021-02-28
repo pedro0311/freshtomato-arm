@@ -19,10 +19,12 @@
 
 */
 
+
 #include <arpa/inet.h>
 #include <tomato.h>
 #include <shared.h>
 #include "iptraffic.h"
+
 
 void asp_iptraffic(int argc, char **argv) {
 	char comma;
@@ -51,35 +53,38 @@ void asp_iptraffic(int argc, char **argv) {
 	web_puts("\n\niptraffic=[");
 	comma = ' ';
 
-	for(br=0 ; br<=3 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
-		if (br!=0)
-			bridge[0]+=br;
+		if (br != 0)
+			bridge[0] += br;
 		else
 			strcpy(bridge, "");
 
 		sprintf(name, "/proc/net/ipt_account/lan%s", bridge);
 
-		if ((a = fopen(name, "r")) == NULL) continue;
+		if ((a = fopen(name, "r")) == NULL)
+			continue;
 
-		fgets(sa, sizeof(sa), a); // network
+		fgets(sa, sizeof(sa), a); /* network */
 		while (fgets(sa, sizeof(sa), a)) {
-			if(sscanf(sa, 
-				"ip = %s bytes_src = %lu %*u %*u %*u %*u packets_src = %*u %lu %lu %lu %*u bytes_dst = %lu %*u %*u %*u %*u packets_dst = %*u %lu %lu %lu %*u time = %*u",
-					ip, &tx_bytes, &tp_tcp, &tp_udp, &tp_icmp, &rx_bytes, &rp_tcp, &rp_udp, &rp_icmp) != 9 ) continue;
-			if (find_word(exclude, ip)) continue ;
-			if ((tx_bytes > 0) || (rx_bytes > 0)){
+			if (sscanf(sa, "ip = %s bytes_src = %lu %*u %*u %*u %*u packets_src = %*u %lu %lu %lu %*u bytes_dst = %lu %*u %*u %*u %*u packets_dst = %*u %lu %lu %lu %*u time = %*u",
+			    ip, &tx_bytes, &tp_tcp, &tp_udp, &tp_icmp, &rx_bytes, &rp_tcp, &rp_udp, &rp_icmp) != 9)
+				continue;
+			if (find_word(exclude, ip))
+				continue;
+
+			if ((tx_bytes > 0) || (rx_bytes > 0)) {
 				strncpy(tmp.ipaddr, ip, INET_ADDRSTRLEN);
 				ptr = TREE_FIND(&tree, _Node, linkage, &tmp);
 				if (!ptr) {
 					ct_tcp = 0;
 					ct_udp = 0;
-				} else {
+				}
+				else {
 					ct_tcp = ptr->tcp_conn;
 					ct_udp = ptr->udp_conn;
 				}
-				web_printf("%c['%s', %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu]", 
-							comma, ip, rx_bytes, tx_bytes, rp_tcp, tp_tcp, rp_udp, tp_udp, rp_icmp, tp_icmp, ct_tcp, ct_udp);
+				web_printf("%c['%s', %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu]", comma, ip, rx_bytes, tx_bytes, rp_tcp, tp_tcp, rp_udp, tp_udp, rp_icmp, tp_icmp, ct_tcp, ct_udp);
 				comma = ',';
 			}
 		}
@@ -112,24 +117,27 @@ void iptraffic_conntrack_init() {
 	unsigned long mask[4];
 	unsigned short int br;
 
-	for(br=0 ; br<=3 ; br++) {
+	for(br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
-		if (br!=0)
-			bridge[0]+=br;
+		if (br != 0)
+			bridge[0] += br;
 		else
 			strcpy(bridge, "");
+
+		memset(sa, 0, 256);
 		sprintf(sa, "lan%s_ifname", bridge);
 
 		if (strcmp(nvram_safe_get(sa), "") != 0) {
+			memset(sa, 0, 256);
 			sprintf(sa, "lan%s_ipaddr", bridge);
 			rip[br] = inet_addr(nvram_safe_get(sa));
+
+			memset(sa, 0, 256);
 			sprintf(sa, "lan%s_netmask", bridge);
 			mask[br] = inet_addr(nvram_safe_get(sa));
 			lan[br] = rip[br] & mask[br];
-//			_dprintf("rip[%d]=%lu\n", br, rip[br]);
-//			_dprintf("mask[%d]=%lu\n", br, mask[br]);
-//			_dprintf("lan[%d]=%lu\n", br, lan[br]);
-		} else {
+		}
+		else {
 			mask[br] = 0;
 			rip[br] = 0;
 			lan[br] = 0;
@@ -138,21 +146,27 @@ void iptraffic_conntrack_init() {
 
 	const char conntrack[] = "/proc/net/ip_conntrack";
 
-	if ((a = fopen(conntrack, "r")) == NULL) return;
+	if ((a = fopen(conntrack, "r")) == NULL)
+		return;
 
-	ctvbuf(a);	// if possible, read in one go
+	ctvbuf(a); /* if possible, read in one go */
 
 	while (fgets(sa, sizeof(sa), a)) {
-		if (sscanf(sa, "%*s %u %u", &a_proto, &a_time) != 2) continue;
+		if (sscanf(sa, "%*s %u %u", &a_proto, &a_time) != 2)
+			continue;
+		if ((a_proto != 6) && (a_proto != 17))
+			continue;
+		if ((p = strstr(sa, "src=")) == NULL)
+			continue;
+		if (sscanf(p, "src=%s dst=%s %n", a_src, a_dst, &x) != 2)
+			continue;
 
-		if ((a_proto != 6) && (a_proto != 17)) continue;
-
-		if ((p = strstr(sa, "src=")) == NULL) continue;
-		if (sscanf(p, "src=%s dst=%s %n", a_src, a_dst, &x) != 2) continue;
 		p += x;
 
-		if ((p = strstr(p, "src=")) == NULL) continue;
-		if (sscanf(p, "src=%s dst=%s", b_src, b_dst) != 2) continue;
+		if ((p = strstr(p, "src=")) == NULL)
+			continue;
+		if (sscanf(p, "src=%s dst=%s", b_src, b_dst) != 2)
+			continue;
 
 		snprintf(sb, sizeof(sb), "%s %s %s %s", a_src, a_dst, b_src, b_dst);
 		remove_dups(sb, sizeof(sb));
@@ -162,27 +176,28 @@ void iptraffic_conntrack_init() {
 
 		foreach(ipaddr, sb, next) {
 			skip = 1;
-			for(br=0 ; br<=3 ; br++) {
+			for (br = 0; br < BRIDGE_COUNT; br++) {
 				if ((mask[br] != 0) && ((inet_addr(ipaddr) & mask[br]) == lan[br])) {
-						skip = 0;
-						break;
+					skip = 0;
+					break;
 				}
 			}
-			if (skip == 1) continue;
+			if (skip == 1)
+				continue;
 
 			strncpy(tmp.ipaddr, ipaddr, INET_ADDRSTRLEN);
 			ptr = TREE_FIND(&tree, _Node, linkage, &tmp);
 
 			if (!ptr) {
-				_dprintf("%s: new ip: %s\n", __FUNCTION__, ipaddr);
+				//_dprintf("%s: new ip: %s\n", __FUNCTION__, ipaddr);
 				TREE_INSERT(&tree, _Node, linkage, Node_new(ipaddr));
 				ptr = TREE_FIND(&tree, _Node, linkage, &tmp);
 			}
-			if (a_proto == 6) ++ptr->tcp_conn;
-			if (a_proto == 17) ++ptr->udp_conn;
+			if (a_proto == 6)
+				++ptr->tcp_conn;
+			if (a_proto == 17)
+				++ptr->udp_conn;
 		}
 	}
 	fclose(a);
-//	Tree_info();
 }
-

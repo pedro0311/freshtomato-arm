@@ -85,7 +85,7 @@
 -extern char path_ipv6down[MAXPATHLEN];	/* pathname of ipv6-down script */
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -315,13 +315,6 @@ main(argc, argv)
+@@ -313,13 +313,6 @@ main(argc, argv)
      struct protent *protp;
      char numbuf[16];
  
@@ -101,7 +101,7 @@
  
 --- pppd/pppd/options.c
 +++ pppd/pppd/options.c
-@@ -118,8 +118,6 @@ bool	tune_kernel;		/* may alter kernel settings */
+@@ -117,8 +117,6 @@ bool	tune_kernel;		/* may alter kernel settings */
  int	connect_delay = 1000;	/* wait this many ms after connect script */
  int	req_unit = -1;		/* requested interface unit */
  int	req_minunit = -1;	/* requested minimal interface unit */
@@ -110,7 +110,7 @@
  bool	multilink = 0;		/* Enable multilink operation */
  char	*bundle_name = NULL;	/* bundle name for multilink */
  bool	dump_options;		/* print out option values */
-@@ -303,13 +301,6 @@ option_t general_options[] = {
+@@ -300,13 +298,6 @@ option_t general_options[] = {
        "Number of seconds to wait for child processes at exit",
        OPT_PRIO },
  
@@ -126,7 +126,7 @@
        OPT_A2PRINTER | OPT_NOPRINT, (void *)user_setprint },
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -324,8 +324,6 @@ extern int	connect_delay;	/* Time to delay after connect script */
+@@ -323,8 +323,6 @@ extern int	connect_delay;	/* Time to delay after connect script */
  extern int	max_data_rate;	/* max bytes/sec through charshunt */
  extern int	req_unit;	/* interface unit number to use */
  extern int	req_minunit;	/* interface minimal unit number to use */

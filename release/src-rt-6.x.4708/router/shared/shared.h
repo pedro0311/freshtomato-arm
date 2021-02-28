@@ -19,6 +19,8 @@
 
 #define ASIZE(array)		(sizeof(array) / sizeof(array[0]))
 
+#define BRIDGE_COUNT		4
+
 #define	MTD_DEV(arg)		"/dev/mtd"#arg
 #define	MTD_BLKDEV(arg)		"/dev/mtdblock"#arg
 #define	DEV_GPIO(arg)		"/dev/gpio"#arg

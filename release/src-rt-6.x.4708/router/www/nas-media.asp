@@ -225,6 +225,7 @@ function save(nomsg) {
 
 	fom.ms_dirs.value = r.join('>');
 	fom._nofootermsg.value = (nomsg ? 1 : 0);
+	fom._service.value = 'media-restart';
 
 	form.submit(fom, 1);
 
@@ -260,7 +261,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="nas-media.asp">
-<input type="hidden" name="_service" value="media-restart">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="ms_enable">
 <input type="hidden" name="ms_dirs">

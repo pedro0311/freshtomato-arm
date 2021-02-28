@@ -7,7 +7,7 @@
 	No part of this file may be used without permission.
 */
 
-//	<% nvram("router_name,wan_domain,wan_hostname,et0macaddr,lan_proto,lan_ipaddr,dhcp_start,dhcp_num,dhcpd_startip,dhcpd_endip,lan_netmask,wl_security_mode,wl_crypto,wl_mode,wl_wds_enable,wl_hwaddr,wl_net_mode,wl_radio,wl_channel,lan_gateway,wl_ssid,wl_closed,t_model_name,t_features,dhcp1_start,dhcp1_num,dhcpd1_startip,dhcpd1_endip,dhcp2_start,dhcp2_num,dhcpd2_startip,dhcpd2_endip,dhcp3_start,dhcp3_num,dhcpd3_startip,dhcpd3_endip,lan1_proto,lan1_ipaddr,lan1_netmask,lan2_proto,lan2_ipaddr,lan2_netmask,lan3_proto,lan3_ipaddr,lan3_netmask,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ifnames,lan1_ifnames,lan2_ifnames,lan3_ifnames,wan_ifnames,tomatoanon_enable,tomatoanon_answer,lan_desc,wan_ppp_get_ip,wan_pptp_dhcp,wan_pptp_server_ip,wan_ipaddr_buf,wan_gateway,wan_gateway_get,wan_get_domain,wan_hwaddr,wan_ipaddr,wan_netmask,wan_proto,wan_run_mtu,wan_sta,wan2_ppp_get_ip,wan2_pptp_dhcp,wan2_pptp_server_ip,wan2_ipaddr_buf,wan2_gateway,wan2_gateway_get,wan2_get_domain,wan2_hwaddr,wan2_ipaddr,wan2_netmask,wan2_proto,wan2_run_mtu,wan2_sta,wan3_ppp_get_ip,wan3_pptp_dhcp,wan3_pptp_server_ip,wan3_ipaddr_buf,wan3_gateway,wan3_gateway_get,wan3_get_domain,wan3_hwaddr,wan3_ipaddr,wan3_netmask,wan3_proto,wan3_run_mtu,wan3_sta,wan4_ppp_get_ip,wan4_pptp_dhcp,wan4_pptp_server_ip,wan4_ipaddr_buf,wan4_gateway,wan4_gateway_get,wan4_get_domain,wan4_hwaddr,wan4_ipaddr,wan4_netmask,wan4_proto,wan4_run_mtu,wan4_sta,mwan_num,pptp_client_enable,pptp_client_ipaddr,pptp_client_netmask,pptp_client_gateway,pptp_client_get_dns,pptp_client_srvsub,pptp_client_srvsubmsk,wan_modem_type,wan2_modem_type,wan3_modem_type,wan4_modem_type,wan_hilink_ip,wan2_hilink_ip,wan3_hilink_ip,wan4_hilink_ip,wan_status_script,wan2_status_script,wan3_status_script,wan4_status_script"); %>
+//	<% nvram("router_name,wan_domain,wan_hostname,et0macaddr,lan_proto,lan_ipaddr,dhcp_start,dhcp_num,dhcpd_startip,dhcpd_endip,lan_netmask,wl_security_mode,wl_crypto,wl_mode,wl_wds_enable,wl_hwaddr,wl_net_mode,wl_radio,wl_channel,lan_gateway,wl_ssid,wl_closed,t_model_name,t_features,dhcp1_start,dhcp1_num,dhcpd1_startip,dhcpd1_endip,dhcp2_start,dhcp2_num,dhcpd2_startip,dhcpd2_endip,dhcp3_start,dhcp3_num,dhcpd3_startip,dhcpd3_endip,lan1_proto,lan1_ipaddr,lan1_netmask,lan2_proto,lan2_ipaddr,lan2_netmask,lan3_proto,lan3_ipaddr,lan3_netmask,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ifnames,lan1_ifnames,lan2_ifnames,lan3_ifnames,wan_ifnames,tomatoanon_enable,tomatoanon_answer,lan_desc,wan_ppp_get_ip,wan_pptp_dhcp,wan_pptp_server_ip,wan_ipaddr_buf,wan_gateway,wan_gateway_get,wan_get_domain,wan_hwaddr,wan_ipaddr,wan_netmask,wan_proto,wan_run_mtu,wan_sta,wan2_ppp_get_ip,wan2_pptp_dhcp,wan2_pptp_server_ip,wan2_ipaddr_buf,wan2_gateway,wan2_gateway_get,wan2_get_domain,wan2_hwaddr,wan2_ipaddr,wan2_netmask,wan2_proto,wan2_run_mtu,wan2_sta,wan3_ppp_get_ip,wan3_pptp_dhcp,wan3_pptp_server_ip,wan3_ipaddr_buf,wan3_gateway,wan3_gateway_get,wan3_get_domain,wan3_hwaddr,wan3_ipaddr,wan3_netmask,wan3_proto,wan3_run_mtu,wan3_sta,wan4_ppp_get_ip,wan4_pptp_dhcp,wan4_pptp_server_ip,wan4_ipaddr_buf,wan4_gateway,wan4_gateway_get,wan4_get_domain,wan4_hwaddr,wan4_ipaddr,wan4_netmask,wan4_proto,wan4_run_mtu,wan4_sta,mwan_num,wan_modem_type,wan2_modem_type,wan3_modem_type,wan4_modem_type,wan_hilink_ip,wan2_hilink_ip,wan3_hilink_ip,wan4_hilink_ip,wan_status_script,wan2_status_script,wan3_status_script,wan4_status_script,dnscrypt_proxy,dnscrypt_priority,stubby_proxy,stubby_priority"); %>
 //	<% nvstat(); %>
 //	<% etherstates(); %>
 //	<% anonupdate(); %>
@@ -46,7 +46,7 @@ stats.freqcpu = nvram.clkfreq;
 
 var total_jiffies = 0;
 var jiffylist = sysinfo.jiffies.split(' ');
-for (i=0; i < jiffylist.length; ++i)
+for (i = 0; i < jiffylist.length; ++i)
 	total_jiffies += parseInt(jiffylist[i]);
 
 var diff_idle = jiffylist[3] - lastjiffiesidle;
@@ -70,6 +70,7 @@ if (sysinfo.totalswap > 0) {
 	stats.swap = '';
 
 stats.time = '<% time(); %>';
+
 /* DUALWAN-BEGIN */
 stats.wanup = [<% wanup("wan"); %>,<% wanup("wan2"); %>];
 stats.wanuptime = ['<% link_uptime("wan"); %>','<% link_uptime("wan2"); %>'];
@@ -82,6 +83,17 @@ stats.wanuptime = ['<% link_uptime("wan"); %>','<% link_uptime("wan2"); %>','<% 
 stats.wanlease = ['<% dhcpc_time("wan"); %>','<% dhcpc_time("wan2"); %>','<% dhcpc_time("wan3"); %>','<% dhcpc_time("wan4"); %>'];
 stats.dns = [<% dns("wan"); %>,<% dns("wan2"); %>,<% dns("wan3"); %>,<% dns("wan4"); %>];
 /* MULTIWAN-END */
+
+var dns = [];
+if (nvram.dnscrypt_proxy == '1' || nvram.stubby_proxy == '1') {
+	for (i = 0; i < stats.dns.length; ++i) {
+		dns[i] = 'Using '+(nvram.dnscrypt_proxy == '1' ? 'dnscrypt-proxy' : 'Stubby')+' resolvers';
+		if ((nvram.dnscrypt_proxy == '1' && nvram.dnscrypt_priority != '2') || (nvram.stubby_proxy == '1' && nvram.stubby_priority != '2'))
+			stats.dns[i] = dns[i]+' and: '+stats.dns[i];
+		else
+			stats.dns[i] = dns[i];
+	}
+}
 
 stats.wanip = [];
 stats.wannetmask = [];

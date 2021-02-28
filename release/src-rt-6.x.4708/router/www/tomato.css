@@ -1485,3 +1485,57 @@ div#sptime {
 	stroke: #f77;
 	stroke-width: 1px;
 }
+
+.svg-path {
+	stroke: #000;
+	stroke-width: 1px;
+	stroke-opacity: 0.3;
+}
+
+.svg-color1 {
+	color: #fafafa;
+}
+
+.svg-color2 {
+	color: #b0c4de;
+}
+
+.svg-color3 {
+	color: #999900;
+}
+
+.svg-color4 {
+	color: #3cb371;
+}
+
+.svg-color5 {
+	color: #4363d8;
+}
+
+.svg-color6 {
+	color: #ffd700;
+}
+
+.svg-color7 {
+	color: #f58231;
+}
+
+.svg-color8 {
+	color: #deb887;
+}
+
+.svg-color9 {
+	color: #d96da0;
+}
+
+.svg-color10 {
+	color: #D70000;
+}
+
+.svg-color11 {
+	color: #929293;
+}
+
+.svg-color12 {
+	color: #323232;
+}

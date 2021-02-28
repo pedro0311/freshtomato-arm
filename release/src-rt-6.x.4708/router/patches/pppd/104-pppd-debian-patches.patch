@@ -12,8 +12,6 @@ Add support for the Framed-MTU Radius attribute
 (http://ppp.samba.org/cgi-bin/ppp-bugs/incoming?id=1532)
 ---
 
-diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
-index a90b3c3..b94c5a1 100644
 --- pppd/pppd/lcp.c
 +++ pppd/pppd/lcp.c
 @@ -75,6 +75,7 @@ void saveWANStatus(char *currentstatus, int statusindex);
@@ -56,8 +54,6 @@ index a90b3c3..b94c5a1 100644
       * Make and send the echo request frame.
       */
      if (f->state == OPENED) {
-diff --git pppd/pppd/plugins/radius/radius.c pppd/pppd/plugins/radius/radius.c
-index 44d1911..cd85812 100644
 --- pppd/pppd/plugins/radius/radius.c
 +++ pppd/pppd/plugins/radius/radius.c
 @@ -651,6 +651,9 @@ radius_setparams(VALUE_PAIR *vp, char *msg, REQUEST_INFO *req_info,
@@ -70,8 +66,6 @@ index 44d1911..cd85812 100644
  	    }
  
  
-diff --git pppd/pppd/pppd.8 pppd/pppd/pppd.8
-index ce7de25..6be85fc 100644
 --- pppd/pppd/pppd.8
 +++ pppd/pppd/pppd.8
 @@ -562,6 +562,11 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the

@@ -2368,6 +2368,75 @@ function show_notice1(s) {
 
 // -----------------------------------------------------------------------------
 
+function getColor(classname) {
+	var styleSheets = document.styleSheets;
+	for (var i = 0; i < styleSheets.length; i++) {
+		if (styleSheets[i].rules)
+			var classes = styleSheets[i].rules;
+		else {
+			try {
+				if (!styleSheets[i].cssRules)
+					continue;
+			}
+
+			catch(e) {
+				if (e.name == 'SecurityError')
+					continue;
+			}
+			var classes = styleSheets[i].cssRules;
+		}
+		for (var x = 0; x < classes.length; x++) {
+			if (classes[x].selectorText == classname)
+				return classes[x].style.color;
+		}
+	}
+}
+
+function checkSVG() {
+	var i, e, d, w;
+
+	try {
+		for (i = 2; i >= 0; --i) {
+			e = E('svg'+i);
+			d = e.getSVGDocument();
+
+			if (d.defaultView)
+				w = d.defaultView;
+			else
+				w = e.getWindow();
+
+			if (!w.ready)
+				break;
+
+			switch (i) {
+				case 0: {
+					updateCD = w.updateSVG;
+					break;
+				}
+				case 1: {
+					updateBI = w.updateSVG;
+					break;
+				}
+				case 2: {
+					updateBO = w.updateSVG;
+					break;
+				}
+			}
+		}
+	}
+	catch (ex) {
+	}
+
+	if (i < 0) {
+		svgReady = 1;
+		updateCD(nfmarks, abc);
+		updateBI(irates, abc);
+		updateBO(orates, abc);
+	}
+	else if (--svgReady > -5)
+		setTimeout(checkSVG, 500);
+}
+
 function myName() {
 	var name, i;
 

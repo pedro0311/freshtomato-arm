@@ -20,25 +20,32 @@
 
 //	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server,ntpd_enable,ntpd_server_redir"); %>
 
-var ntpList = [
-	['custom', 'Custom...'],
-	['', 'Default'],
-	['africa', 'Africa'],
-	['asia', 'Asia'],
-	['europe', 'Europe'],
-	['oceania', 'Oceania'],
-	['north-america', 'North America'],
-	['south-america', 'South America'],
-	['us', 'US']
-];
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
+var up = new TomatoRefresh('isup.jsx', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	elem.setInnerHTML('clock', isup.time);
+}
+
+var ntpList = [['custom','Custom...'],['','Default'],['africa','Africa'],['asia','Asia'],['europe','Europe'],['oceania','Oceania'],['north-america','North America'],['south-america','South America'],['us','US']];
 
 function ntpString(name) {
 	if (name == '')
 		name = 'pool.ntp.org';
 	else
-		name = name + '.pool.ntp.org';
+		name = name+'.pool.ntp.org';
 
-	return '0.' + name + ' 1.' + name + ' 2.' + name;
+	return '0.'+name+' 1.'+name+' 2.'+name;
 }
 
 function verifyFields(focused, quiet) {
@@ -48,27 +55,26 @@ function verifyFields(focused, quiet) {
 	var f_dst = E('_f_tm_dst');
 	var f_tz = E('_f_tm_tz');
 	if (s == 'custom') {
-		f_dst.disabled = true;
-		f_tz.disabled = false;
+		f_dst.disabled = 1;
+		f_tz.disabled = 0;
 		PR(f_dst).style.display = 'none';
 		PR(f_tz).style.display = '';
 	}
 	else {
-		f_tz.disabled = true;
+		f_tz.disabled = 1;
 		PR(f_tz).style.display = 'none';
 		PR(f_dst).style.display = '';
 		if (s.match(/^([A-Z]+[\d:-]+)[A-Z]+/)) {
 			if (!f_dst.checked)
 				s = RegExp.$1;
 
-			f_dst.disabled = false;
+			f_dst.disabled = 0;
 		}
-		else {
-			f_dst.disabled = true;
-		}
+		else
+			f_dst.disabled = 1;
+
 		f_tz.value = s;
 	}
-	E('_f_ntpd_server_redir').disabled = !E('_f_ntpd_enable').checked;
 
 	var a = 1;
 	var b = 1;
@@ -79,11 +85,12 @@ function verifyFields(focused, quiet) {
 		a = 0;
 		break;
 	}
+	E('_f_ntpd_enable').disabled = !a || !b;
+	E('_f_ntpd_server_redir').disabled = !a || !b || !E('_f_ntpd_enable').checked;
 	elem.display(PR('_f_ntp_server'), b);
-	elem.display(PR('_f_ntpd_enable'), PR('_f_ntpd_server_redir'), a && b);
+
 	a = (E('_f_ntp_server').value == 'custom');
 	elem.display(PR('_f_ntp_1'), PR('_f_ntp_2'), PR('_f_ntp_3'), a && b);
-
 	elem.display(PR('ntp-preset'), !a && b);
 
 	if (a) {
@@ -92,9 +99,8 @@ function verifyFields(focused, quiet) {
 			return 0;
 		}
 	}
-	else {
-		E('ntp-preset').innerHTML = ntpString(E('_f_ntp_server').value).replace(/\s+/, ', ');
-	}
+	else 
+		elem.setInnerHTML('ntp-preset', ntpString(E('_f_ntp_server').value).replace(/\s+/, ', '));
 
 	ferror.clear('_f_ntp_1');
 
@@ -102,7 +108,8 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (!verifyFields(null, 0)) return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var fom, a, i;
 
@@ -112,34 +119,47 @@ function save() {
 	fom.ntpd_server_redir.value = fom.f_ntpd_server_redir.checked ? 1 : 0;
 	fom.tm_tz.value = fom.f_tm_tz.value;
 
-	if (E('_f_ntp_server').value != 'custom') {
-		fom.ntp_server.value = ntpString(E('_f_ntp_server').value);
-	}
+	if (fom._f_ntp_server.value != 'custom')
+		fom.ntp_server.value = ntpString(fom._f_ntp_server.value);
 	else {
 		a = [fom.f_ntp_1.value, fom.f_ntp_2.value, fom.f_ntp_3.value];
 		for (i = 0; i < a.length; ) {
-			if (a[i] == '') a.splice(i, 1);
-				else ++i;
+			if (a[i] == '')
+				a.splice(i, 1);
+			else
+				++i;
 		}
 		fom.ntp_server.value = a.join(' ');
 	}
 
-	/* we must restart dnsmasq for it to take effect (and firewall if redir was changed) */
-	if (fom.ntpd_enable.value != nvram.ntpd_enable)
-		fom._service.value = 'dnsmasq-restart';
-			if (fom.ntpd_server_redir.value != nvram.ntpd_server_redir)
-				fom._service.value += ',firewall-restart';
+	if (E('_ntp_updates').value != 1) { /* only possible when 'Auto interval' is set */
+		fom.ntpd_enable.value = 0;
+		fom.ntpd_server_redir.value  = 0;
+		fom.f_ntpd_enable.checked = 0;
+		fom.f_ntpd_server_redir.checked = 0;
+	}
 
-	form.submit(fom);
+	fom._service.value = 'ntpd-restart';
+	/* we must restart dnsmasq for it to take effect (and firewall if redir was changed) */
+	if (fom.ntpd_enable.value != nvram.ntpd_enable) {
+		nvram.ntpd_enable = fom.ntpd_enable.value;
+		fom._service.value += ',dnsmasq-restart';
+	}
+	if (fom.ntpd_server_redir.value != nvram.ntpd_server_redir) {
+		nvram.ntpd_server_redir = fom.ntpd_server_redir.value;
+		fom._service.value += ',firewall-restart';
+	}
+
+	form.submit(fom, 1);
 }
 
-function earlyInit() {
-	verifyFields(null, 1);
+function init() {
+	up.initPage(250, 5);
 }
 </script>
 </head>
 
-<body>
+<body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -153,9 +173,7 @@ function earlyInit() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="basic-time.asp">
-<input type="hidden" name="_nextwait" value="5">
-<input type="hidden" name="_service" value="ntpd-restart">
-<input type="hidden" name="_sleep" value="3">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="tm_dst">
 <input type="hidden" name="tm_tz">
 <input type="hidden" name="ntp_server">
@@ -167,15 +185,15 @@ function earlyInit() {
 <div class="section-title">Time</div>
 <div class="section">
 	<script>
-		ntp = nvram.ntp_server.split(/\s+/);
-
-		ntpSel = 'custom';
-		for (i = ntpList.length - 1; i > 0; --i) {
-			if (ntpString(ntpList[i][0]) == nvram.ntp_server) ntpSel = ntpList[i][0];
+		var ntp = nvram.ntp_server.split(/\s+/);
+		var ntpSel = 'custom';
+		for (var i = ntpList.length - 1; i > 0; --i) {
+			if (ntpString(ntpList[i][0]) == nvram.ntp_server)
+				ntpSel = ntpList[i][0];
 		}
 
 		createFieldTable('', [
-			{ title: 'Router Time', text: '<span id="clock"><% time(); %><\/span>' },
+			{ title: 'Router Time', text: '<span id="clock">'+isup.time+'<\/span>' },
 			null,
 			{ title: 'Time Zone', name: 'tm_sel', type: 'select', options: [
 				['custom','Custom...'],
@@ -233,8 +251,8 @@ function earlyInit() {
 				['UTC-12','UTC+12:00 Fiji'],
 				['NZST-12NZDT,M9.5.0/2,M4.1.0/3','UTC+12:00 New Zealand']
 			], value: nvram.tm_sel },
-			{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != '0' },
-			{ title: 'Custom TZ String', indent: 2, name: 'f_tm_tz', type: 'text', maxlen: 32, size: 34, value: nvram.tm_tz || '' },
+				{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != '0' },
+				{ title: 'Custom TZ String', indent: 2, name: 'f_tm_tz', type: 'text', maxlen: 32, size: 34, value: nvram.tm_tz || '' },
 			null,
 			{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Auto interval']], value: nvram.ntp_updates },
 			{ title: 'NTP Time Server', name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
@@ -244,7 +262,7 @@ function earlyInit() {
 			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 },
 			null,
 			{ title: 'Enable local NTP server', name: 'f_ntpd_enable', type: 'checkbox', value: nvram.ntpd_enable != '0' },
-			{ title: 'Intercept NTP client requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != '0' }
+				{ title: 'Intercept NTP client requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != '0' }
 		]);
 	</script>
 </div>
@@ -260,6 +278,6 @@ function earlyInit() {
 </td></tr>
 </table>
 </form>
-<script>earlyInit()</script>
+<script>verifyFields(null, 1);</script>
 </body>
 </html>

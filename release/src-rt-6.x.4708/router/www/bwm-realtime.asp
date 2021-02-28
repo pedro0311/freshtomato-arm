@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_colors,rstats_enable"); %>
+//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_enable"); %>
 
 var cprefix = 'bw_r';
 var updateInt = 2;
@@ -110,7 +110,7 @@ function init() {
 	if (nvram.rstats_enable != '1') return;
 	speed_history = [];
 
-	initCommon(2, 1, 1, 1);
+	initCommon(2, 1, 0, 1);
 
 	wdogWarn = E('warnwd');
 	watchdogReset();

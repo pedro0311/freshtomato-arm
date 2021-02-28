@@ -6,8 +6,6 @@ Subject: [PATCH] pppd: populate gateway of default route with peer address
 
 ---
 
-diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
-index c0b3961..d1163e8 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
 @@ -1642,6 +1642,9 @@ int sifdefaultroute (int unit, u_int32_t ouraddr, u_int32_t gateway)

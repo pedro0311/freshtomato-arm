@@ -1,5 +1,7 @@
 isup = {};
 
+isup.time = '<% time(); %>';
+
 isup.telnetd = parseInt('<% psup("telnetd"); %>');
 
 isup.miniupnpd = parseInt('<% psup("miniupnpd"); %>');

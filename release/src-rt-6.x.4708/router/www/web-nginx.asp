@@ -148,7 +148,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="web-nginx.asp">
-<input type="hidden" name="_service" value="nginxfp-restart">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="nginx_enable">
 <input type="hidden" name="nginx_php">

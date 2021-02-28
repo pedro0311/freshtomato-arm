@@ -5,8 +5,6 @@ Subject: [PATCH] Build: pppd: fix passing EXTRACFLAGS
 
 ---
 
-diff --git pppd/pppd/plugins/Makefile.linux pppd/pppd/plugins/Makefile.linux
-index 832c79e..987739d 100644
 --- pppd/pppd/plugins/Makefile.linux
 +++ pppd/pppd/plugins/Makefile.linux
 @@ -1,7 +1,7 @@
@@ -18,8 +16,6 @@ index 832c79e..987739d 100644
  INSTALL	= install
  
  DESTDIR = $(INSTROOT)@DESTDIR@
-diff --git pppd/pppd/plugins/pppoatm/Makefile.linux pppd/pppd/plugins/pppoatm/Makefile.linux
-index 20f62e6..11e0c54 100644
 --- pppd/pppd/plugins/pppoatm/Makefile.linux
 +++ pppd/pppd/plugins/pppoatm/Makefile.linux
 @@ -1,7 +1,7 @@
@@ -32,8 +28,6 @@ index 20f62e6..11e0c54 100644
  INSTALL	= install
  
  #***********************************************************************
-diff --git pppd/pppd/plugins/pppol2tp/Makefile.linux pppd/pppd/plugins/pppol2tp/Makefile.linux
-index bf5134c..4b0ea89 100644
 --- pppd/pppd/plugins/pppol2tp/Makefile.linux
 +++ pppd/pppd/plugins/pppol2tp/Makefile.linux
 @@ -1,7 +1,7 @@
@@ -46,8 +40,6 @@ index bf5134c..4b0ea89 100644
  INSTALL	= install
  
  #***********************************************************************
-diff --git pppd/pppd/plugins/radius/Makefile.linux pppd/pppd/plugins/radius/Makefile.linux
-index 24ed3e5..89e856e 100644
 --- pppd/pppd/plugins/radius/Makefile.linux
 +++ pppd/pppd/plugins/radius/Makefile.linux
 @@ -12,7 +12,7 @@ VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
@@ -59,8 +51,6 @@ index 24ed3e5..89e856e 100644
  
  # Uncomment the next line to include support for Microsoft's
  # MS-CHAP authentication protocol.
-diff --git pppd/pppd/plugins/rp-pppoe/Makefile.linux pppd/pppd/plugins/rp-pppoe/Makefile.linux
-index 92d9ab5..46f68ce 100644
 --- pppd/pppd/plugins/rp-pppoe/Makefile.linux
 +++ pppd/pppd/plugins/rp-pppoe/Makefile.linux
 @@ -26,7 +26,7 @@ INSTALL	= install

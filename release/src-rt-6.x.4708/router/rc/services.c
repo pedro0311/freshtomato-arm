@@ -1573,7 +1573,7 @@ void stop_zebra(void)
 
 void start_syslog(void)
 {
-	char *argv[16];
+	char *argv[18];
 	int argc;
 	char *nv;
 	char *b_opt = "";
@@ -1588,6 +1588,9 @@ void start_syslog(void)
 
 	argv[0] = "syslogd";
 	argc = 1;
+
+	if (nvram_get_int("log_dropdups"))
+		argv[argc++] = "-D";
 
 	if (nvram_get_int("log_remote")) {
 		nv = nvram_safe_get("log_remoteip");
@@ -1896,7 +1899,6 @@ void start_ntpd(void)
 
 	stop_ntpd();
 
-
 	if ((nvram_get_int("dnscrypt_proxy")) || (nvram_get_int("stubby_proxy")))
 		eval("ntp2ip");
 
@@ -1937,12 +1939,12 @@ void start_ntpd(void)
 		free(servers);
 
 		if (ntp_updates_int == 0) /* only at startup, then quit */
-			xstart("ntpd", "-q");
+			xstart("ntpd", "-q", "-t");
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 			if (nvram_get_int("ntpd_enable"))
-				ret = xstart("ntpd", "-l");
+				ret = xstart("ntpd", "-l", "-t");
 			else
-				ret = xstart("ntpd");
+				ret = xstart("ntpd", "-t");
 
 			if (!ret)
 				logmsg(LOG_INFO, "ntpd is started");

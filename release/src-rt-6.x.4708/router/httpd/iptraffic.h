@@ -19,7 +19,9 @@
 
 */
 
+
 #include <tree.h>
+
 
 void iptraffic_conntrack_init();
 
@@ -42,7 +44,7 @@ Node *Node_new(char *ipaddr) {
 		strncpy(self->ipaddr, ipaddr, INET_ADDRSTRLEN);
 		self->tcp_conn = 0;
 		self->udp_conn = 0;
-		_dprintf("%s: new node ip=%s, sizeof(Node)=%d (bytes)\n", __FUNCTION__, self->ipaddr, sizeof(Node));
+		//_dprintf("%s: new node ip=%s, sizeof(Node)=%d (bytes)\n", __FUNCTION__, self->ipaddr, sizeof(Node));
 	}
 	return self;
 }
@@ -57,7 +59,7 @@ void Node_housekeeping(Node *self, void *info) {
 	free(self);
 }
 
-// DEBUG
+/* DEBUG */
 /*
 void Node_print(Node *self, FILE *stream) {
 	fprintf(stream, "%s/%d/%d", self->ipaddr, self->tcp_conn, self->udp_conn);
@@ -75,4 +77,3 @@ void Tree_info(void) {
 	_dprintf("Tree depth = %d\n", TREE_DEPTH(&tree, linkage));
 }
 */
-

@@ -5,8 +5,6 @@ Subject: [PATCH] pppd patches from wl500g.googlecode.com project
 
 ---
 
-diff --git pppd/chat/Makefile.linux pppd/chat/Makefile.linux
-index 1065ac5..a011814 100644
 --- pppd/chat/Makefile.linux
 +++ pppd/chat/Makefile.linux
 @@ -11,7 +11,7 @@ CDEF4=	-DFNDELAY=O_NDELAY		# Old name value
@@ -18,8 +16,6 @@ index 1065ac5..a011814 100644
  
  INSTALL= install
  
-diff --git pppd/chat/chat.c pppd/chat/chat.c
-index 0b88c27..7aeb9cb 100644
 --- pppd/chat/chat.c
 +++ pppd/chat/chat.c
 @@ -199,8 +199,9 @@ struct termios saved_tty_parameters;
@@ -61,8 +57,8 @@ index 0b88c27..7aeb9cb 100644
 +    
 +    if (hex_next) {
 +	hex_next = 0;
-+    	hex = (strcmp(s, "ON") == 0);
-+    	return;
++	hex = (strcmp(s, "ON") == 0);
++	return;
 +    }
  
      /*
@@ -98,8 +94,6 @@ index 0b88c27..7aeb9cb 100644
  	    return (1);
  	}
  
-diff --git pppd/include/linux/ppp-comp.h pppd/include/linux/ppp-comp.h
-index d30cacb..e7f1a61 100644
 --- pppd/include/linux/ppp-comp.h
 +++ pppd/include/linux/ppp-comp.h
 @@ -36,7 +36,7 @@
@@ -145,8 +139,6 @@ index d30cacb..e7f1a61 100644
  /*
   * Definitions for other, as yet unsupported, compression methods.
   */
-diff --git pppd/include/net/ppp-comp.h pppd/include/net/ppp-comp.h
-index 088c73e..704042c 100644
 --- pppd/include/net/ppp-comp.h
 +++ pppd/include/net/ppp-comp.h
 @@ -168,6 +168,33 @@ struct compressor {
@@ -183,8 +175,6 @@ index 088c73e..704042c 100644
  /*
   * Definitions for other, as yet unsupported, compression methods.
   */
-diff --git pppd/pppd/Makefile.linux pppd/pppd/Makefile.linux
-index df12da0..08d5355 100644
 --- pppd/pppd/Makefile.linux
 +++ pppd/pppd/Makefile.linux
 @@ -48,7 +48,7 @@ LIBS =
@@ -222,8 +212,6 @@ index df12da0..08d5355 100644
  
  ifdef CHAPMS
  CFLAGS   += -DCHAPMS=1
-diff --git pppd/pppd/auth.c pppd/pppd/auth.c
-index fb71944..c1774d3 100644
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
 @@ -556,6 +556,9 @@ void start_link(unit)
@@ -265,8 +253,6 @@ index fb71944..c1774d3 100644
  
      auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
  }
-diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
-index 5814f35..99eaa47 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
 @@ -61,12 +61,6 @@ static int setdeflate __P((char **));
@@ -683,7 +669,7 @@ index 5814f35..99eaa47 100644
  	opt_buf[0] = CI_BSD_COMPRESS;
  	opt_buf[1] = CILEN_BSD_COMPRESS;
 @@ -679,7 +767,8 @@ ccp_cilen(f)
-	+ (go->deflate && go->deflate_draft? CILEN_DEFLATE: 0)
+ 	+ (go->deflate && go->deflate_draft? CILEN_DEFLATE: 0)
  	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
  	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
 -	+ (go->mppe? CILEN_MPPE: 0);
@@ -1560,8 +1546,6 @@ index 5814f35..99eaa47 100644
  	     * Send a reset-request to reset the peer's compressor.
  	     * We don't do that if we are still waiting for an
  	     * acknowledgement to a previous reset-request.
-diff --git pppd/pppd/ccp.h pppd/pppd/ccp.h
-index 6f4a2fe..43fe095 100644
 --- pppd/pppd/ccp.h
 +++ pppd/pppd/ccp.h
 @@ -37,9 +37,17 @@ typedef struct ccp_options {
@@ -1582,8 +1566,6 @@ index 6f4a2fe..43fe095 100644
      short method;		/* code for chosen compression method */
  } ccp_options;
  
-diff --git pppd/pppd/chap_ms.c pppd/pppd/chap_ms.c
-index aec1226..f1cae5a 100644
 --- pppd/pppd/chap_ms.c
 +++ pppd/pppd/chap_ms.c
 @@ -962,13 +962,17 @@ set_mppe_enc_types(int policy, int types)
@@ -1606,8 +1588,6 @@ index aec1226..f1cae5a 100644
  	    break;
  	default:
  	    break;
-diff --git pppd/pppd/demand.c pppd/pppd/demand.c
-index 5e57658..3eddf30 100644
 --- pppd/pppd/demand.c
 +++ pppd/pppd/demand.c
 @@ -36,6 +36,8 @@
@@ -1747,8 +1727,6 @@ index 5e57658..3eddf30 100644
  	    output(0, pkt->data, pkt->length);
  	    free(pkt);
  	} else {
-diff --git pppd/pppd/fsm.c pppd/pppd/fsm.c
-index c200cc3..cfd80be 100644
 --- pppd/pppd/fsm.c
 +++ pppd/pppd/fsm.c
 @@ -69,6 +69,8 @@ static void fsm_sconfreq __P((fsm *, int));
@@ -1771,8 +1749,6 @@ index c200cc3..cfd80be 100644
  	    warn("%s: timeout sending Config-Requests\n", PROTO_NAME(f));
  	    f->state = STOPPED;
  	    if( (f->flags & OPT_PASSIVE) == 0 && f->callbacks->finished )
-diff --git pppd/pppd/ipcp.c pppd/pppd/ipcp.c
-index 12bcc61..0de3e45 100644
 --- pppd/pppd/ipcp.c
 +++ pppd/pppd/ipcp.c
 @@ -1882,7 +1882,7 @@ ipcp_up(f)
@@ -1818,8 +1794,6 @@ index 12bcc61..0de3e45 100644
  	}
  	break;
      }
-diff --git pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
-index 4a09c9a..b05fe51 100644
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
 @@ -244,6 +244,8 @@ static option_t ipv6cp_option_list[] = {
@@ -1868,8 +1842,6 @@ index 4a09c9a..b05fe51 100644
  	sifnpmode(f->unit, PPP_IPV6, NPMODE_PASS);
  
      } else {
-diff --git pppd/pppd/ipv6cp.h pppd/pppd/ipv6cp.h
-index cc4568d..8c7552e 100644
 --- pppd/pppd/ipv6cp.h
 +++ pppd/pppd/ipv6cp.h
 @@ -150,7 +150,8 @@
@@ -1882,8 +1854,6 @@ index cc4568d..8c7552e 100644
      int opt_local;		/* ourtoken set by option */
      int opt_remote;		/* histoken set by option */
      int use_ip;			/* use IP as interface identifier */
-diff --git pppd/pppd/lcp.c pppd/pppd/lcp.c
-index 5c77490..980bbb7 100644
 --- pppd/pppd/lcp.c
 +++ pppd/pppd/lcp.c
 @@ -67,6 +67,9 @@ static const char rcsid[] = RCSID;
@@ -1936,27 +1906,9 @@ index 5c77490..980bbb7 100644
      ppp_send_config(f->unit, mtu,
  		    (ho->neg_asyncmap? ho->asyncmap: 0xffffffff),
  		    ho->neg_pcompression, ho->neg_accompression);
-diff --git pppd/pppd/main.c pppd/pppd/main.c
-index 014d614..0f56a21 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -89,6 +89,7 @@
- #include <sys/socket.h>
- #include <netinet/in.h>
- #include <arpa/inet.h>
-+#include <sys/sysinfo.h>
- 
- #include "pppd.h"
- #include "magic.h"
-@@ -226,6 +227,7 @@ static struct subprocess *children;
- 
- /* Prototypes for procedures local to this file. */
- 
-+static void check_time(void);
- static void setup_signals __P((void));
- static void create_pidfile __P((int pid));
- static void create_linkpidfile __P((int pid));
-@@ -313,6 +315,9 @@ main(argc, argv)
+@@ -313,6 +313,9 @@ main(argc, argv)
      struct protent *protp;
      char numbuf[16];
  
@@ -1966,70 +1918,7 @@ index 014d614..0f56a21 100644
      link_stats_valid = 0;
      new_phase(PHASE_INITIALIZE);
  
-@@ -527,6 +532,7 @@ main(argc, argv)
- 	    info("Starting link");
- 	}
- 
-+	check_time();
- 	gettimeofday(&start_time, NULL);
- 	script_unsetenv("CONNECT_TIME");
- 	script_unsetenv("BYTES_SENT");
-@@ -1269,6 +1275,36 @@ struct	callout {
- 
- static struct callout *callout = NULL;	/* Callout list */
- static struct timeval timenow;		/* Current time */
-+static long uptime_diff = 0;
-+static int uptime_diff_set = 0;
-+
-+static void check_time(void)
-+{
-+	long new_diff;
-+	struct timeval t;
-+	struct sysinfo i;
-+    struct callout *p;
-+	
-+	gettimeofday(&t, NULL);
-+	sysinfo(&i);
-+	new_diff = t.tv_sec - i.uptime;
-+	
-+	if (!uptime_diff_set) {
-+		uptime_diff = new_diff;
-+		uptime_diff_set = 1;
-+		return;
-+	}
-+
-+	if ((new_diff - 5 > uptime_diff) || (new_diff + 5 < uptime_diff)) {
-+		/* system time has changed, update counters and timeouts */
-+		info("System time change detected.");
-+		start_time.tv_sec += new_diff - uptime_diff;
-+		
-+    	for (p = callout; p != NULL; p = p->c_next)
-+			p->c_time.tv_sec += new_diff - uptime_diff;
-+	}
-+	uptime_diff = new_diff;
-+}
- 
- /*
-  * timeout - Schedule a timeout.
-@@ -1339,6 +1375,8 @@ calltimeout()
- {
-     struct callout *p;
- 
-+	check_time();
-+	
-     while (callout != NULL) {
- 	p = callout;
- 
-@@ -1366,6 +1404,8 @@ timeleft(tvp)
- {
-     if (callout == NULL)
- 	return NULL;
-+	
-+	check_time();
- 
-     gettimeofday(&timenow, NULL);
-     tvp->tv_sec = callout->c_time.tv_sec - timenow.tv_sec;
-@@ -1686,7 +1726,7 @@ device_script(program, in, out, dont_wait)
+@@ -1686,7 +1689,7 @@ device_script(program, in, out, dont_wait)
      if (log_to_fd >= 0)
  	errfd = log_to_fd;
      else
@@ -2038,8 +1927,6 @@ index 014d614..0f56a21 100644
  
      ++conn_running;
      pid = safe_fork(in, out, errfd);
-diff --git pppd/pppd/options.c pppd/pppd/options.c
-index 482eab9..80f7bc6 100644
 --- pppd/pppd/options.c
 +++ pppd/pppd/options.c
 @@ -78,6 +78,7 @@
@@ -2095,8 +1982,6 @@ index 482eab9..80f7bc6 100644
      { NULL }
  };
  
-diff --git pppd/pppd/pathnames.h pppd/pppd/pathnames.h
-index a33f046..a1cb041 100644
 --- pppd/pppd/pathnames.h
 +++ pppd/pppd/pathnames.h
 @@ -9,40 +9,40 @@
@@ -2175,8 +2060,6 @@ index a33f046..a1cb041 100644
  #else /* __STDC__ */
  #define _PATH_PLUGIN	"/usr/lib/pppd"
  #endif /* __STDC__ */
-diff --git pppd/pppd/plugins/Makefile.linux pppd/pppd/plugins/Makefile.linux
-index 0a7ec7b..832c79e 100644
 --- pppd/pppd/plugins/Makefile.linux
 +++ pppd/pppd/plugins/Makefile.linux
 @@ -1,6 +1,6 @@
@@ -2187,8 +2070,6 @@ index 0a7ec7b..832c79e 100644
  LDFLAGS	= -shared
  INSTALL	= install
  
-diff --git pppd/pppd/plugins/pppol2tp/Makefile.linux pppd/pppd/plugins/pppol2tp/Makefile.linux
-index 19eff67..bf5134c 100644
 --- pppd/pppd/plugins/pppol2tp/Makefile.linux
 +++ pppd/pppd/plugins/pppol2tp/Makefile.linux
 @@ -1,6 +1,6 @@
@@ -2199,8 +2080,6 @@ index 19eff67..bf5134c 100644
  LDFLAGS	= -shared
  INSTALL	= install
  
-diff --git pppd/pppd/plugins/pppol2tp/pppol2tp.c pppd/pppd/plugins/pppol2tp/pppol2tp.c
-index a7e3400..e6070dd 100644
 --- pppd/pppd/plugins/pppol2tp/pppol2tp.c
 +++ pppd/pppd/plugins/pppol2tp/pppol2tp.c
 @@ -117,14 +117,8 @@ static option_t pppol2tp_options[] = {
@@ -2264,8 +2143,6 @@ index a7e3400..e6070dd 100644
  	return pppol2tp_fd;
  }
  
-diff --git pppd/pppd/plugins/radius/clientid.c pppd/pppd/plugins/radius/clientid.c
-index d49579c..91201b0 100644
 --- pppd/pppd/plugins/radius/clientid.c
 +++ pppd/pppd/plugins/radius/clientid.c
 @@ -104,13 +104,13 @@ int rc_read_mapfile(char *filename)
@@ -2284,8 +2161,6 @@ index d49579c..91201b0 100644
  
  	for(p = map2id_list; p; p = p->next)
  		if (!strcmp(ttyname, p->name)) return p->id;
-diff --git pppd/pppd/plugins/rp-pppoe/Makefile.linux pppd/pppd/plugins/rp-pppoe/Makefile.linux
-index 5d7a271..92d9ab5 100644
 --- pppd/pppd/plugins/rp-pppoe/Makefile.linux
 +++ pppd/pppd/plugins/rp-pppoe/Makefile.linux
 @@ -23,7 +23,7 @@ PPPDVERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
@@ -2297,8 +2172,6 @@ index 5d7a271..92d9ab5 100644
  
  COPTS=-O2 -g
  CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"'
-diff --git pppd/pppd/plugins/rp-pppoe/discovery.c pppd/pppd/plugins/rp-pppoe/discovery.c
-index 6e25ae7..b2ba08a 100644
 --- pppd/pppd/plugins/rp-pppoe/discovery.c
 +++ pppd/pppd/plugins/rp-pppoe/discovery.c
 @@ -24,6 +24,7 @@ static char const RCSID[] =
@@ -2320,8 +2193,6 @@ index 6e25ae7..b2ba08a 100644
  		continue;
  	    }
  	    if (conn->req_peer
-diff --git pppd/pppd/plugins/rp-pppoe/plugin.c pppd/pppd/plugins/rp-pppoe/plugin.c
-index e94494b..bb99a1a 100644
 --- pppd/pppd/plugins/rp-pppoe/plugin.c
 +++ pppd/pppd/plugins/rp-pppoe/plugin.c
 @@ -55,7 +55,7 @@ static char const RCSID[] =
@@ -2333,8 +2204,6 @@ index e94494b..bb99a1a 100644
  
  char pppd_version[] = VERSION;
  
-diff --git pppd/pppd/pppd.8 pppd/pppd/pppd.8
-index 8ea8200..c148652 100644
 --- pppd/pppd/pppd.8
 +++ pppd/pppd/pppd.8
 @@ -458,6 +458,10 @@ scripts.  If this
@@ -2400,8 +2269,6 @@ index 8ea8200..c148652 100644
  .B unset \fIname
  Remove a variable from the environment variable for scripts that are
  invoked by pppd.  When specified by a privileged source, the variable
-diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
-index cf9840a..5236f4e 100644
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
 @@ -82,6 +82,7 @@
@@ -2439,8 +2306,6 @@ index cf9840a..5236f4e 100644
  int  loop_chars __P((unsigned char *, int)); /* process chars from loopback */
  int  loop_frame __P((unsigned char *, int)); /* should we bring link up? */
  
-diff --git pppd/pppd/sha1.c pppd/pppd/sha1.c
-index f4f975c..00835d0 100644
 --- pppd/pppd/sha1.c
 +++ pppd/pppd/sha1.c
 @@ -22,9 +22,6 @@
@@ -2515,8 +2380,6 @@ index f4f975c..00835d0 100644
  		     ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
      }
      /* Wipe variables */
-diff --git pppd/pppd/sha1.h pppd/pppd/sha1.h
-index 83f64df..07c0332 100644
 --- pppd/pppd/sha1.h
 +++ pppd/pppd/sha1.h
 @@ -8,6 +8,8 @@
@@ -2544,8 +2407,6 @@ index 83f64df..07c0332 100644
  
  #define __SHA1_INCLUDE_
  #endif /* __SHA1_INCLUDE_ */
-diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
-index b675c97..c0b3961 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
 @@ -458,6 +458,13 @@ int generic_establish_ppp (int fd)
@@ -2584,8 +2445,6 @@ index b675c97..c0b3961 100644
  	if (x < 0)
  		error("Couldn't create new ppp unit: %m");
  	return x;
-diff --git pppd/pppd/utils.c pppd/pppd/utils.c
-index 062b17e..2e038bc 100644
 --- pppd/pppd/utils.c
 +++ pppd/pppd/utils.c
 @@ -1043,3 +1043,23 @@ unlock()

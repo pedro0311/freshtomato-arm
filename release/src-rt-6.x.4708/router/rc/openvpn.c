@@ -943,8 +943,6 @@ void start_ovpn_server(int unit)
 			sprintf(buffer, "vpn_server%d_ccd_excl", unit);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
-			else
-				fprintf(fp, "duplicate-cn\n");
 
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, OVPN_DIR"/server%d/ccd", unit);
@@ -1013,14 +1011,15 @@ void start_ovpn_server(int unit)
 		sprintf(buffer, "vpn_server%d_userpass", unit);
 		if (nvram_get_int(buffer)) {
 			fprintf(fp, "plugin /lib/openvpn_plugin_auth_nvram.so vpn_server%d_users_val\n"
-			            "script-security 2\n"
-			            "username-as-common-name\n",
+			            "script-security 2\n",
 			            unit);
 
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_nocert", unit);
-			if (nvram_get_int(buffer))
-				fprintf(fp, "verify-client-cert optional\n");
+			if (nvram_get_int(buffer)) {
+				fprintf(fp, "verify-client-cert optional\n"
+				            "username-as-common-name\n");
+			}
 		}
 
 		memset(buffer, 0, BUF_SIZE);
