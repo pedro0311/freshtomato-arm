@@ -108,7 +108,7 @@ void ipt_qos(void)
 	char saddr[256];
 	char end[256];
 	char s[32];
-	char app[128];
+	char app[256];
 	int inuse;
 	const char *chain;
 	unsigned long min;
@@ -242,7 +242,7 @@ void ipt_qos(void)
 		}
 
 		/* IPP2P/Layer7 */
-		memset(app, 0, 128);
+		memset(app, 0, 256);
 		if (ipt_ipp2p(ipp2p, app))
 			v4v6_ok &= ~IPT_V6;
 		else
