@@ -82,6 +82,16 @@
 #define MAXARGS		1	/* max # args to a command */
 #define MAXNAMELEN	256	/* max length of hostname or name for auth */
 #define MAXSECRETLEN	256	/* max length of password or secret */
+#define MAXIFNAMELEN	32	/* max length of interface name; or use IFNAMSIZ, can we
+				   always include net/if.h? */
+
+/*
+ * If PPP_DRV_NAME is not defined, use the default "ppp" as the device name.
+ * Where should PPP_DRV_NAME come from? Do we include it here?
+ */
+#if !defined(PPP_DRV_NAME)
+#define PPP_DRV_NAME	"ppp"
+#endif /* !defined(PPP_DRV_NAME) */
 
 /*
  * Option descriptor structure.
@@ -287,6 +297,9 @@ extern int	inspeed;	/* Input/Output speed requested */
 extern u_int32_t netmask;	/* IP netmask to set on interface */
 extern bool	lockflag;	/* Create lock file to lock the serial dev */
 extern bool	nodetach;	/* Don't detach from controlling tty */
+#ifdef SYSTEMD
+extern bool	up_sdnotify;	/* Notify systemd once link is up (implies nodetach) */
+#endif
 extern bool	updetach;	/* Detach from controlling tty when link up */
 extern bool	master_detach;	/* Detach when multilink master without link */
 extern char	*initializer;	/* Script to initialize physical link */
@@ -320,6 +333,7 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
 extern int	connect_delay;	/* Time to delay after connect script */
 extern int	max_data_rate;	/* max bytes/sec through charshunt */
 extern int	req_unit;	/* interface unit number to use */
+extern char	req_ifname[MAXIFNAMELEN]; /* interface name to use */
 extern bool	multilink;	/* enable multilink operation */
 extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
 extern char	*bundle_name;	/* bundle name for multilink */
@@ -671,6 +685,12 @@ int  sifdefaultroute __P((int, u_int32_t, u_int32_t));
 				/* Create default route through i/f */
 int  cifdefaultroute __P((int, u_int32_t, u_int32_t));
 				/* Delete default route through i/f */
+#ifdef INET6
+int  sif6defaultroute __P((int, eui64_t, eui64_t));
+				/* Create default IPv6 route through i/f */
+int  cif6defaultroute __P((int, eui64_t, eui64_t));
+				/* Delete default IPv6 route through i/f */
+#endif
 int  sifproxyarp __P((int, u_int32_t));
 				/* Add proxy ARP entry for peer */
 int  cifproxyarp __P((int, u_int32_t));

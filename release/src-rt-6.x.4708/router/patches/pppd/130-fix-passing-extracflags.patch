@@ -5,41 +5,47 @@ Subject: [PATCH] Build: pppd: fix passing EXTRACFLAGS
 
 ---
 
+--- pppd/chat/Makefile.linux
++++ pppd/chat/Makefile.linux
+@@ -11,7 +11,7 @@
+ CDEFS=	$(CDEF1) $(CDEF2) $(CDEF3) $(CDEF4)
+ 
+ COPTS=	-O2 -g -pipe
+-CFLAGS=	$(COPTS) $(CDEFS)
++CFLAGS=	$(COPTS) $(CDEFS) $(EXTRACFLAGS)
+ 
+ INSTALL= install
+ 
 --- pppd/pppd/plugins/Makefile.linux
 +++ pppd/pppd/plugins/Makefile.linux
-@@ -1,7 +1,7 @@
+@@ -1,6 +1,6 @@
  #CC	= gcc
  COPTS	= -O2 -g
- CFLAGS	= $(COPTS) -I.. -I../../include -fPIC $(EXTRACFLAGS)
--LDFLAGS	= -shared
-+LDFLAGS	+= -shared
+-CFLAGS	= $(COPTS) -I.. -I../../include -fPIC
++CFLAGS	= $(COPTS) -I.. -I../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS_SHARED	= -shared
  INSTALL	= install
  
- DESTDIR = $(INSTROOT)@DESTDIR@
 --- pppd/pppd/plugins/pppoatm/Makefile.linux
 +++ pppd/pppd/plugins/pppoatm/Makefile.linux
-@@ -1,7 +1,7 @@
+@@ -1,6 +1,6 @@
  #CC	= gcc
  COPTS	= -O2 -g
 -CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC
--LDFLAGS	= -shared
 +CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC $(EXTRACFLAGS)
-+LDFLAGS	+= -shared
+ LDFLAGS_SHARED	= -shared
  INSTALL	= install
  
- #***********************************************************************
 --- pppd/pppd/plugins/pppol2tp/Makefile.linux
 +++ pppd/pppd/plugins/pppol2tp/Makefile.linux
-@@ -1,7 +1,7 @@
+@@ -1,6 +1,6 @@
  #CC	= gcc
  COPTS	= -O2 -g
--CFLAGS	= $(COPTS) -I. -I../.. -I$(LINUXDIR)/include -fPIC
--LDFLAGS	= -shared
-+CFLAGS	= $(COPTS) -I. -I../.. -I$(LINUXDIR)/include -fPIC $(EXTRACFLAGS)
-+LDFLAGS	+= -shared
+-CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC
++CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS_SHARED	= -shared
  INSTALL	= install
  
- #***********************************************************************
 --- pppd/pppd/plugins/radius/Makefile.linux
 +++ pppd/pppd/plugins/radius/Makefile.linux
 @@ -12,7 +12,7 @@ VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
@@ -54,7 +60,7 @@ Subject: [PATCH] Build: pppd: fix passing EXTRACFLAGS
 --- pppd/pppd/plugins/rp-pppoe/Makefile.linux
 +++ pppd/pppd/plugins/rp-pppoe/Makefile.linux
 @@ -26,7 +26,7 @@ INSTALL	= install
- RP_VERSION=3.10p
+ RP_VERSION=3.8p
  
  COPTS=-O2 -g
 -CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"'

@@ -7,7 +7,7 @@ Subject: [PATCH] pppd: always create a new process group (Debian patch)
 
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -431,6 +431,13 @@ main(argc, argv)
+@@ -421,6 +421,13 @@ main(argc, argv)
      }
  
      /*
@@ -21,7 +21,7 @@ Subject: [PATCH] pppd: always create a new process group (Debian patch)
       * Initialize system-dependent stuff.
       */
      sys_init();
-@@ -783,8 +790,6 @@ detach()
+@@ -781,8 +788,6 @@ detach()
  	    create_linkpidfile(pid);
  	exit(0);		/* parent dies */
      }

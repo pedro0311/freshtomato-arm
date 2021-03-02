@@ -122,7 +122,7 @@
 
 
 /* interface vars */
-char ifname[32];		/* Interface name */
+char ifname[MAXIFNAMELEN];	/* Interface name */
 int ifunit;			/* Interface unit number */
 
 struct channel *the_channel;
@@ -294,13 +294,6 @@ struct protent *protocols[] = {
     &eap_protent,
     NULL
 };
-
-/*
- * If PPP_DRV_NAME is not defined, use the default "ppp" as the device name.
- */
-#if !defined(PPP_DRV_NAME)
-#define PPP_DRV_NAME	"ppp"
-#endif /* !defined(PPP_DRV_NAME) */
 
 int
 main(argc, argv)
@@ -615,9 +608,10 @@ handle_events()
     add_fd(sigpipe[0]);
     /* wait if necessary */
     if (!(got_sighup || got_sigterm || got_sigusr2 || got_sigchld))
-    wait_input(timeleft(&timo));
+	wait_input(timeleft(&timo));
     waiting = 0;
     remove_fd(sigpipe[0]);
+
     calltimeout();
     if (got_sighup) {
 	info("Hangup (SIGHUP)");
@@ -654,7 +648,7 @@ setup_signals()
 
     /* create pipe to wake up event handler from signal handler */
     if (pipe(sigpipe) < 0)
-    fatal("Couldn't create signal pipe: %m");
+	fatal("Couldn't create signal pipe: %m");
     fcntl(sigpipe[0], F_SETFD, fcntl(sigpipe[0], F_GETFD) | FD_CLOEXEC);
     fcntl(sigpipe[1], F_SETFD, fcntl(sigpipe[1], F_GETFD) | FD_CLOEXEC);
     fcntl(sigpipe[0], F_SETFL, fcntl(sigpipe[0], F_GETFL) | O_NONBLOCK);
@@ -743,9 +737,16 @@ void
 set_ifunit(iskey)
     int iskey;
 {
-    info("Using interface %s%d", PPP_DRV_NAME, ifunit);
-    slprintf(ifname, sizeof(ifname), "%s%d", PPP_DRV_NAME, ifunit);
+    char ifkey[32];
+
+    if (req_ifname[0] != '\0')
+	slprintf(ifname, sizeof(ifname), "%s", req_ifname);
+    else
+	slprintf(ifname, sizeof(ifname), "%s%d", PPP_DRV_NAME, ifunit);
+    info("Using interface %s", ifname);
     script_setenv("IFNAME", ifname, iskey);
+    slprintf(ifkey, sizeof(ifkey), "%d", ifunit);
+    script_setenv("UNIT", ifkey, iskey);
     if (iskey) {
 	create_pidfile(getpid());	/* write pid to file */
 	create_linkpidfile(getpid());

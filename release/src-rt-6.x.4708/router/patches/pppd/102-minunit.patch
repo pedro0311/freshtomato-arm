@@ -1,0 +1,62 @@
+--- pppd/pppd/options.c
++++ pppd/pppd/options.c
+@@ -116,6 +116,7 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
+ bool	tune_kernel;		/* may alter kernel settings */
+ int	connect_delay = 1000;	/* wait this many ms after connect script */
+ int	req_unit = -1;		/* requested interface unit */
++int	req_minunit = -1;	/* requested minimal interface unit */
+ char	req_ifname[MAXIFNAMELEN];	/* requested interface name */
+ bool	multilink = 0;		/* Enable multilink operation */
+ char	*bundle_name = NULL;	/* bundle name for multilink */
+@@ -291,6 +292,9 @@ option_t general_options[] = {
+     { "unit", o_int, &req_unit,
+       "PPP interface unit number to use if possible",
+       OPT_PRIO | OPT_LLIMIT, 0, 0 },
++    { "minunit", o_int, &req_minunit,
++      "PPP interface minimal unit number",
++      OPT_PRIO | OPT_LLIMIT, 0, 0 },
+ 
+     { "ifname", o_string, req_ifname,
+       "Set PPP interface name",
+--- pppd/pppd/pppd.h
++++ pppd/pppd/pppd.h
+@@ -84,6 +84,7 @@
+ #define MAXSECRETLEN	256	/* max length of password or secret */
+ #define MAXIFNAMELEN	32	/* max length of interface name; or use IFNAMSIZ, can we
+ 				   always include net/if.h? */
++#define MAXUNIT		255	/* max ppp interface */
+ 
+ /*
+  * If PPP_DRV_NAME is not defined, use the default "ppp" as the device name.
+@@ -333,6 +334,7 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
+ extern int	connect_delay;	/* Time to delay after connect script */
+ extern int	max_data_rate;	/* max bytes/sec through charshunt */
+ extern int	req_unit;	/* interface unit number to use */
++extern int	req_minunit;	/* interface minimal unit number to use */
+ extern char	req_ifname[MAXIFNAMELEN]; /* interface name to use */
+ extern bool	multilink;	/* enable multilink operation */
+ extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
+--- pppd/pppd/sys-linux.c
++++ pppd/pppd/sys-linux.c
+@@ -641,13 +641,15 @@ static int make_ppp_unit()
+ 	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+ 		warn("Couldn't set /dev/ppp to nonblock: %m");
+ 
+-	ifunit = req_unit;
+-	x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+-	if (x < 0 && req_unit >= 0 && errno == EEXIST) {
+-		warn("Couldn't allocate PPP unit %d as it is already in use", req_unit);
+-		ifunit = -1;
++	ifunit = (req_unit >= 0) ? req_unit : req_minunit;
++	do {
+ 		x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+-	}
++		if (x < 0 && errno == EEXIST) {
++			warn("Couldn't allocate PPP unit %d as it is already in use", ifunit);
++			ifunit = (req_unit >= 0) ? -1 : ++req_minunit;
++		} else break;
++	} while (ifunit < MAXUNIT);
++
+ 	if (x < 0)
+ 		error("Couldn't create new ppp unit: %m");
+ 

@@ -10,7 +10,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
 
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
-@@ -199,7 +199,7 @@
+@@ -200,7 +200,7 @@
  static int restore_term        = 0;	/* 1 => we've munged the terminal */
  static struct termios inittermios;	/* Initial TTY termios */
  
@@ -19,7 +19,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  
  static char loop_name[20];
  static unsigned char inbuf[512]; /* buffer for chars read from loopback */
-@@ -215,8 +215,8 @@
+@@ -217,8 +217,8 @@
  static int	link_mtu;		/* mtu for the link (not bundle) */
  
  static struct utsname utsname;	/* for the kernel version */
@@ -29,7 +29,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  
  #define MAX_IFS		100
  
-@@ -1417,11 +1417,12 @@
+@@ -1441,11 +1441,12 @@
   *
   * path_to_procfs - find the path to the proc file system mount point
   */
@@ -44,7 +44,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
      struct mntent *mntent;
      FILE *fp;
  
-@@ -1443,6 +1444,7 @@
+@@ -1467,6 +1468,7 @@
  	    fclose (fp);
  	}
      }
@@ -52,7 +52,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  
      strlcpy(proc_path + proc_path_len, tail,
  	    sizeof(proc_path) - proc_path_len);
-@@ -2045,15 +2047,19 @@
+@@ -2269,15 +2271,19 @@
      int    my_version, my_modification, my_patch;
      int osmaj, osmin, ospatch;
  
@@ -72,7 +72,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  
  	/* XXX should get from driver */
  	driver_version = 2;
-@@ -2113,6 +2119,7 @@
+@@ -2337,6 +2343,7 @@
  
      if (ok && ((ifr.ifr_hwaddr.sa_family & ~0xFF) != ARPHRD_PPP))
  	ok = 0;
@@ -80,7 +80,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  
  /*
   *  This is the PPP device. Validate the version of the driver at this
-@@ -2651,6 +2658,7 @@
+@@ -2875,6 +2882,7 @@
      }
  #endif /* TIOCGPTN */
  
@@ -88,7 +88,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
      if (sfd < 0) {
  	/* the old way - scan through the pty name space */
  	for (i = 0; i < 64; ++i) {
-@@ -2669,6 +2677,7 @@
+@@ -2893,6 +2901,7 @@
  	    }
  	}
      }
@@ -125,7 +125,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
  char *pppd_pppoe_service = NULL;
  static char *acName = NULL;
  static char *existingSession = NULL;
-@@ -374,10 +371,6 @@
+@@ -394,10 +391,6 @@
  void
  plugin_init(void)
  {
@@ -138,7 +138,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
      info("RP-PPPoE plugin version %s compiled against pppd %s",
 --- pppd/pppd/plugins/pppol2tp/pppol2tp.c
 +++ pppd/pppd/plugins/pppol2tp/pppol2tp.c
-@@ -486,12 +486,7 @@
+@@ -490,12 +490,7 @@
  
  void plugin_init(void)
  {

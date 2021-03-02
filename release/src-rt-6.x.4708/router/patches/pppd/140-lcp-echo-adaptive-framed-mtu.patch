@@ -68,7 +68,7 @@ Add support for the Framed-MTU Radius attribute
  
 --- pppd/pppd/pppd.8
 +++ pppd/pppd/pppd.8
-@@ -562,6 +562,11 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the
+@@ -570,6 +570,11 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the
  dynamic IP address option (i.e. set /proc/sys/net/ipv4/ip_dynaddr to
  1) in demand mode if the local address changes.
  .TP
