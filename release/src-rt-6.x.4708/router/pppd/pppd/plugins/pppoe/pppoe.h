@@ -82,7 +82,7 @@ typedef unsigned long UINT32_t;
 
 #ifdef HAVE_LINUX_IF_ETHER_H
 #include <linux/if_ether.h>
-#endif
+#else
 
 #ifdef HAVE_NETINET_IF_ETHER_H
 #include <sys/types.h>
@@ -94,7 +94,7 @@ typedef unsigned long UINT32_t;
 #include <netinet/if_ether.h>
 #endif
 #endif
-
+#endif
 
 /* Ethernet frame types according to RFC 2516 */
 #define ETH_PPPOE_DISCOVERY 0x8863
@@ -262,9 +262,6 @@ int openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr);
 int sendPacket(PPPoEConnection *conn, int sock, PPPoEPacket *pkt, int size);
 int receivePacket(int sock, PPPoEPacket *pkt, int *size);
 void fatalSys(char const *str);
-void rp_fatal(char const *str);
-void printErr(char const *str);
-void sysErr(char const *str);
 void dumpPacket(FILE *fp, PPPoEPacket *packet, char const *dir);
 void dumpHex(FILE *fp, unsigned char const *buf, int len);
 int parsePacket(PPPoEPacket *packet, ParseFunc *func, void *extra);

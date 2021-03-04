@@ -17,6 +17,7 @@
 char pppd_version[] = VERSION;
 
 static char promptprog[PATH_MAX+1];
+static int promptprog_refused = 0;
 
 static option_t options[] = {
     { "promptprog", o_string, promptprog,
@@ -32,7 +33,7 @@ static int promptpass(char *user, char *passwd)
     int readgood, wstat;
     ssize_t red;
 
-    if (promptprog[0] == 0 || access(promptprog, X_OK) < 0)
+    if (promptprog_refused || promptprog[0] == 0 || access(promptprog, X_OK) < 0)
 	return -1;	/* sorry, can't help */
 
     if (!passwd)
@@ -74,7 +75,7 @@ static int promptpass(char *user, char *passwd)
 	if (red == 0)
 	    break;
 	if (red < 0) {
-	    if (errno == EINTR)
+	    if (errno == EINTR && !got_sigterm)
 		continue;
 	    error("Can't read secret from %s: %m", promptprog);
 	    readgood = -1;
@@ -86,7 +87,7 @@ static int promptpass(char *user, char *passwd)
 
     /* now wait for child to exit */
     while (waitpid(kid, &wstat, 0) < 0) {
-	if (errno != EINTR) {
+	if (errno != EINTR || got_sigterm) {
 	    warn("error waiting for %s: %m", promptprog);
 	    break;
 	}
@@ -97,9 +98,14 @@ static int promptpass(char *user, char *passwd)
     passwd[readgood] = 0;
     if (!WIFEXITED(wstat))
 	warn("%s terminated abnormally", promptprog);
-    if (WEXITSTATUS(wstat))
-	warn("%s exited with code %d", promptprog, WEXITSTATUS(status));
-
+    if (WEXITSTATUS(wstat)) {
+	    warn("%s exited with code %d", promptprog, WEXITSTATUS(wstat));
+	    /* code when cancel was hit in the prompt prog */
+	    if (WEXITSTATUS(wstat) == 128) {
+	        promptprog_refused = 1;
+	    }
+	    return -1;
+    }
     return 1;
 }
 
@@ -107,4 +113,7 @@ void plugin_init(void)
 {
     add_options(options);
     pap_passwd_hook = promptpass;
+#ifdef USE_EAPTLS
+    eaptls_passwd_hook = promptpass;
+#endif
 }
