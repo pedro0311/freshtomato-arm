@@ -929,8 +929,6 @@ void start_wan(void)
 	start_firewall();
 	set_host_domain_name();
 
-	enable_ip_forward();
-
 	killall_tk_period_wait("mwanroute", 50);
 	xstart("mwanroute");
 
