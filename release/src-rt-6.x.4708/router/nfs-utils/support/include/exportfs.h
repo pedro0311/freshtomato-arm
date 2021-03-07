@@ -96,7 +96,7 @@ typedef struct mexport {
 	struct mexport *	m_next;
 	struct mclient *	m_client;
 	struct exportent	m_export;
-	int			m_exported;	/* known to knfsd. -1 means not sure */
+	int			m_exported;	/* known to knfsd. */
 	int			m_xtabent  : 1,	/* xtab entry exists */
 				m_mayexport: 1,	/* derived from xtabbed */
 				m_changed  : 1, /* options (may) have changed */
@@ -134,24 +134,18 @@ struct addrinfo *		client_resolve(const struct sockaddr *sap);
 int 				client_member(const char *client,
 						const char *name);
 
-int				export_read(char *fname);
+int				export_read(char *fname, int ignore_hosts);
+int				export_d_read(const char *dname, int ignore_hosts);
 void				export_reset(nfs_export *);
 nfs_export *			export_lookup(char *hname, char *path, int caconical);
 nfs_export *			export_find(const struct addrinfo *ai,
 						const char *path);
-nfs_export *			export_allowed(const struct addrinfo *ai,
-						const char *path);
 nfs_export *			export_create(struct exportent *, int canonical);
 void				exportent_release(struct exportent *);
 void				export_freeall(void);
-int				export_export(nfs_export *);
-int				export_unexport(nfs_export *);
 
-int				xtab_mount_read(void);
 int				xtab_export_read(void);
-int				xtab_mount_write(void);
 int				xtab_export_write(void);
-void				xtab_append(nfs_export *);
 
 int				secinfo_addflavor(struct flav_info *, struct exportent *);
 
@@ -167,8 +161,6 @@ __attribute__((__malloc__))
 struct addrinfo *		host_reliable_addrinfo(const struct sockaddr *sap);
 __attribute__((__malloc__))
 struct addrinfo *		host_numeric_addrinfo(const struct sockaddr *sap);
-
-int				rmtab_read(void);
 
 struct nfskey *			key_lookup(char *hname);
 

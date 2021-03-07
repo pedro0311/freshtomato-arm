@@ -197,7 +197,6 @@ static const struct secinfo_flag_displaymap {
 	const char *set;
 	const char *unset;
 } secinfo_flag_displaymap[] = {
-	{ NFSEXP_READONLY, "ro", "rw" },
 	{ NFSEXP_INSECURE_PORT, "insecure", "secure" },
 	{ NFSEXP_ROOTSQUASH, "root_squash", "no_root_squash" },
 	{ NFSEXP_ALLSQUASH, "all_squash", "no_all_squash" },
@@ -275,6 +274,8 @@ putexportent(struct exportent *ep)
 		"no_" : "");
 	if (ep->e_flags & NFSEXP_NOREADDIRPLUS)
 		fprintf(fp, "nordirplus,");
+	if (ep->e_flags & NFSEXP_SECURITY_LABEL)
+		fprintf(fp, "security_label,");
 	fprintf(fp, "%spnfs,", (ep->e_flags & NFSEXP_PNFS)? "" : "no_");
 	if (ep->e_flags & NFSEXP_FSID) {
 		fprintf(fp, "fsid=%d,", ep->e_fsid);
@@ -544,6 +545,8 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			setflags(NFSEXP_ASYNC, active, ep);
 		else if (!strcmp(opt, "nordirplus"))
 			setflags(NFSEXP_NOREADDIRPLUS, active, ep);
+		else if (!strcmp(opt, "security_label"))
+			setflags(NFSEXP_SECURITY_LABEL, active, ep);
 		else if (!strcmp(opt, "nohide"))
 			setflags(NFSEXP_NOHIDE, active, ep);
 		else if (!strcmp(opt, "hide"))
