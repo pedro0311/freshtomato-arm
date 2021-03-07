@@ -107,14 +107,14 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/fcntl_h.m4 $(top_srcdir)/m4/flexmember.m4 \
 	$(top_srcdir)/m4/float_h.m4 $(top_srcdir)/m4/fnmatch.m4 \
 	$(top_srcdir)/m4/fnmatch_h.m4 $(top_srcdir)/m4/fpieee.m4 \
-	$(top_srcdir)/m4/frexp.m4 $(top_srcdir)/m4/frexpl.m4 \
-	$(top_srcdir)/m4/fstat.m4 $(top_srcdir)/m4/futimens.m4 \
-	$(top_srcdir)/m4/getdelim.m4 $(top_srcdir)/m4/getline.m4 \
-	$(top_srcdir)/m4/getlogin.m4 $(top_srcdir)/m4/getlogin_r.m4 \
-	$(top_srcdir)/m4/getopt.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/gettime.m4 $(top_srcdir)/m4/gettimeofday.m4 \
-	$(top_srcdir)/m4/glob.m4 $(top_srcdir)/m4/glob_h.m4 \
-	$(top_srcdir)/m4/gnulib-common.m4 \
+	$(top_srcdir)/m4/free.m4 $(top_srcdir)/m4/frexp.m4 \
+	$(top_srcdir)/m4/frexpl.m4 $(top_srcdir)/m4/fstat.m4 \
+	$(top_srcdir)/m4/futimens.m4 $(top_srcdir)/m4/getdelim.m4 \
+	$(top_srcdir)/m4/getline.m4 $(top_srcdir)/m4/getlogin.m4 \
+	$(top_srcdir)/m4/getlogin_r.m4 $(top_srcdir)/m4/getopt.m4 \
+	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/gettime.m4 \
+	$(top_srcdir)/m4/gettimeofday.m4 $(top_srcdir)/m4/glob.m4 \
+	$(top_srcdir)/m4/glob_h.m4 $(top_srcdir)/m4/gnulib-common.m4 \
 	$(top_srcdir)/m4/gnulib-comp.m4 $(top_srcdir)/m4/iconv.m4 \
 	$(top_srcdir)/m4/include_next.m4 \
 	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/intmax_t.m4 \
@@ -146,7 +146,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/progtest.m4 \
 	$(top_srcdir)/m4/pthread_rwlock_rdlock.m4 \
 	$(top_srcdir)/m4/raise.m4 $(top_srcdir)/m4/readdir.m4 \
-	$(top_srcdir)/m4/regex.m4 $(top_srcdir)/m4/setlocale_null.m4 \
+	$(top_srcdir)/m4/realloc.m4 $(top_srcdir)/m4/regex.m4 \
+	$(top_srcdir)/m4/setlocale_null.m4 \
 	$(top_srcdir)/m4/sigaction.m4 $(top_srcdir)/m4/signal_h.m4 \
 	$(top_srcdir)/m4/signalblocking.m4 $(top_srcdir)/m4/signbit.m4 \
 	$(top_srcdir)/m4/size_max.m4 \
@@ -1189,6 +1190,7 @@ LIB_SETLOCALE_NULL = @LIB_SETLOCALE_NULL@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
 LOCALCHARSET_TESTS_ENVIRONMENT = @LOCALCHARSET_TESTS_ENVIRONMENT@
+LOCALENAME_ENHANCE_LOCALE_FUNCS = @LOCALENAME_ENHANCE_LOCALE_FUNCS@
 LOCALE_FR = @LOCALE_FR@
 LOCALE_FR_UTF8 = @LOCALE_FR_UTF8@
 LOCALE_JA = @LOCALE_JA@

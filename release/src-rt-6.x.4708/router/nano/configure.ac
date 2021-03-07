@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-AC_INIT([GNU nano], [5.5], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [5.6.1], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.14])
@@ -59,7 +59,7 @@ AC_DEFINE_DIR([PKGDATADIR], [pkgdatadir], [Where data are placed to.])
 dnl Whether this is a git repository.
 
 AC_MSG_CHECKING([whether building from git])
-if test -f roll-a-release.sh ; then
+if test -f "$srcdir/roll-a-release.sh" ; then
 	AC_MSG_RESULT([yes])
 	from_git=yes
 else

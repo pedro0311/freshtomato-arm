@@ -164,14 +164,14 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/fcntl_h.m4 $(top_srcdir)/m4/flexmember.m4 \
 	$(top_srcdir)/m4/float_h.m4 $(top_srcdir)/m4/fnmatch.m4 \
 	$(top_srcdir)/m4/fnmatch_h.m4 $(top_srcdir)/m4/fpieee.m4 \
-	$(top_srcdir)/m4/frexp.m4 $(top_srcdir)/m4/frexpl.m4 \
-	$(top_srcdir)/m4/fstat.m4 $(top_srcdir)/m4/futimens.m4 \
-	$(top_srcdir)/m4/getdelim.m4 $(top_srcdir)/m4/getline.m4 \
-	$(top_srcdir)/m4/getlogin.m4 $(top_srcdir)/m4/getlogin_r.m4 \
-	$(top_srcdir)/m4/getopt.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/gettime.m4 $(top_srcdir)/m4/gettimeofday.m4 \
-	$(top_srcdir)/m4/glob.m4 $(top_srcdir)/m4/glob_h.m4 \
-	$(top_srcdir)/m4/gnulib-common.m4 \
+	$(top_srcdir)/m4/free.m4 $(top_srcdir)/m4/frexp.m4 \
+	$(top_srcdir)/m4/frexpl.m4 $(top_srcdir)/m4/fstat.m4 \
+	$(top_srcdir)/m4/futimens.m4 $(top_srcdir)/m4/getdelim.m4 \
+	$(top_srcdir)/m4/getline.m4 $(top_srcdir)/m4/getlogin.m4 \
+	$(top_srcdir)/m4/getlogin_r.m4 $(top_srcdir)/m4/getopt.m4 \
+	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/gettime.m4 \
+	$(top_srcdir)/m4/gettimeofday.m4 $(top_srcdir)/m4/glob.m4 \
+	$(top_srcdir)/m4/glob_h.m4 $(top_srcdir)/m4/gnulib-common.m4 \
 	$(top_srcdir)/m4/gnulib-comp.m4 $(top_srcdir)/m4/iconv.m4 \
 	$(top_srcdir)/m4/include_next.m4 \
 	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/intmax_t.m4 \
@@ -203,7 +203,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/progtest.m4 \
 	$(top_srcdir)/m4/pthread_rwlock_rdlock.m4 \
 	$(top_srcdir)/m4/raise.m4 $(top_srcdir)/m4/readdir.m4 \
-	$(top_srcdir)/m4/regex.m4 $(top_srcdir)/m4/setlocale_null.m4 \
+	$(top_srcdir)/m4/realloc.m4 $(top_srcdir)/m4/regex.m4 \
+	$(top_srcdir)/m4/setlocale_null.m4 \
 	$(top_srcdir)/m4/sigaction.m4 $(top_srcdir)/m4/signal_h.m4 \
 	$(top_srcdir)/m4/signalblocking.m4 $(top_srcdir)/m4/signbit.m4 \
 	$(top_srcdir)/m4/size_max.m4 \
@@ -248,10 +249,13 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libgnu_a_AR = $(AR) $(ARFLAGS)
 am__DEPENDENCIES_1 =
-am__libgnu_a_SOURCES_DIST = gettext.h gettime.c hard-locale.c idx.h \
-	localcharset.c glthread/lock.h glthread/lock.c malloca.c \
-	math.c printf-frexp.c printf-frexpl.c \
-	malloc/scratch_buffer_dupfree.c malloc/scratch_buffer_grow.c \
+am__libgnu_a_SOURCES_DIST = malloc/dynarray_at_failure.c \
+	malloc/dynarray_emplace_enlarge.c malloc/dynarray_finalize.c \
+	malloc/dynarray_resize.c malloc/dynarray_resize_clear.c \
+	gettext.h gettime.c hard-locale.c idx.h localcharset.c \
+	glthread/lock.h glthread/lock.c malloca.c math.c \
+	printf-frexp.c printf-frexpl.c malloc/scratch_buffer_dupfree.c \
+	malloc/scratch_buffer_grow.c \
 	malloc/scratch_buffer_grow_preserve.c \
 	malloc/scratch_buffer_set_array_size.c setlocale_null.c \
 	sig-handler.c size_max.h stat-time.c strnlen1.h strnlen1.c \
@@ -259,10 +263,14 @@ am__libgnu_a_SOURCES_DIST = gettext.h gettime.c hard-locale.c idx.h \
 	utimens.c wctype-h.c xsize.h xsize.c
 am__dirstamp = $(am__leading_dot)dirstamp
 @LIBUNISTRING_COMPILE_UNIWIDTH_WIDTH_TRUE@am__objects_1 = uniwidth/width.$(OBJEXT)
-am_libgnu_a_OBJECTS = gettime.$(OBJEXT) hard-locale.$(OBJEXT) \
-	localcharset.$(OBJEXT) glthread/lock.$(OBJEXT) \
-	malloca.$(OBJEXT) math.$(OBJEXT) printf-frexp.$(OBJEXT) \
-	printf-frexpl.$(OBJEXT) \
+am_libgnu_a_OBJECTS = malloc/dynarray_at_failure.$(OBJEXT) \
+	malloc/dynarray_emplace_enlarge.$(OBJEXT) \
+	malloc/dynarray_finalize.$(OBJEXT) \
+	malloc/dynarray_resize.$(OBJEXT) \
+	malloc/dynarray_resize_clear.$(OBJEXT) gettime.$(OBJEXT) \
+	hard-locale.$(OBJEXT) localcharset.$(OBJEXT) \
+	glthread/lock.$(OBJEXT) malloca.$(OBJEXT) math.$(OBJEXT) \
+	printf-frexp.$(OBJEXT) printf-frexpl.$(OBJEXT) \
 	malloc/scratch_buffer_dupfree.$(OBJEXT) \
 	malloc/scratch_buffer_grow.$(OBJEXT) \
 	malloc/scratch_buffer_grow_preserve.$(OBJEXT) \
@@ -292,7 +300,7 @@ am__depfiles_remade = ./$(DEPDIR)/alloca.Po ./$(DEPDIR)/asnprintf.Po \
 	./$(DEPDIR)/btowc.Po ./$(DEPDIR)/closedir.Po \
 	./$(DEPDIR)/dirfd.Po ./$(DEPDIR)/float.Po \
 	./$(DEPDIR)/fnmatch.Po ./$(DEPDIR)/fnmatch_loop.Po \
-	./$(DEPDIR)/frexp.Po ./$(DEPDIR)/frexpl.Po \
+	./$(DEPDIR)/free.Po ./$(DEPDIR)/frexp.Po ./$(DEPDIR)/frexpl.Po \
 	./$(DEPDIR)/fstat.Po ./$(DEPDIR)/futimens.Po \
 	./$(DEPDIR)/getdelim.Po ./$(DEPDIR)/getline.Po \
 	./$(DEPDIR)/getlogin_r.Po ./$(DEPDIR)/getopt.Po \
@@ -316,26 +324,32 @@ am__depfiles_remade = ./$(DEPDIR)/alloca.Po ./$(DEPDIR)/asnprintf.Po \
 	./$(DEPDIR)/printf-args.Po ./$(DEPDIR)/printf-frexp.Po \
 	./$(DEPDIR)/printf-frexpl.Po ./$(DEPDIR)/printf-parse.Po \
 	./$(DEPDIR)/raise.Po ./$(DEPDIR)/readdir.Po \
-	./$(DEPDIR)/regcomp.Po ./$(DEPDIR)/regex.Po \
-	./$(DEPDIR)/regex_internal.Po ./$(DEPDIR)/regexec.Po \
-	./$(DEPDIR)/setlocale-lock.Po ./$(DEPDIR)/setlocale_null.Po \
-	./$(DEPDIR)/sig-handler.Po ./$(DEPDIR)/sigaction.Po \
-	./$(DEPDIR)/signbitd.Po ./$(DEPDIR)/signbitf.Po \
-	./$(DEPDIR)/signbitl.Po ./$(DEPDIR)/sigprocmask.Po \
-	./$(DEPDIR)/snprintf.Po ./$(DEPDIR)/stat-time.Po \
-	./$(DEPDIR)/stat-w32.Po ./$(DEPDIR)/stat.Po \
-	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strcasestr.Po \
-	./$(DEPDIR)/strncasecmp.Po ./$(DEPDIR)/strnlen.Po \
-	./$(DEPDIR)/strnlen1.Po ./$(DEPDIR)/timespec.Po \
-	./$(DEPDIR)/unistd.Po ./$(DEPDIR)/utime.Po \
-	./$(DEPDIR)/utimens.Po ./$(DEPDIR)/vasnprintf.Po \
-	./$(DEPDIR)/vsnprintf.Po ./$(DEPDIR)/wcrtomb.Po \
-	./$(DEPDIR)/wctype-h.Po ./$(DEPDIR)/wcwidth.Po \
-	./$(DEPDIR)/windows-mutex.Po ./$(DEPDIR)/windows-once.Po \
-	./$(DEPDIR)/windows-recmutex.Po ./$(DEPDIR)/windows-rwlock.Po \
-	./$(DEPDIR)/wmemchr.Po ./$(DEPDIR)/wmempcpy.Po \
-	./$(DEPDIR)/xsize.Po glthread/$(DEPDIR)/lock.Po \
-	glthread/$(DEPDIR)/threadlib.Po \
+	./$(DEPDIR)/realloc.Po ./$(DEPDIR)/regcomp.Po \
+	./$(DEPDIR)/regex.Po ./$(DEPDIR)/regex_internal.Po \
+	./$(DEPDIR)/regexec.Po ./$(DEPDIR)/setlocale-lock.Po \
+	./$(DEPDIR)/setlocale_null.Po ./$(DEPDIR)/sig-handler.Po \
+	./$(DEPDIR)/sigaction.Po ./$(DEPDIR)/signbitd.Po \
+	./$(DEPDIR)/signbitf.Po ./$(DEPDIR)/signbitl.Po \
+	./$(DEPDIR)/sigprocmask.Po ./$(DEPDIR)/snprintf.Po \
+	./$(DEPDIR)/stat-time.Po ./$(DEPDIR)/stat-w32.Po \
+	./$(DEPDIR)/stat.Po ./$(DEPDIR)/strcasecmp.Po \
+	./$(DEPDIR)/strcasestr.Po ./$(DEPDIR)/strncasecmp.Po \
+	./$(DEPDIR)/strnlen.Po ./$(DEPDIR)/strnlen1.Po \
+	./$(DEPDIR)/timespec.Po ./$(DEPDIR)/unistd.Po \
+	./$(DEPDIR)/utime.Po ./$(DEPDIR)/utimens.Po \
+	./$(DEPDIR)/vasnprintf.Po ./$(DEPDIR)/vsnprintf.Po \
+	./$(DEPDIR)/wcrtomb.Po ./$(DEPDIR)/wctype-h.Po \
+	./$(DEPDIR)/wcwidth.Po ./$(DEPDIR)/windows-mutex.Po \
+	./$(DEPDIR)/windows-once.Po ./$(DEPDIR)/windows-recmutex.Po \
+	./$(DEPDIR)/windows-rwlock.Po ./$(DEPDIR)/wmemchr.Po \
+	./$(DEPDIR)/wmempcpy.Po ./$(DEPDIR)/xsize.Po \
+	glthread/$(DEPDIR)/lock.Po glthread/$(DEPDIR)/threadlib.Po \
+	malloc/$(DEPDIR)/dynarray-skeleton.Po \
+	malloc/$(DEPDIR)/dynarray_at_failure.Po \
+	malloc/$(DEPDIR)/dynarray_emplace_enlarge.Po \
+	malloc/$(DEPDIR)/dynarray_finalize.Po \
+	malloc/$(DEPDIR)/dynarray_resize.Po \
+	malloc/$(DEPDIR)/dynarray_resize_clear.Po \
 	malloc/$(DEPDIR)/scratch_buffer_dupfree.Po \
 	malloc/$(DEPDIR)/scratch_buffer_grow.Po \
 	malloc/$(DEPDIR)/scratch_buffer_grow_preserve.Po \
@@ -1324,6 +1338,7 @@ LIB_SETLOCALE_NULL = @LIB_SETLOCALE_NULL@
 LIMITS_H = @LIMITS_H@
 LN_S = @LN_S@
 LOCALCHARSET_TESTS_ENVIRONMENT = @LOCALCHARSET_TESTS_ENVIRONMENT@
+LOCALENAME_ENHANCE_LOCALE_FUNCS = @LOCALENAME_ENHANCE_LOCALE_FUNCS@
 LOCALE_FR = @LOCALE_FR@
 LOCALE_FR_UTF8 = @LOCALE_FR_UTF8@
 LOCALE_JA = @LOCALE_JA@
@@ -1776,14 +1791,15 @@ noinst_HEADERS =
 noinst_LIBRARIES = libgnu.a
 noinst_LTLIBRARIES = 
 EXTRA_DIST = alloca.c alloca.in.h attribute.h btowc.c closedir.c \
-	dirent-private.h ctype.in.h dirent.in.h dirfd.c errno.in.h \
+	dirent-private.h ctype.in.h dirent.in.h dirfd.c dynarray.h \
+	malloc/dynarray-skeleton.c malloc/dynarray.h errno.in.h \
 	fcntl.in.h filename.h flexmember.h float.c float.in.h itold.c \
-	fnmatch.c fnmatch_loop.c fnmatch.in.h fpucw.h frexp.c frexp.c \
-	frexpl.c fstat.c stat-w32.c stat-w32.h futimens.c getdelim.c \
-	getline.c getlogin_r.c getopt-cdefs.in.h getopt-core.h \
-	getopt-ext.h getopt-pfx-core.h getopt-pfx-ext.h getopt.c \
-	getopt.in.h getopt1.c getopt_int.h gettimeofday.c glob.c \
-	glob_internal.h glob_pattern_p.c globfree.c glob-libc.h \
+	fnmatch.c fnmatch_loop.c fnmatch.in.h fpucw.h free.c frexp.c \
+	frexp.c frexpl.c fstat.c stat-w32.c stat-w32.h futimens.c \
+	getdelim.c getline.c getlogin_r.c getopt-cdefs.in.h \
+	getopt-core.h getopt-ext.h getopt-pfx-core.h getopt-pfx-ext.h \
+	getopt.c getopt.in.h getopt1.c getopt_int.h gettimeofday.c \
+	glob.c glob_internal.h glob_pattern_p.c globfree.c glob-libc.h \
 	glob.in.h hard-locale.h intprops.h inttypes.in.h isblank.c \
 	float+.h isnan.c isnand-nolibm.h isnand.c float+.h isnan.c \
 	isnanf-nolibm.h isnanf.c float+.h isnan.c isnanl-nolibm.h \
@@ -1798,7 +1814,7 @@ EXTRA_DIST = alloca.c alloca.in.h attribute.h btowc.c closedir.c \
 	nl_langinfo-lock.c nl_langinfo.c windows-initguard.h \
 	dirent-private.h opendir.c pathmax.h printf-frexp.h \
 	printf-frexp.c printf-frexpl.h raise.c dirent-private.h \
-	readdir.c regcomp.c regex.c regex.h regex_internal.c \
+	readdir.c realloc.c regcomp.c regex.c regex.h regex_internal.c \
 	regex_internal.h regexec.c malloc/scratch_buffer.h \
 	scratch_buffer.h setlocale-lock.c setlocale_null.h \
 	windows-initguard.h sig-handler.h sigaction.c signal.in.h \
@@ -1847,10 +1863,13 @@ MAINTAINERCLEANFILES =
 # No GNU Make output.
 AM_CPPFLAGS = 
 AM_CFLAGS = 
-libgnu_a_SOURCES = gettext.h gettime.c hard-locale.c idx.h \
-	localcharset.c glthread/lock.h glthread/lock.c malloca.c \
-	math.c printf-frexp.c printf-frexpl.c \
-	malloc/scratch_buffer_dupfree.c malloc/scratch_buffer_grow.c \
+libgnu_a_SOURCES = malloc/dynarray_at_failure.c \
+	malloc/dynarray_emplace_enlarge.c malloc/dynarray_finalize.c \
+	malloc/dynarray_resize.c malloc/dynarray_resize_clear.c \
+	gettext.h gettime.c hard-locale.c idx.h localcharset.c \
+	glthread/lock.h glthread/lock.c malloca.c math.c \
+	printf-frexp.c printf-frexpl.c malloc/scratch_buffer_dupfree.c \
+	malloc/scratch_buffer_grow.c \
 	malloc/scratch_buffer_grow_preserve.c \
 	malloc/scratch_buffer_set_array_size.c setlocale_null.c \
 	sig-handler.c size_max.h stat-time.c strnlen1.h strnlen1.c \
@@ -1858,17 +1877,18 @@ libgnu_a_SOURCES = gettext.h gettime.c hard-locale.c idx.h \
 	utimens.c wctype-h.c xsize.h xsize.c
 libgnu_a_LIBADD = $(gl_LIBOBJS) @ALLOCA@
 libgnu_a_DEPENDENCIES = $(gl_LIBOBJS) @ALLOCA@
-EXTRA_libgnu_a_SOURCES = alloca.c btowc.c closedir.c dirfd.c float.c \
-	itold.c fnmatch.c fnmatch_loop.c frexp.c frexp.c frexpl.c \
-	fstat.c stat-w32.c futimens.c getdelim.c getline.c \
-	getlogin_r.c getopt.c getopt1.c gettimeofday.c glob.c \
-	glob_pattern_p.c globfree.c isblank.c isnan.c isnand.c isnan.c \
-	isnanf.c isnan.c isnanl.c iswblank.c localeconv.c lstat.c \
-	malloc.c lc-charset-dispatch.c mbrtowc.c mbtowc-lock.c \
-	mbsinit.c mbsrtowcs-state.c mbsrtowcs.c mbtowc.c memchr.c \
-	mempcpy.c msvc-inval.c msvc-nothrow.c nl_langinfo-lock.c \
-	nl_langinfo.c opendir.c printf-frexp.c raise.c readdir.c \
-	regcomp.c regex.c regex_internal.c regexec.c setlocale-lock.c \
+EXTRA_libgnu_a_SOURCES = alloca.c btowc.c closedir.c dirfd.c \
+	malloc/dynarray-skeleton.c float.c itold.c fnmatch.c \
+	fnmatch_loop.c free.c frexp.c frexp.c frexpl.c fstat.c \
+	stat-w32.c futimens.c getdelim.c getline.c getlogin_r.c \
+	getopt.c getopt1.c gettimeofday.c glob.c glob_pattern_p.c \
+	globfree.c isblank.c isnan.c isnand.c isnan.c isnanf.c isnan.c \
+	isnanl.c iswblank.c localeconv.c lstat.c malloc.c \
+	lc-charset-dispatch.c mbrtowc.c mbtowc-lock.c mbsinit.c \
+	mbsrtowcs-state.c mbsrtowcs.c mbtowc.c memchr.c mempcpy.c \
+	msvc-inval.c msvc-nothrow.c nl_langinfo-lock.c nl_langinfo.c \
+	opendir.c printf-frexp.c raise.c readdir.c realloc.c regcomp.c \
+	regex.c regex_internal.c regexec.c setlocale-lock.c \
 	sigaction.c signbitd.c signbitf.c signbitl.c sigprocmask.c \
 	snprintf.c stat-w32.c stat.c strcasecmp.c strncasecmp.c \
 	strcasestr.c strnlen.c utime.c asnprintf.c printf-args.c \
@@ -1948,6 +1968,22 @@ clean-noinstLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+malloc/$(am__dirstamp):
+	@$(MKDIR_P) malloc
+	@: > malloc/$(am__dirstamp)
+malloc/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) malloc/$(DEPDIR)
+	@: > malloc/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray_at_failure.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray_emplace_enlarge.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray_finalize.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray_resize.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray_resize_clear.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
 glthread/$(am__dirstamp):
 	@$(MKDIR_P) glthread
 	@: > glthread/$(am__dirstamp)
@@ -1956,12 +1992,6 @@ glthread/$(DEPDIR)/$(am__dirstamp):
 	@: > glthread/$(DEPDIR)/$(am__dirstamp)
 glthread/lock.$(OBJEXT): glthread/$(am__dirstamp) \
 	glthread/$(DEPDIR)/$(am__dirstamp)
-malloc/$(am__dirstamp):
-	@$(MKDIR_P) malloc
-	@: > malloc/$(am__dirstamp)
-malloc/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) malloc/$(DEPDIR)
-	@: > malloc/$(DEPDIR)/$(am__dirstamp)
 malloc/scratch_buffer_dupfree.$(OBJEXT): malloc/$(am__dirstamp) \
 	malloc/$(DEPDIR)/$(am__dirstamp)
 malloc/scratch_buffer_grow.$(OBJEXT): malloc/$(am__dirstamp) \
@@ -1980,6 +2010,8 @@ uniwidth/$(DEPDIR)/$(am__dirstamp):
 	@: > uniwidth/$(DEPDIR)/$(am__dirstamp)
 uniwidth/width.$(OBJEXT): uniwidth/$(am__dirstamp) \
 	uniwidth/$(DEPDIR)/$(am__dirstamp)
+malloc/dynarray-skeleton.$(OBJEXT): malloc/$(am__dirstamp) \
+	malloc/$(DEPDIR)/$(am__dirstamp)
 
 libgnu.a: $(libgnu_a_OBJECTS) $(libgnu_a_DEPENDENCIES) $(EXTRA_libgnu_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libgnu.a
@@ -2003,6 +2035,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/float.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fnmatch.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fnmatch_loop.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/free.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/frexp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/frexpl.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstat.Po@am__quote@ # am--include-marker
@@ -2051,6 +2084,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/printf-parse.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/raise.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/readdir.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/realloc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regcomp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regex.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regex_internal.Po@am__quote@ # am--include-marker
@@ -2090,6 +2124,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xsize.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@glthread/$(DEPDIR)/lock.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@glthread/$(DEPDIR)/threadlib.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray-skeleton.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray_at_failure.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray_emplace_enlarge.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray_finalize.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray_resize.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/dynarray_resize_clear.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/scratch_buffer_dupfree.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/scratch_buffer_grow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@malloc/$(DEPDIR)/scratch_buffer_grow_preserve.Po@am__quote@ # am--include-marker
@@ -2337,6 +2377,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/float.Po
 	-rm -f ./$(DEPDIR)/fnmatch.Po
 	-rm -f ./$(DEPDIR)/fnmatch_loop.Po
+	-rm -f ./$(DEPDIR)/free.Po
 	-rm -f ./$(DEPDIR)/frexp.Po
 	-rm -f ./$(DEPDIR)/frexpl.Po
 	-rm -f ./$(DEPDIR)/fstat.Po
@@ -2385,6 +2426,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/printf-parse.Po
 	-rm -f ./$(DEPDIR)/raise.Po
 	-rm -f ./$(DEPDIR)/readdir.Po
+	-rm -f ./$(DEPDIR)/realloc.Po
 	-rm -f ./$(DEPDIR)/regcomp.Po
 	-rm -f ./$(DEPDIR)/regex.Po
 	-rm -f ./$(DEPDIR)/regex_internal.Po
@@ -2424,6 +2466,12 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/xsize.Po
 	-rm -f glthread/$(DEPDIR)/lock.Po
 	-rm -f glthread/$(DEPDIR)/threadlib.Po
+	-rm -f malloc/$(DEPDIR)/dynarray-skeleton.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_at_failure.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_emplace_enlarge.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_finalize.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_resize.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_resize_clear.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_dupfree.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_grow.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_grow_preserve.Po
@@ -2482,6 +2530,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/float.Po
 	-rm -f ./$(DEPDIR)/fnmatch.Po
 	-rm -f ./$(DEPDIR)/fnmatch_loop.Po
+	-rm -f ./$(DEPDIR)/free.Po
 	-rm -f ./$(DEPDIR)/frexp.Po
 	-rm -f ./$(DEPDIR)/frexpl.Po
 	-rm -f ./$(DEPDIR)/fstat.Po
@@ -2530,6 +2579,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/printf-parse.Po
 	-rm -f ./$(DEPDIR)/raise.Po
 	-rm -f ./$(DEPDIR)/readdir.Po
+	-rm -f ./$(DEPDIR)/realloc.Po
 	-rm -f ./$(DEPDIR)/regcomp.Po
 	-rm -f ./$(DEPDIR)/regex.Po
 	-rm -f ./$(DEPDIR)/regex_internal.Po
@@ -2569,6 +2619,12 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/xsize.Po
 	-rm -f glthread/$(DEPDIR)/lock.Po
 	-rm -f glthread/$(DEPDIR)/threadlib.Po
+	-rm -f malloc/$(DEPDIR)/dynarray-skeleton.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_at_failure.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_emplace_enlarge.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_finalize.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_resize.Po
+	-rm -f malloc/$(DEPDIR)/dynarray_resize_clear.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_dupfree.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_grow.Po
 	-rm -f malloc/$(DEPDIR)/scratch_buffer_grow_preserve.Po
@@ -2920,6 +2976,7 @@ locale.h: locale.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''REPLACE_DUPLOCALE''@|$(REPLACE_DUPLOCALE)|g' \
 	      -e 's|@''REPLACE_FREELOCALE''@|$(REPLACE_FREELOCALE)|g' \
 	      -e 's|@''REPLACE_STRUCT_LCONV''@|$(REPLACE_STRUCT_LCONV)|g' \
+	      -e 's|@''LOCALENAME_ENHANCE_LOCALE_FUNCS''@|$(LOCALENAME_ENHANCE_LOCALE_FUNCS)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)' \

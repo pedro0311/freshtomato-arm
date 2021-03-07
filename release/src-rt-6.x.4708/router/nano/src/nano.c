@@ -640,7 +640,6 @@ void usage(void)
 	if (!ISSET(RESTRICTED))
 		print_opt("-z", "--suspendable", N_("Enable suspension"));
 #ifndef NANO_TINY
-	print_opt("-^", "--markmatch", N_("Select the match of a search"));
 	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
 	print_opt("-_", "--minibar", N_("Show a feedback bar at the bottom"));
 #endif
@@ -1066,8 +1065,6 @@ void regenerate_screen(void)
 /* Handle the global toggle specified in flag. */
 void do_toggle(int flag)
 {
-	bool enabled;
-
 	if (flag == SUSPENDABLE && in_restricted_mode())
 		return;
 
@@ -1103,19 +1100,27 @@ void do_toggle(int flag)
 #endif
 	}
 
-	if (ISSET(STATEFLAGS) && (flag == AUTOINDENT ||
-						flag == BREAK_LONG_LINES || flag == SOFTWRAP))
-		titlebar(NULL);
+	if (!ISSET(MINIBAR) && ISSET(STATEFLAGS))
+		if (flag == AUTOINDENT || flag == BREAK_LONG_LINES || flag == SOFTWRAP)
+			titlebar(NULL);
 
-	enabled = ISSET(flag);
+	if (ISSET(MINIBAR) && (flag == NO_HELP || flag == LINE_NUMBERS ))
+		return;
 
-	if (flag == NO_HELP || flag == NO_SYNTAX)
-		enabled = !enabled;
+	if (flag == CONSTANT_SHOW)
+		wipe_statusbar();
+	else if (!ISSET(MINIBAR) || !ISSET(STATEFLAGS) || flag == SMART_HOME ||
+						flag == NO_SYNTAX || flag == WHITESPACE_DISPLAY ||
+						flag == CUT_FROM_CURSOR || flag == TABS_TO_SPACES ||
+						flag == USE_MOUSE || flag == SUSPENDABLE) {
+		bool enabled = ISSET(flag);
 
-	if (!ISSET(MINIBAR) || flag == SMART_HOME || flag == CUT_FROM_CURSOR ||
-				flag == TABS_TO_SPACES || flag == USE_MOUSE || flag == SUSPENDABLE)
+		if (flag == NO_HELP || flag == NO_SYNTAX)
+			enabled = !enabled;
+
 		statusline(REMARK, "%s %s", _(flagtostr(flag)),
-						enabled ? _("enabled") : _("disabled"));
+									enabled ? _("enabled") : _("disabled"));
+	}
 }
 #endif /* !NANO_TINY */
 
@@ -1235,6 +1240,8 @@ void confirm_margin(void)
 		needed_margin = 0;
 
 	if (needed_margin != margin) {
+		bool keep_focus = (margin > 0) && focusing;
+
 		margin = needed_margin;
 		editwincols = COLS - margin - thebar;
 
@@ -1243,6 +1250,7 @@ void confirm_margin(void)
 		 * and ensure a proper starting column for the first screen row. */
 		compute_the_extra_rows_per_line_from(openfile->filetop);
 		ensure_firstcolumn_is_aligned();
+		focusing = keep_focus;
 #endif
 		/* The margin has changed -- schedule a full refresh. */
 		refresh_needed = TRUE;
@@ -1758,7 +1766,6 @@ int main(int argc, char **argv)
 		{"indicator", 0, NULL, 'q'},
 		{"unix", 0, NULL, 'u'},
 		{"afterends", 0, NULL, 'y'},
-		{"markmatch", 0, NULL, '^'},
 		{"stateflags", 0, NULL, '%'},
 		{"minibar", 0, NULL, '_'},
 #endif
@@ -1815,7 +1822,7 @@ int main(int argc, char **argv)
 		SET(RESTRICTED);
 
 	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxyz$^%_!", long_options, NULL)) != -1) {
+				"abcdef:ghijklmno:pqr:s:tuvwxyz$%_!", long_options, NULL)) != -1) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -2052,9 +2059,6 @@ int main(int argc, char **argv)
 				SET(SUSPENDABLE);
 				break;
 #ifndef NANO_TINY
-			case '^':
-				SET(MARK_MATCH);
-				break;
 			case '%':
 				SET(STATEFLAGS);
 				break;
@@ -2321,6 +2325,7 @@ int main(int argc, char **argv)
 		interface_color_pair[GUIDE_STRIPE] = A_REVERSE;
 		interface_color_pair[SCROLL_BAR] = A_NORMAL;
 		interface_color_pair[SELECTED_TEXT] = hilite_attribute;
+		interface_color_pair[SPOTLIGHTED] = A_REVERSE;
 		interface_color_pair[PROMPT_BAR] = hilite_attribute;
 		interface_color_pair[STATUS_BAR] = hilite_attribute;
 		interface_color_pair[ERROR_MESSAGE] = hilite_attribute;
@@ -2537,6 +2542,11 @@ int main(int argc, char **argv)
 		} else
 			edit_refresh();
 
+#ifndef NANO_TINY
+		/* Let the next keystroke cancel the highlighting of a search match. */
+		refresh_needed = spotlighted;
+		spotlighted = FALSE;
+#endif
 		errno = 0;
 		focusing = TRUE;
 

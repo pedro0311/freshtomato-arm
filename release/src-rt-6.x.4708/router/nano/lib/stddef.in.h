@@ -51,7 +51,7 @@
 
 /* On AIX 7.2, with xlc in 64-bit mode, <stddef.h> defines max_align_t to a
    type with alignment 4, but 'long' has alignment 8.  */
-#  if defined _AIX && defined _ARCH_PPC64
+#  if defined _AIX && defined __LP64__
 #   if !GNULIB_defined_max_align_t
 #    ifdef _MAX_ALIGN_T
 /* /usr/include/stddef.h has already defined max_align_t.  Override it.  */
@@ -103,11 +103,13 @@ typedef long max_align_t;
    we are currently compiling with gcc.
    On MSVC, max_align_t is defined only in C++ mode, after <cstddef> was
    included.  Its definition is good since it has an alignment of 8 (on x86
-   and x86_64).  */
-#if defined _MSC_VER && defined __cplusplus
+   and x86_64).
+   Similarly on OS/2 kLIBC.  */
+#if (defined _MSC_VER || (defined __KLIBC__ && !defined __LIBCN__)) \
+    && defined __cplusplus
 # include <cstddef>
 #else
-# if ! (@HAVE_MAX_ALIGN_T@ || defined _GCC_MAX_ALIGN_T)
+# if ! (@HAVE_MAX_ALIGN_T@ || (defined _GCC_MAX_ALIGN_T && !defined __clang__))
 #  if !GNULIB_defined_max_align_t
 /* On the x86, the maximum storage alignment of double, long, etc. is 4,
    but GCC's C11 ABI for x86 says that max_align_t has an alignment of 8,
