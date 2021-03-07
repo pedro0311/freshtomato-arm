@@ -1333,12 +1333,6 @@ void start_ovpn_eas()
 	if ((strlen(nvram_safe_get("vpn_server_eas")) == 0) && (strlen(nvram_safe_get("vpn_client_eas")) == 0))
 		return;
 
-	/* wait for time sync for a while */
-	i = 10;
-	while (time(0) < Y2K && i--) {
-		sleep(1);
-	}
-
 	/* Parse and start servers */
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));
 

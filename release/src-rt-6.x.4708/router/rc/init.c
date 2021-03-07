@@ -5417,6 +5417,9 @@ int init_main(int argc, char *argv[])
 	nvram_set("debug_ddns", "1");
 #endif
 
+	/* reset ntp status */
+	nvram_set("ntp_ready", "0");
+
 	start_jffs2();
 
 	state = SIGUSR2;	/* START */

@@ -145,7 +145,7 @@ void enable_ip6_forward(void)
 	f_write_procsysnet("ipv6/conf/all/forwarding", (ipv6_enabled() ? "1" : "0"));
 }
 
-static void enable_ndp_proxy(void)
+static void enable_ndp6_proxy(void)
 {
 	f_write_procsysnet("ipv6/conf/default/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
 	f_write_procsysnet("ipv6/conf/all/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
@@ -2158,7 +2158,7 @@ int start_firewall(void)
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
 		enable_ip6_forward();
-		enable_ndp_proxy();
+		enable_ndp6_proxy();
 	}
 #endif
 
@@ -2174,7 +2174,11 @@ int start_firewall(void)
 	modprobe_r("xt_HL");
 	modprobe_r("xt_length");
 	modprobe_r("xt_web");
+#ifdef TCONFIG_BCMARM
 	modprobe_r("ipt_webmon");
+#else
+	modprobe_r("xt_webmon");
+#endif
 	modprobe_r("xt_dscp");
 	modprobe_r("ipt_ipp2p");
 

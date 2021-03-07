@@ -235,9 +235,14 @@ extern void reload_dnsmasq(void);
 extern void start_stubby(void);
 extern void stop_stubby(void);
 #endif
+#ifdef TCONFIG_DNSCRYPT
+extern void start_dnscrypt(void);
+extern void stop_dnscrypt(void);
+#endif
 extern void set_tz(void);
 extern void start_ntpd(void);
 extern void stop_ntpd(void);
+extern int ntpd_synced_main(int argc, char *argv[]);
 extern void check_services(void);
 extern void exec_service(void);
 extern int service_main(int argc, char *argv[]);
@@ -264,14 +269,13 @@ extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif /* TCONFIG_IPV6 */
 #ifdef TCONFIG_BCMBSD
-int start_bsd(void);
-void stop_bsd(void);
+extern int start_bsd(void);
+extern void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
 #ifdef TCONFIG_SAMBASRV
 extern void start_samba(void);
 extern void stop_samba(void);
 #endif /* TCONFIG_SAMBASRV */
-
 
 /* usb.c */
 #ifdef TCONFIG_USB

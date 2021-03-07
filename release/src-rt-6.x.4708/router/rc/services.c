@@ -479,10 +479,14 @@ void start_dnsmasq()
 		fprintf(f, "conf-file=/etc/dnsmasq.adblock\n");
 
 #ifdef TCONFIG_DNSSEC
-	if (nvram_get_int("dnssec_enable"))
+	if (nvram_get_int("dnssec_enable")) {
 		fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
-		           "dnssec\n"
-		           "dnssec-no-timecheck\n");
+		           "dnssec\n");
+
+		/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
+		if (!nvram_get_int("ntp_ready"))
+			fprintf(f, "dnssec-no-timecheck\n");
+	}
 #endif
 
 #ifdef TCONFIG_DNSCRYPT
@@ -561,71 +565,18 @@ void start_dnsmasq()
 		symlink("/rom/etc/resolv.conf", RESOLV_CONF); /* nameserver 127.0.0.1 */
 	}
 
+#ifdef TCONFIG_DNSCRYPT
+	start_dnscrypt();
+#endif
+#ifdef TCONFIG_STUBBY
+	start_stubby();
+#endif
+
 	/* default to some values we like, but allow the user to override them */
 	eval("dnsmasq", "-c", "4096", "--log-async");
 
 	if (!nvram_contains_word("debug_norestart", "dnsmasq"))
 		pid_dnsmasq = -2;
-
-#ifdef TCONFIG_DNSCRYPT
-	/* start dnscrypt-proxy */
-	if (nvram_get_int("dnscrypt_proxy")) {
-		char dnscrypt_local[30];
-		char *dnscrypt_ekeys;
-
-		memset(dnscrypt_local, 0, 30);
-		sprintf(dnscrypt_local, "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
-		dnscrypt_ekeys = nvram_get_int("dnscrypt_ephemeral_keys") ? "-E" : "";
-
-		eval("ntp2ip");
-
-		if (nvram_get_int("dnscrypt_manual"))
-			eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
-			     "-a", dnscrypt_local,
-			     "-m", nvram_safe_get("dnscrypt_log"),
-			     "-N", nvram_safe_get("dnscrypt_provider_name"),
-			     "-k", nvram_safe_get("dnscrypt_provider_key"),
-			     "-r", nvram_safe_get("dnscrypt_resolver_address"));
-		else
-			eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
-			     "-a", dnscrypt_local,
-			     "-m", nvram_safe_get("dnscrypt_log"),
-			     "-R", nvram_safe_get("dnscrypt_resolver"),
-			     "-L", "/etc/dnscrypt-resolvers.csv");
-
-#ifdef TCONFIG_IPV6
-		memset(dnscrypt_local, 0, 30);
-		sprintf(dnscrypt_local, "::1:%s", nvram_safe_get("dnscrypt_port"));
-
-		if (get_ipv6_service() != *("NULL")) { /* when ipv6 enabled */
-			if (nvram_get_int("dnscrypt_manual"))
-				eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
-				     "-a", dnscrypt_local,
-				     "-m", nvram_safe_get("dnscrypt_log"),
-				     "-N", nvram_safe_get("dnscrypt_provider_name"),
-				     "-k", nvram_safe_get("dnscrypt_provider_key"),
-				     "-r", nvram_safe_get("dnscrypt_resolver_address"));
-			else
-				eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
-				     "-a", dnscrypt_local,
-				     "-m", nvram_safe_get("dnscrypt_log"),
-				     "-R", nvram_safe_get("dnscrypt_resolver"),
-				     "-L", "/etc/dnscrypt-resolvers.csv");
-		}
-#endif
-	}
-#endif
-
-#ifdef TCONFIG_STUBBY
-	start_stubby();
-#endif
-
-#ifdef TCONFIG_DNSSEC
-	if ((time(0) > Y2K) && nvram_get_int("dnssec_enable")) {
-		sleep(1);
-		reload_dnsmasq();
-	}
-#endif
 }
 
 void stop_dnsmasq(void)
@@ -642,9 +593,8 @@ void stop_dnsmasq(void)
 
 	killall_tk_period_wait("dnsmasq", 50);
 #ifdef TCONFIG_DNSCRYPT
-	killall_tk_period_wait("dnscrypt-proxy", 50);
+	stop_dnscrypt();
 #endif
-
 #ifdef TCONFIG_STUBBY
 	stop_stubby();
 #endif
@@ -662,6 +612,73 @@ void clear_resolv(void)
 	f_write(dmresolv, NULL, 0, 0, 0); /* blank */
 }
 
+#ifdef TCONFIG_DNSCRYPT
+void start_dnscrypt(void)
+{
+	const static char *dnscrypt_resolv = "/etc/dnscrypt-resolvers.csv";
+	char dnscrypt_local[30];
+	char *dnscrypt_ekeys;
+
+	if (!nvram_get_int("dnscrypt_proxy"))
+		return;
+
+	if (getpid() != 1) {
+		start_service("dnscrypt");
+		return;
+	}
+
+	stop_dnscrypt();
+
+	memset(dnscrypt_local, 0, 30);
+	sprintf(dnscrypt_local, "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
+	dnscrypt_ekeys = nvram_get_int("dnscrypt_ephemeral_keys") ? "-E" : "";
+
+	if (nvram_get_int("dnscrypt_manual"))
+		eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
+		     "-a", dnscrypt_local,
+		     "-m", nvram_safe_get("dnscrypt_log"),
+		     "-N", nvram_safe_get("dnscrypt_provider_name"),
+		     "-k", nvram_safe_get("dnscrypt_provider_key"),
+		     "-r", nvram_safe_get("dnscrypt_resolver_address"));
+	else
+		eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
+		     "-a", dnscrypt_local,
+		     "-m", nvram_safe_get("dnscrypt_log"),
+		     "-R", nvram_safe_get("dnscrypt_resolver"),
+		     "-L", (char *) dnscrypt_resolv);
+#ifdef TCONFIG_IPV6
+	memset(dnscrypt_local, 0, 30);
+	sprintf(dnscrypt_local, "::1:%s", nvram_safe_get("dnscrypt_port"));
+
+	if (get_ipv6_service() != *("NULL")) { /* when ipv6 enabled */
+		if (nvram_get_int("dnscrypt_manual"))
+			eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
+			     "-a", dnscrypt_local,
+			     "-m", nvram_safe_get("dnscrypt_log"),
+			     "-N", nvram_safe_get("dnscrypt_provider_name"),
+			     "-k", nvram_safe_get("dnscrypt_provider_key"),
+			     "-r", nvram_safe_get("dnscrypt_resolver_address"));
+		else
+			eval("dnscrypt-proxy", "-d", dnscrypt_ekeys,
+			     "-a", dnscrypt_local,
+			     "-m", nvram_safe_get("dnscrypt_log"),
+			     "-R", nvram_safe_get("dnscrypt_resolver"),
+			     "-L", (char *) dnscrypt_resolv);
+	}
+#endif
+}
+
+void stop_dnscrypt(void)
+{
+	if (getpid() != 1) {
+		stop_service("dnscrypt");
+		return;
+	}
+
+	killall_tk_period_wait("dnscrypt-proxy", 50);
+}
+#endif /* TCONFIG_DNSCRYPT */
+
 #ifdef TCONFIG_STUBBY
 void start_stubby(void)
 {
@@ -669,7 +686,7 @@ void start_stubby(void)
 	FILE *fp;
 	char *nv, *nvp, *b;
 	char *server, *tlsport, *hostname, *spkipin, *digest;
-	int port;
+	int ntp_ready, port;
 	union {
 		struct in_addr addr4;
 #ifdef TCONFIG_IPV6
@@ -694,12 +711,14 @@ void start_stubby(void)
 		return;
 	}
 
+	ntp_ready = nvram_get_int("ntp_ready");
+
 	/* basic & privacy settings */
 	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"
 	            "resolution_type: GETDNS_RESOLUTION_STUB\n"
 	            "dns_transport_list:\n"
-	            "  - GETDNS_TRANSPORT_TLS\n"
-	            "tls_authentication: GETDNS_AUTHENTICATION_REQUIRED\n"
+	            "%s"
+	            "tls_authentication: %s\n"
 	            "tls_query_padding_blocksize: 128\n"
 	            "edns_client_subnet_private: 1\n"
 	/* connection settings */
@@ -712,6 +731,8 @@ void start_stubby(void)
 	/* listen address */
 	            "listen_addresses:\n"
 	            "  - 127.0.0.1@%s\n",
+	            ntp_ready ? "  - GETDNS_TRANSPORT_TLS\n" : "  - GETDNS_TRANSPORT_UDP\n  - GETDNS_TRANSPORT_TCP\n",
+	            ntp_ready ? "GETDNS_AUTHENTICATION_REQUIRED" : "GETDNS_AUTHENTICATION_NONE",
 	            nvram_safe_get("stubby_port"));
 #ifdef TCONFIG_IPV6
 	if (get_ipv6_service() != *("NULL")) /* when ipv6 enabled */
@@ -761,7 +782,6 @@ void start_stubby(void)
 
 	fclose(fp);
 
-	eval("ntp2ip");
 	eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *) stubby_config);
 }
 
@@ -775,7 +795,7 @@ void stop_stubby(void)
 	killall_tk_period_wait("stubby", 50);
 	unlink("/var/run/stubby.pid");
 }
-#endif
+#endif /* TCONFIG_STUBBY */
 
 #ifdef TCONFIG_FANCTRL
 void start_phy_tempsense()
@@ -791,7 +811,7 @@ void stop_phy_tempsense()
 	pid_phy_tempsense = -1;
 	killall_tk_period_wait("phy_tempsense", 50);
 }
-#endif
+#endif /* TCONFIG_FANCTRL */
 
 void start_adblock(int update)
 {
@@ -1942,9 +1962,9 @@ void start_ntpd(void)
 			xstart("ntpd", "-q", "-t");
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 			if (nvram_get_int("ntpd_enable"))
-				ret = xstart("ntpd", "-l", "-t");
+				ret = xstart("ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced");
 			else
-				ret = xstart("ntpd", "-t");
+				ret = xstart("ntpd", "-t", "-S", "/sbin/ntpd_synced");
 
 			if (!ret)
 				logmsg(LOG_INFO, "ntpd is started");
@@ -1959,7 +1979,38 @@ void stop_ntpd(void)
 		return;
 	}
 
-	killall_tk_period_wait("ntpd", 50);
+	if (pidof("ntpd") > 0) {
+		killall_tk_period_wait("ntpd", 50);
+		logmsg(LOG_INFO, "ntpd is stopped");
+	}
+}
+
+int ntpd_synced_main(int argc, char *argv[])
+{
+	if (!nvram_match("ntp_ready", "1") && (argc == 2 && !strcmp(argv[1], "step"))) {
+		nvram_set("ntp_ready", "1");
+		logmsg(LOG_INFO, "initial clock set");
+
+		start_sched();
+		start_ddns();
+#ifdef TCONFIG_DNSCRYPT
+		stop_dnscrypt();
+		start_dnscrypt();
+#endif
+#ifdef TCONFIG_STUBBY
+		stop_stubby();
+		start_stubby();
+#endif
+#ifdef TCONFIG_DNSSEC
+		if (nvram_get_int("dnssec_enable"))
+			reload_dnsmasq();
+#endif
+#ifdef TCONFIG_OPENVPN
+		start_ovpn_eas();
+#endif
+	}
+
+	return 0;
 }
 
 static void stop_rstats(void)
@@ -2926,7 +2977,6 @@ void start_services(void)
 	start_cron();
 	start_rstats(0);
 	start_cstats(0);
-	start_sched();
 #ifdef TCONFIG_PPTPD
 	start_pptpd();
 #endif
@@ -3116,6 +3166,14 @@ TOP:
 		if (act_start) reload_dnsmasq();
 		goto CLEAR;
 	}
+
+#ifdef TCONFIG_DNSCRYPT
+	if (strcmp(service, "dnscrypt") == 0) {
+		if (act_stop) stop_dnscrypt();
+		if (act_start) start_dnscrypt();
+		goto CLEAR;
+	}
+#endif
 
 #ifdef TCONFIG_STUBBY
 	if (strcmp(service, "stubby") == 0) {

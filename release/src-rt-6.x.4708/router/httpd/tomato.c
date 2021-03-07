@@ -532,6 +532,7 @@ static const nvset_t nvset_list[] = {
 	{ "tm_dst",			V_01				},
 	{ "ntp_updates",		V_RANGE(-1, 24)			},
 	{ "ntp_server",			V_LENGTH(1, 150)		},	// x y z
+	{ "ntpd_ready",			V_01				},	/* is ntp synced? */
 	{ "ntpd_enable",		V_01				},	/* enable ntpd server */
 	{ "ntpd_server_redir",		V_01				},	/* intercept ntp requests */
 
