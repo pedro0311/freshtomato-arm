@@ -1210,23 +1210,15 @@ void start_ipv6(void)
 	char buffer[16];
 
 	service = get_ipv6_service();
-	enable_ip6_forward();
 
 	/* check if turned on */
-	switch (service) {
-		case IPV6_NATIVE:
-		case IPV6_6IN4:
-		case IPV6_MANUAL:
-			add_ip6_lanaddr();
-			break;
-		case IPV6_NATIVE_DHCP:
-		case IPV6_ANYCAST_6TO4:
-			nvram_set("ipv6_rtr_addr", "");
-			nvram_set("ipv6_prefix", "");
-			break;
-	}
-
 	if (service != IPV6_DISABLED) {
+
+		ipv6_forward("default", 1); /* enable it for default */
+		ipv6_forward("all", 1); /* enable it for all */
+		ndp_proxy("default", 1);
+		ndp_proxy("all", 1);
+
 		/* check if "ipv6_accept_ra" (bit 1) for lan is enabled (via GUI, basic-ipv6.asp) and "ipv6_radvd" AND "ipv6_dhcpd" (SLAAC and/or DHCP with dnsmasq) is disabled (via GUI, advanced-dhcpdns.asp) */
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
 		/* check lanX / brX if available */
@@ -1245,12 +1237,30 @@ void start_ipv6(void)
 			}
 		}
 	}
+
+	switch (service) {
+		case IPV6_NATIVE:
+		case IPV6_6IN4:
+		case IPV6_MANUAL:
+			add_ip6_lanaddr();
+			break;
+		case IPV6_NATIVE_DHCP:
+		case IPV6_ANYCAST_6TO4:
+			nvram_set("ipv6_rtr_addr", "");
+			nvram_set("ipv6_prefix", "");
+			break;
+	}
 }
 
 void stop_ipv6(void)
 {
 	stop_ipv6_tunnel();
 	stop_dhcp6c();
+
+	ipv6_forward("default", 0); /* disable it for default */
+	ipv6_forward("all", 0); /* disable it for all */
+	ndp_proxy("default", 0);
+	ndp_proxy("all", 0);
 
 	eval("ip", "-6", "addr", "flush", "scope", "global");
 	eval("ip", "-6", "route", "flush", "scope", "global");
@@ -3300,18 +3310,6 @@ TOP:
 	}
 
 #ifdef TCONFIG_IPV6
-	if (strcmp(service, "ipv6") == 0) {
-		if (act_stop) {
-			stop_dnsmasq();
-			stop_ipv6();
-		}
-		if (act_start) {
-			start_ipv6();
-			start_dnsmasq();
-		}
-		goto CLEAR;
-	}
-
 	if (strcmp(service, "dhcp6") == 0) {
 		if (act_stop) stop_dhcp6c();
 		if (act_start) start_dhcp6c();

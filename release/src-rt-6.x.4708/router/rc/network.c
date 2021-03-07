@@ -928,13 +928,6 @@ void accept_ra(const char *ifname)
 	*/
 	snprintf(s, sizeof(s), "ipv6/conf/%s/accept_ra", ifname);
 	f_write_procsysnet(s, "2");
-
-	/* possible values for forwarding:
-	   0 Forwarding disabled
-	   1 Forwarding enabled
-	*/
-	snprintf(s, sizeof(s), "ipv6/conf/%s/forwarding", ifname);
-	f_write_procsysnet(s, "1");
 }
 
 void accept_ra_reset(const char *ifname)
@@ -944,12 +937,29 @@ void accept_ra_reset(const char *ifname)
 	/* set accept_ra (back) to 1 (default) */
 	snprintf(s, sizeof(s), "ipv6/conf/%s/accept_ra", ifname);
 	f_write_procsysnet(s, "1");
-
-	/* leave forwarding like it is right now and let function enable_ip6_forward(void) decide */
-	//snprintf(s, sizeof(s), "ipv6/conf/%s/forwarding", ifname);
-	//f_write_procsysnet(s, "1");
 }
-#endif
+
+void ipv6_forward(const char *ifname, int enable)
+{
+	char s[128];
+
+	/* possible values for forwarding:
+	   0 Forwarding disabled
+	   1 Forwarding enabled
+	*/
+	snprintf(s, sizeof(s), "ipv6/conf/%s/forwarding", ifname);
+	f_write_procsysnet(s, enable ? "1" : "0");
+}
+
+void ndp_proxy(const char *ifname, int enable)
+{
+	char s[128];
+
+	snprintf(s, sizeof(s), "ipv6/conf/%s/proxy_ndp", ifname);
+	f_write_procsysnet(s, enable ? "1" : "0");
+
+}
+#endif /* TCONFIG_IPV6 */
 
 void start_lan(void)
 {
@@ -1152,6 +1162,9 @@ void start_lan(void)
 		else {
 			close(sfd);
 			free(lan_ifname);
+#ifdef TCONFIG_IPV6
+			start_ipv6(); /* all work done at function start_lan(), lets call start_ipv6() finally (only once!) */
+#endif
 			return;
 		}
 
@@ -1195,10 +1208,6 @@ void start_lan(void)
 			}
 		}
 
-#ifdef TCONFIG_IPV6
-		start_ipv6();
-#endif
-
 #ifdef TCONFIG_EMF
 		start_emf(lan_ifname);
 #endif
@@ -1225,6 +1234,10 @@ void stop_lan(void)
 
 	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
 
+#ifdef TCONFIG_IPV6
+	stop_ipv6(); /* stop IPv6 first! */
+#endif
+
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
@@ -1237,10 +1250,6 @@ void stop_lan(void)
 		strcat(tmp, "_ifname");
 		lan_ifname = nvram_safe_get(tmp);
 		ifconfig(lan_ifname, 0, NULL, NULL);
-
-#ifdef TCONFIG_IPV6
-		stop_ipv6();
-#endif
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
 

@@ -184,10 +184,14 @@ extern void load_wl(void);
 extern void enable_ipv6(int enable);
 extern void accept_ra(const char *ifname);
 extern void accept_ra_reset(const char *ifname);
+extern void ipv6_forward(const char *ifname, int enable);
+extern void ndp_proxy(const char *ifname, int enable);
 #else
 #define enable_ipv6(enable) do {} while (0)
 #define accept_ra(ifname) do {} while (0)
 #define accept_ra_reset(ifname) do {} while (0)
+#define ipv6_forward(ifname, enable) do {} while (0)
+#define ndp_proxy(ifname, enable) do {} while (0)
 #endif /* TCONFIG_IPV6 */
 
 /* dhcpc.c */
@@ -320,9 +324,6 @@ extern const char *chain_out_accept;
 extern const char *chain_out_reject;
 extern char **layer7_in;
 extern void enable_ip_forward(void);
-#ifdef TCONFIG_IPV6
-extern void enable_ip6_forward(void);
-#endif
 extern void ipt_write(const char *format, ...);
 extern void ip6t_write(const char *format, ...);
 #ifdef TCONFIG_IPV6
