@@ -148,7 +148,7 @@
      } else {
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
-@@ -1264,7 +1264,7 @@ ipv6cp_up(f)
+@@ -1262,7 +1262,7 @@ ipv6cp_up(f)
  		if (sif6defaultroute(f->unit, go->ourid, ho->hisid))
  		    default_route_set[f->unit] = 1;
  	}

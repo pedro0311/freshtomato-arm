@@ -23,7 +23,7 @@
     { NULL }
  };
  
-@@ -1297,7 +1306,7 @@ ipv6cp_up(f)
+@@ -1295,7 +1304,7 @@ ipv6cp_up(f)
       */
      if (ipv6cp_script_state == s_down && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_up;
@@ -32,7 +32,7 @@
      }
  }
  
-@@ -1348,7 +1357,7 @@ ipv6cp_down(f)
+@@ -1346,7 +1355,7 @@ ipv6cp_down(f)
      /* Execute the ipv6-down script */
      if (ipv6cp_script_state == s_up && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_down;
@@ -41,7 +41,7 @@
      }
  }
  
-@@ -1386,13 +1395,13 @@ ipv6cp_script_done(arg)
+@@ -1384,13 +1393,13 @@ ipv6cp_script_done(arg)
      case s_up:
  	if (ipv6cp_fsm[0].state != OPENED) {
  	    ipv6cp_script_state = s_down;
