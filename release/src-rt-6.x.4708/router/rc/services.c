@@ -1991,14 +1991,13 @@ int ntpd_synced_main(int argc, char *argv[])
 		nvram_set("ntp_ready", "1");
 		logmsg(LOG_INFO, "initial clock set");
 
+		start_httpd();
 		start_sched();
 		start_ddns();
 #ifdef TCONFIG_DNSCRYPT
-		stop_dnscrypt();
 		start_dnscrypt();
 #endif
 #ifdef TCONFIG_STUBBY
-		stop_stubby();
 		start_stubby();
 #endif
 #ifdef TCONFIG_DNSSEC
