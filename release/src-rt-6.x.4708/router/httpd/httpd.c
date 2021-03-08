@@ -621,9 +621,19 @@ static void erase_cert(void)
 
 static void start_ssl(void)
 {
-	int ok = 0, retry = 2, save;
+	int i, lock, ok, retry = 2, save;
 	unsigned long long sn;
 	char t[32];
+
+	lock = file_lock("httpd");
+
+	/* avoid collisions if another httpd instance is initializing SSL cert */
+	for (i = 1; i < 5; i++) {
+		if (lock < 0)
+			sleep(i * i);
+		else
+			i = 5;
+	}
 
 	if (nvram_match("https_crt_gen", "1")) {
 		erase_cert();
@@ -632,7 +642,8 @@ static void start_ssl(void)
 	while (1) {
 		save = nvram_match("https_crt_save", "1");
 
-		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || ((nvram_get_int("https_crt_timeset") != 1) && (time(NULL) > Y2K))) {
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || ((!nvram_get_int("https_crt_timeset")) && (time(NULL) > Y2K))) {
+			ok = 0;
 			if (save && nvram_match("crt_ver", HTTPS_CRT_VER)) {
 				if (nvram_get_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
 					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0) {
@@ -647,7 +658,7 @@ static void start_ssl(void)
 				erase_cert();
 				syslog(LOG_INFO, "Generating SSL certificate...");
 
-				/* browsers seems to like this when the ip address moves... - zzz */
+				/* browsers seems to like this when the ip address moves... */
 				f_read("/dev/urandom", &sn, sizeof(sn));
 
 				sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
@@ -660,6 +671,7 @@ static void start_ssl(void)
 		}
 
 		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) {
+			file_unlock(lock);
 			return;
 		}
 		erase_cert();
@@ -667,6 +679,7 @@ static void start_ssl(void)
 		syslog(retry ? LOG_WARNING : LOG_ERR, "Unable to start SSL");
 
 		if (!retry) {
+			file_unlock(lock);
 			exit(1);
 		}
 		retry -= 1;
@@ -963,7 +976,6 @@ static void close_listen_sockets(void)
 int main(int argc, char **argv)
 {
 	int c;
-	int debug = 0;
 	fd_set rfdset;
 	int i, n;
 	struct sockaddr_storage sai;
@@ -982,20 +994,10 @@ int main(int argc, char **argv)
 	FD_ZERO(&listeners.lfdset);
 	memset(bind, 0, sizeof(bind));
 
-	while ((c = getopt(argc, argv, "hNdp:s:")) != -1) {
+	while ((c = getopt(argc, argv, "Np:s:")) != -1) {
 		switch (c) {
-		case 'h':
-			printf(
-				"Usage: %s [options]\n"
-				"  -N        Disable caching (always send no-cache)\n"
-				"  -d        Debug mode / do not demonize\n"
-				, argv[0]);
-			return 1;
 		case 'N':
 			disable_maxage = 1;
-			break;
-		case 'd':
-			debug = 1;
 			break;
 		case 'p':
 		case 's':
@@ -1007,15 +1009,17 @@ int main(int argc, char **argv)
 					memcpy(bind, optarg, MIN(sizeof(bind), (unsigned int) (port - optarg)));
 				port++;
 			}
-			else {
+			else
 				port = optarg;
-			}
 
 			IF_TCONFIG_HTTPS(if (c == 's') do_ssl = 1);
 			IF_TCONFIG_IPV6(ip6 = (*bind && strchr(bind, ':')));
 			add_listen_socket(bind, atoi(port), ip6, (c == 's'));
 
 			memset(bind, 0, sizeof(bind));
+			break;
+		default:
+			fprintf(stderr, "ERROR: unknown option %c\n", c);
 			break;
 		}
 	}
@@ -1027,25 +1031,19 @@ int main(int argc, char **argv)
 		syslog(LOG_ERR, "can't bind to any address");
 		return 1;
 	}
-	_dprintf("%s: initialized %d listener(s)\n", __FUNCTION__, listeners.count);
 
 	IF_TCONFIG_HTTPS(if (do_ssl) start_ssl());
 
 	init_id();
 
-	if (!debug) {
-		if (daemon(1, 1) == -1) {
-			syslog(LOG_ERR, "daemon: %m");
-			return 0;
-		}
+	if (daemon(1, 1) == -1) {
+		syslog(LOG_ERR, "daemon: %m");
+		return 0;
+	}
 
-		char s[16];
-		sprintf(s, "%d", getpid());
-		f_write_string("/var/run/httpd.pid", s, 0, 0644);
-	}
-	else {
-		printf("DEBUG mode, not daemonizing\n");
-	}
+	char s[16];
+	sprintf(s, "%d", getpid());
+	f_write_string("/var/run/httpd.pid", s, 0, 0644);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGALRM, SIG_IGN);
