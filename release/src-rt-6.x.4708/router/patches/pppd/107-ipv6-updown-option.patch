@@ -1,6 +1,6 @@
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
-@@ -175,6 +175,8 @@ ipv6cp_options ipv6cp_gotoptions[NUM_PPP];	/* Options that peer ack'd */
+@@ -179,6 +179,8 @@ ipv6cp_options ipv6cp_gotoptions[NUM_PPP];	/* Options that peer ack'd */
  /* local vars */
  static int default_route_set[NUM_PPP];		/* Have set up a default route */
  static int ipv6cp_is_up;
@@ -8,8 +8,8 @@
 +static char path_ipv6down[MAXPATHLEN] = _PATH_IPV6DOWN; /* pathname of ipv6-down script */
  
  /* Hook for a plugin to know when IPv6 protocol has come up */
- void (*ipv6_up_hook)(void) = NULL;
-@@ -268,6 +270,13 @@ static option_t ipv6cp_option_list[] = {
+ void (*ipv6_up_hook) __P((void)) = NULL;
+@@ -272,6 +274,13 @@ static option_t ipv6cp_option_list[] = {
      { "ipv6cp-max-failure", o_int, &ipv6cp_fsm[0].maxnakloops,
        "Set max #conf-naks for IPv6CP", OPT_PRIO },
  
@@ -23,7 +23,7 @@
     { NULL }
  };
  
-@@ -1297,7 +1306,7 @@ ipv6cp_up(f)
+@@ -1299,7 +1308,7 @@ ipv6cp_up(f)
       */
      if (ipv6cp_script_state == s_down && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_up;
@@ -32,7 +32,7 @@
      }
  }
  
-@@ -1348,7 +1357,7 @@ ipv6cp_down(f)
+@@ -1351,7 +1360,7 @@ ipv6cp_down(f)
      /* Execute the ipv6-down script */
      if (ipv6cp_script_state == s_up && ipv6cp_script_pid == 0) {
  	ipv6cp_script_state = s_down;
@@ -41,7 +41,7 @@
      }
  }
  
-@@ -1386,13 +1395,13 @@ ipv6cp_script_done(arg)
+@@ -1394,13 +1403,13 @@ ipv6cp_script_done(arg)
      case s_up:
  	if (ipv6cp_fsm[0].state != OPENED) {
  	    ipv6cp_script_state = s_down;

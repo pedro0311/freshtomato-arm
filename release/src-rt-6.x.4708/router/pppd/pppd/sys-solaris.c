@@ -85,6 +85,8 @@
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define RCSID	"$Id: sys-solaris.c,v 1.16 2008/01/30 14:26:53 carlsonj Exp $"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -218,7 +220,10 @@ static int	if6_is_up = 0;	/* IPv6 interface has been marked up */
 
 #endif /* defined(INET6) && defined(SOL2) */
 
-#if !defined(INET6) || !defined(SOL2)
+#if defined(INET6) && defined(SOL2)
+static char	first_ether_name[LIFNAMSIZ];	/* Solaris 8 and above */
+#else
+static char	first_ether_name[IFNAMSIZ];	/* Before Solaris 8 */
 #define MAXIFS		256			/* Max # of interfaces */
 #endif /* defined(INET6) && defined(SOL2) */
 
@@ -251,15 +256,15 @@ static eui64_t	default_route_gateway6;	/* Gateway for default IPv6 route added *
 static u_int32_t proxy_arp_addr;	/* Addr for proxy arp entry added */
 
 /* Prototypes for procedures local to this file. */
-static int translate_speed(int);
-static int baud_rate_of(int);
-static int get_ether_addr(u_int32_t, struct sockaddr *);
-static int get_hw_addr(char *, u_int32_t, struct sockaddr *);
-static int get_hw_addr_dlpi(char *, struct sockaddr *);
-static int dlpi_attach(int, int);
-static int dlpi_info_req(int);
-static int dlpi_get_reply(int, union DL_primitives *, int, size_t);
-static int strioctl(int, int, void *, int, int);
+static int translate_speed __P((int));
+static int baud_rate_of __P((int));
+static int get_ether_addr __P((u_int32_t, struct sockaddr *));
+static int get_hw_addr __P((char *, u_int32_t, struct sockaddr *));
+static int get_hw_addr_dlpi __P((char *, struct sockaddr *));
+static int dlpi_attach __P((int, int));
+static int dlpi_info_req __P((int));
+static int dlpi_get_reply __P((int, union DL_primitives *, int, int));
+static int strioctl __P((int, int, void *, int, int));
 
 #ifdef SOL2
 /*
@@ -291,13 +296,13 @@ sifppa(fd, ppa)
 
 #if defined(SOL2) && defined(INET6)
 /*
- * get_first_ether_hwaddr - get the hardware address for the first
- * ethernet-style interface on this system.
+ * get_first_ethernet - returns the first Ethernet interface name found in 
+ * the system, or NULL if none is found
  *
  * NOTE: This is the lifreq version (Solaris 8 and above)
  */
-int
-get_first_ether_hwaddr(u_char *addr)
+char *
+get_first_ethernet()
 {
     struct lifnum lifn;
     struct lifconf lifc;
@@ -309,7 +314,7 @@ get_first_ether_hwaddr(u_char *addr)
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
-	return -1;
+	return 0;
     }
 
     /*
@@ -320,7 +325,7 @@ get_first_ether_hwaddr(u_char *addr)
     if (ioctl(fd, SIOCGLIFNUM, &lifn) < 0) {
 	close(fd);
 	error("could not determine number of interfaces: %m");
-	return -1;
+	return 0;
     }
 
     num_ifs = lifn.lifn_count;
@@ -329,7 +334,7 @@ get_first_ether_hwaddr(u_char *addr)
     if (req == NULL) {
 	close(fd);
 	error("out of memory");
-	return -1;
+	return 0;
     }
 
     /*
@@ -343,7 +348,7 @@ get_first_ether_hwaddr(u_char *addr)
 	close(fd);
 	free(req);
 	error("SIOCGLIFCONF: %m");
-	return -1;
+	return 0;
     }
 
     /*
@@ -360,16 +365,15 @@ get_first_ether_hwaddr(u_char *addr)
 	memset(&lifr, 0, sizeof(lifr));
 	strncpy(lifr.lifr_name, plifreq->lifr_name, sizeof(lifr.lifr_name));
 	if (ioctl(fd, SIOCGLIFFLAGS, &lifr) < 0) {
+	    close(fd);
+	    free(req);
 	    error("SIOCGLIFFLAGS: %m");
-	    break;
+	    return 0;
 	}
 	fl = lifr.lifr_flags;
 
 	if ((fl & (IFF_UP|IFF_BROADCAST|IFF_POINTOPOINT|IFF_LOOPBACK|IFF_NOARP))
 		!= (IFF_UP | IFF_BROADCAST))
-	    continue;
-
-	if (get_if_hwaddr(addr, lifr.lifr_name) < 0)
 	    continue;
 
 	found = 1;
@@ -378,20 +382,21 @@ get_first_ether_hwaddr(u_char *addr)
     free(req);
     close(fd);
 
-    if (found)
-	return 0;
-    else
-	return -1;
+    if (found) {
+	strncpy(first_ether_name, lifr.lifr_name, sizeof(first_ether_name));
+	return (char *)first_ether_name;
+    } else
+	return NULL;
 }
 #else
 /*
- * get_first_ether_hwaddr - get the hardware address for the first
- * ethernet-style interface on this system.
+ * get_first_ethernet - returns the first Ethernet interface name found in 
+ * the system, or NULL if none is found
  *
  * NOTE: This is the ifreq version (before Solaris 8). 
  */
-int
-get_first_ether_hwaddr(u_char *addr)
+char *
+get_first_ethernet()
 {
     struct ifconf ifc;
     struct ifreq *pifreq;
@@ -402,7 +407,7 @@ get_first_ether_hwaddr(u_char *addr)
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
-	return -1;
+	return 0;
     }
 
     /*
@@ -417,7 +422,7 @@ get_first_ether_hwaddr(u_char *addr)
     if (req == NULL) {
 	close(fd);
 	error("out of memory");
-	return -1;
+	return 0;
     }
 
     /*
@@ -429,7 +434,7 @@ get_first_ether_hwaddr(u_char *addr)
 	close(fd);
 	free(req);
 	error("SIOCGIFCONF: %m");
-	return -1;
+	return 0;
     }
 
     /*
@@ -446,16 +451,15 @@ get_first_ether_hwaddr(u_char *addr)
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, pifreq->ifr_name, sizeof(ifr.ifr_name));
 	if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+	    close(fd);
+	    free(req);
 	    error("SIOCGIFFLAGS: %m");
-	    break;
+	    return 0;
 	}
 	fl = ifr.ifr_flags;
 
 	if ((fl & (IFF_UP|IFF_BROADCAST|IFF_POINTOPOINT|IFF_LOOPBACK|IFF_NOARP))
 		!= (IFF_UP | IFF_BROADCAST))
-	    continue;
-
-	if (get_if_hwaddr(addr, ifr.ifr_name) < 0)
 	    continue;
 
 	found = 1;
@@ -464,10 +468,11 @@ get_first_ether_hwaddr(u_char *addr)
     free(req);
     close(fd);
 
-    if (found)
-	return 0;
-    else
-	return -1;
+    if (found) {
+	strncpy(first_ether_name, ifr.ifr_name, sizeof(first_ether_name));
+	return (char *)first_ether_name;
+    } else
+	return NULL;
 }
 #endif /* defined(SOL2) && defined(INET6) */
 
@@ -506,7 +511,9 @@ get_if_hwaddr(u_char *addr, char *if_name)
  * be set in order to declare this as an IPv6 interface
  */
 static int
-slifname(int fd, int ppa)
+slifname(fd, ppa)
+    int fd;
+    int ppa;
 {
     struct  lifreq lifr;
     int	    ret;
@@ -528,13 +535,57 @@ slifname_done:
 
 
 }
+
+
+/*
+ * ether_to_eui64 - Convert 48-bit Ethernet address into 64-bit EUI
+ *
+ * walks the list of valid ethernet interfaces, and convert the first
+ * found 48-bit MAC address into EUI 64. caller also assumes that
+ * the system has a properly configured Ethernet interface for this
+ * function to return non-zero.
+ */
+int
+ether_to_eui64(eui64_t *p_eui64)
+{
+    struct sockaddr s_eth_addr;
+    struct ether_addr *eth_addr = (struct ether_addr *)&s_eth_addr.sa_data;
+    char *if_name;
+
+    if ((if_name = get_first_ethernet()) == NULL) {
+	error("no persistent id can be found");
+	return 0;
+    }
+ 
+    /*
+     * Send DL_INFO_REQ to the driver to solicit its MAC address
+     */
+    if (!get_hw_addr_dlpi(if_name, &s_eth_addr)) {
+	error("could not obtain hardware address for %s", if_name);
+	return 0;
+    }
+
+    /*
+     * And convert the EUI-48 into EUI-64, per RFC 2472 [sec 4.1]
+     */
+    p_eui64->e8[0] = (eth_addr->ether_addr_octet[0] & 0xFF) | 0x02;
+    p_eui64->e8[1] = (eth_addr->ether_addr_octet[1] & 0xFF);
+    p_eui64->e8[2] = (eth_addr->ether_addr_octet[2] & 0xFF);
+    p_eui64->e8[3] = 0xFF;
+    p_eui64->e8[4] = 0xFE;
+    p_eui64->e8[5] = (eth_addr->ether_addr_octet[3] & 0xFF);
+    p_eui64->e8[6] = (eth_addr->ether_addr_octet[4] & 0xFF);
+    p_eui64->e8[7] = (eth_addr->ether_addr_octet[5] & 0xFF);
+
+    return 1;
+}
 #endif /* defined(SOL2) && defined(INET6) */
 
 /*
  * sys_init - System-dependent initialization.
  */
 void
-sys_init(void)
+sys_init()
 {
     int ifd, x;
     struct ifreq ifr;
@@ -734,7 +785,7 @@ sys_init(void)
  * This should call die() because it's called from die().
  */
 void
-sys_cleanup(void)
+sys_cleanup()
 {
 #if defined(SOL2)
     struct ifreq ifr;
@@ -808,7 +859,7 @@ sys_cleanup(void)
  * sys_close - Clean up in a child process before execing.
  */
 void
-sys_close(void)
+sys_close()
 {
     close(ipfd);
 #if defined(INET6) && defined(SOL2)
@@ -822,7 +873,7 @@ sys_close(void)
  * sys_check_options - check the options that the user specified
  */
 int
-sys_check_options(void)
+sys_check_options()
 {
     return 1;
 }
@@ -832,7 +883,8 @@ sys_check_options(void)
  * daemon - Detach us from controlling terminal session.
  */
 int
-daemon(int nochdir, int noclose)
+daemon(nochdir, noclose)
+    int nochdir, noclose;
 {
     int pid;
 
@@ -856,7 +908,7 @@ daemon(int nochdir, int noclose)
  * ppp_available - check whether the system has any ppp interfaces
  */
 int
-ppp_available(void)
+ppp_available()
 {
     struct stat buf;
 
@@ -873,7 +925,7 @@ ppp_available(void)
  * no point of having the comp module be pushed on the stream.
  */
 static int
-any_compressions(void)
+any_compressions()
 {
     if ((!lcp_wantoptions[0].neg_accompression) &&
 	(!lcp_wantoptions[0].neg_pcompression) &&
@@ -888,7 +940,8 @@ any_compressions(void)
  * tty_establish_ppp - Turn the serial port into a ppp interface.
  */
 int
-tty_establish_ppp(int fd)
+tty_establish_ppp(fd)
+    int fd;
 {
     int i;
 
@@ -947,7 +1000,8 @@ tty_establish_ppp(int fd)
  * modules.  This shouldn't call die() because it's called from die().
  */
 void
-tty_disestablish_ppp(int fd)
+tty_disestablish_ppp(fd)
+    int fd;
 {
     int i;
 
@@ -983,7 +1037,7 @@ tty_disestablish_ppp(int fd)
  * Check whether the link seems not to be 8-bit clean.
  */
 void
-clean_check(void)
+clean_check()
 {
     int x;
     char *s;
@@ -1105,7 +1159,8 @@ struct speed {
  * Translate from bits/second to a speed_t.
  */
 static int
-translate_speed(int bps)
+translate_speed(bps)
+    int bps;
 {
     struct speed *speedp;
 
@@ -1122,7 +1177,8 @@ translate_speed(int bps)
  * Translate from a speed_t to bits/second.
  */
 static int
-baud_rate_of(int speed)
+baud_rate_of(speed)
+    int speed;
 {
     struct speed *speedp;
 
@@ -1140,7 +1196,8 @@ baud_rate_of(int speed)
  * regardless of whether the modem option was specified.
  */
 void
-set_up_tty(int fd, int local)
+set_up_tty(fd, local)
+    int fd, local;
 {
     int speed;
     struct termios tios;
@@ -1235,7 +1292,8 @@ set_up_tty(int fd, int local)
  * restore_tty - restore the terminal to the saved settings.
  */
 void
-restore_tty(int fd)
+restore_tty(fd)
+    int fd;
 {
     if (restore_term) {
 	if (!default_device) {
@@ -1267,7 +1325,8 @@ restore_tty(int fd)
  * This is called from die(), so it shouldn't call die().
  */
 void
-setdtr(int fd, int on)
+setdtr(fd, on)
+int fd, on;
 {
     int modembits = TIOCM_DTR;
 
@@ -1280,7 +1339,7 @@ setdtr(int fd, int on)
  * to the ppp driver.
  */
 int
-open_ppp_loopback(void)
+open_ppp_loopback()
 {
     return pppfd;
 }
@@ -1289,7 +1348,10 @@ open_ppp_loopback(void)
  * output - Output PPP packet.
  */
 void
-output(int unit, u_char *p, int len)
+output(unit, p, len)
+    int unit;
+    u_char *p;
+    int len;
 {
     struct strbuf data;
     int retries;
@@ -1320,7 +1382,8 @@ output(int unit, u_char *p, int len)
  * if timo is NULL).
  */
 void
-wait_input(struct timeval *timo)
+wait_input(timo)
+    struct timeval *timo;
 {
     int t;
 
@@ -1332,7 +1395,8 @@ wait_input(struct timeval *timo)
 /*
  * add_fd - add an fd to the set that wait_input waits for.
  */
-void add_fd(int fd)
+void add_fd(fd)
+    int fd;
 {
     int n;
 
@@ -1350,7 +1414,8 @@ void add_fd(int fd)
 /*
  * remove_fd - remove an fd from the set that wait_input waits for.
  */
-void remove_fd(int fd)
+void remove_fd(fd)
+    int fd;
 {
     int n;
 
@@ -1371,7 +1436,8 @@ void remove_fd(int fd)
  * if timo is NULL).
  */
 void
-wait_loop_output(struct timeval *timo)
+wait_loop_output(timo)
+    struct timeval *timo;
 {
     wait_input(timo);
 }
@@ -1381,7 +1447,8 @@ wait_loop_output(struct timeval *timo)
  * signal is received.
  */
 void
-wait_time(struct timeval *timo)
+wait_time(timo)
+    struct timeval *timo;
 {
     int n;
 
@@ -1396,7 +1463,8 @@ wait_time(struct timeval *timo)
  * read_packet - get a PPP packet from the serial device.
  */
 int
-read_packet(u_char *buf)
+read_packet(buf)
+    u_char *buf;
 {
     struct strbuf ctrl, data;
     int flags, len;
@@ -1435,7 +1503,7 @@ read_packet(u_char *buf)
  * Return value is 1 if we need to bring up the link, 0 otherwise.
  */
 int
-get_loop_output(void)
+get_loop_output()
 {
     int len;
     int rv = 0;
@@ -1451,7 +1519,8 @@ get_loop_output(void)
  * netif_set_mtu - set the MTU on the PPP network interface.
  */
 void
-netif_set_mtu(int unit, int mtu)
+netif_set_mtu(unit, mtu)
+    int unit, mtu;
 {
     struct ifreq ifr;
 #if defined(INET6) && defined(SOL2)
@@ -1461,7 +1530,7 @@ netif_set_mtu(int unit, int mtu)
 
     memset(&ifr, 0, sizeof(ifr));
     strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-    ifr.ifr_metric = mtu;
+    ifr.ifr_metric = link_mtu;
     if (ioctl(ipfd, SIOCSIFMTU, &ifr) < 0) {
 	error("Couldn't set IP MTU (%s): %m", ifr.ifr_name);
     }
@@ -1473,7 +1542,7 @@ netif_set_mtu(int unit, int mtu)
 
     memset(&lifr, 0, sizeof(lifr));
     strlcpy(lifr.lifr_name, ifname, sizeof(lifr.lifr_name));
-    lifr.lifr_mtu = mtu;
+    lifr.lifr_mtu = link_mtu;
     if (ioctl(fd, SIOCSLIFMTU, &lifr) < 0) {
 	close(fd);
 	error("Couldn't set IPv6 MTU (%s): %m", ifr.ifr_name);
@@ -1482,32 +1551,15 @@ netif_set_mtu(int unit, int mtu)
 #endif /* defined(INET6) && defined(SOL2) */
 }
 
-
-
-/*
- * netif_get_mtu - get the MTU on the PPP network interface.
- */
-int
-netif_get_mtu(int unit)
-{
-    struct ifreq ifr;
-
-    memset (&ifr, '\0', sizeof (ifr));
-    strlcpy(ifr.ifr_name, ifname, sizeof (ifr.ifr_name));
-
-    if (ioctl(ipfd, SIOCGIFMTU, (caddr_t) &ifr) < 0) {
-    error("ioctl(SIOCGIFMTU): %m (line %d)", __LINE__);
-    return 0;
-    }
-    return ifr.ifr_metric;
-}
-
 /*
  * tty_send_config - configure the transmit characteristics of
  * the ppp interface.
  */
 void
-tty_send_config(int mtu, u_int32_t asyncmap, int pcomp, int accomp)
+tty_send_config(mtu, asyncmap, pcomp, accomp)
+    int mtu;
+    u_int32_t asyncmap;
+    int pcomp, accomp;
 {
     int cf[2];
 
@@ -1536,7 +1588,8 @@ tty_send_config(int mtu, u_int32_t asyncmap, int pcomp, int accomp)
  * tty_set_xaccm - set the extended transmit ACCM for the interface.
  */
 void
-tty_set_xaccm(ext_accm accm)
+tty_set_xaccm(accm)
+    ext_accm accm;
 {
     if (sync_serial)
 	return;
@@ -1553,7 +1606,10 @@ tty_set_xaccm(ext_accm accm)
  * the ppp interface.
  */
 void
-tty_recv_config(int mru, u_int32_t asyncmap, int pcomp, int accomp)
+tty_recv_config(mru, asyncmap, pcomp, accomp)
+    int mru;
+    u_int32_t asyncmap;
+    int pcomp, accomp;
 {
     int cf[2];
 
@@ -1583,7 +1639,9 @@ tty_recv_config(int mru, u_int32_t asyncmap, int pcomp, int accomp)
  * is acceptable for use.
  */
 int
-ccp_test(int unit, u_char *opt_ptr, int opt_len, int for_transmit)
+ccp_test(unit, opt_ptr, opt_len, for_transmit)
+    int unit, opt_len, for_transmit;
+    u_char *opt_ptr;
 {
     if (strioctl(pppfd, (for_transmit? PPPIO_XCOMP: PPPIO_RCOMP),
 		 opt_ptr, opt_len, 0) >= 0)
@@ -1595,7 +1653,8 @@ ccp_test(int unit, u_char *opt_ptr, int opt_len, int for_transmit)
  * ccp_flags_set - inform kernel about the current state of CCP.
  */
 void
-ccp_flags_set(int unit, int isopen, int isup)
+ccp_flags_set(unit, isopen, isup)
+    int unit, isopen, isup;
 {
     int cf[2];
 
@@ -1611,7 +1670,9 @@ ccp_flags_set(int unit, int isopen, int isup)
  * get_idle_time - return how long the link has been idle.
  */
 int
-get_idle_time(int u, struct ppp_idle *ip)
+get_idle_time(u, ip)
+    int u;
+    struct ppp_idle *ip;
 {
     return strioctl(pppfd, PPPIO_GIDLE, ip, 0, sizeof(struct ppp_idle)) >= 0;
 }
@@ -1620,7 +1681,9 @@ get_idle_time(int u, struct ppp_idle *ip)
  * get_ppp_stats - return statistics for the link.
  */
 int
-get_ppp_stats(int u, struct pppd_stats *stats)
+get_ppp_stats(u, stats)
+    int u;
+    struct pppd_stats *stats;
 {
     struct ppp_stats s;
 
@@ -1641,7 +1704,8 @@ get_ppp_stats(int u, struct pppd_stats *stats)
  * set_filters - transfer the pass and active filters to the kernel.
  */
 int
-set_filters(struct bpf_program *pass, struct bpf_program *active)
+set_filters(pass, active)
+    struct bpf_program *pass, *active;
 {
     int ret = 1;
 
@@ -1669,7 +1733,8 @@ set_filters(struct bpf_program *pass, struct bpf_program *active)
  * 0 otherwise.  This is necessary because of patent nonsense.
  */
 int
-ccp_fatal_error(int unit)
+ccp_fatal_error(unit)
+    int unit;
 {
     int cf[2];
 
@@ -1686,7 +1751,8 @@ ccp_fatal_error(int unit)
  * sifvjcomp - config tcp header compression
  */
 int
-sifvjcomp(int u, int vjcomp, int xcidcomp, int xmaxcid)
+sifvjcomp(u, vjcomp, xcidcomp, xmaxcid)
+    int u, vjcomp, xcidcomp, xmaxcid;
 {
     int cf[2];
     char maxcid[2];
@@ -1714,7 +1780,8 @@ sifvjcomp(int u, int vjcomp, int xcidcomp, int xmaxcid)
  * sifup - Config the interface up and enable IP packets to pass.
  */
 int
-sifup(int u)
+sifup(u)
+    int u;
 {
     struct ifreq ifr;
 
@@ -1736,7 +1803,8 @@ sifup(int u)
  * sifdown - Config the interface down and disable IP.
  */
 int
-sifdown(int u)
+sifdown(u)
+    int u;
 {
     struct ifreq ifr;
 
@@ -1760,7 +1828,10 @@ sifdown(int u)
  * sifnpmode - Set the mode for handling packets for a given NP.
  */
 int
-sifnpmode(int u, int proto, enum NPmode mode)
+sifnpmode(u, proto, mode)
+    int u;
+    int proto;
+    enum NPmode mode;
 {
     int npi[2];
 
@@ -1778,7 +1849,8 @@ sifnpmode(int u, int proto, enum NPmode mode)
  * sif6up - Config the IPv6 interface up and enable IPv6 packets to pass.
  */
 int
-sif6up(int u)
+sif6up(u)
+    int u;
 {
     struct lifreq lifr;
     int fd;
@@ -1811,7 +1883,8 @@ sif6up(int u)
  * sifdown - Config the IPv6 interface down and disable IPv6.
  */
 int
-sif6down(int u)
+sif6down(u)
+    int u;
 {
     struct lifreq lifr;
     int fd;
@@ -1843,7 +1916,9 @@ sif6down(int u)
  * sif6addr - Config the interface with an IPv6 link-local address
  */
 int
-sif6addr(int u, eui64_t o, eui64_t h)
+sif6addr(u, o, h)
+    int u;
+    eui64_t o, h;
 {
     struct lifreq lifr;
     struct sockaddr_storage laddr;
@@ -1892,7 +1967,9 @@ sif6addr(int u, eui64_t o, eui64_t h)
  * cif6addr - Remove the IPv6 address from interface
  */
 int
-cif6addr(int u, eui64_t o, eui64_t h)
+cif6addr(u, o, h)
+    int u;
+    eui64_t o, h;
 {
     return 1;
 }
@@ -1901,7 +1978,9 @@ cif6addr(int u, eui64_t o, eui64_t h)
  * sif6defaultroute - assign a default route through the address given.
  */
 int
-sif6defaultroute(int u, eui64_t l, eui64_t g)
+sif6defaultroute(u, l, g)
+    int u;
+    eui64_t l, g;
 {
     struct {
 	struct rt_msghdr rtm;
@@ -1949,7 +2028,9 @@ sif6defaultroute(int u, eui64_t l, eui64_t g)
  * cif6defaultroute - delete a default route through the address given.
  */
 int
-cif6defaultroute(int u, eui64_t l, eui64_t g)
+cif6defaultroute(u, l, g)
+    int u;
+    eui64_t l, g;
 {
     /* No need to do this on Solaris; the kernel deletes the
        route when the interface goes down. */
@@ -1966,7 +2047,9 @@ cif6defaultroute(int u, eui64_t l, eui64_t g)
  * sifaddr - Config the interface IP addresses and netmask.
  */
 int
-sifaddr(int u, u_int32_t o, u_int32_t h, u_int32_t m)
+sifaddr(u, o, h, m)
+    int u;
+    u_int32_t o, h, m;
 {
     struct ifreq ifr;
     int ret = 1;
@@ -2014,7 +2097,9 @@ sifaddr(int u, u_int32_t o, u_int32_t h, u_int32_t m)
  * through the interface if possible.
  */
 int
-cifaddr(int u, u_int32_t o, u_int32_t h)
+cifaddr(u, o, h)
+    int u;
+    u_int32_t o, h;
 {
 #if defined(__USLC__)		/* was: #if 0 */
     cifroute(unit, ouraddr, hisaddr);
@@ -2035,14 +2120,11 @@ cifaddr(int u, u_int32_t o, u_int32_t h)
  * sifdefaultroute - assign a default route through the address given.
  */
 int
-sifdefaultroute(int u, u_int32_t l, u_int32_t g, bool replace)
+sifdefaultroute(u, l, g)
+    int u;
+    u_int32_t l, g;
 {
     struct rtentry rt;
-
-    if (replace) {
-	error("Replacing the default route is not implemented on Solaris yet");
-	return 0;
-    }
 
 #if defined(__USLC__)
     g = l;			/* use the local address as gateway */
@@ -2067,7 +2149,9 @@ sifdefaultroute(int u, u_int32_t l, u_int32_t g, bool replace)
  * cifdefaultroute - delete a default route through the address given.
  */
 int
-cifdefaultroute(int u, u_int32_t l, u_int32_t g)
+cifdefaultroute(u, l, g)
+    int u;
+    u_int32_t l, g;
 {
     struct rtentry rt;
 
@@ -2094,7 +2178,9 @@ cifdefaultroute(int u, u_int32_t l, u_int32_t g)
  * sifproxyarp - Make a proxy ARP entry for the peer.
  */
 int
-sifproxyarp(int unit, u_int32_t hisaddr)
+sifproxyarp(unit, hisaddr)
+    int unit;
+    u_int32_t hisaddr;
 {
     struct arpreq arpreq;
 
@@ -2118,7 +2204,9 @@ sifproxyarp(int unit, u_int32_t hisaddr)
  * cifproxyarp - Delete the proxy ARP entry for the peer.
  */
 int
-cifproxyarp(int unit, u_int32_t hisaddr)
+cifproxyarp(unit, hisaddr)
+    int unit;
+    u_int32_t hisaddr;
 {
     struct arpreq arpreq;
 
@@ -2141,7 +2229,9 @@ cifproxyarp(int unit, u_int32_t hisaddr)
 #define MAX_IFS		32
 
 static int
-get_ether_addr(u_int32_t ipaddr, struct sockaddr *hwaddr)
+get_ether_addr(ipaddr, hwaddr)
+    u_int32_t ipaddr;
+    struct sockaddr *hwaddr;
 {
     struct ifreq *ifr, *ifend, ifreq;
     int nif;
@@ -2210,7 +2300,9 @@ get_ether_addr(u_int32_t ipaddr, struct sockaddr *hwaddr)
  * get_hw_addr_dlpi - obtain the hardware address using DLPI
  */
 static int
-get_hw_addr_dlpi(char *name, struct sockaddr *hwaddr)
+get_hw_addr_dlpi(name, hwaddr)
+    char *name;
+    struct sockaddr *hwaddr;
 {
     char *q;
     int unit, iffd, adrlen;
@@ -2267,7 +2359,10 @@ get_hw_addr_dlpi(char *name, struct sockaddr *hwaddr)
  * get_hw_addr - obtain the hardware address for a named interface.
  */
 static int
-get_hw_addr(char *name, u_int32_t ina, struct sockaddr *hwaddr)
+get_hw_addr(name, ina, hwaddr)
+    char *name;
+    u_int32_t ina;
+    struct sockaddr *hwaddr;
 {
     /* New way - get the address by doing an arp request. */
     int s;
@@ -2290,7 +2385,8 @@ get_hw_addr(char *name, u_int32_t ina, struct sockaddr *hwaddr)
 }
 
 static int
-dlpi_attach(int fd, int ppa)
+dlpi_attach(fd, ppa)
+    int fd, ppa;
 {
     dl_attach_req_t req;
     struct strbuf buf;
@@ -2303,7 +2399,8 @@ dlpi_attach(int fd, int ppa)
 }
 
 static int
-dlpi_info_req(int fd)
+dlpi_info_req(fd)
+    int fd;
 {
     dl_info_req_t req;
     struct strbuf buf;
@@ -2315,7 +2412,9 @@ dlpi_info_req(int fd)
 }
 
 static int
-dlpi_get_reply(int fd, union DL_primitives *reply, int expected_prim, size_t maxlen)
+dlpi_get_reply(fd, reply, expected_prim, maxlen)
+    union DL_primitives *reply;
+    int fd, expected_prim, maxlen;
 {
     struct strbuf buf;
     int flags, n;
@@ -2328,7 +2427,7 @@ dlpi_get_reply(int fd, union DL_primitives *reply, int expected_prim, size_t max
     pfd.events = POLLIN | POLLPRI;
     do {
 	n = poll(&pfd, 1, 1000);
-    } while (n == -1 && errno == EINTR && !got_sigterm);
+    } while (n == -1 && errno == EINTR);
     if (n <= 0)
 	return -1;
 
@@ -2373,7 +2472,8 @@ dlpi_get_reply(int fd, union DL_primitives *reply, int expected_prim, size_t max
  * user-specified netmask.
  */
 u_int32_t
-GetMask(u_int32_t addr)
+GetMask(addr)
+    u_int32_t addr;
 {
     u_int32_t mask, nmask, ina;
     struct ifreq *ifr, *ifend, ifreq;
@@ -2441,7 +2541,8 @@ GetMask(u_int32_t addr)
  * logwtmp - write an accounting record to the /var/adm/wtmp file.
  */
 void
-logwtmp(const char *line, const char *name, const char *host)
+logwtmp(line, name, host)
+    const char *line, *name, *host;
 {
     static struct utmpx utmpx;
 
@@ -2468,7 +2569,7 @@ logwtmp(const char *line, const char *name, const char *host)
  * get_host_seed - return the serial number of this machine.
  */
 int
-get_host_seed(void)
+get_host_seed()
 {
     char buf[32];
 
@@ -2480,7 +2581,9 @@ get_host_seed(void)
 }
 
 static int
-strioctl(int fd, int cmd, void *ptr, int ilen, int olen)
+strioctl(fd, cmd, ptr, ilen, olen)
+    int fd, cmd, ilen, olen;
+    void *ptr;
 {
     struct strioctl str;
 
@@ -2505,7 +2608,8 @@ strioctl(int fd, int cmd, void *ptr, int ilen, int olen)
 static char lock_file[40];	/* name of lock file created */
 
 int
-lock(char *dev)
+lock(dev)
+    char *dev;
 {
     int n, fd, pid;
     struct stat sbuf;
@@ -2566,7 +2670,7 @@ lock(char *dev)
  * unlock - remove our lockfile
  */
 void
-unlock(void)
+unlock()
 {
     if (lock_file[0]) {
 	unlink(lock_file);
@@ -2579,7 +2683,9 @@ unlock(void)
  * cifroute - delete a route through the addresses given.
  */
 int
-cifroute(int u, u_int32_t our, u_int32_t his)
+cifroute(u, our, his)
+    int u;
+    u_int32_t our, his;
 {
     struct rtentry rt;
 
@@ -2610,7 +2716,8 @@ cifroute(int u, u_int32_t our, u_int32_t his)
 #endif
 
 int
-have_route_to(u_int32_t addr)
+have_route_to(addr)
+    u_int32_t addr;
 {
 #ifdef SOL2
     int fd, r, flags, i;
@@ -2713,7 +2820,11 @@ have_route_to(u_int32_t addr)
  * the uid given.  Assumes slave_name points to MAXPATHLEN bytes of space.
  */
 int
-get_pty(int *master_fdp, int *slave_fdp, char *slave_name, int uid)
+get_pty(master_fdp, slave_fdp, slave_name, uid)
+    int *master_fdp;
+    int *slave_fdp;
+    char *slave_name;
+    int uid;
 {
     int mfd, sfd;
     char *pty_name;

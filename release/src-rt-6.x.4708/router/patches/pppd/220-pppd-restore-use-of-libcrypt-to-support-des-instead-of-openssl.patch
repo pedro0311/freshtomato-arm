@@ -1,0 +1,170 @@
+--- pppd/pppd/Makefile.linux
++++ pppd/pppd/Makefile.linux
+@@ -38,7 +38,12 @@ LIBS =
+ # Uncomment the next line to include support for Microsoft's
+ # MS-CHAP authentication protocol.  Also, edit plugins/radius/Makefile.linux.
+ CHAPMS=y
+-#USE_CRYPT=y
++USE_CRYPT=y
++
++# Alternatively, if you want to use OpenSSL for DES functions, comment out
++# USE_CRYPT, above, and uncomment this line.
++#USE_OPENSSL=y
++
+ # Don't use MSLANMAN unless you really know what you're doing.
+ #MSLANMAN=y
+ # Uncomment the next line to include support for MPPE.  CHAPMS (above) must
+@@ -136,11 +141,18 @@ LIBS	+= -lutil
+ endif
+ 
+ ifdef NEEDDES
+-ifndef USE_CRYPT
+-CFLAGS   += -I$(shell $(CC) --print-sysroot)/usr/include/openssl
++ifdef USE_OPENSSL
++CFLAGS   += -I$(shell $(CC) --print-sysroot)/usr/include/openssl -DUSE_OPENSSL=1
+ LIBS     += -lcrypto
+ else
++ifndef USE_CRYPT
++LIBS     += -ldes $(LIBS)
++CFLAGS   += -DUSE_LIBDES=1
++LIBS     += -ldes
++else
+ CFLAGS   += -DUSE_CRYPT=1
++LIBS     += -lcrypt
++endif
+ endif
+ PPPDOBJS += pppcrypt.o
+ HEADERS += pppcrypt.h
+--- pppd/pppd/pppcrypt.c
++++ pppd/pppd/pppcrypt.c
+@@ -34,6 +34,22 @@
+ #include "pppd.h"
+ #include "pppcrypt.h"
+ 
++/* This code can use one of three DES libraries. The first, if USE_LIBDES is
++ * defined, are the libdes functions. This interface is still supported by
++ * OpenSSL as backwards compatibility. If USE_CRYPT is defined then the
++ * libcrypt functions are used. Lastly, if USE_OPENSSL is defined the "modern"
++ * OpenSSL interface is used. */
++
++#if defined(USE_CRYPT)
++#include <crypt.h>
++#elif defined(USE_OPENSSL)
++#include <openssl/des.h>
++#elif defined(USE_LIBDES)
++#include <des.h>
++#else
++#error "Must define one of USE_CRYPT, USE_LIBDES or USE_OPENSSL"
++#endif
++
+ static u_char
+ Get7Bits(input, startBit)
+ u_char *input;
+@@ -63,12 +79,12 @@ u_char *des_key;	/* OUT 64 bit DES key w
+ 	des_key[6] = Get7Bits(key, 42);
+ 	des_key[7] = Get7Bits(key, 49);
+ 
+-#ifndef USE_CRYPT
+-	DES_set_odd_parity((DES_cblock *)des_key);
++#if defined(USE_LIBDES)
++	des_set_odd_parity((des_cblock *)des_key);
+ #endif
+ }
+ 
+-#ifdef USE_CRYPT
++#if defined(USE_CRYPT)
+ /*
+  * in == 8-byte string (expanded version of the 56-bit key)
+  * out == 64-byte string where each byte is either 1 or 0
+@@ -157,15 +173,15 @@ u_char *clear;	/* OUT 8 octets */
+ 	return (1);
+ }
+ 
+-#else /* USE_CRYPT */
+-static DES_key_schedule	key_schedule;
++#elif defined(USE_OPENSSL)
++static DES_key_schedule key_schedule;
+ 
+ bool
+ DesSetkey(key)
+ u_char *key;
+ {
+ 	DES_cblock des_key;
+-	MakeKey(key, des_key);
++	MakeKey(key, (u_char*) &des_key);
+ 	DES_set_key(&des_key, &key_schedule);
+ 	return (1);
+ }
+@@ -176,7 +192,7 @@ u_char *clear;	/* IN  8 octets */
+ u_char *cipher;	/* OUT 8 octets */
+ {
+ 	DES_ecb_encrypt((DES_cblock *)clear, (DES_cblock *)cipher,
+-	    &key_schedule, 1);
++	    &key_schedule, 1 /* encrypt */);
+ 	return (1);
+ }
+ 
+@@ -186,8 +202,45 @@ u_char *cipher;	/* IN  8 octets */
+ u_char *clear;	/* OUT 8 octets */
+ {
+ 	DES_ecb_encrypt((DES_cblock *)cipher, (DES_cblock *)clear,
+-	    &key_schedule, 0);
++	    &key_schedule, 0 /* decrypt */);
+ 	return (1);
+ }
+ 
++#elif defined(USE_LIBDES)
++static des_key_schedule	key_schedule;
++
++bool
++DesSetkey(key)
++u_char *key;
++{
++	des_cblock des_key;
++	MakeKey(key, des_key);
++	des_set_key(&des_key, key_schedule);
++	return (1);
++}
++
++bool
++DesEncrypt(clear, key, cipher)
++u_char *clear;	/* IN  8 octets */
++u_char *cipher;	/* OUT 8 octets */
++{
++	des_ecb_encrypt((des_cblock *)clear, (des_cblock *)cipher,
++	    key_schedule, 1);
++	return (1);
++}
++
++bool
++DesDecrypt(cipher, clear)
++u_char *cipher;	/* IN  8 octets */
++u_char *clear;	/* OUT 8 octets */
++{
++	des_ecb_encrypt((des_cblock *)cipher, (des_cblock *)clear,
++	    key_schedule, 0);
++	return (1);
++}
++
++#else
++
++#error "Must define one of USE_CRYPT, USE_LIBDES or USE_OPENSSL"
++
+ #endif /* USE_CRYPT */
+--- pppd/pppd/pppcrypt.h
++++ pppd/pppd/pppcrypt.h
+@@ -33,14 +33,6 @@
+ #ifndef PPPCRYPT_H
+ #define	PPPCRYPT_H
+ 
+-#ifdef HAVE_CRYPT_H
+-#include <crypt.h>
+-#endif
+-
+-#ifndef USE_CRYPT
+-#include <des.h>
+-#endif
+-
+ extern bool	DesSetkey __P((u_char *));
+ extern bool	DesEncrypt __P((u_char *, u_char *));
+ extern bool	DesDecrypt __P((u_char *, u_char *));

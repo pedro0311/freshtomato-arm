@@ -1,16 +1,15 @@
-#***********************************************************************
-CROSS_COMPILE=@CROSS_COMPILE@
-CC=$(CROSS_COMPILE)@CC@
-COPTS=@CFLAGS@
-
-DESTDIR = $(INSTROOT)/@DESTDIR@
-LIBDIR = $(DESTDIR)/lib/pppd/$(VERSION)
-
-VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
-
+#CC	= gcc
+COPTS	= -O2 -g
 CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC
 LDFLAGS_SHARED	= -shared
 INSTALL	= install
+
+#***********************************************************************
+
+DESTDIR = @DESTDIR@
+LIBDIR = $(DESTDIR)/lib/pppd/$(VERSION)
+
+VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
 
 PLUGINS := pppol2tp.so openl2tp.so
 

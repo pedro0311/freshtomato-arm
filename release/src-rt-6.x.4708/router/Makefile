@@ -1348,9 +1348,7 @@ pptpd-clean:
 
 pppd/Makefile: pppd/linux/Makefile.top
 	$(call patch_files,pppd)
-	cd pppd && \
-		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="-O2 -Wall -ffunction-sections -fdata-sections"
+	cd pppd && $(CONFIGURE) --prefix=/usr --sysconfdir=/tmp
 
 pppd: pppd/Makefile
 	@$(SEP)

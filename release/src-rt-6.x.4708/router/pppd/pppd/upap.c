@@ -40,6 +40,8 @@
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define RCSID	"$Id: upap.c,v 1.30 2005/07/13 10:41:58 paulus Exp $"
+
 /*
  * TODO:
  */
@@ -75,13 +77,13 @@ static option_t pap_option_list[] = {
 /*
  * Protocol entry points.
  */
-static void upap_init(int);
-static void upap_lowerup(int);
-static void upap_lowerdown(int);
-static void upap_input(int, u_char *, int);
-static void upap_protrej(int);
-static int  upap_printpkt(u_char *, int,
-			  void (*)(void *, char *, ...), void *);
+static void upap_init __P((int));
+static void upap_lowerup __P((int));
+static void upap_lowerdown __P((int));
+static void upap_input __P((int, u_char *, int));
+static void upap_protrej __P((int));
+static int  upap_printpkt __P((u_char *, int,
+			       void (*) __P((void *, char *, ...)), void *));
 
 struct protent pap_protent = {
     PPP_PAP,
@@ -105,20 +107,21 @@ struct protent pap_protent = {
 
 upap_state upap[NUM_PPP];		/* UPAP state; one for each unit */
 
-static void upap_timeout(void *);
-static void upap_reqtimeout(void *);
-static void upap_rauthreq(upap_state *, u_char *, int, int);
-static void upap_rauthack(upap_state *, u_char *, int, int);
-static void upap_rauthnak(upap_state *, u_char *, int, int);
-static void upap_sauthreq(upap_state *);
-static void upap_sresp(upap_state *, int, int, char *, int);
+static void upap_timeout __P((void *));
+static void upap_reqtimeout __P((void *));
+static void upap_rauthreq __P((upap_state *, u_char *, int, int));
+static void upap_rauthack __P((upap_state *, u_char *, int, int));
+static void upap_rauthnak __P((upap_state *, u_char *, int, int));
+static void upap_sauthreq __P((upap_state *));
+static void upap_sresp __P((upap_state *, int, int, char *, int));
 
 
 /*
  * upap_init - Initialize a UPAP unit.
  */
 static void
-upap_init(int unit)
+upap_init(unit)
+    int unit;
 {
     upap_state *u = &upap[unit];
 
@@ -142,7 +145,9 @@ upap_init(int unit)
  * Set new state and send authenticate's.
  */
 void
-upap_authwithpeer(int unit, char *user, char *password)
+upap_authwithpeer(unit, user, password)
+    int unit;
+    char *user, *password;
 {
     upap_state *u = &upap[unit];
 
@@ -170,7 +175,8 @@ upap_authwithpeer(int unit, char *user, char *password)
  * Set new state.
  */
 void
-upap_authpeer(int unit)
+upap_authpeer(unit)
+    int unit;
 {
     upap_state *u = &upap[unit];
 
@@ -191,7 +197,8 @@ upap_authpeer(int unit)
  * upap_timeout - Retransmission timer for sending auth-reqs expired.
  */
 static void
-upap_timeout(void *arg)
+upap_timeout(arg)
+    void *arg;
 {
     upap_state *u = (upap_state *) arg;
 
@@ -214,7 +221,8 @@ upap_timeout(void *arg)
  * upap_reqtimeout - Give up waiting for the peer to send an auth-req.
  */
 static void
-upap_reqtimeout(void *arg)
+upap_reqtimeout(arg)
+    void *arg;
 {
     upap_state *u = (upap_state *) arg;
 
@@ -232,7 +240,8 @@ upap_reqtimeout(void *arg)
  * Start authenticating if pending.
  */
 static void
-upap_lowerup(int unit)
+upap_lowerup(unit)
+    int unit;
 {
     upap_state *u = &upap[unit];
 
@@ -258,7 +267,8 @@ upap_lowerup(int unit)
  * Cancel all timeouts.
  */
 static void
-upap_lowerdown(int unit)
+upap_lowerdown(unit)
+    int unit;
 {
     upap_state *u = &upap[unit];
 
@@ -278,7 +288,8 @@ upap_lowerdown(int unit)
  * This shouldn't happen.  In any case, pretend lower layer went down.
  */
 static void
-upap_protrej(int unit)
+upap_protrej(unit)
+    int unit;
 {
     upap_state *u = &upap[unit];
 
@@ -298,7 +309,10 @@ upap_protrej(int unit)
  * upap_input - Input UPAP packet.
  */
 static void
-upap_input(int unit, u_char *inpacket, int l)
+upap_input(unit, inpacket, l)
+    int unit;
+    u_char *inpacket;
+    int l;
 {
     upap_state *u = &upap[unit];
     u_char *inp;
@@ -353,7 +367,11 @@ upap_input(int unit, u_char *inpacket, int l)
  * upap_rauth - Receive Authenticate.
  */
 static void
-upap_rauthreq(upap_state *u, u_char *inp, int id, int len)
+upap_rauthreq(u, inp, id, len)
+    upap_state *u;
+    u_char *inp;
+    int id;
+    int len;
 {
     u_char ruserlen, rpasswdlen;
     char *ruser, *rpasswd;
@@ -447,7 +465,11 @@ upap_rauthreq(upap_state *u, u_char *inp, int id, int len)
  * upap_rauthack - Receive Authenticate-Ack.
  */
 static void
-upap_rauthack(upap_state *u, u_char *inp, int id, int len)
+upap_rauthack(u, inp, id, len)
+    upap_state *u;
+    u_char *inp;
+    int id;
+    int len;
 {
     u_char msglen;
     char *msg;
@@ -483,7 +505,11 @@ upap_rauthack(upap_state *u, u_char *inp, int id, int len)
  * upap_rauthnak - Receive Authenticate-Nak.
  */
 static void
-upap_rauthnak(upap_state *u, u_char *inp, int id, int len)
+upap_rauthnak(u, inp, id, len)
+    upap_state *u;
+    u_char *inp;
+    int id;
+    int len;
 {
     u_char msglen;
     char *msg;
@@ -520,7 +546,8 @@ upap_rauthnak(upap_state *u, u_char *inp, int id, int len)
  * upap_sauthreq - Send an Authenticate-Request.
  */
 static void
-upap_sauthreq(upap_state *u)
+upap_sauthreq(u)
+    upap_state *u;
 {
     u_char *outp;
     int outlen;
@@ -552,7 +579,11 @@ upap_sauthreq(upap_state *u)
  * upap_sresp - Send a response (ack or nak).
  */
 static void
-upap_sresp(upap_state *u, int code, int id, char *msg, int msglen)
+upap_sresp(u, code, id, msg, msglen)
+    upap_state *u;
+    u_char code, id;
+    char *msg;
+    int msglen;
 {
     u_char *outp;
     int outlen;
@@ -577,7 +608,11 @@ static char *upap_codenames[] = {
 };
 
 static int
-upap_printpkt(u_char *p, int plen, void (*printer)(void *, char *, ...), void *arg)
+upap_printpkt(p, plen, printer, arg)
+    u_char *p;
+    int plen;
+    void (*printer) __P((void *, char *, ...));
+    void *arg;
 {
     int code, id, len;
     int mlen, ulen, wlen;

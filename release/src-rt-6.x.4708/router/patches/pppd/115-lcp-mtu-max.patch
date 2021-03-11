@@ -8,7 +8,7 @@ Signed-off-by: Jo-Philipp Wich <jo@mein.io>
 
 --- pppd/pppd/lcp.c
 +++ pppd/pppd/lcp.c
-@@ -1876,12 +1876,12 @@ lcp_up(f)
+@@ -1927,12 +1927,12 @@ lcp_up(f)
       * the interface MTU is set to the lowest of that, the
       * MTU we want to use, and our link MRU.
       */

@@ -1,11 +1,7 @@
 #
 # pppd makefile for Linux
-# Processed by configure to produce pppd/Makefile
+# $Id: Makefile.linux,v 1.70 2007/06/19 02:08:34 carlsonj Exp $
 #
-
-CROSS_COMPILE=@CROSS_COMPILE@
-CC=$(CROSS_COMPILE)@CC@
-COPTS=@CFLAGS@
 
 # Default installation locations
 DESTDIR = $(INSTROOT)@DESTDIR@
@@ -34,6 +30,9 @@ ifeq (.depend,$(wildcard .depend))
 include .depend
 endif
 
+# CC = gcc
+#
+COPTS = -O2 -pipe -Wall -g
 LIBS = -lrt
 
 # Uncomment the next line to include support for Microsoft's
@@ -79,19 +78,14 @@ PLUGIN=y
 # Enable EAP SRP-SHA1 authentication (requires libsrp)
 #USE_SRP=y
 
-# Use libutil; test if logwtmp is declared in <utmp.h> to detect
-ifeq ($(shell echo '\#include <utmp.h>' | $(CC) -E - 2>/dev/null | grep -q logwtmp && echo yes),yes)
+# Use libutil
 USE_LIBUTIL=y
-endif
-
-# Enable EAP-TLS authentication (requires MPPE support, libssl and libcrypto)
-USE_EAPTLS=y
 
 MAXOCTETS=y
 
 INCLUDE_DIRS= -I../include
 
-COMPILE_FLAGS= -DHAVE_PATHS_H -DIPX_CHANGE -DHAVE_MMAP -pipe
+COMPILE_FLAGS= -DHAVE_PATHS_H -DIPX_CHANGE -DHAVE_MMAP
 
 CFLAGS= $(COPTS) $(COMPILE_FLAGS) $(INCLUDE_DIRS) '-DDESTDIR="@DESTDIR@"'
 
@@ -105,17 +99,15 @@ CFLAGS   += -DMSLANMAN=1
 endif
 ifdef MPPE
 CFLAGS   += -DMPPE=1
-HEADERS  += mppe.h
 endif
 endif
 
 # EAP SRP-SHA1
 ifdef USE_SRP
 CFLAGS	+= -DUSE_SRP -DOPENSSL -I/usr/local/ssl/include
-LIBS	+= -lsrp -L/usr/local/ssl/lib
-NEEDCRYPTOLIB = y
+LIBS	+= -lsrp -L/usr/local/ssl/lib -lcrypto
 TARGETS	+= srp-entry
-EXTRAINSTALL = $(INSTALL) -c -m 555 srp-entry $(BINDIR)/srp-entry
+EXTRAINSTALL = $(INSTALL) -s -c -m 555 srp-entry $(BINDIR)/srp-entry
 MANPAGES += srp-entry.8
 EXTRACLEAN += srp-entry.o
 NEEDDES=y
@@ -128,22 +120,12 @@ HEADERS += sha1.h
 PPPDOBJS += sha1.o
 endif
 
-# EAP-TLS
-ifdef USE_EAPTLS
-CFLAGS += -DUSE_EAPTLS=1
-LIBS += -lssl
-NEEDCRYPTOLIB = y
-PPPDSRC += eap-tls.c
-HEADERS += eap-tls.h
-PPPDOBJS += eap-tls.o
-endif
-
 ifdef HAS_SHADOW
 CFLAGS   += -DHAS_SHADOW
 #LIBS     += -lshadow $(LIBS)
 endif
 
-ifeq ($(shell echo '\#include <crypt.h>' | $(CC) -E - >/dev/null 2>&1 && echo yes),yes)
+ifneq ($(wildcard $(shell $(CC) --print-sysroot)/usr/include/crypt.h),)
 CFLAGS  += -DHAVE_CRYPT_H=1
 LIBS	+= -lcrypt
 endif
@@ -156,16 +138,12 @@ endif
 ifdef NEEDDES
 ifndef USE_CRYPT
 CFLAGS   += -I$(shell $(CC) --print-sysroot)/usr/include/openssl
-NEEDCRYPTOLIB = y
+LIBS     += -lcrypto
 else
 CFLAGS   += -DUSE_CRYPT=1
 endif
 PPPDOBJS += pppcrypt.o
 HEADERS += pppcrypt.h
-endif
-
-ifdef NEEDCRYPTOLIB
-LIBS     += -lcrypto
 endif
 
 # For "Pluggable Authentication Modules", see ftp.redhat.com:/pub/pam/.
@@ -210,8 +188,10 @@ LIBS	+= -ldl
 endif
 
 ifdef FILTER
+ifneq ($(wildcard /usr/include/pcap-bpf.h),)
 LIBS    += -lpcap
 CFLAGS  += -DPPP_FILTER
+endif
 endif
 
 ifdef HAVE_INET6
@@ -239,7 +219,7 @@ all: $(TARGETS)
 install: pppd
 	mkdir -p $(BINDIR) $(MANDIR)
 	$(EXTRAINSTALL)
-	$(INSTALL) -c -m 555 pppd $(BINDIR)/pppd
+	$(INSTALL) -s -c -m 555 pppd $(BINDIR)/pppd
 	if chgrp pppusers $(BINDIR)/pppd 2>/dev/null; then \
 	  chmod o-rx,u+s $(BINDIR)/pppd; fi
 	$(INSTALL) -c -m 444 pppd.8 $(MANDIR)

@@ -1,6 +1,6 @@
 --- pppd/pppd/pathnames.h
 +++ pppd/pppd/pathnames.h
-@@ -7,47 +7,47 @@
+@@ -9,40 +9,40 @@
  
  #else /* HAVE_PATHS_H */
  #ifndef _PATH_VARRUN
@@ -18,19 +18,6 @@
 -#define _PATH_UPAPFILE 	 _ROOT_PATH "/etc/ppp/pap-secrets"
 -#define _PATH_CHAPFILE 	 _ROOT_PATH "/etc/ppp/chap-secrets"
 -#define _PATH_SRPFILE 	 _ROOT_PATH "/etc/ppp/srp-secrets"
-+#define _PATH_UPAPFILE 	 _ROOT_PATH "/ppp/pap-secrets"
-+#define _PATH_CHAPFILE 	 _ROOT_PATH "/ppp/chap-secrets"
-+#define _PATH_SRPFILE 	 _ROOT_PATH "/ppp/srp-secrets"
- 
- #ifdef USE_EAPTLS
--#define _PATH_EAPTLSCLIFILE	_ROOT_PATH "/etc/ppp/eaptls-client"
--#define _PATH_EAPTLSSERVFILE	_ROOT_PATH "/etc/ppp/eaptls-server"
--#define _PATH_OPENSSLCONFFILE	_ROOT_PATH "/etc/ppp/openssl.cnf"
-+#define _PATH_EAPTLSCLIFILE	_ROOT_PATH "/ppp/eaptls-client"
-+#define _PATH_EAPTLSSERVFILE	_ROOT_PATH "/ppp/eaptls-server"
-+#define _PATH_OPENSSLCONFFILE	_ROOT_PATH "/ppp/openssl.cnf"
- #endif /* USE_EAPTLS */
- 
 -#define _PATH_SYSOPTIONS _ROOT_PATH "/etc/ppp/options"
 -#define _PATH_IPUP	 _ROOT_PATH "/etc/ppp/ip-up"
 -#define _PATH_IPDOWN	 _ROOT_PATH "/etc/ppp/ip-down"
@@ -41,6 +28,9 @@
 -#define _PATH_CONNERRS	 _ROOT_PATH "/etc/ppp/connect-errors"
 -#define _PATH_PEERFILES	 _ROOT_PATH "/etc/ppp/peers/"
 -#define _PATH_RESOLV	 _ROOT_PATH "/etc/ppp/resolv.conf"
++#define _PATH_UPAPFILE 	 _ROOT_PATH "/ppp/pap-secrets"
++#define _PATH_CHAPFILE 	 _ROOT_PATH "/ppp/chap-secrets"
++#define _PATH_SRPFILE 	 _ROOT_PATH "/ppp/srp-secrets"
 +#define _PATH_SYSOPTIONS _ROOT_PATH "/ppp/options"
 +#define _PATH_IPUP	 _ROOT_PATH "/ppp/ip-up"
 +#define _PATH_IPDOWN	 _ROOT_PATH "/ppp/ip-down"
@@ -70,7 +60,7 @@
  #endif /* IPX_CHANGE */
  
  #ifdef __STDC__
-@@ -56,13 +56,13 @@
+@@ -51,13 +51,13 @@
  #ifdef HAVE_PATHS_H
  #define _PATH_PPPDB	"/var/run/pppd2.tdb"
  #else

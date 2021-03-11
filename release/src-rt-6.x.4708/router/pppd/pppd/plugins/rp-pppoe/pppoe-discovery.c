@@ -29,6 +29,10 @@
 #include <linux/if_packet.h>
 #endif
 
+#ifdef HAVE_NET_ETHERNET_H
+#include <net/ethernet.h>
+#endif
+
 #ifdef HAVE_ASM_TYPES_H
 #include <asm/types.h>
 #endif
@@ -130,7 +134,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     if ((fd = socket(domain, stype, htons(type))) < 0) {
 	/* Give a more helpful message for the common error case */
 	if (errno == EPERM) {
-	    fatal("Cannot create raw socket -- pppoe must be run as root.");
+	    rp_fatal("Cannot create raw socket -- pppoe must be run as root.");
 	}
 	fatalSys("socket");
     }
@@ -148,11 +152,17 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
 	memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 #ifdef ARPHRD_ETHER
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-	    fatal("Interface %.16s is not Ethernet", ifname);
+	    char buffer[256];
+	    sprintf(buffer, "Interface %.16s is not Ethernet", ifname);
+	    rp_fatal(buffer);
 	}
 #endif
 	if (NOT_UNICAST(hwaddr)) {
-	    fatal("Interface %.16s has broadcast/multicast MAC address??", ifname);
+	    char buffer[256];
+	    sprintf(buffer,
+		    "Interface %.16s has broadcast/multicast MAC address??",
+		    ifname);
+	    rp_fatal(buffer);
 	}
     }
 
@@ -208,18 +218,18 @@ sendPacket(PPPoEConnection *conn, int sock, PPPoEPacket *pkt, int size)
 {
 #if defined(HAVE_STRUCT_SOCKADDR_LL)
     if (send(sock, pkt, size, 0) < 0) {
-	fatalSys("send (sendPacket)");
+	sysErr("send (sendPacket)");
 	return -1;
     }
 #else
     struct sockaddr sa;
 
     if (!conn) {
-	fatal("relay and server not supported on Linux 2.0 kernels");
+	rp_fatal("relay and server not supported on Linux 2.0 kernels");
     }
     strcpy(sa.sa_data, conn->ifName);
     if (sendto(sock, pkt, size, 0, &sa, sizeof(sa)) < 0) {
-	fatalSys("sendto (sendPacket)");
+	sysErr("sendto (sendPacket)");
 	return -1;
     }
 #endif
@@ -241,7 +251,7 @@ int
 receivePacket(int sock, PPPoEPacket *pkt, int *size)
 {
     if ((*size = recv(sock, pkt, sizeof(PPPoEPacket), 0)) < 0) {
-	fatalSys("recv (receivePacket)");
+	sysErr("recv (receivePacket)");
 	return -1;
     }
     return 0;
@@ -318,10 +328,14 @@ void
 parseForHostUniq(UINT16_t type, UINT16_t len, unsigned char *data,
 		 void *extra)
 {
-    PPPoETag *tag = extra;
-
-    if (type == TAG_HOST_UNIQ && len == ntohs(tag->length))
-	tag->length = memcmp(data, tag->payload, len);
+    int *val = (int *) extra;
+    if (type == TAG_HOST_UNIQ && len == sizeof(pid_t)) {
+	pid_t tmp;
+	memcpy(&tmp, data, len);
+	if (tmp == getpid()) {
+	    *val = 1;
+	}
+    }
 }
 
 /**********************************************************************
@@ -338,7 +352,7 @@ parseForHostUniq(UINT16_t type, UINT16_t len, unsigned char *data,
 int
 packetIsForMe(PPPoEConnection *conn, PPPoEPacket *packet)
 {
-    PPPoETag hostUniq = conn->hostUniq;
+    int forMe = 0;
 
     /* If packet is not directed to our MAC address, forget it */
     if (memcmp(packet->ethHdr.h_dest, conn->myEth, ETH_ALEN)) return 0;
@@ -346,8 +360,8 @@ packetIsForMe(PPPoEConnection *conn, PPPoEPacket *packet)
     /* If we're not using the Host-Unique tag, then accept the packet */
     if (!conn->hostUniq.length) return 1;
 
-    parsePacket(packet, parseForHostUniq, &hostUniq);
-    return !hostUniq.length;
+    parsePacket(packet, parseForHostUniq, &forMe);
+    return forMe;
 }
 
 /**********************************************************************
@@ -707,7 +721,7 @@ int main(int argc, char *argv[])
 			optarg, strerror(errno));
 		exit(1);
 	    }
-	    fprintf(conn->debugFile, "pppoe-discovery from pppd %s\n", VERSION);
+	    fprintf(conn->debugFile, "pppoe-discovery %s\n", RP_VERSION);
 	    break;
 	case 'I':
 	    conn->ifName = xstrdup(optarg);
@@ -740,13 +754,9 @@ int main(int argc, char *argv[])
 	exit(0);
 }
 
-void fatal(char * fmt, ...)
+void rp_fatal(char const *str)
 {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fputc('\n', stderr);
+    fprintf(stderr, "%s\n", str);
     exit(1);
 }
 
@@ -756,11 +766,16 @@ void fatalSys(char const *str)
     exit(1);
 }
 
+void sysErr(char const *str)
+{
+    rp_fatal(str);
+}
+
 char *xstrdup(const char *s)
 {
     register char *ret = strdup(s);
     if (!ret)
-	fatalSys("strdup");
+	sysErr("strdup");
     return ret;
 }
 
@@ -780,5 +795,5 @@ void usage(void)
 	    "   -U             -- Use Host-Unique to allow multiple PPPoE sessions.\n"
 	    "   -W hexvalue    -- Set the Host-Unique to the supplied hex string.\n"
 	    "   -h             -- Print usage information.\n");
-    fprintf(stderr, "\npppoe-discovery from pppd " VERSION "\n");
+    fprintf(stderr, "\nVersion " RP_VERSION "\n");
 }
