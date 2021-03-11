@@ -1127,7 +1127,8 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		stop_zebra();
 		start_zebra();
 #endif
-		if ((wanup) && (!nvram_get_int("ntp_ready"))) {
+
+		if ((wanup || (proto == WP_DISABLED)) && (!nvram_get_int("ntp_ready"))) {
 			first_ntp_sync = 1;
 			stop_ntpd();
 			start_ntpd();
