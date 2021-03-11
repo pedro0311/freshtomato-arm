@@ -1232,6 +1232,7 @@ static const nvset_t nvset_list[] = {
 	{ "console_loglevel",		V_RANGE(1, 8)			},
 	{ "t_cafree",			V_01				},
 	{ "t_hidelr",			V_01				},
+	{ "http_nocache",		V_01				},	/* disable cache in httpd? */
 
 // admin-sched
 	{ "sch_rboot", 			V_TEXT(0, 64)			},

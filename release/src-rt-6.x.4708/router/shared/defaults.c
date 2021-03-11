@@ -968,6 +968,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "t_hidelr",			"0"				, 0 },
 	{ "debug_clkfix",		"1"				, 0 },
 	{ "debug_ddns",			"0"				, 0 },
+	{ "http_nocache",		"0"				, 0 },
 
 /* admin-cifs */
 	{ "cifs1",			""				, 0 },

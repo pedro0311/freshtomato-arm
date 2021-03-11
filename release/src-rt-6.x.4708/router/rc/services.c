@@ -968,7 +968,7 @@ void start_httpd(void)
 	else
 		chdir("/www");
 
-	eval("httpd");
+	eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
 	chdir("/");
 }
 
