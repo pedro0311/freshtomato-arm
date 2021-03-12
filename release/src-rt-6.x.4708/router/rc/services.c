@@ -706,6 +706,12 @@ void start_stubby(void)
 
 	mkdir_if_none("/etc/stubby");
 
+	/* alternative (user) configuration file */
+	if (f_exists("/etc/stubby/stubby.alt")) {
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby/stubby.alt");
+		return;
+	}
+
 	if ((fp = fopen(stubby_config, "w")) == NULL) {
 		perror(stubby_config);
 		return;
