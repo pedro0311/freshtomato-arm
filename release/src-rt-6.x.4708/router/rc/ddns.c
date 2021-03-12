@@ -81,12 +81,6 @@ static void update(int num, int *dirty, int force)
 	else
 		pass = "";
 
-	for (n = 120; (n > 0) && (time(0) < Y2K); --n) {
-		sleep(1);
-	}
-	if (n <= 0)
-		logmsg(LOG_INFO, "time not yet set");
-
 	if (!wait_action_idle(10)) {
 		logmsg(LOG_DEBUG, "*** %s: !wait_action_idle", __FUNCTION__);
 		return;

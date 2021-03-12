@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("debug_nocommit,debug_cprintf,debug_cprintf_file,console_loglevel,t_cafree,t_hidelr,debug_ddns,debug_norestart,debug_logsegfault"); %>
+//	<% nvram("debug_nocommit,debug_cprintf,debug_cprintf_file,console_loglevel,t_cafree,t_hidelr,debug_ddns,debug_norestart,debug_logsegfault,http_nocache"); %>
 
 function nvramCommit() {
 	fields.disableAll('t_fom', 1);
@@ -43,6 +43,7 @@ function save() {
 	fom.t_hidelr.value = fom.f_hidelr.checked ? 1 : 0;
 	fom.debug_logsegfault.value = fom.f_debug_logsegfault.checked ? 1 : 0;
 	fom.debug_ddns.value = fom.f_debug_ddns.checked ? 1 : 0;
+	fom.http_nocache.value = fom.http_nocache.checked ? 1 : 0;
 
 	var a = [];
 	if (fom.f_nr_crond.checked) a.push('crond');
@@ -51,10 +52,18 @@ function save() {
 	if (fom.f_nr_igmprt.checked) a.push('igmprt');
 	fom.debug_norestart.value = a.join(',');
 
-	if (fom.debug_logsegfault.value != nvram.debug_logsegfault)
+	fom._service.value = '';
+	if (fom.debug_logsegfault.value != nvram.debug_logsegfault) {
+		nvram.debug_logsegfault = fom.debug_logsegfault.value;
 		fom._service.value = 'firewall-restart';
-	else
-		fom._service.value = '';
+	}
+	if (fom.http_nocache.value != nvram.http_nocache) {
+		nvram.http_nocache = fom.http_nocache.value;
+		if (fom._service.value != '')
+			fom._service.value += ',';
+
+		fom._service.value += 'httpd-restart';
+	}
 
 	form.submit(fom, 1);
 }
@@ -84,6 +93,7 @@ function save() {
 <input type="hidden" name="debug_logsegfault">
 <input type="hidden" name="t_cafree">
 <input type="hidden" name="t_hidelr">
+<input type="hidden" name="http_nocache">
 
 <!-- / / / -->
 
@@ -106,7 +116,8 @@ function save() {
 				{ name: 'f_nr_dnsmasq', type: 'checkbox', suffix: ' dnsmasq<br>', value: (nvram.debug_norestart.indexOf('dnsmasq') != -1) },
 				{ name: 'f_nr_hotplug2', type: 'checkbox', suffix: ' hotplug2<br>', value: (nvram.debug_norestart.indexOf('hotplug2') != -1) },
 				{ name: 'f_nr_igmprt', type: 'checkbox', suffix: ' igmprt<br>', value: (nvram.debug_norestart.indexOf('igmprt') != -1) }
-			] }
+			] },
+			{ title: 'Set "no-cache" in httpd header', name: 'f_http_nocache', type: 'checkbox', value: nvram.http_nocache == '1' }
 		]);
 	</script>
 

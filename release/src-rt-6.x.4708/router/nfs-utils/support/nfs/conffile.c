@@ -52,6 +52,7 @@
 #pragma GCC visibility push(hidden)
 
 static void conf_load_defaults(void);
+static int conf_load(int trans, char *path);
 static int conf_set(int , char *, char *, char *, 
 	char *, int , int );
 
@@ -106,8 +107,6 @@ struct conf_binding {
 
 char *conf_path;
 LIST_HEAD (conf_bindings, conf_binding) conf_bindings[256];
-
-static char *conf_addr;
 
 static __inline__ uint8_t
 conf_hash(char *s)
@@ -213,7 +212,7 @@ static void
 conf_parse_line(int trans, char *line, size_t sz)
 {
 	char *val, *ptr;
-	size_t i, valsize;
+	size_t i;
 	size_t j;
 	static char *section = 0;
 	static char *arg = 0;
@@ -300,18 +299,32 @@ conf_parse_line(int trans, char *line, size_t sz)
 			}
 			line[strcspn (line, " \t=")] = '\0';
 			val = line + i + 1 + strspn (line + i + 1, " \t");
-			valsize = 0;
-			while (val[valsize++]);
 
-			/* Skip trailing spaces and comments */
-			for (j = 0; j < valsize; j++) {
-				if (val[j] == '#' || val[j] == ';' || isspace(val[j])) {
-					val[j] = '\0';
-					break;
+			if (val[0] == '"') {
+				val ++;
+				j = strcspn(val, "\"");
+				val[j] = 0;
+			} else if (val[0] == '\'') {
+				val ++;
+				j = strcspn(val, "'");
+				val[j] = 0;
+			} else {
+				/* Skip trailing spaces and comments */
+				for (j = 0; val[j]; j++) {
+					if ((val[j] == '#' || val[j] == ';')
+					    && (j == 0 || isspace(val[j-1]))) {
+						val[j] = '\0';
+						break;
+					}
 				}
+				while (j && isspace(val[j-1]))
+					val[--j] = '\0';
 			}
-			/* XXX Perhaps should we not ignore errors?  */
-			conf_set(trans, section, arg, line, val, 0, 0);
+			if (strcasecmp(line, "include") == 0)
+				conf_load(trans, val);
+			else
+				/* XXX Perhaps should we not ignore errors?  */
+				conf_set(trans, section, arg, line, val, 0, 0);
 			return;
 		}
 	}
@@ -368,23 +381,18 @@ conf_init (void)
 	conf_reinit();
 }
 
-/* Open the config file and map it into our address space, then parse it.  */
-void
-conf_reinit(void)
+static int
+conf_load(int trans, char *path)
 {
-	struct conf_binding *cb = 0;
-	int fd, trans;
-	unsigned int i;
-	size_t sz;
-	char *new_conf_addr = 0;
 	struct stat sb;
+	if ((stat (path, &sb) == 0) || (errno != ENOENT)) {
+		char *new_conf_addr;
+		size_t sz = sb.st_size;
+		int fd = open (path, O_RDONLY, 0);
 
-	if ((stat (conf_path, &sb) == 0) || (errno != ENOENT)) {
-		sz = sb.st_size;
-		fd = open (conf_path, O_RDONLY, 0);
 		if (fd == -1) {
-			xlog_warn("conf_reinit: open (\"%s\", O_RDONLY) failed", conf_path);
-			return;
+			xlog_warn("conf_reinit: open (\"%s\", O_RDONLY) failed", path);
+			return -1;
 		}
 
 		new_conf_addr = malloc(sz);
@@ -396,39 +404,46 @@ conf_reinit(void)
 		/* XXX I assume short reads won't happen here.  */
 		if (read (fd, new_conf_addr, sz) != (int)sz) {
 			xlog_warn("conf_reinit: read (%d, %p, %lu) failed",
-   				fd, new_conf_addr, (unsigned long)sz);
+				fd, new_conf_addr, (unsigned long)sz);
 			goto fail;
 		}
 		close(fd);
 
-		trans = conf_begin();
 		/* XXX Should we not care about errors and rollback?  */
 		conf_parse(trans, new_conf_addr, sz);
+		free(new_conf_addr);
+		return 0;
+	fail:
+		close(fd);
+		free(new_conf_addr);
 	}
-	else
-		trans = conf_begin();
+	return -1;
+}
+
+/* Open the config file and map it into our address space, then parse it.  */
+void
+conf_reinit(void)
+{
+	struct conf_binding *cb = 0;
+	int trans;
+	unsigned int i;
+
+	trans = conf_begin();
+	if (conf_load(trans, conf_path) < 0)
+		return;
 
 	/* Load default configuration values.  */
 	conf_load_defaults();
 
 	/* Free potential existing configuration.  */
-	if (conf_addr) {
-		for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++) {
-			cb = LIST_FIRST (&conf_bindings[i]);
-			for (; cb; cb = LIST_FIRST (&conf_bindings[i]))
-				conf_remove_now(cb->section, cb->tag);
-		}
-		free (conf_addr);
+	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++) {
+		cb = LIST_FIRST (&conf_bindings[i]);
+		for (; cb; cb = LIST_FIRST (&conf_bindings[i]))
+			conf_remove_now(cb->section, cb->tag);
 	}
 
 	conf_end(trans, 1);
-	conf_addr = new_conf_addr;
 	return;
-
-fail:
-	if (new_conf_addr)
-		free(new_conf_addr);
-	close (fd);
 }
 
 /*
@@ -443,6 +458,38 @@ conf_get_num(char *section, char *tag, int def)
 	if (value)
 		return atoi(value);
 
+	return def;
+}
+
+/*
+ * Return the Boolean value denoted by TAG in section SECTION, or DEF
+ * if that tags does not exist.
+ * FALSE is returned for case-insensitve comparisons with 0, f, false, n, no, off
+ * TRUE is returned for 1, t, true, y, yes, on
+ * A failure to match one of these results in DEF
+ */
+_Bool
+conf_get_bool(char *section, char *tag, _Bool def)
+{
+	char *value = conf_get_str(section, tag);
+
+	if (!value)
+		return def;
+	if (strcasecmp(value, "1") == 0 ||
+	    strcasecmp(value, "t") == 0 ||
+	    strcasecmp(value, "true") == 0 ||
+	    strcasecmp(value, "y") == 0 ||
+	    strcasecmp(value, "yes") == 0 ||
+	    strcasecmp(value, "on") == 0)
+		return true;
+
+	if (strcasecmp(value, "0") == 0 ||
+	    strcasecmp(value, "f") == 0 ||
+	    strcasecmp(value, "false") == 0 ||
+	    strcasecmp(value, "n") == 0 ||
+	    strcasecmp(value, "no") == 0 ||
+	    strcasecmp(value, "off") == 0)
+		return false;
 	return def;
 }
 
@@ -476,12 +523,24 @@ char *
 conf_get_str(char *section, char *tag)
 {
 	struct conf_binding *cb;
-
+retry:
 	cb = LIST_FIRST (&conf_bindings[conf_hash (section)]);
 	for (; cb; cb = LIST_NEXT (cb, link)) {
 		if (strcasecmp (section, cb->section) == 0
-				&& strcasecmp (tag, cb->tag) == 0)
+		    && strcasecmp (tag, cb->tag) == 0) {
+			if (cb->value[0] == '$') {
+				/* expand $name from [environment] section,
+				 * or from environment
+				 */
+				char *env = getenv(cb->value+1);
+				if (env)
+					return env;
+				section = "environment";
+				tag = cb->value + 1;
+				goto retry;
+			}
 			return cb->value;
+		}
 	}
 	return 0;
 }
@@ -705,6 +764,8 @@ conf_set(int transaction, char *section, char *arg,
 {
 	struct conf_trans *node;
 
+	if (!value || !*value)
+		return 0;
 	node = conf_trans_node(transaction, CONF_SET);
 	if (!node)
 		return 1;

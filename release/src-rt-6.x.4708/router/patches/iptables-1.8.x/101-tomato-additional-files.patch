@@ -2362,25 +2362,25 @@
 +{
 +    struct ipt_p2p_info *info = (struct ipt_p2p_info *)match->data;
 +
-+    if ((info->cmd & SHORT_HAND_IPP2P) == SHORT_HAND_IPP2P) printf("--ipp2p ");
-+//    if ((info->cmd & SHORT_HAND_DATA) == SHORT_HAND_DATA) printf("--ipp2p-data ");
-+    if ((info->cmd & IPP2P_KAZAA) == IPP2P_KAZAA) printf("--kazaa ");
-+//    if ((info->cmd & IPP2P_DATA_KAZAA) == IPP2P_DATA_KAZAA) printf("--kazaa-data ");
-+//    if ((info->cmd & IPP2P_DATA_GNU) == IPP2P_DATA_GNU) printf("--gnu-data ");
-+    if ((info->cmd & IPP2P_GNU) == IPP2P_GNU) printf("--gnu ");
-+    if ((info->cmd & IPP2P_EDK) == IPP2P_EDK) printf("--edk ");
-+//    if ((info->cmd & IPP2P_DATA_EDK) == IPP2P_DATA_EDK) printf("--edk-data ");
-+//    if ((info->cmd & IPP2P_DATA_DC) == IPP2P_DATA_DC) printf("--dc-data ");
-+    if ((info->cmd & IPP2P_DC) == IPP2P_DC) printf("--dc ");
-+    if ((info->cmd & IPP2P_BIT) == IPP2P_BIT) printf("--bit ");
-+    if ((info->cmd & IPP2P_APPLE) == IPP2P_APPLE) printf("--apple ");
-+    if ((info->cmd & IPP2P_SOUL) == IPP2P_SOUL) printf("--soul ");
-+    if ((info->cmd & IPP2P_WINMX) == IPP2P_WINMX) printf("--winmx ");
-+    if ((info->cmd & IPP2P_ARES) == IPP2P_ARES) printf("--ares ");
++    if ((info->cmd & SHORT_HAND_IPP2P) == SHORT_HAND_IPP2P) printf(" --ipp2p");
++//    if ((info->cmd & SHORT_HAND_DATA) == SHORT_HAND_DATA) printf(" --ipp2p-data");
++    if ((info->cmd & IPP2P_KAZAA) == IPP2P_KAZAA) printf(" --kazaa");
++//    if ((info->cmd & IPP2P_DATA_KAZAA) == IPP2P_DATA_KAZAA) printf(" --kazaa-data");
++//    if ((info->cmd & IPP2P_DATA_GNU) == IPP2P_DATA_GNU) printf(" --gnu-data");
++    if ((info->cmd & IPP2P_GNU) == IPP2P_GNU) printf(" --gnu");
++    if ((info->cmd & IPP2P_EDK) == IPP2P_EDK) printf(" --edk");
++//    if ((info->cmd & IPP2P_DATA_EDK) == IPP2P_DATA_EDK) printf(" --edk-data");
++//    if ((info->cmd & IPP2P_DATA_DC) == IPP2P_DATA_DC) printf(" --dc-data");
++    if ((info->cmd & IPP2P_DC) == IPP2P_DC) printf(" --dc");
++    if ((info->cmd & IPP2P_BIT) == IPP2P_BIT) printf(" --bit");
++    if ((info->cmd & IPP2P_APPLE) == IPP2P_APPLE) printf(" --apple");
++    if ((info->cmd & IPP2P_SOUL) == IPP2P_SOUL) printf(" --soul");
++    if ((info->cmd & IPP2P_WINMX) == IPP2P_WINMX) printf(" --winmx");
++    if ((info->cmd & IPP2P_ARES) == IPP2P_ARES) printf(" --ares");
 +    if ((info->cmd & IPP2P_MUTE) == IPP2P_MUTE) printf(" --mute");
 +    if ((info->cmd & IPP2P_WASTE) == IPP2P_WASTE) printf(" --waste");
 +    if ((info->cmd & IPP2P_XDCC) == IPP2P_XDCC) printf(" --xdcc");
-+    if (info->debug != 0) printf("--debug ");
++    if (info->debug != 0) printf(" --debug");
 +}
 +
 +
@@ -2497,9 +2497,9 @@
 +{
 +	printf(
 +	"LAYER7 match v%s options:\n"
-+	"--l7dir <directory>  : Look for patterns here instead of /etc_ro/l7-protocols/\n"
++	"--l7dir <directory>  : Look for patterns here instead of /etc/l7-protocols/\n"
 +	"                       (--l7dir must be specified before --l7proto if used!)\n"
-+	"--l7proto [!] <name> : Match the protocol defined in /etc_ro/l7-protocols/name.pat\n",
++	"--l7proto [!] <name> : Match the protocol defined in /etc/l7-protocols/name.pat\n",
 +	XTABLES_VERSION);
 +}
 +
@@ -2728,7 +2728,7 @@
 +	if(strlen(l7dir) > 0)
 +		dir = l7dir;
 +	else
-+		dir = "/etc_ro/l7-protocols";
++		dir = "/etc/l7-protocols";
 +
 +	subdirs = readl7dir(dir);
 +
@@ -2829,7 +2829,7 @@
 +        const struct xt_layer7_info *info =
 +            (const struct xt_layer7_info*) match->data;
 +
-+        printf("--l7proto %s%s ", (info->invert)   ? "! ": "", info->protocol);
++        printf(" --l7proto %s%s", (info->invert)   ? "! ": "", info->protocol);
 +}
 +
 +static struct xtables_match layer7_match = {

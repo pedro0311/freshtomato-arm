@@ -5,7 +5,6 @@ MAINTAINERCLEANFILES = Makefile.in
 unit_files =  \
     nfs-client.target \
     \
-    nfs-config.service \
     nfs-mountd.service \
     nfs-server.service \
     nfs-utils.service \
@@ -36,11 +35,21 @@ unit_files += \
 endif
 endif
 
-EXTRA_DIST = $(unit_files)
+man5_MANS	= nfs.conf.man
+man7_MANS	= nfs.systemd.man
+EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
 
 unit_dir = /usr/lib/systemd/system
+generator_dir = /usr/lib/systemd/system-generators
+
+EXTRA_PROGRAMS	= nfs-server-generator
+genexecdir = $(generator_dir)
+nfs_server_generator_LDADD = ../support/export/libexport.a \
+			     ../support/nfs/libnfs.a \
+			     ../support/misc/libmisc.a
 
 if INSTALL_SYSTEMD
+genexec_PROGRAMS = nfs-server-generator
 install-data-hook: $(unit_files)
 	mkdir -p $(DESTDIR)/$(unitdir)
 	cp $(unit_files) $(DESTDIR)/$(unitdir)

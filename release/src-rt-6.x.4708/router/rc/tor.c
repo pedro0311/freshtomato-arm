@@ -60,7 +60,7 @@ void start_tor(void) {
 		chmod("/etc/tor.conf", 0644);
 		chmod("/dev/null", 0666);
 
-		mkdir(nvram_safe_get("tor_datadir"), 0777);
+		mkdir(nvram_safe_get("tor_datadir"), 0700);
 
 		xstart("chown", "nobody:nobody", nvram_safe_get("tor_datadir"));
 

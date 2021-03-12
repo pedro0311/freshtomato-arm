@@ -14,8 +14,8 @@
 m4_ifndef([AC_CONFIG_MACRO_DIRS], [m4_defun([_AM_CONFIG_MACRO_DIRS], [])m4_defun([AC_CONFIG_MACRO_DIRS], [_AM_CONFIG_MACRO_DIRS($@)])])
 m4_ifndef([AC_AUTOCONF_VERSION],
   [m4_copy([m4_PACKAGE_VERSION], [AC_AUTOCONF_VERSION])])dnl
-m4_if(m4_defn([AC_AUTOCONF_VERSION]), [2.70],,
-[m4_warning([this file was generated for autoconf 2.70.
+m4_if(m4_defn([AC_AUTOCONF_VERSION]), [2.71],,
+[m4_warning([this file was generated for autoconf 2.71.
 You have another version of autoconf.  It may work, but is not guaranteed to.
 If you have problems, you may need to regenerate the build system entirely.
 To do so, use the procedure documented by the package, typically 'autoreconf'.])])
@@ -1508,6 +1508,7 @@ m4_include([m4/float_h.m4])
 m4_include([m4/fnmatch.m4])
 m4_include([m4/fnmatch_h.m4])
 m4_include([m4/fpieee.m4])
+m4_include([m4/free.m4])
 m4_include([m4/frexp.m4])
 m4_include([m4/frexpl.m4])
 m4_include([m4/fstat.m4])
@@ -1579,6 +1580,7 @@ m4_include([m4/progtest.m4])
 m4_include([m4/pthread_rwlock_rdlock.m4])
 m4_include([m4/raise.m4])
 m4_include([m4/readdir.m4])
+m4_include([m4/realloc.m4])
 m4_include([m4/regex.m4])
 m4_include([m4/setlocale_null.m4])
 m4_include([m4/sigaction.m4])

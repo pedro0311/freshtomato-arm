@@ -717,13 +717,13 @@ void start_ovpn_server(int unit)
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	int nvi, pid, mwan_num, taskset_ret = 0;
+	int pid, mwan_num, taskset_ret = 0;
 	long int nvl;
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	FILE *ccd;
 	char *br_ipaddr, *br_netmask;
 	char *chp, *route;
-	int i, ip[4], nm[4];
+	int nvi, i, ip[4], nm[4];
 	int c2c = 0;
 	int dont_push_active = 0;
 	int push_lan[4] = {0};
@@ -1332,12 +1332,6 @@ void start_ovpn_eas()
 
 	if ((strlen(nvram_safe_get("vpn_server_eas")) == 0) && (strlen(nvram_safe_get("vpn_client_eas")) == 0))
 		return;
-
-	/* wait for time sync for a while */
-	i = 10;
-	while (time(0) < Y2K && i--) {
-		sleep(1);
-	}
 
 	/* Parse and start servers */
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));

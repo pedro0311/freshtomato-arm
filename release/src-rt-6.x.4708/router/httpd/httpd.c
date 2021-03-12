@@ -52,7 +52,7 @@
 
 */
 
-#include "tomato.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -61,7 +61,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <getopt.h>
-#include <stdarg.h>
 #include <sys/wait.h>
 #include <error.h>
 #include <sys/signal.h>
@@ -69,12 +68,30 @@
 #include <sys/stat.h>
 
 #include <wlutils.h>
-
-
+#ifdef TCONFIG_HTTPS
 #include "../mssl/mssl.h"
-int do_ssl;
+#define HTTPS_CRT_VER	"1"
+#endif
+#include "tomato.h"
 
 #define HTTP_MAX_LISTENERS 16
+
+
+int do_ssl;
+int disable_maxage = 0;
+
+int post;
+int connfd = -1;
+FILE *connfp = NULL;
+struct sockaddr_storage clientsai;
+
+int header_sent;
+char *user_agent;
+#ifdef TCONFIG_IPV6
+char client_addr[INET6_ADDRSTRLEN];
+#else
+char client_addr[INET_ADDRSTRLEN];
+#endif
 
 typedef struct {
 	int count;
@@ -84,33 +101,25 @@ typedef struct {
 		int ssl;
 	} listener[HTTP_MAX_LISTENERS];
 } listeners_t;
+
 static listeners_t listeners;
 static int maxfd = -1;
 
-int post;
-int connfd = -1;
-FILE *connfp = NULL;
-struct sockaddr_storage clientsai;
-
-int header_sent;
-char *user_agent;
-//	int hidok = 0;
-
-int disable_maxage = 0;
+typedef enum {
+	AUTH_NONE,
+	AUTH_OK,
+	AUTH_BAD
+} auth_t;
 
 const char mime_html[] = "text/html; charset=utf-8";
 const char mime_plain[] = "text/plain";
 const char mime_javascript[] = "text/javascript";
-const char mime_binary[] = "application/tomato-binary-file";	// instead of "application/octet-stream" to make browser just "save as" and prevent automatic detection weirdness	-- zzz
+const char mime_binary[] = "application/tomato-binary-file"; /* instead of "application/octet-stream" to make browser just "save as" and prevent automatic detection weirdness */
 const char mime_octetstream[] = "application/octet-stream";
 
 static int match(const char* pattern, const char* string);
 static int match_one(const char* pattern, int patternlen, const char* string);
 static void handle_request(void);
-
-
-// --------------------------------------------------------------------------------------------------------------------
-
 
 static const char *http_status_desc(int status)
 {
@@ -137,23 +146,28 @@ void send_header(int status, const char* header, const char* mime, int cache)
 	char tms[128];
 
 	now = time(NULL);
-	if (now < Y2K) now += Y2K;
-	strftime(tms, sizeof(tms), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));	// RFC 1123
-	web_printf("HTTP/1.0 %d %s\r\n"
-			   "Date: %s\r\n",
-			   status, http_status_desc(status),
-			   tms);
+	if (now < Y2K)
+		now += Y2K;
 
-	if (mime) web_printf("Content-Type: %s\r\n", mime);
-	if (cache > 0 && !disable_maxage) {
+	strftime(tms, sizeof(tms), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now)); /* RFC 1123 */
+	web_printf("HTTP/1.0 %d %s\r\n"
+	           "Date: %s\r\n",
+	           status, http_status_desc(status),
+	           tms);
+
+	if (mime)
+		web_printf("Content-Type: %s\r\n", mime);
+
+	if (cache > 0 && !disable_maxage)
 		web_printf("Cache-Control: max-age=%d\r\n", cache * 3600);
-	}
 	else {
 		web_puts("Cache-Control: no-cache, no-store, must-revalidate, private\r\n"
-				 "Expires: Thu, 31 Dec 1970 00:00:00 GMT\r\n"
-				 "Pragma: no-cache\r\n");
+		         "Expires: Thu, 31 Dec 1970 00:00:00 GMT\r\n"
+		         "Pragma: no-cache\r\n");
 	}
-	if (header) web_printf("%s\r\n", header);
+	if (header)
+		web_printf("%s\r\n", header);
+
 	web_puts("Connection: close\r\n\r\n");
 
 	header_sent = 1;
@@ -162,14 +176,14 @@ void send_header(int status, const char* header, const char* mime, int cache)
 void send_error(int status, const char *header, const char *text)
 {
 	const char *s = http_status_desc(status);
+
 	send_header(status, header, mime_html, 0);
-	web_printf(
-		"<html>"
-		"<head><title>Error</title></head>"
-		"<body>"
-		"<h2>%d %s</h2> %s"
-		"</body></html>",
-		status, s, text ? text : s);
+	web_printf("<html>"
+	           "<head><title>Error</title></head>"
+	           "<body>"
+	           "<h2>%d %s</h2> %s"
+	           "</body></html>",
+	           status, s, text ? text : s);
 }
 
 void redirect(const char *path)
@@ -179,8 +193,6 @@ void redirect(const char *path)
 	snprintf(s, sizeof(s), "Location: %s", path);
 	send_header(302, s, mime_html, 0);
 	web_puts(s);
-
-	_dprintf("Redirect: %s\n", path);
 }
 
 int skip_header(int *len)
@@ -188,39 +200,32 @@ int skip_header(int *len)
 	char buf[2048];
 
 	while (*len > 0) {
-		if (!web_getline(buf, MIN((unsigned int) *len, sizeof(buf)))) {
+		if (!web_getline(buf, MIN((unsigned int) *len, sizeof(buf))))
 			break;
-		}
+
 		*len -= strlen(buf);
-		if ((strcmp(buf, "\n") == 0) || (strcmp(buf, "\r\n") == 0)) {
+		if ((strcmp(buf, "\n") == 0) || (strcmp(buf, "\r\n") == 0))
 			return 1;
-		}
 	}
 	return 0;
 }
-
-
-// -----------------------------------------------------------------------------
 
 static void eat_garbage(void)
 {
 	int i;
 	int flags;
 
-	// eat garbage \r\n (IE6, ...) or browser ends up with a tcp reset error message
+	/* eat garbage \r\n (IE6, ...) or browser ends up with a tcp reset error message */
 	if ((!do_ssl) && (post)) {
 		if (((flags = fcntl(connfd, F_GETFL)) != -1) && (fcntl(connfd, F_SETFL, flags | O_NONBLOCK) != -1)) {
-//					if (fgetc(connfp) != EOF) fgetc(connfp);
 			for (i = 0; i < 1024; ++i) {
-				if (fgetc(connfp) == EOF) break;
+				if (fgetc(connfp) == EOF)
+					break;
 			}
 			fcntl(connfd, F_SETFL, flags);
 		}
 	}
 }
-
-// -----------------------------------------------------------------------------
-
 
 static void send_authenticate(void)
 {
@@ -228,13 +233,27 @@ static void send_authenticate(void)
 	const char *realm;
 
 	realm = nvram_get("router_name");
-	if ((realm == NULL) || (*realm == 0) || (strlen(realm) > 64)) realm = "unknown";
+	if ((realm == NULL) || (*realm == 0) || (strlen(realm) > 64))
+		realm = "unknown";
 
-	sprintf(header, "WWW-Authenticate: Basic realm=\"%s\"", realm);
+	memset(header, 0, sizeof(header));
+	snprintf(header, sizeof(header), "WWW-Authenticate: Basic realm=\"%s\"", realm);
 	send_error(401, header, NULL);
 }
 
-typedef enum { AUTH_NONE, AUTH_OK, AUTH_BAD } auth_t;
+static void get_client_addr(void)
+{
+	void *addr = NULL;
+
+	if (clientsai.ss_family == AF_INET)
+		addr = &(((struct sockaddr_in*) &clientsai)->sin_addr);
+#ifdef TCONFIG_IPV6
+	else if (clientsai.ss_family == AF_INET6)
+		addr = &(((struct sockaddr_in6*) &clientsai)->sin6_addr);
+#endif
+
+	inet_ntop(clientsai.ss_family, addr, client_addr, sizeof(client_addr));
+}
 
 static auth_t auth_check(const char *authorization)
 {
@@ -250,11 +269,11 @@ static auth_t auth_check(const char *authorization)
 			if ((pass = strchr(buf, ':')) != NULL) {
 				*pass++ = 0;
 
-				if (((u = nvram_get("http_username")) == NULL) || (*u == 0))	/* special case: empty username => root */
+				if (((u = nvram_get("http_username")) == NULL) || (*u == 0)) /* special case: empty username => root */
 					u = "root";
 
 				if (strcmp(buf, u) == 0) {
-					if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0))	/* special case: empty password => admin */
+					if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0)) /* special case: empty password => admin */
 						p = "admin";
 
 					if (strcmp(pass, p) == 0) {
@@ -271,11 +290,13 @@ static auth_t auth_check(const char *authorization)
 
 static void auth_fail(int clen, int show)
 {
-	if (post) web_eat(clen);
+	if (post)
+		web_eat(clen);
+
 	eat_garbage();
 	send_authenticate();
 	if (show == 1)
-		syslog(LOG_WARNING, "Bad password attempt (GUI)");
+		syslog(LOG_WARNING, "Bad password attempt (GUI) from: %s", client_addr);
 }
 
 static int check_wif(int idx, int unit, int subunit, void *param)
@@ -290,23 +311,21 @@ static int check_wlaccess(void)
 	char ifname[32];
 	sta_info_t sti;
 
-	if (nvram_match("web_wl_filter", "1")) {
+	if (nvram_get_int("web_wl_filter")) {
 		if (get_client_info(mac, ifname)) {
 			memset(&sti, 0, sizeof(sti));
-			strcpy((char *)&sti, "sta_info");	// sta_info0<mac>
+			strcpy((char *)&sti, "sta_info"); /* sta_info0<mac> */
 			ether_atoe(mac, (unsigned char *)&sti + 9);
 			if (foreach_wif(1, &sti, check_wif)) {
-				if (nvram_match("debug_logwlac", "1")) {
+				if (nvram_get_int("debug_logwlac"))
 					syslog(LOG_WARNING, "Wireless access from %s blocked.", mac);
-				}
+
 				return 0;
 			}
 		}
 	}
 	return 1;
 }
-
-// -----------------------------------------------------------------------------
 
 static int match_one(const char* pattern, int patternlen, const char* string)
 {
@@ -315,44 +334,53 @@ static int match_one(const char* pattern, int patternlen, const char* string)
 	for (p = pattern; p - pattern < patternlen; ++p, ++string) {
 		if (*p == '?' && *string != '\0')
 			continue;
+
 		if (*p == '*') {
 			int i, pl;
 			++p;
-			if (*p == '*') {
-				/* Double-wildcard matches anything. */
+			if (*p == '*') { /* double-wildcard matches anything */
 				++p;
 				i = strlen(string);
-			} else
-				/* Single-wildcard matches anything but slash. */
+			}
+			else /* single-wildcard matches anything but slash */
 				i = strcspn(string, "/");
+
 			pl = patternlen - (p - pattern);
+
 			for (; i >= 0; --i)
 				if (match_one(p, pl, &(string[i])))
 					return 1;
+
 			return 0;
 		}
+
 		if (*p != *string)
 			return 0;
 	}
+
 	if (*string == '\0')
 		return 1;
+
 	return 0;
 }
 
-//	Simple shell-style filename matcher.  Only does ? * and **, and multiple
-//	patterns separated by |.  Returns 1 or 0.
+/* Simple shell-style filename matcher.  Only does ? * and **, and multiple
+ * patterns separated by |.  Returns 1 or 0.
+ */
 static int match(const char* pattern, const char* string)
 {
 	const char* p;
 
 	for (;;) {
 		p = strchr(pattern, '|');
-		if (p == NULL) return match_one(pattern, strlen(pattern), string);
-		if (match_one(pattern, p - pattern, string)) return 1;
+		if (p == NULL)
+			return match_one(pattern, strlen(pattern), string);
+		if (match_one(pattern, p - pattern, string))
+			return 1;
+
 		pattern = p + 1;
 	}
 }
-
 
 void do_file(char *path)
 {
@@ -362,6 +390,7 @@ void do_file(char *path)
 	if ((f = fopen(path, "r")) != NULL) {
 		while ((nr = fread(buf, 1, sizeof(buf), f)) > 0)
 			web_write(buf, nr);
+
 		fclose(f);
 	}
 }
@@ -381,21 +410,20 @@ static void handle_request(void)
 	authorization = boundary = NULL;
 	bzero(line, sizeof(line));
 
-	// Parse the first line of the request.
+	/* parse the first line of the request */
 	if (!web_getline(line, sizeof(line))) {
 		send_error(400, NULL, NULL);
 		return;
 	}
 
-	_dprintf("%s\n", line);
-
 	method = path = line;
 	strsep(&path, " ");
-	if (!path) {	// Avoid http server crash, added by honor 2003-12-08
+	if (!path) { /* avoid http server crash */
 		send_error(400, NULL, NULL);
 		return;
 	}
-	while (*path == ' ') path++;
+	while (*path == ' ')
+		path++;
 
 	if ((strcasecmp(method, "GET") != 0) && (strcasecmp(method, "POST") != 0)) {
 		send_error(501, NULL, NULL);
@@ -404,11 +432,12 @@ static void handle_request(void)
 
 	protocol = path;
 	strsep(&protocol, " ");
-	if (!protocol) {	// Avoid http server crash, added by honor 2003-12-08
+	if (!protocol) { /* avoid http server crash */
 		send_error(400, NULL, NULL);
 		return;
 	}
-	while (*protocol == ' ') protocol++;
+	while (*protocol == ' ')
+		protocol++;
 
 	if (path[0] != '/') {
 		send_error(400, NULL, NULL);
@@ -416,49 +445,29 @@ static void handle_request(void)
 	}
 	file = path + 1;
 
-#if 0
-	const char *hid;
-	int n;
-
-	hid = nvram_safe_get("http_id");
-	n = strlen(hid);
-	cprintf("file=%s hid=%s n=%d +n=%s\n", file, hid, n, path + n + 1);
-	if ((strncmp(file, hid, n) == 0) && (path[n + 1] == '/')) {
-		path += n + 1;
-		file = path + 1;
-		hidok = 1;
-
-		cprintf("OK path=%s file=%s\n", path, file);
-	}
-#endif
-
 	if ((cp = strchr(file, '?')) != NULL) {
 		*cp = 0;
 		setenv("QUERY_STRING", cp + 1, 1);
 		webcgi_init(cp + 1);
 	}
 
-	if ((file[0] == '/') || (strncmp(file, "..", 2) == 0) || (strstr(file, "/../") != NULL) ||
-		(strcmp(file + (strlen(file) - 3), "/..") == 0)) {
+	if ((file[0] == '/') || (strncmp(file, "..", 2) == 0) || (strstr(file, "/../") != NULL) || (strcmp(file + (strlen(file) - 3), "/..") == 0)) {
 		send_error(400, NULL, NULL);
 		return;
 	}
 
-	if ((file[0] == 0) || (strcmp(file, "index.asp") == 0)) {
+	if ((file[0] == 0) || (strcmp(file, "index.asp") == 0))
 		file = "status-overview.asp";
-	}
-	else if ((strcmp(file, "ext/") == 0) || (strcmp(file, "ext") == 0)) {
+	else if ((strcmp(file, "ext/") == 0) || (strcmp(file, "ext") == 0))
 		file = "ext/index.asp";
-	}
 
 	cp = protocol;
 	strsep(&cp, " ");
 	cur = protocol + strlen(protocol) + 1;
 
 	while (web_getline(cur, line + sizeof(line) - cur)) {
-		if ((strcmp(cur, "\n") == 0) || (strcmp(cur, "\r\n") == 0)) {
+		if ((strcmp(cur, "\n") == 0) || (strcmp(cur, "\r\n") == 0))
 			break;
-		}
 
 		if (strncasecmp(cur, "Authorization:", 14) == 0) {
 			cp = &cur[14];
@@ -490,40 +499,19 @@ static void handle_request(void)
 	}
 
 	post = (strcasecmp(method, "post") == 0);
-
+	get_client_addr();
 	auth = auth_check(authorization);
-
-#if 0
-	cprintf("UserAgent: %s\n", user_agent);
-	switch (auth) {
-	case AUTH_NONE:
-		cprintf("AUTH_NONE\n");
-		break;
-	case AUTH_OK:
-		cprintf("AUTH_OK\n");
-		break;
-	case AUTH_BAD:
-		cprintf("AUTH_BAD\n");
-		break;
-	default:
-		cprintf("AUTH_?\n");
-		break;
-	}
-#endif
-
 	/*
+	 * Chrome 1.0.154:
+	 * - User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.19 (KHTML, like Gecko) Chrome/1.0.154.53 Safari/525.19
+	 * - It *always* sends an 'AUTH_NONE request' first. This results in a
+	 *   send_authenticate, then finally sends an 'AUTH_OK request'.
+	 * - It does not clear the authentication even if AUTH_NONE request succeeds.
+	 * - If user doesn't enter anything (blank) for credential, it sends the
+	 *   previous credential.
+	 */
 
-	Chrome 1.0.154:
-	- User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.19 (KHTML, like Gecko) Chrome/1.0.154.53 Safari/525.19
-	- It *always* sends an 'AUTH_NONE request' first. This results in a
-	  send_authenticate, then finally sends an 'AUTH_OK request'.
-	- It does not clear the authentication even if AUTH_NONE request succeeds.
-	- If user doesn't enter anything (blank) for credential, it sends the
-	  previous credential.
-
-	*/
-
-	if (strcmp(file, "logout") == 0) {	// special case
+	if (strcmp(file, "logout") == 0) { /* special case */
 		wi_generic(file, cl, boundary);
 		eat_garbage();
 
@@ -539,6 +527,7 @@ static void handle_request(void)
 				return;
 			}
 		}
+
 		send_error(404, NULL, "Goodbye");
 		return;
 	}
@@ -555,10 +544,16 @@ static void handle_request(void)
 				return;
 			}
 
-			if (handler->input) handler->input(file, cl, boundary);
+			if (handler->input)
+				handler->input(file, cl, boundary);
+
 			eat_garbage();
-			if (handler->mime_type != NULL) send_header(200, NULL, handler->mime_type, handler->cache);
-			if (handler->output) handler->output(file);
+
+			if (handler->mime_type != NULL)
+				send_header(200, NULL, handler->mime_type, handler->cache);
+			if (handler->output)
+				handler->output(file);
+
 			return;
 		}
 	}
@@ -568,37 +563,10 @@ static void handle_request(void)
 		return;
 	}
 
-/*
-	if ((!post) && (strchr(file, '.') == NULL)) {
-		cl = strlen(file);
-		if ((cl > 1) && (cl < 64)) {
-			char alt[128];
-
-			path = alt + 1;
-			strcpy(path, file);
-
-			cp = path + cl - 1;
-			if (*cp == '/') *cp = 0;
-
-			if ((cp = strrchr(path, '/')) != NULL) *cp = '-';
-
-			strcat(path, ".asp");
-			if (f_exists(path)) {
-				alt[0] = '/';
-				redirect(alt);
-				return;
-			}
-		}
-	}
-*/
-
 	send_error(404, NULL, NULL);
 }
 
 #ifdef TCONFIG_HTTPS
-
-#define HTTPS_CRT_VER	"1"
-
 static void save_cert(void)
 {
 	if (eval("tar", "-C", "/", "-czf", "/tmp/cert.tgz", "etc/cert.pem", "etc/key.pem") == 0) {
@@ -621,18 +589,28 @@ static void erase_cert(void)
 
 static void start_ssl(void)
 {
-	int ok = 0, retry = 2, save;
+	int i, lock, ok, retry = 2, save;
 	unsigned long long sn;
 	char t[32];
 
-	if (nvram_match("https_crt_gen", "1")) {
-		erase_cert();
+	lock = file_lock("httpd");
+
+	/* avoid collisions if another httpd instance is initializing SSL cert */
+	for (i = 1; i < 5; i++) {
+		if (lock < 0)
+			sleep(i * i);
+		else
+			i = 5;
 	}
 
-	while (1) {
-		save = nvram_match("https_crt_save", "1");
+	if (nvram_match("https_crt_gen", "1"))
+		erase_cert();
 
-		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || ((nvram_get_int("https_crt_timeset") != 1) && (time(NULL) > Y2K))) {
+	while (1) {
+		save = nvram_get_int("https_crt_save");
+
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || ((!nvram_get_int("https_crt_timeset")) && (time(NULL) > Y2K))) {
+			ok = 0;
 			if (save && nvram_match("crt_ver", HTTPS_CRT_VER)) {
 				if (nvram_get_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
 					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0) {
@@ -647,19 +625,20 @@ static void start_ssl(void)
 				erase_cert();
 				syslog(LOG_INFO, "Generating SSL certificate...");
 
-				/* browsers seems to like this when the ip address moves... - zzz */
+				/* browsers seem to like this when the ip address moves... */
 				f_read("/dev/urandom", &sn, sizeof(sn));
 
-				sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
+				memset(t, 0, sizeof(t));
+				snprintf(t, sizeof(t), "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
 				eval("gencert.sh", t);
 			}
 		}
 
-		if ((save) && (*nvram_safe_get("https_crt_file")) == 0) {
+		if ((save) && (*nvram_safe_get("https_crt_file")) == 0)
 			save_cert();
-		}
 
 		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) {
+			file_unlock(lock);
 			return;
 		}
 		erase_cert();
@@ -667,12 +646,13 @@ static void start_ssl(void)
 		syslog(retry ? LOG_WARNING : LOG_ERR, "Unable to start SSL");
 
 		if (!retry) {
+			file_unlock(lock);
 			exit(1);
 		}
 		retry -= 1;
 	}
 }
-#endif
+#endif /* TCONFIG_HTTPS */
 
 static void init_id(void)
 {
@@ -681,7 +661,9 @@ static void init_id(void)
 
 	if (strncmp(nvram_safe_get("http_id"), "TID", 3) != 0) {
 		f_read("/dev/urandom", &n, sizeof(n));
-		sprintf(s, "TID%llx", n);
+
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), "TID%llx", n);
 		nvram_set("http_id", s);
 	}
 
@@ -690,59 +672,28 @@ static void init_id(void)
 
 void check_id(const char *url)
 {
+	char s[72];
+	char *i;
+	char *u;
+
 	if (!nvram_match("http_id", webcgi_safeget("_http_id", ""))) {
-#if 0
-		const char *hid = nvram_safe_get("http_id");
-		if (url) {
-			const char *a;
-			int n;
 
-			// http://xxx/yyy/TID/zzz
-			if (((a = strrchr(url, '/')) != NULL) && (a != url)) {
-				n = strlen(hid);
-				a -= n;
-				if ((a > url) && (*(a - 1) == '/')) {
-					if (strncmp(a, hid, n) == 0) return;
-				}
-			}
-		}
 
-#endif
-
-		char s[72];
-		char *i;
-		char *u;
-#ifdef TCONFIG_IPV6
-		char a[INET6_ADDRSTRLEN];
-#else
-		char a[INET_ADDRSTRLEN];
-#endif
-		void *addr = NULL;
-
-		if (clientsai.ss_family == AF_INET)
-			addr = &( ((struct sockaddr_in*) &clientsai)->sin_addr );
-#ifdef TCONFIG_IPV6
-		else if (clientsai.ss_family == AF_INET6)
-			addr = &( ((struct sockaddr_in6*) &clientsai)->sin6_addr );
-#endif
-		inet_ntop(clientsai.ss_family, addr, a, sizeof(a));
-
-		sprintf(s, "%s,%ld", a, time(NULL) & 0xFFC0);
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), "%s,%ld", client_addr, time(NULL) & 0xFFC0);
 		if (!nvram_match("http_id_warn", s)) {
 			nvram_set("http_id_warn", s);
 
 			strlcpy(s, webcgi_safeget("_http_id", ""), sizeof(s));
-			i = js_string(s);	// quicky scrub
+			i = js_string(s); /* quicky scrub */
 
 			strlcpy(s, url, sizeof(s));
 			u = js_string(s);
 
 			if ((i != NULL) && (u != NULL)) {
-				syslog(LOG_WARNING, "Invalid ID '%s' from %s for /%s", i, a, u);
+				get_client_addr();
+				syslog(LOG_WARNING, "Invalid ID '%s' from %s for /%s", i, client_addr, u);
 			}
-
-			//	free(u);
-			//	free(i);
 		}
 
 		exit(1);
@@ -791,7 +742,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 		n = 1;
 		setsockopt(listenfd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&n, sizeof(n));
 	} else
-#endif
+#endif /* TCONFIG_IPV6 */
 	{
 		struct sockaddr_in *sai = (struct sockaddr_in *) &sai_stor;
 		sai->sin_family = HTTPD_FAMILY;
@@ -812,13 +763,29 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 	}
 
 	if (listenfd >= 0) {
-		_dprintf("%s: added IPv%d listener [%d] for %s:%d, ssl=%d\n",
-			__FUNCTION__, do_ipv6 ? 6 : 4, listenfd,
-			(addr && *addr) ? addr : "addr_any", server_port, do_ssl);
 		listeners.listener[listeners.count].listenfd = listenfd;
 		listeners.listener[listeners.count++].ssl = do_ssl;
 		FD_SET(listenfd, &listeners.lfdset);
-		if (maxfd < listenfd) maxfd = listenfd;
+
+		if (maxfd < listenfd)
+			maxfd = listenfd;
+	}
+}
+
+static void listen_wan(char* wan, wanface_list_t wanXfaces, int wanport)
+{
+	int i;
+	char *ip;
+
+	if (check_wanup(wan)) {
+		memcpy(&wanXfaces, get_wanfaces(wan), sizeof(wanXfaces));
+		for (i = 0; i < wanXfaces.count; ++i) {
+			ip = wanXfaces.iface[i].ip;
+			if (!(*ip) || strcmp(ip, "0.0.0.0") == 0)
+				continue;
+
+			add_listen_socket(ip, wanport, 0, nvram_get_int("remote_mgt_https"));
+		}
 	}
 }
 
@@ -829,119 +796,82 @@ static void setup_listeners(int do_ipv6)
 	char ipaddr2[INET6_ADDRSTRLEN];
 	char ipaddr3[INET6_ADDRSTRLEN];
 	IF_TCONFIG_IPV6(const char *wanaddr);
-	int wanport, p;
-	IF_TCONFIG_IPV6(int wan6port);
-
-	wanport = nvram_get_int("http_wanport");
-#ifdef TCONFIG_IPV6
-	wan6port = wanport;
-	if (do_ipv6) {
-		// get the configured routable IPv6 address from the lan iface.
-		// add_listen_socket() will fall back to in6addr_any
-		// if NULL or empty address is returned
-		strlcpy(ipaddr, getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0) ? : "", sizeof(ipaddr));
-	}
-	else
+	int wanport = nvram_get_int("http_wanport");
+	IF_TCONFIG_IPV6(int wan6port = wanport);
+	int lanport;
+	wanface_list_t wanfaces;
+	wanface_list_t wan2faces;
+#ifdef TCONFIG_MULTIWAN
+	wanface_list_t wan3faces;
+	wanface_list_t wan4faces;
 #endif
-	strlcpy(ipaddr, nvram_safe_get("lan_ipaddr"), sizeof(ipaddr));
-	strlcpy(ipaddr1, nvram_safe_get("lan1_ipaddr"), sizeof(ipaddr));
-	strlcpy(ipaddr2, nvram_safe_get("lan2_ipaddr"), sizeof(ipaddr));
-	strlcpy(ipaddr3, nvram_safe_get("lan3_ipaddr"), sizeof(ipaddr));
 
-	if (!nvram_match("http_enable", "0")) {
-		p = nvram_get_int("http_lanport");
-		add_listen_socket(ipaddr, p, do_ipv6, 0);
-		if (strcmp(ipaddr1,"")!=0)
-			add_listen_socket(ipaddr1, p, do_ipv6, 0);
-		if (strcmp(ipaddr2,"")!=0)
-			add_listen_socket(ipaddr2, p, do_ipv6, 0);
-		if (strcmp(ipaddr3,"")!=0)
-			add_listen_socket(ipaddr3, p, do_ipv6, 0);
+#ifdef TCONFIG_IPV6
+	/* get the configured routable IPv6 address from the lan iface.
+	 * add_listen_socket() will fall back to in6addr_any
+	 * if NULL or empty address is returned
+	 */
+	if (do_ipv6)
+		strlcpy(ipaddr, getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0) ? : "", sizeof(ipaddr));
+	else
+#endif /* TCONFIG_IPV6 */
+		strlcpy(ipaddr, nvram_safe_get("lan_ipaddr"), sizeof(ipaddr));
 
-		IF_TCONFIG_IPV6(if (do_ipv6 && wanport == p) wan6port = 0);
+	strlcpy(ipaddr1, nvram_safe_get("lan1_ipaddr"), sizeof(ipaddr1));
+	strlcpy(ipaddr2, nvram_safe_get("lan2_ipaddr"), sizeof(ipaddr2));
+	strlcpy(ipaddr3, nvram_safe_get("lan3_ipaddr"), sizeof(ipaddr3));
+
+	if (nvram_get_int("http_enable")) {
+		lanport = nvram_get_int("http_lanport");
+		add_listen_socket(ipaddr, lanport, do_ipv6, 0);
+		if (strcmp(ipaddr1, "") != 0)
+			add_listen_socket(ipaddr1, lanport, do_ipv6, 0);
+		if (strcmp(ipaddr2, "") != 0)
+			add_listen_socket(ipaddr2, lanport, do_ipv6, 0);
+		if (strcmp(ipaddr3, "") != 0)
+			add_listen_socket(ipaddr3, lanport, do_ipv6, 0);
+
+		IF_TCONFIG_IPV6(if (do_ipv6 && wanport == lanport) wan6port = 0);
 	}
 
 #ifdef TCONFIG_HTTPS
-	if (!nvram_match("https_enable", "0")) {
+	if (nvram_get_int("https_enable")) {
 		do_ssl = 1;
-		p = nvram_get_int("https_lanport");
-		add_listen_socket(ipaddr, p, do_ipv6, 1);
-		if (strcmp(ipaddr1,"")!=0)
-			add_listen_socket(ipaddr1, p, do_ipv6, 1);
-		if (strcmp(ipaddr2,"")!=0)
-			add_listen_socket(ipaddr2, p, do_ipv6, 1);
-		if (strcmp(ipaddr3,"")!=0)
-			add_listen_socket(ipaddr3, p, do_ipv6, 1);
+		lanport = nvram_get_int("https_lanport");
+		add_listen_socket(ipaddr, lanport, do_ipv6, 1);
+		if (strcmp(ipaddr1, "") != 0)
+			add_listen_socket(ipaddr1, lanport, do_ipv6, 1);
+		if (strcmp(ipaddr2, "") != 0)
+			add_listen_socket(ipaddr2, lanport, do_ipv6, 1);
+		if (strcmp(ipaddr3, "") != 0)
+			add_listen_socket(ipaddr3, lanport, do_ipv6, 1);
 
-		IF_TCONFIG_IPV6(if (do_ipv6 && wanport == p) wan6port = 0);
+		IF_TCONFIG_IPV6(if (do_ipv6 && wanport == lanport) wan6port = 0);
 	}
-#endif
+#endif /* TCONFIG_HTTPS */
 
-	if ((wanport) && nvram_match("wk_mode","gateway") && nvram_match("remote_management", "1")) {
-		IF_TCONFIG_HTTPS(if (nvram_match("remote_mgt_https", "1")) do_ssl = 1);
+	/* remote management */
+	if ((wanport) && nvram_match("wk_mode", "gateway") && nvram_get_int("remote_management")) {
+		IF_TCONFIG_HTTPS(if (nvram_get_int("remote_mgt_https")) do_ssl = 1);
 #ifdef TCONFIG_IPV6
 		if (do_ipv6) {
-			if (*ipaddr && wan6port) {
-				add_listen_socket(ipaddr, wan6port, 1, nvram_match("remote_mgt_https", "1"));
-			}
+			if (*ipaddr && wan6port)
+				add_listen_socket(ipaddr, wan6port, 1, nvram_get_int("remote_mgt_https"));
+
 			if (*ipaddr || wan6port) {
-				// get the IPv6 address from wan iface
+				/* get the IPv6 address from wan iface */
 				wanaddr = getifaddr((char *)get_wan6face(), AF_INET6, 0);
-				if (wanaddr && *wanaddr && strcmp(wanaddr, ipaddr) != 0) {
-					add_listen_socket(wanaddr, wanport, 1, nvram_match("remote_mgt_https", "1"));
-				}
+				if (wanaddr && *wanaddr && strcmp(wanaddr, ipaddr) != 0)
+					add_listen_socket(wanaddr, wanport, 1, nvram_get_int("remote_mgt_https"));
 			}
 		} else
-#endif
+#endif /* TCONFIG_IPV6 */
 		{
-			int i;
-			char *ip;
-			wanface_list_t wanfaces;
-			wanface_list_t wan2faces;
+			listen_wan("wan", wanfaces, wanport);
+			listen_wan("wan2", wan2faces, wanport);
 #ifdef TCONFIG_MULTIWAN
-			wanface_list_t wan3faces;
-			wanface_list_t wan4faces;
-#endif
-
-			if (check_wanup("wan")) {
-				memcpy(&wanfaces, get_wanfaces("wan"), sizeof(wanfaces));
-				for (i = 0; i < wanfaces.count; ++i) {
-					ip = wanfaces.iface[i].ip;
-					if (!(*ip) || strcmp(ip, "0.0.0.0") == 0)
-						continue;
-					add_listen_socket(ip, wanport, 0, nvram_match("remote_mgt_https", "1"));
-				}
-			}
-
-			if (check_wanup("wan2")) {
-				memcpy(&wan2faces, get_wanfaces("wan2"), sizeof(wan2faces));
-				for (i = 0; i < wan2faces.count; ++i) {
-					ip = wan2faces.iface[i].ip;
-					if (!(*ip) || strcmp(ip, "0.0.0.0") == 0)
-						continue;
-					add_listen_socket(ip, wanport, 0, nvram_match("remote_mgt_https", "1"));
-				}
-			}
-#ifdef TCONFIG_MULTIWAN
-			if (check_wanup("wan3")) {
-				memcpy(&wan3faces, get_wanfaces("wan3"), sizeof(wan3faces));
-				for (i = 0; i < wan3faces.count; ++i) {
-					ip = wan3faces.iface[i].ip;
-					if (!(*ip) || strcmp(ip, "0.0.0.0") == 0)
-						continue;
-					add_listen_socket(ip, wanport, 0, nvram_match("remote_mgt_https", "1"));
-				}
-			}
-
-			if (check_wanup("wan4")) {
-				memcpy(&wan4faces, get_wanfaces("wan4"), sizeof(wan4faces));
-				for (i = 0; i < wan4faces.count; ++i) {
-					ip = wan4faces.iface[i].ip;
-					if (!(*ip) || strcmp(ip, "0.0.0.0") == 0)
-						continue;
-					add_listen_socket(ip, wanport, 0, nvram_match("remote_mgt_https", "1"));
-				}
-			}
+			listen_wan("wan3", wan3faces, wanport);
+			listen_wan("wan4", wan4faces, wanport);
 #endif
 		}
 	}
@@ -963,11 +893,11 @@ static void close_listen_sockets(void)
 int main(int argc, char **argv)
 {
 	int c;
-	int debug = 0;
 	fd_set rfdset;
 	int i, n;
 	struct sockaddr_storage sai;
 	char bind[128];
+	char s[16];
 	char *port = NULL;
 #ifdef TCONFIG_IPV6
 	int ip6 = 0;
@@ -982,24 +912,14 @@ int main(int argc, char **argv)
 	FD_ZERO(&listeners.lfdset);
 	memset(bind, 0, sizeof(bind));
 
-	while ((c = getopt(argc, argv, "hNdp:s:")) != -1) {
+	while ((c = getopt(argc, argv, "Np:s:")) != -1) {
 		switch (c) {
-		case 'h':
-			printf(
-				"Usage: %s [options]\n"
-				"  -N        Disable caching (always send no-cache)\n"
-				"  -d        Debug mode / do not demonize\n"
-				, argv[0]);
-			return 1;
 		case 'N':
 			disable_maxage = 1;
 			break;
-		case 'd':
-			debug = 1;
-			break;
 		case 'p':
 		case 's':
-			// [addr:]port
+			/* [addr:]port */
 			if ((port = strrchr(optarg, ':')) != NULL) {
 				if ((optarg[0] == '[') && (port > optarg) && (port[-1] == ']'))
 					memcpy(bind, optarg + 1, MIN(sizeof(bind), (unsigned int) (port - optarg) - 2));
@@ -1007,15 +927,17 @@ int main(int argc, char **argv)
 					memcpy(bind, optarg, MIN(sizeof(bind), (unsigned int) (port - optarg)));
 				port++;
 			}
-			else {
+			else
 				port = optarg;
-			}
 
 			IF_TCONFIG_HTTPS(if (c == 's') do_ssl = 1);
 			IF_TCONFIG_IPV6(ip6 = (*bind && strchr(bind, ':')));
 			add_listen_socket(bind, atoi(port), ip6, (c == 's'));
 
 			memset(bind, 0, sizeof(bind));
+			break;
+		default:
+			fprintf(stderr, "ERROR: unknown option %c\n", c);
 			break;
 		}
 	}
@@ -1027,25 +949,19 @@ int main(int argc, char **argv)
 		syslog(LOG_ERR, "can't bind to any address");
 		return 1;
 	}
-	_dprintf("%s: initialized %d listener(s)\n", __FUNCTION__, listeners.count);
 
 	IF_TCONFIG_HTTPS(if (do_ssl) start_ssl());
 
 	init_id();
 
-	if (!debug) {
-		if (daemon(1, 1) == -1) {
-			syslog(LOG_ERR, "daemon: %m");
-			return 0;
-		}
+	if (daemon(1, 1) == -1) {
+		syslog(LOG_ERR, "daemon: %m");
+		return 0;
+	}
 
-		char s[16];
-		sprintf(s, "%d", getpid());
-		f_write_string("/var/run/httpd.pid", s, 0, 0644);
-	}
-	else {
-		printf("DEBUG mode, not daemonizing\n");
-	}
+	memset(s, 0, sizeof(s));
+	snprintf(s, sizeof(s), "%d", getpid());
+	f_write_string("/var/run/httpd.pid", s, 0, 0644);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGALRM, SIG_IGN);
@@ -1055,40 +971,36 @@ int main(int argc, char **argv)
 	for (;;) {
 
 		/* Do a select() on at least one and possibly many listen fds.
-		** If there's only one listen fd then we could skip the select
-		** and just do the (blocking) accept(), saving one system call;
-		** that's what happened up through version 1.18. However there
-		** is one slight drawback to that method: the blocking accept()
-		** is not interrupted by a signal call. Since we definitely want
-		** signals to interrupt a waiting server, we use select() even
-		** if there's only one fd.
-		*/
+		 * If there's only one listen fd then we could skip the select
+		 * and just do the (blocking) accept(), saving one system call;
+		 * that's what happened up through version 1.18. However there
+		 * is one slight drawback to that method: the blocking accept()
+		 * is not interrupted by a signal call. Since we definitely want
+		 * signals to interrupt a waiting server, we use select() even
+		 * if there's only one fd.
+		 */
 		rfdset = listeners.lfdset;
-		_dprintf("%s: calling select(maxfd=%d)...\n", __FUNCTION__, maxfd);
 		if (select(maxfd + 1, &rfdset, NULL, NULL, NULL) < 0) {
-			if (errno != EINTR && errno != EAGAIN) sleep(1);
+			if (errno != EINTR && errno != EAGAIN)
+				sleep(1);
+
 			continue;
 		}
 
 		for (i = listeners.count - 1; i >= 0; --i) {
-			if (listeners.listener[i].listenfd < 0 ||
-			    !FD_ISSET(listeners.listener[i].listenfd, &rfdset))
+			if (listeners.listener[i].listenfd < 0 || !FD_ISSET(listeners.listener[i].listenfd, &rfdset))
 				continue;
 
 			do_ssl = 0;
 			n = sizeof(sai);
-			_dprintf("%s: calling accept(listener=%d)...\n", __FUNCTION__, listeners.listener[i].listenfd);
-			connfd = accept(listeners.listener[i].listenfd,
-				(struct sockaddr *)&sai, (socklen_t *) &n);
 
+			connfd = accept(listeners.listener[i].listenfd, (struct sockaddr *)&sai, (socklen_t *) &n);
 			if (connfd < 0) {
-				_dprintf("accept: %m");
 				continue;
 			}
-			_dprintf("%s: connfd = accept(listener=%d) = %d\n", __FUNCTION__, listeners.listener[i].listenfd, connfd);
 
 			if (!wait_action_idle(10)) {
-				_dprintf("router is busy");
+				syslog(LOG_WARNING, "router is busy");
 				continue;
 			}
 
@@ -1098,9 +1010,8 @@ int main(int argc, char **argv)
 				webcgi_init(NULL);
 
 				clientsai = sai;
-				if (!check_wlaccess()) {
+				if (!check_wlaccess())
 					exit(0);
-				}
 
 				struct timeval tv;
 				tv.tv_sec = 60;
@@ -1113,7 +1024,9 @@ int main(int argc, char **argv)
 
 				fcntl(connfd, F_SETFD, FD_CLOEXEC);
 
-				if (web_open()) handle_request();
+				if (web_open())
+					handle_request();
+
 				web_close();
 				exit(0);
 			}

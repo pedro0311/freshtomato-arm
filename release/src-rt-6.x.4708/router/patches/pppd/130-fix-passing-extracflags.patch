@@ -1,0 +1,73 @@
+From b7e8e2124d2dee0992b50ad5fa324556a6af879e Mon Sep 17 00:00:00 2001
+From: lly <lly@sf.net>
+Date: Mon, 22 Nov 2010 23:39:16 -0500
+Subject: [PATCH] Build: pppd: fix passing EXTRACFLAGS
+
+---
+
+--- pppd/chat/Makefile.linux
++++ pppd/chat/Makefile.linux
+@@ -11,7 +11,7 @@
+ CDEFS=	$(CDEF1) $(CDEF2) $(CDEF3) $(CDEF4)
+ 
+ COPTS=	-O2 -g -pipe
+-CFLAGS=	$(COPTS) $(CDEFS)
++CFLAGS=	$(COPTS) $(CDEFS) $(EXTRACFLAGS)
+ 
+ INSTALL= install
+ 
+--- pppd/pppd/plugins/Makefile.linux
++++ pppd/pppd/plugins/Makefile.linux
+@@ -1,6 +1,6 @@
+ #CC	= gcc
+ COPTS	= -O2 -g
+-CFLAGS	= $(COPTS) -I.. -I../../include -fPIC
++CFLAGS	= $(COPTS) -I.. -I../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS_SHARED	= -shared
+ INSTALL	= install
+ 
+--- pppd/pppd/plugins/pppoatm/Makefile.linux
++++ pppd/pppd/plugins/pppoatm/Makefile.linux
+@@ -1,6 +1,6 @@
+ #CC	= gcc
+ COPTS	= -O2 -g
+-CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC
++CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS_SHARED	= -shared
+ INSTALL	= install
+ 
+--- pppd/pppd/plugins/pppol2tp/Makefile.linux
++++ pppd/pppd/plugins/pppol2tp/Makefile.linux
+@@ -1,6 +1,6 @@
+ #CC	= gcc
+ COPTS	= -O2 -g
+-CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC
++CFLAGS	= $(COPTS) -I. -I../.. -I../../../include -fPIC $(EXTRACFLAGS)
+ LDFLAGS_SHARED	= -shared
+ INSTALL	= install
+ 
+--- pppd/pppd/plugins/radius/Makefile.linux
++++ pppd/pppd/plugins/radius/Makefile.linux
+@@ -12,7 +12,7 @@ VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
+ INSTALL	= install
+ 
+ PLUGIN=radius.so radattr.so radrealms.so
+-CFLAGS=-I. -I../.. -I../../../include -O2 -fPIC -DRC_LOG_FACILITY=LOG_DAEMON
++CFLAGS=-I. -I../.. -I../../../include -O2 -fPIC -DRC_LOG_FACILITY=LOG_DAEMON $(EXTRACFLAGS)
+ 
+ # Uncomment the next line to include support for Microsoft's
+ # MS-CHAP authentication protocol.
+--- pppd/pppd/plugins/rp-pppoe/Makefile.linux
++++ pppd/pppd/plugins/rp-pppoe/Makefile.linux
+@@ -26,7 +26,7 @@ INSTALL	= install
+ RP_VERSION=3.8p
+ 
+ COPTS=-O2 -g
+-CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"'
++CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"' $(EXTRACFLAGS)
+ all: rp-pppoe.so pppoe-discovery
+ 
+ pppoe-discovery: pppoe-discovery.o debug.o
+-- 
+2.10.5
+

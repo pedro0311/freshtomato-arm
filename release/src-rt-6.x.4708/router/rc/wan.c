@@ -929,8 +929,6 @@ void start_wan(void)
 	start_firewall();
 	set_host_domain_name();
 
-	enable_ip_forward();
-
 	killall_tk_period_wait("mwanroute", 50);
 	xstart("mwanroute");
 
@@ -1032,6 +1030,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 	int is_primary;
 	char pw[] = "wanXX";
+	int first_ntp_sync = 0;
 
 	sysinfo(&si);
 
@@ -1119,23 +1118,27 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		memset(pw, 0, 6);
 		strncpy(pw, prefix, sizeof(pw));
 	}
-	is_primary = (strcmp(prefix, pw) == 0); /* Is this primary wan? */
 
-	wanup = check_wanup(prefix);
+	wanup = check_wanup(prefix); /* is wan up? */
+	is_primary = (strcmp(prefix, pw) == 0); /* is this primary wan? */
 
 	if (is_primary) {
 #ifdef TCONFIG_ZEBRA
 		stop_zebra();
 		start_zebra();
 #endif
-		if ((wanup) || (time(0) < Y2K)) {
+
+		if ((wanup || (proto == WP_DISABLED)) && (!nvram_get_int("ntp_ready"))) {
+			first_ntp_sync = 1;
 			stop_ntpd();
 			start_ntpd();
 		}
 
 		if ((wanup) || (proto == WP_DISABLED)) {
-			stop_ddns();
-			start_ddns();
+			if (nvram_get_int("ntp_ready") && !first_ntp_sync) {
+				stop_ddns();
+				start_ddns();
+			}
 			stop_igmp_proxy();
 			stop_udpxy();
 			start_igmp_proxy();
@@ -1145,6 +1148,11 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		start_httpd();
 	}
 
+	if (nvram_get_int("ntp_ready") && !first_ntp_sync) {
+		stop_sched();
+		start_sched();
+	}
+
 	if (wanup) {
 		char wan_unit_str[16];
 		memset(wan_unit_str, 0, 16);
@@ -1152,9 +1160,9 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		notice_set(prefix, "");
 		run_nvscript("script_mwanup", wan_unit_str, 0);
-		if (is_primary) {
+
+		if (is_primary)
 			run_nvscript("script_wanup", NULL, 0);
-		}
 	}
 
 	if (is_primary) {
@@ -1188,23 +1196,22 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		if (wanup) {
 #ifdef TCONFIG_OPENVPN
-			start_ovpn_eas();
+			if (nvram_get_int("ntp_ready") && !first_ntp_sync)
+				start_ovpn_eas();
 #endif
 #ifdef TCONFIG_TINC
 			start_tinc_wanup();
 #endif
 			start_pptp_client_eas();
 			start_adblock(0);
+#ifdef TCONFIG_SAMBASRV
+			stop_samba();
+			start_samba();
+#endif
 		}
 
 		stop_upnp();
 		start_upnp();
-#ifdef TCONFIG_SAMBASRV
-		if (nvram_get_int("smbd_enable")) {
-			stop_samba();
-			start_samba();
-		}
-#endif
 		start_bwlimit();
 	}
 

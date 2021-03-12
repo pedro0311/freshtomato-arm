@@ -144,6 +144,7 @@ static const applets_t applets[] = {
 #ifdef DEBUG_RCTEST
 	{ "rctest",			rctest_main			},
 #endif
+	{ "ntpd_synced",		ntpd_synced_main		},
 	{NULL, NULL}
 };
 

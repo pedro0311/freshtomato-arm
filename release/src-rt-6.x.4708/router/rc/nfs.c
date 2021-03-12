@@ -24,16 +24,21 @@ void start_nfs(void)
 	char *buf;
 	char *g, *p;
 	char *dir, *address, *access, *sync, *subtree, *other;
+	char numthreads[4];
+	int threads;
 
 	if (!nvram_match("nfs_enable", "1"))
 		return;
+
+	if (getpid() != 1) {
+		start_service("nfs");
+		return;
+	}
 
 	if ((pidof("nfsd") >= 0) && (pidof("mountd") >= 0) && (pidof("statd") >= 0)) {
 		syslog(LOG_INFO, "NFS Server already running... stop");
 		stop_nfs();
 	}
-
-	syslog(LOG_INFO, "Starting NFS Server...");
 
 	/* create directories/files */
 	mkdir_if_none("/var/lib");
@@ -48,6 +53,7 @@ void start_nfs(void)
 	close(creat("/var/lib/nfs/xtab", 0644));
 	close(creat("/var/lib/nfs/rmtab", 0644));
 
+	/* (re-)create /etc/exports */
 	if (stat(NFS_EXPORT, &st_buf) == 0)
 		unlink(NFS_EXPORT);
 
@@ -75,6 +81,10 @@ void start_nfs(void)
 
 	chmod(NFS_EXPORT, 0644);
 
+	/* get number of threads to start */
+	threads = nvram_get_int("nfsd_threads");
+	snprintf(numthreads, sizeof(numthreads), "%d", (threads ? : 2)); /* default to 2 threads */
+
 	if (pidof("portmap") < 0)
 		eval("/usr/sbin/portmap");
 
@@ -82,15 +92,15 @@ void start_nfs(void)
 
 	if (nvram_match("nfs_enable_v2", "1")) {
 #if defined(TCONFIG_BCMARM)
-		eval("/usr/sbin/nfsd", "-V 2");
+		eval("/usr/sbin/nfsd", "-V", "2", numthreads);
 #else
-		eval("/usr/sbin/nfsd");
+		eval("/usr/sbin/nfsd", numthreads);
 #endif
-		eval("/usr/sbin/mountd", "-V 2");
+		eval("/usr/sbin/mountd", "-V", "2", "-t", numthreads);
 	}
 	else {
-		eval("/usr/sbin/nfsd", "-N 2");
-		eval("/usr/sbin/mountd", "-N 2");
+		eval("/usr/sbin/nfsd", "-N", "2", numthreads);
+		eval("/usr/sbin/mountd", "-t", numthreads); /* always enable V1/V2 mountd for Win10 NFS discovery */
 	}
 
 	sleep(1);
@@ -101,7 +111,10 @@ void start_nfs(void)
 
 void stop_nfs(void)
 {
-	syslog(LOG_INFO, "Stopping NFS Server...");
+	if (getpid() != 1) {
+		stop_service("nfs");
+		return;
+	}
 
 	eval("/usr/sbin/exportfs", "-ua");
 	killall_tk_period_wait("mountd", 50);

@@ -22,7 +22,7 @@
    non-IEEE-754 'long double' values. */
 #undef CHECK_PRINTF_SAFE
 
-/* Define to 1 if using `alloca.c'. */
+/* Define to 1 if using 'alloca.c'. */
 #undef C_ALLOCA
 
 /* Define as the bit index in the word where to find bit 0 of the exponent of
@@ -149,12 +149,20 @@
 #undef GNULIB_LOCK
 
 /* Define to a C preprocessor expression that evaluates to 1 or 0, depending
+   whether the gnulib module malloc-posix shall be considered present. */
+#undef GNULIB_MALLOC_POSIX
+
+/* Define to a C preprocessor expression that evaluates to 1 or 0, depending
    whether the gnulib module msvc-nothrow shall be considered present. */
 #undef GNULIB_MSVC_NOTHROW
 
 /* Define to 1 if printf and friends should be labeled with attribute
    "__gnu_printf__" instead of "__printf__" */
 #undef GNULIB_PRINTF_ATTRIBUTE_FLAVOR_GNU
+
+/* Define to a C preprocessor expression that evaluates to 1 or 0, depending
+   whether the gnulib module realloc-posix shall be considered present. */
+#undef GNULIB_REALLOC_POSIX
 
 /* Define to a C preprocessor expression that evaluates to 1 or 0, depending
    whether the gnulib module scanf shall be considered present. */
@@ -175,6 +183,9 @@
 
 /* Define to 1 when the gnulib module fnmatch should be tested. */
 #undef GNULIB_TEST_FNMATCH
+
+/* Define to 1 when the gnulib module free-posix should be tested. */
+#undef GNULIB_TEST_FREE_POSIX
 
 /* Define to 1 when the gnulib module frexp should be tested. */
 #undef GNULIB_TEST_FREXP
@@ -247,6 +258,9 @@
 
 /* Define to 1 when the gnulib module readdir should be tested. */
 #undef GNULIB_TEST_READDIR
+
+/* Define to 1 when the gnulib module realloc-posix should be tested. */
+#undef GNULIB_TEST_REALLOC_POSIX
 
 /* Define to 1 when the gnulib module setlocale_null should be tested. */
 #undef GNULIB_TEST_SETLOCALE_NULL
@@ -476,6 +490,9 @@
 /* Define to 1 if you have the <fnmatch.h> header file. */
 #undef HAVE_FNMATCH_H
 
+/* Define if the 'free' function is guaranteed to preserve errno. */
+#undef HAVE_FREE_POSIX
+
 /* Define if the frexpl function is available in libc. */
 #undef HAVE_FREXPL_IN_LIBC
 
@@ -680,6 +697,9 @@
 
 /* Define to 1 if you have the `readdir' function. */
 #undef HAVE_READDIR
+
+/* Define if the 'realloc' function is POSIX compliant. */
+#undef HAVE_REALLOC_POSIX
 
 /* Define to 1 if 'long double' and 'double' have the same representation. */
 #undef HAVE_SAME_LONG_DOUBLE_AS_DOUBLE
@@ -1315,11 +1335,12 @@
        this syntax with 'extern'.  */
 #  define _Noreturn [[noreturn]]
 # elif ((!defined __cplusplus || defined __clang__) \
-        && (201112 <= (defined __STDC_VERSION__ ? __STDC_VERSION__ : 0)  \
-            || _GL_GNUC_PREREQ (4, 7) \
-            || (defined __apple_build_version__ \
-                ? 6000000 <= __apple_build_version__ \
-                : 3 < __clang_major__ + (5 <= __clang_minor__))))
+        && (201112 <= (defined __STDC_VERSION__ ? __STDC_VERSION__ : 0) \
+            || (!defined __STRICT_ANSI__ \
+                && (_GL_GNUC_PREREQ (4, 7) \
+                    || (defined __apple_build_version__ \
+                        ? 6000000 <= __apple_build_version__ \
+                        : 3 < __clang_major__ + (5 <= __clang_minor__))))))
    /* _Noreturn works as-is.  */
 # elif _GL_GNUC_PREREQ (2, 8) || defined __clang__ || 0x5110 <= __SUNPRO_C
 #  define _Noreturn __attribute__ ((__noreturn__))
@@ -1379,7 +1400,9 @@
 
 
 /* Attributes.  */
-#ifdef __has_attribute
+#if (defined __has_attribute \
+     && (!defined __clang_minor__ \
+         || 3 < __clang_major__ + (5 <= __clang_minor__)))
 # define _GL_HAS_ATTRIBUTE(attr) __has_attribute (__##attr##__)
 #else
 # define _GL_HAS_ATTRIBUTE(attr) _GL_ATTR_##attr

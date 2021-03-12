@@ -171,6 +171,8 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc listen
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ppp_event
 
+	@cd $(INSTALLDIR)/sbin && ln -sf rc ntpd_synced
+
 ifeq ($(TCONFIG_BCMARM),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-write2
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-erase2

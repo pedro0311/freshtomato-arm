@@ -15,6 +15,8 @@
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <dirent.h>
+#include <errno.h>
 #include "xmalloc.h"
 #include "nfslib.h"
 #include "exportfs.h"
@@ -26,9 +28,6 @@ static void	export_init(nfs_export *exp, nfs_client *clp,
 					struct exportent *nep);
 static void	export_add(nfs_export *exp);
 static int	export_check(const nfs_export *exp, const struct addrinfo *ai,
-				const char *path);
-static nfs_export *
-		export_allowed_internal(const struct addrinfo *ai,
 				const char *path);
 
 void
@@ -68,11 +67,15 @@ static void warn_duplicated_exports(nfs_export *exp, struct exportent *eep)
 /**
  * export_read - read entries from /etc/exports
  * @fname: name of file to read from
+ * @ignore_hosts: don't check validity of host names
  *
  * Returns number of read entries.
+ * @ignore_hosts can be set when the host names won't be used
+ * and when getting delays or errors due to problems with
+ * hostname looking is not acceptable.
  */
 int
-export_read(char *fname)
+export_read(char *fname, int ignore_hosts)
 {
 	struct exportent	*eep;
 	nfs_export		*exp;
@@ -81,7 +84,7 @@ export_read(char *fname)
 
 	setexportent(fname, "r");
 	while ((eep = getexportent(0,1)) != NULL) {
-		exp = export_lookup(eep->e_hostname, eep->e_path, 0);
+		exp = export_lookup(eep->e_hostname, eep->e_path, ignore_hosts);
 		if (!exp) {
 			if (export_create(eep, 0))
 				/* possible complaints already logged */
@@ -91,6 +94,70 @@ export_read(char *fname)
 			warn_duplicated_exports(exp, eep);
 	}
 	endexportent();
+
+	return volumes;
+}
+
+/**
+ * export_d_read - read entries from /etc/exports.
+ * @fname: name of directory to read from
+ * @ignore_hosts: don't check validity of host names
+ *
+ * Returns number of read entries.
+ * Based on mnt_table_parse_dir() in
+ *  util-linux-ng/shlibs/mount/src/tab_parse.c
+ */
+int
+export_d_read(const char *dname, int ignore_hosts)
+{
+	int n = 0, i;
+	struct dirent **namelist = NULL;
+	int volumes = 0;
+
+
+	n = scandir(dname, &namelist, NULL, versionsort);
+	if (n < 0) {
+		if (errno == ENOENT)
+			/* Silently return */
+			return volumes;
+		xlog(L_NOTICE, "scandir %s: %s", dname, strerror(errno));
+	} else if (n == 0)
+		return volumes;
+
+	for (i = 0; i < n; i++) {
+		struct dirent *d = namelist[i];
+		size_t namesz;
+		char fname[PATH_MAX + 1];
+		int fname_len;
+
+
+		if (d->d_type != DT_UNKNOWN
+		    && d->d_type != DT_REG
+		    && d->d_type != DT_LNK)
+			continue;
+		if (*d->d_name == '.')
+			continue;
+
+#define _EXT_EXPORT_SIZ   (sizeof(_EXT_EXPORT) - 1)
+		namesz = strlen(d->d_name);
+		if (!namesz
+		    || namesz < _EXT_EXPORT_SIZ + 1
+		    || strcmp(d->d_name + (namesz - _EXT_EXPORT_SIZ),
+			      _EXT_EXPORT))
+			continue;
+
+		fname_len = snprintf(fname, PATH_MAX +1, "%s/%s", dname, d->d_name);
+		if (fname_len > PATH_MAX) {
+			xlog(L_WARNING, "Too long file name: %s in %s", d->d_name, dname);
+			continue;
+		}
+
+		volumes += export_read(fname, ignore_hosts);
+	}
+
+	for (i = 0; i < n; i++)
+		free(namelist[i]);
+	free(namelist);
 
 	return volumes;
 }
@@ -221,59 +288,6 @@ export_find(const struct addrinfo *ai, const char *path)
 				return exp;
 			return export_dup(exp, ai);
 		}
-	}
-
-	return NULL;
-}
-
-static nfs_export *
-export_allowed_internal(const struct addrinfo *ai, const char *path)
-{
-	nfs_export	*exp;
-	int		i;
-
-	for (i = 0; i < MCL_MAXTYPES; i++) {
-		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
-			if (!exp->m_mayexport ||
-			    !export_check(exp, ai, path))
-				continue;
-			return exp;
-		}
-	}
-
-	return NULL;
-}
-
-/**
- * export_allowed - determine if this export is allowed
- * @ai: pointer to addrinfo for client
- * @path: '\0'-terminated ASCII string containing export path
- *
- * Returns a pointer to nfs_export data matching @ai and @path,
- * or NULL if the export is not allowed.
- */
-nfs_export *
-export_allowed(const struct addrinfo *ai, const char *path)
-{
-	nfs_export		*exp;
-	char			epath[MAXPATHLEN+1];
-	char			*p = NULL;
-
-	if (path [0] != '/') return NULL;
-
-	strncpy(epath, path, sizeof (epath) - 1);
-	epath[sizeof (epath) - 1] = '\0';
-
-	/* Try the longest matching exported pathname. */
-	while (1) {
-		exp = export_allowed_internal(ai, epath);
-		if (exp)
-			return exp;
-		/* We have to treat the root, "/", specially. */
-		if (p == &epath[1]) break;
-		p = strrchr(epath, '/');
-		if (p == epath) p++;
-		*p = '\0';
 	}
 
 	return NULL;

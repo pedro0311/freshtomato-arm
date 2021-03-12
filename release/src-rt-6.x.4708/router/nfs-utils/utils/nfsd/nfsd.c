@@ -24,13 +24,17 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "conffile.h"
 #include "nfslib.h"
 #include "nfssvc.h"
 #include "xlog.h"
+#include "xcommon.h"
 
 #ifndef NFSD_NPROC
 #define NFSD_NPROC 8
 #endif
+
+char *conf_path = NFS_CONFFILE;
 
 static void	usage(const char *);
 
@@ -55,10 +59,11 @@ static struct option longopts[] =
 int
 main(int argc, char **argv)
 {
-	int	count = NFSD_NPROC, c, i, error = 0, portnum = 0, fd, found_one;
+	int	count = NFSD_NPROC, c, i, error = 0, portnum, fd, found_one;
 	char *p, *progname, *port, *rdma_port = NULL;
 	char **haddr = NULL;
 	int hcounter = 0;
+	struct conf_list *hosts;
 	int	socket_up = 0;
 	unsigned int minorvers = 0;
 	unsigned int minorversset = 0;
@@ -67,27 +72,71 @@ main(int argc, char **argv)
 	int grace = -1;
 	int lease = -1;
 
-	progname = strdup(basename(argv[0]));
-	if (!progname) {
-		fprintf(stderr, "%s: unable to allocate memory.\n", argv[0]);
-		exit(1);
-	}
-
-	port = strdup("nfs");
-	if (!port) {
-		fprintf(stderr, "%s: unable to allocate memory.\n", progname);
-		exit(1);
-	}
-
-	haddr = malloc(sizeof(char *));
-	if (!haddr) {
-		fprintf(stderr, "%s: unable to allocate memory.\n", progname);
-		exit(1);
-	}
+	progname = basename(argv[0]);
+	haddr = xmalloc(sizeof(char *));
 	haddr[0] = NULL;
 
 	xlog_syslog(0);
 	xlog_stderr(1);
+
+	conf_init();
+	xlog_from_conffile("nfsd");
+	count = conf_get_num("nfsd", "threads", count);
+	grace = conf_get_num("nfsd", "grace-time", grace);
+	lease = conf_get_num("nfsd", "lease-time", lease);
+	port = conf_get_str("nfsd", "port");
+	if (!port)
+		port = "nfs";
+	rdma_port = conf_get_str("nfsd", "rdma");
+	if (conf_get_bool("nfsd", "udp", NFSCTL_UDPISSET(protobits)))
+		NFSCTL_UDPSET(protobits);
+	else
+		NFSCTL_UDPUNSET(protobits);
+	if (conf_get_bool("nfsd", "tcp", NFSCTL_TCPISSET(protobits)))
+		NFSCTL_TCPSET(protobits);
+	else
+		NFSCTL_TCPUNSET(protobits);
+	for (i = 2; i <= 4; i++) {
+		char tag[10];
+		sprintf(tag, "vers%d", i);
+		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(versbits, i)))
+			NFSCTL_VERSET(versbits, i);
+		else
+			NFSCTL_VERUNSET(versbits, i);
+	}
+	/* We assume the kernel will default all minor versions to 'on',
+	 * and allow the config file to disable some.
+	 */
+	for (i = NFS4_MINMINOR; i <= NFS4_MAXMINOR; i++) {
+		char tag[20];
+		sprintf(tag, "vers4.%d", i);
+		/* The default for minor version support is to let the
+		 * kernel decide.  We could ask the kernel what that choice
+		 * will be, but that is needlessly complex.
+		 * Instead, perform a config-file lookup using each of the
+		 * two possible default.  If the result is different from the
+		 * default, then impose that value, else don't make a change
+		 * (i.e. don't set the bit in minorversset).
+		 */
+		if (!conf_get_bool("nfsd", tag, 1)) {
+			NFSCTL_VERSET(minorversset, i);
+			NFSCTL_VERUNSET(minorvers, i);
+		}
+		if (conf_get_bool("nfsd", tag, 0)) {
+			NFSCTL_VERSET(minorversset, i);
+			NFSCTL_VERSET(minorvers, i);
+		}
+	}
+
+	hosts = conf_get_list("nfsd", "host");
+	if (hosts && hosts->cnt) {
+		struct conf_list_node *n;
+		haddr = realloc(haddr, sizeof(char*) * hosts->cnt);
+		TAILQ_FOREACH(n, &(hosts->fields), link) {
+			haddr[hcounter] = n->field;
+			hcounter++;
+		}
+	}
 
 	while ((c = getopt_long(argc, argv, "dH:hN:V:p:P:sTUrG:L:", longopts, NULL)) != EOF) {
 		switch(c) {
@@ -95,6 +144,10 @@ main(int argc, char **argv)
 			xlog_config(D_ALL, 1);
 			break;
 		case 'H':
+			if (hosts) {
+				hosts = NULL;
+				hcounter = 0;
+			}
 			if (hcounter) {
 				haddr = realloc(haddr, sizeof(char*) * hcounter+1);
 				if(!haddr) {
@@ -103,30 +156,13 @@ main(int argc, char **argv)
 					exit(1);
 				}
 			}
-			haddr[hcounter] = strdup(optarg);
-			if (!haddr[hcounter]) {
-				fprintf(stderr, "%s: unable to allocate "
-					"memory.\n", progname);
-				exit(1);
-			}
+			haddr[hcounter] = optarg;
 			hcounter++;
 			break;
 		case 'P':	/* XXX for nfs-server compatibility */
 		case 'p':
 			/* only the last -p option has any effect */
-			portnum = atoi(optarg);
-			if (portnum <= 0 || portnum > 65535) {
-				fprintf(stderr, "%s: bad port number: %s\n",
-					progname, optarg);
-				usage(progname);
-			}
-			free(port);
-			port = strdup(optarg);
-			if (!port) {
-				fprintf(stderr, "%s: unable to allocate "
-						"memory.\n", progname);
-				exit(1);
-			}
+			port = optarg;
 			break;
 		case 'r':
 			rdma_port = "nfsrdma";
@@ -143,7 +179,7 @@ main(int argc, char **argv)
 			case 4:
 				if (*p == '.') {
 					int i = atoi(p+1);
-					if (i > NFS4_MAXMINOR) {
+					if (i < NFS4_MINMINOR || i > NFS4_MAXMINOR) {
 						fprintf(stderr, "%s: unsupported minor version\n", optarg);
 						exit(1);
 					}
@@ -165,7 +201,7 @@ main(int argc, char **argv)
 			case 4:
 				if (*p == '.') {
 					int i = atoi(p+1);
-					if (i > NFS4_MAXMINOR) {
+					if (i < NFS4_MINMINOR || i > NFS4_MAXMINOR) {
 						fprintf(stderr, "%s: unsupported minor version\n", optarg);
 						exit(1);
 					}
@@ -231,6 +267,15 @@ main(int argc, char **argv)
 	}
 
 	xlog_open(progname);
+
+	portnum = strtol(port, &p, 0);
+	if (!*p && (portnum <= 0 || portnum > 65535)) {
+		/* getaddrinfo will catch other errors, but not
+		 * out-of-range numbers.
+		 */
+		xlog(L_ERROR, "invalid port number: %s", port);
+		exit(1);
+	}
 
 	/* make sure that at least one version is enabled */
 	found_one = 0;
@@ -315,14 +360,10 @@ set_threads:
 	}
 	closeall(3);
 
-	if ((error = nfssvc_threads(portnum, count)) < 0)
+	if ((error = nfssvc_threads(count)) < 0)
 		xlog(L_ERROR, "error starting threads: errno %d (%m)", errno);
 out:
-	free(port);
-	for(i=0; i < hcounter; i++)
-		free(haddr[i]);
 	free(haddr);
-	free(progname);
 	return (error != 0);
 }
 

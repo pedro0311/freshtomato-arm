@@ -83,7 +83,7 @@
  #if 0 /* we filter out such packets earlier */
  	if ((p->lastpkt_status & LI_ALARM) == LI_ALARM
  	 || p->lastpkt_stratum >= MAXSTRAT
-@@ -2050,9 +2055,10 @@
+@@ -2059,9 +2064,10 @@
  	close(p->p_fd);
  	p->p_fd = -1;
  
@@ -96,7 +96,7 @@
  	) {
  		bb_error_msg("reply from %s: peer is unsynced", p->p_dotted);
  		/*
-@@ -2442,7 +2448,7 @@
+@@ -2451,7 +2457,7 @@
  	opts = getopt32(argv, "^"
  			"nqNx" /* compat */
  			IF_FEATURE_NTP_AUTH("k:")  /* compat */

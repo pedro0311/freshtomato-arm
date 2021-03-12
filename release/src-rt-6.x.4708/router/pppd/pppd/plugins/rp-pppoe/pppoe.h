@@ -15,9 +15,10 @@
 
 #include "config.h"
 
-
 #include <stdio.h>		/* For FILE */
 #include <sys/types.h>		/* For pid_t */
+#include <ctype.h>
+#include <string.h>
 
 #include "pppd/pppd.h"		/* For error */
 
@@ -38,13 +39,13 @@
 #error Unknown method for accessing raw Ethernet frames
 #endif
 
-#ifdef HAVE_SYS_CDEFS_H
-#include <sys/cdefs.h>
-#endif
-
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+
+/* This has to be included before Linux 4.8's linux/in.h
+ * gets dragged in. */
+#include <netinet/in.h>
 
 /* Ugly header files on some Linux boxes... */
 #if defined(HAVE_LINUX_IF_H)
@@ -83,8 +84,6 @@ typedef unsigned long UINT32_t;
 #include <linux/if_ether.h>
 #endif
 
-#include <netinet/in.h>
-
 #ifdef HAVE_NETINET_IF_ETHER_H
 #include <sys/types.h>
 
@@ -95,7 +94,6 @@ typedef unsigned long UINT32_t;
 #include <netinet/if_ether.h>
 #endif
 #endif
-
 
 
 /* Ethernet frame types according to RFC 2516 */
@@ -234,7 +232,7 @@ typedef struct PPPoEConnectionStruct {
     char *serviceName;		/* Desired service name, if any */
     char *acName;		/* Desired AC name, if any */
     int synchronous;		/* Use synchronous PPP */
-    int useHostUniq;		/* Use Host-Uniq tag */
+    PPPoETag hostUniq;		/* Use Host-Uniq tag */
     int printACNames;		/* Just print AC names */
     FILE *debugFile;		/* Debug file for dumping packets */
     int numPADOs;		/* Number of PADO packets received */
@@ -243,6 +241,7 @@ typedef struct PPPoEConnectionStruct {
     int error;			/* Error packet received */
     int debug;			/* Set to log packets sent and received */
     int discoveryTimeout;       /* Timeout for discovery packets */
+    int discoveryAttempts;      /* Number of discovery attempts */
     int seenMaxPayload;
     int mtu;			/* Stored MTU */
     int mru;			/* Stored MRU */
@@ -289,6 +288,32 @@ unsigned char *findTag(PPPoEPacket *packet, UINT16_t tagType,
 void pppoe_printpkt(PPPoEPacket *packet,
 		    void (*printer)(void *, char *, ...), void *arg);
 void pppoe_log_packet(const char *prefix, PPPoEPacket *packet);
+
+static inline int parseHostUniq(const char *uniq, PPPoETag *tag)
+{
+    unsigned i, len = strlen(uniq);
+
+#define hex(x) \
+    (((x) <= '9') ? ((x) - '0') : \
+        (((x) <= 'F') ? ((x) - 'A' + 10) : \
+            ((x) - 'a' + 10)))
+
+    if (!len || len % 2 || len / 2 > sizeof(tag->payload))
+        return 0;
+
+    for (i = 0; i < len; i += 2) {
+        if (!isxdigit(uniq[i]) || !isxdigit(uniq[i+1]))
+            return 0;
+
+        tag->payload[i / 2] = (char)(hex(uniq[i]) << 4 | hex(uniq[i+1]));
+    }
+
+#undef hex
+
+    tag->type = htons(TAG_HOST_UNIQ);
+    tag->length = htons(len / 2);
+    return 1;
+}
 
 #define SET_STRING(var, val) do { if (var) free(var); var = strDup(val); } while(0);
 

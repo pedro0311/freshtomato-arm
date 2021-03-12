@@ -7,7 +7,6 @@
 
 
 #include "rc.h"
-
 #include <time.h>
 
 
@@ -146,10 +145,6 @@ int sched_main(int argc, char *argv[])
 				unsched(argv[1]);
 		}
 		else if (strcmp(argv[1], "start") == 0) {
-			while (time(0) < Y2K) {
-				sleep(1);
-			}
-
 			sched("sch_rboot", 0);
 			sched("sch_rcon", 0);
 			sched("sch_c1", 0);

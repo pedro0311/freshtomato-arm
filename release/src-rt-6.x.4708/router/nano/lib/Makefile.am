@@ -232,6 +232,16 @@ EXTRA_libgnu_a_SOURCES += dirfd.c
 
 ## end   gnulib module dirfd
 
+## begin gnulib module dynarray
+
+libgnu_a_SOURCES += malloc/dynarray_at_failure.c                 malloc/dynarray_emplace_enlarge.c                 malloc/dynarray_finalize.c                 malloc/dynarray_resize.c                 malloc/dynarray_resize_clear.c
+
+EXTRA_DIST += dynarray.h malloc/dynarray-skeleton.c malloc/dynarray.h
+
+EXTRA_libgnu_a_SOURCES += malloc/dynarray-skeleton.c
+
+## end   gnulib module dynarray
+
 ## begin gnulib module errno
 
 BUILT_SOURCES += $(ERRNO_H)
@@ -399,6 +409,15 @@ EXTRA_DIST += fnmatch.in.h
 EXTRA_DIST += fpucw.h
 
 ## end   gnulib module fpucw
+
+## begin gnulib module free-posix
+
+
+EXTRA_DIST += free.c
+
+EXTRA_libgnu_a_SOURCES += free.c
+
+## end   gnulib module free-posix
 
 ## begin gnulib module frexp-nolibm
 
@@ -780,6 +799,7 @@ locale.h: locale.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''REPLACE_DUPLOCALE''@|$(REPLACE_DUPLOCALE)|g' \
 	      -e 's|@''REPLACE_FREELOCALE''@|$(REPLACE_FREELOCALE)|g' \
 	      -e 's|@''REPLACE_STRUCT_LCONV''@|$(REPLACE_STRUCT_LCONV)|g' \
+	      -e 's|@''LOCALENAME_ENHANCE_LOCALE_FUNCS''@|$(LOCALENAME_ENHANCE_LOCALE_FUNCS)|g' \
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)' \
@@ -1271,6 +1291,15 @@ EXTRA_DIST += dirent-private.h readdir.c
 EXTRA_libgnu_a_SOURCES += readdir.c
 
 ## end   gnulib module readdir
+
+## begin gnulib module realloc-posix
+
+
+EXTRA_DIST += realloc.c
+
+EXTRA_libgnu_a_SOURCES += realloc.c
+
+## end   gnulib module realloc-posix
 
 ## begin gnulib module regex
 

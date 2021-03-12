@@ -1,0 +1,90 @@
+--- pppd/pppd/fsm.c
++++ pppd/pppd/fsm.c
+@@ -69,6 +69,8 @@ static void fsm_sconfreq __P((fsm *, int));
+ 
+ int peer_mru[NUM_PPP];
+ 
++/* add to wanstatus.log */
++void saveWANStatus(char *currentstatus, int statusindex);
+ 
+ /*
+  * fsm_init - Initialize fsm.
+@@ -305,6 +307,10 @@ fsm_timeout(arg)
+     case ACKRCVD:
+     case ACKSENT:
+ 	if (f->retransmits <= 0) {
++	    /* add to wanstatus.log */
++	    int statusindex = 0; 
++	    saveWANStatus("No response from ISP.", statusindex);
++
+ 	    warn("%s: timeout sending Config-Requests\n", PROTO_NAME(f));
+ 	    f->state = STOPPED;
+ 	    if( (f->flags & OPT_PASSIVE) == 0 && f->callbacks->finished )
+--- pppd/pppd/lcp.c
++++ pppd/pppd/lcp.c
+@@ -67,6 +67,9 @@ static const char rcsid[] = RCSID;
+ 
+ static void lcp_delayed_up __P((void *));
+ 
++/* add to wanstatus.log */
++void saveWANStatus(char *currentstatus, int statusindex);
++
+ /*
+  * LCP-related command-line options.
+  */
+@@ -396,6 +399,7 @@ lcp_close(unit, reason)
+     char *reason;
+ {
+     fsm *f = &lcp_fsm[unit];
++    int statusindex = 0; /* add to wanstatus.log */
+     int oldstate;
+ 
+     if (phase != PHASE_DEAD && phase != PHASE_MASTER)
+@@ -408,6 +412,16 @@ lcp_close(unit, reason)
+     oldstate = f->state;
+ 
+     fsm_close(f, reason);
++    /* add to wanstatus.log */
++    if (strstr(reason, "Link inactive")) {
++	    statusindex = 1;
++	    saveWANStatus("Terminating connection due to lack of activity.", statusindex);
++    }
++    else {
++	    statusindex = 2;
++	    saveWANStatus(reason, statusindex);
++    }
++
+     if (oldstate == STOPPED && f->flags & (OPT_PASSIVE|OPT_SILENT|DELAYED_UP)) {
+ 	/*
+ 	 * This action is not strictly according to the FSM in RFC1548,
+--- pppd/pppd/utils.c
++++ pppd/pppd/utils.c
+@@ -1043,3 +1043,28 @@ unlock()
+     }
+ }
+ 
++/* add to wanstatus.log */
++
++void saveWANStatus(char *currentstatus, int statusindex)
++{
++	FILE *STATUSFILE;
++
++	/* only save with status description */
++	if (strlen(currentstatus) == 0)
++		return;
++
++#ifdef ONWL500G_SHELL
++	if ((req_unit == 0) && (STATUSFILE = fopen("/etc/linuxigd/wanstatus.log", "w"))!=NULL)
++	{
++		fprintf(STATUSFILE, "StatusCode=\"%d\"\n", statusindex);
++		fprintf(STATUSFILE, "StatusReason=\"%s\"\n", currentstatus);
++		fclose(STATUSFILE);
++	}
++#else
++	if ((req_unit == 0) && (STATUSFILE = fopen("/tmp/wanstatus.log", "w"))!=NULL)
++	{
++		fprintf(STATUSFILE, "%d,%s\n", statusindex, currentstatus);
++		fclose(STATUSFILE);
++	}
++#endif
++}

@@ -26,6 +26,7 @@ download() {
 	# example: Yes<http://url1>No<http://URL2>Yes<http://URL3>
 	COUNT=1
 	ENTRIES=0
+	COUNT_CUSTOM=0
 
 	# fix race condition on wan-up
 	[ "$1" -ne "1" ] && sleep 30
@@ -63,6 +64,7 @@ download() {
 		echo "# custom blacklist" > $PREFIX/_host.custom
 		for i in $CUSTOM; do
 			echo "127.0.0.1 $i" >> $PREFIX/_host.custom
+			COUNT_CUSTOM=$((COUNT_CUSTOM+1))
 		done
 	}
 
@@ -99,9 +101,9 @@ download() {
 	# clean-up
 	rm -rf $PREFIX/*
 
-	[ -f "$FINAL" -a "$ENTRIES" -gt 0 ] && {
+	[ -f "$FINAL" -a "$ENTRIES" -gt 0 ] || [ "$COUNT_CUSTOM" -ne 0 ] && {
 		# count entries
-		COUNT=$(cat $FINAL | wc -l)
+		COUNT=$(($COUNT_CUSTOM+$(cat $FINAL | wc -l)))
 		$LOGS "activated - $COUNT entries"
 		touch "$CHK_FILE"
 		cru d adblockDL

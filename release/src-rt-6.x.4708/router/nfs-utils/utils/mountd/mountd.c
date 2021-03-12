@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+
+#include "conffile.h"
 #include "xmalloc.h"
 #include "misc.h"
 #include "mountd.h"
@@ -35,9 +37,10 @@ static exports		get_exportlist(void);
 static struct nfs_fh_len *get_rootfh(struct svc_req *, dirpath *, nfs_export **, mountstat3 *, int v3);
 
 int reverse_resolve = 0;
-int new_cache = 0;
 int manage_gids;
 int use_ipaddr = -1;
+
+char *conf_path = NFS_CONFFILE;
 
 /* PRC: a high-availability callout program can be specified with -H
  * When this is done, the program will receive callouts whenever clients
@@ -107,7 +110,6 @@ unregister_services (void)
 static void
 cleanup_lockfiles (void)
 {
-	unlink(_PATH_XTABLCK);
 	unlink(_PATH_ETABLCK);
 	unlink(_PATH_RMTABLCK);
 }
@@ -289,7 +291,7 @@ mount_umntall_1_svc(struct svc_req *rqstp, void *UNUSED(argp),
 	xlog(D_CALL, "Received UMNTALL request from %s",
 		host_ntop(sap, buf, sizeof(buf)));
 
-	/* Reload /etc/xtab if necessary */
+	/* Reload /etc/exports if necessary */
 	auth_reload();
 
 	mountlist_del_all(nfs_getrpccaller(rqstp->rq_xprt));
@@ -350,7 +352,7 @@ mount_pathconf_2_svc(struct svc_req *rqstp, dirpath *path, ppathcnf *res)
 	if (*p == '\0')
 		p = "/";
 
-	/* Reload /etc/xtab if necessary */
+	/* Reload /etc/exports if necessary */
 	auth_reload();
 
 	/* Resolve symlinks */
@@ -496,8 +498,7 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		return NULL;
 	}
 	if (estb.st_dev != stb.st_dev
-		   && (!new_cache
-			   || !(exp->m_export.e_flags & NFSEXP_CROSSMOUNT))) {
+	    && !(exp->m_export.e_flags & NFSEXP_CROSSMOUNT)) {
 		xlog(L_WARNING, "request to export directory %s below nearest filesystem %s",
 		     p, exp->m_export.e_path);
 		*error = MNT3ERR_ACCES;
@@ -513,51 +514,18 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		return NULL;
 	}
 
-	if (new_cache) {
-		/* This will be a static private nfs_export with just one
-		 * address.  We feed it to kernel then extract the filehandle,
-		 * 
-		 */
+	/* This will be a static private nfs_export with just one
+	 * address.  We feed it to kernel then extract the filehandle,
+	 */
 
-		if (cache_export(exp, p)) {
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
-		fh = cache_get_filehandle(exp, v3?64:32, p);
-		if (fh == NULL) {
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
-	} else {
-		int did_export = 0;
-	retry:
-		if (exp->m_exported<1) {
-			export_export(exp);
-			did_export = 1;
-		}
-		if (!exp->m_xtabent)
-			xtab_append(exp);
-
-		if (v3)
-			fh = getfh_size((struct sockaddr_in *)sap, p, 64);
-		if (!v3 || (fh == NULL && errno == EINVAL)) {
-			/* We first try the new nfs syscall. */
-			fh = getfh((struct sockaddr_in *)sap, p);
-			if (fh == NULL && errno == EINVAL)
-				/* Let's try the old one. */
-				fh = getfh_old((struct sockaddr_in *)sap,
-						stb.st_dev, stb.st_ino);
-		}
-		if (fh == NULL && !did_export) {
-			exp->m_exported = 0;
-			goto retry;
-		}
-
-		if (fh == NULL) {
-			xlog(L_WARNING, "getfh failed: %s", strerror(errno));
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
+	if (cache_export(exp, p)) {
+		*error = MNT3ERR_ACCES;
+		return NULL;
+	}
+	fh = cache_get_filehandle(exp, v3?64:32, p);
+	if (fh == NULL) {
+		*error = MNT3ERR_ACCES;
+		return NULL;
 	}
 	*error = MNT_OK;
 	mountlist_add(host_ntop(sap, buf, sizeof(buf)), p);
@@ -690,6 +658,7 @@ main(int argc, char **argv)
 {
 	char    *state_dir = NFS_STATEDIR;
 	char	*progname;
+	char	*s;
 	unsigned int listeners = 0;
 	int	foreground = 0;
 	int	port = 0;
@@ -704,6 +673,38 @@ main(int argc, char **argv)
 		progname++;
 	else
 		progname = argv[0];
+
+	conf_init();
+	xlog_from_conffile("mountd");
+	manage_gids = conf_get_bool("mountd", "manage-gids", manage_gids);
+	descriptors = conf_get_num("mountd", "descriptors", descriptors);
+	port = conf_get_num("mountd", "port", port);
+	num_threads = conf_get_num("mountd", "threads", num_threads);
+	reverse_resolve = conf_get_bool("mountd", "reverse-lookup", reverse_resolve);
+	ha_callout_prog = conf_get_str("mountd", "ha-callout");
+
+	s = conf_get_str("mountd", "state-directory-path");
+	if (s)
+		state_dir = s;
+
+	/* NOTE: following uses "nfsd" section of nfs.conf !!!! */
+	if (conf_get_bool("nfsd", "udp", NFSCTL_UDPISSET(_rpcprotobits)))
+		NFSCTL_UDPSET(_rpcprotobits);
+	else
+		NFSCTL_UDPUNSET(_rpcprotobits);
+	if (conf_get_bool("nfsd", "tcp", NFSCTL_TCPISSET(_rpcprotobits)))
+		NFSCTL_TCPSET(_rpcprotobits);
+	else
+		NFSCTL_TCPUNSET(_rpcprotobits);
+	for (vers = 2; vers <= 4; vers++) {
+		char tag[10];
+		sprintf(tag, "vers%d", vers);
+		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(nfs_version, vers)))
+			NFSCTL_VERSET(nfs_version, vers);
+		else
+			NFSCTL_VERUNSET(nfs_version, vers);
+	}
+
 
 	/* Parse the command line options and arguments. */
 	opterr = 0;
@@ -757,11 +758,7 @@ main(int argc, char **argv)
 			reverse_resolve = 1;
 			break;
 		case 's':
-			if ((state_dir = xstrdup(optarg)) == NULL) {
-				fprintf(stderr, "%s: xstrdup(%s) failed!\n",
-					progname, optarg);
-				exit(1);
-			}
+			state_dir = xstrdup(optarg);
 			break;
 		case 't':
 			num_threads = atoi (optarg);
@@ -834,9 +831,7 @@ main(int argc, char **argv)
 	if (!foreground)
 		closeall(3);
 
-	new_cache = check_new_cache();
-	if (new_cache)
-		cache_open();
+	cache_open();
 
 	unregister_services();
 	if (version2()) {
@@ -856,8 +851,6 @@ main(int argc, char **argv)
 	sigaction(SIGTERM, &sa, NULL);
 	sa.sa_handler = sig_hup;
 	sigaction(SIGHUP, &sa, NULL);
-
-	auth_init();
 
 	if (!foreground) {
 		/* We first fork off a child. */

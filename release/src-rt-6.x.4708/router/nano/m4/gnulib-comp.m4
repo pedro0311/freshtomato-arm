@@ -56,6 +56,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module d-type:
   # Code from module dirent:
   # Code from module dirfd:
+  # Code from module dynarray:
   # Code from module errno:
   # Code from module extensions:
   # Code from module extern-inline:
@@ -68,6 +69,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module fpieee:
   AC_REQUIRE([gl_FP_IEEE])
   # Code from module fpucw:
+  # Code from module free-posix:
   # Code from module frexp-nolibm:
   # Code from module frexpl-nolibm:
   # Code from module fstat:
@@ -123,6 +125,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module printf-safe:
   # Code from module raise:
   # Code from module readdir:
+  # Code from module realloc-posix:
   # Code from module regex:
   # Code from module scratch_buffer:
   # Code from module setlocale-null:
@@ -248,6 +251,12 @@ AC_DEFUN([gl_INIT],
   fi
   gl_FNMATCH_MODULE_INDICATOR([fnmatch])
   gl_FNMATCH_H
+  gl_FUNC_FREE
+  if test $REPLACE_FREE = 1; then
+    AC_LIBOBJ([free])
+    gl_PREREQ_FREE
+  fi
+  gl_STDLIB_MODULE_INDICATOR([free-posix])
   gl_FUNC_FREXP_NO_LIBM
   if test $gl_func_frexp_no_libm != yes; then
     AC_LIBOBJ([frexp])
@@ -388,6 +397,7 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([malloc])
   fi
   gl_STDLIB_MODULE_INDICATOR([malloc-posix])
+  gl_MODULE_INDICATOR([malloc-posix])
   gl_MALLOCA
   gl_MATH_H
   gl_FUNC_MBRTOWC
@@ -471,6 +481,12 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([readdir])
   fi
   gl_DIRENT_MODULE_INDICATOR([readdir])
+  gl_FUNC_REALLOC_POSIX
+  if test $REPLACE_REALLOC = 1; then
+    AC_LIBOBJ([realloc])
+  fi
+  gl_STDLIB_MODULE_INDICATOR([realloc-posix])
+  gl_MODULE_INDICATOR([realloc-posix])
   gl_REGEX
   if test $ac_use_included_regex = yes; then
     AC_LIBOBJ([regex])
@@ -781,6 +797,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/dirent-private.h
   lib/dirent.in.h
   lib/dirfd.c
+  lib/dynarray.h
   lib/errno.in.h
   lib/fcntl.in.h
   lib/filename.h
@@ -792,6 +809,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/fnmatch.in.h
   lib/fnmatch_loop.c
   lib/fpucw.h
+  lib/free.c
   lib/frexp.c
   lib/frexpl.c
   lib/fstat.c
@@ -846,6 +864,13 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/localeconv.c
   lib/lstat.c
   lib/malloc.c
+  lib/malloc/dynarray-skeleton.c
+  lib/malloc/dynarray.h
+  lib/malloc/dynarray_at_failure.c
+  lib/malloc/dynarray_emplace_enlarge.c
+  lib/malloc/dynarray_finalize.c
+  lib/malloc/dynarray_resize.c
+  lib/malloc/dynarray_resize_clear.c
   lib/malloc/scratch_buffer.h
   lib/malloc/scratch_buffer_dupfree.c
   lib/malloc/scratch_buffer_grow.c
@@ -887,6 +912,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/printf-parse.h
   lib/raise.c
   lib/readdir.c
+  lib/realloc.c
   lib/regcomp.c
   lib/regex.c
   lib/regex.h
@@ -997,6 +1023,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/fnmatch.m4
   m4/fnmatch_h.m4
   m4/fpieee.m4
+  m4/free.m4
   m4/frexp.m4
   m4/frexpl.m4
   m4/fstat.m4
@@ -1059,6 +1086,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/pthread_rwlock_rdlock.m4
   m4/raise.m4
   m4/readdir.m4
+  m4/realloc.m4
   m4/regex.m4
   m4/setlocale_null.m4
   m4/sigaction.m4

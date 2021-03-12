@@ -138,20 +138,6 @@ void log_segfault(void)
 	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
 }
 
-#ifdef TCONFIG_IPV6
-void enable_ip6_forward(void)
-{
-	f_write_procsysnet("ipv6/conf/default/forwarding", (ipv6_enabled() ? "1" : "0"));
-	f_write_procsysnet("ipv6/conf/all/forwarding", (ipv6_enabled() ? "1" : "0"));
-}
-
-static void enable_ndp_proxy(void)
-{
-	f_write_procsysnet("ipv6/conf/default/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
-	f_write_procsysnet("ipv6/conf/all/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
-}
-#endif /* TCONFIG_IPV6 */
-
 static int dmz_dst(char *s)
 {
 	struct in_addr ia;
@@ -2155,12 +2141,6 @@ int start_firewall(void)
 	simple_unlock("restrictions");
 	sched_restrictions();
 	enable_ip_forward();
-#ifdef TCONFIG_IPV6
-	if (ipv6_enabled()) {
-		enable_ip6_forward();
-		enable_ndp_proxy();
-	}
-#endif
 
 	led(LED_DMZ, dmz_dst(NULL));
 
@@ -2174,7 +2154,11 @@ int start_firewall(void)
 	modprobe_r("xt_HL");
 	modprobe_r("xt_length");
 	modprobe_r("xt_web");
+#ifdef TCONFIG_BCMARM
 	modprobe_r("ipt_webmon");
+#else
+	modprobe_r("xt_webmon");
+#endif
 	modprobe_r("xt_dscp");
 	modprobe_r("ipt_ipp2p");
 

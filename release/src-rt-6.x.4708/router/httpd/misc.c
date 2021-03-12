@@ -297,92 +297,46 @@ static int check_connect(char *prefix)
 static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
 	char buffer[INET6_ADDRSTRLEN];
+	char buffer2[16];
 	const char *p_tmp;
 	char *dns = NULL;
 	char *next = NULL;
 	struct in6_addr addr;
 	int cnt = 0;
+	char br;
 
 	if (!ipv6_enabled())
 		return;
 
 	/* check LAN */
-	if (strcmp(nvram_safe_get("lan_ipaddr"),"") != 0) {
-		/* check LAN IPv6 address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0); /* global address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan: '%s',\n", buffer);
-		}
-		/* check LAN IPv6 link local address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 1); /* link local address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan_ll: '%s',\n", buffer);
-		}
-	}
+	for (br = 0; br < BRIDGE_COUNT; br++) {
+		char bridge[2] = "0";
+		if (br != 0)
+			bridge[0] += br;
+		else
+			strcpy(bridge, "");
 
-	/* check LAN1 */
-	if (strcmp(nvram_safe_get("lan1_ipaddr"),"") != 0) {
-		/* check LAN1 IPv6 address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 0); /* global address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan1: '%s',\n", buffer);
-		}
-		/* check LAN1 IPv6 link local address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan1_ifname"), AF_INET6, 1); /* link local address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan1_ll: '%s',\n", buffer);
-		}
-	}
-
-	/* check LAN2 */
-	if (strcmp(nvram_safe_get("lan2_ipaddr"),"") != 0) {
-		/* check LAN2 IPv6 address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 0); /* global address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan2: '%s',\n", buffer);
-		}
-		/* check LAN2 IPv6 link local address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan2_ifname"), AF_INET6, 1); /* link local address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan2_ll: '%s',\n", buffer);
-		}
-	}
-
-	/* check LAN3 */
-	if (strcmp(nvram_safe_get("lan3_ipaddr"),"") != 0) {
-		/* check LAN3 IPv6 address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 0); /* global address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan3: '%s',\n", buffer);
-		}
-		/* check LAN3 IPv6 link local address and copy to buffer */
-		p_tmp = NULL;
-		p_tmp = getifaddr(nvram_safe_get("lan3_ifname"), AF_INET6, 1); /* link local address */
-		if (p_tmp != NULL) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), "%s", p_tmp);
-			web_printf("\tip6_lan3_ll: '%s',\n", buffer);
+		memset(buffer2, 0, sizeof(buffer2));
+		snprintf(buffer2, sizeof(buffer2), "lan%s_ipaddr", bridge);
+		if (strcmp(nvram_safe_get(buffer2), "") != 0) {
+			/* check LANx IPv6 address and copy to buffer */
+			memset(buffer2, 0, sizeof(buffer2));
+			snprintf(buffer2, sizeof(buffer2), "lan%s_ifname", bridge);
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get(buffer2), AF_INET6, 0); /* global address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+				web_printf("\tip6_lan%s: '%s',\n", bridge, buffer);
+			}
+			/* check LAN IPv6 link local address and copy to buffer */
+			p_tmp = NULL;
+			p_tmp = getifaddr(nvram_safe_get(buffer2), AF_INET6, 1); /* link local address */
+			if (p_tmp != NULL) {
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer), "%s", p_tmp);
+				web_printf("\tip6_lan%s_ll: '%s',\n", bridge, buffer);
+			}
 		}
 	}
 

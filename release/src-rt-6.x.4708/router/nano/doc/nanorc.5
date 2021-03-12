@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 5.5" "January 2021"
+.TH NANORC 5 "version 5.6.1" "March 2021"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -176,12 +176,6 @@ try using libmagic to determine the applicable syntax.
 (Calling libmagic can be relatively time consuming.
 It is therefore not done by default.)
 .TP
-.B set markmatch
-After a search, set the mark at the end of the found match
-(if there is any) so that it gets highlighted.  This makes
-the match more visible, but also allows deleting the match
-with a single keystroke.
-.TP
 .BI "set matchbrackets """ characters """
 Specify the opening and closing brackets that can be found by bracket
 searches.  This may not include blank characters.  The opening set must
@@ -201,6 +195,9 @@ When a file is loaded or saved, and also when switching between buffers,
 the number of lines in the buffer is displayed after the file name.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
+The line plus column numbers and the character code are displayed only when
+\fBset constantshow\fR is used, and can be toggled on and off with \fBM-C\fR.
+The state flags are displayed only when \fBset stateflags\fR is used.
 .TP
 .B set morespace
 Deprecated option since it has become the default setting.
@@ -262,8 +259,8 @@ specfified closing punctuation, optionally followed by closing brackets
 (see \fBbrackets\fP), can end sentences.  The default value is "\fB!.?\fP".
 .TP
 .B set quickblank
-Do quick status-bar blanking: status-bar messages will disappear after 1
-keystroke instead of 25.  The option \fBconstantshow\fR overrides this.
+Make status-bar messages disappear after 1 keystroke instead of after 20.
+Note that options \fBconstantshow\fR and \fBminibar\fR override this.
 .TP
 .BI "set quotestr """ regex """
 Set the regular expression for matching the quoting part of a line.
@@ -324,6 +321,11 @@ the screen's edge, by using also \fBset atblanks\fR.)
 .B set speller """\fIprogram\fR [\fIargument \fR...]\fB"""
 Use the given \fIprogram\fR to do spell checking and correcting, instead of
 using the built-in corrector that calls \fBhunspell\fR(1) or \fBspell\fR(1).
+.TP
+.B set spotlightcolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
+Use this color combination for highlighting a search match.
+The default value is \fBblack,lightyellow\fR.
+See \fBset titlecolor\fR for valid color names.
 .TP
 .B set stateflags
 Use the top-right corner of the screen for showing some state flags:
