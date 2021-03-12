@@ -71,6 +71,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_gateway",		"0.0.0.0"			, 0 },	// WAN gateway
 	{ "wan_gateway_get",		"0.0.0.0"			, 0 },	// default gateway for PPP
 	{ "wan_dns",			""				, 0 },	// x.x.x.x x.x.x.x ...
+	{ "wan_dns_auto",		"1"				, 0 },	// wan auto dns to 1 after reset
 	{ "wan_weight",			"1"				, 0 },
 	{ "wan_hilink_ip",		"0.0.0.0"			, 0 },
 	{ "wan_status_script",		"0"				, 0 },
@@ -81,6 +82,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_netmask",		"0.0.0.0"			, 0 },	// WAN netmask
 	{ "wan2_gateway",		"0.0.0.0"			, 0 },	// WAN gateway
 	{ "wan2_dns",			""				, 0 },	// x.x.x.x x.x.x.x ...
+	{ "wan2_dns_auto",		"1"				, 0 },	// wan2 auto dns to 1 after reset
 	{ "wan2_weight",		"1"				, 0 },
 	{ "wan2_hwname",		""				, 0 },	// WAN driver name (e.g. et1)
 	{ "wan2_hwaddr",		""				, 0 },	// WAN interface MAC address
@@ -95,6 +97,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_netmask",		"0.0.0.0"			, 0 },	// WAN netmask
 	{ "wan3_gateway",		"0.0.0.0"			, 0 },	// WAN gateway
 	{ "wan3_dns",			""				, 0 },	// x.x.x.x x.x.x.x ...
+	{ "wan3_dns_auto",		"1"				, 0 },	// wan3 auto dns to 1 after reset
 	{ "wan3_weight",		"1"				, 0 },
 	{ "wan3_hwname",		""				, 0 },	// WAN driver name (e.g. et1)
 	{ "wan3_hwaddr",		""				, 0 },	// WAN interface MAC address
@@ -108,6 +111,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_netmask",		"0.0.0.0"			, 0 },	// WAN netmask
 	{ "wan4_gateway",		"0.0.0.0"			, 0 },	// WAN gateway
 	{ "wan4_dns",			""				, 0 },	// x.x.x.x x.x.x.x ...
+	{ "wan4_dns_auto",		"1"				, 0 },	// wan4 auto dns to 1 after reset
 	{ "wan4_weight",		"1"				, 0 },
 	{ "wan4_hwname"			""				, 0 },	// WAN driver name (e.g. et1)
 	{ "wan4_hwaddr",		""				, 0 },	// WAN interface MAC address

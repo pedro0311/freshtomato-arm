@@ -1511,13 +1511,16 @@ REMOVE-END */
 		fom['wan'+u+'_status_script'].value = fom['f_wan'+u+'_status_script'].checked ? 1 : 0;
 /* USB-END */
 
+		if (fom['wan'+u+'_proto'].value == 'disabled') /* if wanX is disabled (for ex. wireless bridge / AP only) */
+			fom['wan'+u+'_dns_auto'].value = '0'; /* make sure to use static dns! */
+
 		if (fom['wan'+u+'_dns_auto'].value == '1')
 			fom['wan'+u+'_dns'].value = '';
 		else
 			fom['wan'+u+'_dns'].value = joinAddr([fom['f_wan'+u+'_dns_1'].value, fom['f_wan'+u+'_dns_2'].value]);
 	}
 
-	fom.wan_dns.value = joinAddr([fom.f_dns_1.value, fom.f_dns_2.value]);
+	fom.wan_dns.value = joinAddr([fom.f_dns_1.value, fom.f_dns_2.value]); /* get static dns */
 	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		var u = (uidx > 1) ? uidx : '';
 		if (fom['wan'+u+'_proto'].value != 'disabled') {
