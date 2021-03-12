@@ -68,11 +68,11 @@
 #include <sys/stat.h>
 
 #include <wlutils.h>
+#include "tomato.h"
 #ifdef TCONFIG_HTTPS
 #include "../mssl/mssl.h"
 #define HTTPS_CRT_VER	"1"
 #endif
-#include "tomato.h"
 
 #define HTTP_MAX_LISTENERS 16
 
