@@ -107,7 +107,7 @@ watchdogRun() {
 					echo "0" > "/var/lib/misc/"$PREFIX"_state"
 					switch4g $PREFIX
 				} || {
-					[ "$PREFIX" == "wan" -a "$MWAN" -gt 1 ] && PREFIX_MWAN="wan1"
+					[ "$PREFIX" == "wan" -a "$MWAN" -gt 1 ] && PREFIX_MWAN="wan1" # "wan" means restart all WANs, but we only want restart one
 
 					[ "$(nvram get action_service)" == "wan-restart" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart" -o "$(nvram get action_service)" == "wan-restart-c" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart-c" ] && {
 						$LOGS "Connection $PREFIX DOWN - Reconnect is already in progress ..."
@@ -132,6 +132,12 @@ watchdogRun() {
 					}
 				}
 			} || {
+				OLD_STATE=$(cat /var/lib/misc/"$PREFIX"_state)
+				[ "$PROTO" == "dhcp" -a "$OLD_STATE" -eq 0 ] && {
+					dhcpc-release $PREFIX
+					sleep 1
+					dhcpc-renew $PREFIX
+				}
 				$DEBUG "Connection $PREFIX is functioning"
 				echo "1" > "/var/lib/misc/"$PREFIX"_state"
 			}
