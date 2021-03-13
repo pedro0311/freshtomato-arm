@@ -46,6 +46,7 @@ watchdogRun() {
 		DEMAND=$(nvram get "$PREFIX"_ppp_demand)
 		RESULT=0
 		PREFIX_MWAN=$PREFIX
+		STATE_FILE="/var/lib/misc/"$PREFIX"_state"
 
 		[ ! -z "$(nvram get "$PREFIX"_ck_pause)" ] && {
 			$LOGS "Watchdog paused for $PREFIX - Skipping ..."
@@ -56,7 +57,7 @@ watchdogRun() {
 			ISGW=$(ip route | grep $IFACE | grep -v "link" | wc -l)
 			$DEBUG "prefix=$PREFIX, iface=$IFACE, uptime=$ISUP, ISGW=$ISGW, WEIGHT=$WEIGHT"
 
-			[ "$WEIGHT" -gt 0 -a "$ISUP" -gt 0 ] && {
+			[ "$ISUP" -gt 0 ] && {
 				DEFAULT_ROUTE_FRAGMENT=$(ip route | grep default | cut -d' ' -f2-)
 				GATEWAY_FRAGMENT="via $(nvram get "$PREFIX"_gateway)"
 				[ "$ISPPPD" -eq 1 ] && GATEWAY_FRAGMENT=""
@@ -94,17 +95,11 @@ watchdogRun() {
 				done
 			}
 
-			[ "$RESULT" -eq 0 -a "$WEIGHT" -eq 0 ] && {
-				# failover does not have default gateway in route table, so we can't check connection to outside. Check only if interface exist
-				$DEBUG "run failover-test"
-				ckfailover
-			}
-
 			# wan is down
 			[ "$RESULT" -eq 0 ] && {
 				[ "$PROTO" == "lte" ] && {
 					$LOGS "Connection $PREFIX DOWN - Reconnecting ..."
-					echo "0" > "/var/lib/misc/"$PREFIX"_state"
+					echo "0" > $STATE_FILE
 					switch4g $PREFIX
 				} || {
 					[ "$PREFIX" == "wan" -a "$MWAN" -gt 1 ] && PREFIX_MWAN="wan1" # "wan" means restart all WANs, but we only want restart one
@@ -112,7 +107,7 @@ watchdogRun() {
 					[ "$(nvram get action_service)" == "wan-restart" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart" -o "$(nvram get action_service)" == "wan-restart-c" -o "$(nvram get action_service)" == $PREFIX_MWAN"-restart-c" ] && {
 						$LOGS "Connection $PREFIX DOWN - Reconnect is already in progress ..."
 					} || {
-						echo "0" > "/var/lib/misc/"$PREFIX"_state"
+						echo "0" > $STATE_FILE
 
 						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
 							$LOGS "Killing orphaned connect-on-demand listen process ..."
@@ -132,14 +127,13 @@ watchdogRun() {
 					}
 				}
 			} || {
-				OLD_STATE=$(cat /var/lib/misc/"$PREFIX"_state)
-				[ "$PROTO" == "dhcp" -a "$OLD_STATE" -eq 0 ] && {
+				[ "$PROTO" == "dhcp" -a "$(cat $STATE_FILE)" -eq 0 ] && { # connected + DHCP + previous status - disconnected? release/renew
 					dhcpc-release $PREFIX
 					sleep 1
 					dhcpc-renew $PREFIX
 				}
 				$DEBUG "Connection $PREFIX is functioning"
-				echo "1" > "/var/lib/misc/"$PREFIX"_state"
+				echo "1" > $STATE_FILE
 			}
 		}
 	done
@@ -184,30 +178,6 @@ ckcurl() {
 	done
 
 	[ "$RESULT" -gt 0 ] && $DEBUG "curl connect for $IFACE: OK=1"
-}
-
-ckfailover() {
-	[ "$(ip route | grep $IFACE | wc -l)" -gt 0 ] && {
-		[ "$PROTO" == "lte" ] && {
-			TYPE=$(nvram get "$PREFIX"_modem_type)
-			DEV=$(nvram get "$PREFIX"_modem_dev)
-
-			[ "$TYPE" == "non-hilink" -o "$TYPE" == "hw-ether" ] && {
-				MODE="AT+CGPADDR=1" gcom -d "$DEV" -s /etc/gcom/setverbose.gcom > /tmp/4g_"$PREFIX".mode
-
-				[ $(cat /tmp/4g_"$PREFIX".mode | grep "+CGPADDR:" | cut -d '"' -f2 | wc -l) -gt 0 ] && {
-					RESULT=1
-					$DEBUG "failover=1, lte $TYPE, dev $DEV"
-				}
-			} || {
-				RESULT=1
-				$DEBUG "failover=1, lte $TYPE"
-			}
-		} || {
-			RESULT=1
-			$DEBUG "failover=1"
-		}
-	}
 }
 
 watchdogAdd() {
