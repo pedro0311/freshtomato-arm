@@ -1,3 +1,5 @@
+//	<% etherstates(); %>
+
 isup = {};
 
 isup.time = '<% time(); %>';

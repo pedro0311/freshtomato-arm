@@ -413,6 +413,15 @@ table.fields {
 	border: 1px solid #eee;
 }
 
+div#vlan-grid img[id^="eth_"] {
+	width: 55%;
+	max-height: 55vh;
+}
+
+div[id^="vport_"] {
+	margin: 0 auto;
+}
+
 #expire-button {
 	margin: 15px 0 5px 0;
 }

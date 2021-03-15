@@ -189,7 +189,8 @@ function ethstates() {
 	if (port == 'disabled')
 		return 0;
 
-	var state1, state2, fn, i, u, uidx, fn, state1, state2, code = '', v = 0;
+	var state = [];
+	var i, u, uidx, code = '', v = 0;
 	var code ='<div class="section-title">Ethernet Ports State<\/div><div class="section"><table class="fields"><tr>';
 
 	/* WANs */
@@ -213,49 +214,9 @@ function ethstates() {
 	for (i = 0; i <= 4; ++i) {
 		port = eval('etherstates.port'+i);
 
-		if (port == null) {
-			fn = 'eth_off';
-			state2 = 'NOSUPPORT';
-		}
-		else if (port == 'DOWN') {
-			fn = 'eth_off';
-			state2 = port.replace('DOWN','Unplugged');
-		}
-		else if (port == '1000FD') {
-			fn = 'eth_1000_fd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else if (port == '1000HD') {
-			fn = 'eth_1000_hd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else if (port == '100FD') {
-			fn = 'eth_100_fd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else if (port == '100HD') {
-			fn = 'eth_100_hd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else if (port == '10FD') {
-			fn = 'eth_10_fd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else if (port == '10HD') {
-			fn = 'eth_10_hd';
-			state1 = port.replace('HD','Mbps Half');
-			state2 = state1.replace('FD','Mbps Full');
-		}
-		else {
-			fn = 'eth_1000_fd';
-			state2 = 'AUTO';
-		}
-		code += '<td class="title indent2"><img id="'+fn+'_'+i+'" src="'+fn+'.gif" alt=""><br>'+(stats.lan_desc == '1' ? state2 : '')+'<\/td>';
+		state = _ethstates(port);
+
+		code += '<td class="title indent2"><img id="'+state[0]+'_'+i+'" src="'+state[0]+'.gif" alt=""><br>'+(stats.lan_desc == '1' ? state[1] : '')+'<\/td>';
 	}
 
 	code += '<td class="content"><\/td><\/tr><tr><td class="title indent1" colspan="6" style="text-align:right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
@@ -422,7 +383,7 @@ function init() {
 		timer2.initPage(250, 1);
 	}
 
-	ref.initPage(3000, 3);
+	ref.initPage(250, 5);
 
 	eventHandler();
 }

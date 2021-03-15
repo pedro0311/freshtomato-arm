@@ -2437,6 +2437,55 @@ function checkSVG() {
 		setTimeout(checkSVG, 500);
 }
 
+function _ethstates(port) {
+	var fn, state1, state2;
+
+	if (port == null) {
+		fn = 'eth_off';
+		state2 = 'NOSUPPORT';
+	}
+	else if (port == 'DOWN') {
+		fn = 'eth_off';
+		state2 = port.replace('DOWN','Unplugged');
+	}
+	else if (port == '1000FD') {
+		fn = 'eth_1000_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '1000HD') {
+		fn = 'eth_1000_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '100FD') {
+		fn = 'eth_100_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '100HD') {
+		fn = 'eth_100_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '10FD') {
+		fn = 'eth_10_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '10HD') {
+		fn = 'eth_10_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else {
+		fn = 'eth_1000_fd';
+		state2 = 'AUTO';
+	}
+
+	return [fn, state2];
+}
+
 function myName() {
 	var name, i;
 
