@@ -19,7 +19,7 @@
 
 <script>
 
-//	<% nvram("qos_enable,qos_classnames,qos_orules"); %>
+//	<% nvram("qos_enable,qos_mode,qos_classnames,qos_orules"); %>
 
 //	<% layer7(); %>
 
@@ -366,6 +366,8 @@ function init() {
 <script>
 	if (nvram.qos_enable != '1')
 		W('<div class="note-disabled"><b>QoS disabled.<\/b><br><br><a href="qos-settings.asp">Enable &raquo;<\/a><\/div>');
+	else if (nvram.qos_enable == '1' && nvram.qos_mode == '2')
+		W('<div class="note-disabled"><b>Classification is not available in Cake mode.</b><br><br><a href="qos-settings.asp">Change mode &raquo;</a><\/div>');
 	else
 		show_notice1('<% notice("iptables"); %>');
 </script>

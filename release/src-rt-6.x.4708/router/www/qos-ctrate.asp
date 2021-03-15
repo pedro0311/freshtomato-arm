@@ -355,7 +355,7 @@ function addExcludeList(address) {
 	if (E('_f_filter_ipe').value.length < 6)
 		E('_f_filter_ipe').value = address;
 	else if (E('_f_filter_ipe').value.indexOf(address) < 0)
-			E('_f_filter_ipe').value = E('_f_filter_ipe').value+','+address;
+		E('_f_filter_ipe').value = E('_f_filter_ipe').value+','+address;
 
 	dofilter();
 }
