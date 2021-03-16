@@ -9,6 +9,13 @@
 
 // -----------------------------------------------------------------------------
 
+/* global variables */
+var MAX_BRIDGE_ID = 3;
+var MAX_PORT_ID = 4;
+var MAX_VLAN_ID = 15;
+
+// -----------------------------------------------------------------------------
+
 Array.prototype.find = function(v) {
 	for (var i = 0; i < this.length; ++i)
 		if (this[i] == v) return i;

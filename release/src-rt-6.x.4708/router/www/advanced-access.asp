@@ -22,7 +22,6 @@
 //	<% nvram ("lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_access");%> 
 
 var cprefix = 'advanced_access';
-var MAX_BRIDGE_ID = 3;
 
 var la = new TomatoGrid();
 la.setup = function() {
