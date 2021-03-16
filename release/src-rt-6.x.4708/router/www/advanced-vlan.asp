@@ -66,11 +66,12 @@ function ethstates() {
 	if (port == 'disabled')
 		return 0;
 
-	for (var i = 0; i <= 4; ++i) {
+	var j = 0;
+	for (var i of [1, 2, 3, 4, 0]) { /* port order in the table */
 		port = eval('etherstates.port'+i);
 		state = _ethstates(port);
-
-		E('vport_'+i).innerHTML = '<img src="'+state[0]+'.gif" id="'+state[0]+'_'+i+'" title="'+state[1]+'" alt="">';
+		elem.setInnerHTML('vport_'+j, '<img src="'+state[0]+'.gif" id="'+state[0]+'_'+j+'" title="'+state[1]+'" alt="">');
+		++j;
 	}
 }
 
