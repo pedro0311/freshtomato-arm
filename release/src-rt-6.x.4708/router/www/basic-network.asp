@@ -1271,19 +1271,16 @@ REMOVE-END */
 	}
 
 /* USB-BEGIN */
-	var count = 0;
-	if ((E('_wan_proto').value == 'lte') || (E('_wan_proto').value == 'ppp3g')) count++;
-	if ((E('_wan2_proto').value == 'lte') || (E('_wan2_proto').value == 'ppp3g')) count++;
-/* MULTIWAN-BEGIN */
-	if ((E('_wan3_proto').value == 'lte') || (E('_wan3_proto').value == 'ppp3g')) count++;
-	if ((E('_wan4_proto').value == 'lte') || (E('_wan4_proto').value == 'ppp3g')) count++;
-/* MULTIWAN-END */
-
-	if (count > 1) {
-		for (var g = 0; g <= curr_mwan_num; g++) {
-			var h = ((g == 0) ? '' : g.toString());
-			ferror.set('_wan'+h+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
-			ok = 0;
+	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		var lte3g = E('_wan'+u+'_proto').value;
+		if (lte3g == 'lte' || lte3g == 'ppp3g') {
+			for (var i = uidx+1; i <= curr_mwan_num; ++i) {
+				if ((E('_wan'+i+'_proto').value == 'lte') || (E('_wan'+i+'_proto').value == 'ppp3g')) {
+					ferror.set('_wan'+i+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
+					ok = 0;
+				}
+			}
 		}
 	}
 /* USB-END */
