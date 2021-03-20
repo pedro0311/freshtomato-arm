@@ -22,15 +22,14 @@
 //	<% nvram ("lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_access");%> 
 
 var cprefix = 'advanced_access';
-var MAX_BRIDGE_ID = 3;
 
 var la = new TomatoGrid();
 la.setup = function() {
 	this.init('la-grid', 'sort', 50, [
 	{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
-	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
+	{ type: 'select', options: [[0, 'LAN0 (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 32 },
-	{ type: 'select', options: [[0, 'LAN (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
+	{ type: 'select', options: [[0, 'LAN0 (br0)'],[1, 'LAN1 (br1)'],[2, 'LAN2 (br2)'],[3, 'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 32 },
 	{ type: 'text', maxlen: 32 }]);
 	this.headerSet(['On', 'Src', 'Src Address', 'Dst', 'Dst Address', 'Description']);
@@ -136,9 +135,9 @@ la.verifyFields = function(row, quiet) {
 
 la.dataToView = function(data) {
 	return [(data[0] != 0) ? 'On' : '',
-			['LAN', 'LAN1', 'LAN2', 'LAN3'][data[1]],
+			['LAN0', 'LAN1', 'LAN2', 'LAN3'][data[1]],
 			data[2],
-			['LAN', 'LAN1', 'LAN2', 'LAN3'][data[3]],
+			['LAN0', 'LAN1', 'LAN2', 'LAN3'][data[3]],
 			data[4],
 			data[5] ];
 }

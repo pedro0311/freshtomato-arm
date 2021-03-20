@@ -18,13 +18,6 @@ stats = { };
 
 var a, b, i;
 
-/* DUALWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'];
-/* DUALWAN-END */
-/* MULTIWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'];
-/* MULTIWAN-END */
-
 stats.anon_enable = nvram.tomatoanon_enable;
 stats.anon_answer = nvram.tomatoanon_answer;
 
@@ -212,9 +205,9 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		wlstats[uidx].ifstatus = '<b>Down</b>';
 	else {
 		wlstats[uidx].ifstatus = 'Up';
-		for (i = 0; i < xifs.length ; ++i) {
-			if ((nvram[xifs[i]+'_ifnames']).indexOf(wl_ifaces[uidx][0]) >= 0) {
-				wlstats[uidx].ifstatus = wlstats[uidx].ifstatus+' ('+xifs[i].toUpperCase()+')';
+		for (i = 0; i < xifs[0].length ; ++i) {
+			if ((nvram[xifs[0][i]+'_ifnames']).indexOf(wl_ifaces[uidx][0]) >= 0) {
+				wlstats[uidx].ifstatus = wlstats[uidx].ifstatus+' ('+xifs[1][i]+')';
 				break;
 			}
 		}

@@ -58,7 +58,7 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var b;
 		b = [];
 		for (var i = 0; i < wl_bands[uidx].length; ++i) {
-			b.push([wl_bands[uidx][i] + '', (wl_bands[uidx][i] == '1') ? '5 GHz' : '2.4 GHz']);
+			b.push([wl_bands[uidx][i]+'', (wl_bands[uidx][i] == '1') ? '5 GHz' : '2.4 GHz']);
 		}
 		bands.push(b);
 
@@ -82,7 +82,7 @@ wlg.setup = function() {
 		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 32, size: 34, prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'select', options: wl_modes_available , prefix: '<div class="centered">', suffix: '<\/div>' },
-		{ type: 'select', options: [[0,'LAN (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']] },
+		{ type: 'select', options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']] },
 		{ type: 'select', options: [['disabled','Disabled'],['deny','Block'],['allow','Permit']] }
 	]);
 
@@ -102,8 +102,10 @@ wlg.populate = function() {
 	if (wlg.tb != null) {
 		wlg.removeAllData();
 		for (var uidx in vifs_defined) {
-			if (typeof(vifs_defined[uidx][0]) == 'undefined') continue;
-			var wmode = (((vifs_defined[uidx][7]) == 'ap') && ((nvram['wl' + u + '_wds_enable']) == '1')) ? 'apwds': (vifs_defined[uidx][7]);
+			if (typeof(vifs_defined[uidx][0]) == 'undefined')
+				continue;
+
+			var wmode = (((vifs_defined[uidx][7]) == 'ap') && ((nvram['wl'+u+'_wds_enable']) == '1')) ? 'apwds': (vifs_defined[uidx][7]);
 			this.insertData(-1, [
 				vifs_defined[uidx][0],
 				vifs_defined[uidx][4],
@@ -197,26 +199,21 @@ REMOVE-END */
 		f[0].options[i].disabled = (this.countVIF(f[0].options[i].value) > 0);
 	}
 
-	if (!v_length(f[2], quiet || !ok, 1, 32)) ok = 0;
+	if (!v_length(f[2], quiet || !ok, 1, 32))
+		ok = 0;
 
 	return ok;
 }
 
 wlg.dataToView = function(data) {
-	var ifname, uidx, ssid;
-	uidx = wl_ifidxx(data[0]);
-	if (uidx < 0) {
-		ifname = 'wl' + data[0];
-	}
-	else {
-		ifname = wl_ifaces[uidx][0] + ((wl_sunit(uidx) < 0) ? ' (wl' + wl_fface(uidx) + ')' : '');
-	}
-	return ([ifname,
+	var uidx = wl_ifidxx(data[0]);
+
+	return ([wl_display_ifname(uidx),
 		(data[1] == 1) ? 'Yes' : 'No',
 		data[2] || '<small><i>(unset)<\/i><\/small>',
 		wmo[data[3]] || '<small><i>(unset)<\/i><\/small>',
-		['LAN (br0)', 'LAN1 (br1)', 'LAN2 (br2)', 'LAN3 (br3)', 'none' ][data[4]],
-		macmode[data[5]] || macmode[nvram['wl' + data[0].toString() + '_macmode']]
+		['LAN0 (br0)', 'LAN1 (br1)', 'LAN2 (br2)', 'LAN3 (br3)', 'none' ][data[4]],
+		macmode[data[5]] || macmode[nvram['wl'+data[0].toString()+'_macmode']]
 	]);
 }
 
@@ -272,14 +269,14 @@ wlg.onAdd = function() {
 
 	vifs_defined.push([
 		u.toString(),							/* fface == wl_ifaces[uidx][1] */
-		(nvram['wl' + u + '_ifname']) || ('wl'+u),			/* ifname =~ wl_ifaces[uidx][0] */
+		(nvram['wl'+u+'_ifname']) || ('wl'+u),				/* ifname =~ wl_ifaces[uidx][0] */
 		u.substr(0, u.indexOf('.')),					/* unit */
 		u.substr(u.indexOf('.')+1) || '-1',				/* subunit */
 		data[1] || '1',							/* radio */
 		'0',								/* iface up? */
 		data[1] || '1',							/* bss_enabled */
 		data[3],							/* WL net mode */
-		data[2], 							/* nvram['wl' + u + '_ssid'] */
+		data[2], 							/* nvram['wl'+u+'_ssid'] */
 		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',	/* MAC addr */
 		'0',								/* VIFs supported */
 		data[4],
@@ -396,11 +393,11 @@ REMOVE-END */
 		var u = wl_fface(uidx).toString();
 		var bridged = 4;
 		if (u) {
-			var wmode = (((nvram['wl' + u + '_mode']) == 'ap') && ((nvram['wl' + u + '_wds_enable']) == '1')) ? 'apwds': (nvram['wl' + u + '_mode']);
+			var wmode = (((nvram['wl'+u+'_mode']) == 'ap') && ((nvram['wl'+u+'_wds_enable']) == '1')) ? 'apwds': (nvram['wl'+u+'_mode']);
 
 			for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 				var j = (i == 0) ? '' : i.toString();
-				var l = nvram['lan' + j + '_ifnames'].split(' ');
+				var l = nvram['lan'+j+'_ifnames'].split(' ');
 				for (var k = 0 ; k < l.length; k++) {
 					if(l[k].indexOf(wl_ifaces[uidx][0]) != -1) {
 						bridged = i;
@@ -412,21 +409,21 @@ REMOVE-END */
 			vifs_defined.push([
 				u.toString(),					/* fface == wl_ifaces[uidx][1] */
 				wl_ifaces[uidx][0],
-				// (nvram['wl' + u + '_ifname']) || ('wl'u),	/* ifname =~ wl_ifaces[uidx][0] */
+				// (nvram['wl'+u+'_ifname']) || ('wl'u),	/* ifname =~ wl_ifaces[uidx][0] */
 				wl_ifaces[uidx][2] || '0',			/* unit */
 				wl_ifaces[uidx][3] || '0',			/* subunit */
-				nvram['wl' + u + '_radio'] || '0',		/* radio */
+				nvram['wl'+u+'_radio'] || '0',			/* radio */
 				wl_ifaces[uidx][6] || '0',			/* iface up/operational status */
-				nvram['wl' + u + '_bss_enabled'] || '1',	/* bss_enabled */
+				nvram['wl'+u+'_bss_enabled'] || '1',		/* bss_enabled */
 				wmode || 'disabled',				/* WL net mode */
-				wl_ifaces[uidx][4] || '',			/* nvram['wl' + u + '_ssid'] */
-				nvram['wl' + u + '_hwaddr'],			/* MAC addr */
+				wl_ifaces[uidx][4] || '',			/* nvram['wl'+u+'_ssid'] */
+				nvram['wl'+u+'_hwaddr'],			/* MAC addr */
 				// (wl_ifaces[uidx][7] * 1).toString(), 	/* VIFs supported */
 				wlvifs,						/* VIFs supported */
 				bridged,
-				nvram['wl' + u + '_macmode'] || 'disabled'	/* Wireless Filter */
+				nvram['wl'+u+'_macmode'] || 'disabled'		/* Wireless Filter */
 			]);
-			/* max_no_vifs = max_no_vifs + ((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]); */
+			/* max_no_vifs = max_no_vifs+((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]); */
 			max_no_vifs = max_no_vifs + parseInt(wlvifs);
 		}
 	}
@@ -439,14 +436,15 @@ REMOVE-END */
 		if (isNaN(total)) continue;
 		if (total >= 4) total = 4;
 
-		W('#spin' + vifs_defined[uidx][2]+', \n');
+		W('#spin'+vifs_defined[uidx][2]+', \n');
 
 		for (var i = 0; i < total; ++i) {
 			var u = vifs_defined[uidx][2].toString();
-			var s = (i == 0) ? '' : '.' + i.toString();
-			var t = u + s;
+			var s = (i == 0) ? '' : '.'+i.toString();
+			var t = u+s;
 			var v = wl_ifidxx(t);
-			var w = (v < 0) ? ('wl' + t) : (wl_ifaces[v][0] + ((wl_sunit(v) < 0) ? ' (wl' + t + ')' : ''));
+			var w = (v < 0) ? ('wl'+t) : (wl_ifaces[v][0]+((wl_sunit(v) < 0) ? ' (wl'+t+')' : ''));
+			//var w = wl_display_ifname(i);
 			vifs_possible.push([ t, w ]);
 			tabs.push([ t, w ]);
 		}
@@ -462,7 +460,7 @@ REMOVE-END */
 function init() {
 	var uninit = wl_ifaces.length - 1;
 	while (uninit > 0) {
-		if (((nvram['wl' + wl_unit(uninit) + '_corerev']) *1) >= 9) break;
+		if (((nvram['wl'+wl_unit(uninit)+'_corerev']) *1) >= 9) break;
 		uninit--;
 	}
 
@@ -472,17 +470,15 @@ function init() {
 		return;
 	}
 
-	tabSelect(cookie.get(cprefix + '_tab') || tabs[0][0]);
+	tabSelect(cookie.get(cprefix+'_tab') || tabs[0][0]);
 
 	var c;
 
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "notes");
-	}
 
-	if (((c = cookie.get(cprefix + '_details_vis')) != null) && (c == '1')) {
+	if (((c = cookie.get(cprefix+'_details_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "details");
-	}
 
 	wlg.setup();
 	eventHandler();
@@ -514,21 +510,21 @@ function tabSelect(name) {
 	for (var i = 1; i < tabs.length; ++i) {
 		if (name == tabs[i][0]) {
 			if (definedVIFidx(name) < 0) {
-				elem.display(tabs[i][0] + '-tab-disabled', 1);
-				elem.display(tabs[i][0] + '-tab-enabled', 0);
+				elem.display(tabs[i][0]+'-tab-disabled', 1);
+				elem.display(tabs[i][0]+'-tab-enabled', 0);
 			}
 			else {
-				elem.display(tabs[i][0] + '-tab-disabled', 0);
-				elem.display(tabs[i][0] + '-tab-enabled', 1);
+				elem.display(tabs[i][0]+'-tab-disabled', 0);
+				elem.display(tabs[i][0]+'-tab-enabled', 1);
 			}
 		}
 		else {
-			elem.display(tabs[i][0] + '-tab-enabled', 0);
-			elem.display(tabs[i][0] + '-tab-disabled', 0);
+			elem.display(tabs[i][0]+'-tab-enabled', 0);
+			elem.display(tabs[i][0]+'-tab-disabled', 0);
 		}
 	}
 
-	cookie.set(cprefix + '_tab', name);
+	cookie.set(cprefix+'_tab', name);
 }
 
 function verifyFields(focused, quiet) {
@@ -807,7 +803,7 @@ REMOVE-END */
 		wl_vis[vidx]._wl_key1 = wl_vis[vidx]._wl_key2 = wl_vis[vidx]._wl_key3 = wl_vis[vidx]._wl_key4 = wl_vis[vidx]._f_wl_wep_gen = wl_vis[vidx]._f_wl_wep_random = wl_vis[vidx]._wl_passphrase = wl_vis[vidx]._wl_wep_bit;
 
 		for (i = 1; i < 10; ++i) {
-			wl_vis[vidx]['_f_wl_wds_' + i] = wl_vis[vidx]._f_wl_wds_0;
+			wl_vis[vidx]['_f_wl_wds_'+i] = wl_vis[vidx]._f_wl_wds_0;
 		}
 
 	} /* for each wl_iface */
@@ -818,7 +814,7 @@ REMOVE-END */
 		for (a in wl_vis[vidx]) {
 			i = 3;
 			if (a.substr(0, 6) == '_f_wl_') i = 5;
-			b = E(a.substr(0, i) + u + a.substr(i, a.length));
+			b = E(a.substr(0, i)+u+a.substr(i, a.length));
 			c = wl_vis[vidx][a];
 			b.disabled = (c != 1);
 			PR(b).style.display = (c ? 'table-row' : 'none');
@@ -927,9 +923,9 @@ REMOVE-END */
 		if (wl_vis[vidx]._wl_key1) {
 			a = (E('_wl'+u+'_wep_bit').value == 128) ? 26 : 10;
 			for (i = 1; i <= 4; ++i) {
-				b = E('_wl'+u+'_key' + i);
+				b = E('_wl'+u+'_key'+i);
 				b.maxLength = a;
-				if ((b.value.length > 0) || (E('_f_wl'+u+'_wepidx_' + i).checked)) {
+				if ((b.value.length > 0) || (E('_f_wl'+u+'_wepidx_'+i).checked)) {
 					if (!v_wep(b, quiet || !ok)) ok = 0;
 				}
 				else {
@@ -942,7 +938,7 @@ REMOVE-END */
 		if (wl_vis[vidx]._f_wl_wds_0 == 1) {
 			b = 0;
 			for (i = 0; i < 10; ++i) {
-				a = E('_f_wl'+u+'_wds_' + i);
+				a = E('_f_wl'+u+'_wds_'+i);
 				if (!v_macz(a, quiet || !ok))
 					ok = 0;
 				else if (!isMAC0(a.value))
@@ -983,7 +979,7 @@ REMOVE-END */
 }
 
 function cancel() {
-	cookie.set(cprefix + '_tab', 'overview');
+	cookie.set(cprefix+'_tab', 'overview');
 	javascript:reloadPage();
 }
 
@@ -1007,10 +1003,10 @@ function save() {
 	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		var j = (i == 0) ? '' : i.toString();
 		fom['lan'+j+'_ifnames'].value = '';
-		var l = nvram['lan' + j + '_ifnames'].split(' ');
+		var l = nvram['lan'+j+'_ifnames'].split(' ');
 		for (var k = 0 ; k < l.length; ++k) {
 			if(l[k].indexOf('vlan') != -1) {
-				fom['lan'+j+'_ifnames'].value += l[k] + ' ';
+				fom['lan'+j+'_ifnames'].value += l[k]+' ';
 			}
 		}
 		fom['lan'+j+'_ifnames'].value = fom['lan'+j+'_ifnames'].value.trim();
@@ -1038,7 +1034,7 @@ REMOVE-END */
 			a = [ ['radio', '0'], ['bss_enabled', '0'], ['ifname', ('wl'+u)] ];
 			b = 'wl'+u+'_';
 			for (i = 0; i < a.length; ++i) {
-				c = '' + b + a[i][0];
+				c = ''+b+a[i][0];
 				if (typeof(nvram[c]) != 'undefined')
 					E('_'+c).value = a[i][1];
 			}
@@ -1047,7 +1043,7 @@ REMOVE-END */
 
 		if (vifs_defined[vif][11]*1 != 4) {
 			var x = (vifs_defined[vif][11] == '0') ? '' : vifs_defined[vif][11].toString();
-			fom['lan'+x+'_ifnames'].value += ' ' + vifs_defined[vif][1];
+			fom['lan'+x+'_ifnames'].value += ' '+vifs_defined[vif][1];
 			fom['lan'+x+'_ifnames'].value = fom['lan'+x+'_ifnames'].value.trim();
 		}
 
@@ -1082,7 +1078,7 @@ REMOVE-END */
 			E('_wl'+u+'_nband').value = selectedBand(wl_ifidxx(u));
 
 			a = [];
-			for (i = 0; i < 10; ++i) a.push(E('_f_wl'+u+'_wds_' + i).value);
+			for (i = 0; i < 10; ++i) a.push(E('_f_wl'+u+'_wds_'+i).value);
 			E('_wl'+u+'_wds').value = joinAddr(a);
 
 			if (wmode.indexOf('wds') != -1) {
@@ -1216,18 +1212,18 @@ function do_pre_submit_form(fom) {
 			var vif = definedVIFidx(u);
 			if (vif >= 0) {
 				for (var i = 0; i < elem.length ; ++i) {
-					if (elem[i].name.indexOf('wl' + u) == 0) {
-						s += 'nvram set ' + elem[i].name + '="' + elem[i].value + '"\n';
+					if (elem[i].name.indexOf('wl'+u) == 0) {
+						s += 'nvram set '+elem[i].name+'="'+elem[i].value+'"\n';
 					}
 				}
 			}
 /* REMOVE-BEGIN
 			// unset HWADDR for any/all non-primary VIFs we have configured
-			s += 'nvram unset wl' + u + '_hwaddr\n';
+			s += 'nvram unset wl'+u+'_hwaddr\n';
 			// AB TODO: figure out what to do with pre-existing/set MAC addresses
 			if (vif >= 0) {
 				if ((vifs_defined[vif][9] == '00:00:00:00:00:00') || (vifs_defined[vif][9] == '')) {
-					s += 'nvram unset wl' + u + '_hwaddr\n';
+					s += 'nvram unset wl'+u+'_hwaddr\n';
 				}
 			}
 REMOVE-END */
@@ -1245,8 +1241,8 @@ REMOVE-END */
 	for (var vidx = 0; vidx < vifs_deleted.length; ++vidx) {
 		var u = vifs_deleted[vidx];
 		for (var i = 0; i < elem.length ; ++i) {
-			if (elem[i].name.indexOf('wl' + u) == 0) {
-				s += 'nvram unset ' + elem[i].name + '\n';
+			if (elem[i].name.indexOf('wl'+u) == 0) {
+				s += 'nvram unset '+elem[i].name+'\n';
 			}
 		}
 		lan_ifnames = lan_ifnames.replace('wl'+u, '');
@@ -1259,20 +1255,20 @@ REMOVE-END */
 		if (typeof(wl1_vifs) != 'undefined') {
 			wl1_vifs = wl1_vifs.replace('wl'+u, '');
 		}
-		s += 'nvram unset wl' + u + '_wme\n';
-		s += 'nvram unset wl' + u + '_bss_maxassoc\n';
-		s += 'nvram unset wl' + u + '_macmode\n';
-		s += 'nvram unset wl' + u + '_maclist\n';
+		s += 'nvram unset wl'+u+'_wme\n';
+		s += 'nvram unset wl'+u+'_bss_maxassoc\n';
+		s += 'nvram unset wl'+u+'_macmode\n';
+		s += 'nvram unset wl'+u+'_maclist\n';
 	}
 	if (vifs_deleted.length > 0) {
-		s += 'nvram set lan_ifnames="' + lan_ifnames + '"\n';
-		s += 'nvram set lan1_ifnames="' + lan1_ifnames + '"\n';
-		s += 'nvram set lan2_ifnames="' + lan2_ifnames + '"\n';
-		s += 'nvram set lan3_ifnames="' + lan3_ifnames + '"\n';
+		s += 'nvram set lan_ifnames="'+lan_ifnames+'"\n';
+		s += 'nvram set lan1_ifnames="'+lan1_ifnames+'"\n';
+		s += 'nvram set lan2_ifnames="'+lan2_ifnames+'"\n';
+		s += 'nvram set lan3_ifnames="'+lan3_ifnames+'"\n';
 		if (typeof(wl0_vifs) != 'undefined')
-			s += 'nvram set wl0_vifs="' + wl0_vifs + '"\n';
+			s += 'nvram set wl0_vifs="'+wl0_vifs+'"\n';
 		if (typeof(wl1_vifs) != 'undefined')
-			s += 'nvram set wl1_vifs="' + wl1_vifs + '"\n';
+			s += 'nvram set wl1_vifs="'+wl1_vifs+'"\n';
 	}
 	post_pre_submit_form(s);
 }
@@ -1280,7 +1276,7 @@ REMOVE-END */
 function error_pre_submit_form() {
 	var footermsg = E('footer-msg');
 
-	footermsg.innerHTML = '<tt>' + escapeText(cmdresult) + '<\/tt>';
+	footermsg.innerHTML = '<tt>'+escapeText(cmdresult)+'<\/tt>';
 	footermsg.style.display = 'inline';
 
 	cmdresult = '';
@@ -1294,16 +1290,16 @@ function post_pre_submit_form(s) {
 		form.submit(E('t_fom'), 1);
 	}
 	cmd.onError = function(x) {
-		cmdresult = 'ERROR: ' + x;
+		cmdresult = 'ERROR: '+x;
 		error_pre_submit_form();
 	}
 
-	cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(s.replace(/\r/g, '')));
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(s.replace(/\r/g, '')));
 }
 
 function escapeText(s) {
 	function esc(c) {
-		return '&#' + c.charCodeAt(0) + ';';
+		return '&#'+c.charCodeAt(0)+';';
 	}
 
 	return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
@@ -1357,9 +1353,9 @@ function escapeText(s) {
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 					if (wl_sunit(uidx) < 0) {
 						var c = [];
-						c.push({ title: 'Interface', text: 'wl' + wl_fface(uidx) + ' <small>(' + wl_display_ifname(uidx) + ')<\/small>' });
-						c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl' + wl_fface(uidx) + '_vifs',
-							text: 'wl' + wl_fface(uidx) + ' ' + nvram['wl' + wl_fface(uidx) + '_vifs'] + ' <small>(max ' + wl_ifaces[uidx][7] + ')<\/small>' });
+						c.push({ title: 'Interface', text: wl_display_ifname(uidx) });
+						c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl'+wl_fface(uidx)+'_vifs',
+							text: 'wl'+wl_fface(uidx)+' '+nvram['wl'+wl_fface(uidx)+'_vifs']+' <small>(max '+wl_ifaces[uidx][7]+')<\/small>' });
 						createFieldTable('',c);
 					}
 				}
@@ -1410,7 +1406,7 @@ function escapeText(s) {
 				var uidx = wl_ifidxx(t);
 				var u = t;
 
-				W('<div id="'+t+'-tab-disabled">VIF ' + tabs[i][1] + ' is not defined.<\/div>');
+				W('<div id="'+t+'-tab-disabled">VIF '+tabs[i][1]+' is not defined.<\/div>');
 
 				W('<div id="'+t+'-tab-enabled">');
 
@@ -1452,8 +1448,8 @@ function escapeText(s) {
 						value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
 					{ title: 'AP Isolation', name: 'f_wl'+u+'_ap_isolate', type: 'checkbox',
 						value: (eval('nvram["wl'+u+'_ap_isolate"]') == '1') },
-					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">' + (eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00') + '<\/a>' +
-						' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="display:none"><small>(warning: WL driver reports BSSID <a href="advanced-mac.asp">' + ((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '') + '<\/a>)<\/small><\/b>' },
+					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">'+(eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00')+'<\/a>' +
+						' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="display:none"><small>(warning: WL driver reports BSSID <a href="advanced-mac.asp">'+((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '')+'<\/a>)<\/small><\/b>' },
 					{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
 						options: wl_modes_available,
 						value: ((eval('nvram["wl'+u+'_mode"]') == 'ap') && (eval('nvram["wl'+u+'_wds_enable"]') == '1')) ? 'apwds' : eval('nvram["wl'+u+'_mode"]'),
@@ -1531,16 +1527,16 @@ REMOVE-END */
 
 				for (var j = 1; j <= 4; ++j) {
 					f.push(
-						{ title: ('Key ' + j), indent: 2, name: ('wl'+u+'_key' + j), type: 'text', maxlen: 26, size: 34,
-							suffix: '<input type="radio" onchange="verifyFields(this,1)" onclick="verifyFields(this,1)" name="f_wl'+u+'_wepidx" id="_f_wl'+u+'_wepidx_' + j + '" value="' + j + '"' + ((eval('nvram["wl'+u+'_key"]') == j) ? ' checked>' : '>'),
-							value: nvram['wl'+u+'_key' + j] });
+						{ title: ('Key '+j), indent: 2, name: ('wl'+u+'_key'+j), type: 'text', maxlen: 26, size: 34,
+							suffix: '<input type="radio" onchange="verifyFields(this,1)" onclick="verifyFields(this,1)" name="f_wl'+u+'_wepidx" id="_f_wl'+u+'_wepidx_'+j+'" value="'+j+'"'+((eval('nvram["wl'+u+'_key"]') == j) ? ' checked>' : '>'),
+							value: nvram['wl'+u+'_key'+j] });
 				}
 
 				f.push(	null,
 					{ title: 'WDS', name: 'f_wl'+u+'_lazywds', type: 'select',
 						options: [['0','Link With...'],['1','Automatic']], value: nvram['wl'+u+'_lazywds'] } );
 /* REMOVE-BEGIN
-				alert('nvram["wl'+u+'_wds"]=' + eval('nvram["wl'+u+'_wds"]'));
+				alert('nvram["wl'+u+'_wds"]='+eval('nvram["wl'+u+'_wds"]'));
 REMOVE-END */
 				var wds = eval('nvram["wl'+u+'_wds"]');
 				if (typeof(wds) == 'undefined') {
@@ -1553,8 +1549,8 @@ REMOVE-END */
 REMOVE-END */
 				for (var k = 0; k < 10; k += 2)	{
 					f.push({ title: (k ? '' : 'MAC Address'), indent: 2, multi: [
-						{ name: 'f_wl'+u+'_wds_' + k, type: 'text', maxlen: 17, size: 20, value: wds[k] || '00:00:00:00:00:00' },
-						{ name: 'f_wl'+u+'_wds_' + (k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || '00:00:00:00:00:00' } ] } );
+						{ name: 'f_wl'+u+'_wds_'+k, type: 'text', maxlen: 17, size: 20, value: wds[k] || '00:00:00:00:00:00' },
+						{ name: 'f_wl'+u+'_wds_'+(k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || '00:00:00:00:00:00' } ] } );
 				}
 
 				createFieldTable('', f);

@@ -325,7 +325,7 @@ function verifyFields(focused, quiet) {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="basic-static.asp">
-<input type="hidden" name="_service" value="dhcpd-restart,arpbind-restart,cstats-restart,dnsmasq-restart">
+<input type="hidden" name="_service" value="arpbind-restart,cstats-restart,dnsmasq-restart">
 <input type="hidden" name="dhcpd_static">
 <input type="hidden" name="dhcpd_static_only">
 <input type="hidden" name="cstats_include">

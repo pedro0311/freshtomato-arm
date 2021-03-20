@@ -290,7 +290,7 @@ function init() {
 
 		createFieldTable('', [
 			{ title: 'Enable', name: 'f_ms_enable', type: 'checkbox', value: nvram.ms_enable == '1' },
-			{ title: 'Listen on', indent: 2, name: 'ms_ifname', type: 'select', options: [['br0','LAN (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']], value: eval ('nvram.ms_ifname'), suffix: ' <small>* default<\/small> ' },
+			{ title: 'Listen on', indent: 2, name: 'ms_ifname', type: 'select', options: [['br0','LAN0 (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']], value: eval ('nvram.ms_ifname'), suffix: ' <small>* default<\/small> ' },
 			{ title: 'Port', indent: 2, name: 'ms_port', type: 'text', maxlen: 5, size: 6, value: nvram.ms_port, suffix: '<small>(range: 0 - 65535; default (random) set 0)<\/small>' },
 			{ title: 'Database Location', multi: [
 				{ name: 'f_loc', type: 'select', options: [['','RAM (Temporary)'],

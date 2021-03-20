@@ -260,13 +260,13 @@ function loadData() {
 				t = 'WL <small>('+i+')<\/small>';
 			/* LAN label */
 			else if (nvram.lan_ifname == i)
-				t = 'LAN <small>('+i+')<\/small>';
+				t = 'LAN0 <small>('+i+')<\/small>';
 			else if (nvram.lan1_ifname == i)
-				t = 'LAN2 <small>('+i+')<\/small>';
+				t = 'LAN1 <small>('+i+')<\/small>';
 			else if (nvram.lan2_ifname == i)
-				t = 'LAN3 <small>('+i+')<\/small>';
+				t = 'LAN2 <small>('+i+')<\/small>';
 			else if (nvram.lan3_ifname == i)
-				t = 'LAN4 <small>('+i+')<\/small>';
+				t = 'LAN3 <small>('+i+')<\/small>';
 			/* WAN label (for PPP wan_iface) */
 			else if ((nvram.wan_proto == 'pppoe') || (nvram.wan_proto == 'ppp3g') || (nvram.wan_proto == 'pptp') || (nvram.wan_proto == 'l2tp')
 			         || (nvram.wan2_proto == 'pppoe') || (nvram.wan2_proto == 'ppp3g') || (nvram.wan2_proto == 'pptp') || (nvram.wan2_proto == 'l2tp')
@@ -276,14 +276,14 @@ function loadData() {
 /* MULTIWAN-END */
 			) {
 				if (nvram.wan_iface == i)
-					t = 'WAN <small>('+i+')<\/small>';
+					t = 'WAN0 <small>('+i+')<\/small>';
 				else if (nvram.wan2_iface == i)
-					t = 'WAN2 <small>('+i+')<\/small>';
+					t = 'WAN1 <small>('+i+')<\/small>';
 /* MULTIWAN-BEGIN */
 				else if (nvram.wan3_iface == i)
-					t = 'WAN3 <small>('+i+')<\/small>';
+					t = 'WAN2 <small>('+i+')<\/small>';
 				else if (nvram.wan4_iface == i)
-					t = 'WAN4 <small>('+i+')<\/small>';
+					t = 'WAN3 <small>('+i+')<\/small>';
 /* MULTIWAN-END */
 			}
 			/* WAN label (for wan_ifname) */
@@ -293,14 +293,14 @@ function loadData() {
 /* MULTIWAN-END */
 			) {
 				if (nvram.wan_ifname == i)
-					t = 'WAN <small>('+i+')<\/small>';
+					t = 'WAN0 <small>('+i+')<\/small>';
 				else if (nvram.wan2_ifname == i)
-					t = 'WAN2 <small>('+i+')<\/small>';
+					t = 'WAN1 <small>('+i+')<\/small>';
 /* MULTIWAN-BEGIN */
 				else if (nvram.wan3_ifname == i)
-					t = 'WAN3 <small>('+i+')<\/small>';
+					t = 'WAN2 <small>('+i+')<\/small>';
 				else if (nvram.wan4_ifname == i)
-					t = 'WAN4 <small>('+i+')<\/small>';
+					t = 'WAN3 <small>('+i+')<\/small>';
 /* MULTIWAN-END */
 			}
 			tabs.push(['speed-tab-'+i, t]);
@@ -401,6 +401,6 @@ function populateCache() {
 	for (var i = 0 ; i <= MAX_BRIDGE_ID; i++) {
 		var j = (i == 0) ? '' : i.toString();
 		if ((nvram['lan'+j+'_ipaddr'] != null) && (nvram['lan'+j+'_netmask'] != null) && (nvram['lan'+j+'_ipaddr'] != '') && (nvram['lan'+j+'_netmask'] != ''))
-			hostnamecache[getNetworkAddress(nvram['lan'+j+'_ipaddr'], nvram['lan'+j+'_netmask'])] = 'LAN'+j;
+			hostnamecache[getNetworkAddress(nvram['lan'+j+'_ipaddr'], nvram['lan'+j+'_netmask'])] = 'LAN'+i;
 	}
 }

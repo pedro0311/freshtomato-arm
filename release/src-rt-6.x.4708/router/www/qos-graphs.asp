@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("qos_enable,qos_classnames,web_svg"); %>
+//	<% nvram("qos_enable,qos_mode,qos_classnames,web_svg"); %>
 
 //	<% qrate(); %>
 
@@ -106,13 +106,19 @@ function showData() {
 	elem.setInnerHTML('bocntx-total', (ort / 8192).toFixed(2));
 }
 
-function init() {
-	if (nvram.qos_enable != '1') {
+function earlyInit() {
+	if ((nvram.qos_enable != '1') || (nvram.qos_enable == '1' && nvram.qos_mode == '2')) { /* off or cake */
 		E('qosstats').style.display = 'none';
 		E('qosstatsoff').style.display = 'block';
-		E('note-disabled').style.display = 'block';
+
+		if (nvram.qos_enable != '1')
+			E('note-disabled').style.display = 'block';
+		else
+			E('note-cake').style.display = 'block';
+
 		E('refresh-time').setAttribute('disabled', 'disabled');
 		E('refresh-button').setAttribute('disabled', 'disabled');
+
 		return;
 	}
 
@@ -127,7 +133,7 @@ function init() {
 </script>
 </head>
 
-<body onload="init()">
+<body>
 <form id="t_fom" action="javascript:{}">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -235,6 +241,7 @@ function init() {
 <!-- / / / -->
 
 <div class="note-disabled" id="note-disabled" style="display:none"><b>QoS disabled.</b><br><br><a href="qos-settings.asp">Enable &raquo;</a></div>
+<div class="note-disabled" id="note-cake" style="display:none"><b>Statistics not available in Cake mode.</b><br><br><a href="qos-settings.asp">Change mode &raquo;</a></div>
 
 <!-- / / / -->
 
@@ -245,5 +252,6 @@ function init() {
 </td></tr>
 </table>
 </form>
+<script>earlyInit();</script>
 </body>
 </html>

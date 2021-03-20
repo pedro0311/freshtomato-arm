@@ -9,6 +9,19 @@
 
 // -----------------------------------------------------------------------------
 
+/* global variables */
+var MAX_BRIDGE_ID = 3;
+var MAX_PORT_ID = 4;
+var MAX_VLAN_ID = 15;
+/* DUALWAN-BEGIN */
+var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'],['WAN0', 'LAN0', 'LAN1', 'LAN2', 'LAN3', 'WAN1']];
+/* DUALWAN-END */
+/* MULTIWAN-BEGIN */
+var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'],['WAN0', 'LAN0', 'LAN1', 'LAN2', 'LAN3', 'WAN1', 'WAN2', 'WAN3']];
+/* MULTIWAN-END */
+
+// -----------------------------------------------------------------------------
+
 Array.prototype.find = function(v) {
 	for (var i = 0; i < this.length; ++i)
 		if (this[i] == v) return i;
@@ -2435,6 +2448,55 @@ function checkSVG() {
 	}
 	else if (--svgReady > -5)
 		setTimeout(checkSVG, 500);
+}
+
+function _ethstates(port) {
+	var fn, state1, state2;
+
+	if (port == null) {
+		fn = 'eth_off';
+		state2 = 'NOSUPPORT';
+	}
+	else if (port == 'DOWN') {
+		fn = 'eth_off';
+		state2 = port.replace('DOWN','Unplugged');
+	}
+	else if (port == '1000FD') {
+		fn = 'eth_1000_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '1000HD') {
+		fn = 'eth_1000_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '100FD') {
+		fn = 'eth_100_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '100HD') {
+		fn = 'eth_100_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '10FD') {
+		fn = 'eth_10_fd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else if (port == '10HD') {
+		fn = 'eth_10_hd';
+		state1 = port.replace('HD','Mbps Half');
+		state2 = state1.replace('FD','Mbps Full');
+	}
+	else {
+		fn = 'eth_1000_fd';
+		state2 = 'AUTO';
+	}
+
+	return [fn, state2];
 }
 
 function myName() {

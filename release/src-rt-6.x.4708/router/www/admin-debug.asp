@@ -43,7 +43,7 @@ function save() {
 	fom.t_hidelr.value = fom.f_hidelr.checked ? 1 : 0;
 	fom.debug_logsegfault.value = fom.f_debug_logsegfault.checked ? 1 : 0;
 	fom.debug_ddns.value = fom.f_debug_ddns.checked ? 1 : 0;
-	fom.http_nocache.value = fom.http_nocache.checked ? 1 : 0;
+	fom.http_nocache.value = fom.f_http_nocache.checked ? 1 : 0;
 
 	var a = [];
 	if (fom.f_nr_crond.checked) a.push('crond');

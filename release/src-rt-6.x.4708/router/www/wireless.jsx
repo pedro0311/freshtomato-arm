@@ -43,5 +43,5 @@ function wl_ifidxx(ifname) {
 }
 
 function wl_display_ifname(uidx) {
-	return ((wl_bands[uidx].length == 1) ? ((wl_bands[uidx][0] == '1') ? '5 GHz / ' : '2.4 GHz / ') : '') + wl_ifaces[uidx][0];
+	return wl_ifaces[uidx][0]+(wl_sunit(uidx) < 0 ? ' (wl'+wl_fface(uidx)+')' : '')+((wl_bands[uidx].length == 1) ? ((wl_bands[uidx][0] == '1') ? ' / 5 GHz' : ' / 2.4 GHz') : '');
 }

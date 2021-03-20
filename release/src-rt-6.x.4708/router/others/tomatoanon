@@ -2,7 +2,7 @@
 
 ###############################
 # Copyright (C) 2012/2013 shibby
-# Changes for new versioning: 2018 by pedro
+# Changes for new versioning: 2018 - 2021 by pedro
 #
 # This script send anonymous or incompleted information about model of router and installed tomato version.
 # Those information will be used ONLY for stats.
@@ -32,28 +32,28 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 		MOD=FreshTomato
 ############################
 
-		#Detect Version and Buildtype
+		# Detect Version and Buildtype
 		IS_USB=$(nvram get os_version | grep USB | wc -l)
-		[ "$IS_USB" -eq 0 ] && { #if K26
+		[ "$IS_USB" -eq 0 ] && { # if K26
 			VER=$(nvram get os_version | awk '{ print $1" "$(NF-1) }')
-		} || { #if K26USB
+		} || { # if K26USB
 			VER=$(nvram get os_version | awk '{ print $1" "$(NF-2)" "$(NF-1) }')
 		}
 		BUILDTYPE=$(nvram get os_version | awk '{ print $NF }')
 
 		[ "$1" == "checkver" -a "$ANON_NOTIFY" -eq 1 ] && {
-			# Tomato ARM Update Notification Script
+			# Tomato Update Notification Script
 			VER_MAJ=$(echo $VER | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
 			VER_MNR=$(echo $VER | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g')
 
 			RESCHK=$(wget -O- "http://freshtomato.org/version.txt")
 
-			CHKVER_MAJ=$(cat $RESCHK | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
-			ISMNR=$(cat $RESCHK | grep "\." | wc -l)
+			CHKVER_MAJ=$(echo $RESCHK | awk '{print $1}' | cut -d "." -f1 | sed 's/[^0-9]*//g')
+			ISMNR=$(echo $RESCHK | grep "\." | wc -l)
 			[ "$ISMNR" -eq 0 ] && {
 				CHKVER_MNR=""
 			} || {
-				CHKVER_MNR=$(cat $RESCHK | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g')
+				CHKVER_MNR=$(echo $RESCHK | awk '{print $1}' | cut -d "." -f2 | sed 's/[^0-9]*//g')
 			}
 
 			RESULT="/tmp/anon.version"
@@ -74,24 +74,23 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 				echo "have_update=no" > $RESULT
 			fi
 
-			#Thanks. Now add cron job
+			# Thanks. Now add cron job
 
 			ISCRU=$(cru l | grep checkver | wc -l)
 			[ "$ISCRU" -eq 0 ] && {
 
-				#random minutes 0..59
+				# random minutes 0..59
 				MINUTES=$(awk 'BEGIN {srand(); printf "%d", 60*rand()}')
 
-				#random hour 0..23
+				# random hour 0..23
 				HOUR=$(awk 'BEGIN {srand(); printf "%d", 23*rand()}')
 
-				#checkver daily
+				# checkver daily
 				cru a checkver "$MINUTES $HOUR * * * /usr/sbin/tomatoanon checkver"
 			}
 
-		} || { #just update anon database
-			#Collect datas
-			MOD=FreshTomato
+		} || { # just update anon database
+			# Collect datas
 			UPTIME=$(uptime | cut -d "," -f1 | cut -d " " -f4,5)
 			WANMAC=$(nvram get wan_hwaddr)
 			LANMAC=$(nvram get lan_hwaddr)
@@ -105,56 +104,48 @@ ANON_NOTIFY=$(nvram get tomatoanon_notify)
 				nvram commit
 			}
 
-			#Change all spaces to %20.
+			# Change all spaces to %20.
 			ANONSEND=$(echo "http://anon.groov.pl/index.php?wanmac_md5=$WANMAC_MD5&model=$MODEL&version=$VER&buildtype=$BUILDTYPE&driver=$DRIVER&uptime=$UPTIME&mod=$MOD&anon=1" | sed "s/ /%20/g")
 
-			#We have all we need well we can send datas to Anon database
+			# We have all we need well we can send data to Anon database
 			RESULT="/tmp/anon.result"
 			wget -O $RESULT $ANONSEND
 
-			#Thanks. Now add cron job
+			# Thanks. Now add cron job
 
 			ISCRU=$(cru l | grep anonupdate | wc -l)
 			[ "$ISCRU" -eq 0 ] && {
 
-				#random minutes 0..59
+				# random minutes 0..59
 				MINUTES=$(awk 'BEGIN {srand(); printf "%d", 60*rand()}')
 
-				#random hour 0..23
+				# random hour 0..23
 				HOUR=$(awk 'BEGIN {srand(); printf "%d", 23*rand()}')
 
-				#random day of week 0..6
+				# random day of week 0..6
 				DAY=$(awk 'BEGIN {srand(); printf "%d", 6*rand()}')
 
-				#update anon one time per week
+				# update anon one time per week
 				cru a anonupdate "$MINUTES $HOUR * * $DAY /usr/sbin/tomatoanon"
 			}
 		}
 
-	} || { #if anon is not enabled or was disabled right now
+	} || { # if anon is not enabled or was disabled right now
 
 		ISCRU=$(cru l | grep anonupdate | wc -l)
-		[ "$ISCRU" -eq 0 ] && {
-			cru d anonupdate
-		}
+		[ "$ISCRU" -eq 0 ] && cru d anonupdate
 
 		ISCRU=$(cru l | grep checkver | wc -l)
-		[ "$ISCRU" -eq 0 ] && {
-			cru d checkver
-		}
+		[ "$ISCRU" -eq 0 ] && cru d checkver
 
-	} #end ANON_ENABLE
+	} # end ANON_ENABLE
 
-} || { #if answer is not enabled or was disabled right now
+} || { # if answer is not enabled or was disabled right now
 
 	ISCRU=$(cru l | grep anonupdate | wc -l)
-	[ "$ISCRU" -eq 0 ] && {
-		cru d anonupdate
-	}
+	[ "$ISCRU" -eq 0 ] && cru d anonupdate
 
 	ISCRU=$(cru l | grep checkver | wc -l)
-	[ "$ISCRU" -eq 0 ] && {
-		cru d checkver
-	}
+	[ "$ISCRU" -eq 0 ] && cru d checkver
 
-} #end ANON_ANSWER
+} # end ANON_ANSWER

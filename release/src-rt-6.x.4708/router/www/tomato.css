@@ -274,7 +274,7 @@ table.fields {
 }
 
 .fields td.title {
-	width: 150px;
+	width: 160px;
 }
 
 .fields td.title.indent1 {
@@ -411,6 +411,15 @@ table.fields {
 #tg-row-panel img:hover {
 	opacity: 1;
 	border: 1px solid #eee;
+}
+
+div#vlan-grid img[id^="eth_"] {
+	width: 55%;
+	max-height: 55vh;
+}
+
+div[id^="vport_"] {
+	margin: 0 auto;
 }
 
 #expire-button {
@@ -882,23 +891,27 @@ div[id$="_users"] .co2 {
 }
 
 #dev-grid .co5 {
-	width: 8%;
-	text-align: right;
-}
-
-#dev-grid .co6 {
-	width: 8%;
+	width: 7%;
 	text-align: center;
 }
 
-#dev-grid .co7 {
-	width: 9%;
+#dev-grid .co6 {
+	width: 7%;
 	text-align: right;
+}
+
+#dev-grid .co7 {
+	width: 8%;
+	text-align: center;
 }
 
 #dev-grid .co8 {
 	width: 13%;
 	text-align: right;
+}
+
+#dev-grid img[id^="bar_"] {
+	padding: 0 6px 0 1px;
 }
 
 #res-over-grid .co1,

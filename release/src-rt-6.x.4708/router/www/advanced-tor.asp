@@ -149,7 +149,7 @@ function save() {
 			null,
 			{ title: 'Only solve .onion/.exit domains', name: 'f_tor_solve_only', type: 'checkbox', value: nvram.tor_solve_only == '1' },
 			{ title: 'Redirect all users from', multi: [
-				{ name: 'tor_iface', type: 'select', options: [['br0','LAN (br0)'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)'],['custom','Selected IP`s']], value: nvram.tor_iface },
+				{ name: 'tor_iface', type: 'select', options: [['br0','LAN0 (br0)'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)'],['custom','Selected IP`s']], value: nvram.tor_iface },
 				{ name: 'tor_users', type: 'text', maxlen: 512, size: 64, value: nvram.tor_users } ] },
 			{ title: 'Redirect TCP Ports', multi: [
 				{ name: 'tor_ports', type: 'select', options: [['80','HTTP only (TCP 80)'],['80,443','HTTP/HTTPS (TCP 80,443)'],['custom','Selected Ports']], value: nvram.tor_ports },

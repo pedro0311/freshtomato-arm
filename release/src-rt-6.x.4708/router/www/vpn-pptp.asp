@@ -160,9 +160,9 @@ function init() {
 		createFieldTable('', [
 			{ title: 'Start with WAN', name: 'f_pptp_client_eas', type: 'checkbox', value: nvram.pptp_client_eas != 0 },
 			{ title: 'Bind to', name: 'pptp_client_usewan', type: 'select',
-				options: [['wan','WAN'],['wan2','WAN2'],
+				options: [['wan','WAN0'],['wan2','WAN1'],
 /* MULTIWAN-BEGIN */
-					['wan3','WAN3'],['wan4','WAN4'],
+					['wan3','WAN2'],['wan4','WAN3'],
 /* MULTIWAN-END */
 					['none','none']], value: nvram.pptp_client_usewan },
 			{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },

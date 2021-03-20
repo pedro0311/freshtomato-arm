@@ -1,7 +1,3 @@
-var MAX_BRIDGE_ID = 3;
-var MAX_PORT_ID = 4;
-var MAX_VLAN_ID = 15;
-
 function h_countbitsfromleft(num) {
 	if (num == 255)
 		return(8);
