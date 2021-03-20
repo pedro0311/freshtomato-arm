@@ -891,23 +891,27 @@ div[id$="_users"] .co2 {
 }
 
 #dev-grid .co5 {
-	width: 8%;
-	text-align: right;
-}
-
-#dev-grid .co6 {
-	width: 8%;
+	width: 7%;
 	text-align: center;
 }
 
-#dev-grid .co7 {
-	width: 9%;
+#dev-grid .co6 {
+	width: 7%;
 	text-align: right;
+}
+
+#dev-grid .co7 {
+	width: 8%;
+	text-align: center;
 }
 
 #dev-grid .co8 {
 	width: 13%;
 	text-align: right;
+}
+
+#dev-grid img[id^="bar_"] {
+	padding: 0 6px 0 1px;
 }
 
 #res-over-grid .co1,
