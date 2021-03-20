@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("lan_stp,routes_static,dhcp_routes,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,wan_proto,wan2_proto,wan3_proto,wan4_proto,mwan_num"); %>
+//	<% nvram("routes_static,dhcp_routes,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface"); %>
 
 //	<% activeroutes(); %>
 
@@ -31,19 +31,31 @@ ara.setup = function() {
 	this.headerSet(['Destination', 'Gateway / Next Hop', 'Subnet Mask', 'Metric', 'Interface']);
 	for (i = 0; i < activeroutes.length; ++i) {
 		a = activeroutes[i];
-		if (a[0] == nvram.lan_ifname) a[0] += ' (LAN)';
-		else if (a[0] == nvram.lan1_ifname) a[0] += ' (LAN1)';
-		else if (a[0] == nvram.lan2_ifname) a[0] += ' (LAN2)';
-		else if (a[0] == nvram.lan3_ifname) a[0] += ' (LAN3)';
-		else if (a[0] == nvram.wan_iface) a[0] += ' (WAN)';
-		else if (a[0] == nvram.wan_ifname) a[0] += ' (MAN)';
-		else if (a[0] == nvram.wan2_iface) a[0] += ' (WAN2)';
-		else if (a[0] == nvram.wan2_ifname) a[0] += ' (MAN2)';
+		if (a[0] == nvram.lan_ifname)
+			a[0] += ' (LAN0)';
+		else if (a[0] == nvram.lan1_ifname)
+			a[0] += ' (LAN1)';
+		else if (a[0] == nvram.lan2_ifname)
+			a[0] += ' (LAN2)';
+		else if (a[0] == nvram.lan3_ifname)
+			a[0] += ' (LAN3)';
+		else if (a[0] == nvram.wan_iface)
+			a[0] += ' (WAN0)';
+		else if (a[0] == nvram.wan_ifname)
+			a[0] += ' (MAN0)';
+		else if (a[0] == nvram.wan2_iface)
+			a[0] += ' (WAN1)';
+		else if (a[0] == nvram.wan2_ifname)
+			a[0] += ' (MAN1)';
 /* MULTIWAN-BEGIN */
-		else if (a[0] == nvram.wan3_iface) a[0] += ' (WAN3)';
-		else if (a[0] == nvram.wan3_ifname) a[0] += ' (MAN3)';
-		else if (a[0] == nvram.wan4_iface) a[0] += ' (WAN4)';
-		else if (a[0] == nvram.wan4_ifname) a[0] += ' (MAN4)';
+		else if (a[0] == nvram.wan3_iface)
+			a[0] += ' (WAN2)';
+		else if (a[0] == nvram.wan3_ifname)
+			a[0] += ' (MAN2)';
+		else if (a[0] == nvram.wan4_iface)
+			a[0] += ' (WAN3)';
+		else if (a[0] == nvram.wan4_ifname)
+			a[0] += ' (MAN3)';
 /* MULTIWAN-END */
 		this.insertData(-1, [a[1],a[2],a[3],a[4],a[0]]);
 	}
@@ -53,12 +65,12 @@ var ars = new TomatoGrid();
 
 ars.setup = function() {
 	this.init('ars-grid', '', 20, [
-		{ type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 },
-		{ type: 'text', maxlen: 3 }, { type: 'select', options: [['LAN','LAN'],['LAN1','LAN1'],['LAN2','LAN2'],['LAN3','LAN3'],['WAN','WAN'],['MAN','MAN'],['WAN2','WAN2'],['MAN2','MAN2']
+		{ type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 },{ type: 'text', maxlen: 3 },
+		{ type: 'select', options: [['LAN','LAN0'],['LAN1','LAN1'],['LAN2','LAN2'],['LAN3','LAN3'],['WAN','WAN0'],['MAN','MAN0'],['WAN2','WAN1'],['MAN2','MAN1']
 /* MULTIWAN-BEGIN */
-									,['WAN3','WAN3'],['MAN3','MAN3'],['WAN4','WAN4'],['MAN4','MAN4']
+					   ,['WAN3','WAN2'],['MAN3','MAN2'],['WAN4','WAN3'],['MAN4','MAN3']
 /* MULTIWAN-END */
-									] }, { type: 'text', maxlen: 32 }]);
+		] }, { type: 'text', maxlen: 32 }]);
 
 	this.headerSet(['Destination', 'Gateway', 'Subnet Mask', 'Metric', 'Interface', 'Description']);
 	var routes = nvram.routes_static.split('>');
@@ -78,24 +90,24 @@ ars.resetNewEditor = function() {
 	e = fields.getAll(this.newEditor);
 
 	if (nvram.lan_ifname.length < 1)
-		e[4].options[0].disabled = true;
+		e[4].options[0].disabled = 1;
 	else
-		e[4].options[0].disabled = false;
+		e[4].options[0].disabled = 0;
 
 	if (nvram.lan1_ifname.length < 1)
-		e[4].options[1].disabled = true;
+		e[4].options[1].disabled = 1;
 	else
-		e[4].options[1].disabled = false;
+		e[4].options[1].disabled = 0;
 
 	if (nvram.lan2_ifname.length < 1)
-		e[4].options[2].disabled = true;
+		e[4].options[2].disabled = 1;
 	else
-		e[4].options[2].disabled = false;
+		e[4].options[2].disabled = 0;
 
 	if (nvram.lan3_ifname.length < 1)
-		e[4].options[3].disabled = true;
+		e[4].options[3].disabled = 1;
 	else
-		e[4].options[3].disabled = false;
+		e[4].options[3].disabled = 0;
 
 	ferror.clearAll(e);
 	for (i = 0; i < e.length; ++i) {
@@ -119,8 +131,13 @@ ars.verifyFields = function(row, quiet) {
 	return v_ip(f[0], quiet) && v_ip(f[1], quiet) && v_netmask(f[2], quiet) && v_range(f[3], quiet, 0, 10) && v_nodelim(f[5], quiet, 'Description');
 }
 
+function submit_complete() {
+	reloadPage();
+}
+
 function save() {
-	if (ars.isEditing()) return;
+	if (ars.isEditing())
+		return;
 
 	var fom = E('t_fom');
 	var data = ars.getAllData();
@@ -133,10 +150,6 @@ function save() {
 	fom._service.value = (fom.dhcp_routes.value != nvram.dhcp_routes) ? 'wan-restart' : 'routing-restart';
 
 	form.submit(fom, 1);
-}
-
-function submit_complete() {
-	reloadPage();
 }
 
 function earlyInit() {

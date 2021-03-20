@@ -190,7 +190,7 @@ function ethstates() {
 		return 0;
 
 	var state = [];
-	var i, u, uidx, code = '', v = 0;
+	var u, uidx, code = '', v = 0;
 	var code ='<div class="section-title">Ethernet Ports State<\/div><div class="section"><table class="fields"><tr>';
 
 	/* WANs */
@@ -202,21 +202,21 @@ function ethstates() {
 		    && (nvram['wan'+u+'_proto'] != 'lte') && (nvram['wan'+u+'_proto'] != 'ppp3g')
 /* USB-END */
 		) {
-			code += '<td class="title indent2"><b>WAN'+u+'<\/b><\/td>';
+			code += '<td class="title indent2"><b>WAN'+(uidx - 1)+'<\/b><\/td>';
 			++v;
 		}
 	}
 	/* LANs */
-	for (uidx = v; uidx <= 4; ++uidx)
-		code += '<td class="title indent2"><b>LAN'+uidx+'<\/b><\/td>';
+	for (uidx = v; uidx <= MAX_PORT_ID; ++uidx)
+		code += '<td class="title indent2"><b>LAN'+(v > 0 ? (uidx - 1) : uidx)+'<\/b><\/td>';
 
 	code += '<td class="content"><\/td><\/tr><tr>';
-	for (i = 0; i <= 4; ++i) {
-		port = eval('etherstates.port'+i);
+	for (uidx = 0; uidx <= MAX_PORT_ID; ++uidx) {
+		port = eval('etherstates.port'+uidx);
 
 		state = _ethstates(port);
 
-		code += '<td class="title indent2"><img id="'+state[0]+'_'+i+'" src="'+state[0]+'.gif" alt=""><br>'+(stats.lan_desc == '1' ? state[1] : '')+'<\/td>';
+		code += '<td class="title indent2"><img id="'+state[0]+'_'+uidx+'" src="'+state[0]+'.gif" alt=""><br>'+(stats.lan_desc == '1' ? state[1] : '')+'<\/td>';
 	}
 
 	code += '<td class="content"><\/td><\/tr><tr><td class="title indent1" colspan="6" style="text-align:right">&raquo; <a href="basic-network.asp">Configure<\/a><\/td><\/tr><\/table><\/div>';
@@ -474,7 +474,7 @@ function init() {
 /* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		var u = (uidx > 1) ? uidx : '';
-		W('<div class="section-title" id="wan'+u+'-title">WAN'+u+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(hide)<\/span><\/a><\/i><\/small><\/div>');
+		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(hide)<\/span><\/a><\/i><\/small><\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
 			{ title: 'MAC Address', text: nvram['wan'+u+'_hwaddr'] },
@@ -530,14 +530,14 @@ function init() {
 					nvram['dhcpd'+j+'_endip'] = x + ((nvram['dhcp'+j+'_start'] * 1) + (nvram['dhcp'+j+'_num'] * 1) - 1);
 				}
 				s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
-				s += '<b>br'+i+'<\/b> (LAN'+j+') - '+nvram['dhcpd'+j+'_startip']+' - '+nvram['dhcpd'+j+'_endip'];
+				s += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['dhcpd'+j+'_startip']+' - '+nvram['dhcpd'+j+'_endip'];
 			}
 			else {
 				s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
-				s += '<b>br'+i+'<\/b> (LAN'+j+') - Disabled';
+				s += '<b>br'+i+'<\/b> (LAN'+i+') - Disabled';
 			}
 			t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br>' : '';
-			t += '<b>br'+i+'<\/b> (LAN'+j+') - '+nvram['lan'+j+'_ipaddr']+'/'+numberOfBitsOnNetMask(nvram['lan'+j+'_netmask']);
+			t += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['lan'+j+'_ipaddr']+'/'+numberOfBitsOnNetMask(nvram['lan'+j+'_netmask']);
 		}
 	}
 
@@ -571,7 +571,7 @@ REMOVE-END */
 		u = wl_fface(uidx);
 		W('<div class="section-title" id="wl'+u+'-title">Wireless');
 		if (wl_ifaces.length > 0)
-			W(' ('+wl_display_ifname(uidx)+')');
+			W(' '+wl_display_ifname(uidx));
 
 		W(' <small><i><a href="javascript:toggleVisibility(cprefix,\'wl_'+u+'\');"><span id="sesdiv_wl_'+u+'_showhide">(hide)<\/span><\/a><\/i><\/small>');
 		W('<\/div>');

@@ -1665,7 +1665,7 @@ REMOVE-END -->
 /* USB-BEGIN */
 		W('<input type="hidden" name="wan'+u+'_status_script">');
 /* USB-END */
-		W('<div class="section-title" id="wan'+u+'-title">WAN'+u+' Settings<\/div>');
+		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' Settings<\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
 			{ title: 'Type', name: 'wan'+u+'_proto', type: 'select', options: [['dhcp','DHCP'],['pppoe','PPPoE'],['static','Static'],['pptp','PPTP'],['l2tp','L2TP'],
@@ -1803,7 +1803,7 @@ REMOVE-END -->
 			W('<input type="hidden" id="_wl'+u+'_nbw" name="wl'+u+'_nbw">');
 
 			W('<div class="section-title" id="wl'+u+'">Wireless');
-			W(' ('+wl_display_ifname(uidx)+')');
+			W(' '+wl_display_ifname(uidx));
 			W('<\/div>');
 			W('<div class="section">');
 

@@ -209,11 +209,11 @@ if (port_vlan_supported) {
 			{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 			{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 			{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: [[1,'none'],[2,'WAN bridge'],[3,'LAN (br0)'],[4,'LAN1 (br1)'],[5,'LAN2 (br2)'],[6,'LAN3 (br3)'],[7,'WAN2 bridge'],
+			{ type: 'select', options: [[1,'none'],[2,'WAN0 bridge'],[3,'LAN0 (br0)'],[4,'LAN1 (br1)'],[5,'LAN2 (br2)'],[6,'LAN3 (br3)'],[7,'WAN1 bridge'],
 /* MULTIWAN-BEGIN */
-				[8,'WAN3 bridge'],[9,'WAN4 bridge']
+				[8,'WAN2 bridge'],[9,'WAN3 bridge']
 /* MULTIWAN-END */
-				], prefix: '<div class="centered-bottom">', suffix: '<\/div>' }]);
+				], prefix: '<div class="centered">', suffix: '<\/div>' }]);
 
 		this.headerSet(['<br><br>VLAN', '<br><br>VID', '<div id="vport_0"><img src="eth_off.gif" id="eth_off_1" alt=""><\/div>1', '<br>Tag<br>1',
 		                '<div id="vport_1"><img src="eth_off.gif" id="eth_off_2" alt=""><\/div>2', '<br>Tag<br>2',
@@ -453,14 +453,14 @@ REMOVE-END */
 			ferror.clear(f[COL_VID]);
 
 		if ((this.countWan() > 0) && (f[COL_BRI].selectedIndex == 1)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN at any time', quiet);
+			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN0 at any time', quiet);
 			valid = 0;
 		}
 		else
 			ferror.clear(f[COL_BRI]);
 
 		if ((this.countWan2() > 0) && (f[COL_BRI].selectedIndex == 6)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN2 at any time', quiet);
+			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN1 at any time', quiet);
 			valid = 0;
 		}
 		else
@@ -468,14 +468,14 @@ REMOVE-END */
 
 /* MULTIWAN-BEGIN */
 		if ((this.countWan3() > 0) && (f[COL_BRI].selectedIndex == 7)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN3 at any time', quiet);
+			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN2 at any time', quiet);
 			valid = 0;
 		}
 		else
 			ferror.clear(f[COL_BRI]);
 
 		if ((this.countWan4() > 0) && (f[COL_BRI].selectedIndex == 8)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN4 at any time', quiet);
+			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN3 at any time', quiet);
 			valid = 0;
 		}
 		else
@@ -484,7 +484,7 @@ REMOVE-END */
 
 		for (var i = 0; i < 4; i++) {
 			if ((this.countLan(i) > 0) && (f[COL_BRI].selectedIndex == (i + 2))) {
-				ferror.set(f[COL_BRI], 'One and only one VID can be used for LAN'+((i == 0) ? '' : i )+' (br'+i+') at any time', quiet);
+				ferror.set(f[COL_BRI], 'One and only one VID can be used for LAN'+i+' (br'+i+') at any time', quiet);
 				valid = 0;
 			}
 			else
@@ -508,9 +508,9 @@ REMOVE-END */
 			(data[COL_P4].toString() != '0') ? '⭐' : '',
 			(data[COL_P4T].toString() != '0') ? '🔰' : '',
 			(data[COL_VID_DEF].toString() != '0') ? '🚩' : '',
-			['','WAN bridge','LAN (br0)','LAN1 (br1)','LAN2 (br2)','LAN3 (br3)','WAN2 bridge'
+			['','WAN0 bridge','LAN0 (br0)','LAN1 (br1)','LAN2 (br2)','LAN3 (br3)','WAN1 bridge'
 /* MULTIWAN-BEGIN */
-			,'WAN3 bridge','WAN4 bridge'
+			,'WAN2 bridge','WAN3 bridge'
 /* MULTIWAN-END */
 			][data[COL_BRI] - 1]];
 	}
@@ -817,7 +817,7 @@ REMOVE-END */
 	}
 
 	if (vlg.countLan(0) != 1) {
-		e.innerHTML = 'Cannot proceed: one and only one VID must be assigned to the primary LAN (br0).';
+		e.innerHTML = 'Cannot proceed: one and only one VID must be assigned to the primary LAN0 (br0).';
 		e.style.display = 'inline-block';
 		setTimeout(
 			function() {
@@ -984,15 +984,12 @@ function init() {
 			var f = [];
 			for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 				var u = wl_fface(uidx);
-
-				var wl = wl_display_ifname(uidx);
-				var freq = wl.substr(0, wl.indexOf('/') - 1);
 				var ssid = nvram['wl'+u+'_ssid'];
 				if (nvram['wl'+u+'_radio'] != '1' || nvram['wl'+u+'_net_mode'] == 'disabled')
 					ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
 
-				f.push( { title: 'Bridge '+wl_ifaces[uidx][0]+(wl_sunit(uidx) < 0 ? ' (wl'+u+')' : '')+' / '+freq, name: 'f_bridge_wlan'+u+'_to', type: 'select',
-				          options: [[0,'LAN (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
+				f.push( { title: 'Bridge '+wl_display_ifname(uidx), name: 'f_bridge_wlan'+u+'_to', type: 'select',
+				          options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
 			}
 			createFieldTable('', f);
 			if (port_vlan_supported)

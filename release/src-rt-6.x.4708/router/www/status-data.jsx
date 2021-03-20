@@ -205,9 +205,9 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		wlstats[uidx].ifstatus = '<b>Down</b>';
 	else {
 		wlstats[uidx].ifstatus = 'Up';
-		for (i = 0; i < xifs.length ; ++i) {
-			if ((nvram[xifs[i]+'_ifnames']).indexOf(wl_ifaces[uidx][0]) >= 0) {
-				wlstats[uidx].ifstatus = wlstats[uidx].ifstatus+' ('+xifs[i].toUpperCase()+')';
+		for (i = 0; i < xifs[0].length ; ++i) {
+			if ((nvram[xifs[0][i]+'_ifnames']).indexOf(wl_ifaces[uidx][0]) >= 0) {
+				wlstats[uidx].ifstatus = wlstats[uidx].ifstatus+' ('+xifs[1][i]+')';
 				break;
 			}
 		}

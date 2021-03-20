@@ -20,9 +20,9 @@ No part of this file may be used without permission.
 
 //	<% nvram("pbr_rules"); %>
 
-var class1 =  [[1,'WAN'],[2,'WAN2']
+var class1 =  [[1,'WAN0'],[2,'WAN1']
 /* MULTIWAN-BEGIN */
-		,[3,'WAN3'],[4,'WAN4']
+		,[3,'WAN2'],[4,'WAN3']
 /* MULTIWAN-END */
 		];
 

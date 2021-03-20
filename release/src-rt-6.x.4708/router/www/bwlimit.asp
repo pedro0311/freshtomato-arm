@@ -283,7 +283,7 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<div class="section-title">Bandwidth Limiter for LAN (br0)</div>
+<div class="section-title">Bandwidth Limiter for LAN0 (br0)</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
@@ -308,7 +308,7 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<div class="section-title">Default Class for unlisted MAC / IP's in LAN (br0)</div>
+<div class="section-title">Default Class for unlisted MAC / IP's in LAN0 (br0)</div>
 <div class="section">
 	<script>
 		createFieldTable('', [

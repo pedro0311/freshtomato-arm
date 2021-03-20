@@ -363,11 +363,11 @@ function init() {
 		createFieldTable('', [
 			{ title: 'IP address', name: 'f_ddnsx_ip', type: 'select',
 				options: [
-					['wan', 'Use WAN IP Address ' + ddnsx_ip + ' (recommended)'],
-					['wan2', 'Use WAN2 IP Address ' + ddnsx2_ip ],
+					['wan', 'Use WAN0 IP Address ' + ddnsx_ip + ' (recommended)'],
+					['wan2', 'Use WAN1 IP Address ' + ddnsx2_ip ],
 /* MULTIWAN-BEGIN */
-					['wan3', 'Use WAN3 IP Address ' + ddnsx3_ip ],
-					['wan4', 'Use WAN4 IP Address ' + ddnsx4_ip ],
+					['wan3', 'Use WAN2 IP Address ' + ddnsx3_ip ],
+					['wan4', 'Use WAN3 IP Address ' + ddnsx4_ip ],
 /* MULTIWAN-END */
 					['@', 'Use External IP Address Checker (every 10 minutes)'],
 					['0.0.0.0', 'Offline (0.0.0.0)'],

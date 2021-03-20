@@ -145,7 +145,7 @@ function init() {
 				{ title: 'Enable Function', name: 'f_NC_enable', type: 'checkbox', value: nvram.NC_enable == '1' },
 				{ title: 'Interface', multi: [
 					{ name: 'NC_BridgeLAN', type: 'select', options: [
-						['br0','LAN (br0)*'],
+						['br0','LAN0 (br0)*'],
 						['br1','LAN1 (br1)'],
 						['br2','LAN2 (br2)'],
 						['br3','LAN3 (br3)']

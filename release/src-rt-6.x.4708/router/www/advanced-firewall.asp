@@ -101,7 +101,7 @@ function verifyFields(focused, quiet) {
 
 /* udpxy check: only one interface can be selected to listen on OR no interface (listen on default: 0.0.0.0) */
 	if (enable_udpxy && (udpxy_lan_count > 1)) {
-		ferror.set('_f_udpxy_enable', 'Udpxy: please select only one interface (LAN, LAN1, LAN2 or LAN3) or none (see notes)', quiet);
+		ferror.set('_f_udpxy_enable', 'Udpxy: please select only one interface (LAN0, LAN1, LAN2 or LAN3) or none (see notes)', quiet);
 		return 0;
 /* udpxy clear */
 	}
@@ -235,7 +235,7 @@ function init() {
 	<script>
 		createFieldTable('', [
 			{ title: 'Enable IGMP proxy', name: 'f_multicast', type: 'checkbox', value: nvram.multicast_pass == '1' },
-			{ title: 'LAN', indent: 2, name: 'f_multicast_lan', type: 'checkbox', value: (nvram.multicast_lan == '1') },
+			{ title: 'LAN0', indent: 2, name: 'f_multicast_lan', type: 'checkbox', value: (nvram.multicast_lan == '1') },
 			{ title: 'LAN1', indent: 2, name: 'f_multicast_lan1', type: 'checkbox', value: (nvram.multicast_lan1 == '1') },
 			{ title: 'LAN2', indent: 2, name: 'f_multicast_lan2', type: 'checkbox', value: (nvram.multicast_lan2 == '1') },
 			{ title: 'LAN3', indent: 2, name: 'f_multicast_lan3', type: 'checkbox', value: (nvram.multicast_lan3 == '1') },
@@ -244,7 +244,7 @@ function init() {
 			null,
 			{ title: 'Enable Udpxy', name: 'f_udpxy_enable', type: 'checkbox', value: (nvram.udpxy_enable == '1') },
 			{ title: 'Upstream interface', indent: 2, name: 'f_udpxy_wanface', type: 'text', maxlen: 8, size: 8, value: nvram.udpxy_wanface, suffix: ' &nbsp;<small>leave empty for default</small>' },
-			{ title: 'LAN', indent: 2, name: 'f_udpxy_lan', type: 'checkbox', value: (nvram.udpxy_lan == '1') },
+			{ title: 'LAN0', indent: 2, name: 'f_udpxy_lan', type: 'checkbox', value: (nvram.udpxy_lan == '1') },
 			{ title: 'LAN1', indent: 2, name: 'f_udpxy_lan1', type: 'checkbox', value: (nvram.udpxy_lan1 == '1') },
 			{ title: 'LAN2', indent: 2, name: 'f_udpxy_lan2', type: 'checkbox', value: (nvram.udpxy_lan2 == '1') },
 			{ title: 'LAN3', indent: 2, name: 'f_udpxy_lan3', type: 'checkbox', value: (nvram.udpxy_lan3 == '1') },
@@ -266,7 +266,7 @@ function init() {
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>IGMP proxy:</i><br>
 	<ul>
-		<li><b>LAN / LAN1 / LAN2 / LAN3</b> - Add interface br0 / br1 / br2 / br3 to igmp.conf (Ex.: phyint br0 downstream ratelimit 0 threshold 1).</li>
+		<li><b>LAN0 / LAN1 / LAN2 / LAN3</b> - Add interface br0 / br1 / br2 / br3 to igmp.conf (Ex.: phyint br0 downstream ratelimit 0 threshold 1).</li>
 		<li><b>Enable quickleave</b> - Send a Leave IGMP message upstream as soon as it receives a Leave message for any downstream interface.</li>
 		<li><b>Custom configuration</b> - Use custom config for IGMP proxy instead of tomato default config. You must define one (or more) upstream interface(s) and one or more downstream interfaces. Refer to the <a href="https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf" class="new_window">IGMP proxy example configuration</a> and <a href="https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f" class="new_window">IGMP proxy commit b55e0125c79fc9d</a> for details.</li>
 		<li><b>Other hints</b> - For error messages please check the <a href="status-log.asp">log file</a>.</li>
@@ -276,7 +276,7 @@ function init() {
 	<i>Udpxy:</i><br>
 	<ul>
 		<li><b>Upstream interface</b> - As one use case for it is to access IPTV which is often delivered via multicast by the ISP but outside of the (PPPoE,etc) session.</li>
-		<li><b>LAN / LAN1 / LAN2 / LAN3</b> - Select one interface br0 / br1 / br2 / br3 to listen on.</li>
+		<li><b>LAN0 / LAN1 / LAN2 / LAN3</b> - Select one interface br0 / br1 / br2 / br3 to listen on.</li>
 		<li><b>Status</b> - To display udpxy status, please go to http://lanaddress:port/status/.</li>
 		<li><b>Other hints</b> - If Udpxy is enabled and no interface is selected default address (0.0.0.0) will be used.</li>
 	</ul>

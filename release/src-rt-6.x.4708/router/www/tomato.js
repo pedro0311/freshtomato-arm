@@ -14,10 +14,10 @@ var MAX_BRIDGE_ID = 3;
 var MAX_PORT_ID = 4;
 var MAX_VLAN_ID = 15;
 /* DUALWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'];
+var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'],['WAN0', 'LAN0', 'LAN1', 'LAN2', 'LAN3', 'WAN1']];
 /* DUALWAN-END */
 /* MULTIWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'];
+var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'],['WAN0', 'LAN0', 'LAN1', 'LAN2', 'LAN3', 'WAN1', 'WAN2', 'WAN3']];
 /* MULTIWAN-END */
 
 // -----------------------------------------------------------------------------

@@ -178,7 +178,7 @@ function save() {
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx > 1) ? uidx : '';
 			f.push(
-				{ title: 'WAN'+u+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
+				{ title: 'WAN'+(uidx - 1)+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
 					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wan'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
 					value: nvram['wan'+u+'_mac'] || defmac('wan'+u) }
 			);
@@ -187,7 +187,7 @@ function save() {
 		for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 			var u = wl_fface(uidx);
 			f.push(
-				{ title: 'Wireless Interface ' + ((wl_ifaces.length > 1) ? wl_ifaces[uidx][0] : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
+				{ title: 'WL '+((wl_ifaces.length > 1) ? wl_display_ifname(uidx) : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
 					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wl'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
 					value: nvram['wl'+u+'_hwaddr'] || defmac('wl' + u) }
 			);
