@@ -13,6 +13,12 @@
 var MAX_BRIDGE_ID = 3;
 var MAX_PORT_ID = 4;
 var MAX_VLAN_ID = 15;
+/* DUALWAN-BEGIN */
+var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'];
+/* DUALWAN-END */
+/* MULTIWAN-BEGIN */
+var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'];
+/* MULTIWAN-END */
 
 // -----------------------------------------------------------------------------
 

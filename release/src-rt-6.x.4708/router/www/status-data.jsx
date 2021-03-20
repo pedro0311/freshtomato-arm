@@ -18,13 +18,6 @@ stats = { };
 
 var a, b, i;
 
-/* DUALWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'];
-/* DUALWAN-END */
-/* MULTIWAN-BEGIN */
-var xifs = ['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'];
-/* MULTIWAN-END */
-
 stats.anon_enable = nvram.tomatoanon_enable;
 stats.anon_answer = nvram.tomatoanon_answer;
 
