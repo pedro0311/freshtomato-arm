@@ -181,12 +181,6 @@ void asp_lanip(int argc, char **argv)
 	}
 }
 
-void asp_lipp(int argc, char **argv)
-{
-	char *one = "1";
-	asp_lanip(1, &one);
-}
-
 /*	<% psup(process); %>
  *	returns 1 if process is running
  */

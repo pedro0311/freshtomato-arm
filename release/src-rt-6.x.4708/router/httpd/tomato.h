@@ -60,7 +60,6 @@ extern char *reltime(char *buf, time_t t);
 extern int get_client_info(char *mac, char *ifname);
 extern int resolve_addr(const char *ip, char *host);
 
-extern void asp_lipp(int argc, char **argv);
 extern void asp_activeroutes(int argc, char **argv);
 extern void asp_cgi_get(int argc, char **argv);
 extern void asp_time(int argc, char **argv);
