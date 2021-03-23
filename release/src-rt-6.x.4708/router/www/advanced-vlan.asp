@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Mar 14 2021 - pedro **
+	** Last Updated - Mar 23 2021 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -66,12 +66,10 @@ function ethstates() {
 	if (port == 'disabled')
 		return 0;
 
-	var j = 0;
-	for (var i of [1, 2, 3, 4, 0]) { /* port order in the table */
+	for (var i = 0 ; i <= MAX_PORT_ID ; i++) {
 		port = eval('etherstates.port'+i);
 		state = _ethstates(port);
-		elem.setInnerHTML('vport_'+j, '<img src="'+state[0]+'.gif" id="'+state[0]+'_'+j+'" title="'+state[1]+'" alt="">');
-		++j;
+		elem.setInnerHTML('vport_'+i, '<img src="'+state[0]+'.gif" id="'+state[0]+'_'+i+'" title="'+state[1]+'" alt="">');
 	}
 }
 
@@ -98,11 +96,11 @@ switch (nvram['t_model_name']) {
 	case 'Cisco Linksys EA6500v2':
 	case 'Cisco Linksys EA6700':
 	case 'Netgear R8000':
-		COL_P0N = '0';
-		COL_P1N = '1';
-		COL_P2N = '2';
-		COL_P3N = '3';
-		COL_P4N = '4';
+		COL_P0N = '4';
+		COL_P1N = '0';
+		COL_P2N = '1';
+		COL_P3N = '2';
+		COL_P4N = '3';
 		break;
 	case 'vlan-testid1':
 	case 'Tenda AC18':
@@ -124,51 +122,51 @@ switch (nvram['t_model_name']) {
 	case 'Netgear R6700v3':
 	case 'Netgear R7000':
 	case 'Netgear XR300':
-		COL_P0N = '1';
-		COL_P1N = '2';
-		COL_P2N = '3';
-		COL_P3N = '4';
-		COL_P4N = '0';
+		COL_P0N = '0';
+		COL_P1N = '1';
+		COL_P2N = '2';
+		COL_P3N = '3';
+		COL_P4N = '4';
 		break;
 	case 'vlan-testid2':
 	case 'Netgear R6250':
 	case 'Netgear R6300v2':
-		COL_P0N = '3';
-		COL_P1N = '2';
-		COL_P2N = '1';
-		COL_P3N = '0';
-		COL_P4N = '4';
-		break;
-	case 'vlan-testid3':
-	case 'Asus RT-AC3200':
 		COL_P0N = '4';
 		COL_P1N = '3';
 		COL_P2N = '2';
 		COL_P3N = '1';
 		COL_P4N = '0';
 		break;
+	case 'vlan-testid3':
+	case 'Asus RT-AC3200':
+		COL_P0N = '0';
+		COL_P1N = '4';
+		COL_P2N = '3';
+		COL_P3N = '2';
+		COL_P4N = '1';
+		break;
 	/* only has 2 Lan Ports */
 	case 'Xiaomi MiWiFi':
-		COL_P0N = '0';
-		COL_P1N = '2';
-		COL_P2N = '1';
-		COL_P3N = '3';
-		COL_P4N = '4';
+		COL_P0N = '4';
+		COL_P1N = '0';
+		COL_P2N = '2';
+		COL_P3N = '1';
+		COL_P4N = '3';
 		break;
 	/* only has 3 Lan ports */
 	case 'Tenda AC15':
-		COL_P0N = '2';
-		COL_P1N = '3';
-		COL_P2N = '4';
-		COL_P3N = '1';
-		COL_P4N = '0';
-		break;
-	default:
-		COL_P0N = '1';
+		COL_P0N = '0';
 		COL_P1N = '2';
 		COL_P2N = '3';
 		COL_P3N = '4';
-		COL_P4N = '0';
+		COL_P4N = '1';
+		break;
+	default:
+		COL_P0N = '0';
+		COL_P1N = '1';
+		COL_P2N = '2';
+		COL_P3N = '3';
+		COL_P4N = '4';
 		unknown_router = 1;
 		break;
 }
@@ -215,11 +213,12 @@ if (port_vlan_supported) {
 /* MULTIWAN-END */
 				], prefix: '<div class="centered">', suffix: '<\/div>' }]);
 
-		this.headerSet(['<br><br>VLAN', '<br><br>VID', '<div id="vport_0"><img src="eth_off.gif" id="eth_off_1" alt=""><\/div>1', '<br>Tag<br>1',
-		                '<div id="vport_1"><img src="eth_off.gif" id="eth_off_2" alt=""><\/div>2', '<br>Tag<br>2',
-		                '<div id="vport_2"><img src="eth_off.gif" id="eth_off_3" alt=""><\/div>3', '<br>Tag<br>3',
-		                '<div id="vport_3"><img src="eth_off.gif" id="eth_off_4" alt=""><\/div>4', '<br>Tag<br>4',
-		                '<div id="vport_4"><img src="eth_off.gif" id="eth_off_5" alt=""><\/div>WAN', '<br>Tag<br>WAN',
+		this.headerSet(['<br><br>VLAN', '<br><br>VID',
+		                '<div id="vport_0"><img src="eth_off.gif" id="eth_off_1" alt=""><\/div>WAN', '<br>Tag<br>WAN',
+		                '<div id="vport_1"><img src="eth_off.gif" id="eth_off_2" alt=""><\/div>1', '<br>Tag<br>1',
+		                '<div id="vport_2"><img src="eth_off.gif" id="eth_off_3" alt=""><\/div>2', '<br>Tag<br>2',
+		                '<div id="vport_3"><img src="eth_off.gif" id="eth_off_4" alt=""><\/div>3', '<br>Tag<br>3',
+		                '<div id="vport_4"><img src="eth_off.gif" id="eth_off_5" alt=""><\/div>4', '<br>Tag<br>4',
 		                '<br>Default<br>VLAN', 'Ethernet to<br>bridge<br>mapping']);
 
 		vlg.populate();
