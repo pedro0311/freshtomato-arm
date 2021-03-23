@@ -420,9 +420,11 @@ function save() {
 function earlyInit() {
 	var count, i;
 
-	for (i = 0; i < 140; ++i) {
-		if ((rrules[i] == null) || (rrules[i] == ''))
-			E('t_rrule').value = i;
+	if (E('t_rrule').value == '') {
+		for (i = 0; i < 140; ++i) {
+			if ((rrules[i] == null) || (rrules[i] == ''))
+				E('t_rrule').value = i;
+		}
 	}
 
 	cg.setup();

@@ -79,6 +79,7 @@ og.dataToView = function(data) {
 }
 
 og.onClick = function(cell) {
+	E('t_rruleN').value = PR(cell).getRowData()[0];
 	form.submit('t_fom');
 }
 
@@ -107,6 +108,7 @@ function init() {
 
 <input type="hidden" name="_redirect" value="restrict-edit.asp">
 <input type="hidden" name="_commit" value="0">
+<input type="hidden" name="rruleN" id="t_rruleN" value="">
 
 <!-- / / / -->
 
