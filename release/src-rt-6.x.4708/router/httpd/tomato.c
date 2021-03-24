@@ -1150,7 +1150,7 @@ static const nvset_t nvset_list[] = {
 
 
 // access restriction
-	{ "rruleN",			V_RANGE(0, 99)			},
+	{ "rruleN",			V_RANGE(-1, 99)			},
 //	{ "rrule##",			V_LENGTH(0, 2048)		},	// in save_variables()
 
 // admin-access

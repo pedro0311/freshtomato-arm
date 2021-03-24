@@ -23,11 +23,21 @@
 
 //	<% layer7(); %>
 
-//	<% nvramseq("rrules", "rrule%d", 0, 139); %>
+//	<% nvramseq("rrules", "rrule%d", 0, 99); %>
 
 //	<% rrule(); %>
 
 /* {enable}|{begin_mins}|{end_mins}|{dow}|{comp[<comp]}|{rules<rules[...]>}|{http[ ...]}|{http_file}|{desc} */
+
+/* adding a new rule - find free slot */
+if (rrule == '') {
+	for (var i = 0; i < 100; ++i) {
+		if ((rrules[i] == null) || (rrules[i] == '')) {
+			rruleN = i;
+			break;
+		}
+	}
+}
 
 if ((rule = rrule.match(/^(\d+)\|(-?\d+)\|(-?\d+)\|(\d+)\|(.*?)\|(.*?)\|([^|]*?)\|(\d+)\|(.*)$/m)) == null)
 	rule = ['', 1, 1380, 240, 31, '', '', '', 0, 'New Rule '+(rruleN + 1)];
@@ -418,17 +428,11 @@ function save() {
 }
 
 function earlyInit() {
-	var count, i;
-
-	if (E('t_rrule').value == '') {
-		for (i = 0; i < 140; ++i) {
-			if ((rrules[i] == null) || (rrules[i] == ''))
-				E('t_rrule').value = i;
-		}
-	}
+	if (rrule == '')
+		E('delete-button').style.display = 'none';
 
 	cg.setup();
-	count = bpg.setup();
+	var count = bpg.setup();
 	E('_f_block_all').checked = (count == 0) && (rule[7].search(/[^\s\r\n]/) == -1) && (rule[8] == 0);
 
 	verifyFields(null, 1);
@@ -454,9 +458,8 @@ function init() {
 
 <!-- / / / -->
 
-<input type="hidden" name="_nextpage" value="restrict.asp">
+<input type="hidden" name="_redirect" value="restrict.asp">
 <input type="hidden" name="_service" value="restrict-restart">
-<input type="hidden" name="_nextwait" value="3">
 <input type="hidden" name="rruleNN" id="t_rrule" value="">
 
 <!-- / / / -->

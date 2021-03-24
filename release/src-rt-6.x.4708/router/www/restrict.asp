@@ -20,7 +20,7 @@
 
 //	<% nvram(''); %>	// http_id
 
-//	<% nvramseq("rrules", "rrule%d", 0, 139); %>
+//	<% nvramseq("rrules", "rrule%d", 0, 99); %>
 
 var dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -84,6 +84,7 @@ og.onClick = function(cell) {
 }
 
 og.addEntry = function() {
+	E('t_rruleN').value = -1;
 	form.submit('t_fom');
 }
 
