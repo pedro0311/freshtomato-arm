@@ -26,7 +26,7 @@
 
 //	<% devlist(); %>
 
-ipp = '<% lipp(); %>.';
+ipp = '<% lanip(1); %>.';
 
 list = [];
 

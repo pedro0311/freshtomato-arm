@@ -20,7 +20,7 @@
 
 //	<% nvram("portforward"); %>
 
-var lipp = '<% lipp(); %>.';
+var lipp = '<% lanip(1); %>.';
 
 var fog = new TomatoGrid();
 

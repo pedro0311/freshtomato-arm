@@ -23,12 +23,24 @@
 
 //	<% layer7(); %>
 
+//	<% nvramseq("rrules", "rrule%d", 0, 99); %>
+
 //	<% rrule(); %>
 
 /* {enable}|{begin_mins}|{end_mins}|{dow}|{comp[<comp]}|{rules<rules[...]>}|{http[ ...]}|{http_file}|{desc} */
 
+/* adding a new rule - find free slot */
+if (rrule == '') {
+	for (var i = 0; i < 100; ++i) {
+		if ((rrules[i] == null) || (rrules[i] == '')) {
+			rruleN = i;
+			break;
+		}
+	}
+}
+
 if ((rule = rrule.match(/^(\d+)\|(-?\d+)\|(-?\d+)\|(\d+)\|(.*?)\|(.*?)\|([^|]*?)\|(\d+)\|(.*)$/m)) == null)
-	rule = ['', 1, 1380, 240, 31, '', '', '', 0, 'New Rule ' + (rruleN + 1)];
+	rule = ['', 1, 1380, 240, 31, '', '', '', 0, 'New Rule '+(rruleN + 1)];
 
 rule[2] *= 1;
 rule[3] *= 1;
@@ -44,6 +56,7 @@ var ipp2p = [[0,'IPP2P (disabled)'],[0xFFFF,'All IPP2P Filters'],[1,'AppleJuice'
              [64,'Kazaa'],[128,'Mute'],[4096,'PPLive/UUSee'],[256,'SoulSeek'],[512,'Waste'],[1024,'WinMX'],[2048,'XDCC'],[8192,'Xunlei/QQCyclone']];
 
 var dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var addrestrict = 0;
 
 var cg = new TomatoGrid();
 
@@ -75,10 +88,32 @@ cg.setup = function() {
 	}
 
 	a = E('_f_comp_all')
-	if (count)
+	if (count || addrestrict == 1)
 		a.value = ex ? 2 : 1;
 	else
 		a.value = 0;
+}
+
+cg.resetNewEditor = function() {
+	var f, c;
+	f = fields.getAll(this.newEditor);
+	ferror.clearAll(f);
+
+	if ((c = cookie.get('addrestrict')) != null) {
+		cookie.set('addrestrict', '', 0);
+		c = c.split(',');
+		if (c.length >= 1 && c != '') {
+			addrestrict = 1;
+			E('_f_desc').value = (c[1] ? c[1] : c[0]);
+			E('_f_sched_allday').checked = 1;
+			E('_f_sched_everyday').checked = 1;
+			E('_f_comp_all').options[1].selected = 1;
+			f[0].value = c[0];
+			return;
+		}
+	}
+
+	f[0].value = '';
 }
 
 cg.verifyFields = function(row, quiet) {
@@ -95,32 +130,64 @@ cg.verifyFields = function(row, quiet) {
 
 var bpg = new TomatoGrid();
 
-bpg.verifyFields = function(row, quiet) {
-	var f = fields.getAll(row);
-	ferror.clearAll(f);
-	this.enDiFields(row);
+bpg.setup = function() {
+	var a, i, r, count, protos;
 
-	if ((f[5].selectedIndex != 0) && ((!v_length(f[6], quiet, 1)) || (!_v_iptaddr(f[6], quiet, false, true, true))))
-		return 0;
-	if ((f[1].selectedIndex != 0) && (!v_iptport(f[2], quiet)))
-		return 0;
-
-	if ((f[1].selectedIndex == 0) && (f[3].selectedIndex == 0) && (f[4].selectedIndex == 0) && (f[5].selectedIndex == 0)) {
-		var m = 'Please enter a specific address or port, or select an application match';
-		ferror.set(f[3], m, 1);
-		ferror.set(f[4], m, 1);
-		ferror.set(f[5], m, 1);
-		ferror.set(f[1], m, quiet);
-		return 0;
+	protos = [[-2, 'Any Protocol'],[-1,'TCP/UDP'],[6,'TCP'],[17,'UDP']];
+	for (i = 0; i < 256; ++i) {
+		if ((i != 6) && (i != 17))
+			protos.push([i, protocols[i] || i]);
 	}
 
-	ferror.clear(f[1]);
-	ferror.clear(f[3]);
-	ferror.clear(f[4]);
-	ferror.clear(f[5]);
-	ferror.clear(f[6]);
+	this.init('res-bp-grid', 'sort', 140, [ { multi: [
+		{ type: 'select', prefix: '<div class="box1">', suffix: '<\/div>', options: protos },
+		{ type: 'select', prefix: '<div class="box2">', suffix: '<\/div>', options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
+		{ type: 'text', prefix: '<div class="box3">', suffix: '<\/div>', maxlen: 32 },
+		{ type: 'select', prefix: '<div class="box4">', suffix: '<\/div>', options: ipp2p },
+		{ type: 'select', prefix: '<div class="box5">', suffix: '<\/div>', options: layer7 },
+		{ type: 'select', prefix: '<div class="box6">', suffix: '<\/div>', options: [[0,'Any Address'],[1,'Dst IP'],[2,'Src IP']] },
+		{ type: 'text', prefix: '<div class="box7">', suffix: '<\/div>', maxlen: 64 }
+		] } ] );
+	this.headerSet(['Rules']);
+	this.showNewEditor();
+	this.resetNewEditor();
+	count = 0;
 
-	return 1;
+	/* proto<dir<port<ipp2p<layer7[<addr_type<addr] */
+
+	a = rule[6].split('>');
+	for (i = 0; i < a.length; ++i) {
+		r = a[i].split('<');
+		if (r.length == 7) {
+			r[2] = r[2].replace(/:/g, '-');
+			this.insertData(-1, r);
+			++count;
+		}
+	}
+
+	return count;
+}
+
+bpg.resetNewEditor = function() {
+	var f = fields.getAll(this.newEditor);
+	f[0].selectedIndex = 0;
+	f[1].selectedIndex = 0;
+	f[2].value = '';
+	f[3].selectedIndex = 0;
+	f[4].selectedIndex = 0;
+	f[5].selectedIndex = 0;
+	f[6].value = '';
+	this.enDiFields(this.newEditor);
+	ferror.clearAll(fields.getAll(this.newEditor));
+}
+
+bpg._createEditor = bpg.createEditor;
+bpg.createEditor = function(which, rowIndex, source) {
+	var row = this._createEditor(which, rowIndex, source);
+	if (which == 'edit')
+		this.enDiFields(row);
+
+	return row;
 }
 
 bpg.dataToView = function(data) {
@@ -171,28 +238,6 @@ bpg.fieldValuesToData = function(row) {
 	return [f[0].value, f[1].value, (f[1].selectedIndex == 0) ? '' : f[2].value, f[3].value, f[4].value, f[5].value, (f[5].selectedIndex == 0) ? '' : f[6].value];
 }
 
-bpg.resetNewEditor = function() {
-	var f = fields.getAll(this.newEditor);
-	f[0].selectedIndex = 0;
-	f[1].selectedIndex = 0;
-	f[2].value = '';
-	f[3].selectedIndex = 0;
-	f[4].selectedIndex = 0;
-	f[5].selectedIndex = 0;
-	f[6].value = '';
-	this.enDiFields(this.newEditor);
-	ferror.clearAll(fields.getAll(this.newEditor));
-}
-
-bpg._createEditor = bpg.createEditor;
-bpg.createEditor = function(which, rowIndex, source) {
-	var row = this._createEditor(which, rowIndex, source);
-	if (which == 'edit')
-		this.enDiFields(row);
-
-	return row;
-}
-
 bpg.enDiFields = function(row) {
 	var x;
 	var f = fields.getAll(row);
@@ -209,45 +254,48 @@ bpg.enDiFields = function(row) {
 	f[6].disabled = (f[5].selectedIndex == 0);
 }
 
-bpg.setup = function() {
-	var a, i, r, count, protos;
+bpg.verifyFields = function(row, quiet) {
+	var f = fields.getAll(row);
+	ferror.clearAll(f);
+	this.enDiFields(row);
 
-	protos = [[-2, 'Any Protocol'],[-1,'TCP/UDP'],[6,'TCP'],[17,'UDP']];
-	for (i = 0; i < 256; ++i)
-		if ((i != 6) && (i != 17)) protos.push([i, protocols[i] || i]);
+	if ((f[5].selectedIndex != 0) && ((!v_length(f[6], quiet, 1)) || (!_v_iptaddr(f[6], quiet, false, true, true))))
+		return 0;
+	if ((f[1].selectedIndex != 0) && (!v_iptport(f[2], quiet)))
+		return 0;
 
-	this.init('res-bp-grid', 'sort', 140, [ { multi: [
-		{ type: 'select', prefix: '<div class="box1">', suffix: '<\/div>', options: protos },
-		{ type: 'select', prefix: '<div class="box2">', suffix: '<\/div>', options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
-		{ type: 'text', prefix: '<div class="box3">', suffix: '<\/div>', maxlen: 32 },
-		{ type: 'select', prefix: '<div class="box4">', suffix: '<\/div>', options: ipp2p },
-		{ type: 'select', prefix: '<div class="box5">', suffix: '<\/div>', options: layer7 },
-		{ type: 'select', prefix: '<div class="box6">', suffix: '<\/div>', options: [[0,'Any Address'],[1,'Dst IP'],[2,'Src IP']] },
-		{ type: 'text', prefix: '<div class="box7">', suffix: '<\/div>', maxlen: 64 }
-		] } ] );
-	this.headerSet(['Rules']);
-	this.showNewEditor();
-	this.resetNewEditor();
-	count = 0;
-
-	/* proto<dir<port<ipp2p<layer7[<addr_type<addr] */
-
-	a = rule[6].split('>');
-	for (i = 0; i < a.length; ++i) {
-		r = a[i].split('<');
-		if (r.length == 5) {
-			/* fixup for backward compatibility */
-			r.push('0');
-			r.push('');
-		}
-		if (r.length == 7) {
-			r[2] = r[2].replace(/:/g, '-');
-			this.insertData(-1, r);
-			++count;
-		}
+	if ((f[1].selectedIndex == 0) && (f[3].selectedIndex == 0) && (f[4].selectedIndex == 0) && (f[5].selectedIndex == 0)) {
+		var m = 'Please enter a specific address or port, or select an application match';
+		ferror.set(f[3], m, 1);
+		ferror.set(f[4], m, 1);
+		ferror.set(f[5], m, 1);
+		ferror.set(f[1], m, quiet);
+		return 0;
 	}
 
-	return count;
+	ferror.clear(f[1]);
+	ferror.clear(f[3]);
+	ferror.clear(f[4]);
+	ferror.clear(f[5]);
+	ferror.clear(f[6]);
+
+	return 1;
+}
+
+function cancel() {
+	document.location = 'restrict.asp';
+}
+
+function remove() {
+	if (!confirm('Delete this rule?'))
+		return;
+
+	E('delete-button').disabled = 1;
+
+	var e = E('t_rrule');
+	e.name = 'rrule'+rruleN;
+	e.value = '';
+	form.submit('t_fom');
 }
 
 function verifyFields(focused, quiet) {
@@ -277,22 +325,6 @@ function verifyFields(focused, quiet) {
 		return 0;
 
 	return 1;
-}
-
-function cancel() {
-	document.location = 'restrict.asp';
-}
-
-function remove() {
-	if (!confirm('Delete this rule?'))
-		return;
-
-	E('delete-button').disabled = 1;
-
-	e = E('t_rrule');
-	e.name = 'rrule'+rruleN;
-	e.value = '';
-	form.submit('t_fom');
 }
 
 function save() {
@@ -396,10 +428,13 @@ function save() {
 }
 
 function earlyInit() {
-	cg.setup();
+	if (rrule == '')
+		E('delete-button').style.display = 'none';
 
+	cg.setup();
 	var count = bpg.setup();
 	E('_f_block_all').checked = (count == 0) && (rule[7].search(/[^\s\r\n]/) == -1) && (rule[8] == 0);
+
 	verifyFields(null, 1);
 }
 
@@ -423,9 +458,8 @@ function init() {
 
 <!-- / / / -->
 
-<input type="hidden" name="_nextpage" value="restrict.asp">
+<input type="hidden" name="_redirect" value="restrict.asp">
 <input type="hidden" name="_service" value="restrict-restart">
-<input type="hidden" name="_nextwait" value="3">
 <input type="hidden" name="rruleNN" id="t_rrule" value="">
 
 <!-- / / / -->

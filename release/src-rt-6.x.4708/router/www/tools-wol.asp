@@ -71,7 +71,7 @@ wg.populate = function() {
 			}
 		}
 		if (t.length == 3) {
-			r = this.insertData(-1, [t[0], (t[1].indexOf('.') != -1) ? t[1] : ('<% lipp(); %>.' + t[1]), active, t[2]]);
+			r = this.insertData(-1, [t[0], (t[1].indexOf('.') != -1) ? t[1] : ('<% lanip(1); %>.' + t[1]), active, t[2]]);
 			for (j = 0; j < 4; ++j)
 				r.cells[j].title = 'Click to wake up';
 		}

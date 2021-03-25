@@ -20,7 +20,7 @@
 
 //	<% nvram(''); %>	// http_id
 
-//	<% nvramseq("rrules", "rrule%d", 0, 49); %>
+//	<% nvramseq("rrules", "rrule%d", 0, 99); %>
 
 var dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -42,14 +42,16 @@ og.populate = function() {
 			continue;
 		}
 		v = v.slice(1);
-		if (isNaN(v[1] *= 1)) continue;
-		if (isNaN(v[2] *= 1)) continue;
-		if (isNaN(v[3] *= 1)) continue;
+		if (isNaN(v[1] *= 1))
+			continue;
+		if (isNaN(v[2] *= 1))
+			continue;
+		if (isNaN(v[3] *= 1))
+			continue;
 
 		var s = '';
-		if (v[3] == 0x7F) {
+		if (v[3] == 0x7F)
 			s += 'Everyday';
-		}
 		else {
 			for (var j = 0; j < 7; ++j) {
 				if (v[3] & (1 << j)) {
@@ -60,10 +62,13 @@ og.populate = function() {
 		}
 
 		if ((v[1] >= 0) && (v[2] >= 0)) {
-			s += '<br>' + timeString(v[1]) + ' to ' + timeString(v[2]);
-			if (v[2] <= v[1]) s += ' <small>(the following day)<\/small>';
+			s += '<br>'+timeString(v[1])+' to '+timeString(v[2]);
+			if (v[2] <= v[1])
+				s += ' <small>(the following day)<\/small>';
 		}
-		if (v[0] != '1') s += '<br><i><b>Disabled<\/b><\/i>';
+		if (v[0] != '1')
+			s += '<br><i><b>Disabled<\/b><\/i>';
+
 		this.insertData(-1, [i, v[8], s]);
 	}
 	og.sort(0);
@@ -79,13 +84,8 @@ og.onClick = function(cell) {
 }
 
 og.addEntry = function() {
-	for (var i = 0; i < 140; ++i) {
-		if ((rrules[i] == null) || (rrules[i] == '')) {
-			E('t_rruleN').value = i;
-			form.submit('t_fom');
-			return;
-		}
-	}
+	E('t_rruleN').value = -1;
+	form.submit('t_fom');
 }
 
 function init() {

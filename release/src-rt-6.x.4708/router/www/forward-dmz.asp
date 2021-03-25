@@ -21,7 +21,7 @@
 
 //	<% nvram("dmz_enable,dmz_ipaddr,dmz_sip,dmz_ifname,dmz_ra,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
-var lipp = '<% lipp(); %>.';
+var lipp = '<% lanip(1); %>.';
 
 function verifyFields(focused, quiet) {
 	var sip, dip, off;
