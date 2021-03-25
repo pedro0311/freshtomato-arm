@@ -206,9 +206,14 @@ REMOVE-END */
 }
 
 wlg.dataToView = function(data) {
-	var uidx = wl_ifidxx(data[0]);
+	var ifname, uidx;
+	uidx = wl_ifidxx(data[0]);
+	if (uidx < 0)
+		ifname = 'wl'+data[0];
+	else
+		ifname = wl_display_ifname(uidx);
 
-	return ([wl_display_ifname(uidx),
+	return ([ifname,
 		(data[1] == 1) ? 'Yes' : 'No',
 		data[2] || '<small><i>(unset)<\/i><\/small>',
 		wmo[data[3]] || '<small><i>(unset)<\/i><\/small>',
@@ -444,7 +449,6 @@ REMOVE-END */
 			var t = u+s;
 			var v = wl_ifidxx(t);
 			var w = (v < 0) ? ('wl'+t) : (wl_ifaces[v][0]+((wl_sunit(v) < 0) ? ' (wl'+t+')' : ''));
-			//var w = wl_display_ifname(i);
 			vifs_possible.push([ t, w ]);
 			tabs.push([ t, w ]);
 		}
