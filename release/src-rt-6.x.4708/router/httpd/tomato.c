@@ -1430,8 +1430,13 @@ static const nvset_t nvset_list[] = {
 #endif
 	{ "qos_orules",			V_LENGTH(0, 4096)		},
 	{ "qos_default",		V_RANGE(0, 9)			},
+#ifdef TCONFIG_MULTIWAN
+	{ "qos_irates",			V_LENGTH(0, 256)		},
+	{ "qos_orates",			V_LENGTH(0, 256)		},
+#else
 	{ "qos_irates",			V_LENGTH(0, 128)		},
 	{ "qos_orates",			V_LENGTH(0, 128)		},
+#endif
 	{ "qos_classnames",		V_LENGTH(10, 128)		},	// !!TOASTMAN
 	{ "ne_vegas",			V_01				},
 	{ "ne_valpha",			V_NUM				},
