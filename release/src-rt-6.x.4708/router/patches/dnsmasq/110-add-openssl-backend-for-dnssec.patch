@@ -19,7 +19,7 @@
  dbus_cflags =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --cflags dbus-1` 
  dbus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DBUS $(PKG_CONFIG) --libs dbus-1` 
  ubus_libs =     `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_UBUS "" --copy '-lubox -lubus'`
-@@ -62,13 +74,15 @@
+@@ -62,13 +74,16 @@
  ct_libs =       `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_CONNTRACK $(PKG_CONFIG) --libs libnetfilter_conntrack`
  lua_cflags =    `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --cflags lua5.2` 
  lua_libs =      `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_LUASCRIPT $(PKG_CONFIG) --libs lua5.2` 
@@ -34,7 +34,8 @@
 +                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --cflags $(crypto_pkg) \
 +                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --cflags $(crypto_pkg)` \
 +                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC "" --copy $(crypto_opt)` \
-+                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_NETTLEHASH "" --copy $(crypto_opt)`
++                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_NETTLEHASH "" --copy $(crypto_opt)` \
++                `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_CRYPTOHASH "" --copy $(crypto_opt)`
 +crypto_libs =   `echo $(COPTS) | $(top)/bld/pkg-wrapper HAVE_DNSSEC     $(PKG_CONFIG) --libs '$(crypto_pkgs)' \
 +                                                        HAVE_CRYPTOHASH $(PKG_CONFIG) --libs $(crypto_pkg) \
 +                                                        HAVE_NETTLEHASH $(PKG_CONFIG) --libs $(crypto_pkg)`
@@ -42,7 +43,7 @@
  sunos_libs =    `if uname | grep SunOS >/dev/null 2>&1; then echo -lsocket -lnsl -lposix4; fi`
  version =     -DVERSION='\"`$(top)/bld/get-version $(top)`\"'
  
-@@ -81,7 +95,7 @@
+@@ -81,7 +96,7 @@
         helper.o tftp.o log.o conntrack.o dhcp6.o rfc3315.o \
         dhcp-common.o outpacket.o radv.o slaac.o auth.o ipset.o \
         domain.o dnssec.o blockdata.o tables.o loop.o inotify.o \
@@ -51,7 +52,7 @@
         metrics.o hash_questions.o
  
  hdrs = dnsmasq.h config.h dhcp-protocol.h dhcp6-protocol.h \
-@@ -90,8 +104,8 @@
+@@ -90,8 +105,8 @@
  all : $(BUILDDIR)
  	@cd $(BUILDDIR) && $(MAKE) \
   top="$(top)" \
@@ -62,7 +63,7 @@
   -f $(top)/Makefile dnsmasq 
  
  mostly_clean :
-@@ -115,8 +129,8 @@
+@@ -115,8 +130,8 @@
  	@cd $(BUILDDIR) && $(MAKE) \
   top="$(top)" \
   i18n=-DLOCALEDIR=\'\"$(LOCALEDIR)\"\' \
