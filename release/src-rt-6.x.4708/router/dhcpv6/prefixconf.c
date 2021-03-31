@@ -60,6 +60,10 @@
 #include "dhcp6c_ia.h"
 #include "prefixconf.h"
 
+#ifdef TOMATO
+#include <bcmnvram.h>
+#endif
+
 TAILQ_HEAD(siteprefix_list, siteprefix);
 struct iactl_pd {
 	struct iactl common;
@@ -132,6 +136,9 @@ update_prefix(ia, pinfo, pifc, dhcpifp, ctlp, callback)
 	struct prefix_ifconf *pif;
 	int spcreate = 0;
 	struct timeval timo;
+#ifdef TOMATO
+	char nvramstr[16];
+#endif
 
 	/*
 	 * A client discards any addresses for which the preferred
@@ -196,6 +203,34 @@ update_prefix(ia, pinfo, pifc, dhcpifp, ctlp, callback)
 	    spcreate ? "create" : "update",
 	    in6addr2str(&pinfo->addr, 0), pinfo->plen,
 	    pinfo->pltime, pinfo->vltime);
+
+#ifdef TOMATO
+#ifndef ONEMONTH_LIFETIME
+#define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
+#endif
+#ifndef INFINITE_LIFETIME
+#define INFINITE_LIFETIME 0xffffffff
+#endif
+	/* get pltime for Tomato */
+	if (pinfo->pltime <= ONEMONTH_LIFETIME) {
+		snprintf(nvramstr, sizeof(nvramstr), "%d", pinfo->pltime);
+		nvram_set("ipv6_pd_pltime", nvramstr);
+	}
+	else {
+		snprintf(nvramstr, sizeof(nvramstr), "%d", INFINITE_LIFETIME);
+		nvram_set("ipv6_pd_pltime", nvramstr);
+	}
+
+	/* get vltime for Tomato */
+	if (pinfo->vltime <= ONEMONTH_LIFETIME) {
+		snprintf(nvramstr, sizeof(nvramstr), "%d", pinfo->vltime);
+		nvram_set("ipv6_pd_vltime", nvramstr);
+	}
+	else {
+		snprintf(nvramstr, sizeof(nvramstr), "%d", INFINITE_LIFETIME);
+		nvram_set("ipv6_pd_vltime", nvramstr);
+	}
+#endif /* Tomato */
 
 	/* update prefix interfaces if necessary */
 	if (sp->prefix.vltime != 0 && spcreate) {
