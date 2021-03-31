@@ -41,7 +41,7 @@ void address_checker (int *address_type, char *ipaddr_old, char *ipaddr)
 		*address_type = IP_RANGE;
 		if (strchr(second_part + 1, '.') != NULL)
 			/* long notation */
-			strcpy (ipaddr, ipaddr_old);
+			strcpy(ipaddr, ipaddr_old);
 		else {
 			/* short notation */
 			last_dot = strrchr(ipaddr_old, '.');
@@ -61,7 +61,7 @@ void address_checker (int *address_type, char *ipaddr_old, char *ipaddr)
 			/* MAC ADDRESS */
 			*address_type = MAC_ADDRESS;
 
-		strcpy (ipaddr, ipaddr_old);
+		strcpy(ipaddr, ipaddr_old);
 	}
 }
 
@@ -70,6 +70,7 @@ void ipt_bwlimit(int chain)
 	char *buf;
 	char *g;
 	char *p;
+	char p1[128];
 	char *ibw, *obw;		/* bandwidth */
 	char seq[32];			/* mark number */
 	int iSeq = 1;
@@ -83,6 +84,8 @@ void ipt_bwlimit(int chain)
 	char *lanX_ipaddr;		/* (br1 - br3) */
 	char *lanX_mask;		/* (br1 - br3) */
 	char *tcplimit, *udplimit;	/* tcp connection limit & udp packets per second */
+	char *description;		/* description */
+	char *enabled;
 	int priority_num;
 	char *bwl_br0_tcp, *bwl_br0_udp;
 	int i, address_type;
@@ -172,12 +175,20 @@ void ipt_bwlimit(int chain)
 
 	while (g) {
 		/*
-		ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit
+		 * old: ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit>
+		 * new: enabled<ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit<description>
 		*/
 		if ((p = strsep(&g, ">")) == NULL)
 			break;
-		i = vstrsep(p, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit);
-		if (i != 8)
+
+		strcpy(p1, p);
+		i = vstrsep(p, "<", &enabled, &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit, &description);
+		if (i < 10) {
+			i = vstrsep(p1, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit); /* compat */
+			if (i < 8)
+				continue;
+		}
+		if (i == 10 && *enabled && atoi(enabled) != 1)
 			continue;
 
 		priority_num = atoi(priority);
@@ -285,6 +296,7 @@ void start_bwlimit(void)
 	char *buf;
 	char *g;
 	char *p;
+	char p1[128];
 	char *ibw, *obw;		/* bandwidth */
 	int mark;			/* mark number */
 	int seq;
@@ -297,6 +309,8 @@ void start_bwlimit(void)
 	char *lanipaddr;		/* lan ip address */
 	char *lanmask;			/* lan netmask */
 	char *tcplimit, *udplimit;	/* tcp connection limit & udp packets per second */
+	char *description;		/* description */
+	char *enabled;
 	int priority_num;
 	char *dlr, *dlc, *ulr, *ulc, *prio; /* download / upload - rate / ceiling / prio */
 	int i, address_type;
@@ -384,12 +398,20 @@ void start_bwlimit(void)
 
 	while (g) {
 		/*
-		ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit
+		 * old: ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit>
+		 * new: enabled<ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit<description>
 		*/
 		if ((p = strsep(&g, ">")) == NULL)
 			break;
-		i = vstrsep(p, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit);
-		if (i != 8)
+
+		strcpy(p1, p);
+		i = vstrsep(p, "<", &enabled, &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit, &description);
+		if (i < 10) {
+			i = vstrsep(p1, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit); /* compat */
+			if (i < 8)
+				continue;
+		}
+		if (i == 10 && *enabled && atoi(enabled) != 1)
 			continue;
 
 		priority_num = atoi(priority);
