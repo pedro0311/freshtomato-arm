@@ -70,7 +70,7 @@ static void update(int num, int *dirty, int force)
 	memset(msg_fn, 0, 32);
 	sprintf(msg_fn, "%s.msg", ddnsx_path);
 
-	if ((vstrsep(config, "<", &serv, &user, &host, &wild, &mx, &bmx, &cust) != 7) || (*serv == 0)) {
+	if ((vstrsep(config, "<", &serv, &user, &host, &wild, &mx, &bmx, &cust) < 7) || (*serv == 0)) {
 		logmsg(LOG_DEBUG, "*** %s: msg=''", __FUNCTION__);
 		f_write(msg_fn, NULL, 0, 0, 0);
 		return;

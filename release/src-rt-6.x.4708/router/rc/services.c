@@ -2325,7 +2325,7 @@ static void start_ftpd(void)
 		p = buf;
 		while ((q = strsep(&p, ">")) != NULL) {
 			i = vstrsep(q, "<", &user, &pass, &rights, &root_dir);
-			if ((i < 3) || (i > 4))
+			if (i < 3)
 				continue;
 			if ((!user) || (!pass))
 				continue;
@@ -2586,7 +2586,7 @@ void start_samba(void)
 
 		p = buf;
 		while ((q = strsep(&p, ">")) != NULL) {
-			if (vstrsep(q, "<", &name, &path, &comment, &writeable, &hidden) != 5)
+			if (vstrsep(q, "<", &name, &path, &comment, &writeable, &hidden) < 5)
 				continue;
 			if (!path || !name)
 				continue;

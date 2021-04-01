@@ -122,7 +122,7 @@ void ipt_routerpolicy(void)
 
 			1<-2<0<<<1<220.249.92.18<<1<1
 			*/
-			if ((vstrsep(b, "<", &active, &proto, &srt_type, &srt_addr, &srt_port, &dst_type, &dst_addr, &dst_port, &wanx, &desc)!=10))
+			if ((vstrsep(b, "<", &active, &proto, &srt_type, &srt_addr, &srt_port, &dst_type, &dst_addr, &dst_port, &wanx, &desc) < 10))
 				continue;
 
 			/* active is not 1, drop the rule */

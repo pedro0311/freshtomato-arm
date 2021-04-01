@@ -197,20 +197,7 @@ void ipt_qos(void)
 
 		i = vstrsep(p, "<", &addr_type, &addr, &proto, &port_type, &port, &ipp2p, &layer7, &bcount, &dscp, &class_prio, &desc);
 		rule_num++;
-		if (i == 10) {
-			/* fixup < v1.28.XX55 */
-			desc = class_prio;
-			class_prio = dscp;
-			dscp = "";
-		}
-		else if (i == 9) {
-			/* fixup < v0.08 - temp */
-			desc = class_prio;
-			class_prio = bcount;
-			bcount = "";
-			dscp = "";
-		}
-		else if (i != 11)
+		if (i < 11)
 			continue;
 
 		class_num = atoi(class_prio);

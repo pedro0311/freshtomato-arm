@@ -85,7 +85,7 @@ void start_tinc(void)
 
 	while ((b = strsep(&nvp, ">")) != NULL) {
 
-		if (vstrsep(b, "<", &connecto, &name, &address, &port, &compression, &subnet, &rsa, &ed25519, &custom) != 9)
+		if (vstrsep(b, "<", &connecto, &name, &address, &port, &compression, &subnet, &rsa, &ed25519, &custom) < 9)
 			continue;
 
 		memset(buffer, 0, (BUF_SIZE));

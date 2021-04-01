@@ -233,7 +233,7 @@ void ipt_restrictions(void)
 		strcpy(buf, p);
 
 		/* q = 0/1, p = time (ignored), http file match */
-		if ((vstrsep(buf, "|", &q, &p, &p, &p, &comps, &matches, &http, &p) != 8) || (*q != '1'))
+		if ((vstrsep(buf, "|", &q, &p, &p, &p, &comps, &matches, &http, &p) < 8) || (*q != '1'))
 			continue;
 
 		http_file = atoi(p);
@@ -266,11 +266,7 @@ void ipt_restrictions(void)
 		blockall = 1;
 
 		while ((q = strsep(&matches, ">")) != NULL) {
-			n = vstrsep(q, "<", &pproto, &dir, &pport, &ipp2p, &layer7, &addr_type, &addr);
-			if (n == 5)
-				/* fixup for backward compatibility */
-				addr_type = "0";
-			else if (n != 7)
+			if (vstrsep(q, "<", &pproto, &dir, &pport, &ipp2p, &layer7, &addr_type, &addr) < 7)
 				continue;
 
 			if ((*dir != 'a') && (*dir != 's') && (*dir != 'd') && (*dir != 'x'))

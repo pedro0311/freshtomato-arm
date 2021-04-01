@@ -393,7 +393,7 @@ void wo_ovpn_genclientconfig(char *url)
 					++i;
 
 					/* enabled<username<password> */
-					if ((vstrsep(b, "<", &dummy, &uname, &passwd)) != 3)
+					if ((vstrsep(b, "<", &dummy, &uname, &passwd)) < 3)
 						continue;
 
 					if ((*uname =='\0') || (*passwd == '\0'))

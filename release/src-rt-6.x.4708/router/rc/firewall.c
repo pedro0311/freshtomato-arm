@@ -1345,22 +1345,20 @@ static void filter_forward(void)
 
 	const char *d, *sbr, *saddr, *dbr, *daddr, *desc;
 	char *nv, *nvp, *b;
-	int n;
 	nvp = nv = strdup(nvram_safe_get("lan_access"));
 	if (nv) {
 		while ((b = strsep(&nvp, ">")) != NULL) {
 			/*
-				1<0<1.2.3.4<1<5.6.7.8<30,45-50<desc
-
-				1 = enabled
-				0 = src bridge
-				1.2.3.4 = src addr
-				1 = dst bridge
-				5.6.7.8 = dst addr
-				desc = desc
-			*/
-			n = vstrsep(b, "<", &d, &sbr, &saddr, &dbr, &daddr, &desc);
-			if (*d != '1')
+			 * 1<0<1.2.3.4<1<5.6.7.8<30,45-50<desc
+			 *
+			 * 1 = enabled
+			 * 0 = src bridge
+			 * 1.2.3.4 = src addr
+			 * 1 = dst bridge
+			 * 5.6.7.8 = dst addr
+			 * desc = desc
+			 */
+			if ((vstrsep(b, "<", &d, &sbr, &saddr, &dbr, &daddr, &desc) < 6) || (*d != '1'))
 				continue;
 			if (!ipt_addr(src, sizeof(src), saddr, "src", (IPT_V4 | IPT_V6), 0, "LAN access", desc))
 				continue;

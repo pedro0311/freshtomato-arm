@@ -70,7 +70,7 @@ void start_nfs(void)
 
 		/* dir < address < access < sync < subtree < other */
 		while ((p = strsep(&g, ">")) != NULL) {
-			if ((vstrsep(p, "<", &dir, &address, &access, &sync, &subtree, &other)) != 6)
+			if ((vstrsep(p, "<", &dir, &address, &access, &sync, &subtree, &other)) < 6)
 				continue;
 
 			fprintf(fp, "%s %s(%s,%s,%s,%s)\n", dir, address, access, sync, subtree, other);

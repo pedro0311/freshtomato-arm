@@ -1313,7 +1313,9 @@ void do_static_routes(int add)
 		else nvram_unset("routes_static_saved");
 	p = buf;
 	while ((q = strsep(&p, ">")) != NULL) {
-		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &ifname) != 5) continue;
+		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &ifname) < 5)
+			continue;
+
 		ifname = nvram_safe_get(((strcmp(ifname,"LAN")==0) ? "lan_ifname" :
 					((strcmp(ifname,"LAN1")==0) ? "lan1_ifname" :
 					((strcmp(ifname,"LAN2")==0) ? "lan2_ifname" :
