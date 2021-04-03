@@ -63,7 +63,8 @@ ifeq ($(USE_DHCP6CTL),y)
 CLIENTOBJS+=	dhcp6_ctl.o
 CFLAGS+=	-DUSE_DHCP6CTL
 endif
-ifeq ($(USE_DHCP6SRV),y)
+#ifeq ($(USE_DHCP6SRV),y)
+ifeq ($(TCONFIG_IPV6),y)
 CLIENTOBJS+=	lease.o
 CFLAGS+=	-DUSE_DHCP6SRV
 endif

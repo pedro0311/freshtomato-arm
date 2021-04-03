@@ -1255,7 +1255,7 @@ usbmodeswitch-install: usbmodeswitch usbmodeswitchdb-install
 
 dhcpv6/stamp-h1:
 	@cd dhcpv6 && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -fPIC -DUSE_DHCP6SRV -I$(SRCBASE)/include -DTOMATO" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -fPIC -I$(SRCBASE)/include -DTOMATO" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC $(if $(TCONFIG_BCMARM),-L$(TOP)/nvram${BCMEX} -lnvram,-L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared)" \
 	ac_cv_func_setpgrp_void=yes \
 	$(CONFIGURE) --prefix= --with-localdbdir=/var
