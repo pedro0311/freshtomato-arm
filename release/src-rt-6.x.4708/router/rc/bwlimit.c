@@ -154,12 +154,11 @@ void ipt_bwlimit(int chain)
 	if (chain == 2) {
 		if (nvram_get_int("bwl_br0_enable") == 1) {
 #ifndef TCONFIG_BCMARM
-			if (nvram_get_int("bwl_br0_tcp") > 0) {
+			if (nvram_get_int("bwl_br0_tcp") > 0)
 				ipt_write("-A PREROUTING -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, bwl_br0_tcp);
-			}
 #endif
 			if (nvram_get_int("bwl_br0_udp") > 0)
-				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n" , lanipaddr, lanmask, bwl_br0_udp);
+				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n", lanipaddr, lanmask, bwl_br0_udp);
 		}
 	}
 
@@ -168,7 +167,7 @@ void ipt_bwlimit(int chain)
 	if (chain == 3) {
 		if (nvram_get_int("bwl_br0_enable") == 1) {
 			if (nvram_get_int("bwl_br0_tcp") > 0)
-				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n" , lanipaddr, lanmask, bwl_br0_tcp);
+				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, bwl_br0_tcp);
 		}
 	}
 #endif
@@ -330,12 +329,6 @@ void start_bwlimit(void)
 	lanmask = nvram_safe_get("lan_netmask");
 	waniface = nvram_safe_get("wan_iface");
 
-	dlr = nvram_safe_get("bwl_br0_dlr");		/* download rate */
-	dlc = nvram_safe_get("bwl_br0_dlc");		/* download ceiling */
-	ulr = nvram_safe_get("bwl_br0_ulr");		/* upload rate */
-	ulc = nvram_safe_get("bwl_br0_ulc");		/* upload ceiling */
-	prio = nvram_safe_get("bwl_br0_prio");		/* priority */
-
 	if ((tc = fopen(bwlimitfn, "w")) == NULL) {
 		perror(bwlimitfn);
 		return;
@@ -373,28 +366,6 @@ void start_bwlimit(void)
 	            waniface,
 	            ibw,
 	            obw);
-
-	if ((nvram_get_int("bwl_br0_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
-		if (!strcmp(dlc, ""))
-			strcpy(dlc, dlr);
-		if (!strcmp(ulc, ""))
-			strcpy(ulc, ulr);
-
-		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQA parent 1:16 handle 16: $Q\n"
-		            "\t$TFA parent 1:0 prio %s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
-		            "\n"
-		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
-		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
-		            "\t}\n"
-		            "\n",
-		            dlr, dlc, prio,
-		            prio,
-		            ulr, ulc, prio,
-		            prio);
-	}
 
 	while (g) {
 		/*
@@ -459,6 +430,34 @@ void start_bwlimit(void)
 			            priority, mark, seq);
 	} /* while */
 	free(buf);
+
+	/* the order matters! first rules for BWL for br0 (above) */
+
+	/* limit br0 */
+	dlr = nvram_safe_get("bwl_br0_dlr");		/* download rate */
+	dlc = nvram_safe_get("bwl_br0_dlc");		/* download ceiling */
+	ulr = nvram_safe_get("bwl_br0_ulr");		/* upload rate */
+	ulc = nvram_safe_get("bwl_br0_ulc");		/* upload ceiling */
+	prio = nvram_safe_get("bwl_br0_prio");		/* priority */
+	if ((nvram_get_int("bwl_br0_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
+		if (!strcmp(dlc, ""))
+			strcpy(dlc, dlr);
+		if (!strcmp(ulc, ""))
+			strcpy(ulc, ulr);
+
+		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA parent 1:16 handle 16: $Q\n"
+		            "\t$TFA parent 1:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 1:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\n"
+		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 2:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\t}\n"
+		            "\n",
+		            dlr, dlc, prio,
+		            ulr, ulc, prio);
+	}
 
 	/* limit br1 */
 	if (nvram_get_int("bwl_br1_enable") == 1) {
@@ -591,7 +590,6 @@ void start_bwlimit(void)
 	fclose(tc);
 
 	chmod(bwlimitfn, 0700);
-
 
 	eval(bwlimitfn, "start");
 }
