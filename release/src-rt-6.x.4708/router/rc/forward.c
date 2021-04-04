@@ -31,9 +31,6 @@ void ipt_forward(ipt_table_t table)
 
 	while ((b = strsep(&nvp, ">")) != NULL) {
 		/*
-		 * [<1.01] 1<3<30,40-45<60<5<desc
-		 * [<1.07] 1<3<30,40-45<60<192.168.1.5<desc
-		 *
 		 * 1<3<71.72.73.74<30,40-45<60<192.168.1.5<desc
 		 *
 		 * 1 = enabled
@@ -44,35 +41,19 @@ void ipt_forward(ipt_table_t table)
 		 * 192.168.1.5 = dst addr
 		 * desc = desc
 		 */
-		n = vstrsep(b, "<", &c, &proto, &saddr, &xports, &iport, &iaddr, &desc);
-		if ((n < 6) || (*c != '1'))
+		if ((vstrsep(b, "<", &c, &proto, &saddr, &xports, &iport, &iaddr, &desc) < 7) || (*c != '1'))
 			continue;
-		if (n == 6) {
-			/* <1.07 */
-			desc = iaddr;
-			iaddr = iport;
-			iport = xports;
-			xports = saddr;
-			saddr = "";
-		}
 
 		memset(src, 0 ,64);
 		if (!ipt_addr(src, sizeof(src), saddr, "src", IPT_V4, 1, "IPv4 port forwarding", desc))
 			continue;
 
 		memset(ip, 0, 64);
-		if (strchr(iaddr, '.') == NULL && strtol(iaddr, NULL, 10) > 0) {
-			/* < 1.01: 5 -> 192.168.1.5 */
-			strcpy(ip, lan_cclass);
-			strlcat(ip, iaddr, sizeof(ip));
+		if (host_addrtypes(iaddr, IPT_V4) != IPT_V4) {
+			ipt_log_unresolved(iaddr, "IPv4", "IPv4 port forwarding", desc);
+			continue;
 		}
-		else {
-			if (host_addrtypes(iaddr, IPT_V4) != IPT_V4) {
-				ipt_log_unresolved(iaddr, "IPv4", "IPv4 port forwarding", desc);
-				continue;
-			}
-			strlcpy(ip, iaddr, sizeof(ip));
-		}
+		strlcpy(ip, iaddr, sizeof(ip));
 
 		mdport = (strchr(xports, ',') != NULL) ? "-m multiport --dports" : "--dport";
 		for (i = 0; i < 2; ++i) {
@@ -129,7 +110,7 @@ void ipt_triggered(ipt_table_t table)
 
 	first = 1;
 	while ((b = strsep(&nvp, ">")) != NULL) {
-		if ((vstrsep(b, "<", &c, &proto, &mports, &fports) != 4) || (*c != '1'))
+		if ((vstrsep(b, "<", &c, &proto, &mports, &fports) < 4) || (*c != '1'))
 			continue;
 
 		for (i = 0; i < 2; ++i) {
@@ -196,7 +177,7 @@ void ip6t_forward(void)
 		 * 30,40-45 = dst port
 		 * desc = desc
 		 */
-		if ((vstrsep(b, "<", &c, &proto, &saddr, &daddr, &dports, &desc) != 6) || (*c != '1'))
+		if ((vstrsep(b, "<", &c, &proto, &saddr, &daddr, &dports, &desc) < 6) || (*c != '1'))
 			continue;
 
 		if (!ipt_addr(src, sizeof(src), saddr, "src", IPT_V6, 1, "IPv6 port forwarding", desc))

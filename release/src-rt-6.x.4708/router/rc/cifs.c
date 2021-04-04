@@ -53,7 +53,8 @@ int mount_cifs_main(int argc, char *argv[])
 
 					sprintf(s, "cifs%d", i);
 					strlcpy(s, nvram_safe_get(s), sizeof(s));
-					if ((vstrsep(s, "<", &on, &unc, &user, &pass, &dom, &exec, &servern, &sec) != 8) || (*on != '1')) continue;
+					if ((vstrsep(s, "<", &on, &unc, &user, &pass, &dom, &exec, &servern, &sec) < 8) || (*on != '1'))
+						continue;
 					custom = nvram_safe_get("cifs_opts");
 
 					done[i] = 0;

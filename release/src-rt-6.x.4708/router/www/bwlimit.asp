@@ -29,13 +29,14 @@ var class_tcp = [['0','nolimit']];
 var class_udp = [['0','nolimit']];
 for (var i = 1; i <= 100; ++i) {
 	class_tcp.push([i*10, i*10+'']);
-	class_udp.push([i, i + '/s']);
+	class_udp.push([i, i+'/s']);
 }
 
 var bwlg = new TomatoGrid();
 
 bwlg.setup = function() {
 	this.init('bwlg-grid', '', 80, [
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 31 },
 		{ type: 'text', maxlen: 8 },
 		{ type: 'text', maxlen: 8 },
@@ -43,19 +44,24 @@ bwlg.setup = function() {
 		{ type: 'text', maxlen: 8 },
 		{ type: 'select', options: class_prio },
 		{ type: 'select', options: class_tcp },
-		{ type: 'select', options: class_udp }]);
-	this.headerSet(['IP | IP Range | MAC Address', 'DLRate', 'DLCeil', 'ULRate', 'ULCeil', 'Priority', 'TCP Limit', 'UDP Limit']);
+		{ type: 'select', options: class_udp },
+		{ type: 'text', maxlen: 31 }]);
+
+	this.headerSet(['Enable','IP | IP Range | MAC','DLRate','DLCeil','ULRate','ULCeil','Priority','TCP Limit','UDP Limit','Description']);
+	/* 1<192.168.1.1<4096<4096<2048<2048<2<0<0<desc> */
 	var bwllimitrules = nvram.bwl_rules.split('>');
 	for (var i = 0; i < bwllimitrules.length; ++i) {
 		var t = bwllimitrules[i].split('<');
-		if (t.length == 8) this.insertData(-1, t);
+		if (t.length == 8) { /* compat */
+			t.unshift('1');
+			t.push('');
+			this.insertData(-1, t);
+		}
+		else if (t.length == 10)
+			this.insertData(-1, t);
 	}
 	this.showNewEditor();
 	this.resetNewEditor();
-}
-
-bwlg.dataToView = function(data) {
-	return [data[0],data[1]+'kbps',data[2]+'kbps',data[3]+'kbps',data[4]+'kbps',class_prio[data[5]*1][1],class_tcp[data[6]*1/10][1],class_udp[data[7]*1][1]];
 }
 
 bwlg.resetNewEditor = function() {
@@ -63,54 +69,66 @@ bwlg.resetNewEditor = function() {
 
 	var f = fields.getAll(this.newEditor);
 	ferror.clearAll(f);
+
+	f[0].onchange = '';
+	f[2].value = '';
+	f[3].value = '';
+	f[4].value = '';
+	f[5].value = '';
+	f[6].selectedIndex = '2';
+	f[7].selectedIndex = '0';
+	f[8].selectedIndex = '0';
+
 	if ((c = cookie.get('addbwlimit')) != null) {
 		cookie.set('addbwlimit', '', 0);
 		c = c.split(',');
 		if (c.length == 2) {
-			f[0].value = c[0];
-			f[1].value = '';
-			f[2].value = '';
-			f[3].value = '';
-			f[4].value = '';
-			f[5].selectedIndex = '2';
-			f[6].selectedIndex = '0';
-			f[7].selectedIndex = '0';
+			f[0].checked = 'checked';
+			f[1].value = c[0];
+			f[9].value = c[1].substr(0, 30);
 			return;
 		}
 	}
 
-	f[0].value = '';
+	f[0].checked = '';
 	f[1].value = '';
-	f[2].value = '';
-	f[3].value = '';
-	f[4].value = '';
-	f[5].selectedIndex = '2';
-	f[6].selectedIndex = '0';
-	f[7].selectedIndex = '0';
+	f[9].value = '';
 	}
+
+bwlg.dataToView = function(row) {
+	return ['<input type="checkbox" disabled'+(row[0] != 0 ? ' checked' : '')+'>',row[1],row[2]+'kbps',row[3]+'kbps',row[4]+'kbps',row[5]+'kbps',class_prio[row[6]*1][1],class_tcp[row[7]*1/10][1],class_udp[row[8]*1][1],row[9]];
+}
+
+bwlg.dataToFieldValues = function(row) {
+	return [row[0] == 1,row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],row[9]];
+}
+
+bwlg.fieldValuesToData = function(row) {
+	var f = fields.getAll(row);
+	return ([f[0].checked ? '1' : '0',f[1].value,f[2].value,f[3].value,f[4].value,f[5].value,f[6].value,f[7].value,f[8].value,f[9].value]);
+}
 
 bwlg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
-		if (data[i][f] == v) return true;
+		if (data[i][f] == v)
+			return true;
 	}
 
 	return false;
 }
 
-bwlg.existID = function(id) {
-	return this.exist(0, id);
-}
-
 bwlg.existIP = function(ip) {
-	if (ip == "0.0.0.0") return true;
+	if (ip == '0.0.0.0')
+		return true;
 
 	return this.exist(1, ip);
 }
 
 bwlg.checkRate = function(rate) {
 	var s = parseInt(rate, 10);
-	if (isNaN(s) || s <= 0 || s >= 100000000) return true;
+	if (isNaN(s) || s <= 0 || s >= 100000000)
+		return true;
 
 	return false;
 }
@@ -118,7 +136,8 @@ bwlg.checkRate = function(rate) {
 bwlg.checkRateCeil = function(rate, ceil) {
 	var r = parseInt(rate, 10);
 	var c = parseInt(ceil, 10);
-	if (r > c) return true;
+	if (r > c)
+		return true;
 
 	return false;
 }
@@ -126,50 +145,48 @@ bwlg.checkRateCeil = function(rate, ceil) {
 bwlg.verifyFields = function(row, quiet) {
 	var ok = 1;
 	var f = fields.getAll(row);
-	var s;
 
-/*
-	if (v_ip(f[0], quiet)) {
-		if (this.existIP(f[0].value)) {
-			ferror.set(f[0], 'duplicate IP address', quiet);
+	if (v_macip(f[1], quiet, 0, nvram.lan_ipaddr, nvram.lan_netmask)) {
+		if (this.existIP(f[1].value)) {
+			ferror.set(f[1], 'Duplicate IP or MAC address', quiet);
 			ok = 0;
 		}
 	}
-*/
-	if (v_macip(f[0], quiet, 0, nvram.lan_ipaddr, nvram.lan_netmask)) {
-		if (this.existIP(f[0].value)) {
-			ferror.set(f[0], 'duplicate IP or MAC address', quiet);
-			ok = 0;
-		}
-	}
-
-	if (this.checkRate(f[1].value)) {
-		ferror.set(f[1], 'DLRate must be between 1 and 99999999', quiet);
+	else
 		ok = 0;
-	}
 
 	if (this.checkRate(f[2].value)) {
-		ferror.set(f[2], 'DLCeil must be between 1 and 99999999', quiet);
-		ok = 0;
-	}
-
-	if (this.checkRateCeil(f[1].value, f[2].value)) {
-		ferror.set(f[2], 'DLCeil must be greater than DLRate', quiet);
+		ferror.set(f[2], 'DLRate must be between 1 and 99999999', quiet);
 		ok = 0;
 	}
 
 	if (this.checkRate(f[3].value)) {
-		ferror.set(f[3], 'ULRate must be between 1 and 99999999', quiet);
+		ferror.set(f[3], 'DLCeil must be between 1 and 99999999', quiet);
+		ok = 0;
+	}
+
+	if (this.checkRateCeil(f[2].value, f[3].value)) {
+		ferror.set(f[3], 'DLCeil must be greater than DLRate', quiet);
 		ok = 0;
 	}
 
 	if (this.checkRate(f[4].value)) {
-		ferror.set(f[4], 'ULCeil must be between 1 and 99999999', quiet);
+		ferror.set(f[4], 'ULRate must be between 1 and 99999999', quiet);
 		ok = 0;
 	}
 
-	if (this.checkRateCeil(f[3].value, f[4].value)) {
-		ferror.set(f[4], 'ULCeil must be greater than ULRate', quiet);
+	if (this.checkRate(f[5].value)) {
+		ferror.set(f[5], 'ULCeil must be between 1 and 99999999', quiet);
+		ok = 0;
+	}
+
+	if (this.checkRateCeil(f[4].value, f[5].value)) {
+		ferror.set(f[5], 'ULCeil must be greater than ULRate', quiet);
+		ok = 0;
+	}
+
+	if (f[9].value.indexOf('>') >= 0 || f[9].value.indexOf('<') >= 0) {
+		ferror.set(f[9], 'Description cannot contain "<" or ">" characters', quiet);
 		ok = 0;
 	}
 
@@ -226,34 +243,37 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (bwlg.isEditing()) return;
+	if (bwlg.isEditing())
+		return;
 
 	var data = bwlg.getAllData();
 	var bwllimitrules = '';
 	var i;
 
-	if (data.length != 0) bwllimitrules += data[0].join('<'); 
+	if (data.length != 0)
+		bwllimitrules += data[0].join('<'); 
+
 	for (i = 1; i < data.length; ++i) {
-		bwllimitrules += '>' + data[i].join('<');
+		bwllimitrules += '>'+data[i].join('<');
 	}
 
 	var fom = E('t_fom');
-	fom.bwl_enable.value = E('_f_bwl_enable').checked ? 1 : 0;
-	fom.bwl_br0_enable.value = E('_f_bwl_br0_enable').checked ? 1 : 0;
-	fom.bwl_br1_enable.value = E('_f_bwl_br1_enable').checked ? 1 : 0;
-	fom.bwl_br2_enable.value = E('_f_bwl_br2_enable').checked ? 1 : 0;
-	fom.bwl_br3_enable.value = E('_f_bwl_br3_enable').checked ? 1 : 0;
+	fom.bwl_enable.value = fom._f_bwl_enable.checked ? 1 : 0;
+	fom.bwl_br0_enable.value = fom._f_bwl_br0_enable.checked ? 1 : 0;
+	fom.bwl_br1_enable.value = fom._f_bwl_br1_enable.checked ? 1 : 0;
+	fom.bwl_br2_enable.value = fom._f_bwl_br2_enable.checked ? 1 : 0;
+	fom.bwl_br3_enable.value = fom._f_bwl_br3_enable.checked ? 1 : 0;
 	fom.bwl_rules.value = bwllimitrules;
 	form.submit(fom, 1);
 }
 
-function init() {
-	bwlg.recolor();
-}
-
 function earlyInit() {
 	bwlg.setup();
-	verifyFields(null, true);
+	verifyFields(null, 1);
+}
+
+function init() {
+	bwlg.recolor();
 }
 </script>
 </head>

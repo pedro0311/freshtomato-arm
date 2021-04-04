@@ -66,6 +66,9 @@
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG	"services_debug"
 
+#define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
+#define IPV6_MIN_LIFETIME 120
+
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
@@ -519,28 +522,48 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
-		ipv6_lease = nvram_get_int("ipv6_lease_time"); /* get DHCP IPv6 lease time */
-		if ((ipv6_lease < 1) || (ipv6_lease > 720)) /* check lease time and limit the range (1...720 hours, 30 days should be enough) */
-			ipv6_lease = 12;
-
-		/* enable-ra should be enabled in both cases */
+		/* enable-ra should be enabled in both cases (SLAAC and/or DHCPv6) */
 		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd"))) {
 			fprintf(f, "enable-ra\n");
 			if (nvram_get_int("ipv6_fast_ra"))
 				fprintf(f, "ra-param=br*, 15, 600\n"); /* interface = br*, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
 		}
 
-		/* only SLAAC and NO DHCPv6 */
-		if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))
-			fprintf(f, "dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %dh\n", ipv6_lease);
+		/* Check for DHCPv6 PD (and use IPv6 preferred lifetime in that case) */
+		if (get_ipv6_service() == IPV6_NATIVE_DHCP) {
+			ipv6_lease = nvram_get_int("ipv6_pd_pltime"); /* get IPv6 preferred lifetime (seconds) */
+			if ((ipv6_lease < IPV6_MIN_LIFETIME) || (ipv6_lease > ONEMONTH_LIFETIME)) /* check lease time and limit the range (120 sec up to one month) */
+				ipv6_lease = IPV6_MIN_LIFETIME;
 
-		/* only DHCPv6 and NO SLAAC */
-		if ((nvram_get_int("ipv6_dhcpd")) && (!nvram_get_int("ipv6_radvd")))
-			fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %dh\n", ipv6_lease);
+			/* only SLAAC and NO DHCPv6 */
+			if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))
+				fprintf(f, "dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %ds\n", ipv6_lease);
 
-		/* SLAAC and DHCPv6 (2 IPv6 IPs) */
-		if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
-			fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+			/* only DHCPv6 and NO SLAAC */
+			if ((nvram_get_int("ipv6_dhcpd")) && (!nvram_get_int("ipv6_radvd")))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %ds\n", ipv6_lease);
+
+			/* SLAAC and DHCPv6 (2 IPv6 IPs) */
+			if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %ds\n", ipv6_lease);
+		}
+		else {
+			ipv6_lease = nvram_get_int("ipv6_lease_time"); /* get DHCP IPv6 lease time via GUI */
+			if ((ipv6_lease < 1) || (ipv6_lease > 720)) /* check lease time and limit the range (1...720 hours, 30 days should be enough) */
+				ipv6_lease = 12;
+
+			/* only SLAAC and NO DHCPv6 */
+			if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))
+				fprintf(f, "dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %dh\n", ipv6_lease);
+
+			/* only DHCPv6 and NO SLAAC */
+			if ((nvram_get_int("ipv6_dhcpd")) && (!nvram_get_int("ipv6_radvd")))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %dh\n", ipv6_lease);
+
+			/* SLAAC and DHCPv6 (2 IPv6 IPs) */
+			if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
+		}
 
 		/* DNS server */
 		fprintf(f, "dhcp-option=option6:dns-server,%s\n", "[::]"); /* use global address */
@@ -707,8 +730,8 @@ void start_stubby(void)
 	mkdir_if_none("/etc/stubby");
 
 	/* alternative (user) configuration file */
-	if (f_exists("/etc/stubby/stubby.alt")) {
-		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby/stubby.alt");
+	if (f_exists("/etc/stubby/stubby_alt.yml")) {
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby/stubby_alt.yml");
 		return;
 	}
 
@@ -2325,7 +2348,7 @@ static void start_ftpd(void)
 		p = buf;
 		while ((q = strsep(&p, ">")) != NULL) {
 			i = vstrsep(q, "<", &user, &pass, &rights, &root_dir);
-			if ((i < 3) || (i > 4))
+			if (i < 3)
 				continue;
 			if ((!user) || (!pass))
 				continue;
@@ -2586,7 +2609,7 @@ void start_samba(void)
 
 		p = buf;
 		while ((q = strsep(&p, ">")) != NULL) {
-			if (vstrsep(q, "<", &name, &path, &comment, &writeable, &hidden) != 5)
+			if (vstrsep(q, "<", &name, &path, &comment, &writeable, &hidden) < 5)
 				continue;
 			if (!path || !name)
 				continue;

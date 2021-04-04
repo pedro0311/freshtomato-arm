@@ -65,7 +65,7 @@ void write_chap_secret(char *file)
 
 	if (nv) {
 		while ((b = strsep(&nvp, ">")) != NULL) {
-			if ((vstrsep(b, "<", &username, &passwd) != 2))
+			if ((vstrsep(b, "<", &username, &passwd) < 2))
 				continue;
 
 			if (*username =='\0' || *passwd == '\0')

@@ -41,7 +41,7 @@ void address_checker (int *address_type, char *ipaddr_old, char *ipaddr)
 		*address_type = IP_RANGE;
 		if (strchr(second_part + 1, '.') != NULL)
 			/* long notation */
-			strcpy (ipaddr, ipaddr_old);
+			strcpy(ipaddr, ipaddr_old);
 		else {
 			/* short notation */
 			last_dot = strrchr(ipaddr_old, '.');
@@ -61,7 +61,7 @@ void address_checker (int *address_type, char *ipaddr_old, char *ipaddr)
 			/* MAC ADDRESS */
 			*address_type = MAC_ADDRESS;
 
-		strcpy (ipaddr, ipaddr_old);
+		strcpy(ipaddr, ipaddr_old);
 	}
 }
 
@@ -70,6 +70,7 @@ void ipt_bwlimit(int chain)
 	char *buf;
 	char *g;
 	char *p;
+	char p1[128];
 	char *ibw, *obw;		/* bandwidth */
 	char seq[32];			/* mark number */
 	int iSeq = 1;
@@ -83,6 +84,8 @@ void ipt_bwlimit(int chain)
 	char *lanX_ipaddr;		/* (br1 - br3) */
 	char *lanX_mask;		/* (br1 - br3) */
 	char *tcplimit, *udplimit;	/* tcp connection limit & udp packets per second */
+	char *description;		/* description */
+	char *enabled;
 	int priority_num;
 	char *bwl_br0_tcp, *bwl_br0_udp;
 	int i, address_type;
@@ -151,12 +154,11 @@ void ipt_bwlimit(int chain)
 	if (chain == 2) {
 		if (nvram_get_int("bwl_br0_enable") == 1) {
 #ifndef TCONFIG_BCMARM
-			if (nvram_get_int("bwl_br0_tcp") > 0) {
+			if (nvram_get_int("bwl_br0_tcp") > 0)
 				ipt_write("-A PREROUTING -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, bwl_br0_tcp);
-			}
 #endif
 			if (nvram_get_int("bwl_br0_udp") > 0)
-				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n" , lanipaddr, lanmask, bwl_br0_udp);
+				ipt_write("-A PREROUTING -s %s/%s -p udp -m limit --limit %s/sec -j ACCEPT\n", lanipaddr, lanmask, bwl_br0_udp);
 		}
 	}
 
@@ -165,19 +167,27 @@ void ipt_bwlimit(int chain)
 	if (chain == 3) {
 		if (nvram_get_int("bwl_br0_enable") == 1) {
 			if (nvram_get_int("bwl_br0_tcp") > 0)
-				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n" , lanipaddr, lanmask, bwl_br0_tcp);
+				ipt_write("-A FORWARD -s %s/%s -p tcp --syn -m connlimit --connlimit-above %s -j DROP\n", lanipaddr, lanmask, bwl_br0_tcp);
 		}
 	}
 #endif
 
 	while (g) {
 		/*
-		ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit
+		 * old: ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit>
+		 * new: enabled<ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit<description>
 		*/
 		if ((p = strsep(&g, ">")) == NULL)
 			break;
-		i = vstrsep(p, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit);
-		if (i != 8)
+
+		strcpy(p1, p);
+		i = vstrsep(p, "<", &enabled, &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit, &description);
+		if (i < 10) {
+			i = vstrsep(p1, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit); /* compat */
+			if (i < 8)
+				continue;
+		}
+		if (i == 10 && *enabled && atoi(enabled) != 1)
 			continue;
 
 		priority_num = atoi(priority);
@@ -285,6 +295,7 @@ void start_bwlimit(void)
 	char *buf;
 	char *g;
 	char *p;
+	char p1[128];
 	char *ibw, *obw;		/* bandwidth */
 	int mark;			/* mark number */
 	int seq;
@@ -297,6 +308,8 @@ void start_bwlimit(void)
 	char *lanipaddr;		/* lan ip address */
 	char *lanmask;			/* lan netmask */
 	char *tcplimit, *udplimit;	/* tcp connection limit & udp packets per second */
+	char *description;		/* description */
+	char *enabled;
 	int priority_num;
 	char *dlr, *dlc, *ulr, *ulc, *prio; /* download / upload - rate / ceiling / prio */
 	int i, address_type;
@@ -315,12 +328,6 @@ void start_bwlimit(void)
 	lanipaddr = nvram_safe_get("lan_ipaddr");
 	lanmask = nvram_safe_get("lan_netmask");
 	waniface = nvram_safe_get("wan_iface");
-
-	dlr = nvram_safe_get("bwl_br0_dlr");		/* download rate */
-	dlc = nvram_safe_get("bwl_br0_dlc");		/* download ceiling */
-	ulr = nvram_safe_get("bwl_br0_ulr");		/* upload rate */
-	ulc = nvram_safe_get("bwl_br0_ulc");		/* upload ceiling */
-	prio = nvram_safe_get("bwl_br0_prio");		/* priority */
 
 	if ((tc = fopen(bwlimitfn, "w")) == NULL) {
 		perror(bwlimitfn);
@@ -360,36 +367,22 @@ void start_bwlimit(void)
 	            ibw,
 	            obw);
 
-	if ((nvram_get_int("bwl_br0_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
-		if (!strcmp(dlc, ""))
-			strcpy(dlc, dlr);
-		if (!strcmp(ulc, ""))
-			strcpy(ulc, ulr);
-
-		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQA parent 1:16 handle 16: $Q\n"
-		            "\t$TFA parent 1:0 prio %s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
-		            "\n"
-		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
-		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
-		            "\t}\n"
-		            "\n",
-		            dlr, dlc, prio,
-		            prio,
-		            ulr, ulc, prio,
-		            prio);
-	}
-
 	while (g) {
 		/*
-		ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit
+		 * old: ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit>
+		 * new: enabled<ipaddr_old<dlrate<dlceil<ulrate<ulceil<priority<tcplimit<udplimit<description>
 		*/
 		if ((p = strsep(&g, ">")) == NULL)
 			break;
-		i = vstrsep(p, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit);
-		if (i != 8)
+
+		strcpy(p1, p);
+		i = vstrsep(p, "<", &enabled, &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit, &description);
+		if (i < 10) {
+			i = vstrsep(p1, "<", &ipaddr_old, &dlrate, &dlceil, &ulrate, &ulceil, &priority, &tcplimit, &udplimit); /* compat */
+			if (i < 8)
+				continue;
+		}
+		if (i == 10 && *enabled && atoi(enabled) != 1)
 			continue;
 
 		priority_num = atoi(priority);
@@ -437,6 +430,34 @@ void start_bwlimit(void)
 			            priority, mark, seq);
 	} /* while */
 	free(buf);
+
+	/* the order matters! first rules for BWL for br0 (above) */
+
+	/* limit br0 */
+	dlr = nvram_safe_get("bwl_br0_dlr");		/* download rate */
+	dlc = nvram_safe_get("bwl_br0_dlc");		/* download ceiling */
+	ulr = nvram_safe_get("bwl_br0_ulr");		/* upload rate */
+	ulc = nvram_safe_get("bwl_br0_ulc");		/* upload ceiling */
+	prio = nvram_safe_get("bwl_br0_prio");		/* priority */
+	if ((nvram_get_int("bwl_br0_enable") == 1) && strcmp(dlr, "") && strcmp(ulr, "")) {
+		if (!strcmp(dlc, ""))
+			strcpy(dlc, dlr);
+		if (!strcmp(ulc, ""))
+			strcpy(ulc, ulr);
+
+		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA parent 1:16 handle 16: $Q\n"
+		            "\t$TFA parent 1:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 1:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\n"
+		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 2:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\t}\n"
+		            "\n",
+		            dlr, dlc, prio,
+		            ulr, ulc, prio);
+	}
 
 	/* limit br1 */
 	if (nvram_get_int("bwl_br1_enable") == 1) {
@@ -569,7 +590,6 @@ void start_bwlimit(void)
 	fclose(tc);
 
 	chmod(bwlimitfn, 0700);
-
 
 	eval(bwlimitfn, "start");
 }

@@ -947,7 +947,6 @@ div[id$="_users"] .co2 {
 }
 
 #res-bp-grid .box6,
-#bwlg-grid .co1,
 #sm-grid .co1 {
 	width: 30%;
 }
@@ -1139,14 +1138,24 @@ div[id$="_users"] .co1 {
 	width: 110px;
 }
 
-#bwlg-grid .co2,
+#bwlg-grid .co1 {
+	width: 3%;
+	text-align: center;
+}
+
+#bwlg-grid .co2 {
+	width: 17%;
+}
+
 #bwlg-grid .co3,
 #bwlg-grid .co4,
 #bwlg-grid .co5,
 #bwlg-grid .co6,
 #bwlg-grid .co7,
-#bwlg-grid .co8 {
-	width: 10%;
+#bwlg-grid .co8,
+#bwlg-grid .co9,
+#bwlg-grid .co10 {
+	width: 9%;
 }
 
 #sm-grid {

@@ -19,7 +19,7 @@ void start_arpbind(void)
 		 * macaddr<ip.ad.dr.ess<hostname<arpbind>anotherhwaddr<other.ip.addr.ess<othername<arpbind
 		*/
 
-		if ((vstrsep(b, "<", &macaddr, &ipaddr, &name, &bind)) != 4)
+		if ((vstrsep(b, "<", &macaddr, &ipaddr, &name, &bind)) < 4)
 			continue;
 		if (strchr(macaddr, ',') != NULL)
 			continue;

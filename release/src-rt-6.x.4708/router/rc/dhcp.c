@@ -517,6 +517,8 @@ int dhcp6c_state_main(int argc, char **argv)
 		return 1;
 
 	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
+
+	/* check IPv6 addr - change/new ? */
 	if (!nvram_match("ipv6_rtr_addr", (char *) lanif)) {
 		nvram_set("ipv6_rtr_addr", lanif);
 		/* extract prefix from configured IPv6 address */
@@ -538,6 +540,7 @@ int dhcp6c_state_main(int argc, char **argv)
 		start_httpd();
 	}
 
+	/* check DNS */
 	if (env2nv("new_domain_name_servers", "ipv6_get_dns"))
 		dns_to_resolv();
 
@@ -567,6 +570,9 @@ void start_dhcp6c(void)
 	nvram_set("ipv6_get_dns", "");
 	nvram_set("ipv6_rtr_addr", "");
 	nvram_set("ipv6_prefix", "");
+
+	nvram_set("ipv6_pd_pltime", "0"); /* reset preferred and valid lifetime */
+	nvram_set("ipv6_pd_vltime", "0");
 
 	/* Create dhcp6c.conf */
 	unlink("/var/dhcp6c_duid");
@@ -634,5 +640,8 @@ void stop_dhcp6c(void)
 {
 	killall("dhcp6c-event", SIGTERM);
 	killall_tk_period_wait("dhcp6c", 50);
+
+	nvram_set("ipv6_pd_pltime", "0"); /* reset preferred and valid lifetime */
+	nvram_set("ipv6_pd_vltime", "0");
 }
 #endif /* TCONFIG_IPV6 */

@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -438,7 +438,7 @@ function init() {
 			{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == '1' },
 			{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == '1' },
 			{ title: 'Fast RA mode', name: 'f_ipv6_fast_ra', type: 'checkbox', value: nvram.ipv6_fast_ra == '1' },
-			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12 },
+			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: (nvram['ipv6_service'] == 'native-pd') },
 /* IPV6-END */
 			{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 /* IPV6-BEGIN */
@@ -463,7 +463,7 @@ function init() {
 		<li><b>Use dnscrypt-proxy</b> - Wraps unmodified DNS traffic between a client and a DNS resolver in a cryptographic construction in order to detect forgery. Uses the DNSCrypt (v1) protocol.</li>
 <!-- DNSCRYPT-END -->
 <!-- STUBBY-BEGIN -->
-		<li><b>Use Stubby</b> - Acts as a local DNS Privacy stub resolver (using DNS-over-TLS). Stubby encrypts DNS queries sent to a DNS Privacy resolver increasing end user privacy. You can use your own custom config file (/etc/stubby/stubby.alt)</li>
+		<li><b>Use Stubby</b> - Acts as a local DNS Privacy stub resolver (using DNS-over-TLS). Stubby encrypts DNS queries sent to a DNS Privacy resolver increasing end user privacy. You can use your own custom config file (/etc/stubby/stubby_alt.yml)</li>
 		<li><b>Prevent client auto DoH</b> - Some clients like Firefox will automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
 <!-- STUBBY-END -->
 		<li><b>WINS <small>(for DHCP)</small></b> - The Windows Internet Naming Service manages interaction of each PC with the Internet. If you use a WINS server, enter IP Address of server here.</li>
