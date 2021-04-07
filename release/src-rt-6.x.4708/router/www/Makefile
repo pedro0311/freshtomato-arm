@@ -188,6 +188,7 @@ ifneq ($(TCONFIG_USB),y)
 	rm -f $(INSTALLDIR)/www/nas-*.*
 	rm -f $(INSTALLDIR)/www/wwan_parser.js
 	rm -f $(INSTALLDIR)/www/wwan-sms.asp
+	rm -f $(INSTALLDIR)/www/cell.gif
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
@@ -200,6 +201,7 @@ endif
 # Only include the USB and NAS pages if REMOVE_USBAPP is NOT configured in.
 ifeq ($(TCONFIG_REMOVE_USBAPP),y)
 	rm -f $(INSTALLDIR)/www/nas-*.*
+	rm -f $(INSTALLDIR)/www/cell.gif
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
