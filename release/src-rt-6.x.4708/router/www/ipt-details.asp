@@ -25,8 +25,6 @@
 
 <script>
 
-//	<% nvram('cstats_enable,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,dhcpd_static'); %>
-
 //	<% devlist(); %>
 
 var cprefix = 'ipt_details';

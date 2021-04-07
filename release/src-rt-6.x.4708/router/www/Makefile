@@ -194,6 +194,7 @@ ifneq ($(TCONFIG_USB),y)
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/USB-BEGIN/,/USB-END/d"
 endif
 
 # Only include the USB and NAS pages if REMOVE_USBAPP is NOT configured in.
@@ -202,6 +203,7 @@ ifeq ($(TCONFIG_REMOVE_USBAPP),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/USB-BEGIN/,/USB-END/d"
 endif
 
 # Only include the CTF configuration if CTF is configured in.
