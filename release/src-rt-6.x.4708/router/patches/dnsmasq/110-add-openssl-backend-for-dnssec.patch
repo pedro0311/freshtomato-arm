@@ -76,7 +76,7 @@
  		cd $(top) && cd $(BUILDDIR) && $(MAKE) top="$(top)" -f $(top)/Makefile $${f%.po}.mo; \
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -157,6 +157,8 @@
+@@ -156,6 +156,8 @@
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
@@ -85,7 +85,7 @@
  
  LEASEFILE
  CONFFILE
-@@ -198,6 +200,8 @@
+@@ -197,6 +199,8 @@
  /* #define HAVE_CONNTRACK */
  /* #define HAVE_CRYPTOHASH */
  /* #define HAVE_DNSSEC */
@@ -96,25 +96,26 @@
  /* Default locations for important system files. */
 --- dnsmasq/src/crypto.c
 +++ dnsmasq/src/crypto.c
-@@ -16,14 +16,16 @@
+@@ -16,6 +16,7 @@
  
  #include "dnsmasq.h"
  
 +#ifdef HAVE_NETTLE
  #ifdef HAVE_DNSSEC
  
- #include <nettle/rsa.h>
- #include <nettle/ecdsa.h>
- #include <nettle/ecc-curve.h>
+ /* Minimal version of nettle */
+@@ -31,8 +32,9 @@
+ #if MIN_VERSION(3, 1)
  #include <nettle/eddsa.h>
--#if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
-+#if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6 && !defined(NO_GOST)
+ #endif
+-#if MIN_VERSION(3, 6)
++#if MIN_VERSION(3, 6) && !defined(NO_GOST)
  #  include <nettle/gostdsa.h>
 +#  define HAVE_GOST
  #endif
  #endif
  
-@@ -104,7 +106,7 @@
+@@ -113,7 +115,7 @@
  };
  
  /* Find pointer to correct hash function in nettle library */
@@ -123,7 +124,7 @@
  {
    if (!name)
      return NULL;
-@@ -134,8 +136,9 @@
+@@ -141,8 +143,9 @@
  }
  
  /* expand ctx and digest memory allocations if necessary and init hash function */
@@ -134,7 +135,7 @@
    static void *ctx = NULL;
    static unsigned char *digest = NULL;
    static unsigned int ctx_sz = 0;
-@@ -171,6 +174,20 @@
+@@ -178,6 +181,20 @@
    return 1;
  }
  
@@ -152,28 +153,28 @@
 +{
 +  return ((struct nettle_hash *)hash)->digest_size;
 +}
- #endif
+ #endif /* defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH) */
  
  #ifdef HAVE_DNSSEC
-@@ -301,7 +318,7 @@
+@@ -308,7 +325,7 @@
    return nettle_ecdsa_verify(key, digest_len, digest, sig_struct);
  }
  
--#if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
-+#ifdef HAVE_GOST
+-#if MIN_VERSION(3, 6)
++#if MIN_VERSION(3, 6) && HAVE_GOST
  static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_len, 
  				  unsigned char *sig, size_t sig_len,
  				  unsigned char *digest, size_t digest_len, int algo)
-@@ -399,7 +416,7 @@
+@@ -408,7 +425,7 @@
      case 5: case 7: case 8: case 10:
        return dnsmasq_rsa_verify;
  
--#if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
-+#ifdef HAVE_GOST
+-#if MIN_VERSION(3, 6)
++#if MIN_VERSION(3, 6) && HAVE_GOST
      case 12:
        return dnsmasq_gostdsa_verify;
  #endif
-@@ -441,7 +458,9 @@
+@@ -451,7 +468,9 @@
      {
      case 1: return "sha1";
      case 2: return "sha256";
@@ -183,7 +184,7 @@
      case 4: return "sha384";
      default: return NULL;
      }
-@@ -460,7 +479,9 @@
+@@ -470,7 +489,9 @@
      case 7: return "sha1";        /* RSASHA1-NSEC3-SHA1 */
      case 8: return "sha256";      /* RSA/SHA-256 */
      case 10: return "sha512";     /* RSA/SHA-512 */
@@ -193,7 +194,7 @@
      case 13: return "sha256";     /* ECDSAP256SHA256 */
      case 14: return "sha384";     /* ECDSAP384SHA384 */ 	
      case 15: return "null_hash";  /* ED25519 */
-@@ -480,3 +501,11 @@
+@@ -490,3 +511,11 @@
  }
  
  #endif
@@ -207,7 +208,7 @@
 +#endif /* HAVE_NETTLE */
 --- dnsmasq/src/crypto-openssl.c
 +++ dnsmasq/src/crypto-openssl.c
-@@ -0,0 +1,669 @@
+@@ -0,0 +1,671 @@
 +/* crypto-openssl.c is Copyright (c) 2019-2020 Vladislav Grishenko
 +                   and Copyright (c) 2012-2018 Simon Kelley
 +
@@ -623,6 +624,8 @@
 +  const unsigned char *p = keybuf;
 +  int r;
 +
++  (void)algo; /* unused */
++
 +  if (key_len != 64 || sig_len != 64)
 +    return 0;
 +
@@ -879,7 +882,7 @@
 +#endif /* HAVE_OPENSSL */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -429,6 +429,9 @@
+@@ -436,6 +436,9 @@
      {
        cache_init();
        blockdata_init();
@@ -887,45 +890,21 @@
 +      crypto_init();
 +#endif
        hash_questions_init();
-     }
  
-@@ -953,7 +956,7 @@
-       if (daemon->resolv_files && !daemon->resolv_files->is_default)
- 	my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
-       daemon->resolv_files = NULL;
--      if (!daemon->servers)
-+      if (!daemon->servers && !daemon->servers_file)
- 	my_syslog(LOG_WARNING, _("warning: no upstream servers configured"));
-     } 
- 
+       /* Scale random socket pool by ftabsize, but
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -95,10 +95,10 @@
- #if defined(HAVE_SOLARIS_NETWORK)
- #  include <sys/sockio.h>
- #endif
--#if defined(HAVE_POLL_H)
--#  include <poll.h>
-+#if defined(__GLIBC__) || defined(__UCLIBC__) /* not musl */
-+#  include <sys/poll.h>
- #else
--#  include <sys/poll.h>
-+#  include <poll.h>
- #endif
- #include <sys/wait.h>
- #include <sys/time.h>
-@@ -161,10 +161,6 @@
+@@ -157,9 +157,6 @@
  #if defined(HAVE_NETTLEHASH)
  #  define HAVE_CRYPTOHASH
  #endif
 -#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 -#  include <nettle/nettle-meta.h>
 -#endif
--
+ 
  /* daemon is function in the C library.... */
  #define daemon dnsmasq_daemon
- 
-@@ -1269,13 +1265,17 @@
+@@ -1283,13 +1280,17 @@
  unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name);
  
  /* crypto.c */
