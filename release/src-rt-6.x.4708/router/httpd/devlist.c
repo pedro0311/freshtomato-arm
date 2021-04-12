@@ -179,21 +179,42 @@ void asp_devlist(int argc, char **argv)
 	char hostname[256];
 	char comma;
 	char *host;
-	char *p;
 	unsigned long expires;
 
 	/* must be here for easier call via update.cgi. arg is ignored */
 	asp_arplist(0, NULL);
 	asp_wlnoise(0, NULL);
 
-	p = js_string(nvram_safe_get("dhcpd_static"));
-	web_printf("dhcpd_static = '%s'.split('>');\n", p ? p : "");
-	free(p);
-
 	web_puts("wldev = [");
 	comma = ' ';
 	foreach_wif(1, &comma, get_wl_clients);
 	web_puts("];\n");
+
+	char *nvram_argv[] = { "wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,\
+wan_iface,wan2_iface,wan3_iface,wan4_iface,\
+wan_proto,wan2_proto,wan3_proto,wan4_proto,\
+wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,\
+wan_ifnames,wan2_ifnames,wan3_ifnames,wan4_ifnames,\
+wan_ipaddr,wan2_ipaddr,wan3_ipaddr,wan4_ipaddr,\
+wan_hwaddr,wan2_hwaddr,wan3_hwaddr,wan4_hwaddr,\
+wan_ppp_get_ip,wan2_ppp_get_ip,wan3_ppp_get_ip,wan4_ppp_get_ip,\
+wan_gateway_get,wan2_gateway_get,wan3_gateway_get,wan4_gateway_get,\
+wan_gateway,wan2_gateway,wan3_gateway,wan4_gateway,\
+wan_pptp_dhcp,wan2_pptp_dhcp,wan3_pptp_dhcp,wan4_pptp_dhcp,\
+wan_pptp_server_ip,wan2_pptp_server_ip,wan3_pptp_server_ip,wan4_pptp_server_ip,\
+lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,\
+lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr,\
+lan_netmask,lan1_netmask,lan2_netmask,lan3_netmask,\
+lan_ifnames,lan1_ifnames,lan2_ifnames,lan3_ifnames,\
+web_svg,web_css,\
+cstats_enable,cstats_labels,\
+dhcpd_static,\
+wl_ifname,\
+wl_mode,\
+wl_radio"
+	};
+
+	asp_nvram(1, nvram_argv);
 
 	web_puts("dhcpd_lease = [");
 

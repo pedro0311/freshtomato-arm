@@ -1246,6 +1246,9 @@ gethwid(buf, len, ifname, hwtypep)
 	struct sockaddr_ll *sll;
 #endif
 	ssize_t l=0;
+#ifdef TOMATO
+	const char first_ethernet[] = "eth0";
+#endif
 
 #ifdef __sun__
 	if (ifname == NULL) {
@@ -1267,6 +1270,11 @@ gethwid(buf, len, ifname, hwtypep)
 	} else {
 		return (getifhwaddr(ifname, buf, hwtypep, -1));
 	}
+#endif
+
+#ifdef TOMATO
+	if (ifname == NULL)
+		ifname = first_ethernet;  /* keep it simple, use (constant) first ethernet for Tomato */
 #endif
 
 	if (getifaddrs(&ifap) < 0)

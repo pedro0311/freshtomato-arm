@@ -447,16 +447,18 @@ void start_bwlimit(void)
 
 		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
 		            "\t$TQA parent 1:16 handle 16: $Q\n"
-		            "\t$TFA parent 1:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 1:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\t$TFA parent 1:0 prio %s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
 		            "\n"
 		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
 		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
-		            "\t\t$TFAU parent 2:0 prio 3 protocol all handle 0x10/0xf0 fw flowid 2:16\n" /* priority 3 here is necessary to have working Highest prio in BWL for br0! */
+		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
 		            "\t}\n"
 		            "\n",
 		            dlr, dlc, prio,
-		            ulr, ulc, prio);
+		            prio,
+		            ulr, ulc, prio,
+		            prio);
 	}
 
 	/* limit br1 */

@@ -1,6 +1,6 @@
 --- dnsmasq/src/forward.c
 +++ dnsmasq/src/forward.c
-@@ -1005,7 +1005,7 @@
+@@ -998,7 +998,7 @@
        forward->sentto->edns_pktsz = SAFE_PKTSZ;
        forward->sentto->pktsz_reduced = now;
        (void)prettyprint_addr(&forward->sentto->addr, daemon->addrbuff);

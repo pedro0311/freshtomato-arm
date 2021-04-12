@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Mar 24 2021 - Tvlz **
+	** Last Updated - Mar 23 2021 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -358,39 +358,39 @@ REMOVE-END */
 		if (!v_range(f[COL_MAP], quiet, 0, 4094))
 			valid = 0;
 
-		if ((trunk_vlan_supported) && (f[COL_P0].checked == 1) && (f[COL_VID_DEF].checked != 1))
+		if ((trunk_vlan_supported) && (f[COL_P0].checked == 1))
 			f[COL_P0T].disabled = 0;
 		else {
 			f[COL_P0T].disabled = 1;
 			f[COL_P0T].checked = 0;
 		}
-		if ((trunk_vlan_supported) && (f[COL_P1].checked == 1) && (f[COL_VID_DEF].checked != 1))
+		if ((trunk_vlan_supported) && (f[COL_P1].checked == 1))
 			f[COL_P1T].disabled = 0;
 		else {
 			f[COL_P1T].disabled = 1;
 			f[COL_P1T].checked = 0;
 		}
-		if ((trunk_vlan_supported) && (f[COL_P2].checked == 1) && (f[COL_VID_DEF].checked != 1))
+		if ((trunk_vlan_supported) && (f[COL_P2].checked == 1))
 			f[COL_P2T].disabled = 0;
 		else {
 			f[COL_P2T].disabled = 1;
 			f[COL_P2T].checked = 0;
 		}
-		if ((trunk_vlan_supported) && (f[COL_P3].checked == 1) && (f[COL_VID_DEF].checked != 1))
+		if ((trunk_vlan_supported) && (f[COL_P3].checked == 1))
 			f[COL_P3T].disabled = 0;
 		else {
 			f[COL_P3T].disabled = 1;
 			f[COL_P3T].checked = 0;
 		}
-		if ((trunk_vlan_supported) && (f[COL_P4].checked == 1) && (f[COL_VID_DEF].checked != 1))
+		if ((trunk_vlan_supported) && (f[COL_P4].checked == 1))
 			f[COL_P4T].disabled = 0;
 		else {
 			f[COL_P4T].disabled = 1;
 			f[COL_P4T].checked = 0;
 		}
 
-		/* Only Default VLAN is allowed to be untagged */
-		var err_vlan = 'Only Default VLAN is allowed to be untagged';
+		/* Modifications to enable Native VLAN support (allow one untagged vlan per port) by default */
+		var err_vlan = 'Only one untagged VLAN per port is allowed (Native VLAN)';
 		if ((f[COL_P0].checked == 1) && (this.countElem(COL_P0, 1) > 0)) {
 			if (((this.countElem(COL_P0,1)-1) >= this.countElem(COL_P0T,1)) && (f[COL_P0T].checked == 0)) {
 				ferror.set(f[COL_P0T], err_vlan, quiet);
@@ -497,15 +497,15 @@ REMOVE-END */
 		return [data[COL_VID],
 			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (data[COL_VID] * 1).toString() : data[COL_MAP].toString(),
 			(data[COL_P0].toString() != '0') ? '⭐' : '',
-			((data[COL_P0T].toString() != '0') && (data[COL_VID_DEF].toString() == '0')) ? '🔰' : '',
+			(data[COL_P0T].toString() != '0') ? '🔰' : '',
 			(data[COL_P1].toString() != '0') ? '⭐' : '',
-			((data[COL_P1T].toString() != '0') && (data[COL_VID_DEF].toString() == '0')) ? '🔰' : '',
+			(data[COL_P1T].toString() != '0') ? '🔰' : '',
 			(data[COL_P2].toString() != '0') ? '⭐' : '',
-			((data[COL_P2T].toString() != '0') && (data[COL_VID_DEF].toString() == '0')) ? '🔰' : '',
+			(data[COL_P2T].toString() != '0') ? '🔰' : '',
 			(data[COL_P3].toString() != '0') ? '⭐' : '',
-			((data[COL_P3T].toString() != '0') && (data[COL_VID_DEF].toString() == '0')) ? '🔰' : '',
+			(data[COL_P3T].toString() != '0') ? '🔰' : '',
 			(data[COL_P4].toString() != '0') ? '⭐' : '',
-			((data[COL_P4T].toString() != '0') && (data[COL_VID_DEF].toString() == '0')) ? '🔰' : '',
+			(data[COL_P4T].toString() != '0') ? '🔰' : '',
 			(data[COL_VID_DEF].toString() != '0') ? '🚩' : '',
 			['','WAN0 bridge','LAN0 (br0)','LAN1 (br1)','LAN2 (br2)','LAN3 (br3)','WAN1 bridge'
 /* MULTIWAN-BEGIN */
@@ -518,15 +518,15 @@ REMOVE-END */
 		return [data[COL_VID],
 			data[COL_MAP],
 			(data[COL_P0] != 0) ? 'checked' : '',
-			((data[COL_P0T] != 0) && (data[COL_VID_DEF].toString() == '0')) ? 'checked' : '',
+			(data[COL_P0T] != 0) ? 'checked' : '',
 			(data[COL_P1] != 0) ? 'checked' : '',
-			((data[COL_P1T] != 0) && (data[COL_VID_DEF].toString() == '0')) ? 'checked' : '',
+			(data[COL_P1T] != 0) ? 'checked' : '',
 			(data[COL_P2] != 0) ? 'checked' : '',
-			((data[COL_P2T] != 0) && (data[COL_VID_DEF].toString() == '0')) ? 'checked' : '',
+			(data[COL_P2T] != 0) ? 'checked' : '',
 			(data[COL_P3] != 0) ? 'checked' : '',
-			((data[COL_P3T] != 0) && (data[COL_VID_DEF].toString() == '0')) ? 'checked' : '',
+			(data[COL_P3T] != 0) ? 'checked' : '',
 			(data[COL_P4] != 0) ? 'checked' : '',
-			((data[COL_P4T] != 0) && (data[COL_VID_DEF].toString() == '0')) ? 'checked' : '',
+			(data[COL_P4T] != 0) ? 'checked' : '',
 			(data[COL_VID_DEF] != 0) ? 'checked' : '',
 			data[COL_BRI]];
 	}
@@ -713,23 +713,23 @@ function save() {
 	for (var i = 0; i < d.length; ++i) {
 		var p = '';
 		p += (d[i][COL_P0].toString() != '0') ? COL_P0N : '';
-		p += ((trunk_vlan_supported) && (d[i][COL_P0T].toString() != '0') && (f[COL_VID_DEF].checked != 1)) ? 't' : '';
+		p += ((trunk_vlan_supported) && (d[i][COL_P0T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
 
 		p += (d[i][COL_P1].toString() != '0') ? COL_P1N : '';
-		p += ((trunk_vlan_supported) && (d[i][COL_P1T].toString() != '0') && (f[COL_VID_DEF].checked != 1)) ? 't' : '';
+		p += ((trunk_vlan_supported) && (d[i][COL_P1T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
 
 		p += (d[i][COL_P2].toString() != '0') ? COL_P2N : '';
-		p += ((trunk_vlan_supported) && (d[i][COL_P2T].toString() != '0') && (f[COL_VID_DEF].checked != 1)) ? 't' : '';
+		p += ((trunk_vlan_supported) && (d[i][COL_P2T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
 
 		p += (d[i][COL_P3].toString() != '0') ? COL_P3N : '';
-		p += ((trunk_vlan_supported) && (d[i][COL_P3T].toString() != '0') && (f[COL_VID_DEF].checked != 1)) ? 't' : '';
+		p += ((trunk_vlan_supported) && (d[i][COL_P3T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
 
 		p += (d[i][COL_P4].toString() != '0') ? COL_P4N : '';
-		p += ((trunk_vlan_supported) && (d[i][COL_P4T].toString() != '0') && (f[COL_VID_DEF].checked != 1)) ? 't' : '';
+		p += ((trunk_vlan_supported) && (d[i][COL_P4T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
 
 		p += (d[i][COL_VID_DEF].toString() != '0') ? (SWITCH_INTERNAL_PORT+'*') : SWITCH_INTERNAL_PORT;

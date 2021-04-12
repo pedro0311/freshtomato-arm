@@ -10,7 +10,7 @@
  #define SAFE_PKTSZ 1280 /* "go anywhere" UDP packet size */
  #define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
  #define DNSSEC_WORK 50 /* Max number of queries to validate one question */
-@@ -77,6 +79,10 @@
+@@ -76,6 +78,10 @@
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -21,7 +21,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -348,6 +354,10 @@
+@@ -347,6 +353,10 @@
  #undef HAVE_LOOP
  #endif
  
@@ -32,7 +32,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -420,6 +430,9 @@
+@@ -419,6 +429,9 @@
  "no-"
  #endif
  "ipset "
@@ -89,7 +89,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1500,8 +1538,22 @@
+@@ -1515,8 +1553,22 @@
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -112,7 +112,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1544,6 +1596,12 @@
+@@ -1559,6 +1611,12 @@
  	    close(daemon->helperfd);
  	  }
  #endif
@@ -127,7 +127,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1465,6 +1465,12 @@
+@@ -1478,6 +1478,12 @@
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
@@ -206,15 +206,13 @@
  	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
  	 
  	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
-@@ -1201,8 +1222,67 @@
+@@ -1201,4 +1222,66 @@
  }
  #endif
  
--#endif
--	  
+-#endif /* HAVE_DHCP */
++
 +#ifdef HAVE_TOMATO
- 
--      
 +void tomato_helper(time_t now)
 +{
 +  FILE *f;
@@ -258,7 +256,7 @@
 +    rename("/var/tmp/dhcp/leases.!", "/var/tmp/dhcp/leases");
 +  }
 +}
-+#endif	/* HAVE_TOMATO */
++#endif /* HAVE_TOMATO */
 +
 +#ifdef HAVE_LEASEFILE_EXPIRE
 +void flush_lease_file(time_t now)
@@ -270,10 +268,9 @@
 +
 +  lease_prune(NULL, now);
 +  lease_update_file(now);
- 
 +  if (file_dirty == 0)
 +    flush_time = now;
 +}
-+#endif	/* HAVE_LEASEFILE_EXPIRE */
++#endif /* HAVE_LEASEFILE_EXPIRE */
 +
-+#endif
++#endif /* HAVE_DHCP */
