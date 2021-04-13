@@ -108,6 +108,7 @@ void start_dnsmasq()
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
 	int ipv6_lease; /* DHCP IPv6 lease time */
+	int service;
 #endif
 	int wan_unit, mwan_num;
 	const dns_list_t *dns;
@@ -522,15 +523,36 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+
+		service = get_ipv6_service();
+		memset(tmp, 0, sizeof(tmp)); /* reset */
+
+		/* get mtu for IPv6 --> only for "wan" (no multiwan support) */
+		switch (service) {
+		case IPV6_ANYCAST_6TO4: /* use tun mtu (visible at basic-ipv6.asp) */
+		case IPV6_6IN4:
+			sprintf(tmp, "%d", (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_get_int("ipv6_tun_mtu") : 1280);
+			break;
+		case IPV6_6RD:		/* use wan mtu and calculate it */
+		case IPV6_6RD_DHCP:
+			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
+			break;
+		default:
+			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? nvram_get_int("wan_mtu") : 1280);
+			break;
+		}
+
 		/* enable-ra should be enabled in both cases (SLAAC and/or DHCPv6) */
 		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd"))) {
 			fprintf(f, "enable-ra\n");
 			if (nvram_get_int("ipv6_fast_ra"))
-				fprintf(f, "ra-param=br*, 15, 600\n"); /* interface = br*, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+				fprintf(f, "ra-param=br*, mtu:%s, 15, 600\n", tmp); /* interface = br*, mtu = XYZ, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+			else /* default case */
+				fprintf(f, "ra-param=br*, mtu:%s, 60, 1200\n", tmp); /* interface = br*, mtu = XYZ, ra-interval = 60 sec, router-lifetime = 1200 sec (20 min) */
 		}
 
 		/* Check for DHCPv6 PD (and use IPv6 preferred lifetime in that case) */
-		if (get_ipv6_service() == IPV6_NATIVE_DHCP) {
+		if (service == IPV6_NATIVE_DHCP) {
 			ipv6_lease = nvram_get_int("ipv6_pd_pltime"); /* get IPv6 preferred lifetime (seconds) */
 			if ((ipv6_lease < IPV6_MIN_LIFETIME) || (ipv6_lease > ONEMONTH_LIFETIME)) /* check lease time and limit the range (120 sec up to one month) */
 				ipv6_lease = IPV6_MIN_LIFETIME;
