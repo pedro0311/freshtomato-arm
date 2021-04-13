@@ -34,11 +34,12 @@ echo "0.emailAddress=E" >> $OPENSSLCNF
 echo "0.emailAddress_value=root@localhost" >> $OPENSSLCNF
 
 # Required extension
-sed -i "/\[ v3_ca \]/aextendedKeyUsage = serverAuth" $OPENSSLCNF
+sed -i "/\[ v3_ca \]/aextendedKeyUsage=serverAuth" $OPENSSLCNF
 
 # Start of SAN extensions
-sed -i "/\[ CA_default \]/acopy_extensions = copy" $OPENSSLCNF
-sed -i "/\[ v3_req \]/asubjectAltName = @alt_names" $OPENSSLCNF
+sed -i "/\[ CA_default \]/acopy_extensions=copy" $OPENSSLCNF
+sed -i "/\[ v3_ca \]/asubjectAltName=@alt_names" $OPENSSLCNF
+sed -i "/\[ v3_req \]/asubjectAltName=@alt_names" $OPENSSLCNF
 echo "[alt_names]" >> $OPENSSLCNF
 
 I=1

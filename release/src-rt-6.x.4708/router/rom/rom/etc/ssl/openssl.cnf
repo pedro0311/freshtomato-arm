@@ -154,7 +154,7 @@ keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 # nsCertType = sslCA, emailCA
 
 # Include email address in subject alt name: another PKIX recommendation
-subjectAltName = @alt_names
+#subjectAltName = @alt_names
 # Copy issuer details
 # issuerAltName=issuer:copy
 
