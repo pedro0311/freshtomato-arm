@@ -27,7 +27,11 @@ install:
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
 ifeq ($(TCONFIG_STUBBY),y)
+ifneq ($(TCONFIG_IPV6),y)
+	install -m 0644 others/dot-servers-ipv4.dat $(INSTALLDIR)/rom/dot-servers.dat
+else
 	install -m 0644 others/dot-servers.dat $(INSTALLDIR)/rom/dot-servers.dat
+endif
 endif
 
 	$(MAKE) certs-install
