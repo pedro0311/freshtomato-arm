@@ -430,7 +430,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title" id="sesdiv_system-title">System <small><i><a href="javascript:toggleVisibility(cprefix,'system');"><span id="sesdiv_system_showhide">(hide)</span></a></i></small></div>
+<div class="section-title" id="sesdiv_system-title">System <small><i><a href="javascript:toggleVisibility(cprefix,'system');"><span id="sesdiv_system_showhide">(Click here to hide)</span></a></i></small></div>
 <div class="section" id="sesdiv_system">
 <script>
 	createFieldTable('', [
@@ -465,7 +465,7 @@ function init() {
 /* USB-BEGIN */
 	foreach_wwan(function(i) {
 		W('<div id="WWANStatus'+i+'_overall" style="display:none;">');
-		W('<div class="section-title" id="wwan'+i+'-title">WWAN'+(updateWWANTimers > 1 ? i : '')+' Modem Status <small><i><a href="javascript:toggleVisibility(cprefix,\'wwan'+i+'\');"><span id="sesdiv_wwan'+i+'_showhide">(hide)<\/span><\/a><\/i><\/small><\/div>');
+		W('<div class="section-title" id="wwan'+i+'-title">WWAN'+(updateWWANTimers > 1 ? i : '')+' Modem Status <small><i><a href="javascript:toggleVisibility(cprefix,\'wwan'+i+'\');"><span id="sesdiv_wwan'+i+'_showhide">(Click here to hide)<\/span><\/a><\/i><\/small><\/div>');
 		W('<div class="section" id="sesdiv_wwan'+i+'">');
 		W('<div id="WWANStatus'+i+'">');
 		W('<div class="fields">Please wait... Initial refresh... &nbsp; <img src="spin.gif" alt="" style="vertical-align:middle"><\/div>');
@@ -474,7 +474,7 @@ function init() {
 /* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		var u = (uidx > 1) ? uidx : '';
-		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(hide)<\/span><\/a><\/i><\/small><\/div>');
+		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(Click here to hide)<\/span><\/a><\/i><\/small><\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
 			{ title: 'MAC Address', text: nvram['wan'+u+'_hwaddr'] },
@@ -515,7 +515,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title" id="sesdiv_lan-title">LAN <small><i><a href="javascript:toggleVisibility(cprefix,'lan');"><span id="sesdiv_lan_showhide">(hide)</span></a></i></small></div>
+<div class="section-title" id="sesdiv_lan-title">LAN <small><i><a href="javascript:toggleVisibility(cprefix,'lan');"><span id="sesdiv_lan_showhide">(Click here to hide)</span></a></i></small></div>
 <div class="section" id="sesdiv_lan">
 <script>
 	var s = '';
@@ -573,7 +573,7 @@ REMOVE-END */
 		if (wl_ifaces.length > 0)
 			W(' '+wl_display_ifname(uidx));
 
-		W(' <small><i><a href="javascript:toggleVisibility(cprefix,\'wl_'+u+'\');"><span id="sesdiv_wl_'+u+'_showhide">(hide)<\/span><\/a><\/i><\/small>');
+		W(' <small><i><a href="javascript:toggleVisibility(cprefix,\'wl_'+u+'\');"><span id="sesdiv_wl_'+u+'_showhide">(Click here to hide)<\/span><\/a><\/i><\/small>');
 		W('<\/div>');
 		W('<div class="section" id="sesdiv_wl_'+u+'">');
 		var sec = auth[nvram['wl'+u+'_security_mode']]+'';
