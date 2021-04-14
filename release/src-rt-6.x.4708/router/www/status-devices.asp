@@ -38,7 +38,7 @@ function find(mac, ip) {
 	mac = mac.toUpperCase();
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
-		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == '00:00:00:00:00:00') && (e.ip == ip)))
+		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == mac_null) && (e.ip == ip)))
 			return e;
 	}
 

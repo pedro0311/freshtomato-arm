@@ -25,7 +25,6 @@
 //	<% nvram("lan_ipaddr,lan_netmask,dhcpd_static,dhcpd_startip,dhcpd_static_only,cstats_include"); %>
 
 var cprefix = 'basic_static';
-var mac_null = '00:00:00:00:00:00';
 
 if (nvram.lan_ipaddr.match(/^(\d+\.\d+\.\d+)\.(\d+)$/))
 	ipp = RegExp.$1 + '.';

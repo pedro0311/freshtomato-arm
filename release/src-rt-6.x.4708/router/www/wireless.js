@@ -242,7 +242,7 @@ function joinAddr(a) {
 	r = [];
 	for (i = 0; i < a.length; ++i) {
 		s = a[i];
-		if ((s != '00:00:00:00:00:00') && (s != '0.0.0.0')) r.push(s);
+		if ((s != mac_null) && (s != '0.0.0.0')) r.push(s);
 	}
 
 	return r.join(' ');
