@@ -131,7 +131,11 @@ function verifyFields(focused, quiet) {
 
 			s = E('_upstream_server_'+id).value;
 			e = '_upstream_ip_'+id;
-			if (!v_ip(e, 1) && !v_ipv6_addr(e, 1)) {
+			if (!v_ip(e, 1)
+/* IPV6-BEGIN */
+			                && !v_ipv6_addr(e, 1)
+/* IPV6-END */
+			) {
 				if (!quiet)
 					alert('Invalid IP ('+E(e).value+') for '+s+suff);
 				return 0;
