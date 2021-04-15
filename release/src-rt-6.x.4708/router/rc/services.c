@@ -73,7 +73,8 @@
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
 static const struct itimerval zombie_tv = { {0, 0}, {307, 0} };
-static const char dmdir[] = "/etc/dnsmasq";
+static const char dmhosts[] = "/etc/dnsmasq/hosts";
+static const char dmdhcp[] = "/etc/dnsmasq/dhcp";
 static const char dmresolv[] = "/etc/resolv.dnsmasq";
 #ifdef TCONFIG_FTP
 static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
@@ -160,7 +161,7 @@ void start_dnsmasq()
 	           "min-port=%u\n" 				/* min port used for random src port */
 	           "dhcp-name-match=set:wpad-ignore,wpad\n"	/* protect against VU#598349 */
 	           "dhcp-ignore-names=tag:wpad-ignore\n",
-	           dmresolv, dmdir, dmdir, n);
+	           dmresolv, dmhosts, dmdhcp, n);
 
 	/* DNS rebinding protection, will discard upstream RFC1918 responses */
 	if (nvram_get_int("dns_norebind"))
@@ -356,8 +357,8 @@ void start_dnsmasq()
 
 	/* write static lease entries & create hosts file */
 	router_ip = nvram_safe_get("lan_ipaddr"); /* use the main one, not the last one from the loop! */
-	mkdir_if_none(dmdir);
-	snprintf(buf, sizeof(buf), "%s/hosts", dmdir);
+	mkdir_if_none(dmhosts);
+	snprintf(buf, sizeof(buf), "%s/hosts", dmhosts);
 	if ((hf = fopen(buf, "w")) != NULL) {
 		if ((nv = nvram_safe_get("wan_hostname")) && (*nv))
 			fprintf(hf, "%s %s\n", router_ip, nv);
@@ -393,71 +394,67 @@ void start_dnsmasq()
 
 	/* create dhcp-hosts file
 	 *
-	 * FORMAT (+static ARP binding after hostname):
+	 * FORMAT (static ARP binding after hostname):
 	 * 00:aa:bb:cc:dd:ee<123<xxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 55 w/ delim
 	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 87 w/ delim
 	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 108 w/ delim
 	 */
-	snprintf(buf, sizeof(buf), "%s/dhcp-hosts", dmdir);
+	mkdir_if_none(dmdhcp);
+	snprintf(buf, sizeof(buf), "%s/dhcp-hosts", dmdhcp);
+	df = fopen(buf, "w");
 
-	if ((df = fopen(buf, "w")) != NULL) {
-		p = nvram_safe_get("dhcpd_static");
-		while ((e = strchr(p, '>')) != NULL) {
-			n = (e - p);
-			if (n > 107) {
-				p = e + 1;
-				continue;
-			}
-
-			strncpy(buf, p, n);
-			buf[n] = 0;
+	p = nvram_safe_get("dhcpd_static");
+	while ((e = strchr(p, '>')) != NULL) {
+		n = (e - p);
+		if (n > 107) {
 			p = e + 1;
-
-			if ((e = strchr(buf, '<')) == NULL)
-				continue;
-
-			*e = 0;
-			mac = buf;
-
-			ip = e + 1;
-			if ((e = strchr(ip, '<')) == NULL)
-				continue;
-
-			*e = 0;
-			if (strchr(ip, '.') == NULL) {
-				ipn = atoi(ip);
-				if ((ipn <= 0) || (ipn > 255))
-					continue;
-
-				memset(ipbuf, 0, 32);
-				sprintf(ipbuf, "%s%d", lan, ipn);
-				ip = ipbuf;
-			}
-			else {
-				if (inet_addr(ip) == INADDR_NONE)
-					continue;
-			}
-
-			name = e + 1;
-
-			if ((e = strchr(name, '<')) != NULL)
-				*e = 0;
-
-			if ((hf) && (*name))
-				fprintf(hf, "%s %s\n", ip, name);
-
-			if ((do_dhcpd_hosts > 0) && (*mac) && (strcmp(mac, "00:00:00:00:00:00") != 0)) {
-				fprintf(f, "dhcp-host=%s,%s", mac, ip);
-				if (nvram_get_int("dhcpd_slt") != 0)
-					fprintf(f, ",%s", sdhcp_lease);
-
-				fprintf(f, "\n");
-			}
+			continue;
 		}
-	}
-	else {
-		perror("dhcp-hosts");
-		return;
+
+		strncpy(buf, p, n);
+		buf[n] = 0;
+		p = e + 1;
+
+		if ((e = strchr(buf, '<')) == NULL)
+			continue;
+
+		*e = 0;
+		mac = buf;
+
+		ip = e + 1;
+		if ((e = strchr(ip, '<')) == NULL)
+			continue;
+
+		*e = 0;
+		if (strchr(ip, '.') == NULL) {
+			ipn = atoi(ip);
+			if ((ipn <= 0) || (ipn > 255))
+				continue;
+
+			memset(ipbuf, 0, 32);
+			sprintf(ipbuf, "%s%d", lan, ipn);
+			ip = ipbuf;
+		}
+		else {
+			if (inet_addr(ip) == INADDR_NONE)
+				continue;
+		}
+
+		name = e + 1;
+
+		if ((e = strchr(name, '<')) != NULL)
+			*e = 0;
+
+		if ((hf) && (*name))
+			fprintf(hf, "%s %s\n", ip, name);
+
+		if ((do_dhcpd_hosts > 0) && (*mac) && (strcmp(mac, "00:00:00:00:00:00") != 0)) {
+			fprintf(f, "dhcp-host=%s,%s", mac, ip);
+			if (nvram_get_int("dhcpd_slt") != 0)
+				fprintf(f, ",%s", sdhcp_lease);
+
+			fprintf(f, "\n");
+		}
 	}
 
 	if (df)
