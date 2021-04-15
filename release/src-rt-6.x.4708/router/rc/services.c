@@ -158,7 +158,8 @@ void start_dnsmasq()
 	           "addn-hosts=%s\n"				/* directory with additional hosts files */
 	           "dhcp-hostsfile=%s\n"			/* directory with dhcp hosts files */
 	           "expand-hosts\n"				/* expand hostnames in hosts file */
-	           "min-port=%u\n" 				/* min port used for random src port */
+	           "min-port=%u\n"				/* min port used for random src port */
+	           "no-negcache\n"				/* disable negative caching */
 	           "dhcp-name-match=set:wpad-ignore,wpad\n"	/* protect against VU#598349 */
 	           "dhcp-ignore-names=tag:wpad-ignore\n",
 	           dmresolv, dmhosts, dmdhcp, n);
