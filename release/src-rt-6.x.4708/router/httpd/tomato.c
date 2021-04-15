@@ -914,6 +914,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpc_minpkt",		V_01				},
 	{ "dhcpc_custom",		V_TEXT(0, 256)			},
 	{ "dns_norebind",		V_01				},
+	{ "dns_fwd_local",		V_01				},	/* forward queries for local domain to upstream DNS server */
 	{ "dns_priv_override",		V_01				},	/* override DoH */
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 4096)			},

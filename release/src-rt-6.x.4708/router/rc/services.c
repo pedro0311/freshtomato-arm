@@ -173,6 +173,11 @@ void start_dnsmasq()
 	if (nvram_get_int("dns_priv_override"))
 		fprintf(f, "address=/use-application-dns.net/\n");
 
+	/* forward local domain queries to upstream DNS */
+	if (nvram_get_int("dns_fwd_local") != 1)
+		fprintf(f, "bogus-priv\n"			/* don't forward private reverse lookups upstream */
+		           "domain-needed\n");			/* don't forward plain name queries upstream */
+
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy"))
 		fprintf(f, "server=127.0.0.1#%s\n", nvram_safe_get("dnscrypt_port"));
