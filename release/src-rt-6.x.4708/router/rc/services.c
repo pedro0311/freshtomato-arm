@@ -73,8 +73,7 @@
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
 static const struct itimerval zombie_tv = { {0, 0}, {307, 0} };
-static const char dmhosts[] = "/etc/dnsmasq/hosts";
-static const char dmdhcp[] = "/etc/dnsmasq/dhcp";
+static const char dmhosts[] = "/etc/hosts.dnsmasq";
 static const char dmresolv[] = "/etc/resolv.dnsmasq";
 #ifdef TCONFIG_FTP
 static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
@@ -97,7 +96,7 @@ static int is_wet(int idx, int unit, int subunit, void *param)
 
 void start_dnsmasq()
 {
-	FILE *f, *hf, *df;
+	FILE *f, *hf;
 	const char *nv;
 	const char *router_ip;
 	char sdhcp_lease[32];
@@ -156,13 +155,12 @@ void start_dnsmasq()
 	fprintf(f, "pid-file=/var/run/dnsmasq.pid\n"
 	           "resolv-file=%s\n"				/* the real stuff is here */
 	           "addn-hosts=%s\n"				/* directory with additional hosts files */
-	           "dhcp-hostsfile=%s\n"			/* directory with dhcp hosts files */
 	           "expand-hosts\n"				/* expand hostnames in hosts file */
 	           "min-port=%u\n"				/* min port used for random src port */
 	           "no-negcache\n"				/* disable negative caching */
 	           "dhcp-name-match=set:wpad-ignore,wpad\n"	/* protect against VU#598349 */
 	           "dhcp-ignore-names=tag:wpad-ignore\n",
-	           dmresolv, dmhosts, dmdhcp, n);
+	           dmresolv, dmhosts, n);
 
 	/* DNS rebinding protection, will discard upstream RFC1918 responses */
 	if (nvram_get_int("dns_norebind"))
@@ -363,9 +361,8 @@ void start_dnsmasq()
 
 	/* write static lease entries & create hosts file */
 	router_ip = nvram_safe_get("lan_ipaddr"); /* use the main one, not the last one from the loop! */
-	mkdir_if_none(dmhosts);
-	snprintf(buf, sizeof(buf), "%s/hosts", dmhosts);
-	if ((hf = fopen(buf, "w")) != NULL) {
+
+	if ((hf = fopen(dmhosts, "w")) != NULL) {
 		if ((nv = nvram_safe_get("wan_hostname")) && (*nv))
 			fprintf(hf, "%s %s\n", router_ip, nv);
 #ifdef TCONFIG_SAMBASRV
@@ -394,21 +391,17 @@ void start_dnsmasq()
 #endif
 	}
 	else {
-		perror(buf);
+		perror(dmhosts);
 		return;
 	}
 
-	/* create dhcp-hosts file
+	/* add dhcp reservations
 	 *
 	 * FORMAT (static ARP binding after hostname):
 	 * 00:aa:bb:cc:dd:ee<123<xxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 55 w/ delim
 	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 87 w/ delim
 	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 108 w/ delim
 	 */
-	mkdir_if_none(dmdhcp);
-	snprintf(buf, sizeof(buf), "%s/dhcp-hosts", dmdhcp);
-	df = fopen(buf, "w");
-
 	p = nvram_safe_get("dhcpd_static");
 	while ((e = strchr(p, '>')) != NULL) {
 		n = (e - p);
@@ -463,8 +456,6 @@ void start_dnsmasq()
 		}
 	}
 
-	if (df)
-		fclose(df);
 	if (hf)
 		fclose(hf);
 
