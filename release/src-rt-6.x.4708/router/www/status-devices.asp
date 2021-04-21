@@ -400,7 +400,7 @@ dg.populate = function() {
 	}
 
 /* IPV6-BEGIN */
-	/* step 2: sync IPv4 Infos to IPv6 with matching mac addr (extra line/entry for IPv6 with mac, ip, name and lease and synced IPv4 infos) */
+	/* step 2: sync IPv4 Infos to IPv6 with matching mac addr (extra line/entry for IPv6 with mac, ipv6, name and lease and synced IPv4 infos) */
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
 		for (i2 = list.length - 1; i2 >= 0; --i2) {
@@ -415,6 +415,7 @@ dg.populate = function() {
 					e2.mode = e.mode;
 					e2.unit = e.unit;
 					e2.rssi = e.rssi;
+					e2.qual = e.qual;
 					e2.txrx = e.txrx;
 					e2.lan = e.lan;
 				}
@@ -427,6 +428,7 @@ dg.populate = function() {
 					e.mode = e2.mode;
 					e.unit = e2.unit;
 					e.rssi = e2.rssi;
+					e.qual = e2.qual;
 					e.txrx = e2.txrx;
 					e.lan = e2.lan;
 				}
