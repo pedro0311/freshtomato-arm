@@ -101,6 +101,7 @@ function verifyFields(focused, quiet) {
 			vis._ipv6_relay = 0;
 			vis._ipv6_tun_addr = 0;
 			vis._ipv6_tun_addrlen = 0;
+			vis._ipv6_tun_mtu = 0;
 			vis._ipv6_ifname = 0;
 			vis._ipv6_relay = 0;
 			vis._f_ipv6_accept_ra_wan = 0;
@@ -131,7 +132,10 @@ function verifyFields(focused, quiet) {
 			vis._ipv6_relay = 0;
 			vis._ipv6_tun_addr = 0;
 			vis._ipv6_tun_addrlen = 0;
-			vis._ipv6_tun_ttl = 0;
+			if (c == '6rd-pd')
+				vis._ipv6_tun_ttl = 1;
+			else
+				vis._ipv6_tun_ttl = 0;
 			vis._ipv6_tun_mtu = 0;
 			vis._ipv6_6rd_ipv4masklen = 0;
 			vis._ipv6_6rd_prefix_length = 0;

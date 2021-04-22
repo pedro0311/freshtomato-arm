@@ -19,6 +19,7 @@ var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2'],['WAN0', 'LAN0', 'LAN
 /* MULTIWAN-BEGIN */
 var xifs = [['wan', 'lan', 'lan1', 'lan2', 'lan3', 'wan2', 'wan3', 'wan4'],['WAN0', 'LAN0', 'LAN1', 'LAN2', 'LAN3', 'WAN1', 'WAN2', 'WAN3']];
 /* MULTIWAN-END */
+var mac_null = '00:00:00:00:00:00';
 
 // -----------------------------------------------------------------------------
 
@@ -1193,7 +1194,7 @@ function v_path(e, quiet, required) {
 }
 
 function isMAC0(mac) {
-	return (mac == '00:00:00:00:00:00');
+	return (mac == mac_null);
 }
 
 // -----------------------------------------------------------------------------

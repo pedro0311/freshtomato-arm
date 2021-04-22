@@ -391,6 +391,10 @@ void start_bwlimit(void)
 		if (!strcmp(ipaddr_old, ""))
 			continue;
 
+		/* increment the priority number by 1 because for filters prio = 0 will make it lowest priority */
+		priority_num++;
+		sprintf(priority, "%d", priority_num);
+
 		address_checker(&address_type, ipaddr_old, ipaddr);
 		seq = iSeq * 10;
 		mark = iSeq << 20;
@@ -445,14 +449,18 @@ void start_bwlimit(void)
 		if (!strcmp(ulc, ""))
 			strcpy(ulc, ulr);
 
+		/* for br0 only, we need to shift the priority values to be after 1 - 5 used for listed IPs/MACs
+		 * to prevent conflict between filters (there cannot be 2 filters with same class parent with
+		 * same pref with different fwmark). Just add a 1 on the left of the prio to make it 10-14.
+		 */
 		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
 		            "\t$TQA parent 1:16 handle 16: $Q\n"
-		            "\t$TFA parent 1:0 prio %s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
+		            "\t$TFA parent 1:0 prio 1%s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
 		            "\n"
 		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
 		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
 		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
-		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
+		            "\t\t$TFAU parent 2:0 prio 1%s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
 		            "\t}\n"
 		            "\n",
 		            dlr, dlc, prio,

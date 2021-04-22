@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -131,7 +131,11 @@ function verifyFields(focused, quiet) {
 
 			s = E('_upstream_server_'+id).value;
 			e = '_upstream_ip_'+id;
-			if (!v_ip(e, 1) && !v_ipv6_addr(e, 1)) {
+			if (!v_ip(e, 1)
+/* IPV6-BEGIN */
+			                && !v_ipv6_addr(e, 1)
+/* IPV6-END */
+			) {
 				if (!quiet)
 					alert('Invalid IP ('+E(e).value+') for '+s+suff);
 				return 0;
@@ -186,6 +190,7 @@ function save() {
 	fom.dhcpd_static_only.value = fom._f_dhcpd_static_only.checked ? 1 : 0;
 	fom.dns_addget.value = fom._f_dns_addget.checked ? 1 : 0;
 	fom.dns_norebind.value = fom._f_dns_norebind.checked ? 1 : 0;
+	fom.dns_fwd_local.value = fom._f_dns_fwd_local.checked ? 1 : 0;
 	fom.dns_intcpt.value = fom._f_dns_intcpt.checked ? 1 : 0;
 	fom.dnsmasq_debug.value = fom._f_dnsmasq_debug.checked ? 1 : 0;
 /* TOR-BEGIN */
@@ -312,6 +317,7 @@ function init() {
 <input type="hidden" name="dhcpd_gwmode">
 <input type="hidden" name="dns_addget">
 <input type="hidden" name="dns_norebind">
+<input type="hidden" name="dns_fwd_local">
 <input type="hidden" name="dns_intcpt">
 <!-- IPV6-BEGIN -->
 <input type="hidden" name="ipv6_radvd">
@@ -408,6 +414,7 @@ function init() {
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
 			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == '1' },
+			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == '1' },
 			null,
 			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'textarea', value: nvram.dhcpc_custom },
 			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == '1' }

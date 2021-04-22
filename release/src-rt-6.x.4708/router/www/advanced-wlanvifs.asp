@@ -282,7 +282,7 @@ wlg.onAdd = function() {
 		data[1] || '1',							/* bss_enabled */
 		data[3],							/* WL net mode */
 		data[2], 							/* nvram['wl'+u+'_ssid'] */
-		(eval('nvram["wl'+u+'_hwaddr"]')) || '00:00:00:00:00:00',	/* MAC addr */
+		(eval('nvram["wl'+u+'_hwaddr"]')) || mac_null,			/* MAC addr */
 		'0',								/* VIFs supported */
 		data[4],
 		data[5]								/* Wireless Filter */
@@ -1226,7 +1226,7 @@ function do_pre_submit_form(fom) {
 			s += 'nvram unset wl'+u+'_hwaddr\n';
 			// AB TODO: figure out what to do with pre-existing/set MAC addresses
 			if (vif >= 0) {
-				if ((vifs_defined[vif][9] == '00:00:00:00:00:00') || (vifs_defined[vif][9] == '')) {
+				if ((vifs_defined[vif][9] == mac_null) || (vifs_defined[vif][9] == '')) {
 					s += 'nvram unset wl'+u+'_hwaddr\n';
 				}
 			}
@@ -1452,7 +1452,7 @@ function escapeText(s) {
 						value: (eval('nvram["wl'+u+'_radio"]') == '1') && (eval('nvram["wl'+u+'_net_mode"]') != 'disabled') },
 					{ title: 'AP Isolation', name: 'f_wl'+u+'_ap_isolate', type: 'checkbox',
 						value: (eval('nvram["wl'+u+'_ap_isolate"]') == '1') },
-					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">'+(eval('nvram["wl'+u+'_hwaddr"]') || '00:00:00:00:00:00')+'<\/a>' +
+					{ title: 'MAC Address', text: '<a href="advanced-mac.asp">'+(eval('nvram["wl'+u+'_hwaddr"]') || mac_null)+'<\/a>' +
 						' &nbsp; <b id="wl'+u+'_hwaddr_msg" style="display:none"><small>(warning: WL driver reports BSSID <a href="advanced-mac.asp">'+((typeof(wl_ifaces[wl_ifidxx(u)]) != 'undefined')? wl_ifaces[wl_ifidxx(u)][9] : '')+'<\/a>)<\/small><\/b>' },
 					{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
 						options: wl_modes_available,
@@ -1553,8 +1553,8 @@ REMOVE-END */
 REMOVE-END */
 				for (var k = 0; k < 10; k += 2)	{
 					f.push({ title: (k ? '' : 'MAC Address'), indent: 2, multi: [
-						{ name: 'f_wl'+u+'_wds_'+k, type: 'text', maxlen: 17, size: 20, value: wds[k] || '00:00:00:00:00:00' },
-						{ name: 'f_wl'+u+'_wds_'+(k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || '00:00:00:00:00:00' } ] } );
+						{ name: 'f_wl'+u+'_wds_'+k, type: 'text', maxlen: 17, size: 20, value: wds[k] || mac_null },
+						{ name: 'f_wl'+u+'_wds_'+(k + 1), type: 'text', maxlen: 17, size: 20, value: wds[k + 1] || mac_null } ] } );
 				}
 
 				createFieldTable('', f);

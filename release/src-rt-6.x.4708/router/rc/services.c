@@ -73,7 +73,7 @@
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
 static const struct itimerval zombie_tv = { {0, 0}, {307, 0} };
-static const char dmdir[] = "/etc/dnsmasq";
+static const char dmhosts[] = "/etc/hosts.dnsmasq";
 static const char dmresolv[] = "/etc/resolv.dnsmasq";
 #ifdef TCONFIG_FTP
 static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
@@ -96,7 +96,7 @@ static int is_wet(int idx, int unit, int subunit, void *param)
 
 void start_dnsmasq()
 {
-	FILE *f, *hf, *df;
+	FILE *f, *hf;
 	const char *nv;
 	const char *router_ip;
 	char sdhcp_lease[32];
@@ -108,6 +108,7 @@ void start_dnsmasq()
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
 	int ipv6_lease; /* DHCP IPv6 lease time */
+	int service;
 #endif
 	int wan_unit, mwan_num;
 	const dns_list_t *dns;
@@ -154,12 +155,12 @@ void start_dnsmasq()
 	fprintf(f, "pid-file=/var/run/dnsmasq.pid\n"
 	           "resolv-file=%s\n"				/* the real stuff is here */
 	           "addn-hosts=%s\n"				/* directory with additional hosts files */
-	           "dhcp-hostsfile=%s\n"			/* directory with dhcp hosts files */
 	           "expand-hosts\n"				/* expand hostnames in hosts file */
-	           "min-port=%u\n" 				/* min port used for random src port */
+	           "min-port=%u\n"				/* min port used for random src port */
+	           "no-negcache\n"				/* disable negative caching */
 	           "dhcp-name-match=set:wpad-ignore,wpad\n"	/* protect against VU#598349 */
 	           "dhcp-ignore-names=tag:wpad-ignore\n",
-	           dmresolv, dmdir, dmdir, n);
+	           dmresolv, dmhosts, n);
 
 	/* DNS rebinding protection, will discard upstream RFC1918 responses */
 	if (nvram_get_int("dns_norebind"))
@@ -169,6 +170,11 @@ void start_dnsmasq()
 	/* instruct clients like Firefox to not auto-enable DoH */
 	if (nvram_get_int("dns_priv_override"))
 		fprintf(f, "address=/use-application-dns.net/\n");
+
+	/* forward local domain queries to upstream DNS */
+	if (nvram_get_int("dns_fwd_local") != 1)
+		fprintf(f, "bogus-priv\n"			/* don't forward private reverse lookups upstream */
+		           "domain-needed\n");			/* don't forward plain name queries upstream */
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy"))
@@ -355,9 +361,8 @@ void start_dnsmasq()
 
 	/* write static lease entries & create hosts file */
 	router_ip = nvram_safe_get("lan_ipaddr"); /* use the main one, not the last one from the loop! */
-	mkdir_if_none(dmdir);
-	snprintf(buf, sizeof(buf), "%s/hosts", dmdir);
-	if ((hf = fopen(buf, "w")) != NULL) {
+
+	if ((hf = fopen(dmhosts, "w")) != NULL) {
 		if ((nv = nvram_safe_get("wan_hostname")) && (*nv))
 			fprintf(hf, "%s %s\n", router_ip, nv);
 #ifdef TCONFIG_SAMBASRV
@@ -386,81 +391,71 @@ void start_dnsmasq()
 #endif
 	}
 	else {
-		perror(buf);
+		perror(dmhosts);
 		return;
 	}
 
-	/* create dhcp-hosts file
+	/* add dhcp reservations
 	 *
-	 * FORMAT (+static ARP binding after hostname):
+	 * FORMAT (static ARP binding after hostname):
 	 * 00:aa:bb:cc:dd:ee<123<xxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 55 w/ delim
 	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 87 w/ delim
 	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 108 w/ delim
 	 */
-	snprintf(buf, sizeof(buf), "%s/dhcp-hosts", dmdir);
-
-	if ((df = fopen(buf, "w")) != NULL) {
-		p = nvram_safe_get("dhcpd_static");
-		while ((e = strchr(p, '>')) != NULL) {
-			n = (e - p);
-			if (n > 107) {
-				p = e + 1;
-				continue;
-			}
-
-			strncpy(buf, p, n);
-			buf[n] = 0;
+	p = nvram_safe_get("dhcpd_static");
+	while ((e = strchr(p, '>')) != NULL) {
+		n = (e - p);
+		if (n > 107) {
 			p = e + 1;
+			continue;
+		}
 
-			if ((e = strchr(buf, '<')) == NULL)
+		strncpy(buf, p, n);
+		buf[n] = 0;
+		p = e + 1;
+
+		if ((e = strchr(buf, '<')) == NULL)
+			continue;
+
+		*e = 0;
+		mac = buf;
+
+		ip = e + 1;
+		if ((e = strchr(ip, '<')) == NULL)
+			continue;
+
+		*e = 0;
+		if (strchr(ip, '.') == NULL) {
+			ipn = atoi(ip);
+			if ((ipn <= 0) || (ipn > 255))
 				continue;
 
-			*e = 0;
-			mac = buf;
-
-			ip = e + 1;
-			if ((e = strchr(ip, '<')) == NULL)
+			memset(ipbuf, 0, 32);
+			sprintf(ipbuf, "%s%d", lan, ipn);
+			ip = ipbuf;
+		}
+		else {
+			if (inet_addr(ip) == INADDR_NONE)
 				continue;
+		}
 
+		name = e + 1;
+
+		if ((e = strchr(name, '<')) != NULL)
 			*e = 0;
-			if (strchr(ip, '.') == NULL) {
-				ipn = atoi(ip);
-				if ((ipn <= 0) || (ipn > 255))
-					continue;
 
-				memset(ipbuf, 0, 32);
-				sprintf(ipbuf, "%s%d", lan, ipn);
-				ip = ipbuf;
-			}
-			else {
-				if (inet_addr(ip) == INADDR_NONE)
-					continue;
-			}
+		if ((hf) && (*name))
+			fprintf(hf, "%s %s\n", ip, name);
 
-			name = e + 1;
+		if ((do_dhcpd_hosts > 0) && (*mac) && (strcmp(mac, "00:00:00:00:00:00") != 0)) {
+			fprintf(f, "dhcp-host=%s,%s", mac, ip);
+			if (nvram_get_int("dhcpd_slt") != 0)
+				fprintf(f, ",%s", sdhcp_lease);
 
-			if ((e = strchr(name, '<')) != NULL)
-				*e = 0;
-
-			if ((hf) && (*name))
-				fprintf(hf, "%s %s\n", ip, name);
-
-			if ((do_dhcpd_hosts > 0) && (*mac) && (strcmp(mac, "00:00:00:00:00:00") != 0)) {
-				fprintf(f, "dhcp-host=%s,%s", mac, ip);
-				if (nvram_get_int("dhcpd_slt") != 0)
-					fprintf(f, ",%s", sdhcp_lease);
-
-				fprintf(f, "\n");
-			}
+			fprintf(f, "\n");
 		}
 	}
-	else {
-		perror("dhcp-hosts");
-		return;
-	}
 
-	if (df)
-		fclose(df);
 	if (hf)
 		fclose(hf);
 
@@ -522,15 +517,36 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+
+		service = get_ipv6_service();
+		memset(tmp, 0, sizeof(tmp)); /* reset */
+
+		/* get mtu for IPv6 --> only for "wan" (no multiwan support) */
+		switch (service) {
+		case IPV6_ANYCAST_6TO4: /* use tun mtu (visible at basic-ipv6.asp) */
+		case IPV6_6IN4:
+			sprintf(tmp, "%d", (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_get_int("ipv6_tun_mtu") : 1280);
+			break;
+		case IPV6_6RD:		/* use wan mtu and calculate it */
+		case IPV6_6RD_DHCP:
+			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
+			break;
+		default:
+			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? nvram_get_int("wan_mtu") : 1280);
+			break;
+		}
+
 		/* enable-ra should be enabled in both cases (SLAAC and/or DHCPv6) */
 		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd"))) {
 			fprintf(f, "enable-ra\n");
 			if (nvram_get_int("ipv6_fast_ra"))
-				fprintf(f, "ra-param=br*, 15, 600\n"); /* interface = br*, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+				fprintf(f, "ra-param=br*, mtu:%s, 15, 600\n", tmp); /* interface = br*, mtu = XYZ, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+			else /* default case */
+				fprintf(f, "ra-param=br*, mtu:%s, 60, 1200\n", tmp); /* interface = br*, mtu = XYZ, ra-interval = 60 sec, router-lifetime = 1200 sec (20 min) */
 		}
 
 		/* Check for DHCPv6 PD (and use IPv6 preferred lifetime in that case) */
-		if (get_ipv6_service() == IPV6_NATIVE_DHCP) {
+		if (service == IPV6_NATIVE_DHCP) {
 			ipv6_lease = nvram_get_int("ipv6_pd_pltime"); /* get IPv6 preferred lifetime (seconds) */
 			if ((ipv6_lease < IPV6_MIN_LIFETIME) || (ipv6_lease > ONEMONTH_LIFETIME)) /* check lease time and limit the range (120 sec up to one month) */
 				ipv6_lease = IPV6_MIN_LIFETIME;

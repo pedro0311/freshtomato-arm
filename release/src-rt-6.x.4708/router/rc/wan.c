@@ -42,6 +42,8 @@
 #include <sys/sysinfo.h>
 #include <time.h>
 #include <bcmdevs.h>
+#include <linux/sockios.h>
+#include <linux/if_vlan.h>
 
 
 static int config_pppd(int wan_proto, int num, char *prefix)
@@ -743,6 +745,8 @@ void start_wan_if(char *prefix)
 	int vlan0tag;
 	int wan_unit;
 	char tmp[100];
+	int jumbo_enable = 0;
+	struct vlan_ioctl_args ifv;
 
 	wan_unit = get_wan_unit(prefix);
 
@@ -805,6 +809,8 @@ void start_wan_if(char *prefix)
 		return;
 	}
 
+	jumbo_enable = nvram_get_int("jumbo_frame_enable");
+
 	/* MTU */
 	switch (wan_proto) {
 	case WP_PPPOE:
@@ -826,7 +832,7 @@ void start_wan_if(char *prefix)
 		 * max MTU on PPP link
 		 */
 		mtu = nvram_get_int(strcat_r(prefix, "_mtu", tmp));
-		if (!(nvram_get_int("jumbo_frame_enable")) && (mtu > max))
+		if (!jumbo_enable && (mtu > max))
 			mtu = max;
 		else if (mtu < 576)
 			mtu = 576;
@@ -842,6 +848,38 @@ void start_wan_if(char *prefix)
 
 	/* Bring wan interface UP */
 	_ifconfig(wan_ifname, IFUP, NULL, NULL, NULL, mtu);
+
+	/* Try to increase WAN interface MTU to allow PPPoE MTU/MRU 1500 (default 1492, with 8 byte overhead) */
+	mtu = nvram_get_int(strcat_r(prefix, "_mtu", tmp)); /* get mtu again */
+	if ((jumbo_enable) && (mtu == 1500) && (wan_proto == WP_PPPOE)) {
+		syslog(LOG_INFO, "Try to increase WAN MTU up to 1500 for ISPs that support RFC 4638");
+
+		/* set parent device --> should be "eth0" */
+		strncpy(ifv.device1, wan_ifname, IFNAMSIZ);
+		ifv.cmd = GET_VLAN_REALDEV_NAME_CMD;
+		if (ioctl(sd, SIOCGIFVLAN, &ifv) >= 0) {
+			strncpy(ifr.ifr_name, ifv.u.device2, IFNAMSIZ);
+			ifr.ifr_mtu = mtu + 8;
+
+			if (ioctl(sd, SIOCSIFMTU, &ifr)) {
+				perror(wan_ifname);
+				syslog(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+			}
+			else
+				syslog(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+		}
+
+		/* set wan device --> for example "vlan7" */
+		strncpy(ifr.ifr_name, wan_ifname, IFNAMSIZ);
+		ifr.ifr_mtu = mtu + 8;
+		if (ioctl(sd, SIOCSIFMTU, &ifr)) {
+			perror(wan_ifname);
+			syslog(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+		}
+		else
+			syslog(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+
+	}
 
 	switch (wan_proto) {
 	case WP_PPPOE:

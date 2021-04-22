@@ -38,7 +38,7 @@ function find(mac, ip) {
 	mac = mac.toUpperCase();
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
-		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == '00:00:00:00:00:00') && (e.ip == ip)))
+		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == mac_null) && (e.ip == ip)))
 			return e;
 	}
 
@@ -196,6 +196,10 @@ dg.populate = function() {
 	var a, b, c, e, f;
 	var mode = '';
 
+/* IPV6-BEGIN */
+	var i2, e2;
+/* IPV6-END */
+
 	list = [];
 	wl_info = [];
 
@@ -347,6 +351,7 @@ dg.populate = function() {
 		}
 	}
 
+	/* step 1: prepare list */
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
 
@@ -392,6 +397,54 @@ dg.populate = function() {
 				e.proto = nvram['wan'+k+'_proto'];
 			}
 		}
+	}
+
+/* IPV6-BEGIN */
+	/* step 2: sync IPv4 Infos to IPv6 with matching mac addr (extra line/entry for IPv6 with mac, ipv6, name and lease and synced IPv4 infos) */
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
+		for (i2 = list.length - 1; i2 >= 0; --i2) {
+			e2 = list[i2];
+			if ((e.mac == e2.mac) && (e.ip != e2.ip)) { /* match mac */
+				if ((e2.bridge == '') || (e2.lan == '')) { /* check infos before sync */
+					e2.ifname = e.ifname;
+					e2.ifstatus = e.ifstatus;
+					e2.bridge = e.bridge;
+					e2.freq = e.freq;
+					e2.ssid = e.ssid;
+					e2.mode = e.mode;
+					e2.unit = e.unit;
+					e2.rssi = e.rssi;
+					e2.qual = e.qual;
+					e2.txrx = e.txrx;
+					e2.lan = e.lan;
+				}
+				else {
+					e.ifname = e2.ifname;
+					e.ifstatus = e2.ifstatus;
+					e.bridge = e2.bridge;
+					e.freq = e2.freq;
+					e.ssid = e2.ssid;
+					e.mode = e2.mode;
+					e.unit = e2.unit;
+					e.rssi = e2.rssi;
+					e.qual = e2.qual;
+					e.txrx = e2.txrx;
+					e.lan = e2.lan;
+				}
+				/* special case: name can be empty for IPv4 OR IPv6 - sync */
+				if ((e.name != '') && (e2.name == ''))
+					e2.name = e.name;
+				else if ((e2.name != '') && (e.name == ''))
+					e.name = e2.name;
+			}
+		}
+	}
+/* IPV6-END */
+
+	/* step 3: finish it */
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
 
 		if ((e.mac.match(/^(..):(..):(..)/)) && e.proto != 'pppoe' && e.proto != 'pptp' && e.proto != 'l2tp') {
 			b = '<a href="javascript:searchOUI(\''+RegExp.$1+'-'+RegExp.$2+'-'+RegExp.$3+'\','+i+')" title="OUI Search">'+e.mac+'<\/a><div style="display:none" id="gW_'+i+'">&nbsp; <img src="spin.gif" alt="" style="vertical-align:middle"><\/div>'+

@@ -1885,8 +1885,8 @@ REMOVE-END -->
 			wds = eval('nvram.wl'+u+'_wds').split(/\s+/);
 			for (i = 0; i < 10; i += 2) {
 				f.push({ title: (i ? '' : 'MAC Address'), indent: 2, multi: [
-					{ name: 'f_wl'+u+'_wds_'+i, type: 'text', maxlen: 17, size: 20, value: wds[i] || '00:00:00:00:00:00' },
-					{ name: 'f_wl'+u+'_wds_'+(i + 1), type: 'text', maxlen: 17, size: 20, value: wds[i + 1] || '00:00:00:00:00:00' } ] } );
+					{ name: 'f_wl'+u+'_wds_'+i, type: 'text', maxlen: 17, size: 20, value: wds[i] || mac_null },
+					{ name: 'f_wl'+u+'_wds_'+(i + 1), type: 'text', maxlen: 17, size: 20, value: wds[i + 1] || mac_null } ] } );
 			}
 			createFieldTable('', f);
 			W('<\/div>');

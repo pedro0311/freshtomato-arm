@@ -50,7 +50,7 @@ smg.resetNewEditor = function() {
 		}
 	}
 
-	f[0].value = '00:00:00:00:00:00';
+	f[0].value = mac_null;
 	f[1].value = '';
 }
 
