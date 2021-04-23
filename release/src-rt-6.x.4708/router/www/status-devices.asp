@@ -72,7 +72,8 @@ function get(mac, ip) {
 		lease: '',
 		lan: '',
 		wan: '',
-		proto: ''
+		proto: '',
+		media: ''
 	};
 	list.push(e);
 
@@ -219,6 +220,7 @@ dg.populate = function() {
 		list[i].lan = '';
 		list[i].wan = '';
 		list[i].proto = '';
+		list[i].media = '';
 	}
 
 	/* [ "eth1", "0", 0, -1, "SSID", "MAC", 1, 16, "wet", "MAC2" ] */
@@ -497,20 +499,28 @@ dg.populate = function() {
 			e.rssi = 1; /* fake value only for checking */
 
 		f = '';
-		if (e.freq != '')
+		if (e.freq != '') {
 			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta') ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			e.media = (e.freq == '5 GHz' ? '1' : '2');
+		}
 		else if (e.ifname != '' && mode != 'wet') {
 			c = (e.wan != '' ? 'style="filter:invert(1)"' : '');
 /* USB-BEGIN */
-			if ((e.proto == 'lte') || (e.proto == 'ppp3g'))
+			if ((e.proto == 'lte') || (e.proto == 'ppp3g')) {
 				f = '<img src="cell.gif"'+c+' alt="" title="LTE / 3G">';
+				e.media = '3';
+			}
 			else
 /* USB-END */
-			     if (e.rssi != 1)
+			     if (e.rssi != 1) {
 				f = '<img src="eth.gif"'+c+' alt="" title="Ethernet">';
+				e.media = '4';
+			}
 		}
-		if (e.rssi == 1)
+		if (e.rssi == 1) {
 			f = '<img src="dis.gif"'+c+' alt="" title="Disconnected">';
+			e.media = '5';
+		}
 
 		this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.ip == '-' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
 		                     (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small> <img src="bar'+MIN(MAX(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
@@ -525,6 +535,9 @@ dg.sortCompare = function(a, b) {
 	var r;
 
 	switch (col) {
+	case 1:
+		r = cmpInt(ra.media, rb.media);
+	break;
 	case 3:
 		r = cmpIP(ra.ip, rb.ip);
 	break;
