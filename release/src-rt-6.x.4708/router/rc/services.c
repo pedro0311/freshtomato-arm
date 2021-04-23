@@ -100,10 +100,13 @@ void start_dnsmasq()
 	const char *nv;
 	const char *router_ip;
 	char sdhcp_lease[32];
-	char buf[512], lan[24], ipbuf[32], tmp[128];
+	char buf[512], lan[24], tmp[128];
 	char *e, *p;
-	char *mac, *ip, *name;
-	int n, ipn;
+	struct in_addr in4;
+	char *mac, *ip, *name, *bind;
+	char *nve, *nvp;
+	unsigned char ea[ETHER_ADDR_LEN];
+	int n;
 	int dhcp_start, dhcp_count, dhcp_lease;
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
@@ -154,13 +157,12 @@ void start_dnsmasq()
 
 	fprintf(f, "pid-file=/var/run/dnsmasq.pid\n"
 	           "resolv-file=%s\n"				/* the real stuff is here */
-	           "addn-hosts=%s\n"				/* directory with additional hosts files */
 	           "expand-hosts\n"				/* expand hostnames in hosts file */
 	           "min-port=%u\n"				/* min port used for random src port */
 	           "no-negcache\n"				/* disable negative caching */
 	           "dhcp-name-match=set:wpad-ignore,wpad\n"	/* protect against VU#598349 */
 	           "dhcp-ignore-names=tag:wpad-ignore\n",
-	           dmresolv, dmhosts, n);
+	           dmresolv, n);
 
 	/* DNS rebinding protection, will discard upstream RFC1918 responses */
 	if (nvram_get_int("dns_norebind"))
@@ -390,64 +392,29 @@ void start_dnsmasq()
 		fprintf(hf, "%s wan4-ip\n", p);
 #endif
 	}
-	else {
-		perror(dmhosts);
-		return;
-	}
 
 	/* add dhcp reservations
 	 *
 	 * FORMAT (static ARP binding after hostname):
-	 * 00:aa:bb:cc:dd:ee<123<xxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 55 w/ delim
-	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 87 w/ delim
-	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a> = 108 w/ delim
+	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a>
+	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a>
 	 */
-	p = nvram_safe_get("dhcpd_static");
-	while ((e = strchr(p, '>')) != NULL) {
-		n = (e - p);
-		if (n > 107) {
-			p = e + 1;
-			continue;
-		}
+	nve = nvp = strdup(nvram_safe_get("dhcpd_static"));
+	while (nvp && (p = strsep(&nvp, ">")) != NULL) {
+		name = NULL;
 
-		strncpy(buf, p, n);
-		buf[n] = 0;
-		p = e + 1;
-
-		if ((e = strchr(buf, '<')) == NULL)
+		if ((vstrsep(p, "<", &mac, &ip, &name, &bind)) < 4)
 			continue;
 
-		*e = 0;
-		mac = buf;
-
-		ip = e + 1;
-		if ((e = strchr(ip, '<')) == NULL)
+		if (*ip == '\0')
 			continue;
-
-		*e = 0;
-		if (strchr(ip, '.') == NULL) {
-			ipn = atoi(ip);
-			if ((ipn <= 0) || (ipn > 255))
-				continue;
-
-			memset(ipbuf, 0, 32);
-			sprintf(ipbuf, "%s%d", lan, ipn);
-			ip = ipbuf;
-		}
-		else {
-			if (inet_addr(ip) == INADDR_NONE)
-				continue;
-		}
-
-		name = e + 1;
-
-		if ((e = strchr(name, '<')) != NULL)
-			*e = 0;
+		else if (inet_pton(AF_INET, ip, &in4) <= 0 || in4.s_addr == INADDR_ANY || in4.s_addr == INADDR_LOOPBACK || in4.s_addr == INADDR_BROADCAST)
+			continue;
 
 		if ((hf) && (*name))
 			fprintf(hf, "%s %s\n", ip, name);
 
-		if ((do_dhcpd_hosts > 0) && (*mac) && (strcmp(mac, "00:00:00:00:00:00") != 0)) {
+		if (do_dhcpd_hosts > 0 && ether_atoe(mac, ea)) {
 			fprintf(f, "dhcp-host=%s,%s", mac, ip);
 			if (nvram_get_int("dhcpd_slt") != 0)
 				fprintf(f, ",%s", sdhcp_lease);
@@ -455,9 +422,14 @@ void start_dnsmasq()
 			fprintf(f, "\n");
 		}
 	}
+	if (nve)
+		free(nve);
 
-	if (hf)
+	if (hf) {
+		/* add directory with additional hosts files */
+		fprintf(f, "addn-hosts=%s\n", dmhosts);
 		fclose(hf);
+	}
 
 	n = nvram_get_int("dhcpd_lmax");
 	fprintf(f, "dhcp-lease-max=%d\n", ((n > 0) ? n : 255));
@@ -590,7 +562,7 @@ void start_dnsmasq()
 			fprintf(f, "dhcp-option=option6:56,%s\n", "[::]");
 		}
 	}
-#endif
+#endif /* TCONFIG_IPV6 */
 
 	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
 
