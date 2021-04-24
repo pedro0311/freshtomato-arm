@@ -1041,6 +1041,8 @@ big_iface_length:
 			strcpy(replace->filename, optarg);
 			break;
 		case 13 : /* concurrent */
+			if (OPT_COMMANDS)
+				ebt_print_error2("Please put the --concurrent option first");
 			use_lockfd = 1;
 			break;
 		case 1 :
