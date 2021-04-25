@@ -46,9 +46,6 @@
 #define SMIN	60
 #define	SHOUR	(60 * 60)
 #define	SDAY	(60 * 60 * 24)
-#ifndef Y2K
-#define Y2K		946684800L
-#endif
 
 #define INTERVAL		60
 
@@ -168,13 +165,6 @@ static void save(int quick)
 	f_write("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime), 0, 0);
 
 	comp(speed_fn, speed, sizeof(speed[0]) * speed_count);
-
-/*
-	if ((now = time(0)) < Y2K) {
-		_dprintf("%s: time not set\n", __FUNCTION__);
-		return;
-	}
-*/
 
 	comp(history_fn, &history, sizeof(history));
 
@@ -695,7 +685,7 @@ static void calc(void)
 
 		// todo: split, delay
 
-		if (now > Y2K) {	/* Skip this if the time&date is not set yet */
+		if (nvram_get_int("ntp_ready")) { /* Skip this if the time&date is not set yet */
 			if (get_wan_proto() == WP_DISABLED) {
 				if ((nvram_get_int("wan_islan") == 0) || (!nvram_match("wan_ifnameX", ifname))) continue;
 			}
