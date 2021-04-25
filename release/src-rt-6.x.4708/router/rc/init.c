@@ -5448,12 +5448,12 @@ int init_main(int argc, char *argv[])
 			stop_arpbind();
 			stop_lan();
 			stop_vlan();
-			stop_syslog();
 
 			if ((state == SIGTERM /* REBOOT */) ||
 			    (state == SIGQUIT /* HALT */)) {
 				remove_storage_main(1);
 				stop_usb();
+				stop_syslog();
 
 				shutdn(state == SIGTERM /* REBOOT */);
 				exit(0);
@@ -5468,6 +5468,7 @@ int init_main(int argc, char *argv[])
 			logmsg(LOG_INFO, "FreshTomato RESTART ...");
 
 		case SIGUSR2:		/* START */
+			stop_syslog();
 			start_syslog();
 
 #ifndef TCONFIG_BCMARM
