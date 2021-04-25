@@ -26,11 +26,12 @@ void prepare_upgrade(void)
 {
 	int n;
 
-	// stop non-essential stuff & free up some memory
+	/* stop non-essential stuff & free up some memory */
 	exec_service("upgrade-start");
 	for (n = 30; n > 0; --n) {
 		sleep(1);
-		if (nvram_match("action_service", "")) break;	// this is cleared at the end
+		if (nvram_match("action_service", ""))
+			break; /* this is cleared at the end */
 	}
 	unlink("/var/log/messages");
 	unlink("/var/log/messages.0");
@@ -50,24 +51,24 @@ void wi_upgrade(char *url, int len, char *boundary)
 	reset = (strcmp(webcgi_safeget("_reset", "0"), "1") == 0);
 
 #ifdef TCONFIG_JFFS2
-	// quickly check if JFFS2 is mounted by checking if /jffs/ is not squashfs
+	/* quickly check if JFFS2 is mounted by checking if /jffs/ is not squashfs */
 	struct statfs sf;
-	if ((statfs("/jffs", &sf) != 0) || (sf.f_type != 0x71736873 && sf.f_type != 0x73717368)) {
-		error = "JFFS2 is currently in use. Since an upgrade may overwrite the "
-			"JFFS2 partition, please backup the contents, disable JFFS2, then reboot the router";
+	if ((statfs("/jffs", &sf) != 0) || (sf.f_type != 0x73717368 && sf.f_type != 0x71736873)) {
+		error = "JFFS2 is currently in use. Since an upgrade may overwrite the JFFS2 partition, please backup the contents, disable JFFS2, then reboot the router";
 		goto ERROR;
 	}
 #endif
 
-	// skip the rest of the header
-	if (!skip_header(&len)) goto ERROR;
+	/* skip the rest of the header */
+	if (!skip_header(&len))
+		goto ERROR;
 
 	if (len < (1 * 1024 * 1024)) {
 		error = "Invalid file";
 		goto ERROR;
 	}
 
-	// -- anything after here ends in a reboot --
+	/* -- anything after here ends in a reboot -- */
 
 	rboot = 1;
 
@@ -77,7 +78,7 @@ void wi_upgrade(char *url, int len, char *boundary)
 	signal(SIGQUIT, SIG_IGN);
 
 	prepare_upgrade();
-	system("cp reboot.asp /tmp");	/* copy to memory */
+	system("cp reboot.asp /tmp"); /* copy to memory */
 	system("cp *.css /tmp");
 
 	led(LED_DIAG, 1);
@@ -86,8 +87,7 @@ void wi_upgrade(char *url, int len, char *boundary)
 	int pid = -1;
 	FILE *f = NULL;
 
-	if ((mktemp(fifo) == NULL) ||
-		(mkfifo(fifo, S_IRWXU) < 0)) {
+	if ((mktemp(fifo) == NULL) || (mkfifo(fifo, S_IRWXU) < 0)) {
 		error = "Unable to create a fifo";
 		goto ERROR2;
 	}
@@ -103,18 +103,16 @@ void wi_upgrade(char *url, int len, char *boundary)
 		goto ERROR2;
 	}
 
-	// !!! This will actually write the boundary. But since mtd-write
-	// uses trx length... -- zzz
-
+	/* !!! This will actually write the boundary. But since mtd-write uses trx length... */
 	while (len > 0) {
-		 if ((m = web_read(buf, MIN((unsigned int) len, sizeof(buf)))) <= 0) {
-			 goto ERROR2;
-		 }
-		 len -= m;
-		 if (safe_fwrite(buf, 1, m, f) != (int) m) {
-			 error = "Error writing to pipe";
-			 goto ERROR2;
-		 }
+		if ((m = web_read(buf, MIN((unsigned int) len, sizeof(buf)))) <= 0)
+			goto ERROR2;
+
+		len -= m;
+		if (safe_fwrite(buf, 1, m, f) != (int) m) {
+			error = "Error writing to pipe";
+			goto ERROR2;
+		}
 	}
 
 	error = NULL;
@@ -123,8 +121,10 @@ void wi_upgrade(char *url, int len, char *boundary)
 ERROR2:
 	rboot = 1;
 
-	if (f) fclose(f);
-	if (pid != -1) waitpid(pid, &n, 0);
+	if (f)
+		fclose(f);
+	if (pid != -1)
+		waitpid(pid, &n, 0);
 
 	if (error == NULL && reset) {
 		set_action(ACT_IDLE);
@@ -135,7 +135,9 @@ ERROR2:
 	if (resmsg_fread("/tmp/.mtd-write"))
 		error = NULL;
 ERROR:
-	if (error) resmsg_set(error);
+	if (error)
+		resmsg_set(error);
+
 	web_eat(len);
 }
 
@@ -149,12 +151,11 @@ void wo_flash(char *url)
 		printf("\n\n -- reboot -- \n\n");
 		set_action(ACT_IDLE);
 #else
-		// disconnect ppp - need this for PPTP/L2TP/PPPOE to finish gracefully
+		/* disconnect ppp - need this for PPTP/L2TP/PPPOE to finish gracefully */
 		killall("xl2tpd", SIGTERM);
 		killall("pppd", SIGTERM);
 
 		sleep(2);
-		//	kill(1, SIGTERM);
 		reboot(RB_AUTOBOOT);
 #endif
 		exit(0);
