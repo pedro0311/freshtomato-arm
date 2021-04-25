@@ -2073,14 +2073,12 @@ static void start_rstats(int new)
 {
 	if (nvram_get_int("rstats_enable")) {
 		stop_rstats();
-		if (new) {
-			logmsg(LOG_INFO, "starting rstats (new datafile)");
+		if (new)
 			xstart("rstats", "--new");
-		}
-		else {
-			logmsg(LOG_INFO, "starting rstats");
+		else
 			xstart("rstats");
-		}
+
+		logmsg(LOG_INFO, "starting rstats%s", (new ? " (new datafile)" : ""));
 	}
 }
 
@@ -2118,14 +2116,12 @@ static void start_cstats(int new)
 {
 	if (nvram_get_int("cstats_enable")) {
 		stop_cstats();
-		if (new) {
-			logmsg(LOG_INFO, "starting cstats (new datafile)");
+		if (new)
 			xstart("cstats", "--new");
-		}
-		else {
-			logmsg(LOG_INFO, "starting cstats");
+		else
 			xstart("cstats");
-		}
+
+		logmsg(LOG_INFO, "starting cstats%s", (new ? " (new datafile)" : ""));
 	}
 }
 
