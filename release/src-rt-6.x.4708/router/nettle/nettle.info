@@ -4179,8 +4179,9 @@ The most well known PBKDF is the ‘PKCS #5 PBKDF2’ described in ‘RFC
    Nettle’s PBKDF2 functions are defined in ‘<nettle/pbkdf2.h>’.  There
 is an abstract function that operate on any PRF implemented via the
 ‘nettle_hash_update_func’, ‘nettle_hash_digest_func’ interfaces.  There
-is also helper macros and concrete functions PBKDF2-HMAC-SHA1 and
-PBKDF2-HMAC-SHA256.  First, the abstract function:
+is also helper macros and concrete functions PBKDF2-HMAC-SHA1,
+PBKDF2-HMAC-SHA256, PBKDF2-HMAC-SHA384 and PBKDF2-HMAC-SHA512.  First,
+the abstract function:
 
  -- Function: void pbkdf2 (void *mac_ctx, nettle_hash_update_func
           *update, nettle_hash_digest_func *digest, size_t digest_size,
@@ -4232,6 +4233,30 @@ than the general PBKDF2 function.
           *KEY, unsigned ITERATIONS, size_t SALT_LENGTH, const uint8_t
           *SALT, size_t LENGTH, uint8_t *DST)
      PBKDF2 with HMAC-SHA256.  Derive LENGTH bytes of key into buffer
+     DST using the password KEY of length KEY_LENGTH and salt SALT of
+     length SALT_LENGTH, with iteration counter ITERATIONS (> 0).  The
+     output buffer is DST which must have room for at least LENGTH
+     octets.
+
+7.6.3.3 PBKDF2-HMAC-SHA384
+..........................
+
+ -- Function: void pbkdf2_hmac_sha384 (size_t KEY_LENGTH, const uint8_t
+          *KEY, unsigned ITERATIONS, size_t SALT_LENGTH, const uint8_t
+          *SALT, size_t LENGTH, uint8_t *DST)
+     PBKDF2 with HMAC-SHA384.  Derive LENGTH bytes of key into buffer
+     DST using the password KEY of length KEY_LENGTH and salt SALT of
+     length SALT_LENGTH, with iteration counter ITERATIONS (> 0).  The
+     output buffer is DST which must have room for at least LENGTH
+     octets.
+
+7.6.3.4 PBKDF2-HMAC-SHA512
+..........................
+
+ -- Function: void pbkdf2_hmac_sha512 (size_t KEY_LENGTH, const uint8_t
+          *KEY, unsigned ITERATIONS, size_t SALT_LENGTH, const uint8_t
+          *SALT, size_t LENGTH, uint8_t *DST)
+     PBKDF2 with HMAC-SHA512.  Derive LENGTH bytes of key into buffer
      DST using the password KEY of length KEY_LENGTH and salt SALT of
      length SALT_LENGTH, with iteration counter ITERATIONS (> 0).  The
      output buffer is DST which must have room for at least LENGTH
@@ -6447,13 +6472,17 @@ Function and Concept Index
 * PBKDF:                                 Key derivation functions.
                                                               (line  58)
 * pbkdf2:                                Key derivation functions.
-                                                              (line  67)
+                                                              (line  68)
 * PBKDF2:                                Key derivation functions.
-                                                              (line  83)
+                                                              (line  84)
 * pbkdf2_hmac_sha1:                      Key derivation functions.
-                                                              (line 102)
+                                                              (line 103)
 * pbkdf2_hmac_sha256:                    Key derivation functions.
-                                                              (line 113)
+                                                              (line 114)
+* pbkdf2_hmac_sha384:                    Key derivation functions.
+                                                              (line 126)
+* pbkdf2_hmac_sha512:                    Key derivation functions.
+                                                              (line 138)
 * PKCS #5:                               Key derivation functions.
                                                               (line  58)
 * poly1305_aes_digest:                   Poly1305.            (line  56)
@@ -6704,23 +6733,23 @@ Node: UMAC161241
 Node: CMAC167116
 Node: Poly1305170423
 Node: Key derivation functions173080
-Node: Public-key algorithms179206
-Node: RSA183277
-Node: RSA-Footnotes203874
-Ref: RSA-Footnote-1203927
-Node: DSA204105
-Node: Elliptic curves219585
-Node: Side-channel silence220970
-Node: ECDSA222417
-Node: GOSTDSA227161
-Node: Curve 25519 and Curve 448231157
-Node: Randomness239070
-Node: ASCII encoding254425
-Node: Miscellaneous functions261152
-Node: Compatibility functions262312
-Node: Nettle soup263001
-Node: Installation263998
-Node: Index265374
+Node: Public-key algorithms180318
+Node: RSA184389
+Node: RSA-Footnotes204986
+Ref: RSA-Footnote-1205039
+Node: DSA205217
+Node: Elliptic curves220697
+Node: Side-channel silence222082
+Node: ECDSA223529
+Node: GOSTDSA228273
+Node: Curve 25519 and Curve 448232269
+Node: Randomness240182
+Node: ASCII encoding255537
+Node: Miscellaneous functions262264
+Node: Compatibility functions263424
+Node: Nettle soup264113
+Node: Installation265110
+Node: Index266486
 
 End Tag Table
 

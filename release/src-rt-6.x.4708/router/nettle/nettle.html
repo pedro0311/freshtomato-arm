@@ -187,6 +187,8 @@ ul.no-bullet {list-style: none}
       <ul class="no-bullet">
         <li><a name="toc-PBKDF2_002dHMAC_002dSHA1" href="#PBKDF2_002dHMAC_002dSHA1">7.6.3.1 <acronym>PBKDF2-HMAC-SHA1</acronym></a></li>
         <li><a name="toc-PBKDF2_002dHMAC_002dSHA256" href="#PBKDF2_002dHMAC_002dSHA256">7.6.3.2 <acronym>PBKDF2-HMAC-SHA256</acronym></a></li>
+        <li><a name="toc-PBKDF2_002dHMAC_002dSHA384" href="#PBKDF2_002dHMAC_002dSHA384">7.6.3.3 <acronym>PBKDF2-HMAC-SHA384</acronym></a></li>
+        <li><a name="toc-PBKDF2_002dHMAC_002dSHA512" href="#PBKDF2_002dHMAC_002dSHA512">7.6.3.4 <acronym>PBKDF2-HMAC-SHA512</acronym></a></li>
       </ul></li>
     </ul></li>
     <li><a name="toc-Public_002dkey-algorithms-1" href="#Public_002dkey-algorithms">7.7 Public-key algorithms</a>
@@ -5200,8 +5202,8 @@ The output buffer is <var>dst</var> which must have room for at least <var>lengt
 <samp>&lt;nettle/pbkdf2.h&gt;</samp>.  There is an abstract function that operate on
 any PRF implemented via the <code>nettle_hash_update_func</code>,
 <code>nettle_hash_digest_func</code> interfaces.  There is also helper macros
-and concrete functions PBKDF2-HMAC-SHA1 and PBKDF2-HMAC-SHA256.  First,
-the abstract function:
+and concrete functions PBKDF2-HMAC-SHA1, PBKDF2-HMAC-SHA256, PBKDF2-HMAC-SHA384
+and PBKDF2-HMAC-SHA512.  First, the abstract function:
 </p>
 <dl>
 <dt><a name="index-pbkdf2"></a>Function: <em>void</em> <strong>pbkdf2</strong> <em>(void *mac_ctx, nettle_hash_update_func *update, nettle_hash_digest_func *digest, size_t digest_size, unsigned iterations, size_t salt_length, const uint8_t *salt, size_t length, uint8_t *dst)</em></dt>
@@ -5253,6 +5255,30 @@ room for at least <var>length</var> octets.
 <dl>
 <dt><a name="index-pbkdf2_005fhmac_005fsha256"></a>Function: <em>void</em> <strong>pbkdf2_hmac_sha256</strong> <em>(size_t <var>key_length</var>, const uint8_t *<var>key</var>, unsigned <var>iterations</var>, size_t <var>salt_length</var>, const uint8_t *<var>salt</var>, size_t <var>length</var>, uint8_t *<var>dst</var>)</em></dt>
 <dd><p>PBKDF2 with HMAC-SHA256.  Derive <var>length</var> bytes of key into buffer
+<var>dst</var> using the password <var>key</var> of length <var>key_length</var> and
+salt <var>salt</var> of length <var>salt_length</var>, with iteration counter
+<var>iterations</var> (&gt; 0).  The output buffer is <var>dst</var> which must have
+room for at least <var>length</var> octets.
+</p></dd></dl>
+
+<a name="PBKDF2_002dHMAC_002dSHA384"></a>
+<h4 class="subsubsection">7.6.3.3 <acronym>PBKDF2-HMAC-SHA384</acronym></h4>
+
+<dl>
+<dt><a name="index-pbkdf2_005fhmac_005fsha384"></a>Function: <em>void</em> <strong>pbkdf2_hmac_sha384</strong> <em>(size_t <var>key_length</var>, const uint8_t *<var>key</var>, unsigned <var>iterations</var>, size_t <var>salt_length</var>, const uint8_t *<var>salt</var>, size_t <var>length</var>, uint8_t *<var>dst</var>)</em></dt>
+<dd><p>PBKDF2 with HMAC-SHA384.  Derive <var>length</var> bytes of key into buffer
+<var>dst</var> using the password <var>key</var> of length <var>key_length</var> and
+salt <var>salt</var> of length <var>salt_length</var>, with iteration counter
+<var>iterations</var> (&gt; 0).  The output buffer is <var>dst</var> which must have
+room for at least <var>length</var> octets.
+</p></dd></dl>
+
+<a name="PBKDF2_002dHMAC_002dSHA512"></a>
+<h4 class="subsubsection">7.6.3.4 <acronym>PBKDF2-HMAC-SHA512</acronym></h4>
+
+<dl>
+<dt><a name="index-pbkdf2_005fhmac_005fsha512"></a>Function: <em>void</em> <strong>pbkdf2_hmac_sha512</strong> <em>(size_t <var>key_length</var>, const uint8_t *<var>key</var>, unsigned <var>iterations</var>, size_t <var>salt_length</var>, const uint8_t *<var>salt</var>, size_t <var>length</var>, uint8_t *<var>dst</var>)</em></dt>
+<dd><p>PBKDF2 with HMAC-SHA512.  Derive <var>length</var> bytes of key into buffer
 <var>dst</var> using the password <var>key</var> of length <var>key_length</var> and
 salt <var>salt</var> of length <var>salt_length</var>, with iteration counter
 <var>iterations</var> (&gt; 0).  The output buffer is <var>dst</var> which must have
@@ -7681,6 +7707,8 @@ Previous: <a href="#Installation" accesskey="p" rel="prev">Installation</a>, Up:
 <tr><td></td><td valign="top"><a href="#index-PBKDF2"><code>PBKDF2</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-pbkdf2_005fhmac_005fsha1"><code>pbkdf2_hmac_sha1</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-pbkdf2_005fhmac_005fsha256"><code>pbkdf2_hmac_sha256</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-pbkdf2_005fhmac_005fsha384"><code>pbkdf2_hmac_sha384</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-pbkdf2_005fhmac_005fsha512"><code>pbkdf2_hmac_sha512</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-PKCS-_00235">PKCS #5</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Key-derivation-functions">Key derivation functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-poly1305_005faes_005fdigest"><code>poly1305_aes_digest</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Poly1305">Poly1305</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-poly1305_005faes_005fset_005fkey"><code>poly1305_aes_set_key</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Poly1305">Poly1305</a></td></tr>
