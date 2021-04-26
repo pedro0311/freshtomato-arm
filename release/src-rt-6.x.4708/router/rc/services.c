@@ -3407,9 +3407,7 @@ TOP:
 #ifdef TCONFIG_BT
 			stop_bittorrent();
 #endif
-#ifdef TCONFIG_ANON
 			stop_tomatoanon();
-#endif
 		}
 		goto CLEAR;
 	}
