@@ -62,9 +62,7 @@
 #define DAILY		0
 #define MONTHLY		1
 
-#define ID_V0		0x30305352
-#define ID_V1		0x31305352
-#define CURRENT_ID	ID_V1
+#define CURRENT_ID	0x31305352
 
 #define HI_BACK		5
 
@@ -279,28 +277,12 @@ static int load_history(const char *fname)
 
 	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
 
-	if ((decomp(fname, &hist, sizeof(hist), 1) != 1) || (hist.id != CURRENT_ID)) {
-		history_v0_t v0;
-
-		if ((decomp(fname, &v0, sizeof(v0), 1) != 1) || (v0.id != ID_V0)) {
-			_dprintf("%s: load failed\n", __FUNCTION__);
-			return 0;
-		}
-		else {
-			// --- temp conversion ---
-			clear_history();
-
-			// V0 -> V1
-			history.id = CURRENT_ID;
-			memcpy(history.daily, v0.daily, sizeof(history.daily));
-			history.dailyp = v0.dailyp;
-			memcpy(history.monthly, v0.monthly, sizeof(v0.monthly));	// v0 is just shorter
-			history.monthlyp = v0.monthlyp;
-		}
+	if (decomp(fname, &hist, sizeof(hist), 1) != 1) {
+		logmsg(LOG_DEBUG, "%s: load failed", __FUNCTION__);
+		return 0;
 	}
-	else {
+	else
 		memcpy(&history, &hist, sizeof(history));
-	}
 
 	_dprintf("%s: dailyp=%d monthlyp=%d\n", __FUNCTION__, history.dailyp, history.monthlyp);
 	return 1;
