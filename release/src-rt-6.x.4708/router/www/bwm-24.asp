@@ -34,7 +34,7 @@ var lastHours = 0;
 var debugTime = 0;
 var rstats_busy = 0;
 
-var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed');
+var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed&arg1=bwm');
 
 ref.refresh = function(text) {
 	++updating;
@@ -102,7 +102,7 @@ function switchHours(h) {
 
 function init() {
 	if (nvram.rstats_enable != '1') {
-		E('refresh-button').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute('disabled', 'disabled');
 		return;
 	}
 

@@ -44,22 +44,25 @@ var ipt_addr_hidden = [];
 hostnamecache = [];
 
 function showHours() {
-	if (hours == lastHours) return;
-		showSelectedOption('hr', lastHours, hours);
+	if (hours == lastHours)
+		return;
+
+	showSelectedOption('hr', lastHours, hours);
 	lastHours = hours;
 }
 
 function switchHours(h) {
-	if ((!svgReady) || (updating)) return;
+	if ((!svgReady) || (updating))
+		return;
 
 	hours = h;
 	updateMaxL = (1440 / 24) * hours;
 	showHours();
 	loadData();
-	cookie.set(cprefix + 'hrs', hours);
+	cookie.set(cprefix+'hrs', hours);
 }
 
-var ref = new TomatoRefresh('update.cgi', 'exec=ipt_bandwidth&arg0=speed');
+var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed&arg1=ipt');
 
 ref.refresh = function(text) {
 	++updating;
@@ -73,41 +76,40 @@ ref.refresh = function(text) {
 			for (i in speed_history) {
 				if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i != '_next')) {
 					ipt_addr_shown.push(i);
-					var option=document.createElement("option");
-					option.value=i;
-					if (hostnamecache[i] != null) {
-						option.text = hostnamecache[i] + ' (' + i + ')';
-					}
-					else {
+					var option = document.createElement('option');
+					option.value = i;
+					if (hostnamecache[i] != null)
+						option.text = hostnamecache[i]+' ('+i+')';
+					else
 						option.text=i;
-					}
-					E('_f_ipt_addr_shown').add(option,null);
+
+					E('_f_ipt_addr_shown').add(option, null);
 					speed_history[i].hide = 0;
 				}
 
-				if (ipt_addr_hidden.find(i) != -1) {
+				if (ipt_addr_hidden.find(i) != -1)
 					speed_history[i].hide = 1;
-				}
-				else {
+				else
 					speed_history[i].hide = 0;
-				}
 			}
 
-			if (cstats_busy) {
+			if (cstats_busy)
 				cstats_busy = 0;
-			}
+
 			this.refreshTime = (fixInt(speed_history._next, 1, 60, 30) + 2) * 1000;
-		} catch (ex) {
+		}
+		catch (ex) {
 			speed_history = {};
 			cstats_busy = 1;
 		}
-		if (debugTime) E('dtime').innerHTML = (ymdText(new Date())) + ' ' + (this.refreshTime / 1000);
+		if (debugTime)
+			E('dtime').innerHTML = (ymdText(new Date()))+' '+(this.refreshTime / 1000);
 
 		loadData();
 	}
 	catch (ex) {
 /* REMOVE-BEGIN
-		alert('ex=' + ex);
+		alert('ex='+ex);
 REMOVE-END */
 	}
 	--updating;
@@ -120,13 +122,13 @@ ref.showState = function() {
 ref.toggleX = function() {
 	this.toggle();
 	this.showState();
-	cookie.set(cprefix + 'refresh', this.running ? 1 : 0);
+	cookie.set(cprefix+'refresh', this.running ? 1 : 0);
 }
 
 ref.initX = function() {
 	var a;
 
-	a = fixInt(cookie.get(cprefix + 'refresh'), 0, 1, 1);
+	a = fixInt(cookie.get(cprefix+'refresh'), 0, 1, 1);
 	if (a) {
 		ref.refreshTime = 100;
 		ref.toggleX();
@@ -135,26 +137,25 @@ ref.initX = function() {
 
 function init() {
 	if (nvram.cstats_enable != '1') {
-		E('refresh-button').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute('disabled', 'disabled');
 		return;
 	}
 
 	populateCache();
 
-	var c,i;
+	var c, i;
 	if ((c = cookie.get('ipt_addr_hidden')) != null) {
 		c = c.split(',');
 		for (var i = 0; i < c.length; ++i) {
 			if (c[i].trim() != '') {
 				ipt_addr_hidden.push(c[i]);
-				var option = document.createElement("option");
+				var option = document.createElement('option');
 				option.value = c[i];
-				if (hostnamecache[c[i]] != null) {
-					option.text = hostnamecache[c[i]] + ' (' + c[i] + ')';
-				}
-				else {
+				if (hostnamecache[c[i]] != null)
+					option.text = hostnamecache[c[i]]+' ('+c[i]+')';
+				else
 					option.text = c[i];
-				}
+
 				E('_f_ipt_addr_hidden').add(option, null);
 			}
 		}
@@ -166,22 +167,20 @@ function init() {
 		for (i in speed_history) {
 			if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && ( i != '_next') && (i.trim() != '')) {
 				ipt_addr_shown.push(i);
-				var option = document.createElement("option");
+				var option = document.createElement('option');
 				var ii = i;
-				if (hostnamecache[i] != null) {
-					ii = hostnamecache[i] + ' (' + i + ')';
-				}
+				if (hostnamecache[i] != null)
+					ii = hostnamecache[i]+' ('+i+')';
+
 				option.text = ii;
 				option.value = i;
 				E('_f_ipt_addr_shown').add(option, null);
 				speed_history[i].hide = 0;
 			}
-			if (ipt_addr_hidden.find(i) != -1) {
+			if (ipt_addr_hidden.find(i) != -1)
 				speed_history[i].hide = 1;
-			}
-			else {
+			else
 				speed_history[i].hide = 0;
-			}
 		}
 	}
 	catch (ex) {
@@ -195,13 +194,13 @@ REMOVE-END */
 		cstats_busy = 1;
 	}
 
-	hours = fixInt(cookie.get(cprefix + 'hrs'), 1, 24, 24);
+	hours = fixInt(cookie.get(cprefix+'hrs'), 1, 24, 24);
 	updateMaxL = (1440 / 24) * hours;
 	showHours();
 
 	initCommon(1, 0, 0, 1);
 
-	verifyFields(null, true);
+	verifyFields(null, 1);
 
 	ref.initX();
 }
@@ -212,9 +211,9 @@ function verifyFields(focused, quiet) {
 		if (focused.id == '_f_ipt_addr_shown') {
 			ipt_addr_shown.remove(focused.options[focused.selectedIndex].value);
 			ipt_addr_hidden.push(focused.options[focused.selectedIndex].value);
-			var option=document.createElement("option");
-			option.text=focused.options[focused.selectedIndex].text;
-			option.value=focused.options[focused.selectedIndex].value;
+			var option = document.createElement('option');
+			option.text = focused.options[focused.selectedIndex].text;
+			option.value = focused.options[focused.selectedIndex].value;
 			E('_f_ipt_addr_shown').remove(focused.selectedIndex);
 			E('_f_ipt_addr_shown').selectedIndex = 0;
 			E('_f_ipt_addr_hidden').add(option, null);
@@ -224,9 +223,9 @@ function verifyFields(focused, quiet) {
 		if (focused.id == '_f_ipt_addr_hidden') {
 			ipt_addr_hidden.remove(focused.options[focused.selectedIndex].value);
 			ipt_addr_shown.push(focused.options[focused.selectedIndex].value);
-			var option=document.createElement("option");
-			option.text=focused.options[focused.selectedIndex].text;
-			option.value=focused.options[focused.selectedIndex].value;
+			var option = document.createElement('option');
+			option.text = focused.options[focused.selectedIndex].text;
+			option.value = focused.options[focused.selectedIndex].value;
 			E('_f_ipt_addr_hidden').remove(focused.selectedIndex);
 			E('_f_ipt_addr_hidden').selectedIndex = 0;
 			E('_f_ipt_addr_shown').add(option, null);
@@ -245,19 +244,15 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	if (E('_f_ipt_addr_hidden').length < 2) {
-		E('_f_ipt_addr_hidden').setAttribute("disabled", "disabled");
-	}
-	else {
-		E('_f_ipt_addr_hidden').removeAttribute("disabled");
-	}
+	if (E('_f_ipt_addr_hidden').length < 2)
+		E('_f_ipt_addr_hidden').setAttribute('disabled', 'disabled');
+	else
+		E('_f_ipt_addr_hidden').removeAttribute('disabled');
 
-	if (E('_f_ipt_addr_shown').length < 2) {
-		E('_f_ipt_addr_shown').setAttribute("disabled", "disabled");
-	}
-	else {
-		E('_f_ipt_addr_shown').removeAttribute("disabled");
-	}
+	if (E('_f_ipt_addr_shown').length < 2)
+		E('_f_ipt_addr_shown').setAttribute('disabled', 'disabled');
+	else
+		E('_f_ipt_addr_shown').removeAttribute('disabled');
 
 	return 1;
 }

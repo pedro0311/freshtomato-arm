@@ -9,6 +9,10 @@ CFLAGS += -I$(SRCBASE)/common/include
 LIBS += -lgcc_s
 endif
 
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+export CFLAGS += -DDEBUG_LOGMSG
+endif
+
 OBJS = httpd.o cgi.o tomato.o version.o
 OBJS += misc.o dhcp.o upgrade.o traceping.o parser.o upnp.o ctnf.o
 OBJS += nvram.o log.o webio.o wl.o devlist.o ddns.o config.o bwm.o
