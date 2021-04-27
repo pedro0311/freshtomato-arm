@@ -69,17 +69,22 @@ function verifyFields(focused, quiet) {
 	var path;
 	var eLoc, eUser, eTime, eOfs;
 	var bak;
+	var eExc, eBak;
 
 	eLoc = E('_f_loc');
 	eUser = E('_f_user');
 	eTime = E('_rstats_stime');
 	eOfs = E('_rstats_offset');
+	eExc = E('_rstats_exclude');
+	eBak = E('_f_bak');
 
 	b = !E('_f_rstats_enable').checked;
 	eLoc.disabled = b;
 	eUser.disabled = b;
 	eTime.disabled = b;
 	eOfs.disabled = b;
+	eExc.disabled = b;
+	eBak.disabled = b;
 	E('_f_new').disabled = b;
 	E('_f_sshut').disabled = b;
 	E('backup-button').disabled = b;
