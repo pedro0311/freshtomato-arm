@@ -16,13 +16,13 @@
 <% css(); %>
 <script src="tomato.js"></script>
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script src="bwm-hist.js"></script>
 <script src="bwm-common.js"></script>
+<script src="bwm-hist.js"></script>
 <script src="interfaces.js"></script>
 
 <script>
 
-//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,wl_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_enable"); %>
+//	<% nvram("wan_ifname,wan_iface,wan2_ifname,wan2_iface,wan3_ifname,wan3_iface,wan4_ifname,wan4_iface,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,wan_proto,wan2_proto,wan3_proto,wan4_proto,web_svg,web_css,rstats_enable"); %>
 
 var cprefix = 'bw_24';
 var updateInt = 60;
@@ -34,23 +34,7 @@ var lastHours = 0;
 var debugTime = 0;
 var rstats_busy = 0;
 
-function showHours() {
-	if (hours == lastHours) return;
-	showSelectedOption('hr', lastHours, hours);
-	lastHours = hours;
-}
-
-function switchHours(h) {
-	if ((!svgReady) || (updating)) return;
-
-	hours = h;
-	updateMaxL = (1440 / 24) * hours;
-	showHours();
-	loadData();
-	cookie.set(cprefix + 'hrs', hours);
-}
-
-var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed');
+var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed&arg1=bwm');
 
 ref.refresh = function(text) {
 	++updating;
@@ -59,19 +43,20 @@ ref.refresh = function(text) {
 		speed_history = {};
 		try {
 			eval(text);
-			if (rstats_busy) {
+			if (rstats_busy)
 				rstats_busy = 0;
-			}
+
 			this.refreshTime = (fixInt(speed_history._next, 1, 60, 30) + 2) * 1000;
 		}
 		catch (ex) {
 			speed_history = {};
 		}
-		if (debugTime) E('dtime').innerHTML = (new Date()) + ' ' + (this.refreshTime / 1000);
+		if (debugTime)
+			E('dtime').innerHTML = (new Date())+' '+(this.refreshTime / 1000);
+
 		loadData();
 	}
 	catch (ex) {
-//		alert('ex=' + ex);
 	}
 	--updating;
 }
@@ -83,22 +68,41 @@ ref.showState = function() {
 ref.toggleX = function() {
 	this.toggle();
 	this.showState();
-	cookie.set(cprefix + 'refresh', this.running ? 1 : 0);
+	cookie.set(cprefix+'refresh', this.running ? 1 : 0);
 }
 
 ref.initX = function() {
 	var a;
 
-	a = fixInt(cookie.get(cprefix + 'refresh'), 0, 1, 1);
+	a = fixInt(cookie.get(cprefix+'refresh'), 0, 1, 1);
 	if (a) {
 		ref.refreshTime = 100;
 		ref.toggleX();
 	}
 }
 
+function showHours() {
+	if (hours == lastHours)
+		return;
+
+	showSelectedOption('hr', lastHours, hours);
+	lastHours = hours;
+}
+
+function switchHours(h) {
+	if ((!svgReady) || (updating))
+		return;
+
+	hours = h;
+	updateMaxL = (1440 / 24) * hours;
+	showHours();
+	loadData();
+	cookie.set(cprefix+'hrs', hours);
+}
+
 function init() {
 	if (nvram.rstats_enable != '1') {
-		E('refresh-button').setAttribute("disabled", "disabled");
+		E('refresh-button').setAttribute('disabled', 'disabled');
 		return;
 	}
 
@@ -114,7 +118,7 @@ function init() {
 		rstats_busy = 1;
 	}
 
-	hours = fixInt(cookie.get(cprefix + 'hrs'), 1, 24, 24);
+	hours = fixInt(cookie.get(cprefix+'hrs'), 1, 24, 24);
 	updateMaxL = (1440 / 24) * hours;
 	showHours();
 

@@ -144,7 +144,7 @@ static int lock_file()
 	int fd, try = 0;
 
 retry:
-	fd = open(LOCKFILE, O_CREAT|O_CLOEXEC, 00600);
+	fd = open(LOCKFILE, O_CREAT|O_WRONLY|O_CLOEXEC, 00600);
 	if (fd < 0) {
 		if (try == 1 || mkdir(dirname(pathbuf), 00700))
 			return -2;

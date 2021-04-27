@@ -31,43 +31,36 @@
 
 #include <bcmnvram.h>
 #include <shutils.h>
-
-
-//#define DEBUG_NOISY
-//#define DEBUG_STIME
-
-
 #include <shared.h>
 
-#define K 1024
-#define M (1024 * 1024)
-#define G (1024 * 1024 * 1024)
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"rstats_debug"
 
-#define SMIN	60
-#define	SHOUR	(60 * 60)
-#define	SDAY	(60 * 60 * 24)
-#ifndef Y2K
-#define Y2K		946684800L
-#endif
+#define K		1024
+#define M		(1024 * 1024)
+#define G		(1024 * 1024 * 1024)
 
-#define INTERVAL		60
+#define SMIN		60
+#define	SHOUR		(60 * 60)
+#define	SDAY		(60 * 60 * 24)
 
-#define MAX_NSPEED		((24 * SHOUR) / INTERVAL)
-#define MAX_NDAILY		62
+#define INTERVAL	60
+
+#define MAX_NSPEED	((24 * SHOUR) / INTERVAL)
+#define MAX_NDAILY	62
 #define MAX_NMONTHLY	25
 #define MAX_SPEED_IF	32
-#define MAX_ROLLOVER	(3750UL * M) // 3750 MByte - new rollover limit
+#define MAX_ROLLOVER	(3750UL * M) /* 3750 MByte - new rollover limit */
 
 #define MAX_COUNTER	2
-#define RX 			0
-#define TX 			1
+#define RX 		0
+#define TX 		1
 
 #define DAILY		0
 #define MONTHLY		1
 
-#define ID_V0		0x30305352
-#define ID_V1		0x31305352
-#define CURRENT_ID	ID_V1
+#define CURRENT_ID	0x31305352
 
 #define HI_BACK		5
 
@@ -125,27 +118,28 @@ const char source_fn[] = "/var/lib/misc/rstats-source";
 
 static int get_stime(void)
 {
-#ifdef DEBUG_STIME
-	return 90;
-#else
 	int t;
 	t = nvram_get_int("rstats_stime");
-	if (t < 1) t = 1;
-		else if (t > 8760) t = 8760;
+	if (t < 1)
+		t = 1;
+	else if (t > 8760)
+		t = 8760;
+
 	return t * SHOUR;
-#endif
 }
 
 static int comp(const char *path, void *buffer, int size)
 {
 	char s[256];
 
-	if (f_write(path, buffer, size, 0, 0) != size) return 0;
+	if (f_write(path, buffer, size, 0, 0) != size)
+		return 0;
 
 	sprintf(s, "%s.gz", path);
 	unlink(s);
 
 	sprintf(s, "gzip %s", path);
+
 	return system(s) == 0;
 }
 
@@ -163,33 +157,24 @@ static void save(int quick)
 	struct tm *tms;
 	static int lastbak = -1;
 
-	_dprintf("%s: quick=%d\n", __FUNCTION__, quick);
+	logmsg(LOG_DEBUG, "*** %s: quick=%d", __FUNCTION__, quick);
 
 	f_write("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime), 0, 0);
 
 	comp(speed_fn, speed, sizeof(speed[0]) * speed_count);
-
-/*
-	if ((now = time(0)) < Y2K) {
-		_dprintf("%s: time not set\n", __FUNCTION__);
-		return;
-	}
-*/
-
 	comp(history_fn, &history, sizeof(history));
 
-	_dprintf("%s: write source=%s\n", __FUNCTION__, save_path);
+	logmsg(LOG_DEBUG, "*** %s: write source=%s", __FUNCTION__, save_path);
 	f_write_string(source_fn, save_path, 0, 0);
 
-	if (quick) {
+	if (quick)
 		return;
-	}
 
 	sprintf(hgz, "%s.gz", history_fn);
 
 	if (strcmp(save_path, "*nvram") == 0) {
 		if (!wait_action_idle(10)) {
-			_dprintf("%s: busy, not saving\n", __FUNCTION__);
+			logmsg(LOG_DEBUG, "*** %s: busy, not saving", __FUNCTION__);
 			return;
 		}
 
@@ -198,9 +183,10 @@ static void save(int quick)
 				n = base64_encode(bi, bo, n);
 				bo[n] = 0;
 				nvram_set("rstats_data", bo);
-				if (!nvram_match("debug_nocommit", "1")) nvram_commit();
+				if (!nvram_match("debug_nocommit", "1"))
+					nvram_commit();
 
-				_dprintf("%s: nvram commit\n", __FUNCTION__);
+				logmsg(LOG_DEBUG, "*** %s: nvram commit", __FUNCTION__);
 
 				free(bo);
 			}
@@ -212,13 +198,12 @@ static void save(int quick)
 		strcat(tmp, ".tmp");
 
 		for (i = 15; i > 0; --i) {
-			if (!wait_action_idle(10)) {
-				_dprintf("%s: busy, not saving\n", __FUNCTION__);
-			}
+			if (!wait_action_idle(10))
+				logmsg(LOG_DEBUG, "*** %s: busy, not saving", __FUNCTION__);
 			else {
-				_dprintf("%s: cp %s %s\n", __FUNCTION__, hgz, tmp);
+				logmsg(LOG_DEBUG, "*** %s: cp %s %s", __FUNCTION__, hgz, tmp);
 				if (eval("cp", hgz, tmp) == 0) {
-					_dprintf("%s: copy ok\n", __FUNCTION__);
+					logmsg(LOG_DEBUG, "*** %s: copy ok", __FUNCTION__);
 
 					if (!nvram_match("rstats_bak", "0")) {
 						now = time(0);
@@ -226,28 +211,32 @@ static void save(int quick)
 						if (lastbak != tms->tm_yday) {
 							strcpy(bak, save_path);
 							n = strlen(bak);
-							if ((n > 3) && (strcmp(bak + (n - 3), ".gz") == 0)) n -= 3;
+							if ((n > 3) && (strcmp(bak + (n - 3), ".gz") == 0))
+								n -= 3;
+
 							strcpy(bkp, bak);
 							for (b = HI_BACK-1; b > 0; --b) {
 								sprintf(bkp + n, "_%d.bak", b + 1);
 								sprintf(bak + n, "_%d.bak", b);
 								rename(bak, bkp);
 							}
-							if (eval("cp", "-p", save_path, bak) == 0) lastbak = tms->tm_yday;
+							if (eval("cp", "-p", save_path, bak) == 0)
+								lastbak = tms->tm_yday;
 						}
 					}
+					logmsg(LOG_DEBUG, "*** %s: rename %s %s", __FUNCTION__, tmp, save_path);
 
-					_dprintf("%s: rename %s %s\n", __FUNCTION__, tmp, save_path);
 					if (rename(tmp, save_path) == 0) {
-						_dprintf("%s: rename ok\n", __FUNCTION__);
+						logmsg(LOG_DEBUG, "*** %s: rename ok", __FUNCTION__);
 						break;
 					}
 				}
 			}
 
-			// might not be ready
+			/* might not be ready */
 			sleep(3);
-			if (gotterm) break;
+			if (gotterm)
+				break;
 		}
 	}
 }
@@ -257,7 +246,7 @@ static int decomp(const char *fname, void *buffer, int size, int max)
 	char s[256];
 	int n;
 
-	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
+	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
 
 	unlink(uncomp_fn);
 
@@ -269,11 +258,12 @@ static int decomp(const char *fname, void *buffer, int size, int max)
 		if (n <= 0) n = 0;
 			else n = n / size;
 	}
-	else {
-		_dprintf("%s: %s != 0\n", __FUNCTION__, s);
-	}
+	else
+		logmsg(LOG_DEBUG, "*** %s: %s != 0", __FUNCTION__, s);
+
 	unlink(uncomp_fn);
 	memset((char *)buffer + (size * n), 0, (max - n) * size);
+
 	return n;
 }
 
@@ -287,32 +277,17 @@ static int load_history(const char *fname)
 {
 	history_t hist;
 
-	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
+	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
 
-	if ((decomp(fname, &hist, sizeof(hist), 1) != 1) || (hist.id != CURRENT_ID)) {
-		history_v0_t v0;
-
-		if ((decomp(fname, &v0, sizeof(v0), 1) != 1) || (v0.id != ID_V0)) {
-			_dprintf("%s: load failed\n", __FUNCTION__);
-			return 0;
-		}
-		else {
-			// --- temp conversion ---
-			clear_history();
-
-			// V0 -> V1
-			history.id = CURRENT_ID;
-			memcpy(history.daily, v0.daily, sizeof(history.daily));
-			history.dailyp = v0.dailyp;
-			memcpy(history.monthly, v0.monthly, sizeof(v0.monthly));	// v0 is just shorter
-			history.monthlyp = v0.monthlyp;
-		}
+	if (decomp(fname, &hist, sizeof(hist), 1) != 1) {
+		logmsg(LOG_DEBUG, "*** %s: load failed", __FUNCTION__);
+		return 0;
 	}
-	else {
+	else
 		memcpy(&history, &hist, sizeof(history));
-	}
 
-	_dprintf("%s: dailyp=%d monthlyp=%d\n", __FUNCTION__, history.dailyp, history.monthlyp);
+	logmsg(LOG_DEBUG, "*** %s: dailyp=%d monthlyp=%d", __FUNCTION__, history.dailyp, history.monthlyp);
+
 	return 1;
 }
 
@@ -330,6 +305,7 @@ static int try_hardway(const char *fname)
 	n = strlen(fn);
 	if ((n > 3) && (strcmp(fn + (n - 3), ".gz") == 0))
 		n -= 3;
+
 	for (b = HI_BACK; b > 0; --b) {
 		sprintf(fn + n, "_%d.bak", b);
 		found |= load_history(fn);
@@ -344,7 +320,9 @@ static void load_new(void)
 	char hgz[256];
 
 	sprintf(hgz, "%s.gz.new", history_fn);
-	if (load_history(hgz)) save(0);
+	if (load_history(hgz))
+		save(0);
+
 	unlink(hgz);
 }
 
@@ -367,18 +345,18 @@ static void load(int new)
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	}
 
-	if (f_read("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime)) != sizeof(save_utime)) {
+	if (f_read("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime)) != sizeof(save_utime))
 		save_utime = 0;
-	}
-	t = uptime + get_stime();
-	if ((save_utime < uptime) || (save_utime > t)) save_utime = t;
-	_dprintf("%s: uptime = %dm, save_utime = %dm\n", __FUNCTION__, uptime / 60, save_utime / 60);
 
-	//
+	t = uptime + get_stime();
+	if ((save_utime < uptime) || (save_utime > t))
+		save_utime = t;
+
+	logmsg(LOG_DEBUG, "*** %s: uptime = %ldm, save_utime = %ldm", __FUNCTION__, uptime / 60, save_utime / 60);
 
 	sprintf(hgz, "%s.gz", speed_fn);
 	speed_count = decomp(hgz, speed, sizeof(speed[0]), MAX_SPEED_IF);
-	_dprintf("%s: speed_count = %d\n", __FUNCTION__, speed_count);
+	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
 
 	for (i = 0; i < speed_count; ++i) {
 		if (speed[i].utime > uptime) {
@@ -386,8 +364,6 @@ static void load(int new)
 			speed[i].sync = 1;
 		}
 	}
-
-	//
 
 	sprintf(hgz, "%s.gz", history_fn);
 
@@ -397,22 +373,24 @@ static void load(int new)
 		return;
 	}
 
-	f_read_string(source_fn, sp, sizeof(sp));	// always terminated
-	_dprintf("%s: read source=%s save_path=%s\n", __FUNCTION__, sp, save_path);
+	f_read_string(source_fn, sp, sizeof(sp)); /* always terminated */
+	logmsg(LOG_DEBUG, "*** %s: read source=%s save_path=%s", __FUNCTION__, sp, save_path);
+
 	if ((strcmp(sp, save_path) == 0) && (load_history(hgz))) {
-		_dprintf("%s: using local file\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: using local file", __FUNCTION__);
 		return;
 	}
 
 	if (save_path[0] != 0) {
 		if (strcmp(save_path, "*nvram") == 0) {
-			if (!wait_action_idle(60)) exit(0);
+			if (!wait_action_idle(60))
+				exit(0);
 
 			bi = nvram_safe_get("rstats_data");
 			if ((n = strlen(bi)) > 0) {
 				if ((bo = malloc(base64_decoded_len(n))) != NULL) {
 					n = base64_decode(bi, (unsigned char *) bo, n);
-					_dprintf("%s: nvram n=%d\n", __FUNCTION__, n);
+					logmsg(LOG_DEBUG, "*** %s: nvram n=%d", __FUNCTION__, n);
 					f_write(hgz, bo, n, 0, 0);
 					free(bo);
 					load_history(hgz);
@@ -424,7 +402,7 @@ static void load(int new)
 			while (1) {
 				if (wait_action_idle(10)) {
 
-					// cifs quirk: try forcing refresh
+					/* cifs quirk: try forcing refresh */
 					eval("ls", save_path);
 
 					/* If we can't access the path, keep trying - maybe it isn't mounted yet.
@@ -439,18 +417,18 @@ static void load(int new)
 					}
 				}
 
-				// not ready...
+				/* not ready... */
 				sleep(i);
-				if ((i *= 2) > 900) i = 900;	// 15m
+				if ((i *= 2) > 900)
+					i = 900; /* 15m */
 
 				if (gotterm) {
 					save_path[0] = 0;
 					return;
 				}
 
-				if (i > (3 * 60)) {
+				if (i > (3 * 60))
 					syslog(LOG_WARNING, "Problem loading %s. Still trying...", save_path);
-				}
 			}
 		}
 	}
@@ -470,13 +448,13 @@ static void save_speedjs(long next)
 	int sfd;
 	struct ifreq ifr;
 
-	if ((f = fopen("/var/tmp/rstats-speed.js", "w")) == NULL) return;
+	if ((f = fopen("/var/tmp/rstats-speed.js", "w")) == NULL)
+		return;
 
-	_dprintf("%s: speed_count = %d\n", __FUNCTION__, speed_count);
+	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
 
-	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		_dprintf("[%s %d]: error opening socket %m\n", __FUNCTION__, __LINE__);
-	}
+	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+		logmsg(LOG_DEBUG, "*** %s: %d: error opening socket %m", __FUNCTION__, __LINE__);
 
 	fprintf(f, "\nspeed_history = {\n");
 
@@ -502,22 +480,23 @@ static void save_speedjs(long next)
 				n = sp->speed[p][j];
 				fprintf(f, "%s%lu", k ? "," : "", n);
 				total += n;
-				if (n > tmax) tmax = n;
+				if (n > tmax)
+					tmax = n;
 			}
 			fprintf(f, "],\n");
 
-			fprintf(f, " %cx_avg: %llu,\n %cx_max: %llu,\n %cx_total: %llu",
-				c, total / MAX_NSPEED, c, tmax, c, total);
+			fprintf(f, " %cx_avg: %llu,\n %cx_max: %llu,\n %cx_total: %llu", c, total / MAX_NSPEED, c, tmax, c, total);
 		}
 	}
 	fprintf(f, "%s_next: %ld};\n", speed_count ? "},\n" : "", ((next >= 1) ? next : 1));
 
-	if (sfd >= 0) close(sfd);
+	if (sfd >= 0)
+		close(sfd);
+
 	fclose(f);
 
 	rename("/var/tmp/rstats-speed.js", "/var/spool/rstats-speed.js");
 }
-
 
 static void save_datajs(FILE *f, int mode)
 {
@@ -541,9 +520,10 @@ static void save_datajs(FILE *f, int mode)
 	kn = 0;
 	for (k = max; k > 0; --k) {
 		p = (p + 1) % max;
-		if (data[p].xtime == 0) continue;
-		fprintf(f, "%s[0x%lx,0x%llx,0x%llx]", kn ? "," : "",
-			(unsigned long)data[p].xtime, data[p].counter[0] / K, data[p].counter[1] / K);
+		if (data[p].xtime == 0)
+			continue;
+
+		fprintf(f, "%s[0x%lx,0x%llx,0x%llx]", kn ? "," : "", (unsigned long)data[p].xtime, data[p].counter[0] / K, data[p].counter[1] / K);
 		++kn;
 	}
 	fprintf(f, "];\n");
@@ -560,7 +540,6 @@ static void save_histjs(void)
 		rename("/var/tmp/rstats-history.js", "/var/spool/rstats-history.js");
 	}
 }
-
 
 static void bump(data_t *data, int *tail, int max, uint32_t xnow, unsigned long *counter)
 {
@@ -603,36 +582,48 @@ static void calc(void)
 	long tick;
 	int n;
 	char *exclude;
-	char prefix[] = "wan"; // not yet mwan ready, assume wan
+	char prefix[] = "wan"; /* not yet mwan ready, assume wan */
 
-	int wanup = 0; // 0 = FALSE, 1 = TRUE
-	long wanuptime = 0; // wanuptime in seconds
+	int wanup = 0; /* 0 = FALSE, 1 = TRUE */
+	long wanuptime = 0; /* wanuptime in seconds */
 
 	now = time(0);
 	exclude = nvram_safe_get("rstats_exclude");
 
-	if ((f = fopen("/proc/net/dev", "r")) == NULL) return;
-	fgets(buf, sizeof(buf), f);	// header
-	fgets(buf, sizeof(buf), f);	// "
-	while (fgets(buf, sizeof(buf), f)) {
-		if ((p = strchr(buf, ':')) == NULL) continue;
-		*p = 0;
-		if ((ifname = strrchr(buf, ' ')) == NULL) ifname = buf;
-			else ++ifname;
-		if ((strcmp(ifname, "lo") == 0) || (find_word(exclude, ifname))) continue;
+	if ((f = fopen("/proc/net/dev", "r")) == NULL)
+		return;
 
-		// <rx bytes, packets, errors, dropped, fifo errors, frame errors, compressed, multicast><tx ...>
-		if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter[0], &counter[1]) != 2) continue;
+	fgets(buf, sizeof(buf), f); /* header */
+	fgets(buf, sizeof(buf), f); /* " */
+	while (fgets(buf, sizeof(buf), f)) {
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
+
+		*p = 0;
+		if ((ifname = strrchr(buf, ' ')) == NULL)
+			ifname = buf;
+		else
+			++ifname;
+
+		if ((strcmp(ifname, "lo") == 0) || (find_word(exclude, ifname)))
+			continue;
+
+		/* <rx bytes, packets, errors, dropped, fifo errors, frame errors, compressed, multicast><tx ...> */
+		if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter[0], &counter[1]) != 2)
+			continue;
 
 		sp = speed;
 		for (i = speed_count; i > 0; --i) {
-			if (strcmp(sp->ifname, ifname) == 0) break;
+			if (strcmp(sp->ifname, ifname) == 0)
+				break;
+
 			++sp;
 		}
 		if (i == 0) {
-			if (speed_count >= MAX_SPEED_IF) continue;
+			if (speed_count >= MAX_SPEED_IF)
+				continue;
 
-			_dprintf("%s: add %s as #%d\n", __FUNCTION__, ifname, speed_count);
+			logmsg(LOG_DEBUG, "*** %s: add %s as #%d", __FUNCTION__, ifname, speed_count);
 
 			i = speed_count++;
 			sp = &speed[i];
@@ -642,7 +633,7 @@ static void calc(void)
 			sp->utime = uptime;
 		}
 		if (sp->sync) {
-			_dprintf("%s: sync %s\n", __FUNCTION__, ifname);
+			logmsg(LOG_DEBUG, "*** %s: sync %s", __FUNCTION__, ifname);
 			sp->sync = -1;
 
 			memcpy(sp->last, counter, sizeof(sp->last));
@@ -650,7 +641,7 @@ static void calc(void)
 		}
 		else {
 			sp->sync = -1;
-			// reset previous counters on first calc() to prevent wrong rollover
+			/* reset previous counters on first calc() to prevent wrong rollover */
 			if (restarted > 0) {
 				for (i = 0; i < MAX_COUNTER; ++i) {
 					sp->last[i] = counter[i];
@@ -660,12 +651,12 @@ static void calc(void)
 			tick = uptime - sp->utime;
 			n = tick / INTERVAL;
 			if (n < 1) {
-				_dprintf("%s: %s is a little early... %d < %d\n", __FUNCTION__, ifname, tick, INTERVAL);
+				logmsg(LOG_DEBUG, "*** %s: %s is a little early... %ld < %d", __FUNCTION__, ifname, tick, INTERVAL);
 				continue;
 			}
 
 			sp->utime += (n * INTERVAL);
-			_dprintf("%s: %s n=%d tick=%d\n", __FUNCTION__, ifname, n, tick);
+			logmsg(LOG_DEBUG, "*** %s: %s n=%d tick=%ld", __FUNCTION__, ifname, n, tick);
 
 			for (i = 0; i < MAX_COUNTER; ++i) {
 				c = counter[i];
@@ -674,13 +665,16 @@ static void calc(void)
 					wanup = check_wanup(prefix); /* see router/shared/misc.c */
 					wanuptime = check_wanup_time(prefix); /* see router/shared/misc.c */
 					diff = ((0xFFFFFFFFUL) - sc + 1UL) + c; /* rollover calculation */
-					if(diff > MAX_ROLLOVER) diff = 0UL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
-					if(wanup && (wanuptime < (long)(INTERVAL + 10))) diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+					if (diff > MAX_ROLLOVER)
+						diff = 0UL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
+					if (wanup && (wanuptime < (long)(INTERVAL + 10)))
+						diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+
 					/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
 				}
-				else {
+				else
 					diff = c - sc;
-				}
+
 				sp->last[i] = c;
 				counter[i] = diff;
 			}
@@ -693,31 +687,33 @@ static void calc(void)
 			}
 		}
 
-		// todo: split, delay
+		/* todo: split, delay */
 
-		if (now > Y2K) {	/* Skip this if the time&date is not set yet */
+		if (nvram_get_int("ntp_ready")) { /* Skip this if the time&date is not set yet */
 			if (get_wan_proto() == WP_DISABLED) {
-				if ((nvram_get_int("wan_islan") == 0) || (!nvram_match("wan_ifnameX", ifname))) continue;
+				if ((nvram_get_int("wan_islan") == 0) || (!nvram_match("wan_ifnameX", ifname)))
+					continue;
 			}
 			else {
-				if (!nvram_match("wan_iface", ifname)) continue;
+				if (!nvram_match("wan_iface", ifname))
+					continue;
 			}
-			
+
 			tms = localtime(&now);
-			bump(history.daily, &history.dailyp, MAX_NDAILY,
-				(tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8) | tms->tm_mday, counter);
+			bump(history.daily, &history.dailyp, MAX_NDAILY, (tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8) | tms->tm_mday, counter);
 
 			n = nvram_get_int("rstats_offset");
-			if ((n < 1) || (n > 31)) n = 1;
+			if ((n < 1) || (n > 31))
+				n = 1;
+
 			mon = now + ((1 - n) * (60 * 60 * 24));
 			tms = localtime(&mon);
-			bump(history.monthly, &history.monthlyp, MAX_NMONTHLY,
-				(tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8), counter);
+			bump(history.monthly, &history.monthlyp, MAX_NMONTHLY, (tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8), counter);
 		}
 	}
 	fclose(f);
 
-	// cleanup stale entries
+	/* cleanup stale entries */
 	for (i = 0; i < speed_count; ++i) {
 		sp = &speed[i];
 		if (sp->sync == -1) {
@@ -725,25 +721,25 @@ static void calc(void)
 			continue;
 		}
 		if (((uptime - sp->utime) > (10 * SMIN)) || (find_word(exclude, sp->ifname))) {
-			_dprintf("%s: #%d removing. > time limit or excluded\n", __FUNCTION__, i);
+			logmsg(LOG_DEBUG, "*** %s: #%d removing. > time limit or excluded", __FUNCTION__, i);
 			--speed_count;
 			memcpy(sp, sp + 1, (speed_count - i) * sizeof(speed[0]));
 		}
 		else {
-			_dprintf("%s: %s not found setting sync=1\n", __FUNCTION__, sp->ifname, i);
+			logmsg(LOG_DEBUG, "*** %s: %s not found setting sync=1 #%d", __FUNCTION__, sp->ifname, i);
 			sp->sync = 1;
 		}
 	}
 
-	// todo: total > user
+	/* todo: total > user */
 	if (uptime >= save_utime) {
 		save(0);
 		save_utime = uptime + get_stime();
-		_dprintf("%s: uptime = %dm, save_utime = %dm\n", __FUNCTION__, uptime / 60, save_utime / 60);
+		logmsg(LOG_DEBUG, "*** %s: uptime = %ldm, save_utime = %ldm", __FUNCTION__, uptime / 60, save_utime / 60);
 	}
-	if (restarted > 0) {
+
+	if (restarted > 0)
 		restarted = 0;
-	}
 }
 
 
@@ -772,17 +768,18 @@ int main(int argc, char *argv[])
 	long z;
 	int new;
 
-	printf("rstats\nCopyright (C) 2006-2009 Jonathan Zarate\n\n");
-
-	if (fork() != 0) return 0;
+	if (fork() != 0)
+		return 0;
 
 	openlog("rstats", LOG_PID, LOG_USER);
+
+	//logmsg(LOG_INFO, "rstats - Copyright (C) 2006-2009 Jonathan Zarate");
 
 	new = 0;
 	if (argc > 1) {
 		if (strcmp(argv[1], "--new") == 0) {
 			new = 1;
-			_dprintf("new=1\n");
+			logmsg(LOG_DEBUG, "*** %s: new=1", __FUNCTION__);
 		}
 	}
 
@@ -805,8 +802,11 @@ int main(int argc, char *argv[])
 		while (uptime < z) {
 			sleep(z - uptime);
 			if (gothup) {
-				if (unlink("/var/tmp/rstats-load") == 0) load_new();
-					else save(0);
+				if (unlink("/var/tmp/rstats-load") == 0)
+					load_new();
+				else
+					save(0);
+
 				gothup = 0;
 			}
 			if (gotterm) {

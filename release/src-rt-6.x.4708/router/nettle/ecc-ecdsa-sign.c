@@ -64,7 +64,7 @@ ecc_ecdsa_sign (const struct ecc_curve *ecc,
 		mp_limb_t *scratch)
 {
 #define P	    scratch
-#define kinv	    scratch                /* Needs 5*ecc->p.size for computation */
+#define kinv	    scratch
 #define hp	    (scratch  + ecc->p.size) /* NOTE: ecc->p.size + 1 limbs! */
 #define tp	    (scratch + 2*ecc->p.size)
   /* Procedure, according to RFC 6090, "KT-I". q denotes the group
@@ -91,9 +91,8 @@ ecc_ecdsa_sign (const struct ecc_curve *ecc,
 
   ecc_mod_mul (&ecc->q, tp, zp, rp, tp);
   ecc_mod_add (&ecc->q, hp, hp, tp);
-  ecc_mod_mul (&ecc->q, tp, hp, kinv, tp);
+  ecc_mod_mul_canonical (&ecc->q, sp, hp, kinv, tp);
 
-  mpn_copyi (sp, tp, ecc->p.size);
 #undef P
 #undef hp
 #undef kinv

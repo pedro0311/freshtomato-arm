@@ -238,6 +238,7 @@ ngx_http_v2_init(ngx_event_t *rev)
     ngx_http_v2_srv_conf_t    *h2scf;
     ngx_http_v2_main_conf_t   *h2mcf;
     ngx_http_v2_connection_t  *h2c;
+    ngx_http_core_srv_conf_t  *cscf;
 
     c = rev->data;
     hc = c->data;
@@ -276,7 +277,7 @@ ngx_http_v2_init(ngx_event_t *rev)
     h2scf = ngx_http_get_module_srv_conf(hc->conf_ctx, ngx_http_v2_module);
 
     h2c->concurrent_pushes = h2scf->concurrent_pushes;
-    h2c->priority_limit = h2scf->concurrent_streams;
+    h2c->priority_limit = ngx_max(h2scf->concurrent_streams, 100);
 
     h2c->pool = ngx_create_pool(h2scf->pool_size, h2c->connection->log);
     if (h2c->pool == NULL) {
@@ -325,8 +326,10 @@ ngx_http_v2_init(ngx_event_t *rev)
     rev->handler = ngx_http_v2_read_handler;
     c->write->handler = ngx_http_v2_write_handler;
 
-    if (c->read->timer_set) {
-        ngx_del_timer(c->read);
+    if (!rev->timer_set) {
+        cscf = ngx_http_get_module_srv_conf(hc->conf_ctx,
+                                            ngx_http_core_module);
+        ngx_add_timer(rev, cscf->client_header_timeout);
     }
 
     c->idle = 1;
@@ -1365,7 +1368,11 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
     clcf = ngx_http_get_module_loc_conf(h2c->http_connection->conf_ctx,
                                         ngx_http_core_module);
 
-    if (h2c->connection->requests >= clcf->keepalive_requests) {
+    if (clcf->keepalive_timeout == 0
+        || h2c->connection->requests >= clcf->keepalive_requests
+        || ngx_current_msec - h2c->connection->start_time
+           > clcf->keepalive_time)
+    {
         h2c->goaway = 1;
 
         if (ngx_http_v2_send_goaway(h2c, NGX_HTTP_V2_NO_ERROR) == NGX_ERROR) {

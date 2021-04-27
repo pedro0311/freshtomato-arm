@@ -69,6 +69,6 @@ stopAdns() {
 
 [ -f $DNSCONFFILE -o -f $DNSRESOLVFILE -o -n "$FILEEXISTS" ] && service dnsmasq restart
 
-rmdir -rf $DNSDIR
+rmdir $DNSDIR
 
 exit 0

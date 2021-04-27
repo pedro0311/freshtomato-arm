@@ -19,6 +19,7 @@
 
 */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,10 +35,10 @@
 #include <bcmnvram.h>
 #include <shutils.h>
 #include <shared.h>
-
 #include <tree.h>
 
 #include "cstats.h"
+
 
 long save_utime;
 char save_path[96];
@@ -46,23 +47,6 @@ long uptime;
 volatile int gothup = 0;
 volatile int gotuser = 0;
 volatile int gotterm = 0;
-
-Node *Node_new(char *ipaddr) {
-	Node *self;
-	if ((self = malloc(sizeof(Node))) != NULL) {
-		memset(self, 0, sizeof(Node));
-		self->id = CURRENT_ID;
-		strncpy(self->ipaddr, ipaddr, INET_ADDRSTRLEN);
-		_dprintf("%s: new node ip=%s, version=%d, sizeof(Node)=%d (bytes)\n", __FUNCTION__, self->ipaddr, self->id, sizeof(Node));
-	}
-	return self;
-}
-
-int Node_compare(Node *lhs, Node *rhs) {
-	return strncmp(lhs->ipaddr, rhs->ipaddr, INET_ADDRSTRLEN);
-}
-
-Tree tree = TREE_INITIALIZER(Node_compare);
 
 #ifdef DEBUG_CSTATS
 void Node_print(Node *self, FILE *stream) {
@@ -75,30 +59,44 @@ void Node_printer(Node *self, void *stream) {
 }
 
 void Tree_info(void) {
-	_dprintf("Tree = ");
 	TREE_FORWARD_APPLY(&tree, _Node, linkage, Node_printer, stdout);
-	_dprintf("\n");
-	_dprintf("Tree depth = %d\n", TREE_DEPTH(&tree, linkage));
+	logmsg(LOG_DEBUG, "Tree depth = %d", TREE_DEPTH(&tree, linkage));
 }
 #endif
 
+Node *Node_new(char *ipaddr) {
+	Node *self;
+	if ((self = malloc(sizeof(Node))) != NULL) {
+		memset(self, 0, sizeof(Node));
+		self->id = CURRENT_ID;
+		strncpy(self->ipaddr, ipaddr, INET_ADDRSTRLEN);
+		logmsg(LOG_DEBUG, "*** %s: new node ip=%s, version=%d, sizeof(Node)=%d (bytes)", __FUNCTION__, self->ipaddr, self->id, sizeof(Node));
+	}
+
+	return self;
+}
+
+int Node_compare(Node *lhs, Node *rhs) {
+	return strncmp(lhs->ipaddr, rhs->ipaddr, INET_ADDRSTRLEN);
+}
+
+Tree tree = TREE_INITIALIZER(Node_compare);
+
 static int get_stime(void) {
-#ifdef DEBUG_STIME
-	return 90;
-#else
 	int t;
 	t = nvram_get_int("cstats_stime");
-	if (t < 1) t = 1;
-		else if (t > 8760) t = 8760;
+	if (t < 1)
+		t = 1;
+	else if (t > 8760)
+		t = 8760;
+
 	return t * SHOUR;
-#endif
 }
 
 void Node_save(Node *self, void *t) {
 	node_print_mode_t *info = (node_print_mode_t *)t;
-	if(fwrite(self, sizeof(Node), 1, info->stream) > 0) {
+	if (fwrite(self, sizeof(Node), 1, info->stream) > 0)
 		info->kn++;
-	}
 }
 
 static int save_history_from_tree(const char *fname) {
@@ -106,13 +104,13 @@ static int save_history_from_tree(const char *fname) {
 	node_print_mode_t info;
 	char s[256];
 
-	info.kn=0;
-	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
+	info.kn = 0;
+	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
 
 	unlink(uncomp_fn);
 	if ((f = fopen(uncomp_fn, "wb")) != NULL) {
-		info.mode=0;
-		info.stream=f;
+		info.mode = 0;
+		info.stream = f;
 		TREE_FORWARD_APPLY(&tree, _Node, linkage, Node_save, &info);
 		fclose(f);
 
@@ -124,6 +122,7 @@ static int save_history_from_tree(const char *fname) {
 			system(s);
 		}
 	}
+
 	return info.kn;
 }
 
@@ -139,19 +138,18 @@ static void save(int quick) {
 	struct tm *tms;
 	static int lastbak = -1;
 
-	_dprintf("%s: quick=%d\n", __FUNCTION__, quick);
+	logmsg(LOG_DEBUG, "*** %s: quick=%d", __FUNCTION__, quick);
 
 	f_write("/var/lib/misc/cstats-stime", &save_utime, sizeof(save_utime), 0, 0);
 
 	n = save_history_from_tree(history_fn);
-	_dprintf("%s: saved %d records from tree on file %s\n", __FUNCTION__, n, history_fn);
+	logmsg(LOG_DEBUG, "*** %s: saved %d records from tree on file %s", __FUNCTION__, n, history_fn);
 
-	_dprintf("%s: write source=%s\n", __FUNCTION__, save_path);
+	logmsg(LOG_DEBUG, "*** %s: write source=%s", __FUNCTION__, save_path);
 	f_write_string(source_fn, save_path, 0, 0);
 
-	if (quick) {
+	if (quick)
 		return;
-	}
 
 	sprintf(hgz, "%s.gz", history_fn);
 
@@ -160,13 +158,12 @@ static void save(int quick) {
 		strcat(tmp, ".tmp");
 
 		for (i = 15; i > 0; --i) {
-			if (!wait_action_idle(10)) {
-				_dprintf("%s: busy, not saving\n", __FUNCTION__);
-			}
+			if (!wait_action_idle(10))
+				logmsg(LOG_DEBUG, "*** %s: busy, not saving", __FUNCTION__);
 			else {
-				_dprintf("%s: cp %s %s\n", __FUNCTION__, hgz, tmp);
+				logmsg(LOG_DEBUG, "*** %s: cp %s %s", __FUNCTION__, hgz, tmp);
 				if (eval("cp", hgz, tmp) == 0) {
-					_dprintf("%s: copy ok\n", __FUNCTION__);
+					logmsg(LOG_DEBUG, "*** %s: copy ok", __FUNCTION__);
 
 					if (!nvram_match("cstats_bak", "0")) {
 						now = time(0);
@@ -174,30 +171,32 @@ static void save(int quick) {
 						if (lastbak != tms->tm_yday) {
 							strcpy(bak, save_path);
 							n = strlen(bak);
-							if ((n > 3) && (strcmp(bak + (n - 3), ".gz") == 0)) n -= 3;
-//							sprintf(bak + n, "_%d.bak", ((tms->tm_yday / 7) % 3) + 1);
-//							if (eval("cp", save_path, bak) == 0) lastbak = tms->tm_yday;
+							if ((n > 3) && (strcmp(bak + (n - 3), ".gz") == 0))
+								n -= 3;
+
 							strcpy(bkp, bak);
 							for (b = HI_BACK-1; b > 0; --b) {
 								sprintf(bkp + n, "_%d.bak", b + 1);
 								sprintf(bak + n, "_%d.bak", b);
 								rename(bak, bkp);
 							}
-							if (eval("cp", "-p", save_path, bak) == 0) lastbak = tms->tm_yday;
+							if (eval("cp", "-p", save_path, bak) == 0)
+								lastbak = tms->tm_yday;
 						}
 					}
 
-					_dprintf("%s: rename %s %s\n", __FUNCTION__, tmp, save_path);
+					logmsg(LOG_DEBUG, "*** %s: rename %s %s", __FUNCTION__, tmp, save_path);
 					if (rename(tmp, save_path) == 0) {
-						_dprintf("%s: rename ok\n", __FUNCTION__);
+						logmsg(LOG_DEBUG, "*** %s: rename ok", __FUNCTION__);
 						break;
 					}
 				}
 			}
 
-			// might not be ready
+			/* might not be ready */
 			sleep(3);
-			if (gotterm) break;
+			if (gotterm)
+				break;
 		}
 	}
 }
@@ -211,8 +210,7 @@ static int load_history_to_tree(const char *fname) {
 	char *exclude;
 
 	exclude = nvram_safe_get("cstats_exclude");
-	_dprintf("%s: cstats_exclude='%s'\n", __FUNCTION__, exclude);
-	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
+	logmsg(LOG_DEBUG, "*** %s: cstats_exclude='%s' fname=%s", __FUNCTION__, exclude, fname);
 	unlink(uncomp_fn);
 
 	n = -1;
@@ -222,16 +220,16 @@ static int load_history_to_tree(const char *fname) {
 			n = 0;
 			while (fread(&tmp, sizeof(Node), 1, f) > 0) {
 				if ((find_word(exclude, tmp.ipaddr))) {
-					_dprintf("%s: not loading excluded ip '%s'\n", __FUNCTION__, tmp.ipaddr);
+					logmsg(LOG_DEBUG, "*** %s: not loading excluded ip '%s'", __FUNCTION__, tmp.ipaddr);
 					continue;
 				}
 
 				if (tmp.id == CURRENT_ID) {
-					_dprintf("%s: found data for ip %s\n", __FUNCTION__, tmp.ipaddr);
+					logmsg(LOG_DEBUG, "*** %s: found data for ip %s", __FUNCTION__, tmp.ipaddr);
 
 					ptr = TREE_FIND(&tree, _Node, linkage, &tmp);
 					if (ptr) {
-						_dprintf("%s: removing/reloading new data for ip %s\n", __FUNCTION__, ptr->ipaddr);
+						logmsg(LOG_DEBUG, "*** %s: removing/reloading new data for ip %s", __FUNCTION__, ptr->ipaddr);
 						TREE_REMOVE(&tree, _Node, linkage, ptr);
 						free(ptr);
 						ptr = NULL;
@@ -250,7 +248,6 @@ static int load_history_to_tree(const char *fname) {
 					memcpy(ptr->speed, &tmp.speed, sizeof(uint64_t) * MAX_NSPEED * MAX_COUNTER);
 					memcpy(ptr->last, &tmp.last, sizeof(uint64_t) * MAX_COUNTER);
 					ptr->tail = tmp.tail;
-//					ptr->sync = tmp.sync;
 					ptr->sync = -1;
 
 					if (ptr->utime > uptime) {
@@ -259,36 +256,36 @@ static int load_history_to_tree(const char *fname) {
 					}
 
 					++n;
-				} else {
-					_dprintf("%s: data for ip '%s' version %d not loaded (current version is %d)\n", __FUNCTION__, tmp.ipaddr, tmp.id, CURRENT_ID);
 				}
+				else
+					logmsg(LOG_DEBUG, "*** %s: data for ip '%s' version %d not loaded (current version is %d)", __FUNCTION__, tmp.ipaddr, tmp.id, CURRENT_ID);
 			}
 
 		fclose(f);
 		}
 	}
-	else {
-		_dprintf("%s: %s != 0\n", __FUNCTION__, s);
-	}
+	else
+		logmsg(LOG_DEBUG, "*** %s: %s != 0", __FUNCTION__, s);
+
 	unlink(uncomp_fn);
 
-	_dprintf("%s: loaded %d records\n", __FUNCTION__, n);
 	if (n == -1)
-		printf("%s: Failed to parse the data file!\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "*** %s: Failed to parse the data file!", __FUNCTION__);
 	else
-		printf("%s: Loaded %d records\n", __FUNCTION__, n);
+		logmsg(LOG_DEBUG, "*** %s: Loaded %d records", __FUNCTION__, n);
 
 	return n;
 }
 
 static int load_history(const char *fname) {
-	_dprintf("%s: fname=%s\n", __FUNCTION__, fname);
+	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
+
 	return load_history_to_tree(fname);
 }
 
 /* Try loading from the backup versions.
  * We'll try from oldest to newest, then
- * retry the requested one again last.  In case the drive mounts while
+ * retry the requested one again last. In case the drive mounts while
  * we are trying to find a good version.
  */
 static int try_hardway(const char *fname) {
@@ -299,6 +296,7 @@ static int try_hardway(const char *fname) {
 	n = strlen(fn);
 	if ((n > 3) && (strcmp(fn + (n - 3), ".gz") == 0))
 		n -= 3;
+
 	for (b = HI_BACK; b > 0; --b) {
 		sprintf(fn + n, "_%d.bak", b);
 		found |= load_history(fn);
@@ -312,7 +310,9 @@ static void load_new(void) {
 	char hgz[256];
 
 	sprintf(hgz, "%s.gz.new", history_fn);
-	if (load_history(hgz) >= 0) save(0);
+	if (load_history(hgz) >= 0)
+		save(0);
+
 	unlink(hgz);
 }
 
@@ -325,21 +325,22 @@ static void load(int new) {
 
 	uptime = get_uptime();
 
-	_dprintf("%s: new=%d, uptime=%lu\n", __FUNCTION__, new, uptime);
+	logmsg(LOG_DEBUG, "*** %s: new=%d, uptime=%lu", __FUNCTION__, new, uptime);
 
 	strlcpy(save_path, nvram_safe_get("cstats_path"), sizeof(save_path) - 32);
 	if (((n = strlen(save_path)) > 0) && (save_path[n - 1] == '/')) {
 		ether_atoe(nvram_safe_get("et0macaddr"), mac);
-		sprintf(save_path + n, "tomato_cstats_%02x%02x%02x%02x%02x%02x.gz",
-			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		sprintf(save_path + n, "tomato_cstats_%02x%02x%02x%02x%02x%02x.gz", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	}
 
-	if (f_read("/var/lib/misc/cstats-stime", &save_utime, sizeof(save_utime)) != sizeof(save_utime)) {
+	if (f_read("/var/lib/misc/cstats-stime", &save_utime, sizeof(save_utime)) != sizeof(save_utime))
 		save_utime = 0;
-	}
+
 	t = uptime + get_stime();
-	if ((save_utime < uptime) || (save_utime > t)) save_utime = t;
-	_dprintf("%s: uptime = %lum, save_utime = %lum\n", __FUNCTION__, uptime / 60, save_utime / 60);
+	if ((save_utime < uptime) || (save_utime > t))
+		save_utime = t;
+
+	logmsg(LOG_DEBUG, "*** %s: uptime = %lum, save_utime = %lum", __FUNCTION__, uptime / 60, save_utime / 60);
 
 	sprintf(hgz, "%s.gz", history_fn);
 
@@ -353,8 +354,7 @@ static void load(int new) {
 		i = 1;
 		while (1) {
 			if (wait_action_idle(10)) {
-
-				// cifs quirk: try forcing refresh
+				/* cifs quirk: try forcing refresh */
 				eval("ls", save_path);
 
 				/* If we can't access the path, keep trying - maybe it isn't mounted yet.
@@ -369,34 +369,35 @@ static void load(int new) {
 				}
 			}
 
-			// not ready...
+			/* not ready... */
 			sleep(i);
-			if ((i *= 2) > 900) i = 900;	// 15m
+			if ((i *= 2) > 900)
+				i = 900; /* 15m */
 
 			if (gotterm) {
 				save_path[0] = 0;
 				return;
 			}
 
-			if (i > (3 * 60)) {
-				syslog(LOG_WARNING, "Problem loading %s. Still trying...", save_path);
-			}
+			if (i > (3 * 60))
+				logmsg(LOG_WARNING, "Problem loading %s. Still trying...", save_path);
 		}
 	}
 }
 
 int speed_empty(Node *node) {
 	int i, j;
-	/*iterate over the entire speed[i][j] two-dimensional array
-	and look for any entries (counters) that are non-zero.
-	If such an entry is found, return 0 (false)*/
+	/* iterate over the entire speed[i][j] two-dimensional array
+	 * and look for any entries (counters) that are non-zero.
+	 * If such an entry is found, return 0 (false)
+	 */
 	for (i = 0; i < MAX_NSPEED; ++i) {
 		for (j = 0; j < MAX_COUNTER; ++j) {
-			if (node->speed[i][j]) {
-			return 0;
-			}
+			if (node->speed[i][j])
+				return 0;
 		}
 	}
+
 	return 1;
 }
 
@@ -406,8 +407,9 @@ void Node_print_speedjs(Node *self, void *t) {
 	uint64_t n;
 	char c;
 
-	//hide hosts with no traffic on IP Traffic - Last 24 Hours
-	if (speed_empty(self)) return;
+	/* hide hosts with no traffic on IP Traffic - Last 24 Hours */
+	if (speed_empty(self))
+		return;
 
 	node_print_mode_t *info = (node_print_mode_t *)t;
 
@@ -421,13 +423,13 @@ void Node_print_speedjs(Node *self, void *t) {
 			n = self->speed[p][j];
 			fprintf(info->stream, "%s%llu", k ? "," : "", n);
 			total += n;
-			if (n > tmax) tmax = n;
+			if (n > tmax)
+				tmax = n;
 		}
 		fprintf(info->stream, "],\n");
 
 		c = j ? 't' : 'r';
-		fprintf(info->stream, " %cx_avg: %llu,\n %cx_max: %llu,\n %cx_total: %llu",
-			c, total / MAX_NSPEED, c, tmax, c, total);
+		fprintf(info->stream, " %cx_avg: %llu,\n %cx_max: %llu,\n %cx_total: %llu", c, total / MAX_NSPEED, c, tmax, c, total);
 	}
 	info->kn++;
 }
@@ -435,12 +437,13 @@ void Node_print_speedjs(Node *self, void *t) {
 static void save_speedjs(long next) {
 	FILE *f;
 
-	if ((f = fopen("/var/tmp/cstats-speed.js", "w")) == NULL) return;
+	if ((f = fopen("/var/tmp/cstats-speed.js", "w")) == NULL)
+		return;
 
 	node_print_mode_t info;
-	info.mode=0;
-	info.stream=f;
-	info.kn=0;
+	info.mode = 0;
+	info.stream = f;
+	info.kn = 0;
 
 	fprintf(f, "\nspeed_history = {\n");
 	TREE_FORWARD_APPLY(&tree, _Node, linkage, Node_print_speedjs, &info);
@@ -462,7 +465,6 @@ void Node_print_datajs(Node *self, void *t) {
 		p = self->dailyp;
 		max = MAX_NDAILY;
 	}
-
 	else {
 		data = self->monthly;
 		p = self->monthlyp;
@@ -471,18 +473,19 @@ void Node_print_datajs(Node *self, void *t) {
 
 	for (k = max; k > 0; --k) {
 		p = (p + 1) % max;
-		if (data[p].xtime == 0) continue;
-		fprintf(info->stream, "%s[0x%lx,'%s',%llu,%llu]", info->kn ? "," : "",
-			(unsigned long)data[p].xtime, self->ipaddr, data[p].counter[0] / K, data[p].counter[1] / K);
+		if (data[p].xtime == 0)
+			continue;
+
+		fprintf(info->stream, "%s[0x%lx,'%s',%llu,%llu]", info->kn ? "," : "", (unsigned long)data[p].xtime, self->ipaddr, data[p].counter[0] / K, data[p].counter[1] / K);
 		info->kn++;
 	}
 }
 
 static void save_datajs(FILE *f, int mode) {
 	node_print_mode_t info;
-	info.mode=mode;
-	info.stream=f;
-	info.kn=0;
+	info.mode = mode;
+	info.stream = f;
+	info.kn = 0;
 	fprintf(f, "\n%s_history = [\n", (mode == DAILY) ? "daily" : "monthly");
 	TREE_FORWARD_APPLY(&tree, _Node, linkage, Node_print_datajs, &info);
 	fprintf(f, "\n];\n");
@@ -523,11 +526,10 @@ static void bump(data_t *data, int *tail, int max, uint32_t xnow, uint64_t *coun
 
 void Node_housekeeping(Node *self, void *info) {
 	if (self) {
-		if (self->sync == -1) {
+		if (self->sync == -1)
 			self->sync = 0;
-		} else {
+		else
 			self->sync = 1;
-		}
 	}
 }
 
@@ -547,22 +549,21 @@ static void calc(void) {
 	int n;
 	char *exclude = NULL;
 	char *include = NULL;
-	char prefix[] = "wan"; // not yet mwan ready, assume wan
+	char prefix[] = "wan"; /* not yet mwan ready, assume wan */
 
 	Node *ptr = NULL;
 	Node test;
 
-	int wanup = 0; // 0 = FALSE, 1 = TRUE
-	long wanuptime = 0; // wanuptime in seconds
+	int wanup = 0; /* 0 = FALSE, 1 = TRUE */
+	long wanuptime = 0; /* wanuptime in seconds */
 
 	now = time(0);
 
 	exclude = strdup(nvram_safe_get("cstats_exclude"));
-	_dprintf("%s: cstats_exclude='%s'\n", __FUNCTION__, exclude);
+	logmsg(LOG_DEBUG, "*** %s: cstats_exclude='%s'", __FUNCTION__, exclude);
 
 	include = strdup(nvram_safe_get("cstats_include"));
-	_dprintf("%s: cstats_include='%s'\n", __FUNCTION__, include);
-
+	logmsg(LOG_DEBUG, "*** %s: cstats_include='%s'", __FUNCTION__, include);
 
 	uint64_t tx;
 	uint64_t rx;
@@ -571,27 +572,26 @@ static void calc(void) {
 
 	char name[] = "/proc/net/ipt_account/lanX";
 
-	for(br=0 ; br<=3 ; br++) {
+	for (br = 0 ; br < BRIDGE_COUNT; br++) {
+		char bridge[2] = "0";
+		if (br != 0)
+			bridge[0] += br;
+		else
+			strcpy(bridge, "");
 
-	    char bridge[2] = "0";
-	    if (br!=0)
-	    	bridge[0]+=br;
-	    else
-	    	strcpy(bridge, "");
+		sprintf(name, "/proc/net/ipt_account/lan%s", bridge);
 
-	    sprintf(name, "/proc/net/ipt_account/lan%s", bridge);
-
-	    if ((f = fopen(name, "r")) == NULL) continue;
+		if ((f = fopen(name, "r")) == NULL)
+			continue;
 
 		while (fgets(buf, sizeof(buf), f)) {
-			if(sscanf(buf, 
-				"ip = %s bytes_src = %llu %*u %*u %*u %*u packets_src = %*u %*u %*u %*u %*u bytes_dst = %llu %*u %*u %*u %*u packets_dst = %*u %*u %*u %*u %*u time = %*u",
-				ip, &rx, &tx) != 3 ) continue;
-#ifdef DEBUG_CSTATS
-			_dprintf("%s: %s tx=%llu rx=%llu\n", __FUNCTION__, ip, tx, rx);
-#endif
+			if (sscanf(buf, "ip = %s bytes_src = %llu %*u %*u %*u %*u packets_src = %*u %*u %*u %*u %*u bytes_dst = %llu %*u %*u %*u %*u packets_dst = %*u %*u %*u %*u %*u time = %*u", ip, &rx, &tx) != 3)
+				continue;
 
-			if (find_word(exclude, ip)) continue;
+			logmsg(LOG_DEBUG, "*** %s: %s tx=%llu rx=%llu", __FUNCTION__, ip, tx, rx);
+
+			if (find_word(exclude, ip))
+				continue;
 
 			counter[0] = tx;
 			counter[1] = rx;
@@ -600,11 +600,12 @@ static void calc(void) {
 			strncpy(test.ipaddr, ipaddr, INET_ADDRSTRLEN);
 			ptr = TREE_FIND(&tree, _Node, linkage, &test);
 
-			if ((tx < 1) && (rx < 1) && (!ptr)) continue;
-			if ( (ptr) || (nvram_get_int("cstats_all")) || (find_word(include, ipaddr)) ) {
+			if ((tx < 1) && (rx < 1) && (!ptr))
+				continue;
 
+			if ((ptr) || (nvram_get_int("cstats_all")) || (find_word(include, ipaddr))) {
 				if (!ptr) {
-					_dprintf("%s: new ip: %s\n", __FUNCTION__, ipaddr);
+					logmsg(LOG_DEBUG, "*** %s: new ip: %s", __FUNCTION__, ipaddr);
 					TREE_INSERT(&tree, _Node, linkage, Node_new(ipaddr));
 					ptr = TREE_FIND(&tree, _Node, linkage, &test);
 					ptr->sync = 1;
@@ -613,104 +614,111 @@ static void calc(void) {
 #ifdef DEBUG_CSTATS
 				Tree_info();
 #endif
-				_dprintf("%s: sync[%s]=%d\n", __FUNCTION__, ptr->ipaddr, ptr->sync);
+				logmsg(LOG_DEBUG, "*** %s: sync[%s]=%d", __FUNCTION__, ptr->ipaddr, ptr->sync);
 				if (ptr->sync) {
-					_dprintf("%s: sync[%s] changed to -1\n", __FUNCTION__, ptr->ipaddr);
+					logmsg(LOG_DEBUG, "*** %s: sync[%s] changed to -1", __FUNCTION__, ptr->ipaddr);
 					ptr->sync = -1;
 #ifdef DEBUG_CSTATS
 					for (i = 0; i < MAX_COUNTER; ++i) {
-						_dprintf("%s: counter[%d]=%llu ptr->last[%d]=%llu\n", __FUNCTION__, i, counter[i], i, ptr->last[i]);
+						logmsg(LOG_DEBUG, "*** %s: counter[%d]=%llu ptr->last[%d]=%llu", __FUNCTION__, i, counter[i], i, ptr->last[i]);
 					}
 #endif
 					memcpy(ptr->last, counter, sizeof(ptr->last));
 					memset(counter, 0, sizeof(counter));
+#ifdef DEBUG_CSTATS
 					for (i = 0; i < MAX_COUNTER; ++i) {
-						_dprintf("%s: counter[%d]=%llu ptr->last[%d]=%llu\n", __FUNCTION__, i, counter[i], i, ptr->last[i]);
+						logmsg(LOG_DEBUG, "*** %s: counter[%d]=%llu ptr->last[%d]=%llu", __FUNCTION__, i, counter[i], i, ptr->last[i]);
 					}
+#endif
 				}
 				else {
 #ifdef DEBUG_CSTATS
-					_dprintf("%s: sync[%s] = %d \n", __FUNCTION__, ptr->ipaddr, ptr->sync);
+					logmsg(LOG_DEBUG, "*** %s: sync[%s] = %d ", __FUNCTION__, ptr->ipaddr, ptr->sync);
 #endif
 					ptr->sync = -1;
-					_dprintf("%s: sync[%s] = %d \n", __FUNCTION__, ptr->ipaddr, ptr->sync);
+					logmsg(LOG_DEBUG, "*** %s: sync[%s] = %d ", __FUNCTION__, ptr->ipaddr, ptr->sync);
 					tick = uptime - ptr->utime;
 					n = tick / INTERVAL;
 					if (n < 1) {
-						_dprintf("%s: %s is a little early... %lu < %d\n", __FUNCTION__, ipaddr, tick, INTERVAL);
+						logmsg(LOG_DEBUG, "*** %s: %s is a little early... %lu < %d", __FUNCTION__, ipaddr, tick, INTERVAL);
 						continue;
-					} else {
+					}
+					else {
 						ptr->utime += (n * INTERVAL);
-						_dprintf("%s: %s n=%d tick=%lu utime=%lu ptr->utime=%lu\n", __FUNCTION__, ipaddr, n, tick, uptime, ptr->utime);
+						logmsg(LOG_DEBUG, "*** %s: %s n=%d tick=%lu utime=%lu ptr->utime=%lu", __FUNCTION__, ipaddr, n, tick, uptime, ptr->utime);
+
 						for (i = 0; i < MAX_COUNTER; ++i) {
 							c = counter[i];
 							sc = ptr->last[i];
 #ifdef DEBUG_CSTATS
-							_dprintf("%s: counter[%d]=%llu ptr->last[%d]=%llu c=%llu sc=%llu\n", __FUNCTION__, i, counter[i], i, ptr->last[i], c, sc);
+							logmsg(LOG_DEBUG, "*** %s: counter[%d]=%llu ptr->last[%d]=%llu c=%llu sc=%llu", __FUNCTION__, i, counter[i], i, ptr->last[i], c, sc);
 #endif
 							if (c < sc) {
-								 wanup = check_wanup(prefix); /* router/shared/misc.c */
-								 wanuptime = check_wanup_time(prefix); /* router/shared/misc.c */
-								 diff = ((0xFFFFFFFFFFFFFFFFULL) - sc + 1ULL) + c; /* rollover calculation */
-								 if(diff > ((uint64_t)MAX_ROLLOVER)) diff = 0ULL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
-								 if(wanup && (wanuptime < (long)(INTERVAL + 10))) diff = 0ULL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
-								 /* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
+								wanup = check_wanup(prefix); /* router/shared/misc.c */
+								wanuptime = check_wanup_time(prefix); /* router/shared/misc.c */
+								diff = ((0xFFFFFFFFFFFFFFFFULL) - sc + 1ULL) + c; /* rollover calculation */
+								if (diff > ((uint64_t)MAX_ROLLOVER))
+									diff = 0ULL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
+								if (wanup && (wanuptime < (long)(INTERVAL + 10)))
+									diff = 0ULL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+
+								/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
 							}
-							else {
+							else
 								 diff = c - sc;
-							}
+
 							ptr->last[i] = c;
 							counter[i] = diff;
-							_dprintf("%s: counter[%d]=%llu ptr->last[%d]=%llu c=%llu sc=%llu diff=%llu\n", __FUNCTION__, i, counter[i], i, ptr->last[i], c, sc, diff);
+							logmsg(LOG_DEBUG, "*** %s: counter[%d]=%llu ptr->last[%d]=%llu c=%llu sc=%llu diff=%llu", __FUNCTION__, i, counter[i], i, ptr->last[i], c, sc, diff);
 						}
-						_dprintf("%s: ip=%s n=%d ptr->tail=%d\n", __FUNCTION__, ptr->ipaddr, n, ptr->tail);
+						logmsg(LOG_DEBUG, "*** %s: ip=%s n=%d ptr->tail=%d", __FUNCTION__, ptr->ipaddr, n, ptr->tail);
+
 						for (j = 0; j < n; ++j) {
 							ptr->tail = (ptr->tail + 1) % MAX_NSPEED;
 #ifdef DEBUG_CSTATS
-							_dprintf("%s: ip=%s j=%d n=%d ptr->tail=%d\n", __FUNCTION__, ptr->ipaddr, j, n, ptr->tail);
+							logmsg(LOG_DEBUG, "*** %s: ip=%s j=%d n=%d ptr->tail=%d", __FUNCTION__, ptr->ipaddr, j, n, ptr->tail);
 #endif
 							for (i = 0; i < MAX_COUNTER; ++i) {
 								ptr->speed[ptr->tail][i] = counter[i] / n;
 							}
 						}
-						_dprintf("%s: ip=%s j=%d n=%d ptr->tail=%d\n", __FUNCTION__, ptr->ipaddr, j, n, ptr->tail);
+						logmsg(LOG_DEBUG, "*** %s: ip=%s j=%d n=%d ptr->tail=%d", __FUNCTION__, ptr->ipaddr, j, n, ptr->tail);
 					}
 				}
 
-				if (now > Y2K) {	/* Skip this if the time&date is not set yet */
+				if (nvram_get_int("ntp_ready")) { /* Skip this if the time&date is not set yet */
 #ifdef DEBUG_CSTATS
-					_dprintf("%s: calling bump %s ptr->dailyp=%d\n", __FUNCTION__, ptr->ipaddr, ptr->dailyp);
+					logmsg(LOG_DEBUG, "*** %s: calling bump %s ptr->dailyp=%d", __FUNCTION__, ptr->ipaddr, ptr->dailyp);
 #endif
 					tms = localtime(&now);
-					bump(ptr->daily, &ptr->dailyp, MAX_NDAILY,
-						(tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8) | tms->tm_mday, counter);
+					bump(ptr->daily, &ptr->dailyp, MAX_NDAILY, (tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8) | tms->tm_mday, counter);
 
 #ifdef DEBUG_CSTATS
-					_dprintf("%s: calling bump %s ptr->monthlyp=%d\n", __FUNCTION__, ptr->ipaddr, ptr->monthlyp);
+					logmsg(LOG_DEBUG, "*** %s: calling bump %s ptr->monthlyp=%d", __FUNCTION__, ptr->ipaddr, ptr->monthlyp);
 #endif
 					n = nvram_get_int("cstats_offset");
-					if ((n < 1) || (n > 31)) n = 1;
+					if ((n < 1) || (n > 31))
+						n = 1;
+
 					mon = now + ((1 - n) * (60 * 60 * 24));
 					tms = localtime(&mon);
-					bump(ptr->monthly, &ptr->monthlyp, MAX_NMONTHLY,
-						(tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8), counter);
+					bump(ptr->monthly, &ptr->monthlyp, MAX_NMONTHLY, (tms->tm_year << 16) | ((uint32_t)tms->tm_mon << 8), counter);
 				}
-
 			}
 		}
 		fclose(f);
 	}
 
-	// remove/exclude history (if we still have any data previously stored)
+	/* remove/exclude history (if we still have any data previously stored) */
 	char *nvp, *b;
 	nvp = exclude;
 	if (nvp) {
 		while ((b = strsep(&nvp, ",")) != NULL) {
-			_dprintf("%s: check exclude='%s'\n", __FUNCTION__, b);
+			logmsg(LOG_DEBUG, "*** %s: check exclude='%s'", __FUNCTION__, b);
 			strncpy(test.ipaddr, b, INET_ADDRSTRLEN);
 			ptr = TREE_FIND(&tree, _Node, linkage, &test);
 			if (ptr) {
-				_dprintf("%s: excluding '%s'\n", __FUNCTION__, ptr->ipaddr);
+				logmsg(LOG_DEBUG, "*** %s: excluding '%s'", __FUNCTION__, ptr->ipaddr);
 				TREE_REMOVE(&tree, _Node, linkage, ptr);
 				free(ptr);
 				ptr = NULL;
@@ -718,19 +726,18 @@ static void calc(void) {
 		}
 	}
 
-	// cleanup remaining entries for next time
+	/* cleanup remaining entries for next time */
 	TREE_FORWARD_APPLY(&tree, _Node, linkage, Node_housekeeping, NULL);
 
-	// todo: total > user ???
+	/* todo: total > user ??? */
 	if (uptime >= save_utime) {
 		save(0);
 		save_utime = uptime + get_stime();
-		_dprintf("%s: uptime = %lum, save_utime = %lum\n", __FUNCTION__, uptime / 60, save_utime / 60);
+		logmsg(LOG_DEBUG, "*** %s: uptime = %lum, save_utime = %lum", __FUNCTION__, uptime / 60, save_utime / 60);
 	}
 
-	_dprintf("%s: ====================================\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s: ====================================", __FUNCTION__);
 
-//QUIT:
 	if (exclude) {
 		free(exclude);
 		exclude = NULL;
@@ -765,18 +772,19 @@ int main(int argc, char *argv[]) {
 	long z;
 	int new;
 
-	printf("cstats - Copyright (C) 2011-2012 Augusto Bott\n");
-	printf("based on rstats - Copyright (C) 2006-2009 Jonathan Zarate\n\n");
-
-	if (fork() != 0) return 0;
+	if (fork() != 0)
+		return 0;
 
 	openlog("cstats", LOG_PID, LOG_USER);
+
+	//logmsg(LOG_INFO, "cstats - Copyright (C) 2011-2012 Augusto Bott");
+	//logmsg(LOG_INFO, "based on rstats - Copyright (C) 2006-2009 Jonathan Zarate");
 
 	new = 0;
 	if (argc > 1) {
 		if (strcmp(argv[1], "--new") == 0) {
 			new = 1;
-			_dprintf("new=1\n");
+			logmsg(LOG_DEBUG, "*** %s: new=1", __FUNCTION__);
 		}
 	}
 
@@ -798,8 +806,11 @@ int main(int argc, char *argv[]) {
 		while (uptime < z) {
 			sleep(z - uptime);
 			if (gothup) {
-				if (unlink("/var/tmp/cstats-load") == 0) load_new();
-					else save(0);
+				if (unlink("/var/tmp/cstats-load") == 0)
+					load_new();
+				else
+					save(0);
+
 				gothup = 0;
 			}
 			if (gotterm) {

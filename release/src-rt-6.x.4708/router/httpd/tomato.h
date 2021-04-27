@@ -179,18 +179,12 @@ extern void asp_upnpinfo(int argc, char **argv);
 extern void wo_upnp(char *url);
 
 // bwm.c
-extern void wo_bwmbackup(char *url);
-extern void wi_bwmrestore(char *url, int len, char *boundary);
-extern void wo_bwmrestore(char *url);
+extern void wo_statsbackup(char *url);
+extern void wi_statsrestore(char *url, int len, char *boundary);
+extern void wo_statsrestore(char *url);
 extern void asp_netdev(int argc, char **argv);
 extern void asp_bandwidth(int argc, char **argv);
 extern void ctvbuf(FILE *f);
-
-extern void wo_iptbackup(char *url);
-extern void wi_iptrestore(char *url, int len, char *boundary);
-extern void wo_iptrestore(char *url);
-
-extern void asp_ipt_bandwidth(int argc, char **argv);
 extern void asp_iptmon(int argc, char **argv);
 extern void asp_iptraffic(int argc, char **argv);
 

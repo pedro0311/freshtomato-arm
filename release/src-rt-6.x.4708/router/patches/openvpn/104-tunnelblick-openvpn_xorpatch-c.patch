@@ -1,6 +1,6 @@
 --- openvpn/src/openvpn/options.h
 +++ openvpn/src/openvpn/options.h
-@@ -99,6 +99,9 @@
+@@ -106,6 +106,9 @@
      int connect_retry_seconds;
      int connect_retry_seconds_max;
      int connect_timeout;
