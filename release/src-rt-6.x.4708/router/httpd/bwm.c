@@ -41,7 +41,7 @@ void wo_statsbackup(char *url)
 	else
 		t = 0;
 
-	killall("rstats", SIGHUP);
+	killall(name, SIGHUP);
 	for (i = 10; i > 0; --i) {
 		if ((stat(hfn, &st) == 0) && (st.st_mtime != t))
 			break;
