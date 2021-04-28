@@ -496,17 +496,17 @@ REMOVE-END */
 	vlg.dataToView = function(data) {
 		return [data[COL_VID],
 			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (data[COL_VID] * 1).toString() : data[COL_MAP].toString(),
-			(data[COL_P0].toString() != '0') ? '⭐' : '',
-			(data[COL_P0T].toString() != '0') ? '🔰' : '',
-			(data[COL_P1].toString() != '0') ? '⭐' : '',
-			(data[COL_P1T].toString() != '0') ? '🔰' : '',
-			(data[COL_P2].toString() != '0') ? '⭐' : '',
-			(data[COL_P2T].toString() != '0') ? '🔰' : '',
-			(data[COL_P3].toString() != '0') ? '⭐' : '',
-			(data[COL_P3T].toString() != '0') ? '🔰' : '',
-			(data[COL_P4].toString() != '0') ? '⭐' : '',
-			(data[COL_P4T].toString() != '0') ? '🔰' : '',
-			(data[COL_VID_DEF].toString() != '0') ? '🚩' : '',
+			(data[COL_P0].toString() != '0') ? '&#x2b50' : '',
+			(data[COL_P0T].toString() != '0') ? '&#x1f530' : '',
+			(data[COL_P1].toString() != '0') ? '&#x2b50' : '',
+			(data[COL_P1T].toString() != '0') ? '&#x1f530' : '',
+			(data[COL_P2].toString() != '0') ? '&#x2b50' : '',
+			(data[COL_P2T].toString() != '0') ? '&#x1f530' : '',
+			(data[COL_P3].toString() != '0') ? '&#x2b50' : '',
+			(data[COL_P3T].toString() != '0') ? '&#x1f530' : '',
+			(data[COL_P4].toString() != '0') ? '&#x2b50' : '',
+			(data[COL_P4T].toString() != '0') ? '&#x1f530' : '',
+			(data[COL_VID_DEF].toString() != '0') ? '&#x1f6a9' : '',
 			['','WAN0 bridge','LAN0 (br0)','LAN1 (br1)','LAN2 (br2)','LAN3 (br3)','WAN1 bridge'
 /* MULTIWAN-BEGIN */
 			,'WAN2 bridge','WAN3 bridge'
