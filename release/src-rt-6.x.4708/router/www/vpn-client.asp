@@ -139,8 +139,15 @@ function sectSelect(tab, section) {
 	cookie.set('vpn_client'+tab+'_section', section);
 }
 
-function updateForm(num) {
+function updateForm(num, fw) {
 	var fom = E('t_fom');
+
+	if (fw && fom._service.value.indexOf('firewall') < 0) {
+		if (fom._service.value != '')
+			fom._service.value += ',';
+
+		fom._service.value += 'firewall-restart';
+	}
 
 	if (eval('isup.vpnclient'+num) && fom._service.value.indexOf('client'+num) < 0) {
 		if (fom._service.value != '')
@@ -153,20 +160,20 @@ function updateForm(num) {
 RouteGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 
-	return [f[0].checked?1:0, f[1].value, f[2].value];
+	return [f[0].checked?1:0, f[1].value, f[2].value,f[3].checked?1:0];
 }
 
 RouteGrid.prototype.dataToView = function(data) {
-	var temp = ['<input type="checkbox" disabled'+(data[0] != 0 ? ' checked' : '')+'>',['From Source IP','To Destination IP','To Domain'][data[1] - 1],data[2]];
+	var temp = ['<input type="checkbox" disabled'+(data[0] != 0 ? ' checked' : '')+'>',['From Source IP','To Destination IP','To Domain'][data[1] - 1],data[2],'<input type="checkbox" disabled'+(data[3] != 0 ? ' checked' : '')+'>'];
 	var v = [];
 	for (var i = 0; i < temp.length; ++i)
-		v.push(i == 0 ? temp[i] : escapeHTML(''+temp[i]));
+		v.push(((i == 0) || (i == 3)) ? temp[i] : escapeHTML(''+temp[i]));
 
 	return v;
 }
 
 RouteGrid.prototype.dataToFieldValues = function(data) {
-	return [data[0] == 1, data[1], data[2]];
+	return [data[0] == 1, data[1], data[2],data[3] == 1];
 }
 
 RouteGrid.prototype.rpDel = function(row) {
@@ -178,7 +185,7 @@ RouteGrid.prototype.rpDel = function(row) {
 
 	for (i = 0; i < tabs.length; ++i) {
 		if (routingTables[i] == this)
-			updateForm(i + 1);
+			updateForm(i + 1, 1);
 	}
 }
 
@@ -187,7 +194,7 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 	var clientnum = 1;
 	for (i = 0; i < tabs.length; ++i) {
 		if (routingTables[i] == this)
-			updateForm(i + 1);
+			updateForm(i + 1, 1);
 	}
 	var f = fields.getAll(row);
 
@@ -230,7 +237,7 @@ function verifyFields(focused, quiet) {
 			else if (stripped == 'f_vpn_client_local')
 				E('_vpn_client'+clientnum+'_local').value = focused.value;
 
-			updateForm(clientnum);
+			updateForm(clientnum, 0);
 		}
 	}
 
@@ -390,8 +397,11 @@ function earlyInit() {
 
 		var t = tabs[i][0];
 
-		routingTables[i].init('table_'+t+'_routing','sort', 0,[ { type: 'checkbox' },{ type: 'select', options: [[1,'From Source IP'],[2,'To Destination IP'],[3,'To Domain']] },{ type: 'text', maxlen: 50 }]);
-		routingTables[i].headerSet(['Enable','Type','Value']);
+		routingTables[i].init('table_'+t+'_routing','sort', 0,[ { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+		                                                        { type: 'select', options: [[1,'From Source IP'],[2,'To Destination IP'],[3,'To Domain']] },
+		                                                        { type: 'text', maxlen: 50 },
+		                                                        { type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' }]);
+		routingTables[i].headerSet(['Enable','Type','Value','Kill Switch']);
 		var routingVal = eval('nvram.vpn_'+t+'_routing_val');
 		if (routingVal.length) {
 			var s = routingVal.split('>');
@@ -401,6 +411,8 @@ function earlyInit() {
 
 				var row = s[j].split('<');
 				if (row.length == 3)
+					row[3] = 0;
+				if (row.length == 4)
 					routingTables[i].insertData(-1, row);
 			}
 		}

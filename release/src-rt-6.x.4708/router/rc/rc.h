@@ -544,6 +544,7 @@ extern void start_ovpn_eas();
 extern void stop_ovpn_eas();
 extern void stop_ovpn_all();
 extern void run_ovpn_firewall_scripts();
+extern void ovpn_kill_switch();
 extern void write_ovpn_dnsmasq_config(FILE*);
 extern int write_ovpn_resolv(FILE*);
 #endif

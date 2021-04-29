@@ -100,7 +100,7 @@ startRouting() {
 	echo "#!/bin/sh" > $FIREWALL_ROUTING
 	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 
-	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
+	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0> (enabled<type<domain_or_IP<kill_switch>)
 	for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do
 		VAL1=$(echo $i | cut -d "<" -f1)
 		VAL2=$(echo $i | cut -d "<" -f2)

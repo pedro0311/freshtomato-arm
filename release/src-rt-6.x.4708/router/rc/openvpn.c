@@ -1544,3 +1544,100 @@ int write_ovpn_resolv(FILE* f)
 
 	return exclusive;
 }
+
+void ovpn_kill_switch()
+{
+	unsigned int i, br, rules_count;
+	int policy_type;
+	int wan_unit, mwan_num;
+	char *enable, *type, *value, *kswitch;
+	char *nv, *nvp, *b, *c;
+	char wan_prefix[] = "wanXX";
+	char buf[64], buf2[64], val[64], wan_if[16];
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	for (i = 1; i <= OVPN_CLIENT_MAX; ++i) {
+		rules_count = 0;
+		nv = nvp = strdup(getNVRAMVar("vpn_client%d_routing_val", i));
+
+		while (nvp && (b = strsep(&nvp, ">")) != NULL) {
+			enable = type = value = kswitch = NULL;
+
+			/* enable<type<domain_or_IP<kill_switch> */
+			if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
+				continue;
+
+			/* check if rule is enabled and kill switch is active and IP/domain is set */
+			if ((atoi(enable) != 1) || (atoi(kswitch) != 1) || (*value == '\0'))
+				continue;
+
+			policy_type = atoi(type);
+			rules_count++;
+
+			/* check all active WANs */
+			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+				get_wan_prefix(wan_unit, wan_prefix);
+
+				/* find WAN IF */
+				memset(wan_if, 0, sizeof(wan_if)); /* reset */
+				snprintf(wan_if, sizeof(wan_if), "%s", get_wanface(wan_prefix));
+				if ((!*wan_if) || (strcmp(wan_if, "") == 0))
+					continue;
+
+				memset(val, 0, sizeof(val)); /* reset */
+				snprintf(val, sizeof(val), "%s", value); /* copy IP/domain to buffer */
+
+				/* "From Source IP" */
+				if (policy_type == 1) {
+					/* find correct bridge for given IP */
+					for (br = 0; br < BRIDGE_COUNT; br++) {
+						memset(buf, 0, sizeof(buf)); /* reset */
+						snprintf(buf, sizeof(buf), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+
+						char *lan_ip = nvram_safe_get(buf);
+						if (strcmp(lan_ip, "") != 0) { /* only for active */
+							memset(buf, 0, sizeof(buf)); /* reset */
+							snprintf(buf, sizeof(buf), "%s", val);
+							if ((c = strchr(buf, '/')) != NULL)
+								*c = 0; /* with mask? get IP */
+
+							memset(buf, 0, sizeof(buf)); /* reset */
+							snprintf(buf, sizeof(buf), "%s", val);
+							if ((c = strrchr(buf, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from value */
+
+							memset(buf2, 0, sizeof(buf2)); /* reset */
+							snprintf(buf2, sizeof(buf2), "%s", lan_ip);
+							if ((c = strrchr(buf2, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from lan IP */
+
+							if (strcmp(buf, buf2) == 0) {
+								memset(buf2, 0, sizeof(buf2)); /* reset */
+								snprintf(buf2, sizeof(buf2), "br%d", br); /* copy brX to buffer */
+
+								eval("iptables", "-I", "FORWARD", "-i", buf2, "-s", val, "-o", wan_if, "-j", "REJECT");
+							}
+						}
+					}
+				}
+				/* "To Destination IP" / "To Domain" */
+				else if ((policy_type == 2) || (policy_type == 3)) {
+					memset(buf, 0, sizeof(buf)); /* reset */
+					snprintf(buf, sizeof(buf), "tun1%d", i); /* find the appropriate tun IF */
+
+					eval("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
+					eval("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
+				}
+
+			}
+		}
+		if (nv)
+			free(nv);
+
+		if (rules_count > 0)
+			logmsg(LOG_INFO, "Kill-Switch: added %d rules to firewall for openvpn-client%d", rules_count, i);
+	}
+}

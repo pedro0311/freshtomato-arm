@@ -818,9 +818,8 @@ static void nat_table(void)
 #ifndef TCONFIG_BCMARM
 				/* Drop incoming packets which destination IP address is to our LAN side directly */
 				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0) || (n == 0)) {
+					if ((strcmp(lanaddr[n], "") != 0) || (n == 0))
 						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan3faces.iface[i].name, lanaddr[n], lanmask[n]);	/* note: ipt will correct lanaddr */
-					}
 				}
 #endif	/* !TCONFIG_BCMARM */
 			}
@@ -833,9 +832,8 @@ static void nat_table(void)
 #ifndef TCONFIG_BCMARM
 				/* Drop incoming packets which destination IP address is to our LAN side directly */
 				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0) || (n == 0)) {
+					if ((strcmp(lanaddr[n], "") != 0) || (n == 0))
 						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan4faces.iface[i].name, lanaddr[n], lanmask[n]);	/* note: ipt will correct lanaddr */
-					}
 				}
 #endif	/* !TCONFIG_BCMARM */
 			}
@@ -862,9 +860,8 @@ static void nat_table(void)
 			if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
 				modprobe("ipt_REDIRECT");
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
+					if ((strcmp(lanface[i], "") != 0) || (i == 0))
 						ipt_write("-A PREROUTING -p udp -m udp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
-					}
 				}
 			}
 
@@ -2040,18 +2037,12 @@ int start_firewall(void)
 	modprobe("ip6t_REJECT");
 #endif
 
-//if (nvram_match("imq_enable", "1")) {
-//	char numdevs[10];
-//	memset(numdevs, 0, 10);
-//	sprintf(numdevs, "numdevs=%d", nvram_get_int("imq_numdevs"));
-//	modprobe("imq", numdevs );
 #ifdef TCONFIG_BCMARM
 	/* do not try load IMQ modules */
 #else
 	modprobe("imq");
 	modprobe("xt_IMQ");
 #endif
-//	}
 
 	mangle_table();
 	nat_table();
@@ -2168,6 +2159,7 @@ int start_firewall(void)
 
 #ifdef TCONFIG_OPENVPN
 	run_ovpn_firewall_scripts();
+	ovpn_kill_switch();
 #endif
 
 #ifdef TCONFIG_TINC
@@ -2180,6 +2172,7 @@ int start_firewall(void)
 	try_enabling_fastnat();
 
 	simple_unlock("firewall");
+
 	return 0;
 }
 
