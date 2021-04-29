@@ -1876,9 +1876,10 @@ void start_igmp_proxy(void)
 void stop_igmp_proxy(void)
 {
 	pid_igmp = -1;
-	killall_tk_period_wait("igmpproxy", 50);
-
-	logmsg(LOG_INFO, "igmpproxy is stopped");
+	if (pidof("igmpproxy") > 0) {
+		killall_tk_period_wait("igmpproxy", 50);
+		logmsg(LOG_INFO, "igmpproxy is stopped");
+	}
 }
 
 void start_udpxy(void)
