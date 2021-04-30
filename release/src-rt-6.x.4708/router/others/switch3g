@@ -127,9 +127,14 @@ switchMode() {
 	}
 }
 
+isDiag() {
+	TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+}
+
 searchDiag() {
 	local MODULES="cdc-acm option sierra"
 	local IS_MLOADED=0 PATHDIAG="/sys/bus/usb/devices"
+	local PATHDEV
 
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
 	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
@@ -139,7 +144,7 @@ searchDiag() {
 			modprobe $MODULE
 			sleep 1
 
-			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+			isDiag # --> TTYS
 			[ -z "$TTYS" ] && {
 				$LOGS "3G MODEM ($MODULE) not found ..."
 				modprobe -r $MODULE
@@ -153,24 +158,40 @@ searchDiag() {
 		[ -n "$TTYS" ] && {
 			$LOGS "3G MODEM found - using $MODULE module"
 		} || {
-			$LOGS "3G MODEM not found by cdc-acm, option, sierra module. Trying usbserial ..."
+			$LOGS "3G MODEM not found by $MODULES module. Trying usbserial ..."
 
-			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
-			[ -z "$TTYS" ] && {
-				$LOGS "3G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
-				IS_MLOADED=$(lsmod | grep usbserial | wc -l)
-
-				[ "$IS_MLOADED" -gt 0 ] && {
-					echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
-				} || {
+			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
+			[ "$IS_MLOADED" -gt 0 ] && {
+				echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
+			} || {
+				[ -n "$VENDOR" -a -n "$PRODUCT" ] && {
+					$LOGS "3G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
 					insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+				} || {
+					# VENDOR/PRODUCT unknown, so try for every possible device...
+					for DEVICENAME in $(ls /sys/bus/usb/devices/ | grep -v ":" | grep "-"); do
+						PATHDEV="$PATHDIAG/$DEVICENAME"
+						[ -f $PATHDEV/idVendor -a -f $PATHDEV/idProduct -a -f $PATHDEV/uevent ] || continue # skip
+
+						VENDOR=$(cat "$PATHDEV"/idVendor)	# vendor
+						PRODUCT=$(cat "$PATHDEV"/idProduct)	# product
+						$LOGS "3G MODEM - try to load usbserial module ($VENDOR:$PRODUCT) for device $DEVICENAME ..."
+
+						modprobe -r usbserial
+						insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+						sleep 1
+						isDiag # --> TTYS
+						[ -n "$TTYS" ] && {
+							# found
+							$LOGS "3G MODEM found - using usbserial module"
+							break
+						}
+					done
 				}
 				sleep 1
 
-				TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
-				[ -n "$TTYS" ] && {
-					MODULE="usbserial"
-				}
+				isDiag # --> TTYS
+				[ -n "$TTYS" ] && MODULE="usbserial"
 			}
 		}
 	}
