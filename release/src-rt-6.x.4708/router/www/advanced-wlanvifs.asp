@@ -1276,7 +1276,7 @@ REMOVE-END */
 			var s = (i == 0) ? '' : '.'+i.toString();
 			var t = u+s;
 			var v = wl_ifidxx(t);
-			var w = (v < 0) ? ('wl'+t) : (wl_ifaces[v][0]+((wl_sunit(v) < 0) ? ' (wl'+t+')' : ''));
+			var w = (v < 0 ? 'wl'+t : (wl_sunit(v) < 0 ? wl_display_ifname(v) : 'wl'+t));
 			vifs_possible.push([ t, w ]);
 			tabs.push([ t, w ]);
 		}
@@ -1309,10 +1309,10 @@ function init() {
 	var c;
 
 	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, "notes");
+		toggleVisibility(cprefix, 'notes');
 
 	if (((c = cookie.get(cprefix+'_details_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, "details");
+		toggleVisibility(cprefix, 'details');
 
 	wlg.setup();
 	eventHandler();
