@@ -1276,7 +1276,7 @@ REMOVE-END */
 				}
 			}
 		}
-		else {
+		else if (wl_ifaces.length > 0) {
 			for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 				if (wl_sunit(uidx) < 0) {
 					u = wl_unit(uidx);
