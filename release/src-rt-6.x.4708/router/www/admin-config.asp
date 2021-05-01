@@ -101,7 +101,7 @@ function init() {
 		<script>
 			W('<input type="text" size="40" maxlength="64" id="backup-name" onchange="backupNameChanged()" value="tomato_v' + ('<% version(); %>'.replace(/\./g, '')) + '_m' + nvram.et0macaddr.replace(/:/g, '').substring(6, 12) + '">');
 		</script>
-		<div style="display:inline">.gz &nbsp;
+		<div style="display:inline">.cfg &nbsp;
 			<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">
 		</div>
 		<div><a href="#" id="backup-link">Link</a></div>
