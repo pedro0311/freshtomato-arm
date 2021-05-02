@@ -728,7 +728,10 @@ table.tomato-grid.vpn-status-table {
 #lan-grid .centered,
 #bs-grid .centered,
 div[id$="_ccd"] .centered,
-div[id$="_users"] .centered {
+div[id$="_users"] .centered,
+div[id^="table_client"] td.co1,
+div[id^="table_client"] td.co4,
+div[id^="table_client"] .centered {
 	text-align: center;
 }
 

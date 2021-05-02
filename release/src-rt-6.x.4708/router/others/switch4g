@@ -509,29 +509,57 @@ searchWAN() {
 	}
 }
 
+isDiag() {
+	TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+}
+
 searchDiag() {
 	DEVNR=""
 	local IS_MLOADED=0 MODIN="" TTYS=""
+	local PATHDEV
 
 	[ -z "$DEVICENAME" ] && DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
 	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
-		TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+		isDiag # --> TTYS
 
 		[ -z "$TTYS" ] && {
 			$LOGS "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
-			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
 
+			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
 			[ "$IS_MLOADED" -gt 0 ] && {
 				echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
 			} || {
-				insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+				[ -n "$VENDOR" -a -n "$PRODUCT" ] && {
+					$LOGS "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
+					insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+				} || {
+					# VENDOR/PRODUCT unknown, so try for every possible device...
+					for DEVICENAME in $(ls /sys/bus/usb/devices/ | grep -v ":" | grep "-"); do
+						PATHDEV="$PATHDIAG/$DEVICENAME"
+						[ -f $PATHDEV/idVendor -a -f $PATHDEV/idProduct -a -f $PATHDEV/uevent ] || continue # skip
+
+						VENDOR=$(cat "$PATHDEV"/idVendor)	# vendor
+						PRODUCT=$(cat "$PATHDEV"/idProduct)	# product
+						$LOGS "4G MODEM - try to load usbserial module ($VENDOR:$PRODUCT) for device $DEVICENAME ..."
+
+						modprobe -r usbserial
+						insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+						sleep 1
+						isDiag # --> TTYS
+						[ -n "$TTYS" ] && {
+							# found
+							$LOGS "4G MODEM found - using usbserial module"
+							break
+						}
+					done
+				}
 			}
 			sleep 1
 
-			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\/\//.*/g" -e "s/.*\//\/dev\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
+			isDiag # --> TTYS
 		}
 
 		[ -n "$TTYS" ] && {

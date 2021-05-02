@@ -16,34 +16,36 @@
 #define LOGMSG_NVDEBUG	"bwm_debug"
 
 
-static char *hfn = "/var/lib/misc/rstats-history.gz";
-static char *ifn = "/var/lib/misc/cstats-history.gz";
+static const char *hfn = "/var/lib/misc/rstats-history.gz";
+static const char *ifn = "/var/lib/misc/cstats-history.gz";
 
 void wo_statsbackup(char *url)
 {
 	struct stat st;
 	time_t t;
 	unsigned int i;
-	const char *what, *name;
+	const char *what, *name, *file;
 
 	what = webcgi_safeget("_what", "bwm");
-	if (strcmp(what, "bwm") == 0)
+	if (strcmp(what, "bwm") == 0) {
 		name = "rstats";
+		file = hfn;
+	}
 	else {
 		name = "cstats";
-		*hfn = *ifn;
+		file = ifn;
 	}
 
-	if (stat(hfn, &st) == 0) {
+	if (stat(file, &st) == 0) {
 		t = st.st_mtime;
 		sleep(1);
 	}
 	else
 		t = 0;
 
-	killall("rstats", SIGHUP);
+	killall(name, SIGHUP);
 	for (i = 10; i > 0; --i) {
-		if ((stat(hfn, &st) == 0) && (st.st_mtime != t))
+		if ((stat(file, &st) == 0) && (st.st_mtime != t))
 			break;
 
 		sleep(1);
@@ -54,13 +56,13 @@ void wo_statsbackup(char *url)
 		return;
 	}
 	send_header(200, NULL, mime_binary, 0);
-	do_file(hfn);
+	do_file((char *)file);
 }
 
 void wi_statsrestore(char *url, int len, char *boundary)
 {
 	char *buf;
-	const char *error, *what, *name;
+	const char *error, *what, *name, *file;
 	int ok;
 	int n;
 	char tmp[64];
@@ -73,11 +75,13 @@ void wi_statsrestore(char *url, int len, char *boundary)
 	ok = 0;
 
 	what = webcgi_safeget("_what", "bwm");
-	if (strcmp(what, "bwm") == 0)
+	if (strcmp(what, "bwm") == 0) {
 		name = "rstats";
+		file = hfn;
+	}
 	else {
 		name = "cstats";
-		*hfn = *ifn;
+		file = ifn;
 	}
 
 	if (!skip_header(&len))
@@ -94,7 +98,7 @@ void wi_statsrestore(char *url, int len, char *boundary)
 	n = web_read(buf, len);
 	len -= n;
 
-	sprintf(tmp, "%s.new", hfn);
+	sprintf(tmp, "%s.new", file);
 	if (f_write(tmp, buf, n, 0, 0600) != n) {
 		unlink(tmp);
 		error = "Error writing temporary file";
