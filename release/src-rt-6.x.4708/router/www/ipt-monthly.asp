@@ -29,7 +29,7 @@
 
 var cprefix = 'ipt_monthly';
 try {
-//	<% ipt_bandwidth("monthly"); %>
+//	<% bandwidth("monthly","ipt"); %>
 }
 catch (ex) {
 	monthly_history = [];
@@ -468,7 +468,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<script>checkCstats();</script>
+<script>checkStats('cstats');</script>
 
 <!-- / / / -->
 

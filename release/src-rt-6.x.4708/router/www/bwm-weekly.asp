@@ -22,7 +22,7 @@
 //	<% nvram("wan_ifname,wan2_ifname,wan3_ifname,wan4_ifname,lan_ifname,rstats_enable"); %>
 
 try {
-//	<% bandwidth("daily"); %>
+//	<% bandwidth("daily","bwm"); %>
 }
 catch (ex) {
 	daily_history = [];
@@ -253,7 +253,7 @@ function init() {
 
 <!-- / / / -->
 
-<script>checkRstats();</script>
+<script>checkStats('rstats');</script>
 
 <!-- / / / -->
 
