@@ -63,7 +63,6 @@ void wi_statsrestore(char *url, int len, char *boundary)
 {
 	char *buf;
 	const char *error, *what, *name, *file;
-	int ok;
 	int n;
 	char tmp[64];
 
@@ -72,7 +71,6 @@ void wi_statsrestore(char *url, int len, char *boundary)
 	tmp[0] = 0;
 	buf = NULL;
 	error = "Error reading file";
-	ok = 0;
 
 	what = webcgi_safeget("_what", "bwm");
 	if (strcmp(what, "bwm") == 0) {
@@ -87,7 +85,7 @@ void wi_statsrestore(char *url, int len, char *boundary)
 	if (!skip_header(&len))
 		goto exit;
 
-	if ((len < 64) || (len > ((strcmp(what, "bwm") == 0) ? 10240 : 40240)))
+	if ((len < 64) || (len > ((strcmp(what, "bwm") == 0) ? 16384 : 131072)))
 		goto exit;
 
 	if ((buf = malloc(len)) == NULL) {
@@ -125,16 +123,16 @@ exit:
 
 void wo_statsrestore(char *url)
 {
-	const char *what, *file;
+	const char *what, *page;
 
 	what = webcgi_safeget("_what", "bwm");
 	if (rboot) {
 		if (strcmp(what, "bwm") == 0)
-			file = "/bwm-daily.asp";
+			page = "/bwm-daily.asp";
 		else
-			file = "/ipt-daily.asp";
+			page = "/ipt-daily.asp";
 
-		redirect(file);
+		redirect(page);
 	}
 	else
 		parse_asp("error.asp");
