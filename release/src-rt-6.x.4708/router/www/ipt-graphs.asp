@@ -287,7 +287,7 @@ function init() {
 
 <!-- / / / -->
 
-<script>checkCstats();</script>
+<script>checkStats('cstats');</script>
 
 <!-- / / / -->
 

@@ -30,22 +30,13 @@ function cmpHist(a, b) {
 	return 0;
 }
 
-function checkRstats() {
-	if (nvram.rstats_enable != '1') {
-		E('rstats').style.display = 'none';
-		W('<div class="note-disabled"><b>Bandwidth monitoring disabled.<\/b><br><br><a href="admin-bwm.asp">Enable &raquo;<\/a><\/div>');
+function checkStats(type) {
+	if (nvram[type+'_enable'] != '1') {
+		E(type).style.display = 'none';
+		W('<div class="note-disabled"><b>'+(type == 'rstats' ? 'Bandwidth' : 'IP Traffic')+' monitoring disabled.<\/b><br><br><a href="admin-'+(type == 'rstats' ? 'bwm' : 'iptraffic')+'.asp">Enable &raquo;<\/a><\/div>');
 	}
-	else if (rstats_busy)
-		W('<div class="note-warning">The rstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
-}
-
-function checkCstats() {
-	if (nvram.cstats_enable != '1') {
-		E('cstats').style.display = 'none';
-		W('<div class="note-disabled"><b>IP Traffic monitoring disabled.<\/b><br><br><a href="admin-iptraffic.asp">Enable &raquo;<\/a><\/div>');
-	}
-	else if (cstats_busy)
-		W('<div class="note-warning">The cstats program is not responding or is busy. Try reloading after a few seconds.<\/div>');
+	else if (eval(type+'_busy'))
+		W('<div class="note-warning">The '+type+' program is not responding or is busy. Try reloading after a few seconds.<\/div>');
 }
 
 /*

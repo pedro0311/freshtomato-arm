@@ -29,7 +29,7 @@
 
 var cprefix = 'ipt_daily';
 try {
-//	<% ipt_bandwidth("daily"); %>
+//	<% bandwidth("daily","ipt"); %>
 }
 catch (ex) {
 	daily_history = [];
@@ -456,7 +456,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<script>checkCstats();</script>
+<script>checkStats('cstats');</script>
 
 <!-- / / / -->
 

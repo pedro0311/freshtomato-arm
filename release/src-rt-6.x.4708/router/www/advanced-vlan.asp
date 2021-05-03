@@ -113,6 +113,7 @@ switch (nvram['t_model_name']) {
 	case 'Asus RT-AC68P/U B1':
 	case 'Asus RT-AC68U C1':
 	case 'Asus RT-AC68U B2':
+	case 'Asus RT-AC68U V3':
 	case 'Asus RT-AC1900P':
 	case 'Huawei WS880':
 	case 'Linksys EA6900':
