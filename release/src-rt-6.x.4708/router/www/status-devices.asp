@@ -307,7 +307,7 @@ dg.populate = function() {
 		e.name = a[0];
 	}
 
-	/* [ "IP", "MAC", "wwan0/br0/1" ] */
+	/* [ "IP", "MAC", "br0/wwan0", "name" ] */
 	for (i = arplist.length - 1; i >= 0; --i) {
 		a = arplist[i];
 		if ((e = get(a[1], a[0])) != null) {
@@ -315,6 +315,8 @@ dg.populate = function() {
 				e.ifname = a[2];
 
 			e.bridge = a[2];
+			if (e.name == '')
+				e.name = a[3];
 		}
 	}
 

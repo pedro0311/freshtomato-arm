@@ -230,8 +230,8 @@ REMOVE-END */
 	s = f[5].value.trim().replace(/\s+/g, ' ');
 
 	if (s.length > 0) {
-		if (s.search(/^[.a-zA-Z0-9_\- ]+$/) == -1) {
-			ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 . - _" are allowed', quiet);
+		if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
+			ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
 			return 0;
 		}
 		if (this.existName(s)) {

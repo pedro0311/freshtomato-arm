@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
+#include <netdb.h>
 
 #include <wlutils.h>
 
@@ -39,7 +40,9 @@ void asp_arplist(int argc, char **argv)
 	char ip[16];
 	char mac[18];
 	char dev[17];
+	char host[NI_MAXHOST];
 	char comma;
+	char *c;
 	unsigned int flags;
 
 	/*
@@ -61,8 +64,14 @@ void asp_arplist(int argc, char **argv)
 			if (flags == 0)
 				continue;
 
+			if ((resolve_addr(ip, host) != 0) || (strcmp(ip, host) == 0))
+				strcpy(host, "");
+
+			if ((c = strchr(host, '.')) != NULL)
+				*c = 0;
+
 			strupr(mac);
-			web_printf("%c['%s','%s','%s']", comma, ip, mac, dev);
+			web_printf("%c['%s','%s','%s','%s']", comma, ip, mac, dev, host);
 			comma = ',';
 		}
 		fclose(f);
@@ -82,9 +91,7 @@ static int get_wds_ifname(const struct ether_addr *ea, char *ifname)
 		/* wds doesn't show up under SIOCGIFCONF; seems to start at 17 (?) */
 		for (i = 1; i < 32; ++i) {
 			ifr.ifr_ifindex = i;
-			if ((ioctl(sd, SIOCGIFNAME, &ifr) == 0) &&
-				(strncmp(ifr.ifr_name, "wds", 3) == 0) &&
-				(wl_ioctl(ifr.ifr_name, WLC_WDS_GET_REMOTE_HWADDR, &e.octet, sizeof(e.octet)) == 0)) {
+			if ((ioctl(sd, SIOCGIFNAME, &ifr) == 0) && (strncmp(ifr.ifr_name, "wds", 3) == 0) && (wl_ioctl(ifr.ifr_name, WLC_WDS_GET_REMOTE_HWADDR, &e.octet, sizeof(e.octet)) == 0)) {
 				if (memcmp(ea->octet, e.octet, sizeof(e.octet)) == 0) {
 					close(sd);
 					strlcpy(ifname, ifr.ifr_name, 16);
