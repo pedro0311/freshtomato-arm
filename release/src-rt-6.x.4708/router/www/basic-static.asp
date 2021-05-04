@@ -203,23 +203,25 @@ sg.verifyFields = function(row, quiet) {
 		}
 	}
 
-	if (!v_ip(f[3], 1)) {
-		ferror.set(f[3], 'Invalid IP address', quiet);
-		return 0;
-	}
-
-	/* 0 and 255 in last octet is not allowed */
-	if ((i = f[3].value.lastIndexOf('.')) != -1) {
-		s = parseInt(f[3].value.substr(i + 1), 10);
-		if ((s <= 0) || (s >= 255)) {
+	if (f[3].value != '') {
+		if (!v_ip(f[3], 1)) {
 			ferror.set(f[3], 'Invalid IP address', quiet);
 			return 0;
 		}
-	}
 
-	if ((!isMAC0(f[0].value)) && (this.inStatic(f[3].value))) {
-		ferror.set(f[3], 'Duplicate IP address', quiet);
-		return 0;
+		/* 0 and 255 in last octet is not allowed */
+		if ((i = f[3].value.lastIndexOf('.')) != -1) {
+			s = parseInt(f[3].value.substr(i + 1), 10);
+			if ((s <= 0) || (s >= 255)) {
+				ferror.set(f[3], 'Invalid IP address', quiet);
+				return 0;
+			}
+		}
+
+		if ((!isMAC0(f[0].value)) && (this.inStatic(f[3].value))) {
+			ferror.set(f[3], 'Duplicate IP address', quiet);
+			return 0;
+		}
 	}
 
 /* REMOVE-BEGIN

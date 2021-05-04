@@ -406,17 +406,19 @@ void start_dnsmasq()
 		if ((vstrsep(p, "<", &mac, &ip, &name, &bind)) < 4)
 			continue;
 
-		if (*ip == '\0')
-			continue;
-		else if (inet_pton(AF_INET, ip, &in4) <= 0 || in4.s_addr == INADDR_ANY || in4.s_addr == INADDR_LOOPBACK || in4.s_addr == INADDR_BROADCAST)
+		if (*ip != '\0' && (inet_pton(AF_INET, ip, &in4) <= 0 || in4.s_addr == INADDR_ANY || in4.s_addr == INADDR_LOOPBACK || in4.s_addr == INADDR_BROADCAST)) /* invalid IP (if any) */
 			continue;
 
-		if ((hf) && (*name))
+		if ((hf) && (*ip) && (*name))
 			fprintf(hf, "%s %s\n", ip, name);
 
 		if (do_dhcpd_hosts > 0 && ether_atoe(mac, ea)) {
-			fprintf(f, "dhcp-host=%s,%s", mac, ip);
-			if (nvram_get_int("dhcpd_slt") != 0)
+			if (*ip)
+				fprintf(f, "dhcp-host=%s,%s", mac, ip);
+			else if (*name)
+				fprintf(f, "dhcp-host=%s,%s", mac, name);
+
+			if (((*ip) || (*name)) && (nvram_get_int("dhcpd_slt") != 0))
 				fprintf(f, ",%s", sdhcp_lease);
 
 			fprintf(f, "\n");
