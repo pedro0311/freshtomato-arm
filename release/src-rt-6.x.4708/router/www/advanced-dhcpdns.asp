@@ -51,7 +51,7 @@ function active_resolvers(ip, port, domain, pinset) {
 				continue;
 			var row = s[j].split('>');
 			if (row.length == 4 && ip == row[0] && port == row[1] && domain == row[2] && pinset == row[3])
-					return 1;
+				return 1;
 		}
 	}
 	return 0;
@@ -376,9 +376,14 @@ function init() {
 		W('<tr><td class="title indent2">Upstream resolvers<br> (max. 8)<\/td><td class="content" id="_stubby_servers"><table class="tomato-grid" id="stubby-grid">');
 		W('<tr class="header"><td class="co1">On<\/td><td class="co2">Server<\/td><\/tr><\/tr>');
 
-		var ip, port, server, domain, pinset, active, t;
+		var ip, port, server, domain, pinset, active, type, t;
 		for (var i = 0; i < up_servers_arr.length; ++i) {
-			server = up_servers_arr[i][0];
+			type = up_servers_arr[i][5];
+
+			if ((type.indexOf('IPv6') != -1) && (nvram.ipv6_service == ''))
+				continue;
+
+			server = '['+type+'] '+up_servers_arr[i][0];
 			ip = up_servers_arr[i][1];
 			port = up_servers_arr[i][2];
 			domain = up_servers_arr[i][3];
@@ -389,14 +394,14 @@ function init() {
 
 			W('<tr class="'+tclass+'">\n'+
 			   '<td class="co1">'+
-			    '<input type="checkbox" name="upstream_active_'+i+'" id="_upstream_active_'+i+'" '+(ip ? '' : 'disabled="disabled"')+(active ? ' checked="checked"' : '')+' onclick="verifyFields(this, 0)">'+
+			    '<input type="checkbox" name="upstream_active_'+i+'" id="_upstream_active_'+i+'" '+(active ? ' checked="checked"' : '')+' onclick="verifyFields(this, 0)">'+
 			    '<input type="hidden" name="upstream_server_'+i+'" id="_upstream_server_'+i+'" value="'+server+'">'+
 			    '<input type="hidden" name="upstream_ip_'+i+'" id="_upstream_ip_'+i+'" value="'+ip+'">'+
 			    '<input type="hidden" name="upstream_port_'+i+'" id="_upstream_port_'+i+'" value="'+port+'">'+
 			    '<input type="hidden" name="upstream_domain_'+i+'" id="_upstream_domain_'+i+'" value="'+domain+'">'+
 			    '<input type="hidden" name="upstream_pinsetv_'+i+'" id="_upstream_pinset_'+i+'" value="'+pinset+'">'+
 			   '<\/td>\n'+
-			   '<td class="co2"'+(ip ? ' title="'+t+'" style="cursor:help"' : '')+'>'+(ip ? server : '<b>'+server+'<\/b>')+'<\/td>\n'+
+			   '<td class="co2"'+(ip ? ' title="'+t+'" style="cursor:help"' : '')+'>'+server+'<\/td>\n'+
 			  '<\/tr>\n');
 		}
 
@@ -445,7 +450,7 @@ function init() {
 			{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == '1' },
 			{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == '1' },
 			{ title: 'Fast RA mode', name: 'f_ipv6_fast_ra', type: 'checkbox', value: nvram.ipv6_fast_ra == '1' },
-			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: (nvram['ipv6_service'] == 'native-pd') },
+			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: (nvram.ipv6_service == 'native-pd') },
 /* IPV6-END */
 			{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 /* IPV6-BEGIN */
