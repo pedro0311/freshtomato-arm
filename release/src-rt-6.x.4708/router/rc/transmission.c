@@ -204,37 +204,39 @@ void stop_bittorrent(void)
 {
 	FILE *fp;
 
-	/* stop script */
-	if (!(fp = fopen(TR_STOP_SCRIPT, "w"))) {
-		perror(TR_STOP_SCRIPT);
-		return;
+	if (pidof("transmission-daemon") > 0) {
+		/* stop script */
+		if (!(fp = fopen(TR_STOP_SCRIPT, "w"))) {
+			perror(TR_STOP_SCRIPT);
+			return;
+		}
+
+		fprintf(fp, "#!/bin/sh\n"
+		            "COUNT=0\n"
+		            "TIMEOUT=10\n"
+		            "SLEEP=1\n"
+		            "logger \"Terminating transmission-daemon...\" \n"
+		            "killall transmission-daemon\n"
+		            "while [ $(pidof transmission-daemon | awk '{print $1}') ]; do\n"
+		            "sleep $SLEEP\n"
+		            "COUNT=$(($COUNT + $SLEEP))\n"
+		            "[ \"$COUNT\" -ge \"$TIMEOUT\" ] && {\n"
+		            "logger \"Killing transmission-daemon...\" \n"
+		            "killall -KILL transmission-daemon\n"
+		            "}\n"
+		            "done\n"
+		            "[ \"$COUNT\" -lt \"$TIMEOUT\" ] && {\n"
+		            "logger \"Transmission daemon successfully stopped\" \n"
+		            "} || {\n"
+		            "logger \"Transmission daemon forcefully stopped\" \n"
+		            "}\n"
+		            "/usr/bin/btcheck addcru\n"
+		            "exit 0\n");
+
+		fclose(fp);
+
+		chmod(TR_STOP_SCRIPT, 0755);
+
+		xstart(TR_STOP_SCRIPT);
 	}
-
-	fprintf(fp, "#!/bin/sh\n"
-	            "COUNT=0\n"
-	            "TIMEOUT=10\n"
-	            "SLEEP=1\n"
-	            "logger \"Terminating transmission-daemon...\" \n"
-	            "killall transmission-daemon\n"
-	            "while [ $(pidof transmission-daemon | awk '{print $1}') ]; do\n"
-	            "sleep $SLEEP\n"
-	            "COUNT=$(($COUNT + $SLEEP))\n"
-	            "[ \"$COUNT\" -ge \"$TIMEOUT\" ] && {\n"
-	            "logger \"Killing transmission-daemon...\" \n"
-	            "killall -KILL transmission-daemon\n"
-	            "}\n"
-	            "done\n"
-	            "[ \"$COUNT\" -lt \"$TIMEOUT\" ] && {\n"
-	            "logger \"Transmission daemon successfully stopped\" \n"
-	            "} || {\n"
-	            "logger \"Transmission daemon forcefully stopped\" \n"
-	            "}\n"
-	            "/usr/bin/btcheck addcru\n"
-	            "exit 0\n");
-
-	fclose(fp);
-
-	chmod(TR_STOP_SCRIPT, 0755);
-
-	xstart(TR_STOP_SCRIPT);
 }

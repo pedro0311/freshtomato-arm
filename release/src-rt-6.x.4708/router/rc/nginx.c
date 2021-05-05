@@ -313,10 +313,8 @@ static void build_nginx_conf(void)
 void start_nginx(void)
 {
 	if (fastpath != 1) {
-		if (!nvram_match("nginx_enable", "1")) {
-			syslog(LOG_INFO, "nginx - daemon not enabled cancelled generation of config file");
+		if (!nvram_match("nginx_enable", "1"))
 			return;
-		}
 	}
 	else
 		syslog(LOG_INFO, "nginx - fastpath forced generation of config file");
@@ -372,8 +370,6 @@ void start_nginxfp(void)
 /* stop nginx and remove traces of the process */
 void stop_nginx(void)
 {
-	syslog(LOG_INFO, "nginx - killing daemon");
-
 	if (pidof(nginxbin) > 0) {
 		killall_tk_period_wait(nginxbin, 50);
 		killall_tk_period_wait("php-cgi", 50);
@@ -393,6 +389,8 @@ void stop_nginx(void)
 			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
 				unlink(nginxconf);
 		}
+
+		syslog(LOG_INFO, "nginx is stopped");
 	}
 }
 

@@ -106,7 +106,7 @@ void start_nfs(void)
 	sleep(1);
 	eval("/usr/sbin/exportfs", "-r");
 
-	syslog(LOG_INFO, "NFS Server started");
+	syslog(LOG_INFO, "NFS Server is started");
 }
 
 void stop_nfs(void)
@@ -116,10 +116,12 @@ void stop_nfs(void)
 		return;
 	}
 
-	eval("/usr/sbin/exportfs", "-ua");
-	killall_tk_period_wait("mountd", 50);
-	killall("nfsd", SIGKILL);
-	killall_tk_period_wait("statd", 50);
+	if ((pidof("mountd") > 0) || (pidof("nfsd") > 0) || (pidof("statd") > 0)) {
+		eval("/usr/sbin/exportfs", "-ua");
+		killall_tk_period_wait("mountd", 50);
+		killall("nfsd", SIGKILL);
+		killall_tk_period_wait("statd", 50);
 
-	syslog(LOG_INFO, "NFS Server stopped");
+		syslog(LOG_INFO, "NFS Server is stopped");
+	}
 }

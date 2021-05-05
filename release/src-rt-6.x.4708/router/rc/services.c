@@ -2404,12 +2404,14 @@ static void stop_ftpd(void)
 		return;
 	}
 
-	killall_tk_period_wait("vsftpd", 50);
-	unlink(vsftpd_passwd);
-	unlink(vsftpd_conf);
-	eval("rm", "-rf", vsftpd_users);
+	if (pidof("vsftpd") > 0) {
+		killall_tk_period_wait("vsftpd", 50);
+		unlink(vsftpd_passwd);
+		unlink(vsftpd_conf);
+		eval("rm", "-rf", vsftpd_users);
 
-	logmsg(LOG_INFO, "vsftpd is stopped");
+		logmsg(LOG_INFO, "vsftpd is stopped");
+	}
 }
 #endif /* TCONFIG_FTP */
 
@@ -2712,20 +2714,21 @@ void stop_samba(void)
 	}
 
 	stop_wsdd();
-	kill_samba(SIGTERM);
 
-	/* clean up */
-	unlink("/var/log/log.smbd");
-	unlink("/var/log/log.nmbd");
-	eval("rm", "-rf", "/var/nmbd");
-	eval("rm", "-rf", "/var/log/cores");
-	eval("rm", "-rf", "/var/run/samba");
+	if ((pidof("smbd") > 0 ) || (pidof("nmbd") > 0 )) {
+		kill_samba(SIGTERM);
 
+		/* clean up */
+		unlink("/var/log/log.smbd");
+		unlink("/var/log/log.nmbd");
+		eval("rm", "-rf", "/var/nmbd");
+		eval("rm", "-rf", "/var/log/cores");
+		eval("rm", "-rf", "/var/run/samba");
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
-	enable_gro(0);
+		enable_gro(0);
 #endif
-
-	logmsg(LOG_INFO, "Samba daemon is stopped");
+		logmsg(LOG_INFO, "Samba daemon is stopped");
+	}
 }
 
 void start_wsdd()
@@ -2889,9 +2892,11 @@ static void stop_media_server(void)
 		return;
 	}
 
-	killall_tk_period_wait(MEDIA_SERVER_APP, 50);
+	if (pidof(MEDIA_SERVER_APP) > 0) {
+		killall_tk_period_wait(MEDIA_SERVER_APP, 50);
 
-	logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+		logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+	}
 }
 #endif /* TCONFIG_MEDIA_SERVER */
 
