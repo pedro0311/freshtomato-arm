@@ -69,6 +69,11 @@
 #define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
 #define IPV6_MIN_LIFETIME 120
 
+/* The g_upgrade global variable is used to skip several unnecessary delay
+ * and redundant steps during upgrade procedure.
+ */
+int g_upgrade = 0;
+
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
@@ -3393,6 +3398,7 @@ TOP:
 
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
+			g_upgrade = 1;
 			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 			stop_jffs2();
 #ifdef TCONFIG_ZEBRA

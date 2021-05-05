@@ -208,6 +208,7 @@ extern void stop_dhcp6c(void);
 #endif
 
 /* services.c */
+extern int g_upgrade;
 extern void start_cron(void);
 extern void stop_cron(void);
 #ifdef TCONFIG_FANCTRL

@@ -899,9 +899,11 @@ void start_wan_if(char *prefix)
 	case WP_LTE:
 	case WP_L2TP:
 	case WP_PPTP:
-		if (wan_proto == WP_LTE)
+		if (wan_proto == WP_LTE) {
 			/* Prepare LTE modem */
-			xstart("switch4g", prefix);
+			if (!g_upgrade)
+				xstart("switch4g", prefix);
+		}
 		else if (using_dhcpc(prefix)) {
 			stop_dhcpc(prefix);
 			start_dhcpc(prefix);
@@ -1290,7 +1292,8 @@ void stop_wan_if(char *prefix)
 	if (wan_proto == WP_LTE) {
 		killall_tk_period_wait("switch4g", 50); /* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
-		sleep(3); /* Wait a litle for disconnect */
+		if (!g_upgrade)
+			sleep(3); /* Wait a litle for disconnect */
 	}
 
 	/* Bring down WAN interfaces */

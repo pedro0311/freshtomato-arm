@@ -5608,8 +5608,11 @@ int init_main(int argc, char *argv[])
 			break;
 		}
 
-		chld_reap(0); /* Periodically reap zombies. */
-		check_services();
+		if (!g_upgrade) {
+			chld_reap(0); /* Periodically reap zombies. */
+			check_services();
+		}
+
 		sigwait(&sigset, &state);
 	}
 
