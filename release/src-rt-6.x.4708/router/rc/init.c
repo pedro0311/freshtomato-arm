@@ -5619,18 +5619,21 @@ int init_main(int argc, char *argv[])
 int reboothalt_main(int argc, char *argv[])
 {
 	int reboot = (strstr(argv[0], "reboot") != NULL);
+	int def_reset_wait = 30;
+
 	puts(reboot ? "Rebooting..." : "Shutting down...");
 	fflush(stdout);
 	sleep(1);
 	kill(1, reboot ? SIGTERM : SIGQUIT);
 
+	int wait = nvram_get_int("reset_wait") ? : def_reset_wait;
 	/* In the case we're hung, we'll get stuck and never actually reboot.
 	 * The only way out is to pull power.
-	 * So after 'reset_wait' seconds (default: 20), forcibly crash & restart.
+	 * So after 'reset_wait' seconds (default: 30), forcibly crash & restart.
 	 */
 	if (fork() == 0) {
-		int wait = nvram_get_int("reset_wait") ? : 20;
-		if ((wait < 10) || (wait > 120)) wait = 10;
+		if ((wait < 10) || (wait > 120))
+			wait = 10;
 
 		f_write("/proc/sysrq-trigger", "s", 1, 0 , 0); /* sync disks */
 		sleep(wait);
@@ -5643,4 +5646,3 @@ int reboothalt_main(int argc, char *argv[])
 
 	return 0;
 }
-
