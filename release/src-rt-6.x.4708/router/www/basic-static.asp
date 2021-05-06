@@ -85,7 +85,7 @@ sg.setup = function() {
 		if (t.length == 4) {
 			var d = t[0].split(',');
 			for (var j = 0; j < ipt.length; ++j) {
-				if (t[1] == ipt[j]) {
+				if (t[1].length > 0 && t[1] == ipt[j]) {
 					h = '1';
 					break;
 				}
