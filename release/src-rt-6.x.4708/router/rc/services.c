@@ -457,14 +457,22 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_DNSSEC
 	if (nvram_get_int("dnssec_enable")) {
-		fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
-		           "dnssec\n");
-
-		/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
-		if (!nvram_get_int("ntp_ready"))
-			fprintf(f, "dnssec-no-timecheck\n");
-	}
+#ifdef TCONFIG_STUBBY
+		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("stubby_dnssec", "0"))) {
 #endif
+			fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
+			           "dnssec\n");
+
+			/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
+			if (!nvram_get_int("ntp_ready"))
+				fprintf(f, "dnssec-no-timecheck\n");
+#ifdef TCONFIG_STUBBY
+		}
+		else /* use stubby dnssec or server only */
+			fprintf(f, "proxy-dnssec\n");
+#endif
+	}
+#endif /* TCONFIG_DNSSEC */
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy")) {
@@ -704,7 +712,7 @@ void start_stubby(void)
 	FILE *fp;
 	char *nv, *nvp, *b;
 	char *server, *tlsport, *hostname, *spkipin, *digest;
-	int ntp_ready, port;
+	int ntp_ready, port, dnssec, ret;
 	union {
 		struct in_addr addr4;
 #ifdef TCONFIG_IPV6
@@ -736,6 +744,7 @@ void start_stubby(void)
 	}
 
 	ntp_ready = nvram_get_int("ntp_ready");
+	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("stubby_dnssec", "1"));
 
 	/* basic & privacy settings */
 	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"
@@ -745,6 +754,7 @@ void start_stubby(void)
 	            "tls_authentication: %s\n"
 	            "tls_query_padding_blocksize: 128\n"
 	            "edns_client_subnet_private: 1\n"
+	            "%s"
 	/* connection settings */
 	            "idle_timeout: 5000\n"
 	            "tls_connection_retries: 5\n"
@@ -757,6 +767,7 @@ void start_stubby(void)
 	            "  - 127.0.0.1@%s\n",
 	            ntp_ready ? "  - GETDNS_TRANSPORT_TLS\n" : "  - GETDNS_TRANSPORT_UDP\n  - GETDNS_TRANSPORT_TCP\n",
 	            ntp_ready ? "GETDNS_AUTHENTICATION_REQUIRED" : "GETDNS_AUTHENTICATION_NONE",
+	            (ntp_ready && dnssec) ? "dnssec: GETDNS_EXTENSION_TRUE\n" : "",
 	            nvram_safe_get("stubby_port"));
 #ifdef TCONFIG_IPV6
 	if (get_ipv6_service() != *("NULL")) /* when ipv6 enabled */
@@ -806,7 +817,19 @@ void start_stubby(void)
 
 	fclose(fp);
 
-	eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *) stubby_config);
+	if (dnssec) {
+		if (ntp_ready)
+			logmsg(LOG_INFO, "stubby: DNSSEC enabled");
+		else
+			logmsg(LOG_INFO, "stubby: DNSSEC pending ntp sync");
+	}
+
+	ret = eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *)stubby_config);
+
+	if (ret)
+		logmsg(LOG_ERR, "starting stubby failed ...");
+	else
+		logmsg(LOG_INFO, "stubby is started");
 }
 
 void stop_stubby(void)

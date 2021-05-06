@@ -141,6 +141,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "stubby_priority",		"2"				, 0 },	/* 0=none, 1=strict-order, 2=no-resolv */
 	{ "stubby_port",		"5453"				, 0 },	/* local port */
 	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>", 0 },	/* default DoT resolvers */
+	{ "stubby_dnssec",		"0"				, 0 },	/* DNSSEC */
 	{ "stubby_log",			"4"				, 0 },	/* log level */
 #endif
 	{ "wan_wins",			""				, 0 },	// x.x.x.x x.x.x.x ...

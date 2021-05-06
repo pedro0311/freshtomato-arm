@@ -705,6 +705,7 @@ static const nvset_t nvset_list[] = {
 	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
 	{ "stubby_port",		V_PORT				},
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
+	{ "stubby_dnssec",		V_RANGE(0, 2)			},	/* 0=dnsmasq, 1=stubby, 2=server only */
 	{ "stubby_log",			V_RANGE(0, 7)			},
 #endif
 	{ "lan_state",			V_01				},
