@@ -706,6 +706,7 @@ static const nvset_t nvset_list[] = {
 	{ "stubby_port",		V_PORT				},
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
 	{ "stubby_dnssec",		V_RANGE(0, 2)			},	/* 0=dnsmasq, 1=stubby, 2=server only */
+	{ "stubby_force_tls13",		V_01				},	/* 0=TLS1.2, 1=TLS1.3 */
 	{ "stubby_log",			V_RANGE(0, 7)			},
 #endif
 	{ "lan_state",			V_01				},

@@ -761,13 +761,14 @@ void start_stubby(void)
 	            "tls_backoff_time: 900\n"
 	            "timeout: 2000\n"
 	            "round_robin_upstreams: 1\n"
-	            "tls_min_version: GETDNS_TLS1_2\n"
+	            "tls_min_version: %s\n"
 	/* listen address */
 	            "listen_addresses:\n"
 	            "  - 127.0.0.1@%s\n",
 	            ntp_ready ? "  - GETDNS_TRANSPORT_TLS\n" : "  - GETDNS_TRANSPORT_UDP\n  - GETDNS_TRANSPORT_TCP\n",
 	            ntp_ready ? "GETDNS_AUTHENTICATION_REQUIRED" : "GETDNS_AUTHENTICATION_NONE",
 	            (ntp_ready && dnssec) ? "dnssec: GETDNS_EXTENSION_TRUE\n" : "",
+	            nvram_get_int("stubby_force_tls13") ? "GETDNS_TLS1_3" : "GETDNS_TLS1_2",
 	            nvram_safe_get("stubby_port"));
 #ifdef TCONFIG_IPV6
 	if (get_ipv6_service() != *("NULL")) /* when ipv6 enabled */
