@@ -19,7 +19,6 @@
 #error WL_BSS_INFO_VERSION < 108
 #endif
 
-#if !defined(CONFIG_BCM7) && !defined(TCONFIG_BCM7)
 /*
  * Country names and abbreviations from ISO 3166
  */
@@ -158,7 +157,6 @@ cntry_name_t cntry_names[] = {
 };
 
 #define WLC_IOCTL_MAXLEN_ADDON 2048
-#endif /* !defined(CONFIG_BCM7) && !defined(TCONFIG_BCM7) */
 
 
 static int unit = 0;
@@ -1275,38 +1273,7 @@ void asp_wlifaces(int argc, char **argv)
 	web_puts("];\n");
 }
 
-#if defined(CONFIG_BCM7) || defined(TCONFIG_BCM7) /* keep the old way for SDK7 for now, it is working */
-void asp_wlcountries(int argc, char **argv)
-{
-	char s[128], *p, *code, *country;
-	FILE *f;
-	int i = 0;
-
-	web_puts("\nwl_countries = [");
-	if ((f = popen("wl country list", "r")) != NULL) {
-		/* skip the header line */
-		fgets(s, sizeof(s), f);
-		while (fgets(s, sizeof(s), f)) {
-			p = s;
-			if ((code = strsep(&p, " \t\n")) && p) {
-				country = strsep(&p, "\n");
-				if ((country && *country && strcmp(code, country) != 0) ||
-				    /* special case EU code since the driver may not have a name for it */
-				    (strcmp(code, "EU") == 0) ||
-				    /* special case for #a - used as default in Tenda AC15 */
-				    (strcmp(code, "#a") == 0)) {
-					if (!country || *country == 0) country = code;
-					p = js_string(country);
-					web_printf("%c['%s', '%s']", i++ ? ',' : ' ', code, p);
-					free(p);
-				}
-			}
-		}
-		pclose(f);
-	}
-	web_puts("];\n");
-}
-#else /* for SDK6 with new driver *.126 (build year 2020 with very long/big country list) */
+/* for SDK6/7 with new driver (build year 2020 with very long/big country list) */
 static cntry_name_t *
 wlc_cntry_abbrev_to_country(const char *abbrev)
 {
@@ -1350,7 +1317,6 @@ void asp_wlcountries(int argc, char **argv)
 
 	web_puts("];\n");
 }
-#endif 
 
 int mround(float val)
 {
