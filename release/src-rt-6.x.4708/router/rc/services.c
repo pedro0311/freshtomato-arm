@@ -2927,6 +2927,9 @@ static void stop_media_server(void)
 #ifdef TCONFIG_USB
 static void start_nas_services(void)
 {
+	if (!g_upgrade)
+		return;
+
 	if (getpid() != 1) {
 		start_service("usbapps");
 		return;
@@ -2967,7 +2970,7 @@ void restart_nas_services(int stop, int start)
 	/* restart all NAS applications */
 	if (stop)
 		stop_nas_services();
-	if (start)
+	if (start && !g_upgrade)
 		start_nas_services();
 
 	file_unlock(fd);
@@ -3001,10 +3004,13 @@ void check_services(void)
 	/* periodically reap any zombies */
 	setitimer(ITIMER_REAL, &zombie_tv, NULL);
 
-	_check(pid_hotplug2, "hotplug2", start_hotplug2);
-	_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
-	_check(pid_crond, "crond", start_cron);
-	_check(pid_igmp, "igmpproxy", start_igmp_proxy);
+	/* do not restart if upgrading */
+	if (!g_upgrade) {
+		_check(pid_hotplug2, "hotplug2", start_hotplug2);
+		_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
+		_check(pid_crond, "crond", start_cron);
+		_check(pid_igmp, "igmpproxy", start_igmp_proxy);
+	}
 }
 
 void start_services(void)
@@ -3039,39 +3045,32 @@ void start_services(void)
 #ifdef TCONFIG_PPTPD
 	start_pptpd();
 #endif
+#ifdef TCONFIG_USB
 	restart_nas_services(1, 1); /* Samba, FTP and Media Server */
-
+#endif
 #ifdef TCONFIG_SNMP
 	start_snmp();
 #endif
-
 	start_tomatoanon();
-
 #ifdef TCONFIG_TOR
 	start_tor();
 #endif
-
 #ifdef TCONFIG_BT
 	start_bittorrent();
 #endif
-
 #ifdef TCONFIG_NOCAT
 	start_nocat();
 #endif
-
 #ifdef TCONFIG_NFS
 	start_nfs();
 #endif
-
 #ifdef TCONFIG_BCMARM
 	/* do LED setup for Router */
 	led_setup();
 #endif
-
 #ifdef TCONFIG_FANCTRL
 	start_phy_tempsense();
 #endif
-
 #ifdef CONFIG_BCM7
 	if (!nvram_get_int("debug_wireless")) { /* suppress dhd debug messages (default 0x01) */
 		system("/usr/sbin/dhd -i eth1 msglevel 0x00");
@@ -3079,7 +3078,6 @@ void start_services(void)
 		system("/usr/sbin/dhd -i eth3 msglevel 0x00");
 	}
 #endif
-
 #ifdef TCONFIG_BCMBSD
 	start_bsd();
 #endif /* TCONFIG_BCMBSD */
@@ -3088,33 +3086,28 @@ void start_services(void)
 void stop_services(void)
 {
 	clear_resolv();
-
 #ifdef TCONFIG_FANCTRL
 	stop_phy_tempsense();
 #endif
-
 #ifdef TCONFIG_BT
 	stop_bittorrent();
 #endif
-
 #ifdef TCONFIG_NOCAT
 	stop_nocat();
 #endif
-
 #ifdef TCONFIG_SNMP
 	stop_snmp();
 #endif
-
 #ifdef TCONFIG_TOR
 	stop_tor();
 #endif
-
 	stop_tomatoanon();
-
 #ifdef TCONFIG_NFS
 	stop_nfs();
 #endif
+#ifdef TCONFIG_USB
 	restart_nas_services(1, 0); /* Samba, FTP and Media Server */
+#endif
 #ifdef TCONFIG_PPTPD
 	stop_pptpd();
 #endif
@@ -3136,7 +3129,6 @@ void stop_services(void)
 	stop_zebra();
 #endif
 	stop_nas();
-
 #ifdef TCONFIG_BCMBSD
 	stop_bsd();
 #endif /* TCONFIG_BCMBSD */
@@ -3214,7 +3206,7 @@ TOP:
 
 	if (strcmp(service, "dnsmasq") == 0) {
 		if (act_stop) stop_dnsmasq();
-		if (act_start) {
+		if (act_start && !g_upgrade) {
 			dns_to_resolv();
 			start_dnsmasq();
 		}
@@ -3428,24 +3420,47 @@ TOP:
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
 			g_upgrade = 1;
+			stop_sched();
+			stop_cron();
+#ifdef TCONFIG_USB
 			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
-			stop_jffs2();
+#endif
 #ifdef TCONFIG_ZEBRA
 			stop_zebra();
 #endif
-			stop_cron();
-			stop_ntpd();
-			stop_upnp();
-			killall("rstats", SIGTERM);
-			killall("cstats", SIGTERM);
-			killall("buttons", SIGTERM);
-			stop_syslog();
-			remove_storage_main(1);
-			stop_usb();
 #ifdef TCONFIG_BT
 			stop_bittorrent();
 #endif
+#ifdef TCONFIG_NGINX
+			stop_mysql();
+			stop_nginx();
+#endif
+#ifdef TCONFIG_TOR
+			stop_tor();
+#endif
 			stop_tomatoanon();
+			killall("rstats", SIGTERM);
+			killall("cstats", SIGTERM);
+			killall("buttons", SIGTERM);
+			if (!nvram_get_int("remote_upgrade")) {
+				killall("xl2tpd", SIGTERM);
+				killall("pppd", SIGTERM);
+				stop_dnsmasq();
+				killall("udhcpc", SIGTERM);
+				stop_wan();
+			}
+			else {
+				stop_ntpd();
+				stop_upnp();
+			}
+			stop_syslog();
+#ifdef TCONFIG_USB
+			remove_storage_main(1);
+			stop_usb();
+			remove_usb_module();
+#endif
+			remove_conntrack();
+			stop_jffs2();
 		}
 		goto CLEAR;
 	}

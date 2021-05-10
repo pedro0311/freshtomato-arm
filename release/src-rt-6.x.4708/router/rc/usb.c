@@ -297,55 +297,127 @@ void start_usb(void)
 	}
 }
 
+void remove_usb_modem_modules(void)
+{
+	/* 3G */
+	modprobe_r("sierra");
+	modprobe_r("option");
+	modprobe_r("cdc-acm");
+
+	/* 4G */
+	modprobe_r("cdc_mbim");
+	modprobe_r("qmi_wwan");
+	modprobe_r("cdc_wdm");
+#ifdef TCONFIG_BCMARM
+	modprobe_r("huawei_cdc_ncm");
+#else
+	modprobe_r("huawei_ether");
+#endif
+	modprobe_r("cdc_ncm");
+	modprobe_r("rndis_host");
+	modprobe_r("cdc_ether");
+
+	modprobe_r("usbnet");
+	//modprobe_r("usbserial"); /* may crash */
+}
+
+void remove_usb_ups_module(void)
+{
+#ifdef TCONFIG_UPS
+	modprobe_r("usbhid");
+	modprobe_r("hid");
+	modprobe_r("input-core");
+#endif
+}
+
+void remove_usb_prn_module(void)
+{
+	/* only find and kill the printer server we started (port 0) */
+	p9100d_sig(SIGTERM);
+	modprobe_r(USBPRINTER_MOD);
+}
+
+void remove_usb_storage_module(void)
+{
+#ifdef TCONFIG_BCMARM
+	modprobe_r("ext4");
+	modprobe_r("jbd2");
+#else
+	modprobe_r("ext2");
+	modprobe_r("ext3");
+	modprobe_r("jbd");
+#endif
+	modprobe_r("crc16");
+	modprobe_r("mbcache");
+	modprobe_r("vfat");
+	modprobe_r("fat");
+	modprobe_r("exfat");
+#if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
+	modprobe_r("ufsd");
+#endif
+#ifdef TCONFIG_TUXERA
+	modprobe_r("tntfs");
+#endif
+#ifdef TCONFIG_HFS
+	modprobe_r("hfs");
+	modprobe_r("hfsplus");
+#endif
+#ifdef TCONFIG_TUXERA_HFS
+	modprobe_r("thfsplus");
+#endif
+	modprobe_r("fuse");
+	sleep(1);
+
+#ifdef TCONFIG_SAMBASRV
+	modprobe_r("nls_cp437");
+	modprobe_r("nls_cp850");
+	modprobe_r("nls_cp852");
+	modprobe_r("nls_cp866");
+	modprobe_r("nls_cp932");
+	modprobe_r("nls_cp936");
+	modprobe_r("nls_cp949");
+	modprobe_r("nls_cp950");
+#endif
+	modprobe_r(SD_MOD);
+	modprobe_r(USBSTORAGE_MOD);
+	modprobe_r(SCSI_WAIT_MOD);
+	modprobe_r(SCSI_MOD);
+}
+
+void remove_usb_host_module(void)
+{
+	modprobe_r(USBOHCI_MOD);
+	modprobe_r(USBUHCI_MOD);
+	modprobe_r(USB20_MOD);
+	modprobe_r(USB30_MOD);
+	modprobe_r(USBCORE_MOD);
+}
+
+void remove_usb_module(void)
+{
+	remove_usb_modem_modules();
+	remove_usb_ups_module();
+	remove_usb_prn_module();
+	remove_usb_storage_module();
+	remove_usb_host_module();
+}
+
 void stop_usb(void)
 {
 	int disabled = !nvram_get_int("usb_enable");
 
 	int i = 255;
-	int mwan_num;
-	int wan_unit;
-	char *module;
-	char *mod;
-	char tmp[100];
-	char prefix[] = "wanXX";
 	int model;
 
 	/* get router model */
 	model = get_model();
 
-	/* Remove 3G/4G modem modules */
-	if ((disabled) || (!nvram_get_int("usb_3g"))) {
-		mwan_num = atoi(nvram_safe_get("mwan_num"));
-		if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-			mwan_num = 1;
-
-		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
-			get_wan_prefix(wan_unit, prefix);
-			module = strdup(nvram_safe_get(strcat_r(prefix, "_modem_modules", tmp)));
-
-			if (module != NULL) {
-				while ((mod = strsep(&module, " ")) != NULL) {
-					int r = modprobe_r(mod);
-					if (r == 0)
-						logmsg(LOG_INFO, "USB: module '%s' was removed correctly (iface: %s, errno: %d)", mod, prefix, r);
-					else
-						logmsg(LOG_INFO, "USB: module '%s' could not be removed! (iface: %s, errno: %d)", mod, prefix, r);
-				}
-				free(module);
-			}
-		}
-	}
-
 #ifdef TCONFIG_UPS
 	stop_ups();
-	modprobe_r("usbhid");
-	modprobe_r("hid");
-	modprobe_r("input-core");
 #endif
-
-	/* only find and kill the printer server we started (port 0) */
-	p9100d_sig(SIGTERM);
-	modprobe_r(USBPRINTER_MOD);
+	remove_usb_ups_module();
+	remove_usb_modem_modules();
+	remove_usb_prn_module();
 
 	if (nvram_get_int("idle_enable") == 0)
 		killall("sd-idle", SIGTERM);
@@ -356,49 +428,7 @@ void stop_usb(void)
 		remove_storage_main(0);
 
 		/* Stop storage services */
-#ifdef TCONFIG_BCMARM
-		modprobe_r("ext4");
-		modprobe_r("jbd2");
-#else
-		modprobe_r("ext2");
-		modprobe_r("ext3");
-		modprobe_r("jbd");
-#endif
-		modprobe_r("crc16");
-		modprobe_r("mbcache");
-		modprobe_r("vfat");
-		modprobe_r("fat");
-		modprobe_r("exfat");
-#if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
-		modprobe_r("ufsd");
-#endif
-#ifdef TCONFIG_TUXERA
-		modprobe_r("tntfs");
-#endif
-#ifdef TCONFIG_HFS
-		modprobe_r("hfs");
-		modprobe_r("hfsplus");
-#endif
-#ifdef TCONFIG_TUXERA_HFS
-		modprobe_r("thfsplus");
-#endif
-		modprobe_r("fuse");
-		sleep(1);
-
-#ifdef TCONFIG_SAMBASRV
-		modprobe_r("nls_cp437");
-		modprobe_r("nls_cp850");
-		modprobe_r("nls_cp852");
-		modprobe_r("nls_cp866");
-		modprobe_r("nls_cp932");
-		modprobe_r("nls_cp936");
-		modprobe_r("nls_cp949");
-		modprobe_r("nls_cp950");
-#endif
-		modprobe_r(SD_MOD);
-		modprobe_r(USBSTORAGE_MOD);
-		modprobe_r(SCSI_WAIT_MOD);
-		modprobe_r(SCSI_MOD);
+		remove_usb_storage_module();
 	}
 
 	if (disabled || nvram_get_int("usb_ohci") != 1)

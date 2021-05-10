@@ -12,6 +12,9 @@
 
 
 #include "rc.h"
+#ifdef TCONFIG_BCM7
+#include "shared.h"
+#endif
 
 #include <ctype.h>
 #include <termios.h>
@@ -49,6 +52,58 @@ restore_defaults_module(char *prefix)
 		nvram_set(t->name, t->value);
 	}
 }
+#ifdef TCONFIG_BCM7
+extern struct nvram_tuple bcm4360ac_defaults[];
+extern struct nvram_tuple r8000_params[];
+
+static void set_bcm4360ac_vars(void)
+{
+	struct nvram_tuple *t;
+
+	/* Restore defaults */
+	dbg("Restoring bcm4360ac vars...\n");
+	for (t = bcm4360ac_defaults; t->name; t++) {
+		if (!nvram_get(t->name))
+			nvram_set(t->name, t->value);
+	}
+}
+
+static void set_r8000_vars(void)
+{
+	struct nvram_tuple *t;
+
+	/* Restore defaults */
+	dbg("Restoring r8000 vars...\n");
+	for (t = r8000_params; t->name; t++) {
+		if (!nvram_get(t->name))
+			nvram_set(t->name, t->value);
+	}
+}
+
+void
+bsd_defaults(void)
+{
+	char extendno_org[14];
+	int ext_num;
+	char ext_commit_str[8];
+	struct nvram_tuple *t;
+
+	dbg("Restoring bsd settings...\n");
+
+	if (!strlen(nvram_safe_get("extendno_org")) || nvram_match("extendno_org", nvram_safe_get("extendno")))
+		return;
+
+	strcpy(extendno_org, nvram_safe_get("extendno_org"));
+	if (!strlen(extendno_org) || sscanf(extendno_org, "%d-g%s", &ext_num, ext_commit_str) != 2)
+		return;
+
+
+	for (t = router_defaults; t->name; t++)
+		if (strstr(t->name, "bsd"))
+			nvram_set(t->name, t->value);
+}
+#endif
+
 
 static void
 restore_defaults(void)
@@ -478,7 +533,10 @@ static int init_vlan_ports(void)
 	case MODEL_RTAC67U:
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
-    	case MODEL_RTAC1900P:
+	case MODEL_RTAC1900P:
+#ifdef TCONFIG_BCM7
+	case MODEL_RTAC3200:
+#endif
 	case MODEL_AC15:
 	case MODEL_AC18:
 	case MODEL_F9K1113v2_20X0:
@@ -487,6 +545,12 @@ static int init_vlan_ports(void)
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
 		break;
+#ifdef TCONFIG_BCM7
+	case MODEL_R8000:
+		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
+		dirty |= check_nv("vlan2ports", "4 8");
+		break;
+#endif
 	case MODEL_EA6350v1:
 	case MODEL_EA6400:
 	case MODEL_EA6700:
@@ -537,6 +601,14 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
 #endif /* CONFIG_BCMWL6A */
+#ifdef CONFIG_BCM7
+	case MODEL_R8000:
+		nvram_unset("et1macaddr");
+		dirty |= check_nv("wl0_ifname", "eth2");
+		dirty |= check_nv("wl1_ifname", "eth1");
+		dirty |= check_nv("wl2_ifname", "eth3");
+		break;
+#endif
 	default:
 		/* nothing to do right now */
 		break;
@@ -1072,6 +1144,178 @@ static int init_nvram(void)
 			nvram_set("1:ccode", "SG");
 		}
 		break;
+#ifdef TCONFIG_BCM7
+	case MODEL_RTAC3200:
+		mfr = "Asus";
+		name = "RT-AC3200";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("lan_invert", "1");
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1 wl2");
+			nvram_set("lan_ifnames", "vlan1 eth2 eth1 eth3");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth2 eth1 eth3");
+			nvram_set("wl_ifname", "eth2");
+			nvram_set("wl0_ifname", "eth2");
+			nvram_set("wl1_ifname", "eth1");
+			nvram_set("wl2_ifname", "eth3");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
+
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("1:macaddr", s);			/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("0:macaddr", s);			/* fix WL mac for wl1 (0:) - 5GHz low (first one) - eth1 */
+			nvram_set("wl1_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("2:macaddr", s);			/* fix WL mac for wl2 (2:) - 5GHz high (second one) - eth3 */
+			nvram_set("wl2_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			/* wl0 (1:) - 2,4GHz */
+			nvram_set("wl0_bw_cap","3");
+			nvram_set("wl0_chanspec","6u");
+			nvram_set("wl0_channel","6");
+			nvram_set("wl0_nbw","40");
+			nvram_set("wl0_nctrlsb", "upper");
+			nvram_set("1:ccode", "SG");
+			nvram_set("1:regrev", "12");
+			/* wl1 (0:) - 5GHz low */
+			nvram_set("wl1_bw_cap", "7");
+			nvram_set("wl1_chanspec", "36/80");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw","80");
+			nvram_set("wl1_nbw_cap","3");
+			nvram_set("wl1_nctrlsb", "lower");
+			nvram_set("0:ccode", "SG");
+			nvram_set("0:regrev", "12");
+			/* wl2 (2:) - 5GHz high */
+			nvram_set("wl2_bw_cap", "7");
+			nvram_set("wl2_chanspec", "104/80");
+			nvram_set("wl2_channel", "104");
+			nvram_set("wl2_nbw","80");
+			nvram_set("wl2_nbw_cap","3");
+			nvram_set("wl2_nctrlsb", "upper");
+			nvram_set("2:ccode", "SG");
+			nvram_set("2:regrev", "12");
+
+			bsd_defaults();
+			set_bcm4360ac_vars();
+		}
+		break;
+	case MODEL_R8000:
+		mfr = "Netgear";
+		name = "R8000";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("vlan1hwname", "et2");
+			nvram_set("vlan2hwname", "et2");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1 wl2");
+			nvram_set("lan_ifnames", "vlan1 eth2 eth1 eth3");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth2 eth1 eth3");
+			nvram_set("wl_ifname", "eth2");
+			nvram_set("wl0_ifname", "eth2");
+			nvram_set("wl1_ifname", "eth1");
+			nvram_set("wl2_ifname", "eth3");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
+
+			/* GMAC3 variables */
+			nvram_set("fwd_cpumap", "d:x:2:169:1 d:l:5:169:1 d:u:5:163:0");
+			nvram_set("fwd_wlandevs", "");
+			nvram_set("fwddevs", "");
+
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et2macaddr"));	/* get et2 MAC address for LAN */
+			nvram_set("et0macaddr", s); 			/* copy et2macaddr to et0macaddr (see also function start_vlan(void) at rc/interface.c */
+			inc_mac(s, +2);					/* MAC + 1 will be for WAN */
+			nvram_set("1:macaddr", s);			/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("0:macaddr", s);			/* fix WL mac for wl1 (0:) - 5GHz high - eth1 */
+			nvram_set("wl1_hwaddr", s);
+			inc_mac(s, +4);					/* do not overlap with VIFs */
+			nvram_set("2:macaddr", s);			/* fix WL mac for wl2 (2:) - 5GHz low - eth3 */
+			nvram_set("wl2_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			/* wl0 (1:) - 2,4GHz */
+			nvram_set("wl0_bw_cap","3");
+			nvram_set("wl0_chanspec","6u");
+			nvram_set("wl0_channel","6");
+			nvram_set("wl0_nbw","40");
+			nvram_set("wl0_nctrlsb", "upper");
+			nvram_set("1:ccode", "SG");
+			nvram_set("1:regrev", "12");
+			/* wl1 (0:) - 5GHz high */
+			nvram_set("wl1_bw_cap", "7");
+			nvram_set("wl1_chanspec", "100/80");
+			nvram_set("wl1_channel", "100");
+			nvram_set("wl1_nbw","80");
+			nvram_set("wl1_nbw_cap","3");
+			nvram_set("wl1_nctrlsb", "lower");
+			nvram_set("0:ccode", "SG");
+			nvram_set("0:regrev", "12");
+			/* wl2 (2:) - 5GHz low */
+			nvram_set("wl2_bw_cap", "7");
+			nvram_set("wl2_chanspec", "40/80");
+			nvram_set("wl2_channel", "40");
+			nvram_set("wl2_nbw","80");
+			nvram_set("wl2_nbw_cap","3");
+			nvram_set("wl2_nctrlsb", "upper");
+			nvram_set("2:ccode", "SG");
+			nvram_set("2:regrev", "12");
+
+			/* fix devpath */
+			nvram_set("devpath0", "pcie/1/1");
+			nvram_set("devpath1", "pcie/2/3");
+			nvram_set("devpath2", "pcie/2/4");
+
+			bsd_defaults();
+			set_r8000_vars();
+		}
+		break;
+#endif /* TCONFIG_BCM7 */
 	case MODEL_AC15:
 		mfr = "Tenda";
 		name = "AC15";
@@ -5419,7 +5663,11 @@ static void sysinit(void)
 	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
 
 	/* load after init_nvram */
-	//load_wl(); /* see function start_lan() */
+#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_DHDAP
+	load_wl(); /* for sdk6 see function start_lan() */
+#endif
+#endif
 
 	//config_loopback(); /* see function start_lan() */
 
@@ -5624,9 +5872,7 @@ int reboothalt_main(int argc, char *argv[])
 	int reboot = (strstr(argv[0], "reboot") != NULL);
 	int def_reset_wait = 30;
 
-	puts(reboot ? "Rebooting..." : "Shutting down...");
-	fflush(stdout);
-	sleep(1);
+	cprintf(reboot ? "Rebooting...\n" : "Shutting down...\n");
 	kill(1, reboot ? SIGTERM : SIGQUIT);
 
 	int wait = nvram_get_int("reset_wait") ? : def_reset_wait;
@@ -5640,8 +5886,10 @@ int reboothalt_main(int argc, char *argv[])
 
 		f_write("/proc/sysrq-trigger", "s", 1, 0 , 0); /* sync disks */
 		sleep(wait);
-		puts("Still running... Doing machine reset.");
-		fflush(stdout);
+		cprintf("Still running... Doing machine reset.\n");
+#ifdef TCONFIG_USB
+		remove_usb_module();
+#endif
 		f_write("/proc/sysrq-trigger", "s", 1, 0 , 0); /* sync disks */
 		sleep(1);
 		f_write("/proc/sysrq-trigger", "b", 1, 0 , 0); /* machine reset */

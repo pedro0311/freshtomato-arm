@@ -493,7 +493,6 @@ searchWAN() {
 	[ "$FOUND" -eq 1 ] && {
 		findType	# MODULE --> MTYPE
 
-		nvram set "$PREFIX"_modem_modules="$MODULE"	# add first one
 		nvram set "$PREFIX"_modem_if="$WAN"
 		nvram set "$PREFIX"_modem_type="$MTYPE"
 		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
@@ -515,7 +514,7 @@ isDiag() {
 
 searchDiag() {
 	DEVNR=""
-	local IS_MLOADED=0 MODIN="" TTYS=""
+	local IS_MLOADED=0 TTYS=""
 	local PATHDEV
 
 	[ -z "$DEVICENAME" ] && DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
@@ -566,8 +565,6 @@ searchDiag() {
 			$LOGS "4G MODEM ready - DIAG(s) found ("$TTYS")"
 			echo $TTYS > $DIAGSFILE
 			DEVNR=$(echo "$TTYS" | cut -d " " -f1)
-			MODIN=$(NV "$PREFIX"_modem_modules)
-			nvram set "$PREFIX"_modem_modules="$MODIN usbserial"
 			nvram set "$PREFIX"_modem_dev="$DEVNR"
 			nvram set "$PREFIX"_modem_devicename="$DEVICENAME"
 		}

@@ -195,7 +195,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_modem_roam",		"2"				, 0 },
 	{ "wan_modem_if",		""				, 0 },
 	{ "wan_modem_type",		""				, 0 },
-	{ "wan_modem_modules",		""				, 0 },
 
 	{ "wan2_modem_pin",		""				, 0 },
 	{ "wan2_modem_dev",		""				, 0 },
@@ -206,7 +205,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_modem_roam",		"2"				, 0 },
 	{ "wan2_modem_if",		""				, 0 },
 	{ "wan2_modem_type",		""				, 0 },
-	{ "wan2_modem_modules",		""				, 0 },
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		""				, 0 },
@@ -218,7 +216,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_modem_roam",		"2"				, 0 },
 	{ "wan3_modem_if",		""				, 0 },
 	{ "wan3_modem_type",		""				, 0 },
-	{ "wan3_modem_modules",		""				, 0 },
 
 	{ "wan4_modem_pin",		""				, 0 },
 	{ "wan4_modem_dev",		""				, 0 },
@@ -229,7 +226,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_modem_roam",		"2"				, 0 },
 	{ "wan4_modem_if",		""				, 0 },
 	{ "wan4_modem_type",		""				, 0 },
-	{ "wan4_modem_modules",		""				, 0 },
 #endif
 #endif
 
@@ -854,6 +850,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "http_passwd",		"admin"				, 0 },	// Password
 	{ "remote_management",		"0"				, 0 },	// Remote Management [1|0]
 	{ "remote_mgt_https",		"0"				, 0 },	// Remote Management use https [1|0]
+	{ "remote_upgrade",		"0"				, 0 },	/* allow remote upgrade [1|0] - for brave guys */
 	{ "http_wanport",		"8080"				, 0 },	// WAN port to listen on
 	{ "http_lanport",		"80"				, 0 },	// LAN port to listen on
 	{ "https_lanport",		"443"				, 0 },	// LAN port to listen on
