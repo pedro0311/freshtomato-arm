@@ -91,7 +91,7 @@ function earlyInit() {
 <div id="afu-input">
 	<div class="section-title">Upgrade Firmware</div>
 	<div class="section">
-		<div class="fields" id="upgradenotice" style="display:none"><div class="about"><b>Note: Remote upgrade is disabled. You can enabled it (not recommended) <a href="admin-access.asp">here</a>.</b></div></div>
+		<div class="fields" id="upgradenotice" style="display:none"><div class="about"><b>Note: Remote upgrade is disabled. You can enable it (not recommended) <a href="admin-access.asp">here</a>.</b></div></div>
 		<div>
 			<div class="afu-form">Select the file to use:</div>
 			<form name="form_upgrade" method="post" action="upgrade.cgi" enctype="multipart/form-data">
