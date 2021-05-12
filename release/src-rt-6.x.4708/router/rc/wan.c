@@ -45,6 +45,12 @@
 #include <linux/sockios.h>
 #include <linux/if_vlan.h>
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"wan_debug"
+
+
+extern int g_upgrade;
 
 static int config_pppd(int wan_proto, int num, char *prefix)
 {
@@ -790,7 +796,7 @@ void start_wan_if(char *prefix)
 
 	if (strcmp(wan_ifname, "none") == 0) {
 		nvram_set(strcat_r(prefix, "_proto", tmp), "disabled");
-		syslog(LOG_WARNING, "%s ifname is NONE, please check you vlan settings!", prefix);
+		logmsg(LOG_WARNING, "%s ifname is NONE, please check you vlan settings!", prefix);
 	}
 
 	/* Defined in shared.h, misc.c */
@@ -852,7 +858,7 @@ void start_wan_if(char *prefix)
 	/* Try to increase WAN interface MTU to allow PPPoE MTU/MRU 1500 (default 1492, with 8 byte overhead) */
 	mtu = nvram_get_int(strcat_r(prefix, "_mtu", tmp)); /* get mtu again */
 	if ((jumbo_enable) && (mtu == 1500) && (wan_proto == WP_PPPOE)) {
-		syslog(LOG_INFO, "Try to increase WAN MTU up to 1500 for ISPs that support RFC 4638");
+		logmsg(LOG_INFO, "Try to increase WAN MTU up to 1500 for ISPs that support RFC 4638");
 
 		/* set parent device --> should be "eth0" */
 		strncpy(ifv.device1, wan_ifname, IFNAMSIZ);
@@ -863,10 +869,10 @@ void start_wan_if(char *prefix)
 
 			if (ioctl(sd, SIOCSIFMTU, &ifr)) {
 				perror(wan_ifname);
-				syslog(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+				logmsg(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 			}
 			else
-				syslog(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+				logmsg(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 		}
 
 		/* set wan device --> for example "vlan7" */
@@ -874,10 +880,10 @@ void start_wan_if(char *prefix)
 		ifr.ifr_mtu = mtu + 8;
 		if (ioctl(sd, SIOCSIFMTU, &ifr)) {
 			perror(wan_ifname);
-			syslog(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+			logmsg(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 		}
 		else
-			syslog(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
+			logmsg(LOG_INFO, "Increase MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 
 	}
 
@@ -899,9 +905,11 @@ void start_wan_if(char *prefix)
 	case WP_LTE:
 	case WP_L2TP:
 	case WP_PPTP:
-		if (wan_proto == WP_LTE)
+		if (wan_proto == WP_LTE) {
 			/* Prepare LTE modem */
-			xstart("switch4g", prefix);
+			if (!g_upgrade)
+				xstart("switch4g", prefix);
+		}
 		else if (using_dhcpc(prefix)) {
 			stop_dhcpc(prefix);
 			start_dhcpc(prefix);
@@ -957,7 +965,7 @@ void start_wan(void)
 	if (mwan_num < 1 || mwan_num > MWAN_MAX)
 		mwan_num = 1;
 
-	syslog(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
+	logmsg(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
@@ -1290,7 +1298,8 @@ void stop_wan_if(char *prefix)
 	if (wan_proto == WP_LTE) {
 		killall_tk_period_wait("switch4g", 50); /* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
-		sleep(3); /* Wait a litle for disconnect */
+		if (!g_upgrade)
+			sleep(3); /* Wait a litle for disconnect */
 	}
 
 	/* Bring down WAN interfaces */
@@ -1321,7 +1330,7 @@ void stop_wan_if(char *prefix)
 	if (wan_proto == WP_PPTP || wan_proto == WP_L2TP || wan_proto == WP_PPPOE || wan_proto == WP_PPP3G) {
 		nvram_set(strcat_r(prefix, "_ppp_get_ip", tmp), "0.0.0.0");
 		nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
-		/* For debug. Don't fool wantchdog / mwan scripts with old obsolete interface, it can be actually used on other wan (ex: ppp0) */
+		/* For debug. Don't fool watchdog / mwan scripts with old obsolete interface, it can be actually used on other wan (ex: ppp0) */
 		nvram_set(strcat_r(prefix, "_iface", tmp), "none");
 	}
 }
@@ -1334,7 +1343,10 @@ void stop_wan(void)
 
 	stop_bwlimit();
 	stop_upnp();
-	stop_firewall();
+#ifdef TCONFIG_OPENVPN
+	stop_ovpn_all();
+#endif
+	stop_pptp_client_eas();
 	stop_igmp_proxy();
 	stop_udpxy();
 	stop_ntpd();
@@ -1344,12 +1356,7 @@ void stop_wan(void)
 	stop_dhcp6c();
 	nvram_set("ipv6_get_dns", "");
 #endif
-
-#ifdef TCONFIG_OPENVPN
-	stop_ovpn_all();
-#endif
-
-	stop_pptp_client_eas();
+	stop_firewall();
 	stop_adblock();
 	clear_resolv();
 	stop_wan_if("wan");
@@ -1361,5 +1368,4 @@ void stop_wan(void)
 #endif
 
 	xstart("watchdog", "del");
-
 }

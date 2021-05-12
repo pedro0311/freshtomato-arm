@@ -1438,8 +1438,12 @@ static void filter_forward(void)
 	ip6t_write("-A FORWARD -p ipv6-nonxt -m length --length 40 -j ACCEPT\n");
 
 	/* ICMPv6 rules */
-	for (i = 0; i < sizeof(allowed_icmpv6)/sizeof(int); ++i)
-		ip6t_write("-A FORWARD -p ipv6-icmp --icmpv6-type %i -j %s\n", allowed_icmpv6[i], chain_in_accept);
+	for (i = 0; i < sizeof(allowed_icmpv6)/sizeof(int); ++i) {
+		if ((allowed_icmpv6[i] == 128) && !nvram_get_int("block_wan")) /* ratelimit ipv6 ping */
+			ip6t_write("-A FORWARD -p ipv6-icmp --icmpv6-type %i -m limit --limit 5/s -j %s\n", allowed_icmpv6[i], chain_in_accept);
+		else
+			ip6t_write("-A FORWARD -p ipv6-icmp --icmpv6-type %i -j %s\n", allowed_icmpv6[i], chain_in_accept);
+	}
 
 	/* IPv6 IPSec - RFC 6092 */
 	if ((nvram_match("ipv6_ipsec", "1")) && (*wan6face))
@@ -1667,7 +1671,10 @@ static void filter6_input(void)
 
 	/* ICMPv6 rules */
 	for (n = 0; n < sizeof(allowed_icmpv6)/sizeof(int); n++) {
-		ip6t_write("-A INPUT -p ipv6-icmp --icmpv6-type %i -j %s\n", allowed_icmpv6[n], chain_in_accept);
+		if ((allowed_icmpv6[n] == 128) && !nvram_get_int("block_wan")) /* ratelimit ipv6 ping */
+			ip6t_write("-A INPUT -p ipv6-icmp --icmpv6-type %i -m limit --limit 5/s -j %s\n", allowed_icmpv6[n], chain_in_accept);
+		else
+			ip6t_write("-A INPUT -p ipv6-icmp --icmpv6-type %i -j %s\n", allowed_icmpv6[n], chain_in_accept);
 	}
 	for (n = 0; n < sizeof(allowed_local_icmpv6)/sizeof(int); n++) {
 		ip6t_write("-A INPUT -p ipv6-icmp --icmpv6-type %i -j %s\n", allowed_local_icmpv6[n], chain_in_accept);

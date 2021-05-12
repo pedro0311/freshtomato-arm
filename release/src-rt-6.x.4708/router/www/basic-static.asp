@@ -85,7 +85,7 @@ sg.setup = function() {
 		if (t.length == 4) {
 			var d = t[0].split(',');
 			for (var j = 0; j < ipt.length; ++j) {
-				if (t[1] == ipt[j]) {
+				if (t[1].length > 0 && t[1] == ipt[j]) {
 					h = '1';
 					break;
 				}
@@ -203,23 +203,25 @@ sg.verifyFields = function(row, quiet) {
 		}
 	}
 
-	if (!v_ip(f[3], 1)) {
-		ferror.set(f[3], 'Invalid IP address', quiet);
-		return 0;
-	}
-
-	/* 0 and 255 in last octet is not allowed */
-	if ((i = f[3].value.lastIndexOf('.')) != -1) {
-		s = parseInt(f[3].value.substr(i + 1), 10);
-		if ((s <= 0) || (s >= 255)) {
+	if (f[3].value != '') {
+		if (!v_ip(f[3], 1)) {
 			ferror.set(f[3], 'Invalid IP address', quiet);
 			return 0;
 		}
-	}
 
-	if ((!isMAC0(f[0].value)) && (this.inStatic(f[3].value))) {
-		ferror.set(f[3], 'Duplicate IP address', quiet);
-		return 0;
+		/* 0 and 255 in last octet is not allowed */
+		if ((i = f[3].value.lastIndexOf('.')) != -1) {
+			s = parseInt(f[3].value.substr(i + 1), 10);
+			if ((s <= 0) || (s >= 255)) {
+				ferror.set(f[3], 'Invalid IP address', quiet);
+				return 0;
+			}
+		}
+
+		if ((!isMAC0(f[0].value)) && (this.inStatic(f[3].value))) {
+			ferror.set(f[3], 'Duplicate IP address', quiet);
+			return 0;
+		}
 	}
 
 /* REMOVE-BEGIN
@@ -230,8 +232,8 @@ REMOVE-END */
 	s = f[5].value.trim().replace(/\s+/g, ' ');
 
 	if (s.length > 0) {
-		if (s.search(/^[.a-zA-Z0-9_\- ]+$/) == -1) {
-			ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 . - _" are allowed', quiet);
+		if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
+			ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
 			return 0;
 		}
 		if (this.existName(s)) {
@@ -354,6 +356,7 @@ function init() {
 	<ul>
 		<li><small><b>Other relevant notes/hints:</b></small>
 			<ul>
+				<li><small>To associate a name to a MAC address (useful for the Device list page) while retaining dynamic DHCP allocation, just leave the IP address field empty.</small></li>
 				<li><small>To specify multiple hostnames for a device, separate them with spaces.</small></li>
 				<li><small>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</small></li>
 				<li><small>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</small></li>

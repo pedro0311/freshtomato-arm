@@ -80,7 +80,7 @@ void start_mysql(void)
 	if (strlen(pdatadir) == 0) {
 		strcpy (pdatadir, "data");
 		nvram_set("mysql_dir", "data");
-}
+	}
 	memset(full_datadir, 0, 256);
 	if (pdatadir[0] == '/')
 		sprintf(full_datadir, "%s%s", ppr, pdatadir);
@@ -271,32 +271,34 @@ void stop_mysql(void)
 	FILE *fp;
 	char pbi[128];
 
-	if (nvram_match("mysql_binary", "internal"))
-		strcpy(pbi, "/usr/bin");
-	else if (nvram_match("mysql_binary", "optware"))
-		strcpy(pbi, "/opt/bin");
-	else
-		strcpy(pbi, nvram_safe_get("mysql_binary_custom"));
+	if (pidof("mysqld") > 0) {
+		if (nvram_match("mysql_binary", "internal"))
+			strcpy(pbi, "/usr/bin");
+		else if (nvram_match("mysql_binary", "optware"))
+			strcpy(pbi, "/opt/bin");
+		else
+			strcpy(pbi, nvram_safe_get("mysql_binary_custom"));
 
-	/* stop script */
-	if (!(fp = fopen(MYSQL_STOP_SCRIPT, "w"))) {
-		perror(MYSQL_STOP_SCRIPT);
-		return;
+		/* stop script */
+		if (!(fp = fopen(MYSQL_STOP_SCRIPT, "w"))) {
+			perror(MYSQL_STOP_SCRIPT);
+			return;
+		}
+
+		fprintf(fp, "#!/bin/sh\n\n"
+		            "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown\n"
+		            "killall mysqld\n"
+		            "logger \"MySQL successfully stopped\" \n"
+		            "sleep 1\n"
+		            "rm -f /var/run/mysql.pid\n"
+		            "/usr/bin/mycheck addcru\n",
+		            pbi,
+		            nvram_safe_get("mysql_passwd"));
+
+		fclose(fp);
+
+		chmod(MYSQL_STOP_SCRIPT, 0755);
+
+		xstart(MYSQL_STOP_SCRIPT);
 	}
-
-	fprintf(fp, "#!/bin/sh\n\n"
-	            "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown\n"
-	            "killall mysqld\n"
-	            "logger \"MySQL successfully stopped\" \n"
-	            "sleep 1\n"
-	            "rm -f /var/run/mysql.pid\n"
-	            "/usr/bin/mycheck addcru\n",
-	            pbi,
-	            nvram_safe_get("mysql_passwd"));
-
-	fclose(fp);
-
-	chmod(MYSQL_STOP_SCRIPT, 0755);
-
-	xstart(MYSQL_STOP_SCRIPT);
 }

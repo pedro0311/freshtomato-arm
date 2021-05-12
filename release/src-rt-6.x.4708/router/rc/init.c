@@ -12,7 +12,9 @@
 
 
 #include "rc.h"
+#ifdef TCONFIG_BCM7
 #include "shared.h"
+#endif
 
 #include <ctype.h>
 #include <termios.h>
@@ -88,13 +90,11 @@ bsd_defaults(void)
 
 	dbg("Restoring bsd settings...\n");
 
-	if (!strlen(nvram_safe_get("extendno_org")) ||
-	    nvram_match("extendno_org", nvram_safe_get("extendno")))
+	if (!strlen(nvram_safe_get("extendno_org")) || nvram_match("extendno_org", nvram_safe_get("extendno")))
 		return;
 
 	strcpy(extendno_org, nvram_safe_get("extendno_org"));
-	if (!strlen(extendno_org) ||
-	    sscanf(extendno_org, "%d-g%s", &ext_num, ext_commit_str) != 2)
+	if (!strlen(extendno_org) || sscanf(extendno_org, "%d-g%s", &ext_num, ext_commit_str) != 2)
 		return;
 
 
@@ -534,7 +534,9 @@ static int init_vlan_ports(void)
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 	case MODEL_RTAC1900P:
+#ifdef TCONFIG_BCM7
 	case MODEL_RTAC3200:
+#endif
 	case MODEL_AC15:
 	case MODEL_AC18:
 	case MODEL_F9K1113v2_20X0:
@@ -543,10 +545,12 @@ static int init_vlan_ports(void)
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
 		break;
+#ifdef TCONFIG_BCM7
 	case MODEL_R8000:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
 		dirty |= check_nv("vlan2ports", "4 8");
 		break;
+#endif
 	case MODEL_EA6350v1:
 	case MODEL_EA6400:
 	case MODEL_EA6700:
@@ -1140,6 +1144,7 @@ static int init_nvram(void)
 			nvram_set("1:ccode", "SG");
 		}
 		break;
+#ifdef TCONFIG_BCM7
 	case MODEL_RTAC3200:
 		mfr = "Asus";
 		name = "RT-AC3200";
@@ -1310,6 +1315,7 @@ static int init_nvram(void)
 			set_r8000_vars();
 		}
 		break;
+#endif /* TCONFIG_BCM7 */
 	case MODEL_AC15:
 		mfr = "Tenda";
 		name = "AC15";
@@ -5657,8 +5663,10 @@ static void sysinit(void)
 	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
 
 	/* load after init_nvram */
+#ifdef TCONFIG_BCM7
 #ifdef TCONFIG_DHDAP
 	load_wl(); /* for sdk6 see function start_lan() */
+#endif
 #endif
 
 	//config_loopback(); /* see function start_lan() */
@@ -5848,8 +5856,11 @@ int init_main(int argc, char *argv[])
 			break;
 		}
 
-		chld_reap(0); /* Periodically reap zombies. */
-		check_services();
+		if (!g_upgrade) {
+			chld_reap(0); /* Periodically reap zombies. */
+			check_services();
+		}
+
 		sigwait(&sigset, &state);
 	}
 
@@ -5859,23 +5870,26 @@ int init_main(int argc, char *argv[])
 int reboothalt_main(int argc, char *argv[])
 {
 	int reboot = (strstr(argv[0], "reboot") != NULL);
-	puts(reboot ? "Rebooting..." : "Shutting down...");
-	fflush(stdout);
-	sleep(1);
+	int def_reset_wait = 30;
+
+	cprintf(reboot ? "Rebooting...\n" : "Shutting down...\n");
 	kill(1, reboot ? SIGTERM : SIGQUIT);
 
+	int wait = nvram_get_int("reset_wait") ? : def_reset_wait;
 	/* In the case we're hung, we'll get stuck and never actually reboot.
 	 * The only way out is to pull power.
-	 * So after 'reset_wait' seconds (default: 20), forcibly crash & restart.
+	 * So after 'reset_wait' seconds (default: 30), forcibly crash & restart.
 	 */
 	if (fork() == 0) {
-		int wait = nvram_get_int("reset_wait") ? : 20;
-		if ((wait < 10) || (wait > 120)) wait = 10;
+		if ((wait < 10) || (wait > 120))
+			wait = 10;
 
 		f_write("/proc/sysrq-trigger", "s", 1, 0 , 0); /* sync disks */
 		sleep(wait);
-		puts("Still running... Doing machine reset.");
-		fflush(stdout);
+		cprintf("Still running... Doing machine reset.\n");
+#ifdef TCONFIG_USB
+		remove_usb_module();
+#endif
 		f_write("/proc/sysrq-trigger", "s", 1, 0 , 0); /* sync disks */
 		sleep(1);
 		f_write("/proc/sysrq-trigger", "b", 1, 0 , 0); /* machine reset */
@@ -5883,4 +5897,3 @@ int reboothalt_main(int argc, char *argv[])
 
 	return 0;
 }
-

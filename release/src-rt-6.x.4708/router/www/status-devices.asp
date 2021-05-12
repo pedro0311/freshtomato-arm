@@ -274,20 +274,20 @@ dg.populate = function() {
 		var proto = nvram['wan'+k+'_proto'];
 		if ((proto == 'pppoe' || proto == 'pptp' || proto == 'l2tp') && nvram['wan'+k+'_hwaddr']) {
 			e = get(nvram['wan'+k+'_hwaddr'], null);
-			e.ifname = nvram['wan'+k+'_iface'];
+			e.ifname = (nvram['wan'+k+'_iface'] ? nvram['wan'+k+'_iface'] : (nvram['wan'+k+'_ifname'] ? nvram['wan'+k+'_ifname'] : 'ppp+'));
 			var face = (nvram['wan'+k+'_ifname'] ? nvram['wan'+k+'_ifname'] : (nvram['wan'+k+'_ifnameX'] ? nvram['wan'+k+'_ifnameX'] : ''));
 			var ip = nvram['wan'+k+'_ppp_get_ip'];
 			var gw = nvram['wan'+k+'_gateway_get'];
-			if (gw == '0.0.0.0' || gw == '')
+			if ((!gw) || (gw == '0.0.0.0'))
 				gw = nvram['wan'+k+'_gateway'];
 
-			e.ip = 'r:&nbsp;'+gw+'<br>l:&nbsp;'+ip;
+			e.ip = 'r:&nbsp;'+gw+(ip && ip != '0.0.0.0' ? '<br>l:&nbsp;'+ip : '');
 			var ip2 = nvram['wan'+k+'_ipaddr'];
 			var gw2 = nvram['wan'+k+'_gateway'];
 			if (nvram['wan'+k+'_pptp_dhcp'] == '1') {
-				if (gw2 != '' && gw2 != '0.0.0.0' && gw2 != gw && ip2 != '' && ip2 != '0.0.0.0' && ip2 != ip) {
+				if (gw2 && gw2 != '0.0.0.0' && gw2 != gw && ip2 && ip2 != '0.0.0.0' && ip2 != ip) {
 					e.ip = 'r:&nbsp;'+gw+'<br>l:&nbsp;'+ip;
-					e. name = 'r:&nbsp;'+gw2+(face ? '&nbsp;<small>('+face+')<\/small>' : '')+'<br>l:&nbsp;'+ip2+(face ? '&nbsp;<small>('+face+')<\/small>' : '');
+					e.name = 'r:&nbsp;'+gw2+(face ? '&nbsp;<small>('+face+')<\/small>' : '')+'<br>l:&nbsp;'+ip2+(face ? '&nbsp;<small>('+face+')<\/small>' : '');
 				}
 			}
 			else {
@@ -307,7 +307,7 @@ dg.populate = function() {
 		e.name = a[0];
 	}
 
-	/* [ "IP", "MAC", "wwan0/br0/1" ] */
+	/* [ "IP", "MAC", "br0/wwan0", "name" ] */
 	for (i = arplist.length - 1; i >= 0; --i) {
 		a = arplist[i];
 		if ((e = get(a[1], a[0])) != null) {
@@ -315,6 +315,8 @@ dg.populate = function() {
 				e.ifname = a[2];
 
 			e.bridge = a[2];
+			if (e.name == '')
+				e.name = a[3];
 		}
 	}
 

@@ -413,6 +413,15 @@ void setup_conntrack(void)
 	}
 }
 
+void remove_conntrack(void)
+{
+	ct_modprobe_r("pptp");
+	ct_modprobe_r("ftp");
+	ct_modprobe_r("rtsp");
+	ct_modprobe_r("h323");
+	ct_modprobe_r("sip");
+}
+
 int host_addr_info(const char *name, int af, struct sockaddr_storage *buf)
 {
 	struct addrinfo hints;

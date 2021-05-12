@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
+//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,remote_upgrade,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -267,6 +267,7 @@ function save() {
 /* HTTPS-END */
 
 	fom.web_wl_filter.value = fom._f_http_wireless.checked ? 0 : 1;
+	fom.remote_upgrade.value = fom._f_remote_upgrade.checked ? 0 : 1;
 
 	a = (fom._web_css.value.match(/at-/g));
 	fom.web_adv_scripts.value = (fom._f_web_adv_scripts.checked && a) ? 1 : 0;
@@ -346,6 +347,7 @@ function init() {
 <!-- HTTPS-END -->
 <input type="hidden" name="remote_management">
 <input type="hidden" name="web_wl_filter">
+<input type="hidden" name="remote_upgrade">
 <input type="hidden" name="web_adv_scripts">
 <input type="hidden" name="telnetd_eas">
 <input type="hidden" name="sshd_eas">
@@ -370,14 +372,14 @@ function init() {
 			          ],
 				value:
 /* HTTPS-BEGIN */
-				 ((nvram.https_enable != 0) ? 2 : 0) |
+				      ((nvram.https_enable != 0) ? 2 : 0) |
 /* HTTPS-END */
-				  ((nvram.http_enable != 0) ? 1 : 0) },
+				       ((nvram.http_enable != 0) ? 1 : 0) },
 				{ title: 'HTTP Port', indent: 2, name: 'http_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.http_lanport, 80) },
 /* HTTPS-BEGIN */
 				{ title: 'HTTPS Port', indent: 2, name: 'https_lanport', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.https_lanport, 443) },
 			{ title: 'SSL Certificate', rid: 'row_sslcert' },
-				{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 40, value: nvram.https_crt_cn, suffix: '&nbsp;<small>(optional; space separated)<\/small>' },
+				{ title: 'Common Name (CN)', indent: 2, name: 'https_crt_cn', type: 'text', maxlen: 64, size: 40, suffix: '&nbsp;<small>(optional; space separated)<\/small>', value: nvram.https_crt_cn },
 				{ title: 'Regenerate', indent: 2, name: 'f_https_crt_gen', type: 'checkbox', value: 0 },
 				{ title: 'Save In NVRAM', indent: 2, name: 'f_https_crt_save', type: 'checkbox', value: nvram.https_crt_save == 1 },
 /* HTTPS-END */
@@ -386,25 +388,26 @@ function init() {
 			          ,[2,'HTTPS']
 /* HTTPS-END */
 			          ],
-				value:  (nvram.remote_management == 1) ? (
+				value: (nvram.remote_management == 1) ? (
 /* HTTPS-BEGIN */
-				 (nvram.remote_mgt_https == 1) ? 2 :
+				        (nvram.remote_mgt_https == 1) ? 2 :
 /* HTTPS-END */
-				  1) : 0 },
+				        1) : 0 },
 				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
-			{ title: 'Allow Wireless Access', name: 'f_http_wireless', type: 'checkbox', value:  nvram.web_wl_filter == 0 },
+			{ title: 'Allow Remote Upgrade', name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
+			{ title: 'Allow Wireless Access', name: 'f_http_wireless', type: 'checkbox', value: nvram.web_wl_filter == 0 },
 			null,
 			{ title: 'Directory with GUI files', name: 'web_dir', type: 'select',
-				options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], value: nvram.web_dir, suffix: '<br>&nbsp;<small>Please be sure of your decision before change this settings!<\/small>' },
+				options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], suffix: '<br>&nbsp;<small>Please be sure of your decision before change this settings!<\/small>', value: nvram.web_dir },
 			{ title: 'Color Scheme', name: 'web_css', type: 'select',
 				options: [['default','Default'],['usbred','USB Red'],['red','Tomato'],['black','Black'],['blue','Blue'],['bluegreen','Blue &amp; Green (Lighter)'],['bluegreen2','Blue &amp; Green (Darker)'],
 					  ['brown','Brown'],['cyan','Cyan'],['olive','Olive'],['pumpkin','Pumpkin'],['asus','Asus RT-N16'],['rtn66u','Asus RT-N66U'],['asusred','Asus Red'],['linksysred','Linksys Red'],
 					  ['at-dark','Advanced Dark'],['at-red','Advanced Red'],['at-blue','Advanced Blue'],['at-green','Advanced Green'],
-					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], value: nvram.web_css, suffix: '&nbsp;<small id="web_css_warn">(requires a modern browser)<\/small>' },
-				{ title: 'Dynamic BW/IPT charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', value: nvram.web_adv_scripts == 1, suffix: '&nbsp;<small>(JS based, supported only by some browsers)<\/small>' },
-				{ title: 'TTB theme name', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 35, value: nvram.ttb_css, suffix: '&nbsp;<small>TTB theme <a href="http://tomatothemebase.eu/wp-content/uploads/themes.txt" class="new_window"><u><i>list<\/i><\/u><\/a> and full <a href="http://www.tomatothemebase.eu" class="new_window"><u><i>gallery<\/i><\/u><\/a><\/small>' },
+					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], suffix: '&nbsp;<small id="web_css_warn">(requires a modern browser)<\/small>', value: nvram.web_css },
+				{ title: 'Dynamic BW/IPT charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', suffix: '&nbsp;<small>(JS based, supported only by some browsers)<\/small>', value: nvram.web_adv_scripts == 1 },
+				{ title: 'TTB theme name', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 35, suffix: '&nbsp;<small>TTB theme <a href="http://tomatothemebase.eu/wp-content/uploads/themes.txt" class="new_window"><u><i>list<\/i><\/u><\/a> and full <a href="http://www.tomatothemebase.eu" class="new_window"><u><i>gallery<\/i><\/u><\/a><\/small>', value: nvram.ttb_css },
 /* USB-BEGIN */
-				{ title: 'TTB save folder', indent: 2, name: 'ttb_loc', type: 'text', maxlen: 35, size: 35, value: nvram.ttb_loc, suffix: '&nbsp;/TomatoThemeBase <small>(optional)<\/small>' },
+				{ title: 'TTB save folder', indent: 2, name: 'ttb_loc', type: 'text', maxlen: 35, size: 35, suffix: '&nbsp;/TomatoThemeBase <small>(optional)<\/small>', value: nvram.ttb_loc },
 				{ title: 'TTB URL', indent: 2, name: 'ttb_url', type: 'text', maxlen: 128, size: 70, value: nvram.ttb_url },
 /* USB-END */
 			null,
@@ -457,7 +460,7 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Allowed Remote<br>IP Address', name: 'f_rmgt_sip', type: 'text', maxlen: 512, size: 64, value: nvram.rmgt_sip, suffix: '<br>&nbsp;<small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>' },
+			{ title: 'Allowed Remote<br>IP Address', name: 'f_rmgt_sip', type: 'text', maxlen: 512, size: 64, suffix: '<br>&nbsp;<small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>', value: nvram.rmgt_sip },
 			{ title: 'Limit Connection Attempts', multi: [
 				{ suffix: '&nbsp; SSH &nbsp; / &nbsp;', name: 'f_limit_ssh', type: 'checkbox', value: (shlimit[0] & 1) != 0 },
 				{ suffix: '&nbsp; Telnet &nbsp;', name: 'f_limit_telnet', type: 'checkbox', value: (shlimit[0] & 2) != 0 }

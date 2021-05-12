@@ -15,12 +15,6 @@
 #include <typedefs.h>
 #include <sys/reboot.h>
 
-#if 1
-#define MTD_WRITE_CMD	"mtd-write2"
-#else
-#define DEBUG_TEST
-#define MTD_WRITE_CMD	"/tmp/mtd-write"
-#endif
 
 void prepare_upgrade(void)
 {
@@ -40,12 +34,14 @@ void prepare_upgrade(void)
 
 void wi_upgrade(char *url, int len, char *boundary)
 {
-	uint8 buf[1024];
+	FILE *f = NULL;
+	char fifo[] = "/tmp/flashXXXXXX";
 	const char *error = "Error reading file";
+	int pid = -1;
 	int ok = 0;
 	int n;
-	unsigned int m;
-	int reset;
+	unsigned int reset, m;
+	uint8 buf[1024];
 
 	check_id(url);
 	reset = (strcmp(webcgi_safeget("_reset", "0"), "1") == 0);
@@ -53,11 +49,16 @@ void wi_upgrade(char *url, int len, char *boundary)
 #ifdef TCONFIG_JFFS2
 	/* quickly check if JFFS2 is mounted by checking if /jffs/ is not squashfs */
 	struct statfs sf;
-	if ((statfs("/jffs", &sf) != 0) || (sf.f_type != 0x73717368 && sf.f_type != 0x71736873)) {
+
+	if ((statfs("/jffs", &sf) != 0) || (sf.f_type != 0x73717368
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
+	     && sf.f_type != 0x71736873
+#endif
+	)) {
 		error = "JFFS2 is currently in use. Since an upgrade may overwrite the JFFS2 partition, please backup the contents, disable JFFS2, then reboot the router";
 		goto ERROR;
 	}
-#endif
+#endif /* TCONFIG_JFFS2 */
 
 	/* skip the rest of the header */
 	if (!skip_header(&len))
@@ -78,32 +79,33 @@ void wi_upgrade(char *url, int len, char *boundary)
 	signal(SIGQUIT, SIG_IGN);
 
 	prepare_upgrade();
+
 	system("cp reboot.asp /tmp"); /* copy to memory */
 	system("cp *.css /tmp");
 
 	led(LED_DIAG, 1);
-
-	char fifo[] = "/tmp/flashXXXXXX";
-	int pid = -1;
-	FILE *f = NULL;
 
 	if ((mktemp(fifo) == NULL) || (mkfifo(fifo, S_IRWXU) < 0)) {
 		error = "Unable to create a fifo";
 		goto ERROR2;
 	}
 
-	char *wargv[] = { MTD_WRITE_CMD, fifo, "linux", NULL };
+#ifdef TCONFIG_BCMARM
+	char *wargv[] = { "mtd-write2", fifo, "linux", NULL };
+#else
+	char *wargv[] = { "mtd-write", "-w", "-i", fifo, "-d", "linux", NULL };
+#endif
 	if (_eval(wargv, ">/tmp/.mtd-write", 0, &pid) != 0) {
 		error = "Unable to start flash program";
 		goto ERROR2;
 	}
 
 	if ((f = fopen(fifo, "w")) == NULL) {
-		error = "Unable to start pipe for mtd write";
+		error = "Unable to start pipe for mtd-write";
 		goto ERROR2;
 	}
 
-	/* !!! This will actually write the boundary. But since mtd-write uses trx length... */
+	/* this will actually write the boundary, but since mtd-write uses trx length... */
 	while (len > 0) {
 		if ((m = web_read(buf, MIN((unsigned int) len, sizeof(buf)))) <= 0)
 			goto ERROR2;
@@ -128,12 +130,17 @@ ERROR2:
 
 	if (error == NULL && reset) {
 		set_action(ACT_IDLE);
+#ifdef TCONFIG_BCMARM
 		eval("mtd-erase2", "nvram");
+#else
+		eval("mtd-erase", "-d", "nvram");
+#endif
 	}
 	set_action(ACT_REBOOT);
 
 	if (resmsg_fread("/tmp/.mtd-write"))
 		error = NULL;
+
 ERROR:
 	if (error)
 		resmsg_set(error);
@@ -147,17 +154,14 @@ void wo_flash(char *url)
 		parse_asp("/tmp/reboot.asp");
 		web_close();
 
-#ifdef DEBUG_TEST
-		printf("\n\n -- reboot -- \n\n");
-		set_action(ACT_IDLE);
-#else
-		/* disconnect ppp - need this for PPTP/L2TP/PPPOE to finish gracefully */
-		killall("xl2tpd", SIGTERM);
-		killall("pppd", SIGTERM);
+		if (nvram_get_int("remote_upgrade")) {
+			killall("xl2tpd", SIGTERM);
+			killall("pppd", SIGTERM);
+		}
 
-		sleep(2);
+		sleep(3);
 		reboot(RB_AUTOBOOT);
-#endif
+
 		exit(0);
 	}
 

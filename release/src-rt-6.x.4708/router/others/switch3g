@@ -197,7 +197,6 @@ searchDiag() {
 	}
 
 	[ -z "$TTYS" ] && {
-		nvram set "$PREFIX"_modem_modules=""
 		nvram set "$PREFIX"_modem_type=""
 		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
 			watchdog add
@@ -210,7 +209,6 @@ searchDiag() {
 		[ "$ALREADYFOUND" -eq 0 ] && $LOGS "3G MODEM ready - DIAG interface(s) found ("$TTYS")"
 
 		echo $TTYS > $DIAGSFILE
-		nvram set "$PREFIX"_modem_modules="$MODULE"
 		nvram set "$PREFIX"_modem_type="$MODULE"
 	}
 }

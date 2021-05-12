@@ -705,6 +705,8 @@ static const nvset_t nvset_list[] = {
 	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
 	{ "stubby_port",		V_PORT				},
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
+	{ "stubby_dnssec",		V_RANGE(0, 2)			},	/* 0=dnsmasq, 1=stubby, 2=server only */
+	{ "stubby_force_tls13",		V_01				},	/* 0=TLS1.2, 1=TLS1.3 */
 	{ "stubby_log",			V_RANGE(0, 7)			},
 #endif
 	{ "lan_state",			V_01				},
@@ -729,7 +731,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 	{ "wan_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
-	{ "wan_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
 
 	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan2_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
@@ -740,7 +741,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
-	{ "wan2_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
@@ -752,7 +752,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
-	{ "wan3_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
 
 	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
 	{ "wan4_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
@@ -763,7 +762,6 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
 	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
 	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
-	{ "wan4_modem_modules",		V_LENGTH(0, 30)			},	// used kernel modules
 #endif
 #endif
 
@@ -1158,6 +1156,7 @@ static const nvset_t nvset_list[] = {
 	{ "https_crt_gen",		V_TEMP				},
 	{ "remote_management",		V_01				},
 	{ "remote_mgt_https",		V_01				},
+	{ "remote_upgrade",		V_01				},
 	{ "http_lanport",		V_PORT				},
 	{ "https_lanport",		V_PORT				},
 	{ "web_wl_filter",		V_01				},

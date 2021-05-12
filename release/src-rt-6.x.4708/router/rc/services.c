@@ -69,6 +69,11 @@
 #define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
 #define IPV6_MIN_LIFETIME 120
 
+/* The g_upgrade global variable is used to skip several unnecessary delay
+ * and redundant steps during upgrade procedure.
+ */
+int g_upgrade = 0;
+
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
@@ -406,17 +411,19 @@ void start_dnsmasq()
 		if ((vstrsep(p, "<", &mac, &ip, &name, &bind)) < 4)
 			continue;
 
-		if (*ip == '\0')
-			continue;
-		else if (inet_pton(AF_INET, ip, &in4) <= 0 || in4.s_addr == INADDR_ANY || in4.s_addr == INADDR_LOOPBACK || in4.s_addr == INADDR_BROADCAST)
+		if (*ip != '\0' && (inet_pton(AF_INET, ip, &in4) <= 0 || in4.s_addr == INADDR_ANY || in4.s_addr == INADDR_LOOPBACK || in4.s_addr == INADDR_BROADCAST)) /* invalid IP (if any) */
 			continue;
 
-		if ((hf) && (*name))
+		if ((hf) && (*ip) && (*name))
 			fprintf(hf, "%s %s\n", ip, name);
 
 		if (do_dhcpd_hosts > 0 && ether_atoe(mac, ea)) {
-			fprintf(f, "dhcp-host=%s,%s", mac, ip);
-			if (nvram_get_int("dhcpd_slt") != 0)
+			if (*ip)
+				fprintf(f, "dhcp-host=%s,%s", mac, ip);
+			else if (*name)
+				fprintf(f, "dhcp-host=%s,%s", mac, name);
+
+			if (((*ip) || (*name)) && (nvram_get_int("dhcpd_slt") != 0))
 				fprintf(f, ",%s", sdhcp_lease);
 
 			fprintf(f, "\n");
@@ -450,14 +457,22 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_DNSSEC
 	if (nvram_get_int("dnssec_enable")) {
-		fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
-		           "dnssec\n");
-
-		/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
-		if (!nvram_get_int("ntp_ready"))
-			fprintf(f, "dnssec-no-timecheck\n");
-	}
+#ifdef TCONFIG_STUBBY
+		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("stubby_dnssec", "0"))) {
 #endif
+			fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
+			           "dnssec\n");
+
+			/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
+			if (!nvram_get_int("ntp_ready"))
+				fprintf(f, "dnssec-no-timecheck\n");
+#ifdef TCONFIG_STUBBY
+		}
+		else /* use stubby dnssec or server only */
+			fprintf(f, "proxy-dnssec\n");
+#endif
+	}
+#endif /* TCONFIG_DNSSEC */
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy")) {
@@ -697,7 +712,7 @@ void start_stubby(void)
 	FILE *fp;
 	char *nv, *nvp, *b;
 	char *server, *tlsport, *hostname, *spkipin, *digest;
-	int ntp_ready, port;
+	int ntp_ready, port, dnssec, ret;
 	union {
 		struct in_addr addr4;
 #ifdef TCONFIG_IPV6
@@ -729,6 +744,7 @@ void start_stubby(void)
 	}
 
 	ntp_ready = nvram_get_int("ntp_ready");
+	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("stubby_dnssec", "1"));
 
 	/* basic & privacy settings */
 	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"
@@ -738,18 +754,21 @@ void start_stubby(void)
 	            "tls_authentication: %s\n"
 	            "tls_query_padding_blocksize: 128\n"
 	            "edns_client_subnet_private: 1\n"
+	            "%s"
 	/* connection settings */
 	            "idle_timeout: 5000\n"
 	            "tls_connection_retries: 5\n"
 	            "tls_backoff_time: 900\n"
 	            "timeout: 2000\n"
 	            "round_robin_upstreams: 1\n"
-	            "tls_min_version: GETDNS_TLS1_2\n"
+	            "tls_min_version: %s\n"
 	/* listen address */
 	            "listen_addresses:\n"
 	            "  - 127.0.0.1@%s\n",
 	            ntp_ready ? "  - GETDNS_TRANSPORT_TLS\n" : "  - GETDNS_TRANSPORT_UDP\n  - GETDNS_TRANSPORT_TCP\n",
 	            ntp_ready ? "GETDNS_AUTHENTICATION_REQUIRED" : "GETDNS_AUTHENTICATION_NONE",
+	            (ntp_ready && dnssec) ? "dnssec: GETDNS_EXTENSION_TRUE\n" : "",
+	            nvram_get_int("stubby_force_tls13") ? "GETDNS_TLS1_3" : "GETDNS_TLS1_2",
 	            nvram_safe_get("stubby_port"));
 #ifdef TCONFIG_IPV6
 	if (get_ipv6_service() != *("NULL")) /* when ipv6 enabled */
@@ -799,7 +818,19 @@ void start_stubby(void)
 
 	fclose(fp);
 
-	eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *) stubby_config);
+	if (dnssec) {
+		if (ntp_ready)
+			logmsg(LOG_INFO, "stubby: DNSSEC enabled");
+		else
+			logmsg(LOG_INFO, "stubby: DNSSEC pending ntp sync");
+	}
+
+	ret = eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *)stubby_config);
+
+	if (ret)
+		logmsg(LOG_ERR, "starting stubby failed ...");
+	else
+		logmsg(LOG_INFO, "stubby is started");
 }
 
 void stop_stubby(void)
@@ -2397,12 +2428,14 @@ static void stop_ftpd(void)
 		return;
 	}
 
-	killall_tk_period_wait("vsftpd", 50);
-	unlink(vsftpd_passwd);
-	unlink(vsftpd_conf);
-	eval("rm", "-rf", vsftpd_users);
+	if (pidof("vsftpd") > 0) {
+		killall_tk_period_wait("vsftpd", 50);
+		unlink(vsftpd_passwd);
+		unlink(vsftpd_conf);
+		eval("rm", "-rf", vsftpd_users);
 
-	logmsg(LOG_INFO, "vsftpd is stopped");
+		logmsg(LOG_INFO, "vsftpd is stopped");
+	}
 }
 #endif /* TCONFIG_FTP */
 
@@ -2705,20 +2738,21 @@ void stop_samba(void)
 	}
 
 	stop_wsdd();
-	kill_samba(SIGTERM);
 
-	/* clean up */
-	unlink("/var/log/log.smbd");
-	unlink("/var/log/log.nmbd");
-	eval("rm", "-rf", "/var/nmbd");
-	eval("rm", "-rf", "/var/log/cores");
-	eval("rm", "-rf", "/var/run/samba");
+	if ((pidof("smbd") > 0 ) || (pidof("nmbd") > 0 )) {
+		kill_samba(SIGTERM);
 
+		/* clean up */
+		unlink("/var/log/log.smbd");
+		unlink("/var/log/log.nmbd");
+		eval("rm", "-rf", "/var/nmbd");
+		eval("rm", "-rf", "/var/log/cores");
+		eval("rm", "-rf", "/var/run/samba");
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
-	enable_gro(0);
+		enable_gro(0);
 #endif
-
-	logmsg(LOG_INFO, "Samba daemon is stopped");
+		logmsg(LOG_INFO, "Samba daemon is stopped");
+	}
 }
 
 void start_wsdd()
@@ -2882,15 +2916,20 @@ static void stop_media_server(void)
 		return;
 	}
 
-	killall_tk_period_wait(MEDIA_SERVER_APP, 50);
+	if (pidof(MEDIA_SERVER_APP) > 0) {
+		killall_tk_period_wait(MEDIA_SERVER_APP, 50);
 
-	logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+		logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+	}
 }
 #endif /* TCONFIG_MEDIA_SERVER */
 
 #ifdef TCONFIG_USB
 static void start_nas_services(void)
 {
+	if (!g_upgrade)
+		return;
+
 	if (getpid() != 1) {
 		start_service("usbapps");
 		return;
@@ -2931,7 +2970,7 @@ void restart_nas_services(int stop, int start)
 	/* restart all NAS applications */
 	if (stop)
 		stop_nas_services();
-	if (start)
+	if (start && !g_upgrade)
 		start_nas_services();
 
 	file_unlock(fd);
@@ -2965,10 +3004,13 @@ void check_services(void)
 	/* periodically reap any zombies */
 	setitimer(ITIMER_REAL, &zombie_tv, NULL);
 
-	_check(pid_hotplug2, "hotplug2", start_hotplug2);
-	_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
-	_check(pid_crond, "crond", start_cron);
-	_check(pid_igmp, "igmpproxy", start_igmp_proxy);
+	/* do not restart if upgrading */
+	if (!g_upgrade) {
+		_check(pid_hotplug2, "hotplug2", start_hotplug2);
+		_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
+		_check(pid_crond, "crond", start_cron);
+		_check(pid_igmp, "igmpproxy", start_igmp_proxy);
+	}
 }
 
 void start_services(void)
@@ -3003,39 +3045,32 @@ void start_services(void)
 #ifdef TCONFIG_PPTPD
 	start_pptpd();
 #endif
+#ifdef TCONFIG_USB
 	restart_nas_services(1, 1); /* Samba, FTP and Media Server */
-
+#endif
 #ifdef TCONFIG_SNMP
 	start_snmp();
 #endif
-
 	start_tomatoanon();
-
 #ifdef TCONFIG_TOR
 	start_tor();
 #endif
-
 #ifdef TCONFIG_BT
 	start_bittorrent();
 #endif
-
 #ifdef TCONFIG_NOCAT
 	start_nocat();
 #endif
-
 #ifdef TCONFIG_NFS
 	start_nfs();
 #endif
-
 #ifdef TCONFIG_BCMARM
 	/* do LED setup for Router */
 	led_setup();
 #endif
-
 #ifdef TCONFIG_FANCTRL
 	start_phy_tempsense();
 #endif
-
 #ifdef CONFIG_BCM7
 	if (!nvram_get_int("debug_wireless")) { /* suppress dhd debug messages (default 0x01) */
 		system("/usr/sbin/dhd -i eth1 msglevel 0x00");
@@ -3043,7 +3078,6 @@ void start_services(void)
 		system("/usr/sbin/dhd -i eth3 msglevel 0x00");
 	}
 #endif
-
 #ifdef TCONFIG_BCMBSD
 	start_bsd();
 #endif /* TCONFIG_BCMBSD */
@@ -3052,33 +3086,28 @@ void start_services(void)
 void stop_services(void)
 {
 	clear_resolv();
-
 #ifdef TCONFIG_FANCTRL
 	stop_phy_tempsense();
 #endif
-
 #ifdef TCONFIG_BT
 	stop_bittorrent();
 #endif
-
 #ifdef TCONFIG_NOCAT
 	stop_nocat();
 #endif
-
 #ifdef TCONFIG_SNMP
 	stop_snmp();
 #endif
-
 #ifdef TCONFIG_TOR
 	stop_tor();
 #endif
-
 	stop_tomatoanon();
-
 #ifdef TCONFIG_NFS
 	stop_nfs();
 #endif
+#ifdef TCONFIG_USB
 	restart_nas_services(1, 0); /* Samba, FTP and Media Server */
+#endif
 #ifdef TCONFIG_PPTPD
 	stop_pptpd();
 #endif
@@ -3100,7 +3129,6 @@ void stop_services(void)
 	stop_zebra();
 #endif
 	stop_nas();
-
 #ifdef TCONFIG_BCMBSD
 	stop_bsd();
 #endif /* TCONFIG_BCMBSD */
@@ -3178,7 +3206,7 @@ TOP:
 
 	if (strcmp(service, "dnsmasq") == 0) {
 		if (act_stop) stop_dnsmasq();
-		if (act_start) {
+		if (act_start && !g_upgrade) {
 			dns_to_resolv();
 			start_dnsmasq();
 		}
@@ -3391,24 +3419,48 @@ TOP:
 
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
+			g_upgrade = 1;
+			stop_sched();
+			stop_cron();
+#ifdef TCONFIG_USB
 			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
-			stop_jffs2();
+#endif
 #ifdef TCONFIG_ZEBRA
 			stop_zebra();
 #endif
-			stop_cron();
-			stop_ntpd();
-			stop_upnp();
-			killall("rstats", SIGTERM);
-			killall("cstats", SIGTERM);
-			killall("buttons", SIGTERM);
-			stop_syslog();
-			remove_storage_main(1);
-			stop_usb();
 #ifdef TCONFIG_BT
 			stop_bittorrent();
 #endif
+#ifdef TCONFIG_NGINX
+			stop_mysql();
+			stop_nginx();
+#endif
+#ifdef TCONFIG_TOR
+			stop_tor();
+#endif
 			stop_tomatoanon();
+			killall("rstats", SIGTERM);
+			killall("cstats", SIGTERM);
+			killall("buttons", SIGTERM);
+			if (!nvram_get_int("remote_upgrade")) {
+				killall("xl2tpd", SIGTERM);
+				killall("pppd", SIGTERM);
+				stop_dnsmasq();
+				killall("udhcpc", SIGTERM);
+				stop_wan();
+			}
+			else {
+				stop_ntpd();
+				stop_upnp();
+			}
+			stop_syslog();
+#ifdef TCONFIG_USB
+			remove_storage_main(1);
+			stop_usb();
+			remove_usb_module();
+#endif
+			remove_conntrack();
+			stop_jffs2();
 		}
 		goto CLEAR;
 	}

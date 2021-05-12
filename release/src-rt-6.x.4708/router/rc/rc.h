@@ -208,6 +208,7 @@ extern void stop_dhcp6c(void);
 #endif
 
 /* services.c */
+extern int g_upgrade;
 extern void start_cron(void);
 extern void stop_cron(void);
 #ifdef TCONFIG_FANCTRL
@@ -285,6 +286,7 @@ extern void stop_samba(void);
 #ifdef TCONFIG_USB
 extern void start_usb(void);
 extern void stop_usb(void);
+extern void remove_usb_module(void);
 extern int dir_is_mountpoint(const char *root, const char *dir);
 extern void hotplug_usb(void);
 extern void remove_storage_main(int shutdn);
@@ -415,6 +417,7 @@ extern int _xstart(const char *cmd, ...);
 extern void run_nvscript(const char *nv, const char *arg1, int wtime);
 extern void run_userfile (char *folder, char *extension, const char *arg1, int wtime);
 extern void setup_conntrack(void);
+extern void remove_conntrack(void);
 extern int host_addr_info(const char *name, int af, struct sockaddr_storage *buf);
 extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);

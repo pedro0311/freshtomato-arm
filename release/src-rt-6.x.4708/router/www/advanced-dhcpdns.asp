@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_port,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -51,7 +51,7 @@ function active_resolvers(ip, port, domain, pinset) {
 				continue;
 			var row = s[j].split('>');
 			if (row.length == 4 && ip == row[0] && port == row[1] && domain == row[2] && pinset == row[3])
-					return 1;
+				return 1;
 		}
 	}
 	return 0;
@@ -90,6 +90,8 @@ function verifyFields(focused, quiet) {
 	vis._stubby_log = v;
 	vis._stubby_port = v;
 	vis._stubby_servers = v;
+	vis._f_stubby_force_tls13 = v;
+	vis._stubby_dnssec_1 = v;
 /* STUBBY-END */
 
 	for (var a in vis) {
@@ -222,6 +224,8 @@ function save() {
 /* STUBBY-BEGIN */
 	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
 	fom.dns_priv_override.value = fom._f_dns_priv_override.checked ? 1 : 0;
+	fom.stubby_force_tls13.value = fom._f_stubby_force_tls13.checked ? 1 : 0;
+	fom.stubby_dnssec.value = (fom._stubby_dnssec_1.checked ? 1 : (fom._stubby_dnssec_0.checked ? 0 : 2));
 
 	var count = 0, stubby_list = '', e;
 	var reg = /^_upstream_active_/;
@@ -341,6 +345,8 @@ function init() {
 <!-- STUBBY-BEGIN -->
 <input type="hidden" name="stubby_proxy">
 <input type="hidden" name="stubby_resolvers">
+<input type="hidden" name="stubby_dnssec">
+<input type="hidden" name="stubby_force_tls13">
 <input type="hidden" name="dns_priv_override">
 <!-- STUBBY-END -->
 
@@ -351,34 +357,43 @@ function init() {
 	<script>
 		createFieldTable('noclose', [
 /* DNSSEC-BEGIN */
-			{ title: 'Enable DNSSEC', name: 'f_dnssec_enable', type: 'checkbox', value: (nvram.dnssec_enable == 1) },
-			null
+			{ title: 'Enable DNSSEC support', name: 'f_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>DNS servers must support DNSSEC<\/small>', value: (nvram.dnssec_enable == 1) }
 /* DNSSEC-END */
+/* STUBBY-BEGIN */
+			, { title: 'DNSSEC validation method', multi: [
+				{ suffix: '&nbsp; Stubby&nbsp;&nbsp;&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_1', type: 'radio', value: nvram.stubby_dnssec == 1 },
+				{ suffix: '&nbsp; Dnsmasq&nbsp;&nbsp;&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_0', type: 'radio', value: nvram.stubby_dnssec == 0 },
+				{ suffix: '&nbsp; Server Only&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_2', type: 'radio', value: nvram.stubby_dnssec == 2 } ]}
+/* STUBBY-END */
 /* DNSCRYPT-BEGIN */
-			, { title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: (nvram.dnscrypt_proxy == 1) },
-				{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: (nvram.dnscrypt_ephemeral_keys == 1) },
-				{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: (nvram.dnscrypt_manual == 1) },
+			, { title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: nvram.dnscrypt_proxy == 1 },
+				{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: nvram.dnscrypt_ephemeral_keys == 1 },
+				{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: nvram.dnscrypt_manual == 1 },
 				{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: _dnscrypt_resolvers_, value: nvram.dnscrypt_resolver },
 				{ title: 'Resolver Address', indent: 2, name: 'dnscrypt_resolver_address', type: 'text', maxlen: 50, size: 25, value: nvram.dnscrypt_resolver_address },
 				{ title: 'Provider Name', indent: 2, name: 'dnscrypt_provider_name', type: 'text', maxlen: 60, size: 25, value: nvram.dnscrypt_provider_name },
 				{ title: 'Provider Public Key', indent: 2, name: 'dnscrypt_provider_key', type: 'text', maxlen: 80, size: 25, value: nvram.dnscrypt_provider_key },
 				{ title: 'Priority', indent: 2, name: 'dnscrypt_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], suffix: '&nbsp; <small style="color:red">warning: set to No-Resolv to only use dnscrypt-proxy resolvers!<\/small>', value: nvram.dnscrypt_priority },
 				{ title: 'Local Port', indent: 2, name: 'dnscrypt_port', type: 'text', maxlen: 5, size: 7, value: nvram.dnscrypt_port },
-				{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log },
-			null
+				{ title: 'Log Level', indent: 2, name: 'dnscrypt_log', type: 'text', maxlen: 2, size: 5, value: nvram.dnscrypt_log }
 /* DNSCRYPT-END */
 		]);
 /* STUBBY-BEGIN */
 		createFieldTable('noopen,noclose', [
-			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: (nvram.stubby_proxy == 1) }
+			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: nvram.stubby_proxy == 1 }
 		]);
 
 		W('<tr><td class="title indent2">Upstream resolvers<br> (max. 8)<\/td><td class="content" id="_stubby_servers"><table class="tomato-grid" id="stubby-grid">');
 		W('<tr class="header"><td class="co1">On<\/td><td class="co2">Server<\/td><\/tr><\/tr>');
 
-		var ip, port, server, domain, pinset, active, t;
+		var ip, port, server, domain, pinset, active, type, t;
 		for (var i = 0; i < up_servers_arr.length; ++i) {
-			server = up_servers_arr[i][0];
+			type = up_servers_arr[i][5];
+
+			if ((type.indexOf('IPv6') != -1) && (nvram.ipv6_service == ''))
+				continue;
+
+			server = '['+type+'] '+up_servers_arr[i][0];
 			ip = up_servers_arr[i][1];
 			port = up_servers_arr[i][2];
 			domain = up_servers_arr[i][3];
@@ -389,35 +404,36 @@ function init() {
 
 			W('<tr class="'+tclass+'">\n'+
 			   '<td class="co1">'+
-			    '<input type="checkbox" name="upstream_active_'+i+'" id="_upstream_active_'+i+'" '+(ip ? '' : 'disabled="disabled"')+(active ? ' checked="checked"' : '')+' onclick="verifyFields(this, 0)">'+
+			    '<input type="checkbox" name="upstream_active_'+i+'" id="_upstream_active_'+i+'" '+(active ? ' checked="checked"' : '')+' onclick="verifyFields(this, 0)">'+
 			    '<input type="hidden" name="upstream_server_'+i+'" id="_upstream_server_'+i+'" value="'+server+'">'+
 			    '<input type="hidden" name="upstream_ip_'+i+'" id="_upstream_ip_'+i+'" value="'+ip+'">'+
 			    '<input type="hidden" name="upstream_port_'+i+'" id="_upstream_port_'+i+'" value="'+port+'">'+
 			    '<input type="hidden" name="upstream_domain_'+i+'" id="_upstream_domain_'+i+'" value="'+domain+'">'+
 			    '<input type="hidden" name="upstream_pinsetv_'+i+'" id="_upstream_pinset_'+i+'" value="'+pinset+'">'+
 			   '<\/td>\n'+
-			   '<td class="co2"'+(ip ? ' title="'+t+'" style="cursor:help"' : '')+'>'+(ip ? server : '<b>'+server+'<\/b>')+'<\/td>\n'+
+			   '<td class="co2"'+(ip ? ' title="'+t+'" style="cursor:help"' : '')+'>'+server+'<\/td>\n'+
 			  '<\/tr>\n');
 		}
 
 		W('<\/table><\/td><\/tr>');
 
 		createFieldTable('noopen,noclose', [
-				{ title: 'Prevent client auto DoH', indent: 2, name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == '1' },
+				{ title: 'Prevent client auto DoH', indent: 2, name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
 				{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], suffix: '&nbsp; <small style="color:red">warning: set to No-Resolv to only use Stubby resolvers!<\/small>', value: nvram.stubby_priority },
 				{ title: 'Local Port', indent: 2, name: 'stubby_port', type: 'text', maxlen: 5, size: 7, value: nvram.stubby_port },
 				{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
 					value: nvram.stubby_log, suffix: '&nbsp; <small>*default<\/small>' },
+				{ title: 'Force TLS1.3', indent: 2, name: 'f_stubby_force_tls13', type: 'checkbox', suffix: '&nbsp; <small>note: works with OpenSSL >= 1.1.1 only<\/small>', value: nvram.stubby_force_tls13 == 1 },
 			null
 		]);
 /* STUBBY-END */
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
-			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == '1' },
-			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == '1' },
+			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == 1 },
+			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 			null,
 			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'textarea', value: nvram.dhcpc_custom },
-			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == '1' }
+			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == 1 }
 		]);
 	</script>
 </div>
@@ -428,24 +444,24 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Use internal DNS', name: 'f_dhcpd_dmdns', type: 'checkbox', value: nvram.dhcpd_dmdns == '1' },
-				{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == '1' },
-			{ title: 'Use received DNS with user-entered DNS', name: 'f_dns_addget', type: 'checkbox', value: nvram.dns_addget == '1' },
-			{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == '1' },
-			{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == '1' },
-			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == '1' },
+			{ title: 'Use internal DNS', name: 'f_dhcpd_dmdns', type: 'checkbox', value: nvram.dhcpd_dmdns == 1 },
+				{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == 1 },
+			{ title: 'Use received DNS with user-entered DNS', name: 'f_dns_addget', type: 'checkbox', value: nvram.dns_addget == 1 },
+			{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == 1 },
+			{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == 1 },
+			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == 1 },
 /* TOR-BEGIN */
-			{ title: 'Solve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', value: nvram.dnsmasq_onion_support == '1' },
+			{ title: 'Solve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', value: nvram.dnsmasq_onion_support == 1 },
 /* TOR-END */
 			{ title: 'Maximum active DHCP leases', name: 'dhcpd_lmax', type: 'text', maxlen: 5, size: 8, value: nvram.dhcpd_lmax },
 			{ title: 'Static lease time', multi: [
 				{ name: 'f_dhcpd_sltsel', type: 'select', options: [[0,'Same as normal lease time'],[-1,'"Infinite"'],[1,'Custom']], value: (nvram.dhcpd_slt < 1) ? nvram.dhcpd_slt : 1 },
 				{ name: 'f_dhcpd_slt', type: 'text', maxlen: 5, size: 8, prefix: '<span id="_dhcpd_sltman"> ', suffix: ' <i>(minutes)<\/i><\/span>', value: (nvram.dhcpd_slt >= 1) ? nvram.dhcpd_slt : 3600 } ] },
 /* IPV6-BEGIN */
-			{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == '1' },
-			{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == '1' },
-			{ title: 'Fast RA mode', name: 'f_ipv6_fast_ra', type: 'checkbox', value: nvram.ipv6_fast_ra == '1' },
-			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: (nvram['ipv6_service'] == 'native-pd') },
+			{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == 1 },
+			{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == 1 },
+			{ title: 'Fast RA mode', name: 'f_ipv6_fast_ra', type: 'checkbox', value: nvram.ipv6_fast_ra == 1 },
+			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: nvram.ipv6_service == 'native-pd' },
 /* IPV6-END */
 			{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 /* IPV6-BEGIN */
@@ -464,8 +480,11 @@ function init() {
 	<i>DHCP / DNS Client (WAN):</i><br>
 	<ul>
 <!-- DNSSEC-BEGIN -->
-		<li><b>Enable DNSSEC</b> - Ensures that DNS lookups haven't been hijacked by a malicious third party when querying a DNSSEC-enabled domain. Make sure your WAN/ISP DNS are DNSSEC-compatible, otherwise DNS lookups will always fail.</li>
+		<li><b>Enable DNSSEC support</b> - Ensures that DNS lookups haven't been hijacked by a malicious third party when querying a DNSSEC-enabled domain. Make sure your WAN/ISP/Stubby DNS are DNSSEC-compatible, otherwise DNS lookups will always fail.</li>
 <!-- DNSSEC-END -->
+<!-- STUBBY-BEGIN -->
+		<li><b>DNSSEC validation method</b> - choose between dnsmasq/Stubby/server only DNSSEC validation.</li>
+<!-- STUBBY-END -->
 <!-- DNSCRYPT-BEGIN -->
 		<li><b>Use dnscrypt-proxy</b> - Wraps unmodified DNS traffic between a client and a DNS resolver in a cryptographic construction in order to detect forgery. Uses the DNSCrypt (v1) protocol.</li>
 <!-- DNSCRYPT-END -->
