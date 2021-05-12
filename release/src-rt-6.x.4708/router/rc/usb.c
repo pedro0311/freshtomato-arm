@@ -26,9 +26,9 @@
 #define LOGMSG_DISABLE	0
 #define LOGMSG_NVDEBUG	"usb_debug"
 
-#define MOUNT_VAL_FAIL 	0
+#define MOUNT_VAL_FAIL	0
 #define MOUNT_VAL_RONLY	1
-#define MOUNT_VAL_RW 	2
+#define MOUNT_VAL_RW	2
 #define MOUNT_VAL_EXIST	3
 
 #define USBCORE_MOD	"usbcore"
@@ -292,7 +292,7 @@ void start_usb(void)
  * and then reboot firewall service (webmon iptables rules) one more time.
  */
 		if (nvram_match("log_wm", "1") && nvram_match("webmon_bkp", "1"))
-			xstart( "service", "firewall", "restart" );
+			xstart("service", "firewall", "restart");
 
 	}
 }
@@ -341,13 +341,13 @@ void remove_usb_storage_module(void)
 {
 #ifdef TCONFIG_BCMARM
 	modprobe_r("ext4");
+	modprobe_r("crc16");
 	modprobe_r("jbd2");
 #else
 	modprobe_r("ext2");
 	modprobe_r("ext3");
 	modprobe_r("jbd");
 #endif
-	modprobe_r("crc16");
 	modprobe_r("mbcache");
 	modprobe_r("vfat");
 	modprobe_r("fat");
