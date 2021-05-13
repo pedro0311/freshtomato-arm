@@ -1144,7 +1144,7 @@ td#navi a.indent1[href^="about"]:hover::after {
 	content: "AdvaFresh theme by tsg2k2@github";
 	position: absolute;
 	top: 18px;
-	left: 17px;
+	left: -118px;
 	width: 350px;
 	opacity: 0.5;
 	font-size: smaller;
