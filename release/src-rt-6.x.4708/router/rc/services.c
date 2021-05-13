@@ -2927,7 +2927,7 @@ static void stop_media_server(void)
 #ifdef TCONFIG_USB
 static void start_nas_services(void)
 {
-	if (!g_upgrade)
+	if (g_upgrade)
 		return;
 
 	if (getpid() != 1) {

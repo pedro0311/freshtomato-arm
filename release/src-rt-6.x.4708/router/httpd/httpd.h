@@ -1,10 +1,11 @@
 #ifndef __HTTPD_H__
 #define __HTTPD_H__
 
+
 extern struct sockaddr_storage clientsai;
 extern int post;
-extern char *user_agent;
 
+/* generic MIME type handler */
 struct mime_handler {
 	const char *pattern;
 	const char *mime_type;
@@ -15,14 +16,9 @@ struct mime_handler {
 };
 extern const struct mime_handler mime_handlers[];
 
-
-//
-
 extern void do_file(char *path);
 
-
-// basic http i/o
-
+/* basic http i/o */
 typedef enum {
 	WOF_NONE,
 	WOF_JAVASCRIPT,
@@ -47,13 +43,11 @@ extern int web_pipecmd(const char *cmd, wofilter_t wof);
 extern int web_putfile(const char *fname, wofilter_t wof);
 
 extern int _web_printf(wofilter_t wof, const char *format, ...);
-#define web_printf(args...)		_web_printf(WOF_NONE, ##args)
+#define web_printf(args...)	_web_printf(WOF_NONE, ##args)
 #define web_printfj(args...)	_web_printf(WOF_JAVASCRIPT, ##args)
 #define web_printfh(args...)	_web_printf(WOF_HTML, ##args)
 
-
-// http header handling
-
+/* http header handling */
 extern const char mime_html[];
 extern const char mime_plain[];
 extern const char mime_javascript[];
@@ -66,9 +60,7 @@ extern void send_error(int status, const char *header, const char *text);
 extern void redirect(const char *path);
 extern int skip_header(int *len);
 
-
-// cgi handling
-
+/* cgi handling */
 #ifdef TCONFIG_OPENVPN
 extern int str_replace(char *str,char *str_src, char *str_des);
 #endif
@@ -78,9 +70,7 @@ extern void webcgi_set(char *name, char *value);
 
 #define webcgi_safeget(key, default) (webcgi_get(key) ? : (default))
 
-
-// asp file handing
-
+/* asp file handing */
 typedef struct {
 	const char *name;
 	void (*exec)(int argc, char **argv);
@@ -90,8 +80,6 @@ extern const aspapi_t aspapi[];
 
 extern int parse_asp(const char *path);
 
-
-//
 extern void check_id(const char *url);
 
 #endif

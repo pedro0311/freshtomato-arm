@@ -71,22 +71,28 @@
 #include "tomato.h"
 #ifdef TCONFIG_HTTPS
 #include "../mssl/mssl.h"
-#define HTTPS_CRT_VER	"1"
+#define HTTPS_CRT_VER		"1"
 #endif
 
-#define HTTP_MAX_LISTENERS 16
+#define HTTP_MAX_LISTENERS	16
+#define SERVER_NAME		"httpd"
+#define PROTOCOL		"HTTP/1.0"
+#define RFC1123FMT		"%a, %d %b %Y %H:%M:%S GMT"
+/* needed by logmsg() */
+#define LOGMSG_DISABLE		0
+#define LOGMSG_NVDEBUG		"httpd_debug"
 
 
-int do_ssl;
 int disable_maxage = 0;
-
+int do_ssl;
+int http_port;
 int post;
 int connfd = -1;
 FILE *connfp = NULL;
 struct sockaddr_storage clientsai;
 
 int header_sent;
-char *user_agent;
+
 #ifdef TCONFIG_IPV6
 char client_addr[INET6_ADDRSTRLEN];
 #else
@@ -149,10 +155,13 @@ void send_header(int status, const char* header, const char* mime, int cache)
 	if (now < Y2K)
 		now += Y2K;
 
-	strftime(tms, sizeof(tms), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now)); /* RFC 1123 */
-	web_printf("HTTP/1.0 %d %s\r\n"
-	           "Date: %s\r\n",
-	           status, http_status_desc(status),
+	strftime(tms, sizeof(tms), RFC1123FMT, gmtime(&now));
+	web_printf("%s %d %s\r\n"
+	           "Server: %s\r\n"
+	           "Date: %s\r\n"
+	           "X-Frame-Options: SAMEORIGIN\r\n",
+	           PROTOCOL, status, http_status_desc(status),
+	           SERVER_NAME,
 	           tms);
 
 	if (mime)
@@ -193,6 +202,8 @@ void redirect(const char *path)
 	snprintf(s, sizeof(s), "Location: %s", path);
 	send_header(302, s, mime_html, 0);
 	web_puts(s);
+
+	logmsg(LOG_DEBUG, "*** %s: Redirect: %s", __FUNCTION__, path);
 }
 
 int skip_header(int *len)
@@ -207,6 +218,7 @@ int skip_header(int *len)
 		if ((strcmp(buf, "\n") == 0) || (strcmp(buf, "\r\n") == 0))
 			return 1;
 	}
+
 	return 0;
 }
 
@@ -257,28 +269,28 @@ static void get_client_addr(void)
 
 static auth_t auth_check(const char *authorization)
 {
-	char buf[512];
+	char authinfo[512];
 	const char *u, *p;
 	char* pass;
 	int len;
 
-	if ((authorization != NULL) && (strncasecmp(authorization, "Basic ", 6) == 0)) {
-		if (base64_decoded_len(strlen(authorization + 6)) <= sizeof(buf)) {
-			len = base64_decode(authorization + 6, (unsigned char *) buf, strlen(authorization) - 6);
-			buf[len] = 0;
-			if ((pass = strchr(buf, ':')) != NULL) {
+	if ((authorization != NULL) && (strncmp(authorization, "Basic ", 6) == 0)) {
+		if (base64_decoded_len(strlen(authorization + 6)) <= sizeof(authinfo)) {
+			len = base64_decode(authorization + 6, (unsigned char *) authinfo, strlen(authorization) - 6);
+			authinfo[len] = '\0';
+			/* split into user and password. */
+			if ((pass = strchr(authinfo, ':')) != NULL) {
 				*pass++ = 0;
 
 				if (((u = nvram_get("http_username")) == NULL) || (*u == 0)) /* special case: empty username => root */
 					u = "root";
 
-				if (strcmp(buf, u) == 0) {
+				if (strcmp(authinfo, u) == 0) {
 					if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0)) /* special case: empty password => admin */
 						p = "admin";
 
-					if (strcmp(pass, p) == 0) {
+					if (strcmp(pass, p) == 0)
 						return AUTH_OK;
-					}
 				}
 			}
 		}
@@ -296,12 +308,13 @@ static void auth_fail(int clen, int show)
 	eat_garbage();
 	send_authenticate();
 	if (show == 1)
-		syslog(LOG_WARNING, "Bad password attempt (GUI) from: %s", client_addr);
+		logmsg(LOG_WARNING, "bad password attempt (GUI) from: %s", client_addr);
 }
 
 static int check_wif(int idx, int unit, int subunit, void *param)
 {
 	sta_info_t *sti = param;
+
 	return (wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, subunit)), WLC_GET_VAR, sti, sizeof(*sti)) == 0);
 }
 
@@ -318,12 +331,13 @@ static int check_wlaccess(void)
 			ether_atoe(mac, (unsigned char *)&sti + 9);
 			if (foreach_wif(1, &sti, check_wif)) {
 				if (nvram_get_int("debug_logwlac"))
-					syslog(LOG_WARNING, "Wireless access from %s blocked.", mac);
+					logmsg(LOG_WARNING, "wireless access from %s blocked", mac);
 
 				return 0;
 			}
 		}
 	}
+
 	return 1;
 }
 
@@ -398,16 +412,19 @@ void do_file(char *path)
 static void handle_request(void)
 {
 	char line[10000], *cur;
-	char *method, *path, *protocol, *authorization, *boundary;
+	char *method, *path, *protocol, *authorization, *boundary, *useragent;
 	char *cp;
 	char *file;
+	int len;
 	const struct mime_handler *handler;
 	int cl = 0;
 	auth_t auth;
 
-	user_agent = "";
+	logmsg(LOG_DEBUG, "*** %s: IN ***", __FUNCTION__);
+
+	/* initialize variables */
 	header_sent = 0;
-	authorization = boundary = NULL;
+	authorization = boundary = useragent = NULL;
 	bzero(line, sizeof(line));
 
 	/* parse the first line of the request */
@@ -416,34 +433,37 @@ static void handle_request(void)
 		return;
 	}
 
+	logmsg(LOG_DEBUG, "*** %s: line: %s", __FUNCTION__, line);
+
 	method = path = line;
 	strsep(&path, " ");
-	if (!path) { /* avoid http server crash */
-		send_error(400, NULL, NULL);
-		return;
-	}
-	while (*path == ' ')
+	while (path && *path == ' ')
 		path++;
-
-	if ((strcasecmp(method, "GET") != 0) && (strcasecmp(method, "POST") != 0)) {
-		send_error(501, NULL, NULL);
-		return;
-	}
 
 	protocol = path;
 	strsep(&protocol, " ");
-	if (!protocol) { /* avoid http server crash */
+	while (protocol && *protocol == ' ')
+		protocol++;
+
+	if (!path || !protocol) { /* avoid http server crash */
 		send_error(400, NULL, NULL);
 		return;
 	}
-	while (*protocol == ' ')
-		protocol++;
+
+	if ((strcasecmp(method, "get") != 0) && (strcasecmp(method, "post") != 0)) {
+		send_error(501, NULL, NULL);
+		return;
+	}
 
 	if (path[0] != '/') {
 		send_error(400, NULL, NULL);
 		return;
 	}
-	file = path + 1;
+
+	file = &(path[1]);
+	len = strlen(file);
+
+	logmsg(LOG_DEBUG, "*** %s: file: %s", __FUNCTION__, file);
 
 	if ((cp = strchr(file, '?')) != NULL) {
 		*cp = 0;
@@ -451,12 +471,14 @@ static void handle_request(void)
 		webcgi_init(cp + 1);
 	}
 
-	if ((file[0] == '/') || (strncmp(file, "..", 2) == 0) || (strstr(file, "/../") != NULL) || (strcmp(file + (strlen(file) - 3), "/..") == 0)) {
+	logmsg(LOG_DEBUG, "*** %s: url : %s", __FUNCTION__, file);
+
+	if ((file[0] == '/') || (strncmp(file, "..", 2) == 0) || (strncmp(file, "../", 3) == 0) || (strstr(file, "/../") != NULL) || (strcmp(&(file[len - 3]), "/..") == 0)) {
 		send_error(400, NULL, NULL);
 		return;
 	}
 
-	if ((file[0] == 0) || (strcmp(file, "index.asp") == 0))
+	if ((file[0] == '\0') || (file[len - 1] == '/') || (strcmp(file, "index.asp") == 0))
 		file = "status-overview.asp";
 	else if ((strcmp(file, "ext/") == 0) || (strcmp(file, "ext") == 0))
 		file = "ext/index.asp";
@@ -468,12 +490,19 @@ static void handle_request(void)
 	while (web_getline(cur, line + sizeof(line) - cur)) {
 		if ((strcmp(cur, "\n") == 0) || (strcmp(cur, "\r\n") == 0))
 			break;
-
-		if (strncasecmp(cur, "Authorization:", 14) == 0) {
+		else if (strncasecmp(cur, "Authorization:", 14) == 0) {
 			cp = &cur[14];
 			cp += strspn(cp, " \t");
 			authorization = cp;
 			cur = cp + strlen(cp) + 1;
+			logmsg(LOG_DEBUG, "*** %s: httpd authorization: %s", __FUNCTION__, authorization);
+		}
+		else if (strncasecmp( cur, "User-Agent:", 11) == 0) {
+			cp = &cur[11];
+			cp += strspn(cp, " \t");
+			useragent = cp;
+			cur = cp + strlen(cp) + 1;
+			logmsg(LOG_DEBUG, "*** %s: httpd user-agent: %s", __FUNCTION__, useragent);
 		}
 		else if (strncasecmp(cur, "Content-Length:", 15) == 0) {
 			cp = &cur[15];
@@ -489,33 +518,19 @@ static void handle_request(void)
 			for (cp = cp + 9; *cp && *cp != '\r' && *cp != '\n'; cp++);
 			*cp = '\0';
 			cur = ++cp;
-		}
-		else if (strncasecmp(cur, "User-Agent:", 11) == 0) {
-			user_agent = cur + 11;
-			user_agent += strspn(user_agent, " \t");
-			cur = user_agent + strlen(user_agent);
-			*cur++ = 0;
+			logmsg(LOG_DEBUG, "*** %s: boundary: %s", __FUNCTION__, boundary);
 		}
 	}
 
 	post = (strcasecmp(method, "post") == 0);
 	get_client_addr();
 	auth = auth_check(authorization);
-	/*
-	 * Chrome 1.0.154:
-	 * - User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.19 (KHTML, like Gecko) Chrome/1.0.154.53 Safari/525.19
-	 * - It *always* sends an 'AUTH_NONE request' first. This results in a
-	 *   send_authenticate, then finally sends an 'AUTH_OK request'.
-	 * - It does not clear the authentication even if AUTH_NONE request succeeds.
-	 * - If user doesn't enter anything (blank) for credential, it sends the
-	 *   previous credential.
-	 */
 
 	if (strcmp(file, "logout") == 0) { /* special case */
 		wi_generic(file, cl, boundary);
 		eat_garbage();
 
-		if (strstr(user_agent, "Chrome/") != NULL) {
+		if (strstr(useragent, "Chrome/") != NULL) {
 			if (auth != AUTH_BAD) {
 				send_authenticate();
 				return;
@@ -551,6 +566,7 @@ static void handle_request(void)
 
 			if (handler->mime_type != NULL)
 				send_header(200, NULL, handler->mime_type, handler->cache);
+
 			if (handler->output)
 				handler->output(file);
 
@@ -559,7 +575,7 @@ static void handle_request(void)
 	}
 
 	if (auth != AUTH_OK) {
-		auth_fail(cl, 1);
+		auth_fail(cl, (auth == AUTH_NONE ? 0 : 1));
 		return;
 	}
 
@@ -623,7 +639,7 @@ static void start_ssl(void)
 
 			if (!ok) {
 				erase_cert();
-				syslog(LOG_INFO, "Generating SSL certificate...");
+				logmsg(LOG_INFO, "generating SSL certificate...");
 
 				/* browsers seem to like this when the ip address moves... */
 				f_read("/dev/urandom", &sn, sizeof(sn));
@@ -643,7 +659,7 @@ static void start_ssl(void)
 		}
 		erase_cert();
 
-		syslog(retry ? LOG_WARNING : LOG_ERR, "Unable to start SSL");
+		logmsg(retry ? LOG_WARNING : LOG_ERR, "unable to start SSL");
 
 		if (!retry) {
 			file_unlock(lock);
@@ -677,8 +693,6 @@ void check_id(const char *url)
 	char *u;
 
 	if (!nvram_match("http_id", webcgi_safeget("_http_id", ""))) {
-
-
 		memset(s, 0, sizeof(s));
 		snprintf(s, sizeof(s), "%s,%ld", client_addr, time(NULL) & 0xFFC0);
 		if (!nvram_match("http_id_warn", s)) {
@@ -692,7 +706,7 @@ void check_id(const char *url)
 
 			if ((i != NULL) && (u != NULL)) {
 				get_client_addr();
-				syslog(LOG_WARNING, "Invalid ID '%s' from %s for /%s", i, client_addr, u);
+				logmsg(LOG_WARNING, "invalid ID '%s' from %s for /%s", i, client_addr, u);
 			}
 		}
 
@@ -712,7 +726,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 #endif
 
 	if (listeners.count >= HTTP_MAX_LISTENERS) {
-		syslog(LOG_ERR, "number of listeners exceeded the max allowed (%d)", HTTP_MAX_LISTENERS);
+		logmsg(LOG_ERR, "number of listeners exceeded the max allowed (%d)", HTTP_MAX_LISTENERS);
 		return;
 	}
 
@@ -722,7 +736,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 	}
 
 	if ((listenfd = socket(HTTPD_FAMILY, SOCK_STREAM, 0)) < 0) {
-		syslog(LOG_ERR, "create listening socket: %m");
+		logmsg(LOG_ERR, "create listening socket: %m");
 		return;
 	}
 	fcntl(listenfd, F_SETFD, FD_CLOEXEC);
@@ -751,18 +765,20 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 	}
 
 	if (bind(listenfd, (struct sockaddr *)&sai_stor, sizeof(sai_stor)) < 0) {
-		syslog(LOG_ERR, "bind: [%s]:%d: %m", (addr && *addr) ? addr : (IF_TCONFIG_IPV6(do_ipv6 ? "::" :) ""), server_port);
+		logmsg(LOG_ERR, "bind: [%s]:%d: %m", (addr && *addr) ? addr : (IF_TCONFIG_IPV6(do_ipv6 ? "::" :) ""), server_port);
 		close(listenfd);
 		return;
 	}
 
 	if (listen(listenfd, 64) < 0) {
-		syslog(LOG_ERR, "listen: %m");
+		logmsg(LOG_ERR, "listen: %m");
 		close(listenfd);
 		return;
 	}
 
 	if (listenfd >= 0) {
+		logmsg(LOG_DEBUG, "*** %s: added IPv%d listener [%d] for %s:%d, ssl=%d", __FUNCTION__, (do_ipv6 ? 6 : 4), listenfd, (addr && *addr) ? addr : "addr_any", server_port, do_ssl);
+
 		listeners.listener[listeners.count].listenfd = listenfd;
 		listeners.listener[listeners.count++].ssl = do_ssl;
 		FD_SET(listenfd, &listeners.lfdset);
@@ -908,37 +924,41 @@ int main(int argc, char **argv)
 	openlog("httpd", LOG_PID, LOG_DAEMON);
 
 	do_ssl = 0;
+	http_port = nvram_get_int("http_lanport");
 	listeners.count = 0;
 	FD_ZERO(&listeners.lfdset);
 	memset(bind, 0, sizeof(bind));
 
-	while ((c = getopt(argc, argv, "Np:s:")) != -1) {
-		switch (c) {
-		case 'N':
-			disable_maxage = 1;
-			break;
-		case 'p':
-		case 's':
-			/* [addr:]port */
-			if ((port = strrchr(optarg, ':')) != NULL) {
-				if ((optarg[0] == '[') && (port > optarg) && (port[-1] == ']'))
-					memcpy(bind, optarg + 1, MIN(sizeof(bind), (unsigned int) (port - optarg) - 2));
+	if (argc) {
+		while ((c = getopt(argc, argv, "Np:s:")) != -1) {
+			switch (c) {
+			case 'N':
+				disable_maxage = 1;
+				break;
+			case 'p':
+			case 's':
+				/* [addr:]port */
+				if ((port = strrchr(optarg, ':')) != NULL) {
+					if ((optarg[0] == '[') && (port > optarg) && (port[-1] == ']'))
+						memcpy(bind, optarg + 1, MIN(sizeof(bind), (unsigned int) (port - optarg) - 2));
+					else
+						memcpy(bind, optarg, MIN(sizeof(bind), (unsigned int) (port - optarg)));
+					port++;
+				}
 				else
-					memcpy(bind, optarg, MIN(sizeof(bind), (unsigned int) (port - optarg)));
-				port++;
+					port = optarg;
+
+				IF_TCONFIG_HTTPS(if (c == 's') do_ssl = 1);
+				IF_TCONFIG_IPV6(ip6 = (*bind && strchr(bind, ':')));
+				http_port = atoi(port);
+				add_listen_socket(bind, http_port, ip6, (c == 's'));
+
+				memset(bind, 0, sizeof(bind));
+				break;
+			default:
+				fprintf(stderr, "ERROR: unknown option %c\n", c);
+				break;
 			}
-			else
-				port = optarg;
-
-			IF_TCONFIG_HTTPS(if (c == 's') do_ssl = 1);
-			IF_TCONFIG_IPV6(ip6 = (*bind && strchr(bind, ':')));
-			add_listen_socket(bind, atoi(port), ip6, (c == 's'));
-
-			memset(bind, 0, sizeof(bind));
-			break;
-		default:
-			fprintf(stderr, "ERROR: unknown option %c\n", c);
-			break;
 		}
 	}
 
@@ -946,7 +966,7 @@ int main(int argc, char **argv)
 	IF_TCONFIG_IPV6(if (ipv6_enabled()) setup_listeners(1));
 
 	if (listeners.count == 0) {
-		syslog(LOG_ERR, "can't bind to any address");
+		logmsg(LOG_ERR, "can't bind to any address");
 		return 1;
 	}
 
@@ -955,7 +975,7 @@ int main(int argc, char **argv)
 	init_id();
 
 	if (daemon(1, 1) == -1) {
-		syslog(LOG_ERR, "daemon: %m");
+		logmsg(LOG_ERR, "daemon: %m");
 		return 0;
 	}
 
@@ -969,7 +989,6 @@ int main(int argc, char **argv)
 	signal(SIGCHLD, SIG_IGN);
 
 	for (;;) {
-
 		/* Do a select() on at least one and possibly many listen fds.
 		 * If there's only one listen fd then we could skip the select
 		 * and just do the (blocking) accept(), saving one system call;
@@ -1000,7 +1019,7 @@ int main(int argc, char **argv)
 			}
 
 			if (!wait_action_idle(10)) {
-				syslog(LOG_WARNING, "router is busy");
+				logmsg(LOG_WARNING, "router is busy");
 				continue;
 			}
 
@@ -1035,5 +1054,6 @@ int main(int argc, char **argv)
 	}
 
 	close_listen_sockets();
+
 	return 0;
 }

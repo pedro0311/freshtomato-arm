@@ -14,6 +14,7 @@
 
 td#navi a.indent1[href*=about]:hover:after {
 	content: 'AdvaFresh theme by tsg2k2@github, dark version by pedro';
+	left: -236px;
 }
 
 img[src^="rp"] {
