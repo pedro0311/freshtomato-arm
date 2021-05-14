@@ -61,9 +61,9 @@ function upgrade() {
 
 function earlyInit() {
 	if (nvram.remote_upgrade == 1)
-		E('upgradenotice').style.display = 'block';
-	else
 		E('upgradenotice').style.display = 'none';
+	else
+		E('upgradenotice').style.display = 'block';
 
 	E('afu-size').innerHTML = '&nbsp; '+scaleSize(sysinfo.totalfreeram)+'&nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>';
 /* JFFS2-BEGIN */

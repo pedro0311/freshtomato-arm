@@ -267,7 +267,7 @@ function save() {
 /* HTTPS-END */
 
 	fom.web_wl_filter.value = fom._f_http_wireless.checked ? 0 : 1;
-	fom.remote_upgrade.value = fom._f_remote_upgrade.checked ? 0 : 1;
+	fom.remote_upgrade.value = fom._f_remote_upgrade.checked ? 1 : 0;
 
 	a = (fom._web_css.value.match(/at-/g));
 	fom.web_adv_scripts.value = (fom._f_web_adv_scripts.checked && a) ? 1 : 0;
