@@ -25,7 +25,7 @@ div.tomato-grid.container-div {
 }
 </style>
 <script>
-var n = 130;
+var n = 90;
 function tick() {
 	var e = document.getElementById('continue');
 	e.value = n--;
@@ -33,7 +33,7 @@ function tick() {
 		e.value = "Continue";
 		return;
 	}
-	if (n == 39) {
+	if (n == 59) {
 		e.style = "cursor:pointer";
 		e.disabled = false;
 	}

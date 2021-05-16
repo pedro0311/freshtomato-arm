@@ -41,18 +41,18 @@ function upgrade() {
 	if (!confirm('Are you sure you want to upgrade using '+name+'?'))
 		return;
 
-	E('afu-upgrade-button').disabled = true;
+	E('afu-upgrade-button').disabled = 1;
 
-	elem.display('afu-input', false);
+	elem.display('afu-input', 0);
 	E('content').style.verticalAlign = 'middle';
-	elem.display('afu-progress', true);
-	elem.display('navi', false)
-	elem.display('ident', false)
+	elem.display('afu-progress', 1);
+	elem.display('navi', 0)
+	elem.display('ident', 0)
 
 	startTime = (new Date()).getTime();
 	setInterval('clock()', 800);
 
-	fom.action += '?_reset='+(E('f_reset').checked ? "1" : "0");
+	fom.action += '?_reset='+(E('f_reset').checked ? 1 : 0);
 	form.addIdAction(fom);
 
 	localStorage.clear();
@@ -67,7 +67,7 @@ function earlyInit() {
 
 	E('afu-size').innerHTML = '&nbsp; '+scaleSize(sysinfo.totalfreeram)+'&nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>';
 /* JFFS2-BEGIN */
-	if (nvram.jffs2_on != '0') {
+	if (nvram.jffs2_on != 0) {
 		E('afu-warn').style.display = 'block';
 		E('afu-input').style.display = 'none';
 	}
@@ -101,7 +101,7 @@ function earlyInit() {
 			</form>
 			<form name="form_reset" action="javascript:{}">
 				<div class="afu-form">
-					<input type="checkbox" id="f_reset">&nbsp;&nbsp;After flashing, erase all data in NVRAM memory
+					<input type="checkbox" id="f_reset">&nbsp; After flashing, erase all data in NVRAM memory
 				</div>
 			</form>
 

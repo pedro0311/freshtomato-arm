@@ -1,9 +1,10 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #include "tomato.h"
 
@@ -38,7 +39,6 @@ void wi_upgrade(char *url, int len, char *boundary)
 	char fifo[] = "/tmp/flashXXXXXX";
 	const char *error = "Error reading file";
 	int pid = -1;
-	int ok = 0;
 	int n;
 	unsigned int reset, m;
 	uint8 buf[1024];
@@ -80,8 +80,10 @@ void wi_upgrade(char *url, int len, char *boundary)
 
 	prepare_upgrade();
 
-	system("cp reboot.asp /tmp"); /* copy to memory */
-	system("cp *.css /tmp");
+	/* copy to memory */
+	system("cp /www/reboot.asp /tmp");
+	system("cp /www/*.css /tmp");
+	system("cp /www/*.png /tmp");
 
 	led(LED_DIAG, 1);
 
@@ -91,11 +93,11 @@ void wi_upgrade(char *url, int len, char *boundary)
 	}
 
 #ifdef TCONFIG_BCMARM
-	char *wargv[] = { "mtd-write2", fifo, "linux", NULL };
+	char *args[] = { "mtd-write2", fifo, "linux", NULL };
 #else
-	char *wargv[] = { "mtd-write", "-w", "-i", fifo, "-d", "linux", NULL };
+	char *args[] = { "mtd-write", "-w", "-i", fifo, "-d", "linux", NULL };
 #endif
-	if (_eval(wargv, ">/tmp/.mtd-write", 0, &pid) != 0) {
+	if (_eval(args, ">/tmp/.mtd-write", 0, &pid) != 0) {
 		error = "Unable to start flash program";
 		goto ERROR2;
 	}
@@ -118,7 +120,6 @@ void wi_upgrade(char *url, int len, char *boundary)
 	}
 
 	error = NULL;
-	ok = 1;
 
 ERROR2:
 	rboot = 1;
@@ -146,6 +147,10 @@ ERROR:
 		resmsg_set(error);
 
 	web_eat(len);
+
+	/* erase flash file and free memory */
+	if (fifo[0])
+		unlink(fifo);
 }
 
 void wo_flash(char *url)
@@ -158,8 +163,10 @@ void wo_flash(char *url)
 			killall("xl2tpd", SIGTERM);
 			killall("pppd", SIGTERM);
 		}
+		sleep(2);
 
-		sleep(3);
+		//kill(1, SIGTERM);
+		sync();
 		reboot(RB_AUTOBOOT);
 
 		exit(0);
