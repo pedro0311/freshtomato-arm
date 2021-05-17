@@ -1,9 +1,10 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #include "tomato.h"
 
@@ -17,10 +18,10 @@
 
 #include <wlutils.h>
 
-#define lease_file	"/var/tmp/dhcp/leases"
-#define lease_file_tmp	lease_file".!"
+#define lease_file		"/var/tmp/dhcp/leases"
+#define lease_file_tmp		lease_file".!"
+#define MAX_CLIENTS_COUNT	128
 
-#define MAX_CLIENTS_COUNT 128
 
 char *strupr(char *str)
 {
@@ -28,7 +29,7 @@ char *strupr(char *str)
 	size_t len = strlen(str);
 
 	for (i = 0; i < len; i++)
-	str[i] = toupper((unsigned char)str[i]);
+		str[i] = toupper((unsigned char)str[i]);
 
 	return str;
 }
@@ -84,7 +85,7 @@ static int get_wds_ifname(const struct ether_addr *ea, char *ifname)
 {
 	struct ifreq ifr;
 	int sd;
-	int i;
+	unsigned int i;
 	struct ether_addr e;
 
 	if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) >= 0) {
@@ -112,7 +113,9 @@ static int get_wl_clients(int idx, int unit, int subunit, void *param)
 	char buf[32];
 	char *wlif;
 	scb_val_t rssi;
+#ifdef TCONFIG_BCMARM
 	scb_val_t rate_backup;
+#endif
 	sta_info_t sti;
 	int cmd;
 	struct maclist *mlist = NULL;
@@ -129,46 +132,46 @@ static int get_wl_clients(int idx, int unit, int subunit, void *param)
 				for (i = 0; i < mlist->count; ++i) {
 					memcpy(&rssi.ea, &(mlist->ea[i]), sizeof(struct ether_addr));
 					rssi.val = 0;
-					if (wl_ioctl(wlif, WLC_GET_RSSI, &rssi, sizeof(rssi)) != 0) continue;
+					if (wl_ioctl(wlif, WLC_GET_RSSI, &rssi, sizeof(rssi)) != 0)
+						continue;
 
 					memset(&sti, 0, sizeof(sti)); /* reset */
 					strcpy((char *)&sti, "sta_info"); /* sta_info */
 					memcpy((char *)&sti + 9, &(mlist->ea[i]), sizeof(struct ether_addr)); /* sta_info0<mac> */
-					if (wl_ioctl(wlif, WLC_GET_VAR, &sti, sizeof(sti)) != 0) {
+					if (wl_ioctl(wlif, WLC_GET_VAR, &sti, sizeof(sti)) != 0)
 						continue;
-					}
-
+#ifdef TCONFIG_BCMARM
 					/* check rate values of the driver */
 					if ((sti.tx_rate == 0) && (sti.rx_rate == 0)) { /* if both values are empty */
 						memcpy(&rate_backup.ea, &(mlist->ea[i]), sizeof(struct ether_addr));
 						rate_backup.val = 0; /* reset */
 
 						/* get backup values to show RX / TX values at the GUI */
-						if (wl_ioctl(wlif, WLC_GET_RATE, &rate_backup, sizeof(rate_backup)) != 0) {
+						if (wl_ioctl(wlif, WLC_GET_RATE, &rate_backup, sizeof(rate_backup)) != 0)
 							continue;
-						}
+
 						/* rate_backup value contains link speed up+down */
 						sti.tx_rate = rate_backup.val * 1000 / 2; /* assume symmetric up/down link and convert */
 						sti.rx_rate = sti.tx_rate;
 					}
-
+#endif /* TCONFIG_BCMARM */
 					p = wlif;
 					if (sti.flags & WL_STA_WDS) {
-						if (cmd != WLC_GET_WDSLIST) continue;
-						if ((sti.flags & WL_WDS_LINKUP) == 0) continue;
-						if (get_wds_ifname(&rssi.ea, ifname)) p = ifname;
+						if (cmd != WLC_GET_WDSLIST)
+							continue;
+						if ((sti.flags & WL_WDS_LINKUP) == 0)
+							continue;
+						if (get_wds_ifname(&rssi.ea, ifname))
+							p = ifname;
 					}
-
-					web_printf("%c['%s','%s',%d,%d,%d,%u,%d]",
-						*comma,
-						p,
-						ether_etoa(rssi.ea.octet, buf),
-						rssi.val,
-						sti.tx_rate, sti.rx_rate, sti.in, unit);
+//sti.rx_rate
+					web_printf("%c['%s','%s',%d,%d,%d,%u,%d]", *comma, p, ether_etoa(rssi.ea.octet, buf), rssi.val, sti.tx_rate, sti.rx_rate, sti.in, unit);
 					*comma = ',';
 				}
 			}
-			if (cmd == WLC_GET_WDSLIST) break;
+			if (cmd == WLC_GET_WDSLIST)
+				break;
+
 			cmd = WLC_GET_WDSLIST;
 		}
 		free(mlist);
