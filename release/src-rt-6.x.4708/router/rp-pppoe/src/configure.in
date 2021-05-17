@@ -75,7 +75,7 @@ if test "$ac_cv_pluginpath" = "yes" ; then
 fi
 
 if test "$ac_cv_pluginpath" = "yes" ; then
-    echo "*** Could not fined pppd/pppd.h anywhere... not building plugin"
+    echo "*** Could not find pppd/pppd.h anywhere... not building plugin"
     ac_cv_pluginpath=no
 fi
 
@@ -141,6 +141,9 @@ dnl Integer sizes
 AC_CHECK_SIZEOF(unsigned short)
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
+
+dnl Check for location of ip
+AC_PATH_PROG(IP, ip, NOTFOUND, $PATH:/bin:/sbin:/usr/bin:/usr/sbin)
 
 dnl Check for location of pppd
 AC_PATH_PROG(PPPD, pppd, NOTFOUND, $PATH:/sbin:/usr/sbin:/usr/local/sbin)

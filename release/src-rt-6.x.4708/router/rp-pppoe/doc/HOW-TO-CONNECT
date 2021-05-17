@@ -21,14 +21,15 @@ visible to the Linux kernel.  Just how to do this is beyond the scope
 of this document.  However, if the card is the only Ethernet card in
 the system, executing:
 
-	ifconfig eth0
+	ip link show eth0
 
 should display something like this:
 
-	eth0      Link encap:Ethernet  HWaddr 00:60:67:62:31:D4
+	2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast qlen 1000
+    link/ether fc:aa:15:39:a7:b3 brd ff:ff:ff:ff:ff:ff
 
-plus some more lines.  Your HWaddr will be different.  As long as you see
-the HWaddr line, your card should be working.
+Your second line will most definately be different.  As long as you see
+the link/ether line, your card should be working.
 
 DO NOT assign an IP address to the Ethernet card.  DO NOT configure the
 card to come up at boot time.
@@ -119,8 +120,8 @@ hosts to the LAN, but consumes some extra CPU time.
 
 If you want to manually configure the LAN hosts, here's how:
 
-In Linux, use: "ifconfig eth0 mtu 1452".  For best results, put this
-in an /etc/rc.d/rc.local script.
+In Linux, use: "ip link set eth0 mtu 1452".  For best results, put
+this in an /etc/rc.d/rc.local script.
 
 For Windows, machines, see http://lan.cns.ksu.edu/OS/WIN95/slip95.htm.
 Set the MaxMTU to 1452.
@@ -145,11 +146,13 @@ Here are some problems PPPoE users have encountered.
 -----------------------------------------------------------------------------
 A) Can't see the Ethernet interface
 
-Well, I can't really help you here.  To use these instructions, you must
-have Linux working to the point where it recognizes your Ethernet card.
-If you type "ifconfig ethx" and you get back a HWAddr value, your Ethernet
-card is probably OK.  But I really can't help with hardware configuration
-issues.
+Well, I can't really help you here.  To use these instructions, you
+must have Linux working to the point where it recognizes your Ethernet
+card.  If you type "ip link show ethx" and you get back a hardware
+address value in the line that begins with link/ether, your Ethernet
+card is probably OK.  But I really can't help with hardware
+configuration issues.
+
 
 -----------------------------------------------------------------------------
 B) Connection seems to come up, but I can't browse the web or ping anything
@@ -224,9 +227,10 @@ problem, give the Ethernet card connected to the DSL modem a fake IP
 address.  For example, if eth0 is your internal LAN card and eth1 goes to
 the DSL modem, do something like this:
 
-	ifconfig eth1 10.0.0.1 netmask 255.255.255.0
+	ip link set eth1 10.0.0.1/24
 
-(You may have to choose a different IP address; experiment.)
+(You may have to choose a different IP address and prefix; experiment.)
+
 -----------------------------------------------------------------------------
 K) How can I run a script every time I connect and get a new IP address?
 
@@ -262,7 +266,7 @@ Make sure no entries in the routing table go through the Ethernet card
 connected to the DSL modem.  You might want to add these lines in
 pppoe-connect:
 
-	ifconfig ethx down
-	ifconfig ethx up mtu 1500
+        ip link set ethx down
+	ip link set  ethx up mtu 1500
 
 which should reset things to sane values.

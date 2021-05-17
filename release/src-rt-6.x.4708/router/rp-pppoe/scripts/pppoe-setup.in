@@ -18,6 +18,7 @@ exec_prefix=@exec_prefix@
 
 # Paths to programs
 IFCONFIG=/sbin/ifconfig
+IP=@IP@
 PPPD=@PPPD@
 PPPOE=@sbindir@/pppoe
 LOGGER="/usr/bin/logger -t `basename $0`"
@@ -93,6 +94,8 @@ while [ true ] ; do
 
     # Under Linux, "fix" the default interface if eth1 is not available
     if test `uname -s` = "Linux" ; then
+        $IP link show $ETH > /dev/null 2>&1 || ETH=eth0
+    else
 	$IFCONFIG $ETH > /dev/null 2>&1 || ETH=eth0
     fi
     echo ""

@@ -31,7 +31,7 @@ and start \fBpppoe-sniff\fR.  If the ethernet interface is \fIeth0\fR,
 for example, type these commands:
 
 .nf
-	ifconfig eth0 promisc
+	ip link set eth0 promisc on
 	pppoe-sniff -I eth0
 .fi
 
@@ -43,7 +43,7 @@ After \fBpppoe-sniff\fR finishes (or you stop it if it seems hung),
 remember to turn off promiscuous mode:
 
 .nf
-	ifconfig eth0 -promisc
+	ip link set eth0 promisc on
 .fi
 
 .SH OPTIONS

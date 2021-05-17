@@ -6,7 +6,7 @@
 * to supply to PPPOE_EXTRA in /etc/ppp/pppoe.conf.  USE AT YOUR OWN RISK.
 *
 * Copyright (C) 2000-2018 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2020 Dianne Skoll
+* Copyright (C) 2018-2021 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
@@ -124,7 +124,7 @@ usage(char const *argv0)
 	    DEFAULT_IF);
     fprintf(stderr, "   -V             -- Print version and exit.\n");
     fprintf(stderr, "\nPPPoE Version %s, Copyright (C) 2000 Roaring Penguin Software Inc.\n", RP_VERSION);
-    fprintf(stderr, "              %*s  Copyright (C) 2018-2020 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
+    fprintf(stderr, "              %*s  Copyright (C) 2018-2021 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
     fprintf(stderr, "PPPoE comes with ABSOLUTELY NO WARRANTY.\n");
     fprintf(stderr, "This is free software, and you are welcome to redistribute it under the terms\n");
     fprintf(stderr, "of the GNU General Public License, version 2 or any later version.\n");
@@ -200,8 +200,8 @@ main(int argc, char *argv[])
 
 #endif
 
-    /* We assume interface is in promiscuous mode -- use ifconfig to
-       ensure this */
+    /* We assume interface is in promiscuous mode -- use "ip link
+       show" to ensure this */
     fprintf(stderr, "Sniffing for PADR.  Start your connection on another machine...\n");
     while (!SeenPADR) {
 	if (receivePacket(sock, &pkt, &size) < 0) continue;
