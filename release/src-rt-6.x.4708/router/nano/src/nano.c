@@ -76,7 +76,6 @@ linestruct *make_new_node(linestruct *prevnode)
 #endif
 	newnode->lineno = (prevnode) ? prevnode->lineno + 1 : 1;
 #ifndef NANO_TINY
-	newnode->extrarows = -2;  /* Bad value, to make it easier to find bugs. */
 	newnode->has_anchor = FALSE;
 #endif
 
@@ -100,6 +99,9 @@ void splice_node(linestruct *afterthis, linestruct *newnode)
 /* Free the data structures in the given node. */
 void delete_node(linestruct *line)
 {
+	/* If the first line on the screen gets deleted, step one back. */
+	if (line == openfile->edittop)
+		openfile->edittop = line->prev;
 #ifdef ENABLE_WRAPPING
 	/* If the spill-over line for hard-wrapping is deleted... */
 	if (line == openfile->spillage_line)
@@ -152,7 +154,6 @@ linestruct *copy_node(const linestruct *src)
 #endif
 	dst->lineno = src->lineno;
 #ifndef NANO_TINY
-	dst->extrarows = src->extrarows;
 	dst->has_anchor = FALSE;
 #endif
 
@@ -1006,14 +1007,6 @@ void handle_sigwinch(int signal)
 	the_window_resized = TRUE;
 }
 
-/* Compute and store how many extra rows each line needs when softwrapping. */
-void compute_the_extra_rows_per_line_from(linestruct *fromline)
-{
-	if (ISSET(SOFTWRAP))
-		for (linestruct *line = fromline; line != NULL; line = line->next)
-			line->extrarows = extra_chunks_in(line);
-}
-
 /* Reinitialize and redraw the screen completely. */
 void regenerate_screen(void)
 {
@@ -1056,7 +1049,6 @@ void regenerate_screen(void)
 
 	/* If we have an open buffer, redraw the contents of the subwindows. */
 	if (openfile) {
-		compute_the_extra_rows_per_line_from(openfile->filetop);
 		ensure_firstcolumn_is_aligned();
 		draw_all_subwindows();
 	}
@@ -1082,9 +1074,7 @@ void do_toggle(int flag)
 			break;
 #endif
 		case SOFTWRAP:
-			if (ISSET(SOFTWRAP))
-				compute_the_extra_rows_per_line_from(openfile->filetop);
-			else
+			if (!ISSET(SOFTWRAP))
 				openfile->firstcolumn = 0;
 			refresh_needed = TRUE;
 			break;
@@ -1246,9 +1236,7 @@ void confirm_margin(void)
 		editwincols = COLS - margin - thebar;
 
 #ifndef NANO_TINY
-		/* Recompute the softwrapped chunks for each line in the buffer,
-		 * and ensure a proper starting column for the first screen row. */
-		compute_the_extra_rows_per_line_from(openfile->filetop);
+		/* Ensure a proper starting column for the first screen row. */
 		ensure_firstcolumn_is_aligned();
 		focusing = keep_focus;
 #endif
@@ -1414,12 +1402,13 @@ void inject(char *burst, size_t count)
 	linestruct *thisline = openfile->current;
 	size_t datalen = strlen(thisline->data);
 #ifndef NANO_TINY
-	size_t old_amount = openfile->current->extrarows;
 	size_t original_row = 0;
+	size_t old_amount = 0;
 
 	if (ISSET(SOFTWRAP)) {
 		if (openfile->current_y == editwinrows - 1)
 			original_row = chunk_for(xplustabs(), thisline);
+		old_amount = extra_chunks_in(thisline);
 	}
 #endif
 
@@ -1483,14 +1472,11 @@ void inject(char *burst, size_t count)
 	/* When softwrapping and the number of chunks in the current line changed,
 	 * or we were on the last row of the edit window and moved to a new chunk,
 	 * we need a full refresh. */
-	if (ISSET(SOFTWRAP)) {
-		openfile->current->extrarows = extra_chunks_in(openfile->current);
-		if (openfile->current->extrarows != old_amount ||
+	if (ISSET(SOFTWRAP) && (extra_chunks_in(openfile->current) != old_amount ||
 					(openfile->current_y == editwinrows - 1 &&
-					chunk_for(xplustabs(), openfile->current) > original_row)) {
-			refresh_needed = TRUE;
-			focusing = FALSE;
-		}
+					chunk_for(xplustabs(), openfile->current) > original_row))) {
+		refresh_needed = TRUE;
+		focusing = FALSE;
 	}
 #endif
 
@@ -1804,18 +1790,8 @@ int main(int argc, char **argv)
 	textdomain(PACKAGE);
 #endif
 
-#if defined(ENABLE_UTF8) && !defined(NANO_TINY)
-	if (MB_CUR_MAX > MAXCHARLEN)
-		fprintf(stderr, "Unexpected large character size: %i bytes"
-						" -- please report a bug\n", (int)MB_CUR_MAX);
-#endif
-
-	/* Set sensible defaults, different from what Pico does. */
+	/* Set a sensible default, different from what Pico does. */
 	SET(NO_WRAP);
-	SET(SMOOTH_SCROLL);
-
-	/* Give a small visual hint that nano has changed. */
-	SET(MORE_SPACE);
 
 	/* If the executable's name starts with 'r', activate restricted mode. */
 	if (*(tail(argv[0])) == 'r')
@@ -2175,13 +2151,9 @@ int main(int argc, char **argv)
 			memmove(alt_speller, alt_speller + 1, strlen(alt_speller));
 #endif
 
-		/* If an rcfile undid the default settings, copy it to the new flags. */
+		/* If an rcfile undid the default setting, copy it to the new flag. */
 		if (!ISSET(NO_WRAP))
 			SET(BREAK_LONG_LINES);
-		if (!ISSET(SMOOTH_SCROLL))
-			SET(JUMPY_SCROLLING);
-		if (!ISSET(MORE_SPACE))
-			SET(EMPTY_LINE);
 
 		/* Simply OR the boolean flags from rcfile and command line. */
 		for (size_t i = 0; i < sizeof(flags) / sizeof(flags[0]); i++)
@@ -2502,11 +2474,16 @@ int main(int argc, char **argv)
 #ifdef ENABLE_NANORC
 	if (startup_problem != NULL)
 		statusline(ALERT, startup_problem);
+
+#define NOTREBOUND  first_sc_for(MMAIN, do_help) && \
+						first_sc_for(MMAIN, do_help)->keycode == 0x07
+#else
+#define NOTREBOUND  TRUE
 #endif
 
 #ifdef ENABLE_HELP
 	if (*openfile->filename == '\0' && openfile->totsize == 0 &&
-				openfile->next == openfile && !ISSET(NO_HELP))
+				openfile->next == openfile && !ISSET(NO_HELP) && NOTREBOUND)
 		statusbar(_("Welcome to nano.  For basic help, type Ctrl+G."));
 #endif
 

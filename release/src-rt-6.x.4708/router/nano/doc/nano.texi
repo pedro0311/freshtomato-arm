@@ -8,8 +8,8 @@
 
 @smallbook
 @set EDITION 0.5
-@set VERSION 5.6.1
-@set UPDATED March 2021
+@set VERSION 5.7
+@set UPDATED April 2021
 
 @dircategory Editors
 @direntry
@@ -23,7 +23,7 @@
 @titlepage
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 5.6.1
+@subtitle version 5.7
 
 @author Chris Allegretta
 @page
@@ -63,7 +63,7 @@ e-mail: @email{chrisa@@asty.org}@*
 @node Top
 @top
 
-This manual documents the GNU @command{nano} editor, version 5.6.1.
+This manual documents the GNU @command{nano} editor, version 5.7.
 
 @menu
 * Introduction::
@@ -946,10 +946,6 @@ The line plus column numbers and the character code are displayed only when
 @code{set constantshow} is used, and can be toggled on and off with @key{M-C}.
 The state flags are displayed only when @code{set stateflags} is used.
 
-@item set morespace
-Deprecated option since it has become the default setting.
-When needed, use @code{unset emptyline} instead.
-
 @item set mouse
 Enable mouse support, so that mouse clicks can be used to place the
 cursor, set the mark (with a double click), or execute shortcuts.
@@ -966,9 +962,6 @@ Don't display the help lists at the bottom of the screen.
 @item set nonewlines
 Don't automatically add a newline when a text does not end with one.
 (This can cause you to save non-POSIX text files.)
-
-@item set nopauses
-Obsolete option.  Ignored.
 
 @item set nowrap
 Deprecated option since it has become the default setting.
@@ -1054,10 +1047,6 @@ very beginning of non-whitespace characters on a line, the cursor will
 jump to that beginning (either forwards or backwards).  If the cursor is
 already at that position, it will jump to the true beginning of the
 line.
-
-@item set smooth
-Deprecated option since it has become the default setting.
-When needed, use @code{unset jumpyscrolling} instead.
 
 @item set softwrap
 Display lines that exceed the screen's width over multiple screen lines.

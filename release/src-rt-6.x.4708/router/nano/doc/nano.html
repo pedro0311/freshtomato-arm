@@ -45,7 +45,7 @@ ul.no-bullet {list-style: none}
 
 
 <span id="Top"></span><span id="SEC_Top"></span>
-<p>This manual documents the GNU <code>nano</code> editor, version 5.6.1.
+<p>This manual documents the GNU <code>nano</code> editor, version 5.7.
 </p>
 <table class="menu" border="0" cellspacing="0">
 <tr><td align="left" valign="top">&bull; <a href="#Introduction" accesskey="1">Introduction</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
@@ -1022,11 +1022,6 @@ The line plus column numbers and the character code are displayed only when
 The state flags are displayed only when <code>set stateflags</code> is used.
 </p>
 </dd>
-<dt><code>set morespace</code></dt>
-<dd><p>Deprecated option since it has become the default setting.
-When needed, use <code>unset emptyline</code> instead.
-</p>
-</dd>
 <dt><code>set mouse</code></dt>
 <dd><p>Enable mouse support, so that mouse clicks can be used to place the
 cursor, set the mark (with a double click), or execute shortcuts.
@@ -1047,10 +1042,6 @@ cursor, set the mark (with a double click), or execute shortcuts.
 <dt><code>set nonewlines</code></dt>
 <dd><p>Don&rsquo;t automatically add a newline when a text does not end with one.
 (This can cause you to save non-POSIX text files.)
-</p>
-</dd>
-<dt><code>set nopauses</code></dt>
-<dd><p>Obsolete option.  Ignored.
 </p>
 </dd>
 <dt><code>set nowrap</code></dt>
@@ -1153,11 +1144,6 @@ very beginning of non-whitespace characters on a line, the cursor will
 jump to that beginning (either forwards or backwards).  If the cursor is
 already at that position, it will jump to the true beginning of the
 line.
-</p>
-</dd>
-<dt><code>set smooth</code></dt>
-<dd><p>Deprecated option since it has become the default setting.
-When needed, use <code>unset jumpyscrolling</code> instead.
 </p>
 </dd>
 <dt><code>set softwrap</code></dt>

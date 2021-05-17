@@ -204,9 +204,9 @@ bool is_cntrl_char(const char *c);
 bool is_word_char(const char *c, bool allow_punct);
 char control_mbrep(const char *c, bool isdata);
 #ifdef ENABLE_UTF8
-int mbwidth(const char *c);
+int mbtowide(wchar_t *wc, const char *c);
+bool is_doublewidth(const char *ch);
 bool is_zerowidth(const char *ch);
-char *make_mbchar(long code, int *length);
 #endif
 int char_length(const char *pointer);
 size_t mbstrlen(const char *pointer);
@@ -230,9 +230,6 @@ char *mbrevstrpbrk(const char *head, const char *accept, const char *pointer);
 bool has_blank_char(const char *string);
 #endif
 bool white_string(const char *string);
-#ifdef ENABLE_UTF8
-bool is_valid_unicode(wchar_t wc);
-#endif
 
 /* Most functions in color.c. */
 #ifdef ENABLE_COLOR
@@ -412,7 +409,6 @@ void block_sigwinch(bool blockit);
 #endif
 #ifndef NANO_TINY
 void handle_sigwinch(int signal);
-void compute_the_extra_rows_per_line_from(linestruct *fromline);
 void regenerate_screen(void);
 void do_toggle(int flag);
 #endif
@@ -532,9 +528,7 @@ void complete_a_word(void);
 void get_homedir(void);
 const char *tail(const char *path);
 char *concatenate(const char *path, const char *name);
-#ifdef ENABLE_LINENUMBERS
 int digits(ssize_t n);
-#endif
 bool parse_num(const char *str, ssize_t *result);
 bool parse_line_column(const char *str, ssize_t *line, ssize_t *column);
 void recode_NUL_to_LF(char *string, size_t length);
