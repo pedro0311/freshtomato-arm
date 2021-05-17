@@ -1,4 +1,17 @@
-$Id: Changelog.txt,v 1.472 2020/10/31 09:16:14 nanard Exp $
+$Id: Changelog.txt,v 1.476 2021/05/11 22:36:16 nanard Exp $
+
+2021/04/22:
+  Add SO_REUSEPORT option for SSDP receive sockets
+
+2021/03/31:
+  GetExternalIPAddress returns empty string when the External IP address can
+    not be retrieved.
+
+2021/02/26:
+  iptables_removeall.sh: fix the cleanup of PREROUTING mangle chain
+
+VERSION 2.2.1 : released on 2020/12/20
+ (only minor build corrections)
 
 VERSION 2.2.0 : released on 2020/10/31
 
