@@ -34,7 +34,7 @@ TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 RT-N18U				BCM47081A0            0x0646       00        0x1100    0x00000110
 RT-AC56U			BCM4708               0x0646	   00	     0x1100    0x00000110
 RT-AC68U			BCM4708               0x0646       <MAC>     0x1100    0x00001000
-RT-AC67U			BCM4708               0x0646       <MAC>     0x1100    0x00001000 // odmpid=RT-AC67U
+RT-AC67U			BCM4708               0x0646       <MAC>     0x1103    0x00001000 // odmpid=RT-AC67U
 RT-AC68U C1			BCM4709C0             0x0646       <MAC>     0x1103    0x00001000
 RT-AC68P			BCM4709               0x0665       <MAC>     0x1103    0x00001000
 RT-AC68U V3			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid="empty" (not useable, let tomato set it right)
