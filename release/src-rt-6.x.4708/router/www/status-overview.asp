@@ -529,14 +529,14 @@ function init() {
 					nvram['dhcpd'+j+'_startip'] = x + nvram['dhcp'+j+'_start'];
 					nvram['dhcpd'+j+'_endip'] = x + ((nvram['dhcp'+j+'_start'] * 1) + (nvram['dhcp'+j+'_num'] * 1) - 1);
 				}
-				s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
+				s += ((s.length > 0) && (s.charAt(s.length - 1) != ' ')) ? '<br>' : '';
 				s += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['dhcpd'+j+'_startip']+' - '+nvram['dhcpd'+j+'_endip'];
 			}
 			else {
-				s += ((s.length>0)&&(s.charAt(s.length-1) != ' ')) ? '<br>' : '';
+				s += ((s.length > 0) && (s.charAt(s.length - 1) != ' ')) ? '<br>' : '';
 				s += '<b>br'+i+'<\/b> (LAN'+i+') - Disabled';
 			}
-			t += ((t.length>0)&&(t.charAt(t.length-1) != ' ')) ? '<br>' : '';
+			t += ((t.length > 0) && (t.charAt(t.length - 1) != ' ')) ? '<br>' : '';
 			t += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['lan'+j+'_ipaddr']+'/'+numberOfBitsOnNetMask(nvram['lan'+j+'_netmask']);
 		}
 	}
@@ -555,7 +555,7 @@ function init() {
 		{ title: 'LAN3 (br3) IPv6 Address', rid: 'ip6_lan3', text: stats.ip6_lan3, hidden: (stats.ip6_lan3 == '') },
 		{ title: 'LAN3 (br3) IPv6 LL Address', rid: 'ip6_lan3_ll', text: stats.ip6_lan3_ll, hidden: (stats.ip6_lan3_ll == '') },
 /* IPV6-END */
-		{ title: 'DNS', rid: 'dns', text: stats.dns, ignore: nvram.wan_proto != 'disabled' },
+		{ title: 'DNS', rid: 'dns', text: nvram.wan_dns, ignore: nvram.wan_proto != 'disabled' },
 		{ title: 'DHCP', text: s }
 	]);
 </script>
