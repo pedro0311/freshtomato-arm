@@ -530,7 +530,7 @@ static int init_vlan_ports(void)
 	case MODEL_XR300:
 	case MODEL_RTN18U:
 	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 and RT-AC1750_B1 */
-	case MODEL_RTAC67U:
+	case MODEL_RTAC67U: /* also for RT-AC1900U */
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 	case MODEL_RTAC1900P:
@@ -825,9 +825,9 @@ static int init_nvram(void)
 			nvram_set("1:mcsbw805ghpo", "0xAA864433");
 		}
 		break;
-	case MODEL_RTAC67U:
+	case MODEL_RTAC67U: /* also for RT-AC1900U */
 		mfr = "Asus";
-		name = "RT-AC67U"; /* RT-AC67U */
+		name = nvram_match("odmpid", "RT-AC67U") ? "RT-AC67U" : "RT-AC1900U";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
