@@ -1,6 +1,6 @@
 --- busybox/modutils/insmod.c
 +++ busybox/modutils/insmod.c
-@@ -21,6 +21,7 @@
+@@ -20,6 +20,7 @@
  
  #include "libbb.h"
  #include "modutils.h"
@@ -8,17 +8,17 @@
  
  /* 2.6 style insmod has no options and required filename
   * (not module name - .ko can't be omitted) */
-@@ -45,10 +46,34 @@
+@@ -44,10 +45,34 @@
  //usage:	)
  //usage:#endif
  
 +static char *m_filename;
 +
-+static int FAST_FUNC check_module_name_match(const char *filename,
-+		struct stat *statbuf UNUSED_PARAM,
-+		void *userdata, int depth UNUSED_PARAM)
++static int FAST_FUNC check_module_name_match(struct recursive_state *state,
++		const char *filename,
++		struct stat *statbuf UNUSED_PARAM)
 +{
-+	char *fullname = (char *) userdata;
++	char *fullname = (char *) state->userData;
 +	char *tmp;
 +
 +	if (fullname[0] == '\0')
@@ -43,7 +43,7 @@
  	int rc;
  
  	/* Compat note:
-@@ -68,9 +93,46 @@
+@@ -67,9 +92,46 @@
  	if (!filename)
  		bb_show_usage();
  
@@ -70,7 +70,7 @@
 +			module_dir = xstrdup(CONFIG_DEFAULT_MODULES_DIR);
 +
 +		r = recursive_action(module_dir, ACTION_RECURSE,
-+		                     check_module_name_match, NULL, filename, 0);
++		                     check_module_name_match, NULL, filename);
 +		free(module_dir);
 +
 +		if (r)

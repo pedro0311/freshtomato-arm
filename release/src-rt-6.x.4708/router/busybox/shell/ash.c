@@ -207,17 +207,17 @@
 #define IF_BASH_SUBSTR              IF_ASH_BASH_COMPAT
 /* BASH_TEST2: [[ EXPR ]]
  * Status of [[ support:
- * We replace && and || with -a and -o
+ *   && and || work as they should
+ *   = is glob match operator, not equality operator: STR = GLOB
+ *   == same as =
+ *   =~ is regex match operator: STR =~ REGEX
  * TODO:
  * singleword+noglob expansion:
  *   v='a b'; [[ $v = 'a b' ]]; echo 0:$?
  *   [[ /bin/n* ]]; echo 0:$?
- * -a/-o are not AND/OR ops! (they are just strings)
  * quoting needs to be considered (-f is an operator, "-f" and ""-f are not; etc)
- * = is glob match operator, not equality operator: STR = GLOB
- * (in GLOB, quoting is significant on char-by-char basis: a*cd"*")
- * == same as =
- * add =~ regex match operator: STR =~ REGEX
+ * ( ) < > should not have special meaning (IOW: should not require quoting)
+ * in word = GLOB, quoting should be significant on char-by-char basis: a*cd"*"
  */
 #define    BASH_TEST2           (ENABLE_ASH_BASH_COMPAT * ENABLE_ASH_TEST)
 #define    BASH_SOURCE          ENABLE_ASH_BASH_COMPAT
@@ -542,6 +542,61 @@ var_end(const char *var)
 			break;
 	return var;
 }
+
+
+/* ============ Parser data */
+
+/*
+ * ash_vmsg() needs parsefile->fd, hence parsefile definition is moved up.
+ */
+struct strlist {
+	struct strlist *next;
+	char *text;
+};
+
+struct alias;
+
+struct strpush {
+	struct strpush *prev;   /* preceding string on stack */
+	char *prev_string;
+	int prev_left_in_line;
+#if ENABLE_ASH_ALIAS
+	struct alias *ap;       /* if push was associated with an alias */
+#endif
+	char *string;           /* remember the string since it may change */
+
+	/* Remember last two characters for pungetc. */
+	int lastc[2];
+
+	/* Number of outstanding calls to pungetc. */
+	int unget;
+};
+
+/*
+ * The parsefile structure pointed to by the global variable parsefile
+ * contains information about the current file being read.
+ */
+struct parsefile {
+	struct parsefile *prev; /* preceding file on stack */
+	int linno;              /* current line */
+	int pf_fd;              /* file descriptor (or -1 if string) */
+	int left_in_line;       /* number of chars left in this line */
+	int left_in_buffer;     /* number of chars left in this buffer past the line */
+	char *next_to_pgetc;    /* next char in buffer */
+	char *buf;              /* input buffer */
+	struct strpush *strpush; /* for pushing strings at this level */
+	struct strpush basestrpush; /* so pushing one is fast */
+
+	/* Remember last two characters for pungetc. */
+	int lastc[2];
+
+	/* Number of outstanding calls to pungetc. */
+	int unget;
+};
+
+static struct parsefile basepf;        /* top level input file */
+static struct parsefile *g_parsefile = &basepf;  /* current input file */
+static char *commandname;              /* currently executing command */
 
 
 /* ============ Interrupts / exceptions */
@@ -1299,61 +1354,6 @@ showtree(union node *n)
 #endif /* DEBUG */
 
 
-/* ============ Parser data */
-
-/*
- * ash_vmsg() needs parsefile->fd, hence parsefile definition is moved up.
- */
-struct strlist {
-	struct strlist *next;
-	char *text;
-};
-
-struct alias;
-
-struct strpush {
-	struct strpush *prev;   /* preceding string on stack */
-	char *prev_string;
-	int prev_left_in_line;
-#if ENABLE_ASH_ALIAS
-	struct alias *ap;       /* if push was associated with an alias */
-#endif
-	char *string;           /* remember the string since it may change */
-
-	/* Remember last two characters for pungetc. */
-	int lastc[2];
-
-	/* Number of outstanding calls to pungetc. */
-	int unget;
-};
-
-/*
- * The parsefile structure pointed to by the global variable parsefile
- * contains information about the current file being read.
- */
-struct parsefile {
-	struct parsefile *prev; /* preceding file on stack */
-	int linno;              /* current line */
-	int pf_fd;              /* file descriptor (or -1 if string) */
-	int left_in_line;       /* number of chars left in this line */
-	int left_in_buffer;     /* number of chars left in this buffer past the line */
-	char *next_to_pgetc;    /* next char in buffer */
-	char *buf;              /* input buffer */
-	struct strpush *strpush; /* for pushing strings at this level */
-	struct strpush basestrpush; /* so pushing one is fast */
-
-	/* Remember last two characters for pungetc. */
-	int lastc[2];
-
-	/* Number of outstanding calls to pungetc. */
-	int unget;
-};
-
-static struct parsefile basepf;        /* top level input file */
-static struct parsefile *g_parsefile = &basepf;  /* current input file */
-static char *commandname;              /* currently executing command */
-
-
 /* ============ Message printing */
 
 static void
@@ -2091,7 +2091,7 @@ static const struct {
 	int flags;
 	const char *var_text;
 	void (*var_func)(const char *) FAST_FUNC;
-} varinit_data[] = {
+} varinit_data[] ALIGN_PTR = {
 	/*
 	 * Note: VEXPORT would not work correctly here for NOFORK applets:
 	 * some environment strings may be constant.
@@ -2770,7 +2770,7 @@ updatepwd(const char *dir)
 			lim++;
 		}
 	}
-	p = strtok(cdcomppath, "/");
+	p = strtok_r(cdcomppath, "/", &cdcomppath);
 	while (p) {
 		switch (*p) {
 		case '.':
@@ -2789,7 +2789,7 @@ updatepwd(const char *dir)
 			new = stack_putstr(p, new);
 			USTPUTC('/', new);
 		}
-		p = strtok(NULL, "/");
+		p = strtok_r(NULL, "/", &cdcomppath);
 	}
 	if (new > lim)
 		STUNPUTC(new);
@@ -4608,7 +4608,7 @@ getstatus(struct job *job)
 				job->sigint = 1;
 #endif
 		}
-		retval += 128;
+		retval |= 128;
 	}
 	TRACE(("getstatus: job %d, nproc %d, status 0x%x, retval 0x%x\n",
 		jobno(job), job->nprocs, status, retval));
@@ -4674,7 +4674,7 @@ waitcmd(int argc UNUSED_PARAM, char **argv)
 				if (status != -1 && !WIFSTOPPED(status)) {
 					retval = WEXITSTATUS(status);
 					if (WIFSIGNALED(status))
-						retval = WTERMSIG(status) + 128;
+						retval = 128 | WTERMSIG(status);
 					goto ret;
 				}
 			}
@@ -4709,7 +4709,7 @@ waitcmd(int argc UNUSED_PARAM, char **argv)
  ret:
 	return retval;
  sigout:
-	retval = 128 + pending_sig;
+	retval = 128 | pending_sig;
 	return retval;
 }
 
@@ -4811,7 +4811,7 @@ static char *cmdnextc;
 static void
 cmdputs(const char *s)
 {
-	static const char vstype[VSTYPE + 1][3] = {
+	static const char vstype[VSTYPE + 1][3] ALIGN1 = {
 		"", "}", "-", "+", "?", "=",
 		"%", "%%", "#", "##"
 		IF_BASH_SUBSTR(, ":")
@@ -7011,7 +7011,8 @@ subevalvar(char *start, char *str, int strloc,
 	slash_pos = -1;
 	if (repl) {
 		slash_pos = expdest - ((char *)stackblock() + strloc);
-		STPUTC('/', expdest);
+		if (!(flag & EXP_DISCARD))
+			STPUTC('/', expdest);
 		//bb_error_msg("repl+1:'%s'", repl + 1);
 		p = argstr(repl + 1, (flag & EXP_DISCARD) | EXP_TILDE); /* EXP_TILDE: echo "${v/x/~}" expands ~ ! */
 		*repl = '/';
@@ -7277,7 +7278,9 @@ subevalvar(char *start, char *str, int strloc,
  out:
 	amount = loc - expdest;
 	STADJUST(amount, expdest);
+#if BASH_PATTERN_SUBST
  out1:
+#endif
 	/* Remove any recorded regions beyond start of variable */
 	removerecordregions(startloc);
 
@@ -8508,7 +8511,7 @@ enum {
 	, /* thus far 29 bits used */
 };
 
-static const char *const tokname_array[] = {
+static const char *const tokname_array[] ALIGN_PTR = {
 	"end of file",
 	"newline",
 	"redirection",
@@ -10593,7 +10596,7 @@ preadfd(void)
 
 	g_parsefile->next_to_pgetc = buf;
 #if ENABLE_FEATURE_EDITING
- retry:
+ /* retry: */
 	if (!iflag || g_parsefile->pf_fd != STDIN_FILENO)
 		nr = nonblock_immune_read(g_parsefile->pf_fd, buf, IBUFSIZ - 1);
 	else {
@@ -10615,15 +10618,14 @@ preadfd(void)
 		if (nr == 0) {
 			/* ^C pressed, "convert" to SIGINT */
 			write(STDOUT_FILENO, "^C", 2);
+			raise(SIGINT);
 			if (trap[SIGINT]) {
 				buf[0] = '\n';
 				buf[1] = '\0';
-				raise(SIGINT);
 				return 1;
 			}
 			exitstatus = 128 + SIGINT;
-			bb_putchar('\n');
-			goto retry;
+			return -1;
 		}
 		if (nr < 0) {
 			if (errno == 0) {
@@ -11823,7 +11825,8 @@ simplecmd(void)
 				tokpushback = 1;
 				goto out;
 			}
-			wordtext = (char *) (t == TAND ? "-a" : "-o");
+			/* pass "&&" or "||" to [[ ]] as literal args */
+			wordtext = (char *) (t == TAND ? "&&" : "||");
 #endif
 		case TWORD:
 			n = stzalloc(sizeof(struct narg));
@@ -14157,6 +14160,7 @@ reset(void)
 	/* from input.c: */
 	g_parsefile->left_in_buffer = 0;
 	g_parsefile->left_in_line = 0;      /* clear input buffer */
+	g_parsefile->unget = 0;
 	popallfiles();
 
 	/* from var.c: */
@@ -14173,8 +14177,7 @@ exitshell(void)
 	char *p;
 
 #if ENABLE_FEATURE_EDITING_SAVE_ON_EXIT
-	if (line_input_state)
-		save_history(line_input_state);
+	save_history(line_input_state); /* may be NULL */
 #endif
 	savestatus = exitstatus;
 	TRACE(("pid %d, exitshell(%d)\n", getpid(), savestatus));
@@ -14338,6 +14341,17 @@ procargs(char **argv)
 		shellparam.nparam++;
 		xargv++;
 	}
+
+	/* Interactive bash re-enables SIGHUP which is SIG_IGNed on entry.
+	 * Try:
+	 * trap '' hup; bash; echo RET	# type "kill -hup $$", see SIGHUP having effect
+	 * trap '' hup; bash -c 'kill -hup $$; echo ALIVE'  # here SIGHUP is SIG_IGNed
+	 * NB: must do it before setting up signals (in optschanged())
+	 * and reading .profile etc (after we return from here):
+	 */
+	if (iflag)
+		signal(SIGHUP, SIG_DFL);
+
 	optschanged();
 
 	return login_sh;
@@ -14486,7 +14500,7 @@ int ash_main(int argc UNUSED_PARAM, char **argv)
 
 	if (sflag || minusc == NULL) {
 #if MAX_HISTORY > 0 && ENABLE_FEATURE_EDITING_SAVEHISTORY
-		if (iflag) {
+		if (line_input_state) {
 			const char *hp = lookupvar("HISTFILE");
 			if (!hp) {
 				hp = lookupvar("HOME");
@@ -14500,7 +14514,7 @@ int ash_main(int argc UNUSED_PARAM, char **argv)
 				}
 			}
 			if (hp)
-				line_input_state->hist_file = hp;
+				line_input_state->hist_file = xstrdup(hp);
 # if ENABLE_FEATURE_SH_HISTFILESIZE
 			hp = lookupvar("HISTFILESIZE");
 			line_input_state->max_history = size_from_HISTFILESIZE(hp);
@@ -14508,14 +14522,6 @@ int ash_main(int argc UNUSED_PARAM, char **argv)
 		}
 #endif
  state4: /* XXX ??? - why isn't this before the "if" statement */
-
-		/* Interactive bash re-enables SIGHUP which is SIG_IGNed on entry.
-		 * Try:
-		 * trap '' hup; bash; echo RET	# type "kill -hup $$", see SIGHUP having effect
-		 * trap '' hup; bash -c 'kill -hup $$; echo ALIVE'  # here SIGHUP is SIG_IGNed
-		 */
-		signal(SIGHUP, SIG_DFL);
-
 		cmdloop(1);
 	}
 #if PROFILE

@@ -1,6 +1,6 @@
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -677,6 +677,7 @@
+@@ -716,6 +716,7 @@
  static NOINLINE int send_discover(uint32_t xid, uint32_t requested)
  {
  	struct dhcp_packet packet;
@@ -8,7 +8,7 @@
  
  	/* Fill in: op, htype, hlen, cookie, chaddr fields,
  	 * random xid field (we override it below),
-@@ -694,7 +695,8 @@
+@@ -733,7 +734,8 @@
  	 */
  	add_client_options(&packet);
  

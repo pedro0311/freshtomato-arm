@@ -22,7 +22,7 @@
  	USE_FOR_MMU(             OPTBIT_b,)
  	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
  	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
-@@ -1245,6 +1246,7 @@
+@@ -1284,6 +1285,7 @@
  	opt = getopt32long(argv, "^"
  		/* O,x: list; -T,-t,-A take numeric param */
  		"CV:H:h:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
@@ -30,7 +30,7 @@
  		USE_FOR_MMU("b")
  		IF_FEATURE_UDHCPC_ARPING("a::")
  		IF_FEATURE_UDHCP_PORT("P:")
-@@ -1317,6 +1319,9 @@
+@@ -1356,6 +1358,9 @@
  		free(optstr);
  	}
  
@@ -62,7 +62,7 @@
  	if (padding > DHCP_SIZE - 300)
  		padding = DHCP_SIZE - 300;
  
-@@ -223,7 +227,7 @@
+@@ -239,7 +243,7 @@
  	}
  
  	udhcp_dump_packet(dhcp_pkt);
