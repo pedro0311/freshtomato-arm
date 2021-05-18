@@ -389,8 +389,8 @@ static void shutdn(int rb)
 	set_action(ACT_REBOOT);
 
 	/* Disconnect pppd - need this for PPTP/L2TP to finish gracefully */
-	stop_pptp("wan");
-	stop_l2tp("wan");
+	killall("xl2tpd", SIGTERM);
+	killall("pppd", SIGTERM);
 
 	logmsg(LOG_DEBUG, "*** %s: TERM", __FUNCTION__);
 	kill(-1, SIGTERM);

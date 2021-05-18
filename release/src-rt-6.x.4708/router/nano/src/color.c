@@ -119,19 +119,9 @@ void prepare_palette(void)
  * the list starting at head.  Return TRUE upon success. */
 bool found_in_list(regexlisttype *head, const char *shibboleth)
 {
-	regexlisttype *item;
-	regex_t rgx;
-
-	for (item = head; item != NULL; item = item->next) {
-		regcomp(&rgx, item->full_regex, NANO_REG_EXTENDED | REG_NOSUB);
-
-		if (regexec(&rgx, shibboleth, 0, NULL, 0) == 0) {
-			regfree(&rgx);
+	for (regexlisttype *item = head; item != NULL; item = item->next)
+		if (regexec(item->one_rgx, shibboleth, 0, NULL, 0) == 0)
 			return TRUE;
-		}
-
-		regfree(&rgx);
-	}
 
 	return FALSE;
 }
@@ -305,7 +295,8 @@ void precalc_multicolorinfo(void)
 
 	/* For each line, allocate cache space for the multiline-regex info. */
 	for (line = openfile->filetop; line != NULL; line = line->next)
-		line->multidata = nmalloc(openfile->syntax->nmultis * sizeof(short));
+		if (!line->multidata)
+			line->multidata = nmalloc(openfile->syntax->nmultis * sizeof(short));
 
 	for (ink = openfile->syntax->color; ink != NULL; ink = ink->next) {
 		/* If this is not a multi-line regex, skip it. */

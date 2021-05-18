@@ -10,7 +10,6 @@
 //config:config MODPROBE
 //config:	bool "modprobe (28 kb)"
 //config:	default y
-//config:	select PLATFORM_LINUX
 //config:	help
 //config:	Handle the loading of modules, and their dependencies on a high
 //config:	level.
@@ -236,10 +235,9 @@ static void add_probe(const char *name)
 	}
 }
 
-static int FAST_FUNC config_file_action(const char *filename,
-					struct stat *statbuf UNUSED_PARAM,
-					void *userdata UNUSED_PARAM,
-					int depth)
+static int FAST_FUNC config_file_action(struct recursive_state *state,
+		const char *filename,
+		struct stat *statbuf UNUSED_PARAM)
 {
 	char *tokens[3];
 	parser_t *p;
@@ -256,7 +254,7 @@ static int FAST_FUNC config_file_action(const char *filename,
 	 * that we shouldn't recurse into /etc/modprobe.d/dir/
 	 * _subdirectories_:
 	 */
-	if (depth > 1)
+	if (state->depth > 1)
 		return SKIP; /* stop recursing */
 //TODO: instead, can use dirAction in recursive_action() to SKIP dirs
 //on depth == 1 level. But that's more code...
@@ -265,7 +263,7 @@ static int FAST_FUNC config_file_action(const char *filename,
 	 * depth==0: read_config("modules.{symbols,alias}") must work,
 	 * "include FILE_NOT_ENDING_IN_CONF" must work too.
 	 */
-	if (depth != 0) {
+	if (state->depth != 0) {
 		if (!is_suffixed_with(base, ".conf"))
 			goto error;
 	}
@@ -330,8 +328,7 @@ static int FAST_FUNC config_file_action(const char *filename,
 static int read_config(const char *path)
 {
 	return recursive_action(path, ACTION_RECURSE | ACTION_QUIET,
-				config_file_action, NULL, NULL,
-				/*depth:*/ 0);
+				config_file_action, NULL, NULL);
 }
 
 static const char *humanly_readable_name(struct module_entry *m)
@@ -664,6 +661,25 @@ int modprobe_main(int argc UNUSED_PARAM, char **argv)
 	if (ENABLE_FEATURE_MODUTILS_ALIAS && G.num_unresolved_deps) {
 		read_config("modules.alias");
 		load_modules_dep();
+	}
+
+	/* Handle modprobe.blacklist=module1,module2,... */
+	if (ENABLE_FEATURE_MODPROBE_BLACKLIST) {
+		char *options;
+		char *substr;
+
+		options = parse_and_add_kcmdline_module_options(NULL, "modprobe");
+		while ((substr = strsep(&options, " ")) != NULL) {
+			char *fn = is_prefixed_with(substr, "blacklist=");
+			if (!fn)
+				continue;
+			while ((substr = strsep(&fn, ",")) != NULL) {
+				/* blacklist <modulename> */
+				get_or_add_modentry(substr)->flags |= MODULE_FLAG_BLACKLISTED;
+				DBG("blacklist: %s", substr);
+			}
+		}
+		/*free(options); - WRONG, strsep may have advanced it */
 	}
 
 	rc = 0;

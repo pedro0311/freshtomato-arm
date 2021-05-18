@@ -1,6 +1,6 @@
 --- busybox/networking/ntpd.c
 +++ busybox/networking/ntpd.c
-@@ -73,7 +73,7 @@
+@@ -72,7 +72,7 @@
  //kbuild:lib-$(CONFIG_NTPD) += ntpd.o
  
  //usage:#define ntpd_trivial_usage
@@ -9,7 +9,7 @@
  //usage:	IF_NOT_FEATURE_NTP_AUTH(" [-p PEER]...")
  //usage:	IF_FEATURE_NTP_AUTH(" [-k KEYFILE] [-p [keyno:N:]PEER]...")
  //usage:#define ntpd_full_usage "\n\n"
-@@ -83,6 +83,7 @@
+@@ -82,6 +82,7 @@
  //usage:     "\n	-q	Quit after clock is set"
  //usage:     "\n	-N	Run at high priority"
  //usage:     "\n	-w	Do not set time (only query peers), implies -n"
@@ -17,7 +17,7 @@
  //usage:     "\n	-S PROG	Run PROG after stepping time, stratum change, and every 11 min"
  //usage:	IF_NOT_FEATURE_NTP_AUTH(
  //usage:     "\n	-p PEER	Obtain time from PEER (may be repeated)"
-@@ -163,7 +164,7 @@
+@@ -162,7 +163,7 @@
   *   datapoints after the step.
   */
  
@@ -26,7 +26,7 @@
  #define MIN_FREQHOLD      10    /* adjust offset, but not freq in this many first adjustments */
  #define BAD_DELAY_GROWTH   4    /* drop packet if its delay grew by more than this factor */
  
-@@ -197,13 +198,13 @@
+@@ -196,13 +197,13 @@
  
  #define FREQ_TOLERANCE  0.000015 /* frequency tolerance (15 PPM) */
  #define BURSTPOLL       0       /* initial poll */
@@ -42,7 +42,7 @@
  /*
   * Actively lower poll when we see such big offsets.
   * With SLEW_THRESHOLD = 0.125, it means we try to sync more aggressively
-@@ -226,7 +227,7 @@
+@@ -225,7 +226,7 @@
   * and when it goes below -POLLADJ_LIMIT, we poll_exp--.
   * (Bumped from 30 to 40 since otherwise I often see poll_exp going *2* steps down)
   */
@@ -51,7 +51,7 @@
  /* If offset < discipline_jitter * POLLADJ_GATE, then we decide to increase
   * poll interval (we think we can't improve timekeeping
   * by staying at smaller poll).
-@@ -372,14 +373,15 @@
+@@ -374,14 +375,15 @@
  	OPT_q = (1 << 1),
  	OPT_N = (1 << 2),
  	OPT_x = (1 << 3),
@@ -73,7 +73,7 @@
  	/* We hijack some bits for other purposes */
  	OPT_qq = (1 << 31),
  };
-@@ -1214,6 +1216,9 @@
+@@ -1238,6 +1240,9 @@
  				"unreachable", p->p_dotted);
  		return 0;
  	}
@@ -83,7 +83,7 @@
  #if 0 /* we filter out such packets earlier */
  	if ((p->lastpkt_status & LI_ALARM) == LI_ALARM
  	 || p->lastpkt_stratum >= MAXSTRAT
-@@ -2059,9 +2064,10 @@
+@@ -2086,9 +2091,10 @@
  	close(p->p_fd);
  	p->p_fd = -1;
  
@@ -96,7 +96,7 @@
  	) {
  		bb_error_msg("reply from %s: peer is unsynced", p->p_dotted);
  		/*
-@@ -2451,7 +2457,7 @@
+@@ -2475,7 +2481,7 @@
  	opts = getopt32(argv, "^"
  			"nqNx" /* compat */
  			IF_FEATURE_NTP_AUTH("k:")  /* compat */

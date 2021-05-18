@@ -28,6 +28,7 @@ exec_prefix=@exec_prefix@
 localstatedir=/var
 
 # Paths to programs
+IP=@IP@
 IFCONFIG=/sbin/ifconfig
 PPPD=@PPPD@
 SETSID=@SETSID@
@@ -115,11 +116,7 @@ fi
 # fails on some *BSD's, so we'll only do it under Linux
 
 if test `uname -s` = Linux ; then
-    $IFCONFIG $ETH up
-    EXISTING_MTU=`$IFCONFIG $ETH 2> /dev/null | grep MTU: | sed -e 's/.*MTU://' | sed -e 's/[^0-9].*//'`
-    if test "$EXISTING_MTU" = "" -o "$EXISTING_MTU" -lt 1500 ; then
-	$IFCONFIG $ETH mtu 1500
-    fi
+    $IP link set $ETH up mtu 1500
 
     # For 2.4 kernels.  Will fail on 2.2.x, but who cares?
     modprobe ppp_generic > /dev/null 2>&1
@@ -129,12 +126,14 @@ if test `uname -s` = Linux ; then
 	modprobe pppox > /dev/null 2>&1
 	modprobe pppoe > /dev/null 2>&1
     fi
+else
+    $IFCONFIG $ETH up
 fi
 
 if test "$SYNCHRONOUS" = "yes" ; then
     PPPOE_SYNC=-s
     PPPD_SYNC=sync
-	# Increase the chances of it working on Linux...
+    # Increase the chances of it working on Linux...
     if test `uname -s` = Linux ; then
 	modprobe n_hdlc > /dev/null 2>&1
     fi

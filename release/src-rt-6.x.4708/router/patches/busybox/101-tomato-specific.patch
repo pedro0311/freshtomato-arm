@@ -1,6 +1,6 @@
 --- busybox/modutils/modprobe.c
 +++ busybox/modutils/modprobe.c
-@@ -452,7 +452,7 @@
+@@ -449,7 +449,7 @@
  		if (option_mask32 & OPT_REMOVE) {
  			/* modprobe -r */
  			if (m2->flags & MODULE_FLAG_LOADED) {
@@ -19,7 +19,7 @@
  	"retries\0"        Required_argument "t"
  	"tryagain\0"       Required_argument "A"
  	"syslog\0"         No_argument       "S"
-@@ -121,7 +122,7 @@
+@@ -128,7 +129,7 @@
  	[OPTION_IP              ] = sizeof("255.255.255.255 "),
  	[OPTION_IP_PAIR         ] = sizeof("255.255.255.255 ") * 2,
  	[OPTION_STATIC_ROUTES   ] = sizeof("255.255.255.255/32 255.255.255.255 "),
@@ -28,7 +28,7 @@
  	[OPTION_STRING          ] = 1,
  	[OPTION_STRING_HOST     ] = 1,
  #if ENABLE_FEATURE_UDHCP_RFC3397
-@@ -1078,11 +1079,11 @@
+@@ -1117,11 +1118,11 @@
  	bb_simple_info_msg("performing DHCP renew");
  	switch (client_data.state) {
  	case BOUND:
@@ -43,7 +43,7 @@
  	case RENEW_REQUESTED: /* impatient are we? fine, square 1 */
  		udhcp_run_script(NULL, "deconfig");
  	case REQUESTING:
-@@ -1188,6 +1189,7 @@
+@@ -1227,6 +1228,7 @@
  //usage:     "\n			-x 0x3d:0100BEEFC0FFEE - option 61 (client id)"
  //usage:     "\n			-x 14:'\"dumpfile\"' - option 14 (shell-quoted)"
  //usage:     "\n	-F NAME		Ask server to update DNS mapping for NAME"
@@ -51,7 +51,7 @@
  //usage:     "\n	-V VENDOR	Vendor identifier (default 'udhcp VERSION')"
  //usage:     "\n	-C		Don't send MAC as client identifier"
  //usage:	IF_UDHCP_VERBOSE(
-@@ -1480,7 +1482,7 @@
+@@ -1519,7 +1521,7 @@
  				/* 1/2 lease passed, enter renewing state */
  				client_data.state = RENEWING;
  				client_data.first_secs = 0; /* make secs field count from 0 */
@@ -60,7 +60,7 @@
  				log1s("entering renew state");
  				/* fall right through */
  			case RENEW_REQUESTED: /* manual (SIGUSR1) renew */
-@@ -1549,7 +1551,7 @@
+@@ -1588,7 +1590,7 @@
  		switch (udhcp_sp_read()) {
  		case SIGUSR1:
  			client_data.first_secs = 0; /* make secs field count from 0 */
@@ -69,7 +69,7 @@
  			perform_renew();
  			if (client_data.state == RENEW_REQUESTED) {
  				/* We might be either on the same network
-@@ -1560,8 +1562,8 @@
+@@ -1599,8 +1601,8 @@
  				 * is not too big, or else we can send
  				 * futile renew requests for hours.
  				 */

@@ -1,6 +1,6 @@
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -1382,6 +1382,12 @@ int udhcpc_main(int argc UNUSED_PARAM, c
+@@ -1421,6 +1421,12 @@ int udhcpc_main(int argc UNUSED_PARAM, c
  		/* silence "uninitialized!" warning */
  		unsigned timestamp_before_wait = timestamp_before_wait;
  

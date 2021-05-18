@@ -666,16 +666,12 @@ endef
 
 define BusyboxOptions
 	@( \
-	sed -i "/CONFIG_FEATURE_2_4_MODULES/d" $(1); \
-	echo "# CONFIG_FEATURE_2_4_MODULES is not set" >>$(1); \
 	sed -i "/CONFIG_FEATURE_LSMOD_PRETTY_2_6_OUTPUT/d" $(1); \
 	echo "CONFIG_FEATURE_LSMOD_PRETTY_2_6_OUTPUT=y" >>$(1); \
 	sed -i "/CONFIG_FEATURE_DEVFS/d" $(1); \
 	echo "# CONFIG_FEATURE_DEVFS is not set" >>$(1); \
 	sed -i "/CONFIG_MKNOD/d" $(1); \
 	echo "CONFIG_MKNOD=y" >>$(1); \
-	sed -i "/CONFIG_FEATURE_SYSLOGD_READ_BUFFER_SIZE/d" $(1); \
-	echo "CONFIG_FEATURE_SYSLOGD_READ_BUFFER_SIZE=512" >>$(1); \
 	if [ "$(NO_CIFS)" = "y" ]; then \
 		sed -i "/CONFIG_FEATURE_MOUNT_CIFS/d" $(1); \
 		echo "# CONFIG_FEATURE_MOUNT_CIFS is not set" >>$(1); \

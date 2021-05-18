@@ -1571,9 +1571,9 @@ proc SetButtonStates {} {
 #***********************************************************************
 proc GetEthernetInterfaces {} {
     set ifs {}
-    set fp [open "|/sbin/ifconfig" "r"]
+    set fp [open "|@IP@ -o link show" "r"]
     while {[gets $fp line] >= 0} {
-	if {[regexp {^eth[0-9]+} $line eth]} {
+	if {[regexp {eth[0-9]+} $line eth]} {
 	    lappend ifs $eth
 	}
     }

@@ -1,17 +1,18 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
 
-*/
 #include "tomato.h"
-
 #include "../mssl/mssl.h"
-extern int do_ssl;
-
 #include <errno.h>
 #include <stdarg.h>
 
+
+extern int do_ssl;
 extern FILE *connfp;
 extern int connfd;
 
@@ -20,7 +21,8 @@ int web_getline(char *buffer, int max)
 	while (fgets(buffer, max, connfp) == NULL) {
 		if (errno != EINTR) return 0;
 	}
-//	cprintf("%s", buffer);
+	//cprintf("%s", buffer);
+
 	return 1;
 }
 
@@ -82,7 +84,8 @@ int _web_printf(wofilter_t wof, const char *format, ...)
 
 	size = 1024;
 	while (1) {
-		if ((b = malloc(size)) == NULL) return 0;
+		if ((b = malloc(size)) == NULL)
+			return 0;
 
 		va_start(args, format);
 		n = vsnprintf(b, size, format, args);
@@ -113,7 +116,8 @@ int _web_printf(wofilter_t wof, const char *format, ...)
 		else size *= 2;
 
 		free(b);
-		if (size > (10 * 1024)) return 0;
+		if (size > (10 * 1024))
+			return 0;
 	}
 }
 
@@ -124,10 +128,13 @@ int web_write(const char *buffer, int len)
 
 	while (n > 0) {
 		r = fwrite(buffer, 1, n, connfp);
-		if ((r == 0) && (errno != EINTR)) return -1;
+		if ((r == 0) && (errno != EINTR))
+			return -1;
+
 		buffer += r;
 		n -= r;
 	}
+
 	return r;
 }
 
@@ -138,6 +145,7 @@ int web_read(void *buffer, int len)
 	while ((r = fread(buffer, 1, len, connfp)) == 0) {
 		if (errno != EINTR) return -1;
 	}
+
 	return r;
 }
 
@@ -147,11 +155,14 @@ int web_read_x(void *buffer, int len)
 	int t = 0;
 	while (len > 0) {
 		n = web_read(buffer, len);
-		if (n <= 0) return len;
+		if (n <= 0)
+			return len;
+
 		buffer += n;
 		len -= n;
 		t += n;
 	}
+
 	return t;
 }
 
@@ -160,9 +171,12 @@ int web_eat(int max)
 	char buf[512];
 	int n;
 	while (max > 0) {
-		 if ((n = web_read(buf, ((unsigned int) max < sizeof(buf)) ? (unsigned int) max : sizeof(buf))) <= 0) return 0;
-		 max -= n;
+		if ((n = web_read(buf, ((unsigned int) max < sizeof(buf)) ? (unsigned int) max : sizeof(buf))) <= 0)
+			return 0;
+
+		max -= n;
 	}
+
 	return 1;
 }
 
@@ -175,12 +189,14 @@ int web_open(void)
 {
 	if (do_ssl) {
 #ifdef TCONFIG_HTTPS
-		if ((connfp = ssl_server_fopen(connfd)) != NULL) return 1;
+		if ((connfp = ssl_server_fopen(connfd)) != NULL)
+			return 1;
 #endif
 	}
-	else {
-		if ((connfp = fdopen(connfd, "r+")) != NULL) return 1;
-	}
+	else
+		if ((connfp = fdopen(connfd, "r+")) != NULL)
+			return 1;
+
 	return 0;
 }
 
@@ -192,16 +208,13 @@ int web_close(void)
 		connfp = NULL;
 	}
 	if (connfd != -1) {
-//		shutdown(connfd, SHUT_RDWR);
+		//shutdown(connfd, SHUT_RDWR);
 		close(connfd);
 		connfd = -1;
 	}
+
 	return 1;
 }
-
-
-// --------------------------------------------------------------------------------------------------------------------
-
 
 static void _web_putfile(FILE *f, wofilter_t wof)
 {
@@ -233,6 +246,7 @@ int web_putfile(const char *fname, wofilter_t wof)
 		fclose(f);
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -245,7 +259,6 @@ int web_pipecmd(const char *cmd, wofilter_t wof)
 		pclose(f);
 		return 1;
 	}
+
 	return 0;
 }
-
-

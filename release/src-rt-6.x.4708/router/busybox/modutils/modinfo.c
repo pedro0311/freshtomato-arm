@@ -8,7 +8,6 @@
 //config:config MODINFO
 //config:	bool "modinfo (24 kb)"
 //config:	default y
-//config:	select PLATFORM_LINUX
 //config:	help
 //config:	Show information about a Linux Kernel module
 
@@ -21,7 +20,7 @@
 #include "libbb.h"
 #include "modutils.h"
 
-static const char *const shortcuts[] = {
+static const char *const shortcuts[] ALIGN_PTR = {
 	"filename",	// -n
 	"author",	// -a
 	"description",	// -d

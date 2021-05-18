@@ -54,6 +54,10 @@ static bool linger_after_escape = FALSE;
 		/* Whether to give ncurses some time to get the next code. */
 static int statusblank = 0;
 		/* The number of keystrokes left before we blank the status bar. */
+size_t from_x = 0;
+		/* From where in the relevant line the current row is drawn. */
+size_t till_x = 0;
+		/* Until where in the relevant line the current row is drawn. */
 static bool has_more = FALSE;
 		/* Whether the current line has more text after the displayed part. */
 static bool is_shorter = TRUE;
@@ -1377,7 +1381,7 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 	 * commence Unicode input.  Otherwise, put the code back. */
 	if (using_utf8() && (keycode == '0' || keycode == '1')) {
 		long unicode = assemble_unicode(keycode);
-		char *multibyte;
+		char multibyte[MB_CUR_MAX];
 
 		reveal_cursor = FALSE;
 
@@ -1407,13 +1411,14 @@ int *parse_verbatim_kbinput(WINDOW *win, size_t *count)
 		}
 
 		/* Convert the Unicode value to a multibyte sequence. */
-		multibyte = make_mbchar(unicode, (int *)count);
+		*count = wctomb(multibyte, unicode);
+
+		if (*count > MAXCHARLEN)
+			*count = 0;
 
 		/* Change the multibyte character into a series of integers. */
 		for (size_t i = 0; i < *count; i++)
 			yield[i] = (int)multibyte[i];
-
-		free(multibyte);
 
 		return yield;
 	}
@@ -1695,32 +1700,35 @@ void set_blankdelay_to_one(void)
 	statusblank = 1;
 }
 
-/* Convert buf into a string that can be displayed on screen.  The caller
- * wants to display buf starting with the given column, and extending for
+/* Convert text into a string that can be displayed on screen.  The caller
+ * wants to display text starting with the given column, and extending for
  * at most span columns.  column is zero-based, and span is one-based, so
  * span == 0 means you get "" returned.  The returned string is dynamically
  * allocated, and should be freed.  If isdata is TRUE, the caller might put
  * "<" at the beginning or ">" at the end of the line if it's too long.  If
  * isprompt is TRUE, the caller might put ">" at the end of the line if it's
  * too long. */
-char *display_string(const char *buf, size_t column, size_t span,
+char *display_string(const char *text, size_t column, size_t span,
 						bool isdata, bool isprompt)
 {
-	size_t start_index = actual_x(buf, column);
+	const char *origin = text;
+		/* The beginning of the text, to later determine the covered part. */
+	size_t start_x = actual_x(text, column);
 		/* The index of the first character that the caller wishes to show. */
-	size_t start_col = wideness(buf, start_index);
+	size_t start_col = wideness(text, start_x);
 		/* The actual column where that first character starts. */
-	char *converted;
-		/* The expanded string we will return. */
+	size_t stowaways = 20;
+		/* The number of zero-width characters for which to reserve space. */
+	size_t allocsize = (COLS + stowaways) * MAXCHARLEN + 1;
+		/* The amount of memory to reserve for the displayable string. */
+	char *converted = nmalloc(allocsize);
+		/* The displayable string we will return. */
 	size_t index = 0;
 		/* Current position in converted. */
 	size_t beyond = column + span;
 		/* The column number just beyond the last shown character. */
 
-	buf += start_index;
-
-	/* Allocate enough space for converting the relevant part of the line. */
-	converted = nmalloc(strlen(buf) * (MAXCHARLEN + tabsize) + 1);
+	text += start_x;
 
 #ifndef NANO_TINY
 	if (span > HIGHEST_POSITIVE) {
@@ -1731,17 +1739,17 @@ char *display_string(const char *buf, size_t column, size_t span,
 #endif
 	/* If the first character starts before the left edge, or would be
 	 * overwritten by a "<" token, then show placeholders instead. */
-	if (*buf != '\0' && *buf != '\t' && (start_col < column ||
-						(start_col > 0 && isdata && !ISSET(SOFTWRAP)))) {
-		if (is_cntrl_char(buf)) {
+	if ((start_col < column || (start_col > 0 && isdata && !ISSET(SOFTWRAP))) &&
+											*text != '\0' && *text != '\t') {
+		if (is_cntrl_char(text)) {
 			if (start_col < column) {
-				converted[index++] = control_mbrep(buf, isdata);
+				converted[index++] = control_mbrep(text, isdata);
 				column++;
-				buf += char_length(buf);
+				text += char_length(text);
 			}
 		}
 #ifdef ENABLE_UTF8
-		else if (mbwidth(buf) == 2) {
+		else if (is_doublewidth(text)) {
 			if (start_col == column) {
 				converted[index++] = ' ';
 				column++;
@@ -1750,29 +1758,29 @@ char *display_string(const char *buf, size_t column, size_t span,
 			/* Display the right half of a two-column character as ']'. */
 			converted[index++] = ']';
 			column++;
-			buf += char_length(buf);
+			text += char_length(text);
 		}
 #endif
 	}
 
 #ifdef ENABLE_UTF8
 #define ISO8859_CHAR  FALSE
-#define ZEROWIDTH_CHAR  (mbwidth(buf) == 0)
+#define ZEROWIDTH_CHAR  (is_zerowidth(text))
 #else
-#define ISO8859_CHAR  ((unsigned char)*buf > 0x9F)
+#define ISO8859_CHAR  ((unsigned char)*text > 0x9F)
 #define ZEROWIDTH_CHAR  FALSE
 #endif
 
-	while (*buf != '\0' && (column < beyond || ZEROWIDTH_CHAR)) {
+	while (*text != '\0' && (column < beyond || ZEROWIDTH_CHAR)) {
 		/* A plain printable ASCII character is one byte, one column. */
-		if (((signed char)*buf > 0x20 && *buf != DEL_CODE) || ISO8859_CHAR) {
-			converted[index++] = *(buf++);
+		if (((signed char)*text > 0x20 && *text != DEL_CODE) || ISO8859_CHAR) {
+			converted[index++] = *(text++);
 			column++;
 			continue;
 		}
 
 		/* Show a space as a visible character, or as a space. */
-		if (*buf == ' ') {
+		if (*text == ' ') {
 #ifndef NANO_TINY
 			if (ISSET(WHITESPACE_DISPLAY)) {
 				for (int i = whitelen[0]; i < whitelen[0] + whitelen[1];)
@@ -1781,12 +1789,12 @@ char *display_string(const char *buf, size_t column, size_t span,
 #endif
 				converted[index++] = ' ';
 			column++;
-			buf++;
+			text++;
 			continue;
 		}
 
 		/* Show a tab as a visible character plus spaces, or as just spaces. */
-		if (*buf == '\t') {
+		if (*text == '\t') {
 #ifndef NANO_TINY
 			if (ISSET(WHITESPACE_DISPLAY) && (index > 0 || !isdata ||
 						!ISSET(SOFTWRAP) || column % tabsize == 0 ||
@@ -1802,15 +1810,15 @@ char *display_string(const char *buf, size_t column, size_t span,
 				converted[index++] = ' ';
 				column++;
 			}
-			buf++;
+			text++;
 			continue;
 		}
 
 		/* Represent a control character with a leading caret. */
-		if (is_cntrl_char(buf)) {
+		if (is_cntrl_char(text)) {
 			converted[index++] = '^';
-			converted[index++] = control_mbrep(buf, isdata);
-			buf += char_length(buf);
+			converted[index++] = control_mbrep(text, isdata);
+			text += char_length(text);
 			column += 2;
 			continue;
 		}
@@ -1820,14 +1828,14 @@ char *display_string(const char *buf, size_t column, size_t span,
 		wchar_t wc;
 
 		/* Convert a multibyte character to a single code. */
-		charlength = mbtowc(&wc, buf, MAXCHARLEN);
+		charlength = mbtowide(&wc, text);
 
 		/* Represent an invalid character with the Replacement Character. */
-		if (charlength < 0 || !is_valid_unicode(wc)) {
+		if (charlength < 0) {
 			converted[index++] = '\xEF';
 			converted[index++] = '\xBF';
 			converted[index++] = '\xBD';
-			buf += (charlength > 0 ? charlength : 1);
+			text++;
 			column++;
 			continue;
 		}
@@ -1835,17 +1843,24 @@ char *display_string(const char *buf, size_t column, size_t span,
 		/* Determine whether the character takes zero, one, or two columns. */
 		charwidth = wcwidth(wc);
 
+		/* Watch the number of zero-widths, to keep ample memory reserved. */
+		if (charwidth == 0 && --stowaways == 0) {
+			stowaways = 40;
+			allocsize += stowaways * MAXCHARLEN;
+			converted = nrealloc(converted, allocsize);
+		}
+
 #ifdef __linux__
 		/* On a Linux console, skip zero-width characters, as it would show
 		 * them WITH a width, thus messing up the display.  See bug #52954. */
 		if (on_a_vt && charwidth == 0) {
-			buf += charlength;
+			text += charlength;
 			continue;
 		}
 #endif
 		/* For any valid character, just copy its bytes. */
 		for (; charlength > 0; charlength--)
-			converted[index++] = *(buf++);
+			converted[index++] = *(text++);
 
 		/* If the codepoint is unassigned, assume a width of one. */
 		column += (charwidth < 0 ? 1 : charwidth);
@@ -1853,15 +1868,15 @@ char *display_string(const char *buf, size_t column, size_t span,
 	}
 
 	/* If there is more text than can be shown, make room for the ">". */
-	if (column > beyond || (*buf != '\0' && (isprompt ||
+	if (column > beyond || (*text != '\0' && (isprompt ||
 							(isdata && !ISSET(SOFTWRAP))))) {
 #ifdef ENABLE_UTF8
 		do {
 			index = step_left(converted, index);
-		} while (mbwidth(converted + index) == 0);
+		} while (is_zerowidth(converted + index));
 
 		/* Display the left half of a two-column character as '['. */
-		if (mbwidth(converted + index) == 2)
+		if (is_doublewidth(converted + index))
 			converted[index++] = '[';
 #else
 		index--;
@@ -1874,6 +1889,10 @@ char *display_string(const char *buf, size_t column, size_t span,
 
 	/* Null-terminate the converted string. */
 	converted[index] = '\0';
+
+	/* Remember what part of the original text is covered by converted. */
+	from_x = start_x;
+	till_x = text - origin;
 
 	return converted;
 }
@@ -2084,10 +2103,9 @@ void minibar(void)
 	wattron(bottomwin, interface_color_pair[TITLE_BAR]);
 	mvwprintw(bottomwin, 0, 0, "%*s", COLS, " ");
 
-	/* Display the name of the current file, plus a star when modified. */
 	if (openfile->filename[0] != '\0') {
 		as_an_at = FALSE;
-		thename = display_string(openfile->filename, 0, HIGHEST_POSITIVE, FALSE, FALSE);
+		thename = display_string(openfile->filename, 0, COLS, FALSE, FALSE);
 	} else
 		thename = copy_of(_("(nameless)"));
 
@@ -2099,8 +2117,9 @@ void minibar(void)
 	if (namewidth + 19 > COLS)
 		padding = 0;
 
+	/* Display the name of the current file (dottifying it if it doesn't fit),
+	 * plus a star when the file has been modified. */
 	if (COLS > 4) {
-		/* If the full file name doesn't fit, dottify it. */
 		if (namewidth > COLS - 2) {
 			thename = display_string(thename, namewidth - COLS + 5, COLS - 5, FALSE, FALSE);
 			mvwaddstr(bottomwin, 0, 0, "...");
@@ -2111,6 +2130,8 @@ void minibar(void)
 		waddstr(bottomwin, openfile->modified ? " *" : "  ");
 	}
 
+	/* Right after reading or writing a file, display its number of lines;
+	 * otherwise, when there a mutiple buffers, display an [x/n] counter. */
 	if (report_size && COLS > 35) {
 		size_t count = openfile->filebot->lineno - (openfile->filebot->data[0] == '\0');
 
@@ -2136,7 +2157,8 @@ void minibar(void)
 	if (ISSET(CONSTANT_SHOW) && namewidth + tallywidth + placewidth + 32 < COLS)
 		mvwaddstr(bottomwin, 0, COLS - 27 - placewidth, location);
 
-	/* Display the hexadecimal code of the character under the cursor. */
+	/* Display the hexadecimal code of the character under the cursor,
+	 * plus the codes of upto two succeeding zero-width characters. */
 	if (ISSET(CONSTANT_SHOW) && namewidth + tallywidth + 28 < COLS) {
 		char *this_position = openfile->current->data + openfile->current_x;
 
@@ -2151,7 +2173,7 @@ void minibar(void)
 #ifdef ENABLE_UTF8
 		else if ((unsigned char)*this_position < 0x80 && using_utf8())
 			sprintf(hexadecimal, "U+%04X", (unsigned char)*this_position);
-		else if (using_utf8() && mbtowc(&widecode, this_position, MAXCHARLEN) >= 0)
+		else if (using_utf8() && mbtowide(&widecode, this_position) > 0)
 			sprintf(hexadecimal, "U+%04X", (int)widecode);
 #endif
 		else
@@ -2163,13 +2185,13 @@ void minibar(void)
 		successor = this_position + char_length(this_position);
 
 		if (*this_position && *successor && is_zerowidth(successor) &&
-					mbtowc(&widecode, successor, MAXCHARLEN) >= 0) {
+								mbtowide(&widecode, successor) > 0) {
 			sprintf(hexadecimal, "|%04X", (int)widecode);
 			waddstr(bottomwin, hexadecimal);
 
 			successor += char_length(successor);
 
-			if (is_zerowidth(successor) && mbtowc(&widecode, successor, MAXCHARLEN) >= 0) {
+			if (is_zerowidth(successor) && mbtowide(&widecode, successor) > 0) {
 				sprintf(hexadecimal, "|%04X", (int)widecode);
 				waddstr(bottomwin, hexadecimal);
 			}
@@ -2223,6 +2245,18 @@ void statusline(message_type importance, const char *msg, ...)
 	if (importance < lastmessage && lastmessage > NOTICE)
 		return;
 
+	/* Construct the message out of all the arguments. */
+	compound = nmalloc(MAXCHARLEN * COLS + 1);
+	va_start(ap, msg);
+	vsnprintf(compound, MAXCHARLEN * COLS + 1, msg, ap);
+	va_end(ap);
+
+#if !defined(NANO_TINY) && defined(ENABLE_MULTIBUFFER)
+	if (!we_are_running && importance == ALERT && openfile && !openfile->fmt &&
+						!openfile->errormessage && openfile->next != openfile)
+		openfile->errormessage = copy_of(compound);
+#endif
+
 	/* If there are multiple alert messages, add trailing dots to the first. */
 	if (lastmessage == ALERT) {
 		if (start_col > 4) {
@@ -2235,6 +2269,7 @@ void statusline(message_type importance, const char *msg, ...)
 			napms(100);
 			beep();
 		}
+		free(compound);
 		return;
 	}
 
@@ -2251,11 +2286,6 @@ void statusline(message_type importance, const char *msg, ...)
 
 	blank_statusbar();
 
-	/* Construct the message out of all the arguments. */
-	compound = nmalloc(MAXCHARLEN * (COLS + 1));
-	va_start(ap, msg);
-	vsnprintf(compound, MAXCHARLEN * (COLS + 1), msg, ap);
-	va_end(ap);
 	message = display_string(compound, 0, COLS, FALSE, FALSE);
 	free(compound);
 
@@ -2267,7 +2297,6 @@ void statusline(message_type importance, const char *msg, ...)
 	if (bracketed)
 		waddstr(bottomwin, "[ ");
 	waddstr(bottomwin, message);
-	free(message);
 	if (bracketed)
 		waddstr(bottomwin, " ]");
 	wattroff(bottomwin, colorpair);
@@ -2280,6 +2309,7 @@ void statusline(message_type importance, const char *msg, ...)
 
 	/* Push the message to the screen straightaway. */
 	wrefresh(bottomwin);
+	free(message);
 
 #ifndef NANO_TINY
 	if (old_whitespace)
@@ -2429,15 +2459,6 @@ void place_the_cursor(void)
  * from_col is the column number of the first character of this "page". */
 void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 {
-#if !defined(NANO_TINY) || defined(ENABLE_COLOR)
-	size_t from_x = actual_x(line->data, from_col);
-		/* The position in the line's data of the leftmost character
-		 * that is at least partially onscreen. */
-	size_t till_x = actual_x(line->data, from_col + editwincols - 1) + 1;
-		/* The position in the line's data just after the start of
-		 * the last character that is at least partially onscreen. */
-#endif
-
 #ifdef ENABLE_LINENUMBERS
 	/* If line numbering is switched on, put a line number in front of
 	 * the text -- but only for the parts that are not softwrapped. */
@@ -3034,22 +3055,26 @@ bool less_than_a_screenful(size_t was_lineno, size_t was_leftedge)
 /* Draw a scroll bar on the righthand side of the screen. */
 void draw_scrollbar(void)
 {
-	int totalrows = openfile->filebot->lineno;
-	int first_row = openfile->edittop->lineno;
+	int totallines = openfile->filebot->lineno;
+	int fromline = openfile->edittop->lineno - 1;
+	int coveredlines = editwinrows;
 
 	if (ISSET(SOFTWRAP)) {
-		for (linestruct *ln = openfile->filetop; ln != openfile->edittop; ln = ln->next)
-			first_row += ln->extrarows;
-		first_row += chunk_for(openfile->firstcolumn, openfile->edittop);
+		linestruct *line = openfile->edittop;
+		int extras = extra_chunks_in(line) - chunk_for(openfile->firstcolumn, line);
 
-		for (linestruct *ln = openfile->filetop; ln != NULL; ln = ln->next)
-			totalrows += ln->extrarows;
+		while (line->lineno + extras < fromline + editwinrows && line->next) {
+			line = line->next;
+			extras += extra_chunks_in(line);
+		}
+
+		coveredlines = line->lineno - fromline;
 	}
 
-	int lowest = ((first_row - 1) * editwinrows) / totalrows;
-	int highest = lowest + (editwinrows * editwinrows) / totalrows;
+	int lowest = (fromline * editwinrows) / totallines;
+	int highest = lowest + (editwinrows * coveredlines) / totallines;
 
-	if (editwinrows > totalrows)
+	if (editwinrows > totallines)
 		highest = editwinrows;
 
 	for (int row = 0; row < editwinrows; row++) {
@@ -3263,14 +3288,11 @@ size_t actual_last_column(size_t leftedge, size_t column)
 	return leftedge + column;
 }
 
-/* Return TRUE if current[current_x] is above the top of the screen, and FALSE
- * otherwise. */
+/* Return TRUE if current[current_x] is before the viewport. */
 bool current_is_above_screen(void)
 {
 #ifndef NANO_TINY
 	if (ISSET(SOFTWRAP))
-		/* The cursor is above screen when current[current_x] is before edittop
-		 * at column firstcolumn. */
 		return (openfile->current->lineno < openfile->edittop->lineno ||
 				(openfile->current->lineno == openfile->edittop->lineno &&
 				xplustabs() < openfile->firstcolumn));
@@ -3279,8 +3301,7 @@ bool current_is_above_screen(void)
 		return (openfile->current->lineno < openfile->edittop->lineno);
 }
 
-/* Return TRUE if current[current_x] is below the bottom of the screen, and
- * FALSE otherwise. */
+/* Return TRUE if current[current_x] is beyond the viewport. */
 bool current_is_below_screen(void)
 {
 #ifndef NANO_TINY
@@ -3293,16 +3314,14 @@ bool current_is_below_screen(void)
 		return (go_forward_chunks(editwinrows - 1, &line, &leftedge) == 0 &&
 						(line->lineno < openfile->current->lineno ||
 						(line->lineno == openfile->current->lineno &&
-						leftedge < leftedge_for(xplustabs(),
-												openfile->current))));
+						leftedge < leftedge_for(xplustabs(), openfile->current))));
 	} else
 #endif
 		return (openfile->current->lineno >=
 						openfile->edittop->lineno + editwinrows);
 }
 
-/* Return TRUE if current[current_x] is offscreen relative to edittop, and
- * FALSE otherwise. */
+/* Return TRUE if current[current_x] is outside the viewport. */
 bool current_is_offscreen(void)
 {
 	return (current_is_above_screen() || current_is_below_screen());
@@ -3478,9 +3497,11 @@ void report_cursor_position(void)
 	charpct = (openfile->totsize == 0) ? 0 : 100 * sum / openfile->totsize;
 
 	statusline(INFO,
-			_("line %zd/%zd (%d%%), col %zu/%zu (%d%%), char %zu/%zu (%d%%)"),
+			_("line %*zd/%zd (%2d%%), col %2zu/%2zu (%3d%%), char %*zu/%zu (%2d%%)"),
+			digits(openfile->filebot->lineno),
 			openfile->current->lineno, openfile->filebot->lineno, linepct,
-			column, fullwidth, colpct, sum, openfile->totsize, charpct);
+			column, fullwidth, colpct,
+			digits(openfile->totsize), sum, openfile->totsize, charpct);
 }
 
 /* Highlight the text between the given two columns on the current line. */

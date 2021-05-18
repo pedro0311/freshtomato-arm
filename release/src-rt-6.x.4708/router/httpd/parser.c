@@ -1,25 +1,28 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #include "tomato.h"
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"parser_debug"
 
-//#define DEBUG 1
 
 /*
-	<% ident(arg, "arg", 'arg'); %>
-
-	Syntax checking is very relaxed and all arguments are considered a
-	string. Example, the following are the same:
-
-		<% ident(foo); %>
-		<% ident('foo'); %>
-
-*/
+ * <% ident(arg, "arg", 'arg'); %>
+ *
+ * Syntax checking is very relaxed and all arguments are considered a
+ * string. Example, the following are the same:
+ *
+ *  <% ident(foo); %>
+ *  <% ident('foo'); %>
+ *
+ */
 int parse_asp(const char *path)
 {
 	char *buffer;
@@ -33,13 +36,16 @@ int parse_asp(const char *path)
 
 	if (f_read_alloc_string(path, &buffer, 128 * 1024) < 0) {
 		free(buffer);
-		if (!header_sent) send_error(500, NULL, "Read error");
+		if (!header_sent)
+			send_error(500, NULL, "Read error");
+
 		return 0;
 	}
 
-	if (!header_sent) send_header(200, NULL, mime_html, 0);
+	if (!header_sent)
+		send_header(200, NULL, mime_html, 0);
 
-	// <% id(arg, arg); %>
+	/* <% id(arg, arg); %> */
 	cp = buffer;
 	while (*cp) {
 		if ((b = strstr(cp, "%>")) == NULL) {
@@ -48,8 +54,8 @@ int parse_asp(const char *path)
 		}
 		*b = 0;
 
-		//xx <% <% %>
-		//xx %>
+		/* xx <% <% %> */
+		/* xx %> */
 
 		a = cp;
 		while ((c = strstr(a, "<%")) != NULL) {
@@ -68,40 +74,44 @@ int parse_asp(const char *path)
 
 		cp = b + 2;
 
-		while (*a == ' ') ++a;
+		while (*a == ' ')
+			++a;
+
 		ident = a;
 		while (((*a >= 'a') && (*a <= 'z')) || ((*a >= 'A') && (*a <= 'Z')) || ((*a >= '0') && (*a <= '9')) || (*a == '_')) {
 			++a;
 		}
 		if (ident == a) {
-#ifdef DEBUG
-			syslog(LOG_WARNING, "Identifier not found in %s @%u", path, a - buffer);
-#endif
+			logmsg(LOG_DEBUG, "Identifier not found in %s @%u", path, a - buffer);
 			continue;
 		}
 		b = a;
-		while (*a == ' ') ++a;
+		while (*a == ' ')
+			++a;
+
 		if (*a++ != '(') {
-#ifdef DEBUG
-			syslog(LOG_WARNING, "Expecting ( in %s @%u", path, a - buffer);
-#endif
+			logmsg(LOG_DEBUG, "Expecting ( in %s @%u", path, a - buffer);
 			continue;
 		}
 		*b = 0;
 
-		// <% foo(123, "arg"); %>
-		// a -----^            ^--- null
-
-//		printf("\n[[['%s'\n", ident);
+		/* <% foo(123, "arg"); %> */
+		/* a -----^            ^--- null */
 
 		argc = 0;
 		while (*a) {
-			while (*a == ' ') ++a;
+			while (*a == ' ')
+				++a;
+
 			if (*a == ')') {
+
 FINAL:
 				++a;
-				while ((*a == ' ') || (*a == ';')) ++a;
-				if (*a != 0) break;
+				while ((*a == ' ') || (*a == ';'))
+					++a;
+
+				if (*a != 0)
+					break;
 
 				for (api = aspapi; api->name; ++api) {
 					if (strcmp(api->name, ident) == 0) {
@@ -111,19 +121,11 @@ FINAL:
 				}
 
 				a = NULL;
-/*
-				int z;
-				for (z = 0; z < argc; ++z) {
-					printf(" %d '%s'\n", z, argv[z]);
-				}
-*/
 				break;
 			}
 
 			if (argc >= 32) {
-#ifdef DEBUG
-				syslog(LOG_WARNING, "Error while parsing arguments in %s @%u", path, a - buffer);
-#endif
+				logmsg(LOG_DEBUG, "Error while parsing arguments in %s @%u", path, a - buffer);
 				break;
 			}
 
@@ -132,35 +134,40 @@ FINAL:
 				argv[argc++] = a + 1;
 				while ((*++a != x) && (*a != 0)) {
 					if (*a == '\\') {
-						if (*++a == 0) break;
+						if (*++a == 0)
+							break;
+
 						*(a - 1) = *a;
 					}
 				}
-				if (*a == 0) break;
+				if (*a == 0)
+					break;
 				*a++ = 0;
 			}
 			else {
 				argv[argc++] = a;
-				while ((*a != ',') && (*a != ')') && (*a != ' ') && (*a != 0)) ++a;
+				while ((*a != ',') && (*a != ')') && (*a != ' ') && (*a != 0))
+					++a;
 			}
-			while (*a == ' ') ++a;
+			while (*a == ' ')
+				++a;
+
 			if (*a == ')') {
 				*a = 0;
 				goto FINAL;
 			}
-			if (*a != ',') break;
+			if (*a != ',')
+				break;
+
 			*a++ = 0;
 		}
 
-#ifdef DEBUG
-		if (a != NULL) syslog(LOG_WARNING, "Error while parsing arguments in %s @%u", path, a - buffer);
-#endif
-
-//		printf("argc=%d]]]\n", argc);
+		if (a != NULL)
+			logmsg(LOG_DEBUG, "Error while parsing arguments in %s @%u", path, a - buffer);
 	}
 
-
 	free(buffer);
+
 	return 1;
 }
 

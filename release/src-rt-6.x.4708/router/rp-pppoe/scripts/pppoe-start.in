@@ -29,7 +29,7 @@ exec_prefix=@exec_prefix@
 
 # Paths to programs
 CONNECT=@sbindir@/pppoe-connect
-IFCONFIG=/sbin/ifconfig
+IP=@IP@
 
 # Set to "C" locale so we can parse messages from commands
 LANG=C
@@ -69,8 +69,8 @@ if [ "$DEBUG" = "1" ] ; then
 	echo "* interfaces.  The one you chose for PPPoE should contain the words:"
 	echo "* 'UP' and 'RUNNING'.  If it does not, you probably have an Ethernet"
 	echo "* driver problem."
-	echo "Output of ifconfig -a"
-	$IFCONFIG -a
+	echo "Output of ip link show"
+        $IP link show
 	echo "---------------------------------------------"
 	if [ "`uname -s`" = "Linux" ] ; then
 	    echo "* The following section contains information about kernel modules."
@@ -83,8 +83,8 @@ if [ "$DEBUG" = "1" ] ; then
 	echo "* have defined a default route and gateway, and pppd will"
 	echo "* not create a default route using your ISP.  Try getting"
 	echo "* rid of this route."
-	echo "Output of netstat -n -r"
-	netstat -n -r
+	echo "Output of ip route"
+        $IP route
 	echo "---------------------------------------------"
 	echo "Contents of /etc/resolv.conf"
 	echo "* The following section lists DNS setup."

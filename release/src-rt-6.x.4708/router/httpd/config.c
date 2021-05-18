@@ -1,9 +1,10 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #include "tomato.h"
 
@@ -14,13 +15,6 @@
 #include <typedefs.h>
 #include <sys/reboot.h>
 
-//#define DEBUG
-
-#ifdef DEBUG
-#define NVRAMCMD	"/tmp/nvram"
-#else
-#define NVRAMCMD	"nvram"
-#endif
 
 void wo_defaults(char *url)
 {
@@ -32,28 +26,34 @@ void wo_defaults(char *url)
 		if ((mode == 1) || (mode == 2)) {
 			prepare_upgrade();
 
+			led(LED_DIAG, 1);
+
 			parse_asp("reboot-default.asp");
 			web_close();
 
-			// disconnect ppp - need this for PPTP/L2TP/PPPOE to finish gracefully
-			killall("xl2tpd", SIGTERM);
-			killall("pppd", SIGTERM);
-
-			led(LED_DIAG, 1);
+			if (nvram_get_int("remote_upgrade")) {
+				killall("xl2tpd", SIGTERM);
+				killall("pppd", SIGTERM);
+			}
 			sleep(2);
 
 			if (mode == 1) {
-				//	eval(NVRAMCMD, "defaults", "--yes");
 				nvram_set("restore_defaults", "1");
 				nvram_commit();
 			}
-			else {
+			else
+#ifdef TCONFIG_BCMARM
 				eval("mtd-erase2", "nvram");
-			}
+#else
+				eval("mtd-erase", "-d", "nvram");
+#endif
 
 			set_action(ACT_REBOOT);
-			//	kill(1, SIGTERM);
+
+			//kill(1, SIGTERM);
+			sync();
 			reboot(RB_AUTOBOOT);
+
 			exit(0);
 		}
 	}
@@ -63,24 +63,26 @@ void wo_defaults(char *url)
 
 void wo_backup(char *url)
 {
-	char tmp[64];
+#ifdef TCONFIG_BCMARM
+	static char *args[] = { "nvram", "save", NULL, NULL };
+#else
+	static char *args[] = { "nvram", "backup", NULL, NULL };
+#endif
+	char file[] = "/tmp/backupXXXXXX";
 	char msg[64];
+	int fd;
 
-	char *args[3];
-	args[0] = NVRAMCMD;
-	args[1] = "save";
+	if ((fd = mkstemp(file)) < 0)
+		exit(1);
 
-	strcpy(tmp, "/tmp/backupXXXXXX");
-	mktemp(tmp);
-	args[2] = tmp;
-
-	sprintf(msg, ">%s.msg", tmp);
+	close(fd);
+	args[2] = file;
+	sprintf(msg, ">%s.msg", file);
 
 	if (_eval(args, msg, 0, NULL) == 0) {
-		eval((char * const) args, msg);
 		send_header(200, NULL, mime_binary, 0);
-		do_file(tmp);
-		unlink(tmp);
+		do_file(file);
+		unlink(file);
 	}
 	else {
 		resmsg_fread(msg + 1);
@@ -95,20 +97,26 @@ void wi_restore(char *url, int len, char *boundary)
 {
 	char *buf;
 	const char *error;
-	int ok;
-	int n;
-	char tmp[64];
+	int n, fd;
+	static char *args[] = { "nvram", "restore", NULL, NULL };
+	char file[] = "/tmp/restoreXXXXXX";
+	char msg[64];
+
+	buf = NULL;
+	error = "Error reading file";
 
 	check_id(url);
 
-	tmp[0] = 0;
-	buf = NULL;
-	error = "Error reading file";
-	ok = 0;
-
-	if (!skip_header(&len)) {
+	if ((fd = mkstemp(file)) < 0) {
+		error = "Error creating file";
 		goto ERROR;
 	}
+	close(fd);
+	args[2] = file;
+	sprintf(msg, ">%s.msg", file);
+
+	if (!skip_header(&len))
+		goto ERROR;
 
 	if ((len < 64) || (len > (NVRAM_SPACE * 2))) {
 		error = "Invalid file";
@@ -123,43 +131,36 @@ void wi_restore(char *url, int len, char *boundary)
 	n = web_read(buf, len);
 	len -= n;
 
-	strcpy(tmp, "/tmp/restoreXXXXXX");
-	mktemp(tmp);
-	if (f_write(tmp, buf, n, 0, 0600) != n) {
+	if (f_write(file, buf, n, 0, 0600) != n) {
 		error = "Error writing temporary file";
 		goto ERROR;
 	}
 
 	rboot = 1;
+
 	prepare_upgrade();
 
-	char msg[64];
-
-	char *args[3];
-	args[0] = NVRAMCMD;
-	args[1] = "restore";
-	args[2] = tmp;
-
-	sprintf(msg, ">%s.msg", tmp);
-
-	if (_eval(args, msg, 0, NULL) != 0) {
+	if (_eval(args, msg, 0, NULL) != 0)
 		resmsg_fread(msg + 1);
-	}
+
+#ifdef TCONFIG_BCMARM
 	nvram_commit();
-#ifndef DEBUG
-	unlink(msg + 1);
 #endif
+
+	unlink(msg + 1);
+
 	error = NULL;
 
 ERROR:
 	free(buf);
-	if (error != NULL) resmsg_set(error);
-	web_eat(len);
-#ifndef DEBUG
-	if (tmp[0]) unlink(tmp);
-#endif
-}
+	if (error)
+		resmsg_set(error);
 
+	web_eat(len);
+
+	if (file[0])
+		unlink(file);
+}
 
 void wo_restore(char *url)
 {
@@ -167,19 +168,17 @@ void wo_restore(char *url)
 		parse_asp("reboot.asp");
 		web_close();
 
-		// disconnect ppp - need this for PPTP/L2TP/PPPOE to finish gracefully
-		killall("xl2tpd", SIGTERM);
-		killall("pppd", SIGTERM);
+		if (nvram_get_int("remote_upgrade")) {
+			killall("xl2tpd", SIGTERM);
+			killall("pppd", SIGTERM);
+		}
 		sleep(2);
 
-#ifdef DEBUG
-		cprintf("---reboot=%d\n", rboot);
-#else
 		set_action(ACT_REBOOT);
-		//	kill(1, SIGTERM);
+		//kill(1, SIGTERM);
 		sync();
 		reboot(RB_AUTOBOOT);
-#endif
+
 		exit(0);
 	}
 

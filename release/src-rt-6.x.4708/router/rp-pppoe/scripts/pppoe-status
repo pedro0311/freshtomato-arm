@@ -22,6 +22,7 @@
 
 # Defaults
 CONFIG=/etc/ppp/pppoe.conf
+PATH=/bin:/usr/bin:/sbin:/usr/sbin:$PATH IP=`which ip`
 
 case "$#" in
     1)
@@ -67,14 +68,13 @@ for i in /etc/ppp/ppp*.pid /var/run/ppp*.pid ; do
 	PID=`cat $i`
 	if [ "$PID" = "$PPPD_PID" ] ; then
 	    IF=`basename $i .pid`
-	    netstat -rn | grep " ${IF}\$" > /dev/null
-	    # /sbin/ifconfig $IF | grep "UP.*POINTOPOINT" > /dev/null
+	    $IP route | grep "dev ${IF}" > /dev/null
 	    if [ "$?" != "0" ] ; then
 		echo "pppoe-status: Link is attached to $IF, but $IF is down"
 		exit 1
 	    fi
 	    echo "pppoe-status: Link is up and running on interface $IF"
-	    /sbin/ifconfig $IF
+	    $IP link show $IF
 	    exit 0
 	fi
     fi

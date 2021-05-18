@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: iptables_removeall.sh,v 1.11 2018/04/06 10:17:09 nanard Exp $
+# $Id: iptables_removeall.sh,v 1.12 2021/05/11 21:55:36 nanard Exp $
 
 EXT=1
 . $(dirname "$0")/miniupnpd_functions.sh
@@ -18,7 +18,7 @@ fi
 #removing the MINIUPNPD chain for mangle
 if [ "$MDIRTY" = "${CHAIN}Chain" ]; then
 	$IPTABLES -t mangle -F $CHAIN
-	$IPTABLES -t mangle -D FORWARD -i $EXTIF -j $CHAIN
+	$IPTABLES -t mangle -D PREROUTING -i $EXTIF -j $CHAIN
 	$IPTABLES -t mangle -X $CHAIN
 elif [ "$MDIRTY" = "Chain" ]; then
 	$IPTABLES -t mangle -F $CHAIN

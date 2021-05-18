@@ -111,9 +111,9 @@
 #define REPLACING  1
 #define INREGION   2
 
-/* In UTF-8 a character is at most six bytes long. */
 #ifdef ENABLE_UTF8
-#define MAXCHARLEN  6
+/* In UTF-8 a valid character is at most four bytes long. */
+#define MAXCHARLEN  4
 #else
 #define MAXCHARLEN  1
 #endif
@@ -246,7 +246,7 @@
 
 /* Enumeration types. */
 typedef enum {
-	NIX_FILE, DOS_FILE, MAC_FILE
+	UNSPECIFIED, NIX_FILE, DOS_FILE, MAC_FILE
 } format_type;
 
 typedef enum {
@@ -307,7 +307,6 @@ enum {
 	CUT_FROM_CURSOR,
 	BACKWARDS_SEARCH,
 	MULTIBUFFER,
-	SMOOTH_SCROLL,
 	REBIND_DELETE,
 	RAW_SEQUENCES,
 	NO_CONVERT,
@@ -319,7 +318,6 @@ enum {
 	RESTRICTED,
 	SMART_HOME,
 	WHITESPACE_DISPLAY,
-	MORE_SPACE,
 	TABS_TO_SPACES,
 	QUICK_BLANK,
 	WORD_BOUNDS,
@@ -333,7 +331,6 @@ enum {
 	TRIM_BLANKS,
 	SHOW_CURSOR,
 	LINE_NUMBERS,
-	NO_PAUSES,
 	AT_BLANKS,
 	AFTER_ENDS,
 	LET_THEM_ZAP,
@@ -369,8 +366,8 @@ typedef struct colortype {
 } colortype;
 
 typedef struct regexlisttype {
-	char *full_regex;
-		/* A regex string to match things that imply a certain syntax. */
+	regex_t *one_rgx;
+		/* A regex to match things that imply a certain syntax. */
 	struct regexlisttype *next;
 		/* The next regex. */
 } regexlisttype;
@@ -441,10 +438,6 @@ typedef struct linestruct {
 		/* The text of this line. */
 	ssize_t lineno;
 		/* The number of this line. */
-#ifndef NANO_TINY
-	ssize_t extrarows;
-		/* The extra rows that this line occupies when softwrapping. */
-#endif
 	struct linestruct *next;
 		/* Next node. */
 	struct linestruct *prev;
@@ -567,6 +560,8 @@ typedef struct openfilestruct {
 		/* The syntax that applies to this file, if any. */
 #endif
 #ifdef ENABLE_MULTIBUFFER
+	char *errormessage;
+		/* The ALERT message (if any) that occurred when opening the file. */
 	struct openfilestruct *next;
 		/* The next open file, if any. */
 	struct openfilestruct *prev;

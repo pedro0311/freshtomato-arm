@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 5.6.1.
+This manual documents the GNU ‘nano’ editor, version 5.7.
 
 * Menu:
 
@@ -899,10 +899,6 @@ The supported settings in a nanorc file are:
      constantshow’ is used, and can be toggled on and off with <M-C>.
      The state flags are displayed only when ‘set stateflags’ is used.
 
-‘set morespace’
-     Deprecated option since it has become the default setting.  When
-     needed, use ‘unset emptyline’ instead.
-
 ‘set mouse’
      Enable mouse support, so that mouse clicks can be used to place the
      cursor, set the mark (with a double click), or execute shortcuts.
@@ -920,9 +916,6 @@ The supported settings in a nanorc file are:
 ‘set nonewlines’
      Don’t automatically add a newline when a text does not end with
      one.  (This can cause you to save non-POSIX text files.)
-
-‘set nopauses’
-     Obsolete option.  Ignored.
 
 ‘set nowrap’
      Deprecated option since it has become the default setting.  When
@@ -1011,10 +1004,6 @@ The supported settings in a nanorc file are:
      cursor will jump to that beginning (either forwards or backwards).
      If the cursor is already at that position, it will jump to the true
      beginning of the line.
-
-‘set smooth’
-     Deprecated option since it has become the default setting.  When
-     needed, use ‘unset jumpyscrolling’ instead.
 
 ‘set softwrap’
      Display lines that exceed the screen’s width over multiple screen
@@ -1917,32 +1906,32 @@ familiar with compiling programs with autoconf support:
 
 Tag Table:
 Node: Top199
-Node: Introduction556
-Node: Invoking1752
-Node: Command-line Options3368
-Ref: --speller12501
-Node: Editor Basics16292
-Node: Entering Text16588
-Node: Commands17577
-Node: The Cutbuffer18374
-Node: The Mark18948
-Node: Screen Layout19918
-Node: Search and Replace21097
-Node: Using the Mouse21832
-Node: Anchors22445
-Node: Limitations23250
-Node: Built-in Help23567
-Node: The File Browser23992
-Node: Feature Toggles24883
-Node: Nanorc Files26690
-Node: Settings28311
-Ref: set functioncolor31581
-Ref: set matchbrackets33966
-Ref: Whitespace42239
-Node: Syntax Highlighting42994
-Node: Rebinding Keys49759
-Node: Pico Compatibility64211
-Node: Building and Configure Options68751
+Node: Introduction554
+Node: Invoking1750
+Node: Command-line Options3366
+Ref: --speller12499
+Node: Editor Basics16290
+Node: Entering Text16586
+Node: Commands17575
+Node: The Cutbuffer18372
+Node: The Mark18946
+Node: Screen Layout19916
+Node: Search and Replace21095
+Node: Using the Mouse21830
+Node: Anchors22443
+Node: Limitations23248
+Node: Built-in Help23565
+Node: The File Browser23990
+Node: Feature Toggles24881
+Node: Nanorc Files26688
+Node: Settings28309
+Ref: set functioncolor31579
+Ref: set matchbrackets33964
+Ref: Whitespace41905
+Node: Syntax Highlighting42660
+Node: Rebinding Keys49425
+Node: Pico Compatibility63877
+Node: Building and Configure Options68417
 
 End Tag Table
 

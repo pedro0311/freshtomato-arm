@@ -194,14 +194,14 @@ struct cp_ext {
 };
 /* Copy lengths and extra bits for literal codes 257..285 */
 /* note: see note #13 above about the 258 in this list. */
-static const struct cp_ext lit = {
+static const struct cp_ext lit ALIGN2 = {
 	/*257 258 259 260 261 262 263 264 265 266 267 268 269 270 271  272  273  274  275  276   277   278   279   280   281   282   283    284    285 */
 	/*0   1   2   3   4   5   6   7   8   9   10  11  12  13   14   15   16   17   18   19    20    21    22    23    24    25    26     27     28     29  30 */
 	{ 3,  4,  5,  6,  7,  8,  9,  10, 11, 13, 15, 17, 19, 23,  27,  31,  35,  43,  51,  59,   67,   83,   99,  115,  131,  163,  195,   227,   258,     0, 0  },
 	{ 0,  0,  0,  0,  0,  0,  0,   0,  1,  1,  1,  1,  2,  2,   2,   2,   3,   3,   3,   3,    4,    4,    4,    4,    5,    5,    5,     5,     0,    99, 99 } /* 99 == invalid */
 };
 /* Copy offsets and extra bits for distance codes 0..29 */
-static const struct cp_ext dist = {
+static const struct cp_ext dist ALIGN2 = {
 	/*0   1   2   3   4   5   6   7   8   9   10  11  12  13   14   15   16   17   18   19    20    21    22    23    24    25    26     27     28     29 */
 	{ 1,  2,  3,  4,  5,  7,  9,  13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577 },
 	{ 0,  0,  0,  0,  1,  1,  2,   2,  3,  3,  4,  4,  5,  5,   6,   6,   7,   7,   8,   8,    9,    9,   10,   10,   11,   11,   12,    12,    13,    13 }
@@ -220,9 +220,19 @@ static const uint8_t border[] ALIGN1 = {
  * each table.
  * t: table to free
  */
+#define BAD_HUFT(p) ((uintptr_t)(p) & 1)
+#define ERR_RET     ((huft_t*)(uintptr_t)1)
 static void huft_free(huft_t *p)
 {
 	huft_t *q;
+
+	/*
+	 * If 'p' has the error bit set we have to clear it, otherwise we might run
+	 * into a segmentation fault or an invalid pointer to free(p)
+	 */
+	if (BAD_HUFT(p)) {
+		p = (huft_t*)((uintptr_t)(p) ^ (uintptr_t)(ERR_RET));
+	}
 
 	/* Go through linked list, freeing from the malloced (t[-1]) address. */
 	while (p) {
@@ -289,8 +299,6 @@ static unsigned fill_bitbuffer(STATE_PARAM unsigned bitbuffer, unsigned *current
  * or a valid pointer to a Huffman table, ORed with 0x1 if incompete table
  * is given: "fixed inflate" decoder feeds us such data.
  */
-#define BAD_HUFT(p) ((uintptr_t)(p) & 1)
-#define ERR_RET     ((huft_t*)(uintptr_t)1)
 static huft_t* huft_build(const unsigned *b, const unsigned n,
 			const unsigned s, const struct cp_ext *cp_ext,
 			unsigned *m)
