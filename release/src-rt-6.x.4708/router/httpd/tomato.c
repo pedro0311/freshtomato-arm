@@ -913,6 +913,7 @@ static const nvset_t nvset_list[] = {
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 4096)			},
 	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
+	{ "dnsmasq_gen_names",		V_01				},	/* generate a name for DHCP clients which do not otherwise have one */
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	V_01				},
 #endif

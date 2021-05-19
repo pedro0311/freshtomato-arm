@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -194,6 +194,7 @@ function save() {
 	fom.dhcpd_gwmode.value = fom._f_dhcpd_gwmode.checked ? 1 : 0;
 	fom.dhcpc_minpkt.value = fom._f_dhcpc_minpkt.checked ? 1 : 0;
 	fom.dhcpd_static_only.value = fom._f_dhcpd_static_only.checked ? 1 : 0;
+	fom.dnsmasq_gen_names.value = fom._f_dnsmasq_gen_names.checked ? 1 : 0;
 	fom.dns_addget.value = fom._f_dns_addget.checked ? 1 : 0;
 	fom.dns_norebind.value = fom._f_dns_norebind.checked ? 1 : 0;
 	fom.dns_fwd_local.value = fom._f_dns_fwd_local.checked ? 1 : 0;
@@ -335,6 +336,7 @@ function init() {
 <!-- IPV6-END -->
 <input type="hidden" name="dnsmasq_q">
 <input type="hidden" name="dnsmasq_debug">
+<input type="hidden" name="dnsmasq_gen_names">
 <!-- TOR-BEGIN -->
 <input type="hidden" name="dnsmasq_onion_support">
 <!-- TOR-END -->
@@ -454,6 +456,7 @@ function init() {
 			{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == 1 },
 			{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == 1 },
 			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == 1 },
+			{ title: 'Generate a name for DHCP clients which do not otherwise have one', name: 'f_dnsmasq_gen_names', type: 'checkbox', value: nvram.dnsmasq_gen_names == 1 },
 /* TOR-BEGIN */
 			{ title: 'Solve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', value: nvram.dnsmasq_onion_support == 1 },
 /* TOR-END */
