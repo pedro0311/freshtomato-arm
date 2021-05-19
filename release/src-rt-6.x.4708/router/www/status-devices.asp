@@ -193,7 +193,7 @@ dg.setup = function() {
 }
 
 dg.populate = function() {
-	var i, j, k;
+	var i, j, k, l;
 	var a, b, c, e, f;
 	var mode = '';
 
@@ -320,11 +320,11 @@ dg.populate = function() {
 		}
 	}
 
-	/* [ "MAC", "IP", "name", "0" ] */
+	/* [ "MAC", "IP", "name", "BoundTo" ] */
 	var dhcpd_static = nvram.dhcpd_static.split('>');
 	for (i = dhcpd_static.length - 1; i >= 0; --i) {
 		a = dhcpd_static[i].split('<');
-		if (a.length < 3)
+		if (a.length < 4)
 			continue;
 
 		/* lipp = 192.168.1. (why one only, what with other bridges?) */
@@ -333,8 +333,20 @@ dg.populate = function() {
 
 		/* find and compare MAC(s) */
 		c = a[0].split(',');
+
+		loop1:
 		for (j = c.length - 1; j >= 0; --j) {
-			if ((e = find(c[j], a[1])) != null)
+			if ((e = find(c[j], a[1])) == null) {
+				/* special case for gateway */
+				for (l = 1; l <= MAX_PORT_ID; l++) {
+					k = (l == 1) ? '' : l.toString();
+					if (nvram['wan'+k+'_gateway'] != '' && nvram['wan'+k+'_gateway'] != '0.0.0.0' && (e = find(c[j], null)) != null) {
+						e.ip = nvram['wan'+k+'_gateway'];
+						break loop1;
+					}
+				}
+			}
+			else
 				break;
 		}
 		if (j < 0)
@@ -503,25 +515,25 @@ dg.populate = function() {
 		f = '';
 		if (e.freq != '') {
 			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta') ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
-			e.media = (e.freq == '5 GHz' ? '1' : '2');
+			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {
 			c = (e.wan != '' ? 'style="filter:invert(1)"' : '');
 /* USB-BEGIN */
 			if ((e.proto == 'lte') || (e.proto == 'ppp3g')) {
 				f = '<img src="cell.gif"'+c+' alt="" title="LTE / 3G">';
-				e.media = '3';
+				e.media = 3;
 			}
 			else
 /* USB-END */
 			     if (e.rssi != 1) {
 				f = '<img src="eth.gif"'+c+' alt="" title="Ethernet">';
-				e.media = '4';
+				e.media = 4;
 			}
 		}
 		if (e.rssi == 1) {
 			f = '<img src="dis.gif"'+c+' alt="" title="Disconnected">';
-			e.media = '5';
+			e.media = 5;
 		}
 
 		this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.ip == '-' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
