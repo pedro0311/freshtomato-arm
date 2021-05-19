@@ -91,7 +91,11 @@ function verifyFields(focused, quiet) {
 	vis._stubby_port = v;
 	vis._stubby_servers = v;
 	vis._f_stubby_force_tls13 = v;
-	vis._stubby_dnssec_1 = v;
+	vis._stubby_dnssec_1 = (v
+/* DNSSEC-BEGIN */
+	                        && E('_dnssec_enable').checked
+	                        );
+/* DNSSEC-END */
 /* STUBBY-END */
 
 	for (var a in vis) {
@@ -357,7 +361,7 @@ function init() {
 	<script>
 		createFieldTable('noclose', [
 /* DNSSEC-BEGIN */
-			{ title: 'Enable DNSSEC support', name: 'f_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>DNS servers must support DNSSEC<\/small>', value: (nvram.dnssec_enable == 1) }
+			{ title: 'Enable DNSSEC support', name: 'f_dnssec_enable', id: '_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>DNS servers must support DNSSEC<\/small>', value: (nvram.dnssec_enable == 1) }
 /* DNSSEC-END */
 /* STUBBY-BEGIN */
 			, { title: 'DNSSEC validation method', multi: [
