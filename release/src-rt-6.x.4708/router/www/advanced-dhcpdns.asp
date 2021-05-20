@@ -25,6 +25,7 @@
 
 <script>
 var cprefix = 'advanced_dhcpdns';
+var height = 0;
 
 var up = new TomatoRefresh('isup.jsx', '', 5);
 
@@ -60,6 +61,11 @@ function active_resolvers(ip, port, domain, pinset) {
 
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1))
 	nvram.dhcpd_lmax = 255;
+
+function resizeTxt() {
+	this.style.height = 'auto';
+	this.style.height = (this.scrollHeight < height ? height : this.scrollHeight)+'px';
+}
 
 function verifyFields(focused, quiet) {
 	var vis = { }, v;
@@ -296,6 +302,11 @@ function init() {
 	var c;
 	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "notes");
+
+	var e = E('_dnsmasq_custom');
+	height = getComputedStyle(e).height.slice(0, -2);
+	e.setAttribute('style', 'height:'+(e.scrollHeight)+'px');
+	addEvent(e, 'input', resizeTxt);
 
 	up.initPage(250, 5);
 	eventHandler();
