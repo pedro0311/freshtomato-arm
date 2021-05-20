@@ -85,7 +85,6 @@ function verifyFields(focused, quiet) {
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
 	v = E('_f_stubby_proxy').checked;
-	vis._f_dns_priv_override = v;
 	vis._stubby_priority = v;
 	vis._stubby_log = v;
 	vis._stubby_port = v;
@@ -199,6 +198,7 @@ function save() {
 	fom.dns_norebind.value = fom._f_dns_norebind.checked ? 1 : 0;
 	fom.dns_fwd_local.value = fom._f_dns_fwd_local.checked ? 1 : 0;
 	fom.dns_intcpt.value = fom._f_dns_intcpt.checked ? 1 : 0;
+	fom.dns_priv_override.value = fom._f_dns_priv_override.checked ? 1 : 0;
 	fom.dnsmasq_debug.value = fom._f_dnsmasq_debug.checked ? 1 : 0;
 /* TOR-BEGIN */
 	fom.dnsmasq_onion_support.value = fom._f_dnsmasq_onion_support.checked ? 1 : 0;
@@ -228,7 +228,6 @@ function save() {
 /* DNSCRYPT-END */
 /* STUBBY-BEGIN */
 	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
-	fom.dns_priv_override.value = fom._f_dns_priv_override.checked ? 1 : 0;
 	fom.stubby_force_tls13.value = fom._f_stubby_force_tls13.checked ? 1 : 0;
 	fom.stubby_dnssec.value = (fom._stubby_dnssec_1.checked ? 1 : (fom._stubby_dnssec_0.checked ? 0 : 2));
 
@@ -328,6 +327,7 @@ function init() {
 <input type="hidden" name="dns_norebind">
 <input type="hidden" name="dns_fwd_local">
 <input type="hidden" name="dns_intcpt">
+<input type="hidden" name="dns_priv_override">
 <!-- IPV6-BEGIN -->
 <input type="hidden" name="ipv6_radvd">
 <input type="hidden" name="ipv6_dhcpd">
@@ -353,7 +353,6 @@ function init() {
 <input type="hidden" name="stubby_resolvers">
 <input type="hidden" name="stubby_dnssec">
 <input type="hidden" name="stubby_force_tls13">
-<input type="hidden" name="dns_priv_override">
 <!-- STUBBY-END -->
 
 <!-- / / / -->
@@ -424,7 +423,6 @@ function init() {
 		W('<\/table><\/td><\/tr>');
 
 		createFieldTable('noopen,noclose', [
-				{ title: 'Prevent client auto DoH', indent: 2, name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
 				{ title: 'Priority', indent: 2, name: 'stubby_priority', type: 'select', options: [['1','Strict-Order'],['2','No-Resolv'],['0','None']], suffix: '&nbsp; <small style="color:red">warning: set to No-Resolv to only use Stubby resolvers!<\/small>', value: nvram.stubby_priority },
 				{ title: 'Local Port', indent: 2, name: 'stubby_port', type: 'text', maxlen: 5, size: 7, value: nvram.stubby_port },
 				{ title: 'Log Level', indent: 2, name: 'stubby_log', type: 'select',  options: [['0','Emergency'],['1','Alert'],['2','Critical'],['3','Error'],['4','Warning*'],['5','Notice'],['6','Info'],['7','Debug']],
@@ -435,6 +433,7 @@ function init() {
 /* STUBBY-END */
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
+			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
 			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == 1 },
 			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 			null,
