@@ -2025,33 +2025,43 @@ TomatoTimer.prototype = {
 // -----------------------------------------------------------------------------
 
 
-function TomatoRefresh(actionURL, postData, refreshTime, cookieTag) {
-	this.setup(actionURL, postData, refreshTime, cookieTag);
+function TomatoRefresh(actionURL, postData, refreshTime, cookieTag, dontuseButton) {
+	this.setup(actionURL, postData, refreshTime, cookieTag, dontuseButton);
 	this.timer = new TomatoTimer(THIS(this, this.start));
 }
 
 TomatoRefresh.prototype = {
 	running: 0,
 
-	setup: function(actionURL, postData, refreshTime, cookieTag) {
+	setup: function(actionURL, postData, refreshTime, cookieTag, dontuseButton) {
 		var e, v;
 
 		this.actionURL = actionURL;
 		this.postData = postData;
 		this.refreshTime = refreshTime * 1000;
 		this.cookieTag = cookieTag;
+		this.dontuseButton = dontuseButton;
 	},
 
 	start: function() {
 		var e;
 
 		if ((e = E('refresh-time')) != null) {
-			if (this.cookieTag) cookie.set(this.cookieTag, e.value);
-			this.refreshTime = e.value * 1000;
+			if (this.cookieTag)
+				cookie.set(this.cookieTag, e.value);
+
+			if (this.dontuseButton != 1)
+				this.refreshTime = e.value * 1000;
 		}
-		e = undefined;
 
 		this.updateUI('start');
+
+		if ((e = E('refresh-button')) != null) {
+			if (e.value == 'Refresh')
+				this.once = 1;
+		}
+
+		e = undefined;
 
 		this.running = 1;
 		if ((this.http = new XmlHttp()) == null) {
@@ -2064,7 +2074,8 @@ TomatoRefresh.prototype = {
 		this.http.onCompleted = function(text, xml) {
 			var p = this.parent;
 
-			if (p.cookieTag) cookie.unset(p.cookieTag + '-error');
+			if (p.cookieTag)
+				cookie.unset(p.cookieTag + '-error');
 			if (!p.running) {
 				p.stop();
 				return;
@@ -2076,16 +2087,16 @@ TomatoRefresh.prototype = {
 				p.updateUI('wait');
 				p.timer.start(Math.round(p.refreshTime));
 			}
-			else {
+			else
 				p.stop();
-			}
 
 			p.errors = 0;
 		}
 
 		this.http.onError = function(ex) {
 			var p = this.parent;
-			if ((!p) || (!p.running)) return;
+			if ((!p) || (!p.running))
+				return;
 
 			p.timer.stop();
 
@@ -2118,7 +2129,9 @@ TomatoRefresh.prototype = {
 	},
 
 	stop: function() {
-		if (this.cookieTag) cookie.set(this.cookieTag, -(this.refreshTime / 1000));
+		if (this.cookieTag)
+			cookie.set(this.cookieTag, -(this.refreshTime / 1000));
+
 		this.running = 0;
 		this.updateUI('stop');
 		this.timer.stop();
@@ -2136,34 +2149,40 @@ TomatoRefresh.prototype = {
 	updateUI: function(mode) {
 		var e, b;
 
-		if (typeof(E) == 'undefined') return;	/* for a bizzare bug... */
+		if (typeof(E) == 'undefined') /* for a bizzare bug... */
+			return;
 
-		b = (mode != 'stop') && (this.refreshTime > 0);
+		if (this.dontuseButton != 1) {
+			b = (mode != 'stop') && (this.refreshTime > 0);
 
-		if ((e = E('refresh-button')) != null) {
-			e.value = b ? 'Stop' : 'Refresh';
-			((mode == 'start') && (!b) ? e.setAttribute("disabled", "disabled") : e.removeAttribute("disabled"));
+			if ((e = E('refresh-button')) != null) {
+				e.value = b ? 'Stop' : 'Refresh';
+				((mode == 'start') && (!b) ? e.setAttribute('disabled', 'disabled') : e.removeAttribute('disabled'));
+			}
+
+			if ((e = E('refresh-time')) != null)
+				((!b) ? e.removeAttribute('disabled') : e.setAttribute('disabled', 'disabled'));
+			if ((e = E('refresh-spinner')) != null)
+				e.style.display = (b ? 'inline-block' : 'none');
 		}
-
-		if ((e = E('refresh-time')) != null)
-			(b == 0 ? e.removeAttribute("disabled") : e.setAttribute("disabled", "disabled"));
-		if ((e = E('refresh-spinner')) != null) e.style.display = (b ? 'inline-block' : 'none');
 	},
 
-	initPage: function(delay, def) {
+	initPage: function(delay, refresh) {
 		var e, v;
 
 		e = E('refresh-time');
-		if (((this.cookieTag) && (e != null)) &&
-			((v = cookie.get(this.cookieTag)) != null) && (!isNaN(v *= 1))) {
+		if (((this.cookieTag) && (e != null)) && ((v = cookie.get(this.cookieTag)) != null) && (!isNaN(v *= 1))) {
 			e.value = Math.abs(v);
-			if (v > 0) v = (v * 1000) + (delay || 0);
+			if (v > 0)
+				v = v * 1000;
 		}
-		else if (def) {
-			v = def * 1000;
-			if (e) e.value = def;
+		else if (refresh) {
+			v = refresh * 1000;
+			if ((e != null) && (this.dontuseButton != 1))
+				e.value = refresh;
 		}
-		else v = 0;
+		else
+			v = 0;
 
 		if (delay < 0) {
 			v = -delay;
@@ -2173,7 +2192,7 @@ TomatoRefresh.prototype = {
 		if (v > 0) {
 			this.running = 1;
 			this.refreshTime = v;
-			this.timer.start(v);
+			this.timer.start(delay);
 			this.updateUI('wait');
 		}
 	}
@@ -2925,10 +2944,6 @@ function toggleVisibility(where, whichone) {
 
 function isLocal() {
 	return location.href.search('file://') == 0;
-}
-
-function console(s)
-{
 }
 
 // -----------------------------------------------------------------------------
