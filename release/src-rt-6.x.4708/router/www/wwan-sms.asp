@@ -20,52 +20,64 @@
 
 <script>
 
-//	<% nvram(''); %>	// http_id
+//	<% nvram(''); %>
 
 var sms_remover = null;
 var wwansms = '';
 var wannum_selection = 1;
 var wwansms_error;
+
+var ref = new TomatoRefresh('wwansms.cgi', 'mwan_num='+wannum_selection, 15, 'wwan_sms_refresh');
+
+ref.refresh = function(text) {
+	try {
+		eval(text);
+	}
+	catch (ex) {
+	}
+	smsGrid.populate();
+}
+
 var smsGrid = new TomatoGrid();
 
 smsGrid.setup = function() {
-	this.init('sms-grid', ['sort', 'delete']);
-	this.headerSet(['ID', 'State', 'Date', 'Sender', 'Message']);
+	this.init('sms-grid',['sort','delete']);
+	this.headerSet(['ID','State','Date','Sender','Message']);
 }
-smsGrid.rpDel = function(e) {
-	var smsToRemove = PR(e)._data[0];
-	TomatoGrid.prototype.rpDel.call(this, e);
-	removeSMS(smsToRemove);
-}
+
 smsGrid.populate = function() {
+	var error_div, buf, i, pduparseRegex, match;
+
 	/* Removing hasn't been done, wait until it finishes */
-	if (sms_remover) return;
-	var error_div = E('notice');
+	if (sms_remover)
+		return;
+
+	error_div = E('notice');
 	if (wwansms_error) {
 		error_div.style.display = 'inline-block';
-		error_div.innerHTML = "<b>Error occurred!<\/b><br><br>Error message: " + wwansms_error;
+		error_div.innerHTML = '<b>Error occurred!<\/b><br><br>Error message: '+wwansms_error;
 	}
 	else {
 		error_div.style.display = 'none';
-		var buf = wwansms.split('\n');
-		var i;
+		buf = wwansms.split('\n');
 
 		this.removeAllData();
 		for (i = 0; i < buf.length; ++i) {
-			var pduparseRegex = /^ID\:\s([0-9]+)\s\[(.*)\]\[(.*)\]\[(.*)\]\:\s(.*)$/g;
-			var match = pduparseRegex.exec(buf[i]);
-			if (match && match.length == 6) {
+			pduparseRegex = /^ID\:\s([0-9]+)\s\[(.*)\]\[(.*)\]\[(.*)\]\:\s(.*)$/g;
+			match = pduparseRegex.exec(buf[i]);
+
+			if (match && match.length == 6)
 				this.insertData(-1, match.slice(1));
-			}
 		}
 	}
 
 	wwansms = '';
-	spin(0);
 }
 
-function verifyFields(focused, quiet) {
-	return true;
+smsGrid.rpDel = function(e) {
+	var smsToRemove = PR(e)._data[0];
+	TomatoGrid.prototype.rpDel.call(this, e);
+	removeSMS(smsToRemove);
 }
 
 function showWait(x) {
@@ -74,7 +86,9 @@ function showWait(x) {
 }
 
 function removeSMS(smsNum) {
-	if (sms_remover) return;
+	if (sms_remover)
+		return;
+
 	showWait(1);
 	sms_remover = new XmlHttp();
 	sms_remover.onCompleted = function(text, xml) {
@@ -82,26 +96,29 @@ function removeSMS(smsNum) {
 		sms_remover = null;
 	}
 	sms_remover.onError = function(x) {
-		alert('error: ' + x);
+		alert('error: '+x);
 		showWait(0);
 		sms_remover = null;
 	}
 
-	sms_remover.post('wwansmsdelete.cgi', 'mwan_num=' + wannum_selection + '&sms_num=' + smsNum);
+	sms_remover.post('wwansmsdelete.cgi', 'mwan_num='+wannum_selection+'&sms_num='+smsNum);
 }
 
-var ref;
+function verifyFields(focused, quiet) {
+	return true;
+}
 
 function init() {
 	if ((wannum_selection = cookie.get('wwansms_selection')) == null)
-		wannum_selection = '1';
-	E('sec-title').innerHTML = 'WWAN SMS list for WWAN modem ' + wannum_selection;
-	ref = new TomatoRefresh('wwansms.cgi', 'mwan_num=' + wannum_selection, 0, 'wwan_sms_refresh');
-	ref.refresh = function(text) {
-		eval(text);
-		smsGrid.populate();
-	}
-	ref.initPage(0, 5);
+		wannum_selection = 1;
+
+	E('sec-title').innerHTML = 'WWAN SMS list for modem '+wannum_selection;
+
+	ref.initPage(250, 15);
+	if (!ref.running)
+		ref.once = 1;
+
+	ref.start();
 }
 </script>
 
@@ -119,7 +136,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id='sec-title' class="section-title">WWAN SMS list for modem </div>
+<div id='sec-title' class="section-title">WWAN SMS list for modem</div>
 
 <div id="notice" style="display:none"></div>
 
@@ -130,7 +147,7 @@ function init() {
 <!-- / / / -->
 
 <div id="footer">
-	<script>genStdRefresh(1,5,'ref.toggle()');</script>
+	<script>genStdRefresh(1,15,'ref.toggle()');</script>
 </div>
 
 </td></tr>
