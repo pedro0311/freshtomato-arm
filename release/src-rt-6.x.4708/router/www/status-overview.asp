@@ -40,8 +40,9 @@ var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi =
 
 <script>
 var cprefix = 'status_overview';
+nphy = features('11n');
 
-var ref = new TomatoRefresh('status-data.jsx', '', 0, cprefix+'_refresh');
+var ref = new TomatoRefresh('status-data.jsx', '', 5, cprefix+'_refresh');
 
 ref.refresh = function(text) {
 	stats = {};
@@ -54,7 +55,35 @@ ref.refresh = function(text) {
 	show();
 }
 
-nphy = features('11n');
+/* USB-BEGIN */
+foreach_wwan(function(i) {
+	updateWWANTimers[i - 1] = new TomatoRefresh('wwansignal.cgi', 'mwan_num='+i, 30, '', 1);
+	updateWWANTimers[i - 1].refresh = function(text) {
+		try {
+			E('WWANStatus'+i).innerHTML = createWWANStatusSection(i, eval(text));
+		}
+		catch (ex) {
+		}
+	}
+});
+/* USB-END */
+
+for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
+	var u = (uidx > 1) ? uidx : '';
+
+	if (nvram['wan'+u+'_status_script'] == 1) {
+		customStatusTimers[uidx - 1] = new TomatoRefresh('/user/cgi-bin/wan'+u+'_status.sh', null, 15, '', 1);
+		customStatusTimers[uidx - 1].refresh = (function(u) {
+			return function(text) {
+				try {
+					document.querySelector('#WanCustomStatus'+u+' > td').innerHTML = text;
+				}
+				catch (ex) {
+				}
+			};
+		})(u);
+	}
+}
 
 function visibility() {
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -124,19 +153,32 @@ function wan_disconnect(uidx) {
 
 function onRefToggle() {
 	ref.toggle();
-/* USB-BEGIN */
 	if (!ref.running) {
+/* USB-BEGIN */
 		for (var i = 0; i < updateWWANTimers.length; i++) {
 			if (updateWWANTimers[i].running)
 				updateWWANTimers[i].stop();
 		}
+/* USB-END */
+		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
+			var u = (uidx > 1) ? uidx : '';
+			if (nvram['wan'+u+'_status_script'] == 1) {
+				if (customStatusTimers[uidx - 1].running)
+					customStatusTimers[uidx - 1].stop();
+			}
+		}
 	}
 	else {
-		var value = E('refresh-time').value;
+/* USB-BEGIN */
 		for (var i = 0; i < updateWWANTimers.length; i++)
-			updateWWANTimers[i].toggle(value < 30 ? 30 : value);
-	}
+			updateWWANTimers[i].toggle();
 /* USB-END */
+		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
+			var u = (uidx > 1) ? uidx : '';
+			if (nvram['wan'+u+'_status_script'] == 1)
+				customStatusTimers[uidx - 1].toggle();
+		}
+	}
 }
 
 /* USB-BEGIN */
@@ -150,35 +192,7 @@ function foreach_wwan(functionToDo) {
 			functionToDo(uidx);
 	}
 }
-
-foreach_wwan(function(i) {
-	updateWWANTimers[i - 1] = new TomatoRefresh('wwansignal.cgi', 'mwan_num='+i, 30, 'wwan'+i+'_signal_refresh');
-	updateWWANTimers[i - 1].refresh = function(text) {
-		try {
-			E('WWANStatus'+i).innerHTML = createWWANStatusSection(i, eval(text));
-		}
-		catch (ex) {
-		}
-	}
-});
 /* USB-END */
-
-for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-	var u = (uidx > 1) ? uidx : '';
-
-	if (nvram['wan'+u+'_status_script'] == '1') {
-		customStatusTimers[uidx - 1] = new TomatoRefresh('/user/cgi-bin/wan'+u+'_status.sh', null, 15);
-		customStatusTimers[uidx - 1].refresh = (function(u) {
-			return function(text) {
-				try {
-					document.querySelector('#WanCustomStatus'+u+' > td').innerHTML = text;
-				}
-				catch (ex) {
-				}
-			};
-		})(u);
-	}
-}
 
 function c(id, htm) {
 	E(id).cells[1].innerHTML = htm;
@@ -366,24 +380,22 @@ function init() {
 			toggleVisibility(cprefix, 'wl_'+u);
 	}
 /* USB-BEGIN */
-	foreach_wwan(function(wwan_number) {
-		if (((c = cookie.get(cprefix+'_wwan'+wwan_number+'_vis')) != null) && (c != '1'))
-			toggleVisibility(cprefix, 'wwan'+wwan_number);
+	foreach_wwan(function(i) {
+		if (((c = cookie.get(cprefix+'_wwan'+i+'_vis')) != null) && (c != '1'))
+			toggleVisibility(cprefix, 'wwan'+i);
 
-		E('WWANStatus'+wwan_number+'_overall').style.display = 'block';
-		var timer1 = updateWWANTimers[wwan_number - 1];
-		timer1.initPage(3000, 3);
+		E('WWANStatus'+i+'_overall').style.display = 'block';
+		updateWWANTimers[i - 1].initPage(3000, 30);
 	});
 /* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
 		if (!customStatusTimers[uidx - 1])
 			continue;
 
-		var timer2 = customStatusTimers[uidx - 1];
-		timer2.initPage(250, 1);
+		customStatusTimers[uidx - 1].initPage(1000, 15);
 	}
 
-	ref.initPage(250, 5);
+	ref.initPage(1000, 5);
 
 	eventHandler();
 }
