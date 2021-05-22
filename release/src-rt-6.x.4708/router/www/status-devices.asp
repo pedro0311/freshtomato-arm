@@ -32,6 +32,24 @@ var xob = null;
 var cmd = null;
 var cmdresult = '';
 
+var ref = new TomatoRefresh('update.cgi', 'exec=devlist', 5, 'status_devices_refresh');
+
+ref.refresh = function(text) {
+	try {
+		eval(text);
+	}
+	catch (ex) {
+	}
+
+	dg.removeAllData();
+	dg.populate();
+	dg.resort();
+	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		if (wl_sunit(uidx) < 0)
+			E('noise'+uidx).innerHTML = wlnoise[uidx];
+	}
+}
+
 function find(mac, ip) {
 	var e, i;
 
@@ -168,19 +186,6 @@ function searchOUI(n, i) {
 
 	var commands = '/usr/bin/wget -T 6 -q http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
 	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
-}
-
-var ref = new TomatoRefresh('update.cgi', 'exec=devlist', 0, 'status_devices_refresh');
-
-ref.refresh = function(text) {
-	eval(text);
-	dg.removeAllData();
-	dg.populate();
-	dg.resort();
-	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if (wl_sunit(uidx) < 0)
-			E('noise'+uidx).innerHTML = wlnoise[uidx];
-	}
 }
 
 var dg = new TomatoGrid();
