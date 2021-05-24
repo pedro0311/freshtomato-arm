@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # v1.00 Shibby 2013
-# v1.01 Fix memory leak + cosmetics - pedro 2019
+# v1.01 Fix memory leak + cosmetics - pedro 2019 - 2021
 # v2.05 [Command line operation, custom URL, local storage] + GUI integration added - rs232 2019
 
 PID=$$
@@ -27,7 +27,7 @@ ttbdownload() {
 	[ -f $DIR2/$TTB.zip ] && {
 		cru d ttbDL
 	} || {
-		cru a ttbDL "*/2 * * * * /usr/sbin/ttb"
+		cru a ttbDL "*/5 * * * * /usr/sbin/ttb"
 		$LOGS "ERROR - Cannot download Online theme. Will try again soon..."
 		ttbexit 1
 	}
