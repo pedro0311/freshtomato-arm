@@ -2776,7 +2776,7 @@ tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
-			--disable-manpage --disable-html-manual --disable-dependency-tracking
+			--disable-manpage --disable-html-manual --disable-dependency-tracking --disable-zstd --disable-systemd
 	@touch $@
 
 tor: tor/stamp-h1
