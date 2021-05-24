@@ -530,7 +530,7 @@ genSO("${root}/usr/lib/libsodium.so.23.0.0", "${router}/libsodium/src/libsodium/
 genSO("${root}/usr/lib/libpng.so.3.59.0", "${router}/libpng/.libs/libpng.a");
 genSO("${root}/usr/lib/libpng12.so.0.59.0", "${router}/libpng/.libs/libpng12.a");
 genSO("${root}/usr/lib/libjpeg.so", "${router}/libjpeg/.libs/libjpeg.a");
-genSO("${root}/usr/lib/libxml2.so.2.9.10", "${router}/libxml2/.libs/libxml2.a");
+genSO("${root}/usr/lib/libxml2.so.2.9.12", "${router}/libxml2/.libs/libxml2.a");
 genSO("${root}/usr/lib/libipset.so.11.0.0", "${router}/ipset/lib/.libs/libipset.a");
 genSO("${root}/usr/lib/libpcre.so.1.2.10", "${router}/pcre/.libs/libpcre.a");
 genSO("${root}/usr/lib/libpcreposix.so.0.0.6", "${router}/pcre/.libs/libpcreposix.a");
