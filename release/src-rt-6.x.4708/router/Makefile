@@ -63,7 +63,7 @@ endef
 #
 #
 SEP=`$(eval progress=$(shell echo $$(($(progress)+1))))` \
-echo "\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007"
+printf "\n\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007\n"
 
 export CFLAGS += -DBCMWPA2
 ifeq ($(TCONFIG_BCMWL6),y)
@@ -446,7 +446,7 @@ countInstallSteps:
 	@echo ${totalSteps}
 
 install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
-	@echo "\033[41;1m   Installing \033[0m\033]2;Installing\007"
+	@printf "\n\033[41;1m   Installing \033[0m\033]2;Installing\007\n"
 	install -d $(TARGETDIR)
 
 
