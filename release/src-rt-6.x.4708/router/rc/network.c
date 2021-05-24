@@ -654,6 +654,7 @@ void restart_wl(void)
 	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
+	    (model == MODEL_R6900) ||
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_XR300)) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))

@@ -123,6 +123,7 @@ switch (nvram['t_model_name']) {
 	case 'Netgear R6400v2':
 	case 'Netgear R6700v1':
 	case 'Netgear R6700v3':
+	case 'Netgear R6900':
 	case 'Netgear R7000':
 	case 'Netgear XR300':
 		COL_P0N = '0';
