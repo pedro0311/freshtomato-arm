@@ -2308,7 +2308,7 @@ wireguard-tools-clean:
 	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
 
 nano/stamp-h1: libncurses
-	cd nano && autoreconf && \
+	cd nano && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
