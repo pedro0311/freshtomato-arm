@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Mar 23 2021 - pedro **
+	** Last Updated - May 25 2021 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -107,6 +107,7 @@ switch (nvram['t_model_name']) {
 	case 'Belkin F9K1113v2':
 	case 'Asus RT-N18U':
 	case 'Asus RT-N66U C1':
+	case 'Asus RT-AC1750 B1':
 	case 'Asus RT-AC66U B1':
 	case 'Asus RT-AC67U':
 	case 'Asus RT-AC68R/U':
@@ -114,6 +115,7 @@ switch (nvram['t_model_name']) {
 	case 'Asus RT-AC68U C1':
 	case 'Asus RT-AC68U B2':
 	case 'Asus RT-AC68U V3':
+	case 'Asus RT-AC1900U':
 	case 'Asus RT-AC1900P':
 	case 'Huawei WS880':
 	case 'Linksys EA6900':
@@ -257,7 +259,7 @@ REMOVE-END */
 /* WLAN */
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 					if (l[k].indexOf(wl_ifaces[uidx][0]) != -1)
-						E('_f_bridge_wlan'+wl_fface(uidx)+'_to').selectedIndex=i;
+						E('_f_bridge_wlan'+uidx+'_to').selectedIndex = i;
 				}
 			}
 		}
@@ -298,7 +300,7 @@ REMOVE-END */
 						port[COL_P2N], tagged[COL_P2N],
 						port[COL_P3N], tagged[COL_P3N],
 						port[COL_P4N], tagged[COL_P4N],
-						(((nvram['vlan'+i+'ports']).indexOf('*') != -1) ? '1' : '0' ),
+						(((nvram['vlan'+i+'ports']).indexOf('*') != -1) ? '1' : '0'),
 						(bridged[i] != null) ? bridged[i] : '1' ]);
 				}
 			}
@@ -668,8 +670,7 @@ function trailingSpace(s) {
 
 function verifyFields(focused, quiet) {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		var u = wl_fface(uidx);
-		var wlan = E('_f_bridge_wlan'+u+'_to');
+		var wlan = E('_f_bridge_wlan'+uidx+'_to');
 		if (nvram.lan_ifname.length < 1)
 			wlan.options[0].disabled = 1;
 
@@ -767,10 +768,8 @@ REMOVE-END */
 	}
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		var u = wl_fface(uidx);
-		var wlan = E('_f_bridge_wlan'+u+'_to');
+		var wlan = E('_f_bridge_wlan'+uidx+'_to');
 /* REMOVE-BEGIN
-		var wlan = E('_f_bridge_wlan_to');
 		alert(wlan.selectedIndex);
 REMOVE-END */
 		switch (parseInt(wlan.selectedIndex)) {
@@ -983,13 +982,15 @@ function init() {
 		<script>
 			var f = [];
 			for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-				var u = wl_fface(uidx);
-				var ssid = nvram['wl'+u+'_ssid'];
-				if (nvram['wl'+u+'_radio'] != '1' || nvram['wl'+u+'_net_mode'] == 'disabled')
-					ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
+				var u = wl_fface(uidx).toString();
+				if (u) {
+					var ssid = wl_ifaces[uidx][4] || '';
+					if (nvram['wl'+u+'_radio'] != '1' || nvram['wl'+u+'_net_mode'] == 'disabled')
+						ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
 
-				f.push( { title: 'Bridge '+wl_display_ifname(uidx), name: 'f_bridge_wlan'+u+'_to', type: 'select',
-				          options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
+					f.push( { title: 'Bridge '+wl_display_ifname(uidx), name: 'f_bridge_wlan'+uidx+'_to', type: 'select',
+					          options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
+				}
 			}
 			createFieldTable('', f);
 			if (port_vlan_supported)

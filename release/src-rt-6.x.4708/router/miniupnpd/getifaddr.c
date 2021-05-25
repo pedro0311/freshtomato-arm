@@ -24,6 +24,8 @@
 #include "getifaddr.h"
 #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
 #include <ifaddrs.h>
+/* FreshTomato ARM - add getifaddr support (missing) */
+#include "ifaddrs.c"
 #endif
 
 int

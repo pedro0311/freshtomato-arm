@@ -742,6 +742,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "dnsmasq_custom",		""				, 0 },
 	{ "dnsmasq_static_only",	"0"				, 0 },
 	{ "dnsmasq_q",			"0"				, 0 },	// Bit0=quiet-dhcp, 1=dhcp6, 2=ra
+	{ "dnsmasq_gen_names",		"0"				, 0 },
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				, 0 },
 #endif

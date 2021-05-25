@@ -34,11 +34,13 @@ TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 RT-N18U				BCM47081A0            0x0646       00        0x1100    0x00000110
 RT-AC56U			BCM4708               0x0646	   00	     0x1100    0x00000110
 RT-AC68U			BCM4708               0x0646       <MAC>     0x1100    0x00001000
-RT-AC67U			BCM4708               0x0646       <MAC>     0x1100    0x00001000 // odmpid=RT-AC67U
+RT-AC67U			BCM4708               0x0646       <MAC>     0x1103    0x00001000 // odmpid=RT-AC67U
 RT-AC68U C1			BCM4709C0             0x0646       <MAC>     0x1103    0x00001000
 RT-AC68P			BCM4709               0x0665       <MAC>     0x1103    0x00001000
 RT-AC68U V3			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid="empty" (not useable, let tomato set it right)
+RT-AC1900U			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid=RT-AC1900U
 RT-AC66U_B1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid=RT-AC66U_B1
+RT-AC1750_B1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid=RT-AC1750_B1
 RT-N66U_C1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid=RT-N66U_C1
 RT-AC1900P			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC1900P
 RT-AC68U B2			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC68U
@@ -107,7 +109,9 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1500")) && (nvram_match("odmpid", "RT-AC68U"))) return MODEL_RTAC1900P; /* RT-AC68U B2 --> (almost) the same like RT-AC1900P */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68R/U */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-N66U_C1"))) return MODEL_RTAC66U_B1; /* RT-N66U_C1 --> (almost) the same like RT-AC66U_B1 */
+		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC1750_B1"))) return MODEL_RTAC66U_B1; /* RT-AC1750_B1 --> (almost) the same like RT-AC66U_B1 */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC66U_B1"))) return MODEL_RTAC66U_B1; /* RT-AC66U_B1 */
+		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC1900U"))) return MODEL_RTAC67U; /* RT-AC1900U --> (almost) the same like RT-AC67U */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC67U"))) return MODEL_RTAC67U; /* RT-AC67U */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("PA", "8527"))) return MODEL_RTAC68UV3; /* RT-AC68U V3 */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68P/U B1 OR RT-AC68U C1 */

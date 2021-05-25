@@ -232,9 +232,17 @@ REMOVE-END */
 	s = f[5].value.trim().replace(/\s+/g, ' ');
 
 	if (s.length > 0) {
-		if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
-			ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
-			return 0;
+		if (f[3].value == '') {
+			if (s.search(/^[a-zA-Z0-9_\-]+$/) == -1) {
+				ferror.set(f[5], 'Invalid hostname. Only a single hostname containing the characters "A-Z 0-9 - _" is allowed', quiet);
+				return 0;
+			}
+		}
+		else {
+			if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
+				ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
+				return 0;
+			}
 		}
 		if (this.existName(s)) {
 			ferror.set(f[5], 'Duplicate hostname', quiet);
@@ -357,7 +365,7 @@ function init() {
 		<li><small><b>Other relevant notes/hints:</b></small>
 			<ul>
 				<li><small>To associate a name to a MAC address (useful for the Device list page) while retaining dynamic DHCP allocation, just leave the IP address field empty.</small></li>
-				<li><small>To specify multiple hostnames for a device, separate them with spaces.</small></li>
+				<li><small>To specify multiple hostnames for a device, separate them with spaces (not available when IP address is empty).</small></li>
 				<li><small>To enable/enforce static ARP binding for a particular device, it must have only one MAC associated with that particular IP address (i.e. you can't have two MAC addresses linked to the same hostname/device in the table above).</small></li>
 				<li><small>When ARP binding is enabled for a particular MAC/IP address pair, that device will always be shown as "active" in the <a href="tools-wol.asp">Wake On LAN</a> table.</small></li>
 				<li><small>See also the <a href="advanced-dhcpdns.asp">Advanced DHCP/DNS</a> settings page for more DHCP-related configuration options.</small></li>

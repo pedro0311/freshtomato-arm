@@ -1165,7 +1165,7 @@ REMOVE-END */
 	}
 
 	/* IP address, blank -> 0.0.0.0 */
-	a = ['_f_dns_1', '_f_dns_2', '_f_dns_3', '_lan_gateway'];
+	a = ['_f_dns_1', '_f_dns_2', '_lan_gateway'];
 	for (i = a.length - 1; i >= 0; --i) {
 		if ((vis[a[i]]) && (!v_dns(a[i], quiet || !ok)))
 			ok = 0;

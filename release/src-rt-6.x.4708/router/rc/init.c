@@ -529,8 +529,8 @@ static int init_vlan_ports(void)
 	case MODEL_R7000:
 	case MODEL_XR300:
 	case MODEL_RTN18U:
-	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
-	case MODEL_RTAC67U:
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 and RT-AC1750_B1 */
+	case MODEL_RTAC67U: /* also for RT-AC1900U */
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 	case MODEL_RTAC1900P:
@@ -825,9 +825,9 @@ static int init_nvram(void)
 			nvram_set("1:mcsbw805ghpo", "0xAA864433");
 		}
 		break;
-	case MODEL_RTAC67U:
+	case MODEL_RTAC67U: /* also for RT-AC1900U */
 		mfr = "Asus";
-		name = "RT-AC67U"; /* RT-AC67U */
+		name = nvram_match("odmpid", "RT-AC67U") ? "RT-AC67U" : "RT-AC1900U";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
@@ -1082,9 +1082,15 @@ static int init_nvram(void)
 			nvram_set("1:ccode", "SG");
 		}
 		break;
-	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 */
+	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 and RT-AC1750_B1 */
 		mfr = "Asus";
-		name = nvram_match("odmpid", "RT-AC66U_B1") ? "RT-AC66U B1" : "RT-N66U C1";
+		if (nvram_match("odmpid", "RT-N66U_C1"))
+			name = "RT-N66U C1";
+		else if (nvram_match("odmpid", "RT-AC1750_B1"))
+			name = "RT-AC1750 B1";
+		else /* default to RT-AC66U B1 */
+			name = "RT-AC66U B1";
+
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
@@ -1138,10 +1144,19 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			if (nvram_match("odmpid", "RT-AC1750_B1")) { /* check for RT-AC1750 B1 first (US Retail Edition) */
+				nvram_set("0:ccode", "US");
+				nvram_set("1:ccode", "US");
+				nvram_set("0:regrev", "0"); /* get 80 MHz channels */
+				nvram_set("1:regrev", "0");
+				nvram_set("ctf_fa_cap", "0"); /* disable fa cap for freshtomato */
+			}
+			else { /* default for RT-AC66U B1 */
+				nvram_set("0:ccode", "SG");
+				nvram_set("1:ccode", "SG");
+				nvram_set("0:regrev", "12");
+				nvram_set("1:regrev", "12");
+			}
 		}
 		break;
 #ifdef TCONFIG_BCM7

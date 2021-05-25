@@ -452,6 +452,10 @@ void start_dnsmasq()
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
 
+	/* generate a name for DHCP clients which do not otherwise have one */
+	if (nvram_get_int("dnsmasq_gen_names"))
+		fprintf(f, "dhcp-generate-names\n");
+
 	if ((nvram_get_int("adblock_enable")) && (f_exists("/etc/dnsmasq.adblock")))
 		fprintf(f, "conf-file=/etc/dnsmasq.adblock\n");
 

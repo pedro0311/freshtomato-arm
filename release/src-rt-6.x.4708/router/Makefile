@@ -63,7 +63,7 @@ endef
 #
 #
 SEP=`$(eval progress=$(shell echo $$(($(progress)+1))))` \
-echo "\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007"
+printf "\n\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007\n"
 
 export CFLAGS += -DBCMWPA2
 ifeq ($(TCONFIG_BCMWL6),y)
@@ -483,7 +483,7 @@ countInstallSteps:
 	@echo ${totalSteps}
 
 install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
-	@echo "\033[41;1m   Installing \033[0m\033]2;Installing\007"
+	@printf "\n\033[41;1m   Installing \033[0m\033]2;Installing\007\n"
 	install -d $(TARGETDIR)
 
 
@@ -2068,11 +2068,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C libxml2 DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.10 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.10
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.10
+	install -D libxml2/.libs/libxml2.so.2.9.12 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.10 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.10 libxml2.so
+		ln -sf libxml2.so.2.9.12 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.12 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2293,7 +2293,7 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
 	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC -EL" \
 	LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
-	$(CONFIGURE) --host=$(HOST) --build=x86_64-linux-gnu  --prefix=/usr \
+	$(CONFIGURE) --prefix=/usr \
 		--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
 		--enable-shared --disable-static \
 		--without-mysqlmanager \
@@ -2428,7 +2428,7 @@ wireguard-tools-clean:
 	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
 
 nano/stamp-h1: libncurses
-	cd nano && autoreconf && \
+	cd nano && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
@@ -2896,7 +2896,7 @@ tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
-			--disable-manpage --disable-html-manual --disable-dependency-tracking
+			--disable-manpage --disable-html-manual --disable-dependency-tracking --disable-zstd --disable-systemd
 	@touch $@
 
 tor: tor/stamp-h1
@@ -2972,7 +2972,7 @@ libnetfilter_conntrack/stamp-h1: libmnl libnfnetlink
 	cd libnetfilter_conntrack && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -3028,7 +3028,7 @@ libnetfilter_queue/stamp-h1: libnfnetlink
 	cd libnetfilter_queue && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -3058,7 +3058,7 @@ conntrack-tools/stamp-h1: libmnl libnfnetlink libnetfilter_conntrack libnetfilte
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections 	-L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
 			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
 	@touch $@
 
