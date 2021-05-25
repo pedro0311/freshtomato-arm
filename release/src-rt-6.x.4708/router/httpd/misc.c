@@ -244,11 +244,22 @@ static char* get_cfeversion(char *buf)
 
 	strcpy(buf, "");
 
+	/* get ASUS Bootloader version */
 	if ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL) {
 		if (fgets(s, 15, f) != NULL)
 			len = strlen(s);
 
 		pclose(f);
+	}
+
+	if (len == 0) {
+		/* get NETGEAR CFE version */
+		if ((f = popen("strings /dev/mtd1ro | grep cfe_version | cut -d '=' -f2", "r")) != NULL) {
+			if (fgets(s, 15, f) != NULL)
+				len = strlen(s);
+
+			pclose(f);
+		}
 	}
 
 	if (len == 0)
