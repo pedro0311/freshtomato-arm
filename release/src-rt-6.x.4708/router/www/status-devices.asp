@@ -345,7 +345,7 @@ dg.populate = function() {
 				/* special case for gateway */
 				for (l = 1; l <= MAX_PORT_ID; l++) {
 					k = (l == 1) ? '' : l.toString();
-					if (nvram['wan'+k+'_gateway'] != '' && nvram['wan'+k+'_gateway'] != '0.0.0.0' && (e = find(c[j], null)) != null) {
+					if (nvram['wan'+k+'_gateway'] != '' && nvram['wan'+k+'_gateway'] != '0.0.0.0' && (e = find(c[j], null)) != null && (a[1] != lipp)) {
 						e.ip = nvram['wan'+k+'_gateway'];
 						break loop1;
 					}

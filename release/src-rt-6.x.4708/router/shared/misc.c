@@ -275,6 +275,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
+	    (model == MODEL_R6900) ||
 	    (model == MODEL_XR300) ||
 	    (model == MODEL_RTAC67U) ||
 	    (model == MODEL_RTAC68U) ||

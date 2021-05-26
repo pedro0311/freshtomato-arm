@@ -114,11 +114,11 @@ if [ -f ./os.astlinux ]; then
 	OS_VERSION=$(cat ./os.astlinux)
 fi
 
-# FreshTomato special case
+# Tomato USB special case
 if [ -f ../shared/tomato_version ]; then
 	OS_NAME=Tomato
-	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f1,2`
-	OS_VERSION="FreshTomato $TOMATO_VER"
+	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f2,3`
+	OS_VERSION="Tomato $TOMATO_VER"
 fi
 
 # OpenEmbedded special case
@@ -396,8 +396,8 @@ case $OS_NAME in
 		FW=iptables
 		;;
 	Tomato)
-		OS_NAME=FreshTomato
-		OS_URL=https://freshtomato.org/
+		OS_NAME=UPnP
+		OS_URL=http://tomatousb.org/
 		echo "" >> ${CONFIGFILE}
 		echo "#ifndef TOMATO" >> ${CONFIGFILE}
 		echo "#define TOMATO" >> ${CONFIGFILE}
@@ -409,7 +409,6 @@ case $OS_NAME in
 		echo "#ifdef TCONFIG_IPV6" >> ${CONFIGFILE}
 		echo "#define ENABLE_IPV6" >> ${CONFIGFILE}
 		echo "#endif" >> ${CONFIGFILE}
-		HAVE_IP_MREQN=1
 		FW=iptables
 		;;
 	Darwin)
@@ -491,14 +490,8 @@ case $FW in
 				fi
 				if [ "$IPTABLES_143" -eq 1 ] ; then
 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
-					if [ "$TCONFIG_IPV6" = "y" ]; then
-						echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip6tc.o" >> config.mk
-					fi
 				else
 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/libiptc.a" >> config.mk
-					if [ "$TCONFIG_IPV6" = "y" ]; then
-						echo "LDLIBS += ${IPTABLESPATH}/libiptc/libip6tc.a" >> config.mk
-					fi
 				fi
 			else
 				# OpenWRT

@@ -689,6 +689,7 @@ void restart_wl(void)
 	    (model == MODEL_R6400v2) ||
 	    (model == MODEL_R6700v1) ||
 	    (model == MODEL_R6700v3) ||
+	    (model == MODEL_R6900) ||
 	    (model == MODEL_R7000) ||
 	    (model == MODEL_XR300) ||
 	    (model == MODEL_R8000)) {

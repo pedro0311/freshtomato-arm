@@ -518,7 +518,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	        maxsize = 0x200000;
 	        size = maxsize;
 	 }
-	/* R7000 and R6700v1 */
+	/* R6900, R7000 and R6700v1 */
 	else if (nvram_match("boardnum", "32") &&
 		 nvram_match("boardtype", "0x0665") &&
 		 nvram_match("boardrev", "0x1301")) {
@@ -932,7 +932,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			offset += 0x180000;
 			bcm947xx_nflash_parts[nparts].size -= 0x180000;
 		}
-		/* R7000 and R6700v1 */
+		/* R6900, R7000 and R6700v1 */
 		else if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0665") &&
 			 nvram_match("boardrev", "0x1301")) {
@@ -985,7 +985,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
                 nparts++;
 #endif /* End of ASUS 2nd FW partition*/
 
-		/* again, to fix R7000 and R6700v1 */
+		/* again, to fix R6900, R7000 and R6700v1 */
 		if (nvram_match("boardnum", "32") &&
 		    nvram_match("boardtype", "0x0665") &&
 		    nvram_match("boardrev", "0x1301")) {
