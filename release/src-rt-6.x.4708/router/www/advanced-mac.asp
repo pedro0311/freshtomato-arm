@@ -19,7 +19,7 @@
 
 <script>
 
-//	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr"); %>
+//	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr,wl_nband"); %>
 
 function et0plus(plus) {
 	var mac = nvram.et0macaddr.split(':');
