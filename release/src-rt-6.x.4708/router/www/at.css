@@ -1376,10 +1376,6 @@ div#loading {
 	padding-right: 1em;
 }
 
-div#wait {
-	line-height: 2.6;
-}
-
 #content > .about {
 	color: var(--tomato-color);
 	text-align: center;

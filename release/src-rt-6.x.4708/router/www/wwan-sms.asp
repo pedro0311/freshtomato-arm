@@ -142,7 +142,7 @@ function init() {
 
 <div class="tomato-grid" id="sms-grid"></div>
 
-<div id="wait">Please wait...&nbsp; <img src="spin.gif" alt="" id="spin"></div>
+<div id="wait">Please wait...&nbsp; <img src="spin.gif" alt="" id="spin"></div><p>
 
 <!-- / / / -->
 
