@@ -75,9 +75,9 @@
    { "chown_uploads", &tunable_chown_uploads },
    { "connect_from_port_20", &tunable_connect_from_port_20 },
    { "xferlog_enable", &tunable_xferlog_enable },
-@@ -179,6 +180,7 @@ parseconf_str_array[] =
-   { "dsa_private_key_file", &tunable_dsa_private_key_file },
+@@ -183,6 +184,7 @@ parseconf_str_array[] =
    { "ca_certs_file", &tunable_ca_certs_file },
+   { "ssl_sni_hostname", &tunable_ssl_sni_hostname },
    { "cmds_denied", &tunable_cmds_denied },
 +  { "passwd_file", &tunable_passwd_file },
    { 0, 0 }
@@ -175,15 +175,15 @@
  int tunable_chown_uploads;
  int tunable_connect_from_port_20;
  int tunable_xferlog_enable;
-@@ -142,6 +143,7 @@ const char* tunable_ssl_ciphers;
- const char* tunable_rsa_private_key_file;
+@@ -146,6 +147,7 @@ const char* tunable_ssl_ciphers;
  const char* tunable_dsa_private_key_file;
  const char* tunable_ca_certs_file;
+ const char* tunable_ssl_sni_hostname;
 +const char* tunable_passwd_file;
  
  static void install_str_setting(const char* p_value, const char** p_storage);
  
-@@ -157,6 +159,7 @@ tunables_load_defaults()
+@@ -161,6 +163,7 @@ tunables_load_defaults()
    tunable_anon_upload_enable = 0;
    tunable_anon_mkdir_write_enable = 0;
    tunable_anon_other_write_enable = 0;
@@ -191,7 +191,7 @@
    tunable_chown_uploads = 0;
    tunable_connect_from_port_20 = 0;
    tunable_xferlog_enable = 0;
-@@ -254,7 +257,7 @@ tunables_load_defaults()
+@@ -261,7 +264,7 @@ tunables_load_defaults()
    /* -rw------- */
    tunable_chown_upload_mode = 0600;
  
@@ -200,7 +200,7 @@
    install_str_setting("ftp", &tunable_ftp_username);
    install_str_setting("root", &tunable_chown_username);
    install_str_setting("/var/log/xferlog", &tunable_xferlog_file);
-@@ -281,13 +284,14 @@ tunables_load_defaults()
+@@ -288,14 +291,15 @@ tunables_load_defaults()
    install_str_setting(0, &tunable_user_sub_token);
    install_str_setting("/etc/vsftpd.email_passwords",
                        &tunable_email_password_file);
@@ -212,6 +212,7 @@
    install_str_setting(0, &tunable_rsa_private_key_file);
    install_str_setting(0, &tunable_dsa_private_key_file);
    install_str_setting(0, &tunable_ca_certs_file);
+   install_str_setting(0, &tunable_ssl_sni_hostname);
 +  install_str_setting(0, &tunable_passwd_file);
  }
  
@@ -226,9 +227,9 @@
  extern int tunable_chown_uploads;             /* chown() anon uploaded files */
  extern int tunable_connect_from_port_20;      /* PORT connects from port 20 */
  extern int tunable_xferlog_enable;            /* Log transfers to a file */
-@@ -145,6 +146,7 @@ extern const char* tunable_rsa_private_k
- extern const char* tunable_dsa_private_key_file;
+@@ -149,6 +150,7 @@ extern const char* tunable_rsa_private_k
  extern const char* tunable_ca_certs_file;
+ extern const char* tunable_ssl_sni_hostname;
  extern const char* tunable_cmds_denied;
 +extern const char* tunable_passwd_file;
  

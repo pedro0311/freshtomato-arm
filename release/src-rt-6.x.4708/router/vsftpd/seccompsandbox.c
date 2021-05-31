@@ -45,6 +45,9 @@
 #ifndef __NR_openat
   #define __NR_openat 257
 #endif
+#ifndef __NR_getrandom
+  #define __NR_getrandom 318
+#endif
 
 #ifndef O_LARGEFILE
   #define O_LARGEFILE 00100000
@@ -350,6 +353,8 @@ seccomp_sandbox_setup_prelogin(const struct vsf_session* p_sess)
     /* For file locking. */
     allow_nr_1_arg_match(__NR_fcntl, 2, F_SETLKW);
     allow_nr_1_arg_match(__NR_fcntl, 2, F_SETLK);
+    /* Newer kernel / glibc hit this. */
+    allow_nr(__NR_getrandom);
   }
   if (tunable_ssl_enable)
   {
@@ -409,8 +414,10 @@ seccomp_sandbox_setup_postlogin(const struct vsf_session* p_sess)
   allow_nr(__NR_getcwd);
   allow_nr(__NR_chdir);
   allow_nr(__NR_getdents);
+  allow_nr(__NR_getdents64);
   /* Misc */
   allow_nr(__NR_umask);
+  reject_nr(__NR_sysinfo, EPERM);
 
   /* Config-dependent items follow. */
   if (tunable_use_sendfile)

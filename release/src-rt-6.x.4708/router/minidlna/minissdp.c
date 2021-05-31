@@ -42,6 +42,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+#include "event.h"
 #include "minidlnapath.h"
 #include "upnphttp.h"
 #include "upnpglobalvars.h"
@@ -144,7 +145,11 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 	int s;
 	unsigned char loopchar = 0;
 	uint8_t ttl = 4;
+#ifdef HAVE_STRUCT_IP_MREQN
+	struct ip_mreqn imr;
+#else
 	struct in_addr mc_if;
+#endif
 	struct sockaddr_in sockname;
 	
 	s = socket(PF_INET, SOCK_DGRAM, 0);
@@ -154,8 +159,6 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 		return -1;
 	}
 
-	mc_if.s_addr = iface->addr.s_addr;
-
 	if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopchar, sizeof(loopchar)) < 0)
 	{
 		DPRINTF(E_ERROR, L_SSDP, "setsockopt(udp_notify, IP_MULTICAST_LOOP): %s\n", strerror(errno));
@@ -163,7 +166,14 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 		return -1;
 	}
 
-	if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, (char *)&mc_if, sizeof(mc_if)) < 0)
+#ifdef HAVE_STRUCT_IP_MREQN
+	imr.imr_address = iface->addr;
+	imr.imr_ifindex = iface->ifindex;
+	if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &imr, sizeof(imr)) < 0)
+#else
+	mc_if = iface->addr;
+	if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &mc_if, sizeof(mc_if)) < 0)
+#endif
 	{
 		DPRINTF(E_ERROR, L_SSDP, "setsockopt(udp_notify, IP_MULTICAST_IF): %s\n", strerror(errno));
 		close(s);
@@ -204,9 +214,10 @@ static const char * const known_service_types[] =
 };
 
 static void
-_usleep(long usecs)
+_usleep(long min, long max)
 {
 	struct timespec sleep_time;
+	long usecs = min + rand() / (RAND_MAX / (max - min + 1) + 1);
 
 	sleep_time.tv_sec = 0;
 	sleep_time.tv_nsec = usecs * 1000;
@@ -278,7 +289,7 @@ SendSSDPNotifies(int s, const char *host, unsigned short port,
 	for (dup = 0; dup < 2; dup++)
 	{
 		if (dup)
-			_usleep(200000);
+			_usleep(150000, 250000);
 		i = 0;
 		while (known_service_types[i])
 		{
@@ -481,8 +492,9 @@ close:
 /* ProcessSSDPRequest()
  * process SSDP M-SEARCH requests and responds to them */
 void
-ProcessSSDPRequest(int s, unsigned short port)
+ProcessSSDPRequest(struct event *ev)
 {
+	int s = ev->fd;
 	int n;
 	char bufr[1500];
 	struct sockaddr_in sendername;
@@ -668,6 +680,11 @@ ProcessSSDPRequest(int s, unsigned short port)
 				pi = (struct in_pktinfo *)CMSG_DATA(cmsg);
 				addr = pi->ipi_spec_dst;
 				inet_ntop(AF_INET, &addr, host, sizeof(host));
+				for (i = 0; i < n_lan_addr; i++)
+				{
+					if (pi->ipi_ifindex == lan_addr[i].ifindex)
+						break;
+				}
 			}
 #else
 			const char *host;
@@ -682,14 +699,14 @@ ProcessSSDPRequest(int s, unsigned short port)
 					break;
 				}
 			}
+			host = lan_addr[iface].str;
+#endif
 			if (n_lan_addr == i)
 			{
 				DPRINTF(E_DEBUG, L_SSDP, "Ignoring SSDP M-SEARCH on other interface [%s]\n",
 					inet_ntoa(sendername.sin_addr));
 				return;
 			}
-			host = lan_addr[iface].str;
-#endif
 			DPRINTF(E_DEBUG, L_SSDP, "SSDP M-SEARCH from %s:%d ST: %.*s, MX: %.*s, MAN: %.*s\n",
 				inet_ntoa(sendername.sin_addr),
 				ntohs(sendername.sin_port),
@@ -722,20 +739,22 @@ ProcessSSDPRequest(int s, unsigned short port)
 					if (l != st_len)
 						break;
 				}
-				_usleep(random()>>20);
-				SendSSDPResponse(s, sendername, i,
-						 host, port, len_r);
+				_usleep(13000, 20000);
+				SendSSDPResponse(s, sendername, i, host,
+				    (unsigned short)runtime_vars.port, len_r);
 				return;
 			}
 			/* Responds to request with ST: ssdp:all */
 			/* strlen("ssdp:all") == 8 */
 			if ((st_len == 8) && (memcmp(st, "ssdp:all", 8) == 0))
 			{
+				_usleep(13000, 30000);
 				for (i=0; known_service_types[i]; i++)
 				{
 					l = strlen(known_service_types[i]);
-					SendSSDPResponse(s, sendername, i,
-							 host, port, len_r);
+					SendSSDPResponse(s, sendername, i, host,
+					    (unsigned short)runtime_vars.port,
+					    len_r);
 				}
 			}
 		}

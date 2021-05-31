@@ -161,7 +161,7 @@
  }
  
 -#if MIN_VERSION(3, 6)
-+#if MIN_VERSION(3, 6) && HAVE_GOST
++#if MIN_VERSION(3, 6) && defined(HAVE_GOST)
  static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_len, 
  				  unsigned char *sig, size_t sig_len,
  				  unsigned char *digest, size_t digest_len, int algo)
@@ -170,7 +170,7 @@
        return dnsmasq_rsa_verify;
  
 -#if MIN_VERSION(3, 6)
-+#if MIN_VERSION(3, 6) && HAVE_GOST
++#if MIN_VERSION(3, 6) && defined(HAVE_GOST)
      case 12:
        return dnsmasq_gostdsa_verify;
  #endif

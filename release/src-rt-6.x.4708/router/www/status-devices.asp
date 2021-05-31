@@ -200,7 +200,7 @@ dg.setup = function() {
 dg.populate = function() {
 	var i, j, k, l;
 	var a, b, c, e, f;
-	var mode = '';
+	var mode = '', wan_gw;
 
 /* IPV6-BEGIN */
 	var i2, e2;
@@ -332,10 +332,6 @@ dg.populate = function() {
 		if (a.length < 4)
 			continue;
 
-		/* lipp = 192.168.1. (why one only, what with other bridges?) */
-		if (a[1].indexOf('.') == -1)
-			a[1] = lipp + a[1];
-
 		/* find and compare MAC(s) */
 		c = a[0].split(',');
 
@@ -345,7 +341,8 @@ dg.populate = function() {
 				/* special case for gateway */
 				for (l = 1; l <= MAX_PORT_ID; l++) {
 					k = (l == 1) ? '' : l.toString();
-					if (nvram['wan'+k+'_gateway'] != '' && nvram['wan'+k+'_gateway'] != '0.0.0.0' && (e = find(c[j], null)) != null && (a[1] != lipp)) {
+					wan_gw = nvram['wan'+k+'_gateway'];
+					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip.substr(0, e.ip.lastIndexOf('.') + 1) != lipp) { /* FIXME: loop needed for every active bridge */
 						e.ip = nvram['wan'+k+'_gateway'];
 						break loop1;
 					}

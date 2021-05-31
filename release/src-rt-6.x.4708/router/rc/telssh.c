@@ -138,7 +138,7 @@ void start_sshd(void)
 	if (!nvram_get_int("sshd_pass"))
 		argv[argc++] = "-s";
 
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	if (nvram_get_int("sshd_forwarding"))
 		argv[argc++] = "-a";
 #endif

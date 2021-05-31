@@ -108,7 +108,7 @@ function verifyFields(focused, quiet) {
 	}
 
 	const mode = E('_qos_mode').value;
-	let modeHtbEnabled = false;
+	var modeHtbEnabled = false;
 	if (mode == 1)
 		modeHtbEnabled = true;
 
