@@ -204,7 +204,7 @@ void stop_bittorrent(void)
 {
 	FILE *fp;
 
-	if (pidof("transmission-daemon") > 0) {
+	if (pidof("transmission-da") > 0) {
 		/* stop script */
 		if (!(fp = fopen(TR_STOP_SCRIPT, "w"))) {
 			perror(TR_STOP_SCRIPT);
