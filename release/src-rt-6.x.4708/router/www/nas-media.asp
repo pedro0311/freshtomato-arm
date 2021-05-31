@@ -319,6 +319,8 @@ function init() {
 <div class="section-title">Media Directories</div>
 <div class="section">
 	<div class="tomato-grid" id="ms-grid"></div>
+
+	<small>To exclude a given subdirectory from the scan, place a file with the name <i>.minidlnaignore</i> in it.</small>
 </div>
 
 <!-- / / / -->
