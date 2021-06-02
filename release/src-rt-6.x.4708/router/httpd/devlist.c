@@ -250,5 +250,19 @@ wl_ifname,wl_mode,wl_radio,wl_nband"
 		}
 		unlink(lease_file);
 	}
-	web_puts("];");
+	web_puts("];\n");
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+	web_puts("gc_time = ");
+	memset(buf, 0, sizeof(buf));
+	if (f_read_string("/proc/sys/net/ipv4/neigh/default/gc_stale_time", buf, sizeof(buf)) > 0)
+		web_printf("%d", atoi(buf));
+	else
+#ifdef TCONFIG_BCMARM
+		web_puts("65");
+#else
+		web_puts("125");
+#endif
+
+	web_puts(";");
+#endif /* TCONFIG_BCMARM || TCONFIG_MIPSR2 */
 }

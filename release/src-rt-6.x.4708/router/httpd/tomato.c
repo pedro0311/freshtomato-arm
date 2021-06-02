@@ -24,6 +24,9 @@ int rboot = 0;
 extern int post;
 
 static void asp_css(int argc, char **argv);
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+static void asp_discovery(int argc, char **argv);
+#endif
 static void asp_resmsg(int argc, char **argv);
 
 //
@@ -425,6 +428,9 @@ const aspapi_t aspapi[] = {
 	{ "calc6rdlocalprefix",		asp_calc6rdlocalprefix		},
 #endif
 	{ "css",			asp_css				},
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+	{ "discovery",			asp_discovery			},
+#endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_presets",		asp_stubby_presets		},
 #endif
@@ -461,6 +467,20 @@ static void asp_css(int argc, char **argv)
 	}
 #endif
 }
+
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+static void asp_discovery(int argc, char **argv)
+{
+	char buf[32] = "/usr/sbin/discovery.sh ";
+
+	if (strncmp(argv[0], "off", 3) == 0)
+		return;
+	else if (strncmp(argv[0], "traceroute", 10) == 0)
+		strcat(buf, argv[0]);
+
+	system(buf);
+}
+#endif
 
 // -----------------------------------------------------------------------------
 
