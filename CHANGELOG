@@ -5,6 +5,112 @@ FreshTomato-ARM Changelog
 
 
 
+2021.3          2021.06.05
+--------------------------
+
+- kernel: drivers: net: ppp_generic.c: check pointer first
+- busybox: update to 1.33.1
+- tor: update to 0.4.5.8
+- sqlite: update to 3.35.5
+- dnsmasq: update to 2021.04.10 (3573ca0) snapshot
+- openvpn: update to 2.5.2
+- libcurl: update to 7.76.1
+- nettle: update to 3.7.2
+- nginx: update to 1.19.10
+- tinc: update to d100eb0 (2021.04.15) snaphot
+- nano: update to 5.7
+- rp-pppoe: update to 3.15
+- miniupnpd: update to 2.2.2
+- adminer: update to 4.8.1-mysql-en
+- libxml2: update to 2.9.12
+- iperf2: update to 3.9
+- minidlna: update to 1.3.0
+- vsftpd: update to 3.0.4
+- libcurl: update CA certificate bundle as of 2021-04-13
+- getdns: fixes from upstream
+- ebtables: fixes from upstream
+- build: add Asus RT-AC68U V3 support
+- build: add Asus RT-AC1750 B1 support
+- build: add Asus RT-AC1900U support
+- build: add Netgear R6900 support
+- build: Makefile: switch to tinc instead of SNMP for 'e' (VPN) image
+- build: Makefile: tor: compile without zstd and systemd
+- build: Makefile: nano: add -fsi to autoreconf
+- build: Makefile: use 'printf' command instead of 'echo', fix formatting
+- build: Makefile: add libmnl to PKG_CONFIG_PATCH in libnetfilter_queue, libnetfilter_conntrack and conntrack-tools recipies
+- build: common.mak: add (export) PKG_CONFIG_DIR/PKG_CONFIG_LIBDIR/PKG_CONFIG_SYSROOT_DIR env variables
+- GUI: update all icons; thanks to @rs232
+- GUI improvements: add interface/bridge info to the device list page and other changes; fixes #106
+- GUI: Admin: Bandwidth Monitoring: fix the availability of some forms when enabling/disabling
+- GUI: Advanced: DHCP/DNS: exclude ipv6 only servers if ipv6 not enabled
+- GUI: Advanced: DHCP/DNS: when built with stubby add option to choose between dnsmasq and stubby for DNSSEC validation
+- GUI: Advanced: DHCP/DNS: add option to force minimum acceptable TLS version to 1.3 for Stubby (required OpenSSL >= 1.1.1)
+- GUI: Advanced: DHCP/DNS: fix visibility of 'DNSSEC validation method' radio group
+- GUI: Advanced: DHCP/DNS: Add option to generate a name for DHCP clients which do not otherwise have one; useful for e.g. Device List page
+- GUI: Advanced: DHCP/DNS: always show the 'Prevent client auto DoH' option regardless of whether the image is built with or without Stubby
+- GUI: Advanced: DHCP/DNS: make 'dnsmasq custom configuration' textarea automatically stretched vertically
+- GUI: Bandwidth: Last 24 Hours: fix bridge naming
+- GUI: Bandwidth: WAN Bandwidth - Daily: flip from/to dates
+- GUI: Basic: DHCP Reservation: do not allow multiple hostnames for a device when only associate to a MAC address (causing dnsmasq failed to start)
+- GUI: basic-ipv6.asp - hide option tun mtu for case 6RD Relay (not used)
+- GUI: basic-ipv6.asp - show option tun ttl for case 6rd from DHCPv4 (Option 212)
+- GUI: DHCP Reservation: allow definition of hostnames for devices without static DHCP assignment (resolves #127)
+- GUI: Display NETGEAR CFE version on status page
+- GUI: status-devices.asp - extend IPv6 support
+- GUI: Status: Device List: add network discovery helper; thanks to @rs232 for the bash script and the idea
+- GUI: Status: Overview: fix displaying of static DNS when in AP mode
+- GUI: Tools: Wireless Site Survey: add/change OUI search like this one on Device List page. Also, calculate the signal quality as on that page
+- GUI: Virtual Wireless: add frequency to interface drop down list
+- Adblock: add DoH servers to Adblock blacklist (disabled)
+- BWL: add the ability to enable/disable rule and enter the description
+- BWL: fix bwlimit filter conflicts due to priority value
+- busybox: build with CONFIG_FEATURE_TOP_INTERACTIVE
+- dnsmasq: patches: fix patch 110 - compilation error when building an image without openssl1.1 support
+- cstats: replace date check with nvram ntp check instead
+- flac: do not build docs, test and utility
+- httpd: devlist.c: also add hostname to devlist()
+- IPv6: for case DHCPv6 PD use IPv6 preferred lifetime provided by your ISP/Server for LAN0-3 (IPv6 lease time); Note: get back IPv6 connectivity faster with IPv6 addr/prefix changes. (Some ISPs provide really very low lifetimes)
+- IPv6: for case DHCPv6 PD use first ethernet for DUID-LL (LLT) (and not ifb0); fixes #113; DUID used by a client or server should not change over time, therefore we use eth0 (constant) now
+- IPv6: help IPv6 and advertise the link MTU in router advertisement messages
+- miniupnpd: patches: remove SO_REUSEPORT option for SSDP - causing build error
+- OpenVPN: Server: fix generating keys
+- OpenVPN: implement kill-switch for routing policy
+- PPPoE: Allow MTU up to 1500 for ISPs that support RFC 4638; Note: Jumbo frame needs to be enabled and supported (Gigabit-LAN) for the router. Clamping can be disabled manually via nvram value "tcp_clamp_disable"
+- QoS: extend qos_irates and qos_orates nvram variables to 256 characters for multiwan images
+- rstats: replace date check with nvram ntp check instead
+- rstats: remove old history format
+- stubby: only include IPv6 resolvers if needed
+- transmission: add missing file in prepackaged source build for tr 3.00
+- TTB: increase the time interval when trying to download the theme to 5 minutes when there are network problems
+- vsftpd: add fix for CVE-2015-1419
+- httpd: httpd.c: use logmsg(); add 'X-Frame-Options' in httpd response headers for better protection; more verbose logging; code improvements
+- httpd: upgrade.c: erase flash file when it's not needed anymore to release more memory; clearly specify the directory from which the (www) files used later are copied - also in some color schemes .png files are needed; a few minor changes in .asp file
+- httpd: wl.c - align country list code/way and sync SDK7 to newer SDK6 code
+- rc: introduce new functions that remove kernel modules (grouped by type), used when disabling/removing USB support or on reboot/upgrade the router
+- rc: add g_upgrade global variable - used to skip several unnecessary delay and redundant steps during upgrade procedure
+- rc: do not stop inactive services, also mute unwanted log messages about it
+- rc: dhcpd: discard old format of dhcpd_static
+- rc: dnsmasq: add the ability to forward local domain queries to upstream DNS (default disabled)
+- rc: firewall: rate limit ipv6 ping when allow ping request disabled
+- rc: init.c: try to write all pending modifications/cache data before reboot
+- rc: init.c: give at least 30 secs instead of only 20 secs before enforcing a system reset during reboot
+- rc: init.c: kill all instances of pppd/xl2tpd on reboot/halt
+- rc: services.c: dnsmasq: disable negative caching
+- rc: transmission.c: fix issue while stopping daemon (resolves #131)
+- samba: enable pthread
+- shared: id.c: cosmetic for RT-AC67U detection details/infos
+- switch3g: add search for every possible visible usb device as a last resort when vendor/product is not available
+- switch4g: add search for every possible visible usb device as a last resort when vendor/product is not available
+- www: advanced-dhcpdns.asp: fix javascript error in case when the image is built without IPv6 support
+- www: basic-static.asp: abandon the old nvram dhcpd_static format; Note: the allowed notation of the IP address also changes (one octet => full IP), ie "200" => "192.168.1.200" (to be synced with other places), so if using the old one, re-enter reservations again
+- www: basic-network.asp: fix page when WL module is removed
+- www: bwm.c: extend allowed size of restored cstats/rstats backup file
+- www: at*.css: align "About" description to the left
+- www: tomato.js: fix problems with refresh time, when using more than one refresher
+- www: wireless.jsx: fix the radio frequency display (2.4 / 5GHz) for dual-band WL devices
+- www: small fixes for older browsers
+
+
 2021.2          2021.03.28
 --------------------------
 

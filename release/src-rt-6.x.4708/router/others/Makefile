@@ -3,6 +3,14 @@ include ../common.mak
 all:
 
 install:
+#	for F in $(wildcard *); do \
+#		if [ $$F = "Makefile" ]; then \
+#			continue; \
+#		fi; \
+#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#	done
+
 	install -d $(INSTALLDIR)/sbin
 	install -d $(INSTALLDIR)/usr/sbin
 	install -d $(INSTALLDIR)/lib
@@ -56,11 +64,11 @@ endif
 #Web Monitor Backup Script
 	install -m 0700 webmon_bkp $(INSTALLDIR)/usr/sbin
 
+#optware/entware install script
 ifeq ($(TCONFIG_USB),y)
-#optware install script
-#	install -m 0700 optware-install.sh $(INSTALLDIR)/usr/sbin
-
-#entware install script
+ifneq ($(TCONFIG_BCMARM),y)
+	install -m 0700 optware-install.sh $(INSTALLDIR)/usr/sbin
+endif
 	install -m 0700 entware-install.sh $(INSTALLDIR)/usr/sbin
 endif
 
@@ -78,6 +86,11 @@ endif
 # BTGUI
 ifeq ($(TCONFIG_BT),y)
 	install -m 0755 btcheck $(INSTALLDIR)/usr/bin
+endif
+
+# network discovery script for status-devices page
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
+	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin
 endif
 
 clean:

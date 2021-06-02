@@ -2,6 +2,9 @@
 # The baseline configuration for Tomato USB.
 # All other build configurations are derived from this.
 #
+TCONFIG_TERMLIB=y
+TCONFIG_KEYGEN=y
+TCONFIG_ADVTHEMES=y
 TCONFIG_OPTIMIZE_SHARED_LIBS=y
 TCONFIG_L2TP=y
 TCONFIG_PPTP=y

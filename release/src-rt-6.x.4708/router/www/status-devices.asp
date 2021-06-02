@@ -31,6 +31,12 @@ var list_last = [];
 var xob = null;
 var cmd = null;
 var cmdresult = '';
+/* DISCOVERY-BEGIN */
+var cprefix = 'status_devices';
+var discovery_mode = cookie.get(cprefix+'_discovery') || 'off';
+var wait = gc_time;
+var time_o;
+/* DISCOVERY-END */
 
 var ref = new TomatoRefresh('update.cgi', 'exec=devlist', 5, 'status_devices_refresh');
 
@@ -45,154 +51,21 @@ ref.refresh = function(text) {
 	dg.populate();
 	dg.resort();
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if (wl_sunit(uidx) < 0)
-			E('noise'+uidx).innerHTML = wlnoise[uidx];
+		if (wl_sunit(uidx) < 0 && E('noise'+uidx) != null)
+			elem.setInnerHTML(E('noise'+uidx), wlnoise[uidx]);
 	}
 }
 
-function find(mac, ip) {
-	var e, i;
-
-	mac = mac.toUpperCase();
-	for (i = list.length - 1; i >= 0; --i) {
-		e = list[i];
-		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == mac_null) && (e.ip == ip)))
-			return e;
-	}
-
-	return null;
-}
-
-function get(mac, ip) {
-	var e, i;
-
-	mac = mac.toUpperCase();
-	if ((e = find(mac, ip)) != null) {
-		if (ip)
-			e.ip = ip;
-
-		return e;
-	}
-
-	e = {
-		mac: mac,
-		ip: ip || '',
-		ifname: '',
-		ifstatus: '',
-		bridge: '',
-		freq: '',
-		ssid: '',
-		mode: '',
-		unit: 0,
-		name: '',
-		rssi: '',
-		txrx: '',
-		lease: '',
-		lan: '',
-		wan: '',
-		proto: '',
-		media: ''
-	};
-	list.push(e);
-
-	return e;
-}
-function spin(x, which) {
-	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x)
-		cmd = null;
-}
-
-function _deleteLease(ip, mac, wl) {
-	form.submitHidden('dhcpd.cgi', { remove: ip, mac: mac, wl: wl });
-}
-
-function deleteLease(a, ip, mac, wl) {
-	if (xob)
-		return;
-
-	if ((xob = new XmlHttp()) == null) {
-		_deleteLease(ip, mac, wl);
-		return;
-	}
-
-	a = E(a);
-	a.innerHTML = 'deleting...';
-
-	xob.onCompleted = function(text, xml) {
-		a.innerHTML = '...';
-		xob = null;
-	}
-	xob.onError = function() {
-		_deleteLease(ip, mac, wl);
-	}
-
-	xob.post('dhcpd.cgi', 'remove='+ip+'&mac='+mac+'&wl='+wl);
-}
-
-function addStatic(n) {
-	var e = list[n];
-	cookie.set('addstatic', [e.mac, e.ip, e.name.split(',')[0]].join(','), 1);
-	location.href = 'basic-static.asp';
-}
-
-function addWF(n) {
-	var e = list[n];
-	cookie.set('addmac', [e.mac, e.name.split(',')[0]].join(','), 1);
-	location.href = 'basic-wfilter.asp';
-}
-
-function addbwlimit(n) {
-	var e = list[n];
-	cookie.set('addbwlimit', [e.ip, e.name.split(',')[0]].join(','), 1);
-	location.href = 'bwlimit.asp';
-}
-
-function addRestrict(n) {
-	var e = list[n];
-	cookie.set('addrestrict', [e.mac, e.name.split(',')[0]].join(','), 1);
-	form.submitHidden('tomato.cgi', { _redirect: 'restrict-edit.asp', rruleN: -1 });
-}
-
-function spin(x, which) {
-	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x)
-		cmd = null;
-}
-
-function displayOUI(i) {
-	spin(0, 'gW_'+i);
-	if (cmdresult.indexOf('Not Found') == -1)
-		cmdresult = 'Manufacturer: \n'+cmdresult;
-	else
-		cmdresult = 'Manufacturer not found!';
-
-	alert(cmdresult);
-	cmdresult = '';
-}
-
-function searchOUI(n, i) {
-	spin(1, 'gW_'+i);
-
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		displayOUI(i);
-	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: '+x;
-		displayOUI(i);
-	}
-
-	var commands = '/usr/bin/wget -T 6 -q http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
-	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
-}
+/* DISCOVERY-BEGIN */
+var discovery = new TomatoRefresh('update.cgi', 'exec=discovery&arg0='+discovery_mode, gc_time, '', 1);
+discovery.refresh = function() { }
+/* DISCOVERY-END */
 
 var dg = new TomatoGrid();
 
 dg.setup = function() {
 	this.init('dev-grid', 'sort');
-	this.headerSet(['Interface', 'Media', 'MAC Address', 'IP Address', 'Name', 'RSSI', 'Quality &nbsp;', 'TX/RX<br>Rate', 'Lease&nbsp;']);
+	this.headerSet(['Interface','Media','MAC Address','IP Address','Name','RSSI','Quality &nbsp;','TX/RX<br>Rate','Lease&nbsp;']);
 	this.populate();
 	this.sort(3);
 }
@@ -332,7 +205,7 @@ dg.populate = function() {
 		if (a.length < 4)
 			continue;
 
-		/* find and compare MAC(s) */
+		/* find and compare max 2 MAC(s) */
 		c = a[0].split(',');
 
 		loop1:
@@ -342,7 +215,7 @@ dg.populate = function() {
 				for (l = 1; l <= MAX_PORT_ID; l++) {
 					k = (l == 1) ? '' : l.toString();
 					wan_gw = nvram['wan'+k+'_gateway'];
-					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip.substr(0, e.ip.lastIndexOf('.') + 1) != lipp) { /* FIXME: loop needed for every active bridge */
+					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && e.ip.substr(0, e.ip.lastIndexOf('.') + 1) != lipp) { /* FIXME: loop needed for every active bridge */
 						e.ip = nvram['wan'+k+'_gateway'];
 						break loop1;
 					}
@@ -576,13 +449,214 @@ dg.sortCompare = function(a, b) {
 	return this.sortAscending ? r : -r;
 }
 
+function find(mac, ip) {
+	var e, i;
+
+	mac = mac.toUpperCase();
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
+		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == mac_null) && (e.ip == ip)))
+			return e;
+	}
+
+	return null;
+}
+
+function get(mac, ip) {
+	var e, i;
+
+	mac = mac.toUpperCase();
+	if ((e = find(mac, ip)) != null) {
+		if (ip)
+			e.ip = ip;
+
+		return e;
+	}
+
+	e = {
+		mac: mac,
+		ip: ip || '',
+		ifname: '',
+		ifstatus: '',
+		bridge: '',
+		freq: '',
+		ssid: '',
+		mode: '',
+		unit: 0,
+		name: '',
+		rssi: '',
+		txrx: '',
+		lease: '',
+		lan: '',
+		wan: '',
+		proto: '',
+		media: ''
+	};
+	list.push(e);
+
+	return e;
+}
+
+function _deleteLease(ip, mac, wl) {
+	form.submitHidden('dhcpd.cgi', { remove: ip, mac: mac, wl: wl });
+}
+
+function deleteLease(a, ip, mac, wl) {
+	if (xob)
+		return;
+
+	if ((xob = new XmlHttp()) == null) {
+		_deleteLease(ip, mac, wl);
+		return;
+	}
+
+	a = E(a);
+	elem.setInnerHTML(a, 'deleting...');
+
+	xob.onCompleted = function(text, xml) {
+		elem.setInnerHTML(a, '...');
+		xob = null;
+	}
+	xob.onError = function() {
+		_deleteLease(ip, mac, wl);
+	}
+
+	xob.post('dhcpd.cgi', 'remove='+ip+'&mac='+mac+'&wl='+wl);
+}
+
+function addStatic(n) {
+	var e = list[n];
+	cookie.set('addstatic', [e.mac, e.ip, e.name.split(',')[0]].join(','), 1);
+	location.href = 'basic-static.asp';
+}
+
+function addWF(n) {
+	var e = list[n];
+	cookie.set('addmac', [e.mac, e.name.split(',')[0]].join(','), 1);
+	location.href = 'basic-wfilter.asp';
+}
+
+function addbwlimit(n) {
+	var e = list[n];
+	cookie.set('addbwlimit', [e.ip, e.name.split(',')[0]].join(','), 1);
+	location.href = 'bwlimit.asp';
+}
+
+function addRestrict(n) {
+	var e = list[n];
+	cookie.set('addrestrict', [e.mac, e.name.split(',')[0]].join(','), 1);
+	form.submitHidden('tomato.cgi', { _redirect: 'restrict-edit.asp', rruleN: -1 });
+}
+
+function searchOUI(n, i) {
+	spin(1, 'gW_'+i);
+
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		displayOUI(i);
+	}
+	cmd.onError = function(x) {
+		cmdresult = 'ERROR: '+x;
+		displayOUI(i);
+	}
+
+	var commands = '/usr/bin/wget -T 6 -q http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+}
+
+function displayOUI(i) {
+	spin(0, 'gW_'+i);
+	if (cmdresult.indexOf('Not Found') == -1)
+		cmdresult = 'Manufacturer: \n'+cmdresult;
+	else
+		cmdresult = 'Manufacturer not found!';
+
+	alert(cmdresult);
+	cmdresult = '';
+}
+
+function spin(x, which) {
+	E(which).style.display = (x ? 'inline-block' : 'none');
+	if (!x)
+		cmd = null;
+}
+
+function onRefToggle() {
+	ref.toggle();
+
+/* DISCOVERY-BEGIN */
+	if (!ref.running) {
+		if (discovery.running)
+			discovery.stop();
+	}
+	else
+		discovery.toggle();
+/* DISCOVERY-END */
+}
+
+/* DISCOVERY-BEGIN */
+function tick() {
+	var clock = E('wait');
+	var spin = E('spin');
+
+	if (ref.running && discovery_mode != 'off' && E('refresh-button').value == 'Stop' && E('refresh-time').value != 0) {
+		elem.setInnerHTML(clock, wait+' sec');
+		clock.style.display = 'inline-block';
+		spin.style.display = 'inline';
+
+		if (wait-- <= 0) {
+			wait = gc_time;
+			clearTimeout(time_o);
+		}
+
+		time_o = setTimeout(tick, 1000);
+	}
+	else {
+		clock.style.display = 'none';
+		spin.style.display = 'none';
+		wait = gc_time;
+		clearTimeout(time_o);
+	}
+}
+
+function verifyFields(f, c) {
+	if (discovery.running)
+		discovery.stop();
+
+	discovery_mode = E('_discovery_mode').value;
+	cookie.set(cprefix+'_discovery', discovery_mode);
+	discovery = new TomatoRefresh('update.cgi', 'exec=discovery&arg0='+discovery_mode, gc_time, '', 1);
+	discovery.refresh = function() { }
+	if (ref.running)
+		discovery.initPage(0, gc_time);
+
+	if (discovery_mode != 'off') {
+		wait = gc_time;
+		clearTimeout(time_o);
+		tick();
+	}
+
+	return true;
+}
+/* DISCOVERY-END */
+
 function earlyInit() {
 	dg.setup();
 }
 
 function init() {
 	dg.recolor();
+
 	ref.initPage(3000, 3);
+/* DISCOVERY-BEGIN */
+	if (ref.running) {
+		discovery.initPage(0, gc_time);
+		tick();
+	}
+
+	addEvent(E('refresh-button'), 'click', tick);
+/* DISCOVERY-END */
 }
 </script>
 </head>
@@ -604,16 +678,22 @@ function init() {
 	<div class="tomato-grid" id="dev-grid"></div>
 
 	<script>
-		f = [];
+		var f = [];
 		for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 			var u = wl_unit(uidx);
-			if (nvram['wl'+u+'_radio'] == '1') {
+			if (nvram['wl'+u+'_radio'] == 1) {
 				if (wl_sunit(uidx) < 0) {
 					var a = wl_display_ifname(uidx);
 					f.push( { title: '<b>Noise Floor<\/b> '+a.substr(0, a.indexOf('/') - 1)+'&nbsp;<b>:<\/b>', prefix: '<span id="noise'+uidx+'">', custom: wlnoise[uidx], suffix: '<\/span>&nbsp;<small>dBm<\/small>' } );
 				}
 			}
 		}
+/* DISCOVERY-BEGIN */
+		f.push(
+			null,
+			{ title: 'Network Discovery mode', name: 'discovery_mode', type: 'select', options: [['off','off'],['arping','arping (preferred)'],['traceroute','traceroute']], suffix: '&nbsp; <img src="spin.gif" alt="" id="spin"><div id="wait"><\/div>', value: discovery_mode }
+		);
+/* DISCOVERY-END */
 		createFieldTable('', f);
 	</script>
 </div>
@@ -621,7 +701,7 @@ function init() {
 <!-- / / / -->
 
 <div id="footer">
-	<script>genStdRefresh(1,0,'ref.toggle()');</script>
+	<script>genStdRefresh(1,0,'onRefToggle()');</script>
 </div>
 
 </td></tr>

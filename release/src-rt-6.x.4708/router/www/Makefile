@@ -323,6 +323,13 @@ ifeq ($(TCONFIG_USB),y)
 endif
 endif
 
+# Only include Discovery helper if it is required
+ifneq ($(TCONFIG_BCMARM),y)
+ifneq ($(TCONFIG_MIPSR2),y)
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/DISCOVERY-BEGIN/,/DISCOVERY-END/d"
+endif
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
@@ -365,6 +372,7 @@ endif
 		-e "/HTTPS-BEGIN/d"	-e "/HTTPS-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		-e "/SSH-BEGIN/d"	-e "/SSH-END/d" \
+		-e "/DISCOVERY-BEGIN/d"	-e "/DISCOVERY-END/d" \
 		|| true; \
 	done
 
