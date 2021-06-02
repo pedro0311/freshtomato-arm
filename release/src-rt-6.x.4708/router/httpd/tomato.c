@@ -122,7 +122,11 @@ void wi_cgi_bin(char *url, int len, char *boundary)
 	}
 }
 
+#ifdef TCONFIG_TERMLIB
 static void _execute_command(char *url, char *command, char *query, char *working_dir, wofilter_t wof)
+#else
+static void _execute_command(char *url, char *command, char *query, wofilter_t wof)
+#endif
 {
 	char webExecFile[]  = "/tmp/.wxXXXXXX";
 	char webQueryFile[] = "/tmp/.wqXXXXXX";
@@ -146,9 +150,14 @@ static void _execute_command(char *url, char *command, char *query, char *workin
 			"export REQUEST_METHOD=\"%s\"\n"
 			"export PATH=%s\n"
 			". /etc/profile\n"
+#ifdef TCONFIG_TERMLIB
 			"cd %s\n"
+#endif
 			"%s%s %s%s\n",
-			post ? "POST" : "GET", getenv("PATH"), working_dir,
+			post ? "POST" : "GET", getenv("PATH"),
+#ifdef TCONFIG_TERMLIB
+			working_dir,
+#endif
 			command ? "" : "./", command ? command : url,
 			query ? "<" : "", query ? webQueryFile : "");
 		fclose(f);
@@ -184,7 +193,11 @@ static void _execute_command(char *url, char *command, char *query, char *workin
 static void wo_cgi_bin(char *url)
 {
 	if (!header_sent) send_header(200, NULL, mime_html, 0);
+#ifdef TCONFIG_TERMLIB
 	_execute_command(url, NULL, post_buf, "/www", WOF_NONE);
+#else
+	_execute_command(url, NULL, post_buf, WOF_NONE);
+#endif
 	if (post_buf) {
 		free(post_buf);
 		post_buf = NULL;
@@ -193,6 +206,7 @@ static void wo_cgi_bin(char *url)
 
 static void wo_shell(char *url)
 {
+#ifdef TCONFIG_TERMLIB
 	if (atoi(webcgi_safeget("nojs", "0"))) {
 		_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
 	} else {
@@ -200,6 +214,11 @@ static void wo_shell(char *url)
 		_execute_command(NULL, webcgi_get("command"), NULL, "/www", WOF_JAVASCRIPT);
 		web_puts("';");
 	}
+#else
+	web_puts("\ncmdresult = '");
+	_execute_command(NULL, webcgi_get("command"), NULL, WOF_JAVASCRIPT);
+	web_puts("';");
+#endif
 }
 
 static void wo_cfe(char *url)
@@ -312,7 +331,9 @@ const struct mime_handler mime_handlers[] = {
 #ifdef TCONFIG_OPENVPN
 	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_status,		1 },
 	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_genkey,		1 },
+#ifdef TCONFIG_KEYGEN
 	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_ovpn_genclientconfig,1 },
+#endif
 #endif
 #ifdef TCONFIG_PPTPD
 	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD
@@ -418,7 +439,9 @@ static void asp_css(int argc, char **argv)
 	const char *ttb = nvram_safe_get("ttb_css");
 	int c = strcmp(css, "tomato") != 0;
 
+#ifdef TCONFIG_ADVTHEMES
 	if (argc == 0) {
+#endif
 		if (nvram_match("web_css", "online")) {
 			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/ext/%s.css\">", ttb);
 		} else {
@@ -426,6 +449,7 @@ static void asp_css(int argc, char **argv)
 				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/%s.css\">", css);
 			}
 		}
+#ifdef TCONFIG_ADVTHEMES
 	}
 	else {
 		if ((strncmp(argv[0], "svg-css", 7) == 0) && c) {
@@ -435,6 +459,7 @@ static void asp_css(int argc, char **argv)
 			web_printf("<script href=\"/resize-charts.js\" />");
 		}
 	}
+#endif
 }
 
 // -----------------------------------------------------------------------------
