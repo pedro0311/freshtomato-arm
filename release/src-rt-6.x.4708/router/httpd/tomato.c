@@ -373,7 +373,9 @@ const aspapi_t aspapi[] = {
 	{ "rrule",			asp_rrule			},
 	{ "statfs",			asp_statfs			},
 	{ "sysinfo",			asp_sysinfo			},
+#ifdef TCONFIG_BCMARM
 	{ "jiffies",			asp_jiffies			},
+#endif
 	{ "time",			asp_time			},
 	{ "upnpinfo",			asp_upnpinfo			},
 	{ "version",			asp_version			},
@@ -392,6 +394,9 @@ const aspapi_t aspapi[] = {
 	{ "wlbands",			asp_wlbands			},
 #ifdef TCONFIG_USB
 	{ "usbdevices",			asp_usbdevices			},	//!!TB - USB Support
+#endif
+#ifdef TCONFIG_SDHC
+	{ "mmcid",			asp_mmcid			},	//MMC Support
 #endif
 	{ "etherstates",		asp_etherstates			},	//Ethernet States
 	{ "anonupdate",			asp_anonupdate			},	//Tomato update notification system
@@ -570,8 +575,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan_pppoe_lef",		V_RANGE(1, 10)			},
 	{ "wan_sta",			V_LENGTH(0, 10)			},
 	{ "wan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+#ifdef TCONFIG_USB
 	{ "wan_hilink_ip",		V_IP				},
 	{ "wan_status_script",		V_01				},
+#endif
 	{ "wan_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
@@ -614,8 +621,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_sta",			V_LENGTH(0, 10)			},
 	{ "wan2_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan2_dns_auto",		V_01				},
+#ifdef TCONFIG_USB
 	{ "wan2_hilink_ip",		V_IP				},
 	{ "wan2_status_script",		V_01				},
+#endif
 	{ "wan2_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 #ifdef TCONFIG_MULTIWAN
@@ -644,8 +653,10 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_sta",			V_LENGTH(0, 10)			},
 	{ "wan3_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan3_dns_auto",		V_01				},
+#ifdef TCONFIG_USB
 	{ "wan3_hilink_ip",		V_IP				},
 	{ "wan3_status_script",		V_01				},
+#endif
 	{ "wan3_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 
 	{ "wan4_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
@@ -673,10 +684,12 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_sta",			V_LENGTH(0, 10)			},
 	{ "wan4_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 	{ "wan4_dns_auto",		V_01				},
+#ifdef TCONFIG_USB
 	{ "wan4_hilink_ip",		V_IP				},
 	{ "wan4_status_script",		V_01				},
-	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
 #endif
+	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
+#endif /* TCONFIG_MULTIWAN */
 
 	// LAN
 	{ "lan_ipaddr",			V_IP				},
@@ -841,7 +854,11 @@ static const nvset_t nvset_list[] = {
 	{ "wl_nmode",			V_NONE				},
 	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
 	{ "wl_nreqd",			V_NONE				},
-	{ "wl_nbw_cap",			V_RANGE(0, 3)			},	// 0 - 20MHz, 1 - 40MHz, 2 - Auto, 3 - 80M
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	{ "wl_nbw_cap",			V_RANGE(0, 3)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto, 3 - 80M */
+#else
+	{ "wl_nbw_cap",			V_RANGE(0, 2)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto */
+#endif
 	{ "wl_nbw",			V_NONE				},
 	{ "wl_mimo_preamble",		V_WORD				},	// 802.11n Preamble: mm/gf/auto/gfbcm
 	{ "wl_nctrlsb",			V_NONE				},	// none, lower, upper
@@ -958,12 +975,19 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
 
 // advanced-misc
+#ifdef TCONFIG_BCMARM
 	{ "wait_time",			V_RANGE(0, 30)			},
+#else
+	{ "wait_time",			V_RANGE(3, 20)			},
+#endif
 	{ "wan_speed",			V_RANGE(0, 4)			},
 	{ "jumbo_frame_enable",		V_01				},	// Jumbo Frames support (for RT-N16/WNR3500L)
 	{ "jumbo_frame_size",		V_RANGE(1, 9720)		},
 #ifdef CONFIG_BCMWL5
 	{ "ctf_disable",		V_01				},
+#endif
+#ifdef TCONFIG_BCMNAT
+	{ "bcmnat_disable",		V_01				},
 #endif
 // advanced-vlan
 	{ "vlan0ports",			V_TEXT(0,17)			},
@@ -1004,6 +1028,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_ifnameX",		V_TEXT(0,8)			},
 	{ "lan_ifnames",		V_TEXT(0,64)			},
 	{ "manual_boot_nv",		V_01				},
+#ifndef TCONFIG_BCMARM
+	{ "trunk_vlan_so",		V_01				},
+#endif
 	{ "vlan0tag",			V_TEXT(0,5)			},
 	{ "vlan0vid",			V_TEXT(0,5)			},
 	{ "vlan1vid",			V_TEXT(0,5)			},
@@ -1038,12 +1065,34 @@ static const nvset_t nvset_list[] = {
 	{ "force_igmpv2",		V_01				},
 	{ "lan_stp",			V_RANGE(0, 1)			},
 	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
+#ifdef TCONFIG_ZEBRA
+	{ "dr_setting",			V_RANGE(0, 3)			},
+	{ "dr_lan_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan1_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan1_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan2_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan2_rx",			V_LENGTH(0, 32)			},
+	{ "dr_lan3_tx",			V_LENGTH(0, 32)			},
+	{ "dr_lan3_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan2_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan2_rx",			V_LENGTH(0, 32)			},
+#ifdef TCONFIG_MULTIWAN
+	{ "dr_wan3_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan3_rx",			V_LENGTH(0, 32)			},
+	{ "dr_wan4_tx",			V_LENGTH(0, 32)			},
+	{ "dr_wan4_rx",			V_LENGTH(0, 32)			},
+#endif
+#endif /* TCONFIG_ZEBRA */
 
 // advanced-access
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
 	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
 	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
@@ -1057,6 +1106,7 @@ static const nvset_t nvset_list[] = {
 	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
 #endif
+#endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},
@@ -1073,7 +1123,11 @@ static const nvset_t nvset_list[] = {
 	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	// long, short
 	{ "wl_antdiv",			V_RANGE(0, 3)			},
 	{ "wl_txant",			V_RANGE(0, 3)			},
+#ifdef TCONFIG_BCMARM
 	{ "wl_txpwr",			V_RANGE(0, 1000)		},
+#else
+	{ "wl_txpwr",			V_RANGE(0, 400)			},
+#endif
 	{ "wl_wme",			V_WORD				},	// auto, off, on
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
@@ -1089,6 +1143,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_nmode_protection",	V_WORD,				},	// off, auto
 	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
 	{ "wl_obss_coex",		V_01				},
+#ifdef TCONFIG_BCMARM
 #ifdef TCONFIG_EMF
 	{ "wl_igs",			V_01				},	/* BCM: sync with wl_wmf_bss_enable */
 	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
@@ -1096,7 +1151,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_mdata_sendup",	V_01				},	/* Disable Sending Multicast Data to host (default) */
 	{ "wl_wmf_ucast_upnp",		V_01				},	/* Disable Converting upnp to ucast (default) */
 	{ "wl_wmf_igmpq_filter",	V_01				},	/* Disable igmp query filter */
-#endif
+#endif /* TCONFIG_EMF */
 	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
 	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
 	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
@@ -1107,6 +1162,10 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMBSD
 	{ "smart_connect_x",		V_01				},	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
 #endif
+#else /* TCONFIG_BCMARM */
+	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
+#endif /* TCONFIG_BCMARM */
+
 // forward-dmz
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
@@ -1151,22 +1210,28 @@ static const nvset_t nvset_list[] = {
 
 // admin-access
 	{ "http_enable",		V_01				},
+#ifdef TCONFIG_HTTPS
 	{ "https_enable",		V_01				},
 	{ "https_crt_save",		V_01				},
 	{ "https_crt_cn",		V_LENGTH(0, 64)			},
 	{ "https_crt_gen",		V_TEMP				},
-	{ "remote_management",		V_01				},
+	{ "https_lanport",		V_PORT				},
 	{ "remote_mgt_https",		V_01				},
+#endif
+	{ "remote_management",		V_01				},
 	{ "remote_upgrade",		V_01				},
 	{ "http_lanport",		V_PORT				},
-	{ "https_lanport",		V_PORT				},
 	{ "web_wl_filter",		V_01				},
 	{ "web_css",			V_LENGTH(1, 32)			},
+#ifdef TCONFIG_ADVTHEMES
 	{ "web_adv_scripts",		V_01				},
+#endif
 	{ "web_dir",			V_LENGTH(1, 32)			},
 	{ "ttb_css",			V_LENGTH(0, 128)		},
+#ifdef TCONFIG_USB
 	{ "ttb_loc",			V_LENGTH(0, 128)		},
 	{ "ttb_url",			V_LENGTH(0, 128)		},
+#endif
 	{ "web_mx",			V_LENGTH(0, 128)		},
 	{ "http_wanport",		V_PORT				},
 	{ "telnetd_eas",		V_01				},
@@ -1206,10 +1271,12 @@ static const nvset_t nvset_list[] = {
 
 // admin-buttons
 	{ "sesx_led",			V_RANGE(0, 255)			},	// amber, white, aoss
+#ifdef TCONFIG_BCMARM
 	{ "blink_wl",			V_01				},	// turn blink on/off for wifi
 	{ "btn_led_mode",		V_01				},	// Asus RT-AC68 Turbo Mode
 	{ "stealth_mode",		V_01				},
 	{ "stealth_iled",		V_01				},
+#endif
 	{ "sesx_b0",			V_RANGE(0, 5)			},	// 0-5: toggle wireless, reboot, shutdown, script, usb unmount
 	{ "sesx_b1",			V_RANGE(0, 5)			},	// "
 	{ "sesx_b2",			V_RANGE(0, 5)			},	// "
@@ -1287,10 +1354,22 @@ static const nvset_t nvset_list[] = {
 	{ "jffs2_exec",			V_LENGTH(0, 64)			},
 	{ "jffs2_format",		V_01				},
 
+#ifdef TCONFIG_SDHC
+// admin-sdhc
+	{ "mmc_on",			V_01				},
+	{ "mmc_cs",			V_RANGE(1, 7)			},	// GPIO pin
+	{ "mmc_clk",			V_RANGE(1, 7)			},	// GPIO pin
+	{ "mmc_din",			V_RANGE(1, 7)			},	// GPIO pin
+	{ "mmc_dout",			V_RANGE(1, 7)			},	// GPIO pin
+	{ "mmc_fs_partition",		V_RANGE(1, 4)			},	// partition number in partition table
+	{ "mmc_fs_type",		V_LENGTH(4, 4)			},	// ext2, ext3, vfat
+	{ "mmc_exec_mount",		V_LENGTH(0, 64)			},
+	{ "mmc_exec_umount",		V_LENGTH(0, 64)			},
+#endif
+
 // admin-tomatoanon
 	{ "tomatoanon_answer",		V_RANGE(0, 1)			},
 	{ "tomatoanon_enable",		V_RANGE(-1, 1)			},
-	{ "tomatoanon_cru",		V_RANGE(1, 12)			},
 	{ "tomatoanon_id",		V_LENGTH(0, 32)			},
 	{ "tomatoanon_notify",		V_01				},
 
@@ -1300,25 +1379,37 @@ static const nvset_t nvset_list[] = {
 	{ "usb_uhci",			V_RANGE(-1, 1)			},	// -1 - disabled, 0 - off, 1 - on
 	{ "usb_ohci",			V_RANGE(-1, 1)			},
 	{ "usb_usb2",			V_RANGE(-1, 1)			},
+#ifdef TCONFIG_BCMARM
 	{ "usb_usb3",			V_RANGE(-1, 1)			},
+#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
 	{ "usb_printer_bidirect",	V_01				},
+#ifdef TCONFIG_BCMARM
 	{ "usb_fs_ext4",		V_01				},
+#else
+	{ "usb_fs_ext3",		V_01				},
+#endif
 	{ "usb_fs_fat",			V_01				},
+#ifdef TCONFIG_BCMARM
 	{ "usb_fs_exfat",		V_01				},
+#endif
 #ifdef TCONFIG_NTFS
 	{ "usb_fs_ntfs",		V_01				},
+#ifdef TCONFIG_BCMARM
 	{ "usb_ntfs_driver",		V_LENGTH(0, 10)			},
 #endif
+#endif /* TCONFIG_NTFS */
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		V_01				},
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
+#ifdef TCONFIG_BCMARM
 	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
+#endif /* TCONFIG_HFS */
 	{ "usb_automount",		V_01				},
 	{ "script_usbhotplug", 		V_TEXT(0, 2048)			},
 	{ "script_usbmount", 		V_TEXT(0, 2048)			},
@@ -1395,7 +1486,9 @@ static const nvset_t nvset_list[] = {
 
 //	qos
 	{ "qos_enable",			V_01				},
+#ifdef TCONFIG_BCMARM
 	{ "qos_mode",			V_NUM				},
+#endif
 	{ "qos_ack",			V_01				},
 	{ "qos_syn",			V_01				},
 	{ "qos_fin",			V_01				},
@@ -1403,28 +1496,40 @@ static const nvset_t nvset_list[] = {
 	{ "qos_icmp",			V_01				},
 	{ "qos_udp",			V_01				},
 	{ "qos_reset",			V_01				},
+#ifdef TCONFIG_BCMARM
+	{ "qos_pfifo",			V_NUM				},
 	{ "qos_classify",		V_01				},
-	{ "qos_pfifo",			V_NUM				},	// !!TB
 	{ "qos_cake_prio_mode",		V_NUM				},
 	{ "qos_cake_wash",		V_01				},
+#else
+	{ "qos_pfifo",			V_01				},
+#endif
 	{ "wan_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
 	{ "wan_qos_encap",		V_NUM				},
+#endif
 	{ "wan_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan2_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
 	{ "wan2_qos_encap",		V_NUM				},
+#endif
 	{ "wan2_qos_overhead",		V_RANGE(-127, 128)		},
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
 	{ "wan3_qos_encap",		V_NUM				},
+#endif
 	{ "wan3_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan4_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
 	{ "wan4_qos_encap",		V_NUM				},
-	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
 #endif
+	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
+#endif /* TCONFIG_MULTIWAN */
 	{ "qos_orules",			V_LENGTH(0, 4096)		},
 	{ "qos_default",		V_RANGE(0, 9)			},
 #ifdef TCONFIG_MULTIWAN
@@ -1759,6 +1864,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client2_routing_val",	V_NONE				},
 	{ "vpn_client2_fw",		V_01				},
+#ifdef TCONFIG_BCMARM
 	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
 	{ "vpn_client3_bridge",		V_01				},
@@ -1797,6 +1903,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_routing_val",	V_NONE				},
 	{ "vpn_client3_fw",		V_01				},
 #endif
+#endif /* TCONFIG_OPENVPN */
 
 #ifdef TCONFIG_PPTPD
 // pptp server
@@ -1992,7 +2099,7 @@ static int nv_wl_find(int idx, int unit, int subunit, void *param)
 	}
 }
 
-#ifdef CONFIG_BCMWL6
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 static int nv_wl_bwcap_chanspec(int idx, int unit, int subunit, void *param){
 	char		chan_spec[32];
 	char		*ch,*nbw_cap,*nctrlsb;
@@ -2069,7 +2176,7 @@ static int save_variables(int write)
 	}
 
 	// special cases
-#ifdef CONFIG_BCMWL6
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 	foreach_wif(0, &write, nv_wl_bwcap_chanspec);
 #endif
 
