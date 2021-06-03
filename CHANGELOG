@@ -8,6 +8,7 @@ FreshTomato-ARM Changelog
 2021.3          2021.06.05
 --------------------------
 
+- SDK6: update wireless driver (dual core) - fix for FragAttacks
 - kernel: drivers: net: ppp_generic.c: check pointer first
 - busybox: update to 1.33.1
 - tor: update to 0.4.5.8
