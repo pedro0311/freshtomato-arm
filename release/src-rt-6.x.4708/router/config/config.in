@@ -282,6 +282,14 @@ config TCONFIG_KEYGEN
 	bool "TLS keys generator in GUI for VPN Server"
 	default y
 
+config TCONFIG_TERMLIB
+	bool "Termlib based tools-shell.asp"
+	default y
+
+config TCONFIG_ADVTHEMES
+	bool "Advanced Themes similar to AdvancedTomato"
+	default y
+
 config TCONFIG_NVRAM_32K
 	bool "NVRAM_32K"
 	default n
