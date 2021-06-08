@@ -3461,8 +3461,10 @@ TOP:
 #ifdef TCONFIG_USB
 			remove_storage_main(1);
 			stop_usb();
+#ifndef TCONFIG_USBAP
 			remove_usb_module();
 #endif
+#endif /* TCONFIG_USB */
 			remove_conntrack();
 			stop_jffs2();
 		}
