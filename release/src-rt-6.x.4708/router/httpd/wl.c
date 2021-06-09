@@ -1,9 +1,10 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #include "tomato.h"
 
@@ -18,12 +19,32 @@
 #if WL_BSS_INFO_VERSION < 108
 #error WL_BSS_INFO_VERSION < 108
 #endif
+#define WLC_IOCTL_MAXLEN_ADDON	2048
+/* allow to scan using up to MAX_WLIF_SCAN wireless ifaces */
+#define MAX_WLIF_SCAN		3
+/* needed by logmsg() */
+#define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG		"wl_debug"
+
+
+static int unit = 0;
+static int subunit = 0;
+
+typedef struct {
+	int unit_filter;
+	char comma;
+	struct {
+		int ap;
+		int radio;
+		int scan_time;
+	} wif[MAX_WLIF_SCAN];
+} scan_list_t;
 
 /*
  * Country names and abbreviations from ISO 3166
  */
 typedef struct {
-	const char *name;	/* Name for Tomato ARM */
+	const char *name;	/* Name for FreshTomato */
 	const char *abbrev;	/* Abbreviation */
 } cntry_name_t;
 
@@ -156,24 +177,16 @@ cntry_name_t cntry_names[] = {
 {NULL,			NULL}
 };
 
-#define WLC_IOCTL_MAXLEN_ADDON 2048
-
-
-static int unit = 0;
-static int subunit = 0;
-
 static void check_wl_unit(const char *unitarg)
 {
 	char ifname[12], *wlunit;
 	unit = 0; subunit = 0;
 
-	wlunit = (unitarg && *unitarg) ? (char *)unitarg :
-		webcgi_safeget("_wl_unit", nvram_safe_get("wl_unit"));
+	wlunit = (unitarg && *unitarg) ? (char *)unitarg : webcgi_safeget("_wl_unit", nvram_safe_get("wl_unit"));
 	snprintf(ifname, sizeof(ifname), "wl%s", wlunit);
 	get_ifname_unit(ifname, &unit, &subunit);
 
-	_dprintf("check_wl_unit: unitarg: %s, _wl_unit: %s, ifname: %s, unit: %d, subunit: %d\n",
-		unitarg, webcgi_safeget("_wl_unit", nvram_safe_get("wl_unit")), ifname, unit, subunit);
+	logmsg(LOG_DEBUG, "*** %s: unitarg: %s, _wl_unit: %s, ifname: %s, unit: %d, subunit: %d", __FUNCTION__, unitarg, webcgi_safeget("_wl_unit", nvram_safe_get("wl_unit")), ifname, unit, subunit);
 }
 
 static void wl_restore(char *wif, int unit, int ap, int radio, int scan_time)
@@ -181,35 +194,25 @@ static void wl_restore(char *wif, int unit, int ap, int radio, int scan_time)
 	if (ap > 0) {
 		wl_ioctl(wif, WLC_SET_AP, &ap, sizeof(ap));
 
-		if (!radio) set_radio(1, unit);
-		eval("wl", "-i", wif, "up"); // without this the router may reboot
+		if (!radio)
+			set_radio(1, unit);
+
+		eval("wl", "-i", wif, "up"); /* without this the router may reboot */
+
 #if WL_BSS_INFO_VERSION >= 108
-		// no idea why this voodoo sequence works to wake up wl	-- zzz
+		/* no idea why this voodoo sequence works to wake up wl */
 		eval("wl", "-i", wif, "ssid", "");
 		eval("wl", "-i", wif, "ssid", nvram_safe_get(wl_nvname("ssid", unit, 0)));
 #endif
 	}
-#ifdef WLC_SET_SCAN_CHANNEL_TIME
+
 	if (scan_time > 0) {
-		// restore original scan channel time
+		/* restore original scan channel time */
 		wl_ioctl(wif, WLC_SET_SCAN_CHANNEL_TIME, &scan_time, sizeof(scan_time));
 	}
-#endif
+
 	set_radio(radio, unit);
 }
-
-// allow to scan using up to MAX_WLIF_SCAN wireless ifaces
-#define MAX_WLIF_SCAN	3
-
-typedef struct {
-	int unit_filter;
-	char comma;
-	struct {
-		int ap;
-		int radio;
-		int scan_time;
-	} wif[MAX_WLIF_SCAN];
-} scan_list_t;
 
 static int start_scan(int idx, int unit, int subunit, void *param)
 {
@@ -218,50 +221,47 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 	char *wif;
 	int zero = 0;
 	int retry;
-#ifdef WLC_SET_SCAN_CHANNEL_TIME
 	int scan_time = 40;
-#endif
 
-	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit)) return 0;
+	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit))
+		return 0;
 
 	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
 
-	memset(&sp, 0xff, sizeof(sp));		// most default to -1
+	memset(&sp, 0xff, sizeof(sp)); /* most default to -1 */
 	sp.ssid.SSID_len = 0;
-	sp.bss_type = DOT11_BSSTYPE_ANY;	// =2
+	sp.bss_type = DOT11_BSSTYPE_ANY; /* = 2 */
 	sp.channel_num = 0;
 
-	if (wl_ioctl(wif, WLC_GET_AP, &(rp->wif[idx].ap), sizeof(rp->wif[idx].ap)) < 0) {
-		// Unable to get AP mode
+	if (wl_ioctl(wif, WLC_GET_AP, &(rp->wif[idx].ap), sizeof(rp->wif[idx].ap)) < 0) /* unable to get AP mode */
 		return 0;
-	}
-	if (rp->wif[idx].ap > 0) {
-		wl_ioctl(wif, WLC_SET_AP, &zero, sizeof(zero));
-	}
 
-	// set scan type based on the ap mode
+	if (rp->wif[idx].ap > 0)
+		wl_ioctl(wif, WLC_SET_AP, &zero, sizeof(zero));
+
+	/* set scan type based on the ap mode */
 	sp.scan_type = rp->wif[idx].ap ? DOT11_SCANTYPE_PASSIVE : -1 /* default */;
 
-#ifdef WLC_SET_SCAN_CHANNEL_TIME
-	// extend scan channel time to get more AP probe resp
+	/* extend scan channel time to get more AP probe resp */
 	wl_ioctl(wif, WLC_GET_SCAN_CHANNEL_TIME, &(rp->wif[idx].scan_time), sizeof(rp->wif[idx].scan_time));
-	if (rp->wif[idx].scan_time < scan_time) {
+	if (rp->wif[idx].scan_time < scan_time)
 		wl_ioctl(wif, WLC_SET_SCAN_CHANNEL_TIME, &scan_time, sizeof(scan_time));
-	}
-#endif
 
 	rp->wif[idx].radio = get_radio(unit);
-	if (!(rp->wif[idx].radio)) set_radio(1, unit);
+	if (!(rp->wif[idx].radio))
+		set_radio(1, unit);
 
 	retry = 3 * 10;
 	while (retry--) {
 		if (wl_ioctl(wif, WLC_SCAN, &sp, WL_SCAN_PARAMS_FIXED_SIZE) == 0)
 			return 1;
-		if (retry) usleep(100000);
+		if (retry)
+			usleep(100000);
 	}
 
-	// Unable to start scan
+	/* unable to start scan */
 	wl_restore(wif, unit, rp->wif[idx].ap, rp->wif[idx].radio, rp->wif[idx].scan_time);
+
 	return 0;
 }
 
@@ -277,6 +277,7 @@ int wpa_selector_to_bitfield(const unsigned char *s)
 		return WPA_CIPHER_CCMP_;
 	if (memcmp(s, WPA_CIPHER_SUITE_WEP104, WPA_SELECTOR_LEN) == 0)
 		return WPA_CIPHER_WEP104_;
+
 	return 0;
 }
 
@@ -292,6 +293,7 @@ int rsn_selector_to_bitfield(const unsigned char *s)
 		return WPA_CIPHER_CCMP_;
 	if (memcmp(s, RSN_CIPHER_SUITE_WEP104, RSN_SELECTOR_LEN) == 0)
 		return WPA_CIPHER_WEP104_;
+
 	return 0;
 }
 
@@ -299,11 +301,11 @@ int wpa_key_mgmt_to_bitfield(const unsigned char *s)
 {
 	if (memcmp(s, WPA_AUTH_KEY_MGMT_UNSPEC_802_1X, WPA_SELECTOR_LEN) == 0)
 		return WPA_KEY_MGMT_IEEE8021X_;
-	if (memcmp(s, WPA_AUTH_KEY_MGMT_PSK_OVER_802_1X, WPA_SELECTOR_LEN) ==
-	    0)
+	if (memcmp(s, WPA_AUTH_KEY_MGMT_PSK_OVER_802_1X, WPA_SELECTOR_LEN) == 0)
 		return WPA_KEY_MGMT_PSK_;
 	if (memcmp(s, WPA_AUTH_KEY_MGMT_NONE, WPA_SELECTOR_LEN) == 0)
 		return WPA_KEY_MGMT_WPA_NONE_;
+
 	return 0;
 }
 
@@ -311,9 +313,9 @@ int rsn_key_mgmt_to_bitfield(const unsigned char *s)
 {
 	if (memcmp(s, RSN_AUTH_KEY_MGMT_UNSPEC_802_1X, RSN_SELECTOR_LEN) == 0)
 		return WPA_KEY_MGMT_IEEE8021X2_;
-	if (memcmp(s, RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X, RSN_SELECTOR_LEN) ==
-	    0)
+	if (memcmp(s, RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X, RSN_SELECTOR_LEN) == 0)
 		return WPA_KEY_MGMT_PSK2_;
+
 	return 0;
 }
 
@@ -321,8 +323,8 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 {
 	const struct wpa_ie_hdr *hdr;
 	const unsigned char *pos;
-	int left;
-	int i, count;
+	unsigned int i;
+	int left, count;
 
 	data->proto = WPA_PROTO_WPA_;
 	data->pairwise_cipher = WPA_CIPHER_TKIP_;
@@ -332,25 +334,16 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 	data->pmkid = NULL;
 	data->num_pmkid = 0;
 
-	if (wpa_ie_len == 0) {
-		/* No WPA IE - fail silently */
+	if (wpa_ie_len == 0) /* No WPA IE - fail silently */
 		return -1;
-	}
 
-	if (wpa_ie_len < sizeof(struct wpa_ie_hdr)) {
-//		fprintf(stderr, "ie len too short %lu", (unsigned long) wpa_ie_len);
+	if (wpa_ie_len < sizeof(struct wpa_ie_hdr))
 		return -1;
-	}
 
 	hdr = (const struct wpa_ie_hdr *) wpa_ie;
 
-	if (hdr->elem_id != DOT11_MNG_WPA_ID ||
-	    hdr->len != wpa_ie_len - 2 ||
-	    memcmp(&hdr->oui, WPA_OUI_TYPE_ARR, WPA_SELECTOR_LEN) != 0 ||
-	    WPA_GET_LE16(hdr->version) != WPA_VERSION_) {
-//		fprintf(stderr, "malformed ie or unknown version");
+	if ((hdr->elem_id != DOT11_MNG_WPA_ID) || (hdr->len != wpa_ie_len - 2) || (memcmp(&hdr->oui, WPA_OUI_TYPE_ARR, WPA_SELECTOR_LEN) != 0) || (WPA_GET_LE16(hdr->version) != WPA_VERSION_))
 		return -1;
-	}
 
 	pos = (const unsigned char *) (hdr + 1);
 	left = wpa_ie_len - sizeof(*hdr);
@@ -359,50 +352,43 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 		data->group_cipher = wpa_selector_to_bitfield(pos);
 		pos += WPA_SELECTOR_LEN;
 		left -= WPA_SELECTOR_LEN;
-	} else if (left > 0) {
-//		fprintf(stderr, "ie length mismatch, %u too much", left);
-		return -1;
 	}
+	else if (left > 0)
+		return -1;
 
 	if (left >= 2) {
 		data->pairwise_cipher = 0;
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * WPA_SELECTOR_LEN) {
-//			fprintf(stderr, "ie count botch (pairwise), "
-//				   "count %u left %u", count, left);
+		if ((count == 0) || (left < count * WPA_SELECTOR_LEN))
 			return -1;
-		}
+
 		for (i = 0; i < count; i++) {
 			data->pairwise_cipher |= wpa_selector_to_bitfield(pos);
 			pos += WPA_SELECTOR_LEN;
 			left -= WPA_SELECTOR_LEN;
 		}
-	} else if (left == 1) {
-//		fprintf(stderr, "ie too short (for key mgmt)");
-		return -1;
 	}
+	else if (left == 1)
+		return -1;
 
 	if (left >= 2) {
 		data->key_mgmt = 0;
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * WPA_SELECTOR_LEN) {
-//			fprintf(stderr, "ie count botch (key mgmt), "
-//				   "count %u left %u", count, left);
+		if ((count == 0) || (left < count * WPA_SELECTOR_LEN))
 			return -1;
-		}
+
 		for (i = 0; i < count; i++) {
 			data->key_mgmt |= wpa_key_mgmt_to_bitfield(pos);
 			pos += WPA_SELECTOR_LEN;
 			left -= WPA_SELECTOR_LEN;
 		}
-	} else if (left == 1) {
-//		fprintf(stderr, "ie too short (for capabilities)");
-		return -1;
 	}
+	else if (left == 1)
+		return -1;
 
 	if (left >= 2) {
 		data->capabilities = WPA_GET_LE16(pos);
@@ -410,10 +396,8 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 		left -= 2;
 	}
 
-	if (left > 0) {
-//		fprintf(stderr, "ie has %u trailing bytes", left);
+	if (left > 0)
 		return -1;
-	}
 
 	return 0;
 }
@@ -422,8 +406,8 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 {
 	const struct rsn_ie_hdr *hdr;
 	const unsigned char *pos;
-	int left;
-	int i, count;
+	unsigned int i;
+	int left, count;
 
 	data->proto = WPA_PROTO_RSN_;
 	data->pairwise_cipher = WPA_CIPHER_CCMP_;
@@ -433,24 +417,16 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 	data->pmkid = NULL;
 	data->num_pmkid = 0;
 
-	if (rsn_ie_len == 0) {
-		/* No RSN IE - fail silently */
+	if (rsn_ie_len == 0)
 		return -1;
-	}
 
-	if (rsn_ie_len < sizeof(struct rsn_ie_hdr)) {
-//		fprintf(stderr, "ie len too short %lu", (unsigned long) rsn_ie_len);
+	if (rsn_ie_len < sizeof(struct rsn_ie_hdr))
 		return -1;
-	}
 
 	hdr = (const struct rsn_ie_hdr *) rsn_ie;
 
-	if (hdr->elem_id != DOT11_MNG_RSN_ID ||
-	    hdr->len != rsn_ie_len - 2 ||
-	    WPA_GET_LE16(hdr->version) != RSN_VERSION_) {
-//		fprintf(stderr, "malformed ie or unknown version");
+	if ((hdr->elem_id != DOT11_MNG_RSN_ID) || (hdr->len != rsn_ie_len - 2) || (WPA_GET_LE16(hdr->version) != RSN_VERSION_))
 		return -1;
-	}
 
 	pos = (const unsigned char *) (hdr + 1);
 	left = rsn_ie_len - sizeof(*hdr);
@@ -459,50 +435,43 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 		data->group_cipher = rsn_selector_to_bitfield(pos);
 		pos += RSN_SELECTOR_LEN;
 		left -= RSN_SELECTOR_LEN;
-	} else if (left > 0) {
-//		fprintf(stderr, "ie length mismatch, %u too much", left);
-		return -1;
 	}
+	else if (left > 0)
+		return -1;
 
 	if (left >= 2) {
 		data->pairwise_cipher = 0;
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * RSN_SELECTOR_LEN) {
-//			fprintf(stderr, "ie count botch (pairwise), "
-//				   "count %u left %u", count, left);
+		if ((count == 0) || (left < count * RSN_SELECTOR_LEN))
 			return -1;
-		}
+
 		for (i = 0; i < count; i++) {
 			data->pairwise_cipher |= rsn_selector_to_bitfield(pos);
 			pos += RSN_SELECTOR_LEN;
 			left -= RSN_SELECTOR_LEN;
 		}
-	} else if (left == 1) {
-//		fprintf(stderr, "ie too short (for key mgmt)");
-		return -1;
 	}
+	else if (left == 1)
+		return -1;
 
 	if (left >= 2) {
 		data->key_mgmt = 0;
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * RSN_SELECTOR_LEN) {
-//			fprintf(stderr, "ie count botch (key mgmt), "
-//				   "count %u left %u", count, left);
+		if ((count == 0) || (left < count * RSN_SELECTOR_LEN))
 			return -1;
-		}
+
 		for (i = 0; i < count; i++) {
 			data->key_mgmt |= rsn_key_mgmt_to_bitfield(pos);
 			pos += RSN_SELECTOR_LEN;
 			left -= RSN_SELECTOR_LEN;
 		}
-	} else if (left == 1) {
-//		fprintf(stderr, "ie too short (for capabilities)");
-		return -1;
 	}
+	else if (left == 1)
+		return -1;
 
 	if (left >= 2) {
 		data->capabilities = WPA_GET_LE16(pos);
@@ -514,19 +483,13 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 		data->num_pmkid = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (left < data->num_pmkid * PMKID_LEN) {
-//			fprintf(stderr, "PMKID underflow "
-//				   "(num_pmkid=%d left=%d)", data->num_pmkid, left);
+		if (left < data->num_pmkid * PMKID_LEN)
 			data->num_pmkid = 0;
-		} else {
+		else {
 			data->pmkid = pos;
 			pos += data->num_pmkid * PMKID_LEN;
 			left -= data->num_pmkid * PMKID_LEN;
 		}
-	}
-
-	if (left > 0) {
-//		fprintf(stderr, "ie has %u trailing bytes - ignored", left);
 	}
 
 	return 0;
@@ -545,25 +508,24 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 {
 	scan_list_t *rp = param;
 
-	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit)) return 0;
-
-	/* get results */
+	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit))
+		return 0;
 
 	char *wif;
 	wl_scan_results_t *results;
 	wl_bss_info_t *bssi;
 	struct bss_ie_hdr *ie;
-	int r;
-	int retry;
+	int r, retry;
 #ifdef CONFIG_BCMWL6
 	int chanspec = 0, ctr_channel = 0;
 #endif
 
+	/* get results */
 	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
 
 	results = malloc(WLC_IOCTL_MAXLEN + sizeof(*results));
 	if (!results) {
-		/* Not enough memory */
+		/* not enough memory */
 		wl_restore(wif, unit, rp->wif[idx].ap, rp->wif[idx].radio, rp->wif[idx].scan_time);
 		return 0;
 	}
@@ -577,7 +539,9 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	r = -1;
 	while (retry--) {
 		r = wl_ioctl(wif, WLC_SCAN_RESULTS, results, WLC_IOCTL_MAXLEN);
-		if (r >= 0) break;
+		if (r >= 0)
+			break;
+
 		usleep(100000);
 	}
 
@@ -585,12 +549,11 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 	if (r < 0) {
 		free(results);
-		/* Unable to obtain scan results */
+		/* unable to obtain scan results */
 		return 0;
 	}
 
 	/* format for javascript */
-
 	unsigned int i, k;
 	int left;
 	char macstr[18];
@@ -602,13 +565,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	for (i = 0; i < results->count; ++i) {
 
 		bssidp = (unsigned char *)&bssi->BSSID;
-		sprintf(macstr, "%02X:%02X:%02X:%02X:%02X:%02X",
-				(unsigned char)bssidp[0],
-				(unsigned char)bssidp[1],
-				(unsigned char)bssidp[2],
-				(unsigned char)bssidp[3],
-				(unsigned char)bssidp[4],
-				(unsigned char)bssidp[5]);
+		sprintf(macstr, "%02X:%02X:%02X:%02X:%02X:%02X", (unsigned char)bssidp[0], (unsigned char)bssidp[1], (unsigned char)bssidp[2], (unsigned char)bssidp[3], (unsigned char)bssidp[4], (unsigned char)bssidp[5]);
 
 		strcpy(apinfos[0].BSSID, macstr);
 		memset(apinfos[0].SSID, 0x0, 33);
@@ -650,15 +607,12 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		apinfos[0].wpa = 0;
 
 		NetWorkType = Ndis802_11DS;
-		if ((uint8)(bssi->chanspec & WL_CHANSPEC_CHAN_MASK) <= 14)
-		{
-			for (k = 0; k < bssi->rateset.count; k++)
-			{
-				rate = bssi->rateset.rates[k] & 0x7f;	/* Mask out basic rate set bit */
+		if ((uint8)(bssi->chanspec & WL_CHANSPEC_CHAN_MASK) <= 14) {
+			for (k = 0; k < bssi->rateset.count; k++) {
+				rate = bssi->rateset.rates[k] & 0x7f; /* Mask out basic rate set bit */
 				if ((rate == 2) || (rate == 4) || (rate == 11) || (rate == 22))
 					continue;
-				else
-				{
+				else {
 					NetWorkType = Ndis802_11OFDM24;
 					break;
 				}
@@ -667,13 +621,11 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		else
 			NetWorkType = Ndis802_11OFDM5;
 
-		if (bssi->n_cap)
-		{
-			if (NetWorkType == Ndis802_11OFDM5)
-			{
+		if (bssi->n_cap) {
+			if (NetWorkType == Ndis802_11OFDM5) {
 #ifdef CONFIG_BCMWL6
 				if (bssi->vht_cap)
-				NetWorkType = Ndis802_11OFDM5_VHT;
+					NetWorkType = Ndis802_11OFDM5_VHT;
 				else
 #endif
 				NetWorkType = Ndis802_11OFDM5_N;
@@ -685,47 +637,46 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 		apinfos[0].NetworkType = NetWorkType;
 
 		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + bssi->ie_offset);
-			for (left = bssi->ie_length; left > 0; // look for RSN IE first
-				left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
-				{
-					if (ie->elem_id != DOT11_MNG_RSN_ID)
-						continue;
+		for (left = bssi->ie_length; left > 0; /* look for RSN IE first */
+		     left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
+		{
+			if (ie->elem_id != DOT11_MNG_RSN_ID)
+				continue;
 
-					if (wpa_parse_wpa_ie(&ie->elem_id, ie->len + 2, &apinfos[0].wid) == 0)
-					{
-						apinfos[0].wpa = 1;
-						goto next_info;
-					}
+			if (wpa_parse_wpa_ie(&ie->elem_id, ie->len + 2, &apinfos[0].wid) == 0) {
+				apinfos[0].wpa = 1;
+				goto next_info;
+			}
 		}
 
 		ie = (struct bss_ie_hdr *) ((unsigned char *) bssi + bssi->ie_offset);
-			for (left = bssi->ie_length; left > 0; // then look for WPA IE
-				left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
-				{
-				if (ie->elem_id != DOT11_MNG_WPA_ID)
-					continue;
+		for (left = bssi->ie_length; left > 0; /* then look for WPA IE */
+		     left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
+		{
+			if (ie->elem_id != DOT11_MNG_WPA_ID)
+				continue;
 
-				if (wpa_parse_wpa_ie(&ie->elem_id, ie->len + 2, &apinfos[0].wid) == 0)
-				{
-					apinfos[0].wpa = 1;
-					break;
+			if (wpa_parse_wpa_ie(&ie->elem_id, ie->len + 2, &apinfos[0].wid) == 0) {
+				apinfos[0].wpa = 1;
+				break;
 			}
 		}
+
 next_info:
 #ifdef CONFIG_BCMWL6
 		/* note: provide/use control channel and not the actual channel because we use it for wireless survey and scan button at basic-network.asp */
 		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
-			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].ctl_ch,
-			 (CHSPEC_IS80(bssi->chanspec) ? 80 : (CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10))),apinfos[0].RSSI_Quality);
+		           apinfos[0].BSSID, apinfos[0].SSID, bssi->RSSI, apinfos[0].ctl_ch,
+		           (CHSPEC_IS80(bssi->chanspec) ? 80 : (CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10))), apinfos[0].RSSI_Quality);
 		rp->comma = ',';
 #else
 		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
-			apinfos[0].BSSID, apinfos[0].SSID,bssi->RSSI,apinfos[0].ctl_ch,
-			CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10),apinfos[0].RSSI_Quality);
+		           apinfos[0].BSSID, apinfos[0].SSID, bssi->RSSI, apinfos[0].ctl_ch,
+		           CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10), apinfos[0].RSSI_Quality);
 		rp->comma = ',';
 #endif
 
-		if (apinfos[0].NetworkType == Ndis802_11FH || apinfos[0].NetworkType == Ndis802_11DS)
+		if ((apinfos[0].NetworkType == Ndis802_11FH) || (apinfos[0].NetworkType == Ndis802_11DS))
 				web_printf("'%s',", "11b");
 		else if (apinfos[0].NetworkType == Ndis802_11OFDM5)
 				web_printf("'%s',", "11a");
@@ -755,11 +706,11 @@ next_info:
 				web_printf("'%s',", "IEEE 802.1X");
 			else
 				web_printf("'%s',", "Unknown");
-		} else if (apinfos[0].wep == 1) {
-			web_printf("'%s',", "Unknown");
-		} else {
-			web_printf("'%s',", "Open System");
 		}
+		else if (apinfos[0].wep == 1)
+			web_printf("'%s',", "Unknown");
+		else
+			web_printf("'%s',", "Open System");
 
 		if (apinfos[0].wpa == 1) {
 			if (apinfos[0].wid.pairwise_cipher == WPA_CIPHER_NONE_)
@@ -772,17 +723,17 @@ next_info:
 				web_printf("'%s',", "TKIP");
 			else if (apinfos[0].wid.pairwise_cipher == WPA_CIPHER_CCMP_)
 				web_printf("'%s',", "AES");
-			else if (apinfos[0].wid.pairwise_cipher == (WPA_CIPHER_TKIP_|WPA_CIPHER_CCMP_))
+			else if (apinfos[0].wid.pairwise_cipher == (WPA_CIPHER_TKIP_ | WPA_CIPHER_CCMP_))
 				web_printf("'%s',", "TKIP+AES");
 			else
 				web_printf("'%s',", "Unknown");
-		} else if (apinfos[0].wep == 1) {
-			web_printf("'%s',", "WEP");
-		} else {
-			web_printf("'%s',", "NONE");
 		}
+		else if (apinfos[0].wep == 1)
+			web_printf("'%s',", "WEP");
+		else
+			web_printf("'%s',", "NONE");
 
-		web_printf("'%s']", CHSPEC_IS2G(bssi->chanspec)?"2.4":"5");
+		web_printf("'%s']", CHSPEC_IS2G(bssi->chanspec) ? "2.4" : "5");
 
 		bssi = (wl_bss_info_t*)((uint8*)bssi + bssi->length);
 	}
@@ -791,7 +742,7 @@ next_info:
 	return 1;
 }
 
-//	returns: ['bssid','ssid',channel,capabilities,rssi,noise,[rates,]],  or  [null,'error message']
+/* returns: ['bssid','ssid',channel,capabilities,rssi,noise,[rates,]],  or  [null,'error message'] */
 void asp_wlscan(int argc, char **argv)
 {
 	scan_list_t rp;
@@ -802,16 +753,14 @@ void asp_wlscan(int argc, char **argv)
 
 	web_puts("\nwlscandata = [");
 
-	// scan
-
+	/* scan */
 	if (foreach_wif(0, &rp, start_scan) == 0) {
 		web_puts("[null,'Unable to start scan.']];\n");
 		return;
 	}
 	sleep(1);
 
-	// get results
-
+	/* get results */
 	if (foreach_wif(0, &rp, get_scan_results) == 0) {
 		web_puts("[null,'Unable to obtain scan results.']];\n");
 		return;
@@ -828,6 +777,7 @@ void wo_wlradio(char *url)
 	check_wl_unit(NULL);
 
 	parse_asp("saved.asp");
+
 	if (nvram_get_int(wl_nvname("radio", unit, 0))) {
 		if ((enable = webcgi_get("enable")) != NULL) {
 			web_close();
@@ -843,13 +793,14 @@ static int read_noise(int unit)
 {
 	int v;
 
-	// WLC_GET_PHY_NOISE = 135
+	/* WLC_GET_PHY_NOISE = 135 */
 	if (wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), 135, &v, sizeof(v)) == 0) {
 		char s[32];
 		sprintf(s, "%d", v);
 		nvram_set(wl_nvname("tnoise", unit, 0), s);
 		return v;
 	}
+
 	return -99;
 }
 
@@ -857,22 +808,23 @@ static int get_wlnoise(int client, int unit)
 {
 	int v;
 
-	if (client) {
+	if (client)
 		v = read_noise(unit);
-	}
 	else {
-		// RMo - added read_noise here, does not take AP down (just reads from register inside Broadcom ASIC).
-		//		 Read keeps value current.
+		/* added read_noise here, does not take AP down (just reads from register inside Broadcom ASIC). Read keeps value current */
 		v = read_noise(unit);
 		v = nvram_get_int(wl_nvname("tnoise", unit, 0));
-		if ((v >= 0) || (v < -100)) v = -99;
+		if ((v >= 0) || (v < -100))
+			v = -99;
 	}
+
 	return v;
 }
 
 static int print_wlnoise(int idx, int unit, int subunit, void *param)
 {
 	web_printf("%c%d", (idx == 0) ? ' ' : ',', get_wlnoise(wl_client(unit, 0), unit));
+
 	return 0;
 }
 
@@ -898,7 +850,7 @@ static int not_wlclient(int idx, int unit, int subunit, void *param)
 	return (!wl_client(unit, subunit));
 }
 
-// returns '1' if all wireless interfaces are in client mode, '0' otherwise
+/* returns '1' if all wireless interfaces are in client mode, '0' otherwise */
 void asp_wlclient(int argc, char **argv)
 {
 	web_puts(foreach_wif(1, NULL, not_wlclient) ? "0" : "1");
@@ -918,7 +870,7 @@ static int print_wlstats(int idx, int unit, int subunit, void *param)
 	ifname = nvram_safe_get(wl_nvname("ifname", unit, 0));
 	client = wl_client(unit, 0);
 
-	/* Get configured phy type */
+	/* get configured phy type */
 	wl_ioctl(ifname, WLC_GET_PHYTYPE, &phytype, sizeof(phytype));
 
 	if (wl_ioctl(ifname, WLC_GET_RATE, &rate, sizeof(rate)) < 0)
@@ -945,10 +897,10 @@ static int print_wlstats(int idx, int unit, int subunit, void *param)
 			if (CHSPEC_IS40(chanspec))
 				channel = channel + (CHSPEC_SB_LOWER(chanspec) ? -2 : 2);
 #ifdef CONFIG_BCMWL6
-                	else if(CHSPEC_IS80(chanspec))
-				channel += (((chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LLU) ? -2 : -6 ); //upper is acturally LLU
+			else if (CHSPEC_IS80(chanspec))
+				channel += (((chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LLU) ? -2 : -6); /* upper is actually LLU */
 
-			ctrlsb =  (chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LOWER ? "lower" : ((chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LLU ? "upper" : "none");
+			ctrlsb = (chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LOWER ? "lower" : ((chanspec & WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LLU ? "upper" : "none");
 			nbw = CHSPEC_IS80(chanspec) ? 80 : (CHSPEC_IS40(chanspec) ? 40 : 20);
 #else
 			ctrlsb = CHSPEC_SB_LOWER(chanspec) ? "lower" : (CHSPEC_SB_UPPER(chanspec) ? "upper" : "none");
@@ -969,6 +921,7 @@ static int print_wlstats(int idx, int unit, int subunit, void *param)
 	mhz = (channel) ? wl_chanfreq(channel, band) : 0;
 	if (wl_iovar_getint(ifname, "chanim_enab", (int*)(void*)&chanim_enab) != 0)
 		chanim_enab = 0;
+
 	if (chanim_enab) {
 		if (wl_iovar_getbuf(ifname, "chanim_state", &chanspec, sizeof(chanspec), retbuf, WLC_IOCTL_SMLEN) == 0)
 			interference = *(int*)retbuf;
@@ -980,9 +933,9 @@ static int print_wlstats(int idx, int unit, int subunit, void *param)
 			rssi.val = -100;
 	}
 
-	// [ radio, is_client, channel, freq (mhz), rate, nctrlsb, nbw, rssi, noise, interference ]
+	/* [ radio, is_client, channel, freq (mhz), rate, nctrlsb, nbw, rssi, noise, interference ] */
 	web_printf("%c{ radio: %d, client: %d, channel: %c%d, mhz: %d, rate: %d, ctrlsb: '%s', nbw: %d, rssi: %d, noise: %d, intf: %d }\n",
-		(idx == 0) ? ' ' : ',',
+		(idx == 0 ? ' ' : ','),
 		get_radio(unit), client, (scan ? '-' : ' '), channel, mhz, rate, ctrlsb, nbw, rssi.val, get_wlnoise(client, unit), interference);
 
 	return 0;
@@ -993,7 +946,7 @@ void asp_wlstats(int argc, char **argv)
 	int include_vifs = (argc > 0) ? atoi(argv[0]) : 0;
 
 	web_puts("\nwlstats = [");
-	foreach_wif(include_vifs, NULL, print_wlstats); // AB multiSSID
+	foreach_wif(include_vifs, NULL, print_wlstats);
 	web_puts("];\n");
 }
 
@@ -1033,7 +986,7 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 	strncpy(buf + buflen, country, WLC_CNTRY_BUF_SZ);
 	buflen += WLC_CNTRY_BUF_SZ;
 
-	/* Add list */
+	/* add list */
 	list = (wl_uint32_list_t *)(buf + buflen);
 	list->count = WL_NUMCHANSPECS;
 	buflen += sizeof(uint32)*(WL_NUMCHANSPECS + 1);
@@ -1047,22 +1000,27 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 	list = (wl_uint32_list_t *)buf;
 	for (i = 0; i < list->count; i++) {
 		c = (chanspec_t)list->element[i];
-		/* Skip upper.. (take only one of the lower or upper) */
+		/* skip upper.. (take only one of the lower or upper) */
+#ifdef CONFIG_BCMWL6
 		if (bw >= 40 && (CHSPEC_CTL_SB(c) != ctrlsb))
+#else
+		if (bw == 40 && (CHSPEC_CTL_SB(c) != ctrlsb))
+#endif
 			continue;
-		/* Create the actual control channel number from sideband */
+		/* create the actual control channel number from sideband */
 		int chan = CHSPEC_CHANNEL(c);
 		if (bw == 40)
 			chan += ((ctrlsb == WL_CHANSPEC_CTL_SB_UPPER) ? 2 : -2);
 #ifdef CONFIG_BCMWL6
-		else if(bw == 80)
-			chan += ((ctrlsb == WL_CHANSPEC_CTL_SB_UPPER) ? -2 : -6 ); //upper is acturally LLU
+		else if (bw == 80)
+			chan += ((ctrlsb == WL_CHANSPEC_CTL_SB_UPPER) ? -2 : -6 ); /* upper is actually LLU */
 #endif
 		web_print_wlchan(chan, band);
 		count++;
 	}
 
 	free((void *)buf);
+
 	return count;
 }
 
@@ -1093,7 +1051,7 @@ void asp_wlchannels(int argc, char **argv)
 	int bw, ctrlsb, chanspec;
 	char *ifname;
 
-	// args: unit, nphy[1|0], bw, band, ctrlsb
+	/* args: unit, nphy[1|0], bw, band, ctrlsb */
 
 	check_wl_unit(argc > 0 ? argv[0] : NULL);
 
@@ -1101,6 +1059,7 @@ void asp_wlchannels(int argc, char **argv)
 	wl_ioctl(ifname, WLC_GET_COUNTRY, buf, sizeof(buf));
 	if (wl_ioctl(ifname, WLC_GET_BAND, &band, sizeof(band)) != 0)
 		band = nvram_get_int(wl_nvname("nband", unit, 0));
+
 	wl_iovar_getint(ifname, "chanspec", &chanspec);
 
 	if (argc > 1)
@@ -1138,6 +1097,7 @@ void asp_wlchannels(int argc, char **argv)
 	}
 	else
 		_wlchannels(ifname, buf, band);
+
 	web_puts("];\n");
 }
 
@@ -1153,13 +1113,16 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 
 	web_printf("%c[", (idx == 0) ? ' ' : ',');
 
-	if (phytype[0] == 'n' ||
-	    phytype[0] == 'l' ||
-	    phytype[0] == 's' ||
-	    phytype[0] == 'c' ||
-	    phytype[0] == 'v' ||
-	    phytype[0] == 'h') {
-		/* Get band list. Assume both the bands in case of error */
+	if ((phytype[0] == 'n') ||
+	    (phytype[0] == 'l') ||
+	    (phytype[0] == 's') ||
+	    (phytype[0] == 'c') ||
+#if defined(CONFIG_BCMWL6) || defined(TCONFIG_BLINK)
+	    (phytype[0] == 'v') ||
+#endif
+	    (phytype[0] == 'h'))
+	{
+		/* get band list, assume both the bands in case of error */
 		if (wl_ioctl(ifname, WLC_GET_BANDLIST, list, sizeof(list)) < 0) {
 			for (i = WLC_BAND_5G; i <= WLC_BAND_2G; i++) {
 				web_printf("%c'%d'", comma, i);
@@ -1169,6 +1132,7 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 		else {
 			if (list[0] > 2)
 				list[0] = 2;
+
 			for (i = 1; i <= (unsigned int) list[0]; i++) {
 				web_printf("%c'%d'", comma, list[i]);
 				comma = ',';
@@ -1176,7 +1140,7 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 		}
 	}
 	else {
-		/* Get available phy types of the currently selected wireless interface */
+		/* get available phy types of the currently selected wireless interface */
 		phylist = nvram_safe_get(wl_nvname("phytypes", unit, 0));
 		for (i = 0; i < strlen(phylist); i++) {
 			web_printf("%c'%d'", comma, phylist[i] == 'a' ? WLC_BAND_5G : WLC_BAND_2G);
@@ -1194,27 +1158,26 @@ void asp_wlbands(int argc, char **argv)
 	int include_vifs = (argc > 0) ? atoi(argv[0]) : 0;
 
 	web_puts("\nwl_bands = [");
-	foreach_wif(include_vifs, NULL, print_wlbands); // AB multiSSID
+	foreach_wif(include_vifs, NULL, print_wlbands);
 	web_puts(" ];\n");
 }
 
 static int print_wif(int idx, int unit, int subunit, void *param)
 {
+	struct ifreq ifr;
+	struct ether_addr bssid;
 	char unit_str[] = "000000";
-	char *ssidj;
-
-	char *next;
+	char *ifname, *ssid, *next;
 	char cap[WLC_IOCTL_SMLEN];
 	char caps[WLC_IOCTL_SMLEN];
-	int max_no_vifs = 0;
+	int sfd, max_no_vifs = 0;
+	unsigned int up = 0;
 
-	if (subunit > 0) {
+	if (subunit > 0)
 		snprintf(unit_str, sizeof(unit_str), "%d.%d", unit, subunit);
-	} else {
+	else {
 		snprintf(unit_str, sizeof(unit_str), "%d", unit);
 
-//		wl_iovar_get(wl_nvname("ifname", unit, 0), "cap", (void *)caps, WLC_IOCTL_SMLEN);
-//		wl_iovar_get("eth1", "cap", (void *)caps, WLC_IOCTL_SMLEN);
 		max_no_vifs = 1;
 		wl_iovar_get(nvram_safe_get(wl_nvname("ifname", unit, 0)), "cap", (void *)caps, WLC_IOCTL_SMLEN);
 		foreach(cap, caps, next) {
@@ -1223,16 +1186,10 @@ static int print_wif(int idx, int unit, int subunit, void *param)
 			if (!strcmp(cap, "mbss4"))
 				max_no_vifs = 4;
 		}
-
 	}
 
-	int up = 0;
-	int sfd;
-	struct ifreq ifr;
-
-	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		_dprintf("[%s %d]: error opening socket %m\n", __FUNCTION__, __LINE__);
-	}
+	if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+		logmsg(LOG_ERR, "[%s %d]: error opening socket %m\n", __FUNCTION__, __LINE__);
 
 	if (sfd >= 0) {
 		strcpy(ifr.ifr_name, nvram_safe_get(wl_nvname("ifname", unit, subunit)));
@@ -1242,24 +1199,19 @@ static int print_wif(int idx, int unit, int subunit, void *param)
 		close(sfd);
 	}
 
-	char *ifname;
 	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
-	struct ether_addr bssid;
-
 	wl_ioctl(ifname, WLC_GET_BSSID, &bssid, ETHER_ADDR_LEN);
 
-	// [ifname, unitstr, unit, subunit, ssid, hwaddr, up, wmode, bssid]
-	ssidj = utf8_to_js_string(nvram_safe_get(wl_nvname("ssid", unit, subunit)));
+	/* [ifname, unitstr, unit, subunit, ssid, hwaddr, up, max_no_vifs, wmode, bssid] */
+	ssid = utf8_to_js_string(nvram_safe_get(wl_nvname("ssid", unit, subunit)));
 
-	web_printf("%c['%s','%s',%d,%d,'%s','%s',%d,%d,'%s','%02X:%02X:%02X:%02X:%02X:%02X']", (idx == 0) ? ' ' : ',',
-		nvram_safe_get(wl_nvname("ifname", unit, subunit)),
-		unit_str, unit, subunit, ssidj,
-//		// virtual inteface MAC address
-		nvram_safe_get(wl_nvname("hwaddr", unit, subunit)), up, max_no_vifs, // AB multiSSID
-		nvram_safe_get(wl_nvname("mode", unit, subunit)),
-		bssid.octet[0], bssid.octet[1], bssid.octet[2], bssid.octet[3], bssid.octet[4], bssid.octet[5]
+	web_printf("%c['%s','%s',%d,%d,'%s','%s',%d,%d,'%s','%02X:%02X:%02X:%02X:%02X:%02X']",
+	           (idx == 0 ? ' ' : ','),
+	           nvram_safe_get(wl_nvname("ifname", unit, subunit)), unit_str, unit, subunit, ssid, nvram_safe_get(wl_nvname("hwaddr", unit, subunit)), up, max_no_vifs,
+	           nvram_safe_get(wl_nvname("mode", unit, subunit)), bssid.octet[0], bssid.octet[1], bssid.octet[2], bssid.octet[3], bssid.octet[4], bssid.octet[5]
 	);
-	free(ssidj);
+
+	free(ssid);
 
 	return 0;
 }
@@ -1273,15 +1225,15 @@ void asp_wlifaces(int argc, char **argv)
 	web_puts("];\n");
 }
 
-/* for SDK6/7 with new driver (build year 2020 with very long/big country list) */
-static cntry_name_t *
-wlc_cntry_abbrev_to_country(const char *abbrev)
+static cntry_name_t *wlc_cntry_abbrev_to_country(const char *abbrev)
 {
 	cntry_name_t *cntry;
-	if (!*abbrev || strlen(abbrev) > 3 || strlen(abbrev) < 2)
+	if ((!*abbrev) || (strlen(abbrev) > 3) || (strlen(abbrev) < 2))
 		return (NULL);
+
 	for (cntry = cntry_names; cntry->name &&
 		strncmp(abbrev, cntry->abbrev, strlen(abbrev)); cntry++);
+
 	return (!cntry->name ? NULL : cntry);
 }
 
@@ -1302,30 +1254,35 @@ void asp_wlcountries(int argc, char **argv)
 		cl->band = band;
 
 		if (wl_ioctl(ifname, WLC_GET_COUNTRY_LIST, cl, cl->buflen) == 0) {
-			for(i = 0; i < cl->count; i++) {
+			for (i = 0; i < cl->count; i++) {
 				abbrev = &cl->country_abbrev[i*WLC_CNTRY_BUF_SZ];
 				cntry = wlc_cntry_abbrev_to_country(abbrev);
-				web_printf("%c['%s', '%s']", i ? ',' : ' ', abbrev, cntry ? cntry->name : abbrev );
+				web_printf("%c['%s','%s']", (i ? ',' : ' '), abbrev, (cntry ? cntry->name : abbrev));
 			}
 
 		}
 		free((void *)cl);
 	}
 	else { /* something went wrong ... provide a basic list at least */
+#ifdef TCONFIG_BCMARM
 		web_puts(" ['#a', '#a (wildcard)'],['EU', 'EUROPE'],['CZ', 'CZECH REPUBLIC'],['DE', 'GERMANY'],['US', 'UNITED STATES'],['SE', 'SWEDEN'],['SG', 'SINGAPORE'],['LU', 'LUXEMBOURG']");
+#else
+		web_puts(" ['BR', 'BRAZIL'],['EU', 'EUROPE'],['CZ', 'CZECH REPUBLIC'],['DE', 'GERMANY'],['US', 'UNITED STATES'],['SE', 'SWEDEN'],['SG', 'SINGAPORE'],['LU', 'LUXEMBOURG']");
+#endif
 	}
 
 	web_puts("];\n");
 }
 
+#ifdef TCONFIG_BCMARM
 int mround(float val)
 {
 	return (int)(val + 0.5);
 }
 
 /*
-    Get temperature of wireless chip
-    bwq518. Copyright 2013
+ * Get temperature of wireless chip
+ * bwq518. Copyright 2013
 */
 char* get_wl_tempsense(char *buf)
 {
@@ -1337,13 +1294,16 @@ char* get_wl_tempsense(char *buf)
 	unsigned *cur_temp;
 	int  ret = 0, len, i;
 
-	strcpy(buf,"");
+	strcpy(buf, "");
 	if ((lan_ifnames = strdup(nvram_safe_get("wl_ifnames"))) != NULL) {
 		p = lan_ifnames;
 		while ((ifname = strsep(&p, " ")) != NULL) {
-			while (*ifname == ' ') ++ifname;
+			while (*ifname == ' ')
+				++ifname;
+
 			trimstr(ifname);
-			if ((*ifname == 0) || (strncasecmp(ifname, "eth",3) != 0)) continue;
+			if ((*ifname == 0) || (strncasecmp(ifname, "eth",3) != 0))
+				continue;
 
 			bzero(s, sizeof(s));
 			bzero(tempC, sizeof(tempC));
@@ -1356,10 +1316,11 @@ char* get_wl_tempsense(char *buf)
 				if ((atoi(tempC) <=0) || (atoi(tempC)>= 120)) {
 					strcpy(tempC, "--");
 					strcpy(tempF, "--");
-				} else {
-					sprintf(tempF, "%d", mround((*cur_temp / 2 + 20) * 1.8 + 32));
 				}
-			} else {
+				else
+					sprintf(tempF, "%d", mround((*cur_temp / 2 + 20) * 1.8 + 32));
+			}
+			else {
 				strcpy(tempC, "--");
 				strcpy(tempF, "--");
 			}
@@ -1369,9 +1330,9 @@ char* get_wl_tempsense(char *buf)
 			bzero(band, sizeof(band));
 			int bandlist[WLC_BAND_ALL];
 			if (wl_ioctl(ifname, WLC_GET_BANDLIST, bandlist, sizeof(bandlist)) == 0) {
-				if (bandlist[0] == 0) {
+				if (bandlist[0] == 0)
 					strcpy(band, "--");
-				} else {
+				else {
 					b5G = 0;
 					b2G = 0;
 					for (i = 1; i <= bandlist[0]; i++) {
@@ -1387,19 +1348,20 @@ char* get_wl_tempsense(char *buf)
 						}
 					}
 					if (b5G == 1 && b2G == 1)
-						strcpy(band,"2.4G/5G");
-					else if ( b5G == 0 && b2G == 1)
-						strcpy(band,"2.4G");
-					else if ( b5G == 1 && b2G == 0)
-						strcpy(band,"5G");
+						strcpy(band, "2.4G/5G");
+					else if (b5G == 0 && b2G == 1)
+						strcpy(band, "2.4G");
+					else if (b5G == 1 && b2G == 0)
+						strcpy(band, "5G");
 					else /* b5G == 0 && b2G == 0 */
-						strcpy(band,"--");
+						strcpy(band, "--");
 				}
-			} else {
-				strcpy(band,"--");
 			}
+			else
+				strcpy(band,"--");
+
 			if ((strlen(tempC) > 0) && (strlen(band) > 0)) {
-				if((strcmp(tempC,"--") != 0) || (strcmp(band,"--") != 0)) {
+				if ((strcmp(tempC, "--") != 0) || (strcmp(band, "--") != 0)) {
 					strcat(buf, ifname);
 					strcat(buf, ": ");
 					strcat(buf, band);
@@ -1415,10 +1377,14 @@ char* get_wl_tempsense(char *buf)
 	}
 	/* remove spaces from end */
 	len = strlen(buf);
-	if (len >= 24) buf[len - 24] = '\0';
+	if (len >= 24)
+		buf[len - 24] = '\0';
+
 	if (len == 0)
-		strcpy(buf,"--");
+		strcpy(buf, "--");
 	else
 		trimstr(buf);
+
 	return buf;
 }
+#endif /* TONFIG_BCMARM */
