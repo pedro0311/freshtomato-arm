@@ -291,6 +291,7 @@ obj-$(TCONFIG_LZO) += lzo
 obj-$(TCONFIG_OPENVPN) += openvpn
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
 obj-$(TCONFIG_WIREGUARD) += wireguard-tools
+obj-$(TCONFIG_ZFS) += zfs
 obj-$(TCONFIG_TINC) += tinc
 
 # Tomato RAF
@@ -2597,6 +2598,80 @@ tinc-install:
 	install -D tinc/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
+
+zfs/stamp-h1: zlib $(OPENSSLDIR) gettext-tiny util-linux
+	$(call patch_files,zfs)
+	cd zfs && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	CPPFLAGS="-I$(TOP)/zlib/staged/usr/include -I$(TOP)/util-linux/staged/include -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/gettext-tiny/staged/include" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/util-linux/staged/lib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/gettext-tiny/staged/lib" \
+	$(CONFIGURE) \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--with-config=user \
+		--disable-nls \
+		--disable-pyzfs \
+		--disable-shared
+	@touch $@
+
+zfs: zfs/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C zfs $(PARALLEL_BUILD)
+
+zfs-clean:
+	-@$(MAKE) -C zfs clean
+	@rm -f zfs/stamp-h1
+	$(call unpatch_files,zfs)
+
+zfs-install:
+	install -D zfs/cmd/zfs/zfs $(INSTALLDIR)/zfs/usr/sbin/zfs
+	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
+	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
+	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
+
+util-linux/stamp-h1:
+	cd util-linux && \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	$(CONFIGURE) \
+		--prefix=/ \
+		--disable-all-programs \
+		--enable-libuuid \
+		--enable-libblkid \
+		--disable-shared
+	@touch $@
+
+util-linux: util-linux/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C util-linux
+	@$(MAKE) -C util-linux DESTDIR=$(TOP)/util-linux/staged install
+
+util-linux-clean:
+	-@$(MAKE) -C util-linux clean
+	@rm -f util-linux/stamp-h1
+	-@rm -rf util-linux/staged
+
+gettext-tiny/stamp-h1:
+	@$(MAKE) -C gettext-tiny \
+	prefix=/ \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
+	@touch $@
+
+gettext-tiny: gettext-tiny/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C gettext-tiny \
+	prefix=/ \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	install \
+	DESTDIR=$(TOP)/gettext-tiny/staged
+
+gettext-tiny-clean:
+	-@$(MAKE) -C gettext-tiny clean
+	@rm -f gettext-tiny/stamp-h1
+	-@rm -rf gettext-tiny/staged
 
 snmp/stamp-h1:
 	$(call patch_files,snmp)
