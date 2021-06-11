@@ -2152,10 +2152,11 @@ int start_firewall(void)
 	modprobe_r("xt_layer7");
 	modprobe_r("xt_HL");
 	modprobe_r("xt_length");
-	modprobe_r("xt_web");
 #ifdef TCONFIG_BCMARM
+	modprobe_r("ipt_web");
 	modprobe_r("ipt_webmon");
 #else
+	modprobe_r("xt_web");
 	modprobe_r("xt_webmon");
 #endif
 	modprobe_r("xt_dscp");
