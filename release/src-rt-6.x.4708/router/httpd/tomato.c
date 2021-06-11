@@ -1458,6 +1458,11 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMARM
 	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
+#ifdef TCONFIG_ZFS
+	{ "usb_fs_zfs",			V_01				},
+	{ "usb_fs_zfs_automount",	V_01				},
+	{ "zfs_mount_script",		V_TEXT(0, 2048)			},
+#endif
 #endif /* TCONFIG_HFS */
 	{ "usb_automount",		V_01				},
 	{ "script_usbhotplug", 		V_TEXT(0, 2048)			},

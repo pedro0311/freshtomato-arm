@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("usb_enable,usb_uhci,usb_ohci,usb_usb2,usb_usb3,usb_mmc,usb_storage,usb_printer,usb_printer_bidirect,usb_automount,usb_fs_ext4,usb_fs_fat,usb_fs_exfat,usb_fs_ntfs,usb_ntfs_driver,usb_fs_hfs,usb_hfs_driver,script_usbmount,script_usbumount,script_usbhotplug,idle_enable,usb_3g,usb_apcupsd"); %>
+//	<% nvram("usb_enable,usb_uhci,usb_ohci,usb_usb2,usb_usb3,usb_mmc,usb_storage,usb_printer,usb_printer_bidirect,usb_automount,usb_fs_ext4,usb_fs_fat,usb_fs_exfat,usb_fs_zfs,usb_fs_zfs_automount,zfs_mount_script,usb_fs_ntfs,usb_ntfs_driver,usb_fs_hfs,usb_hfs_driver,script_usbmount,script_usbumount,script_usbhotplug,idle_enable,usb_3g,usb_apcupsd"); %>
 
 //	<% usbdevices(); %>
 
@@ -242,6 +242,9 @@ function verifyFields(focused, quiet) {
 	E('_f_hfs').disabled = b || a;
 	E('_usb_hfs_driver').disabled = b || a;
 /* HFS-END */
+/* ZFS-BEGIN */
+	E('_f_zfs').disabled = b || a;
+/* ZFS-END */
 	E('_f_automount').disabled = b || a;
 	E('_f_bprint').disabled = b || !E('_f_print').checked;
 
@@ -249,9 +252,17 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_script_usbmount'), PR('_script_usbumount'), !b && !a && E('_f_automount').checked);
 	elem.display(PR('_script_usbhotplug'), !b && (!a || E('_f_print').checked));
 
+/* ZFS-BEGIN */
+	elem.display(PR('_f_zfs_automount'), !b && !a && E('_f_zfs').checked);
+	elem.display(PR('_zfs_mount_script'), !b && !a && E('_f_zfs').checked && !E('_f_zfs_automount').checked);
+/* ZFS-END */
+
 	if (!v_length('_script_usbmount', quiet, 0, 2048)) return 0;
 	if (!v_length('_script_usbumount', quiet, 0, 2048)) return 0;
 	if (!v_length('_script_usbhotplug', quiet, 0, 2048)) return 0;
+/* ZFS-BEGIN */
+	if (!v_length('_zfs_mount_script', quiet, 0, 2048)) return 0;
+/* ZFS-END */
 
 	return 1;
 }
@@ -279,6 +290,10 @@ function save() {
 /* HFS-BEGIN */
 	fom.usb_fs_hfs.value = E('_f_hfs').checked ? 1 : 0;
 /* HFS-END */
+/* ZFS-BEGIN */
+	fom.usb_fs_zfs.value = E('_f_zfs').checked ? 1 : 0;
+	fom.usb_fs_zfs_automount.value = E('_f_zfs_automount').checked ? 1 : 0;
+/* ZFS-END */
 	fom.usb_automount.value = E('_f_automount').checked ? 1 : 0;
 	fom.idle_enable.value = E('_f_idle_enable').checked ? 1 : 0;
 	fom.usb_3g.value = E('_f_usb_3g').checked ? 1 : 0;
@@ -329,6 +344,10 @@ function submit_complete() {
 <!-- HFS-BEGIN -->
 <input type="hidden" name="usb_fs_hfs">
 <!-- HFS-END -->
+<!-- ZFS-BEGIN -->
+<input type="hidden" name="usb_fs_zfs">
+<input type="hidden" name="usb_fs_zfs_automount">
+<!-- ZFS-END -->
 <input type="hidden" name="usb_automount">
 <input type="hidden" name="idle_enable">
 <input type="hidden" name="usb_3g">
@@ -364,6 +383,10 @@ function submit_complete() {
 /* HFS-BEGIN */
 				,{ suffix: '&nbsp; HFS / HFS+ &nbsp;', name: 'f_hfs', type: 'checkbox', value: nvram.usb_fs_hfs == 1 }
 /* HFS-END */
+
+/* ZFS-BEGIN */
+				,{ suffix: '&nbsp; ZFS &nbsp;', name: 'f_zfs', type: 'checkbox', value: nvram.usb_fs_zfs == 1 }
+/* ZFS-END */
 			] },
 /* NTFS-BEGIN */
 			{ title: 'NTFS Driver', indent: 2, name: 'usb_ntfs_driver', type: 'select', options: [
@@ -386,8 +409,15 @@ function submit_complete() {
 /* HFS-END */
 			{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
 					suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
+/* ZFS-BEGIN */
+			{ title: 'ZFS Automount', indent: 2, name: 'f_zfs_automount', type: 'checkbox',
+					suffix: '&nbsp; <small>Automatically mount all zfs partitions.<\/small>', value: nvram.usb_fs_zfs_automount == 1 },
+/* ZFS-END */
 			{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
 			{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
+/* ZFS-BEGIN */
+			{ title: 'ZFS Custom Mounting', indent: 2, name: 'zfs_mount_script', type: 'textarea', value: nvram.zfs_mount_script },
+/* ZFS-END */
 			null,
 			{ title: 'HDD Spindown', name: 'f_idle_enable', type: 'checkbox',
 				suffix: '&nbsp; <small>Spin down each HDD when idle. No need to use with flash drive.<\/small>', value: nvram.idle_enable == 1 },
