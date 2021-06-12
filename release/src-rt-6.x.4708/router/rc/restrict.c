@@ -145,6 +145,8 @@ int rcheck_main(int argc, char *argv[])
 				r = eval("iptables", "-A", "restrict", "-j", buf);
 
 #ifdef TCONFIG_IPV6
+#ifndef TCONFIG_BCM_ARM
+			/* disable web for ip6tables (ARM) - FIXME */
 			r6 = eval("ip6tables", "-D", "restrict", "-j", buf);
 			if (ipv6_enabled()) {
 				if (insch)
@@ -154,6 +156,7 @@ int rcheck_main(int argc, char *argv[])
 				r |= r6;
 			}
 #endif
+#endif /* TCONFIG_IPV6 */
 
 			if (r != 0) {
 				syslog(LOG_ERR, "Iptables: %sactivating chain \"%s\" failed. Retrying in 15 minutes.", insch ? "" : "de", buf);
