@@ -123,7 +123,6 @@ obj-y += www
 obj-y += bridge
 obj-y += dnsmasq
 obj-y += etc
-# obj-y += vlan # use Busybox vconfig
 obj-y += pppd
 obj-y += rp-pppoe
 obj-y += utils
@@ -1295,14 +1294,6 @@ samba3: $(if $(TCONFIG_MEDIA_SERVER)$(TCONFIG_NGINX),libiconv,)
 nvram_arm: shared
 
 prebuilt: shared libbcmcrypto
-
-vlan:
-	@$(SEP)
-	@$(MAKE) -C vlan CROSS=$(CROSS_COMPILE)	# STRIPTOOL=$(STRIP)
-
-vlan-install:
-	$(MAKE) -C vlan CROSS=$(CROSS_COMPILE) INSTALLDIR=$(INSTALLDIR) install	# STRIPTOOL=$(STRIP)
-	$(STRIP) $(INSTALLDIR)/vlan/usr/sbin/vconfig
 
 accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
 	$(call patch_files,accel-pptp)
