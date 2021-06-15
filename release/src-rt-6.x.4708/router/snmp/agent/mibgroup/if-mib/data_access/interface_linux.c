@@ -143,10 +143,10 @@ static void init_libpci(void)
     struct stat stbuf;
 
     /*
-     * When snmpd is run inside an OpenVZ container /proc/bus/pci is not
-     * available.
+     * When snmpd is run inside an OpenVZ container or on a Raspberry Pi system
+     * /proc/bus/pci is not available.
      */
-    if (stat("/proc/vz", &stbuf) == 0)
+    if (stat("/proc/bus/pci", &stbuf) == 0)
         return;
 
     pci_access = pci_alloc();
@@ -757,8 +757,6 @@ netsnmp_arch_interface_container_load(netsnmp_container* container,
 #ifdef NETSNMP_ENABLE_IPV6
             netsnmp_access_ipaddress_container_free(addr_container, 0);
 #endif
-            netsnmp_access_interface_container_free(container,
-                                                    NETSNMP_ACCESS_INTERFACE_FREE_NOFLAGS);
             fclose(devin);
             close(fd);
             free(ifc.ifc_buf);
@@ -1256,9 +1254,9 @@ void netsnmp_prefix_process(int fd, void *data)
         iret = net_snmp_delete_prefix_info (list_info.list_head, in6pAddr);
         if(iret < 0)
             DEBUGMSGTL(("access:interface:prefix", "Unable to delete the prefix info\n"));
-            if(!iret)
-                DEBUGMSGTL(("access:interface:prefix", "Unable to find the node to delete\n"));
-            have_addr = 0;
+        if(!iret)
+            DEBUGMSGTL(("access:interface:prefix", "Unable to find the node to delete\n"));
+        have_addr = 0;
     }
 }
 #endif

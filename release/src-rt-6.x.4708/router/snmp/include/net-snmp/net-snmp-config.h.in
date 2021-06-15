@@ -175,6 +175,9 @@
 /* Define to 1 if you have the `DTLS_method' function. */
 #undef HAVE_DTLS_METHOD
 
+/* Define to 1 if you have the `endfsent' function. */
+#undef HAVE_ENDFSENT
+
 /* Define to 1 if you have the `ERR_get_error_all' function. */
 #undef HAVE_ERR_GET_ERROR_ALL
 
@@ -244,6 +247,9 @@
 /* Define to 1 if you have the `getdtablesize' function. */
 #undef HAVE_GETDTABLESIZE
 
+/* Define to 1 if you have the `getfsent' function. */
+#undef HAVE_GETFSENT
+
 /* Define to 1 if you have the `getfsstat' function. */
 #undef HAVE_GETFSSTAT
 
@@ -273,6 +279,9 @@
 
 /* Define to 1 if you have the `getmntent' function. */
 #undef HAVE_GETMNTENT
+
+/* Define to 1 if you have the `getmntinfo' function. */
+#undef HAVE_GETMNTINFO
 
 /* Define to 1 if you have the `getopt' function. */
 #undef HAVE_GETOPT
@@ -743,6 +752,9 @@
 /* Define to 1 if you have the `poll' function. */
 #undef HAVE_POLL
 
+/* Define to 1 if you have the `posix_spawn' function. */
+#undef HAVE_POSIX_SPAWN
+
 /* Define to 1 if you have the `pread64' function. */
 #undef HAVE_PREAD64
 
@@ -809,6 +821,9 @@
 /* Define to 1 if you have the `setenv' function. */
 #undef HAVE_SETENV
 
+/* Define to 1 if you have the `setfsent' function. */
+#undef HAVE_SETFSENT
+
 /* Define to 1 if you have the `setgid' function. */
 #undef HAVE_SETGID
 
@@ -842,9 +857,6 @@
 /* Define to 1 if you have the `sigblock' function. */
 #undef HAVE_SIGBLOCK
 
-/* Define to 1 if you have the `sighold' function. */
-#undef HAVE_SIGHOLD
-
 /* Define if SIGHUP is defined in <signal.h>. */
 #undef HAVE_SIGHUP
 
@@ -868,6 +880,9 @@
 
 /* Define to 1 if SO_BINDTODEVICE is available */
 #undef HAVE_SO_BINDTODEVICE
+
+/* Define to 1 if you have the <spawn.h> header file. */
+#undef HAVE_SPAWN_H
 
 /* Define to 1 if you have the `srand' function. */
 #undef HAVE_SRAND
@@ -1421,6 +1436,12 @@
 /* Define to 1 if you have the <validator/validator-config.h> header file. */
 #undef HAVE_VALIDATOR_VALIDATOR_CONFIG_H
 
+/* Define to 1 if you have the `vm_region' function. */
+#undef HAVE_VM_REGION
+
+/* Define to 1 if you have the `vm_region_64' function. */
+#undef HAVE_VM_REGION_64
+
 /* Define to 1 if you have the <vm/swap_pager.h> header file. */
 #undef HAVE_VM_SWAP_PAGER_H
 
@@ -1435,6 +1456,9 @@
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
+
+/* Define to 1 if you have the `waitpid' function. */
+#undef HAVE_WAITPID
 
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H

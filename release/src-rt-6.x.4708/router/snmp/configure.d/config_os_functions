@@ -99,7 +99,7 @@ case x$with_socklib in
   *)
     # Do not use fork() nor any related function when using Windows sockets
     # because Windows sockets are not compatible with fork().
-    AC_CHECK_FUNCS([execv fork signal sigset uname]dnl
+    AC_CHECK_FUNCS([execv fork signal sigset uname posix_spawn waitpid]dnl
                    [closesocket gai_strerror getaddrinfo gethostbyname]dnl
                    [gethostbyname2 gethostname gethostbyaddr]dnl
                    [inet_ntop inet_pton])
@@ -156,20 +156,23 @@ AC_REPLACE_FUNCS([getopt                                       ] dnl
                  [strtol        strtoul       strtoull         ] )
 
 #  Agent:
-AC_CHECK_FUNCS([cgetnext        chown          forkall         ] dnl
-               [fsync           gai_strerror   getgrnam        ] dnl
-               [gethostname     getloadavg                     ] dnl
+AC_CHECK_FUNCS([cgetnext        chown          endfsent        ] dnl
+               [forkall         fsync          gai_strerror    ] dnl
+               [getfsent        getgrnam       gethostname     ] dnl
+               [getloadavg      getmntent      getmntinfo      ] dnl
                [getpid          getpwnam                       ] dnl
                [hasmntopt       initgroups                     ] dnl
                [if_nameindex    if_indextoname if_nametoindex  ] dnl
                [localtime_r     mkstemp        mktime          ] dnl
-               [poll            regcomp                        ] dnl
+               [poll            regcomp        setfsent        ] dnl
                [setgid          setgroups                      ] dnl
                [setmntent       setuid                         ] dnl
-               [sigaction       sigblock      sighold          ] dnl
-               [sigprocmask                                    ] dnl
+               [sigaction       sigblock      sigprocmask      ] dnl
                [statfs          statvfs       stime            ] dnl
                [strncasecmp     system        usleep           ] )
+
+# Agent, Darwin (Apple):
+AC_CHECK_FUNCS([vm_region vm_region_64])
 
 #  Apps:
 AC_CHECK_FUNCS([getdtablesize                                  ] dnl
@@ -213,12 +216,12 @@ AC_CACHE_VAL(
 #ifdef HAVE_SYS_FS_TYPES_H
 #include <sys/fs_types.h>
 #endif
-main ()
+int main ()
 {
 struct fs_data fsd;
 /* Ultrix's statfs returns 1 for success,
    0 for not mounted, -1 for failure.  */
-exit (statfs (".", &fsd) != 1);
+return statfs (".", &fsd) != 1;
 }]])],
     [fu_cv_sys_stat_fs_data=yes],
     [fu_cv_sys_stat_fs_data=no],
