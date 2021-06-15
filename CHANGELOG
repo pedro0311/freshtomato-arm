@@ -5,6 +5,20 @@ FreshTomato-ARM Changelog
 
 
 
+2021.4          2021.06.17
+--------------------------
+
+- SDK7: update wireless driver - fix for FragAttacks
+- nginx: update to 1.21.0
+- libcurl: update to 7.77.0
+- snmp: update to 5.9.1
+- libcurl: update CA certificate bundle as of 2021-05-25
+- httpd: devlist.c: fix display of devices in wds mode
+- others: mymotd: code improvements, thanks to @WildFireSG
+- rc: firewall.c: fix removing ipt_web/xt_web module
+- rc: restrict: disable web for ip6tables in ARM branch
+
+
 2021.3          2021.06.05
 --------------------------
 
