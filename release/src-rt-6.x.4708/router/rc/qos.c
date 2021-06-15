@@ -236,22 +236,14 @@ void ipt_qos(void)
 			ipt_layer7(layer7, app);
 
 		if (app[0]) {
-			v4v6_ok &= ~IPT_V6; /* temp: l7 not working either! */
-#ifdef TCONFIG_BCMARM
+			v4v6_ok &= ~IPT_V6; /* L7 for IPv6 not working either! */
 			strcat(saddr, app);
-#else
-			strcpy(end, app);
-#endif
 		}
 
 		/* dscp */
 		memset(s, 0, 32);
 		if (ipt_dscp(dscp, s))
-#ifdef TCONFIG_BCMARM
 			strcat(saddr, s);
-#else
-			strcat(end, s);
-#endif
 
 		class_flag = 0;
 
