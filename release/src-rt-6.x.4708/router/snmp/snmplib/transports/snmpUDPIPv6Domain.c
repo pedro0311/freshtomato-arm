@@ -34,11 +34,6 @@
 #if HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-
-#if defined(HAVE_WINSOCK_H) && !defined(mingw32)
-static const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-#endif
-
 #if HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -300,9 +295,14 @@ netsnmp_udp6_transport_bind(netsnmp_transport *t,
     DEBUGIF("netsnmp_udp6") {
         char *str;
         str = netsnmp_udp6_fmtaddr(NULL, addr, sizeof(*addr));
-        DEBUGMSGTL(("netsnmp_udpbase", "binding socket: %d to %s\n",
+        DEBUGMSGTL(("netsnmp_udp6", "binding socket: %d to %s\n",
                     t->sock, str));
         free(str);
+    }
+    if (flags & NETSNMP_TSPEC_PREBOUND) {
+        DEBUGMSGTL(("netsnmp_udp6", "socket %d is prebound, nothing to do\n",
+                    t->sock));
+        return 0;
     }
     rc = netsnmp_bindtodevice(t->sock, ep->iface);
     if (rc != 0) {
@@ -419,6 +419,8 @@ netsnmp_udp6_transport_with_source(const struct netsnmp_ep *ep,
          */
         t->sock = netsnmp_sd_find_inet_socket(PF_INET6, SOCK_DGRAM, -1,
                                               ntohs(ep->a.sin6.sin6_port));
+        if (t->sock >= 0)
+            flags |= NETSNMP_TSPEC_PREBOUND;
 #endif
     }
     else
@@ -701,7 +703,7 @@ netsnmp_udp6_parse_security(const char *token, char *param)
             /* Try to interpret the mask */
             if (strmask == NULL || *strmask == '\0') {
                 /* No mask was given. Assume /128 */
-                memset(mask.s6_addr, '\xff', sizeof(mask.s6_addr));
+                memset(mask.s6_addr, 0xff, sizeof(mask.s6_addr));
             } else {
                 /* Try to interpret mask as a "number of 1 bits". */
                 char* cp;
@@ -710,7 +712,8 @@ netsnmp_udp6_parse_security(const char *token, char *param)
                     if (0 <= masklength && masklength <= 128) {
                         const int j = masklength / 8;
                         const int jj = masklength % 8;
-                        memset(mask.s6_addr, '\xff', j);
+
+                        memset(mask.s6_addr, 0xff, j);
                         if (j < 16) {
                             mask.s6_addr[j] = (0xffu << (8 - jj));
                             memset(mask.s6_addr + j + 1, '\0', 15 - j);
@@ -739,7 +742,15 @@ netsnmp_udp6_parse_security(const char *token, char *param)
                 memset(&pton_addr.sin6_addr.s6_addr, '\0',
                        sizeof(struct in6_addr));
             } else if (inet_pton(AF_INET6, sourcep, &pton_addr.sin6_addr) != 1) {
-                /* Nope, wasn't a numeric address. Must be a hostname. */
+                /* Nope, wasn't a numeric IPv6 address. Must be IPv4 or a hostname. */
+
+                /* Try interpreting as dotted quad - IPv4 */
+                struct in_addr network;
+                if (inet_pton(AF_INET, sourcep, &network) > 0){
+                    /* Yes, it's IPv4 - so it's already parsed and we can return. */
+                    DEBUGMSGTL(("com2sec6", "IPv4 detected for IPv6 parser. Skipping.\n"));
+                    return;
+                }
 #if HAVE_GETADDRINFO
                 int             gai_error;
 

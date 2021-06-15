@@ -216,6 +216,17 @@ class BasicTests(unittest.TestCase):
         for var in varlist:
             print("  ", var.tag, var.iid, "=", var.val, '(', var.type, ')')
 
+    def test_v1_walk_4(self):
+        print("\n")
+        print("---v1 walk4-------------------------------------\n")
+
+        sess = setup_v1()
+        varlist = netsnmp.VarList(netsnmp.Varbind('.1'))
+
+        vals = sess.walk(varlist)
+        print("v1 sess.walk length: ", len(vals), "\n")
+        self.assertTrue(len(vals) > 0)
+
     def test_v2c_get(self):
         print("\n")
         print("---v2c get-------------------------------------\n")
@@ -465,6 +476,52 @@ class SetTests(unittest.TestCase):
 
         print("\n-------------- SET Test End ----------------------------\n")
 
+
+class HexStringGet(unittest.TestCase):
+    """SNMP hex string tests for the Net-SNMP Python interface"""
+    def testFunc(self):
+        """HexStringGet"""
+        session = setup_v2()
+
+        # snmpEngineID.0
+        varlist = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.6.3.10.2.1.1.0'))
+        session.get(varlist)
+        for var in varlist:
+            print(var)
+        self.assertEqual(varlist[0].iid, '0');
+        self.assertEqual(varlist[0].type, 'OCTETSTR');
+
+class HexStringGetNext(unittest.TestCase):
+    """SNMP hex string tests for the Net-SNMP Python interface"""
+    def testFunc(self):
+        """HexStringGetNext"""
+        session = setup_v2()
+
+        varlist = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.6.3.10'))
+        session.walk(varlist)
+        for var in varlist:
+            print(var)
+        self.assertEqual(varlist[0].iid, '0');
+
+class HexStringSet(unittest.TestCase):
+    """SNMP hex string tests for the Net-SNMP Python interface"""
+    def testFunc(self):
+        """HexStringSet"""
+        session = setup_v2()
+
+        varlist = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.6.3.10.2.1.1.0'))
+        session.get(varlist)
+        print("varlist length =", len(varlist))
+        for var in varlist:
+            print(var)
+        self.assertEqual(varlist[0].iid, '0');
+        res = netsnmp.snmpset(var, **snmp_dest());
+        print("first SNMP set result:", res)
+        self.assertEqual(res, 0)
+        var.val = ""
+        res = netsnmp.snmpset(var, **snmp_dest());
+        print("second SNMP set result:", res)
+        self.assertEqual(res, 0)
 
 if __name__ == '__main__':
     unittest.main()

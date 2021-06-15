@@ -114,6 +114,7 @@ typedef struct netsnmp_tmStateReference_s {
 } netsnmp_tmStateReference;
 
 #define NETSNMP_TSPEC_LOCAL                     0x01 /* 1=server, 0=client */
+#define NETSNMP_TSPEC_PREBOUND                  0x02 /* 1=bound by systemd, 0=needs bind in the library */
 
 struct netsnmp_container_s; /* forward decl */
 typedef struct netsnmp_tdomain_spec_s {
@@ -253,6 +254,7 @@ void shutdown_snmp_transport(void);
 
 /*  Some utility functions.  */
 
+NETSNMP_IMPORT
 char *netsnmp_transport_peer_string(netsnmp_transport *t, const void *data,
                                     int len);
 
@@ -265,6 +267,7 @@ int netsnmp_transport_add_to_list(netsnmp_transport_list **transport_list,
 				  netsnmp_transport *transport);
 int netsnmp_transport_remove_from_list(netsnmp_transport_list **transport_list,
 				       netsnmp_transport *transport);
+NETSNMP_IMPORT
 int netsnmp_sockaddr_size(const struct sockaddr *sa);
 
 

@@ -20,6 +20,9 @@
 #if HAVE_IO_H
 #include <io.h>
 #endif
+#ifdef HAVE_SPAWN_H
+#include <spawn.h>
+#endif
 #include <stdio.h>
 #if HAVE_STDLIB_H
 #include <stdlib.h>
@@ -409,68 +412,59 @@ get_exec_output(struct extensible *ex)
 #endif /* !defined(USING_UTILITIES_EXECUTE_MODULE) */
     return -1;
 }
-int
-get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
+
+/*
+ * Split @cmd into words and return an array with pointers to these words.
+ * Store a pointer to the split command string into *@args. The caller must
+ * free both *@args and the returned pointer.
+ */
+static NETSNMP_ATTRIBUTE_UNUSED char **
+parse_cmd(char **args, const char *cmd)
 {
-#if defined(HAVE_EXECV) && defined(__uClinux__)
-    int in, out;
-    char fifo_in_path[256];
-    char fifo_out_path[256];
-    pid_t tpid;
+    int             i, cnt;
+    const char     *cptr1;
+    char           *cptr2, **argv, **aptr;
 
-    /*
-     * Alexander Prömel, alexander@proemel.de 08/24/2006. The following code,
-     * is tested on picotux rev. 1.01.  I think, it will be better to put the
-     * named pipes, into /var/run or make it selectable via CONFIG file. If
-     * the pipe file already exist, the creation will fail. I put the pipes
-     * into /flash, the pipepath has to change in ucd-snmp/pass_persist.c
-     * too, if you change it here.
-     */
-    if ((tpid = vfork()) == 0) {
-        /* child */
-        execve(cmd, NULL,NULL);
-        perror(cmd);
-        exit(1);
-    } else if (tpid > 0) {
-        /* parent */
-        snprintf(fifo_in_path, sizeof(fifo_in_path), "/flash/cp_%d", tpid);
-        snprintf(fifo_out_path, sizeof(fifo_out_path), "/flash/pc_%d", tpid);
-
-        in = mkfifo(fifo_in_path, S_IRWXU);	/*Create Input Pipe, 700*/
-        if (in) {
-            perror("parent: inpipe");
-            return 0;
+    *args = strdup(cmd);
+    if (!*args)
+        return NULL;
+    for (cnt = 1, cptr1 = cmd, cptr2 = *args; *cptr1 != '\0';
+         cptr2++, cptr1++) {
+        *cptr2 = *cptr1;
+        if (*cptr1 == ' ') {
+            *cptr2++ = '\0';
+            cptr1 = skip_white_const(cptr1);
+            if (!cptr1)
+                break;
+            *cptr2 = *cptr1;
+            if (*cptr1)
+                cnt++;
         }
-        out = mkfifo(fifo_out_path, S_IRWXU);	/*Create Output Pipe, 700*/
-        if (out) {
-            perror("parent: outpipe");
-            return 0;
-        }
-
-        in = open(fifo_in_path,O_RDONLY);	/*open the Input Pipe read Only*/
-        if (in < 0) {
-            perror("parent: input");
-            return 0;
-        }
-        out = open(fifo_out_path,O_WRONLY); 	/*open the Output Pipe write Only*/
-        if (out < 0) {
-            perror("parent: output");
-            return 0;
-        }
-
-        *fdIn = in;	/*read*/
-        *fdOut = out;	/*write*/
-        *pid = tpid;
-        return 1;
-    } else {
-        /* pid < 0 */
-        setPerrorstatus("vfork");
-        return 0;
     }
-#elif defined(HAVE_EXECV)
-    int             fd[2][2], i, cnt;
-    char            ctmp[STRMAX], *cptr1, *cptr2, argvs[STRMAX], **argv,
-        **aptr;
+    argv = malloc((cnt + 1) * sizeof(argv[0]));
+    if (argv == NULL) {
+        free(*args);
+        return NULL;
+    }
+    aptr = argv;
+    *aptr++ = *args;
+    for (cptr2 = *args, i = 1; i != cnt; cptr2++) {
+        if (*cptr2 == '\0') {
+            *aptr++ = cptr2 + 1;
+            i++;
+        }
+    }
+    *aptr++ = NULL;
+    return argv;
+}
+
+#if defined(HAVE_EXECV)
+static int
+get_exec_pipes_fork(const char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
+{
+    int             fd[2][2];
+    char           **argv, *args;
+
     /*
      * Setup our pipes 
      */
@@ -481,15 +475,13 @@ get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
     if ((*pid = fork()) == 0) { /* First handle for the child */
         close(fd[0][1]);
         close(fd[1][0]);
-        close(0);
-        if (dup(fd[0][0]) != 0) {
-            setPerrorstatus("dup 0");
+        if (dup2(fd[0][0], STDIN_FILENO) < 0) {
+            setPerrorstatus("dup stdin");
             return 0;
         }
         close(fd[0][0]);
-        close(1);
-        if (dup(fd[1][1]) != 1) {
-            setPerrorstatus("dup 1");
+        if (dup2(fd[1][1], STDOUT_FILENO) < 0) {
+            setPerrorstatus("dup stdout");
             return 0;
         }
         close(fd[1][1]);
@@ -500,39 +492,19 @@ get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
         /*
          * close all non-standard open file descriptors 
          */
-        netsnmp_close_fds(1);
-        NETSNMP_IGNORE_RESULT(dup(1));  /* stderr */
+        netsnmp_close_fds(STDOUT_FILENO);
+        NETSNMP_IGNORE_RESULT(dup2(STDOUT_FILENO, STDERR_FILENO));
 
-        for (cnt = 1, cptr1 = cmd, cptr2 = argvs; *cptr1 != 0;
-             cptr2++, cptr1++) {
-            *cptr2 = *cptr1;
-            if (*cptr1 == ' ') {
-                *(cptr2++) = 0;
-                if ((cptr1 = skip_white(cptr1)) == NULL)
-                    break;
-                *cptr2 = *cptr1;
-                if (*cptr1 != 0)
-                    cnt++;
-            }
+        argv = parse_cmd(&args, cmd);
+        if (!argv) {
+            DEBUGMSGTL(("util_funcs", "get_exec_pipes(): argv == NULL\n"));
+            return 0;
         }
-        *cptr2 = 0;
-        *(cptr2 + 1) = 0;
-        argv = (char **) malloc((cnt + 2) * sizeof(char *));
-        if (argv == NULL)
-            return 0;           /* memory alloc error */
-        aptr = argv;
-        *(aptr++) = argvs;
-        for (cptr2 = argvs, i = 1; i != cnt; cptr2++)
-            if (*cptr2 == 0) {
-                *(aptr++) = cptr2 + 1;
-                i++;
-            }
-        while (*cptr2 != 0)
-            cptr2++;
-        *(aptr++) = NULL;
-        copy_nword(cmd, ctmp, sizeof(ctmp));
-        execv(ctmp, argv);
-        perror(ctmp);
+        DEBUGMSGTL(("util_funcs", "get_exec_pipes(): argv[0] = %s\n", argv[0]));
+        execv(argv[0], argv);
+        perror(argv[0]);
+        free(argv);
+        free(args);
         exit(1);
     } else {
         close(fd[0][0]);
@@ -547,7 +519,75 @@ get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
         *fdOut = fd[0][1];
         return (1);             /* We are returning 0 for error... */
     }
-#elif defined(HAVE__GET_OSFHANDLE) && defined(HAVE__OPEN_OSFHANDLE)
+}
+#endif
+
+#if defined(HAVE_POSIX_SPAWN)
+static int
+NETSNMP_ATTRIBUTE_UNUSED
+get_exec_pipes_spawn(const char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
+{
+    int             fd[2][2], spawn_res;
+    char           **argv, *args;
+    posix_spawnattr_t attr;
+    posix_spawn_file_actions_t file_actions;
+
+    argv = parse_cmd(&args, cmd);
+    if (!argv) {
+        DEBUGMSGTL(("util_funcs", "get_exec_pipes(): argv == NULL\n"));
+        goto err;
+    }
+    if (pipe(fd[0])) {
+        setPerrorstatus("pipe 0");
+        goto free_argv;
+    }
+    if (pipe(fd[1])) {
+        setPerrorstatus("pipe 1");
+        goto close_pipe_0;
+    }
+    posix_spawnattr_init(&attr);
+    posix_spawn_file_actions_init(&file_actions);
+    posix_spawn_file_actions_addclose(&file_actions, fd[0][1]);
+    posix_spawn_file_actions_addclose(&file_actions, fd[1][0]);
+    posix_spawn_file_actions_adddup2(&file_actions,  fd[0][0], STDIN_FILENO);
+    posix_spawn_file_actions_addclose(&file_actions, fd[0][0]);
+    posix_spawn_file_actions_adddup2(&file_actions,  fd[1][1], STDOUT_FILENO);
+    posix_spawn_file_actions_addclose(&file_actions, fd[1][1]);
+    posix_spawn_file_actions_adddup2(&file_actions,  STDOUT_FILENO,
+                                     STDERR_FILENO);
+    spawn_res = posix_spawn(pid, argv[0], &file_actions, &attr, argv, NULL);
+    posix_spawn_file_actions_destroy(&file_actions);
+    posix_spawnattr_destroy(&attr);
+    if (spawn_res != 0) {
+        setPerrorstatus("posix_spawn");
+        goto close_pipe_1;
+    }
+    close(fd[0][0]);
+    close(fd[1][1]);
+    *fdIn = fd[1][0];
+    *fdOut = fd[0][1];
+    return 1;
+
+close_pipe_1:
+    close(fd[1][0]);
+    close(fd[1][1]);
+
+close_pipe_0:
+    close(fd[0][0]);
+    close(fd[0][1]);
+
+free_argv:
+    free(argv);
+
+err:
+    return 0;
+}
+#endif
+
+#if defined(HAVE__GET_OSFHANDLE) && defined(HAVE__OPEN_OSFHANDLE)
+static int
+get_exec_pipes_win32(const char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
+{
     /* MSVC and MinGW32. Cygwin has execv() and fork(). */
     /* Reference:  MS tech note: 190351 */
     HANDLE hInputWriteTmp, hInputRead, hInputWrite = NULL;
@@ -642,7 +682,8 @@ get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
     /* Launch the process that you want to redirect.  Example snmpd.conf pass_persist:
      * pass_persist    .1.3.6.1.4.1.2021.255  c:/perl/bin/perl c:/temp/pass_persisttest
     */
-    if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+    if (!CreateProcess(NULL, NETSNMP_REMOVE_CONST(char *, cmd), NULL, NULL,
+		       TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
         DEBUGMSGTL(("util_funcs","get_exec_pipes CreateProcess:'%s' %d\n", cmd,
                     (unsigned int)GetLastError()));
         CloseHandle(hErrorWrite);
@@ -688,7 +729,21 @@ get_exec_pipes(char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
       return 0;
     }
     return 1;
+}
 #endif                          /* WIN32 */
+
+int
+get_exec_pipes(const char *cmd, int *fdIn, int *fdOut, netsnmp_pid_t *pid)
+{
+#if defined(HAVE_EXECV)
+    return get_exec_pipes_fork(cmd, fdIn, fdOut, pid);
+#elif defined(HAVE_POSIX_SPAWN)
+    return get_exec_pipes_fork(cmd, fdIn, fdOut, pid);
+#elif defined(HAVE__GET_OSFHANDLE) && defined(HAVE__OPEN_OSFHANDLE)
+    return get_exec_pipes_win32(cmd, fdIn, fdOut, pid);
+#endif
+    DEBUGMSGTL(("util_funcs",
+                "get_exec_pipes() has not yet been implemented for this platform"));
     return 0;
 }
 

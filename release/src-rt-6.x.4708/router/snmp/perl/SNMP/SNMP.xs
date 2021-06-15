@@ -2605,6 +2605,7 @@ snmp_new_v3_session(version, peer, retries, timeout, sec_name, sec_level, sec_en
 	   SnmpSession session = {0};
 	   void *ss = NULL;
            int verbose = SvIV(perl_get_sv("SNMP::verbose", 0x01 | 0x04));
+           int auth_type, priv_type;
 
            snmp_sess_init(&session);
 
@@ -2636,25 +2637,25 @@ snmp_new_v3_session(version, peer, retries, timeout, sec_name, sec_level, sec_en
                              (char **) &session.contextEngineID);
            session.engineBoots = eng_boots;
            session.engineTime = eng_time;
-#ifndef NETSNMP_DISABLE_MD5
-           if (!strcmp(auth_proto, "MD5")) {
-               session.securityAuthProto = 
-                  snmp_duplicate_objid(usmHMACMD5AuthProtocol,
-                                          OID_LENGTH(usmHMACMD5AuthProtocol));
-              session.securityAuthProtoLen = OID_LENGTH(usmHMACMD5AuthProtocol);
-           } else
-#endif
-               if (!strcmp(auth_proto, "SHA")) {
-               session.securityAuthProto = 
-                   snmp_duplicate_objid(usmHMACSHA1AuthProtocol,
-                                        OID_LENGTH(usmHMACSHA1AuthProtocol));
-              session.securityAuthProtoLen = OID_LENGTH(usmHMACSHA1AuthProtocol);
-           } else if (!strcmp(auth_proto, "DEFAULT")) {
+           /* NETSNMP_USMAUTH_* */
+           auth_type = usm_lookup_auth_type(auth_proto);
+           if (auth_type >= 0) {
+               const netsnmp_auth_alg_info *auth_alg_info =
+                   sc_find_auth_alg_bytype(auth_type);
+               if (auth_alg_info) {
+                   session.securityAuthProto = 
+                       snmp_duplicate_objid(auth_alg_info->alg_oid,
+                                            auth_alg_info->oid_len);
+                   session.securityAuthProtoLen = auth_alg_info->oid_len;
+               }
+           }
+           if (strcmp(auth_proto, "DEFAULT") == 0) {
                const oid *theoid =
                    get_default_authtype(&session.securityAuthProtoLen);
                session.securityAuthProto = 
                    snmp_duplicate_objid(theoid, session.securityAuthProtoLen);
-           } else {
+           }
+           if (session.securityAuthProto == NULL) {
               if (verbose)
                  warn("error:snmp_new_v3_session:Unsupported authentication protocol(%s)\n", auth_proto);
               goto end;
@@ -2686,25 +2687,24 @@ snmp_new_v3_session(version, peer, retries, timeout, sec_name, sec_level, sec_en
                    }
                }
            }
-#ifndef NETSNMP_DISABLE_DES
-           if (!strcmp(priv_proto, "DES")) {
-              session.securityPrivProto =
-                  snmp_duplicate_objid(usmDESPrivProtocol,
-                                       OID_LENGTH(usmDESPrivProtocol));
-              session.securityPrivProtoLen = OID_LENGTH(usmDESPrivProtocol);
-           } else
-#endif
-               if (!strncmp(priv_proto, "AES", 3)) {
-              session.securityPrivProto =
-                  snmp_duplicate_objid(usmAESPrivProtocol,
-                                       OID_LENGTH(usmAESPrivProtocol));
-              session.securityPrivProtoLen = OID_LENGTH(usmAESPrivProtocol);
-           } else if (!strcmp(priv_proto, "DEFAULT")) {
+           priv_type = usm_lookup_priv_type(priv_proto);
+           if (priv_type >= 0) {
+               const netsnmp_priv_alg_info *priv_alg_info =
+                   sc_get_priv_alg_bytype(priv_type);
+               if (priv_alg_info) {
+                   session.securityPrivProto =
+                       snmp_duplicate_objid(priv_alg_info->alg_oid,
+                                            priv_alg_info->oid_len);
+                   session.securityPrivProtoLen = priv_alg_info->oid_len;
+               }
+           }
+           if (strcmp(priv_proto, "DEFAULT") == 0) {
                const oid *theoid =
                    get_default_privtype(&session.securityPrivProtoLen);
                session.securityPrivProto = 
                    snmp_duplicate_objid(theoid, session.securityPrivProtoLen);
-           } else {
+           }
+           if (session.securityPrivProto == NULL) {
               if (verbose)
                  warn("error:snmp_new_v3_session:Unsupported privacy protocol(%s)\n", priv_proto);
               goto end;
@@ -5190,11 +5190,11 @@ snmp_mib_node_FETCH(tp_ref, key)
                     mib_hv = perl_get_hv("SNMP::MIB", FALSE);
                     if (SvMAGICAL(mib_hv)) mg = mg_find((SV*)mib_hv, 'P');
                     if (mg) mib_tied_href = (SV*)mg->mg_obj;
-                    next_node_href = newRV((SV*)newHV());
                     __tp_sprint_num_objid(str_buf, tp);
                     nn_hrefp = hv_fetch((HV*)SvRV(mib_tied_href),
                                         str_buf, strlen(str_buf), 1);
                     if (!SvROK(*nn_hrefp)) {
+                       next_node_href = newRV((SV*)newHV());
                        sv_setsv(*nn_hrefp, next_node_href);
                        ENTER ;
                        SAVETMPS ;
@@ -5319,11 +5319,11 @@ snmp_mib_node_FETCH(tp_ref, key)
                  mib_hv = perl_get_hv("SNMP::MIB", FALSE);
                  if (SvMAGICAL(mib_hv)) mg = mg_find((SV*)mib_hv, 'P');
                  if (mg) mib_tied_href = (SV*)mg->mg_obj;
-                 next_node_href = newRV((SV*)newHV());
                  __tp_sprint_num_objid(str_buf, tp);
                  nn_hrefp = hv_fetch((HV*)SvRV(mib_tied_href),
                                      str_buf, strlen(str_buf), 1);
                  if (!SvROK(*nn_hrefp)) {
+                 next_node_href = newRV((SV*)newHV());
                  sv_setsv(*nn_hrefp, next_node_href);
                  ENTER ;
                  SAVETMPS ;
@@ -5434,14 +5434,14 @@ MODULE = SNMP	PACKAGE = SnmpSessionPtr	PREFIX = snmp_session_
 
 void
 snmp_session_DESTROY(sess_ptr)
-	void *sess_ptr
+	SnmpSession *sess_ptr
 	CODE:
 	{
 	if(sess_ptr != NULL)
 	{
  	 if(api_mode == SNMP_API_SINGLE)
 	 {
-           snmp_sess_close( sess_ptr );
+           snmp_sess_close( (struct session_list *) sess_ptr );
 	 } else { 
            snmp_close( sess_ptr );
 	 }
