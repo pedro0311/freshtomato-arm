@@ -157,10 +157,9 @@ static void build_nginx_conf(void)
 	mkdir_if_none(nginxdir);
 	if ((nginx_conf_file = fopen(nginxconf, "w")) == NULL) {
 		simple_unlock(nginxconf);
+		perror(nginxconf);
 		return;
 	}
-
-	//syslog(LOG_INFO, "nginx - started writing config file %s", nginxconf);
 
 	i = nvram_get_int("nginx_priority");
 	if ((i <= -20) || (i >= 19))
@@ -304,14 +303,14 @@ static void build_nginx_conf(void)
 		                     nvram_safe_get("nginx_phpconf"));
 
 		fclose(phpini_file);
-
-		syslog(LOG_INFO, "nginx - php.ini file built succesfully");
 	}
 }
 
 /* start the nginx module according environment directives */
 void start_nginx(void)
 {
+	int ret;
+
 	if (fastpath != 1) {
 		if (!nvram_match("nginx_enable", "1"))
 			return;
@@ -337,8 +336,12 @@ void start_nginx(void)
 			build_nginx_conf();
 	}
 
-	/* create log directory before start daemon (if does not exist) */
-	xstart("mkdir", "-p", nginxlogdir);
+	/* create directories before starting daemon */
+	mkdir_if_none(nginxlogdir);
+	mkdir_if_none(client_body_temp_path);
+	mkdir_if_none(fastcgi_temp_path);
+	mkdir_if_none(uwsgi_temp_path);
+	mkdir_if_none(scgi_temp_path);
 
 	if (nvram_match("nginx_php", "1"))
 		/* run spawn-fcgi */
@@ -346,17 +349,15 @@ void start_nginx(void)
 	else
 		killall_tk_period_wait("php-cgi", 50);
 
-	mkdir_if_none(client_body_temp_path);
-	mkdir_if_none(fastcgi_temp_path);
-	mkdir_if_none(uwsgi_temp_path);
-	mkdir_if_none(scgi_temp_path);
-
 	if (nvram_match("nginx_override", "1"))
-		xstart(nginxbin, "-c", nvram_safe_get("nginx_overridefile"));
+		ret = eval(nginxbin, "-c", nvram_safe_get("nginx_overridefile"));
 	else
-		xstart(nginxbin, "-c", nginxconf);
+		ret = eval(nginxbin, "-c", nginxconf);
 
-	syslog(LOG_INFO, "nginx - running daemon");
+	if (ret)
+		syslog(LOG_ERR, "starting nginx failed - check configuration ...");
+	else
+		syslog(LOG_INFO, "nginx is started");
 }
 
 /* start nginx using fastpath method no checks */
