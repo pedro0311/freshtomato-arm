@@ -1802,7 +1802,7 @@ void start_igmp_proxy(void)
 
 	pid_igmp = -1;
 	if (nvram_get_int("multicast_pass")) {
-		int ret = 0;
+		int ret = 1;
 
 		if (f_exists("/etc/igmp.alt"))
 			ret = eval("igmpproxy", "/etc/igmp.alt");
@@ -2022,12 +2022,12 @@ void start_ntpd(void)
 		free(servers);
 
 		if (ntp_updates_int == 0) /* only at startup, then quit */
-			xstart("ntpd", "-q", "-t");
+			eval("/usr/sbin/ntpd", "-q", "-t");
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 			if (nvram_get_int("ntpd_enable"))
-				ret = xstart("ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced");
+				ret = eval("/usr/sbin/ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced");
 			else
-				ret = xstart("ntpd", "-t", "-S", "/sbin/ntpd_synced");
+				ret = eval("/usr/sbin/ntpd", "-t", "-S", "/sbin/ntpd_synced");
 
 			if (!ret)
 				logmsg(LOG_INFO, "ntpd is started");
@@ -2415,9 +2415,9 @@ static void start_ftpd(void)
 
 	/* start vsftpd if it's not already running */
 	if (pidof("vsftpd") <= 0) {
-		int ret = 0;
+		int ret;
 
-		ret = xstart("vsftpd");
+		ret = eval("vsftpd");
 		if (ret)
 			logmsg(LOG_ERR, "starting vsftpd failed ...");
 		else
@@ -3945,7 +3945,7 @@ void stop_service(const char *name)
 #ifdef TCONFIG_BCMBSD
 int start_bsd(void)
 {
-	int ret = 0;
+	int ret;
 
 	stop_bsd();
 
