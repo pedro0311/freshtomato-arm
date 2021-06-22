@@ -37,7 +37,7 @@
 +		workgroup[0] = '\0';
 +	}
  
-+	if (!(fp = fopen("/etc/smb.conf","r"))) {
++	if (!(fp = fopen("/etc/smb.conf", "r"))) {
 +		ep->_errno = errno;
 +		ep->errstr = __FUNCTION__ ": Can't access smb.conf";
 +		goto exit;
@@ -45,9 +45,9 @@
 +
 +	while (fgets(buf, sizeof(buf), fp) && (!*netbiosname || !*workgroup)) {
 +		if (!*workgroup)
-+			sscanf(buf, "workgroup = %14[^\n]s", workgroup);
++			sscanf(buf, " workgroup = %14[^\n]s", workgroup);
 +		if (!*netbiosname)
-+			sscanf(buf, "netbios name = %16[^\n]s", netbiosname);
++			sscanf(buf, " netbios name = %16[^\n]s", netbiosname);
 +	}
 +	fclose(fp);
 +
