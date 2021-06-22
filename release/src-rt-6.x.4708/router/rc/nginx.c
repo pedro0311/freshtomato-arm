@@ -110,6 +110,7 @@ static void build_mime_types(void)
 	                        "image/x-icon\t\t\t\tico;\n"
 	                        "image/x-jng\t\t\t\tjng;\n"
 	                        "image/vnd.wap.wbmp\t\t\twbmp;\n"
+	                        "image/svg+xml svg svgz;\n"
 	                        "application/java-archive\t\tjar war ear;\n"
 	                        "application/mac-binhex40\t\thqx;\n"
 	                        "application/pdf\t\t\t\tpdf;\n"
