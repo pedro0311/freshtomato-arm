@@ -60,7 +60,6 @@ static void build_fastcgi_conf(void)
 	/* Starting a fastcgi configuration file */
 	mkdir_if_none(nginxdir);
 	if ((fastcgi_conf_file = fopen(fastcgiconf, "w")) == NULL) {
-		simple_unlock(fastcgiconf);
 		return;
 	}
 
@@ -92,7 +91,6 @@ static void build_mime_types(void)
 	/* Starting the mime.types configuration file */
 	mkdir_if_none(nginxdir);
 	if ((mimetypes_file = fopen(mimetypes, "w")) == NULL) {
-		simple_unlock(mimetypes);
 		return;
 	}
 
@@ -157,7 +155,6 @@ static void build_nginx_conf(void)
 	/* Starting the nginx configuration file */
 	mkdir_if_none(nginxdir);
 	if ((nginx_conf_file = fopen(nginxconf, "w")) == NULL) {
-		simple_unlock(nginxconf);
 		perror(nginxconf);
 		return;
 	}
@@ -188,7 +185,7 @@ static void build_nginx_conf(void)
 	                         "include %s;\n"
 	                         "include %s;\n"
 	                         "default_type application/octet-stream;\n"
-	                         "log_format   main '$remote_addr - $remote_user [$time_local]  $status '\n"
+	                         "log_format main '$remote_addr - $remote_user [$time_local] $status'\n"
 	                         "'\"$request\" $body_bytes_sent \"$http_referer\" '\n"
 	                         "'\"$http_user_agent\" \"$http_x_forwarded_for\"';\n"
 	                         "sendfile %s;\n"
@@ -241,7 +238,7 @@ static void build_nginx_conf(void)
 		buf = nginxdocrootdir;
 
 	fprintf(nginx_conf_file, "root %s;\n"
-	                         "index index.html index.htm index.php;\n"
+	                         "index index.html index.htm index.php /_h5ai/public/index.php;\n"
 	                         /* error pages section */
 	                         "error_page 404 /404.html;\n"
 	                         "error_page 500 502 503 504 /50x.html;\n"
