@@ -162,6 +162,8 @@ void wlconf_pre(void)
 static void set_lan_hostname(const char *wan_hostname)
 {
 	const char *s;
+	char *lan_hostname;
+	char hostname[16];
 	FILE *f;
 
 	nvram_set("lan_hostname", wan_hostname);
@@ -169,10 +171,8 @@ static void set_lan_hostname(const char *wan_hostname)
 		/* derive from et0 mac address */
 		s = nvram_get("et0macaddr");
 		if (s && strlen(s) >= 17) {
-			char hostname[16];
-			sprintf(hostname, "RT-%c%c%c%c%c%c%c%c%c%c%c%c",
-				s[0], s[1], s[3], s[4], s[6], s[7],
-				s[9], s[10], s[12], s[13], s[15], s[16]);
+			sprintf(hostname, "FT-%c%c%c%c%c%c%c%c%c%c%c%c",
+			        s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
 
 			if ((f = fopen("/proc/sys/kernel/hostname", "w"))) {
 				fputs(hostname, f);
@@ -182,25 +182,29 @@ static void set_lan_hostname(const char *wan_hostname)
 		}
 	}
 
+	lan_hostname = nvram_safe_get("lan_hostname");
 	if ((f = fopen("/etc/hosts", "w"))) {
-		fprintf(f, "127.0.0.1  localhost\n");
+		fprintf(f, "127.0.0.1 localhost\n");
+
 		if ((s = nvram_get("lan_ipaddr")) && (*s))
-			fprintf(f, "%s  %s %s-lan\n", s, nvram_safe_get("lan_hostname"), nvram_safe_get("lan_hostname"));
-		if ((s = nvram_get("lan1_ipaddr")) && (*s) && (strcmp(s,"") != 0))
-			fprintf(f, "%s  %s-lan1\n", s, nvram_safe_get("lan_hostname"));
-		if ((s = nvram_get("lan2_ipaddr")) && (*s) && (strcmp(s,"") != 0))
-			fprintf(f, "%s  %s-lan2\n", s, nvram_safe_get("lan_hostname"));
-		if ((s = nvram_get("lan3_ipaddr")) && (*s) && (strcmp(s,"") != 0))
-			fprintf(f, "%s  %s-lan3\n", s, nvram_safe_get("lan_hostname"));
+			fprintf(f, "%s %s %s-lan\n", s, lan_hostname, lan_hostname);
+		if ((s = nvram_get("lan1_ipaddr")) && (*s) && (strcmp(s, "") != 0))
+			fprintf(f, "%s %s-lan1\n", s, lan_hostname);
+		if ((s = nvram_get("lan2_ipaddr")) && (*s) && (strcmp(s, "") != 0))
+			fprintf(f, "%s %s-lan2\n", s, lan_hostname);
+		if ((s = nvram_get("lan3_ipaddr")) && (*s) && (strcmp(s, "") != 0))
+			fprintf(f, "%s %s-lan3\n", s, lan_hostname);
 #ifdef TCONFIG_IPV6
 		if (ipv6_enabled()) {
-			fprintf(f, "::1  localhost\n");
+			fprintf(f, "::1 localhost ip6-localhost ip6-loopback\n");
 			s = ipv6_router_address(NULL);
-			if (*s) fprintf(f, "%s  %s\n", s, nvram_safe_get("lan_hostname"));
+			if (*s)
+				fprintf(f, "%s %s\n", s, lan_hostname);
 		}
 #endif
 		fclose(f);
-	}
+	} else
+		perror("/etc/hosts");
 }
 
 void set_host_domain_name(void)
