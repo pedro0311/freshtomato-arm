@@ -1,0 +1,10 @@
+--- getdns/stubby/src/yaml/convert_yaml_to_json.c
++++ getdns/stubby/src/yaml/convert_yaml_to_json.c
+@@ -68,6 +68,7 @@
+ 	"dnssec_trust_anchors",
+ 	"tls_auth_name",
+ 	"digest",
++	"resolvconf",
+ 	NULL
+ };
+ 
