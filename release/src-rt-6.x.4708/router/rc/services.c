@@ -2025,9 +2025,9 @@ void start_ntpd(void)
 			eval("/usr/sbin/ntpd", "-q", "-t");
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 			if (nvram_get_int("ntpd_enable"))
-				ret = eval("/usr/sbin/ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d" : NULL);
+				ret = eval("/usr/sbin/ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
 			else
-				ret = eval("/usr/sbin/ntpd", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d" : NULL);
+				ret = eval("/usr/sbin/ntpd", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
 
 			if (!ret)
 				logmsg(LOG_INFO, "ntpd is started");
