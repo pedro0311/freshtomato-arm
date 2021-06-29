@@ -27,7 +27,7 @@
 var cprefix = 'advanced_dhcpdns';
 var height = 0;
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};
