@@ -281,6 +281,10 @@ extern void stop_bsd(void);
 extern void start_samba(void);
 extern void stop_samba(void);
 #endif /* TCONFIG_SAMBASRV */
+#ifdef TCONFIG_MDNS
+extern void start_mdns(void);
+extern void stop_mdns(void);
+#endif /* TCONFIG_MDNS */
 
 /* usb.c */
 #ifdef TCONFIG_USB

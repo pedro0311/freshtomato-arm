@@ -330,6 +330,11 @@ ifneq ($(TCONFIG_MIPSR2),y)
 endif
 endif
 
+# Only include the mdns option if it is compiled in
+ifneq ($(TCONFIG_IPERF),y)
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/MDNS-BEGIN/,/MDNS-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \

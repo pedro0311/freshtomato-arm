@@ -714,6 +714,11 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				, 0 },
 #endif
+#ifdef TCONFIG_MDNS
+	{ "mdns_enable",		"0"				, 0 },
+	{ "mdns_reflector",		"1"				, 0 },
+	{ "mdns_debug",			"0"				, 0 },
+#endif
 
 /* advanced-firewall */
 	{ "nf_loopback",		"0"				, 0 },
