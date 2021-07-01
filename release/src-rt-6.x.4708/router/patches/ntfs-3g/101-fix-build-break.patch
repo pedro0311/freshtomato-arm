@@ -1,0 +1,17 @@
+--- ntfs-3g/configure.ac
++++ ntfs-3g/configure.ac
+@@ -334,14 +334,6 @@
+ compile_crypto=false
+ if test "$enable_crypto" != "no"; then
+ 	have_libgcrypt=false
+-	AM_PATH_LIBGCRYPT(1.2.2, [ have_libgcrypt=true ],
+-	[
+-		if test "$enable_crypto" = "yes"; then
+-			AC_MSG_ERROR([ntfsprogs crypto code requires the gcrypt library.])
+-		else
+-			AC_MSG_WARN([ntfsprogs crypto code requires the gcrypt library.])
+-		fi
+-	])
+ 	have_libgnutls=false
+ 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.4, [ have_libgnutls=true ],
+ 		if test "$enable_crypto" = "yes"; then

@@ -172,12 +172,12 @@ function earlyInit() {
 <div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
-		<li><b>Adblock</b> - Autoupdate will be randomly launch between 2:00-2.59 AM every day</li>
+		<li><b>Adblock</b> - Autoupdate will be launched randomly between 2:00 and 2.59 AM every day</li>
 		<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog</li>
-		<li><b>Blacklist URL</b> - Correct file format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, one domain per line</li>
+		<li><b>Blacklist URL</b> - Correct entry format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, with one domain per line</li>
 		<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com</li>
 		<li><b>Whitelist</b> - Optional, space separated: domain1.com domain2.com domain3.com</li>
-		<li><b style="text-decoration:underline">Caution!</b> - Adblock having too many large blocklists configured may crash the router, as it exhausted all available system memory.</li>
+		<li><b style="text-decoration:underline">Caution!</b> - Configuring too many large blocklists in Adblock may crash the router, as it can exhaust all available system memory</li>
 	</ul>
 </div>
 

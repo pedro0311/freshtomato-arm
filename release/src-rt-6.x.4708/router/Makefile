@@ -269,6 +269,12 @@ obj-y += libnetfilter_queue
 obj-y += conntrack-tools
 endif
 
+ifeq ($(TCONFIG_MDNS),y)
+obj-y += libdaemon
+obj-y += expat
+obj-y += avahi
+endif
+
 
 #
 # configurable packages
@@ -1309,7 +1315,8 @@ ufsd-netgear-install:
 	@$(MAKE) -C ufsd-netgear install INSTALLDIR=$(INSTALLDIR)/ufsd-netgear
 
 ntfs-3g/Makefile:
-	cd ntfs-3g && \
+	$(call patch_files,ntfs-3g)
+	cd ntfs-3g && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --enable-shared=no --enable-static=no \
@@ -1324,6 +1331,7 @@ ntfs-3g: ntfs-3g/Makefile
 ntfs-3g-clean:
 	-@$(MAKE) -C ntfs-3g clean
 	@rm -f ntfs-3g/Makefile
+	$(call unpatch_files,ntfs-3g)
 
 ntfs-3g-install:
 	install -D ntfs-3g/src/ntfs-3g $(INSTALLDIR)/ntfs-3g/bin/ntfs-3g
@@ -3219,13 +3227,97 @@ diskdev_cmds-332.25-clean:
 	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfs
 	$(call unpatch_files,diskdev_cmds-332.25)
 
+libdaemon/stamp-h1:
+	cd libdaemon && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr --disable-dependency-tracking ac_cv_func_setpgrp_void=yes
+	touch $@
+
+libdaemon: libdaemon/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/libdaemon/staged install
+
+libdaemon-install: libdaemon
+	install -D libdaemon/libdaemon/.libs/libdaemon.so.0.5.0 $(INSTALLDIR)/libdaemon/usr/lib/libdaemon.so.0.5.0
+	$(STRIP) $(INSTALLDIR)/libdaemon/usr/lib/*.so.*
+	cd $(INSTALLDIR)/libdaemon/usr/lib && \
+		ln -sf libdaemon.so.0.5.0 libdaemon.so && \
+		ln -sf libdaemon.so.0.5.0 libdaemon.so.0
+
+libdaemon-clean:
+	-@$(MAKE) -C libdaemon distclean
+	@rm -f libdaemon/stamp-h1
+
+expat/stamp-h1:
+	cd expat && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+		$(CONFIGURE) --prefix=/usr
+	touch $@
+
+expat: expat/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/expat/staged install
+
+expat-install: expat
+	install -D expat/.libs/libexpat.so.1.6.2 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.6.2
+	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.6.2
+	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.6.2 libexpat.so.1
+
+expat-clean:
+	-@$(MAKE) -C expat clean
+	@rm -f expat/stamp-h1
+
+avahi/stamp-h1:
+	$(call patch_files,avahi)
+	cd avahi && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/lib" \
+		LDFLAGS="-L$(TOP)/expat/.libs -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
+		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon $(EXTRALDFLAGS2)" \
+		$(CONFIGURE) \
+			--prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
+			--enable-introspection=no \
+			--disable-nls --disable-glib --disable-gobject \
+			--disable-qt3 --disable-qt4 --disable-gtk --disable-gtk3 \
+			--disable-dbus --disable-gdbm --disable-python --disable-python-dbus \
+			--disable-mono --disable-monodoc --disable-autoipd \
+			--disable-doxygen-doc --disable-manpages --disable-xmltoman \
+			--with-xml=expat \
+			--with-avahi-user="nobody" --with-avahi-group="nobody" \
+			--disable-stack-protector \
+			--disable-dependency-tracking \
+			avahi_runtime_dir=/var/run servicedir=/etc/avahi/services
+	@touch $@
+
+avahi: avahi/stamp-h1 expat libdaemon
+	@$(SEP)
+	@$(MAKE) $(PARALLEL_BUILD) -C $@
+
+avahi-install: avahi
+	install -D avahi/avahi-daemon/.libs/avahi-daemon $(INSTALLDIR)/avahi/usr/sbin/avahi-daemon
+	install -D avahi/avahi-common/.libs/libavahi-common.so.3.5.3 $(INSTALLDIR)/avahi/usr/lib/libavahi-common.so.3.5.3
+	install -D avahi/avahi-core/.libs/libavahi-core.so.7.0.2 $(INSTALLDIR)/avahi/usr/lib/libavahi-core.so.7.0.2
+	$(STRIP) $(INSTALLDIR)/avahi/usr/sbin/avahi-daemon
+	$(STRIP) $(INSTALLDIR)/avahi/usr/lib/libavahi-common.so.3.5.3
+	$(STRIP) $(INSTALLDIR)/avahi/usr/lib/libavahi-core.so.7.0.2
+	cd $(INSTALLDIR)/avahi/usr/lib && ln -sf libavahi-common.so.3.5.3 libavahi-common.so.3
+	cd $(INSTALLDIR)/avahi/usr/lib && ln -sf libavahi-core.so.7.0.2 libavahi-core.so.7
+
+avahi-clean:
+	[ ! -f avahi/stamp-h1 ] || $(MAKE) -C avahi distclean
+	@rm -f avahi/stamp-h1
+	$(call unpatch_files,avahi)
+
+
 #
 # Generic rules
 #
 
 %:
 	@[ ! -d $* ] || ( $(SEP); $(MAKE) -C $* )
-
 
 %-clean:
 	@-[ ! -d $* ] || $(MAKE) -C $* clean
@@ -3238,6 +3330,7 @@ diskdev_cmds-332.25-clean:
 
 %-build:
 	$(MAKE) $*-clean $*
+
 
 $(obj-y) $(obj-n) $(obj-clean) $(obj-install): dummy
 

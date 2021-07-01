@@ -42,7 +42,7 @@ var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi =
 var cprefix = 'status_overview';
 nphy = features('11n');
 
-var ref = new TomatoRefresh('status-data.jsx', '', 5, cprefix+'_refresh');
+var ref = new TomatoRefresh('status-data.jsx?_http_id=<% nv(http_id); %>', '', 5, cprefix+'_refresh');
 
 ref.refresh = function(text) {
 	stats = {};

@@ -26,7 +26,7 @@
 
 <script>
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};
@@ -39,7 +39,7 @@ up.refresh = function(text) {
 	show();
 }
 
-var upnp = new TomatoRefresh('upnp.jsx', '', 30);
+var upnp = new TomatoRefresh('upnp.jsx?_http_id=<% nv(http_id); %>', '', 30);
 
 upnp.refresh = function(text) {
 	try {

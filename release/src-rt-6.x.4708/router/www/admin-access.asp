@@ -24,7 +24,7 @@
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
 
 <script>
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};
@@ -408,7 +408,7 @@ function init() {
 				{ title: 'TTB theme name', indent: 2, name: 'ttb_css', type: 'text', maxlen: 25, size: 35, suffix: '&nbsp;<small>TTB theme <a href="http://tomatothemebase.eu/wp-content/uploads/themes.txt" class="new_window"><u><i>list<\/i><\/u><\/a> and full <a href="http://www.tomatothemebase.eu" class="new_window"><u><i>gallery<\/i><\/u><\/a><\/small>', value: nvram.ttb_css },
 /* USB-BEGIN */
 				{ title: 'TTB save folder', indent: 2, name: 'ttb_loc', type: 'text', maxlen: 35, size: 35, suffix: '&nbsp;/TomatoThemeBase <small>(optional)<\/small>', value: nvram.ttb_loc },
-				{ title: 'TTB URL', indent: 2, name: 'ttb_url', type: 'text', maxlen: 128, size: 70, value: nvram.ttb_url },
+				{ title: 'TTB URL', indent: 2, name: 'ttb_url', type: 'text', maxlen: 128, size: 70, suffix: '&nbsp;<small>(space separated)<\/small>', value: nvram.ttb_url },
 /* USB-END */
 			null,
 			{ title: 'Open Menus' }

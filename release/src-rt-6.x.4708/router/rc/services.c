@@ -49,25 +49,30 @@
 #include <dirent.h>
 #include <linux/version.h>
 
-#define ADBLOCK_EXE	"/usr/sbin/adblock"
-#define DNSMASQ_CONF	"/etc/dnsmasq.conf"
-#define RESOLV_CONF	"/etc/resolv.conf"
-#define IGMP_CONF	"/etc/igmp.conf"
-#define UPNP_DIR	"/etc/upnp"
+#define ADBLOCK_EXE		"/usr/sbin/adblock"
+#define DNSMASQ_CONF		"/etc/dnsmasq.conf"
+#define RESOLV_CONF		"/etc/resolv.conf"
+#define IGMP_CONF		"/etc/igmp.conf"
+#define UPNP_DIR		"/etc/upnp"
 #ifdef TCONFIG_ZEBRA
-#define ZEBRA_CONF	"/etc/zebra.conf"
-#define RIPD_CONF	"/etc/ripd.conf"
+#define ZEBRA_CONF		"/etc/zebra.conf"
+#define RIPD_CONF		"/etc/ripd.conf"
 #endif
 #ifdef TCONFIG_MEDIA_SERVER
 #define MEDIA_SERVER_APP	"minidlna"
 #endif
+#ifdef TCONFIG_MDNS
+#define AVAHI_CONFIG_PATH	"/etc/avahi"
+#define AVAHI_SERVICES_PATH	"/etc/avahi/services"
+#define AVAHI_CONFIG_FN		"avahi-daemon.conf"
+#endif /* TCONFIG_MDNS */
 
 /* needed by logmsg() */
-#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
-#define LOGMSG_NVDEBUG	"services_debug"
+#define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG		"services_debug"
 
-#define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
-#define IPV6_MIN_LIFETIME 120
+#define ONEMONTH_LIFETIME	(30 * 24 * 60 * 60)
+#define IPV6_MIN_LIFETIME	120
 
 /* The g_upgrade global variable is used to skip several unnecessary delay
  * and redundant steps during upgrade procedure.
@@ -848,6 +853,112 @@ void stop_stubby(void)
 	unlink("/var/run/stubby.pid");
 }
 #endif /* TCONFIG_STUBBY */
+
+#ifdef TCONFIG_MDNS
+void generate_mdns_config(void)
+{
+	FILE *fp;
+	char avahi_config[80];
+	char *wan2_ifname;
+#ifdef TCONFIG_MULTIWAN
+	char *wan3_ifname;
+	char *wan4_ifname;
+#endif
+
+	sprintf(avahi_config, "%s/%s", AVAHI_CONFIG_PATH, AVAHI_CONFIG_FN);
+
+	/* generate avahi configuration file */
+	if (!(fp = fopen(avahi_config, "w"))) {
+		perror(avahi_config);
+		return;
+	}
+
+	/* set [server] configuration */
+	fprintf(fp, "[Server]\n"
+	            "use-ipv4=yes\n"
+	            "use-ipv6=no\n"
+	            "deny-interfaces=%s",
+	            nvram_safe_get("wan_ifname"));
+
+	wan2_ifname = nvram_safe_get("wan2_ifname");
+	if (*wan2_ifname)
+		fprintf(fp, ",%s", wan2_ifname);
+
+#ifdef TCONFIG_MULTIWAN
+	wan3_ifname = nvram_safe_get("wan3_ifname");
+	if (*wan3_ifname)
+		fprintf(fp, ",%s", wan3_ifname);
+	wan4_ifname = nvram_safe_get("wan4_ifname");
+	if (*wan4_ifname)
+		fprintf(fp, ",%s", wan4_ifname);
+#endif
+
+	fprintf(fp, "\n"
+	            "ratelimit-interval-usec=1000000\n"
+	            "ratelimit-burst=1000\n");
+
+	/* set [publish] configuration */
+	fprintf(fp, "\n[publish]\n"
+	            "publish-hinfo=yes\n"
+	            "publish-a-on-ipv6=no\n"
+	            "publish-aaaa-on-ipv4=no\n");
+
+	/* set [reflector] configuration */
+	if (nvram_get_int("mdns_reflector")) {
+		fprintf(fp, "\n[reflector]\n"
+		            "enable-reflector=yes\n");
+	}
+
+	/* set [rlimits] configuration */
+	fprintf(fp, "\n[rlimits]\n"
+	            "rlimit-core=0\n"
+	            "rlimit-data=4194304\n"
+	            "rlimit-fsize=0\n"
+	            "rlimit-nofile=256\n"
+	            "rlimit-stack=4194304\n"
+	            "rlimit-nproc=3\n");
+
+	fclose(fp);
+}
+
+void start_mdns(void)
+{
+	if (g_upgrade)
+		return;
+
+	if (!nvram_get_int("mdns_enable"))
+		return;
+
+	if (getpid() != 1) {
+		start_service("mdns");
+		return;
+	}
+
+	stop_mdns();
+
+	mkdir_if_none(AVAHI_CONFIG_PATH);
+	mkdir_if_none(AVAHI_SERVICES_PATH);
+
+	/* alternative (user) configuration file */
+	if (f_exists(AVAHI_CONFIG_PATH"/avahi-daemon_alt.conf"))
+		eval("avahi-daemon", "-D", "-f", AVAHI_CONFIG_PATH"/avahi-daemon_alt.conf", (nvram_get_int("mdns_debug") ? "--debug" : NULL));
+	else {
+		generate_mdns_config();
+		eval("avahi-daemon", "-D", (nvram_get_int("mdns_debug") ? "--debug" : NULL));
+	}
+}
+
+void stop_mdns(void)
+{
+	if (pidof("avahi-daemon") > 0) {
+		if (getpid() != 1) {
+			stop_service("mdns");
+			return;
+		}
+		killall_tk_period_wait("avahi-daemon", 50);
+	}
+}
+#endif /* TCONFIG_MDNS */
 
 #ifdef TCONFIG_FANCTRL
 void start_phy_tempsense()
@@ -1802,7 +1913,7 @@ void start_igmp_proxy(void)
 
 	pid_igmp = -1;
 	if (nvram_get_int("multicast_pass")) {
-		int ret = 0;
+		int ret = 1;
 
 		if (f_exists("/etc/igmp.alt"))
 			ret = eval("igmpproxy", "/etc/igmp.alt");
@@ -2022,12 +2133,12 @@ void start_ntpd(void)
 		free(servers);
 
 		if (ntp_updates_int == 0) /* only at startup, then quit */
-			xstart("ntpd", "-q", "-t");
+			eval("/usr/sbin/ntpd", "-q", "-t");
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
 			if (nvram_get_int("ntpd_enable"))
-				ret = xstart("ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced");
+				ret = eval("/usr/sbin/ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
 			else
-				ret = xstart("ntpd", "-t", "-S", "/sbin/ntpd_synced");
+				ret = eval("/usr/sbin/ntpd", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
 
 			if (!ret)
 				logmsg(LOG_INFO, "ntpd is started");
@@ -2069,6 +2180,9 @@ int ntpd_synced_main(int argc, char *argv[])
 #endif
 #ifdef TCONFIG_OPENVPN
 		start_ovpn_eas();
+#endif
+#ifdef TCONFIG_MDNS
+		start_mdns();
 #endif
 	}
 
@@ -2415,9 +2529,9 @@ static void start_ftpd(void)
 
 	/* start vsftpd if it's not already running */
 	if (pidof("vsftpd") <= 0) {
-		int ret = 0;
+		int ret;
 
-		ret = xstart("vsftpd");
+		ret = eval("vsftpd");
 		if (ret)
 			logmsg(LOG_ERR, "starting vsftpd failed ...");
 		else
@@ -3037,6 +3151,9 @@ void start_services(void)
 	start_mmc();
 #endif
 	start_dnsmasq();
+#ifdef TCONFIG_MDNS
+	start_mdns();
+#endif
 	start_cifs();
 	start_httpd();
 #ifdef TCONFIG_NGINX
@@ -3129,6 +3246,9 @@ void stop_services(void)
 	stop_cifs();
 	stop_httpd();
 	stop_dnsmasq();
+#ifdef TCONFIG_MDNS
+	stop_mdns();
+#endif
 #ifdef TCONFIG_ZEBRA
 	stop_zebra();
 #endif
@@ -3234,6 +3354,14 @@ TOP:
 	if (strcmp(service, "stubby") == 0) {
 		if (act_stop) stop_stubby();
 		if (act_start) start_stubby();
+		goto CLEAR;
+	}
+#endif
+
+#ifdef TCONFIG_MDNS
+	if (strcmp(service, "mdns") == 0) {
+		if (act_stop) stop_mdns();
+		if (act_start) start_mdns();
 		goto CLEAR;
 	}
 #endif
@@ -3457,6 +3585,9 @@ TOP:
 				stop_ntpd();
 				stop_upnp();
 			}
+#ifdef TCONFIG_MDNS
+			stop_mdns();
+#endif
 			stop_syslog();
 #ifdef TCONFIG_USB
 			remove_storage_main(1);
@@ -3616,6 +3747,9 @@ TOP:
 #endif
 			stop_httpd();
 			stop_dnsmasq();
+#ifdef TCONFIG_MDNS
+			stop_mdns();
+#endif
 			stop_nas();
 			stop_wan();
 			stop_arpbind();
@@ -3628,6 +3762,9 @@ TOP:
 			start_arpbind();
 			start_nas();
 			start_dnsmasq();
+#ifdef TCONFIG_MDNS
+			start_mdns();
+#endif
 			start_httpd();
 			start_wl();
 #ifdef TCONFIG_USB
@@ -3945,7 +4082,7 @@ void stop_service(const char *name)
 #ifdef TCONFIG_BCMBSD
 int start_bsd(void)
 {
-	int ret = 0;
+	int ret;
 
 	stop_bsd();
 

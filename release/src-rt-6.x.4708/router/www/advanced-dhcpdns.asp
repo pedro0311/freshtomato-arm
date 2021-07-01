@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -27,7 +27,7 @@
 var cprefix = 'advanced_dhcpdns';
 var height = 0;
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};
@@ -102,6 +102,9 @@ function verifyFields(focused, quiet) {
 	                        );
 /* DNSSEC-END */
 /* STUBBY-END */
+/* MDNS-BEGIN */
+	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
+/* MDNS-END */
 
 	for (var a in vis) {
 		var b = E(a);
@@ -272,13 +275,13 @@ function save() {
 	else
 		fom._service.value = 'dnsmasq-restart'; /* always restart dnsmasq */
 
-	if ((fom.dns_intcpt.value != nvram.dns_intcpt)) {
+	if (fom.dns_intcpt.value != nvram.dns_intcpt) {
 		nvram.dns_intcpt = fom.dns_intcpt.value;
 		if (fom._service.value != '*')
 			fom._service.value += ',firewall-restart'; /* special case: restart FW */
 	}
 
-	if ((fom.wan_wins.value != nvram.wan_wins)) { /* special case: restart vpnservers/pptpd if up */
+	if (fom.wan_wins.value != nvram.wan_wins) { /* special case: restart vpnservers/pptpd if up */
 		nvram.wan_wins = fom.wan_wins.value;
 
 		if (fom._service.value != '*') {
@@ -294,6 +297,22 @@ function save() {
 /* PPTPD-END */
 		}
 	}
+
+/* MDNS-BEGIN */
+	fom.mdns_enable.value = fom._f_mdns_enable.checked ? 1 : 0;
+	fom.mdns_reflector.value = fom._f_mdns_reflector.checked ? 1 : 0;
+
+	if ((fom.mdns_enable.value != nvram.mdns_enable) || (fom.mdns_reflector.value != nvram.mdns_reflector)) {
+		nvram.mdns_enable = fom.mdns_enable.value;
+		nvram.mdns_reflector = fom.mdns_reflector.value;
+		if (fom._service.value != '*') {
+			if (fom.mdns_enable.value == 1)
+				fom._service.value += ',mdns-restart'; /* special case: re/start avahi */
+			else
+				fom._service.value += ',mdns-stop'; /* special case: stop avahi */
+		}
+	}
+/* MDNS-END */
 
 	form.submit(fom, 1);
 }
@@ -365,6 +384,10 @@ function init() {
 <input type="hidden" name="stubby_dnssec">
 <input type="hidden" name="stubby_force_tls13">
 <!-- STUBBY-END -->
+<!-- MDNS-BEGIN -->
+<input type="hidden" name="mdns_enable">
+<input type="hidden" name="mdns_reflector">
+<!-- MDNS-END -->
 
 <!-- / / / -->
 
@@ -485,6 +508,10 @@ function init() {
 			{ title: 'Mute dhcpv6 logging', name: 'f_dnsmasq_q6', type: 'checkbox', value: (nvram.dnsmasq_q & 2) },
 			{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
 /* IPV6-END */
+/* MDNS-BEGIN */
+			{ title: 'Enable multicast DNS<br>(Avahi mDNS)', name: 'f_mdns_enable', type: 'checkbox', value: nvram.mdns_enable == 1 },
+				{ title: 'Enable reflector', indent: 2, name: 'f_mdns_reflector', type: 'checkbox', value: nvram.mdns_reflector == 1 },
+/* MDNS-END */
 			{ title: '<a href="http://www.thekelleys.org.uk/" class="new_window">Dnsmasq<\/a><br>Custom configuration', name: 'dnsmasq_custom', type: 'textarea', value: nvram.dnsmasq_custom }
 		]);
 	</script>
@@ -527,6 +554,9 @@ function init() {
 <!-- IPV6-BEGIN -->
 		<li><b>Fast RA mode</b> - Forces dnsmasq to be always in frequent RA mode. (Recommendation: enable also "Mute RA logging" option)</li>
 <!-- IPV6-END -->
+<!-- MDNS-BEGIN -->
+		<li><b>Enable multicast DNS (Avahi mDNS)</b> - You will probably also like to add some <a href="advanced-access.asp">LAN access rules</a> (by default all communications between bridges is blocked) and/or use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. (br0 = private network, br1 = IOT): <i>iptables -I FORWARD -i br0 -o br+ -j ACCEPT</i> and <i>iptables -I INPUT -i br1 -p udp --dport 5353 -j ACCEPT</i>. Alternative config file is available (/etc/avahi/avahi-daemon_alt.conf).</li>
+<!-- MDNS-END -->
 		<li><b>Custom configuration</b> - Extra options to be added to the Dnsmasq configuration file.</li>
 	</ul>
 	<br>

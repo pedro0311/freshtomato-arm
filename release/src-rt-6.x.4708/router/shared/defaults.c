@@ -746,6 +746,11 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				, 0 },
 #endif
+#ifdef TCONFIG_MDNS
+	{ "mdns_enable",		"0"				, 0 },
+	{ "mdns_reflector",		"1"				, 0 },
+	{ "mdns_debug",			"0"				, 0 },
+#endif
 
 /* advanced-firewall */
 	{ "nf_loopback",		"0"				, 0 },
@@ -899,7 +904,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "web_dir",			"default"			, 0 },	// jffs, opt, tmp or default (/www)
 	{ "ttb_css",			"example"			, 0 },	// Tomato Themes Base - default theme name
 	{ "ttb_loc",			""				, 0 },	// Tomato Themes Base - default files location
-	{ "ttb_url",			"http://www.tomatothemebase.eu/wp-content/uploads", 0 },	// Tomato Themes Base - default URL
+	{ "ttb_url",			"http://ttb.mooo.com http://ttb.ath.cx http://ttb.ddnsfree.com", 0 },	// Tomato Themes Base - default URL
 	{ "web_svg",			"1"				, 0 },
 	{ "telnetd_eas",		"1"				, 0 },
 	{ "telnetd_port",		"23"				, 0 },

@@ -1,6 +1,6 @@
 --- getdns/src/stub.c
 +++ getdns/src/stub.c
-@@ -383,6 +383,10 @@ tcp_connect(getdns_upstream *upstream, g
+@@ -477,6 +477,10 @@ tcp_connect(getdns_upstream *upstream, g
  	static const int  enable = 1;
  # endif
  #endif
@@ -11,7 +11,7 @@
  	int fd = -1;
  
  
-@@ -415,15 +419,19 @@ tcp_connect(getdns_upstream *upstream, g
+@@ -511,15 +515,19 @@ tcp_connect(getdns_upstream *upstream, g
  	   doesn't start till the sendto() lack of connection is often delayed until
  	   then or even the subsequent event depending on the error and platform.*/
  # if  defined(HAVE_DECL_TCP_FASTOPEN_CONNECT) && HAVE_DECL_TCP_FASTOPEN_CONNECT
@@ -33,7 +33,7 @@
  		/* TCP_FASTOPEN works for TCP only (not TLS) */
  		if (transport != GETDNS_TRANSPORT_TCP)
  			; /* This variant of TFO doesn't work with TLS */
-@@ -438,8 +446,8 @@ tcp_connect(getdns_upstream *upstream, g
+@@ -534,8 +542,8 @@ tcp_connect(getdns_upstream *upstream, g
  			    "%-40s : Upstream   : "
  			    "Could not fallback to TCP TFO\n",
  			     upstream->addr_str);

@@ -35,7 +35,7 @@ static void wo_update(char *url);
 static void wo_service(char *url);
 static void wo_shutdown(char *url);
 static void wo_nvcommit(char *url);
-//	static void wo_logout(char *url);
+// static void wo_logout(char *url);
 
 
 // ----------------------------------------------------------------------------
@@ -978,6 +978,11 @@ static const nvset_t nvset_list[] = {
 	{ "dnsmasq_gen_names",		V_01				},	/* generate a name for DHCP clients which do not otherwise have one */
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	V_01				},
+#endif
+#ifdef TCONFIG_MDNS
+	{ "mdns_enable",		V_01				},
+	{ "mdns_reflector",		V_01				},
+	{ "mdns_debug",			V_01				},
 #endif
 
 // advanced-firewall
@@ -2116,7 +2121,7 @@ static int webcgi_nvram_set(const nvset_t *v, const char *name, int write)
 	if (write) {
 		if (!nvram_match((char *)name, p)) {
 			if (v->vtype != VT_TEMP) dirty = 1;
-			DEBUG_NVRAMSET(name, p);
+			//DEBUG_NVRAMSET(name, p);
 			nvram_set(name, p);
 		}
 	}
@@ -2251,7 +2256,7 @@ static int save_variables(int write)
 			}
 			if ((write) && (!nvram_match(s, p))) {
 				dirty = 1;
-				DEBUG_NVRAMSET(s, p);
+				//DEBUG_NVRAMSET(s, p);
 				nvram_set(s, p);
 			}
 		}

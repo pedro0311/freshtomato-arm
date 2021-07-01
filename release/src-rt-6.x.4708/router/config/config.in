@@ -334,3 +334,7 @@ config TCONFIG_NVRAM_32K
 config TCONFIG_CONNTRACK_TOOL
 	bool "Conntrack Userspace Tool"
 	default n
+
+config TCONFIG_MDNS
+	bool "MDNS Support"
+	default n

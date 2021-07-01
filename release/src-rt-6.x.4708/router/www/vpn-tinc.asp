@@ -30,7 +30,7 @@
 <script>
 var cprefix = 'vpn_tinc';
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};

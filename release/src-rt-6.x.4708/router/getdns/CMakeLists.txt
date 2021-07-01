@@ -13,7 +13,7 @@ endif ()
 
 set(PACKAGE "getdns")
 set(PACKAGE_NAME "getdns")
-set(PACKAGE_VERSION "1.6.0")
+set(PACKAGE_VERSION "1.7.0")
 set(PACKAGE_BUGREPORT "team@getdnsapi.net")
 set(PACKAGE_URL "https://getdnsapi.net")
 
@@ -25,7 +25,7 @@ set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}${RELEASE_CANDIDATE}")
 set(PACKAGE_TARNAME "${PACKAGE}-${PACKAGE_VERSION}${RELEASE_CANDIDATE}")
 
 set(GETDNS_VERSION "${PACKAGE_VERSION}${RELEASE_CANDIDATE}")
-set(GETDNS_NUMERIC_VERSION 0x01060000)
+set(GETDNS_NUMERIC_VERSION 0x01070000)
 set(API_VERSION "December 2015")
 set(API_NUMERIC_VERSION 0x07df0c00)
 
@@ -68,10 +68,11 @@ set(API_NUMERIC_VERSION 0x07df0c00)
 # getdns-1.5.0 had libversion 11:0:1
 # getdns-1.5.1 had libversion 11:1:1
 # getdns-1.5.2 had libversion 11:2:1
-# getdns-1.6.0 has libversion 11:3:1
-set(GETDNS_VERSION_CURRENT 11)
-set(GETDNS_VERSION_REVISION 3)
-set(GETDNS_VERSION_AGE 1)
+# getdns-1.6.0 had libversion 11:3:1
+# getdns-1.7.0 has libversion 12:0:2
+set(GETDNS_VERSION_CURRENT 12)
+set(GETDNS_VERSION_REVISION 0)
+set(GETDNS_VERSION_AGE 2)
 
 project(getdns VERSION ${PACKAGE_VERSION} LANGUAGES C)
 
@@ -102,7 +103,7 @@ elseif (APPLE)
 elseif (UNIX)
   set(HOSTOS "unix")
 
-  if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+  if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "OpenBSD")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=600")
   endif ()
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -165,6 +166,8 @@ option(BUILD_LIBUV "Build libuv support library available." ON)
 
 option(USE_LIBIDN2 "Use libidn2 if available." ON)
 option(USE_GNUTLS "Use GnuTLS for TLS connections." OFF)
+
+option(FORCE_COMPAT_STRPTIME "Force use of internal strptime when cross-compiling." OFF)
 
 # Above names chosen for user consistency. Now define substituted names.
 set(REQ_DEBUG ${ENABLE_DEBUG_REQ})
@@ -334,6 +337,9 @@ check_include_file(openssl/err.h HAVE_OPENSSL_ERR_H)
 check_include_file(openssl/rand.h HAVE_OPENSSL_RAND_H)
 check_include_file(openssl/conf.h HAVE_OPENSSL_CONF_H)
 check_include_file(openssl/engine.h HAVE_OPENSSL_ENGINE_H)
+check_include_file(openssl/bn.h HAVE_OPENSSL_BN_H)
+check_include_file(openssl/dsa.h HAVE_OPENSSL_DSA_H)
+check_include_file(openssl/rsa.h HAVE_OPENSSL_RSA_H)
 
 set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES} ${getdns_system_libs})
 check_function_exists(DSA_SIG_set0 HAVE_DSA_SIG_SET0)
@@ -531,7 +537,14 @@ set(STRPTIME_TEST_SOURCE "\n
   if (!res) return 1; return 0; }")
 
 if (HAVE_STRPTIME)
-  check_c_source_runs("${STRPTIME_TEST_SOURCE}" STRPTIME_WORKS)
+  if (CMAKE_CROSSCOMPILING)
+    if (NOT FORCE_COMPAT_STRPTIME)
+      message(WARNING "Assuming strptime() is POSIX compliant with %t matching any white space. Specify FORCE_COMPAT_STRPTIME on non-compliant platforms e.g. BSD derived.")
+      set(STRPTIME_WORKS 1)
+    endif ()
+  else ()
+    check_c_source_runs("${STRPTIME_TEST_SOURCE}" STRPTIME_WORKS)
+  endif ()
 endif ()
 
 try_compile(HAVE___FUNC__
@@ -558,6 +571,8 @@ else ()
     endif ()
   endif ()
 endif ()
+
+check_symbol_exists(TCP_USER_TIMEOUT "sys/socket.h;netinet/tcp.h" HAVE_DECL_TCP_USER_TIMEOUT)
 
 # Main library
 add_library(getdns_objects OBJECT
@@ -1065,22 +1080,22 @@ if (ENABLE_STATIC)
   endif ()
 endif ()
 if (ENABLE_SHARED)
-  install(TARGETS getdns_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS getdns_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   if (USE_LIBEV)
-    install(TARGETS getdns_ext_ev_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS getdns_ext_ev_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif ()
   if (USE_LIBEVENT2)
-    install(TARGETS getdns_ext_event_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS getdns_ext_event_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif ()
   if (USE_LIBUV)
-    install(TARGETS getdns_ext_uv_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS getdns_ext_uv_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif ()
 endif ()
 if (BUILD_GETDNS_QUERY)
-  install(TARGETS getdns_query RUNTIME DESTINATION bin)
+  install(TARGETS getdns_query RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif ()
 if (BUILD_GETDNS_SERVER_MON)
-  install(TARGETS getdns_server_mon RUNTIME DESTINATION bin)
+  install(TARGETS getdns_server_mon RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif ()
 
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/getdns DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

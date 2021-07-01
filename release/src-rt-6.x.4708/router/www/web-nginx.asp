@@ -31,7 +31,7 @@
 <script>
 var cprefix = 'web_nginx';
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
 
 up.refresh = function(text) {
 	isup = {};
@@ -180,7 +180,7 @@ function init() {
 			{ title: 'Upload file size limit', name: 'nginx_upload', type: 'text', maxlen: 5, size: 7, value: nvram.nginx_upload, suffix: '<small> MB<\/small>'},
 			{ title: 'Allow Remote Access', name: 'f_nginx_remote', type: 'checkbox', value: nvram.nginx_remote == '1' },
 			{ title: 'Web Server Name', name: 'nginx_fqdn', type: 'text', maxlen: 255, size: 20, value: nvram.nginx_fqdn },
-			{ title: 'Document Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php<\/small>' },
+			{ title: 'Document Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php / /_h5ai/public/index.php<\/small>' },
 			{ title: 'Server Priority', name: 'nginx_priority', type: 'text', maxlen: 8, size:3, value: nvram.nginx_priority, suffix:'<small> Max. Perfor: -20, Min.Perfor: 19, default: 10<\/small>' }
 		]);
 	</script>

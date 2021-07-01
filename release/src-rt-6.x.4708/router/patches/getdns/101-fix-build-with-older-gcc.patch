@@ -1,6 +1,6 @@
 --- getdns/CMakeLists.txt
 +++ getdns/CMakeLists.txt
-@@ -235,7 +235,7 @@ if (MSVC)
+@@ -238,7 +238,7 @@ if (MSVC)
    # So full on warnings are not appropriate.
    add_compile_options(/W2)
  else ()
