@@ -1195,7 +1195,8 @@ ufsd-netgear-install:
 	@$(MAKE) -C ufsd-netgear install INSTALLDIR=$(INSTALLDIR)/ufsd-netgear
 
 ntfs-3g/Makefile:
-	cd ntfs-3g && \
+	$(call patch_files,ntfs-3g)
+	cd ntfs-3g && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --enable-shared=no --enable-static=no \
@@ -1210,6 +1211,7 @@ ntfs-3g: ntfs-3g/Makefile
 ntfs-3g-clean:
 	-@$(MAKE) -C ntfs-3g clean
 	@rm -f ntfs-3g/Makefile
+	$(call unpatch_files,ntfs-3g)
 
 ntfs-3g-install:
 	install -D ntfs-3g/src/ntfs-3g $(INSTALLDIR)/ntfs-3g/bin/ntfs-3g
