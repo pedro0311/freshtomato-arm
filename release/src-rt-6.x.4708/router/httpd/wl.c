@@ -323,8 +323,7 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 {
 	const struct wpa_ie_hdr *hdr;
 	const unsigned char *pos;
-	unsigned int i;
-	int left, count;
+	int i, left, count;
 
 	data->proto = WPA_PROTO_WPA_;
 	data->pairwise_cipher = WPA_CIPHER_TKIP_;
@@ -406,8 +405,7 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 {
 	const struct rsn_ie_hdr *hdr;
 	const unsigned char *pos;
-	unsigned int i;
-	int left, count;
+	int i, left, count;
 
 	data->proto = WPA_PROTO_RSN_;
 	data->pairwise_cipher = WPA_CIPHER_CCMP_;
