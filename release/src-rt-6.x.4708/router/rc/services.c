@@ -1109,6 +1109,8 @@ void dns_to_resolv(void)
 
 void start_httpd(void)
 {
+	int ret;
+
 	if (getpid() != 1) {
 		start_service("httpd");
 		return;
@@ -1131,8 +1133,13 @@ void start_httpd(void)
 	else
 		chdir("/www");
 
-	eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
+	ret = eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
 	chdir("/");
+
+	if (ret)
+		logmsg(LOG_ERR, "starting httpd failed ...");
+	else
+		logmsg(LOG_INFO, "httpd is started");
 }
 
 void stop_httpd(void)
@@ -1142,7 +1149,10 @@ void stop_httpd(void)
 		return;
 	}
 
-	killall_tk_period_wait("httpd", 50);
+	if (pidof("httpd") > 0) {
+		killall_tk_period_wait("httpd", 50);
+		logmsg(LOG_INFO, "httpd is stopped");
+	}
 }
 
 #ifdef TCONFIG_IPV6
