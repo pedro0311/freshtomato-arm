@@ -331,7 +331,7 @@ void mwan_state_files(void)
 void mwan_status_update(void)
 {
 	int mwan_num, wan_unit;
-	char prefix[] = "wanXX";
+	char prefix[16];
 
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
@@ -358,24 +358,18 @@ void mwan_status_update(void)
 	if ((mwan_curr[0] < '2') && (mwan_curr[1] < '2')) {
 #endif
 		/* all connections down, searching failover interfaces */
-		if (nvram_match("wan_weight", "0") && (mwan_curr[0] == '1')) {
-			logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN1");
-			mwan_curr[0] = '2';
+		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+			if (mwan_curr[wan_unit - 1] == '1') {
+				get_wan_prefix(wan_unit, prefix);
+				strcat(prefix, "_weight");
+				if (nvram_match(prefix, "0")) {
+					if (mwan_last[wan_unit - 1] != '2')
+						logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN%d", wan_unit);
+
+					mwan_curr[wan_unit - 1] = '2';
+				}
+			}
 		}
-		if (nvram_match("wan2_weight", "0") && (mwan_curr[1] == '1')) {
-			logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN2");
-			mwan_curr[1] = '2';
-		}
-#ifdef TCONFIG_MULTIWAN
-		if (nvram_match("wan3_weight", "0") && (mwan_curr[2] == '1')) {
-			logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN3");
-			mwan_curr[2] = '2';
-		}
-		if (nvram_match("wan4_weight", "0") && (mwan_curr[3] == '1')) {
-			logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN4");
-			mwan_curr[3] = '2';
-		}
-#endif
 	}
 
 	logmsg(LOG_DEBUG, "*** OUT %s: mwan_curr=%s", __FUNCTION__, mwan_curr);
