@@ -2107,6 +2107,11 @@ wlconf(char *name)
 	val = (ap || apsta || wds) ? 1 : 0;
 	WL_IOCTL(name, WLC_SET_AP, &val, sizeof(val));
 
+#ifdef __CONFIG_DHDAP__
+	if (is_dhd) {
+		dhd_iovar_setint(name, "wet", wet);
+	} else
+#endif /* __CONFIG_DHDAP__ */
 	/* Turn WET mode ON or OFF based on selected mode */
 	WL_IOCTL(name, WLC_SET_WET, &wet, sizeof(wet));
 
@@ -2334,8 +2339,6 @@ wlconf(char *name)
 #ifdef __CONFIG_DHDAP__
 			if (is_dhd) {
 				DHD_BSSIOVAR_SETINT(name, "mcast_regen_bss_enable",
-					bsscfg->idx, val);
-				WL_BSSIOVAR_SETINT(name, "mcast_regen_bss_enable",
 					bsscfg->idx, val);
 			} else {
 #endif /* __CONFIG_DHDAP__ */
