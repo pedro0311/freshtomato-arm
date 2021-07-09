@@ -68,6 +68,26 @@ int get_wan_unit(const char *sPrefix)
 		return 1;
 }
 
+int get_wan_unit_with_value(const char *suffix, const char *value)
+{
+	char tmp[64];
+	int mwan_num, wan_unit;
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+		return -1;
+
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		get_wan_prefix(wan_unit, tmp);
+		strcat(tmp, suffix);
+
+		if (nvram_match(tmp, value))
+			return wan_unit;
+	}
+
+	return -1;
+}
+
 int get_wan_proto(void)
 {
 	return get_wanx_proto("wan");

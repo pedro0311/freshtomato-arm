@@ -98,8 +98,14 @@ typedef struct {
 	signed char sync;
 } speed_t;
 
+typedef struct {
+	int16_t wan_unit;
+	uint16_t from_ifaceX;
+} speed_runtime_t;
+
 history_t history;
 speed_t speed[MAX_SPEED_IF];
+speed_runtime_t speed_rtd[MAX_SPEED_IF];
 int speed_count;
 long save_utime;
 char save_path[96];
@@ -567,11 +573,13 @@ static void bump(data_t *data, int *tail, int max, uint32_t xnow, unsigned long 
 static void calc(void)
 {
 	FILE *f;
-	char buf[256];
+	char buf[256], sbuf[16];
+	char prefix[] = "wanXX";
 	char *ifname;
 	char *p;
 	unsigned long counter[MAX_COUNTER];
 	speed_t *sp;
+	speed_runtime_t *sp_rtd;
 	int i, j;
 	time_t now;
 	time_t mon;
@@ -582,7 +590,6 @@ static void calc(void)
 	long tick;
 	int n;
 	char *exclude;
-	char prefix[] = "wan"; /* not yet mwan ready, assume wan */
 
 	int wanup = 0; /* 0 = FALSE, 1 = TRUE */
 	long wanuptime = 0; /* wanuptime in seconds */
@@ -613,11 +620,13 @@ static void calc(void)
 			continue;
 
 		sp = speed;
+		sp_rtd = speed_rtd;
 		for (i = speed_count; i > 0; --i) {
 			if (strcmp(sp->ifname, ifname) == 0)
 				break;
 
 			++sp;
+			++sp_rtd;
 		}
 		if (i == 0) {
 			if (speed_count >= MAX_SPEED_IF)
@@ -627,11 +636,23 @@ static void calc(void)
 
 			i = speed_count++;
 			sp = &speed[i];
+			sp_rtd = &speed_rtd[i];
 			memset(sp, 0, sizeof(*sp));
 			strcpy(sp->ifname, ifname);
 			sp->sync = 1;
 			sp->utime = uptime;
 		}
+		if (sp_rtd->wan_unit == 0) {
+			sp_rtd->wan_unit = get_wan_unit_with_value("_iface", ifname);
+			if (sp_rtd->wan_unit < 0) {
+				sp_rtd->wan_unit = get_wan_unit_with_value("_ifnameX", ifname);
+				sp_rtd->from_ifaceX = sp_rtd->wan_unit > 0;
+			}
+
+			logmsg(LOG_DEBUG, "*** %s: mapped ifname %s to wan unit %d", __FUNCTION__, ifname, sp_rtd->wan_unit);
+		}
+		get_wan_prefix(sp_rtd->wan_unit, prefix); /* Note this will default to 'wan' for anything but the primary interface for wanXX */
+
 		if (sp->sync) {
 			logmsg(LOG_DEBUG, "*** %s: sync %s", __FUNCTION__, ifname);
 			sp->sync = -1;
@@ -661,16 +682,19 @@ static void calc(void)
 			for (i = 0; i < MAX_COUNTER; ++i) {
 				c = counter[i];
 				sc = sp->last[i];
-				if (c < sc) {
-					wanup = check_wanup(prefix); /* see router/shared/misc.c */
-					wanuptime = check_wanup_time(prefix); /* see router/shared/misc.c */
+				if (c < sc) { /* TX/RX bytes went backwards - figure out why */
 					diff = ((0xFFFFFFFFUL) - sc + 1UL) + c; /* rollover calculation */
-					if (diff > MAX_ROLLOVER)
+					if (diff > MAX_ROLLOVER) {
 						diff = 0UL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
-					if (wanup && (wanuptime < (long)(INTERVAL + 10)))
-						diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+					}
+					else {
+						wanup = check_wanup(prefix); /* see router/shared/misc.c */
+						wanuptime = check_wanup_time(prefix); /* see router/shared/misc.c */
 
-					/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
+						/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
+						if (wanup && (wanuptime < (long)(INTERVAL + 10)))
+							diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+					}
 				}
 				else
 					diff = c - sc;
@@ -689,14 +713,14 @@ static void calc(void)
 
 		/* todo: split, delay */
 
-		if (nvram_get_int("ntp_ready")) { /* Skip this if the time&date is not set yet */
-			if (get_wan_proto() == WP_DISABLED) {
-				if ((nvram_get_int("wan_islan") == 0) || (!nvram_match("wan_ifnameX", ifname)))
+		if (sp_rtd->wan_unit > 0 && nvram_get_int("ntp_ready")) { /* Skip if this is not a primary wan interface or the time&date is not set yet */
+			if (get_wanx_proto(prefix) == WP_DISABLED) {
+				if (!sp_rtd->from_ifaceX || (nvram_get_int(strcat_r(prefix, "_islan", sbuf)) == 0)) {
 					continue;
+				}
 			}
-			else {
-				if (!nvram_match("wan_iface", ifname))
-					continue;
+			else if (sp_rtd->from_ifaceX) {
+				continue;
 			}
 
 			tms = localtime(&now);
