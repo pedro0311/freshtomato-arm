@@ -31,39 +31,6 @@ typedef struct
 
 static waninfo_t wan_info;
 
-
-void get_wan_prefix(int iWan_unit, char *sPrefix)
-{
-	if (iWan_unit == 1)
-		strcpy(sPrefix, "wan");
-	else if (iWan_unit == 2)
-		strcpy(sPrefix, "wan2");
-#ifdef TCONFIG_MULTIWAN
-	else if (iWan_unit == 3)
-		strcpy(sPrefix, "wan3");
-	else if (iWan_unit == 4)
-		strcpy(sPrefix, "wan4");
-#endif
-	else
-		strcpy(sPrefix, "wan");
-}
-
-int get_wan_unit(char *sPrefix)
-{
-	if (!strcmp(sPrefix, "wan"))
-		return 1;
-	else if (!strcmp(sPrefix, "wan2"))
-		return 2;
-#ifdef TCONFIG_MULTIWAN
-	else if (!strcmp(sPrefix, "wan3"))
-		return 3;
-	else if (!strcmp(sPrefix, "wan4"))
-		return 4;
-#endif
-	else
-		return 1;
-}
-
 void get_wan_info(char *sPrefix)
 {
 	char tmp[100];

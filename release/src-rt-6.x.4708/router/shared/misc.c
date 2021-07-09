@@ -36,26 +36,41 @@
 #define LOGMSG_NVDEBUG	"misc_debug"
 
 
+void get_wan_prefix(int iWan_unit, char *sPrefix)
+{
+	if (iWan_unit == 1)
+		strcpy(sPrefix, "wan");
+	else if (iWan_unit == 2)
+		strcpy(sPrefix, "wan2");
+#ifdef TCONFIG_MULTIWAN
+	else if (iWan_unit == 3)
+		strcpy(sPrefix, "wan3");
+	else if (iWan_unit == 4)
+		strcpy(sPrefix, "wan4");
+#endif
+	else
+		strcpy(sPrefix, "wan");
+}
+
+int get_wan_unit(const char *sPrefix)
+{
+	if (!strcmp(sPrefix, "wan"))
+		return 1;
+	else if (!strcmp(sPrefix, "wan2"))
+		return 2;
+#ifdef TCONFIG_MULTIWAN
+	else if (!strcmp(sPrefix, "wan3"))
+		return 3;
+	else if (!strcmp(sPrefix, "wan4"))
+		return 4;
+#endif
+	else
+		return 1;
+}
+
 int get_wan_proto(void)
 {
-	const char *names[] = {	/* order must be synced with def at shared.h */
-		"static",
-		"dhcp",
-		"l2tp",
-		"pppoe",
-		"pptp",
-		"ppp3g",
-		"lte",
-		NULL
-	};
-	int i;
-	const char *p;
-
-	p = nvram_safe_get("wan_proto");
-	for (i = 0; names[i] != NULL; ++i) {
-		if (strcmp(p, names[i]) == 0) return i + 1;
-	}
-	return WP_DISABLED;
+	return get_wanx_proto("wan");
 }
 
 int get_wanx_proto(char *prefix)
@@ -315,11 +330,6 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 #endif
 		NULL
 	};
-#ifdef TCONFIG_MULTIWAN
-#define MWAN_MAX	4
-#else
-#define MWAN_MAX	2
-#endif
 	int i;
 	int f;
 	struct ifreq ifr;

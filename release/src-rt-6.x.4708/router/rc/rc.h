@@ -57,9 +57,6 @@
 #ifdef TCONFIG_MULTIWAN
 #define PPPOEWAN3	2
 #define PPPOEWAN4	3
-#define MWAN_MAX	4
-#else
-#define MWAN_MAX	2
 #endif
 
 /* see init.c - used for /proc/sys/vm/min_free_kbytes */
@@ -151,9 +148,7 @@ extern void do_wan_routes(char *ifname, int metric, int add, char *prefix);
 extern void preset_wan(char *ifname, char *gw, char *netmask, char *prefix);
 
 /* mwan.c */
-extern void get_wan_prefix(int iWan_unit, char *sPrefix);
 extern void get_wan_info(char *sPrefix);
-extern int get_wan_unit(char *sPrefix);
 extern void mwan_table_add(char *sPrefix);
 extern void mwan_table_del(char *sPrefix);
 extern void mwan_load_balance(void);
