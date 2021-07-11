@@ -32,7 +32,7 @@ void asp_ddnsx(int argc, char **argv)
 
 	for (i = 0; i < 2; ++i) {
 		web_puts(i ? "','" : "'");
-		sprintf(name, "/var/lib/mdu/ddnsx%d.msg", i);
+		snprintf(name, sizeof(name), "/var/lib/mdu/ddnsx%d.msg", i);
 		f_read_string(name, m, sizeof(m));	// null term'd even on error
 		if (m[0] != 0) {
 			if ((stat(name, &st) == 0) && (st.st_mtime > Y2K)) {
@@ -47,9 +47,9 @@ void asp_ddnsx(int argc, char **argv)
 
 	for (i = 0; i < 2; ++i) {
 		web_puts(i ? "','" : "'");
-		sprintf(name, "ddnsx%d", i);
+		snprintf(name, sizeof(name), "ddnsx%d", i);
 		if (!nvram_match(name, "")) {
-			sprintf(name, "ddnsx%d_cache", i);
+			snprintf(name, sizeof(name), "ddnsx%d_cache", i);
 			if ((p = nvram_get(name)) == NULL) continue;
 			tt = strtoul(p, &q, 10);
 			if (*q++ != ',') continue;

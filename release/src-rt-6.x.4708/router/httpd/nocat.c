@@ -58,7 +58,7 @@ void wi_uploadsplash(char *url, int len, char *boundary)
 	n = n - strlen(boundary)-6;
 	syslog(LOG_INFO, "boundary %s, len %d", boundary, strlen(boundary));
 	if ((p = nvram_get("NC_DocumentRoot")) == NULL) p = "/tmp/splashd";
-	sprintf(tmp, "%s/splash.html", p);
+	snprintf(tmp, sizeof(tmp), "%s/splash.html", p);
 	if (f_write(tmp, buf, n, 0, 0600) != n) {
 		error = "Error writing temporary file";
 		goto ERROR;

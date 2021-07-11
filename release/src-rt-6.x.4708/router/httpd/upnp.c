@@ -30,7 +30,7 @@ void wo_upnp(char *url)
 	if (nvram_get_int("upnp_enable")) {
 		if (((proto = webcgi_get("remove_proto")) != NULL) && (*proto) &&
 			((eport = webcgi_get("remove_eport")) != NULL) && (*eport)) {
-			sprintf(s, "%3s %6s\n", proto, eport);
+			snprintf(s, sizeof(s), "%3s %6s\n", proto, eport);
 			f_write_string("/etc/upnp/delete", s, 0, 0);
 			if (killall("miniupnpd", SIGUSR2) == 0) {
 				f_wait_notexists("/etc/upnp/delete", 5);

@@ -592,7 +592,7 @@ static void retrieveRatesFromTc(const char* deviceName, unsigned long ratesArray
 	char *e;
 	int n;
 
-	sprintf(s, "tc -s class ls dev %s", deviceName);
+	snprintf(s, sizeof(s), "tc -s class ls dev %s", deviceName);
 	if ((f = popen(s, "r")) != NULL) {
 		n = 1;
 		while (fgets(s, sizeof(s), f)) {

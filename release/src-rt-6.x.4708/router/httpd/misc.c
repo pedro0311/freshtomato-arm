@@ -133,15 +133,15 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 */
 	if (clientsai.ss_family == AF_INET) {
 		inet_ntop(clientsai.ss_family, &(((struct sockaddr_in*)&clientsai)->sin_addr), ip, sizeof(ip));
-		sprintf(s, "ip neigh show %s", ip);
+		snprintf(s, sizeof(s), "ip neigh show %s", ip);
 	}
 #ifdef TCONFIG_IPV6
 	else if (clientsai.ss_family == AF_INET6) {
 		inet_ntop(clientsai.ss_family, &(((struct sockaddr_in6*)&clientsai)->sin6_addr), ip, sizeof(ip));
 		if (IN6_IS_ADDR_V4MAPPED(&(((struct sockaddr_in6*)&clientsai)->sin6_addr)))
-			sprintf(s, "ip neigh show %s", ip + 7); /* chop off the ::ffff: to get the ipv4 bit */
+			snprintf(s, sizeof(s), "ip neigh show %s", ip + 7); /* chop off the ::ffff: to get the ipv4 bit */
 		else
-			sprintf(s, "ip neigh show %s", ip);
+			snprintf(s, sizeof(s), "ip neigh show %s", ip);
 	}
 #endif
 
@@ -280,7 +280,7 @@ static int check_connect(char *prefix)
 	int result;
 
 	memset(tmp, 0, 64);
-	sprintf(tmp, "/var/lib/misc/%s_state", prefix);
+	snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_state", prefix);
 
 	if (check_wanup(prefix)) {
 		if (nvram_get_int("mwan_cktime") == 0)
@@ -413,7 +413,7 @@ void asp_calc6rdlocalprefix(int argc, char **argv)
 
 	if (calc_6rd_local_prefix(&prefix_addr, prefix_len, relay_prefix_len, &wanip_addr, &local_prefix_addr, &local_prefix_len)
 	    && inet_ntop(AF_INET6, &local_prefix_addr, local_prefix, sizeof(local_prefix)) != NULL) {
-		sprintf(s, "\nlocal_prefix = '%s/%d';\n", local_prefix, local_prefix_len);
+		snprintf(s, sizeof(s), "\nlocal_prefix = '%s/%d';\n", local_prefix, local_prefix_len);
 		web_puts(s);
 	}
 }
@@ -851,9 +851,9 @@ void asp_wanstatus(int argc, char **argv)
 		strcpy(prefix, "wan");
 
 	memset(renew_file, 0, 64);
-	sprintf(renew_file, "/var/lib/misc/%s_dhcpc.renewing", prefix);
+	snprintf(renew_file, sizeof(renew_file), "/var/lib/misc/%s_dhcpc.renewing", prefix);
 	memset(wanconn_file, 0, 64);
-	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
+	snprintf(wanconn_file, sizeof(wanconn_file), "/var/lib/misc/%s.connecting", prefix);
 
 	if ((using_dhcpc(prefix)) && (f_exists(renew_file)))
 		p = "Renewing...";
@@ -893,7 +893,7 @@ void asp_rrule(int argc, char **argv)
 	int i;
 
 	i = nvram_get_int("rruleN");
-	sprintf(s, "rrule%d", i);
+	snprintf(s, sizeof(s), "rrule%d", i);
 	web_puts("\nrrule = '");
 	web_putj(nvram_safe_get(s));
 	web_printf("';\nrruleN = %d;\n", i);
@@ -1014,7 +1014,7 @@ void asp_dns(int argc, char **argv)
 	dns = get_dns(prefix); /* static buffer */
 	strcpy(s, "[");
 	for (i = 0 ; i < dns->count; ++i)
-		sprintf(s + strlen(s), "%s'%s:%u'", i ? "," : "", inet_ntoa(dns->dns[i].addr), dns->dns[i].port);
+		snprintf(s + strlen(s), sizeof(s), "%s'%s:%u'", i ? "," : "", inet_ntoa(dns->dns[i].addr), dns->dns[i].port);
 
 	strcat(s, "]");
 	web_puts(s);
