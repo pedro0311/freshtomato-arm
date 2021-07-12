@@ -46,7 +46,7 @@ char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
 char wan6face[IFNAMSIZ + 1];
 #endif
 
-char lan_cclass[sizeof("xxx.xxx.xxx.") + 1];
+char dmz_ifname[IFNAMSIZ + 1];
 static int can_enable_fastnat;
 
 #ifdef DEBUG_IPTFILE
@@ -142,25 +142,36 @@ static int dmz_dst(char *s)
 {
 	struct in_addr ia;
 	char *p;
-	int n;
 
-	if (nvram_get_int("dmz_enable") <= 0)
+	if (!nvram_get_int("dmz_enable"))
 		return 0;
 
 	p = nvram_safe_get("dmz_ipaddr");
-	if ((ia.s_addr = inet_addr(p)) == (in_addr_t) - 1) {
-		if (((n = atoi(p)) <= 0) || (n >= 255))
-			return 0;
-		if (s)
-			sprintf(s, "%s%d", lan_cclass, n);
 
-		return 1;
-	}
+	/* check for valid IP */
+	if (inet_pton(AF_INET, p, &ia) <= 0)
+		return 0;
 
 	if (s)
-		strcpy(s, inet_ntoa(ia));
+		strcpy(s, p);
 
 	return 1;
+}
+
+void lan_ip(char *buffer, char *ret)
+{
+	char *nv, *p;
+	char s[32];
+
+	if ((nv = nvram_get(buffer)) != NULL) {
+		strcpy(s, nv);
+		if ((p = strrchr(s, '.')) != NULL) {
+			*p = 0;
+			strcpy(ret, s);
+		}
+	}
+	else
+		strcpy(ret, "");
 }
 
 void ipt_log_unresolved(const char *addr, const char *addrtype, const char *categ, const char *name)
@@ -238,7 +249,8 @@ void ip6t_write(const char *format, ...)
 
 static void foreach_wan_input(int wanXup, wanface_list_t wanXfaces)
 {
-	int i, br;
+	unsigned int br;
+	int i;
 
 	if ((nvram_get_int("nf_loopback") != 0) && (wanXup)) {
 		for (i = 0; i < wanXfaces.count; ++i) {
@@ -300,7 +312,7 @@ int ipt_ipp2p(const char *v, char *opt)
 	if ((n & 0xFFF) == 0xFFF)
 		strcat(opt, "--ipp2p");
 	else {
-		// x12
+		/* x12 */
 		if (n & 0x0001) strcat(opt, "--apple ");
 		if (n & 0x0002) strcat(opt, "--ares ");
 		if (n & 0x0004) strcat(opt, "--bit ");
@@ -391,11 +403,11 @@ int ipt_layer7(const char *v, char *opt)
 
 	path = "/etc/l7-extra";
 	memset(s, 0, 128);
-	sprintf(s, "%s/%s.pat", path, v);
+	snprintf(s, sizeof(s), "%s/%s.pat", path, v);
 	if (!f_exists(s)) {
 		path = "/etc/l7-protocols";
 		memset(s, 0, 128);
-		sprintf(s, "%s/%s.pat", path, v);
+		snprintf(s, sizeof(s), "%s/%s.pat", path, v);
 		if (!f_exists(s)) {
 			syslog(LOG_ERR, "L7 %s was not found", v);
 			return -1;
@@ -444,12 +456,12 @@ static void ipt_account(void) {
 		else
 			strcpy(bridge, "");
 
-		sprintf(lanN_ifname, "lan%s_ifname", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 
 		if (strcmp(nvram_safe_get(lanN_ifname), "") != 0) {
-			sprintf(lanN_ipaddr, "lan%s_ipaddr", bridge);
-			sprintf(lanN_netmask, "lan%s_netmask", bridge);
-			sprintf(lanN, "lan%s", bridge);
+			snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
+			snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
+			snprintf(lanN, sizeof(lanN), "lan%s", bridge);
 
 			inet_aton(nvram_safe_get(lanN_ipaddr), &ipaddr);
 			inet_aton(nvram_safe_get(lanN_netmask), &netmask);
@@ -457,7 +469,7 @@ static void ipt_account(void) {
 			/* bitwise AND of ip and netmask gives the network */
 			network.s_addr = ipaddr.s_addr & netmask.s_addr;
 
-			sprintf(netaddrnetmask, "%s/%s", inet_ntoa(network), nvram_safe_get(lanN_netmask));
+			snprintf(netaddrnetmask, sizeof(netaddrnetmask), "%s/%s", inet_ntoa(network), nvram_safe_get(lanN_netmask));
 
 			/* ipv4 only */
 			ipt_write("-A FORWARD -m account --aaddr %s --aname %s\n", netaddrnetmask, lanN);
@@ -562,12 +574,12 @@ static void ipt_webmon()
 	if (nvram_match("webmon_bkp", "1")) {
 		xstart( "/usr/sbin/webmon_bkp", "add" );	/* add jobs to cru */
 
-		sprintf(webdomain, "--domain_load_file %s/webmon_recent_domains", nvram_safe_get("webmon_dir"));
-		sprintf(websearch, "--search_load_file %s/webmon_recent_searches", nvram_safe_get("webmon_dir"));
+		snprintf(webdomain, sizeof(webdomain), "--domain_load_file %s/webmon_recent_domains", nvram_safe_get("webmon_dir"));
+		snprintf(websearch, sizeof(websearch), "--search_load_file %s/webmon_recent_searches", nvram_safe_get("webmon_dir"));
 	}
 	else {
-		sprintf(webdomain, "--domain_load_file /var/webmon/domain");
-		sprintf(websearch, "--search_load_file /var/webmon/search");
+		snprintf(webdomain, sizeof(webdomain), "--domain_load_file /var/webmon/domain");
+		snprintf(websearch, sizeof(websearch), "--search_load_file /var/webmon/search");
 	}
 
 #ifdef TCONFIG_BCMARM
@@ -868,7 +880,7 @@ static void nat_table(void)
 			/* ICMP packets are always redirected to INPUT chains */
 			ipt_write("-A %s -p icmp -j DNAT --to-destination %s\n", chain_wan_prerouting, lanaddr[0]);
 
-			/* force remote access to router if DMZ is enabled */
+			/* force remote access to the router if DMZ is enabled */
 			if ((nvram_match("dmz_enable", "1")) && (nvram_match("dmz_ra", "1"))) {
 				strlcpy(t, nvram_safe_get("rmgt_sip"), sizeof(t));
 				p = t;
@@ -890,7 +902,6 @@ static void nat_table(void)
 					p = c + 1;
 				} while (*p);
 			}
-
 			ipt_forward(IPT_TABLE_NAT);
 			ipt_triggered(IPT_TABLE_NAT);
 		}
@@ -957,7 +968,7 @@ static void nat_table(void)
 
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				memset(buf, 0, 8);
-				sprintf(buf, "br%d", i);
+				snprintf(buf, sizeof(buf), "br%d", i);
 
 				if ((nvram_match("tor_iface", buf)) && (done == 0)) {
 					ipt_write("-A PREROUTING -i %s -p tcp -m multiport --dport %s ! -d %s -j DNAT --to-destination %s:%s\n",
@@ -1019,7 +1030,9 @@ static void nat_table(void)
 				strlcpy(t, nvram_safe_get("dmz_sip"), sizeof(t));
 				p = t;
 				do {
-					if ((c = strchr(p, ',')) != NULL) *c = 0;
+					if ((c = strchr(p, ',')) != NULL)
+						*c = 0;
+
 					if (ipt_source_strict(p, src, "dmz", NULL))
 						ipt_write("-A %s %s -j DNAT --to-destination %s\n", chain_wan_prerouting, src, dst);
 
@@ -1172,7 +1185,7 @@ static void filter_input(void)
 		memset(s, 0, 64);
 		/* Accept ICMP requests from the remote tunnel endpoint */
 		if (n == IPV6_ANYCAST_6TO4)
-			sprintf(s, "192.88.99.%d", nvram_get_int("ipv6_relay"));
+			snprintf(s, sizeof(s), "192.88.99.%d", nvram_get_int("ipv6_relay"));
 		else
 			strlcpy(s, nvram_safe_get("ipv6_tun_v4end"), sizeof(s));
 
@@ -1325,7 +1338,7 @@ static void filter_forward(void)
 {
 	char dst[64];
 	char src[64];
-	char t[512];
+	char buffer[512], dmz1[32], dmz2[32];
 	char *p, *c;
 	unsigned int i;
 
@@ -1402,7 +1415,7 @@ static void filter_forward(void)
 		else
 			strcpy(bridge, "");
 
-		sprintf(lanN_ifname, "lan%s_ifname", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 		if (strncmp(nvram_safe_get(lanN_ifname), "br", 2) == 0) {
 			char lanN_ifname2[] = "lanXX_ifname";
 			char br2;
@@ -1419,12 +1432,12 @@ static void filter_forward(void)
 				else
 					strcpy(bridge2, "");
 
-				sprintf(lanN_ifname2, "lan%s_ifname", bridge2);
+				snprintf(lanN_ifname2, sizeof(lanN_ifname2), "lan%s_ifname", bridge2);
 
 				if (strncmp(nvram_safe_get(lanN_ifname2), "br", 2) == 0)
 					ipt_write("-A FORWARD -i %s -o %s -j DROP\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ifname2));
 			}
-//		ip46t_write("-A FORWARD -i %s -j %s\n", nvram_safe_get(lanN_ifname), chain_out_accept);
+//			ip46t_write("-A FORWARD -i %s -j %s\n", nvram_safe_get(lanN_ifname), chain_out_accept);
 		}
 	}
 
@@ -1501,7 +1514,7 @@ static void filter_forward(void)
 		else
 			strcpy(bridge, "");
 
-		sprintf(lanN_ifname, "lan%s_ifname", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 		if (strncmp(nvram_safe_get(lanN_ifname), "br", 2) == 0)
 			ip46t_write("-A FORWARD -i %s -j %s\n", nvram_safe_get(lanN_ifname), chain_out_accept);
 	}
@@ -1536,15 +1549,28 @@ static void filter_forward(void)
 #ifdef TCONFIG_IPV6
 		ip6t_forward();
 #endif
-
+		memset(dst, 0, 64);
 		if (dmz_dst(dst)) {
-			char dmz_ifname[IFNAMSIZ+1];
-			strlcpy(dmz_ifname, nvram_safe_get("dmz_ifname"), sizeof(dmz_ifname));
-			if (strcmp(dmz_ifname, "") == 0)
-				strlcpy(dmz_ifname, lanface[0], sizeof(lanface[0]));
+			memset(dmz_ifname, 0, sizeof(dmz_ifname));
+			for (i = 0; i < BRIDGE_COUNT; i++) {
+				if (strcmp(lanface[i], "") != 0) { /* LAN is enabled */
+					memset(buffer, 0, sizeof(buffer));
+					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+					lan_ip(buffer, dmz1);
+					lan_ip("dmz_ipaddr", dmz2);
 
-			strlcpy(t, nvram_safe_get("dmz_sip"), sizeof(t));
-			p = t;
+					if (strcmp(dmz1, dmz2) == 0 && strcmp(lanface[i], "") != 0) {
+						strlcpy(dmz_ifname, lanface[i], sizeof(dmz_ifname));
+						break;
+					}
+				}
+			}
+			if (strcmp(dmz_ifname, "") == 0)
+				strlcpy(dmz_ifname, lanface[0], sizeof(dmz_ifname)); /* empty? set default (primary) */
+
+			memset(buffer, 0, sizeof(buffer));
+			strlcpy(buffer, nvram_safe_get("dmz_sip"), sizeof(buffer));
+			p = buffer;
 			do {
 				if ((c = strchr(p, ',')) != NULL)
 					*c = 0;
@@ -1570,7 +1596,7 @@ static void filter_log(void)
 	n = nvram_get_int("log_limit");
 	memset(limit, 0, 128);
 	if ((n >= 1) && (n <= 9999))
-		sprintf(limit, "-m limit --limit %d/m", n);
+		snprintf(limit, sizeof(limit), "-m limit --limit %d/m", n);
 	else
 		limit[0] = 0;
 
@@ -1903,16 +1929,16 @@ int start_firewall(void)
 
 	for (n = 0; n < BRIDGE_COUNT; n++) {
 		memset(buf1, 0, 16);
-		sprintf(buf1, (n == 0 ? "lan_ifname" : "lan%d_ifname"), n);
-		strlcpy(lanface[n], nvram_safe_get(buf1), sizeof(lanaddr[n]));
+		snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_ifname" : "lan%d_ifname"), n);
+		strlcpy(lanface[n], nvram_safe_get(buf1), sizeof(lanface[n]));
 	}
 
 	if ((gateway_mode = !nvram_match("wk_mode", "router"))) {
 		for (n = 0; n < BRIDGE_COUNT; n++) {
 			memset(buf1, 0, 16);
-			sprintf(buf1, (n == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), n);
+			snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), n);
 			memset(buf2, 0, 16);
-			sprintf(buf2, (n == 0 ? "lan_netmask" : "lan%d_netmask"), n);
+			snprintf(buf2, sizeof(buf2), (n == 0 ? "lan_netmask" : "lan%d_netmask"), n);
 			strlcpy(lanaddr[n], nvram_safe_get(buf1), sizeof(lanaddr[n]));
 			strlcpy(lanmask[n], nvram_safe_get(buf2), sizeof(lanmask[n]));
 		}
@@ -1935,27 +1961,6 @@ int start_firewall(void)
 #endif
 
 	can_enable_fastnat = 1;
-
-	strlcpy(s, lanaddr[0], sizeof(s));
-	if ((c = strrchr(s, '.')) != NULL)
-		*(c + 1) = 0;
-	strlcpy(lan_cclass, s, sizeof(lan_cclass));
-/*
-	strlcpy(s, lanaddr[1], sizeof(s));
-	if ((c = strrchr(s, '.')) != NULL)
-		*(c + 1) = 0;
-	strlcpy(lan1_cclass, s, sizeof(lan1_cclass));
-
-	strlcpy(s, lanaddr[2], sizeof(s));
-	if ((c = strrchr(s, '.')) != NULL)
-		*(c + 1) = 0;
-	strlcpy(lan2_cclass, s, sizeof(lan2_cclass));
-
-	strlcpy(s, lanaddr[3], sizeof(s));
-	if ((c = strrchr(s, '.')) != NULL)
-		*(c + 1) = 0;
-	strlcpy(lan3_cclass, s, sizeof(lan3_cclass));
-*/
 
 	/*
 		block obviously spoofed IP addresses
@@ -1983,14 +1988,14 @@ int start_firewall(void)
 				continue;
 
 			memset(s, 0, 64);
-			sprintf(s, "/proc/sys/net/ipv4/conf/%s/rp_filter", dirent->d_name);
+			snprintf(s, sizeof(s), "/proc/sys/net/ipv4/conf/%s/rp_filter", dirent->d_name);
 			bool enable_rp_filter = 1;
 
 			for (n = 1; n <= multiwan_wanfaces_count; n++) {
 				memset(buf1, 0, 16);
-				sprintf(buf1, "%d", n);
+				snprintf(buf1, sizeof(buf1), "%d", n);
 				memset(buf2, 0, 16);
-				sprintf(buf2, "wan%s_ifname", (n == 1 ? "" : buf1));
+				snprintf(buf2, sizeof(buf2), "wan%s_ifname", (n == 1 ? "" : buf1));
 				c = nvram_safe_get(buf2);
 
 				/* mcast needs rp filter to be turned off only for non default iface */
@@ -2096,7 +2101,7 @@ int start_firewall(void)
 	}
 	if (n < 5) {
 		memset(s, 0, 64);
-		sprintf(s, "%s.error", ipt_fname);
+		snprintf(s, sizeof(s), "%s.error", ipt_fname);
 		rename(ipt_fname, s);
 		syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
 		led(LED_DIAG, LED_ON);
@@ -2120,7 +2125,7 @@ int start_firewall(void)
 		}
 		if (n < 5) {
 			memset(s, 0, 64);
-			sprintf(s, "%s.error", ip6t_fname);
+			snprintf(s, sizeof(s), "%s.error", ip6t_fname);
 			rename(ip6t_fname, s);
 			syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
 			led(LED_DIAG, LED_ON);

@@ -1220,7 +1220,6 @@ static const nvset_t nvset_list[] = {
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
 	{ "dmz_sip",			V_LENGTH(0, 512)		},
-	{ "dmz_ifname",			V_LENGTH(0, 5)			},
 	{ "dmz_ra",			V_01				},
 
 // forward-upnp

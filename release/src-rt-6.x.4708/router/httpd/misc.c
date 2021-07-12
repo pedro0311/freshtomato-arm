@@ -1,9 +1,9 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
 
 #include "tomato.h"
@@ -158,27 +158,39 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 	return 0;
 }
 
-/*	<% lanip(mode); %>
- *	<mode>
- *		1	return first 3 octets (192.168.1)
- *		2	return last octet (1)
- *		else	return full (192.168.1.1)
+/* <% lanip(mode); %>
+ * <mode>
+ * 1	return first 3 octets (192.168.1)
+ * 2	return last octet (1)
+ * else	return full (192.168.1.1)
+ *
+ * =>	for all active bridges
  */
 void asp_lanip(int argc, char **argv)
 {
 	char *nv, *p;
 	char s[64];
 	char mode;
+	char comma = ' ';
+	int br;
 
 	mode = argc ? *argv[0] : 0;
 
-	if ((nv = nvram_get("lan_ipaddr")) != NULL) {
-		strcpy(s, nv);
-		if ((p = strrchr(s, '.')) != NULL) {
-			*p = 0;
-			web_puts((mode == '1') ? s : (mode == '2') ? (p + 1) : nv);
+	web_puts("\nvar lanip = [");
+	for (br = 0; br < BRIDGE_COUNT; br++) {
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+		if ((nv = nvram_get(s)) != NULL) {
+			memset(s, 0, sizeof(s));
+			snprintf(s, sizeof(s), "%s", nv);
+			if ((p = strrchr(s, '.')) != NULL) {
+				*p = 0;
+				web_printf("%c'%s'", comma, ((mode == '1') ? s : (mode == '2') ? (p + 1) : nv));
+				comma = ',';
+			}
 		}
 	}
+	web_puts("];\n");
 }
 
 /*	<% psup(process); %>

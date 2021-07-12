@@ -24,7 +24,7 @@
 
 //	<% devlist(); %>
 
-var lipp = '<% lanip(1); %>.';
+//	<% lanip(1); %>
 
 var list = [];
 var list_last = [];
@@ -215,7 +215,7 @@ dg.populate = function() {
 				for (l = 1; l <= MAX_PORT_ID; l++) {
 					k = (l == 1) ? '' : l.toString();
 					wan_gw = nvram['wan'+k+'_gateway'];
-					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && e.ip.substr(0, e.ip.lastIndexOf('.') + 1) != lipp) { /* FIXME: loop needed for every active bridge */
+					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && lanip.indexOf(e.ip.substr(0, e.ip.lastIndexOf('.'))) == -1) {
 						e.ip = nvram['wan'+k+'_gateway'];
 						break loop1;
 					}
