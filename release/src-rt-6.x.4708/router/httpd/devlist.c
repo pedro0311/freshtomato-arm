@@ -219,7 +219,7 @@ lan_ifnames,lan1_ifnames,lan2_ifnames,lan3_ifnames,\
 web_svg,web_css,\
 cstats_enable,cstats_labels,\
 dhcpd_static,\
-wl_ifname,wl_mode,wl_radio,wl_nband"
+wl_ifname,wl_mode,wl_radio,wl_nband,wl_wds_enable"
 	};
 
 	asp_nvram(1, nvram_argv);
