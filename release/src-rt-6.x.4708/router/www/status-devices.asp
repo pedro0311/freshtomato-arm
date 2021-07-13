@@ -73,7 +73,7 @@ dg.setup = function() {
 dg.populate = function() {
 	var i, j, k, l;
 	var a, b, c, e, f;
-	var mode = '', wan_gw;
+	var mode = '', wan_gw, found_last;
 
 /* IPV6-BEGIN */
 	var i2, e2;
@@ -101,9 +101,8 @@ dg.populate = function() {
 		list[i].media = '';
 	}
 
-	/* [ "eth1", "0", 0, -1, "SSID", "MAC", 1, 16, "wet", "MAC2" ] */
+	/* [ ifname, unitstr, unit, subunit, ssid, hwaddr, up, max_no_vifs, mode(ap/wet/wds), bssid ] */
 	for (i = 0; i < wl_ifaces.length; ++i) {
-		var j = wl_fface(i);
 		a = wl_ifaces[i];
 		c = wl_display_ifname(i);
 		if (a[6] != 1)
@@ -119,7 +118,7 @@ dg.populate = function() {
 		wl_info.push([a[0], c.substr(c.indexOf('/') + 2), a[4], a[8], b]);
 	}
 
-	/*  [ "wl0.1/eth1/2/3", "MAC", -53, 39000, 144444, 56992, (unit[0/1/2]) ] */
+	/* [ "wl0.1/eth1/2/3", "MAC", -53, 39000, 144444, 56992, (unit[0/1/2]) ] */
 	for (i = wldev.length - 1; i >= 0; --i) {
 		a = wldev[i];
 		if (a[0].indexOf('wds') == 0)
@@ -371,20 +370,23 @@ dg.populate = function() {
 			c = (a ? '<br><small>'+a+'<\/small>' : '');
 		}
 
+		/* fix issue when disconnected WL devices are displayed (for a while) as a LAN devices */
+		found_last = 0;
+		for (j = list_last.length - 1; j >= 0; --j) {
+			if (e.mac == list_last[j][0] && e.ip == list_last[j][1]) {
+				found_last = 1;
+				break;
+			}
+		}
+		if (found_last == 0 && e.freq != '') /* WL, new */
+			list_last.push([e.mac, e.ip]);
+
 		a = '';
-		if ((e.rssi < 0 && e.qual >= 0)) /* WL */
+		if (e.freq != '') /* WL */
 			a = e.ifstatus+' '+e.ifname+(e.ifname.indexOf('.') == -1 ? ' (wl'+e.unit+')' : '')+c;
-		else if ((e.ifname != '' && e.name != '') || (e.ifname != ''))
+		else if (e.ifname != '' && found_last == 0)
 			a = e.lan+e.wan+'('+e.ifname+')'+c;
 		else
-			e.rssi = 1; /* fake value only for checking */
-
-		/* fix issue when disconnected WL devices are displayed (for a while) as a LAN devices */
-		if (list_last.indexOf(e.mac) == -1) {
-			if (e.freq != '') /* it means device is on WL, connected */
-				list_last.push(e.mac);
-		}
-		else if (e.freq == '')
 			e.rssi = 1; /* fake value only for checking */
 
 		f = '';
