@@ -165,7 +165,7 @@ cntry_name_t cntry_names[] = {
 {"UGANDA",		"UG"},
 {"UKRAINE",		"UA"},
 {"U.AR. EMIRATES",	"AE"},
-{"U. KINGDOM",		"GB"},
+{"GREAT BRITAIN",	"GB"},
 {"USA",			"US"},
 {"URUGUAY",		"UY"},
 {"UZBEKISTAN",		"UZ"},
