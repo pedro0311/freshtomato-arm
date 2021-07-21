@@ -100,10 +100,17 @@ void wlconf_pre(void)
 	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
 	char buf[16] = {0};
 	wlc_rev_info_t rev;
+#ifdef TCONFIG_BCMBSD
+	int smart_conn = nvram_get_int("smart_connect_x");
+#endif
 
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
 
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+#ifdef TCONFIG_BCMBSD
+		nvram_set(strcat_r(prefix, "probresp_sw", tmp), smart_conn ? "1" : "0"); /* turn On with wireless band steering otherwise Off */
+#endif
 
 		/* for TxBeamforming: get corerev for TxBF check */
 		wl_ioctl(word, WLC_GET_REVINFO, &rev, sizeof(rev));
