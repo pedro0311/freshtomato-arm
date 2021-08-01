@@ -31,6 +31,37 @@ typedef struct
 
 static waninfo_t wan_info;
 
+#ifdef TCONFIG_BCMWL6
+int get_sta_wan_prefix(char *sPrefix)
+{
+	int mwan_num;
+	int wan_unit;
+	char wan_prefix[] = "wanXX";
+	char tmp[32];
+	int found = 0;
+
+	mwan_num = nvram_get_int("mwan_num");
+	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+		mwan_num = 1;
+
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		get_wan_prefix(wan_unit, wan_prefix);
+
+		if (strcmp(nvram_safe_get(strcat_r(wan_prefix, "_sta", tmp)), "")) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found)
+		strcpy(sPrefix, wan_prefix);
+	else
+		strcpy(sPrefix, "wan");
+
+	return found;
+}
+#endif
+
 void get_wan_info(char *sPrefix)
 {
 	char tmp[100];

@@ -3787,9 +3787,15 @@ TOP:
 		goto CLEAR;
 	}
 
-	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) {
+	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) { /* for tomato user --> 'service wl start' will restart wl allways (failsafe, even if wl was not stopped!) */
 		if (act_stop) stop_wireless();
 		if (act_start) restart_wireless();
+		goto CLEAR;
+	}
+
+	if (strcmp(service, "wlgui") == 0) { /* for GUI to restart wireless (only stop wl once!) */
+		if (act_stop) stop_wireless();
+		if (act_start) start_wireless();
 		goto CLEAR;
 	}
 

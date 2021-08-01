@@ -1336,7 +1336,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="advanced-wlanvifs.asp">
 <input type="hidden" name="_nextwait" value="10">
-<input type="hidden" name="_service" value="wireless-restart">
+<input type="hidden" name="_service" value="wlgui-restart">
 <input type="hidden" name="_force_commit" value="1">
 <input type="hidden" name="lan_ifnames" value="">
 <input type="hidden" name="lan1_ifnames" value="">

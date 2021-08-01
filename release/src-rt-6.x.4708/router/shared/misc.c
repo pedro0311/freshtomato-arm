@@ -231,10 +231,18 @@ int foreach_wif(int include_vifs, void *param,
 	int ret = 0;
 
 #ifdef TCONFIG_MULTIWAN
+#ifdef TCONFIG_DHDAP
+	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s",
+#else
+	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
+#endif /* TCONFIG_DHDAP */
+#else
+#ifdef TCONFIG_DHDAP
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
 #else
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s",
-#endif
+#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_MULTIWAN */
 		nvram_safe_get("lan_ifnames"),
 		nvram_safe_get("lan1_ifnames"),
 		nvram_safe_get("lan2_ifnames"),
@@ -244,12 +252,17 @@ int foreach_wif(int include_vifs, void *param,
 #ifdef TCONFIG_MULTIWAN
 		nvram_safe_get("wan3_ifnames"),
 		nvram_safe_get("wan4_ifnames"),
-#endif
+#endif /* TCONFIG_MULTIWAN */
+#ifdef TCONFIG_DHDAP
+		nvram_safe_get("wl2_ifname"),
+		nvram_safe_get("wl2_vifs"),
+#endif /* TCONFIG_DHDAP */
 		nvram_safe_get("wl_ifname"),
 		nvram_safe_get("wl0_ifname"),
 		nvram_safe_get("wl0_vifs"),
 		nvram_safe_get("wl1_ifname"),
 		nvram_safe_get("wl1_vifs"));
+
 	remove_dups(ifnames, sizeof(ifnames));
 	sort_list(ifnames, sizeof(ifnames));
 

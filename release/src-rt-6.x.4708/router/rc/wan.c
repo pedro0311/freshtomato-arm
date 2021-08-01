@@ -735,34 +735,19 @@ void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 	}
 }
 
-void start_wan_if(char *prefix)
+void store_wan_if_to_nvram(char *prefix)
 {
-	int wan_proto;
-	char *wan_ifname;
 	char *p = NULL;
 	char *w = NULL;
-	struct ifreq ifr;
-	int sd;
-	int max;
-	int mtu;
-	char buf[128];
+	char buf[64];
+	int wan_unit;
 	int vid;
 	int vid_map;
 	int vlan0tag;
-	int wan_unit;
-	char tmp[100];
-	int jumbo_enable = 0;
-	struct vlan_ioctl_args ifv;
+	char tmp[64];
 
 	wan_unit = get_wan_unit(prefix);
 
-	do_connect_file(1, prefix);
-
-	/* if (!foreach_wif(1, &p, is_sta)) {
-	 * this returns ethX to pointer in case there is any STA interface (for example on secondary WAN)
-	 * so primary / 3G WAN will be setup with wrong interface in case there is any STA exist.
-	 * also, (nvram_match(strcat_r(prefix, "_sta", tmp), "") return 0 for PPP3G or portless? WAN !!!
-	 */
 	if (strcmp(nvram_safe_get(strcat_r(prefix, "_sta", tmp)), "") == 0) {
 		p = nvram_safe_get(strcat_r(prefix, "_ifnameX", tmp));
 		if (sscanf(p, "vlan%d", &vid) == 1) {
@@ -786,6 +771,25 @@ void start_wan_if(char *prefix)
 	/* Store interface name to nvram */
 	nvram_set(strcat_r(prefix, "_ifname", tmp), p);
 	nvram_set(strcat_r(prefix, "_ifnames", tmp), p);
+}
+
+void start_wan_if(char *prefix)
+{
+	int wan_proto;
+	char *wan_ifname;
+	char *nvp;
+	struct ifreq ifr;
+	int sd;
+	int max;
+	int mtu;
+	char buf[128];
+	char tmp[128];
+	int jumbo_enable = 0;
+	struct vlan_ioctl_args ifv;
+
+	do_connect_file(1, prefix);
+
+	store_wan_if_to_nvram(prefix);
 
 	/* Setup WAN interface name */
 	wan_ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
@@ -919,9 +923,9 @@ void start_wan_if(char *prefix)
 			ifconfig(wan_ifname, IFUP, "0.0.0.0", NULL);
 			ifconfig(wan_ifname, IFUP, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), nvram_safe_get(strcat_r(prefix, "_netmask", tmp)));
 
-			p = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
-			if ((strcmp(p, "0.0.0.0") != 0) && (*p))
-				preset_wan(wan_ifname, p, nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), prefix);
+			nvp = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
+			if ((strcmp(nvp, "0.0.0.0") != 0) && (*nvp))
+				preset_wan(wan_ifname, nvp, nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), prefix);
 
 			switch (wan_proto) {
 			case WP_PPTP:

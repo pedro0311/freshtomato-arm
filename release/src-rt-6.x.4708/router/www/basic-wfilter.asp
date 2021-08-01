@@ -143,7 +143,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="basic-wfilter.asp">
 <input type="hidden" name="_nextwait" value="10">
-<input type="hidden" name="_service" value="wireless-restart">
+<input type="hidden" name="_service" value="wlgui-restart">
 <input type="hidden" name="_force_commit" value="1">
 <input type="hidden" name="wl_maclist">
 <input type="hidden" name="macnames">

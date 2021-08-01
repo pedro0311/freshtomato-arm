@@ -1257,6 +1257,8 @@ REMOVE-END */
 			m_mode.options[2].disabled = 0;
 			m_mode.options[3].disabled = 1;
 			m_mode.options[4].disabled = 1;
+/* remove wl securtiy setup restriction and let tomato user decide. no need to force auto WPA/WPA2 */
+/* REMOVE-BEGIN
 			var s_mode = E('_'+sta_wl+'_security_mode');
 			s_mode.options[2].disabled = 1;
 			s_mode.options[3].disabled = 1;
@@ -1267,7 +1269,7 @@ REMOVE-END */
 
 			if (s_mode.options[3].selected || s_mode.options[5].selected)
 				s_mode.options[7].selected = 1;
-
+REMOVE-END */
 			for (i = uidx+1; i <= curr_mwan_num; ++i) {
 				if (E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
 					ferror.set('_wan'+i+'_sta', 'Wireless Client mode can be set only to one WAN port', quiet || !ok);
