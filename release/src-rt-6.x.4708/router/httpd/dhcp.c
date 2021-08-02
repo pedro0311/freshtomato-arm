@@ -27,7 +27,7 @@ void asp_dhcpc_time(int argc, char **argv)
 
 	char expires_file[256];
 	memset(expires_file, 0, 256);
-	sprintf(expires_file, "/var/lib/misc/dhcpc-%s.expires", prefix);
+	snprintf(expires_file, sizeof(expires_file), "/var/lib/misc/dhcpc-%s.expires", prefix);
 	
 	if (using_dhcpc(prefix)) {
 		exp = 0;

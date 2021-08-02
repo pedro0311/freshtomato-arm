@@ -36,7 +36,7 @@ void wo_trace(char *url)
 	killall("traceroute", SIGTERM);
 
 	web_puts("\ntracedata = '");
-	sprintf(cmd, "traceroute -I -m %u -w %u %s", atoi(webcgi_safeget("hops", "0")), atoi(webcgi_safeget("wait", "0")), addr);
+	snprintf(cmd, sizeof(cmd), "traceroute -I -m %u -w %u %s", atoi(webcgi_safeget("hops", "0")), atoi(webcgi_safeget("wait", "0")), addr);
 	web_pipecmd(cmd, WOF_JAVASCRIPT);
 	web_puts("';");
 }
@@ -52,7 +52,7 @@ void wo_ping(char *url)
 	killall("ping", SIGTERM);
 
 	web_puts("\npingdata = '");
-	sprintf(cmd, "ping -c %d -s %d %s", atoi(webcgi_safeget("count", "0")), atoi(webcgi_safeget("size", "0")), addr);
+	snprintf(cmd, sizeof(cmd), "ping -c %d -s %d %s", atoi(webcgi_safeget("count", "0")), atoi(webcgi_safeget("size", "0")), addr);
 	web_pipecmd(cmd, WOF_JAVASCRIPT);
 	web_puts("';");
 }

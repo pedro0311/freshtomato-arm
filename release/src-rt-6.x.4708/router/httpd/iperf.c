@@ -98,12 +98,12 @@ void wo_ttcprun(char *url)
 		snprintf(tmp, sizeof(tmp), "%d", port);
 		if (!strcmp(v, "server")) {
 			_dprintf("Server\n");
-			sprintf(cmdBuffer, "iperf -J --logfile /tmp/iperf_log --intervalfile \
+			snprintf(cmdBuffer, sizeof(cmdBuffer), "iperf -J --logfile /tmp/iperf_log --intervalfile \
 			        /tmp/iperf_interval -I /var/run/iperf.pid -s -1 -D -p %d", port);
 		} else {
 			if ((host = webcgi_get("_host")) != NULL && (*host)) {
 				_dprintf("Client Address %s\n", host);
-				sprintf(cmdBuffer, "iperf -J --logfile /tmp/iperf_log --intervalfile \
+				snprintf(cmdBuffer, sizeof(cmdBuffer), "iperf -J --logfile /tmp/iperf_log --intervalfile \
 				        /tmp/iperf_interval -p %d %s %s %llu -c %s &", port, udpMode == 1 ? "-u" : "", byteLimitMode == 1 ? "-n" : "-t", limit, host);
 			}
 		}

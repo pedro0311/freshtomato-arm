@@ -165,7 +165,7 @@ cntry_name_t cntry_names[] = {
 {"UGANDA",		"UG"},
 {"UKRAINE",		"UA"},
 {"U.AR. EMIRATES",	"AE"},
-{"U. KINGDOM",		"GB"},
+{"GREAT BRITAIN",	"GB"},
 {"USA",			"US"},
 {"URUGUAY",		"UY"},
 {"UZBEKISTAN",		"UZ"},
@@ -323,8 +323,7 @@ int wpa_parse_wpa_ie_wpa(const unsigned char *wpa_ie, size_t wpa_ie_len, struct 
 {
 	const struct wpa_ie_hdr *hdr;
 	const unsigned char *pos;
-	unsigned int i;
-	int left, count;
+	int i, left, count;
 
 	data->proto = WPA_PROTO_WPA_;
 	data->pairwise_cipher = WPA_CIPHER_TKIP_;
@@ -406,8 +405,7 @@ int wpa_parse_wpa_ie_rsn(const unsigned char *rsn_ie, size_t rsn_ie_len, struct 
 {
 	const struct rsn_ie_hdr *hdr;
 	const unsigned char *pos;
-	unsigned int i;
-	int left, count;
+	int i, left, count;
 
 	data->proto = WPA_PROTO_RSN_;
 	data->pairwise_cipher = WPA_CIPHER_CCMP_;
@@ -565,7 +563,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	for (i = 0; i < results->count; ++i) {
 
 		bssidp = (unsigned char *)&bssi->BSSID;
-		sprintf(macstr, "%02X:%02X:%02X:%02X:%02X:%02X", (unsigned char)bssidp[0], (unsigned char)bssidp[1], (unsigned char)bssidp[2], (unsigned char)bssidp[3], (unsigned char)bssidp[4], (unsigned char)bssidp[5]);
+		snprintf(macstr, sizeof(macstr), "%02X:%02X:%02X:%02X:%02X:%02X", (unsigned char)bssidp[0], (unsigned char)bssidp[1], (unsigned char)bssidp[2], (unsigned char)bssidp[3], (unsigned char)bssidp[4], (unsigned char)bssidp[5]);
 
 		strcpy(apinfos[0].BSSID, macstr);
 		memset(apinfos[0].SSID, 0x0, 33);
@@ -782,7 +780,7 @@ void wo_wlradio(char *url)
 		if ((enable = webcgi_get("enable")) != NULL) {
 			web_close();
 			sleep(2);
-			sprintf(sunit, "%d", unit);
+			snprintf(sunit, sizeof(sunit), "%d", unit);
 			eval("radio", atoi(enable) ? "on" : "off", sunit);
 			return;
 		}
@@ -796,7 +794,7 @@ static int read_noise(int unit)
 	/* WLC_GET_PHY_NOISE = 135 */
 	if (wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), 135, &v, sizeof(v)) == 0) {
 		char s[32];
-		sprintf(s, "%d", v);
+		snprintf(s, sizeof(s), "%d", v);
 		nvram_set(wl_nvname("tnoise", unit, 0), s);
 		return v;
 	}
@@ -1311,14 +1309,14 @@ char* get_wl_tempsense(char *buf)
 			strcpy(s, "phy_tempsense");
 			if ((ret = wl_ioctl(ifname, WLC_GET_VAR, s, sizeof(s))) == 0) {
 				cur_temp = (unsigned int*) s;
-				sprintf(tempC, "%d", *cur_temp / 2 + 20);
+				snprintf(tempC, sizeof(tempC), "%d", *cur_temp / 2 + 20);
 
 				if ((atoi(tempC) <=0) || (atoi(tempC)>= 120)) {
 					strcpy(tempC, "--");
 					strcpy(tempF, "--");
 				}
 				else
-					sprintf(tempF, "%d", mround((*cur_temp / 2 + 20) * 1.8 + 32));
+					snprintf(tempF, sizeof(tempF), "%d", mround((*cur_temp / 2 + 20) * 1.8 + 32));
 			}
 			else {
 				strcpy(tempC, "--");

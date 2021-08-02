@@ -13,9 +13,9 @@ void wo_wwansignal(char *url)
 
 	int desired_wan = atoi(webcgi_safeget("mwan_num", "1"));
 	if (desired_wan == 1) {
-		sprintf(wancmd, "wwansignal wan -stdout");
+		snprintf(wancmd, sizeof(wancmd), "wwansignal wan -stdout");
 	} else {
-		sprintf(wancmd, "wwansignal wan%d -stdout", desired_wan);
+		snprintf(wancmd, sizeof(wancmd), "wwansignal wan%d -stdout", desired_wan);
 	}
 	web_puts("\nwwanstatus = '");
 	web_pipecmd(wancmd, WOF_JAVASCRIPT);
@@ -26,14 +26,14 @@ static char* getModemDiagPort(const char *wannum)
 {
 	char tmp[16];
 
-	sprintf(tmp, "%s_proto", wannum);
+	snprintf(tmp, sizeof(tmp), "%s_proto", wannum);
 	if (nvram_match(tmp, "ppp3g")) {
-		sprintf(tmp, "%s_modem_sdev", wannum);
+		snprintf(tmp, sizeof(tmp), "%s_modem_sdev", wannum);
 		return nvram_safe_get(tmp);
 	} else if (nvram_match(tmp, "lte")) {
-		sprintf(tmp, "%s_modem_type", wannum);
+		snprintf(tmp, sizeof(tmp), "%s_modem_type", wannum);
 		if (nvram_match(tmp, "non-hilink") || nvram_match(tmp, "huawei-non-hilink")) {
-			sprintf(tmp, "%s_modem_dev", wannum);
+			snprintf(tmp, sizeof(tmp), "%s_modem_dev", wannum);
 			return nvram_safe_get(tmp);
 		} else {	/* QMI or HiLink */
 			web_puts("\nwwansms_error = 'WWAN is not supported!'");
@@ -52,12 +52,12 @@ void wo_wwansms(char *url)
 	char *wwan_devId = NULL;
 
 	int desired_wan = atoi(webcgi_safeget("mwan_num", "1"));
-	sprintf(wannum, "wan%c", desired_wan == 1 ? '\0' : (char)desired_wan + 48);
+	snprintf(wannum, sizeof(wannum), "wan%c", desired_wan == 1 ? '\0' : (char)desired_wan + 48);
 
 	wwan_devId = getModemDiagPort(wannum);
 
 	if (wwan_devId != NULL) {
-		sprintf(smscmd, "gcom -d %s -s /etc/gcom/getsmses.gcom | pdureader", wwan_devId);
+		snprintf(smscmd, sizeof(smscmd), "gcom -d %s -s /etc/gcom/getsmses.gcom | pdureader", wwan_devId);
 		web_puts("\n");
 		web_puts("\nwwansms = '");
 		web_pipecmd(smscmd, WOF_JAVASCRIPT);
@@ -84,15 +84,13 @@ void wo_wwansms_delete(char *url)
 		return;
 	}
 	desired_wan = atoi(desired_wan_str);
-	sprintf(wannum, "wan%c", desired_wan == 1 ? '\0' : (char)desired_wan + 48);
+	snprintf(wannum, sizeof(wannum), "wan%c", desired_wan == 1 ? '\0' : (char)desired_wan + 48);
 	smsToRemove = atoi(smsToRemove_str);
 	printf("Request to delte %d from wan %s", smsToRemove, wannum);
 
 	wwan_devId = getModemDiagPort(wannum);
 	if (wwan_devId != NULL) {
-		sprintf(smscmd,
-			"MODE=\"AT+CMGD=%d\" gcom -d %s -s /etc/gcom/setverbose.gcom",
-			smsToRemove, wwan_devId);
+		snprintf(smscmd, sizeof(smscmd), "MODE=\"AT+CMGD=%d\" gcom -d %s -s /etc/gcom/setverbose.gcom", smsToRemove, wwan_devId);
 		web_puts("\n");
 		web_puts("\nwwansms_delete = '");
 		web_pipecmd(smscmd, WOF_JAVASCRIPT);

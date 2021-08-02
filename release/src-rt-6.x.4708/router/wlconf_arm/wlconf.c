@@ -2704,6 +2704,10 @@ wlconf(char *name)
 	val = atoi(nvram_safe_get(strcat_r(prefix, "bcn", tmp)));
 	WL_IOCTL(name, WLC_SET_BCNPRD, &val, sizeof(val));
 
+	/* Set SW probe response */
+	val = atoi(nvram_safe_get(strcat_r(prefix, "probresp_sw", tmp)));
+	wl_iovar_setint(name, "probresp_sw", val);
+
 #ifdef TCONFIG_WLCONF_VHT /* prepare for future change; right now we use wl util to apply it */
 	/* Update vht_features only if explicitly updated by NVRAM */
 	if (phytype == PHY_TYPE_AC) {

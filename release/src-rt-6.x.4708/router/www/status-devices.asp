@@ -24,7 +24,7 @@
 
 //	<% devlist(); %>
 
-var lipp = '<% lanip(1); %>.';
+//	<% lanip(1); %>
 
 var list = [];
 var list_last = [];
@@ -73,7 +73,7 @@ dg.setup = function() {
 dg.populate = function() {
 	var i, j, k, l;
 	var a, b, c, e, f;
-	var mode = '', wan_gw;
+	var mode = '', wan_gw, found_last, is_wds = 0;
 
 /* IPV6-BEGIN */
 	var i2, e2;
@@ -101,9 +101,8 @@ dg.populate = function() {
 		list[i].media = '';
 	}
 
-	/* [ "eth1", "0", 0, -1, "SSID", "MAC", 1, 16, "wet", "MAC2" ] */
+	/* [ ifname, unitstr, unit, subunit, ssid, hwaddr, up, max_no_vifs, mode(ap/wet/wds), bssid ] */
 	for (i = 0; i < wl_ifaces.length; ++i) {
-		var j = wl_fface(i);
 		a = wl_ifaces[i];
 		c = wl_display_ifname(i);
 		if (a[6] != 1)
@@ -116,10 +115,10 @@ dg.populate = function() {
 				}
 			}
 		}
-		wl_info.push([a[0], c.substr(c.indexOf('/') + 2), a[4], a[8], b]);
+		wl_info.push([a[0], c.substr(c.indexOf('/') + 2), a[4], a[8], b, i]);
 	}
 
-	/*  [ "wl0.1/eth1/2/3", "MAC", -53, 39000, 144444, 56992, (unit[0/1/2]) ] */
+	/* [ "wl0.1/eth1/2/3", "MAC", -53, 39000, 144444, 56992, (unit[0/1/2]) ] */
 	for (i = wldev.length - 1; i >= 0; --i) {
 		a = wldev[i];
 		if (a[0].indexOf('wds') == 0)
@@ -132,11 +131,13 @@ dg.populate = function() {
 		e.rssi = a[2];
 
 		for (j = 0; j < wl_info.length; ++j) {
-			if (wl_info[j][0] == e.ifname) {
+			is_wds = (e.ip == '-' && ((nvram['wl'+wl_info[j][5]+'_mode'] == 'wds') || (nvram['wl'+wl_info[j][5]+'_mode'] == 'ap' && nvram['wl'+wl_info[j][5]+'_wds_enable'] == 1)));
+			if ((wl_info[j][0] == e.ifname) || (is_wds)) {
 				e.freq = wl_info[j][1];
 				e.ssid = wl_info[j][2];
-				e.mode = wl_info[j][3];
-				e.ifstatus = wl_info[j][4];
+				e.mode = (is_wds ? 'wds' : wl_info[j][3]);
+				if (!is_wds)
+					e.ifstatus = wl_info[j][4];
 				if (e.mode == 'wet')
 					mode = e.mode;
 			}
@@ -185,7 +186,65 @@ dg.populate = function() {
 		e.name = a[0];
 	}
 
-	/* [ "IP", "MAC", "br0/wwan0", "name" ] */
+/* IPV6-BEGIN */
+	/* IPv6 step 1/2 - catch wireless devices: sync IPv4/IPv6 Infos with matching mac addr (extra line/entry for IPv6 with mac, ipv6, name and lease and synced infos) */
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
+		for (i2 = list.length - 1; i2 >= 0; --i2) {
+			e2 = list[i2];
+			if ((e.mac == e2.mac) && (e.ip != e2.ip) && (e.mode != 'wds') && (e2.mode != 'wds')) { /* match mac, and do not touch wds device */
+
+				/* sync infos but check first */
+				if ((e.mode != '') && (e2.mode == ''))
+					e2.mode = e.mode;
+				else if ((e2.mode != '') && (e.mode == ''))
+					e.mode = e2.mode;
+
+				if ((e.ifname != '') && (e2.ifname == ''))
+					e2.ifname = e.ifname;
+				else if ((e2.ifname != '') && (e.ifname == ''))
+					e.ifname = e2.ifname;
+
+				if ((e.ifstatus != '') && (e2.ifstatus == ''))
+					e2.ifstatus = e.ifstatus;
+				else if ((e2.ifstatus != '') && (e.ifstatus == ''))
+					e.ifstatus = e2.ifstatus;
+
+				if ((e.unit != '') && (e2.unit == ''))
+					e2.unit = e.unit;
+				else if ((e2.unit != '') && (e.unit == ''))
+					e.unit = e2.unit;
+
+				if ((e.name != '') && (e2.name == ''))
+					e2.name = e.name;
+				else if ((e2.name != '') && (e.name == ''))
+					e.name = e2.name;
+
+				if ((e.freq != '') && (e2.freq == ''))
+					e2.freq = e.freq;
+				else if ((e2.freq != '') && (e.freq == ''))
+					e.freq = e2.freq;
+
+				if ((e.ssid != '') && (e2.ssid == ''))
+					e2.ssid = e.ssid;
+				else if ((e2.ssid != '') && (e.ssid == ''))
+					e.ssid = e2.ssid;
+
+				if ((e.rssi != '') && (e2.rssi == ''))
+					e2.rssi = e.rssi;
+				else if ((e2.rssi != '') && (e.rssi == ''))
+					e.rssi = e2.rssi;
+
+				if ((e.txrx != '') && (e2.txrx == ''))
+					e2.txrx = e.txrx;
+				else if ((e2.txrx != '') && (e.txrx == ''))
+					e.txrx = e2.txrx;
+			}
+		}
+	}
+/* IPV6-END */
+
+	/* [ "IP", "MAC", "br0/wwan0", "name" ] (Note: need to catch IPv6 devices later) */
 	for (i = arplist.length - 1; i >= 0; --i) {
 		a = arplist[i];
 		if ((e = get(a[1], a[0])) != null) {
@@ -215,7 +274,7 @@ dg.populate = function() {
 				for (l = 1; l <= MAX_PORT_ID; l++) {
 					k = (l == 1) ? '' : l.toString();
 					wan_gw = nvram['wan'+k+'_gateway'];
-					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && e.ip.substr(0, e.ip.lastIndexOf('.') + 1) != lipp) { /* FIXME: loop needed for every active bridge */
+					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && lanip.indexOf(e.ip.substr(0, e.ip.lastIndexOf('.'))) == -1) {
 						e.ip = nvram['wan'+k+'_gateway'];
 						break loop1;
 					}
@@ -261,7 +320,7 @@ dg.populate = function() {
 			e.qual = -1;
 
 		/* fix problem with arplist */
-		if (e.bridge == '' && e.ip != '-') {
+		if (e.bridge == '' && e.mode != 'wds') {
 			for (j = 0; j <= MAX_BRIDGE_ID; j++) {
 				k = (j == 0) ? '' : j.toString();
 				if (nvram['lan'+k+'_ipaddr'] && (nvram['lan'+k+'_ipaddr'].substr(0, nvram['lan'+k+'_ipaddr'].lastIndexOf('.'))) == (e.ip.substr(0, e.ip.lastIndexOf('.')))) {
@@ -291,43 +350,33 @@ dg.populate = function() {
 	}
 
 /* IPV6-BEGIN */
-	/* step 2: sync IPv4 Infos to IPv6 with matching mac addr (extra line/entry for IPv6 with mac, ipv6, name and lease and synced IPv4 infos) */
+	/* step 2: IPv6 step 2/2 - catch wired devices: sync IPv4/IPv6 Infos with matching mac addr */
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
 		for (i2 = list.length - 1; i2 >= 0; --i2) {
 			e2 = list[i2];
-			if ((e.mac == e2.mac) && (e.ip != e2.ip)) { /* match mac */
-				if ((e2.bridge == '') || (e2.lan == '')) { /* check infos before sync */
+			if ((e.mac == e2.mac) && (e.ip != e2.ip) && (e.mode != 'wds') && (e2.mode != 'wds')) { /* match mac, and do not touch wds device */
+
+				/* sync infos but check first */
+				if ((e.ifname != '') && (e2.ifname == ''))
 					e2.ifname = e.ifname;
-					e2.ifstatus = e.ifstatus;
-					e2.bridge = e.bridge;
-					e2.freq = e.freq;
-					e2.ssid = e.ssid;
-					e2.mode = e.mode;
-					e2.unit = e.unit;
-					e2.rssi = e.rssi;
-					e2.qual = e.qual;
-					e2.txrx = e.txrx;
-					e2.lan = e.lan;
-				}
-				else {
+				else if ((e2.ifname != '') && (e.ifname == ''))
 					e.ifname = e2.ifname;
-					e.ifstatus = e2.ifstatus;
-					e.bridge = e2.bridge;
-					e.freq = e2.freq;
-					e.ssid = e2.ssid;
-					e.mode = e2.mode;
-					e.unit = e2.unit;
-					e.rssi = e2.rssi;
-					e.qual = e2.qual;
-					e.txrx = e2.txrx;
-					e.lan = e2.lan;
-				}
-				/* special case: name can be empty for IPv4 OR IPv6 - sync */
+
 				if ((e.name != '') && (e2.name == ''))
 					e2.name = e.name;
 				else if ((e2.name != '') && (e.name == ''))
 					e.name = e2.name;
+
+				if ((e.bridge != '') && (e2.bridge == ''))
+					e2.bridge = e.bridge;
+				else if ((e2.bridge != '') && (e.bridge == ''))
+					e.bridge = e2.bridge;
+
+				if ((e.lan != '') && (e2.lan == ''))
+					e2.lan = e.lan;
+				else if ((e2.lan != '') && (e.lan == ''))
+					e.lan = e2.lan;
 			}
 		}
 	}
@@ -371,25 +420,28 @@ dg.populate = function() {
 			c = (a ? '<br><small>'+a+'<\/small>' : '');
 		}
 
+		/* fix issue when disconnected WL devices are displayed (for a while) as a LAN devices */
+		found_last = 0;
+		for (j = list_last.length - 1; j >= 0; --j) {
+			if (e.mac == list_last[j][0] && e.ip == list_last[j][1]) {
+				found_last = 1;
+				break;
+			}
+		}
+		if (found_last == 0 && e.freq != '') /* WL, new */
+			list_last.push([e.mac, e.ip]);
+
 		a = '';
-		if ((e.rssi < 0 && e.qual >= 0)) /* WL */
+		if (e.freq != '') /* WL */
 			a = e.ifstatus+' '+e.ifname+(e.ifname.indexOf('.') == -1 ? ' (wl'+e.unit+')' : '')+c;
-		else if ((e.ifname != '' && e.name != '') || (e.ifname != ''))
+		else if (e.ifname != '' && found_last == 0)
 			a = e.lan+e.wan+'('+e.ifname+')'+c;
 		else
 			e.rssi = 1; /* fake value only for checking */
 
-		/* fix issue when disconnected WL devices are displayed (for a while) as a LAN devices */
-		if (list_last.indexOf(e.mac) == -1) {
-			if (e.freq != '') /* it means device is on WL, connected */
-				list_last.push(e.mac);
-		}
-		else if (e.freq == '')
-			e.rssi = 1; /* fake value only for checking */
-
 		f = '';
 		if (e.freq != '') {
-			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta') ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
 			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {
@@ -411,7 +463,7 @@ dg.populate = function() {
 			e.media = 5;
 		}
 
-		this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.ip == '-' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
+		this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.mode == 'wds' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
 		                     (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small> <img src="bar'+MIN(MAX(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
 		                     e.txrx, e.lease], false);
 	}

@@ -190,13 +190,13 @@ void asp_usbdevices(int argc, char **argv)
 	{
 		if (!strncmp(USB_STORAGE, scsi_dirent->d_name, strlen(USB_STORAGE)))
 		{
-			sprintf(line, "%s/%s", PROC_SCSI_ROOT, scsi_dirent->d_name);
+			snprintf(line, sizeof(line), "%s/%s", PROC_SCSI_ROOT, scsi_dirent->d_name);
 			usb_dir = opendir(line);
 			while (usb_dir && (dp = readdir(usb_dir)))
 			{
 				if (!strcmp(dp->d_name, "..") || !strcmp(dp->d_name, "."))
 					continue;
-				sprintf(line, "%s/%s/%s", PROC_SCSI_ROOT, scsi_dirent->d_name, dp->d_name);
+				snprintf(line, sizeof(line), "%s/%s/%s", PROC_SCSI_ROOT, scsi_dirent->d_name, dp->d_name);
 
 				fp = fopen(line, "r");
 				if (fp) {
@@ -265,7 +265,7 @@ void asp_usbdevices(int argc, char **argv)
 		if (!strcmp(dp->d_name, "..") || !strcmp(dp->d_name, "."))
 			continue;
 
-		sprintf(line, "/proc/usblp/%s", dp->d_name);
+		snprintf(line, sizeof(line), "/proc/usblp/%s", dp->d_name);
 		if ((fp = fopen(line, "r"))) {
 			g_usb_vendor[0] = 0;
 			g_usb_product[0] = 0;

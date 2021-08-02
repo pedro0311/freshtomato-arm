@@ -807,7 +807,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "dmz_enable",			"0"				, 0 },
 	{ "dmz_ipaddr",			"0"				, 0 },
 	{ "dmz_sip",			""				, 0 },
-	{ "dmz_ifname",			"br0"				, 0 },
 	{ "dmz_ra",			"1"				, 0 },
 
 /* forward-upnp */

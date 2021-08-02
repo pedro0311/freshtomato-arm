@@ -202,12 +202,11 @@ lg.countBridge = function (v) {
 
 lg.countOverlappingNetworks = function (ip) {
 	var data = this.getAllData();
-
 	var total = 0;
 	for (var i = 0; i < data.length; ++i) {
 		var net = getNetworkAddress(data[i][2], data[i][3]);
 		var brd = getBroadcastAddress(net, data[i][3]);
-		total += ((aton(ip) <= aton(brd)) && (aton(ip) >= aton(net))) ? 1 : 0;
+		total += (net != '0.0.0.0' ? (((aton(ip) <= aton(brd)) && (aton(ip) >= aton(net))) ? 1 : 0) : 0);
 	}
 
 	return total;
@@ -1466,7 +1465,6 @@ function save() {
 
 	var d = lg.getAllData();
 	for (var i = 0; i < d.length; ++i) {
-
 		if (lg.countOverlappingNetworks(d[i][2]) > 1) {
 			var s = 'Cannot proceed: two or more LAN bridges have conflicting IP addresses or overlapping subnets';
 			alert(s);
@@ -1509,8 +1507,8 @@ REMOVE-END */
 
 	var e = E('footer-msg');
 	var t = fixIP(fom['lan_ipaddr'].value);
-	if ((fom['lan_ifname'].value != 'br0') || (fom['lan_ipaddr'].value == '0.0.0.0') || (!t)) {
-		e.innerHTML = 'Bridge br0 must be always defined and have a valid IP address set.';
+	if ((fom['lan_ifname'].value != 'br0') || (!t)) {
+		e.innerHTML = 'Bridge br0 must be always defined.';
 		e.style.display = 'inline-block';
 		setTimeout(
 			function() {

@@ -104,7 +104,7 @@ void asp_nvstat(int argc, char **argv)
 	char s[20];
 
 	if (mtd_getinfo("nvram", &part, &size)) {
-		sprintf(s, MTD_DEV(%dro), part);
+		snprintf(s, sizeof(s), MTD_DEV(%dro), part);
 
 		if ((fp = fopen(s, "r"))) {
 

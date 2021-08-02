@@ -187,7 +187,7 @@ static void _execute_command(char *url, char *command, char *query, wofilter_t w
 		}
 	}
 
-	sprintf(cmd, "%s 2>&1", webExecFile);
+	snprintf(cmd, sizeof(cmd), "%s 2>&1", webExecFile);
 	web_pipecmd(cmd, wof);
 	unlink(webQueryFile);
 	unlink(webExecFile);
@@ -1220,7 +1220,6 @@ static const nvset_t nvset_list[] = {
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
 	{ "dmz_sip",			V_LENGTH(0, 512)		},
-	{ "dmz_ifname",			V_LENGTH(0, 5)			},
 	{ "dmz_ra",			V_01				},
 
 // forward-upnp
@@ -2218,7 +2217,7 @@ static int save_variables(int write)
 		}
 
 		if (ok < 0) {
-			sprintf(s, msgf, v->name);
+			snprintf(s, sizeof(s), msgf, v->name);
 			resmsg_set(s);
 			return 0;
 		}
@@ -2238,19 +2237,19 @@ static int save_variables(int write)
 				nvram_set("http_passwd", p1);
 			}
 		} else {
-			sprintf(s, msgf, "password");
+			snprintf(s, sizeof(s), msgf, "password");
 			resmsg_set(s);
 			return 0;
 		}
 	}
 
 	for (n = 0; n < 50; ++n) {
-		sprintf(s, "rrule%d", n);
+		snprintf(s, sizeof(s), "rrule%d", n);
 		if ((p = webcgi_get(s)) != NULL) {
 			if (strlen(p) > 2048) {
-				memset(t,0,sizeof(t));
-				strncpy(t,s,sizeof(s));
-				sprintf(s, msgf, t);
+				memset(t, 0, sizeof(t));
+				strncpy(t, s, sizeof(s));
+				snprintf(s, sizeof(s), msgf, t);
 				resmsg_set(s);
 				return 0;
 			}
@@ -2358,7 +2357,7 @@ static void wo_update(char *url)
 		for (api = aspapi; api->name; ++api) {
 			if (strcmp(api->name, name) == 0) {
 				for (argc = 0; argc < 16; ++argc) {
-					sprintf(s, "arg%d", argc);
+					snprintf(s, sizeof(s), "arg%d", argc);
 					if ((argv[argc] = (char *)webcgi_get(s)) == NULL) break;
 				}
 				api->exec(argc, argv);

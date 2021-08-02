@@ -1,9 +1,9 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
 
 #include "tomato.h"
@@ -133,15 +133,15 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 */
 	if (clientsai.ss_family == AF_INET) {
 		inet_ntop(clientsai.ss_family, &(((struct sockaddr_in*)&clientsai)->sin_addr), ip, sizeof(ip));
-		sprintf(s, "ip neigh show %s", ip);
+		snprintf(s, sizeof(s), "ip neigh show %s", ip);
 	}
 #ifdef TCONFIG_IPV6
 	else if (clientsai.ss_family == AF_INET6) {
 		inet_ntop(clientsai.ss_family, &(((struct sockaddr_in6*)&clientsai)->sin6_addr), ip, sizeof(ip));
 		if (IN6_IS_ADDR_V4MAPPED(&(((struct sockaddr_in6*)&clientsai)->sin6_addr)))
-			sprintf(s, "ip neigh show %s", ip + 7); /* chop off the ::ffff: to get the ipv4 bit */
+			snprintf(s, sizeof(s), "ip neigh show %s", ip + 7); /* chop off the ::ffff: to get the ipv4 bit */
 		else
-			sprintf(s, "ip neigh show %s", ip);
+			snprintf(s, sizeof(s), "ip neigh show %s", ip);
 	}
 #endif
 
@@ -158,27 +158,39 @@ fe80::201:2ff:fe3:405 dev br0 lladdr 00:01:02:03:04:05 REACHABLE
 	return 0;
 }
 
-/*	<% lanip(mode); %>
- *	<mode>
- *		1	return first 3 octets (192.168.1)
- *		2	return last octet (1)
- *		else	return full (192.168.1.1)
+/* <% lanip(mode); %>
+ * <mode>
+ * 1	return first 3 octets (192.168.1)
+ * 2	return last octet (1)
+ * else	return full (192.168.1.1)
+ *
+ * =>	for all active bridges
  */
 void asp_lanip(int argc, char **argv)
 {
 	char *nv, *p;
 	char s[64];
 	char mode;
+	char comma = ' ';
+	int br;
 
 	mode = argc ? *argv[0] : 0;
 
-	if ((nv = nvram_get("lan_ipaddr")) != NULL) {
-		strcpy(s, nv);
-		if ((p = strrchr(s, '.')) != NULL) {
-			*p = 0;
-			web_puts((mode == '1') ? s : (mode == '2') ? (p + 1) : nv);
+	web_puts("\nvar lanip = [");
+	for (br = 0; br < BRIDGE_COUNT; br++) {
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+		if ((nv = nvram_get(s)) != NULL) {
+			memset(s, 0, sizeof(s));
+			snprintf(s, sizeof(s), "%s", nv);
+			if ((p = strrchr(s, '.')) != NULL) {
+				*p = 0;
+				web_printf("%c'%s'", comma, ((mode == '1') ? s : (mode == '2') ? (p + 1) : nv));
+				comma = ',';
+			}
 		}
 	}
+	web_puts("];\n");
 }
 
 /*	<% psup(process); %>
@@ -280,7 +292,7 @@ static int check_connect(char *prefix)
 	int result;
 
 	memset(tmp, 0, 64);
-	sprintf(tmp, "/var/lib/misc/%s_state", prefix);
+	snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_state", prefix);
 
 	if (check_wanup(prefix)) {
 		if (nvram_get_int("mwan_cktime") == 0)
@@ -413,7 +425,7 @@ void asp_calc6rdlocalprefix(int argc, char **argv)
 
 	if (calc_6rd_local_prefix(&prefix_addr, prefix_len, relay_prefix_len, &wanip_addr, &local_prefix_addr, &local_prefix_len)
 	    && inet_ntop(AF_INET6, &local_prefix_addr, local_prefix, sizeof(local_prefix)) != NULL) {
-		sprintf(s, "\nlocal_prefix = '%s/%d';\n", local_prefix, local_prefix_len);
+		snprintf(s, sizeof(s), "\nlocal_prefix = '%s/%d';\n", local_prefix, local_prefix_len);
 		web_puts(s);
 	}
 }
@@ -851,9 +863,9 @@ void asp_wanstatus(int argc, char **argv)
 		strcpy(prefix, "wan");
 
 	memset(renew_file, 0, 64);
-	sprintf(renew_file, "/var/lib/misc/%s_dhcpc.renewing", prefix);
+	snprintf(renew_file, sizeof(renew_file), "/var/lib/misc/%s_dhcpc.renewing", prefix);
 	memset(wanconn_file, 0, 64);
-	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
+	snprintf(wanconn_file, sizeof(wanconn_file), "/var/lib/misc/%s.connecting", prefix);
 
 	if ((using_dhcpc(prefix)) && (f_exists(renew_file)))
 		p = "Renewing...";
@@ -893,7 +905,7 @@ void asp_rrule(int argc, char **argv)
 	int i;
 
 	i = nvram_get_int("rruleN");
-	sprintf(s, "rrule%d", i);
+	snprintf(s, sizeof(s), "rrule%d", i);
 	web_puts("\nrrule = '");
 	web_putj(nvram_safe_get(s));
 	web_printf("';\nrruleN = %d;\n", i);
@@ -1014,7 +1026,7 @@ void asp_dns(int argc, char **argv)
 	dns = get_dns(prefix); /* static buffer */
 	strcpy(s, "[");
 	for (i = 0 ; i < dns->count; ++i)
-		sprintf(s + strlen(s), "%s'%s:%u'", i ? "," : "", inet_ntoa(dns->dns[i].addr), dns->dns[i].port);
+		snprintf(s + strlen(s), sizeof(s), "%s'%s:%u'", i ? "," : "", inet_ntoa(dns->dns[i].addr), dns->dns[i].port);
 
 	strcat(s, "]");
 	web_puts(s);

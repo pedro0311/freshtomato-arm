@@ -60,7 +60,7 @@ void asp_iptraffic(int argc, char **argv) {
 		else
 			strcpy(bridge, "");
 
-		sprintf(name, "/proc/net/ipt_account/lan%s", bridge);
+		snprintf(name, sizeof(name), "/proc/net/ipt_account/lan%s", bridge);
 
 		if ((a = fopen(name, "r")) == NULL)
 			continue;
@@ -125,15 +125,15 @@ void iptraffic_conntrack_init() {
 			strcpy(bridge, "");
 
 		memset(sa, 0, 256);
-		sprintf(sa, "lan%s_ifname", bridge);
+		snprintf(sa, sizeof(sa), "lan%s_ifname", bridge);
 
 		if (strcmp(nvram_safe_get(sa), "") != 0) {
 			memset(sa, 0, 256);
-			sprintf(sa, "lan%s_ipaddr", bridge);
+			snprintf(sa, sizeof(sa), "lan%s_ipaddr", bridge);
 			rip[br] = inet_addr(nvram_safe_get(sa));
 
 			memset(sa, 0, 256);
-			sprintf(sa, "lan%s_netmask", bridge);
+			snprintf(sa, sizeof(sa), "lan%s_netmask", bridge);
 			mask[br] = inet_addr(nvram_safe_get(sa));
 			lan[br] = rip[br] & mask[br];
 		}

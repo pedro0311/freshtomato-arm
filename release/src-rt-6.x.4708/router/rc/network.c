@@ -1143,6 +1143,17 @@ void start_lan(void)
 						if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
 							strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 							ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+#ifdef TCONFIG_DHDAP
+							/* FIX me / Workaround for SDK7: mac addr value may be wrong for 2nd vif (after (re-) boot ??)  --> catch that case and adjust mac to our wl configuration */
+							if (subunit > 0) {
+								unsigned char hwaddr[ETHER_ADDR_LEN];
+								if (ether_atoe(nvram_safe_get(wl_nvname("hwaddr", unit, subunit)), hwaddr) &&
+								    memcmp(hwaddr, "\0\0\0\0\0\0", ETHER_ADDR_LEN) &&
+								    memcmp(hwaddr, ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN)) { /* compare and take nvram value if different */
+									memcpy(ifr.ifr_hwaddr.sa_data, hwaddr, ETHER_ADDR_LEN);
+								}
+							}
+#endif /* TCONFIG_DHDAP */
 							logmsg(LOG_DEBUG, "*** %s: setting MAC of %s bridge to %s", __FUNCTION__, ifr.ifr_name, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
 							ioctl(sfd, SIOCSIFHWADDR, &ifr);
 							hwaddrset = 1;

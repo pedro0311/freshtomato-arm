@@ -96,7 +96,7 @@ void wi_statsrestore(char *url, int len, char *boundary)
 	n = web_read(buf, len);
 	len -= n;
 
-	sprintf(tmp, "%s.new", file);
+	snprintf(tmp, sizeof(tmp), "%s.new", file);
 	if (f_write(tmp, buf, n, 0, 0600) != n) {
 		unlink(tmp);
 		error = "Error writing temporary file";
@@ -229,7 +229,7 @@ void asp_iptmon(int argc, char **argv) {
 		else
 			strcpy(bridge, "");
 
-		sprintf(name, "/proc/net/ipt_account/lan%s", bridge);
+		snprintf(name, sizeof(name), "/proc/net/ipt_account/lan%s", bridge);
 
 		if ((a = fopen(name, "r")) == NULL)
 			continue;

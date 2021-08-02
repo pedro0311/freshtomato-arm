@@ -77,7 +77,7 @@ void wo_backup(char *url)
 
 	close(fd);
 	args[2] = file;
-	sprintf(msg, ">%s.msg", file);
+	snprintf(msg, sizeof(msg), ">%s.msg", file);
 
 	if (_eval(args, msg, 0, NULL) == 0) {
 		send_header(200, NULL, mime_binary, 0);
@@ -113,7 +113,7 @@ void wi_restore(char *url, int len, char *boundary)
 	}
 	close(fd);
 	args[2] = file;
-	sprintf(msg, ">%s.msg", file);
+	snprintf(msg, sizeof(msg), ">%s.msg", file);
 
 	if (!skip_header(&len))
 		goto ERROR;
