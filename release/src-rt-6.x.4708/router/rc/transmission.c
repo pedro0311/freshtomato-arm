@@ -178,7 +178,9 @@ void start_bittorrent(void)
 		            nvram_safe_get("bt_blocklist_url"), pk,
 		            pk);
 
-	fprintf(fp, "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"			/* crash fix? */
+	fprintf(fp, "echo 4194304 > /proc/sys/net/core/rmem_max\n"		/* tune buffers */
+	            "echo 2080768 > /proc/sys/net/core/wmem_max\n"
+	            "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"			/* crash fix? */
 	            "CURL_CA_BUNDLE=/etc/ssl/cert.pem; export CURL_CA_BUNDLE\n"	/* workaround for missing cacert (in new curl versions) */
 	            "%s/transmission-daemon -g %s/.settings",
 	            pn,
@@ -231,6 +233,8 @@ void stop_bittorrent(void)
 		            "logger \"Transmission daemon forcefully stopped\" \n"
 		            "}\n"
 		            "/usr/bin/btcheck addcru\n"
+		            "echo 1040384 > /proc/sys/net/core/rmem_max\n" /* tune-back buffers */
+		            "echo 1040384 > /proc/sys/net/core/wmem_max\n"
 		            "exit 0\n");
 
 		fclose(fp);
