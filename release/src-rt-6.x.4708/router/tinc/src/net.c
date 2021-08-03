@@ -1,7 +1,7 @@
 /*
     net.c -- most of the network code
     Copyright (C) 1998-2005 Ivo Timmermans,
-                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2021 Guus Sliepen <guus@tinc-vpn.org>
                   2006      Scott Lamb <slamb@slamb.org>
                   2011      Loïc Grenié <loic.grenie@gmail.com>
 
@@ -404,20 +404,18 @@ int reload_configuration(void) {
 		while(cfg) {
 			subnet_t *subnet, *s2;
 
-			if(!get_config_subnet(cfg, &subnet)) {
-				continue;
-			}
+			if(get_config_subnet(cfg, &subnet)) {
+				if((s2 = lookup_subnet(myself, subnet))) {
+					if(s2->expires == 1) {
+						s2->expires = 0;
+					}
 
-			if((s2 = lookup_subnet(myself, subnet))) {
-				if(s2->expires == 1) {
-					s2->expires = 0;
+					free_subnet(subnet);
+				} else {
+					subnet_add(myself, subnet);
+					send_add_subnet(everyone, subnet);
+					subnet_update(myself, subnet, true);
 				}
-
-				free_subnet(subnet);
-			} else {
-				subnet_add(myself, subnet);
-				send_add_subnet(everyone, subnet);
-				subnet_update(myself, subnet, true);
 			}
 
 			cfg = lookup_config_next(config_tree, cfg);

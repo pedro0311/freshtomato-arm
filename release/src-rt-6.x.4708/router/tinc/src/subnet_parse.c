@@ -1,6 +1,6 @@
 /*
     subnet_parse.c -- handle subnet parsing
-    Copyright (C) 2000-2012 Guus Sliepen <guus@tinc-vpn.org>,
+    Copyright (C) 2000-2021 Guus Sliepen <guus@tinc-vpn.org>,
                   2000-2005 Ivo Timmermans
 
     This program is free software; you can redistribute it and/or modify
@@ -85,6 +85,17 @@ void maskcpy(void *va, const void *vb, int masklen, int len) {
 	for(; i < len; i++) {
 		a[i] = 0;
 	}
+}
+
+bool subnetcheck(const subnet_t subnet) {
+	if(((subnet.type == SUBNET_IPV4)
+	                && !maskcheck(&subnet.net.ipv4.address, subnet.net.ipv4.prefixlength, sizeof(subnet.net.ipv4.address)))
+	                || ((subnet.type == SUBNET_IPV6)
+	                    && !maskcheck(&subnet.net.ipv6.address, subnet.net.ipv6.prefixlength, sizeof(subnet.net.ipv6.address)))) {
+		return false;
+	}
+
+	return true;
 }
 
 bool maskcheck(const void *va, int masklen, int len) {

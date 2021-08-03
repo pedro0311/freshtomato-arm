@@ -1,6 +1,6 @@
 /*
     crypto.c -- Cryptographic miscellaneous functions and initialisation
-    Copyright (C) 2007-2014 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2021 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -96,9 +96,10 @@ void crypto_init(void) {
 
 	ENGINE_load_builtin_engines();
 	ENGINE_register_all_complete();
-
+#if OPENSSL_API_COMPAT < 0x10100000L
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
+#endif
 
 	if(!RAND_status()) {
 		fprintf(stderr, "Not enough entropy for the PRNG!\n");
@@ -107,8 +108,10 @@ void crypto_init(void) {
 }
 
 void crypto_exit(void) {
+#if OPENSSL_API_COMPAT < 0x10100000L
 	EVP_cleanup();
 	ERR_free_strings();
 	ENGINE_cleanup();
+#endif
 	random_exit();
 }
