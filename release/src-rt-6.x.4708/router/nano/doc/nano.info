@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 5.7.
+This manual documents the GNU ‘nano’ editor, version 5.8.
 
 * Menu:
 
@@ -831,7 +831,8 @@ The supported settings in a nanorc file are:
      the foreground and background colors are: ‘red’, ‘green’, ‘blue’,
      ‘magenta’, ‘yellow’, ‘cyan’, ‘white’, and ‘black’.  Each of these
      eight names may be prefixed with the word ‘light’ to get a brighter
-     version of that color.
+     version of that color.  The word ‘grey’ or ‘gray’ may be used as a
+     synonym for ‘lightblack’.
 
      On terminal emulators that can do at least 256 colors, other valid
      (but unprefixable) color names are: ‘pink’, ‘purple’, ‘mauve’,
@@ -898,6 +899,11 @@ The supported settings in a nanorc file are:
      numbers and the character code are displayed only when ‘set
      constantshow’ is used, and can be toggled on and off with <M-C>.
      The state flags are displayed only when ‘set stateflags’ is used.
+
+‘set minicolor [bold,][italic,]FGCOLOR,BGCOLOR’
+     Use this color combination for the minibar.  (When this option is
+     not specified, the colors of the title bar are used.)  *Note set
+     functioncolor:: for valid color names.
 
 ‘set mouse’
      Enable mouse support, so that mouse clicks can be used to place the
@@ -1926,12 +1932,12 @@ Node: Feature Toggles24881
 Node: Nanorc Files26688
 Node: Settings28309
 Ref: set functioncolor31579
-Ref: set matchbrackets33964
-Ref: Whitespace41905
-Node: Syntax Highlighting42660
-Node: Rebinding Keys49425
-Node: Pico Compatibility63877
-Node: Building and Configure Options68417
+Ref: set matchbrackets34051
+Ref: Whitespace42230
+Node: Syntax Highlighting42985
+Node: Rebinding Keys49750
+Node: Pico Compatibility64202
+Node: Building and Configure Options68742
 
 End Tag Table
 

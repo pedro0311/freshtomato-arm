@@ -130,6 +130,7 @@ static const rcoption rcopts[] = {
 	{"scrollercolor", 0},
 	{"selectedcolor", 0},
 	{"spotlightcolor", 0},
+	{"minicolor", 0},
 	{"promptcolor", 0},
 	{"statuscolor", 0},
 	{"errorcolor", 0},
@@ -290,7 +291,7 @@ keystruct *strtosc(const char *input)
 		s->func = do_gotolinecolumn_void;
 #ifdef ENABLE_JUSTIFY
 	else if (!strcmp(input, "justify"))
-		s->func = do_justify_void;
+		s->func = do_justify;
 	else if (!strcmp(input, "fulljustify"))
 		s->func = do_full_justify;
 	else if (!strcmp(input, "beginpara"))
@@ -991,9 +992,21 @@ void parse_includes(char *ptr)
 	free(expanded);
 }
 
-const char hues[9][7] = { "pink", "purple", "mauve", "lagoon", "mint",
-						  "lime", "peach", "orange", "latte" };
-short indices[9] = { 204, 163, 134, 38, 48, 148, 215, 208, 137 };
+#define COLORCOUNT  20
+
+const char hues[COLORCOUNT][8] = { "red", "green", "blue",
+								   "yellow", "cyan", "magenta",
+								   "white", "black", "normal",
+								   "pink", "purple", "mauve",
+								   "lagoon", "mint", "lime",
+								   "peach", "orange", "latte",
+								   "grey", "gray" };
+
+short indices[COLORCOUNT] = { COLOR_RED, COLOR_GREEN, COLOR_BLUE,
+							  COLOR_YELLOW, COLOR_CYAN, COLOR_MAGENTA,
+							  COLOR_WHITE, COLOR_BLACK, THE_DEFAULT,
+							  204, 163, 134, 38, 48, 148, 215, 208, 137,
+							  COLOR_BLACK + 8, COLOR_BLACK + 8 };
 
 /* Return the short value corresponding to the given color name, and set
  * vivid to TRUE for a lighter color, and thick for a heavier typeface. */
@@ -1013,35 +1026,16 @@ short color_to_short(const char *colorname, bool *vivid, bool *thick)
 		*thick = FALSE;
 	}
 
-	if (strcmp(colorname, "green") == 0)
-		return COLOR_GREEN;
-	else if (strcmp(colorname, "red") == 0)
-		return COLOR_RED;
-	else if (strcmp(colorname, "blue") == 0)
-		return COLOR_BLUE;
-	else if (strcmp(colorname, "white") == 0)
-		return COLOR_WHITE;
-	else if (strcmp(colorname, "yellow") == 0)
-		return COLOR_YELLOW;
-	else if (strcmp(colorname, "cyan") == 0)
-		return COLOR_CYAN;
-	else if (strcmp(colorname, "magenta") == 0)
-		return COLOR_MAGENTA;
-	else if (strcmp(colorname, "black") == 0)
-		return COLOR_BLACK;
-	else if (strcmp(colorname, "normal") == 0)
-		return THE_DEFAULT;
-	else
-		for (int index = 0; index < 9; index++)
-			if (strcmp(colorname, hues[index]) == 0) {
-				if (*vivid) {
-					jot_error(N_("Color '%s' takes no prefix"), colorname);
-					return BAD_COLOR;
-				} else if (COLORS < 255)
-					return THE_DEFAULT;
-				else
-					return indices[index];
-			}
+	for (int index = 0; index < COLORCOUNT; index++)
+		if (strcmp(colorname, hues[index]) == 0) {
+			if (index > 7 && *vivid) {
+				jot_error(N_("Color '%s' takes no prefix"), colorname);
+				return BAD_COLOR;
+			} else if (index > 8 && COLORS < 255)
+				return THE_DEFAULT;
+			else
+				return indices[index];
+		}
 
 	jot_error(N_("Color \"%s\" not understood"), colorname);
 	return BAD_COLOR;
@@ -1557,6 +1551,8 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			color_combo[SELECTED_TEXT] = parse_interface_color(argument);
 		else if (strcmp(option, "spotlightcolor") == 0)
 			color_combo[SPOTLIGHTED] = parse_interface_color(argument);
+		else if (strcmp(option, "minicolor") == 0)
+			color_combo[MINI_INFOBAR] = parse_interface_color(argument);
 		else if (strcmp(option, "promptcolor") == 0)
 			color_combo[PROMPT_BAR] = parse_interface_color(argument);
 		else if (strcmp(option, "statuscolor") == 0)

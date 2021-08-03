@@ -60,8 +60,8 @@ void do_mark(void)
 }
 #endif /* !NANO_TINY */
 
-/* Insert a tab.  If the TABS_TO_SPACES flag is set, insert the number
- * of spaces that a tab would normally take up. */
+/* Insert a tab.  Or, if --tabstospaces is in effect, insert the number
+ * of spaces that a tab would normally take up at this position. */
 void do_tab(void)
 {
 #ifdef ENABLE_COLOR
@@ -133,12 +133,12 @@ void do_indent(void)
 
 	indentation = nmalloc(tabsize + 1);
 
-	/* Set the indentation to either a bunch of spaces or a single tab. */
 #ifdef ENABLE_COLOR
 	if (openfile->syntax && openfile->syntax->tab)
 		indentation = mallocstrcpy(indentation, openfile->syntax->tab);
 	else
 #endif
+	/* Set the indentation to either a bunch of spaces or a single tab. */
 	if (ISSET(TABS_TO_SPACES)) {
 		memset(indentation, ' ', tabsize);
 		indentation[tabsize] = '\0';
@@ -278,9 +278,6 @@ void handle_indent_action(undostruct *u, bool undoing, bool add_indent)
 	groupstruct *group = u->grouping;
 	linestruct *line = line_from_number(group->top_line);
 
-	if (group->next != NULL)
-		die("Multiple groups -- please report a bug\n");
-
 	/* When redoing, reposition the cursor and let the indenter adjust it. */
 	if (!undoing)
 		goto_line_posx(u->head_lineno, u->head_x);
@@ -418,11 +415,9 @@ void do_comment(void)
 
 	/* Comment/uncomment each of the selected lines when possible, and
 	 * store undo data when a line changed. */
-	for (line = top; line != bot->next; line = line->next) {
-		if (comment_line(action, line, comment_seq)) {
+	for (line = top; line != bot->next; line = line->next)
+		if (comment_line(action, line, comment_seq))
 			update_multiline_undo(line->lineno, "");
-		}
-	}
 
 	set_modified();
 	ensure_firstcolumn_is_aligned();
@@ -1087,24 +1082,24 @@ void update_multiline_undo(ssize_t lineno, char *indentation)
 	/* If there already is a group and the current line is contiguous with it,
 	 * extend the group; otherwise, create a new group. */
 	if (u->grouping && u->grouping->bottom_line + 1 == lineno) {
-		size_t number_of_lines;
+		size_t number_of_lines = lineno - u->grouping->top_line + 1;
 
-		u->grouping->bottom_line++;
+		u->grouping->bottom_line = lineno;
 
-		number_of_lines = u->grouping->bottom_line - u->grouping->top_line + 1;
 		u->grouping->indentations = nrealloc(u->grouping->indentations,
 										number_of_lines * sizeof(char *));
 		u->grouping->indentations[number_of_lines - 1] = copy_of(indentation);
 	} else {
 		groupstruct *born = nmalloc(sizeof(groupstruct));
 
-		born->next = u->grouping;
-		u->grouping = born;
 		born->top_line = lineno;
 		born->bottom_line = lineno;
 
-		u->grouping->indentations = nmalloc(sizeof(char *));
-		u->grouping->indentations[0] = copy_of(indentation);
+		born->indentations = nmalloc(sizeof(char *));
+		born->indentations[0] = copy_of(indentation);
+
+		born->next = u->grouping;
+		u->grouping = born;
 	}
 
 	/* Store the file size after the change, to be used when redoing. */
@@ -1332,7 +1327,9 @@ bool do_wrap(void)
 		strncpy(line->data, line->prev->data, lead_len);
 
 		openfile->current_x += lead_len;
+		openfile->totsize += lead_len;
 #ifndef NANO_TINY
+		free(openfile->undotop->strdata);
 		update_undo(ENTER);
 #endif
 		if (autowhite)
@@ -1707,9 +1704,12 @@ void justify_paragraph(linestruct **line, size_t count)
 	free(lead_string);
 }
 
-/* Justify the current paragraph, or the entire buffer when full_justify is
+#define ONE_PARAGRAPH  FALSE
+#define WHOLE_BUFFER  TRUE
+
+/* Justify the current paragraph, or the entire buffer when whole_buffer is
  * TRUE.  But if the mark is on, justify only the marked text instead. */
-void do_justify(bool full_justify)
+void justify_text(bool whole_buffer)
 {
 	size_t linecount;
 		/* The number of lines in the original paragraph. */
@@ -1825,7 +1825,7 @@ void do_justify(bool full_justify)
 	{
 		/* When justifying the entire buffer, start at the top.  Otherwise, when
 		 * in a paragraph but not at its beginning, move back to its first line. */
-		if (full_justify)
+		if (whole_buffer)
 			openfile->current = openfile->filetop;
 		else if (inpar(openfile->current) && !begpar(openfile->current, 0))
 			do_para_begin(&openfile->current);
@@ -1847,7 +1847,7 @@ void do_justify(bool full_justify)
 		start_x = 0;
 
 		/* Set the end point of the paragraph. */
-		if (full_justify)
+		if (whole_buffer)
 			endline = openfile->filebot;
 		else {
 			endline = startline;
@@ -1922,7 +1922,7 @@ void do_justify(bool full_justify)
 		justify_paragraph(&jusline, linecount);
 
 		/* When justifying the entire buffer, find and justify all paragraphs. */
-		if (full_justify) {
+		if (whole_buffer) {
 			while (find_paragraph(&jusline, &linecount)) {
 				justify_paragraph(&jusline, linecount);
 
@@ -1934,7 +1934,7 @@ void do_justify(bool full_justify)
 
 #ifndef NANO_TINY
 	add_undo(PASTE, NULL);
-	if (full_justify && !openfile->mark && !cutbuffer->has_anchor)
+	if (whole_buffer && !openfile->mark && !cutbuffer->has_anchor)
 		openfile->current->has_anchor = FALSE;
 #endif
 	/* Do the equivalent of a paste of the justified text. */
@@ -1965,7 +1965,7 @@ void do_justify(bool full_justify)
 		statusline(REMARK, _("Justified selection"));
 	else
 #endif
-	if (full_justify)
+	if (whole_buffer)
 		statusline(REMARK, _("Justified file"));
 	else
 		statusbar(_("Justified paragraph"));
@@ -1979,15 +1979,15 @@ void do_justify(bool full_justify)
 }
 
 /* Justify the current paragraph. */
-void do_justify_void(void)
+void do_justify(void)
 {
-	do_justify(FALSE);
+	justify_text(ONE_PARAGRAPH);
 }
 
 /* Justify the entire file. */
 void do_full_justify(void)
 {
-	do_justify(TRUE);
+	justify_text(WHOLE_BUFFER);
 	ran_a_tool = TRUE;
 }
 #endif /* ENABLE_JUSTIFY */
@@ -2610,6 +2610,9 @@ void do_linter(void)
 		return;
 	}
 
+	/* Block resizing signals while reading from the pipe. */
+	block_sigwinch(TRUE);
+
 	/* Read in the returned syntax errors. */
 	totalread = 0;
 	buffersize = pipesize + 1;
@@ -2626,10 +2629,12 @@ void do_linter(void)
 	*pointer = '\0';
 	close(lint_fd[0]);
 
-	/* Process the linter output. */
+	block_sigwinch(FALSE);
+
 	pointer = lintings;
 	onelint = lintings;
 
+	/* Now parse the output of the linter. */
 	while (*pointer != '\0') {
 		if ((*pointer == '\r') || (*pointer == '\n')) {
 			*pointer = '\0';
@@ -2637,11 +2642,8 @@ void do_linter(void)
 				char *filename = NULL, *linestr = NULL, *maybecol = NULL;
 				char *message = copy_of(onelint);
 
-				/* At the moment we handle the following formats:
-				 *
-				 * filenameorcategory:line:column:message (e.g. splint)
-				 * filenameorcategory:line,column:message (e.g. pylint)
-				 * filenameorcategory:line:message        (e.g. pyflakes) */
+				/* The recognized format is "filename:line:column: message",
+				 * where ":column" may be absent or be ",column" instead. */
 				if (strstr(message, ": ") != NULL) {
 					filename = strtok(onelint, ":");
 					if ((linestr = strtok(NULL, ":")) != NULL) {
@@ -2674,7 +2676,7 @@ void do_linter(void)
 							curlint->prev = tmplint;
 							if (curlint->prev != NULL)
 								curlint->prev->next = curlint;
-							curlint->msg = copy_of(message);
+							curlint->msg = copy_of(strstr(message, ": ") + 2);
 							curlint->lineno = tmplineno;
 							curlint->colno = tmpcolno;
 							curlint->filename = copy_of(filename);
@@ -3159,8 +3161,8 @@ void complete_a_word(void)
 
 	/* The search has reached the end of the file. */
 	if (list_of_completions != NULL) {
+		edit_refresh();
 		statusline(AHEM, _("No further matches"));
-		refresh_needed = TRUE;
 	} else
 		/* TRANSLATORS: Shown when there are zero possible completions. */
 		statusline(AHEM, _("No matches"));

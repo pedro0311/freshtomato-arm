@@ -82,7 +82,7 @@ void search_init(bool replacing, bool retain_answer)
 		thedefault = nmalloc(strlen(disp) + 7);
 		/* We use (COLS / 3) here because we need to see more on the line. */
 		sprintf(thedefault, " [%s%s]", disp,
-				(breadth(last_search) > COLS / 3) ? "..." : "");
+					(breadth(last_search) > COLS / 3) ? "..." : "");
 		free(disp);
 	} else
 		thedefault = copy_of("");
@@ -329,15 +329,12 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 		light_to_col = wideness(line->data, found_x + found_len);
 		if (!ISSET(SHOW_CURSOR))
 			hide_cursor = TRUE;
-		refresh_needed = TRUE;
+		edit_refresh();
 	}
 #endif
 
-	/* Wipe the "Searching..." message and unsuppress cursor-position display. */
-	if (feedback > 0) {
+	if (feedback > 0)
 		wipe_statusbar();
-		lastmessage = VACUUM;
-	}
 
 	return 1;
 }
@@ -431,10 +428,8 @@ void go_looking(void)
 	/* If we found something, and we're back at the exact same spot
 	 * where we started searching, then this is the only occurrence. */
 	if (didfind == 1 && openfile->current == was_current &&
-				openfile->current_x == was_current_x)
+						openfile->current_x == was_current_x)
 		statusline(REMARK, _("This is the only occurrence"));
-	else if (didfind == 1 && LINES == 1)
-		refresh_needed = TRUE;
 	else if (didfind == 0)
 		not_found_msg(last_search);
 
@@ -475,8 +470,7 @@ int replace_regexp(char *string, bool create)
 			/* And if create is TRUE, append the result of the
 			 * subexpression match to the new line. */
 			if (create) {
-				strncpy(string, openfile->current->data +
-										regmatches[num].rm_so, i);
+				strncpy(string, openfile->current->data + regmatches[num].rm_so, i);
 				string += i;
 			}
 		}
@@ -706,8 +700,8 @@ void ask_for_and_do_replacements(void)
 	size_t begin_x = openfile->current_x;
 	ssize_t numreplaced;
 	int response = do_prompt(MREPLACEWITH, "", &replace_history,
-						/* TRANSLATORS: This is a prompt. */
-						edit_refresh, _("Replace with"));
+							/* TRANSLATORS: This is a prompt. */
+							edit_refresh, _("Replace with"));
 
 #ifdef ENABLE_HISTORIES
 	/* When not "", add the replace string to the replace history list. */
@@ -729,11 +723,12 @@ void ask_for_and_do_replacements(void)
 	openfile->firstcolumn = was_firstcolumn;
 	openfile->current = beginline;
 	openfile->current_x = begin_x;
-	refresh_needed = TRUE;
+
+	edit_refresh();
 
 	if (numreplaced >= 0)
 		statusline(REMARK, P_("Replaced %zd occurrence",
-				"Replaced %zd occurrences", numreplaced), numreplaced);
+					"Replaced %zd occurrences", numreplaced), numreplaced);
 }
 
 /* Go to the specified line and x position. */

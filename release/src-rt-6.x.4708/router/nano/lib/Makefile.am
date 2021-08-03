@@ -234,6 +234,32 @@ EXTRA_libgnu_a_SOURCES += dirfd.c
 
 ## begin gnulib module dynarray
 
+BUILT_SOURCES += malloc/dynarray.gl.h malloc/dynarray-skeleton.gl.h
+
+malloc/dynarray.gl.h: malloc/dynarray.h
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e '/libc_hidden_proto/d' < $(srcdir)/malloc/dynarray.h; \
+	} > $@-t && \
+	mv $@-t $@
+MOSTLYCLEANFILES += malloc/dynarray.gl.h malloc/dynarray.gl.h-t
+
+malloc/dynarray-skeleton.gl.h: malloc/dynarray-skeleton.c
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e 's|<malloc/dynarray\.h>|<malloc/dynarray.gl.h>|g' \
+	      -e 's|__attribute_maybe_unused__|_GL_ATTRIBUTE_MAYBE_UNUSED|g' \
+	      -e 's|__attribute_nonnull__|_GL_ATTRIBUTE_NONNULL|g' \
+	      -e 's|__attribute_warn_unused_result__|_GL_ATTRIBUTE_NODISCARD|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      < $(srcdir)/malloc/dynarray-skeleton.c; \
+	} > $@-t && \
+	mv $@-t $@
+MOSTLYCLEANFILES += malloc/dynarray-skeleton.gl.h malloc/dynarray-skeleton.gl.h-t
+
 libgnu_a_SOURCES += malloc/dynarray_at_failure.c                 malloc/dynarray_emplace_enlarge.c                 malloc/dynarray_finalize.c                 malloc/dynarray_resize.c                 malloc/dynarray_resize_clear.c
 
 EXTRA_DIST += dynarray.h malloc/dynarray-skeleton.c malloc/dynarray.h
@@ -579,6 +605,24 @@ glob.h: $(top_builddir)/config.status
 	rm -f $@
 endif
 MOSTLYCLEANFILES += glob.h glob.h-t
+
+BUILT_SOURCES += glob-libc.gl.h
+
+glob-libc.gl.h: glob-libc.h
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e '/__BEGIN_DECLS/{ s/__BEGIN_DECLS/#ifdef __cplusplus%extern "C" {%#endif/; y/%/\n/; }' \
+	      -e '/__END_DECLS/{ s/__END_DECLS/#ifdef __cplusplus%}%#endif/; y/%/\n/; }' \
+	      -e 's|__THROW||g' \
+	      -e 's|__restrict|restrict|g' \
+	      -e 's|defined __USE_MISC|1|' \
+	      -e 's|ifdef __USE_GNU|if 1|' \
+	      -e 's|ifdef __USE_LARGEFILE64|if 0|' \
+	      < $(srcdir)/glob-libc.h; \
+	} > $@-t && \
+	mv $@-t $@
+MOSTLYCLEANFILES += glob-libc.gl.h glob-libc.gl.h-t
+
 
 EXTRA_DIST += glob-libc.h glob.in.h
 
@@ -1311,6 +1355,21 @@ EXTRA_libgnu_a_SOURCES += regcomp.c regex.c regex_internal.c regexec.c
 ## end   gnulib module regex
 
 ## begin gnulib module scratch_buffer
+
+BUILT_SOURCES += malloc/scratch_buffer.gl.h
+
+malloc/scratch_buffer.gl.h: malloc/scratch_buffer.h
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e 's|__always_inline|inline _GL_ATTRIBUTE_ALWAYS_INLINE|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      -e '/libc_hidden_proto/d' \
+	      < $(srcdir)/malloc/scratch_buffer.h; \
+	} > $@-t && \
+	mv $@-t $@
+MOSTLYCLEANFILES += malloc/scratch_buffer.gl.h malloc/scratch_buffer.gl.h-t
 
 libgnu_a_SOURCES += malloc/scratch_buffer_dupfree.c                 malloc/scratch_buffer_grow.c                 malloc/scratch_buffer_grow_preserve.c                 malloc/scratch_buffer_set_array_size.c
 

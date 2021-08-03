@@ -2298,6 +2298,7 @@ int main(int argc, char **argv)
 		interface_color_pair[SCROLL_BAR] = A_NORMAL;
 		interface_color_pair[SELECTED_TEXT] = hilite_attribute;
 		interface_color_pair[SPOTLIGHTED] = A_REVERSE;
+		interface_color_pair[MINI_INFOBAR] = hilite_attribute;
 		interface_color_pair[PROMPT_BAR] = hilite_attribute;
 		interface_color_pair[STATUS_BAR] = hilite_attribute;
 		interface_color_pair[ERROR_MESSAGE] = hilite_attribute;
@@ -2378,9 +2379,9 @@ int main(int argc, char **argv)
 #endif
 		/* If there's a +LINE[,COLUMN] argument here, eat it up. */
 		if (optind < argc - 1 && argv[optind][0] == '+') {
+#ifndef NANO_TINY
 			int n = 1;
 
-#ifndef NANO_TINY
 			while (isalpha(argv[optind][n])) {
 				switch (argv[optind][n++]) {
 					case 'c': SET(CASE_SENSITIVE); break;
@@ -2403,7 +2404,11 @@ int main(int argc, char **argv)
 				optind++;
 			} else
 #endif
-			if (!parse_line_column(&argv[optind++][n], &givenline, &givencol))
+			/* When there is nothing after the "+", understand it as go-to-EOF,
+			 * otherwise parse and store the given number(s).*/
+			if (argv[optind++][1] == '\0')
+				givenline = -1;
+			else if (!parse_line_column(&argv[optind - 1][1], &givenline, &givencol))
 				statusline(ALERT, _("Invalid line or column number"));
 		}
 
@@ -2429,7 +2434,7 @@ int main(int argc, char **argv)
 			if (!findnextstr(searchstring, FALSE, JUSTFIND, NULL,
 							ISSET(BACKWARDS_SEARCH), openfile->filetop, 0))
 				not_found_msg(searchstring);
-			else if (lastmessage == HUSH)
+			else if (lastmessage <= REMARK)
 				wipe_statusbar();
 			openfile->placewewant = xplustabs();
 			if (ISSET(USE_REGEXP))
@@ -2501,13 +2506,14 @@ int main(int argc, char **argv)
 			bottombars(MMAIN);
 
 #ifndef NANO_TINY
-		if (ISSET(MINIBAR) && lastmessage < REMARK)
+		if (ISSET(MINIBAR) && LINES > 1 && lastmessage < REMARK)
 			minibar();
 		else
 #endif
 		/* Update the displayed current cursor position only when there
 		 * is no message and no keys are waiting in the input buffer. */
-		if (ISSET(CONSTANT_SHOW) && lastmessage == VACUUM && get_key_buffer_len() == 0)
+		if (ISSET(CONSTANT_SHOW) && lastmessage == VACUUM && LINES > 1 &&
+										get_key_buffer_len() == 0)
 			report_cursor_position();
 
 		as_an_at = TRUE;
@@ -2516,14 +2522,9 @@ int main(int argc, char **argv)
 		if (!refresh_needed) {
 			place_the_cursor();
 			wnoutrefresh(edit);
-		} else
+		} else if (LINES > 1 || lastmessage == VACUUM)
 			edit_refresh();
 
-#ifndef NANO_TINY
-		/* Let the next keystroke cancel the highlighting of a search match. */
-		refresh_needed = spotlighted;
-		spotlighted = FALSE;
-#endif
 		errno = 0;
 		focusing = TRUE;
 
