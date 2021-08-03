@@ -876,8 +876,9 @@ void generate_mdns_config(void)
 	/* set [server] configuration */
 	fprintf(fp, "[Server]\n"
 	            "use-ipv4=yes\n"
-	            "use-ipv6=no\n"
+	            "use-ipv6=%s\n"
 	            "deny-interfaces=%s",
+	            ipv6_enabled() ? "yes" : "no",
 	            nvram_safe_get("wan_ifname"));
 
 	wan2_ifname = nvram_safe_get("wan2_ifname");
@@ -901,13 +902,13 @@ void generate_mdns_config(void)
 	fprintf(fp, "\n[publish]\n"
 	            "publish-hinfo=yes\n"
 	            "publish-a-on-ipv6=no\n"
-	            "publish-aaaa-on-ipv4=no\n");
+	            "publish-aaaa-on-ipv4=%s\n",
+	            ipv6_enabled() ? "yes" : "no");
 
 	/* set [reflector] configuration */
-	if (nvram_get_int("mdns_reflector")) {
-		fprintf(fp, "\n[reflector]\n"
-		            "enable-reflector=yes\n");
-	}
+	fprintf(fp, "\n[reflector]\n");
+	if (nvram_get_int("mdns_reflector"))
+		fprintf(fp, "enable-reflector=yes\n");
 
 	/* set [rlimits] configuration */
 	fprintf(fp, "\n[rlimits]\n"
