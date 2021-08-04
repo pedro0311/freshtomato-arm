@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Thu Apr 29 11:50:46 2021 -->
+<!-- CreationDate: Tue Jun 15 10:05:46 2021 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -310,6 +310,14 @@ displayed only when <b>set constantshow</b> is used, and can
 be toggled on and off with <b>M-C</b>. The state flags are
 displayed only when <b>set stateflags</b> is used.</p>
 
+<p style="margin-left:11%;"><b>set minicolor</b>
+[<b>bold,</b>][<b>italic,</b>]<i>fgcolor</i><b>,</b><i>bgcolor</i></p>
+
+<p style="margin-left:15%;">Use this color combination for
+the minibar. (When this option is not specified, the colors
+of the title bar are used.) See <b>set titlecolor</b> for
+more details.</p>
+
 <p style="margin-left:11%;"><b>set mouse</b></p>
 
 <p style="margin-left:15%;">Enable mouse support, if
@@ -545,13 +553,14 @@ colors are: <b>red</b>, <b>green</b>, <b>blue</b>,
 <b>magenta</b>, <b>yellow</b>, <b>cyan</b>, <b>white</b>,
 and <b>black</b>. Each of these eight names may be prefixed
 with the word <b>light</b> to get a brighter version of that
-color. On terminal emulators that can do at least 256
-colors, other valid (but unprefixable) color names are:
-<b>pink</b>, <b>purple</b>, <b>mauve</b>, <b>lagoon</b>,
-<b>mint</b>, <b>lime</b>, <b>peach</b>, <b>orange</b>,
-<b>latte</b>, and <b>normal</b> -- where <b>normal</b> means
-the default foreground or background color. Either
-&quot;<i>fgcolor</i>&quot; or
+color. The word <b>grey</b> or <b>gray</b> may be used as a
+synonym for <b>lightblack</b>. On terminal emulators that
+can do at least 256 colors, other valid (but unprefixable)
+color names are: <b>pink</b>, <b>purple</b>, <b>mauve</b>,
+<b>lagoon</b>, <b>mint</b>, <b>lime</b>, <b>peach</b>,
+<b>orange</b>, <b>latte</b>, and <b>normal</b> -- where
+<b>normal</b> means the default foreground or background
+color. Either &quot;<i>fgcolor</i>&quot; or
 &quot;<b>,</b><i>bgcolor</i>&quot; may be left out, and the
 pair may be preceded by <b>bold</b> and/or <b>italic</b>
 (separated by commas) to get a bold and/or slanting

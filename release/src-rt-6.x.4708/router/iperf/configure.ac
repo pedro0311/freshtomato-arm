@@ -1,4 +1,4 @@
-# iperf, Copyright (c) 2014-2020, The Regents of the University of
+# iperf, Copyright (c) 2014-2021, The Regents of the University of
 # California, through Lawrence Berkeley National Laboratory (subject
 # to receipt of any required approvals from the U.S. Dept. of
 # Energy).  All rights reserved.
@@ -24,7 +24,7 @@
 # file for complete information.
 
 # Initialize the autoconf system for the specified tool, version and mailing list
-AC_INIT(iperf, 3.9, https://github.com/esnet/iperf, iperf, https://software.es.net/iperf/)
+AC_INIT([iperf],[3.10],[https://github.com/esnet/iperf],[iperf],[https://software.es.net/iperf/])
 m4_include([config/ax_check_openssl.m4])
 m4_include([config/iperf_config_static_bin.m4])
 AC_LANG(C)
@@ -49,7 +49,7 @@ AC_CANONICAL_HOST
 AC_PROG_CC
 AC_PROG_RANLIB
 AC_PROG_LN_S
-AC_PROG_LIBTOOL
+LT_INIT
 
 # Add -Wall if we are using GCC.
 if test "x$GCC" = "xyes"; then
@@ -62,7 +62,15 @@ AC_ARG_ENABLE([profiling],
 AM_CONDITIONAL([ENABLE_PROFILING], [test x$enable_profiling = xyes])
 
 # Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro `STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 
 # Check for systems which need -lsocket and -lnsl
 #AX_LIB_SOCKET_NSL
@@ -112,6 +120,8 @@ AC_ARG_WITH([sctp],
         try_sctp=true
     ]
 )
+
+AC_CHECK_HEADERS([linux/tcp.h])
 
 # Check for SCTP support
 if $try_sctp; then
@@ -224,9 +234,57 @@ if test "x$iperf3_cv_header_so_max_pacing_rate" = "xyes"; then
     AC_DEFINE([HAVE_SO_MAX_PACING_RATE], [1], [Have SO_MAX_PACING_RATE sockopt.])
 fi
 
+# Check for SO_BINDTODEVICE sockopt (believed to be Linux only)
+AC_CACHE_CHECK([SO_BINDTODEVICE socket option],
+[iperf3_cv_header_so_bindtodevice],
+AC_EGREP_CPP(yes,
+[#include <sys/socket.h>
+#ifdef SO_BINDTODEVICE
+  yes
+#endif
+],iperf3_cv_header_so_bindtodevice=yes,iperf3_cv_header_so_bindtodevice=no))
+if test "x$iperf3_cv_header_so_bindtodevice" = "xyes"; then
+    AC_DEFINE([HAVE_SO_BINDTODEVICE], [1], [Have SO_BINDTODEVICE sockopt.])
+fi
+
+# Check for IP DF support
+AC_CACHE_CHECK([IP_MTU_DISCOVER or IP_DONTFRAG socket option],
+[iperf3_cv_header_dontfragment],
+AC_EGREP_CPP(yes,
+[#include <sys/socket.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#ifdef IP_MTU_DISCOVER
+  yes
+#endif
+#ifdef IP_DONTFRAG
+  yes
+#endif
+#ifdef IP_DONTFRAGMENT
+  yes
+#endif
+],iperf3_cv_header_dontfragment=yes,iperf3_cv_header_dontfragment=no))
+if test "x$iperf3_cv_header_dontfragment" = "xyes"; then
+    AC_DEFINE([HAVE_DONT_FRAGMENT], [1], [Have IP_MTU_DISCOVER/IP_DONTFRAG sockopt.])
+fi
+
+AC_CHECK_MEMBER([struct tcp_info.tcpi_snd_wnd],
+[iperf3_cv_header_tcp_info_snd_wnd=yes], [iperf3_cv_header_tcp_info_snd_wnd=no],
+[#ifdef HAVE_LINUX_TCP_H
+#include <linux/tcp.h>
+#else
+#include <netinet/tcp.h>
+#endif
+])
+
+if test "x$iperf3_cv_header_tcp_info_snd_wnd" = "xyes"; then
+  AC_DEFINE([HAVE_TCP_INFO_SND_WND], [1], [Have tcpi_snd_wnd field in tcp_info.])
+fi
+
 # Check if we need -lrt for clock_gettime
 AC_SEARCH_LIBS(clock_gettime, [rt posix4])
 # Check for clock_gettime support
 AC_CHECK_FUNCS([clock_gettime])
 
-AC_OUTPUT([Makefile src/Makefile src/version.h examples/Makefile iperf3.spec])
+AC_CONFIG_FILES([Makefile src/Makefile src/version.h examples/Makefile iperf3.spec])
+AC_OUTPUT

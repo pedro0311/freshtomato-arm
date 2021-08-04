@@ -146,6 +146,9 @@ function init() {
 	- Tinc Daemon integration and GUI<br>
 <!-- TINC-END -->
 	- Comcast DSCP Fix GUI<br>
+<!-- ZFS-BEGIN -->
+	- ZFS filesystem integration<br>
+<!-- ZFS-END -->
 	<i>Copyright (C) 2014 Lance Fredrickson</i><br>
 	<a href="mailto:lancethepants@gmail.com">lancethepants@gmail.com</a><br>
 	<br>

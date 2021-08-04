@@ -335,6 +335,12 @@ ifneq ($(TCONFIG_MDNS),y)
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/MDNS-BEGIN/,/MDNS-END/d"
 endif
 
+# Only include ZFS option if is compiled in
+ifneq ($(TCONFIG_ZFS),y)
+	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/ZFS-BEGIN/,/ZFS-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/ZFS-BEGIN/,/ZFS-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
@@ -379,6 +385,7 @@ endif
 		-e "/SSH-BEGIN/d"	-e "/SSH-END/d" \
 		-e "/DISCOVERY-BEGIN/d"	-e "/DISCOVERY-END/d" \
 		-e "/MDNS-BEGIN/d"	-e "/MDNS-END/d" \
+		-e "/ZFS-BEGIN/d"	-e "/ZFS-END/d" \
 		|| true; \
 	done
 

@@ -258,6 +258,11 @@ void start_usb(void)
 				modprobe("thfsplus");
 #endif
 
+#ifdef TCONFIG_ZFS
+			if (nvram_get_int("usb_fs_zfs"))
+				modprobe("zfs");
+#endif
+
 #ifdef TCONFIG_MICROSD
 			if (nvram_get_int("usb_mmc") == 1) {
 				/* insert SD/MMC modules if present */
@@ -412,6 +417,9 @@ void remove_usb_storage_module(void)
 #endif
 #ifdef TCONFIG_TUXERA_HFS
 	modprobe_r("thfsplus");
+#endif
+#ifdef TCONFIG_ZFS
+	modprobe_r("zfs");
 #endif
 
 	modprobe_r("fuse");

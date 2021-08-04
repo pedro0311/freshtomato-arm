@@ -1,0 +1,238 @@
+diff -Naur zfs_orig/cmd/Makefile.in zfs/cmd/Makefile.in
+--- zfs_orig/cmd/Makefile.in	2021-01-18 13:47:14.087324730 -0700
++++ zfs/cmd/Makefile.in	2021-01-18 13:47:22.547350899 -0700
+@@ -304,7 +304,7 @@
+   done | $(am__uniquify_input)`
+ ETAGS = etags
+ CTAGS = ctags
+-DIST_SUBDIRS = zfs zpool zdb zhack zinject zstreamdump ztest fsck_zfs \
++DIST_SUBDIRS = zfs zpool zdb zhack zinject zstreamdump fsck_zfs \
+ 	vdev_id raidz_test zgenhostid arcstat arc_summary dbufstat \
+ 	mount_zfs zed zvol_id zvol_wait
+ am__DIST_COMMON = $(srcdir)/Makefile.in
+@@ -602,7 +602,7 @@
+ udevdir = @udevdir@
+ udevruledir = @udevruledir@
+ zfsexecdir = @zfsexecdir@
+-SUBDIRS = zfs zpool zdb zhack zinject zstreamdump ztest fsck_zfs \
++SUBDIRS = zfs zpool zdb zhack zinject zstreamdump fsck_zfs \
+ 	vdev_id raidz_test zgenhostid $(am__append_1) mount_zfs zed \
+ 	zvol_id zvol_wait
+ all: all-recursive
+diff -Naur zfs_orig/include/linux/blkdev_compat.h zfs/include/linux/blkdev_compat.h
+--- zfs_orig/include/linux/blkdev_compat.h	2021-01-18 13:47:13.943324284 -0700
++++ zfs/include/linux/blkdev_compat.h	2021-01-18 13:47:22.547350899 -0700
+@@ -92,7 +92,7 @@
+ #elif defined(HAVE_BLK_QUEUE_FLUSH)
+ 	blk_queue_flush(q, (wc ? REQ_FLUSH : 0) | (fua ? REQ_FUA : 0));
+ #else
+-	blk_queue_ordered(q, QUEUE_ORDERED_DRAIN, NULL);
++	blk_queue_ordered(q, QUEUE_ORDERED_DRAIN);
+ #endif
+ }
+ 
+diff -Naur zfs_orig/include/spl/sys/mutex.h zfs/include/spl/sys/mutex.h
+--- zfs_orig/include/spl/sys/mutex.h	2021-01-18 13:47:13.947324296 -0700
++++ zfs/include/spl/sys/mutex.h	2021-01-18 13:47:22.547350899 -0700
+@@ -30,6 +30,7 @@
+ #include <linux/mutex.h>
+ #include <linux/lockdep.h>
+ #include <linux/compiler_compat.h>
++#include <asm/current.h>
+ 
+ typedef enum {
+ 	MUTEX_DEFAULT	= 0,
+diff -Naur zfs_orig/lib/libtpool/thread_pool.c zfs/lib/libtpool/thread_pool.c
+--- zfs_orig/lib/libtpool/thread_pool.c	2021-01-18 13:47:14.075324693 -0700
++++ zfs/lib/libtpool/thread_pool.c	2021-01-18 13:47:22.547350899 -0700
+@@ -252,15 +252,15 @@
+ 	if (error || (old_attr == NULL))
+ 		return (error);
+ 
+-#ifdef __GLIBC__
+-	cpu_set_t cpuset;
+-	size_t cpusetsize = sizeof (cpuset);
+-	error = pthread_attr_getaffinity_np(old_attr, cpusetsize, &cpuset);
+-	if (error == 0)
+-		error = pthread_attr_setaffinity_np(attr, cpusetsize, &cpuset);
+-	if (error)
+-		goto error;
+-#endif /* __GLIBC__ */
++//#ifdef __GLIBC__
++//	cpu_set_t cpuset;
++//	size_t cpusetsize = sizeof (cpuset);
++//	error = pthread_attr_getaffinity_np(old_attr, cpusetsize, &cpuset);
++//	if (error == 0)
++//		error = pthread_attr_setaffinity_np(attr, cpusetsize, &cpuset);
++//	if (error)
++//		goto error;
++//#endif /* __GLIBC__ */
+ 
+ 	int detachstate;
+ 	error = pthread_attr_getdetachstate(old_attr, &detachstate);
+@@ -306,11 +306,11 @@
+ 
+ 	void *stackaddr;
+ 	size_t stacksize;
+-	error = pthread_attr_getstack(old_attr, &stackaddr, &stacksize);
+-	if (error == 0)
+-		error = pthread_attr_setstack(attr, stackaddr, stacksize);
+-	if (error)
+-		goto error;
++//	error = pthread_attr_getstack(old_attr, &stackaddr, &stacksize);
++//	if (error == 0)
++//		error = pthread_attr_setstack(attr, stackaddr, stacksize);
++//	if (error)
++//		goto error;
+ 
+ 	return (0);
+ error:
+@@ -333,10 +333,10 @@
+ 		return (NULL);
+ 	}
+ 	if (attr != NULL) {
+-		if (pthread_attr_getstack(attr, &stackaddr, &stacksize) != 0) {
+-			errno = EINVAL;
+-			return (NULL);
+-		}
++//		if (pthread_attr_getstack(attr, &stackaddr, &stacksize) != 0) {
++//			errno = EINVAL;
++//			return (NULL);
++//		}
+ 		/*
+ 		 * Allow only one thread in the pool with a specified stack.
+ 		 * Require threads to have at least the minimum stack size.
+diff -Naur zfs_orig/lib/libzfs/libzfs_util.c zfs/lib/libzfs/libzfs_util.c
+--- zfs_orig/lib/libzfs/libzfs_util.c	2021-01-18 13:47:14.071324680 -0700
++++ zfs/lib/libzfs/libzfs_util.c	2021-01-18 13:47:22.547350899 -0700
+@@ -31,6 +31,7 @@
+  * Internal utility routines for the ZFS library.
+  */
+ 
++#define _GNU_SOURCE
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <libintl.h>
+@@ -55,6 +56,56 @@
+ #include <zfs_fletcher.h>
+ #include <libzutil.h>
+ #include <sys/zfs_sysfs.h>
++#include <limits.h>
++
++int execvpe(const char *file, char *const argv[], char *const envp[])
++{
++	const char *p, *z, *path = getenv("PATH");
++	size_t l, k;
++	int seen_eacces = 0;
++
++	errno = ENOENT;
++	if (!*file) return -1;
++
++	if (strchr(file, '/'))
++		return execve(file, argv, envp);
++
++	if (!path) path = "/usr/local/bin:/bin:/usr/bin";
++	k = strnlen(file, NAME_MAX+1);
++	if (k > NAME_MAX) {
++		errno = ENAMETOOLONG;
++		return -1;
++	}
++	l = strnlen(path, PATH_MAX-1)+1;
++
++	for(p=path; ; p=z) {
++		char b[l+k+1];
++		z = strchrnul(p, ':');
++		if (z-p >= l) {
++			if (!*z++) break;
++			continue;
++		}
++		memcpy(b, p, z-p);
++		b[z-p] = '/';
++		memcpy(b+(z-p)+(z>p), file, k+1);
++		execve(b, argv, envp);
++		switch (errno) {
++		case EACCES:
++			seen_eacces = 1;
++		case ENOENT:
++		case ENOTDIR:
++			break;
++		default:
++			return -1;
++		}
++		if (!*z++) break;
++	}
++	if (seen_eacces) errno = EACCES;
++	return -1;
++}
++
++weak_alias(__execvpe, execvpe);
++
+ 
+ int
+ libzfs_errno(libzfs_handle_t *hdl)
+diff -Naur zfs_orig/lib/libzutil/zutil_nicenum.c zfs/lib/libzutil/zutil_nicenum.c
+--- zfs_orig/lib/libzutil/zutil_nicenum.c	2021-01-18 13:47:14.071324680 -0700
++++ zfs/lib/libzutil/zutil_nicenum.c	2021-01-18 13:47:22.551350911 -0700
+@@ -75,7 +75,7 @@
+ 	if ((format == ZFS_NICENUM_TIME) && (num == 0)) {
+ 		(void) snprintf(buf, buflen, "-");
+ 	} else if ((index == 0) || ((num %
+-	    (uint64_t)powl(k_unit[format], index)) == 0)) {
++	    (uint64_t)pow(k_unit[format], index)) == 0)) {
+ 		/*
+ 		 * If this is an even multiple of the base, always display
+ 		 * without any decimal precision.
+@@ -95,7 +95,7 @@
+ 		int i;
+ 		for (i = 2; i >= 0; i--) {
+ 			val = (double)num /
+-			    (uint64_t)powl(k_unit[format], index);
++			    (uint64_t)pow(k_unit[format], index);
+ 
+ 			/*
+ 			 * Don't print floating point values for time.  Note,
+diff -Naur zfs_orig/Makefile.in zfs/Makefile.in
+--- zfs_orig/Makefile.in	2021-01-18 13:47:13.903324160 -0700
++++ zfs/Makefile.in	2021-01-18 13:47:39.575403042 -0700
+@@ -97,7 +97,7 @@
+ build_triplet = @build@
+ host_triplet = @host@
+ target_triplet = @target@
+-@CONFIG_USER_TRUE@am__append_1 = udev etc man scripts lib tests cmd contrib
++@CONFIG_USER_TRUE@am__append_1 = udev etc man scripts lib cmd contrib
+ @CONFIG_KERNEL_TRUE@am__append_2 = module
+ subdir = .
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+@@ -354,7 +354,7 @@
+ ETAGS = etags
+ CTAGS = ctags
+ CSCOPE = cscope
+-DIST_SUBDIRS = include rpm udev etc man scripts lib tests cmd contrib \
++DIST_SUBDIRS = include rpm udev etc man scripts lib cmd contrib \
+ 	module
+ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config/deb.am \
+ 	$(srcdir)/config/rpm.am $(srcdir)/config/tgz.am \
+diff -Naur zfs_orig/module/spl/spl-condvar.c zfs/module/spl/spl-condvar.c
+--- zfs_orig/module/spl/spl-condvar.c	2021-01-18 13:47:13.911324184 -0700
++++ zfs/module/spl/spl-condvar.c	2021-01-18 13:47:22.551350911 -0700
+@@ -46,7 +46,7 @@
+ 	unsigned long val;
+ 	int error;
+ 
+-	error = kstrtoul(buf, 0, &val);
++	error = strict_strtoul(buf, 0, &val);
+ 	if (error)
+ 		return (error);
+ 
+diff -Naur zfs_orig/module/zfs/spa_misc.c zfs/module/zfs/spa_misc.c
+--- zfs_orig/module/zfs/spa_misc.c	2021-01-18 13:47:13.915324197 -0700
++++ zfs/module/zfs/spa_misc.c	2021-01-18 13:47:22.551350911 -0700
+@@ -2749,7 +2749,7 @@
+ 	unsigned long val;
+ 	int error;
+ 
+-	error = kstrtoul(buf, 0, &val);
++	error = strict_strtoul(buf, 0, &val);
+ 	if (error)
+ 		return (SET_ERROR(error));
+ 

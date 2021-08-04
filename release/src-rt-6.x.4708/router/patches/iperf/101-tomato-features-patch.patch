@@ -1,8 +1,6 @@
-diff --git iperf/src/iperf.h iperf/src/iperf.h
-index 26e4f4f..eb6f586 100755
 --- iperf/src/iperf.h
 +++ iperf/src/iperf.h
-@@ -277,6 +277,8 @@
+@@ -289,6 +289,8 @@
      char     *logfile;				/* --logfile option */
      FILE     *outfile;
  
@@ -11,11 +9,9 @@ index 26e4f4f..eb6f586 100755
      int       ctrl_sck;
      int       listener;
      int       prot_listener;
-diff --git iperf/src/iperf_api.c iperf/src/iperf_api.c
-index d6c4717..b88350a 100755
 --- iperf/src/iperf_api.c
 +++ iperf/src/iperf_api.c
-@@ -918,6 +918,7 @@
+@@ -988,6 +988,7 @@
  #endif
  	{"pidfile", required_argument, NULL, 'I'},
  	{"logfile", required_argument, NULL, OPT_LOGFILE},
@@ -23,7 +19,7 @@ index d6c4717..b88350a 100755
  	{"forceflush", no_argument, NULL, OPT_FORCEFLUSH},
  	{"get-server-output", no_argument, NULL, OPT_GET_SERVER_OUTPUT},
  	{"udp-counters-64bit", no_argument, NULL, OPT_UDP_COUNTERS_64BIT},
-@@ -953,7 +954,7 @@
+@@ -1030,7 +1031,7 @@
      char *client_username = NULL, *client_rsa_public_key = NULL, *server_rsa_private_key = NULL;
  #endif /* HAVE_SSL */
  
@@ -32,7 +28,7 @@ index d6c4717..b88350a 100755
          switch (flag) {
              case 'p':
  		portno = atoi(optarg);
-@@ -1292,6 +1293,9 @@
+@@ -1391,6 +1392,9 @@
  	    case OPT_LOGFILE:
  		test->logfile = strdup(optarg);
  		break;
@@ -42,7 +38,7 @@ index d6c4717..b88350a 100755
  	    case OPT_FORCEFLUSH:
  		test->forceflush = 1;
  		break;
-@@ -2957,6 +2961,44 @@
+@@ -3114,6 +3118,44 @@
      }
  }
  
@@ -87,7 +83,7 @@ index d6c4717..b88350a 100755
  /**
   * Print intermediate results during a test (interval report).
   * Uses print_interval_results to print the results for each stream,
-@@ -3668,13 +3710,14 @@
+@@ -3825,13 +3867,14 @@
          case STREAM_RUNNING:
              /* print interval results for each stream */
              iperf_print_intermediate(test);
@@ -103,7 +99,7 @@ index d6c4717..b88350a 100755
  
  }
  
-@@ -4175,6 +4218,18 @@
+@@ -4394,6 +4437,18 @@
      return 0;
  }
  
@@ -122,19 +118,17 @@ index d6c4717..b88350a 100755
  int
  iperf_json_start(struct iperf_test *test)
  {
-diff --git iperf/src/iperf_api.h iperf/src/iperf_api.h
-index 54936ab..8ddd3d6 100755
 --- iperf/src/iperf_api.h
 +++ iperf/src/iperf_api.h
-@@ -79,6 +79,7 @@
- #define OPT_BIDIRECTIONAL 20
- #define OPT_SERVER_BITRATE_LIMIT 21
- #define OPT_TIMESTAMPS 22
-+#define OPT_INTERVAL_LOG 23
+@@ -87,6 +87,7 @@
+ #define OPT_IDLE_TIMEOUT 25
+ #define OPT_DONT_FRAGMENT 26
+ #define OPT_RCV_TIMEOUT 27
++#define OPT_INTERVAL_LOG 28
  
  /* states */
  #define TEST_START 1
-@@ -312,6 +313,7 @@
+@@ -326,6 +327,7 @@
  int iperf_create_pidfile(struct iperf_test *);
  int iperf_delete_pidfile(struct iperf_test *);
  void iperf_check_total_rate(struct iperf_test *, iperf_size_t);
@@ -142,8 +136,6 @@ index 54936ab..8ddd3d6 100755
  
  /* JSON output routines. */
  int iperf_json_start(struct iperf_test *);
-diff --git iperf/src/iperf_error.c iperf/src/iperf_error.c
-index 945984e..9df3510 100644
 --- iperf/src/iperf_error.c
 +++ iperf/src/iperf_error.c
 @@ -114,6 +114,8 @@
@@ -159,19 +151,17 @@ diff --git iperf/src/iperf_locale.c iperf/src/iperf_locale.c
 index 115adf2..698705b 100644
 --- iperf/src/iperf_locale.c
 +++ iperf/src/iperf_locale.c
-@@ -108,6 +108,7 @@
+@@ -112,6 +112,7 @@
                             "  -V, --verbose             more detailed output\n"
                             "  -J, --json                output in JSON format\n"
                             "  --logfile f               send output to a log file\n"
 +                           "  --intervalfile f          interval file to report current progress\n"
                             "  --forceflush              force flushing output at every interval\n"
-                            "  --timestamps    <format>  emit a timestamp at the start of each output line\n"
-                            "                            (using optional format string as per strftime(3))\n"
-diff --git iperf/src/main.c iperf/src/main.c
-index 9d72d77..47eebc2 100644
+                            "  --timestamps<=format>     emit a timestamp at the start of each output line\n"
+                            "                            (optional \"=\" and format string as per strftime(3))\n"
 --- iperf/src/main.c
 +++ iperf/src/main.c
-@@ -177,6 +177,7 @@
+@@ -189,6 +189,7 @@
              break;
      }
  

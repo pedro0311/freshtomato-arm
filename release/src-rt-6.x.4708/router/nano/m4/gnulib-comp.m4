@@ -237,6 +237,7 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_DIRFD
   fi
   gl_DIRENT_MODULE_INDICATOR([dirfd])
+  AC_PROG_MKDIR_P
   gl_HEADER_ERRNO_H
   AC_REQUIRE([gl_EXTERN_INLINE])
   gl_FCNTL_H
@@ -501,6 +502,7 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([regex])
     gl_PREREQ_REGEX
   fi
+  AC_PROG_MKDIR_P
   gl_FUNC_SETLOCALE_NULL
   if test $SETLOCALE_NULL_ALL_MTSAFE = 0 || test $SETLOCALE_NULL_ONE_MTSAFE = 0; then
     AC_LIBOBJ([setlocale-lock])
@@ -622,8 +624,8 @@ AC_DEFUN([gl_INIT],
   gl_TIMESPEC
   gl_UNISTD_H
   gl_UNISTD_H_REQUIRE_DEFAULTS
-  gl_LIBUNISTRING_LIBHEADER([0.9.4], [unitypes.h])
-  gl_LIBUNISTRING_LIBHEADER([0.9.4], [uniwidth.h])
+  gl_LIBUNISTRING_LIBHEADER([0.9.11], [unitypes.h])
+  gl_LIBUNISTRING_LIBHEADER([0.9.11], [uniwidth.h])
   gl_LIBUNISTRING_MODULE([0.9.8], [uniwidth/width])
   gl_FUNC_UTIME
   if test $HAVE_UTIME = 0 || test $REPLACE_UTIME = 1; then

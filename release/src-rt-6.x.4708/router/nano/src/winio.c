@@ -182,15 +182,20 @@ void read_keys_from(WINDOW *win)
 	bool timed = FALSE;
 #endif
 
+	/* On a one-row terminal, overwrite an unimportant message. */
+	if (LINES == 1 && currmenu == MMAIN && lastmessage == HUSH)
+		edit_refresh();
+
 	/* Before reading the first keycode, display any pending screen updates. */
 	doupdate();
 
-	if (reveal_cursor && !hide_cursor)
+	if (reveal_cursor && !hide_cursor && (LINES > 1 || lastmessage <= HUSH))
 		curs_set(1);
 
 #ifndef NANO_TINY
-	if (currmenu == MMAIN && ISSET(MINIBAR) && lastmessage > HUSH &&
-						lastmessage != INFO && lastmessage < ALERT) {
+	if (currmenu == MMAIN && (spotlighted || ((ISSET(MINIBAR) || LINES == 1) &&
+						lastmessage > HUSH &&
+						lastmessage != INFO && lastmessage < ALERT))) {
 		timed = TRUE;
 		halfdelay(ISSET(QUICK_BLANK) ? 8 : 15);
 		disable_kb_interrupt();
@@ -212,7 +217,15 @@ void read_keys_from(WINDOW *win)
 			raw();
 
 			if (input == ERR) {
-				minibar();
+				if (spotlighted || LINES == 1) {
+					lastmessage = VACUUM;
+					spotlighted = FALSE;
+					update_line(openfile->current, openfile->current_x);
+					wnoutrefresh(edit);
+					curs_set(1);
+				}
+				if (ISSET(MINIBAR) && LINES > 1)
+					minibar();
 				as_an_at = TRUE;
 				place_the_cursor();
 				doupdate();
@@ -236,6 +249,10 @@ void read_keys_from(WINDOW *win)
 	key_buffer_len = 1;
 
 #ifndef NANO_TINY
+	/* Cancel the highlighting of a search match, if there still is one. */
+	refresh_needed |= spotlighted;
+	spotlighted = FALSE;
+
 	/* If we got a SIGWINCH, get out as the win argument is no longer valid. */
 	if (input == KEY_WINCH)
 		return;
@@ -1661,6 +1678,7 @@ void wipe_statusbar(void)
 {
 	blank_row(bottomwin, 0);
 	wnoutrefresh(bottomwin);
+	lastmessage = VACUUM;
 }
 
 /* Blank out the two help lines (when they are present). */
@@ -1683,7 +1701,7 @@ void check_statusblank(void)
 	statusblank--;
 
 	/* When editing and 'constantshow' is active, skip the blanking. */
-	if (currmenu == MMAIN && ISSET(CONSTANT_SHOW))
+	if (currmenu == MMAIN && ISSET(CONSTANT_SHOW) && LINES > 1)
 		return;
 
 	if (statusblank == 0)
@@ -2100,7 +2118,7 @@ void minibar(void)
 #endif
 
 	/* Draw a colored bar over the full width of the screen. */
-	wattron(bottomwin, interface_color_pair[TITLE_BAR]);
+	wattron(bottomwin, interface_color_pair[MINI_INFOBAR]);
 	mvwprintw(bottomwin, 0, 0, "%*s", COLS, " ");
 
 	if (openfile->filename[0] != '\0') {
@@ -2212,7 +2230,7 @@ void minibar(void)
 		mvwaddstr(bottomwin, 0, COLS - 4 - padding, location);
 	}
 
-	wattroff(bottomwin, interface_color_pair[TITLE_BAR]);
+	wattroff(bottomwin, interface_color_pair[MINI_INFOBAR]);
 	wrefresh(bottomwin);
 
 	free(number_of_lines);
@@ -2244,6 +2262,11 @@ void statusline(message_type importance, const char *msg, ...)
 	/* Ignore a message with an importance that is lower than the last one. */
 	if (importance < lastmessage && lastmessage > NOTICE)
 		return;
+
+	/* On a one-row terminal, ensure that any changes in the edit window are
+	 * written out first, to prevent them from overwriting the message. */
+	if (LINES == 1 && importance < INFO)
+		wnoutrefresh(edit);
 
 	/* Construct the message out of all the arguments. */
 	compound = nmalloc(MAXCHARLEN * COLS + 1);

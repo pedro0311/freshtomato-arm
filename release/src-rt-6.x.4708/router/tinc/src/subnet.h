@@ -3,7 +3,7 @@
 
 /*
     subnet.h -- header for subnet.c
-    Copyright (C) 2000-2012 Guus Sliepen <guus@tinc-vpn.org>,
+    Copyright (C) 2000-2021 Guus Sliepen <guus@tinc-vpn.org>,
                   2000-2005 Ivo Timmermans
 
     This program is free software; you can redistribute it and/or modify
@@ -78,6 +78,7 @@ extern void subnet_update(struct node_t *owner, subnet_t *subnet, bool up);
 extern int maskcmp(const void *a, const void *b, int masklen);
 extern void maskcpy(void *dest, const void *src, int masklen, int len);
 extern void mask(void *mask, int masklen, int len);
+extern bool subnetcheck(const subnet_t subnet);
 extern bool maskcheck(const void *mask, int masklen, int len);
 extern bool net2str(char *netstr, int len, const subnet_t *subnet);
 extern bool str2net(subnet_t *subnet, const char *netstr);

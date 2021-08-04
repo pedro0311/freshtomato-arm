@@ -35,4 +35,3 @@
              (m->server->config.allow_point_to_point || !(flags & IFF_POINTOPOINT));
          hw->name = avahi_strdup(lifreq->lifr_name);
          hw->mtu = mtu;
---- avahi/avahi-core/resolve-service.c

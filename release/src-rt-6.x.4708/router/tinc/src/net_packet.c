@@ -1,7 +1,7 @@
 /*
     net_packet.c -- Handles in- and outgoing VPN packets
     Copyright (C) 1998-2005 Ivo Timmermans,
-                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2021 Guus Sliepen <guus@tinc-vpn.org>
                   2010      Timothy Redaelli <timothy@redaelli.eu>
                   2010      Brandon Black <blblack@gmail.com>
 
@@ -545,7 +545,10 @@ bool receive_tcppacket_sptps(connection_t *c, const char *data, size_t len) {
 	/* If we're not the final recipient, relay the packet. */
 
 	if(to != myself) {
-		send_sptps_data(to, from, 0, data, len);
+		if(to->status.validkey) {
+			send_sptps_data(to, from, 0, data, len);
+		}
+
 		try_tx(to, true);
 		return true;
 	}

@@ -1844,28 +1844,33 @@ EXTRA_DIST = alloca.c alloca.in.h attribute.h btowc.c closedir.c \
 	windows-initguard.h windows-recmutex.c windows-recmutex.h \
 	windows-initguard.h windows-rwlock.c windows-rwlock.h \
 	wmemchr-impl.h wmemchr.c wmempcpy.c xalloc-oversized.h
-BUILT_SOURCES = $(ALLOCA_H) ctype.h dirent.h $(ERRNO_H) fcntl.h \
-	$(FLOAT_H) $(FNMATCH_H) $(GETOPT_H) $(GETOPT_CDEFS_H) \
-	$(GLOB_H) inttypes.h langinfo.h $(LIMITS_H) locale.h math.h \
-	signal.h $(STDARG_H) $(STDBOOL_H) $(STDDEF_H) $(STDINT_H) \
-	stdio.h stdlib.h string.h strings.h sys/stat.h sys/time.h \
-	sys/types.h sys/wait.h time.h unistd.h \
-	$(LIBUNISTRING_UNITYPES_H) $(LIBUNISTRING_UNIWIDTH_H) utime.h \
-	wchar.h wctype.h
+BUILT_SOURCES = $(ALLOCA_H) ctype.h dirent.h malloc/dynarray.gl.h \
+	malloc/dynarray-skeleton.gl.h $(ERRNO_H) fcntl.h $(FLOAT_H) \
+	$(FNMATCH_H) $(GETOPT_H) $(GETOPT_CDEFS_H) $(GLOB_H) \
+	glob-libc.gl.h inttypes.h langinfo.h $(LIMITS_H) locale.h \
+	math.h malloc/scratch_buffer.gl.h signal.h $(STDARG_H) \
+	$(STDBOOL_H) $(STDDEF_H) $(STDINT_H) stdio.h stdlib.h string.h \
+	strings.h sys/stat.h sys/time.h sys/types.h sys/wait.h time.h \
+	unistd.h $(LIBUNISTRING_UNITYPES_H) $(LIBUNISTRING_UNIWIDTH_H) \
+	utime.h wchar.h wctype.h
 SUFFIXES = 
 MOSTLYCLEANFILES = core *.stackdump alloca.h alloca.h-t ctype.h \
-	ctype.h-t dirent.h dirent.h-t errno.h errno.h-t fcntl.h \
+	ctype.h-t dirent.h dirent.h-t malloc/dynarray.gl.h \
+	malloc/dynarray.gl.h-t malloc/dynarray-skeleton.gl.h \
+	malloc/dynarray-skeleton.gl.h-t errno.h errno.h-t fcntl.h \
 	fcntl.h-t float.h float.h-t fnmatch.h fnmatch.h-t getopt.h \
 	getopt.h-t getopt-cdefs.h getopt-cdefs.h-t glob.h glob.h-t \
-	inttypes.h inttypes.h-t langinfo.h langinfo.h-t limits.h \
-	limits.h-t locale.h locale.h-t math.h math.h-t signal.h \
-	signal.h-t stdarg.h stdarg.h-t stdbool.h stdbool.h-t stddef.h \
-	stddef.h-t stdint.h stdint.h-t stdio.h stdio.h-t stdlib.h \
-	stdlib.h-t string.h string.h-t strings.h strings.h-t \
-	sys/stat.h sys/stat.h-t sys/time.h sys/time.h-t sys/types.h \
-	sys/types.h-t sys/wait.h sys/wait.h-t time.h time.h-t unistd.h \
-	unistd.h-t unitypes.h unitypes.h-t uniwidth.h uniwidth.h-t \
-	utime.h utime.h-t wchar.h wchar.h-t wctype.h wctype.h-t
+	glob-libc.gl.h glob-libc.gl.h-t inttypes.h inttypes.h-t \
+	langinfo.h langinfo.h-t limits.h limits.h-t locale.h \
+	locale.h-t math.h math.h-t malloc/scratch_buffer.gl.h \
+	malloc/scratch_buffer.gl.h-t signal.h signal.h-t stdarg.h \
+	stdarg.h-t stdbool.h stdbool.h-t stddef.h stddef.h-t stdint.h \
+	stdint.h-t stdio.h stdio.h-t stdlib.h stdlib.h-t string.h \
+	string.h-t strings.h strings.h-t sys/stat.h sys/stat.h-t \
+	sys/time.h sys/time.h-t sys/types.h sys/types.h-t sys/wait.h \
+	sys/wait.h-t time.h time.h-t unistd.h unistd.h-t unitypes.h \
+	unitypes.h-t uniwidth.h uniwidth.h-t utime.h utime.h-t wchar.h \
+	wchar.h-t wctype.h wctype.h-t
 MOSTLYCLEANDIRS = sys sys
 CLEANFILES = 
 DISTCLEANFILES = 
@@ -2748,6 +2753,28 @@ dirent.h: dirent.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	} > $@-t && \
 	mv $@-t $@
 
+malloc/dynarray.gl.h: malloc/dynarray.h
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e '/libc_hidden_proto/d' < $(srcdir)/malloc/dynarray.h; \
+	} > $@-t && \
+	mv $@-t $@
+
+malloc/dynarray-skeleton.gl.h: malloc/dynarray-skeleton.c
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e 's|<malloc/dynarray\.h>|<malloc/dynarray.gl.h>|g' \
+	      -e 's|__attribute_maybe_unused__|_GL_ATTRIBUTE_MAYBE_UNUSED|g' \
+	      -e 's|__attribute_nonnull__|_GL_ATTRIBUTE_NONNULL|g' \
+	      -e 's|__attribute_warn_unused_result__|_GL_ATTRIBUTE_NODISCARD|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      < $(srcdir)/malloc/dynarray-skeleton.c; \
+	} > $@-t && \
+	mv $@-t $@
+
 # We need the following in order to create <errno.h> when the system
 # doesn't have one that is POSIX compliant.
 @GL_GENERATE_ERRNO_H_TRUE@errno.h: errno.in.h $(top_builddir)/config.status
@@ -2886,6 +2913,20 @@ getopt-cdefs.h: getopt-cdefs.in.h $(top_builddir)/config.status
 @GL_GENERATE_GLOB_H_TRUE@	mv $@-t $@
 @GL_GENERATE_GLOB_H_FALSE@glob.h: $(top_builddir)/config.status
 @GL_GENERATE_GLOB_H_FALSE@	rm -f $@
+
+glob-libc.gl.h: glob-libc.h
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e '/__BEGIN_DECLS/{ s/__BEGIN_DECLS/#ifdef __cplusplus%extern "C" {%#endif/; y/%/\n/; }' \
+	      -e '/__END_DECLS/{ s/__END_DECLS/#ifdef __cplusplus%}%#endif/; y/%/\n/; }' \
+	      -e 's|__THROW||g' \
+	      -e 's|__restrict|restrict|g' \
+	      -e 's|defined __USE_MISC|1|' \
+	      -e 's|ifdef __USE_GNU|if 1|' \
+	      -e 's|ifdef __USE_LARGEFILE64|if 0|' \
+	      < $(srcdir)/glob-libc.h; \
+	} > $@-t && \
+	mv $@-t $@
 
 # We need the following in order to create <inttypes.h> when the system
 # doesn't have one that works with the given compiler.
@@ -3288,6 +3329,18 @@ math.h: math.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
 	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
 	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)'; \
+	} > $@-t && \
+	mv $@-t $@
+
+malloc/scratch_buffer.gl.h: malloc/scratch_buffer.h
+	$(AM_V_at)$(MKDIR_P) malloc
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e 's|__always_inline|inline _GL_ATTRIBUTE_ALWAYS_INLINE|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      -e '/libc_hidden_proto/d' \
+	      < $(srcdir)/malloc/scratch_buffer.h; \
 	} > $@-t && \
 	mv $@-t $@
 

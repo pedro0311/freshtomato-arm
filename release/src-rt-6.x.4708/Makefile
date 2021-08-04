@@ -493,6 +493,10 @@ define RouterOptions
 		sed -i "/#TCONFIG_WIREGUARD is not set/d" $(1); \
 		echo "TCONFIG_WIREGUARD=y" >>$(1); \
 	fi; \
+	if [ "$(ZFS)" = "y" ]; then \
+		sed -i "/#TCONFIG_ZFS is not set/d" $(1); \
+		echo "TCONFIG_ZFS=y" >>$(1); \
+	fi; \
 	if [ "$(PPTPD)" = "y" ]; then \
 		sed -i "/TCONFIG_PPTPD/d" $(1); \
 		echo "TCONFIG_PPTPD=y" >>$(1); \
@@ -1151,6 +1155,9 @@ define KernelConfig
 	if [ "$(WIREGUARD)" = "y" ]; then \
 		sed -i "s/# CONFIG_WIREGUARD is not set/CONFIG_WIREGUARD=m/g" $(1); \
 	fi; \
+	if [ "$(ZFS)" = "y" ]; then \
+		sed -i "s/# CONFIG_ZFS is not set/CONFIG_ZFS=m/g" $(1); \
+	fi; \
 	)
 endef
 
@@ -1182,7 +1189,7 @@ o:
 
 z:
 	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
-	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y NAMESPACES=y CRASH_LOG=y MDNS=y
+	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y NAMESPACES=y CRASH_LOG=y MDNS=y ZFS=y
 
 ac68e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y BRCM_NAND_JFFS2=y DPSTA=y BSD=y

@@ -1,7 +1,7 @@
 /*
     fd_device.c -- Interaction with Android tun fd
     Copyright (C)   2001-2005   Ivo Timmermans,
-                    2001-2016   Guus Sliepen <guus@tinc-vpn.org>
+                    2001-2021   Guus Sliepen <guus@tinc-vpn.org>
                     2009        Grzegorz Dymarek <gregd72002@googlemail.com>
                     2016-2020   Pacien TRAN-GIRARD <pacien@pacien.net>
 
@@ -20,9 +20,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
+#ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 
-#include "system.h"
 #include "conf.h"
 #include "device.h"
 #include "ethernet.h"
@@ -55,9 +57,12 @@ static int read_fd(int socket) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Could not read from unix socket (error %d)!", ret);
 		return -1;
 	}
+
 #ifdef IP_RECVERR
+
 	if(msg.msg_flags & (MSG_CTRUNC | MSG_OOB | MSG_ERRQUEUE)) {
 #else
+
 	if(msg.msg_flags & (MSG_CTRUNC | MSG_OOB)) {
 #endif
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while receiving message (flags %d)!", msg.msg_flags);
@@ -65,19 +70,22 @@ static int read_fd(int socket) {
 	}
 
 	cmsgptr = CMSG_FIRSTHDR(&msg);
+
 	if(cmsgptr->cmsg_level != SOL_SOCKET) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Wrong CMSG level: %d, expected %d!",
-			cmsgptr->cmsg_level, SOL_SOCKET);
+		       cmsgptr->cmsg_level, SOL_SOCKET);
 		return -1;
 	}
+
 	if(cmsgptr->cmsg_type != SCM_RIGHTS) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Wrong CMSG type: %d, expected %d!",
-			cmsgptr->cmsg_type, SCM_RIGHTS);
+		       cmsgptr->cmsg_type, SCM_RIGHTS);
 		return -1;
 	}
+
 	if(cmsgptr->cmsg_len != CMSG_LEN(sizeof(device_fd))) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Wrong CMSG data length: %lu, expected %lu!",
-			(unsigned long)cmsgptr->cmsg_len, CMSG_LEN(sizeof(device_fd)));
+		       (unsigned long)cmsgptr->cmsg_len, (unsigned long)CMSG_LEN(sizeof(device_fd)));
 		return -1;
 	}
 
@@ -113,7 +121,9 @@ static struct unix_socket_addr parse_socket_addr(const char *path) {
 
 	if(strlen(path) >= sizeof(socket_addr.sun_path)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unix socket path too long!");
-		return (struct unix_socket_addr) {0};
+		return (struct unix_socket_addr) {
+			0
+		};
 	}
 
 	socket_addr.sun_family = AF_UNIX;
@@ -226,3 +236,4 @@ const devops_t fd_devops = {
 	.read = read_packet,
 	.write = write_packet,
 };
+#endif

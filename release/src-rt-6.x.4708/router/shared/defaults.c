@@ -1061,6 +1061,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "usb_hfs_driver",		"kernel"			, 0 },
 #endif
 #endif /* TCONFIG_HFS */
+#ifdef TCONFIG_ZFS
+	{ "usb_fs_zfs",			"0"				, 0 },
+	{ "usb_fs_zfs_automount",	"1"				, 0 },
+	{ "zfs_mount_script",		""				, 0 },
+#endif
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		"0"				, 0 },
 #endif

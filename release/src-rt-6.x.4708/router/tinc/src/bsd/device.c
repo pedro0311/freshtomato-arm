@@ -1,7 +1,7 @@
 /*
     device.c -- Interaction BSD tun/tap device
     Copyright (C) 2001-2005 Ivo Timmermans,
-                  2001-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2001-2021 Guus Sliepen <guus@tinc-vpn.org>
                   2009      Grzegorz Dymarek <gregd72002@googlemail.com>
 
     This program is free software; you can redistribute it and/or modify
@@ -40,8 +40,13 @@
 #include <net/if_utun.h>
 #endif
 
+#if defined(HAVE_FREEBSD) || defined(HAVE_DRAGONFLY)
+#define DEFAULT_TUN_DEVICE "/dev/tun"  // Use the autoclone device
+#define DEFAULT_TAP_DEVICE "/dev/tap"
+#else
 #define DEFAULT_TUN_DEVICE "/dev/tun0"
 #define DEFAULT_TAP_DEVICE "/dev/tap0"
+#endif
 
 typedef enum device_type {
 	DEVICE_TYPE_TUN,

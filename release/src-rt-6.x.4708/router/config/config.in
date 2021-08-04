@@ -73,6 +73,10 @@ config TCONFIG_WIREGUARD
 	bool "WireGuard"
 	default n
 
+config TCONFIG_ZFS
+	bool "zfs"
+	default n
+
 # !!TB
 config TCONFIG_IPV6
 	bool "IPv6 Support"
