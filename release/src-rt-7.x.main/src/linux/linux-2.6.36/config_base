@@ -1732,6 +1732,7 @@ CONFIG_RTC_LIB=y
 #
 # File systems
 #
+# CONFIG_ZFS is not set
 CONFIG_EXT2_FS=m
 CONFIG_EXT2_FS_XATTR=y
 # CONFIG_EXT2_FS_POSIX_ACL is not set
