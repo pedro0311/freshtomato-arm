@@ -921,6 +921,11 @@ div[id$="_users"] .co2 {
 	padding: 0 6px 0 1px;
 }
 
+img[id^="barnoise_"] {
+	-webkit-transform: scaleX(-1);
+	transform: scaleX(-1);
+}
+
 #dev-grid div[id^="media_"] img {
 	padding: 3px 0 0 2px;
 }

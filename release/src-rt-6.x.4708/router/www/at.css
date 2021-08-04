@@ -747,6 +747,10 @@ img[id*="_off"] {
 	opacity: 0.35;
 }
 
+img[id^="barnoise_"] {
+	margin-right: 8px;
+}
+
 div[id^="vport_"] {
 	width: 55%;
 }

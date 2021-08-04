@@ -51,8 +51,10 @@ ref.refresh = function(text) {
 	dg.populate();
 	dg.resort();
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		if (wl_sunit(uidx) < 0 && E('noise'+uidx) != null)
+		if (wl_sunit(uidx) < 0 && E('noise'+uidx) != null) {
 			elem.setInnerHTML(E('noise'+uidx), wlnoise[uidx]);
+			setNoiseBar(uidx, wlnoise[uidx]);
+		}
 	}
 }
 
@@ -672,6 +674,25 @@ function tick() {
 	}
 }
 
+function setNoiseBar(i, lvl) {
+	var num;
+
+	if (lvl >= -69)
+		num = 1;
+	else if (lvl >= -75)
+		num = 2;
+	else if (lvl >= -81)
+		num = 3;
+	else if (lvl >= -87)
+		num = 4;
+	else if (lvl >= -93)
+		num = 5;
+	else
+		num = 6;
+
+	elem.setInnerHTML(E('noiseimg_'+i), '<img src="bar'+num+'.gif" id="barnoise_'+i+'" alt="">');
+}
+
 function verifyFields(f, c) {
 	if (discovery.running)
 		discovery.stop();
@@ -694,6 +715,12 @@ function verifyFields(f, c) {
 /* DISCOVERY-END */
 
 function earlyInit() {
+	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		if (wl_sunit(uidx) < 0 && E('noise'+uidx) != null) {
+			setNoiseBar(uidx, wlnoise[uidx]);
+		}
+	}
+
 	dg.setup();
 }
 
@@ -736,7 +763,7 @@ function init() {
 			if (nvram['wl'+u+'_radio'] == 1) {
 				if (wl_sunit(uidx) < 0) {
 					var a = wl_display_ifname(uidx);
-					f.push( { title: '<b>Noise Floor<\/b> '+a.substr(0, a.indexOf('/') - 1)+'&nbsp;<b>:<\/b>', prefix: '<span id="noise'+uidx+'">', custom: wlnoise[uidx], suffix: '<\/span>&nbsp;<small>dBm<\/small>' } );
+					f.push( { title: '<b>Noise Floor<\/b> '+a.substr(0, a.indexOf('/') - 1)+'&nbsp;<b>:<\/b>', prefix: '<span id="noiseimg_'+uidx+'"><\/span>&nbsp;<span id="noise'+uidx+'">', custom: wlnoise[uidx], suffix: '<\/span>&nbsp;<small>dBm<\/small>' } );
 				}
 			}
 		}
