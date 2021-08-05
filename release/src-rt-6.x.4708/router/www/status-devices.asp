@@ -67,7 +67,7 @@ var dg = new TomatoGrid();
 
 dg.setup = function() {
 	this.init('dev-grid', 'sort');
-	this.headerSet(['Interface','Media','MAC Address','IP Address','Name','RSSI','Quality &nbsp;','TX/RX<br>Rate','Lease&nbsp;']);
+	this.headerSet(['Interface','Media','MAC Address','IP Address','Hostname','RSSI','Quality &nbsp;','TX/RX<br>Rate','Lease&nbsp;']);
 	this.populate();
 	this.sort(3);
 }
