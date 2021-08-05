@@ -3237,6 +3237,9 @@ void stop_services(void)
 #ifdef TCONFIG_NFS
 	stop_nfs();
 #endif
+#ifdef TCONFIG_MDNS
+	stop_mdns();
+#endif
 #ifdef TCONFIG_USB
 	restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 #endif
@@ -3257,9 +3260,6 @@ void stop_services(void)
 	stop_cifs();
 	stop_httpd();
 	stop_dnsmasq();
-#ifdef TCONFIG_MDNS
-	stop_mdns();
-#endif
 #ifdef TCONFIG_ZEBRA
 	stop_zebra();
 #endif
@@ -3757,10 +3757,10 @@ TOP:
 			stop_pppoerelay();
 #endif
 			stop_httpd();
-			stop_dnsmasq();
 #ifdef TCONFIG_MDNS
 			stop_mdns();
 #endif
+			stop_dnsmasq();
 			stop_nas();
 			stop_wan();
 			stop_arpbind();
