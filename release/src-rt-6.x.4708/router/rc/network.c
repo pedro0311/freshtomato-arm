@@ -91,6 +91,11 @@ typedef u_int8_t u8;
 void restart_wl(void);
 void stop_lan_wl(void);
 void start_lan_wl(void);
+#ifdef TCONFIG_BCMWL6
+int wl_sta_prepare(void);
+void wl_sta_start(void);
+void wl_sta_stop(void);
+#endif
 
 #ifdef TCONFIG_BCMWL6
 void wlconf_pre(void)
@@ -726,11 +731,10 @@ void stop_lan_wl(void)
 #ifdef CONFIG_BCMWL5
 	int unit, subunit;
 #endif
-
-	eval("ebtables", "-F");
-
 	char tmp[32];
 	char br;
+
+	eval("ebtables", "-F");
 
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
@@ -914,8 +918,20 @@ void start_lan_wl(void)
 }
 
 void stop_wireless(void) {
+
+#ifdef TCONFIG_BCMWL6
+	char prefix[] = "wanXX";
+#endif
+
 #ifdef CONFIG_BCMWL5
 	stop_nas();
+#endif
+#ifdef TCONFIG_BCMWL6
+	if (get_sta_wan_prefix(prefix)) { /* wl client will be down */
+		logmsg(LOG_INFO, "wireless client WAN: stopping %s (WL down)", prefix);
+		stop_wan_if(prefix);
+	}
+	wl_sta_stop();
 #endif
 	stop_lan_wl();
 
@@ -923,14 +939,32 @@ void stop_wireless(void) {
 }
 
 void start_wireless(void) {
+
+#ifdef TCONFIG_BCMWL6
+	int ret = 0;
+	char prefix[] = "wanXX";
+#endif
 	//load_wl();
 
+#ifdef TCONFIG_BCMWL6
+	if ((ret = wl_sta_prepare()))
+		wl_sta_start();
+#endif
 	start_lan_wl();
 
 #ifdef CONFIG_BCMWL5
 	start_nas();
 #endif
 	restart_wl();
+
+#ifdef TCONFIG_BCMWL6
+	if (ret && get_sta_wan_prefix(prefix)) { /* wl client up again */
+		logmsg(LOG_INFO, "wireless client WAN: starting %s (WL up)", prefix);
+		start_wan_if(prefix);
+		sleep(5);
+		force_to_dial(prefix);
+	}
+#endif
 }
 
 void restart_wireless(void) {
@@ -940,6 +974,207 @@ void restart_wireless(void) {
 	start_wireless();
 
 }
+
+#ifdef TCONFIG_BCMWL6
+void wl_sta_start(void)
+{
+	char *wlc = NULL;
+	int unit = 0;
+	int r = -1;
+
+	wlc = nvram_safe_get("wlc_ifname");
+
+	if (!strlen(wlc))
+		return;
+
+	/* Check wl interface */
+	if (wl_probe(wlc))
+		return;
+
+	/* get the instance number of the wl */
+	if (wl_ioctl(wlc, WLC_GET_INSTANCE, &unit, sizeof(unit)))
+		return;
+
+	/* bring up interface */
+	if (ifconfig(wlc, IFUP | IFF_ALLMULTI, NULL, NULL) != 0)
+		return;
+
+	r = eval("wlconf", wlc, "up"); /* wl iface up! */
+	if (r == 0) {
+		if (strncmp(wlc, "eth", 3) == 0) { /* check for main radio units */
+			eval("wl", "-i", wlc, "antdiv", nvram_safe_get(wl_nvname("antdiv", unit, 0)));
+			eval("wl", "-i", wlc, "txant", nvram_safe_get(wl_nvname("txant", unit, 0)));
+			eval("wl", "-i", wlc, "txpwr1", "-o", "-m", nvram_get_int(wl_nvname("txpwr", unit, 0)) ? nvram_safe_get(wl_nvname("txpwr", unit, 0)) : "-1");
+#ifdef TCONFIG_BCMARM
+			eval("wl", "-i", wlc, "interference", nvram_match(wl_nvname("phytype", unit, 0), "v") ? nvram_safe_get(wl_nvname("mitigation_ac", unit, 0)) : nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#else
+			eval("wl", "-i", wlc, "interference", nvram_safe_get(wl_nvname("mitigation", unit, 0)));
+#endif /* TCONFIG_BCMARM */
+
+			if (unit == 0) {
+				led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
+			}
+			else if (unit == 1) {
+				led(LED_5G, LED_ON);	/* enable WLAN LED for 5 GHz */
+			}
+#ifdef TCONFIG_DHDAP
+			else if (unit == 2) {
+				led(LED_52G, LED_ON);	/* enable WLAN LED for 2nd 5 GHz */
+			}
+#endif /* TCONFIG_DHDAP */
+		}
+
+		xstart("radio", "join"); /* try connecting ... */
+	}
+	else
+		return;
+
+	eval("wlconf", wlc, "start"); /* start wl iface */
+}
+
+void wl_sta_stop(void)
+{
+	char *wlc = NULL;
+	int unit = 0;
+
+	wlc = nvram_safe_get("wlc_ifname");
+
+	if (!strlen(wlc))
+		return;
+
+	/* Check wl interface */
+	if (wl_probe(wlc))
+		return;
+
+	/* get the instance number of the wl */
+	if (wl_ioctl(wlc, WLC_GET_INSTANCE, &unit, sizeof(unit)))
+		return;
+
+	eval("wlconf", wlc, "down"); /* stop wl iface */
+
+	ifconfig(wlc, 0, NULL, NULL);
+
+	if (strncmp(wlc, "eth", 3) == 0) { /* check for main radio units */
+
+		if (unit == 0) {
+			led(LED_WLAN, LED_OFF);	/* disable WLAN LED for 2.4 GHz */
+		}
+		else if (unit == 1) {
+			led(LED_5G, LED_OFF);	/* disable WLAN LED for 5 GHz */
+		}
+#ifdef TCONFIG_DHDAP
+		else if (unit == 2) {
+			led(LED_52G, LED_OFF);	/* disable WLAN LED for 2nd 5 GHz */
+		}
+#endif /* TCONFIG_DHDAP */
+	}
+}
+
+int wl_sta_prepare(void)
+{
+	int mwan_num;
+	int wan_unit;
+	char wan_prefix[] = "wanXX";
+	char wl_prefix[8];
+	int wl_unit = 0;
+	int i;
+	char buffer[32];
+	char tmp[64];
+	char *wl_sta = NULL;
+	char *wlc = NULL;
+	int sta = 0;
+
+	mwan_num = nvram_get_int("mwan_num");
+	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+		mwan_num = 1;
+
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		get_wan_prefix(wan_unit, wan_prefix);
+
+		store_wan_if_to_nvram(wan_prefix); /* prepare wan setup very early now! */
+
+		wl_sta = nvram_safe_get(strcat_r(wan_prefix, "_ifname", tmp));
+
+		/* Check interface len */
+		if (!strlen(wl_sta))
+			continue;
+
+		/* Check for wl interface */
+		if (!wl_probe(wl_sta)) {
+
+			/* get the instance number of the wl */
+			if (wl_ioctl(wl_sta, WLC_GET_INSTANCE, &wl_unit, sizeof(wl_unit)))
+				return 0;
+
+			snprintf(wl_prefix, sizeof(wl_prefix), "wl%d_", wl_unit);
+
+			if (nvram_match(strcat_r(wl_prefix, "mode", tmp), "sta") &&
+			    nvram_match(strcat_r(wl_prefix, "radio", tmp), "1") &&
+			    nvram_match(strcat_r(wl_prefix, "bss_enabled", tmp), "1")) { /* check for sta interface */
+				logmsg(LOG_INFO, "Wireless WAN found: %s - wl%d", wl_sta, wl_unit);
+				sta = 1;
+				break;
+			}
+		}
+	}
+
+	/* check bridges and remove sta interface from the interface list */
+	if (sta) {
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			memset(buffer, 0, sizeof(buffer));
+			sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			if (strcmp(nvram_safe_get(buffer), "") != 0) { /* check brX */
+				memset(buffer, 0, sizeof(buffer));
+				memset(tmp, 0, sizeof(tmp));
+				sprintf(buffer, (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
+				snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get(buffer));
+				if (!remove_from_list(wl_sta, tmp, sizeof(tmp))) {
+					nvram_set(buffer, tmp); /* save lanX_ifnames back to nvram without sta interface */
+					break;
+				}
+
+			}
+		}
+	}
+
+	/* prepare & clean-up nvram */
+	/* case 1: new setup/interface */
+	if (sta && nvram_is_empty("wlc_ifname")) {
+		nvram_set("wlc_ifname", wl_sta); /* if not yet set, save to nvram */
+	}
+	/* case 2: setup/interface changed */
+	else if (sta && !nvram_match("wlc_ifname", wl_sta)) {
+		wlc = nvram_safe_get("wlc_ifname");
+		memset(tmp, 0, sizeof(tmp));
+		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
+		if (!add_to_list(wlc, tmp, sizeof(tmp))) {
+			nvram_set("lan_ifnames", tmp);
+			nvram_set("wlc_ifname", wl_sta); /* save new client interface to nvram */
+		}
+	}
+	/* case 3: no setup/interface change, restart */
+	else if (sta && nvram_match("wlc_ifname", wl_sta)) {
+		/* nothing to do so far! */
+	}
+	/* case 4: no client anymore */
+	else if (!sta && strlen(nvram_safe_get("wlc_ifname"))) {
+		wlc = nvram_safe_get("wlc_ifname");
+		memset(tmp, 0, sizeof(tmp));
+		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
+		if (!add_to_list(wlc, tmp, sizeof(tmp))) {
+			logmsg(LOG_INFO, "Wireless WAN disabled: add wireless interface %s back to br0 (default)", wlc);
+			nvram_set("lan_ifnames", tmp);
+			nvram_unset("wlc_ifname"); /* remove client interface again! */
+		}
+	}
+	/* case 5: no client */
+	else {
+		/* nothing to do so far! */
+	}
+
+	return sta;
+}
+#endif /* TCONFIG_BCMWL6 */
 
 #ifdef TCONFIG_IPV6
 void enable_ipv6(int enable)
@@ -1047,6 +1282,11 @@ void start_lan(void)
 	foreach_wif(0, NULL, set_wlmac);
 #else
 	foreach_wif(1, NULL, set_wlmac);
+#endif
+
+#ifdef TCONFIG_BCMWL6
+	if (wl_sta_prepare())
+		wl_sta_start();
 #endif
 
 #ifdef TCONFIG_IPV6
@@ -1295,6 +1535,10 @@ void stop_lan(void)
 	vlan0tag = nvram_get_int("vlan0tag");
 
 	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
+
+#ifdef TCONFIG_BCMWL6
+	wl_sta_stop();
+#endif
 
 #ifdef TCONFIG_IPV6
 	stop_ipv6(); /* stop IPv6 first! */
@@ -1562,14 +1806,15 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 {
 	int i;
 	char s[32], f[64];
-	char *ifname;
+	char ifname[16];
+	char *amode, sec[16];
 
 	int *unit_filter = param;
 	if (*unit_filter >= 0 && *unit_filter != unit) return 0;
 
 	if (!nvram_get_int(wl_nvname("radio", unit, 0)) || !wl_client(unit, subunit)) return 0;
 
-	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
+	snprintf(ifname, sizeof(ifname), "%s", nvram_safe_get(wl_nvname("ifname", unit, subunit)));
 
 	/* skip disabled wl vifs */
 	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
@@ -1600,8 +1845,11 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 			}
 			else {
 				eval("wl", "-i", ifname, "disassoc");
-#ifdef CONFIG_BCMWL5
-				char *amode, *sec = nvram_safe_get(wl_nvname("akm", unit, subunit));
+
+				if (!strlen(nvram_safe_get(wl_nvname("ssid", unit, subunit))))
+					break;
+
+				snprintf(sec, sizeof(sec), "%s", nvram_safe_get(wl_nvname("akm", unit, subunit)));
 
 				if (strstr(sec, "psk2")) amode = "wpa2psk";
 				else if (strstr(sec, "psk")) amode = "wpapsk";
@@ -1610,11 +1858,8 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 				else if (nvram_get_int(wl_nvname("auth", unit, subunit))) amode = "shared";
 				else amode = "open";
 
-				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)),
-					"imode", "bss", "amode", amode);
-#else
-				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)));
-#endif
+				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)), "imode", "bss", "amode", amode);
+
 				stacheck = STACHECK_DISCONNECT;
 			}
 			sleep(stacheck);

@@ -85,6 +85,12 @@ extern const char *tomato_shortver;
 #define	IPV6_6RD_DHCP		7
 #endif
 
+#ifdef TCONFIG_MULTIWAN
+#define MWAN_MAX	4
+#else
+#define MWAN_MAX	2
+#endif
+
 enum {
 	ACT_IDLE,
 	ACT_TFTP_UPGRADE_UNUSED,
@@ -115,6 +121,9 @@ typedef struct {
 } wanface_list_t;
 
 extern void chld_reap(int sig);
+extern void get_wan_prefix(int iWan_unit, char *sPrefix);
+extern int get_wan_unit(const char *sPrefix);
+extern int get_wan_unit_with_value(const char *suffix, const char *value);
 extern int get_wan_proto(void);
 extern int get_wanx_proto(char *prefix);
 #ifdef TCONFIG_IPV6

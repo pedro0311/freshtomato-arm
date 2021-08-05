@@ -36,26 +36,61 @@
 #define LOGMSG_NVDEBUG	"misc_debug"
 
 
+void get_wan_prefix(int iWan_unit, char *sPrefix)
+{
+	if (iWan_unit == 1)
+		strcpy(sPrefix, "wan");
+	else if (iWan_unit == 2)
+		strcpy(sPrefix, "wan2");
+#ifdef TCONFIG_MULTIWAN
+	else if (iWan_unit == 3)
+		strcpy(sPrefix, "wan3");
+	else if (iWan_unit == 4)
+		strcpy(sPrefix, "wan4");
+#endif
+	else
+		strcpy(sPrefix, "wan");
+}
+
+int get_wan_unit(const char *sPrefix)
+{
+	if (!strcmp(sPrefix, "wan"))
+		return 1;
+	else if (!strcmp(sPrefix, "wan2"))
+		return 2;
+#ifdef TCONFIG_MULTIWAN
+	else if (!strcmp(sPrefix, "wan3"))
+		return 3;
+	else if (!strcmp(sPrefix, "wan4"))
+		return 4;
+#endif
+	else
+		return 1;
+}
+
+int get_wan_unit_with_value(const char *suffix, const char *value)
+{
+	char tmp[64];
+	int mwan_num, wan_unit;
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		get_wan_prefix(wan_unit, tmp);
+		strcat(tmp, suffix);
+
+		if (nvram_match(tmp, value))
+			return wan_unit;
+	}
+
+	return -1;
+}
+
 int get_wan_proto(void)
 {
-	const char *names[] = {	/* order must be synced with def at shared.h */
-		"static",
-		"dhcp",
-		"l2tp",
-		"pppoe",
-		"pptp",
-		"ppp3g",
-		"lte",
-		NULL
-	};
-	int i;
-	const char *p;
-
-	p = nvram_safe_get("wan_proto");
-	for (i = 0; names[i] != NULL; ++i) {
-		if (strcmp(p, names[i]) == 0) return i + 1;
-	}
-	return WP_DISABLED;
+	return get_wanx_proto("wan");
 }
 
 int get_wanx_proto(char *prefix)
@@ -196,10 +231,18 @@ int foreach_wif(int include_vifs, void *param,
 	int ret = 0;
 
 #ifdef TCONFIG_MULTIWAN
+#ifdef TCONFIG_DHDAP
+	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s",
+#else
+	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
+#endif /* TCONFIG_DHDAP */
+#else
+#ifdef TCONFIG_DHDAP
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
 #else
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s",
-#endif
+#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_MULTIWAN */
 		nvram_safe_get("lan_ifnames"),
 		nvram_safe_get("lan1_ifnames"),
 		nvram_safe_get("lan2_ifnames"),
@@ -209,12 +252,17 @@ int foreach_wif(int include_vifs, void *param,
 #ifdef TCONFIG_MULTIWAN
 		nvram_safe_get("wan3_ifnames"),
 		nvram_safe_get("wan4_ifnames"),
-#endif
+#endif /* TCONFIG_MULTIWAN */
+#ifdef TCONFIG_DHDAP
+		nvram_safe_get("wl2_ifname"),
+		nvram_safe_get("wl2_vifs"),
+#endif /* TCONFIG_DHDAP */
 		nvram_safe_get("wl_ifname"),
 		nvram_safe_get("wl0_ifname"),
 		nvram_safe_get("wl0_vifs"),
 		nvram_safe_get("wl1_ifname"),
 		nvram_safe_get("wl1_vifs"));
+
 	remove_dups(ifnames, sizeof(ifnames));
 	sort_list(ifnames, sizeof(ifnames));
 
@@ -317,11 +365,6 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 #endif
 		NULL
 	};
-#ifdef TCONFIG_MULTIWAN
-#define MWAN_MAX	4
-#else
-#define MWAN_MAX	2
-#endif
 	int i;
 	int f;
 	struct ifreq ifr;

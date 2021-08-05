@@ -56,7 +56,7 @@ function save() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Router Name', name: 'router_name', type: 'text', maxlen: 32, size: 34, value: nvram.router_name },
+			{ title: 'Router Name', name: 'router_name', type: 'text', maxlen: 32, size: 34, suffix: '&nbsp; <small>Locally significant only, it doesn\'t affect the router operation/name-resolution<\/small>', value: nvram.router_name },
 			{ title: 'Hostname', name: 'wan_hostname', type: 'text', maxlen: 63, size: 34, value: nvram.wan_hostname },
 			{ title: 'Domain Name', name: 'wan_domain', type: 'text', maxlen: 32, size: 34, value: nvram.wan_domain }
 		]);
