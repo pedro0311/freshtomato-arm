@@ -556,6 +556,9 @@ function _deleteLease(ip, mac, wl) {
 }
 
 function deleteLease(a, ip, mac, wl) {
+	if (!confirm("Delete lease?"))
+		return;
+
 	if (xob)
 		return;
 
