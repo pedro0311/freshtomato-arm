@@ -74,8 +74,8 @@ int get_wan_unit_with_value(const char *suffix, const char *value)
 	int mwan_num, wan_unit;
 
 	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num > MWAN_MAX)
-		return -1;
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, tmp);
