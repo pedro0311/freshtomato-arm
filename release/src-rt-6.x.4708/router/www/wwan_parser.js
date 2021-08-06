@@ -1,9 +1,11 @@
 function createWWANTableItem(value, unit, bar) {
 	var retVal = '<td class="content">';
-	var calculatedMargin = 4;
+	var calculatedMargin = 6; /* dBm */
 
-	if (unit.length < 3) {	/* FIXME: db vs dBm width calculation...Crazy logic :/ */
-		calculatedMargin += (3 - unit.length) * 8;
+	if (unit.length == 0) { /* None */
+		calculatedMargin = 26;
+	} else if (unit.length < 3 && unit.length > 0) { /* dB */
+		calculatedMargin = 14;
 	}
 	retVal += '<span style="width:34px;display:inline-block">'+value+'</span><small style="margin-right:'+calculatedMargin+'px">'+unit+'</small>';
 	if (bar) {
@@ -54,11 +56,11 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	}
 	if (valMap['CQI1']) {
 		code += '<tr><td class="title indent1">CQI1</td>';
-		code += '<td class="content">'+valMap['CQI1']+'</td></tr>';
+		code += createWWANTableItem(valMap['CQI1'], '', wwan_getCQIBar(valMap['CQI1']));
 	}
 	if (valMap['CQI2']) {
 		code += '<tr><td class="title indent1">CQI2</td>';
-		code += '<td class="content">'+valMap['CQI2']+'</td></tr>';
+		code += createWWANTableItem(valMap['CQI2'], '', wwan_getCQIBar(valMap['CQI2']));
 	}
 	if (valMap['ECIO']) {
 		code += '<tr><td class="title indent1">ECIO</td>';
@@ -255,6 +257,23 @@ function wwan_getRSCPBar(value) {
 		return "bar2.gif";
 	else
 		return "bar1.gif";
+}
+
+function wwan_getCQIBar(value) {
+	if (value >= 14)
+		return 'bar6.gif';
+	else if (value < 14 && value >= 11)
+		return 'bar5.gif';
+	else if (value < 11 && value >= 9)
+		return 'bar4.gif';
+	else if (value < 9 && value >= 7)
+		return 'bar3.gif';
+	else if (value < 7 && value >= 5)
+		return 'bar3.gif';
+	else if (value < 5 && value >= 3)
+		return 'bar2.gif';
+	else
+		return 'bar1.gif';
 }
 
 function wwan_getCurrentMode(buffer) {
