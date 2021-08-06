@@ -22,6 +22,7 @@ void start_bittorrent(void)
 {
 	FILE *fp;
 	char *pb, *pc, *pd, *pe, *pf, *ph, *pi, *pj, *pk, *pl, *pm, *pn, *po, *pp, *pr, *pt, *pu;
+	char *whitelistEnabled;
 
 	/* make sure its really stop */
 	stop_bittorrent();
@@ -44,7 +45,13 @@ void start_bittorrent(void)
 	else if (nvram_match("bt_settings", "custom"))   { pk = nvram_safe_get("bt_settings_custom"); }
 	else                                             { pk = nvram_safe_get("bt_settings"); }
 
-	if (nvram_match("bt_auth", "1"))      { pl = "true"; } else { pl = "false"; }
+	if (nvram_match("bt_auth", "1")) {
+		pl = "true";
+		whitelistEnabled = "false";
+	} else {
+		pl = "false";
+		whitelistEnabled = "true";
+	}
 	if (nvram_match("bt_blocklist", "1")) { pm = "true"; } else { pm = "false"; }
 
 	if      (nvram_match("bt_binary", "internal")) { pn = "/usr/bin"; }
@@ -72,7 +79,10 @@ void start_bittorrent(void)
 	            "\"rpc-enabled\": %s, \n"
 	            "\"rpc-bind-address\": \"0.0.0.0\", \n"
 	            "\"rpc-port\": %s, \n"
-	            "\"rpc-whitelist-enabled\": false, \n"
+	            "\"rpc-whitelist\": \"*\", \n"
+	            "\"rpc-whitelist-enabled\": %s, \n"
+	            "\"rpc-host-whitelist\": \"*\", \n"
+	            "\"rpc-host-whitelist-enabled\": %s, \n"
 	            "\"rpc-username\": \"%s\", \n"
 	            "\"rpc-password\": \"%s\", \n"
 	            "\"download-dir\": \"%s\", \n"
@@ -108,6 +118,8 @@ void start_bittorrent(void)
 	            nvram_safe_get("bt_ul"),
 	            pb,
 	            nvram_safe_get("bt_port_gui"),
+	            whitelistEnabled,
+	            whitelistEnabled,
 	            nvram_safe_get("bt_login"),
 	            nvram_safe_get("bt_password"),
 	            nvram_safe_get("bt_dir"),
