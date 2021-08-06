@@ -2355,7 +2355,7 @@ function comma(n) {
 
 function doScaleSize(n, sm) {
 	if (isNaN(n *= 1)) return '-';
-	if (n <= 9999) return '' + n;
+	if (n <= 9999) return '' + n + '<small> B</small>';
 	var s = -1;
 	do {
 		n /= 1024;
