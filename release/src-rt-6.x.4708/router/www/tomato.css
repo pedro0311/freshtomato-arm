@@ -1481,6 +1481,11 @@ div#sptime {
 	border-radius: 2px;
 }
 
+progress {
+	width: 190px;
+	height: 6px;
+}
+
 /* SVG */
 #svg text {
 	font: 11px monospace;
