@@ -2301,6 +2301,17 @@ div#sptime {
 	color: #fff;
 }
 
+.progress-container {
+	width: 280px;
+	height: 6px;
+	border-color: var(--tomato-background);
+	background-color: var(--tomato-container-background);
+}
+
+.progress-bar {
+	height: 6px;
+}
+
 /* SVG */
 #svg text {
 	font: 13px monospace;

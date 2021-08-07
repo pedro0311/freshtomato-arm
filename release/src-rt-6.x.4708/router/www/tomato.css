@@ -1481,9 +1481,23 @@ div#sptime {
 	border-radius: 2px;
 }
 
-progress {
+.progress-wrapper {
+	padding: 6px 0 3px 1px;
+}
+
+.progress-container {
 	width: 190px;
-	height: 6px;
+	height: 4px;
+	border-radius: 3px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #8f8f9d;
+	background-color: #e9e9ed;
+}
+
+.progress-bar {
+	height: 4px;
+	border-radius: 3px 0 0 3px;
 }
 
 /* SVG */
