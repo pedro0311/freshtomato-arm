@@ -54,11 +54,11 @@ stats.wlsense = sysinfo.wlsense;
 
 a = sysinfo.totalram;
 b = sysinfo.totalfreeram;
-stats.memory = scaleSize(a)+' / '+scaleSize(b)+' <small>('+(b / a * 100.0).toFixed(2)+'%)</small>';
+stats.memory = scaleSize(a - b)+' / '+scaleSize(a)+' <small>('+((a - b) / a * 100.0).toFixed(2)+'%)</small>';
 if (sysinfo.totalswap > 0) {
 	a = sysinfo.totalswap;
 	b = sysinfo.freeswap;
-	stats.swap = scaleSize(a)+' / '+scaleSize(b)+' <small>('+(b / a * 100.0).toFixed(2)+'%)</small>';
+	stats.swap = scaleSize(a - b)+' / '+scaleSize(a)+' <small>('+((a - b) / a * 100.0).toFixed(2)+'%)</small>';
 } else
 	stats.swap = '';
 

@@ -270,7 +270,7 @@ function show() {
 	c('memory', stats.memory);
 	c('swap', stats.swap);
 	elem.display('swap', stats.swap != '');
-	c('nvram_stat', scaleSize(nvstat.size)+' / '+scaleSize(nvstat.free)+' <small>('+(nvstat.free / nvstat.size * 100.0).toFixed(2)+'%)<\/small>');
+	c('nvram_stat', scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small>');
 /* IPV6-BEGIN */
 	c('ip6_wan', stats.ip6_wan);
 	elem.display('ip6_wan', stats.ip6_wan != '');
@@ -461,9 +461,9 @@ function init() {
 		{ title: 'Uptime', rid: 'uptime', text: stats.uptime },
 		{ title: 'CPU Usage', rid: 'cpupercent', text: stats.cpupercent },
 		{ title: 'CPU Load <small>(1 / 5 / 15 mins)<\/small>', rid: 'cpu', text: stats.cpuload },
-		{ title: 'Total / Free Memory', rid: 'memory', text: stats.memory },
-		{ title: 'Total / Free Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
-		{ title: 'Total / Free NVRAM', rid: 'nvram_stat', text: scaleSize(nvstat.size)+' / '+scaleSize(nvstat.free)+' <small>('+(nvstat.free / nvstat.size * 100.0).toFixed(2)+'%)<\/small>' },
+		{ title: 'Used / Total RAM', rid: 'memory', text: stats.memory },
+		{ title: 'Used / Total Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
+		{ title: 'Used / Total NVRAM', rid: 'nvram_stat', text: scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small>' },
 		null,
 		{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1) * 1.8 + 32) + '°F' },
 		{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
