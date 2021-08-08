@@ -5,8 +5,10 @@
 #	Copyright (c) 2016 Hiro Sugawara
 #
 
-OBJFILES	= wsdd2.o wsd.o llmnr.o
-HEADERS		= wsdd.h wsd.h
+CFLAGS        = -Wall -Wextra -g -O0
+LDFLAGS       = -g
+OBJFILES      = wsdd2.o wsd.o llmnr.o
+HEADERS       = wsdd.h wsd.h
 
 INSTALLPREFIX ?= $(PREFIX)/usr
 SBINDIR       ?= sbin
@@ -19,9 +21,11 @@ LIBINSTALLDIR = $(LIBDIR)
 
 all: wsdd2
 
-wsdd2: $(OBJFILES)
+nl_debug: CPPFLAGS+=-DMAIN
+nl_debug: nl_debug.c; $(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-$(OBJFILES) : $(HEADERS) Makefile
+wsdd2: $(OBJFILES)
+$(OBJFILES): $(HEADERS) Makefile
 
 install: wsdd2
 	install -d $(DESTDIR)/$(SBININSTALLDIR)
@@ -32,4 +36,4 @@ install: wsdd2
 	install -m 0644 wsdd2.service $(DESTDIR)/$(LIBINSTALLDIR)/systemd/system
 
 clean:
-	rm -f wsdd2 $(OBJFILES)
+	rm -f wsdd2 nl_debug $(OBJFILES)
