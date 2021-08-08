@@ -2301,15 +2301,20 @@ div#sptime {
 	color: #fff;
 }
 
+.progress-wrapper {
+	padding: 2px 0 2px 0;
+}
+
 .progress-container {
-	width: 280px;
+	width: 310px;
 	height: 6px;
-	border-color: var(--tomato-background);
+	border-radius: 3px;
 	background-color: var(--tomato-container-background);
 }
 
 .progress-bar {
 	height: 6px;
+	border-radius: 3px 0 0 3px;
 }
 
 /* SVG */

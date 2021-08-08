@@ -1482,22 +1482,19 @@ div#sptime {
 }
 
 .progress-wrapper {
-	padding: 6px 0 3px 1px;
+	padding: 0;
 }
 
 .progress-container {
-	width: 190px;
-	height: 4px;
-	border-radius: 3px;
-	border-width: 1px;
-	border-style: solid;
-	border-color: #8f8f9d;
-	background-color: #e9e9ed;
+	width: 270px;
+	height: 2px;
+	border-style: none;
+	background-color: #efefef;
 }
 
 .progress-bar {
-	height: 4px;
-	border-radius: 3px 0 0 3px;
+	height: 2px;
+	border-radius: 0;
 }
 
 /* SVG */

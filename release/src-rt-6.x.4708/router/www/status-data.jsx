@@ -15,14 +15,12 @@
 //	<% wlstats(1); %>
 
 function setColor(n) {
-	if (n >= 75)
-		return 'red';
-	else if (n >= 50)
-		return 'orange';
-	else if (n >= 25)
-		return 'yellow';
+	if (n >= 80)
+		return '#ff6f59';
+	else if (n >= 60)
+		return '#f9c05c';
 	else
-		return 'green';
+		return '#6fbf3d';
 }
 
 stats = { };
