@@ -400,7 +400,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">QoS Class Names <small><i><a href="javascript:toggleVisibility(cprefix,'classnames');"><span id="sesdiv_classnames_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section-title">QoS Class Names <small><i><a href="javascript:toggleVisibility(cprefix,'classnames');"><span id="sesdiv_classnames_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_classnames" style="display:none">
 	<script>
 		if ((v = nvram.qos_classnames.match(/^(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)$/)) == null)

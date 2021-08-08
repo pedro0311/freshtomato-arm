@@ -1361,7 +1361,7 @@ function init() {
 
 <!-- / / / -->
 
-		<div class="section-title">Wireless Interfaces Details <small><i><a href="javascript:toggleVisibility(cprefix,'details');"><span id="sesdiv_details_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section-title">Wireless Interfaces Details <small><i><a href="javascript:toggleVisibility(cprefix,'details');"><span id="sesdiv_details_showhide">(Show)</span></a></i></small></div>
 		<div class="section" id="sesdiv_details" style="display:none">
 			<script>
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
@@ -1377,7 +1377,7 @@ function init() {
 
 <!-- / / / -->
 
-		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 		<div class="section" id="sesdiv_notes" style="display:none">
 			<ul>
 				<li><b>Interface</b> - Wireless VIF name.</li>

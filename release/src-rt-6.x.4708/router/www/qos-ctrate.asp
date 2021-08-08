@@ -466,7 +466,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Filters: <small><i><a href="javascript:toggleVisibility(cprefix,'filters');"><span id="sesdiv_filters_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section-title">Filters: <small><i><a href="javascript:toggleVisibility(cprefix,'filters');"><span id="sesdiv_filters_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_filters" style="display:none">
 	<script>
 		var c;
