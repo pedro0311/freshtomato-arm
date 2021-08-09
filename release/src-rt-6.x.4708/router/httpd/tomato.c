@@ -287,7 +287,6 @@ const struct mime_handler mime_handlers[] = {
 	{ "stats/*.gz",			NULL,					0,	wi_generic,		wo_statsbackup,		1 },
 	{ "stats/restore.cgi",		NULL,					0,	wi_statsrestore,	wo_statsrestore,	1 },
 
-	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
 	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
 	{ "webmon_**",			NULL,					0,	wi_generic,		wo_syslog,		1 },
 
@@ -374,6 +373,7 @@ const aspapi_t aspapi[] = {
 	{ "ctrate",			asp_ctrate			},
 	{ "ddnsx",			asp_ddnsx			},
 	{ "devlist",			asp_devlist			},
+	{ "showlog",			asp_showsyslog			},
 	{ "webmon",			asp_webmon			},
 	{ "dhcpc_time",			asp_dhcpc_time			},
 	{ "dns",			asp_dns				},

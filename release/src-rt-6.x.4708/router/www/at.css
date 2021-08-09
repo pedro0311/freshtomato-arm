@@ -530,7 +530,8 @@ div#footer input {
 	width: unset;
 }
 
-span#footer-msg {
+span#footer-msg,
+span#footer-msg2 {
 	width: 400px;
 	background-color: #0000;
 	font-size: inherit;
@@ -539,6 +540,11 @@ span#footer-msg {
 	float: none;
 	padding: 10px 15px;
 	color: unset;
+}
+
+span#footer-msg2 {
+	width: 250px;
+	padding: 0;
 }
 
 ul.tabs li {
@@ -934,6 +940,23 @@ input[type="checkbox"] {
 
 #qos-cl-grid .x4b {
 	width: 42%;
+}
+
+#log-table .co1,
+#log-table .co4 {
+	white-space: nowrap;
+}
+
+#log-table .co1,
+#log-table-header .co1 {
+	width: 140px;
+}
+
+#log-table .co2,
+#log-table .co3,
+#log-table-header .co2,
+#log-table-header .co3 {
+	width: 100px;
 }
 
 #client_commandline_helper {
@@ -1782,8 +1805,8 @@ td#content > div.section {
 	overflow: visible;
 }
 
-td#content #bwm-controls .selected {
-	padding: 0px;
+td#content #bwm-controls .selected,
+td#content #logging .selected {
 	font-weight: bolder;
 	color: var(--tomato-accent-color);
 	text-decoration: none;
@@ -1794,7 +1817,8 @@ td#content #bwm-controls a {
 	padding-right: 1px;
 }
 
-td#content #bwm-controls a:hover {
+td#content #bwm-controls a:hover,
+td#content #logging a:hover {
 	color: #fff;
 }
 
@@ -1830,7 +1854,9 @@ table.fields tr td.wwan-parser-view {
 #bwm-ctrl a[href^="admin"],
 #webmon-config a[href^="admin"],
 #pptp-ctrl [href^="vpn"],
-#logging a[href^="admin"] {
+#logging a[href^="admin"],
+.log-viewlast a,
+.log-clear a {
 	position: relative;
 	left: -10px;
 	border-left: 1px solid transparent;
@@ -2324,6 +2350,10 @@ div#sptime {
 .progress-bar {
 	height: 6px;
 	border-radius: 3px 0 0 3px;
+}
+
+#log-table {
+	max-height: 604px;
 }
 
 /* SVG */
