@@ -66,7 +66,7 @@ RUN apt-get update \
   mc \
   cmake \
   curl \
-  linux-headers-4.19.0-9-all \
+  linux-headers-$(uname -r) \
   && dpkg --add-architecture i386 \
   && apt-get update \
   && apt-get install --no-install-suggests --no-install-recommends -y \

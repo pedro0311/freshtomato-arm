@@ -435,7 +435,7 @@ dg.populate = function() {
 
 		a = '';
 		if (e.freq != '') /* WL */
-			a = e.ifstatus+' '+e.ifname+(e.ifname.indexOf('.') == -1 ? ' (wl'+e.unit+')' : '')+c;
+			a = e.ifstatus+' '+(e.ifname.indexOf('.') == -1 ? e.ifname+' (wl'+e.unit+')' : '('+e.ifname+')')+c;
 		else if (e.ifname != '' && found_last == 0)
 			a = e.lan+e.wan+'('+e.ifname+')'+c;
 		else

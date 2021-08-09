@@ -169,10 +169,10 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
-		<li><b>Adblock</b> - Autoupdate will be launched randomly between 2:00 and 2.59 AM every day</li>
+		<li><b>Adblock</b> - Autoupdate will be launched randomly between 02:00 and 02:59 AM every day</li>
 		<li><b>Debug Mode</b> - All queries to dnsmasq will be logged to syslog</li>
 		<li><b>Blacklist URL</b> - Correct entry format: 0.0.0.0 domain.com or 127.0.0.1 domain.com, with one domain per line</li>
 		<li><b>Blacklist Custom</b> - Optional, space separated: domain1.com domain2.com domain3.com</li>

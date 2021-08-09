@@ -14,6 +14,15 @@
 //	<% sysinfo(); %>
 //	<% wlstats(1); %>
 
+function setColor(n) {
+	if (n >= 80)
+		return '#ff6f59';
+	else if (n >= 60)
+		return '#f9c05c';
+	else
+		return '#6fbf3d';
+}
+
 stats = { };
 
 var a, b, i;
@@ -49,16 +58,16 @@ lastjiffiesusage = (1000*(diff_total-diff_idle)/diff_total)/10;
 lastjiffiestotal = total_jiffies;
 lastjiffiesidle = jiffylist[3];
 
-stats.cpupercent = lastjiffiesusage.toFixed(2)+'%';
+stats.cpupercent = lastjiffiesusage.toFixed(2)+'%<div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(lastjiffiesusage.toFixed(2))+';width:'+lastjiffiesusage.toFixed(2)+'%"></div></div></div>';
 stats.wlsense = sysinfo.wlsense;
 
 a = sysinfo.totalram;
 b = sysinfo.totalfreeram;
-stats.memory = scaleSize(a)+' / '+scaleSize(b)+' <small>('+(b / a * 100.0).toFixed(2)+'%)</small>';
+stats.memory = scaleSize(a - b)+' / '+scaleSize(a)+' <small>('+((a - b) / a * 100.0).toFixed(2)+'%)</small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((a - b) / a * 100.0).toFixed(2))+';width:'+((a - b) / a * 100.0).toFixed(2)+'%"></div></div></div>';
 if (sysinfo.totalswap > 0) {
 	a = sysinfo.totalswap;
 	b = sysinfo.freeswap;
-	stats.swap = scaleSize(a)+' / '+scaleSize(b)+' <small>('+(b / a * 100.0).toFixed(2)+'%)</small>';
+	stats.swap = scaleSize(a - b)+' / '+scaleSize(a)+' <small>('+((a - b) / a * 100.0).toFixed(2)+'%)</small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((a - b) / a * 100.0).toFixed(2))+';width:'+((a - b) / a * 100.0).toFixed(2)+'%"></div></div></div>';
 } else
 	stats.swap = '';
 

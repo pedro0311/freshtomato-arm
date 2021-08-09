@@ -2355,7 +2355,7 @@ function comma(n) {
 
 function doScaleSize(n, sm) {
 	if (isNaN(n *= 1)) return '-';
-	if (n <= 9999) return '' + n;
+	if (n <= 9999) return '' + n + '<small> B</small>';
 	var s = -1;
 	do {
 		n /= 1024;
@@ -2914,10 +2914,7 @@ function reboot() {
 }
 
 function shutdown() {
-	if (confirm("Shutdown?")) shutdown2();
-}
-
-function shutdown2() {
+	if (!confirm("Shutdown?")) return;
 	if (confirm("Are you really sure you want to Shutdown??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
 }
 
@@ -2928,12 +2925,12 @@ function logout() {
 function toggleVisibility(where, whichone) {
 	if (E('sesdiv_' + whichone).style.display != 'none') {
 		E('sesdiv_' + whichone).style.display = 'none';
-		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to show)';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Show)';
 		cookie.set(where + '_' + whichone + '_vis', 0);
 	}
 	else {
 		E('sesdiv_' + whichone).style.display = 'block';
-		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Click here to hide)';
+		E('sesdiv_' + whichone + '_showhide').innerHTML = '(Hide)';
 		cookie.set(where + '_' + whichone + '_vis', 1);
 	}
 }

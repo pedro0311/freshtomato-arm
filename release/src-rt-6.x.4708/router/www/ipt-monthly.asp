@@ -441,7 +441,7 @@ function verifyFields(focused, quiet) {
 		<div class="tomato-grid" id="bwm-grid"></div>
 	</div>
 
-	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility(cprefix,"options");'><span id="sesdiv_options_showhide">(Click here to show)</span></a></i></small></div>
+	<div class="section-title">Options <small><i><a href='javascript:toggleVisibility(cprefix,"options");'><span id="sesdiv_options_showhide">(Show)</span></a></i></small></div>
 	<div class="section" id="sesdiv_options" style="display:none">
 		<script>
 			var c;

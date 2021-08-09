@@ -566,7 +566,7 @@ function init() {
 	W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_tinc_button2"><\/div>');
 	W('<\/div>');
 
-	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,\'hosts\');"><span id="sesdiv_hosts_showhide">(Click here to show)<\/span><\/a><\/i><\/small><\/div>');
+	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,\'hosts\');"><span id="sesdiv_hosts_showhide">(Show)<\/span><\/a><\/i><\/small><\/div>');
 	W('<div class="section" id="sesdiv_hosts" style="display:none">');
 	W('<ul>');
 	W('<li><b>ConnectTo<\/b> - Tinc will try to establish a meta-connection to the host. Requires the Address field');

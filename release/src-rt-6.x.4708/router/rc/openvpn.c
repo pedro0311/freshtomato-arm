@@ -585,6 +585,10 @@ void start_ovpn_client(int unit)
 		            iface,
 		            (nvi ? "DROP" : "ACCEPT"),
 		            iface);
+#ifdef TCONFIG_BCMARM
+		if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
+			fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", iface);
+#endif /* TCONFIG_BCMARM */
 
 		if (route_mode == NAT)
 			/* masquerade all client outbound traffic regardless of source subnet */
@@ -1223,6 +1227,10 @@ void start_ovpn_server(int unit)
 			            "iptables -I FORWARD -i %s -j ACCEPT\n",
 			            iface,
 			            iface);
+#ifdef TCONFIG_BCMARM
+			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
+				fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", iface);
+#endif /* TCONFIG_BCMARM */
 		}
 
 		/* Create firewall rules for IPv6 */
